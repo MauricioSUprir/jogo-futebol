@@ -10,7 +10,10 @@
 // (lib/gol-roteirizado.mjs) — câmera do gol, de perto, na TV, por trás e de perfil, dia e noite, PC e celular (pedido de
 // 11/10); o REPLAY (pedidos de 11/10): os planos do replay de um gol de verdade (TV, atrás do gol e a lateral do golaço)
 // e o impedimento no quadro do passe CONGELADO com a linha (câmera alinhada com ela). A linha VIVA saiu do jogo (dono,
-// 11/10) e as cenas dela também. Só as cenas do replay abrem com ele ligado (as outras: ?replay=0).
+// 11/10) e as cenas dela também. Só as cenas do replay abrem com ele ligado (as outras: ?replay=0). A COMEMORAÇÃO do gol
+// (pedido de 11/10): um gol de verdade do time da casa (achado em Node com a entrada da página), a corrida, a finalização
+// forçada (joelhos, pulo, céu, giro), o abraço com a torcida no fundo e a reação de quem sofreu; só as cenas dela (e as
+// do replay, que vem depois dela) abrem com ela ligada (as outras: ?comemoracao=0).
 // Roda a simulação com o relógio manual (?demo=1: a IA joga pelo humano) e salva em tools/saida/.
 // Confere também: erros no console e caixas do HUD/botões que se sobrepõem ou passam da área
 // segura (botões de toque conferidos como círculos).
@@ -116,6 +119,20 @@ const CENAS = [
   { nome: 'pc-replay-golaco-lateral', ...PC, semente: 'golPagina', replay: true, url: 'q=alta&hora=dia&demo=1', prep: 'replayGol:lateral' },
   { nome: 'celular-replay-gol-tv-noite', ...CEL, semente: 'golPagina', replay: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'replayGol:tv' },
   { nome: 'celular-replay-gol-atras', ...CEL, semente: 'golPagina', replay: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'replayGol:atras' },
+  // COMEMORAÇÃO do gol (semente: 'golCasa' = o 1º gol do time da casa no laço da página, achado em Node): a corrida (com
+  // o gesto dela), a finalização forçada, o abraço (contraplano com a torcida) e a reação de quem sofreu
+  { nome: 'pc-comemoracao-corrida', ...PC, semente: 'golCasa', comemoracao: true, url: 'q=alta&hora=dia&demo=1', prep: 'comemoracao:corrida:joelhos' },
+  { nome: 'pc-comemoracao-joelhos', ...PC, semente: 'golCasa', comemoracao: true, url: 'q=alta&hora=dia&demo=1', prep: 'comemoracao:final:joelhos' },
+  { nome: 'pc-comemoracao-pulo-noite', ...PC, semente: 'golCasa', comemoracao: true, url: 'q=alta&hora=noite&demo=1', prep: 'comemoracao:final:pulo' },
+  { nome: 'pc-comemoracao-ceu', ...PC, semente: 'golCasa', comemoracao: true, url: 'q=alta&hora=dia&demo=1', prep: 'comemoracao:final:ceu' },
+  { nome: 'pc-comemoracao-abraco', ...PC, semente: 'golCasa', comemoracao: true, url: 'q=alta&hora=dia&demo=1', prep: 'comemoracao:abraco:joelhos' },
+  { nome: 'pc-comemoracao-abraco-noite', ...PC, semente: 'golCasa', comemoracao: true, url: 'q=alta&hora=noite&demo=1', prep: 'comemoracao:abraco:bracos' },
+  { nome: 'pc-comemoracao-reacao-noite', ...PC, semente: 'golCasa', comemoracao: true, url: 'q=alta&hora=noite&demo=1', prep: 'comemoracao:reacao:pulo' },
+  { nome: 'celular-comemoracao-corrida-noite', ...CEL, semente: 'golCasa', comemoracao: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'comemoracao:corrida:ceu' },
+  { nome: 'celular-comemoracao-giro', ...CEL, semente: 'golCasa', comemoracao: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'comemoracao:final:giro' },
+  { nome: 'celular-comemoracao-joelhos-noite', ...CEL, semente: 'golCasa', comemoracao: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'comemoracao:final:joelhos' },
+  { nome: 'celular-comemoracao-abraco', ...CEL, semente: 'golCasa', comemoracao: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'comemoracao:abraco:ceu' },
+  { nome: 'celular-comemoracao-reacao', ...CEL, semente: 'golCasa', comemoracao: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'comemoracao:reacao:bracos' },
   // Etapa 4: o relógio nos acréscimos ("45+1'", "1º T +N")
   { nome: 'celular-acrescimo', ...CEL, semente: 5, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1&min=0.25', prep: 'acrescimo' },
   { nome: 'celular-568-acrescimo', largura: 568, altura: 320, dpr: 2, toque: true, semente: 2, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1&min=0.25', prep: 'acrescimo' },
@@ -423,6 +440,30 @@ async function preparar(pagina, prep, gol = null) {
       const e = ro();
       return e.ativo ? `replay do gol: plano ${e.plano + 1}/${e.planos} '${e.cam}' a ${e.vel}×, quadro ${e.tick.toFixed(1)} (${e.de}–${e.ate})${e.golaco ? ', golaço' : ''}, ${e.duracao.toFixed(1)} s no total; bola em (${g.render.bola.x.toFixed(1)}, ${g.render.bola.y.toFixed(2)}, ${g.render.bola.z.toFixed(1)})` : `o replay acabou antes do plano '${cam}'`;
     }
+    if (prep.startsWith('comemoracao:')) {
+      // até a comemoração de um gol de verdade (a finalização forçada) e o momento pedido nela
+      const [, momento, final] = prep.split(':');
+      const C = g.comemoracao;
+      C.forcarFinal(final);
+      let n = 0;
+      while (n < 12000 && !C.ativa) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; }
+      if (!C.ativa) return 'NENHUM gol (comemoração) no caminho';
+      const T = 2 * Math.sqrt(2 * 9.81 * 0.5) / 9.81; // voo do pulo (COMEMORACAO.pulo.altura 0,5 m)
+      const quando = e => {
+        if (momento === 'corrida') return e.fase === 'corrida' && e.t >= 1.7;
+        if (momento === 'final') {
+          if (e.kFinal < 0) return false;
+          if (e.variante === 'pulo' || e.variante === 'giro') return e.kPulo >= 0 && e.t >= e.kPulo / 60 + 0.3 + T * (e.variante === 'giro' ? 0.35 : 0.5);
+          return e.t >= e.kFinal / 60 + (e.variante === 'joelhos' ? 0.9 : 1.0);
+        }
+        if (momento === 'abraco') return e.fase === 'abraco' && e.t >= e.kFimFinal / 60 + 1.1;
+        return e.fase === 'reacao' && e.t >= e.kFimAbraco / 60 + 0.45;
+      };
+      let q = 0;
+      while (q < 900 && C.ativa && !quando(C.estado)) { g.relogio.avancar(1000 / 60, { desenhar: false }); q++; }
+      const e = C.estado;
+      return e ? `comemoração do gol do time ${e.time} (autor ${e.autor}): ${e.variante}/${e.corrida}, alvo ${e.alvo.nome}, ${e.colegas.length} colegas; fase ${e.fase}, t ${e.t.toFixed(2)} s, plano ${e.plano}` : 'a comemoração acabou antes do momento';
+    }
     if (prep === 'acrescimo') {
       // 1º tempo de 0,25 min reais: anda até o acréscimo anunciado e 1,5 min de jogo dentro dele ("45+1'")
       const m = g.mundo, p = m.partida;
@@ -548,18 +589,26 @@ if (CENAS.some(c => c.semente === 'imped' && (!so || so.has(c.nome)))) {
   IMPED = await acharImpedimento({ pastaJs: path.join(RAIZ, 'js') });
   console.log(IMPED ? `impedimento de verdade: semente ${IMPED.semente}, tick ${IMPED.tick} (jogador ${IMPED.id})` : 'NENHUM impedimento nas sementes 1–40: cenas do impedimento puladas');
 }
+// o 1º gol do time da CASA do laço da página (os prints da comemoração: a cena inteira, com o abraço)
+let GOLC = null;
+if (CENAS.some(c => c.semente === 'golCasa' && (!so || so.has(c.nome)))) {
+  GOLC = await acharGol({ pastaJs: path.join(RAIZ, 'js'), maxTicks: 6000, comoPagina: true, time: 0 });
+  console.log(GOLC ? `gol do time da casa (laço da página): semente ${GOLC.semente}, tick ${GOLC.golTick}` : 'NENHUM gol do time da casa no laço da página: cenas da comemoração puladas');
+}
 let falhas = 0;
 for (const c of CENAS) {
   if (so && !so.has(c.nome)) continue;
   if (c.semente === 'gol' && !GOL) continue;
   if (c.semente === 'imped' && !IMPED) continue;
   if (c.semente === 'golPagina' && !GOLP) continue;
+  if (c.semente === 'golCasa' && !GOLC) continue;
   const t0 = Date.now();
   const { navegador, pagina, erros } = await abrir({ largura: c.largura, altura: c.altura, dpr: c.dpr, toque: c.toque });
   try {
     // só as cenas do replay abrem com ele ligado (nas outras, o replay automático seguraria a simulação depois de um gol)
-    const sem = c.semente === 'gol' ? GOL.semente : c.semente === 'imped' ? IMPED.semente : c.semente === 'golPagina' ? GOLP.semente : (c.semente ?? 3);
-    await pagina.goto(`${srv.url}?${c.semPrints ? '' : 'prints=1&'}semente=${sem}&${c.url}${c.replay ? '' : '&replay=0'}`, { waitUntil: 'load' });
+    const sem = c.semente === 'gol' ? GOL.semente : c.semente === 'imped' ? IMPED.semente : c.semente === 'golPagina' ? GOLP.semente : c.semente === 'golCasa' ? GOLC.semente : (c.semente ?? 3);
+    // a comemoração só nas cenas dela e nas do replay (que vem depois dela)
+    await pagina.goto(`${srv.url}?${c.semPrints ? '' : 'prints=1&'}semente=${sem}&${c.url}${c.replay ? '' : '&replay=0'}${c.replay || c.comemoracao ? '' : '&comemoracao=0'}`, { waitUntil: 'load' });
     await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
     // N segundos de simulação a 60 Hz com relógio manual (sem render: mais rápido)
     await pagina.evaluate(seg => {
@@ -567,7 +616,7 @@ for (const c of CENAS) {
       g.relogio.usarManual(true);
       const n = Math.round(seg * 60);
       for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
-    }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' || c.prep === 'antesDoGol' || c.replay || c.prep === 'acrescimo' ? 0 : /^(mergulho|recepcao)/.test(c.prep ?? '') ? 0.5 : c.prep === 'penalti' || c.prep === 'cartao' || c.prep === 'expulso' || c.prep === 'pressao' || c.prep === 'goleiroMao' || /^(lateral|escanteioZonas|tiroDeMeta|barreira)/.test(c.prep ?? '') ? 2 : segundos);
+    }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' || c.prep === 'antesDoGol' || c.replay || c.comemoracao || c.prep === 'acrescimo' ? 0 : /^(mergulho|recepcao)/.test(c.prep ?? '') ? 0.5 : c.prep === 'penalti' || c.prep === 'cartao' || c.prep === 'expulso' || c.prep === 'pressao' || c.prep === 'goleiroMao' || /^(lateral|escanteioZonas|tiroDeMeta|barreira)/.test(c.prep ?? '') ? 2 : segundos);
     // opções da pausa (como quem toca nos botões de liga/desliga): {minimapa|nomes: 'ligado'|'desligado'}
     if (c.opcoes) await pagina.evaluate(o => { for (const [g, v] of Object.entries(o)) { const b = document.getElementById(`chip-${g}`); if (b && (b.getAttribute('aria-pressed') === 'true') !== (v === 'ligado')) b.click(); } }, c.opcoes);
     // gol da rede: o gol roteirizado (o mesmo do teste-estadio), na página

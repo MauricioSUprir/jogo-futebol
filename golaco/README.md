@@ -91,7 +91,14 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
   visitante a casa cala e só o setor deles comemora. Liga no primeiro toque/tecla (regra dos navegadores; o apito do
   início espera por ele). Menu → "Som da torcida": ligado/desligado e volume (salvos); desligado não liga o Web Audio nem
   baixa os sons. Pesquisa: `PESQUISA-ESTADIO.md`.
-- **Replay** (11/10): depois do gol, na saída de bola, a jogada de novo — na câmera de TV na velocidade real, de trás do
+- **Comemoração do gol** (11/10): depois do gol, a rede (1,2 s) e um corte para a comemoração — o autor corre para a
+  bandeirinha, a linha de fundo diante da torcida ou a lateral (de braços abertos, punho cerrado ou mão no peito) e
+  finaliza de joelhos, com um pulo e soco no ar, apontando o céu, de braços em V ou com um giro no ar; até 4 colegas chegam
+  para o abraço (contraplano com a torcida no fundo) e o último plano é quem sofreu (goleiro agachado, mãos na cabeça ou na
+  cintura). 6–8,5 s; no gol da IA contra você, ~4,5 s. Qualquer tecla, botão, clique ou toque pula depois de 0,5 s ("Pular"
+  no celular) — o replay vem depois e tem o pulo dele. O jogo espera no passo antes da saída de bola (o resultado não muda).
+  `?comemoracao=0` desliga.
+- **Replay** (11/10): depois do gol e da comemoração, na saída de bola, a jogada de novo — na câmera de TV na velocidade real, de trás do
   gol em câmera lenta e, no golaço de longe, rente ao gramado bem devagar. No apito do impedimento, a câmera alinhada com
   a linha congela no quadro do passe com a linha desenhada (a linha só aparece no replay). "Replay" na pausa revê os
   últimos 10 s. O jogo espera parado durante o replay (o resultado não muda); qualquer tecla, botão, clique ou toque pula
@@ -178,6 +185,8 @@ node golaco/tools/teste-rede-veu.mjs   # rede véu de noiva (Node): forma pela f
 node golaco/tools/teste-rede-tela.mjs  # navegador: a rede véu de noiva na tela (forma da malha, fio branco de dia e de noite, clareia o gol, mexe na batida)
 node golaco/tools/teste-estadio.mjs    # navegador: torcida (qualidades, chamadas, troca sem remontar, pixels dia/noite), gol ROTEIRIZADO (rede estufa, câmera do gol, "GOL!", saída no tempo), gol do visitante, treino, som (1º gesto, apito do início, grito na hora, desligado, volume), "GOL!" em 3 celulares, GPU = JS
 node golaco/tools/teste-replay-anel.mjs  # (Node, também no rodar-testes) anel do replay, roteiros do gol/impedimento/pausa e o replay de lances de verdade
+node golaco/tools/teste-comemoracao.mjs      # (Node, também no rodar-testes) cena da comemoração: locomoção sem patinar, golpes, gestos, abraço, quem sofreu, câmera, mundo intacto [--js <pasta js>]
+node golaco/tools/teste-comemoracao-tela.mjs # navegador: comemoração na página (fases, autor no quadro, simulação segura, cena → replay → saída no mesmo tick e hash, pular, celular, CPU) [--raiz <pasta do jogo>]
 node golaco/tools/teste-replay.mjs     # navegador: replay do gol (na saída, simulação parada, hash igual), do impedimento (linha só no passe), pausa, pular, custos [--base <pasta do jogo>]
 node golaco/tools/teste-hud-minimo.mjs # navegador: tela limpa — área do HUD no celular (≤ 11%, 3 telas, ataque e defesa), nenhum texto fora do placar e dos nomes dos botões, nomes dos botões por padrão (H9), torcida atrás do HUD (≤ 15%), linha de impedimento só no apito, PC ≤ 2,5% com a dica que some, opções Minimapa e Nomes nos botões, ajustes de toque v2
 python3 -I golaco/tools/sons/fazer_sons.py <gravações> <saída>  # refaz os sons a partir das gravações originais (CREDITOS.md)

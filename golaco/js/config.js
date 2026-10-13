@@ -1185,6 +1185,50 @@ export const REPLAY = {
   linha: { altura: 15, fora: 8, folga: 7, fovMin: 22, fovMax: 40 },
 };
 
+// ------------------------------------------------------------------------ Comemoração do gol (render: nunca muda o hash)
+// Pedido do dono de 11/10: "não tem cena de comemoração!!!". js/comemoracao.js (PURO) copia os 22 no tick do gol para um
+// mundo de cena à parte e anda com a MESMA locomoção do jogo; por cima, gestos por IK e os golpes de corpo inteiro
+// (joelhos, pulo, giro). A página (main.js) só SEGURA o laço antes do tick da montagem da saída (gol + 150) enquanto a
+// cena e o replay rodam: a saída sai no mesmo tick, com o mesmo hash. Ordem: gol → comemoração → replay → saída de bola.
+// Tempos em s desde o gol; distâncias em m. Pesquisa: PESQUISA-ESTADIO.md §10.
+export const COMEMORACAO = {
+  ligada: true,               // padrão (?comemoracao=0 desliga; os testes que não são dela abrem com ele)
+  pularDepois: 0.5,           // s — antes disso nenhum aperto pula (o chute que fez o gol não pula a cena)
+  passosCortina: 40,          // passos da simulação por quadro quando a cena é pulada antes da hora (cortina)
+  rede: 1.2,                  // s — plano da rede (a câmera do gol do jogo) até o 1º corte; o "GOL!" sai no corte
+  reage: 0.3,                 // s — o autor termina o chute antes de arrancar para o alvo
+  velCorrida: 0.95,           // × vArrancada do autor
+  parada: 1.2,                // m do alvo em que a finalização em pé começa (o autor para e vira para a torcida)
+  alvoMin: 8, alvoMax: 22,    // m — o alvo mais perto a ≥ alvoMin; além de alvoMax ele vem para perto do autor
+  chegadaMax: 4.3,            // s — a finalização começa mesmo sem chegar (nunca acontece com alvoMax)
+  final: 1.5,                 // s de finalização (joelhos, pulo, céu, braços, giro)
+  abracoAte: 6.5, abracoMin: 1.2, // s — o abraço vai até abracoAte, e dura ao menos abracoMin depois da finalização
+  reacao: 1.0,                // s — plano de quem sofreu, antes do replay
+  // gol da IA contra o time do humano: cena curta (EA FC: "Celebration Camera Focus" no time do usuário)
+  curta: { duracao: 4.5, alvoMin: 6, alvoMax: 13, final: 0.9, reacao: 1.0 },
+  // colegas: até `max` (os mais perto do alvo, a ≤ raioBusca), saindo com atraso[0] + atraso[1]·i s, para vagas a `vaga`
+  // m do autor, `abertura` rad entre elas, do lado do campo
+  colegas: { max: 4, raioBusca: 45, atraso: [0.35, 0.15], vaga: 0.72, abertura: 0.85, vel: 0.92, abraco: 1.3 },
+  separacao: 0.5,             // m entre os centros dos corpos na cena (o jogo usa 0,6; no abraço ficam mais perto)
+  sofreu: { vel: 1.3, espera: 0.8, gesto: 0.6, gestoEntra: 0.5, meio: 6 }, // anda para a saída (x = lado·meio)
+  resto: { vel: 2.8, desde: 1.2, para: 10 },     // o resto do time que marcou trota até `para` m do grupo (atrás da câmera do contraplano)
+  agacha: { desce: 0.3, entra: 0.5, tronco: 0.35 }, // goleiro batido e autor do gol contra: agachados
+  // de joelhos: o deslize começa a `inicio` m do alvo e desacelera até parar nele (entre decel[0] e decel[1] m/s²); o
+  // joelho a `joelho` m do chão (centro da junta), tronco `tronco` rad para trás, entra em `entra` s
+  deslize: { inicio: 2.6, joelho: 0.065, decel: [2.5, 7], tronco: 0.32, entra: 0.28 },
+  // pulo: agacha `agacha` s (desce `desce` m), estende em `estende` s, voo balístico de `altura` m (as pernas encolhem
+  // `encolhe` m), aterrissa em `aterrissa` s; o giro dá uma volta inteira no voo
+  pulo: { agacha: 0.2, estende: 0.1, desce: 0.14, altura: 0.5, encolhe: 0.16, aterrissa: 0.35, espera: 0.8 },
+  festa: { altura: 0.13, freq: 1.8 },             // pulo do grupo no abraço (m, Hz)
+  // câmera (fov vertical em graus para 16:9; o celular fecha `celular` e põe o autor no terço esquerdo)
+  camera: {
+    steadicam: { frente: 6.5, lado: 2.4, altura: 1.6, fov: 32, media: 0.3, rumo: 0.5 },
+    contraplano: { atras: 7.5, lado: 2.5, altura: 1.3, alem: 6, olharY: 2.4, fov: 36 },
+    reacao: { dist: 4.8, altura: 1.5, olharY: 0.95, fov: 30, ladoTV: 0.35 },
+    celular: 0.88, terco: 1 / 3, limite: 5.5,
+  },
+};
+
 // Estádio (só desenho: nada da simulação usa). O TÚNEL por onde os times entram (o pré-jogo usa) fica no meio da
 // arquibancada do lado de cá (z +, a da câmera de TV): a boca na frente dela (z = 44,5), 7 m de largura e 3,2 m de
 // altura, e o corredor entra 12 m por baixo das cadeiras. Os BANCOS DE RESERVAS ficam na frente da arquibancada, atrás

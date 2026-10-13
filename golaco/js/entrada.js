@@ -42,6 +42,8 @@ const SEM_ACOES = Object.freeze([]);
 export const ACOES_TECLA = {
   KeyR: 'recomecar', KeyM: 'maquina', KeyN: 'marcador', KeyC: 'camera',
   KeyH: 'ajuda', F1: 'ajuda', Escape: 'pausa', KeyP: 'pausa', F3: 'qps',
+  // Enter pula a comemoração do gol e o replay (fora deles não faz nada; nos menus o navegador aperta o botão em foco)
+  Enter: 'pular', NumpadEnter: 'pular',
 };
 // tecla → bit da máscara (segurar = bit ligado), o mesmo nas duas fases
 export const TECLA_BIT = {
@@ -663,6 +665,13 @@ export function criarEntrada(opc = {}) {
     },
     /** Solta tudo (pausa, troca de aba). */
     soltarTudo() { soltarTudo(false); },
+    /**
+     * Refaz o layout dos botões e o analógico de descanso (o mesmo do resize). Para quando os botões de toque voltam a
+     * aparecer depois de uma camada que os escondia (a comemoração do gol): com eles escondidos a zona do analógico mede
+     * 0×0 e o descanso calculado ali (o "Pular" solta tudo; a barra do navegador muda o tamanho da janela) ia para o alto
+     * da tela.
+     */
+    reposicionar() { aoRedimensionar(); },
     /**
      * Bloqueia (true) ou libera (false) a entrada do jogo — o "Editar time" aberto. Bloqueada: ler()
      * devolve tudo solto, nenhum aperto vira pulso e nenhuma ação sai, menos a pausa (Esc/P/Start, que

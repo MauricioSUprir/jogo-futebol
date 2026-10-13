@@ -5,10 +5,11 @@
 // por software, então o tempo de GPU não serve.
 // Metas: CPU por quadro p95 ≤ 6 ms e média ≤ 3 ms (sobram ≥ 10 ms para a GPU a 60 qps); chamadas de
 // desenho da partida ≤ as do treino + 2 (mesma câmera); geometrias e texturas iguais depois de 10
-// substituições (5 por time; sem vazamento).
+// substituições (5 por time; sem vazamento); o quadro durante a comemoração do gol ≤ p95 do jogo + 1 ms.
 //   node tools/teste-desempenho-celular.mjs [--raiz <pasta do jogo>] [--segundos 30] [--cpu 4]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
+import { golRoteirizado } from './lib/gol-roteirizado.mjs';
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
@@ -24,7 +25,7 @@ const f2 = v => (Number.isFinite(v) ? v.toFixed(2) : String(v));
 const srv = await servidor(0, raiz);
 const { navegador, contexto, pagina: pg, erros } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
 try {
-  await pg.goto(`${srv.url}?q=media&demo=1&toque=1&entalhe=1&replay=0&semente=${4 + DS}`, { waitUntil: 'load' });
+  await pg.goto(`${srv.url}?q=media&demo=1&toque=1&entalhe=1&replay=0&comemoracao=0&semente=${4 + DS}`, { waitUntil: 'load' });
   await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
   const info = await pg.evaluate(() => {
     const g = window.__golaco;
@@ -94,6 +95,24 @@ try {
   }, DS);
   meta('10 substituições (5 por time) feitas na parada', `pendentes ${vaz.pend.join('+')}, feitas ${vaz.feitas.join('+')} em ${vaz.quadros} quadros, ${vaz.jogadores} em campo`, '5 + 5, 22 em campo', vaz.feitas[0] === 5 && vaz.feitas[1] === 5 && vaz.jogadores === 22);
   meta('Sem vazamento: geometrias e texturas iguais depois das substituições', `geometrias ${vaz.antes.geo} → ${vaz.depois.geo} · texturas ${vaz.antes.tex} → ${vaz.depois.tex}`, 'iguais', vaz.antes.geo === vaz.depois.geo && vaz.antes.tex === vaz.depois.tex);
+  // comemoração do gol (CPU 4×): a página abre com ?comemoracao=0 (a cena seguraria a simulação nos 30 s medidos); aqui ela
+  // é ligada e o quadro da cena (os 22 atores dela, junto com a simulação nos primeiros 2,5 s) é medido contra o p95 do jogo
+  if (await pg.evaluate(() => !!window.__golaco.comemoracao)) {
+    await pg.evaluate(() => window.__golaco.comemoracao.ligada(true));
+    const golC = await golRoteirizado(pg, { semente: 5, time: 0 });
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
+    const mc = await pg.evaluate(() => {
+      const g = window.__golaco;
+      g.medirQuadro({ zerar: true }); g.comemoracao.zerarCusto();
+      let n = 0;
+      while (g.comemoracao.ativa && g.comemoracao.estado.estado === 'rodando' && n < 700) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; }
+      return { q: g.medirQuadro({ zerar: true }), c: g.comemoracao.custo, n };
+    });
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+    await pg.evaluate(() => window.__golaco.comemoracao.ligada(false));
+    meta(`Comemoração do gol (CPU ${CPU}×): CPU do quadro na cena`, golC.ok ? `méd ${f2(mc.q.cpu.media)} · p95 ${f2(mc.q.cpu.p95)} ms em ${mc.n} quadros (a cena: ${f2(mc.c.msPorTick)} ms por tick) × jogo p95 ${f2(med.cpu.p95)} ms` : 'o gol roteirizado não saiu',
+      'p95 ≤ jogo p95 + 1 ms', golC.ok && mc.n > 300 && mc.q.cpu.p95 <= med.cpu.p95 + 1);
+  }
   meta('Sem erro no console', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
 } catch (e) {
   meta('Execução', e.message, 'sem exceção', false);
