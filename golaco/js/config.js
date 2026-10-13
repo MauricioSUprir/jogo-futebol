@@ -475,8 +475,8 @@ export const GOLEIRO = {
   // 83,6% (48 partidas, sementes 1001–1048; a faixa de 6 a 16,5 m ~1 ponto abaixo da meta, dentro do sorteio da amostra).
   // No painel de 144 do CI (rodada "volume de ataque", 13/10) a faixa de 6 a 16,5 m ficou em 60–61,5% (meta 55–60%) com
   // −0,35/−0,5; com o condutor que entra na área (utilidade.manterPeso) os chutes ficam mais perto e as defesas caem
-  // sozinhas: −0,3
-  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.3, cTempo: 6, vRef: 20 },
+  // sozinhas: −0,3 deixou a faixa de 6 a 16,5 m em 53,0% no CI → −0,15
+  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.15, cTempo: 6, vRef: 20 },
   // segurar × espalmar (StatsBomb): em pé, de longe ~60%; no mergulho ~25%; de perto ~23%
   segurar: { emPe: 0.6, mergulho: 0.25, perto: 0.23 },
   alturaMax: 2.45,            // m alcançados com a mão no alto
@@ -1081,8 +1081,10 @@ export const IA_DEFESA = {
   //  - v = 6,8 m/s: a arrancada de verdade (o humano em disparada com a bola vai a 7,6 m/s; o trote, ~5,6 m/s, fica com a
   //    defesa de sempre, que já o parava: 4% chegavam à área). Com 6,3 m/s (a definição da contraprova de 11/10) o condutor
   //    da IA ainda acelerando já ligava o bloco inteiro e o contra-ataque morria: painel de 48 partidas (sementes
-  //    1001–1048), gols 0,90 → 1,50 por partida com 6,8 (sem a defesa da arrancada: 1,60).
-  corrida: { v: 6.8, hist: 0.8, dist: [1.5, 0.35, 2, 5], aperto: 1.0, engaja: [30, 45], cobre: [4, 0.6], ganho: 3, recua: [10, 0.5, 1.5],
+  //    1001–1048), gols 0,90 → 1,50 por partida com 6,8 (sem a defesa da arrancada: 1,60). Rodada "volume de ataque"
+  //    (13/10): 7,0 — com 7,2 o roteiro do humano em disparada passava a fazer 1,9 gol por partida (teste-defesa-corrida,
+  //    meta ≤ 1,5); com 7,0, 1,33.
+  corrida: { v: 7.0, hist: 0.8, dist: [1.5, 0.35, 2, 5], aperto: 1.0, engaja: [30, 45], cobre: [4, 0.6], ganho: 3, recua: [10, 0.5, 1.5],
     batido: 1, batidoPaga: 12, batidoFrente: 15, raio: 25, corredor: 14, fBloco: 0.85, correLonge: 8, liga: 8, caminho: 2.5 },
   // filtro do ponto de quem pressiona (ia-tatica.js alvoPressa): trocando de papel (contém ↔ aperta, 1º ↔ 2º homem) o
   // filtro só recomeça com o ponto novo a mais de `saltoPressa` m (antes recomeçava a cada troca e o avanço de 0,9 s sumia
