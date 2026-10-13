@@ -65,6 +65,7 @@ const LISTA = [
   ['torcida: lugares, setores, atlas das poses e ânimo (murmúrio, gol, "uuuh", apitos)', 'teste-torcida.mjs'],
   ['replay: anel dos últimos 10 s, roteiros do gol/impedimento/pausa e o replay de lances de verdade', 'teste-replay-anel.mjs'],
   ['comemoração do gol: cena pura (locomoção, golpes, gestos, abraço, quem sofreu, câmera; o mundo não muda)', 'teste-comemoracao.mjs'],
+  ['cenas de cartão e de fim de tempo, corte da torcida e gancho do treinador no gol (puras; o mundo não muda)', 'teste-cenas.mjs'],
   // Etapa 4: regras (IFAB)
   ['impedimento (Regra 11: cenas, tiro livre indireto, árbitro independente) e acréscimos (Regra 7.3)', 'teste-impedimento.mjs'],
   ['faltas, vantagem, cartões e expulsão (Regra 12), tiro livre direto e pênalti (Regra 14)', 'teste-faltas.mjs'],

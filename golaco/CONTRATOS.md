@@ -516,6 +516,76 @@ Constantes em `config.js COMEMORACAO`.
   e atravessam um gol esperando a saída abrem com `?comemoracao=0` (`teste-estadio`, `teste-desempenho-celular` — que
   mede a cena à parte com a CPU 4× —, `prints.mjs` fora das cenas dela e das do replay).
 
+## Cenas de cartão e de fim de tempo (pedido de 12/10; contrato)
+Pedido do dono: "cenas de final de primeiro tempo, final de segundo tempo, cartão amarelo (3 cenas diferentes) e cartão
+vermelho (outras 3 cenas diferentes). Quando sai gol, pode ter cenas de torcida e treinador comemorando." Pesquisa em
+`PESQUISA-CENAS.md`; constantes em `config.js` (`CENAS`, `CENA_CARTAO`, `CENA_FIM`, `COMEMORACAO.torcida`,
+`COMEMORACAO.treinador`, `CAMERA_GERAL`). **Só desenho**: cenas num mundo à parte, na receita da comemoração (o hash não
+muda; `hash-igual` e `hash-partida` IGUAIS).
+- **`js/cena-atores.js`** (puro): o árbitro e os assistentes (`criarJogador` 200–202, posição 'ARB', kit 'arbitro'),
+  `adicionarJogador`/`adicionarArbitro`/`adicionarNovo` (o técnico do gancho, posição 'TEC'), `passoAtores(c, desejo,
+  gestos)` (a ordem do `passoCena`: corpo → separação → passada → pé desenhado → quadril → pose + gestos; quem fica parado e
+  plantado por `CENAS.parado` ticks fica FIXO — a pose de base é a da locomoção, a respiração e os gestos vão por cima; o
+  fixo volta a andar quando o desejo pede), `recriarAtor` (ELIPSE: só no tick de um corte; passada e pés zerados, com
+  pré-rolagem opcional), `escolherVariante(tick, id, ultima, disponiveis, penultima?)` (hash, nunca a anterior), os gestos
+  (`gTiraAmarelo`, `gTiraVermelho`, `gCartao` — braço reto, a mão ≥ 0,25 m acima do topo da cabeça —, `gAponta`, `gAnota`,
+  `gAfasta` (IFAB), `gApito`, `gAbertos`, `gCabeca`, `gDesculpa`, `gSegura`, `gTapinha`, `gAbana`, `gRosto`, `gPalmasAlto`,
+  `gCintura`, `gJoelhos`, `gAperto`, `gCeu`, `gSoco`) e as posturas (`posturaCabisbaixo`, `posturaAgachado`); câmera:
+  `camValida` (limites da comemoração, fora do gol e dos sólidos), `custoCamera`/`melhorCamera` (Infinity com alguém —
+  ou o caminho dele até o alvo `a.alvoX/alvoZ` — a menos de `CENAS.lente` + folga; custo por quem tampa ou fica grande
+  perto da lente), `fugirDaLente` (quem não é assunto sai de perto da câmera do plano de agora, `c.camDe`, e da do próximo,
+  `c.camDe2`, escolhida 0,9 s antes do corte), `caberNoQuadro` (o fov abre o necessário para o assunto inteiro caber),
+  `definirPlano`/`definirPlanoGrupo`. Nada alocado por tick; sem rng.
+- **`js/cena-cartao.js`** (puro): `escolherCartao(eventos)` (o mais grave do passo; o 2º amarelo vira UM vermelho com
+  `segundo`; os outros em `outros`), `planejarCartao(m, cartao, {ultimaAmarelo, ultimaVermelho, variante, timeHumano})` →
+  plano (variante, apoio a ≤ 15 m, árbitro: de onde vem e onde para — 2,0–2,8 m do punido —, planos, tempos),
+  `criarCenaCartao(plano, m)` (cópias; o capitão longe e o árbitro já vêm correndo — pré-rolagem), `passoCenaCartao`,
+  `avancarCenaCartao(c, dt)`, `faseCartao`, `tempoCenaCartao`, `duracaoCenaCartao`, `planoCameraCartao(c, {pequena,
+  aspecto}, out)` (`out.tunel` = abrir o vão das placas), `cartaoNaMao(c, poseDesenhada, out)` (a mão e a face do cartão),
+  `consumirEventosCartao` (`cartaoCena` {fase 'alto' | 'saida', cor, time}, `aplausoExpulso`), `infoAtoresCartao`.
+  Variações: amarelo `abertos` (A1), `cabeca` (A2), `aceita` (A3); vermelho `cabisbaixo` (V1), `segurado` (V2), `rosto`
+  (V3). Planos: amarelo `arbitro → reacao → anota` (5,45 s); vermelho `arbitro → reacao → saida → tunel → torcida` (8,9 s;
+  2º amarelo 9,9 s; no `tunel` a ELIPSE do expulso a 10–14 m da boca, terminando com z > 34).
+- **`js/cena-fim.js`** (puro): `planejarFim(m, 'intervalo' | 'fimDeJogo', {placar, timeHumano, treinadores: {0, 1}})`,
+  `criarCenaFim`, `passoCenaFim`, `avancarCenaFim`, `faseFim` ('geral' no plano geral; 'fim' quando a cena do intervalo
+  acaba), `pularParaGeral(c)`, `planoCameraFim`, `consumirEventosFim` (`cenaFim` {fim, placar}), `infoAtoresFim`. Intervalo:
+  `apito → campo → tunel (ELIPSE: o funil) → torcida → geral (3 s, campo vazio)`; fim: `apito → vencedor → perdedor →
+  cumprimentos → [treinador] → aplauso (ELIPSE: o time do humano na frente da torcida dele) → torcida → geral (até "Jogar
+  de novo")`; empate: `neutro` no lugar de `vencedor`/`perdedor`. O árbitro cumprimenta um jogador no fim.
+- **Gol** (`js/comemoracao.js`): fases de câmera `... abraco → torcida → [treinador] → reacao → fim`. `torcida` = um corte
+  de câmera de `max(fim da finalização + 0,4 s, fim do abraço − 1,5 s)` até o fim do abraço — os atores NÃO mudam
+  (`planejarComemoracao(..., {cortes: false})` dá os mesmos atores tick a tick e o mesmo `kFim`); enquadramentos
+  `TORCIDAS` (`fundo`, `lateral`, `close`; `planoTorcidaGol(plano, out)`), sem repetir `ultimaTorcida`. `treinador`: só com
+  `opc.treinador = {id, time, x, z, rumo, kit}` (+90 ticks exatos, um ator a mais com papel 'treinador'). A cena curta (o
+  gol da IA contra o humano) não muda. A página passa `cortes: cenasLigadas`.
+- **GANCHO dos treinadores** (`main.js treinadorDoTime(t)`): devolve `null` até a frente dos treinadores (área técnica e
+  técnicos no estádio) entregar. Ela deve: (1) fazer `treinadorDoTime(t)` devolver `{id (≥ 300), time, x, z, rumo, kit}`
+  do técnico do time `t` DENTRO da área técnica (Regra 1: |x| de 4 a 18 do lado do banco dele, z de 35 a 41); (2) desenhar os
+  técnicos na `lista` do `desenharQuadro` também durante as cenas (hoje só os atores da cena são desenhados — o técnico do
+  gancho já entra como ator da comemoração e do fim de jogo). Com o gancho, a comemoração ganha o corte do treinador
+  (+1,5 s) e o fim do jogo o plano dele (+2,0 s); sem ele, nada muda (testado em Node com um técnico falso).
+- **Página** (`main.js`): `?cenas=0|1`; padrão `CENAS.ligadas`, desligadas com `navigator.webdriver`, PRINTS e DEMO.
+  Fila única `filaCenas` (prioridade: cartão 1 → subst 2 → fim de tempo 3 → faixas 4; a comemoração nunca entra na fila,
+  o replay vem antes de tudo) e `proximaCena()` (chamada no fim do replay, no fim de cada cena e na saída do gol SEM replay
+  — antes um cartão na fila ficava preso). `decidirCartao()` no fim do `rodarPasso` (e no `faltaDeTeste`); no gol (a
+  vantagem que acabou em gol) a cena copia o mundo no gol + 149 (`cartaoGolNoPonto`). Laço: cartão e intervalo (até o plano
+  geral) com a simulação PARADA no tick do evento (`laco.ultimo = agora`; nenhum passo, nenhuma entrada; o estádio anda no
+  relógio do desenho, `estadioSegurado`); no plano geral do intervalo o laço é solto (os 3 s de `PARTIDA.intervalo` atrás
+  da faixa) e a `saida` acaba a cena; o fim do jogo não segura nada. Pular: um aperto NOVO depois de `CENAS.pularDepois`
+  pula UMA cena (cartão: cortina e volta ao vivo; fim de tempo: o plano geral); depois, `soltarEntrada()` (nada vaza do
+  botão segurado). Pausa e celular em pé congelam a cena. HUD: `hud.cena(ativo)` (classe `em-cena`: só o placar e o "Pular"
+  com toque); o `#cartao-icone` de quem ganhou a cena não aparece (sem a cena, como antes). Render: `render/cartao3d.js`
+  (11 × 16 cm, cor plana #f5c518/#e5484d, 1 chamada só visível, pré-carga no 1º quadro), o vão das placas
+  (`render/prejogo.js criarVaoPlacas`, exportado) no plano do túnel, `jog3d.reservar(30)`. Torcida: `render/emocao.js`
+  reage a `cartaoCena`, `aplausoExpulso` e `cenaFim` (palmas/vaia pelo placar). `estadio.planoCamera` devolve
+  'comemoracao', 'cartao' ou 'fim' com a câmera de cinema.
+- **API de testes** (`__golaco`): `cenas` {ligado, ligar(b), ativo, tipo, estado, fila, pular(), cartaoNaFila(id?),
+  forcarVariante(cor, v), atores(), cartao3d, vao, naTela(id | 'cartao'), custo, zerarCusto(), treinador(t)},
+  `fimDeTempoDeTeste(tipo, placar?)`, `faltaDeTeste({..., segundo, goleiroExpulso, motivo})` → `{..., cena}`.
+- **Testes**: `teste-cenas` (Node, padrão: A canhão de 144 cartões, B variedade, C 56 cenas de fim de tempo, D gol com
+  torcida e treinador, E pureza, F relógio do estádio, G custo), `teste-comemoracao` 14–16, `teste-cenas-tela` (navegador,
+  CI e deploy; `--capturas <pasta>` grava uma captura por plano).
+
 ## Pré-jogo (pedido de 11/10; contrato)
 Pedido do dono: cenas de fora do estádio, o estádio, a entrada dos times, a fila com a câmera passando, cortes de torcida e
 as duas escalações no campinho (~10 s cada, o mesmo fundo). Pesquisa e números em `PESQUISA-PREJOGO.md`. **Só desenho**: o

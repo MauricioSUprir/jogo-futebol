@@ -604,6 +604,8 @@ export function custoCamera(c, cx, cz, assuntos, folga = 0.4) {
         if (da < 7 && w > 0) {
           const cosA = (ax * ex + az * ez) / (da * Math.sqrt(el2));
           if (cosA > 0.85) custo += (7 - da) * 0.15;
+          // perto da lente e no quadro: tampa o assunto (com a lente fechada dos closes, a 4–5 m já enche a tela)
+          if (cosA > 0.5 && da < 5) custo += (5 - da) * 1.0;
         }
       }
     }

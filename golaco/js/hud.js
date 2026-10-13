@@ -575,6 +575,17 @@ export function criarHud(opc) {
       if (el.comemoracao) el.comemoracao.hidden = !ativo;
     },
     get comemoracaoVisivel() { return !!el.comemoracao && !el.comemoracao.hidden; },
+    /**
+     * Cena de cartão ou de fim de tempo ligada/desligada (html.em-cena): o mesmo da comemoração — do HUD fica só o placar;
+     * a camada pega qualquer toque (pular) e o "Pular" aparece só com toque. Nenhum texto.
+     */
+    cena(ativo) {
+      ativo = !!ativo;
+      if (raiz.classList.contains('em-cena') === ativo) return;
+      raiz.classList.toggle('em-cena', ativo);
+      if (el.comemoracao) el.comemoracao.hidden = !ativo && !raiz.classList.contains('em-comemoracao');
+    },
+    get cenaVisivel() { return raiz.classList.contains('em-cena'); },
     /** A faixa verde cruza a tela (a cortina da comemoração pulada antes da hora: os passos que faltam rodam por baixo). */
     cortina() {
       const f = el.replayFaixa;

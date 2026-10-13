@@ -178,6 +178,40 @@ export function emocaoEvento(est, ev, ctx) {
     else disparar(est, 'palmas', casa, 0.5);
     return;
   }
+  // as cenas de cartão e de fim de tempo (js/cena-cartao.js, js/cena-fim.js; pedido do dono de 12/10): a torcida reage
+  // ao que a cena mostra — o cartão no alto (vaia de quem levou, palmas do outro lado), a saída do expulso (vaia forte
+  // para o árbitro), as palmas do expulso para a própria torcida (ela responde) e o plano da torcida no fim de cada tempo
+  // (o placar decide: palmas ganhando ou empatando, vaia perdendo; no fim, a vitória festeja)
+  if (tipo === 'cartaoCena') {
+    const k = ev.time === 1 ? 1 : 0;
+    const forte = ev.fase === 'saida';
+    if (ev.fase === 'alto' && ev.cor === 'amarelo') { disparar(est, 'vaia', k, 0.4); disparar(est, 'palmas', 1 - k, 0.3); return; }
+    if (ev.fase === 'alto' || forte) {
+      disparar(est, 'vaia', k, forte ? 0.8 : 0.6);
+      const o = est.torcida[1 - k];
+      o.excita = Math.max(o.excita, 0.6); o.palmas = Math.max(o.palmas, 0.6);
+      disparar(est, 'palmas', 1 - k, 0.6);
+    }
+    return;
+  }
+  if (tipo === 'aplausoExpulso') {
+    const k = ev.time === 1 ? 1 : 0;
+    est.torcida[k].palmas = Math.max(est.torcida[k].palmas, 0.6);
+    disparar(est, 'palmas', k, 0.6);
+    return;
+  }
+  if (tipo === 'cenaFim') {
+    const p = ev.placar ?? { 0: 0, 1: 0 };
+    for (const k of [0, 1]) {
+      const meu = p[k] ?? 0, deles = p[1 - k] ?? 0, g = est.torcida[k];
+      if (ev.fim === 'intervalo') {
+        if (meu >= deles) { g.palmas = Math.max(g.palmas, 0.6); disparar(est, 'palmas', k, 0.6); } else disparar(est, 'vaia', k, 0.6);
+      } else if (meu > deles) { g.excita = Math.max(g.excita, 0.9); g.palmas = Math.max(g.palmas, 0.9); disparar(est, 'palmas', k, 1); }
+      else if (meu === deles) { g.palmas = Math.max(g.palmas, 0.5); disparar(est, 'palmas', k, 0.5); }
+      else { g.lamento = 1; disparar(est, 'vaia', k, 0.7); }
+    }
+    return;
+  }
   if (tipo === 'redeImpacto') {
     disparar(est, 'rede', -1, clamp(ev.vel / 25, 0.15, 1));
   }

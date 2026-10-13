@@ -259,6 +259,16 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   na cortina). Câmera por cortes (`camera.js definirCinema`: rede → steadicam → contraplano → reação). `?comemoracao=0`
   desliga (sem opção na pausa: não cabe em 844×390). Testes: `teste-comemoracao` (Node, padrão) e
   `teste-comemoracao-tela` (navegador, CI e deploy); os de navegador que não são dela abrem com `?comemoracao=0`.
+- **Cenas de cartão e de fim de tempo e cortes de torcida/treinador no gol** (pedido de 12/10; `PESQUISA-CENAS.md`,
+  contrato em `CONTRATOS.md`): `js/cena-atores.js`, `cena-cartao.js`, `cena-fim.js` (puros, mundo à parte como a
+  comemoração; hash IGUAL). Cartão: 3 amarelos (abertos, cabeca, aceita) e 3 vermelhos (cabisbaixo, segurado, rosto) +
+  2º amarelo, o árbitro (id 200) com o cartão 3D na mão (`render/cartao3d.js`), laço PARADO no tick do cartão; fim do 1º
+  tempo (apito → campo → túnel → torcida → plano geral com o laço solto) e do jogo (vencedor/perdedor ou neutro,
+  cumprimentos, aplauso à torcida, torcida, plano geral com "Jogar de novo"); no gol, o corte da torcida no fim do abraço
+  (só a câmera) e o GANCHO do treinador (`main.js treinadorDoTime` → null até a frente da área técnica entregar; ela
+  também tem de desenhar os técnicos durante as cenas). Fila única `filaCenas`/`proximaCena` (cartão → subst → fim →
+  faixas); pular = aperto novo depois de 0,5 s, uma cena por aperto. `?cenas=0|1`; desligadas com webdriver, prints e demo.
+  Testes: `teste-cenas` (Node, padrão), `teste-comemoracao` 14–16, `teste-cenas-tela` (navegador, CI e deploy).
 - **Etapa 4 (regras IFAB, goleiro, bolas paradas, equilíbrio)** — em PRs; pesquisa em `golaco/PESQUISA-ETAPA4.md`,
   contrato em `CONTRATOS.md`. **Painel** `tools/painel-equilibrio.mjs` (seção 11 inteira, 144 partidas em ~9 min com 4
   CPUs; `--base <pasta js>` compara versões com as mesmas sementes; `--json`; `--partes a.json,b.json` junta pedaços). O CI

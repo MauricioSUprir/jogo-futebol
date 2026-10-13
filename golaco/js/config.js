@@ -1300,11 +1300,12 @@ export const CENA_FIM = {
     empate: [['apito', 1.5], ['neutro', 3.0], ['cumprimentos', 2.0], ['treinador', 2.0], ['aplauso', 2.5], ['torcida', 2.0], ['geral', 0]],
   },
   velAnda: 1.4,               // m/s — os pares caminham para o aperto de mão, os times para o túnel
+  lenteLivre: 4.6,            // m — quem não é do plano sai de perto da câmera (os closes têm a lente fechada)
   aperto: { dist: 0.92, altura: 1.06, pares: 6, maxDist: 6, maxDistFolga: 14, sacode: 2.4, amp: 0.035 },
   cintura: 0.62,              // fração com as mãos na cintura no P2 do intervalo / no neutro
   joelhos: 2,                 // quantos com as mãos nos joelhos
   funil: { d: [8, 25], vel: [1.3, 1.5] },        // a elipse do túnel (intervalo)
-  aplauso: { d: [8, 10] },    // a elipse do aplauso à torcida (fim)
+  aplauso: { d: [8, 10], z0: 7.2, zMeio: 12.5 },    // a elipse do aplauso à torcida (fim): ao lado do gol, de z0 para fora
   // câmera
   camera: {
     apito: { altura: 16, recuo: 30, fov: 34 },
@@ -1312,7 +1313,7 @@ export const CENA_FIM = {
     tunel: { x: 6.5, y: 1.6, z: 38.3, fov: 40 },
     grupo: { dist: 8, altura: 1.8, fov: 32 },
     close: { dist: 5.2, altura: 1.55, fov: 30 },
-    aplauso: { atras: 7, altura: 1.7, fov: 40 },
+    aplauso: { atras: 9, altura: 1.8, fov: 40 },
     cumprimentos: { dist: 8.5, altura: 1.8, fov: 34 },
     treinador: { fov: 30, altura: 1.5 },
   },

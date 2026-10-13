@@ -40,9 +40,10 @@ function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
  * são inteiras porque a bola bate nelas (bola.js). Recorte por planos da three.js (Material.clippingPlanes com
  * clipIntersection: some só o que está dentro dos três — |x| < meia e z além da linha das placas) nas duas malhas das
  * placas (a face de LED e a estrutura), com localClippingEnabled no renderizador, e dois arremates escuros nas pontas
- * (a caixa recortada ficaria oca). abrir()/fechar() devolvem tudo como estava.
+ * (a caixa recortada ficaria oca). abrir()/fechar() devolvem tudo como estava. Exportado também para as cenas de
+ * cartão e de fim de tempo (main.js: o plano do túnel, com a simulação parada): ctx = {campo, cena3d}.
  */
-function criarVaoPlacas(ctx) {
+export function criarVaoPlacas(ctx) {
   const g = FORA.vaoPlacas.meia, PZ = CAMPO.meioZ + CAMPO.entorno, A = PLACA.altura;
   const planos = [
     new THREE.Plane(new THREE.Vector3(-1, 0, 0), -g),  // x > −meia

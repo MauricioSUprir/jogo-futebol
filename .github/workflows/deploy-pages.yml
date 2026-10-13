@@ -42,6 +42,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node golaco/tools/teste-comemoracao-tela.mjs
+      - name: Cenas de cartão e de fim de tempo no navegador (laço parado, cartão 3D, pular, fila, celular; hash igual)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node golaco/tools/teste-cenas-tela.mjs
   deploy:
     needs: testes-golaco
     environment:

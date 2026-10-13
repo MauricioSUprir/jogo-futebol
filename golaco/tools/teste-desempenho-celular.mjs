@@ -5,7 +5,8 @@
 // por software, então o tempo de GPU não serve.
 // Metas: CPU por quadro p95 ≤ 6 ms e média ≤ 3 ms (sobram ≥ 10 ms para a GPU a 60 qps); chamadas de
 // desenho da partida ≤ as do treino + 2 (mesma câmera); geometrias e texturas iguais depois de 10
-// substituições (5 por time; sem vazamento); o quadro durante a comemoração do gol ≤ p95 do jogo + 1 ms.
+// substituições (5 por time; sem vazamento); o quadro durante a comemoração do gol, a cena de cartão vermelho e a do fim do
+// 1º tempo ≤ p95 do jogo + 1 ms.
 //   node tools/teste-desempenho-celular.mjs [--raiz <pasta do jogo>] [--segundos 30] [--cpu 4]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -112,6 +113,27 @@ try {
     await pg.evaluate(() => window.__golaco.comemoracao.ligada(false));
     meta(`Comemoração do gol (CPU ${CPU}×): CPU do quadro na cena`, golC.ok ? `méd ${f2(mc.q.cpu.media)} · p95 ${f2(mc.q.cpu.p95)} ms em ${mc.n} quadros (a cena: ${f2(mc.c.msPorTick)} ms por tick) × jogo p95 ${f2(med.cpu.p95)} ms` : 'o gol roteirizado não saiu',
       'p95 ≤ jogo p95 + 1 ms', golC.ok && mc.n > 300 && mc.q.cpu.p95 <= med.cpu.p95 + 1);
+  }
+  // cenas de cartão e de fim de tempo (CPU 4×): a demo abre com elas desligadas; aqui são ligadas e o quadro de uma cena de
+  // vermelho (a mais longa: 25 atores, simulação parada) e do intervalo é medido contra o p95 do jogo
+  if (await pg.evaluate(() => !!window.__golaco.cenas)) {
+    await pg.evaluate(() => window.__golaco.cenas.ligar(true));
+    for (const [nome, prep] of [['cartão vermelho', 'g.faltaDeTeste({ cartao: "vermelho" })'], ['fim do 1º tempo', 'g.fimDeTempoDeTeste("intervalo")']]) {
+      await pg.evaluate(() => { const g = window.__golaco; g.reiniciar({ modo: 'partida', semente: 3 }); g.rodarPassos(900, 'demo'); });
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
+      const mc = await pg.evaluate(prep => {
+        const g = window.__golaco;
+        g.medirQuadro({ zerar: true }); g.cenas.zerarCusto();
+        new Function('g', prep)(g);
+        let n = 0;
+        while (g.cenas.ativo && !g.cenas.estado.geral && n < 900) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; }
+        return { q: g.medirQuadro({ zerar: true }), c: g.cenas.custo, n };
+      }, prep);
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+      meta(`Cena de ${nome} (CPU ${CPU}×): CPU do quadro na cena`, `méd ${f2(mc.q.cpu.media)} · p95 ${f2(mc.q.cpu.p95)} ms em ${mc.n} quadros (a cena: ${f2(mc.c.msPorTick)} ms por tick) × jogo p95 ${f2(med.cpu.p95)} ms`,
+        'p95 ≤ jogo p95 + 1 ms', mc.n > 200 && mc.q.cpu.p95 <= med.cpu.p95 + 1);
+    }
+    await pg.evaluate(() => window.__golaco.cenas.ligar(false));
   }
   meta('Sem erro no console', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
 } catch (e) {

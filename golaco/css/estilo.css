@@ -613,6 +613,12 @@ html.em-replay .qps { display: none; }
 html.em-comemoracao .minimapa, html.em-comemoracao .btn-menu, html.em-comemoracao .aviso, html.em-comemoracao .carga,
 html.em-comemoracao .cartao-icone, html.em-comemoracao .dica, html.em-comemoracao .painel-jogo, html.em-comemoracao .faixa,
 html.em-comemoracao .toque, html.em-comemoracao .qps { display: none; }
+/* cenas de cartão e de fim de tempo (js/cena-cartao.js, js/cena-fim.js): a mesma camada (qualquer toque pula depois de
+   0,5 s; "Pular" só com toque); do HUD fica só o placar — nenhum texto novo. O ícone do cartão não aparece: o cartão está
+   na mão do árbitro (3D). No plano geral do fim de tempo a cena sai daqui e a faixa aparece. */
+html.em-cena .minimapa, html.em-cena .btn-menu, html.em-cena .aviso, html.em-cena .carga, html.em-cena .cartao-icone,
+html.em-cena .dica, html.em-cena .painel-jogo, html.em-cena .gol-tela, html.em-cena .faixa, html.em-cena .toque,
+html.em-cena .qps { display: none; }
 /* a "vinheta" de replay da TV: uma faixa verde que cruza a tela (entrada e saída, REPLAY.transicao = 0,4 s); sem
    bloquear nada. Com "reduzir movimento": não passa. */
 .replay-faixa {

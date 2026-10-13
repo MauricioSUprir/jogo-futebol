@@ -22,7 +22,7 @@ import { PASSO, CAMPO, CENA_FIM, CENAS, CAMERA_GERAL } from './config.js';
 import {
   criarBase, adicionarJogador, adicionarArbitro, adicionarNovo, poseInicial, recriarAtor, soltar, para, irPara, parar,
   desviar, passoAtores, tempoDe, planoNoTempo, hashGol, camValida, melhorCamera, definirPlano, definirPlanoGrupo, fugirDaLente,
-  criarPlanoCena, clamp, suave, lerp, janela, s60, J, moverTudo, gApito, gAponta, gCintura, gJoelhos, gAperto, gCeu, gSoco,
+  criarPlanoCena, clamp, suave, lerp, janela, s60, J, moverTudo, caberNoQuadro, gApito, gAponta, gCintura, gJoelhos, gAperto, gCeu, gSoco,
   gCabeca, gTapinha, gPalmasAlto, posturaCabisbaixo, posturaAgachado,
 } from './cena-atores.js';
 import { cameraDoPlano } from './prejogo-roteiro.js';
@@ -162,6 +162,10 @@ function montarGrupos(c) {
     }
   }
   if (p.length >= 2) {
+    // o do meio e os 3 perdedores mais perto DELE (um grupo junto: o close pega 2–3; o 2º, o mais perto, levanta o 1º)
+    const f0 = p[0].j;
+    const g = [p[0], ...p.slice(1).sort((x, y) => Math.hypot(x.j.x - f0.x, x.j.z - f0.z) - Math.hypot(y.j.x - f0.x, y.j.z - f0.z) || x.id - y.id).slice(0, 3)];
+    p.length = 0; p.push(...g);
     c.grupoP = { membros: p.slice(0, 4) };
     p.slice(0, 4).forEach((a, i) => { a.lamento = i; a.podeFixar = false; });
     // o 2º vai levantar o 1º: o alvo dele (as câmeras escolhidas deixam a lente fora do caminho)
@@ -192,7 +196,7 @@ function desejo(c, a, t) {
     return parar(c, a, j.x - 1, j.z);
   }
   if (a.tipo === 'assistente') {
-    const fl = fugirDaLente(c, a);
+    const fl = fugirDaLente(c, a, K.lenteLivre);
     if (fl) return desviar(c, a, fl);
     // o trio se junta: os assistentes andam para perto do árbitro
     if (t < 1.2) return parar(c, a, arb.x, arb.z);
@@ -207,7 +211,8 @@ function desejo(c, a, t) {
   const nomeAgora = c.ip >= 0 && c.ip < P.planos.length ? P.planos[c.ip].nome : '';
   const assunto = a.par || a.vaiArbitro || ((a.festa != null || a.corre) && nomeAgora === 'vencedor') || (a.lamento != null && nomeAgora === 'perdedor');
   if (!assunto) {
-    const fl = fugirDaLente(c, a);
+    // (os closes do fim têm a lente fechada: a 4,6 m quem passa já enche o quadro)
+    const fl = fugirDaLente(c, a, K.lenteLivre);
     if (fl) return desviar(c, a, fl);
   }
   // o jogador que cumprimenta o árbitro no fim: vai até ele (0,86 m), de frente
@@ -428,6 +433,9 @@ export function passoCenaFim(c) {
     }
     if (melhor) {
       c.parArbitro = { jog: melhor, t0: -1 }; melhor.vaiArbitro = true; soltar(melhor);
+      // onde os dois se encontram (as câmeras escolhidas depois deixam a lente — e o quadro — fora do caminho deles)
+      const A = c.arbitro.j, mx = (A.x + melhor.j.x) / 2, mz = (A.z + melhor.j.z) / 2;
+      c.arbitro.alvoX = mx; c.arbitro.alvoZ = mz; melhor.alvoX = mx; melhor.alvoZ = mz;
       if (melhor.festa != null && c.grupoV) { c.grupoV.membros = c.grupoV.membros.filter(q => q !== melhor); melhor.festa = null; }
       if (melhor.lamento != null && c.grupoP) { c.grupoP.membros = c.grupoP.membros.filter(q => q !== melhor); melhor.lamento = null; }
     }
@@ -458,6 +466,21 @@ export function avancarCenaFim(c, dt) {
   return c.alfa;
 }
 export function tempoCenaFim(c) { return tempoDe(c); }
+/**
+ * Pulo (um aperto novo depois de 0,5 s): a cena vai direto ao plano geral (a faixa "Intervalo"/"Fim de jogo"). No
+ * intervalo o campo fica vazio; no fim os atores ficam onde estão, respirando.
+ */
+export function pularParaGeral(c) {
+  if (c.acabou) return;
+  const pl = c.plano.planos, ig = pl.findIndex(p => p.nome === 'geral');
+  if (ig < 0) return;
+  const k = Math.round(pl[ig].t0 / PASSO);
+  if (c.k >= k) return;
+  c.k = k; c.acum = 0; c.alfa = 1;
+  c.noTunel = false; c.noAplauso = false;
+  entrarPlano(c, ig);
+  for (const a of c.atores) { a.ant.set(a.atu); a.x0 = a.x1; a.z0 = a.z1; a.r0 = a.r1; }
+}
 /** Duração até o plano geral (s). */
 export function duracaoCenaFim(c) { return c.kFim * PASSO; }
 /** Nome do plano no estado desenhado ('geral' depois do último; 'fim' quando a cena do intervalo acaba). */
@@ -532,12 +555,15 @@ function elipseAplauso(c) {
   time.sort((x, y) => x.id - y.id);
   const n = time.length;
   void n;
+  // ao lado do gol (longe dele e da rede), num bloco em duas fileiras: a câmera atrás deles pega o time inteiro e a
+  // arquibancada (o lado de z pelo hash)
+  const zs = (P.hash >>> 5) & 1 ? 1 : -1;
+  c.zAplauso = zs * K.aplauso.zMeio;
   time.forEach((a, i) => {
-    // um de cada lado do gol (longe dele e da rede), de 1,9 em 1,9 m para fora, em duas fileiras
-    const lado = i % 2 ? 1 : -1, k = i >> 1;
-    const d = lerp(K.aplauso.d[0], K.aplauso.d[1], (k % 2) * 0.6 + 0.2);
-    const z = lado * (5.8 + k * 1.9);
-    const x = sx * (frente - d) - sx * (k % 2) * 1.4;
+    const fila = i % 2, k = i >> 1;
+    const d = lerp(K.aplauso.d[0], K.aplauso.d[1], fila);
+    const z = zs * (K.aplauso.z0 + k * 2.1 + fila * 1.05);
+    const x = sx * (frente - d) - sx * fila * 0.4;
     a.alvoX = sx * (frente - 4.6); a.alvoZ = z; a.rumoAlvo = sx > 0 ? 0 : Math.PI;
     recriarAtor(c, a, x, z, a.rumoAlvo, { dx: sx, dz: 0, vel: 1.2, ticks: 40 });
     a.aplaude = true; a.podeFixar = false;
@@ -605,7 +631,7 @@ function escolherCamera(c, ip) {
         const a0 = Math.PI / 2 + da;
         cands.push({ x: f.x + Math.cos(a0) * C.close.dist, y: C.close.altura, z: f.z + Math.sin(a0) * C.close.dist, pref: Math.abs(da) * 0.3 });
       }
-      _a.length = 0; if (g) _a.push(...g.membros.slice(0, 2));
+      _a.length = 0; if (g) _a.push(g.membros[0]);
       return { ...melhorCamera(c, cands, _a), fov: C.close.fov };
     }
     case 'treinador': {
@@ -614,8 +640,8 @@ function escolherCamera(c, ip) {
       return { x: sx + (sx >= 0 ? -3 : 3), y: C.treinador.altura, z: 33, fov: C.treinador.fov, alvo: tr };
     }
     case 'aplauso': {
-      const sx = P.timeHumano === 1 ? -1 : 1;
-      return { x: sx * (62.5 - 10 - C.aplauso.atras), y: C.aplauso.altura, z: 1.5, fov: C.aplauso.fov, olharX: sx * 66 };
+      const sx = P.timeHumano === 1 ? -1 : 1, z = c.zAplauso ?? 12;
+      return { x: sx * (62.5 - 10 - C.aplauso.atras), y: C.aplauso.altura, z, fov: C.aplauso.fov, olharX: sx * 66, olharZ: z };
     }
     case 'torcida': return { trilho: 'organizada' };
     case 'geral': return { geral: true };
@@ -661,15 +687,21 @@ function planoIndice(c, ip, t, opc, out) {
     case 'vencedor': case 'perdedor': {
       const g = pl.nome === 'vencedor' ? c.grupoV : c.grupoP;
       _g.length = 0;
-      const lista = g ? (pl.nome === 'vencedor' ? [g.foco, ...g.membros.slice(0, 2)] : g.membros.slice(0, 3)) : [arb];
-      for (const a of lista) _g.push(lerp(a.x0, a.x1, al), lerp(a.z0, a.z1, al));
-      return definirPlanoGrupo(out, pl.nome, cam.x, cam.y, cam.z, _g, 1.0, cam.fov, opc);
+      // (o close do lamento: o agachado — quem chega para levantá-lo entra no quadro sozinho, sem a câmera pular)
+      _l.length = 0;
+      if (!g) _l.push(arb);
+      else if (pl.nome === 'vencedor') _l.push(g.foco, ...g.membros.slice(0, 2));
+      else _l.push(g.membros[0]);
+      for (const a of _l) _g.push(lerp(a.x0, a.x1, al), lerp(a.z0, a.z1, al));
+      definirPlanoGrupo(out, pl.nome, cam.x, cam.y, cam.z, _g, 1.0, cam.fov, opc);
+      _cab.length = 0; for (const a of _l) _cab.push(a.atu);
+      return caberNoQuadro(out, opc, _cab);
     }
     case 'treinador': {
       const tr = cam.alvo;
       return definirPlano(out, 'treinador', cam.x, cam.y, cam.z, tr ? lerp(tr.x0, tr.x1, al) : 0, 1.3, tr ? lerp(tr.z0, tr.z1, al) : 36, cam.fov, opc);
     }
-    case 'aplauso': return definirPlano(out, 'aplauso', cam.x, cam.y, cam.z, cam.olharX, 5.5, 0, cam.fov, opc);
+    case 'aplauso': return definirPlano(out, 'aplauso', cam.x, cam.y, cam.z, cam.olharX, 5.5, cam.olharZ, cam.fov, opc);
     case 'torcida': {
       const u = (t - pl.t0) / Math.max(0.1, pl.t1 - pl.t0);
       const q = cameraDoPlano(cam.trilho, u, _cp);
@@ -686,7 +718,7 @@ function planoIndice(c, ip, t, opc, out) {
     default: out.nome = 'fim'; return out;
   }
 }
-const _cp = {}, _g = [];
+const _cp = {}, _g = [], _l = [], _cab = [];
 export { criarPlanoCena as criarPlanoCameraFim };
 
 /** Eventos novos da cena (a reação da torcida no plano dela); esvazia a fila. */
