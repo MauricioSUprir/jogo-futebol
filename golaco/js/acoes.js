@@ -809,7 +809,11 @@ function cavadinha(m, j, pe, p, erroMult, gx) {
   // a cavadinha é difícil de dosar (StatsBomb: 41,8% no alvo): erro grande na força e na direção
   const fin = j.par.attr.finalizacao / 100;
   const u = girar(ux, uz, normal(m.rng) * lerp(cfg.erroDir[0], cfg.erroDir[1], fin) * erroMult);
-  const s2 = s * (1 + normal(m.rng) * lerp(cfg.erroForca[0], cfg.erroForca[1], fin) * erroMult);
+  let s2 = s * (1 + normal(m.rng) * lerp(cfg.erroForca[0], cfg.erroForca[1], fin) * erroMult);
+  // a pedida vale de qualquer lugar: nunca sai mais rápida que o chute mais forte dele (a mesma conta do chute com a
+  // força cheia). De longe a busca pedia até 45 m/s e o erro de força somava (até ~70 m/s, contraprova 13/10): com o
+  // teto, o balão de longe cai antes do gol. A da IA (até distMax) fica como era
+  if (p.cavadinha) s2 = Math.min(s2, ACOES.chute.v[1] * lerp(0.86, 1.08, fin) * velPeFraco(j, pe));
   const ce = MD.cos(el), se = MD.sin(el);
   finalizarChute(m, j, pe, 'cavadinha', { x: u.x * s2 * ce, y: s2 * se, z: u.z * s2 * ce }, w, { x: b.p.x + ux * D, z: b.p.z + uz * D }, null, { voo: { alto: true } });
   return true;

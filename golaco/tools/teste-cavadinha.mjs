@@ -368,6 +368,44 @@ const penalti = (sem, seq) => falta(sem, seq);
   reg('J. a demo (IA pelo humano) cobrando 40 pênaltis: nunca cavadinha', `${cav} cavadinhas em ${n} cobranças (${Object.entries(res).map(([k, v]) => `${k} ${v}`).join(', ')})`, `0 em ${N}`, n === N && cav === 0);
 }
 
+// ------------------------------------------------------------------ K. cavadinha de longe: velocidade de gente
+// (contraprova 13/10: "de qualquer lugar" — do meio-campo para trás a busca pedia 45 m/s e o erro de força ainda somava;
+// a bola saía a até ~70 m/s, o dobro do chute mais forte do jogo — teste-chutes: o forte do melhor finalizador ~33 m/s,
+// nunca > 38). A cavadinha pedida nunca sai mais rápida que o chute mais forte do mesmo jogador (de longe, cai antes)
+{
+  const FIN = 50, teto = ACOES.chute.v[1] * (0.86 + (1.08 - 0.86) * FIN / 100);
+  const porD = [];
+  let n = 0, cav = 0, acima = 0, vMax = 0;
+  for (const d of [40, 55, 70, 90]) {
+    let md = 0;
+    for (let s = 1; s <= 20; s++) {
+      const r = cena([[1, 4], [0, 4], [1, 3]], { sem: 8000 + s, x: GX - d, z: (s % 5) - 2, fin: FIN });
+      n++;
+      if (r.tipo !== 'cavadinha') continue;
+      cav++;
+      const v = r.chutes[0].v;
+      md = Math.max(md, v); vMax = Math.max(vMax, v);
+      if (v > teto + 0.01) acima++;
+    }
+    porD.push(`${d} m ${fmt(md, 1)}`);
+  }
+  reg('K. cavadinha de longe (40–90 m, 20 sementes cada, finalizador 50): nunca mais rápida que o chute mais forte dele',
+    `${cav}/${n} cavadinhas; maior velocidade ${fmt(vMax, 1)} m/s (${porD.join(', ')}); acima do teto: ${acima}`, `${n}/${n}; ≤ ${fmt(teto, 1)} m/s (ACOES.chute.v[1] pela finalização)`, cav === n && acima === 0);
+}
+
+// ------------------------------------------------------------------ L. limite do toque duplo (informação para o dono)
+// (contraprova 13/10) até onde o toque duplo vira cavadinha: o intervalo entre soltar o 1º e apertar o 2º e a duração
+// do 1º. Parado, o contato sai no fim da janela: intervalo acima dela (ou 1º toque ≥ toqueRapido) = chute; correndo, às
+// vezes o apoio seguinte ainda pega. Janela maior pega mais toques lentos, mas atrasa o toque simples o mesmo tanto
+{
+  const conta = seq => ANDARES.map(an => { let c = 0; for (let f = 0; f < FASES; f++) if (cena(seq, { andar: an, fase: f, sem: 10 + f }).tipo === 'cavadinha') c++; return `${an[0]} ${c}/${FASES}`; }).join(', ');
+  const ms = t => Math.round(t * PASSO * 1000);
+  const tx = [[5, JANELA, 4], [5, JANELA + 1, 4], [5, JANELA + 2, 4]].map(([a, g, b]) => `intervalo ${ms(g)} ms: ${conta([[1, a], [0, g], [1, b]])}`);
+  const t1 = Math.ceil((ACOES.cavadinha?.toqueRapido ?? 0) / PASSO);
+  tx.push(`1º toque ${ms(t1)} ms: ${conta([[1, t1], [0, 5], [1, 4]])}`);
+  reg('L. limite do toque duplo (informação): intervalo maior que a janela ou 1º toque longo', tx.join(' · '), 'informação (janela e toqueRapido: decisão do dono)', null);
+}
+
 console.log(tabelaTexto(linhas));
 console.log(falhas ? `\nteste-cavadinha: REPROVOU (${falhas})` : '\nteste-cavadinha: PASSOU');
 process.exit(falhas ? 1 : 0);
