@@ -1347,7 +1347,8 @@ async function iniciar() {
 /** Siglas e nomes do placar: os do elenco na partida; null nos treinos (o HUD usa os dele). */
 function timesDoMundo(m) {
   if (!m.times) return null;
-  return [0, 1].map(t => { const e = ELENCOS[m.times[t].elenco]; return { sigla: e.sigla, nome: e.nome }; });
+  // escudo: o id do elenco (o <symbol id="escudo-<id>"> do index.html; fictícios)
+  return [0, 1].map(t => { const e = ELENCOS[m.times[t].elenco]; return { sigla: e.sigla, nome: e.nome, escudo: e.id }; });
 }
 
 function trocarMundo(m, opc = {}) {
@@ -1646,6 +1647,12 @@ const api = {
       texturas: cena3d ? cena3d.info().memory.textures : 0,
     };
   },
+  /**
+   * Placar de teste (layout do placar no teste-hud-minimo H10, com o relógio manual parado): gols [a, b] e o relógio
+   * como o laço passa ao HUD ({minuto, tempo, estado, acrescimo: {anunciado, decorrido} | null}). O próximo quadro do
+   * laço escreve o de verdade de novo.
+   */
+  placarDeTeste(gols, rel) { if (gols) hud.placar(gols[0], gols[1]); if (rel !== undefined) hud.relogio(rel); },
   /** Escreve um modo/posição no painel do HUD já (testes de layout com o texto mais longo). */
   hudModo(texto, posicao = null) { hud.atualizar(performance.now(), 0, texto, false, posicao); },
   /** Mostra o aviso de um evento ({tipo, ...}) mesmo no modo de prints (conferência do HUD). */
