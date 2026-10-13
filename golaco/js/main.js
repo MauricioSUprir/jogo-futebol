@@ -41,10 +41,20 @@
 // saída. Pular (um aperto NOVO, tecla, clique ou toque, depois de 0,5 s) acaba só a comemoração; o replay tem o pulo dele.
 // Pulada antes da hora, os passos que faltam até a saída rodam em poucos quadros com a cena parada e a faixa passando.
 //
+// Treinadores e área técnica (render; pedido do dono de 12/10: "quero a área técnica e o treinador"): na partida, os 2
+// treinadores fictícios (js/tecnicos.js, PURO) dão um passo por passo da simulação, depois do estádio, LENDO o mundo
+// (leituraDoMundo) — o hash não muda —; segurando a simulação na comemoração, andam os passos da cena com o mundo
+// parado; na pausa, no editor e no replay ficam parados. Desenhados pelo mesmo manequim instanciado dos jogadores (sem
+// chamada de desenho a mais), também na comemoração e no pré-jogo, e gravados no anel (o replay os mostra como foram).
+// As câmeras de cinema (comemoração, pré-jogo, lateral do golaço) passam por afastarDeTecnicos. ?tecnicos=0 desliga.
+// Replay do gol com 4 câmeras (12/10): TV, atrás do gol [lateral], a 1ª PESSOA do autor e a VISÃO DO TREINADOR do time
+// que marcou (render/replay-olhos.js); na 1ª pessoa o autor fica sem cabeça e tronco e a bola some perto da lente; na
+// parte 1 do treinador ele sai da lista.
+//
 // Parâmetros: ?semente=N ?q=baixa|media|alta ?hora=dia|noite ?camera=tv|aproximada ?demo=1
 // ?modo=partida|ataque|conducao (padrão da página: partida) ?min=N (minutos reais por tempo)
 // ?marcador=1 ?prints=1 (cena limpa) ?qps=1 ?toque=1 ?entalhe=1 ?replay=0|1 ?comemoracao=0|1
-// ?prejogo=0|1|curto|escalacao.
+// ?prejogo=0|1|curto|escalacao ?tecnicos=0|1.
 // Pré-jogo (pedido de 11/10; render/prejogo.js): antes do 1º passo da partida — a simulação fica no tick 0 e o apito da
 // saída só toca no fim dele. Desligado por padrão nos testes (navigator.webdriver), nos prints e na demonstração.
 // Testes: window.__golaco (ver o fim do arquivo).
@@ -81,6 +91,8 @@ import { criarPrejogo } from './render/prejogo.js';
 import { PREJOGO } from './prejogo-roteiro.js';
 import { criarAnel, lerQuadro, tempoEstadio as tempoEstadioAnel, jogadorNoTick } from './render/replay-anel.js';
 import { criarDiretor } from './render/replay.js';
+import { criarTecnicos, criarLeitura, leituraDoMundo, passoTecnicos, afastarDeTecnicos, infoTecnicos, IDS_TECNICOS } from './tecnicos.js';
+import { OCULTA } from './render/jogador3d.js';
 import {
   planejarComemoracao, criarCena as criarCenaComemoracao, avancarCena, planoCamera, criarPlanoCamera, faseCena,
   tempoCena, duracaoCena, infoAtores,
@@ -190,6 +202,13 @@ let ultimaFinal = null;      // a finalização do gol anterior (a próxima não
 let forcarFinal = null;      // testes e prints: a finalização do próximo gol
 const planoCam = criarPlanoCamera();
 const custoCena = { n: 0, ms: 0 };
+// Treinadores (js/tecnicos.js): só na partida; ?tecnicos=0 desliga (comparação A/B do custo). tecAlfaCena: o último passo
+// deles veio da cena (simulação segura): o desenho interpola com o alfa da cena
+const TECNICOS_ON = params.get('tecnicos') !== '0';
+let tecnicos = null, tecAlfaCena = false;
+const leituraTec = criarLeitura();
+const custoTec = { n: 0, ms: 0 };
+const _leituraVazia = [];
 const ENTRADA_NEUTRA = { x: 0, z: 0, botoes: 0 };
 const PASSOS_GOL = Math.round(CFG.PARTIDA.golPausa / PASSO);
 const bolaAnt = { p: new THREE.Vector3(), q: new THREE.Quaternion() };
@@ -256,6 +275,9 @@ function copiarBolaDoMundo(d) {
 }
 function iniciarEstados() {
   estJ.clear();
+  // os treinadores do mundo novo (na partida), em pé no centro da área técnica deles
+  tecnicos = TECNICOS_ON && mundo.times ? criarTecnicos(mundo.times, mundo.semente ?? SEMENTE) : null;
+  tecAlfaCena = false;
   for (const j of mundo.jogadores) estadoDe(j);
   copiarBolaDoMundo(bolaAtu);
   copiarBolaDoMundo(bolaAnt);
@@ -280,6 +302,14 @@ function rodarPasso(entrada, acoes) {
   contPassos++;
   passosTotais++;
   estadioPasso(eventos);
+  // treinadores: um passo deles por passo da simulação, lendo o mundo (nada é escrito nele)
+  if (tecnicos) {
+    const tt = agoraMs();
+    leituraDoMundo(mundo, eventos, leituraTec);
+    passoTecnicos(tecnicos, leituraTec);
+    tecAlfaCena = false;
+    custoTec.n++; custoTec.ms += agoraMs() - tt;
+  }
   // atual ← pose deste passo (calculada uma vez por passo); quem saiu do mundo (marcador
   // desligado, substituição) perde o estado — sem alocar nada por passo
   let cortou = false;
@@ -317,6 +347,8 @@ function gravarNoAnel(cortou, eventos) {
     const e = estJ.get(j.id);
     if (e) anel.jogador(v++, j.id, j.time, j.posicao === 'GOL', e.x1, e.z1, e.r1, e.atu);
   }
+  // os treinadores depois dos jogadores (bit2: técnico): a pose deles depende do caminho, então vai gravada
+  if (tecnicos) for (const tc of tecnicos.tecs) anel.jogador(v++, tc.id, tc.time, false, tc.x1, tc.z1, tc.r1, tc.atu, true);
   const im = mundo.partida?.imped;
   if (im) anel.foto(im.tick, im.time, im.por, im.defensor, im.linhaX, mundo.ataca[im.time]);
   for (const ev of eventos) anel.marcar(ev.tipo === 'gol' ? 2 : ev.tipo === 'chute' || ev.tipo === 'cabeceio' ? 1 : 0);
@@ -366,7 +398,15 @@ function tratarEvento(ev) {
     // partida: corte para a câmera do gol (até a saída); treino: zoom/tremor leve (até o recomeço)
     if (cam) cam.efeitoGol((mundo.bola.p.x > 0 ? 1 : -1) * CFG.CAMPO.meioX, mundo.bola.p.z, { fechado: !!mundo.partida });
     // replay: o gol fica pendente até o pós-gol chegar na vez dele (o chute que vale o gol: autor-gol.js)
-    if (diretor && mundo.partida) diretor.aoGol({ golTick: mundo.tick, chuteTick: autorGol.chute.ativo ? autorGol.chute.tick : null, lado: mundo.bola.p.x > 0 ? 1 : -1, time: ev.time });
+    // (o autor de verdade, gol contra, desvio e o tipo do toque: a 1ª pessoa do replay)
+    if (diretor && mundo.partida) {
+      const g = autorGol.gol, deAgora = g.ativo && g.tick === mundo.tick;
+      diretor.aoGol({
+        golTick: mundo.tick, chuteTick: autorGol.chute.ativo ? autorGol.chute.tick : null, lado: mundo.bola.p.x > 0 ? 1 : -1, time: ev.time,
+        autor: deAgora ? g.id : (ev.autor ?? null), contra: deAgora ? !!g.contra : false, desvio: deAgora ? !!g.desvio : false,
+        tipoChute: autorGol.chute.ativo ? autorGol.chute.tipo : null,
+      });
+    }
     // comemoração (só na partida): começa já, da cópia do mundo neste tick
     if (mundo.partida && comemoracaoLigada) iniciarComemoracao(ev);
     return;
@@ -544,6 +584,9 @@ function pausado() { return hud.menuAberto || hud.ajudaAberta || editor.aberto |
 const kitCache = new Map();
 function kitDoId(id, goleiro) {
   if (!mundo.times) return null;
+  // os treinadores antes do elenco (não são jogadores)
+  if (id === IDS_TECNICOS[0]) return 'tecnico0';
+  if (id === IDS_TECNICOS[1]) return 'tecnico1';
   let k = kitCache.get(id);
   if (k === undefined) {
     const el = ELENCOS[elencoDoJogador(id)];
@@ -580,6 +623,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
       interpolarPose(a.ant, a.atu, al, des);
       const it = lista[n] ?? (lista[n] = {});
       it.id = a.id; it.time = a.time; it.pose = des; it.controlado = false; it.goleiro = a.goleiro; it.proximo = false;
+      it.tecnico = false; it.ocultar = 0;
       it.kit = kitDoId(a.id, a.goleiro);
       it.x = lerp(a.x0, a.x1, al); it.z = lerp(a.z0, a.z1, al); it.rumo = lerpAng(a.r0, a.r1, al);
       n++;
@@ -591,11 +635,14 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     const it = lista[n] ?? (lista[n] = {});
     it.id = j.id; it.time = j.time; it.pose = e.des; it.controlado = j.id === idC;
     it.goleiro = j.posicao === 'GOL'; it.proximo = idProx != null && j.id === idProx && !it.controlado;
+    it.tecnico = false; it.ocultar = 0;
     it.kit = kitDe(j);
     it.x = lerp(e.x0, e.x1, alfa); it.z = lerp(e.z0, e.z1, alfa); it.rumo = lerpAng(e.r0, e.r1, alfa);
     if (it.controlado) { hx = it.x; hz = it.z; achou = true; }
     n++;
   }
+  // os treinadores (na partida; também com a cena da comemoração no lugar dos jogadores)
+  n = anexarTecnicos(lista, n, tecAlfaCena && cenaGol ? cenaGol.alfa : alfa);
   lista.length = n;
   const tl1 = performance.now();
   const h = controlado();
@@ -676,6 +723,23 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   mq.i = (i + 1) % MQ; mq.n = Math.min(MQ, mq.n + 1);
   mq.aSim = 0; mq.aPose = 0; mq.aPassos = 0; mq.aCena = 0;
 }
+/**
+ * Acrescenta os 2 treinadores à lista do desenho a partir de n (interpolados por al; o kit deles e o estilo de treinador):
+ * os ramos do jogo, da comemoração e do pré-jogo usam esta mesma função. Devolve o novo n.
+ */
+function anexarTecnicos(L, n, al, T = tecnicos) {
+  if (!T) return n;
+  for (const tc of T.tecs) {
+    const it = L[n] ?? (L[n] = {});
+    const des = tc.des ?? (tc.des = new Float32Array(NJ * 3));
+    interpolarPose(tc.ant, tc.atu, al, des);
+    it.id = tc.id; it.time = tc.time; it.pose = des; it.controlado = false; it.proximo = false; it.goleiro = false;
+    it.tecnico = true; it.ocultar = 0; it.kit = tc.time === 1 ? 'tecnico1' : 'tecnico0';
+    it.x = lerp(tc.x0, tc.x1, al); it.z = lerp(tc.z0, tc.z1, al); it.rumo = lerpAng(tc.r0, tc.r1, al);
+    n++;
+  }
+  return n;
+}
 // ------------------------------------------------------------------ comemoração
 /** Começa a cena no tick do gol: o plano (autor de verdade: autor-gol.js) e a cópia dos 22 (o mundo não é tocado). */
 function iniciarComemoracao(ev) {
@@ -702,7 +766,15 @@ function quadroComemoracao(dt, ent) {
     if (novos) { pularComemoracao(); return; }
   }
   const t0 = performance.now();
-  custoCena.n += avancarCena(c, dt);
+  // a simulação já está segura no gol + 149: os treinadores andam os passos da cena, com o mundo parado
+  const segura = seguraSimulacao();
+  const nCena = avancarCena(c, dt);
+  custoCena.n += nCena;
+  if (segura && tecnicos && nCena > 0) {
+    leituraDoMundo(mundo, _leituraVazia, leituraTec);
+    for (let k = 0; k < nCena; k++) passoTecnicos(tecnicos, leituraTec);
+    tecAlfaCena = true;
+  }
   const ms = performance.now() - t0;
   custoCena.ms += ms; mq.aCena += ms;
   if (c.acabou) fimComemoracao(false);
@@ -718,6 +790,8 @@ function cameraComemoracao() {
     if (cam.efeitoAtivo) cam.encerrarGol();
     hud.esconderGol();
   }
+  // a câmera de cinema nunca dentro de um treinador (a steadicam do alvo na lateral vai até a área técnica)
+  if (tecnicos) afastarDeTecnicos(planoCam.de, tecnicos, 0.6);
   if (planoCam.nome !== 'fim') cam.definirCinema(planoCam);
 }
 
@@ -772,6 +846,9 @@ function desenharReplay(dt, agoraMs, renderizar = true) {
   const tq = performance.now();
   const n = lerQuadro(anel, diretor.tick, listaR, _bpR, _bqR, kitDoId);
   if (!n) { fimReplay(false); desenharQuadro(dt, agoraMs, renderizar); return; }
+  // 1ª pessoa: o autor sem cabeça e tronco (o olho está dentro dela); parte 1 do treinador: ele fora da lista
+  const dx = diretor.desenho();
+  if (dx.ocultar != null) for (const it of listaR) if (it.id === dx.ocultar) it.ocultar = OCULTA.cabeca | OCULTA.tronco;
   const tEst = tempoEstadioAnel(anel, diretor.tick);
   if (redeLigada) empurraoBola(ondas, _bpR, tEst, _emp); else { _emp.x = 0; _emp.y = 0; _emp.z = 0; }
   _bpDes.x = _bpR.x + _emp.x; _bpDes.y = _bpR.y + _emp.y; _bpDes.z = _bpR.z + _emp.z;
@@ -782,7 +859,8 @@ function desenharReplay(dt, agoraMs, renderizar = true) {
   cena3d.acompanhar(f.x, f.z);
   // análise semiautomática: só os jogadores do lance (o impedido, o defensor da linha, quem passou) e a bola
   const sc = diretor.cena();
-  const lista = sc.ativa ? soDaCena(listaR, sc.ids) : listaR;
+  const lista = sc.ativa ? soDaCena(listaR, sc.ids) : dx.sem != null ? semId(listaR, dx.sem) : listaR;
+  bola3d.mesh.visible = !dx.semBola;
   jog3d.atualizar(lista, diretor.camera);
   desenhadosReplay = lista.length;
   // nada do jogo ao vivo no gramado: queda da bola e opções do lateral somem; a linha só no replay do impedimento e na
@@ -813,6 +891,13 @@ let desenhadosReplay = 0;
 function soDaCena(lista, ids) {
   let k = 0;
   for (const it of lista) if (ids.includes(it.id)) listaCena[k++] = it;
+  listaCena.length = k;
+  return listaCena;
+}
+/** A lista sem o `id` (a parte 1 da visão do treinador: ele não se vê). */
+function semId(lista, id) {
+  let k = 0;
+  for (const it of lista) if (it.id !== id) listaCena[k++] = it;
   listaCena.length = k;
   return listaCena;
 }
@@ -855,6 +940,7 @@ function fimReplay(pulou) {
   diretor.pular();
   hud.replay(false);
   hud.terco(null);
+  if (bola3d) bola3d.mesh.visible = true;
   if (linhaImped) { linhaImped.mostrar(null); linhaImped.mostrarSaot(null); }
   if (estava) { laco.ultimo = null; corteCamera = true; }
   if (entrada) {

@@ -27,6 +27,10 @@ export const KITS = {
   // árbitros (pré-jogo): azul-royal com calção preto — não confunde com o preto/verde do mandante, o branco do
   // visitante, o lima do goleiro 0 nem o laranja do goleiro 1
   arbitro: { camisa: '#2459d6', calcao: '#0e1112', meiao: '#0e1112', chuteira: '#0e1112', acento: '#e9ecee', sola: '#0b0d0e', luva: '#2459d6' },
+  // treinadores (12/10; fictícios): o do Golaço FC de terno grafite com a gola da camisa branca; o do Ventania FC de
+  // agasalho cinza-chumbo com faixas brancas e tênis branco. 7 dos 8 uniformes que a chave de cor aceita
+  tecnico0: { camisa: '#2b3034', calcao: '#23272a', meiao: '#23272a', chuteira: '#0e1112', acento: '#e9ecee', sola: '#0b0d0e', luva: '#2b3034' },
+  tecnico1: { camisa: '#3a4046', calcao: '#2a2f33', meiao: '#2a2f33', chuteira: '#e9ecee', acento: '#e9ecee', sola: '#d5d9dc', luva: '#3a4046' },
 };
 // Pele e cabelo variam por jogador (sorteio fixo pelo id): elenco com cara de elenco.
 const PELES = ['#f0c8a4', '#e3b088', '#c99067', '#b9825c', '#a06a46', '#8d5d3f', '#6e452c', '#5a3824'];
@@ -69,6 +73,31 @@ function estiloGoleiro(seg, base) {
   return base;
 }
 const ESTILOS_GOL = SEGMENTOS.map((sg, i) => estiloGoleiro(sg, ESTILOS[i]));
+/**
+ * Treinador (com os padrões que já existem, sem shader novo): o tronco liso (sem as listras do uniforme) com a gola na cor
+ * de acento (a gola branca da camisa sob o paletó; a do agasalho), o braço inteiro na cor do paletó/agasalho e o antebraço
+ * no padrão da luva com a mão de pele (a manga até o punho, o punho na cor de acento), a coxa, a canela e o meião lisos
+ * na cor da calça.
+ */
+function estiloTecnico(seg, base) {
+  const a = nomeJ(seg[0]), b = nomeJ(seg[1]);
+  if (/^ombro/.test(a) && /^cotovelo/.test(b)) return { ...base, pad: P.liso, c: ['camisa', 'pele', 'acento'] };
+  if (/^cotovelo/.test(a) && /^mao/.test(b)) return { ...base, pad: P.luva, c: ['camisa', 'pele', 'acento'] };
+  if (base.pad === P.tronco) return { ...base, pad: P.liso };
+  if (/^quadril/.test(a) && /^joelho/.test(b)) return { ...base, pad: P.liso, c: ['calcao', 'pele', 'acento'] };
+  if (/^joelho/.test(a) && /^tornozelo/.test(b)) return { ...base, pad: P.liso, c: ['calcao', 'pele', 'acento'] };
+  return base;
+}
+const ESTILOS_TECNICO = SEGMENTOS.map((sg, i) => estiloTecnico(sg, ESTILOS[i]));
+const estilosDe = jg => (jg.tecnico ? ESTILOS_TECNICO : jg.goleiro ? ESTILOS_GOL : ESTILOS);
+// `ocultar` (1ª pessoa do replay: o autor não pode se ver por dentro): bit1 (2) = cabeça e cabelo com escala 0; bit2 (4) =
+// as cápsulas do pescoço, do peito, da lombar, dos ombros e dos braços com raio e comprimento 0. Ficam a pelve e as pernas.
+export const OCULTA = { cabeca: 2, tronco: 4 };
+const OCULTA_TRONCO = new Uint8Array(NSEG);
+SEGMENTOS.forEach((sg, i) => {
+  const a = nomeJ(sg[0]), b = nomeJ(sg[1]), nomes = a + ' ' + b;
+  if (/pescoco|peito|ombro|cotovelo|mao|cabeca/.test(nomes) || (a === 'lombar' && b === 'peito')) OCULTA_TRONCO[i] = 1;
+});
 
 /** Cápsula unitária: anéis do cilindro (aAnel = 1) + calotas; aFim = 0 no lado A, 1 no B. */
 function geoCapsula(nr, nc) {
@@ -317,12 +346,13 @@ export function criarJogadores3D(cena, qualidade) {
   const pelesLin = PELES.map(h => new THREE.Color(h));
   const cabelosLin = CABELOS.map(h => new THREE.Color(h));
   const vagaDe = new Map(); // vaga → chave (id, time, goleiro) das cores escritas
-  montar(24);
+  // 32 vagas de uma vez (22 em campo + os 2 treinadores + quem entra + o 4º árbitro + folga): nada é remontado no meio de uma
+  // cena (o cortejo do pré-jogo tem 25 e a substituição 26)
+  montar(32);
 
   function escreverCores(vaga, jg) {
-    const gol = !!jg.goleiro;
     const kit = kitsLin[NOMES_KIT[kitIdx(jg)]];
-    const est = gol ? ESTILOS_GOL : ESTILOS;
+    const est = estilosDe(jg);
     const pele = pelesLin[Math.floor(sorteio(jg.id, 1) * pelesLin.length)];
     const cab = cabelosLin[Math.floor(sorteio(jg.id, 2) * cabelosLin.length)];
     const cor = nome => (nome === 'pele' ? pele : kit[nome]);
@@ -374,8 +404,9 @@ export function criarJogadores3D(cena, qualidade) {
     get cabelos() { return cabelos; },
     get capacidade() { return cap; },
     /**
-     * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, x, z, rumo}]
-     * (kit: chave dos KITS pelo uniforme do elenco; sem ele, o do time)
+     * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, x, z, rumo, tecnico?,
+     * ocultar?}] (kit: chave dos KITS pelo uniforme do elenco; sem ele, o do time; tecnico: o estilo do treinador; ocultar:
+     * OCULTA.cabeca | OCULTA.tronco, a 1ª pessoa do replay)
      * camera: para o tamanho constante da seta acima da cabeça.
      */
     atualizar(lista, camera) {
@@ -389,8 +420,9 @@ export function criarJogadores3D(cena, qualidade) {
         // cores fixas por vaga (só reescreve quando a vaga muda de dono/time/função/uniforme)
         const chave = ((jg.id * 8 + kitIdx(jg)) * 2 + (jg.time === 1 ? 1 : 0)) * 2 + (jg.goleiro ? 1 : 0);
         if (vagaDe.get(p) !== chave) { vagaDe.set(p, chave); escreverCores(p, jg); }
-        const est = jg.goleiro ? ESTILOS_GOL : ESTILOS;
+        const est = estilosDe(jg);
         const pose = jg.pose;
+        const ocu = jg.ocultar | 0;
         frente(pose, J.ombroE, J.ombroD, fSup);
         frente(pose, J.quadrilE, J.quadrilD, fInf);
         for (let s = 0; s < NSEG; s++) {
@@ -417,6 +449,7 @@ export function criarJogadores3D(cena, qualidade) {
           mat[o + 8] = Z.x; mat[o + 9] = Z.y; mat[o + 10] = Z.z; mat[o + 11] = 0;
           mat[o + 12] = A.x; mat[o + 13] = A.y; mat[o + 14] = A.z; mat[o + 15] = 1;
           dim[i * 4] = e.r ? e.r[0] : sg[2]; dim[i * 4 + 1] = e.r ? e.r[1] : sg[3]; dim[i * 4 + 2] = len; dim[i * 4 + 3] = e.achata;
+          if ((ocu & 4) && OCULTA_TRONCO[s]) { dim[i * 4] = 0; dim[i * 4 + 1] = 0; dim[i * 4 + 2] = 0; }
         }
         // cabeça: "cima" pelo pescoço, "frente" média de ombros e quadris
         const ic = J.cabeca * 3, ip = J.pescoco * 3;
@@ -428,11 +461,12 @@ export function criarJogadores3D(cena, qualidade) {
         const R = RAIO_CABECA;
         _m.makeBasis(X, Y, Z);
         _q.setFromRotationMatrix(_m);
-        _s.set(R * 0.92, R * 1.1, R * 1.0);
+        const kc = ocu & 2 ? 0 : 1;
+        _s.set(R * 0.92 * kc, R * 1.1 * kc, R * 1.0 * kc);
         _m.compose(A, _q, _s);
         cabecas.setMatrixAt(p, _m);
         _v.copy(A).addScaledVector(Y, R * 0.12).addScaledVector(Z, -R * 0.1);
-        _s.set(R * 0.98, R * 1.08, R * 1.08);
+        _s.set(R * 0.98 * kc, R * 1.08 * kc, R * 1.08 * kc);
         _m.compose(_v, _q, _s);
         cabelos.setMatrixAt(p, _m);
         // mancha de contato (no meio dos pés; o goleiro deitado leva a mancha junto)
