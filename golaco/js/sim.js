@@ -306,6 +306,11 @@ function boteIA(m, j) {
   const ultT = dono.cond?.ult;
   const lento = !!m.partida && MD.hypot(dono.vx, dono.vz) < cfg.vParado && !(ultT && (m.tick - ultT.tick) * PASSO < cfg.semToque);
   if (!lento && (dD < 0.35 || dB > dD)) return; // colada no pé de quem conduz: não alcança
+  // (só na partida) o escolhido da PRESSÃO do humano (defesa.js entradaPressao, ramo 'pressaoHumano') não dá o bote
+  // embalado — acima de vPressao m/s (a falta no bote cresce com a velocidade de quem chega, FALTAS.bote.porVel): freia e
+  // tenta no passo seguinte. Ele chegava a 5–8 m/s de frente num condutor a ~2 m/s e as faltas nos 2 s do botão iam de 8 a
+  // 24 (teste-pressao-humano M4; main: 6 → 6)
+  if (m.partida && j.ia?.ramo === 'pressaoHumano' && MD.hypot(j.vx, j.vz) > cfg.vPressao) return;
   if (uniforme(m.rng) >= cfg.chancePorPasso) return;
   // Etapa 4 (só na partida): o bote que chega pode ser falta (faltas.js: chegada, velocidade, desarme) — a bola fica
   // com o condutor (desequilibrado) e o árbitro decide nas regras (vantagem, tiro livre, pênalti, cartão)

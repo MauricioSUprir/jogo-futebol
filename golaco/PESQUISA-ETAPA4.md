@@ -179,4 +179,32 @@ desfeitas pelo mesmo jogador em 1 s) e 30–41% das arrancadas do próprio campo
 | Opta, definição de interceptação ("a player intercepts a pass by moving into the line of the intended pass") e tempo de reação a um estímulo visual no esporte (~0,2 s) | O corte é ler a trajetória e chegar à linha antes do recebedor | `cortaPasse`: o 1º ponto da trajetória (`preverBola`) que o defensor alcança da velocidade que leva, com 0,2 s de leitura e 0,1 s antes do recebedor; e no `sim.js` o recebedor que só marcou o domínio não tira a vez de quem foi cortar (antes o canhão do passe arriscado cortava 1 de 92 passes alcançáveis) |
 | Contraprova de 11/10 (`diag11/ia-intensa-contraprova`) | Só correr não para a arrancada; falta o desarme lado a lado e não subir no corredor; o trote não pode virar "arrancada" | A ordem das mudanças (bote com `semDominioAte` e a bola para o lado do defensor; acompanhar sem subir; filtro da pressa; o batido; o 1º homem além da linha de engajamento) e `corrida.v` = 6,3 m/s |
 
-**Medido** — ver as tabelas do PR (preenchidas abaixo quando o painel fechar).
+**Medido** (13/10; o painel de 144 no GitHub não pôde ser disparado daqui — `workflow_dispatch` com 403 para a integração
+da sessão —, então 48 partidas locais, sementes 1001–1048, as MESMAS na main e na branch; ± = intervalo de 95% dos gols):
+
+| Medida (painel) | main (base) | branch | Meta |
+|---|---|---|---|
+| gols por partida | 1,79 ± 0,35 | 1,50 ± 0,35 | 2,3–3,5 |
+| chutes por partida (time 0 / time 1) | 8,5 (4,2 / 4,3) | 6,6 (3,5 / 3,1) | — |
+| conversão / no alvo | 19,9% / 62,7% | 22,4% / 67,8% | 9–14% / 28–38% |
+| chutes de fora da área / gols de fora | 34,6% / 12,3% | 43,8% / 19,7% | 35–40% / 12–18% |
+| passe certo | 88,7% | 85,9% | 75–88% (Opta: 82,9%) |
+| interceptações por time por partida | 8,09 | 11,88 | 8,5–14 (PL: 8,5) |
+| posses que chegam ao último terço | 46,4% | 41,2% | 35–45% |
+| impedimentos por partida | 1,15 | 1,17 | ≥ 1 |
+| goleiro: total / 6–16,5 m / de fora | 69,2 / 58,1 / 88,9% | 67,6 / 54,2 / 83,6% | 66–72 / 55–60 / 80–90% |
+| origem dos gols: trabalhada / contra-ataque / roubada alta / bola parada | 23 / 10 / 47 / 19% | 36 / 18 / 31 / 14% | bola parada 20–30% |
+| gols de cabeça | 6,2% | 9,9% | 8–18% (PL: 16%) |
+| duelos pelo alto por partida (bola rolando) | 1,6 (0,0) | 3,5 (1,9) | — |
+
+Onde foram os gols (ablação com `--set`, 48 partidas cada, a mesma base): a defesa contra a arrancada com `corrida.v`
+6,3 m/s levava os gols a 0,90 (sem ela, 1,60) — o condutor da IA ainda acelerando ligava o bloco inteiro e o contra-ataque
+morria; com 6,8 m/s (só a disparada de verdade; o humano com a bola vai a 7,6) 1,50. O corte do passe sozinho quase não
+muda os gols (sem ele, 1,10 contra 0,90), nem a sombra na linha de passe (1,19). O que caiu foi o gol de roubada alta
+(47% dos gols na main, ~0,8 por partida — no real ~10–15%): a defesa nova perde menos bola perto da área. Calibrado:
+`GOLEIRO.logit.c0Partida` −0,1 → −0,35 (o goleiro tinha ido a 75–79% com menos chances claras), `IA_ATAQUE.contra` bonus
+1,0 e 8 s (a retomada no meio vira contra-ataque), `utilidade.chute` 3,0. Falta ~0,3 gol para a main e ~0,8 para a meta:
+volume de ataque (chutes 6,6 contra 8,5) — a calibração final fica com a condução curta, como combinado. Testes:
+`teste-intercepta` (base: 1/92 passes alcançáveis cortados, passe certo 88,7%, 8,75 interceptações; agora 20/34 = 59%,
+85,4%, 12,08), `teste-cabeceio` e `teste-defesa-corrida` (a base reprova 8 e 6 metas); o defensor do corredor ultrapassado
+ficou em 3,3–3,6 m/s (meta ≥ 5; base 3,0) — PENDENTE, não reprova.

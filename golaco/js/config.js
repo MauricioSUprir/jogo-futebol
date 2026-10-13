@@ -436,7 +436,9 @@ export const ACOES = {
     vParado: 2.0, semToque: 0.1,
     // (só na partida; entrega "IA intensa" de 12/10) com o condutor a mais de vLado m/s, a bola tirada sai para o lado do
     // defensor e `tras` (fração) para trás no caminho do condutor — e ele fica DEFESA_HUMANO.dividida.semDominio s sem domínio
-    vLado: 3, tras: 0.7 },
+    vLado: 3, tras: 0.7,
+    // (só na partida) o escolhido da PRESSÃO do humano não dá o bote acima de vPressao m/s (freia antes)
+    vPressao: 5 },
   primeiraErro: 1.4,          // multiplica o erro de jogada de primeira
 };
 
@@ -467,8 +469,10 @@ export const GOLEIRO = {
   // cTempo/vRef (partida; entrega "cabeceio na bola rolando", 12/10): a bola mais lenta que dChute / vRef s até o goleiro dá
   // cTempo por s a mais no logit — o cabeceio a gol (~12 m/s) de 8 m era defendido em 6% (o real: ~70% dos no alvo). Só no
   // cabeceio a gol (m.voo.tipo 'cabeceio'): valendo em todo chute, as defesas de 6 a 16,5 m iam de 57,5% a 66,7% (64
-  // partidas do painel; meta 55–60%)
-  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.1, cTempo: 6, vRef: 20 },
+  // partidas do painel; meta 55–60%). Com a defesa que corta o passe e acompanha a arrancada (entrega "cabeceio + IA
+  // intensa", 12/10) sobram menos chances claras e o goleiro foi a 75–79% (48 partidas): c0Partida −0,35 → 67,6% / 54,2% /
+  // 83,6% (48 partidas, sementes 1001–1048; a faixa de 6 a 16,5 m ~1 ponto abaixo da meta, dentro do sorteio da amostra)
+  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.35, cTempo: 6, vRef: 20 },
   // segurar × espalmar (StatsBomb): em pé, de longe ~60%; no mergulho ~25%; de perto ~23%
   segurar: { emPe: 0.6, mergulho: 0.25, perto: 0.23 },
   alturaMax: 2.45,            // m alcançados com a mão no alto
@@ -1070,9 +1074,11 @@ export const IA_DEFESA = {
   //    `aperto` (engaja[0] m), ao alcance do bote — longe do gol ele atrasa a arrancada, perto ele tira a bola (1 × 1:
   //    fechar, conter e dar o bote antes da área). Com o contém sem fim, o condutor TROTANDO entrava na área em 53% das
   //    arrancadas do próprio campo (base 4%)
-  //  - v = 6,3 m/s (a definição de arrancada da contraprova de 11/10: o trote do humano, ~5,6 m/s, fica com a defesa de
-  //    sempre, que já o parava: 4% chegavam à área).
-  corrida: { v: 6.3, hist: 0.8, dist: [1.5, 0.35, 2, 5], aperto: 1.0, engaja: [30, 45], cobre: [4, 0.6], ganho: 3, recua: [10, 0.5, 1.5],
+  //  - v = 6,8 m/s: a arrancada de verdade (o humano em disparada com a bola vai a 7,6 m/s; o trote, ~5,6 m/s, fica com a
+  //    defesa de sempre, que já o parava: 4% chegavam à área). Com 6,3 m/s (a definição da contraprova de 11/10) o condutor
+  //    da IA ainda acelerando já ligava o bloco inteiro e o contra-ataque morria: painel de 48 partidas (sementes
+  //    1001–1048), gols 0,90 → 1,50 por partida com 6,8 (sem a defesa da arrancada: 1,60).
+  corrida: { v: 6.8, hist: 0.8, dist: [1.5, 0.35, 2, 5], aperto: 1.0, engaja: [30, 45], cobre: [4, 0.6], ganho: 3, recua: [10, 0.5, 1.5],
     batido: 1, batidoPaga: 12, batidoFrente: 15, raio: 25, corredor: 14, fBloco: 0.85, correLonge: 8, liga: 8, caminho: 2.5 },
   // filtro do ponto de quem pressiona (ia-tatica.js alvoPressa): trocando de papel (contém ↔ aperta, 1º ↔ 2º homem) o
   // filtro só recomeça com o ponto novo a mais de `saltoPressa` m (antes recomeçava a cada troca e o avanço de 0,9 s sumia
@@ -1103,7 +1109,10 @@ export const IA_ATAQUE = {
   // jogadores de linha deles entre a bola e o gol deles → por `s` s o time joga o contra-ataque: transição
   // ofensiva com bônus `bonus` nas opções à frente e sem a posse da retomada (utilidade.posseRetomada).
   // Tenga 2010; Armatas 2022; PESQUISA-ETAPA3.md §16.5.
-  contra: { atras: 6, campo: -30, s: 6, bonus: 0.5 },
+  // (entrega "cabeceio + IA intensa", 12/10: com a defesa cortando o passe — ~12 interceptações por time por partida — a
+  // retomada no meio vira contra-ataque de verdade: bonus 0,5 → 1,0 e s 6 → 8; gols de contra-ataque 16% → 18–26% dos
+  // gols no painel de 48)
+  contra: { atras: 6, campo: -30, s: 8, bonus: 1.0 },
   // Finalização de primeira (ia-ataque.js primeiraIA): recebendo passe rasteiro na área num ponto com chance de gol
   // ≥ xg, aperta CHUTE com a força `forca` para o pedido nascer `folga` s antes da bola (bola até alturaMax m).
   primeira: { xg: 0.12, forca: 0.6, folga: 0.25, alturaMax: 0.6 },
@@ -1121,7 +1130,8 @@ export const IA_ATAQUE = {
   //    e valor cruzamentoV;
   //  - chute: xG = xgA·θ^xgB (θ = ângulo da boca do gol, teto xgMax) × (1 − bloqueio·risco da linha)
   //    × chute (× chuteLonge de fora da área) − chutePosse·posse; mira a miraPoste m do poste longe do
-  //    goleiro; força chuteForca (perto → longe);
+  //    goleiro; força chuteForca (perto → longe); chute 2,5 → 3,0 na entrega "cabeceio + IA intensa" (12/10: com a
+  //    defesa que corta o passe e acompanha a arrancada o time finaliza o que tem);
   //  - conduzir: 7 direções a passoAngConduz rad, conduzDist m à frente, × conduz (o tempo que leva);
   //    chance de manter pelos adversários a < manterRaio m do caminho (manterPeso; de lado/atrás
   //    manterLado), × manterArea[0] dentro da área e [1] a < manterPerto m do gol; quem segura a bola
@@ -1132,7 +1142,7 @@ export const IA_ATAQUE = {
     posse: 0, posseMeuCampo: 0.025, posseRetomada: [0.02, 2], vPasse: 12, vEnfiada: 15, vChute: 25, passeMax: 40, erroDist: 0.25, pressaoRecebe: 3.5, pressaoValor: 0.5,
     passePress: 0.2, impedido: 0.3, enfiadaLeads: [6, 10, 14], vEnfiadaAlta: 13, enfiadaAltaP: 0.7, lancamentoP: 0.5, cruzamentoV: 0.25,
     cruzamentoP: [0.01, 0.06, 0.35, 0.4], cruzamentoRaio: 1,
-    xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 2.5, chuteLonge: 0.3, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
+    xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 3.0, chuteLonge: 0.3, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
     passoAngConduz: 0.5, conduzDist: 5, conduz: 0.85, conduzSolta: [1.5, 4, 0.35], vConduz: 5.5, magConduz: 0.9,
     manterRaio: 3, manterPeso: 0.7, manterLado: 0.4, manterArea: [0.95, 0.7], manterPerto: 9,
     protegeDist: 1.5, protegeP: 0.7, protegeMax: 1.0, correrLivre: 10, correrAte: 25, curtaPerto: 2.5,
