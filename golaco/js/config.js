@@ -471,8 +471,10 @@ export const GOLEIRO = {
   // cabeceio a gol (m.voo.tipo 'cabeceio'): valendo em todo chute, as defesas de 6 a 16,5 m iam de 57,5% a 66,7% (64
   // partidas do painel; meta 55–60%). Com a defesa que corta o passe e acompanha a arrancada (entrega "cabeceio + IA
   // intensa", 12/10) sobram menos chances claras e o goleiro foi a 75–79% (48 partidas): c0Partida −0,35 → 67,6% / 54,2% /
-  // 83,6% (48 partidas, sementes 1001–1048; a faixa de 6 a 16,5 m ~1 ponto abaixo da meta, dentro do sorteio da amostra)
-  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.35, cTempo: 6, vRef: 20 },
+  // 83,6% (48 partidas, sementes 1001–1048; a faixa de 6 a 16,5 m ~1 ponto abaixo da meta, dentro do sorteio da amostra).
+  // No painel de 144 do CI (rodada "volume de ataque", 13/10) a faixa de 6 a 16,5 m ficou em 61,5% (meta 55–60%):
+  // −0,35 → −0,5
+  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.5, cTempo: 6, vRef: 20 },
   // segurar × espalmar (StatsBomb): em pé, de longe ~60%; no mergulho ~25%; de perto ~23%
   segurar: { emPe: 0.6, mergulho: 0.25, perto: 0.23 },
   alturaMax: 2.45,            // m alcançados com a mão no alto

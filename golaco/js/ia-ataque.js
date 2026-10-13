@@ -899,7 +899,8 @@ function decidir(m, j, A, ia, cobranca) {
   acaoIA(m, j, melhor === 'cruzamento' ? 'lancamento' : melhor, mForca);
   // tabela (1-2): o passe curto no campo de ataque com espaço à frente sai com o modificador — o acoes.js tabela manda o
   // passador arrancar para o espaço, e quem recebe vê a devolução como enfiada (acima)
-  if (melhor === 'passe' && j.iaAcao && tabelaIA(m, j, A, mAlvo)) j.iaAcao.bot |= BOTAO.MOD;
+  // (na cobrança, não: o modificador muda o arremesso do lateral e a cobrança não é jogada corrida)
+  if (melhor === 'passe' && !cobranca && j.iaAcao && tabelaIA(m, j, A, mAlvo)) j.iaAcao.bot |= BOTAO.MOD;
   // enfiada alta: o mesmo botão com o modificador (acoes.js enfiada: p.mod = por cima da defesa)
   if (melhor === 'enfiada' && mAlta && j.iaAcao) j.iaAcao.bot |= BOTAO.MOD;
 }
