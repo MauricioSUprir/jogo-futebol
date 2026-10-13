@@ -6,13 +6,14 @@
 // marcador, câmera, ajuda, pausa) vão para uma fila.
 //
 // Teclado: WASD/setas = analógico; J passe (ataque) / CONTER (defesa, segurar); K chute (ataque) /
-// DIVIDIDA (defesa); O PRESSÃO (defesa, segurar: um companheiro aperta); L lançamento; I enfiada;
-// Shift correr; E modificador (colocado / enfiada alta / cruzamento tenso; condução curta e proteção;
-// dois toques = pedalada); Q trocar; G goleiro (segurar = sai do gol); R recomeçar; M máquina de
-// passes; N marcador; C câmera; H ou F1 ajuda; Esc pausa.
+// DIVIDIDA (defesa); O PEGAR (ataque: goleiro com a bola no pé) / PRESSÃO (defesa, segurar: um companheiro aperta);
+// L lançamento; I enfiada (goleiro com a bola nas mãos: solta no chão); Shift correr; E modificador (colocado /
+// enfiada alta / cruzamento tenso; condução curta e proteção; dois toques = pedalada); Q trocar (segurar 0,4 s: o
+// goleiro, na partida); G goleiro (segurar = sai do gol); R recomeçar; M máquina de passes; N marcador; C câmera;
+// H ou F1 ajuda; Esc pausa.
 // Controle: analógico esquerdo; A passe / CONTER; B chute / DIVIDIDA; X lançamento; Y enfiada /
-// goleiro (segurar); RB PRESSÃO (defesa, segurar); LB trocar; RT correr; LT modificador; Start pausa;
-// View ajuda; R3 câmera. (O mapa da defesa é o do EA FC: segurar A = conter, B = bote em pé, segurar
+// goleiro (segurar); RB PEGAR / PRESSÃO (defesa, segurar); LB trocar (segurar: o goleiro); RT correr; LT modificador;
+// Start pausa; View ajuda; R3 câmera. (O mapa da defesa é o do EA FC: segurar A = conter, B = bote em pé, segurar
 // RB = companheiro pressiona.)
 // Os botões que mudam de sentido pela fase (J, K, O, A, B, Y, RB) têm o sentido FIXADO NO APERTO:
 // segurar J enquanto a posse muda não troca o passe por CONTER no meio (criarSentidoFixo, pura).
@@ -55,11 +56,11 @@ export const TECLA_BIT = {
 export const SENTIDO_FASE = {
   KeyJ: [BOTAO.PASSE, BOTAO.CONTER],
   KeyK: [BOTAO.CHUTE, BOTAO.DIVIDIDA],
-  KeyO: [0, BOTAO.PRESSAO],
+  KeyO: [BOTAO.PEGAR, BOTAO.PRESSAO],
   'pad:A': [BOTAO.PASSE, BOTAO.CONTER],
   'pad:B': [BOTAO.CHUTE, BOTAO.DIVIDIDA],
   'pad:Y': [BOTAO.ENFIADA, BOTAO.GOLEIRO],
-  'pad:RB': [0, BOTAO.PRESSAO],
+  'pad:RB': [BOTAO.PEGAR, BOTAO.PRESSAO],
 };
 // ações de um toque que passam com a entrada bloqueada (o editor aberto fecha pela pausa)
 const PASSA_BLOQUEADA = new Set(['pausa']);
@@ -109,6 +110,9 @@ export const BOTOES_TOQUE = [
   { id: 'btn-goleiro', bit: 'GOLEIRO', fase: 'defesa', vaga: 'a', rotulo: 'GOLEIRO' },
   { id: 'btn-pressao', bit: 'PRESSAO', fase: 'defesa', vaga: 'b', rotulo: 'PRESSÃO' },
   { id: 'btn-dividida', bit: 'DIVIDIDA', segura: 'CONTER', fase: 'defesa', vaga: 'c', rotulo: 'DIVIDIDA' },
+  // goleiro do humano com a bola no pé, na área (recuo, a bola que ele soltou): pega com a mão — só aparece nessa hora
+  // (main.js definirGoleiroPe; com recuo é tiro livre indireto: Regra 12.2)
+  { id: 'btn-pegar', bit: 'PEGAR', fase: 'ataque', vaga: 'd', rotulo: 'PEGAR' },
   { id: 'btn-correr', bit: 'CORRER', fase: 'ambas', vaga: 'correr', rotulo: 'CORRER' },
 ];
 // diâmetro de cada vaga (px CSS com tamanho 100%); nada fica abaixo de 48 px
@@ -642,6 +646,8 @@ export function criarEntrada(opc = {}) {
       trocarFaseSePuder();
     },
     get fase() { return faseVisivel; },
+    /** Goleiro do humano com a bola no pé (o botão PEGAR aparece na vaga 'd' do ataque). */
+    definirGoleiroPe(v) { if (raizToque) raizToque.classList.toggle('goleiro-pe', !!v); },
     /** Reaplica no DOM a fase visível (testes que mexem nas classes à mão). */
     sincronizarFase() { trocarFaseSePuder(true); },
     /** Ações pendentes (recomecar, maquina, marcador, camera, ajuda, pausa, qps). */

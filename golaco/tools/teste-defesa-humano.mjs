@@ -12,10 +12,11 @@
 //  - DIVIDIDA na hora certa (bola a ≤ 1 m, entre toques): ganha 35–65% (bote em pé no FC; 44–71% de acerto
 //    nos titulares da Premier League 2022/23); errada (logo depois do toque do condutor): o condutor passa
 //    em ≥ 70%; de longe (> 1,5 m): ganha 0%;
-//  - PRESSÃO: um companheiro (≠ controlado) chega a ≤ 2 m do condutor em ≤ 2 s em ≥ 80% dos casos.
-//    Quem faz o companheiro apertar é a IA tática (Parte 2) lendo o contrato m.pedidoPressao[time]: se a IA
-//    desta lógica não lê o pedido (o mundo com e sem o botão sai bit a bit igual), a linha sai "AGUARDANDO
-//    PARTE 2" e não reprova (com --estrito, reprova);
+//  - PRESSÃO (pareado com × sem o botão, tools/lib/pressao-pareada.mjs): o pedido muda o jogo, quem foi chamado
+//    aparece para a marca do desenho e, com o 1º homem da IA já apertando, o botão chama outro (as medidas do
+//    efeito na partida ficam no tools/teste-pressao-humano.mjs). Quem faz o companheiro apertar é a IA tática lendo
+//    o contrato m.pedidoPressao[time]: se a lógica não lê o pedido (com e sem o botão, o mesmo jogo), as linhas saem
+//    "AGUARDANDO" e não reprovam (com --estrito, reprovam);
 //  - sem recuo: o treino continua bit a bit igual (tools/hash-igual.mjs, à parte).
 //   node tools/teste-defesa-humano.mjs                 (lógica do repositório)
 //   node tools/teste-defesa-humano.mjs --antes         (a mesma partida com a IA de antes: iaClassica)
@@ -275,79 +276,21 @@ for (const tipo of ['certa', 'errada', 'longe']) {
 }
 
 // ------------------------------------------------------------------------------------ PRESSÃO
-// Partida IA × IA (a IA joga pelo controlado). A cada condutor do adversário (bola no pé de alguém do time
-// 1, fora de parada) com um companheiro (≠ controlado) a ≤ 8 m dele, o humano segura PRESSÃO por 2 s: algum
-// companheiro chega a ≤ 2 m desse condutor em ≤ 2 s? Vale o caso em que alguém chegou ou o condutor ficou
-// com a bola ≥ 1 s. A mesma partida sem o botão diz se a IA lê o pedido (mundo igual = não lê).
-const ALCANCE_P = 8; // m — companheiro mais perto que isto do condutor: dá para chegar em 2 s
-/** Distância do companheiro de linha do humano (≠ controlado) mais perto do condutor d. */
-function maisPerto(m, d) {
-  let dm = Infinity;
-  for (const o of m.jogadores) {
-    if (o.time !== 0 || o.posicao === 'GOL' || o.id === m.controlado[0]) continue;
-    dm = Math.min(dm, Math.hypot(o.x - d.x, o.z - d.z));
-  }
-  return dm;
-}
-function rodarPressao(sem, comBotao, min, ateTick = Infinity) {
-  const m = P.criarPartida({ semente: sem, iaClassica: ANTES, minutosPorTempo: min });
-  const N = Math.round(min * 60 / PASSO);
-  const casos = [];
-  let caso = null, posseAnt = null;
-  let hash1 = null; // hash do mundo no fim do 1º caso (o detector compara com a partida sem o botão)
-  for (let i = 0; i < N && m.tick < ateTick; i++) {
-    const dono = m.posse != null && m.naMao == null ? S.jogadorPorId(m, m.posse) : null;
-    const advTem = dono && dono.time === 1 && !(m.parada && !m.parada.rolou);
-    // um caso por posse do adversário, quando há um companheiro (≠ controlado) a ≤ 12 m do condutor (dá
-    // para chegar em 2 s; é quando o humano pede a pressão)
-    if (!caso && advTem && posseAnt !== dono.id) {
-      const d0 = maisPerto(m, dono);
-      if (d0 <= ALCANCE_P) caso = { t0: m.tick, cond: dono.id, ok: false, durou: 0, d0, dMin: d0 };
-    }
-    posseAnt = advTem && (caso || maisPerto(m, dono) <= ALCANCE_P) ? dono.id : (dono ? dono.id : null);
-    const e = P.entradaDemoPartida(m);
-    const segura = comBotao && caso && m.tick - caso.t0 < Math.round(2 / PASSO);
-    P.passoPartida(m, segura ? { ...e, botoes: (e.botoes | 0) | BOTAO.PRESSAO } : e);
-    if (caso) {
-      const d2 = m.posse === caso.cond && m.naMao == null ? S.jogadorPorId(m, m.posse) : null;
-      if (d2) {
-        caso.durou++;
-        const d = maisPerto(m, d2);
-        caso.dMin = Math.min(caso.dMin, d);
-        if (d <= 2) caso.ok = true;
-      }
-      if (m.tick - caso.t0 >= Math.round(2 / PASSO)) {
-        casos.push(caso);
-        if (hash1 == null) hash1 = { tick: m.tick, h: S.hashMundo(m) };
-        if (DEPURA) console.log(`PRESSÃO ${sem}${comBotao ? '' : ' (sem botão)'} t ${fmt(caso.t0 * PASSO, 1)} s: mais perto ${fmt(caso.d0, 1)} → ${fmt(caso.dMin, 1)} m, posse ${caso.durou} ticks ${caso.ok ? 'OK' : ''}`);
-        caso = null;
-      }
-    }
-  }
-  return { casos, hash1, hashFim: S.hashMundo(m), tick: m.tick };
-}
+// (pedido do dono, 11/10: "o botão de pressão não funciona") A meta antiga — "um companheiro a ≤ 2 m do condutor em ≤ 2 s
+// em ≥ 80%" — passava SEM o botão (79%): não media o botão. Agora a medida é PAREADA (tools/lib/pressao-pareada.mjs: a
+// cada posse do adversário o mundo é copiado e roda com e sem o botão, do mesmo hash); aqui, a parte que não depende de
+// amostra grande — o pedido muda o jogo, quem foi chamado aparece para o desenho e o botão SOMA um jogador à pressão da
+// IA (o perceptível — distâncias com × sem, faltas, corrida — fica no tools/teste-pressao-humano.mjs, 8 partidas).
 {
-  // casos até juntar 20 (6 a 24 partidas de 1,5 min: quantos casos cada partida dá depende do jogo — com a
-  // recepção assistida de 10/10 as mesmas 12 sementes deram 12 casos e outras 36 sementes, o mesmo número de
-  // trocas de posse que antes; a meta continua ≥ 80% com ≥ 20 casos); a IA lê o pedido? A mesma partida sem
-  // o botão até o fim do 1º caso: mundo bit a bit igual = não lê
-  let le = false, ok = 0, n = 0, testados = 0;
-  for (let k = 1; k <= 24 && (k <= 6 || n < 20); k++) {
-    const s = BASE + 30000 + k;
-    const r = rodarPressao(s, true, 1.5);
-    for (const c of r.casos) if (c.ok || c.durou >= 60) { n++; if (c.ok) ok++; }
-    if (!le && r.hash1 && testados < 3) {
-      testados++;
-      const b = rodarPressao(s, false, 1.5, r.hash1.tick);
-      if (b.hashFim !== r.hash1.h) le = true;
-    }
-  }
-  // a IA não lê o pedido: o número é o de sem o botão (não mede a PRESSÃO) — aguarda a Parte 2
-  const aguarda = !le && !ESTRITO && !ANTES;
-  const passa = le && n >= 20 && ok / n >= 0.8;
-  reg('PRESSÃO: um companheiro a ≤ 2 m do condutor em ≤ 2 s',
-    `${pc(ok, n)} (a IA ${le ? 'lê' : 'NÃO lê'} m.pedidoPressao)`, '≥ 80%',
-    passa, aguarda);
+  const { medirPressaoPareada } = await import(pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'lib/pressao-pareada.mjs')).href);
+  const { casos } = await medirPressaoPareada(JS, { sementes: [BASE + 30001, BASE + 30002], min: 2, T: 2, alcance: 15, modelos: ['persegue', 'parado'] });
+  const muda = casos.filter(c => c.A.d.some((x, i) => Number.isFinite(x) && Number.isFinite(c.B.d[i]) && Math.abs(x - c.B.d[i]) > 1e-9)).length;
+  const mo = casos.reduce((s, c) => s + c.B.marcaOk, 0), mt = casos.reduce((s, c) => s + c.B.marcaTot, 0);
+  const pd = casos.reduce((s, c) => s + c.B.p1Dobra, 0), pt = casos.reduce((s, c) => s + c.B.p1Tot, 0);
+  const aguarda = muda === 0 && !ESTRITO && !ANTES;
+  reg('PRESSÃO: com o botão o jogo muda (pareado, do mesmo hash)', `${muda}/${casos.length} casos`, '> 0', muda > 0, aguarda);
+  reg('PRESSÃO: quem foi chamado aparece para o desenho (marca) com o pedido valendo', pc(mo, mt), '100%', mt > 0 && mo === mt, aguarda);
+  reg('PRESSÃO: com o 1º homem da IA já apertando, o botão chama OUTRO', pt ? pc(pd, pt) : '—', '≥ 95%', pt > 0 && pd >= 0.95 * pt, aguarda);
 }
 
 fim();
