@@ -10,7 +10,7 @@
 // comprida e luvas.
 import * as THREE from 'three';
 import { SEGMENTOS, RAIO_CABECA, J } from '../anim.js';
-import { texMancha, texIndicador } from './texturas.js';
+import { texMancha, texIndicador, texIndicadorPressao } from './texturas.js';
 
 const NSEG = SEGMENTOS.length;
 
@@ -294,6 +294,26 @@ export function criarJogadores3D(cena, qualidade) {
   marca.visible = false;
   marca.renderOrder = 5;
   cena.add(marca);
+  // companheiro chamado pelo PRESSÃO (pedido do dono, 11/10: "o botão de pressão não funciona" — nada na tela mostrava
+  // quem ia): setas âmbar acima da cabeça, sem texto
+  const marcaPressao = new THREE.Sprite(new THREE.SpriteMaterial({ map: texIndicadorPressao(), depthWrite: false, transparent: true }));
+  marcaPressao.visible = false;
+  marcaPressao.renderOrder = 5;
+  marcaPressao.name = 'indicador-pressao';
+  cena.add(marcaPressao);
+  // Regra 12.3 (pedido do dono, 11/10): nos últimos 5 s dos 8 com a bola nas mãos, um anel âmbar sob o goleiro que se
+  // esvazia (a contagem que o árbitro faz com a mão; sem texto). O anel é desenhado em pedaços (drawRange)
+  const SEG_OITO = 48;
+  const geoOito = new THREE.RingGeometry(0.62, 0.74, SEG_OITO, 1);
+  const anelOito = new THREE.Mesh(geoOito, new THREE.MeshBasicMaterial({
+    color: 0xffc23a, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
+  }));
+  anelOito.rotation.x = -Math.PI / 2;
+  anelOito.renderOrder = 4;
+  anelOito.visible = false;
+  anelOito.name = 'anel-oito';
+  cena.add(anelOito);
   // "próximo da troca": anel fino, menor e translúcido (discreto)
   const matProx = new THREE.MeshBasicMaterial({
     color: 0xd8ffe9, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide,
@@ -373,8 +393,17 @@ export function criarJogadores3D(cena, qualidade) {
     get cabecas() { return cabecas; },
     get cabelos() { return cabelos; },
     get capacidade() { return cap; },
+    /** Marcas da partida (testes de navegador): a do PRESSÃO e o anel dos 8 s — posição e quanto do anel aparece. */
+    get indicadores() {
+      return {
+        pressao: marcaPressao.visible ? { x: marcaPressao.position.x, y: marcaPressao.position.y, z: marcaPressao.position.z } : null,
+        oito: anelOito.visible ? { x: anelOito.position.x, z: anelOito.position.z, segmentos: Math.round(geoOito.drawRange.count / 6), total: SEG_OITO } : null,
+      };
+    },
     /**
-     * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, x, z, rumo}]
+     * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, pressiona, x, z, rumo}]
+     * (pressiona: o companheiro chamado pelo botão PRESSÃO — a marca âmbar acima da cabeça; relogio: 0–1 dos últimos 5 s
+     * dos 8 com a bola nas mãos — o anel âmbar sob o goleiro, Regra 12.3; −1 ou ausente = nada)
      * (kit: chave dos KITS pelo uniforme do elenco; sem ele, o do time)
      * camera: para o tamanho constante da seta acima da cabeça.
      */
@@ -383,7 +412,7 @@ export function criarJogadores3D(cena, qualidade) {
       const nj = lista.length;
       const mat = segs.instanceMatrix.array;
       const dim = aDim.array;
-      let controlado = null, proximo = null;
+      let controlado = null, proximo = null, pressiona = null, relogio = null;
       for (let p = 0; p < nj; p++) {
         const jg = lista[p];
         // cores fixas por vaga (só reescreve quando a vaga muda de dono/time/função/uniforme)
@@ -443,6 +472,8 @@ export function criarJogadores3D(cena, qualidade) {
         manchas.setMatrixAt(p, _m);
         if (jg.controlado) controlado = jg;
         else if (jg.proximo) proximo = jg;
+        if (jg.pressiona && !jg.controlado) pressiona = jg;
+        if (jg.relogio != null && jg.relogio >= 0) relogio = jg;
       }
       segs.count = nj * NSEG;
       cabecas.count = cabelos.count = manchas.count = nj;
@@ -471,6 +502,23 @@ export function criarJogadores3D(cena, qualidade) {
         anelTodo.visible = false;
         marca.visible = false;
       }
+      if (pressiona) {
+        const ic3 = J.cabeca * 3, pz = pressiona.pose;
+        marcaPressao.visible = true;
+        marcaPressao.position.set(pz[ic3], pz[ic3 + 1] + 0.42, pz[ic3 + 2]);
+        if (camera) {
+          // o mesmo tamanho na tela da seta do controlado (~2,6% do menor lado)
+          const d = camera.position.distanceTo(marcaPressao.position);
+          const k = 2 * Math.tan((camera.fov * Math.PI) / 360) * d * 0.026 * Math.min(1, camera.aspect);
+          marcaPressao.scale.set(k, k, 1);
+          marcaPressao.position.y += k * 0.3;
+        }
+      } else marcaPressao.visible = false;
+      if (relogio) {
+        anelOito.visible = true;
+        anelOito.position.set(relogio.x, 0.021, relogio.z);
+        geoOito.setDrawRange(0, Math.max(1, Math.round(relogio.relogio * SEG_OITO)) * 6);
+      } else anelOito.visible = false;
       if (proximo) {
         anelProx.visible = true;
         anelProx.position.set(proximo.x, 0.019, proximo.z);

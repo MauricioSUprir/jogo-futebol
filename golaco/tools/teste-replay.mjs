@@ -190,7 +190,8 @@ const caixasSelo = [];          // F2: caixas do selo, do placar, da marca e do 
 const analise = [];             // F8/F9: chamadas, triângulos e CPU da análise
 const hashImped = { com: null, sem: null };
 let apitoP1 = null;
-const IMP = await acharImpedimento({ pastaJs: path.join(raiz, 'js'), depoisDe: 900 });
+// a semente achada com a entrada que a PÁGINA entrega (comoPagina): sem isso o lance de Node pode não acontecer na página
+const IMP = await acharImpedimento({ pastaJs: path.join(raiz, 'js'), depoisDe: 900, comoPagina: true });
 if (!IMP) meta('C impedimento de verdade nas sementes 1–40 (Node)', 'nenhum', '≥ 1', false);
 else try {
   const P = await pagina(raiz, `?q=baixa&hora=dia&demo=1&semente=${IMP.semente}`);

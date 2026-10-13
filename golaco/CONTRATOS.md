@@ -1144,3 +1144,83 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
   conter), `teste-controles` (lista da defesa com 5 e a DIVIDIDA tocada/segurada/cancelada pelo sistema com toque de
   verdade; volta ao tamanho salvo). `tools/prints.mjs`: sem as cenas da linha viva;
   cenas `*-jogador-ve*` sem o `?prints=1` (a página como ela abre).
+
+## Pedidos de 11/10 — regras e controles (contrato)
+
+Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (`tools/hash-igual.mjs` IGUAL). Pesquisa em
+`PESQUISA-ETAPA3.md` §17 (jogador parado, PRESSÃO) e `PESQUISA-ETAPA4.md` §5 (goleiro).
+
+### Condutor parado ou lento
+- `sim.js boteIA`: com o condutor abaixo de `ACOES.boteIA.vParado` m/s e sem tocar na bola há `semToque` s, a regra da
+  bola "colada" (dD < 0,35 ou dB > dD) não vale — quem tem a bola ao alcance (0,65 m) tenta; passou do sorteio e não é
+  falta, ganha por `defesa.js chanceDividida` (a mesma da DIVIDIDA do humano); errou: evento `boteErrado {id}` e descanso.
+- `ia-tatica.js blocoDoTime`: estado `B.lentoId`, `B.lentoDesde`, `B.lento` — condutor pressionável com a velocidade
+  filtrada (`B.cvx/cvz`) abaixo de `IA_DEFESA.lento.v` por `lento.s[pressão]` s (+ `lento.longe` fora da linha de
+  engajamento): o 1º homem aperta (também além da linha), mirando `lento.aperto` m da bola; o 2º cobre em todo nível.
+- `faltas.js chanceFaltaBote`: × `FALTAS.bote.lento` com o condutor abaixo de `vParado` (vale também na DIVIDIDA).
+
+### PRESSÃO (`defesa.js`; o desenho em `render/jogador3d.js`)
+- `pressionadorDe(m, time, excluir = -1)` → id de quem chega primeiro ao ponto de encontro (a `pressao.colado` m do corpo
+  do condutor, do lado do gol, adiantado pela corrida dele até `leadMax` s; tempo com `acel`/`freio`; quem já ia leva
+  `histerese` s), sem o controlado, o goleiro e `excluir` (nunca exclui quem já ia). Uma vez por tick em
+  `m.pressaoHumano[time] = {tick, id}`.
+- `pressionadorVisivel(m, time)` → id do chamado no último passo, ou −1 (pura; `main.js` passa `pressiona` na lista do
+  desenho: setas âmbar acima da cabeça, `indicador-pressao`).
+- `entradaPressao(m, j)`: bola solta do pé do condutor (> `bolaSolta` m) e eu mais perto → vou na bola; a mais de
+  `chega` m → disparada (analógico cheio + CORRER) ao ponto de encontro, contornando o condutor a `contorno` m se venho
+  por trás; perto → pela velocidade (a do condutor + `ganho` × (ponto − corpo), até `aproxMax` m/s a mais; por trás,
+  fechando no máximo `trasAprox` m/s), mirando `naBola` m antes da bola, do lado do gol. Estado `j.pressaoH = {corre}`.
+- `ia-tatica.js`: `B.apertaProprio` (o 1º aperta por conta própria); `B.pedido` é calculado ANTES do aperto, com
+  `excluir = p1` quando ele já aperta (o botão chama outro); quem foi chamado no tick anterior (`B.pedidoTick`) não é o
+  1º nem o 2º homem do bloco; `B.aperta1 = B.apertaProprio` (o botão soma um jogador, não dois).
+
+### Goleiro pelas Leis do Jogo (`regras-goleiro.js`, puro)
+- Estado `m.regraMao = {semMao: time | -1, soltou: id | -1}` (no hash da partida) e `m.infracaoMao` (do passo).
+- `naPropriaArea(m, g, x, z, r = BOLA.raio)`; `maoPermitida(m, g, x, z)` (fora da partida: sempre); `motivoSemMao` →
+  'recuo' | 'soltou' | 'fora' | null; `registrarChute(m, j, tipo)` (acoes.js finalizarChute: de linha liga o recuo do
+  time dele; cabeceio = toque de cabeça); `registrarToque(m, j, modo)` ('cabeca' | 'peito' | 'posse' | 'corpo' |
+  'roubada' | 'defesa'; sim.js, goleiro.js aplicarDefesa, defesa.js); `limparRegraMao(m)` (partida.js bolaMorta);
+  `segundosNaMao(m, g)` (de pé, bola em jogo: `g.segura.dePe`); `relogioMao(m, time)` → `{id, frac}` nos últimos
+  `GOLEIRO.contagem` s (o anel `anel-oito`); `paredeAreaMao(m, g, mv)`; `pontoTiroLivreMao(m, g, x, z, out)` (na
+  pequena área → na linha dela); `goleiroNoPe(m, g)` (a bola no pé dele, ou a bola livre que ele não pode pegar com a mão
+  e ele vai: o passe é para ele, ou a ≤ `GOLEIRO.pe.busca` m sendo o 1º do time e antes dos adversários / na área).
+- `goleiro.js lerChute`: sem `maoPermitida` no ponto do contato (ou do recuo por cima) → `j.defesa = {fora: true,
+  semMao: true, ...}` (bloqueia com o corpo); o cabeceio de PASSE de companheiro conta como passe dele ("proprio").
+- `sim.js`: o goleiro entra em `candidatosBolaLivre` quando não pode usar a mão; o "pegou" usa `maoPermitida`;
+  `goleiroComoLinha` (anda pela locomoção de jogador de linha: bola no pé, `goleiroNoPe`, ou o do humano sem a bola com o
+  analógico mexido — a defesa automática vem antes); `andarComBolaNaMao` (`GOLEIRO.maoAnda` + `paredeAreaMao`; colado na
+  linha do gol o rumo pedido fica no arco em que a bola nas mãos fica a ≥ `GOLEIRO.soltaLinha` m aquém dela — virar para o
+  gol não faz gol contra); `bolaAquemDaLinha` (partida: a bola que sai das mãos fica a ≥ `soltaLinha` m aquém da linha);
+  `goleiroComBola` (IA: `esperaIA`; treino e demo — `m.iaJoga[time]`, a entrada com `ia` —: `esperaHumano`; humano na
+  partida: sem reposição automática, ENFIADA = `soltarNoChao` (evento `soltou`, `regraMao.soltou`), CHUTE vira
+  LANÇAMENTO; tiro de meta: a IA cobra por ele em `PARTIDA.cobrancaHumanoMax`); `pegarDoHumano` (PEGAR na borda, bola a ≤
+  `GOLEIRO.pegaPe` m, no pé dele ou solta a ≤ `GOLEIRO.pegaVMax` m/s — a bola rápida é da defesa automática —, na área: mão → "pegou"; sem mão → `m.infracaoMao` e evento `maoGoleiro {id, motivo}`);
+  `trocarJogador`: TROCAR segurado `GOLEIRO.trocarGoleiro` s → o goleiro (evento `troca {id, goleiro: true}`;
+  `m.trocarDesde[time]`). O goleiro da IA com o pé recebe `ia-tatica.js entradaGoleiroPe` (sem a bola: ao ponto de
+  interceptação; com ela: espera `pe.espera` s e passa curto ao companheiro livre a `dMin–dMax` m, nunca para trás; com
+  adversário a < `pe.pressao` m ou sem ninguém, chutão para a frente e para o lado dele; nunca conduz).
+- `partida.js regrasPartida` (bola rolando, antes das faltas): `m.infracaoMao` → `apitarMao` (eventos `apito {motivo:
+  'maoGoleiro'}` e `infracaoMao {id, time, motivo}`; parada `tiroLivre` indireto do adversário); mais de
+  `GOLEIRO.oitoSegundos` s → `oitoSegundos` (eventos `apito {motivo: 'oitoSegundos'}` e `oitoSegundos {id, time}`; parada
+  `escanteio` do adversário do lado do goleiro). `rolou` no tiro de meta com a bola nas mãos zera o relógio dela.
+  `montarTiroDeMeta`: adversários na área vão para fora (evento `corteBolaParada {parada: 'tiroDeMeta'}`; `main.js` corta a
+  câmera nele, como no recomeço — a mesma linha do branch `golaco/bolas-paradas`; `teste-estadio` item 11).
+- IA: `acoes.js escolherAlvo` — na partida a IA só passa para o goleiro com `recuoSeguro` (`GOLEIRO.recuoIA`);
+  `ia-tatica.js pressionavel(m, o)`: o goleiro com a bola no pé é pressionado, com ela nas mãos não.
+- Entrada e tela: `BOTAO.PEGAR` (4096); `SENTIDO_FASE` O/RB = PEGAR (ataque) / PRESSÃO (defesa); botão de toque
+  `btn-pegar` na vaga 'd' do ataque, visível só com `#toque.goleiro-pe` (`entrada.definirGoleiroPe(v)`, main.js:
+  goleiro do humano com a bola no pé). API de testes: `__golaco.cenaDeTeste('pressao' | 'goleiroMao' | 'goleiroPe')` e
+  `__golaco.indicadores` (`{pressao: {x, y, z} | null, oito: {x, z, segmentos, total} | null}`).
+
+### Testes
+`teste-parado`, `teste-pressao-humano` (pareado, `tools/lib/pressao-pareada.mjs`) e `teste-goleiro-regras` no padrão;
+`teste-defesa-humano` (a meta antiga do PRESSÃO, que passava sem o botão, virou a pareada); `teste-controles` (celular:
+a marca do PRESSÃO, o PEGAR, o goleiro andando com a bola e o anel); `teste-goleiro-trava` segue medindo o treino;
+`teste-entrada` (O/RB no ataque = PEGAR); `teste-taticas` mede a forma com `IA_DEFESA.lento` desligado (a cena prende a
+bola parada no pé do condutor).
+
+### Equilíbrio (painel de 144 partidas, mesmas sementes da base)
+`GOLEIRO.logit.c0Partida` (−0,1): `goleiro.js chanceDefesa(..., partida)` soma no logit só na partida (o treino não
+muda). Sem ele as defesas de 6 a 16,5 m iam a 60,8% (meta 55–60%): as regras tiraram gols fáceis nessa faixa (177 → 164
+com as mesmas defesas). Com ele: 59,0% · total 68,0% · de fora da área 86,8% · gols 2,13 (base 2,13) · impedimentos 1,15
+· bola parada 29% dos gols — nenhuma medida que estava na meta saiu dela.
