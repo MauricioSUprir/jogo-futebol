@@ -1177,22 +1177,29 @@ com as mesmas defesas). Com ele: 59,0% · total 68,0% · de fora da área 86,8% 
   (ignorando o controle segurado) quando a pausa fecha. `main.js faseDoMundo`: a bola solta sem dono que o controlado
   alcança antes de qualquer adversário (rebote, sobra) é ataque. A Ajuda aberta pela pausa volta para ela ao fechar.
 - **Simulação** (`sim.js`): `m.ultPosse = {time, tick}` (time com a bola no pé no começo do passo) e `m.trocaManual[time] =
-  {tick, id, goleiro}` (TROCAR tocado ou segurado). `ganhouPosse` só passa o humano para o mais perto da bola quando o
-  time dele ACABOU de perder a bola (última posse ou último toque dele) e nunca por cima da escolha manual (TROCAR há <
-  `TROCA_AEREA.manualRecente` s ou o goleiro escolhido). Toque aéreo vencido (a hora passou ou a bola é de outro) é limpo em
+  {tick, id, goleiro}` (TROCAR tocado ou segurado). `ganhouPosse` passa o humano para o jogador de linha mais perto da
+  bola em todo ganho de posse do outro time (como antes: o "Auto" do EA FC), menos por cima da escolha manual da jogada
+  de defesa em andamento (`escolhaManual`: o controlado é o escolhido pelo TROCAR e o time dele não teve a bola desde
+  então). Só na perda, como chegou a ficar, mudava a medida pareada do PRESSÃO (o controlado deixava de ser o mais perto
+  e o 1º homem da IA já apertava sem o botão: `teste-pressao-humano` M1 Δ 0,35 m, M4 10 → 27 faltas) e o treino. Toque aéreo vencido (a hora passou ou a bola é de outro) é limpo em
   `movimentoAereo` e no laço do `bolaLivre`. `candidatoTroca` pula `papel` 'parado'/'marcador' (a barreira).
   `goleiroComoLinha` é falso com o pênalti montado. `m.cobrou = {id, tick}` (`partida.js rolou`; zerado em `bolaMorta`):
   quem cobrou fica fora da bola livre e da bola alta (`candidatosBolaLivre`, `ia-tatica.js vaiNaLivre`) até outro jogador
   tocar (posse, mão, `ultimoToque`, `bateuCorpo`).
 - **PRESSÃO** (`defesa.js`): `passeAdversario(m, time)` — no passe do adversário o pedido segue valendo e o chamado corre
-  para `m.voo.alvo` (pelo lado do meu gol); `m.pressaoHumano[time] = {tick, id, ult, ultTick}`: a histerese vale para o
-  último escolhido dentro de `DEFESA_HUMANO.pressao.validade`.
+  para `m.voo.alvo` (pelo lado do meu gol) e para a `pressao.chega` m dele (freia no último metro; de lá a disputa aperta
+  o recebedor); `m.pressaoHumano[time] = {tick, id, ult, ultTick}`: a histerese vale para o último escolhido dentro de
+  `DEFESA_HUMANO.pressao.validade`. Na troca automática (`sim.js ganhouPosse`) o chamado fica fora (segue apertando; o
+  humano vai para o mais perto depois dele). `sim.js boteIA`: o chamado (`j.ia.ramo === 'pressaoHumano'`) não dá o bote
+  acima de `FALTAS.bote.vLivre` m/s nem por trás do condutor (`faltas.js chegada`) — `teste-pressao-humano` M4 4 → 5.
 - **Bola parada** (`partida.js cobrar`): os botões do cobrador humano valem na montagem; o pedido feito antes de `pronta`
   espera (renovado) e sai em `pronta`; o CHUTE fora do pênalti e do tiro livre direto vira `passe` (saída) ou
   `lancamento` (o resto; no lateral, o arremesso longo).
 - **Pênalti**: contra — `lerChute` compara o palpite com o meio do gol (z = 0), `iniciarMergulho` usa o lado escolhido
-  (`d.z`) com `d.palpite`; a favor — a mira do humano fica em ±`ACOES.chute.penaltiCanto` m (2,5: ~8% para fora, `teste-botoes` B11).
-- **Ações** (`acoes.js`): o LANÇAMENTO do humano na zona do cruzamento espera `ACOES.toqueDuplo` s (do soltar) antes de
+  (`d.z`) com `d.palpite`; a favor — a mira do humano fica em ±`ACOES.chute.penaltiCanto` m (2,5: ~8% para fora, `teste-botoes` B11);
+  a IA continua mirando o canto dela (`PARTIDA.penaltiIA`, ±2,75).
+- **Ações** (`acoes.js`; "humano" = o controlado de um time humano com o humano jogando — `ehHumano` exclui
+  `m.iaJoga[time]`, a demo/IA jogando por ele, como no painel de equilíbrio): o LANÇAMENTO do humano na zona do cruzamento espera `ACOES.toqueDuplo` s (do soltar) antes de
   marcar o toque (dois toques = rasteiro); o pedido de primeira do humano com `j.recebe` vale até `recebe.chega +
   ACOES.primeiraFolga` s. `troca.js trocaAerea` não troca no chute do adversário nem tira o goleiro escolhido pelo
   TROCAR segurado (`m.trocaManual[time].goleiro`; também no cruzamento — `teste-botoes` B13, sem reassumir o controle).

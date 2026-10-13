@@ -413,13 +413,18 @@ export function pressionadorVisivel(m, time) {
  */
 export function entradaPressao(m, j) {
   if (!pressaoPedida(m, j.time)) return null;
-  // passe do adversário: o chamado corre em disparada para onde a bola vai, pelo lado do meu gol (chega junto com ela)
+  // passe do adversário: o chamado corre em disparada para onde a bola vai, pelo lado do meu gol, e para a P.chega m do
+  // ponto de chegada — de lá a disputa (abaixo) aperta o recebedor com a velocidade limitada. Chegando colado, em
+  // disparada, ele atropelava o recebedor no domínio (faltas com o botão 4 → 13 no teste-pressao-humano M4)
   const pv = m.posse == null ? passeAdversario(m, j.time) : null;
   if (pv) {
     if (pressionadorDe(m, j.time) !== j.id) return null;
     estadoIA(m, j).ramo = 'pressaoHumano';
     const gx = -ataca(m, j.time) * CAMPO.meioX - pv.alvo.x, gz = -pv.alvo.z, g = MD.hypot(gx, gz) || 1;
-    return direto(j, pv.alvo.x + (gx / g) * P.colado - j.x, pv.alvo.z + (gz / g) * P.colado - j.z, true);
+    const dx = pv.alvo.x + (gx / g) * P.chega - j.x, dz = pv.alvo.z + (gz / g) * P.chega - j.z, d = MD.hypot(dx, dz);
+    // perto do ponto, freia (o analógico proporcional à distância): espera o recebedor ali
+    if (d < 1) return { x: dx, z: dz, botoes: 0 };
+    return direto(j, dx, dz, true);
   }
   const d0 = condutorAdversario(m, j);
   if (!d0 || pressionadorDe(m, j.time) !== j.id) return null;

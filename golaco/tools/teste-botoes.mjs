@@ -4,8 +4,8 @@
 // A parte da tela (toque de verdade, fase dos botões, PEGAR/TROCAR visíveis) está no tools/teste-controles.mjs.
 //  B1 toque aéreo vencido não prende o jogador (sim.js movimentoAereo/bolaLivre): o analógico anda ≥ 80% do que anda sem
 //     o toque e o toque é limpo;
-//  B2 troca automática só na PERDA da bola (sim.js ganhouPosse): o passe entre adversários não desfaz o TROCAR nem o
-//     goleiro do TROCAR segurado; perdendo a bola, o controle ainda vai para o mais perto dela;
+//  B2 a troca automática não desfaz a escolha manual (sim.js ganhouPosse/escolhaManual): o passe entre adversários não
+//     desfaz o TROCAR nem o goleiro do TROCAR segurado; perdendo a bola, o controle ainda vai para o mais perto dela;
 //  B3 PRESSÃO no passe do adversário (defesa.js/ia-tatica.js): o chamado segue chamado durante o passe (correndo para
 //     onde a bola vai) e continua chamado com o recebedor;
 //  B4 bola parada: o aperto antes da hora (montagem) cobra na hora (partida.js cobrar);
@@ -155,7 +155,7 @@ if (faz('B2')) {
   reg('B2b TROCAR segurado 0,5 s = goleiro; o adversário trocando passes: goleiro tirado sem perda', `${dG}/${nG} (goleiro escolhido em ${gOk})`, `0 (com ≥ 4 lances)`, nG >= 4 && dG === 0);
   // perdendo a bola (posse do time 0 → time 1), o controle ainda vai para o jogador de linha mais perto dela
   let perdas = 0, foi = 0;
-  for (const sem of [21, 22, 23]) {
+  for (const sem of [21, 22, 23, 24, 25]) {
     const m = novaPartida(sem, 100);
     let antes = m.posse != null ? porId(m, m.posse)?.time : null;
     for (let i = 0; i < 60 * 90; i++) {

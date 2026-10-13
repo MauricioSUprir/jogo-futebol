@@ -81,9 +81,13 @@ export function atualizarBotoesAcao(m, j) {
   }
 }
 
-/** j é o controlado de um time humano? */
+/**
+ * j é o controlado de um time humano, com o humano jogando? (A IA jogando pelo humano — a demo, entrada com `ia`, como
+ * no painel de equilíbrio — não: ela não espera o 2º toque nem precisa da primeira estendida, e a partida IA × IA fica
+ * a mesma para os dois times.)
+ */
 function ehHumano(m, j) {
-  return !!m.humanos && m.humanos.includes(j.time) && m.controlado?.[j.time] === j.id;
+  return !!m.humanos && m.humanos.includes(j.time) && m.controlado?.[j.time] === j.id && !m.iaJoga?.[j.time];
 }
 
 /** j, com a bola, está onde o LANÇAMENTO vira cruzamento (ponta no último terço: lancamentoOuCruzamento)? */
@@ -667,8 +671,8 @@ function chute(m, j, pe, p, erroMult) {
   }
   // pênalti: a mira do humano vai no máximo a ±penaltiCanto m do meio — com o erro da cobrança (penaltiErro) a ±3,1 m
   // mandava 1/3 dos pênaltis para fora com qualquer analógico; a ±2,75 (o canto da IA, que bate 36% mais no meio), 16%;
-  // a ±2,5, ~8% (teste-botoes B11; a meta do dono é ~6%)
-  if (p.penalti) zMira = clamp(zMira, -cfg.penaltiCanto, cfg.penaltiCanto);
+  // a ±2,5, ~8% (teste-botoes B11; a meta do dono é ~6%). Só o humano: a IA mira o canto dela (PARTIDA.penaltiIA)
+  if (p.penalti && ehHumano(m, j)) zMira = clamp(zMira, -cfg.penaltiCanto, cfg.penaltiCanto);
   const yMira = lerp(cfg.yAlvo[0], cfg.yAlvo[1], p.forca * p.forca);
   const colocado = p.mod;
   let s = lerp(cfg.v[0], cfg.v[1], p.forca) * lerp(0.86, 1.08, j.par.attr.finalizacao / 100) * velPeFraco(j, pe);

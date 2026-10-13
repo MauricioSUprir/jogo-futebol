@@ -3,7 +3,7 @@
 // mesma partida bit a bit (ver hashMundo).
 
 import { profundidadeVeu } from './rede-forma.js';
-import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO, TROCA_AEREA } from './config.js';
+import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO, FALTAS } from './config.js';
 import { criarRng, entre, uniforme } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
@@ -23,11 +23,11 @@ import { ACOES } from './config.js';
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
 import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe } from './ia-tatica.js';
 import { trocaAerea, alvoAereo } from './troca.js';
-import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida } from './defesa.js';
+import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada } from './partida.js';
 import { planejarRecepcao } from './recepcao.js';
-import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta } from './faltas.js';
+import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta, chegada } from './faltas.js';
 // Regras da mão do goleiro e o goleiro jogando com o pé (pedido do dono, 11/10; só na partida)
 import { maoPermitida, motivoSemMao, registrarToque, estadoMao, paredeAreaMao, naPropriaArea, goleiroNoPe } from './regras-goleiro.js';
 import { lateralSegurando, segurarLateral } from './lateral.js';
@@ -296,6 +296,11 @@ function boteIA(m, j) {
   if (b.p.y > 0.5) return;
   const dB = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   if (dB > cfg.alcance) return;
+  // o companheiro chamado pelo PRESSÃO do humano aperta com responsabilidade: não dá o bote embalado (acima de
+  // FALTAS.bote.vLivre m/s) nem por trás do condutor — chega, freia e tira. Seguindo o recebedor depois do passe, os
+  // botes assim viravam falta (teste-pressao-humano M4: 4 → 9 faltas com o botão)
+  if (m.partida && j.ia && j.ia.ramo === 'pressaoHumano' && m.tick - j.ia.tick <= 1
+    && (MD.hypot(j.vx, j.vz) > FALTAS.bote.vLivre || chegada(j, dono) === 'tras')) return;
   const dD = MD.hypot(b.p.x - dono.x, b.p.z - dono.z);
   // (só na partida) condutor parado ou lento (abaixo de vParado m/s) e sem tocar na bola há semToque s: a bola parada à
   // frente do pé dele (a condução a deixa a ~0,345 m do corpo) não está "colada" — quem chega ao alcance dela tenta
@@ -339,7 +344,7 @@ function boteIA(m, j) {
 export function passo(m, entradas) {
   m.eventos = [];
   const js = m.jogadores;
-  // time com a bola no pé no começo do passo (ganhouPosse: o time humano acabou de perder a bola?)
+  // time com a bola no pé no começo do passo (ganhouPosse: a escolha manual do TROCAR vale até o time dela ter a bola)
   if (m.posse != null) {
     const d = jogadorPorId(m, m.posse);
     if (d) { const up = (m.ultPosse ??= { time: d.time, tick: m.tick }); up.time = d.time; up.tick = m.tick; }
@@ -759,23 +764,17 @@ function ganhaDisputa(m, j, o) {
 }
 
 /**
- * O time humano t ACABOU de perder a bola (para quem ganhou a posse agora)? A última posse foi dele, ou o último chute,
- * passe, bote ou defesa depois dela foi de alguém dele. O passe entre dois adversários não é perda: antes a troca
- * automática rodava em todo ganho de posse do outro time e desfazia a escolha do TROCAR (e o goleiro escolhido pelo
- * TROCAR segurado) a cada passe da IA (auditoria dos botões, 12/10).
+ * A escolha do humano do time t vale (a troca automática não passa por cima dela): o controlado é o que ele escolheu pelo
+ * TROCAR (tocado, ou segurado = o goleiro) e o time dele não teve a bola desde então — a escolha vale a jogada de defesa
+ * inteira. Antes a troca automática rodava em todo ganho de posse do outro time, inclusive no passe entre dois
+ * adversários, e desfazia a escolha do TROCAR (e o goleiro do TROCAR segurado) a cada passe da IA (auditoria dos botões,
+ * 12/10). Sem escolha manual a troca automática segue como antes (o "Auto" do EA FC: vai para o mais perto da bola).
  */
-function timeAcabouDePerder(m, t) {
-  const up = m.ultPosse, u = m.ultimoToque;
-  if (!up) return true;
-  return up.time === t || (!!u && u.time === t && u.tick >= up.tick);
-}
-
-/** A escolha do humano do time t vale: TROCAR apertado há pouco ou o goleiro escolhido pelo TROCAR segurado. */
 function escolhaManual(m, t) {
   const e = m.trocaManual?.[t];
-  if (!e) return false;
-  if ((m.tick - e.tick) * PASSO < TROCA_AEREA.manualRecente) return true;
-  return e.goleiro && m.controlado[t] === e.id;
+  if (!e || m.controlado[t] !== e.id) return false;
+  const up = m.ultPosse;
+  return !(up && up.time === t && up.tick >= e.tick);
 }
 
 /** O jogador ganhou a posse: o controle humano vai para ele (time humano). */
@@ -789,12 +788,16 @@ function ganhouPosse(m, j) {
   m.voo = null;
   for (const t of m.humanos) {
     if (t === j.time) continue;
-    // o time humano perdeu a bola: passa para o jogador de linha mais perto dela (só na perda — o passe entre
-    // adversários não desfaz a escolha do humano — e nunca por cima da escolha manual)
-    if (!timeAcabouDePerder(m, t) || escolhaManual(m, t)) continue;
+    // o outro time ganhou a bola: o humano vai para o jogador de linha mais perto dela — nunca por cima da escolha
+    // manual (TROCAR) da jogada de defesa em andamento
+    if (escolhaManual(m, t)) continue;
+    // com o PRESSÃO segurado, quem foi chamado segue apertando o recebedor: o controle vai para o mais perto depois dele
+    // (senão o humano, de analógico solto, ficava com o chamado e ele parava; outro partia do zero)
+    const pc = pressaoPedida(m, t) ? m.pressaoHumano?.[t] : null;
+    const chamado = pc && pc.ult >= 0 && m.tick - pc.ultTick <= 2 ? pc.ult : -1;
     let mel = null, dm = Infinity;
     for (const o of m.jogadores) {
-      if (o.time !== t || o.posicao === 'GOL') continue;
+      if (o.time !== t || o.posicao === 'GOL' || o.id === chamado) continue;
       const d = MD.hypot(o.x - m.bola.p.x, o.z - m.bola.p.z);
       if (d < dm) { dm = d; mel = o; }
     }
