@@ -9,7 +9,9 @@
 // (pedido de 10/10); o relógio nos acréscimos (Etapa 4); a rede véu de noiva branca estufada num gol roteirizado
 // (lib/gol-roteirizado.mjs) — câmera do gol, de perto, na TV, por trás e de perfil, dia e noite, PC e celular (pedido de
 // 11/10); o REPLAY (pedidos de 11/10): os planos do replay de um gol de verdade (TV, atrás do gol e a lateral do golaço)
-// e o impedimento no quadro do passe CONGELADO com a linha (câmera alinhada com ela). A linha VIVA saiu do jogo (dono,
+// e o impedimento: o quadro do passe com a linha (câmera alinhada com ela, P1) e a ANÁLISE semiautomática (12/10: a
+// sequência linha → órbita → quadro final com o selo "IMPEDIMENTO"; e a de POSIÇÃO LEGAL, com o passe legal mais apertado
+// achado em Node — lib/acha-legal.mjs — no laço da página, com o selo verde). A linha VIVA saiu do jogo (dono,
 // 11/10) e as cenas dela também. Só as cenas do replay abrem com ele ligado (as outras: ?replay=0). A COMEMORAÇÃO do gol
 // (pedido de 11/10): um gol de verdade do time da casa (achado em Node com a entrada da página), a corrida, a finalização
 // forçada (joelhos, pulo, céu, giro), o abraço com a torcida no fundo e a reação de quem sofreu; só as cenas dela (e as
@@ -25,6 +27,7 @@ import { acharGol } from './lib/acha-gol.mjs';
 import { golRoteirizado } from './lib/gol-roteirizado.mjs';
 import { CAMERA } from '../js/config.js';
 import { acharImpedimento } from './lib/acha-impedimento.mjs';
+import { acharLegal } from './lib/acha-legal.mjs';
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
@@ -106,11 +109,25 @@ const CENAS = [
   { nome: 'pc-gol-rede-perfil', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'golRede', livre: { de: [53.9, 1.5, 12.5], para: [53.9, 1.2, 0], fov: 34, doGol: true, zFixo: true } },
   // o "GOL!" no menor celular deitado (568×320): entre o analógico e os botões
   // REPLAY do impedimento (semente: 'imped' = um impedimento de verdade, achado em Node; o lance é procurado na
-  // página): o quadro do passe CONGELADO com a linha, na câmera alinhada com ela (como o VAR), dia e noite
-  { nome: 'pc-impedimento', ...PC, semente: 'imped', replay: true, url: 'q=alta&hora=dia&demo=1', prep: 'replayImped' },
-  { nome: 'pc-impedimento-noite', ...PC, semente: 'imped', replay: true, url: 'q=alta&hora=noite&demo=1', prep: 'replayImped' },
-  { nome: 'celular-impedimento', ...CEL, semente: 'imped', replay: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'replayImped' },
-  { nome: 'celular-impedimento-noite', ...CEL, semente: 'imped', replay: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'replayImped' },
+  // página): P1 — o quadro do passe com a linha, na câmera alinhada com ela (como o VAR), dia e noite
+  { nome: 'pc-impedimento', ...PC, semente: 'imped', replay: true, url: 'q=alta&hora=dia&demo=1', prep: 'replayImped:linha' },
+  { nome: 'pc-impedimento-noite', ...PC, semente: 'imped', replay: true, url: 'q=alta&hora=noite&demo=1', prep: 'replayImped:linha' },
+  { nome: 'celular-impedimento', ...CEL, semente: 'imped', replay: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'replayImped:linha' },
+  { nome: 'celular-impedimento-noite', ...CEL, semente: 'imped', replay: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'replayImped:linha' },
+  // a ANÁLISE semiautomática (pedido do dono de 12/10): o quadro final com o selo (parede do defensor, plano do atacante
+  // em vermelho), dia e noite; e a sequência do PR — o meio da órbita (pulsos no quadril)
+  { nome: 'pc-impedimento-saot', ...PC, semente: 'imped', replay: true, url: 'q=alta&hora=dia&demo=1', prep: 'replayImped' },
+  { nome: 'pc-impedimento-saot-noite', ...PC, semente: 'imped', replay: true, url: 'q=alta&hora=noite&demo=1', prep: 'replayImped' },
+  { nome: 'celular-impedimento-saot', ...CEL, semente: 'imped', replay: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'replayImped' },
+  { nome: 'celular-impedimento-saot-noite', ...CEL, semente: 'imped', replay: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'replayImped' },
+  { nome: 'pc-impedimento-saot-orbita', ...PC, semente: 'imped', replay: true, url: 'q=alta&hora=dia&demo=1', prep: 'replayImped:orbita' },
+  { nome: 'celular-impedimento-saot-orbita', ...CEL, semente: 'imped', replay: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'replayImped:orbita' },
+  // a análise de POSIÇÃO LEGAL (semente: 'legal' = o passe legal mais apertado achado em Node no laço da página; sem a
+  // comemoração no caminho): o quadro final verde com o selo, dia e noite
+  { nome: 'pc-legal', ...PC, semente: 'legal', replay: true, url: 'q=alta&hora=dia&demo=1&comemoracao=0', prep: 'replayLegal' },
+  { nome: 'pc-legal-noite', ...PC, semente: 'legal', replay: true, url: 'q=alta&hora=noite&demo=1&comemoracao=0', prep: 'replayLegal' },
+  { nome: 'celular-legal', ...CEL, semente: 'legal', replay: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1&comemoracao=0', prep: 'replayLegal' },
+  { nome: 'celular-legal-noite', ...CEL, semente: 'legal', replay: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1&comemoracao=0', prep: 'replayLegal' },
   // REPLAY do gol (semente: 'golPagina' = um gol de verdade do laço da página, achado em Node com a entrada da
   // página): o plano de TV no chute, o de trás do gol com a bola indo para a rede e a lateral baixa do golaço
   { nome: 'pc-replay-gol-tv', ...PC, semente: 'golPagina', replay: true, url: 'q=alta&hora=dia&demo=1', prep: 'replayGol:tv' },
@@ -402,9 +419,11 @@ async function preparar(pagina, prep, gol = null) {
       const im = r.impactos[0];
       return `gol roteirizado ${gol && gol.ok ? `do time 0 (autor ${window.__golPrint.autor}) no tick ${gol.golTick}` : 'NÃO saiu'}, batida ${n} passo(s) depois, câmera ${g.estadio.planoCamera}, batidas ${r.batidas}${im ? `, pano ${im.plano} em (${im.x.toFixed(2)}, ${im.y.toFixed(2)}, ${im.z.toFixed(2)}), bolsa ${g.estadio.deslocamentoRede(im.plano, im.x, im.y, im.z).toFixed(2)} m` : ''}, placar ${g.estado().placar.join('×')}, torcida da casa excita ${g.estadio.emocao.torcida[0].excita.toFixed(2)}`;
     }
-    if (prep === 'replayImped') {
-      // até o replay automático de um impedimento (o lance é procurado aqui; os replays de gol no caminho são pulados)
-      // e, nele, o quadro do passe CONGELADO com a linha já inteira
+    if (prep.startsWith('replayImped')) {
+      // até o replay automático de um impedimento (o lance é procurado aqui; os replays de gol no caminho são pulados) e,
+      // nele: 'linha' = o P1 no quadro do passe com a linha já inteira; 'orbita' = a análise no meio da órbita (1,2 s);
+      // sem nada = o quadro final da análise (fase 'final', 2,6 s: a decisão e o selo já na tela)
+      const fase = prep.split(':')[1] ?? 'final';
       let n = 0;
       for (; n < 30000; n++) {
         g.relogio.avancar(1000 / 60, { desenhar: false });
@@ -412,10 +431,31 @@ async function preparar(pagina, prep, gol = null) {
         if (e.ativo && e.tipo === 'impedimento') break;
         if (e.ativo) g.replay.pular();
       }
+      const e = () => g.replay.estado;
       let q = 0;
-      while (q < 900 && g.replay.estado.ativo && !(g.replay.estado.congelado && g.linhaImpedimento.opacidade > 0.9 && g.replay.estado.quadros > 40)) { g.relogio.avancar(1000 / 60, { desenhar: false }); q++; }
-      const e = g.replay.estado, ui = g.mundo.partida.ultimoImped;
-      return e.ativo ? `replay do impedimento (apito no tick ${ui?.tick}, jogador ${ui?.id}): quadro ${e.tick.toFixed(1)} congelado ${e.congelado}, linha em x = ${g.linhaImpedimento.x.toFixed(2)} (lance ${e.linhaX?.toFixed(2)}), opacidade ${g.linhaImpedimento.opacidade.toFixed(2)}` : 'NENHUM replay de impedimento';
+      if (fase === 'linha') while (q < 900 && e().ativo && !(e().cam === 'linha' && e().tick >= e().fotoTick && g.linhaImpedimento.opacidade > 0.9 && e().quadros > 40)) { g.relogio.avancar(1000 / 60, { desenhar: false }); q++; }
+      else {
+        const tAlvo = fase === 'orbita' ? 1.2 : 2.6;
+        while (q < 1500 && e().ativo && !(e().cam === 'saot' && e().saot.t >= tAlvo - 1e-6)) { g.relogio.avancar(1000 / 60, { desenhar: false }); q++; }
+      }
+      const r = e(), ui = g.mundo.partida.ultimoImped;
+      if (!r.ativo) return 'NENHUM replay de impedimento';
+      if (r.cam === 'saot') return `análise do impedimento (apito no tick ${ui?.tick}, jogador ${ui?.id}, defensor ${r.saot.idDef}): fase ${r.saot.fase}, t ${r.saot.t.toFixed(2)} s, câmera ${r.saot.el.toFixed(1)}° (final ${r.saot.elFim.toFixed(1)}°, ${r.saot.desvio.toFixed(1)}° fora do eixo, ${r.saot.dist.toFixed(1)} m), margem ${r.saot.margem.toFixed(2)} m, selo ${g.replay.planos?.selo ?? '-'}, ${g.replay.desenhados} jogadores`;
+      return `replay do impedimento (apito no tick ${ui?.tick}, jogador ${ui?.id}): plano ${r.cam}, quadro ${r.tick.toFixed(1)}, linha em x = ${g.linhaImpedimento.x.toFixed(2)} (lance ${r.linhaX?.toFixed(2)}), opacidade ${g.linhaImpedimento.opacidade.toFixed(2)}`;
+    }
+    if (prep === 'replayLegal') {
+      // até o tick do passe legal mais apertado achado em Node (o laço da página é o mesmo; replays no caminho pulados) e a
+      // análise de posição legal dele, no quadro final (2,4 s: a decisão verde e o selo)
+      const L = gol;
+      let n = 0;
+      while (n < 40000 && g.mundo.tick < L.tick) { g.relogio.avancar(1000 / 60, { desenhar: false }); if (g.replay.estado.ativo) g.replay.pular(); n++; }
+      const m0 = g.replay.legalMaisApertada(60);
+      if (!g.replay.saotDeTeste('legal', { limite: Math.max(1.0, (m0 ?? L.margem) + 0.01) })) return `NENHUMA cadeia legal no anel no tick ${g.mundo.tick} (Node: ${L.margem.toFixed(2)} m)`;
+      const e = () => g.replay.estado;
+      let q = 0;
+      while (q < 1500 && e().ativo && !(e().cam === 'saot' && e().saot.t >= 2.4)) { g.relogio.avancar(1000 / 60, { desenhar: false }); q++; }
+      const r = e();
+      return r.ativo ? `análise de POSIÇÃO LEGAL no tick ${g.mundo.tick}: margem ${r.saot.margem.toFixed(2)} m${r.saot.mesmaLinha ? ' (mesma linha)' : ''}, defensor ${r.saot.idDef}, atacante ${r.saot.idAtac}, câmera ${r.saot.elFim.toFixed(1)}° e ${r.saot.desvio.toFixed(1)}° fora do eixo, selo ${g.replay.planos?.selo ?? '-'}` : 'a análise acabou antes';
     }
     if (prep.startsWith('replayGol:')) {
       // até o replay automático de um gol (na saída de bola; os de impedimento no caminho são pulados) e o instante do
@@ -586,7 +626,7 @@ if (CENAS.some(c => c.semente === 'golPagina' && (!so || so.has(c.nome)))) {
 }
 let IMPED = null;
 if (CENAS.some(c => c.semente === 'imped' && (!so || so.has(c.nome)))) {
-  IMPED = await acharImpedimento({ pastaJs: path.join(RAIZ, 'js') });
+  IMPED = await acharImpedimento({ pastaJs: path.join(RAIZ, 'js'), comoPagina: true });
   console.log(IMPED ? `impedimento de verdade: semente ${IMPED.semente}, tick ${IMPED.tick} (jogador ${IMPED.id})` : 'NENHUM impedimento nas sementes 1–40: cenas do impedimento puladas');
 }
 // o 1º gol do time da CASA do laço da página (os prints da comemoração: a cena inteira, com o abraço)
@@ -595,18 +635,25 @@ if (CENAS.some(c => c.semente === 'golCasa' && (!so || so.has(c.nome)))) {
   GOLC = await acharGol({ pastaJs: path.join(RAIZ, 'js'), maxTicks: 6000, comoPagina: true, time: 0 });
   console.log(GOLC ? `gol do time da casa (laço da página): semente ${GOLC.semente}, tick ${GOLC.golTick}` : 'NENHUM gol do time da casa no laço da página: cenas da comemoração puladas');
 }
+// o passe em POSIÇÃO LEGAL mais apertado do laço da página (os prints da análise de posição legal)
+let LEGAL = null;
+if (CENAS.some(c => c.semente === 'legal' && (!so || so.has(c.nome)))) {
+  LEGAL = await acharLegal({ pastaJs: path.join(RAIZ, 'js') });
+  console.log(LEGAL ? `passe em posição legal (laço da página): semente ${LEGAL.semente}, tick ${LEGAL.tick}, margem ${LEGAL.margem.toFixed(2)} m` : 'NENHUM passe em posição legal: cenas da posição legal puladas');
+}
 let falhas = 0;
 for (const c of CENAS) {
   if (so && !so.has(c.nome)) continue;
   if (c.semente === 'gol' && !GOL) continue;
   if (c.semente === 'imped' && !IMPED) continue;
+  if (c.semente === 'legal' && !LEGAL) continue;
   if (c.semente === 'golPagina' && !GOLP) continue;
   if (c.semente === 'golCasa' && !GOLC) continue;
   const t0 = Date.now();
   const { navegador, pagina, erros } = await abrir({ largura: c.largura, altura: c.altura, dpr: c.dpr, toque: c.toque });
   try {
     // só as cenas do replay abrem com ele ligado (nas outras, o replay automático seguraria a simulação depois de um gol)
-    const sem = c.semente === 'gol' ? GOL.semente : c.semente === 'imped' ? IMPED.semente : c.semente === 'golPagina' ? GOLP.semente : c.semente === 'golCasa' ? GOLC.semente : (c.semente ?? 3);
+    const sem = c.semente === 'gol' ? GOL.semente : c.semente === 'imped' ? IMPED.semente : c.semente === 'golPagina' ? GOLP.semente : c.semente === 'golCasa' ? GOLC.semente : c.semente === 'legal' ? LEGAL.semente : (c.semente ?? 3);
     // a comemoração só nas cenas dela e nas do replay (que vem depois dela)
     await pagina.goto(`${srv.url}?${c.semPrints ? '' : 'prints=1&'}semente=${sem}&${c.url}${c.replay ? '' : '&replay=0'}${c.replay || c.comemoracao ? '' : '&comemoracao=0'}`, { waitUntil: 'load' });
     await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
@@ -621,7 +668,7 @@ for (const c of CENAS) {
     if (c.opcoes) await pagina.evaluate(o => { for (const [g, v] of Object.entries(o)) { const b = document.getElementById(`chip-${g}`); if (b && (b.getAttribute('aria-pressed') === 'true') !== (v === 'ligado')) b.click(); } }, c.opcoes);
     // gol da rede: o gol roteirizado (o mesmo do teste-estadio), na página
     const golR = c.prep === 'golRede' ? await golRoteirizado(pagina, { semente: 5, time: 0 }) : null;
-    const nota = c.prep ? await preparar(pagina, c.prep, c.semente === 'imped' ? IMPED : c.prep === 'golRede' ? golR : GOL) : '';
+    const nota = c.prep ? await preparar(pagina, c.prep, c.semente === 'imped' ? IMPED : c.semente === 'legal' ? LEGAL : c.prep === 'golRede' ? golR : GOL) : '';
     let notaEd = '';
     if (c.editor) {
       // "Editar time" pela pausa (cliques de verdade); a aba e, na substituição, 9 → 22
@@ -707,8 +754,12 @@ for (const c of CENAS) {
         for (const el of [document.getElementById('gol-tela'), document.querySelector('.placar')]) for (const an of el.getAnimations({ subtree: true })) { an.currentTime = 900; an.pause(); }
       });
     }
+    // o selo da análise (terço de baixo) entra em 0,2 s; o relógio das animações CSS do headless anda devagar e o print
+    // pegava o selo ainda transparente (celular-legal): a entrada é levada ao fim
+    await pagina.evaluate(() => { for (const e of document.querySelectorAll('#terco .terco-selo')) for (const an of e.getAnimations()) an.finish(); });
     const arq = path.join(SAIDA, `${c.nome}.png`);
-    await pagina.screenshot({ path: arq });
+    // (máquina carregada: o print do Chromium sem GPU passa dos 30 s do padrão)
+    await pagina.screenshot({ path: arq, timeout: 240000 });
     const lay = c.depois || c.editor ? { problemas: [], caixas: [] } : await conferirLayout(pagina);
     const est = await pagina.evaluate(() => {
       const g = window.__golaco;
