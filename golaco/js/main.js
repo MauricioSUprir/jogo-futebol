@@ -910,8 +910,10 @@ function quadro(agoraMs, desenhar = true) {
       // a edição do time entra ANTES das outras ações, no 1º passo depois da pausa
       if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
       rodarPasso(e, ac);
+      // o que este passo viu dos botões (o reaperto entre dois passos vira solto + apertado: entrada.js)
+      entrada.passoUsou(e.botoes);
       // o aperto curto (tocou e soltou entre dois passos) já foi visto por um passo
-      if (i === 0) { entrada.limparPulsos(); ent.botoes = entrada.ler(cam.yaw, agoraMs).botoes; }
+      if (i === 0) { entrada.limparPulsos(true); ent.botoes = entrada.ler(cam.yaw, agoraMs).botoes; }
       // o replay começou neste passo (gol, impedimento): os passos que sobraram não rodam (a simulação espera)
       if (diretor && diretor.ativo) break;
       // a cortina acabou na saída (a cena saiu): o resto do quadro é do laço normal

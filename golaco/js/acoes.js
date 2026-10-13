@@ -58,6 +58,17 @@ function botoesDoHumano(m, j) {
 }
 
 /**
+ * O botão b foi apertado AGORA pela pessoa (o time não o segurava no passo anterior)? A borda do jogador também
+ * aparece quando o controle troca com o botão segurado (o novo controlado não o via apertado) — isso não é um toque
+ * rápido, é o mesmo aperto de antes. sim.js: botoesTimeAgora = este passo, botoesTimeAnt = o anterior; o `cobrar` da
+ * bola parada (o cobrador 'parado') roda ANTES do passo, com o anterior ainda em botoesTimeAgora.
+ */
+function apertoNovoDoTime(m, j, b) {
+  const ant = j.papel === 'parado' ? m.botoesTimeAgora?.[j.time] : m.botoesTimeAnt?.[j.time];
+  return !((ant ?? 0) & b);
+}
+
+/**
  * Cavadinha por dois toques no CHUTE (pedido do dono, 12/10): o 2º aperto vale enquanto o chute do 1º ainda não
  * tocou na bola (o pedido está de pé) e chega até ACOES.toqueDuplo s depois de soltar o 1º. Só o humano (a IA não
  * aperta duas vezes; a cavadinha dela continua a automática, com o goleiro adiantado).
@@ -87,7 +98,11 @@ export function atualizarBotoesAcao(m, j) {
         j.carga = { tipo, t0: m.tick, mod: false, cavadinha: true, humano: true };
       } else {
         j.carga = { tipo, t0: m.tick, mod: (agora & BOTAO.MOD) !== 0 };
-        if (botoesDoHumano(m, j)) j.carga.humano = true;
+        if (botoesDoHumano(m, j)) {
+          j.carga.humano = true;
+          // só o aperto novo pode ser o 1º de dois toques (o segurado que veio na troca de controle chuta na hora)
+          if (apertoNovoDoTime(m, j, b)) j.carga.novo = true;
+        }
         j.mira = null;
       }
     } else if (soltou && j.carga && j.carga.tipo === tipo) {
@@ -125,9 +140,10 @@ function soltarCarga(m, j) {
     j.pedido = { tipo: c.tipo, forca, mod, tick: m.tick };
     if (c.humano) {
       j.pedido.humano = true;
-      // chute de toque rápido do humano: pode ser o 1º de dois toques — o contato não sai antes de
-      // ACOES.cavadinha.janela s (o 2º toque chega a tempo). O chute carregado sai na hora, como antes
-      if (c.tipo === 'chute' && (m.tick - c.t0) * DT < ACOES.cavadinha.toqueRapido) {
+      // chute de toque rápido do humano (aperto novo): pode ser o 1º de dois toques — o contato não sai antes de
+      // ACOES.cavadinha.janela s (o 2º toque chega a tempo). O chute carregado sai na hora, como antes; o botão que
+      // vinha segurado de antes da troca de controle também (carga sem `novo`)
+      if (c.tipo === 'chute' && c.novo && (m.tick - c.t0) * DT < ACOES.cavadinha.toqueRapido) {
         j.pedido.espera = m.tick + Math.round(ACOES.cavadinha.janela / DT);
       }
     }

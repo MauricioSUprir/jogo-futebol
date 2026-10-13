@@ -36,7 +36,7 @@ const LISTA = [
   // Etapa 2
   ['passes: rasteiro, enfiada, lançamento, cruzamento, primeira, tabela', 'teste-passes.mjs'],
   ['chute: velocidade, curva, dispersão, perna ruim, cavadinha', 'teste-chutes.mjs'],
-  ['cavadinha com dois toques no CHUTE (humano): de qualquer lugar, um toque nunca, chute carregado no mesmo tick', 'teste-cavadinha.mjs'],
+  ['cavadinha com dois toques no CHUTE (humano): de qualquer lugar, um toque nunca, chute carregado no mesmo tick, bola parada, botão herdado na troca', 'teste-cavadinha.mjs'],
   ['goleiro: defesas pelos dados, posição, botão GOLEIRO, mãos', 'teste-goleiro.mjs'],
   ['goleiro pula e espalma: mergulho desenhado, mão na bola, espalmada para fora do perigo', 'teste-mergulho.mjs'],
   ['jogo aéreo: domínio no peito e cabeceio', 'teste-aereo.mjs'],

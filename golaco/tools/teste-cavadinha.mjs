@@ -14,7 +14,12 @@
 //  F. qualidade com o goleiro adiantado (StatsBomb-1485: ~30% de gols com o chutador a 0–10 m do goleiro; 41,8% no
 //     alvo) e com o goleiro na linha (informação);
 //  G. chute carregado + 2º toque depois do contato: só o chute (nada de 2º chute);
-//  H. pênalti (Panenka): dois toques = cavadinha; um toque = chute.
+//  H. pênalti (Panenka): dois toques = cavadinha; um toque = chute. Tiro livre direto: dois toques = cavadinha (por
+//     cima da barreira); um toque = chute. Escanteio: o CHUTE não cobra bola parada (nem duas vezes) — nada sai, e o
+//     PASSE depois cobra normalmente;
+//  I. botão que já vinha segurado quando o controle trocou (o time apertava no passo anterior): não é toque rápido —
+//     o contato não espera a janela (antes: a troca virava um "toque" de poucos ticks e o chute atrasava; o
+//     hash-igual do treino de ataque mudava por isso).
 //   node tools/teste-cavadinha.mjs [--js <pasta js>]   (--js: mede outra cópia da lógica, ex.: a base — o "antes")
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -26,6 +31,7 @@ const imp = f => import(pathToFileURL(path.join(JS, f)).href);
 const { criarMundo, passo } = await imp('sim.js');
 const { BOTAO, CAMPO, ACOES, PASSO } = await imp('config.js');
 const P = await imp('partida.js');
+const A = await imp('acoes.js');
 
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
 let falhas = 0;
@@ -215,27 +221,42 @@ const GOLEIROS = [['sem goleiro', null], ['goleiro adiantado (8 m)', GX - 8], ['
 }
 
 // ------------------------------------------------------------------ H. pênalti (Panenka)
-/** Pênalti para o time 0 (o humano cobra): seq de CHUTE a partir da hora em que a cobrança fica pronta. */
-function penalti(sem, seq) {
+/**
+ * Falta a favor do time 0 (o humano cobra): pênalti (x 45, na área) ou tiro livre direto (x, fora da área, com
+ * barreira). seq de CHUTE a partir da hora em que a cobrança fica pronta. Devolve o modo do 1º chute e o desfecho.
+ */
+function falta(sem, seq, opc = {}) {
+  const x = opc.x ?? 45, z = opc.z ?? 3, area = opc.area ?? true;
   const m = P.criarPartida({ semente: sem });
   for (let i = 0; i < 200; i++) P.passoPartida(m, P.entradaDemoPartida(m));
-  const A = m.jogadores.find(j => j.time === 0 && j.posicao === 'ATA') ?? m.jogadores.find(j => j.time === 0 && j.posicao !== 'GOL');
+  const At = m.jogadores.find(j => j.time === 0 && j.posicao === 'ATA') ?? m.jogadores.find(j => j.time === 0 && j.posicao !== 'GOL');
   const D = m.jogadores.find(j => j.time === 1 && j.posicao === 'ZAG');
-  P.teleportar(A, 45, 3, 0); P.teleportar(D, 44, 3.5, 0);
-  m.bola.p.x = 45.4; m.bola.p.z = 3; m.posse = A.id; m.naMao = null; m.voo = null;
+  P.teleportar(At, x, z, 0); P.teleportar(D, x - 1, z + 0.5, 0);
+  m.bola.p.x = x + 0.4; m.bola.p.z = z; m.posse = At.id; m.naMao = null; m.voo = null;
   m.eventos = [];
-  m.faltaPendente = { def: D.id, cond: A.id, time: 0, x: 45, z: 3, area: true, chegada: 'tras', v: 3, grau: 'imprudente', cartao: null, motivo: 'imprudente', origem: 'bote', tick: m.tick };
+  m.faltaPendente = { def: D.id, cond: At.id, time: 0, x, z, area, chegada: 'tras', v: 3, grau: 'imprudente', cartao: null, motivo: 'imprudente', origem: 'bote', tick: m.tick };
   P.regrasPartida(m);
-  if (m.parada?.tipo !== 'penalti') return { erro: 'sem pênalti' };
+  const tipo = area ? 'penalti' : 'tiroLivre';
+  if (m.parada?.tipo !== tipo || (!area && !m.parada.direto)) return { erro: `sem ${tipo}${area ? '' : ' direto'}` };
   // espera a cobrança ficar pronta com o cobrador do humano
   for (let i = 0; i < 60 * 10 && !(m.parada && m.tick >= m.parada.pronta + 2 && m.controlado[0] === m.parada.cobrador); i++) P.passoPartida(m, { x: 0, z: 0, botoes: 0 });
   if (!m.parada || m.controlado[0] !== m.parada.cobrador) return { erro: 'o cobrador não é do humano' };
-  let modo = null, res = null;
-  const olhar = evs => { for (const e of evs) { if (e.tipo === 'chute' && !modo) modo = e.modo; if (e.tipo === 'penalti') res = e.resultado; } };
+  const barreira = m.parada.barreira?.n ?? 0;
+  let modo = null, res = null, bateu = false;
+  const olhar = evs => {
+    for (const e of evs) {
+      if (e.tipo === 'chute' && !modo) modo = e.modo;
+      if (e.tipo === 'penalti') res = e.resultado;
+      if (e.tipo === 'bateuBarreira') bateu = true;
+      if (!area && modo && !res && (e.tipo === 'gol' || e.tipo === 'defesa')) res = e.tipo;
+    }
+  };
   for (const [aperta, dur] of seq) for (let i = 0; i < dur; i++) olhar(P.passoPartida(m, { x: 0, z: 0, botoes: aperta ? BOTAO.CHUTE : 0 }));
   for (let i = 0; i < 60 * 6 && !res; i++) olhar(P.passoPartida(m, { x: 0, z: 0, botoes: 0 }));
-  return { modo, res };
+  if (!area && modo && !res) res = 'fora';
+  return { modo, res, barreira, bateu };
 }
+const penalti = (sem, seq) => falta(sem, seq);
 {
   let n2 = 0, cav = 0, n1 = 0, nc1 = 0, erro = null;
   const desf = {};
@@ -248,6 +269,78 @@ function penalti(sem, seq) {
     n1++; if (u.modo === 'chute') nc1++;
   }
   reg('H. pênalti do humano: dois toques = cavadinha (Panenka); um toque = chute', `dois toques: ${cav}/${n2} cavadinhas (${Object.entries(desf).map(([k, v]) => `${k} ${v}`).join(', ') || '-'}) · um toque: ${nc1}/${n1} chutes${erro ? ` · ${erro}` : ''}`, '12/12 e 12/12', n2 === 12 && cav === 12 && n1 === 12 && nc1 === 12);
+}
+{
+  // tiro livre direto a ~22 m, de frente, com barreira: a cavadinha cai logo depois da linha (alemDaLinha) e passa
+  // por cima da barreira; o desfecho é informação (de longe ela é um balão fácil para o goleiro na linha)
+  let n2 = 0, cav = 0, n1 = 0, nc1 = 0, bateu = 0, comBarreira = 0, erro = null;
+  const desf = {};
+  for (let s = 1; s <= 10; s++) {
+    const o = { x: 30.5, z: (s % 5) - 2, area: false };
+    const d = falta(7100 + s, [[1, 4], [0, 5], [1, 4]], o);
+    if (d.erro) { erro = d.erro; continue; }
+    n2++; if (d.barreira > 0) comBarreira++;
+    if (d.modo === 'cavadinha') { cav++; desf[d.res] = (desf[d.res] ?? 0) + 1; if (d.bateu) bateu++; }
+    const u = falta(7100 + s, [[1, 4]], o);
+    if (u.erro) { erro = u.erro; continue; }
+    n1++; if (u.modo === 'chute' || u.modo === 'colocado') nc1++;
+  }
+  reg('H2. tiro livre direto (~22 m, barreira): dois toques = cavadinha, por cima da barreira; um toque = chute', `dois toques: ${cav}/${n2} cavadinhas (barreira em ${comBarreira}/${n2}; bateu nela ${bateu}; ${Object.entries(desf).map(([k, v]) => `${k} ${v}`).join(', ') || '-'}) · um toque: ${nc1}/${n1} chutes${erro ? ` · ${erro}` : ''}`, '10/10, barreira em todos, nenhuma na barreira; 10/10 chutes', n2 === 10 && cav === 10 && comBarreira === 10 && bateu === 0 && n1 === 10 && nc1 === 10);
+}
+{
+  // escanteio do humano: o CHUTE não cobra bola parada (só pênalti e tiro livre direto) — nem com dois toques; o PASSE
+  // depois cobra normalmente (nada fica preso pela janela do 2º toque)
+  let n = 0, ok = 0, erro = null;
+  const det = [];
+  for (let s = 1; s <= 6; s++) {
+    const m = P.criarPartida({ semente: 7200 + s });
+    for (let i = 0; i < 200; i++) P.passoPartida(m, P.entradaDemoPartida(m));
+    const lado = m.ataca[0];
+    const d1 = m.jogadores.find(o => o.time === 1 && o.posicao !== 'GOL');
+    m.posse = null; m.naMao = null; m.voo = null;
+    Object.assign(m.bola.p, { x: lado * (CAMPO.meioX + 0.6), y: 0.11, z: 12 }); Object.assign(m.bola.v, { x: 0, y: 0, z: 0 });
+    m.partida.ultimoTime = 1; m.partida.ultimoId = d1.id; m.partida.ultimoTick = m.tick;
+    m.ultimoToque = { id: d1.id, time: 1, tick: m.tick };
+    for (let i = 0; i < 400 && !(m.parada && m.parada.tipo === 'escanteio' && m.parada.cobrador != null && m.tick >= m.parada.pronta + 2 && m.controlado[0] === m.parada.cobrador); i++) P.passoPartida(m, { x: 0, z: 0, botoes: 0 });
+    if (!m.parada || m.parada.tipo !== 'escanteio' || m.controlado[0] !== m.parada.cobrador) { erro = 'sem escanteio do humano'; continue; }
+    n++;
+    let chutes = 0, rolou = false;
+    const olhar = evs => { for (const e of evs) { if (e.tipo === 'chute') chutes++; if (e.tipo === 'cobranca' || e.tipo === 'passe') rolou = true; } };
+    for (const [aperta, dur] of [[1, 4], [0, 5], [1, 4], [0, 40]]) for (let i = 0; i < dur; i++) olhar(P.passoPartida(m, { x: 0, z: 0, botoes: aperta ? BOTAO.CHUTE : 0 }));
+    const parado = !!m.parada && m.parada.tipo === 'escanteio' && !m.parada.rolou && !rolou && chutes === 0;
+    for (let i = 0; i < 10; i++) olhar(P.passoPartida(m, { x: 0, z: 0, botoes: BOTAO.PASSE }));
+    for (let i = 0; i < 90 && !rolou; i++) olhar(P.passoPartida(m, { x: 0, z: 0, botoes: 0 }));
+    if (parado && rolou && chutes === 0) ok++;
+    else if (det.length < 3) det.push(`semente ${7200 + s}: parado ${parado}, cobrou com o PASSE ${rolou}, chutes ${chutes}`);
+  }
+  reg('H3. escanteio: CHUTE duas vezes não cobra (nada sai); o PASSE depois cobra', `${ok}/${n}${det.length ? ' · ' + det.join('; ') : ''}${erro ? ` · ${erro}` : ''}`, '6/6', n === 6 && ok === 6);
+}
+
+// ------------------------------------------------------------------ I. botão segurado de antes da troca de controle
+// (a mesma conta do passo: atualizarBotoesAcao com o time segurando o CHUTE no passo anterior e o jogador vendo a borda
+// agora — a troca de controle com o botão apertado; o hash-igual do treino de ataque, semente 17, passa por isso)
+{
+  const res = {};
+  for (const herdado of [true, false]) {
+    const m = criarMundo({ semente: 5, jogadores: [{ id: 0, x: GX - 20, z: 0, rumo: 0, time: 0, papel: 'humano', posicao: 'ATA' }], bola: { x: GX - 19.6, z: 0 }, posse: 0, log: true });
+    passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
+    const j = m.jogadores[0];
+    const t0 = m.tick;
+    // aperto: o jogador vê a borda (antes 0); o time já segurava (herdado) ou não (aperto novo)
+    m.botoesTimeAnt[0] = herdado ? BOTAO.CHUTE : 0; m.botoesTimeAgora[0] = BOTAO.CHUTE;
+    j.porHumano = true; j.botoesAnt = 0; j.botoes = BOTAO.CHUTE;
+    A.atualizarBotoesAcao(m, j);
+    // solta 6 ticks depois (toque rápido para o jogador)
+    m.tick = t0 + 6;
+    m.botoesTimeAnt[0] = BOTAO.CHUTE; m.botoesTimeAgora[0] = 0;
+    j.botoesAnt = BOTAO.CHUTE; j.botoes = 0;
+    A.atualizarBotoesAcao(m, j);
+    res[herdado] = { pedido: !!j.pedido, humano: !!j.pedido?.humano, espera: j.pedido?.espera != null ? j.pedido.espera - m.tick : null };
+  }
+  const h = res[true], nv = res[false];
+  reg('I. CHUTE que já vinha segurado na troca de controle: o contato não espera a janela (o aperto novo espera)',
+    `herdado: espera ${h.espera ?? 'nenhuma'}${h.humano ? ' (pedido do humano)' : ''} · aperto novo: espera ${nv.espera ?? 'nenhuma'} ticks`, 'herdado sem espera (e do humano); novo com a janela',
+    h.pedido && h.humano && h.espera == null && nv.pedido && nv.espera === JANELA);
 }
 
 console.log(tabelaTexto(linhas));

@@ -7,7 +7,8 @@
 //  - Controle: A passe, B chute, X lançamento, Y enfiada (ataque) / goleiro (defesa), LB trocar,
 //    RT correr.
 //  - Cavadinha (pedido do dono, 12/10): o MESMO botão de chute duas vezes (K, B do controle, CHUTE do celular) = cavadinha;
-//    uma vez = chute, nunca cavadinha.
+//    uma vez = chute, nunca cavadinha; soltar e apertar de novo sem quadro no meio também é dois toques; a repetição
+//    automática da tecla não conta; o toque cancelado pelo sistema é soltar (não prende o botão).
 //  - Celular: CONDUÇÃO não existe mais; ataque = CHUTE (o maior), PASSE, ENFIADA, LANÇAMENTO e
 //    CORRER; defesa = TROCAR, GOLEIRO, PRESSÃO, DIVIDIDA e CORRER (tela limpa, 11/10: 5 botões — o CONTER
 //    virou a DIVIDIDA SEGURADA, conferida aqui com toque de verdade: tocar = bote, segurar = CONTER);
@@ -268,6 +269,23 @@ async function conferirTodosLayouts(pagina) {
     await pagina.keyboard.press('KeyK');
     const ku = await rodar(pagina, 90);
     meta('K duas vezes: cavadinha (um chute só); K uma vez: chute, nunca cavadinha', `duas: chutes ${kk.chutes}, voos ${kk.voos.join(',') || '-'} · uma: chutes ${ku.chutes}, voos ${ku.voos.join(',') || '-'}`, sem(kk.chutes === 1 && kk.voos.includes('cavadinha') && ku.chutes === 1 && !ku.voos.includes('cavadinha')));
+    // K solto e apertado de novo SEM quadro no meio (toque duplo rápido; num celular a 30 qps, < 33 ms): o passo vê
+    // solto e depois apertado — antes as duas bordas se perdiam e virava um aperto só (chute fraco)
+    await novo();
+    await quadros(pagina, 10);
+    await pagina.keyboard.down('KeyK'); await rodar(pagina, 4);
+    await pagina.keyboard.up('KeyK'); await pagina.keyboard.down('KeyK'); await rodar(pagina, 4);
+    await pagina.keyboard.up('KeyK');
+    const kr = await rodar(pagina, 90);
+    meta('K solto e apertado de novo no mesmo quadro: cavadinha (o reaperto não se perde)', `chutes ${kr.chutes}, voos ${kr.voos.join(',') || '-'}`, sem(kr.chutes === 1 && kr.voos.includes('cavadinha')));
+    // K segurado com a repetição automática da tecla (keydown com repeat): um aperto só — chute, nunca cavadinha
+    await novo();
+    await quadros(pagina, 10);
+    await pagina.keyboard.down('KeyK'); await rodar(pagina, 3);
+    for (let i = 0; i < 4; i++) { await pagina.keyboard.down('KeyK'); await rodar(pagina, 3); } // repeat: true
+    await pagina.keyboard.up('KeyK');
+    const kq = await rodar(pagina, 90);
+    meta('K segurado com repetição automática da tecla: chute, nunca cavadinha', `chutes ${kq.chutes}, voos ${kq.voos.join(',') || '-'}`, sem(kq.chutes === 1 && kq.voos.includes('chute') && !kq.voos.includes('cavadinha')));
     // L: lançamento (bola alta → anel de queda no gramado)
     await novo();
     await pagina.evaluate(() => window.__golaco.forcarEntrada({ x: 0.7, z: -0.7, botoes: 0 }));
@@ -502,6 +520,31 @@ async function conferirTodosLayouts(pagina) {
     await toque('touchEnd', [{ x: bc.x, y: bc.y, id: 16 }]);
     const cu = await rodar(pagina, 90);
     meta('CHUTE tocado duas vezes: cavadinha (um chute só); um toque: chute, nunca cavadinha', `duas: chutes ${cc.chutes}, voos ${cc.voos.join(',') || '-'} · um: chutes ${cu.chutes}, voos ${cu.voos.join(',') || '-'}`, sem(cc.chutes === 1 && cc.voos.includes('cavadinha') && cu.chutes === 1 && !cu.voos.includes('cavadinha')));
+    // o dedo sai e volta ao CHUTE sem quadro no meio: cavadinha (o reaperto vira solto + apertado nos passos)
+    await novo();
+    await quadros(pagina, 10);
+    await toque('touchStart', [{ x: bc.x, y: bc.y, id: 17 }]); await rodar(pagina, 4);
+    await toque('touchEnd', [{ x: bc.x, y: bc.y, id: 17 }]);
+    await toque('touchStart', [{ x: bc.x, y: bc.y, id: 18 }]); await rodar(pagina, 4);
+    await toque('touchEnd', [{ x: bc.x, y: bc.y, id: 18 }]);
+    const cr = await rodar(pagina, 90);
+    meta('CHUTE: dedo sai e volta no mesmo quadro: cavadinha (o reaperto não se perde)', `chutes ${cr.chutes}, voos ${cr.voos.join(',') || '-'}`, sem(cr.chutes === 1 && cr.voos.includes('cavadinha')));
+    // toque cancelado pelo sistema (pointercancel: gesto da borda, notificação) = soltar, como sempre foi no CHUTE: o 2º
+    // toque cancelado ainda dá a cavadinha (um chute só); um toque só cancelado dá o chute; o botão não fica preso
+    await novo();
+    await quadros(pagina, 10);
+    await toque('touchStart', [{ x: bc.x, y: bc.y, id: 19 }]); await rodar(pagina, 4);
+    await toque('touchEnd', [{ x: bc.x, y: bc.y, id: 19 }]); await rodar(pagina, 4);
+    await toque('touchStart', [{ x: bc.x, y: bc.y, id: 20 }]); await rodar(pagina, 4);
+    await toque('touchCancel', []);
+    const cx = await rodar(pagina, 90);
+    const presoX = await pagina.evaluate(() => document.getElementById('btn-chute').classList.contains('ativo'));
+    await novo();
+    await quadros(pagina, 10);
+    await toque('touchStart', [{ x: bc.x, y: bc.y, id: 21 }]); await rodar(pagina, 20);
+    await toque('touchCancel', []);
+    const cy = await rodar(pagina, 90);
+    meta('CHUTE cancelado pelo sistema = soltar: 2º toque cancelado → cavadinha; toque único cancelado → chute; nada preso', `dois (2º cancelado): chutes ${cx.chutes}, voos ${cx.voos.join(',') || '-'} · um cancelado: chutes ${cy.chutes}, voos ${cy.voos.join(',') || '-'} · aceso depois ${presoX}`, !presoX && sem(cx.chutes === 1 && cx.voos.includes('cavadinha') && cy.chutes === 1 && !cy.voos.includes('cavadinha')));
     // ENFIADA e LANÇAMENTO chegam à máscara
     await novo();
     const be = await centro('btn-enfiada'), bl = await centro('btn-lancamento');

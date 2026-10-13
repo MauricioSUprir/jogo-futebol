@@ -2,7 +2,8 @@
 // {x, z, botoes} com o analógico JÁ no mundo (paraMundo com o yaw da câmera) e a máscara BOTAO.
 // A máscara só diz "apertado agora": quem mede o tempo segurado (força do passe/chute) é a
 // lógica. Um toque mais curto que um quadro não se perde: o aperto fica marcado (pulso) até um
-// passo de simulação consumir (limparPulsos). Ações de um toque só (recomeçar, máquina,
+// passo de simulação consumir (limparPulsos); soltar e apertar de novo antes de um passo também não (o passo vê o
+// botão solto e o seguinte, apertado: o 2º toque do CHUTE = cavadinha). Ações de um toque só (recomeçar, máquina,
 // marcador, câmera, ajuda, pausa) vão para uma fila.
 //
 // Teclado: WASD/setas = analógico; J passe (ataque) / CONTER (defesa, segurar); K chute (ataque) /
@@ -64,6 +65,8 @@ export const SENTIDO_FASE = {
 };
 // ações de um toque que passam com a entrada bloqueada (o editor aberto fecha pela pausa)
 const PASSA_BLOQUEADA = new Set(['pausa']);
+// bits em que o reaperto entre dois passos vira solto + apertado (os de segurar continuamente ficam de fora)
+const REAPERTO = ~(BOTAO.CORRER | BOTAO.MOD);
 
 /**
  * Sentido fixado no aperto (pura; os testes em Node chamam): bit(id, apertado, fase) devolve o bit do
@@ -259,6 +262,11 @@ export function criarEntrada(opc = {}) {
   let usandoToque = !!opc.forcarToque || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   let forcada = null;      // entrada injetada pelos testes
   let pulsos = 0;          // botões apertados desde o último passo (toque curto não se perde)
+  // soltou e apertou de novo antes de um passo ver a soltura (toque duplo rápido no CHUTE = cavadinha; dois no
+  // LANÇAMENTO = rasteiro): o passo seguinte vê o botão SOLTO e o outro, apertado — a 2ª borda não se perde
+  let soltas = 0;          // botões soltos desde o último passo
+  let vistos = 0;          // botões que o último passo viu apertados
+  let adiados = 0;         // reapertos guardados para o próximo passo (pulso)
   let fase = 'ataque';     // pedida pelo main.js (estado do mundo)
   let faseVisivel = 'ataque';
   let bloqueada = false;   // "Editar time" aberto: nada vai para o jogo (só a pausa)
@@ -285,7 +293,11 @@ export function criarEntrada(opc = {}) {
     if (SENTIDO_FASE[code]) pulsos |= sentido.bit(code, true, fase); // o sentido fica fixado aqui
     if (ACOES_TECLA[code]) emitir(ACOES_TECLA[code]);
   });
-  window.addEventListener('keyup', e => { teclas.delete(e.code); if (SENTIDO_FASE[e.code]) sentido.bit(e.code, false); });
+  window.addEventListener('keyup', e => {
+    if (teclas.has(e.code)) soltas |= TECLA_BIT[e.code] ?? sentido.atual(e.code) ?? 0;
+    teclas.delete(e.code);
+    if (SENTIDO_FASE[e.code]) sentido.bit(e.code, false);
+  });
   window.addEventListener('blur', () => { teclas.clear(); for (const k in SENTIDO_FASE) if (!k.startsWith('pad:')) sentido.bit(k, false); });
 
   // cada fonte escreve no próprio objeto (nada é alocado por quadro além do que controle.js devolve)
@@ -319,7 +331,7 @@ export function criarEntrada(opc = {}) {
   }
   function segura(i, bit) {
     const p = lido(i);
-    if (p && !bloqueada) { bPad |= bit; if (!antes[i]) pulsos |= bit; }
+    if (p && !bloqueada) { bPad |= bit; if (!antes[i]) pulsos |= bit; } else if (antes[i]) soltas |= bit;
     antes[i] = p;
   }
   // A, B, Y e RB: o sentido (ataque/defesa) é decidido no aperto e vale até soltar
@@ -329,7 +341,10 @@ export function criarEntrada(opc = {}) {
       const bit = sentido.bit(id, true, fase);
       bPad |= bit;
       if (!antes[i]) pulsos |= bit;
-    } else sentido.bit(id, false);
+    } else {
+      if (antes[i]) soltas |= sentido.atual(id) ?? 0;
+      sentido.bit(id, false);
+    }
     antes[i] = p;
   }
   function borda(i, acao) {
@@ -483,7 +498,7 @@ export function criarEntrada(opc = {}) {
       b.dedo = null;
       // dois sentidos: só o dedo que SAI do botão (pointerup) vale como toque curto. O sistema tomando o toque
       // (pointercancel: gesto da borda, chamada, notificação) ou a captura perdida sem soltar não dão o bote
-      if (b.dois) { if (e.type === 'pointerup') pulsos |= b.dois.soltar(); else b.dois.cancelar(); }
+      if (b.dois) { if (e.type === 'pointerup') pulsos |= b.dois.soltar(); else b.dois.cancelar(); } else soltas |= b.mask;
       el.classList.remove('ativo');
       trocarFaseSePuder();
     };
@@ -600,7 +615,7 @@ export function criarEntrada(opc = {}) {
   /** Solta tudo. ignorarPad: botão do controle segurado agora só vale depois de solto e apertado de novo. */
   function soltarTudo(ignorarPad) {
     teclas.clear();
-    pulsos = 0;
+    pulsos = 0; soltas = 0; adiados = 0;
     sentido.soltarTudo();
     toque.id = null; toque.vx = toque.vy = 0;
     for (const b of bts) { b.dedo = null; b.dois?.cancelar(); b.el.classList.remove('ativo'); }
@@ -634,11 +649,21 @@ export function criarEntrada(opc = {}) {
         if (f.mag > mag) { mag = f.mag; ax = f.ax; ay = f.ay; }
       }
       const w = paraMundo(ax, ay, yaw);
-      saida.x = w.x; saida.z = w.z; saida.botoes = botoes | pulsos; saida.ax = ax; saida.ay = ay; saida.mag = mag;
+      botoes |= pulsos;
+      // soltou e apertou de novo sem um passo no meio: este passo vê solto, o próximo vê o reaperto (pulso). Os
+      // segurados contínuos (CORRER, modificador) ficam de fora: duas teclas do mesmo bit (os dois Shift) não piscam
+      adiados = soltas & vistos & botoes & REAPERTO;
+      botoes &= ~adiados;
+      saida.x = w.x; saida.z = w.z; saida.botoes = botoes; saida.ax = ax; saida.ay = ay; saida.mag = mag;
       return saida;
     },
-    /** Um passo de simulação usou a entrada: os apertos curtos já foram vistos. */
-    limparPulsos() { pulsos = 0; },
+    /**
+     * Os apertos curtos já foram vistos. passo = true: um passo de simulação usou a entrada (o laço do main.js) e o
+     * reaperto adiado vira o pulso do próximo; fora do laço (replay, cenas) limpa tudo.
+     */
+    limparPulsos(passo = false) { pulsos = passo ? adiados : 0; adiados = 0; soltas = 0; },
+    /** Os botões que um passo de simulação usou (main.js, depois de CADA passo): base do reaperto entre passos. */
+    passoUsou(botoes) { vistos = botoes | 0; },
     /** 'ataque' | 'defesa' (estado do mundo, decidido no main.js). */
     definirFase(f) {
       if (f !== 'ataque' && f !== 'defesa') return;

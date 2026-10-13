@@ -299,12 +299,18 @@ O dono pediu "cavadinha, clicando duas vezes em chutar" — a decisão de produt
 | FIFA 19 (EA, Pitch Notes; goal.com) | Na finalização cronometrada a força e a mira vêm do 1º aperto; o 2º só muda o tipo | A mira é a do analógico (guardada desde o 1º toque); a força da cavadinha vem do 2º toque (segurado = mais alta), porque o 1º de um toque duplo é sempre curto |
 | Patente de toque duplo (USPTO 7190356) e estudos de toque (arXiv 2408.02525; SeoulTech) | Intervalo entre os toques: ~80–90 ms com pressa, ~150–180 ms no ritmo normal, 250–480 ms devagar; os sistemas esperam 350–500 ms para decidir toque simples × duplo (é a latência do toque simples) | Janela de 0,15 s depois de soltar o 1º (`ACOES.cavadinha.janela`) só para o 1º toque RÁPIDO (< 0,18 s, `toqueRapido`): pega o toque duplo com pressa e no ritmo normal sem esperar 350 ms; o chute carregado não espera nada |
 | StatsBomb-1485 (item 2.7.3) | 20% de gols e 41,8% no alvo; por distância chutador–goleiro 0–6 m 31,9%, 6–10 m 29,0% | A precisão continua a da cavadinha de antes (`erroForca`, `erroDir`); meta do teste com o goleiro a ~8 m: 20–50% de gols |
+| Premier League / Opta ("The history of the Panenka penalty", 12/2024) | Pênaltis por lugar: alto no meio 92, 95,7% de gols (alto à direita 97,3%, à esquerda 96,6%; baixo 78–81%) | Só referência: a Panenka daqui (erro da cavadinha × a pressão do pênalti) fez 2 gols em 12 (9 fora); calibrar a Panenka fica para o dono decidir (a precisão pedida é a da cavadinha de hoje) |
+| Taxa de quadros do celular (o próprio jogo: Baixa a ~30 qps) | Um quadro de 33 ms; o dedo fora do botão num toque duplo rápido fica 30–60 ms | A entrada guarda o "soltou e apertou de novo" entre dois passos (o passo vê solto, o seguinte apertado): sem isso o toque duplo rápido virava um aperto só (teste-controles: reprovava antes) |
 
 **Medido antes de decidir** (teste próprio, 12/10): o chute sai 3 ticks (50 ms) depois de soltar o botão em 100% dos
 chutes parado e na mediana correndo (máximo 12 ticks). Um 2º toque normal chega 80–180 ms depois do 1º: converter só
 "antes do contato" pegaria quase nenhum toque duplo. Por isso o 1º toque rápido espera a janela: parado, o contato sai
 117 ms mais tarde; correndo, no 1º apoio depois da janela (mediana 117 ms, até 267 ms). O chute carregado (a barra de
 força) sai no mesmo tick de antes. Detalhes no contrato (CONTRATOS.md, "Cavadinha por dois toques no CHUTE").
+Só o aperto novo espera: o botão que já vinha segurado quando o controle trocou chuta na hora (13/10; com isso o
+hash-igual do treino volta a dar IGUAL, e o hash-partida dá IGUAL com a janela zerada e a cavadinha por dois toques
+desligada — as únicas diferenças da partida são a cavadinha pedida, a espera do toque rápido e o fim da cavadinha
+automática do humano).
 
 ### 2.8 Jogada de primeira
 O comando apertado com a bola chegando fica guardado e sai no 1º contato, sem domínio. Também vale se chegar um pouco atrasado. O erro cresce com o ângulo entre a chegada e a saída (faixas 0–45°, 45–90°, 90–135° e 135–180°), e a enfiada alta de primeira tem penalidade extra. Fonte: EA FC 25 TU#8, EA FC 26.

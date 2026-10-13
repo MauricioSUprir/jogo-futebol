@@ -121,7 +121,8 @@ parte; Pular, Esc ou Start: direto para o jogo. Pausa → "Modo de jogo" → "Pr
   **LANÇAMENTO** (vira **cruzamento** na faixa lateral do último terço: analógico para a linha de
   fundo = 1º pau, atravessado = 2º pau, para trás = marca do pênalti; dois toques = rasteiro),
   **CHUTE** (com o modificador: colocado com efeito; **dois toques no CHUTE: cavadinha**, de qualquer lugar, mirando pelo
-  analógico — o 2º toque segurado deixa a bola mais alta; a da IA sai sozinha com o goleiro adiantado), de primeira,
+  analógico — o 2º toque segurado deixa a bola mais alta; vale no pênalti (Panenka) e no tiro livre direto; o toque
+  rápido espera até 0,15 s pelo 2º, o chute carregado sai na hora; a da IA sai sozinha com o goleiro adiantado), de primeira,
   tabela (passe com o modificador), cabeceio e domínio no peito.
 - Força pela barra (segurar), perna boa e ruim, pressão, de primeira — calibrados com dados reais
   (StatsBomb, biomecânica): ver `PESQUISA-ETAPA2.md`.
