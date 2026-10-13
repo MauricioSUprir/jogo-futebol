@@ -3,7 +3,7 @@
 // mesma partida bit a bit (ver hashMundo).
 
 import { profundidadeVeu } from './rede-forma.js';
-import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO } from './config.js';
+import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO, FALTAS } from './config.js';
 import { criarRng, entre, uniforme } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
@@ -22,12 +22,12 @@ import { ACOES } from './config.js';
 // (tools/hash-igual.mjs). Exceção: os botões de defesa do humano (defesa.js), que só agem com
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
 import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe } from './ia-tatica.js';
-import { trocaAerea, alvoAereo } from './troca.js';
-import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida } from './defesa.js';
+import { trocaAerea, alvoAereo, escolhaManual } from './troca.js';
+import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
-import { misturarPartida, paredeParada } from './partida.js';
+import { misturarPartida, paredeParada, ladoPenaltiHumano } from './partida.js';
 import { planejarRecepcao } from './recepcao.js';
-import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta } from './faltas.js';
+import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta, chegada } from './faltas.js';
 // Regras da mão do goleiro e o goleiro jogando com o pé (pedido do dono, 11/10; só na partida)
 import { maoPermitida, motivoSemMao, registrarToque, estadoMao, paredeAreaMao, naPropriaArea, goleiroNoPe } from './regras-goleiro.js';
 import { lateralSegurando, segurarLateral } from './lateral.js';
@@ -301,6 +301,11 @@ function boteIA(m, j) {
   if (b.p.y > 0.5) return;
   const dB = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   if (dB > cfg.alcance) return;
+  // o companheiro chamado pelo PRESSÃO do humano aperta com responsabilidade: não dá o bote embalado (acima de
+  // FALTAS.bote.vLivre m/s) nem por trás do condutor — chega, freia e tira. Seguindo o recebedor depois do passe, os
+  // botes assim viravam falta (teste-pressao-humano M4: 4 → 9 faltas com o botão)
+  if (m.partida && j.ia && j.ia.ramo === 'pressaoHumano' && m.tick - j.ia.tick <= 1
+    && (MD.hypot(j.vx, j.vz) > FALTAS.bote.vLivre || chegada(j, dono) === 'tras')) return;
   const dD = MD.hypot(b.p.x - dono.x, b.p.z - dono.z);
   // (só na partida) condutor parado ou lento (abaixo de vParado m/s) e sem tocar na bola há semToque s: a bola parada à
   // frente do pé dele (a condução a deixa a ~0,345 m do corpo) não está "colada" — quem chega ao alcance dela tenta
@@ -347,6 +352,13 @@ function boteIA(m, j) {
 export function passo(m, entradas) {
   m.eventos = [];
   const js = m.jogadores;
+  // o último tick de cada time com a bola (no pé ou na mão) no começo do passo: a escolha manual do TROCAR vale até o
+  // time dela ter a bola (troca.js escolhaManual). Por time — guardar só o último time com a bola fazia a escolha antiga
+  // "reviver" quando o adversário recuperava a bola (contraprova, teste-botoes B14b)
+  if (m.posse != null) {
+    const d = jogadorPorId(m, m.posse);
+    if (d) (m.possePorTime ??= {})[d.time] = m.tick;
+  }
   // botões de cada time humano (bordas de TROCAR e botões segurados na troca)
   for (const t of m.humanos) {
     m.botoesTimeAnt[t] = m.botoesTimeAgora[t] ?? 0;
@@ -511,6 +523,13 @@ export function passo(m, entradas) {
     if (dono) verificarPerda(m, dono);
   }
   if (m.voo && m.posse != null) m.voo = null;
+  // "o cobrador não toca de novo" acaba quando outro jogador toca a bola (posse, mão, chute/passe/bote/defesa, corpo)
+  if (m.cobrou) {
+    const c = m.cobrou, u = m.ultimoToque;
+    let outro = (m.posse != null && m.posse !== c.id) || (m.naMao != null && m.naMao !== c.id) || (!!u && u.id !== c.id && u.tick > c.tick);
+    if (!outro) for (const e of m.eventos) if (e.tipo === 'bateuCorpo' && e.id !== c.id) { outro = true; break; }
+    if (outro) m.cobrou = null;
+  }
   // passe que morreu (a bola rolando a menos de 1 m/s meio segundo depois da hora de chegar): vira bola livre.
   // Antes o passe continuava "do recebedor" para sempre: ele já tinha desistido (j.recebe vence em 4 s) e os
   // companheiros mais perto não iam na bola do passe de outro — os 22 ficavam parados em volta dela (medido
@@ -571,6 +590,8 @@ function candidatosBolaLivre(m, alvo) {
   for (let k = 0; k < js.length; k++) {
     const j = js[k];
     if (j.papel === 'marcador' || j.papel === 'parado') continue;
+    // partida: quem cobrou a bola parada não toca de novo antes de outro jogador (partida.js rolou: m.cobrou)
+    if (m.cobrou && m.cobrou.id === j.id) continue;
     // o goleiro só disputa a bola livre com o pé quando não pode pegá-la com a mão (partida: recuo, a bola que ele
     // soltou, fora da área — Regra 12)
     if (j.posicao === 'GOL' && !(m.partida && !maoPermitida(m, j, b.p.x, b.p.z))) continue;
@@ -598,6 +619,9 @@ function bolaLivre(m) {
     const j = _cands[k];
     if (j.id === passou) continue; // quem acabou de bater não domina a própria bola
     if (naParada(m) && j.id !== m.parada.cobrador) continue; // partida: só o cobrador
+    // toque aéreo vencido (a hora passou): não segura a bola livre para quem não vai mais nela
+    const ta = j.cond?.toque;
+    if (ta && ta.tipo === 'aereo' && aereoVencido(m, j, ta)) j.cond.toque = null;
     if (!b.rolando && b.p.y > 0.45) {
       if (bolaAltaNoCorpo(m, j)) return;
       continue;
@@ -637,10 +661,21 @@ function primeira(m, j, pe) {
   return ok;
 }
 
+/**
+ * Toque aéreo marcado que não vale mais: a hora dele passou (a bola foi para outro ou ficou baixa) ou a bola já é de
+ * outro jogador. Antes ele ficava marcado para sempre (só bolaAltaNoCorpo limpava, e só com a bola alta e livre): o
+ * corpo ia para o ponto velho e o analógico não mexia o jogador — o controlado do humano ficou preso 7 s (auditoria dos
+ * botões, 12/10).
+ */
+function aereoVencido(m, j, t) {
+  return m.tick > t.tick + 1 || (m.posse != null && m.posse !== j.id);
+}
+
 /** Com cabeceio/domínio aéreo marcado: vai para o ponto marcado e chega na hora, de frente para a bola. */
 function movimentoAereo(m, j, base) {
   const t = j.cond.toque;
   if (!t || t.tipo !== 'aereo' || m.posse === j.id) return base;
+  if (aereoVencido(m, j, t)) { j.cond.toque = null; return base; }
   const dx = t.bx - j.x, dz = t.bz - j.z, d = MD.hypot(dx, dz);
   const resta = Math.max(1, t.tick - m.tick) * PASSO;
   const b = m.bola;
@@ -749,10 +784,16 @@ function ganhouPosse(m, j) {
   m.voo = null;
   for (const t of m.humanos) {
     if (t === j.time) continue;
-    // o time humano perdeu a bola: passa para o jogador de linha mais perto dela
+    // o outro time ganhou a bola: o humano vai para o jogador de linha mais perto dela — nunca por cima da escolha
+    // manual (TROCAR) da jogada de defesa em andamento
+    if (escolhaManual(m, t)) continue;
+    // com o PRESSÃO segurado, quem foi chamado segue apertando o recebedor: o controle vai para o mais perto depois dele
+    // (senão o humano, de analógico solto, ficava com o chamado e ele parava; outro partia do zero)
+    const pc = pressaoPedida(m, t) ? m.pressaoHumano?.[t] : null;
+    const chamado = pc && pc.ult >= 0 && m.tick - pc.ultTick <= 2 ? pc.ult : -1;
     let mel = null, dm = Infinity;
     for (const o of m.jogadores) {
-      if (o.time !== t || o.posicao === 'GOL') continue;
+      if (o.time !== t || o.posicao === 'GOL' || o.id === chamado) continue;
       const d = MD.hypot(o.x - m.bola.p.x, o.z - m.bola.p.z);
       if (d < dm) { dm = d; mel = o; }
     }
@@ -873,6 +914,15 @@ function defesaDoGoleiro(m, j) {
 function goleiroComoLinha(m, j) {
   if (ehControlado(m, j) && m.naMao !== j.id && m.posse === j.id) return true;
   if (!m.partida || m.naMao === j.id || defesaDoGoleiro(m, j)) return false;
+  // pênalti montado (Regra 14): o analógico escolhe o lado (partida.js rolou: j.palpite) e dá o passo para ele, na linha —
+  // no máximo GOLEIRO.penalti.passo m do meio (partida.js restricaoPenalti; antes andava até a trave e o lado certo virava
+  // errado; congelado no meio, o lado certo escolhido no fim defendia menos que na main: 7 → 4 em 38, teste-botoes B6d).
+  // Sem canto escolhido (para o batedor, para o gol: partida.js ladoPenaltiHumano = 0) ele fica com a IA do goleiro, no
+  // meio, como com o analógico solto (antes andava na diagonal até o passo sem ter escolhido: teste-botoes B6e)
+  const pr = m.parada;
+  if (pr && !pr.rolou && pr.tipo === 'penalti' && pr.time !== j.time && ehControlado(m, j) && !m.iaJoga?.[j.time]) {
+    return ladoPenaltiHumano(j) !== 0;
+  }
   if (ehControlado(m, j) && !m.iaJoga?.[j.time]) return m.posse === j.id || j.imag > 0 || goleiroNoPe(m, j);
   return goleiroNoPe(m, j);
 }
@@ -969,6 +1019,7 @@ function trocarJogador(m, entradas) {
         const g = m.jogadores.find(o => o.time === t && o.posicao === 'GOL');
         if (g && m.controlado[t] !== g.id && !(m.posse === j.id && m.naMao !== j.id)) {
           assumirControle(m, t, g);
+          (m.trocaManual ??= {})[t] = { tick: m.tick, id: g.id, goleiro: true };
           m.eventos.push({ tipo: 'troca', id: g.id, goleiro: true });
           continue;
         }
@@ -979,6 +1030,7 @@ function trocarJogador(m, entradas) {
     const comBola = m.posse === j.id && m.naMao !== j.id;
     if (apertou && !comBola && melhor && melhor.id !== j.id) {
       assumirControle(m, t, melhor);
+      (m.trocaManual ??= {})[t] = { tick: m.tick, id: melhor.id, goleiro: false };
       m.eventos.push({ tipo: 'troca', id: melhor.id });
     }
   }
@@ -995,6 +1047,9 @@ export function candidatoTroca(m, t) {
   let mel = null, mt = Infinity;
   for (const o of m.jogadores) {
     if (o.time !== t || o.posicao === 'GOL' || o.id === m.controlado[t]) continue;
+    // quem está parado (na barreira, cobrador) ou é o marcador do treino não recebe o controle: a simulação não lê a
+    // entrada dele — o TROCAR na barreira dava um zagueiro que não andava com o analógico
+    if (o.papel === 'parado' || o.papel === 'marcador') continue;
     const d = MD.hypot(o.x - px, o.z - pz);
     // chega antes = distância / velocidade de arrancada, com bônus para quem já corre para lá
     const v = Math.max(1, (o.vx * (px - o.x) + o.vz * (pz - o.z)) / Math.max(d, 1e-6));

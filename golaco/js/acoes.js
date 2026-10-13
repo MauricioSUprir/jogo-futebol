@@ -71,9 +71,29 @@ export function atualizarBotoesAcao(m, j) {
   if (j.pedido) {
     const idade = (m.tick - j.pedido.tick) * DT;
     const esperandoBola = j.cond && j.cond.toque && (j.cond.toque.tipo === 'dominio' || j.cond.toque.tipo === 'aereo');
-    if (idade > (esperandoBola || bolaVindo(m, j) ? ACOES.pedidoPrimeira : ACOES.pedidoValidade) && m.posse !== j.id) j.pedido = null;
+    // o humano com um passe vindo para ele (j.recebe): o pedido de primeira vale enquanto o passe para ele está a caminho
+    // (o rasteiro não tem hora de chegada marcada) ou até a hora de chegada (+ ACOES.primeiraFolga s) — no passe longo
+    // (24–30 m) a bola chegava depois dos 1,6 s e ele só dominava (auditoria dos botões, 12/10)
+    const ateChegar = !!j.recebe && ehHumano(m, j) && m.posse == null
+      && ((!!m.voo && m.voo.para === j.id) || (j.recebe.chega > 0 && m.tick <= j.recebe.chega + Math.round(ACOES.primeiraFolga / DT)));
+    if (idade > (esperandoBola || bolaVindo(m, j) ? ACOES.pedidoPrimeira : ACOES.pedidoValidade) && m.posse !== j.id && !ateChegar) j.pedido = null;
     else if (idade > ACOES.pedidoValidade * 2 && m.posse === j.id && !(j.cond.toque && j.cond.toque.tipo === 'acao')) j.pedido = null;
   }
+}
+
+/**
+ * j é o controlado de um time humano, com o humano jogando? (A IA jogando pelo humano — a demo, entrada com `ia`, como
+ * no painel de equilíbrio — não: ela não espera o 2º toque nem precisa da primeira estendida, e a partida IA × IA fica
+ * a mesma para os dois times.)
+ */
+function ehHumano(m, j) {
+  return !!m.humanos && m.humanos.includes(j.time) && m.controlado?.[j.time] === j.id && !m.iaJoga?.[j.time];
+}
+
+/** j, com a bola, está onde o LANÇAMENTO vira cruzamento (ponta no último terço: lancamentoOuCruzamento)? */
+function naZonaDeCruzamento(m, j) {
+  const cc = ACOES.cruzamento;
+  return (j.x * ataca(m, j.time)) > cc.terco && Math.abs(j.z) > cc.faixa;
 }
 
 function soltarCarga(m, j) {
@@ -111,6 +131,11 @@ export function processarPedido(m, j) {
   if (!j.pedido || m.posse !== j.id) return;
   const c = j.cond;
   if (c.toque && c.toque.tipo === 'acao') return;
+  // LANÇAMENTO do humano na zona do cruzamento: espera a janela do 2º toque (ACOES.toqueDuplo, contada do soltar) antes de
+  // marcar o toque — senão o 1º toque já cruzava alto e o 2º virava um pedido do recebedor (dois toques = rasteiro)
+  const p0 = j.pedido;
+  if (p0.tipo === 'lancamento' && !p0.rasteiro && ehHumano(m, j) && naZonaDeCruzamento(m, j)
+    && (m.tick - p0.tick) * DT < ACOES.toqueDuplo) return;
   let op = procurarOportunidade(m, j, 2, 24, true, null, true);
   // perna boa: parado (os dois pés no chão) com a bola à frente, bate com ela; sem pressão,
   // ajeita o passo para bater com ela
@@ -644,6 +669,10 @@ function chute(m, j, pe, p, erroMult) {
     const gz = gk ? gk.z : 0;
     zMira = gz > 0 ? -meio + 0.6 : meio - 0.6;
   }
+  // pênalti: a mira do humano vai no máximo a ±penaltiCanto m do meio — com o erro da cobrança (penaltiErro) a ±3,1 m
+  // mandava 1/3 dos pênaltis para fora com qualquer analógico; a ±2,75 (o canto da IA, que bate 36% mais no meio), 16%;
+  // a ±2,5, ~8% (teste-botoes B11; a meta do dono é ~6%). Só o humano: a IA mira o canto dela (PARTIDA.penaltiIA)
+  if (p.penalti && ehHumano(m, j)) zMira = clamp(zMira, -cfg.penaltiCanto, cfg.penaltiCanto);
   const yMira = lerp(cfg.yAlvo[0], cfg.yAlvo[1], p.forca * p.forca);
   const colocado = p.mod;
   let s = lerp(cfg.v[0], cfg.v[1], p.forca) * lerp(0.86, 1.08, j.par.attr.finalizacao / 100) * velPeFraco(j, pe);
