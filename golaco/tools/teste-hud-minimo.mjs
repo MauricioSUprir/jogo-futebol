@@ -21,12 +21,28 @@
 //     LIGADO desde 12/10) mudam a tela, ficam salvas e, com os dois ligados, nada encosta
 //     e, na barra de cima da pausa, título, opções, tela cheia e X não encostam (folga ≥ 4 px) nas 3 telas do H1
 //  H8 os ajustes de toque antigos (golaco.toque.v1) não valem mais: todo mundo recebe o padrão novo (80%, 55%)
-//   node tools/teste-hud-minimo.mjs [--raiz <pasta do jogo>]   (--raiz: mede outra cópia, ex.: a base)
+//  H10 placar (dono, 12/10: "quero o placar assim, tem que ser algo menor e mais com a nossa cara", com a barra de TV de
+//     referência): nas 3 telas do celular (com entalhe) e no PC 1280×720, no jogo ("34'"), nos acréscimos ("45+2'" com
+//     "1º T +4") e no intervalo —
+//     a) formato: marca do GOLAÇO no começo, escudo + sigla da casa, placar, sigla + escudo do visitante (escudos dos
+//        times do elenco: Golaço FC e Ventania FC) e o relógio no bloco VERDE no fim (texto com contraste ≥ 4,5:1);
+//     b) menor: altura ≤ 24 px no celular e ≤ 26 no PC, e altura e área MENORES que as do placar de antes (mesmo estado,
+//        mesma tela) e que as da referência do dono (248×29 px em 844×390 = 7192 px²);
+//     c) legível: números ≥ 14 px, siglas ≥ 11 px (Apple HIG e Material 3: 11), "1º T +4" ≥ 10 px, escudos ≥ 12 px;
+//     d) nada encosta: as peças do placar não se sobrepõem nem saem dele, e com o minimapa LIGADO o placar mais largo
+//        (acréscimos) não encosta no minimapa nem no menu (folga ≥ 4 px), o "1º T +4" CONTINUA na tela (o minimapa encosta
+//        à direita do placar antes de o tempo sair) e com gols de 2 dígitos (10-9: só o placar muda, o relógio não) nada
+//        encosta (contraprova de 13/10: em 568×320 o "1º T +4" sumia e o 10-9 passava 2,5 px por cima do minimapa); no
+//        treino de ataque com o minimapa e o painel, nada encosta e a marca fica (saía em 568 e 667 px sem precisar);
+//     e) leitor de tela: o placar tem o nome dos dois times (Golaço FC e Ventania FC; na tela só as siglas)
+//   node tools/teste-hud-minimo.mjs [--raiz <pasta do jogo>] [--so-placar]   (--raiz: mede outra cópia, ex.: a base;
+//   --so-placar: só as telas do H1/H7/H9 e o H5 com o H10, sem os 2 min de jogo nem as opções salvas — para iterar no placar)
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 
 const args = process.argv.slice(2);
 const raiz = path.resolve(args.includes('--raiz') ? args[args.indexOf('--raiz') + 1] : RAIZ);
+const soPlacar = args.includes('--so-placar');
 const res = [];
 const meta = (nome, medido, alvo, ok) => res.push({ nome, medido, alvo, ok: !!ok });
 const srv = await servidor(0, raiz);
@@ -93,6 +109,110 @@ const ENCOSTA = f => {
   return p;
 };
 
+// H10: o placar no estado pedido (gols e relógio como o laço passa ao HUD) e as medidas dele. Na base (sem
+// __golaco.placarDeTeste) escreve o mesmo no DOM, como o hud.js de antes, para medir o "antes" com o --raiz.
+const ESTADOS_PLACAR = [
+  ['jogo', [1, 0], { minuto: 34, tempo: 1, estado: 'jogo', acrescimo: null }],
+  ['acréscimos', [2, 1], { minuto: 45, tempo: 1, estado: 'jogo', acrescimo: { anunciado: 4, decorrido: 2 } }],
+  ['intervalo', [2, 1], { minuto: 45, tempo: 1, estado: 'intervalo', acrescimo: null }],
+];
+const MEDIR_PLACAR = async (gols, rel) => {
+  const g = window.__golaco;
+  if (g.placarDeTeste) g.placarDeTeste(gols, rel);
+  else {
+    // base: só os gols (rel ausente) não refazem o topo, como no hud.js de antes
+    if (gols) { document.getElementById('gols-0').textContent = gols[0]; document.getElementById('gols-1').textContent = gols[1]; }
+  }
+  if (!g.placarDeTeste && rel) {
+    const r = document.getElementById('placar-relogio'); r.hidden = false;
+    document.getElementById('relogio').textContent = rel.acrescimo ? `${rel.minuto}+${rel.acrescimo.decorrido}'` : `${rel.minuto}'`;
+    document.getElementById('relogio-tempo').textContent = rel.estado === 'intervalo' ? 'Intervalo' : `${rel.tempo}º T${rel.acrescimo ? ' +' + rel.acrescimo.anunciado : ''}`;
+    r.classList.toggle('com-tempo', !!rel.acrescimo || rel.estado !== 'jogo'); r.classList.toggle('parado', rel.estado !== 'jogo');
+    dispatchEvent(new Event('resize'));
+  }
+  for (const e of document.querySelectorAll('.placar-gols')) e.classList.remove('mudou');
+  // o topo se ajusta no próximo quadro (resize → requestAnimationFrame)
+  await new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(ok)));
+  const vis = e => !!e && e.getClientRects().length > 0 && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden';
+  const ret = e => { const q = e.getBoundingClientRect(); return { l: q.left, t: q.top, r: q.right, b: q.bottom, w: q.width, h: q.height }; };
+  const pl = document.querySelector('#hud .placar');
+  const peca = (nome, e, fonte) => (vis(e) && e.getBoundingClientRect().width > 0 ? { nome, ...ret(e), fs: fonte ? parseFloat(getComputedStyle(fonte).fontSize) : null, txt: e.textContent.trim() } : { nome, ausente: true });
+  const esc = [...pl.querySelectorAll('.placar-escudo')];
+  const usa = esc.map(e => (e.querySelector('use')?.getAttribute('href') ?? ''));
+  const rel0 = document.getElementById('placar-relogio');
+  const pecas = [
+    peca('marca', pl.querySelector('.placar-marca') ?? (vis(pl.querySelector('.marca-simbolo')) ? pl.querySelector('.marca-simbolo') : null)),
+    peca('escudo da casa', esc[0]), peca('sigla da casa', document.getElementById('sigla-0'), document.getElementById('sigla-0')),
+    peca('gols da casa', document.getElementById('gols-0'), document.getElementById('gols-0')),
+    peca('gols do visitante', document.getElementById('gols-1'), document.getElementById('gols-1')),
+    peca('sigla do visitante', document.getElementById('sigla-1'), document.getElementById('sigla-1')), peca('escudo do visitante', esc[1]),
+    peca('relógio', rel0, document.getElementById('relogio')),
+  ];
+  const tempo = document.getElementById('relogio-tempo');
+  const rgb = c => (c.match(/[\d.]+/g) ?? []).map(Number);
+  const lum = ([r, g, b]) => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+  const fundo = rgb(getComputedStyle(rel0).backgroundColor), letra = rgb(getComputedStyle(document.getElementById('relogio')).color);
+  const l1 = lum(fundo), l2 = lum(letra);
+  return {
+    caixa: ret(pl), pecas, usa, cls: document.documentElement.className,
+    tempo: vis(tempo) && tempo.getBoundingClientRect().width > 0 ? { fs: parseFloat(getComputedStyle(tempo).fontSize), ...ret(tempo), txt: tempo.textContent.trim() } : null,
+    relogio: { fundo, alfa: fundo.length > 3 ? fundo[3] : 1, contraste: (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05) },
+  };
+};
+// "antes" (placar compacto de TV publicado até 12/10, origin/main 44f68081, medido com este teste e --raiz) e a referência
+// do dono (a barra de TV de 248×29 px numa tela de 844×390: 2532×1170 com 3 px por px)
+// (o "antes" é igual nas 3 telas do celular: nada aperta com o minimapa desligado)
+const PLACAR_ANTES = {
+  celular: { jogo: { h: 30, area: 5084 }, 'acréscimos': { h: 30, area: 6743 }, intervalo: { h: 30, area: 6949 } },
+  pc: { jogo: { h: 34, area: 6176 }, 'acréscimos': { h: 34, area: 8101 }, intervalo: { h: 34, area: 8290 } },
+};
+const PLACAR_REF = { h: 29, area: 248 * 29 };
+const PLACAR_MIN = { num: 14, sigla: 11, tempo: 10, escudo: 12 };
+const placarFalhas = [], placarLinhas = [];
+/** Confere um estado medido (H10 a–d). tela: '844×390' etc.; tipo: 'celular' | 'pc'. */
+function conferirPlacar(tela, tipo, estado, r) {
+  const f = [], c = r.caixa, alt = tipo === 'pc' ? 26 : 24;
+  const p = Object.fromEntries(r.pecas.map(x => [x.nome, x]));
+  const faltam = r.pecas.filter(x => x.ausente).map(x => x.nome);
+  if (faltam.length) f.push(`falta: ${faltam.join(', ')}`);
+  // a) ordem da esquerda para a direita, marca no começo e relógio no fim (só com todas as peças)
+  if (!faltam.length) {
+    const ordem = r.pecas.map(x => x.nome);
+    for (let i = 1; i < ordem.length; i++) if (!(p[ordem[i]].l >= p[ordem[i - 1]].l + 1)) f.push(`${ordem[i]} não vem depois de ${ordem[i - 1]}`);
+    if (p.marca.l - c.l > 2) f.push('a marca não começa a barra');
+    if (c.r - p['relógio'].r > 2) f.push('o relógio não fecha a barra');
+    if (!/escudo-golaco$/.test(r.usa[0] ?? '') || !/escudo-ventania$/.test(r.usa[1] ?? '')) f.push(`escudos ${r.usa.join(' / ') || 'nenhum'}`);
+    if (p['sigla da casa'].txt !== 'GLÇ' || p['sigla do visitante'].txt !== 'VNT') f.push(`siglas ${p['sigla da casa'].txt}/${p['sigla do visitante'].txt}`);
+    // bloco verde (com o jogo rolando; parado, no intervalo, fica claro) e letras legíveis nele
+    const [rr, gg, bb] = r.relogio.fundo;
+    if (estado !== 'intervalo' && !(r.relogio.alfa > 0.9 && gg >= 170 && gg - rr >= 90 && gg - bb >= 50)) f.push(`relógio sem o bloco verde (${r.relogio.fundo.join(',')})`);
+    if (r.relogio.contraste < 4.5) f.push(`contraste do relógio ${r.relogio.contraste.toFixed(1)}:1`);
+  }
+  // b) menor
+  const area = c.w * c.h, antes = PLACAR_ANTES[tipo][estado];
+  if (c.h > alt + 0.5) f.push(`altura ${c.h.toFixed(1)} > ${alt}`);
+  if (!(c.h < antes.h)) f.push(`altura ${c.h.toFixed(1)} ≥ antes ${antes.h}`);
+  if (antes.area && !(area < antes.area)) f.push(`área ${area.toFixed(0)} ≥ antes ${antes.area}`);
+  if (!(c.h < PLACAR_REF.h) || !(area < PLACAR_REF.area)) f.push(`não é menor que a referência (${c.w.toFixed(0)}×${c.h.toFixed(0)})`);
+  // c) legível
+  for (const n of ['gols da casa', 'gols do visitante', 'relógio']) if (p[n] && !p[n].ausente && !(p[n].fs >= PLACAR_MIN.num)) f.push(`${n} ${p[n].fs} px`);
+  for (const n of ['sigla da casa', 'sigla do visitante']) if (p[n] && !p[n].ausente && !(p[n].fs >= PLACAR_MIN.sigla)) f.push(`${n} ${p[n].fs} px`);
+  for (const n of ['escudo da casa', 'escudo do visitante']) if (p[n] && !p[n].ausente && !(p[n].h >= PLACAR_MIN.escudo)) f.push(`${n} ${p[n].h.toFixed(1)} px`);
+  if (estado !== 'jogo' && r.tempo && !(r.tempo.fs >= PLACAR_MIN.tempo)) f.push(`"${r.tempo.txt}" ${r.tempo.fs} px`);
+  if (estado === 'acréscimos' && !r.tempo && !/topo-c3/.test(r.cls)) f.push('"1º T +4" não aparece');
+  // d) peças dentro da barra e sem sobrepor
+  const dentro = r.pecas.filter(x => !x.ausente);
+  for (const x of dentro) if (x.l < c.l - 0.5 || x.r > c.r + 0.5 || x.t < c.t - 0.5 || x.b > c.b + 0.5) f.push(`${x.nome} sai do placar`);
+  for (let i = 0; i < dentro.length; i++) for (let k = i + 1; k < dentro.length; k++) {
+    const a = dentro[i], b = dentro[k];
+    if (a.l < b.r - 0.5 && b.l < a.r - 0.5 && a.t < b.b - 0.5 && b.t < a.b - 0.5) f.push(`${a.nome} × ${b.nome}`);
+  }
+  placarLinhas.push(`${tela} ${estado} ${c.w.toFixed(0)}×${c.h.toFixed(0)} = ${area.toFixed(0)} px² (antes ${antes.area || '-'}${p['gols da casa']?.fs ? `; gols ${p['gols da casa'].fs}, sigla ${p['sigla da casa']?.fs}, relógio ${p['relógio']?.fs ?? '-'}${r.tempo ? `, tempo ${r.tempo.fs}` : ''} px` : ''})`);
+  if (f.length) placarFalhas.push(`${tela} ${estado}: ${f.join('; ')}`);
+  return { area, h: c.h };
+}
+const placarEncosta = [], placarTreino = []; let placarAria = '';
+
 // H1 + H2: layout nas duas fases e três telas de celular (determinístico, sem simular)
 let piorArea = 0, piorTexto = 0; const txtVisto = new Set(); const linhasH1 = [];
 const nomesBotoes = { botoes: 0, comNome: 0, sem: new Set() };
@@ -139,6 +259,52 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
       linhasH1.push(`${w}×${h} ${fase} ${(r[fase].area * 100).toFixed(1)}% (${r[fase].pecas} peças)`);
     }
     if (r.pausa) { linhasPausa.push(`${w}×${h} folga ${r.pausa.folga.toFixed(0)} px (${r.pausa.par})${r.pausa.transborda > 0 ? `, transborda ${r.pausa.transborda} px` : ''}`); piorPausa = Math.min(piorPausa, r.pausa.transborda > 0 ? -1 : r.pausa.folga); }
+    // H10: o placar nos 3 estados (minimapa desligado, o padrão do celular) e, com o minimapa ligado, o mais largo
+    for (const [estado, gols, rel] of ESTADOS_PLACAR) {
+      const m = await pagina.evaluate(([MP, gols, rel]) => eval(MP)(gols, rel), [MEDIR_PLACAR.toString(), gols, rel]);
+      conferirPlacar(`${w}×${h}`, 'celular', estado, m);
+    }
+    // leitor de tela: o nome de cada time (só no aria-label; contraprova de 13/10: num <span> sem papel o Chromium não
+    // expunha o nome, e a árvore saía "GLÇ 0 0 VNT")
+    if (w === 844) {
+      placarAria = (await pagina.locator('#hud .placar').ariaSnapshot()).replace(/\s*\n\s*/g, ' ');
+      if (!/Golaço FC/.test(placarAria) || !/Ventania FC/.test(placarAria)) placarFalhas.push(`leitor de tela sem o nome dos times: ${placarAria}`);
+    }
+    const enc = await pagina.evaluate(async ([MP, FS, ES, gols, rel]) => {
+      document.getElementById('chip-minimapa')?.click();
+      const m = await eval(MP)(gols, rel);
+      const f = eval(FS)().f.filter(x => ['placar', 'minimapa', 'menu'].includes(x.nome));
+      const p = eval(ES)(f);
+      // contraprova (13/10): com o minimapa ligado o "1º T +4" continua (o minimapa encosta à direita do placar antes de
+      // o tempo sair), e gols de 2 dígitos (só o placar muda; o relógio não) refazem o topo: nada encosta
+      const tempo = m.tempo?.txt ?? null;
+      const m2 = await eval(MP)([10, 9]);
+      const p2 = eval(ES)(eval(FS)().f.filter(x => ['placar', 'minimapa', 'menu'].includes(x.nome)));
+      document.getElementById('chip-minimapa')?.click();
+      return { p, p2, tempo, nomes: f.map(x => x.nome), cls: m.cls, larg2: m2.caixa.w };
+    }, [MEDIR_PLACAR.toString(), FORMAS.toString(), ENCOSTA.toString(), ESTADOS_PLACAR[1][1], ESTADOS_PLACAR[1][2]]);
+    placarEncosta.push(`${w}×${h}: ${enc.p.length ? 'encosta ' + enc.p.join(', ') : 'nada encosta'} (${enc.nomes.join(', ')}${/topo-c4/.test(enc.cls) ? '; compacto' : ''}; tempo "${enc.tempo ?? 'escondido'}"; com 10-9 ${enc.larg2.toFixed(0)} px: ${enc.p2.length ? 'encosta ' + enc.p2.join(', ') : 'nada encosta'})`);
+    if (enc.p.length || !enc.nomes.includes('minimapa')) placarFalhas.push(`${w}×${h} com o minimapa: ${enc.p.join(', ') || 'minimapa não aparece'}`);
+    if (enc.tempo !== '1º T +4') placarFalhas.push(`${w}×${h} com o minimapa: "1º T +4" ${enc.tempo === null ? 'escondido' : `"${enc.tempo}"`}`);
+    if (enc.p2.length) placarFalhas.push(`${w}×${h} com o minimapa e gols 10-9: ${enc.p2.join(', ')}`);
+    // treino de ataque com o minimapa ligado e o painel ("Conduzindo" + posição): nada encosta e a marca do GOLAÇO fica
+    // (contraprova de 13/10: em 568 e 667 px ela saía com 40–90 px livres à direita do placar — quem encostava era o
+    // painel, e apertar o painel, passo 2, já resolvia)
+    const tr = await pagina.evaluate(async ([FS, ES]) => {
+      const g = window.__golaco, espera = () => new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(ok)));
+      g.trocarModo('ataque'); g.relogio.avancar(1000 / 60);
+      document.getElementById('chip-minimapa')?.click();
+      g.hudModo('Conduzindo', 'MEI');
+      await espera();
+      const f = eval(FS)().f.filter(x => ['placar', 'minimapa', 'menu', 'painel'].includes(x.nome));
+      const mc = document.querySelector('#hud .placar-marca');
+      const marca = !!mc && getComputedStyle(mc).display !== 'none' && mc.getBoundingClientRect().width > 0;
+      return { p: eval(ES)(f), marca, nomes: f.map(x => x.nome), modo: document.documentElement.classList.contains('em-partida') ? 'partida' : 'treino' };
+    }, [FORMAS.toString(), ENCOSTA.toString()]);
+    placarTreino.push(`${w}×${h}: ${tr.p.length ? 'encosta ' + tr.p.join(', ') : 'nada encosta'} (${tr.nomes.join(', ')}; marca ${tr.marca ? 'na tela' : 'FORA'})`);
+    if (tr.p.length || !tr.marca || tr.modo !== 'treino' || !tr.nomes.includes('minimapa') || !tr.nomes.includes('painel')) {
+      placarFalhas.push(`${w}×${h} treino com o minimapa: ${[...tr.p, tr.marca ? null : 'marca fora', tr.modo !== 'treino' ? 'não trocou de modo' : null].filter(Boolean).join(', ') || 'falta caixa'}`);
+    }
   } finally { await navegador.close(); }
 }
 meta('H9 nomes dos botões de toque por padrão (dono, 12/10), inteiros dentro do círculo do botão (3 telas, 2 fases)', `${nomesBotoes.comNome}/${nomesBotoes.botoes} botões com o nome${nomesBotoes.sem.size ? ' — sem: ' + [...nomesBotoes.sem].slice(0, 8).join(', ') : ''}`, 'todos', nomesBotoes.botoes > 0 && nomesBotoes.comNome === nomesBotoes.botoes);
@@ -146,7 +312,7 @@ meta('H1 área do HUD no celular (pior caso, ataque e defesa, 3 telas)', `${(pio
 meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada encosta nem transborda (3 telas com entalhe)', linhasPausa.join('; ') || 'sem a pausa', 'folga ≥ 4 px (a do ENCOSTA)', linhasPausa.length === 3 && piorPausa >= 4);
 
 // H2 (jogo) + H3 + H4 + H6: jogo de verdade no celular 844×390
-{
+if (!soPlacar) {
   const { navegador, pagina, erros } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
   try {
     // ?comemoracao=0: a comemoração do gol seguraria a simulação ~5–7,5 s por gol e mudaria a linha do tempo destes 2 min
@@ -243,11 +409,21 @@ meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada enco
       dica0 && fimDica && fimDica.ms > 0 && fimDica.ms <= 9000);
     const mapa = await pagina.evaluate(() => { const m = document.getElementById('minimapa'); return !!m && getComputedStyle(m).display !== 'none' && m.offsetWidth > 0; });
     meta('H7 PC: o minimapa continua ligado por padrão', String(mapa), 'true', mapa);
+    // H10 no PC: os 3 estados com o relógio manual parado (o laço não reescreve o placar)
+    await pagina.evaluate(() => window.__golaco.relogio.usarManual(true));
+    for (const [estado, gols, rel] of ESTADOS_PLACAR) {
+      const m = await pagina.evaluate(([MP, gols, rel]) => eval(MP)(gols, rel), [MEDIR_PLACAR.toString(), gols, rel]);
+      conferirPlacar('1280×720', 'pc', estado, m);
+    }
+    meta('H10 placar no formato da referência, menor (altura e área < antes e < referência), legível e sem encostar (3 telas do celular + PC; jogo, acréscimos e intervalo)',
+      `${placarFalhas.length ? 'FALHAS: ' + placarFalhas.join(' | ') + ' — ' : ''}${placarLinhas.join('; ')}; com o minimapa: ${placarEncosta.join('; ')}; treino com o minimapa: ${placarTreino.join('; ')}; leitor de tela: ${placarAria}`,
+      `marca, 2 escudos, 2 siglas, placar, relógio no bloco verde; altura ≤ 24 px (PC ≤ 26) e < antes (30/34) e < ref (29); área < antes e < ${PLACAR_REF.area}; números ≥ ${PLACAR_MIN.num} px, siglas ≥ ${PLACAR_MIN.sigla}, escudos ≥ ${PLACAR_MIN.escudo}; nada encosta`,
+      placarFalhas.length === 0 && placarLinhas.length === 12 && placarEncosta.length === 3 && placarTreino.length === 3 && !!placarAria);
   } finally { await navegador.close(); }
 }
 
 // H7 + H8: opções da pausa no celular e os ajustes antigos
-{
+if (!soPlacar) {
   const { navegador, pagina, erros } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
   try {
     await pagina.goto(`${srv.url}?q=baixa&toque=1&entalhe=1&demo=1&semente=4`, { waitUntil: 'load' });

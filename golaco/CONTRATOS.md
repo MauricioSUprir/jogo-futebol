@@ -1146,8 +1146,8 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
   círculos, analógico em repouso se a opacidade passar de 0,25) cobre ≤ 11% da tela; 0 caracteres fora do placar; ≤ 15%
   dos pixels de torcida atrás do HUD; 0 amostras com a linha viva; PC ≤ 2,5% depois de 9 s. Peça nova de HUD na partida
   tem de caber nisso (ou ir para a pausa).
-- **`index.html`/`css/estilo.css`**: na partida (`html.em-partida`) o placar é compacto de TV (30 px no celular, 34 no PC;
-  sem a marca, sem borda nem caixinha nos gols; barrinha de cor de 3 px por time) e o "1º T" só aparece com
+- **`index.html`/`css/estilo.css`**: o placar é a barra de TV da seção "Placar (12/10)" abaixo (antes: compacto de 30 px
+  no celular e 34 no PC, sem a marca) e o "1º T" só aparece com
   `.placar-relogio.com-tempo` (intervalo, fim e acréscimos; o texto fica no DOM); menu só com o ícone (44×44); barra de
   força 44×6 sem o rótulo (`#carga-tipo` continua com o texto, escondido); dica de teclas do PC (`#dica`) some 8 s depois
   de `hud.pronto()` e de cada troca de modo. Botões de toque translúcidos (fundo 0,32, borda 1,5–2 px, sem sombra) com
@@ -1266,3 +1266,37 @@ bola parada no pé do condutor).
 muda). Sem ele as defesas de 6 a 16,5 m iam a 60,8% (meta 55–60%): as regras tiraram gols fáceis nessa faixa (177 → 164
 com as mesmas defesas). Com ele: 59,0% · total 68,0% · de fora da área 86,8% · gols 2,13 (base 2,13) · impedimentos 1,15
 · bola parada 29% dos gols — nenhuma medida que estava na meta saiu dela.
+
+## Placar (12/10) — barra de TV no formato da referência, menor e com a cara do GOLAÇO (contrato)
+Pedido do dono (12/10), com uma imagem de referência: "quero o placar assim, tem que ser algo menor e mais com a nossa
+cara". Pesquisa e medidas em `PESQUISA-ESTADIO.md` §7.1. **Só DOM e CSS**: nenhuma linha da simulação mudou (`hash-igual`
+IGUAL; o hash Node = Chromium do `teste-carga` continua).
+- **`index.html`**: `.placar` (`data-caixa="placar"`, no canto de cima à esquerda, nas margens seguras) = `.placar-marca`
+  (o símbolo do GOLAÇO, `.marca-simbolo`) | `.placar-time.t0#placar-time-0` (`.placar-cor` + `svg.placar-escudo` com
+  `<use id="escudo-0">` + `#sigla-0`) | `.placar-resultado` (`#gols-0`, `.placar-x`, `#gols-1`) | `.placar-time.t1#placar-time-1`
+  (`#sigla-1` + escudo `#escudo-1` + `.placar-cor`) | `#placar-relogio` (bloco verde: `#relogio` e `#relogio-tempo`). Os
+  escudos são `<symbol id="escudo-golaco">` e `<symbol id="escudo-ventania">` no `svg.sprite` do começo do `body` (fictícios,
+  só traço, sem texto). Igual na partida e nos treinos (nos treinos o relógio fica `hidden`).
+- **`css/estilo.css`**: altura `--placar-h` (24 px; 26 no PC, `min-width: 1001px`), fundo `rgba(7,9,10,0.8)`, borda verde
+  0,3, cantos de 6 px; números do placar verdes de 16 px (17 no PC), siglas de 11 px (12), relógio de 14 px (15) preto no
+  bloco `--verde` (parado — intervalo e fim — o bloco fica `--verde-escuro` com letras `--texto`), "1º T +4" de 10 px; faixa de cor do time de 2 px de
+  cima a baixo (casa verde depois da marca, visitante branca antes do relógio). Topo apertado (`hud.js ajustarTopo`):
+  `topo-c1` tira a marca SÓ nos treinos e só se sem ela ainda encostar; `topo-c3` tira o "1º T"; `topo-c4` aperta só os
+  espaços (as fontes ficam nos mínimos do H10); depois o minimapa sai do meio e encosta à direita do placar (como antes).
+  Na PARTIDA o `topo-c3` vem por último: o "1º T +4", o "Intervalo" e o "Fim" só saem se nem com o minimapa ao lado couber
+  (contraprova de 13/10). O topo também se refaz quando os gols mudam de número de dígitos (9 → 10).
+- **`hud.js`**: `definirTimes([{sigla, nome, escudo}])` — `escudo` = id do elenco (`main.js timesDoMundo`: `e.id`; treino:
+  `golaco`/`ventania`); escreve sigla, o `href` do `<use>` (id desconhecido → o do treino) e o `aria-label` do time (o nome
+  só para leitor de tela: nenhum texto novo na tela; cada `.placar-time` é `role="img"` — num `<span>` sem papel o nome
+  não chegava ao leitor de tela).
+- **`main.js` (API de teste)**: `__golaco.placarDeTeste([a, b], relogio)` escreve o placar e o relógio como o laço passa ao
+  HUD ({minuto, tempo, estado, acrescimo}); com o relógio manual parado o laço não reescreve (o próximo quadro escreve o de
+  verdade).
+- **Teste**: `teste-hud-minimo` H10 (CI): nas 3 telas do celular com entalhe e no PC, no jogo ("34'"), nos acréscimos
+  ("45+2'" com "1º T +4") e no intervalo — formato (marca, 2 escudos certos, 2 siglas, placar, relógio no bloco verde com
+  contraste ≥ 4,5:1, nessa ordem), altura ≤ 24 px (PC ≤ 26) e altura e área menores que as de antes (`PLACAR_ANTES`) e que a
+  referência (248×29 px), números ≥ 14 px, siglas ≥ 11, "1º T +4" ≥ 10, escudos ≥ 12, peças sem sobrepor e dentro da barra,
+  e com o minimapa ligado o placar dos acréscimos não encosta no minimapa nem no menu, mantém o "1º T +4" e, com gols 10-9,
+  continua sem encostar; no treino de ataque com o minimapa e o painel nada encosta e a marca fica; a árvore de
+  acessibilidade tem "Golaço FC" e "Ventania FC" (contraprova de 13/10). `--so-placar` roda só essa parte
+  (sem os 2 min de jogo).
