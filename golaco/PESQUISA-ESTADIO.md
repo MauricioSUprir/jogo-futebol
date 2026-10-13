@@ -169,6 +169,49 @@ mundo recebe as mesmas máscaras (hash do treino e da partida iguais). "Minimapa
 liga/desliga na barra da pausa: na lista de opções sobravam 3 px em 844×390 e uma linha a mais fazia a pausa rolar 62 px.
 Retorno do dono (12/10): "coloca o nome da função do botão de novo" — os nomes voltaram por padrão (a opção continua na
 pausa para quem quiser só o ícone); o resto da tela limpa fica como está (`teste-hud-minimo` H9).
+### 7.1 Placar no formato da referência, menor e com a cara do GOLAÇO (12/10; `index.html`, `css/estilo.css`, `js/hud.js`)
+
+Pedido do dono (12/10), com uma imagem de referência: "quero o placar assim, tem que ser algo menor e mais com a nossa
+cara". A referência é uma barra de TV no canto de cima à esquerda: marca do jogo | escudo + sigla da casa | "1 - 0" |
+sigla + escudo do visitante | relógio num bloco verde; fundo escuro translúcido, cantos arredondados, caixa alta. Medida
+na própria imagem (2532×1170 = 844×390 com 3 px por px): **248×29 px = 7192 px² (2,2% da tela)**, números de ~14 px,
+siglas e relógio de ~11 px. O placar publicado antes: 30 px de altura no celular (34 no PC), sem marca e sem escudos.
+
+| Fonte | O que aproveitamos |
+|---|---|
+| Placares de TV (Premier League, Champions League, Brasileirão na TV aberta, EA SPORTS FC) — a forma comum das transmissões (nenhuma publica medidas: lacuna registrada, sem números inventados) | Uma barra só no canto de cima à esquerda; a marca da competição abre a barra; sigla de 3 letras com a cor do time numa faixa; o placar no meio; o relógio num bloco separado no fim. Daí: a ordem da referência, a faixa de cor de cima a baixo na borda de fora de cada time (casa verde logo depois da marca, visitante branca logo antes do relógio, como na referência) e o relógio no bloco verde da marca |
+| "Designing the Modern Scorebug" (SportsVideo.org, 2026, já citado no §7) | Logos dos times no lugar das siglas (a Fox trocou as letras por logos em 2025) e "um placar menor pode ser mais legível que um maior se a tipografia e o espaço forem precisos" (contraste, espaço, hierarquia). Daí: escudo + sigla, números MAIORES numa barra MENOR (16 px numa barra de 24 px; na referência ~14 px em 29 px) e o contraste do relógio conferido no teste |
+| Apple Human Interface Guidelines, Typography (https://developer.apple.com/design/human-interface-guidelines/typography) | Mínimo de 11 pt no iOS (padrão 17). Daí: siglas de 11 px no celular (12 no PC) — o placar antes também tinha 11 — e nada abaixo de 10 px (o "1º T +4"/"Intervalo" estava em 9 px e subiu para 10) |
+| Material Design 3, escala de tipos (https://m3.material.io/styles/typography/type-scale-tokens) | Label Small = 11, Title Small = 14, Title Medium = 16. Daí: números (placar e relógio) ≥ 14 px — o relógio subiu de 12 para 14 px (15 no PC) — e os gols com 16 px (17 no PC) |
+| WCAG 2.x, contraste mínimo 4,5:1 | Relógio preto (#07090a) no verde da marca (#19e07a): ~11:1; conferido no teste (≥ 4,5:1) |
+
+Identidade (a "nossa cara"): preto e verde da interface (`--preto`, `--verde`, `--texto`), a mesma fonte (`--fonte`), o
+símbolo do GOLAÇO (o paralelogramo verde do favicon e da placa do estádio) no lugar da marca da referência e escudos
+desenhados aqui, fictícios: Golaço FC = escudo preto com o G verde do bandeirão da organizada; Ventania FC = escudo branco
+com o vento. Nada licenciado e nenhum texto novo na tela (escudos e marca são só desenho; o nome do time fica só no
+`aria-label`).
+
+Resultado (`teste-hud-minimo` H10, mesma ferramenta na base com `--raiz`; largura × altura no jogo "34'" / acréscimos
+"45+2' 1º T +4" / intervalo):
+
+| Medida (`teste-hud-minimo` H10) | Antes (placar compacto) | Depois | Referência do dono | Meta |
+|---|---|---|---|---|
+| Celular (844×390, 667×375 e 568×320, com entalhe): jogo "34'" | 169×30 = 5084 px² | 197×24 = 4732 px² | 248×29 = 7192 px² | altura ≤ 24 px; altura e área < antes e < referência |
+| Celular: acréscimos "45+2' 1º T +4" | 225×30 = 6743 px² | 254×24 = 6086 px² | | idem |
+| Celular: intervalo | 232×30 = 6949 px² | 259×24 = 6226 px² | | idem |
+| PC 1280×720: jogo / acréscimos / intervalo | 182×34 = 6176 / 238×34 = 8101 / 244×34 = 8290 px² | 209×26 = 5421 / 266×26 = 6922 / 271×26 = 7040 px² | | altura ≤ 26 px; área < antes e < referência |
+| Peças (marca, 2 escudos, 2 siglas, placar, relógio no bloco verde, nessa ordem) | faltam a marca e os 2 escudos; relógio sem bloco | todas, na ordem; relógio preto no verde (~11:1) | todas | todas; contraste ≥ 4,5:1 |
+| Números (gols / relógio), siglas, "1º T +4" no celular | 15 / 12 px, 11 px, 9 px | 16 / 14 px, 11 px, 10 px | ~14 px, ~11 px | ≥ 14, ≥ 11, ≥ 10 px |
+| Com o minimapa ligado (acréscimos) | nada encosta, mas em 568 px o "1º T +4" some e o 10-9 passa 1,6 px por cima do minimapa (main 48b24933; na 1ª versão deste placar, em 667 e 568) | nada encosta nas 3 telas, com o "1º T +4" na tela e também com 10-9 (em 667 e 568 os espaços apertam, `topo-c4`, e o minimapa encosta à direita do placar; contraprova de 13/10) | | folga ≥ 4 px com o minimapa e o menu; "1º T +4" na tela |
+| Treino de ataque com o minimapa e o painel | a marca não existia | (contraprova de 13/10) a marca saía em 667 e 568 px com 40–90 px livres; agora fica e nada encosta | | marca na tela, folga ≥ 4 px |
+| Leitor de tela (árvore de acessibilidade) | "GLÇ 0 0 VNT" | (contraprova de 13/10) "Golaço FC 0 0 Ventania FC" (`role="img"` com o nome) | | nome dos dois times |
+
+A base REPROVA o H10 nos 12 casos (3 telas do celular + PC × 3 estados: sem marca e sem escudos, 30/34 px de altura, relógio de 12–13 px, "1º T" de 9 px) e a
+versão nova passa. O placar ficou um pouco mais LARGO que o de antes (a marca e os escudos ocupam ~30 px), mas mais baixo
+(24 × 30 px) e com área menor em todos os estados e telas; a tela limpa continua no orçamento (H1: 7,2–10,0% no celular,
+≤ 11%; H5: 1,7% no PC, ≤ 2,5%). Nos treinos o placar é o mesmo, sem o relógio (159×24 px no celular, 168×26 no PC; nada
+encosta no painel nem no menu nas 3 telas e no PC — conferido à parte).
+
 ## 8. Rede véu de noiva e branca (pedido de 11/10; `js/rede-forma.js`, `js/bola.js`, `js/render/rede-onda.js`, `js/render/campo.js`)
 
 Pedido do dono: "as redes têm que ser brancas, e ter uma movimentação na rede quando a bola toca nela, quero que seja
