@@ -15,6 +15,8 @@
 //     B6d (contraprova, 38 pênaltis no canto, a mesma cena do medir5 da auditoria do goleiro): o lado certo escolhido no
 //     fim (0,3 s) defende como na main (o passo de ~0,4 m para o lado, na linha) e segurado desde a montagem não defende
 //     menos (no máximo GOLEIRO.penalti.passo do meio: nem a trave, nem parado no meio); o lado errado não defende;
+//     B6e (contraprova): o canto sai só do z do analógico (ao longo da linha do gol); com a câmera de TV, esquerda/direita
+//     da tela (para o batedor ou para o gol) não escolhe canto e o goleiro fica no meio, como sem analógico (antes: +z);
 //  B7 LANÇAMENTO dois toques na ponta = cruzamento rasteiro (acoes.js processarPedido);
 //  B8 CHUTE de primeira no passe longo (24–30 m): bate de primeira (acoes.js atualizarBotoesAcao);
 //  B9 TROCAR na barreira: nunca um jogador parado (sim.js candidatoTroca);
@@ -399,6 +401,63 @@ if (faz('B6')) {
     `certo no fim ${t.certoFim[0]}/${n} (|z| ≤ ${f1(zMax(t.certoFim[1]), 2)}) · segurado ${t.certoSempre[0]}/${n} (|z| ≤ ${f1(zMax(t.certoSempre[1]), 2)}) · errado ${t.erradoFim[0]}/${n}`,
     'certo no fim ≥ 7 (a main) · segurado ≥ certo no fim, |z| ≤ 0,6 m · errado 0',
     n >= 30 && t.certoFim[0] >= 7 && t.certoSempre[0] >= t.certoFim[0] && zMax(t.certoSempre[1]) <= 0.6 && passo > 0 && t.erradoFim[0] === 0);
+}
+
+// B6e (contraprova): o canto sai só da componente do analógico AO LONGO da linha do gol (z do mundo). Com a câmera de TV
+// (render/camera.js, yaw = −π/2: direita da tela = +x, cima = −z) o empurrão para os lados da tela vai para o batedor ou
+// para o gol (iz ≈ 0) e antes escolhia sempre +z (gk.iz >= 0); agora não escolhe: fica no meio, como sem analógico
+if (faz('B6')) {
+  const { paraMundo } = await imp('controle.js');
+  const YAW_TV = -Math.PI / 2;
+  // [nome, analógico na tela (x para a direita, y para cima), canto esperado (sinal de z; 0 = nenhum)]
+  const casos = [
+    ['direita', 1, 0, 0], ['esquerda', -1, 0, 0],
+    ['quase horizontal (20° acima da direita)', Math.cos(0.35), Math.sin(0.35), 0], ['quase horizontal (20° abaixo da esquerda)', -Math.cos(0.35), -Math.sin(0.35), 0],
+    ['cima (trave de lá)', 0, 1, -1], ['baixo (trave de cá)', 0, -1, 1],
+    ['diagonal z dominante (60° acima da direita)', Math.cos(1.05), Math.sin(1.05), -1], ['diagonal z dominante (60° abaixo da esquerda)', -Math.cos(1.05), -Math.sin(1.05), 1],
+    ['diagonal do teclado (cima + esquerda)', -Math.SQRT1_2, Math.SQRT1_2, -1],
+  ];
+  /** Segura `ent` desde a montagem até o fim do pênalti: palpite no chute, |z| do goleiro no chute, resultado. */
+  function cobrar(base, ent) {
+    const m = clone(base), g = ctrl(m);
+    let palpite, zChute = null, res = null;
+    for (let i = 0; i < 60 * 15 && !res; i++) {
+      for (const e of P.passoPartida(m, ent)) {
+        if (e.tipo === 'cobranca' && e.parada === 'penalti') { palpite = g.palpite; zChute = g.z; }
+        if (e.tipo === 'penalti') res = e.resultado;
+      }
+    }
+    return { palpite, z: zChute, res };
+  }
+  let n = 0, okSem = 0, nSem = 0, okCanto = 0, nCanto = 0, igualSem = 0;
+  const erros = [];
+  for (const sem of [2, 4, 5, 6, 7, 8]) {
+    const base = penaltiContra(sem);
+    if (base.parada?.tipo !== 'penalti' || ctrl(base)?.posicao !== 'GOL') continue;
+    n++;
+    const ref = cobrar(base, NADA); // sem analógico
+    for (const [nome, ax, ay, esperado] of casos) {
+      const w = paraMundo(ax, ay, YAW_TV);
+      const r = cobrar(base, { x: w.x, z: w.z, botoes: 0 });
+      const lado = Math.sign(r.palpite ?? NaN);
+      if (esperado === 0) {
+        nSem++;
+        // nenhum canto e o goleiro como sem analógico: mesmo z no chute (no meio) e mesmo resultado
+        const igual = r.palpite === 0 && ref.palpite === 0 && Math.abs((r.z ?? 9) - (ref.z ?? 9)) <= 0.02 && r.res === ref.res;
+        if (r.palpite === 0) okSem++;
+        if (igual) igualSem++;
+        else erros.push(`${sem} ${nome}: palpite ${f1(r.palpite, 1)}, z ${f1(r.z, 2)} × ${f1(ref.z, 2)} sem analógico, ${r.res} × ${ref.res}`);
+      } else {
+        nCanto++;
+        if (lado === esperado) okCanto++;
+        else erros.push(`${sem} ${nome}: palpite ${f1(r.palpite, 1)} (esperado ${esperado > 0 ? '+' : '−'}z)`);
+      }
+    }
+  }
+  reg('B6e pênalti contra, câmera de TV: esquerda/direita da tela (para o batedor/o gol, |iz| < 0,38) não escolhe canto e o goleiro fica como sem analógico',
+    `sem canto ${okSem}/${nSem} · igual a sem analógico ${igualSem}/${nSem}`, 'todos', n >= 5 && okSem === nSem && igualSem === nSem);
+  reg('B6e cima/baixo da tela (±z, ao longo da linha do gol) e diagonal com z dominante: o canto do z', `${okCanto}/${nCanto}`, 'todos', n >= 5 && okCanto === nCanto);
+  if (erros.length && (args.includes('--detalhe') || igualSem < nSem || okCanto < nCanto)) console.log(erros.slice(0, 12).join('\n'));
 }
 
 // ------------------------------------------------------------------ B7. LANÇAMENTO dois toques = cruzamento rasteiro

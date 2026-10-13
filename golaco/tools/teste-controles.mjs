@@ -211,8 +211,8 @@ async function conferirTodosLayouts(pagina) {
     await pagina.keyboard.press('KeyH');
     const ajudaFechou = await pagina.evaluate(() => document.getElementById('ajuda').hidden);
     // (e o goleiro da partida: segurar TROCAR/Q/LB, PEGAR com O/RB, soltar no chão com I/Y, o canto no pênalti contra pelo
-    // analógico — auditoria dos botões e do goleiro, 12/10)
-    const okAjuda = ['Passe', 'Chute', 'enfiada', 'Lançamento', 'Trocar', 'goleiro sai', 'LB', 'TROCAR', 'GOLEIRO', 'vai para o goleiro', 'PEGAR', 'pega com a mão', 'solta no chão', 'Segure TROCAR para controlar o goleiro', 'pênalti contra', 'escolhem o canto', 'escolhe o canto'].every(t => ajudaTexto.includes(t)) && !ajudaTexto.includes('CONDUÇÃO');
+    // analógico apontado para uma das traves, sem isso no meio — auditoria dos botões e do goleiro, 12/10)
+    const okAjuda = ['Passe', 'Chute', 'enfiada', 'Lançamento', 'Trocar', 'goleiro sai', 'LB', 'TROCAR', 'GOLEIRO', 'vai para o goleiro', 'PEGAR', 'pega com a mão', 'solta no chão', 'Segure TROCAR para controlar o goleiro', 'pênalti contra', 'escolhem o canto', 'escolhe o canto', 'uma das traves', 'ele fica no meio'].every(t => ajudaTexto.includes(t)) && !ajudaTexto.includes('CONDUÇÃO');
     meta('H abre e fecha a ajuda (com os botões novos, sem CONDUÇÃO)', `${ajuda} / ${ajudaFechou}, texto novo ${okAjuda}`, ajuda && ajudaFechou && okAjuda);
     await pagina.keyboard.press('KeyC');
     await quadros(pagina, 2);

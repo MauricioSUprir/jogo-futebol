@@ -25,7 +25,7 @@ import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe } from './ia-tatica.
 import { trocaAerea, alvoAereo, escolhaManual } from './troca.js';
 import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
-import { misturarPartida, paredeParada } from './partida.js';
+import { misturarPartida, paredeParada, ladoPenaltiHumano } from './partida.js';
 import { planejarRecepcao } from './recepcao.js';
 import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta, chegada } from './faltas.js';
 // Regras da mão do goleiro e o goleiro jogando com o pé (pedido do dono, 11/10; só na partida)
@@ -908,7 +908,13 @@ function goleiroComoLinha(m, j) {
   if (!m.partida || m.naMao === j.id || defesaDoGoleiro(m, j)) return false;
   // pênalti montado (Regra 14): o analógico escolhe o lado (partida.js rolou: j.palpite) e dá o passo para ele, na linha —
   // no máximo GOLEIRO.penalti.passo m do meio (partida.js restricaoPenalti; antes andava até a trave e o lado certo virava
-  // errado; congelado no meio, o lado certo escolhido no fim defendia menos que na main: 7 → 4 em 38, teste-botoes B6d)
+  // errado; congelado no meio, o lado certo escolhido no fim defendia menos que na main: 7 → 4 em 38, teste-botoes B6d).
+  // Sem canto escolhido (para o batedor, para o gol: partida.js ladoPenaltiHumano = 0) ele fica com a IA do goleiro, no
+  // meio, como com o analógico solto (antes andava na diagonal até o passo sem ter escolhido: teste-botoes B6e)
+  const pr = m.parada;
+  if (pr && !pr.rolou && pr.tipo === 'penalti' && pr.time !== j.time && ehControlado(m, j) && !m.iaJoga?.[j.time]) {
+    return ladoPenaltiHumano(j) !== 0;
+  }
   if (ehControlado(m, j) && !m.iaJoga?.[j.time]) return m.posse === j.id || j.imag > 0 || goleiroNoPe(m, j);
   return goleiroNoPe(m, j);
 }

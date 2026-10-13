@@ -1019,6 +1019,18 @@ function soltarLateral(m, c) {
   return true;
 }
 
+/**
+ * Canto do pênalti contra escolhido pelo analógico do goleiro do humano (Regra 14): −1/+1 = o sinal de z (o canto do lado
+ * de lá / de cá da linha do gol), 0 = nenhum (fica no meio). Só a componente AO LONGO da linha do gol escolhe: o empurrão
+ * principalmente para o batedor ou para o gol (|iz| < GOLEIRO.penalti.ladoMin × o módulo; com a câmera de TV, esquerda e
+ * direita da tela) ou o analógico solto não escolhe — antes o sinal de iz ≈ 0 dava sempre +z. Pura.
+ */
+export function ladoPenaltiHumano(j) {
+  if (!(j.imag > 0.3)) return 0;
+  const iz = j.iz ?? 0, mod = MD.hypot(j.ix ?? 0, iz);
+  return mod > 1e-6 && Math.abs(iz) >= GOLEIRO.penalti.ladoMin * mod ? (iz > 0 ? 1 : -1) : 0;
+}
+
 /** A bola rolou: fim da parada (o cobrador volta a se mexer), evento `cobranca`. */
 function rolou(m) {
   const pr = m.parada;
@@ -1032,10 +1044,11 @@ function rolou(m) {
   if (pr.tipo === 'escanteio' && pr.papeis) m.partida.bp = { tipo: 'escanteio', time: pr.time, sz: pr.sz, papeis: pr.papeis, tick: m.tick };
   if (pr.tipo === 'penalti') {
     m.partida.penaltiAberto = { tick: m.tick, time: pr.time, id: pr.cobrador };
-    // goleiro do humano: o lado é o do analógico na hora do chute (solto: fica no meio)
+    // goleiro do humano: o lado é o do analógico na hora do chute — só o z dele, ao longo da linha do gol (para o batedor,
+    // para o gol ou solto: fica no meio)
     const gk = m.jogadores.find(o => o.time !== pr.time && o.posicao === 'GOL');
     if (gk && m.humanos.includes(gk.time) && m.controlado[gk.time] === gk.id) {
-      gk.palpite = gk.imag > 0.3 ? (gk.iz >= 0 ? 1 : -1) * GOLEIRO.penalti.palpite[GOLEIRO.penalti.palpite.length - 1][0] : 0;
+      gk.palpite = ladoPenaltiHumano(gk) * GOLEIRO.penalti.palpite[GOLEIRO.penalti.palpite.length - 1][0];
     }
   }
   encerrarParada(m);
