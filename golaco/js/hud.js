@@ -8,6 +8,8 @@
 // (.com-tempo), a barra de força não escreve o tipo (o CSS esconde o rótulo), a dica de teclas do PC some em 8 s
 // e o minimapa é opção da pausa (escondido = não redesenha).
 
+import { aoTocar, engolirClique } from './toque-botao.js';
+
 // prio: um aviso não apaga outro de prioridade MAIOR que ainda está na tela (a substituição e o
 // resultado da edição do time saem no mesmo passo do recomeço e não podem sumir debaixo dele)
 // Sem narração na tela (dono, 10/10: "não quero narração em cima"): os lances (passe, chute,
@@ -85,6 +87,7 @@ export function criarHud(opc) {
   const relogioVisto = { minuto: null, tempo: null, visivel: null, comTempo: null };
   let timerFaixa = null;
   let modoAtual = null, fimDeJogo = false;
+  let ajudaDaPausa = false; // a Ajuda foi aberta pela pausa: fechar volta para ela
   const NOME_MODO = { partida: 'partida', ataque: 'treino de ataque', conducao: 'treino de condução' };
   /** Sigla, escudo e nome (só para leitores de tela: nenhum texto novo na tela) de cada time no placar. */
   function escreverTimes() {
@@ -96,21 +99,22 @@ export function criarHud(opc) {
   }
   escreverTimes();
 
-  // botões com data-cmd (menu, ajuda e faixa); data-valor vai junto (modo de jogo)
+  // botões com data-cmd (menu, ajuda e faixa); data-valor vai junto (modo de jogo). Pelo toque age no pointerup do mesmo
+  // dedo (aoTocar): com outro dedo na tela (o polegar no analógico, um dedo parado na janela) o click não vem
   document.querySelectorAll('[data-cmd]').forEach(b => {
-    b.addEventListener('click', () => cmd(b.dataset.cmd, b.dataset.valor));
+    aoTocar(b, () => cmd(b.dataset.cmd, b.dataset.valor));
   });
   // grupos segmentados
   document.querySelectorAll('.segmentado').forEach(g => {
-    g.addEventListener('click', e => {
+    aoTocar(g, e => {
       const b = e.target.closest('button[data-valor]');
       if (b) cmd(g.dataset.grupo, b.dataset.valor);
     });
   });
-  // fundo escuro fecha a janela
+  // fundo escuro fecha a janela (o click do mesmo toque não cai no ≡ que fica embaixo e reabre a pausa)
   for (const s of [el.menu, el.ajuda]) {
     s?.addEventListener('pointerdown', e => {
-      if (e.target === s) cmd(s === el.menu ? 'continuar' : 'fechar-ajuda');
+      if (e.target === s) { engolirClique(e); cmd(s === el.menu ? 'continuar' : 'fechar-ajuda'); }
     });
   }
   el.tam?.addEventListener('input', () => { cmd('toqueTamanho', +el.tam.value / 100); });
@@ -125,9 +129,10 @@ export function criarHud(opc) {
   el.opa?.addEventListener('input', () => { cmd('toqueOpacidade', +el.opa.value / 100); });
   el.somVol?.addEventListener('input', () => { cmd('volume', +el.somVol.value / 100); });
   // replay: a camada cobre a tela inteira — qualquer toque ou clique pula (o "Pular" do toque é só o alvo visível)
-  el.replay?.addEventListener('pointerdown', e => { e.preventDefault(); cmd('replay-pular'); });
+  // (o click do mesmo toque é engolido: no canto de cima à direita ele caía no ≡ e abria a pausa)
+  el.replay?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('replay-pular'); });
   // comemoração do gol: a mesma camada (qualquer toque ou clique pula, depois de 0,5 s — quem decide é o main.js)
-  el.comemoracao?.addEventListener('pointerdown', e => { e.preventDefault(); cmd('comemoracao-pular'); });
+  el.comemoracao?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('comemoracao-pular'); });
 
   function marcarGrupo(grupo, valor) {
     document.querySelectorAll(`.segmentado[data-grupo="${grupo}"] button`).forEach(b => {
@@ -456,6 +461,40 @@ export function criarHud(opc) {
     get menuAberto() { return !el.menu.hidden; },
     get ajudaAberta() { return !el.ajuda.hidden; },
     /** Abre a pausa; foco: seletor do botão que recebe o foco (padrão: o primário visível). */
+    /**
+     * Controle na pausa ou na Ajuda (main.js, ações 'menu-*'): cima/esquerda e baixo/direita movem o foco entre os botões
+     * visíveis (no deslizante em foco, esquerda/direita mudam o valor), ok aperta o botão em foco e voltar fecha a
+     * Ajuda, sai do "Modo de jogo" ou fecha a pausa.
+     */
+    navegarPad(acao) {
+      const raizAberta = !el.ajuda.hidden ? el.ajuda : !el.menu.hidden ? el.menu : null;
+      if (!raizAberta) return;
+      if (acao === 'voltar') {
+        if (raizAberta === el.ajuda) cmd('fechar-ajuda');
+        else if (el.modos && !el.modos.hidden) cmd('modos-voltar');
+        else cmd('continuar');
+        return;
+      }
+      const lista = [...raizAberta.querySelectorAll('button, input[type="range"]')]
+        .filter(b => !b.disabled && !b.hidden && b.getClientRects().length > 0 && getComputedStyle(b).visibility !== 'hidden');
+      if (!lista.length) return;
+      const at = document.activeElement, i = lista.indexOf(at);
+      if (acao === 'ok') {
+        if (i >= 0 && at.tagName === 'BUTTON') at.click();
+        else if (i < 0) lista[0].focus({ preventScroll: false });
+        return;
+      }
+      if ((acao === 'esq' || acao === 'dir') && i >= 0 && at.type === 'range') {
+        const st = +at.step || 1;
+        at.value = String(+at.value + (acao === 'dir' ? st : -st));
+        at.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      }
+      const passo = acao === 'cima' || acao === 'esq' ? -1 : 1;
+      const k = i < 0 ? 0 : (i + passo + lista.length) % lista.length;
+      lista[k].focus({ preventScroll: false });
+      lista[k].scrollIntoView?.({ block: 'nearest' });
+    },
     abrirMenu(forcar = false, foco = null) {
       if (prints && !forcar) return;
       el.ajuda.hidden = true; el.menu.hidden = false;
@@ -522,8 +561,16 @@ export function criarHud(opc) {
       if (f.ms) timerFaixa = setTimeout(() => { el.faixa.hidden = true; }, f.ms);
     },
     get faixaVisivel() { return !!el.faixa && !el.faixa.hidden; },
-    abrirAjuda(forcar = false) { if (prints && !forcar) return; el.menu.hidden = true; el.ajuda.hidden = false; },
-    fecharAjuda() { el.ajuda.hidden = true; },
+    /** Abre a Ajuda; aberta pela pausa, fechar volta para a pausa (antes o jogo recomeçava sem aviso). */
+    abrirAjuda(forcar = false) {
+      if (prints && !forcar) return;
+      ajudaDaPausa = !el.menu.hidden;
+      el.menu.hidden = true; el.ajuda.hidden = false;
+    },
+    fecharAjuda() {
+      el.ajuda.hidden = true;
+      if (ajudaDaPausa) { ajudaDaPausa = false; this.abrirMenu(true, '[data-cmd="ajuda"]'); }
+    },
     /** Recalcula o topo do HUD (os controles de toque apareceram ou a tela mudou). */
     ajustarTopo,
     /** Estado das opções no menu. */

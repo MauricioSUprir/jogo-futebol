@@ -350,16 +350,16 @@ const penalti = (sem, seq) => falta(sem, seq);
     for (let i = 0; i < 400 && !(m.parada && m.parada.tipo === 'escanteio' && m.parada.cobrador != null && m.tick >= m.parada.pronta + 2 && m.controlado[0] === m.parada.cobrador); i++) P.passoPartida(m, { x: 0, z: 0, botoes: 0 });
     if (!m.parada || m.parada.tipo !== 'escanteio' || m.controlado[0] !== m.parada.cobrador) { erro = 'sem escanteio do humano'; continue; }
     n++;
-    let chutes = 0, rolou = false;
-    const olhar = evs => { for (const e of evs) { if (e.tipo === 'chute') chutes++; if (e.tipo === 'cobranca' || e.tipo === 'passe') rolou = true; } };
+    // auditoria dos botões (#474, 12/10): o CHUTE na bola parada que não é a gol COBRA o padrão (no escanteio, o
+    // lançamento) — o botão não fica morto. Os dois toques aqui nunca viram cavadinha nem chute a gol
+    let chutes = 0, rolou = false, cav = false;
+    const olhar = evs => { for (const e of evs) { if (e.tipo === 'chute') chutes++; if (e.tipo === 'cobranca' || e.tipo === 'passe') rolou = true; } if (m.voo && m.voo.tipo === 'cavadinha') cav = true; };
     for (const [aperta, dur] of [[1, 4], [0, 5], [1, 4], [0, 40]]) for (let i = 0; i < dur; i++) olhar(P.passoPartida(m, { x: 0, z: 0, botoes: aperta ? BOTAO.CHUTE : 0 }));
-    const parado = !!m.parada && m.parada.tipo === 'escanteio' && !m.parada.rolou && !rolou && chutes === 0;
-    for (let i = 0; i < 10; i++) olhar(P.passoPartida(m, { x: 0, z: 0, botoes: BOTAO.PASSE }));
     for (let i = 0; i < 90 && !rolou; i++) olhar(P.passoPartida(m, { x: 0, z: 0, botoes: 0 }));
-    if (parado && rolou && chutes === 0) ok++;
-    else if (det.length < 3) det.push(`semente ${7200 + s}: parado ${parado}, cobrou com o PASSE ${rolou}, chutes ${chutes}`);
+    if (rolou && chutes === 0 && !cav) ok++;
+    else if (det.length < 3) det.push(`semente ${7200 + s}: cobrou ${rolou}, chutes ${chutes}, cavadinha ${cav}`);
   }
-  reg('H3. escanteio: CHUTE duas vezes não cobra (nada sai); o PASSE depois cobra', `${ok}/${n}${det.length ? ' · ' + det.join('; ') : ''}${erro ? ` · ${erro}` : ''}`, '6/6', n === 6 && ok === 6);
+  reg('H3. escanteio: CHUTE duas vezes cobra o padrão (botões #474), nunca cavadinha nem chute a gol', `${ok}/${n}${det.length ? ' · ' + det.join('; ') : ''}${erro ? ` · ${erro}` : ''}`, '6/6', n === 6 && ok === 6);
 }
 
 // ------------------------------------------------------------------ I. botão segurado de antes da troca de controle
