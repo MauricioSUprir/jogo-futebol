@@ -328,6 +328,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   replay do impedimento = P1 'linha' + P2 'saot' (só os do lance, parede/plano no QUADRIL, pulsos, quadro final oblíquo,
   ≤ 7,5 s); posição legal (passe ≤ 1,0 m, legal também pelas partes) no fim do replay do gol (≤ 13 s) e do da pausa. O
   selo "IMPEDIMENTO"/"POSIÇÃO LEGAL" (`hud.terco`, `#terco`) é a ÚNICA exceção à "sem narração": só no quadro final.
+  Contraprova (13/10): o enquadramento confere os sólidos só no candidato que serve (S9: 415 mil → 11 mil chamadas de
+  `solidoEm`, mesmo quadro) e só o cabeceio PARA O GOL marca "chute" no anel (`marcasDoPasso`: o de passe não abre a
+  análise no "Replay" da pausa).
 - **Pré-jogo** (pedido de 11/10; `PESQUISA-PREJOGO.md`, contrato em `CONTRATOS.md`): antes do 1º passo (tick 0; o apito
   da saída só no fim; hash igual) — abertura "Toque para começar" (libera o som), aéreo de fora, fachada com a torcida
   chegando, o estádio por dentro, túnel, entrada com os árbitros, plano alto da fila se formando, a câmera passando pela

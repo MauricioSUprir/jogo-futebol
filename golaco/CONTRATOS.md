@@ -455,7 +455,9 @@ em `config.js REPLAY.impedimento` e `REPLAY.saot`.
   partes do corpo (sem tolerância). `medirCadeia`, `enquadrarSaot(anel, cena, aspecto)` (pinhole própria, cilindros de
   0,35 × 1,9 m: os dois no quadro com 8% de folga e sobreposição ≤ 30%, câmera ≥ 2 m e fora dos sólidos —
   `estadio-forma.js solidoEm` —; mira o centro do par na tela; níveis: 0 = 16/22° e ±12/±20° a 9–30 m; 1 = o mesmo até
-  45 m (os dois a 30–48 m na largura); 2 = sobe e abre até 62°/±40°), `medirCandidato`, `cameraSaot(enq, u, out,
+  45 m (os dois a 30–48 m na largura); 2 = sobe e abre até 62°/±40°; a checagem de sólidos — dezenas de amostras de
+  `solidoEm` — só no candidato que enquadra ou que seria o "menos ruim": `custoEnquadrar.solidos`, S9 ≤ 15 mil por
+  enquadramento; antes 415 mil), `medirCandidato`, `cameraSaot(enq, u, out,
   reduzir)` (órbita do alto: 68°, azimute final + 35° para fora, 1,3 × a distância), `faseSaot(t, tipo, out, mesmaLinha,
   reduzir)` (`{fase, u, parede, plano, pulsoDef, pulsoAtac, batidaDef, batidaAtac, cor, selo, decidido}`),
   `duracaoSaot(tipo)`. O ponto que vale é o CENTRO do corpo (o quadril; o `impedimento.js` decide por ele): parede no x da
