@@ -249,6 +249,62 @@ os últimos 10 s do que foi DESENHADO e um diretor de replay; a simulação espe
 | Transmissões de TV (Wikipedia "Instant replay"; Creative COW, transições de replay das emissoras; Fiveable, "instant replays") | A emissora "anuncia" o replay com uma vinheta que cruza a tela (o logo voa e puxa o replay), e o replay mistura ângulos e câmera lenta | A faixa verde (a da identidade, como a do "GOL!") cruza a tela em 0,4 s na entrada e na saída do replay — o espectador sabe que é replay sem texto; com "reduzir movimento", não passa |
 | O próprio jogo (relógio do estádio gravado) | A rede balança pelo relógio do estádio (`rede-onda.js`, impactos com `t0`) | O anel grava o relógio do estádio por passo: no replay a rede re-balança com o tempo gravado, sem mudar `rede-onda.js` |
 
+### 9.1 Análise semiautomática do impedimento e posição legal (pedido do dono de 12/10)
+
+"No impedimento, quero que seja marcado o impedimento, tenha cena de impedimento, tipo aquelas cenas de replay do
+impedimento semiautomático" e "pode colocar o selo IMPEDIMENTO sim, e em um replay qualquer, aparece uma cena de quando NÃO
+foi impedimento também". Antes, o jogo "marcava" o impedimento só com o apito (som) e o replay da linha congelado 1,6 s,
+sem nenhuma decisão na tela. Agora: o replay do impedimento ganha a análise semiautomática (P2 'saot') e o replay do gol
+— e o "Replay" da pausa — ganha a checagem de POSIÇÃO LEGAL quando o passe foi apertado.
+
+| Fonte | O que diz | O que aproveitamos |
+|---|---|---|
+| The FA — explicação do SAOT na FA Cup (27/02/2025, thefa.com) e Premier League — "Semi-automated offside technology: What you need to know" (premierleague.com/en/news/4256036) | Replay virtual 3D só dos jogadores do lance, com o uniforme do time; a linha é uma PAREDE branca vertical com um "pulso" na parte do corpo do defensor; a parte impedida do atacante atravessa a parede e fica em vermelho; "an offside decision will be shown with a red line and onside with a green line"; o quadro final fica "on an angle, off-centre" e nele o pulso some; o replay CORTA para a cena, sem sobrepor a imagem da TV | O plano 'saot': corte seco, só o impedido, o defensor da linha, quem passou e a bola; parede branco-gelo no defensor, pulsos (anéis) no quadril, plano do atacante que fica vermelho (impedimento) ou parede/plano/linha verdes (legal); quadro final oblíquo e fora do centro (16/22°, 12/20° fora do eixo) e sem pulsos |
+| FIFA — Semi-automated offside technology (inside.fifa.com, Copa 2022) | 12 câmeras, até 29 pontos por jogador a 50 Hz e a bola a 500 Hz para o "kick point"; a animação 3D sai dos MESMOS dados, mostra os membros no instante do passe "from the best possible perspectives" e vai ao ar na parada seguinte à decisão | A cena sai do anel do replay (os mesmos dados da simulação, 60 Hz exatos; o "kick point" é o `tickFoto` da Regra 11); no gol, a checagem entra no fim do replay, antes da saída (a parada seguinte) |
+| ESPN (Dale Johnson), "Premier League semi-automated VAR offside: All you need to know" (2025) e "Will semi-automated offside be the big VAR fix…" (2023, com Collina e Holzmüller) | O VAR só aciona o sistema nos lances que mudam o jogo (gol, pênalti, vermelho); a animação da PL não fica "directly in line with the two players as they can appear over the top of each other"; a da UEFA demora por ser sobreposta à TV, a da PL é "standalone"; meta média da FIFA de 70 → 25 s | A checagem de posição legal só no lance que acaba em gol (ou, na pausa, em chute/gol); a câmera nunca termina alinhada (sobreposição ≤ 30% medida em `teste-saot` S4); a cena é curta e própria (3,4–3,6 s), pulável |
+| Premier League — "How offsides are determined by VAR" (premierleague.com/en/news/1488423) | Linha 2D rápida nos lances claros; o processo completo só nos apertados; o público vê só a imagem final da decisão | Sem cena nos lances claros (margem > 1,0 m) nem com a linha na bola/meio-campo |
+| Goal.com — PSG × Liverpool (12/03/2025) | Barcola "just played onside" antes do gol de Dembélé; o gráfico foi mostrado pela Amazon no INTERVALO | Respaldo para "em um replay qualquer": a análise legal também no fim do "Replay" da pausa, não só no gol |
+| FIFA, Copa 2026 (Catar × Suíça; Yahoo Sports) | "a brief technical outage prevented the onside animation graphic from being generated" | A TV mostra a POSIÇÃO LEGAL num lance decisivo — o selo "POSIÇÃO LEGAL" (par do "IMPEDIMENTO") |
+| Inside World Football (03/06/2026) | Na Copa 2026 o alerta ao assistente dispara a partir de 10 cm; no Mundial de Clubes 2025 e no Intercontinental, só acima de 50 cm | Faixa de "apertado": até 0,5 m é sempre apertado (a faixa antiga sem alerta automático) |
+| Universidade de Bath (Soltani, ISBS 2022); Helsen, Gilis e Weston, Journal of Sports Sciences 24(5), 2006 | O chute é percebido 132 ms depois de acontecer; na Copa 2002, 26,2% de erro dos assistentes (86,6% bandeira levantada sem impedimento: "flash-lag") | Limite de 1,0 m: 132 ms × 5–8 m/s de velocidade relativa = 0,66–1,06 m — a faixa em que o olho erra (inferência nossa; nenhuma fonte dá um número em metros para quando a TV desenha) |
+| IFAB — Regra 11 e Protocolo do VAR (theifab.com) | Contam cabeça, corpo e pés; mãos e braços não (o limite é a axila); vale o 1º contato da jogada; o VAR revê o gol com impedimento na construção | `parteMaisAvancada`: pelve, lombar, peito, pescoço, cabeça, quadris, joelhos, tornozelos e pontas, com o raio da cápsula; a cena legal só aparece se também for legal por elas (critério v) |
+
+Escolhas (e por quê):
+- **Selo "POSIÇÃO LEGAL", não "GOL VALIDADO"**: forma par com o "IMPEDIMENTO" aprovado (os dois falam da posição no passe —
+  "offside/onside" da PL; "onside or offside position", Collina); serve em qualquer replay (pausa, intervalo), que foi o
+  que o dono pediu; "GOL VALIDADO" contaria o lance em texto e afirmaria uma checagem do gol inteiro (falta, mão) que o jogo
+  não faz.
+- **O ponto que vale é o quadril**: a simulação decide pelo centro do corpo (`impedimento.js`, tolerância 0,1 m). A parede
+  e o plano ficam nele, então o desenho nunca contradiz a decisão; na tela o pé pode atravessar a parede (a contradição
+  centro × partes é medida no `medir-saot`). Passar a regra para as partes do corpo muda o hash, a IA e o árbitro do
+  `teste-impedimento`: decisão do dono, num PR à parte.
+- **Cores**: impedimento vermelho (#ff3b30) e legal verde (#19e07a, o `--verde` do jogo), a convenção da PL; o âmbar da
+  linha do chão fica só no P1; parede branco-gelo; o pulso azul-claro (a "medição", como o pulso da PL).
+- **Câmera longe na largura**: com o atacante e o defensor a mais de ~30 m um do outro na largura do campo, olhando pela
+  linha um fica perto e o outro longe da câmera: o quadro de 16/22° a ≤ 30 m não cabe os dois. A câmera recua até 45 m no
+  mesmo ângulo (ainda 12–24°) e, só com ~60 m (canto a canto), sobe e abre (até 62°); o `teste-saot` S4 prova por busca que
+  nenhum quadro de 12–24° cabe os dois nesses casos antes de aceitar o nível "extra".
+- **Frequência medida** (`medir-saot`, PARCIAL: 40 das 144 partidas, sementes 1001–1040 — com a máquina a carga ~120 em 4
+  núcleos a varredura passou do limite de tempo): 67 gols; a cena de POSIÇÃO LEGAL em 6 (9,0%; com 0,5 m seriam 4 = 6,0%),
+  dentro da faixa 5–30% — o limite fica em 1,0 m; margens dos 6: −0,05 (mesma linha), 0,05, 0,43, 0,48, 0,59, 0,91 m; a
+  espera extra nesses gols é a análise (3,4 s); por partida, 1,30 impedimento e 0,15 cena legal. Das 132 cadeias de passe
+  dos gols, 61% passam de 5 m e só 6% ficam até 1,0 m. Contradição centro × partes: 2 dos 52 impedimentos marcados pelo
+  centro seriam legais pelas partes do corpo (3,8%; a cena mostra o quadril, coerente com a decisão) e 0 dos 6 legais.
+
+Correções sobre a pesquisa inicial: os "skeletons flying above the ground" da MIT Technology Review (23/06/2026) são erro
+de dado num TESTE de laboratório, não algo que o torcedor viu (mesmo assim o `teste-saot` S8 confere a pose da análise: a
+gravada, nenhuma junta abaixo de −2 cm); não há fonte para "Decision upheld. Goal disallowed.", "ghostly" ou "frozen in
+space" (não estão na MIT nem na TNT); "legal só pela tolerância mostra só a linha do defensor em verde" não está na ESPN
+(a cena "mesma linha" é escolha nossa: sem o plano do atacante, o pulso dele encostado na parede).
+
+**A próxima peça da arbitragem em campo (Etapa 6, fora deste PR): assistentes com bandeira.** A marcação de TV ao vivo é o
+assistente levantando a bandeira no apito. Metas propostas: (A) dois assistentes na lateral, cada um numa metade, no x do
+penúltimo defensor (IFAB Practical Guidelines for Match Officials: "keep in line with the second-last defender"); (B)
+corrida lateral de 1–6 m/s com passos de lado e de frente (Krustrup, Helsen e Bangsbo 2009: ~7 km por jogo, 35% de lado);
+(C) bandeira levantada no apito do impedimento por ~1,5 s, apontando a altura do lance; (D) sem patinar (o mesmo
+`teste-patinacao`). Custo medido na proposta: +5 a 11 mil triângulos no celular, o anel do replay em 24 de 24 vagas e um
+estado novo no laço do `main.js` — por isso fica para a Etapa 6.
+
 ## 10. Comemoração do gol (`js/comemoracao.js`, `main.js`, `render/camera.js`; pedido do dono de 11/10)
 
 "Não tem cena de comemoração!!!". O diagnóstico (versão publicada antes desta entrega) mostrou: depois do gol, 2,48 s de
