@@ -10,7 +10,7 @@
 //      cena em ≤ 2 quadros; com o K (chute) segurado, 0 passe/chute/lançamento/enfiada do humano nos 60 ticks seguintes;
 //   T5 gol + troca na mesma parada (gol roteirizado): em-comemoracao → em-replay (inteiro) → em-substituicao → jogo; a
 //      faixa só depois do replay; o apito da saída é pedido depois do fim da cena;
-//   T6 troca no intervalo: sem cena; a faixa ≥ 4 s na saída do 2º tempo;
+//   T6 troca no intervalo (pedida nele, ou pedida antes e feita no apito): sem cena; a faixa ≥ 4 s na saída do 2º tempo;
 //   T7 pausa, aba escondida e celular em pé: o tempo da cena não anda na interrupção e volta em ≤ 1 quadro; trocarMundo
 //      cancela a cena e esvazia a fila;
 //   T8 nada sobre nada: folga ≥ 4 px entre a faixa (na cena e no jogo) e o placar, o menu, o minimapa (ligado e
@@ -305,6 +305,36 @@ if (roda('C')) try {
       });
       meta('T6 troca no intervalo: sem cena; a faixa ≥ 4 s na saída do 2º tempo', `cena ${t6.cena} quadros; faixa ${f2(t6.vis / 60)} s ("${t6.texto}"); 2º tempo no quadro ${t6.tempo2}; saiu [${t6.saiu}]`,
         '0; ≥ 4 s', t6.cena === 0 && t6.vis >= 240 && t6.texto === TEXTO && t6.saiu.includes(9));
+      // T6b: a troca pedida com a bola rolando e feita NO APITO do intervalo (a 1ª parada é o fim do 1º tempo): sem cena;
+      // a faixa aparece na saída do 2º tempo (até ≤ 3 quadros depois dela) e fica ≥ 4 s. 1ª passada acha o tick do apito;
+      // a 2ª (a mesma partida, sem entrada) pede a troca 30 passos antes dele.
+      const t6b = await pg.evaluate(() => {
+        const g = window.__golaco, av = () => g.relogio.avancar(1000 / 60, { desenhar: false });
+        g.reiniciar({ modo: 'partida', semente: 5, minutosPorTempo: 0.25 });
+        let q = 0;
+        while (q < 6000 && g.mundo.partida.estado !== 'intervalo') { av(); q++; }
+        const tickApito = g.mundo.partida.desde;
+        g.reiniciar({ modo: 'partida', semente: 5, minutosPorTempo: 0.25 });
+        q = 0;
+        while (q < 6000 && g.mundo.tick < tickApito - 30) { av(); q++; }
+        g.substituicaoDeTeste({ pares: [{ sai: 9, entra: 22 }], parada: null });
+        q = 0;
+        while (q < 600 && !g.estadoTime(0).saiu.includes(9)) { av(); q++; }
+        const mm = g.mundo, tickTroca = mm.tick, noApito = mm.partida.estado === 'intervalo' && mm.partida.desde === tickTroca;
+        let cena = 0, vis = 0, kSaida = null, kFaixa = null, texto = '', k = 0;
+        while (k < 3000) {
+          av(); k++;
+          if (g.cenaSubst.ativo) cena++;
+          if (kSaida == null && mm.partida.tempo === 2) kSaida = k;
+          const f = g.cenaSubst.faixa();
+          if (f.visivel) { if (kFaixa == null) kFaixa = k; vis++; texto = f.texto; } else if (vis) break;
+        }
+        return { tickApito, tickTroca, noApito, cena, vis, kSaida, kFaixa, texto };
+      });
+      meta('T6 troca pedida com a bola rolando e feita no apito do intervalo: sem cena; a faixa na saída do 2º tempo (≤ 3 quadros), ≥ 4 s',
+        `apito no tick ${t6b.tickApito}, troca no tick ${t6b.tickTroca} (${t6b.noApito ? 'no apito' : 'NÃO foi no apito'}); cena ${t6b.cena} quadros; 2º tempo no quadro ${t6b.kSaida}, faixa ${t6b.kFaixa == null ? 'NUNCA aparece' : `no quadro ${t6b.kFaixa}, ${f2(t6b.vis / 60)} s ("${t6b.texto}")`}`,
+        'no apito; 0; faixa ≤ 3 quadros depois da saída; ≥ 4 s',
+        t6b.noApito && t6b.cena === 0 && t6b.kSaida != null && t6b.kFaixa != null && t6b.kFaixa - t6b.kSaida <= 3 && t6b.kFaixa >= t6b.kSaida && t6b.vis >= 240 && t6b.texto === TEXTO);
     }
   } finally { await P.fechar(); }
 } catch (e) { meta('C execução', e.message.split('\n')[0], 'sem exceção', false); }

@@ -342,6 +342,9 @@ function rodarPasso(entrada, acoes) {
   // as trocas do passo viram UMA cena (ou só a faixa) — decidido no fim do passo: no gol, as trocas e a 'saida' saem no
   // mesmo tick (as trocas antes) e o replay do gol, que a saída abre, vem primeiro
   if (substNoPasso.length) decidirSubst(eventos);
+  // as trocas feitas NO APITO do intervalo (a edição pendente vale ali, Regra 3): a faixa na saída do 2º tempo — o passo
+  // em que o intervalo acaba, também sem troca nova nele (antes elas ficavam guardadas e a faixa nunca aparecia)
+  else if (faixaSub2T.length && estadoAntesPasso === 'intervalo' && mundo.partida?.estado !== 'intervalo') faixaDoIntervalo();
   atualizarFase();
 }
 
@@ -873,12 +876,19 @@ function decidirSubst(eventos) {
   const intervalo = eventos.some(e => e.tipo === 'intervalo') || estadoAntesPasso === 'intervalo';
   if (intervalo) {
     faixaSub2T.push(...pares);
-    if (estadoAntesPasso === 'intervalo') mostrarFaixaSub(faixaSub2T.splice(0));
+    if (estadoAntesPasso === 'intervalo') faixaDoIntervalo();
     return;
   }
   const item = { tipo: substLigada && !emRodarPassos ? 'subst' : 'faixaSub', pares };
   if ((diretor && diretor.ativo) || filaCenas.length || cenaSub) filaCenas.push(item);
   else if (item.tipo === 'subst') iniciarSubst(item);
+  else mostrarFaixaSub(pares);
+}
+
+/** As trocas do intervalo na faixa (sem cena), na saída do 2º tempo; depois do replay/cena que estiver na frente. */
+function faixaDoIntervalo() {
+  const pares = faixaSub2T.splice(0);
+  if ((diretor && diretor.ativo) || filaCenas.length || cenaSub) filaCenas.push({ tipo: 'faixaSub', pares });
   else mostrarFaixaSub(pares);
 }
 

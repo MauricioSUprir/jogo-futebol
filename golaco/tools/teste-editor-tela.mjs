@@ -8,7 +8,7 @@
 //      hash de 60 passos igual ao de uma execução sem as teclas).
 //   5  Celular 844×390, toque: 9 depois 22 → selos ↑/↓ e "1/5" → PRONTO → Continuar → pendente →
 //      a bola sai (até 20 s) → evento substituicao, o 22 em campo, o 9 fora e a faixa ENTRA/SAI no HUD em ≤ 3
-//      quadros (12/10: data-texto "Golaço FC: entra 22 Wallace Pimenta, sai 9 Diego Albuquerque"; na tela, a linha
+//      quadros (se a 1ª parada for o apito do intervalo, ≤ 3 quadros da saída do 2º tempo) (12/10: data-texto "Golaço FC: entra 22 Wallace Pimenta, sai 9 Diego Albuquerque"; na tela, a linha
 //      compacta "ENTRA 22 Wallace" e "SAI 9 Diego"; a página abre com a cena desligada, como em todo teste automatizado).
 //   6  Celular: arrastar 60 px na lista de reservas não escolhe ninguém.
 //   7  Formação: 4-2-3-1 → 11 cartas nas vagas novas e ninguém fora; 3-5-2 → 2 com o selo "!";
@@ -442,18 +442,25 @@ async function conferirEditor(pg) {
         g.relogio.avancar(1000 / 60, { desenhar: false });
       }
       g.forcarEntrada(null);
+      // a troca feita no apito do intervalo (a 1ª parada foi o fim do 1º tempo) aparece na saída do 2º tempo, sem cena
+      // (teste-substituicao-tela T6): o prazo de 3 quadros conta dali
+      const m = g.mundo;
+      let intervalo = null;
+      if (ev != null && m.partida.estado === 'intervalo') {
+        intervalo = 0;
+        while (intervalo < 900 && m.partida.estado === 'intervalo') { g.relogio.avancar(1000 / 60, { desenhar: false }); intervalo++; }
+      }
       // a faixa em ≤ 3 quadros depois da troca feita (o mesmo prazo do aviso de antes)
       let fx = faixa(), k = 0;
       while ((!fx || !fx.texto) && k < 3) { g.relogio.avancar(1000 / 60, { desenhar: false }); k++; fx = faixa(); }
-      const m = g.mundo;
-      return { quadro: ev, fx, k, aviso, em22: m.jogadores.some(j => j.id === 22), em9: m.jogadores.some(j => j.id === 9), saiu: [...m.times[0].saiu], subs: { ...m.times[0].subs } };
+      return { quadro: ev, intervalo, fx, k, aviso, em22: m.jogadores.some(j => j.id === 22), em9: m.jogadores.some(j => j.id === 9), saiu: [...m.times[0].saiu], subs: { ...m.times[0].subs } };
     }, BIT);
     meta('5  Celular, toque: 9 depois 22 → selos ↑ (22 no campo) e ↓ (9 nas reservas), contagem 1/5',
       `entra ${selos.entra}, sai ${selos.sai}, "${selos.cont}"`, selos.entra && selos.sai && /1\/5/.test(selos.cont));
     meta('5  Celular: PRONTO → Continuar → pendente {sai 9, entra 22} no mundo',
       JSON.stringify(pend), pend.length === 1 && pend[0].sai === 9 && pend[0].entra === 22);
     meta('5  Celular: na parada → substituição feita: 22 em campo, 9 fora, a faixa ENTRA/SAI no HUD (≤ 3 quadros)',
-      `em ${sub.quadro ?? '-'} quadros; 22 em campo ${sub.em22}, 9 em campo ${sub.em9}, saiu [${sub.saiu}], subs ${JSON.stringify(sub.subs)}; faixa ${sub.fx ? `"${sub.fx.texto}" / visível "${sub.fx.visto}"` : 'nenhuma'} (+${sub.k} quadros)`,
+      `em ${sub.quadro ?? '-'} quadros${sub.intervalo != null ? ` (no apito do intervalo; a faixa contada da saída do 2º tempo, ${sub.intervalo} quadros depois)` : ''}; 22 em campo ${sub.em22}, 9 em campo ${sub.em9}, saiu [${sub.saiu}], subs ${JSON.stringify(sub.subs)}; faixa ${sub.fx ? `"${sub.fx.texto}" / visível "${sub.fx.visto}"` : 'nenhuma'} (+${sub.k} quadros)`,
       sub.quadro != null && sub.em22 && !sub.em9 && sub.saiu.includes(9) && !!sub.fx && sub.k <= 3
         && sub.fx.texto === 'Golaço FC: entra 22 Wallace Pimenta, sai 9 Diego Albuquerque'
         && sub.fx.visto.includes('ENTRA 22 Wallace') && sub.fx.visto.includes('SAI 9 Diego'));
