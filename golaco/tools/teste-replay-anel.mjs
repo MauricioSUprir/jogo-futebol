@@ -197,7 +197,7 @@ if (!RA || !RR) {
     } while (avancarRelogio(rel, 1 / 60));
     reg('B9 a linha só aparece do quadro do passe em diante e não apaga', `antes do passe ${antesComLinha}; depois sem linha ${depoisSem}; 1º tick com linha ${fmt(primeiroComLinha, 1)}; ${comLinha} quadros`, '0, 0, 2450', antesComLinha === 0 && depoisSem === 0 && Math.abs(primeiroComLinha - 2450) < 1e-6);
     reg('B10 linha no x do lance, entrando até 0,95', `x ok ${xOk}, opacidade máx ${fmt(opMax, 2)}`, 'sim, 0,95', xOk && Math.abs(opMax - 0.95) < 1e-9);
-    const dSaot = REPLAY.saot.impedimento.dura;
+    const dSaot = REPLAY.saot?.impedimento.dura ?? 3.6; // (a versão sem a análise não tem REPLAY.saot: a meta é 3,6 s)
     reg('B11 congela no passe (a análise)', `${fmt(congelados / 60, 2)} s`, `${dSaot} s (≥ 3,0)`, congelados / 60 >= 3.0 && Math.abs(congelados / 60 - dSaot) <= 2 / 60);
     reg('B12 impedimento com o passe fora do anel: sem roteiro', String(roteiroImpedimento(a, { fotoTick: 1800, apitoTick: 2537, linhaX: 0, idImpedido: 9, time: 0, lado: 1 })), 'null', roteiroImpedimento(a, { fotoTick: 1800, apitoTick: 2537, linhaX: 0, idImpedido: 9, time: 0, lado: 1 }) === null);
     const rm = roteiroMenu(a);
@@ -298,7 +298,7 @@ if (!RA || !RR) {
       const p2 = ri?.planos[1];
       reg('C8 roteiro do impedimento: P1 até o apito (o toque) e a análise congelada no passe, ≤ 7,5 s', ri ? `${ri.planos.map(p => p.cam).join(' → ')}; P1 ${ri.planos[0].de}–${ri.planos[0].ate} (passe ${ri.planos[0].congela.tick}, depois a ${fmt(ri.planos[0].congela.velDepois, 2)}×); P2 no ${p2?.congela.tick} por ${p2?.congela.s} s; ${fmt(duracao(ri), 2)} s` : 'sem roteiro',
         `linha → saot; P1 termina em ${fimEsp}; P2 na foto ≥ 3,0 s; ≤ 7,5 s`,
-        !!ri && ri.planos.length === 2 && ri.planos[0].congela.tick === e.tickFoto && ri.planos[0].ate === fimEsp && p2.cam === 'saot' && p2.congela.tick === e.tickFoto && p2.congela.s >= 3.0 && duracao(ri) <= 7.5 + 1e-9);
+        !!ri && ri.planos.length === 2 && ri.planos[0].congela.tick === e.tickFoto && ri.planos[0].ate === fimEsp && !!p2 && p2.cam === 'saot' && p2.congela.tick === e.tickFoto && p2.congela.s >= 3.0 && duracao(ri) <= 7.5 + 1e-9);
     }
   }
 }

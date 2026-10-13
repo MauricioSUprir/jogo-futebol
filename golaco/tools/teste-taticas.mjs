@@ -131,6 +131,11 @@ const perdas = [];
 // ---------------------------------------------------------------- 1. formação (6 × 2) e contrato (b)
 let piorForm = { n: 11, txt: '' }, contratoB = true, contratoN = 0;
 const porForm = [];
+// o condutor da cena é parado por construção (a bola presa no ponto): o gatilho do condutor lento (IA_DEFESA.lento,
+// pedido de 11/10, medido no teste-parado) levaria o 1º e o 2º homem até ele em qualquer pressão — aqui se mede a
+// forma, então ele fica desligado só nestas cenas
+const LENTO = L.C.IA_DEFESA?.lento, lentoV = LENTO?.v;
+if (LENTO) LENTO.v = -1;
 for (const f of Object.keys(L.F.FORMACOES)) {
   for (const fase of ['sem', 'com']) {
     const c = cena({ formacao: f, tatica: TAT(fase === 'sem' ? { pressao: 0 } : {}), fase, bola: { x: 0, z: 0 } });
@@ -149,6 +154,7 @@ for (const f of Object.keys(L.F.FORMACOES)) {
     if (!c.contrato) contratoB = false;
   }
 }
+if (LENTO) LENTO.v = lentoV;
 reg('formação: vagas a ≤ 3 m da tabela (6 formações × 2 fases, pior caso)', piorForm.n === 11 ? 'todas 11/11' : piorForm.txt, '≥ 9 de 11', piorForm.n >= 9);
 
 // ------------------------------------------------------------------------- 2. altura da linha

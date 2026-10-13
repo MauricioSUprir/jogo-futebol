@@ -193,9 +193,16 @@ export function sobreposicao(a, b) {
   return (w * h) / Math.max(1e-9, Math.min(aa, ab));
 }
 
+/**
+ * Custo do enquadramento (teste-saot S9): chamadas de `solidoEm` desde a última zerada. A busca do quadro final varre
+ * milhares de candidatos; a checagem de sólidos (dezenas de amostras) só roda nos que enquadram (enquadrarSaot).
+ */
+export const custoEnquadrar = { solidos: 0 };
+
 /** Câmera em (cx, cy, cz) e a linha de visão até os alvos livres de sólidos (placas, bancos, arquibancada, gols)? */
 function cameraLivre(cx, cy, cz, alvos) {
   if (cy < S.alturaMin) return false;
+  custoEnquadrar.solidos++;
   if (solidoEm(cx, cy, cz, 0.4, false)) return false;
   for (const a of alvos) {
     const dx = a.x - cx, dy = a.y - cy, dz = a.z - cz, L = Math.hypot(dx, dy, dz);
@@ -203,6 +210,7 @@ function cameraLivre(cx, cy, cz, alvos) {
     const n = Math.max(2, Math.ceil((L - 1.5) / 1.5));
     for (let k = 1; k <= n; k++) {
       const t = ((L - 1.5) / L) * (k / n);
+      custoEnquadrar.solidos++;
       const s = solidoEm(cx + dx * t, cy + dy * t, cz + dz * t, 0.05, false);
       if (s && s !== 'chão') return false;
     }
@@ -211,6 +219,7 @@ function cameraLivre(cx, cy, cz, alvos) {
 }
 
 const _ra = { x0: 0, x1: 0, y0: 0, y1: 0, atras: false }, _rd = { x0: 0, x1: 0, y0: 0, y1: 0, atras: false };
+const _alvos = [{ x: 0, y: 1.6, z: 0 }, { x: 0, y: 1.6, z: 0 }];
 /** Projeta os dois cilindros com a câmera em c olhando t; devolve quanto passam da folga (0 = dentro). */
 function projetarPar(A, D, cx, cy, cz, tx, ty, tz, tanH, tanV) {
   const b = base(cx, cy, cz, tx, ty, tz);
@@ -229,9 +238,10 @@ function projetarPar(A, D, cx, cy, cz, tx, ty, tz, tanH, tanV) {
  * Mede um quadro candidato: câmera a `d` m do ponto médio M (dos dois quadris), `el`° de elevação, azimute `az`° (0 =
  * +z, o lado da TV), MIRANDO o centro do par na tela (um perto e o outro longe da câmera: o ponto médio no espaço não é
  * o meio da tela). out {ok, sobre (sobreposição), fora (quanto passa da folga, ≥ 0), livre, cx, cy, cz (câmera), tx, ty,
- * tz (para onde olha), ra, rd}.
+ * tz (para onde olha), ra, rd}. semLivre: só a projeção (livre = null, ok = false; quem chama confere os sólidos depois
+ * com cameraLivre(cx, cy, cz, _alvos), já preenchido).
  */
-function medirQuadro(cena, M, el, az, d, tanH, tanV, out) {
+function medirQuadro(cena, M, el, az, d, tanH, tanV, out, semLivre = false) {
   const ce = Math.cos(el * GRAU), se = Math.sin(el * GRAU);
   const cx = M.x + Math.sin(az * GRAU) * ce * d, cy = M.y + se * d, cz = M.z + Math.cos(az * GRAU) * ce * d;
   const A = cena.atac, D = cena.def ?? { x: cena.linhaX, z: cena.bola.z };
@@ -246,8 +256,9 @@ function medirQuadro(cena, M, el, az, d, tanH, tanV, out) {
   const fora = projetarPar(A, D, cx, cy, cz, tx, ty, tz, tanH, tanV);
   out.sobre = sobreposicao(_ra, _rd); out.fora = fora;
   out.cx = cx; out.cy = cy; out.cz = cz; out.tx = tx; out.ty = ty; out.tz = tz;
-  out.livre = cameraLivre(cx, cy, cz, [{ x: A.x, y: 1.6, z: A.z }, { x: D.x, y: 1.6, z: D.z }]);
-  out.ok = out.livre && fora === 0 && out.sobre <= S.sobreposicaoMax;
+  _alvos[0].x = A.x; _alvos[0].z = A.z; _alvos[1].x = D.x; _alvos[1].z = D.z;
+  out.livre = semLivre ? null : cameraLivre(cx, cy, cz, _alvos);
+  out.ok = !!out.livre && fora === 0 && out.sobre <= S.sobreposicaoMax;
   out.ra = { ..._ra }; out.rd = { ..._rd };
   return out;
 }
@@ -287,12 +298,17 @@ export function enquadrarSaot(anel, cena, aspecto, out = {}) {
         for (const dv of F.desvios) {
           const az = lado === 'tv' ? dv : 180 - dv;
           for (let d = F.dist[0]; d <= F.dist[1] + 1e-9; d += 0.25) {
-            medirQuadro(cena, M, el, az, d, tanH, tanV, q);
-            if (q.ok) return preencherEnq(out, fov, q, lado, true, nivel);
-            if (q.livre) {
-              const pena = q.fora * 4 + Math.max(0, q.sobre - S.sobreposicaoMax) + (lado === 'oposto' ? 0.5 : 0) + nivel;
-              if (pena < menosPena) { menosPena = pena; menos = { q: { ...q }, lado, nivel }; }
-            }
+            // a projeção primeiro (barata); a câmera e as visadas fora dos sólidos (a parte cara: dezenas de amostras de
+            // solidoEm) só no candidato que enquadra ou que seria o novo "menos ruim" — o MESMO quadro escolhido de antes
+            // (ok = livre e enquadra; o menos ruim só entre os livres), sem varrer sólidos à toa (S9)
+            medirQuadro(cena, M, el, az, d, tanH, tanV, q, true);
+            const cabe = q.fora === 0 && q.sobre <= S.sobreposicaoMax;
+            const pena = q.fora * 4 + Math.max(0, q.sobre - S.sobreposicaoMax) + (lado === 'oposto' ? 0.5 : 0) + nivel;
+            if (!cabe && pena >= menosPena) continue;
+            q.livre = cameraLivre(q.cx, q.cy, q.cz, _alvos);
+            if (!q.livre) continue;
+            if (cabe) { q.ok = true; return preencherEnq(out, fov, q, lado, true, nivel); }
+            menosPena = pena; menos = { q: { ...q }, lado, nivel };
           }
         }
       }

@@ -1,8 +1,9 @@
 // Partida IA × IA em Node gravando o anel do replay EXATAMENTE como o main.js (rodarPasso + gravarNoAnel): a pose de
 // cada passo (anim.js), x/z/rumo, a bola, o corte (jogador levado > 2 m ou bola > 2,5 m), a foto da Regra 11 em vigor
-// (m.partida.imped, só lida), as marcas do passo (bit0 chute/cabeceio, bit1 gol) e, com js/tecnicos.js, os 2 treinadores
-// (um passo deles depois do passo da partida, lendo o mundo; gravados depois dos jogadores com o bit2). Para os testes da
-// cena semiautomática (teste-saot, teste-replay-anel) e o medir-saot.
+// (m.partida.imped, só lida), as marcas do passo (bit0 chute ou cabeceio para o gol, bit1 gol: replay-anel.js
+// marcasDoPasso, a mesma função do main.js) e, com js/tecnicos.js, os 2 treinadores (um passo deles depois do passo da
+// partida, lendo o mundo; gravados depois dos jogadores com o bit2). Para os testes da cena semiautomática (teste-saot,
+// teste-replay-anel) e o medir-saot.
 //   const G = await criarGravador(pastaJs);  const S = G.novaPartida(semente, {comoPagina});  G.passo(S) → eventos
 // comoPagina: a entrada da IA pelo humano chega como a página (?demo=1) entrega (lib/acha-gol.mjs).
 import path from 'node:path';
@@ -56,7 +57,11 @@ export async function criarGravador(pastaJs) {
     if (S.T) for (const tc of S.T.tecs) a.jogador(v++, tc.id, tc.time, false, tc.j.x, tc.j.z, tc.j.rumo, tc.atu, true);
     const im = m.partida?.imped;
     if (im && a.foto) a.foto(im.tick, im.time, im.por, im.defensor, im.linhaX, m.ataca[im.time]);
-    if (a.marcar) for (const e of ev) a.marcar(e.tipo === 'gol' ? 2 : e.tipo === 'chute' || e.tipo === 'cabeceio' ? 1 : 0);
+    // as marcas pela mesma função do main.js (versões antigas sem ela: todo cabeceio como chute, como era)
+    if (a.marcar) {
+      if (RA.marcasDoPasso) a.marcar(RA.marcasDoPasso(ev, m.voo));
+      else for (const e of ev) a.marcar(e.tipo === 'gol' ? 2 : e.tipo === 'chute' || e.tipo === 'cabeceio' ? 1 : 0);
+    }
     a.fim(m.bola.p, m.bola.q);
     S.ms += performance.now() - tg; S.n++;
     return ev;

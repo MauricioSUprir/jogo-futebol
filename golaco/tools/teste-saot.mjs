@@ -178,6 +178,25 @@ if (!SA) {
       reg('S3 "Replay" da pausa: com chute no fim mostra a análise; sem chute nem gol, não', `${rm ? rm.planos.map(p => p.cam).join(' → ') : '-'} × ${rm2 ? rm2.planos.map(p => p.cam).join(' → ') : '-'}`, 'tv → saot × tv',
         !!rm && rm.checagem && rm.planos.at(-1).cam === 'saot' && !!rm2 && !rm2.checagem && rm2.planos.length === 1);
     }
+    // contraprova (13/10): as marcas do passo vêm dos EVENTOS (replay-anel.js marcasDoPasso, a mesma função do main.js
+    // gravarNoAnel). Todo cabeceio emite 'cabeceio' — o de passe, o de lançamento e o corte do rival também —; antes todos
+    // viravam "chute" (bit0) e a cadeia que acabava num cabeceio de PASSE ganhava a análise no "Replay" da pausa (o
+    // critério i pede chute ou gol). Só o cabeceio PARA O GOL (m.voo.cabeceio = 'chute') é finalização.
+    {
+      const md = RA.marcasDoPasso;
+      if (!md) reg('S3 "Replay" da pausa: cabeceio de passe ou corte não é chute; cabeceio para o gol é', 'sem marcasDoPasso (todo cabeceio virava chute)', 'passe/corte 0, gol 1; tv × tv → saot', false);
+      else {
+        const cab = [{ tipo: 'passe', id: 9, modo: 'cabeceio' }, { tipo: 'cabeceio', id: 9 }];
+        const bPasse = md(cab, { tipo: 'cabeceio', cabeceio: 'passe' }), bChute = md(cab, { tipo: 'cabeceio', cabeceio: 'chute' });
+        const bCorte = md([{ tipo: 'passe', id: 104, modo: 'cabeceio' }, { tipo: 'cabeceio', id: 104 }], { tipo: 'cabeceio', cabeceio: 'lancamento' });
+        const bBase = [md([{ tipo: 'chute', id: 9 }], null), md([{ tipo: 'gol', time: 0 }], null), md([{ tipo: 'passe', id: 9 }], null)];
+        const menu = bits => { const L = lancePasse({ margem: 0.3 }); L.marcas = bits ? { [L.chute]: bits } : {}; return RR.roteiroMenu(montarAnel(RA, NJ, J, L)); };
+        const rp = menu(bPasse), rc = menu(bChute);
+        const cams = r => (r ? r.planos.map(p => p.cam).join(' → ') : '-');
+        reg('S3 "Replay" da pausa: cabeceio de passe ou corte não é chute; cabeceio para o gol é', `marcas: passe ${bPasse}, corte ${bCorte}, para o gol ${bChute}, chute/gol/passe ${bBase.join('/')}; pausa: ${cams(rp)} × ${cams(rc)}`,
+          'passe/corte 0, gol 1, 1/2/0; tv × tv → saot', bPasse === 0 && bCorte === 0 && bChute === 1 && bBase.join() === '1,2,0' && !!rp && !rp.checagem && !!rc && rc.checagem);
+      }
+    }
   }
 
   // ---------------------------------------------------------------- S5 selo (só no quadro final; nunca volta a 0)
@@ -286,6 +305,31 @@ if (!SA) {
     reg('S4 câmera (montadas): termina a 12–24° de elevação e 8–25° fora do eixo da linha', `${meta} de ${n}`, '100%', meta === n);
     reg('S4 órbita (montadas, 60 qps): começa ≥ 60°, ≤ 3° por quadro, ≥ 2 m, fora dos sólidos', `começa ≥ ${f2(elIniMin)}°; giro máx ${f2(giroMax)}°/quadro; altura mín ${f2(minY)} m; ${solidos} em sólidos`, '≥ 60; ≤ 3; ≥ 2; 0',
       elIniMin >= 60 && giroMax <= 3 && minY >= 2 && solidos === 0);
+  }
+  // ---------------------------------------------------------------- S9 custo do enquadramento (contraprova de 13/10)
+  // O quadro final é calculado num quadro só (no apito e a cada `resize`, ao girar o celular). A busca varre milhares de
+  // candidatos; a câmera e as visadas fora dos sólidos (`solidoEm`, dezenas de amostras por candidato) só valem para o
+  // candidato que enquadra (ou que seria o "menos ruim"). Antes, em todos: 415 mil chamadas de `solidoEm` (~80 ms de CPU
+  // no PC) num enquadramento com os dois longe na largura. Conta determinística (`custoEnquadrar.solidos`) nos piores
+  // casos montados (os dois a 30–66 m na largura, linha perto do meio e do gol); o quadro escolhido não muda (S4).
+  {
+    const ce = SA.custoEnquadrar;
+    if (!ce) reg('S9 custo do enquadramento: chamadas de solidoEm por quadro final (pior caso montado)', 'sem a conta (custoEnquadrar)', '≤ 15 mil', false);
+    else {
+      let pior = 0, ondePior = '', cpuMax = 0;
+      for (const lado of [1, -1]) for (const [lx, zB, zD] of [[2, 33, 3], [5, -30, 30], [25, -30, 30], [45, 33, -33], [45, -32, 24], [50, -33, 33]]) {
+        const L = lancePasse({ lado, linhaX: lx * lado, margem: -0.5, zB, zD });
+        const a = montarAnel(RA, NJ, J, L);
+        const c = SA.cenaImpedimento(a, { fotoTick: L.passe, id: 9, defensor: 104, por: 7, linhaX: L.linhaX, lado });
+        for (const asp of [16 / 9, 844 / 390]) {
+          ce.solidos = 0;
+          const u0 = process.cpuUsage(); SA.enquadrarSaot(a, c, asp); const u = process.cpuUsage(u0);
+          cpuMax = Math.max(cpuMax, (u.user + u.system) / 1000);
+          if (ce.solidos > pior) { pior = ce.solidos; ondePior = `linha ${lx * lado}, z ${zB}/${zD}, ${asp.toFixed(2)}`; }
+        }
+      }
+      reg('S9 custo do enquadramento: chamadas de solidoEm por quadro final (pior caso montado)', `${pior} (${ondePior}); CPU máx ${f2(cpuMax)} ms (informativo)`, '≤ 15 mil', pior > 0 && pior <= 15000);
+    }
   }
 
   // ---------------------------------------------------------------- lances de verdade (IA × IA): S2, S4, S6, S7, S8

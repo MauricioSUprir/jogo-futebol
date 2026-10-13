@@ -41,7 +41,10 @@ const base = args.includes('--base') ? path.resolve(args[args.indexOf('--base') 
 const res = [];
 const meta = (nome, medido, alvo, ok, info = false) => { res.push({ nome, medido, alvo, ok: !!ok, info }); };
 const f2 = v => (Number.isFinite(v) ? v.toFixed(2) : String(v));
+// erro do Playwright: a 1ª linha e o fim do registro da espera (o motivo de um clique que não sai: fora da tela, coberto, instável)
+const erroCurto = e => { const l = String(e?.message ?? e).replace(/\x1b\[[0-9;]*m/g, '').split('\n').map(x => x.trim()).filter(Boolean); const log = [...new Set(l.slice(1).filter(x => x.startsWith('-')))].slice(-3); return [l[0], ...log].join(' | '); };
 const errosTodos = [];
+const CLIQUE_MS = 120000;   // espera de um clique de verdade (máquina carregada; no CI sai em milissegundos)
 
 async function pagina(raizJogo, url, opc = {}) {
   const srv = await servidor(0, raizJogo);
@@ -187,7 +190,8 @@ const caixasSelo = [];          // F2: caixas do selo, do placar, da marca e do 
 const analise = [];             // F8/F9: chamadas, triângulos e CPU da análise
 const hashImped = { com: null, sem: null };
 let apitoP1 = null;
-const IMP = await acharImpedimento({ pastaJs: path.join(raiz, 'js'), depoisDe: 900 });
+// a semente achada com a entrada que a PÁGINA entrega (comoPagina): sem isso o lance de Node pode não acontecer na página
+const IMP = await acharImpedimento({ pastaJs: path.join(raiz, 'js'), depoisDe: 900, comoPagina: true });
 if (!IMP) meta('C impedimento de verdade nas sementes 1–40 (Node)', 'nenhum', '≥ 1', false);
 else try {
   const P = await pagina(raiz, `?q=baixa&hora=dia&demo=1&semente=${IMP.semente}`);
@@ -267,8 +271,10 @@ else try {
       const noAnel = fq ? await pg.evaluate(({ foto, a, d }) => ({ atac: window.__golaco.replay.noAnel(foto, a), def: d >= 0 ? window.__golaco.replay.noAnel(foto, d) : null }), { foto, a: fq.idAtac, d: fq.idDef }) : null;
       const okX = !!noAnel && !!noAnel.def && Math.abs(fq.xParede - noAnel.def.x) < 1e-4 && Math.abs(fq.xPlano - noAnel.atac.x) < 1e-4 && Math.abs(fq.xParede - lx) < 1e-4;
       const alem = fq ? (fq.xPlano - fq.xParede) * fq.lado : NaN;
-      meta('F4 parede no x do defensor (= a linha) e plano no x do atacante, conferidos no anel; o plano passa a parede > 0,10 m', fq && noAnel ? `parede ${fq.xParede.toFixed(4)} × defensor ${noAnel.def?.x.toFixed(4)} × linha ${lx.toFixed(4)}; plano ${fq.xPlano.toFixed(4)} × atacante ${noAnel.atac?.x.toFixed(4)}; além ${f2(alem)} m; vermelho ${fq.corPlano === 0xff3b30}` : '-',
-        '|Δ| < 1e-4; > 0,10 m; vermelho', okX && alem > 0.10 && fq.corPlano === 0xff3b30 && finais.every(q => q.planosVis));
+      // a cor entra em 0,15 s depois da decisão: o último quadro final já está todo vermelho
+      const fu = finais.at(-1);
+      meta('F4 parede no x do defensor (= a linha) e plano no x do atacante, conferidos no anel; o plano passa a parede > 0,10 m', fq && noAnel ? `parede ${fq.xParede.toFixed(4)} × defensor ${noAnel.def?.x.toFixed(4)} × linha ${lx.toFixed(4)}; plano ${fq.xPlano.toFixed(4)} × atacante ${noAnel.atac?.x.toFixed(4)}; além ${f2(alem)} m; no fim, plano #${fu.corPlano?.toString(16)}` : '-',
+        '|Δ| < 1e-4; > 0,10 m; vermelho (#ff3b30)', okX && alem > 0.10 && fu.corPlano === 0xff3b30 && finais.every(q => q.planosVis && q.xParede === fq.xParede && q.xPlano === fq.xPlano));
       const depois = await pg.evaluate(() => { const g = window.__golaco, t0 = g.mundo.tick; let linha = 0, planos = 0, selo = 0; for (let i = 0; i < 60; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); if (g.linhaImpedimento.visivel) linha++; if (g.replay.planos?.visivel) planos++; if (!document.getElementById('terco').hidden) selo++; } return { linha, planos, selo, rp: g.replay.estado.ativo, parada: g.mundo.parada?.tipo ?? null, andou: g.mundo.tick - t0 }; });
       meta('C6 depois do replay: a linha, os planos e o selo não ficam no jogo e o tiro livre segue', `linha em ${depois.linha}, planos em ${depois.planos}, selo em ${depois.selo} de 60 quadros, replay ${depois.rp}, parada ${depois.parada}, a sim andou ${depois.andou} passos`, 'linha 0, planos 0, selo 0, replay não, anda',
         depois.linha === 0 && depois.planos === 0 && depois.selo === 0 && !depois.rp && depois.andou > 0);
@@ -361,7 +367,9 @@ else try {
     await pg.evaluate(() => window.__golaco.abrirMenu());
     const temBotao = await pg.evaluate(() => { const b = document.querySelector('#menu [data-cmd="replay"]'); return !!b && !b.hidden && b.offsetParent !== null; });
     const tickAntes = await pg.evaluate(() => window.__golaco.mundo.tick);
-    if (temBotao) await pg.click('#menu [data-cmd="replay"]');
+    // CLIQUE (o botão tem de estar visível e por cima de tudo); a espera longa é da máquina carregada: a checagem de
+    // "estável" do Playwright pede 2 quadros do navegador, que chegaram a levar 24 s com a carga ~120 em 4 núcleos
+    if (temBotao) await pg.click('#menu [data-cmd="replay"]', { timeout: CLIQUE_MS });
     const em = await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 30; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); return { rp: g.replay.estado, anel: g.replay.anel, tick: g.mundo.tick, menu: g.estado().menuAberto }; });
     meta('D1 "Replay" na pausa toca os últimos ≤ 10 s com a simulação parada', `botão ${temBotao}; tipo ${em.rp.tipo}, plano ${em.rp.de}–${em.rp.ate} (anel ${em.anel.primeiro}–${em.anel.ultimo}), sim parada ${em.tick === tickAntes}, pausa fechada ${!em.menu}`,
       'botão, menu, ≤ 600 ticks, sim parada', temBotao && em.rp.tipo === 'menu' && em.rp.ate - em.rp.de <= 600 && em.tick === tickAntes && !em.menu);
@@ -377,7 +385,7 @@ else try {
     meta('D3 uma tecla do jogo (K) pula e não vira chute', `replay antes ${antesK}, depois ${posK.ativo}; quadros com carga depois do pulo ${posK.cargas}`, 'sim → não; 0', antesK && !posK.ativo && posK.cargas === 0);
     // desligar na pausa: salvo; o gol seguinte sem replay
     await pg.evaluate(() => window.__golaco.abrirMenu());
-    await pg.click('#menu .segmentado[data-grupo="replayAuto"] button[data-valor="desligado"]');
+    await pg.click('#menu .segmentado[data-grupo="replayAuto"] button[data-valor="desligado"]', { timeout: CLIQUE_MS });
     const salvo = await pg.evaluate(() => { const g = window.__golaco; g.fecharMenu(); let p = {}; try { p = JSON.parse(localStorage.getItem('golaco.prefs.v1') || '{}'); } catch (_) {} return { auto: g.replay.automatico(), salvo: p.replay, marcado: document.querySelector('#menu .segmentado[data-grupo="replayAuto"] [aria-pressed="true"]')?.dataset.valor }; });
     const gol2 = await golRoteirizado(pg, { semente: 5, time: 0 });
     const semAuto = await pg.evaluate(gt => { const g = window.__golaco; let q = 0; for (let i = 0; i < 260; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); if (g.replay.estado.ativo) q++; } return { q, passou: g.mundo.tick - gt }; }, gol2.golTick);
@@ -393,7 +401,7 @@ else try {
     const anelB = await pg.evaluate(() => window.__golaco.replay.anel.bytes);
     meta('E3 memória do anel (10 s, 24 vagas)', `${f2(anelB / 1048576)} MB`, '≤ 4 MB', anelB > 0 && anelB <= 4 * 1048576);
   } finally { await P.fechar(); }
-} catch (e) { meta('C–E execução (impedimento, pausa, custos)', e.message.split('\n')[0], 'sem exceção', false); }
+} catch (e) { meta('C–E execução (impedimento, pausa, custos)', erroCurto(e), 'sem exceção', false); }
 
 // ------------------------------------------------------------------------------------------------ D (celular, toque)
 try {
@@ -426,7 +434,7 @@ try {
     const tocou = await pg.evaluate(() => { const g = window.__golaco; g.relogio.avancar(1000 / 60, { desenhar: false }); return { ativo: g.replay.estado.ativo, toque: getComputedStyle(document.getElementById('toque')).display !== 'none', menu: g.estado().menuAberto }; });
     meta('D6 celular: um toque em qualquer lugar pula (e os botões de toque voltam)', JSON.stringify(tocou), 'ativo false, toque true, menu false', !tocou.ativo && tocou.toque && !tocou.menu);
   } finally { await P.fechar(); }
-} catch (e) { meta('D5–D6 execução (celular)', e.message.split('\n')[0], 'sem exceção', false); }
+} catch (e) { meta('D5–D6 execução (celular)', erroCurto(e), 'sem exceção', false); }
 // ------------------------------------------------------------------------------------------------ F (sem replay)
 // a mesma partida com o replay desligado: os 120 quadros ao vivo antes do apito (chamadas, triângulos, CPU), o apito sem
 // replay nem selo (a linha parada 2,2 s, como antes) e o hash no tick apito + 600
@@ -462,7 +470,7 @@ if (IMP && apitoP1 != null) try {
       meta('F9 CPU do quadro da análise (sem o desenho) ≤ o quadro ao vivo', `${ana.cpu.toFixed(3)} ms (${ana.quadros} quadros) × ${sem.cpu.toFixed(3)} ms`, 'análise ≤ ao vivo', ana.quadros > 0 && ana.cpu <= sem.cpu);
     } else meta('F8/F9 a análise de novo (saotDeTeste)', 'sem roteiro', 'roteiro', false);
   } finally { await P.fechar(); }
-} catch (e) { meta('F6–F11 execução (sem replay)', e.message.split('\n')[0], 'sem exceção', false); }
+} catch (e) { meta('F6–F11 execução (sem replay)', erroCurto(e), 'sem exceção', false); }
 {
   // F2: as caixas não se tocam (2 px de folga)
   const toca = (a, b) => !!a && !!b && a.x0 < b.x1 + 2 && b.x0 < a.x1 + 2 && a.y0 < b.y1 + 2 && b.y0 < a.y1 + 2;
