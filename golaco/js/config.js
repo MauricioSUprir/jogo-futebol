@@ -437,8 +437,9 @@ export const ACOES = {
     // (só na partida; entrega "IA intensa" de 12/10) com o condutor a mais de vLado m/s, a bola tirada sai para o lado do
     // defensor e `tras` (fração) para trás no caminho do condutor — e ele fica DEFESA_HUMANO.dividida.semDominio s sem domínio
     vLado: 3, tras: 0.7,
-    // (só na partida) o escolhido da PRESSÃO do humano não dá o bote acima de vPressao m/s (freia antes)
-    vPressao: 5 },
+    // (só na partida) o escolhido da PRESSÃO do humano não dá o bote acima de vPressao m/s (freia antes; 5 → 4 com o condutor
+    // da IA que encara o marcador — rodada "volume de ataque", 13/10)
+    vPressao: 4 },
   primeiraErro: 1.4,          // multiplica o erro de jogada de primeira
 };
 
@@ -472,9 +473,10 @@ export const GOLEIRO = {
   // partidas do painel; meta 55–60%). Com a defesa que corta o passe e acompanha a arrancada (entrega "cabeceio + IA
   // intensa", 12/10) sobram menos chances claras e o goleiro foi a 75–79% (48 partidas): c0Partida −0,35 → 67,6% / 54,2% /
   // 83,6% (48 partidas, sementes 1001–1048; a faixa de 6 a 16,5 m ~1 ponto abaixo da meta, dentro do sorteio da amostra).
-  // No painel de 144 do CI (rodada "volume de ataque", 13/10) a faixa de 6 a 16,5 m ficou em 61,5% (meta 55–60%):
-  // −0,35 → −0,5
-  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.5, cTempo: 6, vRef: 20 },
+  // No painel de 144 do CI (rodada "volume de ataque", 13/10) a faixa de 6 a 16,5 m ficou em 60–61,5% (meta 55–60%) com
+  // −0,35/−0,5; com o condutor que entra na área (utilidade.manterPeso) os chutes ficam mais perto e as defesas caem
+  // sozinhas: −0,3
+  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.3, cTempo: 6, vRef: 20 },
   // segurar × espalmar (StatsBomb): em pé, de longe ~60%; no mergulho ~25%; de perto ~23%
   segurar: { emPe: 0.6, mergulho: 0.25, perto: 0.23 },
   alturaMax: 2.45,            // m alcançados com a mão no alto
@@ -1142,7 +1144,12 @@ export const IA_ATAQUE = {
   //    rolando rende gol: o cruzamento vale mais);
   //  - conduzir: 7 direções a passoAngConduz rad, conduzDist m à frente, × conduz (o tempo que leva);
   //    chance de manter pelos adversários a < manterRaio m do caminho (manterPeso; de lado/atrás
-  //    manterLado), × manterArea[0] dentro da área e [1] a < manterPerto m do gol; quem segura a bola
+  //    manterLado), × manterArea[0] dentro da área e [1] a < manterPerto m do gol (rodada "volume de ataque", 13/10:
+  //    no último terço, a partir de manterTerco.u m, peso e lado de manterTerco — o condutor encara o marcador e entra na
+  //    área; valendo no campo todo, com 0,85/0,7 os chutes caíam de 7,6 para 4,9 por partida e com 0,55/0,25 subiam para
+  //    8,4, mas no meio-campo o condutor ia para cima da PRESSÃO do humano — faltas e o botão menos perceptível no
+  //    teste-pressao-humano — e sobravam menos bolas longas: os duelos pelo alto com a bola rolando caíam de ~2 para
+  //    ~1,5 por partida); quem segura a bola
   //    perde valor (conduzSolta: de [0] s a [1] s, até [2]×); analógico magConduz; CORRER com
   //    correrLivre m livres à frente (transição ou antes de correrAte m), condução curta com < curtaPerto m;
   //  - proteger: adversário a < protegeDist m, chance protegeP, no máximo protegeMax s por posse.
@@ -1152,7 +1159,7 @@ export const IA_ATAQUE = {
     cruzamentoP: [0.01, 0.06, 0.35, 0.4], cruzamentoRaio: 1,
     xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 3.0, chuteLonge: 0.25, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
     passoAngConduz: 0.5, conduzDist: 5, conduz: 0.85, conduzSolta: [1.5, 4, 0.35], vConduz: 5.5, magConduz: 0.9,
-    manterRaio: 3, manterPeso: 0.7, manterLado: 0.4, manterArea: [0.95, 0.7], manterPerto: 9,
+    manterRaio: 3, manterPeso: 0.7, manterLado: 0.4, manterTerco: { u: 17.5, peso: 0.55, lado: 0.25 }, manterArea: [0.95, 0.7], manterPerto: 9,
     protegeDist: 1.5, protegeP: 0.7, protegeMax: 1.0, correrLivre: 10, correrAte: 25, curtaPerto: 2.5,
   },
   riscoMentalidade: [0.8, 0.9, 1.0, 1.1, 1.25], // risco de passe aceito, por mentalidade (−2..+2)

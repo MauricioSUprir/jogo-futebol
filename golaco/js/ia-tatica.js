@@ -139,7 +139,9 @@ function vaiNaLivre(m, j) {
   if (v && v.para != null && v.time === j.time && v.para !== j.id) return false;
   const atual = ant && ant.tick >= m.tick - 1 ? ant.id : -1, H = IA_DEFESA.livre.histerese;
   // passe do adversário no ar com destino: lê a LINHA do passe (pedido do dono de 12/10, "a defesa mal intercepta passe")
-  if (v && v.para != null && v.time !== j.time && m.partida) return cortaPasse(m, j, v, Lv, atual);
+  // (o arremesso do lateral não: chega no ar, na coxa/peito de quem vem buscar, e quem marca disputa no corpo — com o corte
+  // o time ficava com a bola em ~26% dos laterais, teste-bolas-paradas E2; main 67%)
+  if (v && v.para != null && v.time !== j.time && m.partida && v.tipo !== 'lateral') return cortaPasse(m, j, v, Lv, atual);
   const tempo = o => MD.hypot(o.x - b.x, o.z - b.z) / o.par.vArrancada - (o.id === atual ? H : 0);
   const tj = tempo(j);
   for (const o of m.jogadores) {

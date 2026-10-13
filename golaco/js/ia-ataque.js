@@ -964,7 +964,10 @@ function miraCruzamento(j, A) {
 function manter(m, j, px, pz) {
   const U = IA_ATAQUE.utilidade;
   const dx = px - j.x, dz = pz - j.z, L = MD.hypot(dx, dz) || 1, ux = dx / L, uz = dz / L;
-  const k = U.manterPeso * lerp(1.15, 0.8, (j.par.attr.drible ?? 65) / 100);
+  // (no último terço o condutor encara: U.manterTerco — rodada "volume de ataque", 13/10)
+  const T = U.manterTerco, terco = !!T && j.x * m.ataca[j.time] > T.u;
+  const k = (terco ? T.peso : U.manterPeso) * lerp(1.15, 0.8, (j.par.attr.drible ?? 65) / 100);
+  const ladoK = terco ? T.lado : U.manterLado;
   let P = 1;
   for (const o of m.jogadores) {
     if (o.time === j.time || o.papel === 'parado' || o.papel === 'marcador') continue;
@@ -974,7 +977,7 @@ function manter(m, j, px, pz) {
     const s = clamp(pr, 0, L);
     const lat = MD.hypot(ox - s * ux, oz - s * uz);
     if (lat >= U.manterRaio) continue;
-    const frente = pr > 0.3 ? 1 : U.manterLado;
+    const frente = pr > 0.3 ? 1 : ladoK;
     P *= 1 - clamp((U.manterRaio - lat) / (U.manterRaio - 0.5), 0, 1) * frente * k;
   }
   return P;

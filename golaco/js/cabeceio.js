@@ -240,9 +240,12 @@ export function intencaoCabeceio(m, j, y) {
   const u = j.x * lado;
   const gx = lado * CAMPO.meioX;
   const naArea = u > CAMPO.meioX - CAMPO.area.profundidade && Math.abs(j.z) < CAMPO.area.largura / 2;
+  // (o arremesso do lateral do meu time não se afasta: no meu terço ele domina ou passa de cabeça; afastando, a bola ia
+  // para fora e virava lateral deles — teste-bolas-paradas E2)
+  const doMeuTime = !!(m.voo && m.voo.time === j.time && m.voo.tipo === 'lateral');
   let tipo;
   if (naArea && MD.hypot(gx - j.x, j.z) <= C.gol) tipo = 'chute';
-  else if (u < -TATICA.terco) tipo = 'lancamento';
+  else if (u < -TATICA.terco && !doMeuTime) tipo = 'lancamento';
   else tipo = 'passe';
   if (y <= ACOES.cabeceio.alturaPeito[1] && tipo === 'passe') return null;
   return { tipo, forca: tipo === 'chute' ? 0.7 : 0.5, auto: true };
