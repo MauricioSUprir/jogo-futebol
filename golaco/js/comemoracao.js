@@ -25,6 +25,7 @@ import { difAng } from './mat.js';
 import { passoCorpo, passoPassada, passoPeDesenhado } from './jogador.js';
 import { pose, alturaQuadril, J, NJ, ik, ikBraco } from './anim.js';
 import { mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho } from './goleiro.js';
+import { hash32 } from './rng.js';
 
 const C = COMEMORACAO;
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
@@ -47,25 +48,21 @@ function suave(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
 function lerp(a, b, t) { return a + (b - a) * t; }
 
 // Gestos: alvo da mão em relação ao OMBRO, no referencial do rumo (f = frente, r = para fora do lado, y = para cima) e o
-// polo do cotovelo no mesmo referencial (pf, pr, py). r < 0 = para dentro (mão no peito, na cabeça).
+// polo do cotovelo no mesmo referencial (pf, pr, py). r < 0 = para dentro (mão no peito, na cabeça). Exportados (com
+// maoEm, gesto, cabeca e poseAgachado) para os treinadores (tecnicos.js) e a cena de substituição.
 //                       f      r      y      pf    pr    py
-const G_AVIAO = [-0.05, 0.53, 0.02, -0.3, 0.2, -1];
-const G_V = [0.0, 0.3, 0.42, -0.2, 1, 0];
-const G_CEU = [0.15, 0.1, 0.5, 0, 1, 0];
-const G_SOCO = [0.1, 0.1, 0.52, 0, 1, 0];
-const G_FORA = [0.15, 0.3, -0.15, -0.3, 1, -0.5];
-const G_PEITO = [0.15, -0.24, -0.05, -0.2, 1, -0.6];
-const G_CINTURA = [-0.02, 0.12, -0.47, -0.6, 1, 0];
-const G_CABECA = [0.02, -0.1, 0.27, 0, 1, 0.4];
-const G_PUNHO = [0.12, 0.12, 0.36, 0, 1, 0];   // o punho cerrado sobe e desce (y + 0,14·sen) na corrida
+export const G_AVIAO = [-0.05, 0.53, 0.02, -0.3, 0.2, -1];
+export const G_V = [0.0, 0.3, 0.42, -0.2, 1, 0];
+export const G_CEU = [0.15, 0.1, 0.5, 0, 1, 0];
+export const G_SOCO = [0.1, 0.1, 0.52, 0, 1, 0];
+export const G_FORA = [0.15, 0.3, -0.15, -0.3, 1, -0.5];
+export const G_PEITO = [0.15, -0.24, -0.05, -0.2, 1, -0.6];
+export const G_CINTURA = [-0.02, 0.12, -0.47, -0.6, 1, 0];
+export const G_CABECA = [0.02, -0.1, 0.27, 0, 1, 0.4];
+export const G_PUNHO = [0.12, 0.12, 0.36, 0, 1, 0];   // o punho cerrado sobe e desce (y + 0,14·sen) na corrida
 
-/** Hash de 32 bits de dois inteiros (a mesma conta em todo motor JS: Math.imul). */
-export function hashGol(tick, id) {
-  let h = Math.imul((tick | 0) ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(((id | 0) + 0x632be5ab) | 0, 0xc2b2ae35);
-  h = Math.imul(h ^ (h >>> 16), 0x7feb352d);
-  h = Math.imul(h ^ (h >>> 15), 0x846ca68b);
-  return (h ^ (h >>> 16)) >>> 0;
-}
+/** Hash de 32 bits de dois inteiros (tick do gol, autor): o hash32 sem estado do rng.js ("aleatoriedade só por rng.js"). */
+export const hashGol = hash32;
 
 /** Finalização pelo hash do (tick do gol, autor), nunca a mesma da última (ultima). */
 export function escolherFinal(tick, id, ultima = null, curta = false) {
@@ -519,7 +516,7 @@ function alvoGesto(o, h, lado, g, dy) {
  * Mão do lado `lado` no ponto (tx, ty, tz), com peso w desde a mão da pose (0 = a pose da locomoção), e o cotovelo pelo
  * polo g (referencial do rumo h). IK do braço (anim.js): os ossos ficam com o comprimento certo.
  */
-function maoEm(o, h, lado, tx, ty, tz, w, g) {
+export function maoEm(o, h, lado, tx, ty, tz, w, g) {
   if (w <= 0) return;
   const iO = lado < 0 ? J.ombroE : J.ombroD, iC = lado < 0 ? J.cotoveloE : J.cotoveloD, iM = lado < 0 ? J.maoE : J.maoD;
   const fx = Math.cos(h), fz = Math.sin(h), rx = -fz, rz = fx;
@@ -529,7 +526,7 @@ function maoEm(o, h, lado, tx, ty, tz, w, g) {
 }
 
 /** Gesto g com peso w; ou a mistura de dois gestos (ga → gb por m) com peso w. */
-function gesto(o, h, lado, ga, gb, m, w, dya = 0, dyb = 0) {
+export function gesto(o, h, lado, ga, gb, m, w, dya = 0, dyb = 0) {
   if (w <= 0) return;
   let a = alvoGesto(o, h, lado, ga, dya);
   let x = a.x, y = a.y, z = a.z, g = ga;
@@ -542,7 +539,7 @@ function gesto(o, h, lado, ga, gb, m, w, dya = 0, dyb = 0) {
 }
 
 /** Cabeça baixa (lamento: w > 0) ou para trás (olhando o céu: w < 0). */
-function cabeca(o, h, w) {
+export function cabeca(o, h, w) {
   if (w === 0) return;
   const fx = Math.cos(h), fz = Math.sin(h), i = J.cabeca * 3, n = J.pescoco * 3;
   const f = w > 0 ? 0.06 * w : 0.05 * w, up = w > 0 ? 0.13 - 0.02 * w : 0.13 + 0.005 * w;
@@ -599,7 +596,7 @@ function poseJoelhos(o, a, w) {
 }
 
 /** Agachado (peso w): pelve desce, tronco para a frente, joelhos para a frente; os pés ficam onde estão. */
-function poseAgachado(o, j, w) {
+export function poseAgachado(o, j, w) {
   if (w <= 0) return;
   const h = j.rumo, fx = Math.cos(h), fz = Math.sin(h), rx = -fz, rz = fx;
   moverJuntas(o, SUP, 0, -C.agacha.desce * w, 0);

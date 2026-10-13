@@ -1077,8 +1077,8 @@ export const TROCA_AEREA = {
 // do jogo (60 passos = 1 s); vel = fração da velocidade real. Pesquisa: PESQUISA-ESTADIO.md §Replay.
 export const REPLAY = {
   automatico: true,           // padrão do ajuste "Replays automáticos" da pausa (?replay=0 desliga)
-  segundos: 10,               // s guardados no anel (600 passos; ~3,3 MB)
-  vagas: 24,                  // jogadores por passo no anel (22 em campo + folga)
+  segundos: 10,               // s guardados no anel (600 passos; ~3,6 MB)
+  vagas: 26,                  // por passo no anel: 22 em campo, os 2 treinadores (12/10) e folga (quem entra, 4º árbitro)
   // gol (na saída de bola; a comemoração entra antes): 1) TV na velocidade real, do chute − `antes` (ou do último corte)
   // até o gol + `depois`; 2) atrás do gol, alto, em câmera lenta, do chute − lentoAntes até o gol + lentoDepois;
   // 3) só no golaço (chute de ≥ `golaco` m do gol): lateral baixa bem lenta em volta do chute (FC 25: "3 ângulos").
@@ -1091,6 +1091,11 @@ export const REPLAY = {
     vel: [1, 0.5, 0.35],      // TV, atrás do gol, lateral baixa
     maximo: 12, maximoGolaco: 14,
     golaco: 20,               // m do gol na hora do chute (fora da área)
+    // 3ª e 4ª câmeras (pedidos do dono de 12/10: "uma é a visão em 1ª pessoa do jogador fazendo o gol"; "a 4ª pode ser a
+    // visão do treinador"): entram DEPOIS de TV, atrás [e lateral], com orçamento PRÓPRIO (a parte antiga não muda):
+    // extras ≤ `maximo` s; passando, encolhe nesta ordem: o começo da 1ª pessoa (até chute − primeiraMin), o fim da
+    // parte 2 do treinador (até gol + parte2Min) e o começo da parte 1 (até chute − parte1Min)
+    extras: { maximo: 7.0, primeiraMin: 0.4, parte2Min: 1.5, parte1Min: 0.3 },
   },
   // impedimento (no apito; pedido do dono de 12/10: "tipo aquelas cenas de replay do impedimento semiautomático"):
   // P1 'linha' — câmera ALINHADA com a linha (como o VAR: a linha fica em pé no quadro), `vel` de `antes` s antes do passe
@@ -1146,6 +1151,34 @@ export const REPLAY = {
   lateral: { recuo: 5, altura: 1.6, fora: 3.5, fov: 18 },
   // linha: na lateral do lado da TV, alta, no x da linha; o fov fecha no impedido e no defensor da linha (com folga)
   linha: { altura: 15, fora: 8, folga: 7, fovMin: 22, fovMax: 40 },
+  // 1ª PESSOA do autor do gol (render/replay-olhos.js; PESQUISA-ESTADIO.md §12): olho = cabeça gravada + frente·`frente` +
+  // cima·`cima`; x/z por gaussiana σ `sigmaXZ` s e y por média móvel de `mediaY` s (um passo: a cabeça sobe e desce 2–9 cm
+  // correndo e o cérebro estabiliza o olhar — Pozzo & Berthoz 1991; nada de balançar no ritmo da passada); rolagem 0.
+  // Olhar: a bola (arfagem ≥ `arfagemAntes`° até chute − `baixaAntes` s: a boca do gol fica no quadro), de chute − baixaAntes
+  // a chute + baixaDepois para baixo na bola e no pé, depois a bola puxada `puxaGol` para o centro da boca do gol;
+  // gaussiana σ `sigmaOlhar` s (`sigmaCabeceio` no cabeceio); arfagem em [arfagem]. Campo de visão HORIZONTAL `fovH`°
+  // fixo (exceção à regra do fov vertical: a faixa de conforto é dada em graus horizontais); plano de recorte próximo
+  // `perto` m. 0,6× de chute − `antes` s a gol + `depois` s (encolhe até chute − extras.primeiraMin). A bola some a
+  // < `bolaSome` m do olho; outro corpo a < `corpo` m da lente no quadro corta o plano (fica se sobrar ≥ `sobraMin` s reais).
+  primeira: {
+    vel: 0.6, antes: 0.9, depois: 0.4, frente: 0.10, cima: 0.03, sigmaXZ: 0.08, mediaY: 0.33,
+    baixaAntes: 0.25, baixaDepois: 0.1, puxaGol: 0.35, sigmaOlhar: 0.10, sigmaCabeceio: 0.14,
+    arfagem: [-60, 15], arfagemAntes: -30, fovH: 90, perto: 0.10, bolaSome: 0.35, corpo: 0.3, sobraMin: 1.2,
+    cabeceioOlhaGol: 0.15,
+  },
+  // VISÃO DO TREINADOR do time que marcou (render/replay-olhos.js): parte 1 = o que ele vê (olho na cabeça gravada,
+  // gaussiana σ `sigmaOlho`; olhar a meio caminho da bola suavizada e do centro da boca do gol, σ `sigmaOlhar`;
+  // teleobjetiva FIXA no plano com o quadro de `largura` m na distância do gol, fov vertical em [fovMin, fovMax]; ele sai da
+  // lista de desenho), de chute − `antes` a gol + `corte`; parte 2 = corte seco para ele reagindo, de gol + corte a gol +
+  // `fim`: câmera parada no gramado (z = meioZ − `recuoZ`, altura `altura`), girando por gaussiana σ `sigmaGiro` para
+  // segui-lo, fov `fov`° (16:9; ×0,88 no celular), ele no terço esquerdo, a área técnica, o banco e a torcida de cá atrás.
+  // Parte 2 com < `parte2Min` s sai; o plano com < `planoMin` s sai.
+  treinador: {
+    vel: 1, antes: 0.8, corte: 0.3, fim: 2.3, frente: 0.10, cima: 0.03, sigmaOlho: 0.1, sigmaOlhar: 0.12, puxaGol: 0.5,
+    bolaNdc: 0.8, largura: 30, fovMin: 9, fovMax: 24,
+    recuoZ: 0.7, altura: 1.5, fov: 30, sigmaGiro: 0.25, terco: 1 / 3, parte2Min: 0.8, planoMin: 1.0,
+    dist: [4.5, 9], corpoMin: 0.6,
+  },
 };
 
 // ------------------------------------------------------------------------ Comemoração do gol (render: nunca muda o hash)
@@ -1199,4 +1232,69 @@ export const COMEMORACAO = {
 export const ESTADIO = {
   tunel: { x: 0, z: 44.5, largura: 7, altura: 3.2, profundidade: 12, laje: 0.5 },
   bancos: { x: [5, 17], z: [41, 43.6], altura: 2.3 },
+};
+// ÁREA TÉCNICA (IFAB, Regra 1, "The Technical Area"; pedido do dono de 12/10: "quero a área técnica e o treinador"): vai
+// 1 m além de cada lado dos assentos e, para a frente, até 1 m da linha lateral; demarcada, com linha da largura das
+// outras (≤ 12 cm). Aqui: x de ±(bancos − 1) a ±(bancos + 1), a frente em z = meioZ + 1 (a borda de fora da linha) e o
+// fundo encostado nas placas (z = placas − 0,3: a folga de estadio-forma.js solidoEm). Linha contínua (a Lei não diz o
+// estilo; a Bundesliga usa um retângulo de giz), para dentro da área, nos 3 lados abertos (o 4º são as placas e o banco).
+// O mandante (time 0) fica no banco de x < 0; o visitante, no de x > 0 (como as colunas do cortejo). Derivada, não digitada.
+ESTADIO.areaTecnica = {
+  x: [ESTADIO.bancos.x[0] - 1, ESTADIO.bancos.x[1] + 1],
+  z: [CAMPO.meioZ + 1, CAMPO.meioZ + CAMPO.entorno - 0.3],
+  linha: CAMPO.linha,
+};
+
+// ------------------------------------------------------------------------ Treinadores (render: nunca muda o hash)
+// Os dois treinadores FICTÍCIOS em pé na área técnica (js/tecnicos.js, PURO): andam com a locomoção do jogo num mundo à
+// parte, olham a bola, gesticulam por IK (os gestos da comemoração) e reagem ao jogo (instruem, aplaudem, reclamam,
+// lamentam, comemoram o gol do time e sentem o gol sofrido). Pesquisa: PESQUISA-ESTADIO.md §11 (Smith & Cushion 2006:
+// o silêncio é a maior categoria, ~40%; Copa 2022: 2,03 gestos táticos/min × 0,73 emocionais). Tempos em s; m; m/s.
+export const TECNICOS = {
+  ids: [210, 211],            // 200–203 são os árbitros
+  estatura: [1.80, 1.76],     // m (nominal: o manequim é o mesmo dos jogadores, como a altura deles)
+  // base: centro do corpo em z; em x, o centro do banco + `segue`·(bola.x − centro), preso em |x| ∈ xLim; o alvo vai por
+  // mola crítica de `tau` s
+  zBase: 36.2, segue: 0.3, xLim: [4.6, 17.4], tau: 1.5,
+  // recuo (não tapar a TV): a bola prevista daqui a `previsao` s em z ≥ zBola a ≤ dx m em x dele, ou lateral/falta/
+  // escanteio do lado de cá a ≤ `parada` m → z = `z` (1,85 m de corpo em z 39,2 não cruza o raio da TV do celular — 46 m
+  // atrás do foco, 12,3 m de altura — nem com a bola na linha: z ≥ 39,14 m; tools/teste-tecnicos.mjs T11)
+  recuo: { z: 39.2, previsao: 1.5, zBola: 24, dx: 16, parada: 18, segura: 1.2 },
+  // velocidades: anda (≤ 1,4 m/s, ≤ 1,5 m/s²), recua de costas (≤ 2), comemora/esquiva (≤ 3, ≤ 6 m/s²)
+  vel: { anda: 1.35, acel: 1.25, recua: 2.0, rapido: 3.0, acelRapida: 5.5, ganho: 1.6, freiaBorda: 2.5 },
+  // margem do centro do corpo dentro da área em z e em x (os pés ficam a ≤ ~0,3 m do centro andando de lado; a régua
+  // dos pés é 0,15 m); o recuo (z 39,2) cabe na de z
+  margem: 0.42, margemX: 0.55,
+  // esquiva: o caminho previsto da bola (rolagem exata de bola.js) a < `raio` m no próximo `janela` s → sai da linha
+  // até `sai` m dela; jogador previsto a < `jogador` m → afasta
+  esquiva: { raio: 0.75, janela: 1.0, sai: 1.25, alturaMax: 2.3, jogador: 1.3, prevJogador: 0.6 },
+  // olhar: a cabeça segue a bola até `cabecaMax` rad do tronco; o tronco vem atrás (mola `tronco` s, até `troncoMax` rad
+  // do quadril); o corpo de frente para o campo, virando até `corpoMax` rad para o lado da bola
+  olhar: { cabecaMax: 1.22, tronco: 0.8, troncoMax: 0.6, corpoMax: 0.75, tau: 0.12 },
+  mistura: 0.35,              // s — toda troca de gesto mistura as juntas (smoothstep)
+  misturaGol: 0.1,            // s — na reação ao gol (comemora/sofreu: o gesto sobe com a rampa dele)
+  misturaAgacha: 0.7,         // s — agachar e levantar (o corpo inteiro desce 0,3 m; as mãos vão junto)
+  maoVel: [4, 7],             // m/s — teto da mão fora / dentro da comemoração
+  // estados (durações em s, [mín, máx] sorteadas por hash01 no rng.js)
+  postura: [6, 15], agachado: [2, 4], chanceAgachado: 0.08,
+  anda: { cada: [20, 40], dist: [2, 5] },
+  // instrui: na perda (chancePerda, em reage s), defendendo no próprio campo há > defendendo s, bola parada a favor no
+  // ataque, lateral do lado dele e o time no terço final (chanceTerco por s); ≤ 1 a cada `intervalo` s
+  instrui: { dura: [1.5, 2.5], reage: [0.3, 1.0], chancePerda: 0.6, intervalo: 15, defendendo: 6, conchaDura: 1.0, terco: 17.5, chanceTerco: 0.25 },
+  aplaude: { dura: [1.5, 2.0], freq: 2.5, intervalo: 5, chance: 0.85 },
+  reclama: { dura: [1.5, 2.5] },
+  lamenta: { dura: [1.5, 2.5], janela: 2.5 },
+  comemora: { comeca: [0.2, 0.23], dura: [4, 6], sobe: 0.15, corre: [3, 6], socos: 2.0, pulo: 0.08, palmas: 2.5 },
+  sofreu: { comeca: [0.25, 0.3], cabeca: [2, 3], depois: 2, vamos: 1.5 },
+  intervalo: { dura: [2, 3] },
+  // variantes de cada gesto (nomes para os testes; a ordem é a do sorteio)
+  variantes: {
+    observa: ['cruzados', 'cintura', 'queixo', 'costas', 'agachado'],
+    instrui: ['aponta', 'concha', 'sobe', 'calma', 'gira'],
+    aplaude: ['peito', 'cima', 'joinha'],
+    reclama: ['abertos', 'cabecaAbre', 'pulso'],
+    lamenta: ['cabeca', 'rosto', 'nuca'],
+    comemora: ['socos', 'pulinhos', 'punho'],
+    sofreu: ['cabecaCosta', 'cabecaAgacha', 'cabecaCruza'],
+  },
 };
