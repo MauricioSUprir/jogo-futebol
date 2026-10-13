@@ -659,10 +659,15 @@ export function criarEntrada(opc = {}) {
     },
     /**
      * Os apertos curtos já foram vistos. passo = true: um passo de simulação usou a entrada (o laço do main.js) e o
-     * reaperto adiado vira o pulso do próximo; fora do laço (replay, cenas) limpa tudo.
+     * reaperto adiado vira o pulso do próximo; fora do laço (replay, cenas) limpa tudo — também o que o último passo
+     * viu: sem passo (o replay), o reaperto não vale, e a tecla segurada no começo, solta e apertada de novo, tem que
+     * aparecer (contraprova 13/10: antes ela ficava escondida o replay inteiro e não pulava).
      */
-    limparPulsos(passo = false) { pulsos = passo ? adiados : 0; adiados = 0; soltas = 0; },
-    /** Os botões que um passo de simulação usou (main.js, depois de CADA passo): base do reaperto entre passos. */
+    limparPulsos(passo = false) { pulsos = passo ? adiados : 0; adiados = 0; soltas = 0; if (!passo) vistos = 0; },
+    /**
+     * Os botões que um passo de simulação usa (main.js, ANTES de cada passo — um replay que começa dentro do passo
+     * limpa isso em limparPulsos()): base do reaperto entre passos.
+     */
     passoUsou(botoes) { vistos = botoes | 0; },
     /** 'ataque' | 'defesa' (estado do mundo, decidido no main.js). */
     definirFase(f) {

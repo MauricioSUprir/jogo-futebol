@@ -373,7 +373,10 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   calibrar é decisão do dono) e tiro livre direto; no resto dois toques não fazem nada; a cobrança da demo leva `iaCobra`
   (a IA repete o botão na cobrança — sem a marca virava cavadinha). Entrada: soltar e apertar de novo
   sem passo no meio vira solto + apertado (`entrada.js` `passoUsou`/`limparPulsos(true)`; antes o toque duplo rápido
-  virava um aperto só). hash-igual IGUAL; hash-partida: demo IGUAL, humano IGUAL com a janela zerada e a cavadinha
+  virava um aperto só; fora do laço — replay — `limparPulsos()` zera também o que o passo viu, e o `passoUsou` vem
+  ANTES do passo: a tecla segurada no começo do replay, solta e apertada de novo, pula). De longe a pedida nunca sai mais
+  rápida que o chute mais forte do jogador (sem o teto saía a até ~70 m/s). Limite medido (teste-cavadinha L): parado,
+  intervalo > 150 ms ou 1º toque ≥ 0,18 s = chute. hash-igual IGUAL; hash-partida: demo IGUAL, humano IGUAL com a janela zerada e a cavadinha
   desligada (só a cavadinha muda a partida). Teste: `teste-cavadinha` (padrão; `--js` mede a base) e `teste-controles`
   (K, B, CHUTE duas vezes, reaperto no mesmo quadro, repetição da tecla, toque cancelado). Pesquisa: `PESQUISA-ETAPA2.md` §2.7a.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,

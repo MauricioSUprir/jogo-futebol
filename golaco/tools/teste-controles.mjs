@@ -31,6 +31,7 @@
 //   node tools/teste-controles.mjs [--raiz <pasta do jogo>]   (--raiz: mede outra cópia, ex.: a base)
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
+import { golRoteirizado } from './lib/gol-roteirizado.mjs';
 
 const res = [];
 const AG = 'aguardando';
@@ -436,6 +437,46 @@ async function conferirTodosLayouts(pagina) {
     const dJ = await def('KeyJ'), dK = await def('KeyK'), dO = await def('KeyO');
     const okDef = dJ.fase === 'defesa' && (dJ.mask & BIT.CONTER) && !(dJ.mask & BIT.PASSE) && (dK.mask & BIT.DIVIDIDA) && !(dK.mask & BIT.CHUTE) && (dO.mask & BIT.PRESSAO);
     meta('Defesa: J = CONTER, K = DIVIDIDA, O = PRESSÃO (sem passe nem chute)', `fase ${dJ.fase}; J ${dJ.mask}, K ${dK.mask}, O ${dO.mask}`, defE3 ? !!okDef : AG4);
+    // replay com a tecla que estava SEGURADA quando ele começou (contraprova 13/10): solta e apertada de novo, pula (como
+    // na main). O reaperto entre passos (entrada.js) não pode valer fora do laço — sem passo nenhum no replay, a soltura
+    // ficava guardada e a tecla segurada no começo nunca mais pulava. Dois caminhos: o "Replay" da pausa (fora do passo)
+    // e o replay que começa DENTRO do passo (o do gol na saída de bola, com a comemoração desligada; o do impedimento é
+    // o mesmo caminho)
+    const pulaComTecla = async (tecla, comecar) => {
+      await pagina.keyboard.down(tecla);
+      const ini = await comecar();
+      await pagina.keyboard.up(tecla);
+      const solto = await pagina.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 3; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); return g.replay.estado.ativo; });
+      await pagina.keyboard.down(tecla);
+      const fim = await pagina.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 6; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); return g.replay.estado.ativo; });
+      await pagina.keyboard.up(tecla);
+      await pagina.evaluate(() => { const g = window.__golaco; if (g.replay.estado.ativo) g.replay.pular(); for (let i = 0; i < 10; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); });
+      return { ini, solto, fim };
+    };
+    const rpAuto = await pagina.evaluate(() => window.__golaco.replay.automatico());
+    // (a tecla desce DEPOIS do mundo novo: o sentido dela é fixado na fase de agora, a mesma do 2º aperto)
+    await pagina.evaluate(() => {
+      const g = window.__golaco;
+      g.reiniciar({ modo: 'partida', semente: 3 }); g.relogio.usarManual(true);
+      for (let i = 0; i < 400; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+    });
+    const rMenu = await pulaComTecla('KeyK', async () => pagina.evaluate(() => {
+      const g = window.__golaco;
+      for (let i = 0; i < 4; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      g.replay.menu(); g.relogio.avancar(1000 / 60, { desenhar: false });
+      return g.replay.estado.ativo;
+    }));
+    await pagina.evaluate(() => { window.__golaco.comemoracao.ligada(false); window.__golaco.replay.automatico(true); });
+    const gr = await golRoteirizado(pagina, { semente: 5 });
+    const rGol = await pulaComTecla('KeyJ', async () => pagina.evaluate(() => {
+      const g = window.__golaco;
+      for (let i = 0; i < 600 && !g.replay.estado.ativo; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      return g.replay.estado.ativo;
+    }));
+    await pagina.evaluate(v => { window.__golaco.comemoracao.ligada(true); window.__golaco.replay.automatico(v); }, rpAuto);
+    const txtR = r => `começou ${r.ini}, solta ${r.solto ? 'segue' : 'parou'}, apertada de novo: ${r.fim ? 'NÃO pulou' : 'pulou'}`;
+    meta('Replay: a tecla segurada no começo, solta e apertada de novo, pula (pausa: K; gol na saída, dentro do passo: J)',
+      `pausa ${txtR(rMenu)} · gol (${gr.ok ? 'roteirizado' : 'sem gol'}) ${txtR(rGol)}`, rMenu.ini && rMenu.solto && !rMenu.fim && gr.ok && rGol.ini && rGol.solto && !rGol.fim);
     meta('PC sem erro no console', erros.length ? erros.join(' | ') : '0', erros.length === 0);
   } finally { await navegador.close(); }
 }
