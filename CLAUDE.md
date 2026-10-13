@@ -269,6 +269,15 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   também tem de desenhar os técnicos durante as cenas). Fila única `filaCenas`/`proximaCena` (cartão → subst → fim →
   faixas); pular = aperto novo depois de 0,5 s, uma cena por aperto. `?cenas=0|1`; desligadas com webdriver, prints e demo.
   Testes: `teste-cenas` (Node, padrão), `teste-comemoracao` 14–16, `teste-cenas-tela` (navegador, CI e deploy).
+- **Placar de TV** (pedido de 12/10 com imagem de referência: "quero o placar assim, tem que ser algo menor e mais com a
+  nossa cara"; `PESQUISA-ESTADIO.md` §7.1, contrato "Placar (12/10)" no `CONTRATOS.md`): uma barra só no canto de cima à
+  esquerda — símbolo do GOLAÇO | faixa de cor + escudo + sigla da casa | placar em verde | sigla + escudo + faixa do
+  visitante | relógio no bloco verde (verde-escuro quando parado). Escudos FICTÍCIOS em `<symbol>` no `index.html` (`escudo-golaco`,
+  `escudo-ventania`; `hud.definirTimes` recebe `escudo` = id do elenco). 24 px de altura no celular e 26 no PC (antes 30/34;
+  referência 29), números ≥ 14 px, siglas 11 px. Teste: `teste-hud-minimo` H10 (`--so-placar` roda só ele; o "antes" fica em
+  `PLACAR_ANTES`). Igual nos treinos (sem o relógio). Só DOM/CSS: hash IGUAL. Contraprova (13/10): na partida o "1º T +4"/
+  "Intervalo" só sai depois de o minimapa encostar à direita do placar; gols 9 → 10 refazem o topo; nos treinos a marca só
+  sai se fizer falta; cada time é `role="img"` com o nome (leitor de tela).
 - **Etapa 4 (regras IFAB, goleiro, bolas paradas, equilíbrio)** — em PRs; pesquisa em `golaco/PESQUISA-ETAPA4.md`,
   contrato em `CONTRATOS.md`. **Painel** `tools/painel-equilibrio.mjs` (seção 11 inteira, 144 partidas em ~9 min com 4
   CPUs; `--base <pasta js>` compara versões com as mesmas sementes; `--json`; `--partes a.json,b.json` junta pedaços). O CI
@@ -334,6 +343,13 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `teste-replay-anel` (Node, padrão) e `teste-replay` (navegador, CI); os testes de navegador e prints que não são do
   replay abrem com `?replay=0`. Lição: o laço da página entrega a entrada da IA pelo humano SEM o `ia` da
   `entradaDemoPartida` — semente achada em Node só bate com a página com `acharGol({comoPagina: true})`.
+- **Análise semiautomática do impedimento** (12/10; contrato "Replay: análise semiautomática", `PESQUISA-ESTADIO.md` §9.1):
+  replay do impedimento = P1 'linha' + P2 'saot' (só os do lance, parede/plano no QUADRIL, pulsos, quadro final oblíquo,
+  ≤ 7,5 s); posição legal (passe ≤ 1,0 m, legal também pelas partes) no fim do replay do gol (≤ 13 s) e do da pausa. O
+  selo "IMPEDIMENTO"/"POSIÇÃO LEGAL" (`hud.terco`, `#terco`) é a ÚNICA exceção à "sem narração": só no quadro final.
+  Contraprova (13/10): o enquadramento confere os sólidos só no candidato que serve (S9: 415 mil → 11 mil chamadas de
+  `solidoEm`, mesmo quadro) e só o cabeceio PARA O GOL marca "chute" no anel (`marcasDoPasso`: o de passe não abre a
+  análise no "Replay" da pausa).
 - **Pré-jogo** (pedido de 11/10; `PESQUISA-PREJOGO.md`, contrato em `CONTRATOS.md`): antes do 1º passo (tick 0; o apito
   da saída só no fim; hash igual) — abertura "Toque para começar" (libera o som), aéreo de fora, fachada com a torcida
   chegando, o estádio por dentro, túnel, entrada com os árbitros, plano alto da fila se formando, a câmera passando pela

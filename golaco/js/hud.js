@@ -26,6 +26,10 @@ const TEXTO_EVENTO = {
   substituicao: { t: 'Substituição', ms: 2400, forte: true, prio: 3 },
   reinicio: { t: 'Partida reiniciada', ms: 1200 },
 };
+// Selos da decisão da análise semiautomática do replay (terço de baixo): exatamente estes textos, sem nome nem minuto.
+const SELOS = { impedimento: 'IMPEDIMENTO', legal: 'POSIÇÃO LEGAL' };
+// bandeira do assistente (ícone do selo, na cor da decisão pelo CSS)
+const ICONE_BANDEIRA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V3.5"/><path d="M6 4h12.5l-3.2 4.2 3.2 4.3H6z"/></svg>';
 // rótulo da barra de força por tipo de carga (fica no DOM; na partida o CSS esconde: tela limpa, 11/10)
 const ROTULO_CARGA = {
   passe: 'PASSE', enfiada: 'ENFIADA', enfiadaAlta: 'ENFIADA ALTA', lancamento: 'LANÇAMENTO', cruzamento: 'CRUZAMENTO',
@@ -36,8 +40,10 @@ const ROTULO_CARGA = {
 const COR_MAPA = {
   t0: '#19e07a', t0gol: '#c6ff3d', t1: '#93a3ae', t1gol: '#d0631f', bola: '#ffffff',
 };
-// times fictícios: siglas do placar (treino; na partida vêm do elenco por definirTimes)
-const TIMES_TREINO = [{ sigla: 'GLÇ', nome: 'Golaço' }, { sigla: 'VIS', nome: 'Visitante' }];
+// times fictícios: siglas e escudos do placar (treino; na partida vêm do elenco por definirTimes). O escudo é o id de um
+// <symbol id="escudo-..."> do index.html (desenhados lá, fictícios); o visitante do treino veste o branco do Ventania
+const TIMES_TREINO = [{ sigla: 'GLÇ', nome: 'Golaço', escudo: 'golaco' }, { sigla: 'VIS', nome: 'Visitante', escudo: 'ventania' }];
+const ESCUDOS = new Set(['golaco', 'ventania']);
 const NOME_TEMPO = { 1: '1º T', 2: '2º T' };
 
 const NOMES_Q = { baixa: 'Baixa', media: 'Média', alta: 'Alta' };
@@ -57,6 +63,7 @@ export function criarHud(opc) {
     carregando: $('carregando'), msg: $('carregando-msg'), marcador: $('estado-marcador'), infoQ: $('info-qualidade'),
     tam: $('toque-tamanho'), opa: $('toque-opacidade'), saidaTam: $('saida-tamanho'), saidaOpa: $('saida-opacidade'),
     gols: [$('gols-0'), $('gols-1')], siglas: [$('sigla-0'), $('sigla-1')], golTela: $('gol-tela'),
+    escudos: [$('escudo-0'), $('escudo-1')], timesPlacar: [$('placar-time-0'), $('placar-time-1')],
     somVol: $('som-volume'), saidaVol: $('saida-volume'), infoSom: $('info-som'),
     mapa: $('minimapa'), cartao: $('cartao-icone'), carga: $('carga'), cargaTipo: $('carga-tipo'), cargaNivel: $('carga-nivel'),
     relogio: $('placar-relogio'), minuto: $('relogio'), tempo: $('relogio-tempo'),
@@ -64,9 +71,10 @@ export function criarHud(opc) {
     acoes: $('menu-acoes'), modos: $('menu-modos'), estadoModo: $('estado-modo'), continuar: $('btn-continuar'),
     reiniciarPartida: $('btn-reiniciar-partida'), dica: $('dica'), replay: $('replay'), replayFaixa: $('replay-faixa'),
     comemoracao: $('comemoracao'),
+    terco: $('terco'),
   };
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
-  let ultimoHud = -1;
+  let ultimoHud = -1, tercoTipo = null;
   const ultimoTexto = { vel: '', modo: '', posicao: null, forte: false };
   let timerAviso = null, timerGol = null;
   // o "GOL!" dura o mesmo que a animação do CSS (2,4 s: some antes da saída de bola, PARTIDA.golPausa 2,5 s)
@@ -78,7 +86,15 @@ export function criarHud(opc) {
   let timerFaixa = null;
   let modoAtual = null, fimDeJogo = false;
   const NOME_MODO = { partida: 'partida', ataque: 'treino de ataque', conducao: 'treino de condução' };
-  times.forEach((t, i) => { if (el.siglas[i]) el.siglas[i].textContent = t.sigla; });
+  /** Sigla, escudo e nome (só para leitores de tela: nenhum texto novo na tela) de cada time no placar. */
+  function escreverTimes() {
+    times.forEach((t, i) => {
+      if (el.siglas[i]) el.siglas[i].textContent = t.sigla;
+      if (el.escudos[i]) el.escudos[i].setAttribute('href', `#escudo-${ESCUDOS.has(t.escudo) ? t.escudo : TIMES_TREINO[i].escudo}`);
+      if (el.timesPlacar[i]) el.timesPlacar[i].setAttribute('aria-label', t.nome ?? t.sigla);
+    });
+  }
+  escreverTimes();
 
   // botões com data-cmd (menu, ajuda e faixa); data-valor vai junto (modo de jogo)
   document.querySelectorAll('[data-cmd]').forEach(b => {
@@ -157,16 +173,34 @@ export function criarHud(opc) {
     if (!raiz.classList.contains('com-toque')) return;
     // o painel (modo e posição) desce para baixo do placar, à esquerda, se o arco chega nele
     if (botaoNoTopo()) raiz.classList.add('topo-desce');
+    apertarTopo();
+    // nos treinos a marca do GOLAÇO só fica de fora se fizer falta: quem encosta costuma ser o painel, e apertar o painel
+    // (passo 2) já resolve (contraprova de 13/10: em 568 e 667 px ela saía com 40–90 px livres à direita do placar)
+    if (raiz.classList.contains('topo-c1') && !raiz.classList.contains('em-partida') && !el.mapa?.style.left) {
+      raiz.classList.remove('topo-c1');
+      if (encostaTopo()) raiz.classList.add('topo-c1');
+    }
+  }
+  /** Os passos do aperto, em ordem, até nada encostar (ajustarTopo). */
+  function apertarTopo() {
     if (!encostaTopo()) return;
     raiz.classList.add('topo-c1');
     if (!encostaTopo()) return;
     raiz.classList.add('topo-c2');
     if (!encostaTopo()) return;
-    raiz.classList.add('topo-c3');
-    if (!encostaTopo()) return;
+    // na partida o tempo escrito ("1º T +4", "Intervalo", "Fim") só sai se nem com o minimapa encostado à direita do
+    // placar couber (contraprova de 13/10: em 667 e 568 px ele saía antes, com espaço sobrando depois do minimapa)
+    const partida = raiz.classList.contains('em-partida');
+    if (!partida) { raiz.classList.add('topo-c3'); if (!encostaTopo()) return; }
     raiz.classList.add('topo-c4');
     if (!encostaTopo() || !el.mapa) return;
     // 5) celular bem estreito (568 px com entalhe): o minimapa sai do meio e encosta à direita do placar
+    mapaAoLado();
+    if (!partida || !encostaTopo()) return;
+    raiz.classList.add('topo-c3');
+    mapaAoLado();
+  }
+  function mapaAoLado() {
     const pl = caixasTopo[0]?.getBoundingClientRect();
     if (pl && pl.width > 0) { el.mapa.style.left = `${Math.round(pl.right + 8)}px`; el.mapa.style.transform = 'none'; }
   }
@@ -338,8 +372,11 @@ export function criarHud(opc) {
     /** Placar (gols do time 0 e do time 1). */
     placar(a, b) {
       const v = [a | 0, b | 0];
+      let largura = false;
       for (let i = 0; i < 2; i++) {
         if (v[i] === placarVisto[i] || !el.gols[i]) continue;
+        // 9 → 10: o placar alarga e, apertado com o minimapa ao lado, encostaria nele (contraprova de 13/10)
+        if (String(v[i]).length !== String(placarVisto[i] ?? 0).length) largura = true;
         el.gols[i].textContent = String(v[i]);
         if (placarVisto[i] !== null) {
           el.gols[i].classList.remove('mudou');
@@ -348,6 +385,7 @@ export function criarHud(opc) {
         }
         placarVisto[i] = v[i];
       }
+      if (largura) ajustarTopo();
     },
     /**
      * Minimapa (no máximo ~30 vezes por segundo; 20 com os controles de toque, no celular). Escondido (opção da
@@ -429,10 +467,10 @@ export function criarHud(opc) {
     fecharMenu() { el.menu.hidden = true; },
     /** Lista "Modo de jogo" (partida e treinos) no lugar das ações do menu (true) ou de volta (false). */
     submenuModos: mostrarSubmenu,
-    /** Siglas e nomes dos dois times (partida: do elenco) ou null (treino). */
+    /** Siglas, nomes e escudos ({sigla, nome, escudo: id do elenco}) dos dois times (partida: do elenco) ou null (treino). */
     definirTimes(t) {
       times = t ?? TIMES_TREINO;
-      times.forEach((x, i) => { if (el.siglas[i]) el.siglas[i].textContent = x.sigla; });
+      escreverTimes();
       ajustarTopo();
     },
     get times() { return times; },
@@ -591,6 +629,25 @@ export function criarHud(opc) {
       const f = el.replayFaixa;
       if (f) { f.classList.remove('passa'); void f.offsetWidth; f.classList.add('passa'); }
     },
+    /**
+     * Terço de baixo (canto de baixo à esquerda): spec = null (some) | {tipo: 'impedimento'} | {tipo: 'legal'} — o SELO
+     * da decisão no quadro final da análise semiautomática do replay ("IMPEDIMENTO" / "POSIÇÃO LEGAL": a única exceção à
+     * "sem narração", aprovada pelo dono em 12/10; só o selo, sem nome nem minuto). A cena de substituição acrescenta o
+     * tipo dela. Só mexe no DOM quando o tipo muda (chamado a cada quadro do replay).
+     */
+    terco(spec) {
+      const tipo = spec && SELOS[spec.tipo] ? spec.tipo : null;
+      if (tipo === tercoTipo) return;
+      tercoTipo = tipo;
+      const e = el.terco;
+      if (!e) return;
+      if (!tipo) { e.hidden = true; e.className = 'terco'; e.textContent = ''; return; }
+      e.className = `terco terco-${tipo}`;
+      e.innerHTML = `<span class="terco-selo">${ICONE_BANDEIRA}<b>${SELOS[tipo]}</b></span>`;
+      e.hidden = false;
+    },
+    /** O tipo do terço de baixo na tela (testes): null, 'impedimento' ou 'legal'. */
+    get tercoTipo() { return tercoTipo; },
     /** Tira o "GOL!" já (saída de bola, recomeço do treino, mundo novo). */
     esconderGol() {
       clearTimeout(timerGol);

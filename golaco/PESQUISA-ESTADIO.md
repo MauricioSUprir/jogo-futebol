@@ -169,6 +169,49 @@ mundo recebe as mesmas máscaras (hash do treino e da partida iguais). "Minimapa
 liga/desliga na barra da pausa: na lista de opções sobravam 3 px em 844×390 e uma linha a mais fazia a pausa rolar 62 px.
 Retorno do dono (12/10): "coloca o nome da função do botão de novo" — os nomes voltaram por padrão (a opção continua na
 pausa para quem quiser só o ícone); o resto da tela limpa fica como está (`teste-hud-minimo` H9).
+### 7.1 Placar no formato da referência, menor e com a cara do GOLAÇO (12/10; `index.html`, `css/estilo.css`, `js/hud.js`)
+
+Pedido do dono (12/10), com uma imagem de referência: "quero o placar assim, tem que ser algo menor e mais com a nossa
+cara". A referência é uma barra de TV no canto de cima à esquerda: marca do jogo | escudo + sigla da casa | "1 - 0" |
+sigla + escudo do visitante | relógio num bloco verde; fundo escuro translúcido, cantos arredondados, caixa alta. Medida
+na própria imagem (2532×1170 = 844×390 com 3 px por px): **248×29 px = 7192 px² (2,2% da tela)**, números de ~14 px,
+siglas e relógio de ~11 px. O placar publicado antes: 30 px de altura no celular (34 no PC), sem marca e sem escudos.
+
+| Fonte | O que aproveitamos |
+|---|---|
+| Placares de TV (Premier League, Champions League, Brasileirão na TV aberta, EA SPORTS FC) — a forma comum das transmissões (nenhuma publica medidas: lacuna registrada, sem números inventados) | Uma barra só no canto de cima à esquerda; a marca da competição abre a barra; sigla de 3 letras com a cor do time numa faixa; o placar no meio; o relógio num bloco separado no fim. Daí: a ordem da referência, a faixa de cor de cima a baixo na borda de fora de cada time (casa verde logo depois da marca, visitante branca logo antes do relógio, como na referência) e o relógio no bloco verde da marca |
+| "Designing the Modern Scorebug" (SportsVideo.org, 2026, já citado no §7) | Logos dos times no lugar das siglas (a Fox trocou as letras por logos em 2025) e "um placar menor pode ser mais legível que um maior se a tipografia e o espaço forem precisos" (contraste, espaço, hierarquia). Daí: escudo + sigla, números MAIORES numa barra MENOR (16 px numa barra de 24 px; na referência ~14 px em 29 px) e o contraste do relógio conferido no teste |
+| Apple Human Interface Guidelines, Typography (https://developer.apple.com/design/human-interface-guidelines/typography) | Mínimo de 11 pt no iOS (padrão 17). Daí: siglas de 11 px no celular (12 no PC) — o placar antes também tinha 11 — e nada abaixo de 10 px (o "1º T +4"/"Intervalo" estava em 9 px e subiu para 10) |
+| Material Design 3, escala de tipos (https://m3.material.io/styles/typography/type-scale-tokens) | Label Small = 11, Title Small = 14, Title Medium = 16. Daí: números (placar e relógio) ≥ 14 px — o relógio subiu de 12 para 14 px (15 no PC) — e os gols com 16 px (17 no PC) |
+| WCAG 2.x, contraste mínimo 4,5:1 | Relógio preto (#07090a) no verde da marca (#19e07a): ~11:1; conferido no teste (≥ 4,5:1) |
+
+Identidade (a "nossa cara"): preto e verde da interface (`--preto`, `--verde`, `--texto`), a mesma fonte (`--fonte`), o
+símbolo do GOLAÇO (o paralelogramo verde do favicon e da placa do estádio) no lugar da marca da referência e escudos
+desenhados aqui, fictícios: Golaço FC = escudo preto com o G verde do bandeirão da organizada; Ventania FC = escudo branco
+com o vento. Nada licenciado e nenhum texto novo na tela (escudos e marca são só desenho; o nome do time fica só no
+`aria-label`).
+
+Resultado (`teste-hud-minimo` H10, mesma ferramenta na base com `--raiz`; largura × altura no jogo "34'" / acréscimos
+"45+2' 1º T +4" / intervalo):
+
+| Medida (`teste-hud-minimo` H10) | Antes (placar compacto) | Depois | Referência do dono | Meta |
+|---|---|---|---|---|
+| Celular (844×390, 667×375 e 568×320, com entalhe): jogo "34'" | 169×30 = 5084 px² | 197×24 = 4732 px² | 248×29 = 7192 px² | altura ≤ 24 px; altura e área < antes e < referência |
+| Celular: acréscimos "45+2' 1º T +4" | 225×30 = 6743 px² | 254×24 = 6086 px² | | idem |
+| Celular: intervalo | 232×30 = 6949 px² | 259×24 = 6226 px² | | idem |
+| PC 1280×720: jogo / acréscimos / intervalo | 182×34 = 6176 / 238×34 = 8101 / 244×34 = 8290 px² | 209×26 = 5421 / 266×26 = 6922 / 271×26 = 7040 px² | | altura ≤ 26 px; área < antes e < referência |
+| Peças (marca, 2 escudos, 2 siglas, placar, relógio no bloco verde, nessa ordem) | faltam a marca e os 2 escudos; relógio sem bloco | todas, na ordem; relógio preto no verde (~11:1) | todas | todas; contraste ≥ 4,5:1 |
+| Números (gols / relógio), siglas, "1º T +4" no celular | 15 / 12 px, 11 px, 9 px | 16 / 14 px, 11 px, 10 px | ~14 px, ~11 px | ≥ 14, ≥ 11, ≥ 10 px |
+| Com o minimapa ligado (acréscimos) | nada encosta, mas em 568 px o "1º T +4" some e o 10-9 passa 1,6 px por cima do minimapa (main 48b24933; na 1ª versão deste placar, em 667 e 568) | nada encosta nas 3 telas, com o "1º T +4" na tela e também com 10-9 (em 667 e 568 os espaços apertam, `topo-c4`, e o minimapa encosta à direita do placar; contraprova de 13/10) | | folga ≥ 4 px com o minimapa e o menu; "1º T +4" na tela |
+| Treino de ataque com o minimapa e o painel | a marca não existia | (contraprova de 13/10) a marca saía em 667 e 568 px com 40–90 px livres; agora fica e nada encosta | | marca na tela, folga ≥ 4 px |
+| Leitor de tela (árvore de acessibilidade) | "GLÇ 0 0 VNT" | (contraprova de 13/10) "Golaço FC 0 0 Ventania FC" (`role="img"` com o nome) | | nome dos dois times |
+
+A base REPROVA o H10 nos 12 casos (3 telas do celular + PC × 3 estados: sem marca e sem escudos, 30/34 px de altura, relógio de 12–13 px, "1º T" de 9 px) e a
+versão nova passa. O placar ficou um pouco mais LARGO que o de antes (a marca e os escudos ocupam ~30 px), mas mais baixo
+(24 × 30 px) e com área menor em todos os estados e telas; a tela limpa continua no orçamento (H1: 7,2–10,0% no celular,
+≤ 11%; H5: 1,7% no PC, ≤ 2,5%). Nos treinos o placar é o mesmo, sem o relógio (159×24 px no celular, 168×26 no PC; nada
+encosta no painel nem no menu nas 3 telas e no PC — conferido à parte).
+
 ## 8. Rede véu de noiva e branca (pedido de 11/10; `js/rede-forma.js`, `js/bola.js`, `js/render/rede-onda.js`, `js/render/campo.js`)
 
 Pedido do dono: "as redes têm que ser brancas, e ter uma movimentação na rede quando a bola toca nela, quero que seja
@@ -248,6 +291,62 @@ os últimos 10 s do que foi DESENHADO e um diretor de replay; a simulação espe
 | bugnet — "How to build a replay system" | Gravar entradas e re-simular (exige determinismo, custa CPU no replay) × gravar estado (custa memória, não diverge) | Estado desenhado: 3,36 MB fixos; o quadro do replay custa ~0,13 ms de CPU contra ~1,1 ms do quadro ao vivo (re-simular custaria a simulação inteira por passo) |
 | Transmissões de TV (Wikipedia "Instant replay"; Creative COW, transições de replay das emissoras; Fiveable, "instant replays") | A emissora "anuncia" o replay com uma vinheta que cruza a tela (o logo voa e puxa o replay), e o replay mistura ângulos e câmera lenta | A faixa verde (a da identidade, como a do "GOL!") cruza a tela em 0,4 s na entrada e na saída do replay — o espectador sabe que é replay sem texto; com "reduzir movimento", não passa |
 | O próprio jogo (relógio do estádio gravado) | A rede balança pelo relógio do estádio (`rede-onda.js`, impactos com `t0`) | O anel grava o relógio do estádio por passo: no replay a rede re-balança com o tempo gravado, sem mudar `rede-onda.js` |
+
+### 9.1 Análise semiautomática do impedimento e posição legal (pedido do dono de 12/10)
+
+"No impedimento, quero que seja marcado o impedimento, tenha cena de impedimento, tipo aquelas cenas de replay do
+impedimento semiautomático" e "pode colocar o selo IMPEDIMENTO sim, e em um replay qualquer, aparece uma cena de quando NÃO
+foi impedimento também". Antes, o jogo "marcava" o impedimento só com o apito (som) e o replay da linha congelado 1,6 s,
+sem nenhuma decisão na tela. Agora: o replay do impedimento ganha a análise semiautomática (P2 'saot') e o replay do gol
+— e o "Replay" da pausa — ganha a checagem de POSIÇÃO LEGAL quando o passe foi apertado.
+
+| Fonte | O que diz | O que aproveitamos |
+|---|---|---|
+| The FA — explicação do SAOT na FA Cup (27/02/2025, thefa.com) e Premier League — "Semi-automated offside technology: What you need to know" (premierleague.com/en/news/4256036) | Replay virtual 3D só dos jogadores do lance, com o uniforme do time; a linha é uma PAREDE branca vertical com um "pulso" na parte do corpo do defensor; a parte impedida do atacante atravessa a parede e fica em vermelho; "an offside decision will be shown with a red line and onside with a green line"; o quadro final fica "on an angle, off-centre" e nele o pulso some; o replay CORTA para a cena, sem sobrepor a imagem da TV | O plano 'saot': corte seco, só o impedido, o defensor da linha, quem passou e a bola; parede branco-gelo no defensor, pulsos (anéis) no quadril, plano do atacante que fica vermelho (impedimento) ou parede/plano/linha verdes (legal); quadro final oblíquo e fora do centro (16/22°, 12/20° fora do eixo) e sem pulsos |
+| FIFA — Semi-automated offside technology (inside.fifa.com, Copa 2022) | 12 câmeras, até 29 pontos por jogador a 50 Hz e a bola a 500 Hz para o "kick point"; a animação 3D sai dos MESMOS dados, mostra os membros no instante do passe "from the best possible perspectives" e vai ao ar na parada seguinte à decisão | A cena sai do anel do replay (os mesmos dados da simulação, 60 Hz exatos; o "kick point" é o `tickFoto` da Regra 11); no gol, a checagem entra no fim do replay, antes da saída (a parada seguinte) |
+| ESPN (Dale Johnson), "Premier League semi-automated VAR offside: All you need to know" (2025) e "Will semi-automated offside be the big VAR fix…" (2023, com Collina e Holzmüller) | O VAR só aciona o sistema nos lances que mudam o jogo (gol, pênalti, vermelho); a animação da PL não fica "directly in line with the two players as they can appear over the top of each other"; a da UEFA demora por ser sobreposta à TV, a da PL é "standalone"; meta média da FIFA de 70 → 25 s | A checagem de posição legal só no lance que acaba em gol (ou, na pausa, em chute/gol); a câmera nunca termina alinhada (sobreposição ≤ 30% medida em `teste-saot` S4); a cena é curta e própria (3,4–3,6 s), pulável |
+| Premier League — "How offsides are determined by VAR" (premierleague.com/en/news/1488423) | Linha 2D rápida nos lances claros; o processo completo só nos apertados; o público vê só a imagem final da decisão | Sem cena nos lances claros (margem > 1,0 m) nem com a linha na bola/meio-campo |
+| Goal.com — PSG × Liverpool (12/03/2025) | Barcola "just played onside" antes do gol de Dembélé; o gráfico foi mostrado pela Amazon no INTERVALO | Respaldo para "em um replay qualquer": a análise legal também no fim do "Replay" da pausa, não só no gol |
+| FIFA, Copa 2026 (Catar × Suíça; Yahoo Sports) | "a brief technical outage prevented the onside animation graphic from being generated" | A TV mostra a POSIÇÃO LEGAL num lance decisivo — o selo "POSIÇÃO LEGAL" (par do "IMPEDIMENTO") |
+| Inside World Football (03/06/2026) | Na Copa 2026 o alerta ao assistente dispara a partir de 10 cm; no Mundial de Clubes 2025 e no Intercontinental, só acima de 50 cm | Faixa de "apertado": até 0,5 m é sempre apertado (a faixa antiga sem alerta automático) |
+| Universidade de Bath (Soltani, ISBS 2022); Helsen, Gilis e Weston, Journal of Sports Sciences 24(5), 2006 | O chute é percebido 132 ms depois de acontecer; na Copa 2002, 26,2% de erro dos assistentes (86,6% bandeira levantada sem impedimento: "flash-lag") | Limite de 1,0 m: 132 ms × 5–8 m/s de velocidade relativa = 0,66–1,06 m — a faixa em que o olho erra (inferência nossa; nenhuma fonte dá um número em metros para quando a TV desenha) |
+| IFAB — Regra 11 e Protocolo do VAR (theifab.com) | Contam cabeça, corpo e pés; mãos e braços não (o limite é a axila); vale o 1º contato da jogada; o VAR revê o gol com impedimento na construção | `parteMaisAvancada`: pelve, lombar, peito, pescoço, cabeça, quadris, joelhos, tornozelos e pontas, com o raio da cápsula; a cena legal só aparece se também for legal por elas (critério v) |
+
+Escolhas (e por quê):
+- **Selo "POSIÇÃO LEGAL", não "GOL VALIDADO"**: forma par com o "IMPEDIMENTO" aprovado (os dois falam da posição no passe —
+  "offside/onside" da PL; "onside or offside position", Collina); serve em qualquer replay (pausa, intervalo), que foi o
+  que o dono pediu; "GOL VALIDADO" contaria o lance em texto e afirmaria uma checagem do gol inteiro (falta, mão) que o jogo
+  não faz.
+- **O ponto que vale é o quadril**: a simulação decide pelo centro do corpo (`impedimento.js`, tolerância 0,1 m). A parede
+  e o plano ficam nele, então o desenho nunca contradiz a decisão; na tela o pé pode atravessar a parede (a contradição
+  centro × partes é medida no `medir-saot`). Passar a regra para as partes do corpo muda o hash, a IA e o árbitro do
+  `teste-impedimento`: decisão do dono, num PR à parte.
+- **Cores**: impedimento vermelho (#ff3b30) e legal verde (#19e07a, o `--verde` do jogo), a convenção da PL; o âmbar da
+  linha do chão fica só no P1; parede branco-gelo; o pulso azul-claro (a "medição", como o pulso da PL).
+- **Câmera longe na largura**: com o atacante e o defensor a mais de ~30 m um do outro na largura do campo, olhando pela
+  linha um fica perto e o outro longe da câmera: o quadro de 16/22° a ≤ 30 m não cabe os dois. A câmera recua até 45 m no
+  mesmo ângulo (ainda 12–24°) e, só com ~60 m (canto a canto), sobe e abre (até 62°); o `teste-saot` S4 prova por busca que
+  nenhum quadro de 12–24° cabe os dois nesses casos antes de aceitar o nível "extra".
+- **Frequência medida** (`medir-saot`, PARCIAL: 40 das 144 partidas, sementes 1001–1040 — com a máquina a carga ~120 em 4
+  núcleos a varredura passou do limite de tempo): 67 gols; a cena de POSIÇÃO LEGAL em 6 (9,0%; com 0,5 m seriam 4 = 6,0%),
+  dentro da faixa 5–30% — o limite fica em 1,0 m; margens dos 6: −0,05 (mesma linha), 0,05, 0,43, 0,48, 0,59, 0,91 m; a
+  espera extra nesses gols é a análise (3,4 s); por partida, 1,30 impedimento e 0,15 cena legal. Das 132 cadeias de passe
+  dos gols, 61% passam de 5 m e só 6% ficam até 1,0 m. Contradição centro × partes: 2 dos 52 impedimentos marcados pelo
+  centro seriam legais pelas partes do corpo (3,8%; a cena mostra o quadril, coerente com a decisão) e 0 dos 6 legais.
+
+Correções sobre a pesquisa inicial: os "skeletons flying above the ground" da MIT Technology Review (23/06/2026) são erro
+de dado num TESTE de laboratório, não algo que o torcedor viu (mesmo assim o `teste-saot` S8 confere a pose da análise: a
+gravada, nenhuma junta abaixo de −2 cm); não há fonte para "Decision upheld. Goal disallowed.", "ghostly" ou "frozen in
+space" (não estão na MIT nem na TNT); "legal só pela tolerância mostra só a linha do defensor em verde" não está na ESPN
+(a cena "mesma linha" é escolha nossa: sem o plano do atacante, o pulso dele encostado na parede).
+
+**A próxima peça da arbitragem em campo (Etapa 6, fora deste PR): assistentes com bandeira.** A marcação de TV ao vivo é o
+assistente levantando a bandeira no apito. Metas propostas: (A) dois assistentes na lateral, cada um numa metade, no x do
+penúltimo defensor (IFAB Practical Guidelines for Match Officials: "keep in line with the second-last defender"); (B)
+corrida lateral de 1–6 m/s com passos de lado e de frente (Krustrup, Helsen e Bangsbo 2009: ~7 km por jogo, 35% de lado);
+(C) bandeira levantada no apito do impedimento por ~1,5 s, apontando a altura do lance; (D) sem patinar (o mesmo
+`teste-patinacao`). Custo medido na proposta: +5 a 11 mil triângulos no celular, o anel do replay em 24 de 24 vagas e um
+estado novo no laço do `main.js` — por isso fica para a Etapa 6.
 
 ## 10. Comemoração do gol (`js/comemoracao.js`, `main.js`, `render/camera.js`; pedido do dono de 11/10)
 

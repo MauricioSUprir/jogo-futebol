@@ -66,6 +66,11 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
   sem a seta no chão do controlado e marca de queda só na bola alta do seu time. **Linha de impedimento só no
   apito** (a do lance, parada): a linha viva durante o jogo saiu. Medido no `teste-hud-minimo` (celular: o HUD cobre
   ≤ 11% da tela; era 18–24%).
+- **Placar de TV com a cara do GOLAÇO** (dono, 12/10: "quero o placar assim, tem que ser algo menor e mais com a nossa
+  cara"): uma barra só no canto de cima à esquerda — marca do GOLAÇO, cor + escudo + sigla da casa, placar em verde,
+  sigla + escudo + cor do visitante e o relógio num bloco verde (escudos fictícios do Golaço FC e do Ventania FC). Menor
+  que o de antes e que a referência (24 px de altura no celular, 26 no PC) e legível (números de 14–16 px, siglas de
+  11 px). Medido no `teste-hud-minimo` (H10).
 - **Celular só deitado**: em pé (com toque) a tela "Gire o celular para jogar" cobre tudo e o jogo para;
   onde dá (Android), o botão "Tela cheia deitada" trava a tela. Janela estreita no PC continua jogando.
 
@@ -188,7 +193,7 @@ node golaco/tools/teste-replay-anel.mjs  # (Node, também no rodar-testes) anel 
 node golaco/tools/teste-comemoracao.mjs      # (Node, também no rodar-testes) cena da comemoração: locomoção sem patinar, golpes, gestos, abraço, quem sofreu, câmera, mundo intacto [--js <pasta js>]
 node golaco/tools/teste-comemoracao-tela.mjs # navegador: comemoração na página (fases, autor no quadro, simulação segura, cena → replay → saída no mesmo tick e hash, pular, celular, CPU) [--raiz <pasta do jogo>]
 node golaco/tools/teste-replay.mjs     # navegador: replay do gol (na saída, simulação parada, hash igual), do impedimento (linha só no passe), pausa, pular, custos [--base <pasta do jogo>]
-node golaco/tools/teste-hud-minimo.mjs # navegador: tela limpa — área do HUD no celular (≤ 11%, 3 telas, ataque e defesa), nenhum texto fora do placar e dos nomes dos botões, nomes dos botões por padrão (H9), torcida atrás do HUD (≤ 15%), linha de impedimento só no apito, PC ≤ 2,5% com a dica que some, opções Minimapa e Nomes nos botões, ajustes de toque v2
+node golaco/tools/teste-hud-minimo.mjs # navegador: tela limpa — área do HUD no celular (≤ 11%, 3 telas, ataque e defesa), nenhum texto fora do placar e dos nomes dos botões, nomes dos botões por padrão (H9), torcida atrás do HUD (≤ 15%), linha de impedimento só no apito, PC ≤ 2,5% com a dica que some, opções Minimapa e Nomes nos botões, ajustes de toque v2, placar de TV menor e legível (H10; --so-placar roda só ele)
 python3 -I golaco/tools/sons/fazer_sons.py <gravações> <saída>  # refaz os sons a partir das gravações originais (CREDITOS.md)
 node golaco/tools/teste-cortejo.mjs   # pré-jogo: o cortejo do túnel até a fila (pés plantados, ninguém atravessa ninguém, vaga, rumo, custo, hash da partida)
 node golaco/tools/teste-prejogo-roteiro.mjs   # pré-jogo: roteiro, escalações de 10 s, pular e trilhos de câmera fora dos sólidos do estádio

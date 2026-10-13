@@ -384,9 +384,9 @@ IGUAIS; `teste-replay` B1/B2). Constantes em `config.js REPLAY`.
   `roteiroGol(anel, {golTick, chuteTick, lado, golaco?})` (TV 1× do chute − 4 s, ou do último corte, até o gol + 0,8 s;
   atrás do gol 0,5× do chute − 1 s até o gol + 1 s; golaço = chute de ≥ 20 m: + lateral 0,35×; ≤ 12 s, golaço ≤ 14 s —
   o começo da TV encolhe; nenhum plano passa de um corte depois do gol), `roteiroImpedimento(anel, {fotoTick, apitoTick,
-  linhaX, idImpedido, time, lado})` (câmera 'linha', 0,6× até o passe, congela 1,6 s nele e segue até o apito — o toque
-  do impedido — em ≤ 2,5 s reais: `congela.velDepois` = 1× ou mais depressa com o apito longe do passe, até 2× (apito até
-  5 s depois do passe); além disso para antes do toque), `roteiroMenu(anel)` (os últimos 10 s, TV 1×; a menos de 3 s
+  linhaX, idImpedido, time, lado, defensor, por})` (P1 câmera 'linha', 0,6× até o passe — sem congelar desde 12/10 — e
+  até o apito — o toque do impedido — em ≤ 2,2 s reais: `congela.velDepois` = 1× ou mais depressa com o apito longe do
+  passe, até 2×; além disso para antes do toque; P2 a análise semiautomática: seção seguinte), `roteiroMenu(anel)` (os últimos 10 s, TV 1×; a menos de 3 s
   de um corte — pausa logo depois de uma montagem de falta/lateral — o lance ANTES do corte, o que parou o jogo; null
   com menos de 0,5 s: o botão da pausa não fecha a pausa), `ehGolaco`, `duracao(roteiro)` e o relógio `criarRelogio`, `iniciarRelogio`,
   `avancarRelogio(r, dt)` (false no fim), `velocidadeAgora`, `linhaDoReplay(r, dt, out)` (`{visivel, x, opacidade}`: só no
@@ -429,6 +429,79 @@ IGUAIS; `teste-replay` B1/B2). Constantes em `config.js REPLAY`.
   navegador que não são do replay abrem com `?replay=0` (o replay seguraria a simulação ~10 s depois de um gol).
   `tools/lib/acha-gol.mjs` ganhou `comoPagina` (a entrada da IA pelo humano como a página entrega: o lance do laço da
   página).
+
+## Replay: análise semiautomática do impedimento e posição legal (pedido de 12/10; contrato)
+Pedidos do dono (12/10): "no impedimento, quero que seja marcado o impedimento, tenha cena de impedimento, tipo aquelas
+cenas de replay do impedimento semiautomático" e "pode colocar o selo IMPEDIMENTO sim, e em um replay qualquer, aparece uma
+cena de quando NÃO foi impedimento também". Pesquisa: `PESQUISA-ESTADIO.md` §9.1. **Só desenho**: a cena lê o anel do
+replay e a simulação espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-replay` F6 com × sem replay). Constantes
+em `config.js REPLAY.impedimento` e `REPLAY.saot`.
+- **Lógica (1 campo, fora do hash)**: `impedimento.js fotografar` guarda `defensor` (o id do penúltimo adversário que faz
+  a linha; null = a bola ou o meio-campo) em `m.partida.imped`; `regraImpedimento` devolve `defensor` na infração e
+  `partida.js marcarImpedimento` o põe no evento `impedimento` (ao lado de `por` e `tickFoto`). O hash não lê o campo.
+- **Anel (`render/replay-anel.js`)**: por passo, a foto da Regra 11 em vigor no fim dele — `foto(tick, time, por, def,
+  linhaX, lado)` (Int32/Int8/Int16/Int16/Float32/Int8; −1 = nenhuma) — e as marcas do passo — `marcar(bits)` (bit0 =
+  chute ou cabeceio PARA O GOL, bit1 = gol: `marcasDoPasso(eventos, voo)` — o cabeceio de passe e o corte do rival não
+  são chute); +~9 KB fixos (3,37 MB no total). `main.js gravarNoAnel(cortou, eventos)` só lê
+  `m.partida.imped` e os eventos. Funções puras: `fotoNoTick`, `marcasNoTick`, `poseNoTick(anel, tick, id, out, xz)`,
+  `parteMaisAvancada(pose, lado)` (cabeça, tronco e pés + o raio da cápsula: `JUNTAS_VALEM`, `RAIO_PARTE`; braços não
+  contam, Regra 11) e `cadeiasNoIntervalo(anel, de, ate, time, out)` (A → B do time: a última foto de A seguida da 1ª de B,
+  sem foto nula, do adversário ou corte no meio).
+- **Cérebro (`render/replay-saot.js`, puro, Node)**: `cenaImpedimento(anel, ev)` → `{tipo, fotoTick, idAtac, idDef, idPor,
+  linhaX, lado, margem, mesmaLinha, atac, def, por, bola, zMin, zMax}` (o defensor vem do EVENTO); `checagemLegal(anel,
+  {golTick | fimTick, time?, lado?, de?, teste?, limite?, semPartes?})` → a cena de posição legal mais apertada ou null:
+  (i) o lance acaba em gol do time (pausa: em chute/gol) sem a foto zerar no caminho; (ii) cadeia A → B depois do último
+  corte; (iii) a linha era um defensor; (iv) margem = (linhaX − x de B)·lado em [−0,10; 1,00] m; (v) legal também pelas
+  partes do corpo (sem tolerância). `medirCadeia`, `enquadrarSaot(anel, cena, aspecto)` (pinhole própria, cilindros de
+  0,35 × 1,9 m: os dois no quadro com 8% de folga e sobreposição ≤ 30%, câmera ≥ 2 m e fora dos sólidos —
+  `estadio-forma.js solidoEm` —; mira o centro do par na tela; níveis: 0 = 16/22° e ±12/±20° a 9–30 m; 1 = o mesmo até
+  45 m (os dois a 30–48 m na largura); 2 = sobe e abre até 62°/±40°; a checagem de sólidos — dezenas de amostras de
+  `solidoEm` — só no candidato que enquadra ou que seria o "menos ruim": `custoEnquadrar.solidos`, S9 ≤ 15 mil por
+  enquadramento; antes 415 mil), `medirCandidato`, `cameraSaot(enq, u, out,
+  reduzir)` (órbita do alto: 68°, azimute final + 35° para fora, 1,3 × a distância), `faseSaot(t, tipo, out, mesmaLinha,
+  reduzir)` (`{fase, u, parede, plano, pulsoDef, pulsoAtac, batidaDef, batidaAtac, cor, selo, decidido}`),
+  `duracaoSaot(tipo)`. O ponto que vale é o CENTRO do corpo (o quadril; o `impedimento.js` decide por ele): parede no x da
+  linha (= o defensor), plano no x do atacante — o desenho nunca contradiz a decisão.
+- **Roteiros (`render/replay-roteiro.js`)**: impedimento = P1 `{cam: 'linha', vel 0,6, congela: {tick: foto, s: 0,
+  velDepois}}` (passe − 1,0 s até o toque, depois do passe em ≤ 2,2 s reais, 1–2×) + P2 `{de = ate = foto, vel 1, cam:
+  'saot', congela: {tick: foto, s: 3,6, velDepois: 1}, saot: cena}`; total ≤ 7,47 s. Gol: `roteiroGol(anel, {..., time})`
+  acrescenta a análise LEGAL de 3,4 s no fim quando há checagem (orçamento 12 → 13 s, golaço 14 → 15: encolhe o plano de
+  TV — nunca começando depois de 0,5 s antes do passe checado —, depois o de trás do gol; não cabe = sem checagem); SEM
+  checagem o roteiro é o de antes, campo a campo (`teste-saot` S6, também nos gols de verdade). `roteiroMenu` também
+  acrescenta a análise (a cadeia acaba em chute ou gol). `roteiroLegalTeste(anel, limite?)`, `tempoSaot(rel)` (no último
+  quadro o relógio zera `congelado`: devolve `s`, o selo não pisca), `linhaDoReplay` decide pelo plano (`{visivel, x,
+  opacidade, cor}`: amarela no P1 do passe em diante; branco-gelo na análise, verde na decisão legal). Relógio: um plano
+  só congelado não pode ser o 1º; `congela.s = 0` só troca a velocidade (sem quadro parado).
+- **Diretor (`render/replay.js`)**: `posicionar` com o caso 'saot'; `iniciar` chama `enquadrarSaot` uma vez por roteiro
+  (e de novo no `redimensionar`) e `enquadrarLinha` usa o `defensor` do roteiro; `cena()` → `{ativa, tipo, ids (impedido,
+  defensor, quem passou), parede, plano, pulsoDef, pulsoAtac, batidaDef, batidaAtac, cor, selo, decidido, mesmaLinha, fase,
+  t, cena}`; `estado.saot` = `{tipo, fase, t, el, az, idDef, idAtac, idPor, margem, linhaX, lado, fotoTick, mesmaLinha,
+  selo, enquadrado, desvio, elFim, dist, ladoCamera}`; `saotDeTeste(tipo, {limite})`, `legalMaisApertada(limite)`,
+  `reduzirMovimento` (o "reduzir movimento" do sistema: sem órbita, selo sem animação).
+- **Desenho**: `render/linha-impedimento.js` — `mostrar(l)` aceita `l.cor`; 2ª malha `planos-saot` (1 BufferGeometry:
+  parede e plano com borda + 2 anéis de 32 segmentos, 144 triângulos, cor e alfa por vértice, `depthWrite: false`,
+  `renderOrder` 4, sem sombra; pré-carregada no 1º quadro desenhado — `atualizar(mundo, dt, desenha)`), `mostrarSaot(sc |
+  null)`, `estadoSaot`. `main.js desenharReplay`: na análise só os jogadores do lance (`soDaCena`, lista de referências;
+  `jogador3d.js` não muda), `linhaImped.mostrarSaot`, `hud.terco(...)` só com `decidido`; `fimReplay` apaga os dois.
+  Cores: impedimento #ff3b30, legal #19e07a, parede branco-gelo #eef6ff, plano neutro #d8dee2, pulso #6fc3ff.
+- **Selo e terço de baixo** — a ÚNICA exceção à "sem narração" (dono, 12/10): `index.html #terco` (irmão de `#replay`,
+  z-index 31, `pointer-events: none`, `data-caixa="terco"`, canto de baixo à esquerda), `hud.terco(spec | null)` (só mexe
+  no DOM quando o tipo muda; `spec.tipo` 'impedimento' → "IMPEDIMENTO", 'legal' → "POSIÇÃO LEGAL"; exatamente esses
+  textos, sem nome nem minuto; a cena de substituição acrescenta o tipo dela), `hud.tercoTipo`. Só no quadro final da
+  análise; fora do `TEXTO_EVENTO` (nenhum lance ao vivo vira texto: `teste-hud-minimo` H2 sem mudança). `html.em-replay` e
+  `html.modo-prints` não escondem; `html.sem-hud` esconde. Pílula `rgba(7,9,10,.85)`, borda esquerda de 4 px e bandeira
+  na cor da decisão, 15 px/40 px no PC e 13 px/34 px no celular; entra em 0,2 s (sem animação com "reduzir movimento").
+- **API** (`window.__golaco.replay`): `saotDeTeste(tipo, {limite})`, `legalMaisApertada(limite)`, `desenhados`, `planos`
+  (o `estadoSaot` + `selo`), `reduzirMovimento(v)`, `noAnel(tick, id)`, `selo(tipo)` (testes de layout); `estado().
+  desenhoTriangulos`.
+- **Testes**: `tools/teste-saot.mjs` (Node, padrão: S1 durações a 60 e 30 qps, S2 defensor no anel, S3 critério com 10
+  cenas montadas — `lib/cena-montada.mjs` — + 2 da pausa, S4 câmera nas montadas e nos impedimentos de verdade das
+  sementes 1–40 — `lib/varre-saot.mjs`, `lib/anel-node.mjs` —, S5 selo, S6 gol com/sem checagem, S7 coerência, S8 pose);
+  `teste-replay-anel` (B8, B11, B16, B17, C8 com os 2 planos; congelamento ≥ 3,0 s; ≤ 7,5 s); `teste-replay` (C4 no P1, C5
+  ≥ 3,0 s no P2, A4/A5 com a checagem, A10 e F1–F11); `teste-impedimento` E1 (o defensor = o penúltimo do árbitro
+  independente); `teste-desempenho-celular` (informativo: a análise com CPU 4×); `tools/medir-saot.mjs` (fora do CI: a
+  frequência da posição legal em 144 partidas); prints `*-impedimento-saot*`, `*-legal*` (`lib/acha-legal.mjs`) e a
+  sequência `pc-impedimento` → `pc-impedimento-saot-orbita` → `pc-impedimento-saot`.
 
 ## Comemoração do gol (pedido de 11/10: "não tem cena de comemoração!!!"; contrato)
 Pesquisa: `PESQUISA-ESTADIO.md` §10. **Só desenho: a cena anda num mundo à parte (cópias dos 22) e a simulação nunca é
@@ -1109,8 +1182,8 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
   círculos, analógico em repouso se a opacidade passar de 0,25) cobre ≤ 11% da tela; 0 caracteres fora do placar; ≤ 15%
   dos pixels de torcida atrás do HUD; 0 amostras com a linha viva; PC ≤ 2,5% depois de 9 s. Peça nova de HUD na partida
   tem de caber nisso (ou ir para a pausa).
-- **`index.html`/`css/estilo.css`**: na partida (`html.em-partida`) o placar é compacto de TV (30 px no celular, 34 no PC;
-  sem a marca, sem borda nem caixinha nos gols; barrinha de cor de 3 px por time) e o "1º T" só aparece com
+- **`index.html`/`css/estilo.css`**: o placar é a barra de TV da seção "Placar (12/10)" abaixo (antes: compacto de 30 px
+  no celular e 34 no PC, sem a marca) e o "1º T" só aparece com
   `.placar-relogio.com-tempo` (intervalo, fim e acréscimos; o texto fica no DOM); menu só com o ícone (44×44); barra de
   força 44×6 sem o rótulo (`#carga-tipo` continua com o texto, escondido); dica de teclas do PC (`#dica`) some 8 s depois
   de `hud.pronto()` e de cada troca de modo. Botões de toque translúcidos (fundo 0,32, borda 1,5–2 px, sem sombra) com
@@ -1224,3 +1297,37 @@ bola parada no pé do condutor).
 muda). Sem ele as defesas de 6 a 16,5 m iam a 60,8% (meta 55–60%): as regras tiraram gols fáceis nessa faixa (177 → 164
 com as mesmas defesas). Com ele: 59,0% · total 68,0% · de fora da área 86,8% · gols 2,13 (base 2,13) · impedimentos 1,15
 · bola parada 29% dos gols — nenhuma medida que estava na meta saiu dela.
+
+## Placar (12/10) — barra de TV no formato da referência, menor e com a cara do GOLAÇO (contrato)
+Pedido do dono (12/10), com uma imagem de referência: "quero o placar assim, tem que ser algo menor e mais com a nossa
+cara". Pesquisa e medidas em `PESQUISA-ESTADIO.md` §7.1. **Só DOM e CSS**: nenhuma linha da simulação mudou (`hash-igual`
+IGUAL; o hash Node = Chromium do `teste-carga` continua).
+- **`index.html`**: `.placar` (`data-caixa="placar"`, no canto de cima à esquerda, nas margens seguras) = `.placar-marca`
+  (o símbolo do GOLAÇO, `.marca-simbolo`) | `.placar-time.t0#placar-time-0` (`.placar-cor` + `svg.placar-escudo` com
+  `<use id="escudo-0">` + `#sigla-0`) | `.placar-resultado` (`#gols-0`, `.placar-x`, `#gols-1`) | `.placar-time.t1#placar-time-1`
+  (`#sigla-1` + escudo `#escudo-1` + `.placar-cor`) | `#placar-relogio` (bloco verde: `#relogio` e `#relogio-tempo`). Os
+  escudos são `<symbol id="escudo-golaco">` e `<symbol id="escudo-ventania">` no `svg.sprite` do começo do `body` (fictícios,
+  só traço, sem texto). Igual na partida e nos treinos (nos treinos o relógio fica `hidden`).
+- **`css/estilo.css`**: altura `--placar-h` (24 px; 26 no PC, `min-width: 1001px`), fundo `rgba(7,9,10,0.8)`, borda verde
+  0,3, cantos de 6 px; números do placar verdes de 16 px (17 no PC), siglas de 11 px (12), relógio de 14 px (15) preto no
+  bloco `--verde` (parado — intervalo e fim — o bloco fica `--verde-escuro` com letras `--texto`), "1º T +4" de 10 px; faixa de cor do time de 2 px de
+  cima a baixo (casa verde depois da marca, visitante branca antes do relógio). Topo apertado (`hud.js ajustarTopo`):
+  `topo-c1` tira a marca SÓ nos treinos e só se sem ela ainda encostar; `topo-c3` tira o "1º T"; `topo-c4` aperta só os
+  espaços (as fontes ficam nos mínimos do H10); depois o minimapa sai do meio e encosta à direita do placar (como antes).
+  Na PARTIDA o `topo-c3` vem por último: o "1º T +4", o "Intervalo" e o "Fim" só saem se nem com o minimapa ao lado couber
+  (contraprova de 13/10). O topo também se refaz quando os gols mudam de número de dígitos (9 → 10).
+- **`hud.js`**: `definirTimes([{sigla, nome, escudo}])` — `escudo` = id do elenco (`main.js timesDoMundo`: `e.id`; treino:
+  `golaco`/`ventania`); escreve sigla, o `href` do `<use>` (id desconhecido → o do treino) e o `aria-label` do time (o nome
+  só para leitor de tela: nenhum texto novo na tela; cada `.placar-time` é `role="img"` — num `<span>` sem papel o nome
+  não chegava ao leitor de tela).
+- **`main.js` (API de teste)**: `__golaco.placarDeTeste([a, b], relogio)` escreve o placar e o relógio como o laço passa ao
+  HUD ({minuto, tempo, estado, acrescimo}); com o relógio manual parado o laço não reescreve (o próximo quadro escreve o de
+  verdade).
+- **Teste**: `teste-hud-minimo` H10 (CI): nas 3 telas do celular com entalhe e no PC, no jogo ("34'"), nos acréscimos
+  ("45+2'" com "1º T +4") e no intervalo — formato (marca, 2 escudos certos, 2 siglas, placar, relógio no bloco verde com
+  contraste ≥ 4,5:1, nessa ordem), altura ≤ 24 px (PC ≤ 26) e altura e área menores que as de antes (`PLACAR_ANTES`) e que a
+  referência (248×29 px), números ≥ 14 px, siglas ≥ 11, "1º T +4" ≥ 10, escudos ≥ 12, peças sem sobrepor e dentro da barra,
+  e com o minimapa ligado o placar dos acréscimos não encosta no minimapa nem no menu, mantém o "1º T +4" e, com gols 10-9,
+  continua sem encostar; no treino de ataque com o minimapa e o painel nada encosta e a marca fica; a árvore de
+  acessibilidade tem "Golaço FC" e "Ventania FC" (contraprova de 13/10). `--so-placar` roda só essa parte
+  (sem os 2 min de jogo).
