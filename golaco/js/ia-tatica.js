@@ -201,6 +201,10 @@ function cortaPasse(m, j, v, Lv, atual) {
   // compromisso: o corte já decidido para este passe segue até o tick do ponto (+ folga)
   if (it.corte && it.corte.chave === v.tickChave && m.tick <= it.corte.ate) { Lv[j.time] = { id: j.id, tick: m.tick }; return true; }
   it.corte = null;
+  // o passe para quem está impedido na foto da jogada (impedimento.js): a defesa deixa a bandeira subir (cortando, a
+  // jogada deliberada dela zeraria o impedimento — com o corte os impedimentos caíram de 1,15 para 0,46 por partida)
+  const im = m.partida.imped;
+  if (im && im.time === v.time && im.ids.includes(v.para)) return false;
   let r = null;
   for (const o of m.jogadores) if (o.id === v.para) { r = o; break; }
   const pr = r ? pontoDeCorte(m, r, 0) : null;
