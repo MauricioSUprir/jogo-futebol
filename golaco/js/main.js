@@ -82,7 +82,7 @@ import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
 import { criarEditorTime } from './editor-time.js';
 import { criarPrejogo } from './render/prejogo.js';
 import { PREJOGO } from './prejogo-roteiro.js';
-import { criarAnel, lerQuadro, tempoEstadio as tempoEstadioAnel } from './render/replay-anel.js';
+import { criarAnel, lerQuadro, tempoEstadio as tempoEstadioAnel, jogadorNoTick, marcasDoPasso } from './render/replay-anel.js';
 import { criarDiretor } from './render/replay.js';
 import {
   planejarComemoracao, criarCena as criarCenaComemoracao, avancarCena, planoCamera, criarPlanoCamera, faseCena,
@@ -308,16 +308,18 @@ function rodarPasso(entrada, acoes) {
   copiarBolaDoMundo(bolaAtu);
   // bola teletransportada (recomeço, máquina): não desenha o rastro entre os dois pontos
   if (bolaAtu.p.distanceTo(bolaAnt.p) > 2.5) { bolaAnt.p.copy(bolaAtu.p); bolaAnt.q.copy(bolaAtu.q); cortou = true; }
-  gravarNoAnel(cortou);
+  gravarNoAnel(cortou, eventos);
   for (const ev of eventos) tratarEvento(ev);
   atualizarFase();
 }
 
 /**
- * Grava o passo no anel do replay: só COPIA o que o desenho já calculou (a pose deste passo, x/z/rumo, a bola) e o
- * relógio do estádio. Nada é lido além disso e nada é escrito no mundo (o hash não muda); nada é alocado.
+ * Grava o passo no anel do replay: só COPIA o que o desenho já calculou (a pose deste passo, x/z/rumo, a bola), o
+ * relógio do estádio, a foto da Regra 11 em vigor (m.partida.imped, só lida) e as marcas do passo (chute ou cabeceio para
+ * o gol, gol: marcasDoPasso, com m.voo só lido) — a cena
+ * semiautomática. Nada é escrito no mundo (o hash não muda); nada é alocado.
  */
-function gravarNoAnel(cortou) {
+function gravarNoAnel(cortou, eventos) {
   const tg = agoraMs();
   anel.inicio(mundo.tick, passosTotais * PASSO, cortou);
   let v = 0;
@@ -325,6 +327,9 @@ function gravarNoAnel(cortou) {
     const e = estJ.get(j.id);
     if (e) anel.jogador(v++, j.id, j.time, j.posicao === 'GOL', e.x1, e.z1, e.r1, e.atu);
   }
+  const im = mundo.partida?.imped;
+  if (im) anel.foto(im.tick, im.time, im.por, im.defensor, im.linhaX, mundo.ataca[im.time]);
+  anel.marcar(marcasDoPasso(eventos, mundo.voo));
   anel.fim(bolaAtu.p, bolaAtu.q);
   custoGravar.n++; custoGravar.ms += agoraMs() - tg;
 }
@@ -376,7 +381,7 @@ function tratarEvento(ev) {
     // partida: corte para a câmera do gol (até a saída); treino: zoom/tremor leve (até o recomeço)
     if (cam) cam.efeitoGol((mundo.bola.p.x > 0 ? 1 : -1) * CFG.CAMPO.meioX, mundo.bola.p.z, { fechado: !!mundo.partida });
     // replay: o gol fica pendente até o pós-gol chegar na vez dele (o chute que vale o gol: autor-gol.js)
-    if (diretor && mundo.partida) diretor.aoGol({ golTick: mundo.tick, chuteTick: autorGol.chute.ativo ? autorGol.chute.tick : null, lado: mundo.bola.p.x > 0 ? 1 : -1 });
+    if (diretor && mundo.partida) diretor.aoGol({ golTick: mundo.tick, chuteTick: autorGol.chute.ativo ? autorGol.chute.tick : null, lado: mundo.bola.p.x > 0 ? 1 : -1, time: ev.time });
     // comemoração (só na partida): começa já, da cópia do mundo neste tick
     if (mundo.partida && comemoracaoLigada) iniciarComemoracao(ev);
     return;
@@ -390,9 +395,10 @@ function tratarEvento(ev) {
   if (t === 'recomeco' || t === 'saida' || t === 'cobrancaPenalti' || t === 'corteBolaParada') { corteCamera = true; kmhVisto = 0; encerrarEfeitosGol(); if (cam) cam.planoGeral(false); }
   // depois do gol, o replay entra na saída de bola (com todos já montados: o roteiro para antes do corte)
   if (t === 'saida' && diretor?.golPendente) posGol();
-  // impedimento: o replay no apito, com a linha no quadro do passe (a foto da Regra 11: ev.tickFoto)
+  // impedimento: o replay no apito, com a linha no quadro do passe (a foto da Regra 11: ev.tickFoto) e a análise
+  // semiautomática (o defensor da linha vem do evento)
   if (t === 'impedimento' && replayAuto && diretor && mundo.partida) {
-    const ro = diretor.impedimento({ fotoTick: ev.tickFoto, apitoTick: mundo.tick, linhaX: ev.linhaX, idImpedido: ev.id, time: ev.time, lado: mundo.ataca?.[ev.time] ?? 1 });
+    const ro = diretor.impedimento({ fotoTick: ev.tickFoto, apitoTick: mundo.tick, linhaX: ev.linhaX, idImpedido: ev.id, time: ev.time, lado: mundo.ataca?.[ev.time] ?? 1, defensor: ev.defensor ?? null, por: ev.por ?? null });
     if (iniciarReplay(ro)) linhaNoReplay = mundo.tick;
   }
   // partida: intervalo, fim, edição do time e substituição (intervalo e fim: plano geral do estádio). Gol no último
@@ -639,7 +645,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     // a linha do lance já passou (congelada) no replay do impedimento: não fica parada de novo no jogo
     const ui = mundo.partida?.ultimoImped;
     if (linhaNoReplay != null && ui && ui.tick === linhaNoReplay && mundo.partida.estado !== 'jogo') linhaImped.mostrar(null);
-    else linhaImped.atualizar(mundo, dt);
+    else linhaImped.atualizar(mundo, dt, renderizar);
     marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
   }
   campo.atualizar(agoraMs / 1000, cam.camera, renderizar);
@@ -795,11 +801,18 @@ function desenharReplay(dt, agoraMs, renderizar = true) {
   uniformsRede(ondas, redeLigada ? tEst : -1e9, campo.rede.a, campo.rede.b);
   const f = diretor.posicionar(_bpR, dt * diretor.velocidade, listaR);
   cena3d.acompanhar(f.x, f.z);
-  jog3d.atualizar(listaR, diretor.camera);
-  // nada do jogo ao vivo no gramado: queda da bola e opções do lateral somem; a linha só no replay do impedimento
+  // análise semiautomática: só os jogadores do lance (o impedido, o defensor da linha, quem passou) e a bola
+  const sc = diretor.cena();
+  const lista = sc.ativa ? soDaCena(listaR, sc.ids) : listaR;
+  jog3d.atualizar(lista, diretor.camera);
+  desenhadosReplay = lista.length;
+  // nada do jogo ao vivo no gramado: queda da bola e opções do lateral somem; a linha só no replay do impedimento e na
+  // análise; o selo da decisão no terço de baixo (só no quadro final)
   marcas.grupo.visible = false;
   marcasLat.atualizar(mundo, semPosicao, agoraMs / 1000, dt);
   linhaImped.mostrar(diretor.linha(dt));
+  linhaImped.mostrarSaot(sc.ativa ? sc : null);
+  hud.terco(sc.ativa && sc.decidido ? sc : null);
   // a arquibancada do lado de cá (e a torcida dela) some/aparece pela câmera do replay, como no jogo pela da TV
   campo.atualizar(agoraMs / 1000, diretor.camera, renderizar);
   torcida.atualizar(agoraMs / 1000, emocao, diretor.camera, som ? som.relogioBatida : null, renderizar);
@@ -815,6 +828,15 @@ function desenharReplay(dt, agoraMs, renderizar = true) {
   render.quadros++;
 }
 const semPosicao = () => null;
+// a lista da análise (referências aos itens do anel; nada alocado por quadro) e quantos jogadores o replay desenhou
+const listaCena = [];
+let desenhadosReplay = 0;
+function soDaCena(lista, ids) {
+  let k = 0;
+  for (const it of lista) if (ids.includes(it.id)) listaCena[k++] = it;
+  listaCena.length = k;
+  return listaCena;
+}
 
 /** Começa um replay (roteiro do diretor). Devolve false se não deu (sem diretor, roteiro vazio, fora da partida). */
 function iniciarReplay(ro) {
@@ -853,7 +875,8 @@ function fimReplay(pulou) {
   const estava = diretor.ativo;
   diretor.pular();
   hud.replay(false);
-  if (linhaImped) linhaImped.mostrar(null);
+  hud.terco(null);
+  if (linhaImped) { linhaImped.mostrar(null); linhaImped.mostrarSaot(null); }
   if (estava) { laco.ultimo = null; corteCamera = true; }
   if (entrada) {
     if (pulou) { entrada.soltarTudo(); entrada.bloquear?.(true); entrada.bloquear?.(false); }
@@ -1550,6 +1573,7 @@ const api = {
       edicaoNaFila: !!edicaoNaFila, editorAberto: editor.aberto, menuAberto: hud.menuAberto,
       marcador: marcadorLigado(mundo), qualidade: qAtual, escolhaQualidade: escolhaQ, hora, camera: cam ? cam.modo : camInicial,
       desenhoChamadas: cena3d ? cena3d.info().render.calls : 0,
+      desenhoTriangulos: cena3d ? cena3d.info().render.triangles : 0,
       // memória na GPU (vazamento = número que cresce com o tempo)
       geometrias: cena3d ? cena3d.info().memory.geometries : 0,
       texturas: cena3d ? cena3d.info().memory.textures : 0,
@@ -1622,6 +1646,23 @@ const api = {
     pular() { if (diretor?.ativo) fimReplay(true); },
     menu() { return iniciarReplay(diretor?.menu()); },
     gol(golaco) { return iniciarReplay(diretor?.reverGol(golaco)); },
+    /**
+     * Análise semiautomática (testes e prints): 'impedimento' = o último impedimento de novo (P1 + análise); 'legal' = a
+     * checagem de posição legal mais apertada do anel, sem exigir chute nem gol (opc.limite: outro teto, m). false se não há.
+     */
+    saotDeTeste(tipo, opc) { return iniciarReplay(diretor?.saotDeTeste(tipo, opc)); },
+    /** A margem (m) da posição legal mais apertada no anel agora (até `limite` m; testes e prints), ou null. */
+    legalMaisApertada(limite) { return diretor ? diretor.legalMaisApertada(limite) : null; },
+    /** Jogadores desenhados no último quadro do replay (a análise mostra só os do lance). */
+    get desenhados() { return desenhadosReplay; },
+    /** Os planos da análise desenhados agora (linha-impedimento.js estadoSaot) e o selo do terço de baixo. */
+    get planos() { return linhaImped ? { ...linhaImped.estadoSaot, selo: hud.tercoTipo } : null; },
+    /** "Reduzir movimento" na análise (true/false força; null segue o sistema). */
+    reduzirMovimento(v) { if (diretor) diretor.reduzirMovimento = v; },
+    /** O jogador `id` gravado no anel no passo `tick` ({x, z, time, goleiro} ou null): conferir a parede e o plano. */
+    noAnel(tick, id) { const j = jogadorNoTick(anel, tick, id); return j ? { ...j } : null; },
+    /** Testes de layout: o selo no terço de baixo sem a análise (tipo ou null; o próximo quadro de replay o refaz). */
+    selo(tipo) { hud.terco(tipo ? { tipo } : null); },
   },
   /**
    * Comemoração do gol (testes e prints): estado da cena ({fase, t, duracao, autor, alvo, variante, corrida, curta, plano,
