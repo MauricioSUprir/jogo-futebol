@@ -393,11 +393,6 @@ export function criarJogadores3D(cena, qualidade) {
     get cabecas() { return cabecas; },
     get cabelos() { return cabelos; },
     get capacidade() { return cap; },
-    /**
-     * Garante lugar para n jogadores desenhados já (sem remontar no meio de uma cena: a cena de substituição desenha os
-     * 22 + quem entra + o quarto árbitro; remontar ali subia um buffer novo para a GPU no meio dela).
-     */
-    reservar(n) { if (n > cap) montar(n); },
     /** Marcas da partida (testes de navegador): a do PRESSÃO e o anel dos 8 s — posição e quanto do anel aparece. */
     get indicadores() {
       return {
@@ -405,6 +400,11 @@ export function criarJogadores3D(cena, qualidade) {
         oito: anelOito.visible ? { x: anelOito.position.x, z: anelOito.position.z, segmentos: Math.round(geoOito.drawRange.count / 6), total: SEG_OITO } : null,
       };
     },
+    /**
+     * Garante lugar para n jogadores desenhados já (sem remontar no meio de uma cena: a cena de substituição desenha os
+     * 22 + quem entra + o quarto árbitro; remontar ali subia um buffer novo para a GPU no meio dela).
+     */
+    reservar(n) { if (n > cap) montar(n); },
     /**
      * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, pressiona, x, z, rumo}]
      * (pressiona: o companheiro chamado pelo botão PRESSÃO — a marca âmbar acima da cabeça; relogio: 0–1 dos últimos 5 s
