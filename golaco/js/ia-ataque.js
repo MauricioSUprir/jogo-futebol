@@ -231,6 +231,8 @@ function estadoAtaque(m, t) {
   //   de 1 s, sem chegar às costas da defesa); quem fica impedido volta correndo (apoioTatico)
   A.corridas = 0;
   for (const o of m.jogadores) {
+    // (a tabela também acaba com a bola perdida)
+    if (o.corrida && o.corrida.tipo === 'tabela' && timeBola != null && timeBola !== o.time) o.corrida = null;
     const s = o.iaA;
     if (!s || !s.corrida) continue;
     if (!o.corrida || o.corrida.tipo !== 'nasCostas') { s.corrida = false; continue; }
@@ -787,7 +789,9 @@ function decidir(m, j, A, ia, cobranca) {
     // tempo: ele (já embalado) chega ao ponto antes do adversário mais perto dele. Só um ponto a 6 m e
     // só a rasteira: com a linha de 4 da Parte 2 no caminho a chance era ~0 e não saía enfiada nenhuma
     const sv = MD.hypot(o.vx, o.vz);
-    const naCorrida = o.corrida && o.corrida.tipo === 'nasCostas';
+    // (a tabela da IA — o passador que arrancou depois de passar, IA_ATAQUE.tabela — vale como a corrida nas costas: a
+    // devolução vai no espaço à frente dele)
+    const naCorrida = o.corrida && (o.corrida.tipo === 'nasCostas' || (o.corrida.tipo === 'tabela' && IA_ATAQUE.tabela));
     const corre = naCorrida || (o.vx * lado > 4 && ou > A.linha - 3);
     // (para quem JÁ passou da linha não: seria impedimento — 48 partidas: 1,33 → 1,15 impedimento por partida, gols e
     // chutes iguais dentro da variação)
@@ -893,8 +897,33 @@ function decidir(m, j, A, ia, cobranca) {
   else if (melhor === 'cruzamento') ia.mira = miraCruzamento(j, A);
   else { ia.mira = { x: 1, z: 0, ax: mAx, az: mAz }; atualizarMira(m, j, ia); }
   acaoIA(m, j, melhor === 'cruzamento' ? 'lancamento' : melhor, mForca);
+  // tabela (1-2): o passe curto no campo de ataque com espaço à frente sai com o modificador — o acoes.js tabela manda o
+  // passador arrancar para o espaço, e quem recebe vê a devolução como enfiada (acima)
+  if (melhor === 'passe' && j.iaAcao && tabelaIA(m, j, A, mAlvo)) j.iaAcao.bot |= BOTAO.MOD;
   // enfiada alta: o mesmo botão com o modificador (acoes.js enfiada: p.mod = por cima da defesa)
   if (melhor === 'enfiada' && mAlta && j.iaAcao) j.iaAcao.bot |= BOTAO.MOD;
+}
+
+/**
+ * A IA faz a tabela com este passe? (FIFA Training Centre, "third player combinations": passe, devolução de primeira e a
+ * corrida para o espaço que o marcador do passador não acompanha — a resposta à defesa que lê a linha do passe.) Passe de
+ * tabela.dMin–dMax m para o lado ou para a frente, do meio-campo de ataque (u ≥ tabela.uMin), por quem não é zagueiro,
+ * com tabela.livre m livres à frente do passador e no máximo tabela.max tabelas correndo no time.
+ */
+function tabelaIA(m, j, A, alvo) {
+  const T = IA_ATAQUE.tabela;
+  if (!T || alvo < 0 || j.posDetalhe === 'ZAG' || j.posicao === 'GOL') return false;
+  const lado = A.lado;
+  if (j.x * lado < T.uMin) return false;
+  let o = null;
+  for (const q of m.jogadores) if (q.id === alvo) { o = q; break; }
+  if (!o) return false;
+  const L = MD.hypot(o.x - j.x, o.z - j.z);
+  if (L < T.dMin || L > T.dMax || (o.x - j.x) * lado < -T.tras) return false;
+  if (livreAFrente(m, j, lado, 0) < T.livre) return false;
+  let n = 0;
+  for (const q of A.ids) if (q.corrida && q.corrida.tipo === 'tabela') n++;
+  return n < T.max;
 }
 
 /**
