@@ -1322,6 +1322,9 @@ export const REPLAY = {
     // (`extra`, ainda oblíqua e fora do centro) — os dois sempre no quadro.
     longe: { elFim: [16, 22, 24], desvios: [12, -12, 20, -20, 25, -25], dist: [9, 45] },
     extra: { elFim: [30, 40, 52, 62], desvios: [12, -12, 25, -25, 40, -40], dist: [9, 75] },
+    // ângulo de VERDADE do quadro final (câmera → ponto mirado, que sai do meio quando um está perto e o outro longe da
+    // câmera): nos níveis da TV e `longe` o quadro só serve com a elevação em [el] e o desvio da linha em [desvio] graus
+    meta: { el: [12, 24], desvio: [8, 25] },
     // parede do defensor (a faixa em z dos jogadores do lance ± margemZ; alfa de baixo para cima), plano do atacante
     // (± meiaLargura em z) e o anel do pulso (raio, largura e quanto cresce na batida)
     parede: { altura: 2.3, margemZ: 3, alfaBaixo: 0.35, alfaCima: 0.10, borda: 0.035 },
