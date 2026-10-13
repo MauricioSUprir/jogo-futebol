@@ -1247,9 +1247,12 @@ export const DEFESA_HUMANO = {
   // e vai na bola solta a mais de `bolaSolta` m do pé dele. Na disputa o corpo anda pela velocidade (a do condutor +
   // `ganho` × (ponto − corpo), até `aproxMax` m/s mais rápido que ele; por trás dele, a menos de `trasPerto` m, fechando
   // no máximo a `trasAprox` m/s: abaixo da carga por trás, FALTAS.carga.vMin). `filtro`: s da velocidade do condutor.
+  // (13/10, com o condutor da IA que faz tabela e encara: chega 2,5 → 2,0 e aproxMax 4 → 5 — o escolhido chegava a ≤ 2 m
+  // em 1,5 s em 57–60% dos casos no teste-pressao-humano M2, meta ≥ 60%; agora 63%, e com o bote só abaixo de
+  // ACOES.boteIA.vPressao as faltas do botão caíram de 13 para 9)
   pressao: {
-    validade: 1, acel: 7, freio: 6.2, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.5, contorno: 1.2,
-    naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.5, filtro: 0.2, ganho: 3, aproxMax: 4, trasPerto: 1.5, trasAprox: 1.4,
+    validade: 1, acel: 7, freio: 6.2, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.0, contorno: 1.2,
+    naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.5, filtro: 0.2, ganho: 3, aproxMax: 5, trasPerto: 1.5, trasAprox: 1.4,
   },
 };
 
