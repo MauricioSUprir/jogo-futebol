@@ -622,6 +622,10 @@ de `criarPartida` depois dele e 600 passos Node = Chromium) e o apito da saída 
     elevação `elevPedida` pela força do 2º toque (rápido = 0,72 rad, a da IA; segurado = até 1,0 rad, mais alta) e o
     mesmo erro de força e direção da cavadinha de antes (StatsBomb: difícil de dosar).
   - O cobrador parado (`papel 'parado'`) com `espera` nunca é marcado por `processarPedido` (chuta pela cobrança).
+  - A cobrança da demo (`entradaDemoPartida` com o controlado cobrando) leva `iaCobra: true` (sem `ia`, para o resto
+    da simulação seguir igual — `m.iaJoga`): o `cobrar` e o sim.js não a tomam como da pessoa. A entrada da cobrança da
+    IA repete o botão a cada `PARTIDA.repeteCobranca`; sem a marca, o 2º aperto virava cavadinha (teste-cavadinha J; o
+    canhão de pênaltis do teste-faltas caía de ~77% para 67% de gols).
   - **Bola parada**: o CHUTE só cobra pênalti e tiro livre direto (`cobrar` descarta o pedido de chute nas outras) —
     no escanteio, lateral, tiro de meta e tiro livre indireto, dois toques no CHUTE não fazem nada e o PASSE/LANÇAMENTO
     depois cobra normal (teste-cavadinha H3). Pênalti: dois toques = Panenka, com o erro da cavadinha × a pressão do

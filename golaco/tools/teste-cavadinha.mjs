@@ -19,7 +19,9 @@
 //     PASSE depois cobra normalmente;
 //  I. botão que já vinha segurado quando o controle trocou (o time apertava no passo anterior): não é toque rápido —
 //     o contato não espera a janela (antes: a troca virava um "toque" de poucos ticks e o chute atrasava; o
-//     hash-igual do treino de ataque mudava por isso).
+//     hash-igual do treino de ataque mudava por isso);
+//  J. a demo (a IA jogando pelo humano) cobrando pênalti: a entrada da cobrança repete o CHUTE a cada
+//     PARTIDA.repeteCobranca — nunca vira cavadinha (antes: 7 em 40 e o canhão do teste-faltas caía para 67% de gols).
 //   node tools/teste-cavadinha.mjs [--js <pasta js>]   (--js: mede outra cópia da lógica, ex.: a base — o "antes")
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -341,6 +343,29 @@ const penalti = (sem, seq) => falta(sem, seq);
   reg('I. CHUTE que já vinha segurado na troca de controle: o contato não espera a janela (o aperto novo espera)',
     `herdado: espera ${h.espera ?? 'nenhuma'}${h.humano ? ' (pedido do humano)' : ''} · aperto novo: espera ${nv.espera ?? 'nenhuma'} ticks`, 'herdado sem espera (e do humano); novo com a janela',
     h.pedido && h.humano && h.espera == null && nv.pedido && nv.espera === JANELA);
+}
+
+// ------------------------------------------------------------------ J. a demo cobra pênalti como a IA
+{
+  const N = 40;
+  let cav = 0, n = 0;
+  const res = {};
+  for (let k = 0; k < N; k++) {
+    const m = P.criarPartida({ semente: 5000 + k });
+    for (let i = 0; i < 200; i++) P.passoPartida(m, P.entradaDemoPartida(m));
+    const At = m.jogadores.find(j => j.time === 0 && j.posicao === 'ATA') ?? m.jogadores.find(j => j.time === 0 && j.posicao !== 'GOL');
+    const D = m.jogadores.find(j => j.time === 1 && j.posicao === 'ZAG');
+    P.teleportar(At, 45, 3, 0); P.teleportar(D, 44, 3.5, 0);
+    m.bola.p.x = 45.4; m.bola.p.z = 3; m.posse = At.id; m.naMao = null; m.voo = null;
+    m.eventos = [];
+    m.faltaPendente = { def: D.id, cond: At.id, time: 0, x: 45, z: 3, area: true, chegada: 'tras', v: 3, grau: 'imprudente', cartao: null, motivo: 'imprudente', origem: 'bote', tick: m.tick };
+    P.regrasPartida(m);
+    let r = null, modo = null;
+    for (let i = 0; i < 60 * 20 && !r; i++) for (const e of P.passoPartida(m, P.entradaDemoPartida(m))) { if (e.tipo === 'penalti') r = e.resultado; if (e.tipo === 'chute' && !modo) modo = e.modo; }
+    if (r) { n++; res[r] = (res[r] ?? 0) + 1; }
+    if (modo === 'cavadinha') cav++;
+  }
+  reg('J. a demo (IA pelo humano) cobrando 40 pênaltis: nunca cavadinha', `${cav} cavadinhas em ${n} cobranças (${Object.entries(res).map(([k, v]) => `${k} ${v}`).join(', ')})`, `0 em ${N}`, n === N && cav === 0);
 }
 
 console.log(tabelaTexto(linhas));

@@ -370,7 +370,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   espera a janela de 0,15 s (contato +117 ms parado; correndo, no 1º apoio depois dela, até +267 ms) — só o aperto NOVO
   (`carga.novo`; o botão segurado de antes da troca de controle chuta na hora); o chute carregado sai no mesmo tick de
   antes. Bola parada: o CHUTE só cobra pênalti (Panenka: 2 gols/12, 9 fora — erro da cavadinha × pressão do pênalti;
-  calibrar é decisão do dono) e tiro livre direto; no resto dois toques não fazem nada. Entrada: soltar e apertar de novo
+  calibrar é decisão do dono) e tiro livre direto; no resto dois toques não fazem nada; a cobrança da demo leva `iaCobra`
+  (a IA repete o botão na cobrança — sem a marca virava cavadinha). Entrada: soltar e apertar de novo
   sem passo no meio vira solto + apertado (`entrada.js` `passoUsou`/`limparPulsos(true)`; antes o toque duplo rápido
   virava um aperto só). hash-igual IGUAL; hash-partida: demo IGUAL, humano IGUAL com a janela zerada e a cavadinha
   desligada (só a cavadinha muda a partida). Teste: `teste-cavadinha` (padrão; `--js` mede a base) e `teste-controles`

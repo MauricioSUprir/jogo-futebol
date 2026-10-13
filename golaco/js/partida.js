@@ -941,7 +941,8 @@ function cobrar(m, entrada) {
     c.pedido = { tipo: a.tipo, forca: a.forca, mod: a.tipo === 'chute' && !!pr.direto, tick: m.tick, dir: { x: a.dx, z: a.dz } };
   } else {
     const e = m.tick >= pr.pronta ? entrada : { x: entrada?.x ?? 0, z: entrada?.z ?? 0, botoes: 0 };
-    c.porHumano = !!entrada && !entrada.ia; // a pessoa (não a demo): dois toques no CHUTE = cavadinha (acoes.js)
+    // a pessoa (não a demo nem a cobrança da IA pelo humano): dois toques no CHUTE = cavadinha (acoes.js)
+    c.porHumano = !!entrada && !entrada.ia && !entrada.iaCobra;
     aplicarEntrada(c, e, m.tick);
     c.pedidoPedalada = false; // parado não pedala (o pedido ficaria para depois da cobrança)
     atualizarBotoesAcao(m, c);
@@ -1467,7 +1468,12 @@ export function entradaDemoPartida(m) {
   const j = jogadorPorId(m, m.controlado[0]);
   if (!j) return { x: 0, z: 0, botoes: 0 };
   const pr = m.parada;
-  if (pr && !pr.rolou && pr.cobrador === j.id) return entradaCobranca(m, j);
+  if (pr && !pr.rolou && pr.cobrador === j.id) {
+    // iaCobra: a cobrança é da IA (o `cobrar` não a toma pelos dois toques da pessoa: o botão que ela repete a cada
+    // PARTIDA.repeteCobranca virava cavadinha). Sem `ia` aqui: o resto da simulação segue como antes (m.iaJoga)
+    const c = entradaCobranca(m, j);
+    return { x: c.x, z: c.z, botoes: c.botoes, iaCobra: true };
+  }
   // ia: a IA joga pelo humano — recebe como a IA (sem a recepção assistida do controle humano, recepcao.js)
   const e = entradaIATatica(m, j);
   return { x: e.x, z: e.z, botoes: e.botoes, ia: true };
