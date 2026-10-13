@@ -517,6 +517,10 @@ async function conferirTodosLayouts(pagina) {
     await toque('touchStart', [{ x: bd.x, y: bd.y, id: 20 }]);
     const dc1 = await rodar(pagina, 3);
     await toque('touchCancel', []);
+    // o CDP devolve antes de a página tratar o pointercancel (fila de entrada do navegador): sem esperar, os quadros
+    // medidos às vezes ainda viam o botão segurado (CI de 13/10: máscara 64 e aceso false logo depois). Espera o
+    // cancelamento chegar (até 2 s; se não chegar, o botão continua aceso e a meta reprova como deve)
+    await pagina.waitForFunction(() => !document.getElementById('btn-dividida').classList.contains('ativo'), null, { timeout: 2000 }).catch(() => {});
     const dc2 = await rodar(pagina, 6);
     const dcAceso = await pagina.evaluate(() => document.getElementById('btn-dividida').classList.contains('ativo'));
     meta('DIVIDIDA: toque cancelado pelo sistema não dá bote (nem fica segurado)', `encostado: máscara ${dc1.mask}; depois do cancelamento: ${dc2.mask}, aceso ${dcAceso}`,
