@@ -17,7 +17,9 @@
 //  B9 TROCAR na barreira: nunca um jogador parado (sim.js candidatoTroca);
 //  B10 tiro livre contra: o chute alto da IA não tira o controle do goleiro (troca.js);
 //  B11 pênalti a favor: com qualquer mira, 4–12% para fora (meta do dono ~6%; acoes.js chute);
-//  B12 quem cobrou a bola parada não toca de novo antes de outro (Regra 15; partida.js rolou, sim.js bolaLivre).
+//  B12 quem cobrou a bola parada não toca de novo antes de outro (Regra 15; partida.js rolou, sim.js bolaLivre);
+//  B13 cruzamento do adversário com o goleiro escolhido pelo TROCAR segurado (sem reassumir o controle a cada passo, como
+//     o G7 do teste-goleiro-regras): o controle fica no goleiro (troca.js trocaAerea, m.trocaManual).
 //   node tools/teste-botoes.mjs                 (lógica do repositório)
 //   node tools/teste-botoes.mjs --js <pasta>    (outra cópia da lógica, ex.: a base → REPROVA)
 //   node tools/teste-botoes.mjs --so B3         (um item só)
@@ -526,6 +528,56 @@ if (faz('B12')) {
     det.push(`${sem}: ${tocou ? 'o arremessador pegou a bola' : 'não tocou'}`);
   }
   reg('B12 lateral: o arremessador não toca de novo antes de outro jogador (Regra 15)', det.join(' · '), `${n}/${n}`, ok === n);
+}
+
+// ------------------------------------------------------------------ B13. cruzamento com o goleiro escolhido pelo TROCAR
+if (faz('B13')) {
+  // auditoria do goleiro (12/10): o humano segura TROCAR (0,55 s) com a ala adversária parada com a bola na ponta —
+  // o controle vai ao goleiro — e NÃO reassume nada; a ala cruza para a marca do pênalti. Até alguém do meu time
+  // (que não o goleiro) tocar na bola, o controle fica no goleiro (antes troca.js trocaAerea o tirava em 16/16)
+  const MX = CAMPO.meioX;
+  let n = 0, foi = 0, perdeu = 0;
+  const det = [];
+  for (let sem = 61; sem <= 68; sem++) for (const zs of [-1, 1]) {
+    const m = P.criarPartida({ semente: sem, minutosPorTempo: 60 });
+    for (let i = 0; i < 600 && !(m.partida.estado === 'jogo' && !m.parada); i++) P.passoPartida(m, P.entradaDemoPartida(m));
+    limpar(m);
+    const lado0 = m.ataca[0], gx = -lado0 * MX, g = m.jogadores.find(j => j.time === 0 && j.posicao === 'GOL');
+    P.teleportar(g, gx + lado0 * 2, 0, lado0 > 0 ? 0 : Math.PI);
+    const atk = m.jogadores.filter(o => o.time === 1 && o.posicao !== 'GOL');
+    const def = m.jogadores.filter(o => o.time === 0 && o.posicao !== 'GOL');
+    atk.forEach((o, k) => P.teleportar(o, gx + lado0 * (8 + (k % 4) * 3), -9 + (k % 5) * 4.5, lado0 > 0 ? Math.PI : 0));
+    def.forEach((o, k) => P.teleportar(o, gx + lado0 * (7 + (k % 4) * 3), -8 + (k % 5) * 4.5, lado0 > 0 ? Math.PI : 0));
+    const ala = atk[0]; P.teleportar(ala, gx + lado0 * 4, zs * 26, 0);
+    const b = m.bola;
+    for (let i = 0; i < 34; i++) {
+      b.p.x = ala.x + 0.4; b.p.z = ala.z; b.p.y = 0.11; b.v.x = b.v.y = b.v.z = 0; b.rolando = true; m.posse = ala.id; ala.pedido = null;
+      P.passoPartida(m, { x: 0, z: 0, botoes: BOTAO.TROCAR });
+    }
+    n++;
+    if (m.controlado[0] !== g.id) { det.push(`${sem}${zs > 0 ? '+' : '-'}: o TROCAR segurado não foi ao goleiro`); continue; }
+    foi++;
+    m.posse = null;
+    b.p.x = gx + lado0 * 4; b.p.z = zs * 25; b.p.y = 0.11;
+    const ax = gx + lado0 * 11, T = 1.25;
+    b.v.x = (ax - b.p.x) / T; b.v.z = -b.p.z / T; b.v.y = 7.5; b.w.x = b.w.y = b.w.z = 0; b.rolando = false;
+    m.voo = { tipo: 'cruzamento', de: ala.id, time: 1, para: null, alvo: { x: ax, z: 0 }, tick0: m.tick, tickChave: m.tick, tickChegada: m.tick + 75, alto: true };
+    m.ultimoToque = { id: ala.id, time: 1, tick: m.tick };
+    let p = false, por = '';
+    for (let i = 0; i < 80 && !p; i++) {
+      const dx = b.p.x - g.x, dz = b.p.z - g.z, l = Math.hypot(dx, dz) || 1;
+      const evs = P.passoPartida(m, { x: dx / l, z: dz / l, botoes: 0 });
+      // um companheiro (não o goleiro) tocou na bola: daí em diante a troca é a do passe do meu time (legítima)
+      const u = m.ultimoToque;
+      if (u && u.time === 0 && u.id !== g.id) break;
+      if (m.controlado[0] !== g.id) { p = true; por = evs.map(e => e.tipo).join(','); }
+      if (m.posse != null || m.naMao != null || m.parada) break;
+    }
+    if (p) perdeu++;
+    det.push(`${sem}${zs > 0 ? '+' : '-'}${p ? ':perdeu(' + por + ')' : ''}`);
+  }
+  reg('B13 cruzamento do adversário com o goleiro do TROCAR segurado (sem reassumir): o controle fica no goleiro',
+    `perdeu ${perdeu}/${foi} (goleiro escolhido em ${foi}/${n})${perdeu ? ' — ' + det.filter(x => x.includes(':')).slice(0, 4).join(' ') : ''}`, `0, com ${n}/${n} no goleiro`, foi === n && perdeu === 0);
 }
 
 const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));
