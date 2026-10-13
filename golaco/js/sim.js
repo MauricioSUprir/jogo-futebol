@@ -22,7 +22,7 @@ import { ACOES } from './config.js';
 // (tools/hash-igual.mjs). Exceção: os botões de defesa do humano (defesa.js), que só agem com
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
 import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe } from './ia-tatica.js';
-import { trocaAerea, alvoAereo } from './troca.js';
+import { trocaAerea, alvoAereo, escolhaManual } from './troca.js';
 import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada } from './partida.js';
@@ -344,10 +344,12 @@ function boteIA(m, j) {
 export function passo(m, entradas) {
   m.eventos = [];
   const js = m.jogadores;
-  // time com a bola no pé no começo do passo (ganhouPosse: a escolha manual do TROCAR vale até o time dela ter a bola)
+  // o último tick de cada time com a bola (no pé ou na mão) no começo do passo: a escolha manual do TROCAR vale até o
+  // time dela ter a bola (troca.js escolhaManual). Por time — guardar só o último time com a bola fazia a escolha antiga
+  // "reviver" quando o adversário recuperava a bola (contraprova, teste-botoes B14b)
   if (m.posse != null) {
     const d = jogadorPorId(m, m.posse);
-    if (d) { const up = (m.ultPosse ??= { time: d.time, tick: m.tick }); up.time = d.time; up.tick = m.tick; }
+    if (d) (m.possePorTime ??= {})[d.time] = m.tick;
   }
   // botões de cada time humano (bordas de TROCAR e botões segurados na troca)
   for (const t of m.humanos) {
@@ -761,20 +763,6 @@ function ganhaDisputa(m, j, o) {
   const x = AEREO.k * (notaAerea(j) - notaAerea(o)) / 100 + (oNoGol ? -AEREO.ladoGol : AEREO.ladoGol);
   const p = 1 / (1 + MD.exp(-x));
   return uniforme(m.rng) < p;
-}
-
-/**
- * A escolha do humano do time t vale (a troca automática não passa por cima dela): o controlado é o que ele escolheu pelo
- * TROCAR (tocado, ou segurado = o goleiro) e o time dele não teve a bola desde então — a escolha vale a jogada de defesa
- * inteira. Antes a troca automática rodava em todo ganho de posse do outro time, inclusive no passe entre dois
- * adversários, e desfazia a escolha do TROCAR (e o goleiro do TROCAR segurado) a cada passe da IA (auditoria dos botões,
- * 12/10). Sem escolha manual a troca automática segue como antes (o "Auto" do EA FC: vai para o mais perto da bola).
- */
-function escolhaManual(m, t) {
-  const e = m.trocaManual?.[t];
-  if (!e || m.controlado[t] !== e.id) return false;
-  const up = m.ultPosse;
-  return !(up && up.time === t && up.tick >= e.tick);
 }
 
 /** O jogador ganhou a posse: o controle humano vai para ele (time humano). */

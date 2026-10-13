@@ -1176,11 +1176,13 @@ com as mesmas defesas). Com ele: 59,0% · total 68,0% · de fora da área 86,8% 
   voltar` (`hud.navegarPad`). `soltarTudo(ignorarPad)`; `main.js` limpa os pulsos a cada quadro pausado e solta tudo
   (ignorando o controle segurado) quando a pausa fecha. `main.js faseDoMundo`: a bola solta sem dono que o controlado
   alcança antes de qualquer adversário (rebote, sobra) é ataque. A Ajuda aberta pela pausa volta para ela ao fechar.
-- **Simulação** (`sim.js`): `m.ultPosse = {time, tick}` (time com a bola no pé no começo do passo) e `m.trocaManual[time] =
-  {tick, id, goleiro}` (TROCAR tocado ou segurado). `ganhouPosse` passa o humano para o jogador de linha mais perto da
+- **Simulação** (`sim.js`): `m.possePorTime[time] = tick` (o último tick de cada time com a bola no pé ou na mão, no
+  começo do passo — por time: guardar só o último time com a bola fazia a escolha antiga "reviver" quando o adversário
+  recuperava a bola, contraprova B14b) e `m.trocaManual[time] = {tick, id, goleiro}` (TROCAR tocado ou segurado).
+  `ganhouPosse` passa o humano para o jogador de linha mais perto da
   bola em todo ganho de posse do outro time (como antes: o "Auto" do EA FC), menos por cima da escolha manual da jogada
-  de defesa em andamento (`escolhaManual`: o controlado é o escolhido pelo TROCAR e o time dele não teve a bola desde
-  então). Só na perda, como chegou a ficar, mudava a medida pareada do PRESSÃO (o controlado deixava de ser o mais perto
+  de defesa em andamento (`troca.js escolhaManual`: o controlado é o escolhido pelo TROCAR e o time dele não teve a bola
+  desde então). Só na perda, como chegou a ficar, mudava a medida pareada do PRESSÃO (o controlado deixava de ser o mais perto
   e o 1º homem da IA já apertava sem o botão: `teste-pressao-humano` M1 Δ 0,35 m, M4 10 → 27 faltas) e o treino. Toque aéreo vencido (a hora passou ou a bola é de outro) é limpo em
   `movimentoAereo` e no laço do `bolaLivre`. `candidatoTroca` pula `papel` 'parado'/'marcador' (a barreira).
   `goleiroComoLinha` é falso com o pênalti montado. `m.cobrou = {id, tick}` (`partida.js rolou`; zerado em `bolaMorta`):
@@ -1202,7 +1204,9 @@ com as mesmas defesas). Com ele: 59,0% · total 68,0% · de fora da área 86,8% 
   `m.iaJoga[time]`, a demo/IA jogando por ele, como no painel de equilíbrio): o LANÇAMENTO do humano na zona do cruzamento espera `ACOES.toqueDuplo` s (do soltar) antes de
   marcar o toque (dois toques = rasteiro); o pedido de primeira do humano com `j.recebe` vale até `recebe.chega +
   ACOES.primeiraFolga` s. `troca.js trocaAerea` não troca no chute do adversário nem tira o goleiro escolhido pelo
-  TROCAR segurado (`m.trocaManual[time].goleiro`; também no cruzamento — `teste-botoes` B13, sem reassumir o controle).
+  TROCAR segurado enquanto a escolha vale (`escolhaManual` + `m.trocaManual[time].goleiro`; também no cruzamento —
+  `teste-botoes` B13, sem reassumir o controle). Vencida a escolha (o meu time teve a bola), a troca aérea volta a valer
+  com o goleiro controlado (`teste-botoes` B14: antes a trava ficava a partida inteira).
 - Ajuda: segurar TROCAR/Q/LB leva ao goleiro; no pênalti contra o analógico escolhe o canto (ele fica na linha); o PEGAR
   não vale no recuo. O botão GOLEIRO continua "segure: ele sai do gol" (decisão do dono).
 - Testes: `teste-botoes` (Node, padrão; `--js` mede outra cópia), `teste-controles` (toque de verdade: ≡ com o polegar no

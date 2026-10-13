@@ -20,6 +20,11 @@
 //  B12 quem cobrou a bola parada não toca de novo antes de outro (Regra 15; partida.js rolou, sim.js bolaLivre);
 //  B13 cruzamento do adversário com o goleiro escolhido pelo TROCAR segurado (sem reassumir o controle a cada passo, como
 //     o G7 do teste-goleiro-regras): o controle fica no goleiro (troca.js trocaAerea, m.trocaManual).
+//  B14 (contraprova) a escolha do goleiro pelo TROCAR segurado VENCE quando o meu time tem a bola: num cruzamento depois,
+//     com o controle de volta no goleiro sem TROCAR (bola parada contra, defesa com encaixe), a troca aérea leva o
+//     controle a quem disputa, como sem escolha nenhuma (antes a trava do goleiro escolhido valia a partida inteira);
+//     B14b: a escolha vencida também não desliga a troca automática no passe do adversário quando o controle volta ao
+//     jogador escolhido (m.ultPosse guardava só o último time com a bola: a escolha antiga "revivia");
 //   node tools/teste-botoes.mjs                 (lógica do repositório)
 //   node tools/teste-botoes.mjs --js <pasta>    (outra cópia da lógica, ex.: a base → REPROVA)
 //   node tools/teste-botoes.mjs --so B3         (um item só)
@@ -35,6 +40,7 @@ const imp = f => import(pathToFileURL(path.join(JS, f)).href);
 const P = await imp('partida.js');
 const S = await imp('sim.js');
 const F = await imp('faltas.js');
+const AC = await imp('acoes.js');
 const { BOTAO, PASSO, CAMPO, PARTIDA, ACOES } = await imp('config.js');
 // calibração (B11): outro canto da mira do pênalti do humano, sem mexer no config.js
 if (arg('--canto', null) != null && ACOES.chute) ACOES.chute.penaltiCanto = +arg('--canto');
@@ -578,6 +584,97 @@ if (faz('B13')) {
   }
   reg('B13 cruzamento do adversário com o goleiro do TROCAR segurado (sem reassumir): o controle fica no goleiro',
     `perdeu ${perdeu}/${foi} (goleiro escolhido em ${foi}/${n})${perdeu ? ' — ' + det.filter(x => x.includes(':')).slice(0, 4).join(' ') : ''}`, `0, com ${n}/${n} no goleiro`, foi === n && perdeu === 0);
+}
+
+// ------------------------------------------------------------------ B14. escolha do goleiro vencida (contraprova)
+if (faz('B14')) {
+  const MX = CAMPO.meioX;
+  /** Cruzamento do adversário com o humano no goleiro: modo 'sem' (nenhuma escolha) ou 'vencida' (escolheu o goleiro
+   * pelo TROCAR segurado, depois o meu time teve a bola). Devolve null (montagem falhou) ou se a troca aérea agiu. */
+  function caso(sem, zs, modo) {
+    const m = P.criarPartida({ semente: sem, minutosPorTempo: 60 });
+    for (let i = 0; i < 600 && !(m.partida.estado === 'jogo' && !m.parada); i++) P.passoPartida(m, P.entradaDemoPartida(m));
+    limpar(m);
+    const lado0 = m.ataca[0], gx = -lado0 * MX, g = m.jogadores.find(j => j.time === 0 && j.posicao === 'GOL');
+    P.teleportar(g, gx + lado0 * 2, 0, lado0 > 0 ? 0 : Math.PI);
+    const atk = m.jogadores.filter(o => o.time === 1 && o.posicao !== 'GOL');
+    const def = m.jogadores.filter(o => o.time === 0 && o.posicao !== 'GOL');
+    atk.forEach((o, k) => P.teleportar(o, gx + lado0 * (8 + (k % 4) * 3), -9 + (k % 5) * 4.5, lado0 > 0 ? Math.PI : 0));
+    def.forEach((o, k) => P.teleportar(o, gx + lado0 * (7 + (k % 4) * 3), -8 + (k % 5) * 4.5, lado0 > 0 ? Math.PI : 0));
+    const ala = atk[0]; P.teleportar(ala, gx + lado0 * 4, zs * 26, 0);
+    const b = m.bola;
+    const segura = (dono, n, botoes) => {
+      for (let i = 0; i < n; i++) {
+        b.p.x = dono.x + 0.4; b.p.z = dono.z; b.p.y = 0.11; b.v.x = b.v.y = b.v.z = 0; b.rolando = true; m.posse = dono.id; dono.pedido = null;
+        P.passoPartida(m, { x: 0, z: 0, botoes });
+      }
+    };
+    if (modo === 'vencida') {
+      segura(ala, 34, BOTAO.TROCAR);
+      if (m.controlado[0] !== g.id) return null;
+      AC.assumirControle(m, 0, def[0]);
+      segura(def[0], 60, 0); // o meu time com a bola por 1 s: a escolha venceu
+    }
+    segura(ala, 10, 0);
+    if (m.controlado[0] !== g.id) AC.assumirControle(m, 0, g); // o controle de volta no goleiro, sem TROCAR
+    m.posse = null;
+    b.p.x = gx + lado0 * 4; b.p.z = zs * 25; b.p.y = 0.11;
+    const ax = gx + lado0 * 11, T = 1.25;
+    b.v.x = (ax - b.p.x) / T; b.v.z = -b.p.z / T; b.v.y = 7.5; b.w.x = b.w.y = b.w.z = 0; b.rolando = false;
+    m.voo = { tipo: 'cruzamento', de: ala.id, time: 1, para: null, alvo: { x: ax, z: 0 }, tick0: m.tick, tickChave: m.tick, tickChegada: m.tick + 75, alto: true };
+    m.ultimoToque = { id: ala.id, time: 1, tick: m.tick };
+    for (let i = 0; i < 80; i++) {
+      const evs = P.passoPartida(m, NADA);
+      if (evs.some(e => e.tipo === 'trocaAerea')) return true;
+      if (m.controlado[0] !== g.id || m.posse != null || m.naMao != null || m.parada) return false;
+    }
+    return false;
+  }
+  const r = { sem: [0, 0], vencida: [0, 0] };
+  for (const modo of ['sem', 'vencida']) for (let sem = 61; sem <= 68; sem++) for (const zs of [-1, 1]) {
+    const v = caso(sem, zs, modo);
+    if (v == null) continue;
+    r[modo][1]++; if (v) r[modo][0]++;
+  }
+  reg('B14 cruzamento depois que a escolha do goleiro (TROCAR segurado) venceu: a troca aérea leva o controle a quem disputa',
+    `vencida ${r.vencida[0]}/${r.vencida[1]} · sem escolha ${r.sem[0]}/${r.sem[1]}`, 'vencida = sem escolha, ≥ 90% e ≥ 12 casos',
+    r.vencida[1] >= 12 && r.vencida[0] === r.vencida[1] && r.vencida[0] >= 0.9 * r.vencida[1] && r.vencida[0] >= r.sem[0] * r.vencida[1] / Math.max(1, r.sem[1]));
+  // B14b: a escolha do TROCAR vencida (o meu time teve a bola depois) não desliga a troca automática do passe do adversário
+  // quando o controlado volta a ser o escolhido (a perda com ele mais perto): igual a sem escolha nenhuma
+  const rb = { sem: [0, 0], vencida: [0, 0] };
+  for (const sem of [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]) {
+    const m = novaPartida(sem, 200);
+    let achou = false;
+    for (let i = 0; i < 3000 && !achou; i++) {
+      P.passoPartida(m, P.entradaDemoPartida(m));
+      const d = m.posse != null ? porId(m, m.posse) : null;
+      achou = !!d && d.time === 1 && d.posicao !== 'GOL' && !m.parada && m.naMao == null;
+    }
+    if (!achou) continue;
+    for (const modo of ['sem', 'vencida']) {
+      const mm = clone(m), d = porId(mm, mm.posse);
+      if (modo === 'vencida') rodar(mm, 1, { x: 0, z: 0, botoes: BOTAO.TROCAR });
+      const X = porId(mm, mm.controlado[0]);
+      if (!X || X.posicao === 'GOL') continue;
+      for (let i = 0; i < 30; i++) { bolaNoPe(mm, X); P.passoPartida(mm, NADA); }   // o meu time com a bola
+      for (let i = 0; i < 5; i++) { bolaNoPe(mm, d); if (mm.controlado[0] !== X.id) AC.assumirControle(mm, 0, X); P.passoPartida(mm, NADA); } // perdeu, X segue
+      if (mm.controlado[0] !== X.id) AC.assumirControle(mm, 0, X);
+      let emPasse = false, trocou = null;
+      for (let i = 0; i < 360 && trocou == null; i++) {
+        const evs = P.passoPartida(mm, NADA);
+        const dono = mm.posse != null ? porId(mm, mm.posse) : null;
+        if (evs.some(e => e.tipo === 'passe' && porId(mm, e.id)?.time === 1)) emPasse = true;
+        if (emPasse && dono && dono.time === 1) trocou = mm.controlado[0] !== X.id;
+        if ((dono && dono.time === 0) || mm.parada || mm.naMao != null) break;
+        if (mm.controlado[0] !== X.id && !emPasse) break;
+      }
+      if (trocou == null) continue;
+      rb[modo][1]++; if (trocou) rb[modo][0]++;
+    }
+  }
+  reg('B14b passe do adversário depois que a escolha do TROCAR venceu: a troca automática vale como sem escolha',
+    `vencida ${rb.vencida[0]}/${rb.vencida[1]} · sem escolha ${rb.sem[0]}/${rb.sem[1]}`, 'trocou na recepção: vencida ≥ sem − 1, sem ≥ 3',
+    rb.sem[0] >= 3 && rb.vencida[1] >= 4 && rb.vencida[0] >= rb.sem[0] * rb.vencida[1] / Math.max(1, rb.sem[1]) - 1);
 }
 
 const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));
