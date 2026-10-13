@@ -1,0 +1,70 @@
+name: GOLAÇO — painel de equilíbrio
+# Painel de equilíbrio (golaco/tools/painel-equilibrio.mjs): 144 partidas IA × IA com as MESMAS sementes na versão do
+# PR e na base, lado a lado ("sem recuo": nenhuma medida boa pode piorar). Roda em 8 máquinas de 18 sementes cada e
+# junta tudo numa tabela só no resumo do job "junta" (e no log). Só em PR que mexe na LÓGICA do jogo (golaco/js/*.js —
+# o desenho em golaco/js/render não muda a partida) ou à mão (workflow_dispatch, com a base escolhida).
+# Informativo: não bloqueia o merge; quem decide é a tabela no PR.
+on:
+  pull_request:
+    paths:
+      - 'golaco/js/*.js'
+      - 'golaco/tools/painel-equilibrio.mjs'
+      - '.github/workflows/golaco-painel.yml'
+  workflow_dispatch:
+    inputs:
+      base:
+        description: 'Commit/branch da base para comparar'
+        default: 'main'
+permissions:
+  contents: read
+concurrency:
+  group: golaco-painel-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  parte:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        parte: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || inputs.base || 'main' }}
+          path: base
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 18 partidas (base e PR, mesmas sementes)
+        run: |
+          S0=$((1001 + 18 * ${{ matrix.parte }}))
+          node golaco/tools/painel-equilibrio.mjs --n 18 --sem0 $S0 --par 4 --base base/golaco/js --json painel-${{ matrix.parte }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: painel-${{ matrix.parte }}
+          path: painel-${{ matrix.parte }}.json
+          retention-days: 7
+  junta:
+    needs: parte
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: painel-*
+          merge-multiple: true
+          path: partes
+      - name: Tabela das 144 partidas
+        run: |
+          PARTES=$(ls partes/painel-*.json | sort -V | paste -sd, -)
+          node golaco/tools/painel-equilibrio.mjs --partes "$PARTES" --base base/golaco/js | tee painel.txt
+          {
+            echo '### Painel de equilíbrio (144 partidas, base × PR, mesmas sementes)'
+            echo '```'
+            cat painel.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
