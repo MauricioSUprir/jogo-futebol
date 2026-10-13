@@ -98,7 +98,7 @@ export function criarHud(opc) {
   // fundo escuro fecha a janela (o click do mesmo toque não cai no ≡ que fica embaixo e reabre a pausa)
   for (const s of [el.menu, el.ajuda]) {
     s?.addEventListener('pointerdown', e => {
-      if (e.target === s) { engolirClique(); cmd(s === el.menu ? 'continuar' : 'fechar-ajuda'); }
+      if (e.target === s) { engolirClique(e); cmd(s === el.menu ? 'continuar' : 'fechar-ajuda'); }
     });
   }
   el.tam?.addEventListener('input', () => { cmd('toqueTamanho', +el.tam.value / 100); });
@@ -114,9 +114,9 @@ export function criarHud(opc) {
   el.somVol?.addEventListener('input', () => { cmd('volume', +el.somVol.value / 100); });
   // replay: a camada cobre a tela inteira — qualquer toque ou clique pula (o "Pular" do toque é só o alvo visível)
   // (o click do mesmo toque é engolido: no canto de cima à direita ele caía no ≡ e abria a pausa)
-  el.replay?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(); cmd('replay-pular'); });
+  el.replay?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('replay-pular'); });
   // comemoração do gol: a mesma camada (qualquer toque ou clique pula, depois de 0,5 s — quem decide é o main.js)
-  el.comemoracao?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(); cmd('comemoracao-pular'); });
+  el.comemoracao?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('comemoracao-pular'); });
 
   function marcarGrupo(grupo, valor) {
     document.querySelectorAll(`.segmentado[data-grupo="${grupo}"] button`).forEach(b => {

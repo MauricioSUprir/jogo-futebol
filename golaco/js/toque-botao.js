@@ -6,26 +6,45 @@
 //  - aoTocar(el, fn): age no pointerup do MESMO dedo que desceu em `el`, ainda dentro do elemento tocado (como um click),
 //    e engole o click que vier depois desse toque; mouse e teclado continuam pelo click. fn recebe {target} (o elemento
 //    tocado: quem delega pelo closest() funciona igual).
-//  - engolirClique(): uma camada que some no pointerdown (pular o replay, avançar o pré-jogo, fundo da pausa) engole o
-//    click do mesmo toque — senão ele caía no que ficou embaixo (o ≡ no canto, e a pausa abria de novo).
+//  - engolirClique(e): uma camada que some no pointerdown (pular o replay, avançar o pré-jogo, fundo da pausa) engole o
+//    click do mesmo toque — senão ele caía no que ficou embaixo (o ≡ no canto, e a pausa abria de novo). Com o evento do
+//    pointerdown, o click é engolido enquanto aquele dedo está na tela e até JANELA_MS depois de ele sair (o click vem
+//    logo depois do pointerup, por mais que o dedo fique na tela).
 const JANELA_MS = 450;   // o click do mesmo toque chega logo depois do pointerup (ms, relógio do navegador)
+const DEDO_MAX_MS = 8000; // um dedo marcado cujo pointerup nunca veio deixa de engolir depois disto
 const FOLGA_PX = 10;     // o dedo pode escorregar um pouco para fora do botão, como no click
 let engolirAte = 0;
+const dedos = new Map(); // pointerId → quando desceu (dedos de camadas que sumiram no pointerdown)
 let instalado = false;
+
+function engolindo() {
+  const agora = performance.now();
+  if (agora < engolirAte) return true;
+  for (const [id, t] of dedos) { if (agora - t < DEDO_MAX_MS) return true; dedos.delete(id); }
+  return false;
+}
 
 function instalar() {
   if (instalado || typeof document === 'undefined') return;
   instalado = true;
   // na captura, antes de qualquer ouvinte: o click do toque que já agiu não chega a ninguém
   document.addEventListener('click', e => {
-    if (performance.now() < engolirAte) { e.stopPropagation(); e.preventDefault(); }
+    if (engolindo()) { e.stopPropagation(); e.preventDefault(); }
   }, true);
+  // o dedo marcado saiu da tela: o click dele ainda vem logo depois
+  const saiu = e => { if (dedos.delete(e.pointerId)) engolirAte = Math.max(engolirAte, performance.now() + JANELA_MS); };
+  window.addEventListener('pointerup', saiu, true);
+  window.addEventListener('pointercancel', saiu, true);
 }
 
-/** O click que vier nos próximos `ms` (o do toque que acabou de agir) não chega a ninguém. */
-export function engolirClique(ms = JANELA_MS) {
+/**
+ * O click do toque que acabou de agir não chega a ninguém: com o evento do pointerdown (camada que some no toque), enquanto
+ * aquele dedo está na tela e até JANELA_MS depois de ele sair; sem evento, nos próximos JANELA_MS.
+ */
+export function engolirClique(e = null) {
   instalar();
-  engolirAte = Math.max(engolirAte, performance.now() + ms);
+  if (e && e.pointerId != null && e.type === 'pointerdown') dedos.set(e.pointerId, performance.now());
+  else engolirAte = Math.max(engolirAte, performance.now() + JANELA_MS);
 }
 
 /** Dentro do elemento (com folga): o dedo saiu da tela em cima dele. */

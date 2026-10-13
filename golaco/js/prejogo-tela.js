@@ -61,7 +61,7 @@ export function criarPrejogoTela(opc) {
     if (!ativo || e.button > 0) return;
     e.preventDefault();
     // o toque que encerra o pré-jogo some com a camada: o click dele não cai no ≡ (abria a pausa)
-    engolirClique();
+    engolirClique(e);
     mostrarPular();
     if (naAbertura) opc.aoComecar(); else opc.aoProximo();
   });

@@ -76,7 +76,7 @@ import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar } from './partida.js';
 import { montarFalta } from './faltas.js';
 import { pressionadorVisivel } from './defesa.js';
-import { relogioMao, naPropriaArea } from './regras-goleiro.js';
+import { relogioMao, maoPermitida } from './regras-goleiro.js';
 import { assumirControle } from './acoes.js';
 import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
 import { criarEditorTime } from './editor-time.js';
@@ -378,13 +378,15 @@ function atualizarFase() {
   // o adversário com a bola no pé: a perda é certa (o toque no botão de ataque ainda visível vale pelo da defesa)
   fase.posseRival = mundo.posse != null && timeDe(mundo.posse) !== TIME_HUMANO;
   if (entrada) entrada.definirFase(fase.atual, fase.agora, fase.posseRival);
-  // o PEGAR aparece com o goleiro do humano com a bola no pé (partida), na própria área e com a bola em jogo — onde o
-  // toque faz alguma coisa (sim.js pegarDoHumano: pega, ou com o recuo é tiro livre indireto)
+  // o PEGAR aparece com o goleiro do humano com a bola no pé (partida), com a bola em jogo e a MÃO VALENDO ali
+  // (regras-goleiro.js maoPermitida: na própria área, sem recuo e sem a bola que ele mesmo soltou) — onde o toque pega a
+  // bola (sim.js pegarDoHumano). Depois do recuo ele não aparece: pegar seria tiro livre indireto (Regra 12.2; a tecla
+  // O/RB ainda marca a infração, como no jogo de verdade)
   if (entrada && entrada.definirGoleiroPe) {
     const c = jogadorPorId(mundo, idControlado());
     const b = mundo.bola.p;
     entrada.definirGoleiroPe(!!(mundo.partida && c && c.posicao === 'GOL' && mundo.posse === c.id && mundo.naMao !== c.id
-      && !(mundo.parada && !mundo.parada.rolou) && naPropriaArea(mundo, c, b.x, b.z)));
+      && !(mundo.parada && !mundo.parada.rolou) && maoPermitida(mundo, c, b.x, b.z)));
   }
   // com a bola nas mãos do goleiro do humano (partida), o TROCAR aparece no ataque (vaga 'e'): o Q do teclado já trocava
   if (entrada && entrada.definirGoleiroMao) {
@@ -1501,7 +1503,8 @@ const api = {
    * só para testes de navegador e prints (o jogo nunca chama).
    *  'pressao': um adversário de linha com a bola no meu campo, parado, o meu time em volta (para segurar o PRESSÃO);
    *  'goleiroMao': o meu goleiro com a bola nas mãos, controlado, perto da marca do pênalti;
-   *  'goleiroPe': o meu goleiro com a bola no pé, controlado, com o recuo valendo (Regra 12.2).
+   *  'goleiroPe': o meu goleiro com a bola no pé, controlado, na área, com a mão valendo (o PEGAR aparece e pega);
+   *  'goleiroPeRecuo': o mesmo, com o recuo valendo (Regra 12.2: o PEGAR não aparece; a tecla O marca a infração).
    */
   cenaDeTeste(nome) {
     const m = mundo;
@@ -1533,7 +1536,7 @@ const api = {
     } else {
       m.bola.p.x = g.x + lado * 0.34; m.bola.p.y = CFG.BOLA.raio; m.bola.p.z = g.z; m.bola.v.x = 0; m.bola.v.y = 0; m.bola.v.z = 0; m.bola.rolando = true;
       m.posse = g.id;
-      (m.regraMao ??= { semMao: -1, soltou: -1 }).semMao = g.time;
+      if (nome === 'goleiroPeRecuo') (m.regraMao ??= { semMao: -1, soltou: -1 }).semMao = g.time;
     }
     if (m.controlado[TIME_HUMANO] !== g.id) assumirControle(m, TIME_HUMANO, g);
     corteCamera = true;
