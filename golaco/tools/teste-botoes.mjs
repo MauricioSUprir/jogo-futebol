@@ -25,6 +25,9 @@
 //     controle a quem disputa, como sem escolha nenhuma (antes a trava do goleiro escolhido valia a partida inteira);
 //     B14b: a escolha vencida também não desliga a troca automática no passe do adversário quando o controle volta ao
 //     jogador escolhido (m.ultPosse guardava só o último time com a bola: a escolha antiga "revivia");
+//  B15 (contraprova) pênalti e tiro livre direto a favor: o CHUTE tocado na montagem não bate sozinho na hora da bola
+//     pronta (fraco e sem a mira); a cobrança é a do aperto depois de pronta, e o CHUTE segurado desde a montagem
+//     ainda bate (partida.js cobrar).
 //   node tools/teste-botoes.mjs                 (lógica do repositório)
 //   node tools/teste-botoes.mjs --js <pasta>    (outra cópia da lógica, ex.: a base → REPROVA)
 //   node tools/teste-botoes.mjs --so B3         (um item só)
@@ -675,6 +678,50 @@ if (faz('B14')) {
   reg('B14b passe do adversário depois que a escolha do TROCAR venceu: a troca automática vale como sem escolha',
     `vencida ${rb.vencida[0]}/${rb.vencida[1]} · sem escolha ${rb.sem[0]}/${rb.sem[1]}`, 'trocou na recepção: vencida ≥ sem − 1, sem ≥ 3',
     rb.sem[0] >= 3 && rb.vencida[1] >= 4 && rb.vencida[0] >= rb.sem[0] * rb.vencida[1] / Math.max(1, rb.sem[1]) - 1);
+}
+
+// ------------------------------------------------------------------ B15. CHUTE na montagem do pênalti/tiro livre direto
+if (faz('B15')) {
+  /** Falta do time 1 no meu atacante a `dist` m do gol (área: pênalti; fora: tiro livre direto); devolve o mundo pronto. */
+  function cobrancaAGol(sem, penalti) {
+    const m = novaPartida(sem, 120);
+    limpar(m);
+    const lado0 = m.ataca[0], gx = lado0 * CAMPO.meioX, dx = penalti ? 8 : 22;
+    const A = m.jogadores.find(j => j.time === 0 && j.posicao === 'ATA') ?? m.jogadores.find(j => j.time === 0 && j.posicao !== 'GOL');
+    const D = m.jogadores.find(j => j.time === 1 && j.posicao === 'ZAG');
+    P.teleportar(A, gx - lado0 * dx, 3, lado0 > 0 ? 0 : Math.PI); P.teleportar(D, gx - lado0 * (dx + 1.2), 3.4, lado0 > 0 ? 0 : Math.PI);
+    bolaNoPe(m, A);
+    apitar(m, { def: D.id, cond: A.id, time: 0, x: A.x, z: A.z, area: penalti, chegada: 'tras', v: 3, grau: 'imprudente', cartao: null, motivo: 'imprudente', origem: 'bote', tick: m.tick });
+    for (let i = 0; i < 300 && !(m.parada && m.parada.cobrador != null && m.parada.pronta > 0); i++) P.passoPartida(m, NADA);
+    const pr = m.parada;
+    if (!pr || pr.tipo !== (penalti ? 'penalti' : 'tiroLivre') || m.controlado[0] !== pr.cobrador) return null;
+    return m;
+  }
+  /** Tick da cobrança com a entrada bt(tick, pronta) (null: não saiu em 4 s). */
+  function cobranca(m, bt) {
+    const pronta = m.parada.pronta;
+    for (let i = 0; i < 240 + (pronta - m.tick); i++) {
+      const evs = P.passoPartida(m, { x: 0, z: 0, botoes: bt(m.tick, pronta) });
+      if (evs.some(e => e.tipo === 'cobranca')) return { t: m.tick, pronta };
+    }
+    return { t: null, pronta };
+  }
+  let nA = 0, okA = 0, nB = 0, okB = 0;
+  const det = [];
+  for (const penalti of [true, false]) for (const sem of [1, 2, 3, 4, 5, 6]) {
+    const m0 = cobrancaAGol(sem, penalti);
+    if (!m0) { det.push(`${penalti ? 'pên' : 'TL'} ${sem}: sem a cobrança do time 0`); nA++; nB++; continue; }
+    // (a) toque 1 s antes de pronta e o aperto de verdade (0,3 s) logo depois: a cobrança é a do aperto de verdade
+    const a = cobranca(clone(m0), (t, p) => (t === p - 60 || (t >= p + 2 && t < p + 20)) ? BOTAO.CHUTE : 0);
+    nA++; if (a.t != null && a.t >= a.pronta + 2) okA++;
+    // (b) CHUTE segurado de pronta − 30 a pronta + 15: bate (a força conta de pronta)
+    const b = cobranca(clone(m0), (t, p) => (t >= p - 30 && t < p + 15) ? BOTAO.CHUTE : 0);
+    nB++; if (b.t != null && b.t <= b.pronta + 60) okB++;
+    det.push(`${penalti ? 'pên' : 'TL'} ${sem}: toque cedo → ${a.t == null ? 'não saiu' : (a.t - a.pronta >= 0 ? '+' : '') + (a.t - a.pronta)}, segurado → ${b.t == null ? 'não saiu' : '+' + (b.t - b.pronta)}`);
+  }
+  reg('B15a pênalti / tiro livre direto: CHUTE tocado 1 s antes de pronta não bate sozinho (vale o aperto depois de pronta, +2)',
+    `${okA}/${nA} · ${det.slice(0, 4).join(' · ')}`, `${nA}/${nA}`, nA >= 10 && okA === nA);
+  reg('B15b (guarda) CHUTE segurado desde a montagem até depois de pronta: bate', `${okB}/${nB}`, `${nB}/${nB}`, nB >= 10 && okB === nB);
 }
 
 const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));

@@ -1196,7 +1196,9 @@ com as mesmas defesas). Com ele: 59,0% · total 68,0% · de fora da área 86,8% 
   acima de `FALTAS.bote.vLivre` m/s nem por trás do condutor (`faltas.js chegada`) — `teste-pressao-humano` M4 4 → 5.
 - **Bola parada** (`partida.js cobrar`): os botões do cobrador humano valem na montagem; o pedido feito antes de `pronta`
   espera (renovado) e sai em `pronta`; o CHUTE fora do pênalti e do tiro livre direto vira `passe` (saída) ou
-  `lancamento` (o resto; no lateral, o arremesso longo).
+  `lancamento` (o resto; no lateral, o arremesso longo). No pênalti e no tiro livre direto o CHUTE (a cobrança a gol) só
+  conta a partir de `pronta` (o bit é tirado da entrada na montagem e o chute formado antes é descartado): o toque antes
+  da hora batia sozinho em `pronta`, fraco e sem a mira (`teste-botoes` B15; segurado desde a montagem, bate).
 - **Pênalti**: contra — `lerChute` compara o palpite com o meio do gol (z = 0), `iniciarMergulho` usa o lado escolhido
   (`d.z`) com `d.palpite`; a favor — a mira do humano fica em ±`ACOES.chute.penaltiCanto` m (2,5: ~8% para fora, `teste-botoes` B11);
   a IA continua mirando o canto dela (`PARTIDA.penaltiIA`, ±2,75).

@@ -944,7 +944,11 @@ function cobrar(m, entrada) {
     // os botões valem já na montagem (o cobrador já é o controlado e os botões de ataque já aparecem): o aperto feito
     // antes da hora forma o pedido e ele ESPERA a bola ficar pronta — antes os botões eram zerados até `pronta` e o
     // toque se perdia (auditoria dos botões, 12/10: também na saída logo depois do replay do gol)
-    aplicarEntrada(c, entrada, m.tick);
+    // menos o CHUTE da cobrança a gol (pênalti e tiro livre direto): ele só conta a partir de `pronta` — força e mira são
+    // as do aperto com a bola pronta. Guardado, o toque antes da hora (ansioso, ou ainda o do lance da falta) batia
+    // sozinho na hora da bola pronta, fraco e sem a mira, e o aperto de verdade era ignorado (contraprova, B15)
+    const aGol = pr.tipo === 'penalti' || (pr.tipo === 'tiroLivre' && pr.direto);
+    aplicarEntrada(c, aGol && m.tick < pr.pronta && entrada ? { x: entrada.x ?? 0, z: entrada.z ?? 0, botoes: (entrada.botoes ?? 0) & ~BOTAO.CHUTE } : entrada, m.tick);
     c.pedidoPedalada = false; // parado não pedala (o pedido ficaria para depois da cobrança)
     atualizarBotoesAcao(m, c);
     // bola parada não é chutada a gol — menos o pênalti e o tiro livre direto: o CHUTE (o botão maior, que aparece na
@@ -953,8 +957,12 @@ function cobrar(m, entrada) {
       c.pedido.tipo = pr.tipo === 'saida' ? 'passe' : 'lancamento';
       c.pedido.mod = false;
     }
-    // ainda montando: o pedido fica guardado (renovado) até `pronta`
-    if (c.pedido && m.tick < pr.pronta) { c.pedido.tick = m.tick; return false; }
+    // ainda montando: o pedido fica guardado (renovado) até `pronta` — o chute a gol formado antes da hora (a carga que
+    // vinha do lance) não: a cobrança a gol é a do aperto com a bola pronta
+    if (c.pedido && m.tick < pr.pronta) {
+      if (aGol && c.pedido.tipo === 'chute') c.pedido = null; else c.pedido.tick = m.tick;
+      return false;
+    }
     // tiro de meta (Regra 16): o humano só cobra com a área livre de adversários (o pedido espera)
     if (c.pedido && pr.tipo === 'tiroDeMeta' && !zonaLivre(m)) return false;
   }
