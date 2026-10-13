@@ -287,6 +287,31 @@ if (!SA) {
     reg('S4 órbita (montadas, 60 qps): começa ≥ 60°, ≤ 3° por quadro, ≥ 2 m, fora dos sólidos', `começa ≥ ${f2(elIniMin)}°; giro máx ${f2(giroMax)}°/quadro; altura mín ${f2(minY)} m; ${solidos} em sólidos`, '≥ 60; ≤ 3; ≥ 2; 0',
       elIniMin >= 60 && giroMax <= 3 && minY >= 2 && solidos === 0);
   }
+  // ---------------------------------------------------------------- S9 custo do enquadramento (contraprova de 13/10)
+  // O quadro final é calculado num quadro só (no apito e a cada `resize`, ao girar o celular). A busca varre milhares de
+  // candidatos; a câmera e as visadas fora dos sólidos (`solidoEm`, dezenas de amostras por candidato) só valem para o
+  // candidato que enquadra (ou que seria o "menos ruim"). Antes, em todos: 415 mil chamadas de `solidoEm` (~80 ms de CPU
+  // no PC) num enquadramento com os dois longe na largura. Conta determinística (`custoEnquadrar.solidos`) nos piores
+  // casos montados (os dois a 30–66 m na largura, linha perto do meio e do gol); o quadro escolhido não muda (S4).
+  {
+    const ce = SA.custoEnquadrar;
+    if (!ce) reg('S9 custo do enquadramento: chamadas de solidoEm por quadro final (pior caso montado)', 'sem a conta (custoEnquadrar)', '≤ 15 mil', false);
+    else {
+      let pior = 0, ondePior = '', cpuMax = 0;
+      for (const lado of [1, -1]) for (const [lx, zB, zD] of [[2, 33, 3], [5, -30, 30], [25, -30, 30], [45, 33, -33], [45, -32, 24], [50, -33, 33]]) {
+        const L = lancePasse({ lado, linhaX: lx * lado, margem: -0.5, zB, zD });
+        const a = montarAnel(RA, NJ, J, L);
+        const c = SA.cenaImpedimento(a, { fotoTick: L.passe, id: 9, defensor: 104, por: 7, linhaX: L.linhaX, lado });
+        for (const asp of [16 / 9, 844 / 390]) {
+          ce.solidos = 0;
+          const u0 = process.cpuUsage(); SA.enquadrarSaot(a, c, asp); const u = process.cpuUsage(u0);
+          cpuMax = Math.max(cpuMax, (u.user + u.system) / 1000);
+          if (ce.solidos > pior) { pior = ce.solidos; ondePior = `linha ${lx * lado}, z ${zB}/${zD}, ${asp.toFixed(2)}`; }
+        }
+      }
+      reg('S9 custo do enquadramento: chamadas de solidoEm por quadro final (pior caso montado)', `${pior} (${ondePior}); CPU máx ${f2(cpuMax)} ms (informativo)`, '≤ 15 mil', pior > 0 && pior <= 15000);
+    }
+  }
 
   // ---------------------------------------------------------------- lances de verdade (IA × IA): S2, S4, S6, S7, S8
   const t0 = Date.now();
