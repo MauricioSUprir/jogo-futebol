@@ -816,6 +816,35 @@ for (const t of [
     meta('PC, janela em pé: sem erro no console', erros.length ? erros.join(' | ') : '0', erros.length === 0);
   } finally { await navegador.close(); }
 }
+// A demo da PÁGINA (?demo=1: a IA joga pelo humano) cobrando pênaltis (contraprova 13/10): a página entrega a entrada só
+// com x, z e botões (main.js entradaDoTime) — sem a marca da IA, a cobrança dela (o CHUTE repetido a cada
+// PARTIDA.repeteCobranca) virava cavadinha por dois toques (9 em 40; na main, 0). A IA na página é a IA de antes
+{
+  const { navegador, pagina, erros } = await abrir({ largura: 640, altura: 360, dpr: 1, toque: false });
+  try {
+    await pagina.goto(srv.url + '?q=baixa&demo=1&replay=0&comemoracao=0', { waitUntil: 'load' });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    const dp = await pagina.evaluate(() => {
+      const g = window.__golaco;
+      const out = { n: 0, cav: 0, tipos: {} };
+      for (let k = 0; k < 40; k++) {
+        g.reiniciar({ modo: 'partida', semente: 5000 + k }); g.relogio.usarManual(true);
+        for (let i = 0; i < 200; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+        if (g.faltaDeTeste({ area: true })?.parada !== 'penalti') continue;
+        let tipo = null;
+        for (let i = 0; i < 60 * 20 && !tipo; i++) {
+          g.relogio.avancar(1000 / 60, { desenhar: false });
+          const v = g.mundo.voo;
+          if (v && (v.tipo === 'chute' || v.tipo === 'colocado' || v.tipo === 'cavadinha')) tipo = v.tipo;
+        }
+        out.n++; out.tipos[tipo] = (out.tipos[tipo] ?? 0) + 1; if (tipo === 'cavadinha') out.cav++;
+      }
+      return out;
+    });
+    meta('Demo da página (?demo=1) cobrando 40 pênaltis: nunca cavadinha (a IA na página é a de antes)', `${dp.cav} cavadinhas em ${dp.n} cobranças (${Object.entries(dp.tipos).map(([k, v]) => `${k} ${v}`).join(', ')})`, dp.n === 40 && dp.cav === 0);
+    meta('Demo da página: sem erro no console', erros.length ? erros.join(' | ') : '0', erros.length === 0);
+  } finally { await navegador.close(); }
+}
 await srv.fechar();
 
 const larg = Math.max(...res.map(r => r.nome.length));

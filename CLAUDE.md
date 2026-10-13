@@ -371,7 +371,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   (`carga.novo`; o botão segurado de antes da troca de controle chuta na hora); o chute carregado sai no mesmo tick de
   antes. Bola parada: o CHUTE só cobra pênalti (Panenka: 2 gols/12, 9 fora — erro da cavadinha × pressão do pênalti;
   calibrar é decisão do dono) e tiro livre direto; no resto dois toques não fazem nada; a cobrança da demo leva `iaCobra`
-  (a IA repete o botão na cobrança — sem a marca virava cavadinha). Entrada: soltar e apertar de novo
+  (a IA repete o botão na cobrança — sem a marca virava cavadinha; a página `?demo=1` passa a mesma marca em toda a
+  entrada da demo — `main.js entradaDoTime` — e os achadores `comoPagina` também). Entrada: soltar e apertar de novo
   sem passo no meio vira solto + apertado (`entrada.js` `passoUsou`/`limparPulsos(true)`; antes o toque duplo rápido
   virava um aperto só; fora do laço — replay — `limparPulsos()` zera também o que o passo viu, e o `passoUsou` vem
   ANTES do passo: a tecla segurada no começo do replay, solta e apertada de novo, pula). De longe a pedida nunca sai mais

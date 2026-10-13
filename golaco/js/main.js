@@ -230,15 +230,21 @@ function controlado() { return jogadorPorId(mundo, idControlado()) ?? jogadorPor
  * os dois formatos leem os mesmos números (o hash não muda). Um objeto só, reaproveitado a cada
  * passo (a lógica lê os números no passo e não guarda a referência).
  */
-const _entTime = { [TIME_HUMANO]: { x: 0, z: 0, botoes: 0 } };
+const _entTime = { [TIME_HUMANO]: { x: 0, z: 0, botoes: 0, iaCobra: false } };
 Object.defineProperties(_entTime, {
   x: { value: 0, writable: true }, z: { value: 0, writable: true }, botoes: { value: 0, writable: true },
+  iaCobra: { value: false, writable: true },
 });
 function entradaDoTime(e) {
   const x = e?.x ?? 0, z = e?.z ?? 0, botoes = (e?.botoes ?? 0) | 0;
+  // a IA jogando pelo humano (?demo=1: a entrada da demo traz `ia` ou `iaCobra`): os botões NÃO são da pessoa — sem
+  // cavadinha por dois toques nem espera do toque rápido (sim.js/partida.js porHumano). Só a marca `iaCobra` passa: o
+  // `ia` a página nunca entregou (a recepção e o goleiro da demo da página seguem como antes; contraprova 13/10: sem a
+  // marca, a cobrança da demo virava cavadinha, 9 em 40 pênaltis)
+  const ia = !!(e && (e.ia || e.iaCobra));
   const d = _entTime[TIME_HUMANO];
-  d.x = x; d.z = z; d.botoes = botoes;
-  _entTime.x = x; _entTime.z = z; _entTime.botoes = botoes;
+  d.x = x; d.z = z; d.botoes = botoes; d.iaCobra = ia;
+  _entTime.x = x; _entTime.z = z; _entTime.botoes = botoes; _entTime.iaCobra = ia;
   return _entTime;
 }
 
@@ -1349,7 +1355,7 @@ const api = {
       e = e ?? { x: 0, z: 0, botoes: 0 };
       // a edição na fila (Editar time / editarTime) entra no 1º passo, como no laço da página
       if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
-      rodarPasso({ x: e.x ?? 0, z: e.z ?? 0, botoes: e.botoes ?? 0 }, ac);
+      rodarPasso({ x: e.x ?? 0, z: e.z ?? 0, botoes: e.botoes ?? 0, iaCobra: !!(e.ia || e.iaCobra) }, ac);
     }
     return hashMundo(mundo);
   },
