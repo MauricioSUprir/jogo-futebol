@@ -191,22 +191,22 @@ desenhados aqui, fictícios: Golaço FC = escudo preto com o G verde do bandeir�
 com o vento. Nada licenciado e nenhum texto novo na tela (escudos e marca são só desenho; o nome do time fica só no
 `aria-label`).
 
-Resultado (`teste-hud-minimo` H10, mesma ferramenta na base com `--raiz`; altura × largura no jogo "34'" / acréscimos
+Resultado (`teste-hud-minimo` H10, mesma ferramenta na base com `--raiz`; largura × altura no jogo "34'" / acréscimos
 "45+2' 1º T +4" / intervalo):
 
 | Medida (`teste-hud-minimo` H10) | Antes (placar compacto) | Depois | Referência do dono | Meta |
 |---|---|---|---|---|
-| Celular (844×390, 667×375 e 568×320, com entalhe): jogo "34'" | 169×30 = 5084 px² | 196×24 = 4708 px² | 248×29 = 7192 px² | altura ≤ 24 px; altura e área < antes e < referência |
-| Celular: acréscimos "45+2' 1º T +4" | 225×30 = 6743 px² | 253×24 = 6062 px² | | idem |
-| Celular: intervalo | 232×30 = 6949 px² | 258×24 = 6202 px² | | idem |
-| PC 1280×720: jogo / acréscimos / intervalo | 182×34 = 6176 / 238×34 = 8101 / 244×34 = 8290 px² | 208×26 = 5395 / 265×26 = 6896 / 270×26 = 7014 px² | | altura ≤ 26 px; área < antes e < referência |
+| Celular (844×390, 667×375 e 568×320, com entalhe): jogo "34'" | 169×30 = 5084 px² | 197×24 = 4732 px² | 248×29 = 7192 px² | altura ≤ 24 px; altura e área < antes e < referência |
+| Celular: acréscimos "45+2' 1º T +4" | 225×30 = 6743 px² | 254×24 = 6086 px² | | idem |
+| Celular: intervalo | 232×30 = 6949 px² | 259×24 = 6226 px² | | idem |
+| PC 1280×720: jogo / acréscimos / intervalo | 182×34 = 6176 / 238×34 = 8101 / 244×34 = 8290 px² | 209×26 = 5421 / 266×26 = 6922 / 271×26 = 7040 px² | | altura ≤ 26 px; área < antes e < referência |
 | Peças (marca, 2 escudos, 2 siglas, placar, relógio no bloco verde, nessa ordem) | faltam a marca e os 2 escudos; relógio sem bloco | todas, na ordem; relógio preto no verde (~11:1) | todas | todas; contraste ≥ 4,5:1 |
 | Números (gols / relógio), siglas, "1º T +4" no celular | 15 / 12 px, 11 px, 9 px | 16 / 14 px, 11 px, 10 px | ~14 px, ~11 px | ≥ 14, ≥ 11, ≥ 10 px |
-| Com o minimapa ligado (acréscimos) | nada encosta | nada encosta (667 e 568 apertam os espaços; em 568 o minimapa encosta à direita do placar) | | folga ≥ 4 px com o minimapa e o menu |
+| Com o minimapa ligado (acréscimos) | nada encosta | nada encosta nas 3 telas (em 568×320 os espaços do placar apertam, `topo-c4`) | | folga ≥ 4 px com o minimapa e o menu |
 
 A base REPROVA o H10 nos 12 casos (3 telas do celular + PC × 3 estados: sem marca e sem escudos, 30/34 px de altura, relógio de 12–13 px, "1º T" de 9 px) e a
 versão nova passa. O placar ficou um pouco mais LARGO que o de antes (a marca e os escudos ocupam ~30 px), mas mais baixo
-(24 × 30 px) e com área menor em todos os estados e telas; a tela limpa continua no orçamento (H1: 7,2–9,9% no celular,
+(24 × 30 px) e com área menor em todos os estados e telas; a tela limpa continua no orçamento (H1: 7,2–10,0% no celular,
 ≤ 11%; H5: 1,7% no PC, ≤ 2,5%). Nos treinos o placar é o mesmo, sem o relógio (159×24 px no celular, 168×26 no PC; nada
 encosta no painel nem no menu nas 3 telas e no PC — conferido à parte).
 
