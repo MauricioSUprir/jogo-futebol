@@ -351,4 +351,5 @@ jogos. O que virou constante está em `config.js CONDUCAO.passosPorToque` e no c
 
 Medido no jogo (`tools/teste-conducao-curta.mjs`, humano sozinho e 6 partidas IA × IA; base → agora): trote 1,49 →
 2,88 toques/s e 1,98 → 0,99 m; corrida 1,85 → 2,53 toques/s, 3,0 → 2,2 m por toque; disparada 3,5 m por toque e
-~1,1 toque por passada (igual); bola–corpo no trote 0,48 → 0,42 m (IA 0,67 → 0,58 m).
+~1,1 toque por passada (igual); bola–corpo no trote 0,48 → 0,42 m (IA 0,67 → 0,58 m antes da defesa recalibrada; depois dela 0,588 em 6 partidas e
+0,595 em 12 — a meta ≤ 0,59 com 12 partidas, condição de merge, ficou 0,005 m acima).
