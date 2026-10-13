@@ -852,7 +852,7 @@ export function controlarComBola(m, j) {
       // toque sem pé livre): nem o freio (manda a bola reto nos cortes de uma vez, tecla ou polegar rápido — trechos de
       // > 1 s com a bola longe no roteiro duro) nem o toque com a leitura do meio do gesto (4,2 m de deriva no giro).
       // (Contraprova, 13/10: sem isso, a 30 qps o toque que esperou saía na direção do meio do gesto)
-      if (j.saltoTick === j.leituraTick && m.tick - j.leituraTick < ESPERA_LEITURA) {
+      if (j.saltoTick >= 0 && j.saltoTick === j.leituraTick && m.tick - j.leituraTick < ESPERA_LEITURA) {
         const esperou = c.esperaSalto === m.tick - 1;
         const semLeituraNova = esperou && j.leituraTick === c.esperaLeitura && m.tick - c.esperaInicio < ESPERA_LEITURA;
         if ((!esperou || semLeituraNova) && bolaFicaNoAlcance(j, b)) {
