@@ -305,7 +305,10 @@ function boteIA(m, j) {
   // o condutor: corpos de 0,3 m de raio) — pedido do dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola"
   const ultT = dono.cond?.ult;
   const lento = !!m.partida && MD.hypot(dono.vx, dono.vz) < cfg.vParado && !(ultT && (m.tick - ultT.tick) * PASSO < cfg.semToque);
-  if (!lento && (dD < cfg.colada || dB > dD)) return; // colada no pé de quem conduz: não alcança
+  // colada no pé de quem conduz: não alcança — a não ser que ela esteja ENCOSTADA no corpo do marcador com os dois
+  // andando juntos (o condutor empurrando a bola nele): aí ela está entre os dois e é disputada
+  const encostada = dB <= cfg.encostada && MD.hypot(j.vx - dono.vx, j.vz - dono.vz) <= cfg.encostadaVrel;
+  if (!lento && !encostada && (dD < cfg.colada || dB > dD)) return;
   if (uniforme(m.rng) >= cfg.chancePorPasso) return;
   // Etapa 4 (só na partida): o bote que chega pode ser falta (faltas.js: chegada, velocidade, desarme) — a bola fica
   // com o condutor (desequilibrado) e o árbitro decide nas regras (vantagem, tiro livre, pênalti, cartão)

@@ -100,8 +100,9 @@ travaApoio, quadril`.
   `GESTO.superficieVBola`, corpo acima de `GESTO.superficieV`): a direção é do centro da bola para o tornozelo e a
   distância é a saída do centro da bola da cápsula. Anda só com o que sobra de `GESTO.velSuperficie` depois do passo
   de `tx, tz`, e fica abaixo de `GESTO.velDesvio × livre` (zero na saída do chão e no pouso). A física NUNCA lê
-  `ox, oz` (pouso, goleiro e hash usam `tx, tz`). Medido: chuteira dentro da bola 61,3% → 32% dos quadros (o resto é o
-  pé que POUSA embaixo da bola — ponto de pouso da física).
+  `ox, oz` (pouso, goleiro e hash usam `tx, tz`). Medido (`teste-conducao`): chuteira dentro da bola 61,3% → 32% dos
+  quadros só com este ajuste, 46,3% com o toque mais frequente da condução curta (o resto é o pé que POUSA embaixo da
+  bola — ponto de pouso da física); a meta PENDENTE de ≤ 1% continua.
 - `quadril`: altura do quadril da última pose (`anim.js alturaQuadril`, guardada pela simulação no
   fim do passo).
 - Pé plantado e tronco: mais torto que 1,0 rad o pé dá um passo para se alinhar (a passada fica
@@ -1110,6 +1111,11 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
   filtrada (`B.cvx/cvz`) abaixo de `IA_DEFESA.lento.v` por `lento.s[pressão]` s (+ `lento.longe` fora da linha de
   engajamento): o 1º homem aperta (também além da linha), mirando `lento.aperto` m da bola; o 2º cobre em todo nível.
 - `faltas.js chanceFaltaBote`: × `FALTAS.bote.lento` com o condutor abaixo de `vParado` (vale também na DIVIDIDA).
+- (condução curta, 12/10) a regra da bola colada lê `ACOES.boteIA.colada` (0,305: o 0,35 de antes × 0,87, a razão da
+  bola–condutor da IA no trote, 0,67 → 0,58 m; também `boteIA.bolaSolta` 0,7 → 0,61, `DEFESA_HUMANO.pressao.bolaSolta`
+  0,5 → 0,435 e `dividida.soltaIni/soltaFaixa` 0,45/0,5 → 0,39/0,435) e não vale com a bola **encostada** no corpo do
+  marcador (`boteIA.encostada`, 0,42 m do centro dele) e os dois andando juntos (velocidade relativa ≤ `encostadaVrel`,
+  1 m/s): o condutor empurrando a bola no marcador colado à frente. Vale também no treino (o hash do ataque muda).
 
 ### PRESSÃO (`defesa.js`; o desenho em `render/jogador3d.js`)
 - `pressionadorDe(m, time, excluir = -1)` → id de quem chega primeiro ao ponto de encontro (a `pressao.colado` m do corpo

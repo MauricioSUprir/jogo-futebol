@@ -443,14 +443,23 @@ export const ACOES = {
   pressaoDist: 2.2,           // m — adversário mais perto que isso pressiona o batedor
   // bote da IA defensora (Etapa 2, enxuto; os botões de defesa e a disputa completa são da Etapa 3):
   // acompanha a ~1,5 m, ataca a bola solta do pé e tenta tirar só com ela ao alcance do pé
-  boteIA: { distAcompanha: 1.5, bolaSolta: 0.7, alcance: 0.65, chancePorPasso: 0.08, descanso: 45, vSai: 3.2,
+  // (bolaSolta e colada × 0,87 com a condução curta de 12/10: a bola–condutor da IA no trote caiu 0,67 → 0,58 m —
+  // a mesma régua relativa; sem isso o bote não chegava no condutor que empurra a bola no marcador colado)
+  boteIA: { distAcompanha: 1.5, bolaSolta: 0.61, alcance: 0.65, chancePorPasso: 0.08, descanso: 45, vSai: 3.2,
     // (só na partida; pedido do dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola") com o condutor
     // abaixo de vParado m/s e sem tocar na bola há semToque s, a bola parada à frente do pé não está "colada": quem
     // chega ao alcance dela tenta tirar — e ganha pela mesma chance da DIVIDIDA do humano (defesa.js chanceDividida)
     vParado: 2.0, semToque: 0.1,
     // bola a menos disto do condutor: "colada" no pé dele — o bote não alcança (condução curta de 12/10: calibrável
     // aqui sem mexer no código; CONDUCAO.passosPorToque deixa a bola mais perto do pé)
-    colada: 0.35 },
+    colada: 0.305,
+    // bola a menos de `encostada` m do CORPO do marcador (raio do corpo 0,3 + raio da bola 0,11 + 0,01) com os dois
+    // andando juntos (velocidade relativa ≤ `encostadaVrel` m/s): o condutor empurra a bola no marcador — ela não está
+    // colada no pé dele, está entre os dois e é disputada. Sem isso, com a condução curta, o condutor que empurrava a
+    // bola no marcador colado à frente (toques a cada 0,1 s) nunca perdia: a bola a 0,29 m dele e a 0,31 m do marcador
+    // (teste-parado, "andando devagar"). Quem chega correndo numa bola colada continua sem alcançar (a PRESSÃO em
+    // disparada fazia faltas de frente: teste-pressao-humano M4)
+    encostada: 0.42, encostadaVrel: 1.0 },
   primeiraErro: 1.4,          // multiplica o erro de jogada de primeira
 };
 
@@ -1110,7 +1119,7 @@ export const DEFESA_HUMANO = {
     base: 0.55,               // chance com atributos iguais (meio da faixa de acerto real, 44–71%)
     porAttr: 0.01,            // por ponto de desarme acima da média de drible e controle do condutor
     solta: 0.12,              // a mais com a bola solta do pé do condutor (soltaIni → soltaIni + soltaFaixa m dele)
-    soltaIni: 0.45, soltaFaixa: 0.5,
+    soltaIni: 0.39, soltaFaixa: 0.435, // (0,45 e 0,5 × 0,87 com a condução curta de 12/10: a bola mais perto do pé)
     vSai: 3.2,                // m/s — a bola tirada sai para longe do condutor (como o boteIA)
     semDominio: 0.5,          // s — quem perdeu a bola não a domina de novo logo em seguida
   },
@@ -1125,7 +1134,7 @@ export const DEFESA_HUMANO = {
   // no máximo a `trasAprox` m/s: abaixo da carga por trás, FALTAS.carga.vMin). `filtro`: s da velocidade do condutor.
   pressao: {
     validade: 1, acel: 7, freio: 6.2, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.5, contorno: 1.2,
-    naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.5, filtro: 0.2, ganho: 3, aproxMax: 4, trasPerto: 1.5, trasAprox: 1.4,
+    naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.435, filtro: 0.2, ganho: 3, aproxMax: 4, trasPerto: 1.5, trasAprox: 1.4,
   },
 };
 
