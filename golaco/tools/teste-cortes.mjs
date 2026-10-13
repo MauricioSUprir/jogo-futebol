@@ -134,8 +134,12 @@ function bateriaGiro(gestos) {
 }
 
 // ---------------- giro de 180° com o gesto no tick do toque marcado (condução curta, 12/10)
-/** Corre a 6 m/s até o toque marcado cair no tick +1+ad e faz o giro com o gesto. */
-function giroNoToque(rumo, gesto, sem, ad) {
+/**
+ * Corre a 6 m/s até o toque marcado cair no tick +1+ad e faz o giro com o gesto. `por` = passos por quadro: o main.js
+ * lê o analógico UMA vez por quadro, e a 30 qps (celular na Média) os 2 passos do quadro usam a mesma leitura — o 2º
+ * vai marcado `repete` (como o main.js manda); `fq` = em que passo do quadro o gesto começa.
+ */
+function giroNoToque(rumo, gesto, sem, ad, por = 1, fq = 0) {
   const hx = Math.cos(rumo), hz = Math.sin(rumo);
   const m = criarMundo({ semente: 100 + sem, jogadores: [{ id: 0, x: -30, z: 0, rumo }], bola: { x: -30 + hx * 0.4, z: hz * 0.4 }, posse: 0 });
   const j = m.jogadores[0];
@@ -146,7 +150,8 @@ function giroNoToque(rumo, gesto, sem, ad) {
   const x0 = j.x, z0 = j.z;
   let d = 0, virou = false, bmax = 0;
   for (let k = 0; k < 150; k++) {
-    passo(m, { 0: gesto(k, rumo) });
+    const q = (k + fq) % por; // passo dentro do quadro: 0 = leitura nova do analógico
+    passo(m, { 0: q === 0 ? gesto(k, rumo) : { ...gesto(k - q, rumo), repete: true } });
     if (!virou) d = Math.max(d, Math.abs(-(j.x - x0) * hz + (j.z - z0) * hx));
     if (-(j.vx * hx + j.vz * hz) >= 2) virou = true;
     bmax = Math.max(bmax, Math.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z));
@@ -163,6 +168,21 @@ function giroNoToque(rumo, gesto, sem, ad) {
   }
   reg(`giro 180° a 6 m/s com o gesto no tick do toque marcado — deriva (${casos} casos)`, `${fmt(pior, 3)} m (${piorNome})`, '≤ 0,25 m', pior <= 0.25);
   reg('giro 180° com o gesto no tick do toque — bola com o jogador e saindo no sentido novo', `${casos - ruins}/${casos} (bola até ${fmt(bmax)} m)`, `${casos}/${casos}`, ruins === 0);
+}
+{
+  // o mesmo com a entrada lida a 30 qps (contraprova da condução curta, 13/10): o celular na Média roda a 30–48 qps e o
+  // main.js lê o analógico uma vez por quadro — o 2º passo do quadro repete a leitura do meio do gesto. Sem saber que é
+  // a MESMA leitura, o toque que esperou 1 tick saía na direção do meio do gesto (4,2 m de deriva, como antes da
+  // espera; a main dava 4,09 m)
+  let pior = 0, piorNome = '', casos = 0, ruins = 0, bmax = 0;
+  for (const n of [1, 2, 4, 6]) for (const l of [1, -1]) for (const rg of [0, 37]) for (let sem = 1; sem <= 4; sem++) for (const ad of [0, 1]) for (let fq = 0; fq < 2; fq++) {
+    const r = giroNoToque(rg / DEG, borda(n, l), sem, ad, 2, fq);
+    casos++; bmax = Math.max(bmax, r.bmax);
+    if (!r.ok) ruins++;
+    if (r.d > pior) { pior = r.d; piorNome = `borda em ${n} ${l > 0 ? '+' : '−'}, rumo ${rg}°, semente ${sem}, toque +${ad}, passo ${fq} do quadro`; }
+  }
+  reg(`giro 180° a 6 m/s com o gesto no tick do toque, entrada a 30 qps — deriva (${casos} casos)`, `${fmt(pior, 3)} m (${piorNome})`, '≤ 0,25 m', pior <= 0.25);
+  reg('giro 180° com o gesto no tick do toque, entrada a 30 qps — bola com o jogador', `${casos - ruins}/${casos} (bola até ${fmt(bmax)} m)`, `${casos}/${casos}`, ruins === 0);
 }
 
 /**

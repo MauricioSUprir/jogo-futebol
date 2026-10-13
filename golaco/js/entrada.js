@@ -609,7 +609,8 @@ export function criarEntrada(opc = {}) {
     baseRepouso();
   }
 
-  const saida = { x: 0, z: 0, botoes: 0, ax: 0, ay: 0, mag: 0 };
+  // repete: o main.js marca os passos do quadro depois do 1º (a mesma leitura; sim.js aplicarEntrada)
+  const saida = { x: 0, z: 0, botoes: 0, ax: 0, ay: 0, mag: 0, repete: false };
   return {
     /**
      * Lê todas as fontes. yaw = rumo da câmera no chão; agora = ms do laço (o relógio do jogo, manual nos testes:

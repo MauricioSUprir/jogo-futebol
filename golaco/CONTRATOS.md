@@ -30,8 +30,10 @@ podem ser usados. Conferido por `tools/teste-matdet.mjs` (precisão) e `tools/te
 
 ## Mundo (`js/sim.js`)
 - `criarMundo({semente, jogadores:[{id,x,z,rumo,attr,time,papel}], bola:{x,z}, posse, log})`
-- `passo(mundo, entradas)` — avança 1/60 s. `entradas = { [id]: {x, z, botoes} }`:
-  analógico **já no mundo** (|v| ≤ 1, quantizado em 1/1024) + máscara `BOTAO` (`config.js`).
+- `passo(mundo, entradas)` — avança 1/60 s. `entradas = { [id]: {x, z, botoes, repete?} }`:
+  analógico **já no mundo** (|v| ≤ 1, quantizado em 1/1024) + máscara `BOTAO` (`config.js`). `repete: true` = a MESMA
+  leitura do analógico do passo anterior (o `main.js` lê a entrada uma vez por quadro: a 30 qps o 2º passo do quadro
+  repete a do 1º); sem o campo, cada passo é uma leitura nova (testes em Node, API `__golaco`).
 - `hashMundo(mundo)` — FNV-1a do estado (bola, corpos, pés, posse, tick, gerador).
 - `mundo.eventos` — eventos do último passo (`toque`, `quique`, `trave`, `rede`, `perda`, ...).
 - `mundo.posse` — id do jogador com a bola ou `null`.
@@ -145,7 +147,11 @@ pede à passada que tire o pé do toque do chão a tempo, e o toque espera por e
   mais que `CONDUCAO.saltoGesto` num tick; `cond.esperaSalto`): o toque marcado para esse tick espera 1 tick (se a
   bola continua ao alcance) e lê o analógico de novo; se ele ainda pula, ou a bola sairia do alcance, sai um **toque de
   freio** (`executarToque(…, freio = true)`): no sentido da velocidade do corpo, até s²/(2·freioGiro) + ofsFrente(s)
-  à frente dele, com v0 = `velParaParar` (a mesma conta da rolagem). Não vale em `j.inv` nem abaixo de 2,5 m/s.
+  à frente dele, com v0 = `velParaParar` (a mesma conta da rolagem). O freio não põe o corpo em inversão (`j.inv`);
+  abaixo de 2,5 m/s o toque sai normal. Com a entrada marcada `repete` (a mesma leitura do quadro anterior) depois de um
+  pulo, o analógico continua "pulando" (`saltoTick` = este tick): sem leitura nova o gesto pode estar no meio do caminho,
+  e o toque espera a leitura do próximo quadro ou sai de freio (contraprova de 13/10: a 30 qps o toque que esperou saía
+  na direção do meio do gesto, 4,2 m de deriva no giro de 180°; `teste-cortes`, entrada a 30 qps, ≤ 0,25 m).
 - **Placas:** o toque não manda a bola além das placas (`ateAPlaca`; `CAMPO.meioX/meioZ + entorno`): com o alvo além
   delas, a bola sai para parar antes (`velParaParar`). Só acontece fora do campo (treino e testes).
 - **Corte** (a bola sai na linha do analógico ±20°, o corpo segura o rumo até o toque —
