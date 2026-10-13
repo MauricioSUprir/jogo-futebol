@@ -475,8 +475,9 @@ export const GOLEIRO = {
   // 83,6% (48 partidas, sementes 1001–1048; a faixa de 6 a 16,5 m ~1 ponto abaixo da meta, dentro do sorteio da amostra).
   // No painel de 144 do CI (rodada "volume de ataque", 13/10) a faixa de 6 a 16,5 m ficou em 60–61,5% (meta 55–60%) com
   // −0,35/−0,5; com o condutor que entra na área (utilidade.manterPeso) os chutes ficam mais perto e as defesas caem
-  // sozinhas: −0,3 deixou a faixa de 6 a 16,5 m em 53,0% no CI → −0,15
-  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.15, cTempo: 6, vRef: 20 },
+  // sozinhas: −0,3 deixou a faixa de 6 a 16,5 m em 53,0% no CI → −0,15 → 60,9% (com a troca aérea e a defesa da
+  // arrancada a 7,0 m/s) → −0,3 de novo
+  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.3, cTempo: 6, vRef: 20 },
   // segurar × espalmar (StatsBomb): em pé, de longe ~60%; no mergulho ~25%; de perto ~23%
   segurar: { emPe: 0.6, mergulho: 0.25, perto: 0.23 },
   alturaMax: 2.45,            // m alcançados com a mão no alto
