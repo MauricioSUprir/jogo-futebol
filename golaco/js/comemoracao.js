@@ -22,7 +22,7 @@
 // plano médio de quem sofreu. Nada é alocado por tick neste módulo (vetores e objetos reaproveitados).
 import { PASSO, CAMPO, JOGADOR, COMEMORACAO } from './config.js';
 import { difAng } from './mat.js';
-import { passoCorpo, passoPassada, passoPeDesenhado } from './jogador.js';
+import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado } from './jogador.js';
 import { pose, alturaQuadril, J, NJ, ik, ikBraco } from './anim.js';
 import { mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho } from './goleiro.js';
 
@@ -35,10 +35,13 @@ const GRAV = 9.81;
 export const FINAIS = ['joelhos', 'pulo', 'ceu', 'bracos', 'giro'];
 export const FINAIS_CURTA = ['bracos', 'ceu'];
 export const CORRIDAS = ['aviao', 'punho', 'peito'];
-export const FASES = ['rede', 'corrida', 'final', 'abraco', 'reacao', 'fim'];
+// (fases de CÂMERA: 'torcida' é um corte no fim do abraço — os atores continuam abraçados; 'treinador' só com o gancho)
+export const FASES = ['rede', 'corrida', 'final', 'abraco', 'torcida', 'treinador', 'reacao', 'fim'];
+/** Enquadramentos do corte da torcida no gol (sem repetir o anterior). */
+export const TORCIDAS = ['fundo', 'lateral', 'close'];
 /** Papéis dos atores. */
-export const PAPEIS = ['autor', 'colega', 'resto', 'sofreu', 'goleiroSofreu', 'contra'];
-const AUTOR = 0, COLEGA = 1, RESTO = 2, SOFREU = 3, GOLEIRO_SOFREU = 4, CONTRA = 5;
+export const PAPEIS = ['autor', 'colega', 'resto', 'sofreu', 'goleiroSofreu', 'contra', 'treinador'];
+const AUTOR = 0, COLEGA = 1, RESTO = 2, SOFREU = 3, GOLEIRO_SOFREU = 4, CONTRA = 5, TREINADOR = 6;
 
 const NHIST = 640;   // ticks guardados da posição do autor (10,6 s; a cena dura ≤ 8,5 s)
 const s60 = s => Math.round(s / PASSO);
@@ -108,7 +111,9 @@ function escolherAlvo(autor, s, min, max) {
 /**
  * Plano da comemoração (no tick do gol; só LÊ o mundo). gol = {tick, time (que marcou), id (autor de verdade:
  * render/autor-gol.js), contra}. opc = {timeHumano (gol do outro time = cena curta), ultima (a finalização do gol
- * anterior), variante (força uma: testes e prints)}.
+ * anterior), variante (força uma: testes e prints), cortes (false = sem o corte da torcida: a câmera de antes),
+ * ultimaTorcida (o enquadramento da torcida do gol anterior), torcida (força um), treinador ({id, time, x, z, rumo, kit}
+ * do time que marcou — o GANCHO da frente dos treinadores; null = sem o plano dele)}. A cena curta não tem cortes.
  */
 export function planejarComemoracao(m, gol, opc = {}) {
   const time = gol.time === 1 ? 1 : 0;
@@ -159,9 +164,21 @@ export function planejarComemoracao(m, gol, opc = {}) {
       if (d < dm) { dm = d; reacaoId = j.id; }
     }
   }
+  // o corte da torcida (cena normal): o enquadramento pelo hash, sem repetir o do gol anterior
+  const cortes = !curta && opc.cortes !== false;
+  let torcida = null;
+  if (cortes) {
+    if (opc.torcida && TORCIDAS.includes(opc.torcida)) torcida = opc.torcida;
+    else {
+      const ult = opc.ultimaTorcida ?? null, livres = TORCIDAS.filter(v => v !== ult);
+      torcida = livres[hashGol(gol.tick, autor.id + 300) % livres.length];
+    }
+  }
+  const tr = opc.treinador;
+  const treinador = !curta && tr ? { id: tr.id, time: tr.time ?? time, x: tr.x, z: tr.z, rumo: tr.rumo ?? -Math.PI / 2, kit: tr.kit ?? null } : null;
   return {
     golTick: gol.tick, time, s, curta, autorId: autor.id, contraId, contra: !!gol.contra || contraId != null,
-    alvo, variante, corrida, colegas, colegasPerto: cand.length, reacaoId, hash: h,
+    alvo, variante, corrida, colegas, colegasPerto: cand.length, reacaoId, hash: h, cortes, torcida, treinador,
   };
 }
 
@@ -215,19 +232,31 @@ export function criarCena(plano, m) {
     plano, mF, atores, ordem: null, autor: null, reacao: null,
     alvo: plano.alvo, s: plano.s, time: plano.time, curta: plano.curta, variante: plano.variante, corrida: plano.corrida,
     k: 0, acum: 0, alfa: 0, acabou: false,
-    kFinal: -1, kFimFinal: -1, kFimAbraco: -1,
+    kFinal: -1, kFimFinal: -1, kFimAbraco: -1, kTorcida: -1, kReacao: -1,
     // fim provisório (a finalização ainda não começou): o pior caso
-    kFim: s60(plano.curta ? Math.max(C.curta.duracao, C.chegadaMax + C.curta.final + C.curta.reacao) : C.chegadaMax + C.final + C.abracoMin + C.reacao),
+    kFim: s60(plano.curta ? Math.max(C.curta.duracao, C.chegadaMax + C.curta.final + C.curta.reacao) : C.chegadaMax + C.final + C.abracoMin + C.reacao)
+      + (plano.treinador ? s60(C.treinador.dur) : 0),
     kPulo: -1, rumoFinal: Math.atan2(plano.alvo.uz, plano.alvo.ux), ladoContra: null, giroReacao: 0,
     olhoY: 1.25,
     hx: new Float32Array(NHIST), hz: new Float32Array(NHIST),
     _d: { dx: 1, dz: 0, vel: 0, rumo: 0 },
   };
+  // o treinador do gancho (só com o plano dele): um ator a mais, parado na área técnica
+  if (plano.treinador) {
+    const T = plano.treinador;
+    const jt = criarJogador(T.id, T.x, T.z, T.rumo, {}, T.time);
+    jt.posicao = 'TEC';
+    const at = criarAtor(jt, atores.length);
+    at.goleiro = false; at.kit = T.kit; at.treinador = true;
+    atores.push(at); mF.jogadores.push(at.j);
+  }
   const porId = new Map(atores.map(a => [a.id, a]));
   for (const a of atores) {
+    if (a.treinador) { a.papel = TREINADOR; continue; }
     if (a.time !== plano.time) a.papel = a.goleiro ? GOLEIRO_SOFREU : SOFREU;
     a.gesto = a.id % 2;
   }
+  c.treinador = atores.find(a => a.treinador) ?? null;
   c.autor = porId.get(plano.autorId);
   c.autor.papel = AUTOR;
   plano.colegas.forEach((id, i) => {
@@ -260,10 +289,15 @@ function iniciarFinal(c, a) {
   c.kFimFinal = c.kFinal + s60(fin);
   if (c.curta) {
     c.kFimAbraco = c.kFimFinal;
+    c.kReacao = c.kFimAbraco;
     c.kFim = Math.max(s60(C.curta.duracao), c.kFimFinal + s60(C.curta.reacao));
   } else {
     c.kFimAbraco = Math.max(s60(C.abracoAte), c.kFimFinal + s60(C.abracoMin));
-    c.kFim = c.kFimAbraco + s60(C.reacao);
+    // o corte da torcida no fim do abraço (só a câmera: os atores continuam abraçados) e o do treinador (gancho: +1,5 s
+    // exatos antes da reação)
+    if (c.plano.cortes) c.kTorcida = Math.max(c.kFimFinal + s60(C.torcida.depoisFinal), c.kFimAbraco - s60(C.torcida.max));
+    c.kReacao = c.kFimAbraco + (c.treinador ? s60(C.treinador.dur) : 0);
+    c.kFim = c.kReacao + s60(C.reacao);
   }
   if (c.variante === 'joelhos') {
     // deslize de joelhos: desacelera até parar no alvo
@@ -331,6 +365,9 @@ function desejo(c, a, t) {
       if (a.goleiro || t < C.resto.desde || d < C.resto.para) return para(c, 0, r);
       return para(c, Math.min(C.resto.vel, (d - C.resto.para) * 1.2 + 0.4), r);
     }
+    case TREINADOR:
+      // na área técnica: fica (comemora com os braços)
+      return para(c, 0, j.rumo);
     default:
       // goleiro batido e autor do gol contra: ficam (agachados)
       return para(c, 0, j.rumo);
@@ -442,7 +479,7 @@ export function passoCena(c) {
   c.olhoY += (py - c.olhoY) * (1 - Math.exp(-PASSO / 0.25));
   if (c.k < NHIST) { c.hx[c.k] = au.j.x; c.hz[c.k] = au.j.z; }
   if (c.k === c.kFimFinal && !c.curta) c.ladoContra = escolherLadoContra(c);
-  if (c.k === c.kFimAbraco) c.giroReacao = escolherGiroReacao(c);
+  if (c.k === c.kReacao) c.giroReacao = escolherGiroReacao(c);
   if (c.k >= c.kFim) c.acabou = true;
   return true;
 }
@@ -470,7 +507,8 @@ export function faseEm(c, tk) {
   if (tk * PASSO < C.rede) return 'rede';
   if (c.kFinal < 0 || tk < c.kFinal) return 'corrida';
   if (tk < c.kFimFinal) return 'final';
-  if (tk < c.kFimAbraco) return 'abraco';
+  if (tk < c.kFimAbraco) return c.kTorcida >= 0 && tk >= c.kTorcida ? 'torcida' : 'abraco';
+  if (tk < c.kReacao) return 'treinador';
   return 'reacao';
 }
 /** Fase do estado desenhado. */
@@ -704,6 +742,15 @@ function poseAtor(c, a, t) {
       cabeca(o, h, w);
       break;
     }
+    case TREINADOR: {
+      // no plano dele: os dois braços para o céu, socando o ar no ritmo (3 socos em 1,5 s)
+      if (c.kFimAbraco < 0) break;
+      const t0 = c.kFimAbraco * PASSO, w = suave((t - t0 - 0.05) / 0.25) * (1 - suave((t - t0 - C.treinador.dur + 0.1) / 0.3));
+      if (w <= 0) break;
+      const soco = 0.07 * Math.max(0, Math.sin(2 * Math.PI * 2 * (t - t0)));
+      gesto(o, h, -1, G_CEU, null, 0, w, soco); gesto(o, h, 1, G_CEU, null, 0, w, soco);
+      break;
+    }
     default: break;
   }
 }
@@ -905,6 +952,19 @@ export function planoCamera(c, opc, out) {
   const fase = c.acabou ? 'fim' : faseEm(c, tk);
   out.fase = fase;
   if (fase === 'rede' || fase === 'fim') { out.nome = fase; return out; }
+  if (fase === 'torcida') return planoTorcidaGol(c.plano, out);
+  if (fase === 'treinador') {
+    // de frente para o treinador, da lateral do campo (dentro dele), na altura dos olhos
+    const T = c.treinador, K = C.treinador.camera;
+    const x = lerp(T.x0, T.x1, c.alfa), z = lerp(T.z0, T.z1, c.alfa), sg = x >= 0 ? -1 : 1;
+    out.nome = 'treinador';
+    out.de[0] = x + sg * K.lado; out.de[1] = K.altura; out.de[2] = K.z;
+    out.para[0] = x; out.para[1] = K.olharY; out.para[2] = z;
+    out.fov = K.fov;
+    limitarCamera(out);
+    ajustarCelular(out, opc);
+    return out;
+  }
   const K = C.camera;
   if (fase === 'corrida' || fase === 'final' || (c.curta && fase !== 'reacao')) {
     const S = K.steadicam;
@@ -961,13 +1021,32 @@ export function planoCamera(c, opc, out) {
   return out;
 }
 
+/**
+ * O corte da TORCIDA do time que marcou (pura: o plano da comemoração): a câmera dentro do campo, baixa, a 10–15 m da
+ * arquibancada dele, olhando para cima. Os enquadramentos (config.js COMEMORACAO.torcida.enquadra) são do time 0 (a
+ * organizada, fundo +x, e a arquibancada de lá na metade +x); o time 1 (o setor visitante, fundo −x) usa o espelho em x
+ * ('lateral' tem o próprio: o setor visitante de lado). O lado em z pelo hash do gol.
+ */
+export function planoTorcidaGol(plano, out) {
+  const T = C.torcida.enquadra, nome = plano.torcida ?? 'fundo';
+  const q = nome === 'lateral' ? (plano.time === 1 ? T.lateral1 : T.lateral0) : T[nome];
+  const sx = plano.time === 1 && nome !== 'lateral' ? -1 : 1;
+  const sz = nome === 'lateral' ? 1 : ((plano.hash >>> 11) & 1 ? 1 : -1);
+  out.nome = 'torcida';
+  out.de[0] = q.de[0] * sx; out.de[1] = q.de[1]; out.de[2] = q.de[2] * sz;
+  out.para[0] = q.para[0] * sx; out.para[1] = q.para[1]; out.para[2] = q.para[2] * sz;
+  out.fov = q.fov;
+  out.torcida = nome;
+  return out;
+}
+
 /** Objeto de saída do planoCamera (um por página/teste, reaproveitado). */
 export function criarPlanoCamera() { return { nome: 'rede', fase: 'rede', de: [0, 0, 0], para: [0, 0, 0], fov: 34 }; }
 
-/** Informação para testes e API: por ator {id, time, papel, x, z, rumo, noAr, desliza, ajoelhado, agacha}. */
+/** Informação para testes e API: por ator {id, time, papel, x, z, rumo, noAr, desliza, ajoelhado, agacha} (o treinador do gancho: papel 'treinador', kit). */
 export function infoAtores(c) {
   return c.atores.map(a => ({
     id: a.id, time: a.time, papel: PAPEIS[a.papel], x: a.j.x, z: a.j.z, rumo: a.j.rumo, v: Math.hypot(a.j.vx, a.j.vz),
-    noAr: a.noAr, desliza: a.desliza, ajoelhado: a.ajoelhado, agacha: a.agacha, goleiro: a.goleiro,
+    noAr: a.noAr, desliza: a.desliza, ajoelhado: a.ajoelhado, agacha: a.agacha, goleiro: a.goleiro, kit: a.kit ?? null,
   }));
 }

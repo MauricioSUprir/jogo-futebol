@@ -622,12 +622,121 @@ if (cenasC.length) {
     okGancho && tecVit.every(x => x.tec.braco >= 30) && comT.every(x => x.tec.dentro && x.tec.n > 0));
 }
 
+// ------------------------------------------------------------------------------------------------ D) gol: torcida e treinador
+const cenasD = [];
+const CM = await tentar('comemoracao.js');
+if (roda('D') || roda('E')) {
+  const GN = await import(pathToFileURL(path.join(AQUI, 'lib/gol-node.mjs')).href);
+  if (!CM || !CM.FASES || !CM.FASES.includes('torcida')) reg('D gol: o corte da torcida (comemoracao.js fase \'torcida\')', 'não existe: do abraço a câmera vai direto à reação de quem sofreu', 'existe', false);
+  else {
+    const LG = await GN.carregarNode(pastaJs);
+    // os 8 gols do teste-comemoracao: 5 naturais (IA × IA) e 3 roteirizados (time 0, time 1 — a cena curta —, gol contra)
+    const gols = [], usadas = new Set();
+    const tentarG = sm => { if (usadas.has(sm)) return; usadas.add(sm); const g = GN.golNaturalNode(LG, sm, 4000); if (g) gols.push({ ...g, nome: `natural ${sm}` }); };
+    for (const sm of [3, 35, 19, 22, 21, 40]) { if (gols.length >= 5) break; tentarG(sm); }
+    for (let sm = 1; sm <= 80 && gols.length < 5; sm++) tentarG(sm);
+    const r0 = GN.golRoteirizadoNode(LG, { semente: 5, time: 0 }); if (r0) gols.push({ ...r0, nome: 'roteirizado 0' });
+    const r1 = GN.golRoteirizadoNode(LG, { semente: 5, time: 1 }); if (r1) gols.push({ ...r1, nome: 'roteirizado 1 (curta)' });
+    const rc = GN.golRoteirizadoNode(LG, { semente: 7, time: 0, dist: 8, z0: -2 });
+    if (rc) {
+      const b = rc.m.bola.p; let z = null, dm = Infinity;
+      for (const j of rc.m.jogadores) { if (j.time === 0 || j.posicao === 'GOL') continue; const d = Math.hypot(j.x - b.x, j.z - b.z); if (d < dm) { dm = d; z = j; } }
+      gols.push({ ...rc, gol: { ...rc.gol, id: z.id, contra: true }, nome: 'roteirizado contra' });
+    }
+    const andar = (plano, m, porTick) => {
+      const c = CM.criarCena(plano, m), pc = CM.criarPlanoCamera(), estados = [];
+      while (!c.acabou && c.k < 12 * 60) {
+        CM.passoCena(c); c.alfa = 1;
+        const fase = CM.faseEm(c, c.k);
+        estados.push(c.atores.filter(a => !a.treinador).map(a => Array.from(a.atu)).flat());
+        if (porTick) porTick(c, fase, CM.planoCamera(c, { pequena: false, aspecto: 16 / 9 }, pc));
+      }
+      return { c, estados };
+    };
+    for (const g of gols) {
+      const m = g.m, h0 = S.hashMundo(m);
+      const x = { nome: g.nome, curta: false, fases: [], torcida: 0, cam: { y: 0, fovMin: Infinity, fovMax: -Infinity, ang: 0, solido: 0, dist: [Infinity, -Infinity] }, igual: true, kFim: [0, 0], tec: null };
+      const plano = CM.planejarComemoracao(m, g.gol, { timeHumano: 0 });
+      x.curta = plano.curta; x.time = plano.time; x.enq = plano.torcida;
+      // os setores da torcida do time que marcou (torcida-dados.js): o 0 = organizada (fundo +x) e a arquibancada de lá
+      // na metade +x; o 1 = o setor visitante (fundo −x)
+      const alvos = plano.time === 1 ? [[-70, -2]] : [[70, 0], [25, -52]];
+      const A1 = andar(plano, m, (c, fase, pc) => {
+        if (x.fases[x.fases.length - 1] !== fase) x.fases.push(fase);
+        if (fase !== 'torcida') return;
+        x.torcida++;
+        const [cx, cy, cz] = pc.de;
+        x.cam.y = Math.max(x.cam.y, cy); x.cam.fovMin = Math.min(x.cam.fovMin, pc.fov); x.cam.fovMax = Math.max(x.cam.fovMax, pc.fov);
+        if (EF.solidoEm(cx, cy, cz, 0.2, false) || Math.abs(cx) > MX + 5.5 || Math.abs(cz) > MZ + 5.5) x.cam.solido++;
+        const lx = pc.para[0] - cx, lz = pc.para[2] - cz, ll = Math.hypot(lx, lz);
+        let melhor = Infinity;
+        for (const [ax, az] of alvos) { const dx = ax - cx, dz = az - cz; const a = Math.acos(Math.max(-1, Math.min(1, (lx * dx + lz * dz) / (ll * Math.hypot(dx, dz))))) * 180 / Math.PI; melhor = Math.min(melhor, a); }
+        x.cam.ang = Math.max(x.cam.ang, melhor);
+        // distância à frente da arquibancada (fundos em |x| = 62,5; a de lá em z = −44,5)
+        const d = Math.min(62.5 - Math.abs(cx), 44.5 + cz);
+        x.cam.dist[0] = Math.min(x.cam.dist[0], d); x.cam.dist[1] = Math.max(x.cam.dist[1], d);
+      });
+      x.kFim[0] = A1.c.kFim;
+      // sem os cortes: os atores tick a tick e o kFim idênticos
+      const B1 = andar(CM.planejarComemoracao(m, g.gol, { timeHumano: 0, cortes: false }), m, null);
+      x.kFim[1] = B1.c.kFim;
+      x.igual = A1.estados.length === B1.estados.length && A1.estados.every((e, k) => e.length === B1.estados[k].length && e.every((v, i) => v === B1.estados[k][i]));
+      // o gancho do treinador: um técnico falso do time que marcou, na área técnica
+      const tec = { ...TECNICOS[plano.time], id: 300 + plano.time };
+      const comT = { braco: 0, max: 0, dentro: true, n: 0 };
+      const C2 = andar(CM.planejarComemoracao(m, g.gol, { timeHumano: 0, treinador: tec }), m, (c, fase) => {
+        if (fase !== 'treinador' || !c.treinador) return;
+        const o = c.treinador.atu, topo = o[J.cabeca * 3 + 1] + TOPO;
+        comT.braco = o[J.maoE * 3 + 1] >= topo + 0.1 && o[J.maoD * 3 + 1] >= topo + 0.1 ? comT.braco + 1 : 0; comT.max = Math.max(comT.max, comT.braco);
+        const ax = Math.abs(c.treinador.j.x); if (!(ax >= 4 && ax <= 18 && c.treinador.j.z >= 35 && c.treinador.j.z <= 41)) comT.dentro = false;
+        comT.n++;
+      });
+      const N1 = andar(CM.planejarComemoracao(m, g.gol, { timeHumano: 0, treinador: null }), m, null);
+      x.tec = { dk: C2.c.kFim - A1.c.kFim, ...comT, nullIgual: N1.c.kFim === A1.c.kFim && N1.estados.length === A1.estados.length && N1.estados.every((e, k) => e.every((v, i) => v === A1.estados[k][i])) };
+      x.hashIgual = S.hashMundo(m) === h0;
+      cenasD.push(x);
+    }
+  }
+}
+if (cenasD.length) {
+  const N = cenasD.filter(x => !x.curta), Cu = cenasD.filter(x => x.curta);
+  reg('D gols: os 8 do teste-comemoracao (5 naturais e 3 roteirizados; a curta é o gol da IA contra o humano)', cenasD.map(x => `${x.nome}${x.curta ? '' : ' ' + x.enq}`).join(', '), '8', cenasD.length === 8);
+  const ordem = ['rede', 'corrida', 'final', 'abraco', 'torcida', 'reacao', 'fim'];
+  reg('D a fase \'torcida\' entre o abraço e a reação (cena normal), com 0,8–1,5 s', N.map(x => f2(x.torcida / 60)).join(' / ') + ' s', '0,8–1,5 s; abraço → torcida → reação',
+    N.length > 0 && N.every(x => x.torcida >= 48 && x.torcida <= 90 && x.fases.indexOf('torcida') === x.fases.indexOf('abraco') + 1 && x.fases.indexOf('reacao') === x.fases.indexOf('torcida') + 1 && x.fases.every((f, i) => i === 0 || ordem.indexOf(f) > ordem.indexOf(x.fases[i - 1]))));
+  reg('D sem os cortes (opc.cortes = false): os atores tick a tick e o kFim IDÊNTICOS', cenasD.map(x => `${x.igual ? 'igual' : 'DIFERENTE'} ${x.kFim[0]}/${x.kFim[1]}`).join(', '), 'todos iguais', cenasD.every(x => x.igual && x.kFim[0] === x.kFim[1]));
+  const ang = Math.max(...N.map(x => x.cam.ang)), y = Math.max(...N.map(x => x.cam.y)), f0 = Math.min(...N.map(x => x.cam.fovMin)), f1 = Math.max(...N.map(x => x.cam.fovMax));
+  const d0 = Math.min(...N.map(x => x.cam.dist[0])), d1 = Math.max(...N.map(x => x.cam.dist[1]));
+  reg('D câmera da torcida: para a torcida do time que marcou (≤ 30°), baixa (≤ 2 m), fov 30–40, a 10–15 m da arquibancada, fora de sólidos', `${f2(ang)}°, ${f2(y)} m, fov ${f2(f0)}–${f2(f1)}, ${f2(d0)}–${f2(d1)} m, fora ${N.reduce((q, x) => q + x.cam.solido, 0)}`, '≤ 30°, ≤ 2 m, 30–40, 10–15 m, 0',
+    ang <= 30 && y <= 2 && f0 >= 30 && f1 <= 40 && d0 >= 10 && d1 <= 15 && N.every(x => x.cam.solido === 0));
+  // os 3 enquadramentos, nos dois times (sem depender do sorteio das 8 cenas)
+  {
+    let ruins = 0;
+    const pc = { de: [0, 0, 0], para: [0, 0, 0] };
+    for (const time of [0, 1]) for (const enq of ['fundo', 'lateral', 'close']) for (const hash of [0, 1 << 11]) {
+      CM.planoTorcidaGol({ time, torcida: enq, hash }, pc);
+      const [cx, cy, cz] = pc.de;
+      const alvos = time === 1 ? [[-70, -2]] : [[70, 0], [25, -52]];
+      const lx = pc.para[0] - cx, lz = pc.para[2] - cz, ll = Math.hypot(lx, lz);
+      const a = Math.min(...alvos.map(([ax, az]) => Math.acos(Math.max(-1, Math.min(1, (lx * (ax - cx) + lz * (az - cz)) / (ll * Math.hypot(ax - cx, az - cz))))) * 180 / Math.PI));
+      const d = Math.min(62.5 - Math.abs(cx), 44.5 + cz);
+      if (a > 30 || cy > 2 || pc.fov < 30 || pc.fov > 40 || d < 10 || d > 15 || EF.solidoEm(cx, cy, cz, 0.2, false) || Math.abs(cx) > MX + 5.5 || Math.abs(cz) > MZ + 5.5 || (Math.abs(cx) > MX - 0.5 && Math.abs(cz) < 4.6)) ruins++;
+    }
+    reg('D os 3 enquadramentos da torcida nos dois times (e nos dois lados)', `${12 - ruins}/12 dentro das metas`, '12/12', ruins === 0);
+  }
+  reg('D gancho do treinador: +90 ticks exatos, braços acima da cabeça ≥ 0,5 s, dentro da área técnica; com null nada muda', N.map(x => `+${x.tec.dk} ${f2(x.tec.max / 60)} s ${x.tec.dentro ? 'dentro' : 'FORA'} ${x.tec.nullIgual ? 'null=igual' : 'null DIFERENTE'}`).join(' / '), '+90; ≥ 0,5 s; dentro; igual',
+    N.length > 0 && N.every(x => x.tec.dk === 90 && x.tec.max >= 30 && x.tec.dentro && x.tec.n === 90 && x.tec.nullIgual));
+  reg('D cena curta (gol da IA contra o humano): sem torcida e sem treinador, como antes', Cu.map(x => `${x.fases.join('→')} +${x.tec.dk}`).join(' / '), 'sem torcida, +0', Cu.length > 0 && Cu.every(x => !x.fases.includes('torcida') && x.tec.dk === 0));
+}
+
 // ------------------------------------------------------------------------------------------------ E) pureza
 if (roda('E')) {
   if (!cenasA.length) reg('E pureza (o mundo não muda com a cena)', 'sem cenas', 'hashMundo igual', false);
   else reg('E pureza: hashMundo antes = depois (cenas de cartão)', `${cenasA.filter(x => x.hashIgual).length}/${cenasA.length}`, 'todas', cenasA.every(x => x.hashIgual));
   if (!cenasC.length) reg('E pureza (cenas de fim de tempo)', 'sem cenas', 'hashMundo igual', false);
   else reg('E pureza: hashMundo antes = depois (cenas de fim de tempo)', `${cenasC.filter(x => x.hashIgual).length}/${cenasC.length}`, 'todas', cenasC.every(x => x.hashIgual));
+  if (!cenasD.length) reg('E pureza (gol com torcida e treinador)', 'sem cenas', 'hashMundo igual', false);
+  else reg('E pureza: hashMundo antes = depois (gol com os cortes, sem eles e com o treinador)', `${cenasD.filter(x => x.hashIgual).length}/${cenasD.length}`, 'todas', cenasD.every(x => x.hashIgual));
 }
 
 // ------------------------------------------------------------------------------------------------ G) custo

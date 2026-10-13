@@ -388,5 +388,31 @@ function min(arr, f) { return Math.min(...arr.map(f)); }
   reg('13 plano da reação: ninguém a < 2 m da lente dentro do quadro (PC e celular; também com um jogador parado na frente da lente)', `${linhas13.join('; ') || 'nenhum quadro'} (${gols.length} cenas; bloqueios ${bloqueios}/${nb})`, '0 quadros', bloqueios === nb && pior === 0);
 }
 
+// ------------------------------------------------------------------------------------------------ 14–16: torcida e treinador
+// (pedido do dono de 12/10: "quando sai gol, pode ter cenas de torcida e treinador comemorando"; a seção D do
+// tools/teste-cenas.mjs mede a câmera da torcida a fundo)
+{
+  const andar = plano => {
+    const c = CM.criarCena(plano, gols.find(g => g === plano._g).m), est = [], fases = [];
+    while (!c.acabou && c.k < 12 * 60) { CM.passoCena(c); const f = CM.faseEm(c, c.k); if (fases[fases.length - 1] !== f) fases.push(f); est.push(c.atores.filter(a => !a.treinador).map(a => Array.from(a.atu)).flat()); }
+    return { c, est, fases, torcida: 0 };
+  };
+  const pl = (g, o) => Object.assign(CM.planejarComemoracao(g.m, g.gol, { timeHumano: 0, ...o }), { _g: g });
+  const temTorcida = typeof CM.planoTorcidaGol === 'function';
+  const r14 = [], r15 = [], r16 = [];
+  if (temTorcida) for (const g of gols) {
+    const A1 = andar(pl(g, {})), B1 = andar(pl(g, { cortes: false }));
+    let nt = 0; { const c = CM.criarCena(pl(g, {}), g.m); while (!c.acabou) { CM.passoCena(c); if (CM.faseEm(c, c.k) === 'torcida') nt++; } }
+    r14.push({ curta: A1.c.curta, nt, fases: A1.fases });
+    r15.push(A1.c.kFim === B1.c.kFim && A1.est.length === B1.est.length && A1.est.every((e, k) => e.every((v, i) => v === B1.est[k][i])));
+    if (!A1.c.curta) { const T1 = andar(pl(g, { treinador: { id: 300, time: A1.c.time, x: A1.c.time ? -11 : 11, z: 36, rumo: -Math.PI / 2 } })); r16.push(T1.c.kFim - A1.c.kFim); }
+  }
+  const N = r14.filter(r => !r.curta);
+  reg('14 corte da torcida no fim do abraço (cena normal, 0,8–1,5 s); a curta sem ele', temTorcida ? r14.map(r => (r.curta ? 'curta' : f2(r.nt / 60) + ' s')).join(' / ') : 'não existe (do abraço direto à reação)', '0,8–1,5 s; curta sem',
+    temTorcida && N.length > 0 && N.every(r => r.nt >= 48 && r.nt <= 90) && r14.filter(r => r.curta).every(r => r.nt === 0));
+  reg('15 sem os cortes (cortes = false): os atores e o fim da cena idênticos', temTorcida ? r15.map(v => (v ? 'igual' : 'DIFERENTE')).join(' ') : 'não existe', 'todos iguais', temTorcida && r15.length === gols.length && r15.every(Boolean));
+  reg('16 gancho do treinador: +1,5 s exatos (90 ticks) na cena normal', temTorcida ? r16.map(v => '+' + v).join(' / ') : 'não existe', '+90', temTorcida && r16.length > 0 && r16.every(v => v === 90));
+}
+
 imprimir();
 process.exit(falhas ? 1 : 0);

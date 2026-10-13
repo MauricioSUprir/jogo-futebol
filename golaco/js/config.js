@@ -1194,6 +1194,23 @@ export const COMEMORACAO = {
   // `encolhe` m), aterrissa em `aterrissa` s; o giro dá uma volta inteira no voo
   pulo: { agacha: 0.2, estende: 0.1, desce: 0.14, altura: 0.5, encolhe: 0.16, aterrissa: 0.35, espera: 0.8 },
   festa: { altura: 0.13, freq: 1.8 },             // pulo do grupo no abraço (m, Hz)
+  // corte da TORCIDA do time que marcou (pedido do dono de 12/10; só a câmera — os atores continuam abraçados): começa em
+  // max(fim da finalização + depoisFinal, fim do abraço − max) e vai até o fim do abraço (0,8–1,5 s). A câmera dentro do
+  // campo, baixa (≤ 2 m), a 10–15 m da arquibancada do time, olhando para cima (fov 30–40); os enquadramentos são do
+  // time 0 (organizada no fundo +x; 'lateral0' na arquibancada de lá, metade +x); o time 1 usa o espelho em x e
+  // 'lateral1' (o setor visitante, fundo −x, de lado). Sem repetir o do gol anterior.
+  torcida: {
+    depoisFinal: 0.4, max: 1.5,
+    enquadra: {
+      fundo: { de: [49, 1.7, 9], para: [68, 8.5, 2.5], fov: 36 },
+      lateral0: { de: [22, 1.7, -31.5], para: [25, 9.5, -52], fov: 34 },
+      lateral1: { de: [-50, 1.7, -26], para: [-68, 8.5, -11], fov: 34 },
+      close: { de: [51, 1.5, 7], para: [64, 6.5, 3.5], fov: 30 },
+    },
+  },
+  // corte do TREINADOR do time que marcou (o GANCHO: só com o ator dele — a frente dos treinadores entrega): +1,5 s
+  // exatos antes da reação; a câmera na lateral, dentro do campo, de frente para ele (Regra 1: ele fica na área técnica)
+  treinador: { dur: 1.5, camera: { z: 33, lado: 3, altura: 1.5, olharY: 1.35, fov: 30 } },
   // câmera (fov vertical em graus para 16:9; o celular fecha `celular` e põe o autor no terço esquerdo)
   camera: {
     steadicam: { frente: 6.5, lado: 2.4, altura: 1.6, fov: 32, media: 0.3, rumo: 0.5 },
