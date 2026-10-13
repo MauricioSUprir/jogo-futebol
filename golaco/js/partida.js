@@ -594,7 +594,11 @@ function restricaoPenalti(m, p, j, out) {
   const lado = m.ataca[p.time], gx = lado * CAMPO.meioX;
   if (j.time !== p.time && j.posicao === 'GOL') {
     out.x = gx - lado * clamp((gx - out.x) * lado, 0, 0.6);
-    out.z = clamp(out.z, -CAMPO.gol.largura / 2 + 0.3, CAMPO.gol.largura / 2 - 0.3);
+    // o goleiro do humano: só o passo para o lado escolhido (GOLEIRO.penalti.passo), não até a trave (sim.js
+    // goleiroComoLinha); a IA, a largura do gol
+    const humano = m.humanos.includes(j.time) && m.controlado[j.time] === j.id && !m.iaJoga?.[j.time];
+    const zMax = humano ? GOLEIRO.penalti.passo : CAMPO.gol.largura / 2 - 0.3;
+    out.z = clamp(out.z, -zMax, zMax);
     return out;
   }
   const folga = PARTIDA.folgaRaio;

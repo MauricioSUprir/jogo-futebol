@@ -1186,7 +1186,9 @@ com as mesmas defesas). Com ele: 59,0% · total 68,0% · de fora da área 86,8% 
   desde então). Só na perda, como chegou a ficar, mudava a medida pareada do PRESSÃO (o controlado deixava de ser o mais perto
   e o 1º homem da IA já apertava sem o botão: `teste-pressao-humano` M1 Δ 0,35 m, M4 10 → 27 faltas) e o treino. Toque aéreo vencido (a hora passou ou a bola é de outro) é limpo em
   `movimentoAereo` e no laço do `bolaLivre`. `candidatoTroca` pula `papel` 'parado'/'marcador' (a barreira).
-  `goleiroComoLinha` é falso com o pênalti montado. `m.cobrou = {id, tick}` (`partida.js rolou`; zerado em `bolaMorta`):
+  Pênalti montado: o goleiro do humano anda com o analógico só na linha e no máximo `GOLEIRO.penalti.passo` m (0,5) do
+  meio (`partida.js restricaoPenalti`) — o passo para o lado escolhido, não até a trave (`teste-botoes` B6d: lado certo no
+  fim 7/38 como na main, segurado desde a montagem 9/38; congelado no meio eram 4/38 nos dois). `m.cobrou = {id, tick}` (`partida.js rolou`; zerado em `bolaMorta`):
   quem cobrou fica fora da bola livre e da bola alta (`candidatosBolaLivre`, `ia-tatica.js vaiNaLivre`) até outro jogador
   tocar (posse, mão, `ultimoToque`, `bateuCorpo`).
 - **PRESSÃO** (`defesa.js`): `passeAdversario(m, time)` — no passe do adversário o pedido segue valendo e o chamado corre

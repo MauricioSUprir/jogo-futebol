@@ -906,8 +906,9 @@ function defesaDoGoleiro(m, j) {
 function goleiroComoLinha(m, j) {
   if (ehControlado(m, j) && m.naMao !== j.id && m.posse === j.id) return true;
   if (!m.partida || m.naMao === j.id || defesaDoGoleiro(m, j)) return false;
-  // pênalti montado (Regra 14): ele fica na linha; o analógico só escolhe o lado (partida.js rolou: j.palpite)
-  if (m.parada && !m.parada.rolou && m.parada.tipo === 'penalti') return false;
+  // pênalti montado (Regra 14): o analógico escolhe o lado (partida.js rolou: j.palpite) e dá o passo para ele, na linha —
+  // no máximo GOLEIRO.penalti.passo m do meio (partida.js restricaoPenalti; antes andava até a trave e o lado certo virava
+  // errado; congelado no meio, o lado certo escolhido no fim defendia menos que na main: 7 → 4 em 38, teste-botoes B6d)
   if (ehControlado(m, j) && !m.iaJoga?.[j.time]) return m.posse === j.id || j.imag > 0 || goleiroNoPe(m, j);
   return goleiroNoPe(m, j);
 }

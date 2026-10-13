@@ -12,6 +12,9 @@
 //  B5 CHUTE na bola parada (saída, escanteio, lateral) vira a cobrança padrão (passe / lançamento);
 //  B6 pênalti contra: o goleiro do humano fica na linha com o analógico segurado e o mergulho vai para o lado escolhido;
 //     no lado certo a defesa vale (goleiro.js lerChute/iniciarMergulho, sim.js goleiroComoLinha);
+//     B6d (contraprova, 38 pênaltis no canto, a mesma cena do medir5 da auditoria do goleiro): o lado certo escolhido no
+//     fim (0,3 s) defende como na main (o passo de ~0,4 m para o lado, na linha) e segurado desde a montagem não defende
+//     menos (no máximo GOLEIRO.penalti.passo do meio: nem a trave, nem parado no meio); o lado errado não defende;
 //  B7 LANÇAMENTO dois toques na ponta = cruzamento rasteiro (acoes.js processarPedido);
 //  B8 CHUTE de primeira no passe longo (24–30 m): bate de primeira (acoes.js atualizarBotoesAcao);
 //  B9 TROCAR na barreira: nunca um jogador parado (sim.js candidatoTroca);
@@ -44,7 +47,7 @@ const P = await imp('partida.js');
 const S = await imp('sim.js');
 const F = await imp('faltas.js');
 const AC = await imp('acoes.js');
-const { BOTAO, PASSO, CAMPO, PARTIDA, ACOES } = await imp('config.js');
+const { BOTAO, PASSO, CAMPO, PARTIDA, ACOES, GOLEIRO } = await imp('config.js');
 // calibração (B11): outro canto da mira do pênalti do humano, sem mexer no config.js
 if (arg('--canto', null) != null && ACOES.chute) ACOES.chute.penaltiCanto = +arg('--canto');
 
@@ -338,6 +341,64 @@ if (faz('B6')) {
   reg('B6b lado errado: o mergulho vai para o lado escolhido (não para o da bola)', `${okErr}/${nErr}`, 'todos', nErr >= 4 && okErr === nErr);
   reg('B6c lado certo (a bola cruza do lado escolhido): a leitura NÃO conta como lado errado (no canto extremo p pode ser 0 pelo alcance)', `${okCerto}/${nCerto}`, 'todos', nCerto >= 3 && okCerto === nCerto);
   if (args.includes('--detalhe')) console.log(det.join('\n'));
+}
+
+// B6d: o lado certo vale como na main (o passo para o lado); segurado desde a montagem não vale menos
+if (faz('B6')) {
+  const MX = CAMPO.meioX;
+  const gkDe = (m, t) => m.jogadores.find(j => j.time === t && j.posicao === 'GOL');
+  function montarPen(sem) {
+    const m = P.criarPartida({ semente: sem });
+    for (let i = 0; i < 200; i++) P.passoPartida(m, P.entradaDemoPartida(m));
+    const lado0 = m.ataca[0], gx = -lado0 * MX;
+    const At = m.jogadores.find(j => j.time === 1 && j.posicao === 'ATA') ?? m.jogadores.find(j => j.time === 1 && j.posicao !== 'GOL');
+    const Df = m.jogadores.find(j => j.time === 0 && j.posicao === 'ZAG');
+    const x = gx + lado0 * 7.5;
+    P.teleportar(At, x, 3, lado0 > 0 ? Math.PI : 0); P.teleportar(Df, x + lado0 * 1, 3.5, lado0 > 0 ? Math.PI : 0);
+    m.bola.p.x = x - lado0 * 0.4; m.bola.p.z = 3; m.posse = At.id; m.naMao = null; m.voo = null;
+    apitar(m, { def: Df.id, cond: At.id, time: 1, x, z: 3, area: true, chegada: 'tras', v: 3, grau: 'imprudente', cartao: null, motivo: 'imprudente', origem: 'bote', tick: m.tick });
+    if (!m.parada || m.parada.tipo !== 'penalti') return null;
+    for (let i = 0; i < 120 && m.parada.cobrador == null; i++) P.passoPartida(m, NADA);
+    return m;
+  }
+  /** O lado (no mundo, sinal de z) para onde a IA bate: a mesma montagem, sem o goleiro escolher. */
+  function ladoReal(base) {
+    const m = clone(base);
+    for (let i = 0; i < 60 * 15; i++) {
+      const ev = P.passoPartida(m, NADA);
+      if (ev.some(e => e.tipo === 'cobranca' && e.parada === 'penalti')) { P.passoPartida(m, NADA); return Math.sign(m.bola.v.z) || 1; }
+    }
+    return 1;
+  }
+  function pen(base, modo, s) {
+    const m = clone(base), g = gkDe(m, 0);
+    let res = null, zChute = null;
+    for (let i = 0; i < 60 * 15 && !res; i++) {
+      const pr = m.parada;
+      const fim = pr && !pr.rolou && pr.pronta != null && m.tick >= pr.pronta + pr.atraso - 18;
+      const az = modo === 'certoFim' ? (fim ? s : 0) : modo === 'erradoFim' ? (fim ? -s : 0) : (pr && !pr.rolou ? s : 0);
+      for (const e of P.passoPartida(m, { x: 0, z: az, botoes: 0 })) {
+        if (e.tipo === 'cobranca' && e.parada === 'penalti') zChute = g.z;
+        if (e.tipo === 'penalti') res = e.resultado;
+      }
+    }
+    return { res, z: Math.abs(zChute ?? 0) };
+  }
+  const t = { certoFim: [0, []], certoSempre: [0, []], erradoFim: [0, []] };
+  let n = 0;
+  for (let k = 0; k < 40; k++) {
+    const base = montarPen(8000 + k);
+    if (!base || Math.abs(base.parada.miraZ) < 0.5) continue;
+    n++;
+    const s = ladoReal(base);
+    for (const md of Object.keys(t)) { const r = pen(base, md, s); if (r.res === 'defesa') t[md][0]++; t[md][1].push(r.z); }
+  }
+  const zMax = l => Math.max(...l);
+  const passo = GOLEIRO.penalti.passo ?? 0;
+  reg('B6d pênalti contra, 38 no canto: lado certo no fim (0,3 s) e segurado desde a montagem (defesas, |z| máx no chute); lado errado',
+    `certo no fim ${t.certoFim[0]}/${n} (|z| ≤ ${f1(zMax(t.certoFim[1]), 2)}) · segurado ${t.certoSempre[0]}/${n} (|z| ≤ ${f1(zMax(t.certoSempre[1]), 2)}) · errado ${t.erradoFim[0]}/${n}`,
+    'certo no fim ≥ 7 (a main) · segurado ≥ certo no fim, |z| ≤ 0,6 m · errado 0',
+    n >= 30 && t.certoFim[0] >= 7 && t.certoSempre[0] >= t.certoFim[0] && zMax(t.certoSempre[1]) <= 0.6 && passo > 0 && t.erradoFim[0] === 0);
 }
 
 // ------------------------------------------------------------------ B7. LANÇAMENTO dois toques = cruzamento rasteiro

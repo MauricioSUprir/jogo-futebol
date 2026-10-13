@@ -439,7 +439,7 @@ export const GOLEIRO = {
   // pênalti (Regra 14; goleiro.js lerChute): o goleiro escolhe o lado ANTES do chute (z do mergulho, m, e o peso de
   // cada escolha; o humano escolhe com o analógico na hora da cobrança). Lado certo: ganha `antecipa` s; lado errado
   // (ou ficou no meio e a bola foi no canto, a > `meio` m): não defende; lado certo: chance × `fator`. Meta do dono: ~76% gol, 18% defesa, 6% fora
-  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72 },
+  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72, passo: 0.5 },
   reacao: [0.25, 0.19],       // s depois do toque (ruim → bom)
   alcanceEmPe: 0.9,           // m: mão de lado sem mergulhar
   bracoReflexo: 1.6,          // m: perna/braço esticados no reflexo, sem tirar o corpo do lugar
