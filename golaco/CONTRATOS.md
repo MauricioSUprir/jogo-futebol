@@ -1318,6 +1318,21 @@ corrido só na partida.
   a falta no bote cresce com a velocidade de quem chega). A IA × IA não usa a PRESSÃO: o painel não muda com isso.
 - Calibração (painel de 48, 13/10): `IA_DEFESA.corrida.v` 6,8 (só a disparada de verdade liga a defesa da arrancada),
   `GOLEIRO.logit.c0Partida` −0,35, `IA_ATAQUE.contra` {s: 8, bonus: 1,0}, `utilidade.chute` 3,0.
+- Volume de ataque (rodada de 13/10, painel de 144 do CI): **tabela da IA** (`ia-ataque.js tabelaIA`, `IA_ATAQUE.tabela`):
+  o passe de `dMin`–`dMax` m (no máximo `tras` m para trás), do campo a partir de `uMin` m, com `livre` m livres à frente
+  do passador e no máximo `max` tabelas correndo no time, sai com o modificador (acoes.js `tabela`: o passador arranca
+  para o espaço); quem recebe vê a devolução como enfiada (a corrida `'tabela'` vale como a `'nasCostas'`); a tabela
+  acaba com a bola perdida; nunca na cobrança. **Condutor no último terço** (`manter`, `utilidade.manterTerco` {u, peso,
+  lado}): a partir de `u` m o peso dos marcadores no caminho é menor — ele encara e entra na área (no campo todo isso
+  levava o condutor para cima da PRESSÃO do humano). `utilidade.cruzamentoV` 0,35 e `chuteLonge` 0,25; `IA_DEFESA.corrida.v`
+  7,0; `GOLEIRO.logit.c0Partida` −0,3.
+- O arremesso do lateral (`m.voo.tipo === 'lateral'`) não entra no corte do passe (`vaiNaLivre`), e o lateral do meu time
+  não se afasta de cabeça no meu terço (`cabeceio.js intencaoCabeceio`).
+- Troca aérea (`troca.js`): quem tem `j.disputaAlta` pendente (o pulo ombro com ombro contra o cabeceio do adversário)
+  conta como disputante marcado (até `janelaMarcado` s); no empate — a previsão confirmada põe o controlado na bola até
+  `antecede` ticks depois do toque marcado de outro companheiro que não o recebedor — o controle fica com ele.
+- PRESSÃO do humano (`DEFESA_HUMANO.pressao`): `chega` 2,0 m e `aproxMax` 5 m/s; o bote do escolhido só abaixo de
+  `ACOES.boteIA.vPressao` (4 m/s).
 
 ### Testes
 `teste-cabeceio` (canhão de cruzamentos, pose, teleporte, partidas demo, humano) e `teste-defesa-corrida` (humano
