@@ -168,16 +168,34 @@ export function criarHud(opc) {
     if (!raiz.classList.contains('com-toque')) return;
     // o painel (modo e posição) desce para baixo do placar, à esquerda, se o arco chega nele
     if (botaoNoTopo()) raiz.classList.add('topo-desce');
+    apertarTopo();
+    // nos treinos a marca do GOLAÇO só fica de fora se fizer falta: quem encosta costuma ser o painel, e apertar o painel
+    // (passo 2) já resolve (contraprova de 13/10: em 568 e 667 px ela saía com 40–90 px livres à direita do placar)
+    if (raiz.classList.contains('topo-c1') && !raiz.classList.contains('em-partida') && !el.mapa?.style.left) {
+      raiz.classList.remove('topo-c1');
+      if (encostaTopo()) raiz.classList.add('topo-c1');
+    }
+  }
+  /** Os passos do aperto, em ordem, até nada encostar (ajustarTopo). */
+  function apertarTopo() {
     if (!encostaTopo()) return;
     raiz.classList.add('topo-c1');
     if (!encostaTopo()) return;
     raiz.classList.add('topo-c2');
     if (!encostaTopo()) return;
-    raiz.classList.add('topo-c3');
-    if (!encostaTopo()) return;
+    // na partida o tempo escrito ("1º T +4", "Intervalo", "Fim") só sai se nem com o minimapa encostado à direita do
+    // placar couber (contraprova de 13/10: em 667 e 568 px ele saía antes, com espaço sobrando depois do minimapa)
+    const partida = raiz.classList.contains('em-partida');
+    if (!partida) { raiz.classList.add('topo-c3'); if (!encostaTopo()) return; }
     raiz.classList.add('topo-c4');
     if (!encostaTopo() || !el.mapa) return;
     // 5) celular bem estreito (568 px com entalhe): o minimapa sai do meio e encosta à direita do placar
+    mapaAoLado();
+    if (!partida || !encostaTopo()) return;
+    raiz.classList.add('topo-c3');
+    mapaAoLado();
+  }
+  function mapaAoLado() {
     const pl = caixasTopo[0]?.getBoundingClientRect();
     if (pl && pl.width > 0) { el.mapa.style.left = `${Math.round(pl.right + 8)}px`; el.mapa.style.transform = 'none'; }
   }
@@ -349,8 +367,11 @@ export function criarHud(opc) {
     /** Placar (gols do time 0 e do time 1). */
     placar(a, b) {
       const v = [a | 0, b | 0];
+      let largura = false;
       for (let i = 0; i < 2; i++) {
         if (v[i] === placarVisto[i] || !el.gols[i]) continue;
+        // 9 → 10: o placar alarga e, apertado com o minimapa ao lado, encostaria nele (contraprova de 13/10)
+        if (String(v[i]).length !== String(placarVisto[i] ?? 0).length) largura = true;
         el.gols[i].textContent = String(v[i]);
         if (placarVisto[i] !== null) {
           el.gols[i].classList.remove('mudou');
@@ -359,6 +380,7 @@ export function criarHud(opc) {
         }
         placarVisto[i] = v[i];
       }
+      if (largura) ajustarTopo();
     },
     /**
      * Minimapa (no máximo ~30 vezes por segundo; 20 com os controles de toque, no celular). Escondido (opção da

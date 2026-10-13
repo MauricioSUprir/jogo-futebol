@@ -202,7 +202,9 @@ Resultado (`teste-hud-minimo` H10, mesma ferramenta na base com `--raiz`; largur
 | PC 1280×720: jogo / acréscimos / intervalo | 182×34 = 6176 / 238×34 = 8101 / 244×34 = 8290 px² | 209×26 = 5421 / 266×26 = 6922 / 271×26 = 7040 px² | | altura ≤ 26 px; área < antes e < referência |
 | Peças (marca, 2 escudos, 2 siglas, placar, relógio no bloco verde, nessa ordem) | faltam a marca e os 2 escudos; relógio sem bloco | todas, na ordem; relógio preto no verde (~11:1) | todas | todas; contraste ≥ 4,5:1 |
 | Números (gols / relógio), siglas, "1º T +4" no celular | 15 / 12 px, 11 px, 9 px | 16 / 14 px, 11 px, 10 px | ~14 px, ~11 px | ≥ 14, ≥ 11, ≥ 10 px |
-| Com o minimapa ligado (acréscimos) | nada encosta | nada encosta nas 3 telas (em 568×320 os espaços do placar apertam, `topo-c4`) | | folga ≥ 4 px com o minimapa e o menu |
+| Com o minimapa ligado (acréscimos) | nada encosta, mas em 568 px o "1º T +4" some e o 10-9 passa 1,6 px por cima do minimapa (main 48b24933; na 1ª versão deste placar, em 667 e 568) | nada encosta nas 3 telas, com o "1º T +4" na tela e também com 10-9 (em 667 e 568 os espaços apertam, `topo-c4`, e o minimapa encosta à direita do placar; contraprova de 13/10) | | folga ≥ 4 px com o minimapa e o menu; "1º T +4" na tela |
+| Treino de ataque com o minimapa e o painel | a marca não existia | (contraprova de 13/10) a marca saía em 667 e 568 px com 40–90 px livres; agora fica e nada encosta | | marca na tela, folga ≥ 4 px |
+| Leitor de tela (árvore de acessibilidade) | "GLÇ 0 0 VNT" | (contraprova de 13/10) "Golaço FC 0 0 Ventania FC" (`role="img"` com o nome) | | nome dos dois times |
 
 A base REPROVA o H10 nos 12 casos (3 telas do celular + PC × 3 estados: sem marca e sem escudos, 30/34 px de altura, relógio de 12–13 px, "1º T" de 9 px) e a
 versão nova passa. O placar ficou um pouco mais LARGO que o de antes (a marca e os escudos ocupam ~30 px), mas mais baixo

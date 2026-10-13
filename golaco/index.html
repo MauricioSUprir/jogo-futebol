@@ -42,7 +42,8 @@
        Tela limpa (dono, 11/10): na partida, placar compacto de TV + menu só com o ícone (tools/teste-hud-minimo.mjs).
        Placar (dono, 12/10: "quero o placar assim, tem que ser algo menor e mais com a nossa cara"): uma barra só, no canto
        de cima à esquerda — marca do GOLAÇO | cor + escudo + sigla da casa | placar | sigla + escudo + cor do visitante |
-       relógio no bloco verde (some nos treinos). Medido no teste-hud-minimo (H10) -->
+       relógio no bloco verde (some nos treinos). Medido no teste-hud-minimo (H10). Cada time é role="img" com o nome no
+       aria-label (hud.js): num <span> sem papel o leitor de tela ignorava o nome e lia "GLÇ" -->
   <div id="hud" class="hud" data-hud>
     <header class="placar" data-caixa="placar" aria-label="Placar">
       <span class="placar-marca" data-placar="marca">
@@ -50,13 +51,13 @@
         <svg class="marca-simbolo" viewBox="6 8 29 24" aria-hidden="true"><path d="M7 31 15.5 9H34L25.5 31z" fill="currentColor"/><path d="M25.11 15.85A6.2 6.2 0 1 0 26.64 20.86H21.1" transform="translate(20.5 20) skewX(-21) translate(-20.5 -20)" fill="none" stroke="#07090a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       <div class="placar-linha">
-        <span class="placar-time t0" id="placar-time-0"><i class="placar-cor" aria-hidden="true"></i><svg class="placar-escudo" data-placar="escudo" viewBox="0 0 20 22" aria-hidden="true"><use id="escudo-0" href="#escudo-golaco"/></svg><span class="placar-sigla" id="sigla-0">GLÇ</span></span>
+        <span class="placar-time t0" id="placar-time-0" role="img"><i class="placar-cor" aria-hidden="true"></i><svg class="placar-escudo" data-placar="escudo" viewBox="0 0 20 22" aria-hidden="true"><use id="escudo-0" href="#escudo-golaco"/></svg><span class="placar-sigla" id="sigla-0">GLÇ</span></span>
         <span class="placar-resultado">
           <b class="placar-gols" id="gols-0">0</b>
           <span class="placar-x" aria-hidden="true"></span>
           <b class="placar-gols" id="gols-1">0</b>
         </span>
-        <span class="placar-time t1" id="placar-time-1"><span class="placar-sigla" id="sigla-1">VIS</span><svg class="placar-escudo" data-placar="escudo" viewBox="0 0 20 22" aria-hidden="true"><use id="escudo-1" href="#escudo-ventania"/></svg><i class="placar-cor" aria-hidden="true"></i></span>
+        <span class="placar-time t1" id="placar-time-1" role="img"><span class="placar-sigla" id="sigla-1">VIS</span><svg class="placar-escudo" data-placar="escudo" viewBox="0 0 20 22" aria-hidden="true"><use id="escudo-1" href="#escudo-ventania"/></svg><i class="placar-cor" aria-hidden="true"></i></span>
       </div>
       <!-- relógio da partida no bloco verde (some nos treinos): minuto acelerado e o tempo -->
       <span class="placar-relogio" id="placar-relogio" hidden><b id="relogio">0'</b><small id="relogio-tempo">1º T</small></span>

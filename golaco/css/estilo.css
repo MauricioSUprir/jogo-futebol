@@ -257,14 +257,16 @@ html.com-toque .minimapa { bottom: auto; top: calc(var(--sa-t) + var(--m)); widt
   html.com-toque .modo { border-left: 0; padding-left: 0; min-width: 0; }
 }
 /* topo apertado (celular estreito ou com entalhe; medido em js/hud.js ajustarTopo):
-   1) nos TREINOS sai a marca do placar (na partida ela fica: o minimapa é que sai do meio, passo 5); 2) sai o texto do
+   1) nos TREINOS sai a marca do placar, só se sem ela ainda encostar (na partida ela fica: o minimapa é que sai do meio,
+   passo 5); 2) sai o texto do
    modo (fica o ponto de estado e a posição) */
 html.topo-c1:not(.em-partida) .placar-marca { display: none; }
 html.topo-c2 .modo { font-size: 0; letter-spacing: 0; gap: 0; }
 html.topo-c2 .painel-jogo { gap: 9px; padding: 0 10px 0 12px; }
 /* arco de botões grande (140%) chegando ao topo: o painel desce para baixo do placar, à esquerda */
 html.topo-desce .painel-jogo { right: auto; left: calc(var(--sa-l) + var(--m)); top: calc(var(--sa-t) + var(--m) + var(--placar-h) + 8px); }
-/* 3) sai o "1º T" do relógio (fica o minuto) */
+/* 3) sai o "1º T" do relógio (fica o minuto); na PARTIDA só depois do passo 5 (o "1º T +4" e o "Intervalo" ficam se o
+   minimapa encostado à direita do placar resolver: hud.js ajustarTopo) */
 html.topo-c3 .placar-relogio small { display: none; }
 /* 4) celular estreito com o relógio de 2 dígitos ou nos acréscimos ("45+2'"): os espaços apertam (as fontes NÃO: ficam
    nos mínimos de leitura do H10); 5) se ainda encostar, o minimapa sai do meio e encosta à direita do placar (hud.js) */

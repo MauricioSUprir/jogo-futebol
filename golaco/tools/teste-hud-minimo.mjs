@@ -30,7 +30,11 @@
 //        mesma tela) e que as da referência do dono (248×29 px em 844×390 = 7192 px²);
 //     c) legível: números ≥ 14 px, siglas ≥ 11 px (Apple HIG e Material 3: 11), "1º T +4" ≥ 10 px, escudos ≥ 12 px;
 //     d) nada encosta: as peças do placar não se sobrepõem nem saem dele, e com o minimapa LIGADO o placar mais largo
-//        (acréscimos) não encosta no minimapa nem no menu (folga ≥ 4 px)
+//        (acréscimos) não encosta no minimapa nem no menu (folga ≥ 4 px), o "1º T +4" CONTINUA na tela (o minimapa encosta
+//        à direita do placar antes de o tempo sair) e com gols de 2 dígitos (10-9: só o placar muda, o relógio não) nada
+//        encosta (contraprova de 13/10: em 568×320 o "1º T +4" sumia e o 10-9 passava 2,5 px por cima do minimapa); no
+//        treino de ataque com o minimapa e o painel, nada encosta e a marca fica (saía em 568 e 667 px sem precisar);
+//     e) leitor de tela: o placar tem o nome dos dois times (Golaço FC e Ventania FC; na tela só as siglas)
 //   node tools/teste-hud-minimo.mjs [--raiz <pasta do jogo>] [--so-placar]   (--raiz: mede outra cópia, ex.: a base;
 //   --so-placar: só as telas do H1/H7/H9 e o H5 com o H10, sem os 2 min de jogo nem as opções salvas — para iterar no placar)
 import path from 'node:path';
@@ -116,7 +120,10 @@ const MEDIR_PLACAR = async (gols, rel) => {
   const g = window.__golaco;
   if (g.placarDeTeste) g.placarDeTeste(gols, rel);
   else {
-    document.getElementById('gols-0').textContent = gols[0]; document.getElementById('gols-1').textContent = gols[1];
+    // base: só os gols (rel ausente) não refazem o topo, como no hud.js de antes
+    if (gols) { document.getElementById('gols-0').textContent = gols[0]; document.getElementById('gols-1').textContent = gols[1]; }
+  }
+  if (!g.placarDeTeste && rel) {
     const r = document.getElementById('placar-relogio'); r.hidden = false;
     document.getElementById('relogio').textContent = rel.acrescimo ? `${rel.minuto}+${rel.acrescimo.decorrido}'` : `${rel.minuto}'`;
     document.getElementById('relogio-tempo').textContent = rel.estado === 'intervalo' ? 'Intervalo' : `${rel.tempo}º T${rel.acrescimo ? ' +' + rel.acrescimo.anunciado : ''}`;
@@ -204,7 +211,7 @@ function conferirPlacar(tela, tipo, estado, r) {
   if (f.length) placarFalhas.push(`${tela} ${estado}: ${f.join('; ')}`);
   return { area, h: c.h };
 }
-const placarEncosta = [];
+const placarEncosta = [], placarTreino = []; let placarAria = '';
 
 // H1 + H2: layout nas duas fases e três telas de celular (determinístico, sem simular)
 let piorArea = 0, piorTexto = 0; const txtVisto = new Set(); const linhasH1 = [];
@@ -257,16 +264,47 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
       const m = await pagina.evaluate(([MP, gols, rel]) => eval(MP)(gols, rel), [MEDIR_PLACAR.toString(), gols, rel]);
       conferirPlacar(`${w}×${h}`, 'celular', estado, m);
     }
+    // leitor de tela: o nome de cada time (só no aria-label; contraprova de 13/10: num <span> sem papel o Chromium não
+    // expunha o nome, e a árvore saía "GLÇ 0 0 VNT")
+    if (w === 844) {
+      placarAria = (await pagina.locator('#hud .placar').ariaSnapshot()).replace(/\s*\n\s*/g, ' ');
+      if (!/Golaço FC/.test(placarAria) || !/Ventania FC/.test(placarAria)) placarFalhas.push(`leitor de tela sem o nome dos times: ${placarAria}`);
+    }
     const enc = await pagina.evaluate(async ([MP, FS, ES, gols, rel]) => {
       document.getElementById('chip-minimapa')?.click();
       const m = await eval(MP)(gols, rel);
       const f = eval(FS)().f.filter(x => ['placar', 'minimapa', 'menu'].includes(x.nome));
       const p = eval(ES)(f);
+      // contraprova (13/10): com o minimapa ligado o "1º T +4" continua (o minimapa encosta à direita do placar antes de
+      // o tempo sair), e gols de 2 dígitos (só o placar muda; o relógio não) refazem o topo: nada encosta
+      const tempo = m.tempo?.txt ?? null;
+      const m2 = await eval(MP)([10, 9]);
+      const p2 = eval(ES)(eval(FS)().f.filter(x => ['placar', 'minimapa', 'menu'].includes(x.nome)));
       document.getElementById('chip-minimapa')?.click();
-      return { p, nomes: f.map(x => x.nome), cls: m.cls };
+      return { p, p2, tempo, nomes: f.map(x => x.nome), cls: m.cls, larg2: m2.caixa.w };
     }, [MEDIR_PLACAR.toString(), FORMAS.toString(), ENCOSTA.toString(), ESTADOS_PLACAR[1][1], ESTADOS_PLACAR[1][2]]);
-    placarEncosta.push(`${w}×${h}: ${enc.p.length ? 'encosta ' + enc.p.join(', ') : 'nada encosta'} (${enc.nomes.join(', ')}${/topo-c4/.test(enc.cls) ? '; compacto' : ''})`);
+    placarEncosta.push(`${w}×${h}: ${enc.p.length ? 'encosta ' + enc.p.join(', ') : 'nada encosta'} (${enc.nomes.join(', ')}${/topo-c4/.test(enc.cls) ? '; compacto' : ''}; tempo "${enc.tempo ?? 'escondido'}"; com 10-9 ${enc.larg2.toFixed(0)} px: ${enc.p2.length ? 'encosta ' + enc.p2.join(', ') : 'nada encosta'})`);
     if (enc.p.length || !enc.nomes.includes('minimapa')) placarFalhas.push(`${w}×${h} com o minimapa: ${enc.p.join(', ') || 'minimapa não aparece'}`);
+    if (enc.tempo !== '1º T +4') placarFalhas.push(`${w}×${h} com o minimapa: "1º T +4" ${enc.tempo === null ? 'escondido' : `"${enc.tempo}"`}`);
+    if (enc.p2.length) placarFalhas.push(`${w}×${h} com o minimapa e gols 10-9: ${enc.p2.join(', ')}`);
+    // treino de ataque com o minimapa ligado e o painel ("Conduzindo" + posição): nada encosta e a marca do GOLAÇO fica
+    // (contraprova de 13/10: em 568 e 667 px ela saía com 40–90 px livres à direita do placar — quem encostava era o
+    // painel, e apertar o painel, passo 2, já resolvia)
+    const tr = await pagina.evaluate(async ([FS, ES]) => {
+      const g = window.__golaco, espera = () => new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(ok)));
+      g.trocarModo('ataque'); g.relogio.avancar(1000 / 60);
+      document.getElementById('chip-minimapa')?.click();
+      g.hudModo('Conduzindo', 'MEI');
+      await espera();
+      const f = eval(FS)().f.filter(x => ['placar', 'minimapa', 'menu', 'painel'].includes(x.nome));
+      const mc = document.querySelector('#hud .placar-marca');
+      const marca = !!mc && getComputedStyle(mc).display !== 'none' && mc.getBoundingClientRect().width > 0;
+      return { p: eval(ES)(f), marca, nomes: f.map(x => x.nome), modo: document.documentElement.classList.contains('em-partida') ? 'partida' : 'treino' };
+    }, [FORMAS.toString(), ENCOSTA.toString()]);
+    placarTreino.push(`${w}×${h}: ${tr.p.length ? 'encosta ' + tr.p.join(', ') : 'nada encosta'} (${tr.nomes.join(', ')}; marca ${tr.marca ? 'na tela' : 'FORA'})`);
+    if (tr.p.length || !tr.marca || tr.modo !== 'treino' || !tr.nomes.includes('minimapa') || !tr.nomes.includes('painel')) {
+      placarFalhas.push(`${w}×${h} treino com o minimapa: ${[...tr.p, tr.marca ? null : 'marca fora', tr.modo !== 'treino' ? 'não trocou de modo' : null].filter(Boolean).join(', ') || 'falta caixa'}`);
+    }
   } finally { await navegador.close(); }
 }
 meta('H9 nomes dos botões de toque por padrão (dono, 12/10), inteiros dentro do círculo do botão (3 telas, 2 fases)', `${nomesBotoes.comNome}/${nomesBotoes.botoes} botões com o nome${nomesBotoes.sem.size ? ' — sem: ' + [...nomesBotoes.sem].slice(0, 8).join(', ') : ''}`, 'todos', nomesBotoes.botoes > 0 && nomesBotoes.comNome === nomesBotoes.botoes);
@@ -378,9 +416,9 @@ if (!soPlacar) {
       conferirPlacar('1280×720', 'pc', estado, m);
     }
     meta('H10 placar no formato da referência, menor (altura e área < antes e < referência), legível e sem encostar (3 telas do celular + PC; jogo, acréscimos e intervalo)',
-      `${placarFalhas.length ? 'FALHAS: ' + placarFalhas.join(' | ') + ' — ' : ''}${placarLinhas.join('; ')}; com o minimapa: ${placarEncosta.join('; ')}`,
+      `${placarFalhas.length ? 'FALHAS: ' + placarFalhas.join(' | ') + ' — ' : ''}${placarLinhas.join('; ')}; com o minimapa: ${placarEncosta.join('; ')}; treino com o minimapa: ${placarTreino.join('; ')}; leitor de tela: ${placarAria}`,
       `marca, 2 escudos, 2 siglas, placar, relógio no bloco verde; altura ≤ 24 px (PC ≤ 26) e < antes (30/34) e < ref (29); área < antes e < ${PLACAR_REF.area}; números ≥ ${PLACAR_MIN.num} px, siglas ≥ ${PLACAR_MIN.sigla}, escudos ≥ ${PLACAR_MIN.escudo}; nada encosta`,
-      placarFalhas.length === 0 && placarLinhas.length === 12 && placarEncosta.length === 3);
+      placarFalhas.length === 0 && placarLinhas.length === 12 && placarEncosta.length === 3 && placarTreino.length === 3 && !!placarAria);
   } finally { await navegador.close(); }
 }
 
