@@ -49,15 +49,17 @@ function lerp(a, b, t) { return a + (b - a) * t; }
 // Gestos: alvo da mão em relação ao OMBRO, no referencial do rumo (f = frente, r = para fora do lado, y = para cima) e o
 // polo do cotovelo no mesmo referencial (pf, pr, py). r < 0 = para dentro (mão no peito, na cabeça).
 //                       f      r      y      pf    pr    py
+// (os gestos e as poses de corpo — inclinarTronco, cabeca, poseAgachado, flexionar — são exportados também para as cenas
+// de cartão e de fim de tempo: js/cena-atores.js)
 const G_AVIAO = [-0.05, 0.53, 0.02, -0.3, 0.2, -1];
-const G_V = [0.0, 0.3, 0.42, -0.2, 1, 0];
-const G_CEU = [0.15, 0.1, 0.5, 0, 1, 0];
-const G_SOCO = [0.1, 0.1, 0.52, 0, 1, 0];
-const G_FORA = [0.15, 0.3, -0.15, -0.3, 1, -0.5];
-const G_PEITO = [0.15, -0.24, -0.05, -0.2, 1, -0.6];
-const G_CINTURA = [-0.02, 0.12, -0.47, -0.6, 1, 0];
-const G_CABECA = [0.02, -0.1, 0.27, 0, 1, 0.4];
-const G_PUNHO = [0.12, 0.12, 0.36, 0, 1, 0];   // o punho cerrado sobe e desce (y + 0,14·sen) na corrida
+export const G_V = [0.0, 0.3, 0.42, -0.2, 1, 0];
+export const G_CEU = [0.15, 0.1, 0.5, 0, 1, 0];
+export const G_SOCO = [0.1, 0.1, 0.52, 0, 1, 0];
+export const G_FORA = [0.15, 0.3, -0.15, -0.3, 1, -0.5];
+export const G_PEITO = [0.15, -0.24, -0.05, -0.2, 1, -0.6];
+export const G_CINTURA = [-0.02, 0.12, -0.47, -0.6, 1, 0];
+export const G_CABECA = [0.02, -0.1, 0.27, 0, 1, 0.4];
+export const G_PUNHO = [0.12, 0.12, 0.36, 0, 1, 0];   // o punho cerrado sobe e desce (y + 0,14·sen) na corrida
 
 /** Hash de 32 bits de dois inteiros (a mesma conta em todo motor JS: Math.imul). */
 export function hashGol(tick, id) {
@@ -481,13 +483,13 @@ const SUP = [J.pelve, J.lombar, J.peito, J.pescoco, J.cabeca, J.ombroE, J.cotove
 const TRONCO = [J.lombar, J.peito, J.pescoco, J.cabeca, J.ombroE, J.cotoveloE, J.maoE, J.ombroD, J.cotoveloD, J.maoD];
 const PERNAS = [J.joelhoE, J.tornozeloE, J.pontaE, J.joelhoD, J.tornozeloD, J.pontaD];
 
-function moverJuntas(o, lista, dx, dy, dz) {
+export function moverJuntas(o, lista, dx, dy, dz) {
   for (let k = 0; k < lista.length; k++) { const i = lista[k] * 3; o[i] += dx; o[i + 1] += dy; o[i + 2] += dz; }
 }
 function moverTudo(o, dy) { for (let i = 1; i < o.length; i += 3) o[i] += dy; }
 
 /** Gira o tronco (lombar para cima, com os braços) em volta da pelve, no eixo da direita: ang > 0 = para a frente. */
-function inclinarTronco(o, fx, fz, ang) {
+export function inclinarTronco(o, fx, fz, ang) {
   if (ang === 0) return;
   const px = o[J.pelve * 3], py = o[J.pelve * 3 + 1], pz = o[J.pelve * 3 + 2];
   const ca = Math.cos(ang), sa = Math.sin(ang);
@@ -547,7 +549,7 @@ export function gesto(o, h, lado, ga, gb, m, w, dya = 0, dyb = 0) {
 }
 
 /** Cabeça baixa (lamento: w > 0) ou para trás (olhando o céu: w < 0). */
-function cabeca(o, h, w) {
+export function cabeca(o, h, w) {
   if (w === 0) return;
   const fx = Math.cos(h), fz = Math.sin(h), i = J.cabeca * 3, n = J.pescoco * 3;
   const f = w > 0 ? 0.06 * w : 0.05 * w, up = w > 0 ? 0.13 - 0.02 * w : 0.13 + 0.005 * w;
@@ -556,7 +558,7 @@ function cabeca(o, h, w) {
 
 const _polo = { x: 0, y: 0, z: 0 };
 /** IK da perna com o joelho nunca abaixo de `minY` (o polo sobe até o joelho sair do chão). */
-function pernaIK(o, iQ, iJ, iT, tx, ty, tz, px, py, pz, minY) {
+export function pernaIK(o, iQ, iJ, iT, tx, ty, tz, px, py, pz, minY) {
   let qy = py;
   for (let k = 0; k < 4; k++) {
     ik(o[iQ * 3], o[iQ * 3 + 1], o[iQ * 3 + 2], tx, ty, tz, px, qy, pz, o, iJ, iT);
@@ -566,7 +568,7 @@ function pernaIK(o, iQ, iJ, iT, tx, ty, tz, px, py, pz, minY) {
 }
 
 /** Ponta do pé a 0,17 m do tornozelo, na direção (dx, dy, dz) (normalizada aqui), nunca abaixo de 2,5 cm. */
-function ponta(o, iT, iP, dx, dy, dz) {
+export function ponta(o, iT, iP, dx, dy, dz) {
   const l = Math.hypot(dx, dy, dz) || 1;
   o[iP * 3] = o[iT * 3] + (dx / l) * 0.17;
   o[iP * 3 + 1] = Math.max(0.025, o[iT * 3 + 1] + (dy / l) * 0.17);
@@ -604,7 +606,7 @@ function poseJoelhos(o, a, w) {
 }
 
 /** Agachado (peso w): pelve desce, tronco para a frente, joelhos para a frente; os pés ficam onde estão. */
-function poseAgachado(o, j, w) {
+export function poseAgachado(o, j, w) {
   if (w <= 0) return;
   const h = j.rumo, fx = Math.cos(h), fz = Math.sin(h), rx = -fz, rz = fx;
   moverJuntas(o, SUP, 0, -C.agacha.desce * w, 0);
@@ -620,7 +622,7 @@ function poseAgachado(o, j, w) {
 }
 
 /** Pernas com o quadril abaixado dy (dy < 0) e os pés onde estão (agacha antes do pulo, aterrissa). */
-function flexionar(o, j, dy) {
+export function flexionar(o, j, dy) {
   if (dy >= 0) return;
   const fx = Math.cos(j.rumo), fz = Math.sin(j.rumo);
   moverJuntas(o, SUP, 0, dy, 0);

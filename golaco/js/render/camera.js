@@ -15,7 +15,7 @@
 // vista do "ponto da bola", e a bola nunca sai do quadro. Com a bola no ar (m.voo), o ponto da
 // bola antecipa a queda (vai parte do caminho até m.voo.alvo); a mola deixa tudo suave.
 import * as THREE from 'three';
-import { CAMERA, CAMPO } from '../config.js';
+import { CAMERA, CAMPO, CAMERA_GERAL } from '../config.js';
 
 /** Mola crítica exata (a mesma de util.js molaCritica), escrevendo no estado: sem alocar. */
 function mola(est, kx, kv, alvo, w, dt) {
@@ -78,7 +78,8 @@ export const CAMERA_GOL = {
 // atraso: comemoracao.js); uma mola aqui atrasava a steadicam ~2,7 m a 8 m/s (o autor corria para dentro da lente).
 // "Reduzir movimento" do sistema: a câmera não anda dentro do plano (fica onde o plano começou e só gira para o assunto).
 // Plano geral do estádio no intervalo e no fim (a torcida inteira no quadro, também no celular).
-export const CAMERA_GERAL = { de: [0, 34, 78], para: [0, 3, -16], fov: 31 };
+// (os números ficam em config.js: as cenas de fim de tempo, puras, terminam neste mesmo plano)
+export { CAMERA_GERAL };
 const reduzMovimento = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function lerp(a, b, t) { return a + (b - a) * t; }

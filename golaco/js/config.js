@@ -1211,3 +1211,91 @@ export const ESTADIO = {
   tunel: { x: 0, z: 44.5, largura: 7, altura: 3.2, profundidade: 12, laje: 0.5 },
   bancos: { x: [5, 17], z: [41, 43.6], altura: 2.3 },
 };
+
+// Cenas de CARTÃO e de FIM DE TEMPO (pedido do dono de 12/10; js/cena-cartao.js, js/cena-fim.js e js/cena-atores.js —
+// puros, como a comemoração: um mundo à parte com a locomoção do jogo; a simulação não muda). Pesquisa em
+// PESQUISA-CENAS.md; contrato em CONTRATOS.md ("Cenas de cartão e de fim de tempo").
+// Plano geral do estádio no intervalo e no fim (a torcida inteira no quadro, também no celular): render/camera.js e as
+// cenas de fim de tempo (js/cena-fim.js, o último plano)
+export const CAMERA_GERAL = { de: [0, 34, 78], para: [0, 3, -16], fov: 31 };
+
+export const CENAS = {
+  ligadas: true,              // padrão (?cenas=0 desliga; com webdriver, PRINTS e DEMO ficam desligadas)
+  pularDepois: 0.5,           // s — antes disso nenhum aperto pula (o mesmo da comemoração)
+  separacao: 0.5,             // m entre os centros dos corpos (a mesma da comemoração)
+  parado: 12,                 // ticks parado e plantado para ficar fixo (respirando, sem custo de locomoção)
+  respira: { sobe: 0.01, lado: 0.012 },          // m — o peito sobe e desce e o peso passa de um pé para o outro
+  lente: 2.5,                 // m — ninguém mais perto que isto da câmera
+  camLimite: 5.5,             // m além das linhas (a mesma regra da comemoração)
+  // árbitro e assistentes (cortejo.js: 200, 201, 202; o quarto árbitro, 203, só na substituição)
+  idArbitro: 200, idAssistentes: [201, 202],
+  assistentes: [[26, -34.5], [-26, 34.5]],      // um em cada metade, na linha lateral
+  tunel: { x: 0, z: 44.5 },   // a boca do túnel (config ESTADIO.tunel)
+};
+
+export const CENA_CARTAO = {
+  // o árbitro: começa a 6–8 m do punido (do lado da bola ou do centro), anda invisível (pré-rolagem) até faltar
+  // `preRolagem` m para o ponto onde para (2,0–2,8 m do punido, de frente: "reasonable distance", US Soccer p. 38)
+  arbitro: { distIni: [6, 8], vel: 5.5, velForte: 6.5, para: [2.0, 2.8], preRolagem: 2.6, freio: 4.2 },
+  tira: 0.55, tiraDur: 0.4,   // s — a mão vai ao bolso (amarelo: da camisa; vermelho: de trás do calção)
+  alto: 1.3,                  // s com o cartão no alto (braço reto acima da cabeça)
+  segundo: { alto1: 1.0, guarda: 0.35, alto2: 1.2 },  // 2º amarelo: amarelo 1,0 s → guarda → vermelho 1,2 s
+  anota: 0.8,                 // s — o árbitro anota (amarelo)
+  ombroSobe: 0.075,           // m — o ombro sobe com o braço reto no alto (elevação da escápula)
+  // planos (s): amarelo 4,8–5,6 s; vermelho 8,5–9,0 s (2º amarelo +1,0 s)
+  planos: {
+    amarelo: [['arbitro', 1.95], ['reacao', 2.5], ['anota', 1.0]],
+    vermelho: [['arbitro', 1.9], ['reacao', 2.5], ['saida', 1.5], ['tunel', 2.0], ['torcida', 1.0]],
+    segundo: [['arbitro', 2.9], ['reacao', 2.5], ['saida', 1.5], ['tunel', 2.0], ['torcida', 1.0]],
+  },
+  companheiro: 15,            // m — A1, A2, V1 e V2 precisam de um companheiro até aqui
+  ifab: 4,                    // m — só o capitão e o punido mais perto do árbitro (IFAB "only the captain")
+  afasta: 5.4,                // m — os outros vão para esta distância do árbitro (A1, V2); 3,5 nas outras
+  afastaLeve: 3.6,
+  velAfasta: 2.8,
+  // reações (m/s, m, s)
+  a1: { passos: 1.3, vel: 1.1, capitao: 0.95, vCap: 3.4 },
+  a2: { vel: 1.0, anda: 2.6, giro: 2.4 },
+  a3: { desculpa: 0.8, vel: 3.6 },
+  v1: { vel: 1.0 },
+  v2: { avanca: 1.7, vel: 1.4, recua: 1.0, vSai: 1.3 },
+  v3: { vel: 1.1 },
+  saida: { vel: 1.2 },
+  // elipse do túnel: o expulso aparece a 10–14 m da boca, fora do campo ou a ≤ 3 m da linha
+  tunel: { dist: [10.5, 13], cam: { x: 6.5, y: 1.6, z: 38.3 } },
+  camera: {
+    arbitro: { dist: 8, altura: 1.5, fov: 31, ang: 0.36, olharY: 1.12, pesoArbitro: 0.6 },
+    reacao3: { dist: 7, altura: 1.55, fov: 36 },     // plano de três (A1, V2)
+    frente: { dist: 4.8, altura: 1.25, olharY: 0.92, fov: 30 },     // de frente para o rosto (A2, V1, V3): o corpo inteiro
+    steadicam: { frente: 6, lado: 2.4, altura: 1.6, olharY: 1.0, fov: 32 }, // A3 (como a da comemoração)
+    anota: { dist: 11, altura: 2.2, fov: 30 },
+    saida: { atras: 1.2, lado: 5.2, altura: 1.6, fov: 32 },   // de lado, um pouco atrás, andando com ele
+    tunel: { fov: 34 },
+  },
+};
+
+export const CENA_FIM = {
+  // planos (s): intervalo ~9 s (+ os 3 s da faixa com o laço solto); fim 13,5 s (empate 11 s; +2 s com o treinador)
+  planos: {
+    intervalo: [['apito', 1.5], ['campo', 2.5], ['tunel', 3.5], ['torcida', 1.5], ['geral', 3.0]],
+    vitoria: [['apito', 1.5], ['vencedor', 3.0], ['perdedor', 2.5], ['cumprimentos', 2.0], ['treinador', 2.0], ['aplauso', 2.5], ['torcida', 2.0], ['geral', 0]],
+    empate: [['apito', 1.5], ['neutro', 3.0], ['cumprimentos', 2.0], ['treinador', 2.0], ['aplauso', 2.5], ['torcida', 2.0], ['geral', 0]],
+  },
+  velAnda: 1.4,               // m/s — os pares caminham para o aperto de mão, os times para o túnel
+  aperto: { dist: 0.86, altura: 1.06, pares: 6, maxDist: 6, maxDistFolga: 14, sacode: 2.4, amp: 0.035 },
+  cintura: 0.62,              // fração com as mãos na cintura no P2 do intervalo / no neutro
+  joelhos: 2,                 // quantos com as mãos nos joelhos
+  funil: { d: [8, 25], vel: [1.3, 1.5] },        // a elipse do túnel (intervalo)
+  aplauso: { d: [8, 10] },    // a elipse do aplauso à torcida (fim)
+  // câmera
+  camera: {
+    apito: { altura: 16, recuo: 30, fov: 34 },
+    campo: { dist: 13.5, altura: 2.4, fov: 34 },
+    tunel: { x: 6.5, y: 1.6, z: 38.3, fov: 40 },
+    grupo: { dist: 8, altura: 1.8, fov: 32 },
+    close: { dist: 5.2, altura: 1.55, fov: 30 },
+    aplauso: { atras: 7, altura: 1.7, fov: 40 },
+    cumprimentos: { dist: 8.5, altura: 1.8, fov: 34 },
+    treinador: { fov: 30, altura: 1.5 },
+  },
+};

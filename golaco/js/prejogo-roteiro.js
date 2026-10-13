@@ -154,6 +154,29 @@ const P = {
     som: { filtro: null, ganho: 1, agito: 0.75 }, torcida: { tensao: [0.7, 0.6], palmas: [0.4, 0.3] }, cortejo: 'fila',
   },
 };
+/**
+ * Os planos do pré-jogo (os dados). As cenas de cartão e de fim de tempo (js/cena-cartao.js, js/cena-fim.js) e o corte da
+ * torcida no gol reaproveitam os trilhos de torcida (organizada, visitantes, ladoDeLa), já conferidos fora dos sólidos do
+ * estádio por tools/teste-prejogo-roteiro.mjs — sem copiar números.
+ */
+export const PLANOS_PREJOGO = P;
+const _curvas = new Map(), _cpA = [0, 0, 0], _cpB = [0, 0, 0];
+/**
+ * Câmera do plano `id` (um de trilho) na fração s do trilho (0–1, pela suavização do plano, como cameraEm): out = {px, py,
+ * pz, lx, ly, lz, fov}.
+ */
+export function cameraDoPlano(id, s, out = {}) {
+  const p = P[id];
+  let cv = _curvas.get(id);
+  if (!cv) { cv = { de: criarCurva(p.cam.de), para: criarCurva(p.cam.para) }; _curvas.set(id, cv); }
+  const u = s < 0 ? 0 : s > 1 ? 1 : s, k = p.cam.suave ?? 0.5;
+  const q = u + (u * u * (3 - 2 * u) - u) * k;
+  const a = pontoCurva(cv.de, q, _cpA), b = pontoCurva(cv.para, q, _cpB);
+  out.px = a[0]; out.py = a[1]; out.pz = a[2]; out.lx = b[0]; out.ly = b[1]; out.lz = b[2];
+  out.fov = p.cam.fov[0] + (p.cam.fov[1] - p.cam.fov[0]) * q;
+  return out;
+}
+
 // a escalação: o MESMO fundo (uma órbita lenta, contínua de uma para a outra), escurecido pela tela
 const ORBITA_ESCALACAO = { centro: [0, 0], olhar: [0, 1, 3.2], raio: [58, 58], altura: [24, 24], ang: [74, 99.3], fov: 40 };
 const escalacao = (t, i) => ({
