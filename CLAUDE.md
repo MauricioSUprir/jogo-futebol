@@ -308,9 +308,11 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   para a linha de passe (`pontoMarcacao`) e, no passe, vai cortar quem chega a um ponto da TRAJETÓRIA antes do recebedor
   (`ia-tatica.js cortaPasse`, 0,2 s de leitura); no `sim.js` o recebedor que só marcou o domínio não tira a vez de quem
   foi cortar (antes o defensor no caminho só cortava com a bola batendo no corpo: 1 de 92 passes alcançáveis; agora
-  ~60%); passe certo 88,7% → 85,4%, interceptações 8,75 → 12,1 por time por partida (acima da PL, 8,5: aqui quase todo
-  passe errado é interceptação). Testes novos: `teste-cabeceio`, `teste-defesa-corrida`, `teste-intercepta` (os três
-  reprovam na base); o painel ganhou `--retomar`/`--parcial` (máquina dividida), `--base-json` e `--set`. O
+  ~60%); passe certo 88,7% → 85,1%, interceptações 8,75 → 11,3 por time por partida (acima da PL, 8,5: aqui quase todo
+  passe errado é interceptação). Gols (painel de 48, mesmas sementes): main 1,79 → branch 1,50 — a defesa da arrancada
+  (`corrida.v` 6,8; com 6,3 caía a 0,90) e menos gol de roubada alta (47% dos gols na main); falta volume de ataque
+  (chutes 8,5 → 6,6), calibração final com a condução curta. Testes novos: `teste-cabeceio`, `teste-defesa-corrida`,
+  `teste-intercepta` (os três reprovam na base; o defensor do corredor, 3,3–3,6 m/s contra a meta de 5, ficou PENDENTE); o painel ganhou `--retomar`/`--parcial` (máquina dividida), `--base-json` e `--set`. O
   `workflow_dispatch` do painel no GitHub dá 403 para a integração das sessões (roda sozinho no PR). NÃO mexer na condução nesta frente
   (a condução curta é de outra branch; a calibração final do painel é junto com ela).
 - **Tela limpa** (pedidos de 11/10: "quero menos informação na tela", "não quero a linha de impedimento durante o jogo";

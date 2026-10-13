@@ -1240,7 +1240,11 @@ corrido só na partida.
   (sem a IA jogando por ele), e o goleiro adversário; os companheiros do passador, não. Antes o recebedor com o toque
   marcado encerrava a vez de todos e o defensor no caminho só cortava com a bola batendo no corpo.
 - `sim.js boteIA` (partida): com o condutor a mais de `ACOES.boteIA.vLado` m/s a bola tirada sai para o lado do defensor e
-  `tras` para trás no caminho do condutor; o condutor fica sem dominar até `semDominioAte` (a regra da DIVIDIDA).
+  `tras` para trás no caminho do condutor; o condutor fica sem dominar até `semDominioAte` (a regra da DIVIDIDA). O
+  escolhido da PRESSÃO do humano (ramo `'pressaoHumano'`) não dá o bote acima de `ACOES.boteIA.vPressao` m/s (freia antes;
+  a falta no bote cresce com a velocidade de quem chega). A IA × IA não usa a PRESSÃO: o painel não muda com isso.
+- Calibração (painel de 48, 13/10): `IA_DEFESA.corrida.v` 6,8 (só a disparada de verdade liga a defesa da arrancada),
+  `GOLEIRO.logit.c0Partida` −0,35, `IA_ATAQUE.contra` {s: 8, bonus: 1,0}, `utilidade.chute` 3,0.
 
 ### Testes
 `teste-cabeceio` (canhão de cruzamentos, pose, teleporte, partidas demo, humano) e `teste-defesa-corrida` (humano

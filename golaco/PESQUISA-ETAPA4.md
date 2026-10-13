@@ -206,5 +206,5 @@ muda os gols (sem ele, 1,10 contra 0,90), nem a sombra na linha de passe (1,19).
 1,0 e 8 s (a retomada no meio vira contra-ataque), `utilidade.chute` 3,0. Falta ~0,3 gol para a main e ~0,8 para a meta:
 volume de ataque (chutes 6,6 contra 8,5) — a calibração final fica com a condução curta, como combinado. Testes:
 `teste-intercepta` (base: 1/92 passes alcançáveis cortados, passe certo 88,7%, 8,75 interceptações; agora 20/34 = 59%,
-85,4%, 12,08), `teste-cabeceio` e `teste-defesa-corrida` (a base reprova 8 e 6 metas); o defensor do corredor ultrapassado
+85,1%, 11,29; homem livre 77,8% → 75,6%), `teste-cabeceio` e `teste-defesa-corrida` (a base reprova 8 e 6 metas); o defensor do corredor ultrapassado
 ficou em 3,3–3,6 m/s (meta ≥ 5; base 3,0) — PENDENTE, não reprova.
