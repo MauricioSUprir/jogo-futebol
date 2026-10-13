@@ -21,7 +21,7 @@
 import { PASSO, CAMPO, CENA_FIM, CENAS, CAMERA_GERAL } from './config.js';
 import {
   criarBase, adicionarJogador, adicionarArbitro, adicionarNovo, poseInicial, recriarAtor, soltar, para, irPara, parar,
-  desviar, passoAtores, tempoDe, planoNoTempo, hashGol, camValida, melhorCamera, definirPlano, definirPlanoGrupo,
+  desviar, passoAtores, tempoDe, planoNoTempo, hashGol, camValida, melhorCamera, definirPlano, definirPlanoGrupo, fugirDaLente,
   criarPlanoCena, clamp, suave, lerp, janela, s60, J, moverTudo, gApito, gAponta, gCintura, gJoelhos, gAperto, gCeu, gSoco,
   gCabeca, gTapinha, gPalmasAlto, posturaCabisbaixo, posturaAgachado,
 } from './cena-atores.js';
@@ -147,13 +147,26 @@ function montarGrupos(c) {
     const resto = v.slice(1).sort((x, y) => Math.hypot(x.j.x - foco.j.x, x.j.z - foco.j.z) - Math.hypot(y.j.x - foco.j.x, y.j.z - foco.j.z) || x.id - y.id).slice(0, 5);
     c.grupoV = { foco, membros: resto, x: foco.j.x, z: foco.j.z };
     foco.festa = 0; foco.podeFixar = false;
-    resto.forEach((a, i) => { a.festa = i + 1; a.podeFixar = false; });
+    const n = resto.length, f = foco.j;
+    resto.forEach((a, i) => {
+      a.festa = i + 1; a.podeFixar = false;
+      // o lugar dele na roda (o mesmo do desejo): as câmeras escolhidas deixam a lente fora do caminho até lá
+      const ang = Math.atan2(-f.z, -f.x) + (i - (n - 1) / 2) * 0.95;
+      a.alvoX = f.x + Math.cos(ang) * 0.78; a.alvoZ = f.z + Math.sin(ang) * 0.78;
+    });
     const gk = c.atores.find(a => a.tipo === 'vencedor' && a.goleiro);
-    if (gk) { gk.corre = true; gk.podeFixar = false; }
+    if (gk) {
+      gk.corre = true; gk.podeFixar = false;
+      const dx = f.x - gk.j.x, dz = f.z - gk.j.z, d = Math.hypot(dx, dz) || 1;
+      gk.alvoX = f.x - (dx / d) * 1.6; gk.alvoZ = f.z - (dz / d) * 1.6;
+    }
   }
   if (p.length >= 2) {
     c.grupoP = { membros: p.slice(0, 4) };
     p.slice(0, 4).forEach((a, i) => { a.lamento = i; a.podeFixar = false; });
+    // o 2º vai levantar o 1º: o alvo dele (as câmeras escolhidas deixam a lente fora do caminho)
+    const o = p[0].j, b = p[1].j, dx = o.x - b.x, dz = o.z - b.z, d = Math.hypot(dx, dz) || 1;
+    p[1].alvoX = o.x - (dx / d) * 0.62; p[1].alvoZ = o.z - (dz / d) * 0.62;
   }
   void P;
 }
@@ -169,10 +182,18 @@ function desejo(c, a, t) {
   if (c.noTunel) return andarTunel(c, a);
   if (c.noAplauso && a.aplaude) return irPara(c, a, a.alvoX, a.alvoZ, 1.25, a.rumoAlvo, 0.2, 1.2);
   if (a === c.arbitro) {
+    // no fim: anda ao encontro de quem vem cumprimentá-lo (até 2,4 m dele) e para de frente
+    if (c.parArbitro) {
+      const g = c.parArbitro.jog.j, dx = g.x - j.x, dz = g.z - j.z, d = Math.hypot(dx, dz) || 1;
+      if (c.parArbitro.t0 < 0 && d > 2.4) return irPara(c, a, g.x - (dx / d) * 2.2, g.z - (dz / d) * 2.2, 1.5, Math.atan2(dz, dx), 0.15, 1.5);
+      return parar(c, a, g.x, g.z);
+    }
     if (P.resultado === 'intervalo' || t < (tCump ?? Infinity)) return parar(c, a, 0, TUNEL.z);
     return parar(c, a, j.x - 1, j.z);
   }
   if (a.tipo === 'assistente') {
+    const fl = fugirDaLente(c, a);
+    if (fl) return desviar(c, a, fl);
     // o trio se junta: os assistentes andam para perto do árbitro
     if (t < 1.2) return parar(c, a, arb.x, arb.z);
     const dx = arb.x - j.x, dz = arb.z - j.z, d = Math.hypot(dx, dz) || 1;
@@ -180,22 +201,34 @@ function desejo(c, a, t) {
     return desviar(c, a, irPara(c, a, j.x + (dx / d) * Math.min(k, 30), j.z + (dz / d) * Math.min(k, 30), K.velAnda, Math.atan2(dz, dx), 0.3, 1.2));
   }
   if (a.tipo === 'treinador') return parar(c, a, 0, 0);
+  // quem não é do plano sai da frente da lente (a de agora e, perto do corte, a do próximo)
+  // (os assuntos do plano de agora ficam: a festa no 'vencedor', o lamento no 'perdedor'; os pares e quem vai ao árbitro
+  // sempre)
+  const nomeAgora = c.ip >= 0 && c.ip < P.planos.length ? P.planos[c.ip].nome : '';
+  const assunto = a.par || a.vaiArbitro || ((a.festa != null || a.corre) && nomeAgora === 'vencedor') || (a.lamento != null && nomeAgora === 'perdedor');
+  if (!assunto) {
+    const fl = fugirDaLente(c, a);
+    if (fl) return desviar(c, a, fl);
+  }
   // o jogador que cumprimenta o árbitro no fim: vai até ele (0,86 m), de frente
   if (a.vaiArbitro) {
     const dx = arb.x - j.x, dz = arb.z - j.z, d = Math.hypot(dx, dz) || 1, meia = K.aperto.dist;
-    return desviar(c, a, irPara(c, a, arb.x - (dx / d) * meia, arb.z - (dz / d) * meia, K.velAnda + 0.4, Math.atan2(dz, dx), 0.03, 1.4));
+    // (até 2,05 s depois do apito, andando: todos desaceleram; depois trota se está longe)
+    return desviar(c, a, irPara(c, a, arb.x - (dx / d) * meia, arb.z - (dz / d) * meia, t < 2.05 ? K.velAnda : d > 6 ? 2.6 : K.velAnda + 0.2, Math.atan2(dz, dx), 0.03, 1.4));
   }
-  // os pares do aperto de mão: andam um para o outro (a partir de 1,0 s; os do fim, a partir do 'cumprimentos' − 2 s)
+  // os pares do aperto de mão: andam um para o outro (a partir de 1,0 s; os da vitória, de 2,2 s: até 2,0 s depois do
+  // apito todos desaceleram)
   if (a.par) {
     const p = a.par, o = p.a === a ? p.b : p.a;
-    const t0 = P.resultado === 'intervalo' || P.resultado === 'empate' ? 1.0 : Math.max(1.0, (tCump ?? 7) - 2.6);
+    const t0 = P.resultado === 'intervalo' || P.resultado === 'empate' ? 1.0 : 2.2;
     if (t < t0 || p.feito) return parar(c, a, o.j.x, o.j.z);
     const mx = (j.x + o.j.x) / 2, mz = (j.z + o.j.z) / 2, dx = o.j.x - j.x, dz = o.j.z - j.z, d = Math.hypot(dx, dz) || 1;
     const meia = K.aperto.dist / 2;
     return irPara(c, a, mx - (dx / d) * meia, mz - (dz / d) * meia, K.velAnda, Math.atan2(dz, dx), 0.03, 1.4);
   }
   // fim com vencedor: o grupo da festa (abraço em volta do foco; o goleiro vem correndo)
-  if (P.resultado === 'vitoria' && t >= 1.6 && t < (tCump ?? 99)) {
+  // (só depois de 2,05 s: até 2,0 s depois do apito todos desaceleram — ninguém acima de 1,6 m/s)
+  if (P.resultado === 'vitoria' && t >= 2.05 && t < (tCump ?? 99)) {
     const G = c.grupoV;
     if (G && a.festa != null && a.festa > 0) {
       const f = G.foco.j, k = a.festa - 1, n = G.membros.length;
@@ -285,7 +318,8 @@ function cintura(c, a, t) {
 function aperto(c, a, t) {
   const p = a.par, o = p.a === a ? p.b : p.a;
   const d = Math.hypot(a.j.x - o.j.x, a.j.z - o.j.z);
-  const tMin = c.plano.resultado === 'vitoria' ? (tPlano(c, 'cumprimentos') ?? 7) - 1.6 : 1.0;
+  // (na vitória o aperto é no plano dos cumprimentos: os pares esperam um de frente para o outro)
+  const tMin = c.plano.resultado === 'vitoria' ? (tPlano(c, 'cumprimentos') ?? 7) - 0.2 : 1.0;
   if (!p.feito && p.t0 < 0 && t >= tMin && d >= 0.8 && d <= K.aperto.dist + 0.12 && Math.hypot(a.j.vx, a.j.vz) < 0.35 && Math.hypot(o.j.vx, o.j.vz) < 0.35) p.t0 = t;
   const dur = 1.0;
   p.ativo = p.t0 >= 0 && t < p.t0 + dur + 0.3;
@@ -375,19 +409,32 @@ function gestosTreinador(c, a, t, tTr) {
 /** Um tick (1/60 s). No fim do jogo a cena continua viva no plano geral (respirando) depois do último plano. */
 export function passoCenaFim(c) {
   if (c.acabou) return false;
+  // a lente do plano de agora e, 0,9 s antes do corte, a do próximo (escolhida já; fica para o plano): quem está na frente
+  // dela sai (cena-atores.js fugirDaLente)
+  lentes(c, c.k * PASSO);
   passoAtores(c, desejo, gestos);
   const t = c.k * PASSO, P = c.plano;
-  // o aperto com o árbitro (fim): o 1º jogador de um par que já terminou o aperto vai até ele
-  if (P.tipo === 'fimDeJogo' && !c.parArbitro) {
-    const tc = tPlano(c, 'cumprimentos');
-    if (tc != null && t >= tc - 1.2) {
-      const p = c.pares.find(q => q.feito) ?? c.pares[0];
-      if (p) { c.parArbitro = { jog: p.a, t0: -1 }; p.a.vaiArbitro = true; soltar(p.a); }
+  // o aperto com o árbitro (fim; UEFA Art. 50.04): a partir de 1,0 s, o jogador de linha livre (sem par, fora da festa e
+  // do lamento) do time que NÃO vai aplaudir a torcida (a elipse do aplauso não o leva) mais perto dele vai até ele e ele
+  // vem ao encontro; apertam a mão no plano dos cumprimentos
+  const tc = tPlano(c, 'cumprimentos');
+  if (P.tipo === 'fimDeJogo' && !c.parArbitro && tc != null && t >= 1.0) {
+    // (sem ninguém livre no outro time: um livre do time que aplaude, depois o último da festa ou do lamento — que sai dela)
+    let melhor = null, dm = Infinity;
+    for (const a of c.atores) {
+      if (!a.ativo || (a.time !== 0 && a.time !== 1) || a.tipo === 'treinador' || a.par || a.goleiro || a.corre || a.festa === 0 || (a.lamento != null && a.lamento < 2)) continue;
+      const d = Math.hypot(a.j.x - c.arbitro.j.x, a.j.z - c.arbitro.j.z) + (a.time === P.timeHumano ? 25 : 0) + (a.festa != null || a.lamento != null ? 40 : 0);
+      if (d < dm) { dm = d; melhor = a; }
+    }
+    if (melhor) {
+      c.parArbitro = { jog: melhor, t0: -1 }; melhor.vaiArbitro = true; soltar(melhor);
+      if (melhor.festa != null && c.grupoV) { c.grupoV.membros = c.grupoV.membros.filter(q => q !== melhor); melhor.festa = null; }
+      if (melhor.lamento != null && c.grupoP) { c.grupoP.membros = c.grupoP.membros.filter(q => q !== melhor); melhor.lamento = null; }
     }
   }
-  if (c.parArbitro && c.parArbitro.t0 < 0) {
+  if (c.parArbitro && c.parArbitro.t0 < 0 && t >= tc + 0.2) {
     const jg = c.parArbitro.jog, d = Math.hypot(jg.j.x - c.arbitro.j.x, jg.j.z - c.arbitro.j.z);
-    if (d <= K.aperto.dist + 0.12 && Math.hypot(jg.j.vx, jg.j.vz) < 0.5) c.parArbitro.t0 = t;
+    if (d <= K.aperto.dist + 0.12 && d >= 0.8 && Math.hypot(jg.j.vx, jg.j.vz) < 0.35) c.parArbitro.t0 = t;
   }
   const pl = P.planos, ip = planoNoTempo(c, t);
   if (ip !== c.ip && ip < pl.length) entrarPlano(c, ip);
@@ -420,6 +467,18 @@ export function faseFim(c) {
   return ip < c.plano.planos.length ? c.plano.planos[ip].nome : 'geral';
 }
 
+const LENTE_LIVRE = { campo: true, neutro: true, cumprimentos: true, vencedor: true, perdedor: true, treinador: true };
+const _opcLente = { pequena: false, aspecto: 16 / 9 }, _pcLente = criarPlanoCena(), _camDe = { x: 0, z: 0 }, _camDe2 = { x: 0, z: 0 };
+function lentes(c, t) {
+  const P0 = c.plano.planos, ia = planoNoTempo(c, t);
+  c.camDe = null; c.camDe2 = null;
+  if (ia < P0.length && LENTE_LIVRE[P0[ia].nome]) { planoIndice(c, ia, t, _opcLente, _pcLente); _camDe.x = _pcLente.de[0]; _camDe.z = _pcLente.de[2]; c.camDe = _camDe; }
+  if (ia + 1 < P0.length && LENTE_LIVRE[P0[ia + 1].nome] && P0[ia + 1].t0 - t <= 0.9) {
+    if (!c.cams[ia + 1]) c.cams[ia + 1] = escolherCamera(c, ia + 1);
+    planoIndice(c, ia + 1, P0[ia + 1].t0, _opcLente, _pcLente); _camDe2.x = _pcLente.de[0]; _camDe2.z = _pcLente.de[2]; c.camDe2 = _camDe2;
+  }
+}
+
 /** Entra no plano ip: as elipses (túnel, aplauso), o campo vazio do geral do intervalo e a câmera dele. */
 function entrarPlano(c, ip) {
   c.ip = ip;
@@ -430,7 +489,8 @@ function entrarPlano(c, ip) {
   if (nome !== 'aplauso' && c.noAplauso) c.noAplauso = nome === 'torcida' || nome === 'geral';
   if (nome === 'geral' && c.plano.tipo === 'intervalo') for (const a of c.atores) a.ativo = false;
   if (nome === 'tunel') c.noTunel = true;
-  c.cams[ip] = escolherCamera(c, ip);
+  // (a câmera do plano já pode ter sido escolhida 0,9 s antes do corte; as elipses escolhem de novo, com as posições novas)
+  if (!c.cams[ip] || nome === 'tunel' || nome === 'aplauso') c.cams[ip] = escolherCamera(c, ip);
   c.cortes++;
 }
 
@@ -471,11 +531,13 @@ function elipseAplauso(c) {
   const time = c.atores.filter(a => a.time === th && a.tipo !== 'treinador');
   time.sort((x, y) => x.id - y.id);
   const n = time.length;
+  void n;
   time.forEach((a, i) => {
-    const d = lerp(K.aplauso.d[0], K.aplauso.d[1], (i % 2) * 0.6 + 0.2);
-    let z = (i - (n - 1) / 2) * 2.05;
-    if (Math.abs(z) < 5.6) z = (z >= 0 ? 1 : -1) * (5.6 + Math.abs(z) * 0.4);   // longe do gol e da rede
-    const x = sx * (frente - d) - sx * (i % 2) * 1.4;
+    // um de cada lado do gol (longe dele e da rede), de 1,9 em 1,9 m para fora, em duas fileiras
+    const lado = i % 2 ? 1 : -1, k = i >> 1;
+    const d = lerp(K.aplauso.d[0], K.aplauso.d[1], (k % 2) * 0.6 + 0.2);
+    const z = lado * (5.8 + k * 1.9);
+    const x = sx * (frente - d) - sx * (k % 2) * 1.4;
     a.alvoX = sx * (frente - 4.6); a.alvoZ = z; a.rumoAlvo = sx > 0 ? 0 : Math.PI;
     recriarAtor(c, a, x, z, a.rumoAlvo, { dx: sx, dz: 0, vel: 1.2, ticks: 40 });
     a.aplaude = true; a.podeFixar = false;
@@ -567,7 +629,14 @@ function escolherCamera(c, ip) {
 export function planoCameraFim(c, opc, out) {
   out.tunel = false;
   if (c.acabou) { out.nome = 'fim'; return out; }
-  const t = tempoDe(c), ip = planoNoTempo(c, t), pl = c.plano.planos[ip];
+  const t = tempoDe(c);
+  return planoIndice(c, planoNoTempo(c, t), t, opc, out);
+}
+
+/** O plano ip no tempo t (s) com as posições desenhadas de agora. */
+function planoIndice(c, ip, t, opc, out) {
+  out.tunel = false;
+  const pl = c.plano.planos[ip];
   if (!pl) { out.nome = 'fim'; return out; }
   const cam = c.cams[ip] ?? (c.cams[ip] = escolherCamera(c, ip));
   const al = c.alfa, arb = c.arbitro;

@@ -155,7 +155,7 @@ function andarCena(c, fns, opc) {
   const ant = new Map();
   const pcs = ASPECTOS.map(() => fns.criarPlano());
   let faseAnt = null;
-  while (!c.acabou && r.ticks < 20 * 60) {
+  while (!c.acabou && r.ticks < (opc.max ?? 20 * 60)) {
     const nomeAntes = faseAnt;
     const t0 = performance.now();
     fns.passo(c);
@@ -309,7 +309,7 @@ function medirCartao(c) {
       x.corTicks.push(alto ? cc.corVisivel : null);
       if (alto) {
         const d = Math.hypot(o[J.pelve * 3] - po[J.pelve * 3], o[J.pelve * 3 + 2] - po[J.pelve * 3 + 2]);
-        x.distAlto[0] = Math.min(x.distAlto[0], d); x.distAlto[1] = Math.max(x.distAlto[1], d);
+        x.distAlto[0] = Math.min(x.distAlto[0], d); if (d > x.distAlto[1]) { x.distAlto[1] = d; x.tAlto = +t.toFixed(2); }
         if (nome === 'arbitro') {
           // o cartão de frente para o punido: o ângulo entre a face e a direção da câmera
           let nx = po[J.peito * 3] - o[J.peito * 3], nz = po[J.peito * 3 + 2] - o[J.peito * 3 + 2];
@@ -425,6 +425,7 @@ if (cenasA.length) {
   if (detalhe) for (const x of ruinsArb) console.log('arbitro', x.sit, x.sem, x.variante, JSON.stringify(seqs(x)));
   const dmin = Math.min(...cenasA.map(x => x.distAlto[0])), dmax = Math.max(...cenasA.map(x => x.distAlto[1]));
   reg('A árbitro: distância ao punido com o cartão no alto', `${f2(dmin)}–${f2(dmax)} m`, '1,5–3,2 m', dmin >= 1.5 && dmax <= 3.2);
+  if (detalhe) for (const x of cenasA) if (x.distAlto[0] < 1.5 || x.distAlto[1] > 3.2) console.log('distancia', x.sit, x.sem, x.variante, x.distAlto.map(f2).join('–'), x.tAlto);
   const ang = Math.max(...cenasA.map(x => x.angCartao));
   reg('A o cartão de frente para a câmera no plano do árbitro', `pior ${f2(ang)}°`, '≤ 35°', ang <= 35);
   const ifab = cenasA.filter(x => x.plano.variante === 'abertos' || x.plano.variante === 'segurado');
@@ -476,10 +477,157 @@ if (roda('B')) {
   }
 }
 
+// ------------------------------------------------------------------------------------------------ C) fim de tempo
+const CF = await tentar('cena-fim.js');
+const cenasC = [];
+// os técnicos falsos do gancho (a frente dos treinadores entrega os de verdade): na área técnica de cada banco
+const TECNICOS = { 0: { id: 301, time: 0, x: 11, z: 36, rumo: -Math.PI / 2, kit: null }, 1: { id: 302, time: 1, x: -11, z: 36, rumo: -Math.PI / 2, kit: null } };
+const RESULTADOS = [['intervalo', 'intervalo', null], ['vitoriaCasa', 'fimDeJogo', { 0: 2, 1: 1 }], ['derrotaCasa', 'fimDeJogo', { 0: 0, 1: 1 }], ['empate', 'fimDeJogo', { 0: 1, 1: 1 }]];
+if (roda('C') || roda('E') || roda('G')) {
+  if (!CF) reg('C cena de fim de tempo (js/cena-fim.js)', 'não existe: no apito do intervalo e do fim a câmera só abre no plano geral com a faixa', 'existe', false);
+  else {
+    const L = await LC.carregarCenas(pastaJs);
+    for (const [sem, tk] of ESTADOS) {
+      const base = LC.estadoDoMeio(L, sem, tk);
+      for (const [nome, tipo, placar] of RESULTADOS) {
+        for (const tec of [false, true]) {
+          if (tec && nome === 'intervalo') continue;
+          const m = structuredClone(base);
+          const h0 = S.hashMundo(m);
+          const plano = CF.planejarFim(m, tipo, { placar: placar ?? undefined, timeHumano: 0, treinadores: tec ? TECNICOS : null });
+          const c = CF.criarCenaFim(plano, m);
+          const x = medirFim(c);
+          x.hashIgual = S.hashMundo(m) === h0;
+          x.nome = nome; x.sem = sem; x.comTec = tec;
+          cenasC.push(x);
+        }
+      }
+    }
+  }
+}
+
+/** Uma cena de fim de tempo: as medidas comuns + as do fim (velocidade depois do apito, cintura, apertos, túnel, festa, lamento). */
+function medirFim(c) {
+  const P = c.plano;
+  const pl = nm => P.planos.find(q => q.nome === nm);
+  const jogs = c.atores.filter(a => a.time === 0 || a.time === 1).filter(a => a.tipo !== 'treinador');
+  const x = { plano: P, v2: 0, piorV2: null, cintura: new Map(), cinturaMax: new Map(), apertos: new Map(), apertoArb: 0, tunel: new Map(), festa: new Map(), lamento: new Map(), maosAlto: new Map(), tec: { braco: 0, dentro: true, n: 0 } };
+  const pCampo = pl('campo') ?? pl('neutro');
+  const kMax = Math.round((P.duracao + 1.0) / PASSO);
+  x.r = andarCena(c, {
+    passo: CF.passoCenaFim, planoCamera: CF.planoCameraFim, criarPlano: CF.criarPlanoCameraFim,
+  }, {
+    max: kMax,
+    por: (cc, t, nome) => {
+      // 2,0 s depois do apito: ninguém acima de 1,6 m/s (todos desaceleram pela locomoção)
+      if (Math.abs(t - 2.0) < PASSO / 2) for (const a of cc.atores) { if (!a.ativo) continue; const v = Math.hypot(a.j.vx, a.j.vz); if (v > x.v2) { x.v2 = v; x.piorV2 = { id: a.id, tipo: a.tipo, v: +v.toFixed(2) }; } }
+      for (const a of jogs) {
+        if (!a.ativo) continue;
+        const o = a.atu;
+        // mãos na cintura (≤ 0,12 m da articulação do quadril), contínuo
+        if (pCampo && t >= pCampo.t0 && t < pCampo.t1) {
+          const ok = Math.hypot(o[J.maoE * 3] - o[J.quadrilE * 3], o[J.maoE * 3 + 1] - o[J.quadrilE * 3 + 1], o[J.maoE * 3 + 2] - o[J.quadrilE * 3 + 2]) <= 0.12
+            && Math.hypot(o[J.maoD * 3] - o[J.quadrilD * 3], o[J.maoD * 3 + 1] - o[J.quadrilD * 3 + 1], o[J.maoD * 3 + 2] - o[J.quadrilD * 3 + 2]) <= 0.12;
+          const n = ok ? (x.cintura.get(a) ?? 0) + 1 : 0;
+          x.cintura.set(a, n); x.cinturaMax.set(a, Math.max(x.cinturaMax.get(a) ?? 0, n));
+        }
+        // no túnel (intervalo, P3): a distância à boca caindo
+        if (nome === 'tunel') {
+          const d = Math.hypot(a.j.x - 0, a.j.z - 44.5), q = x.tunel.get(a) ?? { ant: null, cai: 0, n: 0 };
+          if (q.ant != null && a.recriado !== cc.k) { q.n++; if (d < q.ant - 1e-6) q.cai++; }
+          q.ant = d; x.tunel.set(a, q);
+        }
+        const topo = o[J.cabeca * 3 + 1] + TOPO;
+        const alto = o[J.maoE * 3 + 1] >= topo + 0.1 && o[J.maoD * 3 + 1] >= topo + 0.1;
+        if (nome === 'vencedor' && a.time === P.vencedor) x.festa.set(a, (x.festa.get(a) ?? 0) + (alto ? 1 : 0));
+        if (nome === 'perdedor' && a.time !== P.vencedor) {
+          const c3 = J.cabeca * 3;
+          const maosCab = [J.maoE, J.maoD].every(im => Math.hypot(o[im * 3] - o[c3], o[im * 3 + 1] - o[c3 + 1], o[im * 3 + 2] - o[c3 + 2]) <= 0.22);
+          const maosJoe = Math.hypot(o[J.maoE * 3] - o[J.joelhoE * 3], o[J.maoE * 3 + 1] - o[J.joelhoE * 3 + 1], o[J.maoE * 3 + 2] - o[J.joelhoE * 3 + 2]) <= 0.2
+            && Math.hypot(o[J.maoD * 3] - o[J.joelhoD * 3], o[J.maoD * 3 + 1] - o[J.joelhoD * 3 + 1], o[J.maoD * 3 + 2] - o[J.joelhoD * 3 + 2]) <= 0.2;
+          const cab = CA.anguloCabeca(o, a.j.rumo) >= 20 * Math.PI / 180;
+          x.lamento.set(a, (x.lamento.get(a) ?? 0) + (maosCab || maosJoe || cab ? 1 : 0));
+        }
+        if (P.resultado === 'empate' && nome !== 'aplauso' && nome !== 'torcida' && nome !== 'geral') {
+          const q = x.maosAlto.get(a) ?? { n: 0, max: 0 };
+          q.n = alto ? q.n + 1 : 0; q.max = Math.max(q.max, q.n); x.maosAlto.set(a, q);
+        }
+      }
+      // apertos de mão: as mãos direitas ≤ 0,15 m e as pelves a 0,8–1,2 m, contínuo
+      const at = cc.atores;
+      for (let p = 0; p < at.length; p++) {
+        const A = at[p]; if (!A.ativo) continue;
+        for (let q = p + 1; q < at.length; q++) {
+          const B = at[q]; if (!B.ativo) continue;
+          if (A.time === B.time) continue;
+          const oa = A.atu, ob = B.atu;
+          const dm = Math.hypot(oa[J.maoD * 3] - ob[J.maoD * 3], oa[J.maoD * 3 + 1] - ob[J.maoD * 3 + 1], oa[J.maoD * 3 + 2] - ob[J.maoD * 3 + 2]);
+          const dp = Math.hypot(oa[J.pelve * 3] - ob[J.pelve * 3], oa[J.pelve * 3 + 2] - ob[J.pelve * 3 + 2]);
+          const k = A.id * 1000 + B.id;
+          const r = x.apertos.get(k) ?? { n: 0, max: 0, arb: A.time === 2 || B.time === 2 };
+          r.n = dm <= 0.15 && dp >= 0.8 && dp <= 1.2 ? r.n + 1 : 0; r.max = Math.max(r.max, r.n);
+          x.apertos.set(k, r);
+        }
+      }
+      // o treinador do gancho: os braços acima da cabeça e dentro da área técnica
+      for (const a of cc.treinadores ?? []) {
+        if (nome !== 'treinador') continue;
+        const o = a.atu, topo = o[J.cabeca * 3 + 1] + TOPO;
+        if (a.timeT === P.vencedor && o[J.maoE * 3 + 1] >= topo + 0.1 && o[J.maoD * 3 + 1] >= topo + 0.1) x.tec.braco++;
+        const ax = Math.abs(a.j.x);
+        if (!(ax >= 4 && ax <= 18 && a.j.z >= 35 && a.j.z <= 41)) x.tec.dentro = false;
+        x.tec.n++;
+      }
+    },
+  });
+  x.nApertos = [...x.apertos.values()].filter(r => !r.arb && r.max >= 24).length;
+  x.nApertoArb = [...x.apertos.values()].filter(r => r.arb && r.max >= 24).length;
+  return x;
+}
+
+if (cenasC.length) {
+  const rs = cenasC.map(x => x.r);
+  reg('C canhão: cenas de fim de tempo a partir de estados do meio', `${cenasC.length} cenas (8 estados × intervalo, vitória da casa, derrota da casa, empate; o fim com e sem o técnico do gancho)`, '56', cenasC.length === 56);
+  reg('C corpo: NaN, ossos, pé plantado, pé no ar, pelves, saltos só no corte', resumoCorpo(rs), '0, ≤ 5 mm, ≤ 0,05, ≤ 1,0, ≥ 0,40, 0', rs.every(okCorpo));
+  if (detalhe) for (const x of cenasC) if (!okCorpo(x.r)) console.log('corpoC', x.nome, x.sem, x.comTec, JSON.stringify({ osso: x.r.osso, pl: x.r.piorPlantado, pe: x.r.piorPe, pelve: x.r.piorPelve, salto: x.r.piorSalto }));
+  reg('C câmera: fora de sólidos, ≤ 5,5 m além das linhas, fora do gol, lente ≥ 2,5 m', resumoCamera(rs), '0, 0, 0, ≥ 2,5 m', rs.every(okCamera));
+  if (detalhe) for (const x of cenasC) if (!okCamera(x.r)) console.log('cameraC', x.nome, x.sem, x.comTec, JSON.stringify({ lente: x.r.piorLente, solido: x.r.piorSolido }));
+  const v2 = Math.max(...cenasC.map(x => x.v2));
+  reg('C 2,0 s depois do apito ninguém acima de 1,6 m/s', `máx ${f2(v2)} m/s${detalhe ? ' ' + JSON.stringify(cenasC.reduce((a, x) => (x.v2 > a.v2 ? x : a)).piorV2) : ''}`, '≤ 1,6', v2 <= 1.6);
+  const comCampo = cenasC.filter(x => x.plano.resultado === 'intervalo' || x.plano.resultado === 'empate');
+  const fracC = x => [...x.cinturaMax.values()].filter(n => n >= 30).length / 22;
+  reg('C mãos na cintura (≤ 0,12 m do quadril, ≥ 0,5 s) no P2 do intervalo / no neutro do empate', `pior ${f2(100 * Math.min(...comCampo.map(fracC)))}% dos 22`, '≥ 60%', comCampo.every(x => fracC(x) >= 0.6));
+  const iv = cenasC.filter(x => x.plano.tipo === 'intervalo'), fj = cenasC.filter(x => x.plano.tipo === 'fimDeJogo');
+  reg('C apertos de mão (mãos direitas ≤ 0,15 m ≥ 0,4 s, pelves 0,8–1,2 m): intervalo / fim / com o árbitro no fim', `mín ${Math.min(...iv.map(x => x.nApertos))} / ${Math.min(...fj.map(x => x.nApertos))} / ${Math.min(...fj.map(x => x.nApertoArb))}`, '≥ 2 / ≥ 3 / ≥ 1', iv.every(x => x.nApertos >= 2) && fj.every(x => x.nApertos >= 3 && x.nApertoArb >= 1));
+  if (detalhe) for (const x of fj) if (x.nApertos < 3 || x.nApertoArb < 1) console.log('apertos', x.nome, x.sem, x.comTec, x.nApertos, x.nApertoArb, JSON.stringify([...x.apertos.entries()].filter(([, r]) => r.max > 0).map(([k, r]) => [k, r.max, r.arb])));
+  const fracT = x => { const v = [...x.tunel.values()].filter(q => q.n > 30); return v.length ? v.filter(q => q.cai / q.n >= 0.9).length / v.length : 0; };
+  reg('C túnel (intervalo, P3): a distância à boca caindo (≥ 90% dos ticks) para quem anda', `pior ${f2(100 * Math.min(...iv.map(fracT)))}% dos jogadores`, '≥ 80%', iv.every(x => fracT(x) >= 0.8));
+  const vit = cenasC.filter(x => x.plano.resultado === 'vitoria');
+  const nFesta = x => [...x.festa.values()].filter(n => n >= 18).length, nLam = x => [...x.lamento.values()].filter(n => n >= 30).length;
+  reg('C vitória: ≥ 3 vencedores com os dois pulsos ≥ 0,10 m acima da cabeça (≥ 0,3 s)', `mín ${Math.min(...vit.map(nFesta))}`, '≥ 3', vit.every(x => nFesta(x) >= 3));
+  reg('C derrota: ≥ 3 perdedores cabisbaixos (≥ 20°) ou com as mãos na cabeça/joelhos (≥ 0,5 s)', `mín ${Math.min(...vit.map(nLam))}`, '≥ 3', vit.every(x => nLam(x) >= 3));
+  const emp = cenasC.filter(x => x.plano.resultado === 'empate');
+  const maxAlto = Math.max(...emp.map(x => Math.max(...[...x.maosAlto.values()].map(q => q.max))));
+  reg('C empate: ninguém com as duas mãos acima da cabeça por mais de 0,5 s', `máx ${f2(maxAlto / 60)} s`, '≤ 0,5 s', maxAlto <= 30);
+  const dur = x => x.plano.duracao;
+  const faixa = (l, a, b) => l.every(x => dur(x) >= a - 1e-9 && dur(x) <= b + 1e-9);
+  const semT = fj.filter(x => !x.comTec), comT = fj.filter(x => x.comTec);
+  reg('C durações: intervalo / fim (vitória ou derrota) / empate, sem o técnico', `${f2(dur(iv[0]))} / ${f2(dur(semT.find(x => x.plano.resultado === 'vitoria')))} / ${f2(dur(semT.find(x => x.plano.resultado === 'empate')))} s`, '8,5–9,5 / 12,5–14,0 / 10,5–11,5 s',
+    faixa(iv, 8.5, 9.5) && faixa(semT.filter(x => x.plano.resultado === 'vitoria'), 12.5, 14) && faixa(semT.filter(x => x.plano.resultado === 'empate'), 10.5, 11.5));
+  // o gancho do treinador: com o técnico, o plano 'treinador' (2,0 s) entra e a cena fica 2,0 s mais longa; sem ele, nenhum buraco
+  const okGancho = comT.every(x => { const q = x.plano.planos.find(p => p.nome === 'treinador'); const s0 = semT.find(y => y.sem === x.sem && y.nome === x.nome); return q && Math.abs(q.t1 - q.t0 - 2) < 1e-9 && Math.abs(dur(x) - dur(s0) - 2) < 1e-9; })
+    && semT.every(x => !x.plano.planos.some(p => p.nome === 'treinador') && x.plano.planos.every((p, i, a) => i === 0 || Math.abs(p.t0 - a[i - 1].t1) < 1e-9));
+  const tecVit = comT.filter(x => x.plano.vencedor != null);
+  reg('C gancho do treinador: com o técnico +2,0 s (braços acima da cabeça ≥ 0,5 s, dentro da área técnica); sem ele, nenhum buraco', `${okGancho ? 'planos ok' : 'planos errados'}; braços mín ${f2(Math.min(...tecVit.map(x => x.tec.braco)) / 60)} s; dentro: ${comT.every(x => x.tec.dentro && x.tec.n > 0)}`, '+2,0 s; ≥ 0,5 s; sim',
+    okGancho && tecVit.every(x => x.tec.braco >= 30) && comT.every(x => x.tec.dentro && x.tec.n > 0));
+}
+
 // ------------------------------------------------------------------------------------------------ E) pureza
 if (roda('E')) {
   if (!cenasA.length) reg('E pureza (o mundo não muda com a cena)', 'sem cenas', 'hashMundo igual', false);
   else reg('E pureza: hashMundo antes = depois (cenas de cartão)', `${cenasA.filter(x => x.hashIgual).length}/${cenasA.length}`, 'todas', cenasA.every(x => x.hashIgual));
+  if (!cenasC.length) reg('E pureza (cenas de fim de tempo)', 'sem cenas', 'hashMundo igual', false);
+  else reg('E pureza: hashMundo antes = depois (cenas de fim de tempo)', `${cenasC.filter(x => x.hashIgual).length}/${cenasC.length}`, 'todas', cenasC.every(x => x.hashIgual));
 }
 
 // ------------------------------------------------------------------------------------------------ G) custo
@@ -504,6 +652,10 @@ if (roda('G')) {
       por.push(melhor);
     }
     reg('G custo da cena de cartão por tick (p95; a melhor de 3 por situação; 24–25 atores)', `${por.map(f3).join(' / ')} ms (no canhão, p95 de tudo: ${f3(p95(custosA))} ms)`, '≤ 0,6 ms', Math.max(...por) <= 0.6);
+    if (cenasC.length) {
+      const msC = cenasC.flatMap(x => x.r.ms);
+      reg('G custo da cena de fim de tempo por tick (p95 de todas; 25–27 atores)', `${f3(p95(msC))} ms`, '≤ 0,6 ms', p95(msC) <= 0.6);
+    }
   }
 }
 

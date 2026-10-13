@@ -1249,6 +1249,7 @@ export const CENA_CARTAO = {
     segundo: [['arbitro', 2.9], ['reacao', 2.5], ['saida', 1.5], ['tunel', 2.0], ['torcida', 1.0]],
   },
   companheiro: 15,            // m — A1, A2, V1 e V2 precisam de um companheiro até aqui
+  apoioPerto: 6,              // m — o companheiro mais longe que isto já vem correndo (pré-rolagem invisível)
   ifab: 4,                    // m — só o capitão e o punido mais perto do árbitro (IFAB "only the captain")
   afasta: 5.4,                // m — os outros vão para esta distância do árbitro (A1, V2); 3,5 nas outras
   afastaLeve: 3.6,
@@ -1282,7 +1283,7 @@ export const CENA_FIM = {
     empate: [['apito', 1.5], ['neutro', 3.0], ['cumprimentos', 2.0], ['treinador', 2.0], ['aplauso', 2.5], ['torcida', 2.0], ['geral', 0]],
   },
   velAnda: 1.4,               // m/s — os pares caminham para o aperto de mão, os times para o túnel
-  aperto: { dist: 0.86, altura: 1.06, pares: 6, maxDist: 6, maxDistFolga: 14, sacode: 2.4, amp: 0.035 },
+  aperto: { dist: 0.92, altura: 1.06, pares: 6, maxDist: 6, maxDistFolga: 14, sacode: 2.4, amp: 0.035 },
   cintura: 0.62,              // fração com as mãos na cintura no P2 do intervalo / no neutro
   joelhos: 2,                 // quantos com as mãos nos joelhos
   funil: { d: [8, 25], vel: [1.3, 1.5] },        // a elipse do túnel (intervalo)

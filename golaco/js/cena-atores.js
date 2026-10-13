@@ -253,15 +253,23 @@ export function separarCena(c, min = CENAS.separacao) {
  * Um tick de todos os atores, na ordem do passoCena da comemoração: desejo → passoCorpo (o goleiro na defesa desenhada
  * termina a defesa), separação, passoPassada, passoPeDesenhado, tick, quadril e a pose (a da locomoção + o gesto do
  * papel: gestos(c, a, t)). Quem pode (a.podeFixar) e ficou parado e plantado por CENAS.parado ticks fica FIXO: sem
- * locomoção, a pose de base e a respiração por cima. desejo(c, a, t) → {dx, dz, vel, rumo} (c._d).
+ * locomoção, a pose de base (a da locomoção, sem gestos) com a respiração e os gestos por cima. desejo(c, a, t) → {dx, dz, vel, rumo} (c._d).
  */
 export function passoAtores(c, desejo, gestos) {
   const t = c.k * PASSO, mF = c.mF, at = c.atores;
   for (let i = 0; i < at.length; i++) {
     const a = at[i];
     a.mergulha = false;
-    if (!a.ativo || a.fixo) continue;
+    if (!a.ativo) continue;
     const j = a.j;
+    if (a.fixo) {
+      // parado: volta a andar quando o papel pede (o desejo com velocidade)
+      const d = desejo(c, a, t);
+      if (d.vel <= 0.05) continue;
+      soltar(a);
+      passoCorpo(j, d.dx, d.dz, d.vel, d.rumo, j.par, PASSO, false);
+      continue;
+    }
     if (a.goleiro && j.mergulho && mergulhoAtivo(j, mF.tick + 1)) { passoMergulho(mF, j); a.mergulha = true; continue; }
     const d = desejo(c, a, t);
     passoCorpo(j, d.dx, d.dz, d.vel, d.rumo, j.par, PASSO, false);
@@ -287,14 +295,15 @@ export function passoAtores(c, desejo, gestos) {
     a.ant.set(a.atu);
     a.x0 = a.x1; a.z0 = a.z1; a.r0 = a.r1;
     a.noAr = false;
-    if (a.fixo) respirar(a, tk);
+    if (a.fixo) { respirar(a, tk); gestos(c, a, tk); }
     else {
       pose(j, mF, a.atu);
-      gestos(c, a, tk);
-      // parado e plantado: fica fixo (a pose de agora é a base; a respiração vai por cima)
+      // parado e plantado: fica fixo (a pose da locomoção de agora é a base — sem os gestos, que vão por cima a cada tick,
+      // como a respiração: quem parou antes de pôr as mãos na cintura põe depois)
       if (a.podeFixar && Math.hypot(j.vx, j.vz) < 0.02 && j.pes[0].apoio && j.pes[1].apoio && !j.pes[0].pendente && !j.pes[1].pendente) {
         if (++a.parado >= CENAS.parado) { a.fixo = true; a.base ??= new Float32Array(NJ * 3); a.base.set(a.atu); a.tFixo = tk; }
       } else a.parado = 0;
+      gestos(c, a, tk);
     }
     a.x1 = j.x; a.z1 = j.z; a.r1 = j.rumo;
   }
@@ -566,7 +575,7 @@ export function camValida(x, y, z) {
 
 /**
  * Custo de uma câmera em (cx, cz) para os assuntos (atores): Infinity com alguém a menos de CENAS.lente (+ folga) da lente
- * agora ou onde vai parar (o alvo dele) — o assunto também —, senão a oclusão (alguém entre a lente e um assunto, perto da
+ * agora, onde vai parar (o alvo dele, a.alvoX/a.alvoZ) ou no caminho até lá — o assunto também —, senão a oclusão (alguém entre a lente e um assunto, perto da
  * reta) e quem fica grande no quadro (perto da lente, no ângulo do plano).
  */
 export function custoCamera(c, cx, cz, assuntos, folga = 0.4) {
@@ -575,7 +584,12 @@ export function custoCamera(c, cx, cz, assuntos, folga = 0.4) {
   for (const a of c.atores) {
     if (!a.ativo) continue;
     const pts = [a.j.x, a.j.z, a.alvoX ?? a.j.x, a.alvoZ ?? a.j.z];
-    for (let q = 0; q < 4; q += 2) if (Math.hypot(pts[q] - cx, pts[q + 1] - cz) < lim) return Infinity;
+    // a lente longe de onde ele está, de onde vai parar e do caminho entre os dois
+    {
+      const sx = pts[2] - pts[0], sz = pts[3] - pts[1], s2 = sx * sx + sz * sz;
+      const w = s2 > 1e-6 ? clamp(((cx - pts[0]) * sx + (cz - pts[1]) * sz) / s2, 0, 1) : 0;
+      if (Math.hypot(pts[0] + sx * w - cx, pts[1] + sz * w - cz) < lim) return Infinity;
+    }
     if (assuntos.includes(a)) continue;
     for (const s of assuntos) {
       const ex = s.j.x - cx, ez = s.j.z - cz, el2 = ex * ex + ez * ez || 1;
@@ -662,6 +676,64 @@ export function definirPlanoGrupo(out, nome, cx, cy, cz, pts, olharY, fov, opc) 
   out.para[0] = cx + Math.cos(centro) * dm; out.para[1] = olharY; out.para[2] = cz + Math.sin(centro) * dm;
   out.fov = f;
   return out;
+}
+
+/**
+ * O assunto INTEIRO no quadro (dos pés ao topo da cabeça, todas as juntas): se alguma passa de `lim` da metade do quadro
+ * (x ou y, na projeção do three.js com o aspecto de opc), o fov abre o necessário — o "zoom" do operador quando o
+ * jogador chega perto da lente. Só abre (nunca fecha), sem mexer na posição nem no olhar. poses = [Float32Array, ...].
+ */
+export function caberNoQuadro(out, opc, poses, lim = 0.86) {
+  const asp = Math.max(0.5, (opc && opc.aspecto) || 16 / 9);
+  let fx = out.para[0] - out.de[0], fy = out.para[1] - out.de[1], fz = out.para[2] - out.de[2];
+  const lf = Math.hypot(fx, fy, fz) || 1; fx /= lf; fy /= lf; fz /= lf;
+  const lr = Math.hypot(fz, fx) || 1, rx = -fz / lr, rz = fx / lr;
+  const ux = -rz * fy, uy = rz * fx - rx * fz, uz = rx * fy;
+  const tv = Math.tan((out.fov * Math.PI) / 360), th = tv * asp;
+  let s = 0;
+  for (const o of poses) {
+    if (!o) continue;
+    for (let i = 0; i <= NJ; i++) {
+      const k = i < NJ ? i : J.cabeca;
+      const dx = o[k * 3] - out.de[0], dy = o[k * 3 + 1] + (i === NJ ? TOPO_CABECA : 0) - out.de[1], dz = o[k * 3 + 2] - out.de[2];
+      const zz = dx * fx + dy * fy + dz * fz;
+      if (zz <= 0.2) continue;
+      const x = Math.abs((dx * rx + dz * rz) / (zz * th)), y = Math.abs((dx * ux + dy * uy + dz * uz) / (zz * tv));
+      if (x > s) s = x;
+      if (y > s) s = y;
+    }
+  }
+  if (s > lim) out.fov = (Math.atan(tv * (s / lim)) * 360) / Math.PI;
+  return out;
+}
+
+/**
+ * Quem não é assunto sai da frente da LENTE: a câmera do plano de agora (c.camDe, posta pela cena a cada tick; e a do
+ * próximo plano, c.camDe2, perto do corte) a menos de
+ * `raio` m — anda radialmente para longe dela até raio + 0,5 m. Devolve o desejo (c._d) ou null (longe).
+ */
+export function fugirDaLente(c, a, raio = CENAS.lente + 0.9, evitar = null) {
+  let cd = c.camDe;
+  // (a lente do próximo plano, quando a cena já a pôs: c.camDe2 — a mais perto manda)
+  if (c.camDe2 && (!cd || Math.hypot(a.j.x - c.camDe2.x, a.j.z - c.camDe2.z) < Math.hypot(a.j.x - cd.x, a.j.z - cd.z))) cd = c.camDe2;
+  if (!cd) return null;
+  const ex = a.j.x - cd.x, ez = a.j.z - cd.z, d = Math.hypot(ex, ez);
+  if (d >= raio && !(a.fugindo && d < raio + 0.5)) { a.fugindo = false; return null; }
+  a.fugindo = true; soltar(a);
+  let ux = d > 0.05 ? ex / d : 1, uz = d > 0.05 ? ez / d : 0;
+  a.alvoX = cd.x + ux * (raio + 0.6); a.alvoZ = cd.z + uz * (raio + 0.6);
+  // sem entrar na roda de quem não pode ser invadido (o árbitro do IFAB): sai de lado, para o lado que se afasta dele
+  if (evitar && Math.hypot(a.alvoX - evitar.x, a.alvoZ - evitar.z) < evitar.r) {
+    const sg = (evitar.x - cd.x) * -uz + (evitar.z - cd.z) * ux >= 0 ? -1 : 1;
+    const px = -uz * sg, pz = ux * sg;
+    ux = (ux + px * 1.5) / 1.803; uz = (uz + pz * 1.5) / 1.803;
+    a.alvoX = cd.x + ux * (raio + 0.6); a.alvoZ = cd.z + uz * (raio + 0.6);
+    if (Math.hypot(a.alvoX - evitar.x, a.alvoZ - evitar.z) < evitar.r) {
+      const ox = a.alvoX - evitar.x, oz = a.alvoZ - evitar.z, ol = Math.hypot(ox, oz) || 1;
+      a.alvoX = evitar.x + (ox / ol) * evitar.r; a.alvoZ = evitar.z + (oz / ol) * evitar.r;
+    }
+  }
+  return irPara(c, a, a.alvoX, a.alvoZ, 3.0, null, 0.1, 3);
 }
 
 /** Objeto de saída do plano de câmera (um por página/teste, reaproveitado). */

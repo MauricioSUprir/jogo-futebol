@@ -31,7 +31,8 @@ import { PASSO, CAMPO, CENA_CARTAO, CENAS } from './config.js';
 import {
   criarBase, adicionarJogador, adicionarArbitro, poseInicial, passoSozinho, recriarAtor, soltar, para, irPara, parar,
   desviar, passoAtores, avancarCom, tempoDe, planoNoTempo, escolherVariante, hashGol, camValida, melhorCamera,
-  definirPlano, definirPlanoGrupo, criarPlanoCena, clamp, suave, lerp, janela, s60, J, TOPO_CABECA,
+  definirPlano, definirPlanoGrupo, criarPlanoCena, clamp, suave, lerp, janela, s60, J, TOPO_CABECA, caberNoQuadro,
+  fugirDaLente, passoSozinho as andarSozinho,
   gTiraAmarelo, gTiraVermelho, gCartao, gAponta, gAnota, gAfasta, gAbertos, gCabeca, gDesculpa, gSegura, gTapinha,
   gAbana, gRosto, gPalmasAlto, posturaCabisbaixo, cabecaCeu, balancaCabeca,
 } from './cena-atores.js';
@@ -181,10 +182,21 @@ export function criarCenaCartao(plano, m) {
   for (const j of m.jogadores) adicionarJogador(c, j, 'resto');
   let pun = c.porId.get(plano.id);
   if (!pun) pun = adicionarJogador(c, acharPunido(m, plano.id), 'resto');
-  pun.tipo = 'punido'; pun.cede = 0.3; pun.podeFixar = false;
+  // (o punido não é empurrado por quem passa: quem chega perto dele cede — V1 anda a ≤ 1,4 m/s)
+  pun.tipo = 'punido'; pun.cede = 0; pun.podeFixar = false;
   c.punido = pun;
   c.apoio = plano.apoio != null ? c.porId.get(plano.apoio) ?? null : null;
-  if (c.apoio) { c.apoio.tipo = 'apoio'; c.apoio.podeFixar = false; c.apoio.cede = 0.4; }
+  if (c.apoio) {
+    c.apoio.tipo = 'apoio'; c.apoio.podeFixar = false; c.apoio.cede = 0.4;
+    // o capitão/companheiro longe (até 15 m) já vem correndo: pré-rolagem invisível até faltar CENA_CARTAO.apoioPerto m
+    // (no 1º quadro ele já está chegando; o V2 segura o punido ≥ 0,8 s)
+    const q = c.apoio.j, pj = pun.j;
+    for (let t = 0; t < 300; t++) {
+      const ex = pj.x - q.x, ez = pj.z - q.z, d = Math.hypot(ex, ez);
+      if (d <= K.apoioPerto) break;
+      andarSozinho(q, c.mF, ex / d, ez / d, 6.2, Math.atan2(ez, ex));
+    }
+  }
   // o árbitro: do ponto de partida, anda sozinho até faltar `preRolagem` m para o ponto onde para
   const A = plano.arb;
   const arb = adicionarArbitro(c, CENAS.idArbitro, A.x0, A.z0, Math.atan2(A.z1 - A.z0, A.x1 - A.x0));
@@ -206,6 +218,8 @@ export function criarCenaCartao(plano, m) {
   for (const a of c.atores) { a.alvoX = a.j.x; a.alvoZ = a.j.z; if (a.tipo === 'resto') a.afasta = false; }
   // a vaga do A3 (a posição tática da cópia) e a direção da saída do expulso
   c.vagaA3 = vagaAceita(c, m);
+  // (as câmeras escolhidas depois deixam a lente fora do caminho dele até a vaga)
+  if (plano.variante === 'aceita') { pun.alvoX = c.vagaA3.x; pun.alvoZ = c.vagaA3.z; }
   for (const a of c.atores) poseInicial(c, a);
   c.ip = -1;
   entrarPlano(c, 0);
@@ -241,7 +255,7 @@ function vagaAceita(c, m) {
 }
 
 // ------------------------------------------------------------------------------------------------ desejos
-const _q = { x: 0, z: 0 };
+const _q = { x: 0, z: 0 }, _ev = { x: 0, z: 0, r: 0 };
 /** Onde o capitão/companheiro fica em relação ao punido (frente/lado no referencial do punido → árbitro). */
 function pontoApoio(c, f, l, out) {
   const p = c.punido.j, A = c.arbitro.j;
@@ -261,7 +275,8 @@ function alvoArbitro(c, out) {
   const ux = Math.cos(A.theta), uz = Math.sin(A.theta);
   if (t <= T.altoFim + 0.05 || c.arbFixo == null) {
     let d = A.dPara;
-    if (IFAB[P.variante] && t >= T.reacao) d += 0.5;
+    // (A1, V2: um passo para trás com o cartão ainda no alto — sem passar de 3,05 m do punido)
+    if (IFAB[P.variante] && t >= T.reacao) d = Math.min(d + 0.5, 3.05);
     out.x = clamp(pun.x + ux * d, -MX - 1, MX + 1); out.z = clamp(pun.z + uz * d, -MZ - 1, MZ + 1);
     if (t > T.altoFim) c.arbFixo = { x: out.x, z: out.z };
     return out;
@@ -276,7 +291,8 @@ function desejo(c, a, t) {
   if (a === c.arbitro) {
     alvoArbitro(c, _q);
     const ex = _q.x - arb.x, ez = _q.z - arb.z, dd = Math.hypot(ex, ez);
-    const vel = dd > 1.2 ? (P.forte ? K.arbitro.velForte : K.arbitro.vel) : 1.6;
+    // perto do ponto: anda (1,6 m/s), mas acompanha o punido que ainda freia (o ponto anda com ele)
+    const vel = dd > 1.2 ? (P.forte ? K.arbitro.velForte : K.arbitro.vel) : Math.max(1.6, Math.hypot(pun.vx, pun.vz) + 1.2);
     const d = irPara(c, a, _q.x, _q.z, vel, Math.atan2(pun.z - arb.z, pun.x - arb.x), 0.08, K.arbitro.freio);
     // ajeitando-se perto do ponto: de frente para o punido (passo de lado), sem virar as costas
     if (dd < 1.0) d.rumo = Math.atan2(pun.z - arb.z, pun.x - arb.x);
@@ -284,6 +300,10 @@ function desejo(c, a, t) {
   }
   if (a === c.punido) return desejoPunido(c, a, t);
   if (a === c.apoio) return desejoApoio(c, a, t);
+  // quem está na frente da lente sai dela
+  _ev.x = arb.x; _ev.z = arb.z; _ev.r = c.limAfasta + 0.7;
+  const fl = fugirDaLente(c, a, undefined, _ev);
+  if (fl) return desviar(c, a, fl);
   // os outros: quem está perto do árbitro sai (radial, para lim + 0,6 m dele); todos freiam e olham o lance
   const ex = a.j.x - arb.x, ez = a.j.z - arb.z, d = Math.hypot(ex, ez), lim = c.limAfasta;
   if (d < lim + 0.25 || (a.afasta && d < lim + 0.55)) {
@@ -544,7 +564,21 @@ export function passoCenaCartao(c) {
   if (c.acabou) return false;
   // quem parou (fixo) e ficou perto do árbitro volta a andar para sair do caminho dele
   const arb = c.arbitro.j, lim = c.limAfasta + 0.25;
-  for (const a of c.atores) if (a.fixo && a.tipo === 'resto' && Math.hypot(a.j.x - arb.x, a.j.z - arb.z) < lim) soltar(a);
+  // a lente do plano de agora (a posição da câmera não depende do aspecto) e, 0,9 s antes do corte, a do próximo (a
+  // equipe se posiciona: escolhida já, ela fica para o plano): quem está na frente de uma delas sai
+  const t0 = c.k * PASSO, P0 = c.plano.planos, ia = planoNoTempo(c, t0);
+  c.camDe = null; c.camDe2 = null;
+  if (ia < P0.length && LENTE_LIVRE[P0[ia].nome]) { planoIndice(c, ia, t0, _opcLente, _pcLente); _camDe.x = _pcLente.de[0]; _camDe.z = _pcLente.de[2]; c.camDe = _camDe; }
+  if (ia + 1 < P0.length && LENTE_LIVRE[P0[ia + 1].nome] && P0[ia + 1].t0 - t0 <= 0.9) {
+    if (!c.cams[ia + 1]) c.cams[ia + 1] = escolherCamera(c, ia + 1);
+    planoIndice(c, ia + 1, P0[ia + 1].t0, _opcLente, _pcLente); _camDe2.x = _pcLente.de[0]; _camDe2.z = _pcLente.de[2]; c.camDe2 = _camDe2;
+  }
+  const lente = CENAS.lente + 0.9;
+  for (const a of c.atores) {
+    if (!a.fixo || a.tipo !== 'resto') continue;
+    if (Math.hypot(a.j.x - arb.x, a.j.z - arb.z) < lim || (c.camDe && Math.hypot(a.j.x - c.camDe.x, a.j.z - c.camDe.z) < lente)
+      || (c.camDe2 && Math.hypot(a.j.x - c.camDe2.x, a.j.z - c.camDe2.z) < lente)) soltar(a);
+  }
   passoAtores(c, desejo, gestos);
   const t = c.k * PASSO, P = c.plano, T = P.tempos;
   // a mão do cartão (o cartão 3D da página vai preso a ela)
@@ -578,7 +612,9 @@ function entrarPlano(c, ip) {
   c.ip = ip;
   const pl = c.plano.planos[ip];
   if (pl.nome === 'tunel') elipseTunel(c);
-  c.cams[ip] = escolherCamera(c, ip);
+  // (a câmera do plano já pode ter sido escolhida 0,9 s antes do corte: a equipe se posicionou e quem estava na frente
+  // da lente saiu)
+  if (!c.cams[ip]) c.cams[ip] = escolherCamera(c, ip);
   c.cortes++;
 }
 
@@ -681,9 +717,9 @@ function cameraReacao(c) {
     const mx = (j.x + arb.j.x) / 2, mz = (j.z + arb.j.z) / 2;
     const ux = arb.j.x - j.x, uz = arb.j.z - j.z, l = Math.hypot(ux, uz) || 1;
     const nx = -uz / l, nz = ux / l, sg = nz >= 0 ? 1 : -1;
-    for (const da of [0, 0.3, -0.3, 0.6, -0.6]) for (const s of [sg, -sg]) {
+    for (const dist of [C.reacao3.dist, C.reacao3.dist + 1.2]) for (const da of [0, 0.3, -0.3, 0.6, -0.6]) for (const s of [sg, -sg]) {
       const a0 = Math.atan2(nz * s, nx * s) + da;
-      cands.push({ x: mx + Math.cos(a0) * C.reacao3.dist, y: C.reacao3.altura, z: mz + Math.sin(a0) * C.reacao3.dist, pref: (s === sg ? 0 : 1.2) + Math.abs(da) * 0.5 });
+      cands.push({ x: mx + Math.cos(a0) * dist, y: C.reacao3.altura, z: mz + Math.sin(a0) * dist, pref: (s === sg ? 0 : 1.2) + Math.abs(da) * 0.5 + (dist - C.reacao3.dist) * 0.5 });
     }
     _a.length = 0; _a.push(pun, arb); if (c.apoio) _a.push(c.apoio);
     return { ...melhorCamera(c, cands, _a), tres: true };
@@ -695,23 +731,25 @@ function cameraReacao(c) {
   else { dx = P.saida.x - j.x; dz = P.saida.z - j.z; }
   const l = Math.hypot(dx, dz) || 1, ux = dx / l, uz = dz / l;
   const F = v === 'aceita' ? C.steadicam : C.frente;
-  const frente = v === 'aceita' ? F.frente : F.dist, lat = v === 'aceita' ? F.lado : 1.1;
-  let lado = 1, menor = Infinity;
-  for (const sg of [1, -1]) {
-    // amostras no caminho previsto (1,2 m/s; o A3 trotando)
-    const vv = v === 'aceita' ? 3.2 : 1.0;
+  const frente0 = v === 'aceita' ? F.frente : F.dist, lat0 = v === 'aceita' ? F.lado : 1.1;
+  let lado = 1, frente = frente0, lat = lat0, menor = Infinity;
+  // o lado, a distância e o desvio de lado com menos gente na lente pelo caminho previsto (1,0 m/s; o A3 trotando) — no
+  // corte (u = 0) a lente tem de estar livre
+  const vv = v === 'aceita' ? 3.2 : 1.0;
+  for (const fr of [frente0, frente0 + 0.8, frente0 + 1.6]) for (const lt of [lat0, lat0 + 1.2, lat0 - 0.9]) for (const sg of [1, -1]) {
     let custo = 0;
     for (const u of [0, 0.8, 1.6, 2.4]) {
       const px = j.x + ux * vv * u, pz = j.z + uz * vv * u;
-      const x = px + ux * frente - uz * sg * lat, z = pz + uz * frente + ux * sg * lat;
+      const x = px + ux * fr - uz * sg * lt, z = pz + uz * fr + ux * sg * lt;
       if (!camValida(x, F.altura, z)) { custo += 50; continue; }
       _a.length = 0; _a.push(pun);
       const cc = melhorCamera(c, [{ x, y: F.altura, z }], _a).custo;
-      custo += Number.isFinite(cc) ? cc : 20;
+      custo += Number.isFinite(cc) ? cc : (u === 0 ? 200 : 20);
     }
-    // do lado da TV (z +) de preferência
-    custo += (uz * 0 + ux * sg) < 0 ? 0 : 0.3;
-    if (custo < menor) { menor = custo; lado = sg; }
+    // do lado da TV (z +) de preferência; o enquadramento padrão
+    custo += (ux * sg) < 0 ? 0 : 0.3;
+    custo += (fr - frente0) * 0.4 + Math.abs(lt - lat0) * 0.3;
+    if (custo < menor) { menor = custo; lado = sg; frente = fr; lat = lt; }
   }
   return { x: 0, y: F.altura, z: 0, ux, uz, lado, frente, lat, movel: true, fov: F.fov, olharY: F.olharY };
 }
@@ -722,7 +760,11 @@ function cameraReacao(c) {
  */
 export function planoCameraCartao(c, opc, out) {
   const t = tempoDe(c);
-  const ip = planoNoTempo(c, t);
+  return planoIndice(c, planoNoTempo(c, t), t, opc, out);
+}
+
+/** O plano ip no tempo t (s) com as posições desenhadas de agora. */
+function planoIndice(c, ip, t, opc, out) {
   const pl = c.plano.planos[ip];
   out.tunel = false;
   if (!pl) { out.nome = 'fim'; return out; }
@@ -734,16 +776,22 @@ export function planoCameraCartao(c, opc, out) {
   switch (pl.nome) {
     case 'arbitro': {
       _g.length = 0; _g.push(px, pz, ax, az);
-      return definirPlanoGrupo(out, 'arbitro', cam.x, cam.y, cam.z, _g, C.arbitro.olharY, C.arbitro.fov, opc);
+      definirPlanoGrupo(out, 'arbitro', cam.x, cam.y, cam.z, _g, C.arbitro.olharY, C.arbitro.fov, opc);
+      _cab.length = 0; _cab.push(pun.atu, arb.atu);
+      return caberNoQuadro(out, opc, _cab);
     }
     case 'reacao': {
       if (cam.tres) {
         _g.length = 0; _g.push(px, pz, ax, az);
         if (c.apoio && Math.hypot(c.apoio.j.x - pun.j.x, c.apoio.j.z - pun.j.z) < 4) _g.push(lerp(c.apoio.x0, c.apoio.x1, al), lerp(c.apoio.z0, c.apoio.z1, al));
-        return definirPlanoGrupo(out, 'reacao', cam.x, cam.y, cam.z, _g, 0.95, C.reacao3.fov, opc);
+        definirPlanoGrupo(out, 'reacao', cam.x, cam.y, cam.z, _g, 0.95, C.reacao3.fov, opc);
+        _cab.length = 0; _cab.push(pun.atu);
+        return caberNoQuadro(out, opc, _cab);
       }
       const x = px + cam.ux * cam.frente - cam.uz * cam.lado * cam.lat, z = pz + cam.uz * cam.frente + cam.ux * cam.lado * cam.lat;
-      return definirPlano(out, 'reacao', x, cam.y, z, px, cam.olharY, pz, cam.fov, opc);
+      definirPlano(out, 'reacao', x, cam.y, z, px, cam.olharY, pz, cam.fov, opc);
+      _cab.length = 0; _cab.push(pun.atu);
+      return caberNoQuadro(out, opc, _cab);
     }
     case 'anota': return definirPlano(out, 'anota', cam.x, cam.y, cam.z, ax, 1.15, az, C.anota.fov, opc);
     case 'saida': {
@@ -767,7 +815,9 @@ export function planoCameraCartao(c, opc, out) {
     default: out.nome = 'fim'; return out;
   }
 }
-const _cp = {}, _g = [];
+const _cp = {}, _g = [], _cab = [];
+const _opcLente = { pequena: false, aspecto: 16 / 9 }, _pcLente = criarPlanoCena(), _camDe = { x: 0, z: 0 }, _camDe2 = { x: 0, z: 0 };
+const LENTE_LIVRE = { arbitro: true, reacao: true, anota: true, saida: true };
 export { criarPlanoCena as criarPlanoCameraCartao };
 
 /**

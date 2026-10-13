@@ -28,19 +28,20 @@ const porId = (m, id) => m.jogadores.find(j => j.id === id) ?? null;
 
 /**
  * Força o cartão da situação no mundo m (estado do meio): o controlado do time 0 (ou o atacante mais perto da bola) sofre
- * a falta do adversário de linha mais perto (no 'goleiro', do goleiro do time 1). Devolve os eventos do tick do cartão
+ * a falta do adversário de linha mais perto (no 'goleiro', do goleiro do outro time). Devolve os eventos do tick do cartão
  * e o mundo no tick em que a cena começa.
  */
 export function forcarCartao(L, m, situacao) {
   const { P, F, C } = L;
   const MX = C.CAMPO.meioX;
-  // o pênalti e o goleiro expulso: o lance de verdade perto da área do time 1 (o time 0 com a bola a ≤ 30 m do gol que
-  // ataca) — a falta dentro da área num estado com a bola no meio-campo deixava a defesa longe (sem companheiro perto)
+  // o pênalti e o goleiro expulso: o lance de verdade perto da área (um time com a bola a ≤ 30 m do gol que ataca; o
+  // primeiro que acontecer, de qualquer um dos dois) — a falta dentro da área num estado com a bola no meio-campo deixava
+  // a defesa longe (sem companheiro perto)
   if (situacao === 'penalti' || situacao === 'goleiro') {
     let achou = false;
     for (let i = 0; i < 6000 && !achou; i++) {
       const j = m.posse != null ? porId(m, m.posse) : null;
-      if (m.partida.estado === 'jogo' && m.naMao == null && j && j.time === 0 && j.posicao !== 'GOL' && Math.hypot(j.x - m.ataca[0] * MX, j.z) <= 30) { achou = true; break; }
+      if (m.partida.estado === 'jogo' && m.naMao == null && j && j.posicao !== 'GOL' && Math.hypot(j.x - m.ataca[j.time] * MX, j.z) <= 30) { achou = true; break; }
       P.passoPartida(m, P.entradaDemoPartida(m), null);
     }
     if (!achou) return null;
@@ -49,7 +50,7 @@ export function forcarCartao(L, m, situacao) {
   if (situacao === 'penalti' || situacao === 'goleiro') c = porId(m, m.posse);
   if (!c || c.posicao === 'GOL') c = m.jogadores.find(j => j.time === 0 && j.posicao !== 'GOL');
   let d = null;
-  if (situacao === 'goleiro') d = m.jogadores.find(j => j.time === 1 && j.posicao === 'GOL');
+  if (situacao === 'goleiro') d = m.jogadores.find(j => j.time !== c.time && j.posicao === 'GOL');
   else {
     let dm = Infinity;
     for (const o of m.jogadores) { if (o.time === c.time || o.posicao === 'GOL') continue; const q = Math.hypot(o.x - c.x, o.z - c.z); if (q < dm) { dm = q; d = o; } }
