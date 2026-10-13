@@ -16,7 +16,9 @@
 //  G. chute carregado + 2º toque depois do contato: só o chute (nada de 2º chute);
 //  H. pênalti (Panenka): dois toques = cavadinha; um toque = chute. Tiro livre direto: dois toques = cavadinha (por
 //     cima da barreira); um toque = chute. Escanteio: o CHUTE não cobra bola parada (nem duas vezes) — nada sai, e o
-//     PASSE depois cobra normalmente;
+//     PASSE depois cobra normalmente. H4: a Panenka contra o goleiro que mergulha para um lado entra (≥ 85% de gols,
+//     ≥ 90% no alvo; Opta: 95,7% de gols no alto do meio) e contra o que fica no meio é defendida (≥ 80%) — binomial,
+//     reprova só se a contagem PROVA que está fora (p < 5%);
 //  I. botão que já vinha segurado quando o controle trocou (o time apertava no passo anterior): não é toque rápido —
 //     o contato não espera a janela (antes: a troca virava um "toque" de poucos ticks e o chute atrasava; o
 //     hash-igual do treino de ataque mudava por isso);
@@ -36,6 +38,9 @@ const P = await imp('partida.js');
 const A = await imp('acoes.js');
 
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
+// cauda binomial P(X ≤ k) para X ~ Bin(n, p) (a mesma conta do teste-faltas)
+function binomPmf(n, k, p) { let c = 1; for (let i = 1; i <= k; i++) c = c * (n - k + i) / i; return c * p ** k * (1 - p) ** (n - k); }
+function caudaBinomAbaixo(k, n, p) { let s = 0; for (let i = 0; i <= k; i++) s += binomPmf(n, i, p); return Math.min(1, s); }
 let falhas = 0;
 function reg(nome, medido, meta, ok) { linhas.push([nome, medido, meta, ok === null ? 'INFO' : ok ? 'PASSOU' : 'REPROVOU']); if (ok === false) falhas++; }
 const GX = CAMPO.meioX, MEIO = CAMPO.gol.largura / 2;
@@ -228,6 +233,8 @@ const GOLEIROS = [['sem goleiro', null], ['goleiro adiantado (8 m)', GX - 8], ['
  * barreira). seq de CHUTE a partir da hora em que a cobrança fica pronta. Devolve o modo do 1º chute e o desfecho.
  */
 function falta(sem, seq, opc = {}) {
+  // opc: x, z, area; palpite (z do lado que o goleiro escolhe no pênalti: ±2,2 = mergulha, 0 = fica no meio; sem ele, o
+  // sorteio da montagem) e fin (finalização do cobrador)
   const x = opc.x ?? 45, z = opc.z ?? 3, area = opc.area ?? true;
   const m = P.criarPartida({ semente: sem });
   for (let i = 0; i < 200; i++) P.passoPartida(m, P.entradaDemoPartida(m));
@@ -243,6 +250,11 @@ function falta(sem, seq, opc = {}) {
   // espera a cobrança ficar pronta com o cobrador do humano
   for (let i = 0; i < 60 * 10 && !(m.parada && m.tick >= m.parada.pronta + 2 && m.controlado[0] === m.parada.cobrador); i++) P.passoPartida(m, { x: 0, z: 0, botoes: 0 });
   if (!m.parada || m.controlado[0] !== m.parada.cobrador) return { erro: 'o cobrador não é do humano' };
+  if (opc.palpite != null) {
+    const gk = m.jogadores.find(o => o.time === 1 && o.posicao === 'GOL');
+    gk.palpite = opc.palpite; m.parada.palpite = opc.palpite;
+  }
+  if (opc.fin != null) m.jogadores.find(o => o.id === m.parada.cobrador).par.attr.finalizacao = opc.fin;
   const barreira = m.parada.barreira?.n ?? 0;
   let modo = null, res = null, bateu = false;
   const olhar = evs => {
@@ -271,6 +283,38 @@ const penalti = (sem, seq) => falta(sem, seq);
     n1++; if (u.modo === 'chute') nc1++;
   }
   reg('H. pênalti do humano: dois toques = cavadinha (Panenka); um toque = chute', `dois toques: ${cav}/${n2} cavadinhas (${Object.entries(desf).map(([k, v]) => `${k} ${v}`).join(', ') || '-'}) · um toque: ${nc1}/${n1} chutes${erro ? ` · ${erro}` : ''}`, '12/12 e 12/12', n2 === 12 && cav === 12 && n1 === 12 && nc1 === 12);
+}
+{
+  // H4. Panenka contra o goleiro que escolhe um lado (mergulha: ±2,2 m) e contra o que fica no meio (0). 48 sementes,
+  // o 2º toque rápido (sementes ímpares) ou segurado 0,75 s (a mais alta, pares), finalizador 40/60/83. Opta/Premier
+  // League ("The history of the Panenka penalty", 12/2024): 95,7% de gols no alto do meio; a Panenka só falha com o
+  // goleiro parado no meio (AFCON 2026: Mendy ficou e pegou). Reprova só se a contagem PROVA que a taxa está fora da
+  // meta (binomial, p < 5%), como os outros testes de taxa do projeto: com 96 contra o que mergulha, 85% reprova com
+  // ≤ 75 gols (78%); com 48 contra o que fica, 80% reprova com ≤ 33 defesas (69%). Antes desta correção (erro da
+  // cavadinha × 1,8 do pênalti, a busca da velocidade parando no travessão e o goleiro que mergulhou voltando a tempo):
+  // ~13% de gols contra o que mergulha
+  const N = 48, FINS = [40, 60, 83];
+  const mg = { gol: 0, defesa: 0, fora: 0, nada: 0 }, fc = { gol: 0, defesa: 0, fora: 0, nada: 0 };
+  let nM = 0, nF = 0, alvoM = 0, cavs = 0, erro = null;
+  for (let s = 1; s <= N; s++) {
+    const seq = s % 2 ? [[1, 4], [0, 5], [1, 4]] : [[1, 4], [0, 5], [1, 45]];
+    const fin = FINS[s % 3];
+    for (const pal of [-2.2, 2.2, 0]) {
+      const d = falta(7300 + s, seq, { palpite: pal, fin });
+      if (d.erro) { erro = d.erro; continue; }
+      if (d.modo === 'cavadinha') cavs++;
+      const r = d.res ?? 'nada';
+      if (pal) { nM++; mg[r]++; if (r === 'gol' || r === 'defesa') alvoM++; } else { nF++; fc[r]++; }
+    }
+  }
+  const pGol = caudaBinomAbaixo(mg.gol, nM, 0.85), pAlvo = caudaBinomAbaixo(alvoM, nM, 0.9), pDef = caudaBinomAbaixo(fc.defesa, nF, 0.8);
+  const pc = (k, n) => `${fmt(100 * k / Math.max(1, n), 0)}%`;
+  reg('H4. Panenka × goleiro que MERGULHA para um lado (48 sementes × 2 lados; 2º toque rápido/segurado; finalização 40/60/83)',
+    `${pc(mg.gol, nM)} de gols (p = ${fmt(pGol, 3)}), ${pc(alvoM, nM)} no alvo (p = ${fmt(pAlvo, 3)}) · gol ${mg.gol}, defesa ${mg.defesa}, fora ${mg.fora}${mg.nada ? `, sem desfecho ${mg.nada}` : ''} em ${nM}${erro ? ` · ${erro}` : ''}`,
+    '≥ 85% de gols e ≥ 90% no alvo (p ≥ 0,05)', nM === 2 * N && pGol >= 0.05 && pAlvo >= 0.05);
+  reg('H4. Panenka × goleiro que FICA no meio (48 sementes): defendida — é o risco dela',
+    `${pc(fc.defesa, nF)} defendidas (p = ${fmt(pDef, 3)}) · gol ${fc.gol}, defesa ${fc.defesa}, fora ${fc.fora}${fc.nada ? `, sem desfecho ${fc.nada}` : ''} em ${nF}; cavadinhas ${cavs}/${nM + nF}`,
+    '≥ 80% defendidas (p ≥ 0,05); todas cavadinha', nF === N && pDef >= 0.05 && cavs === nM + nF);
 }
 {
   // tiro livre direto a ~22 m, de frente, com barreira: a cavadinha cai logo depois da linha (alemDaLinha) e passa

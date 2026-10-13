@@ -117,10 +117,15 @@ export function lerChute(m, j) {
   // sai antes (GOLEIRO.penalti.antecipa s a mais); lado errado ou parado no meio com a bola no canto: não chega
   const pen = m.partida?.penaltiAberto;
   const ehPenalti = !!pen && j.palpite != null && m.voo && m.voo.de === pen.id && j.time !== pen.time && m.tick - pen.tick < 90;
-  let palpiteErrado = false;
+  // Panenka (a cavadinha do pênalti; acoes.js): a bola lenta leva ~1,3–1,6 s até ele (o chute, ~0,4–0,6 s)
+  const panenka = ehPenalti && m.voo.tipo === 'cavadinha';
+  let palpiteErrado = false, mergulhou = false;
   if (ehPenalti) {
     const zg = j.palpite, P = GOLEIRO.penalti;
     palpiteErrado = zg === 0 ? Math.abs(plano.z - j.z) > P.meio : Math.sign(plano.z - j.z) !== Math.sign(zg) && Math.abs(plano.z - j.z) > P.meio * 0.5;
+    // Panenka contra quem escolheu um lado: ele já mergulhou e está no chão quando ela chega — longe do lado dele (no
+    // meio), entra
+    if (panenka && zg !== 0 && Math.abs(plano.z - zg) > P.meio) { palpiteErrado = true; mergulhou = true; }
   }
   // partida (Regra 12): a mão só vale na própria área, sem recuo e sem a bola que ele soltou (regras-goleiro.js) — no
   // ponto do contato. Sem ela, não há defesa com a mão: ele bloqueia com o corpo (a colisão da bola com as pernas) e
@@ -136,8 +141,11 @@ export function lerChute(m, j) {
   const alturaOk = plano.y < GOLEIRO.alturaMax + (dist < 1 ? 0.2 : 0);
   const dChute = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   let pDefesa = alturaOk ? chanceDefesa(dist, dChute, plano.y, alcance, a, !!m.partida) : 0;
+  // Panenka com o goleiro que ficou no meio: tempo de sobra — pega (encaixa) a que alcança, como o recuo; a que passa
+  // por cima dele ainda alta ele busca voltando para a linha (recuoBolaAlta)
+  const panenkaNoMeio = panenka && !palpiteErrado && j.palpite === 0;
   // bola por cima do goleiro adiantado (cavadinha): ele volta e tenta tirar antes da linha
-  const recuo = !alturaOk && Math.abs(j.x - gx) > 2 ? recuoBolaAlta(m, j, b, gx, reac) : null;
+  const recuo = !alturaOk && (Math.abs(j.x - gx) > 2 || panenkaNoMeio) ? recuoBolaAlta(m, j, b, gx, reac) : null;
   if (recuo && m.partida && !maoPermitida(m, j, recuo.bx, recuo.bz)) { j.defesa = { chave: m.voo?.tickChave, fora: true, semMao: true, tick: m.tick + recuo.i, lido: m.tick }; return; }
   if (recuo) pDefesa = lerp(GOLEIRO.recuoDefesa[0], GOLEIRO.recuoDefesa[1], clamp(recuo.folga / 0.3, 0, 1));
   // passe do próprio time (recuo) não é chute: o goleiro recebe sempre que alcança, sem o sorteio
@@ -147,12 +155,13 @@ export function lerChute(m, j) {
     && (m.voo.tipo !== 'cabeceio' || (!!m.partida && m.voo.cabeceio === 'passe'));
   if (proprio) pDefesa = alturaOk && dist <= alcance + GOLEIRO.folgaAlcance / 2 ? 1 : 0;
   if (palpiteErrado) pDefesa = 0;
+  else if (panenkaNoMeio) pDefesa = recuo || (alturaOk && dist <= alcance + GOLEIRO.folgaAlcance / 2) ? 1 : 0;
   else if (ehPenalti) pDefesa *= GOLEIRO.penalti.fator; // lado certo: o pênalti no canto ainda é difícil de pegar
   const ok = uniforme(m.rng) < pDefesa;
   // segurar ou espalmar: em pé e de longe segura mais; no mergulho e de perto, espalma
   const mergulha = dist > GOLEIRO.alcanceEmPe;
   const S = GOLEIRO.segurar;
-  const pSegura = proprio ? 1 : (mergulha ? S.mergulho : dChute < 12 ? S.perto : S.emPe) * lerp(0.85, 1.15, a.reflexo / 100);
+  const pSegura = proprio || panenkaNoMeio ? 1 : (mergulha ? S.mergulho : dChute < 12 ? S.perto : S.emPe) * lerp(0.85, 1.15, a.reflexo / 100);
   const encaixe = ok && uniforme(m.rng) < pSegura;
   // a bola no tick do contato (aplicarDefesa roda em defesa.tick − 1, antes de a bola andar nesse passo):
   // é onde as mãos do mergulho desenhado chegam
@@ -163,10 +172,15 @@ export function lerChute(m, j) {
   // pênalti no lado errado: o mergulho desenhado vai para o lado que ele escolheu (ou ele fica no meio)
   if (palpiteErrado) {
     const zg = j.palpite;
+    // Panenka: o mergulho desenhado sai no tempo do pênalti (pico GOLEIRO.penalti.picoPanenka s depois do chute) para o
+    // lado escolhido — não em câmera lenta até a bola chegar, nem de volta para ela — e ele fica no chão até a bola
+    // passar a linha (chaoAte; iniciarMergulho): não levanta a tempo de pegá-la
+    const tk = mergulhou ? m.tick + Math.min(plano.ticks, Math.round(GOLEIRO.penalti.picoPanenka / DT)) : m.tick + plano.ticks;
     j.defesa = {
-      chave: m.voo?.tickChave, lido: m.tick, tick: m.tick + plano.ticks, inicio, z: zg === 0 ? j.z : zg, y: 0.55,
+      chave: m.voo?.tickChave, lido: m.tick, tick: tk, inicio: mergulhou ? m.tick + 1 : inicio, z: zg === 0 ? j.z : zg, y: 0.55,
       sucesso: false, tipo: 'falhou', mergulha: zg !== 0, proprio: false, lado: Math.sign(zg - j.z) || 1, xPlano,
-      bx: contato.x, by: contato.y, bz: contato.z, palpite: true,
+      bx: mergulhou ? xPlano : contato.x, by: mergulhou ? 0.55 : contato.y, bz: mergulhou ? zg : contato.z, palpite: true,
+      chaoAte: mergulhou ? m.tick + linha.ticks + Math.round(0.3 / DT) : undefined,
     };
     m.eventos.push({ tipo: 'leituraGoleiro', id: j.id, chega: false, p: 0, palpite: zg });
     return;
@@ -497,8 +511,8 @@ export function soltarDaMao(m, j) {
 //   anda de lado e para a frente até o pico), hC, hLow (quadril no pico e no fim da impulsão), phi0, phiC
 //   (inclinação do tronco de lado no começo e no pico: 0 = de pé, π/2 = deitado de lado), th0, thC (para a
 //   frente), v0L, v0F (velocidade do corpo no começo), h0, bx, by, bz (a bola no contato), ext (1 = o braço
-//   chega à bola), tImp (s de impulsão), tq (s do pico até cair), vc, sFim, sLev, fim (tick em que está de pé
-//   de novo), pe0 [{x, z, y, ar}], perto (o pé do lado do mergulho), passo, pmL, pmF, pf [{x, z}], passa,
+//   chega à bola), tImp (s de impulsão), tq (s do pico até cair), tChao (s deitado: GOLEIRO.mergulho.tChao, ou até a
+//   Panenka passar — defesa.chaoAte), vc, sFim, sLev, fim (tick em que está de pé de novo), pe0 [{x, z, y, ar}], perto (o pé do lado do mergulho), passo, pmL, pmF, pf [{x, z}], passa,
 //   durPasso, iniPasso (defesa em pé: o pé que dá um passo curto até a base), rebote (começou no meio de outra
 //   defesa), rebaixada (o sorteio dava defesa, mas o corpo não alcançava), lado, alt, ate, idDefesa}
 
@@ -753,12 +767,14 @@ export function iniciarMergulho(m, j, d) {
       phiC = emPe.phi; thC = emPe.th; hC = emPe.h; sC = emPe.s; fC = emPe.f;
     }
     const vc = T > 0 ? sC / T : 0;
-    let tq = 0, fim, sFim, fFim = fC, passo = 0;
+    let tq = 0, fim, sFim, fFim = fC, passo = 0, tChao = MG.tChao;
     if (tipo === 'mergulho') {
       // queda pela gravidade, e o tronco não gira mais rápido que `giro` até deitar
       tq = Math.max(cl(Math.sqrt((2 * Math.max(0.05, hC - H_CHAO)) / 9.81) * 1.1, 0.15, 0.4), (1.5 * Math.abs(MEIO_PI - phiC)) / MG.giro);
       sFim = sC + vc * tq * 0.5;
-      fim = tp + Math.round((tq + MG.tChao + MG.tLevanta) / DT);
+      // d.chaoAte (Panenka no meio contra quem mergulhou: lerChute): fica no chão até a bola passar (não levanta e a pega)
+      if (d.chaoAte != null) tChao = Math.max(MG.tChao, (d.chaoAte - tp) * DT - tq);
+      fim = tp + Math.round((tq + tChao + MG.tLevanta) / DT);
       // o passo do pé do lado da bola na impulsão: menor quando os pés ficam para trás no voo
       const pesC = sC - PERNA * MD.sin(phiC);
       passo = emPeAgora ? cl(0.15 + pesC - pmL, 0.05, 0.3) : 0;
@@ -788,7 +804,7 @@ export function iniciarMergulho(m, j, d) {
     return {
       tick0: t0, tc, tp, T, tipo, sucesso, encaixe: sucesso && d.tipo === 'encaixe', x0: j.x, z0: j.z, fx, fz, lx, lz, ladoS,
       rF, dYaw, tGiro: Math.min(MG.tGiro, Math.max(T, 3 * DT)),
-      sC, fC, hC, hLow, phi0, phiC, th0, thC, v0L, v0F, h0, bx: d.bx, by: d.by, bz: d.bz, ext, tImp, tq, vc, sFim, sLev, fim,
+      sC, fC, hC, hLow, phi0, phiC, th0, thC, v0L, v0F, h0, bx: d.bx, by: d.by, bz: d.bz, ext, tImp, tq, tChao, vc, sFim, sLev, fim,
       pe0, perto, passo, pmL, pmF: fFim, pf, passa, durPasso, iniPasso, rebote: !!ant, mao0, rebaixada: false,
       lado: d.lado, alt: d.y, ate: fim, idDefesa: undefined,
     };
@@ -869,18 +885,18 @@ function corpoMergulho(g, t, q) {
   let s, f, h, phi, th = 0;
   if (g.tipo === 'mergulho') {
     if (t <= T) { s = g.sC * S + g.v0L * H0; f = g.fC * S + g.v0F * H0; }
-    else if (t <= tPouso + MG.tChao) { const w = Math.min(1, (t - T) / Math.max(g.tq, DT)); s = g.sC + (g.sFim - g.sC) * (2 * w - w * w); f = g.fC; }
-    else { s = g.sFim + (g.sLev - g.sFim) * sm((t - tPouso - MG.tChao) / MG.tLevanta); f = g.fC; }
+    else if (t <= tPouso + g.tChao) { const w = Math.min(1, (t - T) / Math.max(g.tq, DT)); s = g.sC + (g.sFim - g.sC) * (2 * w - w * w); f = g.fC; }
+    else { s = g.sFim + (g.sLev - g.sFim) * sm((t - tPouso - g.tChao) / MG.tLevanta); f = g.fC; }
     if (t <= g.tImp) h = g.h0 + (g.hLow - g.h0) * sm(t / g.tImp);
     else if (t <= T) h = g.hLow + (g.hC - g.hLow) * MD.sin(MEIO_PI * cl((t - g.tImp) / Math.max(T - g.tImp, DT), 0, 1));
     else if (t <= tPouso) { const v = (t - T) / g.tq; h = g.hC + (H_CHAO - g.hC) * v * v; }
-    else if (t <= tPouso + MG.tChao) h = H_CHAO;
-    else h = H_CHAO + (H_PE - H_CHAO) * sm((t - tPouso - MG.tChao) / MG.tLevanta);
+    else if (t <= tPouso + g.tChao) h = H_CHAO;
+    else h = H_CHAO + (H_PE - H_CHAO) * sm((t - tPouso - g.tChao) / MG.tLevanta);
     // o tronco gira junto com o corpo que anda (o mesmo perfil): os pés não são jogados para trás
     if (t <= T) { phi = g.phi0 + (g.phiC - g.phi0) * S; th = g.th0 * (1 - S); }
     else if (t <= tPouso) phi = g.phiC + (MEIO_PI - g.phiC) * sm((t - T) / g.tq);
-    else if (t <= tPouso + MG.tChao) phi = MEIO_PI;
-    else phi = MEIO_PI * (1 - sm((t - tPouso - MG.tChao) / MG.tLevanta));
+    else if (t <= tPouso + g.tChao) phi = MEIO_PI;
+    else phi = MEIO_PI * (1 - sm((t - tPouso - g.tChao) / MG.tLevanta));
   } else if (g.tipo === 'salto') {
     if (t <= T) { s = g.sC * S + g.v0L * H0; f = g.fC * S + g.v0F * H0; }
     else { const w = Math.min(t - T, g.tq); s = g.sC + g.vc * (w - (0.5 * w * w) / Math.max(g.tq, DT)); f = g.fC; }

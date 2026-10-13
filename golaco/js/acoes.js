@@ -402,8 +402,9 @@ export function executarAcao(m, j, pe, primeira = false) {
     // no chute a pressão só pesa de perto (< 12 m) e pouco; de primeira, ×1,15 (StatsBomb)
     const lado = ataca(m, j.time);
     const perto = MD.hypot(lado * CAMPO.meioX - b.p.x, b.p.z) < 12;
+    // (a Panenka — cavadinha pedida no pênalti — tem o erro próprio, ACOES.cavadinha.penalti, sem a pressão do pênalti)
     const em = (primeira ? ACOES.chute.primeiraErro : 1) * (1 + (perto ? ACOES.chute.pressaoErro : 0) * pressaoSobre(m, j)) * multPeFraco(j, pe)
-      * (p.penalti ? ACOES.chute.penaltiErro : 1) // a pressão da cobrança do pênalti
+      * (p.penalti && !p.cavadinha ? ACOES.chute.penaltiErro : 1) // a pressão da cobrança do pênalti
       * (p.barreira ? ACOES.chute.faltaErro : 1); // o tiro livre por cima da barreira: subir e descer no gol é difícil
     return chute(m, j, pe, p, em);
   }
@@ -799,17 +800,26 @@ function cavadinha(m, j, pe, p, erroMult, gx) {
     const mr = mira(j);
     const zM = mr && mr.mag > 0.3 ? zPeloAnalogico(b, gx, lado, meio, mr) : clamp(b.p.z * 0.4, -meio + 0.6, meio - 0.6);
     uz = zM - b.p.z;
-    el = lerp(cfg.elevPedida[0], cfg.elevPedida[1], clamp((p.forca - 0.08) / 0.92, 0, 1));
+    // (a Panenka sobe no máximo até penalti.elevMax: mais em pé que isso, de 11 m, é um balão de ~5 m que 1% de força
+    // muda 0,3 m na altura em que chega ao goleiro)
+    el = lerp(cfg.elevPedida[0], p.penalti ? cfg.penalti.elevMax : cfg.elevPedida[1], clamp((p.forca - 0.08) / 0.92, 0, 1));
   }
   const D = MD.hypot(ux, uz) || 1;
   ux /= D; uz /= D;
   const pp = { x: b.p.x, y: b.p.y, z: b.p.z };
   const w = { x: uz * 12, y: 0, z: -ux * 12 };
-  const s = velParaPousar(pp, ux, uz, D, el, w);
-  // a cavadinha é difícil de dosar (StatsBomb: 41,8% no alvo): erro grande na força e na direção
+  // Panenka (a pedida no pênalti, ACOES.cavadinha.penalti): a velocidade é a que passa na linha na altura `y`, descendo
+  // (medida 0,4 m antes dela, como o chute: na linha estão as traves). A busca de "cair alemDaLinha m depois da linha"
+  // não serve aqui: com o gol no caminho a distância do pouso não cresce com a velocidade (a bola bate no travessão ou no
+  // teto da rede e volta) e a busca parava no travessão — sem erro nenhum, a Panenka passava a ~2,8 m na linha
+  const pen = p.cavadinha && p.penalti ? cfg.penalti : null;
+  const s = pen ? velParaAlturaEm(pp, ux, uz, Math.max(1, (gx - b.p.x) / ux - 0.4), el, w, pen.y) : velParaPousar(pp, ux, uz, D, el, w);
+  // a cavadinha é difícil de dosar (StatsBomb: 41,8% no alvo): erro grande na força e na direção. A Panenka é a bola
+  // parada a 11 m, sem marcador e sem a pressão do pênalti: erro próprio, pequeno (Opta: 95,7% de gols no alto do meio)
   const fin = j.par.attr.finalizacao / 100;
-  const u = girar(ux, uz, normal(m.rng) * lerp(cfg.erroDir[0], cfg.erroDir[1], fin) * erroMult);
-  let s2 = s * (1 + normal(m.rng) * lerp(cfg.erroForca[0], cfg.erroForca[1], fin) * erroMult);
+  const eDir = pen ? pen.erroDir : cfg.erroDir, eForca = pen ? pen.erroForca : cfg.erroForca;
+  const u = girar(ux, uz, normal(m.rng) * lerp(eDir[0], eDir[1], fin) * erroMult);
+  let s2 = s * (1 + normal(m.rng) * lerp(eForca[0], eForca[1], fin) * erroMult);
   // a pedida vale de qualquer lugar: nunca sai mais rápida que o chute mais forte dele (a mesma conta do chute com a
   // força cheia). De longe a busca pedia até 45 m/s e o erro de força somava (até ~70 m/s, contraprova 13/10): com o
   // teto, o balão de longe cai antes do gol. A da IA (até distMax) fica como era

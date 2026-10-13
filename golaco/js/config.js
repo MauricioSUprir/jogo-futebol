@@ -412,9 +412,14 @@ export const ACOES = {
   // lugar: o 2º aperto antes de o chute do 1º tocar na bola. toqueRapido: 1º toque mais curto que isso pode ser o 1º de
   // dois — o contato espera até `janela` s depois de soltar (um toque duplo normal leva ~0,08–0,18 s entre os toques; o
   // chute carregado não espera). elevPedida: elevação da cavadinha pedida pela força do 2º toque (toque rápido → [0], a
-  // mesma da IA; segurado → [1], mais alta)
+  // mesma da IA; segurado → [1], mais alta). penalti: a Panenka (a pedida na cobrança do pênalti; acoes.js cavadinha) —
+  // passa 0,4 m antes da linha a `y` m, descendo, com a elevação de elevPedida[0] (2º toque rápido) até `elevMax`
+  // (segurado), erro próprio de força/direção (ruim → bom) e SEM a pressão do pênalti (ACOES.chute.penaltiErro): bola
+  // parada a 11 m e sem marcador; Opta/Premier League: 95,7% de gols no alto do meio (PESQUISA-ETAPA2 §2.7a). Força
+  // +7% (elevMax) a +9% (rápido) a mais já passa por cima do travessão
   cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05],
-    toqueRapido: 0.18, janela: 0.15, elevPedida: [0.72, 1.0] },
+    toqueRapido: 0.18, janela: 0.15, elevPedida: [0.72, 1.0],
+    penalti: { y: 1.3, elevMax: 0.86, erroForca: [0.05, 0.025], erroDir: [0.06, 0.025] } },
   // cabeceio (pesquisa da Etapa 2): a cabeça chega ~0,56 m acima da estatura com corrida (Fílter
   // 2022) — com 1,80 m, centro da bola a ~2,45 m; força própria de 6,4–8,3 m/s (Becker 2021)
   // erroGolBolaParada: o cabeceio PARA O GOL na bola parada (escanteio, falta, lateral) espalha como o real (Opta: ~1/3
@@ -443,8 +448,11 @@ export const ACOES = {
 export const GOLEIRO = {
   // pênalti (Regra 14; goleiro.js lerChute): o goleiro escolhe o lado ANTES do chute (z do mergulho, m, e o peso de
   // cada escolha; o humano escolhe com o analógico na hora da cobrança). Lado certo: ganha `antecipa` s; lado errado
-  // (ou ficou no meio e a bola foi no canto, a > `meio` m): não defende; lado certo: chance × `fator`. Meta do dono: ~76% gol, 18% defesa, 6% fora
-  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72 },
+  // (ou ficou no meio e a bola foi no canto, a > `meio` m): não defende; lado certo: chance × `fator`. Meta do dono: ~76% gol, 18% defesa, 6% fora.
+  // Panenka (a cavadinha do pênalti, ~1,3–1,6 s até o goleiro): longe do lado escolhido (> `meio` m) entra — ele já
+  // mergulhou e fica no chão até ela passar (o mergulho desenhado tem o pico `picoPanenka` s depois do chute, o tempo
+  // de um pênalti chegar ao canto); quem ficou no meio pega a que alcança (sem sorteio, como o recuo)
+  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72, picoPanenka: 0.5 },
   reacao: [0.25, 0.19],       // s depois do toque (ruim → bom)
   alcanceEmPe: 0.9,           // m: mão de lado sem mergulhar
   bracoReflexo: 1.6,          // m: perna/braço esticados no reflexo, sem tirar o corpo do lugar
