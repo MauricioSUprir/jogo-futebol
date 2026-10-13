@@ -494,11 +494,13 @@ export function criarEntrada(opc = {}) {
     toque.vx = dx; toque.vy = dy;
     posicionarPino(dx, dy);
   }
-  // Botão de ataque ainda visível (a histerese de 0,25 s dos botões) com o adversário já com a bola no pé: o toque vale
-  // pelo botão da defesa da MESMA vaga (grande: CHUTE → TROCAR; a: PASSE → GOLEIRO; b: ENFIADA → PRESSÃO; c:
-  // LANÇAMENTO → DIVIDIDA). Antes o dedo no botão grande logo depois da perda era um CHUTE sem bola.
+  // Botão grande ainda visível como CHUTE (a histerese de 0,25 s dos botões) com o adversário já com a bola no pé: o
+  // toque vale pelo TROCAR (o botão da defesa da mesma vaga). Antes o dedo nele logo depois da perda era um CHUTE sem
+  // bola. Só o grande: nas outras vagas o da defesa é outra ação (a: PASSE → GOLEIRO, que segurado tirava o goleiro do
+  // gol — contraprova, 2,5 → 6,8 m da linha; c: LANÇAMENTO → DIVIDIDA, um bote): o PASSE/ENFIADA/LANÇAMENTO apertado
+  // na perda segue como antes (um pedido sem bola, que vence sozinho).
   function botaoQueVale(b) {
-    if (b.fase !== 'ataque' || !posseRival || faseAgora !== 'defesa') return b;
+    if (b.fase !== 'ataque' || b.vaga !== 'grande' || !posseRival || faseAgora !== 'defesa') return b;
     return bts.find(x => x.fase === 'defesa' && x.vaga === b.vaga) ?? b;
   }
   function ligarBotao(b) {

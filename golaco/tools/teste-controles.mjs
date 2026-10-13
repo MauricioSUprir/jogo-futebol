@@ -770,6 +770,55 @@ async function conferirTodosLayouts(pagina) {
       meta('Rebote do goleiro deles vindo para o meu atacante: fase de ataque, o botão grande é o CHUTE (não o TROCAR)',
         `defesa em ${rb.fases.filter(f => f === 'defesa').length}/25 quadros, CHUTE visível ${rb.chute}, controlado ${rb.ctrl} (atacante ${rb.at})`,
         rb.fases.every(f => f === 'ataque') && rb.chute && rb.ctrl === rb.at);
+      // (g2) logo depois da perda, com o PASSE (vaga a) ainda visível: o dedo segurado 0,8 s nele não vira o GOLEIRO (só o
+      // botão grande vale pelo da defesa, o TROCAR) — segurado, o goleiro saía do gol (contraprova: 2,5 → 6,8 m da linha)
+      const perdaVaga = async segurar => {
+        await pagina.evaluate(() => {
+          const g = window.__golaco; g.reiniciar({ modo: 'partida', semente: 3 }); g.relogio.usarManual(true);
+          for (let i = 0; i < 150; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+          const m = g.mundo, lado = m.ataca[0], gx = -lado * 52.5;
+          m.parada = null; m.partida.estado = 'jogo'; m.golTick = null; m.foraDesde = null; m.voo = null; m.naMao = null; m.posse = null;
+          for (const j of m.jogadores) { j.pedido = null; j.carga = null; j.recebe = null; j.vx = 0; j.vz = 0; }
+          const mv = (j, x, z) => { j.x = x; j.z = z; j.vx = 0; j.vz = 0; for (const p of j.pes) { p.x = x; p.z = z; } };
+          const c = m.jogadores.find(o => o.id === m.controlado[0]);
+          const o = m.jogadores.filter(x => x.time === 1 && x.posicao !== 'GOL').sort((a, b) => b.vagaIdx - a.vagaIdx)[0];
+          mv(c, gx + lado * 26, 3); mv(o, gx + lado * 25.2, 3.3);
+          mv(m.jogadores.find(x => x.time === 0 && x.posicao === 'GOL'), gx + lado * 1.5, 0);
+          const b = m.bola; b.p.x = c.x + lado * 0.4; b.p.y = 0.11; b.p.z = c.z; b.v.x = b.v.y = b.v.z = 0; b.rolando = true; m.posse = c.id;
+        });
+        await quadros(pagina, 20);
+        await pagina.evaluate(() => {
+          const g = window.__golaco, m = g.mundo, lado = m.ataca[0];
+          const c = m.jogadores.find(o => o.id === m.controlado[0]);
+          const o = m.jogadores.filter(x => x.time === 1 && x.posicao !== 'GOL').sort((a, b) => Math.hypot(a.x - c.x, a.z - c.z) - Math.hypot(b.x - c.x, b.z - c.z))[0];
+          if (c.cond) { c.cond.toque = null; c.cond.busca = false; }
+          const b = m.bola; b.p.x = o.x - lado * 0.4; b.p.y = 0.11; b.p.z = o.z; b.v.x = b.v.y = b.v.z = 0; b.rolando = true; m.posse = o.id;
+        });
+        await quadros(pagina, 3);
+        const vis = await pagina.evaluate(() => getComputedStyle(document.getElementById('btn-passe')).display !== 'none');
+        const coleta = n => pagina.evaluate(n => {
+          const g = window.__golaco, m = g.mundo, lado = m.ataca[0]; let dm = 0;
+          for (let i = 0; i < n; i++) {
+            g.relogio.avancar(1000 / 60, { desenhar: false });
+            const gk = m.jogadores.find(x => x.time === 0 && x.posicao === 'GOL');
+            dm = Math.max(dm, Math.abs(gk.x + lado * 52.5));
+          }
+          return dm;
+        }, n);
+        let dm = 0;
+        if (segurar) {
+          const bp = await centro('btn-passe');
+          await toque('touchStart', [{ x: bp.x, y: bp.y, id: 52 }]);
+          dm = await coleta(48);
+          await toque('touchEnd', []);
+          dm = Math.max(dm, await coleta(30));
+        } else dm = await coleta(78);
+        return { vis, dm };
+      };
+      const pv0 = await perdaVaga(false), pv1 = await perdaVaga(true);
+      meta('Logo depois da perda, o PASSE ainda visível segurado 0,8 s: não vira o GOLEIRO (o goleiro não sai do gol)',
+        `PASSE visível ${pv1.vis}; goleiro até ${pv0.dm.toFixed(1)} m da linha sem toque, ${pv1.dm.toFixed(1)} m com o PASSE segurado`,
+        pv1.vis && pv1.dm <= pv0.dm + 1.0);
       // (h) PEGAR só onde faz alguma coisa: não no tiro de meta montado nem com o goleiro fora da área
       const pg = await pagina.evaluate(() => {
         const g = window.__golaco; g.reiniciar({ modo: 'partida', semente: 3 }); g.relogio.usarManual(true);
