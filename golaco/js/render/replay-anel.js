@@ -13,6 +13,13 @@
 //
 // Corte: um passo em que alguém foi levado longe (montagem do recomeço, saída de bola) ou a bola pulou é marcado; o
 // replay nunca interpola através dele (lerQuadro) e os roteiros não atravessam um corte (ultimoCorte).
+//
+// Lance (cena semiautomática do impedimento, render/replay-saot.js): por passo, a FOTO da Regra 11 em vigor no fim dele
+// (m.partida.imped, só lida: tick da jogada, time, quem jogou, o defensor da linha, x da linha e o lado que esse time
+// ataca; −1 = nenhuma) e as marcas do passo (bit0 = chute ou cabeceio para o gol, bit1 = gol: marcasDoPasso). +~9 KB
+// fixos.
+
+import { J, SEGMENTOS, RAIO_CABECA } from '../anim.js';
 
 export function criarAnel({ ticks = 600, vagas = 24, nj = 19 } = {}) {
   const P = nj * 3, K = P + 3;
@@ -24,15 +31,25 @@ export function criarAnel({ ticks = 600, vagas = 24, nj = 19 } = {}) {
   const tickDe = new Int32Array(ticks).fill(-1);
   const tEst = new Float64Array(ticks);                 // relógio do estádio (s) no fim do passo
   const corte = new Uint8Array(ticks);                  // 1 = alguém teletransportado neste passo
+  // foto da Regra 11 no fim do passo (−1 = nenhuma) e marcas do passo
+  const fotoTick = new Int32Array(ticks).fill(-1);
+  const fotoTime = new Int8Array(ticks), fotoLado = new Int8Array(ticks);
+  const fotoPor = new Int16Array(ticks), fotoDef = new Int16Array(ticks);
+  const fotoLinhaX = new Float32Array(ticks);
+  const marcas = new Uint8Array(ticks);                 // bit0 = chute ou cabeceio para o gol, bit1 = gol
   let ultimo = -1, primeiro = -1, slotAtual = -1;
   const a = {
     ticks, vagas, K, P, nj, dados, ids, info, nVagas, bola, tickDe, tEst, corte,
+    fotoTick, fotoTime, fotoLado, fotoPor, fotoDef, fotoLinhaX, marcas,
     /** Tick mais novo gravado (-1: vazio). */
     get ultimo() { return ultimo; },
     /** Tick mais velho ainda no anel (sem buraco até `ultimo`). */
     get primeiro() { return primeiro; },
     /** Bytes ocupados (fixos). */
-    get bytes() { return dados.byteLength + ids.byteLength + info.byteLength + nVagas.byteLength + bola.byteLength + tickDe.byteLength + tEst.byteLength + corte.byteLength; },
+    get bytes() {
+      return dados.byteLength + ids.byteLength + info.byteLength + nVagas.byteLength + bola.byteLength + tickDe.byteLength + tEst.byteLength + corte.byteLength
+        + fotoTick.byteLength + fotoTime.byteLength + fotoLado.byteLength + fotoPor.byteLength + fotoDef.byteLength + fotoLinhaX.byteLength + marcas.byteLength;
+    },
     /** Esquece tudo (mundo novo). */
     limpar() { tickDe.fill(-1); ultimo = -1; primeiro = -1; slotAtual = -1; },
     /** Começa o registro do passo `tick` (t = relógio do estádio, s; cortou = alguém/a bola teletransportado). */
@@ -40,7 +57,7 @@ export function criarAnel({ ticks = 600, vagas = 24, nj = 19 } = {}) {
       const s = ((tick % ticks) + ticks) % ticks;
       // começo, buraco ou mundo novo (o tick voltou): o anel recomeça daqui
       if (ultimo < 0 || tick !== ultimo + 1) { tickDe.fill(-1); primeiro = tick; }
-      slotAtual = s; tickDe[s] = tick; tEst[s] = t; corte[s] = cortou ? 1 : 0; nVagas[s] = 0;
+      slotAtual = s; tickDe[s] = tick; tEst[s] = t; corte[s] = cortou ? 1 : 0; nVagas[s] = 0; fotoTick[s] = -1; marcas[s] = 0;
       ultimo = tick;
       if (ultimo - primeiro >= ticks) primeiro = ultimo - ticks + 1;
     },
@@ -53,6 +70,18 @@ export function criarAnel({ ticks = 600, vagas = 24, nj = 19 } = {}) {
       dados[o + P] = x; dados[o + P + 1] = z; dados[o + P + 2] = rumo;
       if (v + 1 > nVagas[s]) nVagas[s] = v + 1;
     },
+    /**
+     * Foto da Regra 11 em vigor no fim do passo atual (impedimento.js m.partida.imped, só lida): tick da jogada, time de
+     * quem jogou, id de quem jogou, id do defensor da linha (−1: a bola ou o meio), x da linha e o lado (±1) que esse time
+     * ataca. Sem foto, não chame (fica −1).
+     */
+    foto(tick, time, por, def, linhaX, lado) {
+      if (slotAtual < 0) return;
+      const s = slotAtual;
+      fotoTick[s] = tick; fotoTime[s] = time; fotoPor[s] = por; fotoDef[s] = def == null ? -1 : def; fotoLinhaX[s] = linhaX; fotoLado[s] = lado >= 0 ? 1 : -1;
+    },
+    /** Marcas do passo atual (bit0 = chute ou cabeceio para o gol, bit1 = gol: marcasDoPasso). */
+    marcar(bits) { if (slotAtual >= 0) marcas[slotAtual] |= bits; },
     /** Fecha o passo com a bola (p {x,y,z}, q {x,y,z,w}). */
     fim(p, q) {
       if (slotAtual < 0) return;
@@ -174,4 +203,101 @@ export function defensorDaLinha(a, tick, time, linhaX, tol = 1, out = { id: -1, 
   if (melhor < 0) return null;
   out.id = a.ids[melhor]; out.x = a.dados[melhor * a.K + a.P]; out.z = a.dados[melhor * a.K + a.P + 1];
   return out;
+}
+
+// ------------------------------------------------------------------------------------------ lance (cena semiautomática)
+/** Foto da Regra 11 em vigor no fim do passo `tick`: out {tick, time, por, def (−1 = bola/meio), linhaX, lado}; null sem foto. */
+export function fotoNoTick(a, tick, out = { tick: -1, time: 0, por: -1, def: -1, linhaX: 0, lado: 1 }) {
+  const s = a.slot(tick);
+  if (s < 0 || a.fotoTick[s] < 0) return null;
+  out.tick = a.fotoTick[s]; out.time = a.fotoTime[s]; out.por = a.fotoPor[s]; out.def = a.fotoDef[s];
+  out.linhaX = a.fotoLinhaX[s]; out.lado = a.fotoLado[s];
+  return out;
+}
+
+/**
+ * Marcas de um passo pelos EVENTOS dele (main.js gravarNoAnel; tools/lib/anel-node.mjs): bit1 = gol; bit0 = finalização
+ * — o evento 'chute' (chute, colocado, cavadinha) ou o cabeceio PARA O GOL. Todo cabeceio emite 'cabeceio' (o de passe,
+ * o de lançamento e o corte do rival também): só conta com `voo.cabeceio === 'chute'` (voo = m.voo no fim do passo, só
+ * lido; acoes.js executarCabeceio). O "Replay" da pausa mostra a posição legal só da cadeia que acaba em chute ou gol.
+ */
+export function marcasDoPasso(eventos, voo) {
+  let b = 0;
+  for (const e of eventos) {
+    if (e.tipo === 'gol') b |= 2;
+    else if (e.tipo === 'chute' || (e.tipo === 'cabeceio' && voo?.cabeceio === 'chute')) b |= 1;
+  }
+  return b;
+}
+
+/** Marcas do passo `tick` (bit0 = chute ou cabeceio para o gol, bit1 = gol; 0 fora do anel). */
+export function marcasNoTick(a, tick) { const s = a.slot(tick); return s < 0 ? 0 : a.marcas[s]; }
+
+/**
+ * Pose gravada do jogador `id` no passo `tick` (NJ×3 no mundo; a MESMA que o desenho mostrou) copiada em `out`
+ * (Float32Array de P), com x/z do centro em xz {x, z} quando dado. null se não está no anel.
+ */
+export function poseNoTick(a, tick, id, out, xz = null) {
+  const s = a.slot(tick);
+  if (s < 0) return null;
+  for (let v = 0; v < a.nVagas[s]; v++) {
+    const i = s * a.vagas + v;
+    if (a.ids[i] !== id) continue;
+    const o = i * a.K;
+    for (let k = 0; k < a.P; k++) out[k] = a.dados[o + k];
+    if (xz) { xz.x = a.dados[o + a.P]; xz.z = a.dados[o + a.P + 1]; }
+    return out;
+  }
+  return null;
+}
+
+// Partes do corpo que valem para o impedimento (IFAB Regra 11: cabeça, tronco e pés; braços e mãos não contam — o
+// ombro só até a axila, e fica de fora). Raio de cada junta = o maior raio das cápsulas válidas que chegam nela
+// (anim.js SEGMENTOS): o ponto mais adiantado de uma cápsula de raios variáveis está numa das esferas das pontas.
+export const JUNTAS_VALEM = [J.pelve, J.lombar, J.peito, J.pescoco, J.cabeca, J.quadrilE, J.quadrilD, J.joelhoE, J.joelhoD, J.tornozeloE, J.tornozeloD, J.pontaE, J.pontaD];
+const BRACO = new Set([J.ombroE, J.ombroD, J.cotoveloE, J.cotoveloD, J.maoE, J.maoD]);
+export const RAIO_PARTE = new Float32Array(19);
+for (const [ja, jb, ra, rb] of SEGMENTOS) {
+  if (BRACO.has(ja) || BRACO.has(jb)) continue;
+  RAIO_PARTE[ja] = Math.max(RAIO_PARTE[ja], ra); RAIO_PARTE[jb] = Math.max(RAIO_PARTE[jb], rb);
+}
+RAIO_PARTE[J.cabeca] = Math.max(RAIO_PARTE[J.cabeca], RAIO_CABECA);
+
+/**
+ * A parte do corpo que vale mais adiantada no sentido `lado` (±1: u = x·lado): out {u (da superfície: junta + raio),
+ * junta (índice em anim.js JUNTAS)}. Para o atacante, a mais perto do gol que ele ataca; para o defensor (com o mesmo
+ * `lado`), a mais perto do gol que ele defende.
+ */
+export function parteMaisAvancada(pose, lado, out = { u: -Infinity, junta: -1 }) {
+  out.u = -Infinity; out.junta = -1;
+  for (const j of JUNTAS_VALEM) {
+    const u = pose[j * 3] * lado + RAIO_PARTE[j];
+    if (u > out.u) { out.u = u; out.junta = j; }
+  }
+  return out;
+}
+
+const _fa = { tick: -1, time: 0, por: -1, def: -1, linhaX: 0, lado: 1 }, _fb = { tick: -1, time: 0, por: -1, def: -1, linhaX: 0, lado: 1 };
+/**
+ * Cadeias A→B do time `time` com a recepção em [de, ate]: o passo s em que a foto passa de `por` = A (a última foto de
+ * A: o passe, o cruzamento ou o chute que voltou da defesa) para `por` = B (a primeira de B), A ≠ B, as duas do time,
+ * sem foto nula, sem foto do adversário e sem corte entre a jogada de A e a recepção; a jogada de A também em [de, ate].
+ * Escreve em `out` (lista reaproveitada) itens {passeTick (a foto de A: o "kick point"), recebeTick (s), por (A), id
+ * (B), def (−1 = bola/meio), linhaX, lado} e devolve quantos.
+ */
+export function cadeiasNoIntervalo(a, de, ate, time, out = []) {
+  let n = 0;
+  for (let s = Math.max(de + 1, a.primeiro + 1); s <= ate; s++) {
+    const fb = fotoNoTick(a, s, _fb);
+    if (!fb || fb.time !== time || fb.tick !== s) continue;          // só a foto NOVA de B
+    const fa = fotoNoTick(a, s - 1, _fa);
+    if (!fa || fa.time !== time || fa.por === fb.por) continue;      // sem foto, do adversário ou do mesmo jogador
+    if (fa.tick < de || a.slot(fa.tick) < 0) continue;               // a jogada de A fora da janela (ou do anel)
+    if (a.primeiroCorte(fa.tick + 1, s) != null) continue;           // um corte entre o passe e a recepção
+    const c = out[n] ?? (out[n] = {});
+    c.passeTick = fa.tick; c.recebeTick = s; c.por = fa.por; c.id = fb.por; c.def = fa.def; c.linhaX = fa.linhaX; c.lado = fa.lado;
+    n++;
+  }
+  out.length = n;
+  return n;
 }

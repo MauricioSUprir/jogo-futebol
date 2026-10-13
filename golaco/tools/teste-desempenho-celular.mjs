@@ -5,11 +5,13 @@
 // por software, então o tempo de GPU não serve.
 // Metas: CPU por quadro p95 ≤ 6 ms e média ≤ 3 ms (sobram ≥ 10 ms para a GPU a 60 qps); chamadas de
 // desenho da partida ≤ as do treino + 2 (mesma câmera); geometrias e texturas iguais depois de 10
-// substituições (5 por time; sem vazamento); o quadro durante a comemoração do gol ≤ p95 do jogo + 1 ms.
+// substituições (5 por time; sem vazamento); o quadro durante a comemoração do gol ≤ p95 do jogo + 1 ms; informativo: a
+// CPU por quadro da análise semiautomática do impedimento no replay (12/10).
 //   node tools/teste-desempenho-celular.mjs [--raiz <pasta do jogo>] [--segundos 30] [--cpu 4]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 import { golRoteirizado } from './lib/gol-roteirizado.mjs';
+import { acharImpedimento } from './lib/acha-impedimento.mjs';
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
@@ -112,6 +114,35 @@ try {
     await pg.evaluate(() => window.__golaco.comemoracao.ligada(false));
     meta(`Comemoração do gol (CPU ${CPU}×): CPU do quadro na cena`, golC.ok ? `méd ${f2(mc.q.cpu.media)} · p95 ${f2(mc.q.cpu.p95)} ms em ${mc.n} quadros (a cena: ${f2(mc.c.msPorTick)} ms por tick) × jogo p95 ${f2(med.cpu.p95)} ms` : 'o gol roteirizado não saiu',
       'p95 ≤ jogo p95 + 1 ms', golC.ok && mc.n > 300 && mc.q.cpu.p95 <= med.cpu.p95 + 1);
+  }
+  // INFORMATIVO: a análise semiautomática do impedimento no replay (12/10), CPU 4×: o quadro da análise (só os jogadores
+  // do lance, a parede e o plano; sem o desenho da GPU) — cada avanço do relógio cronometrado
+  if (await pg.evaluate(() => typeof window.__golaco.replay?.saotDeTeste === 'function')) {
+    // a semente de um impedimento de verdade, achada em Node como a página entrega a entrada (comoPagina): uma semente fixa
+    // deixa de ter o lance quando a IA muda (com a semente 3 da versão de 12/10, nenhum impedimento em 20 mil quadros)
+    const imp = await acharImpedimento({ pastaJs: path.join(raiz, 'js'), comoPagina: true });
+    const achou = await pg.evaluate(sem => {
+      const g = window.__golaco;
+      g.reiniciar({ modo: 'partida', semente: sem });
+      g.replay.automatico(true);
+      let n = 0;
+      for (; n < 20000; n++) { g.relogio.avancar(1000 / 60, { desenhar: false }); const e = g.replay.estado; if (e.ativo && e.tipo === 'impedimento') break; if (e.ativo) g.replay.pular(); }
+      let q = 0;
+      while (q < 900 && g.replay.estado.ativo && g.replay.estado.cam !== 'saot') { g.relogio.avancar(1000 / 60, { desenhar: false }); q++; }
+      return { ok: g.replay.estado.ativo && g.replay.estado.cam === 'saot', n, sem };
+    }, imp?.semente ?? 3);
+    if (achou.ok) {
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
+      const an = await pg.evaluate(() => {
+        const g = window.__golaco, ms = [];
+        while (g.replay.estado.ativo && g.replay.estado.cam === 'saot' && ms.length < 400) { const t0 = performance.now(); g.relogio.avancar(1000 / 60, { desenhar: false }); ms.push(performance.now() - t0); }
+        ms.sort((a, b) => a - b);
+        return { n: ms.length, media: ms.reduce((a, b) => a + b, 0) / Math.max(1, ms.length), p95: ms[Math.floor(ms.length * 0.95)] ?? NaN, des: g.replay.desenhados };
+      });
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+      meta(`INFO análise do impedimento no replay (CPU ${CPU}×): CPU por quadro`, `méd ${f2(an.media)} · p95 ${f2(an.p95)} ms em ${an.n} quadros (${an.des} jogadores desenhados)`, `méd ≤ ${META.media}, p95 ≤ ${META.p95} ms (informativo)`, true);
+    } else meta('INFO análise do impedimento no replay', `nenhum impedimento em ${achou.n} quadros (semente ${achou.sem}${imp ? `, lance de Node no tick ${imp.tick}` : ', nenhum em Node'})`, 'informativo', true);
+    await pg.evaluate(() => window.__golaco.replay.automatico(false));
   }
   meta('Sem erro no console', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
 } catch (e) {
