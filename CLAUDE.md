@@ -304,8 +304,14 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   dela e quem ataca tem a iniciativa (1º contato ~40%). IA: com o condutor em arrancada (≥ 6,3 m/s, `IA_DEFESA.corrida`)
   o 1º e o 2º homem acompanham pela velocidade sem subir no corredor, fecham até o bote perto do gol, o batido deixa de ser
   o 1º homem, o corredor recua junto, e o bote tira a bola para o lado do defensor com o condutor sem dominar (a roubada
-  desfeita caiu de 23% para ~3%). Testes novos: `teste-cabeceio`, `teste-defesa-corrida` (os dois reprovam na base); o
-  painel ganhou `--retomar`/`--parcial` (máquina dividida), `--base-json` e `--set`. NÃO mexer na condução nesta frente
+  desfeita caiu de 23% para ~3%). Interceptação (dono, 12/10: "a defesa mal intercepta passe"): o marcador fica puxado
+  para a linha de passe (`pontoMarcacao`) e, no passe, vai cortar quem chega a um ponto da TRAJETÓRIA antes do recebedor
+  (`ia-tatica.js cortaPasse`, 0,2 s de leitura); no `sim.js` o recebedor que só marcou o domínio não tira a vez de quem
+  foi cortar (antes o defensor no caminho só cortava com a bola batendo no corpo: 1 de 92 passes alcançáveis; agora
+  ~60%); passe certo 88,7% → 85,4%, interceptações 8,75 → 12,1 por time por partida (acima da PL, 8,5: aqui quase todo
+  passe errado é interceptação). Testes novos: `teste-cabeceio`, `teste-defesa-corrida`, `teste-intercepta` (os três
+  reprovam na base); o painel ganhou `--retomar`/`--parcial` (máquina dividida), `--base-json` e `--set`. O
+  `workflow_dispatch` do painel no GitHub dá 403 para a integração das sessões (roda sozinho no PR). NÃO mexer na condução nesta frente
   (a condução curta é de outra branch; a calibração final do painel é junto com ela).
 - **Tela limpa** (pedidos de 11/10: "quero menos informação na tela", "não quero a linha de impedimento durante o jogo";
   `PESQUISA-ESTADIO.md` §7, contrato "Tela limpa" no `CONTRATOS.md`): a **linha viva saiu** (`IMPEDIMENTO.linhaViva`

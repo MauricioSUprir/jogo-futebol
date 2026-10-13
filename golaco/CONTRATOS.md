@@ -1227,17 +1227,30 @@ corrido só na partida.
 - Interceptação (pedido de 12/10, "a defesa mal intercepta passe"): `pontoMarcacao(m, B, a, meuGol, p, out)` — quem marca
   o adversário `a` (individual, `B.marcaAdv`, ou na zona, `B.zonaAdv`) fica `marcaDist` m do lado do meu gol dele e, com o
   condutor deles a até `linhaDePasse.alcance` m (e a mais de `sombraMin`), puxado `linhaDePasse.sombra[pressão]` para o
-  ponto a `sombraDist` m de `a` na linha de passe do condutor para ele. `vaiNaLivre`: no passe do adversário, quem marca o
-  recebedor vai à bola chegando até `IA_DEFESA.livre.marcador` s depois dele (os outros, `livre.margem` s antes).
+  ponto a `sombraDist` m de `a` na linha de passe do condutor para ele.
+- Corte do passe (`ia-tatica.js cortaPasse`, só na partida): no passe do adversário com destino, vai cortar quem do time
+  chega a um ponto da TRAJETÓRIA (`conducao.js preverBola`, rasteira ou até `livre.alturaMax` m, `livre.horizonte` ticks)
+  com `livre.le` s de leitura, `livre.antes` s antes de o recebedor chegar a ela (a mesma conta, sem leitura). Tempo de
+  chegada (`tempoCorte`): da velocidade que já leva na direção do ponto, a `livre.acel` m/s² até a arrancada, o pé a 0,5 m.
+  Só o primeiro do time (6 ticks de vantagem para quem já ia); decidido, segue até a bola passar (`j.iaT.corte = {chave:
+  voo.tickChave, x, z, ate}`, `livre.segue` ticks de folga), direto ao ponto em disparada, sem o filtro da pressa (ramo
+  `'corta'`). `cortandoPasse(m, j)` (exportada) diz se j está cortando o passe no ar.
+- `sim.js bolaLivre` (partida, passe rasteiro com destino): o candidato que só MARCOU o domínio (o recebedor esperando) não
+  encerra mais a vez — seguem os adversários do passador que estão cortando (`cortandoPasse`) ou controlados pelo humano
+  (sem a IA jogando por ele), e o goleiro adversário; os companheiros do passador, não. Antes o recebedor com o toque
+  marcado encerrava a vez de todos e o defensor no caminho só cortava com a bola batendo no corpo.
 - `sim.js boteIA` (partida): com o condutor a mais de `ACOES.boteIA.vLado` m/s a bola tirada sai para o lado do defensor e
   `tras` para trás no caminho do condutor; o condutor fica sem dominar até `semDominioAte` (a regra da DIVIDIDA).
 
 ### Testes
 `teste-cabeceio` (canhão de cruzamentos, pose, teleporte, partidas demo, humano) e `teste-defesa-corrida` (humano
 roteirizado em arrancada e em trote contra a IA) no padrão; os dois aceitam `--js <pasta>` (a base reprova).
-`teste-intercepta` (partidas IA × IA): interceptações NA LINHA do passe por 100 passes do adversário (o passe com destino
-dominado por um adversário de linha antes de chegar, a 2 m ou mais do recebedor), passe certo e o homem livre (recepção no
-último terço sem ninguém da IA a até 3 m); a mesma conta no painel.
+`teste-intercepta` (padrão): A) partidas IA × IA — interceptações NA LINHA do passe por time por partida (o passe com
+destino dominado por um adversário de linha com a bola andando, a 2 m ou mais do recebedor, sem bater no corpo; mais que a
+base + 1,5 e ≤ 14), passe certo (80–86,5%) e o homem livre (recepção no último terço sem ninguém da IA a até 3 m; ≤ base + 3
+pontos); B) canhão do passe arriscado (o meia passa a 12–28 m com um adversário a até 3,5 m da linha): dos passes que a
+física diz alcançáveis (a conta do `cortaPasse`, com 0,2 s de leitura e 0,1 s antes do recebedor) a IA corta ≥ 50%, dos
+outros ≤ 15%. A mesma contagem de interceptações no painel (por time por partida).
 `painel-equilibrio` ganhou `--base-json` (a base gravada), `--set` (constantes só da versão medida) e as linhas de chutes
 por time, gols de cabeça (8–18%), cabeceios e duelos pelo alto. `prints-cabeceio.mjs`: cabeceio, disputa e o corredor (TV
 e de perto).
