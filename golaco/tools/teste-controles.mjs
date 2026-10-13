@@ -21,6 +21,10 @@
 //  - Partida (Etapa 3; a página abre nela): menu com Editar time e Reiniciar partida, sem Recomeçar,
 //    Máquina e Marcador; placar com o relógio; R/M/N não mexem na partida; teclas da defesa (J
 //    conter, K dividida, O pressão). As cenas de treino pedem modo:'ataque'/'conducao' explícito.
+//  - Partida, celular (pedidos do dono de 11/10): PRESSÃO segurado pelo toque — a marca (setas âmbar) aparece sobre
+//    quem foi chamado em ≤ 3 quadros e ele chega a ≤ 2,5 m do condutor em 1,5 s; goleiro do humano com a bola no pé —
+//    o PEGAR aparece (sem encostar; também nos layouts de 70–140%) e, com o recuo, vira tiro livre indireto; com a
+//    bola nas mãos ele anda pelo analógico sem sair da área e o anel dos 8 s aparece nos últimos 5 s.
 // Itens que dependem da lógica (Etapa 2: m.controlado, j.carga, m.voo...; Etapa 3: a entrada da
 // defesa da Parte 4) saem como AGUARDANDO enquanto ela não existir — nunca como PASSOU.
 //   node tools/teste-controles.mjs [--raiz <pasta do jogo>]   (--raiz: mede outra cópia, ex.: a base)
@@ -33,7 +37,7 @@ const meta = (nome, medido, ok) => res.push({ nome, medido, ok });
 const argv = process.argv.slice(2);
 const srv = await servidor(0, path.resolve(argv.includes('--raiz') ? argv[argv.indexOf('--raiz') + 1] : RAIZ));
 
-const BIT = { CORRER: 1, MOD: 2, PASSE: 4, ENFIADA: 8, LANCAMENTO: 16, CHUTE: 32, CONTER: 64, DIVIDIDA: 128, PRESSAO: 512, TROCAR: 1024, GOLEIRO: 2048 };
+const BIT = { CORRER: 1, MOD: 2, PASSE: 4, ENFIADA: 8, LANCAMENTO: 16, CHUTE: 32, CONTER: 64, DIVIDIDA: 128, PRESSAO: 512, TROCAR: 1024, GOLEIRO: 2048, PEGAR: 4096 };
 const AG4 = 'aguardando4';
 /** A entrada da Parte 4 posiciona os botões da defesa da Etapa 3 (CONTER, DIVIDIDA, PRESSÃO)? */
 const temDefesaE3 = pagina => pagina.evaluate(() => { const b = document.getElementById('btn-dividida'); return !!window.__golaco.entradaEtapa3 || (!!b && b.hasAttribute('style')); });
@@ -150,21 +154,22 @@ async function conferirTodosLayouts(pagina) {
   await pagina.evaluate(() => window.__golaco.hudModo('Condução curta', 'MEI'));
   const tamSalvo = await pagina.evaluate(() => +getComputedStyle(document.documentElement).getPropertyValue('--toque-escala') || 0.8);
   for (const tam of [0.7, 1, 1.4]) {
-    for (const f of ['ataque', 'defesa']) {
+    for (const f of ['ataque', 'defesa', 'goleiroPe']) {
       await pagina.evaluate(([tam, f]) => {
         window.__golaco.toqueTamanho(tam);
         const t = document.getElementById('toque');
-        t.classList.toggle('fase-ataque', f === 'ataque'); t.classList.toggle('fase-defesa', f === 'defesa');
+        t.classList.toggle('fase-ataque', f !== 'defesa'); t.classList.toggle('fase-defesa', f === 'defesa');
+        t.classList.toggle('goleiro-pe', f === 'goleiroPe');
       }, [tam, f]);
       const l = await layoutToque(pagina);
-      const esperado = f === 'ataque' ? ['chute', 'correr', 'enfiada', 'lancamento', 'passe'] : defE3 ? DEFESA_TOQUE : ['correr', 'goleiro', 'trocar'];
+      const esperado = f === 'goleiroPe' ? ['chute', 'correr', 'enfiada', 'lancamento', 'passe', 'pegar'] : f === 'ataque' ? ['chute', 'correr', 'enfiada', 'lancamento', 'passe'] : defE3 ? DEFESA_TOQUE : ['correr', 'goleiro', 'trocar'];
       const okIds = JSON.stringify(l.ids) === JSON.stringify(esperado);
       if (!okIds || l.problemas.length) ok = false;
       textos.push(`${Math.round(tam * 100)}% ${f}: ${l.ids.length} botões, menor ${l.menor} px${l.problemas.length ? ' — ' + l.problemas.join('; ') : ''}${okIds ? '' : ' — botões ' + l.ids.join(',')}`);
     }
   }
   // volta ao tamanho de antes (o padrão é 80% desde a tela limpa; a fase verdadeira é reposta pelo próximo passo)
-  await pagina.evaluate(t => { window.__golaco.toqueTamanho(t); window.__golaco.sincronizarFase(); }, tamSalvo);
+  await pagina.evaluate(t => { window.__golaco.toqueTamanho(t); document.getElementById('toque').classList.remove('goleiro-pe'); window.__golaco.sincronizarFase(); }, tamSalvo);
   return [ok, textos.join(' | ')];
 }
 
@@ -575,6 +580,68 @@ async function conferirTodosLayouts(pagina) {
     const s2 = await quadros(pagina, 2);
     const depois = await pagina.evaluate(() => document.getElementById('toque').dataset.fase);
     meta('Botão segurado segura a troca ataque → defesa até soltar', `fase do mundo ${s1.fase}, CHUTE visível ${durante}, depois de soltar: ${depois} (mundo ${s2.fase})`, s1.fase === 'defesa' && durante && (s2.fase === 'ataque' || depois === 'defesa'));
+    // ---- partida (pedidos do dono de 11/10): PRESSÃO com a marca de quem foi chamado; goleiro na mão do humano
+    const temCena = await pagina.evaluate(() => typeof window.__golaco.cenaDeTeste === 'function');
+    if (!temCena) {
+      meta('Partida: PRESSÃO segurado (toque) — a marca aparece sobre quem foi chamado em ≤ 3 quadros e ele persegue', 'sem cenaDeTeste na página', false);
+      meta('Partida: goleiro com a bola no pé — PEGAR aparece e, com o recuo, é tiro livre indireto', 'sem cenaDeTeste na página', false);
+      meta('Partida: goleiro com a bola nas mãos anda pelo analógico na área; o anel dos 8 s aparece', 'sem cenaDeTeste na página', false);
+    } else {
+      await pagina.evaluate(() => { const g = window.__golaco; g.reiniciar({ modo: 'partida', semente: 3 }); g.relogio.usarManual(true); for (let i = 0; i < 5; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); g.cenaDeTeste('pressao'); });
+      const p0 = await quadros(pagina, 20);
+      const semMarca = await pagina.evaluate(() => window.__golaco.indicadores?.pressao == null);
+      const bpr = await centro('btn-pressao');
+      await toque('touchStart', [{ x: bpr.x, y: bpr.y, id: 21 }]);
+      const pr = await pagina.evaluate(() => {
+        const g = window.__golaco, out = [];
+        for (let k = 0; k < 90; k++) {
+          g.relogio.avancar(1000 / 60, { desenhar: k < 4 || k === 89 });
+          const m = g.mundo, c = m.pressaoHumano?.[0], id = c && c.tick === m.tick - 1 ? c.id : -1;
+          const j = id >= 0 ? m.jogadores.find(o => o.id === id) : null, d0 = m.jogadores.find(o => o.id === m.posse);
+          const mk = g.indicadores?.pressao;
+          out.push({ id, marca: !!mk, sobre: !!(mk && j && Math.hypot(mk.x - j.x, mk.z - j.z) < 0.6 && mk.y > 1.8), d: j && d0 && d0.time === 1 ? Math.hypot(j.x - d0.x, j.z - d0.z) : null });
+        }
+        return out;
+      });
+      await toque('touchEnd', [{ x: bpr.x, y: bpr.y, id: 21 }]);
+      const primeiro = pr.findIndex(q => q.marca && q.sobre);
+      const dIni = pr.find(q => q.d != null)?.d ?? null, dMin = Math.min(...pr.filter(q => q.d != null).map(q => q.d));
+      meta('Partida: PRESSÃO segurado (toque) — a marca aparece sobre quem foi chamado em ≤ 3 quadros e ele persegue',
+        `fase ${p0.fase}, marca antes ${semMarca ? 'não' : 'sim'}, aparece no quadro ${primeiro + 1}, chamado ${pr[primeiro]?.id ?? '-'}; distância ao condutor ${dIni?.toFixed(1) ?? '-'} → mín ${Number.isFinite(dMin) ? dMin.toFixed(1) : '-'} m em 1,5 s`,
+        p0.fase === 'defesa' && semMarca && primeiro >= 0 && primeiro <= 2 && dIni != null && dMin <= Math.min(2.5, dIni - 2));
+      // goleiro com a bola no pé, recuo valendo: o PEGAR aparece (sem encostar) e vira tiro livre indireto do adversário
+      await pagina.evaluate(() => { const g = window.__golaco; g.reiniciar({ modo: 'partida', semente: 3 }); g.relogio.usarManual(true); for (let i = 0; i < 5; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); g.cenaDeTeste('goleiroPe'); });
+      await quadros(pagina, 3);
+      const lp = await layoutToque(pagina);
+      const bpg = await centro('btn-pegar');
+      await toque('touchStart', [{ x: bpg.x, y: bpg.y, id: 22 }]);
+      await toque('touchEnd', [{ x: bpg.x, y: bpg.y, id: 22 }]);
+      const ep = await quadros(pagina, 3);
+      meta('Partida: goleiro com a bola no pé — PEGAR aparece (≥ 48 px, sem encostar) e, com o recuo, é tiro livre indireto',
+        `botões ${lp.ids.join(', ')}${lp.problemas.length ? ' — ' + lp.problemas.join('; ') : ''}; depois do toque: parada ${ep.parada?.tipo ?? '-'} do time ${ep.parada?.time ?? '-'}${ep.parada?.direto ? ' (direto)' : ''}`,
+        lp.ids.includes('pegar') && lp.problemas.length === 0 && ep.parada?.tipo === 'tiroLivre' && ep.parada?.time === 1 && !ep.parada?.direto);
+      // goleiro com a bola nas mãos: anda pelo analógico (para a frente), não sai da área; o anel aparece nos últimos 5 s
+      const gm = await pagina.evaluate(() => {
+        const g = window.__golaco; g.reiniciar({ modo: 'partida', semente: 3 }); g.relogio.usarManual(true);
+        for (let i = 0; i < 5; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+        const ids = g.cenaDeTeste('goleiroMao');
+        const m = g.mundo, gk = m.jogadores.find(o => o.id === ids.goleiro), lado = m.ataca[0], gx = -lado * 52.5;
+        const x0 = gk.x, z0 = gk.z;
+        g.forcarEntrada({ x: lado, z: 0, botoes: 0 });
+        let fora = 0, anelAntes = false, anel = null;
+        for (let k = 0; k < 240; k++) {
+          g.relogio.avancar(1000 / 60, { desenhar: k === 100 || k === 239 });
+          if (Math.abs(gk.x - gx) > 16.5 || Math.abs(gk.z) > 20.16) fora++;
+          if (k === 100) anelAntes = !!g.indicadores?.oito;
+        }
+        anel = g.indicadores?.oito;
+        g.forcarEntrada(null);
+        return { andou: Math.hypot(gk.x - x0, gk.z - z0), fora, naMao: m.naMao === gk.id, anelAntes, anel: anel ? { ...anel } : null };
+      });
+      meta('Partida: goleiro com a bola nas mãos anda pelo analógico na área; o anel dos 8 s aparece (aos 4 s, esvaziando)',
+        `andou ${gm.andou.toFixed(1)} m, fora da área ${gm.fora} quadros, bola na mão ${gm.naMao}; anel aos 1,7 s ${gm.anelAntes ? 'sim' : 'não'}, aos 4 s ${gm.anel ? `${gm.anel.segmentos}/${gm.anel.total}` : 'não'}`,
+        gm.andou >= 3 && gm.fora === 0 && gm.naMao && !gm.anelAntes && !!gm.anel && gm.anel.segmentos < gm.anel.total && gm.anel.segmentos > 0);
+    }
     const m = await centro('btn-menu');
     await pagina.touchscreen.tap(m.x, m.y);
     const menu = await pagina.evaluate(() => !document.getElementById('menu').hidden);

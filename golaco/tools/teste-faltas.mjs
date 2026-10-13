@@ -13,7 +13,8 @@
 //     vazia (nunca o gol), mudar a formação deixa o buraco fora do gol, 2 min de jogo depois sem erro e sem ele na bola;
 //     (5) goleiro expulso → o de linha mais perto do gol vai para o gol.
 //  C. Canhão de 400 pênaltis (IA × goleiro IA): gol 70–82%, defesa 12–24%, fora 2–10% (meta do dono: ~76/18/6).
-//  D. 12 partidas IA × IA: faltas 1,5–5 por partida; amarelos 10–30% das faltas; vermelhos ≤ 0,2 por partida (teste de Poisson: reprova se a contagem prova mais que isso);
+//  D. 12 partidas IA × IA: faltas 1,5–5 por partida; amarelos 10–30% das faltas (teste binomial: reprova se a contagem prova que
+//     está fora da faixa); vermelhos ≤ 0,2 por partida (teste de Poisson: reprova se a contagem prova mais que isso);
 //     nenhuma parada passa de 8 s; nada de NaN.
 //
 //   node tools/teste-faltas.mjs              (lógica do repositório)
@@ -66,6 +67,11 @@ function cena({ ax = 20, az = 0, avx = 6, dx = 18.8, dz = 0, dvx = 7, outros = '
 }
 
 /** P(X ≥ k) para X ~ Poisson(λ). */
+// cauda binomial: P(X ≥ k) e P(X ≤ k) para X ~ Bin(n, p) — a fração de amarelos é uma contagem em ~25 faltas (12
+// partidas): a faixa 10–30% só reprova quando a contagem PROVA que a taxa está fora dela (como os vermelhos abaixo)
+function binomPmf(n, k, p) { let c = 1; for (let i = 1; i <= k; i++) c = c * (n - k + i) / i; return c * p ** k * (1 - p) ** (n - k); }
+function caudaBinomAcima(k, n, p) { let s = 0; for (let i = k; i <= n; i++) s += binomPmf(n, i, p); return Math.min(1, s); }
+function caudaBinomAbaixo(k, n, p) { let s = 0; for (let i = 0; i <= k; i++) s += binomPmf(n, i, p); return Math.min(1, s); }
 function caudaPoisson(k, lam) {
   let termo = Math.exp(-lam), acum = 0;
   for (let i = 0; i < k; i++) { acum += termo; termo *= lam / (i + 1); }
@@ -271,7 +277,11 @@ function apitar(m, f) {
   // acima de 0,2 por partida (P(X ≥ contagem | λ = 0,2·N) < 5%); com "verm / N ≤ 0,2" direto, 12 partidas com a taxa
   // real de 0,10–0,13 (painel de 144) reprovavam em 12–21% das rodadas só por sorteio
   const pVerm = caudaPoisson(verm, 0.2 * N);
-  reg('D. amarelos (fração das faltas) e vermelhos por partida', `${f2(100 * amar / Math.max(1, faltas))}% · ${verm} em ${N} (${f2(verm / N)}; p = ${f2(pVerm)} contra 0,2)`, '10–30% · taxa ≤ 0,2 (p ≥ 0,05)', amar / Math.max(1, faltas) >= 0.1 && amar / Math.max(1, faltas) <= 0.3 && pVerm >= 0.05);
+  // amarelos: a faixa 10–30% pelo teste binomial (reprova se a contagem prova mais de 30% ou menos de 10%) e pelo menos
+  // 1 amarelo (com ~25 faltas, 0 amarelo não "prova" < 10% sozinho: P = 6,5%); a medida de verdade da taxa é o painel de
+  // 144 partidas (19% nas regras e controles; 17,5% na main)
+  const pAmarAlto = caudaBinomAcima(amar, faltas, 0.3), pAmarBaixo = caudaBinomAbaixo(amar, faltas, 0.1);
+  reg('D. amarelos (fração das faltas) e vermelhos por partida', `${f2(100 * amar / Math.max(1, faltas))}% (${amar}/${faltas}; p = ${f2(pAmarAlto)} contra 30%, ${f2(pAmarBaixo)} contra 10%) · ${verm} em ${N} (${f2(verm / N)}; p = ${f2(pVerm)} contra 0,2)`, '10–30% (p ≥ 0,05 nos dois lados; ≥ 1 amarelo) · taxa ≤ 0,2 (p ≥ 0,05)', faltas > 0 && amar >= 1 && pAmarAlto >= 0.05 && pAmarBaixo >= 0.05 && pVerm >= 0.05);
   reg('D. nenhuma parada passa de 8 s; nada de NaN (bola e contagens)', `parada mais longa ${f2(paradaMax)} s · NaN ${nan ? 'sim' : 'não'}`, `≤ ${PARTIDA.paradaMax} s · não`, paradaMax <= PARTIDA.paradaMax + 0.05 && !nan);
 }
 fim();

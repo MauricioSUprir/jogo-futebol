@@ -1,0 +1,84 @@
+// PRESSÃO do humano PERCEPTÍVEL (pedido do dono, 11/10: "o botão de pressão não funciona"; o EA FC "teammate pressure":
+// segurar o botão manda o companheiro que chega primeiro PERSEGUIR o condutor de forma agressiva, com uma marca em cima
+// dele; com o 1º defensor da IA já apertando, vem o segundo). Medida PAREADA (tools/lib/pressao-pareada.mjs): a cada posse
+// nova do adversário na partida IA × IA, o mundo é copiado e roda 2 s em dois ramos com a mesma entrada do humano — A sem
+// o botão, B com PRESSÃO segurado. Modelos do humano alternados por partida: 'persegue' (analógico na bola) e 'parado'.
+// O teste antigo do teste-defesa-humano ("um companheiro a ≤ 2 m em ≤ 2 s") passava SEM o botão (79%).
+// Metas (casos "longos": o condutor ≥ 1,5 s com a bola nos dois ramos e um companheiro a ≤ 12 m no começo):
+//  M0 os dois ramos começam bit a bit iguais (100%);
+//  M1 o mais perto: mediana da distância do companheiro mais perto ao condutor em 1,5 s, com ≤ sem − 1,0 m;
+//  M2 (guarda) com o botão, um companheiro chega a ≤ 2 m do condutor em ≤ 1,5 s em ≥ 60% (o diagnóstico pedia 70%: do
+//     parado o corpo anda ~6,4 m em 1,5 s, e o companheiro mais perto começa a ~7,5 m na mediana);
+//  M3 um a MAIS na pressão: mediana da distância do 2º companheiro mais perto ao condutor em 2 s, com ≤ sem − 1,5 m;
+//  M4 sem abuso: faltas do time 0 com o botão ≤ 1,5 × as de sem o botão + 2 (todos os casos);
+//  M5 corre de verdade: o escolhido a mais de 4 m do condutor, ≥ 1 s depois de escolhido (o tempo de acelerar: do
+//     parado a 6 m/s leva ~1,1 s no perfil de aceleração do jogo), a ≥ vCorrida em ≥ 80% dos ticks;
+//  M6 marca visível: com o pedido valendo e um condutor adversário, o escolhido existe para o desenho (defesa.js
+//     pressionadorVisivel) em 100% dos ticks;
+//  M7 dobra a marcação: com o 1º homem da IA (≠ controlado) já apertando por conta própria, o escolhido é OUTRO em ≥ 95%.
+// Informativos: as metas do diagnóstico que a física do jogo não deixa cumprir (o mais perto ≥ 2 m mais perto em 1,0 s —
+// do parado o corpo anda ~3,2 m no 1º segundo; bola ao alcance do bote em ≥ 15% de TODAS as posses — só ~1/5 delas dura
+// ≥ 1 s), o alcance do bote nos casos longos e os dois modelos do humano.
+//   node tools/teste-pressao-humano.mjs                       (lógica do repositório)
+//   node tools/teste-pressao-humano.mjs --js <pasta js>       (outra cópia da lógica, ex.: a base)
+//   node tools/teste-pressao-humano.mjs --partidas 8 --min 4  (amostra: partidas de 2 × min minutos)
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const args = process.argv.slice(2);
+const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
+const AQUI = path.dirname(fileURLToPath(import.meta.url));
+const JS = args.includes('--js') ? path.resolve(arg('--js')) : path.resolve(AQUI, '../js');
+const NP = +arg('--partidas', 8), MIN = +arg('--min', 4), SEM0 = +arg('--sem', 7001);
+const { medirPressaoPareada } = await import(pathToFileURL(path.join(AQUI, 'lib/pressao-pareada.mjs')).href);
+
+const t0 = Date.now();
+const { casos, PASSO } = await medirPressaoPareada(JS, { sementes: Array.from({ length: NP }, (_, k) => SEM0 + k), min: MIN, T: 2, alcance: 15, modelos: ['persegue', 'parado'] });
+const fmt = (v, c = 2) => (Number.isFinite(v) ? v.toFixed(c).replace('.', ',') : '—');
+const med = a => { const b = a.filter(Number.isFinite).sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : NaN; };
+const em = (r, s) => r.d[Math.round(s / PASSO)];
+const pc = (a, b) => `${a}/${b} (${b ? Math.round(100 * a / b) : 0}%)`;
+
+const linhas = [['teste', 'medido', 'meta', 'resultado']];
+let falhas = 0;
+const reg = (nome, medido, meta, ok, info = false) => { linhas.push([nome, medido, meta, info ? 'informativo' : ok ? 'PASSOU' : 'REPROVOU']); if (!ok && !info) falhas++; };
+
+const h0 = casos.filter(c => c.h0).length;
+reg('M0 os dois ramos começam bit a bit iguais', `${h0}/${casos.length}`, '100%', casos.length > 0 && h0 === casos.length);
+const L = casos.filter(c => (c.A.perdeu == null || c.A.perdeu >= 1.5) && (c.B.perdeu == null || c.B.perdeu >= 1.5) && c.d0 <= 12);
+const NMIN = 20;
+const d15A = med(L.map(c => em(c.A, 1.5))), d15B = med(L.map(c => em(c.B, 1.5)));
+reg('M1 o mais perto: mediana da distância ao condutor em 1,5 s, sem → com o botão', `${fmt(d15A)} → ${fmt(d15B)} m (Δ ${fmt(d15A - d15B)}; n = ${L.length})`, 'Δ ≥ 1,0 m', L.length >= NMIN && d15A - d15B >= 1.0);
+const c2 = L.filter(c => c.B.t2 != null && c.B.t2 <= 1.5).length, c2A = L.filter(c => c.A.t2 != null && c.A.t2 <= 1.5).length;
+reg('M2 (guarda) com o botão: um companheiro a ≤ 2 m do condutor em ≤ 1,5 s', `${pc(c2, L.length)} (sem: ${pc(c2A, L.length)})`, '≥ 60%', L.length >= NMIN && c2 >= 0.6 * L.length);
+const K2 = Math.round(2 / PASSO);
+const seg2 = o => Object.values(o ?? {}).sort((a, b) => a - b)[1];
+const L2 = L.filter(c => seg2(c.A.dj[K2]) != null && seg2(c.B.dj[K2]) != null);
+const s2A = med(L2.map(c => seg2(c.A.dj[K2]))), s2B = med(L2.map(c => seg2(c.B.dj[K2])));
+reg('M3 um a mais na pressão: 2º companheiro mais perto do condutor em 2 s, sem → com', `${fmt(s2A)} → ${fmt(s2B)} m (Δ ${fmt(s2A - s2B)}; n = ${L2.length})`, 'Δ ≥ 1,5 m', L2.length >= NMIN / 2 && s2A - s2B >= 1.5);
+const fA = casos.reduce((s, c) => s + c.A.faltas, 0), fB = casos.reduce((s, c) => s + c.B.faltas, 0);
+reg('M4 faltas do time 0 nos 2 s (todos os casos): sem → com o botão', `${fA} → ${fB}`, 'com ≤ 1,5 × sem + 2', fB <= 1.5 * fA + 2);
+const co = casos.reduce((s, c) => s + c.B.corre1, 0), ct = casos.reduce((s, c) => s + c.B.correTot1, 0);
+reg('M5 escolhido a > 4 m do condutor, ≥ 1 s depois de escolhido, a ≥ vCorrida', pc(co, ct), '≥ 80%', ct > 0 && co >= 0.8 * ct);
+const mo = casos.reduce((s, c) => s + c.B.marcaOk, 0), mt = casos.reduce((s, c) => s + c.B.marcaTot, 0);
+reg('M6 marca visível: o escolhido existe para o desenho com o pedido valendo', pc(mo, mt), '100%', mt > 0 && mo === mt);
+const pd = casos.reduce((s, c) => s + c.B.p1Dobra, 0), pt = casos.reduce((s, c) => s + c.B.p1Tot, 0);
+reg('M7 1º homem da IA já apertando: o botão chama OUTRO (dobra a marcação)', pt ? pc(pd, pt) : '— (sem o estado apertaProprio)', '≥ 95%', pt > 0 && pd >= 0.95 * pt);
+// informativos
+const d1A = med(L.map(c => em(c.A, 1))), d1B = med(L.map(c => em(c.B, 1)));
+reg('(diagnóstico) o mais perto em 1,0 s: sem → com', `${fmt(d1A)} → ${fmt(d1B)} m (Δ ${fmt(d1A - d1B)})`, 'Δ ≥ 2,0 m', true, true);
+const bA = casos.filter(c => c.A.alcBote != null).length, bB = casos.filter(c => c.B.alcBote != null).length;
+const lbA = L.filter(c => c.A.alcBote != null).length, lbB = L.filter(c => c.B.alcBote != null).length;
+reg('(diagnóstico) bola ao alcance do bote em ≤ 2 s: todos · casos longos', `${pc(bA, casos.length)} → ${pc(bB, casos.length)} · ${pc(lbA, L.length)} → ${pc(lbB, L.length)}`, '—', true, true);
+const c5 = casos.reduce((s, c) => s + c.B.corre, 0), t5 = casos.reduce((s, c) => s + c.B.correTot, 0);
+reg('(diagnóstico) escolhido a > 4 m, ≥ 0,5 s depois de escolhido, a ≥ vCorrida', pc(c5, t5), '—', true, true);
+for (const mod of ['persegue', 'parado']) {
+  const Lm = L.filter(c => c.modelo === mod), Cm = casos.filter(c => c.modelo === mod);
+  const r1 = Cm.filter(c => c.A.rouba).length, r2 = Cm.filter(c => c.B.rouba).length;
+  reg(`humano '${mod}': d(1,5 s) sem → com · ≤ 2 m em ≤ 1,5 s · roubadas`, `${fmt(med(Lm.map(c => em(c.A, 1.5))))} → ${fmt(med(Lm.map(c => em(c.B, 1.5))))} m · ${pc(Lm.filter(c => c.B.t2 != null && c.B.t2 <= 1.5).length, Lm.length)} · ${r1} → ${r2} em ${Cm.length} casos`, '—', true, true);
+}
+const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));
+console.log(`lógica: ${JS} · ${NP} partidas de 2 × ${MIN} min · ${casos.length} casos · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+console.log(linhas.map(l => l.map((x, c) => String(x).padEnd(larg[c])).join(' | ')).join('\n'));
+console.log(falhas ? `\nteste-pressao-humano: REPROVOU (${falhas})` : '\nteste-pressao-humano: PASSOU');
+process.exit(falhas ? 1 : 0);

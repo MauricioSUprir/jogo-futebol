@@ -42,7 +42,7 @@ const LISTA = [
   ['jogo aéreo: domínio no peito e cabeceio', 'teste-aereo.mjs'],
   ['treino de ataque com a IA: não trava e chega ao chute', 'teste-treino.mjs'],
   // Correções depois da Etapa 2
-  ['goleiro com a bola na mão não trava (repõe sozinho, TROCAR)', 'teste-goleiro-trava.mjs'],
+  ['goleiro com a bola na mão não trava no treino (repõe sozinho, TROCAR)', 'teste-goleiro-trava.mjs'],
   ['movimento da IA sem a bola (vai e volta, tremor, amontoado, pressão)', 'teste-movimento.mjs'],
   // Etapa 3 (partida 11×11, tática, IA e Editar time)
   ['custo da partida 11×11 (razão partida ÷ treino ≤ 2,5×)', 'teste-custo.mjs'],
@@ -69,6 +69,10 @@ const LISTA = [
   // Etapa 4: regras (IFAB)
   ['impedimento (Regra 11: cenas, tiro livre indireto, árbitro independente) e acréscimos (Regra 7.3)', 'teste-impedimento.mjs'],
   ['faltas, vantagem, cartões e expulsão (Regra 12), tiro livre direto e pênalti (Regra 14)', 'teste-faltas.mjs'],
+  // Pedidos do dono de 11/10 (regras e controles)
+  ['jogador parado com a bola: a IA fecha e dá o bote (condutor lento)', 'teste-parado.mjs'],
+  ['PRESSÃO perceptível: com × sem o botão (pareado), marca, um a mais na pressão', 'teste-pressao-humano.mjs'],
+  ['goleiro pelas Leis do Jogo (mão só na área, recuo, 8 s) e na mão do humano (anda, TROCAR, PEGAR)', 'teste-goleiro-regras.mjs'],
   ['bolas paradas: lateral com as mãos e 3 opções (Regra 15), tiro de meta (16), escanteio por zonas, barreira (13)', 'teste-bolas-paradas.mjs'],
   // Pré-jogo (pedido de 11/10): o cortejo do túnel até a fila e o roteiro com os trilhos de câmera (contas puras)
   ['pré-jogo: cortejo do túnel até a fila (pés, colisão, vaga, rumo, custo, hash da partida)', 'teste-cortejo.mjs'],

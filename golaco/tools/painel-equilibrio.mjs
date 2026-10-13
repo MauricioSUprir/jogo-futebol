@@ -27,6 +27,9 @@
 //   node tools/painel-equilibrio.mjs --base <pasta js>     (roda as duas com as MESMAS sementes, lado a lado)
 //   node tools/painel-equilibrio.mjs --json saida.json     (grava as partidas, para comparar depois)
 //   --par N (processos; padrão: CPUs)   --min 4 (minutos reais por tempo)   --estrito (sai com 1 fora da meta)
+//   node tools/painel-equilibrio.mjs --partes a.json,b.json,... [--base <pasta js>]
+//        junta partes gravadas com --json (as mesmas versões, sementes diferentes) e monta a tabela de todas, sem
+//        rodar nada — é como o CI roda as 144 partidas em pedaços (.github/workflows/golaco-painel.yml)
 import { fork } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -245,9 +248,17 @@ const LINHAS = [
 const versoes = [];
 if (BASE) versoes.push({ nome: 'base', pasta: BASE });
 versoes.push({ nome: BASE ? 'agora' : 'medido', pasta: JS });
-for (const v of versoes) { const r = await rodar(v.pasta); v.res = r.res; v.s = r.s; v.x = medidas(r.res); }
+if (arg('--partes', null)) {
+  // junta as partes (cada uma gravada com --json, as versões na mesma ordem: base, agora)
+  const lidas = arg('--partes').split(',').filter(Boolean).map(f => JSON.parse(fs.readFileSync(f, 'utf8')));
+  if (lidas.some(l => l.length !== versoes.length)) throw new Error(`--partes: cada parte tem de ter ${versoes.length} versão(ões) (use o mesmo --base de quando gravou)`);
+  versoes.forEach((v, i) => { v.res = lidas.flatMap(l => l[i].partidas).sort((a, b) => a.sem - b.sem); v.s = 0; v.x = medidas(v.res); });
+} else for (const v of versoes) { const r = await rodar(v.pasta); v.res = r.res; v.s = r.s; v.x = medidas(r.res); }
 
-console.log(`Painel de equilíbrio — ${NS} partidas IA × IA de 2 × ${MIN_TEMPO} min (sementes ${S0}–${S0 + NS - 1}), ${nPar} processos`);
+if (arg('--partes', null)) {
+  const ss = versoes[versoes.length - 1].res.map(r => r.sem);
+  console.log(`Painel de equilíbrio — ${ss.length} partidas IA × IA (sementes ${Math.min(...ss)}–${Math.max(...ss)}), juntadas de ${arg('--partes').split(',').filter(Boolean).length} partes`);
+} else console.log(`Painel de equilíbrio — ${NS} partidas IA × IA de 2 × ${MIN_TEMPO} min (sementes ${S0}–${S0 + NS - 1}), ${nPar} processos`);
 for (const v of versoes) console.log(`  ${v.nome}: ${v.pasta} (${f(v.s, 0)} s)`);
 const cab = ['medida', 'meta', ...versoes.map(v => v.nome)];
 const tab = [cab];
