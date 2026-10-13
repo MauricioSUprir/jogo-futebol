@@ -114,6 +114,12 @@ html.noite .vinheta { display: block; }
   .placar-escudo { width: 14px; height: 15px; }
   .placar-gols { font-size: 17px; height: 20px; }
   .placar-relogio b { font-size: 15px; }
+  /* espaços 1 px mais justos no PC: com a fonte do sistema mais larga (DejaVu Sans, a do Linux do CI) o "45+2' 1º T +4"
+     passava a área da referência (283 × 26 px); assim fica abaixo dela com qualquer fonte do sistema */
+  .placar-time { gap: 2px; }
+  .placar-resultado { gap: 2px; }
+  .placar-relogio { gap: 2px; padding: 0 4px; }
+  .placar-relogio small { letter-spacing: 0; }
 }
 
 .painel-jogo {
