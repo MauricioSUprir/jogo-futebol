@@ -26,6 +26,10 @@ const TEXTO_EVENTO = {
   substituicao: { t: 'Substituição', ms: 2400, forte: true, prio: 3 },
   reinicio: { t: 'Partida reiniciada', ms: 1200 },
 };
+// Selos da decisão da análise semiautomática do replay (terço de baixo): exatamente estes textos, sem nome nem minuto.
+const SELOS = { impedimento: 'IMPEDIMENTO', legal: 'POSIÇÃO LEGAL' };
+// bandeira do assistente (ícone do selo, na cor da decisão pelo CSS)
+const ICONE_BANDEIRA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V3.5"/><path d="M6 4h12.5l-3.2 4.2 3.2 4.3H6z"/></svg>';
 // rótulo da barra de força por tipo de carga (fica no DOM; na partida o CSS esconde: tela limpa, 11/10)
 const ROTULO_CARGA = {
   passe: 'PASSE', enfiada: 'ENFIADA', enfiadaAlta: 'ENFIADA ALTA', lancamento: 'LANÇAMENTO', cruzamento: 'CRUZAMENTO',
@@ -64,9 +68,10 @@ export function criarHud(opc) {
     acoes: $('menu-acoes'), modos: $('menu-modos'), estadoModo: $('estado-modo'), continuar: $('btn-continuar'),
     reiniciarPartida: $('btn-reiniciar-partida'), dica: $('dica'), replay: $('replay'), replayFaixa: $('replay-faixa'),
     comemoracao: $('comemoracao'),
+    terco: $('terco'),
   };
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
-  let ultimoHud = -1;
+  let ultimoHud = -1, tercoTipo = null;
   const ultimoTexto = { vel: '', modo: '', posicao: null, forte: false };
   let timerAviso = null, timerGol = null;
   // o "GOL!" dura o mesmo que a animação do CSS (2,4 s: some antes da saída de bola, PARTIDA.golPausa 2,5 s)
@@ -580,6 +585,25 @@ export function criarHud(opc) {
       const f = el.replayFaixa;
       if (f) { f.classList.remove('passa'); void f.offsetWidth; f.classList.add('passa'); }
     },
+    /**
+     * Terço de baixo (canto de baixo à esquerda): spec = null (some) | {tipo: 'impedimento'} | {tipo: 'legal'} — o SELO
+     * da decisão no quadro final da análise semiautomática do replay ("IMPEDIMENTO" / "POSIÇÃO LEGAL": a única exceção à
+     * "sem narração", aprovada pelo dono em 12/10; só o selo, sem nome nem minuto). A cena de substituição acrescenta o
+     * tipo dela. Só mexe no DOM quando o tipo muda (chamado a cada quadro do replay).
+     */
+    terco(spec) {
+      const tipo = spec && SELOS[spec.tipo] ? spec.tipo : null;
+      if (tipo === tercoTipo) return;
+      tercoTipo = tipo;
+      const e = el.terco;
+      if (!e) return;
+      if (!tipo) { e.hidden = true; e.className = 'terco'; e.textContent = ''; return; }
+      e.className = `terco terco-${tipo}`;
+      e.innerHTML = `<span class="terco-selo">${ICONE_BANDEIRA}<b>${SELOS[tipo]}</b></span>`;
+      e.hidden = false;
+    },
+    /** O tipo do terço de baixo na tela (testes): null, 'impedimento' ou 'legal'. */
+    get tercoTipo() { return tercoTipo; },
     /** Tira o "GOL!" já (saída de bola, recomeço do treino, mundo novo). */
     esconderGol() {
       clearTimeout(timerGol);
