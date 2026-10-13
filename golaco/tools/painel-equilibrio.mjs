@@ -147,7 +147,7 @@ async function partida(pastaJs, sem) {
             passe = null;
           } else if (e.tipo === 'passe' && j) {
             // (tickChegada: o passe chega ao destino; o adversário com a bola antes disso (+ 0,25 s) = interceptação)
-            passe = j.posicao !== 'GOL' ? { time: j.time, chega: (m.voo && m.voo.de === j.id ? m.voo.tickChegada : m.tick) + 15 } : null;
+            passe = j.posicao !== 'GOL' ? { time: j.time, para: m.voo && m.voo.de === j.id ? m.voo.para : null, chega: (m.voo && m.voo.de === j.id ? m.voo.tickChegada : m.tick) + 15 } : null;
             if (j.posicao !== 'GOL') R.passes++;
           }
       }
@@ -159,7 +159,12 @@ async function partida(pastaJs, sem) {
     const dono = M.donoDaBola(m);
     if (dono && passe) {
       if (dono.time === passe.time) R.passesOk++;
-      else if (m.tick <= passe.chega && dono.posicao !== 'GOL') R.intercept[dono.time]++;
+      else if (m.tick <= passe.chega && dono.posicao !== 'GOL') {
+        // na LINHA do passe: com destino, a 2 m ou mais do recebedor (a disputa na recepção não conta; Opta: "moving into
+        // the line of the intended pass")
+        const r = passe.para != null ? jog(passe.para) : null;
+        if (r && Math.hypot(r.x - dono.x, r.z - dono.z) >= 2) R.intercept[dono.time]++;
+      }
       passe = null;
     }
     const tc = M.timeComBola(m);
@@ -285,8 +290,8 @@ const LINHAS = [
   ['gols de fora da área', '12–18%', x => dentro(x.golsFora, 12, 18), x => `${f(x.golsFora)}%`],
   ['passe certo', '75–88%', x => dentro(x.passe, 75, 88), x => `${f(x.passe)}% (${f(x.passes, 0)} por partida)`],
   // interceptações (FBref/Opta, PL 2023/24: 8,5 por time por jogo, 6,1–10,0; ~941 passes por jogo → ~1,8 por 100 passes do
-  // adversário): o passe dominado por um adversário de linha antes de chegar ao destino
-  ['interceptações por 100 passes do adversário', '1,4–2,4 (PL 23/24: 1,8)', x => Number.isFinite(x.interc100) && dentro(x.interc100, 1.4, 2.4), x => `${f(x.interc100, 2)} (${f(x.intercT, 2)} por time por partida)`],
+  // adversário): o passe dominado por um adversário de linha antes de chegar ao destino, a 2 m ou mais do recebedor (na linha)
+  ['interceptações na linha por 100 passes do adversário', '1,4–2,4 (PL 23/24: 1,8)', x => Number.isFinite(x.interc100) && dentro(x.interc100, 1.4, 2.4), x => `${f(x.interc100, 2)} (${f(x.intercT, 2)} por time por partida)`],
   ['posses que chegam ao último terço', '35–45%', x => dentro(x.terco, 35, 45), x => `${f(x.terco)}% (${f(x.posses, 0)} posses)`],
   ['impedimentos por partida', '≥ 1', x => x.impedimentos >= 1, x => x.impedimentos ? f(x.impedimentos, 2) : '0 (ainda não existe)'],
   ['pênaltis: gol / defesa / fora', '~76 / 18 / 6%', x => x.pen.total >= 10 && dentro(x.penGol, 70, 82), x => x.pen.total ? `${f(x.penGol, 0)} / ${f(x.penDef, 0)} / ${f(x.penFora, 0)}% (${x.pen.total})` : '0 (ainda não existe)'],

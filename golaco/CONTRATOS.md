@@ -1134,12 +1134,23 @@ corrido só na partida.
   do condutor (`atacaBola`), a bola — sem parar de correr. Do lado do gol e a menos de `recua[0]` m, nunca sobe
   (velocidade para o gol ≥ a do condutor − `recua[1]`). Estado `j.iaT.acomp = {corre}`.
 - `alvoPressa`: trocando de papel o filtro só recomeça com o ponto novo a mais de `IA_DEFESA.saltoPressa` m.
+- Quem está no caminho do condutor rápido (`noCaminho`: do lado do gol, a menos de `corrida.recua[0]` m e a até
+  `corrida.caminho` m da linha condutor → gol) recua junto, `acompanhar(..., 'cobre')`; a contrapressão com o condutor
+  rápido também acompanha (`'aperta'`).
+- Interceptação (pedido de 12/10, "a defesa mal intercepta passe"): `pontoMarcacao(m, B, a, meuGol, p, out)` — quem marca
+  o adversário `a` (individual, `B.marcaAdv`, ou na zona, `B.zonaAdv`) fica `marcaDist` m do lado do meu gol dele e, com o
+  condutor deles a até `linhaDePasse.alcance` m (e a mais de `sombraMin`), puxado `linhaDePasse.sombra[pressão]` para o
+  ponto a `sombraDist` m de `a` na linha de passe do condutor para ele. `vaiNaLivre`: no passe do adversário, quem marca o
+  recebedor vai à bola chegando até `IA_DEFESA.livre.marcador` s depois dele (os outros, `livre.margem` s antes).
 - `sim.js boteIA` (partida): com o condutor a mais de `ACOES.boteIA.vLado` m/s a bola tirada sai para o lado do defensor e
   `tras` para trás no caminho do condutor; o condutor fica sem dominar até `semDominioAte` (a regra da DIVIDIDA).
 
 ### Testes
 `teste-cabeceio` (canhão de cruzamentos, pose, teleporte, partidas demo, humano) e `teste-defesa-corrida` (humano
 roteirizado em arrancada e em trote contra a IA) no padrão; os dois aceitam `--js <pasta>` (a base reprova).
+`teste-intercepta` (partidas IA × IA): interceptações NA LINHA do passe por 100 passes do adversário (o passe com destino
+dominado por um adversário de linha antes de chegar, a 2 m ou mais do recebedor), passe certo e o homem livre (recepção no
+último terço sem ninguém da IA a até 3 m); a mesma conta no painel.
 `painel-equilibrio` ganhou `--base-json` (a base gravada), `--set` (constantes só da versão medida) e as linhas de chutes
 por time, gols de cabeça (8–18%), cabeceios e duelos pelo alto. `prints-cabeceio.mjs`: cabeceio, disputa e o corredor (TV
 e de perto).
