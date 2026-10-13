@@ -585,7 +585,7 @@ ligada, desligada e em Node (`teste-substituicao-tela` T1).
   sólidos, o ator no quadro ≥ 95%, os pés acima da faixa no celular; S8 a placa (números, cores, o humano primeiro) e o
   quarto árbitro. `tools/teste-substituicao-tela.mjs` (navegador, CI e antes do deploy; `--raiz <pasta>`): T1–T10 (hash
   com e sem a cena e em Node; tick parado; faixa em ≤ 3 quadros e ≥ 4 s também pulada e "só a faixa"; pular; gol + troca
-  na fila e o apito depois; intervalo sem cena; pausa, aba escondida, em pé, `trocarMundo`; nada sobre nada em 4 telas e a
+  na fila e o apito depois; intervalo sem cena (a troca pedida nele e a feita no apito dele: a faixa na saída do 2º tempo); pausa, aba escondida, em pé, `trocarMundo`; nada sobre nada em 4 telas e a
   opção salva; CPU, chamadas de desenho, programas e memória no celular; a placa ≥ 40 px). `teste-editor-tela` 5 confere
   a faixa (data-texto exato; "ENTRA 22 Wallace" e "SAI 9 Diego" na tela) e `teste-hud-minimo` H7 o submenu sem rolar.
 
