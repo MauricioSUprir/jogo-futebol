@@ -1,7 +1,8 @@
 // Partida IA × IA em Node gravando o anel do replay EXATAMENTE como o main.js (rodarPasso + gravarNoAnel): a pose de
 // cada passo (anim.js), x/z/rumo, a bola, o corte (jogador levado > 2 m ou bola > 2,5 m), a foto da Regra 11 em vigor
-// (m.partida.imped, só lida) e as marcas do passo (bit0 chute/cabeceio, bit1 gol). Para os testes da cena
-// semiautomática (teste-saot, teste-replay-anel) e o medir-saot.
+// (m.partida.imped, só lida), as marcas do passo (bit0 chute/cabeceio, bit1 gol) e, com js/tecnicos.js, os 2 treinadores
+// (um passo deles depois do passo da partida, lendo o mundo; gravados depois dos jogadores com o bit2). Para os testes da
+// cena semiautomática (teste-saot, teste-replay-anel) e o medir-saot.
 //   const G = await criarGravador(pastaJs);  const S = G.novaPartida(semente, {comoPagina});  G.passo(S) → eventos
 // comoPagina: a entrada da IA pelo humano chega como a página (?demo=1) entrega (lib/acha-gol.mjs).
 import path from 'node:path';
@@ -13,15 +14,18 @@ export async function criarGravador(pastaJs) {
   const RA = await imp('render/replay-anel.js');
   const C = await imp('config.js');
   const { NJ, pose } = await imp('anim.js');
+  let TE = null;
+  try { TE = await imp('tecnicos.js'); } catch (_) { TE = null; }
   const P = NJ * 3;
   const ent = { 0: { x: 0, z: 0, botoes: 0 } };
   Object.defineProperties(ent, { x: { value: 0, writable: true }, z: { value: 0, writable: true }, botoes: { value: 0, writable: true } });
   function novaPartida(semente, opc = {}) {
-    const m = PA.criarPartida({ semente });
+    const m = PA.criarPartida({ semente, minutosPorTempo: opc.minutosPorTempo });
     const a = RA.criarAnel({ ticks: Math.round(C.REPLAY.segundos / C.PASSO), vagas: C.REPLAY.vagas, nj: NJ });
     const est = new Map();
     const bAnt = { x: m.bola.p.x, y: m.bola.p.y, z: m.bola.p.z };
-    return { m, a, est, bAnt, ms: 0, n: 0, comoPagina: !!opc.comoPagina, semente };
+    const T = TE && opc.tecnicos !== false ? TE.criarTecnicos(m.times, semente) : null;
+    return { m, a, est, bAnt, ms: 0, n: 0, comoPagina: !!opc.comoPagina, semente, T, L: T ? TE.criarLeitura() : null };
   }
   function entrada(S) {
     const e = PA.entradaDemoPartida(S.m);
@@ -33,6 +37,7 @@ export async function criarGravador(pastaJs) {
   function passo(S, gravar = true) {
     const { m, a, est } = S;
     const ev = PA.passoPartida(m, entrada(S), null) ?? m.eventos;
+    if (S.T) { TE.leituraDoMundo(m, ev, S.L); TE.passoTecnicos(S.T, S.L); }
     if (!gravar) return ev;
     let cortou = false;
     for (const j of m.jogadores) {
@@ -48,6 +53,7 @@ export async function criarGravador(pastaJs) {
     a.inicio(m.tick, m.tick * C.PASSO, cortou);
     let v = 0;
     for (const j of m.jogadores) { const e = est.get(j.id); a.jogador(v++, j.id, j.time, j.posicao === 'GOL', j.x, j.z, j.rumo, e.atu); }
+    if (S.T) for (const tc of S.T.tecs) a.jogador(v++, tc.id, tc.time, false, tc.j.x, tc.j.z, tc.j.rumo, tc.atu, true);
     const im = m.partida?.imped;
     if (im && a.foto) a.foto(im.tick, im.time, im.por, im.defensor, im.linhaX, m.ataca[im.time]);
     if (a.marcar) for (const e of ev) a.marcar(e.tipo === 'gol' ? 2 : e.tipo === 'chute' || e.tipo === 'cabeceio' ? 1 : 0);
@@ -55,5 +61,5 @@ export async function criarGravador(pastaJs) {
     S.ms += performance.now() - tg; S.n++;
     return ev;
   }
-  return { PA, RA, C, NJ, P, novaPartida, passo };
+  return { PA, RA, C, NJ, P, TE, novaPartida, passo };
 }

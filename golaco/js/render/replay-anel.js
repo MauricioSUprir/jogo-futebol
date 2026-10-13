@@ -8,8 +8,11 @@
 // Gaffer on Games). Gravar o ESTADO desenhado (e não as entradas para re-simular) custa memória fixa e nunca diverge;
 // re-simular custaria a simulação inteira por passo durante o replay (PESQUISA-ESTADIO.md §Replay).
 //
-// Memória fixa, alocada uma vez: ticks × vagas × (NJ×3 + 3) Float32 (10 s, 24 vagas, NJ = 19: ~3,3 MB). Nada é
+// Memória fixa, alocada uma vez: ticks × vagas × (NJ×3 + 3) Float32 (10 s, 26 vagas, NJ = 19: ~3,6 MB). Nada é
 // alocado por passo.
+//
+// Treinadores (12/10): gravados depois dos jogadores, com o bit2 de `info` (técnico). A pose deles depende do caminho
+// (mola, recuo, esquiva): recalcular no replay daria outra; gravada, o replay mostra o que aconteceu ao vivo.
 //
 // Corte: um passo em que alguém foi levado longe (montagem do recomeço, saída de bola) ou a bola pulou é marcado; o
 // replay nunca interpola através dele (lerQuadro) e os roteiros não atravessam um corte (ultimoCorte).
@@ -20,11 +23,11 @@
 
 import { J, SEGMENTOS, RAIO_CABECA } from '../anim.js';
 
-export function criarAnel({ ticks = 600, vagas = 24, nj = 19 } = {}) {
+export function criarAnel({ ticks = 600, vagas = 26, nj = 19 } = {}) {
   const P = nj * 3, K = P + 3;
   const dados = new Float32Array(ticks * vagas * K);
   const ids = new Int16Array(ticks * vagas).fill(-1);
-  const info = new Uint8Array(ticks * vagas);          // bit0 = time 1, bit1 = goleiro
+  const info = new Uint8Array(ticks * vagas);          // bit0 = time 1, bit1 = goleiro, bit2 = treinador
   const nVagas = new Uint8Array(ticks);
   const bola = new Float32Array(ticks * 7);             // p (x, y, z) + q (x, y, z, w)
   const tickDe = new Int32Array(ticks).fill(-1);
@@ -60,11 +63,11 @@ export function criarAnel({ ticks = 600, vagas = 24, nj = 19 } = {}) {
       ultimo = tick;
       if (ultimo - primeiro >= ticks) primeiro = ultimo - ticks + 1;
     },
-    /** Um jogador do passo atual na vaga v (pose = Float32Array NJ×3 já calculada, no mundo). */
-    jogador(v, id, time, goleiro, x, z, rumo, pose) {
+    /** Um jogador do passo atual na vaga v (pose = Float32Array NJ×3 já calculada, no mundo); tecnico: um treinador. */
+    jogador(v, id, time, goleiro, x, z, rumo, pose, tecnico = false) {
       if (slotAtual < 0 || v >= vagas) return;
       const s = slotAtual, i = s * vagas + v, o = i * K;
-      ids[i] = id; info[i] = (time === 1 ? 1 : 0) | (goleiro ? 2 : 0);
+      ids[i] = id; info[i] = (time === 1 ? 1 : 0) | (goleiro ? 2 : 0) | (tecnico ? 4 : 0);
       dados.set(pose.length === P ? pose : pose.subarray(0, P), o);
       dados[o + P] = x; dados[o + P + 1] = z; dados[o + P + 2] = rumo;
       if (v + 1 > nVagas[s]) nVagas[s] = v + 1;
@@ -138,9 +141,10 @@ export function lerQuadro(a, t, lista, bp, bq, kitDe = null) {
     it.x = dados[o0 + P] + (dados[o1 + P] - dados[o0 + P]) * f;
     it.z = dados[o0 + P + 1] + (dados[o1 + P + 1] - dados[o0 + P + 1]) * f;
     it.rumo = lerpAng(dados[o0 + P + 2], dados[o1 + P + 2], f);
-    it.id = id; it.time = a.info[i0] & 1; it.goleiro = (a.info[i0] & 2) !== 0;
-    // no replay ninguém está "controlado" (sem anel nem seta: a transmissão não tem cursor)
-    it.controlado = false; it.proximo = false; it.kit = kitDe ? kitDe(id, it.goleiro) : null;
+    it.id = id; it.time = a.info[i0] & 1; it.goleiro = (a.info[i0] & 2) !== 0; it.tecnico = (a.info[i0] & 4) !== 0;
+    // no replay ninguém está "controlado" (sem anel nem seta: a transmissão não tem cursor); nada oculto (a 1ª pessoa liga
+    // o `ocultar` do autor depois, só no plano dela)
+    it.controlado = false; it.proximo = false; it.ocultar = 0; it.kit = kitDe ? kitDe(id, it.goleiro) : null;
     n++;
   }
   lista.length = n;
@@ -195,7 +199,7 @@ export function defensorDaLinha(a, tick, time, linhaX, tol = 1, out = { id: -1, 
   let melhor = -1, dm = tol;
   for (let v = 0; v < a.nVagas[s]; v++) {
     const i = s * a.vagas + v;
-    if ((a.info[i] & 1) !== time) continue;
+    if ((a.info[i] & 1) !== time || (a.info[i] & 4)) continue; // o treinador nunca faz a linha
     const d = Math.abs(a.dados[i * a.K + a.P] - linhaX);
     if (d <= dm) { dm = d; melhor = i; }
   }
@@ -212,6 +216,23 @@ export function fotoNoTick(a, tick, out = { tick: -1, time: 0, por: -1, def: -1,
   out.tick = a.fotoTick[s]; out.time = a.fotoTime[s]; out.por = a.fotoPor[s]; out.def = a.fotoDef[s];
   out.linhaX = a.fotoLinhaX[s]; out.lado = a.fotoLado[s];
   return out;
+}
+
+/**
+ * Junta `junta` (índice em anim.js JUNTAS) do jogador `id` gravada no passo `tick` em out {x, y, z} (null se não está). Lê só
+ * os 3 floats (as câmeras da 1ª pessoa e do treinador leem a cabeça a cada passo do plano).
+ */
+export function juntaNoTick(a, tick, id, junta, out = { x: 0, y: 0, z: 0 }) {
+  const s = a.slot(tick);
+  if (s < 0) return null;
+  for (let v = 0; v < a.nVagas[s]; v++) {
+    const i = s * a.vagas + v;
+    if (a.ids[i] !== id) continue;
+    const o = i * a.K + junta * 3;
+    out.x = a.dados[o]; out.y = a.dados[o + 1]; out.z = a.dados[o + 2];
+    return out;
+  }
+  return null;
 }
 
 /** Marcas do passo `tick` (bit0 = chute/cabeceio, bit1 = gol; 0 fora do anel). */
