@@ -58,34 +58,69 @@ html.noite .vinheta { display: block; }
 
 /* ------------------------------------------------------------------ HUD */
 .hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+/* símbolos SVG da página (escudos dos times): só as definições, nada aparece */
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+/* Placar (dono, 12/10: "quero o placar assim, tem que ser algo menor e mais com a nossa cara"; referência: a barra de TV
+   no canto de cima à esquerda). Uma barra só, escura e translúcida, com cantos arredondados: marca do GOLAÇO (o
+   paralelogramo verde do símbolo) | cor do time + escudo + sigla da casa | placar em verde | sigla + escudo + cor do
+   visitante | relógio no bloco VERDE (letras pretas; some nos treinos). Menor que o de antes e que o da referência (24 px
+   de altura no celular, 26 no PC; antes 30/34; referência ~29 px) sem passar dos mínimos de leitura: números de 15–16 px,
+   siglas de 11 px (Apple HIG: mínimo de 11 pt; Material 3: Label Small 11) e o "1º T +4" de 10 px. Medido no
+   teste-hud-minimo (H10). Igual na partida e nos treinos (nos treinos sem o relógio). */
+:root { --placar-h: 24px; }
 .placar {
   position: absolute; top: calc(var(--sa-t) + var(--m)); left: calc(var(--sa-l) + var(--m));
-  display: flex; align-items: center; gap: 10px; padding: 0 12px 0 9px; height: 48px;
-  background: var(--painel); border: 1px solid var(--linha); border-radius: 10px;
+  display: flex; align-items: stretch; height: var(--placar-h); overflow: hidden;
+  background: rgba(7, 9, 10, 0.8); border: 1px solid rgba(25, 224, 122, 0.3); border-radius: 6px;
+  line-height: 1; white-space: nowrap; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
 }
-.marca-simbolo { width: 28px; height: 28px; color: var(--verde); flex: none; }
-.placar-linha { display: flex; align-items: center; gap: 8px; line-height: 1; }
-.placar-time { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 900; letter-spacing: 0.1em; }
-.placar-time i { display: block; width: 4px; height: 18px; border-radius: 2px; }
-.placar-time.t0 i { background: var(--verde); }
-.placar-time.t1 i { background: #e7eaec; }
+/* marca do jogo: o símbolo do GOLAÇO (favicon, placa do estádio), no bloco mais escuro do começo da barra */
+.placar-marca { display: grid; place-items: center; flex: none; width: 20px; background: rgba(0, 0, 0, 0.42); }
+.marca-simbolo { display: block; width: 14px; height: 12px; color: var(--verde); flex: none; }
+.placar-linha { display: flex; align-items: stretch; }
+.placar-time { display: flex; align-items: center; gap: 3px; padding: 0 4px 0 0; font-size: 11px; font-weight: 800; letter-spacing: 0.03em; color: var(--texto); }
+.placar-time.t1 { padding: 0 0 0 4px; }
+/* cor do time: a faixa de cima a baixo na borda de fora (casa logo depois da marca; visitante logo antes do relógio) */
+.placar-cor { display: block; align-self: stretch; width: 2px; flex: none; }
+.placar-time.t0 .placar-cor { background: var(--verde); }
+.placar-time.t1 .placar-cor { background: #e7eaec; }
+.placar-escudo { display: block; width: 13px; height: 14px; flex: none; }
+.placar-sigla { display: block; }
+/* o placar no meio, com um fundo levemente verde (os números em verde, grandes) */
+.placar-resultado { display: flex; align-items: center; gap: 3px; padding: 0 4px; background: rgba(25, 224, 122, 0.09); }
 .placar-gols {
-  min-width: 26px; height: 30px; display: grid; place-items: center; padding: 0 5px;
-  font-size: 19px; font-weight: 900; font-variant-numeric: tabular-nums;
-  background: var(--preto); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px;
+  display: grid; place-items: center; min-width: 9px; height: 18px; padding: 0 1px; border-radius: 3px;
+  font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--verde);
 }
 .placar-gols.mudou { animation: placar-mudou 1.2s ease-out; }
-@keyframes placar-mudou { 0%, 40% { background: var(--verde); color: var(--preto); } 100% { background: var(--preto); color: var(--texto); } }
-.placar-x { width: 6px; height: 2px; background: var(--texto-2); border-radius: 1px; }
-/* relógio da partida: minuto acelerado (0'–90') e o tempo, depois do placar */
+@keyframes placar-mudou { 0%, 40% { background: var(--verde); color: var(--preto); } 100% { background: transparent; color: var(--verde); } }
+.placar-x { width: 5px; height: 2px; background: var(--texto-2); border-radius: 1px; opacity: 0.8; }
+/* relógio da partida no bloco verde: minuto acelerado (0'–90'); o "1º T" só no intervalo, no fim e nos acréscimos
+   ("1º T +4", como na TV — hud.js liga .com-tempo); parado (intervalo e fim) o bloco fica verde-escuro com letras claras */
 .placar-relogio {
-  display: flex; align-items: baseline; gap: 5px; padding-left: 10px; margin-left: 1px;
-  border-left: 1px solid rgba(255, 255, 255, 0.1); line-height: 1; white-space: nowrap;
+  display: flex; align-items: center; gap: 3px; padding: 0 5px; flex: none;
+  background: var(--verde); color: var(--preto);
 }
 .placar-relogio[hidden] { display: none; }
-.placar-relogio b { font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; min-width: 2.2ch; text-align: right; }
-.placar-relogio small { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; color: var(--texto-2); text-transform: uppercase; }
-.placar-relogio.parado b { color: var(--verde); }
+.placar-relogio b { font-size: 14px; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.placar-relogio small { font-size: 10px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; opacity: 0.78; }
+.placar-relogio:not(.com-tempo) small { display: none; }
+.placar-relogio.parado { background: var(--verde-escuro); color: var(--texto); }
+@media (min-width: 1001px) {
+  :root { --placar-h: 26px; }
+  .placar-marca { width: 22px; }
+  .marca-simbolo { width: 16px; height: 13px; }
+  .placar-time { font-size: 12px; }
+  .placar-escudo { width: 14px; height: 15px; }
+  .placar-gols { font-size: 17px; height: 20px; }
+  .placar-relogio b { font-size: 15px; }
+  /* espaços 1 px mais justos no PC: com a fonte do sistema mais larga (DejaVu Sans, a do Linux do CI) o "45+2' 1º T +4"
+     passava a área da referência (283 × 26 px); assim fica abaixo dela com qualquer fonte do sistema */
+  .placar-time { gap: 2px; }
+  .placar-resultado { gap: 2px; }
+  .placar-relogio { gap: 2px; padding: 0 4px; }
+  .placar-relogio small { letter-spacing: 0; }
+}
 
 .painel-jogo {
   position: absolute; top: calc(var(--sa-t) + var(--m)); right: calc(var(--sa-r) + var(--m) + 48px + 10px);
@@ -228,43 +263,23 @@ html.com-toque .minimapa { bottom: auto; top: calc(var(--sa-t) + var(--m)); widt
   html.com-toque .modo { border-left: 0; padding-left: 0; min-width: 0; }
 }
 /* topo apertado (celular estreito ou com entalhe; medido em js/hud.js ajustarTopo):
-   1) sai a marca do placar; 2) sai o texto do modo (fica o ponto de estado e a posição) */
-html.topo-c1 .marca-simbolo { display: none; }
-html.topo-c1 .placar { padding-left: 12px; }
+   1) nos TREINOS sai a marca do placar, só se sem ela ainda encostar (na partida ela fica: o minimapa é que sai do meio,
+   passo 5); 2) sai o texto do
+   modo (fica o ponto de estado e a posição) */
+html.topo-c1:not(.em-partida) .placar-marca { display: none; }
 html.topo-c2 .modo { font-size: 0; letter-spacing: 0; gap: 0; }
 html.topo-c2 .painel-jogo { gap: 9px; padding: 0 10px 0 12px; }
 /* arco de botões grande (140%) chegando ao topo: o painel desce para baixo do placar, à esquerda */
-html.topo-desce .painel-jogo { right: auto; left: calc(var(--sa-l) + var(--m)); top: calc(var(--sa-t) + var(--m) + 48px + 8px); }
-/* 3) sai o "1º T" do relógio (fica o minuto) */
+html.topo-desce .painel-jogo { right: auto; left: calc(var(--sa-l) + var(--m)); top: calc(var(--sa-t) + var(--m) + var(--placar-h) + 8px); }
+/* 3) sai o "1º T" do relógio (fica o minuto); na PARTIDA só depois do passo 5 (o "1º T +4" e o "Intervalo" ficam se o
+   minimapa encostado à direita do placar resolver: hud.js ajustarTopo) */
 html.topo-c3 .placar-relogio small { display: none; }
-html.topo-c3 .placar { gap: 8px; padding-right: 10px; }
-/* 4) celular estreito com o relógio de 2 dígitos ou nos acréscimos ("45+2'"): o placar inteiro aperta (fontes e
-   espaços menores); 5) se ainda encostar, o minimapa sai do meio (js/hud.js ajustarTopo) */
-html.topo-c4 .placar { gap: 5px; padding-left: 9px; padding-right: 8px; }
-html.topo-c4 .placar-linha { gap: 5px; }
-html.topo-c4 .placar-time { gap: 4px; font-size: 12px; letter-spacing: 0.04em; }
-html.topo-c4 .placar-gols { min-width: 22px; height: 26px; font-size: 16px; padding: 0 4px; }
-html.topo-c4 .placar-relogio { padding-left: 6px; }
-html.topo-c4 .placar-relogio b { font-size: 13px; min-width: 0; letter-spacing: -0.02em; }
-/* partida: placar compacto de TV (placar e relógio primeiro; sem a marca, sem bordas nem caixinhas nos gols; o
-   "1º T" só no intervalo, no fim e no anúncio dos acréscimos — hud.js liga .com-tempo). Nos treinos fica o de cima. */
-html.em-partida .marca-simbolo { display: none; }
-html.em-partida .placar { height: 30px; gap: 6px; padding: 0 8px; background: rgba(8, 11, 12, 0.62); border-color: transparent; border-radius: 7px; }
-html.em-partida .placar-linha { gap: 5px; }
-html.em-partida .placar-time { gap: 4px; font-size: 11px; letter-spacing: 0.05em; }
-html.em-partida .placar-time i { width: 3px; height: 11px; border-radius: 1.5px; }
-html.em-partida .placar-gols { min-width: 14px; height: 22px; padding: 0 2px; font-size: 15px; background: transparent; border: 0; border-radius: 4px; }
-html.em-partida .placar-x { width: 5px; }
-html.em-partida .placar-relogio { gap: 4px; padding-left: 6px; }
-html.em-partida .placar-relogio b { font-size: 12px; min-width: 0; }
-html.em-partida .placar-relogio small { font-size: 9px; }
-html.em-partida .placar-relogio:not(.com-tempo) small { display: none; }
-@media (min-width: 1001px) {
-  html.em-partida .placar { height: 34px; padding: 0 10px; }
-  html.em-partida .placar-time { font-size: 12px; }
-  html.em-partida .placar-gols { font-size: 17px; height: 26px; }
-  html.em-partida .placar-relogio b { font-size: 13px; }
-}
+/* 4) celular estreito com o relógio de 2 dígitos ou nos acréscimos ("45+2'"): os espaços apertam (as fontes NÃO: ficam
+   nos mínimos de leitura do H10); 5) se ainda encostar, o minimapa sai do meio e encosta à direita do placar (hud.js) */
+html.topo-c4 .placar-time { gap: 2px; padding-right: 4px; letter-spacing: 0.02em; }
+html.topo-c4 .placar-time.t1 { padding: 0 0 0 4px; }
+html.topo-c4 .placar-resultado { padding: 0 4px; gap: 2px; }
+html.topo-c4 .placar-relogio { padding: 0 5px; }
 
 /* força do passe/chute: perto do jogador controlado (posicionada pelo main.js) */
 /* cartão do árbitro (amarelo/vermelho) em cima de quem levou: só o cartão, sem texto */
@@ -382,6 +397,9 @@ html.nomes-botoes .btn-toque span { display: block; text-shadow: 0 1px 2px rgba(
 .toque:not(.goleiro-pe) .btn-pegar { display: none; }
 .btn-pegar svg { stroke: #c6ff3d; }
 .btn-pegar.ativo svg { stroke: var(--preto); }
+/* TROCAR com a bola nas mãos do goleiro do humano (partida): só com a classe goleiro-mao (main.js) — no toque o TROCAR é da
+   defesa e o goleiro com a bola é ataque; o Q do teclado e o LB do controle já trocavam */
+.toque:not(.goleiro-mao) .btn-trocar-mao { display: none; }
 @keyframes bt-aparece { from { transform: scale(0.82); opacity: 0; } to { transform: none; } }
 
 /* ------------------------------------------------------------------ janelas (menu e ajuda) */

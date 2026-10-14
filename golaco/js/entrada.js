@@ -9,13 +9,14 @@
 // DIVIDIDA (defesa); O PEGAR (ataque: goleiro com a bola no pé) / PRESSÃO (defesa, segurar: um companheiro aperta);
 // L lançamento; I enfiada (goleiro com a bola nas mãos: solta no chão); Shift correr; E modificador (colocado /
 // enfiada alta / cruzamento tenso; condução curta e proteção; dois toques = pedalada); Q trocar (segurar 0,4 s: o
-// goleiro, na partida); G goleiro (segurar = sai do gol); R recomeçar; M máquina de passes; N marcador; C câmera;
+// goleiro, na partida); G goleiro (defesa; segurar = sai do gol); R recomeçar; M máquina de passes; N marcador; C câmera;
 // H ou F1 ajuda; Esc pausa.
 // Controle: analógico esquerdo; A passe / CONTER; B chute / DIVIDIDA; X lançamento; Y enfiada /
 // goleiro (segurar); RB PEGAR / PRESSÃO (defesa, segurar); LB trocar (segurar: o goleiro); RT correr; LT modificador;
 // Start pausa; View ajuda; R3 câmera. (O mapa da defesa é o do EA FC: segurar A = conter, B = bote em pé, segurar
-// RB = companheiro pressiona.)
-// Os botões que mudam de sentido pela fase (J, K, O, A, B, Y, RB) têm o sentido FIXADO NO APERTO:
+// RB = companheiro pressiona.) Na pausa e na Ajuda: cruz/analógico escolhem o botão, A confirma, B volta.
+// G só vale na defesa (como o Y do controle). Os botões que mudam de sentido pela fase (J, K, O, G, A, B, Y, RB) têm o
+// sentido FIXADO NO APERTO, pela fase do mundo NAQUELE passo (sem a histerese de 0,25 s dos botões visíveis):
 // segurar J enquanto a posse muda não troca o passe por CONTER no meio (criarSentidoFixo, pura).
 // Toque: analógico flutuante na metade esquerda; à direita, um arco de botões ao alcance do
 // polegar, só com o ícone (os nomes são opção da pausa: html.nomes-botoes). ATAQUE (meu time com a
@@ -28,6 +29,7 @@
 
 import { processarAnalogico, teclasParaAnalogico, paraMundo } from './controle.js';
 import { BOTAO, ENTRADA } from './config.js';
+import { aoTocar } from './toque-botao.js';
 
 // v2 (tela limpa, 11/10): o padrão mudou (80%, 55%) e vale para todo mundo — a v1 salva é ignorada
 const CHAVE_AJUSTES = 'golaco.toque.v2', CHAVE_AJUSTES_V1 = 'golaco.toque.v1';
@@ -48,7 +50,7 @@ export const ACOES_TECLA = {
 // tecla → bit da máscara (segurar = bit ligado), o mesmo nas duas fases
 export const TECLA_BIT = {
   KeyL: BOTAO.LANCAMENTO, KeyI: BOTAO.ENFIADA,
-  KeyQ: BOTAO.TROCAR, KeyG: BOTAO.GOLEIRO, KeyE: BOTAO.MOD,
+  KeyQ: BOTAO.TROCAR, KeyE: BOTAO.MOD,
   ShiftLeft: BOTAO.CORRER, ShiftRight: BOTAO.CORRER,
 };
 // Botões físicos que mudam de sentido pela fase: [bit no ataque, bit na defesa] (0 = nada). Teclas pelo
@@ -57,6 +59,8 @@ export const SENTIDO_FASE = {
   KeyJ: [BOTAO.PASSE, BOTAO.CONTER],
   KeyK: [BOTAO.CHUTE, BOTAO.DIVIDIDA],
   KeyO: [BOTAO.PEGAR, BOTAO.PRESSAO],
+  // G só na defesa, como o Y do controle (no ataque o goleiro saía até ~21 m da linha com o meu time atacando)
+  KeyG: [0, BOTAO.GOLEIRO],
   'pad:A': [BOTAO.PASSE, BOTAO.CONTER],
   'pad:B': [BOTAO.CHUTE, BOTAO.DIVIDIDA],
   'pad:Y': [BOTAO.ENFIADA, BOTAO.GOLEIRO],
@@ -113,6 +117,9 @@ export const BOTOES_TOQUE = [
   // goleiro do humano com a bola no pé, na área (recuo, a bola que ele soltou): pega com a mão — só aparece nessa hora
   // (main.js definirGoleiroPe; com recuo é tiro livre indireto: Regra 12.2)
   { id: 'btn-pegar', bit: 'PEGAR', fase: 'ataque', vaga: 'd', rotulo: 'PEGAR' },
+  // goleiro do humano com a bola NAS MÃOS (partida): TROCAR passa o controle a um jogador de linha e a IA repõe (o Q do
+  // teclado e o LB do controle já faziam; no toque o TROCAR é da defesa) — só aparece nessa hora (main.js definirGoleiroMao)
+  { id: 'btn-trocar-mao', bit: 'TROCAR', fase: 'ataque', vaga: 'e', rotulo: 'TROCAR' },
   { id: 'btn-correr', bit: 'CORRER', fase: 'ambas', vaga: 'correr', rotulo: 'CORRER' },
 ];
 // diâmetro de cada vaga (px CSS com tamanho 100%); nada fica abaixo de 48 px
@@ -132,10 +139,11 @@ function lerAjustes() {
 
 /**
  * Botão de toque com dois sentidos (pura; os testes em Node chamam). TOCAR (soltar antes de limiar s) dá um pulso
- * do bit `toque`; SEGURAR dá o bit `segura` enquanto o dedo fica, desde o 1º quadro (o CONTER não espera o
- * limiar; um toque curto conta como bote, não como conter). O tempo é o do jogo (ms do laço, o mesmo relógio
- * manual dos testes): apertar() no pointerdown; quadro(agora) em cada leitura devolve o bit segurado (ou 0);
- * soltar() no pointerup devolve o pulso (o bit `toque` ou 0).
+ * do bit `toque`; SEGURAR dá o bit `segura` enquanto o dedo fica, a partir do limiar: antes dele ainda não se sabe se
+ * é um toque (um toque normal de dedo dura ~80 ms) — o CONTER desde o 1º quadro afastava o defensor do condutor
+ * (defesa.js entradaConter, ≥ 1,5 m) e o bote do soltar saía de mais longe ou nem saía (auditoria dos botões, 12/10).
+ * O tempo é o do jogo (ms do laço, o mesmo relógio manual dos testes): apertar() no pointerdown; quadro(agora) em
+ * cada leitura devolve o bit segurado (ou 0); soltar() no pointerup devolve o pulso (o bit `toque` ou 0).
  */
 export function criarToqueOuSegura(toque, segura, limiar = ENTRADA.toqueCurto) {
   let dedo = false, t0 = null, ultimo = null;
@@ -145,7 +153,7 @@ export function criarToqueOuSegura(toque, segura, limiar = ENTRADA.toqueCurto) {
       if (!dedo) return 0;
       if (t0 === null) t0 = agora;
       ultimo = agora;
-      return segura;
+      return (agora - t0) / 1000 >= limiar ? segura : 0;
     },
     soltar() {
       if (!dedo) return 0;
@@ -231,17 +239,18 @@ export function calcularLayoutToque(W, H, sa, tamanho = 1, vagas = ['grande', 'a
     out[v] = melhor ?? pos(rg + folga + dArco + folga + r, ang);
   }
   const anel2 = retrato ? { correr: vaoBC, d: vaoAB, e: vaoAB - 0.6 } : { d: vaoBC, e: vaoAB };
-  for (const v of ['d', 'e']) if (vagas.includes(v)) noAnel2(v, anel2[v]);
-  if (retrato && vagas.includes('correr')) {
-    // em pé: CORRER no 2º anel, por cima do arco (à esquerda ficaria em cima do analógico)
-    noAnel2('correr', anel2.correr);
-  }
   if (!retrato && vagas.includes('correr')) {
-    // deitado: CORRER à esquerda da 'a' (ou da grande), base alinhada
+    // deitado: CORRER à esquerda da 'a' (ou da grande), base alinhada — ANTES do 2º anel, para d e e não encostarem nele
+    // (o TROCAR da bola nas mãos, vaga e, ficava a 3,9 px do CORRER a 80% em 844×390)
     const D = diam('correr'), r = D / 2;
     const viz = out.a ?? out.grande;
     const x = viz.x - viz.d / 2 - folga - r;
     out.correr = { x, y: cy + rg - r, d: D };
+  }
+  for (const v of ['d', 'e']) if (vagas.includes(v)) noAnel2(v, anel2[v]);
+  if (retrato && vagas.includes('correr')) {
+    // em pé: CORRER no 2º anel, por cima do arco (à esquerda ficaria em cima do analógico)
+    noAnel2('correr', anel2.correr);
   }
   return out;
 }
@@ -259,9 +268,12 @@ export function criarEntrada(opc = {}) {
   let usandoToque = !!opc.forcarToque || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   let forcada = null;      // entrada injetada pelos testes
   let pulsos = 0;          // botões apertados desde o último passo (toque curto não se perde)
-  let fase = 'ataque';     // pedida pelo main.js (estado do mundo)
+  let fase = 'ataque';     // pedida pelo main.js (estado do mundo, com a histerese dos botões visíveis)
+  let faseAgora = 'ataque'; // a do mundo AGORA, sem a histerese: fixa o sentido de J/K/O e A/B/Y/RB no aperto
+  let posseRival = false;  // o adversário está com a bola no pé (a perda é certa)
   let faseVisivel = 'ataque';
   let bloqueada = false;   // "Editar time" aberto: nada vai para o jogo (só a pausa)
+  let menuAtivo = false;   // pausa ou Ajuda aberta: o controle navega nos botões dela (lerMenuPad)
   const sentido = criarSentidoFixo(); // J/K/O e A/B/Y/RB: o sentido do aperto vale até soltar
   const ajustes = lerAjustes();
 
@@ -282,7 +294,7 @@ export function criarEntrada(opc = {}) {
     if (e.repeat) return;
     teclas.add(code);
     if (TECLA_BIT[code]) pulsos |= TECLA_BIT[code];
-    if (SENTIDO_FASE[code]) pulsos |= sentido.bit(code, true, fase); // o sentido fica fixado aqui
+    if (SENTIDO_FASE[code]) pulsos |= sentido.bit(code, true, faseAgora); // o sentido fica fixado aqui (fase de agora)
     if (ACOES_TECLA[code]) emitir(ACOES_TECLA[code]);
   });
   window.addEventListener('keyup', e => { teclas.delete(e.code); if (SENTIDO_FASE[e.code]) sentido.bit(e.code, false); });
@@ -299,7 +311,7 @@ export function criarEntrada(opc = {}) {
     // modificador só no E: Ctrl + W fecharia a aba do navegador (o navegador não deixa impedir)
     for (const c of teclas) {
       if (TECLA_BIT[c]) b |= TECLA_BIT[c];
-      else if (SENTIDO_FASE[c]) b |= sentido.bit(c, true, fase);
+      else if (SENTIDO_FASE[c]) b |= sentido.bit(c, true, faseAgora);
     }
     fTec.ax = a.x; fTec.ay = a.y; fTec.mag = a.mag; fTec.botoes = b;
     return fTec;
@@ -326,7 +338,7 @@ export function criarEntrada(opc = {}) {
   function seguraFase(i, id) {
     const p = lido(i);
     if (p && !bloqueada) {
-      const bit = sentido.bit(id, true, fase);
+      const bit = sentido.bit(id, true, faseAgora);
       bPad |= bit;
       if (!antes[i]) pulsos |= bit;
     } else sentido.bit(id, false);
@@ -337,11 +349,27 @@ export function criarEntrada(opc = {}) {
     if (p && !antes[i] && (!bloqueada || PASSA_BLOQUEADA.has(acao))) emitir(acao);
     antes[i] = p;
   }
+  // Pausa e Ajuda abertas (main.js definirMenu): a cruz ou o analógico movem o foco entre os botões, A confirma e B volta
+  // (antes só o Start fechava; o resto do controle não fazia nada na pausa). As bordas são medidas sempre (um A segurado
+  // quando a pausa abre não vale como confirmação), mas só viram ação com a pausa aberta.
+  const antesMenu = [];
+  let eixoMenu = 0;
+  const ACAO_EIXO = ['', 'menu-cima', 'menu-baixo', 'menu-esq', 'menu-dir'];
+  function lerMenuPad() {
+    const bordaM = (i, acao) => { const p = apertado(i); if (p && !antesMenu[i] && menuAtivo) emitir(acao); antesMenu[i] = p; };
+    bordaM(12, 'menu-cima'); bordaM(13, 'menu-baixo'); bordaM(14, 'menu-esq'); bordaM(15, 'menu-dir');
+    bordaM(PAD.A, 'menu-ok'); bordaM(PAD.B, 'menu-voltar');
+    const ax = gp.axes[0] ?? 0, ay = gp.axes[1] ?? 0;
+    const e = ay < -0.6 ? 1 : ay > 0.6 ? 2 : ax < -0.6 ? 3 : ax > 0.6 ? 4 : 0;
+    if (e && e !== eixoMenu && menuAtivo) emitir(ACAO_EIXO[e]);
+    eixoMenu = e;
+  }
   function lerControle() {
     const lista = navigator.getGamepads ? navigator.getGamepads() : null;
     gp = null;
     if (lista) for (let i = 0; i < lista.length; i++) { const g = lista[i]; if (g && g.connected) { gp = g; break; } }
     if (!gp) return null;
+    lerMenuPad();
     let ax = gp.axes[0] ?? 0, ay = -(gp.axes[1] ?? 0);
     // cruz digital como alternativa ao analógico
     const dc = apertado(12), db = apertado(13), de = apertado(14), dd = apertado(15);
@@ -466,6 +494,15 @@ export function criarEntrada(opc = {}) {
     toque.vx = dx; toque.vy = dy;
     posicionarPino(dx, dy);
   }
+  // Botão grande ainda visível como CHUTE (a histerese de 0,25 s dos botões) com o adversário já com a bola no pé: o
+  // toque vale pelo TROCAR (o botão da defesa da mesma vaga). Antes o dedo nele logo depois da perda era um CHUTE sem
+  // bola. Só o grande: nas outras vagas o da defesa é outra ação (a: PASSE → GOLEIRO, que segurado tirava o goleiro do
+  // gol — contraprova, 2,5 → 6,8 m da linha; c: LANÇAMENTO → DIVIDIDA, um bote): o PASSE/ENFIADA/LANÇAMENTO apertado
+  // na perda segue como antes (um pedido sem bola, que vence sozinho).
+  function botaoQueVale(b) {
+    if (b.fase !== 'ataque' || b.vaga !== 'grande' || !posseRival || faseAgora !== 'defesa') return b;
+    return bts.find(x => x.fase === 'defesa' && x.vaga === b.vaga) ?? b;
+  }
   function ligarBotao(b) {
     const el = b.el;
     el.addEventListener('pointerdown', e => {
@@ -473,17 +510,21 @@ export function criarEntrada(opc = {}) {
       if (bloqueada) return;
       usandoToque = true;
       b.dedo = e.pointerId;
+      const v = botaoQueVale(b);
+      b.como = v === b ? null : v;
       // dois sentidos: o pulso sai no soltar (se foi um toque curto); o segurado sai em lerToque
-      if (b.dois) b.dois.apertar(); else pulsos |= b.mask;
+      if (v.dois) v.dois.apertar(); else pulsos |= v.mask;
       el.classList.add('ativo');
       try { el.setPointerCapture(e.pointerId); } catch (_) { /* ok */ }
     });
     const solta = e => {
       if (e.pointerId !== b.dedo) return;
       b.dedo = null;
+      const v = b.como ?? b;
+      b.como = null;
       // dois sentidos: só o dedo que SAI do botão (pointerup) vale como toque curto. O sistema tomando o toque
       // (pointercancel: gesto da borda, chamada, notificação) ou a captura perdida sem soltar não dão o bote
-      if (b.dois) { if (e.type === 'pointerup') pulsos |= b.dois.soltar(); else b.dois.cancelar(); }
+      if (v.dois) { if (e.type === 'pointerup') pulsos |= v.dois.soltar(); else v.dois.cancelar(); }
       el.classList.remove('ativo');
       trocarFaseSePuder();
     };
@@ -494,12 +535,17 @@ export function criarEntrada(opc = {}) {
   }
   for (const b of bts) ligarBotao(b);
   const btMenu = document.getElementById('btn-menu');
-  if (btMenu) btMenu.addEventListener('click', () => emitir('pausa'));
+  // ≡ pelo toque (aoTocar: age no pointerup do mesmo dedo — com o polegar no analógico o navegador não gera o click)
+  aoTocar(btMenu, () => emitir('pausa'));
   window.addEventListener('touchstart', () => { if (!usandoToque) { usandoToque = true; mostrarToque(true); } }, { passive: true });
 
   function lerToque(agora) {
     let b = 0;
-    for (const x of bts) if (x.dedo !== null) b |= x.dois ? x.dois.quadro(agora) : x.mask;
+    for (const x of bts) {
+      if (x.dedo === null) continue;
+      const v = x.como ?? x;
+      b |= v.dois ? v.dois.quadro(agora) : v.mask;
+    }
     if (toque.id === null && !b) return null;
     const a = processarAnalogico(toque.vx, toque.vy, ENTRADA.zonaMorta, ENTRADA.zonaExterna);
     fToq.ax = a.x; fToq.ay = a.y; fToq.mag = a.mag; fToq.botoes = b;
@@ -603,7 +649,7 @@ export function criarEntrada(opc = {}) {
     pulsos = 0;
     sentido.soltarTudo();
     toque.id = null; toque.vx = toque.vy = 0;
-    for (const b of bts) { b.dedo = null; b.dois?.cancelar(); b.el.classList.remove('ativo'); }
+    for (const b of bts) { b.dedo = null; b.como = null; b.dois?.cancelar(); b.el.classList.remove('ativo'); }
     if (ignorarPad && gp) for (let i = 0; i < gp.buttons.length; i++) if (apertado(i)) ignorar[i] = true;
     trocarFaseSePuder();
     baseRepouso();
@@ -639,15 +685,23 @@ export function criarEntrada(opc = {}) {
     },
     /** Um passo de simulação usou a entrada: os apertos curtos já foram vistos. */
     limparPulsos() { pulsos = 0; },
-    /** 'ataque' | 'defesa' (estado do mundo, decidido no main.js). */
-    definirFase(f) {
+    /**
+     * Fases decididas no main.js: f = a dos botões visíveis (com a histerese de 0,25 s), agora = a do mundo neste passo
+     * (fixa o sentido de J/K/O e A/B/Y/RB no aperto; padrão: f), rival = o adversário com a bola no pé (o toque num
+     * botão de ataque ainda visível vale pelo da defesa da mesma vaga).
+     */
+    definirFase(f, agora = f, rival = false) {
       if (f !== 'ataque' && f !== 'defesa') return;
       fase = f;
+      faseAgora = agora === 'ataque' || agora === 'defesa' ? agora : f;
+      posseRival = !!rival;
       trocarFaseSePuder();
     },
     get fase() { return faseVisivel; },
     /** Goleiro do humano com a bola no pé (o botão PEGAR aparece na vaga 'd' do ataque). */
     definirGoleiroPe(v) { if (raizToque) raizToque.classList.toggle('goleiro-pe', !!v); },
+    /** Goleiro do humano com a bola nas mãos (o TROCAR aparece no ataque, na vaga 'e'). */
+    definirGoleiroMao(v) { if (raizToque) raizToque.classList.toggle('goleiro-mao', !!v); },
     /** Reaplica no DOM a fase visível (testes que mexem nas classes à mão). */
     sincronizarFase() { trocarFaseSePuder(true); },
     /** Ações pendentes (recomecar, maquina, marcador, camera, ajuda, pausa, qps). */
@@ -663,8 +717,11 @@ export function criarEntrada(opc = {}) {
       salvarAjustes(ajustes);
       aplicarAjustes();
     },
-    /** Solta tudo (pausa, troca de aba). */
-    soltarTudo() { soltarTudo(false); },
+    /**
+     * Solta tudo (pausa, troca de aba). ignorarPad: o botão do controle segurado agora só vale depois de solto e
+     * apertado de novo (a pausa que fecha: o A apertado nela não vira passe ao voltar).
+     */
+    soltarTudo(ignorarPad = false) { soltarTudo(!!ignorarPad); },
     /**
      * Refaz o layout dos botões e o analógico de descanso (o mesmo do resize). Para quando os botões de toque voltam a
      * aparecer depois de uma camada que os escondia (a comemoração do gol): com eles escondidos a zona do analógico mede
@@ -685,5 +742,7 @@ export function criarEntrada(opc = {}) {
       soltarTudo(true);
     },
     get bloqueada() { return bloqueada; },
+    /** Pausa ou Ajuda aberta (main.js): a cruz/analógico, o A e o B do controle navegam nela (ações 'menu-*'). */
+    definirMenu(v) { menuAtivo = !!v; },
   };
 }

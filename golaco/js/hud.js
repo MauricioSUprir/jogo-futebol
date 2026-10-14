@@ -8,6 +8,8 @@
 // (.com-tempo), a barra de força não escreve o tipo (o CSS esconde o rótulo), a dica de teclas do PC some em 8 s
 // e o minimapa é opção da pausa (escondido = não redesenha).
 
+import { aoTocar, engolirClique } from './toque-botao.js';
+
 // prio: um aviso não apaga outro de prioridade MAIOR que ainda está na tela (a substituição e o
 // resultado da edição do time saem no mesmo passo do recomeço e não podem sumir debaixo dele)
 // Sem narração na tela (dono, 10/10: "não quero narração em cima"): os lances (passe, chute,
@@ -40,8 +42,10 @@ const ROTULO_CARGA = {
 const COR_MAPA = {
   t0: '#19e07a', t0gol: '#c6ff3d', t1: '#93a3ae', t1gol: '#d0631f', bola: '#ffffff',
 };
-// times fictícios: siglas do placar (treino; na partida vêm do elenco por definirTimes)
-const TIMES_TREINO = [{ sigla: 'GLÇ', nome: 'Golaço' }, { sigla: 'VIS', nome: 'Visitante' }];
+// times fictícios: siglas e escudos do placar (treino; na partida vêm do elenco por definirTimes). O escudo é o id de um
+// <symbol id="escudo-..."> do index.html (desenhados lá, fictícios); o visitante do treino veste o branco do Ventania
+const TIMES_TREINO = [{ sigla: 'GLÇ', nome: 'Golaço', escudo: 'golaco' }, { sigla: 'VIS', nome: 'Visitante', escudo: 'ventania' }];
+const ESCUDOS = new Set(['golaco', 'ventania']);
 const NOME_TEMPO = { 1: '1º T', 2: '2º T' };
 
 const NOMES_Q = { baixa: 'Baixa', media: 'Média', alta: 'Alta' };
@@ -61,6 +65,7 @@ export function criarHud(opc) {
     carregando: $('carregando'), msg: $('carregando-msg'), marcador: $('estado-marcador'), infoQ: $('info-qualidade'),
     tam: $('toque-tamanho'), opa: $('toque-opacidade'), saidaTam: $('saida-tamanho'), saidaOpa: $('saida-opacidade'),
     gols: [$('gols-0'), $('gols-1')], siglas: [$('sigla-0'), $('sigla-1')], golTela: $('gol-tela'),
+    escudos: [$('escudo-0'), $('escudo-1')], timesPlacar: [$('placar-time-0'), $('placar-time-1')],
     somVol: $('som-volume'), saidaVol: $('saida-volume'), infoSom: $('info-som'),
     mapa: $('minimapa'), cartao: $('cartao-icone'), carga: $('carga'), cargaTipo: $('carga-tipo'), cargaNivel: $('carga-nivel'),
     relogio: $('placar-relogio'), minuto: $('relogio'), tempo: $('relogio-tempo'),
@@ -82,24 +87,34 @@ export function criarHud(opc) {
   const relogioVisto = { minuto: null, tempo: null, visivel: null, comTempo: null };
   let timerFaixa = null;
   let modoAtual = null, fimDeJogo = false;
+  let ajudaDaPausa = false; // a Ajuda foi aberta pela pausa: fechar volta para ela
   const NOME_MODO = { partida: 'partida', ataque: 'treino de ataque', conducao: 'treino de condução' };
-  times.forEach((t, i) => { if (el.siglas[i]) el.siglas[i].textContent = t.sigla; });
+  /** Sigla, escudo e nome (só para leitores de tela: nenhum texto novo na tela) de cada time no placar. */
+  function escreverTimes() {
+    times.forEach((t, i) => {
+      if (el.siglas[i]) el.siglas[i].textContent = t.sigla;
+      if (el.escudos[i]) el.escudos[i].setAttribute('href', `#escudo-${ESCUDOS.has(t.escudo) ? t.escudo : TIMES_TREINO[i].escudo}`);
+      if (el.timesPlacar[i]) el.timesPlacar[i].setAttribute('aria-label', t.nome ?? t.sigla);
+    });
+  }
+  escreverTimes();
 
-  // botões com data-cmd (menu, ajuda e faixa); data-valor vai junto (modo de jogo)
+  // botões com data-cmd (menu, ajuda e faixa); data-valor vai junto (modo de jogo). Pelo toque age no pointerup do mesmo
+  // dedo (aoTocar): com outro dedo na tela (o polegar no analógico, um dedo parado na janela) o click não vem
   document.querySelectorAll('[data-cmd]').forEach(b => {
-    b.addEventListener('click', () => cmd(b.dataset.cmd, b.dataset.valor));
+    aoTocar(b, () => cmd(b.dataset.cmd, b.dataset.valor));
   });
   // grupos segmentados
   document.querySelectorAll('.segmentado').forEach(g => {
-    g.addEventListener('click', e => {
+    aoTocar(g, e => {
       const b = e.target.closest('button[data-valor]');
       if (b) cmd(g.dataset.grupo, b.dataset.valor);
     });
   });
-  // fundo escuro fecha a janela
+  // fundo escuro fecha a janela (o click do mesmo toque não cai no ≡ que fica embaixo e reabre a pausa)
   for (const s of [el.menu, el.ajuda]) {
     s?.addEventListener('pointerdown', e => {
-      if (e.target === s) cmd(s === el.menu ? 'continuar' : 'fechar-ajuda');
+      if (e.target === s) { engolirClique(e); cmd(s === el.menu ? 'continuar' : 'fechar-ajuda'); }
     });
   }
   el.tam?.addEventListener('input', () => { cmd('toqueTamanho', +el.tam.value / 100); });
@@ -114,9 +129,10 @@ export function criarHud(opc) {
   el.opa?.addEventListener('input', () => { cmd('toqueOpacidade', +el.opa.value / 100); });
   el.somVol?.addEventListener('input', () => { cmd('volume', +el.somVol.value / 100); });
   // replay: a camada cobre a tela inteira — qualquer toque ou clique pula (o "Pular" do toque é só o alvo visível)
-  el.replay?.addEventListener('pointerdown', e => { e.preventDefault(); cmd('replay-pular'); });
+  // (o click do mesmo toque é engolido: no canto de cima à direita ele caía no ≡ e abria a pausa)
+  el.replay?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('replay-pular'); });
   // comemoração do gol: a mesma camada (qualquer toque ou clique pula, depois de 0,5 s — quem decide é o main.js)
-  el.comemoracao?.addEventListener('pointerdown', e => { e.preventDefault(); cmd('comemoracao-pular'); });
+  el.comemoracao?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('comemoracao-pular'); });
 
   function marcarGrupo(grupo, valor) {
     document.querySelectorAll(`.segmentado[data-grupo="${grupo}"] button`).forEach(b => {
@@ -162,16 +178,34 @@ export function criarHud(opc) {
     if (!raiz.classList.contains('com-toque')) return;
     // o painel (modo e posição) desce para baixo do placar, à esquerda, se o arco chega nele
     if (botaoNoTopo()) raiz.classList.add('topo-desce');
+    apertarTopo();
+    // nos treinos a marca do GOLAÇO só fica de fora se fizer falta: quem encosta costuma ser o painel, e apertar o painel
+    // (passo 2) já resolve (contraprova de 13/10: em 568 e 667 px ela saía com 40–90 px livres à direita do placar)
+    if (raiz.classList.contains('topo-c1') && !raiz.classList.contains('em-partida') && !el.mapa?.style.left) {
+      raiz.classList.remove('topo-c1');
+      if (encostaTopo()) raiz.classList.add('topo-c1');
+    }
+  }
+  /** Os passos do aperto, em ordem, até nada encostar (ajustarTopo). */
+  function apertarTopo() {
     if (!encostaTopo()) return;
     raiz.classList.add('topo-c1');
     if (!encostaTopo()) return;
     raiz.classList.add('topo-c2');
     if (!encostaTopo()) return;
-    raiz.classList.add('topo-c3');
-    if (!encostaTopo()) return;
+    // na partida o tempo escrito ("1º T +4", "Intervalo", "Fim") só sai se nem com o minimapa encostado à direita do
+    // placar couber (contraprova de 13/10: em 667 e 568 px ele saía antes, com espaço sobrando depois do minimapa)
+    const partida = raiz.classList.contains('em-partida');
+    if (!partida) { raiz.classList.add('topo-c3'); if (!encostaTopo()) return; }
     raiz.classList.add('topo-c4');
     if (!encostaTopo() || !el.mapa) return;
     // 5) celular bem estreito (568 px com entalhe): o minimapa sai do meio e encosta à direita do placar
+    mapaAoLado();
+    if (!partida || !encostaTopo()) return;
+    raiz.classList.add('topo-c3');
+    mapaAoLado();
+  }
+  function mapaAoLado() {
     const pl = caixasTopo[0]?.getBoundingClientRect();
     if (pl && pl.width > 0) { el.mapa.style.left = `${Math.round(pl.right + 8)}px`; el.mapa.style.transform = 'none'; }
   }
@@ -343,8 +377,11 @@ export function criarHud(opc) {
     /** Placar (gols do time 0 e do time 1). */
     placar(a, b) {
       const v = [a | 0, b | 0];
+      let largura = false;
       for (let i = 0; i < 2; i++) {
         if (v[i] === placarVisto[i] || !el.gols[i]) continue;
+        // 9 → 10: o placar alarga e, apertado com o minimapa ao lado, encostaria nele (contraprova de 13/10)
+        if (String(v[i]).length !== String(placarVisto[i] ?? 0).length) largura = true;
         el.gols[i].textContent = String(v[i]);
         if (placarVisto[i] !== null) {
           el.gols[i].classList.remove('mudou');
@@ -353,6 +390,7 @@ export function criarHud(opc) {
         }
         placarVisto[i] = v[i];
       }
+      if (largura) ajustarTopo();
     },
     /**
      * Minimapa (no máximo ~30 vezes por segundo; 20 com os controles de toque, no celular). Escondido (opção da
@@ -423,6 +461,40 @@ export function criarHud(opc) {
     get menuAberto() { return !el.menu.hidden; },
     get ajudaAberta() { return !el.ajuda.hidden; },
     /** Abre a pausa; foco: seletor do botão que recebe o foco (padrão: o primário visível). */
+    /**
+     * Controle na pausa ou na Ajuda (main.js, ações 'menu-*'): cima/esquerda e baixo/direita movem o foco entre os botões
+     * visíveis (no deslizante em foco, esquerda/direita mudam o valor), ok aperta o botão em foco e voltar fecha a
+     * Ajuda, sai do "Modo de jogo" ou fecha a pausa.
+     */
+    navegarPad(acao) {
+      const raizAberta = !el.ajuda.hidden ? el.ajuda : !el.menu.hidden ? el.menu : null;
+      if (!raizAberta) return;
+      if (acao === 'voltar') {
+        if (raizAberta === el.ajuda) cmd('fechar-ajuda');
+        else if (el.modos && !el.modos.hidden) cmd('modos-voltar');
+        else cmd('continuar');
+        return;
+      }
+      const lista = [...raizAberta.querySelectorAll('button, input[type="range"]')]
+        .filter(b => !b.disabled && !b.hidden && b.getClientRects().length > 0 && getComputedStyle(b).visibility !== 'hidden');
+      if (!lista.length) return;
+      const at = document.activeElement, i = lista.indexOf(at);
+      if (acao === 'ok') {
+        if (i >= 0 && at.tagName === 'BUTTON') at.click();
+        else if (i < 0) lista[0].focus({ preventScroll: false });
+        return;
+      }
+      if ((acao === 'esq' || acao === 'dir') && i >= 0 && at.type === 'range') {
+        const st = +at.step || 1;
+        at.value = String(+at.value + (acao === 'dir' ? st : -st));
+        at.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      }
+      const passo = acao === 'cima' || acao === 'esq' ? -1 : 1;
+      const k = i < 0 ? 0 : (i + passo + lista.length) % lista.length;
+      lista[k].focus({ preventScroll: false });
+      lista[k].scrollIntoView?.({ block: 'nearest' });
+    },
     abrirMenu(forcar = false, foco = null) {
       if (prints && !forcar) return;
       el.ajuda.hidden = true; el.menu.hidden = false;
@@ -434,10 +506,10 @@ export function criarHud(opc) {
     fecharMenu() { el.menu.hidden = true; },
     /** Lista "Modo de jogo" (partida e treinos) no lugar das ações do menu (true) ou de volta (false). */
     submenuModos: mostrarSubmenu,
-    /** Siglas e nomes dos dois times (partida: do elenco) ou null (treino). */
+    /** Siglas, nomes e escudos ({sigla, nome, escudo: id do elenco}) dos dois times (partida: do elenco) ou null (treino). */
     definirTimes(t) {
       times = t ?? TIMES_TREINO;
-      times.forEach((x, i) => { if (el.siglas[i]) el.siglas[i].textContent = x.sigla; });
+      escreverTimes();
       ajustarTopo();
     },
     get times() { return times; },
@@ -489,8 +561,16 @@ export function criarHud(opc) {
       if (f.ms) timerFaixa = setTimeout(() => { el.faixa.hidden = true; }, f.ms);
     },
     get faixaVisivel() { return !!el.faixa && !el.faixa.hidden; },
-    abrirAjuda(forcar = false) { if (prints && !forcar) return; el.menu.hidden = true; el.ajuda.hidden = false; },
-    fecharAjuda() { el.ajuda.hidden = true; },
+    /** Abre a Ajuda; aberta pela pausa, fechar volta para a pausa (antes o jogo recomeçava sem aviso). */
+    abrirAjuda(forcar = false) {
+      if (prints && !forcar) return;
+      ajudaDaPausa = !el.menu.hidden;
+      el.menu.hidden = true; el.ajuda.hidden = false;
+    },
+    fecharAjuda() {
+      el.ajuda.hidden = true;
+      if (ajudaDaPausa) { ajudaDaPausa = false; this.abrirMenu(true, '[data-cmd="ajuda"]'); }
+    },
     /** Recalcula o topo do HUD (os controles de toque apareceram ou a tela mudou). */
     ajustarTopo,
     /** Estado das opções no menu. */

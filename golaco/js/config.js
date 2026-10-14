@@ -397,6 +397,7 @@ export const ACOES = {
   cargaMax: 1.2,              // s — depois disso solta sozinho
   pedidoValidade: 0.6,        // s — pedido sem toque possível expira
   pedidoPrimeira: 1.6,        // s — esperando a bola chegar para bater de primeira
+  primeiraFolga: 0.3,         // s — o humano com o passe vindo (j.recebe): o pedido de primeira vale até a chegada + isto
   toqueDuplo: 0.35,           // s — dois toques no LANÇAMENTO = cruzamento rasteiro
   passe: { cone: 0.55, dMin: 3, dMax: 42, vChegada: [4.5, 8.0], adiante: 0.9, erroBom: 0.012, erroRuim: 0.07 },
   enfiada: { cone: 0.7, dMin: 5, dMax: 48, lead: [4.5, 12], vNoPonto: [3.5, 7], vMax: 26, erroBom: 0.015, erroRuim: 0.08 },
@@ -406,7 +407,7 @@ export const ACOES = {
   // a ~0,85 do forte e com 30–40 rad/s de efeito (Whiteside 2010); força máxima ×1,15 no erro
   // (Carlsson 2018); pressão só de perto e pouca; de primeira ×1,15 (StatsBomb)
   // penaltiErro: o erro do chute no pênalti (a pressão da cobrança; ~6% para fora — a meta do dono, seção 11)
-  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18 },
+  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, penaltiCanto: 2.5, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18 },
   // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado)
   cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05] },
   // cabeceio (pesquisa da Etapa 2): a cabeça chega ~0,56 m acima da estatura com corrida (Fílter
@@ -436,10 +437,7 @@ export const ACOES = {
     vParado: 2.0, semToque: 0.1,
     // (só na partida; entrega "IA intensa" de 12/10) com o condutor a mais de vLado m/s, a bola tirada sai para o lado do
     // defensor e `tras` (fração) para trás no caminho do condutor — e ele fica DEFESA_HUMANO.dividida.semDominio s sem domínio
-    vLado: 3, tras: 0.7,
-    // (só na partida) o escolhido da PRESSÃO do humano não dá o bote acima de vPressao m/s (freia antes; 5 → 4 com o condutor
-    // da IA que encara o marcador — rodada "volume de ataque", 13/10)
-    vPressao: 4 },
+    vLado: 3, tras: 0.7 },
   primeiraErro: 1.4,          // multiplica o erro de jogada de primeira
 };
 
@@ -451,8 +449,11 @@ export const ACOES = {
 export const GOLEIRO = {
   // pênalti (Regra 14; goleiro.js lerChute): o goleiro escolhe o lado ANTES do chute (z do mergulho, m, e o peso de
   // cada escolha; o humano escolhe com o analógico na hora da cobrança). Lado certo: ganha `antecipa` s; lado errado
-  // (ou ficou no meio e a bola foi no canto, a > `meio` m): não defende; lado certo: chance × `fator`. Meta do dono: ~76% gol, 18% defesa, 6% fora
-  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72 },
+  // (ou ficou no meio e a bola foi no canto, a > `meio` m): não defende; lado certo: chance × `fator`. Meta do dono: ~76% gol, 18% defesa, 6% fora.
+  // `ladoMin`: o humano só escolhe o canto com a componente do analógico AO LONGO da linha do gol (|iz|) ≥ ladoMin × o
+  // módulo (0,38 ≈ sen 22,5°: o setor de 45° em volta do horizontal da tela de TV — para o batedor ou para o gol — não
+  // escolhe; a diagonal do teclado, 45°, escolhe); abaixo disso, ou solto, fica no meio (partida.js ladoPenaltiHumano)
+  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72, passo: 0.5, ladoMin: 0.38 },
   reacao: [0.25, 0.19],       // s depois do toque (ruim → bom)
   alcanceEmPe: 0.9,           // m: mão de lado sem mergulhar
   bracoReflexo: 1.6,          // m: perna/braço esticados no reflexo, sem tirar o corpo do lugar
@@ -1249,8 +1250,8 @@ export const DEFESA_HUMANO = {
   // `ganho` × (ponto − corpo), até `aproxMax` m/s mais rápido que ele; por trás dele, a menos de `trasPerto` m, fechando
   // no máximo a `trasAprox` m/s: abaixo da carga por trás, FALTAS.carga.vMin). `filtro`: s da velocidade do condutor.
   // (13/10, com o condutor da IA que faz tabela e encara: chega 2,5 → 2,0 e aproxMax 4 → 5 — o escolhido chegava a ≤ 2 m
-  // em 1,5 s em 57–60% dos casos no teste-pressao-humano M2, meta ≥ 60%; agora 63%, e com o bote só abaixo de
-  // ACOES.boteIA.vPressao as faltas do botão caíram de 13 para 9)
+  // em 1,5 s em 57–60% dos casos no teste-pressao-humano M2, meta ≥ 60%; agora 63%; o bote do escolhido só abaixo de
+  // FALTAS.bote.vLivre e não por trás: sim.js boteIA, da auditoria dos botões, #474)
   pressao: {
     validade: 1, acel: 7, freio: 6.2, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.0, contorno: 1.2,
     naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.5, filtro: 0.2, ganho: 3, aproxMax: 5, trasPerto: 1.5, trasAprox: 1.4,

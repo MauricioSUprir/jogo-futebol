@@ -1112,8 +1112,8 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
   círculos, analógico em repouso se a opacidade passar de 0,25) cobre ≤ 11% da tela; 0 caracteres fora do placar; ≤ 15%
   dos pixels de torcida atrás do HUD; 0 amostras com a linha viva; PC ≤ 2,5% depois de 9 s. Peça nova de HUD na partida
   tem de caber nisso (ou ir para a pausa).
-- **`index.html`/`css/estilo.css`**: na partida (`html.em-partida`) o placar é compacto de TV (30 px no celular, 34 no PC;
-  sem a marca, sem borda nem caixinha nos gols; barrinha de cor de 3 px por time) e o "1º T" só aparece com
+- **`index.html`/`css/estilo.css`**: o placar é a barra de TV da seção "Placar (12/10)" abaixo (antes: compacto de 30 px
+  no celular e 34 no PC, sem a marca) e o "1º T" só aparece com
   `.placar-relogio.com-tempo` (intervalo, fim e acréscimos; o texto fica no DOM); menu só com o ícone (44×44); barra de
   força 44×6 sem o rótulo (`#carga-tipo` continua com o texto, escondido); dica de teclas do PC (`#dica`) some 8 s depois
   de `hud.pronto()` e de cada troca de modo. Botões de toque translúcidos (fundo 0,32, borda 1,5–2 px, sem sombra) com
@@ -1212,7 +1212,8 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
   `ia-tatica.js pressionavel(m, o)`: o goleiro com a bola no pé é pressionado, com ela nas mãos não.
 - Entrada e tela: `BOTAO.PEGAR` (4096); `SENTIDO_FASE` O/RB = PEGAR (ataque) / PRESSÃO (defesa); botão de toque
   `btn-pegar` na vaga 'd' do ataque, visível só com `#toque.goleiro-pe` (`entrada.definirGoleiroPe(v)`, main.js:
-  goleiro do humano com a bola no pé). API de testes: `__golaco.cenaDeTeste('pressao' | 'goleiroMao' | 'goleiroPe')` e
+  goleiro do humano com a bola no pé e a mão valendo). API de testes: `__golaco.cenaDeTeste('pressao' | 'goleiroMao' |
+  'goleiroPe' | 'goleiroPeRecuo')` e
   `__golaco.indicadores` (`{pressao: {x, y, z} | null, oito: {x, z, segmentos, total} | null}`).
 
 ### Testes
@@ -1314,8 +1315,8 @@ corrido só na partida.
   marcado encerrava a vez de todos e o defensor no caminho só cortava com a bola batendo no corpo.
 - `sim.js boteIA` (partida): com o condutor a mais de `ACOES.boteIA.vLado` m/s a bola tirada sai para o lado do defensor e
   `tras` para trás no caminho do condutor; o condutor fica sem dominar até `semDominioAte` (a regra da DIVIDIDA). O
-  escolhido da PRESSÃO do humano (ramo `'pressaoHumano'`) não dá o bote acima de `ACOES.boteIA.vPressao` m/s (freia antes;
-  a falta no bote cresce com a velocidade de quem chega). A IA × IA não usa a PRESSÃO: o painel não muda com isso.
+  escolhido da PRESSÃO do humano (ramo `'pressaoHumano'`) não dá o bote embalado nem por trás (a regra da main, #474;
+  a IA × IA não usa a PRESSÃO: o painel não muda com isso).
 - Calibração (painel de 48, 13/10): `IA_DEFESA.corrida.v` 6,8 (só a disparada de verdade liga a defesa da arrancada),
   `GOLEIRO.logit.c0Partida` −0,35, `IA_ATAQUE.contra` {s: 8, bonus: 1,0}, `utilidade.chute` 3,0.
 - Volume de ataque (rodada de 13/10, painel de 144 do CI): **tabela da IA** (`ia-ataque.js tabelaIA`, `IA_ATAQUE.tabela`):
@@ -1331,8 +1332,8 @@ corrido só na partida.
 - Troca aérea (`troca.js`): quem tem `j.disputaAlta` pendente (o pulo ombro com ombro contra o cabeceio do adversário)
   conta como disputante marcado (até `janelaMarcado` s); no empate — a previsão confirmada põe o controlado na bola até
   `antecede` ticks depois do toque marcado de outro companheiro que não o recebedor — o controle fica com ele.
-- PRESSÃO do humano (`DEFESA_HUMANO.pressao`): `chega` 2,0 m e `aproxMax` 5 m/s; o bote do escolhido só abaixo de
-  `ACOES.boteIA.vPressao` (4 m/s).
+- PRESSÃO do humano (`DEFESA_HUMANO.pressao`): `chega` 2,0 m e `aproxMax` 5 m/s (o bote do escolhido só abaixo de
+  `FALTAS.bote.vLivre` e não por trás: a regra do sim.js boteIA que veio da main, #474).
 
 ### Testes
 `teste-cabeceio` (canhão de cruzamentos, pose, teleporte, partidas demo, humano) e `teste-defesa-corrida` (humano
@@ -1346,3 +1347,108 @@ outros ≤ 15%. A mesma contagem de interceptações no painel (por time por par
 `painel-equilibrio` ganhou `--base-json` (a base gravada), `--set` (constantes só da versão medida) e as linhas de chutes
 por time, gols de cabeça (8–18%), cabeceios e duelos pelo alto. `prints-cabeceio.mjs`: cabeceio, disputa e o corredor (TV
 e de perto).
+
+## Auditoria dos botões (dono, 12/10: "ainda tem botões que não funcionam")
+- **Botões de tela pelo toque** (`js/toque-botao.js`, DOM): `aoTocar(el, fn)` age no `pointerup` do MESMO dedo que desceu no
+  elemento (dentro dele, com folga de 10 px) e engole o `click` desse toque; mouse, teclado e `element.click()` seguem pelo
+  `click`. Vale no ≡ (`entrada.js`), em `[data-cmd]` e `.segmentado` (`hud.js`), na raiz do editor (`editor-time.js`) e no
+  "Pular" do pré-jogo. O navegador não gera o `click` com outro dedo na tela (o polegar no analógico). `engolirClique(e)`:
+  as camadas que somem no `pointerdown` (pular o replay, a comemoração, avançar o pré-jogo, o fundo da pausa) engolem o
+  click do mesmo toque (senão ele caía no ≡ e reabria a pausa) — com o evento, enquanto AQUELE dedo está na tela e até
+  450 ms depois de ele sair (o click vem depois do pointerup, por mais que o dedo demore; um dedo cujo pointerup nunca
+  veio deixa de valer em 8 s); sem o evento, nos próximos 450 ms.
+- **Entrada**: `definirFase(visivel, agora, posseRival)` — `agora` (a do mundo no passo, sem a histerese de 0,25 s dos
+  botões visíveis) fixa o sentido de J/K/O/G e A/B/Y/RB no aperto; com `posseRival` (o adversário com a bola no pé), o toque
+  no botão grande ainda visível como CHUTE vale pelo TROCAR (`botaoQueVale`; só o grande — nas outras vagas o da defesa é
+  outra ação: o PASSE virava o GOLEIRO e, segurado, tirava o goleiro do gol, contraprova; o PASSE/ENFIADA/LANÇAMENTO
+  na perda segue como pedido sem bola). `KeyG` está em `SENTIDO_FASE` como `[0, GOLEIRO]` (só na defesa). A DIVIDIDA segurada só vira
+  CONTER depois de `ENTRADA.toqueCurto` (o toque curto não afasta o defensor antes do bote). `definirGoleiroMao(v)` mostra o
+  `btn-trocar-mao` (TROCAR, vaga 'e' do ataque) com a bola nas mãos do goleiro do humano; `definirGoleiroPe` (PEGAR) só
+  com a bola em jogo e a mão valendo (`regras-goleiro.js maoPermitida`: na área, sem recuo, sem a bola que ele soltou —
+  depois do recuo o botão não aparece; a tecla O/RB ainda marca o tiro livre indireto, Regra 12.2). `definirMenu(v)`: com a pausa/Ajuda abertas o controle emite `menu-cima/baixo/esq/dir/ok/
+  voltar` (`hud.navegarPad`). `soltarTudo(ignorarPad)`; `main.js` limpa os pulsos a cada quadro pausado e solta tudo
+  (ignorando o controle segurado) quando a pausa fecha. `main.js faseDoMundo`: a bola solta sem dono que o controlado
+  alcança antes de qualquer adversário (rebote, sobra) é ataque. A Ajuda aberta pela pausa volta para ela ao fechar.
+- **Simulação** (`sim.js`): `m.possePorTime[time] = tick` (o último tick de cada time com a bola no pé ou na mão, no
+  começo do passo — por time: guardar só o último time com a bola fazia a escolha antiga "reviver" quando o adversário
+  recuperava a bola, contraprova B14b) e `m.trocaManual[time] = {tick, id, goleiro}` (TROCAR tocado ou segurado).
+  `ganhouPosse` passa o humano para o jogador de linha mais perto da
+  bola em todo ganho de posse do outro time (como antes: o "Auto" do EA FC), menos por cima da escolha manual da jogada
+  de defesa em andamento (`troca.js escolhaManual`: o controlado é o escolhido pelo TROCAR e o time dele não teve a bola
+  desde então). Só na perda, como chegou a ficar, mudava a medida pareada do PRESSÃO (o controlado deixava de ser o mais perto
+  e o 1º homem da IA já apertava sem o botão: `teste-pressao-humano` M1 Δ 0,35 m, M4 10 → 27 faltas) e o treino. Toque aéreo vencido (a hora passou ou a bola é de outro) é limpo em
+  `movimentoAereo` e no laço do `bolaLivre`. `candidatoTroca` pula `papel` 'parado'/'marcador' (a barreira).
+  Pênalti montado: o goleiro do humano anda com o analógico (só com um canto escolhido: `partida.js ladoPenaltiHumano`)
+  só na linha e no máximo `GOLEIRO.penalti.passo` m (0,5) do meio (`partida.js restricaoPenalti`) — o passo para o lado
+  escolhido, não até a trave (`teste-botoes` B6d: lado certo no
+  fim 7/38 como na main, segurado desde a montagem 9/38; congelado no meio eram 4/38 nos dois). `m.cobrou = {id, tick}` (`partida.js rolou`; zerado em `bolaMorta`):
+  quem cobrou fica fora da bola livre e da bola alta (`candidatosBolaLivre`, `ia-tatica.js vaiNaLivre`) até outro jogador
+  tocar (posse, mão, `ultimoToque`, `bateuCorpo`).
+- **PRESSÃO** (`defesa.js`): `passeAdversario(m, time)` — no passe do adversário o pedido segue valendo e o chamado corre
+  para `m.voo.alvo` (pelo lado do meu gol) e para a `pressao.chega` m dele (freia no último metro; de lá a disputa aperta
+  o recebedor); `m.pressaoHumano[time] = {tick, id, ult, ultTick}`: a histerese vale para o último escolhido dentro de
+  `DEFESA_HUMANO.pressao.validade`. Na troca automática (`sim.js ganhouPosse`) o chamado fica fora (segue apertando; o
+  humano vai para o mais perto depois dele). `sim.js boteIA`: o chamado (`j.ia.ramo === 'pressaoHumano'`) não dá o bote
+  acima de `FALTAS.bote.vLivre` m/s nem por trás do condutor (`faltas.js chegada`) — `teste-pressao-humano` M4 4 → 5.
+- **Bola parada** (`partida.js cobrar`): os botões do cobrador humano valem na montagem; o pedido feito antes de `pronta`
+  espera (renovado) e sai em `pronta`; o CHUTE fora do pênalti e do tiro livre direto vira `passe` (saída) ou
+  `lancamento` (o resto; no lateral, o arremesso longo). No pênalti e no tiro livre direto o CHUTE (a cobrança a gol) só
+  conta a partir de `pronta` (o bit é tirado da entrada na montagem e o chute formado antes é descartado): o toque antes
+  da hora batia sozinho em `pronta`, fraco e sem a mira (`teste-botoes` B15; segurado desde a montagem, bate).
+- **Pênalti**: contra — o canto do humano é `partida.js ladoPenaltiHumano(gk)` na hora do chute (`rolou`): só a
+  componente do analógico AO LONGO da linha do gol (z do mundo) escolhe, com |iz| ≥ `GOLEIRO.penalti.ladoMin` (0,38 ≈
+  sen 22,5°) × o módulo; com a câmera de TV (yaw −π/2: cima da tela = −z, a trave de lá; baixo = +z, a de cá) o empurrão
+  para a esquerda/direita da tela vai para o batedor ou para o gol e NÃO escolhe — nem solto: palpite 0, e o goleiro
+  fica com a IA do goleiro, no meio, como sem analógico (`sim.js goleiroComoLinha`; antes `iz >= 0` dava sempre +z e
+  esquerda/direita escolhiam o mesmo canto: `teste-botoes` B6e, sem canto 0/24 → 24/24, igual a sem analógico 0/24 →
+  24/24; cima/baixo e diagonal com z dominante 30/30 nos dois). `lerChute` compara o palpite com o meio do gol (z = 0),
+  `iniciarMergulho` usa o lado escolhido (`d.z`) com `d.palpite`; a favor — a mira do humano fica em ±`ACOES.chute.penaltiCanto` m (2,5: ~8% para fora, `teste-botoes` B11);
+  a IA continua mirando o canto dela (`PARTIDA.penaltiIA`, ±2,75).
+- **Ações** (`acoes.js`; "humano" = o controlado de um time humano com o humano jogando — `ehHumano` exclui
+  `m.iaJoga[time]`, a demo/IA jogando por ele, como no painel de equilíbrio): o LANÇAMENTO do humano na zona do cruzamento espera `ACOES.toqueDuplo` s (do soltar) antes de
+  marcar o toque (dois toques = rasteiro); o pedido de primeira do humano com `j.recebe` vale até `recebe.chega +
+  ACOES.primeiraFolga` s. `troca.js trocaAerea` não troca no chute do adversário nem tira o goleiro escolhido pelo
+  TROCAR segurado enquanto a escolha vale (`escolhaManual` + `m.trocaManual[time].goleiro`; também no cruzamento —
+  `teste-botoes` B13, sem reassumir o controle). Vencida a escolha (o meu time teve a bola), a troca aérea volta a valer
+  com o goleiro controlado (`teste-botoes` B14: antes a trava ficava a partida inteira).
+- Ajuda: segurar TROCAR/Q/LB leva ao goleiro; no pênalti contra o analógico para cima ou para baixo (para uma das
+  traves) escolhe o canto, sem isso ele fica no meio; o PEGAR
+  não vale no recuo. O botão GOLEIRO continua "segure: ele sai do gol" (decisão do dono).
+- Testes: `teste-botoes` (Node, padrão; `--js` mede outra cópia), `teste-controles` (toque de verdade: ≡ com o polegar no
+  analógico, Continuar com outro dedo na janela, camadas que não atravessam, Ajuda → pausa, CHUTE/TROCAR na perda, rebote,
+  PEGAR com a mão valendo e escondido no recuo, TROCAR com a bola nas mãos, Esc/H → K → Esc/H, O na perda, controle na
+  pausa) e `teste-entrada` (G, DIVIDIDA).
+
+## Placar (12/10) — barra de TV no formato da referência, menor e com a cara do GOLAÇO (contrato)
+Pedido do dono (12/10), com uma imagem de referência: "quero o placar assim, tem que ser algo menor e mais com a nossa
+cara". Pesquisa e medidas em `PESQUISA-ESTADIO.md` §7.1. **Só DOM e CSS**: nenhuma linha da simulação mudou (`hash-igual`
+IGUAL; o hash Node = Chromium do `teste-carga` continua).
+- **`index.html`**: `.placar` (`data-caixa="placar"`, no canto de cima à esquerda, nas margens seguras) = `.placar-marca`
+  (o símbolo do GOLAÇO, `.marca-simbolo`) | `.placar-time.t0#placar-time-0` (`.placar-cor` + `svg.placar-escudo` com
+  `<use id="escudo-0">` + `#sigla-0`) | `.placar-resultado` (`#gols-0`, `.placar-x`, `#gols-1`) | `.placar-time.t1#placar-time-1`
+  (`#sigla-1` + escudo `#escudo-1` + `.placar-cor`) | `#placar-relogio` (bloco verde: `#relogio` e `#relogio-tempo`). Os
+  escudos são `<symbol id="escudo-golaco">` e `<symbol id="escudo-ventania">` no `svg.sprite` do começo do `body` (fictícios,
+  só traço, sem texto). Igual na partida e nos treinos (nos treinos o relógio fica `hidden`).
+- **`css/estilo.css`**: altura `--placar-h` (24 px; 26 no PC, `min-width: 1001px`), fundo `rgba(7,9,10,0.8)`, borda verde
+  0,3, cantos de 6 px; números do placar verdes de 16 px (17 no PC), siglas de 11 px (12), relógio de 14 px (15) preto no
+  bloco `--verde` (parado — intervalo e fim — o bloco fica `--verde-escuro` com letras `--texto`), "1º T +4" de 10 px; faixa de cor do time de 2 px de
+  cima a baixo (casa verde depois da marca, visitante branca antes do relógio). Topo apertado (`hud.js ajustarTopo`):
+  `topo-c1` tira a marca SÓ nos treinos e só se sem ela ainda encostar; `topo-c3` tira o "1º T"; `topo-c4` aperta só os
+  espaços (as fontes ficam nos mínimos do H10); depois o minimapa sai do meio e encosta à direita do placar (como antes).
+  Na PARTIDA o `topo-c3` vem por último: o "1º T +4", o "Intervalo" e o "Fim" só saem se nem com o minimapa ao lado couber
+  (contraprova de 13/10). O topo também se refaz quando os gols mudam de número de dígitos (9 → 10).
+- **`hud.js`**: `definirTimes([{sigla, nome, escudo}])` — `escudo` = id do elenco (`main.js timesDoMundo`: `e.id`; treino:
+  `golaco`/`ventania`); escreve sigla, o `href` do `<use>` (id desconhecido → o do treino) e o `aria-label` do time (o nome
+  só para leitor de tela: nenhum texto novo na tela; cada `.placar-time` é `role="img"` — num `<span>` sem papel o nome
+  não chegava ao leitor de tela).
+- **`main.js` (API de teste)**: `__golaco.placarDeTeste([a, b], relogio)` escreve o placar e o relógio como o laço passa ao
+  HUD ({minuto, tempo, estado, acrescimo}); com o relógio manual parado o laço não reescreve (o próximo quadro escreve o de
+  verdade).
+- **Teste**: `teste-hud-minimo` H10 (CI): nas 3 telas do celular com entalhe e no PC, no jogo ("34'"), nos acréscimos
+  ("45+2'" com "1º T +4") e no intervalo — formato (marca, 2 escudos certos, 2 siglas, placar, relógio no bloco verde com
+  contraste ≥ 4,5:1, nessa ordem), altura ≤ 24 px (PC ≤ 26) e altura e área menores que as de antes (`PLACAR_ANTES`) e que a
+  referência (248×29 px), números ≥ 14 px, siglas ≥ 11, "1º T +4" ≥ 10, escudos ≥ 12, peças sem sobrepor e dentro da barra,
+  e com o minimapa ligado o placar dos acréscimos não encosta no minimapa nem no menu, mantém o "1º T +4" e, com gols 10-9,
+  continua sem encostar; no treino de ataque com o minimapa e o painel nada encosta e a marca fica; a árvore de
+  acessibilidade tem "Golaço FC" e "Ventania FC" (contraprova de 13/10). `--so-placar` roda só essa parte
+  (sem os 2 min de jogo).

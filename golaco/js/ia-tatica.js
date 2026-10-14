@@ -42,7 +42,7 @@ import { faseDoTime, posicaoTatica } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
 import { restricaoParada } from './partida.js';
 import { alvoBolaParada } from './bolas-paradas.js';
-import { entradaPressao, pressaoPedida, pressionadorDe, entradaVelocidade } from './defesa.js';
+import { entradaPressao, pressaoPedida, pressionadorDe, entradaVelocidade, passeAdversario } from './defesa.js';
 
 const DT = PASSO;
 const seg = s => Math.round(s / DT);
@@ -135,6 +135,9 @@ function reposicionar(m, j, B) {
  */
 function vaiNaLivre(m, j) {
   if (j.posicao === 'GOL') return false;
+  // quem cobrou a bola parada não toca de novo antes de outro jogador (partida.js rolou): não vai nela
+  const cobrou = m.cobrou ? m.cobrou.id : -1;
+  if (j.id === cobrou) return false;
   const v = m.voo, b = m.bola.p, Lv = (m.iaLivre ??= {}), ant = Lv[j.time];
   if (v && v.para != null && v.time === j.time && v.para !== j.id) return false;
   const atual = ant && ant.tick >= m.tick - 1 ? ant.id : -1, H = IA_DEFESA.livre.histerese;
@@ -145,7 +148,7 @@ function vaiNaLivre(m, j) {
   const tempo = o => MD.hypot(o.x - b.x, o.z - b.z) / o.par.vArrancada - (o.id === atual ? H : 0);
   const tj = tempo(j);
   for (const o of m.jogadores) {
-    if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+    if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador' || o.id === cobrou) continue;
     const to = tempo(o);
     if (to < tj || (to === tj && o.id < j.id)) return false;
   }
@@ -491,7 +494,8 @@ export function blocoDoTime(m, t) {
   // entradaPressao. Com o 1º homem (≠ controlado) já apertando por conta própria, o botão chama OUTRO: dobra a
   // marcação (o "second man press" do EA FC). Calculado ANTES do aperto do 1º (antes ia com 1 tick de atraso)
   B.pedido = -1;
-  if (f.fase === 'sem' && pressaoPedida(m, t) && condutorAdversarioDe(m, t)) {
+  // (no passe do adversário o pedido segue valendo: o chamado corre para onde a bola vai — defesa.js passeAdversario)
+  if (f.fase === 'sem' && pressaoPedida(m, t) && (condutorAdversarioDe(m, t) || passeAdversario(m, t))) {
     B.pedido = pressionadorDe(m, t, B.apertaProprio && p1 && p1.id !== humano ? p1.id : -1);
   }
   B.pedidoTick = m.tick;
