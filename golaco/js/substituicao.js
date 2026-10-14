@@ -653,9 +653,11 @@ function custoCamera(c, ip, cx, cz, dur) {
   return duro > 0 ? DURO * (1 + duro) + oclusao : oclusao;
 }
 const DURO = 1e6;
-// distância (m) a partir da qual o corpo inteiro (1,95 m com folga) cabe entre os pés (SUBST.pes) e a cabeça
-// (SUBST.cabeca) no fov fixo do plano ENTRA, + 0,5 m (a conta do assuntoEm é aproximada)
-const D_CABE_ENTRA = 1.95 / ((2 * S.cabeca - 2 * S.pes) * Math.tan((S.camEntra.fov * Math.PI) / 360)) + 0.5;
+// distância (m) a partir da qual o corpo inteiro (1,95 m com folga) fica no quadro do fov fixo do plano ENTRA: os pés a
+// SUBST.pes da altura (a inclinação do enquadrar) e a cabeça até a borda de cima (≈ 5,8 m). Com a cabeça só até
+// SUBST.cabeca (6,5 m, ou 7,0 com folga) a câmera de sempre era trocada por uma mais longe sem precisar e a placa no
+// celular caía de 50 para 39–44 px (teste-substituicao-tela T10)
+const D_CABE_ENTRA = 1.95 / ((2 - 2 * S.pes) * Math.tan((S.camEntra.fov * Math.PI) / 360));
 const _q = { x: 0, z: 0 };
 
 /** Câmera de um plano: {x, y, z} (fixa no plano inteiro), escolhida no começo dele. */
