@@ -94,7 +94,7 @@ import { criarPrejogo } from './render/prejogo.js';
 import { PREJOGO } from './prejogo-roteiro.js';
 import { criarAnel, lerQuadro, tempoEstadio as tempoEstadioAnel, jogadorNoTick, marcasDoPasso } from './render/replay-anel.js';
 import { criarDiretor } from './render/replay.js';
-import { criarTecnicos, criarLeitura, leituraDoMundo, passoTecnicos, afastarDeTecnicos, infoTecnicos, IDS_TECNICOS } from './tecnicos.js';
+import { criarTecnicos, criarLeitura, leituraDoMundo, passoTecnicos, afastarDeTecnicos, infoTecnicos, IDS_TECNICOS, kitTecnico } from './tecnicos.js';
 import { OCULTA } from './render/jogador3d.js';
 import {
   planejarComemoracao, criarCena as criarCenaComemoracao, avancarCena, planoCamera, criarPlanoCamera, faseCena,
@@ -799,7 +799,7 @@ function anexarTecnicos(L, n, al, T = tecnicos) {
     interpolarPose(tc.ant, tc.atu, al, des);
     it.id = tc.id; it.time = tc.time; it.pose = des; it.controlado = false; it.proximo = false; it.goleiro = false;
     it.pressiona = false; it.relogio = -1; // a vaga da lista pode ter sido de um jogador (marcas do PRESSÃO e dos 8 s)
-    it.tecnico = true; it.ocultar = 0; it.kit = tc.time === 1 ? 'tecnico1' : 'tecnico0';
+    it.tecnico = true; it.ocultar = 0; it.kit = kitTecnico(tc.time);
     it.x = lerp(tc.x0, tc.x1, al); it.z = lerp(tc.z0, tc.z1, al); it.rumo = lerpAng(tc.r0, tc.r1, al);
     n++;
   }
@@ -1851,6 +1851,11 @@ const api = {
     noAnel(tick, id) { const j = jogadorNoTick(anel, tick, id); return j ? { ...j } : null; },
     /** Testes de layout: o selo no terço de baixo sem a análise (tipo ou null; o próximo quadro de replay o refaz). */
     selo(tipo) { hud.terco(tipo ? { tipo } : null); },
+    /**
+     * Testes (tools/lib/gol-roteirizado.mjs {marcarChute}): o chute que a física do teste deu conta para o autor do gol como
+     * um chute de verdade (render/autor-gol.js: o autor, o tick do chute e o tipo), só no desenho — a simulação não muda.
+     */
+    chuteDeTeste(id, tipo = 'chute') { autorEventos(autorGol, [{ tipo, id }], mundo.tick, timeDe); },
   },
   /**
    * Comemoração do gol (testes e prints): estado da cena ({fase, t, duracao, autor, alvo, variante, corrida, curta, plano,

@@ -33,9 +33,12 @@
 //      G2 a duração real de cada plano a ±0,1 s da do roteiro; o total ≤ 19 s (golaço 21; com a checagem + 1);
 //      G3 o autor sem cabeça e tronco (OCULTA) SÓ nos quadros da 1ª pessoa, e só ele; o treinador do time que marcou fora
 //         da lista SÓ na parte 1 da visão dele (na parte 2 ele está lá); os 2 treinadores na lista nos outros planos;
-//      G4 no celular deitado (844×390, Média): as chamadas de desenho em cada plano ≤ o máximo ao vivo + 1 e o quadro do
-//         replay (CPU, sem o desenho) p95 ≤ o do jogo + 1 ms;
-//      G5 um toque pula tudo (também no meio da 1ª pessoa), como antes.
+//      G4 no celular deitado (844×390, Média): as chamadas de desenho na 1ª pessoa e na visão do treinador ≤ o máximo ao
+//         vivo + 1 (os planos de antes, informativos: atrás do gol o lado de cá entra, +2) e o quadro do replay (CPU, sem o
+//         desenho) p95 ≤ o do jogo + 1 ms;
+//      G5 um toque no meio da 1ª pessoa e no meio da visão do treinador (o "Replay" do mesmo gol de novo) pula tudo;
+//      G6 nada some: os 22 e os 2 treinadores em todo quadro do replay do gol (o treinador que marcou fora SÓ na parte 1
+//         da visão dele — a lente é o olho dele) e a bola sempre desenhada, menos na 1ª pessoa com ela perto da lente.
 // Na versão sem replay reprova (A1, C2, D1: não existe replay); na sem a cena semiautomática, C5 (≥ 3,0 s), F1, F3–F5,
 // F7 e F8 reprovam.
 //   node tools/teste-replay.mjs [--raiz <pasta do jogo>] [--base <pasta do jogo de comparação para o hash>]
@@ -77,7 +80,7 @@ async function rodadaGol(raizJogo, url, clicar = false) {
       await pg.waitForFunction(() => (window.__golaco.estadio.som?.decodificados ?? []).includes('apito'), null, { timeout: 20000 }).catch(() => {});
     }
     await pg.evaluate(() => { for (let i = 0; i < 3; i++) window.__golaco.relogio.avancar(1000 / 60, { desenhar: false }); });
-    const gol = await golRoteirizado(pg, { semente: 5, time: 0 });
+    const gol = await golRoteirizado(pg, { semente: 5, time: 0, marcarChute: true });
     const r = await pg.evaluate(golTick => {
       const g = window.__golaco, m = g.mundo, temReplay = !!g.replay;
       const alvo = golTick + 600;
@@ -312,7 +315,9 @@ else try {
       meta('F1 o selo "IMPEDIMENTO" só no quadro final da análise', `${comSelo} de ${finais.length} quadros finais; ${antesSelo} quadros com selo antes`, '≥ 90%, 0 antes', finais.length > 0 && comSelo >= 0.9 * finais.length && antesSelo === 0);
       const p1 = qs.filter(q => q.plano === 'linha');
       const d2 = [...new Set(p2.map(q => q.desenhados))], d1 = [...new Set(p1.map(q => q.desenhados))];
-      meta('F3 só os jogadores do lance na análise (2–3); todos no P1', `análise ${d2.join('/')}, P1 ${d1.join('/')}`, 'análise 2 ou 3; P1 22', p2.length > 0 && d2.every(n => n >= 2 && n <= 3) && d1.length > 0 && d1.every(n => n === 22));
+      // (no P1 todos os gravados: os 22 e os 2 treinadores, quando existem — 12/10)
+      const nTec = await pg.evaluate(() => (window.__golaco.estadio?.tecnicos ? 2 : 0));
+      meta('F3 só os jogadores do lance na análise (2–3); todos no P1', `análise ${d2.join('/')}, P1 ${d1.join('/')}`, `análise 2 ou 3; P1 ${22 + nTec}`, p2.length > 0 && d2.every(n => n >= 2 && n <= 3) && d1.length > 0 && d1.every(n => n === 22 + nTec));
       const fq = finais[0];
       const noAnel = fq ? await pg.evaluate(({ foto, a, d }) => ({ atac: window.__golaco.replay.noAnel(foto, a), def: d >= 0 ? window.__golaco.replay.noAnel(foto, d) : null }), { foto, a: fq.idAtac, d: fq.idDef }) : null;
       const okX = !!noAnel && !!noAnel.def && Math.abs(fq.xParede - noAnel.def.x) < 1e-4 && Math.abs(fq.xPlano - noAnel.atac.x) < 1e-4 && Math.abs(fq.xParede - lx) < 1e-4;
@@ -481,6 +486,104 @@ try {
     meta('D6 celular: um toque em qualquer lugar pula (e os botões de toque voltam)', JSON.stringify(tocou), 'ativo false, toque true, menu false', !tocou.ativo && tocou.toque && !tocou.menu);
   } finally { await P.fechar(); }
 } catch (e) { meta('D5–D6 execução (celular)', erroCurto(e), 'sem exceção', false); }
+// ------------------------------------------------------------------------------------------------ G4–G6 (celular)
+// celular deitado (844×390, Média, toque): o jogo ao vivo (chamadas nos 120 quadros desenhados e a CPU do quadro em 600)
+// e o replay automático do gol roteirizado inteiro (um quadro desenhado a cada 3: as chamadas por plano; a CPU de todos)
+try {
+  const P = await pagina(raiz, '?q=media&hora=dia&semente=5&toque=1&entalhe=1', { largura: 844, altura: 390, dpr: 1, toque: true });
+  try {
+    const pg = P.pagina;
+    const vivo = await pg.evaluate(() => {
+      const g = window.__golaco;
+      for (let i = 0; i < 240; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      let cham = 0, tri = 0;
+      for (let i = 0; i < 120; i++) { g.relogio.avancar(1000 / 60, { desenhar: true }); const e = g.estado(); cham = Math.max(cham, e.desenhoChamadas); tri = Math.max(tri, e.desenhoTriangulos); }
+      g.medirQuadro({ zerar: true });
+      for (let i = 0; i < 600; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      const q = g.medirQuadro({ zerar: true });
+      return { cham, tri, p95: q.cpu.p95, media: q.cpu.media, n: q.quadros };
+    });
+    const golC = await golRoteirizado(pg, { semente: 5, time: 0, marcarChute: true });
+    const rp = await pg.evaluate(() => {
+      const g = window.__golaco;
+      let n = 0;
+      while (!g.replay.estado.ativo && n < 2000) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; }
+      if (!g.replay.estado.ativo) return { semReplay: true, n };
+      g.replay.zerarCusto();
+      const por = {}, q = { n: 0, semBolaFora: 0, semBolaPrim: 0, bolaSumiu: 0, faltam: 0, faltamEx: '' };
+      let k = 0;
+      while (g.replay.estado.ativo && k < 2400) {
+        const des = k % 3 === 0;
+        g.relogio.avancar(1000 / 60, { desenhar: des });
+        k++;
+        const e = g.replay.estado;
+        if (!e.ativo) break;
+        const d = g.replay.desenho;
+        const c = (por[e.cam] ??= { quadros: 0, desenhados: 0, cham: 0, tri: 0 });
+        c.quadros++;
+        if (des) { const s = g.estado(); c.desenhados++; c.cham = Math.max(c.cham, s.desenhoChamadas); c.tri = Math.max(c.tri, s.desenhoTriangulos); }
+        // G6: nada some — os 22 e os 2 treinadores em todo plano do gol (na parte 1 da visão do treinador, ele fica de
+        // fora: é o olho dele); a bola só some na 1ª pessoa, perto da lente
+        if (e.cam === 'saot') continue;
+        q.n++;
+        const esperado = 24 - (e.cam === 'treinador' && e.parte === 1 ? 1 : 0);
+        if (!d || d.ids.length !== esperado) { q.faltam++; if (!q.faltamEx) q.faltamEx = `${d ? d.ids.length : '-'} de ${esperado} no plano ${e.cam}`; }
+        if (d && !d.bola) { if (e.cam === 'primeira' && d.semBola) q.semBolaPrim++; else q.semBolaFora++; }
+      }
+      return { por, q, custo: g.replay.custo, k, ativo: g.replay.estado.ativo };
+    });
+    if (rp.semReplay) meta('G4–G6 celular: o replay do gol roteirizado', `nenhum replay em ${rp.n} quadros (gol ${golC.ok})`, 'replay', false);
+    else {
+      const cams = Object.entries(rp.por);
+      // (os planos de antes, informativos: atrás do gol a arquibancada e a torcida do lado de cá entram no desenho — +2
+      // chamadas, de propósito desde o replay de 11/10)
+      const novos = cams.filter(([c]) => c === 'primeira' || c === 'treinador');
+      meta('G4 celular deitado (844×390, Média): chamadas de desenho na 1ª pessoa e na visão do treinador ≤ o máximo ao vivo + 1; CPU do quadro do replay p95 ≤ o do jogo + 1 ms',
+        `${cams.map(([c, o]) => `${c} ${o.cham} (${o.desenhados} quadros, ${(o.tri / 1000).toFixed(0)} mil triângulos)`).join(' · ')} × ao vivo ${vivo.cham} (${(vivo.tri / 1000).toFixed(0)} mil); CPU p95 ${f2(rp.custo.quadroReplayP95)} ms (média ${f2(rp.custo.quadroReplayMs)}, ${rp.custo.quadros} quadros) × jogo p95 ${f2(vivo.p95)} ms (média ${f2(vivo.media)}, ${vivo.n} quadros)`,
+        `≤ ${vivo.cham + 1} na 1ª pessoa e no treinador; ≤ ${f2(vivo.p95 + 1)} ms`,
+        novos.length === 2 && novos.every(([, o]) => o.desenhados > 0 && o.cham <= vivo.cham + 1) && rp.custo.quadros > 0 && rp.custo.quadroReplayP95 <= vivo.p95 + 1);
+      meta('G6 nada some: os 22 e os 2 treinadores desenhados em todo quadro do gol (o treinador fora só na parte 1 da visão dele); a bola só some na 1ª pessoa, perto da lente',
+        `${rp.q.n - rp.q.faltam}/${rp.q.n} quadros com a lista inteira${rp.q.faltamEx ? ` (ex.: ${rp.q.faltamEx})` : ''}; bola escondida fora da 1ª pessoa ${rp.q.semBolaFora}, na 1ª pessoa (perto da lente) ${rp.q.semBolaPrim}`,
+        'todos; 0', rp.q.n > 0 && rp.q.faltam === 0 && rp.q.semBolaFora === 0);
+    }
+    // G5: o "Replay" do mesmo gol de novo e um toque no meio da 1ª pessoa pula tudo
+    const g5 = await pg.evaluate(() => {
+      const g = window.__golaco;
+      for (let i = 0; i < 3 && g.replay.estado.ativo; i++) g.replay.pular();
+      if (!g.replay.gol()) return { semRoteiro: true };
+      let q = 0, prim = 0;
+      while (q < 2400 && g.replay.estado.ativo) {
+        g.relogio.avancar(1000 / 60, { desenhar: false }); q++;
+        if (g.replay.estado.cam === 'primeira' && ++prim >= 20) break;
+      }
+      return { ativo: g.replay.estado.ativo, cam: g.replay.estado.cam, prim, cams: g.replay.estado.cams };
+    });
+    let g5b = null;
+    if (!g5.semRoteiro && g5.ativo && g5.cam === 'primeira') {
+      await pg.touchscreen.tap(300, 200);
+      g5b = await pg.evaluate(() => { const g = window.__golaco; g.relogio.avancar(1000 / 60, { desenhar: false }); const r = { ativo: g.replay.estado.ativo, toque: getComputedStyle(document.getElementById('toque')).display !== 'none', menu: g.estado().menuAberto, d: g.replay.desenho }; let cargas = 0; for (let i = 0; i < 20; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); if (g.estado().jogador?.carga) cargas++; } r.cargas = cargas; return r; });
+    }
+    // e o mesmo na visão do treinador (o "Pular" vale em qualquer plano)
+    const g5t = await pg.evaluate(() => {
+      const g = window.__golaco;
+      for (let i = 0; i < 3 && g.replay.estado.ativo; i++) g.replay.pular();
+      if (!g.replay.gol()) return { semRoteiro: true };
+      let q = 0, tr = 0;
+      while (q < 2400 && g.replay.estado.ativo) {
+        g.relogio.avancar(1000 / 60, { desenhar: false }); q++;
+        if (g.replay.estado.cam === 'treinador' && ++tr >= 30) break;
+      }
+      return { ativo: g.replay.estado.ativo, cam: g.replay.estado.cam, tr, parte: g.replay.estado.parte };
+    });
+    let g5tb = null;
+    if (!g5t.semRoteiro && g5t.ativo && g5t.cam === 'treinador') {
+      await pg.touchscreen.tap(300, 200);
+      g5tb = await pg.evaluate(() => { const g = window.__golaco; g.relogio.avancar(1000 / 60, { desenhar: false }); return { ativo: g.replay.estado.ativo, toque: getComputedStyle(document.getElementById('toque')).display !== 'none' }; });
+    }
+    meta('G5 um toque no meio da 1ª pessoa (e no meio da visão do treinador) pula o replay inteiro (os botões de toque voltam; nada vira jogada)', g5.semRoteiro ? 'sem roteiro do gol' : `${g5.cams?.join(' · ')}: no quadro ${g5.prim} da 1ª pessoa (${g5.cam}) → ${g5b ? `replay ${g5b.ativo}, toque ${g5b.toque}, pausa ${g5b.menu}, cargas ${g5b.cargas}` : 'não chegou na 1ª pessoa'}; no quadro ${g5t.tr ?? '-'} do treinador (parte ${g5t.parte ?? '-'}) → ${g5tb ? `replay ${g5tb.ativo}, toque ${g5tb.toque}` : 'não chegou no treinador'}`,
+      'ativo false, toque true, pausa false, 0; ativo false, toque true', !!g5b && !g5b.ativo && g5b.toque && !g5b.menu && g5b.cargas === 0 && !!g5tb && !g5tb.ativo && g5tb.toque);
+  } finally { await P.fechar(); }
+} catch (e) { meta('G4–G6 execução (celular)', erroCurto(e), 'sem exceção', false); }
 // ------------------------------------------------------------------------------------------------ F (sem replay)
 // a mesma partida com o replay desligado: os 120 quadros ao vivo antes do apito (chamadas, triângulos, CPU), o apito sem
 // replay nem selo (a linha parada 2,2 s, como antes) e o hash no tick apito + 600

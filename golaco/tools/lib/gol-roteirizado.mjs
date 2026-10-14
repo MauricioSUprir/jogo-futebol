@@ -11,7 +11,8 @@
 //   3) a bola sai do pé dele com a FÍSICA da bola (bola.js passoBola: vy achado por bisseção para passar a
 //      linha na altura pedida) a v m/s para o ponto (y, z) da boca do gol.
 // Devolve {ok, golTick, autor, lado, n, tickChute} (ok = o gol saiu em até 90 passos).
-//   golRoteirizado(pagina, {semente = 5, time = 0, v = 23, y = 1.0, z = -1.4, z0 = 3.0, dist = 9.5, reiniciar = true})
+//   golRoteirizado(pagina, {semente = 5, time = 0, v = 23, y = 1.0, z = -1.4, z0 = 3.0, dist = 9.5, reiniciar = true,
+//     marcarChute = false (o chute conta para o autor como um de verdade: replay.chuteDeTeste — a 1ª pessoa do replay)})
 
 export async function golRoteirizado(pagina, opc = {}) {
   return pagina.evaluate(async o => {
@@ -77,6 +78,8 @@ export async function golRoteirizado(pagina, opc = {}) {
     Object.assign(m.bola, criarBola(P0.x, P0.z));
     m.bola.p.y = 0.25; m.bola.v.x = dx * v; m.bola.v.z = dz * v; m.bola.v.y = vy; m.bola.rolando = false;
     m.ultimoToque = { id: autor.id, time: autor.time, tick: m.tick };
+    // {marcarChute}: o chute conta para o autor do gol como um de verdade (o replay da 1ª pessoa precisa dele)
+    if (o.marcarChute && g.replay?.chuteDeTeste) g.replay.chuteDeTeste(autor.id);
     const tickChute = m.tick;
     let golTick = null;
     for (let i = 0; i < 90 && golTick == null; i++) {
