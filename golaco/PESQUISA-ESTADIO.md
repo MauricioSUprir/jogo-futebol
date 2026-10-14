@@ -377,3 +377,48 @@ autor a ≤ 3 m do alvo em 1,5–3,5 s; 2 colegas no abraço em 3,6–5,1 s (ant
 pelves a ≥ 0,47 m; pé plantado 0,000 m/s, pé no ar ≤ 0,90 do limite; quem sofreu: 100% com gesto, ≤ 1,4 m/s; 0,09–0,23 ms
 por tick (22 atores; a simulação custa ~0,6 ms por passo); hash do mundo igual antes e depois; a saída no mesmo tick (gol +
 150) com o mesmo hash que sem a cena.
+
+## 11. Área técnica e treinadores (`js/tecnicos.js`, `estadio-forma.js`, `render/campo.js`; pedido do dono de 12/10)
+
+"Quero a área técnica e o treinador." Antes: nenhum técnico no estádio, nenhuma marcação na beira do campo. Agora: as duas
+áreas técnicas desenhadas na malha das linhas (+0 chamadas) e os dois treinadores FICTÍCIOS (terno no mandante, agasalho
+no visitante) andando com a MESMA locomoção do jogo num mundo à parte, só lendo a partida (o hash não muda).
+
+| Fonte | O que diz | O que aproveitamos |
+|---|---|---|
+| IFAB, Leis do Jogo, Regra 1 ("The Technical Area") | A área vai 1 m além de cada lado dos assentos e, para a frente, até 1 m da linha lateral; demarcada; o técnico dá instruções de dentro dela, uma pessoa por vez | `ESTADIO.areaTecnica` derivada dos bancos (x ±4 a ±18) e do campo (frente a 1 m da lateral, fundo nas placas), linha de 0,12 m nos 3 lados abertos; o treinador nunca sai dela (`teste-tecnicos` T1, T2) |
+| Bundesliga (fotos de transmissão: retângulo de giz) | A marcação é uma linha contínua, da largura das outras | Linha contínua, para dentro da área (como as linhas do campo) |
+| Smith & Cushion (2006), "An investigation of the in-game behaviours of professional, top-level youth soccer coaches", J. Sports Sciences 24(4) | O silêncio (observar) é a maior categoria (~40% do jogo); instrução, elogio e incentivo vêm em rajadas curtas | 55–85% do tempo observando (posturas: braços cruzados, mãos na cintura, mão no queixo, mãos atrás, agachado raro); incentivo na bola recuperada e numa sequência de passes (T8) |
+| Análise dos técnicos na Copa do Mundo de 2022 (contagem por minuto de jogo televisionado) | ~2 gestos táticos por minuto e ~0,7 emocionais | 1–2,5 instruções por minuto de bola rolando; reclamar/lamentar raros; nunca o mesmo (gesto, variante) duas vezes seguidas (T8) |
+| Transmissões (Premier League, LaLiga): câmera principal alta do lado dos bancos | O banco fica embaixo da câmera principal; o técnico aparece quando a jogada vem para a lateral de cá | Recuo quando a bola vem para a linha de cá (z 39,2) e esquiva da bola e dos jogadores: ninguém tapa a TV (T11–T13); visíveis na TV do celular com o banco no quadro (`teste-tecnicos-tela` V1) |
+| O próprio jogo | `jogador.js` passoCorpo/passoPassada/passoPeDesenhado, `anim.js` pose/ikBraco, gestos da comemoração (`comemoracao.js` maoEm) | Pé plantado sem patinar (T4), gestos por IK com os ossos do tamanho certo (T5), a troca de gesto comum com a mão ≤ 6,5 m/s no pico (`TECNICOS.maoPico`: a mistura cresce com a distância) e, quando a linha reta da mão passaria pela cabeça (das costas para as palmas no alto), um arco de 0,25 m pela frente (`TECNICOS.arcoMao`; antes a mão empurrada para fora da cabeça dava a volta nela de uma vez: 0,158 m num passo) |
+
+Medidas (Node, `tools/teste-tecnicos.mjs`, 24 partidas de 2 × 4 min; navegador, `tools/teste-tecnicos-tela.mjs`, celular
+844×390 Média): 0 passos fora da área em 1,5 milhão; pé plantado 0,0000 m/s; a mão ≤ 0,15 m por passo; olhando a bola com
+mediana de 1°; reação ao gol em 0,27–0,38 s (mão acima da cabeça) e às mãos na cabeça em ≤ 0,42 s; 83% observando e 2,0
+instruções por minuto; nunca entre a TV e a bola (0 passos); 8,9 µs por passo; a mão ≤ 0,142 m por passo (antes 0,158); visíveis em 20/20 instantes com o banco no
+quadro; chamadas de desenho iguais com e sem eles (+2 bonecos de triângulos); CPU do quadro sem recuo.
+
+## 12. 3ª e 4ª câmeras do replay do gol: 1ª pessoa do autor e visão do treinador (`js/render/replay-olhos.js`, `replay-roteiro.js`, `replay.js`; pedidos do dono de 12/10)
+
+"Quero que tenha uma 3ª e uma 4ª câmera de replay, onde uma é a visão em 1ª pessoa do jogador fazendo o gol." "A 4ª pode ser
+a visão do treinador, quero a área técnica e o treinador." O replay do gol fica: TV 1× → atrás do gol 0,5× → [lateral do
+golaço] → 1ª PESSOA do autor 0,6× → VISÃO DO TREINADOR do time que marcou (o que ele vê → corte → ele reagindo) → [checagem
+de posição legal]. Os planos de antes não mudam (orçamento próprio de ≤ 7 s; total ≤ 19 s, golaço 21).
+
+| Fonte | O que diz | O que aproveitamos |
+|---|---|---|
+| Pozzo, Berthoz & Lefort (1990/1991), estabilização da cabeça e do olhar na locomoção humana (Exp. Brain Research) | Andando e correndo a cabeça sobe e desce 2–9 cm, mas o olhar fica estável: o cérebro compensa | O olho da 1ª pessoa SEM balanço: a altura é a média de um passo (0,33 s) e uma gaussiana de 0,22 s; o manequim balança até ±9 cm correndo e o olho fica ≤ 0,8 cm do próprio movimento lento (`teste-replay-anel` G6) |
+| John Nesky (thatgamecompany), GDC 2014, "50 Game Camera Mistakes" (#41, #42, #44) | Nada de balançar a câmera na passada; não mudar o campo de visão dentro de um plano; o conforto é dado em graus horizontais | Campo de visão HORIZONTAL de 90° fixo na 1ª pessoa; teleobjetiva fixa na visão do treinador (o quadro de 30 m na distância do gol); sem zoom dentro do plano |
+| Oculus/Meta, "VR Best Practices" (locomoção e conforto) | "Do not use head bobbing"; giros de câmera lentos e previsíveis; o horizonte nivelado | Rolagem sempre 0; o giro com LIMITE de 85°/s no tempo do replay (`limitarGiro`: ida e volta, a média — sem atraso — e gaussiana de 0,05 s): p95 ~80°/s, máximo ≤ 90°/s (antes do limite: p95 192°/s e picos de 1936°/s quando a bola passava embaixo do olho) |
+| arXiv 1611.06292 (conforto em rotações de câmera virtual) | O que incomoda é a DURAÇÃO da mudança rápida, não o tamanho total | Giros curtos e lentos: o olhar desce para a bola de chute − 0,3 s a chute + 0,2 s e volta para o gol |
+| Transmissão da UEFA: câmera 3 baixa (atrás dos bancos) | Teleobjetiva baixa na lateral do banco que pega a área inteira do gol | Parte 1 da visão do treinador: o olho na cabeça gravada dele, o olhar a meio caminho da bola e da boca do gol, a bola sempre no quadro (100%) e o giro ≤ 14°/s |
+| Steadicam no gramado depois do gol (Premier League 2025/26; já em §10) | O plano de reação próximo e estável, com o banco e a torcida atrás | Parte 2: corte seco para uma câmera parada no gramado, ele INTEIRO no terço esquerdo (agora com os pés e o alto da cabeça da pose gravada: correndo, o pé da frente saía por baixo em 2% dos quadros), ninguém na frente, a lente fora dos sólidos |
+
+Decisões medidas (antes → depois, `teste-replay-anel`: 14 partidas antes, 28 depois): a boca do gol no quadro 0,5 s antes do chute
+0/18 → 34/34 (o olhar antes do chute ia na bola, 30° para baixo: no celular deitado o gol ficava acima do quadro; agora a
+bola puxada 60% para o gol e no máximo 18° para baixo); a bola no quadro do chute ao gol 94% → 96,5%; o giro p95 196 → 80°/s
+(máximo 1936 → 86°/s); o olho a ≤ 0,148 m do centro da cabeça (antes 0,25 m) e a ≤ 0,057 m do olho bruto na horizontal
+(antes 0,215 m); a parte 2 do treinador com ele inteiro no quadro 98,4% → 100%; o pênalti com o goleiro no quadro. Uma meta mudou de forma: "≤ 6 cm do olho bruto"
+vale na HORIZONTAL — com a passada de agora a cabeça oscila ±9 cm e um olho a ≤ 6 cm dela na vertical também balançaria;
+a vertical fica presa pela cabeça (≤ 0,15 m) e pelo balanço (≤ 1 cm).

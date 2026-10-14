@@ -7,11 +7,12 @@
 // 1ª PESSOA (cam 'primeira'; REPLAY.primeira; PESQUISA-ESTADIO.md §12):
 //  - olho bruto = a cabeça gravada + frente·0,085 + cima·0,03 (frente = horizontal, da linha dos ombros, como jogador3d
 //    frente());
-//  - x/z por gaussiana σ 0,08 s, presa a ≤ 2 cm do olho bruto na horizontal; y por média móvel de 0,33 s (um passo) e
-//    gaussiana σ 0,22 s: a cabeça do manequim sobe e desce até ±9 cm correndo e o cérebro estabiliza o olhar (Pozzo &
-//    Berthoz 1991); rolagem sempre 0; nada de balançar no ritmo da passada (Nesky, GDC 2014 #44; Oculus: "do not use head
-//    bobbing"); presa a [cabeça − 0,14, cabeça + 0,16] e, por fim, dentro da esfera de 0,148 m em volta do centro da cabeça
-//    (com a cabeça longe na vertical, o olho recua na horizontal: a altura não treme);
+//  - x/z por gaussiana σ 0,08 s, presa a ≤ 2 cm do olho bruto na horizontal (≤ 6 cm depois da esfera, abaixo); y por
+//    média móvel de 0,33 s (um passo) e gaussiana σ 0,22 s: a cabeça do manequim sobe e desce até ±9 cm correndo e o
+//    cérebro estabiliza o olhar (Pozzo & Berthoz 1991); rolagem sempre 0; nada de balançar no ritmo da passada (Nesky,
+//    GDC 2014 #44; Oculus: "do not use head bobbing"); presa a [cabeça − 0,14, cabeça + 0,16] e, por fim, dentro da
+//    esfera de 0,148 m em volta do centro da cabeça (com a cabeça longe na vertical, o olho recua na horizontal: a
+//    altura não treme);
 //  - olhar: até chute − 0,3 s a bola puxada 60% para o centro da boca do gol (o autor vê o gol antes de bater), sem descer
 //    mais que 18° (a boca do gol no quadro também no celular deitado); de chute − 0,3 s a chute + 0,2 s a bola e o pé;
 //    depois a bola puxada 35% para o gol (cabeceio: puxada 60% até 0,15 s antes do contato e 50% perto dele); gaussiana σ
