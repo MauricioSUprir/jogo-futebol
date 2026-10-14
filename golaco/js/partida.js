@@ -952,6 +952,8 @@ function cobrar(m, entrada) {
     // as do aperto com a bola pronta. Guardado, o toque antes da hora (ansioso, ou ainda o do lance da falta) batia
     // sozinho na hora da bola pronta, fraco e sem a mira, e o aperto de verdade era ignorado (contraprova, B15)
     const aGol = pr.tipo === 'penalti' || (pr.tipo === 'tiroLivre' && pr.direto);
+    // a pessoa (não a demo nem a cobrança da IA pelo humano): dois toques no CHUTE = cavadinha (acoes.js)
+    c.porHumano = !!entrada && !entrada.ia && !entrada.iaCobra;
     aplicarEntrada(c, aGol && m.tick < pr.pronta && entrada ? { x: entrada.x ?? 0, z: entrada.z ?? 0, botoes: (entrada.botoes ?? 0) & ~BOTAO.CHUTE } : entrada, m.tick);
     c.pedidoPedalada = false; // parado não pedala (o pedido ficaria para depois da cobrança)
     atualizarBotoesAcao(m, c);
@@ -971,6 +973,9 @@ function cobrar(m, entrada) {
     if (c.pedido && pr.tipo === 'tiroDeMeta' && !zonaLivre(m)) return false;
   }
   if (!c.pedido) return false;
+  // dois toques no CHUTE (pênalti, tiro livre direto: cavadinha, acoes.js): o toque rápido espera a janela do 2º toque
+  // e o 2º toque, ser solto
+  if (c.pedido.segura || (c.pedido.espera != null && m.tick < c.pedido.espera)) return false;
   if (pr.tipo === 'lateral') return comecarArremesso(m, c, iaAssume);
   if (pr.tipo === 'penalti') c.pedido.penalti = true; // a pressão da cobrança (acoes.js: erro do chute)
   // tiro livre com barreira: o chute (da IA e do humano) busca passar por cima dela (acoes.js chute)
@@ -1501,7 +1506,12 @@ export function entradaDemoPartida(m) {
   const j = jogadorPorId(m, m.controlado[0]);
   if (!j) return { x: 0, z: 0, botoes: 0 };
   const pr = m.parada;
-  if (pr && !pr.rolou && pr.cobrador === j.id) return entradaCobranca(m, j);
+  if (pr && !pr.rolou && pr.cobrador === j.id) {
+    // iaCobra: a cobrança é da IA (o `cobrar` não a toma pelos dois toques da pessoa: o botão que ela repete a cada
+    // PARTIDA.repeteCobranca virava cavadinha). Sem `ia` aqui: o resto da simulação segue como antes (m.iaJoga)
+    const c = entradaCobranca(m, j);
+    return { x: c.x, z: c.z, botoes: c.botoes, iaCobra: true };
+  }
   // ia: a IA joga pelo humano — recebe como a IA (sem a recepção assistida do controle humano, recepcao.js)
   const e = entradaIATatica(m, j);
   return { x: e.x, z: e.z, botoes: e.botoes, ia: true };

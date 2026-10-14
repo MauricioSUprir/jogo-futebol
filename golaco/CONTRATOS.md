@@ -117,7 +117,7 @@ travaApoio, quadril`.
 - **Forma única (desempenho, Etapa 3):** `criarJogador` já declara TODOS os campos que os outros módulos põem
   no jogador depois (`papel, posicao, vagaId, vagaIdx, posDetalhe, vaga, iaT, recebe, corrida, intercepta, carga,
   pedido, mira, miraAuto, iaAcao, defesa, mergulho, segura, saindo, ia, botoesTime, giroParado, quadril, iaA,
-  pedidoPedalada, ladoOlha, ritmo, ultLanc, ultMod, descansoBote, defH, conter, descanso, contorno`), com
+  pedidoPedalada, ladoOlha, ritmo, ultLanc, ultMod, descansoBote, defH, conter, descanso, contorno, recep, porHumano`), com
   `undefined` (o mesmo valor de antes da 1ª escrita), na mesma ordem para todos: os 22 ficam com UMA classe oculta
   do motor JS. Com uma ordem por jogador (eram 9 formas na partida) os acessos ficavam megamórficos e cada leitura de
   número alocava (~300 KB de lixo por passo). **Campo novo no jogador: declarar em `criarJogador`** (o mesmo vale
@@ -706,6 +706,62 @@ de `criarPartida` depois dele e 600 passos Node = Chromium) e o apito da saída 
   sai **de primeira**. `m.voo = {tipo, de, para, alvo:{x,z}, tickChegada, alto}` descreve o passe/chute em
   andamento (o desenho marca o ponto de queda no gramado quando `alto`). Tipos: `'passe' | 'enfiada' |
   'enfiadaAlta' | 'lancamento' | 'cruzamento' | 'chute' | 'colocado' | 'cavadinha' | 'cabeceio'`.
+- **Cavadinha por dois toques no CHUTE** (pedido do dono, 12/10; `acoes.js`, constantes em `ACOES.cavadinha`):
+  - `j.porHumano` (sim.js, a cada passo; partida.js `cobrar` no cobrador): os botões são da PESSOA — o controlado do
+    time humano com a entrada sem `ia` (a demo/IA jogando pelo humano manda `ia: true` e conta como IA). A carga do
+    humano leva `humano: true` e o pedido dela também (`j.pedido.humano`).
+  - **2º aperto do CHUTE** com o pedido de chute do humano ainda de pé (não tocou na bola) e até `ACOES.toqueDuplo` s
+    depois de soltar o 1º: `j.pedido.cavadinha = true`, `j.pedido.segura = true` (o pedido não é marcado nem expira) e
+    a carga nova `{tipo: 'chute', cavadinha: true}`; o toque 'acao' já marcado é desfeito. Soltar o 2º: a força dele
+    vale (`pedido.forca`), `segura = false`, a idade conta de novo e o toque é marcado como sempre (lead 2). De primeira
+    com o 2º ainda segurado (`executarAcao`): a força carregada até ali. Vale em qualquer lugar e na cobrança do
+    pênalti/tiro livre direto (Panenka).
+  - **Janela do 2º toque**: o chute do humano de toque rápido (segurado < `toqueRapido` s) leva `pedido.espera` = tick
+    de soltar + `janela` s; `processarPedido` só marca o toque da ação a partir de `espera − 2` ticks (a condução segue
+    até lá) e o `cobrar` da bola parada espera também. O chute carregado (≥ `toqueRapido`) não tem `espera`: sai no
+    mesmo tick de antes (teste-cavadinha C: igual ao da IA na mesma cena). Só o **aperto novo** espera (`carga.novo`:
+    o time não segurava o botão no passo anterior — `m.botoesTimeAnt`; no `cobrar`, que roda antes do passo,
+    `m.botoesTimeAgora`): o botão que já vinha segurado quando o controle trocou vira borda no novo controlado, mas não
+    é toque rápido e chuta na hora (teste-cavadinha I; era o que mudava o hash-igual do treino de ataque).
+  - `chute()`: `pedido.cavadinha` → `cavadinha()` de qualquer lugar; a cavadinha AUTOMÁTICA (goleiro adiantado) só
+    para o pedido sem `humano` — o chute de um toque do humano nunca vira cavadinha. A pedida mira pelo analógico como o
+    chute (`zPeloAnalogico`; sem analógico, 0,4 × z da bola, como a da IA), cai `alemDaLinha` m depois da linha, com a
+    elevação `elevPedida` pela força do 2º toque (rápido = 0,72 rad, a da IA; segurado = até 1,0 rad, mais alta) e o
+    mesmo erro de força e direção da cavadinha de antes (StatsBomb: difícil de dosar). Teto: a pedida nunca sai mais
+    rápida que o chute mais forte do mesmo jogador (`ACOES.chute.v[1]` × finalização × pé; o erro de força entra antes
+    do teto) — de longe a busca pedia até 45 m/s e a bola saía a até ~70 m/s (contraprova 13/10, teste-cavadinha K); com
+    o teto o balão de longe cai antes do gol. A automática da IA (até `distMax`) não passa por isso (fica como era).
+  - O cobrador parado (`papel 'parado'`) com `espera` nunca é marcado por `processarPedido` (chuta pela cobrança).
+  - A cobrança da demo (`entradaDemoPartida` com o controlado cobrando) leva `iaCobra: true` (sem `ia`, para o resto
+    da simulação seguir igual — `m.iaJoga`): o `cobrar` e o sim.js não a tomam como da pessoa. A entrada da cobrança da
+    IA repete o botão a cada `PARTIDA.repeteCobranca`; sem a marca, o 2º aperto virava cavadinha (teste-cavadinha J; o
+    canhão de pênaltis do teste-faltas caía de ~77% para 67% de gols). Na PÁGINA (`?demo=1`), `main.js entradaDoTime`
+    entrega a entrada da demo sem o `ia` (como sempre), mas com a marca `iaCobra` (= `ia || iaCobra`), também no
+    `rodarPassos(n, 'demo')` da API e nos achadores `comoPagina` (`tools/lib/acha-gol.mjs`, `acha-impedimento.mjs`): a
+    demo da página é a IA de antes (contraprova 13/10: sem a marca, 9 cavadinhas em 40 pênaltis da demo; teste-controles).
+  - **Bola parada**: o CHUTE só cobra pênalti e tiro livre direto (`cobrar` descarta o pedido de chute nas outras) —
+    no escanteio, lateral, tiro de meta e tiro livre indireto, dois toques no CHUTE não fazem nada e o PASSE/LANÇAMENTO
+    depois cobra normal (teste-cavadinha H3). Pênalti: dois toques = **Panenka** (`pedido.penalti` + `cavadinha`;
+    `ACOES.cavadinha.penalti`): SEM a pressão do pênalti (`penaltiErro` não entra), erro próprio de força/direção
+    (`erroForca`/`erroDir`, bem menor que o da cavadinha de jogo: bola parada a 11 m, sem marcador), elevação de
+    `elevPedida[0]` (2º toque rápido) até `elevMax` (segurado; mais em pé, 1% de força mudava 0,3 m na altura em que a bola
+    chega ao goleiro) e a velocidade que passa 0,4 m antes da linha a `y` m, descendo (`velParaAlturaEm`, como o chute).
+    A busca de "cair `alemDaLinha` m depois da linha" (`velParaPousar`) não serve no pênalti: com o gol no caminho o pouso
+    não cresce com a velocidade (a bola bate no travessão ou no teto da rede e volta) e a busca parava no travessão — sem
+    erro nenhum, a Panenka passava a ~2,8 m na linha. O goleiro: contrato do pênalti (Etapa 4, faltas). Medido
+    (teste-cavadinha H4, 48 sementes, finalização 40/60/83, 2º toque rápido e segurado): contra o goleiro que mergulha
+    97% de gols e 97% no alvo (antes 22% e 29%); contra o que fica no meio, 100% defendidas (antes 6%; 11 gols e 34 fora
+    em 48). A cavadinha de jogo, a da IA e a do tiro livre não mudam. Tiro livre direto
+    (~22 m, barreira): dois toques = cavadinha por cima da barreira (× `faltaErro`; 0/10 na barreira, quase todas fora).
+  - **Entrada** (`entrada.js`, DOM): soltar e apertar de novo ANTES de um passo ver a soltura (teclado, toque e controle
+    num quadro sem passo) não perde a 2ª borda — o passo vê o botão solto e o seguinte, apertado (`soltas`, `vistos`
+    pelo `passoUsou(botoes)` que o main.js chama ANTES de cada passo, `adiados` viram o pulso do próximo em
+    `limparPulsos(true)`; fora do laço, `limparPulsos()` limpa tudo, também `vistos` — o replay que começa dentro do
+    passo, no apito do impedimento ou na saída depois do gol, chama `limparPulsos()` depois do `passoUsou`: sem passo
+    nenhum no replay, a tecla segurada no começo, solta e apertada de novo, pula, como na main; antes ela ficava
+    escondida o replay inteiro — contraprova 13/10, teste-controles). Não vale para CORRER e o modificador (dois Shift
+    seguros não piscam). A repetição automática da tecla (`keydown` com `repeat`) não conta. O toque cancelado pelo
+    sistema (`pointercancel`, `lostpointercapture`) no CHUTE é soltar, como sempre foi (teste-controles).
 - `j.recebe = {tick, x, z, tipo}`: o jogador que vai receber (vem ao encontro / arranca na enfiada).
 - `j.mergulho`: a defesa desenhada do goleiro (mergulho, salto ou em pé) — ver a seção "Pedido de 10/10" abaixo.
 - Eventos novos: `passe`, `chute`, `defesa` ({tipo: 'encaixe'|'espalmada'}), `gol`, `troca`, `saidaGoleiro`.
@@ -1072,8 +1128,15 @@ Sai em PRs menores; cada um acrescenta a sua parte aqui. Pesquisa e números em 
   `pr.miraZ` e a força `pr.forca` da IA e o lado do goleiro `pr.palpite`/`gk.palpite` sorteados na montagem; evento
   `cobrancaPenalti`); `rolou` abre `penaltiAberto` (o goleiro do humano escolhe o lado pelo analógico); `resolverPenalti`
   → evento `penalti {time, id, resultado: 'gol'|'defesa'|'fora'}`. Na cobrança o humano pode chutar (pênalti e tiro
-  livre direto); `pedido.penalti` multiplica o erro (`ACOES.chute.penaltiErro`). `goleiro.js lerChute`: no pênalti, lado
-  errado = não defende (o mergulho desenhado vai para o lado escolhido); lado certo = chance × `GOLEIRO.penalti.fator`.
+  livre direto); `pedido.penalti` multiplica o erro (`ACOES.chute.penaltiErro`; a Panenka não: erro próprio,
+  `ACOES.cavadinha.penalti`). `goleiro.js lerChute`: no pênalti, lado errado = não defende (o mergulho desenhado vai para
+  o lado escolhido); lado certo = chance × `GOLEIRO.penalti.fator`. **Panenka** (`m.voo.tipo === 'cavadinha'` no pênalti,
+  ~1,3–1,6 s até o goleiro): contra quem escolheu um lado (`palpite` ±2,2) e a bola a mais de `GOLEIRO.penalti.meio` m
+  dele = lado errado — o mergulho desenhado sai para o lado escolhido com o pico `GOLEIRO.penalti.picoPanenka` s depois
+  do chute e ele fica deitado até a bola passar a linha (`defesa.chaoAte` → `mergulho.tChao`); contra quem ficou no
+  meio (`palpite` 0): sem sorteio — pega (encaixa) a que alcança, e a que passa alta por cima dele busca voltando para a
+  linha (`recuoBolaAlta`, como o goleiro adiantado). Só a Panenka: o chute do pênalti (IA e humano) fica como era
+  (teste-faltas C igual; hash-partida igual).
 - Escalação: `situacao` → 'expulso'; `tocar` troca o buraco com um titular (nunca o gol) e recusa substituí-lo;
   `mudarFormacao` deixa o buraco nas vagas que sobram (fora do gol); `validarEdicao` aceita o expulso só como buraco e
   fora do gol; `misturarTimes` inclui os expulsos.

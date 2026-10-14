@@ -395,6 +395,24 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   pegava todo chute a ≤ 1 m do corpo), colado na linha do gol o goleiro com a bola nas mãos não vira para o gol nem a
   solta além dela (`GOLEIRO.soltaLinha`; virar fazia gol contra), a câmera corta no `corteBolaParada` do tiro de meta
   (testes: `teste-goleiro-regras` G3c/G5d, `teste-estadio` item 13).
+- **Cavadinha com dois toques no CHUTE** (dono, 12/10; `acoes.js`, `ACOES.cavadinha`, contrato no CONTRATOS.md): o 2º
+  aperto do CHUTE (K, B, CHUTE do celular — o mesmo botão, nada novo na tela) antes de o chute do 1º tocar na bola vira
+  cavadinha, de qualquer lugar (também pênalti/tiro livre direto), mirando pelo analógico; a força do 2º toque deixa mais
+  alta. Só do humano (`j.porHumano`: entrada sem `ia`); um toque do humano nunca é cavadinha; a IA (e a demo) seguem com
+  a automática do goleiro adiantado. Medido: o chute sai 50 ms depois de soltar, então o 1º toque RÁPIDO (< 0,18 s)
+  espera a janela de 0,15 s (contato +117 ms parado; correndo, no 1º apoio depois dela, até +267 ms) — só o aperto NOVO
+  (`carga.novo`; o botão segurado de antes da troca de controle chuta na hora); o chute carregado sai no mesmo tick de
+  antes. Bola parada: o CHUTE só cobra pênalti (Panenka: 2 gols/12, 9 fora — erro da cavadinha × pressão do pênalti;
+  calibrar é decisão do dono) e tiro livre direto; no resto dois toques não fazem nada; a cobrança da demo leva `iaCobra`
+  (a IA repete o botão na cobrança — sem a marca virava cavadinha; a página `?demo=1` passa a mesma marca em toda a
+  entrada da demo — `main.js entradaDoTime` — e os achadores `comoPagina` também). Entrada: soltar e apertar de novo
+  sem passo no meio vira solto + apertado (`entrada.js` `passoUsou`/`limparPulsos(true)`; antes o toque duplo rápido
+  virava um aperto só; fora do laço — replay — `limparPulsos()` zera também o que o passo viu, e o `passoUsou` vem
+  ANTES do passo: a tecla segurada no começo do replay, solta e apertada de novo, pula). De longe a pedida nunca sai mais
+  rápida que o chute mais forte do jogador (sem o teto saía a até ~70 m/s). Limite medido (teste-cavadinha L): parado,
+  intervalo > 150 ms ou 1º toque ≥ 0,18 s = chute. hash-igual IGUAL; hash-partida: demo IGUAL, humano IGUAL com a janela zerada e a cavadinha
+  desligada (só a cavadinha muda a partida). Teste: `teste-cavadinha` (padrão; `--js` mede a base) e `teste-controles`
+  (K, B, CHUTE duas vezes, reaperto no mesmo quadro, repetição da tecla, toque cancelado). Pesquisa: `PESQUISA-ETAPA2.md` §2.7a.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =
