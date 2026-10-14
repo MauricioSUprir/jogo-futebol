@@ -20,7 +20,10 @@
 //      principal no quadro em ≥ 95% dos quadros de cada plano, com os pés acima dos 20% de baixo no celular;
 //   S8 paresDaPlaca certo (verde = entra, vermelho = sai, o do humano primeiro); o quarto árbitro com o kit 'arbitro'.
 // "Antes" (sem js/substituicao.js): o reserva SURGE no lugar de quem saiu no mesmo tick (0 s de cena) — o teste REPROVA.
-//   node tools/teste-substituicao.mjs [--js <pasta js>] [--detalhe]
+// --estresse: mais 48 sementes (289 cenas; ~1 min) — a contraprova de 14/10 achou com elas defeitos que as 8 do CI não
+// pegavam (e que a mudança de estados de uma mescla da main expôs: a câmera colada em quem parava de lado, quem sai rente
+// ao gol trombando em quem parou na reta, o reserva correndo para a lente no ENTRA, dois com a vez um dentro do outro).
+//   node tools/teste-substituicao.mjs [--js <pasta js>] [--detalhe] [--estresse]
 import path from 'node:path';
 import fs from 'node:fs';
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -54,6 +57,9 @@ const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
 
 // ------------------------------------------------------------------------------------------------ canhão
 const SEMENTES = [3, 5, 7, 11, 13, 17, 19, 23];
+if (args.includes('--estresse')) SEMENTES.push(31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
+  127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271);
+const N_CASOS = SEMENTES.length * 6 + 1;
 const TIPOS = ['lateral', 'escanteio', 'tiroDeMeta', 'tiroLivre', 'penalti', 'gol'];
 const NPARES = [1, 2, 3, 5];
 const MODOS = ['0', '1', 'ambos'];
@@ -199,7 +205,7 @@ const casos = [];
   if (dez) casos.push(dez);
 }
 const validos = casos.filter(c => c.m);
-reg('canhão: casos com a troca feita na parada', `${validos.length}/${casos.length} (${['lateral', 'escanteio', 'tiroDeMeta', 'tiroLivre', 'penalti', 'gol'].map(t => `${t} ${validos.filter(c => c.tipo === t).length}`).join(', ')}; pares ${[...new Set(validos.map(c => c.n))].sort((a, b) => a - b).join('/')})`, '49/49 (48 + o de 5 + 5)', validos.length === 49 && casos.length === 49);
+reg('canhão: casos com a troca feita na parada', `${validos.length}/${casos.length} (${['lateral', 'escanteio', 'tiroDeMeta', 'tiroLivre', 'penalti', 'gol'].map(t => `${t} ${validos.filter(c => c.tipo === t).length}`).join(', ')}; pares ${[...new Set(validos.map(c => c.n))].sort((a, b) => a - b).join('/')})`, `${N_CASOS}/${N_CASOS} (${N_CASOS - 1} + o de 5 + 5)`, validos.length === N_CASOS && casos.length === N_CASOS);
 
 // ------------------------------------------------------------------------------------------------ medidas de uma cena
 const ossos = [[J.quadrilE, J.joelhoE, JOGADOR.coxa], [J.joelhoE, J.tornozeloE, JOGADOR.canela], [J.quadrilD, J.joelhoD, JOGADOR.coxa], [J.joelhoD, J.tornozeloD, JOGADOR.canela],

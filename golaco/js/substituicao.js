@@ -95,14 +95,15 @@ export function planejarSubstituicao(m, pares, opc = {}) {
   // onde cada reserva espera (time 0: x +; time 1: x −) e o caminho dele até cruzar a lateral pelo meio-campo: quem sai
   // pelo lado de cá não para em cima disso (nem do quarto árbitro)
   const nPorTime = [0, 0];
+  const xCruza = pontoDeCruzar(m, lista);
   const espera = lista.map(p => {
     const s = p.time === 1 ? -1 : 1, q = nPorTime[p.time === 1 ? 1 : 0]++;
-    return { x: s * (S.espera.x0 + S.espera.passo * q), z: S.espera.z, lado: s };
+    return { x: s * (S.espera.x0 + S.espera.passo * q), z: S.espera.z, lado: s, cx: xCruza[p.time === 1 ? 1 : 0] };
   });
   const obst = [[S.quarto.x, S.quarto.z, S.quarto.x, S.quarto.z]];
   for (const e of espera) {
-    obst.push([e.x, e.z, e.lado * S.cruzaX, e.z]);
-    obst.push([e.lado * S.cruzaX, e.z, e.lado * S.cruzaX, MZ - 2]);
+    obst.push([e.x, e.z, e.cx, e.z]);
+    obst.push([e.cx, e.z, e.cx, MZ - 2]);
   }
   const ps = [];
   lista.forEach((p, k) => {
@@ -153,6 +154,38 @@ export function planejarSubstituicao(m, pares, opc = {}) {
     });
   });
   return { tick: m.tick, pares: ps, planos, duracao, timeHumano: th };
+}
+
+/**
+ * O x em que os reservas de cada time cruzam a lateral (Regra 3.3: pela linha do meio-campo, |x| ≤ 1 m): ±SUBST.cruzaX
+ * (time 0: x +; time 1: x −), ou outro ponto da lista SUBST.cruzaOpcoes se alguém do jogo está parado ali (o cobrador do
+ * lateral no meio-campo: antes o reserva o contornava e cruzava a 1,01 m). Do outro lado da linha do meio só se o outro
+ * time não troca (os reservas dele esperam ali). Sem nenhum livre, o mais longe de todos. Devolve [x do time 0, x do 1].
+ */
+function pontoDeCruzar(m, lista) {
+  const entram = new Set(lista.map(p => p.entra));
+  const troca = [lista.some(p => p.time !== 1), lista.some(p => p.time === 1)];
+  const obs = [];
+  for (const j of m.jogadores) {
+    if (entram.has(j.id)) continue; // na cena, a vaga dele é de quem sai (vai para longe)
+    const v = Math.hypot(j.vx, j.vz), ox = j.x + j.vx * v / 12, oz = j.z + j.vz * v / 12; // onde para (freando a 6 m/s²)
+    if (Math.abs(ox) < 3 && oz > MZ - 2.6 && oz < MZ + 1.6) obs.push(ox);
+  }
+  const out = [0, 0];
+  for (const t of [0, 1]) {
+    const s = t === 1 ? -1 : 1;
+    let melhor = s * S.cruzaX, folga = -Infinity;
+    for (const k of S.cruzaOpcoes) {
+      if (k < 0 && troca[1 - t]) continue;
+      const x = s * k;
+      let f = Infinity;
+      for (const ox of obs) f = Math.min(f, Math.abs(ox - x));
+      if (f >= S.cruzaFolga) { melhor = x; break; }
+      if (f > folga + 1e-9) { folga = f; melhor = x; }
+    }
+    out[t] = melhor;
+  }
+  return out;
 }
 
 // ------------------------------------------------------------------------------------------------ atores e cena
@@ -302,13 +335,13 @@ function desejo(c, a, t) {
     }
     if (a.fase === 'vai') {
       // pela grama, ao longo da lateral, até a frente da linha do meio-campo (freando para virar)
-      const ex = a.lado * S.cruzaX - j.x, ez = S.espera.z - j.z, d = Math.hypot(ex, ez);
+      const ex = c.plano.pares[a.par].espera.cx - j.x, ez = S.espera.z - j.z, d = Math.hypot(ex, ez);
       if (Math.abs(ex) < 0.25) a.fase = 'cruza';
       else return rumoA(c, ex, ez, Math.min(S.velEntra, 0.5 + 1.8 * d), Math.atan2(ez, ex));
     }
     if (a.fase === 'cruza') {
       // cruza a lateral pela linha do meio-campo (Regra 3.3: |x| ≤ 1 m), reto para dentro do campo
-      const ex = a.lado * S.cruzaX - j.x, ez = MZ - 1.2 - j.z;
+      const ex = c.plano.pares[a.par].espera.cx - j.x, ez = MZ - 1.2 - j.z;
       if (j.z < MZ - 0.3) a.fase = 'campo';
       else return rumoA(c, ex, ez, S.velEntra, Math.atan2(ez, ex));
     }
@@ -323,8 +356,9 @@ function desejo(c, a, t) {
 /**
  * Desvio de quem anda (Reynolds, "Steering Behaviors", GDC 1999: evitar obstáculos): alguém à frente (até 1,8 m) e perto
  * da reta (< 0,8 m de lado) empurra o rumo pedido para o lado contrário, mais forte quanto mais perto. Escreve em d.
+ * fora ≠ 0 (o z do ponto de saída rente ao gol): só vale o desvio que AFASTA do meio do gol (|z| maior).
  */
-function desviar(c, a, d) {
+function desviar(c, a, d, fora = 0) {
   const j = a.j;
   let lat = 0;
   for (const b of c.atores) {
@@ -337,11 +371,16 @@ function desviar(c, a, d) {
     const k = ((0.8 - Math.abs(w)) / 0.8) * (1 - u / 1.8);
     lat += (w >= 0 ? -1 : 1) * k;
   }
+  // (à esquerda do rumo = (−dz, dx): o z anda dx·lat; para fora do gol é o sinal de z)
+  if (fora) lat = d.dx * fora > 0 ? Math.max(0, lat) : Math.min(0, lat);
   if (lat === 0) return;
   lat = clamp(lat, -1, 1) * 0.9;
   const nx = d.dx + -d.dz * lat, nz = d.dz + d.dx * lat, l = Math.hypot(nx, nz) || 1;
   d.dx = nx / l; d.dz = nz / l;
 }
+
+/** Ordem da vez entre dois que andam colados (o menor não cede): quem sai antes de quem entra, o par de antes primeiro. */
+function ordemVez(a) { return (a.tipo === SAI_T ? 0 : 100) + a.par; }
 
 /** Ator que anda neste tick (fixo = parado e plantado: não roda a locomoção nem a pose). */
 function anda(a) { return !a.fixo; }
@@ -354,18 +393,23 @@ export function passoCenaSubst(c) {
     const a = at[i];
     if (!anda(a)) continue;
     const d = desejo(c, a, t);
-    // (quem sai pela linha de fundo rente ao gol fica na reta dele: o desvio o poria na boca do gol)
-    if (d.vel > 0.3 && (a.tipo === ENTRA_T || (a.tipo === SAI_T && !c.plano.pares[a.par].rentaGol))) desviar(c, a, d);
+    // (quem sai pela linha de fundo rente ao gol só desvia para o lado de FORA do gol: para dentro, o desvio o poria na
+    // boca do gol; sem desvio nenhum ele trombava em quem já parou na reta e cruzava a linha atrasado)
+    if (d.vel > 0.3 && (a.tipo === ENTRA_T || a.tipo === SAI_T)) desviar(c, a, d, a.tipo === SAI_T && c.plano.pares[a.par].rentaGol ? c.plano.pares[a.par].saida.z : 0);
     passoCorpo(a.j, d.dx, d.dz, d.vel, d.rumo, a.j.par, PASSO, false);
   }
   // ninguém dentro de ninguém: quem sai e quem entra têm a vez (não cedem a quem anda ou freia: esse sai do caminho);
-  // colado em alguém já parado (fixo), quem anda é que cede (contorna)
+  // colado em alguém já parado (fixo), quem anda é que cede (contorna); dois com a vez colados: cede o que vem depois na
+  // ordem (quem sai antes de quem entra; o par de antes primeiro) — antes nenhum dos dois cedia e um entrava no outro
   const min = S.separacao;
   for (const a of c.sai) a.prio = !a.fixo && !a.chegou;
   for (const a of c.entra) a.prio = !a.fixo && (a.fase === 'vai' || a.fase === 'cruza');
   for (const a of at) {
     if (!a.prio) continue;
-    for (const b of at) if (b.fixo && b !== a && Math.hypot(b.j.x - a.j.x, b.j.z - a.j.z) < min + 0.05) { a.prio = false; break; }
+    for (const b of at) {
+      if (b === a || !(b.fixo || (b.prio && ordemVez(b) < ordemVez(a)))) continue;
+      if (Math.hypot(b.j.x - a.j.x, b.j.z - a.j.z) < min + 0.05) { a.prio = false; break; }
+    }
   }
   for (const a of at) if (a.prio) a.fixo = true;
   separar(c, min);
@@ -525,21 +569,30 @@ function previsto(a, out) {
 function assuntoEm(c, ip, u, out) {
   const pl = c.plano.planos[ip];
   if (pl.nome === 'entra') {
-    const a = c.entra[0], j = a.j, v = c.plano.pares[a.par].vaga;
-    const t0 = S.sinal + S.escalona * a.ordem, dc = Math.hypot(a.lado * S.cruzaX - j.x, MZ - j.z);
+    const a = c.entra[0], j = a.j, v = c.plano.pares[a.par].vaga, xc = c.plano.pares[a.par].espera.cx;
+    const t0 = S.sinal + S.escalona * a.ordem, dc = Math.hypot(xc - j.x, MZ - j.z);
     let s = Math.max(0, (u - t0)) * S.velEntra * 0.85;
-    if (s <= dc) { const f = dc > 0 ? s / dc : 1; out.x = lerp(j.x, a.lado * S.cruzaX, f); out.z = lerp(j.z, MZ, f); return out; }
+    if (s <= dc) { const f = dc > 0 ? s / dc : 1; out.x = lerp(j.x, xc, f); out.z = lerp(j.z, MZ, f); return out; }
     s -= dc;
-    const ex = v.x - a.lado * S.cruzaX, ez = v.z - MZ, l = Math.hypot(ex, ez) || 1;
+    const ex = v.x - xc, ez = v.z - MZ, l = Math.hypot(ex, ez) || 1;
     s = Math.min(s, l);
-    out.x = a.lado * S.cruzaX + (ex / l) * s; out.z = MZ + (ez / l) * s;
+    out.x = xc + (ex / l) * s; out.z = MZ + (ez / l) * s;
     return out;
   }
-  const a = c.sai.find(x => x.par === pl.par) ?? c.sai[0];
-  const sd = c.plano.pares[a.par].saida, j = a.j;
+  return caminhoSai(c, c.sai.find(x => x.par === pl.par) ?? c.sai[0], u, out);
+}
+/**
+ * Onde quem sai vai estar daqui a u s (aproximado): pela normal até a linha e depois até o ponto em que ele para (o
+ * `para` do plano: de lado ao longo da linha se outro já parou ali — antes a conta seguia a normal e a câmera ficava
+ * colada em quem parava de lado).
+ */
+function caminhoSai(c, a, u, out) {
+  const p = c.plano.pares[a.par], sd = p.saida, j = a.j;
   const s0 = (j.x - sd.x) * sd.nx + (j.z - sd.z) * sd.nz;
-  const s = Math.min(S.alemLinha, s0 + S.velSai * u);
-  out.x = sd.x + sd.nx * s; out.z = sd.z + sd.nz * s;
+  const s = s0 + S.velSai * u;
+  if (s <= 0) { out.x = sd.x + sd.nx * s; out.z = sd.z + sd.nz * s; return out; }
+  const ex = p.para.x - sd.x, ez = p.para.z - sd.z, l = Math.hypot(ex, ez) || 1, f = Math.min(1, s / l);
+  out.x = sd.x + ex * f; out.z = sd.z + ez * f;
   return out;
 }
 /** Assunto do plano ip (o ator). */
@@ -552,7 +605,7 @@ function assunto(c, ip) {
 /** Custo da câmera em (cx, cz): gente perto da lente (inválida) e gente entre a lente e o assunto (oclusão). */
 function custoCamera(c, ip, cx, cz, dur) {
   const sujeito = assunto(c, ip);
-  let oclusao = 0;
+  let oclusao = 0, duro = 0;
   for (const a of c.atores) {
     if (a === sujeito) continue;
     const p = previsto(a, _pt);
@@ -563,17 +616,16 @@ function custoCamera(c, ip, cx, cz, dur) {
       let ax = p.x, az = p.z;
       if (movel) {
         if (a.tipo === SAI_T) {
-          const sd = c.plano.pares[a.par].saida, j = a.j;
-          const s0 = (j.x - sd.x) * sd.nx + (j.z - sd.z) * sd.nz, s = Math.min(S.alemLinha, s0 + S.velSai * u);
-          ax = sd.x + sd.nx * s; az = sd.z + sd.nz * s;
+          caminhoSai(c, a, u, _pt);
+          ax = _pt.x; az = _pt.z;
         } else if (c.plano.planos[ip].nome === 'entra') {
           // os outros reservas: entre a espera e o ponto de cruzar
           const f = clamp((u - S.sinal - S.escalona * a.ordem) / 1.0, 0, 1);
-          ax = lerp(a.j.x, a.lado * S.cruzaX, f); az = lerp(a.j.z, MZ - 0.5, f);
+          ax = lerp(a.j.x, c.plano.pares[a.par].espera.cx, f); az = lerp(a.j.z, MZ - 0.5, f);
         }
       }
       const da = Math.hypot(ax - cx, az - cz);
-      if (da < S.lenteMin + 0.5) return Infinity;
+      if (da < S.lenteMin + 0.5) { duro += S.lenteMin + 0.5 - da; continue; }
       const q = assuntoEm(c, ip, u, _q);
       const ex = q.x - cx, ez = q.z - cz, el2 = ex * ex + ez * ez || 1;
       const w = ((ax - cx) * ex + (az - cz) * ez) / el2;
@@ -588,14 +640,22 @@ function custoCamera(c, ip, cx, cz, dur) {
       }
     }
   }
-  // o assunto também nunca colado na lente
+  // o assunto também nunca colado na lente; no ENTRA (fov fixo) nunca mais perto do que a distância em que o corpo
+  // inteiro cabe no quadro (com a vaga para o lado da lente ele vinha correndo para ela e a cabeça saía por cima)
+  const dMin = c.plano.planos[ip].nome === 'entra' ? D_CABE_ENTRA : S.lenteMin + 1;
   for (const u of SAMPLES) {
     if (u > dur + 1e-9) break;
     const q = assuntoEm(c, ip, u, _q);
-    if (Math.hypot(q.x - cx, q.z - cz) < S.lenteMin + 1) return Infinity;
+    const dq = Math.hypot(q.x - cx, q.z - cz);
+    if (dq < dMin) duro += dMin - dq;
   }
-  return oclusao;
+  // alguém perto da lente: a câmera só fica se não houver outra — e então a que deixa todos mais longe
+  return duro > 0 ? DURO * (1 + duro) + oclusao : oclusao;
 }
+const DURO = 1e6;
+// distância (m) a partir da qual o corpo inteiro (1,95 m com folga) cabe entre os pés (SUBST.pes) e a cabeça
+// (SUBST.cabeca) no fov fixo do plano ENTRA, + 0,5 m (a conta do assuntoEm é aproximada)
+const D_CABE_ENTRA = 1.95 / ((2 * S.cabeca - 2 * S.pes) * Math.tan((S.camEntra.fov * Math.PI) / 360)) + 0.5;
 const _q = { x: 0, z: 0 };
 
 /** Câmera de um plano: {x, y, z} (fixa no plano inteiro), escolhida no começo dele. */
@@ -638,6 +698,16 @@ function escolherCamera(c, ip) {
     for (const Ld of [L, A.lado[0], A.lado[1]]) for (const Fd of [F, A.fora[0], A.fora[1]]) {
       const x = sd.x + tx * l * Ld + sd.nx * Fd, z = sd.z + tz * l * Ld + sd.nz * Fd;
       if (tentar(x, A.altura, z)) return melhor;
+    }
+  }
+  // nenhuma livre (vários saindo pelo mesmo lado, os reservas e o quarto árbitro no meio-campo): mais longe ao longo da
+  // linha e mais para fora (o zoom acompanha a distância); sem nenhuma livre, fica a menos ruim (custo duro: a que deixa
+  // todos mais longe da lente) — antes ia para a posição padrão sem conferir ninguém
+  const okPos = (x, z) => (sd.linha === 'lateral' ? Math.abs(x) <= MX - 3 : Math.abs(z) >= 6 && Math.abs(z) <= MZ - 3);
+  for (const l of [lado, -lado]) {
+    for (const Ld of A.longe) for (const Fd of [F, A.fora[0], A.fora[1], A.foraMax]) {
+      const x = sd.x + tx * l * Ld + sd.nx * Fd, z = sd.z + tz * l * Ld + sd.nz * Fd;
+      if (okPos(x, z) && tentar(x, A.altura, z)) return melhor;
     }
   }
   return melhor ?? { x: sd.x + tx * lado * L + sd.nx * F, y: A.altura, z: sd.z + tz * lado * L + sd.nz * F };

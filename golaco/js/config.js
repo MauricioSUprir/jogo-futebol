@@ -1323,9 +1323,13 @@ export const SUBST = {
   quarto: { x: 0, z: 35.6 },  // o quarto árbitro com a placa, de frente para o campo
   espera: { x0: 0.7, passo: 0.8, z: 35.2 }, // reservas esperando na grama entre a lateral e as placas (x = ±(x0 + passo·k))
   cruzaX: 0.5,                // |x| do ponto em que o reserva cruza a lateral (Regra 3.3: pela linha do meio-campo)
+  // outros pontos (× o lado do time; negativo = do outro lado da linha do meio, só se o outro time não troca) quando
+  // alguém do jogo está parado a < cruzaFolga m do x (o cobrador do lateral no meio-campo)
+  cruzaOpcoes: [0.5, 0.2, 0.85, -0.2, -0.5, -0.85], cruzaFolga: 0.85,
   // câmera de ala do plano SAI: altura, lado (m ao longo da linha a partir do ponto de saída), fora (m para fora da
   // linha, antes das placas) e fov (vertical, graus, para 16:9) que enquadra o corpo inteiro na distância de 7 m
-  camSai: { altura: 1.5, lado: [5, 7], fora: [1.5, 2.5], fov: 22 },
+  // (longe/foraMax: a 2ª grade, quando nenhuma da 1ª fica a ≥ lenteMin + 0,5 m de todos)
+  camSai: { altura: 1.5, lado: [5, 7], fora: [1.5, 2.5], fov: 22, longe: [8, 9, 10, 4], foraMax: 3.2 },
   // câmera do plano ENTRA: no gramado do lado de cá, do lado contrário ao x da vaga, olhando o quarto árbitro
   camEntra: { x: 5, y: 1.4, z: 28, alvo: [0, 1.5, 35], fov: 26 },
   // enquadramento: os pés acima da faixa embaixo (fração da altura do quadro a partir de baixo) e a cabeça no alto

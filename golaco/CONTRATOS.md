@@ -641,16 +641,22 @@ ligada, desligada e em Node (`teste-substituicao-tela` T1).
   os reservas e o quarto árbitro, id `SUBST.idQuarto` = 203, kit 'arbitro', em (0; 35,6); a bola copiada — no chão se
   estava na mão de quem sai; só o par 0 tem pré-rolagem de 1,1 s, os outros começam parados); `passoCenaSubst(c)` = 1
   tick com a MESMA locomoção do jogo (`passoCorpo → passoPassada → passoPeDesenhado → alturaQuadril → pose`), desvio
-  de Reynolds para quem anda, separação a 0,55 m, quem freou e assentou fica fixo (sem custo); `avancarCenaSubst(c, dt)`
+  de Reynolds para quem anda (quem sai rente ao gol só desvia para FORA dele), separação a 0,55 m (dois com a vez colados:
+  cede o de depois — quem sai antes de quem entra, o par de antes primeiro), quem freou e assentou fica fixo (sem custo); `avancarCenaSubst(c, dt)`
   (devolve `alfa`), `tempoCenaSubst`, `duracaoCenaSubst`, `planoEm(c, t)`, `placaNasMaos(c, pose, out)`, `paresDaPlaca(c,
   t, out)` ({indice, n, time, entra, sai, corEntra: 'verde', corSai: 'vermelho'}: troca a cada `placaTroca` s, o do humano
   primeiro), `planoCameraSubst(c, {pequena, aspecto}, out)` → `{nome: 'sai' | 'sai2' | 'entra' | 'fim', de, para, fov}`
-  (SAI: câmera de ala FORA da linha, ≥ `lenteMin` + 0,5 m de todo ator, sem ninguém grande no quadro, nunca em sólido
-  — `estadio-forma.js solidoEm`; o corpo inteiro acima da faixa: pés a `SUBST.pes` do quadro; ENTRA: câmera baixa no
-  gramado do lado de cá, pan do quarto para o reserva; celular: `comemoracao.js ajustarCelular`), `consumirEventosSubst(c,
+  (SAI: câmera de ala FORA da linha, ≥ `lenteMin` + 0,5 m de todo ator — quem sai pelo caminho até o `para` dele —, sem
+  ninguém grande no quadro, nunca em sólido — `estadio-forma.js solidoEm`; sem nenhuma livre na grade, a 2ª grade
+  `camSai.longe`/`foraMax`; sem nenhuma livre nela, a menos ruim (custo duro finito), nunca a posição padrão sem conferir;
+  o corpo inteiro acima da faixa: pés a `SUBST.pes` do quadro; ENTRA: câmera baixa no gramado do lado de cá, pan do
+  quarto para o reserva, o reserva nunca mais perto da lente que a distância em que o corpo cabe no fov fixo + 0,5 m;
+  celular: `comemoracao.js ajustarCelular`), `consumirEventosSubst(c,
   out)` (`{tipo: 'substituicao', cruzou: true, time, sai, entra}` quando quem sai cruza a linha: palmas da torcida dele em
   `render/emocao.js`), `infoAtoresSubst(c)`. Quem entra cruza a lateral só DEPOIS do par dele ter saído, pela linha do
-  meio-campo (|x| ≤ 1 m), a partir de `sinal` + `escalona`·ordem s do plano ENTRA. `comemoracao.js` só passou a exportar
+  meio-campo (|x| ≤ 1 m: `±cruzaX`, ou o 1º de `cruzaOpcoes` a ≥ `cruzaFolga` de quem do jogo está parado ali — o
+  cobrador do lateral no meio-campo —; do outro lado da linha do meio só se o outro time não troca), a partir de `sinal`
+  + `escalona`·ordem s do plano ENTRA. `comemoracao.js` só passou a exportar
   `copiaJogador`, `criarAtor`, `separar(c, min)`, `maoEm`, `gesto`, `limitarCamera`, `ajustarCelular` (a comemoração não
   mudou).
 - **`render/placa-subst.js`**: `criarPlacaSubst(cena)` → `{mesh, estado {visivel, entra, sai}, mostrar(entra, sai),
@@ -683,8 +689,9 @@ ligada, desligada e em Node (`teste-substituicao-tela` T1).
   `atores()`, `camera`, `naTela(id?)`, `placa` {`estado`, `naTela()`}, `pular()`, `ligada(v?)` (sem salvar), `custo`,
   `zerarCusto()`, `fila`, `faixa()`}; `substituicaoDeTeste({pares, time, parada})` (a edição na fila e a parada forçada
   como `bolaParadaDeTeste`; a troca sai pelo `aplicarPendentes` de verdade); `estadio.sonsPedidos`; `estado().programas`.
-- **Testes**: `tools/teste-substituicao.mjs` (Node, padrão; `--js <pasta>`: sem o módulo, reprova) — canhão de 49 paradas
-  (8 sementes × lateral, escanteio, tiro de meta, tiro livre, pênalti, gol + 5 + 5): S1 duração e o corte para a TV; S2
+- **Testes**: `tools/teste-substituicao.mjs` (Node, padrão; `--js <pasta>`: sem o módulo, reprova; `--estresse`: + 48
+  sementes, 337 paradas, ~1,5 min — rodar em toda mescla da main que mude a simulação: os estados mudam e a cena tem de
+  passar em todos) — canhão de 49 paradas (8 sementes × lateral, escanteio, tiro de meta, tiro livre, pênalti, gol + 5 + 5): S1 duração e o corte para a TV; S2
   Regra 3.3 (≤ 0,5 m do ponto mais perto, nunca a boca do gol, antes do fim do plano dele; no 1º quadro andando 2,2 m/s a
   3,0–3,6 m), quem entra pelo meio-campo só depois do par; S3 NaN, ossos, pé plantado ≤ 0,05 m/s e pé no ar (a régua do
   `teste-patinacao`); S4 corpos ≥ 0,5 m, ninguém nas placas nem no gol; S5 hash e rng iguais, sem Math.random, mesma
