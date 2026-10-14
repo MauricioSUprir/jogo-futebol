@@ -250,7 +250,7 @@ const CC = await tentar('cena-cartao.js');
 const CA = await tentar('cena-atores.js');
 const LC = await import(pathToFileURL(path.join(AQUI, 'lib/cenas-node.mjs')).href);
 const SITUACOES = ['amarelo', 'vermelho', 'segundo', 'penalti', 'vantagemGol', 'goleiro'];
-const ESTADOS = [[3, 1500], [5, 2600], [7, 900], [11, 3400], [13, 1900], [17, 4300], [19, 2200], [23, 3000]];
+const ESTADOS = [[3, 900], [5, 2600], [7, 900], [11, 3400], [13, 1900], [17, 4300], [19, 2200], [23, 3000]];
 const cenasA = [];
 const custosA = [];
 if (roda('A') || roda('E') || roda('G')) {
@@ -311,6 +311,24 @@ function medirCartao(c) {
         const d = Math.hypot(o[J.pelve * 3] - po[J.pelve * 3], o[J.pelve * 3 + 2] - po[J.pelve * 3 + 2]);
         x.distAlto[0] = Math.min(x.distAlto[0], d); if (d > x.distAlto[1]) { x.distAlto[1] = d; x.tAlto = +t.toFixed(2); }
         if (nome === 'arbitro') {
+          // o cartão visível: a reta da lente até ele (a mão + 7 cm) longe da cabeça, do pescoço, dos ombros e do peito de
+          // todo mundo (o punido e o capitão que entra entre os dois, sobretudo)
+          {
+            const tx = o[J.maoD * 3], ty = o[J.maoD * 3 + 1] + 0.07, tz = o[J.maoD * 3 + 2];
+            const dx = tx - pc.de[0], dy = ty - pc.de[1], dz = tz - pc.de[2], l2 = dx * dx + dy * dy + dz * dz;
+            let dmin = Infinity;
+            for (const at of cc.atores) {
+              if (!at.ativo || at === arb) continue;
+              const pa = at.atu;
+              for (const [k, raio] of [[J.cabeca, 0.13], [J.pescoco, 0.08], [J.ombroE, 0.08], [J.ombroD, 0.08], [J.peito, 0.14]]) {
+                const qx = pa[k * 3], qy = pa[k * 3 + 1], qz = pa[k * 3 + 2];
+                const w = Math.max(0, Math.min(1, ((qx - pc.de[0]) * dx + (qy - pc.de[1]) * dy + (qz - pc.de[2]) * dz) / l2));
+                dmin = Math.min(dmin, Math.hypot(pc.de[0] + dx * w - qx, pc.de[1] + dy * w - qy, pc.de[2] + dz * w - qz) - raio);
+              }
+            }
+            x.altoArb = (x.altoArb ?? 0) + 1;
+            if (dmin < 0.1) x.tampado = (x.tampado ?? 0) + 1;   // (o cartão tem 11 × 16 cm: a 10 cm da borda já some parte dele)
+          }
           // o cartão de frente para o punido: o ângulo entre a face e a direção da câmera
           let nx = po[J.peito * 3] - o[J.peito * 3], nz = po[J.peito * 3 + 2] - o[J.peito * 3 + 2];
           const ln = Math.hypot(nx, nz) || 1; nx /= ln; nz /= ln;
@@ -426,6 +444,9 @@ if (cenasA.length) {
   const dmin = Math.min(...cenasA.map(x => x.distAlto[0])), dmax = Math.max(...cenasA.map(x => x.distAlto[1]));
   reg('A árbitro: distância ao punido com o cartão no alto', `${f2(dmin)}–${f2(dmax)} m`, '1,5–3,2 m', dmin >= 1.5 && dmax <= 3.2);
   if (detalhe) for (const x of cenasA) if (x.distAlto[0] < 1.5 || x.distAlto[1] > 3.2) console.log('distancia', x.sit, x.sem, x.variante, x.distAlto.map(f2).join('–'), x.tAlto);
+  const tamp = Math.max(...cenasA.map(x => (x.tampado ?? 0) / Math.max(1, x.altoArb ?? 0)));
+  reg('A o cartão no alto não fica atrás de ninguém (cabeça, pescoço, ombros, peito) no plano do árbitro', `pior cena ${f2(100 * tamp)}% dos ticks com o cartão no alto`, '≤ 10%', tamp <= 0.1);
+  if (detalhe) for (const x of cenasA) if ((x.tampado ?? 0) / Math.max(1, x.altoArb ?? 0) > 0.1) console.log('tampado', x.sit, x.sem, x.variante, x.tampado, x.altoArb);
   const ang = Math.max(...cenasA.map(x => x.angCartao));
   reg('A o cartão de frente para a câmera no plano do árbitro', `pior ${f2(ang)}°`, '≤ 35°', ang <= 35);
   const ifab = cenasA.filter(x => x.plano.variante === 'abertos' || x.plano.variante === 'segurado');

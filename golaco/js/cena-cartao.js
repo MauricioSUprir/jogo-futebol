@@ -299,7 +299,8 @@ function desejo(c, a, t) {
     return d;
   }
   if (a === c.punido) return desejoPunido(c, a, t);
-  if (a === c.apoio) return desejoApoio(c, a, t);
+  // no plano do árbitro ninguém entra na frente do cartão (a reta da lente até o árbitro; o capitão também, enquanto chega)
+  if (a === c.apoio) { const fl0 = foraDaLinha(c, a, 1.2); return fl0 ?? desejoApoio(c, a, t); }
   // quem está na frente da lente sai dela
   _ev.x = arb.x; _ev.z = arb.z; _ev.r = c.limAfasta + 0.7;
   const fl = fugirDaLente(c, a, undefined, _ev);
@@ -316,7 +317,30 @@ function desejo(c, a, t) {
     return desviar(c, a, irPara(c, a, a.alvoX, a.alvoZ, K.velAfasta, Math.atan2(-ez, -ex), 0.1, 3));
   }
   a.afasta = false;
+  const fl1 = foraDaLinha(c, a);
+  if (fl1) return desviar(c, a, fl1);
   return parar(c, a, arb.x, arb.z);
+}
+
+/**
+ * No plano do árbitro (a lente em c.camDe): quem está a menos de 0,75 m da reta da lente até o árbitro (entre os dois)
+ * sai de lado — o cartão no alto nunca fica atrás de ninguém (perto do árbitro, a menos de minArb m, manda a roda do
+ * IFAB). Devolve o desejo ou null.
+ */
+function foraDaLinha(c, a, minArb = c.limAfasta + 0.6) {
+  if (!c.camDe || c.planoAgora !== 'arbitro') return null;
+  const ar = c.arbitro.j, cx = c.camDe.x, cz = c.camDe.z;
+  const sx = ar.x - cx, sz = ar.z - cz, l2 = sx * sx + sz * sz;
+  if (l2 < 1) return null;
+  const j = a.j, w = ((j.x - cx) * sx + (j.z - cz) * sz) / l2;
+  if (w <= 0.05 || w >= 1.0) return null;
+  // perto do árbitro manda a roda do IFAB (quem afasta) e o papel de quem está com ele
+  if (Math.hypot(j.x - ar.x, j.z - ar.z) < minArb) return null;
+  const qx = cx + sx * w, qz = cz + sz * w, ex = j.x - qx, ez = j.z - qz, d = Math.hypot(ex, ez);
+  if (d >= 0.75) return null;
+  soltar(a);
+  const l = Math.sqrt(l2), nx = -sz / l, nz = sx / l, sg = d > 0.02 ? (ex * nx + ez * nz >= 0 ? 1 : -1) : 1;
+  return irPara(c, a, qx + nx * sg * 1.0, qz + nz * sg * 1.0, 3.0, Math.atan2(ar.z - j.z, ar.x - j.x), 0.05, 4);
 }
 
 /** O destino de quem sai: a lateral do lado do túnel; depois da elipse, a frente do vão e a boca do túnel. */
@@ -568,6 +592,7 @@ export function passoCenaCartao(c) {
   // equipe se posiciona: escolhida já, ela fica para o plano): quem está na frente de uma delas sai
   const t0 = c.k * PASSO, P0 = c.plano.planos, ia = planoNoTempo(c, t0);
   c.camDe = null; c.camDe2 = null;
+  c.planoAgora = ia < P0.length ? P0[ia].nome : null;
   if (ia < P0.length && LENTE_LIVRE[P0[ia].nome]) { planoIndice(c, ia, t0, _opcLente, _pcLente); _camDe.x = _pcLente.de[0]; _camDe.z = _pcLente.de[2]; c.camDe = _camDe; }
   if (ia + 1 < P0.length && LENTE_LIVRE[P0[ia + 1].nome] && P0[ia + 1].t0 - t0 <= 0.9) {
     if (!c.cams[ia + 1]) c.cams[ia + 1] = escolherCamera(c, ia + 1);
@@ -648,8 +673,10 @@ function escolherCamera(c, ip) {
       for (const da of [C.arbitro.ang, -C.arbitro.ang, C.arbitro.ang * 0.7, -C.arbitro.ang * 0.7, C.arbitro.ang * 0.4, -C.arbitro.ang * 0.4]) {
         for (const dist of [C.arbitro.dist, C.arbitro.dist - 0.8, C.arbitro.dist + 0.8]) {
           const x = ax + Math.cos(base + da) * dist, z = az + Math.sin(base + da) * dist;
-          // do lado da TV (z maior que o punido) é a preferência; o ângulo maior custa um pouco
-          cands.push({ x, y: C.arbitro.altura, z, pref: (z < P.parada.z ? 1.5 : 0) + Math.abs(da) * 0.4 + Math.abs(dist - C.arbitro.dist) * 0.2 });
+          // do lado da TV (z maior que o punido) é a preferência; o ângulo maior custa um pouco; o cartão no alto não pode
+          // ficar atrás da cabeça nem do ombro do punido (a reta da lente até ele passa longe deles)
+          const tap = tampaCartao(x, C.arbitro.altura, z, ax, az, P.parada.x, P.parada.z);
+          cands.push({ x, y: C.arbitro.altura, z, pref: (z < P.parada.z ? 1.5 : 0) + Math.abs(da) * 0.4 + Math.abs(dist - C.arbitro.dist) * 0.2 + tap });
         }
       }
       _a.length = 0; _a.push(arb, pun);
@@ -706,6 +733,22 @@ function escolherCamera(c, ip) {
     }
     default: return { x: 0, y: 10, z: 30 };
   }
+}
+
+/**
+ * Custo de o punido (em px, pz) tampar o cartão no alto (o árbitro em ax, az; o cartão a ~2,2 m) visto da lente (cx, cy,
+ * cz): a reta da lente até o cartão perto da cabeça (1,72 m) ou dos ombros (1,45 m) dele.
+ */
+function tampaCartao(cx, cy, cz, ax, az, px, pz) {
+  const tx = ax + (px - ax) * 0.06, ty = 2.2, tz = az + (pz - az) * 0.06;
+  const dx = tx - cx, dy = ty - cy, dz = tz - cz, l2 = dx * dx + dy * dy + dz * dz;
+  let custo = 0;
+  for (const [hy, raio] of [[1.72, 0.42], [1.45, 0.5]]) {
+    const w = Math.max(0, Math.min(1, ((px - cx) * dx + (hy - cy) * dy + (pz - cz) * dz) / l2));
+    const d = Math.hypot(cx + dx * w - px, cy + dy * w - hy, cz + dz * w - pz);
+    if (d < raio) custo += (raio - d) * 20;
+  }
+  return custo;
 }
 
 /** A câmera da reação de cada variação (plano de três, de frente, steadicam). */

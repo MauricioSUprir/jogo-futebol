@@ -1237,11 +1237,12 @@ export const COMEMORACAO = {
   // 'lateral1' (o setor visitante, fundo −x, de lado). Sem repetir o do gol anterior.
   torcida: {
     depoisFinal: 0.4, max: 1.5,
+    // (o olhar sobe ~12°: a arquibancada enche o quadro até a cobertura — à noite o céu preto não entra)
     enquadra: {
-      fundo: { de: [49, 1.7, 9], para: [68, 8.5, 2.5], fov: 36 },
-      lateral0: { de: [22, 1.7, -31.5], para: [25, 9.5, -52], fov: 34 },
-      lateral1: { de: [-50, 1.7, -26], para: [-68, 8.5, -11], fov: 34 },
-      close: { de: [51, 1.5, 7], para: [64, 6.5, 3.5], fov: 30 },
+      fundo: { de: [49, 1.7, 9], para: [68, 5.6, 2.5], fov: 36 },
+      lateral0: { de: [22, 1.7, -31.5], para: [25, 6.0, -52], fov: 34 },
+      lateral1: { de: [-50, 1.7, -26], para: [-68, 5.6, -11], fov: 34 },
+      close: { de: [51, 1.5, 7], para: [64, 4.4, 3.5], fov: 30 },
     },
   },
   // corte do TREINADOR do time que marcou (o GANCHO: só com o ator dele — a frente dos treinadores entrega): +1,5 s

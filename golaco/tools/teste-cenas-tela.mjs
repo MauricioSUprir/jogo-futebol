@@ -280,9 +280,10 @@ try {
     // 7b) o fim do jogo: cena → faixa "Fim de jogo" + "Jogar de novo"
     const fim = await pg.evaluate(() => {
       const g = window.__golaco;
+      let z = 0; while (g.cenas.ativo && z < 1500) { g.relogio.avancar(1000 / 60, { desenhar: false }); z++; }
       g.fimDeTempoDeTeste('fimDeJogo', { 0: 2, 1: 1 });
       const ini = g.cenas.estado;
-      const faixa = () => { const f = document.querySelector('.faixa'); return !!f && getComputedStyle(f).display !== 'none' && f.classList.contains('visivel') ? f.innerText.replace(/\s+/g, ' ').trim() : null; };
+      const faixa = () => { const f = document.querySelector('.faixa'); return !!f && !f.hidden && getComputedStyle(f).display !== 'none' ? f.innerText.replace(/\s+/g, ' ').trim() : null; };
       let antesGeral = null, q = 0;
       while (g.cenas.ativo && !g.cenas.estado.geral && q < 1500) { g.relogio.avancar(1000 / 60, { desenhar: false }); q++; if (antesGeral == null && faixa()) antesGeral = faixa(); }
       for (let i = 0; i < 10; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
@@ -328,7 +329,7 @@ const intervalo = async q => {
       let q = 0;
       while (m.partida.estado !== 'intervalo' && q < 20000) { g.relogio.avancar(1000 / 60, { desenhar: false }); q++; }
       const tick0 = m.tick, out = { tick0, cena: g.cenas?.ativo ?? false, parado: true, geral: false, faixa: null, saida: null, planos: [] };
-      const faixaTxt = () => { const f = document.querySelector('.faixa'); return f && f.classList.contains('visivel') && getComputedStyle(f).display !== 'none' ? f.innerText.replace(/\s+/g, ' ').trim() : null; };
+      const faixaTxt = () => { const f = document.querySelector('.faixa'); return f && !f.hidden && getComputedStyle(f).display !== 'none' ? f.innerText.replace(/\s+/g, ' ').trim() : null; };
       while (g.cenas?.ativo && !g.cenas.estado.geral && q < 30000) {
         g.relogio.avancar(1000 / 60, { desenhar: false }); q++;
         if (m.tick !== tick0) out.parado = false;

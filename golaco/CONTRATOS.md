@@ -612,7 +612,8 @@ muda; `hash-igual` e `hash-partida` IGUAIS).
 - **`js/cena-cartao.js`** (puro): `escolherCartao(eventos)` (o mais grave do passo; o 2º amarelo vira UM vermelho com
   `segundo`; os outros em `outros`), `planejarCartao(m, cartao, {ultimaAmarelo, ultimaVermelho, variante, timeHumano})` →
   plano (variante, apoio a ≤ 15 m, árbitro: de onde vem e onde para — 2,0–2,8 m do punido —, planos, tempos),
-  `criarCenaCartao(plano, m)` (cópias; o capitão longe e o árbitro já vêm correndo — pré-rolagem), `passoCenaCartao`,
+  `criarCenaCartao(plano, m)` (cópias; o capitão longe e o árbitro já vêm correndo — pré-rolagem; no plano do árbitro a
+  câmera fica longe da reta até o cartão no alto e ninguém entra na frente dele: `tampaCartao`, `foraDaLinha`), `passoCenaCartao`,
   `avancarCenaCartao(c, dt)`, `faseCartao`, `tempoCenaCartao`, `duracaoCenaCartao`, `planoCameraCartao(c, {pequena,
   aspecto}, out)` (`out.tunel` = abrir o vão das placas), `cartaoNaMao(c, poseDesenhada, out)` (a mão e a face do cartão),
   `consumirEventosCartao` (`cartaoCena` {fase 'alto' | 'saida', cor, time}, `aplausoExpulso`), `infoAtoresCartao`.

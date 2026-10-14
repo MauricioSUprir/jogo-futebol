@@ -1184,6 +1184,9 @@ function quadro(agoraMs, desenhar = true) {
     laco.ultimo = agoraMs;
     estadioSegurado(dt);
     quadroCenaJogo(dt, ent);
+    // o aperto curto já foi visto por este quadro (sem passos, ninguém mais limpa: um toque antes de 0,5 s ficaria preso e
+    // o aperto novo depois não seria novo)
+    entrada.limparPulsos();
     alfa = 1;
   } else {
     // comemoração: anda no relógio do desenho (um aperto novo depois de 0,5 s pula)
