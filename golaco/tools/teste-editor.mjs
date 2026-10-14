@@ -427,7 +427,9 @@ bloco('E10', () => {
 // ------------------------------------------------------------------------------------ E11
 {
   // hashes gravados (as cenas de tools/hash-igual.mjs, encurtadas: 1800 passos, hash a cada 600) — o ataque-1 gravado
-  // de novo com a bola encostada só com o marcador à frente ou de lado (14/10, sim.js boteIA: diverge no 2º hash —
+  // de novo com o cabeceio na bola rolando (PR #471, 14/10: no tick 1777 a bola de um lançamento está a 6,2 m e o pulo
+  // do cabeceio — que vale no treino onde há bola alta, CONTRATOS "Cabeceio na bola rolando" — muda o 3º hash; antes:
+  // ataque-1 [3619134975, 1608967163, 1634992519]); o ataque-1 gravado de novo com a bola encostada só com o marcador à frente ou de lado (14/10, sim.js boteIA: diverge no 2º hash —
   // antes: ataque-1 [3619134975, 1428056045, 2443973810]; o ataque-2 e a condução não mudam); o ataque gravado
   // de novo com o bote recalibrado para a condução curta (ACOES.boteIA colada/bolaSolta × 0,87 e a bola encostada no
   // marcador; a condução não muda — antes: ataque-1 [3586056966, 2447456466, 624803259], ataque-2 [3642177924, 77078510,
@@ -439,7 +441,7 @@ bloco('E10', () => {
   // correções da contraprova (base 980b0b0 era: ataque-1 [3298389666, 255764296, 4082737914], ataque-2 [3929265932,
   // 3750097417, 646006693], conducao-7 [1415330591, 986885701, 4093573822])
   const GRAVADO = {
-    'ataque-1': [3619134975, 1608967163, 1634992519],
+    'ataque-1': [3619134975, 1608967163, 1555434781],
     'ataque-2': [1010992996, 2184279481, 1380498239],
     'conducao-7': [1241881221, 2297094772, 3558332514],
   };
