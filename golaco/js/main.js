@@ -230,15 +230,21 @@ function controlado() { return jogadorPorId(mundo, idControlado()) ?? jogadorPor
  * os dois formatos leem os mesmos números (o hash não muda). Um objeto só, reaproveitado a cada
  * passo (a lógica lê os números no passo e não guarda a referência).
  */
-const _entTime = { [TIME_HUMANO]: { x: 0, z: 0, botoes: 0 } };
+const _entTime = { [TIME_HUMANO]: { x: 0, z: 0, botoes: 0, iaCobra: false } };
 Object.defineProperties(_entTime, {
   x: { value: 0, writable: true }, z: { value: 0, writable: true }, botoes: { value: 0, writable: true },
+  iaCobra: { value: false, writable: true },
 });
 function entradaDoTime(e) {
   const x = e?.x ?? 0, z = e?.z ?? 0, botoes = (e?.botoes ?? 0) | 0;
+  // a IA jogando pelo humano (?demo=1: a entrada da demo traz `ia` ou `iaCobra`): os botões NÃO são da pessoa — sem
+  // cavadinha por dois toques nem espera do toque rápido (sim.js/partida.js porHumano). Só a marca `iaCobra` passa: o
+  // `ia` a página nunca entregou (a recepção e o goleiro da demo da página seguem como antes; contraprova 13/10: sem a
+  // marca, a cobrança da demo virava cavadinha, 9 em 40 pênaltis)
+  const ia = !!(e && (e.ia || e.iaCobra));
   const d = _entTime[TIME_HUMANO];
-  d.x = x; d.z = z; d.botoes = botoes;
-  _entTime.x = x; _entTime.z = z; _entTime.botoes = botoes;
+  d.x = x; d.z = z; d.botoes = botoes; d.iaCobra = ia;
+  _entTime.x = x; _entTime.z = z; _entTime.botoes = botoes; _entTime.iaCobra = ia;
   return _entTime;
 }
 
@@ -984,9 +990,13 @@ function quadro(agoraMs, desenhar = true) {
       let ac = filaAcoes.length ? filaAcoes.splice(0) : null;
       // a edição do time entra ANTES das outras ações, no 1º passo depois da pausa
       if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
+      // o que este passo vê dos botões (o reaperto entre dois passos vira solto + apertado: entrada.js). ANTES do passo:
+      // o replay que começa dentro dele (impedimento, gol na saída) limpa isso (limparPulsos) — depois, a tecla
+      // segurada no apito ficava como "vista" o replay inteiro e não pulava mais
+      entrada.passoUsou(e.botoes);
       rodarPasso(e, ac);
       // o aperto curto (tocou e soltou entre dois passos) já foi visto por um passo
-      if (i === 0) { entrada.limparPulsos(); ent.botoes = entrada.ler(cam.yaw, agoraMs).botoes; }
+      if (i === 0) { entrada.limparPulsos(true); ent.botoes = entrada.ler(cam.yaw, agoraMs).botoes; }
       // o replay começou neste passo (gol, impedimento): os passos que sobraram não rodam (a simulação espera)
       if (diretor && diretor.ativo) break;
       // a cortina acabou na saída (a cena saiu): o resto do quadro é do laço normal
@@ -1423,7 +1433,7 @@ const api = {
       e = e ?? { x: 0, z: 0, botoes: 0 };
       // a edição na fila (Editar time / editarTime) entra no 1º passo, como no laço da página
       if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
-      rodarPasso({ x: e.x ?? 0, z: e.z ?? 0, botoes: e.botoes ?? 0 }, ac);
+      rodarPasso({ x: e.x ?? 0, z: e.z ?? 0, botoes: e.botoes ?? 0, iaCobra: !!(e.ia || e.iaCobra) }, ac);
     }
     return hashMundo(mundo);
   },

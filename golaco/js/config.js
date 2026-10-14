@@ -398,7 +398,7 @@ export const ACOES = {
   pedidoValidade: 0.6,        // s — pedido sem toque possível expira
   pedidoPrimeira: 1.6,        // s — esperando a bola chegar para bater de primeira
   primeiraFolga: 0.3,         // s — o humano com o passe vindo (j.recebe): o pedido de primeira vale até a chegada + isto
-  toqueDuplo: 0.35,           // s — dois toques no LANÇAMENTO = cruzamento rasteiro
+  toqueDuplo: 0.35,           // s — dois toques no LANÇAMENTO = cruzamento rasteiro; no CHUTE = cavadinha (2º aperto até isso depois de soltar o 1º)
   passe: { cone: 0.55, dMin: 3, dMax: 42, vChegada: [4.5, 8.0], adiante: 0.9, erroBom: 0.012, erroRuim: 0.07 },
   enfiada: { cone: 0.7, dMin: 5, dMax: 48, lead: [4.5, 12], vNoPonto: [3.5, 7], vMax: 26, erroBom: 0.015, erroRuim: 0.08 },
   lancamento: { cone: 0.5, dMin: 16, dMax: 62, elev: [0.5, 0.72], erroBom: 1.2, erroRuim: 6 }, // erro em m a 40 m
@@ -408,8 +408,19 @@ export const ACOES = {
   // (Carlsson 2018); pressão só de perto e pouca; de primeira ×1,15 (StatsBomb)
   // penaltiErro: o erro do chute no pênalti (a pressão da cobrança; ~6% para fora — a meta do dono, seção 11)
   chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, penaltiCanto: 2.5, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18 },
-  // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado)
-  cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05] },
+  // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado). A da IA sai sozinha com o
+  // goleiro adiantado (goleiroFora/distMax); a do humano, com DOIS TOQUES no CHUTE (pedido do dono, 12/10), de qualquer
+  // lugar: o 2º aperto antes de o chute do 1º tocar na bola. toqueRapido: 1º toque mais curto que isso pode ser o 1º de
+  // dois — o contato espera até `janela` s depois de soltar (um toque duplo normal leva ~0,08–0,18 s entre os toques; o
+  // chute carregado não espera). elevPedida: elevação da cavadinha pedida pela força do 2º toque (toque rápido → [0], a
+  // mesma da IA; segurado → [1], mais alta). penalti: a Panenka (a pedida na cobrança do pênalti; acoes.js cavadinha) —
+  // passa 0,4 m antes da linha a `y` m, descendo, com a elevação de elevPedida[0] (2º toque rápido) até `elevMax`
+  // (segurado), erro próprio de força/direção (ruim → bom) e SEM a pressão do pênalti (ACOES.chute.penaltiErro): bola
+  // parada a 11 m e sem marcador; Opta/Premier League: 95,7% de gols no alto do meio (PESQUISA-ETAPA2 §2.7a). Força
+  // +7% (elevMax) a +9% (rápido) a mais já passa por cima do travessão
+  cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05],
+    toqueRapido: 0.18, janela: 0.15, elevPedida: [0.72, 1.0],
+    penalti: { y: 1.3, elevMax: 0.86, erroForca: [0.05, 0.025], erroDir: [0.06, 0.025] } },
   // cabeceio (pesquisa da Etapa 2): a cabeça chega ~0,56 m acima da estatura com corrida (Fílter
   // 2022) — com 1,80 m, centro da bola a ~2,45 m; força própria de 6,4–8,3 m/s (Becker 2021)
   // erroGolBolaParada: o cabeceio PARA O GOL na bola parada (escanteio, falta, lateral) espalha como o real (Opta: ~1/3
@@ -439,10 +450,13 @@ export const GOLEIRO = {
   // pênalti (Regra 14; goleiro.js lerChute): o goleiro escolhe o lado ANTES do chute (z do mergulho, m, e o peso de
   // cada escolha; o humano escolhe com o analógico na hora da cobrança). Lado certo: ganha `antecipa` s; lado errado
   // (ou ficou no meio e a bola foi no canto, a > `meio` m): não defende; lado certo: chance × `fator`. Meta do dono: ~76% gol, 18% defesa, 6% fora.
+  // Panenka (a cavadinha do pênalti, ~1,3–1,6 s até o goleiro): longe do lado escolhido (> `meio` m) entra — ele já
+  // mergulhou e fica no chão até ela passar (o mergulho desenhado tem o pico `picoPanenka` s depois do chute, o tempo
+  // de um pênalti chegar ao canto); quem ficou no meio pega a que alcança (sem sorteio, como o recuo)
   // `ladoMin`: o humano só escolhe o canto com a componente do analógico AO LONGO da linha do gol (|iz|) ≥ ladoMin × o
   // módulo (0,38 ≈ sen 22,5°: o setor de 45° em volta do horizontal da tela de TV — para o batedor ou para o gol — não
   // escolhe; a diagonal do teclado, 45°, escolhe); abaixo disso, ou solto, fica no meio (partida.js ladoPenaltiHumano)
-  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72, passo: 0.5, ladoMin: 0.38 },
+  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72, passo: 0.5, ladoMin: 0.38, picoPanenka: 0.5 },
   reacao: [0.25, 0.19],       // s depois do toque (ruim → bom)
   alcanceEmPe: 0.9,           // m: mão de lado sem mergulhar
   bracoReflexo: 1.6,          // m: perna/braço esticados no reflexo, sem tirar o corpo do lugar
