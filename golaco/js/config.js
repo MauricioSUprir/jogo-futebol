@@ -1165,11 +1165,13 @@ export const IA_ATAQUE = {
   //    rolando rende gol: o cruzamento vale mais);
   //  - conduzir: 7 direções a passoAngConduz rad, conduzDist m à frente, × conduz (o tempo que leva);
   //    chance de manter pelos adversários a < manterRaio m do caminho (manterPeso; de lado/atrás
-  //    manterLado), × manterArea[0] dentro da área e [1] a < manterPerto m do gol (rodada "volume de ataque", 13/10, o
-  //    condutor que encara — peso/lado menores no campo todo ou só no último terço: no campo todo, com 0,85/0,7 os chutes
-  //    caíam de 7,6 para 4,9 por partida e com 0,55/0,25 subiam para 8,4, mas ele ia para cima da PRESSÃO do humano; só
-  //    no último terço (u ≥ 17,5, 0,55/0,25) o volume ficou igual nas mesmas 48 partidas — 7,4 × 7,5 chutes, 1,71 × 1,69
-  //    gol, 14/10 — e o chamado da PRESSÃO deixava de correr: teste-pressao-humano M5 72%, meta 80%. Saiu); quem segura a bola
+  //    manterLado), × manterArea[0] dentro da área e [1] a < manterPerto m do gol (rodada "volume de ataque", 13/10:
+  //    no último terço, a partir de manterTerco.u m, peso e lado de manterTerco — o condutor encara o marcador e entra na
+  //    área; valendo no campo todo, com 0,85/0,7 os chutes caíam de 7,6 para 4,9 por partida e com 0,55/0,25 subiam para
+  //    8,4, mas no meio-campo o condutor ia para cima da PRESSÃO do humano. Só no último terço: no painel de 144 do CI
+  //    sem ele os chutes caem de 7,3 para 6,9 por partida (14/10; em 48 partidas pareciam iguais, 7,4 × 7,5), mas com ele
+  //    o chamado da PRESSÃO corre menos — teste-pressao-humano M5 72%, meta 80%, PENDENTE: o condutor que encara para
+  //    perto do marcador e as aproximações do chamado ficam curtas, quase só a aceleração); quem segura a bola
   //    perde valor (conduzSolta: de [0] s a [1] s, até [2]×); analógico magConduz; CORRER com
   //    correrLivre m livres à frente (transição ou antes de correrAte m), condução curta com < curtaPerto m;
   //  - proteger: adversário a < protegeDist m, chance protegeP, no máximo protegeMax s por posse.
@@ -1179,7 +1181,7 @@ export const IA_ATAQUE = {
     cruzamentoP: [0.01, 0.06, 0.35, 0.4], cruzamentoRaio: 1,
     xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 3.0, chuteLonge: 0.25, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
     passoAngConduz: 0.5, conduzDist: 5, conduz: 0.85, conduzSolta: [1.5, 4, 0.35], vConduz: 5.5, magConduz: 0.9,
-    manterRaio: 3, manterPeso: 0.7, manterLado: 0.4, manterArea: [0.95, 0.7], manterPerto: 9,
+    manterRaio: 3, manterPeso: 0.7, manterLado: 0.4, manterTerco: { u: 17.5, peso: 0.55, lado: 0.25 }, manterArea: [0.95, 0.7], manterPerto: 9,
     protegeDist: 1.5, protegeP: 0.7, protegeMax: 1.0, correrLivre: 10, correrAte: 25, curtaPerto: 2.5,
   },
   riscoMentalidade: [0.8, 0.9, 1.0, 1.1, 1.25], // risco de passe aceito, por mentalidade (−2..+2)

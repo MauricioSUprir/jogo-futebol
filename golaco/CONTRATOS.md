@@ -1386,9 +1386,11 @@ corrido só na partida.
   o passe de `dMin`–`dMax` m (no máximo `tras` m para trás), do campo a partir de `uMin` m, com `livre` m livres à frente
   do passador e no máximo `max` tabelas correndo no time, sai com o modificador (acoes.js `tabela`: o passador arranca
   para o espaço); quem recebe vê a devolução como enfiada (a corrida `'tabela'` vale como a `'nasCostas'`); a tabela
-  acaba com a bola perdida; nunca na cobrança. (O condutor que encara no último terço, `utilidade.manterTerco`, saiu em
-  14/10: nas mesmas 48 partidas o volume ficou igual sem ele — 7,4 × 7,5 chutes, 1,71 × 1,69 gol — e com ele o chamado da
-  PRESSÃO deixava de correr, teste-pressao-humano M5 72%, meta 80%.) `utilidade.cruzamentoV` 0,35 e `chuteLonge` 0,25;
+  acaba com a bola perdida; nunca na cobrança. **Condutor no último terço** (`manter`, `utilidade.manterTerco` {u, peso,
+  lado}): a partir de `u` m o peso dos marcadores no caminho é menor — ele encara e entra na área (no campo todo isso
+  levava o condutor para cima da PRESSÃO do humano). Vale ~0,4 chute por partida no painel de 144 (7,3 com ele, 6,9 sem,
+  14/10) e faz o chamado da PRESSÃO correr menos (teste-pressao-humano M5 72%, meta 80% — PENDENTE: o condutor que encara
+  para perto do marcador e as aproximações do chamado ficam curtas, quase só a aceleração). `utilidade.cruzamentoV` 0,35 e `chuteLonge` 0,25;
   `IA_DEFESA.corrida.v` 7,0; `GOLEIRO.logit.c0Partida` −0,3; o pênalti com o próprio `GOLEIRO.penalti.c0Partida` −0,1 (a
   calibração dele, canhão 77/18/5% e teste-botoes B6d, é a da main; com o −0,3 da bola rolando as defesas de pênalti iam a
   0% no painel de 144).
