@@ -1175,7 +1175,12 @@ export const IA_ATAQUE = {
   // Tabela da IA (ia-ataque.js tabelaIA; rodada "volume de ataque", 13/10 — FIFA Training Centre, third player
   // combinations): o passe de dMin–dMax m (no máximo `tras` m para trás), do campo a partir de uMin m, com `livre` m livres
   // à frente do passador, sai com o modificador (acoes.js tabela: ele arranca para o espaço); no máximo `max` por time
-  tabela: { dMin: 6, dMax: 20, tras: 3, uMin: -5, livre: 8, max: 2 },
+  // DESLIGADA (null) em 14/10: em 16 partidas a IA começava ~17 tabelas por partida e só ~3,6 viravam devolução para quem
+  // correu (1,3 chegavam); o passador que sai correndo deixava a vaga, e sem ela o volume SOBE (48 partidas: chutes 7,2 →
+  // 8,1, gols 1,73 → 1,83). Com ela, o corredor que recebe a devolução embalado levava o chamado da PRESSÃO do humano a
+  // atropelá-lo (teste-pressao-humano M3/M4) e mexia nos lances do TROCAR (teste-botoes B14b). O código fica (ia-ataque.js
+  // tabelaIA) para uma tabela que só sai com a devolução provável
+  tabela: null,
   // Finalização de primeira (ia-ataque.js primeiraIA): recebendo passe rasteiro na área num ponto com chance de gol
   // ≥ xg, aperta CHUTE com a força `forca` para o pedido nascer `folga` s antes da bola (bola até alturaMax m).
   primeira: { xg: 0.12, forca: 0.6, folga: 0.25, alturaMax: 0.6 },
