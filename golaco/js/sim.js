@@ -116,12 +116,17 @@ export function aplicarEntrada(j, e, tick) {
       j.intW += (w - j.intW) * Math.min(1, PASSO / 0.12);
     } else {
       j.intW = 0; // salto (tecla, flick): não extrapola
+      // o analógico pulou neste tick (o toque marcado para agora espera o fim do gesto: conducao.js)
+      if (j.imag > 0 && Math.abs(d) > CONDUCAO.saltoGesto) j.saltoTick = tick;
     }
     j.intRumo = r;
     j.ix = x / mag; j.iz = z / mag;
   } else {
     j.intW *= MD.exp(-PASSO / 0.1);
   }
+  // leitura nova do analógico neste passo? (`repete`: a MESMA leitura do passo anterior — main.js: a 30 qps os 2 passos
+  // do quadro usam a leitura do 1º). O toque que espera o fim de um gesto espera a próxima leitura NOVA (conducao.js)
+  if (!e?.repete) j.leituraTick = tick;
   j.imag = mag;
   // pedalada: dois toques no modificador
   const sub = (j.botoes & BOTAO.MOD) && !(j.botoesAnt & BOTAO.MOD);
@@ -308,7 +313,13 @@ function boteIA(m, j) {
   // o condutor: corpos de 0,3 m de raio) — pedido do dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola"
   const ultT = dono.cond?.ult;
   const lento = !!m.partida && MD.hypot(dono.vx, dono.vz) < cfg.vParado && !(ultT && (m.tick - ultT.tick) * PASSO < cfg.semToque);
-  if (!lento && (dD < 0.35 || dB > dD)) return; // colada no pé de quem conduz: não alcança
+  // colada no pé de quem conduz: não alcança — a não ser que ela esteja ENCOSTADA no corpo do marcador com os dois
+  // andando juntos (o condutor empurrando a bola nele): aí ela está entre os dois e é disputada. Só com o marcador à
+  // frente ou de lado (faltas.js chegada): nas costas do condutor a bola não está entre os dois — o bote por trás dela
+  // era quase sempre falta (FALTAS.bote.tras; teste-pressao-humano M4, 14/10)
+  const encostada = dB <= cfg.encostada && MD.hypot(j.vx - dono.vx, j.vz - dono.vz) <= cfg.encostadaVrel
+    && chegada(j, dono) !== 'tras';
+  if (!lento && !encostada && (dD < cfg.colada || dB > dD)) return;
   if (uniforme(m.rng) >= cfg.chancePorPasso) return;
   // Etapa 4 (só na partida): o bote que chega pode ser falta (faltas.js: chegada, velocidade, desarme) — a bola fica
   // com o condutor (desequilibrado) e o árbitro decide nas regras (vantagem, tiro livre, pênalti, cartão)

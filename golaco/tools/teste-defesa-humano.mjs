@@ -106,9 +106,14 @@ function entradaCondutor(m, cond, def, c, t) {
   else if (c.modo === 'drible') {
     const dx = def.x - cond.x, dz = def.z - cond.z, d = Math.hypot(dx, dz);
     if (d < 3.2 && dx < 0.5) {
-      // marcador à frente: sai para o lado contrário ao dele (o lado sorteado se ele estiver no meio)
-      const lado = Math.abs(dz) < 0.3 ? c.ladoDrible : (dz > 0 ? -1 : 1);
-      a += lado * 0.85;
+      // marcador à frente: sai para o lado contrário ao dele (o lado sorteado se ele estiver no meio). O lado escolhido
+      // só troca com o marcador claramente do outro lado (|dz| > 0,5 m): sem essa folga, com o marcador colado em
+      // |dz| ≈ 0,3 m o analógico trocava de lado (±49°) a CADA tick — um polegar indo e vindo 60 vezes por segundo,
+      // que ninguém faz — e, com a bola no pé (condução curta, 12/10), os dois corpos ficavam travados empurrando um
+      // ao outro (sonda: base 88% → 86% com a folga; a condução curta 67% → 96%; a DIVIDIDA certa segue em 35–65%)
+      if (c.ladoAtual == null) c.ladoAtual = Math.abs(dz) < 0.3 ? c.ladoDrible : (dz > 0 ? -1 : 1);
+      else if (Math.abs(dz) > 0.5) c.ladoAtual = dz > 0 ? -1 : 1;
+      a += c.ladoAtual * 0.85;
     }
   }
   return { x: Math.cos(a) * c.mag, z: Math.sin(a) * c.mag, botoes: c.correr ? BOTAO.CORRER : 0 };

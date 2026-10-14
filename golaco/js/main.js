@@ -230,21 +230,21 @@ function controlado() { return jogadorPorId(mundo, idControlado()) ?? jogadorPor
  * os dois formatos leem os mesmos números (o hash não muda). Um objeto só, reaproveitado a cada
  * passo (a lógica lê os números no passo e não guarda a referência).
  */
-const _entTime = { [TIME_HUMANO]: { x: 0, z: 0, botoes: 0, iaCobra: false } };
+const _entTime = { [TIME_HUMANO]: { x: 0, z: 0, botoes: 0, repete: false, iaCobra: false } };
 Object.defineProperties(_entTime, {
   x: { value: 0, writable: true }, z: { value: 0, writable: true }, botoes: { value: 0, writable: true },
-  iaCobra: { value: false, writable: true },
+  repete: { value: false, writable: true }, iaCobra: { value: false, writable: true },
 });
 function entradaDoTime(e) {
-  const x = e?.x ?? 0, z = e?.z ?? 0, botoes = (e?.botoes ?? 0) | 0;
+  const x = e?.x ?? 0, z = e?.z ?? 0, botoes = (e?.botoes ?? 0) | 0, repete = !!e?.repete;
   // a IA jogando pelo humano (?demo=1: a entrada da demo traz `ia` ou `iaCobra`): os botões NÃO são da pessoa — sem
   // cavadinha por dois toques nem espera do toque rápido (sim.js/partida.js porHumano). Só a marca `iaCobra` passa: o
   // `ia` a página nunca entregou (a recepção e o goleiro da demo da página seguem como antes; contraprova 13/10: sem a
   // marca, a cobrança da demo virava cavadinha, 9 em 40 pênaltis)
   const ia = !!(e && (e.ia || e.iaCobra));
   const d = _entTime[TIME_HUMANO];
-  d.x = x; d.z = z; d.botoes = botoes; d.iaCobra = ia;
-  _entTime.x = x; _entTime.z = z; _entTime.botoes = botoes; _entTime.iaCobra = ia;
+  d.x = x; d.z = z; d.botoes = botoes; d.repete = repete; d.iaCobra = ia;
+  _entTime.x = x; _entTime.z = z; _entTime.botoes = botoes; _entTime.repete = repete; _entTime.iaCobra = ia;
   return _entTime;
 }
 
@@ -986,6 +986,9 @@ function quadro(agoraMs, desenhar = true) {
       // a cena rodando segura a montagem da saída: a simulação espera no passo gol + 149
       if (seguraSimulacao()) { segurou = true; break; }
       // durante a cena o humano assiste: a entrada dele não vai para a simulação (a demo segue)
+      // do 2º passo do quadro em diante o analógico é a MESMA leitura (sim.js aplicarEntrada: `repete` — um gesto que
+      // pulou no passo anterior ainda não acabou de ser lido)
+      ent.repete = i > 0;
       const e = DEMO_ON ? (entradaDemoDoMundo(mundo) ?? ent) : cenaGol ? ENTRADA_NEUTRA : ent;
       let ac = filaAcoes.length ? filaAcoes.splice(0) : null;
       // a edição do time entra ANTES das outras ações, no 1º passo depois da pausa
