@@ -337,6 +337,52 @@ if (SO.includes('F')) {
     }
   }
   reg('F', 'F3 teleporte no ar: passos com um pé a mais de 1,2 m do corpo', `${longe} (em ${noAr} pulos; pior ${pior.toFixed(2)} m)`, '0 (≥ 12 pulos)', noAr >= 12 && longe === 0);
+  // F4: PULO FANTASMA (partida; 8 partidas IA × IA: 3 de 100 pulos saíam do chão 0,27 s depois de outro tocar na bola,
+  // com ela já a 7–8 m do ponto do plano). Cena: lançamento alto para um atacante sozinho; com o pulo planejado e ainda
+  // no chão, a bola é desviada (outro tocou nela: a velocidade gira 60° e perde 30%). Meta: ninguém sai do chão para o
+  // ponto velho; sem o desvio (guarda), ele pula em ≥ 80% das cenas.
+  let planF = 0, fant = 0, guarda = 0, nG = 0;
+  for (let k = 0; k < 24; k++) {
+    for (const desvia of [true, false]) {
+      const m = P.criarPartida({ semente: 7100 + k, minutosPorTempo: 4 });
+      for (let i = 0; i < 400 && !(m.partida.estado === 'jogo' && (!m.parada || m.parada.rolou)); i++) P.passoPartida(m, P.entradaDemoPartida(m));
+      const T = 1, lado = m.ataca[T];
+      const ata = m.jogadores.find(j => j.time === T && j.posicao === 'ATA') ?? m.jogadores.find(j => j.time === T && j.posicao !== 'GOL');
+      const z0 = (k % 5) - 2;
+      P.teleportar(ata, lado * 10, z0, lado > 0 ? Math.PI : 0);
+      let q = 0;
+      for (const j of m.jogadores) { if (j === ata || j.posicao === 'GOL') continue; P.teleportar(j, -lado * (20 + 3 * (q % 4)), -30 + 6 * (q % 11), j.rumo); q++; }
+      const b = m.bola, h = 2.0 + 0.02 * (k % 10), s = 17;
+      const p0 = { x: lado * 28, y: 0.11, z: z0 }, D = Math.abs(p0.x - ata.x), ux = -lado, uz = 0;
+      let lo = -0.1, hi = 1.0;
+      for (let it = 0; it < 30; it++) { const el = (lo + hi) / 2; if (alturaNaDistancia(p0, ux, uz, D, s, el).y < h) lo = el; else hi = el; }
+      const el = (lo + hi) / 2;
+      Object.assign(b.p, p0); b.v.x = ux * s * Math.cos(el); b.v.y = s * Math.sin(el); b.v.z = 0; b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = false;
+      m.posse = null; m.naMao = null; m.parada = null; m.partida.estado = 'jogo'; m.golTick = null; m.foraDesde = null;
+      const lanc = m.jogadores.find(j => j.time === T && j !== ata && j.posicao !== 'GOL');
+      m.voo = { tipo: 'lancamento', de: lanc.id, time: T, para: ata.id, alvo: { x: ata.x, z: ata.z }, tick0: m.tick, tickChave: m.tick, tickChegada: m.tick + 60, alto: true };
+      m.ultimoToque = { id: lanc.id, time: T, tick: m.tick };
+      let desviou = false, pulou = false, plano = false;
+      for (let i = 0; i < 150; i++) {
+        P.passoPartida(m, P.entradaDemoPartida(m));
+        const c = ata.cab;
+        if (c && c.cabeceio && c.h > 0 && !c.saiu) plano = true;
+        if (desvia && !desviou && c && c.h > 0 && !c.saiu && c.td - m.tick >= 4 && c.td - m.tick <= 12) {
+          const a = 1.05 * (k % 2 ? 1 : -1), cs = Math.cos(a), sn = Math.sin(a);
+          const vx = b.v.x * 0.7, vz = b.v.z * 0.7;
+          b.v.x = vx * cs - vz * sn; b.v.z = vx * sn + vz * cs; b.v.y *= 0.7;
+          m.voo = null; m.ultimoToque = { id: lanc.id, time: T, tick: m.tick };
+          desviou = true;
+        }
+        if (c && c.saiu) { pulou = true; break; }
+        if (m.eventos.some(e => e.tipo === 'cabeceio' || e.tipo === 'dominioAereo') || m.posse != null) break;
+      }
+      if (desvia) { if (desviou) { planF++; if (pulou) fant++; } }
+      else if (plano) { nG++; if (pulou) guarda++; }
+    }
+  }
+  reg('F', 'F4 pulo fantasma: a bola desviada depois do plano e ele sai do chão para o ponto velho', `${fant}/${planF}`, '0 (≥ 12 cenas)', planF >= 12 && fant === 0);
+  reg('F', 'F4 (guarda) sem o desvio ele pula', `${guarda}/${nG}`, '≥ 80% (≥ 12 cenas)', nG >= 12 && guarda >= 0.8 * nG);
 }
 
 // ------------------------------------------------------------------ D) partidas IA × IA

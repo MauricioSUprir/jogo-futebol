@@ -886,6 +886,7 @@ export const CABECEIO = {
   janela: [0.22, 0.25],       // s — sem pulo, o tronco vai à bola nestes tempos antes e depois do contato
   chega: 0.3,                 // m — o corpo vai ao ponto em que a bola chega isto à frente dele (a testa vai nela)
   longe: 1.4,                 // m — mais longe que isto do ponto na hora de sair do chão, não pula (o pulo não alcança)
+  velho: 0.5,                 // m — (partida) na saída do chão, a bola prevista a mais disto do ponto do plano: não pula
   alturaPedido: 1.25,         // m — com botão, abaixo disto não sai cabeceio (peito ou voleio)
   // intenção sem botão (cabeceio.js intencaoCabeceio): na área adversária, a gol a até `gol` m do gol; no meu terço,
   // afastar; no resto, passe de cabeça. Bola entre alturaPedido e alturaPeito[1]: de cabeça só para o gol ou para afastar
