@@ -919,7 +919,8 @@ export const FALTAS = {
   // condutor), × (1 + porVel · (v − vLivre)⁺) pela velocidade de quem chega, × lerp(desarme 40 → 90: 1,3 → 0,7)
   // (× lento com o condutor parado/lento, abaixo de ACOES.boteIA.vParado: o bote nele chega devagar e de perto — sem
   // isso ~30% das tentativas viravam falta e o humano ganhava tiro livre só por ficar parado)
-  bote: { frente: 0.2, lado: 0.42, tras: 0.8, porVel: 0.12, vLivre: 4, desarme: [1.3, 0.7], lento: 0.4 },
+  // naBola: o bote de frente na bola já solta do pé do condutor, sem entrar nele (faltas.js faltaNoBote; 14/10)
+  bote: { frente: 0.2, lado: 0.42, tras: 0.8, porVel: 0.12, vLivre: 4, desarme: [1.3, 0.7], lento: 0.4, naBola: 0.4 },
   // DIVIDIDA do humano que não ganha a bola com o pé no condutor (defesa.js resolverBote): as mesmas chances
   dividida: { perdeu: 1.0, tocou: 0.6 },
   // carga por trás (sim.js colisaoCorpos): o marcador bate no condutor por trás fechando a ≥ vMin m/s
@@ -1076,7 +1077,7 @@ export const IA_DEFESA = {
   // a trajetória dela antes do recebedor: `le` s para ler o passe e `antes` s de folga (ia-tatica.js cortaPasse; o corpo
   // acelera a `acel` m/s² até a arrancada; a bola rasteira ou até `alturaMax` m, nos próximos `horizonte` ticks; decidido,
   // segue até `segue` ticks depois do ponto)
-  livre: { histerese: 0.25, margem: 0.2, disputa: null, le: 0.2, antes: 0.1, acel: 7, alturaMax: 1.0, horizonte: 120, segue: 12 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele — null: arranca em toda bola solta (com 0,6 s o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; medido com 32 partidas)
+  livre: { histerese: 0.25, margem: 0.2, disputa: null, le: 0.15, antes: 0.1, acel: 7, alturaMax: 1.0, horizonte: 120, segue: 12 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele — null: arranca em toda bola solta (com 0,6 s o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; medido com 32 partidas)
   contemLead: 0.9,            // s — quem contém mira à frente pela velocidade do ponto (tira o atraso do filtro, 0,2 s, e do modo pressa, ~0,7 s: sem isso ele corria ao lado do condutor, a 0,6 m)
   // contrapressão: janela (s), quantos, a ≤ raio m da bola, e só com a perda fora do meu terço (u >
   // campo; ou perto da lateral) e sem estar em inferioridade a ≤ raio m (no máximo `inferioridade` a

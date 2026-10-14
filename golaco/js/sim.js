@@ -308,12 +308,6 @@ function boteIA(m, j) {
   // botes assim viravam falta (teste-pressao-humano M4: 4 → 9 faltas com o botão)
   if (m.partida && j.ia && j.ia.ramo === 'pressaoHumano' && m.tick - j.ia.tick <= 1
     && (MD.hypot(j.vx, j.vz) > FALTAS.bote.vLivre || chegada(j, dono) === 'tras')) return;
-  // a IA que vai na bola solta do pé do condutor (ramo 'ataca', ia-tatica.js atacaBola) também não entra por trás embalada:
-  // o bote por trás tem chance de falta FALTAS.bote.tras (0,8) e cresce com a velocidade — era quase sempre falta. Com a
-  // condução curta (o bolaSolta 0,87×, #476) ela ia mais vezes na bola a 7 m/s nas costas do condutor (teste-defesa-corrida:
-  // faltas da IA no humano 4,5 → 5,3 por partida, teto 5; 2/3 delas assim). Segue correndo até chegar ao lado da bola
-  if (m.partida && j.ia && j.ia.ramo === 'ataca' && m.tick - j.ia.tick <= 1
-    && MD.hypot(j.vx, j.vz) > FALTAS.bote.vLivre && chegada(j, dono) === 'tras') return;
   const dD = MD.hypot(b.p.x - dono.x, b.p.z - dono.z);
   // (só na partida) condutor parado ou lento (abaixo de vParado m/s) e sem tocar na bola há semToque s: a bola parada à
   // frente do pé dele (a condução a deixa a ~0,345 m do corpo) não está "colada" — quem chega ao alcance dela tenta

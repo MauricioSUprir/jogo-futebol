@@ -1438,9 +1438,14 @@ corrido só na partida.
   marcado encerrava a vez de todos e o defensor no caminho só cortava com a bola batendo no corpo.
 - `sim.js boteIA` (partida): com o condutor a mais de `ACOES.boteIA.vLado` m/s a bola tirada sai para o lado do defensor e
   `tras` para trás no caminho do condutor; o condutor fica sem dominar até `semDominioAte` (a regra da DIVIDIDA). O
-  defensor da IA que vai na bola solta do pé do condutor (ramo `'ataca'`) não dá o bote por trás acima de
-  `FALTAS.bote.vLivre` (bote por trás: chance de falta `FALTAS.bote.tras` 0,8). O escolhido da PRESSÃO do humano (ramo `'pressaoHumano'`) não dá o bote embalado nem por trás (a regra da main, #474;
+  escolhido da PRESSÃO do humano (ramo `'pressaoHumano'`) não dá o bote embalado nem por trás (a regra da main, #474;
   a IA × IA não usa a PRESSÃO: o painel não muda com isso).
+- Falta no bote (`faltas.js faltaNoBote`, 14/10): de frente, com o defensor sem entrar no condutor (a velocidade dele na
+  direção do condutor ≤ 0: corre para o próprio gol ou fica) e a bola já solta do pé do condutor (≥ `ACOES.boteIA.bolaSolta`),
+  a chance de falta é × `FALTAS.bote.naBola` (0,4): ele joga a bola antes do homem. Era o desarme da defesa da arrancada
+  contra o condutor em disparada que empurra a bola 0,6–0,8 m (50 das 67 faltas da IA no humano no teste-defesa-corrida
+  eram botes de frente, quase todos assim). Corte do passe com `IA_DEFESA.livre.le` 0,15 s (era 0,2): com a condução curta
+  (#476) o passe sai mais cedo do pé e o passe certo da partida IA × IA subia para 87,4% (teste-intercepta, meta 80–86,5%).
 - Calibração (painel de 48, 13/10): `IA_DEFESA.corrida.v` 6,8 (só a disparada de verdade liga a defesa da arrancada),
   `GOLEIRO.logit.c0Partida` −0,35, `IA_ATAQUE.contra` {s: 8, bonus: 1,0}, `utilidade.chute` 3,0.
 - Volume de ataque (rodada de 13/10, painel de 144 do CI): **tabela da IA** (`ia-ataque.js tabelaIA`, `IA_ATAQUE.tabela`; DESLIGADA
