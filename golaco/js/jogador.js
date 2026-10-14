@@ -71,6 +71,7 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     contorno: undefined, recep: undefined,
     // cabeceio na bola rolando (cabeceio.js): o pulo, a disputa marcada, o tick da disputa ganha e o da perdida
     cab: undefined, disputaAlta: undefined, disputa: undefined, perdeuAlto: undefined,
+    porHumano: undefined, // os botões deste passo vêm da pessoa (sim.js; cavadinha por dois toques, acoes.js)
   };
   return j;
 }
