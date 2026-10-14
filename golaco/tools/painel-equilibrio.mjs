@@ -20,6 +20,11 @@
 //    gol saiu em ≤ 15 s; jogada trabalhada = o resto (inclui saída de bola e tiro de meta).
 //  - impedimentos, faltas, cartões e pênaltis: contados pelos eventos 'impedimento', 'falta', 'cartao' e 'penalti'
 //    (Etapa 4; antes deles existirem a linha mostra 0 e "ainda não existe").
+//  - roubadas (condução curta, 12/10: a bola mais perto do pé não pode tirar a defesa do jogo): bote da IA (evento
+//    'roubada' com ia), DIVIDIDA do humano ('roubada' com dividida) e bola solta disputada = o outro time domina a
+//    bola que o condutor perdeu sem passe, chute nem bote (pressão em cima do toque longo, bola que bateu no corpo).
+//    Perdas por toque longo = o evento 'perda' da condução (bola longe do condutor por tempo demais), e quantas
+//    delas acabam com o adversário.
 //
 //   node tools/painel-equilibrio.mjs                       (144 partidas, sementes 1001…)
 //   node tools/painel-equilibrio.mjs --n 48 --sem0 101     (outra amostra)
@@ -31,6 +36,8 @@
 //   node tools/painel-equilibrio.mjs --retomar parciais.jsonl (grava cada partida; de novo, continua de onde parou;
 //                                                          com --parcial, só mostra as que já estão lá)
 //   --par N (processos; padrão: CPUs)   --min 4 (minutos reais por tempo)   --estrito (sai com 1 fora da meta)
+//   --cache <pasta>   (guarda cada partida num arquivo por versão e semente e reaproveita: uma rodada longa que
+//                      parou — máquina carregada, limite de tempo — continua de onde estava)
 //   node tools/painel-equilibrio.mjs --partes a.json,b.json,... [--base <pasta js>]
 //        junta partes gravadas com --json (as mesmas versões, sementes diferentes) e monta a tabela de todas, sem
 //        rodar nada — é como o CI roda as 144 partidas em pedaços (.github/workflows/golaco-painel.yml)
@@ -74,7 +81,7 @@ async function partida(pastaJs, sem) {
     sem, gols: [0, 0], golsContra: 0, chutes: [], passes: 0, passesOk: 0, posse: [0, 0], intercept: [0, 0],
     posses: 0, possesTerco: 0, origem: { trabalhada: 0, contra: 0, erroSaida: 0, bolaParada: 0, outro: 0 },
     golsFora: 0, cobrancas: {}, impedimentos: 0, faltas: 0, amarelos: 0, vermelhos: 0, penaltis: { total: 0, gol: 0, defesa: 0, fora: 0 },
-    ticks: 0,
+    ticks: 0, roubadas: { bote: 0, dividida: 0, solta: 0 }, perdas: 0, perdasAdv: 0,
     // jogo aéreo (entrega "cabeceio na bola rolando"): cabeceios, cabeceios a gol, duelos pelo alto (com a bola rolando =
     // fora da bola parada), gols de cabeça (o chute que virou gol foi um cabeceio); chutes por time
     cabeceios: 0, cabGol: 0, duelos: 0, duelosRolando: 0, golsCabeca: 0, chutesT: [0, 0],
@@ -82,6 +89,8 @@ async function partida(pastaJs, sem) {
   const porId = new Map(m.jogadores.map(j => [j.id, j]));
   const jog = id => porId.get(id) ?? m.jogadores.find(j => j.id === id);
   let passe = null, aberto = null, pos = null, vBola = 0;
+  // roubadas: o time do último dono da bola e o que tirou a bola dele (null = nada: ela ficou solta)
+  let ultTime = null, saiu = null, perdeu = false;
   const N = Math.round(2 * MIN_TEMPO * 3600 + 3600);
   const novaPosse = (time, tipo) => {
     pos = { time, tipo, tick: m.tick, u0: M.uDe(m, time, m.bola.p.x), terco: false };
@@ -111,7 +120,7 @@ async function partida(pastaJs, sem) {
             else o = 'trabalhada';
           }
           R.origem[o]++;
-          passe = null; pos = null;
+          passe = null; pos = null; ultTime = null;
           break;
         }
         case 'defesa':
@@ -122,13 +131,19 @@ async function partida(pastaJs, sem) {
           if (passe) passe.bloqueio = true;
           break;
         case 'fora':
-          fecharChute('fora'); passe = null; pos = null;
+          fecharChute('fora'); passe = null; pos = null; ultTime = null;
           break;
         case 'cobranca':
           R.cobrancas[e.parada] = (R.cobrancas[e.parada] ?? 0) + 1;
           if (j) novaPosse(j.time, e.parada);
+          ultTime = null;
           break;
         case 'disputaAerea': R.duelos++; if (e.bolaParada === false) R.duelosRolando++; break;
+        case 'roubada':
+          if (e.ia) R.roubadas.bote++; else if (e.dividida) R.roubadas.dividida++;
+          saiu = 'roubada';
+          break;
+        case 'perda': R.perdas++; perdeu = true; break;
         case 'impedimento': R.impedimentos++; break;
         case 'falta': R.faltas++; break;
         case 'cartao': if (e.cor === 'vermelho') R.vermelhos++; else R.amarelos++; break;
@@ -148,8 +163,9 @@ async function partida(pastaJs, sem) {
             if (cab) R.cabGol++;
             R.chutesT[j.time]++;
             aberto = { time: j.time, id: j.id, tick: m.tick, dist, dentro: u > 52.5 - 16.5 && Math.abs(w) < 20.16, res: null, penalti: pen, cab };
-            passe = null;
+            passe = null; saiu = 'acao';
           } else if (e.tipo === 'passe' && j) {
+            saiu = 'acao';
             // (o adversário com a bola ainda andando, ≥ 2 m/s, e a 2 m ou mais do recebedor = interceptação na linha)
             passe = j.posicao !== 'GOL' ? { time: j.time, para: m.voo && m.voo.de === j.id ? m.voo.para : null } : null;
             if (j.posicao !== 'GOL') R.passes++;
@@ -172,6 +188,11 @@ async function partida(pastaJs, sem) {
         if (r && !passe.bloqueio && Math.hypot(r.x - dono.x, r.z - dono.z) >= 2) R.intercept[dono.time]++;
       }
       passe = null;
+    }
+    if (dono) {
+      // o outro time ficou com a bola que o condutor perdeu sem passe, chute nem bote: bola solta disputada
+      if (ultTime != null && dono.time !== ultTime && saiu == null) { R.roubadas.solta++; if (perdeu) R.perdasAdv++; }
+      ultTime = dono.time; saiu = null; perdeu = false;
     }
     const tc = M.timeComBola(m);
     if (tc != null) R.posse[tc]++;
@@ -203,6 +224,20 @@ if (RETOMAR && args.includes('--parcial')) {
   const tem = new Set(fs.existsSync(RETOMAR) ? fs.readFileSync(RETOMAR, 'utf8').split('\n').filter(l => l.trim()).map(l => JSON.parse(l).sem) : []);
   SEMENTES = SEMENTES.filter(s => tem.has(s));
 }
+const CACHE = arg('--cache', null) ? path.resolve(arg('--cache')) : null;
+/** Pasta do cache desta versão da lógica: o conteúdo dos .js (qualquer mudança na lógica = outra pasta). */
+async function pastaCache(pastaJs) {
+  const { createHash } = await import('node:crypto');
+  const h = createHash('sha1');
+  for (const f of fs.readdirSync(pastaJs).filter(f => f.endsWith('.js')).sort()) h.update(f).update(fs.readFileSync(path.join(pastaJs, f)));
+  h.update(fs.readFileSync(fileURLToPath(import.meta.url))).update(String(MIN_TEMPO));
+  // (os --set trocam constantes só na versão medida: entram na chave, senão a variação pegaria o cache da sem eles)
+  if (pastaJs === JS) h.update(JSON.stringify(args.flatMap((a, i) => (a === '--set' ? [args[i + 1]] : []))));
+  const d = path.join(CACHE, h.digest('hex').slice(0, 16));
+  fs.mkdirSync(d, { recursive: true });
+  return d;
+}
+
 async function rodar(pastaJs) {
   if (!fs.existsSync(path.join(pastaJs, 'partida.js'))) throw new Error(`${pastaJs}: sem partida.js`);
   const res = [];
@@ -218,13 +253,16 @@ async function rodar(pastaJs) {
   const falta = SEMENTES.filter(s => !ja.has(s));
   let prox = 0, feitas = 0;
   const t0 = Date.now();
+  const dc = CACHE ? await pastaCache(pastaJs) : null;
   await Promise.all(Array.from({ length: Math.min(nPar, falta.length) }, async () => {
     while (prox < falta.length) {
       const s = falta[prox++];
+      const arqC = dc ? path.join(dc, `${s}.json`) : null;
+      if (arqC && fs.existsSync(arqC)) { const r = JSON.parse(fs.readFileSync(arqC, 'utf8')); if (ret) fs.appendFileSync(ret, JSON.stringify(r) + '\n'); res.push(r); feitas++; continue; }
       res.push(await new Promise((ok, erro) => {
         const sets = pastaJs === JS ? args.flatMap((a, i) => (a === '--set' ? ['--set', args[i + 1]] : [])) : [];
         const c = fork(fileURLToPath(import.meta.url), ['--filho', '--pasta', pastaJs, '--s', String(s), '--min', String(MIN_TEMPO), ...sets]);
-        c.on('message', r => { if (ret) fs.appendFileSync(ret, JSON.stringify(r) + '\n'); ok(r); }); c.on('error', erro);
+        c.on('message', r => { if (arqC) fs.writeFileSync(arqC, JSON.stringify(r)); if (ret) fs.appendFileSync(ret, JSON.stringify(r) + '\n'); ok(r); }); c.on('error', erro);
         c.on('exit', cod => { if (cod) erro(new Error(`semente ${s}: saiu com ${cod}`)); });
       }));
       feitas++;
@@ -280,6 +318,9 @@ function medidas(res) {
     duelos: soma(r => r.duelos ?? 0) / n, duelosRolando: soma(r => r.duelosRolando ?? 0) / n,
     golsCabeca: pct(soma(r => r.golsCabeca ?? 0), golsCh),
     chutes0: soma(r => r.chutesT?.[0] ?? 0) / n, chutes1: soma(r => r.chutesT?.[1] ?? 0) / n,
+    roubadas: soma(r => (r.roubadas ? r.roubadas.bote + r.roubadas.dividida + r.roubadas.solta : 0)) / n,
+    roubBote: soma(r => r.roubadas?.bote ?? 0) / n, roubDiv: soma(r => r.roubadas?.dividida ?? 0) / n, roubSolta: soma(r => r.roubadas?.solta ?? 0) / n,
+    perdas: soma(r => r.perdas ?? 0) / n, perdasAdv: soma(r => r.perdasAdv ?? 0) / n,
   };
 }
 
@@ -319,6 +360,8 @@ const LINHAS = [
   ['gols de cabeça', '8–18% (PL 23/24: 16%)', x => dentro(x.golsCabeca, 8, 18), x => `${f(x.golsCabeca)}%`],
   ['cabeceios por partida (a gol)', '—', null, x => `${f(x.cabeceios)} (${f(x.cabGol)})`],
   ['duelos pelo alto por partida (com a bola rolando)', '—', null, x => `${f(x.duelos)} (${f(x.duelosRolando)})`],
+  ['roubadas por partida (bote da IA / DIVIDIDA / bola solta)', '—', null, x => `${f(x.roubadas, 2)} (${f(x.roubBote, 2)} / ${f(x.roubDiv, 2)} / ${f(x.roubSolta, 2)})`],
+  ['perdas por toque longo (com o adversário)', '—', null, x => `${f(x.perdas, 2)} (${f(x.perdasAdv, 2)})`],
 ];
 
 const versoes = [];

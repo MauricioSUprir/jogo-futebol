@@ -30,8 +30,10 @@ podem ser usados. Conferido por `tools/teste-matdet.mjs` (precisão) e `tools/te
 
 ## Mundo (`js/sim.js`)
 - `criarMundo({semente, jogadores:[{id,x,z,rumo,attr,time,papel}], bola:{x,z}, posse, log})`
-- `passo(mundo, entradas)` — avança 1/60 s. `entradas = { [id]: {x, z, botoes} }`:
-  analógico **já no mundo** (|v| ≤ 1, quantizado em 1/1024) + máscara `BOTAO` (`config.js`).
+- `passo(mundo, entradas)` — avança 1/60 s. `entradas = { [id]: {x, z, botoes, repete?} }`:
+  analógico **já no mundo** (|v| ≤ 1, quantizado em 1/1024) + máscara `BOTAO` (`config.js`). `repete: true` = a MESMA
+  leitura do analógico do passo anterior (o `main.js` lê a entrada uma vez por quadro: a 30 qps o 2º passo do quadro
+  repete a do 1º); sem o campo, cada passo é uma leitura nova (testes em Node, API `__golaco`).
 - `hashMundo(mundo)` — FNV-1a do estado (bola, corpos, pés, posse, tick, gerador).
 - `mundo.eventos` — eventos do último passo (`toque`, `quique`, `trave`, `rede`, `perda`, ...).
 - `mundo.posse` — id do jogador com a bola ou `null`.
@@ -95,6 +97,14 @@ travaApoio, quadril`.
   do ponto de pouso (`velPeAterrissa`); senão fica `pendente` (no ar) até chegar.
 - `puxa` (0–1) e `gx, gz`: gesto do toque (só visual, integrado pela simulação — `conducao.js`
   `atualizarGesto`): peso e ponto aonde o pé desenhado vai até a bola, com velocidade limitada.
+- `ox, oz` (condução curta, 12/10; **só o desenho**): deslocamento que a pose soma ao pé desenhado no ar para a
+  chuteira (cápsula tornozelo–ponta) parar na SUPERFÍCIE da bola dele (posse ou domínio, bola abaixo de
+  `GESTO.superficieVBola`, corpo acima de `GESTO.superficieV`): a direção é do centro da bola para o tornozelo e a
+  distância é a saída do centro da bola da cápsula. Anda só com o que sobra de `GESTO.velSuperficie` depois do passo
+  de `tx, tz`, e fica abaixo de `GESTO.velDesvio × livre` (zero na saída do chão e no pouso). A física NUNCA lê
+  `ox, oz` (pouso, goleiro e hash usam `tx, tz`). Medido (`teste-conducao`): chuteira dentro da bola 61,3% → 32% dos
+  quadros só com este ajuste, 46,3% com o toque mais frequente da condução curta (o resto é o pé que POUSA embaixo da
+  bola — ponto de pouso da física); a meta PENDENTE de ≤ 1% continua.
 - `quadril`: altura do quadril da última pose (`anim.js alturaQuadril`, guardada pela simulação no
   fim do passo).
 - Pé plantado e tronco: mais torto que 1,0 rad o pé dá um passo para se alinhar (a passada fica
@@ -118,13 +128,37 @@ travaApoio, quadril`.
 ## Condução (`js/conducao.js`)
 `j.cond = { toque{tick, pe, bx, bz, tipo, tol?, modo?, desde?, qx?, qz?}, ult{tick, pe, bx, bz,
 dx, dz, v, tipo}, busca, longeDesde, pedalada{tick0, lado}, cortePendente, corteRumo,
-semDominioAte, puxada{tick0, rumo} }`. O toque é marcado com antecedência e o impulso é calculado
+semDominioAte, puxada{tick0, rumo}, esperaSalto, restoPassos }`. O toque é marcado com antecedência e o impulso é calculado
 no próprio tick. **O toque sai sempre do pé livre** (`peLivre`: no ar desde antes deste tick, com o outro
 no chão; no domínio vale também com os dois no ar). Com os dois pés no chão, `saidaParaToque`
 pede à passada que tire o pé do toque do chão a tempo, e o toque espera por ele
 (`GESTO.esperaSaida`). `atualizarGesto` (no fim do passo) integra o gesto de cada pé.
 - Tick do próximo toque forçado (antes de o corpo alcançar a bola, ou freando) cai num tick com um
   pé livre na passada prevista (nunca na fase de voo da corrida).
+- **Passos entre toques pela velocidade** (condução curta, pedido de 12/10; `passosDoToque`): `CONDUCAO.passosPorToque`
+  dá os passos por toque pela velocidade do corpo (1 até 3,5 m/s, 1,5 a 5,6 m/s, 2 a partir de 7,4 m/s); no meio da
+  tabela 1 e 2 se alternam pela difusão do erro (`restoPassos`; sem rng, a mesma regra para o humano e a IA). Ficam em
+  2 (um toque por passada, como antes): domínio, `j.inv`, freada (pede 1 m/s a menos do que corre), analógico além de
+  `CONDUCAO.angRitmo` do sentido da corrida e passe/chute carregando (`j.carga`, `j.pedido`). A condução curta (MOD) e
+  a proteção: 1 passo fixo. O primeiro replanejamento (folga/arco/ultrapassagem → 1 passo) só roda quando o ritmo deu
+  2; o da violação de `semUltrapassar` roda sempre. A física do toque, a previsão do corpo, `folgaMax`, `alcance`,
+  `intervaloMin` e `faseToque` não mudam.
+- **Gesto do analógico no tick do toque** (`j.saltoTick`, marcado por `sim.js aplicarEntrada` quando o analógico pula
+  mais que `CONDUCAO.saltoGesto` num tick; `cond.esperaSalto`): o toque marcado para esse tick espera 1 tick (se a
+  bola continua ao alcance) e lê o analógico de novo; se ele ainda pula, ou a bola sairia do alcance, sai um **toque de
+  freio** (`executarToque(…, freio = true)`): no sentido da velocidade do corpo, até s²/(2·freioGiro) + ofsFrente(s)
+  à frente dele, com v0 = `velParaParar` (a mesma conta da rolagem). O freio não põe o corpo em inversão (`j.inv`);
+  abaixo de 2,5 m/s o toque sai normal. A espera é pela próxima leitura NOVA do analógico (`j.leituraTick`, o passo da
+  última entrada sem `repete`; `cond.esperaInicio/esperaLeitura`): com a entrada marcada `repete` (a mesma leitura do
+  quadro anterior) o toque segue esperando, até 3 ticks e com a bola ao alcance; chegou a leitura nova, decide como
+  acima (pulou de novo → freio; não pulou → toque normal). Se o pé do toque sai do chão antes, o toque fica para o passo
+  seguinte. A 60 qps (toda entrada nova) é exatamente a regra de 1 tick. (Contraprova de 13/10: a 30 qps o toque que
+  esperou via a leitura do meio do gesto repetida e saía para o lado — 2,5 m no giro de 180° comum e 4,2 m com o gesto
+  no tick do toque; `teste-cortes`, entrada a 30 qps, ≤ 0,35 m = 0,25 + o passo a mais da leitura a 6 m/s. O freio
+  quando a janela da passada fecha sem leitura nova foi medido e descartado: mandava a bola reto nos cortes de uma vez
+  — 22 trechos de > 0,6 s com a bola longe em 480 sementes do roteiro duro a 30 qps, contra 7 sem ele.)
+- **Placas:** o toque não manda a bola além das placas (`ateAPlaca`; `CAMPO.meioX/meioZ + entorno`): com o alvo além
+  delas, a bola sai para parar antes (`velParaParar`). Só acontece fora do campo (treino e testes).
 - **Corte** (a bola sai na linha do analógico ±20°, o corpo segura o rumo até o toque —
   `cortePendente`/`corteRumo`, no máximo 0,25 s). Corte "para trás" do corpo embalado (> ~95° do
   sentido da corrida, > 5 m/s) em que o corpo não alcançaria a bola na linha pedida em até 0,5 s:
@@ -1224,18 +1258,35 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
   filtrada (`B.cvx/cvz`) abaixo de `IA_DEFESA.lento.v` por `lento.s[pressão]` s (+ `lento.longe` fora da linha de
   engajamento): o 1º homem aperta (também além da linha), mirando `lento.aperto` m da bola; o 2º cobre em todo nível.
 - `faltas.js chanceFaltaBote`: × `FALTAS.bote.lento` com o condutor abaixo de `vParado` (vale também na DIVIDIDA).
+- (condução curta, 12/10) a regra da bola colada lê `ACOES.boteIA.colada` (0,305: o 0,35 de antes × 0,87, a razão da
+  bola–condutor da IA no trote, 0,67 → 0,58 m; também `boteIA.bolaSolta` 0,7 → 0,61, `DEFESA_HUMANO.pressao.bolaSolta`
+  0,5 → 0,435 e `dividida.soltaIni/soltaFaixa` 0,45/0,5 → 0,39/0,435) e não vale com a bola **encostada** no corpo do
+  marcador (`boteIA.encostada`, 0,42 m do centro dele) e os dois andando juntos (velocidade relativa ≤ `encostadaVrel`,
+  1 m/s): o condutor empurrando a bola no marcador colado à frente — só com o marcador à frente ou de lado
+  (`faltas.js chegada` ≠ 'tras'; nas costas do condutor o bote era quase sempre falta, 14/10). Vale também no treino (o
+  hash do ataque muda).
 
 ### PRESSÃO (`defesa.js`; o desenho em `render/jogador3d.js`)
 - `pressionadorDe(m, time, excluir = -1)` → id de quem chega primeiro ao ponto de encontro (a `pressao.colado` m do corpo
   do condutor, do lado do gol, adiantado pela corrida dele até `leadMax` s; tempo com `acel`/`freio`; quem já ia leva
-  `histerese` s), sem o controlado, o goleiro e `excluir` (nunca exclui quem já ia). Uma vez por tick em
-  `m.pressaoHumano[time] = {tick, id}`.
+  `histerese` s — só se o ponto não pede a inversão dele, além de `JOGADOR.angInversao` do sentido da corrida: no passe
+  do adversário, quem teria de frear na linha até parar cede para quem chega primeiro), sem o controlado, o goleiro e
+  `excluir` (nunca exclui quem já ia). Uma vez por tick em `m.pressaoHumano[time] = {tick, id}`.
 - `pressionadorVisivel(m, time)` → id do chamado no último passo, ou −1 (pura; `main.js` passa `pressiona` na lista do
   desenho: setas âmbar acima da cabeça, `indicador-pressao`).
 - `entradaPressao(m, j)`: bola solta do pé do condutor (> `bolaSolta` m) e eu mais perto → vou na bola; a mais de
   `chega` m → disparada (analógico cheio + CORRER) ao ponto de encontro, contornando o condutor a `contorno` m se venho
   por trás; perto → pela velocidade (a do condutor + `ganho` × (ponto − corpo), até `aproxMax` m/s a mais; por trás,
   fechando no máximo `trasAprox` m/s), mirando `naBola` m antes da bola, do lado do gol. Estado `j.pressaoH = {corre}`.
+  Em todos os trechos (também no passe do adversário, no recebedor `voo.para`) ele **chega freando**: a velocidade
+  PEDIDA com que fecha no corpo do adversário fica em √(2 · `freio` · (d − 2 raios)) + `trasAprox`; longe disso, a
+  disparada de antes. É o pedido, não a garantia do contato: o corpo segue o pedido com o atraso de `JOGADOR.tauVel`
+  (freando a 6,2 m/s², ~1,1 m/s acima dele) e o CORRER segue ligado enquanto a velocidade pedida passa da corrida — o
+  chega freando tira a maior parte dos contatos, mas os que sobram ainda chegam acima de `FALTAS.carga.vMin`
+  (contraprova 14/10, teste-pressao-humano, sementes 7001–7008: contatos do chamado por trás do condutor 12 na main →
+  3 aqui, 2 deles fechando a 2,9–3,1 m/s; não de frente 31 → 11, acima de 1,8 m/s 23 → 8). A curva com a folga do atraso
+  (pedido τ·a abaixo, alvo 1,6 m/s no contato) foi medida e não resolveu (8 de 9 contatos não de frente seguiam acima
+  de 1,8 m/s): pendência.
 - `ia-tatica.js`: `B.apertaProprio` (o 1º aperta por conta própria); `B.pedido` é calculado ANTES do aperto, com
   `excluir = p1` quando ele já aperta (o botão chama outro); quem foi chamado no tick anterior (`B.pedidoTick`) não é o
   1º nem o 2º homem do bloco; `B.aperta1 = B.apertaProprio` (o botão soma um jogador, não dois).
@@ -1400,13 +1451,12 @@ corrido só na partida.
   conta como disputante marcado (até `janelaMarcado` s); no empate — a previsão confirmada põe o controlado na bola até
   `antecede` ticks depois do toque marcado de outro companheiro que não o recebedor — o controle fica com ele.
 - PRESSÃO do humano (`DEFESA_HUMANO.pressao`): `chega` 2,0 m e `aproxMax` 5 m/s (o bote do escolhido só abaixo de
-  `FALTAS.bote.vLivre` e não por trás: a regra do sim.js boteIA que veio da main, #474). Na aproximação (`entradaPressao`,
-  a mais de `chega` m), vindo POR TRÁS do condutor, a velocidade com que fecha nele fica em √(2·`freio`·(d − `colado` − 2
-  raios)) (o freio do corpo, `JOGADOR.freio` 6,2 m/s²): de 6 m/s ele precisa de ~2,9 m e chegava atropelando o condutor
-  quase parado (carga por trás; teste-pressao-humano M4 5 → 11 faltas com o botão, 10 de carga). De frente ou de lado,
-  disparada até `chega` (freando sempre, M1/M2 caíam). O chamado (`defesa.js chamadoDaPressao`: o último escolhido dentro
-  da validade, com o pedido valendo) não entra no corte do passe (`ia-tatica.js vaiNaLivre`): segue a PRESSÃO até o ponto
-  de chegada. Sem o botão nada disso liga (o painel IA × IA não muda).
+  `FALTAS.bote.vLivre` e não por trás: a regra do sim.js boteIA que veio da main, #474). Na aproximação vale a
+  `corridaAte`/`chegaFreando` da main (#476: fecha no condutor no máximo a √(2·`freio`·folga) + `trasAprox`; a mesma conta
+  que esta branch tinha feito só por trás — 10 de 11 faltas com o botão eram carga por trás do chamado a 5–6 m/s) e o
+  `bolaSolta` 0,435 da condução curta. O chamado (`defesa.js chamadoDaPressao`: o último escolhido dentro da validade, com
+  o pedido valendo) não entra no corte do passe (`ia-tatica.js vaiNaLivre`): segue a PRESSÃO até o ponto de chegada. Sem
+  o botão nada disso liga (o painel IA × IA não muda).
 
 ### Testes
 `teste-cabeceio` (canhão de cruzamentos, pose, teleporte, partidas demo, humano) e `teste-defesa-corrida` (humano

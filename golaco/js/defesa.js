@@ -210,7 +210,7 @@ export function chanceDividida(j, d0, bx, bz) {
   const a = j.par.attr, c = d0.par.attr;
   const dif = (a.desarme ?? 65) - ((c.drible ?? 75) + (c.controle ?? 75)) / 2;
   const dC = MD.hypot(bx - d0.x, bz - d0.z);
-  const solta = clamp((dC - 0.45) / 0.5, 0, 1);
+  const solta = clamp((dC - D.soltaIni) / D.soltaFaixa, 0, 1);
   return clamp(D.base + D.porAttr * dif + D.solta * solta, D.chance[0], D.chance[1]);
 }
 
@@ -395,7 +395,11 @@ export function pressionadorDe(m, time, excluir = -1) {
     for (const o of m.jogadores) {
       if (o.time !== time || o.posicao === 'GOL' || o.id === ctrl || o.papel === 'parado' || o.papel === 'marcador') continue;
       if (o.id === excluir && o.id !== atual) continue;
-      const t = pontoEncontro(m, time, o, d0, d0.vx, d0.vz, _pc).t - (o.id === atual ? P.histerese : 0);
+      let t = pontoEncontro(m, time, o, d0, d0.vx, d0.vz, _pc).t;
+      // a vantagem de quem já ia só vale se ele continua indo para lá: com o ponto novo (o passe do adversário mudou o
+      // alvo) além de JOGADOR.angInversao do sentido da corrida, ele freia na linha até parar (jogador.js passoCorpo) e
+      // quem chega primeiro assume (teste-pressao-humano M5, 14/10: o chamado parado no meio da inversão)
+      if (o.id === atual && !inverte(o, _pc.x, _pc.z)) t -= P.histerese;
       if (t < mt) { mt = t; id = o.id; }
     }
   }
@@ -404,6 +408,41 @@ export function pressionadorDe(m, time, excluir = -1) {
   if (id >= 0) { c.ult = id; c.ultTick = m.tick; }
   else if (c.ult === undefined) { c.ult = -1; c.ultTick = -1; }
   return id;
+}
+
+/** Correndo (acima de JOGADOR.vGiroLivre), o ponto (px, pz) pede a inversão do corpo (além de JOGADOR.angInversao)? */
+function inverte(o, px, pz) {
+  const dx = px - o.x, dz = pz - o.z, d = MD.hypot(dx, dz), s = MD.hypot(o.vx, o.vz);
+  return s > JOGADOR.vGiroLivre && d > 1e-6 && (o.vx * dx + o.vz * dz) < COS_INVERSAO * s * d;
+}
+const COS_INVERSAO = MD.cos(JOGADOR.angInversao);
+
+/**
+ * Chega freando (o chamado não atropela o adversário o: carga por trás, FALTAS.carga.vMin): a velocidade pedida (vx, vz)
+ * fecha no corpo de o no máximo o que ainda dá para frear (P.freio) até encostar (2 raios) a P.trasAprox m/s. Escreve em
+ * _vf {x, z} e devolve true se limitou. Sem isso o chamado entrava na disputa (P.chega m) a ~7 m/s fechando a ~6,8 m/s
+ * — no passe do adversário ele chegava em disparada no recebedor — e trombava nas costas dele (M4, 14/10).
+ */
+function chegaFreando(j, o, vx, vz) {
+  _vf.x = vx; _vf.z = vz;
+  const rx = o.x - j.x, rz = o.z - j.z, dc = MD.hypot(rx, rz);
+  if (dc < 1e-6) return false;
+  const nx = rx / dc, nz = rz / dc;
+  const fecha = (vx - o.vx) * nx + (vz - o.vz) * nz;
+  const max = Math.sqrt(2 * P.freio * Math.max(0, dc - 2 * JOGADOR.raio)) + P.trasAprox;
+  if (fecha <= max) return false;
+  _vf.x -= (fecha - max) * nx; _vf.z -= (fecha - max) * nz;
+  return true;
+}
+const _vf = { x: 0, z: 0 };
+
+/** Disparada na direção (dx, dz) chegando freando no adversário o (chegaFreando); sem limite, o direto de antes. */
+function corridaAte(j, o, dx, dz, st) {
+  const l = MD.hypot(dx, dz);
+  if (!o || l < 1e-6) return direto(j, dx, dz, true);
+  const v = j.par.vArrancada;
+  if (!chegaFreando(j, o, (dx / l) * v, (dz / l) * v)) return direto(j, dx, dz, true);
+  return entradaVelocidade(j, _vf.x, _vf.z, st, 0);
 }
 
 /**
@@ -430,6 +469,7 @@ export function entradaPressao(m, j) {
   // ponto de chegada — de lá a disputa (abaixo) aperta o recebedor com a velocidade limitada. Chegando colado, em
   // disparada, ele atropelava o recebedor no domínio (faltas com o botão 4 → 13 no teste-pressao-humano M4)
   const pv = m.posse == null ? passeAdversario(m, j.time) : null;
+  const st = j.pressaoH ??= { corre: false };
   if (pv) {
     if (pressionadorDe(m, j.time) !== j.id) return null;
     estadoIA(m, j).ramo = 'pressaoHumano';
@@ -437,7 +477,8 @@ export function entradaPressao(m, j) {
     const dx = pv.alvo.x + (gx / g) * P.chega - j.x, dz = pv.alvo.z + (gz / g) * P.chega - j.z, d = MD.hypot(dx, dz);
     // perto do ponto, freia (o analógico proporcional à distância): espera o recebedor ali
     if (d < 1) return { x: dx, z: dz, botoes: 0 };
-    return direto(j, dx, dz, true);
+    // em disparada, chegando freando no recebedor (ele vem ao encontro da bola)
+    return corridaAte(j, pv.para != null ? porId(m, pv.para) : null, dx, dz, st);
   }
   const d0 = condutorAdversario(m, j);
   if (!d0 || pressionadorDe(m, j.time) !== j.id) return null;
@@ -447,9 +488,9 @@ export function entradaPressao(m, j) {
   s.cvx += (d0.vx - s.cvx) * a; s.cvz += (d0.vz - s.cvz) * a;
   s.ramo = 'pressaoHumano';
   const b = m.bola.p;
-  // bola solta do pé do condutor e eu mais perto dela: vou na bola
+  // bola solta do pé do condutor e eu mais perto dela: vou na bola (chegando freando no condutor)
   const dbC = MD.hypot(b.x - d0.x, b.z - d0.z), dbJ = MD.hypot(b.x - j.x, b.z - j.z);
-  if (dbC > P.bolaSolta && dbJ < dbC) return direto(j, b.x - j.x, b.z - j.z, true);
+  if (dbC > P.bolaSolta && dbJ < dbC) return corridaAte(j, d0, b.x - j.x, b.z - j.z, st);
   const dc = MD.hypot(d0.x - j.x, d0.z - j.z);
   let tx, tz;
   const longe = dc > P.chega;
@@ -475,20 +516,7 @@ export function entradaPressao(m, j) {
       tx = d0.x + nx * P.contorno + s.cvx * P.leadDisputa; tz = d0.z + nz * P.contorno + s.cvz * P.leadDisputa;
     }
   }
-  if (longe) {
-    // aproximação em disparada; vindo POR TRÁS do condutor, a velocidade com que fecha nele fica na que ainda freia antes
-    // do corpo dele (v² = 2·P.freio·folga, o freio do corpo, JOGADOR.freio): chegando a P.chega m na disparada (6 m/s
-    // pedem ~2,9 m de freio) ele atropelava por trás o condutor quase parado — carga (teste-pressao-humano M4: 5 → 11
-    // faltas com o botão, 10 delas carga). De frente ou de lado não (é disputa, não falta): freando sempre, M1/M2 caíam
-    const ex = tx - j.x, ez = tz - j.z, el = MD.hypot(ex, ez) || 1, vA = j.par.vArrancada;
-    let vx = (ex / el) * vA, vz = (ez / el) * vA;
-    const nx = (d0.x - j.x) / (dc || 1), nz = (d0.z - j.z) / (dc || 1);
-    const ap = (vx - s.cvx) * nx + (vz - s.cvz) * nz;
-    const lim = Math.sqrt(2 * P.freio * Math.max(0, dc - P.colado - 2 * JOGADOR.raio));
-    if (rx * _pc.ux + rz * _pc.uz >= 0 || ap <= lim) return direto(j, ex, ez, true);
-    vx -= (ap - lim) * nx; vz -= (ap - lim) * nz;
-    return entradaVelocidade(j, vx, vz, j.pressaoH ??= { corre: false }, 0);
-  }
+  if (longe) return corridaAte(j, d0, tx - j.x, tz - j.z, st);
   // disputa pela VELOCIDADE (como o CONTER): a do condutor + P.ganho × (ponto − corpo), chegando no máximo a P.aproxMax
   // m/s mais rápido que ele — o para() reduzia a intensidade perto do ponto e soltava o CORRER, e o condutor que arrancava
   // fugia; por trás dele, perto (P.trasPerto m), a aproximação fica abaixo da carga por trás (P.trasAprox m/s)
@@ -501,8 +529,8 @@ export function entradaPressao(m, j) {
     if (ap > P.trasAprox) { rvx -= (ap - P.trasAprox) * nx; rvz -= (ap - P.trasAprox) * nz; }
   }
   vx = s.cvx + rvx; vz = s.cvz + rvz;
-  const st = j.pressaoH ??= { corre: false };
-  return entradaVelocidade(j, vx, vz, st, 0);
+  chegaFreando(j, d0, vx, vz);
+  return entradaVelocidade(j, _vf.x, _vf.z, st, 0);
 }
 
 /** Analógico cheio na direção (dx, dz), com CORRER. */

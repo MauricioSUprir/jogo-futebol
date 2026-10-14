@@ -32,6 +32,8 @@ const LISTA = [
   ['recepção que nunca se afasta da bola (canhão de passes e bolas livres)', 'teste-recepcao.mjs'],
   ['proteção de corpo', 'teste-protecao.mjs'],
   ['condução curta e pedalada', 'teste-dribles.mjs'],
+  // Pedido do dono de 12/10: "condução mais curtinha, com a bola mais no pé"
+  ['condução curta: bola no pé e toque por faixa de velocidade (humano e IA × IA)', 'teste-conducao-curta.mjs'],
   ['recomeço do treino (bola no pé, bola fora)', 'teste-recomeco.mjs'],
   // Etapa 2
   ['passes: rasteiro, enfiada, lançamento, cruzamento, primeira, tabela', 'teste-passes.mjs'],

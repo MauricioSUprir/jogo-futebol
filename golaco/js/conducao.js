@@ -14,8 +14,11 @@
 //   pedalada {tick0, lado} | null
 //   semDominioAte  tick até o qual não domina (acabou de ter a bola roubada)
 //   puxada  {tick0, rumo} | null — puxada de sola em andamento (ult.tipo === 'sola')
+//   esperaSalto  tick em que o toque marcado esperou o fim de um gesto do analógico (-1: não esperou)
+//   esperaInicio, esperaLeitura  tick em que essa espera começou e a leitura do analógico (j.leituraTick) de então
+//   restoPassos  resto da difusão do erro dos passos por toque (passosDoToque)
 
-import { CONDUCAO, PASSO, BOTAO, SUBPASSOS_BOLA, ENTRADA, GESTO, RECEPCAO } from './config.js';
+import { CONDUCAO, PASSO, BOTAO, SUBPASSOS_BOLA, ENTRADA, GESTO, RECEPCAO, CAMPO, BOLA } from './config.js';
 import { clamp, difAng, lerp, tabela } from './mat.js';
 import { passoCorpo, freqPassada, cargaPassada, faseLocal, velocidadeDesejada } from './jogador.js';
 import { velParaDistancia, velParaParar, chutarRasteiro, copiarBola, passoBola, proxVelRolando, DT_BOLA, distAteParar } from './bola.js';
@@ -25,13 +28,17 @@ import { movimentoAssistido, recepcaoAtiva } from './recepcao.js';
 
 const DT = PASSO;
 const PROT_INTERVALO = Math.round(0.3 / PASSO); // ticks — toque de proteção mais espaçado
+// ticks que o toque espera a leitura nova do analógico depois de um gesto (a entrada repetida do quadro: até 20 qps)
+const ESPERA_LEITURA = 3;
 const MAG_DIR = ENTRADA.magDirecao; // pedido de direção (sim.js zera o analógico abaixo disso)
 const BUSCA_PEDIDO_MAX = 1.75;       // rad (~100°) — indo buscar a bola, pedido até aqui curva o corpo
 const TAB_OFS = [[0, CONDUCAO.ofsFrente.curta], [3, CONDUCAO.ofsFrente.trote], [5.5, CONDUCAO.ofsFrente.corrida], [7.6, CONDUCAO.ofsFrente.arrancada]];
+// placas em volta do campo (bola.js colidirPlacas): onde o centro da bola encosta nelas, menos uma folga
+const PLACA_X = CAMPO.meioX + CAMPO.entorno - BOLA.raio - 0.05, PLACA_Z = CAMPO.meioZ + CAMPO.entorno - BOLA.raio - 0.05;
 
 export function criarCond() {
   // bolaDesviada (sim.js) declarado já (undefined, como antes da 1ª escrita): todos os cond com a mesma forma
-  return { toque: null, ult: null, ref: null, busca: false, longeDesde: -1, pedalada: null, nToques: 0, cortePendente: null, corteRumo: null, semDominioAte: -1, puxada: null, bolaDesviada: undefined };
+  return { toque: null, ult: null, ref: null, busca: false, longeDesde: -1, pedalada: null, nToques: 0, cortePendente: null, corteRumo: null, semDominioAte: -1, puxada: null, bolaDesviada: undefined, esperaSalto: -1, esperaInicio: -1, esperaLeitura: -1, restoPassos: 0 };
 }
 
 /** Distância de toque à frente do corpo pela velocidade. */
@@ -588,10 +595,30 @@ function desvioDoArco(b, plano, pc) {
 }
 
 /**
+ * Passos até o próximo toque (condução curta, 12/10): pela velocidade do corpo (CONDUCAO.passosPorToque), 1 ou 2 —
+ * no meio da tabela os dois se alternam pela difusão do erro (o resto fica em c.restoPassos; sem sorteio, a mesma
+ * regra para o humano e para a IA). Um toque por passada (2), como antes, no domínio, na inversão do corpo, na
+ * freada (pede 1 m/s a menos do que corre), com o analógico além de angRitmo do sentido da corrida (o giro e o corte
+ * pedem o toque no tempo de antes: com toque a cada passo a deriva do giro de 180° ia a 1,9 m) e com passe ou chute
+ * carregando.
+ */
+function passosDoToque(j, c, s, dom) {
+  if (dom || j.inv || velPedida(j, true) < s - 1.0 || j.carga > 0 || j.pedido
+    || (s > 1 && j.imag > MAG_DIR && Math.abs(difAng(MD.atan2(j.vz, j.vx), MD.atan2(j.iz, j.ix))) > CONDUCAO.angRitmo)) {
+    c.restoPassos = 0;
+    return 2;
+  }
+  const acc = c.restoPassos + tabela(CONDUCAO.passosPorToque, s, 1);
+  const n = acc >= 1.5 ? 2 : 1;
+  c.restoPassos = acc - n;
+  return n;
+}
+
+/**
  * Executa o toque agora (tick atual, antes de integrar a bola). Planeja o próximo.
  * tipo: 'conducao' | 'dominio' | 'ajuste' | 'protecao' (a puxada de sola é executarPuxada)
  */
-export function executarToque(m, j, pe, tipo) {
+export function executarToque(m, j, pe, tipo, freio = false) {
   const c = j.cond;
   const b = m.bola;
   c.cortePendente = null;
@@ -618,13 +645,15 @@ export function executarToque(m, j, pe, tipo) {
       if (d > lim || d < -lim) ori = aV + clamp(d, -lim, lim);
     }
   }
-  let plano = planejarAlvo(m, j, pe, prot || curta ? 1 : 2, pc, prot, curta, 0, dom, ori);
-  // também toca a cada passo se a bola fosse abrir demais (saindo do parado): assim ela
+  // passos até o próximo toque: 1 na condução curta (MOD) e na proteção; senão pela velocidade (passosDoToque)
+  const passos = prot || curta ? 1 : passosDoToque(j, c, sAgora0, dom);
+  let plano = planejarAlvo(m, j, pe, passos, pc, prot, curta, 0, dom, ori);
+  // um toque por passada que deixaria a bola abrir demais (saindo do parado) vira toque a cada passo: assim ela
   // está sempre ao alcance de um corte pedido no meio do caminho; e numa curva fechada, se a
   // bola rolando reta se afastaria demais do arco do corpo até o próximo toque
   // (curva = o analógico girando de forma contínua; um gesto brusco não conta)
   const curvando = Math.abs(j.intW) > 0.3;
-  if (!prot && !curta && (!semUltrapassar(b, plano, pc) || plano.folgaMax > CONDUCAO.folgaMax || (curvando && desvioDoArco(b, plano, pc) > CONDUCAO.arcoMax))) {
+  if (!prot && !curta && passos === 2 && (!semUltrapassar(b, plano, pc) || plano.folgaMax > CONDUCAO.folgaMax || (curvando && desvioDoArco(b, plano, pc) > CONDUCAO.arcoMax))) {
     plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, 0, dom, ori);
   }
   if (!semUltrapassar(b, plano, pc)) {
@@ -638,6 +667,23 @@ export function executarToque(m, j, pe, tipo) {
     else if (velPedida(j, true) < sAgora0 - 1.0) plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, minI, dom, ori);
   }
   let { iN, proxPe, tx, tz, dx, dz, dist, tolerancia } = plano;
+  // TOQUE DE FREIO (gesto do analógico ainda pela borda no tick do toque): a bola sai no sentido da corrida e para
+  // onde o corpo para — s²/(2·freioGiro) à frente dele, mais o ponto do toque — pela mesma conta da rolagem
+  // (velParaParar); o próximo toque, com o analógico já no fim do gesto, leva a bola para o lado novo
+  let parar = false;
+  if (freio && !dom && !prot && !curta && sAgora0 > 2.5) {
+    const av = MD.atan2(j.vz, j.vx), ux = MD.cos(av), uz = MD.sin(av);
+    const dPara = sAgora0 * sAgora0 / (2 * j.par.freioGiro) + ofsFrente(sAgora0, false);
+    const pr = Math.max(0.05, (j.x + ux * dPara - b.p.x) * ux + (j.z + uz * dPara - b.p.z) * uz);
+    parar = true; dx = ux * pr; dz = uz * pr; dist = pr; tx = b.p.x + dx; tz = b.p.z + dz;
+  }
+  // o toque não manda a bola na placa (o roteiro do teste-perda leva o condutor para fora do campo a 6–7 m/s): com o
+  // alvo além dela, a bola sai para parar antes dela (a mesma conta da rolagem) — antes ela batia e voltava de lado
+  // e o corpo, invertendo, ficava até 1,7 s longe dela
+  if (!prot && dist > 0.05) {
+    const lim = ateAPlaca(b.p.x, b.p.z, dx / dist, dz / dist);
+    if (lim < dist) { const k = Math.max(0.02, lim) / dist; dx *= k; dz *= k; dist *= k; tx = b.p.x + dx; tz = b.p.z + dz; parar = true; }
+  }
   const apoio = 1 - pe;
   const hx = MD.cos(pc.rs[iN]), hz = MD.sin(pc.rs[iN]);
   // erro do toque: cresce com a velocidade e cai com o atributo
@@ -676,7 +722,8 @@ export function executarToque(m, j, pe, tipo) {
   // protegendo parado, a bola é rolada de leve com a sola e para no ponto (não foge do corpo);
   // andando, chega ao ponto no próximo toque, no passo de proteção (sem disparar)
   let vBase;
-  if (!prot) vBase = velDist(dist, iN);
+  if (parar) vBase = velParaParar(dist);
+  else if (!prot) vBase = velDist(dist, iN);
   else if (j.imag > MAG_DIR) vBase = Math.min(velDist(dist, iN), CONDUCAO.vProtecao * 1.6);
   else vBase = velParaParar(dist);
   let v0 = vBase * Math.max(0.5, 1 + ev);
@@ -793,7 +840,34 @@ export function controlarComBola(m, j) {
   if (c.toque && m.tick >= c.toque.tick) {
     const alc = noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y);
     const pe = peLivre(j, c.toque.pe, false);
-    if (alc && pe >= 0) { executarToque(m, j, pe, 'conducao'); return; }
+    if (alc && pe >= 0) {
+      // o analógico pulou NESTE tick (gesto rápido do polegar pela borda): o 1º tick ainda está no meio do caminho e
+      // não decide o toque. Espera 1 tick (se a bola continua ao alcance) e lê o analógico de novo; se ele ainda
+      // pula, ou a bola sairia do alcance, toque de FREIO. (Antes a bola saía na direção do meio do gesto: no giro de
+      // 180° a 6 m/s com o gesto no tick do toque, até 4,2 m de deriva para o lado — teste-cortes)
+      // A espera é pela próxima leitura NOVA do analógico: a 30 qps o 2º passo do quadro repete a leitura do 1º
+      // (`repete`; j.leituraTick parado) e não decide nada — o toque segue esperando (até ESPERA_LEITURA ticks e com a
+      // bola ao alcance); chegou a leitura nova: pulou de novo → freio; não pulou → o toque normal, já com o analógico
+      // no fim do gesto. Se a passada tira o pé do toque antes disso, o toque fica para o passo seguinte (como todo
+      // toque sem pé livre): nem o freio (manda a bola reto nos cortes de uma vez, tecla ou polegar rápido — trechos de
+      // > 1 s com a bola longe no roteiro duro) nem o toque com a leitura do meio do gesto (4,2 m de deriva no giro).
+      // (Contraprova, 13/10: sem isso, a 30 qps o toque que esperou saía na direção do meio do gesto)
+      if (j.saltoTick >= 0 && j.saltoTick === j.leituraTick && m.tick - j.leituraTick < ESPERA_LEITURA) {
+        const esperou = c.esperaSalto === m.tick - 1;
+        const semLeituraNova = esperou && j.leituraTick === c.esperaLeitura && m.tick - c.esperaInicio < ESPERA_LEITURA;
+        if ((!esperou || semLeituraNova) && bolaFicaNoAlcance(j, b)) {
+          if (!esperou) { c.esperaInicio = m.tick; c.esperaLeitura = j.leituraTick; }
+          c.esperaSalto = m.tick;
+          return;
+        }
+        c.esperaSalto = -1;
+        executarToque(m, j, pe, 'conducao', true);
+        return;
+      }
+      c.esperaSalto = -1;
+      executarToque(m, j, pe, 'conducao');
+      return;
+    }
     // os dois pés no chão: a passada está tirando o pé do toque do chão — espera por ele
     if (alc && j.pes[0].apoio && j.pes[1].apoio && m.tick - c.toque.tick < GESTO.esperaSaida) return;
     // sem pé de apoio agora (fase de voo) ou fora do alcance: remarca para a próxima
@@ -832,6 +906,20 @@ export function controlarComBola(m, j) {
     c.toque = null;
     c.busca = true;
   }
+}
+
+/** Distância da bola (bx, bz) até a placa andando na direção (ux, uz) (Infinity se não chega a uma; 0 se já passou). */
+function ateAPlaca(bx, bz, ux, uz) {
+  if (Math.abs(bx) > PLACA_X || Math.abs(bz) > PLACA_Z) return Infinity; // fora delas (posta lá): não muda o toque
+  let d = Infinity;
+  if (ux > 1e-6) d = Math.min(d, (PLACA_X - bx) / ux); else if (ux < -1e-6) d = Math.min(d, (-PLACA_X - bx) / ux);
+  if (uz > 1e-6) d = Math.min(d, (PLACA_Z - bz) / uz); else if (uz < -1e-6) d = Math.min(d, (-PLACA_Z - bz) / uz);
+  return Math.max(0, d);
+}
+
+/** A bola continua ao alcance do pé no próximo tick (corpo e bola seguindo como estão)? */
+function bolaFicaNoAlcance(j, b) {
+  return noAlcance(j.x + j.vx * DT, j.z + j.vz * DT, j.rumo, b.p.x + b.v.x * DT, b.p.z + b.v.z * DT, b.p.y);
 }
 
 /** O toque marcado ainda vai encontrar a bola no alcance (corpo e bola previstos)? */
