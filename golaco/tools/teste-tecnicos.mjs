@@ -25,7 +25,9 @@
 //   T13 treinador e jogador nunca se sobrepõem (≥ 0,5 m entre os centros); ≥ 1 m em ≥ 99,9% dos passos;
 //   T14 custo ≤ 0,05 ms por passo (passoTecnicos com as 2 poses; mediana de 3 execuções);
 //   T15 câmeras roteirizadas (pré-jogo, comemoração, lateral do golaço) a ≥ 0,6 m de qualquer treinador em 100% dos
-//       quadros.
+//       quadros;
+//   T16 treinadorDoTime(T, t) (o gancho das cenas): {id, time, x, z, rumo, kit} do time, dentro da área técnica; null sem
+//       treinadores.
 // Na versão sem os treinadores (main/saot antes desta frente) os módulos não existem: reprova.
 //   node tools/teste-tecnicos.mjs [--js <pasta js>] [--sementes N] [--par N] [--min M]
 import { fork } from 'node:child_process';
@@ -166,7 +168,7 @@ async function coletar(sem) {
       if (e.mao) {
         for (let p = 0; p < 2; p++) {
           const dm = Math.hypot(maos[p * 3] - e.mao[p * 3], maos[p * 3 + 1] - e.mao[p * 3 + 1], maos[p * 3 + 2] - e.mao[p * 3 + 2]), vm = dm / PASSO;
-          if (dm > R.maoPasso) { R.maoPasso = dm; R.maoPassoEx = `${tc.id} ${tc.estado}/${tc.variante} postura ${tc.postura} t ${fmt((T.k - tc.desde) * PASSO, 2)} s, v ${fmt(v, 2)} m/s`; }
+          if (dm > R.maoPasso) { R.maoPasso = dm; R.maoPassoEx = `semente ${sem}: ${tc.id} ${tc.estado}/${tc.variante} postura ${tc.postura} t ${fmt((T.k - tc.desde) * PASSO, 2)} s, v ${fmt(v, 2)} m/s`; }
           if (tc.estado !== 'comemora') { R.maoVel[Math.min(1000, Math.round(vm * 50))]++; R.nMao++; }
           else R.maoVelC[Math.min(1000, Math.round(vm * 50))]++;
         }
@@ -285,6 +287,19 @@ if (!TE || !EF) {
     }
     const espelho = rs.filter(r => r.time === 0).every(r => rs.some(q => q.time === 1 && q.lado === r.lado && Math.abs(q.x0 + r.x1) < 1e-9 && Math.abs(q.x1 + r.x0) < 1e-9 && q.z0 === r.z0 && q.z1 === r.z1));
     reg('T1 área técnica (IFAB Regra 1): frente, lados, fundo, linha e espelho', `${txt}espelhadas ${espelho}`, '1,00 m; 1,00 m; ≤ 39,7; 0,12 m (±5 cm); sim', ok.every(Boolean) && espelho);
+  }
+
+  // ---------------------------------------------------------------- T16 (o gancho das cenas: o treinador como ator)
+  {
+    let txt = 'treinadorDoTime não existe', bom = false;
+    if (typeof TE.treinadorDoTime === 'function') {
+      const T = TE.criarTecnicos(null, 7), L = TE.leituraVazia(TE.criarLeitura());
+      for (let i = 0; i < 600; i++) TE.passoTecnicos(T, L);
+      const a = [0, 1].map(t => TE.treinadorDoTime(T, t));
+      bom = a.every((o, t) => o && o.id === TECNICOS.ids[t] && o.time === t && o.kit === `tecnico${t}` && EF.dentroAreaTecnica(t, o.x, o.z) && Number.isFinite(o.rumo)) && TE.treinadorDoTime(null, 0) === null;
+      txt = a.map(o => (o ? `${o.id} (time ${o.time}, ${o.kit}) em x ${fmt(o.x, 1)}, z ${fmt(o.z, 1)}` : 'null')).join('; ') + `; sem treinadores: ${TE.treinadorDoTime(null, 0)}`;
+    }
+    reg('T16 o treinador como ator de cena (treinadorDoTime: o gancho da comemoração e do fim de jogo)', txt, 'id, time e kit do time, dentro da área técnica; null sem treinadores', bom);
   }
 
   // ---------------------------------------------------------------- partidas (processos filhos)

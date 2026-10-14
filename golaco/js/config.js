@@ -1383,6 +1383,8 @@ export const TECNICOS = {
   // do quadril); o corpo de frente para o campo, virando até `corpoMax` rad para o lado da bola
   olhar: { cabecaMax: 1.22, tronco: 0.8, troncoMax: 0.6, corpoMax: 0.75, tau: 0.12, virarAnda: 0.7 },
   mistura: 0.35,              // s — toda troca de gesto mistura as juntas (smoothstep)
+  maoPico: 6.5,               // m/s — o pico da mão na troca comum: a mistura cresce com a distância (1,5·d/maoPico)
+  arcoMao: 0.25,              // m — a mão que iria pela cabeça na troca comum passa pela frente (o arco no meio dela)
   misturaGol: 0.2,            // s — o gol sofrido: as mãos vão para a cabeça (a comemoração usa comemora.sobe)
   misturaAgacha: 0.7,         // s — agachar e levantar (o corpo inteiro desce 0,3 m; as mãos vão junto)
   maoVel: [4, 7],             // m/s — teto da mão fora / dentro da comemoração

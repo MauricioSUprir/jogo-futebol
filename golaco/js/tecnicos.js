@@ -27,7 +27,8 @@
 // Contrato:
 //   criarTecnicos(times, semente) → T;  criarLeitura() → L;  leituraDoMundo(m, eventos, L) (só lê);
 //   passoTecnicos(T, L) (1 passo de 1/60 s);  poseTecnico(tec, out) (57 floats, o formato do anel);
-//   afastarDeTecnicos(p, T|lista, dmin) (câmeras de cinema fora deles);  infoTecnicos(T) (testes).
+//   afastarDeTecnicos(p, T|lista, dmin) (câmeras de cinema fora deles);  infoTecnicos(T) (testes);
+//   treinadorDoTime(T, t) (o ator de cena do gancho das cenas) e kitTecnico(time).
 import { PASSO, CAMPO, TECNICOS as TC } from './config.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado } from './jogador.js';
 import { pose, alturaQuadril, J, NJ, RAIO_CABECA, ikBraco } from './anim.js';
@@ -150,7 +151,7 @@ function criarTecnico(t, mini) {
     ultimo: { estado: '', variante: -1 }, ultimaPostura: -1,
     ultimoInstrui: -1e9, instruiEm: -1, ultimoAplauso: -1e9, defendeDesde: -1, ultimoChute: -1e9,
     pendente: null, pendenteEm: -1, pendenteV: 0, aponta: 1, possePrev: null, paradaVista: NaN, vamos: false, exG: cx, ezG: TC.zBase,
-    passeNoAr: false, passes: 0, fimPendente: -1, construindoDesde: -1,
+    passeNoAr: false, passes: 0, fimPendente: -1, construindoDesde: -1, mixMedido: -1e9,
     olhar: -Math.PI / 2, tronco: 0, vTronco: 0, cabecaPitch: 0,
     corre: { ate: -1, x: cx },
     noAr: false, rapido: false, modo: 'anda', mix: TC.mistura,
@@ -711,6 +712,7 @@ function misturarMao(a, b, s, o) {
 }
 
 const _al = { x: 0, y: 0, z: 0 }, _al2 = { x: 0, y: 0, z: 0 }, _g = [0, 0, 0, 0, 0, 0];
+const _modoN = { m: 'n' };   // a mão onde está (o 'p', o pulso apontado, mede a troca pela mão atual)
 /** Ponto-alvo da mão (lado −1/+1) da especificação o, no mundo, em out. */
 function alvoMao(o, P, h, lado, sp, out) {
   const fx = Math.cos(h), fz = Math.sin(h), rx = -fz, rz = fx;
@@ -737,6 +739,7 @@ function aplicarMao(o, h, lado, sp) {
   if (sp.w <= 0 && !sp.m2) return;
   let t = alvoMao(sp, o, h, lado, sp, _al);
   if (sp.m2 && sp.m2.w > 0) { const t2 = alvoMao(sp.m2, o, h, lado, sp.m2, _al2); _al.x = lerp(t2.x, t.x, sp.s); _al.y = lerp(t2.y, t.y, sp.s); _al.z = lerp(t2.z, t.z, sp.s); t = _al; }
+  if (sp.arco) { if (t !== _al) { _al.x = t.x; _al.y = t.y; _al.z = t.z; t = _al; } _al.x += Math.cos(h) * sp.arco; _al.z += Math.sin(h) * sp.arco; }
   const w = sp.m2 ? lerp(sp.m2.w, sp.w, sp.s) : sp.w;
   _g[3] = sp.pf; _g[4] = sp.pr; _g[5] = sp.py;
   maoEm(o, h, lado, t.x, t.y, t.z, w, _g);
@@ -796,7 +799,10 @@ function poseTec(T, tc, L) {
     const a = tc.snap;
     misturarMao(a.e, _pb.e, sMix, _pm.e); misturarMao(a.d, _pb.d, sMix, _pm.d);
     _pm.agacha = lerp(a.agacha, _pb.agacha, sMix); _pm.pitch = lerp(a.pitch, _pb.pitch, sMix); _pm.pulo = lerp(a.pulo, _pb.pulo, sMix);
+    // o arco da troca (medido no 1º passo dela): a mão que iria em linha reta pela cabeça passa pela FRENTE do corpo
+    _pm.e.arco = _pm.d.arco = (tc.arcoMix || 0) * Math.sin(Math.PI * sMix);
   } else { _pb.e.m2 = null; _pb.d.m2 = null; }
+  _pb.e.arco = _pb.d.arco = 0;
   tc.ultP.agacha = p.agacha; tc.ultP.pitch = p.pitch; tc.ultP.pulo = p.pulo;
   // agachado (os pés ficam; joelhos para a frente)
   if (p.agacha > 0) poseAgachado(o, j, suave(p.agacha));
@@ -811,6 +817,27 @@ function poseTec(T, tc, L) {
   // cabeça: no olhar, até cabecaMax do tronco (o comprimento do pescoço fixo)
   const yaw = h + clamp(difAng(h, tc.olhar), -TC.olhar.cabecaMax, TC.olhar.cabecaMax);
   cabecaOlhando(o, yaw, p.pitch, T.pescoco);
+  // troca de gesto comum (TC.mistura) com a mão longe do alvo novo (das costas para cima da cabeça): a mistura dura o
+  // bastante para o pico do smoothstep (1,5 × a velocidade média) ficar em TC.maoPico m/s — medido UMA vez, no 1º passo da
+  // troca, com as duas mãos (a foto e o alvo no mundo, pelos ombros e pela cabeça desta pose); as reações ao gol ficam
+  // explosivas (TC.comemora.sobe, TC.misturaGol)
+  // (e a linha reta da mão passando a < RMIN + 5 cm do centro da cabeça — das costas para cima dela — ganha um ARCO pela
+  // frente, TC.arcoMao m no meio: sem ele a mão empurrada para fora da cabeça dava a volta nela de uma vez)
+  if (tc.mixMedido !== tc.troca) {
+    tc.mixMedido = tc.troca; tc.arcoMix = 0;
+    if (tc.mix === TC.mistura && sMix < 1) {
+      let d = 0, perto = Infinity;
+      const ic = J.cabeca * 3;
+      for (const [lado, a, b] of [[-1, tc.snap.e, _pb.e], [1, tc.snap.d, _pb.d]]) {
+        const pa = alvoMao(a, o, h, lado, a.m === 'p' || a.w <= 0 ? _modoN : a, _al), xa = pa.x, ya = pa.y, za = pa.z;
+        const pb = alvoMao(b, o, h, lado, b.m === 'p' || b.w <= 0 ? _modoN : b, _al2);
+        d = Math.max(d, Math.hypot(pb.x - xa, pb.y - ya, pb.z - za));
+        for (let u = 0.1; u < 0.95; u += 0.1) perto = Math.min(perto, Math.hypot(xa + (pb.x - xa) * u - o[ic], ya + (pb.y - ya) * u - o[ic + 1], za + (pb.z - za) * u - o[ic + 2]));
+      }
+      if (perto < RMIN + 0.05) { tc.arcoMix = TC.arcoMao; d += TC.arcoMao; }
+      tc.mix = Math.max(TC.mistura, 1.5 * d / TC.maoPico);
+    }
+  }
   // braços (alvos do ombro/cabeça desta pose; a esquerda antes: a direita pode apontar o pulso dela) e a mão fora da cabeça
   aplicarMao(o, h, -1, p.e);
   aplicarMao(o, h, 1, p.d);
@@ -860,6 +887,19 @@ export function afastarDeTecnicos(p, tecs, dmin = 0.6) {
   if (arr) { p[0] = x; p[2] = z; } else { p.x = x; p.z = z; }
   return p;
 }
+
+/**
+ * O treinador do time `t` como ATOR de cena — o GANCHO da frente das cenas (comemoracao.js `opc.treinador`, cena-fim.js
+ * `treinadores`; main.js `treinadorDoTime(t)`): {id (TECNICOS.ids: 210 | 211; não cruza com os jogadores 1–123 nem com os
+ * árbitros 200–203), time, x, z, rumo, kit ('tecnico0' | 'tecnico1')} onde ele está AGORA (dentro da área técnica dele,
+ * Regra 1), ou null sem treinadores. Só lê.
+ */
+export function treinadorDoTime(T, t) {
+  const tc = T?.tecs?.find(q => q.time === t);
+  return tc ? { id: tc.id, time: tc.time, x: tc.j.x, z: tc.j.z, rumo: tc.j.rumo, kit: kitTecnico(tc.time) } : null;
+}
+/** O uniforme do treinador do time (jogador3d.js: o terno do mandante, o agasalho do visitante). */
+export function kitTecnico(time) { return time === 1 ? 'tecnico1' : 'tecnico0'; }
 
 /** Informação para testes e API: por treinador {id, time, x, z, rumo, v, estado, variante, postura, olhar, noAr, rapido}. */
 export function infoTecnicos(T) {
