@@ -231,3 +231,25 @@ menos bolas longas — os duelos pelo alto com a bola rolando caíam para ~1,5),
 partida no `teste-defesa-corrida`, meta ≤ 1,5).
 
 Medido (painel do CI, 144 partidas, main × branch, mesmas sementes): ver o relatório do PR #471.
+
+### 7.1 Rodada de 14/10 — onde o volume se perde (diagnóstico, 24–48 partidas locais, decisão no CI)
+
+- **O passador que confere a linha** (Jordet et al. 2020, *Frontiers in Psychology*, "Scanning, contextual factors, and
+  association with performance in English Premier League footballers", 9.574 posses: o jogador olha em volta mais antes de
+  passar do que antes de qualquer outra ação, e quem olha mais acerta mais o passe). Medido: ~16 passes por partida saíam
+  com a linha fechada no toque (risco ≥ 0,8 pela conta do `riscoCaminho`) tendo < 0,2 na decisão — a carga do botão e a
+  espera do pé de apoio levam 0,3–0,9 s e a marcação na linha de passe fecha a linha nesse tempo; 2/3 deles eram perdidos
+  (um terço das perdas do meio-campo). Desistir do passe quando a linha fecha derrubou esses passes de 16,2 para 3,3 por
+  partida, mas não trouxe volume (7,4 → 7,6 chutes, 1,71 → 1,67 gol em 48) e as interceptações voltaram ao nível da base
+  (13,1 → 8,0 por time, teste-intercepta A pede ≥ base + 1,5) com o passe certo em 88,6% (meta 80–86,5%): boa parte das
+  interceptações novas eram erro do passador. Não entrou — fica para o dono decidir (IA que passa melhor × defesa que
+  intercepta mais); uma versão pela `visao` (quem olha mais vê a linha fechar) é o meio-termo natural.
+- **Ablação da defesa nova** (48 partidas, base = a branch, 7,4 chutes; a main nas mesmas sementes: 9,4): sem a sombra da
+  linha de passe 7,2; sem o corte do passe 7,8; goleiro sem ler o cruzamento 8,0; sem a defesa da arrancada 8,1. Nenhuma
+  peça explica sozinha: cada uma tira ~0,5 chute (a soma dá a diferença). O que falta são os chutes da área sem ser de
+  cabeça (5,06 → 3,44 por partida) e os escanteios (2,33 → 1,69); os cabeceios a gol quase não mudam (1,44 → 1,19).
+- **Pesos do ataque não trazem volume** (48 partidas): `utilidade.chute` 3,6 → 7,1 chutes; `primeira.xg` 0,08 → 7,4;
+  `cruzamentoV` 0,45 → 7,5 (base 7,4). O condutor que encara no último terço (`manterTerco`) parecia neutro em 48 (7,4 ×
+  7,5) mas vale ~0,4 chute nas 144 do CI (7,3 × 6,9) — de novo, 48 partidas enganam.
+- No painel do CI com a IA jogando pelo humano do time 0, só o time 1 perde chute (4,7 → 3,2); sem o controle humano
+  (`m.humanos = []`) os dois perdem parecido: a causa é geral, não do lado do humano.
