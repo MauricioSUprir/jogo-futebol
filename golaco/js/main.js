@@ -187,7 +187,7 @@ const estJ = new Map();   // id → {ant, atu, des, x0, z0, x1, z1, r0, r1}
 const anel = criarAnel({ ticks: Math.round(CFG.REPLAY.segundos / PASSO), vagas: CFG.REPLAY.vagas, nj: NJ });
 let diretor = null;
 let replayAuto = params.get('replay') === '0' ? false : params.get('replay') === '1' ? true : typeof prefs.replay === 'boolean' ? prefs.replay : CFG.REPLAY.automatico;
-const custoGravar = { n: 0, ms: 0 }, custoReplay = { n: 0, ms: 0 };
+const custoGravar = { n: 0, ms: 0 }, custoReplay = { n: 0, ms: 0, v: new Float64Array(4096) };
 const listaR = [];
 const _bpR = { x: 0, y: 0, z: 0 }, _bqR = { x: 0, y: 0, z: 0, w: 1 }, _qR = new THREE.Quaternion();
 let replayBotoes = 0;     // botões já segurados quando o replay começou: só pulam depois de soltos e apertados de novo
@@ -208,7 +208,7 @@ const custoCena = { n: 0, ms: 0 };
 // Treinadores (js/tecnicos.js): só na partida; ?tecnicos=0 desliga (comparação A/B do custo). tecAlfaCena: o último passo
 // deles veio da cena (simulação segura): o desenho interpola com o alfa da cena
 const TECNICOS_ON = params.get('tecnicos') !== '0';
-let tecnicos = null, tecAlfaCena = false;
+let tecnicos = null, tecAlfaCena = false, tecVisiveis = true;
 const leituraTec = criarLeitura();
 const custoTec = { n: 0, ms: 0 };
 const _leituraVazia = [];
@@ -743,7 +743,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
  * os ramos do jogo, da comemoração e do pré-jogo usam esta mesma função. Devolve o novo n.
  */
 function anexarTecnicos(L, n, al, T = tecnicos) {
-  if (!T) return n;
+  if (!T || !tecVisiveis) return n;
   for (const tc of T.tecs) {
     const it = L[n] ?? (L[n] = {});
     const des = tc.des ?? (tc.des = new Float32Array(NJ * 3));
@@ -878,7 +878,7 @@ function desenharReplay(dt, agoraMs, renderizar = true) {
   const lista = sc.ativa ? soDaCena(listaR, sc.ids) : dx.sem != null ? semId(listaR, dx.sem) : listaR;
   bola3d.mesh.visible = !dx.semBola;
   jog3d.atualizar(lista, diretor.camera);
-  desenhadosReplay = lista.length;
+  desenhadosReplay = lista.length; ultimaListaReplay = lista; ultimoDesenhoReplay = dx;
   // nada do jogo ao vivo no gramado: queda da bola e opções do lateral somem; a linha só no replay do impedimento e na
   // análise; o selo da decisão no terço de baixo (só no quadro final)
   marcas.grupo.visible = false;
@@ -893,7 +893,7 @@ function desenharReplay(dt, agoraMs, renderizar = true) {
   hud.carga(null); hud.cartao(null);
   hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
   hud.relogio(mundo.partida ? lerRelogio() : null);
-  custoReplay.n++; custoReplay.ms += performance.now() - tq;
+  { const ms = performance.now() - tq; custoReplay.v[custoReplay.n & 4095] = ms; custoReplay.n++; custoReplay.ms += ms; }
   if (renderizar) cena3d.desenhar(diretor.camera);
   render.bola.x = _bpR.x; render.bola.y = _bpR.y; render.bola.z = _bpR.z;
   const cp = diretor.camera.position;
@@ -903,7 +903,7 @@ function desenharReplay(dt, agoraMs, renderizar = true) {
 const semPosicao = () => null;
 // a lista da análise (referências aos itens do anel; nada alocado por quadro) e quantos jogadores o replay desenhou
 const listaCena = [];
-let desenhadosReplay = 0;
+let desenhadosReplay = 0, ultimaListaReplay = null, ultimoDesenhoReplay = null;
 function soDaCena(lista, ids) {
   let k = 0;
   for (const it of lista) if (ids.includes(it.id)) listaCena[k++] = it;
@@ -1701,7 +1701,11 @@ const api = {
   replay: {
     get estado() { return diretor ? diretor.estado : null; },
     get anel() { return { primeiro: anel.primeiro, ultimo: anel.ultimo, bytes: anel.bytes }; },
-    get custo() { return { gravarMsPorPasso: custoGravar.ms / Math.max(1, custoGravar.n), passos: custoGravar.n, quadroReplayMs: custoReplay.ms / Math.max(1, custoReplay.n), quadros: custoReplay.n }; },
+    get custo() {
+      // p95 do quadro do replay (CPU, sem o desenho) nos últimos ≤ 4096 quadros
+      const k = Math.min(custoReplay.n, 4096), v = Array.from(custoReplay.v.subarray(0, k)).sort((a, b) => a - b);
+      return { gravarMsPorPasso: custoGravar.ms / Math.max(1, custoGravar.n), passos: custoGravar.n, quadroReplayMs: custoReplay.ms / Math.max(1, custoReplay.n), quadroReplayP95: k ? v[Math.min(k - 1, Math.floor(0.95 * k))] : 0, quadros: custoReplay.n };
+    },
     zerarCusto() { custoGravar.n = 0; custoGravar.ms = 0; custoReplay.n = 0; custoReplay.ms = 0; },
     /**
      * Custo de gravar um passo (ms), medido em lotes: `lotes` × `n` gravações do estado atual num anel de rascunho, um
@@ -1739,6 +1743,16 @@ const api = {
     legalMaisApertada(limite) { return diretor ? diretor.legalMaisApertada(limite) : null; },
     /** Jogadores desenhados no último quadro do replay (a análise mostra só os do lance). */
     get desenhados() { return desenhadosReplay; },
+    /**
+     * O último quadro do replay desenhado (12/10, 1ª pessoa e treinador): os ids da lista do desenho, quem foi oculto (id,
+     * bits de jogador3d OCULTA) e a bola (some perto da lente da 1ª pessoa).
+     */
+    get desenho() {
+      const L = ultimaListaReplay, d = ultimoDesenhoReplay;
+      return L ? { ids: L.map(it => it.id), ocultos: L.filter(it => it.ocultar).map(it => ({ id: it.id, ocultar: it.ocultar })), semBola: !!d?.semBola, bola: bola3d.mesh.visible } : null;
+    },
+    /** A câmera da 1ª pessoa / do treinador agora (o diretor: posição, alvo, campo de visão, parte), ou null. */
+    get cameraExtra() { return diretor?.ativo ? diretor.cameraExtra() : null; },
     /** Os planos da análise desenhados agora (linha-impedimento.js estadoSaot) e o selo do terço de baixo. */
     get planos() { return linhaImped ? { ...linhaImped.estadoSaot, selo: hud.tercoTipo } : null; },
     /** "Reduzir movimento" na análise (true/false força; null segue o sistema). */
@@ -1825,6 +1839,12 @@ const api = {
     trocarTorcida(q) { const t0 = performance.now(); torcida.definirQualidade(q); const ms = performance.now() - t0; torcida.definirQualidade(qAtual); return ms; },
     /** Mostra/esconde a torcida (conferência de pixels nos testes). */
     mostrarTorcida(v) { if (torcida?.mesh) torcida.mesh.visible = !!v; },
+    /** Os 2 treinadores agora (tecnicos.js infoTecnicos: posição, estado, gesto) e o custo do passo deles; null sem eles. */
+    get tecnicos() { return tecnicos ? { lista: infoTecnicos(tecnicos), msPorPasso: custoTec.ms / Math.max(1, custoTec.n), passos: custoTec.n } : null; },
+    /** Mostra/esconde os treinadores SÓ no desenho (conferência de pixels nos testes; o passo deles continua). */
+    mostrarTecnicos(v) { tecVisiveis = !!v; },
+    /** Triângulos de um boneco do manequim (cápsulas, cabeça, cabelo e mancha): o teto do custo dos treinadores. */
+    get triangulosBoneco() { return jog3d ? jog3d.triangulosPorBoneco : null; },
     get bolaDesenhada() { return { ..._bpDes }; },
     get efeitoCamera() { return cam ? cam.efeitoAtivo : false; },
     /** 'fechado' (câmera do gol da partida), 'leve' (treino) ou null; e o plano geral (intervalo/fim). */

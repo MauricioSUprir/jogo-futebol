@@ -97,6 +97,7 @@ export function leituraDoMundo(m, eventos, L = criarLeitura()) {
     const t = e.tipo;
     if (t === 'gol') evento(L, 'gol', e.time === 1 ? 1 : 0);
     else if (t === 'chute' || t === 'cabeceio') { const k = timeDe(e.id); if (k != null) evento(L, 'chute', k); }
+    else if (t === 'passe') { const k = timeDe(e.id); if (k != null) evento(L, 'passe', k); }
     else if (t === 'defesa') { const k = timeDe(e.id); if (k != null) evento(L, 'defesa', k); }
     else if (t === 'trave') evento(L, 'trave', -1);
     else if (t === 'fora' || t === 'tiroDeMeta' || t === 'escanteio') evento(L, 'fora', -1);
@@ -149,6 +150,7 @@ function criarTecnico(t, mini) {
     ultimo: { estado: '', variante: -1 }, ultimaPostura: -1,
     ultimoInstrui: -1e9, instruiEm: -1, ultimoAplauso: -1e9, defendeDesde: -1, ultimoChute: -1e9,
     pendente: null, pendenteEm: -1, pendenteV: 0, aponta: 1, possePrev: null, paradaVista: NaN, vamos: false, exG: cx, ezG: TC.zBase,
+    passeNoAr: false, passes: 0, fimPendente: -1, construindoDesde: -1,
     olhar: -Math.PI / 2, tronco: 0, vTronco: 0, cabecaPitch: 0,
     corre: { ate: -1, x: cx },
     noAr: false, rapido: false, modo: 'anda', mix: TC.mistura,
@@ -191,8 +193,8 @@ function sortearVariante(T, tc, estado, sal) {
   return Math.min(n - 1, k);
 }
 /** Postura do "observa": as 4 em pé sorteadas (nunca a mesma de antes); o agachado, raro. */
-function sortearPostura(T, tc) {
-  const ag = rnd(T, tc, 1) < TC.chanceAgachado && tc.ultimaPostura !== 4;
+function sortearPostura(T, tc, emPe = false) {
+  const ag = !emPe && rnd(T, tc, 1) < TC.chanceAgachado && tc.ultimaPostura !== 4;
   let k = 4;
   if (!ag) { k = Math.floor(rnd(T, tc, 2) * 3); if (k >= tc.ultimaPostura && tc.ultimaPostura >= 0 && tc.ultimaPostura < 4) k++; k = Math.min(3, k); }
   tc.postura = k; tc.ultimaPostura = k; tc.posturaDesde = T.k;
@@ -205,7 +207,7 @@ function comecar(T, tc, estado, variante, dura) {
   tirarFoto(tc); tc.faseG = -1;
   tc.troca = T.k;
   // a reação ao gol é explosiva: a mistura com o gesto de antes é curta (o próprio gesto sobe com a rampa dele)
-  tc.mix = estado === 'comemora' || estado === 'sofreu' ? TC.misturaGol : TC.mistura;
+  tc.mix = estado === 'comemora' ? TC.comemora.sobe : estado === 'sofreu' ? TC.misturaGol : TC.mistura;
   tc.estado = estado; tc.variante = variante; tc.desde = T.k; tc.ate = T.k + Math.max(1, s60(dura));
   // apontando: o braço do lado da bola no começo (não troca de braço no meio do gesto)
   tc.aponta = difAng(tc.j.rumo + tc.tronco, tc.olhar) >= 0 ? 1 : -1;
@@ -227,6 +229,18 @@ function tentar(T, tc, estado, sal, dura) {
   return true;
 }
 
+/**
+ * Lance de perigo do time: a bola dele (ou o chute dele de agora há pouco) a ≤ TC.tensao m do gol de lá. Ninguém aplaude
+ * enquanto a chance acontece (o treinador olha, tenso); o gol pode sair a qualquer momento.
+ */
+function tensao(T, tc, L) {
+  const t = tc.time, perto = L.bola.x * L.ataca[t] > MX - TC.tensao;
+  return perto && (L.posseTime === t || L.posseTime == null || T.k - tc.ultimoChute < s60(1.5));
+}
+
+/** A defesa do goleiro deles com a bola ainda perto do gol de lá (o rebote): sem palmas. */
+function tensaoRebote(tc, L) { return L.bola.x * L.ataca[tc.time] > MX - TC.tensao; }
+
 function atualizarEstado(T, tc, L) {
   const t = tc.time, k = T.k;
   // eventos do passo
@@ -241,7 +255,7 @@ function atualizarEstado(T, tc, L) {
       case 'chute': if (e.time === t) tc.ultimoChute = k; break;
       case 'defesa':
         // a defesa do goleiro do time ou o chute do time no alvo (o goleiro deles defendeu): palmas
-        if ((e.time === t || k - tc.ultimoChute < s60(TC.lamenta.janela)) && k - tc.ultimoAplauso > s60(TC.aplaude.intervalo * 0.5)) {
+        if ((e.time === t || k - tc.ultimoChute < s60(TC.lamenta.janela)) && k - tc.ultimoAplauso > s60(TC.aplaude.intervalo * 0.5) && !(e.time !== t && tensaoRebote(tc, L))) {
           if (tentar(T, tc, 'aplaude', 6, entre(T, tc, 7, TC.aplaude.dura))) tc.ultimoAplauso = k;
         }
         if (e.time !== t) tc.ultimoChute = -1e9;
@@ -251,16 +265,19 @@ function atualizarEstado(T, tc, L) {
         break;
       case 'reclama': if (e.time === t) tentar(T, tc, 'reclama', 10, entre(T, tc, 11, TC.reclama.dura)); break;
       case 'desarme':
-        if (e.time === t && k - tc.ultimoAplauso > s60(TC.aplaude.intervalo) && rnd(T, tc, 12) < TC.aplaude.chance) {
+        if (e.time === t && k - tc.ultimoAplauso > s60(TC.aplaude.intervalo) && rnd(T, tc, 12) < TC.aplaude.chance && !tensao(T, tc, L)) {
           if (tentar(T, tc, 'aplaude', 13, entre(T, tc, 14, TC.aplaude.dura))) tc.ultimoAplauso = k;
         }
         break;
       case 'intervalo': tentar(T, tc, 'intervalo', 15, entre(T, tc, 16, TC.intervalo.dura)); break;
       case 'fim': {
-        const g = L.placar[t] - L.placar[1 - t];
-        comecar(T, tc, 'fim', g > 0 ? 0 : g < 0 ? 1 : 2, entre(T, tc, 17, TC.intervalo.dura) + 1);
+        // no meio da reação a um gol (o apito final logo depois dele), o fim espera ela acabar
+        const g = L.placar[t] - L.placar[1 - t], v = g > 0 ? 0 : g < 0 ? 1 : 2;
+        if (tc.estado === 'comemora' || tc.estado === 'sofreu' || tc.pendente) tc.fimPendente = v;
+        else comecar(T, tc, 'fim', v, entre(T, tc, 17, TC.intervalo.dura) + 1);
         break;
       }
+      case 'passe': if (e.time === t) tc.passeNoAr = true; break;
       case 'saida':
         // palmas de "vamos" na saída de quem sofreu o gol (o "sofreu" ainda no começo encurta e as palmas vêm depois)
         if (T.golTime >= 0 && T.golTime !== t && k - T.golTick < s60(30)) {
@@ -272,6 +289,12 @@ function atualizarEstado(T, tc, L) {
       default: break;
     }
   }
+  // lance de perigo do time: as palmas param (e nenhuma começa abaixo)
+  const tenso = (L.emJogo || L.estado === 'gol') && tensao(T, tc, L);
+  if (tenso && tc.estado === 'aplaude' && !tc.pendente) voltarObserva(T, tc);
+  // perigo de qualquer lado (a chance do time ou a bola do adversário perto do gol de cá): agachado, ele levanta
+  const perigo = tenso || (L.emJogo && L.posseTime !== t && L.bola.x * L.ataca[t] < -(MX - TC.tensao));
+  if (perigo && tc.estado === 'observa' && tc.postura === 4) { sortearPostura(T, tc, true); tirarFoto(tc); tc.troca = k; tc.mix = TC.mistura; }
   // gol: a reação começa no tempo dela (o comemora/sofreu interrompe qualquer gesto)
   if (tc.pendente && k >= tc.pendenteEm) {
     const est = tc.pendente;
@@ -296,10 +319,25 @@ function atualizarEstado(T, tc, L) {
       if (tc.possePrev === t && L.posseTime !== t && tc.instruiEm < 0 && livre && rnd(T, tc, 23) < I.chancePerda) tc.instruiEm = k + s60(entre(T, tc, 24, I.reage));
       tc.possePrev = L.posseTime;
     }
+    // incentivo (Smith & Cushion 2006: elogio e incentivo intercalados com a instrução; o pedido de jogadores do FC 27:
+    // "aplaudir após desarme ou sequência de passes"): a bola recuperada pelo time e a sequência de passes certos
+    if (L.posseTime === t) {
+      if (tc.passeNoAr) { tc.passeNoAr = false; tc.passes++; }
+    } else if (L.posseTime === 1 - t) { tc.passeNoAr = false; tc.passes = 0; }
+    const A = TC.aplaude, livreAp = k - tc.ultimoAplauso >= s60(A.intervalo);
+    if (L.emJogo && livreAp && tc.estado === 'observa' && !tenso) {
+      let quer = false;
+      if (L.posseTime === t && tc.possePrev === 1 - t && rnd(T, tc, 40) < A.chanceRecupera) quer = true;
+      if (tc.passes >= A.passes) { tc.passes = 0; if (rnd(T, tc, 41) < A.chancePasses) quer = true; }
+      if (quer && tentar(T, tc, 'aplaude', 42, entre(T, tc, 43, A.dura))) tc.ultimoAplauso = k;
+    }
     const noProprio = (L.bola.x * L.ataca[t]) < 0;
     if (L.emJogo && L.posseTime === 1 - t && noProprio) { if (tc.defendeDesde < 0) tc.defendeDesde = k; } else tc.defendeDesde = -1;
+    if (L.emJogo && L.posseTime === t && noProprio) { if (tc.construindoDesde < 0) tc.construindoDesde = k; } else tc.construindoDesde = -1;
     if (livre && tc.instruiEm < 0) {
       if (tc.defendeDesde >= 0 && k - tc.defendeDesde > s60(I.defendendo)) { tc.instruiEm = k + s60(0.4); tc.defendeDesde = k; }
+      // o time construindo no próprio campo há um tempo: "sobe!" (a linha, o apoio)
+      if (tc.construindoDesde >= 0 && k - tc.construindoDesde > s60(I.construindo)) { tc.instruiEm = k + s60(0.4); tc.construindoDesde = k; }
       // o time com a bola no terço final: "vai!" (de vez em quando)
       if (L.emJogo && L.posseTime === t && L.bola.x * L.ataca[t] > I.terco && rnd(T, tc, 27) < I.chanceTerco * PASSO) tc.instruiEm = k + s60(0.3);
       const pr = L.parada;
@@ -316,9 +354,11 @@ function atualizarEstado(T, tc, L) {
   } else { tc.instruiEm = -1; tc.defendeDesde = -1; }
   // fim do estado
   if (k >= tc.ate) {
-    if (tc.estado === 'comemora') { comecar(T, tc, 'aplaude', 0, TC.comemora.palmas); tc.ultimo.estado = 'comemora'; tc.ultimo.variante = tc.prev.variante; }
+    // (as palmas depois da comemoração: a próxima vez que ele aplaudir é com outra variante)
+    if (tc.estado === 'comemora') comecar(T, tc, 'aplaude', 0, TC.comemora.palmas);
     else if (tc.estado === 'sofreu' && tc.vamos) { tc.vamos = false; comecar(T, tc, 'vamos', 0, TC.sofreu.vamos); tc.ultimo.estado = 'sofreu'; tc.ultimo.variante = tc.prev.variante; }
     else if (tc.estado === 'fim') comecar(T, tc, 'fim', tc.variante, 1e6);
+    else if (tc.fimPendente >= 0) { comecar(T, tc, 'fim', tc.fimPendente, 1e6); tc.fimPendente = -1; }
     else voltarObserva(T, tc);
   }
   // postura do observa (troca a cada 6–15 s; o agachado, 2–4 s)
@@ -388,20 +428,25 @@ function esquivaBola(tc, L) {
   return true;
 }
 
-/** Afasta de jogador previsto perto (≥ TC.esquiva.jogador m): alvo em tc.ex/ez, ou false. */
+/**
+ * Afasta de jogador previsto perto (a < TC.esquiva.jogador m agora ou em até prevJogador s, em linha reta): alvo em
+ * tc.ex/ez, ou false. Ele vai para TRÁS (as placas: nenhum jogador passa de z ~37 — o corpo do jogador fica no campo ou
+ * na faixa de fora) e um pouco para o lado contrário ao do jogador; quem corre pela linha passa na frente dele.
+ */
 function esquivaJogador(tc, L) {
   const j = tc.j, E = TC.esquiva;
-  let fx = 0, fz = 0, achou = false;
+  let fx = 0, achou = false;
   for (let i = 0; i < L.nPerto; i++) {
     const o = i * 4;
-    for (const t of [0, E.prevJogador]) {
+    for (let q = 0; q <= 4; q++) {
+      const t = E.prevJogador * q / 4;
       const x = L.perto[o] + L.perto[o + 2] * t, z = L.perto[o + 1] + L.perto[o + 3] * t;
       const dx = j.x - x, dz = j.z - z, d = Math.hypot(dx, dz);
-      if (d < E.jogador) { const k = (E.jogador - d) / Math.max(d, 0.1); fx += dx * k; fz += dz * k; achou = true; }
+      if (d < E.jogador) { fx += (dx >= 0 ? 1 : -1) * (E.jogador - d); achou = true; }
     }
   }
   if (!achou) return false;
-  tc.ex = j.x + fx * 1.5; tc.ez = j.z + fz * 1.5 + 0.4;
+  tc.ex = j.x + clamp(fx, -1, 1) * 0.6; tc.ez = TC.recuo.z;
   return true;
 }
 
@@ -474,6 +519,12 @@ function mover(T, tc, L) {
   // rumo do corpo: de frente para o campo, virando para o lado da bola (até corpoMax); comemorando e "de costas" para o
   // banco; correndo na comemoração, para onde corre
   let rumo = -Math.PI / 2 + clamp(difAng(-Math.PI / 2, tc.olhar), -TC.olhar.corpoMax, TC.olhar.corpoMax);
+  // andando de lado (ao longo da linha), o corpo vira para onde anda — sem andar de costas na diagonal (a passada para trás
+  // levaria o pé de trás para as placas); a cabeça e o tronco seguem a bola (cabecaMax + troncoMax)
+  if (vel > TC.olhar.virarAnda && Math.abs(tc.cmdX) > 1.5 * Math.abs(tc.cmdZ)) {
+    const s = clamp((vel - TC.olhar.virarAnda) / 0.5, 0, 1);
+    rumo = normAng(rumo + difAng(rumo, Math.atan2(tc.cmdZ, tc.cmdX)) * s);
+  }
   if (tc.estado === 'comemora') {
     if (k < tc.corre.ate && vel > 1) rumo = Math.atan2(tc.cmdZ, tc.cmdX);
     else if (tc.variante === 2 || (tc.variante === 0 && k >= tc.corre.ate)) rumo = Math.PI / 2;   // vira para o banco
@@ -613,8 +664,9 @@ function gestoEm(T, tc, estado, v, postura, t, out) {
       break;
     case 'comemora': {
       // a explosão (os primeiros 0,6 s): o punho no ar em TC.comemora.sobe s; depois a variante
-      const S = suave(t / TC.comemora.sobe);
-      if (t < 0.6) { maoG(out.d, G_SOCO, S, 0.04); maoG(out.e, v === 1 ? G_V : G_PUNHO, S); break; }
+      // (a subida é a própria mistura da foto para o gesto: TC.comemora.sobe s, smoothstep — a mão sobe de uma vez, sem
+      // passar pela mão da locomoção)
+      if (t < 0.6) { maoG(out.d, G_SOCO, 1, 0.04); maoG(out.e, v === 1 ? G_V : G_PUNHO, 1); break; }
       const u = t - 0.6;
       out.fase = 1;
       if (v === 0) { // socos no ar a ~2 Hz (o direito), o esquerdo em punho
@@ -630,7 +682,8 @@ function gestoEm(T, tc, estado, v, postura, t, out) {
     }
     case 'sofreu': {
       const tc0 = TC.sofreu.cabeca[0];
-      if (t < tc0 + 0.4 || v === 2 && t < tc0 + 0.8) { maosNaCabeca(out, suave(t / 0.22)); out.pitch = 0.2; }
+      // (as mãos vão para a cabeça pela própria mistura da foto: TC.misturaGol s, smoothstep)
+      if (t < tc0 + 0.4 || v === 2 && t < tc0 + 0.8) { maosNaCabeca(out, 1); out.pitch = 0.2; }
       else if (v === 1 && t < tc0 + TC.sofreu.depois + 0.4) { out.agacha = 1; maosNaCabeca(out, 1); out.pitch = 0.45; out.fase = 1; }
       else { bracosCruzados(out, 1); out.pitch = 0.25; out.fase = 2; }
       break;
@@ -735,7 +788,8 @@ function poseTec(T, tc, L) {
   }
   pose(j, mini, o);
   // agachar ou levantar devagar (o corpo inteiro desce 0,3 m; as mãos vão junto)
-  const durMix = Math.abs(tc.snap.agacha - _pb.agacha) > 0.3 ? Math.max(tc.mix, TC.misturaAgacha) : tc.mix;
+  // (comemorando, ele levanta mais depressa: TC.comemora.levanta s)
+  const durMix = Math.abs(tc.snap.agacha - _pb.agacha) > 0.3 ? Math.max(tc.mix, tc.estado === 'comemora' ? TC.comemora.levanta : TC.misturaAgacha) : tc.mix;
   const sMix = suave((k - tc.troca) * PASSO / durMix);
   const p = sMix < 1 ? _pm : _pb;
   if (sMix < 1) {

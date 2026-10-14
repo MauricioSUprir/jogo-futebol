@@ -1311,15 +1311,15 @@ export const TECNICOS = {
   vel: { anda: 1.35, acel: 1.25, recua: 2.0, rapido: 3.0, acelRapida: 5.5, ganho: 1.6, freiaBorda: 2.5 },
   // margem do centro do corpo dentro da área em z e em x (os pés ficam a ≤ ~0,3 m do centro andando de lado; a régua
   // dos pés é 0,15 m); o recuo (z 39,2) cabe na de z
-  margem: 0.42, margemX: 0.55,
+  margem: 0.5, margemX: 0.55,
   // esquiva: o caminho previsto da bola (rolagem exata de bola.js) a < `raio` m no próximo `janela` s → sai da linha
   // até `sai` m dela; jogador previsto a < `jogador` m → afasta
-  esquiva: { raio: 0.75, janela: 1.0, sai: 1.25, alturaMax: 2.3, jogador: 1.3, prevJogador: 0.6 },
+  esquiva: { raio: 0.75, janela: 1.0, sai: 1.25, alturaMax: 2.3, jogador: 1.6, prevJogador: 1.0 },
   // olhar: a cabeça segue a bola até `cabecaMax` rad do tronco; o tronco vem atrás (mola `tronco` s, até `troncoMax` rad
   // do quadril); o corpo de frente para o campo, virando até `corpoMax` rad para o lado da bola
-  olhar: { cabecaMax: 1.22, tronco: 0.8, troncoMax: 0.6, corpoMax: 0.75, tau: 0.12 },
+  olhar: { cabecaMax: 1.22, tronco: 0.8, troncoMax: 0.6, corpoMax: 0.75, tau: 0.12, virarAnda: 0.7 },
   mistura: 0.35,              // s — toda troca de gesto mistura as juntas (smoothstep)
-  misturaGol: 0.1,            // s — na reação ao gol (comemora/sofreu: o gesto sobe com a rampa dele)
+  misturaGol: 0.2,            // s — o gol sofrido: as mãos vão para a cabeça (a comemoração usa comemora.sobe)
   misturaAgacha: 0.7,         // s — agachar e levantar (o corpo inteiro desce 0,3 m; as mãos vão junto)
   maoVel: [4, 7],             // m/s — teto da mão fora / dentro da comemoração
   // estados (durações em s, [mín, máx] sorteadas por hash01 no rng.js)
@@ -1327,11 +1327,14 @@ export const TECNICOS = {
   anda: { cada: [20, 40], dist: [2, 5] },
   // instrui: na perda (chancePerda, em reage s), defendendo no próprio campo há > defendendo s, bola parada a favor no
   // ataque, lateral do lado dele e o time no terço final (chanceTerco por s); ≤ 1 a cada `intervalo` s
-  instrui: { dura: [1.5, 2.5], reage: [0.3, 1.0], chancePerda: 0.6, intervalo: 15, defendendo: 6, conchaDura: 1.0, terco: 17.5, chanceTerco: 0.25 },
-  aplaude: { dura: [1.5, 2.0], freq: 2.5, intervalo: 5, chance: 0.85 },
+  instrui: { dura: [2.2, 3.2], reage: [0.3, 1.0], chancePerda: 0.6, intervalo: 12, defendendo: 6, construindo: 10, conchaDura: 1.0, terco: 17.5, chanceTerco: 0.25 },
+  // aplaude: desarme do time (chance), defesa do goleiro, chute no alvo; incentivo: a bola recuperada (chanceRecupera) e
+  // `passes` passes certos seguidos (chancePasses); ≥ `intervalo` s entre um e outro
+  aplaude: { dura: [1.5, 2.0], freq: 2.5, intervalo: 5, chance: 0.85, chanceRecupera: 0.45, passes: 4, chancePasses: 0.7 },
+  tensao: 22,                 // m do gol de lá: lance de perigo do time (sem palmas: ele olha a chance)
   reclama: { dura: [1.5, 2.5] },
   lamenta: { dura: [1.5, 2.5], janela: 2.5 },
-  comemora: { comeca: [0.2, 0.23], dura: [4, 6], sobe: 0.15, corre: [3, 6], socos: 2.0, pulo: 0.08, palmas: 2.5 },
+  comemora: { comeca: [0.2, 0.23], dura: [4, 6], sobe: 0.2, levanta: 0.3, corre: [3, 6], socos: 2.0, pulo: 0.08, palmas: 2.5 },
   sofreu: { comeca: [0.25, 0.3], cabeca: [2, 3], depois: 2, vamos: 1.5 },
   intervalo: { dura: [2, 3] },
   // variantes de cada gesto (nomes para os testes; a ordem é a do sorteio)

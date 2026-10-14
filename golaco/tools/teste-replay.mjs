@@ -26,6 +26,16 @@
 //      some, a tecla não vira jogada); chamadas ≤ o máximo ao vivo nos 120 quadros antes do apito + 1 e triângulos ≤ esse
 //      máximo; CPU do quadro da análise ≤ o ao vivo; com o replay desligado: 0 quadro de replay, 0 selo, a linha parada
 //      2,2 s como antes.
+//   G) a 3ª e a 4ª câmeras do gol (pedidos do dono de 12/10: "uma 3ª e uma 4ª câmera de replay, onde uma é a visão em 1ª
+//      pessoa do jogador fazendo o gol"; "a 4ª pode ser a visão do treinador"), no gol roteirizado: A4/A5 e C0 medem a
+//      PARTE ANTIGA (tv, atras [, lateral] e a checagem: a mesma grandeza e o mesmo limite) e
+//      G1 as câmeras na ordem tv, atras, [lateral], primeira, treinador, [saot] (o roteiro e os quadros);
+//      G2 a duração real de cada plano a ±0,1 s da do roteiro; o total ≤ 19 s (golaço 21; com a checagem + 1);
+//      G3 o autor sem cabeça e tronco (OCULTA) SÓ nos quadros da 1ª pessoa, e só ele; o treinador do time que marcou fora
+//         da lista SÓ na parte 1 da visão dele (na parte 2 ele está lá); os 2 treinadores na lista nos outros planos;
+//      G4 no celular deitado (844×390, Média): as chamadas de desenho em cada plano ≤ o máximo ao vivo + 1 e o quadro do
+//         replay (CPU, sem o desenho) p95 ≤ o do jogo + 1 ms;
+//      G5 um toque pula tudo (também no meio da 1ª pessoa), como antes.
 // Na versão sem replay reprova (A1, C2, D1: não existe replay); na sem a cena semiautomática, C5 (≥ 3,0 s), F1, F3–F5,
 // F7 e F8 reprovam.
 //   node tools/teste-replay.mjs [--raiz <pasta do jogo>] [--base <pasta do jogo de comparação para o hash>]
@@ -83,7 +93,10 @@ async function rodadaGol(raizJogo, url, clicar = false) {
         const rp = temReplay ? g.replay.estado : null;
         if (saidaTick == null && m.partida.estado !== 'gol' && m.tick > golTick + 10) saidaTick = m.tick;
         if (rp?.ativo) {
-          amostras.push({ tick: m.tick, rt: rp.tick, cam: rp.cam, vel: rp.vel, plano: rp.plano, tipo: rp.tipo, bx: g.render.bola.x, linha: !!g.linhaImpedimento?.visivel, ca: g.estadio.torcida?.ladoDeCa ?? null, cz: g.render.camera.z, cy: g.render.camera.y, checagem: rp.checagem, golaco: rp.golaco, fase: rp.saot?.fase ?? null, selo: selo() });
+          const dz = g.replay.desenho;
+          amostras.push({ tick: m.tick, rt: rp.tick, cam: rp.cam, vel: rp.vel, plano: rp.plano, tipo: rp.tipo, bx: g.render.bola.x, linha: !!g.linhaImpedimento?.visivel, ca: g.estadio.torcida?.ladoDeCa ?? null, cz: g.render.camera.z, cy: g.render.camera.y, checagem: rp.checagem, golaco: rp.golaco, fase: rp.saot?.fase ?? null, selo: selo(),
+            autor: rp.autor ?? null, tecnico: rp.tecnico ?? null, parte: rp.parte ?? null, cams: rp.cams, duracoes: rp.duracoes ?? null,
+            ocultos: dz ? dz.ocultos : null, t210: dz ? dz.ids.includes(210) : null, t211: dz ? dz.ids.includes(211) : null });
           if (!hud && amostras.length === 30) {
             const textos = [...document.querySelectorAll('#hud *, #replay *, #terco *')].filter(e => e.children.length === 0 && e.offsetParent !== null && getComputedStyle(e).visibility !== 'hidden' && e.textContent.trim()).map(e => e.textContent.trim());
             hud = { marca: vis('replay-marca'), minimapa: vis('minimapa'), menu: vis('btn-menu'), aviso: vis('aviso'), pular: vis('replay-pular'), placar: vis('#hud .placar'), textos };
@@ -116,7 +129,38 @@ const comR = await rodadaGol(raiz, '?q=baixa&hora=dia&semente=5', true);
   const chk = n > 0 && a.some(x => x.checagem), golA = n > 0 && a.some(x => x.golaco);
   meta('A4 planos do replay (a análise de posição legal só com a checagem)', `${planos.join(', ') || '-'}${chk ? ' (com checagem)' : ''}`, 'tv@1 e atras@0.5; saot só com checagem', planos.includes('tv@1') && planos.includes('atras@0.5') && (!planos.includes('saot@1') || chk));
   const maxA = chk ? (golA ? 15 : 13) : 12;
-  meta('A5 duração (relógio real)', `${f2(n / 60)} s${chk ? ' (com checagem)' : ''}`, `3–${maxA} s`, n / 60 >= 3 && n / 60 <= maxA + 0.1);
+  // a parte antiga do replay (tv, atras, lateral e a checagem): a 1ª pessoa e o treinador têm orçamento próprio (G2)
+  const nAnt = a.filter(x => x.cam === 'tv' || x.cam === 'atras' || x.cam === 'lateral' || x.cam === 'saot').length;
+  meta('A5 duração da parte antiga (tv, atras [, lateral, checagem]; relógio real)', `${f2(nAnt / 60)} s${chk ? ' (com checagem)' : ''} (o replay inteiro: ${f2(n / 60)} s)`, `3–${maxA} s`, nAnt / 60 >= 3 && nAnt / 60 <= maxA + 0.1);
+  // ---------------------------------------------------------------- G (3ª e 4ª câmeras)
+  {
+    const cams = n ? a[0].cams : [];
+    const esperado = ['tv', 'atras', ...(cams.includes('lateral') ? ['lateral'] : []), 'primeira', 'treinador', ...(cams.includes('saot') ? ['saot'] : [])];
+    // os quadros seguem os planos do roteiro, em ordem (o índice do plano nunca volta)
+    const seq = []; for (const x of a) if (!seq.length || seq[seq.length - 1].plano !== x.plano) seq.push({ plano: x.plano, cam: x.cam });
+    const crescente = seq.every((q, i) => i === 0 || q.plano > seq[i - 1].plano);
+    meta('G1 câmeras do replay do gol na ordem tv, atras, [lateral], primeira, treinador, [saot]', `roteiro ${cams.join(' · ') || '-'}; quadros ${seq.map(q => q.cam).join(' · ') || '-'}`, esperado.join(' · '),
+      n > 0 && cams.join() === esperado.join() && seq.map(q => q.cam).join() === esperado.join() && crescente);
+    // duração real de cada plano (quadros a 60 qps) × a do roteiro
+    const dur = n ? a[0].duracoes ?? [] : [];
+    const porPlano = cams.map((c, i) => ({ cam: c, real: a.filter(x => x.plano === i).length / 60, rot: dur[i] }));
+    const difs = porPlano.filter(q => q.cam !== 'saot').map(q => Math.abs(q.real - q.rot));
+    const lim = (golA ? 21 : 19) + (chk ? 1 : 0);
+    meta('G2 duração real de cada plano = a do roteiro (±0,1 s); o total ≤ 19 s (golaço 21; checagem + 1)', `${porPlano.map(q => `${q.cam} ${f2(q.real)}/${f2(q.rot)}`).join(' · ')} s; total ${f2(n / 60)} s`, `±0,1 s; ≤ ${lim} s`,
+      n > 0 && difs.length >= 4 && difs.every(d => d <= 0.1 + 1e-9) && n / 60 <= lim + 0.1);
+    // quem o desenho tirou ou ocultou em cada quadro
+    const autor = a.find(x => x.cam === 'primeira')?.autor ?? null, tec = a.find(x => x.cam === 'treinador')?.tecnico ?? null;
+    const prim = a.filter(x => x.cam === 'primeira'), fora = a.filter(x => x.cam !== 'primeira');
+    const okPrim = prim.filter(x => x.ocultos && x.ocultos.length === 1 && x.ocultos[0].id === autor && x.ocultos[0].ocultar === 6).length;
+    const okFora = fora.filter(x => x.ocultos && x.ocultos.length === 0).length;
+    const tem = (x, id) => (id === 210 ? x.t210 : x.t211);
+    const p1 = a.filter(x => x.cam === 'treinador' && x.parte === 1), p2 = a.filter(x => x.cam === 'treinador' && x.parte === 2);
+    const outros = a.filter(x => x.cam !== 'treinador' && x.cam !== 'saot');
+    const okP1 = p1.filter(x => tem(x, tec) === false).length, okP2 = p2.filter(x => tem(x, tec) === true).length;
+    const okOut = outros.filter(x => x.t210 && x.t211).length;
+    meta('G3 o autor sem cabeça e tronco só na 1ª pessoa; o treinador fora da lista só na parte 1 da visão dele', `autor ${autor}: oculto em ${okPrim}/${prim.length} quadros da 1ª pessoa, ninguém oculto em ${okFora}/${fora.length} fora dela; treinador ${tec}: fora da lista em ${okP1}/${p1.length} quadros da parte 1, na lista em ${okP2}/${p2.length} da parte 2; os 2 treinadores nos outros planos ${okOut}/${outros.length}`,
+      'todos; todos; todos; todos; todos', autor != null && tec === 210 && prim.length > 0 && okPrim === prim.length && okFora === fora.length && p1.length > 0 && okP1 === p1.length && p2.length > 0 && okP2 === p2.length && okOut === outros.length);
+  }
   seloForaDoFinal.push(...a.filter(x => x.selo && x.fase !== 'final').map(() => 'gol roteirizado'));
   const h = comR.hud;
   meta('A6 tela do replay: só a marca "REPLAY" (sem texto de lance), sem minimapa, menu e avisos', h ? `marca ${h.marca}, placar ${h.placar}, minimapa ${h.minimapa}, menu ${h.menu}, aviso ${h.aviso}, "Pular" (PC) ${h.pular}; textos: ${JSON.stringify(h.textos)}` : '-',
@@ -163,23 +207,24 @@ try {
         }
         const rp = g.replay?.estado;
         if (!rp?.ativo) return { semGol: true, n };
-        const ticks = [], cams = new Set(), xs = []; let q = 0, linha = 0, seloFora = 0; const simTick = m.tick; let andou = false;
+        const ticks = [], cams = new Set(), xs = []; let q = 0, linha = 0, seloFora = 0, qAnt = 0; const simTick = m.tick; let andou = false;
         const tipo = rp.tipo, golaco = rp.golaco, checagem = rp.checagem;
         while (g.replay.estado.ativo && q < 2000) {
           const e = g.replay.estado; ticks.push(e.tick); cams.add(e.cam + '@' + e.vel); xs.push(g.render.bola.x);
+          if (e.cam !== 'primeira' && e.cam !== 'treinador') qAnt++;
           if (g.linhaImpedimento.visivel && e.cam !== 'saot') linha++;
           if (g.replay.planos?.selo && e.saot?.fase !== 'final') seloFora++;
           g.relogio.avancar(1000 / 60, { desenhar: false }); q++;
           if (m.tick !== simTick && g.replay.estado.ativo) andou = true;
         }
-        return { tipo, tick: simTick, s: +(q / 60).toFixed(2), de: Math.min(...ticks), ate: Math.max(...ticks), cams: [...cams], linha, andou, golaco, checagem, seloFora, cruzou: xs.some(x => Math.abs(x) > 52.61) };
+        return { tipo, tick: simTick, s: +(qAnt / 60).toFixed(2), total: +(q / 60).toFixed(2), de: Math.min(...ticks), ate: Math.max(...ticks), cams: [...cams], linha, andou, golaco, checagem, seloFora, cruzou: xs.some(x => Math.abs(x) > 52.61) };
       });
       // REPLAY.gol.maximoGolaco (+ 0,2 s dos quadros de borda); com a checagem de posição legal, + 1 s
       const maxGol = 14.2 + (gn.checagem ? 1 : 0), maxN = 12 + (gn.checagem ? 1 : 0);
       if (gn.seloFora) seloForaDoFinal.push('gol natural');
       // o lance foi achado em Node com a entrada da página (comoPagina): sem ele aqui, a página divergiu do Node
       if (gn.semGol) meta('C0 replay de um gol NATURAL (IA × IA)', `semente ${GOL.semente}: nenhum replay de gol em ${gn.n} quadros na página (o Node achou o gol no tick ${GOL.golTick})`, 'o gol do Node também na página', false);
-      else meta('C0 replay de um gol NATURAL (IA × IA)', `semente ${GOL.semente}, saída no tick ${gn.tick}: ${gn.s} s, ticks ${gn.de.toFixed(0)}–${gn.ate.toFixed(0)}, ${gn.cams.join(' ')}${gn.golaco ? ', golaço' : ''}${gn.checagem ? ', com checagem' : ''}; bola entra ${gn.cruzou}; linha ${gn.linha}; sim andou ${gn.andou}`,
+      else meta('C0 replay de um gol NATURAL (IA × IA): a parte antiga (tv, atras [, lateral, checagem])', `semente ${GOL.semente}, saída no tick ${gn.tick}: ${gn.s} s (o replay inteiro ${gn.total} s), ticks ${gn.de.toFixed(0)}–${gn.ate.toFixed(0)}, ${gn.cams.join(' ')}${gn.golaco ? ', golaço' : ''}${gn.checagem ? ', com checagem' : ''}; bola entra ${gn.cruzou}; linha ${gn.linha}; sim andou ${gn.andou}`,
         `6–${gn.golaco ? f2(maxGol) : maxN} s, bola entra, sim parada, sem linha (fora da análise)`, gn.s >= 6 && gn.s <= (gn.golaco ? maxGol : maxN) && gn.cruzou && !gn.andou && gn.linha === 0 && (!gn.cams.includes('saot@1') || gn.checagem));
     } finally { await P.fechar(); }
   }
@@ -205,15 +250,16 @@ else try {
         g.relogio.avancar(1000 / 60, { desenhar: false }); n++;
         const rp = g.replay?.estado;
         if (rp?.ativo && rp.tipo === 'gol') {
-          const ticks = [], cams = new Set(); let q = 0, linha = 0, seloFora = 0; const simTick = m.tick; let andou = false; const golaco = rp.golaco, checagem = rp.checagem;
+          const ticks = [], cams = new Set(); let q = 0, linha = 0, seloFora = 0, qAnt = 0; const simTick = m.tick; let andou = false; const golaco = rp.golaco, checagem = rp.checagem;
           while (g.replay.estado.ativo && q < 2000) {
             const e = g.replay.estado; ticks.push(e.tick); cams.add(e.cam + '@' + e.vel);
+            if (e.cam !== 'primeira' && e.cam !== 'treinador') qAnt++;
             if (g.linhaImpedimento.visivel && e.cam !== 'saot') linha++;
             if (g.replay.planos?.selo && e.saot?.fase !== 'final') seloFora++;
             g.relogio.avancar(1000 / 60, { desenhar: false }); q++;
             if (m.tick !== simTick && g.replay.estado.ativo) andou = true;
           }
-          golsNat.push({ tick: simTick, s: +(q / 60).toFixed(2), de: Math.min(...ticks), ate: Math.max(...ticks), cams: [...cams], linha, andou, golaco, checagem, seloFora });
+          golsNat.push({ tick: simTick, s: +(qAnt / 60).toFixed(2), total: +(q / 60).toFixed(2), de: Math.min(...ticks), ate: Math.max(...ticks), cams: [...cams], linha, andou, golaco, checagem, seloFora });
           continue;
         }
         if (m.eventos.some(e => e.tipo === 'impedimento')) break;
@@ -226,7 +272,7 @@ else try {
     for (const gn of r.golsNat) {
       const maxGol = 14.2 + (gn.checagem ? 1 : 0), maxN = 12 + (gn.checagem ? 1 : 0);
       if (gn.seloFora) seloForaDoFinal.push('gol natural no caminho');
-      meta('C0 replay de um gol NATURAL (IA × IA) no caminho', `tick ${gn.tick}: ${gn.s} s, ticks ${gn.de.toFixed(0)}–${gn.ate.toFixed(0)}, ${gn.cams.join(' ')}${gn.golaco ? ', golaço' : ''}${gn.checagem ? ', com checagem' : ''}; linha ${gn.linha}; sim andou ${gn.andou}`, `6–${gn.golaco ? f2(maxGol) : maxN} s, sim parada, sem linha (fora da análise)`,
+      meta('C0 replay de um gol NATURAL (IA × IA) no caminho: a parte antiga', `tick ${gn.tick}: ${gn.s} s (inteiro ${gn.total} s), ticks ${gn.de.toFixed(0)}–${gn.ate.toFixed(0)}, ${gn.cams.join(' ')}${gn.golaco ? ', golaço' : ''}${gn.checagem ? ', com checagem' : ''}; linha ${gn.linha}; sim andou ${gn.andou}`, `6–${gn.golaco ? f2(maxGol) : maxN} s, sim parada, sem linha (fora da análise)`,
         gn.s >= 6 && gn.s <= (gn.golaco ? maxGol : maxN) && !gn.andou && gn.linha === 0 && (!gn.cams.includes('saot@1') || gn.checagem));
     }
     // a tela limpa (11/10) tirou a linha viva do jogo: a linha só aparece no replay do impedimento (e parada no apito)

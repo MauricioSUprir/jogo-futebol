@@ -88,7 +88,7 @@ async function coletar(sem) {
     sem, passos: 0, fora: 0, foraEx: '', zMin: Infinity,
     vAndaMax: 0, vRapMax: 0, passoMax: 0, acel: new Uint32Array(1001), nAnda: 0,
     plantadoMax: 0, saltoMax: 0, nSalto: 0,
-    nan: 0, ossoMax: 0, ossoEx: '', maoCabMin: Infinity, maoCabEx: '', maoVel: new Uint32Array(1001), nMao: 0, maoVelC: new Uint32Array(1001), maoPasso: 0,
+    nan: 0, ossoMax: 0, ossoEx: '', maoCabMin: Infinity, maoCabEx: '', maoVel: new Uint32Array(1001), nMao: 0, maoVelC: new Uint32Array(1001), maoPasso: 0, maoPassoEx: '',
     angulos: new Uint32Array(181), nAng: 0,
     gols: [], rolando: 0, observa: [0, 0], instrui: [0, 0], seq: [[], []], repetidos: 0, repEx: '',
     emJogo: 0, tv: { PC: 0, celular: 0 }, tvEx: '', condutor: 0, condutorPassos: 0,
@@ -127,7 +127,7 @@ async function coletar(sem) {
       const o = tc.atu, j = tc.j, e = est[k];
       // T2
       const s = sinal(tc, o);
-      if (s) { R.fora++; if (!R.foraEx) R.foraEx = `${tc.id} ${s} no passo ${i} (${tc.estado})`; }
+      if (s) { R.fora++; if (!R.foraEx) R.foraEx = `${tc.id} ${s} no passo ${i} da semente ${sem} (${tc.estado})`; }
       R.zMin = Math.min(R.zMin, j.z);
       // T3
       const v = Math.hypot(j.vx, j.vz);
@@ -166,7 +166,7 @@ async function coletar(sem) {
       if (e.mao) {
         for (let p = 0; p < 2; p++) {
           const dm = Math.hypot(maos[p * 3] - e.mao[p * 3], maos[p * 3 + 1] - e.mao[p * 3 + 1], maos[p * 3 + 2] - e.mao[p * 3 + 2]), vm = dm / PASSO;
-          R.maoPasso = Math.max(R.maoPasso, dm);
+          if (dm > R.maoPasso) { R.maoPasso = dm; R.maoPassoEx = `${tc.id} ${tc.estado}/${tc.variante} postura ${tc.postura} t ${fmt((T.k - tc.desde) * PASSO, 2)} s, v ${fmt(v, 2)} m/s`; }
           if (tc.estado !== 'comemora') { R.maoVel[Math.min(1000, Math.round(vm * 50))]++; R.nMao++; }
           else R.maoVelC[Math.min(1000, Math.round(vm * 50))]++;
         }
@@ -221,7 +221,7 @@ async function coletar(sem) {
       // T13: distância a todos os jogadores
       for (const q of m.jogadores) {
         const d = Math.hypot(q.x - j.x, q.z - j.z);
-        if (d < R.distMin) { R.distMin = d; R.distMinEx = `${tc.id} × ${q.id} (${fmt(d, 2)} m) no passo ${i}`; }
+        if (d < R.distMin) { R.distMin = d; R.distMinEx = `${tc.id} × ${q.id} (${fmt(d, 2)} m) no passo ${i} da semente ${sem}`; }
         if (d < 1) R.abaixo1++;
       }
     });
@@ -288,7 +288,8 @@ if (!TE || !EF) {
   }
 
   // ---------------------------------------------------------------- partidas (processos filhos)
-  const SEMENTES = Array.from({ length: NS }, (_, i) => i + 1);
+  // --so S: só a semente S (diagnóstico)
+  const SEMENTES = args.includes('--so') ? [+arg('--so')] : Array.from({ length: NS }, (_, i) => i + 1);
   const res = [];
   const nPar = Math.max(1, Math.min(SEMENTES.length, os.availableParallelism?.() ?? os.cpus().length, +arg('--par', 2)));
   let prox = 0;
@@ -322,7 +323,7 @@ if (!TE || !EF) {
   const ossoMax = maxDe('ossoMax'), maoCab = Math.min(...res.map(r => r.maoCabMin));
   const { RAIO_CABECA } = await imp('anim.js');
   reg('T5 sem NaN; ossos ± 1 mm da referência; mão ≥ RAIO_CABECA + 0,02 da cabeça; mão ≤ 4 m/s fora da comemoração e ≤ 7 nela (p99), ≤ 0,15 m por passo',
-    `${soma('nan')} NaN; osso ${fmt(ossoMax * 1000, 2)} mm (${res.find(r => r.ossoMax === ossoMax)?.ossoEx}); mão–cabeça ${fmt(maoCab, 3)} m (${res.find(r => r.maoCabMin === maoCab)?.maoCabEx}); mão ${fmt(p99m, 2)} m/s fora, ${fmt(p99c, 2)} m/s comemorando (p99); ${fmt(maxDe('maoPasso'), 3)} m por passo`,
+    `${soma('nan')} NaN; osso ${fmt(ossoMax * 1000, 2)} mm (${res.find(r => r.ossoMax === ossoMax)?.ossoEx}); mão–cabeça ${fmt(maoCab, 3)} m (${res.find(r => r.maoCabMin === maoCab)?.maoCabEx}); mão ${fmt(p99m, 2)} m/s fora, ${fmt(p99c, 2)} m/s comemorando (p99); ${fmt(maxDe('maoPasso'), 3)} m por passo (${res.find(r => r.maoPasso === maxDe('maoPasso'))?.maoPassoEx})`,
     `0; ≤ 1 mm; ≥ ${fmt(RAIO_CABECA + 0.02, 3)}; ≤ 4; ≤ 7; ≤ 0,15`, soma('nan') === 0 && ossoMax <= 0.001 && maoCab >= RAIO_CABECA + 0.02 && p99m <= 4 && p99c <= 7 && maxDe('maoPasso') <= 0.15);
   // T6
   const ang = juntar('angulos'), med = quantil(ang, 0.5, 1), p90 = quantil(ang, 0.9, 1);

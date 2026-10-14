@@ -423,6 +423,11 @@ export function criarJogadores3D(cena, qualidade) {
     get cabecas() { return cabecas; },
     get cabelos() { return cabelos; },
     get capacidade() { return cap; },
+    /** Triângulos de UM boneco (as cápsulas dos segmentos, a cabeça, o cabelo e a mancha de contato). */
+    get triangulosPorBoneco() {
+      const t = g => (g.index ? g.index.count : g.attributes.position.count) / 3;
+      return t(segs.geometry) * NSEG + t(cabecas.geometry) + t(cabelos.geometry) + t(manchas.geometry);
+    },
     /** Marcas da partida (testes de navegador): a do PRESSÃO e o anel dos 8 s — posição e quanto do anel aparece. */
     get indicadores() {
       return {
