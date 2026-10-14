@@ -314,8 +314,11 @@ function boteIA(m, j) {
   const ultT = dono.cond?.ult;
   const lento = !!m.partida && MD.hypot(dono.vx, dono.vz) < cfg.vParado && !(ultT && (m.tick - ultT.tick) * PASSO < cfg.semToque);
   // colada no pé de quem conduz: não alcança — a não ser que ela esteja ENCOSTADA no corpo do marcador com os dois
-  // andando juntos (o condutor empurrando a bola nele): aí ela está entre os dois e é disputada
-  const encostada = dB <= cfg.encostada && MD.hypot(j.vx - dono.vx, j.vz - dono.vz) <= cfg.encostadaVrel;
+  // andando juntos (o condutor empurrando a bola nele): aí ela está entre os dois e é disputada. Só com o marcador à
+  // frente ou de lado (faltas.js chegada): nas costas do condutor a bola não está entre os dois — o bote por trás dela
+  // era quase sempre falta (FALTAS.bote.tras; teste-pressao-humano M4, 14/10)
+  const encostada = dB <= cfg.encostada && MD.hypot(j.vx - dono.vx, j.vz - dono.vz) <= cfg.encostadaVrel
+    && chegada(j, dono) !== 'tras';
   if (!lento && !encostada && (dD < cfg.colada || dB > dD)) return;
   if (uniforme(m.rng) >= cfg.chancePorPasso) return;
   // Etapa 4 (só na partida): o bote que chega pode ser falta (faltas.js: chegada, velocidade, desarme) — a bola fica

@@ -470,7 +470,7 @@ export const ACOES = {
     // colada no pé dele, está entre os dois e é disputada. Sem isso, com a condução curta, o condutor que empurrava a
     // bola no marcador colado à frente (toques a cada 0,1 s) nunca perdia: a bola a 0,29 m dele e a 0,31 m do marcador
     // (teste-parado, "andando devagar"). Quem chega correndo numa bola colada continua sem alcançar (a PRESSÃO em
-    // disparada fazia faltas de frente: teste-pressao-humano M4)
+    // disparada fazia faltas de frente: teste-pressao-humano M4); nas costas do condutor não vale (sim.js boteIA)
     encostada: 0.42, encostadaVrel: 1.0 },
   primeiraErro: 1.4,          // multiplica o erro de jogada de primeira
 };
