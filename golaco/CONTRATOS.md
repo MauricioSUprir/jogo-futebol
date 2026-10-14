@@ -1278,9 +1278,15 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
   `chega` m → disparada (analógico cheio + CORRER) ao ponto de encontro, contornando o condutor a `contorno` m se venho
   por trás; perto → pela velocidade (a do condutor + `ganho` × (ponto − corpo), até `aproxMax` m/s a mais; por trás,
   fechando no máximo `trasAprox` m/s), mirando `naBola` m antes da bola, do lado do gol. Estado `j.pressaoH = {corre}`.
-  Em todos os trechos (também no passe do adversário, no recebedor `voo.para`) ele **chega freando**: a velocidade com
-  que fecha no corpo do adversário fica em √(2 · `freio` · (d − 2 raios)) + `trasAprox` (encosta abaixo da carga por
-  trás, `FALTAS.carga.vMin`); longe disso, a disparada de antes.
+  Em todos os trechos (também no passe do adversário, no recebedor `voo.para`) ele **chega freando**: a velocidade
+  PEDIDA com que fecha no corpo do adversário fica em √(2 · `freio` · (d − 2 raios)) + `trasAprox`; longe disso, a
+  disparada de antes. É o pedido, não a garantia do contato: o corpo segue o pedido com o atraso de `JOGADOR.tauVel`
+  (freando a 6,2 m/s², ~1,1 m/s acima dele) e o CORRER segue ligado enquanto a velocidade pedida passa da corrida — o
+  chega freando tira a maior parte dos contatos, mas os que sobram ainda chegam acima de `FALTAS.carga.vMin`
+  (contraprova 14/10, teste-pressao-humano, sementes 7001–7008: contatos do chamado por trás do condutor 12 na main →
+  3 aqui, 2 deles fechando a 2,9–3,1 m/s; não de frente 31 → 11, acima de 1,8 m/s 23 → 8). A curva com a folga do atraso
+  (pedido τ·a abaixo, alvo 1,6 m/s no contato) foi medida e não resolveu (8 de 9 contatos não de frente seguiam acima
+  de 1,8 m/s): pendência.
 - `ia-tatica.js`: `B.apertaProprio` (o 1º aperta por conta própria); `B.pedido` é calculado ANTES do aperto, com
   `excluir = p1` quando ele já aperta (o botão chama outro); quem foi chamado no tick anterior (`B.pedidoTick`) não é o
   1º nem o 2º homem do bloco; `B.aperta1 = B.apertaProprio` (o botão soma um jogador, não dois).
