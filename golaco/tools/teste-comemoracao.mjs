@@ -19,6 +19,10 @@
 //  11) pureza: hashMundo antes = depois da cena (o mundo não é tocado); a pose no tick k é a mesma andando a cena tick a
 //      tick ou em quadros de tamanhos variados (avancarCena); a mesma cena duas vezes = as mesmas poses;
 //  12) custo ≤ 0,6 ms por tick (a melhor de 3 medidas de cada cena: a máquina é dividida);
+//  14) (contraprova de 14/10) gol com quem cabeceou AINDA NO AR (o cabeceio de muito perto: ~1 em 100 gols de cabeça no
+//      canhão da pequena área): a cena termina o pulo do cabeceio (cabeceio.js) — o tornozelo desenhado anda no máximo a
+//      régua do pé no ar ((2,5·v + 3)·dt) e a pelve no máximo 0,06 m por tick (no pulo mais alto ela anda ~0,05). Antes a
+//      cena andava o corpo pela locomoção e os pés pela passada no chão: o tornozelo saltava 0,2 m e a pelve 0,19 m num tick;
 //  13) (contraprova) plano da reação: ninguém além de quem reage a < 2 m da lente dentro do quadro, no PC e no celular
 //      (nas 8 cenas e em 2 gols naturais em que um defensor andando para a saída passava colado na câmera).
 // "Antes" (informativo): o pós-gol da versão sem cena, medido na simulação (a IA leva o autor de volta; nenhuma mão acima
@@ -386,6 +390,50 @@ function min(arr, f) { return Math.min(...arr.map(f)); }
   }
   const nb = gols.length * 2;
   reg('13 plano da reação: ninguém a < 2 m da lente dentro do quadro (PC e celular; também com um jogador parado na frente da lente)', `${linhas13.join('; ') || 'nenhum quadro'} (${gols.length} cenas; bloqueios ${bloqueios}/${nb})`, '0 quadros', bloqueios === nb && pior === 0);
+}
+
+// 14 (contraprova de 14/10) o gol sai com quem cabeceou ainda no ar: a cena termina o pulo (mundo do treino: o lançamento
+// do teste-cabeceio E3, a cena criada a 2–10 ticks do pouso)
+if (CM) {
+  const { alturaNaDistancia } = await imp('bola.js');
+  let cenas = 0, piorPe = 0, piorPelve = 0, passou = 0;
+  for (let s = 1; s <= 12; s++) {
+    const jog = [{ id: 0, x: 0, z: 0, rumo: Math.PI, time: 0, papel: 'humano', posicao: 'ATA', attr: { impulsao: 70 } }];
+    const m = S.criarMundo({ semente: 800 + s, jogadores: jog, bola: { x: 20, z: 0 }, posse: null });
+    const p0 = { x: 18, y: 0.11, z: (s % 3) - 1 }, h = 2.1 + 0.02 * s, v0 = 17;
+    const D = Math.hypot(p0.x, p0.z), ux = -p0.x / D, uz = -p0.z / D;
+    let lo = -0.1, hi = 1.0;
+    for (let k = 0; k < 30; k++) { const el = (lo + hi) / 2; if (alturaNaDistancia(p0, ux, uz, D, v0, el).y < h) lo = el; else hi = el; }
+    const el = (lo + hi) / 2, b = m.bola;
+    Object.assign(b.p, p0);
+    b.v.x = ux * v0 * Math.cos(el); b.v.y = v0 * Math.sin(el); b.v.z = uz * v0 * Math.cos(el);
+    b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = false; m.posse = null;
+    m.voo = { tipo: 'lancamento', de: 9, time: 0, para: 0, tick0: m.tick, tickChave: m.tick, alto: true };
+    const j = m.jogadores[0], falta = 2 + (s % 9);
+    for (let i = 0; i < 150; i++) {
+      S.passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
+      const c = j.cab;
+      if (!(c && c.saiu && m.tick > c.td && c.tp - m.tick === falta)) continue;
+      const cena = CM.criarCena(CM.planejarComemoracao(m, { tick: m.tick, time: 0, id: 0 }), m);
+      const a = cena.atores.find(q => q.id === 0);
+      let ant = a.atu.slice();
+      for (let t = 0; t < 45; t++) {
+        CM.passoCena(cena);
+        const n = a.atu, regua = (2.5 * Math.hypot(a.j.vx, a.j.vz) + 3) * PASSO + 1e-6;
+        for (const k of [J.tornozeloE, J.tornozeloD]) {
+          const d = Math.hypot(n[k * 3] - ant[k * 3], n[k * 3 + 1] - ant[k * 3 + 1], n[k * 3 + 2] - ant[k * 3 + 2]);
+          piorPe = Math.max(piorPe, d / regua);
+          if (d > regua) passou++;
+        }
+        piorPelve = Math.max(piorPelve, Math.abs(n[J.pelve * 3 + 1] - ant[J.pelve * 3 + 1]));
+        ant = n.slice();
+      }
+      cenas++;
+      break;
+    }
+  }
+  reg('14 gol com quem cabeceou no ar: a cena termina o pulo (passos do tornozelo além da régua · maior passo da pelve)',
+    `${passou} (pior ${f2(piorPe)}× a régua) · ${f3(piorPelve)} m (${cenas} cenas)`, '0 · ≤ 0,06 m (≥ 10 cenas)', cenas >= 10 && passou === 0 && piorPelve <= 0.06);
 }
 
 imprimir();
