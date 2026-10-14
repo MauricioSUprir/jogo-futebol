@@ -650,7 +650,7 @@ ligada, desligada e em Node (`teste-substituicao-tela` T1).
   ninguém grande no quadro, nunca em sólido — `estadio-forma.js solidoEm`; sem nenhuma livre na grade, a 2ª grade
   `camSai.longe`/`foraMax`; sem nenhuma livre nela, a menos ruim (custo duro finito), nunca a posição padrão sem conferir;
   o corpo inteiro acima da faixa: pés a `SUBST.pes` do quadro; ENTRA: câmera baixa no gramado do lado de cá, pan do
-  quarto para o reserva, o reserva nunca mais perto da lente que a distância em que o corpo cabe no fov fixo + 0,5 m;
+  quarto para o reserva, o reserva nunca mais perto da lente que a distância em que o corpo cabe no quadro do fov fixo (≈ 5,8 m);
   celular: `comemoracao.js ajustarCelular`), `consumirEventosSubst(c,
   out)` (`{tipo: 'substituicao', cruzou: true, time, sai, entra}` quando quem sai cruza a linha: palmas da torcida dele em
   `render/emocao.js`), `infoAtoresSubst(c)`. Quem entra cruza a lateral só DEPOIS do par dele ter saído, pela linha do
