@@ -208,3 +208,26 @@ volume de ataque (chutes 6,6 contra 8,5) — a calibração final fica com a con
 `teste-intercepta` (base: 1/92 passes alcançáveis cortados, passe certo 88,7%, 8,75 interceptações; agora 20/34 = 59%,
 85,1%, 11,29; homem livre 77,8% → 75,6%), `teste-cabeceio` e `teste-defesa-corrida` (a base reprova 8 e 6 metas); o defensor do corredor ultrapassado
 ficou em 3,3–3,6 m/s (meta ≥ 5; base 3,0) — PENDENTE, não reprova.
+
+## 7. Volume de ataque com a defesa que corta o passe (rodada de 13/10)
+
+Pedido: trazer de volta o volume de ataque sem afrouxar a defesa nova (os chutes tinham caído de 9,2 para 6,8 por partida
+no painel de 144 do CI, os gols de 1,81 para 1,42). Diagnóstico (scratch `cabia/dbg-terco.mjs`, sementes 1001–1016): no
+último terço as posses eram as mesmas da main (14,9 por partida) — faltavam ações em cada uma (passes 25 → 20, cruzamentos
+4,1 → 2,8, chutes da área 3,6 → 2,1), e o gol de roubada alta caía de 1,0 para 0,4 por partida (na main, 30% das
+roubadas a ≤ 40 m do gol viravam gol — Opta: ~2%).
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| FIFA Training Centre, "Third player combinations" (fifatrainingcentre.com/en/game/game-analysis/in-possession/third-player-combinations.php) | A combinação em quatro fases: o passe, a devolução de primeira, a corrida para o espaço que o marcador do passador não acompanha e o passe final | A tabela da IA (`tabelaIA`): o passe curto no campo de ataque com espaço à frente sai com a corrida do passador, e quem recebe vê a devolução como enfiada. A devolução de primeira foi medida e saiu (chutes 7,6 → 6,2 e passe certo 85 → 82% em 48 partidas) |
+| American Soccer Analysis, "Where goals come from: playing the killer final ball" (2021) | Enfiada: chute de ~0,30 de xG; o cutback acontece ~1,6 vez por partida com 32% de acerto; os dois convertem bem mais que o cruzamento | Valorizar a bola no espaço para quem corre (a tabela vira enfiada). O "passe para quem finaliza" (o valor do passe pela chance de gol do recebedor) foi medido e não mudou os gols (1,73 → 1,71 em 48 partidas): não entrou |
+| StatsBomb, "How do Headers compare to Shots?" | Da mesma zona o cabeceio marca ~62% do chute; 95% dos cabeceios são do meio da área | `utilidade.cruzamentoV` 0,25 → 0,35 (com o cabeceio na bola rolando o cruzamento rende gol), sem passar da faixa de gols de cabeça (12–13%; PL 16%) |
+| Opta Analyst, "Premier League pressing stats" (2024) | PL 2024/25: 2,5 roubadas altas que terminam em chute por jogo, 0,3 em gol (13% dos chutes delas; 15–17% das roubadas altas terminam em chute) | O gol de roubada alta da main (~0,7 por partida, 37% dos gols) é o defeito antigo (a saída de bola roubada perto da área); a branch fica mais perto do real e não se buscou de volta esse gol |
+
+Também medido e descartado (48 partidas, `--set`): o condutor cauteloso (`manterPeso` 0,85 / `manterLado` 0,7: chutes 7,6 →
+4,9), o ousado no campo todo (0,55 / 0,25: chutes 8,4, mas no meio-campo ia para cima da PRESSÃO do humano e sobravam
+menos bolas longas — os duelos pelo alto com a bola rolando caíam para ~1,5), mais gente na área no cruzamento
+(`TATICA.naArea`) e a defesa da arrancada só a partir de 7,2 m/s (o humano em disparada passava a fazer 1,9 gol por
+partida no `teste-defesa-corrida`, meta ≤ 1,5).
+
+Medido (painel do CI, 144 partidas, main × branch, mesmas sementes): ver o relatório do PR #471.
