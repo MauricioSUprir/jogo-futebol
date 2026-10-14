@@ -439,12 +439,7 @@ export function passo(m, entradas) {
         j.disputaAlta = null;
       }
       const c = j.cab;
-      if (c && c.h > 0 && !c.saiu && m.tick >= c.td) {
-        // (partida) a bola já não vai ao ponto do plano (outro tocou nela, bateu num corpo, alguém a dominou): não sai do
-        // chão para o ponto velho — antes ~3% dos pulos eram para a bola já a 7–8 m dali (contraprova de 14/10)
-        if (m.partida && planoVelho(m, c)) { j.cab = null; if (j.cond && j.cond.toque && j.cond.toque.tipo === 'aereo') j.cond.toque = null; }
-        else sairDoChao(m, j);
-      }
+      if (c && c.h > 0 && !c.saiu && m.tick >= c.td) sairDoChao(m, j);
       if (voando(j, m.tick + 1)) { passoCorpoNoAr(m, j); continue; }
     }
     if (j.papel === 'marcador') {
@@ -941,18 +936,6 @@ function tempoCorrida(j, x, z) {
   const s0 = Math.max(0, Math.min(vmax, (j.vx * dx + j.vz * dz) / dist));
   const tAcel = (vmax - s0) / 7, dAcel = (s0 + vmax) / 2 * tAcel;
   return d <= dAcel ? d / Math.max((s0 + vmax) / 2, 1) : tAcel + (d - dAcel) / vmax;
-}
-
-/**
- * O plano do pulo c já não vale: a bola com dono (no pé ou na mão), ou a trajetória prevista agora (conducao.js preverBola,
- * a mesma física do plano) passa a mais de CABECEIO.velho m do ponto do contato no tick dele.
- */
-function planoVelho(m, c) {
-  if (m.posse != null || m.naMao != null) return true;
-  const n = c.tc - m.tick;
-  if (n < 0) return true;
-  const pb = preverBola(m.bola, n);
-  return MD.hypot(pb.xs[n] - c.bx, pb.ys[n] - c.by, pb.zs[n] - c.bz) > CABECEIO.velho;
 }
 
 /** O corpo de j anda pelo pulo do cabeceio no passo que leva ao estado do tick t (da saída ao pouso, inclusive)? */
