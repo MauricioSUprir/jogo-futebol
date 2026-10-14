@@ -122,7 +122,12 @@ async function lado(contexto, c, corpo, srvUrl) {
   const nota = c.prejogo ? await prejogo(pg, c) : await preparar(pg, c);
   await pg.evaluate(() => window.__golaco.desenhar());
   const info = await pg.evaluate(() => { const e = window.__golaco.estado(); return { corpo: e.corpo, j: e.jogadoresDesenho, cham: e.desenhoChamadas, tri: e.desenhoTriangulos }; });
-  const png = await pg.screenshot({ type: 'png', timeout: 180000 });
+  // máquina dividida: o print pode demorar minutos; uma segunda tentativa redesenha antes
+  let png;
+  try { png = await pg.screenshot({ type: 'png', timeout: 300000 }); } catch (_) {
+    await pg.evaluate(() => window.__golaco.desenhar());
+    png = await pg.screenshot({ type: 'png', timeout: 300000 });
+  }
   await pg.close();
   return { png, nota, info, erros };
 }

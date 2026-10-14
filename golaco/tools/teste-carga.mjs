@@ -163,7 +163,7 @@ const { navegador, contexto, pagina, erros, cdnBytes, cdnArquivos } = await abri
 try {
   const t0 = Date.now();
   await pagina.goto(url, { waitUntil: 'load' });
-  await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+  await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 300000 });
   const tCarga = (Date.now() - t0) / 1000;
   await pagina.waitForTimeout(2500); // alguns quadros no laço real
   const quadrosReais = await pagina.evaluate(() => window.__golaco.render.quadros);
@@ -400,7 +400,7 @@ try {
     if (srv) srv.zerar();
     const cdn0 = cdnArquivos();
     await pg.goto(url + '?corpo=novo', { waitUntil: 'load' });
-    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 300000 });
     await pg.waitForTimeout(2000);
     // o jogo segue desenhando: mais 2 quadros do laço real (até 60 s: com a máquina carregada um quadro demora)
     const q0 = await pg.evaluate(() => window.__golaco.render.quadros);

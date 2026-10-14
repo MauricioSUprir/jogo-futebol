@@ -138,7 +138,7 @@ try {
   {
     const { navegador, pagina: pg, erros } = await abrir({ largura: 1280, altura: 720 });
     await pg.goto(`${srv.url}?semente=${SEMENTE}&q=media${CORPO}`, { waitUntil: 'load' });
-    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 300000 });
     const r = await pg.evaluate(() => ({ ativo: !!window.__golaco.prejogo?.ativo, wd: navigator.webdriver }));
     meta('Testes automatizados (webdriver) abrem direto no jogo', `pré-jogo ativo ${r.ativo} (webdriver ${r.wd})`, 'false', r.ativo === false && erros.length === 0);
     // memória do jogo sem pré-jogo (item 8): 120 quadros do jogo
@@ -150,7 +150,7 @@ try {
   for (const P of PERFIS) {
     const { navegador, contexto, pagina: pg, erros } = await abrir({ largura: P.largura, altura: P.altura, dpr: P.dpr, toque: P.toque });
     await pg.goto(`${srv.url}?prejogo=1&semente=${SEMENTE}&q=${P.q}&hora=dia${P.toque ? '&toque=1' : ''}${CORPO}`, { waitUntil: 'load' });
-    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 300000 });
     await pg.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); g.relogio.avancar(16); g.relogio.avancar(16); });
     // ---------------------------------------------------------------- 1) abertura, tick 0
     const e1 = await pg.evaluate(() => {
@@ -355,7 +355,7 @@ try {
   {
     const { navegador, pagina: pg, erros } = await abrir({ largura: 1280, altura: 720 });
     await pg.goto(`${srv.url}?prejogo=1&semente=${SEMENTE}&q=alta&hora=dia${CORPO}`, { waitUntil: 'load' });
-    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 300000 });
     const ok = await pg.evaluate(() => !!window.__golaco.prejogo);
     if (ok) {
       await pg.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); g.relogio.avancar(16); g.prejogo.comecar(); g.prejogo.irPara(30); g.relogio.avancar(16); });
