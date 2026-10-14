@@ -3,7 +3,7 @@
 // mesma partida bit a bit (ver hashMundo).
 
 import { profundidadeVeu } from './rede-forma.js';
-import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO, CABECEIO, TROCA_AEREA, DEFESA_HUMANO, FALTAS } from './config.js';
+import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, BOLA, GOLEIRO, IA, AEREO, CABECEIO, TROCA_AEREA, DEFESA_HUMANO, FALTAS } from './config.js';
 import { criarRng, entre, uniforme, normal } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
@@ -431,6 +431,13 @@ export function passo(m, entradas) {
     if (j.cab || j.disputaAlta) {
       if (j.cab && m.tick > j.cab.tf) j.cab = null;
       if (j.disputaAlta && m.tick > j.disputaAlta.tc) j.disputaAlta = null;
+      // bola morta (partida: saiu, falta, impedimento — a parada ainda sem cobrar): ninguém sai do chão nem corre para ela;
+      // quem já está no ar termina o pulo (contraprova de 14/10: na semente 1008 dois pularam para a bola que já tinha saído
+      // pela linha de fundo, atrás do gol)
+      if (naParada(m)) {
+        if (j.cab && !j.cab.saiu) { j.cab = null; if (j.cond && j.cond.toque && j.cond.toque.tipo === 'aereo') j.cond.toque = null; }
+        j.disputaAlta = null;
+      }
       const c = j.cab;
       if (c && c.h > 0 && !c.saiu && m.tick >= c.td) sairDoChao(m, j);
       if (voando(j, m.tick + 1)) { passoCorpoNoAr(m, j); continue; }
@@ -849,7 +856,8 @@ function bolaAltaNoCorpo(m, j) {
   // adversário: a disputa com ele é a do agendarDisputa (quem chega primeiro a ela), não um 2º pulo por conta própria
   if (pc && !ehControlado(m, j) && alguemNoAlto(m, j, m.tick + pc.i + AEREO.juntoTicks)) pc = null;
   const q = pc ?? r;
-  if (!q || !planejarPulo(m, j, m.tick + q.i, q.x, q.y, q.z, q.ux ?? -MD.cos(j.rumo), q.uz ?? -MD.sin(j.rumo))) {
+  // (partida: a bola que já terá saído inteira do campo no contato não se cabeceia — contraprova de 14/10)
+  if (!q || (m.partida && bolaForaEm(q.x, q.z)) || !planejarPulo(m, j, m.tick + q.i, q.x, q.y, q.z, q.ux ?? -MD.cos(j.rumo), q.uz ?? -MD.sin(j.rumo))) {
     // a cabeça não alcança: a bola na altura do peito ele ainda domina; mais alta, passa
     if (!r || r.y > peito) return false;
     c.toque = { tick: m.tick + r.i, pe: j.par.attr.pePreferido, bx: r.x, bz: r.z, tipo: 'aereo', y: r.y };
@@ -861,6 +869,8 @@ function bolaAltaNoCorpo(m, j) {
 }
 
 const N_CAB = 72; // ticks da trajetória olhados para o ponto do cabeceio (1,2 s)
+/** A bola com o centro em (x, z) já passou INTEIRA da linha lateral ou da de fundo (Regra 9)? */
+const bolaForaEm = (x, z) => Math.abs(x) > CAMPO.meioX + BOLA.raio || Math.abs(z) > CAMPO.meioZ + BOLA.raio;
 const _pc = { i: 0, x: 0, y: 0, z: 0, ux: 0, uz: 0 };
 /**
  * O 1º ponto da trajetória prevista da bola (conducao.js preverBola: a mesma física) em que j cabeceia a tempo: a bola
@@ -876,6 +886,9 @@ function pontoDeCabeceio(m, j, querCabeca, raioMax = Infinity) {
   let achou = -1;
   for (let i = 4; i <= N_CAB; i += 2) {
     if (pb.rol[i]) break;
+    // (partida) a bola saiu inteira do campo (Regra 9) nesse ponto: dali em diante não há cabeceio — antes o jogador corria
+    // para trás da linha de fundo, por dentro da rede, para cabecear a bola que ia para o tiro de meta
+    if (m.partida && bolaForaEm(pb.xs[i], pb.zs[i])) break;
     const y = pb.ys[i];
     if (y > alc) continue;
     if (!querCabeca(y)) { if (y <= ACOES.cabeceio.alturaPeito[1]) break; continue; }

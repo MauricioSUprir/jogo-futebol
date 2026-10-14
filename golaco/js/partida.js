@@ -144,6 +144,9 @@ export function teleportar(j, x, z, rumo) {
   j.travaApoio = null;
   j.recebe = null; j.corrida = null; j.pedido = null; j.carga = null; j.mira = null; j.iaAcao = null; j.intercepta = null;
   j.defesa = null; j.mergulho = null; j.segura = null; j.saindo = null; j.ia = null;
+  // o pulo do cabeceio e a disputa marcada (cabeceio.js): teletransportado no ar, os pés ficavam no ponto de pouso velho, a
+  // até 15 m do corpo, e eram plantados lá (contraprova de 14/10, semente 1008: a montagem do tiro de meta)
+  j.cab = null; j.disputaAlta = null;
   const c = j.cond;
   if (c) { c.toque = null; c.busca = false; c.ref = null; c.longeDesde = -1; c.ult = null; c.pedalada = null; c.cortePendente = null; c.corteRumo = null; c.puxada = null; }
 }

@@ -86,7 +86,7 @@ const linhas = [['parte', 'medida', 'medido', 'meta', 'resultado']];
 let falhas = 0;
 const reg = (parte, nome, medido, meta, ok) => { linhas.push([parte, nome, medido, meta, ok ? 'PASSOU' : 'REPROVOU']); if (!ok) falhas++; };
 const pc = (a, b) => (b ? `${(100 * a / b).toFixed(0)}%` : '—');
-const SO = (arg('--so', 'A,B,C,D,E')).split(',');
+const SO = (arg('--so', 'A,B,C,D,E,F')).split(',');
 const poses = [];
 
 // ------------------------------------------------------------------ A) canhão de cruzamentos
@@ -253,6 +253,90 @@ if (SO.includes('E')) {
     }
   }
   reg('E', 'E3 passe alto para ele a 1,6–2,2 m: 1º toque de cabeça', `${deCabeca}/${prim}`, '≥ 80%', prim >= 12 && deCabeca >= 0.8 * prim);
+}
+
+// ------------------------------------------------------------------ F) bola morta e teleporte no pulo (contraprova de 14/10)
+// Na semente 1008 do painel (tick ~21580) dois jogadores planejaram o cabeceio de uma bola que ia sair pela linha de fundo
+// — o ponto do contato 3,3 m ATRÁS da linha, dentro da rede —, correram para lá, saíram do chão com a bola já fora (a
+// parada do tiro de meta montando) e foram teletransportados no ar pela montagem: os pés ficaram no ponto de pouso velho,
+// a 7 e 15 m do corpo, e foram plantados lá. Partes:
+//  F1/F2) BOLA QUE SAI (20 cenas, partida): a bola subindo a ~3,2 m, 3,5 m antes da linha de fundo e fora da trave, só desce
+//     à altura da cabeça 1–3 m depois dela; 2 atacantes e 2 zagueiros perto da linha. Metas: nenhum cabeceio planejado
+//     com a bola fora do campo (F1) e ninguém sai do chão com a bola morta (a parada ainda sem cobrar, F2).
+//  F3) TELEPORTE NO AR (16 cenas, treino): o jogador no ar é levado pela montagem (partida.js teleportar) 10 m para o lado;
+//     os pés ficam com o corpo (≤ 1,2 m) até o fim do pulo.
+if (SO.includes('F')) {
+  const fora = (x, z) => Math.abs(x) > MX + 0.11 || Math.abs(z) > 34 + 0.11;
+  let cenas = 0, planosFora = 0, pulosMorta = 0, planos = 0;
+  for (let k = 0; k < 20; k++) {
+    const m = P.criarPartida({ semente: 7000 + k, minutosPorTempo: 4 });
+    for (let i = 0; i < 400 && !(m.partida.estado === 'jogo' && (!m.parada || m.parada.rolou)); i++) P.passoPartida(m, P.entradaDemoPartida(m));
+    for (let i = 0; i < 30; i++) P.passoPartida(m, P.entradaDemoPartida(m));
+    const T = 1, lado = m.ataca[T], sz = k % 2 ? 1 : -1, gx = lado * MX;
+    const meu = m.jogadores.filter(j => j.time === T && j.posicao !== 'GOL');
+    const deles = m.jogadores.filter(j => j.time !== T && j.posicao !== 'GOL');
+    const quatro = [meu[0], meu[1], deles[0], deles[1]];
+    const zs = [sz * 5.2, sz * 6.6, sz * 5.6, sz * 7.0];
+    quatro.forEach((j, q) => P.teleportar(j, gx - lado * (q < 2 ? 1.2 : 0.6), zs[q], lado > 0 ? 0 : Math.PI));
+    let q = 0;
+    for (const j of m.jogadores) {
+      if (quatro.includes(j) || j.posicao === 'GOL') continue;
+      P.teleportar(j, -lado * (5 + 3 * (q % 4)), -30 + 6 * (q % 11), j.rumo); q++;
+    }
+    const gk = m.jogadores.find(j => j.time !== T && j.posicao === 'GOL');
+    P.teleportar(gk, gx - lado * 1.0, 0, lado > 0 ? Math.PI : 0);
+    // a bola subindo a ~3,2 m, 3,5 m antes da linha de fundo e fora da trave: passa por cima de todos e só desce à altura da
+    // cabeça 1–3 m depois da linha (o lance da semente 1008)
+    const b = m.bola;
+    b.p.x = gx - lado * 3.5; b.p.y = 3.2 + 0.02 * k; b.p.z = sz * 6;
+    b.v.x = lado * (6 + 0.15 * (k % 10)); b.v.y = 2.0; b.v.z = 0.2 * sz;
+    b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = false;
+    const px = gx + lado * 3, pz = sz * 6;
+    m.posse = null; m.naMao = null; m.parada = null; m.partida.estado = 'jogo'; m.golTick = null; m.foraDesde = null;
+    const lancador = meu[2];
+    m.voo = { tipo: 'lancamento', de: lancador.id, time: T, para: meu[0].id, alvo: { x: px, z: pz }, tick0: m.tick, tickChave: m.tick, tickChegada: m.tick + 60, alto: true };
+    m.ultimoToque = { id: lancador.id, time: T, tick: m.tick };
+    cenas++;
+    const vistos = new Set(), saiuAntes = new Map();
+    for (let i = 0; i < 220; i++) {
+      P.passoPartida(m, P.entradaDemoPartida(m));
+      const morta = !!(m.parada && !m.parada.rolou);
+      for (const j of m.jogadores) {
+        const c = j.cab;
+        if (c && c.cabeceio && !vistos.has(`${j.id}:${c.tc}`)) {
+          vistos.add(`${j.id}:${c.tc}`); planos++;
+          if (fora(c.bx, c.bz)) planosFora++;
+        }
+        const saiu = !!(c && c.saiu);
+        if (saiu && !saiuAntes.get(j.id) && morta) pulosMorta++;
+        saiuAntes.set(j.id, saiu);
+      }
+      if (m.parada && m.parada.rolou) break;
+    }
+  }
+  reg('F', 'F1 cabeceios planejados com a bola fora do campo', `${planosFora} (de ${planos} planos em ${cenas} cenas)`, '0', cenas >= 15 && planosFora === 0);
+  reg('F', 'F2 pulos que saem do chão com a bola morta (parada sem cobrar)', `${pulosMorta}`, '0', cenas >= 15 && pulosMorta === 0);
+  // F3: teleporte no ar
+  let noAr = 0, longe = 0, pior = 0;
+  for (let s = 1; s <= 16; s++) {
+    const h = 2.0 + 0.02 * s;
+    const jog = [{ id: 0, x: 0, z: 0, rumo: Math.PI, time: 0, papel: 'humano', posicao: 'MEI', attr: { impulsao: 70 } }];
+    const m = S.criarMundo({ semente: 600 + s, jogadores: jog, bola: { x: 20, z: 0 }, posse: null });
+    lancar(m, 18, (s % 3) - 1, 0, 0, h, 17);
+    m.voo.para = 0;
+    const j = m.jogadores[0];
+    let levado = false;
+    for (let i = 0; i < 150; i++) {
+      S.passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
+      const c = j.cab;
+      if (!levado && c && c.saiu && m.tick > c.td + 2 && m.tick < c.tp - 2) { P.teleportar(j, j.x, j.z + 10, j.rumo); levado = true; noAr++; continue; }
+      if (levado) {
+        for (const p of j.pes) { const d = Math.hypot((p.apoio ? p.x : p.tx) - j.x, (p.apoio ? p.z : p.tz) - j.z); pior = Math.max(pior, d); if (d > 1.2) { longe++; break; } }
+        if (!j.cab) break;
+      }
+    }
+  }
+  reg('F', 'F3 teleporte no ar: passos com um pé a mais de 1,2 m do corpo', `${longe} (em ${noAr} pulos; pior ${pior.toFixed(2)} m)`, '0 (≥ 12 pulos)', noAr >= 12 && longe === 0);
 }
 
 // ------------------------------------------------------------------ D) partidas IA × IA

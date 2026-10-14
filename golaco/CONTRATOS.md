@@ -1371,6 +1371,11 @@ corrido só na partida.
 - Ordem no passo: no movimento, `sairDoChao` em `td` e, voando (`td < t ≤ tp`), `passoCorpoNoAr` no lugar da locomoção;
   na passada, `pesNoAr` no lugar de `passoPassada`; `passoPeDesenhado` pulado no ar; na bola livre quem está no ar não
   domina.
+- Bola morta e teleporte (contraprova de 14/10): na partida, `pontoDeCabeceio` para no 1º ponto em que a bola já saiu
+  INTEIRA do campo (`bolaForaEm`, Regra 9) e nenhum cabeceio é planejado para ele; com a parada ainda sem cobrar
+  (`naParada`) o pulo que não saiu do chão e a disputa marcada são cancelados (quem já está no ar termina o pulo);
+  `partida.js teleportar` zera `j.cab` e `j.disputaAlta` (antes os pés ficavam no ponto de pouso velho, a até 15 m do
+  corpo). Teste: `teste-cabeceio` F.
 - `bolaAltaNoCorpo`: o toque aéreo marcado (`c.toque.tipo = 'aereo'`) vira cabeceio só com o pulo planejado para o tick
   (`j.cab.tc === m.tick`) e a cabeça DESENHADA na bola (`cabecaNaBola`: pose do tick, superfícies a até `CABECEIO.folga`);
   senão o peito/coxa (bola até `alturaPeito[1] + 0,15`). Marcação: `pontoDeCabeceio(m, j, querCabeca, raioMax)` — o 1º
