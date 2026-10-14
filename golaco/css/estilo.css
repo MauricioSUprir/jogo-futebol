@@ -661,8 +661,10 @@ html.em-substituicao .toque, html.em-substituicao .qps, html.em-substituicao .go
   flex: none; align-self: center; padding: 6px 8px; border-radius: 5px; font-size: 14px; font-weight: 900; letter-spacing: 0.08em;
   background: var(--cor-time, var(--verde)); color: var(--cor-time-texto, var(--preto));
 }
-.fs-linhas { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
-.fs-linha { display: grid; grid-template-columns: 14px 52px 28px minmax(0, 1fr); align-items: center; column-gap: 8px; opacity: 0.72; min-width: 0; }
+/* as linhas dividem as colunas (subgrid): a do número tem a largura do maior número escrito, em qualquer fonte (no CI a
+   DejaVu Sans é mais larga que a Inter e o "22" não cabia em 28 px); sem subgrid (navegador antigo) fica a coluna fixa */
+.fs-linhas { display: grid; grid-template-columns: 14px 52px max-content minmax(0, 1fr); column-gap: 8px; row-gap: 3px; min-width: 0; flex: 1 1 auto; }
+.fs-linha { display: grid; grid-template-columns: 14px 52px 28px minmax(0, 1fr); grid-template-columns: subgrid; grid-column: 1 / -1; align-items: center; column-gap: 8px; opacity: 0.72; min-width: 0; }
 .fs-linha.destaque { opacity: 1; }
 .fs-tri { width: 14px; height: 14px; }
 .fs-entra .fs-tri { fill: var(--verde); }
@@ -683,8 +685,8 @@ html.com-toque .faixa-subst {
   max-height: 64px; padding: 5px 12px 5px 6px; gap: 8px;
 }
 html.com-toque .fs-sigla { font-size: 12px; padding: 4px 6px; }
-html.com-toque .fs-linhas { gap: 1px; }
-html.com-toque .fs-linha { grid-template-columns: 11px 42px 22px minmax(0, 1fr); column-gap: 6px; }
+html.com-toque .fs-linhas { grid-template-columns: 11px 42px max-content minmax(0, 1fr); column-gap: 6px; row-gap: 1px; }
+html.com-toque .fs-linha { grid-template-columns: 11px 42px 22px minmax(0, 1fr); grid-template-columns: subgrid; column-gap: 6px; }
 html.com-toque .fs-tri { width: 11px; height: 11px; }
 html.com-toque .fs-palavra { font-size: 10px; }
 html.com-toque .fs-num { font-size: 17px; }
@@ -694,7 +696,7 @@ html.com-toque .faixa-subst.jogo {
   top: calc(var(--sa-t) + var(--m) + 74px); bottom: auto; left: 50%; transform: translateX(-50%); animation: none;
   max-width: min(360px, calc(100vw - var(--sa-l) - var(--sa-r) - 2 * var(--m))); height: 34px; padding: 0 12px 0 4px; gap: 7px;
 }
-html.com-toque .faixa-subst.jogo .fs-linhas { flex-direction: row; align-items: center; gap: 7px; }
+html.com-toque .faixa-subst.jogo .fs-linhas { display: flex; flex-direction: row; align-items: center; gap: 7px; }
 html.com-toque .faixa-subst.jogo .fs-linha { display: flex; align-items: baseline; gap: 4px; opacity: 1; }
 html.com-toque .faixa-subst.jogo .fs-tri { align-self: center; }
 html.com-toque .faixa-subst.jogo .fs-num { font-size: 15px; }
