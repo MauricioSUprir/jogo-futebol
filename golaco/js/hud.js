@@ -272,7 +272,10 @@ export function criarHud(opc) {
     const linha = sel => { const l = el.faixaSub.querySelector(sel); return { l, num: l.querySelector('.fs-num'), nome: l.querySelector('.fs-nome-completo'), curto: l.querySelector('.fs-nome-curto') }; };
     return { sigla: el.faixaSub.querySelector('.fs-sigla'), sr: el.faixaSub.querySelector('.fs-sr'), conta: el.faixaSub.querySelector('.fs-conta'), entra: linha('.fs-entra'), sai: linha('.fs-sai') };
   })() : null;
-  const fs = { pares: null, t0: 0, dur: 0, porPar: FAIXA_SUB.porPar, pagina: -1, modo: null, destaque: null };
+  // visto[i] = s que a página i já ficou na tela; no jogo (depois da cena, ou sem ela) passam primeiro as páginas vistas
+  // por menos de 0,6·porPar (fila, a partir de tj), cada uma porPar s, e a faixa vai até fim (≥ dur) — contraprova de
+  // 14/10: com 4 e 5 trocas o relógio desde o começo da cena pulava um par, que nunca aparecia
+  const fs = { pares: null, t0: 0, dur: 0, porPar: FAIXA_SUB.porPar, pagina: -1, modo: null, destaque: null, visto: [], ultimo: 0, fila: [], tj: 0, fim: 0 };
   const textoPar = p => `${p.nomeTime}: entra ${p.entra.num} ${p.entra.nome}, sai ${p.sai.num} ${p.sai.nome}`;
   function paginaFaixa(i) {
     const p = fs.pares[i];
@@ -297,11 +300,28 @@ export function criarHud(opc) {
   function quadroFaixaSub(agora, cena) {
     if (!fs.pares || !el.faixaSub) return;
     const t = (agora - fs.t0) / 1000;
-    if (!cena && t >= fs.dur) { esconderFaixaSub(); return; }
-    const n = fs.pares.length;
-    const pg = cena && cena.pagina != null ? Math.max(0, Math.min(n - 1, cena.pagina)) : Math.floor(Math.max(0, t) / fs.porPar) % n;
-    if (pg !== fs.pagina) paginaFaixa(pg);
+    // o tempo desde o quadro anterior conta para a página que estava na tela
+    if (fs.pagina >= 0) fs.visto[fs.pagina] += Math.max(0, (agora - fs.ultimo) / 1000);
+    fs.ultimo = agora;
+    const n = fs.pares.length, pp = fs.porPar;
     const modo = cena ? 'cena' : 'jogo';
+    if (modo === 'jogo' && fs.modo !== 'jogo') {
+      fs.tj = t;
+      fs.fila = [];
+      for (let i = 0; i < n; i++) if (fs.visto[i] < 0.6 * pp) fs.fila.push(i);
+      // (a última página da cena que ainda está na fila vem primeiro: ela continua, sem piscar)
+      const k = fs.fila.indexOf(fs.pagina);
+      if (k > 0) { fs.fila.splice(k, 1); fs.fila.unshift(fs.pagina); }
+      fs.fim = Math.max(fs.dur, t + fs.fila.length * pp);
+    }
+    if (!cena && t >= fs.fim) { esconderFaixaSub(); return; }
+    let pg;
+    if (cena && cena.pagina != null) pg = Math.max(0, Math.min(n - 1, cena.pagina));
+    else {
+      const u = t - fs.tj;
+      pg = u >= 0 && u < fs.fila.length * pp ? fs.fila[Math.floor(u / pp)] : Math.floor(Math.max(0, t) / pp) % n;
+    }
+    if (pg !== fs.pagina) paginaFaixa(pg);
     if (modo !== fs.modo) {
       fs.modo = modo;
       el.faixaSub.classList.toggle('cena', modo === 'cena');
@@ -741,6 +761,7 @@ export function criarHud(opc) {
       const n = pares.length, pp = n >= 4 ? FAIXA_SUB.porParMuitos : FAIXA_SUB.porPar;
       fs.pares = pares; fs.t0 = agora; fs.porPar = pp; fs.dur = Math.min(FAIXA_SUB.teto, Math.max(FAIXA_SUB.min, n * pp));
       fs.pagina = -1; fs.modo = null; fs.destaque = undefined;
+      fs.visto = pares.map(() => 0); fs.ultimo = agora; fs.fila = []; fs.tj = 0; fs.fim = fs.dur;
       el.faixaSub.hidden = false;
       el.faixaSub.classList.remove('visivel'); void el.faixaSub.offsetWidth; el.faixaSub.classList.add('visivel');
       quadroFaixaSub(agora, cena);
@@ -750,7 +771,8 @@ export function criarHud(opc) {
     /** Estado da faixa (testes): {visivel, modo, pagina, n, texto, restante (s)}. */
     faixaSubstEstado(agora) {
       const vis = !!el.faixaSub && !el.faixaSub.hidden && !!fs.pares;
-      return { visivel: vis, modo: fs.modo, pagina: fs.pagina, n: fs.pares?.length ?? 0, texto: el.faixaSub?.dataset.texto ?? '', restante: vis ? fs.dur - (agora - fs.t0) / 1000 : 0, dur: fs.dur };
+      const fim = fs.modo === 'jogo' ? fs.fim : fs.dur;
+      return { visivel: vis, modo: fs.modo, pagina: fs.pagina, n: fs.pares?.length ?? 0, texto: el.faixaSub?.dataset.texto ?? '', restante: vis ? fim - (agora - fs.t0) / 1000 : 0, dur: fim };
     },
     /** A faixa ENTRA/SAI sai já (mundo novo). */
     esconderFaixaSubst: esconderFaixaSub,

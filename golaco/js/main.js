@@ -965,8 +965,11 @@ function infoFaixaCena() {
   const c = cenaSub;
   const t = tempoCenaSubst(c), ip = planoEm(c, t), pl = c.plano.planos[ip];
   if (!pl || pl.nome === 'entra') {
+    // no ENTRA, do 3º par em diante (o 1º e o 2º já passaram no SAI e no SAI2; os outros, no jogo depois do corte —
+    // hud.js fila), sem trocar de página a menos de 0,5 s do corte (antes uma página piscava 0,1 s no fim)
     const t0 = pl ? pl.t0 : c.plano.duracao, n = c.plano.pares.length, pp = n >= 4 ? SUBC.faixa.porParMuitos : SUBC.faixa.porPar;
-    _faixaCena.pagina = Math.floor(Math.max(0, t - t0) / pp) % n; _faixaCena.destaque = 'entra';
+    const ini = n >= 3 ? 2 : 0, kMax = pl ? Math.max(0, Math.floor((pl.t1 - pl.t0 - 0.5) / pp)) : 0;
+    _faixaCena.pagina = (ini + Math.min(kMax, Math.floor(Math.max(0, t - t0) / pp))) % n; _faixaCena.destaque = 'entra';
   } else { _faixaCena.pagina = pl.par; _faixaCena.destaque = 'sai'; }
   return _faixaCena;
 }
@@ -1037,6 +1040,8 @@ function proximaCena() {
   while (filaCenas.length) {
     const it = filaCenas.shift();
     if (typeof it === 'function') { it(); continue; }
+    // o "Replay" pedido na pausa durante a cena de substituição
+    if (it.tipo === 'replay') { if (iniciarReplay(it.ro)) return; continue; }
     if (it.tipo === 'subst' && substLigada && mundo.partida) { iniciarSubst(it); return; }
     mostrarFaixaSub(it.pares);
   }
@@ -1416,6 +1421,9 @@ function comando(c, v) {
       const ro = diretor.menu();
       if (!ro) break;
       hud.fecharMenu();
+      // com a cena de substituição rodando, o replay espera ela acabar (ou ser pulada): antes ele começava por baixo dela,
+      // invisível, e a classe em-replay escondia a faixa ENTRA/SAI a cena inteira (contraprova de 14/10)
+      if (cenaSub) { filaCenas.unshift({ tipo: 'replay', ro }); break; }
       iniciarReplay(ro);
       break;
     }

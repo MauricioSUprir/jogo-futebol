@@ -19,10 +19,14 @@
 //   T9 celular 844×390 Média: p95 da CPU do quadro na cena ≤ p95 do jogo + 1 ms; chamadas de desenho ≤ jogo + 3; os
 //      programas de shader não aumentam na cena (pré-carga); 0 geometria e 0 textura a mais depois de 10 trocas;
 //   T10 a placa com ≥ 40 px de largura no celular no plano ENTRA, com os números certos;
+//   T11 com 2, 3, 4 e 5 trocas na mesma parada, cada par na faixa ≥ 1,5 s (cena + jogo) e nenhuma página por < 0,5 s
+//       seguidos (contraprova de 14/10: com 4 e 5 um par NUNCA aparecia; no fim do ENTRA uma página piscava 0,1 s);
+//   T12 o "Replay" da pausa no meio da cena: a cena segue com a faixa e o replay vem depois dela (antes ele começava por
+//       baixo da cena, invisível, e escondia a faixa a cena inteira);
 //   console sem erros.
 // Na versão sem a cena (--raiz <cópia da base>) reprova (não há cena, a faixa nem a placa). Medida de TEMPO que reprovar
 // repete sozinha (até 3 vezes; a máquina é dividida).
-//   node tools/teste-substituicao-tela.mjs [--raiz <pasta do jogo>] [--so A,B,C,L] [--telas 1280,844,667,568]
+//   node tools/teste-substituicao-tela.mjs [--raiz <pasta do jogo>] [--so A,B,C,P,L] [--telas 1280,844,667,568]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -30,7 +34,8 @@ import { golRoteirizado } from './lib/gol-roteirizado.mjs';
 
 const args = process.argv.slice(2);
 const raiz = path.resolve(args.includes('--raiz') ? args[args.indexOf('--raiz') + 1] : RAIZ);
-// --so A,B,C,L: só algumas partes (A = PC ligada, B = só a faixa, C = gol e intervalo, L = as 4 telas e o celular)
+// --so A,B,C,P,L: só algumas partes (A = PC ligada, B = só a faixa, C = gol e intervalo, P = páginas da faixa e o Replay da
+// pausa, L = as 4 telas e o celular)
 const so = args.includes('--so') ? new Set(args[args.indexOf('--so') + 1].split(',')) : null;
 const roda = s => !so || so.has(s);
 const res = [];
@@ -529,6 +534,64 @@ if (roda('L')) {
   meta('T8 nada sobre nada: a faixa (cena e jogo) a ≥ 4 px do placar, menu, minimapa, aviso, "Pular" e botões; número e palavra inteiros', t8.length ? t8.join('; ') : `${LAYOUTS.length} telas, sem encosto`, 'nenhum encosto', t8Ok && t8.length === 0 && t8Mapa);
   meta('T8 a faixa cobre ≤ 10% da caixa do ator principal (na cena)', `${f2(t8Cobre * 100)}% no pior quadro`, '≤ 10%', t8Cobre <= 0.1);
 }
+
+// ------------------------------------------------------------------------------------------------ P (PC: páginas da faixa; Replay da pausa)
+if (roda('P')) try {
+  const P = await pagina('?q=baixa&hora=dia&semente=7&substituicao=1&comemoracao=0&replay=0');
+  try {
+    const pg = P.pagina;
+    if (!(await temCena(pg))) meta('T11/T12 páginas da faixa e o Replay da pausa', 'sem a cena', 'existe', false);
+    else {
+      const PARES = [{ sai: 9, entra: 22 }, { sai: 7, entra: 19 }, { sai: 8, entra: 18 }, { sai: 10, entra: 20 }, { sai: 11, entra: 21 }];
+      const t11 = [];
+      for (const n of [2, 3, 4, 5]) {
+        await trocar(pg, { pares: PARES.slice(0, n) });
+        const i = await ateCena(pg);
+        const r = await pg.evaluate(() => {
+          const g = window.__golaco, por = {}, trechos = [];
+          let q = 0, vis = 0, ant = -1, seg = 0;
+          while (q < 1500) {
+            const f = g.cenaSubst.faixa();
+            if (f.visivel) {
+              vis++; por[f.pagina] = (por[f.pagina] ?? 0) + 1;
+              if (f.pagina !== ant) { if (ant >= 0) trechos.push([ant, seg]); ant = f.pagina; seg = 0; }
+              seg++;
+            } else if (vis && !g.cenaSubst.ativo) break;
+            g.relogio.avancar(1000 / 60, { desenhar: false }); q++;
+          }
+          if (ant >= 0) trechos.push([ant, seg]);
+          return { por, total: vis, trechos };
+        });
+        const minPar = Math.min(...Array.from({ length: n }, (_, k) => r.por[k] ?? 0)) / 60;
+        // (o último trecho vai até a faixa sair: não conta como piscar)
+        const pisca = Math.min(Infinity, ...r.trechos.slice(0, -1).map(x => x[1])) / 60;
+        t11.push({ n, ativo: i.ativo, minPar, total: r.total / 60, pisca, seq: r.trechos.map(x => `${x[0]}:${f2(x[1] / 60)}`).join(' ') });
+      }
+      meta('T11 2 a 5 trocas na parada: cada par na faixa ≥ 1,5 s; nenhuma página por < 0,5 s', t11.map(x => `${x.n} pares: pior par ${f2(x.minPar)} s, menor trecho ${f2(x.pisca)} s, faixa ${f2(x.total)} s [${x.seq}]`).join('; '),
+        '≥ 1,5 s; ≥ 0,5 s', t11.every(x => x.ativo && x.minPar >= 1.5 && x.pisca >= 0.5));
+      await trocar(pg, {});
+      const i12 = await ateCena(pg);
+      await pg.evaluate(() => { const g = window.__golaco; while (g.cenaSubst.estado.tempo < 1.0) g.relogio.avancar(1000 / 60, { desenhar: false }); g.abrirMenu(); });
+      await pg.click('[data-cmd="replay"]', { timeout: 10000 });
+      const t12 = await pg.evaluate(() => {
+        const g = window.__golaco, raiz = document.documentElement, el = document.getElementById('faixa-subst');
+        const seq = [];
+        let faixaCena = 0, cenaQ = 0, replayNaCena = 0, q = 0;
+        while (q < 1500) {
+          const cena = g.cenaSubst.ativo, rep = !!g.replay.estado?.ativo;
+          const st = cena ? 'substituicao' : rep ? 'replay' : 'jogo';
+          if (seq[seq.length - 1] !== st) seq.push(st);
+          if (cena) { cenaQ++; if (rep || raiz.classList.contains('em-replay')) replayNaCena++; if (el && !el.hidden && getComputedStyle(el).display !== 'none') faixaCena++; }
+          if (st === 'jogo' && seq.length > 1) break;
+          g.relogio.avancar(1000 / 60, { desenhar: false }); q++;
+        }
+        return { seq, faixaCena, cenaQ, replayNaCena, menu: !document.getElementById('menu').hidden };
+      });
+      meta('T12 "Replay" da pausa no meio da cena: a cena segue com a faixa; o replay vem depois dela', `${t12.seq.join(' → ')}; faixa ${t12.faixaCena}/${t12.cenaQ} quadros da cena; replay por baixo da cena ${t12.replayNaCena} quadros`,
+        'substituicao → replay → jogo; faixa em todos; 0', i12.ativo && t12.seq.join(',') === 'substituicao,replay,jogo' && t12.cenaQ > 0 && t12.faixaCena === t12.cenaQ && t12.replayNaCena === 0);
+    }
+  } finally { await P.fechar(); }
+} catch (e) { meta('P execução', e.message.split('\n')[0], 'sem exceção', false); }
 
 await srv.fechar();
 meta('console sem erros', errosTodos.length ? errosTodos.slice(0, 3).join(' | ') : 'nenhum', 'nenhum', errosTodos.length === 0);

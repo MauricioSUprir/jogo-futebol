@@ -672,7 +672,8 @@ ligada, desligada e em Node (`teste-substituicao-tela` T1).
   escondida e celular em pé congelam a cena. Pular: um aperto NOVO depois de `pularDepois` (0,5 s) — botão, tecla (menos
   Esc/P e F3), clique/toque na camada `#substituicao` ("Pular" 112 × 52) —; o aperto que pulou não vira jogada
   (`entrada.soltarTudo` + `bloquear`). Fim (`fimSubst`): corte seco para a câmera de TV, a faixa passa para o jogo (a
-  contagem segue), `proximaCena()`. `trocarMundo` cancela a cena, a fila e a faixa. Opção "Substituição: ligada | só a
+  contagem segue), `proximaCena()`. O "Replay" da pausa no meio da cena entra na frente da fila (`{tipo: 'replay', ro}`):
+  a cena segue com a faixa e o replay vem depois dela (T12). `trocarMundo` cancela a cena, a fila e a faixa. Opção "Substituição: ligada | só a
   faixa" no submenu "Modo de jogo" (`prefs.substituicao`; `?substituicao=0|1` força; desligada por padrão com
   `navigator.webdriver`, `?prints=1` e `?demo=1`).
 - **HUD**: `hud.substituicao(ativo)` (classe `em-substituicao`: some o mesmo que na comemoração), `hud.faixaSubst(pares,
@@ -680,7 +681,10 @@ ligada, desligada e em Node (`teste-substituicao-tela` T1).
   pagina, n, texto, restante, dur}`, `esconderFaixaSubst()`. `#faixa-subst` (role status, aria-live polite): sigla do
   time na cor dele, ▲ ENTRA número nome, ▼ SAI número nome, "1/2" com mais de um par; `data-texto` = a frase do leitor
   de tela ("Golaço FC: entra 22 Wallace Pimenta, sai 9 Diego Albuquerque"). Fica ≥ 4,0 s (mesmo com a cena pulada),
-  2,5 s por par (1,8 com ≥ 4), teto 10 s; na cena, a página do plano (SAI/SAI2: o par dele; ENTRA: de par em par).
+  2,5 s por par (1,8 com ≥ 4), teto 10 s; na cena, a página do plano (SAI/SAI2: o par dele; ENTRA: do 3º par em diante,
+  de par em par, sem trocar a < 0,5 s do corte); no jogo (depois da cena ou sem ela) passam primeiro as páginas vistas por
+  menos de 0,6·porPar (a última da cena primeiro), cada uma porPar s, e a faixa vai até max(dur, o fim delas) — todo par
+  aparece ≥ 1,5 s (`teste-substituicao-tela` T11).
   Lugar: PC embaixo à esquerda (64 px da borda, 280–520 px; no jogo, sem chegar no minimapa); celular na cena embaixo à
   esquerda (área segura + 14 px, ≤ 64 px de altura, sem chegar no "Pular"); celular no jogo, uma linha compacta no lugar
   do aviso (topo + 74 px, ≤ 360 px, nomes da camisa) com o aviso descendo 42 px (`html.faixa-subst-topo`). Sem aviso de
@@ -700,7 +704,8 @@ ligada, desligada e em Node (`teste-substituicao-tela` T1).
   quarto árbitro. `tools/teste-substituicao-tela.mjs` (navegador, CI e antes do deploy; `--raiz <pasta>`): T1–T10 (hash
   com e sem a cena e em Node; tick parado; faixa em ≤ 3 quadros e ≥ 4 s também pulada e "só a faixa"; pular; gol + troca
   na fila e o apito depois; intervalo sem cena (a troca pedida nele e a feita no apito dele: a faixa na saída do 2º tempo); pausa, aba escondida, em pé, `trocarMundo`; nada sobre nada em 4 telas e a
-  opção salva; CPU, chamadas de desenho, programas e memória no celular; a placa ≥ 40 px). `teste-editor-tela` 5 confere
+  opção salva; CPU, chamadas de desenho, programas e memória no celular; a placa ≥ 40 px; T11 2 a 5 pares: cada um na faixa
+  ≥ 1,5 s, nenhuma página < 0,5 s; T12 o "Replay" da pausa no meio da cena). `teste-editor-tela` 5 confere
   a faixa (data-texto exato; "ENTRA 22 Wallace" e "SAI 9 Diego" na tela) e `teste-hud-minimo` H7 o submenu sem rolar.
 
 ## Pré-jogo (pedido de 11/10; contrato)
