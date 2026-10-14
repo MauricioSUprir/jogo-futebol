@@ -194,15 +194,33 @@ export const GESTO = {
   saidaAntes: 0.25,           // s — com os dois pés no chão, o pé do toque sai do chão antes disto
   pedidoSaida: 0.5,           // s antes do toque em que a passada começa a tirar o pé do chão
   esperaSaida: 10,            // ticks que o toque espera o pé sair do chão (depois remarca)
+  // (só o desenho) no balanço, a chuteira (cápsula tornozelo–ponta) para na superfície da bola dele (jogador.js
+  // passoPeDesenhado: centro a ≥ raio + raio da chuteira + `superficie` m). Com o toque mais frequente da condução curta
+  // (12/10) o gesto fica ligado quase o tempo todo: sem isto a chuteira entrava na bola em ~61% dos quadros
+  superficie: 0.005,
+  velSuperficie: [2.82, 2.35], // m/s — o pé desenhado com esse ajuste anda no máximo [0] + [1] × v (94% do limite do
+                              // teste-patinacao, 3 + 2,5·v: Clark et al. 2023)
+  superficieV: [1.5, 2.5],    // m/s do corpo: abaixo de [0] sem o ajuste (girando no lugar o pé pousa embaixo da bola),
+                              // inteiro a partir de [1]
+  superficieVBola: 11,        // m/s — só com a bola dele (posse ou domínio) rolando abaixo disto (o pé acompanha)
 };
 
 // Condução (o toque planejado). Ver CONTRATOS.md.
 export const CONDUCAO = {
   // Ponto de toque à frente do corpo (centro do quadril projetado), por modo.
-  ofsFrente: { curta: 0.34, trote: 0.36, corrida: 0.33, arrancada: 0.42 },
+  // (arrancada 0,42 → 0,38 com a condução curta de 12/10: a folga p90 da disparada passava do alcance do pé, 0,78)
+  ofsFrente: { curta: 0.34, trote: 0.36, corrida: 0.33, arrancada: 0.38 },
   ofsLado: 0.06,              // para o lado do pé que toca
-  // Passos entre toques, por modo (2 = um toque por passada).
-  passosEntreToques: { curta: 1, trote: 2, corrida: 2, arrancada: 2 },
+  // Passos entre toques pela velocidade do corpo (condução curta, pedido do dono de 12/10: "condução mais curtinha,
+  // com a bola mais no pé"): [m/s, passos por toque]. 1 = um toque a cada passo, 2 = um por passada; no meio, 1 e 2
+  // se alternam pela difusão do erro (passosDoToque, sem sorteio). Andando e no trote, um toque a cada passo: o
+  // drible fechado de Zago et al. 2016 (2,3–3,0 toques/s, os mais rápidos tocam mais); na corrida, 1,5 passo por toque
+  // (Preissler et al. 2023: arrancada reta com bola colada, 2,5–4 m e 1,4–2,3 toques/s); na disparada, um por
+  // passada (dados abertos DFL/TRACAB, Bassek et al. 2025: em velocidade alta a bola anda 4–7 m por toque). Ajuste
+  // fino para o dono: se o trote ficar "picotado", sobe o 3,5. A condução curta (MOD) e a proteção: 1 passo fixo; o
+  // domínio, a inversão, a freada, a curva fora do rumo e o passe/chute carregando: 2 (como antes)
+  passosPorToque: [[3.5, 1], [4.5, 1.25], [5.6, 1.5], [6.6, 1.75], [7.4, 2]],
+  angRitmo: 0.35,             // rad — analógico além disto do rumo da velocidade: um toque por passada (o giro)
   faseToque: 0.8,             // fração do apoio do pé de apoio em que o outro pé toca
   antecedencia: 0.1,          // s — um toque é sempre marcado com essa antecedência
   alcance: 0.78,              // m — distância máxima bola–corpo para tocar
@@ -212,6 +230,10 @@ export const CONDUCAO = {
   alcanceFrente: -0.15,       // m — a bola pode estar até 15 cm atrás do centro do corpo
   intervaloMin: 0.16,         // s entre dois toques
   angReplanejar: 0.35,        // rad — mudança de rumo pedido que antecipa o toque
+  // (condução curta, 12/10) o analógico pulou mais que isto num tick (gesto rápido do polegar pela borda): o toque
+  // marcado para esse tick espera 1 tick para ler o analógico já no fim do gesto; se ele ainda pula, sai um toque de
+  // FREIO (a bola para onde o corpo para, pela mesma conta da rolagem) — antes, no meio do gesto, a bola saía de lado
+  saltoGesto: 0.3,            // rad
   desvioReplanejar: 0.2,      // m — bola prevista longe do pé no próximo toque: antecipa o toque
   horizonte: 1.6,             // s — previsão máxima do caminho do corpo
   meiaVidaGiroPedido: 1.2,    // s — o giro do analógico é extrapolado com esta meia-vida
@@ -397,7 +419,8 @@ export const ACOES = {
   cargaMax: 1.2,              // s — depois disso solta sozinho
   pedidoValidade: 0.6,        // s — pedido sem toque possível expira
   pedidoPrimeira: 1.6,        // s — esperando a bola chegar para bater de primeira
-  toqueDuplo: 0.35,           // s — dois toques no LANÇAMENTO = cruzamento rasteiro
+  primeiraFolga: 0.3,         // s — o humano com o passe vindo (j.recebe): o pedido de primeira vale até a chegada + isto
+  toqueDuplo: 0.35,           // s — dois toques no LANÇAMENTO = cruzamento rasteiro; no CHUTE = cavadinha (2º aperto até isso depois de soltar o 1º)
   passe: { cone: 0.55, dMin: 3, dMax: 42, vChegada: [4.5, 8.0], adiante: 0.9, erroBom: 0.012, erroRuim: 0.07 },
   enfiada: { cone: 0.7, dMin: 5, dMax: 48, lead: [4.5, 12], vNoPonto: [3.5, 7], vMax: 26, erroBom: 0.015, erroRuim: 0.08 },
   lancamento: { cone: 0.5, dMin: 16, dMax: 62, elev: [0.5, 0.72], erroBom: 1.2, erroRuim: 6 }, // erro em m a 40 m
@@ -406,9 +429,20 @@ export const ACOES = {
   // a ~0,85 do forte e com 30–40 rad/s de efeito (Whiteside 2010); força máxima ×1,15 no erro
   // (Carlsson 2018); pressão só de perto e pouca; de primeira ×1,15 (StatsBomb)
   // penaltiErro: o erro do chute no pênalti (a pressão da cobrança; ~6% para fora — a meta do dono, seção 11)
-  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18 },
-  // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado)
-  cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05] },
+  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, penaltiCanto: 2.5, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18 },
+  // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado). A da IA sai sozinha com o
+  // goleiro adiantado (goleiroFora/distMax); a do humano, com DOIS TOQUES no CHUTE (pedido do dono, 12/10), de qualquer
+  // lugar: o 2º aperto antes de o chute do 1º tocar na bola. toqueRapido: 1º toque mais curto que isso pode ser o 1º de
+  // dois — o contato espera até `janela` s depois de soltar (um toque duplo normal leva ~0,08–0,18 s entre os toques; o
+  // chute carregado não espera). elevPedida: elevação da cavadinha pedida pela força do 2º toque (toque rápido → [0], a
+  // mesma da IA; segurado → [1], mais alta). penalti: a Panenka (a pedida na cobrança do pênalti; acoes.js cavadinha) —
+  // passa 0,4 m antes da linha a `y` m, descendo, com a elevação de elevPedida[0] (2º toque rápido) até `elevMax`
+  // (segurado), erro próprio de força/direção (ruim → bom) e SEM a pressão do pênalti (ACOES.chute.penaltiErro): bola
+  // parada a 11 m e sem marcador; Opta/Premier League: 95,7% de gols no alto do meio (PESQUISA-ETAPA2 §2.7a). Força
+  // +7% (elevMax) a +9% (rápido) a mais já passa por cima do travessão
+  cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05],
+    toqueRapido: 0.18, janela: 0.15, elevPedida: [0.72, 1.0],
+    penalti: { y: 1.3, elevMax: 0.86, erroForca: [0.05, 0.025], erroDir: [0.06, 0.025] } },
   // cabeceio (pesquisa da Etapa 2): a cabeça chega ~0,56 m acima da estatura com corrida (Fílter
   // 2022) — com 1,80 m, centro da bola a ~2,45 m; força própria de 6,4–8,3 m/s (Becker 2021)
   // erroGolBolaParada: o cabeceio PARA O GOL na bola parada (escanteio, falta, lateral) espalha como o real (Opta: ~1/3
@@ -421,11 +455,23 @@ export const ACOES = {
   pressaoDist: 2.2,           // m — adversário mais perto que isso pressiona o batedor
   // bote da IA defensora (Etapa 2, enxuto; os botões de defesa e a disputa completa são da Etapa 3):
   // acompanha a ~1,5 m, ataca a bola solta do pé e tenta tirar só com ela ao alcance do pé
-  boteIA: { distAcompanha: 1.5, bolaSolta: 0.7, alcance: 0.65, chancePorPasso: 0.08, descanso: 45, vSai: 3.2,
+  // (bolaSolta e colada × 0,87 com a condução curta de 12/10: a bola–condutor da IA no trote caiu 0,67 → 0,58 m —
+  // a mesma régua relativa; sem isso o bote não chegava no condutor que empurra a bola no marcador colado)
+  boteIA: { distAcompanha: 1.5, bolaSolta: 0.61, alcance: 0.65, chancePorPasso: 0.08, descanso: 45, vSai: 3.2,
     // (só na partida; pedido do dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola") com o condutor
     // abaixo de vParado m/s e sem tocar na bola há semToque s, a bola parada à frente do pé não está "colada": quem
     // chega ao alcance dela tenta tirar — e ganha pela mesma chance da DIVIDIDA do humano (defesa.js chanceDividida)
-    vParado: 2.0, semToque: 0.1 },
+    vParado: 2.0, semToque: 0.1,
+    // bola a menos disto do condutor: "colada" no pé dele — o bote não alcança (condução curta de 12/10: calibrável
+    // aqui sem mexer no código; CONDUCAO.passosPorToque deixa a bola mais perto do pé)
+    colada: 0.305,
+    // bola a menos de `encostada` m do CORPO do marcador (raio do corpo 0,3 + raio da bola 0,11 + 0,01) com os dois
+    // andando juntos (velocidade relativa ≤ `encostadaVrel` m/s): o condutor empurra a bola no marcador — ela não está
+    // colada no pé dele, está entre os dois e é disputada. Sem isso, com a condução curta, o condutor que empurrava a
+    // bola no marcador colado à frente (toques a cada 0,1 s) nunca perdia: a bola a 0,29 m dele e a 0,31 m do marcador
+    // (teste-parado, "andando devagar"). Quem chega correndo numa bola colada continua sem alcançar (a PRESSÃO em
+    // disparada fazia faltas de frente: teste-pressao-humano M4); nas costas do condutor não vale (sim.js boteIA)
+    encostada: 0.42, encostadaVrel: 1.0 },
   primeiraErro: 1.4,          // multiplica o erro de jogada de primeira
 };
 
@@ -437,8 +483,14 @@ export const ACOES = {
 export const GOLEIRO = {
   // pênalti (Regra 14; goleiro.js lerChute): o goleiro escolhe o lado ANTES do chute (z do mergulho, m, e o peso de
   // cada escolha; o humano escolhe com o analógico na hora da cobrança). Lado certo: ganha `antecipa` s; lado errado
-  // (ou ficou no meio e a bola foi no canto, a > `meio` m): não defende; lado certo: chance × `fator`. Meta do dono: ~76% gol, 18% defesa, 6% fora
-  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72 },
+  // (ou ficou no meio e a bola foi no canto, a > `meio` m): não defende; lado certo: chance × `fator`. Meta do dono: ~76% gol, 18% defesa, 6% fora.
+  // Panenka (a cavadinha do pênalti, ~1,3–1,6 s até o goleiro): longe do lado escolhido (> `meio` m) entra — ele já
+  // mergulhou e fica no chão até ela passar (o mergulho desenhado tem o pico `picoPanenka` s depois do chute, o tempo
+  // de um pênalti chegar ao canto); quem ficou no meio pega a que alcança (sem sorteio, como o recuo)
+  // `ladoMin`: o humano só escolhe o canto com a componente do analógico AO LONGO da linha do gol (|iz|) ≥ ladoMin × o
+  // módulo (0,38 ≈ sen 22,5°: o setor de 45° em volta do horizontal da tela de TV — para o batedor ou para o gol — não
+  // escolhe; a diagonal do teclado, 45°, escolhe); abaixo disso, ou solto, fica no meio (partida.js ladoPenaltiHumano)
+  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72, passo: 0.5, ladoMin: 0.38, picoPanenka: 0.5 },
   reacao: [0.25, 0.19],       // s depois do toque (ruim → bom)
   alcanceEmPe: 0.9,           // m: mão de lado sem mergulhar
   bracoReflexo: 1.6,          // m: perna/braço esticados no reflexo, sem tirar o corpo do lugar
@@ -1084,7 +1136,8 @@ export const DEFESA_HUMANO = {
     chance: [0.35, 0.65],     // limites da chance de ganhar (bote na hora certa)
     base: 0.55,               // chance com atributos iguais (meio da faixa de acerto real, 44–71%)
     porAttr: 0.01,            // por ponto de desarme acima da média de drible e controle do condutor
-    solta: 0.12,              // a mais com a bola solta do pé do condutor (0,45 → 0,95 m dele)
+    solta: 0.12,              // a mais com a bola solta do pé do condutor (soltaIni → soltaIni + soltaFaixa m dele)
+    soltaIni: 0.39, soltaFaixa: 0.435, // (0,45 e 0,5 × 0,87 com a condução curta de 12/10: a bola mais perto do pé)
     vSai: 3.2,                // m/s — a bola tirada sai para longe do condutor (como o boteIA)
     semDominio: 0.5,          // s — quem perdeu a bola não a domina de novo logo em seguida
   },
@@ -1099,7 +1152,7 @@ export const DEFESA_HUMANO = {
   // no máximo a `trasAprox` m/s: abaixo da carga por trás, FALTAS.carga.vMin). `filtro`: s da velocidade do condutor.
   pressao: {
     validade: 1, acel: 7, freio: 6.2, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.5, contorno: 1.2,
-    naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.5, filtro: 0.2, ganho: 3, aproxMax: 4, trasPerto: 1.5, trasAprox: 1.4,
+    naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.435, filtro: 0.2, ganho: 3, aproxMax: 4, trasPerto: 1.5, trasAprox: 1.4,
   },
 };
 
@@ -1174,6 +1227,9 @@ export const REPLAY = {
     // (`extra`, ainda oblíqua e fora do centro) — os dois sempre no quadro.
     longe: { elFim: [16, 22, 24], desvios: [12, -12, 20, -20, 25, -25], dist: [9, 45] },
     extra: { elFim: [30, 40, 52, 62], desvios: [12, -12, 25, -25, 40, -40], dist: [9, 75] },
+    // ângulo de VERDADE do quadro final (câmera → ponto mirado, que sai do meio quando um está perto e o outro longe da
+    // câmera): nos níveis da TV e `longe` o quadro só serve com a elevação em [el] e o desvio da linha em [desvio] graus
+    meta: { el: [12, 24], desvio: [8, 25] },
     // parede do defensor (a faixa em z dos jogadores do lance ± margemZ; alfa de baixo para cima), plano do atacante
     // (± meiaLargura em z) e o anel do pulso (raio, largura e quanto cresce na batida)
     parede: { altura: 2.3, margemZ: 3, alfaBaixo: 0.35, alfaCima: 0.10, borda: 0.035 },

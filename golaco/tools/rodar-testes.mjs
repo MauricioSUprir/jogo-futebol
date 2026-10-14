@@ -32,10 +32,13 @@ const LISTA = [
   ['recepção que nunca se afasta da bola (canhão de passes e bolas livres)', 'teste-recepcao.mjs'],
   ['proteção de corpo', 'teste-protecao.mjs'],
   ['condução curta e pedalada', 'teste-dribles.mjs'],
+  // Pedido do dono de 12/10: "condução mais curtinha, com a bola mais no pé"
+  ['condução curta: bola no pé e toque por faixa de velocidade (humano e IA × IA)', 'teste-conducao-curta.mjs'],
   ['recomeço do treino (bola no pé, bola fora)', 'teste-recomeco.mjs'],
   // Etapa 2
   ['passes: rasteiro, enfiada, lançamento, cruzamento, primeira, tabela', 'teste-passes.mjs'],
   ['chute: velocidade, curva, dispersão, perna ruim, cavadinha', 'teste-chutes.mjs'],
+  ['cavadinha com dois toques no CHUTE (humano): de qualquer lugar, um toque nunca, chute carregado no mesmo tick, bola parada, botão herdado na troca', 'teste-cavadinha.mjs'],
   ['goleiro: defesas pelos dados, posição, botão GOLEIRO, mãos', 'teste-goleiro.mjs'],
   ['goleiro pula e espalma: mergulho desenhado, mão na bola, espalmada para fora do perigo', 'teste-mergulho.mjs'],
   ['jogo aéreo: domínio no peito e cabeceio', 'teste-aereo.mjs'],
@@ -74,6 +77,8 @@ const LISTA = [
   ['PRESSÃO perceptível: com × sem o botão (pareado), marca, um a mais na pressão', 'teste-pressao-humano.mjs'],
   ['goleiro pelas Leis do Jogo (mão só na área, recuo, 8 s) e na mão do humano (anda, TROCAR, PEGAR)', 'teste-goleiro-regras.mjs'],
   ['bolas paradas: lateral com as mãos e 3 opções (Regra 15), tiro de meta (16), escanteio por zonas, barreira (13)', 'teste-bolas-paradas.mjs'],
+  // Auditoria dos botões (dono, 12/10: "ainda tem botões que não funcionam"): o efeito de cada botão no mundo
+  ['botões: toque aéreo vencido, troca sem desfazer o TROCAR, PRESSÃO no passe, bola parada, pênalti, cruzamento rasteiro, primeira, barreira', 'teste-botoes.mjs'],
   // Pré-jogo (pedido de 11/10): o cortejo do túnel até a fila e o roteiro com os trilhos de câmera (contas puras)
   ['pré-jogo: cortejo do túnel até a fila (pés, colisão, vaga, rumo, custo, hash da partida)', 'teste-cortejo.mjs'],
   ['pré-jogo: roteiro, escalações de 10 s, pular e trilhos de câmera fora dos sólidos', 'teste-prejogo-roteiro.mjs'],

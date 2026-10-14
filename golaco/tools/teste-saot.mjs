@@ -334,11 +334,18 @@ if (!SA) {
 
   // ---------------------------------------------------------------- lances de verdade (IA × IA): S2, S4, S6, S7, S8
   const t0 = Date.now();
-  const sementes = Array.from({ length: NSEM }, (_, i) => i + 1);
-  const res = await varrerSaot({ pastaJs, sementes, maxTicks: TICKS, threads: THREADS });
+  // a amostra cresce de NSEM em NSEM sementes (até 3 × NSEM) enquanto faltarem impedimentos: a IA muda entre versões e
+  // ~1 impedimento por partida inteira dá só 2–6 em 40 × 5000 passos; a meta (≥ 3 lances de verdade) não muda
+  const res = [];
+  let nSem = 0;
+  while (nSem < 3 * NSEM && (nSem === 0 || res.reduce((s, r) => s + r.imped.length, 0) < 3)) {
+    const sementes = Array.from({ length: NSEM }, (_, i) => nSem + i + 1);
+    res.push(...await varrerSaot({ pastaJs, sementes, maxTicks: TICKS, threads: THREADS }));
+    nSem += NSEM;
+  }
   const imped = res.flatMap(r => r.imped.map(i => ({ ...i, semente: r.semente })));
   const gols = res.flatMap(r => r.gols.map(g => ({ ...g, semente: r.semente })));
-  reg('lances de verdade (IA × IA)', `${imped.length} impedimentos e ${gols.length} gols em ${NSEM} sementes × ${TICKS} passos (${((Date.now() - t0) / 1000).toFixed(0)} s)`, '≥ 3 impedimentos', imped.length >= 3);
+  reg('lances de verdade (IA × IA)', `${imped.length} impedimentos e ${gols.length} gols em ${nSem} sementes × ${TICKS} passos (${((Date.now() - t0) / 1000).toFixed(0)} s)`, '≥ 3 impedimentos', imped.length >= 3);
   {
     const comDef = imped.filter(i => i.def != null);
     const certos = comDef.filter(i => i.distDef != null && i.distDef < 1e-4).length;

@@ -125,7 +125,9 @@ parte; Pular, Esc ou Start: direto para o jogo. Pausa → "Modo de jogo" → "Pr
 - **PASSE** (no pé; o companheiro pelo analógico), **ENFIADA** (no espaço, o recebedor arranca),
   **LANÇAMENTO** (vira **cruzamento** na faixa lateral do último terço: analógico para a linha de
   fundo = 1º pau, atravessado = 2º pau, para trás = marca do pênalti; dois toques = rasteiro),
-  **CHUTE** (com o modificador: colocado com efeito; goleiro adiantado: cavadinha), de primeira,
+  **CHUTE** (com o modificador: colocado com efeito; **dois toques no CHUTE: cavadinha**, de qualquer lugar, mirando pelo
+  analógico — o 2º toque segurado deixa a bola mais alta; vale no pênalti (Panenka) e no tiro livre direto; o toque
+  rápido espera até 0,15 s pelo 2º, o chute carregado sai na hora; a da IA sai sozinha com o goleiro adiantado), de primeira,
   tabela (passe com o modificador), cabeceio e domínio no peito.
 - Força pela barra (segurar), perna boa e ruim, pressão, de primeira — calibrados com dados reais
   (StatsBomb, biomecânica): ver `PESQUISA-ETAPA2.md`.
@@ -148,6 +150,7 @@ parte; Pular, Esc ou Start: direto para o jogo. Pausa → "Modo de jogo" → "Pr
 | TROCAR de jogador | Q | LB | TROCAR |
 | Modificador (colocado, tabela, condução curta, proteção) | E | LT | — |
 | Pedalada | dois toques rápidos no modificador | | |
+| Cavadinha | K duas vezes | B duas vezes | CHUTE duas vezes |
 | Recomeçar a jogada | R | | menu |
 | Câmera TV / aproximada | C | R3 | menu |
 | Ajuda / pausa | H / Esc | View / Start | menu |
@@ -176,6 +179,7 @@ node golaco/tools/rodar-testes.mjs --etapa3   # + os testes da IA 11×11 (forma,
 node golaco/tools/rodar-testes.mjs --par 2    # no máximo 2 testes ao mesmo tempo (também em hash-igual e hash-partida)
 node golaco/tools/teste-transicao.mjs [--humano] # transição defensiva: recomposição em disparada depois da perda (IA × IA ou contra o humano roteirizado)
 node golaco/tools/teste-recepcao.mjs   # 1000 bolas no jogador do humano com o analógico já para o lado: domina, nunca se afasta, 1º toque ±20°
+node golaco/tools/teste-cavadinha.mjs  # (Node, também no rodar-testes) dois toques no CHUTE = cavadinha (4 andares × 6 fases × 7 ritmos), um toque nunca é, chute carregado no mesmo tick de antes, força do 2º toque, mira, StatsBomb, pênalti (Panenka), de longe nunca mais rápida que o chute mais forte, limite do toque duplo [--js <pasta js>]
 node golaco/tools/teste-mergulho.mjs   # canhões de chutes no goleiro: mergulho desenhado, mão na bola, corpo ≤ 5,5 m/s, rebote, cavadinha, espalmada para fora (com atacantes na área), chute desviado
 node golaco/tools/medir-controle.mjs   # (minutos, informativo) controle de bola em jogo: domínio que escapa, perdas, bola–pé, 1º toque por atributo
 node golaco/tools/hash-igual.mjs       # o treino bit a bit igual a uma base (padrão 980b0b0; --ref <commit>) — rodar antes de todo commit da lógica;

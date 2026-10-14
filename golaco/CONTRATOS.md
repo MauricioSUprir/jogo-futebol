@@ -30,8 +30,10 @@ podem ser usados. Conferido por `tools/teste-matdet.mjs` (precisão) e `tools/te
 
 ## Mundo (`js/sim.js`)
 - `criarMundo({semente, jogadores:[{id,x,z,rumo,attr,time,papel}], bola:{x,z}, posse, log})`
-- `passo(mundo, entradas)` — avança 1/60 s. `entradas = { [id]: {x, z, botoes} }`:
-  analógico **já no mundo** (|v| ≤ 1, quantizado em 1/1024) + máscara `BOTAO` (`config.js`).
+- `passo(mundo, entradas)` — avança 1/60 s. `entradas = { [id]: {x, z, botoes, repete?} }`:
+  analógico **já no mundo** (|v| ≤ 1, quantizado em 1/1024) + máscara `BOTAO` (`config.js`). `repete: true` = a MESMA
+  leitura do analógico do passo anterior (o `main.js` lê a entrada uma vez por quadro: a 30 qps o 2º passo do quadro
+  repete a do 1º); sem o campo, cada passo é uma leitura nova (testes em Node, API `__golaco`).
 - `hashMundo(mundo)` — FNV-1a do estado (bola, corpos, pés, posse, tick, gerador).
 - `mundo.eventos` — eventos do último passo (`toque`, `quique`, `trave`, `rede`, `perda`, ...).
 - `mundo.posse` — id do jogador com a bola ou `null`.
@@ -95,6 +97,14 @@ travaApoio, quadril`.
   do ponto de pouso (`velPeAterrissa`); senão fica `pendente` (no ar) até chegar.
 - `puxa` (0–1) e `gx, gz`: gesto do toque (só visual, integrado pela simulação — `conducao.js`
   `atualizarGesto`): peso e ponto aonde o pé desenhado vai até a bola, com velocidade limitada.
+- `ox, oz` (condução curta, 12/10; **só o desenho**): deslocamento que a pose soma ao pé desenhado no ar para a
+  chuteira (cápsula tornozelo–ponta) parar na SUPERFÍCIE da bola dele (posse ou domínio, bola abaixo de
+  `GESTO.superficieVBola`, corpo acima de `GESTO.superficieV`): a direção é do centro da bola para o tornozelo e a
+  distância é a saída do centro da bola da cápsula. Anda só com o que sobra de `GESTO.velSuperficie` depois do passo
+  de `tx, tz`, e fica abaixo de `GESTO.velDesvio × livre` (zero na saída do chão e no pouso). A física NUNCA lê
+  `ox, oz` (pouso, goleiro e hash usam `tx, tz`). Medido (`teste-conducao`): chuteira dentro da bola 61,3% → 32% dos
+  quadros só com este ajuste, 46,3% com o toque mais frequente da condução curta (o resto é o pé que POUSA embaixo da
+  bola — ponto de pouso da física); a meta PENDENTE de ≤ 1% continua.
 - `quadril`: altura do quadril da última pose (`anim.js alturaQuadril`, guardada pela simulação no
   fim do passo).
 - Pé plantado e tronco: mais torto que 1,0 rad o pé dá um passo para se alinhar (a passada fica
@@ -107,7 +117,7 @@ travaApoio, quadril`.
 - **Forma única (desempenho, Etapa 3):** `criarJogador` já declara TODOS os campos que os outros módulos põem
   no jogador depois (`papel, posicao, vagaId, vagaIdx, posDetalhe, vaga, iaT, recebe, corrida, intercepta, carga,
   pedido, mira, miraAuto, iaAcao, defesa, mergulho, segura, saindo, ia, botoesTime, giroParado, quadril, iaA,
-  pedidoPedalada, ladoOlha, ritmo, ultLanc, ultMod, descansoBote, defH, conter, descanso, contorno`), com
+  pedidoPedalada, ladoOlha, ritmo, ultLanc, ultMod, descansoBote, defH, conter, descanso, contorno, recep, porHumano`), com
   `undefined` (o mesmo valor de antes da 1ª escrita), na mesma ordem para todos: os 22 ficam com UMA classe oculta
   do motor JS. Com uma ordem por jogador (eram 9 formas na partida) os acessos ficavam megamórficos e cada leitura de
   número alocava (~300 KB de lixo por passo). **Campo novo no jogador: declarar em `criarJogador`** (o mesmo vale
@@ -118,13 +128,37 @@ travaApoio, quadril`.
 ## Condução (`js/conducao.js`)
 `j.cond = { toque{tick, pe, bx, bz, tipo, tol?, modo?, desde?, qx?, qz?}, ult{tick, pe, bx, bz,
 dx, dz, v, tipo}, busca, longeDesde, pedalada{tick0, lado}, cortePendente, corteRumo,
-semDominioAte, puxada{tick0, rumo} }`. O toque é marcado com antecedência e o impulso é calculado
+semDominioAte, puxada{tick0, rumo}, esperaSalto, restoPassos }`. O toque é marcado com antecedência e o impulso é calculado
 no próprio tick. **O toque sai sempre do pé livre** (`peLivre`: no ar desde antes deste tick, com o outro
 no chão; no domínio vale também com os dois no ar). Com os dois pés no chão, `saidaParaToque`
 pede à passada que tire o pé do toque do chão a tempo, e o toque espera por ele
 (`GESTO.esperaSaida`). `atualizarGesto` (no fim do passo) integra o gesto de cada pé.
 - Tick do próximo toque forçado (antes de o corpo alcançar a bola, ou freando) cai num tick com um
   pé livre na passada prevista (nunca na fase de voo da corrida).
+- **Passos entre toques pela velocidade** (condução curta, pedido de 12/10; `passosDoToque`): `CONDUCAO.passosPorToque`
+  dá os passos por toque pela velocidade do corpo (1 até 3,5 m/s, 1,5 a 5,6 m/s, 2 a partir de 7,4 m/s); no meio da
+  tabela 1 e 2 se alternam pela difusão do erro (`restoPassos`; sem rng, a mesma regra para o humano e a IA). Ficam em
+  2 (um toque por passada, como antes): domínio, `j.inv`, freada (pede 1 m/s a menos do que corre), analógico além de
+  `CONDUCAO.angRitmo` do sentido da corrida e passe/chute carregando (`j.carga`, `j.pedido`). A condução curta (MOD) e
+  a proteção: 1 passo fixo. O primeiro replanejamento (folga/arco/ultrapassagem → 1 passo) só roda quando o ritmo deu
+  2; o da violação de `semUltrapassar` roda sempre. A física do toque, a previsão do corpo, `folgaMax`, `alcance`,
+  `intervaloMin` e `faseToque` não mudam.
+- **Gesto do analógico no tick do toque** (`j.saltoTick`, marcado por `sim.js aplicarEntrada` quando o analógico pula
+  mais que `CONDUCAO.saltoGesto` num tick; `cond.esperaSalto`): o toque marcado para esse tick espera 1 tick (se a
+  bola continua ao alcance) e lê o analógico de novo; se ele ainda pula, ou a bola sairia do alcance, sai um **toque de
+  freio** (`executarToque(…, freio = true)`): no sentido da velocidade do corpo, até s²/(2·freioGiro) + ofsFrente(s)
+  à frente dele, com v0 = `velParaParar` (a mesma conta da rolagem). O freio não põe o corpo em inversão (`j.inv`);
+  abaixo de 2,5 m/s o toque sai normal. A espera é pela próxima leitura NOVA do analógico (`j.leituraTick`, o passo da
+  última entrada sem `repete`; `cond.esperaInicio/esperaLeitura`): com a entrada marcada `repete` (a mesma leitura do
+  quadro anterior) o toque segue esperando, até 3 ticks e com a bola ao alcance; chegou a leitura nova, decide como
+  acima (pulou de novo → freio; não pulou → toque normal). Se o pé do toque sai do chão antes, o toque fica para o passo
+  seguinte. A 60 qps (toda entrada nova) é exatamente a regra de 1 tick. (Contraprova de 13/10: a 30 qps o toque que
+  esperou via a leitura do meio do gesto repetida e saía para o lado — 2,5 m no giro de 180° comum e 4,2 m com o gesto
+  no tick do toque; `teste-cortes`, entrada a 30 qps, ≤ 0,35 m = 0,25 + o passo a mais da leitura a 6 m/s. O freio
+  quando a janela da passada fecha sem leitura nova foi medido e descartado: mandava a bola reto nos cortes de uma vez
+  — 22 trechos de > 0,6 s com a bola longe em 480 sementes do roteiro duro a 30 qps, contra 7 sem ele.)
+- **Placas:** o toque não manda a bola além das placas (`ateAPlaca`; `CAMPO.meioX/meioZ + entorno`): com o alvo além
+  delas, a bola sai para parar antes (`velParaParar`). Só acontece fora do campo (treino e testes).
 - **Corte** (a bola sai na linha do analógico ±20°, o corpo segura o rumo até o toque —
   `cortePendente`/`corteRumo`, no máximo 0,25 s). Corte "para trás" do corpo embalado (> ~95° do
   sentido da corrida, > 5 m/s) em que o corpo não alcançaria a bola na linha pedida em até 0,5 s:
@@ -672,6 +706,62 @@ de `criarPartida` depois dele e 600 passos Node = Chromium) e o apito da saída 
   sai **de primeira**. `m.voo = {tipo, de, para, alvo:{x,z}, tickChegada, alto}` descreve o passe/chute em
   andamento (o desenho marca o ponto de queda no gramado quando `alto`). Tipos: `'passe' | 'enfiada' |
   'enfiadaAlta' | 'lancamento' | 'cruzamento' | 'chute' | 'colocado' | 'cavadinha' | 'cabeceio'`.
+- **Cavadinha por dois toques no CHUTE** (pedido do dono, 12/10; `acoes.js`, constantes em `ACOES.cavadinha`):
+  - `j.porHumano` (sim.js, a cada passo; partida.js `cobrar` no cobrador): os botões são da PESSOA — o controlado do
+    time humano com a entrada sem `ia` (a demo/IA jogando pelo humano manda `ia: true` e conta como IA). A carga do
+    humano leva `humano: true` e o pedido dela também (`j.pedido.humano`).
+  - **2º aperto do CHUTE** com o pedido de chute do humano ainda de pé (não tocou na bola) e até `ACOES.toqueDuplo` s
+    depois de soltar o 1º: `j.pedido.cavadinha = true`, `j.pedido.segura = true` (o pedido não é marcado nem expira) e
+    a carga nova `{tipo: 'chute', cavadinha: true}`; o toque 'acao' já marcado é desfeito. Soltar o 2º: a força dele
+    vale (`pedido.forca`), `segura = false`, a idade conta de novo e o toque é marcado como sempre (lead 2). De primeira
+    com o 2º ainda segurado (`executarAcao`): a força carregada até ali. Vale em qualquer lugar e na cobrança do
+    pênalti/tiro livre direto (Panenka).
+  - **Janela do 2º toque**: o chute do humano de toque rápido (segurado < `toqueRapido` s) leva `pedido.espera` = tick
+    de soltar + `janela` s; `processarPedido` só marca o toque da ação a partir de `espera − 2` ticks (a condução segue
+    até lá) e o `cobrar` da bola parada espera também. O chute carregado (≥ `toqueRapido`) não tem `espera`: sai no
+    mesmo tick de antes (teste-cavadinha C: igual ao da IA na mesma cena). Só o **aperto novo** espera (`carga.novo`:
+    o time não segurava o botão no passo anterior — `m.botoesTimeAnt`; no `cobrar`, que roda antes do passo,
+    `m.botoesTimeAgora`): o botão que já vinha segurado quando o controle trocou vira borda no novo controlado, mas não
+    é toque rápido e chuta na hora (teste-cavadinha I; era o que mudava o hash-igual do treino de ataque).
+  - `chute()`: `pedido.cavadinha` → `cavadinha()` de qualquer lugar; a cavadinha AUTOMÁTICA (goleiro adiantado) só
+    para o pedido sem `humano` — o chute de um toque do humano nunca vira cavadinha. A pedida mira pelo analógico como o
+    chute (`zPeloAnalogico`; sem analógico, 0,4 × z da bola, como a da IA), cai `alemDaLinha` m depois da linha, com a
+    elevação `elevPedida` pela força do 2º toque (rápido = 0,72 rad, a da IA; segurado = até 1,0 rad, mais alta) e o
+    mesmo erro de força e direção da cavadinha de antes (StatsBomb: difícil de dosar). Teto: a pedida nunca sai mais
+    rápida que o chute mais forte do mesmo jogador (`ACOES.chute.v[1]` × finalização × pé; o erro de força entra antes
+    do teto) — de longe a busca pedia até 45 m/s e a bola saía a até ~70 m/s (contraprova 13/10, teste-cavadinha K); com
+    o teto o balão de longe cai antes do gol. A automática da IA (até `distMax`) não passa por isso (fica como era).
+  - O cobrador parado (`papel 'parado'`) com `espera` nunca é marcado por `processarPedido` (chuta pela cobrança).
+  - A cobrança da demo (`entradaDemoPartida` com o controlado cobrando) leva `iaCobra: true` (sem `ia`, para o resto
+    da simulação seguir igual — `m.iaJoga`): o `cobrar` e o sim.js não a tomam como da pessoa. A entrada da cobrança da
+    IA repete o botão a cada `PARTIDA.repeteCobranca`; sem a marca, o 2º aperto virava cavadinha (teste-cavadinha J; o
+    canhão de pênaltis do teste-faltas caía de ~77% para 67% de gols). Na PÁGINA (`?demo=1`), `main.js entradaDoTime`
+    entrega a entrada da demo sem o `ia` (como sempre), mas com a marca `iaCobra` (= `ia || iaCobra`), também no
+    `rodarPassos(n, 'demo')` da API e nos achadores `comoPagina` (`tools/lib/acha-gol.mjs`, `acha-impedimento.mjs`): a
+    demo da página é a IA de antes (contraprova 13/10: sem a marca, 9 cavadinhas em 40 pênaltis da demo; teste-controles).
+  - **Bola parada**: o CHUTE só cobra pênalti e tiro livre direto (`cobrar` descarta o pedido de chute nas outras) —
+    no escanteio, lateral, tiro de meta e tiro livre indireto, dois toques no CHUTE não fazem nada e o PASSE/LANÇAMENTO
+    depois cobra normal (teste-cavadinha H3). Pênalti: dois toques = **Panenka** (`pedido.penalti` + `cavadinha`;
+    `ACOES.cavadinha.penalti`): SEM a pressão do pênalti (`penaltiErro` não entra), erro próprio de força/direção
+    (`erroForca`/`erroDir`, bem menor que o da cavadinha de jogo: bola parada a 11 m, sem marcador), elevação de
+    `elevPedida[0]` (2º toque rápido) até `elevMax` (segurado; mais em pé, 1% de força mudava 0,3 m na altura em que a bola
+    chega ao goleiro) e a velocidade que passa 0,4 m antes da linha a `y` m, descendo (`velParaAlturaEm`, como o chute).
+    A busca de "cair `alemDaLinha` m depois da linha" (`velParaPousar`) não serve no pênalti: com o gol no caminho o pouso
+    não cresce com a velocidade (a bola bate no travessão ou no teto da rede e volta) e a busca parava no travessão — sem
+    erro nenhum, a Panenka passava a ~2,8 m na linha. O goleiro: contrato do pênalti (Etapa 4, faltas). Medido
+    (teste-cavadinha H4, 48 sementes, finalização 40/60/83, 2º toque rápido e segurado): contra o goleiro que mergulha
+    97% de gols e 97% no alvo (antes 22% e 29%); contra o que fica no meio, 100% defendidas (antes 6%; 11 gols e 34 fora
+    em 48). A cavadinha de jogo, a da IA e a do tiro livre não mudam. Tiro livre direto
+    (~22 m, barreira): dois toques = cavadinha por cima da barreira (× `faltaErro`; 0/10 na barreira, quase todas fora).
+  - **Entrada** (`entrada.js`, DOM): soltar e apertar de novo ANTES de um passo ver a soltura (teclado, toque e controle
+    num quadro sem passo) não perde a 2ª borda — o passo vê o botão solto e o seguinte, apertado (`soltas`, `vistos`
+    pelo `passoUsou(botoes)` que o main.js chama ANTES de cada passo, `adiados` viram o pulso do próximo em
+    `limparPulsos(true)`; fora do laço, `limparPulsos()` limpa tudo, também `vistos` — o replay que começa dentro do
+    passo, no apito do impedimento ou na saída depois do gol, chama `limparPulsos()` depois do `passoUsou`: sem passo
+    nenhum no replay, a tecla segurada no começo, solta e apertada de novo, pula, como na main; antes ela ficava
+    escondida o replay inteiro — contraprova 13/10, teste-controles). Não vale para CORRER e o modificador (dois Shift
+    seguros não piscam). A repetição automática da tecla (`keydown` com `repeat`) não conta. O toque cancelado pelo
+    sistema (`pointercancel`, `lostpointercapture`) no CHUTE é soltar, como sempre foi (teste-controles).
 - `j.recebe = {tick, x, z, tipo}`: o jogador que vai receber (vem ao encontro / arranca na enfiada).
 - `j.mergulho`: a defesa desenhada do goleiro (mergulho, salto ou em pé) — ver a seção "Pedido de 10/10" abaixo.
 - Eventos novos: `passe`, `chute`, `defesa` ({tipo: 'encaixe'|'espalmada'}), `gol`, `troca`, `saidaGoleiro`.
@@ -1038,8 +1128,15 @@ Sai em PRs menores; cada um acrescenta a sua parte aqui. Pesquisa e números em 
   `pr.miraZ` e a força `pr.forca` da IA e o lado do goleiro `pr.palpite`/`gk.palpite` sorteados na montagem; evento
   `cobrancaPenalti`); `rolou` abre `penaltiAberto` (o goleiro do humano escolhe o lado pelo analógico); `resolverPenalti`
   → evento `penalti {time, id, resultado: 'gol'|'defesa'|'fora'}`. Na cobrança o humano pode chutar (pênalti e tiro
-  livre direto); `pedido.penalti` multiplica o erro (`ACOES.chute.penaltiErro`). `goleiro.js lerChute`: no pênalti, lado
-  errado = não defende (o mergulho desenhado vai para o lado escolhido); lado certo = chance × `GOLEIRO.penalti.fator`.
+  livre direto); `pedido.penalti` multiplica o erro (`ACOES.chute.penaltiErro`; a Panenka não: erro próprio,
+  `ACOES.cavadinha.penalti`). `goleiro.js lerChute`: no pênalti, lado errado = não defende (o mergulho desenhado vai para
+  o lado escolhido); lado certo = chance × `GOLEIRO.penalti.fator`. **Panenka** (`m.voo.tipo === 'cavadinha'` no pênalti,
+  ~1,3–1,6 s até o goleiro): contra quem escolheu um lado (`palpite` ±2,2) e a bola a mais de `GOLEIRO.penalti.meio` m
+  dele = lado errado — o mergulho desenhado sai para o lado escolhido com o pico `GOLEIRO.penalti.picoPanenka` s depois
+  do chute e ele fica deitado até a bola passar a linha (`defesa.chaoAte` → `mergulho.tChao`); contra quem ficou no
+  meio (`palpite` 0): sem sorteio — pega (encaixa) a que alcança, e a que passa alta por cima dele busca voltando para a
+  linha (`recuoBolaAlta`, como o goleiro adiantado). Só a Panenka: o chute do pênalti (IA e humano) fica como era
+  (teste-faltas C igual; hash-partida igual).
 - Escalação: `situacao` → 'expulso'; `tocar` troca o buraco com um titular (nunca o gol) e recusa substituí-lo;
   `mudarFormacao` deixa o buraco nas vagas que sobram (fora do gol); `validarEdicao` aceita o expulso só como buraco e
   fora do gol; `misturarTimes` inclui os expulsos.
@@ -1161,18 +1258,35 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
   filtrada (`B.cvx/cvz`) abaixo de `IA_DEFESA.lento.v` por `lento.s[pressão]` s (+ `lento.longe` fora da linha de
   engajamento): o 1º homem aperta (também além da linha), mirando `lento.aperto` m da bola; o 2º cobre em todo nível.
 - `faltas.js chanceFaltaBote`: × `FALTAS.bote.lento` com o condutor abaixo de `vParado` (vale também na DIVIDIDA).
+- (condução curta, 12/10) a regra da bola colada lê `ACOES.boteIA.colada` (0,305: o 0,35 de antes × 0,87, a razão da
+  bola–condutor da IA no trote, 0,67 → 0,58 m; também `boteIA.bolaSolta` 0,7 → 0,61, `DEFESA_HUMANO.pressao.bolaSolta`
+  0,5 → 0,435 e `dividida.soltaIni/soltaFaixa` 0,45/0,5 → 0,39/0,435) e não vale com a bola **encostada** no corpo do
+  marcador (`boteIA.encostada`, 0,42 m do centro dele) e os dois andando juntos (velocidade relativa ≤ `encostadaVrel`,
+  1 m/s): o condutor empurrando a bola no marcador colado à frente — só com o marcador à frente ou de lado
+  (`faltas.js chegada` ≠ 'tras'; nas costas do condutor o bote era quase sempre falta, 14/10). Vale também no treino (o
+  hash do ataque muda).
 
 ### PRESSÃO (`defesa.js`; o desenho em `render/jogador3d.js`)
 - `pressionadorDe(m, time, excluir = -1)` → id de quem chega primeiro ao ponto de encontro (a `pressao.colado` m do corpo
   do condutor, do lado do gol, adiantado pela corrida dele até `leadMax` s; tempo com `acel`/`freio`; quem já ia leva
-  `histerese` s), sem o controlado, o goleiro e `excluir` (nunca exclui quem já ia). Uma vez por tick em
-  `m.pressaoHumano[time] = {tick, id}`.
+  `histerese` s — só se o ponto não pede a inversão dele, além de `JOGADOR.angInversao` do sentido da corrida: no passe
+  do adversário, quem teria de frear na linha até parar cede para quem chega primeiro), sem o controlado, o goleiro e
+  `excluir` (nunca exclui quem já ia). Uma vez por tick em `m.pressaoHumano[time] = {tick, id}`.
 - `pressionadorVisivel(m, time)` → id do chamado no último passo, ou −1 (pura; `main.js` passa `pressiona` na lista do
   desenho: setas âmbar acima da cabeça, `indicador-pressao`).
 - `entradaPressao(m, j)`: bola solta do pé do condutor (> `bolaSolta` m) e eu mais perto → vou na bola; a mais de
   `chega` m → disparada (analógico cheio + CORRER) ao ponto de encontro, contornando o condutor a `contorno` m se venho
   por trás; perto → pela velocidade (a do condutor + `ganho` × (ponto − corpo), até `aproxMax` m/s a mais; por trás,
   fechando no máximo `trasAprox` m/s), mirando `naBola` m antes da bola, do lado do gol. Estado `j.pressaoH = {corre}`.
+  Em todos os trechos (também no passe do adversário, no recebedor `voo.para`) ele **chega freando**: a velocidade
+  PEDIDA com que fecha no corpo do adversário fica em √(2 · `freio` · (d − 2 raios)) + `trasAprox`; longe disso, a
+  disparada de antes. É o pedido, não a garantia do contato: o corpo segue o pedido com o atraso de `JOGADOR.tauVel`
+  (freando a 6,2 m/s², ~1,1 m/s acima dele) e o CORRER segue ligado enquanto a velocidade pedida passa da corrida — o
+  chega freando tira a maior parte dos contatos, mas os que sobram ainda chegam acima de `FALTAS.carga.vMin`
+  (contraprova 14/10, teste-pressao-humano, sementes 7001–7008: contatos do chamado por trás do condutor 12 na main →
+  3 aqui, 2 deles fechando a 2,9–3,1 m/s; não de frente 31 → 11, acima de 1,8 m/s 23 → 8). A curva com a folga do atraso
+  (pedido τ·a abaixo, alvo 1,6 m/s no contato) foi medida e não resolveu (8 de 9 contatos não de frente seguiam acima
+  de 1,8 m/s): pendência.
 - `ia-tatica.js`: `B.apertaProprio` (o 1º aperta por conta própria); `B.pedido` é calculado ANTES do aperto, com
   `excluir = p1` quando ele já aperta (o botão chama outro); quem foi chamado no tick anterior (`B.pedidoTick`) não é o
   1º nem o 2º homem do bloco; `B.aperta1 = B.apertaProprio` (o botão soma um jogador, não dois).
@@ -1212,7 +1326,8 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
   `ia-tatica.js pressionavel(m, o)`: o goleiro com a bola no pé é pressionado, com ela nas mãos não.
 - Entrada e tela: `BOTAO.PEGAR` (4096); `SENTIDO_FASE` O/RB = PEGAR (ataque) / PRESSÃO (defesa); botão de toque
   `btn-pegar` na vaga 'd' do ataque, visível só com `#toque.goleiro-pe` (`entrada.definirGoleiroPe(v)`, main.js:
-  goleiro do humano com a bola no pé). API de testes: `__golaco.cenaDeTeste('pressao' | 'goleiroMao' | 'goleiroPe')` e
+  goleiro do humano com a bola no pé e a mão valendo). API de testes: `__golaco.cenaDeTeste('pressao' | 'goleiroMao' |
+  'goleiroPe' | 'goleiroPeRecuo')` e
   `__golaco.indicadores` (`{pressao: {x, y, z} | null, oito: {x, z, segmentos, total} | null}`).
 
 ### Testes
@@ -1227,6 +1342,77 @@ bola parada no pé do condutor).
 muda). Sem ele as defesas de 6 a 16,5 m iam a 60,8% (meta 55–60%): as regras tiraram gols fáceis nessa faixa (177 → 164
 com as mesmas defesas). Com ele: 59,0% · total 68,0% · de fora da área 86,8% · gols 2,13 (base 2,13) · impedimentos 1,15
 · bola parada 29% dos gols — nenhuma medida que estava na meta saiu dela.
+
+## Auditoria dos botões (dono, 12/10: "ainda tem botões que não funcionam")
+- **Botões de tela pelo toque** (`js/toque-botao.js`, DOM): `aoTocar(el, fn)` age no `pointerup` do MESMO dedo que desceu no
+  elemento (dentro dele, com folga de 10 px) e engole o `click` desse toque; mouse, teclado e `element.click()` seguem pelo
+  `click`. Vale no ≡ (`entrada.js`), em `[data-cmd]` e `.segmentado` (`hud.js`), na raiz do editor (`editor-time.js`) e no
+  "Pular" do pré-jogo. O navegador não gera o `click` com outro dedo na tela (o polegar no analógico). `engolirClique(e)`:
+  as camadas que somem no `pointerdown` (pular o replay, a comemoração, avançar o pré-jogo, o fundo da pausa) engolem o
+  click do mesmo toque (senão ele caía no ≡ e reabria a pausa) — com o evento, enquanto AQUELE dedo está na tela e até
+  450 ms depois de ele sair (o click vem depois do pointerup, por mais que o dedo demore; um dedo cujo pointerup nunca
+  veio deixa de valer em 8 s); sem o evento, nos próximos 450 ms.
+- **Entrada**: `definirFase(visivel, agora, posseRival)` — `agora` (a do mundo no passo, sem a histerese de 0,25 s dos
+  botões visíveis) fixa o sentido de J/K/O/G e A/B/Y/RB no aperto; com `posseRival` (o adversário com a bola no pé), o toque
+  no botão grande ainda visível como CHUTE vale pelo TROCAR (`botaoQueVale`; só o grande — nas outras vagas o da defesa é
+  outra ação: o PASSE virava o GOLEIRO e, segurado, tirava o goleiro do gol, contraprova; o PASSE/ENFIADA/LANÇAMENTO
+  na perda segue como pedido sem bola). `KeyG` está em `SENTIDO_FASE` como `[0, GOLEIRO]` (só na defesa). A DIVIDIDA segurada só vira
+  CONTER depois de `ENTRADA.toqueCurto` (o toque curto não afasta o defensor antes do bote). `definirGoleiroMao(v)` mostra o
+  `btn-trocar-mao` (TROCAR, vaga 'e' do ataque) com a bola nas mãos do goleiro do humano; `definirGoleiroPe` (PEGAR) só
+  com a bola em jogo e a mão valendo (`regras-goleiro.js maoPermitida`: na área, sem recuo, sem a bola que ele soltou —
+  depois do recuo o botão não aparece; a tecla O/RB ainda marca o tiro livre indireto, Regra 12.2). `definirMenu(v)`: com a pausa/Ajuda abertas o controle emite `menu-cima/baixo/esq/dir/ok/
+  voltar` (`hud.navegarPad`). `soltarTudo(ignorarPad)`; `main.js` limpa os pulsos a cada quadro pausado e solta tudo
+  (ignorando o controle segurado) quando a pausa fecha. `main.js faseDoMundo`: a bola solta sem dono que o controlado
+  alcança antes de qualquer adversário (rebote, sobra) é ataque. A Ajuda aberta pela pausa volta para ela ao fechar.
+- **Simulação** (`sim.js`): `m.possePorTime[time] = tick` (o último tick de cada time com a bola no pé ou na mão, no
+  começo do passo — por time: guardar só o último time com a bola fazia a escolha antiga "reviver" quando o adversário
+  recuperava a bola, contraprova B14b) e `m.trocaManual[time] = {tick, id, goleiro}` (TROCAR tocado ou segurado).
+  `ganhouPosse` passa o humano para o jogador de linha mais perto da
+  bola em todo ganho de posse do outro time (como antes: o "Auto" do EA FC), menos por cima da escolha manual da jogada
+  de defesa em andamento (`troca.js escolhaManual`: o controlado é o escolhido pelo TROCAR e o time dele não teve a bola
+  desde então). Só na perda, como chegou a ficar, mudava a medida pareada do PRESSÃO (o controlado deixava de ser o mais perto
+  e o 1º homem da IA já apertava sem o botão: `teste-pressao-humano` M1 Δ 0,35 m, M4 10 → 27 faltas) e o treino. Toque aéreo vencido (a hora passou ou a bola é de outro) é limpo em
+  `movimentoAereo` e no laço do `bolaLivre`. `candidatoTroca` pula `papel` 'parado'/'marcador' (a barreira).
+  Pênalti montado: o goleiro do humano anda com o analógico (só com um canto escolhido: `partida.js ladoPenaltiHumano`)
+  só na linha e no máximo `GOLEIRO.penalti.passo` m (0,5) do meio (`partida.js restricaoPenalti`) — o passo para o lado
+  escolhido, não até a trave (`teste-botoes` B6d: lado certo no
+  fim 7/38 como na main, segurado desde a montagem 9/38; congelado no meio eram 4/38 nos dois). `m.cobrou = {id, tick}` (`partida.js rolou`; zerado em `bolaMorta`):
+  quem cobrou fica fora da bola livre e da bola alta (`candidatosBolaLivre`, `ia-tatica.js vaiNaLivre`) até outro jogador
+  tocar (posse, mão, `ultimoToque`, `bateuCorpo`).
+- **PRESSÃO** (`defesa.js`): `passeAdversario(m, time)` — no passe do adversário o pedido segue valendo e o chamado corre
+  para `m.voo.alvo` (pelo lado do meu gol) e para a `pressao.chega` m dele (freia no último metro; de lá a disputa aperta
+  o recebedor); `m.pressaoHumano[time] = {tick, id, ult, ultTick}`: a histerese vale para o último escolhido dentro de
+  `DEFESA_HUMANO.pressao.validade`. Na troca automática (`sim.js ganhouPosse`) o chamado fica fora (segue apertando; o
+  humano vai para o mais perto depois dele). `sim.js boteIA`: o chamado (`j.ia.ramo === 'pressaoHumano'`) não dá o bote
+  acima de `FALTAS.bote.vLivre` m/s nem por trás do condutor (`faltas.js chegada`) — `teste-pressao-humano` M4 4 → 5.
+- **Bola parada** (`partida.js cobrar`): os botões do cobrador humano valem na montagem; o pedido feito antes de `pronta`
+  espera (renovado) e sai em `pronta`; o CHUTE fora do pênalti e do tiro livre direto vira `passe` (saída) ou
+  `lancamento` (o resto; no lateral, o arremesso longo). No pênalti e no tiro livre direto o CHUTE (a cobrança a gol) só
+  conta a partir de `pronta` (o bit é tirado da entrada na montagem e o chute formado antes é descartado): o toque antes
+  da hora batia sozinho em `pronta`, fraco e sem a mira (`teste-botoes` B15; segurado desde a montagem, bate).
+- **Pênalti**: contra — o canto do humano é `partida.js ladoPenaltiHumano(gk)` na hora do chute (`rolou`): só a
+  componente do analógico AO LONGO da linha do gol (z do mundo) escolhe, com |iz| ≥ `GOLEIRO.penalti.ladoMin` (0,38 ≈
+  sen 22,5°) × o módulo; com a câmera de TV (yaw −π/2: cima da tela = −z, a trave de lá; baixo = +z, a de cá) o empurrão
+  para a esquerda/direita da tela vai para o batedor ou para o gol e NÃO escolhe — nem solto: palpite 0, e o goleiro
+  fica com a IA do goleiro, no meio, como sem analógico (`sim.js goleiroComoLinha`; antes `iz >= 0` dava sempre +z e
+  esquerda/direita escolhiam o mesmo canto: `teste-botoes` B6e, sem canto 0/24 → 24/24, igual a sem analógico 0/24 →
+  24/24; cima/baixo e diagonal com z dominante 30/30 nos dois). `lerChute` compara o palpite com o meio do gol (z = 0),
+  `iniciarMergulho` usa o lado escolhido (`d.z`) com `d.palpite`; a favor — a mira do humano fica em ±`ACOES.chute.penaltiCanto` m (2,5: ~8% para fora, `teste-botoes` B11);
+  a IA continua mirando o canto dela (`PARTIDA.penaltiIA`, ±2,75).
+- **Ações** (`acoes.js`; "humano" = o controlado de um time humano com o humano jogando — `ehHumano` exclui
+  `m.iaJoga[time]`, a demo/IA jogando por ele, como no painel de equilíbrio): o LANÇAMENTO do humano na zona do cruzamento espera `ACOES.toqueDuplo` s (do soltar) antes de
+  marcar o toque (dois toques = rasteiro); o pedido de primeira do humano com `j.recebe` vale até `recebe.chega +
+  ACOES.primeiraFolga` s. `troca.js trocaAerea` não troca no chute do adversário nem tira o goleiro escolhido pelo
+  TROCAR segurado enquanto a escolha vale (`escolhaManual` + `m.trocaManual[time].goleiro`; também no cruzamento —
+  `teste-botoes` B13, sem reassumir o controle). Vencida a escolha (o meu time teve a bola), a troca aérea volta a valer
+  com o goleiro controlado (`teste-botoes` B14: antes a trava ficava a partida inteira).
+- Ajuda: segurar TROCAR/Q/LB leva ao goleiro; no pênalti contra o analógico para cima ou para baixo (para uma das
+  traves) escolhe o canto, sem isso ele fica no meio; o PEGAR
+  não vale no recuo. O botão GOLEIRO continua "segure: ele sai do gol" (decisão do dono).
+- Testes: `teste-botoes` (Node, padrão; `--js` mede outra cópia), `teste-controles` (toque de verdade: ≡ com o polegar no
+  analógico, Continuar com outro dedo na janela, camadas que não atravessam, Ajuda → pausa, CHUTE/TROCAR na perda, rebote,
+  PEGAR com a mão valendo e escondido no recuo, TROCAR com a bola nas mãos, Esc/H → K → Esc/H, O na perda, controle na
+  pausa) e `teste-entrada` (G, DIVIDIDA).
 
 ## Placar (12/10) — barra de TV no formato da referência, menor e com a cara do GOLAÇO (contrato)
 Pedido do dono (12/10), com uma imagem de referência: "quero o placar assim, tem que ser algo menor e mais com a nossa

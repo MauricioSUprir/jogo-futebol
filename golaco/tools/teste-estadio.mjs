@@ -123,7 +123,9 @@ try {
     const trocas = await pg.evaluate(() => {
       const g = window.__golaco;
       if (!g.estadio.trocarTorcida) return null;
-      return ['baixa', 'media', 'alta', 'media', 'baixa', 'alta'].map(q => g.estadio.trocarTorcida(q));
+      // cada troca 3 vezes, vale a menor: uma pausa do coletor de lixo do navegador (7–9 ms numa troca só, com as
+      // outras em 0,0 — CI de 13/10) não é remontar; remontar custa ~300 ms em TODAS as vezes e continua reprovando
+      return ['baixa', 'media', 'alta', 'media', 'baixa', 'alta'].map(q => Math.min(...[0, 1, 2].map(() => g.estadio.trocarTorcida(q))));
     });
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
     await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 3; i++) g.relogio.avancar(1000 / 60, { desenhar: true }); });

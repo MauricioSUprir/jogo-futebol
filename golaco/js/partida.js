@@ -177,6 +177,7 @@ function bolaMorta(m, tipo, time, x, z) {
   m.voo = null;
   for (const j of m.jogadores) { j.recebe = null; j.corrida = null; j.intercepta = null; }
   limparRegraMao(m); // recuo e "soltou" (Regra 12.2) não passam da bola morta
+  m.cobrou = null;   // nem o "cobrador não toca de novo" da cobrança anterior
 }
 
 /** Desfaz a parada (cobrança feita, fim do tempo): o cobrador volta a se mexer. */
@@ -593,7 +594,11 @@ function restricaoPenalti(m, p, j, out) {
   const lado = m.ataca[p.time], gx = lado * CAMPO.meioX;
   if (j.time !== p.time && j.posicao === 'GOL') {
     out.x = gx - lado * clamp((gx - out.x) * lado, 0, 0.6);
-    out.z = clamp(out.z, -CAMPO.gol.largura / 2 + 0.3, CAMPO.gol.largura / 2 - 0.3);
+    // o goleiro do humano: só o passo para o lado escolhido (GOLEIRO.penalti.passo), não até a trave (sim.js
+    // goleiroComoLinha); a IA, a largura do gol
+    const humano = m.humanos.includes(j.time) && m.controlado[j.time] === j.id && !m.iaJoga?.[j.time];
+    const zMax = humano ? GOLEIRO.penalti.passo : CAMPO.gol.largura / 2 - 0.3;
+    out.z = clamp(out.z, -zMax, zMax);
     return out;
   }
   const folga = PARTIDA.folgaRaio;
@@ -940,16 +945,37 @@ function cobrar(m, entrada) {
     c.carga = null;
     c.pedido = { tipo: a.tipo, forca: a.forca, mod: a.tipo === 'chute' && !!pr.direto, tick: m.tick, dir: { x: a.dx, z: a.dz } };
   } else {
-    const e = m.tick >= pr.pronta ? entrada : { x: entrada?.x ?? 0, z: entrada?.z ?? 0, botoes: 0 };
-    aplicarEntrada(c, e, m.tick);
+    // os botões valem já na montagem (o cobrador já é o controlado e os botões de ataque já aparecem): o aperto feito
+    // antes da hora forma o pedido e ele ESPERA a bola ficar pronta — antes os botões eram zerados até `pronta` e o
+    // toque se perdia (auditoria dos botões, 12/10: também na saída logo depois do replay do gol)
+    // menos o CHUTE da cobrança a gol (pênalti e tiro livre direto): ele só conta a partir de `pronta` — força e mira são
+    // as do aperto com a bola pronta. Guardado, o toque antes da hora (ansioso, ou ainda o do lance da falta) batia
+    // sozinho na hora da bola pronta, fraco e sem a mira, e o aperto de verdade era ignorado (contraprova, B15)
+    const aGol = pr.tipo === 'penalti' || (pr.tipo === 'tiroLivre' && pr.direto);
+    // a pessoa (não a demo nem a cobrança da IA pelo humano): dois toques no CHUTE = cavadinha (acoes.js)
+    c.porHumano = !!entrada && !entrada.ia && !entrada.iaCobra;
+    aplicarEntrada(c, aGol && m.tick < pr.pronta && entrada ? { x: entrada.x ?? 0, z: entrada.z ?? 0, botoes: (entrada.botoes ?? 0) & ~BOTAO.CHUTE } : entrada, m.tick);
     c.pedidoPedalada = false; // parado não pedala (o pedido ficaria para depois da cobrança)
     atualizarBotoesAcao(m, c);
-    // bola parada não é chutada a gol — menos o pênalti e o tiro livre direto
-    if (c.pedido && c.pedido.tipo === 'chute' && pr.tipo !== 'penalti' && !(pr.tipo === 'tiroLivre' && pr.direto)) c.pedido = null;
+    // bola parada não é chutada a gol — menos o pênalti e o tiro livre direto: o CHUTE (o botão maior, que aparece na
+    // cobrança) vira a cobrança padrão do tipo — passe na saída, lançamento no resto (antes era jogado fora)
+    if (c.pedido && c.pedido.tipo === 'chute' && pr.tipo !== 'penalti' && !(pr.tipo === 'tiroLivre' && pr.direto)) {
+      c.pedido.tipo = pr.tipo === 'saida' ? 'passe' : 'lancamento';
+      c.pedido.mod = false;
+    }
+    // ainda montando: o pedido fica guardado (renovado) até `pronta` — o chute a gol formado antes da hora (a carga que
+    // vinha do lance) não: a cobrança a gol é a do aperto com a bola pronta
+    if (c.pedido && m.tick < pr.pronta) {
+      if (aGol && c.pedido.tipo === 'chute') c.pedido = null; else c.pedido.tick = m.tick;
+      return false;
+    }
     // tiro de meta (Regra 16): o humano só cobra com a área livre de adversários (o pedido espera)
     if (c.pedido && pr.tipo === 'tiroDeMeta' && !zonaLivre(m)) return false;
   }
   if (!c.pedido) return false;
+  // dois toques no CHUTE (pênalti, tiro livre direto: cavadinha, acoes.js): o toque rápido espera a janela do 2º toque
+  // e o 2º toque, ser solto
+  if (c.pedido.segura || (c.pedido.espera != null && m.tick < c.pedido.espera)) return false;
   if (pr.tipo === 'lateral') return comecarArremesso(m, c, iaAssume);
   if (pr.tipo === 'penalti') c.pedido.penalti = true; // a pressão da cobrança (acoes.js: erro do chute)
   // tiro livre com barreira: o chute (da IA e do humano) busca passar por cima dela (acoes.js chute)
@@ -969,7 +995,7 @@ function cobrar(m, entrada) {
 function comecarArremesso(m, c, ia) {
   const pr = m.parada, p = c.pedido;
   c.pedido = null; c.carga = null;
-  if (p.tipo === 'chute') return false; // lateral não é chutado
+  if (p.tipo === 'chute') p.tipo = 'lancamento'; // lateral não é chutado: o CHUTE é o arremesso longo
   let para = null, longo = null;
   if (ia) {
     const a = alvoCobranca(m, c, 'lateral');
@@ -998,20 +1024,36 @@ function soltarLateral(m, c) {
   return true;
 }
 
+/**
+ * Canto do pênalti contra escolhido pelo analógico do goleiro do humano (Regra 14): −1/+1 = o sinal de z (o canto do lado
+ * de lá / de cá da linha do gol), 0 = nenhum (fica no meio). Só a componente AO LONGO da linha do gol escolhe: o empurrão
+ * principalmente para o batedor ou para o gol (|iz| < GOLEIRO.penalti.ladoMin × o módulo; com a câmera de TV, esquerda e
+ * direita da tela) ou o analógico solto não escolhe — antes o sinal de iz ≈ 0 dava sempre +z. Pura.
+ */
+export function ladoPenaltiHumano(j) {
+  if (!(j.imag > 0.3)) return 0;
+  const iz = j.iz ?? 0, mod = MD.hypot(j.ix ?? 0, iz);
+  return mod > 1e-6 && Math.abs(iz) >= GOLEIRO.penalti.ladoMin * mod ? (iz > 0 ? 1 : -1) : 0;
+}
+
 /** A bola rolou: fim da parada (o cobrador volta a se mexer), evento `cobranca`. */
 function rolou(m) {
   const pr = m.parada;
   pr.rolou = true;
+  // quem cobrou não toca a bola de novo antes de outro jogador (Regras 13, 14, 15, 16, 17 — a saída também, Regra 8):
+  // sim.js tira ele da bola livre e da bola alta até outro tocar (antes o arremessador cabeceava o próprio lateral)
+  m.cobrou = { id: pr.cobrador, tick: m.tick };
   if (m.voo) m.voo.bolaParada = pr.tipo; // a bola que sai da cobrança (a disputa pelo alto vale nela: sim.js)
   m.eventos.push({ tipo: 'cobranca', parada: pr.tipo, id: pr.cobrador });
   if (pr.barreira) desfazerBarreira(m, pr);
   if (pr.tipo === 'escanteio' && pr.papeis) m.partida.bp = { tipo: 'escanteio', time: pr.time, sz: pr.sz, papeis: pr.papeis, tick: m.tick };
   if (pr.tipo === 'penalti') {
     m.partida.penaltiAberto = { tick: m.tick, time: pr.time, id: pr.cobrador };
-    // goleiro do humano: o lado é o do analógico na hora do chute (solto: fica no meio)
+    // goleiro do humano: o lado é o do analógico na hora do chute — só o z dele, ao longo da linha do gol (para o batedor,
+    // para o gol ou solto: fica no meio)
     const gk = m.jogadores.find(o => o.time !== pr.time && o.posicao === 'GOL');
     if (gk && m.humanos.includes(gk.time) && m.controlado[gk.time] === gk.id) {
-      gk.palpite = gk.imag > 0.3 ? (gk.iz >= 0 ? 1 : -1) * GOLEIRO.penalti.palpite[GOLEIRO.penalti.palpite.length - 1][0] : 0;
+      gk.palpite = ladoPenaltiHumano(gk) * GOLEIRO.penalti.palpite[GOLEIRO.penalti.palpite.length - 1][0];
     }
   }
   encerrarParada(m);
@@ -1464,7 +1506,12 @@ export function entradaDemoPartida(m) {
   const j = jogadorPorId(m, m.controlado[0]);
   if (!j) return { x: 0, z: 0, botoes: 0 };
   const pr = m.parada;
-  if (pr && !pr.rolou && pr.cobrador === j.id) return entradaCobranca(m, j);
+  if (pr && !pr.rolou && pr.cobrador === j.id) {
+    // iaCobra: a cobrança é da IA (o `cobrar` não a toma pelos dois toques da pessoa: o botão que ela repete a cada
+    // PARTIDA.repeteCobranca virava cavadinha). Sem `ia` aqui: o resto da simulação segue como antes (m.iaJoga)
+    const c = entradaCobranca(m, j);
+    return { x: c.x, z: c.z, botoes: c.botoes, iaCobra: true };
+  }
   // ia: a IA joga pelo humano — recebe como a IA (sem a recepção assistida do controle humano, recepcao.js)
   const e = entradaIATatica(m, j);
   return { x: e.x, z: e.z, botoes: e.botoes, ia: true };

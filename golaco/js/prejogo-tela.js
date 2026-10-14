@@ -9,6 +9,7 @@
 // qualquer toque, tecla ou movimento.
 import { criarEscalacaoTela } from './escalacao-tela.js';
 import { ELENCOS } from './elenco.js';
+import { aoTocar, engolirClique } from './toque-botao.js';
 
 const SVG_PULAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6l7 6-7 6zM12 6l7 6-7 6z" fill="currentColor"/><path d="M20.5 5.5v13" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -54,10 +55,13 @@ export function criarPrejogoTela(opc) {
   const mostrarPular = () => { ultimoGesto = performance.now(); pular.classList.add('visivel'); };
 
   pular.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); });
-  pular.addEventListener('click', e => { e.stopPropagation(); if (ativo && !naAbertura) opc.aoPularTudo(); });
+  // toque: no pointerup do mesmo dedo (aoTocar; com outro dedo na tela o click não vem)
+  aoTocar(pular, () => { if (ativo && !naAbertura) opc.aoPularTudo(); });
   raiz.addEventListener('pointerdown', e => {
     if (!ativo || e.button > 0) return;
     e.preventDefault();
+    // o toque que encerra o pré-jogo some com a camada: o click dele não cai no ≡ (abria a pausa)
+    engolirClique(e);
     mostrarPular();
     if (naAbertura) opc.aoComecar(); else opc.aoProximo();
   });
