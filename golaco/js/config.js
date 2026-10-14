@@ -1255,19 +1255,27 @@ export const REPLAY = {
   // linha: na lateral do lado da TV, alta, no x da linha; o fov fecha no impedido e no defensor da linha (com folga)
   linha: { altura: 15, fora: 8, folga: 7, fovMin: 22, fovMax: 40 },
   // 1ª PESSOA do autor do gol (render/replay-olhos.js; PESQUISA-ESTADIO.md §12): olho = cabeça gravada + frente·`frente` +
-  // cima·`cima`; x/z por gaussiana σ `sigmaXZ` s e y por média móvel de `mediaY` s (um passo: a cabeça sobe e desce 2–9 cm
-  // correndo e o cérebro estabiliza o olhar — Pozzo & Berthoz 1991; nada de balançar no ritmo da passada); rolagem 0.
-  // Olhar: a bola (arfagem ≥ `arfagemAntes`° até chute − `baixaAntes` s: a boca do gol fica no quadro), de chute − baixaAntes
-  // a chute + baixaDepois para baixo na bola e no pé, depois a bola puxada `puxaGol` para o centro da boca do gol;
-  // gaussiana σ `sigmaOlhar` s (`sigmaCabeceio` no cabeceio); arfagem em [arfagem]. Campo de visão HORIZONTAL `fovH`°
-  // fixo (exceção à regra do fov vertical: a faixa de conforto é dada em graus horizontais); plano de recorte próximo
-  // `perto` m. 0,6× de chute − `antes` s a gol + `depois` s (encolhe até chute − extras.primeiraMin). A bola some a
-  // < `bolaSome` m do olho; outro corpo a < `corpo` m da lente no quadro corta o plano (fica se sobrar ≥ `sobraMin` s reais).
+  // cima·`cima` (o olho bruto); x/z por gaussiana σ `sigmaXZ` s presa a ≤ `prendeXZ` m do olho bruto na horizontal; y por
+  // média móvel de `mediaY` s (um passo) e gaussiana σ `sigmaY` s — a cabeça do manequim sobe e desce até ±9 cm correndo e
+  // o cérebro estabiliza o olhar (Pozzo & Berthoz 1991; nada de balançar no ritmo da passada) —, presa a [cabeça + yMin,
+  // cabeça + yMax] e, por fim, dentro da esfera de raio `raioCabeca` em volta do centro da cabeça (o olho recua na
+  // horizontal); rolagem 0.
+  // Olhar: até chute − `baixaAntes` s a bola puxada `puxaAntes` para o centro da boca do gol (o autor vê o gol antes de
+  // bater), sem descer mais que `arfagemAntes`° (a boca do gol no quadro também no celular deitado); de chute − baixaAntes a
+  // chute + `baixaDepois`, a bola e o pé; depois a bola puxada `puxaGol` para o gol (cabeceio: a bola puxada `puxaAntes`
+  // até `cabeceioOlhaGol` s antes do contato; perto do contato, `puxaCabeceio`); gaussiana σ `sigmaOlhar` s (`sigmaCabeceio`
+  // no cabeceio); arfagem em [arfagem]; GIRO com limite de `giroMax` °/s no tempo do replay (ida e volta, a média) e
+  // gaussiana σ `sigmaGiro` s por cima. Campo de visão HORIZONTAL `fovH`° fixo (exceção à regra do fov vertical: a faixa de
+  // conforto é dada em graus horizontais); plano de recorte próximo `perto` m. 0,6× de chute − `antes` s a gol + `depois` s
+  // (encolhe até chute − extras.primeiraMin). A bola some a < `bolaSome` m do olho; outro corpo a < `corpo` m da lente no
+  // quadro corta o plano (fica se sobrar ≥ `sobraMin` s reais).
   primeira: {
-    vel: 0.6, antes: 0.9, depois: 0.4, frente: 0.10, cima: 0.03, sigmaXZ: 0.08, mediaY: 0.33,
-    baixaAntes: 0.25, baixaDepois: 0.1, puxaGol: 0.35, sigmaOlhar: 0.10, sigmaCabeceio: 0.14,
-    arfagem: [-60, 15], arfagemAntes: -30, fovH: 90, perto: 0.10, bolaSome: 0.35, corpo: 0.3, sobraMin: 1.2,
-    cabeceioOlhaGol: 0.15,
+    vel: 0.6, antes: 0.9, depois: 0.4, frente: 0.085, cima: 0.03, sigmaXZ: 0.08, mediaY: 0.33,
+    prendeXZ: 0.02, yMin: -0.14, yMax: 0.16, sigmaY: 0.22, raioCabeca: 0.148,
+    baixaAntes: 0.3, baixaDepois: 0.2, puxaAntes: 0.6, puxaGol: 0.35, sigmaOlhar: 0.10, sigmaCabeceio: 0.14,
+    giroMax: 85, sigmaGiro: 0.05,
+    arfagem: [-60, 15], arfagemAntes: -18, fovH: 90, perto: 0.10, bolaSome: 0.35, corpo: 0.3, sobraMin: 1.2,
+    cabeceioOlhaGol: 0.15, puxaCabeceio: 0.5,
   },
   // VISÃO DO TREINADOR do time que marcou (render/replay-olhos.js): parte 1 = o que ele vê (olho na cabeça gravada,
   // gaussiana σ `sigmaOlho`; olhar a meio caminho da bola suavizada e do centro da boca do gol, σ `sigmaOlhar`;

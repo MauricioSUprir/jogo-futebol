@@ -21,8 +21,10 @@
 //   G3  extras ≤ 7,0 s; total ≤ 19 s (golaço ≤ 21; com a checagem ≤ 20/22);
 //   G4  os planos dentro do anel, sem atravessar corte (o gol no fim do tempo: o treinador encurta ou sai);
 //   G5  pênalti: a 1ª pessoa começa depois da montagem e o goleiro está no quadro em chute − 0,3 s;
-//   G6  1ª pessoa: olho ≤ 0,15 m da cabeça gravada e ≤ 0,06 m do olho bruto; arfagem em [−60°, 15°]; balanço residual
-//       (y − média móvel de 0,5 s) ≤ 1 cm correndo (antes: o olho bruto, 2–6 cm);
+//   G6  1ª pessoa: olho ≤ 0,15 m da cabeça gravada e ≤ 0,06 m do olho bruto na HORIZONTAL (14/10: a cabeça do manequim
+//       sobe e desce até ±9 cm correndo — a passada de agora —, e um olho a ≤ 6 cm dela na vertical também balançaria ≥ 3 cm:
+//       a vertical fica presa pela cabeça e pelo balanço); arfagem em [−60°, 15°]; balanço residual (y − média móvel de
+//       0,5 s, com o olho dos dois lados do quadro) ≤ 1 cm correndo (o olho bruto: ~8 cm);
 //   G7  1ª pessoa: giro p95 ≤ 90°/s e máximo ≤ 150°/s (tempo de replay); bola no quadro ≥ 95% de chute a gol (fora da janela
 //       em que ela some); olhar ≤ 25° da bola (mediana); a boca do gol no quadro em chute − 0,5 s e de chute + 0,3 s ao gol;
 //   G8  1ª pessoa: nenhum outro corpo a < 0,3 m da lente no quadro; presente em ≥ 80% dos gols com autor;
@@ -31,9 +33,12 @@
 //   G10 treinador (parte 2): ele inteiro no quadro em 100%; centro em x ∈ [0,2; 0,45]; cabeça e peito livres ≥ 90%; câmera
 //       fora dos sólidos e a ≥ 0,6 m de qualquer corpo; nada a < 2 m dela no quadro;
 //   G11 anel com 26 vagas ≤ 4 MB; lerQuadro marca it.tecnico e zera it.ocultar; defensorDaLinha nunca devolve o treinador;
-//   G12 a pose do treinador gravada no passo = a ao vivo, bit a bit.
+//   G12 a pose do treinador gravada no passo = a ao vivo, bit a bit;
+//   G13 (14/10) a lente da 1ª pessoa e da parte 1 do treinador fora dos sólidos do estádio (solidoEm, 5 cm; acima do chão)
+//       em 100% dos quadros; o que se vê do próprio autor (o quadril e as pernas: o resto fica OCULTO) a ≥ 0,20 m da lente;
+//       nenhum outro corpo a < 0,3 m da lente do treinador no quadro; na parte 2 ele reage (a mão acima da cabeça ≥ 0,1 s).
 // Na versão sem replay os módulos não existem: o teste reprova.
-//   node tools/teste-replay-anel.mjs [--js <pasta js>] [--ref <commit> | --base <pasta js>] [--sementes N] [--par N] [--min M]
+//   node tools/teste-replay-anel.mjs [--js <pasta js>] [--ref <commit> | --base <pasta js>] [--sementes N] [--par N] [--min M] [--so-g5]
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
@@ -310,6 +315,8 @@ async function itensG() {
   let RO = null, TE = null;
   try { RO = await imp('render/replay-olhos.js'); TE = await imp('tecnicos.js'); } catch (_) { RO = null; }
   if (!RO || !RR.planosExtrasGol) { reg('G 3ª e 4ª câmeras do gol (render/replay-olhos.js, planosExtrasGol)', 'não existem', 'existem', false); return; }
+  // --so-g5: só o pênalti (diagnóstico)
+  if (args.includes('--so-g5')) { await itemG5(RO); return; }
   const C = await imp('config.js');
   const { REPLAY, CAMPO } = C;
   const { J, NJ } = await imp('anim.js');
@@ -323,7 +330,7 @@ async function itensG() {
     if (!fs.existsSync(path.join(dest, 'golaco/js/render/replay-roteiro.js'))) { fs.mkdirSync(dest, { recursive: true }); execFileSync('sh', ['-c', `git archive ${sha} golaco/js | tar -x -C ${dest}`], { cwd: raiz }); }
     refJs = path.join(dest, 'golaco/js');
   }
-  const NS = +arg('--sementes', 14), MIN = +arg('--min', 4);
+  const NS = +arg('--sementes', 28), MIN = +arg('--min', 4);
   const nPar = Math.max(1, Math.min(NS, os.availableParallelism?.() ?? os.cpus().length, +arg('--par', 3)));
   const res = [];
   let prox = 1;
@@ -367,10 +374,10 @@ async function itensG() {
   // G6
   {
     const ps = comAutor.filter(g => g.p).map(g => g.p);
-    const oc = Math.max(...ps.map(p => p.olhoCab)), ob = Math.max(...ps.map(p => p.olhoBruto));
+    const oc = Math.max(...ps.map(p => p.olhoCab)), ob = Math.max(...ps.map(p => p.olhoBrutoH)), ob3 = Math.max(...ps.map(p => p.olhoBruto));
     const a0 = Math.min(...ps.map(p => p.arfMin)), a1 = Math.max(...ps.map(p => p.arfMax));
     const cr = ps.filter(p => p.nCorrendo > 10), rs = Math.max(...cr.map(p => p.resid)), rb = mediana(cr.map(p => p.residBruto));
-    reg('G6 1ª pessoa: olho perto da cabeça e do olho bruto; arfagem; balanço residual correndo', `olho–cabeça ${fmt(oc, 3)} m, olho–bruto ${fmt(ob, 3)} m; arfagem ${fmt(a0, 0)}°…${fmt(a1, 0)}°; balanço ${fmt(rs * 100, 2)} cm (${cr.length} planos correndo; o olho bruto: ${fmt(rb * 100, 1)} cm de mediana)`,
+    reg('G6 1ª pessoa: olho perto da cabeça e do olho bruto (na horizontal); arfagem; balanço residual correndo', `olho–cabeça ${fmt(oc, 3)} m, olho–bruto ${fmt(ob, 3)} m na horizontal (${fmt(ob3, 3)} m com a vertical estabilizada); arfagem ${fmt(a0, 0)}°…${fmt(a1, 0)}°; balanço ${fmt(rs * 100, 2)} cm (${cr.length} planos correndo; o olho bruto: ${fmt(rb * 100, 1)} cm de mediana)`,
       '≤ 0,15; ≤ 0,06; [−60°, 15°]; ≤ 1 cm', ps.length > 0 && oc <= 0.15 && ob <= 0.06 && a0 >= -60 - 1e-6 && a1 <= 15 + 1e-6 && cr.length > 0 && rs <= 0.01);
   }
   // G7
@@ -407,6 +414,17 @@ async function itensG() {
     const solido = p2.filter(q => q.camSolido).length, perto = p2.reduce((s, q) => s + q.perto2, 0);
     reg('G10 treinador (parte 2): inteiro no quadro, terço esquerdo, sem ninguém na frente, câmera livre', `${p2.length} partes 2 (de ${gols.filter(g => g.t).length} planos): inteiro ${inteiro}/${n}; x ${fmt(x0, 2)}–${fmt(x1, 2)}; livre ${fmt(100 * livre / Math.max(1, n), 1)}%; câmera em sólido ${solido}, a ${fmt(cc, 2)} m do corpo mais perto; corpo a < 2 m no quadro ${perto}`,
       '100%; [0,2; 0,45]; ≥ 90%; 0, ≥ 0,6; 0', p2.length > 0 && inteiro === n && x0 >= 0.2 && x1 <= 0.45 && livre / Math.max(1, n) >= 0.9 && solido === 0 && cc >= 0.6 && perto === 0);
+  }
+  // G13 (14/10: "nada atravessa, lente nunca dentro de sólido" e o treinador reagindo)
+  {
+    const ps = comAutor.filter(g => g.p).map(g => g.p), ts = gols.filter(g => g.t).map(g => g.t), p2 = ts.filter(t => t.p2).map(t => t.p2);
+    const sp = ps.reduce((s, p) => s + p.solido, 0), np = ps.reduce((s, p) => s + p.n, 0), prop = Math.min(...ps.map(p => p.proprio));
+    const st = ts.reduce((s, t) => s + t.solido, 0), nt = ts.reduce((s, t) => s + t.n, 0), cl = ts.reduce((s, t) => s + t.corpoLente, 0), cm = Math.min(...ts.map(t => t.corpoMin));
+    const reagem = p2.filter(q => q.reage >= 6).length;
+    const exP = ps.find(p => p.solido)?.solidoEx, exT = ts.find(t => t.solido)?.solidoEx, exC = ts.find(t => t.corpoLente)?.corpoEx;
+    reg('G13 a lente fora dos sólidos (1ª pessoa e treinador); nada do próprio corpo na lente; ninguém na lente do treinador; ele reage no plano 2',
+      `1ª pessoa: ${sp}/${np} quadros em sólido${exP ? ` (${exP})` : ''}, o corpo dele que aparece a ≥ ${fmt(prop, 2)} m da lente; treinador: ${st}/${nt} em sólido${exT ? ` (${exT})` : ''}, ${cl} quadros com corpo a < ${REPLAY.primeira.corpo} m no quadro${exC ? ` (${exC})` : ''} (o mais perto a ${fmt(cm, 2)} m); a mão acima da cabeça (≥ 0,1 s) em ${reagem}/${p2.length} partes 2`,
+      `0; ≥ 0,20 m; 0; 0; todas`, ps.length > 0 && ts.length > 0 && p2.length > 0 && sp === 0 && prop >= 0.2 && st === 0 && cl === 0 && reagem === p2.length);
   }
   // G12
   {

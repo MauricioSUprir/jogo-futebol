@@ -20,6 +20,10 @@ export async function medirSemente(pastaJs, sem, opc = {}) {
   const RR = await imp('render/replay-roteiro.js'), RA = await imp('render/replay-anel.js'), RO = await imp('render/replay-olhos.js');
   const AG = await imp('render/autor-gol.js'), C = await imp('config.js'), EF = await imp('estadio-forma.js');
   const { J, SEGMENTOS, RAIO_CABECA } = await imp('anim.js');
+  // G13: os segmentos do próprio autor que a 1ª pessoa DESENHA (jogador3d.js OCULTA.cabeca | OCULTA.tronco tira a cabeça,
+  // o pescoço, o peito, os ombros e os braços: a mesma regra pelo nome das juntas)
+  const NOME = Object.fromEntries(Object.entries(J).map(([n, i]) => [i, n]));
+  const VISIVEL_1P = SEGMENTOS.map(([a, b]) => { const nm = NOME[a] + ' ' + NOME[b]; return !(/pescoco|peito|ombro|cotovelo|mao|cabeca/.test(nm) || (NOME[a] === 'lombar' && NOME[b] === 'peito')); });
   const REF = opc.ref ? await import(pathToFileURL(path.join(opc.ref, 'render/replay-roteiro.js')).href) : null;
   const { REPLAY, CAMPO } = C;
   const GR = await criarGravador(pastaJs);
@@ -86,8 +90,8 @@ export async function medirSemente(pastaJs, sem, opc = {}) {
   // ---------------------------------------------------------------------------------------------- 1ª pessoa (G6–G8)
   function medirPrimeira(a, p, g) {
     const e = p.enq, F = REPLAY.primeira, cab = p.tipoChute === 'cabeceio';
-    const m = { olhoCab: 0, olhoBruto: 0, arfMin: Infinity, arfMax: -Infinity, resid: 0, residBruto: 0, giros: [], bolaIn: 0, bolaN: 0, olharBola: [], gol0: null, gol1: null, lente: -1, de: p.de, ate: p.ate, cortado: !!p.cortadoPelaLente };
-    const cam = {}, pr = {}, cabeca = { x: 0, y: 0, z: 0 }, b = { x: 0, y: 0, z: 0 };
+    const m = { olhoCab: 0, olhoBruto: 0, arfMin: Infinity, arfMax: -Infinity, resid: 0, residBruto: 0, giros: [], bolaIn: 0, bolaN: 0, olharBola: [], gol0: null, gol1: null, lente: -1, de: p.de, ate: p.ate, cortado: !!p.cortadoPelaLente, solido: 0, solidoEx: '', proprio: Infinity, n: 0 };
+    const cam = {}, pr = {}, cabeca = { x: 0, y: 0, z: 0 }, b = { x: 0, y: 0, z: 0 }, PA = new Float32Array(57);
     const gx = p.lado * CAMPO.meioX, gy = CAMPO.gol.altura / 2;
     let ant = null;
     const ys = [], ysB = [], correndo = [];
@@ -95,8 +99,14 @@ export async function medirSemente(pastaJs, sem, opc = {}) {
       RO.cameraPrimeira(e, t, cam);
       const i = t - e.w0;
       RA.juntaNoTick(a, t, p.autor, J.cabeca, cabeca);
+      // G13: a lente fora dos sólidos do estádio (gol, placas, bancos...) e acima do chão; longe do que se vê do próprio corpo
+      m.n++;
+      const so = lenteEmSolido(cam.x, cam.y, cam.z, F.perto);
+      if (so) { m.solido++; if (!m.solidoEx) m.solidoEx = `${so} no passo ${t} (y ${cam.y.toFixed(2)})`; }
+      if (RA.poseNoTick(a, t, p.autor, PA)) m.proprio = Math.min(m.proprio, distCorpo(PA, cam.x, cam.y, cam.z, VISIVEL_1P));
       m.olhoCab = Math.max(m.olhoCab, Math.hypot(cam.x - cabeca.x, cam.y - cabeca.y, cam.z - cabeca.z));
       m.olhoBruto = Math.max(m.olhoBruto, Math.hypot(cam.x - e.bruto[i * 3], cam.y - e.bruto[i * 3 + 1], cam.z - e.bruto[i * 3 + 2]));
+      m.olhoBrutoH = Math.max(m.olhoBrutoH ?? 0, Math.hypot(cam.x - e.bruto[i * 3], cam.z - e.bruto[i * 3 + 2]));
       const dx = cam.lx - cam.x, dy = cam.ly - cam.y, dz = cam.lz - cam.z;
       const arf = Math.atan2(dy, Math.hypot(dx, dz)) * GRAU;
       m.arfMin = Math.min(m.arfMin, arf); m.arfMax = Math.max(m.arfMax, arf);
@@ -121,9 +131,11 @@ export async function medirSemente(pastaJs, sem, opc = {}) {
       ys.push(cam.y); ysB.push(e.bruto[i * 3 + 1]);
       correndo.push(v > 3 && !cab && cabeca.y < 1.75 && t < p.chuteTick - 6);
     }
-    // y − média móvel de 0,5 s (30 passos)
-    const res = arr => { let mx = 0; for (let i = 0; i < arr.length; i++) { if (!correndo[i]) continue; let s = 0, n = 0; for (let k = -15; k <= 15; k++) { const q = Math.max(0, Math.min(arr.length - 1, i + k)); s += arr[q]; n++; } mx = Math.max(mx, Math.abs(arr[i] - s / n)); } return mx; };
-    m.resid = res(ys); m.residBruto = res(ysB);
+    // y − média móvel de 0,5 s (31 passos) — a média com o olho de verdade dos 15 passos de cada lado (o enquadramento vai
+    // além do plano: nada de repetir a borda, que inventava balanço no começo e no fim)
+    const yCam = t => RO.cameraPrimeira(e, t, cam).y, yBr = t => e.bruto[Math.max(0, Math.min(e.n - 1, t - e.w0)) * 3 + 1];
+    const res = f => { let mx = 0; for (let i = 0; i < ys.length; i++) { if (!correndo[i]) continue; const t = p.de + i; let s = 0; for (let k = -15; k <= 15; k++) s += f(t + k); mx = Math.max(mx, Math.abs(f(t) - s / 31)); } return mx; };
+    m.resid = res(yCam); m.residBruto = res(yBr);
     m.nCorrendo = correndo.filter(Boolean).length;
     m.lente = RO.corpoNaLente(a, e, F.corpo, p.autor);
     m.olharBolaMed = mediana(m.olharBola); delete m.olharBola;
@@ -133,8 +145,8 @@ export async function medirSemente(pastaJs, sem, opc = {}) {
   // ---------------------------------------------------------------------------------------------- treinador (G9–G10)
   function medirTreinador(a, p, g) {
     const e = p.enq, Tr = REPLAY.treinador;
-    const m = { olhoCab: 0, fovs: new Set(), bolaIn: 0, bolaN: 0, golGol: null, giros: [], p2: null, de: p.de, corte: p.corte, ate: p.ate };
-    const cam = {}, pr = {}, cabeca = { x: 0, y: 0, z: 0 }, b = { x: 0, y: 0, z: 0 };
+    const m = { olhoCab: 0, fovs: new Set(), bolaIn: 0, bolaN: 0, golGol: null, giros: [], p2: null, de: p.de, corte: p.corte, ate: p.ate, n: 0, solido: 0, solidoEx: '', corpoLente: 0, corpoEx: '', corpoMin: Infinity };
+    const cam = {}, pr = {}, cabeca = { x: 0, y: 0, z: 0 }, b = { x: 0, y: 0, z: 0 }, Q = new Float32Array(57);
     const gx = p.lado * CAMPO.meioX, gy = CAMPO.gol.altura / 2;
     let ant = null;
     const fim1 = p.corte ?? p.ate;
@@ -144,6 +156,25 @@ export async function medirSemente(pastaJs, sem, opc = {}) {
       RA.juntaNoTick(a, t, p.tecnico, J.cabeca, cabeca);
       m.olhoCab = Math.max(m.olhoCab, Math.hypot(cam.x - cabeca.x, cam.y - cabeca.y, cam.z - cabeca.z));
       m.fovs.add(cam.fov.toFixed(6));
+      // G13: a lente fora dos sólidos e nenhum outro corpo (jogador, o outro treinador) a < REPLAY.primeira.corpo m dela
+      // no quadro (ele mesmo sai da lista de desenho na parte 1)
+      m.n++;
+      const so = lenteEmSolido(cam.x, cam.y, cam.z, 0.5);
+      if (so) { m.solido++; if (!m.solidoEx) m.solidoEx = `${so} no passo ${t}`; }
+      const s = a.slot(t);
+      for (let v = 0; s >= 0 && v < a.nVagas[s]; v++) {
+        const id = a.ids[s * a.vagas + v];
+        if (id < 0 || id === p.tecnico) continue;
+        const cx = a.dados[(s * a.vagas + v) * a.K + a.P], cz = a.dados[(s * a.vagas + v) * a.K + a.P + 1];
+        if (Math.hypot(cx - cam.x, cz - cam.z) > 2.5) continue;
+        RA.poseNoTick(a, t, id, Q);
+        const d = distCorpo(Q, cam.x, cam.y, cam.z);
+        m.corpoMin = Math.min(m.corpoMin, d);
+        if (d < REPLAY.primeira.corpo) {
+          RO.projetar(cam.x, cam.y, cam.z, cam.lx, cam.ly, cam.lz, cam.fov, 16 / 9, cx, 1.0, cz, pr);
+          if (pr.z > -0.3 && Math.abs(pr.x) <= 1.3) { m.corpoLente++; if (!m.corpoEx) m.corpoEx = `${id} a ${d.toFixed(2)} m no passo ${t}`; }
+        }
+      }
       const dx = cam.lx - cam.x, dy = cam.ly - cam.y, dz = cam.lz - cam.z;
       if (ant) m.giros.push(ang(dx, dy, dz, ant[0], ant[1], ant[2]) * 60 * p.vel);
       ant = [dx, dy, dz];
@@ -159,26 +190,41 @@ export async function medirSemente(pastaJs, sem, opc = {}) {
     return m;
   }
 
-  /** Distância do ponto à superfície do corpo gravado (cápsulas e cabeça). */
-  function distCorpo(P, x, y, z) {
+  /**
+   * A lente (x, y, z) dentro de algo sólido do estádio (estadio-forma.js solidoEm, folga 5 cm; o chão conta só com a lente a
+   * < perto + 5 cm dele: o plano de recorte próximo entraria no gramado)? O nome ou null.
+   */
+  function lenteEmSolido(x, y, z, perto) {
+    if (y < perto + 0.05) return 'chão';
+    const so = EF.solidoEm(x, y, z, 0.05, false);
+    return so && so !== 'chão' ? so : null;
+  }
+
+  /** Distância do ponto à superfície do corpo gravado (cápsulas e cabeça; `vis`: só os segmentos marcados, sem a cabeça). */
+  function distCorpo(P, x, y, z, vis = null) {
     let dm = Infinity;
-    for (const [ja, jb, ra, rb] of SEGMENTOS) {
+    for (let si = 0; si < SEGMENTOS.length; si++) {
+      if (vis && !vis[si]) continue;
+      const [ja, jb, ra, rb] = SEGMENTOS[si];
       const ax = P[ja * 3], ay = P[ja * 3 + 1], az = P[ja * 3 + 2], vx = P[jb * 3] - ax, vy = P[jb * 3 + 1] - ay, vz = P[jb * 3 + 2] - az;
       const l2 = vx * vx + vy * vy + vz * vz || 1e-9, u = Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy + (z - az) * vz) / l2));
       dm = Math.min(dm, Math.hypot(x - ax - vx * u, y - ay - vy * u, z - az - vz * u) - (ra + (rb - ra) * u));
     }
+    if (vis) return dm;
     const ic = J.cabeca * 3;
     return Math.min(dm, Math.hypot(x - P[ic], y - P[ic + 1], z - P[ic + 2]) - RAIO_CABECA);
   }
 
   function medirParte2(a, p, e) {
     const pr = {}, P = new Float32Array(57), Q = new Float32Array(57);
-    const r = { n: 0, inteiro: 0, xMin: Infinity, xMax: -Infinity, livre: 0, camSolido: false, camCorpo: Infinity, perto2: 0 };
+    const r = { n: 0, inteiro: 0, xMin: Infinity, xMax: -Infinity, livre: 0, camSolido: false, camCorpo: Infinity, perto2: 0, reage: 0 };
     const q = e.parte2;
     r.camSolido = !!EF.solidoEm(q.cam.x, q.cam.y, q.cam.z, 0.3, false);
     for (let t = p.corte; t <= p.ate; t++) {
       if (!RA.poseNoTick(a, t, p.tecnico, P)) continue;
       r.n++;
+      // reagindo ao gol: uma mão acima do topo da cabeça (o soco no ar da comemoração: tecnicos.js 'comemora')
+      if (Math.max(P[J.maoE * 3 + 1], P[J.maoD * 3 + 1]) > P[J.cabeca * 3 + 1] + RAIO_CABECA) r.reage++;
       let inteiro = true;
       for (const [asp, peq] of telas) {
         const c = RO.cameraTreinador(e, t, asp, peq, {});
