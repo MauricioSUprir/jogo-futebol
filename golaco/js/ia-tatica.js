@@ -42,7 +42,7 @@ import { faseDoTime, posicaoTatica } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
 import { restricaoParada } from './partida.js';
 import { alvoBolaParada } from './bolas-paradas.js';
-import { entradaPressao, pressaoPedida, pressionadorDe, entradaVelocidade, passeAdversario } from './defesa.js';
+import { entradaPressao, pressaoPedida, pressionadorDe, entradaVelocidade, passeAdversario, chamadoDaPressao } from './defesa.js';
 
 const DT = PASSO;
 const seg = s => Math.round(s / DT);
@@ -144,7 +144,11 @@ function vaiNaLivre(m, j) {
   // passe do adversário no ar com destino: lê a LINHA do passe (pedido do dono de 12/10, "a defesa mal intercepta passe")
   // (o arremesso do lateral não: chega no ar, na coxa/peito de quem vem buscar, e quem marca disputa no corpo — com o corte
   // o time ficava com a bola em ~26% dos laterais, teste-bolas-paradas E2; main 67%)
-  if (v && v.para != null && v.time !== j.time && m.partida && v.tipo !== 'lateral') return cortaPasse(m, j, v, Lv, atual);
+  // (o chamado da PRESSÃO do humano segue a PRESSÃO no passe: defesa.js chamadoDaPressao)
+  if (v && v.para != null && v.time !== j.time && m.partida && v.tipo !== 'lateral') {
+    if (chamadoDaPressao(m, j)) { if (j.iaT) j.iaT.corte = null; return false; }
+    return cortaPasse(m, j, v, Lv, atual);
+  }
   const tempo = o => MD.hypot(o.x - b.x, o.z - b.z) / o.par.vArrancada - (o.id === atual ? H : 0);
   const tj = tempo(j);
   for (const o of m.jogadores) {

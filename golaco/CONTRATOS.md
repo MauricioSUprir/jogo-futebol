@@ -1386,17 +1386,25 @@ corrido só na partida.
   o passe de `dMin`–`dMax` m (no máximo `tras` m para trás), do campo a partir de `uMin` m, com `livre` m livres à frente
   do passador e no máximo `max` tabelas correndo no time, sai com o modificador (acoes.js `tabela`: o passador arranca
   para o espaço); quem recebe vê a devolução como enfiada (a corrida `'tabela'` vale como a `'nasCostas'`); a tabela
-  acaba com a bola perdida; nunca na cobrança. **Condutor no último terço** (`manter`, `utilidade.manterTerco` {u, peso,
-  lado}): a partir de `u` m o peso dos marcadores no caminho é menor — ele encara e entra na área (no campo todo isso
-  levava o condutor para cima da PRESSÃO do humano). `utilidade.cruzamentoV` 0,35 e `chuteLonge` 0,25; `IA_DEFESA.corrida.v`
-  7,0; `GOLEIRO.logit.c0Partida` −0,3.
+  acaba com a bola perdida; nunca na cobrança. (O condutor que encara no último terço, `utilidade.manterTerco`, saiu em
+  14/10: nas mesmas 48 partidas o volume ficou igual sem ele — 7,4 × 7,5 chutes, 1,71 × 1,69 gol — e com ele o chamado da
+  PRESSÃO deixava de correr, teste-pressao-humano M5 72%, meta 80%.) `utilidade.cruzamentoV` 0,35 e `chuteLonge` 0,25;
+  `IA_DEFESA.corrida.v` 7,0; `GOLEIRO.logit.c0Partida` −0,3; o pênalti com o próprio `GOLEIRO.penalti.c0Partida` −0,1 (a
+  calibração dele, canhão 77/18/5% e teste-botoes B6d, é a da main; com o −0,3 da bola rolando as defesas de pênalti iam a
+  0% no painel de 144).
 - O arremesso do lateral (`m.voo.tipo === 'lateral'`) não entra no corte do passe (`vaiNaLivre`), e o lateral do meu time
   não se afasta de cabeça no meu terço (`cabeceio.js intencaoCabeceio`).
 - Troca aérea (`troca.js`): quem tem `j.disputaAlta` pendente (o pulo ombro com ombro contra o cabeceio do adversário)
   conta como disputante marcado (até `janelaMarcado` s); no empate — a previsão confirmada põe o controlado na bola até
   `antecede` ticks depois do toque marcado de outro companheiro que não o recebedor — o controle fica com ele.
 - PRESSÃO do humano (`DEFESA_HUMANO.pressao`): `chega` 2,0 m e `aproxMax` 5 m/s (o bote do escolhido só abaixo de
-  `FALTAS.bote.vLivre` e não por trás: a regra do sim.js boteIA que veio da main, #474).
+  `FALTAS.bote.vLivre` e não por trás: a regra do sim.js boteIA que veio da main, #474). Na aproximação (`entradaPressao`,
+  a mais de `chega` m), vindo POR TRÁS do condutor, a velocidade com que fecha nele fica em √(2·`freio`·(d − `colado` − 2
+  raios)) (o freio do corpo, `JOGADOR.freio` 6,2 m/s²): de 6 m/s ele precisa de ~2,9 m e chegava atropelando o condutor
+  quase parado (carga por trás; teste-pressao-humano M4 5 → 11 faltas com o botão, 10 de carga). De frente ou de lado,
+  disparada até `chega` (freando sempre, M1/M2 caíam). O chamado (`defesa.js chamadoDaPressao`: o último escolhido dentro
+  da validade, com o pedido valendo) não entra no corte do passe (`ia-tatica.js vaiNaLivre`): segue a PRESSÃO até o ponto
+  de chegada. Sem o botão nada disso liga (o painel IA × IA não muda).
 
 ### Testes
 `teste-cabeceio` (canhão de cruzamentos, pose, teleporte, partidas demo, humano) e `teste-defesa-corrida` (humano

@@ -82,10 +82,11 @@ export function alcanceGoleiro(tau, fator = 1) {
  * ajustada pelos atributos, e zero além do alcance físico (com folga). `partida`: soma GOLEIRO.logit.c0Partida
  * (o equilíbrio da partida; o treino não muda).
  */
-export function chanceDefesa(lateral, dChute, altura, alcance, attr, partida = false, tVoo = null) {
+export function chanceDefesa(lateral, dChute, altura, alcance, attr, partida = false, tVoo = null, c0Partida = null) {
   const L = GOLEIRO.logit;
   const nivel = ((attr.reflexo + attr.mergulho + attr.posicionamento) / 3 - 72) / 100;
-  let lg = L.c0 + (partida ? L.c0Partida : 0) + L.cLat * lateral + L.cDist * dChute + L.cAlt * altura + L.attr * nivel;
+  // (c0Partida: o do pênalti, GOLEIRO.penalti.c0Partida — a calibração dele é a própria)
+  let lg = L.c0 + (partida ? (c0Partida ?? L.c0Partida) : 0) + L.cLat * lateral + L.cDist * dChute + L.cAlt * altura + L.attr * nivel;
   // (partida) a bola bem mais lenta que um chute da mesma distância (cabeceio, chute fraco, desvio) dá ao goleiro o tempo a
   // mais: a logística foi ajustada com chutes (~20 m/s); cTempo por s além de dChute / vRef
   if (partida && tVoo != null) lg += L.cTempo * Math.max(0, tVoo - dChute / L.vRef);
@@ -147,7 +148,8 @@ export function lerChute(m, j) {
   const alturaOk = plano.y < GOLEIRO.alturaMax + (dist < 1 ? 0.2 : 0);
   const dChute = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   // (o tempo de voo só conta no cabeceio a gol: GOLEIRO.logit.cTempo)
-  let pDefesa = alturaOk ? chanceDefesa(dist, dChute, plano.y, alcance, a, !!m.partida, m.voo && m.voo.tipo === 'cabeceio' ? plano.ticks * DT : null) : 0;
+  let pDefesa = alturaOk ? chanceDefesa(dist, dChute, plano.y, alcance, a, !!m.partida, m.voo && m.voo.tipo === 'cabeceio' ? plano.ticks * DT : null,
+    ehPenalti ? GOLEIRO.penalti.c0Partida : null) : 0;
   // Panenka com o goleiro que ficou no meio: tempo de sobra — pega (encaixa) a que alcança, como o recuo; a que passa
   // por cima dele ainda alta ele busca voltando para a linha (recuoBolaAlta)
   const panenkaNoMeio = panenka && !palpiteErrado && j.palpite === 0;

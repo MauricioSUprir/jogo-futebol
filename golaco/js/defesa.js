@@ -321,6 +321,19 @@ export function pedidoPressao(m, j) {
   (m.pedidoPressao ??= {})[j.time] = m.tick;
 }
 
+/**
+ * j é o chamado da PRESSÃO do time (o último escolhido de pressionadorDe dentro da validade do pedido, com o pedido
+ * valendo)? No passe do adversário ele segue a PRESSÃO até o ponto de chegada (entradaPressao), não entra no corte do
+ * passe (ia-tatica.js vaiNaLivre): cortando, ele saía da aproximação da PRESSÃO e, com o domínio do recebedor longe
+ * dele, recomeçava do parado (teste-pressao-humano M5, o chamado que corre de verdade). Sem o botão, sempre false (a
+ * partida IA × IA não muda).
+ */
+export function chamadoDaPressao(m, j) {
+  if (!pressaoPedida(m, j.time)) return false;
+  const c = m.pressaoHumano?.[j.time];
+  return !!c && c.ult === j.id && c.ultTick >= 0 && m.tick - c.ultTick <= seg(P.validade);
+}
+
 /** O pedido de PRESSÃO do time está valendo neste tick? */
 export function pressaoPedida(m, time) {
   const t = m.pedidoPressao?.[time];
@@ -462,7 +475,20 @@ export function entradaPressao(m, j) {
       tx = d0.x + nx * P.contorno + s.cvx * P.leadDisputa; tz = d0.z + nz * P.contorno + s.cvz * P.leadDisputa;
     }
   }
-  if (longe) return direto(j, tx - j.x, tz - j.z, true);
+  if (longe) {
+    // aproximação em disparada; vindo POR TRÁS do condutor, a velocidade com que fecha nele fica na que ainda freia antes
+    // do corpo dele (v² = 2·P.freio·folga, o freio do corpo, JOGADOR.freio): chegando a P.chega m na disparada (6 m/s
+    // pedem ~2,9 m de freio) ele atropelava por trás o condutor quase parado — carga (teste-pressao-humano M4: 5 → 11
+    // faltas com o botão, 10 delas carga). De frente ou de lado não (é disputa, não falta): freando sempre, M1/M2 caíam
+    const ex = tx - j.x, ez = tz - j.z, el = MD.hypot(ex, ez) || 1, vA = j.par.vArrancada;
+    let vx = (ex / el) * vA, vz = (ez / el) * vA;
+    const nx = (d0.x - j.x) / (dc || 1), nz = (d0.z - j.z) / (dc || 1);
+    const ap = (vx - s.cvx) * nx + (vz - s.cvz) * nz;
+    const lim = Math.sqrt(2 * P.freio * Math.max(0, dc - P.colado - 2 * JOGADOR.raio));
+    if (rx * _pc.ux + rz * _pc.uz >= 0 || ap <= lim) return direto(j, ex, ez, true);
+    vx -= (ap - lim) * nx; vz -= (ap - lim) * nz;
+    return entradaVelocidade(j, vx, vz, j.pressaoH ??= { corre: false }, 0);
+  }
   // disputa pela VELOCIDADE (como o CONTER): a do condutor + P.ganho × (ponto − corpo), chegando no máximo a P.aproxMax
   // m/s mais rápido que ele — o para() reduzia a intensidade perto do ponto e soltava o CORRER, e o condutor que arrancava
   // fugia; por trás dele, perto (P.trasPerto m), a aproximação fica abaixo da carga por trás (P.trasAprox m/s)
