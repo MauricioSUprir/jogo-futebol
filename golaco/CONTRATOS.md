@@ -1377,7 +1377,9 @@ corrido só na partida.
   `partida.js teleportar` zera `j.cab` e `j.disputaAlta` (antes os pés ficavam no ponto de pouso velho, a até 15 m do
   corpo). Na saída do chão (`td`), o plano velho (`planoVelho`: a bola com dono, ou a trajetória prevista agora a mais de
   `CABECEIO.velho` m do ponto do contato — outro tocou nela, bateu num corpo) cancela o pulo (antes ~3% dos pulos eram
-  para a bola já a 7–8 m dali). Teste: `teste-cabeceio` F.
+  para a bola já a 7–8 m dali). Teste: `teste-cabeceio` F. A cena da comemoração (`comemoracao.js`) copia `j.cab` de quem
+  já saiu do chão e termina o pulo (`passoCorpoNoAr`/`pesNoAr`, como o `sim.js`); o pulo que ainda não saiu do chão não
+  sai (teste-comemoracao 14).
 - `bolaAltaNoCorpo`: o toque aéreo marcado (`c.toque.tipo = 'aereo'`) vira cabeceio só com o pulo planejado para o tick
   (`j.cab.tc === m.tick`) e a cabeça DESENHADA na bola (`cabecaNaBola`: pose do tick, superfícies a até `CABECEIO.folga`);
   senão o peito/coxa (bola até `alturaPeito[1] + 0,15`). Marcação: `pontoDeCabeceio(m, j, querCabeca, raioMax)` — o 1º
