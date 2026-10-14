@@ -25,6 +25,7 @@ import { difAng } from './mat.js';
 import { passoCorpo, passoPassada, passoPeDesenhado } from './jogador.js';
 import { pose, alturaQuadril, J, NJ, ik, ikBraco } from './anim.js';
 import { mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho } from './goleiro.js';
+import { passoCorpoNoAr, pesNoAr } from './cabeceio.js';
 
 const C = COMEMORACAO;
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
@@ -171,6 +172,10 @@ function copiaJogador(j) {
   const c = { ...j };
   c.pes = [{ ...j.pes[0] }, { ...j.pes[1] }];
   c.mergulho = j.posicao === 'GOL' && j.mergulho ? clonar(j.mergulho) : null;
+  // pulo do cabeceio (cabeceio.js; contraprova de 14/10): quem já saiu do chão termina o pulo (o gol de cabeça de muito
+  // perto sai com ele no ar — antes a cena o andava pela passada no chão e a pelve caía 0,19 m num tick); o pulo que ainda
+  // não saiu do chão não sai mais. Cópia: a cena nunca escreve no plano do mundo
+  c.cab = j.cab && (j.cab.saiu || !(j.cab.h > 0)) ? clonar(j.cab) : null; c.disputaAlta = null;
   c.cond = null; c.defesa = null; c.travaApoio = null; c.alvo = null; c.recebe = null; c.corrida = null; c.carga = null;
   c.pedido = null; c.mira = null; c.miraAuto = null; c.conter = null; c.defH = null; c.salto = null; c.arremesso = null;
   c.segura = null; c.saindo = null; c.ia = null; c.iaA = null; c.iaT = null; c.recep = null; c.contorno = null;
@@ -246,6 +251,12 @@ function para(c, vel, rumo) {
   const d = c._d;
   d.dx = Math.cos(rumo); d.dz = Math.sin(rumo); d.vel = vel; d.rumo = rumo;
   return d;
+}
+
+/** O corpo de j anda pelo pulo do cabeceio no passo que leva ao estado do tick t (da saída ao pouso; sim.js voando)? */
+function voandoCab(j, t) {
+  const c = j.cab;
+  return !!c && c.saiu && t > c.td && t <= c.tp;
 }
 
 /** Fronteiras das fases depois que a finalização começa (tick c.k). */
@@ -390,6 +401,9 @@ export function passoCena(c) {
     if (a.desliza) { deslizar(a); continue; }
     if (a.ajoelhado) continue;
     if (a.goleiro && j.mergulho && mergulhoAtivo(j, mF.tick + 1)) { passoMergulho(mF, j); a.mergulha = true; a.fixo = true; continue; }
+    // no ar (pulo do cabeceio, até o pouso): o corpo segue a velocidade da saída, como na simulação (sim.js)
+    a.voa = voandoCab(j, mF.tick + 1);
+    if (a.voa) { passoCorpoNoAr(mF, j); continue; }
     if (a.papel === GOLEIRO_SOFREU || a.papel === CONTRA) a.fixo = a.agacha > 0.02;
     const d = desejo(c, a, t);
     if (a.desliza) { deslizar(a); continue; }
@@ -399,9 +413,10 @@ export function passoCena(c) {
   for (const a of c.ordem) {
     if (a.mergulha) { fixarMergulho(mF, a.j); pesMergulho(mF, a.j); continue; }
     if (a.desliza || a.ajoelhado) continue;
+    if (a.voa) { pesNoAr(mF, a.j); continue; } // os pés no ar e plantados no pouso (cabeceio.js)
     passoPassada(a.j, false, PASSO, null, null);
   }
-  for (const a of c.ordem) if (!a.mergulha && !a.desliza && !a.ajoelhado) passoPeDesenhado(a.j, mF, PASSO);
+  for (const a of c.ordem) if (!a.mergulha && !a.desliza && !a.ajoelhado && !a.voa) passoPeDesenhado(a.j, mF, PASSO);
   mF.tick++;
   c.k++;
   for (const a of c.ordem) if (!a.desliza && !a.ajoelhado) a.j.quadril = alturaQuadril(a.j, mF);
