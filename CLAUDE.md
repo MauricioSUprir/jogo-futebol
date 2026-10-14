@@ -143,6 +143,23 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   nunca passa por cima da bola) e de folga máxima (≤ 0,8 m); corte = a bola sai na linha do analógico (±20°) com o
   corpo segurando o rumo até o toque; domínio pela linha do analógico com erro por atributo/velocidade/pressão;
   proteção = o corpo gira em volta da bola, de costas para o marcador.
+  **Condução curta** (dono, 12/10: "em tese é uma condução mais curtinha, com a bola mais no pé"; `golaco/conducao-curta`):
+  só o RITMO muda — passos entre toques pela velocidade (`CONDUCAO.passosPorToque`: 1 até 3,5 m/s, 1,5 a 5,6, 2 na
+  disparada; 1 e 2 alternados sem rng; guardas: domínio, inversão, freada, analógico > `angRitmo`, passe/chute
+  carregando); gesto do analógico no tick do toque espera 1 tick ou sai toque de FREIO (`saltoTick`); o toque não
+  manda a bola na placa; a chuteira para na superfície da bola (só o desenho: `pe.ox/oz`, hash igual). Trote 1,49 →
+  2,88 toques/s e 1,98 → 0,99 m; corrida 3,0 → 2,2 m por toque; bola–corpo trote 0,48 → 0,42 m (IA 0,67 → 0,588 em 6 partidas, 0,595 em 12: meta ≤ 0,59 com 12 pendente);
+  chuteira dentro da bola 61 → 46%; metas PENDENTE do `teste-conducao --estrito` que passaram a valer: bola–pé no trote
+  p5–p95 0,02–0,67 → 0,40–0,58 m e tornozelo p95 0,33 → 0,30 m (só a chuteira segue pendente).
+  Teste `teste-conducao-curta` (CI; `--js`, `--ia 12`), casos novos no `teste-cortes` e `teste-perda --cauda 120`
+  (antes do merge). Ajuste fino do dono: o 3,5 da tabela (trote "picotado"). Defesa recalibrada pela mesma régua
+  (commit 8 da especificação; a bateria reprovava teste-parado, teste-partida, teste-movimento e teste-pressao-humano):
+  distâncias da bola "colada/solta" × 0,87 e a bola ENCOSTADA no marcador com os dois andando juntos é disputada
+  (`ACOES.boteIA.encostada/encostadaVrel`) — antes o condutor que empurrava a bola no marcador nunca a perdia.
+  Contraprova (13/10): o main.js lê o analógico uma vez por quadro — a 30 qps o 2º passo do quadro vai marcado `repete`
+  (a mesma leitura) e o toque que espera o gesto espera a próxima leitura NOVA (`j.leituraTick`); sem isso, no celular a
+  30 qps o toque saía com a leitura do meio do gesto (giro de 180°: 2,5 m comum, 4,2 m no tick do toque; `teste-cortes`,
+  entrada a 30 qps, ≤ 0,35 m). A 60 qps nada muda (hash-igual e hash-partida IGUAIS).
 - Etapa 2 (`js/acoes.js`, `goleiro.js`, `ia.js`, `sessao.js` modo 'ataque'): botões carregam força e soltam pedido
   (`j.carga`/`j.pedido`, mira guardada em `j.mira`); toque de ação no pé livre; troca de controle SEMPRE por
   `assumirControle` (carga/pedido vão junto; TROCAR pela borda do time e nunca com a bola no pé). Números da
@@ -150,7 +167,7 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   biomecânica de chute, mergulho e cabeceio). Testes: `teste-passes`, `teste-chutes`, `teste-goleiro` (canhão de
   bolas ±10 pontos da logística), `teste-aereo`, `teste-treino` (treino com a IA não trava), `teste-recomeco`;
   `teste-patinacao` mede também o treino de ataque (10 jogadores). Pendências para o dono: corte de 90° a ~7 m/s em
-  2–3 apoios (PESQUISA pede 3–5); tornozelo do pé que toca até a bola p95 0,33 m (meta ≤ 0,30, só `--estrito`);
+  2–3 apoios (PESQUISA pede 3–5); tornozelo do pé que toca até a bola p95 0,33 m (meta ≤ 0,30, só `--estrito`; 0,30 com a condução curta);
   falta com curva chega a ~24 m/s aos 27 m (vídeo: 17–21).
 - Correções depois da Etapa 2 (`ia.js`, `sim.js`, `jogador.js`, `goleiro.js`; constantes em `config.js` IA e PASSADA):
   goleiro do humano com a bola na mão repõe sozinho em 3 s (`GOLEIRO.esperaHumano`), TROCAR funciona com a bola na
@@ -395,6 +412,24 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   pegava todo chute a ≤ 1 m do corpo), colado na linha do gol o goleiro com a bola nas mãos não vira para o gol nem a
   solta além dela (`GOLEIRO.soltaLinha`; virar fazia gol contra), a câmera corta no `corteBolaParada` do tiro de meta
   (testes: `teste-goleiro-regras` G3c/G5d, `teste-estadio` item 13).
+- **Cavadinha com dois toques no CHUTE** (dono, 12/10; `acoes.js`, `ACOES.cavadinha`, contrato no CONTRATOS.md): o 2º
+  aperto do CHUTE (K, B, CHUTE do celular — o mesmo botão, nada novo na tela) antes de o chute do 1º tocar na bola vira
+  cavadinha, de qualquer lugar (também pênalti/tiro livre direto), mirando pelo analógico; a força do 2º toque deixa mais
+  alta. Só do humano (`j.porHumano`: entrada sem `ia`); um toque do humano nunca é cavadinha; a IA (e a demo) seguem com
+  a automática do goleiro adiantado. Medido: o chute sai 50 ms depois de soltar, então o 1º toque RÁPIDO (< 0,18 s)
+  espera a janela de 0,15 s (contato +117 ms parado; correndo, no 1º apoio depois dela, até +267 ms) — só o aperto NOVO
+  (`carga.novo`; o botão segurado de antes da troca de controle chuta na hora); o chute carregado sai no mesmo tick de
+  antes. Bola parada: o CHUTE só cobra pênalti (Panenka: 2 gols/12, 9 fora — erro da cavadinha × pressão do pênalti;
+  calibrar é decisão do dono) e tiro livre direto; no resto dois toques não fazem nada; a cobrança da demo leva `iaCobra`
+  (a IA repete o botão na cobrança — sem a marca virava cavadinha; a página `?demo=1` passa a mesma marca em toda a
+  entrada da demo — `main.js entradaDoTime` — e os achadores `comoPagina` também). Entrada: soltar e apertar de novo
+  sem passo no meio vira solto + apertado (`entrada.js` `passoUsou`/`limparPulsos(true)`; antes o toque duplo rápido
+  virava um aperto só; fora do laço — replay — `limparPulsos()` zera também o que o passo viu, e o `passoUsou` vem
+  ANTES do passo: a tecla segurada no começo do replay, solta e apertada de novo, pula). De longe a pedida nunca sai mais
+  rápida que o chute mais forte do jogador (sem o teto saía a até ~70 m/s). Limite medido (teste-cavadinha L): parado,
+  intervalo > 150 ms ou 1º toque ≥ 0,18 s = chute. hash-igual IGUAL; hash-partida: demo IGUAL, humano IGUAL com a janela zerada e a cavadinha
+  desligada (só a cavadinha muda a partida). Teste: `teste-cavadinha` (padrão; `--js` mede a base) e `teste-controles`
+  (K, B, CHUTE duas vezes, reaperto no mesmo quadro, repetição da tecla, toque cancelado). Pesquisa: `PESQUISA-ETAPA2.md` §2.7a.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

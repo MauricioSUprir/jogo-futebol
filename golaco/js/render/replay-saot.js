@@ -302,7 +302,7 @@ export function enquadrarSaot(anel, cena, aspecto, out = {}) {
             // solidoEm) só no candidato que enquadra ou que seria o novo "menos ruim" — o MESMO quadro escolhido de antes
             // (ok = livre e enquadra; o menos ruim só entre os livres), sem varrer sólidos à toa (S9)
             medirQuadro(cena, M, el, az, d, tanH, tanV, q, true);
-            const cabe = q.fora === 0 && q.sobre <= S.sobreposicaoMax;
+            const cabe = q.fora === 0 && q.sobre <= S.sobreposicaoMax && (nivel === 2 || anguloNaMeta(q, lado));
             const pena = q.fora * 4 + Math.max(0, q.sobre - S.sobreposicaoMax) + (lado === 'oposto' ? 0.5 : 0) + nivel;
             if (!cabe && pena >= menosPena) continue;
             q.livre = cameraLivre(q.cx, q.cy, q.cz, _alvos);
@@ -318,6 +318,17 @@ export function enquadrarSaot(anel, cena, aspecto, out = {}) {
   // nada livre (não acontece no campo): o primeiro candidato, do alto
   medirQuadro(cena, M, S.elFim[1], S.desvios[0], S.dist[1], tanH, tanV, q);
   return preencherEnq(out, fov, q, 'tv', false, 0);
+}
+
+/** O ângulo de verdade do candidato (câmera → ponto mirado) cabe em S.meta? O ponto mirado sai do meio dos dois quando
+ *  um fica perto e o outro longe da câmera, e aí o desvio nominal (`desvios`) não é o que aparece na tela. */
+function anguloNaMeta(q, lado) {
+  const dx = q.cx - q.tx, dy = q.cy - q.ty, dz = q.cz - q.tz, d = Math.hypot(dx, dy, dz);
+  const el = Math.asin(dy / d) / GRAU, az = Math.atan2(dx, dz) / GRAU;
+  let dv = lado === 'tv' ? az : 180 - az;
+  if (dv > 180) dv -= 360; else if (dv < -180) dv += 360;
+  const adv = Math.abs(dv), e = 1e-6;
+  return el >= S.meta.el[0] - e && el <= S.meta.el[1] + e && adv >= S.meta.desvio[0] - e && adv <= S.meta.desvio[1] + e;
 }
 
 /** Preenche o quadro final pela câmera e pelo alvo do candidato: coordenadas esféricas em volta do alvo. */

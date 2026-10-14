@@ -69,7 +69,8 @@ export function pePrevisto(j, p, comBola) {
   const pe = j.pes[p];
   if (pe.apoio) return { x: pe.x, y: TORN, z: pe.z, apoio: true, rumo: pe.rumo, u: 0 };
   const { u, meioApoio } = progressoBalanco(j, p, comBola);
-  return { x: pe.tx, y: pe.ty, z: pe.tz, apoio: false, rumo: pe.lrumo, u, meioApoio };
+  // + (ox, oz): só o desenho — a chuteira para na superfície da bola (jogador.js passoPeDesenhado; zero no pouso)
+  return { x: pe.tx + pe.ox, y: pe.ty, z: pe.tz + pe.oz, apoio: false, rumo: pe.lrumo, u, meioApoio };
 }
 
 /** IK de dois ossos da perna: quadril H, alvo T, polo (direção para onde o joelho aponta). Exportada para a cena de

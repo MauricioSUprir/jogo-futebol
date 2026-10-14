@@ -11,7 +11,7 @@
 //   fase      passada em PASSOS (float): o pé j toca o chão quando fase cruza um inteiro n
 //             com n ≡ j (mod 2); fica no chão por 2·carga passos.
 
-import { JOGADOR, PASSADA, ATRIBUTOS_PADRAO, ENTRADA, PASSO, GESTO, CONDUCAO } from './config.js';
+import { JOGADOR, PASSADA, ATRIBUTOS_PADRAO, ENTRADA, PASSO, GESTO, CONDUCAO, BOLA } from './config.js';
 import { clamp, difAng, normAng, tabela, porAtributo, lerp } from './mat.js';
 import { MD } from './matdet.js';
 
@@ -48,7 +48,7 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     par,
     // intenção (já em coordenadas do mundo)
     ix: MD.cos(rumo), iz: MD.sin(rumo), imag: 0, botoes: 0, botoesAnt: 0,
-    intRumo: rumo, intW: 0,
+    intRumo: rumo, intW: 0, saltoTick: -1, leituraTick: -1,
     // controle de bola (preenchido por conducao.js)
     cond: null,
     // alvo de movimento sobrescrito pelo controlador (busca da bola, proteção, treino)
@@ -69,6 +69,7 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     pedidoPedalada: undefined, ladoOlha: undefined, ritmo: undefined, ultLanc: undefined,
     ultMod: undefined, descansoBote: undefined, defH: undefined, conter: undefined, descanso: undefined,
     contorno: undefined, recep: undefined,
+    porHumano: undefined, // os botões deste passo vêm da pessoa (sim.js; cavadinha por dois toques, acoes.js)
   };
   return j;
 }
@@ -96,6 +97,9 @@ function criarPe(x, z, rumo, lado) {
     puxa: 0,
     gx: x + rx * s * PASSADA.afastamentoLateral,
     gz: z + rz * s * PASSADA.afastamentoLateral,
+    // só o DESENHO: deslocamento do pé desenhado no ar para a chuteira parar na superfície da bola (passoPeDesenhado).
+    // A pose soma (ox, oz) ao pé desenhado; a física nunca lê (o pouso, o mergulho e o hash usam tx, tz)
+    ox: 0, oz: 0,
     // pé DESENHADO no balanço (tornozelo: tx, ty, tz), integrado pela simulação com a
     // velocidade de um pé humano (passoPeDesenhado); bx, bz = ponto da trajetória do balanço
     // sem o gesto do toque, k = peso do perfil do balanço no último tick. pendente = a fase já
@@ -476,6 +480,7 @@ function plantarPe(j, p) {
 }
 
 const TORN = JOGADOR.alturaTornozelo;
+const BOLA_RAIO = BOLA.raio;
 // Arco do pé de fora na pedalada (por cima da bola): raio para o lado, altura do tornozelo acima
 // do normal, recuo atrás do centro da bola e as frações da pedalada em que o pé entra no arco,
 // começa a sair dele e pousa (sim.js: o pé de fora pousa a 0,85 da pedalada). A chuteira (cápsula
@@ -526,9 +531,13 @@ export function progressoBalanco(j, p, comBola) {
 export function passoPeDesenhado(j, m, dt) {
   const comBola = m.posse === j.id;
   const pd = j.cond && j.cond.pedalada;
+  // a bola é "do pé" dele (com a posse ou dominando, rolando devagar o bastante para o pé acompanhar): a chuteira para
+  // na superfície dela (só o desenho: pe.ox, pe.oz)
+  const bv = m.bola.v, ct = j.cond && j.cond.toque;
+  const supBola = (comBola || !!(ct && ct.tipo === 'dominio')) && bv.x * bv.x + bv.z * bv.z < GESTO.superficieVBola * GESTO.superficieVBola;
   for (let p = 0; p < 2; p++) {
     const pe = j.pes[p];
-    if (pe.apoio) { pe.tx = pe.x; pe.ty = TORN; pe.tz = pe.z; continue; }
+    if (pe.apoio) { pe.tx = pe.x; pe.ty = TORN; pe.tz = pe.z; pe.ox = 0; pe.oz = 0; continue; }
     const { u, livre, total, s } = progressoBalanco(j, p, comBola);
     pe.chegou = u >= 1;
     const k = lerp(u, suaveU(u), PASSADA.perfilBalanco);
@@ -580,7 +589,69 @@ export function passoPeDesenhado(j, m, dt) {
     const dh = MD.hypot(hx, hz);
     if (dh > vh) { hx *= vh / dh; hz *= vh / dh; }
     pe.tx += hx; pe.ty += dy; pe.tz += hz;
+    // SÓ O DESENHO (condução curta, 12/10): o pé no ar vai ATÉ a bola dele, nunca para dentro dela. O deslocamento
+    // (ox, oz) que a pose soma ao pé desenhado persegue o que tira a chuteira da bola, com dois limites que fazem o pé
+    // nunca saltar nem pousar fora do ponto plantado: (1) por tick, só o que sobra da velocidade de um pé humano
+    // (GESTO.velSuperficie) depois do que o pé desenhado já andou; (2) no máximo o desvio do gesto pelo tempo livre do
+    // pé (GESTO.velDesvio × livre: zero na saída do chão e no pouso). Não muda tx/tz: a passada (pouso), o goleiro e o
+    // hash não o leem
+    let qx = 0, qz = 0;
+    // (devagar não: girando no lugar o pé pousa embaixo da bola — entra de superficieV[0] a superficieV[1] m/s)
+    const ws = supBola ? clamp((s - GESTO.superficieV[0]) / (GESTO.superficieV[1] - GESTO.superficieV[0]), 0, 1) : 0;
+    if (ws > 0 && chuteiraForaDaBola(pe.tx, pe.ty, pe.tz, MD.cos(pe.lrumo), MD.sin(pe.lrumo), -0.35 * MD.sin(Math.PI * u), m.bola.p)) {
+      qx = _fora.x * ws; qz = _fora.z * ws;
+    }
+    if (qx !== 0 || qz !== 0 || pe.ox !== 0 || pe.oz !== 0) {
+      const ks = clamp(s / GESTO.velRef, 0, 1);
+      const sobra = Math.max(0, (GESTO.velSuperficie[0] + GESTO.velSuperficie[1] * s) * dt - Math.sqrt(hx * hx + dy * dy + hz * hz));
+      let ex = qx - pe.ox, ez = qz - pe.oz;
+      const el = MD.hypot(ex, ez);
+      if (el > sobra) { ex *= sobra / el; ez *= sobra / el; }
+      let ox = pe.ox + ex, oz = pe.oz + ez;
+      const cap = lerp(GESTO.velDesvio[0], GESTO.velDesvio[1], ks) * livre, ol = MD.hypot(ox, oz);
+      if (ol > cap) { ox *= cap / ol; oz *= cap / ol; }
+      pe.ox = ox; pe.oz = oz;
+    }
   }
+}
+
+// Chuteira (cápsula tornozelo–ponta) como a pose a desenha (anim.js: ponta 0,17 m à frente do tornozelo, 0,055 m
+// abaixo dele, inclinada no balanço; raio do segmento da chuteira 0,045 m)
+const PONTA = 0.17, PONTA_DESCE = 0.055, R_CHUTEIRA = 0.045;
+const _fora = { x: 0, z: 0 };
+/** Distância² do ponto (px, py, pz) ao segmento a → a + u (l2 = |u|²). */
+function dist2Seg(px, py, pz, ax, ay, az, ux, uy, uz, l2) {
+  let k = l2 > 1e-12 ? ((px - ax) * ux + (py - ay) * uy + (pz - az) * uz) / l2 : 0;
+  k = k < 0 ? 0 : k > 1 ? 1 : k;
+  const dx = ax + ux * k - px, dy = ay + uy * k - py, dz = az + uz * k - pz;
+  return dx * dx + dy * dy + dz * dz;
+}
+/**
+ * O pé no ar com o tornozelo em (ax, ay, az), a ponta pela direção (pfx, pfz) e a inclinação incl: se a chuteira entra
+ * na bola b, escreve em _fora o deslocamento HORIZONTAL que a põe na superfície dela (centro a raio + R_CHUTEIRA +
+ * GESTO.superficie) e devolve true. A direção é a do centro da bola para o tornozelo (o pé recua por onde veio: atrás
+ * da bola, na direção do toque); a distância é a saída do centro da bola da cápsula ao longo dela (a cápsula é
+ * convexa: a saída é única). Sem alocar.
+ */
+function chuteiraForaDaBola(ax, ay, az, pfx, pfz, incl, b) {
+  const ci = MD.cos(incl);
+  const ux = pfx * PONTA * ci, uz = pfz * PONTA * ci;
+  const uy = Math.max(0.025, ay - PONTA_DESCE + PONTA * MD.sin(incl)) - ay;
+  const l2 = ux * ux + uy * uy + uz * uz;
+  const need = BOLA_RAIO + R_CHUTEIRA + GESTO.superficie, need2 = need * need;
+  if (dist2Seg(b.x, b.y, b.z, ax, ay, az, ux, uy, uz, l2) >= need2) return false;
+  // da bola para o tornozelo (um pouco de "para trás do pé" só decide com o tornozelo no centro da bola)
+  let nx = ax - b.x - 0.02 * pfx, nz = az - b.z - 0.02 * pfz;
+  const nl = MD.hypot(nx, nz) || 1;
+  nx /= nl; nz /= nl;
+  // saída do centro da bola da cápsula andando para −n (o mesmo que o pé andar +n): bisseção
+  let lo = 0, hi = need + PONTA + 0.05;
+  for (let it = 0; it < 16; it++) {
+    const sm = 0.5 * (lo + hi);
+    if (dist2Seg(b.x - nx * sm, b.y, b.z - nz * sm, ax, ay, az, ux, uy, uz, l2) < need2) lo = sm; else hi = sm;
+  }
+  _fora.x = nx * hi; _fora.z = nz * hi;
+  return true;
 }
 
 /** Copia só o estado cinemático (para previsão). */
