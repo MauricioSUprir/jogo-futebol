@@ -29,7 +29,7 @@ import { estadoIA } from './ia-tatica.js';
 import { chanceFaltaBote, montarFalta, registrarFalta } from './faltas.js';
 import { registrarToque } from './regras-goleiro.js';
 
-const C = DEFESA_HUMANO.conter, D = DEFESA_HUMANO.dividida, P = DEFESA_HUMANO.pressao;
+const C = DEFESA_HUMANO.conter, D = DEFESA_HUMANO.dividida, P = DEFESA_HUMANO.pressao, SA = DEFESA_HUMANO.semAtropelar;
 const seg = s => Math.round(s / PASSO);
 const TICKS_BOTE = seg(D.tempo);
 const SEM_CORRER = ~BOTAO.CORRER;
@@ -422,6 +422,49 @@ function chegaFreando(j, o, vx, vz) {
   return true;
 }
 const _vf = { x: 0, z: 0 };
+
+/**
+ * Sem atropelar (sim.js, só na partida): os jogadores do time jogado por uma pessoa (o controlado, os companheiros da IA,
+ * para quem o controle troca no meio da corrida, e o chamado da PRESSÃO na disputa) chegam freando no
+ * condutor adversário (ou no recebedor do passe dele) — a velocidade pedida PARA DENTRO dele (a componente na linha até o corpo dele) fica no máximo na
+ * dele se afastando, menos o que ele pode frear no tempo de reação de quem vem atrás (SA.reacao · JOGADOR.freioGiro; ≥ 0),
+ * + √(SA.chega² + 2 · SA.freio · folga) (folga = distância − 2 raios): encosta a ~SA.chega m/s,
+ * abaixo da carga por trás (FALTAS.carga.vMin). A de lado fica (contorna para disputar de lado), e ninguém é mandado para
+ * trás (o condutor que vem para cima não empurra o defensor para o próprio gol). A DIVIDIDA saindo (j.defH.bote) não muda.
+ * Pedido do dono, 15/10 ("faltas muito forçadas e sem sentido"): com o analógico só na bola, o corpo chegava a 5–6 m/s
+ * no condutor quase parado; ele virava de costas e a trombada era carga por trás (falta em 50%) — 1,4 a 3,3 faltas por
+ * partida de quem só corria atrás (tools/teste-faltas-sentido.mjs). Devolve mv (o mesmo objeto, se não limitou) ou um
+ * novo {…mv, dx, dz, vel}.
+ */
+export function semAtropelar(m, j, mv) {
+  if (j.defH && j.defH.bote) return mv;
+  // o condutor adversário ou, no passe dele, o recebedor (chegando no domínio dele por trás, a trombada vira carga assim
+  // que a bola chega)
+  let o = condutorAdversario(m, j);
+  if (!o && m.posse == null) { const pv = passeAdversario(m, j.time); if (pv && pv.para != null) o = porId(m, pv.para); }
+  if (!o || o.time === j.time) return mv;
+  const rx = o.x - j.x, rz = o.z - j.z, dc = MD.hypot(rx, rz);
+  if (dc < 1e-6) return mv;
+  // o chamado da PRESSÃO corre pela conta dele (entradaPressao: disparada até P.chega m e chegaFreando) e só cai nesta
+  // curva perto (na disputa): longe, ela o fazia frear a ~5 m e a PRESSÃO deixava de correr (teste-pressao-humano M5)
+  if (dc > P.chega && j.ia && j.ia.ramo === 'pressaoHumano' && m.tick - j.ia.tick <= 1) return mv;
+  const nx = rx / dc, nz = rz / dc;
+  let vx = mv.dx * mv.vel, vz = mv.dz * mv.vel;
+  const entra = vx * nx + vz * nz;
+  // a curva de freada que chega a SA.chega no contato freando SA.freio m/s² (metade da freada do corpo, 6,2 m/s²: o corpo
+  // acompanha a curva com folga). Com √(2·a·folga) + chega, a freada pedida crescia sem limite perto do contato e o corpo
+  // encostava a ~2–3 m/s
+  // quem vem atrás de um condutor que se afasta não conta com a velocidade inteira dele: ele pode frear (até
+  // JOGADOR.freioGiro m/s²) no tempo de reação SA.reacao s. Sem isso, colado a 0,45 m na mesma velocidade, o condutor freando
+  // a ~8 m/s² levava a trombada a ~2,2 m/s (carga) antes de o corpo de trás frear (6,2 m/s²)
+  const vAfasta = Math.max(0, o.vx * nx + o.vz * nz - SA.reacao * JOGADOR.freioGiro);
+  const max = vAfasta + Math.sqrt(SA.chega * SA.chega + 2 * SA.freio * Math.max(0, dc - 2 * JOGADOR.raio));
+  if (entra <= max) return mv;
+  vx -= (entra - max) * nx; vz -= (entra - max) * nz;
+  const v = MD.hypot(vx, vz);
+  if (v < 1e-6) return { ...mv, vel: 0 };
+  return { ...mv, dx: vx / v, dz: vz / v, vel: v };
+}
 
 /** Disparada na direção (dx, dz) chegando freando no adversário o (chegaFreando); sem limite, o direto de antes. */
 function corridaAte(j, o, dx, dz, st) {

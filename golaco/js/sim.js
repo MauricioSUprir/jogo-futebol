@@ -23,11 +23,11 @@ import { ACOES } from './config.js';
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
 import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe } from './ia-tatica.js';
 import { trocaAerea, alvoAereo, escolhaManual } from './troca.js';
-import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida } from './defesa.js';
+import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida, semAtropelar } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada, ladoPenaltiHumano } from './partida.js';
 import { planejarRecepcao } from './recepcao.js';
-import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta, chegada } from './faltas.js';
+import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta, chegada, guardarChoque } from './faltas.js';
 // Regras da mão do goleiro e o goleiro jogando com o pé (pedido do dono, 11/10; só na partida)
 import { maoPermitida, motivoSemMao, registrarToque, estadoMao, paredeAreaMao, naPropriaArea, goleiroNoPe } from './regras-goleiro.js';
 import { lateralSegurando, segurarLateral } from './lateral.js';
@@ -185,6 +185,9 @@ function colisaoCorpos(m) {
       p.x -= nx * pen * wp; p.z -= nz * pen * wp;
       q.x += nx * pen * wq; q.z += nz * pen * wq;
       const rv = (q.vx - p.vx) * nx + (q.vz - p.vz) * nz;
+      // (só na partida) a força com que cada um entrou no outro, antes da resposta que zera a aproximação: o bote do
+      // passo seguinte a lê (faltas.js forcaContato; contato a passo não é falta)
+      if (rv < 0 && m.partida) guardarChoque(m, p, q, nx, nz);
       // Etapa 4 (só na partida): carga por trás no condutor (faltas.js; o árbitro decide nas regras)
       if (rv < 0 && m.partida && m.posse != null && (p.id === m.posse || q.id === m.posse) && !m.faltaPendente) {
         const f = faltaNaCarga(m, p, q, -rv);
@@ -293,7 +296,7 @@ function boteIA(m, j) {
   const dono = jogadorPorId(m, m.posse);
   if (!dono || dono.time === j.time) return;
   const b = m.bola, cfg = ACOES.boteIA;
-  // Etapa 4 (só na partida): o marcador batido, colado atrás do condutor no ataque promissor, segura (falta tática)
+  // Etapa 4 (só na partida): o marcador batido, colado atrás do condutor, segura (no ataque promissor: falta tática)
   if (m.partida && !m.faltaPendente) {
     const ft = faltaTatica(m, j, dono);
     if (ft) { registrarFalta(m, ft); dono.vx *= 0.3; dono.vz *= 0.3; j.descansoBote = cfg.descanso; return; }
@@ -461,6 +464,10 @@ export function passo(m, entradas) {
     // CONTER (defesa.js): o controlado acompanhando o condutor fica de frente para ele (j.conter só
     // existe depois do CONTER apertado: o treino não muda)
     if (j.conter && m.posse !== j.id) mv = troncoConter(m, j, mv);
+    // partida: o time jogado por uma pessoa (o controlado, o chamado da PRESSÃO e os companheiros da IA — o controle troca
+    // para eles no meio da corrida) não atropela o condutor adversário (defesa.js semAtropelar: a carga de quem só corria
+    // atrás da bola; pedido do dono, 15/10). A demo (m.iaJoga) e o time da IA ficam como eram
+    if (m.partida && m.posse !== j.id && j.posicao !== 'GOL' && m.humanos.includes(j.time) && !m.iaJoga?.[j.time]) mv = semAtropelar(m, j, mv);
     // partida: na bola parada, ninguém entra no raio (e quem está dentro sai) pela locomoção
     if (m.parada) mv = paredeParada(m, j, mv);
     passoCorpo(j, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, PASSO, m.posse === j.id);

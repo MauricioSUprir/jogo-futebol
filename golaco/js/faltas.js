@@ -4,8 +4,10 @@
 // Onde nasce uma falta (ganchos, todos só com m.partida):
 //  - sim.js boteIA: o bote da IA que chega pode ser falta (chegada por trás/lado/frente, velocidade, desarme);
 //  - defesa.js resolverBote: a DIVIDIDA do humano que não ganha a bola com o pé no condutor;
-//  - sim.js colisaoCorpos: carga por trás no condutor fechando rápido;
-//  - sim.js boteIA (antes do alcance da bola): falta tática do marcador batido, colado no condutor no contra-ataque.
+//  - sim.js colisaoCorpos: carga por trás no condutor fechando rápido (e a memória do choque, guardarChoque: a força com
+//    que cada um entrou no outro, para o bote do passo seguinte — forcaContato);
+//  - sim.js boteIA (antes do alcance da bola): o marcador batido, colado por trás do condutor, segura — no contra-ataque é a
+//    falta tática (SPA, amarelo); fora dele, às vezes, sem cartão ('segurar').
 // A falta vira m.faltaPendente (a 1ª do passo) e o evento 'falta'; partida.js regrasPartida decide: vantagem, tiro livre
 // direto ou pênalti, e o cartão (agora ou na próxima parada).
 //
@@ -13,7 +15,7 @@
 // conduta (Regra 12.3): amarelo por parar um ataque promissor (SPA); vermelho por tirar uma chance clara de gol (DOGSO)
 // — dentro da própria área, tentando jogar a bola, é amarelo (e o pênalti).
 
-import { FALTAS, CAMPO, ACOES } from './config.js';
+import { FALTAS, CAMPO, ACOES, PASSO } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp } from './mat.js';
 import { uniforme } from './rng.js';
@@ -99,6 +101,8 @@ export function montarFalta(m, d, c, origem, tentouBola, excessivo = false) {
   let grau = 'imprudente';
   if (excessivo) grau = 'excessivo';
   else if (ch === 'tras' && v >= FALTAS.temerario) grau = 'temerario';
+  // a carga nas costas com força é no mínimo temerária (IFAB Regra 12.1: "sem ligar para o perigo" para o adversário)
+  else if (ch === 'tras' && origem === 'carga' && forcaContato(m, d, c) >= FALTAS.carga.temeraria) grau = 'temerario';
   const dogso = chanceClara(m, c, d);
   let cartao = null, motivo = grau;
   if (grau === 'excessivo') { cartao = 'vermelho'; motivo = 'forcaExcessiva'; }
@@ -115,6 +119,53 @@ export function registrarFalta(m, f) {
   m.faltaPendente = f;
   m.eventos.push({ tipo: 'falta', def: f.def, id: f.cond, time: f.time, x: f.x, z: f.z, area: f.area, grau: f.grau, cartao: f.cartao, motivo: f.motivo, origem: f.origem });
   return true;
+}
+
+/**
+ * Força do contato que o defensor `d` faz no condutor `c` (m/s, ≥ 0): a velocidade com que ELE entra no homem, limitada
+ * pela aproximação dos dois — min(v_d · n, (v_d − v_c) · n)⁺, n de d para c (IFAB Regra 12: imprudente é o desafio sem
+ * cuidado; o contato a passo, sem ninguém entrar no outro, é incidental). O defensor que recua ou só acompanha não entra
+ * (0); o condutor que recua para dentro de quem estava atrás não vira carga de quem estava atrás. A colisão dos corpos
+ * (sim.js colisaoCorpos) zera a aproximação no passo do choque: vale também a força guardada no choque com ele
+ * (guardarChoque) nos últimos FALTAS.forca.janela s. A mais de FALTAS.forca.alcance m do condutor: 0 (não há contato).
+ */
+export function forcaContato(m, d, c) {
+  const rx = c.x - d.x, rz = c.z - d.z, l = MD.hypot(rx, rz) || 1;
+  // longe do condutor (a bola entre os dois, ele a mais de FALTAS.forca.alcance m: corpo + perna esticada + o pé dele) não
+  // há contato possível — o bote na bola é desarme limpo
+  if (l > FALTAS.forca.alcance) return 0;
+  const nx = rx / l, nz = rz / l;
+  let f = Math.max(0, Math.min(d.vx * nx + d.vz * nz, (d.vx - c.vx) * nx + (d.vz - c.vz) * nz));
+  const ch = d.choque;
+  if (ch && ch.id === c.id && (m.tick - ch.tick) * PASSO <= FALTAS.forca.janela) f = Math.max(f, ch.f);
+  return f;
+}
+
+/**
+ * Memória do choque (sim.js colisaoCorpos, só na partida, ANTES da resposta que zera a aproximação): a força com que cada
+ * um entrou no outro (n de p para q) — a maior dos últimos FALTAS.forca.janela s (encostados correndo juntos, o choque
+ * de antes não vale para sempre: depois da janela vale a força de agora).
+ */
+export function guardarChoque(m, p, q, nx, nz) {
+  const rv = (p.vx - q.vx) * nx + (p.vz - q.vz) * nz; // > 0: fechando
+  if (rv <= 0) return;
+  const fp = Math.max(0, Math.min(p.vx * nx + p.vz * nz, rv)), fq = Math.max(0, Math.min(-(q.vx * nx + q.vz * nz), rv));
+  anotarChoque(m, p, q.id, fp);
+  anotarChoque(m, q, p.id, fq);
+}
+function anotarChoque(m, j, id, f) {
+  const ch = j.choque;
+  if (ch && ch.id === id && f < ch.f && (m.tick - ch.tick) * PASSO <= FALTAS.forca.janela) return;
+  if (ch) { ch.id = id; ch.tick = m.tick; ch.f = f; } else j.choque = { id, tick: m.tick, f };
+}
+
+/**
+ * Fator da força do contato no bote: 0 até FALTAS.forca.min m/s (contato incidental), sobe até FALTAS.forca.cheia e, de
+ * min para cima, × (1 + porForca · (f − min)): quanto mais forte o defensor entra no homem, mais o bote vira falta.
+ */
+export function fatorForca(f) {
+  const F = FALTAS.forca;
+  return clamp((f - F.min) / (F.cheia - F.min), 0, 1) * (1 + F.porForca * Math.max(0, f - F.min));
 }
 
 /** Chance de o bote/dividida de `d` em `c` ser falta (sem sortear). */
@@ -135,7 +186,12 @@ export function chanceFaltaBote(d, c) {
  */
 export function faltaNoBote(m, d, c) {
   if (!m.partida) return null;
-  const p = chanceFaltaBote(d, c);
+  // o bote da IA só sai com a bola mais perto do defensor que do condutor (ou parada/encostada nele): ele chega na bola
+  // antes do homem. Falta é o desafio sem cuidado que leva o corpo para dentro do condutor — pela força do contato
+  // (forcaContato × fatorForca). Contato a passo (o defensor recuando de frente, acompanhando de lado, a bola encostada)
+  // é desarme limpo. Pedido do dono, 15/10 ("faltas muito forçadas e sem sentido": 53% das faltas da IA no humano que
+  // conduz eram com o defensor entrando a < 1 m/s; tools/teste-faltas-sentido.mjs)
+  const p = Math.min(0.95, chanceFaltaBote(d, c) * fatorForca(forcaContato(m, d, c)));
   if (uniforme(m.rng) >= p) return null;
   const v = MD.hypot(d.vx, d.vz);
   const exc = chegada(d, c) === 'tras' && v >= FALTAS.excessivo && uniforme(m.rng) < FALTAS.excessivoP;
@@ -144,16 +200,21 @@ export function faltaNoBote(m, d, c) {
 
 /**
  * Falta tática (sim.js boteIA, antes do alcance da bola): o defensor da IA batido — atrás do condutor, colado (≤
- * FALTAS.tatica.dist) — num ataque promissor (não na chance clara: seria vermelho) puxa a camisa. Chance por passo; só
- * na partida.
+ * FALTAS.tatica.dist) — num ataque promissor (não na chance clara: seria vermelho) puxa a camisa (SPA: amarelo). Fora do
+ * ataque promissor ele também segura, menos (FALTAS.tatica.semSPA por passo; IFAB Regra 12.1, "segura o adversário": tiro
+ * livre direto, sem cartão — origem 'segurar'), e nunca na própria área (seria pênalti: ele evita). Chance por passo; só
+ * na partida. Pedido do dono, 15/10: sem as faltas sem contato, a IA × IA caía para ~1,1 falta por partida (real ~0,40 por
+ * minuto de bola rolando ≈ 3 por partida daqui); segurar quem passou é falta de verdade que só existia no contra-ataque.
  */
 export function faltaTatica(m, d, c) {
   if (!m.partida || m.posse !== c.id) return null;
   if (MD.hypot(d.x - c.x, d.z - c.z) > FALTAS.tatica.dist) return null;
   if (chegada(d, c) !== 'tras') return null;
-  if (!ataquePromissor(m, c) || chanceClara(m, c, d)) return null;
-  if (uniforme(m.rng) >= FALTAS.tatica.chancePorPasso) return null;
-  return montarFalta(m, d, c, 'tatica', false);
+  if (chanceClara(m, c, d)) return null;
+  const spa = ataquePromissor(m, c);
+  const p = spa ? FALTAS.tatica.chancePorPasso : naAreaDe(m, d.time, c.x, c.z) ? 0 : FALTAS.tatica.semSPA;
+  if (!(p > 0) || uniforme(m.rng) >= p) return null;
+  return montarFalta(m, d, c, spa ? 'tatica' : 'segurar', false);
 }
 
 /**
@@ -166,6 +227,13 @@ export function faltaNaCarga(m, a, b, rv) {
   if (a.id === m.posse) { c = a; d = b; } else if (b.id === m.posse) { c = b; d = a; }
   if (!c || d.time === c.time || d.posicao === 'GOL') return null;
   if (chegada(d, c) !== 'tras') return null;
+  // quem fez a carga é quem ENTROU: com o condutor travando na frente de quem vinha atrás devagar, a aproximação é dele
+  // (forcaContato: a velocidade do defensor para dentro do condutor, limitada pela aproximação)
+  if (forcaContato(m, d, c) < FALTAS.carga.vMin) return null;
+  // quem acabou de perder a bola (tocou nela há menos de FALTAS.carga.perdeu s) e segue a corrida no defensor que a tirou
+  // não deu carga: é o embalo da condução (o bote limpo não vira falta de quem perdeu a bola)
+  const ult = d.cond?.ult;
+  if (ult && (m.tick - ult.tick) * PASSO < FALTAS.carga.perdeu) return null;
   // na chance clara de gol quem volta evita o contato (seria vermelho): a carga vira falta bem menos
   const p = FALTAS.carga.chance * (chanceClara(m, c, d) ? FALTAS.carga.naChanceClara : 1);
   if (uniforme(m.rng) >= p) return null;

@@ -73,6 +73,8 @@ const LISTA = [
   // Etapa 4: regras (IFAB)
   ['impedimento (Regra 11: cenas, tiro livre indireto, árbitro independente) e acréscimos (Regra 7.3)', 'teste-impedimento.mjs'],
   ['faltas, vantagem, cartões e expulsão (Regra 12), tiro livre direto e pênalti (Regra 14)', 'teste-faltas.mjs'],
+  // Pedido do dono de 15/10: "faltas muito forçadas e sem sentido"
+  ['faltas com sentido: contato a passo não é falta, quem só corre atrás não atropela, a falta de verdade continua', 'teste-faltas-sentido.mjs'],
   // Pedidos do dono de 11/10 (regras e controles)
   ['jogador parado com a bola: a IA fecha e dá o bote (condutor lento)', 'teste-parado.mjs'],
   ['PRESSÃO perceptível: com × sem o botão (pareado), marca, um a mais na pressão', 'teste-pressao-humano.mjs'],

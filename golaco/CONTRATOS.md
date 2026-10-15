@@ -1230,6 +1230,26 @@ Sai em PRs menores; cada um acrescenta a sua parte aqui. Pesquisa e números em 
   API de testes: `__golaco.faltaDeTeste({area, cartao, doMeu})`.
 - Testes: `teste-faltas` (padrão): cenas, vantagem e volta, pênalti montado, 2º amarelo/expulsão/editor, goleiro
   expulso, canhão de 400 pênaltis, 12 partidas.
+- **Faltas com sentido** (pedido do dono, 15/10: "faltas muito forçadas e sem sentido"; `PESQUISA-ETAPA4.md` §3b):
+  `forcaContato(m, d, c)` = a velocidade com que o defensor ENTRA no condutor, limitada pela aproximação dos dois
+  (min(v_d · n, (v_d − v_c) · n)⁺) ou a guardada no choque dos corpos (`guardarChoque`, chamada em `sim.js colisaoCorpos`
+  antes da resposta, só na partida; `j.choque {id, tick, f}`: a maior dos últimos `FALTAS.forca.janela` s); 0 a mais de
+  `FALTAS.forca.alcance` m entre os centros (corpo + perna até a bola + o pé dele: não há contato). O bote da IA
+  (`faltaNoBote`) vira falta com a chance de antes × `fatorForca(f)` (0 até `FALTAS.forca.min` — o passo, contato
+  incidental —, rampa até `cheia`, × (1 + `porForca` · (f − min)) acima; teto 0,95): o desarme sem entrar no homem é
+  limpo (a IA leva a bola). A carga (`faltaNaCarga`) exige `forcaContato ≥ carga.vMin` (o condutor que recua para dentro
+  de quem estava atrás não é carga dele) e não vale para quem tocou na bola há menos de `carga.perdeu` s (o embalo de quem
+  acabou de perder a bola no bote); nas costas a ≥ `carga.temeraria` m/s é temerária (amarelo; Regra 12.1). Segurar
+  (`faltaTatica`): o marcador batido colado por trás segura — no ataque promissor `tatica.chancePorPasso` por passo
+  (origem 'tatica', amarelo: SPA), fora dele `tatica.semSPA` (origem 'segurar', o cartão pela regra geral) e nunca na
+  própria área. A DIVIDIDA do humano não muda.
+  `defesa.js semAtropelar(m, j, mv)` (sim.js, só na partida, só no time jogado por uma pessoa — `m.humanos` sem
+  `m.iaJoga`; o controlado, os companheiros da IA e o chamado da PRESSÃO a ≤ `pressao.chega` m): a velocidade pedida
+  para dentro do condutor adversário (ou do recebedor do passe dele) fica ≤ (a dele se afastando − `reacao` ·
+  `JOGADOR.freioGiro`)⁺ + √(chega² + 2 · freio · folga) (`DEFESA_HUMANO.semAtropelar`: quem vem atrás guarda a folga para
+  a freada do condutor no tempo de reação); a de lado fica; a DIVIDIDA saindo não muda. A demo e o time da IA não mudam.
+  Teste: `teste-faltas-sentido` (padrão; registro de toda falta com o contexto em `tools/lib/faltas-registro.mjs`; o
+  árbitro do teste mede a força do contato com os corpos encostando ou a ≤ 1,2 m, antes ou depois da locomoção do passo).
 
 ### Bolas paradas (Regras 13, 15 e 16) e disputa pelo alto
 Pedido do dono (seção 8). Tudo só com `m.partida`: o treino fica bit a bit igual (`hash-igual`).
