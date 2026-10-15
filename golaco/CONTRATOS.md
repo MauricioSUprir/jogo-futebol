@@ -173,6 +173,24 @@ pede à passada que tire o pé do toque do chão a tempo, e o toque espera por e
   mesma regra) ou `'corrida'` (a bola vem por trás/de lado no sentido da corrida, ou quase parada à
   frente: segue correndo, corrige o caminho até `qx, qz` e domina em velocidade, primeiro toque para
   a frente). `semDominioAte`: quem acabou de ter a bola roubada não domina de novo por 0,5 s.
+- **Ninguém passa da bola quase dominada** (só na partida, `m.partida`; o treino fica bit a bit igual; pedido do dono,
+  15/10; medida em `tools/medir-passa.mjs`, teste `teste-nao-passa`):
+  - **domínio da IA embalada** (`executarToque` com `tipo 'dominio'`, quem não é o humano — `!j.porHumano` — sem a
+    recepção assistida, a ≥ `CONDUCAO.dominioIA.vMin` m/s): o 1º toque é planejado com o analógico trocado, só durante
+    o plano, pelo sentido da corrida no ritmo de agora (`magParaVelocidade`, sem CORRER/MOD se não precisar) — a
+    entrada da IA na recepção é a de chegar ao ponto do encontro e muda no tick seguinte para a do condutor. O
+    `cond.ref` fica com esse analógico (o condutor que pedir outra coisa replaneja no tick seguinte, com a bola à frente);
+  - **proteção só até `CONDUCAO.protecaoVmax` m/s** (`emProtecao`): acima, o MOD é a condução curta (freando com a bola
+    no pé); a proteção começa quando o corpo cai a isso;
+  - **toque com a parte de dentro/fora do pé logo depois do domínio** (`controlarComBola`, com `cond.ult.tipo ===
+    'dominio'`): sem toque possível com a frente do pé e sem o toque marcado viável, procura um com o alcance do domínio
+    (`noAlcance` relaxado) antes de ir buscar a bola; o toque marcado assim leva `relax: true` (executado e remarcado com
+    o mesmo alcance). Depois do 1º toque de condução, como antes (em toda a condução, ele mudava os chutes de fora);
+  - **passe lento não é só do recebedor** (`sim.js bolaLivre`, `RECEPCAO.passeLento`): com um passe para outro no ar, o
+    candidato que só MARCOU o domínio (posse ainda nula, o mesmo `voo.tickChave`) não encerra a vez — seguem os
+    adversários de quem passou com a bola no chão, até `passeLento` m/s e ao alcance do pé AGORA (`bolaLentaNoPe`), e o
+    goleiro adversário só com a bola nessa velocidade (o de quem passou, nunca). Mesma forma do `soMarcou` da branch
+    do cabeceio (PR #471), que soma a ela quem corta o passe (`cortandoPasse`) e o controlado do humano.
 - **Previsões sem alocar (Etapa 3, plano 4.3):** `preverBola(b, n)` → `{xs, zs, ys, rol}` e `preverCorpo(m, j, n,
   ...)` → `{n, xs, zs, rs, ss, fs}` devolvem vetores **SÓ DE LEITURA e reaproveitados** (dois jogos que se revezam:
   a resposta vale até a SEGUNDA previsão nova seguinte; os vetores podem ter mais de n + 1 posições — use só 0..n).

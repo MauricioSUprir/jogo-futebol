@@ -265,10 +265,19 @@ export const CONDUCAO = {
   // para trás ou de lado fugia do corpo que ainda corre)
   dominioOrientado: { curto: 0.45, lado: 0.25, kmax: 2, entorta: 0.6, vLivre: 3.5, vLado: 4.5, queda: 0.3, angMin: 0.75 },
   dominioPressaoDist: 2.5,    // m — marcador mais perto que isso pressiona
+  // domínio da IA embalada (só na partida; pedido do dono, 15/10: "jogadores passam da bola quando estão com ela
+  // praticamente dominada"): acima de vMin m/s o 1º toque é planejado com o corpo seguindo a corrida no ritmo dela — a
+  // entrada da IA na recepção é a de chegar ao ponto do encontro (devagar, virando para a bola) e muda no tick seguinte
+  // para a do condutor: o toque planejado para o corpo que ia frear deixava a bola parada e o corpo passava dela
+  dominioIA: { vMin: 2.0 },
   // Proteção.
   protecaoDist: 5,            // m — marcador a menos disso ativa a proteção (com o modificador)
   protecaoOfs: 0.42,          // m — bola do lado oposto ao marcador
   vProtecao: 1.6,             // m/s máximo protegendo
+  // (só na partida) acima disso não protege: o MOD em disparada é a condução curta, freando com a bola no pé, e a
+  // proteção começa quando o corpo cai a isso (o grupo corpo+bola protegendo anda até vProtecao × 2,4 = 3,84 m/s) — a
+  // bola da proteção é posta onde o corpo estaria andando devagar, e o corpo a 5–6 m/s passava dela
+  protecaoVmax: 4.0,
   giroProtecao: 3.5,          // rad/s — giro do corpo (e da bola, com a sola) em volta da bola
                               // protegendo, com agilidade 50 (×0,8–1,2 pela agilidade): um marcador
                               // que contorna mais rápido que isso chega à bola
@@ -314,6 +323,10 @@ export const RECEPCAO = {
   chuteFolgaTrave: 1.5,
   // bola livre: o adversário que chega antes dele por mais que isto (s) fica com ela — o controlado não é puxado
   folgaAdversario: 0.3,
+  // (só na partida) passe para outro: com a bola até isto (m/s), no chão e ao alcance do pé de um adversário de quem
+  // passou, ele domina mesmo com o recebedor só com o domínio MARCADO (sim.js bolaLivre) — antes o toque marcado do
+  // recebedor (sempre adiante, ele correndo atrás da bola) tirava a vez de todo mundo e o defensor passava pela bola
+  passeLento: 4.0,
 };
 
 // Entrada.

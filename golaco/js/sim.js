@@ -3,7 +3,7 @@
 // mesma partida bit a bit (ver hashMundo).
 
 import { profundidadeVeu } from './rede-forma.js';
-import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO, FALTAS } from './config.js';
+import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO, FALTAS, RECEPCAO } from './config.js';
 import { criarRng, entre, uniforme } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
@@ -11,7 +11,7 @@ import { alturaQuadril } from './anim.js';
 import { clamp, difAng, quantizar, lerp } from './mat.js';
 import {
   criarCond, controlarComBola, movimentoComBola, movimentoBase, movimentoRecepcao, tentarDominio, verificarPerda,
-  executarToque, saidaParaToque, atualizarGesto, peLivre,
+  executarToque, saidaParaToque, atualizarGesto, peLivre, noAlcance,
 } from './conducao.js';
 import { MD } from './matdet.js';
 import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, executarCabeceio, ataca, assumirControle } from './acoes.js';
@@ -621,9 +621,16 @@ function bolaLivre(m) {
   const alvo = m.voo && m.voo.para != null ? m.voo.para : null;
   const nc = candidatosBolaLivre(m, alvo);
   const passou = m.voo && m.voo.de != null && m.tick - (m.voo.tick0 ?? 0) < 6 ? m.voo.de : null;
+  // passe para outro (só na partida; pedido do dono, 15/10: "jogadores passam da bola quando estão com ela praticamente
+  // dominada"): quem só MARCOU o domínio (o recebedor esperando a bola chegar, ou correndo atrás dela com o toque sempre
+  // adiante) não tira a vez do adversário de quem passou com a bola lenta no pé (RECEPCAO.passeLento) — antes ele
+  // encerrava a vez de todo mundo e o defensor com a bola entre os pés passava por ela
+  const vooCorte = m.partida && m.voo && m.voo.para != null && m.voo.time != null ? m.voo : null;
+  let soMarcou = false;
   for (let k = 0; k < nc; k++) {
     const j = _cands[k];
     if (j.id === passou) continue; // quem acabou de bater não domina a própria bola
+    if (soMarcou && (j.time === vooCorte.time || !bolaLentaNoPe(m, j))) continue;
     if (naParada(m) && j.id !== m.parada.cobrador) continue; // partida: só o cobrador
     // toque aéreo vencido (a hora passou): não segura a bola livre para quem não vai mais nela
     const ta = j.cond?.toque;
@@ -632,15 +639,18 @@ function bolaLivre(m) {
       if (bolaAltaNoCorpo(m, j)) return;
       continue;
     }
-    const antes = m.posse;
+    const antes = m.posse, chave = vooCorte ? vooCorte.tickChave : -1;
     if (tentarDominio(m, j, primeira)) {
       if (m.posse === j.id && antes !== j.id) ganhouPosse(m, j);
+      if (vooCorte && m.posse == null && m.voo === vooCorte && vooCorte.tickChave === chave) { soMarcou = true; continue; }
       return;
     }
   }
   // o goleiro pega a bola solta perto dele (dentro da área)
   for (const g of m.jogadores) {
     if (g.posicao !== 'GOL') continue;
+    // (com o recebedor só com o domínio marcado: o goleiro de quem passou não pega, o outro só a bola lenta)
+    if (soMarcou && (g.time === vooCorte.time || b.v.x * b.v.x + b.v.z * b.v.z > RECEPCAO.passeLento * RECEPCAO.passeLento)) continue;
     if (naParada(m) && g.id !== m.parada.cobrador) continue; // partida: só o cobrador
     const gx = linhaDoGol(m, g);
     // (partida: só onde a mão vale — na área, com qualquer parte da bola sobre a linha, sem recuo nem a bola que ele
@@ -658,6 +668,12 @@ function bolaLivre(m) {
       return;
     }
   }
+}
+
+/** A bola, no chão e lenta (até RECEPCAO.passeLento m/s), está ao alcance do pé de j agora (o alcance do domínio)? */
+function bolaLentaNoPe(m, j) {
+  const b = m.bola;
+  return b.v.x * b.v.x + b.v.z * b.v.z <= RECEPCAO.passeLento * RECEPCAO.passeLento && noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y, true);
 }
 
 /** De primeira: com uma ação pedida, bate na bola que chega em vez de dominar. */

@@ -353,3 +353,25 @@ Medido no jogo (`tools/teste-conducao-curta.mjs`, humano sozinho e 6 partidas IA
 2,88 toques/s e 1,98 → 0,99 m; corrida 1,85 → 2,53 toques/s, 3,0 → 2,2 m por toque; disparada 3,5 m por toque e
 ~1,1 toque por passada (igual); bola–corpo no trote 0,48 → 0,42 m (IA 0,67 → 0,58 m antes da defesa recalibrada; depois dela 0,588 em 6 partidas e
 0,595 em 12 — a meta ≤ 0,59 com 12 partidas, condição de merge, ficou 0,005 m acima).
+
+## 6. "Passou da bola" (pedido do dono de 15/10)
+
+Pedido: "jogadores passam da bola quando estão com ela praticamente dominada, ajeite". Medido antes de mexer
+(`tools/medir-passa.mjs`): o jogador que é da bola (condutor, recebedor ou com o domínio marcado, ou o mais perto da bola
+solta) chega a ≤ 1 m dela, no chão e a ≤ 4 m/s, correndo com ela à frente, e o corpo passa por ela sem ninguém mais
+tocar (a bola ≥ 0,3 m atrás do quadril, ≤ 0,8 m de lado, ele ainda indo para a frente, sem a bola mandada para trás);
+fora da conta o corte/inversão pedidos (analógico a mais de 60° de onde ele vinha) com a bola até 1 m atrás. 24
+partidas na versão publicada (d3725f55; IA × IA e o humano roteirizado como no celular): **1,33 por partida**, bola até
+2,85 m atrás, 3 perdidas para o adversário. Nas versões antigas (972b1ff3, antes da condução curta) os números eram os
+mesmos: **sempre existiu**, não veio da condução curta. Cada caso foi reprisado da foto do mundo (structuredClone, a
+continuação é bit a bit) para achar a causa e conferir a correção no mesmo lance; quatro causas (CONTRATOS.md, recepção).
+
+| Fonte | Dado | O que aproveitamos |
+|---|---|---|
+| Universidade de Tsukuba (comunicado de 08/2026, captura 3D de quem recebe correndo e passa em seguida) | A transição recebe → passa é mais rápida sem a última passada rápida demais na chegada à bola e com pouco rebote da bola para a frente no 1º toque | O 1º toque de quem recebe embalado acompanha o corpo: a bola sai no ritmo da corrida (nem morta no pé, que o corpo atropela, nem longe) — `CONDUCAO.dominioIA` |
+| Sessões de treino de recepção (sportsessionplanner: "receiving — furthest foot, positive first touch") | O 1º toque "positivo" leva a bola para o lado em que o jogador vai, fora dos pés | A IA embalada domina para a frente, no sentido da corrida; o condutor muda de rumo depois, com a bola à frente |
+| Madden NFL 17 (notas dos desenvolvedores sobre a bola solta) e a crítica ao "fight for the fumble" | A recuperação da bola solta tem de seguir o estado físico da bola: quando já é claro quem a alcançou, a animação/decisão de outro não deve tomar a vez | O passe lento colado no pé do adversário é dele — o recebedor que só marcou o domínio não encerra a vez (`RECEPCAO.passeLento`) |
+
+Depois da correção (mesmas 24 partidas): 0,50 por partida, bola até 1,51 m atrás (corte pedido), nenhuma perdida; nas
+reprises dos 48 casos, 9 dos 32 que contam ainda passam (cortes de 50–60° a 4–6 m/s com 0,3–0,7 m de passo de
+apoio além da bola: é o corte, não a bola dominada).
