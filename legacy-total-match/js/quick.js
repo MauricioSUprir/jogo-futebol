@@ -39,7 +39,7 @@
     function chosenCard(label, teamKey) {
       var id = setup[teamKey];
       var open = function () {
-        TM.ui.pickTeam({ source: setup.source, title: label, current: id, back: function () { TM.ui.go("quick"); },
+        TM.ui.pickTeam({ source: setup.source, title: label, current: id, back: function () { TM.ui.go("quick"); }, especiais: setup.source === "club",
           onPick: function (pid) { setup[teamKey] = pid; TM.ui.go("quick"); } });
       };
       if (!id) return el("button", { class: "chosen-team empty", on: { click: open } }, [ el("span", { text: "➕ " + label } ) ]);

@@ -6609,3 +6609,17 @@ body.theme-light .ut-tab.utk-aba.on .utk-badge{background:#ffffff;color:#0f7a3a}
 .tm3d-sair:hover{opacity:1}
 .tm3d-sair .tm-ic{width:18px;height:18px}
 body.tm3d-aberto{overflow:hidden}
+
+/* ---------- Viverde FC (time especial com senha: js/viverde.js) ---------- */
+.vv-sheet .vv-sheet-in{max-width:380px}
+.vv-topo{display:flex;align-items:center;gap:12px;margin:6px 0 12px}
+.vv-escudo{width:56px;height:62px;object-fit:contain;flex:0 0 auto}
+.vv-txt{margin:0;color:var(--text-dim);font-size:14px;line-height:1.4}
+.vv-senha{width:100%;box-sizing:border-box;margin:0 0 12px}
+.vv-bts{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.vv-cadeado{margin-left:auto;display:inline-flex;align-items:center;color:var(--text-dim)}
+.vv-cadeado .tm-ic{width:18px;height:18px}
+.vv-cta{margin-top:10px}
+.vv-cta-esc{width:40px;height:44px;object-fit:contain;flex:0 0 auto}
+.tp-lg-ic{display:inline-flex;align-items:center;color:var(--gold)}
+.tp-lg-ic .tm-ic{width:18px;height:18px}

@@ -487,6 +487,17 @@
       var leagues = TM.data.world().leagues;
       if (opts.leagues) leagues = leagues.filter(function (lg) { return opts.leagues.indexOf(lg.id) >= 0; });
       var any = false;
+      // times especiais (Viverde FC: senha antes de escolher; js/viverde.js)
+      var vv = opts.especiais && TM.viverde ? TM.data.club(TM.viverde.ID) : null;
+      if (vv && (!q || vv.name.toLowerCase().indexOf(q) >= 0)) {
+        any = true;
+        listWrap.appendChild(el("div", { class: "tp-league" }, [el("span", { class: "tp-lg-ic" }, [TM.ic("star")]), el("span", { class: "tp-lg-name", text: "Especiais" })]));
+        var rv = el("button", { class: "tp-row" + (opts.current === vv.id ? " sel" : ""), on: { click: function () { TM.viverde.pedirSenha(function () { opts.onPick(vv.id); }); } } }, [
+          TM.img.clubImg(vv, "tp-crest"), el("span", { class: "tp-name", text: vv.name }),
+          TM.viverde.liberado() ? ovBadge(TM.data.clubRating(vv.id)) : el("span", { class: "vv-cadeado" }, [TM.ic("lock")])
+        ]);
+        listWrap.appendChild(rv);
+      }
       leagues.forEach(function (lg) {
         var clubs = lg.clubIds.map(function (id) { return TM.data.club(id); })
           .filter(function (c) { return c && (!q || c.name.toLowerCase().indexOf(q) >= 0); })
@@ -508,11 +519,11 @@
   }
   // rota de tela cheia para escolher um time (usa um callback guardado)
   var _pickCb = null;
-  function pickTeam(o) { _pickCb = o.onPick; go("pick-team", { source: o.source, title: o.title, current: o.current, back: o.back, leagues: o.leagues }); }
+  function pickTeam(o) { _pickCb = o.onPick; go("pick-team", { source: o.source, title: o.title, current: o.current, back: o.back, leagues: o.leagues, especiais: o.especiais }); }
   register("pick-team", function (screen, params) {
     screen.appendChild(topbar(params.title || "Escolha o time", function () { if (params.back) params.back(); else go("modes"); }));
     screen.appendChild(teamPickerEl({
-      source: params.source, current: params.current, leagues: params.leagues,
+      source: params.source, current: params.current, leagues: params.leagues, especiais: params.especiais,
       onPick: function (id) { var cb = _pickCb; _pickCb = null; if (cb) cb(id); }
     }));
   });

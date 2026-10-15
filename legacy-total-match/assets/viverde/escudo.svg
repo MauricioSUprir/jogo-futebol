@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 112" width="250" height="280">
+  <!-- escudo PROVISÓRIO do Viverde FC (até a logo do dono chegar) -->
+  <defs><clipPath id="c"><path d="M50 3 L93 15 V52 C93 80 73 99 50 109 C27 99 7 80 7 52 V15 Z"/></clipPath></defs>
+  <path d="M50 3 L93 15 V52 C93 80 73 99 50 109 C27 99 7 80 7 52 V15 Z" fill="#16a34a"/>
+  <g clip-path="url(#c)" fill="#ffffff" fill-opacity=".9"><rect x="20" y="0" width="12" height="112"/><rect x="44" y="0" width="12" height="112"/><rect x="68" y="0" width="12" height="112"/></g>
+  <path d="M10 34 H90 V58 H10 Z" fill="#0b3d1f" clip-path="url(#c)"/>
+  <text x="50" y="53" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="19" letter-spacing="2" fill="#ffffff">VFC</text>
+  <path d="M50 3 L93 15 V52 C93 80 73 99 50 109 C27 99 7 80 7 52 V15 Z" fill="none" stroke="#0b3d1f" stroke-width="4"/>
+</svg>

@@ -225,8 +225,23 @@
   };
   function hashStr(s) { s = String(s || ""); var h = 0; for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; } return Math.abs(h); }
   // grupos onde o jogador também atua sem perder overall — ~a maioria (mas nem todos; goleiros não)
+  // posições declaradas (time especial: Viverde FC, js/viverde.js): `todas` = nenhuma penalidade; `posicoes` = funções
+  // em que atua sem perder nota; `notaPos` = nota própria numa função (ex.: { ZAG: 84 })
+  var GRUPO_DA_FUNCAO = { GOL: "GK", ZAG: "DF", LD: "DF", LE: "DF", VOL: "MF", MC: "MF", MEI: "MF", MD: "MF", ME: "MF", PD: "FW", PE: "FW", CA: "FW", SA: "FW" };
+  function penalidadeDeclarada(p, slot) {
+    if (!p || !(p.todas || p.posicoes)) return null;
+    if (p.todas) return 0;
+    var g = Array.isArray(slot) ? slot[0] : slot, sl = Array.isArray(slot) ? slotPos(slot) : null;
+    var funcoes = p.posicoes.filter(function (f) { return sl ? f === sl : GRUPO_DA_FUNCAO[f] === g; });
+    if (!funcoes.length) return null;
+    var pen = 99;
+    funcoes.forEach(function (f) { pen = Math.min(pen, p.notaPos && p.notaPos[f] != null ? Math.max(0, p.overall - p.notaPos[f]) : 0); });
+    return pen;
+  }
   function playerVersa(p) {
     if (!p) return [];
+    if (p.todas) return ["GK", "DF", "MF", "FW"];
+    if (p.posicoes) return p.posicoes.map(function (f) { return GRUPO_DA_FUNCAO[f]; }).filter(function (g, i, a) { return g && g !== p.pos && a.indexOf(g) === i; });
     if (p._versa) return p._versa;
     var cands = VERSA_CAND[p.pos2] || [], h = hashStr(p.id), out = [];
     if (cands.length && (h % 100) < 66) { out.push(cands[0]); if (cands.length > 1 && (h % 100) < 20) out.push(cands[1]); }
@@ -236,6 +251,7 @@
   // quanto o jogador perde de overall ao atuar no grupo `slotGroup`
   function posPenalty(playerPos, slotGroup, p) {
     if (playerPos === slotGroup) return 0;
+    var dec = penalidadeDeclarada(p, slotGroup); if (dec != null) return dec;
     if (playerVersa(p).indexOf(slotGroup) >= 0) return 0;         // posição secundária confortável
     if (playerPos === "GK" || slotGroup === "GK") return 16;      // goleiro é único
     var d = Math.abs((POS_ORDER[playerPos] == null ? 2 : POS_ORDER[playerPos]) - (POS_ORDER[slotGroup] == null ? 2 : POS_ORDER[slotGroup]));
@@ -253,6 +269,7 @@
   }
   function slotPenalty(p, slot) {
     if (!p || !slot) return 0;
+    var dec = penalidadeDeclarada(p, slot); if (dec != null) return dec;
     var g = Array.isArray(slot) ? slot[0] : slot;
     var gp = posPenalty(p.pos, g, p);
     return gp > 0 ? gp : specificPenalty(p, slot);
@@ -260,7 +277,8 @@
   // overall efetivo do jogador num slot: { ov, off (outro grupo), light (mesma linha, função diferente), drop, natural, slotLbl }
   function effOverall(p, slotOrGroup) {
     var slot = Array.isArray(slotOrGroup) ? slotOrGroup : null, g = slot ? slot[0] : slotOrGroup;
-    var gp = p ? posPenalty(p.pos, g, p) : 0, sp = (p && slot && gp === 0) ? specificPenalty(p, slot) : 0, pen = gp + sp;
+    var dec = p && slot ? penalidadeDeclarada(p, slot) : null;
+    var gp = dec != null ? 0 : p ? posPenalty(p.pos, g, p) : 0, sp = dec != null ? dec : (p && slot && gp === 0) ? specificPenalty(p, slot) : 0, pen = gp + sp;
     return { ov: Math.max(40, (p ? p.overall : 60) - pen), off: gp > 0, light: sp > 0, drop: pen, natural: p ? (p.pos2 || TM.data.posLabel(p)) : "?", slotLbl: slot ? slotPos(slot) : g };
   }
   // converte a posição LIVRE (arrastada no campinho, em coords de tela) para um slot
