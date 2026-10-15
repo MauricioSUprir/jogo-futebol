@@ -363,7 +363,8 @@ function atualizarEstado(T, tc, L) {
     // (as palmas depois da comemoração: a próxima vez que ele aplaudir é com outra variante)
     if (tc.estado === 'comemora') comecar(T, tc, 'aplaude', 0, TC.comemora.palmas);
     else if (tc.estado === 'sofreu' && tc.vamos) { tc.vamos = false; comecar(T, tc, 'vamos', 0, TC.sofreu.vamos); tc.ultimo.estado = 'sofreu'; tc.ultimo.variante = tc.prev.variante; }
-    else if (tc.estado === 'fim') comecar(T, tc, 'fim', tc.variante, 1e6);
+    // (o fim segue no mesmo gesto, sem recomeçar — 15/10: recomeçado, o mesmo (gesto, variante) contava duas vezes)
+    else if (tc.estado === 'fim') tc.ate = k + s60(1e6);
     else if (tc.fimPendente >= 0) { comecar(T, tc, 'fim', tc.fimPendente, 1e6); tc.fimPendente = -1; }
     else voltarObserva(T, tc);
   }
