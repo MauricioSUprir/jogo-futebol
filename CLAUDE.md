@@ -403,7 +403,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   escanteio (anel âmbar sem texto nos últimos 5 s; a reposição automática do humano saiu — a demo e a IA repõem),
   TROCAR segurado 0,4 s = o goleiro, o analógico o move sem a bola e com ela nas mãos até a borda da área (PASSE rola,
   LANÇAMENTO/CHUTE é o chutão, ENFIADA solta no chão); tiro de meta com os adversários fora da área na montagem.
-  Testes: `teste-parado`, `teste-pressao-humano` (pareado com × sem o botão, `tools/lib/pressao-pareada.mjs`),
+  Testes: `teste-parado`, `teste-pressao-humano` (pareado com × sem o botão, `tools/lib/pressao-pareada.mjs`; 32 partidas desde
+  15/10 — em 8 só 5 de 16 conjuntos da main passavam; nas 128 da main o M4 passa da meta, 1,58× as faltas com o botão
+  contra 1,5× + 2, e o M5 fica no limite, 80,6%: só o jogo dá margem a eles, a amostra não),
   `teste-goleiro-regras` (padrão); `teste-controles` (marca, PEGAR, anel). Limite físico anotado: do parado o corpo anda
   ~3,2 m no 1º segundo (o "≥ 2 m mais perto em 1 s" do diagnóstico fica informativo). Painel (144, base × agora): as
   regras tiraram gols fáceis de 6 a 16,5 m e as defesas nessa faixa foram a 60,8% (meta 55–60%) — `GOLEIRO.logit.c0Partida`

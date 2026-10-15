@@ -1508,7 +1508,9 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
   `__golaco.indicadores` (`{pressao: {x, y, z} | null, oito: {x, z, segmentos, total} | null}`).
 
 ### Testes
-`teste-parado`, `teste-pressao-humano` (pareado, `tools/lib/pressao-pareada.mjs`) e `teste-goleiro-regras` no padrão;
+`teste-parado`, `teste-pressao-humano` (pareado, `tools/lib/pressao-pareada.mjs`; 32 partidas, uma por processo — com 8 a
+mesma lógica passava ou reprovava pelo sorteio dos lances; nas 128 partidas da main o M4 fica acima da meta, 1,58× as faltas,
+e o M5 no limite, 80,6%: pendência do jogo) e `teste-goleiro-regras` no padrão;
 `teste-defesa-humano` (a meta antiga do PRESSÃO, que passava sem o botão, virou a pareada); `teste-controles` (celular:
 a marca do PRESSÃO, o PEGAR, o goleiro andando com a bola e o anel); `teste-goleiro-trava` segue medindo o treino;
 `teste-entrada` (O/RB no ataque = PEGAR); `teste-taticas` mede a forma com `IA_DEFESA.lento` desligado (a cena prende a
