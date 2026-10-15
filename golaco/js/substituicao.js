@@ -148,6 +148,8 @@ export function planejarSubstituicao(m, pares, opc = {}) {
     ps.push({
       k, time: p.time, sai: p.sai, entra: p.entra, goleiro: !!(novo && novo.posicao === 'GOL'),
       x0, z0, saida: sd, d0, adianta, para, espera: espera[k], tPlano: pl.t0, comPlano: k < 2, hash: h,
+      // a hora em que ele cruza a linha (s da cena): a d0 − adianta dela no 1º quadro do plano dele, a velSai
+      tCruza: pl.t0 + (d0 - adianta) / S.velSai,
       rentaGol: sd.linha === 'fundo' && Math.abs(sd.z) < S.golRaio + 1.5,
       vaga: { x: novo ? novo.x : 0, z: novo ? novo.z : 0 },
       numSai: fs?.num ?? null, numEntra: fe?.num ?? null,
@@ -317,9 +319,14 @@ function desejo(c, a, t) {
   if (a.tipo === SAI_T) {
     const p = c.plano.pares[a.par], sd = p.saida, rumo = Math.atan2(sd.nz, sd.nx);
     if (a.cruzou < 0) {
-      // até a linha: na reta da normal, pelo ponto mais perto (o desvio de lado volta devagar), sem frear
+      // até a linha: na reta da normal, pelo ponto mais perto (o desvio de lado volta devagar), sem frear; no horário
+      // (p.tCruza): quem atrasou (contornou alguém parado na reta) apressa o passo até velSaiMax para cruzar quando o
+      // plano manda; adiantado, anda firme a velSai (contraprova de 15/10: contornando um zagueiro parado ele perdeu 0,4 m
+      // e cruzou 0,07 s depois do fim do plano dele)
       const lado = (j.x - sd.x) * -sd.nz + (j.z - sd.z) * sd.nx;
-      return rumoA(c, sd.nx - (-sd.nz) * lado * 0.8, sd.nz - sd.nx * lado * 0.8, S.velSai, rumo);
+      const falta = -((j.x - sd.x) * sd.nx + (j.z - sd.z) * sd.nz), resta = p.tCruza - t;
+      const vel = resta > PASSO ? clamp(falta / resta, S.velSai, S.velSaiMax) : S.velSaiMax;
+      return rumoA(c, sd.nx - (-sd.nz) * lado * 0.8, sd.nz - sd.nx * lado * 0.8, vel, rumo);
     }
     // cruzou: para no ponto dele (alemLinha além da linha; de lado se outro já parou ali), freando
     const ex = p.para.x - j.x, ez = p.para.z - j.z, falta = Math.hypot(ex, ez);
@@ -349,9 +356,23 @@ function desejo(c, a, t) {
     if (d < 0.3) return para(c, 0, j.rumo);
     return rumoA(c, ex, ez, Math.min(S.velEntra, d * 1.6), Math.atan2(ez, ex));
   }
-  // os outros (e o quarto árbitro): freiam até parar, no rumo de agora
+  // os outros (e o quarto árbitro): freiam até parar, no rumo de agora — mas ninguém para nas placas: quem vem correndo
+  // para fora do campo e não para antes delas (a freada: v²/(2·freio)) tira só a velocidade para fora e escorrega ao
+  // longo delas (contraprova de 15/10: um jogador correndo a 7,7 m/s para fora da lateral no tiro de meta parava 0,8 m
+  // dentro da faixa das placas)
+  const v = Math.hypot(j.vx, j.vz);
+  if (v > 0.3 && !a.fixo) {
+    const k = v / (2 * j.par.freio), px = j.x + j.vx * k, pz = j.z + j.vz * k;
+    const tx = Math.abs(px) > LIM_X && px * j.vx > 0 ? 0 : j.vx, tz = Math.abs(pz) > LIM_Z && pz * j.vz > 0 ? 0 : j.vz;
+    if (tx !== j.vx || tz !== j.vz) {
+      const vt = Math.hypot(tx, tz);
+      return vt > 1e-6 ? rumoA(c, tx, tz, vt, j.rumo) : para(c, 0, j.rumo);
+    }
+  }
   return para(c, 0, j.rumo);
 }
+// até onde quem freia pode ir (o centro do corpo): 0,9 m antes das placas
+const LIM_X = PLACAS_X - 0.9, LIM_Z = PLACAS_Z - 0.9;
 
 /**
  * Desvio de quem anda (Reynolds, "Steering Behaviors", GDC 1999: evitar obstáculos): alguém à frente (até 1,8 m) e perto

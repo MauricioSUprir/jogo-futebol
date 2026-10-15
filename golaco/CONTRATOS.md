@@ -568,9 +568,12 @@ Constantes em `config.js COMEMORACAO`.
   menos gente perto da lente nos próximos 0,8 s, escolhido uma vez no começo do abraço: `c.ladoContra`) olhando 6 m além
   dele a 2,4 m de altura (a torcida atrás do alvo enche o fundo; o resto do time para a 10 m, atrás da câmera), fov 36; reação de frente para quem sofreu (puxada para o lado da
   TV), 4,8 m, fov 30, girada em volta dele pelo giro escolhido UMA vez no começo da reação (`c.giroReacao`: entre 0, ±0,5 e
-  ±1 rad, o de menor custo — gente na frente da lente a < 2,2 m dentro do ângulo do quadro ou perto da linha de visão,
-  integrado no próximo segundo pela posição + velocidade; o 0 fica se o custo dele for ≤ 0,03 m·s — contraprova: um
-  defensor andando para a saída passava a < 1 m da lente em ~15% das cenas curtas; `teste-comemoracao` 13); câmera nunca além de 5,5 m das linhas nem dentro do gol; celular: fov × 0,88 e o assunto no terço
+  ±1 rad, o de menor custo — gente na frente da lente a < 2,2 m de profundidade dentro do quadro do PC ou do celular
+  (fov × 0,88, até 2,2:1, o eixo girado para o terço esquerdo) ou perto da linha de visão, integrado na reação INTEIRA (até
+  o fim da cena: na curta ela dura até 2 s), cada um andando reto para o destino dele na cena (a vaga do abraço, a saída,
+  10 m do grupo) e parando nele; o 0 fica se o custo dele for ≤ 0,03 m·s — contraprovas: um defensor andando para a saída
+  passava a < 1 m da lente em ~15% das cenas curtas; (15/10) o custo só olhava o 1º segundo e o quadro do PC e um colega
+  correndo para o abraço passava rente à lente no celular; `teste-comemoracao` 13, com mais 12 gols naturais); câmera nunca além de 5,5 m das linhas nem dentro do gol; celular: fov × 0,88 e o assunto no terço
   esquerdo. Exporta `ik`/`ikBraco`/`BRACO`/`ANTEBRACO` do `anim.js` (só exportar: o hash não muda).
 - **Golpes e gestos** (todos por IK: os ossos ficam com o comprimento certo): de joelhos (o corpo desliza desacelerando
   até parar no alvo, entre 2,5 e 7 m/s²; pelve na altura de joelhos, joelho 6 cm à frente do quadril a 6,5 cm do chão,
@@ -635,14 +638,17 @@ ligada, desligada e em Node (`teste-substituicao-tela` T1).
   {timeHumano, posAntes(id)})` → `{tick, pares (o do humano primeiro; por par: time, sai, entra, goleiro, saida {x, z, nx,
   nz, linha}, d0 (3,0–3,6 m da linha no 1º quadro do plano, pelo hashGol), para (onde ele para além da linha, longe do
   gol, da quina, dos outros e dos caminhos dos reservas), espera (lugar do reserva na grama do lado de cá: z = 35,2, x =
-  ±(0,7 + 0,8k)), vaga (onde o reserva está na simulação), numSai/numEntra, rentaGol}, planos [{nome: 'sai' | 'sai2' |
+  ±(0,7 + 0,8k)), vaga (onde o reserva está na simulação), numSai/numEntra, rentaGol, tCruza (a hora em que ele cruza a
+  linha: quem atrasou contornando alguém parado apressa até `velSaiMax` = 2,35 m/s para cruzar nela; adiantado, anda a
+  `velSai`)}, planos [{nome: 'sai' | 'sai2' |
   'entra', par, t0, t1}], duracao}` (só lê o mundo; 1 par = 5,0 s, ≥ 2 pares = 6,4 s, teto 6,5); `criarCenaSubst(plano, m)`
   → cena (cópias dos 22 por `comemoracao.js criarAtor`; a cópia de quem entra vira quem SAI, com o id e o uniforme dele;
   os reservas e o quarto árbitro, id `SUBST.idQuarto` = 203, kit 'arbitro', em (0; 35,6); a bola copiada — no chão se
   estava na mão de quem sai; só o par 0 tem pré-rolagem de 1,1 s, os outros começam parados); `passoCenaSubst(c)` = 1
   tick com a MESMA locomoção do jogo (`passoCorpo → passoPassada → passoPeDesenhado → alturaQuadril → pose`), desvio
   de Reynolds para quem anda (quem sai rente ao gol só desvia para FORA dele), separação a 0,55 m (dois com a vez colados:
-  cede o de depois — quem sai antes de quem entra, o par de antes primeiro), quem freou e assentou fica fixo (sem custo); `avancarCenaSubst(c, dt)`
+  cede o de depois — quem sai antes de quem entra, o par de antes primeiro), quem freou e assentou fica fixo (sem custo;
+  quem vem correndo para fora e pararia a < 0,9 m das placas tira só a velocidade para fora e escorrega ao longo delas); `avancarCenaSubst(c, dt)`
   (devolve `alfa`), `tempoCenaSubst`, `duracaoCenaSubst`, `planoEm(c, t)`, `placaNasMaos(c, pose, out)`, `paresDaPlaca(c,
   t, out)` ({indice, n, time, entra, sai, corEntra: 'verde', corSai: 'vermelho'}: troca a cada `placaTroca` s, o do humano
   primeiro), `planoCameraSubst(c, {pequena, aspecto}, out)` → `{nome: 'sai' | 'sai2' | 'entra' | 'fim', de, para, fov}`
