@@ -8,7 +8,8 @@
 //  - olho bruto = a cabeça gravada + frente·0,085 + cima·0,03 (frente = horizontal, da linha dos ombros, como jogador3d
 //    frente());
 //  - x/z por gaussiana σ 0,08 s, presa a ≤ 2 cm do olho bruto na horizontal (≤ 6 cm depois da esfera, abaixo); y por
-//    média móvel de 0,33 s (um passo) e gaussiana σ 0,22 s: a cabeça do manequim sobe e desce até ±9 cm correndo e o
+//    média móvel de 0,33 s (um passo) e gaussiana σ 0,26 s (15/10: era 0,22 — a postura que desce antes do chute deixava
+//    1 cm de balanço; 0,26 deixa 0,8): a cabeça do manequim sobe e desce até ±9 cm correndo e o
 //    cérebro estabiliza o olhar (Pozzo & Berthoz 1991); rolagem sempre 0; nada de balançar no ritmo da passada (Nesky,
 //    GDC 2014 #44; Oculus: "do not use head bobbing"); presa a [cabeça − 0,14, cabeça + 0,16] e, por fim, dentro da
 //    esfera de 0,148 m em volta do centro da cabeça (com a cabeça longe na vertical, o olho recua na horizontal até 3,5 cm
