@@ -167,8 +167,11 @@ export function planejarComemoracao(m, gol, opc = {}) {
 // ------------------------------------------------------------------------------------------------ atores
 function clonar(o) { return o == null ? null : (typeof structuredClone === 'function' ? structuredClone(o) : JSON.parse(JSON.stringify(o))); }
 
-/** Cópia do jogador para a cena: o estado cinemático, os pés (cópias) e o mergulho em andamento; nada de bola. */
-function copiaJogador(j) {
+/**
+ * Cópia do jogador para a cena: o estado cinemático, os pés (cópias) e o mergulho em andamento; nada de bola. Exportada
+ * (com criarAtor, separar, maoEm, gesto, limitarCamera e ajustarCelular) para a cena de substituição (substituicao.js).
+ */
+export function copiaJogador(j) {
   const c = { ...j };
   c.pes = [{ ...j.pes[0] }, { ...j.pes[1] }];
   c.mergulho = j.posicao === 'GOL' && j.mergulho ? clonar(j.mergulho) : null;
@@ -183,7 +186,7 @@ function copiaJogador(j) {
   return c;
 }
 
-function criarAtor(j, i) {
+export function criarAtor(j, i) {
   return {
     j: copiaJogador(j), i, id: j.id, time: j.time, goleiro: j.posicao === 'GOL',
     papel: RESTO, t0: 0, slot: 0,
@@ -362,9 +365,11 @@ function deslizar(a) {
  */
 function cede(a) { return a.fixo ? 0 : a.papel === SOFREU || a.papel === GOLEIRO_SOFREU || a.papel === CONTRA ? 0.25 : 1; }
 
-/** Ninguém dentro de ninguém: centros a ≥ C.separacao (antes da passada, como o colisaoCorpos do jogo). */
-function separar(c) {
-  const at = c.atores, n = at.length, min = C.separacao, min2 = min * min;
+/**
+ * Ninguém dentro de ninguém: centros a ≥ min m (padrão C.separacao; antes da passada, como o colisaoCorpos do jogo).
+ */
+export function separar(c, min = C.separacao) {
+  const at = c.atores, n = at.length, min2 = min * min;
   for (let it = 0; it < 2; it++) {
     for (let p = 0; p < n; p++) {
       const A = at[p], ja = A.j, fa = cede(A);
@@ -534,7 +539,7 @@ function alvoGesto(o, h, lado, g, dy) {
  * Mão do lado `lado` no ponto (tx, ty, tz), com peso w desde a mão da pose (0 = a pose da locomoção), e o cotovelo pelo
  * polo g (referencial do rumo h). IK do braço (anim.js): os ossos ficam com o comprimento certo.
  */
-function maoEm(o, h, lado, tx, ty, tz, w, g) {
+export function maoEm(o, h, lado, tx, ty, tz, w, g) {
   if (w <= 0) return;
   const iO = lado < 0 ? J.ombroE : J.ombroD, iC = lado < 0 ? J.cotoveloE : J.cotoveloD, iM = lado < 0 ? J.maoE : J.maoD;
   const fx = Math.cos(h), fz = Math.sin(h), rx = -fz, rz = fx;
@@ -544,7 +549,7 @@ function maoEm(o, h, lado, tx, ty, tz, w, g) {
 }
 
 /** Gesto g com peso w; ou a mistura de dois gestos (ga → gb por m) com peso w. */
-function gesto(o, h, lado, ga, gb, m, w, dya = 0, dyb = 0) {
+export function gesto(o, h, lado, ga, gb, m, w, dya = 0, dyb = 0) {
   if (w <= 0) return;
   let a = alvoGesto(o, h, lado, ga, dya);
   let x = a.x, y = a.y, z = a.z, g = ga;
@@ -885,7 +890,7 @@ function mediaAutor(c, tk, n, out) {
   return out;
 }
 
-function limitarCamera(out) {
+export function limitarCamera(out) {
   const L = C.camera.limite;
   out.de[0] = clamp(out.de[0], -MX - L, MX + L);
   out.de[2] = clamp(out.de[2], -MZ - L, MZ + L);
@@ -894,7 +899,7 @@ function limitarCamera(out) {
 }
 
 /** Celular: fecha o plano e põe o assunto no terço esquerdo (o "Pular" fica à direita). */
-function ajustarCelular(out, opc) {
+export function ajustarCelular(out, opc) {
   if (!opc.pequena) return;
   out.fov *= C.camera.celular;
   const fx = out.para[0] - out.de[0], fz = out.para[2] - out.de[2], d = Math.hypot(fx, fz) || 1;

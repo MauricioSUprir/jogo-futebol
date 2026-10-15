@@ -19,7 +19,8 @@
 //  H6 (informativo) jogadores a < 20 m da bola com ≥ 30% do corpo atrás do HUD, média por instante
 //  H7 opções da pausa: "Minimapa" (padrão desligado no celular e ligado no PC) e "Nomes nos botões" (padrão
 //     LIGADO desde 12/10) mudam a tela, ficam salvas e, com os dois ligados, nada encosta
-//     e, na barra de cima da pausa, título, opções, tela cheia e X não encostam (folga ≥ 4 px) nas 3 telas do H1
+//     e, na barra de cima da pausa, título, opções, tela cheia e X não encostam (folga ≥ 4 px) nas 3 telas do H1;
+//     o submenu "Modo de jogo" (Pré-jogo e a cena de substituição, 12/10) cabe sem rolar no celular deitado
 //  H8 os ajustes de toque antigos (golaco.toque.v1) não valem mais: todo mundo recebe o padrão novo (80%, 55%)
 //  H10 placar (dono, 12/10: "quero o placar assim, tem que ser algo menor e mais com a nossa cara", com a barra de TV de
 //     referência): nas 3 telas do celular (com entalhe) e no PC 1280×720, no jogo ("34'"), nos acréscimos ("45+2'" com
@@ -446,10 +447,22 @@ if (!soPlacar) {
       };
     });
     const e0 = await estado();
-    let e1 = { mapa: false, nomes: false }, e2 = e1, e3 = { nomes: true }, enc = ['sem as opções'], menu = { pressionados: '-', rola: NaN };
+    let e1 = { mapa: false, nomes: false }, e2 = e1, e3 = { nomes: true }, enc = ['sem as opções'], menu = { pressionados: '-', rola: NaN }, sub = null;
     if (e0.temOpcoes) {
       await pagina.evaluate(() => window.__golaco.abrirMenu());
       menu = await estado();
+      // o submenu "Modo de jogo" (12/10: a opção da cena de substituição entrou nele, ao lado do pré-jogo) também cabe
+      // sem rolar, e os dois botões da linha de cenas não encostam
+      sub = await pagina.evaluate(() => {
+        document.getElementById('btn-modos')?.click();
+        const j = document.querySelector('.janela-menu'), b = document.getElementById('btn-subst'), p = document.getElementById('btn-prejogo');
+        const vis = e => !!e && e.offsetParent !== null && e.getBoundingClientRect().height > 0;
+        const rb = b?.getBoundingClientRect(), rp = p?.getBoundingClientRect();
+        const folga = rb && rp ? Math.max(rb.left - rp.right, rp.left - rb.right, rb.top - rp.bottom, rp.top - rb.bottom) : NaN;
+        const r = { rola: j ? j.scrollHeight - j.clientHeight : 0, subst: vis(b), prejogo: vis(p), folga, texto: b?.textContent.replace(/\s+/g, ' ').trim() ?? '' };
+        document.querySelector('#menu-modos [data-cmd="modos-voltar"]')?.click();
+        return r;
+      });
       // liga o minimapa (os nomes já vêm ligados): os dois ligados
       await pagina.click('#chip-minimapa');
       await pagina.evaluate(() => window.__golaco.fecharMenu());
@@ -478,6 +491,9 @@ if (!soPlacar) {
       e3 = await estado();
     }
     meta('H7 celular: minimapa desligado e nomes dos botões LIGADOS por padrão (dono, 12/10); opções na pausa (que cabe sem rolar)', `minimapa ${e0.mapa ? 'ligado' : 'desligado'}, nomes ${e0.nomes ? 'ligados' : 'desligados'}, opções ${e0.temOpcoes ? `na pausa (marcadas ${menu.pressionados}), pausa rola ${menu.rola} px` : 'NÃO existem'}`, 'minimapa não, nomes sim, opções na pausa (false/true), rola ≤ 0 px', !e0.mapa && e0.nomes && e0.temOpcoes && menu.pressionados === 'false/true' && menu.rola <= 0);
+    meta('H7 celular: o submenu "Modo de jogo" (com Pré-jogo e Substituição lado a lado) cabe sem rolar e nada encosta',
+      sub ? `rola ${sub.rola} px; Substituição ${sub.subst ? `visível ("${sub.texto}")` : 'NÃO aparece'}, Pré-jogo ${sub.prejogo ? 'visível' : 'NÃO aparece'}, folga entre eles ${Number.isFinite(sub.folga) ? sub.folga.toFixed(0) : '-'} px` : 'sem a pausa',
+      'rola ≤ 0 px; os dois visíveis; folga ≥ 4 px', !!sub && sub.rola <= 0 && sub.subst && sub.prejogo && sub.folga >= 4);
     meta('H7 celular: com o minimapa ligado na pausa os dois aparecem, nada encosta e fica salvo; desligar os nomes deixa só o ícone (salvo)', `ligados: minimapa ${e1.mapa}, nomes ${e1.nomes}${enc.length ? ' — encosta: ' + enc.join('; ') : ''}; depois de abrir de novo: minimapa ${e2.mapa}, nomes ${e2.nomes}; nomes desligados e aberto de novo: ${e3.nomes ? 'ainda aparecem' : 'só o ícone'}`, 'tudo true, nada encosta; depois só o ícone',
       e1.mapa && e1.nomes && enc.length === 0 && e2.mapa && e2.nomes && !e3.nomes && erros.length === 0);
   } finally { await navegador.close(); }

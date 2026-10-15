@@ -15,7 +15,10 @@
 // 11/10) e as cenas dela também. Só as cenas do replay abrem com ele ligado (as outras: ?replay=0). A COMEMORAÇÃO do gol
 // (pedido de 11/10): um gol de verdade do time da casa (achado em Node com a entrada da página), a corrida, a finalização
 // forçada (joelhos, pulo, céu, giro), o abraço com a torcida no fundo e a reação de quem sofreu; só as cenas dela (e as
-// do replay, que vem depois dela) abrem com ela ligada (as outras: ?comemoracao=0).
+// do replay, que vem depois dela) abrem com ela ligada (as outras: ?comemoracao=0). A CENA DE SUBSTITUIÇÃO (pedido de
+// 12/10, com ?substituicao=1): quem sai do lado de cá, do lado de lá e o goleiro pela linha de fundo, o quarto árbitro com
+// a placa, o reserva entrando pelo meio-campo, a troca dupla e a faixa ENTRA/SAI na cena e no jogo (depois do Pular),
+// também a 667×375 e 568×320 com entalhe.
 // Roda a simulação com o relógio manual (?demo=1: a IA joga pelo humano) e salva em tools/saida/.
 // Confere também: erros no console e caixas do HUD/botões que se sobrepõem ou passam da área
 // segura (botões de toque conferidos como círculos).
@@ -150,6 +153,28 @@ const CENAS = [
   { nome: 'celular-comemoracao-joelhos-noite', ...CEL, semente: 'golCasa', comemoracao: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'comemoracao:final:joelhos' },
   { nome: 'celular-comemoracao-abraco', ...CEL, semente: 'golCasa', comemoracao: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'comemoracao:abraco:ceu' },
   { nome: 'celular-comemoracao-reacao', ...CEL, semente: 'golCasa', comemoracao: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'comemoracao:reacao:bracos' },
+  // CENA DE SUBSTITUIÇÃO (pedido de 12/10) e a faixa ENTRA/SAI: subst:<momento>:<quem sai> — momento sai (o plano de
+  // quem sai, ~1,3 s nele), sai2 (o 2º de uma troca dupla), quarto (o começo do ENTRA: o quarto árbitro com a placa e o
+  // reserva), entra (o reserva cruzando a linha no meio-campo) ou jogo (a cena pulada aos 0,6 s: a faixa no jogo); quem
+  // sai: perto (o do lado de cá, o dos bancos), longe (o do lado de lá), goleiro (pela linha de fundo) ou dupla
+  { nome: 'pc-subst-sai-perto', ...PC, subst: true, url: 'q=alta&hora=dia&demo=1', prep: 'subst:sai:perto' },
+  { nome: 'pc-subst-sai-longe-noite', ...PC, subst: true, url: 'q=alta&hora=noite&demo=1', prep: 'subst:sai:longe' },
+  { nome: 'pc-subst-sai-goleiro', ...PC, subst: true, url: 'q=alta&hora=dia&demo=1', prep: 'subst:sai:goleiro' },
+  { nome: 'pc-subst-quarto-noite', ...PC, subst: true, url: 'q=alta&hora=noite&demo=1', prep: 'subst:quarto:perto' },
+  { nome: 'pc-subst-entra', ...PC, subst: true, url: 'q=alta&hora=dia&demo=1', prep: 'subst:entra:longe' },
+  { nome: 'pc-subst-dupla-noite', ...PC, subst: true, url: 'q=alta&hora=noite&demo=1', prep: 'subst:sai2:dupla' },
+  { nome: 'pc-subst-jogo', ...PC, subst: true, url: 'q=alta&hora=dia&demo=1', prep: 'subst:jogo:perto' },
+  { nome: 'celular-subst-sai-perto-noite', ...CEL, subst: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'subst:sai:perto' },
+  { nome: 'celular-subst-sai-longe', ...CEL, subst: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'subst:sai:longe' },
+  { nome: 'celular-subst-sai-goleiro-noite', ...CEL, subst: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'subst:sai:goleiro' },
+  { nome: 'celular-subst-quarto', ...CEL, subst: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'subst:quarto:longe' },
+  { nome: 'celular-subst-entra-noite', ...CEL, subst: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'subst:entra:perto' },
+  { nome: 'celular-subst-dupla', ...CEL, subst: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'subst:entra:dupla' },
+  { nome: 'celular-subst-jogo-noite', ...CEL, subst: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'subst:jogo:longe' },
+  { nome: 'celular-667-subst-sai', largura: 667, altura: 375, dpr: 2, toque: true, subst: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'subst:sai:perto' },
+  { nome: 'celular-667-subst-jogo-noite', largura: 667, altura: 375, dpr: 2, toque: true, subst: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'subst:jogo:perto' },
+  { nome: 'celular-568-subst-entra-noite', largura: 568, altura: 320, dpr: 2, toque: true, subst: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'subst:entra:longe' },
+  { nome: 'celular-568-subst-jogo', largura: 568, altura: 320, dpr: 2, toque: true, subst: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'subst:jogo:longe' },
   // Etapa 4: o relógio nos acréscimos ("45+1'", "1º T +N")
   { nome: 'celular-acrescimo', ...CEL, semente: 5, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1&min=0.25', prep: 'acrescimo' },
   { nome: 'celular-568-acrescimo', largura: 568, altura: 320, dpr: 2, toque: true, semente: 2, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1&min=0.25', prep: 'acrescimo' },
@@ -504,6 +529,41 @@ async function preparar(pagina, prep, gol = null) {
       const e = C.estado;
       return e ? `comemoração do gol do time ${e.time} (autor ${e.autor}): ${e.variante}/${e.corrida}, alvo ${e.alvo.nome}, ${e.colegas.length} colegas; fase ${e.fase}, t ${e.t.toFixed(2)} s, plano ${e.plano}` : 'a comemoração acabou antes do momento';
     }
+    if (prep.startsWith('subst:')) {
+      // a cena de substituição numa parada de verdade (lateral do time da casa, aplicada pela partida ≈ 1 s depois)
+      const [, momento, quem] = prep.split(':');
+      const S = g.cenaSubst;
+      if (!S || !g.substituicaoDeTeste) return 'SEM a cena de substituição';
+      const m = g.mundo, meus = m.jogadores.filter(j => j.time === 0), linha = meus.filter(j => j.posicao !== 'GOL');
+      const maisZ = s => linha.reduce((a, b) => (s * b.z > s * a.z ? b : a));
+      const reserva = [22, 19, 20, 21];
+      let pares;
+      if (quem === 'goleiro') pares = [{ sai: meus.find(j => j.posicao === 'GOL').id, entra: 12 }];
+      else if (quem === 'dupla') pares = [{ sai: maisZ(1).id, entra: 22 }, { sai: maisZ(-1).id, entra: 19 }];
+      else pares = [{ sai: maisZ(quem === 'perto' ? 1 : -1).id, entra: reserva[0] }];
+      g.substituicaoDeTeste({ pares, parada: 'lateral' });
+      let n = 0;
+      while (n < 900 && !S.ativo) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; }
+      if (!S.ativo) return 'a troca não abriu a cena';
+      const planos = S.estado.planos, pl = nome => planos.find(p => p.nome === nome);
+      let alvo;
+      if (momento === 'jogo') alvo = 0.6;
+      else if (momento === 'sai' || momento === 'sai2') alvo = (pl(momento)?.t0 ?? 0) + 1.3;
+      else if (momento === 'quarto') alvo = (pl('entra')?.t0 ?? 0) + 0.35;
+      else alvo = (pl('entra')?.t0 ?? 0) + 1.45;
+      while (n < 2400 && S.ativo && S.estado.tempo < alvo) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; }
+      let nota = '';
+      if (momento === 'jogo') {
+        S.pular();
+        for (let i = 0; i < 40; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+        const f = S.faixa();
+        nota = `cena pulada aos ${alvo} s; faixa ${f.visivel ? `no ${f.modo} ("${f.texto}", faltam ${f.restante.toFixed(1)} s)` : 'NÃO aparece'}`;
+      } else {
+        const e = S.estado, f = S.faixa(), pz = S.placa.estado;
+        nota = `${e.pares.map(p => `${p.sai} → ${p.entra}${p.goleiro ? ' (goleiro)' : ''}, saída (${p.saida.x.toFixed(1)}, ${p.saida.z.toFixed(1)})`).join('; ')}; plano ${e.plano}, t ${e.tempo.toFixed(2)} de ${e.total.toFixed(1)} s; placa ${pz?.visivel ? `▲${pz.entra} ▼${pz.sai}` : 'guardada'}; faixa "${f.texto}"`;
+      }
+      return nota;
+    }
     if (prep === 'acrescimo') {
       // 1º tempo de 0,25 min reais: anda até o acréscimo anunciado e 1,5 min de jogo dentro dele ("45+1'")
       const m = g.mundo, p = m.partida;
@@ -655,8 +715,8 @@ for (const c of CENAS) {
     // só as cenas do replay abrem com ele ligado (nas outras, o replay automático seguraria a simulação depois de um gol)
     const sem = c.semente === 'gol' ? GOL.semente : c.semente === 'imped' ? IMPED.semente : c.semente === 'golPagina' ? GOLP.semente : c.semente === 'golCasa' ? GOLC.semente : c.semente === 'legal' ? LEGAL.semente : (c.semente ?? 3);
     // a comemoração só nas cenas dela e nas do replay (que vem depois dela)
-    await pagina.goto(`${srv.url}?${c.semPrints ? '' : 'prints=1&'}semente=${sem}&${c.url}${c.replay ? '' : '&replay=0'}${c.replay || c.comemoracao ? '' : '&comemoracao=0'}`, { waitUntil: 'load' });
-    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    await pagina.goto(`${srv.url}?${c.semPrints ? '' : 'prints=1&'}semente=${sem}&${c.url}${c.replay ? '' : '&replay=0'}${c.replay || c.comemoracao ? '' : '&comemoracao=0'}${c.subst ? '&substituicao=1' : ''}`, { waitUntil: 'load', timeout: 180000 });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
     // N segundos de simulação a 60 Hz com relógio manual (sem render: mais rápido)
     await pagina.evaluate(seg => {
       const g = window.__golaco;

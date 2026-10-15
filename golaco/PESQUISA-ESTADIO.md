@@ -377,3 +377,34 @@ autor a ≤ 3 m do alvo em 1,5–3,5 s; 2 colegas no abraço em 3,6–5,1 s (ant
 pelves a ≥ 0,47 m; pé plantado 0,000 m/s, pé no ar ≤ 0,90 do limite; quem sofreu: 100% com gesto, ≤ 1,4 m/s; 0,09–0,23 ms
 por tick (22 atores; a simulação custa ~0,6 ms por passo); hash do mundo igual antes e depois; a saída no mesmo tick (gol +
 150) com o mesmo hash que sem a cena.
+
+## 11. Cena de substituição e faixa ENTRA/SAI (`js/substituicao.js`, `render/placa-subst.js`, `main.js`, `hud.js`; pedido do dono de 12/10)
+
+"Quando tiver substituição, quero que tenha a cena de substituição, só jogador saindo e entrando, e embaixo, no modelo, a
+informação de quem entra e quem sai". O diagnóstico (versão antes desta entrega, `teste-substituicao` "antes"): na
+simulação o reserva SURGIA a 0,03 m de onde o titular estava, no mesmo tick, ninguém cruzava a linha, cena 0 s; na tela, só
+um aviso de texto ("sai Diego, entra Wallace", sem número nem time). Agora: uma cena de 5,0 s (1 par) ou 6,4 s (2 ou mais;
+teto 6,5), pulável depois de 0,5 s, num mundo À PARTE (cópias, a MESMA locomoção do jogo) — a simulação só espera depois
+do passo das trocas (hash igual) — e a faixa de TV embaixo com sigla, ▲ ENTRA número nome, ▼ SAI número nome.
+
+| Fonte | O que diz | O que aproveitamos |
+|---|---|---|
+| IFAB, Regras do Jogo, Regra 3.3 (procedimento de substituição; theifab.com; thefa.com "Law 3 – The Players") | Quem é substituído sai pelo ponto mais perto da linha do contorno (salvo indicação do árbitro); o substituto entra só depois de ele sair, pela linha do meio-campo, com o sinal do árbitro, numa paralisação | `pontoDeSaida` (lateral ou linha de fundo, o mais perto; erro máx 0,19 m em 146 saídas); o reserva cruza com \|x\| ≤ 1 m só depois do par dele (`teste-substituicao` S2) |
+| IFAB, "Changes to the Laws of the Game 2026/27" e o protocolo de substituição com tempo (Circular 34; Irish FA, julho de 2026) | A partir de 1/7/2026 quem sai tem 10 s depois da placa; passou disso, o substituto só entra na 1ª parada depois de 1 min; o motivo é o tempo perdido e o ritmo do jogo | Quem sai anda FIRME (2,2 m/s), já no 1º quadro do plano, a 3,0–3,6 m da linha: cruza em ~1,5 s; a cena inteira cabe em 5–6,5 s e o relógio da partida não perde nada (a cena é só desenho) |
+| Premier League (19/07/2019, as mudanças da Regra 3 para 2019/20) | A saída pelo ponto mais perto começou para cortar a "caminhada até o banco" | O goleiro e quem está perto da linha de fundo saem por ela (nunca pela boca do gol: \|z\| ≥ 4,75 m) — o print `pc-subst-sai-goleiro` |
+| IFAB Regra 6.2 / guia da FA para o quarto árbitro | O quarto árbitro ajuda no procedimento: confere o equipamento e mostra a placa no meio-campo | O quarto árbitro (id 203, kit dos árbitros) em (0; 35,6), com a placa no alto nas duas mãos (IK: `G_PLACA`), ao lado dos reservas que esperam na grama do lado de cá |
+| Fabricantes de placas eletrônicas (Stramatel "Substitution player board"; Referee Store, placas UCL e Major League; Favero) | "RED = OUT, GREEN = IN": 2 dígitos de LED vermelhos para quem sai e 2 verdes para quem entra, legíveis de longe | A placa: caixa 0,58 × 0,38 m, dígitos de 7 segmentos (os apagados em cinza, como no LED), ▲ verde entra e ▼ vermelho sai; com vários pares troca a cada 0,8 s, o do humano primeiro (S8; no celular ≥ 40 px no plano ENTRA — `teste-substituicao-tela` T10) |
+| Transmissão de TV (posições de câmera do futebol: câmeras de ala na beira do campo e a do banco) | O close de quem sai é feito da beira do campo; o banco e o quarto árbitro por uma câmera baixa | Plano SAI: câmera de ala FORA da linha, no rosto de quem sai (lente ≥ 2,5 m de todo ator, ninguém grande no quadro, nunca dentro de sólido); plano ENTRA: câmera baixa no gramado do lado de cá, pan do quarto árbitro para o reserva |
+| Lower thirds (School of Motion, "Sports lower thirds"; Epidemic Sound; Riverside; Vimeo) | 3–6 (até 7) s na tela para dar tempo de ler; informação mínima, no terço de baixo, dentro da área segura | A faixa fica ≥ 4,0 s (também com a cena pulada aos 0,6 s), 2,5 s por par (1,8 com ≥ 4), teto 10 s; só sigla, ▲/▼, ENTRA/SAI, número e nome (a exceção do dono à regra "sem narração"); PC embaixo à esquerda, celular dentro da área segura, nada encosta no HUD (T8) |
+| EA Forums, FC 26 ("Stupid substitution animation"; o fio do botão das substituições rápidas que é o mesmo do pular replay) | A animação de substituição "toma o lugar" do replay e os jogadores pedem um jeito de desligar; o mesmo botão que pula uma coisa dispara outra | Fila ÚNICA: gol → comemoração → replay INTEIRO → substituição → recomeço (a cena nunca rouba o replay, T5); pular só com um aperto NOVO depois de 0,5 s, e esse aperto nunca vira jogada (T4); opção "Substituição: ligada / só a faixa" no "Modo de jogo" |
+| Squirrel Eiserloh, GDC 2016 — "Juicing Your Cameras With Math" (já em §2 e §10) | Corte não enjoa; travelling rápido sim | Câmera por CORTES entre os planos (SAI, SAI2, ENTRA) e corte SECO para a TV no fim; dentro do plano só o pan e o zoom do enquadramento |
+| Craig Reynolds, GDC 1999 — "Steering Behaviors For Autonomous Characters" | Separação e desvio de obstáculos olhando à frente | `desviar()` para quem anda (reservas e quem sai) e separação a 0,55 m: nenhum par de corpos a < 0,5 m nas 49 paradas do canhão (S4) |
+| O próprio jogo | `jogador.js` passoCorpo/passoPassada/passoPeDesenhado, `anim.js` pose, `comemoracao.js` criarAtor/gesto/maoEm, `estadio-forma.js` solidoEm, a régua do `teste-patinacao` | A cena usa a MESMA locomoção e a MESMA régua de pé plantado/pé no ar; os gestos (palmas de quem sai, troca de peso de quem espera, a placa no alto) por IK |
+
+Medidas (Node, `tools/teste-substituicao.mjs`, canhão de 49 paradas — 8 sementes × lateral, escanteio, tiro de meta, tiro
+livre, pênalti e gol + uma de 5 + 5): duração 5,00 s (1 par) e 6,40 s (2 a 10 pares); quem sai cruza a ≤ 0,19 m do ponto
+mais perto, entre 1,40 e 3,67 s, nunca pela boca do gol, no 1º quadro a 2,20 m/s e 3,01–3,51 m da linha; reservas cruzam
+com |x| ≤ 0,60 m, nunca antes do par; 0 NaN, ossos ±1,4 mm, pé plantado 0,000 m/s, pé no ar ≤ 0,90 do limite; corpos ≥
+0,55 m; ninguém nas placas nem no gol; hash e rng iguais; 0 chamadas ao Math.random; 0,10 ms por tick de cena (CPU) e 1,8
+ms para criar a cena; lente ≥ 2,79 m; o ator no quadro em 100% dos quadros (PC e celular) e os pés acima da faixa no
+celular.

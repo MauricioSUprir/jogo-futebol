@@ -25,9 +25,12 @@ const TEXTO_EVENTO = {
   // partida (Etapa 3): respostas à edição do time feita na pausa
   timeEditado: { t: 'Time atualizado', ms: 1600, forte: true, prio: 2 },
   edicaoRecusada: { t: 'Mudança no time recusada', ms: 2400, prio: 3 },
-  substituicao: { t: 'Substituição', ms: 2400, forte: true, prio: 3 },
+  // (a substituição feita não vira aviso de texto: a faixa ENTRA/SAI de TV — faixaSubst — mostra quem entra e quem sai)
   reinicio: { t: 'Partida reiniciada', ms: 1200 },
 };
+// faixa ENTRA/SAI (pedido do dono de 12/10: "embaixo, no modelo, a informação de quem entra e quem sai"; a exceção dele à
+// regra sem narração: só sigla, ▲/▼, ENTRA/SAI, número e nome). Tempos em s (config.js SUBST.faixa).
+const FAIXA_SUB = { min: 4.0, porPar: 2.5, porParMuitos: 1.8, teto: 10 };
 // Selos da decisão da análise semiautomática do replay (terço de baixo): exatamente estes textos, sem nome nem minuto.
 const SELOS = { impedimento: 'IMPEDIMENTO', legal: 'POSIÇÃO LEGAL' };
 // bandeira do assistente (ícone do selo, na cor da decisão pelo CSS)
@@ -56,7 +59,8 @@ const CAMPO_MX = 52.5, CAMPO_MZ = 34;
  * fechar-ajuda, qualidade, hora, camera, toqueTamanho, toqueOpacidade, editar-time,
  * reiniciar-partida, modos, modos-voltar, modo (valor: partida | ataque | conducao), som (ligado |
  * desligado), volume (0–1), minimapa e nomes (sem valor: alterna; tela limpa, 11/10), replay (o "Replay" da pausa),
- * replay-pular, replayAuto (ligado | desligado), comemoracao-pular.
+ * replay-pular, replayAuto (ligado | desligado), comemoracao-pular, substituicao-pular, subst-ciclo (a opção "Cena de
+ * substituição" do "Modo de jogo": ligada ↔ só a faixa).
  */
 export function criarHud(opc) {
   const $ = id => document.getElementById(id);
@@ -72,7 +76,7 @@ export function criarHud(opc) {
     faixa: $('faixa'), faixaTitulo: $('faixa-titulo'), faixaPlacar: $('faixa-placar'), faixaBotao: $('faixa-botao'),
     acoes: $('menu-acoes'), modos: $('menu-modos'), estadoModo: $('estado-modo'), continuar: $('btn-continuar'),
     reiniciarPartida: $('btn-reiniciar-partida'), dica: $('dica'), replay: $('replay'), replayFaixa: $('replay-faixa'),
-    comemoracao: $('comemoracao'),
+    comemoracao: $('comemoracao'), substituicao: $('substituicao'), faixaSub: $('faixa-subst'),
     terco: $('terco'),
   };
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
@@ -133,6 +137,8 @@ export function criarHud(opc) {
   el.replay?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('replay-pular'); });
   // comemoração do gol: a mesma camada (qualquer toque ou clique pula, depois de 0,5 s — quem decide é o main.js)
   el.comemoracao?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('comemoracao-pular'); });
+  // cena de substituição: a mesma camada (qualquer toque ou clique pula, depois de 0,5 s — quem decide é o main.js)
+  el.substituicao?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('substituicao-pular'); });
 
   function marcarGrupo(grupo, valor) {
     document.querySelectorAll(`.segmentado[data-grupo="${grupo}"] button`).forEach(b => {
@@ -250,13 +256,85 @@ export function criarHud(opc) {
     const agora = performance.now();
     const vivo = el.aviso.classList.contains('visivel') && agora < avisoAtual.ate;
     if (vivo && avisoAtual.prio > prio) return;
-    // duas substituições na mesma parada: um aviso só ("Substituição: sai A, entra B; sai C, entra D")
-    if (vivo && tipo === 'substituicao' && avisoAtual.tipo === 'substituicao' && texto !== avisoAtual.texto) texto = `${avisoAtual.texto}; ${texto.replace(/^Substituição: /, '')}`;
     el.aviso.textContent = texto;
     el.aviso.className = 'aviso visivel' + (cls ? ' ' + cls : '');
     Object.assign(avisoAtual, { tipo, prio, ate: agora + ms, texto });
     clearTimeout(timerAviso);
     timerAviso = setTimeout(() => { el.aviso.classList.remove('visivel'); }, ms);
+  }
+
+  // ---------------------------------------------------------------- faixa ENTRA/SAI (lower third de TV)
+  // pares = [{time, sigla, nomeTime, cor, corTexto, entra: {num, nome, camisa}, sai: {...}}]. Um par por página: na cena a
+  // página vem do main.js (o par do plano); no jogo ela passa pelo tempo (porPar s), sem recomeçar a contagem. Fica
+  // ≥ FAIXA_SUB.min s (mesmo com a cena pulada), até FAIXA_SUB.teto; na cena, até ela acabar. O relógio é o do laço
+  // (agora, ms): o mesmo dos testes com o relógio manual.
+  const fsEl = el.faixaSub ? (() => {
+    const linha = sel => { const l = el.faixaSub.querySelector(sel); return { l, num: l.querySelector('.fs-num'), nome: l.querySelector('.fs-nome-completo'), curto: l.querySelector('.fs-nome-curto') }; };
+    return { sigla: el.faixaSub.querySelector('.fs-sigla'), sr: el.faixaSub.querySelector('.fs-sr'), conta: el.faixaSub.querySelector('.fs-conta'), entra: linha('.fs-entra'), sai: linha('.fs-sai') };
+  })() : null;
+  // visto[i] = s que a página i já ficou na tela; no jogo (depois da cena, ou sem ela) passam primeiro as páginas vistas
+  // por menos de 0,6·porPar (fila, a partir de tj), cada uma porPar s, e a faixa vai até fim (≥ dur) — contraprova de
+  // 14/10: com 4 e 5 trocas o relógio desde o começo da cena pulava um par, que nunca aparecia
+  const fs = { pares: null, t0: 0, dur: 0, porPar: FAIXA_SUB.porPar, pagina: -1, modo: null, destaque: null, visto: [], ultimo: 0, fila: [], tj: 0, fim: 0 };
+  const textoPar = p => `${p.nomeTime}: entra ${p.entra.num} ${p.entra.nome}, sai ${p.sai.num} ${p.sai.nome}`;
+  function paginaFaixa(i) {
+    const p = fs.pares[i];
+    fsEl.sigla.textContent = p.sigla;
+    el.faixaSub.style.setProperty('--cor-time', p.cor);
+    el.faixaSub.style.setProperty('--cor-time-texto', p.corTexto);
+    for (const k of ['entra', 'sai']) { const q = fsEl[k]; q.num.textContent = String(p[k].num ?? ''); q.nome.textContent = p[k].nome; q.curto.textContent = p[k].camisa; }
+    fsEl.conta.textContent = fs.pares.length > 1 ? `${i + 1}/${fs.pares.length}` : '';
+    const t = textoPar(p);
+    el.faixaSub.dataset.texto = t;
+    fsEl.sr.textContent = t;
+    fs.pagina = i;
+  }
+  function esconderFaixaSub() {
+    fs.pares = null; fs.pagina = -1; fs.modo = null;
+    if (!el.faixaSub) return;
+    el.faixaSub.hidden = true;
+    el.faixaSub.classList.remove('visivel', 'cena', 'jogo');
+    el.faixaSub.dataset.texto = '';
+    raiz.classList.remove('faixa-subst-topo');
+  }
+  function quadroFaixaSub(agora, cena) {
+    if (!fs.pares || !el.faixaSub) return;
+    const t = (agora - fs.t0) / 1000;
+    // o tempo desde o quadro anterior conta para a página que estava na tela
+    if (fs.pagina >= 0) fs.visto[fs.pagina] += Math.max(0, (agora - fs.ultimo) / 1000);
+    fs.ultimo = agora;
+    const n = fs.pares.length, pp = fs.porPar;
+    const modo = cena ? 'cena' : 'jogo';
+    if (modo === 'jogo' && fs.modo !== 'jogo') {
+      fs.tj = t;
+      fs.fila = [];
+      for (let i = 0; i < n; i++) if (fs.visto[i] < 0.6 * pp) fs.fila.push(i);
+      // (a última página da cena que ainda está na fila vem primeiro: ela continua, sem piscar)
+      const k = fs.fila.indexOf(fs.pagina);
+      if (k > 0) { fs.fila.splice(k, 1); fs.fila.unshift(fs.pagina); }
+      fs.fim = Math.max(fs.dur, t + fs.fila.length * pp);
+    }
+    if (!cena && t >= fs.fim) { esconderFaixaSub(); return; }
+    let pg;
+    if (cena && cena.pagina != null) pg = Math.max(0, Math.min(n - 1, cena.pagina));
+    else {
+      const u = t - fs.tj;
+      pg = u >= 0 && u < fs.fila.length * pp ? fs.fila[Math.floor(u / pp)] : Math.floor(Math.max(0, t) / pp) % n;
+    }
+    if (pg !== fs.pagina) paginaFaixa(pg);
+    if (modo !== fs.modo) {
+      fs.modo = modo;
+      el.faixaSub.classList.toggle('cena', modo === 'cena');
+      el.faixaSub.classList.toggle('jogo', modo === 'jogo');
+      // celular, no jogo: a linha compacta fica no lugar do aviso (o aviso desce para baixo dela)
+      raiz.classList.toggle('faixa-subst-topo', modo === 'jogo');
+    }
+    const d = cena ? cena.destaque ?? null : null;
+    if (d !== fs.destaque) {
+      fs.destaque = d;
+      fsEl.entra.l.classList.toggle('destaque', !d || d === 'entra');
+      fsEl.sai.l.classList.toggle('destaque', !d || d === 'sai');
+    }
   }
 
   // ---------------------------------------------------------------- minimapa
@@ -660,6 +738,44 @@ export function criarHud(opc) {
       if (el.comemoracao) el.comemoracao.hidden = !ativo;
     },
     get comemoracaoVisivel() { return !!el.comemoracao && !el.comemoracao.hidden; },
+    /**
+     * Cena de substituição ligada/desligada (html.em-substituicao): do HUD de jogo fica só o placar (e a faixa ENTRA/SAI);
+     * minimapa, menu, avisos, barra de força, cartão e botões de toque somem; a camada pega qualquer toque (pular) e o
+     * "Pular" aparece só com toque.
+     */
+    substituicao(ativo) {
+      ativo = !!ativo;
+      if (raiz.classList.contains('em-substituicao') === ativo) return;
+      raiz.classList.toggle('em-substituicao', ativo);
+      if (el.substituicao) el.substituicao.hidden = !ativo;
+    },
+    get substituicaoVisivel() { return !!el.substituicao && !el.substituicao.hidden; },
+    /**
+     * Faixa ENTRA/SAI: pares (ver quadroFaixaSub) ou null (some); agora = o relógio do laço (ms). Começa no modo da cena
+     * se `cena` vier ({pagina, destaque: 'sai' | 'entra'}); senão no do jogo. Fica ≥ 4 s (2,5 s por par; 1,8 com 4 ou
+     * mais; teto 10 s).
+     */
+    faixaSubst(pares, agora, cena = null) {
+      if (!el.faixaSub) return;
+      if (!pares || !pares.length) { esconderFaixaSub(); return; }
+      const n = pares.length, pp = n >= 4 ? FAIXA_SUB.porParMuitos : FAIXA_SUB.porPar;
+      fs.pares = pares; fs.t0 = agora; fs.porPar = pp; fs.dur = Math.min(FAIXA_SUB.teto, Math.max(FAIXA_SUB.min, n * pp));
+      fs.pagina = -1; fs.modo = null; fs.destaque = undefined;
+      fs.visto = pares.map(() => 0); fs.ultimo = agora; fs.fila = []; fs.tj = 0; fs.fim = fs.dur;
+      el.faixaSub.hidden = false;
+      el.faixaSub.classList.remove('visivel'); void el.faixaSub.offsetWidth; el.faixaSub.classList.add('visivel');
+      quadroFaixaSub(agora, cena);
+    },
+    /** Um quadro da faixa (página, modo, destaque, fim). cena = {pagina, destaque} durante a cena; null no jogo. */
+    faixaSubstQuadro: quadroFaixaSub,
+    /** Estado da faixa (testes): {visivel, modo, pagina, n, texto, restante (s)}. */
+    faixaSubstEstado(agora) {
+      const vis = !!el.faixaSub && !el.faixaSub.hidden && !!fs.pares;
+      const fim = fs.modo === 'jogo' ? fs.fim : fs.dur;
+      return { visivel: vis, modo: fs.modo, pagina: fs.pagina, n: fs.pares?.length ?? 0, texto: el.faixaSub?.dataset.texto ?? '', restante: vis ? fim - (agora - fs.t0) / 1000 : 0, dur: fim };
+    },
+    /** A faixa ENTRA/SAI sai já (mundo novo). */
+    esconderFaixaSubst: esconderFaixaSub,
     /** A faixa verde cruza a tela (a cortina da comemoração pulada antes da hora: os passos que faltam rodam por baixo). */
     cortina() {
       const f = el.replayFaixa;

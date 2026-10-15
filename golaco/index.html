@@ -96,6 +96,17 @@
       <span class="faixa-placar" id="faixa-placar"></span>
       <button class="btn btn-primario faixa-botao" id="faixa-botao" type="button" data-cmd="reiniciar-partida" hidden>Jogar de novo</button>
     </div>
+    <!-- faixa ENTRA/SAI da substituição (lower third de TV; pedido do dono de 12/10 — a exceção dele à regra sem narração:
+         só sigla, ▲/▼, ENTRA/SAI, número e nome). Na cena: embaixo à esquerda; no jogo do celular: uma linha no lugar do aviso -->
+    <div id="faixa-subst" class="faixa-subst" role="status" aria-live="polite" data-caixa="faixa-subst" hidden>
+      <span class="fs-sr"></span>
+      <span class="fs-sigla" aria-hidden="true"></span>
+      <div class="fs-linhas" aria-hidden="true">
+        <div class="fs-linha fs-entra"><svg class="fs-tri" viewBox="0 0 12 12"><path d="M6 1.5 11 10.5H1z"/></svg><b class="fs-palavra">ENTRA</b><b class="fs-num"></b><span class="fs-nome fs-nome-completo"></span><span class="fs-nome fs-nome-curto"></span></div>
+        <div class="fs-linha fs-sai"><svg class="fs-tri" viewBox="0 0 12 12"><path d="M1 1.5h10L6 10.5z"/></svg><b class="fs-palavra">SAI</b><b class="fs-num"></b><span class="fs-nome fs-nome-completo"></span><span class="fs-nome fs-nome-curto"></span></div>
+      </div>
+      <span class="fs-conta" aria-hidden="true"></span>
+    </div>
     <div id="qps" class="qps" hidden></div>
     <div id="dica" class="dica" data-caixa="dica"><kbd>H</kbd> controles <span class="sep"></span> <kbd>Esc</kbd> menu</div>
   </div>
@@ -160,9 +171,14 @@
   <div id="comemoracao" class="replay comemoracao" hidden>
     <button id="comemoracao-pular" class="btn-replay-pular" data-caixa="comemoracao-pular" type="button" aria-label="Pular a comemoração">Pular<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg></button>
   </div>
+  <!-- Cena de substituição (js/substituicao.js): a mesma camada — depois de 0,5 s qualquer toque, clique, tecla (menos a
+       pausa) ou botão do controle pula a cena; a faixa ENTRA/SAI continua no jogo. "Pular" só aparece com toque. -->
+  <div id="substituicao" class="replay substituicao" hidden>
+    <button id="substituicao-pular" class="btn-replay-pular" data-caixa="substituicao-pular" type="button" aria-label="Pular a cena da substituição">Pular<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg></button>
+  </div>
   <!-- Terço de baixo (js/hud.js terco): o selo da decisão no quadro final da análise semiautomática do replay
-       ("IMPEDIMENTO" / "POSIÇÃO LEGAL" — a única exceção à "sem narração"; nada de nome nem minuto). A cena de
-       substituição usa a mesma peça. Não pega toque (o toque na camada do replay continua pulando). -->
+       ("IMPEDIMENTO" / "POSIÇÃO LEGAL" — a única exceção à "sem narração"; nada de nome nem minuto). A faixa
+       ENTRA/SAI da substituição é outra peça (#faixa-subst). Não pega toque (o toque na camada do replay continua pulando). -->
   <div id="terco" class="terco" data-caixa="terco" aria-live="polite" hidden></div>
 
   <!-- Menu de pausa -->
@@ -212,7 +228,12 @@
           <!-- pré-jogo da partida (as cenas antes da saída de bola e as escalações): cada toque passa para o próximo —
                completo, curto, só escalação, desligado; salvo (js/main.js modoPrejogo). Aqui e não nas opções: com uma
                linha a mais a pausa rolava no celular deitado (ela tem de caber inteira) -->
-          <button class="btn" type="button" data-cmd="prejogo-ciclo" id="btn-prejogo" aria-describedby="estado-prejogo">Pré-jogo da partida <small id="estado-prejogo">completo</small></button>
+          <!-- as cenas da partida lado a lado (numa linha só: o submenu continua cabendo sem rolar no celular deitado) — o
+               pré-jogo e a cena de substituição (ligada ↔ só a faixa ENTRA/SAI: a faixa fica sempre, é o pedido do dono) -->
+          <div class="linha-cenas" role="group" aria-label="Cenas da partida">
+            <button class="btn" type="button" data-cmd="prejogo-ciclo" id="btn-prejogo" aria-label="Pré-jogo da partida" aria-describedby="estado-prejogo">Pré-jogo <small id="estado-prejogo">completo</small></button>
+            <button class="btn" type="button" data-cmd="subst-ciclo" id="btn-subst" aria-label="Cena de substituição" aria-describedby="estado-subst">Substituição <small id="estado-subst">ligada</small></button>
+          </div>
         </div>
         <div class="menu-opcoes">
           <div class="opcao">

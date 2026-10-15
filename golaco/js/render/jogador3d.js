@@ -401,6 +401,11 @@ export function criarJogadores3D(cena, qualidade) {
       };
     },
     /**
+     * Garante lugar para n jogadores desenhados já (sem remontar no meio de uma cena: a cena de substituição desenha os
+     * 22 + quem entra + o quarto árbitro; remontar ali subia um buffer novo para a GPU no meio dela).
+     */
+    reservar(n) { if (n > cap) montar(n); },
+    /**
      * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, pressiona, x, z, rumo}]
      * (pressiona: o companheiro chamado pelo botão PRESSÃO — a marca âmbar acima da cabeça; relogio: 0–1 dos últimos 5 s
      * dos 8 com a bola nas mãos — o anel âmbar sob o goleiro, Regra 12.3; −1 ou ausente = nada)

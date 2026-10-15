@@ -1456,6 +1456,59 @@ export const COMEMORACAO = {
   },
 };
 
+// ------------------------------------------------------------------------ Cena de substituição (render: nunca muda o hash)
+// Pedido do dono de 12/10: "quando tiver substituição, quero que tenha a cena de substituição, só jogador saindo e
+// entrando, e embaixo, no modelo, a informação de quem entra e quem sai". js/substituicao.js (PURO) copia os 22 para um
+// mundo de cena à parte (a receita da comemoração) e anda com a MESMA locomoção do jogo; a página (main.js) SEGURA o
+// laço depois do passo que trouxe as trocas enquanto a cena roda (o mundo não muda: hash igual). Regra 3.3 da IFAB:
+// quem sai vai pelo ponto MAIS PERTO da linha; quem entra só depois, pela linha do meio-campo, com o sinal do árbitro.
+// Planos (s): SAI (câmera de ala, de fora da linha, no rosto de quem sai) → [SAI2 com 2 pares ou mais] → ENTRA (câmera
+// baixa no gramado do lado de cá: o quarto árbitro com a placa, o banco ao fundo e os reservas cruzando a lateral no
+// meio-campo) → corte seco para a câmera de TV. Pesquisa: PESQUISA-ESTADIO.md §11; contrato: CONTRATOS.md.
+export const SUBST = {
+  ligada: true,               // padrão da opção "Cena de substituição" (desligada com webdriver, ?prints=1 e ?demo=1)
+  sai: 2.4,                   // s — plano de quem sai (1 par)
+  sai1de2: 2.2,               // s — o 1º plano de quem sai com 2 pares ou mais
+  sai2: 1.6,                  // s — o 2º plano de quem sai (o 2º par)
+  entra: 2.6,                 // s — plano de quem entra (o quarto árbitro com a placa)
+  sinal: 0.5,                 // s do plano ENTRA antes do 1º reserva sair (o "sinal" com a placa no alto)
+  escalona: 0.35,             // s entre um reserva e o próximo
+  teto: 6.5,                  // s — nenhuma cena passa disto (até 5 + 5 pares)
+  velSai: 2.2,                // m/s — quem sai anda firme (IFAB 2026/27: sair em até 10 s)
+  freioSai: 2.0,              // m/s² — freada depois de cruzar a linha (para a ~alemLinha m dela)
+  velEntra: 3.2,              // m/s — quem entra trota para a vaga
+  distSai: [3.0, 3.6],        // m da linha no 1º quadro do plano dele (pelo hash)
+  alemLinha: 1.2,             // m além da linha em que quem sai para (e aplaude)
+  preRolagem: 1.1,            // s de caminhada invisível do 1º que sai (ele já entra no plano andando a 2,2 m/s)
+  arranque: 0.4,              // m que o arranque do repouso atrasa (2,2 m/s em ~1 s: a 1,5 s andou 2,9 m e não 3,3)
+  quarto: { x: 0, z: 35.6 },  // o quarto árbitro com a placa, de frente para o campo
+  espera: { x0: 0.7, passo: 0.8, z: 35.2 }, // reservas esperando na grama entre a lateral e as placas (x = ±(x0 + passo·k))
+  cruzaX: 0.5,                // |x| do ponto em que o reserva cruza a lateral (Regra 3.3: pela linha do meio-campo)
+  // outros pontos (× o lado do time; negativo = do outro lado da linha do meio, só se o outro time não troca) quando
+  // alguém do jogo está parado a < cruzaFolga m do x (o cobrador do lateral no meio-campo)
+  cruzaOpcoes: [0.5, 0.2, 0.85, -0.2, -0.5, -0.85], cruzaFolga: 0.85,
+  // câmera de ala do plano SAI: altura, lado (m ao longo da linha a partir do ponto de saída), fora (m para fora da
+  // linha, antes das placas) e fov (vertical, graus, para 16:9) que enquadra o corpo inteiro na distância de 7 m
+  // (longe/foraMax: a 2ª grade, quando nenhuma da 1ª fica a ≥ lenteMin + 0,5 m de todos)
+  camSai: { altura: 1.5, lado: [5, 7], fora: [1.5, 2.5], fov: 22, longe: [8, 9, 10, 4], foraMax: 3.2 },
+  // câmera do plano ENTRA: no gramado do lado de cá, do lado contrário ao x da vaga, olhando o quarto árbitro
+  camEntra: { x: 5, y: 1.4, z: 28, alvo: [0, 1.5, 35], fov: 26 },
+  // enquadramento: os pés acima da faixa embaixo (fração da altura do quadro a partir de baixo) e a cabeça no alto
+  pes: 0.27, cabeca: 0.92,
+  lenteMin: 2.5,              // m — nenhum ator mais perto da lente que isto
+  separacao: 0.55,            // m entre os centros dos corpos na cena (a comemoração usa 0,5; a régua do teste é 0,5)
+  golRaio: 4.6,               // m do meio da linha de fundo: ninguém sai pela boca do gol (nem pela rede)
+  golFolga: 0.15,             // m — quem sai pela linha de fundo perto do gol passa a golRaio + golFolga (o ruído do passo
+                              // nunca o põe na boca do gol)
+  pularDepois: 0.5,           // s — antes disso nenhum aperto pula
+  placaTroca: 0.8,            // s — a placa passa de par em par (o do humano primeiro)
+  aplauso: { freq: 2.4, entra: 0.3 }, // palmas de quem sai ao cruzar a linha (Hz; s para os braços subirem)
+  idQuarto: 203,              // id do quarto árbitro (200–202: os árbitros do pré-jogo)
+  // faixa ENTRA/SAI: ≥ min s na tela (mesmo com a cena pulada), porPar s por par (porParMuitos com 4 pares ou mais),
+  // teto s, fade s
+  faixa: { min: 4.0, porPar: 2.5, porParMuitos: 1.8, teto: 10, fade: 0.25 },
+};
+
 // Estádio (só desenho: nada da simulação usa). O TÚNEL por onde os times entram (o pré-jogo usa) fica no meio da
 // arquibancada do lado de cá (z +, a da câmera de TV): a boca na frente dela (z = 44,5), 7 m de largura e 3,2 m de
 // altura, e o corredor entra 12 m por baixo das cadeiras. Os BANCOS DE RESERVAS ficam na frente da arquibancada, atrás

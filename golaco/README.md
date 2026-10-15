@@ -108,6 +108,14 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
   a linha congela no quadro do passe com a linha desenhada (a linha só aparece no replay). "Replay" na pausa revê os
   últimos 10 s. O jogo espera parado durante o replay (o resultado não muda); qualquer tecla, botão, clique ou toque pula
   ("Pular" no celular). Pausa → "Replays automáticos": ligado/desligado (salvo).
+- **Substituição** (12/10): na parada em que a troca entra, uma cena de 5 s (6,4 s com duas ou mais) — quem sai anda até
+  o ponto mais perto da linha (Regra 3.3; o goleiro pela linha de fundo, nunca pela boca do gol), aplaude a torcida e para
+  fora do campo; o quarto árbitro levanta a placa (▲ verde entra, ▼ vermelho sai) e o reserva cruza a lateral no
+  meio-campo depois que o outro saiu. Embaixo, a faixa de TV: sigla do time, ▲ ENTRA número nome, ▼ SAI número nome (≥ 4 s;
+  no jogo ela continua — no celular, uma linha no alto). Com gol na mesma parada: comemoração → replay → substituição. O
+  jogo espera parado (o resultado não muda); um aperto novo depois de 0,5 s pula ("Pular" no celular) e não vira jogada.
+  Troca no intervalo: sem cena, a faixa na saída do 2º tempo. Pausa → "Modo de jogo" → "Substituição: ligada / só a
+  faixa" (salvo); `?substituicao=0|1` força.
 
 ## Pré-jogo (pedido de 11/10)
 
@@ -196,6 +204,8 @@ node golaco/tools/teste-estadio.mjs    # navegador: torcida (qualidades, chamada
 node golaco/tools/teste-replay-anel.mjs  # (Node, também no rodar-testes) anel do replay, roteiros do gol/impedimento/pausa e o replay de lances de verdade
 node golaco/tools/teste-comemoracao.mjs      # (Node, também no rodar-testes) cena da comemoração: locomoção sem patinar, golpes, gestos, abraço, quem sofreu, câmera, mundo intacto [--js <pasta js>]
 node golaco/tools/teste-comemoracao-tela.mjs # navegador: comemoração na página (fases, autor no quadro, simulação segura, cena → replay → saída no mesmo tick e hash, pular, celular, CPU) [--raiz <pasta do jogo>]
+node golaco/tools/teste-substituicao.mjs      # (Node, também no rodar-testes) cena de substituição: canhão de 49 paradas (Regra 3.3, pés, corpos, câmera, placa, mundo intacto) [--js <pasta js>]
+node golaco/tools/teste-substituicao-tela.mjs # navegador: cena na página (hash com e sem ela e em Node, faixa ENTRA/SAI, pular, fila depois do replay, intervalo, pausa, nada encosta em 4 telas, celular) [--raiz <pasta do jogo>]
 node golaco/tools/teste-replay.mjs     # navegador: replay do gol (na saída, simulação parada, hash igual), do impedimento (linha só no passe), pausa, pular, custos [--base <pasta do jogo>]
 node golaco/tools/teste-hud-minimo.mjs # navegador: tela limpa — área do HUD no celular (≤ 11%, 3 telas, ataque e defesa), nenhum texto fora do placar e dos nomes dos botões, nomes dos botões por padrão (H9), torcida atrás do HUD (≤ 15%), linha de impedimento só no apito, PC ≤ 2,5% com a dica que some, opções Minimapa e Nomes nos botões, ajustes de toque v2, placar de TV menor e legível (H10; --so-placar roda só ele)
 python3 -I golaco/tools/sons/fazer_sons.py <gravações> <saída>  # refaz os sons a partir das gravações originais (CREDITOS.md)
