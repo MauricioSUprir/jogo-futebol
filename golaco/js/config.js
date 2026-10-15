@@ -827,7 +827,9 @@ export const FALTAS = {
   // condutor), × (1 + porVel · (v − vLivre)⁺) pela velocidade de quem chega, × lerp(desarme 40 → 90: 1,3 → 0,7)
   // (× lento com o condutor parado/lento, abaixo de ACOES.boteIA.vParado: o bote nele chega devagar e de perto — sem
   // isso ~30% das tentativas viravam falta e o humano ganhava tiro livre só por ficar parado)
-  bote: { frente: 0.2, lado: 0.42, tras: 0.8, porVel: 0.12, vLivre: 4, desarme: [1.3, 0.7], lento: 0.4 },
+  // × naArea na própria área (pênalti) e × naChanceClara na chance clara de gol (vermelho): ali o defensor evita entrar no
+  // homem, como na carga (real: ~1% das faltas vira pênalti — 0,23 por jogo para 22,8 faltas; aqui eram 4–8%)
+  bote: { frente: 0.2, lado: 0.42, tras: 0.8, porVel: 0.12, vLivre: 4, desarme: [1.3, 0.7], lento: 0.4, naArea: 0.4, naChanceClara: 0.2 },
   // força do contato no bote da IA (faltas.js forcaContato/fatorForca: a velocidade com que o defensor entra no condutor,
   // limitada pela aproximação): até `min` m/s (o passo) é contato incidental (desarme limpo: ele chega na bola antes do
   // homem); a chance de antes a partir de `cheia` m/s, × (1 + porForca · (f − min)) acima; `janela` s: a memória do choque

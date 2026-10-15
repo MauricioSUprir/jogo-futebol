@@ -1328,8 +1328,9 @@ Sai em PRs menores; cada um acrescenta a sua parte aqui. Pesquisa e números em 
   antes da resposta, só na partida; `j.choque {id, tick, f}`: a maior dos últimos `FALTAS.forca.janela` s); 0 a mais de
   `FALTAS.forca.alcance` m entre os centros (corpo + perna até a bola + o pé dele: não há contato). O bote da IA
   (`faltaNoBote`) vira falta com a chance de antes × `fatorForca(f)` (0 até `FALTAS.forca.min` — o passo, contato
-  incidental —, rampa até `cheia`, × (1 + `porForca` · (f − min)) acima; teto 0,95): o desarme sem entrar no homem é
-  limpo (a IA leva a bola). A carga (`faltaNaCarga`) exige `forcaContato ≥ carga.vMin` (o condutor que recua para dentro
+  incidental —, rampa até `cheia`, × (1 + `porForca` · (f − min)) acima; × `bote.naArea` na própria área e
+  × `bote.naChanceClara` na chance clara de gol — ali o defensor evita entrar no homem, como na carga; teto 0,95): o desarme
+  sem entrar no homem é limpo (a IA leva a bola). A carga (`faltaNaCarga`) exige `forcaContato ≥ carga.vMin` (o condutor que recua para dentro
   de quem estava atrás não é carga dele) e não vale para quem tocou na bola há menos de `carga.perdeu` s (o embalo de quem
   acabou de perder a bola no bote); nas costas a ≥ `carga.temeraria` m/s é temerária (amarelo; Regra 12.1). Segurar
   (`faltaTatica`): o marcador batido colado por trás segura — no ataque promissor `tatica.chancePorPasso` por passo

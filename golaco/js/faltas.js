@@ -191,7 +191,10 @@ export function faltaNoBote(m, d, c) {
   // (forcaContato × fatorForca). Contato a passo (o defensor recuando de frente, acompanhando de lado, a bola encostada)
   // é desarme limpo. Pedido do dono, 15/10 ("faltas muito forçadas e sem sentido": 53% das faltas da IA no humano que
   // conduz eram com o defensor entrando a < 1 m/s; tools/teste-faltas-sentido.mjs)
-  const p = Math.min(0.95, chanceFaltaBote(d, c) * fatorForca(forcaContato(m, d, c)));
+  // na própria área (seria pênalti) e na chance clara de gol (seria vermelho) o defensor evita entrar no homem, como na
+  // carga: × FALTAS.bote.naArea, × FALTAS.bote.naChanceClara
+  const cuidado = (naAreaDe(m, d.time, c.x, c.z) ? FALTAS.bote.naArea : 1) * (chanceClara(m, c, d) ? FALTAS.bote.naChanceClara : 1);
+  const p = Math.min(0.95, chanceFaltaBote(d, c) * fatorForca(forcaContato(m, d, c)) * cuidado);
   if (uniforme(m.rng) >= p) return null;
   const v = MD.hypot(d.vx, d.vz);
   const exc = chegada(d, c) === 'tras' && v >= FALTAS.excessivo && uniforme(m.rng) < FALTAS.excessivoP;
