@@ -1,7 +1,12 @@
 name: GOLAÇO — testes
 # Roda a bateria do GOLAÇO (golaco/) em todo PR que mexe no jogo, para o PR já mostrar se
-# passa antes do merge. O deploy (deploy-pages.yml) roda a mesma bateria e bloqueia a
-# publicação se algo reprovar.
+# passa antes do merge. O deploy (deploy-pages.yml, job testes-golaco) chama ESTE arquivo
+# (workflow_call com deploy: true) e bloqueia a publicação se algo reprovar.
+# Em partes paralelas (dono, 15/10: "diminuir o tempo"; os mesmos testes, a mesma amostra):
+# os testes em Node em 4 máquinas (rodar-testes.mjs --parte i --de 4) e os de navegador em 3
+# (rodar-navegador.mjs --parte i --de 3; a lista deles fica no rodar-navegador.mjs). A divisão
+# é pelo tempo medido no CI (golaco/tools/lib/tempos-ci.mjs). O job "testes" (o nome que o PR
+# mostra) só passa se todas as partes passaram.
 on:
   pull_request:
     paths:
@@ -9,74 +14,56 @@ on:
       - '.github/workflows/golaco-testes.yml'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      deploy:
+        description: 'Navegador só com os testes marcados para o deploy (rodar-navegador.mjs --deploy)'
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
-  testes:
+  node:
+    name: node ${{ matrix.parte }} de 4
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        parte: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Testes em Node (lógica do jogo)
-        run: node golaco/tools/rodar-testes.mjs
-      - name: Playwright (Chromium) para o teste no navegador
+      - name: Testes em Node (lógica do jogo), parte ${{ matrix.parte }} de 4
+        run: node golaco/tools/rodar-testes.mjs --parte ${{ matrix.parte }} --de 4
+  navegador:
+    name: navegador ${{ matrix.parte }} de 3
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        parte: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Playwright (Chromium) para os testes no navegador
         run: |
           npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright@1.56.1
           "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
-      - name: Teste no navegador (carga, erros, download, determinismo Node = Chromium)
+      - name: Testes no navegador, parte ${{ matrix.parte }} de 3
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-carga.mjs || node golaco/tools/teste-carga.mjs
-      - name: Controles na página (teclado no PC e toque no celular)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-controles.mjs
-      - name: Editar time (mouse, teclado e toque; Node = Chromium; nada encosta em 6 telas)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-editor-tela.mjs
-      - name: Estádio (torcida, rede que balança num gol de verdade, efeito de gol e som)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-estadio.mjs
-      - name: Pré-jogo (cenas, cortejo, escalações no campinho, pular, som, hash igual depois)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-prejogo.mjs
-      - name: Som da torcida durante o jogo (leito, apito, cantos, iPhone, interrupção, limitador, hash)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-som-jogo.mjs
-      - name: Rede véu de noiva na tela (forma, branca de dia e de noite, mexe na batida; PC e celular)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-rede-tela.mjs
-      - name: Tela limpa (HUD mínimo no celular e no PC, linha de impedimento só no apito)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-hud-minimo.mjs
-      - name: Replay (gol, impedimento com a linha, pausa; simulação parada e hash igual)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-replay.mjs
-      - name: Comemoração do gol (cena, câmera de cinema, pular, celular; simulação segura e hash igual)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-comemoracao-tela.mjs
-      - name: Área técnica e treinadores na tela (celular — visíveis com o banco no quadro, chamadas iguais, CPU)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-tecnicos-tela.mjs
-      - name: Cena de substituição e faixa ENTRA/SAI (fila depois do replay, pular, pausa, celular, nada encosta; hash igual)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-substituicao-tela.mjs
-      # informativo até passar 5 vezes seguidas (a CPU da simulação no celular simulado ainda passa
-      # do teto do plano 4.1); mostra os números no PR sem bloquear
-      - name: Desempenho no celular simulado (CPU 4×, informativo)
-        continue-on-error: true
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-desempenho-celular.mjs
+        run: node golaco/tools/rodar-navegador.mjs --parte ${{ matrix.parte }} --de 3 ${{ inputs.deploy && '--deploy' || '' }}
+  testes:
+    needs: [node, navegador]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Todas as partes passaram
+        run: |
+          echo "node (4 partes): ${{ needs.node.result }} · navegador (3 partes): ${{ needs.navegador.result }}"
+          test "${{ needs.node.result }}" = success
+          test "${{ needs.navegador.result }}" = success
