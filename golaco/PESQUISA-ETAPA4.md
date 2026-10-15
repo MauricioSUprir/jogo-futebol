@@ -113,15 +113,15 @@ das faltas eram "sem sentido".
 | Categoria | persegue | pressão | dribla | IA × IA |
 |---|---|---|---|---|
 | IA: bote com contato < 1 m/s | 0 | 0 | 0 | 0 |
-| IA: bote com contato ≥ 1 m/s | 0,83 | 0,83 | 3,42 | 0,54 |
-| IA: carga por trás | 0,25 | 0,17 | 0,58 | 0,13 |
-| IA: segurar (contra-ataque e fora dele) | 0,83 | 0,75 | 1,67 | 0,63 |
-| pessoa: carga de quem só corria atrás | 0 | 0,25 | 0 | 0,17 (IA) |
-| pessoa: outras | 0,25 | 0,58 | 0,25 | 0,25 |
-| **Total** | **2,17** | **2,58** | **5,92** | **1,71** |
-| amarelos · vermelhos · pênaltis | 0,58 · 0 · 0 | 0,92 · 0 · 0 | 0,75 · 0,17 · 0,33 | 0,58 · 0 · 0,08 |
+| IA: bote com contato ≥ 1 m/s | 1,17 | 1,00 | 2,75 | 0,54 |
+| IA: carga por trás | 0,17 | 0,17 | 0,33 | 0,13 |
+| IA: segurar (contra-ataque e fora dele) | 0,92 | 0,33 | 2,42 | 0,63 |
+| pessoa: carga de quem só corria atrás | 0 | 0,50 | 0 | 0,17 (IA) |
+| pessoa: outras | 0,33 | 0,50 | 0,25 | 0,25 |
+| **Total** | **2,58** | **2,50** | **5,75** | **1,71** |
+| amarelos · vermelhos · pênaltis | 0,42 · 0 · 0,08 | 0,83 · 0,08 · 0,08 | 1,00 · 0,08 · 0,17 | 0,58 · 0 · 0,08 |
 
-A mediana da força de contato dos botes da IA que viram falta passou para 2,6–4,0 m/s. Pendente: na IA × IA o jogo tem 0,21
+A mediana da força de contato dos botes da IA que viram falta passou para 2,5–3,8 m/s. Pendente: na IA × IA o jogo tem 0,21
 falta por minuto de bola rolando (main 0,25; real ~0,40) — faltam as faltas que o jogo ainda não tem (no alto, segurar na
 bola parada); não foi reposto à custa de botes sem contato.
 
