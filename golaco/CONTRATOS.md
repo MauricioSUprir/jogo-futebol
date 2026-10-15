@@ -1556,6 +1556,14 @@ corrido só na partida.
   `bolaSolta` 0,435 da condução curta. O chamado (`defesa.js chamadoDaPressao`: o último escolhido dentro da validade, com
   o pedido valendo) não entra no corte do passe (`ia-tatica.js vaiNaLivre`): segue a PRESSÃO até o ponto de chegada. Sem
   o botão nada disso liga (o painel IA × IA não muda).
+- O chamado da PRESSÃO contorna quem está no caminho (15/10; `defesa.js desviarCorpos`, `DEFESA_HUMANO.pressao.desvio`
+  {olha 0,7 s, min 1,5 m, vMin 3 m/s, lado 0,8 m}): em toda `corridaAte` (aproximação do condutor, bola solta do pé dele e
+  o ponto de chegada do passe do adversário), o corpo mais perto à frente na linha da corrida — companheiro ou adversário,
+  não o alvo nem os goleiros —, onde ele vai estar quando o chamado chegar lá, a menos de `lado` m da linha → o ponto passa
+  a `lado` m dele, do lado em que o chamado já está. Antes ele ia reto, trombava (`sim.js colisaoCorpos`: ~1,8 m/s a menos)
+  e recomeçava a arrancada. Medida: `teste-pressao-humano` M8 (trombadas com quem não é o condutor por 100 casos: base
+  799ab53b 4,2 → 2,1; meta ≤ 3) e M5 (80 → 83% com 8 partidas; 81 → 83% com 16). A partida IA × IA não muda (hash-partida
+  `demo` IGUAL; só as cenas `humano`, que apertam PRESSÃO, mudam).
 
 ### Testes
 `teste-cabeceio` (canhão de cruzamentos, pose, teleporte, partidas demo, humano) e `teste-defesa-corrida` (humano

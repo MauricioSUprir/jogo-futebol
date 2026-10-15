@@ -15,7 +15,9 @@
 //     parado a 6 m/s leva ~1,1 s no perfil de aceleração do jogo), a ≥ vCorrida em ≥ 80% dos ticks;
 //  M6 marca visível: com o pedido valendo e um condutor adversário, o escolhido existe para o desenho (defesa.js
 //     pressionadorVisivel) em 100% dos ticks;
-//  M7 dobra a marcação: com o 1º homem da IA (≠ controlado) já apertando por conta própria, o escolhido é OUTRO em ≥ 95%.
+//  M7 dobra a marcação: com o 1º homem da IA (≠ controlado) já apertando por conta própria, o escolhido é OUTRO em ≥ 95%;
+//  M8 contorna (15/10): em disparada, o chamado não tromba em quem está no caminho (companheiro ou adversário que não é o
+//     condutor): ≤ 3 trombadas por 100 casos (base 799ab53b: 4,2 — ia reto, perdia ~1,8 m/s e recomeçava a arrancada).
 // Informativos: as metas do diagnóstico que a física do jogo não deixa cumprir (o mais perto ≥ 2 m mais perto em 1,0 s —
 // do parado o corpo anda ~3,2 m no 1º segundo; bola ao alcance do bote em ≥ 15% de TODAS as posses — só ~1/5 delas dura
 // ≥ 1 s), o alcance do bote nos casos longos e os dois modelos do humano.
@@ -64,6 +66,10 @@ const mo = casos.reduce((s, c) => s + c.B.marcaOk, 0), mt = casos.reduce((s, c) 
 reg('M6 marca visível: o escolhido existe para o desenho com o pedido valendo', pc(mo, mt), '100%', mt > 0 && mo === mt);
 const pd = casos.reduce((s, c) => s + c.B.p1Dobra, 0), pt = casos.reduce((s, c) => s + c.B.p1Tot, 0);
 reg('M7 1º homem da IA já apertando: o botão chama OUTRO (dobra a marcação)', pt ? pc(pd, pt) : '— (sem o estado apertaProprio)', '≥ 95%', pt > 0 && pd >= 0.95 * pt);
+// M8 o chamado contorna quem está no caminho (defesa.js desviarCorpos): trombadas dele em disparada com quem não é o condutor,
+// por 100 casos (base 799ab53b: ~11)
+const chq = casos.reduce((s, c) => s + c.B.choques, 0);
+reg('M8 o chamado contorna: trombadas em disparada com quem não é o condutor, por 100 casos', `${fmt(100 * chq / Math.max(1, casos.length), 1)} (${chq} em ${casos.length})`, '≤ 3', casos.length > 0 && 100 * chq / casos.length <= 3);
 // informativos
 const d1A = med(L.map(c => em(c.A, 1))), d1B = med(L.map(c => em(c.B, 1)));
 reg('(diagnóstico) o mais perto em 1,0 s: sem → com', `${fmt(d1A)} → ${fmt(d1B)} m (Δ ${fmt(d1A - d1B)})`, 'Δ ≥ 2,0 m', true, true);

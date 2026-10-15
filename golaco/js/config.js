@@ -1314,6 +1314,9 @@ export const DEFESA_HUMANO = {
   pressao: {
     validade: 1, acel: 7, freio: 6.2, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.0, contorno: 1.2,
     naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.435, filtro: 0.2, ganho: 3, aproxMax: 5, trasPerto: 1.5, trasAprox: 1.4,
+    // em disparada, contorna o corpo mais perto à frente (defesa.js desviarCorpos): olha `olha` s da corrida (pelo menos
+    // `min` m; a velocidade conta a partir de vMin m/s) e passa a `lado` m dele (2 raios do corpo + folga)
+    desvio: { olha: 0.7, min: 1.5, vMin: 3, lado: 0.8 },
   },
 };
 
