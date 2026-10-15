@@ -183,10 +183,12 @@ pede à passada que tire o pé do toque do chão a tempo, e o toque espera por e
   - **proteção só até `CONDUCAO.protecaoVmax` m/s** (`emProtecao`): acima, o MOD é a condução curta (freando com a bola
     no pé); a proteção começa quando o corpo cai a isso;
   - **passe lento não é só do recebedor** (`sim.js bolaLivre`, `RECEPCAO.passeLento`): com um passe para outro no ar, o
-    candidato que só MARCOU o domínio (posse ainda nula, o mesmo `voo.tickChave`) não encerra a vez — seguem os
-    adversários de quem passou com a bola no chão, até `passeLento` m/s e ao alcance do pé AGORA (`bolaLentaNoPe`), e o
-    goleiro adversário só com a bola nessa velocidade (o de quem passou, nunca). Mesma forma do `soMarcou` da branch
-    do cabeceio (PR #471), que soma a ela quem corta o passe (`cortandoPasse`) e o controlado do humano.
+    candidato que só MARCOU o domínio (posse ainda nula, o mesmo `voo.tickChave`) não encerra a vez — seguem os que
+    estão com a bola no chão, até `passeLento` m/s e ao alcance do pé AGORA (`bolaLentaNoPe`): o adversário que corta e
+    o companheiro de quem passou em cima dela (contraprova: só com o adversário, o companheiro deixava o passe lento
+    correr colado no pé); e o goleiro adversário só com a bola nessa velocidade (o de quem passou, nunca). Mesma forma do
+    `soMarcou` da branch do cabeceio (PR #471), que lá deixa seguir quem corta o passe (`cortandoPasse`) e o controlado
+    do humano — na junção, as condições se somam (OU).
 - **Previsões sem alocar (Etapa 3, plano 4.3):** `preverBola(b, n)` → `{xs, zs, ys, rol}` e `preverCorpo(m, j, n,
   ...)` → `{n, xs, zs, rs, ss, fs}` devolvem vetores **SÓ DE LEITURA e reaproveitados** (dois jogos que se revezam:
   a resposta vale até a SEGUNDA previsão nova seguinte; os vetores podem ter mais de n + 1 posições — use só 0..n).

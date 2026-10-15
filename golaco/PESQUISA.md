@@ -389,3 +389,18 @@ estados (medido): `teste-partida` C "posse troca ≥ 10 em todas" (semente 7: 9 
 nas sementes 9–20 a main tem mínimo 10 e a correção 11, média 18,5 × 18,6); `teste-pressao-humano` M5 (76% × 81%; PAREADO
 nos mesmos estados da main, 81,2% × 81,4%; nas sementes 7201 a main reprova com 79% e a correção passa com 83%);
 `teste-bolas-paradas` C3 (gol em 18,3% dos escanteios, p = 0,03; PAREADO nos mesmos estados, 262 escanteios: 12,6% × 12,6%).
+
+**Contraprova (15/10).** Com mais 24 partidas (3101–3492; o `teste-nao-passa` passa de 18 para 42) a correção reprovava
+duas metas que nas 18 primeiras passavam: passe lento colado no pé de outro 1 (o COMPANHEIRO de quem passou — a vez só
+seguia para o adversário; corrigido: segue para quem estiver com a bola lenta no pé, dos dois times) e "passou e o
+adversário ficou com ela" 1. Nas 42: publicada 0,81 / 12 / 7 → correção 0,43 / 0 / 1. O que sobra NÃO são cortes de
+40–60°: 10 dos 18 casos são viradas de 87–123° a 4,7–7,3 m/s logo depois do domínio (o 2º toque manda a bola na linha
+do analógico, como o `teste-cortes` pede — "o corte de 90° correndo responde em ≤ 0,4 s" —, e o corpo embalado passa
+1,0–1,95 m dela; o único "perdeu" é um deles, IA a 6,3 m/s virando 119°). É a mesma troca entre resposta e realismo da
+pendência do dono "corte de 90° a ~7 m/s em 2–3 apoios (PESQUISA pede 3–5)". Duas tentativas medidas nas mesmas 42
+partidas e descartadas: toque de freio no 1º toque de condução depois do domínio além de `anguloEmbalado(v)` (0,43 →
+0,67, perdeu 1 → 4: a bola parada onde o corpo "para" e ele, virando, não para) e o domínio da IA embalada só com a
+corrida para o ataque (0,50 / 2). Também medido: na IA embalada o condutor, 2 ticks depois do domínio, vai a ≥ 90° da
+corrida em 59% dos domínios (vem ao encontro e vira para o jogo) e a < 45° em 23%; o 1º toque que acompanha a corrida
+(`CONDUCAO.dominioIA`) ficou 2× mais forte (mediana 1,8 → 3,7 m/s; bola a > 1,5 m do pé logo depois 1,1% → 2,9%), mas
+perder a bola em 1 s (1,8% → 2,0%) e a bola > 1 m atrás dele (1,8% → 2,2%) ficam dentro do sorteio (907 domínios).

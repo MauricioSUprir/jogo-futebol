@@ -1,8 +1,8 @@
 // O jogador que chega na bola quase dominada não passa por cima dela (pedido do dono, 15/10: "jogadores passam da bola
 // quando estão com ela praticamente dominada, ajeite").
 //
-// Medido na partida de verdade (18 partidas de 2 × 3 min, sementes fixas): a IA joga pelos dois times em 6 delas e, nas
-// outras 12, o controlado do time 0 é o humano roteirizado como no celular deitado (30 qps, sem o MOD; com a bola vindo
+// Medido na partida de verdade (42 partidas de 2 × 3 min, sementes fixas): a IA joga pelos dois times em 14 delas e, nas
+// outras 28, o controlado do time 0 é o humano roteirizado como no celular deitado (30 qps, sem o MOD; com a bola vindo
 // para ele o analógico vai para a frente — o ataque ±30° — ou para um lado sorteado e fica lá até ele dominar e por mais
 // 0,8 s). "Passou da bola" (tools/medir-passa.mjs, a mesma conta): o jogador que é da bola — o condutor, o recebedor do
 // passe ou com o domínio marcado, ou o mais perto da bola solta — chega a ≤ 1 m dela, no chão e a ≤ 4 m/s, correndo
@@ -20,15 +20,17 @@
 //     #106, ia 1136 t 18096 #106, ...);
 //  C. a proteção (MOD com o marcador perto) em disparada: a bola posta onde o corpo estaria andando devagar (ia 1034 t
 //     1106 #9: 6,5 m/s, 2,09 m);
+//  D. (contraprova, 15/10) o companheiro de quem passou, com o passe lento entre os pés, também o deixava correr colado
+//     (só o adversário tinha a vez): ia 3135 t 15397 #10, passe para #4 a 3,0 m/s;
 // (Fica para depois: logo depois do domínio a bola ao lado do pé, fora do alcance da frente do pé — ele vai buscá-la e
 // corre ao lado dela a ~0,6 m até passar, lado 1102 t 19824 #107. O toque com a parte de dentro/fora do pé resolvia, mas
 // tirava os chutes de fora da área no painel: 39 → 32–34%, abaixo da meta de 35–40%.)
 //
-// Metas:
-//  1. "passou da bola" ≤ 0,5 por partida (todos os jogadores; a publicada: 0,89 nestas 18, 1,33 em 24 de 2 × 4 min);
+// Metas (a publicada, c2f76d69, nestas 42: 0,81 / 12 / 7; nas 18 primeiras: 0,89 / 5 / 6):
+//  1. "passou da bola" ≤ 0,5 por partida (todos os jogadores; a publicada: 1,33 em 24 de 2 × 4 min);
 //  2. bola de passe para outro, lenta, colada (≤ 0,6 m) no pé de quem não é o recebedor por ≥ 0,2 s sem ele tocar: 0
-//     (a publicada: 5);
-//  3. depois de passar da bola, o adversário fica com ela: 0 (a publicada: 6).
+//     (o adversário de quem passou ou o companheiro dele);
+//  3. depois de passar da bola, o adversário fica com ela: 0.
 //   node tools/teste-nao-passa.mjs [--js <pasta js>] [--detalhe]
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -44,7 +46,11 @@ const P = await import(pathToFileURL(path.join(JS, 'partida.js')).href);
 const MP = await import(pathToFileURL(path.join(AQUI, 'medir-passa.mjs')).href);
 
 const MIN = 3;
-const CENAS = [['ia', [2101, 2118, 2135, 2152, 2305, 2322]], ['frente', [2169, 2186, 2203, 2220, 2339, 2356]], ['lado', [2237, 2254, 2271, 2288, 2373, 2390]]];
+// (contraprova, 15/10: + 8 partidas por cena, 3101–3492 — nas 18 primeiras a correção passava as três metas, nas 24 novas
+// reprovava a 2 e a 3; amostra só cresce)
+const CENAS = [['ia', [2101, 2118, 2135, 2152, 2305, 2322, 3101, 3118, 3135, 3152, 3169, 3186, 3203, 3220]],
+  ['frente', [2169, 2186, 2203, 2220, 2339, 2356, 3237, 3254, 3271, 3288, 3305, 3322, 3339, 3356]],
+  ['lado', [2237, 2254, 2271, 2288, 2373, 2390, 3373, 3390, 3407, 3424, 3441, 3458, 3475, 3492]]];
 const res = [];
 let n = 0;
 for (const [cena, sems] of CENAS) {

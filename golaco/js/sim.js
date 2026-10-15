@@ -623,14 +623,15 @@ function bolaLivre(m) {
   const passou = m.voo && m.voo.de != null && m.tick - (m.voo.tick0 ?? 0) < 6 ? m.voo.de : null;
   // passe para outro (só na partida; pedido do dono, 15/10: "jogadores passam da bola quando estão com ela praticamente
   // dominada"): quem só MARCOU o domínio (o recebedor esperando a bola chegar, ou correndo atrás dela com o toque sempre
-  // adiante) não tira a vez do adversário de quem passou com a bola lenta no pé (RECEPCAO.passeLento) — antes ele
-  // encerrava a vez de todo mundo e o defensor com a bola entre os pés passava por ela
+  // adiante) não tira a vez de quem está com a bola lenta no pé (RECEPCAO.passeLento): o adversário que corta ou o
+  // companheiro de quem passou em cima dela — antes ele encerrava a vez de todo mundo e quem tinha a bola entre os pés
+  // passava por ela (contraprova, 15/10: com só o adversário, o companheiro ainda deixava o passe lento correr colado no pé)
   const vooCorte = m.partida && m.voo && m.voo.para != null && m.voo.time != null ? m.voo : null;
   let soMarcou = false;
   for (let k = 0; k < nc; k++) {
     const j = _cands[k];
     if (j.id === passou) continue; // quem acabou de bater não domina a própria bola
-    if (soMarcou && (j.time === vooCorte.time || !bolaLentaNoPe(m, j))) continue;
+    if (soMarcou && !bolaLentaNoPe(m, j)) continue; // (adversário que corta ou companheiro em cima dela)
     if (naParada(m) && j.id !== m.parada.cobrador) continue; // partida: só o cobrador
     // toque aéreo vencido (a hora passou): não segura a bola livre para quem não vai mais nela
     const ta = j.cond?.toque;

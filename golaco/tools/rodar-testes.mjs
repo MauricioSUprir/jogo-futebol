@@ -49,7 +49,7 @@ const LISTA = [
   // Etapa 3 (partida 11×11, tática, IA e Editar time)
   ['custo da partida 11×11 (razão partida ÷ treino ≤ 2,5×)', 'teste-custo.mjs'],
   ['partida 11×11: relógio, intervalo, fim e recomeços (Parte 1)', 'teste-partida.mjs'],
-  ['ninguém passa da bola quase dominada (18 partidas: IA × IA e o humano roteirizado no celular)', 'teste-nao-passa.mjs'],
+  ['ninguém passa da bola quase dominada (42 partidas: IA × IA e o humano roteirizado no celular)', 'teste-nao-passa.mjs'],
   ['Editar time: elenco, formações, encaixe, edição e substituição (Parte 1)', 'teste-editor.mjs'],
   ['forma do time sem e com a bola (Parte 2)', 'teste-forma.mjs', [], 'etapa3'],
   ['táticas do Editar time movem a forma (Parte 2)', 'teste-taticas.mjs'],
