@@ -1647,7 +1647,8 @@ corrido só na partida.
   levava o condutor para cima da PRESSÃO do humano). Vale ~0,4 chute por partida no painel de 144 (7,3 com ele, 6,9 sem,
   14/10) e faz o chamado da PRESSÃO correr menos (teste-pressao-humano M5 72%, meta 80% — PENDENTE: o condutor que encara
   para perto do marcador e as aproximações do chamado ficam curtas, quase só a aceleração). `utilidade.cruzamentoV` 0,35 e `chuteLonge` 0,25;
-  `IA_DEFESA.corrida.v` 7,0; `GOLEIRO.logit.c0Partida` −0,3; o pênalti com o próprio `GOLEIRO.penalti.c0Partida` −0,1 (a
+  `IA_DEFESA.corrida.v` 7,0; `GOLEIRO.logit.c0Partida` −0,3 e, de longe, `cLongePartida` −0,035 por m de chute além de
+  `dLonge` 15 m do goleiro (15/10: gols de fora da área); o pênalti com o próprio `GOLEIRO.penalti.c0Partida` −0,1 (a
   calibração dele, canhão 77/18/5% e teste-botoes B6d, é a da main; com o −0,3 da bola rolando as defesas de pênalti iam a
   0% no painel de 144).
 - O arremesso do lateral (`m.voo.tipo === 'lateral'`) não entra no corte do passe (`vaiNaLivre`), e o lateral do meu time

@@ -321,3 +321,12 @@ aceita mais risco no passe para a frente; Opta/PL: 28,7% dos passes terminam no 
 `teste-defesa-corrida` reprovava os gols do roteiro sprint com 12 partidas (1,58; a mesma conta foi de 1,42 a 1,67 entre
 versões que não mexem na defesa da arrancada): com 24 partidas, 1,21 (9933ea0e) → 1,29 (candidato), meta ≤ 1,5 — a amostra
 cresceu para 24. Decisão pelo painel de 144 do CI.
+
+Gols de fora da área (painel do bf918606: 11,5%, meta 12–18%; goleiro de 16,5 m ou mais 86,2%, meta ~85%):
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| Premier League / Opta, "Why are players shooting less from long range this season?" (premierleague.com/news/4272809) e Jonathan Wilson (The Guardian, dados Opta) | 2024/25: 11,5% dos gols de fora da área, o mínimo desde 1992; 2006/07: 20,2%; desde 2003/04, 14,3% em média, com o chute de longe convertendo ~3,7% | O nosso 11,5% é o do ano mais baixo; a meta 12–18% fica com a média. O chute de fora daqui já converte ~6,7% (poucos chutes e precisos demais: 65% no alvo), então o ajuste não aumenta o volume de chutes de longe (`chuteLonge` fica em 0,25, os chutes de fora já estão em 36,9%, meta 35–40%) |
+| The Analyst / Premier League, goleiros 2024/25 (premierleague.com/news/4293708; theanalyst.com) | O melhor goleiro da PL defende 73,5% dos chutes no alvo; o pior, 51,5% | O total daqui (69,2%) fica na meta 66–72%; o ajuste mexe só no chute de longe |
+`GOLEIRO.logit.cLongePartida` −0,035 por m de chute além de 15 m do goleiro (só na partida; o treino e o pênalti não mudam):
+`teste-bolas-paradas` D4 (tiros livres de 18–31 m) gol 8,5% (meta 2–12%), `teste-goleiro` e `teste-mergulho` PASSOU,
+hash-igual IGUAL. Decisão pelo painel de 144 do CI.

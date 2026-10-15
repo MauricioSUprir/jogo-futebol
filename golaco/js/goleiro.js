@@ -90,6 +90,8 @@ export function chanceDefesa(lateral, dChute, altura, alcance, attr, partida = f
   // (partida) a bola bem mais lenta que um chute da mesma distância (cabeceio, chute fraco, desvio) dá ao goleiro o tempo a
   // mais: a logística foi ajustada com chutes (~20 m/s); cTempo por s além de dChute / vRef
   if (partida && tVoo != null) lg += L.cTempo * Math.max(0, tVoo - dChute / L.vRef);
+  // (partida) de longe a logística do treino defendia demais para os gols de fora da área (GOLEIRO.logit.cLongePartida)
+  if (partida && L.cLongePartida) lg += L.cLongePartida * Math.max(0, dChute - L.dLonge);
   const p = 1 / (1 + MD.exp(-lg));
   const fis = clamp((alcance + GOLEIRO.folgaAlcance - lateral) / GOLEIRO.folgaAlcance, 0, 1);
   return p * fis;

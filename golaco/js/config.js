@@ -529,7 +529,10 @@ export const GOLEIRO = {
   // −0,35/−0,5; com o condutor que entra na área (utilidade.manterPeso) os chutes ficam mais perto e as defesas caem
   // sozinhas: −0,3 deixou a faixa de 6 a 16,5 m em 53,0% no CI → −0,15 → 60,9% (com a troca aérea e a defesa da
   // arrancada a 7,0 m/s) → −0,3 de novo
-  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.3, cTempo: 6, vRef: 20 },
+  // cLongePartida/dLonge (partida; 15/10): −cLongePartida no logit por m de chute além de dLonge m do goleiro — com o
+  // condutor que arrisca o passe para a frente os gols de fora da área ficaram em 11,5% (meta 12–18%; Opta/PL: 14,3% em
+  // média desde 2003/04, 11,5% em 2024/25, o mínimo) e o goleiro de 16,5 m ou mais em 86,2% (meta ~85%, 80–90%)
+  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.3, cTempo: 6, vRef: 20, cLongePartida: -0.035, dLonge: 15 },
   // segurar × espalmar (StatsBomb): em pé, de longe ~60%; no mergulho ~25%; de perto ~23%
   segurar: { emPe: 0.6, mergulho: 0.25, perto: 0.23 },
   alturaMax: 2.45,            // m alcançados com a mão no alto
