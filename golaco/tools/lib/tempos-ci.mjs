@@ -1,9 +1,12 @@
 // Tempo de cada teste no CI, em segundos — só para dividir as listas em partes (lib/partes.mjs); não precisa ser
 // exato, e um teste que não está aqui conta TEMPO_NOVO. Atualizar quando um teste mudar muito de tempo (os números
 // saem do log do CI: "PASSOU  <nome>  (N s)").
-// Node: chave = arquivo + argumentos (como na lista do rodar-testes.mjs); segundos de CPU de um processo, medidos
-// no job testes-golaco do deploy da main aa16c901 (run 38805251165: 57 testes, 4 por vez numa máquina de 4 vCPU,
-// 1685 s). Um teste que roda em k processos (--par k) conta o mesmo total de CPU: a divisão é por CPU.
+// Node: chave = arquivo + argumentos (como na lista do rodar-testes.mjs); segundos de parede de cada teste no job
+// testes-golaco do deploy da main aa16c901 (run 38805251165: 57 testes, 4 por vez numa máquina de 4 vCPU, 1685 s).
+// Com a disputa da máquina inteira o número é só uma ordem de grandeza: os testes que abrem processos filhos
+// (transicao, replay-anel, tecnicos, defesa-corrida) pesam mais do que ele diz, e o aereo-troca natural levou 913 s
+// lá e 195 s na parte dele (PR #485). O ramo das "vagas" (teste em k processos, --par k) não muda a conta: o tempo
+// aqui é o do teste inteiro.
 export const TEMPO_NOVO = 60;
 export const TEMPOS_NODE = {
   'teste-matdet.mjs': 2,
