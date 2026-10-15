@@ -1478,6 +1478,7 @@ export const SUBST = {
   escalona: 0.35,             // s entre um reserva e o próximo
   teto: 6.5,                  // s — nenhuma cena passa disto (até 5 + 5 pares)
   velSai: 2.2,                // m/s — quem sai anda firme (IFAB 2026/27: sair em até 10 s)
+  velSaiMax: 2.35,            // m/s — quem atrasou (contornou alguém parado) apressa até isto para cruzar no horário
   freioSai: 2.0,              // m/s² — freada depois de cruzar a linha (para a ~alemLinha m dela)
   velEntra: 3.2,              // m/s — quem entra trota para a vaga
   distSai: [3.0, 3.6],        // m da linha no 1º quadro do plano dele (pelo hash)

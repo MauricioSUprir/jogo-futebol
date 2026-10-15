@@ -18,19 +18,26 @@
 //      duas vezes seguidas;
 //  11) pureza: hashMundo antes = depois da cena (o mundo não é tocado); a pose no tick k é a mesma andando a cena tick a
 //      tick ou em quadros de tamanhos variados (avancarCena); a mesma cena duas vezes = as mesmas poses;
-//  12) custo ≤ 0,6 ms por tick (a melhor de 3 medidas de cada cena: a máquina é dividida);
+//  12) custo ≤ 0,6 ms por tick (a mediana de 5 medidas de cada cena: a máquina é dividida). O tempo é a parede MENOS a
+//      espera do fio na fila do escalonador (/proc/thread-self/schedstat, como o teste-custo): no CI dividido o fio ficava
+//      parado fora da CPU e a parede passava da meta (0,638 ms no deploy de c4d8067d) sem a cena custar mais. A mediana,
+//      não a melhor: com a CPU muito disputada a espera às vezes passa da parede por arredondamento e daria 0;
 //  14) (contraprova de 14/10) gol com quem cabeceou AINDA NO AR (o cabeceio de muito perto: ~1 em 100 gols de cabeça no
 //      canhão da pequena área): a cena termina o pulo do cabeceio (cabeceio.js) — o tornozelo desenhado anda no máximo a
 //      régua do pé no ar ((2,5·v + 3)·dt) e a pelve no máximo 0,06 m por tick (no pulo mais alto ela anda ~0,05). Antes a
 //      cena andava o corpo pela locomoção e os pés pela passada no chão: o tornozelo saltava 0,2 m e a pelve 0,19 m num tick;
 //  13) (contraprova) plano da reação: ninguém além de quem reage a < 2 m da lente dentro do quadro, no PC e no celular
-//      (nas 8 cenas e em 2 gols naturais em que um defensor andando para a saída passava colado na câmera).
+//      (nas 8 cenas e em mais 12 gols naturais — todos os gols das partidas das sementes 101 em diante —, cada uma também
+//      com um jogador parado na frente da lente). Contraprova de 15/10: na cena curta a reação dura até 2 s e a escolha do
+//      giro só olhava o 1º segundo e o quadro do PC — no 1º gol da semente 29 um colega correndo para o abraço passou
+//      rente à lente no celular (2/121 quadros).
 // "Antes" (informativo): o pós-gol da versão sem cena, medido na simulação (a IA leva o autor de volta; nenhuma mão acima
 // da cabeça; colega mais perto a 16–24 m). Na versão sem js/comemoracao.js o teste REPROVA (o módulo não existe).
 //   node tools/teste-comemoracao.mjs [--js <pasta js>] [--detalhe]
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
-import { carregarNode, golRoteirizadoNode, golNaturalNode } from './lib/gol-node.mjs';
+import { carregarNode, golRoteirizadoNode, golNaturalNode, golsNaturaisNode } from './lib/gol-node.mjs';
+import fs from 'node:fs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -309,20 +316,37 @@ function min(arr, f) { return Math.min(...arr.map(f)); }
   }
   reg('11 a pose no tick k: tick a tick = em quadros variados (avancarCena)', `${comparados} quadros comparados, ${dif} números diferentes; ticks ${n1} / ${a2.k}`, '0 diferentes, mesmo nº de ticks', dif === 0 && comparados > 50 && n1 === a2.k);
 }
-// custo: a melhor de 3 medidas por cena
+// custo: a mediana de 5 medidas por cena. O tempo da cena é a parede menos a espera do fio principal na fila do escalonador
+// (2º campo de /proc/thread-self/schedstat, em ns; a mesma conta do teste-custo): o tempo em que o fio esteve fora da CPU
+// porque outro processo a usava não é custo da cena. Sem o arquivo (outro sistema), vale a parede.
 {
-  const ms = [];
+  let espera = () => 0, comEspera = false;
+  try {
+    const fd = fs.openSync('/proc/thread-self/schedstat', 'r'), buf = Buffer.alloc(128);
+    const ler = () => {
+      const n = fs.readSync(fd, buf, 0, 128, 0);
+      let k = 0; while (k < n && buf[k] !== 32) k++; k++;
+      let v = 0; while (k < n && buf[k] >= 48 && buf[k] <= 57) { v = v * 10 + buf[k] - 48; k++; }
+      return v / 1e6;
+    };
+    ler(); espera = ler; comEspera = true;
+  } catch { /* sem schedstat: a parede */ }
+  const ms = [], parede = [];
   for (const g of gols) {
-    let melhor = Infinity;
-    for (let rep = 0; rep < 3; rep++) {
+    const med = [];
+    let melhorParede = Infinity;
+    for (let rep = 0; rep < 5; rep++) {
       const c = CM.criarCena(CM.planejarComemoracao(g.m, g.gol, { timeHumano: 0 }), g.m);
-      const t0 = performance.now(); let n = 0;
+      const e0 = espera(), t0 = performance.now(); let n = 0;
       while (!c.acabou) { CM.passoCena(c); n++; }
-      melhor = Math.min(melhor, (performance.now() - t0) / n);
+      const p = performance.now() - t0, e = espera() - e0;
+      med.push(Math.max(0, p - e) / n); melhorParede = Math.min(melhorParede, p / n);
     }
-    ms.push(melhor);
+    med.sort((x, y) => x - y);
+    ms.push(comEspera ? med[2] : melhorParede); parede.push(melhorParede);
   }
-  reg('12 custo da cena por tick (22 atores; a melhor de 3)', `${ms.map(f3).join(' / ')} ms`, '≤ 0,6 ms', Math.max(...ms) <= 0.6);
+  reg(`12 custo da cena por tick (22 atores; ${comEspera ? 'a mediana de 5, sem a espera na fila do escalonador' : 'a melhor de 5, parede'})`,
+    `${ms.map(f3).join(' / ')} ms${comEspera ? ` (a melhor parede ${parede.map(f3).join(' / ')})` : ''}`, '≤ 0,6 ms', Math.max(...ms) <= 0.6);
 }
 // 13 (contraprova) a lente do plano da REAÇÃO livre: ninguém além de quem reage a < 2 m da câmera dentro do quadro (um corpo
 // a 2 m já enche a altura do quadro com fov 30), no PC (16:9) e no celular (844×390). Nas 8 cenas e nelas mesmas com um
@@ -367,9 +391,15 @@ function min(arr, f) { return Math.min(...arr.map(f)); }
     bl.j.x = rj.x + vx * (R.dist - 1.2); bl.j.z = rj.z + vz * (R.dist - 1.2); bl.j.vx = 0; bl.j.vz = 0;
     return true;
   };
+  // amostra maior (contraprova de 15/10): mais 12 gols naturais, todos os gols das partidas inteiras das sementes 101 em diante
+  const extras = [];
+  for (let s = 101; s <= 140 && extras.length < 12; s++) {
+    for (const g of golsNaturaisNode(L, s, 30000, 12 - extras.length)) extras.push({ ...g, nome: `natural (semente ${s} @${g.golTick})` });
+  }
+  const gols13 = [...gols, ...extras];
   const linhas13 = [];
   let pior = 0, bloqueios = 0;
-  for (const g of gols) {
+  for (const g of gols13) {
     for (const bloqueio of [false, true]) {
       for (const [nomeT, pequena, aspecto] of [['PC', false, 16 / 9], ['celular', true, 844 / 390]]) {
         const c = CM.criarCena(CM.planejarComemoracao(g.m, g.gol, { timeHumano: 0 }), g.m);
@@ -388,8 +418,8 @@ function min(arr, f) { return Math.min(...arr.map(f)); }
       }
     }
   }
-  const nb = gols.length * 2;
-  reg('13 plano da reação: ninguém a < 2 m da lente dentro do quadro (PC e celular; também com um jogador parado na frente da lente)', `${linhas13.join('; ') || 'nenhum quadro'} (${gols.length} cenas; bloqueios ${bloqueios}/${nb})`, '0 quadros', bloqueios === nb && pior === 0);
+  const nb = gols13.length * 2;
+  reg('13 plano da reação: ninguém a < 2 m da lente dentro do quadro (PC e celular; também com um jogador parado na frente da lente)', `${linhas13.join('; ') || 'nenhum quadro'} (${gols13.length} cenas: as 8 + ${extras.length} gols naturais das sementes 101+; ${gols13.filter(g => CM.planejarComemoracao(g.m, g.gol, { timeHumano: 0 }).curta).length} curtas; bloqueios ${bloqueios}/${nb})`, '0 quadros (≥ 20 cenas)', extras.length >= 12 && bloqueios === nb && pior === 0);
 }
 
 // 14 (contraprova de 14/10) o gol sai com quem cabeceou ainda no ar: a cena termina o pulo (mundo do treino: o lançamento
