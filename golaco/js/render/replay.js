@@ -24,7 +24,7 @@ import * as THREE from 'three';
 import { CAMPO, REPLAY } from '../config.js';
 import { criarCamera } from './camera.js';
 import { jogadorNoTick, defensorDaLinha, bolaNoTick } from './replay-anel.js';
-import { cameraPrimeira, cameraTreinador, fovVerticalDe, cameraLateral, tecnicosNoTick } from './replay-olhos.js';
+import { cameraPrimeira, cameraTreinador, fovVerticalDe, cameraLateral, tecnicosNoTick, zLateralDoPlano } from './replay-olhos.js';
 import {
   roteiroGol, roteiroImpedimento, roteiroMenu, duracao, criarRelogio, iniciarRelogio, pararRelogio, avancarRelogio,
   planoAtual, velocidadeAgora, linhaDoReplay, tempoSaot, roteiroLegalTeste,
@@ -134,8 +134,10 @@ export function criarDiretor({ anel, aspecto }) {
       const Lt = REPLAY.lateral;
       if (corte) seg.cx = seg.lx - s * Lt.recuo;
       seg.cx += (seg.lx - s * Lt.recuo - seg.cx) * k;
-      // nunca dentro de um treinador gravado (com um deles a < 2 m, a câmera desce para a frente da área técnica)
-      cameraLateral(seg.cx, tecnicosNoTick(anel, Math.round(rel.t), _tecs), _lat);
+      // nunca dentro de um treinador gravado: com um deles perto do caminho dela no plano, ela fica na frente da área técnica
+      // o plano INTEIRO (o z é decidido uma vez por plano: antes pulava 2,5 m no meio dele); e sempre a ≥ 0,6 m deles
+      if (seg.planoLat !== p) { seg.planoLat = p; seg.zLat = zLateralDoPlano(anel, p.de, p.ate, s); }
+      cameraLateral(seg.cx, tecnicosNoTick(anel, Math.round(rel.t), _tecs), _lat, seg.zLat);
       camera.position.set(_lat.x, _lat.y, _lat.z);
       camera.lookAt(seg.lx, 0.9, seg.lz);
       ajustarFov(fovFixo(Lt.fov));

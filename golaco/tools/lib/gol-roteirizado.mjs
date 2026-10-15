@@ -12,7 +12,8 @@
 //      linha na altura pedida) a v m/s para o ponto (y, z) da boca do gol.
 // Devolve {ok, golTick, autor, lado, n, tickChute} (ok = o gol saiu em até 90 passos).
 //   golRoteirizado(pagina, {semente = 5, time = 0, v = 23, y = 1.0, z = -1.4, z0 = 3.0, dist = 9.5, reiniciar = true,
-//     marcarChute = false (o chute conta para o autor como um de verdade: replay.chuteDeTeste — a 1ª pessoa do replay)})
+//     marcarChute = false (o chute conta para o autor como um de verdade: replay.chuteDeTeste — a 1ª pessoa do replay),
+//     preparo = (marcarChute ? 60 : 0) (passos da corrida do autor até a bola antes do chute, com o corte para trás)})
 
 export async function golRoteirizado(pagina, opc = {}) {
   return pagina.evaluate(async o => {
@@ -72,6 +73,22 @@ export async function golRoteirizado(pagina, opc = {}) {
     let lo = -2, hi = 8;
     for (let it = 0; it < 40; it++) { const mid = (lo + hi) / 2; if (altura(mid) < yAlvo) lo = mid; else hi = mid; }
     const vy = (lo + hi) / 2;
+    // {preparo: n passos (padrão: 60 com marcarChute, 0 sem)}: a corrida do autor até a bola ANTES do chute (3 m/s pela
+    // linha do chute; a bola parada em P0), para o corte do teletransporte acima ficar ANTES do chute — sem isso o anel
+    // tem o autor do outro lado do campo até o chute e o corte no passo seguinte a ele (contraprova 15/10: a 1ª pessoa do
+    // replay atravessava esse corte; agora ela só existe com a corrida antes do chute no anel)
+    const prep = o.preparo ?? (o.marcarChute ? 60 : 0), vCorre = 3;
+    for (let i = 0; i < prep; i++) {
+      const d = 0.55 + vCorre * (prep - i) / 60;
+      m.posse = null; m.naMao = null; m.voo = null;
+      if (autor.cond) { autor.cond.toque = null; autor.cond.busca = false; }
+      Object.assign(m.bola, criarBola(P0.x, P0.z));
+      levar(autor, P0.x - dx * d, P0.z - dz * d);
+      autor.rumo = Math.atan2(dz, dx); autor.vx = dx * vCorre; autor.vz = dz * vCorre;
+      g.rodarPassos(1, 'demo');
+    }
+    levar(autor, P0.x - dx * 0.55, P0.z - dz * 0.55);
+    autor.rumo = Math.atan2(dz, dx);
     // 3) a bola sai do pé do autor
     m.posse = null; m.naMao = null; m.voo = null;
     if (autor.cond) { autor.cond.toque = null; autor.cond.busca = false; }

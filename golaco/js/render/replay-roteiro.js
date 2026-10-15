@@ -139,12 +139,15 @@ export function planosExtrasGol(anel, g, base) {
   const chute = g.chuteTick != null && anel.slot(g.chuteTick) >= 0 ? g.chuteTick : null;
   const cDepois = anel.primeiroCorte(golTick + 1, Math.min(anel.ultimo, golTick + s60(Math.max(Tr.fim, F.depois) + 0.5)));
   const fimMax = cDepois != null ? cDepois - 1 : anel.ultimo;
-  const inicio = t => { let de = Math.max(anel.primeiro, t); const c = anel.ultimoCorte(de, chute ?? golTick); if (c != null) de = c; return de; };
-  // 1ª pessoa
+  // o começo: depois do último corte ATÉ O GOL (contraprova 15/10: um corte entre o chute e o gol — o autor levado longe no
+  // passo seguinte ao chute, como no gol roteirizado dos testes — era atravessado: a 1ª pessoa começava no autor do outro
+  // lado do campo e a câmera pulava 52 m no meio do plano)
+  const inicio = t => { let de = Math.max(anel.primeiro, t); const c = anel.ultimoCorte(de, golTick); if (c != null) de = c; return de; };
+  // 1ª pessoa (só com a corrida antes do chute no anel: ≥ extras.primeiraMin s dela depois do último corte)
   let prim = null;
   if (chute != null && !g.contra && !g.reduzirMovimento && g.autor != null && jogadorNoTick(anel, chute, g.autor)) {
     prim = { de: inicio(chute - s60(F.antes)), ate: Math.min(fimMax, golTick + s60(F.depois)), vel: F.vel, cam: 'primeira', autor: g.autor, chuteTick: chute, golTick, lado: lado >= 0 ? 1 : -1, tipoChute: g.tipoChute ?? 'chute', desvio: !!g.desvio };
-    if (prim.ate <= prim.de) prim = null;
+    if (prim.ate <= prim.de || prim.de > chute - s60(X.primeiraMin)) prim = null;
   }
   // treinador do time que marcou (no gol contra, o que ganhou o gol: g.time)
   let tr = null;

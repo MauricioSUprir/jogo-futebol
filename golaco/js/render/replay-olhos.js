@@ -482,12 +482,38 @@ export function cameraTreinador(e, t, a, pequena, out = {}) {
  * deles a < 2 m, ela desce para z = meioZ + 1 (na frente da área técnica, que é só desenho: o roteiro não muda); e sempre a
  * ≥ 0,6 m de qualquer um (tecnicos.js afastarDeTecnicos). out {x, y, z}.
  */
-export function cameraLateral(cx, tecnicos, out = { x: 0, y: 0, z: 0 }) {
+export function cameraLateral(cx, tecnicos, out = { x: 0, y: 0, z: 0 }, z = null) {
   const Lt = REPLAY.lateral;
-  out.x = typeof cx === 'number' ? cx : cx.x; out.y = Lt.altura; out.z = MZ + Lt.fora;
-  if (tecnicos) for (const tc of tecnicos) if (Math.hypot(tc.x - out.x, tc.z - out.z) < 2) { out.z = MZ + 1; break; }
+  out.x = typeof cx === 'number' ? cx : cx.x; out.y = Lt.altura; out.z = z ?? MZ + Lt.fora;
+  // `z` dado: o do plano inteiro (zLateralDoPlano); sem ele, a regra de antes, quadro a quadro
+  if (z == null && tecnicos) for (const tc of tecnicos) if (Math.hypot(tc.x - out.x, tc.z - out.z) < 2) { out.z = MZ + 1; break; }
   if (tecnicos) afastarDeTecnicos(out, tecnicos, 0.6);
   return out;
+}
+
+/**
+ * O z da câmera lateral do golaço para o PLANO INTEIRO [de, ate] (o diretor calcula uma vez, no começo dele; contraprova
+ * 15/10: decidido a cada quadro, ela pulava 2,5 m no meio do plano ao passar por um treinador): meioZ + fora; com um
+ * treinador gravado a < 2 m do caminho dela — o x dela segue a bola com atraso, então fica entre o menor e o maior x da bola
+ * − lado·recuo no plano —, meioZ + 1 (na frente da área técnica) o plano todo.
+ */
+export function zLateralDoPlano(anel, de, ate, lado) {
+  const Lt = REPLAY.lateral, s = lado >= 0 ? 1 : -1, z0 = MZ + Lt.fora;
+  let x0 = Infinity, x1 = -Infinity;
+  for (let t = de; t <= ate; t++) { const b = bolaNoTick(anel, t, _b); if (b) { const x = b.x - s * Lt.recuo; if (x < x0) x0 = x; if (x > x1) x1 = x; } }
+  if (!(x1 >= x0)) return z0;
+  for (let t = de; t <= ate; t++) {
+    const sl = anel.slot(t);
+    if (sl < 0) continue;
+    for (let v = 0; v < anel.nVagas[sl]; v++) {
+      const i = sl * anel.vagas + v;
+      if (!(anel.info[i] & 4)) continue;
+      const tx = anel.dados[i * anel.K + anel.P], tz = anel.dados[i * anel.K + anel.P + 1];
+      const dx = tx < x0 ? x0 - tx : tx > x1 ? tx - x1 : 0;
+      if (Math.hypot(dx, tz - z0) < 2) return MZ + 1;
+    }
+  }
+  return z0;
 }
 
 /** Os treinadores gravados no passo (ids e x/z) em out [{id, x, z}] (lista reaproveitada). */

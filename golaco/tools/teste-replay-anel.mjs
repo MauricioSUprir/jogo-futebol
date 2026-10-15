@@ -231,6 +231,17 @@ if (!RA || !RR) {
     for (let t = 2001; t <= 2600; t++) gravar(a4, t, ordem, new Set([2150, 2580]));
     const rm4 = roteiroMenu(a4);
     reg('B18 "Replay" da pausa logo depois de uma montagem: o lance antes dela (sem atravessar o corte anterior)', rm4 ? `${rm4.planos[0].de}–${rm4.planos[0].ate}` : 'nenhum', '2150–2579', !!rm4 && rm4.planos[0].de === 2150 && rm4.planos[0].ate === 2579);
+    // contraprova 15/10: corte ENTRE o chute e o gol (o autor levado longe no passo seguinte ao chute, como no gol
+    // roteirizado dos testes de navegador) — nenhum plano, nem os extras, o atravessa (antes a 1ª pessoa e a visão do
+    // treinador começavam antes dele: a câmera da 1ª pessoa pulava 52 m no meio do plano); sem a corrida antes do chute
+    // no anel, sem 1ª pessoa
+    const a5 = criarAnel({ ticks: 600, vagas: 26, nj: NJ });
+    for (let t = 2001; t <= 2600; t++) gravar(a5, t, [...ordem, 210, 211], new Set([2351]));
+    const re = roteiroGol(a5, { golTick: 2400, chuteTick: 2350, lado: 1, time: 0, autor: 5, tipoChute: 'chute', golaco: false });
+    const cruza = re ? re.planos.filter(p => p.cam !== 'saot' && a5.primeiroCorte(p.de + 1, p.ate) != null) : [];
+    reg('B19 corte entre o chute e o gol: nenhum plano (os extras também) o atravessa; sem a corrida antes do chute, sem 1ª pessoa',
+      re ? `${re.planos.map(p => `${p.cam} ${p.de}–${p.ate}`).join(' · ')}; atravessam: ${cruza.map(p => p.cam).join(', ') || 'nenhum'}` : 'sem roteiro',
+      'nenhum; sem primeira; com treinador', !!re && cruza.length === 0 && !re.planos.some(p => p.cam === 'primeira') && re.planos.some(p => p.cam === 'treinador'));
   }
 
   // ---------------------------------------------------------------- C) partida de verdade (IA × IA)

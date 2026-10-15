@@ -39,6 +39,8 @@
 //      G5 um toque no meio da 1ª pessoa e no meio da visão do treinador (o "Replay" do mesmo gol de novo) pula tudo;
 //      G6 nada some: os 22 e os 2 treinadores em todo quadro do replay do gol (o treinador que marcou fora SÓ na parte 1
 //         da visão dele — a lente é o olho dele) e a bola sempre desenhada, menos na 1ª pessoa com ela perto da lente.
+//      G7 (contraprova 15/10) a câmera da 1ª pessoa e da visão do treinador sem salto (≤ 0,25 m) entre dois quadros do
+//         mesmo plano e da mesma parte (nenhum corte dentro deles).
 // Na versão sem replay reprova (A1, C2, D1: não existe replay); na sem a cena semiautomática, C5 (≥ 3,0 s), F1, F3–F5,
 // F7 e F8 reprovam.
 //   node tools/teste-replay.mjs [--raiz <pasta do jogo>] [--base <pasta do jogo de comparação para o hash>]
@@ -97,7 +99,7 @@ async function rodadaGol(raizJogo, url, clicar = false) {
         if (saidaTick == null && m.partida.estado !== 'gol' && m.tick > golTick + 10) saidaTick = m.tick;
         if (rp?.ativo) {
           const dz = g.replay.desenho;
-          amostras.push({ tick: m.tick, rt: rp.tick, cam: rp.cam, vel: rp.vel, plano: rp.plano, tipo: rp.tipo, bx: g.render.bola.x, linha: !!g.linhaImpedimento?.visivel, ca: g.estadio.torcida?.ladoDeCa ?? null, cz: g.render.camera.z, cy: g.render.camera.y, checagem: rp.checagem, golaco: rp.golaco, fase: rp.saot?.fase ?? null, selo: selo(),
+          amostras.push({ tick: m.tick, rt: rp.tick, cam: rp.cam, vel: rp.vel, plano: rp.plano, tipo: rp.tipo, bx: g.render.bola.x, linha: !!g.linhaImpedimento?.visivel, ca: g.estadio.torcida?.ladoDeCa ?? null, cx: g.render.camera.x, cz: g.render.camera.z, cy: g.render.camera.y, checagem: rp.checagem, golaco: rp.golaco, fase: rp.saot?.fase ?? null, selo: selo(),
             autor: rp.autor ?? null, tecnico: rp.tecnico ?? null, parte: rp.parte ?? null, cams: rp.cams, duracoes: rp.duracoes ?? null,
             ocultos: dz ? dz.ocultos : null, t210: dz ? dz.ids.includes(210) : null, t211: dz ? dz.ids.includes(211) : null });
           if (!hud && amostras.length === 30) {
@@ -163,6 +165,18 @@ const comR = await rodadaGol(raiz, '?q=baixa&hora=dia&semente=5', true);
     const okOut = outros.filter(x => x.t210 && x.t211).length;
     meta('G3 o autor sem cabeça e tronco só na 1ª pessoa; o treinador fora da lista só na parte 1 da visão dele', `autor ${autor}: oculto em ${okPrim}/${prim.length} quadros da 1ª pessoa, ninguém oculto em ${okFora}/${fora.length} fora dela; treinador ${tec}: fora da lista em ${okP1}/${p1.length} quadros da parte 1, na lista em ${okP2}/${p2.length} da parte 2; os 2 treinadores nos outros planos ${okOut}/${outros.length}`,
       'todos; todos; todos; todos; todos', autor != null && tec === 210 && prim.length > 0 && okPrim === prim.length && okFora === fora.length && p1.length > 0 && okP1 === p1.length && p2.length > 0 && okP2 === p2.length && okOut === outros.length);
+    // G7 (contraprova 15/10): a câmera da 1ª pessoa e da visão do treinador sem salto entre dois quadros do mesmo plano (e da
+    // mesma parte): antes, o corte do gol roteirizado no passo seguinte ao chute ficava DENTRO da 1ª pessoa e a câmera pulava
+    // 52 m (o autor do outro lado do campo até o chute)
+    let saltoP = 0, saltoT = 0;
+    for (let i = 1; i < a.length; i++) {
+      const x = a[i], y = a[i - 1];
+      if (x.plano !== y.plano || x.parte !== y.parte || (x.cam !== 'primeira' && x.cam !== 'treinador')) continue;
+      const d = Math.hypot(x.cx - y.cx, x.cy - y.cy, x.cz - y.cz);
+      if (x.cam === 'primeira') saltoP = Math.max(saltoP, d); else saltoT = Math.max(saltoT, d);
+    }
+    meta('G7 a câmera da 1ª pessoa e da visão do treinador sem salto entre dois quadros do plano', `1ª pessoa ${f2(saltoP)} m, treinador ${f2(saltoT)} m por quadro (${prim.length} e ${p1.length + p2.length} quadros)`, '≤ 0,25 m (correndo a 0,6×: ~0,08)',
+      prim.length > 0 && p1.length > 0 && saltoP <= 0.25 && saltoT <= 0.25);
   }
   seloForaDoFinal.push(...a.filter(x => x.selo && x.fase !== 'final').map(() => 'gol roteirizado'));
   const h = comR.hud;

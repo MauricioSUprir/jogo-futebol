@@ -25,7 +25,8 @@
 //   T13 treinador e jogador nunca se sobrepõem (≥ 0,5 m entre os centros); ≥ 1 m em ≥ 99,9% dos passos;
 //   T14 custo ≤ 0,05 ms por passo (passoTecnicos com as 2 poses; mediana de 3 execuções);
 //   T15 câmeras roteirizadas (pré-jogo, comemoração, lateral do golaço) a ≥ 0,6 m de qualquer treinador em 100% dos
-//       quadros;
+//       quadros; e (contraprova 15/10) a lateral do golaço passando por um treinador sem salto (≤ 0,3 m por quadro: o z
+//       dela é do plano inteiro);
 //   T16 treinadorDoTime(T, t) (o gancho das cenas): {id, time, x, z, rumo, kit} do time, dentro da área técnica; null sem
 //       treinadores.
 // Na versão sem os treinadores (main/saot antes desta frente) os módulos não existem: reprova.
@@ -493,8 +494,37 @@ if (!TE || !EF) {
       }
       if (pior < 0.6) viol.push(`lateral do golaço: ${fmt(pior, 2)} m`); else viol.push(`(lateral do golaço: mín ${fmt(pior, 1)} m)`);
     } catch (e) { viol.push(`lateral do golaço: ${e.message}`); }
+    // contraprova 15/10: o plano lateral INTEIRO passando por um treinador (o diretor de render/replay.js quadro a quadro: a
+    // bola seguida pela mola de REPLAY.atras, o x da câmera atrás dela; o z do plano por zLateralDoPlano) — sem salto entre
+    // dois quadros (antes o z era decidido a cada quadro e a câmera pulava 2,5 m quando passava a 2 m dele) e a ≥ 0,6 m dele
+    try {
+      const RO = await imp('render/replay-olhos.js'), RA = await imp('render/replay-anel.js');
+      const { REPLAY, PASSO } = C;
+      const a = RA.criarAnel({ ticks: 600, vagas: REPLAY.vagas, nj: 19 });
+      const pz = new Float32Array(57);
+      for (let t = 1000; t <= 1100; t++) {
+        a.inicio(t, t * PASSO, false);
+        a.jogador(0, 211, 1, false, 13.5, 36.2, -Math.PI / 2, pz, true);
+        a.fim({ x: 19.5 + (t - 1000) * 0.33, y: 0.3, z: 0 }, { x: 0, y: 0, z: 0, w: 1 });
+      }
+      const p = { de: 1000, ate: 1100, vel: REPLAY.gol.vel[2], cam: 'lateral' }, Lt = REPLAY.lateral, b = {};
+      const k = 1 - Math.exp(-(1 / 60) * p.vel * REPLAY.atras.mola);
+      const zPlano = RO.zLateralDoPlano ? RO.zLateralDoPlano(a, p.de, p.ate, 1) : null;
+      let lx = null, cx = 0, ant = null, salto = 0, perto = Infinity;
+      for (let t = p.de; t <= p.ate; t += p.vel) {
+        const bp = RA.bolaNoTick(a, Math.floor(t), b);
+        if (lx == null) { lx = bp.x; cx = lx - Lt.recuo; } else lx += (bp.x - lx) * k;
+        cx += (lx - Lt.recuo - cx) * k;
+        const c = RO.cameraLateral(cx, RO.tecnicosNoTick(a, Math.round(t)), {}, zPlano);
+        if (ant) salto = Math.max(salto, Math.hypot(c.x - ant.x, c.y - ant.y, c.z - ant.z));
+        ant = c;
+        perto = Math.min(perto, TE.distanciaTecnico(c.x, c.y, c.z, 13.5, 36.2));
+      }
+      if (salto > 0.3 || perto < 0.6) viol.push(`lateral passando pelo treinador: salto ${fmt(salto, 2)} m por quadro, ${fmt(perto, 2)} m dele`);
+      else viol.push(`(lateral passando pelo treinador: salto ${fmt(salto, 2)} m, ${fmt(perto, 1)} m)`);
+    } catch (e) { viol.push(`lateral passando pelo treinador: ${e.message}`); }
     const ruins = viol.filter(v => !v.startsWith('('));
-    reg('T15 câmeras roteirizadas (pré-jogo, comemoração, lateral do golaço) a ≥ 0,6 m dos treinadores', viol.join('; '), '≥ 0,6 m em todos os quadros', ruins.length === 0);
+    reg('T15 câmeras roteirizadas (pré-jogo, comemoração, lateral do golaço) a ≥ 0,6 m dos treinadores; a lateral sem salto no plano', viol.join('; '), '≥ 0,6 m em todos os quadros; ≤ 0,3 m por quadro', ruins.length === 0);
   }
   console.log(`${res.length} partidas (sementes 1–${NS}) de 2 × ${MIN_TEMPO} min, ${nPar} processos, ${((Date.now() - t0) / 1000).toFixed(0)} s`);
 }
