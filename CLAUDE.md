@@ -122,7 +122,10 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
 - Toda mudança de jogabilidade tem teste que **reprova antes e passa depois**, com tabela antes → depois no PR.
   O GitHub Actions roda os testes (`golaco/tools/rodar-testes.mjs` + `teste-carga.mjs`) em todo PR
   (`.github/workflows/golaco-testes.yml`) e antes do deploy (`deploy-pages.yml`, job `testes-golaco`): reprovou,
-  não publica.
+  não publica. **CI em partes** (15/10): o deploy chama o mesmo `golaco-testes.yml`, que roda os testes em Node em 4
+  máquinas ao mesmo tempo (`rodar-testes.mjs --parte i --de 4`) e os de navegador em 3 (`rodar-navegador.mjs`; teste
+  de navegador novo entra na lista DESSE arquivo, não no YAML), divididos pelo tempo de `tools/lib/tempos-ci.mjs`;
+  o check do PR continua `testes` (só passa com todas as partes).
 - **Pesquisar antes de mexer** (artigos, GDC, docs do three.js, dados reais) e dizer no PR o que aproveitou de cada
   fonte. Base da Etapa 1: `golaco/PESQUISA.md` (física da bola, biomecânica, passo fixo, jogos, three.js).
 - Prints sempre com torcida e HUD ligados (torcida só existe a partir da Etapa 6): PC 1280×720 Alta e celular

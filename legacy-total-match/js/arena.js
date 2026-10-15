@@ -169,7 +169,7 @@
 
   /* ---------- CHEFÃO: TIME DAS LENDAS ---------- */
   function legendsTeam() {
-    var W = TM.data.world(), all = Object.keys(W.playersById || {}).map(function (k) { return W.playersById[k]; }).filter(function (p) { return p && p.clubId; });
+    var W = TM.data.world(), all = Object.keys(W.playersById || {}).map(function (k) { return W.playersById[k]; }).filter(function (p) { return p && p.clubId && !p.especial; });
     function top(pos, n) { return all.filter(function (p) { return p.pos === pos; }).sort(function (a, b) { return (b.overall || 0) - (a.overall || 0); }).slice(0, n); }
     var xi = top("GK", 1).concat(top("DF", 4), top("MF", 3), top("FW", 3));
     var bench = top("GK", 2).slice(1).concat(top("DF", 6).slice(4), top("MF", 5).slice(3), top("FW", 5).slice(3));
