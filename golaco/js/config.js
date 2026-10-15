@@ -1076,7 +1076,7 @@ export const IA_DEFESA = {
   // a trajetória dela antes do recebedor: `le` s para ler o passe e `antes` s de folga (ia-tatica.js cortaPasse; o corpo
   // acelera a `acel` m/s² até a arrancada; a bola rasteira ou até `alturaMax` m, nos próximos `horizonte` ticks; decidido,
   // segue até `segue` ticks depois do ponto)
-  livre: { histerese: 0.25, margem: 0.2, disputa: null, le: 0.15, antes: 0.1, acel: 7, alturaMax: 1.0, horizonte: 120, segue: 12 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele — null: arranca em toda bola solta (com 0,6 s o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; medido com 32 partidas)
+  livre: { histerese: 0.25, margem: 0.2, disputa: null, le: 0.2, antes: 0.1, acel: 7, alturaMax: 1.0, horizonte: 120, segue: 12 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele — null: arranca em toda bola solta (com 0,6 s o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; medido com 32 partidas)
   contemLead: 0.9,            // s — quem contém mira à frente pela velocidade do ponto (tira o atraso do filtro, 0,2 s, e do modo pressa, ~0,7 s: sem isso ele corria ao lado do condutor, a 0,6 m)
   // contrapressão: janela (s), quantos, a ≤ raio m da bola, e só com a perda fora do meu terço (u >
   // campo; ou perto da lateral) e sem estar em inferioridade a ≤ raio m (no máximo `inferioridade` a

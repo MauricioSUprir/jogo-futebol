@@ -1442,8 +1442,7 @@ corrido só na partida.
   direção do condutor ≤ 0: corre para o próprio gol ou fica) e a bola já solta do pé do condutor (≥ `ACOES.boteIA.bolaSolta`),
   a chance de falta é × `FALTAS.bote.naBola` (0,4): ele joga a bola antes do homem. Era o desarme da defesa da arrancada
   contra o condutor em disparada que empurra a bola 0,6–0,8 m (50 das 67 faltas da IA no humano no teste-defesa-corrida
-  eram botes de frente, quase todos assim). Corte do passe com `IA_DEFESA.livre.le` 0,15 s (era 0,2): com a condução curta
-  (#476) o passe sai mais cedo do pé e o passe certo da partida IA × IA subia para 87,4% (teste-intercepta, meta 80–86,5%).
+  eram botes de frente, quase todos assim).
 - Calibração (painel de 48, 13/10): `IA_DEFESA.corrida.v` 6,8 (só a disparada de verdade liga a defesa da arrancada),
   `GOLEIRO.logit.c0Partida` −0,35, `IA_ATAQUE.contra` {s: 8, bonus: 1,0}, `utilidade.chute` 3,0.
 - Volume de ataque (rodada de 13/10, painel de 144 do CI): **tabela da IA** (`ia-ataque.js tabelaIA`, `IA_ATAQUE.tabela`; DESLIGADA
