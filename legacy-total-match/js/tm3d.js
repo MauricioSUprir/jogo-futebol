@@ -361,6 +361,8 @@
       v: 2, id: "j" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36),
       titulo: o.title || "Partida", origem: (TM.ui.current && TM.ui.current()) || "",
       home: home, away: away, partida: partidaDe(o, home, away),
+      // edição do TM: na pro (licenciada) o 3D desenha o estádio real do mandante; na pública, o Estádio Total Match
+      edicao: (function () { try { return TM.storage.edition() === "pro" ? "pro" : "public"; } catch (e) { return "public"; } })(),
       userSide: o.userSide === 1 ? "away" : "home", controle: o.controle || null
     };
   }
