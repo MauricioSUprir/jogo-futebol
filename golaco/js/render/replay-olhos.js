@@ -11,8 +11,8 @@
 //    média móvel de 0,33 s (um passo) e gaussiana σ 0,22 s: a cabeça do manequim sobe e desce até ±9 cm correndo e o
 //    cérebro estabiliza o olhar (Pozzo & Berthoz 1991); rolagem sempre 0; nada de balançar no ritmo da passada (Nesky,
 //    GDC 2014 #44; Oculus: "do not use head bobbing"); presa a [cabeça − 0,14, cabeça + 0,16] e, por fim, dentro da
-//    esfera de 0,148 m em volta do centro da cabeça (com a cabeça longe na vertical, o olho recua na horizontal até 6 cm
-//    do centro — a altura não treme — e, passando disso, a altura é que fica presa);
+//    esfera de 0,148 m em volta do centro da cabeça (com a cabeça longe na vertical, o olho recua na horizontal até 3,5 cm
+//    do centro — a altura não treme — e, passando disso, a altura é que fica presa: o olho a ≤ 5 cm do olho bruto);
 //  - olhar (15/10, frente "replay robusto": tudo em ÂNGULO — rumo e arfagem por passo, suavizados e com o limite do giro;
 //    antes, os pontos eram suavizados em posição e o ponto longe do gol se misturava com a bola no pé): até chute − 0,48 s a
 //    bola puxada 60% para o centro da boca do gol (o autor vê o gol antes de bater), sem descer mais que 18° e com o rumo a
@@ -197,8 +197,9 @@ export function enquadrarPrimeira(anel, p) {
     olho[i * 3 + 1] = clamp(olho[i * 3 + 1], cy + F.yMin, cy + F.yMax);
     // dentro da esfera de raio `raioCabeca` em volta do centro da cabeça: com a cabeça longe na vertical (o balanço da
     // passada), o olho recua na horizontal para o centro dela (a altura fica estável)
-    // (15/10: o recuo na horizontal vai até `olhoHMin` m do centro — mais que isso tirava o olho de perto do olho bruto, G6;
-    // passando, a altura é que fica presa na esfera)
+    // (15/10: o recuo na horizontal vai até `olhoHMin` m do centro — sem limite, o olho ia a 5,7 cm do olho bruto, G6: ≤ 6;
+    // com o limite em 6 cm, a altura presa balançava com a passada, 1,4 cm, G6: ≤ 1 —; passando, a altura é que fica presa
+    // na esfera)
     const hx = olho[i * 3] - cabeca[i * 3], hz = olho[i * 3 + 2] - cabeca[i * 3 + 2], hy = olho[i * 3 + 1] - cy, R = F.raioCabeca;
     if (hx * hx + hy * hy + hz * hz > R * R) {
       const hh = Math.hypot(hx, hz);

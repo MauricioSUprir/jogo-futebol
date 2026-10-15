@@ -1274,7 +1274,7 @@ export const REPLAY = {
   // quadro corta o plano (fica se sobrar ≥ `sobraMin` s reais).
   primeira: {
     vel: 0.6, antes: 0.9, depois: 0.4, frente: 0.085, cima: 0.03, sigmaXZ: 0.08, mediaY: 0.33,
-    prendeXZ: 0.02, yMin: -0.14, yMax: 0.16, sigmaY: 0.22, raioCabeca: 0.148, olhoHMin: 0.06,
+    prendeXZ: 0.02, yMin: -0.14, yMax: 0.16, sigmaY: 0.22, raioCabeca: 0.148, olhoHMin: 0.035,
     baixaAntes: 0.3, baixaDepois: 0.2, puxaAntes: 0.6, puxaGol: 0.35, sigmaOlhar: 0.10, sigmaCabeceio: 0.14,
     giroMax: 85, sigmaGiro: 0.05,
     arfagem: [-60, 15], arfagemAntes: -18, fovH: 90, perto: 0.10, bolaSome: 0.35, corpo: 0.3, sobraMin: 1.2,
