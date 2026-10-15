@@ -163,10 +163,13 @@ const BANDEIROES = bandeiroes();
 
 
 /**
- * Cria a torcida. opc = {qualidade, mascara (Uint8Array das cadeiras do mosaico, ou null), hora}.
+ * Cria a torcida. opc = {qualidade, mascara (Uint8Array das cadeiras do mosaico, ou null), hora, identidade (identidade.js:
+ * só a do Total Match — `tm` — muda as camisas, os cachecóis, as faixas, as bandeiras e o público; os lugares e os
+ * sorteios são os mesmos)}.
  * Devolve {mesh, n, atualizar(t, emocao, camera), definirHora(h), definirQualidade(q), dispose()}.
  */
 export function criarTorcida(cena, opc) {
+  const ident = opc.identidade && opc.identidade.tm ? opc.identidade : null;
   const uni = {
     ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog),
     uAtlas: { value: null }, uTamAtlas: { value: new THREE.Vector2(1, 1) },
@@ -181,6 +184,8 @@ export function criarTorcida(cena, opc) {
     // acento (cachecol) na cor do time, linear: verde do Golaço FC, branco do Ventania FC
     uAcento0: { value: new THREE.Color(0x19e07a) }, uAcento1: { value: new THREE.Color(0xf2f4f5) },
   };
+  // cachecol de cada time (Total Match): as cores da identidade
+  if (ident) { uni.uAcento0.value.set(ident.torcida.acentos[0]); uni.uAcento1.value.set(ident.torcida.acentos[1]); }
   let mesh = null, material = null, qualidade = null, n = 0, dados = null;
   const _frustum = new THREE.Frustum(), _mat = new THREE.Matrix4();
   function desmontar() {
@@ -194,7 +199,7 @@ export function criarTorcida(cena, opc) {
   /** Monta TODOS os torcedores (os da Alta) uma vez; a qualidade só escolhe quantos desenhar. */
   function montar() {
     desmontar();
-    const d = gerarTorcidaNiveis(opc.mascara ?? null);
+    const d = gerarTorcidaNiveis(opc.mascara ?? null, ident ? { ...ident.torcida, publico: ident.publico } : null);
     dados = d;
     const [cw, ch] = TORCIDA.atlas;
     const at = atlasTorcida(cw, ch);
@@ -257,7 +262,7 @@ export function criarTorcida(cena, opc) {
   montar();
   aplicarQualidade(TORCIDA.ocupacao[opc.qualidade] ? opc.qualidade : 'media');
   // a festa da torcida: faixas, bandeiras e bandeirões (1 chamada) e os sinalizadores (1 chamada, só no evento)
-  const bandeiras = criarBandeiras(cena, { qualidade, hora: opc.hora });
+  const bandeiras = criarBandeiras(cena, { qualidade, hora: opc.hora, identidade: ident });
   const sinalizadores = criarSinalizadores(cena, { qualidade, hora: opc.hora });
   let festaVisivel = true;
   // pré-carga: no 1º quadro desenhado os grupos fora do quadro (o lado de cá, os fundos) vão para a GPU com 0

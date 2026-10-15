@@ -13,6 +13,7 @@ import { BANDEIRAS, faixas, bandeiras, bandeiroes, BANDEIRA_GLSL, BANDEIRAO_GLSL
 import { aberturaBandeirao } from './festa.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ } from './luz-falsa.js';
 import { criarCanvas, texturaCanvas } from './util.js';
+import { desenharEscudo, imagemEscudo } from './escudo-desenho.js';
 
 const ATLAS = 1024;
 const SLOT_FAIXA = 48;                       // px de altura de cada faixa no atlas
@@ -100,8 +101,12 @@ void main() {
 }
 `;
 
-/** Atlas (1024²): as faixas (uma linha de 48 px cada), 4 desenhos de bandeira, os 2 bandeirões e o mastro. */
-function atlasFesta(lista) {
+/**
+ * Atlas (1024²): as faixas (uma linha de 48 px cada), 4 desenhos de bandeira, os 2 bandeirões e o mastro. festa (só com
+ * ?tm; identidade.js festa): as cores do mandante no lugar do verde/preto/branco, o nome dele no bandeirão do lado de
+ * lá e o escudo (escudo = a imagem decodificada; sem ela, a sigla) no da organizada e numa bandeira de mastro.
+ */
+function atlasFesta(lista, festa = null, escudo = null) {
   const c = criarCanvas(ATLAS, ATLAS);
   const g = c.getContext('2d');
   g.clearRect(0, 0, ATLAS, ATLAS);
@@ -112,7 +117,7 @@ function atlasFesta(lista) {
     g.fillStyle = f.fundo; g.fillRect(0, y0, w, h);
     if (f.detalhe === 'borda') { g.strokeStyle = f.letra; g.lineWidth = 3; g.strokeRect(3, y0 + 3, w - 6, h - 6); }
     if (f.detalhe === 'listras') { g.fillStyle = f.letra; g.fillRect(0, y0 + 3, w, 3); g.fillRect(0, y0 + h - 6, w, 3); }
-    if (f.detalhe === 'verde') { g.fillStyle = '#19e07a'; g.fillRect(0, y0, 10, h); g.fillRect(w - 10, y0, 10, h); }
+    if (f.detalhe === 'verde') { g.fillStyle = f.detalheCor ?? '#19e07a'; g.fillRect(0, y0, 10, h); g.fillRect(w - 10, y0, 10, h); }
     g.save();
     g.beginPath(); g.rect(0, y0, w, h); g.clip();
     g.fillStyle = f.letra; g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -124,7 +129,14 @@ function atlasFesta(lista) {
     g.restore();
   }
   // bandeiras (Golaço FC): metades, faixa diagonal, estrela e listras
-  const VERDE = '#19e07a', PRETO = '#07090a', BRANCO = '#f2f4f3', VERDE2 = '#0d8447';
+  const { VERDE, PRETO, BRANCO, VERDE2 } = festa ? festa.cores : { VERDE: '#19e07a', PRETO: '#07090a', BRANCO: '#f2f4f3', VERDE2: '#0d8447' };
+  const letra = festa ? festa.letra : 'G', nomeBand = festa ? festa.texto : 'GOLAÇO';
+  // a letra/escudo no círculo (bandeira 2 e bandeirão da organizada): o escudo do mandante, se veio; senão a letra
+  const noCirculo = (cx, cy, r, tamLetra, cor) => {
+    if (escudo && desenharEscudo(g, escudo, cx - r * 0.82, cy - r * 0.82, r * 1.64, r * 1.64)) return;
+    g.fillStyle = cor; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = fonte(900, tamLetra);
+    g.fillText(letra, cx, cy + tamLetra * 0.06);
+  };
   for (let d = 0; d < 4; d++) {
     const x0 = d * 256, y0 = Y_BANDEIRA, w = BAND_W, h = BAND_H;
     g.save(); g.beginPath(); g.rect(x0, y0, w, h); g.clip();
@@ -133,7 +145,8 @@ function atlasFesta(lista) {
     else if (d === 2) {
       g.fillStyle = VERDE2; g.fillRect(x0, y0, w, h);
       g.fillStyle = PRETO; g.beginPath(); g.arc(x0 + w / 2, y0 + h / 2, h * 0.36, 0, Math.PI * 2); g.fill();
-      g.fillStyle = VERDE; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = fonte(900, 66); g.fillText('G', x0 + w / 2, y0 + h / 2 + 4);
+      if (festa) noCirculo(x0 + w / 2, y0 + h / 2, h * 0.36, 66, festa.corLetra);
+      else { g.fillStyle = VERDE; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = fonte(900, 66); g.fillText('G', x0 + w / 2, y0 + h / 2 + 4); }
     } else { for (let k = 0; k < 5; k++) { g.fillStyle = [VERDE, PRETO, BRANCO, PRETO, VERDE][k]; g.fillRect(x0, y0 + k * h / 5, w, h / 5 + 1); } }
     g.restore();
   }
@@ -145,9 +158,9 @@ function atlasFesta(lista) {
     g.fillStyle = PRETO;
     for (let k = -2; k < 9; k++) { g.beginPath(); g.moveTo(x0 + k * 64, y0 + h); g.lineTo(x0 + k * 64 + 24, y0 + h); g.lineTo(x0 + k * 64 + 24 + h * 0.5, y0); g.lineTo(x0 + k * 64 + h * 0.5, y0); g.closePath(); g.fill(); }
     g.fillStyle = PRETO; g.fillRect(x0 + 40, y0 + 18, w - 80, h - 36);
-    g.fillStyle = VERDE; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = fonte(900, 80);
-    const larg = g.measureText('GOLAÇO').width;
-    g.translate(x0 + w / 2, y0 + h / 2 + 4); g.scale(Math.min(1.2, (w - 120) / larg), 1); g.fillText('GOLAÇO', 0, 0);
+    g.fillStyle = festa ? festa.corLetra : VERDE; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = fonte(900, 80);
+    const larg = g.measureText(nomeBand).width;
+    g.translate(x0 + w / 2, y0 + h / 2 + 4); g.scale(Math.min(1.2, (w - 120) / larg), 1); g.fillText(nomeBand, 0, 0);
     g.restore();
   }
   // bandeirão da organizada (24 × 14 m): listras verdes e pretas (qualquer pedaço dele lê como a bandeira do time — a
@@ -160,7 +173,8 @@ function atlasFesta(lista) {
     for (let k = 0; k < NL; k++) { g.fillStyle = k % 2 ? PRETO : VERDE; g.fillRect(x0 + Math.round(k * w / NL), y0, Math.ceil(w / NL) + 1, h); }
     g.fillStyle = BRANCO; g.beginPath(); g.arc(x0 + w / 2, y0 + h / 2, h * 0.34, 0, Math.PI * 2); g.fill();
     g.fillStyle = PRETO; g.beginPath(); g.arc(x0 + w / 2, y0 + h / 2, h * 0.3, 0, Math.PI * 2); g.fill();
-    g.fillStyle = VERDE; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = fonte(900, 150); g.fillText('G', x0 + w / 2, y0 + h / 2 + 10);
+    if (festa) noCirculo(x0 + w / 2, y0 + h / 2, h * 0.3, 150, festa.corLetra);
+    else { g.fillStyle = VERDE; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = fonte(900, 150); g.fillText('G', x0 + w / 2, y0 + h / 2 + 10); }
     const estrela = (cx, cy, r) => { g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } g.closePath(); g.fill(); };
     g.fillStyle = BRANCO;
     for (let k = -1; k <= 1; k++) estrela(x0 + w / 2 + k * 46, y0 + 30, 15);
@@ -173,9 +187,13 @@ function atlasFesta(lista) {
 
 const u = x => x / ATLAS, v = y => 1 - y / ATLAS;   // canvas → uv (flipY)
 
-/** Cria a malha. opc = {qualidade, hora}. Devolve {mesh, atualizar(festa, t), definirQualidade(q), definirHora(h), contagem}. */
+/**
+ * Cria a malha. opc = {qualidade, hora, identidade (identidade.js; só a do Total Match muda os textos e as cores)}.
+ * Devolve {mesh, atualizar(festa, t), definirQualidade(q), definirHora(h), contagem}.
+ */
 export function criarBandeiras(cena, opc = {}) {
-  const lFaixas = faixas(), lBand = bandeiras(), lBand2 = bandeiroes();
+  const ident = opc.identidade && opc.identidade.tm ? opc.identidade : null;
+  const lFaixas = ident ? faixas(ident.faixas) : faixas(), lBand = bandeiras(), lBand2 = bandeiroes();
   const pos = [], uv = [], loc = [], meta = [];
   const B = BANDEIRAS;
   function vert(p, t, l, m) { pos.push(p[0], p[1], p[2]); uv.push(t[0], t[1]); loc.push(l[0], l[1]); meta.push(m[0], m[1], m[2], m[3]); }
@@ -236,7 +254,7 @@ export function criarBandeiras(cena, opc = {}) {
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   geo.setAttribute('aLocal', new THREE.Float32BufferAttribute(loc, 2));
   geo.setAttribute('aMeta', new THREE.Float32BufferAttribute(meta, 4));
-  const tex = atlasFesta(lFaixas);
+  const tex = ident ? atlasFesta(lFaixas, ident.festa, imagemEscudo(ident, ident.festa.escudo ?? 0)) : atlasFesta(lFaixas);
   const uni = {
     ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog),
     uAtlas: { value: tex }, uTempo: { value: 0 }, uAnimada: { value: 1 }, uAbre: { value: new THREE.Vector2(0, 0) },

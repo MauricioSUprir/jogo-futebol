@@ -31,6 +31,10 @@
 //   node tools/painel-equilibrio.mjs --js <pasta js>       (outra cópia da lógica, ex.: a publicada)
 //   node tools/painel-equilibrio.mjs --base <pasta js>     (roda as duas com as MESMAS sementes, lado a lado)
 //   node tools/painel-equilibrio.mjs --json saida.json     (grava as partidas, para comparar depois)
+//   node tools/painel-equilibrio.mjs --base-json saida.json (a base é a rodada gravada: não roda de novo)
+//   node tools/painel-equilibrio.mjs --set IA_ATAQUE.utilidade.chute=3 (repetível: constante trocada só na versão medida)
+//   node tools/painel-equilibrio.mjs --retomar parciais.jsonl (grava cada partida; de novo, continua de onde parou;
+//                                                          com --parcial, só mostra as que já estão lá)
 //   --par N (processos; padrão: CPUs)   --min 4 (minutos reais por tempo)   --estrito (sai com 1 fora da meta)
 //   --cache <pasta>   (guarda cada partida num arquivo por versão e semente e reaproveita: uma rodada longa que
 //                      parou — máquina carregada, limite de tempo — continua de onde estava)
@@ -56,18 +60,35 @@ const BOLA_PARADA = new Set(['escanteio', 'lateral', 'falta', 'tiroLivre', 'pena
 
 // ------------------------------------------------------------------ uma partida (processo filho)
 async function partida(pastaJs, sem) {
+  // --set CONST.caminho=valor (repetível; valor em JSON): troca uma constante do config.js antes da partida (triagem de
+  // calibração; as constantes são lidas na hora pelos módulos)
+  const sets = args.flatMap((a, i) => (a === '--set' ? [args[i + 1]] : []));
+  if (sets.length) {
+    const CF = await import(pathToFileURL(path.join(pastaJs, 'config.js')).href);
+    for (const s of sets) {
+      const [chave, valor] = [s.slice(0, s.indexOf('=')), s.slice(s.indexOf('=') + 1)];
+      const partes = chave.split('.');
+      let o = CF[partes[0]];
+      for (const p of partes.slice(1, -1)) o = o[p];
+      if (!o || !(partes[partes.length - 1] in o)) throw new Error(`--set: ${chave} não existe`);
+      o[partes[partes.length - 1]] = JSON.parse(valor);
+    }
+  }
   const P = await import(pathToFileURL(path.join(pastaJs, 'partida.js')).href);
   const M = await import(pathToFileURL(path.join(AQUI, 'lib/partida-medidas.mjs')).href);
   const m = P.criarPartida({ semente: sem, minutosPorTempo: MIN_TEMPO });
   const R = {
-    sem, gols: [0, 0], golsContra: 0, chutes: [], passes: 0, passesOk: 0, posse: [0, 0],
+    sem, gols: [0, 0], golsContra: 0, chutes: [], passes: 0, passesOk: 0, posse: [0, 0], intercept: [0, 0],
     posses: 0, possesTerco: 0, origem: { trabalhada: 0, contra: 0, erroSaida: 0, bolaParada: 0, outro: 0 },
     golsFora: 0, cobrancas: {}, impedimentos: 0, faltas: 0, amarelos: 0, vermelhos: 0, penaltis: { total: 0, gol: 0, defesa: 0, fora: 0 },
     ticks: 0, roubadas: { bote: 0, dividida: 0, solta: 0 }, perdas: 0, perdasAdv: 0,
+    // jogo aéreo (entrega "cabeceio na bola rolando"): cabeceios, cabeceios a gol, duelos pelo alto (com a bola rolando =
+    // fora da bola parada), gols de cabeça (o chute que virou gol foi um cabeceio); chutes por time
+    cabeceios: 0, cabGol: 0, duelos: 0, duelosRolando: 0, golsCabeca: 0, chutesT: [0, 0],
   };
   const porId = new Map(m.jogadores.map(j => [j.id, j]));
   const jog = id => porId.get(id) ?? m.jogadores.find(j => j.id === id);
-  let passe = null, aberto = null, pos = null;
+  let passe = null, aberto = null, pos = null, vBola = 0;
   // roubadas: o time do último dono da bola e o que tirou a bola dele (null = nada: ela ficou solta)
   let ultTime = null, saiu = null, perdeu = false;
   const N = Math.round(2 * MIN_TEMPO * 3600 + 3600);
@@ -88,6 +109,7 @@ async function partida(pastaJs, sem) {
           R.gols[e.time]++;
           if (aberto && aberto.time === e.time) {
             if (!aberto.dentro) R.golsFora++;
+            if (aberto.cab) R.golsCabeca++;
             fecharChute('gol');
           } else fecharChute(aberto ? 'fora' : null);
           // origem pela posse que terminou no gol
@@ -106,6 +128,7 @@ async function partida(pastaJs, sem) {
           break;
         case 'bateuCorpo':
           if (aberto && j && j.id !== aberto.id && j.posicao !== 'GOL') fecharChute('bloqueado');
+          if (passe) passe.bloqueio = true;
           break;
         case 'fora':
           fecharChute('fora'); passe = null; pos = null; ultTime = null;
@@ -115,6 +138,7 @@ async function partida(pastaJs, sem) {
           if (j) novaPosse(j.time, e.parada);
           ultTime = null;
           break;
+        case 'disputaAerea': R.duelos++; if (e.bolaParada === false) R.duelosRolando++; break;
         case 'roubada':
           if (e.ia) R.roubadas.bote++; else if (e.dividida) R.roubadas.dividida++;
           saiu = 'roubada';
@@ -128,17 +152,22 @@ async function partida(pastaJs, sem) {
           if (e.resultado && R.penaltis[e.resultado] != null) R.penaltis[e.resultado]++;
           break;
         default:
+          if (j && e.tipo === 'passe' && e.modo === 'cabeceio') R.cabeceios++;
           if (j && M.ehChute(m, e)) {
             fecharChute('fora');
             const u = M.uDe(m, j.time, m.bola.p.x), w = M.wDe(m, j.time, m.bola.p.z);
             const dist = Math.hypot(52.5 - u, w);
             // (a cobrança de pênalti é marcada: as defesas do goleiro contam sem ela — o pênalti tem a linha dele)
             const pen = ev.some(x => x.tipo === 'cobranca' && x.parada === 'penalti');
-            aberto = { time: j.time, id: j.id, tick: m.tick, dist, dentro: u > 52.5 - 16.5 && Math.abs(w) < 20.16, res: null, penalti: pen };
+            const cab = e.tipo === 'passe';
+            if (cab) R.cabGol++;
+            R.chutesT[j.time]++;
+            aberto = { time: j.time, id: j.id, tick: m.tick, dist, dentro: u > 52.5 - 16.5 && Math.abs(w) < 20.16, res: null, penalti: pen, cab };
             passe = null; saiu = 'acao';
           } else if (e.tipo === 'passe' && j) {
             saiu = 'acao';
-            passe = j.posicao !== 'GOL' ? { time: j.time } : null;
+            // (o adversário com a bola ainda andando, ≥ 2 m/s, e a 2 m ou mais do recebedor = interceptação na linha)
+            passe = j.posicao !== 'GOL' ? { time: j.time, para: m.voo && m.voo.de === j.id ? m.voo.para : null } : null;
             if (j.posicao !== 'GOL') R.passes++;
           }
       }
@@ -146,9 +175,20 @@ async function partida(pastaJs, sem) {
     if (aberto && m.tick - aberto.tick > ABERTO) fecharChute('fora');
     if (m.partida.estado === 'fim') break;
     const rolando = m.partida.estado === 'jogo' && !(m.parada && !m.parada.rolou) && m.foraDesde == null && m.golTick == null;
+    const vAnt = vBola; vBola = Math.hypot(m.bola.v.x, m.bola.v.z);
     if (!rolando) { passe = null; continue; }
     const dono = M.donoDaBola(m);
-    if (dono && passe) { if (dono.time === passe.time) R.passesOk++; passe = null; }
+    if (dono && passe) {
+      if (dono.time === passe.time) R.passesOk++;
+      else if (vAnt >= 2 && dono.posicao !== 'GOL') {
+        // na LINHA do passe: com destino, a 2 m ou mais do recebedor (a disputa na recepção não conta; Opta: "moving into
+        // the line of the intended pass")
+        const r = passe.para != null ? jog(passe.para) : null;
+        // (a bola que bateu no corpo de alguém no caminho é bloqueio, não interceptação — Opta conta à parte)
+        if (r && !passe.bloqueio && Math.hypot(r.x - dono.x, r.z - dono.z) >= 2) R.intercept[dono.time]++;
+      }
+      passe = null;
+    }
     if (dono) {
       // o outro time ficou com a bola que o condutor perdeu sem passe, chute nem bote: bola solta disputada
       if (ultTime != null && dono.time !== ultTime && saiu == null) { R.roubadas.solta++; if (perdeu) R.perdasAdv++; }
@@ -171,10 +211,19 @@ if (args.includes('--filho')) {
 
 // ------------------------------------------------------------------ processo principal
 const NS = +arg('--n', 144), S0 = +arg('--sem0', 1001);
-const SEMENTES = Array.from({ length: NS }, (_, k) => S0 + k);
+let SEMENTES = Array.from({ length: NS }, (_, k) => S0 + k);
 const nPar = Math.max(1, +arg('--par', os.availableParallelism?.() ?? os.cpus().length));
 const sem = a => { const n = a.length, mu = a.reduce((x, y) => x + y, 0) / n; return n > 1 ? Math.sqrt(a.reduce((x, y) => x + (y - mu) ** 2, 0) / (n - 1) / n) : 0; };
 
+// --retomar <arquivo>: cada partida terminada da versão medida vai para o arquivo (uma linha JSON); rodando de novo com o
+// mesmo arquivo (e as mesmas opções), as sementes já feitas não rodam outra vez — numa máquina dividida o processo pode cair
+// no meio das 144 partidas (limite de tempo) e a rodada continua de onde parou
+const RETOMAR = arg('--retomar', null);
+// --parcial (com --retomar): só as sementes que já estão no arquivo (uma olhada no meio da rodada, sem rodar nada)
+if (RETOMAR && args.includes('--parcial')) {
+  const tem = new Set(fs.existsSync(RETOMAR) ? fs.readFileSync(RETOMAR, 'utf8').split('\n').filter(l => l.trim()).map(l => JSON.parse(l).sem) : []);
+  SEMENTES = SEMENTES.filter(s => tem.has(s));
+}
 const CACHE = arg('--cache', null) ? path.resolve(arg('--cache')) : null;
 /** Pasta do cache desta versão da lógica: o conteúdo dos .js (qualquer mudança na lógica = outra pasta). */
 async function pastaCache(pastaJs) {
@@ -182,6 +231,8 @@ async function pastaCache(pastaJs) {
   const h = createHash('sha1');
   for (const f of fs.readdirSync(pastaJs).filter(f => f.endsWith('.js')).sort()) h.update(f).update(fs.readFileSync(path.join(pastaJs, f)));
   h.update(fs.readFileSync(fileURLToPath(import.meta.url))).update(String(MIN_TEMPO));
+  // (os --set trocam constantes só na versão medida: entram na chave, senão a variação pegaria o cache da sem eles)
+  if (pastaJs === JS) h.update(JSON.stringify(args.flatMap((a, i) => (a === '--set' ? [args[i + 1]] : []))));
   const d = path.join(CACHE, h.digest('hex').slice(0, 16));
   fs.mkdirSync(d, { recursive: true });
   return d;
@@ -190,17 +241,28 @@ async function pastaCache(pastaJs) {
 async function rodar(pastaJs) {
   if (!fs.existsSync(path.join(pastaJs, 'partida.js'))) throw new Error(`${pastaJs}: sem partida.js`);
   const res = [];
+  const ret = RETOMAR && pastaJs === JS ? RETOMAR : null;
+  const ja = new Set();
+  if (ret && fs.existsSync(ret)) {
+    for (const l of fs.readFileSync(ret, 'utf8').split('\n')) {
+      if (!l.trim()) continue;
+      const r = JSON.parse(l);
+      if (SEMENTES.includes(r.sem) && !ja.has(r.sem)) { ja.add(r.sem); res.push(r); }
+    }
+  }
+  const falta = SEMENTES.filter(s => !ja.has(s));
   let prox = 0, feitas = 0;
   const t0 = Date.now();
   const dc = CACHE ? await pastaCache(pastaJs) : null;
-  await Promise.all(Array.from({ length: Math.min(nPar, SEMENTES.length) }, async () => {
-    while (prox < SEMENTES.length) {
-      const s = SEMENTES[prox++];
+  await Promise.all(Array.from({ length: Math.min(nPar, falta.length) }, async () => {
+    while (prox < falta.length) {
+      const s = falta[prox++];
       const arqC = dc ? path.join(dc, `${s}.json`) : null;
-      if (arqC && fs.existsSync(arqC)) { res.push(JSON.parse(fs.readFileSync(arqC, 'utf8'))); feitas++; continue; }
+      if (arqC && fs.existsSync(arqC)) { const r = JSON.parse(fs.readFileSync(arqC, 'utf8')); if (ret) fs.appendFileSync(ret, JSON.stringify(r) + '\n'); res.push(r); feitas++; continue; }
       res.push(await new Promise((ok, erro) => {
-        const c = fork(fileURLToPath(import.meta.url), ['--filho', '--pasta', pastaJs, '--s', String(s), '--min', String(MIN_TEMPO)]);
-        c.on('message', r => { if (arqC) fs.writeFileSync(arqC, JSON.stringify(r)); ok(r); }); c.on('error', erro);
+        const sets = pastaJs === JS ? args.flatMap((a, i) => (a === '--set' ? ['--set', args[i + 1]] : [])) : [];
+        const c = fork(fileURLToPath(import.meta.url), ['--filho', '--pasta', pastaJs, '--s', String(s), '--min', String(MIN_TEMPO), ...sets]);
+        c.on('message', r => { if (arqC) fs.writeFileSync(arqC, JSON.stringify(r)); if (ret) fs.appendFileSync(ret, JSON.stringify(r) + '\n'); ok(r); }); c.on('error', erro);
         c.on('exit', cod => { if (cod) erro(new Error(`semente ${s}: saiu com ${cod}`)); });
       }));
       feitas++;
@@ -238,6 +300,9 @@ function medidas(res) {
     longe: pct(cnt(c => c.dist >= 25), nc),
     golsFora: pct(soma(r => r.golsFora), golsCh),
     passe: pct(soma(r => r.passesOk), soma(r => r.passes)), passes: soma(r => r.passes) / n,
+    // (partidas gravadas antes da contagem não têm r.intercept: NaN)
+    interc100: res.every(r => r.intercept) ? 100 * soma(r => r.intercept[0] + r.intercept[1]) / soma(r => r.passes) : NaN,
+    intercT: res.every(r => r.intercept) ? soma(r => r.intercept[0] + r.intercept[1]) / (2 * n) : NaN,
     terco: pct(soma(r => r.possesTerco), soma(r => r.posses)), posses: soma(r => r.posses) / n,
     impedimentos: soma(r => r.impedimentos) / n,
     faltas: soma(r => r.faltas) / n, amarelos: soma(r => r.amarelos) / n, vermelhos: soma(r => r.vermelhos) / n,
@@ -249,6 +314,10 @@ function medidas(res) {
     escanteios: soma(r => r.cobrancas.escanteio ?? 0) / n,
     laterais: soma(r => r.cobrancas.lateral ?? 0) / n,
     posse0: pct(p0, p0 + p1),
+    cabeceios: soma(r => r.cabeceios ?? 0) / n, cabGol: soma(r => r.cabGol ?? 0) / n,
+    duelos: soma(r => r.duelos ?? 0) / n, duelosRolando: soma(r => r.duelosRolando ?? 0) / n,
+    golsCabeca: pct(soma(r => r.golsCabeca ?? 0), golsCh),
+    chutes0: soma(r => r.chutesT?.[0] ?? 0) / n, chutes1: soma(r => r.chutesT?.[1] ?? 0) / n,
     roubadas: soma(r => (r.roubadas ? r.roubadas.bote + r.roubadas.dividida + r.roubadas.solta : 0)) / n,
     roubBote: soma(r => r.roubadas?.bote ?? 0) / n, roubDiv: soma(r => r.roubadas?.dividida ?? 0) / n, roubSolta: soma(r => r.roubadas?.solta ?? 0) / n,
     perdas: soma(r => r.perdas ?? 0) / n, perdasAdv: soma(r => r.perdasAdv ?? 0) / n,
@@ -267,6 +336,10 @@ const LINHAS = [
   ['chutes de 25 m ou mais', '≤ 15%', x => Number.isFinite(x.longe) && x.longe <= 15, x => `${f(x.longe)}%`],
   ['gols de fora da área', '12–18%', x => dentro(x.golsFora, 12, 18), x => `${f(x.golsFora)}%`],
   ['passe certo', '75–88%', x => dentro(x.passe, 75, 88), x => `${f(x.passe)}% (${f(x.passes, 0)} por partida)`],
+  // interceptações (FBref/Opta, PL 2023/24: 8,5 por time por jogo, 6,1–10,0 entre os times): o passe dominado por um
+  // adversário de linha antes de chegar ao destino, a 2 m ou mais do recebedor (na linha). Por partida, como o jogador vê; as
+  // nossas têm ~1/3 dos passes e quase nenhum outro jeito de errar o passe, então o teto passa um pouco da PL (teste-intercepta)
+  ['interceptações na linha por time por partida', '8,5–14 (PL 23/24: 8,5)', x => Number.isFinite(x.intercT) && dentro(x.intercT, 8.5, 14), x => `${f(x.intercT, 2)} (${f(x.interc100, 2)} por 100 passes do adversário)`],
   ['posses que chegam ao último terço', '35–45%', x => dentro(x.terco, 35, 45), x => `${f(x.terco)}% (${f(x.posses, 0)} posses)`],
   ['impedimentos por partida', '≥ 1', x => x.impedimentos >= 1, x => x.impedimentos ? f(x.impedimentos, 2) : '0 (ainda não existe)'],
   ['pênaltis: gol / defesa / fora', '~76 / 18 / 6%', x => x.pen.total >= 10 && dentro(x.penGol, 70, 82), x => x.pen.total ? `${f(x.penGol, 0)} / ${f(x.penDef, 0)} / ${f(x.penFora, 0)}% (${x.pen.total})` : '0 (ainda não existe)'],
@@ -282,24 +355,38 @@ const LINHAS = [
   ['escanteios / laterais por partida', '—', null, x => `${f(x.escanteios)} / ${f(x.laterais)}`],
   ['gols contra por partida', '—', null, x => f(x.golsContra, 2)],
   ['posse do time 0 (soma)', '—', null, x => `${f(x.posse0)}%`],
+  ['chutes por partida: time 0 / time 1', '—', null, x => `${f(x.chutes0)} / ${f(x.chutes1)}`],
+  // jogo aéreo (Opta Analyst, PL 2023/24: 203 de 1.246 gols de cabeça, 16%; FA/Opta: zagueiros cabeceiam ~2× os atacantes)
+  ['gols de cabeça', '8–18% (PL 23/24: 16%)', x => dentro(x.golsCabeca, 8, 18), x => `${f(x.golsCabeca)}%`],
+  ['cabeceios por partida (a gol)', '—', null, x => `${f(x.cabeceios)} (${f(x.cabGol)})`],
+  ['duelos pelo alto por partida (com a bola rolando)', '—', null, x => `${f(x.duelos)} (${f(x.duelosRolando)})`],
   ['roubadas por partida (bote da IA / DIVIDIDA / bola solta)', '—', null, x => `${f(x.roubadas, 2)} (${f(x.roubBote, 2)} / ${f(x.roubDiv, 2)} / ${f(x.roubSolta, 2)})`],
   ['perdas por toque longo (com o adversário)', '—', null, x => `${f(x.perdas, 2)} (${f(x.perdasAdv, 2)})`],
 ];
 
 const versoes = [];
-if (BASE) versoes.push({ nome: 'base', pasta: BASE });
-versoes.push({ nome: BASE ? 'agora' : 'medido', pasta: JS });
+// --base-json <arquivo>: a base vem de uma rodada gravada com --json (as MESMAS sementes; a máquina dividida não roda a
+// base de novo a cada comparação)
+const BASE_JSON = arg('--base-json', null);
+if (BASE_JSON) {
+  const g = JSON.parse(fs.readFileSync(BASE_JSON, 'utf8'));
+  const e = g.find(x => x.nome === 'base') ?? g[g.length - 1];
+  const res = e.partidas.filter(r => SEMENTES.includes(r.sem)).sort((a, b) => a.sem - b.sem);
+  if (res.length !== SEMENTES.length) throw new Error(`${BASE_JSON}: ${res.length} de ${SEMENTES.length} sementes`);
+  versoes.push({ nome: 'base', pasta: `${e.pasta} (gravada em ${path.basename(BASE_JSON)})`, res, s: 0, gravada: true });
+} else if (BASE) versoes.push({ nome: 'base', pasta: BASE });
+versoes.push({ nome: BASE || BASE_JSON ? 'agora' : 'medido', pasta: JS });
 if (arg('--partes', null)) {
   // junta as partes (cada uma gravada com --json, as versões na mesma ordem: base, agora)
   const lidas = arg('--partes').split(',').filter(Boolean).map(f => JSON.parse(fs.readFileSync(f, 'utf8')));
   if (lidas.some(l => l.length !== versoes.length)) throw new Error(`--partes: cada parte tem de ter ${versoes.length} versão(ões) (use o mesmo --base de quando gravou)`);
   versoes.forEach((v, i) => { v.res = lidas.flatMap(l => l[i].partidas).sort((a, b) => a.sem - b.sem); v.s = 0; v.x = medidas(v.res); });
-} else for (const v of versoes) { const r = await rodar(v.pasta); v.res = r.res; v.s = r.s; v.x = medidas(r.res); }
+} else for (const v of versoes) { if (!v.gravada) { const r = await rodar(v.pasta); v.res = r.res; v.s = r.s; } v.x = medidas(v.res); }
 
 if (arg('--partes', null)) {
   const ss = versoes[versoes.length - 1].res.map(r => r.sem);
   console.log(`Painel de equilíbrio — ${ss.length} partidas IA × IA (sementes ${Math.min(...ss)}–${Math.max(...ss)}), juntadas de ${arg('--partes').split(',').filter(Boolean).length} partes`);
-} else console.log(`Painel de equilíbrio — ${NS} partidas IA × IA de 2 × ${MIN_TEMPO} min (sementes ${S0}–${S0 + NS - 1}), ${nPar} processos`);
+} else console.log(`Painel de equilíbrio — ${SEMENTES.length} partidas IA × IA de 2 × ${MIN_TEMPO} min (sementes ${S0}–${S0 + NS - 1}${SEMENTES.length < NS ? `: as ${SEMENTES.length} já feitas` : ''}), ${nPar} processos`);
 for (const v of versoes) console.log(`  ${v.nome}: ${v.pasta} (${f(v.s, 0)} s)`);
 const cab = ['medida', 'meta', ...versoes.map(v => v.nome)];
 const tab = [cab];

@@ -16,6 +16,10 @@ import { FORA, predios, arvores, carros, torcedoresFora } from '../estadio-forma
 import { ARQUIBANCADA as A } from './torcida-dados.js';
 import { criarCanvas, texturaCanvas, gerador, juntarGeometrias } from './util.js';
 import { texArquibancada } from './texturas.js';
+import { desenharEscudo, imagemEscudo } from './escudo-desenho.js';
+
+// cores do lado de fora (as de hoje; com ?tm, as do mandante: identidade.js fachada)
+const FACHADA_PADRAO = { led: '#11a85b', ledNoite: '#19e07a', letreiro: '#19e07a', testeira: '#0d3a25', testeiraFriso: '#19e07a', tunel: '#19e07a', simbolo: '#19e07a' };
 
 // ------------------------------------------------------------------ contorno do retângulo de cantos arredondados
 /**
@@ -50,7 +54,7 @@ function geometria(pos, nrm, uv, cor = null, idx = null) {
 
 // ------------------------------------------------------------------ texturas (canvas)
 const TILE_FACHADA = 12;   // m de fachada por repetição da textura
-function texFachada(aniso, emissiva) {
+function texFachada(aniso, emissiva, fa = FACHADA_PADRAO) {
   const W = 512, H = 512, F = FORA.fachada;
   const c = criarCanvas(W, H), g = c.getContext('2d');
   const yPx = y => H - (y / F.altura) * H;      // y (m) → linha do canvas
@@ -71,11 +75,11 @@ function texFachada(aniso, emissiva) {
     }
     // laje branca sobre a base, faixa de LED e arremate
     g.fillStyle = '#e4e8ea'; g.fillRect(0, yPx(5.2), W, yPx(4.6) - yPx(5.2));
-    g.fillStyle = '#11a85b'; g.fillRect(0, yPx(25.7), W, yPx(24) - yPx(25.7));
+    g.fillStyle = fa.led; g.fillRect(0, yPx(25.7), W, yPx(24) - yPx(25.7));
     g.fillStyle = '#e8ecee'; g.fillRect(0, 0, W, yPx(25.7));
     // portão (no meio da repetição): vão escuro e o letreiro verde em cima
     g.fillStyle = '#0b0e10'; g.fillRect(xPx(4.4), yPx(3.6), xPx(3.2), H - yPx(3.6));
-    g.fillStyle = '#19e07a'; g.fillRect(xPx(4.6), yPx(4.2), xPx(2.8), yPx(3.85) - yPx(4.2));
+    g.fillStyle = fa.letreiro; g.fillRect(xPx(4.6), yPx(4.2), xPx(2.8), yPx(3.85) - yPx(4.2));
     // juntas do concreto
     g.fillStyle = 'rgba(0,0,0,0.18)';
     for (let x = 0; x < TILE_FACHADA; x += 2) g.fillRect(xPx(x), yPx(4.6), 1, H - yPx(4.6));
@@ -83,33 +87,47 @@ function texFachada(aniso, emissiva) {
     // mapa de brilho (noite): LED, portão aceso, um pouco de luz atrás do vidro
     g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
     g.fillStyle = '#0c1820'; g.fillRect(0, yPx(24), W, yPx(5.2) - yPx(24));
-    g.fillStyle = '#19e07a'; g.fillRect(0, yPx(25.7), W, yPx(24) - yPx(25.7));
+    g.fillStyle = fa.ledNoite; g.fillRect(0, yPx(25.7), W, yPx(24) - yPx(25.7));
     g.fillStyle = '#ffd9a0'; g.fillRect(xPx(4.4), yPx(3.6), xPx(3.2), H - yPx(3.6));
-    g.fillStyle = '#19e07a'; g.fillRect(xPx(4.6), yPx(4.2), xPx(2.8), yPx(3.85) - yPx(4.2));
+    g.fillStyle = fa.letreiro; g.fillRect(xPx(4.6), yPx(4.2), xPx(2.8), yPx(3.85) - yPx(4.2));
   }
   const t = texturaCanvas(c, { aniso, repetir: true });
   t.wrapT = THREE.ClampToEdgeWrapping;
   return t;
 }
 
-function texPlaca() {
+/**
+ * Placa com o nome do estádio na fachada. Com ?tm (ident): o escudo do mandante no lugar do símbolo (jogo neutro: o
+ * símbolo na cor do Total Match) e o nome do estádio dele; nome comprido demais para uma linha → duas linhas.
+ */
+function texPlaca(ident = null) {
   const W = 1024, H = 160;
   const c = criarCanvas(W, H), g = c.getContext('2d');
   g.clearRect(0, 0, W, H);
-  // símbolo da marca (o paralelogramo verde do placar)
-  g.fillStyle = '#19e07a';
-  g.beginPath(); g.moveTo(14, 140); g.lineTo(54, 20); g.lineTo(130, 20); g.lineTo(90, 140); g.closePath(); g.fill();
+  const img = ident && !ident.neutro ? imagemEscudo(ident, 0) : null;
+  if (!(img && desenharEscudo(g, img, 4, 4, 140, 152))) {
+    // símbolo da marca (o paralelogramo verde do placar)
+    g.fillStyle = ident ? ident.fachada.simbolo : '#19e07a';
+    g.beginPath(); g.moveTo(14, 140); g.lineTo(54, 20); g.lineTo(130, 20); g.lineTo(90, 140); g.closePath(); g.fill();
+  }
   g.fillStyle = '#ffffff';
   g.font = '900 104px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
   g.textBaseline = 'middle';
-  const texto = FORA.placa.texto;
+  const texto = ident ? ident.estadio.placa : FORA.placa.texto;
   const larg = g.measureText(texto).width;
   const k = Math.min(1, (W - 170) / larg);
-  g.save(); g.translate(152, H / 2 + 4); g.scale(k, 1); g.fillText(texto, 0, 0); g.restore();
+  const meio = texto.length / 2, esp = [...texto.matchAll(/\s/g)].map(m => m.index).sort((a, b) => Math.abs(a - meio) - Math.abs(b - meio))[0];
+  if (ident && k < 0.62 && esp != null) {
+    g.font = '900 70px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    [texto.slice(0, esp), texto.slice(esp + 1)].forEach((l, i) => {
+      const kl = Math.min(1, (W - 170) / g.measureText(l).width);
+      g.save(); g.translate(152, H / 2 + (i ? 38 : -34)); g.scale(kl, 1); g.fillText(l, 0, 0); g.restore();
+    });
+  } else { g.save(); g.translate(152, H / 2 + 4); g.scale(k, 1); g.fillText(texto, 0, 0); g.restore(); }
   return texturaCanvas(c, { aniso: 4 });
 }
 
-function texCobertura() {
+function texCobertura(fa = FACHADA_PADRAO) {
   const W = 256, H = 64;
   const c = criarCanvas(W, H), g = c.getContext('2d');
   const grad = g.createLinearGradient(0, 0, 0, H);
@@ -119,8 +137,8 @@ function texCobertura() {
   g.fillStyle = '#8f999e'; g.fillRect(0, 0, 10, H - 10);
   g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(10, 0, 4, H - 10);
   // a faixa de baixo do canvas: a testeira da borda de dentro (verde-escura com friso verde)
-  g.fillStyle = '#0d3a25'; g.fillRect(0, H - 10, W, 10);
-  g.fillStyle = '#19e07a'; g.fillRect(0, H - 10, W, 2);
+  g.fillStyle = fa.testeira; g.fillRect(0, H - 10, W, 10);
+  g.fillStyle = fa.testeiraFriso; g.fillRect(0, H - 10, W, 2);
   const t = texturaCanvas(c, { aniso: 4, repetir: true });
   t.wrapT = THREE.ClampToEdgeWrapping;
   return t;
@@ -175,7 +193,7 @@ function texBairro(aniso) {
 }
 
 // ------------------------------------------------------------------ peças
-function criarFachada(aniso) {
+function criarFachada(aniso, fa = FACHADA_PADRAO) {
   const F = FORA.fachada;
   const pts = contorno(F.hx, F.hz, F.raio);
   const pos = [], nrm = [], uv = [], idx = [];
@@ -186,25 +204,25 @@ function criarFachada(aniso) {
     uv.push(u, 0, u, 1);
   }
   for (let i = 0; i < pts.length - 1; i++) { const a = 2 * i; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
-  const mat = new THREE.MeshLambertMaterial({ map: texFachada(aniso, false), emissiveMap: texFachada(aniso, true), emissive: 0xffffff, emissiveIntensity: 0, side: THREE.DoubleSide });
+  const mat = new THREE.MeshLambertMaterial({ map: texFachada(aniso, false, fa), emissiveMap: texFachada(aniso, true, fa), emissive: 0xffffff, emissiveIntensity: 0, side: THREE.DoubleSide });
   const m = new THREE.Mesh(geometria(pos, nrm, uv, null, idx), mat);
   m.name = 'fora-fachada';
   return m;
 }
 
-function criarPlaca() {
+function criarPlaca(ident = null) {
   const F = FORA.fachada, P = FORA.placa;
   const alt = P.largura * 160 / 1024;
   const g = new THREE.PlaneGeometry(P.largura, alt);
   g.translate(0, (P.y[0] + P.y[1]) / 2, F.hz + F.esp / 2 + 0.25);
-  const mat = new THREE.MeshBasicMaterial({ map: texPlaca(), transparent: true, alphaTest: 0.35, depthWrite: false, color: 0xeaf6ee });
+  const mat = new THREE.MeshBasicMaterial({ map: texPlaca(ident), transparent: true, alphaTest: 0.35, depthWrite: false, color: 0xeaf6ee });
   const m = new THREE.Mesh(g, mat);
   m.name = 'fora-placa';
   m.renderOrder = 2;
   return m;
 }
 
-function criarCobertura() {
+function criarCobertura(fa = FACHADA_PADRAO) {
   const F = FORA.fachada, C = FORA.cobertura;
   const fora = contorno(F.hx, F.hz, F.raio), dentro = contorno(C.hx, C.hz, C.raio);
   const beiral = contorno(F.hx + F.beiral, F.hz + F.beiral, F.raio + F.beiral);
@@ -222,14 +240,14 @@ function criarCobertura() {
   }
   const g = geometria(pos, nrm, uv, null, idx);
   g.computeVertexNormals();
-  const mat = new THREE.MeshLambertMaterial({ map: texCobertura(), side: THREE.DoubleSide });
+  const mat = new THREE.MeshLambertMaterial({ map: texCobertura(fa), side: THREE.DoubleSide });
   const m = new THREE.Mesh(g, mat);
   m.name = 'fora-cobertura';
   return m;
 }
 
 /** Cantos do lado de cá (z +): degrau de concreto com cadeiras vazias ligando a arquibancada de cá aos fundos. */
-function criarCantos(aniso, qualidade) {
+function criarCantos(aniso, qualidade, coresArq = null) {
   const K = FORA.canto, N = 6;
   const pos = [], nrm = [], uv = [], idx = [];
   const vMax = A.vMax;
@@ -250,14 +268,14 @@ function criarCantos(aniso, qualidade) {
   }
   const g = geometria(pos, nrm, uv, null, idx);
   g.computeVertexNormals();
-  const mat = new THREE.MeshLambertMaterial({ map: texArquibancada(aniso, false, qualidade === 'baixa' ? 1024 : 2048), side: THREE.DoubleSide });
+  const mat = new THREE.MeshLambertMaterial({ map: texArquibancada(aniso, false, qualidade === 'baixa' ? 1024 : 2048, coresArq), side: THREE.DoubleSide });
   const m = new THREE.Mesh(g, mat);
   m.name = 'fora-cantos';
   return m;
 }
 
 /** O túnel por dentro: paredes claras, piso de borracha, teto, as luzes do teto e a faixa verde (2 malhas). */
-function criarTunel() {
+function criarTunel(fa = FACHADA_PADRAO) {
   const T = ESTADIO.tunel, ti = T.largura / 2 - 0.03, y1 = T.altura - 0.03, z0 = T.z + 0.15, z1 = T.z + T.profundidade - 0.05;
   const geos = [], cores = [];
   const parede = new THREE.Color(0xc4cbce), teto = new THREE.Color(0x8d969b), piso = new THREE.Color(0x26332d), fundo = new THREE.Color(0x3c4448);
@@ -277,7 +295,7 @@ function criarTunel() {
   lit.name = 'fora-tunel';
   // luzes do teto e a faixa verde das paredes (sem luz: brilham)
   const g2 = [], c2 = [];
-  const branco = new THREE.Color(0xf2f7ff), verde = new THREE.Color(0x19e07a);
+  const branco = new THREE.Color(0xf2f7ff), verde = new THREE.Color(fa.tunel);
   for (let z = z0 + 0.9; z < z1 - 0.8; z += 2.2) for (const x of [-0.9, 0.9]) {
     g2.push(quad([x - 0.22, y1 - 0.01, z], [x - 0.22, y1 - 0.01, z + 1.4], [x + 0.22, y1 - 0.01, z + 1.4], [x + 0.22, y1 - 0.01, z])); c2.push(branco);
   }
@@ -419,13 +437,14 @@ function criarCarros() {
 }
 
 /** Torcedores chegando: o MESMO material (atlas e shader) da torcida, em pé (como a organizada), no chão da esplanada. */
-function criarTorcedores(material) {
+function criarTorcedores(material, tf = null) {
   const L = torcedoresFora();
   if (!material || !L.length) return null;
   const n = L.length;
   const pos = new Float32Array(4 * n), cam = new Uint8Array(4 * n), pel = new Uint8Array(4 * n), cab = new Uint8Array(4 * n), inf = new Uint8Array(4 * n);
-  const casa = [[0x15, 0x19, 0x1b], [0x19, 0xe0, 0x7a], [0x10, 0xb8, 0x62], [0xf2, 0xf4, 0xf3], [0x2b, 0x32, 0x38]];
-  const fora = [[0xe9, 0xec, 0xee], [0xb9, 0xbf, 0xc4], [0x2b, 0x32, 0x38]];
+  const rgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  const casa = tf ? tf.casa.map(rgb) : [[0x15, 0x19, 0x1b], [0x19, 0xe0, 0x7a], [0x10, 0xb8, 0x62], [0xf2, 0xf4, 0xf3], [0x2b, 0x32, 0x38]];
+  const fora = tf ? tf.fora.map(rgb) : [[0xe9, 0xec, 0xee], [0xb9, 0xbf, 0xc4], [0x2b, 0x32, 0x38]];
   const peles = [[0xf1, 0xc7, 0xa5], [0xe3, 0xb0, 0x8a], [0xc9, 0x90, 0x69], [0xa8, 0x71, 0x4d], [0x8d, 0x56, 0x36], [0x6b, 0x3e, 0x25], [0x4b, 0x2b, 0x1b]];
   const cabelos = [[0x16, 0x11, 0x0d], [0x2b, 0x1d, 0x14], [0x4a, 0x32, 0x22], [0x26, 0x30, 0x3a], [0x7a, 0x5a, 0x3a]];
   const r = gerador(FORA.semente + 9);
@@ -462,17 +481,21 @@ function criarTorcedores(material) {
  */
 export function criarEstadioFora(cena, opc = {}) {
   const q = opc.qualidade ?? 'media', aniso = opc.aniso ?? 4;
+  // com ?tm (identidade.js): o nome do estádio e o escudo do mandante na placa, as cores dele na fachada, na cobertura,
+  // no túnel e nos cantos, e as camisas de quem chega (só desenho; nenhuma medida muda)
+  const ident = opc.identidade && opc.identidade.tm ? opc.identidade : null;
+  const fa = ident ? ident.fachada : FACHADA_PADRAO;
   const uNoite = { value: 0 };
   const grupo = new THREE.Group();
   grupo.name = 'estadio-fora';
   // estrutura (vista também de dentro)
-  const estrutura = [criarFachada(aniso), criarPlaca(), criarCobertura(), criarCantos(aniso, q), ...criarTunel()];
+  const estrutura = [criarFachada(aniso, fa), criarPlaca(ident), criarCobertura(fa), criarCantos(aniso, q, ident ? ident.arquibancada : null), ...criarTunel(fa)];
   // o entorno (só nos planos de fora)
   const comEntorno = opc.entorno !== false;
   const entorno = comEntorno ? [criarEsplanada(aniso, q), criarBairro(aniso)] : [];
   if (comEntorno && q !== 'baixa') {
     entorno.push(criarPredios(uNoite), criarArvores(), criarCarros());
-    const t = criarTorcedores(opc.materialTorcida);
+    const t = criarTorcedores(opc.materialTorcida, ident ? ident.torcedoresFora : null);
     if (t) entorno.push(t);
   }
   for (const m of [...estrutura, ...entorno]) { m.castShadow = false; m.receiveShadow = false; grupo.add(m); }

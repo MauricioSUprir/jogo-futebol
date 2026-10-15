@@ -46,6 +46,7 @@ const LISTA = [
   ['goleiro: defesas pelos dados, posição, botão GOLEIRO, mãos', 'teste-goleiro.mjs'],
   ['goleiro pula e espalma: mergulho desenhado, mão na bola, espalmada para fora do perigo', 'teste-mergulho.mjs'],
   ['jogo aéreo: domínio no peito e cabeceio', 'teste-aereo.mjs'],
+  ['cabeceio na bola rolando: pulo desenhado, cabeça na bola, intenção, disputa pelo alto', 'teste-cabeceio.mjs'],
   ['treino de ataque com a IA: não trava e chega ao chute', 'teste-treino.mjs'],
   // Correções depois da Etapa 2
   ['goleiro com a bola na mão não trava no treino (repõe sozinho, TROCAR)', 'teste-goleiro-trava.mjs'],
@@ -67,6 +68,8 @@ const LISTA = [
   // PR "IA intensa" (dono, 10/10: "a IA não corre para trás"): recomposição depois da perda
   ['transição defensiva: recomposição em disparada (IA × IA)', 'teste-transicao.mjs'],
   ['transição defensiva contra o humano roteirizado', 'teste-transicao.mjs', ['--humano'], 'etapa3'],
+  ['defesa contra a arrancada do humano: recua no corredor, roubada não desfeita, bloco armado', 'teste-defesa-corrida.mjs'],
+  ['interceptação: a IA lê a linha do passe e corta o alcançável, sem deixar o homem livre', 'teste-intercepta.mjs'],
   // Estádio: rede que balança, torcida e som (contas puras do desenho)
   ['rede que balança: bolsa, onda, batidas com a física da bola, bola desenhada no bojo', 'teste-rede.mjs'],
   ['rede véu de noiva: forma pela física, morre no fundo, nada atravessa, gol pelo véu, desenho', 'teste-rede-veu.mjs'],
@@ -93,6 +96,10 @@ const LISTA = [
   // Pré-jogo (pedido de 11/10): o cortejo do túnel até a fila e o roteiro com os trilhos de câmera (contas puras)
   ['pré-jogo: cortejo do túnel até a fila (pés, colisão, vaga, rumo, custo, hash da partida)', 'teste-cortejo.mjs'],
   ['pré-jogo: roteiro, escalações de 10 s, pular e trilhos de câmera fora dos sólidos', 'teste-prejogo-roteiro.mjs'],
+  // Total Match (dono, 15/10: "a logo dos times, torcida, e estádio adaptáveis a cada time"): identidade visual
+  ['identidade dos times: padrão = hoje, uniformes sem confusão (ΔE₀₀), torcida, faixas, placas, estádio e HUD do TM', 'teste-identidade.mjs'],
+  // Ponte com o Total Match (15/10): o pedido do TM vira os times, o humano no lado do usuário, a trava e a súmula
+  ['ponte com o Total Match: pedido → times, humano no visitante, trava "só o meu jogador", súmula e resultado', 'teste-ponte-tm.mjs'],
 ];
 const argv = process.argv.slice(2);
 const iSo = argv.indexOf('--so');

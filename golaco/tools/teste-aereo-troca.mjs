@@ -11,7 +11,10 @@
 //  - natural (IA × IA, sem o canhão; os dois times com um humano — a IA joga pelo controlado de cada um,
 //    e a disputa de cada time conta contra o controlado dele): ≥ 90% com ≥ 120 disputas (real: 97%
 //    reavaliando até 0,5 s antes, Metrica, pesquisa §7) — reprova só se a contagem PROVA menos de 90%
-//    (binomial, p < 5%; ver o fim do arquivo).
+//    (binomial, p < 5%; ver o fim do arquivo). Fora da conta (informativo): a disputa de uma bola alta que é um
+//    CHUTE do adversário (chute, colocado, cavadinha ou cabeceio a gol) — a troca aérea não troca nela de propósito
+//    (troca.js, trava `chuteAdv`, decisão da auditoria dos botões, #474: no tiro livre o controle saía do goleiro no
+//    chute e o escolhido corria para longe do gol).
 //   node tools/teste-aereo-troca.mjs                (lógica do repositório)
 //   node tools/teste-aereo-troca.mjs --antes        (a mesma partida com a IA de antes, sem a troca aérea)
 //   node tools/teste-aereo-troca.mjs --js <pasta>   (outra cópia da lógica)
@@ -66,7 +69,7 @@ function rngTeste(s) {
 }
 const ALTOS = new Set(['lancamento', 'cruzamento']);
 // [disputas com o controlado, disputas] por origem; trocas por bola
-const R = { canhaoMeu: [0, 0], canhaoAdv: [0, 0], natural: [0, 0], bolas: { canhao: [0, 0], natural: 0 }, extras: [], extraMax: 0 };
+const R = { canhaoMeu: [0, 0], canhaoAdv: [0, 0], natural: [0, 0], naturalChuteAdv: [0, 0], bolas: { canhao: [0, 0], natural: 0 }, extras: [], extraMax: 0 };
 
 /**
  * Canhão: põe a bola no ar saindo de um ponto sorteado do campo de quem lança (`time`), para passar na
@@ -197,6 +200,9 @@ function rodar(sem, min, injeta, solto = false) {
     }
     let ev;
     const ctrlAntes1 = m.controlado[1];
+    // a bola no ar antes do passo é um chute de qual time? (a trava chuteAdv da troca aérea, troca.js)
+    const v0 = m.voo, chuteDe = v0 && (v0.tipo === 'chute' || v0.tipo === 'colocado' || v0.tipo === 'cavadinha'
+      || (v0.tipo === 'cabeceio' && v0.cabeceio === 'chute')) ? v0.time : null;
     if (dois) {
       // o mesmo passo da partida (partida.js passoPartida) com a entrada dos dois humanos
       const e0 = entradaHumano(m, solto, 0), e1 = entradaHumano(m, solto, 1);
@@ -213,8 +219,9 @@ function rodar(sem, min, injeta, solto = false) {
         if (e.tipo !== 'cabeceio' && e.tipo !== 'dominioAereo') continue;
         const j = S.jogadorPorId(m, e.id);
         if (!j) continue;
-        R.natural[1]++;
-        if ((j.time === 0 ? ctrlAntes : ctrlAntes1) === e.id) R.natural[0]++;
+        const k = chuteDe != null && chuteDe !== j.time ? 'naturalChuteAdv' : 'natural';
+        R[k][1]++;
+        if ((j.time === 0 ? ctrlAntes : ctrlAntes1) === e.id) R[k][0]++;
         else if (DEPURA) { const st = m.trocaAerea?.[j.time]; console.log(`natural sem ${sem} t ${fmt(m.tick * PASSO, 1)} time ${j.time}: disputou ${e.id} (${e.tipo}), controlado ${j.time === 0 ? ctrlAntes : ctrlAntes1}, melhor ${st?.melhor} i ${st?.iMelhor} ativo ${st?.ativo} trocas ${st?.trocas} corr ${st?.correcoes} voo ${m.voo?.tipo ?? '-'} posse ${m.posse}`); }
         else if (DEPURA) console.log(`semente ${sem} t ${fmt(m.tick * PASSO, 1)} s: natural — disputou ${e.id}, controlado ${ctrlAntes}`);
       }
@@ -294,6 +301,7 @@ if (SO !== 'canhao') {
   // menos de 90%: P(X ≤ k | n, 0,9) < 5% (binomial), como os vermelhos do teste-faltas. Com 120 disputas (reprova com
   // k ≤ 101, 84%) uma taxa real de 80% reprova em ~90% das rodadas, a de 85% em ~45%, a de 93% em 0,1%.
   const pNat = caudaBinomialAte(R.natural[0], R.natural[1], 0.9);
+  console.log(`natural, bola alta que é chute do adversário (fora da conta: a troca aérea não troca no chute dele, #474): ${pc(...R.naturalChuteAdv)}`);
   reg('natural (IA × IA, os dois times): o controlado é quem disputa', `${pc(...R.natural)} em ${nNat} × ${MIN_NAT} min (p = ${fmt(pNat)} contra 90%)`, `≥ 90% (p ≥ 0,05) com ≥ ${NAT_DISP} disputas`, R.natural[1] >= NAT_DISP && pNat >= 0.05);
 }
 fim();

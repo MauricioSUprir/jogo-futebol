@@ -7,8 +7,9 @@ import * as THREE from 'three';
 import { CAMPO, ESTADIO } from '../config.js';
 import { juntarGeometrias, cilindroEntre, caixa } from './util.js';
 import {
-  GRAMA, texGramado, texDetalheGrama, texPlacas, PLACA, texArquibancada, ARQ, texBandeira, texBrilho,
+  GRAMA, texGramado, texDetalheGrama, texPlacas, PLACA, texArquibancada, ARQ, texBandeira, texBrilho, mascaraTexto,
 } from './texturas.js';
+import { imagemEscudo } from './escudo-desenho.js';
 import { REDE_GLSL, fixo as fixoRede, REDE } from './rede-onda.js';
 import { VEU, COMPRIMENTO_PERFIL, pontoPerfil, profundidadeVeu } from '../rede-forma.js';
 // trama da rede (m): colmeia de 12 cm com fio de 6 mm; o fio não afina abaixo de ~1 px, só fica até uRedeMin mais
@@ -334,7 +335,7 @@ function criarRede() {
 
 // ------------------------------------------------------------------ bandeirinhas
 
-function criarBandeiras() {
+function criarBandeiras(ident = null) {
   const pos = [], uv = [], nrm = [], ond = [];
   const W = 0.42, H = 0.3, NS = 6;
   for (const s of [-1, 1]) for (const t of [-1, 1]) {
@@ -358,7 +359,7 @@ function criarBandeiras() {
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
   geo.setAttribute('aOnda', new THREE.Float32BufferAttribute(ond, 1));
   geo.computeBoundingSphere();
-  const mat = new THREE.MeshLambertMaterial({ map: texBandeira(), side: THREE.DoubleSide });
+  const mat = new THREE.MeshLambertMaterial({ map: texBandeira(ident ? ident.escanteio : null), side: THREE.DoubleSide });
   const tempo = { value: 0 };
   mat.onBeforeCompile = sh => {
     sh.uniforms.uTempo = tempo;
@@ -377,7 +378,7 @@ function criarBandeiras() {
 
 // ------------------------------------------------------------------ placas
 
-function criarPlacas(aniso) {
+function criarPlacas(aniso, ident = null) {
   const PX = MX + CAMPO.entorno, PZ = MZ + CAMPO.entorno;
   const A = PLACA.altura;
   const pos = [], uv = [], nrm = [];
@@ -402,7 +403,7 @@ function criarPlacas(aniso) {
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
   geo.computeBoundingSphere();
   // LED: material sem luz (a placa brilha sozinha), mais forte à noite
-  const mat = new THREE.MeshBasicMaterial({ map: texPlacas(aniso), color: 0xdddddd, fog: false });
+  const mat = new THREE.MeshBasicMaterial({ map: ident ? texPlacas(aniso, ident.paineis, [imagemEscudo(ident, 0), imagemEscudo(ident, 1)]) : texPlacas(aniso), color: 0xdddddd, fog: false });
   const frente = new THREE.Mesh(geo, mat);
   frente.name = 'placas';
   const E = 0.12;
@@ -484,7 +485,7 @@ function comLuzFalsa(mat, chave) {
   return mat;
 }
 
-function criarArquibancada(aniso, qualidade) {
+function criarArquibancada(aniso, qualidade, ident = null) {
   const larg = qualidade === 'baixa' ? 1024 : 2048;
   const V_PAREDE = 0.975, vMax = 1 - 24 / 512;
   function construtor(comCor = false) {
@@ -532,7 +533,9 @@ function criarArquibancada(aniso, qualidade) {
     }
   }
   const g = new THREE.Group();
-  const lado = L1.mesh(texArquibancada(aniso, true, larg), 'lado');
+  // com ?tm: as cores das cadeiras, do friso e do mosaico pelo mandante, e o nome dele no mosaico (identidade.js)
+  const coresArq = ident ? ident.arquibancada : null, mascaraTm = ident ? mascaraTexto(ident.mosaico.texto, 2.6) : null;
+  const lado = L1.mesh(texArquibancada(aniso, true, larg, coresArq, mascaraTm), 'lado');
   // atrás dos gols (x±): do canto de lá (z −74,5) até o lado de cá (z +44,5)
   const L2 = construtor();
   for (const s of [-1, 1]) {
@@ -544,7 +547,7 @@ function criarArquibancada(aniso, qualidade) {
     L2.quad([x0, yBase, za], [x0, yBase, zb], [x1, yT, zb], [x1, yT, za], 0, u1, 0, vMax * 0.82);
     L2.quad([x1, yT, za], [x1, yT, zb], [x1, yT + 5, zb], [x1, yT + 5, za], 0, u1, V_PAREDE, 1);
   }
-  const texSemNome = texArquibancada(aniso, false, larg);
+  const texSemNome = texArquibancada(aniso, false, larg, coresArq);
   const fundos = L2.mesh(texSemNome, 'fundos');
   lado.name = 'arquibancada-lado';
   fundos.name = 'arquibancada-fundos';
@@ -653,9 +656,14 @@ function criarRefletores() {
   return { grupo, matLamp, brilhos };
 }
 
-/** Monta o campo inteiro. opc: {qualidade, aniso}. Devolve {grupo, definirHora(h), atualizar(t)}. */
+/**
+ * Monta o campo inteiro. opc: {qualidade, aniso, identidade (identidade.js; só a do Total Match — `tm` — muda as placas,
+ * as cadeiras, o mosaico e as bandeiras de escanteio: só desenho, a geometria é a mesma)}. Devolve {grupo,
+ * definirHora(h), atualizar(t)}.
+ */
 export function criarCampo(opc) {
   const aniso = opc.aniso ?? 4;
+  const ident = opc.identidade && opc.identidade.tm ? opc.identidade : null;
   const tamGrama = opc.qualidade === 'baixa' ? 1024 : 2048;
   const grupo = new THREE.Group();
   grupo.name = 'campo';
@@ -681,11 +689,11 @@ export function criarCampo(opc) {
   grupo.add(gols.estrutura, gols.rede);
   // rede que balança: main.js escreve os impactos (rede-onda.js uniformsRede) nestes vetores
   const uRede = gols.uniformsRede;
-  const band = criarBandeiras();
+  const band = criarBandeiras(ident);
   grupo.add(band.mesh);
-  const placas = criarPlacas(aniso);
+  const placas = criarPlacas(aniso, ident);
   grupo.add(placas.frente, placas.corpo);
-  const arq = criarArquibancada(aniso, opc.qualidade);
+  const arq = criarArquibancada(aniso, opc.qualidade, ident);
   grupo.add(arq);
   const refl = criarRefletores();
   grupo.add(refl.grupo);

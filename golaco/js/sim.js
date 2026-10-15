@@ -3,15 +3,17 @@
 // mesma partida bit a bit (ver hashMundo).
 
 import { profundidadeVeu } from './rede-forma.js';
-import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO, FALTAS, RECEPCAO } from './config.js';
-import { criarRng, entre, uniforme } from './rng.js';
+import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, BOLA, GOLEIRO, IA, AEREO, CABECEIO, TROCA_AEREA, DEFESA_HUMANO, FALTAS, RECEPCAO } from './config.js';
+import { criarRng, entre, uniforme, normal } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
-import { alturaQuadril } from './anim.js';
+import { alturaQuadril, pose, NJ, J as JUNTA, RAIO_CABECA } from './anim.js';
+// cabeceio na bola rolando (entrega de 12/10): o pulo desenhado e a intenção (cabeceio.js)
+import { alcanceCabeceio, planejarPulo, sairDoChao, passoCorpoNoAr, pesNoAr, intencaoCabeceio, subidaPara, preparoPulo, puloAtivo } from './cabeceio.js';
 import { clamp, difAng, quantizar, lerp } from './mat.js';
 import {
   criarCond, controlarComBola, movimentoComBola, movimentoBase, movimentoRecepcao, tentarDominio, verificarPerda,
-  executarToque, saidaParaToque, atualizarGesto, peLivre, noAlcance,
+  executarToque, saidaParaToque, atualizarGesto, peLivre, noAlcance, preverBola,
 } from './conducao.js';
 import { MD } from './matdet.js';
 import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, executarCabeceio, ataca, assumirControle } from './acoes.js';
@@ -21,7 +23,7 @@ import { ACOES } from './config.js';
 // Etapa 3 (partida 11×11): tudo isto só liga com m.times — o treino continua bit a bit igual
 // (tools/hash-igual.mjs). Exceção: os botões de defesa do humano (defesa.js), que só agem com
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
-import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe } from './ia-tatica.js';
+import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe, cortandoPasse } from './ia-tatica.js';
 import { trocaAerea, alvoAereo, escolhaManual } from './troca.js';
 import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
@@ -337,8 +339,21 @@ function boteIA(m, j) {
   // tira: para longe de quem conduzia
   let ux = b.p.x - dono.x, uz = b.p.z - dono.z;
   const l = MD.hypot(ux, uz) || 1; ux /= l; uz /= l;
+  // (só na partida; entrega "IA intensa" de 12/10) com o condutor embalado, a bola sai para o lado do defensor e um pouco
+  // para trás no caminho do condutor — "para longe dele" era ADIANTE no caminho dele, e o mesmo condutor, embalado,
+  // pegava de novo: 26% das roubadas da IA na arrancada do humano (contraprova de 11/10)
+  const vD = MD.hypot(dono.vx, dono.vz);
+  if (m.partida && vD > cfg.vLado) {
+    const cx = dono.vx / vD, cz = dono.vz / vD;
+    let px = -cz, pz = cx;
+    if ((j.x - dono.x) * px + (j.z - dono.z) * pz < 0) { px = -px; pz = -pz; }
+    ux = px - cfg.tras * cx; uz = pz - cfg.tras * cz;
+    const k = MD.hypot(ux, uz) || 1; ux /= k; uz /= k;
+  }
   chutarRasteiro(b, ux * cfg.vSai, uz * cfg.vSai);
   dono.cond.toque = null; dono.cond.busca = false;
+  // (só na partida) quem perdeu a bola não a domina de novo logo em seguida (a mesma regra da DIVIDIDA do humano)
+  if (m.partida) dono.cond.semDominioAte = m.tick + Math.round(DEFESA_HUMANO.dividida.semDominio / PASSO);
   m.posse = null;
   m.voo = null;
   m.ultimoToque = { id: j.id, time: j.time, tick: m.tick };
@@ -411,13 +426,31 @@ export function passo(m, entradas) {
   // 2) movimento de cada corpo
   for (const j of js) {
     let mv;
+    // cabeceio (cabeceio.js): o pulo acabou → some; no passo da saída do chão (m.tick = td) guarda a velocidade e os pés
+    // (longe do ponto: não pula); no ar (até o pouso) o corpo segue com a velocidade da saída, sem a locomoção
+    if (j.cab || j.disputaAlta) {
+      if (j.cab && m.tick > j.cab.tf) j.cab = null;
+      if (j.disputaAlta && m.tick > j.disputaAlta.tc) j.disputaAlta = null;
+      // bola morta (partida: saiu, falta, impedimento — a parada ainda sem cobrar): ninguém sai do chão nem corre para ela;
+      // quem já está no ar termina o pulo (contraprova de 14/10: na semente 1008 dois pularam para a bola que já tinha saído
+      // pela linha de fundo, atrás do gol)
+      if (naParada(m)) {
+        if (j.cab && !j.cab.saiu) { j.cab = null; if (j.cond && j.cond.toque && j.cond.toque.tipo === 'aereo') j.cond.toque = null; }
+        j.disputaAlta = null;
+      }
+      const c = j.cab;
+      if (c && c.h > 0 && !c.saiu && m.tick >= c.td) sairDoChao(m, j);
+      if (voando(j, m.tick + 1)) { passoCorpoNoAr(m, j); continue; }
+    }
     if (j.papel === 'marcador') {
       if (j.descanso > 0) { j.descanso--; mv = { dx: MD.cos(j.rumo), dz: MD.sin(j.rumo), vel: 0, rumoAlvo: j.rumo }; }
       else mv = moverMarcador(m, j);
     } else if (j.papel === 'parado') {
       mv = { dx: 1, dz: 0, vel: 0, rumoAlvo: j.rumo };
     } else if (j.posicao === 'GOL' && !goleiroComoLinha(m, j)) {
-      mv = movimentoGoleiro(m, j, m.humanos.includes(j.time));
+      // (com a trava "só o meu jogador" do Total Match, o goleiro que não é o travado decide sozinho, como o da IA: senão
+      // ele só sairia do gol com o botão GOLEIRO, que o travado não tem)
+      mv = movimentoGoleiro(m, j, m.humanos.includes(j.time) && !(m.trava?.[j.time] != null && m.trava[j.time] !== j.id));
       // defesa desenhada (mergulho, salto, em pé): o corpo anda pela conta do mergulho, não pela locomoção
       if (mergulhoAtivo(j, m.tick + 1)) { passoMergulho(m, j); continue; }
       // partida: o goleiro do humano com a bola nas mãos anda pelo analógico até a borda da área (nunca sai dela)
@@ -477,6 +510,8 @@ export function passo(m, entradas) {
   for (const j of js) {
     // goleiro na defesa desenhada: o corpo e os pés são os do quadro do mergulho (trombada não o tira dele)
     if (j.posicao === 'GOL' && mergulhoAtivo(j, m.tick + 1)) { fixarMergulho(m, j); pesMergulho(m, j); continue; }
+    // pulo do cabeceio: os pés no ar (sobem e descem com o quadril) e plantados no pouso (cabeceio.js pesNoAr)
+    if (voando(j, m.tick + 1)) { pesNoAr(m, j); continue; }
     const ped = j.cond && j.cond.pedalada ? pesDaPedalada(m, j) : null;
     if (!(j.cond && j.cond.pedalada) && j.travaApoio != null) j.travaApoio = null;
     passoPassada(j, m.posse === j.id, PASSO, null, ped || saidaParaToque(m, j));
@@ -512,8 +547,7 @@ export function passo(m, entradas) {
     aplicarDefesa(m, j);
     // encaixou: com o goleiro do time humano, o controle vai para ele como no "pegou" (antes o encaixe
     // deixava o controle na linha e o pegou o passava ao goleiro: dois comportamentos para a mesma bola)
-    if (m.naMao === j.id && antes !== j.id && m.humanos.includes(j.time) && m.controlado[j.time] !== j.id) {
-      assumirControle(m, j.time, j);
+    if (m.naMao === j.id && antes !== j.id && m.humanos.includes(j.time) && m.controlado[j.time] !== j.id && assumirControle(m, j.time, j)) {
       m.eventos.push({ tipo: 'troca', id: j.id, auto: true });
     }
   }
@@ -552,7 +586,7 @@ export function passo(m, entradas) {
   for (const j of js) if (j.cond) atualizarGesto(m, j);
   // 8) pé desenhado no balanço (trajetória + gesto, com a velocidade de um pé humano) e altura
   // do quadril da pose (sobe com velocidade limitada: anim.js alturaQuadril)
-  for (const j of js) if (!(j.posicao === 'GOL' && mergulhoAtivo(j, m.tick + 1))) passoPeDesenhado(j, m, PASSO);
+  for (const j of js) if (!(j.posicao === 'GOL' && mergulhoAtivo(j, m.tick + 1)) && !voando(j, m.tick + 1)) passoPeDesenhado(j, m, PASSO);
   m.tick++;
   for (const j of js) j.quadril = alturaQuadril(j, m);
 }
@@ -627,25 +661,31 @@ function bolaLivre(m) {
   const alvo = m.voo && m.voo.para != null ? m.voo.para : null;
   const nc = candidatosBolaLivre(m, alvo);
   const passou = m.voo && m.voo.de != null && m.tick - (m.voo.tick0 ?? 0) < 6 ? m.voo.de : null;
-  // passe para outro (só na partida; pedido do dono, 15/10: "jogadores passam da bola quando estão com ela praticamente
-  // dominada"): quem só MARCOU o domínio (o recebedor esperando a bola chegar, ou correndo atrás dela com o toque sempre
-  // adiante) não tira a vez de quem está com a bola lenta no pé (RECEPCAO.passeLento): o adversário que corta ou o
-  // companheiro de quem passou em cima dela — antes ele encerrava a vez de todo mundo e quem tinha a bola entre os pés
-  // passava por ela (contraprova, 15/10: com só o adversário, o companheiro ainda deixava o passe lento correr colado no pé)
+  // passe para outro (só na partida): quem só MARCOU o domínio (o recebedor esperando a bola chegar, ou correndo atrás
+  // dela com o toque sempre adiante) não tira a vez de
+  //  - quem está com a bola lenta no pé (RECEPCAO.passeLento): o adversário que corta ou o companheiro de quem passou em
+  //    cima dela (pedido do dono, 15/10: "jogadores passam da bola quando estão com ela praticamente dominada" — antes ele
+  //    encerrava a vez de todo mundo e quem tinha a bola entre os pés passava por ela);
+  //  - o adversário que foi cortar o passe rasteiro (a IA em ia-tatica.js cortaPasse, ou o controlado pelo humano): ele
+  //    toca na bola antes se chegar à linha antes (pedido do dono de 12/10, "a defesa mal intercepta passe"; com todos os
+  //    adversários: 12 interceptações por time por partida, acima do real).
   const vooCorte = m.partida && m.voo && m.voo.para != null && m.voo.time != null ? m.voo : null;
   let soMarcou = false;
   for (let k = 0; k < nc; k++) {
     const j = _cands[k];
     if (j.id === passou) continue; // quem acabou de bater não domina a própria bola
-    if (soMarcou && !bolaLentaNoPe(m, j)) continue; // (adversário que corta ou companheiro em cima dela)
+    if (soMarcou && !bolaLentaNoPe(m, j) && (j.time === vooCorte.time || !(cortandoPasse(m, j) || (ehControlado(m, j) && !m.iaJoga?.[j.time])))) continue;
     if (naParada(m) && j.id !== m.parada.cobrador) continue; // partida: só o cobrador
     // toque aéreo vencido (a hora passou): não segura a bola livre para quem não vai mais nela
     const ta = j.cond?.toque;
     if (ta && ta.tipo === 'aereo' && aereoVencido(m, j, ta)) j.cond.toque = null;
     if (!b.rolando && b.p.y > 0.45) {
-      if (bolaAltaNoCorpo(m, j)) return;
+      // (só quem TOCOU na bola encerra a vez; quem marcou o toque ou ainda espera por ele, não — antes o 1º da fila
+      // esperando um toque marcado tirava a vez de quem cabeceava ANTES dele e a do goleiro, que pega a bola logo abaixo)
+      if (bolaAltaNoCorpo(m, j) === true) return;
       continue;
     }
+    if (noArAgora(m, j)) continue; // no ar (pulo do cabeceio): não domina a bola baixa
     const antes = m.posse, chave = vooCorte ? vooCorte.tickChave : -1;
     if (tentarDominio(m, j, primeira)) {
       if (m.posse === j.id && antes !== j.id) ganhouPosse(m, j);
@@ -656,8 +696,8 @@ function bolaLivre(m) {
   // o goleiro pega a bola solta perto dele (dentro da área)
   for (const g of m.jogadores) {
     if (g.posicao !== 'GOL') continue;
-    // (com o recebedor só com o domínio marcado: o goleiro de quem passou não pega, o outro só a bola lenta)
-    if (soMarcou && (g.time === vooCorte.time || b.v.x * b.v.x + b.v.z * b.v.z > RECEPCAO.passeLento * RECEPCAO.passeLento)) continue;
+    // (com o recebedor só com o domínio marcado: o goleiro de quem passou não pega)
+    if (soMarcou && g.time === vooCorte.time) continue;
     if (naParada(m) && g.id !== m.parada.cobrador) continue; // partida: só o cobrador
     const gx = linhaDoGol(m, g);
     // (partida: só onde a mão vale — na área, com qualquer parte da bola sobre a linha, sem recuo nem a bola que ele
@@ -700,54 +740,91 @@ function aereoVencido(m, j, t) {
   return m.tick > t.tick + 1 || (m.posse != null && m.posse !== j.id);
 }
 
-/** Com cabeceio/domínio aéreo marcado: vai para o ponto marcado e chega na hora, de frente para a bola. */
+/**
+ * Com cabeceio/domínio aéreo marcado (ou indo disputar a bola alta: j.disputaAlta): vai para o ponto e chega na hora, de
+ * frente para a bola. Com o pulo do cabeceio planejado (j.cab), chega ao ponto do corpo na saída do chão (cab.td).
+ */
 function movimentoAereo(m, j, base) {
-  const t = j.cond.toque;
-  if (!t || t.tipo !== 'aereo' || m.posse === j.id) return base;
-  if (aereoVencido(m, j, t)) { j.cond.toque = null; return base; }
-  const dx = t.bx - j.x, dz = t.bz - j.z, d = MD.hypot(dx, dz);
-  const resta = Math.max(1, t.tick - m.tick) * PASSO;
+  let t = j.cond.toque;
+  // (auditoria dos botões, 12/10) o toque aéreo vencido não prende o corpo no ponto velho
+  if (t && t.tipo === 'aereo' && aereoVencido(m, j, t)) { j.cond.toque = null; t = null; }
+  const marcado = !!t && t.tipo === 'aereo';
+  const da = j.disputaAlta && m.tick < j.disputaAlta.tc ? j.disputaAlta : null;
+  if ((!marcado && !da) || m.posse === j.id) return base;
+  // quem vai disputar sendo o controlado: só com o analógico solto (mexendo, o humano decide; a IA jogando por ele, a demo,
+  // vai como a IA)
+  if (!marcado && ehControlado(m, j) && !m.iaJoga?.[j.time] && j.imag > TROCA_AEREA.analogicoSolto) return base;
+  const cab = j.cab && !j.cab.saiu ? j.cab : null;
+  const tx = cab ? cab.cx : marcado ? t.bx : da.x, tz = cab ? cab.cz : marcado ? t.bz : da.z;
+  // (com o pulo, chega CABECEIO.antes s antes da saída: chegando em cima da hora, qualquer trombada o tirava do ponto)
+  const tAlvo = cab ? Math.max(m.tick + 1, cab.td - Math.round(CABECEIO.antes / PASSO)) : marcado ? t.tick : da.tc;
+  const dx = tx - j.x, dz = tz - j.z, d = MD.hypot(dx, dz);
+  const resta = Math.max(1, tAlvo - m.tick) * PASSO;
   const b = m.bola;
   const rumo = MD.atan2(b.p.z - j.z, b.p.x - j.x);
   if (d < 0.05) return { dx: base.dx, dz: base.dz, vel: 0, rumoAlvo: rumo };
   return { dx: dx / d, dz: dz / d, vel: Math.min(j.par.vArrancada, d / resta), rumoAlvo: rumo };
 }
 
-/** Bola alta chegando ao corpo: cabeceio (com ação pedida) ou domínio no peito/coxa. */
+const _poseCab = new Float32Array(NJ * 3);
+/**
+ * A cabeça DESENHADA de j (anim.js pose neste tick: o pulo e o tronco indo à bola) está na bola? Superfície com superfície
+ * a até CABECEIO.folga + extra m. A física do cabeceio presa ao desenho (pedido do dono: quem joga vê o cabeceio).
+ */
+function cabecaNaBola(m, j, extra = 0) {
+  const p = pose(j, m, _poseCab), k = JUNTA.cabeca * 3, b = m.bola.p;
+  return MD.hypot(b.x - p[k], b.y - p[k + 1], b.z - p[k + 2]) - RAIO_CABECA - 0.11 <= CABECEIO.folga + extra;
+}
+
+const ESPERA = 'espera';
+/**
+ * Bola alta chegando ao corpo: cabeceio (planejado com o pulo desenhado) ou domínio no peito/coxa. Devolve true quando
+ * tocou na bola, ESPERA quando marcou o toque ou ainda espera por ele, false quando não vai nela.
+ */
 function bolaAltaNoCorpo(m, j) {
   const c = j.cond;
   const b = m.bola;
   if (c.toque && c.toque.tipo === 'aereo') {
-    if (m.tick < c.toque.tick) return true;
+    if (m.tick < c.toque.tick) return ESPERA;
     c.toque = null;
     const d = MD.hypot(b.p.x - j.x, b.p.z - j.z);
-    const alcanceY = ACOES.cabeceio.alcanceSalto * (0.92 + 0.12 * j.par.attr.impulsao / 100);
-    if (d > 0.75 || b.p.y > alcanceY) return false;
-    // disputa pelo alto (Etapa 4, só na partida e, por enquanto, só na bola que vem de uma bola parada — escanteio,
-    // falta, lateral; no jogo corrido entra com o equilíbrio): o adversário que alcança a bola no ponto disputa
-    if (m.partida && b.p.y >= AEREO.yMin && m.voo && m.voo.bolaParada) {
-      const o = rivalNoAlto(m, j);
-      if (o) {
-        const venceu = ganhaDisputa(m, j, o);
-        m.eventos.push({ tipo: 'disputaAerea', id: venceu ? j.id : o.id, perdeu: venceu ? o.id : j.id });
-        if (!venceu) {
-          // o rival ganhou: afasta de cabeça (para longe do gol dele); quem ia na bola não toca nela — nem logo depois,
-          // ainda no ar (AEREO.perdeuSalto s: antes ele cabeceava a bola recém-afastada, colada nele, para o gol)
-          j.pedido = null; j.perdeuAlto = m.tick;
-          const p0 = o.pedido && o.pedido.tipo !== 'chute' ? o.pedido : { tipo: 'lancamento', forca: 0.8 };
-          o.pedido = null; if (o.cond) o.cond.toque = null;
-          executarCabeceio(m, o, p0);
-          m.eventos.push({ tipo: 'cabeceio', id: o.id });
-          return true;
-        }
-        j.disputa = m.tick; // ganhou disputando: o cabeceio sai mais impreciso (acoes.js)
+    const bp = !!(m.voo && m.voo.bolaParada);
+    // de cabeça: só com o cabeceio planejado para este tick e a cabeça desenhada na bola; senão o peito/coxa (a bola no
+    // corpo, até um pouco acima do peito)
+    const cab = j.cab && j.cab.tc === m.tick && j.cab.cabeceio ? j.cab : null;
+    const okJ = cab ? cabecaNaBola(m, j) : (d <= 0.75 && b.p.y <= ACOES.cabeceio.alturaPeito[1] + 0.15);
+    // disputa pelo alto (só na partida): na bola parada, o adversário mais perto que alcança (Etapa 4); no jogo corrido,
+    // quem foi disputar (agendarDisputa) e chegou com a cabeça na bola
+    let o = m.partida && b.p.y >= AEREO.yMin ? rivalNoAlto(m, j, bp) : null;
+    // sem quem ia na bola alcançar, o rival que pulou só fica com ela com a cabeça desenhada nela de verdade (sem a folga de
+    // chegar de raspão, que só vale para atrapalhar)
+    if (!okJ && o && !bp && o.cab && puloAtivo(o, m.tick) && !cabecaNaBola(m, o)) o = null;
+    if (!okJ && !o) return false;
+    if (o) {
+      const venceu = okJ && ganhaDisputa(m, j, o, bp);
+      m.eventos.push({ tipo: 'disputaAerea', id: venceu ? j.id : o.id, perdeu: venceu ? o.id : j.id, dono: j.id, bolaParada: bp, alcancou: okJ, p: okJ ? m.pDisputa : 0 });
+      if (!venceu) {
+        // o rival ganhou (ou só ele alcançou): cabeceia; quem ia na bola não toca nela — nem logo depois, ainda no ar
+        // (AEREO.perdeuSalto s: antes ele cabeceava a bola recém-afastada, colada nele, para o gol)
+        j.pedido = null; j.perdeuAlto = m.tick;
+        // jogo corrido, com a cabeça desenhada dele perto mas não na bola: um raspão (a bola desvia, perde força e sobe um
+        // pouco) — o desenho não mostra um cabeceio limpo de longe
+        if (!bp && o.cab && puloAtivo(o, m.tick) && !cabecaNaBola(m, o)) { raspao(m, o); return true; }
+        // bola parada: afasta (como na Etapa 4); jogo corrido: a intenção dele (cabeceio.js; o botão do humano manda)
+        const p0 = bp ? (o.pedido && o.pedido.tipo !== 'chute' ? o.pedido : { tipo: 'lancamento', forca: 0.8 })
+          : (o.pedido && b.p.y > CABECEIO.alturaPedido ? o.pedido : intencaoCabeceio(m, o, 9) ?? { tipo: 'passe', forca: 0.5 });
+        o.pedido = null; if (o.cond) o.cond.toque = null;
+        if (!bp && okJ) o.disputa = m.tick; // ganhou disputando: o cabeceio sai mais impreciso
+        executarCabeceio(m, o, p0);
+        m.eventos.push({ tipo: 'cabeceio', id: o.id });
+        return true;
       }
+      j.disputa = m.tick; // ganhou disputando: o cabeceio sai mais impreciso (acoes.js)
     }
-    if (b.p.y > ACOES.cabeceio.alturaPeito[1] || j.pedido) {
-      // sem botão: a IA na área cabeceia para o gol; fora dela (e o humano), cabeceia de passe
-      const lado = ataca(m, j.time);
-      const naArea = (lado * CAMPO.meioX - j.x) * lado < 16.5 && Math.abs(j.z) < 20.16;
-      const p = j.pedido ?? (naArea && !ehControlado(m, j) ? { tipo: 'chute', forca: 0.7 } : { tipo: 'passe', forca: 0.5 });
+    if (cab) {
+      // o botão manda (acima de CABECEIO.alturaPedido); sem botão, a intenção (cabeceio.js: a gol na área, afastar no meu
+      // terço, passe no resto) — para a IA e para o humano que não apertou nada
+      const p = (j.pedido && b.p.y > CABECEIO.alturaPedido ? j.pedido : null) ?? intencaoCabeceio(m, j, 9) ?? { tipo: 'passe', forca: 0.5 };
       j.pedido = null;
       executarCabeceio(m, j, p);
       m.eventos.push({ tipo: 'cabeceio', id: j.id });
@@ -765,48 +842,240 @@ function bolaAltaNoCorpo(m, j) {
     return true;
   }
   if (j.perdeuAlto != null && (m.tick - j.perdeuAlto) * PASSO < AEREO.perdeuSalto) return false;
-  const r = bolaAltaPassando(m, j, 60);
-  if (!r) return false;
-  const alcanceY = ACOES.cabeceio.alcanceSalto * (0.92 + 0.12 * j.par.attr.impulsao / 100);
-  if (r.y > alcanceY || r.y < 0.2) return false;
-  c.toque = { tick: m.tick + r.i, pe: j.par.attr.pePreferido, bx: r.x, bz: r.z, tipo: 'aereo', y: r.y };
-  return true;
+  if (noArAgora(m, j)) return false; // no ar (pulo de outro cabeceio): não marca outro toque
+  // indo disputar o toque de um adversário (agendarDisputa): o pulo dele é o da disputa — não planeja outro por cima
+  if (j.disputaAlta && m.tick <= j.disputaAlta.tc) return ESPERA;
+  const peito = ACOES.cabeceio.alturaPeito[1];
+  // de cabeça? Acima do peito, sempre; com botão, acima de CABECEIO.alturaPedido; sem botão, na altura do peito só para o
+  // gol ou para afastar (cabeceio.js intencaoCabeceio). O pulo (e o tronco indo à bola) fica planejado já: a pose o desenha
+  const querCabeca = y => y > peito || (y > CABECEIO.alturaPedido && !!(j.pedido || intencaoCabeceio(m, j, y)));
+  let r = bolaAltaPassando(m, j, 60);
+  if (r && (r.y > alcanceCabeceio(j) || r.y < 0.2)) r = null;
+  if (r && !querCabeca(r.y)) {
+    // peito/coxa: a bola passa nele (como antes)
+    if (j.cab && j.cab.tc > m.tick && !j.cab.saiu) j.cab = null;
+    c.toque = { tick: m.tick + r.i, pe: j.par.attr.pePreferido, bx: r.x, bz: r.z, tipo: 'aereo', y: r.y };
+    return ESPERA;
+  }
+  // de cabeça: o 1º ponto da trajetória que ele alcança A TEMPO DE PULAR (correr até lá + contramovimento + subida) —
+  // esperar a bola passar a 0,6 m dele (bolaAltaPassando) não deixava tempo para a subida. O controlado com o analógico
+  // mexido só cabeceia a bola que passa nele (o humano decide para onde vai)
+  const livre = !ehControlado(m, j) || !!m.iaJoga?.[j.time] || j.imag <= TROCA_AEREA.analogicoSolto;
+  // (vai antes à bola de cabeça só quando vale: com botão, para o gol ou para afastar, ou com um adversário perto — a
+  // disputa; sozinho no meio-campo ele espera a bola cair no peito/pé, como antes)
+  const vale = y => y > CABECEIO.alturaPedido && (!!j.pedido || adversarioPerto(m, j, CABECEIO.disputaPerto)
+    || (intencaoCabeceio(m, j, y)?.tipo ?? 'passe') !== 'passe');
+  // (na bola parada quem defende ataca a bola na zona dele: AEREO.zonaBolaParada)
+  const zona = m.voo && m.voo.bolaParada && m.voo.time !== j.time ? AEREO.zonaBolaParada : Infinity;
+  let pc = livre ? pontoDeCabeceio(m, j, vale, zona) : null;
+  // alguém já vai a esta bola de cabeça e chega antes (ou junto): não corro para ela também — o companheiro: os dois
+  // corriam, o que chegava depois voltava (o vai e volta do teste-movimento subia) e amontoavam debaixo do cruzamento; o
+  // adversário: a disputa com ele é a do agendarDisputa (quem chega primeiro a ela), não um 2º pulo por conta própria
+  if (pc && !ehControlado(m, j) && alguemNoAlto(m, j, m.tick + pc.i + AEREO.juntoTicks)) pc = null;
+  const q = pc ?? r;
+  // (partida: a bola que já terá saído inteira do campo no contato não se cabeceia — contraprova de 14/10)
+  if (!q || (m.partida && bolaForaEm(q.x, q.z)) || !planejarPulo(m, j, m.tick + q.i, q.x, q.y, q.z, q.ux ?? -MD.cos(j.rumo), q.uz ?? -MD.sin(j.rumo))) {
+    // a cabeça não alcança: a bola na altura do peito ele ainda domina; mais alta, passa
+    if (!r || r.y > peito) return false;
+    c.toque = { tick: m.tick + r.i, pe: j.par.attr.pePreferido, bx: r.x, bz: r.z, tipo: 'aereo', y: r.y };
+    return ESPERA;
+  }
+  c.toque = { tick: m.tick + q.i, pe: j.par.attr.pePreferido, bx: q.x, bz: q.z, tipo: 'aereo', y: q.y };
+  if (m.partida && !(m.voo && m.voo.bolaParada)) agendarDisputa(m, j, j.cab);
+  return ESPERA;
+}
+
+const N_CAB = 72; // ticks da trajetória olhados para o ponto do cabeceio (1,2 s)
+/** A bola com o centro em (x, z) já passou INTEIRA da linha lateral ou da de fundo (Regra 9)? */
+const bolaForaEm = (x, z) => Math.abs(x) > CAMPO.meioX + BOLA.raio || Math.abs(z) > CAMPO.meioZ + BOLA.raio;
+const _pc = { i: 0, x: 0, y: 0, z: 0, ux: 0, uz: 0 };
+/**
+ * O 1º ponto da trajetória prevista da bola (conducao.js preverBola: a mesma física) em que j cabeceia a tempo: a bola
+ * na altura da cabeça (querCabeca(y), até o alcance do pulo) e ele chega ao ponto do corpo (a bola CABECEIO.chega m à
+ * frente) correndo e ainda pula (cabeceio.js preparoPulo) antes dela. Antes de a bola descer abaixo da cabeça. {i, x,
+ * y, z, ux, uz} (reaproveitado) ou null. raioMax: só pontos a até isto do corpo (a zona do defensor na bola parada).
+ */
+function pontoDeCabeceio(m, j, querCabeca, raioMax = Infinity) {
+  const b = m.bola;
+  if (b.rolando || MD.hypot(b.p.x - j.x, b.p.z - j.z) > 30) return null;
+  const pb = preverBola(b, N_CAB);
+  const alc = alcanceCabeceio(j);
+  let achou = -1;
+  for (let i = 4; i <= N_CAB; i += 2) {
+    if (pb.rol[i]) break;
+    // (partida) a bola saiu inteira do campo (Regra 9) nesse ponto: dali em diante não há cabeceio — antes o jogador corria
+    // para trás da linha de fundo, por dentro da rede, para cabecear a bola que ia para o tiro de meta
+    if (m.partida && bolaForaEm(pb.xs[i], pb.zs[i])) break;
+    const y = pb.ys[i];
+    if (y > alc) continue;
+    if (!querCabeca(y)) { if (y <= ACOES.cabeceio.alturaPeito[1]) break; continue; }
+    let ux = pb.xs[i] - pb.xs[i - 1], uz = pb.zs[i] - pb.zs[i - 1];
+    const l = MD.hypot(ux, uz);
+    if (l < 1e-6) continue;
+    ux /= l; uz /= l;
+    const cx = pb.xs[i] + ux * CABECEIO.chega, cz = pb.zs[i] + uz * CABECEIO.chega;
+    if (raioMax < Infinity && MD.hypot(cx - j.x, cz - j.z) > raioMax) continue;
+    const t = tempoCorrida(j, cx, cz) + preparoPulo(subidaPara(y, CABECEIO.chega));
+    if (t > i * PASSO) continue;
+    // o 1º ponto que ele alcança a tempo; se a bola ainda está no limite do pulo, um pouco depois (até CABECEIO.desce s),
+    // já descendo a uma altura confortável (CABECEIO.conforto m abaixo do alcance) — ataca a bola na descida
+    if (achou < 0) achou = i;
+    _pc.i = i; _pc.x = pb.xs[i]; _pc.y = y; _pc.z = pb.zs[i]; _pc.ux = ux; _pc.uz = uz;
+    if (y <= alc - CABECEIO.conforto || (i - achou) * PASSO >= CABECEIO.desce) return _pc;
+  }
+  return achou >= 0 ? _pc : null;
+}
+
+/** Algum outro jogador (dos dois times) com o cabeceio planejado (toque aéreo marcado e o pulo) para o tick t ou antes? */
+function alguemNoAlto(m, j, t) {
+  for (const o of m.jogadores) {
+    if (o === j || !o.cab || !o.cab.cabeceio || o.cab.tc > t || o.cab.tc < m.tick) continue;
+    if (o.cond && o.cond.toque && o.cond.toque.tipo === 'aereo') return true;
+  }
+  return false;
+}
+
+/** Algum adversário de linha a até d m de j? */
+function adversarioPerto(m, j, d) {
+  for (const o of m.jogadores) {
+    if (o.time === j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+    if (MD.hypot(o.x - j.x, o.z - j.z) <= d) return true;
+  }
+  return false;
+}
+
+/** Tempo (s) para j chegar correndo a (x, z): a velocidade que já leva na direção e a aceleração até a máxima (troca.js). */
+function tempoCorrida(j, x, z) {
+  const dx = x - j.x, dz = z - j.z, dist = MD.hypot(dx, dz);
+  const d = Math.max(0, dist - 0.3);
+  if (d <= 0) return 0;
+  const vmax = j.par.vArrancada;
+  const s0 = Math.max(0, Math.min(vmax, (j.vx * dx + j.vz * dz) / dist));
+  const tAcel = (vmax - s0) / 7, dAcel = (s0 + vmax) / 2 * tAcel;
+  return d <= dAcel ? d / Math.max((s0 + vmax) / 2, 1) : tAcel + (d - dAcel) / vmax;
+}
+
+/** O corpo de j anda pelo pulo do cabeceio no passo que leva ao estado do tick t (da saída ao pouso, inclusive)? */
+function voando(j, t) {
+  const c = j.cab;
+  return !!c && c.saiu && t > c.td && t <= c.tp;
 }
 
 /**
- * Adversário de j que disputa a bola alta no toque dele: de linha, a ≤ AEREO.raio m da bola e alcançando a altura dela
- * (o salto pela impulsão); o mais perto. Só na partida.
+ * Raspão na disputa pelo alto (jogo corrido): o rival chega de raspão e a bola desvia (AEREO.raspao: o quanto da
+ * velocidade fica e o desvio, rad, sorteado pelo m.rng), subindo um pouco. Bola livre; o goleiro relê (m.desvio).
  */
-function rivalNoAlto(m, j) {
+function raspao(m, o) {
+  const b = m.bola, R = AEREO.raspao;
+  const a = normal(m.rng) * R.desvio, c = MD.cos(a), s = MD.sin(a);
+  const vx = b.v.x * R.fica, vz = b.v.z * R.fica;
+  b.v.x = vx * c - vz * s; b.v.z = vx * s + vz * c;
+  b.v.y = Math.abs(b.v.y) * R.fica + R.sobe; b.rolando = false;
+  m.voo = null;
+  m.ultimoToque = { id: o.id, time: o.time, tick: m.tick };
+  m.desvio = m.tick;
+  registrarToque(m, o, 'corpo');
+  m.eventos.push({ tipo: 'raspao', id: o.id });
+}
+
+/** j está no ar agora (pulo do cabeceio, entre a saída e o pouso)? */
+function noArAgora(m, j) {
+  const c = j.cab;
+  return !!c && c.saiu && m.tick > c.td && m.tick < c.tp;
+}
+
+/**
+ * Jogo corrido (partida): no cabeceio planejado de j, o adversário de linha que chega a até AEREO.vai m do ponto do contato
+ * antes de sair do chão (com AEREO.folgaT s de folga) e alcança a bola vai disputar: corre para o lado do gol dele, colado
+ * no ponto, e pula junto (o pulo dele desenhado, mesmo perdendo). O que chega mais depressa.
+ */
+function agendarDisputa(m, j, cab) {
+  let mel = null, mt = Infinity;
+  for (const o of m.jogadores) {
+    if (o.time === j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+    if (o.disputaAlta && o.disputaAlta.contra === j.id && o.disputaAlta.tc === cab.tc) return; // já agendado
+    if (o.cab && o.cab.tf >= m.tick) continue; // já num pulo
+    if (o.cond && o.cond.toque && o.cond.toque.tipo === 'aereo') continue; // ele mesmo vai na bola (o toque dele)
+    if (cab.by > alcanceCabeceio(o)) continue;
+    const dist = Math.max(0, MD.hypot(cab.bx - o.x, cab.bz - o.z) - AEREO.vai);
+    const t = dist / o.par.vArrancada;
+    if (t + AEREO.folgaT > (cab.td - m.tick) * PASSO) continue;
+    if (t < mt) { mt = t; mel = o; }
+  }
+  if (!mel) return;
+  // ombro com ombro: quem ia na bola fica no ponto dele e o rival encosta do lado (CABECEIO.ombro m entre os centros, do
+  // lado em que ele já está) — corpos no mesmo ponto se empurravam e um deles saía de baixo da bola
+  let ux = cab.cx - cab.bx, uz = cab.cz - cab.bz;
+  const l = MD.hypot(ux, uz);
+  if (l > 1e-6) { ux /= l; uz /= l; } else { ux = MD.cos(j.rumo + Math.PI); uz = MD.sin(j.rumo + Math.PI); }
+  let nx = -uz, nz = ux;
+  if ((mel.x - cab.bx) * nx + (mel.z - cab.bz) * nz < 0) { nx = -nx; nz = -nz; }
+  // o rival: CABECEIO.ombro m de lado e CABECEIO.recua m antes da bola na linha dela (a ~0,6 m de quem ia na bola: ombro
+  // com ombro, sem os corpos se empurrarem), com a folga de chegar de raspão (AEREO.folgaRival)
+  const o = CABECEIO.ombro, r = CABECEIO.chega + CABECEIO.recua;
+  const pc = planejarPulo(m, mel, cab.tc, cab.bx, cab.by, cab.bz, ux, uz, nx * o - ux * r, nz * o - uz * r, CABECEIO.margem + AEREO.folgaRival);
+  if (!pc) return;
+  pc.cabeceio = false; // o pulo é dele; o contato é decidido no toque de j (rivalNoAlto)
+  mel.disputaAlta = { tc: cab.tc, x: pc.cx, z: pc.cz, contra: j.id };
+}
+
+/**
+ * Adversário de j que disputa a bola alta no toque dele (só na partida). Bola parada (Etapa 4): de linha, a ≤ AEREO.raio
+ * m da bola e alcançando a altura dela; o mais perto. Jogo corrido: quem foi disputar com ele (agendarDisputa), a ≤
+ * AEREO.raio m da bola e com a cabeça desenhada nela.
+ */
+function rivalNoAlto(m, j, bp) {
   const b = m.bola.p;
   let mel = null, dm = Infinity;
   for (const o of m.jogadores) {
     if (o.time === j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
     const d = MD.hypot(b.x - o.x, b.z - o.z);
     if (d > AEREO.raio) continue;
-    const alcanceY = ACOES.cabeceio.alcanceSalto * (0.92 + 0.12 * o.par.attr.impulsao / 100);
-    if (b.y > alcanceY) continue;
-    // o controlado do humano ao alcance disputa (quem joga vê o próprio jogador subir); senão, o mais perto
-    if (ehControlado(m, o)) return o;
-    if (d < dm) { dm = d; mel = o; }
+    if (bp) {
+      if (b.y > alcanceCabeceio(o)) continue;
+      // o controlado do humano ao alcance disputa (quem joga vê o próprio jogador subir); senão, o mais perto
+      if (ehControlado(m, o)) return o;
+      if (d < dm) { dm = d; mel = o; }
+    } else {
+      // jogo corrido: no pulo (agendarDisputa), com a cabeça desenhada perto da bola (AEREO.folgaRival a mais: ele
+      // chega nela de raspão); sem pulo, só a bola que ele alcança de pé
+      if (!(o.cab && puloAtivo(o, m.tick) ? cabecaNaBola(m, o, AEREO.folgaRival) : b.y <= CABECEIO.hyPe + CABECEIO.pescoco + CABECEIO.contato)) continue;
+      if (d < dm) { dm = d; mel = o; }
+    }
   }
   return mel;
 }
 
-/** j (quem ia na bola) ganha a disputa pelo alto contra o? Logística da diferença de nota, o lado do gol (m.rng). */
-function ganhaDisputa(m, j, o) {
+/**
+ * j (quem ia na bola) ganha a disputa pelo alto contra o? Logística (m.rng): a diferença de nota no alto; na bola parada,
+ * o lado do gol (Etapa 4); no jogo corrido, quem está mais perto da bola no contato e, perto do gol de quem defende, o
+ * lado do gol.
+ */
+function ganhaDisputa(m, j, o, bp) {
   const gx = ataca(m, o.time) * -CAMPO.meioX; // gol que o rival defende
   const oNoGol = MD.hypot(gx - o.x, o.z) < MD.hypot(gx - j.x, j.z);
-  const x = AEREO.k * (notaAerea(j) - notaAerea(o)) / 100 + (oNoGol ? -AEREO.ladoGol : AEREO.ladoGol);
+  let x = AEREO.k * (notaAerea(j) - notaAerea(o)) / 100;
+  if (bp) {
+    x += oNoGol ? -AEREO.ladoGol : AEREO.ladoGol;
+    // quem ataca a bola parada vem na corrida, no tempo da cobrança (AEREO.ataqueBolaParada)
+    const tc = m.voo ? m.voo.time : -1;
+    if (j.time === tc) x += AEREO.ataqueBolaParada; else if (o.time === tc) x -= AEREO.ataqueBolaParada;
+  } else {
+    const b = m.bola.p;
+    // quem foi na bola escolheu o ponto e o tempo do pulo (a iniciativa); quem está mais perto dela chega antes
+    x += AEREO.iniciativa + AEREO.kDist * (MD.hypot(b.x - o.x, b.z - o.z) - MD.hypot(b.x - j.x, b.z - j.z));
+    // o lado do gol só conta perto do gol de quem defende (a área, a entrada dela)
+    if (MD.hypot(gx - b.x, b.z) <= AEREO.ladoGolDist) x += oNoGol ? -AEREO.ladoGolRolando : AEREO.ladoGolRolando;
+  }
   const p = 1 / (1 + MD.exp(-x));
+  m.pDisputa = p; // (o evento da disputa leva a chance: diagnóstico)
   return uniforme(m.rng) < p;
 }
 
 /** O jogador ganhou a posse: o controle humano vai para ele (time humano). */
 function ganhouPosse(m, j) {
   registrarToque(m, j, 'posse');
-  if (m.humanos.includes(j.time) && m.controlado[j.time] !== j.id) {
-    assumirControle(m, j.time, j);
+  if (m.humanos.includes(j.time) && m.controlado[j.time] !== j.id && assumirControle(m, j.time, j)) {
     m.eventos.push({ tipo: 'troca', id: j.id, auto: true });
   }
   j.recebe = null;
@@ -826,7 +1095,7 @@ function ganhouPosse(m, j) {
       const d = MD.hypot(o.x - m.bola.p.x, o.z - m.bola.p.z);
       if (d < dm) { dm = d; mel = o; }
     }
-    if (mel && m.controlado[t] !== mel.id) { assumirControle(m, t, mel); m.eventos.push({ tipo: 'troca', id: mel.id, auto: true }); }
+    if (mel && m.controlado[t] !== mel.id && assumirControle(m, t, mel)) m.eventos.push({ tipo: 'troca', id: mel.id, auto: true });
   }
 }
 
@@ -898,7 +1167,7 @@ function goleiroComBola(m, g) {
         const d = MD.hypot(o.x - a.x, o.z - a.z);
         if (d < dm) { dm = d; mel = o; }
       }
-      if (mel) { assumirControle(m, g.time, mel); m.eventos.push({ tipo: 'troca', id: mel.id, auto: true }); }
+      if (mel && assumirControle(m, g.time, mel)) m.eventos.push({ tipo: 'troca', id: mel.id, auto: true });
     }
   }
 }
@@ -1046,8 +1315,7 @@ function trocarJogador(m, entradas) {
       else if (!(agora & BOTAO.TROCAR)) st[t] = -1;
       if (st[t] >= 0 && m.tick - st[t] === Math.round(GOLEIRO.trocarGoleiro / PASSO)) {
         const g = m.jogadores.find(o => o.time === t && o.posicao === 'GOL');
-        if (g && m.controlado[t] !== g.id && !(m.posse === j.id && m.naMao !== j.id)) {
-          assumirControle(m, t, g);
+        if (g && m.controlado[t] !== g.id && !(m.posse === j.id && m.naMao !== j.id) && assumirControle(m, t, g)) {
           (m.trocaManual ??= {})[t] = { tick: m.tick, id: g.id, goleiro: true };
           m.eventos.push({ tipo: 'troca', id: g.id, goleiro: true });
           continue;
@@ -1057,8 +1325,7 @@ function trocarJogador(m, entradas) {
     // com a bola no pé o TROCAR não tira o controle de quem conduz; com a bola nas mãos do
     // goleiro, TROCAR passa o controle para um jogador de linha e a IA repõe
     const comBola = m.posse === j.id && m.naMao !== j.id;
-    if (apertou && !comBola && melhor && melhor.id !== j.id) {
-      assumirControle(m, t, melhor);
+    if (apertou && !comBola && melhor && melhor.id !== j.id && assumirControle(m, t, melhor)) {
       (m.trocaManual ??= {})[t] = { tick: m.tick, id: melhor.id, goleiro: false };
       m.eventos.push({ tipo: 'troca', id: melhor.id });
     }
