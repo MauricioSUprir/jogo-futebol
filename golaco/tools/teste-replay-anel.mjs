@@ -430,11 +430,11 @@ async function itensG() {
   {
     const ps = comAutor.filter(g => g.p).map(g => g.p), ts = gols.filter(g => g.t).map(g => g.t), p2 = ts.filter(t => t.p2).map(t => t.p2);
     const sp = ps.reduce((s, p) => s + p.solido, 0), np = ps.reduce((s, p) => s + p.n, 0), prop = Math.min(...ps.map(p => p.proprio));
-    const st = ts.reduce((s, t) => s + t.solido, 0), nt = ts.reduce((s, t) => s + t.n, 0), cl = ts.reduce((s, t) => s + t.corpoLente, 0), cm = Math.min(...ts.map(t => t.corpoMin));
+    const st = ts.reduce((s, t) => s + t.solido, 0), nt = ts.reduce((s, t) => s + t.n, 0), cl = ts.reduce((s, t) => s + t.corpoLente, 0), cm = Math.min(...ts.map(t => t.corpoMin).filter(v => v != null));
     const reagem = p2.filter(q => q.reage >= 6).length;
     const exP = ps.find(p => p.solido)?.solidoEx, exT = ts.find(t => t.solido)?.solidoEx, exC = ts.find(t => t.corpoLente)?.corpoEx;
     reg('G13 a lente fora dos sólidos (1ª pessoa e treinador); nada do próprio corpo na lente; ninguém na lente do treinador; ele reage no plano 2',
-      `1ª pessoa: ${sp}/${np} quadros em sólido${exP ? ` (${exP})` : ''}, o corpo dele que aparece a ≥ ${fmt(prop, 2)} m da lente; treinador: ${st}/${nt} em sólido${exT ? ` (${exT})` : ''}, ${cl} quadros com corpo a < ${REPLAY.primeira.corpo} m no quadro${exC ? ` (${exC})` : ''} (o mais perto a ${fmt(cm, 2)} m); a mão acima da cabeça (≥ 0,1 s) em ${reagem}/${p2.length} partes 2`,
+      `1ª pessoa: ${sp}/${np} quadros em sólido${exP ? ` (${exP})` : ''}, o corpo dele que aparece a ≥ ${fmt(prop, 2)} m da lente; treinador: ${st}/${nt} em sólido${exT ? ` (${exT})` : ''}, ${cl} quadros com corpo a < ${REPLAY.primeira.corpo} m no quadro${exC ? ` (${exC})` : ''} (${Number.isFinite(cm) ? `o mais perto a ${fmt(cm, 2)} m` : 'ninguém a < 2,5 m dela'}); a mão acima da cabeça (≥ 0,1 s) em ${reagem}/${p2.length} partes 2`,
       `0; ≥ 0,20 m; 0; 0; todas`, ps.length > 0 && ts.length > 0 && p2.length > 0 && sp === 0 && prop >= 0.2 && st === 0 && cl === 0 && reagem === p2.length);
   }
   // G12

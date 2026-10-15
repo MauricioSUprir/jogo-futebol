@@ -186,6 +186,8 @@ export async function medirSemente(pastaJs, sem, opc = {}) {
       if (t === p.golTick) m.golGol = telas.slice(0, 2).every(([asp, peq]) => { const c2 = RO.cameraTreinador(e, t, asp, peq, {}); RO.projetar(c2.x, c2.y, c2.z, c2.lx, c2.ly, c2.lz, c2.fov, asp, gx, gy, 0, pr); return pr.z > 0 && Math.abs(pr.x) <= 1 && Math.abs(pr.y) <= 1; });
     }
     m.fovs = m.fovs.size;
+    // (o filho manda por JSON: Infinity viraria null e o pai leria 0 m — "o mais perto a 0,00 m" sem ninguém a < 2,5 m)
+    if (!Number.isFinite(m.corpoMin)) m.corpoMin = null;
     if (p.corte != null && e.parte2) m.p2 = medirParte2(a, p, e);
     return m;
   }
