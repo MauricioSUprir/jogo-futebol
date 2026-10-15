@@ -20,9 +20,9 @@
 //     #106, ia 1136 t 18096 #106, ...);
 //  C. a proteção (MOD com o marcador perto) em disparada: a bola posta onde o corpo estaria andando devagar (ia 1034 t
 //     1106 #9: 6,5 m/s, 2,09 m);
-//  D. logo depois do domínio a bola ao lado do pé, fora do alcance da frente do pé: ele ia buscá-la e corria ao lado
-//     dela a ~0,6 m até passar (ia 1136 t 18096 #106). Agora o toque sai com a parte de dentro/fora do pé (o alcance do
-//     domínio) — só antes do 1º toque de condução (em toda a condução ele também tirava os chutes de fora da área).
+// (Fica para depois: logo depois do domínio a bola ao lado do pé, fora do alcance da frente do pé — ele vai buscá-la e
+// corre ao lado dela a ~0,6 m até passar, lado 1102 t 19824 #107. O toque com a parte de dentro/fora do pé resolvia, mas
+// tirava os chutes de fora da área no painel: 39 → 32–34%, abaixo da meta de 35–40%.)
 //
 // Metas:
 //  1. "passou da bola" ≤ 0,5 por partida (todos os jogadores; a publicada: 0,89 nestas 18, 1,33 em 24 de 2 × 4 min);

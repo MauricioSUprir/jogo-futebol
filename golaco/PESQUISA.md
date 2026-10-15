@@ -364,7 +364,8 @@ fora da conta o corte/inversão pedidos (analógico a mais de 60° de onde ele v
 partidas na versão publicada (d3725f55; IA × IA e o humano roteirizado como no celular): **1,33 por partida**, bola até
 2,85 m atrás, 3 perdidas para o adversário. Nas versões antigas (972b1ff3, antes da condução curta) os números eram os
 mesmos: **sempre existiu**, não veio da condução curta. Cada caso foi reprisado da foto do mundo (structuredClone, a
-continuação é bit a bit) para achar a causa e conferir a correção no mesmo lance; quatro causas (CONTRATOS.md, recepção).
+continuação é bit a bit) para achar a causa e conferir a correção no mesmo lance; três causas corrigidas (CONTRATOS.md,
+recepção) e uma que fica para depois (abaixo).
 
 | Fonte | Dado | O que aproveitamos |
 |---|---|---|
@@ -373,11 +374,14 @@ continuação é bit a bit) para achar a causa e conferir a correção no mesmo 
 | Madden NFL 17 (notas dos desenvolvedores sobre a bola solta) e a crítica ao "fight for the fumble" | A recuperação da bola solta tem de seguir o estado físico da bola: quando já é claro quem a alcançou, a animação/decisão de outro não deve tomar a vez | O passe lento colado no pé do adversário é dele — o recebedor que só marcou o domínio não encerra a vez (`RECEPCAO.passeLento`) |
 
 Depois da correção: no `teste-nao-passa` (18 partidas de 2 × 3 min, IA × IA e o humano roteirizado a 30 qps) 0,89 →
-0,28 por partida, passe lento colado no pé de outro 5 → 0 e bola perdida depois de passar dela 6 → 0; nas reprises dos
-48 casos da publicada, 35 → 14 ainda passam (quase todos cortes de 40–60° a 4–6 m/s com o passo de apoio 0,3–0,5 m além
-da bola: é o corte, não a bola dominada). O toque com a parte de dentro/fora do pé em TODA a condução também resolvia a
-bola ao lado do pé, mas tirava os chutes de fora da área no painel (39 → 32%, meta 35–40%): ficou só logo depois do
-domínio (painel de 48 partidas: 32–34% com ele em toda a condução, ~41% sem ele).
+0,39 por partida, passe lento colado no pé de outro 5 → 0 e bola perdida depois de passar dela 6 → 0; nas reprises dos
+48 casos da publicada, 35 → 15 ainda passam (quase todos cortes de 40–60° a 4–6 m/s com o passo de apoio 0,3–0,5 m além
+da bola: é o corte, não a bola dominada). **Fica para depois:** a bola ao lado do pé, fora do alcance da frente do pé,
+logo depois do domínio (ele vai buscá-la e corre ao lado dela a ~0,6 m até passar; lado 1102 t 19824 #107). O toque com a
+parte de dentro/fora do pé (o alcance do domínio) resolvia, mas tirava os chutes de fora da área no painel — em toda a
+condução 31,6% / 33,2% e só logo depois do domínio 32,1% / 33,7% (sementes 1001–1024 / 1025–1048; main 39,4% / 39,2%; meta
+35–40%); sem ele 40,7% / 35,8% / 37,2% (com 1049–1072; main 34,8%). Gols por partida, sem ele: 1,46 / 1,38 / 2,21 × main
+2,25 / 1,67 / 1,83 (± 0,5 em 24 partidas: dentro do sorteio).
 
 O hash da partida muda de propósito a partir do passo ~300 (`hash-partida`); o treino fica bit a bit igual
 (`hash-igual`). Com o hash novo, três itens que estão na beira da meta também na main mudam de lado pelo sorteio dos

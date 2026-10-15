@@ -182,10 +182,6 @@ pede à passada que tire o pé do toque do chão a tempo, e o toque espera por e
     `cond.ref` fica com esse analógico (o condutor que pedir outra coisa replaneja no tick seguinte, com a bola à frente);
   - **proteção só até `CONDUCAO.protecaoVmax` m/s** (`emProtecao`): acima, o MOD é a condução curta (freando com a bola
     no pé); a proteção começa quando o corpo cai a isso;
-  - **toque com a parte de dentro/fora do pé logo depois do domínio** (`controlarComBola`, com `cond.ult.tipo ===
-    'dominio'`): sem toque possível com a frente do pé e sem o toque marcado viável, procura um com o alcance do domínio
-    (`noAlcance` relaxado) antes de ir buscar a bola; o toque marcado assim leva `relax: true` (executado e remarcado com
-    o mesmo alcance). Depois do 1º toque de condução, como antes (em toda a condução, ele mudava os chutes de fora);
   - **passe lento não é só do recebedor** (`sim.js bolaLivre`, `RECEPCAO.passeLento`): com um passe para outro no ar, o
     candidato que só MARCOU o domínio (posse ainda nula, o mesmo `voo.tickChave`) não encerra a vez — seguem os
     adversários de quem passou com a bola no chão, até `passeLento` m/s e ao alcance do pé AGORA (`bolaLentaNoPe`), e o

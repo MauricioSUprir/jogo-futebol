@@ -864,8 +864,7 @@ export function controlarComBola(m, j) {
   }
   // toque marcado para agora
   if (c.toque && m.tick >= c.toque.tick) {
-    // (o toque marcado com a parte de dentro/fora do pé, logo depois do domínio: `relax`, abaixo)
-    const alc = noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y, !!c.toque.relax);
+    const alc = noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y);
     const pe = peLivre(j, c.toque.pe, false);
     if (alc && pe >= 0) {
       // o analógico pulou NESTE tick (gesto rápido do polegar pela borda): o 1º tick ainda está no meio do caminho e
@@ -899,9 +898,8 @@ export function controlarComBola(m, j) {
     if (alc && j.pes[0].apoio && j.pes[1].apoio && m.tick - c.toque.tick < GESTO.esperaSaida) return;
     // sem pé de apoio agora (fase de voo) ou fora do alcance: remarca para a próxima
     // oportunidade real (a passada de verdade pode estar uns ticks fora da prevista)
-    const rx = !!c.toque.relax;
-    const op = procurarOportunidade(m, j, 1, 20, true, prot, rx);
-    if (op) { c.toque = rx ? { tick: m.tick + op.i, pe: op.pe, bx: op.bx, bz: op.bz, tipo: 'ajuste', relax: true } : { tick: m.tick + op.i, pe: op.pe, bx: op.bx, bz: op.bz, tipo: 'ajuste' }; return; }
+    const op = procurarOportunidade(m, j, 1, 20, true, prot, false);
+    if (op) { c.toque = { tick: m.tick + op.i, pe: op.pe, bx: op.bx, bz: op.bz, tipo: 'ajuste' }; return; }
     c.toque = null; // procura de novo abaixo (ou vai buscar a bola)
   }
   if (c.toque && !precisaReplanejar(m, j, prot)) { c.bolaDesviada = false; return; }
@@ -930,11 +928,6 @@ export function controlarComBola(m, j) {
     }
     c.busca = false;
   } else if (!c.toque || !toqueMarcadoViavel(m, j, prot)) {
-    // (só na partida) logo depois do domínio (nenhum toque de condução ainda), sem toque possível com a frente do pé: a
-    // bola ao lado do pé ainda dá com a parte de dentro/fora (o alcance do domínio, noAlcance relaxado) — antes ele ia
-    // buscá-la e corria ao lado dela, a ~0,6 m, até passar (o 1º toque da IA embalada leva a bola no ritmo da corrida)
-    const opR = m.partida && !prot && c.ult && c.ult.tipo === 'dominio' ? procurarOportunidade(m, j, 1, 20, true, prot, true) : null;
-    if (opR) { c.toque = { tick: m.tick + opR.i, pe: opR.pe, bx: opR.bx, bz: opR.bz, tipo: 'ajuste', relax: true }; c.busca = false; return; }
     // nenhum toque possível tão cedo e o marcado não vai alcançar a bola: vai buscá-la
     c.toque = null;
     c.busca = true;
