@@ -28,9 +28,29 @@
 //       quadros; e (contraprova 15/10) a lateral do golaço passando por um treinador sem salto (≤ 0,3 m por quadro: o z
 //       dela é do plano inteiro);
 //   T16 treinadorDoTime(T, t) (o gancho das cenas): {id, time, x, z, rumo, kit} do time, dentro da área técnica; null sem
-//       treinadores.
+//       treinadores;
+//   T17 (15/10, frente "replay robusto") a reação ao gol de QUALQUER gesto, sem partida (determinístico): cada postura do
+//       "observa" (forçada), cada gesto antes do gol (nenhum, reclama, desarme, defesa, instrui, lamento da bola na trave,
+//       palmas), 4 atrasos do gol depois do gesto e 2 lances (a bola chegando ao gol de lá de perto e de longe), em N
+//       sementes: as metas do T7 (a mão acima do topo da cabeça em 0,25–0,40 s, comemorando ≥ 3 s; sofreu ≤ 0,6 s) e do T5
+//       (a mão ≤ 0,15 m por passo e a ≥ RAIO_CABECA + 0,02 m da cabeça) em 100% dos casos. (Nas partidas os gols saem de
+//       poucos estados; das mãos nas costas o soco no ar passava de 0,15 m por passo — 0,151 na cópia do domínio-sem-passar.)
+//   T18 (15/10) quem corre perto da área técnica, sem partida (determinístico): o treinador parado no lugar de sempre ou
+//       recuado (a bola na linha de cá), um jogador passando por ele de 8 (16 no --estresse) direções, a 3 distâncias do
+//       centro dele, a 3–8,5 m/s, em linha reta ou em curva (±3 m/s² de lado), sem passar das placas; e a bola rolando para ele
+//       de 8 direções a 6–16 m/s: treinador × jogador ≥ 0,5 m em 100% dos casos (≥ 1 m em ≥ 99%) e a bola fora da cápsula
+//       (r 0,25 + raio) em 100%. (Na partida, um lateral correndo pelo fundo da área a 6,4 m/s chegou a 0,46 m: a esquiva
+//       de antes mandava sempre para o fundo, z 39,2.)
+//   T19 (contraprova 15/10) a esquiva saindo da QUINA da área, sem partida (determinístico): o treinador no limite de x (a
+//       bola longe, de lado: para dentro e para fora do campo), parado no lugar ou recuado, e alguém passando por ele de
+//       16 direções (32 no --estresse), a 3 distâncias de lado, a 3 e 6 m/s: o centro e os dois pés dentro da área (a
+//       margem do T2, 0,15 m) em 100% dos passos. (Na partida da cabeceio-ia, semente 10, a esquiva para a frente com o
+//       corpo virado para a bola levou o pé de dentro a 0,42 m do centro, para fora da área: 45 passos.)
+// As partidas seguem `depoisFim` s depois do apito final (como a página: o laço continua com o mundo parado, e o último
+// gol tem a cena dele): o gol nos últimos segundos media a comemoração só até o apito (2,48 s na cópia do domínio).
+// --estresse: 3× as sementes das partidas (72) e do T17 (12); 2× as direções do T18 e do T19.
 // Na versão sem os treinadores (main/saot antes desta frente) os módulos não existem: reprova.
-//   node tools/teste-tecnicos.mjs [--js <pasta js>] [--sementes N] [--par N] [--min M]
+//   node tools/teste-tecnicos.mjs [--js <pasta js>] [--sementes N] [--par N] [--min M] [--estresse]
 import { fork } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -42,7 +62,10 @@ const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const JS = path.resolve(arg('--js', path.join(AQUI, '../js')));
 const MIN_TEMPO = +arg('--min', 4);
-const NS = +arg('--sementes', 24);
+const ESTRESSE = args.includes('--estresse');
+const NS = +arg('--sementes', ESTRESSE ? 72 : 24);
+const NS17 = ESTRESSE ? 12 : 4;
+const DEPOIS_FIM = 4;   // s de passos depois do apito final
 const imp = f => import(pathToFileURL(path.join(JS, f)).href);
 const GRAU = 180 / Math.PI;
 
@@ -111,7 +134,9 @@ async function coletar(sem) {
     if (!EF.dentroAreaTecnica(tc.time, tc.j.x, tc.j.z, 0.15)) return `centro em (${fmt(tc.j.x, 2)}, ${fmt(tc.j.z, 2)})`;
     return null;
   };
-  for (let i = 0; i < 400000 && m.partida.estado !== 'fim'; i++) {
+  let nFim = 0;
+  for (let i = 0; i < 400000 && nFim < DEPOIS_FIM / PASSO; i++) {
+    if (m.partida.estado === 'fim') nFim++;
     const ev = P.passoPartida(m, P.entradaDemoPartida(m), null) ?? m.eventos;
     TE.leituraDoMundo(m, ev, L);
     const t0 = performance.now();
@@ -253,6 +278,181 @@ async function coletar(sem) {
   return R;
 }
 
+// ------------------------------------------------------------------------------------------------ T17
+/** A reação ao gol de qualquer gesto (sem partida; NS17 sementes). */
+async function itemT17() {
+  const { PASSO } = await imp('config.js');
+  const { J, RAIO_CABECA } = await imp('anim.js');
+  const GESTOS = [null, 'reclama', 'desarme', 'defesa', 'instrui', 'lamenta', 'aplaudir'];
+  const ruins = [];
+  let n = 0, maoPasso = 0, maoPassoEx = '', maoCab = Infinity, cruza = [Infinity, -Infinity], sofreuMax = 0, comMin = Infinity;
+  for (let sem = 1; sem <= NS17; sem++) for (const post of [0, 1, 2, 3, 4]) for (const gesto of GESTOS) for (const atraso of [0.05, 0.3, 0.7, 1.2]) for (const longe of [false, true]) {
+    const T = TE.criarTecnicos(null, sem), L = TE.leituraVazia(TE.criarLeitura());
+    L.estado = 'jogo'; L.emJogo = true; L.bola.y = 0.11; L.bola.x = longe ? -8 : 10; L.bola.z = 10; L.ataca[0] = 1; L.ataca[1] = -1;
+    for (const tc of T.tecs) { tc.postura = post; tc.posturaAte = 1e9; }
+    for (let i = 0; i < 90; i++) { L.nEventos = 0; TE.passoTecnicos(T, L); }
+    // o gesto (o evento do jogo que o provoca, para os dois times) e, depois de `atraso` s, o gol do time 0, com a bola
+    // indo para o gol de lá (como no lance de verdade: a tensão do lance vale)
+    L.nEventos = 0;
+    const ev = (tipo, time) => { const e = L.eventos[L.nEventos++]; e.tipo = tipo; e.time = time; e.forca = 3; };
+    if (gesto === 'instrui') for (const tc of T.tecs) tc.instruiEm = T.k;
+    else if (gesto === 'lamenta') { ev('chute', 0); ev('chute', 1); ev('trave', -1); L.bola.x = 50; }
+    else if (gesto === 'aplaudir') ev('aplaudir', -1);
+    else if (gesto) { ev(gesto, 0); ev(gesto, 1); }
+    const nAntes = Math.max(1, Math.round(atraso / PASSO));
+    const ant = [null, null], med = [{ mao: null, com: 0 }, { sof: null }];
+    let golK = -1;
+    const x0 = longe ? 5 : 30, x1 = longe ? 51 : 48;
+    for (let k = 0; k < nAntes + Math.round(3.6 / PASSO); k++) {
+      if (k > 0) L.nEventos = 0;
+      if (k === nAntes) { ev('gol', 0); golK = T.k + 1; }
+      if (gesto !== 'lamenta' || k > 0) { L.bola.x = x0 + (x1 - x0) * Math.min(1, k / nAntes); L.bola.z = longe ? -5 : 12; }
+      L.posseTime = 0;
+      TE.passoTecnicos(T, L);
+      T.tecs.forEach((tc, q) => {
+        const o = tc.atu, ic = J.cabeca * 3;
+        const maos = [J.maoE, J.maoD].map(i => [o[i * 3], o[i * 3 + 1], o[i * 3 + 2]]);
+        for (const mm of maos) maoCab = Math.min(maoCab, Math.hypot(mm[0] - o[ic], mm[1] - o[ic + 1], mm[2] - o[ic + 2]));
+        if (ant[q]) for (let p = 0; p < 2; p++) {
+          const d = Math.hypot(maos[p][0] - ant[q][p][0], maos[p][1] - ant[q][p][1], maos[p][2] - ant[q][p][2]);
+          if (d > maoPasso) { maoPasso = d; maoPassoEx = `semente ${sem}, postura ${post}, ${gesto ?? 'sem gesto'}, gol ${atraso} s depois: ${tc.id} ${tc.estado}/${tc.variante}`; }
+        }
+        ant[q] = maos;
+        if (golK < 0) return;
+        const t = (T.k - golK) * PASSO;
+        if (tc.time === 0) {
+          if (med[0].mao == null && Math.max(maos[0][1], maos[1][1]) > o[ic + 1] + RAIO_CABECA * 1.1) med[0].mao = t;
+          if (tc.estado === 'comemora') med[0].com = t;
+        } else if (med[1].sof == null) {
+          const dE = Math.hypot(maos[0][0] - o[ic], maos[0][1] - o[ic + 1], maos[0][2] - o[ic + 2]), dD = Math.hypot(maos[1][0] - o[ic], maos[1][1] - o[ic + 1], maos[1][2] - o[ic + 2]);
+          if ((dE < 0.25 && dD < 0.25) || o[J.pelve * 3 + 1] < 0.72) med[1].sof = t;
+        }
+      });
+    }
+    n++;
+    const [m0, m1] = med;
+    if (m0.mao != null) { cruza[0] = Math.min(cruza[0], m0.mao); cruza[1] = Math.max(cruza[1], m0.mao); }
+    comMin = Math.min(comMin, m0.com); sofreuMax = Math.max(sofreuMax, m1.sof ?? 99);
+    if (!(m0.mao != null && m0.mao >= 0.25 && m0.mao <= 0.40) || m0.com < 3 || !(m1.sof != null && m1.sof <= 0.6))
+      ruins.push(`semente ${sem}, postura ${post}, ${gesto ?? 'sem gesto'}, gol ${atraso} s depois${longe ? ' (de longe)' : ''}: mão ${m0.mao == null ? 'nunca' : fmt(m0.mao, 2) + ' s'}, comemora ${fmt(m0.com, 2)} s, sofreu ${m1.sof == null ? 'nunca' : fmt(m1.sof, 2) + ' s'}`);
+  }
+  reg('T17 a reação ao gol de qualquer gesto (posturas × gestos × atrasos × lances, sem partida): T7 e a mão do T5 em 100%',
+    `${n} casos (${NS17} sementes): ${ruins.length} fora (${ruins.slice(0, 2).join('; ') || '-'}); mão acima da cabeça em ${fmt(cruza[0], 2)}–${fmt(cruza[1], 2)} s, comemora ≥ ${fmt(comMin, 2)} s, sofreu ≤ ${fmt(sofreuMax, 2)} s; mão ${fmt(maoPasso, 3)} m por passo (${maoPassoEx}); mão–cabeça ≥ ${fmt(maoCab, 3)} m`,
+    `0 fora; 0,25–0,40 s; ≥ 3 s; ≤ 0,6 s; ≤ 0,15 m; ≥ ${fmt(RAIO_CABECA + 0.02, 3)} m`, ruins.length === 0 && maoPasso <= 0.15 && maoCab >= RAIO_CABECA + 0.02);
+}
+
+// ------------------------------------------------------------------------------------------------ T19
+/** A esquiva saindo da quina da área: os pés dentro dela (a margem do T2). */
+async function itemT19() {
+  const { PASSO, CAMPO } = await imp('config.js');
+  const { J } = await imp('anim.js');
+  const NDIR = ESTRESSE ? 32 : 16;
+  const MZp = CAMPO.meioZ + CAMPO.entorno - 0.45;   // o corpo do jogador nunca passa daqui (as placas)
+  let n = 0, ruins = 0, ex = '', pior = Infinity;
+  // a bola parada longe, de lado (ele no limite de x da área): com z ≥ 24 e a ≤ 16 m em x dele, ele recua
+  const lances = [[11.5, 26, 'recuado, a bola para dentro'], [16, 12, 'no lugar, a bola para dentro'], [-40, 12, 'no lugar, a bola para fora'], [-33, 26, 'recuado, a bola para fora']];
+  for (const [bx, bz, nome] of lances) for (let q = 0; q < NDIR; q++) for (const off of [-1.5, 0, 1.5]) for (const v of [3, 6]) {
+    const T = TE.criarTecnicos(null, 3), L = TE.leituraVazia(TE.criarLeitura());
+    L.estado = 'jogo'; L.emJogo = true; L.bola.x = bx; L.bola.y = 0.11; L.bola.z = bz;
+    for (let i = 0; i < 480; i++) { L.nEventos = 0; TE.passoTecnicos(T, L); }
+    const tc = T.tecs[0], a = EF.areaTecnica(tc.time);
+    const ang = 2 * Math.PI * q / NDIR, dx = -Math.cos(ang), dz = -Math.sin(ang);
+    const px = tc.j.x + Math.cos(ang) * 10 - dz * off, pz = tc.j.z + Math.sin(ang) * 10 + dx * off;
+    if (pz > MZp) continue;
+    const mundo = { tick: 0, partida: { estado: 'jogo' }, parada: null, posse: null, naMao: null, voo: null, ataca: [1, -1], placar: [0, 0],
+      bola: { p: { x: bx, y: 0.11, z: bz }, v: { x: 0, y: 0, z: 0 } }, jogadores: [{ id: 106, time: 1, x: px, z: pz, vx: dx * v, vz: dz * v }] };
+    n++;
+    let fora = 0, foraEx = '';
+    for (let k = 0; k < Math.round(4 / PASSO); k++) {
+      const jg = mundo.jogadores[0];
+      jg.x += jg.vx * PASSO; jg.z = Math.min(MZp, jg.z + jg.vz * PASSO); if (jg.z >= MZp) jg.vz = 0;
+      TE.leituraDoMundo(mundo, [], L);
+      TE.passoTecnicos(T, L);
+      const o = tc.atu;
+      for (const [x, z] of [[o[J.tornozeloE * 3], o[J.tornozeloE * 3 + 2]], [o[J.tornozeloD * 3], o[J.tornozeloD * 3 + 2]], [tc.j.x, tc.j.z]]) {
+        pior = Math.min(pior, x - (a.x0 + 0.15), a.x1 - 0.15 - x, z - (a.z0 + 0.15), a.z1 - 0.15 - z);
+        if (!EF.dentroAreaTecnica(tc.time, x, z, 0.15)) { fora++; if (!foraEx) foraEx = `(${fmt(x, 2)}, ${fmt(z, 2)}) com o centro em (${fmt(tc.j.x, 2)}, ${fmt(tc.j.z, 2)})`; }
+      }
+    }
+    if (fora) { ruins++; if (!ex) ex = `${nome}, de ${Math.round(ang * 180 / Math.PI)}°, ${off} m de lado, ${v} m/s: ${fora} pontos fora, o 1º em ${foraEx}`; }
+  }
+  reg('T19 a esquiva saindo da quina da área (sem partida): o centro e os pés dentro da área (margem 0,15 m)',
+    `${n} corridas: ${ruins} com algo fora${ex ? ` (${ex})` : ''}; a menor folga até a margem ${fmt(pior, 3)} m`, '0', ruins === 0);
+}
+
+// ------------------------------------------------------------------------------------------------ T18
+/** Quem corre perto da área técnica e a bola rolando para ela (sem partida; as direções dobram no --estresse). */
+async function itemT18() {
+  const { PASSO, CAMPO, BOLA } = await imp('config.js');
+  const { proxVelRolando, DT_BOLA } = await imp('bola.js');
+  const NDIR = ESTRESSE ? 16 : 8;
+  let n = 0, nb = 0, dMin = Infinity, dMinEx = '', abaixo1 = 0, dentro = 0, dentroEx = '';
+  const MZp = CAMPO.meioZ + CAMPO.entorno - 0.45;   // o corpo do jogador nunca passa daqui (as placas)
+  for (const recuado of [false, true]) {
+    // o treinador do time 0 parado no lugar dele (a bola longe, ou na linha de cá na frente dele: recuado)
+    const T = TE.criarTecnicos(null, 3), L = TE.leituraVazia(TE.criarLeitura());
+    L.estado = 'jogo'; L.emJogo = true; L.bola.y = 0.11;
+    const tc = T.tecs[0];
+    const pos = () => { L.bola.x = recuado ? tc.centro : 0; L.bola.z = recuado ? CAMPO.meioZ - 0.4 : 0; L.bola.vx = L.bola.vz = 0; };
+    pos();
+    for (let i = 0; i < 360; i++) { L.nEventos = 0; TE.passoTecnicos(T, L); }
+    const cx = tc.j.x, cz = tc.j.z;
+    // jogadores: começam a 9 m dele, em direção ao ponto a `off` m do centro dele (de lado), em linha reta ou em curva
+    for (let q = 0; q < NDIR; q++) for (const off of [-0.8, 0, 0.8]) for (const v of [3, 5.5, 8.5]) for (const aLado of [0, 3, -3]) {
+      const w = aLado / v;   // a curva: 3 m/s² de lado
+      const ang = 2 * Math.PI * q / NDIR, dx = -Math.cos(ang), dz = -Math.sin(ang);
+      let px = cx + Math.cos(ang) * 9 - dz * off, pz = cz + Math.sin(ang) * 9 + dx * off;
+      if (pz > MZp) continue;
+      const T2 = TE.criarTecnicos(null, 3), L2 = TE.leituraVazia(TE.criarLeitura());
+      Object.assign(L2, { estado: 'jogo', emJogo: true }); L2.bola.y = 0.11;
+      // o mesmo treinador, já parado no lugar (os passos de antes de novo: determinístico)
+      const t2 = T2.tecs[0];
+      L2.bola.x = L.bola.x; L2.bola.z = L.bola.z;
+      for (let i = 0; i < 360; i++) { L2.nEventos = 0; TE.passoTecnicos(T2, L2); }
+      let vx = dx * v, vz = dz * v, ruim = Infinity;
+      const mundo = { tick: 0, partida: { estado: 'jogo' }, parada: null, posse: null, naMao: null, voo: null, ataca: [1, -1], placar: [0, 0],
+        bola: { p: { x: L.bola.x, y: 0.11, z: L.bola.z }, v: { x: 0, y: 0, z: 0 } }, jogadores: [{ id: 106, time: 1, x: px, z: pz, vx, vz }] };
+      for (let k = 0; k < Math.round(4 / PASSO); k++) {
+        // o jogador (curva: a velocidade gira w rad/s), preso antes das placas
+        const c = Math.cos(w * PASSO), s2 = Math.sin(w * PASSO), nvx = vx * c - vz * s2, nvz = vx * s2 + vz * c;
+        vx = nvx; vz = nvz; px += vx * PASSO; pz = Math.min(MZp, pz + vz * PASSO);
+        // a leitura de verdade (leituraDoMundo) de um mundo com só esse jogador e a bola parada onde estava
+        mundo.jogadores[0].x = px; mundo.jogadores[0].z = pz; mundo.jogadores[0].vx = vx; mundo.jogadores[0].vz = pz >= MZp ? 0 : vz;
+        TE.leituraDoMundo(mundo, [], L2);
+        TE.passoTecnicos(T2, L2);
+        const d = Math.hypot(px - t2.j.x, pz - t2.j.z);
+        ruim = Math.min(ruim, d);
+      }
+      n++;
+      if (ruim < 1) abaixo1++;
+      if (ruim < dMin) { dMin = ruim; dMinEx = `${recuado ? 'recuado' : 'no lugar'}, de ${Math.round(ang * 180 / Math.PI)}°, ${off} m de lado, ${v} m/s${aLado ? `, curva de ${aLado} m/s²` : ''}`; }
+    }
+    // a bola rolando para ele (de 8 direções do campo e de lado, rasteira) a 6, 11 e 16 m/s
+    for (let q = 0; q < 8; q++) for (const vb of [6, 11, 16]) for (const off of [-0.3, 0, 0.3]) {
+      const ang = Math.PI * (1.15 + 0.7 * q / 7), dx = -Math.cos(ang), dz = -Math.sin(ang);
+      const T2 = TE.criarTecnicos(null, 3), L2 = TE.leituraVazia(TE.criarLeitura());
+      Object.assign(L2, { estado: 'jogo', emJogo: true });
+      L2.bola.x = L.bola.x; L2.bola.z = L.bola.z; L2.bola.y = 0.11;
+      for (let i = 0; i < 360; i++) { L2.nEventos = 0; TE.passoTecnicos(T2, L2); }
+      const t2 = T2.tecs[0];
+      // começa a 12 m dele, com a velocidade para chegar até ele (a rolagem freia)
+      let bx = t2.j.x + Math.cos(ang) * 12 - dz * off, bz = t2.j.z + Math.sin(ang) * 12 + dx * off, sv = vb, ep = 0, epMax = 0;
+      for (let k = 0; k < Math.round(3 / PASSO); k++) {
+        for (let qq = 0; qq < 2; qq++) { sv = proxVelRolando(sv, DT_BOLA); bx += dx * sv * DT_BOLA; bz += dz * sv * DT_BOLA; }
+        if (bz > CAMPO.meioZ + CAMPO.entorno - 0.11) { bz = CAMPO.meioZ + CAMPO.entorno - 0.11; sv = 0; }
+        L2.nEventos = 0; L2.bola.x = bx; L2.bola.z = bz; L2.bola.vx = dx * sv; L2.bola.vz = dz * sv;
+        TE.passoTecnicos(T2, L2);
+        if (Math.hypot(bx - t2.j.x, bz - t2.j.z) < 0.25 + BOLA.raio) { ep++; epMax = Math.max(epMax, ep); } else ep = 0;
+      }
+      nb++;
+      if (epMax > 0) { dentro++; if (!dentroEx) dentroEx = `${recuado ? 'recuado' : 'no lugar'}, de ${Math.round(ang * 180 / Math.PI)}°, ${vb} m/s, ${off} m de lado: ${epMax} passos`; }
+    }
+  }
+  reg('T18 quem corre perto da área técnica e a bola rolando para ela (sem partida): o treinador sai da frente',
+    `${n} corridas: mín ${fmt(dMin, 2)} m (${dMinEx}); a < 1 m em ${abaixo1} (${fmt(100 * abaixo1 / Math.max(1, n), 1)}%); ${nb} bolas: ${dentro} dentro da cápsula${dentroEx ? ` (${dentroEx})` : ''}`,
+    '≥ 0,5 m em 100%; < 1 m em ≤ 1%; 0', dMin >= 0.5 && abaixo1 / Math.max(1, n) <= 0.01 && dentro === 0);
+}
+
 if (args.includes('--filho')) {
   process.send(await coletar(+arg('--s', 1)));
   process.exit(0);
@@ -304,7 +504,8 @@ if (!TE || !EF) {
   }
 
   // ---------------------------------------------------------------- partidas (processos filhos)
-  // --so S: só a semente S (diagnóstico)
+  // --so S: só a semente S (diagnóstico); --so-sinteticos: só o T17 e o T18
+  if (args.includes('--so-sinteticos')) { await itemT17(); await itemT18(); await itemT19(); console.log(tabelaTexto(linhas)); process.exit(falhas ? 1 : 0); }
   const SEMENTES = args.includes('--so') ? [+arg('--so')] : Array.from({ length: NS }, (_, i) => i + 1);
   const res = [];
   const nPar = Math.max(1, Math.min(SEMENTES.length, os.availableParallelism?.() ?? os.cpus().length, +arg('--par', 2)));
@@ -526,7 +727,10 @@ if (!TE || !EF) {
     const ruins = viol.filter(v => !v.startsWith('('));
     reg('T15 câmeras roteirizadas (pré-jogo, comemoração, lateral do golaço) a ≥ 0,6 m dos treinadores; a lateral sem salto no plano', viol.join('; '), '≥ 0,6 m em todos os quadros; ≤ 0,3 m por quadro', ruins.length === 0);
   }
-  console.log(`${res.length} partidas (sementes 1–${NS}) de 2 × ${MIN_TEMPO} min, ${nPar} processos, ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  await itemT17();
+  await itemT18();
+  await itemT19();
+  console.log(`${res.length} partidas (sementes 1–${NS}) de 2 × ${MIN_TEMPO} min (+ ${DEPOIS_FIM} s depois do apito final), ${nPar} processos, ${((Date.now() - t0) / 1000).toFixed(0)} s${ESTRESSE ? ' (--estresse)' : ''}`);
 }
 
 console.log(tabelaTexto(linhas));
