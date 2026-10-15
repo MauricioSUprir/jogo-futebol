@@ -439,3 +439,9 @@ do "vamos" e ele saía de novo (vamos:0 duas vezes seguidas; sementes 13 e 17) �
 reprovava, 5 → 10; a main 4 → 6). Quase tudo é carga por trás (15 de 19) de quem persegue o condutor que acabou de pegar a
 bola, a 2–4 m/s — o que a #480 ("faltas com sentido": quem só corre atrás não atropela) corrige: com a lógica da #480
 aplicada por cima desta (cópia em rascunho) 2 → 5 (passa) e o `teste-faltas` D 1,67 nas 12 primeiras (1,58 nas 36).
+Painel do CI (144 partidas, as mesmas sementes; main 1d85907b → ramo antes da virada 1a0e4f1b → com a virada e0cde400): gols
+1,85 → 1,75 → **2,10** (meta 2,3–3,5), chutes 8,6 → 8,6 → 9,3, de dentro da área ~5,3 → 5,4 → 6,2 e de fora 3,3 → 3,2 → 3,1
+por partida — a FRAÇÃO de fora cai 38,6 → 37,3 → **33,5%** (meta 35–40%) porque o ataque perde menos bolas logo depois do
+domínio e chega mais à área, não porque chuta menos de longe; gols de fora 18,1 → 17,8 → 11,9% (0,33 → 0,31 → 0,25 por
+partida; meta 12–18%); passe certo 88,5 → 88,0 → 88,1% (meta ≤ 88%); goleiro 68,8 → 71,9 → 69,7%; faltas 2,2 → 2,0 → 1,8
+por partida. Decisão do dono (pendência): aceitar a fração de chutes de fora abaixo da faixa com mais gols e chutes de dentro.
