@@ -2,7 +2,7 @@
 // rng fora do rng.js (os gestos saem de hash01(semente, id, bloco) — nunca Math.random) e sem escrever no mundo da partida:
 // a página (main.js) dá um passo deles por passo da simulação, depois de LER o mundo (leituraDoMundo), e o hash não muda
 // (tools/teste-tecnicos.mjs T10). Contrato em CONTRATOS.md ("Área técnica e treinadores"); constantes em config.js
-// TECNICOS; pesquisa em PESQUISA-ESTADIO.md §11.
+// TECNICOS; pesquisa em PESQUISA-ESTADIO.md §12.
 //
 // Cada um anda SÓ pela locomoção do jogo num mundo à parte (como os árbitros do cortejo do pré-jogo: jogador.js
 // passoCorpo, passoPassada e passoPeDesenhado; anim.js alturaQuadril e pose) — pé plantado não patina — dentro da ÁREA

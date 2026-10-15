@@ -69,6 +69,7 @@ const LISTA = [
   ['replay: anel dos últimos 10 s, roteiros do gol/impedimento/pausa e o replay de lances de verdade', 'teste-replay-anel.mjs'],
   ['replay: a cena semiautomática do impedimento e a checagem de posição legal (durações, critério, câmera, selo, coerência)', 'teste-saot.mjs'],
   ['comemoração do gol: cena pura (locomoção, golpes, gestos, abraço, quem sofreu, câmera; o mundo não muda)', 'teste-comemoracao.mjs'],
+  ['cena de substituição: quem sai pela linha mais perto (Regra 3.3), quem entra pelo meio, placa, câmera; o mundo não muda', 'teste-substituicao.mjs'],
   // Área técnica e treinadores (dono, 12/10: "quero a área técnica e o treinador")
   ['área técnica (Regra 1) e os 2 treinadores: dentro da área, pé plantado, gestos, olham a bola, reagem ao gol, nunca tapam a TV, hash igual', 'teste-tecnicos.mjs'],
   // Etapa 4: regras (IFAB)

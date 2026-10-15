@@ -11,9 +11,12 @@
 //      ?tecnicos=0 (mesma semente), 3 blocos de 300 quadros alternados: p95 (mediana dos blocos) ≤ o sem + 1 ms;
 //   V4 as LINHAS da área técnica no gramado: de uma câmera parada perto dela (sem os treinadores no desenho), os pixels
 //      sobre as linhas dos lados são mais claros que a grama ao lado (≥ +25 de luminância) nas duas áreas;
-//   V5 console sem erros.
-// Na versão sem os treinadores (origin/main antes desta frente) V1, V2 e V4 reprovam (não existem).
-//   node tools/teste-tecnicos-tela.mjs [--raiz <pasta do jogo>]
+//   V5 console sem erros;
+//   V6 a cena de substituição (a fila de cenas da main, 15/10; 6 cenas: 1, 4 e 2 pares em lateral perto da área técnica):
+//      os treinadores dão os passos da cena (o mundo parado), o ator mais perto a ≥ 0,5 m de cada um e a câmera de ala a
+//      ≥ 0,6 m da cápsula deles em todos os quadros.
+// Na versão sem os treinadores (origin/main antes desta frente) V1, V2, V4 e V6 reprovam (não existem).
+//   node tools/teste-tecnicos-tela.mjs [--raiz <pasta do jogo>] [--so V1,V6]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 
@@ -24,6 +27,8 @@ const meta = (nome, medido, alvo, ok) => res.push({ nome, medido, alvo, ok: !!ok
 const f2 = v => (Number.isFinite(v) ? v.toFixed(2) : String(v));
 const mediana = v => { const s = [...v].sort((a, b) => a - b); return s.length ? s[s.length >> 1] : NaN; };
 const erros = [];
+// --so V6: só uma parte (diagnóstico)
+const SO = args.includes('--so') ? new Set(args[args.indexOf('--so') + 1].split(',')) : null;
 const CEL = { largura: 844, altura: 390, dpr: 1, toque: true };
 const URL0 = '?q=media&demo=1&semente=4&toque=1&entalhe=1&hora=dia&replay=0&comemoracao=0';
 
@@ -36,7 +41,7 @@ async function abrirPagina(url) {
   return nav;
 }
 
-try {
+if (!SO || SO.has('V1')) try {
   const A = await abrirPagina(URL0);
   try {
     const pg = A.pagina;
@@ -148,6 +153,54 @@ try {
 } catch (e) {
   meta('Execução', String(e?.message ?? e).split('\n')[0], 'sem exceção', false);
 }
+// ------------------------------------------------------------------ V6 (a cena de substituição, 15/10)
+// a fila de cenas da main (#477): na cena de substituição (o mundo parado) os treinadores continuam no desenho, dão os
+// passos da cena (não congelam no meio de uma passada), saem da frente de quem sai e de quem entra e a câmera de ala
+// (na beira do campo, do lado de cá) nunca fica dentro de um deles
+if (!SO || SO.has('V6')) try {
+  const C6 = await abrirPagina('?q=media&semente=7&toque=1&entalhe=1&hora=dia&replay=0&comemoracao=0&substituicao=1');
+  try {
+    const r = await C6.pagina.evaluate(async () => {
+      const g = window.__golaco;
+      if (!g.cenaSubst || !g.substituicaoDeTeste || !g.estadio?.tecnicos) return { sem: true };
+      const { distanciaTecnico } = await import('./js/tecnicos.js');
+      const out = { cenas: 0, quadros: 0, distMin: Infinity, distEx: '', camMin: Infinity, camEx: '', andaram: 0, desenhados: 0, perto: 0 };
+      // a troca num lateral em frente a uma área técnica (o lateral de substituicaoDeTeste: x = ±14, z = meioZ + 0,5) e a
+      // de 5 pares dos dois times
+      const casos = [{ pares: [{ sai: 9, entra: 22 }] }, { pares: [{ sai: 9, entra: 22 }, { sai: 7, entra: 17 }, { time: 1, sai: 110, entra: 120 }, { time: 1, sai: 107, entra: 117 }] }, { pares: [{ sai: 11, entra: 19 }, { sai: 2, entra: 13 }] }];
+      for (const [ci, caso] of casos.entries()) {
+        for (const sem of [7, 3]) {
+          g.reiniciar({ modo: 'partida', semente: sem + ci * 10 });
+          for (let i = 0; i < 240; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+          g.substituicaoDeTeste({ pares: caso.pares, parada: 'lateral' });
+          let q = 0;
+          while (q < 600 && !g.cenaSubst.ativo) { g.relogio.avancar(1000 / 60, { desenhar: false }); q++; }
+          if (!g.cenaSubst.ativo) continue;
+          out.cenas++;
+          const t0 = g.estadio.tecnicos.k;
+          let k = 0;
+          while (g.cenaSubst.ativo && k < 900) {
+            g.relogio.avancar(1000 / 60, { desenhar: k % 4 === 0 }); k++;
+            if (!g.cenaSubst.ativo) break;
+            out.quadros++;
+            const tl = g.estadio.tecnicos.lista, at = g.cenaSubst.atores() ?? [], cp = g.cenaSubst.camera.posicao;
+            for (const t of tl) {
+              for (const a of at) { const d = Math.hypot(a.x - t.x, a.z - t.z); if (d < out.distMin) { out.distMin = d; out.distEx = `${t.id} × ${a.id} (${a.tipo}) ${d.toFixed(2)} m, caso ${ci}`; } if (d < 1) out.perto++; }
+              if (cp) { const d = distanciaTecnico(cp.x, cp.y, cp.z, t.x, t.z); if (d < out.camMin) { out.camMin = d; out.camEx = `${t.id}: ${d.toFixed(2)} m (${g.cenaSubst.camera.nome}, caso ${ci})`; } }
+            }
+          }
+          out.andaram += g.estadio.tecnicos.k - t0 > k * 0.5 ? 1 : 0;
+          out.desenhados += g.estadio.tecnicos.lista.length === 2 ? 1 : 0;
+        }
+      }
+      return out;
+    });
+    if (r.sem) meta('V6 cena de substituição: os treinadores andam com ela, saem da frente dos atores e a câmera fica fora deles', 'sem a cena ou sem os treinadores', 'existem', false);
+    else meta('V6 cena de substituição: os treinadores andam com ela, saem da frente dos atores e a câmera fica fora deles',
+      `${r.cenas} cenas, ${r.quadros} quadros: dão os passos da cena em ${r.andaram}/${r.cenas}; o ator mais perto a ${f2(r.distMin)} m (${r.distEx}; a < 1 m em ${r.perto} quadros×pares); a câmera a ≥ ${f2(r.camMin)} m da cápsula (${r.camEx})`,
+      '6 cenas; todas; ≥ 0,5 m; ≥ 0,6 m', r.cenas === 6 && r.andaram === r.cenas && r.distMin >= 0.5 && r.camMin >= 0.6);
+  } finally { erros.push(...C6.erros); await C6.navegador.close(); }
+} catch (e) { meta('V6 execução (cena de substituição)', String(e?.message ?? e).split('\n')[0], 'sem exceção', false); }
 meta('V5 console sem erros', erros.length ? erros.slice(0, 3).join(' | ') : 'nenhum', 'nenhum', erros.length === 0);
 await srv.fechar();
 

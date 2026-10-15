@@ -4,7 +4,7 @@
 // (filtros de fase zero, centrados no passo) — e devolve, por passo do plano, onde fica o olho e para onde ele olha. O
 // diretor (render/replay.js) só interpola entre dois passos. Testado em Node (tools/teste-replay-anel.mjs G6–G10).
 //
-// 1ª PESSOA (cam 'primeira'; REPLAY.primeira; PESQUISA-ESTADIO.md §12):
+// 1ª PESSOA (cam 'primeira'; REPLAY.primeira; PESQUISA-ESTADIO.md §13):
 //  - olho bruto = a cabeça gravada + frente·0,085 + cima·0,03 (frente = horizontal, da linha dos ombros, como jogador3d
 //    frente());
 //  - x/z por gaussiana σ 0,08 s, presa a ≤ 2 cm do olho bruto na horizontal (≤ 6 cm depois da esfera, abaixo); y por

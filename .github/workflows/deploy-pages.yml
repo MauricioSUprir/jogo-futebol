@@ -42,6 +42,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node golaco/tools/teste-comemoracao-tela.mjs
+      - name: Cena de substituição no navegador (fila depois do replay, pular, pausa, celular, nada encosta; hash igual)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node golaco/tools/teste-substituicao-tela.mjs
   deploy:
     needs: testes-golaco
     environment:
