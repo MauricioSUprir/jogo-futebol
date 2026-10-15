@@ -37,6 +37,12 @@
 //   G13 (14/10) a lente da 1ª pessoa e da parte 1 do treinador fora dos sólidos do estádio (solidoEm, 5 cm; acima do chão)
 //       em 100% dos quadros; o que se vê do próprio autor (o quadril e as pernas: o resto fica OCULTO) a ≥ 0,20 m da lente;
 //       nenhum outro corpo a < 0,3 m da lente do treinador no quadro; na parte 2 ele reage (a mão acima da cabeça ≥ 0,1 s).
+//   G14 (contraprova 15/10) gol de cabeça SINTÉTICO (sem partida, determinístico): o autor cabeceia a 7 m do gol e segue
+//       correndo para dentro dele, passando pela bola que morre na rede (a 1ª pessoa acaba antes, pela lente no gol): de
+//       chute + 0,3 s ao gol a boca do gol no quadro (16:9 e celular) e o olhar a ≤ 60° do rumo para ela em cada um dos 30
+//       gols (5 velocidades do autor × 2 linhas de corrida × 3 lados da bola); a bola no quadro em ≥ 95% de chute a gol (as
+//       metas do G7). (Na partida da cabeceio-ia, semente 80, os passos depois do fim do plano — o olho já dentro do gol, o "para
+//       o gol" virado para trás — puxavam o olhar pela suavização e pelo limite do giro: ele girou até 107° do gol.)
 // Na versão sem replay os módulos não existem: o teste reprova.
 // 15/10 (frente "replay robusto"): --estresse = 3× as sementes (84); a amostra do G8 (≥ 48 gols com autor) cresce com as
 // sementes seguintes, em ordem, até + 20 (nunca escolhe sementes).
@@ -330,6 +336,7 @@ async function itensG() {
   if (!RO || !RR.planosExtrasGol) { reg('G 3ª e 4ª câmeras do gol (render/replay-olhos.js, planosExtrasGol)', 'não existem', 'existem', false); return; }
   // --so-g5: só o pênalti (diagnóstico)
   if (args.includes('--so-g5')) { await itemG5(RO); return; }
+  if (args.includes('--so-g14')) { await itemG14(); return; }
   const C = await imp('config.js');
   const { REPLAY, CAMPO } = C;
   const { J, NJ } = await imp('anim.js');
@@ -473,11 +480,75 @@ async function itensG() {
   }
   // ---------------------------------------------------------------- G5 (pênalti) e G1 com "reduzir movimento"
   await itemG5(RO);
+  await itemG14();
   {
     const g = comAutor.find(x => x.temPrimeira);
     reg('G1b "reduzir movimento": sem 1ª pessoa (o resto igual)', g ? 'conferido no G5 (mesmo gol, com e sem)' : 'sem gol com autor', '-', true);
   }
   console.log(`G: ${res.length} partidas (sementes 1–${NS}${NS > NS0 ? `: ${NS0} + ${NS - NS0} até 48 gols com autor` : ''}) de 2 × ${MIN} min, ${gols.length} gols, ${nPar} processos${ESTRESSE ? ' (--estresse)' : ''}`);
+}
+
+async function itemG14() {
+  const { criarMedidor } = await import(pathToFileURL(path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib/replay-g.mjs')).href);
+  const { medirGol } = await criarMedidor(pastaJs);
+  const RA = await imp('render/replay-anel.js'), RO = await imp('render/replay-olhos.js'), RR = await imp('render/replay-roteiro.js'), C = await imp('config.js');
+  const { criarJogador } = await imp('jogador.js');
+  const { pose, NJ, J } = await imp('anim.js');
+  const { REPLAY, CAMPO, PASSO } = C;
+  const GRAU = 180 / Math.PI;
+  // a pose de pé (de frente para +x) levada pelo caminho: o olho e o corpo do autor do jeito que o anel guarda
+  const j0 = criarJogador(9, 0, 0, 0, {}, 0);
+  const mini = { tick: 0, posse: null, naMao: null, parada: null, voo: null, bola: { p: { x: 0, y: -10, z: 0 }, v: { x: 0, y: 0, z: 0 }, q: { x: 0, y: 0, z: 0, w: 1 } }, jogadores: [j0] };
+  const P0 = pose(j0, mini, new Float32Array(NJ * 3)), Pt = new Float32Array(NJ * 3);
+  const gx = CAMPO.meioX, ch = 300, gol = ch + 52, xCh = 45.3;
+  const lin = (a, b, u) => a + (b - a) * Math.max(0, Math.min(1, u));
+  let n = 0, nRuins = 0, ex = '', piorAng = 0, casos = 0, bolaMin = 1, bIn = 0, bN = 0;
+  // (até 7,5 m/s: mais depressa, o olho chega à linha do gol antes da bola e o centro da boca fica abaixo do quadro de
+  // qualquer jeito — o limite da medida do G7, nas duas versões)
+  for (const v of [5, 6, 6.5, 7, 7.5]) for (const zA of [0.5, -1.5]) for (const zb of [3.5, 1.4, -2.5]) {
+    casos++;
+    const a = RA.criarAnel({ ticks: Math.round(REPLAY.segundos / PASSO), vagas: REPLAY.vagas, nj: NJ });
+    for (let t = 0; t <= gol + 150; t++) {
+      // o autor: a v m/s em +x até o fundo da rede (x 54,3), pela linha z = zA
+      const x = Math.min(54.3, xCh + v * (t - ch) * PASSO), z = zA;
+      for (let k = 0; k < NJ; k++) { Pt[k * 3] = P0[k * 3] + x; Pt[k * 3 + 1] = P0[k * 3 + 1]; Pt[k * 3 + 2] = P0[k * 3 + 2] + z; }
+      a.inicio(t, t * PASSO, false);
+      a.jogador(0, 9, 0, false, x, z, 0, Pt);
+      // a bola: o cruzamento da esquerda até a cabeça (no chute), depois para (52,4; 2,2; zb), entra e morre na rede perto
+      // da linha (o autor passa por ela)
+      const hx = Pt[J.cabeca * 3], hy = Pt[J.cabeca * 3 + 1];
+      let b;
+      if (t <= ch) { const u = (t - (ch - 60)) / 60; b = { x: lin(38, hx + 0.15, u), y: lin(1.5, hy + 0.1, u), z: lin(14, zA + 0.05, u) }; }
+      else if (t <= gol - 16) { const u = (t - ch) / (gol - 16 - ch); b = { x: lin(xCh + 0.3, 52.4, u), y: lin(1.75, 2.2, u), z: lin(zA, zb, u) }; }
+      else if (t <= gol) { const u = (t - (gol - 16)) / 16; b = { x: lin(52.4, gx + 0.1, u), y: lin(2.2, 1.2, u), z: lin(zb, zb * 0.4, u) }; }
+      else { const u = (t - gol) / 40; b = { x: lin(gx + 0.1, gx + 0.5, u), y: lin(1.2, 0.5, u), z: lin(zb * 0.4, zb * 0.2, u) }; }
+      if (a.marcar) a.marcar(t === ch ? 1 : t === gol ? 2 : 0);
+      a.fim(b, { x: 0, y: 0, z: 0, w: 1 });
+    }
+    const g = { golTick: gol, chuteTick: ch, lado: 1, time: 0, autor: 9, contra: false, desvio: false, tipoChute: 'cabeceio' };
+    const m = medirGol(a, g);
+    const prim = RR.roteiroGol(a, g)?.planos.find(p => p.cam === 'primeira');
+    const nome = `${v} m/s pela linha z ${zA}, a bola para z ${zb}`;
+    if (!prim || !m.p) { nRuins++; if (!ex) ex = `${nome}: sem 1ª pessoa`; continue; }
+    // o olhar × o rumo para a boca do gol, de chute + 0,3 s ao gol (no plano)
+    const cam = {};
+    let angMax = 0;
+    for (let t = ch + 18; t <= Math.min(gol, prim.ate); t++) {
+      RO.cameraPrimeira(prim.enq, t, cam);
+      const yv = Math.atan2(cam.lz - cam.z, cam.lx - cam.x), yg = Math.atan2(-cam.z, gx - cam.x);
+      let d = Math.abs(yv - yg); if (d > Math.PI) d = 2 * Math.PI - d;
+      angMax = Math.max(angMax, d * GRAU);
+      n++;
+    }
+    const bolaFr = m.p.bolaIn / Math.max(1, m.p.bolaN);
+    piorAng = Math.max(piorAng, angMax); bolaMin = Math.min(bolaMin, bolaFr); bIn += m.p.bolaIn; bN += m.p.bolaN;
+    if (m.p.gol1 === false || angMax > 60) {
+      nRuins++;
+      if (!ex) ex = `${nome}: boca do gol no quadro ${m.p.gol1}, bola no quadro ${fmt(100 * bolaFr, 0)}%, olhar a ${fmt(angMax, 0)}° dela (1ª pessoa ${prim.de}–${prim.ate}${prim.cortadoPelaLente ? ', cortada' : ''})`;
+    }
+  }
+  reg('G14 gol de cabeça sintético, o autor seguindo para dentro do gol: a boca do gol no quadro de chute + 0,3 s ao gol e o olhar a ≤ 60° dela em cada gol; a bola no quadro ≥ 95% de chute a gol (as metas do G7)',
+    `${casos} gols (${n} passos): ${nRuins} ruins${ex ? ` (${ex})` : ''}; o olhar a até ${fmt(piorAng, 0)}° da boca do gol; bola no quadro ${fmt(100 * bIn / Math.max(1, bN), 1)}% (no pior gol ${fmt(100 * bolaMin, 0)}%)`, '0; ≤ 60°; ≥ 95%', nRuins === 0 && bIn / Math.max(1, bN) >= 0.95);
 }
 
 async function itemG5(RO) {

@@ -230,6 +230,16 @@ export function enquadrarPrimeira(anel, p) {
     return o;
   };
   const _a = { x: 0, y: 0, z: 0 };
+  // depois do chute (de chute + baixaDepois em diante) o mesmo limite: o rumo do alvo a ≤ golAngMax° do centro da boca do
+  // gol, à mesma distância (contraprova 15/10: o autor que cabeceia perto do gol e segue correndo atrás da bola via a bola
+  // puxada 35% a 45–50° do centro da boca, e ela saía do quadro de 90° antes do gol — cabeceio-ia, semente 80)
+  const noGol = (i, o) => {
+    const ox = olho[i * 3], oz = olho[i * 3 + 2], dh = Math.hypot(o.x - ox, o.z - oz), yg = Math.atan2(-oz, gx - ox);
+    let d = Math.atan2(o.z - oz, o.x - ox) - yg;
+    while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+    if (Math.abs(d) > F.golAngMax * GRAU) { const yN = yg + Math.sign(d) * F.golAngMax * GRAU; o.x = ox + Math.cos(yN) * dh; o.z = oz + Math.sin(yN) * dh; }
+    return o;
+  };
   // o ponto (x, y, z) visto do olho i em rumo/arfagem (piso à frente — 15/10: no referencial do gol, a = para o gol, o alvo
   // nunca fica a menos de `pisoFrente` m à frente do olho; a bola no pé, atrás do olho com o corpo inclinado, ou passando
   // por cima da cabeça tem o rumo de ruído e o limite do giro dava a volta inteira para segui-lo — e a arfagem presa)
@@ -258,7 +268,7 @@ export function enquadrarPrimeira(anel, p) {
       // passado o contato, como no chute (a bola que sobe da cabeça fica no quadro)
       // (15/10: do contato a contato + baixaDepois, a bola mesma, como no chute — a cabeçada para o chão, puxada 50% para o
       // gol, deixava a bola que quica no pé abaixo do quadro)
-      if (t > ch + s60(F.baixaDepois)) { x += (gx - x) * F.puxaGol; y += (gy - y) * F.puxaGol; z += (0 - z) * F.puxaGol; }
+      if (t > ch + s60(F.baixaDepois)) { x += (gx - x) * F.puxaGol; y += (gy - y) * F.puxaGol; z += (0 - z) * F.puxaGol; _a.x = x; _a.z = z; noGol(i, _a); x = _a.x; z = _a.z; }
       else if (t >= ch) { /* a bola */ }
       else if (t >= ch - s60(F.cabeceioOlhaGol)) { x += (gx - x) * F.puxaCabeceio; y += (gy - y) * F.puxaCabeceio; z += (0 - z) * F.puxaCabeceio; }
       else if (t < ch - s60(F.baixaAntes)) { antes(i, b, _a); x = _a.x; y = _a.y; z = _a.z; }
@@ -266,7 +276,8 @@ export function enquadrarPrimeira(anel, p) {
       ang(i, x, y, z, _g1);
     } else if (t > ch + s60(F.baixaDepois)) {
       x += (gx - x) * F.puxaGol; y += (gy - y) * F.puxaGol; z += (0 - z) * F.puxaGol;
-      ang(i, x, y, z, _g1);
+      _a.x = x; _a.z = z; noGol(i, _a);
+      ang(i, _a.x, y, _a.z, _g1);
     } else if (t < d1) {
       antes(i, b, _a);
       ang(i, _a.x, _a.y, _a.z, _g1);
@@ -286,6 +297,10 @@ export function enquadrarPrimeira(anel, p) {
     yaw[i] = _g1[0]; arfA[i] = _g1[1];
     if (i) { while (yaw[i] - yaw[i - 1] > Math.PI) yaw[i] -= 2 * Math.PI; while (yaw[i] - yaw[i - 1] < -Math.PI) yaw[i] += 2 * Math.PI; }
   }
+  // depois do fim do plano, o olhar fica o do último passo dele (contraprova 15/10: os passos depois do fim — o autor já
+  // dentro do gol, passando pela bola, o "para o gol" virado para trás — puxavam o olhar de dentro do plano pela suavização
+  // e pelo limite do giro, que anda para trás: ele girou até 107° da boca do gol)
+  for (let i = Math.max(1, p.ate - w0 + 1); i < n; i++) { yaw[i] = yaw[i - 1]; arfA[i] = arfA[i - 1]; }
   // suavizado em ângulo (σ sigmaOlhar; sigmaCabeceio no cabeceio); no chute (±sigmaChute[1] s, entrando até ±sigmaChute[2]),
   // σ sigmaChute[0] s: a σ de 0,1 s levava o olhar do pé (−60°, uns 8 passos) para −48° e a bola do chute saía por baixo
   {
