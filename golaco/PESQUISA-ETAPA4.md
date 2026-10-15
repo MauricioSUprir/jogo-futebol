@@ -121,6 +121,16 @@ das faltas eram "sem sentido".
 | **Total** | **2,58** | **2,50** | **5,75** | **1,71** |
 | amarelos · vermelhos · pênaltis | 0,42 · 0 · 0,08 | 0,83 · 0,08 · 0,08 | 1,00 · 0,08 · 0,17 | 0,58 · 0 · 0,08 |
 
+**Contraprova** (mesma régua, `teste-faltas-sentido` A8–A13 e B4; reprovam no commit e9d88eed): (1) a DIVIDIDA da pessoa
+seguia pela régua antiga (sem a força do contato) — no modelo 'dividida' (DIVIDIDA com a bola a ≤ 1,5 m) 60% das faltas
+dela eram com o corpo entrando a < 1 m/s (8 partidas: 15 de 25; de frente recuando, 17% de chance de falta): agora
+`chanceFaltaDividida` é a mesma régua do bote da IA (0 sem o corpo entrar; de lado a 3 m/s 71%, por trás forte 95%);
+(2) o 'segurar' saía com o condutor parado de costas, andando ou com o defensor alcançando (~1/3 das 'segurar': o
+condutor a < 3 m/s ou indo para trás) — agora só segura quem escapa dele (`tatica.escapa` 3 m/s, `tatica.ganhando`
+0,5); (3) na própria área o cuidado do defensor (`bote.naArea` 0,4) virava roubada LIMPA com o mesmo contato que fora
+dela é falta (de lado entrando a ~2,5 m/s: 69% limpo dentro × 29% fora) — agora o defensor tira o corpo
+(`BOTE_EVITADO`, sem bote) e a fração limpa é a mesma (29% × 29%), com o pênalti mantido em 31%.
+
 A mediana da força de contato dos botes da IA que viram falta passou para 2,5–3,8 m/s. Pendente: na IA × IA o jogo tem 0,21
 falta por minuto de bola rolando (main 0,25; real ~0,40) — faltam as faltas que o jogo ainda não tem (no alto, segurar na
 bola parada); não foi reposto à custa de botes sem contato.

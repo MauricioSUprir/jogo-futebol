@@ -837,7 +837,8 @@ export const FALTAS = {
   // a bola ACOES.boteIA.alcance 0,65 + o pé do condutor ~0,25). Pedido do dono, 15/10 ("faltas muito forçadas e sem
   // sentido"; tools/teste-faltas-sentido.mjs)
   forca: { min: 1.0, cheia: 1.5, porForca: 0.5, janela: 0.33, alcance: 1.2 },
-  // DIVIDIDA do humano que não ganha a bola com o pé no condutor (defesa.js resolverBote): as mesmas chances
+  // DIVIDIDA do humano que não ganha a bola com o pé no condutor (defesa.js resolverBote): as mesmas chances do bote da
+  // IA, com a força do contato (faltas.js chanceFaltaDividida; sem o × naArea/naChanceClara)
   dividida: { perdeu: 1.0, tocou: 0.6 },
   // carga por trás (sim.js colisaoCorpos): o marcador ENTRA no condutor por trás a ≥ vMin m/s (faltas.js forcaContato: a
   // velocidade dele para dentro do condutor, limitada pela aproximação — o condutor que recua para dentro de quem estava
@@ -846,8 +847,9 @@ export const FALTAS = {
   carga: { vMin: 1.8, chance: 0.5, naChanceClara: 0.2, temeraria: 3.0, perdeu: 0.5 },
   // falta tática (o marcador batido segura o condutor no contra-ataque: SPA → amarelo): chance por passo colado (não
   // na chance clara de gol: seria vermelho, e o defensor sabe); `semSPA`: fora do contra-ataque ele também segura (sem
-  // cartão, origem 'segurar'; nunca na própria área) — faltas.js faltaTatica
-  tatica: { dist: 1.4, chancePorPasso: 0.012, semSPA: 0.002 },
+  // cartão, origem 'segurar'; nunca na própria área), só com o condutor ESCAPANDO dele — se afastando a ≥ `escapa` m/s,
+  // com ele sem ganhar terreno (aproximação ≤ `ganhando` m/s) — faltas.js faltaTatica/escapando
+  tatica: { dist: 1.4, chancePorPasso: 0.012, semSPA: 0.002, escapa: 3.0, ganhando: 0.5 },
   temerario: 6.0,             // m/s — chegando por trás acima disto: temerário (amarelo)
   excessivo: 7.6,             // m/s — por trás acima disto: força excessiva (sorteio pelo `excessivoP`)
   excessivoP: 0.25,

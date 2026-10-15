@@ -26,7 +26,7 @@ import { chutarRasteiro } from './bola.js';
 import { ataca } from './acoes.js';
 import { para } from './ia.js';
 import { estadoIA } from './ia-tatica.js';
-import { chanceFaltaBote, montarFalta, registrarFalta } from './faltas.js';
+import { chanceFaltaDividida, montarFalta, registrarFalta } from './faltas.js';
 import { registrarToque } from './regras-goleiro.js';
 
 const C = DEFESA_HUMANO.conter, D = DEFESA_HUMANO.dividida, P = DEFESA_HUMANO.pressao, SA = DEFESA_HUMANO.semAtropelar;
@@ -278,10 +278,10 @@ function resolverBote(m, j, h) {
     }
   }
   // Etapa 4 (só na partida): a dividida que não ganha a bola com o pé no condutor pode ser falta (faltas.js) — a
-  // mesma chance do bote da IA (chegada, velocidade, desarme) × FALTAS.dividida[motivo]
+  // mesma régua do bote da IA (chegada, velocidade, desarme e a força do contato) × FALTAS.dividida[motivo]
   let falta = null;
   if (!ganhou && m.partida && d0 && (motivo === 'perdeu' || motivo === 'tocou') && !m.faltaPendente) {
-    const pF = chanceFaltaBote(j, d0) * (FALTAS.dividida[motivo] ?? 0);
+    const pF = chanceFaltaDividida(m, j, d0, motivo);
     if (uniforme(m.rng) < pF) {
       const v = MD.hypot(j.vx, j.vz);
       const exc = v >= FALTAS.excessivo && uniforme(m.rng) < FALTAS.excessivoP;

@@ -1330,12 +1330,17 @@ Sai em PRs menores; cada um acrescenta a sua parte aqui. Pesquisa e números em 
   (`faltaNoBote`) vira falta com a chance de antes × `fatorForca(f)` (0 até `FALTAS.forca.min` — o passo, contato
   incidental —, rampa até `cheia`, × (1 + `porForca` · (f − min)) acima; × `bote.naArea` na própria área e
   × `bote.naChanceClara` na chance clara de gol — ali o defensor evita entrar no homem, como na carga; teto 0,95): o desarme
-  sem entrar no homem é limpo (a IA leva a bola). A carga (`faltaNaCarga`) exige `forcaContato ≥ carga.vMin` (o condutor que recua para dentro
+  sem entrar no homem é limpo (a IA leva a bola). Evitar é tirar o corpo: o sorteio que seria falta fora da área e o
+  cuidado descarta devolve `BOTE_EVITADO` (sim.js boteIA: sem bote, descansa) — a fração de botes limpos com o mesmo
+  contato é igual dentro e fora da área (contraprova de 15/10: dentro da área o bote forte virava roubada limpa). A
+  DIVIDIDA da pessoa usa a mesma régua (`chanceFaltaDividida(m, d, c, motivo)` = min(0,95, chanceFaltaBote × fatorForca) ×
+  `dividida[motivo]`, sem o cuidado da área). A carga (`faltaNaCarga`) exige `forcaContato ≥ carga.vMin` (o condutor que recua para dentro
   de quem estava atrás não é carga dele) e não vale para quem tocou na bola há menos de `carga.perdeu` s (o embalo de quem
   acabou de perder a bola no bote); nas costas a ≥ `carga.temeraria` m/s é temerária (amarelo; Regra 12.1). Segurar
   (`faltaTatica`): o marcador batido colado por trás segura — no ataque promissor `tatica.chancePorPasso` por passo
-  (origem 'tatica', amarelo: SPA), fora dele `tatica.semSPA` (origem 'segurar', o cartão pela regra geral) e nunca na
-  própria área. A DIVIDIDA do humano não muda.
+  (origem 'tatica', amarelo: SPA), fora dele `tatica.semSPA` (origem 'segurar', o cartão pela regra geral) só com o
+  condutor escapando dele (se afastando a ≥ `tatica.escapa` m/s, ele sem ganhar terreno: aproximação ≤ `tatica.ganhando`)
+  e nunca na própria área.
   `defesa.js semAtropelar(m, j, mv)` (sim.js, só na partida, só no time jogado por uma pessoa — `m.humanos` sem
   `m.iaJoga`; o controlado, os companheiros da IA e o chamado da PRESSÃO a ≤ `pressao.chega` m): a velocidade pedida
   para dentro do condutor adversário (ou do recebedor do passe dele) fica ≤ (a dele se afastando − `reacao` ·

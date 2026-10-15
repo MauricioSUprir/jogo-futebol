@@ -27,7 +27,7 @@ import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pre
 import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada, ladoPenaltiHumano } from './partida.js';
 import { planejarRecepcao } from './recepcao.js';
-import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta, chegada, guardarChoque } from './faltas.js';
+import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta, chegada, guardarChoque, BOTE_EVITADO } from './faltas.js';
 // Regras da mão do goleiro e o goleiro jogando com o pé (pedido do dono, 11/10; só na partida)
 import { maoPermitida, motivoSemMao, registrarToque, estadoMao, paredeAreaMao, naPropriaArea, goleiroNoPe } from './regras-goleiro.js';
 import { lateralSegurando, segurarLateral } from './lateral.js';
@@ -328,6 +328,8 @@ function boteIA(m, j) {
   // com o condutor (desequilibrado) e o árbitro decide nas regras (vantagem, tiro livre, pênalti, cartão)
   if (m.partida && !m.faltaPendente) {
     const f = faltaNoBote(m, j, dono);
+    // na própria área / na chance clara ele tirou o corpo do bote que entraria no homem: sem bote, descansa
+    if (f === BOTE_EVITADO) { j.descansoBote = cfg.descanso; return; }
     if (f) { registrarFalta(m, f); dono.vx *= 0.5; dono.vz *= 0.5; j.descansoBote = cfg.descanso; return; }
   }
   // contra o condutor parado/lento o bote em pé ganha pela mesma chance da DIVIDIDA do humano (desarme × drible/controle,

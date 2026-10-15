@@ -181,8 +181,22 @@ export function chanceFaltaBote(d, c) {
 }
 
 /**
+ * Chance de a DIVIDIDA do humano que não ganhou a bola (defesa.js resolverBote; motivo 'perdeu' ou 'tocou') ser falta: a
+ * MESMA régua do bote da IA — chegada, velocidade, desarme e a força do contato (fatorForca(forcaContato): o pé que sai
+ * na bola sem o corpo entrar no condutor é desarme errado, não falta) — × FALTAS.dividida[motivo]. Sem o cuidado da área
+ * e da chance clara (FALTAS.bote.naArea/naChanceClara: ali quem decide entrar é a pessoa). Contraprova de 15/10: só o
+ * bote da IA tinha ganhado a força do contato, e ~60% das faltas da DIVIDIDA eram com o corpo entrando a < 1 m/s.
+ */
+export function chanceFaltaDividida(m, d, c, motivo) {
+  return Math.min(0.95, chanceFaltaBote(d, c) * fatorForca(forcaContato(m, d, c))) * (FALTAS.dividida[motivo] ?? 0);
+}
+
+/** faltaNoBote: o defensor tirou o corpo (na própria área ou na chance clara) — o bote não sai neste passo. */
+export const BOTE_EVITADO = Object.freeze({ evitado: true });
+
+/**
  * O bote da IA (sim.js boteIA, depois do sorteio de que ele chega) é falta? Sorteia pelo m.rng (só na partida).
- * Devolve a falta montada ou null (bote limpo: a IA leva a bola como antes).
+ * Devolve a falta montada, BOTE_EVITADO (ele tirou o corpo: sem bote) ou null (bote limpo: a IA leva a bola como antes).
  */
 export function faltaNoBote(m, d, c) {
   if (!m.partida) return null;
@@ -192,10 +206,14 @@ export function faltaNoBote(m, d, c) {
   // é desarme limpo. Pedido do dono, 15/10 ("faltas muito forçadas e sem sentido": 53% das faltas da IA no humano que
   // conduz eram com o defensor entrando a < 1 m/s; tools/teste-faltas-sentido.mjs)
   // na própria área (seria pênalti) e na chance clara de gol (seria vermelho) o defensor evita entrar no homem, como na
-  // carga: × FALTAS.bote.naArea, × FALTAS.bote.naChanceClara
+  // carga: × FALTAS.bote.naArea, × FALTAS.bote.naChanceClara. Evitar é TIRAR O CORPO (BOTE_EVITADO: sem bote neste passo),
+  // não o árbitro deixar passar — o bote que entraria no homem seguia como desarme limpo, e o mesmo contato era falta fora
+  // da área e roubada limpa dentro dela (contraprova de 15/10). A régua do contato é a mesma no campo todo (IFAB Regra 12)
   const cuidado = (naAreaDe(m, d.time, c.x, c.z) ? FALTAS.bote.naArea : 1) * (chanceClara(m, c, d) ? FALTAS.bote.naChanceClara : 1);
-  const p = Math.min(0.95, chanceFaltaBote(d, c) * fatorForca(forcaContato(m, d, c)) * cuidado);
-  if (uniforme(m.rng) >= p) return null;
+  const p = Math.min(0.95, chanceFaltaBote(d, c) * fatorForca(forcaContato(m, d, c)));
+  const u = uniforme(m.rng);
+  if (u >= p) return null;
+  if (u >= p * cuidado) return BOTE_EVITADO;
   const v = MD.hypot(d.vx, d.vz);
   const exc = chegada(d, c) === 'tras' && v >= FALTAS.excessivo && uniforme(m.rng) < FALTAS.excessivoP;
   return montarFalta(m, d, c, 'bote', true, exc);
@@ -215,9 +233,23 @@ export function faltaTatica(m, d, c) {
   if (chegada(d, c) !== 'tras') return null;
   if (chanceClara(m, c, d)) return null;
   const spa = ataquePromissor(m, c);
-  const p = spa ? FALTAS.tatica.chancePorPasso : naAreaDe(m, d.time, c.x, c.z) ? 0 : FALTAS.tatica.semSPA;
+  // fora do contra-ataque ele só segura quem está ESCAPANDO dele (escapando): segurar o condutor parado, andando ou que
+  // ele está alcançando não tem motivo — era falta "do nada" (contraprova de 15/10: ~1/3 das 'segurar')
+  const p = spa ? FALTAS.tatica.chancePorPasso : naAreaDe(m, d.time, c.x, c.z) || !escapando(d, c) ? 0 : FALTAS.tatica.semSPA;
   if (!(p > 0) || uniforme(m.rng) >= p) return null;
   return montarFalta(m, d, c, spa ? 'tatica' : 'segurar', false);
+}
+
+/**
+ * O condutor `c` está escapando do defensor `d` (que ficou para trás)? Ele se afasta de d a ≥ FALTAS.tatica.escapa m/s e d
+ * não ganha terreno (aproximação ≤ FALTAS.tatica.ganhando m/s: quem está alcançando dá o bote, não segura).
+ */
+function escapando(d, c) {
+  const rx = c.x - d.x, rz = c.z - d.z, l = MD.hypot(rx, rz) || 1;
+  const nx = rx / l, nz = rz / l;
+  const foge = c.vx * nx + c.vz * nz;
+  const fecha = (d.vx - c.vx) * nx + (d.vz - c.vz) * nz;
+  return foge >= FALTAS.tatica.escapa && fecha <= FALTAS.tatica.ganhando;
 }
 
 /**

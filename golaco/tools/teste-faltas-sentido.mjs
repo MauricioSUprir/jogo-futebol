@@ -16,7 +16,15 @@
 //   A4 (de verdade) bote por trás entrando forte (defensor a 7 m/s, condutor a 3): falta em ≥ 70%, temerário + amarelo;
 //   A5 (de verdade) bote de lado entrando no condutor a 3 m/s: falta em ≥ 30%;
 //   A6 carga: o condutor de costas recua para dentro de quem vinha atrás devagar (fechando a 1,85 m/s, ≥ vMin): 0 falta;
-//   A7 (de verdade) carga por trás forte (defensor a 6 m/s, condutor a 2): falta em 35–65% (FALTAS.carga.chance 0,5).
+//   A7 (de verdade) carga por trás forte (defensor a 6 m/s, condutor a 2): falta em 35–65% (FALTAS.carga.chance 0,5);
+//   A8 DIVIDIDA da pessoa (defesa.js resolverBote, faltas.js chanceFaltaDividida) de frente sem o corpo entrar — recuando
+//      ('perdeu') ou parada com o condutor tocando na bola ('tocou'): chance 0 (a mesma régua do bote da IA: contraprova);
+//   A9 (de verdade) DIVIDIDA de lado entrando a 3 m/s: ≥ 30%; A10 (de verdade) DIVIDIDA por trás forte: ≥ 70%;
+//   A11 segurar (faltaTatica fora do contra-ataque) sem motivo — o condutor parado de costas, andando, ou o defensor
+//      alcançando: 0 em 3000 passos; A12 (de verdade) segurar quem escapa do batido (5 m/s): 0,05–0,5% por passo, sem
+//      cartão;
+//   A13 bote forte na própria área: o defensor tira o corpo (BOTE_EVITADO) — a fração de botes limpos dentro da área é a
+//      de fora (|Δ| ≤ 8 pontos; o mesmo contato é falta no campo todo) e a falta dentro existe (pênalti).
 //  B. Partidas com o time 0 jogado como uma pessoa (faltas-registro: 'persegue', 'pressao', 'dribla'; o árbitro do teste
 //     mede a força do contato pela foto antes do passo — a de quando os corpos encostam nos últimos 0,33 s):
 //   B1 faltas de bote da IA com o contato a < 1 m/s: ≤ 0,1 por partida (main: ~2 por partida);
@@ -24,7 +32,9 @@
 //      (main: ~2 por partida);
 //   B3 (de verdade) a IA ainda faz falta em quem conduz entrando forte: faltas da IA no time 0 com contato ≥ 2 m/s ≥ 0,5
 //      por partida no 'dribla'; vermelhos e pênaltis do 'dribla' ≤ 0,6 por partida cada (main: 1,0 e 1,0; real ~0,15 e
-//      ~0,23 em 90 min).
+//      ~0,23 em 90 min);
+//   B4 'dividida' (a pessoa aperta DIVIDIDA com a bola a ≤ 1,5 m): faltas da DIVIDIDA com o contato a < 1 m/s ≤ 0,1 por
+//      partida (main: ~1,9 — 60% das faltas da DIVIDIDA).
 // Informativos: a tabela por categoria (quem fez, origem, chegada, força) e as faltas por minuto (real: Premier League
 // 2024/25, ~22,8 faltas e ~57 min de bola rolando ≈ 0,40 por minuto; PESQUISA-ETAPA4.md §3b).
 //
@@ -57,7 +67,7 @@ const t0 = Date.now();
  * Partida com a bola rolando: o condutor C (time 0, atacando +x) em (20, 0) e o defensor D (time 1); os outros longe
  * (atrás do lance). d = {dx, dz (de D relativo a C), dvx, dvz}, c = {vx, vz, rumo}; a bola a `bola` (dx, dz) de C.
  */
-function cena({ dx, dz = 0, dvx = 0, dvz = 0, cvx = 0, cvz = 0, crumo = 0, bola = [0.45, 0], sem = 1 }) {
+function cena({ dx, dz = 0, dvx = 0, dvz = 0, cvx = 0, cvz = 0, crumo = 0, bola = [0.45, 0], sem = 1, cx = 20, cz = 0 }) {
   const m = P.criarPartida({ semente: sem });
   m.partida.estado = 'jogo'; m.parada = null; m.golTick = null; m.foraDesde = null; m.voo = null; m.naMao = null;
   const C = m.jogadores.find(j => j.time === 0 && j.posicao === 'MC') ?? m.jogadores.find(j => j.time === 0 && j.posicao !== 'GOL');
@@ -67,18 +77,30 @@ function cena({ dx, dz = 0, dvx = 0, dvz = 0, cvx = 0, cvz = 0, crumo = 0, bola 
     if (j.posicao === 'GOL') P.teleportar(j, j.time === 0 ? -51 : 51, 0, j.time === 0 ? 0 : Math.PI);
     else P.teleportar(j, j.time === 0 ? -30 : 40, (j.vagaIdx - 5) * 3, 0); // o time 1 com defensores à frente (sem DOGSO)
   }
-  P.teleportar(C, 20, 0, crumo); C.vx = cvx; C.vz = cvz;
-  P.teleportar(D, 20 + dx, dz, Math.atan2(-dz, -dx)); D.vx = dvx; D.vz = dvz;
-  m.bola.p.x = 20 + bola[0]; m.bola.p.z = bola[1]; m.bola.p.y = 0.11; m.posse = C.id;
+  P.teleportar(C, cx, cz, crumo); C.vx = cvx; C.vz = cvz;
+  P.teleportar(D, cx + dx, cz + dz, Math.atan2(-dz, -dx)); D.vx = dvx; D.vz = dvz;
+  m.bola.p.x = cx + bola[0]; m.bola.p.z = cz + bola[1]; m.bola.p.y = 0.11; m.posse = C.id;
   m.eventos = [];
   return { m, C, D };
 }
-/** Fração de sorteios do bote da IA que viram falta (e o grau/cartão da 1ª). */
+/** Fração de sorteios do bote da IA que viram falta (e o grau/cartão da 1ª), que ele evita (F.BOTE_EVITADO: tira o corpo) e
+ * que saem limpos (null: a IA leva a bola). */
 function sorteiaBote(o, N = 400) {
   const { m, C, D } = cena(o);
+  let n = 0, ev = 0, f1 = null;
+  for (let i = 0; i < N; i++) {
+    const f = F.faltaNoBote(m, D, C);
+    if (f && f.evitado) ev++;
+    else if (f) { n++; f1 ??= f; }
+  }
+  return { p: n / N, f1, n, N, ev, limpo: (N - n - ev) / N };
+}
+/** Faltas de segurar (faltas.js faltaTatica) em N passos com a cena parada: {n, N, f1}. */
+function sorteiaSegurar(o, N = 3000) {
+  const { m, C, D } = cena(o);
   let n = 0, f1 = null;
-  for (let i = 0; i < N; i++) { const f = F.faltaNoBote(m, D, C); if (f) { n++; f1 ??= f; } }
-  return { p: n / N, f1, n, N };
+  for (let i = 0; i < N; i++) { const f = F.faltaTatica(m, D, C); if (f) { n++; f1 ??= f; } }
+  return { n, N, f1 };
 }
 /** Fração de sorteios da carga que viram falta: o choque passa por guardarChoque (como em sim.js) quando ela existe. */
 function sorteiaCarga(o, N = 400) {
@@ -116,6 +138,31 @@ function sorteiaCarga(o, N = 400) {
   // A7: por trás, o defensor a 6 m/s, o condutor a 2 m/s
   const a7 = sorteiaCarga({ dx: -0.6, dvx: 6, cvx: 2, bola: [0.4, 0] });
   reg('A7 (de verdade) carga por trás forte (6 → 2 m/s)', `falta em ${pc(a7.n, a7.N)}`, '35–65%', a7.p >= 0.35 && a7.p <= 0.65);
+  // A8–A10: a DIVIDIDA da pessoa que não ganha a bola (defesa.js resolverBote) — a mesma régua do bote da IA (contraprova
+  // de 15/10: só o bote da IA tinha ganhado a força do contato). Na main a chance é chanceFaltaBote × FALTAS.dividida
+  const chDiv = F.chanceFaltaDividida ?? ((m, d, c, mot) => F.chanceFaltaBote(d, c) * (FALTAS.dividida[mot] ?? 0));
+  const div = (o, mot) => { const { m, C, D } = cena(o); return chDiv(m, D, C, mot); };
+  const a8p = div({ dx: 0.95, dvx: 3.5, cvx: 4, bola: [0.55, 0] }, 'perdeu'), a8t = div({ dx: 0.9, dvx: 0, cvx: 0.5, bola: [0.4, 0] }, 'tocou');
+  reg('A8 DIVIDIDA de frente sem o corpo entrar (recuando · parado com o condutor tocando): chance de falta', `${f2(100 * a8p)}% · ${f2(100 * a8t)}%`, '0 · 0', a8p === 0 && a8t === 0);
+  const a9 = div({ dx: 0.1, dz: 0.8, dvx: 4, dvz: -3, cvx: 4, bola: [0.35, 0.45] }, 'perdeu');
+  reg('A9 (de verdade) DIVIDIDA de lado entrando no condutor a 3 m/s', `chance ${f2(100 * a9)}%`, '≥ 30%', a9 >= 0.3);
+  const a10 = div({ dx: -0.8, dz: 0.15, dvx: 7, cvx: 3, bola: [-0.3, 0.35] }, 'perdeu');
+  reg('A10 (de verdade) DIVIDIDA por trás entrando forte (7 → 3 m/s)', `chance ${f2(100 * a10)}%`, '≥ 70%', a10 >= 0.7);
+  // A11–A12: segurar (faltaTatica fora do contra-ataque, origem 'segurar') só quem está escapando do defensor batido
+  const s1 = sorteiaSegurar({ dx: -0.7, crumo: 0, bola: [0.4, 0] });             // condutor parado, de costas para ele
+  const s2 = sorteiaSegurar({ dx: -0.8, cvx: 1.5, bola: [0.45, 0] });            // condutor andando, o defensor parado
+  const s3 = sorteiaSegurar({ dx: -0.9, dvx: 5.5, cvx: 3.5, bola: [0.45, 0] });  // o defensor alcançando (dá o bote)
+  reg('A11 segurar sem motivo: o condutor parado · andando · o defensor alcançando (faltas em 3000 passos)', `${s1.n} · ${s2.n} · ${s3.n}`, '0 · 0 · 0', s1.n + s2.n + s3.n === 0);
+  const s4 = sorteiaSegurar({ dx: -0.9, dvx: 4.5, cvx: 5, bola: [0.45, 0] });    // escapando a 5 m/s do batido
+  reg("A12 (de verdade) segurar quem escapa do defensor batido (5 m/s, ele a 4,5), sem cartão", `${s4.n} em ${s4.N} passos (${f2(100 * s4.n / s4.N)}%) · ${s4.f1 ? `${s4.f1.origem}/${s4.f1.cartao ?? 'sem cartão'}` : '—'}`, '0,05–0,5% · segurar/sem cartão',
+    s4.n / s4.N >= 0.0005 && s4.n / s4.N <= 0.005 && s4.f1?.origem === 'segurar' && !s4.f1?.cartao);
+  // A13: na própria área o defensor que entraria no homem TIRA O CORPO (faltas.js BOTE_EVITADO) — não vira desarme limpo:
+  // com o mesmo contato (de lado, entrando a 3 m/s; o condutor correndo pela largura, sem chance clara), a fração de botes
+  // limpos dentro da área é a de fora (o mesmo contato é falta no campo todo) e a falta ainda existe (pênalti)
+  const fora = sorteiaBote({ cx: 20, cz: 8, dx: 0.8, dz: 0.1, dvx: -3, dvz: 4, cvz: 4, crumo: Math.PI / 2, bola: [0.45, 0.35] });
+  const dentro = sorteiaBote({ cx: 44, cz: 8, dx: 0.8, dz: 0.1, dvx: -3, dvz: 4, cvz: 4, crumo: Math.PI / 2, bola: [0.45, 0.35] });
+  reg('A13 bote forte na própria área: limpo dentro × fora · falta dentro', `${pc(Math.round(dentro.limpo * dentro.N), dentro.N)} × ${pc(Math.round(fora.limpo * fora.N), fora.N)} · ${pc(dentro.n, dentro.N)} (${dentro.f1?.area ? 'pênalti' : '—'})`, '|Δ| ≤ 8 pontos · > 0',
+    Math.abs(dentro.limpo - fora.limpo) <= 0.08 && dentro.n > 0 && !!dentro.f1?.area && fora.n > 0);
 }
 
 // ------------------------------------------------------------------ B. partidas com o humano
@@ -134,8 +181,16 @@ reg('B2 carga por trás de quem só corria atrás (controlado da pessoa ou chama
   reg("B3 (de verdade) 'dribla': falta da IA entrando forte (≥ 2 m/s) · vermelhos · pênaltis, por partida", `${f2(fortes / nd)} · ${f2(verm / nd)} · ${f2(pen / nd)}`, '≥ 0,5 · ≤ 0,6 · ≤ 0,6',
     fortes / nd >= 0.5 && verm / nd <= 0.6 && pen / nd <= 0.6);
 }
+{
+  // B4: a pessoa que aperta DIVIDIDA (faltas-registro 'dividida': com a bola a ≤ 1,5 m, no máximo a cada 0,4 s) não leva
+  // falta com o corpo entrando a < 1 m/s no condutor (main: ~1,9 por partida, 60% das faltas da DIVIDIDA)
+  res.dividida = await registrarFaltas(JS, { sementes: Array.from({ length: NP }, (_, i) => 8401 + i), modelos: ['dividida'] });
+  const dv = res.dividida.faltas.filter(f => f.origem === 'dividida' && f.timeDef === 0);
+  const fracas = dv.filter(f => f.forcaContato < 1).length, nd = res.dividida.partidas.length;
+  reg("B4 'dividida': falta da DIVIDIDA da pessoa com o contato a < 1 m/s (por partida)", `${f2(fracas / nd)} (${fracas} de ${dv.length} faltas da DIVIDIDA em ${nd} partidas; ${res.dividida.partidas.reduce((s, p) => s + p.divididas, 0)} divididas)`, '≤ 0,1', fracas / nd <= 0.1);
+}
 // informativos: por modelo e categoria
-for (const mod of MOD) {
+for (const mod of [...MOD, 'dividida']) {
   const r = res[mod], n = r.partidas.length, min = r.partidas.reduce((s, p) => s + p.ticksJogo, 0) / 3600;
   const cat = {};
   for (const f of r.faltas) {
