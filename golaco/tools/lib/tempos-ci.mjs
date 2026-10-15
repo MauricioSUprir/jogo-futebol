@@ -1,0 +1,87 @@
+// Tempo de cada teste no CI, em segundos — só para dividir as listas em partes (lib/partes.mjs); não precisa ser
+// exato, e um teste que não está aqui conta TEMPO_NOVO. Atualizar quando um teste mudar muito de tempo (os números
+// saem do log do CI: "PASSOU  <nome>  (N s)").
+// Node: chave = arquivo + argumentos (como na lista do rodar-testes.mjs); segundos de parede de cada teste no job
+// testes-golaco do deploy da main aa16c901 (run 38805251165: 57 testes, 4 por vez numa máquina de 4 vCPU, 1685 s).
+// Com a disputa da máquina inteira o número é só uma ordem de grandeza: os testes que abrem processos filhos
+// (transicao, replay-anel, tecnicos, defesa-corrida) pesam mais do que ele diz, e o aereo-troca natural levou 913 s
+// lá e 195 s na parte dele (PR #485). O ramo das "vagas" (teste em k processos, --par k) não muda a conta: o tempo
+// aqui é o do teste inteiro.
+export const TEMPO_NOVO = 60;
+export const TEMPOS_NODE = {
+  'teste-matdet.mjs': 2,
+  'teste-bola.mjs': 1,
+  'teste-determinismo.mjs': 3,
+  'teste-entrada.mjs': 1,
+  'teste-laco.mjs': 0.3,
+  'teste-resposta.mjs': 4,
+  'teste-conducao.mjs': 4,
+  'teste-cortes.mjs': 30,
+  'teste-perda.mjs': 27,
+  'teste-patinacao.mjs': 14,
+  'teste-inclinacao.mjs': 0.5,
+  'teste-dominio.mjs': 41,
+  'teste-recepcao.mjs': 25,
+  'teste-protecao.mjs': 11,
+  'teste-dribles.mjs': 1,
+  'teste-conducao-curta.mjs': 44,
+  'teste-recomeco.mjs': 7,
+  'teste-passes.mjs': 5,
+  'teste-chutes.mjs': 15,
+  'teste-cavadinha.mjs': 107,
+  'teste-goleiro.mjs': 6,
+  'teste-mergulho.mjs': 35,
+  'teste-aereo.mjs': 2,
+  'teste-cabeceio.mjs': 54,
+  'teste-treino.mjs': 14,
+  'teste-goleiro-trava.mjs': 105,
+  'teste-movimento.mjs': 41,
+  'teste-custo.mjs': 15,
+  'teste-partida.mjs': 84,
+  'teste-editor.mjs': 16,
+  'teste-taticas.mjs': 57,
+  'teste-defesa-humano.mjs': 59,
+  'teste-aereo-troca.mjs --so canhao': 69,
+  'teste-aereo-troca.mjs --so natural': 913,
+  'teste-transicao.mjs': 685,
+  'teste-defesa-corrida.mjs': 449,
+  'teste-intercepta.mjs': 276,
+  'teste-rede.mjs': 1,
+  'teste-rede-veu.mjs': 3,
+  'teste-torcida.mjs': 10,
+  'teste-replay-anel.mjs': 688,
+  'teste-saot.mjs': 215,
+  'teste-comemoracao.mjs': 294,
+  'teste-substituicao.mjs': 69,
+  'teste-tecnicos.mjs': 482,
+  'teste-tecnicos.mjs --so-sinteticos --estresse': 103,
+  'teste-impedimento.mjs': 156,
+  'teste-faltas.mjs': 302,
+  'teste-parado.mjs': 7,
+  'teste-pressao-humano.mjs': 306,
+  'teste-goleiro-regras.mjs': 146,
+  'teste-bolas-paradas.mjs': 237,
+  'teste-botoes.mjs': 95,
+  'teste-cortejo.mjs': 4,
+  'teste-prejogo-roteiro.mjs': 0.3,
+  'teste-identidade.mjs': 1,
+  'teste-ponte-tm.mjs': 21,
+  // ainda fora da main (ramo golaco/dominio-sem-passar): 687 s num processo só no CI
+  'teste-nao-passa.mjs': 687,
+};
+// Navegador: chave = arquivo; segundos de parede (um teste por vez), medidos no CI do PR #483 (run 38805241618).
+export const TEMPOS_NAVEGADOR = {
+  'teste-carga.mjs': 36,
+  'teste-controles.mjs': 64,
+  'teste-editor-tela.mjs': 51,
+  'teste-estadio.mjs': 229,
+  'teste-prejogo.mjs': 298,
+  'teste-som-jogo.mjs': 105,
+  'teste-rede-tela.mjs': 53,
+  'teste-hud-minimo.mjs': 68,
+  'teste-replay.mjs': 196,
+  'teste-comemoracao-tela.mjs': 80,
+  'teste-tecnicos-tela.mjs': 155,
+  'teste-substituicao-tela.mjs': 164,
+  'teste-desempenho-celular.mjs': 35,
+};

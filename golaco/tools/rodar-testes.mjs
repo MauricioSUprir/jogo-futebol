@@ -10,10 +10,19 @@
 // não passaram 5 vezes seguidas com sementes diferentes (plano 5). Não entram no padrão, para o CI
 // da main continuar verde. Quando o teste de uma parte estiver pronto, ela tira o 'etapa3' da linha
 // DELA (só da dela; a lista não muda de lugar).
+//
+// CI em partes (dono, 15/10: "diminuir o tempo"): --parte i --de n roda só a parte i de n. A lista (do grupo
+// escolhido) é dividida pelo tempo medido no CI (lib/tempos-ci.mjs; teste novo conta 60 s): o mais demorado
+// primeiro, cada um na parte mais leve até ali. A divisão não depende da máquina, então as n partes juntas são a
+// lista inteira, sem repetir. O GitHub Actions roda as 4 partes em 4 máquinas ao mesmo tempo (golaco-testes.yml).
+//   node tools/rodar-testes.mjs --parte 2 --de 4     (só a parte 2 de 4)
+//   node tools/rodar-testes.mjs --de 4 --lista       (só imprime as 4 partes, sem rodar; com --parte, só aquela)
 import { spawn } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { dividirPorCusto, lerParte } from './lib/partes.mjs';
+import { TEMPOS_NODE, TEMPO_NOVO } from './lib/tempos-ci.mjs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const LISTA = [
@@ -100,7 +109,21 @@ const argv = process.argv.slice(2);
 const iSo = argv.indexOf('--so');
 const so = iSo >= 0 ? argv[iSo + 1] : null;
 const grupos = so ? [so] : argv.includes('--etapa3') ? ['padrao', 'etapa3'] : ['padrao'];
-const TESTES = LISTA.filter(([, , , g = 'padrao']) => grupos.includes(g));
+const DO_GRUPO = LISTA.filter(([, , , g = 'padrao']) => grupos.includes(g));
+// --parte i --de n: só a parte i (ver o cabeçalho); --lista: imprime a divisão e sai
+const PARTE = lerParte(argv);
+const tempoDe = ([, arq, args = []]) => TEMPOS_NODE[[arq, ...args].join(' ')] ?? TEMPO_NOVO;
+const PARTES = dividirPorCusto(DO_GRUPO.map(tempoDe), PARTE?.n ?? 1);
+const TESTES = PARTE?.i ? PARTES[PARTE.i - 1].idx.map(k => DO_GRUPO[k]) : DO_GRUPO;
+if (argv.includes('--lista')) {
+  PARTES.forEach((p, k) => {
+    if (PARTE?.i && PARTE.i !== k + 1) return;
+    console.log(`parte ${k + 1} de ${PARTES.length}: ${p.idx.length} testes, ~${Math.round(p.carga)} s`);
+    for (const t of p.idx.map(j => DO_GRUPO[j])) console.log(`  ${[t[1], ...(t[2] ?? [])].join(' ')}  (~${tempoDe(t)} s)`);
+  });
+  process.exit(0);
+}
+if (PARTE?.i) console.log(`parte ${PARTE.i} de ${PARTE.n}: ${TESTES.length} de ${DO_GRUPO.length} testes, ~${Math.round(PARTES[PARTE.i - 1].carga)} s\n`);
 
 function rodar(arq, args = []) {
   return new Promise(resolve => {

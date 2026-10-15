@@ -11,41 +11,13 @@ concurrency:
   group: "pages"
   cancel-in-progress: true
 jobs:
-  # GOLAÇO (golaco/): a bateria de testes roda antes de publicar; se algum reprovar, o
-  # deploy não acontece.
+  # GOLAÇO (golaco/): a bateria de testes roda antes de publicar; se algum reprovar, o deploy não
+  # acontece. É o mesmo arquivo do CI do PR (golaco-testes.yml), em partes paralelas (Node em 4
+  # máquinas, navegador em 3); deploy: true = no navegador só os testes marcados para o deploy.
   testes-golaco:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Testes em Node (lógica do jogo)
-        run: node golaco/tools/rodar-testes.mjs
-      - name: Playwright (Chromium) para o teste no navegador
-        run: |
-          npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright@1.56.1
-          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
-      - name: Teste no navegador (carga, erros, download, determinismo Node = Chromium)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-carga.mjs || node golaco/tools/teste-carga.mjs
-      - name: Editar time no navegador (mouse, teclado, toque e nada encostando)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-editor-tela.mjs
-      - name: Tela limpa no navegador (HUD mínimo no celular e no PC, linha de impedimento só no apito)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-hud-minimo.mjs
-      - name: Comemoração do gol no navegador (cena, câmera de cinema, pular, celular; simulação segura e hash igual)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-comemoracao-tela.mjs
-      - name: Cena de substituição no navegador (fila depois do replay, pular, pausa, celular, nada encosta; hash igual)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node golaco/tools/teste-substituicao-tela.mjs
+    uses: ./.github/workflows/golaco-testes.yml
+    with:
+      deploy: true
   deploy:
     needs: testes-golaco
     environment:
