@@ -265,6 +265,8 @@ if (SO.includes('E')) {
 //     com a bola fora do campo (F1) e ninguém sai do chão com a bola morta (a parada ainda sem cobrar, F2).
 //  F3) TELEPORTE NO AR (16 cenas, treino): o jogador no ar é levado pela montagem (partida.js teleportar) 10 m para o lado;
 //     os pés ficam com o corpo (≤ 1,2 m) até o fim do pulo.
+//  F4) PÉ NO BALANÇO NA SAÍDA (48 cenas, treino; 15/10): o pé que sai do chão no meio do passo não cai para o chão no 1º
+//     passo do voo (o tornozelo desenhado anda ≤ 2,5·v + 3 m/s em todo quadro perto da saída).
 if (SO.includes('F')) {
   const fora = (x, z) => Math.abs(x) > MX + 0.11 || Math.abs(z) > 34 + 0.11;
   let cenas = 0, planosFora = 0, pulosMorta = 0, planos = 0;
@@ -337,6 +339,39 @@ if (SO.includes('F')) {
     }
   }
   reg('F', 'F3 teleporte no ar: passos com um pé a mais de 1,2 m do corpo', `${longe} (em ${noAr} pulos; pior ${pior.toFixed(2)} m)`, '0 (≥ 12 pulos)', noAr >= 12 && longe === 0);
+  // F4: o pé no balanço na saída do pulo (15/10: no teste-patinacao, cena da partida 11×11, o jogador 110 saiu do chão com
+  // o pé direito no meio do passo, a 0,15 m; no 1º passo do voo o pé desenhado caiu para 0,08 m — 6,8 cm num quadro,
+  // 1,11× o limite de 2,5·v + 3 m/s). O jogador começa a 0,3–1,0 m do ponto e anda até ele: parte dos pulos sai com um pé
+  // no ar. Meta: do 2º passo antes da saída ao 8º depois, o tornozelo desenhado anda ≤ (2,5·v + 3 m/s)·dt (o limite do
+  // teste-patinacao) em todo quadro.
+  let pulos4 = 0, comPeNoAr = 0, saltos = 0, pior4 = 0;
+  const TK = [AN.J.tornozeloE, AN.J.tornozeloD], TORN = CF.JOGADOR.alturaTornozelo;
+  for (let s = 1; s <= 48; s++) {
+    const off = 0.3 + 0.1 * (s % 8), ang = s * 2.4;
+    const jog = [{ id: 0, x: Math.cos(ang) * off, z: Math.sin(ang) * off, rumo: Math.PI, time: 0, papel: 'humano', posicao: 'MEI', attr: { impulsao: 70 } }];
+    const m = S.criarMundo({ semente: 700 + s, jogadores: jog, bola: { x: 20, z: 0 }, posse: null });
+    lancar(m, 18, (s % 3) - 1, 0, 0, 2.0 + 0.02 * (s % 16), 17);
+    m.voo.para = 0;
+    const j = m.jogadores[0];
+    let ant = null, vAnt = 0, contou = false;
+    for (let i = 0; i < 160; i++) {
+      const noArAntes = j.pes.some(pe => !pe.apoio && pe.ty > TORN + 0.02);
+      S.passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
+      const c = j.cab, v = Math.hypot(j.vx, j.vz);
+      const p = AN.pose(j, m), t = TK.map(k => [p[k * 3], p[k * 3 + 1], p[k * 3 + 2]]);
+      if (c && c.saiu && !contou) { contou = true; pulos4++; if (noArAntes) comPeNoAr++; }
+      if (c && c.h > 0 && m.tick >= c.td - 2 && m.tick <= c.td + 8 && ant) {
+        for (let q = 0; q < 2; q++) {
+          const r = Math.hypot(t[q][0] - ant[q][0], t[q][1] - ant[q][1], t[q][2] - ant[q][2]) / ((2.5 * Math.max(v, vAnt) + 3) * CF.PASSO);
+          pior4 = Math.max(pior4, r);
+          if (r > 1) saltos++;
+        }
+      }
+      ant = t; vAnt = v;
+      if (c && m.tick > c.tp + 5) break;
+    }
+  }
+  reg('F', 'F4 pé no balanço na saída do pulo: quadros com o tornozelo desenhado acima do limite', `${saltos} (em ${pulos4} pulos, ${comPeNoAr} com um pé no ar; pior ${pior4.toFixed(2)}× o limite)`, '0 (≥ 15 pulos, ≥ 3 com um pé no ar)', pulos4 >= 15 && comPeNoAr >= 3 && saltos === 0);
 }
 
 // ------------------------------------------------------------------ D) partidas IA × IA

@@ -109,7 +109,7 @@ export function planejarPulo(m, j, tc, bx, by, bz, ux, uz, nx = 0, nz = 0, folga
   }
   j.cab = {
     tA, td, tc, tp, tf, h, bx, by, bz, cx, cz, vx: 0, vz: 0, saiu: false,
-    x0: [0, 0], z0: [0, 0], lx: [0, 0], lz: [0, 0], cabeceio: true,
+    x0: [0, 0], z0: [0, 0], y0: [0, 0], lx: [0, 0], lz: [0, 0], cabeceio: true,
   };
   return j.cab;
 }
@@ -174,6 +174,8 @@ export function sairDoChao(m, j) {
   for (let p = 0; p < 2; p++) {
     const pe = j.pes[p], s = p === 0 ? -1 : 1;
     c.x0[p] = pe.apoio ? pe.x : pe.tx; c.z0[p] = pe.apoio ? pe.z : pe.tz;
+    // (o pé que estava no balanço sai da altura em que estava: pesNoAr desce a sobra até o pouso)
+    c.y0[p] = pe.apoio ? 0 : Math.max(0, pe.ty - TORN);
     const adiante = Math.min(0.25, 0.08 * vv) * (p === 0 ? 1 : 0.2);
     c.lx[p] = px + rx * s * PASSADA.afastamentoLateral + fx * adiante;
     c.lz[p] = pz + rz * s * PASSADA.afastamentoLateral + fz * adiante;
@@ -221,8 +223,10 @@ export function pesNoAr(m, j) {
     pe.apoio = false;
     // um caminho só, suave, de onde saiu ao ponto de pouso no voo inteiro (velocidade zero na saída e no pouso; o pé nunca
     // anda mais que o necessário — o teste de patinação limita o pé a 2,5·v + 3 m/s)
+    // (o pé que saiu do chão no meio do balanço parte da altura que tinha — c.y0, acima do tornozelo no chão — e essa sobra
+    // some no caminho até o pouso; antes ele caía no chão no 1º passo do voo: ~7 cm num quadro, teste-cabeceio F4)
     const k = suave(u);
-    pe.tx = lerp(c.x0[p], c.lx[p], k); pe.tz = lerp(c.z0[p], c.lz[p], k); pe.ty = TORN + lift;
+    pe.tx = lerp(c.x0[p], c.lx[p], k); pe.tz = lerp(c.z0[p], c.lz[p], k); pe.ty = TORN + lift + (c.y0 ? c.y0[p] * (1 - k) : 0);
     pe.lx = c.lx[p]; pe.lz = c.lz[p]; pe.lrumo = j.rumo; pe.puxa = 0;
   }
 }
