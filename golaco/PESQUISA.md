@@ -372,6 +372,16 @@ continuação é bit a bit) para achar a causa e conferir a correção no mesmo 
 | Sessões de treino de recepção (sportsessionplanner: "receiving — furthest foot, positive first touch") | O 1º toque "positivo" leva a bola para o lado em que o jogador vai, fora dos pés | A IA embalada domina para a frente, no sentido da corrida; o condutor muda de rumo depois, com a bola à frente |
 | Madden NFL 17 (notas dos desenvolvedores sobre a bola solta) e a crítica ao "fight for the fumble" | A recuperação da bola solta tem de seguir o estado físico da bola: quando já é claro quem a alcançou, a animação/decisão de outro não deve tomar a vez | O passe lento colado no pé do adversário é dele — o recebedor que só marcou o domínio não encerra a vez (`RECEPCAO.passeLento`) |
 
-Depois da correção (mesmas 24 partidas): 0,50 por partida, bola até 1,51 m atrás (corte pedido), nenhuma perdida; nas
-reprises dos 48 casos, 9 dos 32 que contam ainda passam (cortes de 50–60° a 4–6 m/s com 0,3–0,7 m de passo de
-apoio além da bola: é o corte, não a bola dominada).
+Depois da correção: no `teste-nao-passa` (18 partidas de 2 × 3 min, IA × IA e o humano roteirizado a 30 qps) 0,89 →
+0,28 por partida, passe lento colado no pé de outro 5 → 0 e bola perdida depois de passar dela 6 → 0; nas reprises dos
+48 casos da publicada, 35 → 14 ainda passam (quase todos cortes de 40–60° a 4–6 m/s com o passo de apoio 0,3–0,5 m além
+da bola: é o corte, não a bola dominada). O toque com a parte de dentro/fora do pé em TODA a condução também resolvia a
+bola ao lado do pé, mas tirava os chutes de fora da área no painel (39 → 32%, meta 35–40%): ficou só logo depois do
+domínio (painel de 48 partidas: 32–34% com ele em toda a condução, ~41% sem ele).
+
+O hash da partida muda de propósito a partir do passo ~300 (`hash-partida`); o treino fica bit a bit igual
+(`hash-igual`). Com o hash novo, três itens que estão na beira da meta também na main mudam de lado pelo sorteio dos
+estados (medido): `teste-partida` C "posse troca ≥ 10 em todas" (semente 7: 9 trocas, a maior posse 41 s × 70 s na main;
+nas sementes 9–20 a main tem mínimo 10 e a correção 11, média 18,5 × 18,6); `teste-pressao-humano` M5 (76% × 81%; PAREADO
+nos mesmos estados da main, 81,2% × 81,4%; nas sementes 7201 a main reprova com 79% e a correção passa com 83%);
+`teste-bolas-paradas` C3 (gol em 18,3% dos escanteios, p = 0,03; PAREADO nos mesmos estados, 262 escanteios: 12,6% × 12,6%).
