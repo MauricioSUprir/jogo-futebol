@@ -341,7 +341,8 @@ async function itensG() {
     if (!fs.existsSync(path.join(dest, 'golaco/js/render/replay-roteiro.js'))) { fs.mkdirSync(dest, { recursive: true }); execFileSync('sh', ['-c', `git archive ${sha} golaco/js | tar -x -C ${dest}`], { cwd: raiz }); }
     refJs = path.join(dest, 'golaco/js');
   }
-  const NS = +arg('--sementes', 28), MIN = +arg('--min', 4);
+  // (36 partidas: o G8 pede ≥ 48 gols com autor — com a defesa que corta o passe, ~1,6 gol por partida, 28 davam 44; 15/10)
+  const NS = +arg('--sementes', 36), MIN = +arg('--min', 4);
   const nPar = Math.max(1, Math.min(NS, os.availableParallelism?.() ?? os.cpus().length, +arg('--par', 3)));
   const res = [];
   let prox = 1;

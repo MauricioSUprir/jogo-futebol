@@ -558,7 +558,9 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
     áreas); `leituraVazia(L)` (pré-jogo: sem jogo); `pedirAplauso(L, s)` (os dois aplaudem `s` s: o pré-jogo, os times
     saindo do túnel);
   - `passoTecnicos(T, L)` = 1 passo de 1/60 s dos dois (estado → locomoção do jogo → pé desenhado → pose com torção,
-    cabeça na bola e braços por IK); `poseTecnico(tec, out)` (57 floats no mundo: o formato do anel e do desenho);
+    cabeça na bola e braços por IK; a mistura de um gesto para o outro cresce com o caminho da mão: ≤ `maoPico` m/s no
+    pico da troca comum e ≤ `maoPicoGol` m/s na reação ao gol — `comemora.sobe`/`misturaGol` só crescem com a mão vindo de
+    longe, T5 ≤ 0,15 m por passo); `poseTecnico(tec, out)` (57 floats no mundo: o formato do anel e do desenho);
   - `ESTADOS` = observa, instrui, aplaude, reclama, lamenta, comemora, sofreu, intervalo, fim, vamos (variantes em
     `TECNICOS.variantes`); `infoTecnicos(T)` → por treinador `{id, time, x, z, rumo, v, estado, variante, varianteNome,
     postura, olhar, noAr, rapido, recuo, esquiva}` (testes e API);
@@ -595,10 +597,12 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
   enquadramento vai em `plano.enq` (não enumerável).
 - **Olhos (`render/replay-olhos.js`, puro, Node)**: `enquadrarPrimeira(anel, p)` → `{olho, dir, bruto, cabeca, bolaSome,
   fovH 90, perto 0,10, w0, n}` (olho estabilizado: horizontal ≤ 2 cm do olho bruto antes da esfera e ≤ 6 cm depois,
-  altura sem o balanço da passada, dentro da esfera de 0,148 m da cabeça; olhar antes do chute para a bola puxada 60% para o gol e ≥ −18°, no chute a bola
+  altura sem o balanço da passada, dentro da esfera de 0,148 m da cabeça; olhar antes do chute para a bola puxada 60% para o gol, a
+  ≤ `golAntes` (30°) da boca do gol na horizontal (a bola que chega de lado) e ≥ −18°, no chute a bola
   e o pé, depois a bola puxada 35%; giro ≤ 85°/s por `limitarGiro(yaw, arf, n, L)`); `cameraPrimeira(e, t, out)`;
-  `corpoNaLente(anel, e, dmin, sem)`; `enquadrarTreinador(anel, p)` → parte 1 (o olho na cabeça dele, teleobjetiva fixa
-  com 30 m na distância do gol) + `parte2` (`parte2Treinador`: câmera parada no gramado com ele inteiro — pés e alto da
+  `corpoNaLente(anel, e, dmin, sem)`; `enquadrarTreinador(anel, p)` → parte 1 (o olho na cabeça dele — suavizado e a no
+  máximo `REPLAY.treinador.olhoMax` = 4 cm do bruto, para o pulo/agachar de uma vez não deixar a lente fora da cabeça —,
+  teleobjetiva fixa com 30 m na distância do gol) + `parte2` (`parte2Treinador`: câmera parada no gramado com ele inteiro — pés e alto da
   cabeça da pose — no terço esquerdo, fora dos sólidos, ≥ 0,6 m de qualquer corpo, o lugar com menos gente na frente);
   `cameraTreinador(e, t, aspecto, pequena, out)`; `zLateralDoPlano(anel, de, ate, lado)` (o z da lateral do golaço para o
   plano INTEIRO: meioZ + 1 com um treinador gravado a < 2 m do caminho dela; o diretor calcula uma vez por plano — antes,
@@ -1042,7 +1046,9 @@ quadro() ─ rodarPasso ──▶ passoPartida(m, entrada, acoes)
   - **Papéis sem a bola, nesta ordem** (`semBola`): PRESSÃO do humano → contrapressão (janela `IA_DEFESA.contrapressao.s`
     depois da perda: 0 / 4 / 7 s por nível de pressão) → 1º homem (aperta/contém) → 2º homem (cobre; sendo da linha de
     defesa, no máximo `IA_DEFESA.coberturaFundo` m atrás da própria referência) → marcação individual na área →
-    **recomposição** (`recompor`, `ramo 'recompoe'`) → referência (linha/zona, ponto calmo).
+    **recomposição** (`recompor`, `ramo 'recompoe'`) → referência (linha/zona, ponto calmo). O ponto calmo (`alvoCalmo`)
+    gira aos poucos, mas o caminho girado que sairia do campo (além de meia largura/comprimento + 0,5 m) com o alvo dentro
+    vira de uma vez (15/10: quem corria para a bola que saiu seguia em arco 4,7 m para fora da linha, pela área técnica).
   - **Recomposição em disparada** (PR "IA intensa"; `TATICA.recomp`): quem está mais de `liga` m (nos `janela` s depois
     da perda; fora dela, `ligaOrganizado` m) à frente do alvo — a referência sem a bola e, para quem não é da frente
     (vaga com x ≥ 0 sem a bola), também `atras` m atrás da linha da bola (com um passe deles no ar, o ponto de chegada;

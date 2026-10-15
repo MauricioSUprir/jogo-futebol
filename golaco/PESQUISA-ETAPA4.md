@@ -287,3 +287,23 @@ trajetória nova): no pulo do cabeceio o pé que saía do chão no meio do passo
 (`cabeceio.js pesNoAr`: 6,8 cm num quadro, 1,11× o limite do `teste-patinacao`). Agora ele parte da altura que tinha e a
 sobra some até o pouso (`teste-cabeceio` F4: 3 quadros acima do limite → 0, pior 1,05× → 0,77×). Muda o treino em passos
 raros (`hash-igual`: ataque-roteiro diferente a partir do passo 4800 da semente 3, um pulo com o pé no ar).
+
+Defeitos da câmera e dos treinadores que os gols da partida do #471 expuseram (CI do 9933ea0e; desenho, o hash da partida
+não muda, menos o T13, que era da IA):
+- `teste-tecnicos` T13 (treinador × jogador ≥ 0,5 m): o ponto calmo da IA (`ia-tatica.js alvoCalmo`) gira aos poucos e, com
+  a bola saindo pela lateral, o caminho girado levava o jogador 106 em arco 4,7 m para fora da linha, pela área técnica (0,46
+  m do treinador, semente 7). Agora o giro que sairia do campo com o alvo dentro vira de uma vez: mín 0,46 → 2,23 m. Muda a
+  partida (o painel do CI roda de novo); o treino fica igual (`alvoCalmo` só existe com `m.times`).
+- T5 (mão ≤ 0,15 m por passo): a reação ao gol misturava as juntas em 0,2 s fixos e a mão que vinha das costas para os
+  braços em V corria 9 m/s (0,152 m num passo). A mistura da reação cresce com o caminho da mão (`TECNICOS.maoPicoGol` 8,1
+  m/s no pico do smoothstep, a mesma conta da troca comum): 0,152 → 0,146 m, com a mão acima da cabeça ainda em 0,28–0,37 s.
+- T7 (comemoração ≥ 3 s): artefato do teste — o laço parava no apito final e cortava a comemoração de um gol nos últimos
+  segundos (2,48 s). A medida segue 3,6 s depois do fim sem andar a partida (o T8 conta os gestos só até o apito, como
+  antes): 2,48–3,50 → 3,50 s.
+- `teste-replay-anel` G9 (olho do treinador ≤ 0,15 m da cabeça): no pulo/agachar de uma vez da reação ao gol o atraso da
+  gaussiana levava a lente a 0,157 m. O olho suavizado fica a ≤ 4 cm do bruto (`REPLAY.treinador.olhoMax`).
+- G8 (≥ 48 gols com autor na amostra): com ~1,6 gol por partida, 28 partidas davam 44; a amostra cresceu para 36.
+- G7 (a boca do gol no quadro da 1ª pessoa em chute − 0,5 s; apareceu com a trajetória nova do T13, semente 9): o
+  cruzamento rasteiro chegava a 140° do gol e, puxando o olhar 60% da bola para o gol, a boca do gol ficava a 54° do centro
+  (fora dos 45° do quadro). O olhar antes do chute fica a ≤ 30° da boca do gol na horizontal (`REPLAY.primeira.golAntes`):
+  54 → 38°, no quadro nas três telas.

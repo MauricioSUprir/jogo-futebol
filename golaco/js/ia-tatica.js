@@ -796,6 +796,11 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
     // com a bola na mão do meu goleiro, qualquer virada vai de uma vez: girando aos poucos, quem
     // recuava quando ele pegou a bola seguia ~1–2 s para a própria linha do gol)
     it.dir = Math.abs(dA) > S.giro[4] || mao ? aD : it.dir + Math.max(-w, Math.min(w, dA));
+    // (girando aos poucos, o caminho não sai do campo: o ponto girado além da linha lateral ou de fundo, com o alvo dentro,
+    // vira de uma vez — quem corria para a bola que saiu seguia em arco 4,7 m para fora da linha, atravessando a área
+    // técnica e o treinador; teste-tecnicos T13, 15/10)
+    const fx = j.x + MD.cos(it.dir) * d, fz = j.z + MD.sin(it.dir) * d;
+    if ((Math.abs(fz) > CAMPO.meioZ + 0.5 || Math.abs(fx) > CAMPO.meioX + 0.5) && Math.abs(out.z) <= CAMPO.meioZ && Math.abs(out.x) <= CAMPO.meioX) it.dir = aD;
     out.x = j.x + MD.cos(it.dir) * d; out.z = j.z + MD.sin(it.dir) * d;
   }
   it.dTick = m.tick;

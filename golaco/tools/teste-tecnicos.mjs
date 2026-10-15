@@ -111,8 +111,13 @@ async function coletar(sem) {
     if (!EF.dentroAreaTecnica(tc.time, tc.j.x, tc.j.z, 0.15)) return `centro em (${fmt(tc.j.x, 2)}, ${fmt(tc.j.z, 2)})`;
     return null;
   };
-  for (let i = 0; i < 400000 && m.partida.estado !== 'fim'; i++) {
-    const ev = P.passoPartida(m, P.entradaDemoPartida(m), null) ?? m.eventos;
+  // (depois do apito final os treinadores seguem desenhados: a medida continua por FIM_EXTRA passos, sem andar a partida —
+  // um gol nos últimos segundos tinha a comemoração cortada pelo fim do laço, T7 com 2,48 s; 15/10)
+  const FIM_EXTRA = Math.ceil(3.6 / PASSO);
+  let fimDesde = -1;
+  for (let i = 0; i < 400000; i++) {
+    if (m.partida.estado === 'fim') { if (fimDesde < 0) fimDesde = i; if (i - fimDesde >= FIM_EXTRA) break; }
+    const ev = m.partida.estado === 'fim' ? [] : P.passoPartida(m, P.entradaDemoPartida(m), null) ?? m.eventos;
     TE.leituraDoMundo(m, ev, L);
     const t0 = performance.now();
     TE.passoTecnicos(T, L);
@@ -198,7 +203,9 @@ async function coletar(sem) {
       }
       // T8
       if (rolando) { if (tc.estado === 'observa') R.observa[k]++; }
-      if (tc.estado !== e.ultimoEstado || tc.variante !== e.ultimaVar || (tc.desde === T.k - 1)) {
+      // (só até o apito final, como antes do FIM_EXTRA: depois dele o gesto do fim se prolonga de propósito — tecnicos.js
+      // recomeça o mesmo 'fim' sem prazo —, não é um gesto repetido)
+      if (fimDesde < 0 && (tc.estado !== e.ultimoEstado || tc.variante !== e.ultimaVar || (tc.desde === T.k - 1))) {
         if (tc.desde === T.k - 1 && tc.estado !== 'observa') {
           R.seq[k].push(`${tc.estado}:${tc.variante}`);
           if (tc.estado === 'instrui' && rolando) R.instrui[k]++;
@@ -243,7 +250,7 @@ async function coletar(sem) {
   // T10: as 3 primeiras sementes de novo, sem os treinadores (o hash no fim tem de ser o mesmo)
   if (sem <= 3) {
     const m2 = P.criarPartida({ semente: sem, minutosPorTempo: MIN_TEMPO });
-    for (let i = 0; i < R.passos; i++) P.passoPartida(m2, P.entradaDemoPartida(m2), null);
+    for (let i = 0; i < R.passos && m2.partida.estado !== 'fim'; i++) P.passoPartida(m2, P.entradaDemoPartida(m2), null);
     R.hashSem = S.hashMundo(m2);
   }
   R.ms.sort((a, b2) => a - b2);

@@ -148,6 +148,23 @@ const _o = { x: 0, y: 0, z: 0 }, _b = { x: 0, y: 0, z: 0 }, _p = { x: 0, y: 0, z
  * ate, o olho (suavizado), o olhar (um ponto para onde olhar), a bola escondida (perto da lente) e o olho bruto e a cabeça
  * (testes). Null se o autor não está no anel no plano.
  */
+// o ponto do olhar antes do chute a no máximo `golAntes`° (na horizontal, visto do olho) da boca do gol: com a bola vindo de
+// lado (o cruzamento rasteiro que chega a 140° do gol), puxar 60% para o gol não bastava e a boca do gol ficava fora do
+// quadro em chute − 0,5 s (teste-replay-anel G7, 15/10)
+const _pg = { x: 0, z: 0 };
+function pertoDoGol(olho, i, x, z, gx) {
+  const ox = olho[i * 3], oz = olho[i * 3 + 2];
+  const aA = Math.atan2(z - oz, x - ox), aG = Math.atan2(0 - oz, gx - ox), lim = REPLAY.primeira.golAntes * GRAU;
+  let d = aA - aG;
+  while (d > Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  _pg.x = x; _pg.z = z;
+  if (Math.abs(d) <= lim) return _pg;
+  const r = Math.hypot(x - ox, z - oz), a = aG + Math.sign(d) * lim;
+  _pg.x = ox + Math.cos(a) * r; _pg.z = oz + Math.sin(a) * r;
+  return _pg;
+}
+
 export function enquadrarPrimeira(anel, p) {
   const F = REPLAY.primeira, cab = p.tipoChute === 'cabeceio';
   const sigO = (cab ? F.sigmaCabeceio : F.sigmaOlhar) * 60;
@@ -198,11 +215,12 @@ export function enquadrarPrimeira(anel, p) {
       // passado o contato, como no chute (a bola que sobe da cabeça fica no quadro)
       if (t > ch + s60(F.baixaDepois)) { x += (gx - x) * F.puxaGol; y += (gy - y) * F.puxaGol; z += (0 - z) * F.puxaGol; }
       else if (t >= ch - s60(F.cabeceioOlhaGol)) { x += (gx - x) * F.puxaCabeceio; y += (gy - y) * F.puxaCabeceio; z += (0 - z) * F.puxaCabeceio; }
-      else { x += (gx - x) * F.puxaAntes; y += (gy - y) * F.puxaAntes; z += (0 - z) * F.puxaAntes; }
+      else { x += (gx - x) * F.puxaAntes; y += (gy - y) * F.puxaAntes; z += (0 - z) * F.puxaAntes; ({ x, z } = pertoDoGol(olho, i, x, z, gx)); }
     } else if (t > ch + s60(F.baixaDepois)) {
       x += (gx - x) * F.puxaGol; y += (gy - y) * F.puxaGol; z += (0 - z) * F.puxaGol;
     } else if (t < ch - s60(F.baixaAntes)) {
       x += (gx - x) * F.puxaAntes; y += (gy - y) * F.puxaAntes; z += (0 - z) * F.puxaAntes;
+      ({ x, z } = pertoDoGol(olho, i, x, z, gx));
       const ox = olho[i * 3], oy = olho[i * 3 + 1], oz = olho[i * 3 + 2], dh = Math.max(0.5, Math.hypot(x - ox, z - oz));
       const yMin = oy + dh * Math.tan(F.arfagemAntes * GRAU);
       if (y < yMin) y = yMin;
@@ -316,6 +334,12 @@ export function enquadrarTreinador(anel, p, opc = {}) {
   }
   if (ultimo < 0) return null;
   const olho = gaussiana(bruto, n, 3, Tr.sigmaOlho * 60, new Float64Array(n * 3));
+  // o olho suavizado fica a no máximo `olhoMax` m do bruto: com o treinador pulando ou agachando de uma vez na reação ao gol
+  // o atraso da gaussiana levava a lente a 0,157 m do centro da cabeça (teste-replay-anel G9 pede ≤ 0,15; 15/10)
+  for (let i = 0; i < n; i++) {
+    const dx = olho[i * 3] - bruto[i * 3], dy = olho[i * 3 + 1] - bruto[i * 3 + 1], dz = olho[i * 3 + 2] - bruto[i * 3 + 2], d = Math.hypot(dx, dy, dz);
+    if (d > Tr.olhoMax) { const k = Tr.olhoMax / d; olho[i * 3] = bruto[i * 3] + dx * k; olho[i * 3 + 1] = bruto[i * 3 + 1] + dy * k; olho[i * 3 + 2] = bruto[i * 3 + 2] + dz * k; }
+  }
   // lente: o quadro com `largura` m na distância do gol (no passo do gol), fixa no plano
   const ig = clamp(p.golTick - w0, 0, n - 1);
   const dGol = Math.hypot(gx - olho[ig * 3], 0 - olho[ig * 3 + 2]);

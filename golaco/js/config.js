@@ -1442,7 +1442,7 @@ export const REPLAY = {
     baixaAntes: 0.3, baixaDepois: 0.2, puxaAntes: 0.6, puxaGol: 0.35, sigmaOlhar: 0.10, sigmaCabeceio: 0.14,
     giroMax: 85, sigmaGiro: 0.05,
     arfagem: [-60, 15], arfagemAntes: -18, fovH: 90, perto: 0.10, bolaSome: 0.35, corpo: 0.3, sobraMin: 1.2,
-    cabeceioOlhaGol: 0.15, puxaCabeceio: 0.5,
+    cabeceioOlhaGol: 0.15, puxaCabeceio: 0.5, golAntes: 30,
   },
   // VISÃO DO TREINADOR do time que marcou (render/replay-olhos.js): parte 1 = o que ele vê (olho na cabeça gravada,
   // gaussiana σ `sigmaOlho`; olhar a meio caminho da bola suavizada e do centro da boca do gol, σ `sigmaOlhar`;
@@ -1452,7 +1452,7 @@ export const REPLAY = {
   // segui-lo, fov `fov`° (16:9; ×0,88 no celular), ele no terço esquerdo, a área técnica, o banco e a torcida de cá atrás.
   // Parte 2 com < `parte2Min` s sai; o plano com < `planoMin` s sai.
   treinador: {
-    vel: 1, antes: 0.8, corte: 0.3, fim: 2.3, frente: 0.10, cima: 0.03, sigmaOlho: 0.1, sigmaOlhar: 0.12, puxaGol: 0.5,
+    vel: 1, antes: 0.8, corte: 0.3, fim: 2.3, frente: 0.10, cima: 0.03, sigmaOlho: 0.1, olhoMax: 0.04, sigmaOlhar: 0.12, puxaGol: 0.5,
     bolaNdc: 0.8, largura: 30, fovMin: 9, fovMax: 24,
     recuoZ: 0.7, altura: 1.5, fov: 30, sigmaGiro: 0.25, terco: 1 / 3, parte2Min: 0.8, planoMin: 1.0,
     dist: [4.5, 9], corpoMin: 0.6,
@@ -1605,6 +1605,7 @@ export const TECNICOS = {
   olhar: { cabecaMax: 1.22, tronco: 0.8, troncoMax: 0.6, corpoMax: 0.75, tau: 0.12, virarAnda: 0.7 },
   mistura: 0.35,              // s — toda troca de gesto mistura as juntas (smoothstep)
   maoPico: 6.5,               // m/s — o pico da mão na troca comum: a mistura cresce com a distância (1,5·d/maoPico)
+  maoPicoGol: 8.1,            // m/s — o pico da mão na reação ao gol (comemora.sobe/misturaGol só crescem com a mão vindo de longe)
   arcoMao: 0.25,              // m — a mão que iria pela cabeça na troca comum passa pela frente (o arco no meio dela)
   misturaGol: 0.2,            // s — o gol sofrido: as mãos vão para a cabeça (a comemoração usa comemora.sobe)
   misturaAgacha: 0.7,         // s — agachar e levantar (o corpo inteiro desce 0,3 m; as mãos vão junto)

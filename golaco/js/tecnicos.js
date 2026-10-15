@@ -836,6 +836,17 @@ function poseTec(T, tc, L) {
       }
       if (perto < RMIN + 0.05) { tc.arcoMix = TC.arcoMao; d += TC.arcoMao; }
       tc.mix = Math.max(TC.mistura, 1.5 * d / TC.maoPico);
+    } else if (sMix < 1 && (tc.mix === TC.comemora.sobe || tc.mix === TC.misturaGol)) {
+      // a reação ao gol continua explosiva, mas a mão que vem de longe (das costas para os braços em V) não passa de
+      // TC.maoPicoGol m/s no pico do smoothstep: com 0,2 s fixos, 1,2 m de caminho davam 9 m/s (0,152 m num passo; o
+      // teste-tecnicos T5 pede ≤ 0,15 m por passo) — 15/10, gols da partida do #471
+      let d = 0;
+      for (const [lado, a, b] of [[-1, tc.snap.e, _pb.e], [1, tc.snap.d, _pb.d]]) {
+        const pa = alvoMao(a, o, h, lado, a.m === 'p' || a.w <= 0 ? _modoN : a, _al), xa = pa.x, ya = pa.y, za = pa.z;
+        const pb = alvoMao(b, o, h, lado, b.m === 'p' || b.w <= 0 ? _modoN : b, _al2);
+        d = Math.max(d, Math.hypot(pb.x - xa, pb.y - ya, pb.z - za));
+      }
+      tc.mix = Math.max(tc.mix, 1.5 * d / TC.maoPicoGol);
     }
   }
   // braços (alvos do ombro/cabeça desta pose; a esquerda antes: a direita pode apontar o pulso dela) e a mão fora da cabeça
