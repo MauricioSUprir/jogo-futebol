@@ -10,7 +10,10 @@
 //   (contaPassou) o corte ou a inversão pedidos — o analógico a mais de INV_ANG (60°) do sentido em que ele vinha — com a
 //   bola até 1 m atrás (o passo de apoio do corte passa da bola). Também mede a bola de passe para outro, lenta, colada
 //   (≤ 0,6 m) no pé de quem não é o recebedor por ≥ 0,2 s sem ele tocar, e o domínio marcado que sobra com a bola no pé
-//   de outro (planosVelhos: o plano velho guiava o corpo).
+//   de outro (planosVelhos: o plano velho guiava o corpo). Também fora da conta (c.fora, listados à parte): quem acabou
+//   de ter a bola roubada e ainda não pode dominar (cond.semDominioAte: o bote do adversário mandou a bola para o lado ou
+//   para trás no caminho dele) e quem foi empurrado por uma trombada (a velocidade do corpo mudou ≥ EMPURRAO m/s num
+//   passo só — a passada não faz isso; colisaoCorpos) — nos dois o corpo não passou da bola por conta própria.
 // Cenas: partida IA × IA (a IA joga pelo humano: entradaDemoPartida) e partida com o humano roteirizado como no
 // celular (sem o MOD, que o celular não tem): a entrada da demo SEM a marca da IA (recebe como humano), e com a bola
 // vindo para o controlado ou com ele conduzindo, o analógico "para a frente" (sentido do ataque, ±30° sorteado por lance)
@@ -37,7 +40,9 @@ const imp = f => import(pathToFileURL(path.join(JS, f)).href);
 const P = await imp('partida.js'), C = await imp('config.js'), Cd = await imp('conducao.js'), Jg = await imp('jogador.js');
 export const INV_ANG = 60 * Math.PI / 180;
 /** O caso conta como "passou da bola"? (seguindo para a frente, ou na inversão com a bola > 1 m atrás) */
-export const contaPassou = c => !c.inversao || c.atras > 1.0;
+export const contaPassou = c => !c.fora && (!c.inversao || c.atras > 1.0);
+/** Mudança de velocidade do corpo num passo que só a trombada faz (m/s; a freada normal é ~0,1 m/s por passo). */
+export const EMPURRAO = 0.8;
 
 /** Gerador do roteiro (sem tocar no gerador do mundo): xorshift32 com o estado em st.rs (copiável com o mundo). */
 function sortear(st) {
@@ -92,6 +97,7 @@ export function rodarPartida(Pm, sem, cena, min, opc = {}) {
   const ultDom = new Map();   // id → tick do último domínio
   const casos = [], volta = [], bloqueios = [], bloq = new Map();
   const velho = new Map(), planosVelhos = []; // id → passos seguidos com o domínio marcado e a bola com outro
+  const vAnt = new Map(), empurrado = new Map(); // id → velocidade antes do passo; id → tick da última trombada
   let kf = 0;
   while (m.tick < N) {
     while (opc.fotos && kf < opc.fotos.length && opc.fotos[kf] <= m.tick) { if (opc.fotos[kf] === m.tick) opc.aoFoto(m.tick, structuredClone({ m, st })); kf++; }
@@ -102,7 +108,9 @@ export function rodarPartida(Pm, sem, cena, min, opc = {}) {
       else st.ult = e;
     }
     const nlog = m.log ? m.log.length : 0;
+    for (const j of m.jogadores) { let o = vAnt.get(j.id); if (!o) vAnt.set(j.id, o = { vx: 0, vz: 0 }); o.vx = j.vx; o.vz = j.vz; }
     const ev = Pm.passoPartida(m, e);
+    for (const j of m.jogadores) { const o = vAnt.get(j.id); if (o && Math.hypot(j.vx - o.vx, j.vz - o.vz) >= EMPURRAO) empurrado.set(j.id, m.tick); }
     if (opc.sonda && m.tick - 1 >= opc.sonda.t - 14 && m.tick - 1 <= opc.sonda.t + 30) sondar(m, pid(opc.sonda.id), ev, nlog, e);
     for (const x of ev) {
       if (x.tipo === 'toque' && x.id != null) { ultToque.set(x.id, m.tick); if (x.modo === 'dominio') ultDom.set(x.id, m.tick); }
@@ -181,7 +189,8 @@ export function rodarPartida(Pm, sem, cena, min, opc = {}) {
             // a intenção agora: o analógico (da pessoa ou da IA) em relação ao sentido em que ele vinha — mais de 100° é
             // inversão pedida (aí deixar a bola um pouco para trás é o giro; só conta se ela ficar > 1 m atrás)
             const aX = j.imag > 0 ? Math.abs(Math.atan2(w.hx * j.iz - w.hz * j.ix, w.hx * j.ix + w.hz * j.iz)) : null;
-            const c = { sem, tick: m.tick, t0: w.t0, id: j.id, time: j.time, hum: j.id === m.controlado[0], sit: w.sit, s: w.s, vb: w.vb, tocou: w.desdeToque, posse: m.posse === j.id, volta: null, perdeu: false, tipoUlt: w.tipoUlt, salto: w.salto, aIn: w.aIn, inv: w.inv,
+            const fora = w.fora ?? ((empurrado.get(j.id) ?? -1e9) >= w.t0 ? 'empurrado' : null);
+            const c = { sem, tick: m.tick, t0: w.t0, id: j.id, time: j.time, hum: j.id === m.controlado[0], sit: w.sit, s: w.s, vb: w.vb, tocou: w.desdeToque, posse: m.posse === j.id, volta: null, perdeu: false, tipoUlt: w.tipoUlt, salto: w.salto, aIn: w.aIn, fora, inv: w.inv,
               aX, inversao: aX != null && aX > INV_ANG, atras: -fr, prot: w.prot, mod: w.mod, freada: w.freada };
             casos.push(c); volta.push({ c, hx: w.hx, hz: w.hz });
             jan.delete(j.id);
@@ -209,7 +218,9 @@ export function rodarPartida(Pm, sem, cena, min, opc = {}) {
       const ut = ultToque.get(j.id);
       // ângulo entre o analógico e a corrida, e se o analógico pulou na leitura deste toque (toque de freio/espera do gesto)
       const aIn = j.imag > 0 ? Math.abs(Math.atan2(hx * j.iz - hz * j.ix, hx * j.ix + hz * j.iz)) : null;
-      jan.set(j.id, { t0: m.tick, hx, hz, bx0: b.p.x, bz0: b.p.z, sit, s, vb, desdeToque: ut != null && m.tick - ut <= 30 ? m.tick - ut : null, tipoUlt: j.cond.ult ? j.cond.ult.tipo : null,
+      // fora da conta: acabou de ter a bola roubada (ainda sem poder dominar) ou empurrado há pouco (≤ 0,2 s) por trombada
+      const fora = j.cond.semDominioAte != null && m.tick < j.cond.semDominioAte ? 'roubado' : (empurrado.get(j.id) ?? -1e9) >= m.tick - 12 ? 'empurrado' : null;
+      jan.set(j.id, { t0: m.tick, hx, hz, bx0: b.p.x, bz0: b.p.z, sit, s, vb, fora, desdeToque: ut != null && m.tick - ut <= 30 ? m.tick - ut : null, tipoUlt: j.cond.ult ? j.cond.ult.tipo : null,
         salto: j.saltoTick >= 0 && m.tick - j.saltoTick <= 4, aIn, inv: !!j.inv,
         mod: (j.botoes & C.BOTAO.MOD) !== 0, prot: !!(Cd.emProtecao && Cd.emProtecao(m, j)),
         freada: Jg.velocidadeDesejada(j.par, j.imag, (j.botoes & C.BOTAO.CORRER) !== 0, (j.botoes & C.BOTAO.MOD) !== 0, m.posse === j.id) < s - 1.0 });

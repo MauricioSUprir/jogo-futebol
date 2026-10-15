@@ -30,6 +30,10 @@
 //     corrida o corpo ia reto até o ponto do toque, de frente ou assistido a ≤ 1 m/s (12118 t 11047 #109, nas sementes
 //     novas: 7 m/s reto 0,6 s para o ponto de um passe que o humano já tinha dominado, 3,67 m além da bola) — agora a
 //     partida apaga o plano assim que a bola é de outro (sim.js);
+//  G. (depois da junção com a #471, 15/10) fora da conta, listados à parte: quem acabou de ter a bola roubada e ainda não
+//     pode dominar (o bote da #471 manda a bola para o lado ou para trás no caminho do condutor: 3169 t 6291 #10 e 2220
+//     t 17834 #7, 2 m "atrás" e o adversário com ela) e quem foi empurrado por trombada (2220 t 5359 #105: parado com a
+//     bola dominada, empurrado a 3,7 m/s para longe dela por quem pressionava — a carga é da frente das faltas, #480);
 // (Fica para depois: logo depois do domínio a bola ao lado do pé, fora do alcance da frente do pé — ele vai buscá-la e
 // corre ao lado dela a ~0,6 m até passar, lado 1102 t 19824 #107. O toque com a parte de dentro/fora do pé resolvia, mas
 // tirava os chutes de fora da área no painel: 39 → 32–34%, abaixo da meta de 35–40%.)
@@ -41,7 +45,8 @@
 //     (o adversário de quem passou ou o companheiro dele);
 //  3. depois de passar da bola, o adversário fica com ela: 0;
 //  4. (contraprova da rodada final) domínio marcado que sobra com a bola no pé de outro por ≥ 2 passos: 0 (antes da
-//     correção F, nestas 42: 290, 93 do controlado; com o F: 0 — e 0,21 / 0 / 1 nas metas 1–3, ver o PESQUISA.md §6).
+//     correção F, nestas 42: 290, 93 do controlado; com o F e a junção com a #471: 0 — e 0,38 / 0 / 0 nas metas 1–3,
+//     com o G; ver o PESQUISA.md §6).
 //   node tools/teste-nao-passa.mjs [--js <pasta js>] [--detalhe] [--par 3] [--json casos.json]
 // (uma partida por processo, até --par ao mesmo tempo: as 42 partidas levavam 687 s no CI num processo só)
 import { fork } from 'node:child_process';
@@ -70,7 +75,7 @@ if (args.includes('--filho')) {
   const cena = arg('--cena'), sem = +arg('--s');
   const P = await import(pathToFileURL(path.join(JS, 'partida.js')).href);
   const r = MP.rodarPartida(P, sem, cena, MIN, { qps30: cena !== 'ia' });
-  await new Promise(ok => process.send({ cena, sem, cs: r.casos.filter(MP.contaPassou), bl: r.bloqueios, pv: r.planosVelhos }, ok));
+  await new Promise(ok => process.send({ cena, sem, cs: r.casos.filter(MP.contaPassou), fo: r.casos.filter(c => c.fora && (!c.inversao || c.atras > 1.0)), bl: r.bloqueios, pv: r.planosVelhos }, ok));
   process.exit(0);
 }
 const t0 = Date.now();
@@ -94,14 +99,16 @@ res.sort((a, b) => ordem.get(`${a.cena} ${a.sem}`) - ordem.get(`${b.cena} ${b.se
 const n = res.length;
 const todos = res.flatMap(r => r.cs), bloq = res.flatMap(r => r.bl), velhos = res.flatMap(r => r.pv);
 const perdeu = todos.filter(c => c.perdeu);
-const lin = [['cena', 'partidas', 'passou da bola', 'do controlado', 'perdeu a bola', 'bola atrás p50 / máx (m)', 'passe colado no pé de outro', 'domínio velho (do controlado)']];
+const lin = [['cena', 'partidas', 'passou da bola', 'do controlado', 'perdeu a bola', 'bola atrás p50 / máx (m)', 'passe colado no pé de outro', 'domínio velho (do controlado)', 'fora da conta: roubado / empurrado (perdeu)']];
 for (const [cena] of CENAS) {
   const rr = res.filter(r => r.cena === cena), cs = rr.flatMap(r => r.cs), at = cs.map(c => c.atras).sort((a, b) => a - b);
-  lin.push([cena, rr.length, cs.length, cs.filter(c => c.hum).length, cs.filter(c => c.perdeu).length, at.length ? `${fmt(at[Math.floor(at.length / 2)], 2)} / ${fmt(at[at.length - 1], 2)}` : '—', rr.flatMap(r => r.bl).length, `${rr.flatMap(r => r.pv).length} (${rr.flatMap(r => r.pv).filter(x => x.hum).length})`]);
+  lin.push([cena, rr.length, cs.length, cs.filter(c => c.hum).length, cs.filter(c => c.perdeu).length, at.length ? `${fmt(at[Math.floor(at.length / 2)], 2)} / ${fmt(at[at.length - 1], 2)}` : '—', rr.flatMap(r => r.bl).length, `${rr.flatMap(r => r.pv).length} (${rr.flatMap(r => r.pv).filter(x => x.hum).length})`,
+    (fo => `${fo.filter(c => c.fora === 'roubado').length} / ${fo.filter(c => c.fora === 'empurrado').length} (${fo.filter(c => c.perdeu).length})`)(rr.flatMap(r => r.fo))]);
 }
 console.log(`"Passou da bola" na partida — lógica de ${path.relative(process.cwd(), JS) || '.'} (${n} partidas de 2 × ${MIN} min; ${nPar} processos, ${fmt((Date.now() - t0) / 1000, 0)} s)`);
 console.log(tabelaTexto(lin));
 if (detalhe) for (const c of todos) console.log(`  ${c.sem} t0 ${c.t0} → ${c.tick} #${c.id}${c.hum ? ' (controlado)' : ''} ${MP.SITS[c.sit]} s ${fmt(c.s, 1)} vb ${fmt(c.vb, 1)} ${c.tocou != null ? `tocou ${c.tocou} ticks antes (${c.tipoUlt})` : 'sem tocar'} analógico ${c.aX == null ? 'solto' : fmt(c.aX * 180 / Math.PI, 0) + '°'} atrás ${fmt(c.atras, 2)} m${c.perdeu ? ' PERDEU' : ''}`);
+if (detalhe) for (const c of res.flatMap(r => r.fo)) console.log(`  fora da conta (${c.fora}): ${c.sem} t0 ${c.t0} → ${c.tick} #${c.id}${c.hum ? ' (controlado)' : ''} ${MP.SITS[c.sit]} s ${fmt(c.s, 1)} atrás ${fmt(c.atras, 2)} m${c.perdeu ? ' PERDEU' : ''}`);
 if (detalhe) for (const x of bloq) console.log(`  colada: sem ${x.sem} t ${x.tick} #${x.id} — passe para #${x.para}, bola ${fmt(x.vb, 1)} m/s`);
 if (detalhe) for (const x of velhos) console.log(`  domínio velho: sem ${x.sem} t ${x.tick} #${x.id}${x.hum ? ' (controlado)' : ''} modo ${x.modo} a ${fmt(x.s, 1)} m/s`);
 if (arg('--json', null)) fs.writeFileSync(arg('--json'), JSON.stringify(res, null, 1));

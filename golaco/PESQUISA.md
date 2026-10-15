@@ -473,3 +473,15 @@ bit a bit igual). Nas 42 do teste: 0,29 → **0,21** "passou da bola" por partid
 0 — e o sorteio novo dos lances traz 1 "perdeu" (o caso 2220 acima: meta 3 de 0 → 1). Nos dois lotes novos: 0,50 / 1 / 1
 e 0,19 / 0 / 1 (o passe colado que aparece, 6288 t 19403 #111, é o cortador com o toque marcado e a bola a 4,96 m/s
 barrado pelo `soMarcou` — a junção com o `cortandoPasse` da #471 cobre esse caso).
+
+**Junção com a #471 (main aa16c901, 15/10).** No `sim.js bolaLivre` as duas formas do `soMarcou` se somam (OU): quem
+só marcou o domínio não tira a vez de quem está com a bola lenta no pé (esta frente) nem do adversário que corta o passe
+ou do controlado do humano (#471); o goleiro adversário pega como na #471. Nas 42 do `teste-nao-passa` depois da junção:
+"passou da bola" 0,48 por partida (20), passe colado 0, domínio velho 0 — e **3 "perdeu", nenhum da recepção ou da
+condução**: dois do bote novo da #471 (a bola tirada sai para o lado ou para trás no caminho do condutor, que fica sem
+poder dominar, `cond.semDominioAte`, e corre por cima dela: 3169 t 6291 #10, 2220 t 17834 #7, ~2 m) e uma trombada
+(2220 t 5359 #105: parado com a bola dominada, empurrado de 1,0 para 3,7 m/s num passo só por quem pressionava, e o
+outro ficou com ela — a carga é da frente das faltas, #480). O medidor deixa esses dois casos fora da conta e os lista à
+parte (coluna "fora da conta"): quem acabou de ter a bola roubada e ainda não pode dominar, e quem foi empurrado
+(a velocidade do corpo mudou ≥ 0,8 m/s num passo, `medir-passa.mjs EMPURRAO`; a freada normal é ~0,1 m/s por passo).
+Com isso: **0,38 (16 em 42) / 0 / 0 / 0** nas metas 1–4; fora da conta 3 roubados e 1 empurrado (3 com a bola perdida).

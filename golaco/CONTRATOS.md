@@ -186,9 +186,9 @@ pede à passada que tire o pé do toque do chão a tempo, e o toque espera por e
     candidato que só MARCOU o domínio (posse ainda nula, o mesmo `voo.tickChave`) não encerra a vez — seguem os que
     estão com a bola no chão, até `passeLento` m/s e ao alcance do pé AGORA (`bolaLentaNoPe`): o adversário que corta e
     o companheiro de quem passou em cima dela (contraprova: só com o adversário, o companheiro deixava o passe lento
-    correr colado no pé); e o goleiro adversário só com a bola nessa velocidade (o de quem passou, nunca). Mesma forma do
-    `soMarcou` da branch do cabeceio (PR #471), que lá deixa seguir quem corta o passe (`cortandoPasse`) e o controlado
-    do humano — na junção, as condições se somam (OU).
+    correr colado no pé). Mesma forma do `soMarcou` do cabeceio (PR #471), que deixa seguir quem corta o passe
+    (`cortandoPasse`), o controlado do humano e o goleiro adversário (o de quem passou, nunca) — na junção, as condições
+    se somam (OU).
   - **virada da IA compatível com o embalo** (`ia-ataque.js viradaComEmbalo`, só o condutor da IA tática — o humano
     vira como pede): até `IA_ATAQUE.condutor.virada.janela` s depois da posse nova e acima de `vMin` m/s, se o rumo
     pedido está a mais de `anguloEmbalado(v)` (conducao.js) da corrida, a entrada vira só até esse limite (× `curva`) e
@@ -1670,7 +1670,8 @@ corrido só na partida.
   `'corta'`). `cortandoPasse(m, j)` (exportada) diz se j está cortando o passe no ar.
 - `sim.js bolaLivre` (partida, passe rasteiro com destino): o candidato que só MARCOU o domínio (o recebedor esperando) não
   encerra mais a vez — seguem os adversários do passador que estão cortando (`cortandoPasse`) ou controlados pelo humano
-  (sem a IA jogando por ele), e o goleiro adversário; os companheiros do passador, não. Antes o recebedor com o toque
+  (sem a IA jogando por ele), e o goleiro adversário; os companheiros do passador só com a bola lenta no pé
+  (`bolaLentaNoPe`, a regra do "passe lento não é só do recebedor" acima). Antes o recebedor com o toque
   marcado encerrava a vez de todos e o defensor no caminho só cortava com a bola batendo no corpo.
 - `sim.js boteIA` (partida): com o condutor a mais de `ACOES.boteIA.vLado` m/s a bola tirada sai para o lado do defensor e
   `tras` para trás no caminho do condutor; o condutor fica sem dominar até `semDominioAte` (a regra da DIVIDIDA). O
