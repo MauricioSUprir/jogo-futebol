@@ -225,6 +225,9 @@ const custoCena = { n: 0, ms: 0 };
 // deles veio da cena (simulação segura): o desenho interpola com o alfa da cena
 const TECNICOS_ON = params.get('tecnicos') !== '0';
 let tecnicos = null, tecAlfaCena = false, tecVisiveis = true;
+// x/z de cada treinador no último passo GRAVADO no anel (por time): os passos de uma cena com o mundo parado não são
+// gravados — se ele andou neles, o passo seguinte vira corte (REPLAY.saltoTecnico)
+const tecGravado = [NaN, NaN, NaN, NaN];
 const leituraTec = criarLeitura();
 const custoTec = { n: 0, ms: 0 };
 const _leituraVazia = [];
@@ -318,7 +321,7 @@ function iniciarEstados() {
   estJ.clear();
   // os treinadores do mundo novo (na partida), em pé no centro da área técnica deles
   tecnicos = TECNICOS_ON && mundo.times ? criarTecnicos(mundo.times, mundo.semente ?? SEMENTE) : null;
-  tecAlfaCena = false;
+  tecAlfaCena = false; tecGravado.fill(NaN);
   for (const j of mundo.jogadores) estadoDe(j);
   copiarBolaDoMundo(bolaAtu);
   copiarBolaDoMundo(bolaAnt);
@@ -391,6 +394,13 @@ function rodarPasso(entrada, acoes) {
  */
 function gravarNoAnel(cortou, eventos) {
   const tg = agoraMs();
+  // o treinador que andou nos passos de uma cena com o mundo parado (a substituição: eles saem da frente dos atores) chega
+  // longe do último passo gravado: corte (antes o replay seguinte o deslizava 3 m num passo)
+  if (tecnicos) for (const tc of tecnicos.tecs) {
+    const o = tc.time * 2;
+    if (Math.hypot(tc.x1 - tecGravado[o], tc.z1 - tecGravado[o + 1]) > CFG.REPLAY.saltoTecnico) cortou = true;
+    tecGravado[o] = tc.x1; tecGravado[o + 1] = tc.z1;
+  }
   anel.inicio(mundo.tick, passosTotais * PASSO, cortou);
   let v = 0;
   for (const j of mundo.jogadores) {
@@ -2147,6 +2157,8 @@ const api = {
     reduzirMovimento(v) { if (diretor) diretor.reduzirMovimento = v; },
     /** O jogador `id` gravado no anel no passo `tick` ({x, z, time, goleiro} ou null): conferir a parede e o plano. */
     noAnel(tick, id) { const j = jogadorNoTick(anel, tick, id); return j ? { ...j } : null; },
+    /** O passo `tick` do anel é um corte (o replay não interpola até ele nem um plano o atravessa)? null fora do anel. */
+    corteNoAnel(tick) { const s = anel.slot(tick); return s < 0 ? null : !!anel.corte[s]; },
     /** Testes de layout: o selo no terço de baixo sem a análise (tipo ou null; o próximo quadro de replay o refaz). */
     selo(tipo) { hud.terco(tipo ? { tipo } : null); },
     /**

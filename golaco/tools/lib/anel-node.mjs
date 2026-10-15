@@ -49,6 +49,12 @@ export async function criarGravador(pastaJs) {
       e.x = j.x; e.z = j.z;
     }
     if (Math.hypot(m.bola.p.x - S.bAnt.x, m.bola.p.y - S.bAnt.y, m.bola.p.z - S.bAnt.z) > 2.5) cortou = true;
+    // o treinador longe do último passo gravado (no main.js: os passos de uma cena com o mundo parado; aqui nunca acontece)
+    if (S.T && C.REPLAY.saltoTecnico) for (const tc of S.T.tecs) {
+      const g = ((S.tecG ??= {})[tc.id] ??= { x: NaN, z: NaN });
+      if (Math.hypot(tc.j.x - g.x, tc.j.z - g.z) > C.REPLAY.saltoTecnico) cortou = true;
+      g.x = tc.j.x; g.z = tc.j.z;
+    }
     S.bAnt.x = m.bola.p.x; S.bAnt.y = m.bola.p.y; S.bAnt.z = m.bola.p.z;
     const tg = performance.now();
     a.inicio(m.tick, m.tick * C.PASSO, cortou);

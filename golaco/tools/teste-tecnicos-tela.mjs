@@ -14,7 +14,10 @@
 //   V5 console sem erros;
 //   V6 a cena de substituição (a fila de cenas da main, 15/10; 6 cenas: 1, 4 e 2 pares em lateral perto da área técnica):
 //      os treinadores dão os passos da cena (o mundo parado), o ator mais perto a ≥ 0,5 m de cada um e a câmera de ala a
-//      ≥ 0,6 m da cápsula deles em todos os quadros.
+//      ≥ 0,6 m da cápsula deles em todos os quadros;
+//   V7 (contraprova 15/10) depois de cada uma dessas cenas, no anel do replay: todo passo em que um treinador "anda" mais que
+//      REPLAY.saltoTecnico desde o passo gravado antes (os passos da cena não são gravados) é um CORTE — senão o replay
+//      seguinte (o "Replay" da pausa, o gol logo depois da troca) o desliza ~3 m num passo.
 // Na versão sem os treinadores (origin/main antes desta frente) V1, V2, V4 e V6 reprovam (não existem).
 //   node tools/teste-tecnicos-tela.mjs [--raiz <pasta do jogo>] [--so V1,V6]
 import path from 'node:path';
@@ -164,7 +167,7 @@ if (!SO || SO.has('V6')) try {
       const g = window.__golaco;
       if (!g.cenaSubst || !g.substituicaoDeTeste || !g.estadio?.tecnicos) return { sem: true };
       const { distanciaTecnico } = await import('./js/tecnicos.js');
-      const out = { cenas: 0, quadros: 0, distMin: Infinity, distEx: '', camMin: Infinity, camEx: '', andaram: 0, desenhados: 0, perto: 0 };
+      const out = { cenas: 0, quadros: 0, distMin: Infinity, distEx: '', camMin: Infinity, camEx: '', andaram: 0, desenhados: 0, perto: 0, saltoMax: 0, saltosSemCorte: 0, saltoEx: '' };
       // a troca num lateral em frente a uma área técnica (o lateral de substituicaoDeTeste: x = ±14, z = meioZ + 0,5) e a
       // de 5 pares dos dois times
       const casos = [{ pares: [{ sai: 9, entra: 22 }] }, { pares: [{ sai: 9, entra: 22 }, { sai: 7, entra: 17 }, { time: 1, sai: 110, entra: 120 }, { time: 1, sai: 107, entra: 117 }] }, { pares: [{ sai: 11, entra: 19 }, { sai: 2, entra: 13 }] }];
@@ -177,7 +180,7 @@ if (!SO || SO.has('V6')) try {
           while (q < 600 && !g.cenaSubst.ativo) { g.relogio.avancar(1000 / 60, { desenhar: false }); q++; }
           if (!g.cenaSubst.ativo) continue;
           out.cenas++;
-          const t0 = g.estadio.tecnicos.k;
+          const t0 = g.estadio.tecnicos.k, tickS = g.mundo.tick;
           let k = 0;
           while (g.cenaSubst.ativo && k < 900) {
             g.relogio.avancar(1000 / 60, { desenhar: k % 4 === 0 }); k++;
@@ -191,6 +194,16 @@ if (!SO || SO.has('V6')) try {
           }
           out.andaram += g.estadio.tecnicos.k - t0 > k * 0.5 ? 1 : 0;
           out.desenhados += g.estadio.tecnicos.lista.length === 2 ? 1 : 0;
+          // V7: o jogo volta; no anel, o salto do treinador entre dois passos gravados só com corte no passo de depois
+          for (let i = 0; i < 40; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+          const lim = 0.25, corte = t => (typeof g.replay.corteNoAnel === 'function' ? g.replay.corteNoAnel(t) === true : false);
+          for (let t = tickS - 3; t < g.mundo.tick; t++) for (const id of [210, 211]) {
+            const a = g.replay.noAnel(t, id), b = g.replay.noAnel(t + 1, id);
+            if (!a || !b) continue;
+            const d = Math.hypot(b.x - a.x, b.z - a.z);
+            if (d > out.saltoMax) out.saltoMax = d;
+            if (d > lim && !corte(t + 1)) { out.saltosSemCorte++; if (!out.saltoEx) out.saltoEx = `${id}: ${d.toFixed(2)} m de ${t} a ${t + 1}, caso ${ci}`; }
+          }
         }
       }
       return out;
@@ -199,6 +212,9 @@ if (!SO || SO.has('V6')) try {
     else meta('V6 cena de substituição: os treinadores andam com ela, saem da frente dos atores e a câmera fica fora deles',
       `${r.cenas} cenas, ${r.quadros} quadros: dão os passos da cena em ${r.andaram}/${r.cenas}; o ator mais perto a ${f2(r.distMin)} m (${r.distEx}; a < 1 m em ${r.perto} quadros×pares); a câmera a ≥ ${f2(r.camMin)} m da cápsula (${r.camEx})`,
       '6 cenas; todas; ≥ 0,5 m; ≥ 0,6 m', r.cenas === 6 && r.andaram === r.cenas && r.distMin >= 0.5 && r.camMin >= 0.6);
+    if (!r.sem) meta('V7 depois da cena: o treinador que andou nela não desliza no replay (salto > 0,25 m entre passos gravados só com corte)',
+      `${r.cenas} cenas: o maior salto entre dois passos gravados ${f2(r.saltoMax)} m; sem corte ${r.saltosSemCorte}${r.saltoEx ? ` (${r.saltoEx})` : ''}`,
+      '0 saltos sem corte', r.cenas === 6 && r.saltosSemCorte === 0);
   } finally { erros.push(...C6.erros); await C6.navegador.close(); }
 } catch (e) { meta('V6 execução (cena de substituição)', String(e?.message ?? e).split('\n')[0], 'sem exceção', false); }
 meta('V5 console sem erros', erros.length ? erros.slice(0, 3).join(' | ') : 'nenhum', 'nenhum', erros.length === 0);

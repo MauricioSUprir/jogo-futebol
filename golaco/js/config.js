@@ -1179,6 +1179,9 @@ export const REPLAY = {
   automatico: true,           // padrão do ajuste "Replays automáticos" da pausa (?replay=0 desliga)
   segundos: 10,               // s guardados no anel (600 passos; ~3,6 MB)
   vagas: 26,                  // por passo no anel: 22 em campo, os 2 treinadores (12/10) e folga (quem entra, 4º árbitro)
+  // m — um treinador que andou mais que isto entre dois passos GRAVADOS (≤ 3 m/s: ~5 cm por passo) deu os passos de uma
+  // cena com o mundo parado (substituição): o passo vira corte no anel e o replay não o desliza pelo gramado (contraprova)
+  saltoTecnico: 0.25,
   // gol (na saída de bola; a comemoração entra antes): 1) TV na velocidade real, do chute − `antes` (ou do último corte)
   // até o gol + `depois`; 2) atrás do gol, alto, em câmera lenta, do chute − lentoAntes até o gol + lentoDepois;
   // 3) só no golaço (chute de ≥ `golaco` m do gol): lateral baixa bem lenta em volta do chute (FC 25: "3 ângulos").
