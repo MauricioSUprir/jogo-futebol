@@ -555,8 +555,15 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
   - `criarLeitura()` → `L` (reaproveitada: nada alocado por passo); `leituraDoMundo(m, eventos, L)` (DEPOIS do passo da
     partida: bola, posse por time, lado, parada, placar, os eventos que eles olham — gol, chute/cabeceio, passe, defesa,
     trave, fora, impedimento/falta/cartão/pênalti (reclama), roubada, intervalo, fim, saída — e os jogadores perto das
-    áreas); `leituraVazia(L)` (pré-jogo: sem jogo); `pedirAplauso(L, s)` (os dois aplaudem `s` s: o pré-jogo, os times
-    saindo do túnel);
+    áreas: `L.perto` x, z, vx, vz e `L.pertoId`, de z > meioZ − 8 e |x| < xLim[1] + 8); `leituraVazia(L)` (pré-jogo: sem
+    jogo); `pedirAplauso(L, s)` (os dois aplaudem `s` s: o pré-jogo, os times saindo do túnel);
+  - ESQUIVA (15/10, frente "replay robusto"): uma só, para a bola e os jogadores (`esquivar`): o caminho previsto da bola
+    (rolagem de bola.js, 1 s) e o de quem está a ≤ 14 m (2 s, com a curva que ele vem fazendo, medida pelo id, e o raio
+    crescendo ½·`TECNICOS.esquiva.curva`·t²); com o caminho para o alvo de agora passando perto de alguma, ele vai para o
+    lugar da área (16 direções × 3 distâncias) com a MAIOR folga até todas, prevendo o próprio corpo (rampa de 5,5 m/s² até
+    3 m/s), evitando o plano da TV com a bola perto da linha de cá; reações ao gol de qualquer gesto: a mão sobe com o pico
+    em `TECNICOS.maoPicoGol` m/s, passa do topo da cabeça em `TECNICOS.comemora.cruza` s (a mistura das mãos espera ou
+    encurta) e nunca anda mais que `TECNICOS.maoPassoMax` m num passo (a rede de segurança);
   - `passoTecnicos(T, L)` = 1 passo de 1/60 s dos dois (estado → locomoção do jogo → pé desenhado → pose com torção,
     cabeça na bola e braços por IK); `poseTecnico(tec, out)` (57 floats no mundo: o formato do anel e do desenho);
   - `ESTADOS` = observa, instrui, aplaude, reclama, lamenta, comemora, sofreu, intervalo, fim, vamos (variantes em
@@ -586,7 +593,10 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
   desvio, tipoChute, reduzirMovimento, extras})` — os planos de antes campo a campo iguais aos de `{extras: false}` (=
   o roteiro antigo); `planosExtrasGol(anel, g, base)` acrescenta, antes da checagem: `{cam: 'primeira', vel 0,6, de: chute −
   0,9 s, ate: gol + 0,4 s, autor, chuteTick, golTick, lado, tipoChute}` (sem gol contra, sem autor ou chute no anel, sem
-  "reduzir movimento"; outro corpo a < 0,3 m da lente no quadro corta o fim — fica se sobrar ≥ 1,2 s reais) e `{cam:
+  "reduzir movimento"; os passos RUINS — outro corpo a < 0,3 m da lente no quadro, a lente a < `REPLAY.primeira.solidoFolga`
+  m de algo sólido (estadio-forma.js solidoEm: o gol inteiro, as placas...) ou perto do chão, o próprio quadril/pernas a <
+  `proprio` m dela — depois do chute acabam o plano antes, antes do chute o começam depois, até não sobrar nenhum; fica se
+  sobrar ≥ 1,2 s reais) e `{cam:
   'treinador', vel 1, de: chute − 0,8 s, corte: gol + 0,3 s, ate: gol + 2,3 s, tecnico (210 + time que marcou)}` (sem lugar
   para a câmera da parte 2: só a parte 1; plano < 1 s sai); nenhum plano atravessa um corte (o começo procura o último corte
   ATÉ O GOL — também um entre o chute e o gol; sem ≥ `extras.primeiraMin` s de corrida antes do chute depois dele, sem 1ª
@@ -594,10 +604,13 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
   da 1ª pessoa, o fim da parte 2 e o começo da parte 1, nessa ordem); total ≤ 19 s (golaço 21; checagem + 1). O
   enquadramento vai em `plano.enq` (não enumerável).
 - **Olhos (`render/replay-olhos.js`, puro, Node)**: `enquadrarPrimeira(anel, p)` → `{olho, dir, bruto, cabeca, bolaSome,
-  fovH 90, perto 0,10, w0, n}` (olho estabilizado: horizontal ≤ 2 cm do olho bruto antes da esfera e ≤ 6 cm depois,
-  altura sem o balanço da passada, dentro da esfera de 0,148 m da cabeça; olhar antes do chute para a bola puxada 60% para o gol e ≥ −18°, no chute a bola
-  e o pé, depois a bola puxada 35%; giro ≤ 85°/s por `limitarGiro(yaw, arf, n, L)`); `cameraPrimeira(e, t, out)`;
-  `corpoNaLente(anel, e, dmin, sem)`; `enquadrarTreinador(anel, p)` → parte 1 (o olho na cabeça dele, teleobjetiva fixa
+  fovH 90, perto 0,10, w0, n}` (olho estabilizado: horizontal ≤ 2 cm do olho bruto antes da esfera e ≤ 6 cm depois — o
+  recuo na esfera para a 6 cm do centro —, altura sem o balanço da passada, dentro da esfera de 0,148 m da cabeça; olhar em
+  ÂNGULO: antes do chute a bola puxada 60% para o gol, ≥ −18° e a ≤ `golAngMax`° do centro da boca, descendo em linha (de
+  chute − 0,48 s a − 0,07 s) para o ponto do contato e nele até chute + 0,05 s, depois a bola e a bola puxada 35% (cabeceio:
+  depois do contato, a bola); o alvo nunca a < `pisoFrente` m à frente do olho na direção do gol; σ 0,03 s em volta do
+  chute; giro ≤ 85°/s por `limitarGiro(yaw, arf, n, L)`); `cameraPrimeira(e, t, out)`; `corpoNaLente(anel, e, dmin, sem,
+  todos?)` e `lenteRuimPrimeira(anel, e, folga, proprio, todos?)` (o 1º passo ruim, ou todos na lista); `enquadrarTreinador(anel, p)` → parte 1 (o olho na cabeça dele — presa a ≤ `REPLAY.treinador.prende` m do olho bruto —, teleobjetiva fixa
   com 30 m na distância do gol) + `parte2` (`parte2Treinador`: câmera parada no gramado com ele inteiro — pés e alto da
   cabeça da pose — no terço esquerdo, fora dos sólidos, ≥ 0,6 m de qualquer corpo, o lugar com menos gente na frente);
   `cameraTreinador(e, t, aspecto, pequena, out)`; `zLateralDoPlano(anel, de, ate, lado)` (o z da lateral do golaço para o
@@ -615,9 +628,12 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
   teletransporte ficar antes dele), `replay.corteNoAnel(tick)`;
   `estadio.tecnicos` (`{lista: infoTecnicos, msPorPasso, passos (os do jogo), k (todos, também os das cenas)}`),
   `estadio.mostrarTecnicos(v)` (só o desenho), `estadio.triangulosBoneco`.
-- **Testes**: `teste-tecnicos` (Node, padrão: T1–T16), `teste-replay-anel` (G1–G13: ordem, os planos de antes iguais,
+- **Testes**: `teste-tecnicos` (Node, padrão: T1–T18; T17 a reação ao gol de qualquer gesto e T18 quem corre perto da
+  área técnica, sem partida; as partidas seguem 4 s depois do apito final; `--estresse` 72 partidas, 3× as sementes do T17 e
+  2× as direções do T18; `--so-sinteticos` só o T17 e o T18), `teste-replay-anel` (G1–G13: ordem, os planos de antes iguais,
   orçamentos, anel e cortes, pênalti, olho/olhar/giro/bola/gol da 1ª pessoa, corpo na lente, as duas partes do treinador,
-  a lente fora dos sólidos, a reação dele, pose gravada = ao vivo), `teste-replay` (navegador: G1–G3 ordem, durações e quem
+  a lente fora dos sólidos, a reação dele, pose gravada = ao vivo; `--estresse` 84 partidas; o G8 cresce a amostra com as
+  sementes seguintes até 48 gols com autor), `teste-replay` (navegador: G1–G3 ordem, durações e quem
   some; G4 celular 844×390 Média — chamadas por plano ≤ o máximo ao vivo + 1 e CPU p95 do quadro do replay ≤ a do jogo + 1
   ms —; G5 um toque no meio da 1ª pessoa pula tudo; G6 nada some; G7 a câmera dos planos novos sem salto entre quadros), `teste-tecnicos-tela` (navegador, CI: visíveis na TV do
   celular com o banco no quadro, chamadas iguais com e sem eles, CPU do quadro × `?tecnicos=0`, as linhas no gramado e,

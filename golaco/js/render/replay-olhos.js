@@ -11,22 +11,29 @@
 //    média móvel de 0,33 s (um passo) e gaussiana σ 0,22 s: a cabeça do manequim sobe e desce até ±9 cm correndo e o
 //    cérebro estabiliza o olhar (Pozzo & Berthoz 1991); rolagem sempre 0; nada de balançar no ritmo da passada (Nesky,
 //    GDC 2014 #44; Oculus: "do not use head bobbing"); presa a [cabeça − 0,14, cabeça + 0,16] e, por fim, dentro da
-//    esfera de 0,148 m em volta do centro da cabeça (com a cabeça longe na vertical, o olho recua na horizontal: a
-//    altura não treme);
-//  - olhar: até chute − 0,3 s a bola puxada 60% para o centro da boca do gol (o autor vê o gol antes de bater), sem descer
-//    mais que 18° (a boca do gol no quadro também no celular deitado); de chute − 0,3 s a chute + 0,2 s a bola e o pé;
-//    depois a bola puxada 35% para o gol (cabeceio: puxada 60% até 0,15 s antes do contato e 50% perto dele); gaussiana σ
-//    0,10 s (0,14 no cabeceio); arfagem em [−60°, +15°]; o GIRO com LIMITE de 85°/s no tempo do replay (limitarGiro: ida e
-//    volta, a média — sem atraso) e gaussiana de 0,05 s por cima (arXiv 1611.06292: incomoda a duração da mudança, não o
-//    tamanho: giros curtos e lentos);
+//    esfera de 0,148 m em volta do centro da cabeça (com a cabeça longe na vertical, o olho recua na horizontal até 6 cm
+//    do centro — a altura não treme — e, passando disso, a altura é que fica presa);
+//  - olhar (15/10, frente "replay robusto": tudo em ÂNGULO — rumo e arfagem por passo, suavizados e com o limite do giro;
+//    antes, os pontos eram suavizados em posição e o ponto longe do gol se misturava com a bola no pé): até chute − 0,48 s a
+//    bola puxada 60% para o centro da boca do gol (o autor vê o gol antes de bater), sem descer mais que 18° e com o rumo a
+//    ≤ 32° do centro dela (a boca no quadro de 90° também com a bola cruzada de lado), já baixando até −20° nos 0,3 s antes;
+//    de chute − 0,48 s a chute − 0,07 s o olhar desce em linha para o ponto do contato (a bola no passo do chute) e fica
+//    nele até chute + 0,05 s; depois a bola, até chute + 0,2 s, e a bola puxada 35% para o gol (cabeceio: puxada 60% até
+//    0,15 s antes do contato e 50% perto dele); o alvo nunca a < 0,6 m à frente do olho na direção do gol (a bola no pé
+//    atrás do olho ou por cima da cabeça: o rumo dela é ruído); gaussiana σ 0,10 s (0,14 no cabeceio; 0,03 s em volta do
+//    chute, senão o olhar do pé subia com a bola que já sai); arfagem em [−60°, +15°]; o GIRO com LIMITE de 85°/s no tempo
+//    do replay (limitarGiro: ida e volta, a média — sem atraso) e gaussiana de 0,05 s por cima (arXiv 1611.06292: incomoda
+//    a duração da mudança, não o tamanho: giros curtos e lentos);
 //  - campo de visão HORIZONTAL de 90° fixo no plano (Nesky #41/#42; a faixa de conforto é dada em graus horizontais);
-//    plano de recorte próximo de 0,10 m; a bola some a < 0,35 m do olho; outro corpo a < 0,3 m da lente no quadro corta o
-//    plano antes (fica se sobrar ≥ 1,2 s reais; senão o plano sai).
+//    plano de recorte próximo de 0,10 m; a bola some a < 0,35 m do olho; os passos RUINS — outro corpo a < 0,3 m da lente
+//    no quadro, a lente a < 0,12 m de algo sólido (o gol, as placas...) ou perto do chão, o próprio quadril/pernas a < 0,25 m
+//    dela — cortam o plano (replay-roteiro.js planosExtrasGol: depois do chute acaba antes, antes do chute começa depois;
+//    fica se sobrar ≥ 1,2 s reais; senão o plano sai).
 // TREINADOR (cam 'treinador'; REPLAY.treinador): um plano com um CORTE no meio:
-//  - parte 1 (o que ele vê): o olho na cabeça gravada do treinador (gaussiana σ 0,1 s), o olhar a meio caminho da bola e do
-//    centro da boca do gol (a bola sempre a ≤ 0,8 da meia largura do quadro), σ 0,12 s; teleobjetiva FIXA no plano (o quadro
-//    com 30 m de largura na distância do gol, como a câmera 3 baixa da UEFA), sem zoom dentro do plano (Nesky #42); ele sai
-//    da lista de desenho;
+//  - parte 1 (o que ele vê): o olho na cabeça gravada do treinador (gaussiana σ 0,1 s, presa a ≤ 4 cm do olho bruto), o
+//    olhar a meio caminho da bola e do centro da boca do gol (a bola sempre a ≤ 0,8 da meia largura do quadro), σ 0,12 s;
+//    teleobjetiva FIXA no plano (o quadro com 30 m de largura na distância do gol, como a câmera 3 baixa da UEFA), sem
+//    zoom dentro do plano (Nesky #42); ele sai da lista de desenho;
 //  - parte 2 (ele reagindo): corte seco para uma câmera parada no gramado (z = meioZ − 0,7, 1,5 m de altura), que só gira
 //    (gaussiana σ 0,25 s) para mantê-lo no terço esquerdo, inteiro no quadro, com a área técnica, o banco e a torcida de cá
 //    atrás; o lugar dela é o de menos gente na frente dele no anel (como escolherGiroReacao da comemoração), fora dos
@@ -40,6 +47,7 @@ import { afastarDeTecnicos } from '../tecnicos.js';
 const GRAU = Math.PI / 180;
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const suave01 = u => { u = clamp(u, 0, 1); return u * u * (3 - 2 * u); };
 const s60 = s => Math.round(s * 60);
 const ALTURA_GOL = CAMPO.gol.altura;
 
@@ -66,6 +74,16 @@ function gaussiana(src, n, dim, sig, out) {
       for (let k = -R; k <= R; k++) { const j = i + k < 0 ? 0 : i + k > n - 1 ? n - 1 : i + k; s += src[j * dim + c] * w[k + R]; }
       out[i * dim + c] = s;
     }
+  }
+  return out;
+}
+/** Gaussiana de 1 componente com o σ (passos) de CADA amostra (sigs[i]), de fase zero (bordas repetidas). */
+function gaussianaVar(src, n, sigs, out) {
+  for (let i = 0; i < n; i++) {
+    const sg = Math.max(0.3, sigs[i]), R = Math.max(1, Math.ceil(3 * sg));
+    let s = 0, w = 0;
+    for (let k = -R; k <= R; k++) { const j = i + k < 0 ? 0 : i + k > n - 1 ? n - 1 : i + k, p = Math.exp(-(k * k) / (2 * sg * sg)); s += src[j] * p; w += p; }
+    out[i] = s / w;
   }
   return out;
 }
@@ -155,7 +173,7 @@ export function enquadrarPrimeira(anel, p) {
   const [w0, w1] = janelaValida(anel, p.de, p.ate, M);
   const n = w1 - w0 + 1;
   if (n <= 0) return null;
-  const bruto = new Float64Array(n * 3), cabeca = new Float64Array(n * 3), alvo = new Float64Array(n * 3);
+  const bruto = new Float64Array(n * 3), cabeca = new Float64Array(n * 3);
   const gx = (p.lado >= 0 ? 1 : -1) * MX, gy = ALTURA_GOL / 2;
   let ultimo = -1;
   for (let i = 0; i < n; i++) {
@@ -179,10 +197,15 @@ export function enquadrarPrimeira(anel, p) {
     olho[i * 3 + 1] = clamp(olho[i * 3 + 1], cy + F.yMin, cy + F.yMax);
     // dentro da esfera de raio `raioCabeca` em volta do centro da cabeça: com a cabeça longe na vertical (o balanço da
     // passada), o olho recua na horizontal para o centro dela (a altura fica estável)
+    // (15/10: o recuo na horizontal vai até `olhoHMin` m do centro — mais que isso tirava o olho de perto do olho bruto, G6;
+    // passando, a altura é que fica presa na esfera)
     const hx = olho[i * 3] - cabeca[i * 3], hz = olho[i * 3 + 2] - cabeca[i * 3 + 2], hy = olho[i * 3 + 1] - cy, R = F.raioCabeca;
     if (hx * hx + hy * hy + hz * hz > R * R) {
-      const hh = Math.hypot(hx, hz), dyA = Math.min(Math.abs(hy), R * 0.98), hMax = Math.sqrt(R * R - dyA * dyA);
+      const hh = Math.hypot(hx, hz);
+      let dyA = Math.min(Math.abs(hy), R * 0.98);
+      const hMax = Math.max(Math.min(hh, F.olhoHMin), Math.sqrt(R * R - dyA * dyA));
       if (hh > hMax) { olho[i * 3] = cabeca[i * 3] + hx * hMax / hh; olho[i * 3 + 2] = cabeca[i * 3 + 2] + hz * hMax / hh; }
+      dyA = Math.min(dyA, Math.sqrt(Math.max(0, R * R - Math.min(hh, hMax) ** 2)));
       if (Math.abs(hy) > dyA) olho[i * 3 + 1] = cy + Math.sign(hy) * dyA;
     }
   }
@@ -190,33 +213,87 @@ export function enquadrarPrimeira(anel, p) {
   // do gol (puxaAntes: o autor levanta a cabeça e vê o gol antes de bater), sem descer mais que arfagemAntes° (a boca do
   // gol fica no quadro também no celular deitado); no chute, a bola e o pé; depois, a bola puxada puxaGol para o gol
   const ch = p.chuteTick;
+  // o alvo de antes do chute: a bola puxada puxaAntes para o gol, sem descer mais que arfagemAntes°, e a boca do gol sempre
+  // no quadro (o rumo a ≤ golAngMax° do centro dela; 15/10: a bola cruzada de lado, a 120° do gol, puxada 60% para ele,
+  // deixava os dois fora dos 90° do quadro)
+  const antes = (i, b, o) => {
+    let x = b.x + (gx - b.x) * F.puxaAntes, y = b.y + (gy - b.y) * F.puxaAntes, z = b.z + (0 - b.z) * F.puxaAntes;
+    const ox = olho[i * 3], oy = olho[i * 3 + 1], oz = olho[i * 3 + 2], dh = Math.max(0.5, Math.hypot(x - ox, z - oz));
+    if (!cab) { const yMin = oy + dh * Math.tan(F.arfagemAntes * GRAU); if (y < yMin) y = yMin; }
+    const yg = Math.atan2(-oz, gx - ox);
+    let d = Math.atan2(z - oz, x - ox) - yg;
+    while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+    if (Math.abs(d) > F.golAngMax * GRAU) { const yN = yg + Math.sign(d) * F.golAngMax * GRAU; x = ox + Math.cos(yN) * dh; z = oz + Math.sin(yN) * dh; }
+    o.x = x; o.y = y; o.z = z;
+    return o;
+  };
+  const _a = { x: 0, y: 0, z: 0 };
+  // o ponto (x, y, z) visto do olho i em rumo/arfagem (piso à frente — 15/10: no referencial do gol, a = para o gol, o alvo
+  // nunca fica a menos de `pisoFrente` m à frente do olho; a bola no pé, atrás do olho com o corpo inclinado, ou passando
+  // por cima da cabeça tem o rumo de ruído e o limite do giro dava a volta inteira para segui-lo — e a arfagem presa)
+  const ang = (i, x, y, z, o) => {
+    const ox = olho[i * 3], oy = olho[i * 3 + 1], oz = olho[i * 3 + 2], ux = gx - ox, uz = -oz, ul = Math.hypot(ux, uz) || 1, fx = ux / ul, fz = uz / ul;
+    const a = (x - ox) * fx + (z - oz) * fz;
+    if (a < F.pisoFrente) { x += fx * (F.pisoFrente - a); z += fz * (F.pisoFrente - a); }
+    o[0] = Math.atan2(z - oz, x - ox);
+    o[1] = clamp(Math.atan2(y - oy, Math.hypot(x - ox, z - oz) || 1e-6), F.arfagem[0] * GRAU, F.arfagem[1] * GRAU);
+    return o;
+  };
+  const _g1 = [0, 0], _g2 = [0, 0];
+  // a descida do olhar para a bola e o pé (chute): de chute − desce[0] a chute − desce[1] s, o olhar vai do alvo de antes
+  // para a bola (smoothstep, em ÂNGULO) — 15/10: a troca seca a chute − 0,3 s, suavizada em posição (o ponto longe de antes
+  // com a bola no pé e com a bola que já sobe), deixava o olhar a −35° com a bola a −70°: abaixo do quadro no chute
+  // (o fim da descida e até chute + `pe` s: o ponto do contato — a bola no passo do chute —, sem o olhar subir com a bola
+  // que já sai antes dela sair: a suavização em volta do chute via a bola subindo e deixava a do pé abaixo do quadro)
+  const d0 = ch - s60(F.desce[0]), d1 = ch - s60(F.desce[1]);
+  const bc = { ...(bolaNoTick(anel, ch, {}) ?? { x: gx, y: 0.11, z: 0 }) };
+  const yaw = new Float64Array(n), arfA = new Float64Array(n);
   for (let i = 0; i < n; i++) {
     const t = w0 + i, b = bolaNoTick(anel, t, _b) ?? _b;
     let x = b.x, y = b.y, z = b.z;
     if (cab) {
       // cabeceio: na bola até cabeceioOlhaGol s antes do contato; depois a bola a meio caminho do gol (puxaCabeceio) e,
       // passado o contato, como no chute (a bola que sobe da cabeça fica no quadro)
+      // (15/10: do contato a contato + baixaDepois, a bola mesma, como no chute — a cabeçada para o chão, puxada 50% para o
+      // gol, deixava a bola que quica no pé abaixo do quadro)
       if (t > ch + s60(F.baixaDepois)) { x += (gx - x) * F.puxaGol; y += (gy - y) * F.puxaGol; z += (0 - z) * F.puxaGol; }
+      else if (t >= ch) { /* a bola */ }
       else if (t >= ch - s60(F.cabeceioOlhaGol)) { x += (gx - x) * F.puxaCabeceio; y += (gy - y) * F.puxaCabeceio; z += (0 - z) * F.puxaCabeceio; }
+      else if (t < ch - s60(F.baixaAntes)) { antes(i, b, _a); x = _a.x; y = _a.y; z = _a.z; }
       else { x += (gx - x) * F.puxaAntes; y += (gy - y) * F.puxaAntes; z += (0 - z) * F.puxaAntes; }
+      ang(i, x, y, z, _g1);
     } else if (t > ch + s60(F.baixaDepois)) {
       x += (gx - x) * F.puxaGol; y += (gy - y) * F.puxaGol; z += (0 - z) * F.puxaGol;
-    } else if (t < ch - s60(F.baixaAntes)) {
-      x += (gx - x) * F.puxaAntes; y += (gy - y) * F.puxaAntes; z += (0 - z) * F.puxaAntes;
-      const ox = olho[i * 3], oy = olho[i * 3 + 1], oz = olho[i * 3 + 2], dh = Math.max(0.5, Math.hypot(x - ox, z - oz));
-      const yMin = oy + dh * Math.tan(F.arfagemAntes * GRAU);
-      if (y < yMin) y = yMin;
-    }
-    alvo[i * 3] = x; alvo[i * 3 + 1] = y; alvo[i * 3 + 2] = z;
-  }
-  const alvoS = gaussiana(alvo, n, 3, sigO, new Float64Array(n * 3));
-  // rumo e arfagem do olhar (arfagem presa em [arfagem]); o rumo desenrolado
-  const yaw = new Float64Array(n), arfA = new Float64Array(n);
-  for (let i = 0; i < n; i++) {
-    const dx = alvoS[i * 3] - olho[i * 3], dy = alvoS[i * 3 + 1] - olho[i * 3 + 1], dz = alvoS[i * 3 + 2] - olho[i * 3 + 2];
-    yaw[i] = Math.atan2(dz, dx);
+      ang(i, x, y, z, _g1);
+    } else if (t < d1) {
+      antes(i, b, _a);
+      ang(i, _a.x, _a.y, _a.z, _g1);
+      // chegando a chute − desce[0], o olhar já vem baixando até arfagemDesce° (a boca do gol ainda no alto do quadro): a
+      // descida depois cabe no limite do giro
+      const ua = clamp((t - (d0 - s60(F.desceAntes))) / Math.max(1, s60(F.desceAntes)), 0, 1);
+      _g1[1] = Math.min(_g1[1], F.arfagem[1] * GRAU + (F.arfagemDesce - F.arfagem[1]) * GRAU * ua);
+      if (t > d0) {
+        const u = clamp((t - d0) / Math.max(1, d1 - d0), 0, 1);
+        ang(i, bc.x, bc.y, bc.z, _g2);
+        let dy = _g2[0] - _g1[0];
+        while (dy > Math.PI) dy -= 2 * Math.PI; while (dy < -Math.PI) dy += 2 * Math.PI;
+        _g1[0] += dy * u; _g1[1] += (_g2[1] - _g1[1]) * u;
+      }
+    } else if (t <= ch + s60(F.pe)) ang(i, bc.x, bc.y, bc.z, _g1);
+    else ang(i, x, y, z, _g1);
+    yaw[i] = _g1[0]; arfA[i] = _g1[1];
     if (i) { while (yaw[i] - yaw[i - 1] > Math.PI) yaw[i] -= 2 * Math.PI; while (yaw[i] - yaw[i - 1] < -Math.PI) yaw[i] += 2 * Math.PI; }
-    arfA[i] = clamp(Math.atan2(dy, Math.hypot(dx, dz) || 1e-6), F.arfagem[0] * GRAU, F.arfagem[1] * GRAU);
+  }
+  // suavizado em ângulo (σ sigmaOlhar; sigmaCabeceio no cabeceio); no chute (±sigmaChute[1] s, entrando até ±sigmaChute[2]),
+  // σ sigmaChute[0] s: a σ de 0,1 s levava o olhar do pé (−60°, uns 8 passos) para −48° e a bola do chute saía por baixo
+  {
+    const sigs = new Float64Array(n), q0 = s60(F.sigmaChute[1]), q1 = s60(F.sigmaChute[2]);
+    for (let i = 0; i < n; i++) {
+      const dt = Math.abs(w0 + i - ch), u = cab && w0 + i < ch ? 0 : dt <= q0 ? 1 : dt >= q1 ? 0 : 1 - (dt - q0) / (q1 - q0);
+      sigs[i] = sigO + (F.sigmaChute[0] * 60 - sigO) * u;
+    }
+    const y2 = gaussianaVar(yaw, n, sigs, new Float64Array(n)), a2 = gaussianaVar(arfA, n, sigs, new Float64Array(n));
+    yaw.set(y2); arfA.set(a2);
   }
   // giro com LIMITE de velocidade angular (giroMax °/s no tempo do replay, a vel ×): uma passada para a frente e uma para
   // trás, a média das duas (sem atraso; a média de duas curvas que respeitam o limite também respeita) e uma gaussiana
@@ -263,15 +340,18 @@ function distCorpo(pose, px, py, pz, perto) {
 
 /**
  * Primeiro passo do plano em que outro corpo fica a < `dmin` m da lente dentro do quadro (1ª pessoa; aspecto mais largo
- * que vai à tela: 16:9 e o celular), ou −1. sem = ids que não contam (o próprio autor).
+ * que vai à tela: 16:9 e o celular), ou −1. sem = ids que não contam (o próprio autor). Com `todos` (uma lista), põe nela
+ * TODOS os passos assim (e devolve o primeiro).
  */
-export function corpoNaLente(anel, e, dmin, sem) {
+export function corpoNaLente(anel, e, dmin, sem, todos = null) {
   const _cam = {}, perto = { x: 0, y: 0, z: 0 }, pr = { x: 0, y: 0, z: 0 };
+  let primeiro = -1;
   for (let t = e.de; t <= e.ate; t++) {
     cameraPrimeira(e, t, _cam);
     const s = anel.slot(t);
     if (s < 0) continue;
-    for (let v = 0; v < anel.nVagas[s]; v++) {
+    let ruim = false;
+    for (let v = 0; v < anel.nVagas[s] && !ruim; v++) {
       const i = s * anel.vagas + v, id = anel.ids[i];
       if (id < 0 || id === sem) continue;
       const cx = anel.dados[i * anel.K + anel.P], cz = anel.dados[i * anel.K + anel.P + 1];
@@ -282,11 +362,53 @@ export function corpoNaLente(anel, e, dmin, sem) {
       // no quadro (o ponto do corpo mais perto, com a folga do raio)
       for (const a of [16 / 9, 844 / 390]) {
         projetar(_cam.x, _cam.y, _cam.z, _cam.lx, _cam.ly, _cam.lz, fovVerticalDe(e.fovH, a), a, perto.x, perto.y, perto.z, pr);
-        if (pr.z > -0.3 && Math.abs(pr.x) <= 1.3 && Math.abs(pr.y) <= 1.3) return t;
+        if (pr.z > -0.3 && Math.abs(pr.x) <= 1.3 && Math.abs(pr.y) <= 1.3) { ruim = true; break; }
       }
     }
+    if (!ruim) continue;
+    if (primeiro < 0) primeiro = t;
+    if (!todos) return t;
+    todos.push(t);
   }
-  return -1;
+  return primeiro;
+}
+
+// a 1ª pessoa DESENHA do próprio autor só o quadril e as pernas (render/jogador3d.js OCULTA_TRONCO tira a cabeça, o
+// pescoço, o peito, os ombros e os braços: a mesma regra, pelo nome das juntas)
+const NOME_J = Object.fromEntries(Object.entries(J).map(([n, i]) => [i, n]));
+const VISIVEL_1P = SEGMENTOS.map(([a, b]) => !(/pescoco|peito|ombro|cotovelo|mao|cabeca/.test(NOME_J[a] + ' ' + NOME_J[b]) || (NOME_J[a] === 'lombar' && NOME_J[b] === 'peito')));
+
+/**
+ * Primeiro passo do plano da 1ª pessoa (de e.de a e.ate, também no meio dos passos: o desenho interpola) com a LENTE
+ * dentro de algo sólido do estádio (estadio-forma.js solidoEm com `folga` m: o gol inteiro — a estrutura e o vão —, as
+ * placas, os bancos...; o chão a < e.perto + folga) ou com o que se vê do próprio autor (o quadril e as pernas) a < `proprio`
+ * m dela; −1 se nenhum. (15/10: o autor que segue para dentro do gol depois de marcar levava a lente para dentro da trave e
+ * da rede.)
+ */
+export function lenteRuimPrimeira(anel, e, folga, proprio, todos = null) {
+  const c = {};
+  let primeiro = -1;
+  for (let t2 = 2 * e.de; t2 <= 2 * e.ate + 1; t2++) {
+    const t = Math.min(e.ate, t2 / 2), ti = Math.floor(t);
+    if (todos && todos.length && todos[todos.length - 1] === ti) continue;
+    cameraPrimeira(e, t, c);
+    let ruim = c.y < e.perto + folga;
+    if (!ruim) { const so = solidoEm(c.x, c.y, c.z, folga, false); ruim = !!so && so !== 'chão'; }
+    if (!ruim && t2 % 2 === 0 && poseNoTick(anel, ti, e.autor, _pose)) {
+      for (let si = 0; si < SEGMENTOS.length && !ruim; si++) {
+        if (!VISIVEL_1P[si]) continue;
+        const [ja, jb, ra, rb] = SEGMENTOS[si];
+        const ax = _pose[ja * 3], ay = _pose[ja * 3 + 1], az = _pose[ja * 3 + 2], vx = _pose[jb * 3] - ax, vy = _pose[jb * 3 + 1] - ay, vz = _pose[jb * 3 + 2] - az;
+        const l2 = vx * vx + vy * vy + vz * vz || 1e-9, u = clamp(((c.x - ax) * vx + (c.y - ay) * vy + (c.z - az) * vz) / l2, 0, 1);
+        if (Math.hypot(c.x - ax - vx * u, c.y - ay - vy * u, c.z - az - vz * u) - (ra + (rb - ra) * u) < proprio) ruim = true;
+      }
+    }
+    if (!ruim) continue;
+    if (primeiro < 0) primeiro = ti;
+    if (!todos) return ti;
+    todos.push(ti);
+  }
+  return primeiro;
 }
 
 // ------------------------------------------------------------------------------------------------ treinador
@@ -316,6 +438,12 @@ export function enquadrarTreinador(anel, p, opc = {}) {
   }
   if (ultimo < 0) return null;
   const olho = gaussiana(bruto, n, 3, Tr.sigmaOlho * 60, new Float64Array(n * 3));
+  // presa a ≤ prende m do olho bruto (15/10: a cabeça dele correndo, agachando e levantando na reação ao gol — mais depressa
+  // que a gaussiana acompanha — levava o olho a 0,19 m da cabeça gravada)
+  for (let i = 0; i < n; i++) {
+    const dx = olho[i * 3] - bruto[i * 3], dy = olho[i * 3 + 1] - bruto[i * 3 + 1], dz = olho[i * 3 + 2] - bruto[i * 3 + 2], d = Math.hypot(dx, dy, dz);
+    if (d > Tr.prende) { const k = Tr.prende / d; olho[i * 3] = bruto[i * 3] + dx * k; olho[i * 3 + 1] = bruto[i * 3 + 1] + dy * k; olho[i * 3 + 2] = bruto[i * 3 + 2] + dz * k; }
+  }
   // lente: o quadro com `largura` m na distância do gol (no passo do gol), fixa no plano
   const ig = clamp(p.golTick - w0, 0, n - 1);
   const dGol = Math.hypot(gx - olho[ig * 3], 0 - olho[ig * 3 + 2]);

@@ -38,7 +38,9 @@
 //       em 100% dos quadros; o que se vê do próprio autor (o quadril e as pernas: o resto fica OCULTO) a ≥ 0,20 m da lente;
 //       nenhum outro corpo a < 0,3 m da lente do treinador no quadro; na parte 2 ele reage (a mão acima da cabeça ≥ 0,1 s).
 // Na versão sem replay os módulos não existem: o teste reprova.
-//   node tools/teste-replay-anel.mjs [--js <pasta js>] [--ref <commit> | --base <pasta js>] [--sementes N] [--par N] [--min M] [--so-g5]
+// 15/10 (frente "replay robusto"): --estresse = 3× as sementes (84); a amostra do G8 (≥ 48 gols com autor) cresce com as
+// sementes seguintes, em ordem, até + 20 (nunca escolhe sementes).
+//   node tools/teste-replay-anel.mjs [--js <pasta js>] [--ref <commit> | --base <pasta js>] [--sementes N] [--par N] [--min M] [--so-g5] [--estresse]
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
@@ -341,11 +343,15 @@ async function itensG() {
     if (!fs.existsSync(path.join(dest, 'golaco/js/render/replay-roteiro.js'))) { fs.mkdirSync(dest, { recursive: true }); execFileSync('sh', ['-c', `git archive ${sha} golaco/js | tar -x -C ${dest}`], { cwd: raiz }); }
     refJs = path.join(dest, 'golaco/js');
   }
-  const NS = +arg('--sementes', 28), MIN = +arg('--min', 4);
+  // --estresse: 3× as sementes (84); a amostra mínima do G8 (48 gols com autor) cresce com mais sementes, em ordem, até
+  // NS + 20 (15/10: uma versão com menos gols por partida reprovava o G8 por falta de amostra, não de 1ª pessoa)
+  const ESTRESSE = args.includes('--estresse');
+  let NS = +arg('--sementes', ESTRESSE ? 84 : 28);
+  const MIN = +arg('--min', 4), NS0 = NS;
   const nPar = Math.max(1, Math.min(NS, os.availableParallelism?.() ?? os.cpus().length, +arg('--par', 3)));
   const res = [];
   let prox = 1;
-  await Promise.all(Array.from({ length: nPar }, async () => {
+  const rodarAte = () => Promise.all(Array.from({ length: nPar }, async () => {
     while (prox <= NS) {
       const s = prox++;
       res.push(await new Promise((ok, erro) => {
@@ -355,6 +361,10 @@ async function itensG() {
       }));
     }
   }));
+  const comAutorDe = r => r.flatMap(x => x.gols.filter(g => g.ok && g.autor != null && !g.contra && g.chute != null));
+  await rodarAte();
+  while (comAutorDe(res).length < 48 && NS < NS0 + 20) { NS = Math.min(NS0 + 20, NS + Math.max(1, Math.ceil((48 - comAutorDe(res).length) / 1.6))); await rodarAte(); }
+  res.sort((a, b) => a.sem - b.sem);
   const gols = res.flatMap(r => r.gols.filter(g => g.ok));
   const comAutor = gols.filter(g => g.autor != null && !g.contra && g.chute != null);
   // G1
@@ -467,7 +477,7 @@ async function itensG() {
     const g = comAutor.find(x => x.temPrimeira);
     reg('G1b "reduzir movimento": sem 1ª pessoa (o resto igual)', g ? 'conferido no G5 (mesmo gol, com e sem)' : 'sem gol com autor', '-', true);
   }
-  console.log(`G: ${res.length} partidas (sementes 1–${NS}) de 2 × ${MIN} min, ${gols.length} gols, ${nPar} processos`);
+  console.log(`G: ${res.length} partidas (sementes 1–${NS}${NS > NS0 ? `: ${NS0} + ${NS - NS0} até 48 gols com autor` : ''}) de 2 × ${MIN} min, ${gols.length} gols, ${nPar} processos${ESTRESSE ? ' (--estresse)' : ''}`);
 }
 
 async function itemG5(RO) {
@@ -477,8 +487,10 @@ async function itemG5(RO) {
   const GR = await criarGravador(pastaJs);
   const P = await imp('partida.js'), FA = await imp('faltas.js'), C = await imp('config.js'), AG = await imp('render/autor-gol.js');
   const { J } = await imp('anim.js');
+  // (--estresse: os 4 primeiros gols de pênalti, em ordem de semente, até a 120; todos têm de passar)
+  const QUANTOS = args.includes('--estresse') ? 4 : 1, achados = [];
   let achou = null, tentativas = 0;
-  for (let sem = 1; sem <= 40 && !achou; sem++) {
+  for (let sem = 1; sem <= (QUANTOS > 1 ? 120 : 40) && achados.length < QUANTOS; sem++) {
     const S = GR.novaPartida(sem);
     const ag = AG.criarAutorGol();
     const timeDe = id => S.m.jogadores.find(j => j.id === id)?.time ?? null;
@@ -507,9 +519,16 @@ async function itemG5(RO) {
       if (gol && evs.some(e => e.tipo === 'saida' || e.tipo === 'intervalo' || e.tipo === 'fimDeJogo')) break;
       if (!gol && i > 400 && !S.m.parada) break;
     }
-    if (gol && gol.chuteTick != null) achou = { S, gol, sem };
+    if (gol && gol.chuteTick != null) achados.push({ S, gol, sem });
   }
-  if (!achou) { reg('G5 pênalti: a 1ª pessoa depois da montagem, o goleiro no quadro', `nenhum gol de pênalti em ${tentativas} tentativas`, 'um gol', false); return; }
+  if (!achados.length) { reg('G5 pênalti: a 1ª pessoa depois da montagem, o goleiro no quadro', `nenhum gol de pênalti em ${tentativas} tentativas`, 'um gol', false); return; }
+  const txts = [];
+  let todos = achados.length === QUANTOS;
+  for (achou of achados) { const r = medirG5(achou); txts.push(r.txt); if (!r.ok) todos = false; }
+  reg('G5 pênalti: a 1ª pessoa começa depois da montagem; o goleiro no quadro em chute − 0,3 s; G1 com "reduzir movimento" sem ela',
+    txts.join(' | ') + (achados.length < QUANTOS ? ` (só ${achados.length} de ${QUANTOS} gols de pênalti)` : ''), `depois da montagem; sim; sem primeira${QUANTOS > 1 ? ` (${QUANTOS} pênaltis)` : ''}`, todos);
+
+  function medirG5(achou) {
   const { S, gol } = achou;
   const r = RR.roteiroGol(S.a, gol), prim = r?.planos.find(p => p.cam === 'primeira');
   const montagem = S.a.ultimoCorte(S.a.primeiro, gol.chuteTick);
@@ -522,9 +541,11 @@ async function itemG5(RO) {
   // "reduzir movimento": sem 1ª pessoa, o resto igual (G1)
   const rR = RR.roteiroGol(S.a, { ...gol, reduzirMovimento: true });
   const semPrim = rR && !rR.planos.some(p => p.cam === 'primeira') && rR.planos.some(p => p.cam === 'treinador') === r.planos.some(p => p.cam === 'treinador');
-  reg('G5 pênalti: a 1ª pessoa começa depois da montagem; o goleiro no quadro em chute − 0,3 s; G1 com "reduzir movimento" sem ela',
-    prim ? `semente ${achou.sem}: montagem ${montagem}, 1ª pessoa ${prim.de}–${prim.ate} (chute ${gol.chuteTick}); goleiro no quadro ${goleiroNoQuadro}; reduzir movimento: ${rR?.planos.map(p => p.cam).join('·')}` : `sem 1ª pessoa (${r?.planos.map(p => p.cam).join('·')})`,
-    'depois da montagem; sim; sem primeira', !!prim && montagem != null && prim.de >= montagem && goleiroNoQuadro && semPrim);
+  return {
+    txt: prim ? `semente ${achou.sem}: montagem ${montagem}, 1ª pessoa ${prim.de}–${prim.ate} (chute ${gol.chuteTick}); goleiro no quadro ${goleiroNoQuadro}; reduzir movimento: ${rR?.planos.map(p => p.cam).join('·')}` : `semente ${achou.sem}: sem 1ª pessoa (${r?.planos.map(p => p.cam).join('·')})`,
+    ok: !!prim && montagem != null && prim.de >= montagem && goleiroNoQuadro && semPrim,
+  };
+  }
 }
 
 console.log(tabelaTexto(linhas));
