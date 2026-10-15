@@ -1046,9 +1046,7 @@ quadro() ─ rodarPasso ──▶ passoPartida(m, entrada, acoes)
   - **Papéis sem a bola, nesta ordem** (`semBola`): PRESSÃO do humano → contrapressão (janela `IA_DEFESA.contrapressao.s`
     depois da perda: 0 / 4 / 7 s por nível de pressão) → 1º homem (aperta/contém) → 2º homem (cobre; sendo da linha de
     defesa, no máximo `IA_DEFESA.coberturaFundo` m atrás da própria referência) → marcação individual na área →
-    **recomposição** (`recompor`, `ramo 'recompoe'`) → referência (linha/zona, ponto calmo). O ponto calmo (`alvoCalmo`)
-    gira aos poucos, mas o caminho girado que sairia do campo (além de meia largura/comprimento + 0,5 m) com o alvo dentro
-    vira de uma vez (15/10: quem corria para a bola que saiu seguia em arco 4,7 m para fora da linha, pela área técnica).
+    **recomposição** (`recompor`, `ramo 'recompoe'`) → referência (linha/zona, ponto calmo).
   - **Recomposição em disparada** (PR "IA intensa"; `TATICA.recomp`): quem está mais de `liga` m (nos `janela` s depois
     da perda; fora dela, `ligaOrganizado` m) à frente do alvo — a referência sem a bola e, para quem não é da frente
     (vaga com x ≥ 0 sem a bola), também `atras` m atrás da linha da bola (com um passe deles no ar, o ponto de chegada;
