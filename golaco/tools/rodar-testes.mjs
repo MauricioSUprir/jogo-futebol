@@ -91,6 +91,10 @@ const LISTA = [
   // Pré-jogo (pedido de 11/10): o cortejo do túnel até a fila e o roteiro com os trilhos de câmera (contas puras)
   ['pré-jogo: cortejo do túnel até a fila (pés, colisão, vaga, rumo, custo, hash da partida)', 'teste-cortejo.mjs'],
   ['pré-jogo: roteiro, escalações de 10 s, pular e trilhos de câmera fora dos sólidos', 'teste-prejogo-roteiro.mjs'],
+  // Total Match (dono, 15/10: "a logo dos times, torcida, e estádio adaptáveis a cada time"): identidade visual
+  ['identidade dos times: padrão = hoje, uniformes sem confusão (ΔE₀₀), torcida, faixas, placas, estádio e HUD do TM', 'teste-identidade.mjs'],
+  // Ponte com o Total Match (15/10): o pedido do TM vira os times, o humano no lado do usuário, a trava e a súmula
+  ['ponte com o Total Match: pedido → times, humano no visitante, trava "só o meu jogador", súmula e resultado', 'teste-ponte-tm.mjs'],
 ];
 const argv = process.argv.slice(2);
 const iSo = argv.indexOf('--so');

@@ -1,0 +1,363 @@
+/* GOLAÇO como motor 3D do Total Match (?tm=<id>; js/ponte-tm.js): a CARA DO TOTAL MATCH (dono: "deixa os botões, menu,
+   tudo com a cara do total match"). Carregada por ÚLTIMO e TUDO sob html.tm (o <script> do <head> do index.html só põe a
+   classe com ?tm): sem ?tm nenhuma regra daqui vale — mesma tela, mesmos testes.
+   A cara sai do próprio Total Match (legacy-total-match/css/styles.css :root e .btn/.seg-btn/.modal/.toast): Inter, preto
+   #050807, painel #0f1612, verde #22c55e/#4ade80, texto #eef5f0, fraco #8a9d90; botão principal em pílula com degradê
+   verde; cartões arredondados com borda fina; nada itálico, inclinado ou condensado; nada de emoji como ícone (os ícones
+   continuam os SVG da página). Logo e fontes copiados para assets/tm/ (o jogo não depende da pasta do TM).
+   O que muda TAMANHO de peça medida pelo jogo fica igual ao do GOLAÇO: o peso e o espaçamento das letras dos botões de
+   toque (entrada.js mede o nome pelo canvas com 900 e o --ls dele) e as alturas mínimas de toque (48 px). A fonte nova
+   chega depois do 1º layout: js/tm-cara.js avisa 'tm:fontes' e a página mede de novo (botões e topo do HUD).
+   Peça nova de interface no modo TM: usar as variáveis --tm-*. */
+
+/* Inter (OFL; a mesma do Total Match). Família com nome PRÓPRIO: a "Inter" do .faixa-subst do GOLAÇO (estilo.css) não
+   pode passar a baixar esta fonte sem ?tm. Só baixa quando alguma regra de html.tm a usa. */
+@font-face { font-family: 'Inter TM'; font-style: normal; font-weight: 400; font-display: swap; src: url('../assets/tm/fontes/inter-400.woff2') format('woff2'); }
+@font-face { font-family: 'Inter TM'; font-style: normal; font-weight: 600; font-display: swap; src: url('../assets/tm/fontes/inter-600.woff2') format('woff2'); }
+@font-face { font-family: 'Inter TM'; font-style: normal; font-weight: 700; font-display: swap; src: url('../assets/tm/fontes/inter-700.woff2') format('woff2'); }
+@font-face { font-family: 'Inter TM'; font-style: normal; font-weight: 800; font-display: swap; src: url('../assets/tm/fontes/inter-800.woff2') format('woff2'); }
+@font-face { font-family: 'Inter TM'; font-style: normal; font-weight: 900; font-display: swap; src: url('../assets/tm/fontes/inter-900.woff2') format('woff2'); }
+
+html.tm {
+  /* as cores do Total Match (para peças novas) */
+  --tm-preto: #050807;
+  --tm-preto2: #0b110e;
+  --tm-painel: #0f1612;
+  --tm-verde: #22c55e;
+  --tm-verde-cl: #4ade80;
+  --tm-verde-esc: #12a150;
+  --tm-verde-fundo: #0f7a3a;
+  --tm-texto: #eef5f0;
+  --tm-fraco: #8a9d90;
+  --tm-linha: rgba(255, 255, 255, 0.07);
+  --tm-linha2: rgba(255, 255, 255, 0.13);
+  --tm-borda: rgba(34, 197, 94, 0.28);
+  --tm-erro: #f05252;
+  --tm-alerta: #f5b83d;
+  --tm-botao: linear-gradient(120deg, #34d572, #1fae55);
+  --tm-ativo: linear-gradient(120deg, #4ade80, #22c55e);
+  --tm-cartao: linear-gradient(160deg, rgba(15, 22, 18, 0.97), rgba(11, 17, 14, 0.98));
+  --tm-tinta: #04130a;  /* letra sobre o verde */
+  --tm-simbolo: url('../assets/tm/simbolo.png');
+  --tm-logo: url('../assets/tm/logo.png');
+  /* os nomes do GOLAÇO apontando para o TM: tudo o que já usa var(...) troca junto */
+  --preto: #050807;
+  --preto-2: #0b110e;
+  --preto-3: #0f1612;
+  --verde: #22c55e;
+  --verde-2: #12a150;
+  --verde-escuro: #0f7a3a;
+  --texto: #eef5f0;
+  --texto-2: #8a9d90;
+  --linha: rgba(34, 197, 94, 0.26);
+  --painel: rgba(11, 17, 14, 0.86);
+  --alerta: #f5b83d;
+  --campinho: #0a1d12;
+  /* a lista escrita por inteiro (sem var): entrada.js lê o --fonte do <html> para medir os nomes dos botões */
+  --fonte: 'Inter TM', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+html.tm, html.tm body { background: var(--tm-preto); }
+html.tm kbd { background: var(--tm-painel); border-color: var(--tm-linha2); }
+html.tm :focus-visible { outline-color: var(--tm-verde-cl); }
+
+/* ------------------------------------------------------------------ carregamento (a logo do TM no lugar de "GOLAÇO") */
+html.tm .carregando {
+  background: radial-gradient(ellipse 60% 50% at 50% 42%, rgba(34, 197, 94, 0.12), rgba(5, 8, 7, 0) 70%), var(--tm-preto);
+  gap: 18px;
+}
+/* o texto fica no DOM (tm-cara.js escreve "Total Match" para o leitor de tela); na tela, a logo */
+html.tm .carregando-marca {
+  font-size: 0; color: transparent; font-style: normal; letter-spacing: 0;
+  width: clamp(120px, min(52vw, 42vh), 230px); aspect-ratio: 480 / 341;
+  background: var(--tm-logo) center / contain no-repeat;
+  filter: drop-shadow(0 6px 20px rgba(34, 197, 94, 0.25));
+}
+html.tm .carregando-marca::after { display: none; }
+html.tm .carregando-barra { width: 200px; height: 4px; background: rgba(255, 255, 255, 0.08); }
+html.tm .carregando-barra span { background: var(--tm-botao); }
+html.tm .carregando p { font-size: 13px; font-weight: 400; color: var(--tm-fraco); }
+html.tm .carregando.erro p { color: #fca5a5; }
+
+/* ------------------------------------------------------------------ placar de TV (a marca do TM no começo da barra) */
+html.tm .placar {
+  background: rgba(11, 17, 14, 0.9); border-color: rgba(34, 197, 94, 0.3); border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+html.tm .placar-marca {
+  width: 28px; background: var(--tm-simbolo) center / 21px auto no-repeat, rgba(5, 8, 7, 0.92);
+  border-right: 1px solid var(--tm-linha2);
+}
+html.tm .marca-simbolo { display: none; }
+html.tm .placar-time { font-weight: 800; letter-spacing: 0.02em; }
+html.tm .placar-resultado { background: rgba(34, 197, 94, 0.1); }
+html.tm .placar-gols { color: var(--tm-verde-cl); }
+html.tm .placar-x { background: var(--tm-fraco); }
+html.tm .placar-relogio { background: var(--tm-botao); color: var(--tm-tinta); }
+html.tm .placar-relogio.parado { background: var(--tm-verde-fundo); color: var(--tm-texto); }
+@media (min-width: 1001px) {
+  html.tm .placar-marca { width: 32px; background-size: 24px auto; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html.tm .placar.gol-pulso { animation-name: tm-placar-pulso; }
+}
+@keyframes tm-placar-pulso {
+  0%, 30%, 60% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.85); }
+  15%, 45%, 75% { box-shadow: 0 0 0 7px rgba(34, 197, 94, 0), 0 0 22px rgba(34, 197, 94, 0.5); border-color: var(--tm-verde); background: rgba(15, 122, 58, 0.88); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+/* ------------------------------------------------------------------ menu (≡), minimapa, força, dica */
+html.tm .btn-menu { border-radius: 999px; }
+html.tm:not(.em-partida) .btn-menu { background: rgba(11, 17, 14, 0.86); border-color: var(--tm-borda); }
+html.tm .btn-menu:hover, html.tm .btn-menu:focus-visible { color: var(--tm-verde-cl); }
+html.tm .minimapa { border-color: rgba(34, 197, 94, 0.3); border-radius: 8px; background: rgba(5, 8, 7, 0.74); }
+html.tm .carga-barra { border-color: rgba(34, 197, 94, 0.55); background: rgba(5, 8, 7, 0.88); }
+html.tm .carga-barra i { background: linear-gradient(90deg, #12a150, #22c55e 60%, #86efac); }
+html.tm .carga.cheia .carga-barra { box-shadow: 0 0 8px rgba(34, 197, 94, 0.9); }
+html.tm .dica { background: rgba(11, 17, 14, 0.78); border: 1px solid var(--tm-linha); border-radius: 12px; }
+html.tm .painel-jogo { background: rgba(11, 17, 14, 0.86); border-color: var(--tm-borda); border-radius: 14px; }
+
+/* ------------------------------------------------------------------ avisos (o cartão do aviso do TM; mesma posição do jogo) */
+html.tm .aviso {
+  border-radius: 14px; border: 1px solid rgba(34, 197, 94, 0.32); border-left: 3px solid var(--tm-verde);
+  background: rgba(11, 17, 14, 0.96); color: var(--tm-texto);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  font-weight: 700; letter-spacing: 0; text-transform: none;
+}
+html.tm .aviso.gol { background: var(--tm-botao); color: var(--tm-tinta); border-color: transparent; letter-spacing: 0.02em; }
+html.tm .aviso.forte { border-left-color: var(--tm-texto); }
+
+/* ------------------------------------------------------------------ GOL! (sem itálico e sem inclinar) */
+html.tm .gol-palavra {
+  font-style: normal; letter-spacing: -0.01em; color: var(--tm-verde-cl);
+  -webkit-text-stroke: 3px var(--tm-preto); paint-order: stroke fill;
+  text-shadow: 0 0 36px rgba(34, 197, 94, 0.55), 0 6px 0 rgba(0, 0, 0, 0.55);
+}
+html.tm.com-toque .gol-palavra { -webkit-text-stroke-width: 2px; }
+html.tm .gol-faixa {
+  transform: translateY(-58%) scaleX(0);
+  background: linear-gradient(90deg, rgba(5, 8, 7, 0) 0%, rgba(5, 8, 7, 0.84) 14%, rgba(5, 8, 7, 0.84) 86%, rgba(5, 8, 7, 0) 100%);
+  border-top-color: var(--tm-verde); border-bottom-color: var(--tm-verde);
+}
+/* as animações do GOLAÇO inclinam (rotate/skew dentro dos keyframes): no TM as mesmas, retas. Só com movimento liberado:
+   fora deste @media o nome novo religaria a animação que o "reduzir movimento" desliga */
+@media (prefers-reduced-motion: no-preference) {
+  html.tm .gol-tela.visivel .gol-faixa { animation-name: tm-gol-faixa; }
+  html.tm .gol-tela.visivel .gol-palavra { animation-name: tm-gol-bate; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.tm .gol-tela .gol-faixa { transform: translateY(-58%); }
+}
+@keyframes tm-gol-faixa { 0%, 12% { transform: translateY(-58%) scaleX(0); } 24%, 100% { transform: translateY(-58%) scaleX(1); } }
+@keyframes tm-gol-bate {
+  0%, 12% { transform: scale(2.6); opacity: 0; }
+  20% { transform: scale(0.94); opacity: 1; }
+  24% { transform: scale(1.06) translateX(-4px); }
+  27% { transform: scale(1) translateX(4px); }
+  30% { transform: scale(1.02) translateX(-2px); }
+  34%, 70% { transform: scale(1); }
+  78% { transform: scale(1.05); }
+  86%, 100% { transform: scale(1); }
+}
+
+/* ------------------------------------------------------------------ faixa do intervalo e do fim (cartão do TM) */
+html.tm .faixa {
+  background: var(--tm-cartao); border: 1px solid var(--tm-borda); border-top: 3px solid var(--tm-verde); border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  padding: 16px 26px 18px;
+}
+/* celular deitado: o aviso do topo (placar + 74 px) e a faixa no meio da tela ficam a 0–3 px um do outro em 844×390 quando
+   aparecem juntos (um aviso no apito final). No TM a faixa desce para baixo do lugar do aviso, ancorada pelo TOPO (com a
+   linha ENTRA/SAI no topo o aviso desce 42 px e a faixa junto); entre o analógico e o arco de botões */
+@media (max-height: 480px) and (min-height: 360px) {
+  html.tm.com-toque .faixa { top: calc(var(--sa-t) + var(--m) + 74px + 58px); transform: translateX(-50%); }
+  html.tm.com-toque.faixa-subst-topo .faixa { top: calc(var(--sa-t) + var(--m) + 74px + 42px + 58px); }
+}
+html.tm .faixa-titulo { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; text-transform: none; }
+html.tm .faixa-placar { font-size: 16px; font-weight: 700; letter-spacing: 0.02em; color: var(--tm-texto); }
+
+/* ------------------------------------------------------------------ botões de toque (só cor: tamanho, peso e espaçamento
+   das letras são os que entrada.js mede) — a transparência da tela limpa continua */
+html.tm .btn-toque { border-color: rgba(34, 197, 94, 0.62); background: rgba(5, 8, 7, 0.34); }
+html.tm.nomes-botoes .btn-toque { background: radial-gradient(circle at 50% 32%, rgba(21, 31, 25, 0.72), rgba(5, 8, 7, 0.64)); }
+html.tm .btn-toque svg { stroke: var(--tm-verde-cl); }
+html.tm .btn-chute, html.tm .btn-trocar { border-color: var(--tm-verde); }
+html.tm .btn-goleiro svg, html.tm .btn-pegar svg { stroke: var(--tm-alerta); }
+html.tm .btn-pressao svg { stroke: #86efac; }
+html.tm .btn-toque.ativo { background: var(--tm-botao); color: var(--tm-tinta); border-color: #86efac; box-shadow: 0 0 18px rgba(34, 197, 94, 0.5); }
+html.tm .btn-toque.ativo svg { stroke: var(--tm-tinta); }
+html.tm .analogico-base { border-color: rgba(34, 197, 94, 0.55); background: radial-gradient(circle, rgba(34, 197, 94, 0.1) 0%, rgba(5, 8, 7, 0.42) 72%); }
+html.tm .analogico-pino { background: radial-gradient(circle at 40% 35%, #86efac, #22c55e 58%, #15803d); box-shadow: 0 0 0 3px rgba(5, 8, 7, 0.55); }
+
+/* ------------------------------------------------------------------ pausa e ajuda (o modal do TM) */
+html.tm .sobreposicao { background: rgba(2, 4, 3, 0.76); }
+html.tm .janela {
+  background: var(--tm-cartao); border: 1px solid var(--tm-borda); border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+}
+html.tm .janela::after { background: linear-gradient(rgba(11, 17, 14, 0), #0b110e 85%); }
+html.tm .janela-topo { background: #0d1410; border-bottom-color: var(--tm-linha); }
+html.tm .janela-topo h2 { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; text-transform: none; white-space: nowrap; }
+/* a marca do TM no lugar da barrinha verde do título */
+html.tm .janela-topo h2::before {
+  width: 22px; height: 12px; margin-right: 9px; vertical-align: -0.5px; border-radius: 0;
+  background: var(--tm-simbolo) center / contain no-repeat;
+}
+html.tm .btn-fechar { border-radius: 999px; background: var(--tm-preto2); border-color: var(--tm-linha2); color: var(--tm-fraco); }
+html.tm .btn-fechar:hover, html.tm .btn-fechar:focus-visible { color: var(--tm-verde-cl); border-color: var(--tm-verde); }
+html.tm .chip { background: var(--tm-preto2); border-color: rgba(255, 255, 255, 0.14); color: var(--tm-texto); border-radius: 999px; }
+html.tm .chip::before { border-color: var(--tm-fraco); }
+html.tm .chip[aria-pressed="true"] { background: var(--tm-ativo); color: var(--tm-preto); border-color: transparent; }
+html.tm .chip[aria-pressed="true"]::before { background: var(--tm-preto); border-color: var(--tm-preto); }
+html.tm .chip:hover, html.tm .chip:focus-visible { border-color: var(--tm-verde); }
+
+/* botões: a pílula do TM (borda fina, painel); o principal com o degradê verde */
+html.tm .btn {
+  border-radius: 999px; padding: 0 18px; background: var(--tm-painel); border: 1px solid var(--tm-linha2);
+  font-weight: 700; color: var(--tm-texto);
+}
+html.tm .btn small { font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--tm-fraco); }
+html.tm .btn:hover, html.tm .btn:focus-visible { border-color: var(--tm-verde); }
+html.tm .btn-primario {
+  background: var(--tm-botao); color: var(--tm-tinta); border-color: transparent;
+  font-weight: 800; letter-spacing: 0.01em; text-transform: none;
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.28);
+}
+html.tm .btn-primario:hover, html.tm .btn-primario:focus-visible { background: var(--tm-botao); filter: brightness(1.07); box-shadow: 0 8px 22px rgba(34, 197, 94, 0.4); }
+html.tm .btn-primario:focus-visible { outline: 2px solid #86efac; outline-offset: 2px; }
+html.tm .btn-replay { padding: 0 16px; }
+html.tm .btn-alternar[aria-pressed="true"] small { color: var(--tm-verde-cl); }
+html.tm #menu-modos .btn[aria-pressed="true"] { border-color: var(--tm-verde); }
+
+/* opções: os segmentados do TM (botões separados, o escolhido em degradê) */
+html.tm .opcao-rotulo { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; color: var(--tm-verde-cl); }
+html.tm .opcao-info { color: var(--tm-fraco); }
+html.tm .segmentado { padding: 0; gap: 6px; background: transparent; border: 0; border-radius: 0; }
+html.tm .segmentado button {
+  border: 1px solid var(--tm-linha2); background: var(--tm-preto2); border-radius: 9px;
+  font-weight: 600; color: var(--tm-fraco);
+}
+html.tm .segmentado button:hover { color: var(--tm-texto); border-color: rgba(34, 197, 94, 0.45); }
+html.tm .segmentado button[aria-pressed="true"] { background: var(--tm-ativo); color: var(--tm-preto); border-color: transparent; font-weight: 700; }
+html.tm .segmentado button:focus-visible { outline: 2px solid #86efac; outline-offset: 1px; }
+html.tm .deslizante { color: var(--tm-texto); }
+html.tm .deslizante output { color: var(--tm-verde-cl); }
+html.tm input[type="range"] { accent-color: var(--tm-verde); }
+html.tm input[type="range"]::-webkit-slider-runnable-track { background: rgba(255, 255, 255, 0.12); }
+html.tm input[type="range"]::-moz-range-track { background: rgba(255, 255, 255, 0.12); }
+html.tm input[type="range"]::-webkit-slider-thumb { background: var(--tm-verde); border-color: var(--tm-preto); }
+html.tm input[type="range"]::-moz-range-thumb { background: var(--tm-verde); border-color: var(--tm-preto); }
+
+html.tm .ajuda-colunas h3 { letter-spacing: 0.1em; font-weight: 800; color: var(--tm-verde-cl); }
+html.tm .ajuda-colunas dd { color: var(--tm-fraco); }
+html.tm .nota { color: var(--tm-fraco); border-top-color: var(--tm-linha); }
+
+/* ------------------------------------------------------------------ replay, selo da análise, faixa ENTRA/SAI */
+html.tm .replay-marca {
+  border-radius: 999px; border: 1px solid rgba(34, 197, 94, 0.45); border-left-width: 1px;
+  background: rgba(11, 17, 14, 0.86); padding: 0 14px 0 11px; letter-spacing: 0.14em; font-weight: 800;
+}
+html.tm .btn-replay-pular {
+  border: 1px solid rgba(34, 197, 94, 0.55); background: rgba(11, 17, 14, 0.88);
+  font-weight: 800; letter-spacing: 0.01em; text-transform: none;
+}
+html.tm .replay-faixa {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0), #22c55e 30%, #86efac 50%, #22c55e 70%, rgba(34, 197, 94, 0));
+  transform: translateX(-120%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  html.tm .replay-faixa.passa { animation-name: tm-replay-faixa; }
+}
+@keyframes tm-replay-faixa { 0% { transform: translateX(-120%); } 100% { transform: translateX(400%); visibility: hidden; } }
+html.tm .terco-impedimento { --decisao: var(--tm-erro); }
+html.tm .terco-legal { --decisao: var(--tm-verde); }
+/* (só as bordas de cima, da direita e de baixo: a da esquerda é a cor da decisão) */
+html.tm .terco-selo {
+  border-radius: 14px; background: rgba(11, 17, 14, 0.9); letter-spacing: 0.1em; font-weight: 800;
+  border-top-color: var(--tm-linha2); border-right-color: var(--tm-linha2); border-bottom-color: var(--tm-linha2);
+}
+html.tm .terco-selo b { font-weight: 800; }
+html.tm .faixa-subst { font-family: var(--fonte); background: rgba(11, 17, 14, 0.9); border-radius: 12px; }
+html.tm .fs-sigla { border-radius: 7px; }
+
+/* ------------------------------------------------------------------ celular em pé: "Gire o celular" com a logo do TM */
+html.tm .girar { background: radial-gradient(ellipse 70% 45% at 50% 40%, rgba(34, 197, 94, 0.1), rgba(5, 8, 7, 0) 70%), var(--tm-preto); }
+html.tm .girar::before {
+  content: ""; display: block; flex: none; width: clamp(84px, 26vw, 130px); aspect-ratio: 480 / 341;
+  background: var(--tm-logo) center / contain no-repeat;
+}
+html.tm .girar-titulo { font-weight: 800; letter-spacing: -0.01em; }
+html.tm .girar-texto { color: var(--tm-fraco); }
+
+/* ------------------------------------------------------------------ pré-jogo: abertura com a logo, escalação */
+html.tm .pj-abertura { background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(5, 8, 7, 0.42) 0%, rgba(5, 8, 7, 0.84) 100%); }
+/* o texto fica no DOM ("Total Match": prejogo-tela.js), na tela a logo; menor em tela baixa (celular deitado) */
+html.tm .pj-ab-marca {
+  font-size: 0; color: transparent; font-style: normal; letter-spacing: 0;
+  width: clamp(84px, min(16vw, 24vh), 190px); aspect-ratio: 480 / 341;
+  background: var(--tm-logo) center / contain no-repeat;
+  filter: drop-shadow(0 6px 20px rgba(34, 197, 94, 0.25));
+}
+html.tm .pj-ab-jogo { font-weight: 800; letter-spacing: -0.02em; }
+html.tm .pj-ab-chama { font-weight: 700; border-color: rgba(34, 197, 94, 0.4); background: rgba(11, 17, 14, 0.72); }
+html.tm .pj-ab-estadio { color: var(--tm-fraco) !important; letter-spacing: 0.06em !important; }
+html.tm .pj-pular { font-weight: 700; background: rgba(11, 17, 14, 0.8); border-color: rgba(34, 197, 94, 0.4); }
+html.tm .pj-pular svg { color: var(--tm-verde-cl); }
+html.tm .pj-esc-fundo { background: linear-gradient(90deg, rgba(5, 8, 7, 0.9) 0%, rgba(5, 8, 7, 0.7) 34%, rgba(5, 8, 7, 0.56) 100%); }
+/* a marca do TM ao lado do rótulo "Escalação" (na mesma linha: a coluna não cresce) */
+html.tm .pj-esc-rotulo { display: flex; align-items: center; gap: 8px; letter-spacing: 0.12em; color: var(--tm-verde-cl); }
+html.tm .pj-esc-rotulo::before { content: ""; flex: none; width: 22px; height: 12px; background: var(--tm-simbolo) left center / contain no-repeat; }
+html.tm .pj-esc-nome { font-weight: 800; letter-spacing: -0.02em; }
+html.tm .pj-esc-forma { color: var(--tm-verde-cl); font-weight: 700; }
+html.tm .pj-esc-campo { background: rgba(10, 29, 18, 0.82); border-color: rgba(34, 197, 94, 0.34); border-radius: 14px; }
+html.tm .pj-esc-linhas * { stroke: rgba(34, 197, 94, 0.4); }
+html.tm .pj-carta { background: rgba(11, 17, 14, 0.95); border-color: var(--tm-linha2); border-radius: 10px; }
+html.tm .pj-pos { color: var(--tm-verde-cl); }
+
+/* ------------------------------------------------------------------ Editar time (os cartões e as abas do TM) */
+html.tm .editor { background: rgba(2, 4, 3, 0.9); }
+html.tm .ed-pc .ed-janela {
+  background: var(--tm-cartao); border: 1px solid var(--tm-borda); border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+}
+html.tm .ed-voltar { border-radius: 999px; background: var(--tm-preto2); border-color: var(--tm-linha2); }
+html.tm .ed-voltar:hover { color: var(--tm-verde-cl); border-color: var(--tm-verde); }
+html.tm .ed-titulo { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; text-transform: none; }
+html.tm .ed-titulo::before { width: 20px; height: 11px; margin-right: 8px; vertical-align: -0.5px; border-radius: 0; background: var(--tm-simbolo) center / contain no-repeat; }
+html.tm .ed-aba { border-radius: 999px; background: var(--tm-preto2); border-color: var(--tm-linha2); color: var(--tm-fraco); font-weight: 700; }
+html.tm .ed-aba:hover { color: var(--tm-texto); border-color: rgba(34, 197, 94, 0.45); }
+html.tm .ed-aba[aria-selected="true"] { background: var(--tm-ativo); color: var(--tm-preto); border-color: transparent; font-weight: 800; }
+html.tm .ed-estrelas, html.tm .ed-estrela-cheia { color: var(--tm-verde-cl); }
+html.tm .campinho { border-color: rgba(34, 197, 94, 0.28); border-radius: 14px; }
+html.tm .campinho-linhas * { stroke: rgba(34, 197, 94, 0.35); }
+html.tm .campinho-rotulo { color: rgba(74, 222, 128, 0.75); }
+html.tm .carta { background: var(--tm-painel); border-color: var(--tm-linha2); border-radius: 10px; }
+html.tm .carta:hover { border-color: rgba(34, 197, 94, 0.55); }
+html.tm .carta[aria-pressed="true"] { background: rgba(34, 197, 94, 0.14); border-color: var(--tm-verde); box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3), 0 2px 8px rgba(0, 0, 0, 0.4); }
+html.tm .tem-escolha .carta:not([aria-pressed="true"]):not(.saiu) { outline-color: rgba(34, 197, 94, 0.35); }
+html.tm .carta.entra { border-color: rgba(34, 197, 94, 0.7); }
+html.tm .c-pos { color: var(--tm-verde-cl); }
+html.tm .enc-alternativa .c-pos { color: var(--tm-texto); }
+html.tm .enc-fora .c-pos { color: var(--tm-alerta); }
+html.tm .ed-info, html.tm .ed-passo { background: var(--tm-painel); border-color: var(--tm-linha); border-radius: 12px; }
+html.tm .ed-info-linha b { color: var(--tm-verde-cl); }
+html.tm .ed-rotulo, html.tm .ed-passo-nome { letter-spacing: 0.1em; color: var(--tm-verde-cl); }
+html.tm .ed-lista { scrollbar-color: rgba(34, 197, 94, 0.4) transparent; }
+html.tm .ed-forma { background: var(--tm-painel); border-color: var(--tm-linha2); border-radius: 12px; }
+html.tm .ed-forma:hover { border-color: rgba(34, 197, 94, 0.55); }
+html.tm .ed-forma[aria-pressed="true"] { border-color: var(--tm-verde); color: var(--tm-verde-cl); }
+html.tm .ed-forma[aria-pressed="true"] .ed-forma-mini { fill: var(--tm-verde-cl); }
+html.tm .ed-passo-bt { border-radius: 999px; background: var(--tm-preto); border-color: var(--tm-linha2); }
+html.tm .ed-passo-bt:hover:not(:disabled) { border-color: var(--tm-verde); color: var(--tm-verde-cl); }
+html.tm .ed-pontos i.on { background: var(--tm-verde); }
+html.tm .ed-seg { border-radius: 999px; background: var(--tm-preto2); border-color: var(--tm-linha2); color: var(--tm-fraco); }
+html.tm .ed-seg[aria-pressed="true"] { background: var(--tm-ativo); color: var(--tm-preto); border-color: transparent; }
+html.tm .ed-canvas { background: #0a1d12; }
+html.tm .ed-btn { border-radius: 999px; background: var(--tm-painel); border-color: var(--tm-linha2); font-weight: 700; }
+html.tm .ed-btn:hover { border-color: var(--tm-verde); }
+html.tm .ed-primario {
+  background: var(--tm-botao); color: var(--tm-tinta); border-color: transparent;
+  font-weight: 800; letter-spacing: 0.01em; text-transform: none; box-shadow: 0 4px 16px rgba(34, 197, 94, 0.28);
+}
+html.tm .ed-primario:hover { background: var(--tm-botao); filter: brightness(1.07); }

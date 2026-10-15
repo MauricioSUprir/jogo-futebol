@@ -154,9 +154,16 @@ export const GRUPOS = [
  * Devolve {n, pos: Float32Array(4n) [x, y, z, escala], camisa, pele, cabelo, info: Uint8Array(4n), nivel:
  * Uint8Array(n), faixas: [{inicio, porNivel: [n0, n1, n2], setor, nome}] por GRUPO} — info = [time·255, setor·85,
  * organizada·255, semente2]; pele[3] = semente.
+ * paletas (só com ?tm; identidade.js torcida + publico): {casa, fora: [[hex, peso]…], mosaico: hex, foraLados (fração de
+ * visitantes espalhados pelos lados), publico (0,1–1: a ocupação)} — as MESMAS cadeiras e os mesmos sorteios; só a cor
+ * das camisas, quem é visitante pelos lados e quantos vieram mudam. Sem elas, a torcida de hoje.
  */
-export function gerarTorcidaNiveis(mascara = null) {
+export function gerarTorcidaNiveis(mascara = null, paletas = null) {
   const T = TORCIDA, A = ARQUIBANCADA;
+  const pCasa = paletas && paletas.casa ? PRE(paletas.casa) : P_CASA, pFora = paletas && paletas.fora ? PRE(paletas.fora) : P_FORA;
+  const rgbMosaico = paletas && paletas.mosaico ? hex(paletas.mosaico) : RGB_MOSAICO;
+  const foraLados = paletas && Number.isFinite(paletas.foraLados) ? paletas.foraLados : 0.03;
+  const publico = paletas && Number.isFinite(paletas.publico) ? Math.max(0.1, Math.min(1, paletas.publico)) : 1;
   const ocs = NIVEIS.map(q => T.ocupacao[q]);
   const ocF = NIVEIS.map(q => T.ocupacaoFrente[q]);
   const ocCa = NIVEIS.map(q => T.ocupacaoCa[q]);
@@ -187,11 +194,13 @@ export function gerarTorcidaNiveis(mascara = null) {
     }
     if (setor === 1 && z >= T.organizada.z[0] && z <= T.organizada.z[1]) { org = 1; for (let q = 0; q < 3; q++) pq[q] = Math.max(pq[q], Math.min(1, ocs[q] * 1.15 + 0.08)); }
     // alguns visitantes espalhados pelos lados
-    if (lado && !mosaico && r7 < 0.03) time = 1;
+    if (lado && !mosaico && r7 < foraLados) time = 1;
+    // público do Total Match (só desenho): menos gente nas mesmas cadeiras
+    if (publico < 1) for (let q = 0; q < 3; q++) pq[q] *= publico;
     let nivel = 3;
     for (let q = 2; q >= 0; q--) if (r < pq[q]) nivel = q;
     if (nivel > 2) return;
-    const camisa = mosaico ? RGB_MOSAICO : sorteiaPre(time === 1 ? P_FORA : P_CASA, r2);
+    const camisa = mosaico ? rgbMosaico : sorteiaPre(time === 1 ? pFora : pCasa, r2);
     const pele = sorteiaPre(P_PELE, r3);
     const cabelo = r5 < 0.08 ? pele : sorteiaPre(P_CABELO, r4);
     const k = 4 * n;

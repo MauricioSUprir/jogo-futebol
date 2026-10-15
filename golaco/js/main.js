@@ -5,10 +5,16 @@
 // ATUAL de cada jogador (uma vez por passo) e a bola anterior/atual; o desenho INTERPOLA com
 // alfa (bola por lerp + slerp do quaternion, juntas por interpolarPose). Igual a 60/120/144 Hz.
 //
-// Entradas POR TIME: o humano é o time 0 e quem recebe a entrada é o jogador m.controlado[0]
-// (cai para o id 0 se o mundo ainda não tiver esse campo). A lógica chega aos poucos: tudo o que
-// é da Etapa 2 (m.controlado, m.voo, m.placar, j.carga, m.proximaTroca, j.posicao) é lido com
+// Entradas POR TIME: o humano é o time TIME_HUMANO (0; com ?tm, o lado do usuário no Total Match) e quem recebe a
+// entrada é o jogador m.controlado[TIME_HUMANO] (cai para o id 0 se o mundo ainda não tiver esse campo). A lógica chega
+// aos poucos: tudo o que é da Etapa 2 (m.controlado, m.voo, m.placar, j.carga, m.proximaTroca, j.posicao) é lido com
 // tolerância (?. e valor padrão).
+//
+// Total Match (?tm=<id>; ponte-tm.js, tm-times.js, sumula.js; contrato "Ponte com o Total Match" no CONTRATOS.md): os
+// times do pedido (o time 0 é o mandante do TM), o humano no lado do usuário, a trava "só o meu jogador" (TROCAR e GOLEIRO
+// mascarados e escondidos), a súmula alimentada a cada passo, 'tm3d:pronto' no api.pronto, 'tm3d:sair' sem WebGL 2, a
+// pausa sem Reiniciar/Modo de jogo e com "Simular o resto" (os passos em pedaços sem desenhar) e a faixa do fim com
+// "Voltar ao Total Match" ('tm3d:fim'; o resultado é gravado já no apito). Sem ?tm nada disso existe (TM = null).
 //
 // Partida (Etapa 3): criarPartida/passoPartida (partida.js) — o mesmo que sessao.js usa para o modo
 // 'partida', chamado direto aqui. A pausa ganha "Editar time" (js/editor-time.js): a tela entrega
@@ -87,6 +93,8 @@ import { criarLinhaImpedimento } from './render/linha-impedimento.js';
 import { criarMarcasLateral } from './render/marcas-lateral.js';
 import { mascaraGolaco } from './render/texturas.js';
 import { criarTorcida } from './render/torcida.js';
+// identidade visual dos times (escudo, uniformes, torcida, estádio, cores do HUD): a de hoje sem ?tm; com ?tm, a do TM
+import { identidadeDaPagina, mascaraDaIdentidade, extrasPlacar } from './render/identidade-pagina.js';
 import { criarOndas, limparOndas, detectarImpactos, registrarImpacto, uniformsRede, empurraoBola, redeAtiva, deslocamento, fixo as fixoRede } from './render/rede-onda.js';
 import { criarEmocao, zerarEmocao, emocaoEvento, emocaoPasso, consumirDisparos } from './render/emocao.js';
 import { forcarFesta } from './render/festa.js';
@@ -114,19 +122,45 @@ import {
   duracaoCenaSubst, infoAtoresSubst, consumirEventosSubst, paresDaPlaca, placaNasMaos, planoEm,
 } from './substituicao.js';
 import { criarPlacaSubst } from './render/placa-subst.js';
+// Total Match (?tm=<id>; ponte-tm.js): os times do pedido, o lado do humano, a trava "só o meu jogador" e a súmula
+import { ID_TM, PEDIDO_TM, avisarTM, fimTM, sairTM, gravarResultadoTM, sementeTM, MENSAGENS as MENSAGENS_TM } from './ponte-tm.js';
+import { registrarElenco } from './elenco.js';
 
 const { PASSO, BOTAO, QUALIDADE, VERSAO, FALTAS } = CFG;
 const ID_HUMANO = S.ID_HUMANO ?? 0;
-const TIME_HUMANO = 0;
+// Só com ?tm: a conversão do pedido (tm-times.js) e a súmula (sumula.js) por import dinâmico — fora do download do jogo
+// sem ?tm (teste-carga)
+const [MOD_TIMES, MOD_SUMULA] = PEDIDO_TM
+  ? await Promise.all([import('./tm-times.js'), import('./sumula.js')]).catch(() => [null, null]) : [null, null];
+const { criarSumula, sumulaPasso, resultadoTM, minutoTM } = MOD_SUMULA ?? {};
+const ELENCOS_TM = MOD_TIMES?.ELENCOS_TM;
+/**
+ * O pedido do TM vira elencos registrados (elenco.js) e os times da partida; sem ?tm, null (o jogo de sempre). Um pedido
+ * que não fecha (time com menos de 11, dado quebrado: a partida de ensaio dá erro) também vira null — o iniciar() manda
+ * 'tm3d:sair' e o TM simula na hora, sem esperar os 30 s dele.
+ */
+function timesDoTM() {
+  if (!PEDIDO_TM || !MOD_TIMES || !MOD_SUMULA) return null;
+  try {
+    const T = MOD_TIMES.timesDoPedido(PEDIDO_TM);
+    for (const el of T.elencos) registrarElenco(el);
+    criarPartida({ semente: 1, minutosPorTempo: 1, times: T.times, elencos: ELENCOS_TM, humano: T.humano, trava: T.trava });
+    return T;
+  } catch (_) { return null; }
+}
+const TM = timesDoTM();
+// o time do humano: 0 (o mandante) sem ?tm; com ?tm, o lado do usuário no TM (o time 0 é sempre o mandante do TM)
+const TIME_HUMANO = TM ? TM.humano : 0;
+const TRAVA_TM = TM ? TM.trava : null;
 
 const params = new URLSearchParams(location.search);
 const PRINTS = params.get('prints') === '1';
-// modo da página: a partida (padrão) ou um dos treinos; o menu "Modo de jogo" troca sem recarregar
+// modo da página: a partida (padrão) ou um dos treinos; o menu "Modo de jogo" troca sem recarregar (com ?tm, sempre a partida)
 const MODOS = ['partida', 'ataque', 'conducao'];
-let modoPagina = MODOS.includes(params.get('modo')) ? params.get('modo') : 'partida';
+let modoPagina = TM ? 'partida' : MODOS.includes(params.get('modo')) ? params.get('modo') : 'partida';
 const MIN_PARAM = +params.get('min') > 0 ? +params.get('min') : undefined;
 const DEMO_ON = params.get('demo') === '1';
-const SEMENTE = Math.max(1, Math.floor(+params.get('semente') || 1));
+const SEMENTE = Math.max(1, Math.floor(+params.get('semente') || (ID_TM ? sementeTM(ID_TM) : 1)));
 const CHAVE_PREFS = 'golaco.prefs.v1';
 
 if (params.get('entalhe') === '1') document.documentElement.classList.add('entalhe-simulado');
@@ -172,7 +206,8 @@ function temWebGL2() {
   try { return !!document.createElement('canvas').getContext('webgl2'); } catch (_) { return false; }
 }
 
-const hud = criarHud({ aoComando: comando });
+// (tm: a pausa do Total Match — sem Reiniciar nem Modo de jogo, com "Simular o resto"; sem Editar time com a trava)
+const hud = criarHud({ aoComando: comando, tm: TM ? { trava: TRAVA_TM != null, timeHumano: TIME_HUMANO } : null });
 // "Editar time" (partida): a tela entrega a edição no PRONTO (aoPronto) e solta a entrada ao fechar
 const editor = criarEditorTime({ raiz: document.getElementById('editar-time'), aoPronto: ed => aoPronto(ed), aoFechar: () => aoFecharEditor() });
 if (PRINTS) hud.modoPrints();
@@ -184,7 +219,14 @@ const marcadorLigado = m => (S.marcadorLigado ? S.marcadorLigado(m) : false);
 function criarMundoTreino(opc = {}) {
   const o = { semente: SEMENTE, ...opc };
   if (o.modo === undefined) o.modo = modoPagina;
-  if (o.modo === 'partida') return criarPartida({ semente: o.semente, minutosPorTempo: o.minutosPorTempo ?? MIN_PARAM, saida: o.saida, times: o.times, elencos: o.elencos });
+  // (com ?tm: os times do pedido, o humano no lado do usuário e a trava — em toda recriação do mundo; sem ?tm, humano 0 e
+  // sem trava: a partida de sempre)
+  if (o.modo === 'partida') {
+    return criarPartida({
+      semente: o.semente, minutosPorTempo: o.minutosPorTempo ?? MIN_PARAM, saida: o.saida, times: o.times ?? TM?.times,
+      elencos: o.elencos ?? (TM ? ELENCOS_TM : undefined), humano: o.humano ?? TIME_HUMANO, trava: o.trava !== undefined ? o.trava : TRAVA_TM,
+    });
+  }
   return S.criarTreino(o);
 }
 /** Um passo: partida (passoPartida) ou treino (passoTreino) — as mesmas funções dos testes em Node. */
@@ -267,6 +309,11 @@ const tempoEstadio = () => Math.max(0, (passosTotais - 1 + alfa) * PASSO);
 const filaAcoes = [];
 // edição do time vinda do "Editar time": entra (uma por vez) no 1º passo depois da pausa
 let edicaoNaFila = null;
+// Total Match: a súmula (sumula.js; a mesma ao vivo e no "Simular o resto"), o "Simular o resto" em andamento e o aviso do
+// travado expulso (uma vez)
+let sumulaTM = TM ? criarSumula() : null;
+let simulandoTM = null;      // {promessa} enquanto o "Simular o resto" roda em pedaços (simularResto)
+let expulsoAvisado = false;
 
 // medidas por quadro (medirQuadro): simulação, pose, atualização dos jogadores, desenho e o quadro
 // inteiro sem o desenho (CPU que não é da GPU). Anéis de tamanho fixo (nada alocado por quadro).
@@ -289,8 +336,12 @@ Object.defineProperties(_entTime, {
   x: { value: 0, writable: true }, z: { value: 0, writable: true }, botoes: { value: 0, writable: true },
   repete: { value: false, writable: true }, iaCobra: { value: false, writable: true },
 });
+// trava "só o meu jogador" (Rumo ao Estrelato do TM): TROCAR e GOLEIRO não chegam ao mundo (a lógica também recusa a troca)
+// "só o meu jogador": sem TROCAR; sem GOLEIRO (sair com o goleiro) a não ser que o travado seja o próprio goleiro
+const TRAVA_GOLEIRO = TRAVA_TM != null && mundo.jogadores.some(j => j.id === TRAVA_TM && j.posicao === 'GOL');
+const MASCARA_TRAVA = TRAVA_TM != null ? ~(BOTAO.TROCAR | (TRAVA_GOLEIRO ? 0 : BOTAO.GOLEIRO)) : ~0;
 function entradaDoTime(e) {
-  const x = e?.x ?? 0, z = e?.z ?? 0, botoes = (e?.botoes ?? 0) | 0, repete = !!e?.repete;
+  const x = e?.x ?? 0, z = e?.z ?? 0, botoes = ((e?.botoes ?? 0) | 0) & MASCARA_TRAVA, repete = !!e?.repete;
   // a IA jogando pelo humano (?demo=1: a entrada da demo traz `ia` ou `iaCobra`): os botões NÃO são da pessoa — sem
   // cavadinha por dois toques nem espera do toque rápido (sim.js/partida.js porHumano). Só a marca `iaCobra` passa: o
   // `ia` a página nunca entregou (a recepção e o goleiro da demo da página seguem como antes; contraprova 13/10: sem a
@@ -344,6 +395,8 @@ function rodarPasso(entrada, acoes) {
   substNoPasso.length = 0;
   const t0 = agoraMs();
   const eventos = passoDoMundo(mundo, entradaDoTime(entrada), acoes) ?? mundo.eventos ?? [];
+  // súmula do Total Match (só lê o mundo e os eventos do passo)
+  if (sumulaTM && mundo.modo === 'partida') sumulaPasso(sumulaTM, mundo, eventos);
   const t1 = agoraMs();
   contPassos++;
   passosTotais++;
@@ -543,7 +596,10 @@ function tratarEvento(ev) {
     return;
   }
   if (t === 'fimDeJogo') {
-    const faixa = () => hud.faixa({ titulo: 'Fim de jogo', placar: textoPlacar(), botao: true });
+    // Total Match: o resultado fica gravado já no apito (o TM lê de lá se a mensagem se perder); o botão da faixa volta ao TM
+    if (TM) gravarResultadoTM(resultadoAtualTM());
+    const faixa = () => hud.faixa(TM ? { titulo: 'Fim de jogo', placar: textoPlacar(), botao: true, botaoTexto: 'Voltar ao Total Match', botaoCmd: 'voltar-tm' }
+      : { titulo: 'Fim de jogo', placar: textoPlacar(), botao: true });
     hud.definirEstado({ fim: true });
     encerrarEfeitosGol();
     if (cam) cam.planoGeral(true);
@@ -566,6 +622,11 @@ function tratarEvento(ev) {
     const a = jogadorNoTick(anel, mundo.tick - 1, ev.sai);
     substNoPasso.push({ time: ev.time, sai: ev.sai, entra: ev.entra, antes: a ? { x: a.x, z: a.z } : null });
     return;
+  }
+  // Total Match, "só o meu jogador": o travado foi expulso — o time segue com a IA e a faixa oferece o "Simular o resto"
+  if (t === 'cartao' && TRAVA_TM != null && ev.id === TRAVA_TM && ev.cor === 'vermelho' && !expulsoAvisado) {
+    expulsoAvisado = true;
+    hud.faixa({ titulo: 'Você foi expulso', placar: textoPlacar(), botao: true, botaoTexto: 'Simular o resto', botaoCmd: 'simular-resto', ms: 6000 });
   }
   // lances (passe, chute, defesa, lateral...) não viram texto: o hud só mostra o gol e os comandos
   // (o goleiro com a bola na mão repõe sozinho em 3 s — GOLEIRO.esperaHumano)
@@ -726,7 +787,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   uniformsRede(ondas, redeLigada ? tEst : -1e9, campo.rede.a, campo.rede.b);
   // jogadores interpolados (quantos houver, dos dois times)
   const idC = idControlado();
-  const idProx = fase.atual === 'defesa' ? (mundo.proximaTroca?.[TIME_HUMANO] ?? null) : null;
+  const idProx = fase.atual === 'defesa' && TRAVA_TM == null ? (mundo.proximaTroca?.[TIME_HUMANO] ?? null) : null;
   // companheiro chamado pelo PRESSÃO no último passo (só lê o mundo: o desenho nunca muda a simulação)
   const idPress = mundo.partida ? pressionadorVisivel(mundo, TIME_HUMANO) : -1;
   // Regra 12.3: o anel dos últimos 5 s sob o goleiro do humano com a bola nas mãos (só lê o mundo)
@@ -781,6 +842,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   const tl1 = performance.now();
   const h = controlado();
   if (!achou && h) { hx = h.x; hz = h.z; }
+  else if (!achou && TRAVA_TM != null) { hx = _bp.x; hz = _bp.z; }
   // câmera: controlado + bola; com a bola no ar, antecipa a queda (m.voo.alvo)
   const voo = mundo.voo;
   alvoCam.jx = hx; alvoCam.jz = hz; alvoCam.jvx = h ? h.vx : 0; alvoCam.jvz = h ? h.vz : 0;
@@ -991,6 +1053,8 @@ function abreCenaSubst(eventos) {
 
 /** Cores do time na faixa (as do placar: o verde do mandante e o branco do visitante) e o texto por cima (contraste). */
 const COR_TIME = [{ cor: '#19e07a', texto: '#07090a' }, { cor: '#e7eaec', texto: '#07090a' }];
+// identidade visual da partida (identidade.js): null = a de hoje; com ?tm, a dos times do Total Match (iniciar)
+let IDENT = null;
 /** Os pares da faixa ENTRA/SAI (sigla, cor, número e nomes pelo elenco; o do humano primeiro). */
 function paresFaixa(pares) {
   const ord = [...pares].sort((a, b) => (a.time === TIME_HUMANO ? 0 : 1) - (b.time === TIME_HUMANO ? 0 : 1));
@@ -1308,6 +1372,8 @@ function quadro(agoraMs, desenhar = true) {
     const emPe = retratoBloqueado();
     if (prejogo.quadro(emPe || document.hidden ? 0 : dtReal, agoraMs, desenhar && !emPe, emPe)) return;
   }
+  // "Simular o resto" (Total Match): os passos rodam em pedaços fora daqui (simularResto), sem desenhar; o laço só espera
+  if (simulandoTM) { laco.ultimo = agoraMs; entrada.ler(cam.yaw, agoraMs); entrada.consumirAcoes(); return; }
   const dt = Math.min(0.1, dtReal);
   ultimoAgora = agoraMs;
   const ent = entrada.ler(cam.yaw, agoraMs);
@@ -1348,7 +1414,8 @@ function quadro(agoraMs, desenhar = true) {
       // do 2º passo do quadro em diante o analógico é a MESMA leitura (sim.js aplicarEntrada: `repete` — um gesto que
       // pulou no passo anterior ainda não acabou de ser lido)
       ent.repete = i > 0;
-      const e = DEMO_ON ? (entradaDemoDoMundo(mundo) ?? ent) : cenaGol ? ENTRADA_NEUTRA : ent;
+      // (o travado do TM expulso: ninguém do time é dele — a entrada não vai para o mundo)
+      const e = DEMO_ON ? (entradaDemoDoMundo(mundo) ?? ent) : cenaGol || expulsoAvisado ? ENTRADA_NEUTRA : ent;
       let ac = filaAcoes.length ? filaAcoes.splice(0) : null;
       // a edição do time entra ANTES das outras ações, no 1º passo depois da pausa
       if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
@@ -1425,6 +1492,8 @@ function redimensionar() {
 
 // ------------------------------------------------------------------ ações e menu
 function tratarAcao(a) {
+  // "Simular o resto" (Total Match) rodando: nada chega ao jogo nem abre a pausa
+  if (simulandoTM) return;
   // o controle na pausa e na Ajuda (entrada.js lerMenuPad): navega nos botões dela; fora delas não faz nada
   if (a.startsWith('menu-')) { if (hud.menuAberto || hud.ajudaAberta) hud.navegarPad(a.slice(5)); return; }
   // pré-jogo: a pausa (Esc, P, Start) pula direto para o jogo
@@ -1529,9 +1598,87 @@ function fimDoPrejogo() {
   eventosIniciais();
 }
 
+// ------------------------------------------------------------------ Total Match (?tm)
+/** O resultado do contrato (§2) pela súmula da partida de agora (sumula.js). */
+function resultadoAtualTM() {
+  return TM && sumulaTM ? resultadoTM(sumulaTM, mundo, TM.mapa) : null;
+}
+/** Quantos ms de simulação por quadro no "Simular o resto" (o resto do quadro fica para a página respirar). */
+const FATIA_SIMULACAO = 30;
+let textoSimulando = '';
+function mostrarSimulando() {
+  const t = `${minutoTM(mundo)}' · ${textoPlacar()}`;
+  if (t === textoSimulando) return;
+  textoSimulando = t;
+  hud.faixa({ titulo: 'Simulando o resto da partida…', placar: t });
+  hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
+  hud.relogio(lerRelogio());
+}
+/**
+ * "Simular o resto" (Total Match; contrato §5): fecha as cenas (pré-jogo, replay, comemoração, substituição, editor), a
+ * IA joga pelo humano (entradaDemoPartida) e passoPartida roda em pedaços de FATIA_SIMULACAO ms por quadro, SEM desenhar
+ * (nada de pose, anel, torcida nem cenas: só o mundo e a súmula). No fim: a faixa do fim com "Voltar ao Total Match" e o
+ * resultado gravado. Devolve uma Promise com o resultado (os testes esperam por ela).
+ */
+function simularResto() {
+  if (!TM || mundo.modo !== 'partida' || !mundo.partida) return Promise.resolve(null);
+  if (simulandoTM) return simulandoTM.promessa;
+  if (prejogo && prejogo.ativo) { prejogo.cancelar(); entrada?.bloquear?.(false); }
+  if (diretor && diretor.ativo) fimReplay(false);
+  encerrarComemoracao();
+  if (cenaSub) { cenaSub = null; if (cam) cam.definirCinema(null); }
+  hud.substituicao(false); hud.esconderFaixaSubst();
+  filaCenas.length = 0; somAdiado.length = 0; substNoPasso.length = 0; faixaSub2T.length = 0;
+  if (editor.aberto) editor.fechar();
+  hud.fecharMenu(); hud.fecharAjuda();
+  entrada?.soltarTudo();
+  encerrarEfeitosGol();
+  textoSimulando = '';
+  let ok;
+  const promessa = new Promise(r => { ok = r; });
+  simulandoTM = { promessa };
+  const fatia = () => {
+    if (!simulandoTM) return;
+    const t0 = performance.now();
+    while (mundo.partida.estado !== 'fim' && performance.now() - t0 < FATIA_SIMULACAO) {
+      // a edição na fila (Editar time) entra no 1º passo, como no laço da página
+      const ac = edicaoNaFila ? [edicaoNaFila] : null;
+      edicaoNaFila = null;
+      const ev = passoPartida(mundo, entradaDemoPartida(mundo), ac);
+      contPassos++; passosTotais++;
+      sumulaPasso(sumulaTM, mundo, ev);
+      autorEventos(autorGol, ev, mundo.tick, timeDe);
+    }
+    mostrarSimulando();
+    if (mundo.partida.estado !== 'fim') { requestAnimationFrame(fatia); return; }
+    // fim: o desenho volta do estado do mundo (o replay e as cenas do que passou não existem)
+    simulandoTM = null;
+    anel.limpar(); if (diretor) diretor.limpar();
+    iniciarEstados();
+    corteCamera = true; laco.ultimo = null; ultimoQuadro = null;
+    if (cam) { cam.encerrarGol(); cam.planoGeral(true); }
+    entrada?.consumirAcoes?.(); entrada?.limparPulsos?.();
+    hud.definirEstado({ fim: true });
+    const r = resultadoAtualTM();
+    gravarResultadoTM(r);
+    hud.faixa({ titulo: 'Fim de jogo', placar: textoPlacar(), botao: true, botaoTexto: 'Voltar ao Total Match', botaoCmd: 'voltar-tm' });
+    ok(r);
+  };
+  requestAnimationFrame(fatia);
+  return promessa;
+}
+/** "Voltar ao Total Match": manda o resultado (tm3d:fim); antes do apito final, simula o resto primeiro. */
+function voltarAoTM() {
+  if (!TM) return;
+  if (mundo.partida?.estado === 'fim') { fimTM(resultadoAtualTM()); return; }
+  simularResto().then(r => { if (r) fimTM(r); });
+}
+
 function comando(c, v) {
   switch (c) {
     case 'continuar': hud.fecharMenu(); break;
+    case 'simular-resto': hud.fecharMenu(); simularResto(); break;
+    case 'voltar-tm': hud.fecharMenu(); voltarAoTM(); break;
     case 'recomecar': case 'maquina': case 'marcador':
       hud.fecharMenu();
       if (mundo.modo === 'partida') { hud.evento('soTreino'); break; }
@@ -1652,8 +1799,17 @@ function comando(c, v) {
 
 // ------------------------------------------------------------------ início
 async function iniciar() {
+  // Total Match: ?tm sem o pedido (sumiu do armazenamento) — o TM simula a partida
+  if (ID_TM && !TM) {
+    hud.erro('A partida do Total Match não foi encontrada. Ela será simulada.');
+    sairTM();
+    return;
+  }
   if (!temWebGL2()) {
-    hud.erro('Este navegador não tem WebGL 2, que o GOLAÇO precisa para o 3D. Atualize o navegador ou ative a aceleração de hardware.');
+    hud.erro(ID_TM ? 'Este navegador não tem WebGL 2, que a partida em 3D precisa. A partida será simulada.'
+      : 'Este navegador não tem WebGL 2, que o GOLAÇO precisa para o 3D. Atualize o navegador ou ative a aceleração de hardware.');
+    // Total Match: o 3D não roda aqui — o TM simula a partida (sem esperar os 30 s do aviso dele)
+    if (ID_TM) sairTM();
     return;
   }
   hud.progresso('Preparando o gramado…');
@@ -1663,16 +1819,21 @@ async function iniciar() {
   cam = criarCamera(window.innerWidth / window.innerHeight);
   cam.definirModo(camInicial);
   diretor = criarDiretor({ anel, aspecto: window.innerWidth / window.innerHeight });
-  campo = criarCampo({ qualidade: qAtual, aniso: cena3d.anisotropia() });
+  // identidade visual: com ?tm, os escudos decodificados ANTES dos canvas do estádio e da torcida (desenhados uma vez só)
+  IDENT = await identidadeDaPagina();
+  if (IDENT) { COR_TIME[0] = IDENT.hud.faixa[0]; COR_TIME[1] = IDENT.hud.faixa[1]; }
+  campo = criarCampo({ qualidade: qAtual, aniso: cena3d.anisotropia(), identidade: IDENT });
   cena3d.cena.add(campo.grupo);
   campo.definirHora(hora);
   hud.progresso('Enchendo as arquibancadas…');
   await proximoQuadro();
-  torcida = criarTorcida(cena3d.cena, { qualidade: qAtual, mascara: mascaraGolaco(), hora });
+  torcida = criarTorcida(cena3d.cena, { qualidade: qAtual, mascara: mascaraDaIdentidade(IDENT), hora, identidade: IDENT });
   hud.progresso('Montando os jogadores…');
   await proximoQuadro();
   bola3d = criarBola3D(cena3d.cena, qAtual);
   jog3d = criarJogadores3D(cena3d.cena, qAtual);
+  // uniformes do Total Match (resolvidos sem confusão: identidade.js) nas chaves que o elenco dele usa
+  if (IDENT) jog3d.definirKits(IDENT.kits);
   // a cena de substituição com o máximo de trocas numa parada (5 + 5) desenha 22 + 10 reservas + o quarto árbitro (+ os
   // 2 treinadores)
   jog3d.reservar(22 + 2 * CFG.PARTIDA.subsMax + 1 + (TECNICOS_ON ? IDS_TECNICOS.length : 0));
@@ -1684,6 +1845,11 @@ async function iniciar() {
   jog3d.definirSombras(sombras);
   // os controles de toque apareceram/sumiram: o topo se ajusta e o padrão do minimapa (celular × PC) muda junto
   entrada = criarEntrada({ forcarToque: params.get('toque') === '1', aoAcao: tratarAcao, aoMudarLayout: () => { hud.ajustarTopo(); hud.definirEstado({ minimapa: minimapaLigado() }); } });
+  // Total Match, "só o meu jogador": sem TROCAR nem GOLEIRO na tela (a entrada mascara as teclas e o mundo recusa a troca)
+  // Total Match (html.tm; js/tm-cara.js): a Inter do TM chega depois do 1º layout — os nomes dos botões de toque (medidos
+  // pelo canvas) e o topo do HUD medem de novo com ela. Sem ?tm o aviso 'tm:fontes' nunca vem
+  window.addEventListener('tm:fontes', () => { entrada.reposicionar?.(); hud.ajustarTopo(); });
+  if (TRAVA_TM != null) for (const id of TRAVA_GOLEIRO ? ['btn-trocar', 'btn-trocar-mao'] : ['btn-trocar', 'btn-goleiro', 'btn-trocar-mao']) { const b = document.getElementById(id); if (b) { b.hidden = true; b.style.display = 'none'; } }
   atualizarFase();
   redimensionar();
   window.addEventListener('resize', redimensionar);
@@ -1720,7 +1886,7 @@ async function iniciar() {
   await proximoQuadro();
   prejogo = criarPrejogo({
     cena3d, cam, jog3d, bola3d, campo, torcida, som: () => som, mundo: () => mundo, hora: () => hora, qualidade: () => qAtual,
-    comToque: () => document.documentElement.classList.contains('com-toque'), aoFim: fimDoPrejogo,
+    comToque: () => document.documentElement.classList.contains('com-toque'), aoFim: fimDoPrejogo, identidade: IDENT,
   });
   marcarPrejogo();
   marcarSubst();
@@ -1735,6 +1901,8 @@ async function iniciar() {
   adapt.inicio = performance.now();
   hud.pronto();
   api.pronto = true;
+  // Total Match: o 3D está no ar (o TM esconde o aviso e o X dele)
+  if (TM) avisarTM('tm3d:pronto');
   const aoQuadro = t => {
     requestAnimationFrame(aoQuadro);
     if (!relogioManual) quadro(t);
@@ -1746,7 +1914,8 @@ async function iniciar() {
 function timesDoMundo(m) {
   if (!m.times) return null;
   // escudo: o id do elenco (o <symbol id="escudo-<id>"> do index.html; fictícios)
-  return [0, 1].map(t => { const e = ELENCOS[m.times[t].elenco]; return { sigla: e.sigla, nome: e.nome, escudo: e.id }; });
+  // (com ?tm: o escudo-imagem, a cor do time e as do minimapa pela identidade — extrasPlacar; sem ?tm, nada a mais)
+  return [0, 1].map(t => { const e = ELENCOS[m.times[t].elenco]; return { sigla: e.sigla, nome: e.nome, escudo: e.id, ...extrasPlacar(IDENT, t) }; });
 }
 
 function trocarMundo(m, opc = {}) {
@@ -1757,6 +1926,8 @@ function trocarMundo(m, opc = {}) {
   laco.acum = 0; laco.ultimo = null;
   filaAcoes.length = 0;
   edicaoNaFila = null;
+  // Total Match: a súmula é do mundo novo
+  if (TM) { sumulaTM = criarSumula(); expulsoAvisado = false; simulandoTM = null; }
   kitCache.clear();
   limparOndas(ondas);
   zerarEmocao(emocao);
@@ -1843,6 +2014,25 @@ const api = {
   /** Põe uma edição do time na fila (entra no próximo passo, como a do "Editar time"). */
   editarTime(ed) { edicaoNaFila = ed ?? null; },
   get edicaoNaFila() { return edicaoNaFila; },
+  /**
+   * Total Match (?tm; null sem ele): o pedido, o time do humano, o travado ("só o meu jogador"; id no mundo ou null), o
+   * mapa id → {tmId, nome, lado}, a súmula (cópia), o resultado do contrato agora, o "Simular o resto" (Promise com o
+   * resultado), as mensagens mandadas ao TM e o que está gravado em localStorage["tm3d:resultado:<id>"].
+   */
+  tm: TM ? {
+    get id() { return ID_TM; },
+    get pedido() { return PEDIDO_TM; },
+    get humano() { return TIME_HUMANO; },
+    get trava() { return TRAVA_TM; },
+    get mapa() { return TM.mapa; },
+    get controlado() { return mundo.controlado?.[TIME_HUMANO] ?? null; },
+    get simulando() { return !!simulandoTM; },
+    get mensagens() { return MENSAGENS_TM.map(m => ({ ...m })); },
+    sumula() { return sumulaTM ? structuredClone({ ...sumulaTM, autor: undefined }) : null; },
+    resultado() { return resultadoAtualTM(); },
+    simularResto() { return simularResto(); },
+    resultadoGravado() { try { return JSON.parse(localStorage.getItem('tm3d:resultado:' + ID_TM) || 'null'); } catch (_) { return null; } },
+  } : null,
   /** Cópia de m.times[t] (partida) ou null. */
   estadoTime(t = TIME_HUMANO) { return mundo.times?.[t] ? structuredClone(mundo.times[t]) : null; },
   /** A tela "Editar time" (aberto, abrir, voltar = PRONTO, esc, aba, rascunho). */
@@ -2091,6 +2281,8 @@ const api = {
   get linhaImpedimento() { return linhaImped?.estado ?? null; },
   /** Marcadores das 3 opções do lateral (testes): {visivel, ids, mirada}. */
   get marcasLateral() { return marcasLat?.estado ?? null; },
+  /** Identidade visual da partida (identidade.js): null sem ?tm; com ?tm, a dos times do Total Match (testes). */
+  get identidade() { return IDENT; },
   /**
    * Replay (testes e prints): estado do diretor ({ativo, tipo, plano, planos, cam, tick, vel, congelado, duracao, ...}),
    * o anel ({primeiro, ultimo, bytes}), custos (gravar por passo, quadro do replay sem o desenho), o ajuste automático,
@@ -2371,4 +2563,6 @@ window.__golaco = api;
 iniciar().catch(err => {
   console.error(err);
   hud.erro('Não foi possível iniciar o 3D: ' + (err && err.message ? err.message : String(err)));
+  // Total Match: o 3D não subiu — o TM simula a partida
+  if (ID_TM && !api.pronto) sairTM();
 });

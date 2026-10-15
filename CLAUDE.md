@@ -52,8 +52,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   lançamento e saída do goleiro**, e **tirar o botão CONDUÇÃO** do celular. Ordem: Etapa 2 (ações + botões +
   goleiro básico) → 3 (11×11, tática, IA) → 4 (regras, goleiro, bolas paradas, equilíbrio) → 5 (modelos humanos,
   mocap, rostos) → 6 (torcida cantando, pré-jogo, replay, comemoração) → 7.
-  As filas antigas do `futebol3d/` (abaixo) ficam PARADAS; o `futebol3d/` continua publicado e intocado porque o
-  Total Match usa ele nas partidas 3D, até o dono decidir aposentá-lo. Não copiar nem ler código do `futebol3d/`
+  As filas antigas do `futebol3d/` (abaixo) ficam PARADAS; o `futebol3d/` continua publicado e intocado como RESERVA
+  (desde 15/10 o Total Match joga as partidas 3D no `golaco/`; ver "Motor 3D do Total Match" abaixo), até o dono decidir
+  aposentá-lo. Não copiar nem ler código do `futebol3d/`
   para o projeto novo.
 - Tudo em **português do Brasil**: textos da interface, comentários e mensagens de commit.
 - Sempre mandar o **link do jogo/app** (GitHub Pages) fora do artifact. **Prints: NÃO mandar mais ao dono** (12/10: "esquece os
@@ -467,13 +468,34 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   treinador — T15); o treinador que andou numa cena com o mundo parado (substituição) marca corte no anel
   (`REPLAY.saltoTecnico`; deslizava ~3 m no replay — `teste-tecnicos-tela` V7); o gol roteirizado `{marcarChute}` tem 60
   passos de corrida antes do chute (o corte do teletransporte fica antes dele).
+- **Motor 3D do Total Match** (dono, 15/10: "pode trocar o antigo pelo novo? e colocar as coisas certas? e na partida,
+  quero que a logo dos times, torcida, e estádio, estejam adaptáveis a cada time"; contrato "Ponte com o Total Match" no
+  `CONTRATOS.md`): o TM (`legacy-total-match/js/tm3d.js`) abre `golaco/index.html?tm=<id>` num quadro com o pedido v2 em
+  `localStorage["tm3d:pedido:<id>"]` (os dois times com 18 jogadores, a vaga da prancheta, uniformes e a IDENTIDADE: o
+  mesmo escudo que o TM mostra — real na edição pro, gerado na pública, desenhado no Ultimate —, estádio, liga; a
+  partida com mando neutro, público e clássico). Lado do golaco: `ponte-tm.js` (lê o pedido na importação, postMessage
+  `tm3d:pronto/fim/sair`), `tm-times.js` (puro: ids 1001+/2001+, formação do TM → as 6 daqui, húngaro pelo slot,
+  atributos do TM sem desequilibrar), `sumula.js` (puro: gols com autor/contra/pênalti/assistência, cartões, chutes, no
+  alvo, posse, nota do travado → o resultado do TM). Time 0 = mandante do TM; o HUMANO é variável (`criarPartida({humano,
+  trava})`, `m.timeHumano`); "só o meu jogador" (Rumo ao Estrelato) = `m.trava` em `assumirControle` + TROCAR/GOLEIRO
+  mascarados. Pausa do TM: "Simular o resto" (passoPartida em pedaços de 30 ms sem desenhar), sem Reiniciar/Modo de
+  jogo; fim com "Voltar ao Total Match". Identidade por time (`identidade.js`, puro; padrão = as constantes de hoje):
+  escudo no placar/escalação/abertura/placas/bandeirões/fachada, uniformes sem confusão (ΔE₀₀), torcida/cachecóis/faixas/
+  mosaico/cadeiras pelas cores e nomes, nome do estádio do mandante, ocupação pelo público. Cara do TM só com `?tm`
+  (`<html class="tm">`, `css/tm.css`, `js/tm-cara.js`, `assets/tm/` com a Inter e a logo do próprio TM). **Sem `?tm` nada
+  muda** (hash-partida e hash-igual IGUAIS; o download do `teste-carga` não cresce: o que é só do TM entra por import
+  dinâmico). Testes: `teste-ponte-tm`, `teste-identidade` (padrão), `teste-tm-tela` (navegador, fora do CI); ponta a ponta
+  com o TM: `node legacy-total-match/ferramentas/testar-3d.mjs`. Pausa do TM: o submenu "Modo de jogo" vira "Cenas da
+  partida" (pré-jogo e substituição, sem os treinos). Nota do travado na escala do Rumo ao Estrelato (média ~7,2, ≥ 8 em
+  ~25%, como a simulação do TM). Mexeu em main.js,
+  hud.js, partida.js, acoes.js ou nos desenhos de estádio/torcida? Rodar também `teste-tm-tela` e o `testar-3d`.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =
   Chromium), `prints.mjs`. O Chromium headless daqui não passa pelo proxy: `tools/lib/navegador.mjs` serve o CDN de
   um cache baixado com curl.
 
-## GOLAÇO antigo (`futebol3d/`) — futebol 3D (fila PARADA; segue publicado para o Total Match)
+## GOLAÇO antigo (`futebol3d/`) — futebol 3D (fila PARADA; publicado como reserva — o TM usa o `golaco/` desde 15/10)
 - three.js 0.170 por importmap (jsdelivr), ES modules, **sem etapa de build**.
 - Identidade visual: **preto e verde**.
 - Contratos entre módulos: `futebol3d/tools/CONTRACTS.md`; constantes em `js/config.js`.
@@ -485,7 +507,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
 - Desempenho: jogadores e torcida instanciados; poucos draw calls; qualidade `baixa` tem
   que rodar em celular médio.
 - Pasta `tools/` não vai para o site.
-- **É o motor 3D do Total Match** (dono, 09/10: "juntar tudo no Total Match"; o menu e os 8 clubes não aparecem mais
+- **Foi o motor 3D do Total Match até 15/10** (hoje é o `golaco/`; o pedido v2 mantém os campos da v1 que ele lê).
+  Histórico (dono, 09/10: "juntar tudo no Total Match"; o menu e os 8 clubes não aparecem mais
   ao público): o TM abre `futebol3d/index.html?tm=<id>` num quadro e o resultado volta para ele (`js/ponte-tm.js`; lado
   do TM em `legacy-total-match/js/tm3d.js`). **Sem `?tm` o endereço leva ao Total Match** — para abrir o menu antigo
   (desenvolvimento, links de teste para o dono) use `futebol3d/index.html?golaco`; os testes automatizados (navigator.webdriver)
@@ -656,14 +679,18 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   (7 larguras; tem que dar 0).
 - Antes de publicar: `python3 ferramentas/conferir-estilos.py` (botão sem estilo = visual padrão do
   navegador) e versão nova em `index.html` (`?v=NNN`) + `sw.js` (`total-match-vNNN`).
-- **Partidas em 3D** (`js/tm3d.js`; dono, 09/10: o GOLAÇO vira o motor 3D do TM, tudo num jogo só): antes de toda
-  partida do seu time (matchview com `pauseSide`) aparece Jogar em 3D / Simular (Config → "Partidas do seu time":
-  Perguntar / Sempre 3D / Sempre simular). O 3D (`futebol3d/`, mesmo site e mesmo localStorage) recebe os dois times
-  com 18 jogadores, a vaga de cada titular na prancheta, os uniformes do TM (inclusive o do pré-jogo da carreira) e
-  devolve placar, gols (autor, minuto, pênalti, contra), cartões e estatísticas, aplicados no MESMO `result` — o modo
-  segue o fluxo normal (pênaltis/prorrogação continuam no TM). Rumo ao Estrelato: titular joga controlando só o
-  próprio jogador (`rae.js` preparaPartida/timesDaPartida; nota, gols e assistências vêm do 3D). O service worker não
-  guarda nada de `futebol3d/`. Teste de ponta a ponta: `node ferramentas/testar-3d.mjs` (como montar o site no topo do arquivo).
+- **Partidas em 3D** (`js/tm3d.js`; dono, 09/10: o GOLAÇO vira o motor 3D do TM, tudo num jogo só; 15/10: o motor passa a
+  ser o GOLAÇO NOVO, `golaco/`): antes de toda partida do seu time (matchview com `pauseSide`) aparece Jogar em 3D / Simular
+  (Config → "Partidas do seu time": Perguntar / Sempre 3D / Sempre simular; só com WebGL 2). O 3D (`golaco/index.html?tm=<id>`,
+  mesmo site e mesmo localStorage) recebe o pedido v2: os dois times com 18 jogadores, a vaga de cada titular na prancheta,
+  os uniformes do TM (inclusive o do pré-jogo da carreira) e a identidade de cada time (`identidade`: o MESMO escudo do
+  `TM.img.clubImg/nationImg` em endereço absoluto — Ultimate: `TM.ut._i.escudoSvg`, o escudo desenhado —, bandeira, liga,
+  técnico, estádio com nome/capacidade/foto) e a `partida` (neutro, público, clássico, pelo `cfg.simOpts`). Devolve placar,
+  gols (autor, minuto, pênalti, contra, assistência), cartões e estatísticas, aplicados no MESMO `result` — o modo segue o
+  fluxo normal (pênaltis/prorrogação continuam no TM). Rumo ao Estrelato: titular joga controlando só o próprio jogador
+  (`rae.js` preparaPartida/timesDaPartida; nota, gols e assistências vêm do 3D). O service worker não guarda nada de
+  `golaco/` nem de `futebol3d/`. Teste de ponta a ponta: `node ferramentas/testar-3d.mjs` (como montar o site no topo do
+  arquivo; `--publica` para a edição pública).
 
 ## LANCE A LANCE (`simulador/`) — simulador de partidas (a "bolinha")
 - Canvas 2D, ES modules, **sem build e sem dependências externas**. Identidade: grafite + verde-limão.

@@ -146,6 +146,20 @@ export const ELENCOS = {
 const FICHAS = new Map();
 for (const t of Object.values(ELENCOS)) for (const jog of t.jogadores) FICHAS.set(jog.id, { jog, elenco: t.id });
 
+/**
+ * Registra (ou substitui) um elenco de fora — os times do Total Match (tm-times.js): ELENCOS[el.id] = el e as fichas
+ * dos jogadores dele. Registrar de novo o mesmo id substitui o elenco inteiro (as fichas antigas dele saem). Os ids dos
+ * jogadores têm de ser inteiros fora dos reservados (0, 1–23, 90, 101–123, 200–203, 210–211). A ficha pode trazer
+ * `attr` explícito (atributosDe devolve uma cópia dele). Sem chamar isto, nada muda (Golaço FC e Ventania FC).
+ */
+export function registrarElenco(el) {
+  const velho = ELENCOS[el.id];
+  if (velho && velho !== el) for (const jog of velho.jogadores) if (FICHAS.get(jog.id)?.elenco === el.id) FICHAS.delete(jog.id);
+  ELENCOS[el.id] = el;
+  for (const jog of el.jogadores) { FICHAS.set(jog.id, { jog, elenco: el.id }); _attrCache.delete(jog.id); }
+  return el;
+}
+
 /** Ficha do jogador pelo id do mundo (ou null). */
 export function fichaDe(id) {
   return FICHAS.get(id)?.jog ?? null;
@@ -179,33 +193,41 @@ const _attrCache = new Map();
 /**
  * Atributos do jogador (tela §7.3), determinísticos: nível + bônus pelo peso na posição natural +
  * variação pelo id; corrigidos para a nota natural sair igual ao nível ± 1. Devolve um objeto NOVO
- * (cópia) com as 19 chaves + altura, peFraco e pePreferido.
+ * (cópia) com as 19 chaves + altura, peFraco e pePreferido. A ficha com `attr` explícito (times do Total
+ * Match, tm-times.js) devolve uma cópia dele (as fichas do Golaço FC e do Ventania FC não têm `attr`).
  */
 export function atributosDe(jog) {
+  if (jog.attr) return { ...jog.attr };
   let a = _attrCache.get(jog.id);
   if (!a) {
-    a = {};
-    const pesos = PESOS[jog.pos];
-    const gol = jog.pos === 'GOL';
-    const perfil = FORA_PERFIL[jog.pos] ?? {};
-    CHAVES.forEach((k, i) => {
-      const w = pesos[k] ?? 0;
-      let v = jog.nivel + (w >= 0.15 ? 3 : w > 0 ? 0 : perfil[k] ?? FORA_PADRAO) + varia(jog.id, i);
-      if (gol && w < 0.1) v = jog.nivel + (GOL_TECNICA[k] ?? GOL_FISICO[k]) + varia(jog.id, i);
-      if (!gol && SO_GOL.includes(k)) v = 25 + varia(jog.id, i);
-      a[k] = clamp(v, 25, 97);
-    });
-    for (let r = 0; r < 3; r++) {
-      const d = jog.nivel - notaNaPosicao(a, jog.pos);
-      if (d === 0) break;
-      for (const k in pesos) a[k] = clamp(a[k] + d, 25, 97);
-    }
-    a.altura = ALTURA[jog.pos] + varia(jog.id, 19);
-    a.peFraco = 35 + (h32(jog.id, 20) % 41);
-    a.pePreferido = jog.pe === 'E' ? 0 : 1;
+    a = gerarAtributos(jog);
     _attrCache.set(jog.id, a);
   }
   return { ...a };
+}
+
+/** O gerador de atributosDe (sem o cache: um objeto novo a cada chamada). tm-times.js parte dele. */
+export function gerarAtributos(jog) {
+  const a = {};
+  const pesos = PESOS[jog.pos];
+  const gol = jog.pos === 'GOL';
+  const perfil = FORA_PERFIL[jog.pos] ?? {};
+  CHAVES.forEach((k, i) => {
+    const w = pesos[k] ?? 0;
+    let v = jog.nivel + (w >= 0.15 ? 3 : w > 0 ? 0 : perfil[k] ?? FORA_PADRAO) + varia(jog.id, i);
+    if (gol && w < 0.1) v = jog.nivel + (GOL_TECNICA[k] ?? GOL_FISICO[k]) + varia(jog.id, i);
+    if (!gol && SO_GOL.includes(k)) v = 25 + varia(jog.id, i);
+    a[k] = clamp(v, 25, 97);
+  });
+  for (let r = 0; r < 3; r++) {
+    const d = jog.nivel - notaNaPosicao(a, jog.pos);
+    if (d === 0) break;
+    for (const k in pesos) a[k] = clamp(a[k] + d, 25, 97);
+  }
+  a.altura = ALTURA[jog.pos] + varia(jog.id, 19);
+  a.peFraco = 35 + (h32(jog.id, 20) % 41);
+  a.pePreferido = jog.pe === 'E' ? 0 : 1;
+  return a;
 }
 
 /** Encaixe do jogador numa vaga de posição `pos`: 'natural' | 'alternativa' | 'fora'. */

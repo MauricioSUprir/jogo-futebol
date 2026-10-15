@@ -268,8 +268,17 @@
 
   /* ---------- quadro do 3D por cima do TM ---------- */
   var ativo = null;
+  // pedidos/resultados que sobraram (TM fechado com o 3D aberto, aba solta): só existe um 3D aberto por vez
+  function limpaSobras() {
+    try {
+      var velhas = [];
+      for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && /^tm3d:(pedido|resultado):/.test(k)) velhas.push(k); }
+      velhas.forEach(function (k) { localStorage.removeItem(k); });
+    } catch (e) {}
+  }
   function abre3d(pedido, fns) {
     if (ativo) fecha3d();
+    limpaSobras();
     try { localStorage.setItem("tm3d:pedido:" + pedido.id, JSON.stringify(pedido)); } catch (e) { fns.falhou("Sem espaço para preparar a partida 3D."); return; }
     var aviso = el("div", { class: "tm3d-aviso", text: "Abrindo o estádio 3D…" });
     var quadro = el("iframe", { class: "tm3d-quadro", src: api.PASTA + "?tm=" + encodeURIComponent(pedido.id), allow: "fullscreen; autoplay; gamepad", title: "Partida em 3D" });

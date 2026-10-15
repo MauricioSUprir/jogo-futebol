@@ -11,7 +11,8 @@
 //
 // Contrato (main.js): criarPrejogo(ctx) → {iniciar(modo, {abertura}), quadro(dt, agoraMs, desenhar, parado), acao(a),
 // proximo(), pularTudo(), irPara(t), ativo, api}. ctx = {cena3d, cam, jog3d, bola3d, campo, torcida, som(),
-// mundo(), hora(), qualidade(), comToque(), aoFim()}. Enquanto ativo, as placas de cá ficam com o vão na frente do
+// mundo(), hora(), qualidade(), comToque(), aoFim(), identidade? (identidade.js: com ?tm, o estádio de fora e as telas
+// com o nome, o escudo e as cores dos times do Total Match)}. Enquanto ativo, as placas de cá ficam com o vão na frente do
 // túnel (criarVaoPlacas) e o lado de fora existe; no fim tudo volta ao estádio do jogo.
 // Treinadores (12/10): já em pé na área técnica deles desde o 1º plano (js/tecnicos.js, um mundo à parte só do pré-jogo,
 // no relógio dele), aplaudindo 3 s quando os times saem do túnel; a câmera de cinema nunca dentro deles.
@@ -97,6 +98,7 @@ export function criarPrejogo(ctx) {
   const vao = criarVaoPlacas(ctx);
   const tela = criarPrejogoTela({
     aoProximo: () => proximo(), aoPularTudo: () => pularTudo(), aoComecar: () => comecar(), comToque: () => ctx.comToque(),
+    identidade: ctx.identidade ?? null,
   });
   const st = {
     ativo: false, fase: 'parado', modo: null, r: null, t: 0, tAb: 0, i: -1, c: null, previa: null, fotos: new Map(),
@@ -352,7 +354,7 @@ export function criarPrejogo(ctx) {
     // partida" (só a escalação) e no curto ele nunca entra no quadro e montá-lo travava ~0,1–0,2 s no celular
     const t0 = performance.now();
     const entorno = !!opc.abertura || st.r.planos.some(p => p.fora);
-    st.fora = criarEstadioFora(cena, { qualidade: ctx.qualidade(), hora: ctx.hora(), aniso: ctx.cena3d.anisotropia(), materialTorcida: ctx.torcida.mesh?.children?.[0]?.material ?? null, entorno });
+    st.fora = criarEstadioFora(cena, { qualidade: ctx.qualidade(), hora: ctx.hora(), aniso: ctx.cena3d.anisotropia(), materialTorcida: ctx.torcida.mesh?.children?.[0]?.material ?? null, entorno, identidade: ctx.identidade ?? null });
     st.msFora = performance.now() - t0;
     vao.abrir();
     tela.escalacao.montar(m.times);

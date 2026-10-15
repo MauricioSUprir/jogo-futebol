@@ -3,6 +3,7 @@
 // cadeiras da arquibancada, bola, sombra de contato, bandeira de escanteio e indicador.
 import { CAMPO } from '../config.js';
 import { criarCanvas, texturaCanvas, hash2, ruido, gerador } from './util.js';
+import { desenharEscudo } from './escudo-desenho.js';
 
 // Área coberta pela textura do gramado (campo + entorno).
 export const GRAMA = {
@@ -131,13 +132,16 @@ const PAINEIS = [
 ];
 export const PLACA = { altura: 0.9, periodo: 24 }; // 4 painéis de 6 m
 
-/** Faixa de placas de LED: 4 painéis lado a lado (cada um 6 m × 0,9 m). */
-export function texPlacas(aniso) {
+/**
+ * Faixa de placas de LED: 4 painéis lado a lado (cada um 6 m × 0,9 m). paineis (identidade.js, só com ?tm): os do
+ * Total Match ('TOTAL MATCH', o mandante, o escudo, a neutra); escudos: as imagens decodificadas dos times.
+ */
+export function texPlacas(aniso, paineis = PAINEIS, escudos = null) {
   const W = 2048, H = 80;
   const c = criarCanvas(W, H);
   const g = c.getContext('2d');
-  const pw = W / PAINEIS.length;
-  PAINEIS.forEach((p, i) => {
+  const pw = W / paineis.length;
+  paineis.forEach((p, i) => {
     const x0 = i * pw;
     g.fillStyle = p.fundo;
     g.fillRect(x0, 0, pw, H);
@@ -150,6 +154,7 @@ export function texPlacas(aniso) {
     g.fillRect(x0, 0, pw, H);
     g.save();
     g.beginPath(); g.rect(x0, 0, pw, H); g.clip();
+    if (p.detalhe === 'escudo') { painelEscudo(g, p, x0, pw, H, escudos?.[p.escudo ?? 0] ?? null); g.restore(); g.fillStyle = 'rgba(0,0,0,0.85)'; g.fillRect(x0, 0, 2, H); return; }
     g.fillStyle = p.cor;
     g.textAlign = 'center';
     g.textBaseline = 'middle';
@@ -165,7 +170,7 @@ export function texPlacas(aniso) {
       g.fillStyle = p.cor;
       g.fillRect(x0 + 18, H - 12, pw - 36, 4);
     } else if (p.detalhe === 'seta') {
-      g.fillStyle = '#19e07a';
+      g.fillStyle = p.seta ?? '#19e07a';
       g.beginPath(); g.moveTo(x0 + 20, 18); g.lineTo(x0 + 44, H / 2); g.lineTo(x0 + 20, H - 18); g.closePath(); g.fill();
       g.beginPath(); g.moveTo(x0 + pw - 44, 18); g.lineTo(x0 + pw - 20, H / 2); g.lineTo(x0 + pw - 44, H - 18); g.closePath(); g.fill();
     } else if (p.detalhe === 'verde') {
@@ -180,15 +185,42 @@ export function texPlacas(aniso) {
   return texturaCanvas(c, { repetir: true, aniso });
 }
 
+/** Painel do escudo do mandante (Total Match): o escudo, a sigla e o escudo, com a cor do time nas bordas. */
+function painelEscudo(g, p, x0, pw, H, img) {
+  g.fillStyle = p.borda ?? '#22c55e';
+  g.fillRect(x0, 0, 8, H); g.fillRect(x0 + pw - 8, 0, 8, H);
+  const tamE = H - 14;
+  const temImg = !!img;
+  g.fillStyle = p.cor;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = `900 50px system-ui, "Segoe UI", Roboto, Arial, sans-serif`;
+  const larg = g.measureText(p.texto).width;
+  const maxT = pw * (temImg ? 0.5 : 0.78);
+  g.save();
+  g.translate(x0 + pw / 2, H / 2 + 2);
+  g.scale(Math.min(1, maxT / Math.max(1, larg)), 1);
+  g.fillText(p.texto, 0, 0);
+  g.restore();
+  if (temImg) for (const cx of [x0 + pw * 0.14, x0 + pw * 0.86]) desenharEscudo(g, img, cx - tamE / 2, 7, tamE, tamE);
+}
+
 export const ARQ = { fileiras: 36, assentoLarg: 0.5, comprimento: 125 };
 
-let _mascara = null;
+const _mascaras = new Map();
 /**
  * Cadeiras do mosaico "GOLAÇO" do lado de lá: Uint8Array(nA × fileiras), 1 = cadeira do texto (fileira 0
  * = a de cima). Calculada uma vez (o texto vem do canvas: depende da fonte do aparelho, a mesma para a
  * textura das cadeiras e para a torcida).
  */
-export function mascaraGolaco() {
+export function mascaraGolaco() { return mascaraTexto('GOLAÇO'); }
+/**
+ * Mosaico com outro texto (o nome do mandante do Total Match; identidade.js mosaico.texto), com a mesma conta; kMax
+ * limita o quanto as letras esticam na largura (uma sigla curta não vira 3 letras de 60 m).
+ */
+export function mascaraTexto(texto, kMax = Infinity) {
+  const chave = texto + '|' + kMax;
+  const _mascara = _mascaras.get(chave);
   if (_mascara) return _mascara;
   const nA = Math.round(ARQ.comprimento / ARQ.assentoLarg), nF = ARQ.fileiras;
   const mk = criarCanvas(nA, nF);
@@ -198,23 +230,26 @@ export function mascaraGolaco() {
   mg.textAlign = 'center'; mg.textBaseline = 'middle';
   mg.font = '900 13px system-ui, "Segoe UI", Roboto, Arial, sans-serif';
   // largura do texto ~60 m (120 cadeiras), nas fileiras 1–11 (as que a câmera de TV vê)
-  const larg = mg.measureText('GOLAÇO').width;
+  const larg = mg.measureText(texto).width;
   mg.save();
   mg.translate(nA / 2, nF - 6.2);
-  mg.scale(120 / larg, 1);
-  mg.fillText('GOLAÇO', 0, 0);
+  mg.scale(Math.min(120 / larg, kMax), 1);
+  mg.fillText(texto, 0, 0);
   mg.restore();
   const d = mg.getImageData(0, 0, nA, nF).data;
-  _mascara = new Uint8Array(nA * nF);
-  for (let i = 0; i < nA * nF; i++) _mascara[i] = d[i * 4] > 110 ? 1 : 0;
-  return _mascara;
+  const m = new Uint8Array(nA * nF);
+  for (let i = 0; i < nA * nF; i++) m[i] = d[i * 4] > 110 ? 1 : 0;
+  _mascaras.set(chave, m);
+  return m;
 }
 
 /**
  * Cadeiras da arquibancada: fileiras (degrau, assento, encosto), corredores e o nome
  * GOLAÇO em cadeiras verdes no meio. A faixa de cima (v > 0,95) é a cor das paredes.
+ * cores (identidade.js arquibancada, só com ?tm): {friso, mosaico, cadeira, tom, tom2} pelo mandante; mascara: a do
+ * mosaico do mandante (mascaraTexto) — sem elas, as de hoje.
  */
-export function texArquibancada(aniso, comTexto = true, W = 2048) {
+export function texArquibancada(aniso, comTexto = true, W = 2048, cores = null, mascaraTm = null) {
   const H = W / 4;
   const c = criarCanvas(W, H);
   const g = c.getContext('2d');
@@ -222,7 +257,7 @@ export function texArquibancada(aniso, comTexto = true, W = 2048) {
   // paredes: cinza-escuro com um friso verde em cima (parapeito)
   g.fillStyle = '#2b3235';
   g.fillRect(0, 0, W, topo);
-  g.fillStyle = '#12a95c';
+  g.fillStyle = cores?.friso ?? '#12a95c';
   g.fillRect(0, 0, W, Math.max(2, Math.round(topo / 8)));
   g.fillStyle = 'rgba(0,0,0,0.35)';
   g.fillRect(0, Math.max(2, Math.round(topo / 8)), W, 2);
@@ -231,7 +266,7 @@ export function texArquibancada(aniso, comTexto = true, W = 2048) {
   const nA = Math.round(ARQ.comprimento / ARQ.assentoLarg);
   const wA = W / nA;
   // máscara do texto (uma célula por cadeira); a torcida (torcida.js) põe camisas verdes nela
-  const mascara = comTexto ? mascaraGolaco() : null;
+  const mascara = comTexto ? (mascaraTm ?? mascaraGolaco()) : null;
   const rnd = gerador(comTexto ? 5 : 9);
   for (let f = 0; f < nF; f++) {
     const y0 = topo + f * hF;
@@ -249,7 +284,7 @@ export function texArquibancada(aniso, comTexto = true, W = 2048) {
       const texto = mascara ? mascara[a + f * nA] === 1 : false;
       if (texto) {
         // cadeiras do mosaico: bloco cheio (as letras ficam legíveis de longe)
-        g.fillStyle = '#0d8447';
+        g.fillStyle = cores?.mosaico ?? '#0d8447';
         g.fillRect(x0, y0, wA, hF);
         g.fillStyle = 'rgba(0,0,0,0.22)';
         g.fillRect(x0, y0 + hF * 0.82, wA, hF * 0.18);
@@ -259,7 +294,7 @@ export function texArquibancada(aniso, comTexto = true, W = 2048) {
       if (texto) cor = '#12b866';
       else {
         const r = rnd();
-        cor = r < 0.06 ? '#2a3033' : r < 0.12 ? '#0f5233' : '#14181a';
+        cor = cores ? (r < 0.06 ? cores.tom : r < 0.12 ? cores.tom2 : cores.cadeira) : r < 0.06 ? '#2a3033' : r < 0.12 ? '#0f5233' : '#14181a';
       }
       g.fillStyle = cor;
       g.fillRect(x0 + 0.6, y0 + hF * 0.22, wA - 1.2, hF * 0.55);
@@ -337,12 +372,12 @@ export function texMancha() {
   return texturaCanvas(c, { cor: false });
 }
 
-/** Bandeira de escanteio (verde com faixa preta). */
-export function texBandeira() {
+/** Bandeira de escanteio (verde com faixa preta; com ?tm, as cores do mandante: identidade.js escanteio). */
+export function texBandeira(cores = null) {
   const c = criarCanvas(64, 48);
   const g = c.getContext('2d');
-  g.fillStyle = '#19e07a'; g.fillRect(0, 0, 64, 48);
-  g.fillStyle = '#07090a';
+  g.fillStyle = cores?.fundo ?? '#19e07a'; g.fillRect(0, 0, 64, 48);
+  g.fillStyle = cores?.faixa ?? '#07090a';
   g.beginPath(); g.moveTo(0, 48); g.lineTo(64, 0); g.lineTo(64, 14); g.lineTo(14, 48); g.closePath(); g.fill();
   return texturaCanvas(c, {});
 }
