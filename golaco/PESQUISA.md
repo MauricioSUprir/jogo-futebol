@@ -430,3 +430,12 @@ recomeçar o compromisso (0,36 / perdeu 1: o rumo trocava logo no fim da curva, 
 a mediana bola–corpo na corrida ficou 0,5712 m (meta ≤ 0,57; ramo 0,5648, main 0,5577) — nos ticks da virada ela é a
 mesma do resto (0,579 × 0,571 m; no trote 0,569 × 0,589): é o sorteio dos lances. Com 12 partidas (a amostra que o
 cabeçalho já pedia antes do merge) 0,5630 × ramo 0,5644 × main 0,5609 — o CI passa a rodar as 12 (amostra só cresce).
+Outros efeitos na bateria (os lances mudam com a IA): `teste-faltas` D com 12 partidas 1,42 falta por partida (17; a meta
+pede 1,5 = 18) — nas 36 sementes 1001–1036 2,03 × ramo 1,97 × main 2,25 (Poisson: ~0,4 de desvio em 12 partidas); a parte D
+passa a ter 36 partidas, em 3 processos (21,9% de amarelos, 3 vermelhos em 36, parada mais longa 5,9 s). `teste-tecnicos` T8
+achou um defeito dos treinadores (`tecnicos.js`): com o gol nos acréscimos do 1º tempo, a saída do 2º tempo caía nos 30 s
+do "vamos" e ele saía de novo (vamos:0 duas vezes seguidas; sementes 13 e 17) — agora uma vez por gol (`tc.vamosGol`).
+`teste-pressao-humano` M4 (faltas do time 0 com o PRESSÃO ≤ 1,5 × sem + 2) reprova: 9 → 19 (o ramo antes desta correção já
+reprovava, 5 → 10; a main 4 → 6). Quase tudo é carga por trás (15 de 19) de quem persegue o condutor que acabou de pegar a
+bola, a 2–4 m/s — o que a #480 ("faltas com sentido": quem só corre atrás não atropela) corrige: com a lógica da #480
+aplicada por cima desta (cópia em rascunho) 2 → 5 (passa) e o `teste-faltas` D 1,67 nas 12 primeiras (1,58 nas 36).

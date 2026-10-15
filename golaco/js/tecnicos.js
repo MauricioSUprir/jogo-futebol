@@ -155,7 +155,7 @@ function criarTecnico(t, mini) {
     prev: { estado: 'observa', variante: 0, desde: 0, postura: 0 }, troca: -1e9,
     ultimo: { estado: '', variante: -1 }, ultimaPostura: -1,
     ultimoInstrui: -1e9, instruiEm: -1, ultimoAplauso: -1e9, defendeDesde: -1, ultimoChute: -1e9,
-    pendente: null, pendenteEm: -1, pendenteV: 0, aponta: 1, possePrev: null, paradaVista: NaN, vamos: false, exG: cx, ezG: TC.zBase,
+    pendente: null, pendenteEm: -1, pendenteV: 0, aponta: 1, possePrev: null, paradaVista: NaN, vamos: false, vamosGol: -1, exG: cx, ezG: TC.zBase,
     passeNoAr: false, passes: 0, fimPendente: -1, construindoDesde: -1, mixMedido: -1e9,
     olhar: -Math.PI / 2, tronco: 0, vTronco: 0, cabecaPitch: 0,
     corre: { ate: -1, x: cx },
@@ -286,7 +286,11 @@ function atualizarEstado(T, tc, L) {
       case 'passe': if (e.time === t) tc.passeNoAr = true; break;
       case 'saida':
         // palmas de "vamos" na saída de quem sofreu o gol (o "sofreu" ainda no começo encurta e as palmas vêm depois)
-        if (T.golTime >= 0 && T.golTime !== t && k - T.golTick < s60(30)) {
+        // (uma vez por gol — 15/10: com o gol nos acréscimos do 1º tempo, a saída do 2º tempo ainda caía nos 30 s e o
+        // "vamos" saía de novo, o mesmo (gesto, variante) duas vezes seguidas; sementes 13 e 17 do teste-tecnicos com a IA
+        // do domínio-sem-passar)
+        if (T.golTime >= 0 && T.golTime !== t && k - T.golTick < s60(30) && tc.vamosGol !== T.golTick) {
+          tc.vamosGol = T.golTick;
           if (tc.estado === 'sofreu') { tc.vamos = true; tc.ate = Math.min(tc.ate, Math.max(k, tc.desde + s60(TC.sofreu.cabeca[0])) + s60(0.8)); }
           else comecar(T, tc, 'vamos', 0, TC.sofreu.vamos);
         }

@@ -8,7 +8,8 @@
 // Cada linha: [nome, arquivo, argumentos (opcional), grupo (opcional; padrão = 'padrao'), processos (opcional)].
 // processos: o teste roda suas partidas em vários processos (--par k); ele ocupa k vagas (k = o pedido, até --par) e
 // sai PRIMEIRO, sozinho com suas k vagas — assim leva ~1/k do tempo em vez de disputar a CPU com os outros (o
-// teste-nao-passa levava 687 s no CI num processo só). A ordem do resultado continua a da lista.
+// teste-nao-passa levava 687 s no CI num processo só; o teste-faltas roda as 36 partidas da parte D em 3). A ordem do
+// resultado continua a da lista.
 // Grupo 'etapa3' (Etapa 3): marcadores que saem com "AGUARDANDO PARTE N" e testes novos que ainda
 // não passaram 5 vezes seguidas com sementes diferentes (plano 5). Não entram no padrão, para o CI
 // da main continuar verde. Quando o teste de uma parte estiver pronto, ela tira o 'etapa3' da linha
@@ -81,7 +82,7 @@ const LISTA = [
   ['treinadores sem partida (--estresse): a reação ao gol de qualquer gesto e quem corre perto da área técnica', 'teste-tecnicos.mjs', ['--so-sinteticos', '--estresse']],
   // Etapa 4: regras (IFAB)
   ['impedimento (Regra 11: cenas, tiro livre indireto, árbitro independente) e acréscimos (Regra 7.3)', 'teste-impedimento.mjs'],
-  ['faltas, vantagem, cartões e expulsão (Regra 12), tiro livre direto e pênalti (Regra 14)', 'teste-faltas.mjs'],
+  ['faltas, vantagem, cartões e expulsão (Regra 12), tiro livre direto e pênalti (Regra 14)', 'teste-faltas.mjs', [], 'padrao', 3],
   // Pedidos do dono de 11/10 (regras e controles)
   ['jogador parado com a bola: a IA fecha e dá o bote (condutor lento)', 'teste-parado.mjs'],
   ['PRESSÃO perceptível: com × sem o botão (pareado), marca, um a mais na pressão', 'teste-pressao-humano.mjs'],
