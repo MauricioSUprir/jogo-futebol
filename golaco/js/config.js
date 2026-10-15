@@ -1158,13 +1158,20 @@ export const DEFESA_HUMANO = {
   },
   // PRESSÃO (segurar): grava m.pedidoPressao[time] = tick (contrato da Parte 0). Pedido do dono, 11/10 ("o botão de
   // pressão não funciona"), como o "teammate pressure" do EA FC: vai quem CHEGA PRIMEIRO (defesa.js pressionadorDe:
-  // tempo de chegada com aceleração `acel` m/s² e freada `freio` m/s² ao ponto a `colado` m do corpo do condutor, do lado
-  // do gol, adiantado pela corrida dele até `leadMax` s; quem já vai leva `histerese` s de vantagem) — com o 1º homem da
-  // IA já apertando, o botão chama o segundo. Aproximação em disparada até `chega` m do condutor (vindo por trás,
-  // contorna a `contorno` m dele) e disputa na bola, pelo lado do gol (`naBola` m antes dela, adiantada `leadDisputa` s),
-  // e vai na bola solta a mais de `bolaSolta` m do pé dele. Na disputa o corpo anda pela velocidade (a do condutor +
-  // `ganho` × (ponto − corpo), até `aproxMax` m/s mais rápido que ele; por trás dele, a menos de `trasPerto` m, fechando
-  // no máximo a `trasAprox` m/s: abaixo da carga por trás, FALTAS.carga.vMin). `filtro`: s da velocidade do condutor.
+  // tempo de chegada pelo perfil de aceleração do corpo, com a inversão, ao ponto a `colado` m do corpo do condutor, do
+  // lado do gol, adiantado pela corrida dele até `leadMax` s; quem já vai leva `histerese` s de vantagem) — com o 1º homem
+  // da IA já apertando, o botão chama o segundo. Aproximação em disparada até `chega` m do condutor (vindo por trás,
+  // contorna a `contorno` m dele; desviando dos outros corpos no caminho: `desvio`) e disputa na bola, pelo lado do gol
+  // (`naBola` m antes dela, adiantada `leadDisputa` s), e vai na bola solta a mais de `bolaSolta` m do pé dele. Na disputa
+  // o corpo anda pela velocidade (a do condutor + `ganho` × (ponto − corpo), até `aproxMax` m/s mais rápido que ele; por
+  // trás dele, a menos de `trasPerto` m, fechando no máximo a `trasAprox` m/s: abaixo da carga por trás,
+  // FALTAS.carga.vMin). `filtro`: s da velocidade do condutor.
+  // "Chegada rápida, freada no fim" (defesa.js chegaFreando; teste-pressao-humano M4/M5, 15/10): a aproximação ao condutor
+  // segue a curva de freada de `freioChegada` × o freio do corpo dele, que encosta a `contato` m/s (abaixo de
+  // FALTAS.forca.min: o contato não entra no homem) — com o condutor vindo, a velocidade DELE na hora do contato; quem vem
+  // atrás guarda a margem da freada do condutor (semAtropelar.reacao/perto). `desvio`: olha `T` s à frente e passa a
+  // ≥ 2 raios + `folga` m de quem estiver no caminho (corpos a até `alcance` m). `depois`: s em que quem deixou de ser o
+  // chamado segue com o bote com responsabilidade e sem falta tática (sim.js boteIA, defesa.js chamadoDaPressao).
   // sem atropelar (defesa.js semAtropelar; pedido do dono, 15/10): o time jogado por uma pessoa entra no condutor
   // adversário (ou no recebedor do passe) no máximo a (v_dele − reacao · JOGADOR.freioGiro · (1 − folga/perto)⁺)⁺ +
   // √(chega² + 2 · freio · folga)
@@ -1173,8 +1180,9 @@ export const DEFESA_HUMANO = {
   // margem inteira com os corpos encostando, sumindo em rampa até `perto` m de folga
   semAtropelar: { freio: 3.0, chega: 1.0, reacao: 0.25, perto: 3.0 },
   pressao: {
-    validade: 1, acel: 7, freio: 6.2, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.5, contorno: 1.2,
-    naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.435, filtro: 0.2, ganho: 3, aproxMax: 4, trasPerto: 1.5, trasAprox: 1.4,
+    validade: 1, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.5, contorno: 1.2,
+    naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.435, filtro: 0.2, ganho: 3, aproxMax: 4, trasPerto: 1.5, trasAprox: 0.5,
+    freioChegada: 0.9, contato: 0.8, desvio: { T: 0.6, folga: 0.25, alcance: 6 }, depois: 0.5,
   },
 };
 

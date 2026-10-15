@@ -23,11 +23,11 @@ import { ACOES } from './config.js';
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
 import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe } from './ia-tatica.js';
 import { trocaAerea, alvoAereo, escolhaManual } from './troca.js';
-import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida, semAtropelar } from './defesa.js';
+import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida, semAtropelar, chamadoDaPressao } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada, ladoPenaltiHumano } from './partida.js';
 import { planejarRecepcao } from './recepcao.js';
-import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta, chegada, guardarChoque, BOTE_EVITADO } from './faltas.js';
+import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta, chegada, guardarChoque, forcaContato, BOTE_EVITADO } from './faltas.js';
 // Regras da mão do goleiro e o goleiro jogando com o pé (pedido do dono, 11/10; só na partida)
 import { maoPermitida, motivoSemMao, registrarToque, estadoMao, paredeAreaMao, naPropriaArea, goleiroNoPe } from './regras-goleiro.js';
 import { lateralSegurando, segurarLateral } from './lateral.js';
@@ -296,8 +296,11 @@ function boteIA(m, j) {
   const dono = jogadorPorId(m, m.posse);
   if (!dono || dono.time === j.time) return;
   const b = m.bola, cfg = ACOES.boteIA;
-  // Etapa 4 (só na partida): o marcador batido, colado atrás do condutor, segura (no ataque promissor: falta tática)
-  if (m.partida && !m.faltaPendente) {
+  // Etapa 4 (só na partida): o marcador batido, colado atrás do condutor, segura (no ataque promissor: falta tática) — o
+  // chamado da PRESSÃO não (defesa.js chamadoDaPressao): foi chamado para apertar a bola; parar o contra-ataque com falta
+  // é decisão da pessoa, pela DIVIDIDA (teste-pressao-humano M4, 15/10: 2 'segurar' do chamado por conjunto de 32 partidas)
+  const chamado = m.partida && chamadoDaPressao(m, j);
+  if (m.partida && !m.faltaPendente && !chamado) {
     const ft = faltaTatica(m, j, dono);
     if (ft) { registrarFalta(m, ft); dono.vx *= 0.3; dono.vz *= 0.3; j.descansoBote = cfg.descanso; return; }
   }
@@ -305,10 +308,12 @@ function boteIA(m, j) {
   const dB = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   if (dB > cfg.alcance) return;
   // o companheiro chamado pelo PRESSÃO do humano aperta com responsabilidade: não dá o bote embalado (acima de
-  // FALTAS.bote.vLivre m/s) nem por trás do condutor — chega, freia e tira. Seguindo o recebedor depois do passe, os
-  // botes assim viravam falta (teste-pressao-humano M4: 4 → 9 faltas com o botão)
-  if (m.partida && j.ia && j.ia.ramo === 'pressaoHumano' && m.tick - j.ia.tick <= 1
-    && (MD.hypot(j.vx, j.vz) > FALTAS.bote.vLivre || chegada(j, dono) === 'tras')) return;
+  // FALTAS.bote.vLivre m/s), nem por trás do condutor, nem com o corpo entrando no dele (faltas.js forcaContato acima de
+  // FALTAS.forca.min, inclusive o choque de agora há pouco) — chega, freia e tira a bola sem levar o homem ("delay, don't
+  // dive in"). Seguindo o recebedor depois do passe, os botes assim viravam falta (teste-pressao-humano M4: 4 → 9 faltas
+  // com o botão; 15/10: 5 dos 8 do chamado em 32 partidas eram botes com o corpo entrando a 1,5–3,4 m/s)
+  // (vale também por DEFESA_HUMANO.pressao.depois s para quem deixou de ser o chamado, ainda embalado)
+  if (chamado && (MD.hypot(j.vx, j.vz) > FALTAS.bote.vLivre || chegada(j, dono) === 'tras' || forcaContato(m, j, dono) > FALTAS.forca.min)) return;
   const dD = MD.hypot(b.p.x - dono.x, b.p.z - dono.z);
   // (só na partida) condutor parado ou lento (abaixo de vParado m/s) e sem tocar na bola há semToque s: a bola parada à
   // frente do pé dele (a condução a deixa a ~0,345 m do corpo) não está "colada" — quem chega ao alcance dela tenta
