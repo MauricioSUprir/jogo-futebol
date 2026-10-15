@@ -461,6 +461,9 @@ html:not(.com-toque) .chip-nomes { display: none; }
 .linha-continuar { display: flex; gap: 8px; }
 .linha-continuar .btn-primario { flex: 1 1 auto; }
 .btn-replay { flex: none; justify-content: center; gap: 7px; }
+/* "Modo de jogo": as cenas da partida (pré-jogo e substituição) lado a lado, o nome em cima e o estado embaixo */
+.linha-cenas { display: flex; gap: 8px; }
+.linha-cenas .btn { flex: 1 1 0; min-width: 0; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; padding: 4px 12px; line-height: 1.2; }
 .btn-replay svg { width: 18px; height: 18px; flex: none; }
 /* no PC as três opções ficam uma embaixo da outra, como as outras */
 .opcoes-linha { display: contents; }
@@ -631,6 +634,81 @@ html.em-replay .qps { display: none; }
 html.em-comemoracao .minimapa, html.em-comemoracao .btn-menu, html.em-comemoracao .aviso, html.em-comemoracao .carga,
 html.em-comemoracao .cartao-icone, html.em-comemoracao .dica, html.em-comemoracao .painel-jogo, html.em-comemoracao .faixa,
 html.em-comemoracao .toque, html.em-comemoracao .qps { display: none; }
+/* cena de substituição (js/substituicao.js): a mesma camada (qualquer toque pula depois de 0,5 s); do HUD ficam o placar e
+   a faixa ENTRA/SAI */
+html.em-substituicao .minimapa, html.em-substituicao .btn-menu, html.em-substituicao .aviso, html.em-substituicao .carga,
+html.em-substituicao .cartao-icone, html.em-substituicao .dica, html.em-substituicao .painel-jogo, html.em-substituicao .faixa,
+html.em-substituicao .toque, html.em-substituicao .qps, html.em-substituicao .gol-tela { display: none; }
+
+/* faixa ENTRA/SAI (lower third de TV; pedido do dono de 12/10). Só sigla, ▲/▼, ENTRA/SAI, número e nome: a palavra e o
+   triângulo sempre escritos (a cor não é a única pista). Na cena: embaixo à esquerda, a linha de quem está no quadro em
+   destaque; no PC fica igual no jogo (sem chegar ao minimapa do meio); no celular, no jogo, vira uma linha compacta no
+   lugar do aviso (embaixo é dos polegares). Nada sobre nada: tools/teste-substituicao-tela.mjs (T8). */
+.faixa-subst {
+  position: absolute; left: calc(var(--sa-l) + 64px); bottom: calc(var(--sa-b) + 64px);
+  display: flex; align-items: center; gap: 12px; min-width: 280px; max-width: 520px;
+  padding: 8px 16px 8px 8px; box-sizing: border-box;
+  background: var(--painel); border-left: 2px solid var(--cor-time, var(--verde)); border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); pointer-events: none; white-space: nowrap;
+  font-family: Inter, var(--fonte); color: var(--texto);
+}
+.faixa-subst[hidden] { display: none; }
+.faixa-subst.visivel { animation: faixa-subst-entra 0.25s ease-out both; }
+@keyframes faixa-subst-entra { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .faixa-subst.visivel { animation: none; } }
+.fs-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.fs-sigla {
+  flex: none; align-self: center; padding: 6px 8px; border-radius: 5px; font-size: 14px; font-weight: 900; letter-spacing: 0.08em;
+  background: var(--cor-time, var(--verde)); color: var(--cor-time-texto, var(--preto));
+}
+/* as linhas dividem as colunas (subgrid): a do número tem a largura do maior número escrito, em qualquer fonte (no CI a
+   DejaVu Sans é mais larga que a Inter e o "22" não cabia em 28 px); sem subgrid (navegador antigo) fica a coluna fixa */
+.fs-linhas { display: grid; grid-template-columns: 14px 52px max-content minmax(0, 1fr); column-gap: 8px; row-gap: 3px; min-width: 0; flex: 1 1 auto; }
+.fs-linha { display: grid; grid-template-columns: 14px 52px 28px minmax(0, 1fr); grid-template-columns: subgrid; grid-column: 1 / -1; align-items: center; column-gap: 8px; opacity: 0.72; min-width: 0; }
+.fs-linha.destaque { opacity: 1; }
+.fs-tri { width: 14px; height: 14px; }
+.fs-entra .fs-tri { fill: var(--verde); }
+.fs-sai .fs-tri { fill: var(--sai); }
+.fs-palavra { font-size: 12px; font-weight: 900; letter-spacing: 0.12em; }
+.fs-entra .fs-palavra { color: var(--verde); }
+.fs-sai .fs-palavra { color: var(--sai); }
+.fs-num { font-size: 22px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; text-align: right; line-height: 1.1; }
+.fs-nome { font-size: 20px; font-weight: 700; color: var(--texto); overflow: hidden; text-overflow: ellipsis; min-width: 0; line-height: 1.15; }
+.fs-nome-curto { display: none; }
+.fs-conta { flex: none; align-self: flex-end; font-size: 11px; font-weight: 700; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+.fs-conta:empty { display: none; }
+/* PC, no jogo: não chega ao minimapa do meio (112 px de largura no meio da tela) */
+.faixa-subst.jogo { max-width: calc(50vw - 56px - var(--sa-l) - 64px - 10px); }
+/* celular, na cena: embaixo à esquerda, sem chegar ao "Pular" (112 px + margens à direita) */
+html.com-toque .faixa-subst {
+  left: calc(var(--sa-l) + 14px); bottom: calc(var(--sa-b) + 14px); min-width: 0; max-width: calc(100vw - var(--sa-l) - var(--sa-r) - 160px);
+  max-height: 64px; padding: 5px 12px 5px 6px; gap: 8px;
+}
+html.com-toque .fs-sigla { font-size: 12px; padding: 4px 6px; }
+html.com-toque .fs-linhas { grid-template-columns: 11px 42px max-content minmax(0, 1fr); column-gap: 6px; row-gap: 1px; }
+html.com-toque .fs-linha { grid-template-columns: 11px 42px 22px minmax(0, 1fr); grid-template-columns: subgrid; column-gap: 6px; }
+html.com-toque .fs-tri { width: 11px; height: 11px; }
+html.com-toque .fs-palavra { font-size: 10px; }
+html.com-toque .fs-num { font-size: 17px; }
+html.com-toque .fs-nome { font-size: 15px; }
+/* celular, no jogo: uma linha compacta no lugar do aviso — "[GLÇ] ▲ ENTRA 22 Wallace · ▼ SAI 9 Diego" (o nome da camisa) */
+html.com-toque .faixa-subst.jogo {
+  top: calc(var(--sa-t) + var(--m) + 74px); bottom: auto; left: 50%; transform: translateX(-50%); animation: none;
+  max-width: min(360px, calc(100vw - var(--sa-l) - var(--sa-r) - 2 * var(--m))); height: 34px; padding: 0 12px 0 4px; gap: 7px;
+}
+html.com-toque .faixa-subst.jogo .fs-linhas { display: flex; flex-direction: row; align-items: center; gap: 7px; }
+html.com-toque .faixa-subst.jogo .fs-linha { display: flex; align-items: baseline; gap: 4px; opacity: 1; }
+html.com-toque .faixa-subst.jogo .fs-tri { align-self: center; }
+html.com-toque .faixa-subst.jogo .fs-num { font-size: 15px; }
+html.com-toque .faixa-subst.jogo .fs-nome { font-size: 14px; }
+html.com-toque .faixa-subst.jogo .fs-nome-completo { display: none; }
+html.com-toque .faixa-subst.jogo .fs-nome-curto { display: inline; }
+html.com-toque .faixa-subst.jogo .fs-sai::before { content: "·"; color: var(--texto-2); font-weight: 900; margin-right: 3px; }
+html.com-toque .faixa-subst.jogo .fs-conta { display: none; }
+/* com a faixa compacta no topo, o aviso desce para baixo dela */
+html.com-toque.faixa-subst-topo .aviso { top: calc(var(--sa-t) + var(--m) + 74px + 42px); }
+html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
+
 /* a "vinheta" de replay da TV: uma faixa verde que cruza a tela (entrada e saída, REPLAY.transicao = 0,4 s); sem
    bloquear nada. Com "reduzir movimento": não passa. */
 .replay-faixa {
