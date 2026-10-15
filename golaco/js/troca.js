@@ -193,7 +193,11 @@ export function trocaAerea(m) {
     for (const o of m.jogadores) {
       if (o.time !== t || o.posicao === 'GOL') continue;
       const tq = o.cond && o.cond.toque;
-      if (!tq || tq.tipo !== 'aereo' || m.tick >= tq.tick || tq.tick - m.tick > janela) continue;
+      // (cabeceio na bola rolando, sim.js agendarDisputa: quem vai pular ombro com ombro contra o cabeceio do adversário
+      // — j.disputaAlta, sem toque marcado — também é quem disputa pelo time dele)
+      const da = o.disputaAlta;
+      const tMarc = tq && tq.tipo === 'aereo' && m.tick < tq.tick ? tq.tick : da && m.tick < da.tc ? da.tc : -1;
+      if (tMarc < 0 || tMarc - m.tick > janela) continue;
       const d = o.id === para ? -1 : MD.hypot(o.x - b.x, o.z - b.z);
       if (d < dMarc) { dMarc = d; marcado = o; }
     }
@@ -211,10 +215,19 @@ export function trocaAerea(m) {
     let disputa = marcado ?? (tqcVale ? ctrl : null);
     if (disputa && disputa.id !== para && st.melhor >= 0 && st.melhor !== disputa.id && st.seguidas >= T.confirma) {
       const iAgora = st.iMelhor - (m.tick - st.tickAval);
-      if (iAgora < disputa.cond.toque.tick - m.tick - T.antecede) {
+      const tqd = disputa.cond && disputa.cond.toque && disputa.cond.toque.tipo === 'aereo' ? disputa.cond.toque.tick : disputa.disputaAlta ? disputa.disputaAlta.tc : m.tick;
+      if (iAgora < tqd - m.tick - T.antecede) {
         for (const o of m.jogadores) if (o.id === st.melhor) { disputa = o; break; }
         marcado = disputa === ctrl ? null : disputa;
       }
+    }
+    // empate (cabeceio na bola rolando, 13/10): a previsão confirmada põe o CONTROLADO na bola até `antecede` ticks depois
+    // do toque marcado de outro companheiro (não o recebedor) — fica com ele: nos empates quem toca primeiro varia (o outro
+    // pode não alcançar com a cabeça), e trocar gastava a única correção da bola (teste-aereo-troca natural: 81%)
+    if (marcado && marcado !== ctrl && marcado.id !== para && st.melhor === ctrl.id && st.seguidas >= T.confirma) {
+      const iAgora = st.iMelhor - (m.tick - st.tickAval);
+      const tqm = marcado.cond && marcado.cond.toque && marcado.cond.toque.tipo === 'aereo' ? marcado.cond.toque.tick : marcado.disputaAlta ? marcado.disputaAlta.tc : m.tick;
+      if (iAgora <= tqm - m.tick + T.antecede) { marcado = null; disputa = null; }
     }
     // travas: o controlado já vai disputar (o toque aéreo dele vem primeiro), carrega uma ação, o humano acabou de
     // escolher, a bola alta é um CHUTE do adversário (no tiro livre o controle saía do goleiro no chute e o escolhido

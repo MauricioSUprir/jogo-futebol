@@ -218,7 +218,8 @@ vez por passo de simulação; o desenho interpola entre a pose anterior e a atua
   desenha interpolando com `alfa`. `window.__golaco` = `{mundo, hash(), passos, alfa, render
   ({bola, jogador, camera, quadros, alfa} do último quadro desenhado), pausar(), rodarPassos(n,
   roteiro), reiniciar(opc), relogio:{usarManual, avancar(ms, {desenhar})}, forcarEntrada(e),
-  estado(), desenhar(), cameraLivre({de, para, fov} | null), naTela(x, y, z) → px CSS}`.
+  estado(), desenhar(), cameraLivre({de, para, fov} | null), naTela(x, y, z) → {x, y} px CSS e `atras` (o ponto atrás da
+  câmera: a projeção dele cai espelhada dentro da tela — "no quadro" é na tela E `!atras`)}`.
   Parâmetros: `?semente ?q ?hora ?camera ?demo ?marcador ?prints ?qps ?toque ?entalhe`.
 - `render/jogador3d.js`: todas as cápsulas de todos os jogadores num `InstancedMesh` (atributos
   por instância: raios, comprimento, achatamento, cores e padrão); cabeça e cabelo instanciados.
@@ -566,7 +567,9 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
     em `TECNICOS.maoPicoGol` m/s, passa do topo da cabeça em `TECNICOS.comemora.cruza` s (a mistura das mãos espera ou
     encurta) e nunca anda mais que `TECNICOS.maoPassoMax` m num passo (a rede de segurança);
   - `passoTecnicos(T, L)` = 1 passo de 1/60 s dos dois (estado → locomoção do jogo → pé desenhado → pose com torção,
-    cabeça na bola e braços por IK); `poseTecnico(tec, out)` (57 floats no mundo: o formato do anel e do desenho);
+    cabeça na bola e braços por IK; a mistura de um gesto para o outro cresce com o caminho da mão: ≤ `maoPico` m/s no
+    pico da troca comum e ≤ `maoPicoGol` m/s na reação ao gol — `comemora.sobe`/`misturaGol` só crescem com a mão vindo de
+    longe, T5 ≤ 0,15 m por passo); `poseTecnico(tec, out)` (57 floats no mundo: o formato do anel e do desenho);
   - `ESTADOS` = observa, instrui, aplaude, reclama, lamenta, comemora, sofreu, intervalo, fim, vamos (variantes em
     `TECNICOS.variantes`); `infoTecnicos(T)` → por treinador `{id, time, x, z, rumo, v, estado, variante, varianteNome,
     postura, olhar, noAr, rapido, recuo, esquiva}` (testes e API);
@@ -641,7 +644,8 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
   ms —; G5 um toque no meio da 1ª pessoa pula tudo; G6 nada some; G7 a câmera dos planos novos sem salto entre quadros), `teste-tecnicos-tela` (navegador, CI: visíveis na TV do
   celular com o banco no quadro, chamadas iguais com e sem eles, CPU do quadro × `?tecnicos=0`, as linhas no gramado e,
   V6, a cena de substituição: eles andam com ela, longe dos atores e da câmera; V7, depois dela, o salto deles entre dois
-  passos gravados só com corte).
+  passos gravados só com corte; V8, quem está atrás da câmera — a do gol, de costas para a área técnica — não conta como
+  "no quadro").
 - **Anel e cenas com o mundo parado (contraprova 15/10)**: os passos que os treinadores dão numa cena com a simulação
   parada (a substituição) não vão para o anel; no passo gravado seguinte, um treinador a > `REPLAY.saltoTecnico` (0,25 m)
   do último passo gravado marca CORTE (`main.js gravarNoAnel`; `tools/lib/anel-node.mjs` igual) — senão o replay seguinte
@@ -679,9 +683,12 @@ Constantes em `config.js COMEMORACAO`.
   menos gente perto da lente nos próximos 0,8 s, escolhido uma vez no começo do abraço: `c.ladoContra`) olhando 6 m além
   dele a 2,4 m de altura (a torcida atrás do alvo enche o fundo; o resto do time para a 10 m, atrás da câmera), fov 36; reação de frente para quem sofreu (puxada para o lado da
   TV), 4,8 m, fov 30, girada em volta dele pelo giro escolhido UMA vez no começo da reação (`c.giroReacao`: entre 0, ±0,5 e
-  ±1 rad, o de menor custo — gente na frente da lente a < 2,2 m dentro do ângulo do quadro ou perto da linha de visão,
-  integrado no próximo segundo pela posição + velocidade; o 0 fica se o custo dele for ≤ 0,03 m·s — contraprova: um
-  defensor andando para a saída passava a < 1 m da lente em ~15% das cenas curtas; `teste-comemoracao` 13); câmera nunca além de 5,5 m das linhas nem dentro do gol; celular: fov × 0,88 e o assunto no terço
+  ±1 rad, o de menor custo — gente na frente da lente a < 2,2 m de profundidade dentro do quadro do PC ou do celular
+  (fov × 0,88, até 2,2:1, o eixo girado para o terço esquerdo) ou perto da linha de visão, integrado na reação INTEIRA (até
+  o fim da cena: na curta ela dura até 2 s), cada um andando reto para o destino dele na cena (a vaga do abraço, a saída,
+  10 m do grupo) e parando nele; o 0 fica se o custo dele for ≤ 0,03 m·s — contraprovas: um defensor andando para a saída
+  passava a < 1 m da lente em ~15% das cenas curtas; (15/10) o custo só olhava o 1º segundo e o quadro do PC e um colega
+  correndo para o abraço passava rente à lente no celular; `teste-comemoracao` 13, com mais 12 gols naturais); câmera nunca além de 5,5 m das linhas nem dentro do gol; celular: fov × 0,88 e o assunto no terço
   esquerdo. Exporta `ik`/`ikBraco`/`BRACO`/`ANTEBRACO` do `anim.js` (só exportar: o hash não muda).
 - **Golpes e gestos** (todos por IK: os ossos ficam com o comprimento certo): de joelhos (o corpo desliza desacelerando
   até parar no alvo, entre 2,5 e 7 m/s²; pelve na altura de joelhos, joelho 6 cm à frente do quadril a 6,5 cm do chão,
@@ -746,14 +753,17 @@ ligada, desligada e em Node (`teste-substituicao-tela` T1).
   {timeHumano, posAntes(id)})` → `{tick, pares (o do humano primeiro; por par: time, sai, entra, goleiro, saida {x, z, nx,
   nz, linha}, d0 (3,0–3,6 m da linha no 1º quadro do plano, pelo hashGol), para (onde ele para além da linha, longe do
   gol, da quina, dos outros e dos caminhos dos reservas), espera (lugar do reserva na grama do lado de cá: z = 35,2, x =
-  ±(0,7 + 0,8k)), vaga (onde o reserva está na simulação), numSai/numEntra, rentaGol}, planos [{nome: 'sai' | 'sai2' |
+  ±(0,7 + 0,8k)), vaga (onde o reserva está na simulação), numSai/numEntra, rentaGol, tCruza (a hora em que ele cruza a
+  linha: quem atrasou contornando alguém parado apressa até `velSaiMax` = 2,35 m/s para cruzar nela; adiantado, anda a
+  `velSai`)}, planos [{nome: 'sai' | 'sai2' |
   'entra', par, t0, t1}], duracao}` (só lê o mundo; 1 par = 5,0 s, ≥ 2 pares = 6,4 s, teto 6,5); `criarCenaSubst(plano, m)`
   → cena (cópias dos 22 por `comemoracao.js criarAtor`; a cópia de quem entra vira quem SAI, com o id e o uniforme dele;
   os reservas e o quarto árbitro, id `SUBST.idQuarto` = 203, kit 'arbitro', em (0; 35,6); a bola copiada — no chão se
   estava na mão de quem sai; só o par 0 tem pré-rolagem de 1,1 s, os outros começam parados); `passoCenaSubst(c)` = 1
   tick com a MESMA locomoção do jogo (`passoCorpo → passoPassada → passoPeDesenhado → alturaQuadril → pose`), desvio
   de Reynolds para quem anda (quem sai rente ao gol só desvia para FORA dele), separação a 0,55 m (dois com a vez colados:
-  cede o de depois — quem sai antes de quem entra, o par de antes primeiro), quem freou e assentou fica fixo (sem custo); `avancarCenaSubst(c, dt)`
+  cede o de depois — quem sai antes de quem entra, o par de antes primeiro), quem freou e assentou fica fixo (sem custo;
+  quem vem correndo para fora e pararia a < 0,9 m das placas tira só a velocidade para fora e escorrega ao longo delas); `avancarCenaSubst(c, dt)`
   (devolve `alfa`), `tempoCenaSubst`, `duracaoCenaSubst`, `planoEm(c, t)`, `placaNasMaos(c, pose, out)`, `paresDaPlaca(c,
   t, out)` ({indice, n, time, entra, sai, corEntra: 'verde', corSai: 'vermelho'}: troca a cada `placaTroca` s, o do humano
   primeiro), `planoCameraSubst(c, {pequena, aspecto}, out)` → `{nome: 'sai' | 'sai2' | 'entra' | 'fim', de, para, fov}`
@@ -1215,6 +1225,8 @@ Pesquisa: `PESQUISA-RECEPCAO-GOLEIRO.md` (seção 4: as correções da contrapro
   outra defesa desenhada ainda em andamento (a relida não teve tempo de começar), com a mão desenhada dela a ≤
   `pegaMergulho` da bola; senão é goleiro batido (evento `goleiroBatido` com `desvio: true`) — antes a defesa lida
   acontecia no tick lido com a bola em outro lugar (a bola ia parar nas mãos de até 23 m num quadro).
+  Com a bola morta (partida: `m.parada` ainda sem cobrar — o impedimento ou a falta apitados com o chute no ar; Regra 9.2)
+  `aplicarDefesa` não defende nem dá a bola a ninguém (`d.fora`; o mergulho desenhado segue).
   `movimentoGoleiro`: com chute vindo, o tronco fica de frente para o chute (até ~35° do campo), sem virar atrás da
   bola que passa; começa a defesa (`iniciarMergulho(m, j, d)`) uma vez por leitura (`j.mergulho.idDefesa` = a
   identidade da leitura: `lido` e `tick`), no máximo `antecipaMergulho` s antes do contato (`antecipaSalto` na
@@ -1538,6 +1550,159 @@ bola parada no pé do condutor).
 muda). Sem ele as defesas de 6 a 16,5 m iam a 60,8% (meta 55–60%): as regras tiraram gols fáceis nessa faixa (177 → 164
 com as mesmas defesas). Com ele: 59,0% · total 68,0% · de fora da área 86,8% · gols 2,13 (base 2,13) · impedimentos 1,15
 · bola parada 29% dos gols — nenhuma medida que estava na meta saiu dela.
+
+## Cabeceio na bola rolando e IA intensa com responsabilidade (12/10, contrato)
+
+Pedidos do dono de 11/10: "os jogadores não cabeceiam a bola, de jeito nenhum" e "o jogo tem que ser mais intenso, ninguém
+do outro time corre, ninguém marca, mas tem que marcar com responsabilidade e consciência". Pesquisa em
+`PESQUISA-ETAPA4.md` §6. O treino muda só onde há bola alta (o pulo vale em todo modo); a IA intensa e a disputa no jogo
+corrido só na partida.
+
+### O pulo do cabeceio (`cabeceio.js`, puro)
+- Estado `j.cab = {tA, td, tc, tp, tf, h, bx, by, bz, cx, cz, vx, vz, saiu, x0, z0, lx, lz, cabeceio}` (criado em
+  `jogador.js` como `undefined`, junto com `disputaAlta`, `disputa`, `perdeuAlto`): contramovimento `tA..td` (pés no chão),
+  sai do chão em `td`, contato em `tc` (no alto do pulo), pousa em `tp`, amortece até `tf`; `h` = quanto o quadril sobe
+  (0 = cabeceia sem pular, só o tronco); `(bx, by, bz)` a bola no contato (a física do jogo, `conducao.js preverBola`);
+  `(cx, cz)` onde o corpo vai para a testa encontrar a bola; `cabeceio = false` no pulo de quem só disputa.
+- `alturaPulo(j)` (impulsão → `CABECEIO.salto`), `alcanceCabeceio(j)` (de pé + pulo + tronco + encosto),
+  `inclinacaoAte(px, py, pz, bx, by, bz, out)` (ângulo do tronco para a cabeça ir à bola), `subidaPara(y, L)`,
+  `preparoPulo(h)` (s do pedido ao contato), `planejarPulo(m, j, tc, bx, by, bz, ux, uz, nx, nz, folgaAlc)` → `j.cab` ou
+  null (não alcança), `puloAtivo(j, t)`, `noAr(j, t)`, `quadroPulo(c, t, out)` → `{off, w, arco, braco}` (o que a pose lê),
+  `sairDoChao(m, j)` (em `td`: velocidade de saída para o ponto, no máximo `vSaida`; longe demais do ponto, cancela),
+  `passoCorpoNoAr(m, j)` (balístico), `pesNoAr(m, j)` (os pés saem de onde estavam e pousam parados em `lx/lz`; o pé que
+  saiu no meio do balanço parte da altura que tinha, `cab.y0[p]` acima do tornozelo no chão, e essa sobra some até o pouso —
+  15/10, `teste-cabeceio` F4: antes ele caía ~7 cm no 1º passo do voo),
+  `intencaoCabeceio(m, j, y)` → `{tipo: 'chute' | 'lancamento' | 'passe', forca, auto: true}` (a gol na área adversária a até
+  `CABECEIO.gol` m, afastar no meu terço, passe no resto; null para passe com a bola na altura do peito).
+- `anim.js`: a pose lê `j.cab` (função pura do estado): o quadril no pulo (`hyPulo`), o tronco inclinado para a bola com o
+  arco da subida e o chicote do contato, os braços subindo; `alturaQuadril` devolve o do pulo.
+
+### Simulação (`sim.js`)
+- Ordem no passo: no movimento, `sairDoChao` em `td` e, voando (`td < t ≤ tp`), `passoCorpoNoAr` no lugar da locomoção;
+  na passada, `pesNoAr` no lugar de `passoPassada`; `passoPeDesenhado` pulado no ar; na bola livre quem está no ar não
+  domina.
+- Bola morta e teleporte (contraprova de 14/10): na partida, `pontoDeCabeceio` para no 1º ponto em que a bola já saiu
+  INTEIRA do campo (`bolaForaEm`, Regra 9) e nenhum cabeceio é planejado para ele; com a parada ainda sem cobrar
+  (`naParada`) o pulo que não saiu do chão e a disputa marcada são cancelados (quem já está no ar termina o pulo);
+  `partida.js teleportar` zera `j.cab` e `j.disputaAlta` (antes os pés ficavam no ponto de pouso velho, a até 15 m do
+  corpo). Teste: `teste-cabeceio` F. A cena da comemoração (`comemoracao.js`) copia `j.cab` de quem
+  já saiu do chão e termina o pulo (`passoCorpoNoAr`/`pesNoAr`, como o `sim.js`); o pulo que ainda não saiu do chão não
+  sai (teste-comemoracao 14).
+- `bolaAltaNoCorpo`: o toque aéreo marcado (`c.toque.tipo = 'aereo'`) vira cabeceio só com o pulo planejado para o tick
+  (`j.cab.tc === m.tick`) e a cabeça DESENHADA na bola (`cabecaNaBola`: pose do tick, superfícies a até `CABECEIO.folga`);
+  senão o peito/coxa (bola até `alturaPeito[1] + 0,15`). Marcação: `pontoDeCabeceio(m, j, querCabeca, raioMax)` — o 1º
+  ponto da trajetória que ele alcança a tempo de pular (correr + `preparoPulo`), preferindo a bola `conforto` m abaixo do
+  alcance; só vai antes à bola com botão, adversário a até `disputaPerto` m ou intenção ≠ passe; o controlado com o
+  analógico mexido só cabeceia a bola que passa nele; na bola parada quem defende só na zona (`AEREO.zonaBolaParada`).
+- Disputa no jogo corrido (partida, fora da bola parada): `agendarDisputa(m, j, cab)` escolhe o adversário de linha mais
+  rápido que chega a até `AEREO.vai` m do ponto antes da saída e planeja o pulo dele ombro com ombro (`CABECEIO.ombro` de
+  lado, `recua` antes; `j.disputaAlta = {tc, x, z, contra}`; `movimentoAereo` o leva até lá). No contato, `rivalNoAlto`
+  (jogo corrido: quem pulou com a cabeça desenhada a até `AEREO.folgaRival` da bola; bola parada: a regra da Etapa 4) e
+  `ganhaDisputa` (nota no alto; jogo corrido: `iniciativa` + `kDist` × diferença de distância à bola + `ladoGolRolando`
+  perto do gol; bola parada: `ladoGol` + `ataqueBolaParada` para quem ataca). O rival ganha de raspão (`raspao`: desvia,
+  perde força) se a cabeça dele não estava na bola. Evento `disputaAerea {id (quem ganhou), perdeu, dono, bolaParada,
+  alcancou, p}`; o cabeceio sai como `passe` com `modo: 'cabeceio'` e `m.voo.cabeceio` = o tipo ('chute', 'lancamento',
+  'passe').
+- `acoes.js executarCabeceio`: a gol mira baixo na linha (`CABECEIO.yGol`, `elevacaoParaAltura`) a `zGol` m do meio, do lado
+  longe do goleiro (ou o analógico), com o erro `ACOES.cabeceio.erroGol` (bola parada e rolando; × `AEREO.erroDisputa` em
+  disputa); afastar sem botão (`p.auto`): para longe do meu gol e para o lado da bola (`vAfasta`, `elAfasta`, `ladoAfasta`).
+  `finalizarChute` só põe a bola rolando no chão com ela rolando ou na altura do pé (antes o cabeceio a gol era
+  teletransportado para o chão).
+- `goleiro.js`: `chanceDefesa(..., partida, tVoo)` soma `logit.cTempo` × (tVoo − dChute / vRef) na partida (bola lenta dá
+  tempo); `pontoDoCruzamento` — cruzamento/lançamento do adversário no ar: a bissetriz é a do ponto onde a bola desce a
+  `GOLEIRO.leCruzamento.y` m (a até `dist` m do gol, nos próximos `ticks`), não a da bola no ar.
+
+### IA intensa com responsabilidade (`ia-tatica.js`, `sim.js boteIA`; constantes `IA_DEFESA.corrida`, `saltoPressa`)
+- `blocoDoTime`: `B.rapido` — condutor adversário de linha a mais de `corrida.v` m/s (o corpo dele, agora) vindo para o meu
+  gol (≥ metade da velocidade nessa direção); desliga pela velocidade filtrada abaixo de `v − hist`. Com ele: quem ficou
+  mais de `batido` m atrás do condutor paga `batidoPaga` m para ser o 1º homem (havendo alguém do lado do gol a até
+  `batidoFrente` m).
+- `semBola`: com `B.rapido` o 1º homem sai do bloco também além da linha de engajamento e `acompanhar(..., 'contem' |
+  'aperta')`; o 2º `acompanhar(..., 'cobre')`; o resto do corredor (`acompanhaCorredor`: do lado do gol, a até `raio` m e
+  `corredor` m de lado) segue o ponto calmo no ritmo `fBloco` × v; a recomposição liga com `liga` m de atraso.
+- `acompanhar`: velocidade = a do condutor (a do corpo) + `ganho` × (ponto − corpo) → `defesa.js entradaVelocidade`
+  (exportada). Ponto: contém a `dist[0] + dist[1]·v` m (entre `dist[2]` e `dist[3]`) na linha condutor → gol, encolhendo
+  até `aperto` m entre `engaja[1]` e `engaja[0]` m do gol; `cobre` atrás e por dentro; com a bola mais perto dele que do pé
+  do condutor (`atacaBola`), a bola — sem parar de correr. Do lado do gol e a menos de `recua[0]` m, nunca sobe
+  (velocidade para o gol ≥ a do condutor − `recua[1]`). Estado `j.iaT.acomp = {corre}`.
+- `alvoPressa`: trocando de papel o filtro só recomeça com o ponto novo a mais de `IA_DEFESA.saltoPressa` m.
+- Quem está no caminho do condutor rápido (`noCaminho`: do lado do gol, a menos de `corrida.recua[0]` m e a até
+  `corrida.caminho` m da linha condutor → gol) recua junto, `acompanhar(..., 'cobre')`; a contrapressão com o condutor
+  rápido também acompanha (`'aperta'`).
+- Interceptação (pedido de 12/10, "a defesa mal intercepta passe"): `pontoMarcacao(m, B, a, meuGol, p, out)` — quem marca
+  o adversário `a` (individual, `B.marcaAdv`, ou na zona, `B.zonaAdv`) fica `marcaDist` m do lado do meu gol dele e, com o
+  condutor deles a até `linhaDePasse.alcance` m (e a mais de `sombraMin`), puxado `linhaDePasse.sombra[pressão]` para o
+  ponto a `sombraDist` m de `a` na linha de passe do condutor para ele.
+- Corte do passe (`ia-tatica.js cortaPasse`, só na partida): no passe do adversário com destino, vai cortar quem do time
+  chega a um ponto da TRAJETÓRIA (`conducao.js preverBola`, rasteira ou até `livre.alturaMax` m, `livre.horizonte` ticks)
+  com `livre.le` s de leitura, `livre.antes` s antes de o recebedor chegar a ela (a mesma conta, sem leitura). Tempo de
+  chegada (`tempoCorte`): da velocidade que já leva na direção do ponto, a `livre.acel` m/s² até a arrancada, o pé a 0,5 m.
+  Só o primeiro do time (6 ticks de vantagem para quem já ia); decidido, segue até a bola passar (`j.iaT.corte = {chave:
+  voo.tickChave, x, z, ate}`, `livre.segue` ticks de folga), direto ao ponto em disparada, sem o filtro da pressa (ramo
+  `'corta'`). `cortandoPasse(m, j)` (exportada) diz se j está cortando o passe no ar.
+- `sim.js bolaLivre` (partida, passe rasteiro com destino): o candidato que só MARCOU o domínio (o recebedor esperando) não
+  encerra mais a vez — seguem os adversários do passador que estão cortando (`cortandoPasse`) ou controlados pelo humano
+  (sem a IA jogando por ele), e o goleiro adversário; os companheiros do passador, não. Antes o recebedor com o toque
+  marcado encerrava a vez de todos e o defensor no caminho só cortava com a bola batendo no corpo.
+- `sim.js boteIA` (partida): com o condutor a mais de `ACOES.boteIA.vLado` m/s a bola tirada sai para o lado do defensor e
+  `tras` para trás no caminho do condutor; o condutor fica sem dominar até `semDominioAte` (a regra da DIVIDIDA). O
+  escolhido da PRESSÃO do humano (ramo `'pressaoHumano'`) não dá o bote embalado nem por trás (a regra da main, #474;
+  a IA × IA não usa a PRESSÃO: o painel não muda com isso).
+- Falta no bote (`faltas.js faltaNoBote`, 14/10): de frente, com o defensor sem entrar no condutor (a velocidade dele na
+  direção do condutor ≤ 0: corre para o próprio gol ou fica) e a bola já solta do pé do condutor (≥ `ACOES.boteIA.bolaSolta`),
+  a chance de falta é × `FALTAS.bote.naBola` (0,4): ele joga a bola antes do homem. Era o desarme da defesa da arrancada
+  contra o condutor em disparada que empurra a bola 0,6–0,8 m (50 das 67 faltas da IA no humano no teste-defesa-corrida
+  eram botes de frente, quase todos assim).
+- Calibração (painel de 48, 13/10): `IA_DEFESA.corrida.v` 6,8 (só a disparada de verdade liga a defesa da arrancada),
+  `GOLEIRO.logit.c0Partida` −0,35, `IA_ATAQUE.contra` {s: 8, bonus: 1,0}, `utilidade.chute` 3,0.
+- Volume de ataque (rodada de 13/10, painel de 144 do CI): **tabela da IA** (`ia-ataque.js tabelaIA`, `IA_ATAQUE.tabela`; DESLIGADA
+  — `tabela: null` — em 14/10: ~17 tabelas por partida e só ~3,6 devoluções para quem correu; sem ela os chutes sobem de 7,2
+  para 8,1 em 48 partidas e voltam a passar o teste-pressao-humano M3/M4 e o teste-botoes B14b):
+  o passe de `dMin`–`dMax` m (no máximo `tras` m para trás), do campo a partir de `uMin` m, com `livre` m livres à frente
+  do passador e no máximo `max` tabelas correndo no time, sai com o modificador (acoes.js `tabela`: o passador arranca
+  para o espaço); quem recebe vê a devolução como enfiada (a corrida `'tabela'` vale como a `'nasCostas'`); a tabela
+  acaba com a bola perdida; nunca na cobrança. **Condutor no último terço** (`manter`, `utilidade.manterTerco` {u, peso,
+  lado}): a partir de `u` m o peso dos marcadores no caminho é menor — ele encara e entra na área (no campo todo isso
+  levava o condutor para cima da PRESSÃO do humano). Vale ~0,4 chute por partida no painel de 144 (7,3 com ele, 6,9 sem,
+  14/10) e faz o chamado da PRESSÃO correr menos (teste-pressao-humano M5 72%, meta 80% — PENDENTE: o condutor que encara
+  para perto do marcador e as aproximações do chamado ficam curtas, quase só a aceleração). `utilidade.cruzamentoV` 0,35 e `chuteLonge` 0,25;
+  `IA_DEFESA.corrida.v` 7,0; `GOLEIRO.logit.c0Partida` −0,3 e, de longe, `cLongePartida` −0,035 por m de chute além de
+  `dLonge` 15 m do goleiro (15/10: gols de fora da área); o pênalti com o próprio `GOLEIRO.penalti.c0Partida` −0,1 (a
+  calibração dele, canhão 77/18/5% e teste-botoes B6d, é a da main; com o −0,3 da bola rolando as defesas de pênalti iam a
+  0% no painel de 144).
+- O arremesso do lateral (`m.voo.tipo === 'lateral'`) não entra no corte do passe (`vaiNaLivre`), e o lateral do meu time
+  não se afasta de cabeça no meu terço (`cabeceio.js intencaoCabeceio`).
+- Troca aérea (`troca.js`): quem tem `j.disputaAlta` pendente (o pulo ombro com ombro contra o cabeceio do adversário)
+  conta como disputante marcado (até `janelaMarcado` s); no empate — a previsão confirmada põe o controlado na bola até
+  `antecede` ticks depois do toque marcado de outro companheiro que não o recebedor — o controle fica com ele.
+- PRESSÃO do humano (`DEFESA_HUMANO.pressao`): `chega` 2,0 m e `aproxMax` 5 m/s (o bote do escolhido só abaixo de
+  `FALTAS.bote.vLivre` e não por trás: a regra do sim.js boteIA que veio da main, #474). Na aproximação vale a
+  `corridaAte`/`chegaFreando` da main (#476: fecha no condutor no máximo a √(2·`freio`·folga) + `trasAprox`; a mesma conta
+  que esta branch tinha feito só por trás — 10 de 11 faltas com o botão eram carga por trás do chamado a 5–6 m/s) e o
+  `bolaSolta` 0,435 da condução curta. O chamado (`defesa.js chamadoDaPressao`: o último escolhido dentro da validade, com
+  o pedido valendo) não entra no corte do passe (`ia-tatica.js vaiNaLivre`): segue a PRESSÃO até o ponto de chegada. Sem
+  o botão nada disso liga (o painel IA × IA não muda).
+- O chamado da PRESSÃO contorna quem está no caminho (15/10; `defesa.js desviarCorpos`, `DEFESA_HUMANO.pressao.desvio`
+  {olha 0,7 s, min 1,5 m, vMin 3 m/s, lado 0,8 m}): em toda `corridaAte` (aproximação do condutor, bola solta do pé dele e
+  o ponto de chegada do passe do adversário), o corpo mais perto à frente na linha da corrida — companheiro ou adversário,
+  não o alvo nem os goleiros —, onde ele vai estar quando o chamado chegar lá, a menos de `lado` m da linha → o ponto passa
+  a `lado` m dele, do lado em que o chamado já está. Antes ele ia reto, trombava (`sim.js colisaoCorpos`: ~1,8 m/s a menos)
+  e recomeçava a arrancada. Medida: `teste-pressao-humano` M8 (trombadas com quem não é o condutor por 100 casos: base
+  799ab53b 4,2 → 2,1; meta ≤ 3) e M5 (80 → 83% com 8 partidas; 81 → 83% com 16). A partida IA × IA não muda (hash-partida
+  `demo` IGUAL; só as cenas `humano`, que apertam PRESSÃO, mudam).
+
+### Testes
+`teste-cabeceio` (canhão de cruzamentos, pose, teleporte, partidas demo, humano) e `teste-defesa-corrida` (humano
+roteirizado em arrancada e em trote contra a IA) no padrão; os dois aceitam `--js <pasta>` (a base reprova).
+`teste-intercepta` (padrão): A) partidas IA × IA — interceptações NA LINHA do passe por time por partida (o passe com
+destino dominado por um adversário de linha com a bola andando, a 2 m ou mais do recebedor, sem bater no corpo; mais que a
+base + 1,5 e ≤ 14), passe certo (80–86,5%) e o homem livre (recepção no último terço sem ninguém da IA a até 3 m; ≤ base + 3
+pontos); B) canhão do passe arriscado (o meia passa a 12–28 m com um adversário a até 3,5 m da linha): dos passes que a
+física diz alcançáveis (a conta do `cortaPasse`, com 0,2 s de leitura e 0,1 s antes do recebedor) a IA corta ≥ 50%, dos
+outros ≤ 15%. A mesma contagem de interceptações no painel (por time por partida).
+`painel-equilibrio` ganhou `--base-json` (a base gravada), `--set` (constantes só da versão medida) e as linhas de chutes
+por time, gols de cabeça (8–18%), cabeceios e duelos pelo alto. `prints-cabeceio.mjs`: cabeceio, disputa e o corredor (TV
+e de perto).
 
 ## Auditoria dos botões (dono, 12/10: "ainda tem botões que não funcionam")
 - **Botões de tela pelo toque** (`js/toque-botao.js`, DOM): `aoTocar(el, fn)` age no `pointerup` do MESMO dedo que desceu no

@@ -84,3 +84,17 @@ export function golNaturalNode(L, semente, maxTicks = 4000) {
   }
   return null;
 }
+
+/** TODOS os gols naturais da partida da semente em até maxTicks (cada um com a cópia do mundo no tick do gol). */
+export function golsNaturaisNode(L, semente, maxTicks = 30000, max = Infinity) {
+  const { P } = L;
+  const m = P.criarPartida({ semente });
+  const r = rastreador(L, m);
+  const gols = [];
+  for (let i = 0; i < maxTicks && gols.length < max; i++) {
+    P.passoPartida(m, P.entradaDemoPartida(m), null);
+    if (m.partida?.estado === 'fim') break;
+    if (r.passo()) gols.push({ m: structuredClone(m), golTick: m.tick, gol: { ...r.est.gol }, s: m.ataca[r.est.gol.time ?? 0], semente });
+  }
+  return gols;
+}

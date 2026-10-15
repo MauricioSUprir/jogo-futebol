@@ -135,7 +135,15 @@ export function chanceFaltaBote(d, c) {
  */
 export function faltaNoBote(m, d, c) {
   if (!m.partida) return null;
-  const p = chanceFaltaBote(d, c);
+  let p = chanceFaltaBote(d, c);
+  // na bola empurrada: de frente, sem entrar no condutor (ele corre para o próprio gol ou fica) e com a bola já solta do pé
+  // dele (≥ ACOES.boteIA.bolaSolta), o defensor joga a BOLA antes do homem — pouco contato (× FALTAS.bote.naBola). É o
+  // desarme da defesa da arrancada: o condutor em disparada empurra a bola 0,6–0,8 m e o defensor à frente chega antes
+  // (teste-defesa-corrida: 50 das 67 faltas da IA no humano eram botes de frente, quase todos assim)
+  if (chegada(d, c) === 'frente') {
+    const b = m.bola.p, dx = c.x - d.x, dz = c.z - d.z;
+    if (d.vx * dx + d.vz * dz <= 0 && MD.hypot(b.x - c.x, b.z - c.z) >= ACOES.boteIA.bolaSolta) p *= FALTAS.bote.naBola;
+  }
   if (uniforme(m.rng) >= p) return null;
   const v = MD.hypot(d.vx, d.vz);
   const exc = chegada(d, c) === 'tras' && v >= FALTAS.excessivo && uniforme(m.rng) < FALTAS.excessivoP;
