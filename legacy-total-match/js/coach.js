@@ -454,7 +454,13 @@
         el("span", { class: "ccc-ic", text: "➕" }),
         el("div", { class: "ccc-txt" }, [ el("div", { class: "ccc-title", text: "Criar meu próprio clube" }), el("div", { class: "ccc-sub", text: "Nome, escudo, cores, verba e nível — do zero" }) ]),
         el("span", { class: "ccc-arrow", text: "›" })
-      ])
+      ]),
+      // Viverde FC (time especial com senha: js/viverde.js)
+      TM.viverde ? el("button", { class: "create-club-cta vv-cta", on: { click: function () { TM.viverde.pedirSenha(function () { TM.ui.go("coach-viverde"); }); } } }, [
+        el("img", { class: "vv-cta-esc", src: TM.viverde.ESCUDO, alt: "" }),
+        el("div", { class: "ccc-txt" }, [ el("div", { class: "ccc-title", text: "Viverde FC" }), el("div", { class: "ccc-sub", text: TM.viverde.liberado() ? "Comandar o Viverde numa liga à sua escolha" : "Time especial · precisa de senha" }) ]),
+        TM.viverde.liberado() ? el("span", { class: "ccc-arrow", text: "›" }) : el("span", { class: "vv-cadeado" }, [TM.ic("lock")])
+      ]) : null
     ]));
     if (exPlayerHandoff) screen.appendChild(el("div", { class: "twin-bar open", style: "max-width:620px;margin:0 auto 4px" }, [ el("span", { text: "🎽➡️🎯 " + exPlayerHandoff.name + " começa a carreira de treinador" }), el("span", { class: "twin-sub", text: "escolha o clube para comandar" }) ]));
     var body = el("div", { class: "panel-narrow" });
@@ -644,6 +650,52 @@
         TM.storage.write("customClub", spec);
         TM.data.resetWorld();
         TM.ui.go("coach-setup", { clubId: slotId, custom: true });
+      }, "btn primary big")
+    ]));
+  });
+
+  /* ---------- Viverde FC na carreira: entra no lugar de um clube da liga escolhida (customClub, fixo "viverde") ---------- */
+  TM.ui.register("coach-viverde", function (screen) {
+    if (!TM.viverde || !TM.viverde.liberado()) { TM.ui.go("coach"); return; }
+    var d = { leagueId: "br", slotClubId: null, rivalClubId: null };
+    screen.appendChild(TM.ui.topbar("Viverde FC", function () { TM.ui.go("coach"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    body.appendChild(el("div", { class: "cc-preview" }, [
+      el("img", { class: "cc-preview-crest", src: TM.viverde.ESCUDO, alt: "Viverde FC" }),
+      el("div", { class: "cc-preview-info" }, [ el("div", { class: "cc-preview-name", text: "Viverde FC" }), el("div", { class: "cc-preview-sub", text: "VFC · elenco fixo de 17 jogadores" }) ])
+    ]));
+    var lgSel = el("select", { class: "select" });
+    TM.data.world().leagues.forEach(function (lg) { lgSel.appendChild(el("option", { value: lg.id, text: lg.name, selected: lg.id === d.leagueId })); });
+    lgSel.addEventListener("change", function () { d.leagueId = lgSel.value; d.slotClubId = null; d.rivalClubId = null; fill(); });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Liga onde vai jogar" }), lgSel ]));
+    var repSel = el("select", { class: "select" }), rivSel = el("select", { class: "select" });
+    repSel.addEventListener("change", function () { d.slotClubId = repSel.value; fillRiv(); });
+    rivSel.addEventListener("change", function () { d.rivalClubId = rivSel.value; });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Substituir qual time?" }), repSel,
+      el("div", { class: "setting-hint", text: "O Viverde FC entra na liga no lugar desse time." }) ]));
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Maior rival" }), rivSel ]));
+    function clubes() { return TM.data.league(d.leagueId).clubIds.map(TM.data.club).sort(function (a, b) { return TM.data.clubRating(b.id) - TM.data.clubRating(a.id); }); }
+    function fill() {
+      var cs = clubes(); TM.ui.clear(repSel);
+      if (!d.slotClubId) d.slotClubId = cs[cs.length - 1].id;
+      cs.forEach(function (c) { repSel.appendChild(el("option", { value: c.id, text: c.name + " (" + TM.data.clubRating(c.id) + ")", selected: c.id === d.slotClubId })); });
+      fillRiv();
+    }
+    function fillRiv() {
+      var cs = clubes().filter(function (c) { return c.id !== d.slotClubId; }); TM.ui.clear(rivSel);
+      if (!d.rivalClubId || d.rivalClubId === d.slotClubId) d.rivalClubId = cs[0].id;
+      cs.forEach(function (c) { rivSel.appendChild(el("option", { value: c.id, text: c.name + " (" + TM.data.clubRating(c.id) + ")", selected: c.id === d.rivalClubId })); });
+    }
+    fill();
+    screen.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("Continuar", function () {
+        var lg = TM.data.league(d.leagueId);
+        var spec = { fixo: "viverde", slotClubId: d.slotClubId, rivalClubId: d.rivalClubId || null, name: "Viverde FC", short: "VFC",
+          colors: { primary: "#16a34a", secondary: "#ffffff" }, crestData: TM.viverde.ESCUDO, level: 90, nation: lg.nation };
+        TM.storage.write("customClub", spec);
+        TM.data.resetWorld();
+        TM.ui.go("coach-setup", { clubId: d.slotClubId, custom: true });
       }, "btn primary big")
     ]));
   });
@@ -2196,7 +2248,7 @@
     nat.players.map(TM.data.player).forEach(addP);
     try {
       var W = TM.data.world();
-      Object.keys(W.playersById || {}).forEach(function (id) { var p = W.playersById[id]; if (p && p.nationId === nat.id && p.clubId && p.clubId !== "free") addP(p); });
+      Object.keys(W.playersById || {}).forEach(function (id) { var p = W.playersById[id]; if (p && !p.especial && p.nationId === nat.id && p.clubId && p.clubId !== "free") addP(p); });
       (c.roster || []).forEach(function (id) { var p = C().resolvePlayer(c, id); if (p && p.nationId === nat.id) addP(p); });
     } catch (e) {}
     pool.sort(function (a, b) { return b.overall - a.overall; });
@@ -3608,7 +3660,7 @@
     function renderResultsInner() {
       var pool;
       if (MKT.free) pool = (world.freeAgents || []).map(TM.data.player).filter(Boolean);
-      else pool = Object.keys(world.playersById).map(function (id) { return world.playersById[id]; }).filter(function (p) { return p && !p.freeAgent && !rosterSet[p.id] && p.clubId && TM.data.club(p.clubId); });
+      else pool = Object.keys(world.playersById).map(function (id) { return world.playersById[id]; }).filter(function (p) { return p && !p.freeAgent && !p.especial && !rosterSet[p.id] && p.clubId && TM.data.club(p.clubId); });
       var q = MKT.q.trim().toLowerCase();
       var qn = q ? q.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
       var regLeagues = null; if (MKT.region && REG[MKT.region]) { regLeagues = {}; REG[MKT.region].leagues.forEach(function (l) { regLeagues[l] = 1; }); }
@@ -5382,7 +5434,7 @@
     var W = TM.data.world(), out = [], ids = Object.keys(W.playersById);
     for (var i = 0; i < ids.length; i++) {
       var p = W.playersById[ids[i]];
-      if (!p || p.id === ref.id || p.pos !== ref.pos) continue;
+      if (!p || p.especial || p.id === ref.id || p.pos !== ref.pos) continue;
       out.push({ p: p, m: matchPct(ref, p) });
     }
     out.sort(function (a, b) { return b.m - a.m; });

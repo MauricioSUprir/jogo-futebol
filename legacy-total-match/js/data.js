@@ -19560,12 +19560,18 @@
       leagues: leagues,
       freeAgents: freeAgents,
       clubs: clubs,
-      clubsById: clubs.reduce(function (m, c) { m[c.id] = c; return m; }, {}),
+      clubsById: viverdeNoMundo(clubs.reduce(function (m, c) { m[c.id] = c; return m; }, {}), playersById),
       leaguesById: leagues.reduce(function (m, l) { m[l.id] = l; return m; }, {}),
       playersById: playersById,
       nations: NATIONS,
       nationsById: NATIONS.reduce(function (m, n) { m[n.id] = n; return m; }, {})
     };
+  }
+  // Viverde FC (js/viverde.js): o clube do jogo rápido, FORA das ligas e da lista `clubs` (não entra em campeonato,
+  // mercado, convocação nem envelhecimento do mundo) — só em clubsById/playersById, nas duas edições
+  function viverdeNoMundo(clubsById, playersById) {
+    try { if (TM.viverde && TM.viverde.registrar) TM.viverde.registrar(clubsById, playersById, NATIONS); } catch (e) {}
+    return clubsById;
   }
 
   // aplica edições do Editor (persistidas em storage "edits")
@@ -19627,6 +19633,8 @@
     var club = null;
     for (var i = 0; i < clubs.length; i++) { if (clubs[i].id === cc.slotClubId) { club = clubs[i]; break; } }
     if (!club) return;
+    // Viverde FC na carreira: o elenco fixo do dono no lugar do clube escolhido (js/viverde.js)
+    if (cc.fixo === "viverde" && TM.viverde && TM.viverde.aplicarNoSlot) { TM.viverde.aplicarNoSlot(club, playersById, NATIONS); return; }
     club.name = cc.name || club.name;
     club.short = cc.short || club.short;
     if (cc.colors && cc.colors.primary) club.colors = { primary: cc.colors.primary, secondary: cc.colors.secondary || cc.colors.primary };
@@ -20370,6 +20378,7 @@
   }
   function stadiumInfo(club) {
     if (!club) return { name: "Estádio", capacity: 30000 };
+    if (club.estadio && club.estadio.name) return { name: club.estadio.name, capacity: club.estadio.capacity || 30000 };
     // edição Atualizado: estádio REAL (por liga+clube, evita conflito de nomes iguais); senão gerado
     var ent = (isProEdition() && (STADIUMS[(club.homeLeagueId || club.leagueId) + "/" + club.name] || STADIUMS[club.leagueId + "/" + club.name] || STADIUMS[club.name])) || null;
     var name = null, cap = null;
