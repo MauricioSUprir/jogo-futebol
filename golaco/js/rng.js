@@ -60,3 +60,21 @@ export function normal(r) {
 export function copiarRng(r) {
   return { s: r.s.slice() };
 }
+
+// ------------------------------------------------------------------ hash sem estado (desenho: comemoração, treinadores)
+/**
+ * Hash de 32 bits de dois inteiros, SEM estado (a mesma conta em todo motor JS: Math.imul). Para sorteios do desenho que
+ * não podem mexer no gerador do mundo (a comemoração escolhe a finalização pelo (tick do gol, autor); os treinadores, os
+ * gestos). Era o comemoracao.js hashGol (que agora é este).
+ */
+export function hash32(a, b) {
+  let h = Math.imul((a | 0) ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(((b | 0) + 0x632be5ab) | 0, 0xc2b2ae35);
+  h = Math.imul(h ^ (h >>> 16), 0x7feb352d);
+  h = Math.imul(h ^ (h >>> 15), 0x846ca68b);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+/** Uniforme em [0, 1) de três inteiros, sem estado (hash32 encadeado). */
+export function hash01(a, b, c) {
+  return hash32(hash32(a, b), c) / 4294967296;
+}

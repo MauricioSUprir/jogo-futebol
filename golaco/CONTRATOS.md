@@ -537,6 +537,98 @@ em `config.js REPLAY.impedimento` e `REPLAY.saot`.
   frequência da posição legal em 144 partidas); prints `*-impedimento-saot*`, `*-legal*` (`lib/acha-legal.mjs`) e a
   sequência `pc-impedimento` → `pc-impedimento-saot-orbita` → `pc-impedimento-saot`.
 
+## Área técnica, treinadores e as câmeras 3 e 4 do replay do gol (pedidos de 12/10; contrato)
+Pedidos do dono (12/10): "quero que tenha uma 3ª e uma 4ª câmera de replay, onde uma é a visão em 1ª pessoa do jogador
+fazendo o gol"; "a 4ª pode ser a visão do treinador, quero a área técnica e o treinador". Pesquisa: `PESQUISA-ESTADIO.md`
+§12 e §13. **Só desenho**: os treinadores andam num mundo à parte e só LEEM a partida; o replay lê o anel e a simulação
+espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Constantes em `config.js` `ESTADIO.areaTecnica`,
+`TECNICOS`, `REPLAY.gol.extras`, `REPLAY.primeira`, `REPLAY.treinador`; `REPLAY.vagas` = 26 (22 + 2 treinadores + 2 de folga).
+- **Área técnica (IFAB Regra 1; `estadio-forma.js`)**: `areaTecnica(time)` → `{time, lado (−1 mandante | +1 visitante), x0,
+  x1, z0 (a frente: 1 m da lateral), z1 (o fundo: as placas − 0,3), poligono}`; `dentroAreaTecnica(time, x, z, margem)`;
+  `retasAreaTecnica()` → as 6 linhas (frente, dentro, fora de cada área; 0,12 m, para dentro). `render/campo.js` as desenha
+  na malha das linhas (+0 chamadas).
+- **`js/tecnicos.js` (puro, Node; sem rng fora do `rng.js` — `hash01(semente, id, bloco)` —; nunca escreve no mundo)** — a API:
+  - `criarTecnicos(times, semente)` → `T = {k, semente, tecs: [tec × 2], golTick, golTime, mini}`; cada `tec = {id (210
+    mandante | 211 visitante: `IDS_TECNICOS`; não cruza com os jogadores 1–123 nem com os árbitros 200–203), time, lado,
+    area, j (o corpo: criarJogador, posição 'TEC'), estado, variante, postura, atu/ant (pose, 57 floats), x0/z0/r0 →
+    x1/z1/r1 (o passo anterior → o atual, para interpolar), ...}`;
+  - `criarLeitura()` → `L` (reaproveitada: nada alocado por passo); `leituraDoMundo(m, eventos, L)` (DEPOIS do passo da
+    partida: bola, posse por time, lado, parada, placar, os eventos que eles olham — gol, chute/cabeceio, passe, defesa,
+    trave, fora, impedimento/falta/cartão/pênalti (reclama), roubada, intervalo, fim, saída — e os jogadores perto das
+    áreas); `leituraVazia(L)` (pré-jogo: sem jogo); `pedirAplauso(L, s)` (os dois aplaudem `s` s: o pré-jogo, os times
+    saindo do túnel);
+  - `passoTecnicos(T, L)` = 1 passo de 1/60 s dos dois (estado → locomoção do jogo → pé desenhado → pose com torção,
+    cabeça na bola e braços por IK); `poseTecnico(tec, out)` (57 floats no mundo: o formato do anel e do desenho);
+  - `ESTADOS` = observa, instrui, aplaude, reclama, lamenta, comemora, sofreu, intervalo, fim, vamos (variantes em
+    `TECNICOS.variantes`); `infoTecnicos(T)` → por treinador `{id, time, x, z, rumo, v, estado, variante, varianteNome,
+    postura, olhar, noAr, rapido, recuo, esquiva}` (testes e API);
+  - câmeras de cinema: `distanciaTecnico(x, y, z, cx, cz)` (até a cápsula de 0,30 × 1,85 m) e `afastarDeTecnicos(p, T |
+    T.tecs | [{x, z}], dmin = 0,6)` (empurra a câmera na horizontal, sem entrar nas placas) — usados pela comemoração, pelo
+    pré-jogo e pela lateral do golaço;
+  - **GANCHO das cenas** (frente `golaco/cenas-jogo`: `comemoracao.js opc.treinador`, `cena-fim.js treinadores`, o
+    `main.js treinadorDoTime(t)` dela): `treinadorDoTime(T, t)` → `{id, time, x, z, rumo, kit}` do treinador do time `t`
+    ONDE ELE ESTÁ (dentro da área técnica: `teste-tecnicos` T16) ou `null` sem treinadores; `kitTecnico(time)` →
+    'tecnico0' | 'tecnico1'. Quem juntar as duas frentes: (1) `function treinadorDoTime(t) { return tecnicos ?
+    treinadorDoTimeTec(tecnicos, t) : null; }` no `main.js` (importe com outro nome); (2) o contrato da outra frente pede
+    `id ≥ 300` só para não cruzar com ninguém — 210/211 já não cruzam (jogadores 1–123, árbitros 200–203) e são os ids
+    gravados no anel (`it.tecnico`); (3) durante uma cena que já tem o ator 'treinador' do time t, o `anexarTecnicos` do
+    `main.js` tem de PULAR esse treinador (senão ele sai em dobro); (4) o treinador de verdade continua dando passos
+    durante a cena (os passos da cena segura: `tecAlfaCena`) e volta ao desenho quando ela acaba.
+- **Página (`main.js`)**: `?tecnicos=0` desliga (A/B do custo); na partida, um `passoTecnicos` por passo da simulação, depois
+  do estádio (também nos passos da cena segura da comemoração e nos da cena de substituição — o mundo parado; nesta, a
+  leitura troca os jogadores perto das áreas pelos atores da cena: `atoresNaLeitura`, e eles saem da frente de quem sai —
+  e a câmera de ala dela passa por `afastarDeTecnicos`; `jog3d.reservar` conta os 2); `anexarTecnicos(lista, n, alfa)` põe os dois na lista do
+  `jogador3d.atualizar` (o manequim instanciado: +0 chamadas; `it.tecnico`, `it.kit` 'tecnico0'/'tecnico1') no jogo, na
+  comemoração e no pré-jogo; o anel grava os dois depois dos jogadores (bit2 de `info`). `jogador3d.js`: os kits dos
+  técnicos, o estilo de treinador e `it.ocultar` (`OCULTA.cabeca | OCULTA.tronco`: some a cabeça, o pescoço, o peito, os
+  ombros e os braços — a 1ª pessoa); `triangulosPorBoneco`.
+- **Roteiro do gol (`render/replay-roteiro.js`)**: `roteiroGol(anel, {golTick, chuteTick, lado, time, autor, contra,
+  desvio, tipoChute, reduzirMovimento, extras})` — os planos de antes campo a campo iguais aos de `{extras: false}` (=
+  o roteiro antigo); `planosExtrasGol(anel, g, base)` acrescenta, antes da checagem: `{cam: 'primeira', vel 0,6, de: chute −
+  0,9 s, ate: gol + 0,4 s, autor, chuteTick, golTick, lado, tipoChute}` (sem gol contra, sem autor ou chute no anel, sem
+  "reduzir movimento"; outro corpo a < 0,3 m da lente no quadro corta o fim — fica se sobrar ≥ 1,2 s reais) e `{cam:
+  'treinador', vel 1, de: chute − 0,8 s, corte: gol + 0,3 s, ate: gol + 2,3 s, tecnico (210 + time que marcou)}` (sem lugar
+  para a câmera da parte 2: só a parte 1; plano < 1 s sai); nenhum plano atravessa um corte (o começo procura o último corte
+  ATÉ O GOL — também um entre o chute e o gol; sem ≥ `extras.primeiraMin` s de corrida antes do chute depois dele, sem 1ª
+  pessoa: contraprova 15/10, `teste-replay-anel` B19); extras ≤ 7 s (encolhe o começo
+  da 1ª pessoa, o fim da parte 2 e o começo da parte 1, nessa ordem); total ≤ 19 s (golaço 21; checagem + 1). O
+  enquadramento vai em `plano.enq` (não enumerável).
+- **Olhos (`render/replay-olhos.js`, puro, Node)**: `enquadrarPrimeira(anel, p)` → `{olho, dir, bruto, cabeca, bolaSome,
+  fovH 90, perto 0,10, w0, n}` (olho estabilizado: horizontal ≤ 2 cm do olho bruto antes da esfera e ≤ 6 cm depois,
+  altura sem o balanço da passada, dentro da esfera de 0,148 m da cabeça; olhar antes do chute para a bola puxada 60% para o gol e ≥ −18°, no chute a bola
+  e o pé, depois a bola puxada 35%; giro ≤ 85°/s por `limitarGiro(yaw, arf, n, L)`); `cameraPrimeira(e, t, out)`;
+  `corpoNaLente(anel, e, dmin, sem)`; `enquadrarTreinador(anel, p)` → parte 1 (o olho na cabeça dele, teleobjetiva fixa
+  com 30 m na distância do gol) + `parte2` (`parte2Treinador`: câmera parada no gramado com ele inteiro — pés e alto da
+  cabeça da pose — no terço esquerdo, fora dos sólidos, ≥ 0,6 m de qualquer corpo, o lugar com menos gente na frente);
+  `cameraTreinador(e, t, aspecto, pequena, out)`; `zLateralDoPlano(anel, de, ate, lado)` (o z da lateral do golaço para o
+  plano INTEIRO: meioZ + 1 com um treinador gravado a < 2 m do caminho dela; o diretor calcula uma vez por plano — antes,
+  quadro a quadro, ela pulava 2,5 m: `teste-tecnicos` T15) e `cameraLateral(cx, tecnicos, out, z)` (a lateral do golaço fora dos
+  treinadores); `tecnicosNoTick(anel, tick, out)`; `planoReacaoTreinador(anel, p, opc)` (a parte 2 para outros planos);
+  `projetar`, `fovVerticalDe`.
+- **Diretor (`render/replay.js`)**: `posicionar` com 'primeira' (plano de recorte próximo 0,10 m) e 'treinador';
+  `desenho()` → `{ocultar: o autor na 1ª pessoa, sem: o treinador na parte 1 da visão dele, semBola: a bola a < 0,35 m da
+  lente}`; `cameraExtra(t)`; `estado` ganha `autor, tecnico, corte, parte (1 | 2), fovH, duracoes, cams`. O "Pular" vale em
+  qualquer plano (um toque/tecla pula o replay inteiro).
+- **API** (`window.__golaco`): `replay.desenho` (`{ids, ocultos, semBola, bola}` do último quadro), `replay.cameraExtra`,
+  `replay.custo.quadroReplayP95`, `replay.chuteDeTeste(id, tipo)` (o chute da física de um teste conta para o autor;
+  `tools/lib/gol-roteirizado.mjs {marcarChute}` dá 60 passos de corrida do autor antes do chute, para o corte do
+  teletransporte ficar antes dele), `replay.corteNoAnel(tick)`;
+  `estadio.tecnicos` (`{lista: infoTecnicos, msPorPasso, passos (os do jogo), k (todos, também os das cenas)}`),
+  `estadio.mostrarTecnicos(v)` (só o desenho), `estadio.triangulosBoneco`.
+- **Testes**: `teste-tecnicos` (Node, padrão: T1–T16), `teste-replay-anel` (G1–G13: ordem, os planos de antes iguais,
+  orçamentos, anel e cortes, pênalti, olho/olhar/giro/bola/gol da 1ª pessoa, corpo na lente, as duas partes do treinador,
+  a lente fora dos sólidos, a reação dele, pose gravada = ao vivo), `teste-replay` (navegador: G1–G3 ordem, durações e quem
+  some; G4 celular 844×390 Média — chamadas por plano ≤ o máximo ao vivo + 1 e CPU p95 do quadro do replay ≤ a do jogo + 1
+  ms —; G5 um toque no meio da 1ª pessoa pula tudo; G6 nada some; G7 a câmera dos planos novos sem salto entre quadros), `teste-tecnicos-tela` (navegador, CI: visíveis na TV do
+  celular com o banco no quadro, chamadas iguais com e sem eles, CPU do quadro × `?tecnicos=0`, as linhas no gramado e,
+  V6, a cena de substituição: eles andam com ela, longe dos atores e da câmera; V7, depois dela, o salto deles entre dois
+  passos gravados só com corte).
+- **Anel e cenas com o mundo parado (contraprova 15/10)**: os passos que os treinadores dão numa cena com a simulação
+  parada (a substituição) não vão para o anel; no passo gravado seguinte, um treinador a > `REPLAY.saltoTecnico` (0,25 m)
+  do último passo gravado marca CORTE (`main.js gravarNoAnel`; `tools/lib/anel-node.mjs` igual) — senão o replay seguinte
+  o deslizava ~3 m num passo. Quem juntar uma cena nova que segura a simulação e anda os treinadores (golaco/cenas-jogo)
+  ganha isso de graça.
+
 ## Comemoração do gol (pedido de 11/10: "não tem cena de comemoração!!!"; contrato)
 Pesquisa: `PESQUISA-ESTADIO.md` §10. **Só desenho: a cena anda num mundo à parte (cópias dos 22) e a simulação nunca é
 escrita** — a página só SEGURA o laço no passo antes da montagem da saída (gol + 149) enquanto a cena roda; a saída sai no

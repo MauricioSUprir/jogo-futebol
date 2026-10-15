@@ -13,6 +13,8 @@
 // proximo(), pularTudo(), irPara(t), ativo, api}. ctx = {cena3d, cam, jog3d, bola3d, campo, torcida, som(),
 // mundo(), hora(), qualidade(), comToque(), aoFim()}. Enquanto ativo, as placas de cá ficam com o vão na frente do
 // túnel (criarVaoPlacas) e o lado de fora existe; no fim tudo volta ao estádio do jogo.
+// Treinadores (12/10): já em pé na área técnica deles desde o 1º plano (js/tecnicos.js, um mundo à parte só do pré-jogo,
+// no relógio dele), aplaudindo 3 s quando os times saem do túnel; a câmera de cinema nunca dentro deles.
 import * as THREE from 'three';
 import { PASSO, BOLA, CAMPO } from '../config.js';
 import { pose, interpolarPose, NJ, J } from '../anim.js';
@@ -25,6 +27,8 @@ import { criarEmocao, emocaoPasso, consumirDisparos } from './emocao.js';
 import { forcarFesta } from './festa.js';
 import { criarPrejogoTela } from '../prejogo-tela.js';
 import { criarEstadioFora } from './estadio-fora.js';
+import { criarTecnicos, criarLeitura, leituraVazia, passoTecnicos, pedirAplauso, afastarDeTecnicos } from '../tecnicos.js';
+import { CORTEJO } from '../cortejo.js';
 
 const ASPECTO_TV = 16 / 9;
 const NEVOA = { dia: [320, 1700], noite: [160, 1000] };     // névoa nos planos de fora (perto, longe)
@@ -98,6 +102,7 @@ export function criarPrejogo(ctx) {
     ativo: false, fase: 'parado', modo: null, r: null, t: 0, tAb: 0, i: -1, c: null, previa: null, fotos: new Map(),
     tcsPrevia: [], filaPronta: false, disparados: new Set(), fora: null, emocao: null, desde: 0, terminando: false,
     nevoa: null, cameraNF: null, cenaSom: { ganho: 1, filtro: null }, ladoDeCaForcado: false,
+    tec: null, tecL: criarLeitura(), tecAcum: 0, tecAplaudiu: false,
   };
   // desenho do cortejo: pose anterior/atual/desenhada por andante (nada alocado por quadro)
   const est = [];
@@ -190,19 +195,43 @@ export function criarPrejogo(ctx) {
   function pontoInicial(i) { const c = cameraEm(st.r, st.r.planos[i].t0, {}); return [c.px, c.py, c.pz]; }
 
   // ---------------------------------------------------------------- desenho
-  function montarLista(alfa, respira, tempo) {
+  /** Os treinadores no relógio do pré-jogo (aplaudem quando os times saem do túnel). */
+  function passoTreinadores(dt) {
+    if (!st.tec) return;
+    st.tecAcum += dt;
+    while (st.tecAcum >= PASSO) {
+      st.tecAcum -= PASSO;
+      leituraVazia(st.tecL);
+      if (!st.tecAplaudiu && st.c && st.c.tick * PASSO >= CORTEJO.atrasoTimes) { st.tecAplaudiu = true; pedirAplauso(st.tecL, 3); }
+      passoTecnicos(st.tec, st.tecL);
+    }
+  }
+  function montarLista(alfa, respira, tempo, comCortejo = true) {
     const c = st.c;
     let n = 0;
-    c.andantes.forEach((a, k) => {
+    if (comCortejo) c.andantes.forEach((a, k) => {
       const e = estadoDe(k);
       interpolarPose(e.ant, e.atu, alfa, e.des);
       if (respira) respirar(e.des, a.id, tempo);
       const it = lista[n] ?? (lista[n] = {});
       it.id = a.id; it.time = a.time; it.goleiro = a.goleiro; it.kit = a.kit; it.pose = e.des;
-      it.controlado = false; it.proximo = false;
+      it.controlado = false; it.proximo = false; it.tecnico = false; it.ocultar = 0;
       it.x = e.x0 + (e.x1 - e.x0) * alfa; it.z = e.z0 + (e.z1 - e.z0) * alfa; it.rumo = e.r1;
       n++;
     });
+    // os treinadores em pé na área técnica (o mesmo manequim instanciado: nenhuma chamada de desenho a mais)
+    if (st.tec) {
+      const al = clamp(st.tecAcum / PASSO, 0, 1);
+      for (const tc of st.tec.tecs) {
+        const it = lista[n] ?? (lista[n] = {});
+        const des = tc.des ?? (tc.des = new Float32Array(NJ * 3));
+        interpolarPose(tc.ant, tc.atu, al, des);
+        it.id = tc.id; it.time = tc.time; it.goleiro = false; it.kit = tc.time === 1 ? 'tecnico1' : 'tecnico0'; it.pose = des;
+        it.controlado = false; it.proximo = false; it.tecnico = true; it.ocultar = 0;
+        it.x = tc.x0 + (tc.x1 - tc.x0) * al; it.z = tc.z0 + (tc.z1 - tc.z0) * al; it.rumo = tc.r1;
+        n++;
+      }
+    }
     lista.length = n;
     return lista;
   }
@@ -229,10 +258,14 @@ export function criarPrejogo(ctx) {
     let fov = c.fov;
     if (a < ASPECTO_TV) fov = (2 * Math.atan(Math.tan((fov * Math.PI) / 360) * ASPECTO_TV / a) * 180) / Math.PI;
     if (Math.abs(cam.fov - fov) > 1e-4 || cam.aspect !== a) { cam.fov = fov; cam.aspect = a; cam.updateProjectionMatrix(); }
-    cam.position.set(c.px, c.py, c.pz);
+    // nunca dentro de um treinador (a câmera de cinema passa pela beira do campo)
+    _pc[0] = c.px; _pc[1] = c.py; _pc[2] = c.pz;
+    if (st.tec) afastarDeTecnicos(_pc, st.tec, 0.6);
+    cam.position.set(_pc[0], _pc[1], _pc[2]);
     cam.lookAt(c.lx, c.ly, c.lz);
     cam.updateMatrixWorld();
   }
+  const _pc = [0, 0, 0];
 
   /** No pré-jogo o lado de cá (arquibancada, túnel, torcida) é desenhado sempre que estiver no quadro. */
   function forcarLadoDeCa() {
@@ -287,7 +320,7 @@ export function criarPrejogo(ctx) {
     if (p && p.id === 'tunel') { fx = 0; fz = 48; }
     else if (comCortejo) { fx = 0; fz = st.filaPronta ? 3.2 : clamp(c.lz, -10, 46); }
     cena3d.acompanhar(fx, fz);
-    jog3d.atualizar(comCortejo ? montarLista(alfa, respira, agoraMs / 1000) : (lista.length = 0, lista), camera());
+    jog3d.atualizar(montarLista(alfa, respira, agoraMs / 1000, comCortejo), camera());
     bola3d.atualizar(_bola, _q);
     campo.atualizar(agoraMs / 1000, camera(), renderizar);
     torcida.atualizar(agoraMs / 1000, st.emocao, camera(), ctx.som() ? ctx.som().relogioBatida : null, renderizar);
@@ -305,6 +338,7 @@ export function criarPrejogo(ctx) {
     st.r = criarRoteiro(modo);
     st.t = 0; st.tAb = 0; st.i = -1; st.filaPronta = false; st.disparados.clear(); st.terminando = false;
     st.c = criarCortejo(m.times);
+    st.tec = criarTecnicos(m.times, m.semente ?? 1); st.tecAcum = 0; st.tecAplaudiu = false;
     st.fotos = new Map([[0, fotoCortejo(st.c)]]);
     st.tcsPrevia = [...new Set(st.r.planos.filter(p => p.cortejo && p.cortejo.tc > 0).map(p => Math.round(p.cortejo.tc / PASSO)))].sort((a, b) => a - b);
     st.previa = st.tcsPrevia.length ? criarCortejo(m.times) : null;
@@ -380,7 +414,7 @@ export function criarPrejogo(ctx) {
     vao.fechar();
     const som = ctx.som();
     if (som) som.cena(null);
-    st.c = null; st.previa = null; st.fotos = new Map(); st.emocao = null; lista.length = 0;
+    st.c = null; st.previa = null; st.fotos = new Map(); st.emocao = null; lista.length = 0; st.tec = null;
     if (avisar && ctx.aoFim) ctx.aoFim();
   }
 
@@ -419,6 +453,7 @@ export function criarPrejogo(ctx) {
     if (i !== st.i) entrarPlano(i);
     const p = st.r.planos[i];
     avancarPrevia(PREVIA_MS);
+    passoTreinadores(dt);
     // cortejo do plano
     let comCortejo = false, alfa = 1, respira = false;
     if (p.cortejo && p.cortejo.tc != null) {
@@ -457,6 +492,7 @@ export function criarPrejogo(ctx) {
     const cam = camera();
     let n = 0;
     for (const it of lista) {
+      if (it.tecnico) continue; // os treinadores não são do cortejo
       const P = it.pose;
       _v.set(P[J.cabeca * 3], P[J.cabeca * 3 + 1], P[J.cabeca * 3 + 2]).project(cam);
       if (_v.z < 1 && Math.abs(_v.x) <= 1 && Math.abs(_v.y) <= 1) n++;
