@@ -427,7 +427,8 @@ const _vf = { x: 0, z: 0 };
  * Sem atropelar (sim.js, só na partida): os jogadores do time jogado por uma pessoa (o controlado, os companheiros da IA,
  * para quem o controle troca no meio da corrida, e o chamado da PRESSÃO na disputa) chegam freando no
  * condutor adversário (ou no recebedor do passe dele) — a velocidade pedida PARA DENTRO dele (a componente na linha até o corpo dele) fica no máximo na
- * dele se afastando, menos o que ele pode frear no tempo de reação de quem vem atrás (SA.reacao · JOGADOR.freioGiro; ≥ 0),
+ * dele se afastando, menos o que ele pode frear no tempo de reação de quem vem atrás (SA.reacao · JOGADOR.freioGiro, em
+ * rampa até SA.perto m de folga; ≥ 0),
  * + √(SA.chega² + 2 · SA.freio · folga) (folga = distância − 2 raios): encosta a ~SA.chega m/s,
  * abaixo da carga por trás (FALTAS.carga.vMin). A de lado fica (contorna para disputar de lado), e ninguém é mandado para
  * trás (o condutor que vem para cima não empurra o defensor para o próprio gol). A DIVIDIDA saindo (j.defH.bote) não muda.
@@ -456,9 +457,12 @@ export function semAtropelar(m, j, mv) {
   // encostava a ~2–3 m/s
   // quem vem atrás de um condutor que se afasta não conta com a velocidade inteira dele: ele pode frear (até
   // JOGADOR.freioGiro m/s²) no tempo de reação SA.reacao s. Sem isso, colado a 0,45 m na mesma velocidade, o condutor freando
-  // a ~8 m/s² levava a trombada a ~2,2 m/s (carga) antes de o corpo de trás frear (6,2 m/s²)
-  const vAfasta = Math.max(0, o.vx * nx + o.vz * nz - SA.reacao * JOGADOR.freioGiro);
-  const max = vAfasta + Math.sqrt(SA.chega * SA.chega + 2 * SA.freio * Math.max(0, dc - 2 * JOGADOR.raio));
+  // a ~8 m/s² levava a trombada a ~2,2 m/s (carga) antes de o corpo de trás frear (6,2 m/s²). A margem só vale perto (some
+  // em rampa até SA.perto m de folga): longe dá tempo de reagir, e a margem inteira segurava a chegada da PRESSÃO
+  // (teste-pressao-humano M2)
+  const folga = Math.max(0, dc - 2 * JOGADOR.raio);
+  const vAfasta = Math.max(0, o.vx * nx + o.vz * nz - SA.reacao * JOGADOR.freioGiro * Math.max(0, 1 - folga / SA.perto));
+  const max = vAfasta + Math.sqrt(SA.chega * SA.chega + 2 * SA.freio * folga);
   if (entra <= max) return mv;
   vx -= (entra - max) * nx; vz -= (entra - max) * nz;
   const v = MD.hypot(vx, vz);

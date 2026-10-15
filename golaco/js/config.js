@@ -1164,10 +1164,12 @@ export const DEFESA_HUMANO = {
   // `ganho` × (ponto − corpo), até `aproxMax` m/s mais rápido que ele; por trás dele, a menos de `trasPerto` m, fechando
   // no máximo a `trasAprox` m/s: abaixo da carga por trás, FALTAS.carga.vMin). `filtro`: s da velocidade do condutor.
   // sem atropelar (defesa.js semAtropelar; pedido do dono, 15/10): o time jogado por uma pessoa entra no condutor
-  // adversário (ou no recebedor do passe) no máximo a (v_dele − reacao · JOGADOR.freioGiro)⁺ + √(chega² + 2 · freio · folga)
+  // adversário (ou no recebedor do passe) no máximo a (v_dele − reacao · JOGADOR.freioGiro · (1 − folga/perto)⁺)⁺ +
+  // √(chega² + 2 · freio · folga)
   // m/s (folga = distância − 2 raios): a curva de freada a `freio` m/s² que encosta a ~chega m/s, abaixo da carga
-  // (FALTAS.carga.vMin), e quem vem atrás guarda a folga para a freada do condutor (até 8 m/s²) no tempo de reação
-  semAtropelar: { freio: 3.0, chega: 1.0, reacao: 0.25 },
+  // (FALTAS.carga.vMin), e quem vem atrás guarda a folga para a freada do condutor (até 8 m/s²) no tempo de reação — a
+  // margem inteira com os corpos encostando, sumindo em rampa até `perto` m de folga
+  semAtropelar: { freio: 3.0, chega: 1.0, reacao: 0.25, perto: 3.0 },
   pressao: {
     validade: 1, acel: 7, freio: 6.2, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.5, contorno: 1.2,
     naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.435, filtro: 0.2, ganho: 3, aproxMax: 4, trasPerto: 1.5, trasAprox: 1.4,

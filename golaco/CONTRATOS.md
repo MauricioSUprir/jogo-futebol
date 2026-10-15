@@ -1339,8 +1339,8 @@ Sai em PRs menores; cada um acrescenta a sua parte aqui. Pesquisa e números em 
   `defesa.js semAtropelar(m, j, mv)` (sim.js, só na partida, só no time jogado por uma pessoa — `m.humanos` sem
   `m.iaJoga`; o controlado, os companheiros da IA e o chamado da PRESSÃO a ≤ `pressao.chega` m): a velocidade pedida
   para dentro do condutor adversário (ou do recebedor do passe dele) fica ≤ (a dele se afastando − `reacao` ·
-  `JOGADOR.freioGiro`)⁺ + √(chega² + 2 · freio · folga) (`DEFESA_HUMANO.semAtropelar`: quem vem atrás guarda a folga para
-  a freada do condutor no tempo de reação); a de lado fica; a DIVIDIDA saindo não muda. A demo e o time da IA não mudam.
+  `JOGADOR.freioGiro` · (1 − folga/`perto`)⁺)⁺ + √(chega² + 2 · freio · folga) (`DEFESA_HUMANO.semAtropelar`: quem vem
+  atrás guarda a folga para a freada do condutor no tempo de reação, só perto); a de lado fica; a DIVIDIDA saindo não muda. A demo e o time da IA não mudam.
   Teste: `teste-faltas-sentido` (padrão; registro de toda falta com o contexto em `tools/lib/faltas-registro.mjs`; o
   árbitro do teste mede a força do contato com os corpos encostando ou a ≤ 1,2 m, antes ou depois da locomoção do passo).
 
