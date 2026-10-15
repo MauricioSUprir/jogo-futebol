@@ -18,7 +18,10 @@
 //      duas vezes seguidas;
 //  11) pureza: hashMundo antes = depois da cena (o mundo não é tocado); a pose no tick k é a mesma andando a cena tick a
 //      tick ou em quadros de tamanhos variados (avancarCena); a mesma cena duas vezes = as mesmas poses;
-//  12) custo ≤ 0,6 ms por tick (a melhor de 3 medidas de cada cena: a máquina é dividida);
+//  12) custo ≤ 0,6 ms por tick (a mediana de 5 medidas de cada cena: a máquina é dividida). O tempo é a parede MENOS a
+//      espera do fio na fila do escalonador (/proc/thread-self/schedstat, como o teste-custo): no CI dividido o fio ficava
+//      parado fora da CPU e a parede passava da meta (0,638 ms no deploy de c4d8067d) sem a cena custar mais. A mediana,
+//      não a melhor: com a CPU muito disputada a espera às vezes passa da parede por arredondamento e daria 0;
 //  13) (contraprova) plano da reação: ninguém além de quem reage a < 2 m da lente dentro do quadro, no PC e no celular
 //      (nas 8 cenas e em 2 gols naturais em que um defensor andando para a saída passava colado na câmera).
 // "Antes" (informativo): o pós-gol da versão sem cena, medido na simulação (a IA leva o autor de volta; nenhuma mão acima
@@ -27,6 +30,7 @@
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { carregarNode, golRoteirizadoNode, golNaturalNode } from './lib/gol-node.mjs';
+import fs from 'node:fs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -305,20 +309,37 @@ function min(arr, f) { return Math.min(...arr.map(f)); }
   }
   reg('11 a pose no tick k: tick a tick = em quadros variados (avancarCena)', `${comparados} quadros comparados, ${dif} números diferentes; ticks ${n1} / ${a2.k}`, '0 diferentes, mesmo nº de ticks', dif === 0 && comparados > 50 && n1 === a2.k);
 }
-// custo: a melhor de 3 medidas por cena
+// custo: a mediana de 5 medidas por cena. O tempo da cena é a parede menos a espera do fio principal na fila do escalonador
+// (2º campo de /proc/thread-self/schedstat, em ns; a mesma conta do teste-custo): o tempo em que o fio esteve fora da CPU
+// porque outro processo a usava não é custo da cena. Sem o arquivo (outro sistema), vale a parede.
 {
-  const ms = [];
+  let espera = () => 0, comEspera = false;
+  try {
+    const fd = fs.openSync('/proc/thread-self/schedstat', 'r'), buf = Buffer.alloc(128);
+    const ler = () => {
+      const n = fs.readSync(fd, buf, 0, 128, 0);
+      let k = 0; while (k < n && buf[k] !== 32) k++; k++;
+      let v = 0; while (k < n && buf[k] >= 48 && buf[k] <= 57) { v = v * 10 + buf[k] - 48; k++; }
+      return v / 1e6;
+    };
+    ler(); espera = ler; comEspera = true;
+  } catch { /* sem schedstat: a parede */ }
+  const ms = [], parede = [];
   for (const g of gols) {
-    let melhor = Infinity;
-    for (let rep = 0; rep < 3; rep++) {
+    const med = [];
+    let melhorParede = Infinity;
+    for (let rep = 0; rep < 5; rep++) {
       const c = CM.criarCena(CM.planejarComemoracao(g.m, g.gol, { timeHumano: 0 }), g.m);
-      const t0 = performance.now(); let n = 0;
+      const e0 = espera(), t0 = performance.now(); let n = 0;
       while (!c.acabou) { CM.passoCena(c); n++; }
-      melhor = Math.min(melhor, (performance.now() - t0) / n);
+      const p = performance.now() - t0, e = espera() - e0;
+      med.push(Math.max(0, p - e) / n); melhorParede = Math.min(melhorParede, p / n);
     }
-    ms.push(melhor);
+    med.sort((x, y) => x - y);
+    ms.push(comEspera ? med[2] : melhorParede); parede.push(melhorParede);
   }
-  reg('12 custo da cena por tick (22 atores; a melhor de 3)', `${ms.map(f3).join(' / ')} ms`, '≤ 0,6 ms', Math.max(...ms) <= 0.6);
+  reg(`12 custo da cena por tick (22 atores; ${comEspera ? 'a mediana de 5, sem a espera na fila do escalonador' : 'a melhor de 5, parede'})`,
+    `${ms.map(f3).join(' / ')} ms${comEspera ? ` (a melhor parede ${parede.map(f3).join(' / ')})` : ''}`, '≤ 0,6 ms', Math.max(...ms) <= 0.6);
 }
 // 13 (contraprova) a lente do plano da REAÇÃO livre: ninguém além de quem reage a < 2 m da câmera dentro do quadro (um corpo
 // a 2 m já enche a altura do quadro com fov 30), no PC (16:9) e no celular (844×390). Nas 8 cenas e nelas mesmas com um
