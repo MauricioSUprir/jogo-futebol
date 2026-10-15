@@ -439,7 +439,12 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   quadro antes do chute) → VISÃO DO TREINADOR (o que ele vê → corte → ele reagindo) → [checagem]; "Pular" em qualquer plano.
   Testes: `teste-tecnicos` (T1–T16, padrão), `teste-replay-anel` G1–G13 (28 partidas), `teste-replay` G1–G6 (celular
   844×390 Média: chamadas e CPU por plano), `teste-tecnicos-tela` (CI). A animação da passada balança a cabeça até ±9 cm:
-  o "≤ 6 cm do olho bruto" da 1ª pessoa vale na horizontal.
+  o "≤ 6 cm do olho bruto" da 1ª pessoa vale na horizontal. Contraprova (15/10): os planos novos procuram o último corte
+  até o GOL (um corte entre o chute e o gol fazia a câmera da 1ª pessoa pular 52 m; sem corrida antes do chute, sem 1ª
+  pessoa — B19 e `teste-replay` G7); a lateral do golaço decide o z uma vez por plano (pulava 2,5 m ao passar por um
+  treinador — T15); o treinador que andou numa cena com o mundo parado (substituição) marca corte no anel
+  (`REPLAY.saltoTecnico`; deslizava ~3 m no replay — `teste-tecnicos-tela` V7); o gol roteirizado `{marcarChute}` tem 60
+  passos de corrida antes do chute (o corte do teletransporte fica antes dele).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

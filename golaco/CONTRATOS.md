@@ -588,7 +588,9 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
   0,9 s, ate: gol + 0,4 s, autor, chuteTick, golTick, lado, tipoChute}` (sem gol contra, sem autor ou chute no anel, sem
   "reduzir movimento"; outro corpo a < 0,3 m da lente no quadro corta o fim — fica se sobrar ≥ 1,2 s reais) e `{cam:
   'treinador', vel 1, de: chute − 0,8 s, corte: gol + 0,3 s, ate: gol + 2,3 s, tecnico (210 + time que marcou)}` (sem lugar
-  para a câmera da parte 2: só a parte 1; plano < 1 s sai); nenhum plano atravessa um corte; extras ≤ 7 s (encolhe o começo
+  para a câmera da parte 2: só a parte 1; plano < 1 s sai); nenhum plano atravessa um corte (o começo procura o último corte
+  ATÉ O GOL — também um entre o chute e o gol; sem ≥ `extras.primeiraMin` s de corrida antes do chute depois dele, sem 1ª
+  pessoa: contraprova 15/10, `teste-replay-anel` B19); extras ≤ 7 s (encolhe o começo
   da 1ª pessoa, o fim da parte 2 e o começo da parte 1, nessa ordem); total ≤ 19 s (golaço 21; checagem + 1). O
   enquadramento vai em `plano.enq` (não enumerável).
 - **Olhos (`render/replay-olhos.js`, puro, Node)**: `enquadrarPrimeira(anel, p)` → `{olho, dir, bruto, cabeca, bolaSome,
@@ -598,7 +600,9 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
   `corpoNaLente(anel, e, dmin, sem)`; `enquadrarTreinador(anel, p)` → parte 1 (o olho na cabeça dele, teleobjetiva fixa
   com 30 m na distância do gol) + `parte2` (`parte2Treinador`: câmera parada no gramado com ele inteiro — pés e alto da
   cabeça da pose — no terço esquerdo, fora dos sólidos, ≥ 0,6 m de qualquer corpo, o lugar com menos gente na frente);
-  `cameraTreinador(e, t, aspecto, pequena, out)`; `cameraLateral(cx, tecnicos, out)` (a lateral do golaço fora dos
+  `cameraTreinador(e, t, aspecto, pequena, out)`; `zLateralDoPlano(anel, de, ate, lado)` (o z da lateral do golaço para o
+  plano INTEIRO: meioZ + 1 com um treinador gravado a < 2 m do caminho dela; o diretor calcula uma vez por plano — antes,
+  quadro a quadro, ela pulava 2,5 m: `teste-tecnicos` T15) e `cameraLateral(cx, tecnicos, out, z)` (a lateral do golaço fora dos
   treinadores); `tecnicosNoTick(anel, tick, out)`; `planoReacaoTreinador(anel, p, opc)` (a parte 2 para outros planos);
   `projetar`, `fovVerticalDe`.
 - **Diretor (`render/replay.js`)**: `posicionar` com 'primeira' (plano de recorte próximo 0,10 m) e 'treinador';
@@ -606,16 +610,24 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
   lente}`; `cameraExtra(t)`; `estado` ganha `autor, tecnico, corte, parte (1 | 2), fovH, duracoes, cams`. O "Pular" vale em
   qualquer plano (um toque/tecla pula o replay inteiro).
 - **API** (`window.__golaco`): `replay.desenho` (`{ids, ocultos, semBola, bola}` do último quadro), `replay.cameraExtra`,
-  `replay.custo.quadroReplayP95`, `replay.chuteDeTeste(id, tipo)` (o chute da física de um teste conta para o autor);
+  `replay.custo.quadroReplayP95`, `replay.chuteDeTeste(id, tipo)` (o chute da física de um teste conta para o autor;
+  `tools/lib/gol-roteirizado.mjs {marcarChute}` dá 60 passos de corrida do autor antes do chute, para o corte do
+  teletransporte ficar antes dele), `replay.corteNoAnel(tick)`;
   `estadio.tecnicos` (`{lista: infoTecnicos, msPorPasso, passos (os do jogo), k (todos, também os das cenas)}`),
   `estadio.mostrarTecnicos(v)` (só o desenho), `estadio.triangulosBoneco`.
 - **Testes**: `teste-tecnicos` (Node, padrão: T1–T16), `teste-replay-anel` (G1–G13: ordem, os planos de antes iguais,
   orçamentos, anel e cortes, pênalti, olho/olhar/giro/bola/gol da 1ª pessoa, corpo na lente, as duas partes do treinador,
   a lente fora dos sólidos, a reação dele, pose gravada = ao vivo), `teste-replay` (navegador: G1–G3 ordem, durações e quem
   some; G4 celular 844×390 Média — chamadas por plano ≤ o máximo ao vivo + 1 e CPU p95 do quadro do replay ≤ a do jogo + 1
-  ms —; G5 um toque no meio da 1ª pessoa pula tudo; G6 nada some), `teste-tecnicos-tela` (navegador, CI: visíveis na TV do
+  ms —; G5 um toque no meio da 1ª pessoa pula tudo; G6 nada some; G7 a câmera dos planos novos sem salto entre quadros), `teste-tecnicos-tela` (navegador, CI: visíveis na TV do
   celular com o banco no quadro, chamadas iguais com e sem eles, CPU do quadro × `?tecnicos=0`, as linhas no gramado e,
-  V6, a cena de substituição: eles andam com ela, longe dos atores e da câmera).
+  V6, a cena de substituição: eles andam com ela, longe dos atores e da câmera; V7, depois dela, o salto deles entre dois
+  passos gravados só com corte).
+- **Anel e cenas com o mundo parado (contraprova 15/10)**: os passos que os treinadores dão numa cena com a simulação
+  parada (a substituição) não vão para o anel; no passo gravado seguinte, um treinador a > `REPLAY.saltoTecnico` (0,25 m)
+  do último passo gravado marca CORTE (`main.js gravarNoAnel`; `tools/lib/anel-node.mjs` igual) — senão o replay seguinte
+  o deslizava ~3 m num passo. Quem juntar uma cena nova que segura a simulação e anda os treinadores (golaco/cenas-jogo)
+  ganha isso de graça.
 
 ## Comemoração do gol (pedido de 11/10: "não tem cena de comemoração!!!"; contrato)
 Pesquisa: `PESQUISA-ESTADIO.md` §10. **Só desenho: a cena anda num mundo à parte (cópias dos 22) e a simulação nunca é
