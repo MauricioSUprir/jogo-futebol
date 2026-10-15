@@ -41,9 +41,14 @@
 //       de 8 direções a 6–16 m/s: treinador × jogador ≥ 0,5 m em 100% dos casos (≥ 1 m em ≥ 99%) e a bola fora da cápsula
 //       (r 0,25 + raio) em 100%. (Na partida, um lateral correndo pelo fundo da área a 6,4 m/s chegou a 0,46 m: a esquiva
 //       de antes mandava sempre para o fundo, z 39,2.)
+//   T19 (contraprova 15/10) a esquiva saindo da QUINA da área, sem partida (determinístico): o treinador no limite de x (a
+//       bola longe, de lado: para dentro e para fora do campo), parado no lugar ou recuado, e alguém passando por ele de
+//       16 direções (32 no --estresse), a 3 distâncias de lado, a 3 e 6 m/s: o centro e os dois pés dentro da área (a
+//       margem do T2, 0,15 m) em 100% dos passos. (Na partida da cabeceio-ia, semente 10, a esquiva para a frente com o
+//       corpo virado para a bola levou o pé de dentro a 0,42 m do centro, para fora da área: 45 passos.)
 // As partidas seguem `depoisFim` s depois do apito final (como a página: o laço continua com o mundo parado, e o último
 // gol tem a cena dele): o gol nos últimos segundos media a comemoração só até o apito (2,48 s na cópia do domínio).
-// --estresse: 3× as sementes das partidas (72) e do T17 (12).
+// --estresse: 3× as sementes das partidas (72) e do T17 (12); 2× as direções do T18 e do T19.
 // Na versão sem os treinadores (main/saot antes desta frente) os módulos não existem: reprova.
 //   node tools/teste-tecnicos.mjs [--js <pasta js>] [--sementes N] [--par N] [--min M] [--estresse]
 import { fork } from 'node:child_process';
@@ -336,6 +341,45 @@ async function itemT17() {
     `0 fora; 0,25–0,40 s; ≥ 3 s; ≤ 0,6 s; ≤ 0,15 m; ≥ ${fmt(RAIO_CABECA + 0.02, 3)} m`, ruins.length === 0 && maoPasso <= 0.15 && maoCab >= RAIO_CABECA + 0.02);
 }
 
+// ------------------------------------------------------------------------------------------------ T19
+/** A esquiva saindo da quina da área: os pés dentro dela (a margem do T2). */
+async function itemT19() {
+  const { PASSO, CAMPO } = await imp('config.js');
+  const { J } = await imp('anim.js');
+  const NDIR = ESTRESSE ? 32 : 16;
+  const MZp = CAMPO.meioZ + CAMPO.entorno - 0.45;   // o corpo do jogador nunca passa daqui (as placas)
+  let n = 0, ruins = 0, ex = '', pior = Infinity;
+  // a bola parada longe, de lado (ele no limite de x da área): com z ≥ 24 e a ≤ 16 m em x dele, ele recua
+  const lances = [[11.5, 26, 'recuado, a bola para dentro'], [16, 12, 'no lugar, a bola para dentro'], [-40, 12, 'no lugar, a bola para fora'], [-33, 26, 'recuado, a bola para fora']];
+  for (const [bx, bz, nome] of lances) for (let q = 0; q < NDIR; q++) for (const off of [-1.5, 0, 1.5]) for (const v of [3, 6]) {
+    const T = TE.criarTecnicos(null, 3), L = TE.leituraVazia(TE.criarLeitura());
+    L.estado = 'jogo'; L.emJogo = true; L.bola.x = bx; L.bola.y = 0.11; L.bola.z = bz;
+    for (let i = 0; i < 480; i++) { L.nEventos = 0; TE.passoTecnicos(T, L); }
+    const tc = T.tecs[0], a = EF.areaTecnica(tc.time);
+    const ang = 2 * Math.PI * q / NDIR, dx = -Math.cos(ang), dz = -Math.sin(ang);
+    const px = tc.j.x + Math.cos(ang) * 10 - dz * off, pz = tc.j.z + Math.sin(ang) * 10 + dx * off;
+    if (pz > MZp) continue;
+    const mundo = { tick: 0, partida: { estado: 'jogo' }, parada: null, posse: null, naMao: null, voo: null, ataca: [1, -1], placar: [0, 0],
+      bola: { p: { x: bx, y: 0.11, z: bz }, v: { x: 0, y: 0, z: 0 } }, jogadores: [{ id: 106, time: 1, x: px, z: pz, vx: dx * v, vz: dz * v }] };
+    n++;
+    let fora = 0, foraEx = '';
+    for (let k = 0; k < Math.round(4 / PASSO); k++) {
+      const jg = mundo.jogadores[0];
+      jg.x += jg.vx * PASSO; jg.z = Math.min(MZp, jg.z + jg.vz * PASSO); if (jg.z >= MZp) jg.vz = 0;
+      TE.leituraDoMundo(mundo, [], L);
+      TE.passoTecnicos(T, L);
+      const o = tc.atu;
+      for (const [x, z] of [[o[J.tornozeloE * 3], o[J.tornozeloE * 3 + 2]], [o[J.tornozeloD * 3], o[J.tornozeloD * 3 + 2]], [tc.j.x, tc.j.z]]) {
+        pior = Math.min(pior, x - (a.x0 + 0.15), a.x1 - 0.15 - x, z - (a.z0 + 0.15), a.z1 - 0.15 - z);
+        if (!EF.dentroAreaTecnica(tc.time, x, z, 0.15)) { fora++; if (!foraEx) foraEx = `(${fmt(x, 2)}, ${fmt(z, 2)}) com o centro em (${fmt(tc.j.x, 2)}, ${fmt(tc.j.z, 2)})`; }
+      }
+    }
+    if (fora) { ruins++; if (!ex) ex = `${nome}, de ${Math.round(ang * 180 / Math.PI)}°, ${off} m de lado, ${v} m/s: ${fora} pontos fora, o 1º em ${foraEx}`; }
+  }
+  reg('T19 a esquiva saindo da quina da área (sem partida): o centro e os pés dentro da área (margem 0,15 m)',
+    `${n} corridas: ${ruins} com algo fora${ex ? ` (${ex})` : ''}; a menor folga até a margem ${fmt(pior, 3)} m`, '0', ruins === 0);
+}
+
 // ------------------------------------------------------------------------------------------------ T18
 /** Quem corre perto da área técnica e a bola rolando para ela (sem partida; as direções dobram no --estresse). */
 async function itemT18() {
@@ -461,7 +505,7 @@ if (!TE || !EF) {
 
   // ---------------------------------------------------------------- partidas (processos filhos)
   // --so S: só a semente S (diagnóstico); --so-sinteticos: só o T17 e o T18
-  if (args.includes('--so-sinteticos')) { await itemT17(); await itemT18(); console.log(tabelaTexto(linhas)); process.exit(falhas ? 1 : 0); }
+  if (args.includes('--so-sinteticos')) { await itemT17(); await itemT18(); await itemT19(); console.log(tabelaTexto(linhas)); process.exit(falhas ? 1 : 0); }
   const SEMENTES = args.includes('--so') ? [+arg('--so')] : Array.from({ length: NS }, (_, i) => i + 1);
   const res = [];
   const nPar = Math.max(1, Math.min(SEMENTES.length, os.availableParallelism?.() ?? os.cpus().length, +arg('--par', 2)));
@@ -685,6 +729,7 @@ if (!TE || !EF) {
   }
   await itemT17();
   await itemT18();
+  await itemT19();
   console.log(`${res.length} partidas (sementes 1–${NS}) de 2 × ${MIN_TEMPO} min (+ ${DEPOIS_FIM} s depois do apito final), ${nPar} processos, ${((Date.now() - t0) / 1000).toFixed(0)} s${ESTRESSE ? ' (--estresse)' : ''}`);
 }
 

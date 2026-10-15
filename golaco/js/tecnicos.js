@@ -468,7 +468,10 @@ function esquivar(T, tc, L, bx, bz) {
   }
   if (!n) return false;
   const a = tc.area, mz = TC.margem, mx = TC.margemX;
-  const x0 = a.x0 + mx, x1 = a.x1 - mx, z0 = a.z0 + mz, z1 = a.z1 - mz;
+  // (contraprova 15/10: os lugares da esquiva ficam E.borda m mais para dentro dos lados e da frente — saindo em disparada
+  // da quina da área, de lado para o corpo virado para a bola, ou freando na frente dela, o pé pousava até 0,42 m do centro
+  // e saía da área: T2 na partida da cabeceio-ia, T19)
+  const x0 = a.x0 + mx + E.borda, x1 = a.x1 - mx - E.borda, z0 = a.z0 + mz + E.borda, z1 = a.z1 - mz;
   const tv = L.emJogo && b.z > MZ - 12 && b.y < 3;
   // a folga (m além do raio de cada ameaça; até E.folga) indo para (cx, cz), o corpo previsto passo a passo; _tv[0]: o
   // caminho passa pela frente da TV (no plano do x da bola, antes do recuo)
