@@ -1291,21 +1291,33 @@ export const REPLAY = {
   // quadro corta o plano (fica se sobrar ≥ `sobraMin` s reais).
   primeira: {
     vel: 0.6, antes: 0.9, depois: 0.4, frente: 0.085, cima: 0.03, sigmaXZ: 0.08, mediaY: 0.33,
-    prendeXZ: 0.02, yMin: -0.14, yMax: 0.16, sigmaY: 0.22, raioCabeca: 0.148,
+    prendeXZ: 0.02, yMin: -0.14, yMax: 0.16, sigmaY: 0.26, raioCabeca: 0.148, olhoHMin: 0.035,
     baixaAntes: 0.3, baixaDepois: 0.2, puxaAntes: 0.6, puxaGol: 0.35, sigmaOlhar: 0.10, sigmaCabeceio: 0.14,
     giroMax: 85, sigmaGiro: 0.05,
     arfagem: [-60, 15], arfagemAntes: -18, fovH: 90, perto: 0.10, bolaSome: 0.35, corpo: 0.3, sobraMin: 1.2,
     cabeceioOlhaGol: 0.15, puxaCabeceio: 0.5,
+    // a lente a < solidoFolga m de algo sólido (o gol inteiro, as placas...) ou o próprio quadril/pernas a < proprio m dela
+    // também cortam o plano (15/10: o autor que entrava no gol depois de marcar levava a lente para dentro da trave)
+    solidoFolga: 0.12, proprio: 0.25,
+    // m — o alvo do olhar nunca a menos disto à frente do olho na direção do gol (a bola no pé ou por cima da cabeça)
+    pisoFrente: 0.6,
+    // ° — antes do chute, o rumo do olhar a no máximo isto do centro da boca do gol (ela no quadro de 90°); s antes do chute
+    // — o olhar desce do gol para o ponto do contato de desce[0] a desce[1] (em linha, no ângulo) e fica nele até chute + `pe`
+    // (no lugar da troca seca a chute − baixaAntes); nos `desceAntes` s antes da descida, ele já vem baixando até
+    // `arfagemDesce`° (a boca do gol ainda no quadro)
+    golAngMax: 32, desce: [0.30, 0.04], pe: 0.05, desceAntes: 0.3, arfagemDesce: -20,
+    // σ do olhar em volta do chute: [σ s, até ± s do chute, entrando até ± s]
+    sigmaChute: [0.03, 0.08, 0.25],
   },
   // VISÃO DO TREINADOR do time que marcou (render/replay-olhos.js): parte 1 = o que ele vê (olho na cabeça gravada,
-  // gaussiana σ `sigmaOlho`; olhar a meio caminho da bola suavizada e do centro da boca do gol, σ `sigmaOlhar`;
-  // teleobjetiva FIXA no plano com o quadro de `largura` m na distância do gol, fov vertical em [fovMin, fovMax]; ele sai da
-  // lista de desenho), de chute − `antes` a gol + `corte`; parte 2 = corte seco para ele reagindo, de gol + corte a gol +
-  // `fim`: câmera parada no gramado (z = meioZ − `recuoZ`, altura `altura`), girando por gaussiana σ `sigmaGiro` para
-  // segui-lo, fov `fov`° (16:9; ×0,88 no celular), ele no terço esquerdo, a área técnica, o banco e a torcida de cá atrás.
-  // Parte 2 com < `parte2Min` s sai; o plano com < `planoMin` s sai.
+  // gaussiana σ `sigmaOlho` presa a ≤ `prende` m do olho bruto; olhar a meio caminho da bola suavizada e do centro da
+  // boca do gol, σ `sigmaOlhar`; teleobjetiva FIXA no plano com o quadro de `largura` m na distância do gol, fov vertical
+  // em [fovMin, fovMax]; ele sai da lista de desenho), de chute − `antes` a gol + `corte`; parte 2 = corte seco para ele
+  // reagindo, de gol + corte a gol + `fim`: câmera parada no gramado (z = meioZ − `recuoZ`, altura `altura`), girando por
+  // gaussiana σ `sigmaGiro` para segui-lo, fov `fov`° (16:9; ×0,88 no celular), ele no terço esquerdo, a área técnica, o
+  // banco e a torcida de cá atrás. Parte 2 com < `parte2Min` s sai; o plano com < `planoMin` s sai.
   treinador: {
-    vel: 1, antes: 0.8, corte: 0.3, fim: 2.3, frente: 0.10, cima: 0.03, sigmaOlho: 0.1, sigmaOlhar: 0.12, puxaGol: 0.5,
+    vel: 1, antes: 0.8, corte: 0.3, fim: 2.3, frente: 0.10, cima: 0.03, sigmaOlho: 0.1, prende: 0.04, sigmaOlhar: 0.12, puxaGol: 0.5,
     bolaNdc: 0.8, largura: 30, fovMin: 9, fovMax: 24,
     recuoZ: 0.7, altura: 1.5, fov: 30, sigmaGiro: 0.25, terco: 1 / 3, parte2Min: 0.8, planoMin: 1.0,
     dist: [4.5, 9], corpoMin: 0.6,
@@ -1449,14 +1461,20 @@ export const TECNICOS = {
   // margem do centro do corpo dentro da área em z e em x (os pés ficam a ≤ ~0,3 m do centro andando de lado; a régua
   // dos pés é 0,15 m); o recuo (z 39,2) cabe na de z
   margem: 0.5, margemX: 0.55,
-  // esquiva: o caminho previsto da bola (rolagem exata de bola.js) a < `raio` m no próximo `janela` s → sai da linha
-  // até `sai` m dela; jogador previsto a < `jogador` m → afasta
-  esquiva: { raio: 0.75, janela: 1.0, sai: 1.25, alturaMax: 2.3, jogador: 1.6, prevJogador: 1.0 },
+  // esquiva (tecnicos.js esquivar): o caminho previsto da bola (rolagem exata de bola.js) a < `raio` m no próximo `janela` s
+  // ou o de um jogador (por `prevJogador` s, com a curva que ele vem fazendo — até `ladoMax` m/s² de lado —, o raio `jogador`
+  // crescendo ½·`curva`·t², até + curvaMax: ele pode virar diferente) → vai para o lugar da área com a maior folga até
+  // todos (contada até `folga` m; − `tv` com o caminho ou o lugar a < `tvX` m do x da bola perto da linha de cá, antes do
+  // recuo: o raio da TV); os lugares da esquiva a mais `borda` m dos lados e da frente da área (o pé da disparada)
+  esquiva: { raio: 0.75, janela: 1.0, alturaMax: 2.3, jogador: 1.6, prevJogador: 2.0, curva: 1.5, curvaMax: 1.0, folga: 1.2, tv: 0.5, tvX: 0.7, ladoMax: 6, borda: 0.35 },
   // olhar: a cabeça segue a bola até `cabecaMax` rad do tronco; o tronco vem atrás (mola `tronco` s, até `troncoMax` rad
   // do quadril); o corpo de frente para o campo, virando até `corpoMax` rad para o lado da bola
   olhar: { cabecaMax: 1.22, tronco: 0.8, troncoMax: 0.6, corpoMax: 0.75, tau: 0.12, virarAnda: 0.7 },
   mistura: 0.35,              // s — toda troca de gesto mistura as juntas (smoothstep)
   maoPico: 6.5,               // m/s — o pico da mão na troca comum: a mistura cresce com a distância (1,5·d/maoPico)
+  // m/s — o pico da mão nas reações ao gol (comemora/sofreu: explosivas; das costas para o soco no ar) e m — a rede de
+  // segurança: a mão nunca anda mais que isto num passo (o corpo, a torção e o gesto juntos; T5: ≤ 0,15)
+  maoPicoGol: 7.5, maoPassoMax: 0.14,
   arcoMao: 0.25,              // m — a mão que iria pela cabeça na troca comum passa pela frente (o arco no meio dela)
   misturaGol: 0.2,            // s — o gol sofrido: as mãos vão para a cabeça (a comemoração usa comemora.sobe)
   misturaAgacha: 0.7,         // s — agachar e levantar (o corpo inteiro desce 0,3 m; as mãos vão junto)
@@ -1473,7 +1491,9 @@ export const TECNICOS = {
   tensao: 22,                 // m do gol de lá: lance de perigo do time (sem palmas: ele olha a chance)
   reclama: { dura: [1.5, 2.5] },
   lamenta: { dura: [1.5, 2.5], janela: 2.5 },
-  comemora: { comeca: [0.2, 0.23], dura: [4, 6], sobe: 0.2, levanta: 0.3, corre: [3, 6], socos: 2.0, pulo: 0.08, palmas: 2.5 },
+  // comemora: a reação começa em `comeca` s do gol; a mão passa do topo da cabeça em `cruza` s do gol (de qualquer gesto: a
+  // mistura das mãos encurta ou espera; T7: 0,25–0,40)
+  comemora: { comeca: [0.2, 0.23], cruza: [0.28, 0.36], dura: [4, 6], sobe: 0.2, levanta: 0.3, corre: [3, 6], socos: 2.0, pulo: 0.08, palmas: 2.5 },
   sofreu: { comeca: [0.25, 0.3], cabeca: [2, 3], depois: 2, vamos: 1.5 },
   intervalo: { dura: [2, 3] },
   // variantes de cada gesto (nomes para os testes; a ordem é a do sorteio)
