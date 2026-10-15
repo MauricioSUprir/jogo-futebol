@@ -9,7 +9,8 @@
 //   tempo ele leva para voltar a ter a bola à frente e perto (≤ 0,6 m) e se a perdeu para o adversário. Fora da conta
 //   (contaPassou) o corte ou a inversão pedidos — o analógico a mais de INV_ANG (60°) do sentido em que ele vinha — com a
 //   bola até 1 m atrás (o passo de apoio do corte passa da bola). Também mede a bola de passe para outro, lenta, colada
-//   (≤ 0,6 m) no pé de quem não é o recebedor por ≥ 0,2 s sem ele tocar.
+//   (≤ 0,6 m) no pé de quem não é o recebedor por ≥ 0,2 s sem ele tocar, e o domínio marcado que sobra com a bola no pé
+//   de outro (planosVelhos: o plano velho guiava o corpo).
 // Cenas: partida IA × IA (a IA joga pelo humano: entradaDemoPartida) e partida com o humano roteirizado como no
 // celular (sem o MOD, que o celular não tem): a entrada da demo SEM a marca da IA (recebe como humano), e com a bola
 // vindo para o controlado ou com ele conduzindo, o analógico "para a frente" (sentido do ataque, ±30° sorteado por lance)
@@ -90,6 +91,7 @@ export function rodarPartida(Pm, sem, cena, min, opc = {}) {
   const ultToque = new Map(); // id → tick do último toque (evento 'toque' dele)
   const ultDom = new Map();   // id → tick do último domínio
   const casos = [], volta = [], bloqueios = [], bloq = new Map();
+  const velho = new Map(), planosVelhos = []; // id → passos seguidos com o domínio marcado e a bola com outro
   let kf = 0;
   while (m.tick < N) {
     while (opc.fotos && kf < opc.fotos.length && opc.fotos[kf] <= m.tick) { if (opc.fotos[kf] === m.tick) opc.aoFoto(m.tick, structuredClone({ m, st })); kf++; }
@@ -109,7 +111,7 @@ export function rodarPartida(Pm, sem, cena, min, opc = {}) {
     const b = m.bola;
     const vb = Math.hypot(b.v.x, b.v.z);
     // fora do jogo, bola no alto ou na mão: nada conta
-    if ((m.partida && m.partida.estado !== 'jogo') || m.naMao != null || (m.parada && !m.parada.rolou)) { jan.clear(); volta.length = 0; continue; }
+    if ((m.partida && m.partida.estado !== 'jogo') || m.naMao != null || (m.parada && !m.parada.rolou)) { jan.clear(); volta.length = 0; velho.clear(); continue; }
     // acompanhamento de quem passou: até quanto a bola fica atrás dele, se volta a tê-la à frente e perto, se a perde
     for (let k = volta.length - 1; k >= 0; k--) {
       const v = volta[k], c = v.c, j = pid(c.id);
@@ -127,6 +129,18 @@ export function rodarPartida(Pm, sem, cena, min, opc = {}) {
       if (d <= 0.6 && dx * h[0] + dz * h[1] > 0) { c.volta = (m.tick - c.tick) / 60; volta.splice(k, 1); continue; }
       if (m.tick - c.tick > 90) volta.splice(k, 1);
     }
+    // domínio marcado que sobra com a bola no pé de outro (contraprova, 15/10): o plano de um passe ou de uma bola livre que
+    // acabou seguia guiando o corpo (sim.js movimentoRecepcao) — conta o episódio quando ele dura ≥ 2 passos (a posse que
+    // muda no fim de um passo só é vista pelo movimento do passo seguinte)
+    if (m.posse != null) {
+      for (const j of m.jogadores) {
+        const t = j.cond?.toque;
+        if (j.id === m.posse || !t || t.tipo !== 'dominio') { velho.delete(j.id); continue; }
+        const k = (velho.get(j.id) ?? 0) + 1;
+        velho.set(j.id, k);
+        if (k === 2) planosVelhos.push({ sem, tick: m.tick, id: j.id, hum: j.id === m.controlado[0], modo: t.modo, s: Math.hypot(j.vx, j.vz) });
+      }
+    } else velho.clear();
     if (b.p.y > 0.35) { jan.clear(); bloq.clear(); continue; }
     // bola de passe para outro, lenta e no chão, colada no pé de quem não é o recebedor (≤ 0,6 m) por ≥ 0,2 s sem ninguém
     // tocar: o recebedor com o domínio só marcado tira a vez de quem está na bola (sim.js bolaLivre)
@@ -202,7 +216,7 @@ export function rodarPartida(Pm, sem, cena, min, opc = {}) {
     }
     if ((opc.parar && casos.length >= opc.parar) || (opc.ate && m.tick >= opc.ate)) break;
   }
-  return { casos, bloqueios, minutos: 2 * min };
+  return { casos, bloqueios, planosVelhos, minutos: 2 * min };
 }
 
 const f2 = (x, n = 2) => (x == null ? '-' : (+x).toFixed(n));
