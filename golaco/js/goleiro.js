@@ -245,6 +245,10 @@ const idDefesa = d => (d.lido ?? -1) * 4096 + d.tick;
 export function aplicarDefesa(m, j) {
   const d = j.defesa;
   if (!d || d.fora || m.tick !== d.tick - 1) return;
+  // bola morta (partida: impedimento ou falta apitados com o chute no ar, a parada ainda sem cobrar — Regra 9.2): não há
+  // defesa, ninguém fica com a bola; o goleiro só segue o mergulho desenhado (teste-partida C: na semente 1 o chute do
+  // impedido ia para as mãos dele 30 passos antes da montagem do tiro livre)
+  if (m.parada && !m.parada.rolou) { d.fora = true; return; }
   if (!d.sucesso) { m.eventos.push({ tipo: 'goleiroBatido', id: j.id }); return; }
   const b = m.bola;
   // a bola não está onde a defesa foi lida (desviou num corpo, na trave ou num domínio depois da leitura): não há
