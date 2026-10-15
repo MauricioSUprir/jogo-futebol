@@ -26,7 +26,7 @@
 //  - roteiro trote: chegada à área nas arrancadas do próprio campo ≤ 5% (binomial, p < 5%).
 //   node tools/teste-defesa-corrida.mjs                 (lógica do repositório)
 //   node tools/teste-defesa-corrida.mjs --js <pasta>    (outra cópia, ex.: a base — tem de REPROVAR)
-//   --sementes N (sprint; padrão 12) · --trote N (padrão 6) · --sem0 K (padrão 101) · --par N (processos; padrão 4)
+//   --sementes N (sprint; padrão 24) · --trote N (padrão 6) · --sem0 K (padrão 101) · --par N (processos; padrão 4)
 import { fork } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -166,7 +166,9 @@ if (args.includes('--filho')) {
   process.exit(0);
 }
 
-const NS = +arg('--sementes', 12), NT = +arg('--trote', 6), S0 = +arg('--sem0', 101);
+// (sprint com 24 partidas: com 12 os gols do roteiro sprint iam de 1,42 a 1,67 por partida entre versões que não mexem na
+// defesa da arrancada — a meta de 1,5 reprovava por sorteio; com 24, a partida do 9933ea0e dá 1,21; 15/10)
+const NS = +arg('--sementes', 24), NT = +arg('--trote', 6), S0 = +arg('--sem0', 101);
 const nPar = Math.max(1, +arg('--par', Math.min(4, os.availableParallelism?.() ?? os.cpus().length)));
 const tarefas = [...Array.from({ length: NS }, (_, k) => ({ s: S0 + k, rot: 'sprint' })), ...Array.from({ length: NT }, (_, k) => ({ s: S0 + k, rot: 'trote' }))];
 const res = [];

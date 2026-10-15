@@ -289,11 +289,15 @@ sobra some até o pouso (`teste-cabeceio` F4: 3 quadros acima do limite → 0, p
 raros (`hash-igual`: ataque-roteiro diferente a partir do passo 4800 da semente 3, um pulo com o pé no ar).
 
 Defeitos da câmera e dos treinadores que os gols da partida do #471 expuseram (CI do 9933ea0e; desenho, o hash da partida
-não muda, menos o T13, que era da IA):
-- `teste-tecnicos` T13 (treinador × jogador ≥ 0,5 m): o ponto calmo da IA (`ia-tatica.js alvoCalmo`) gira aos poucos e, com
-  a bola saindo pela lateral, o caminho girado levava o jogador 106 em arco 4,7 m para fora da linha, pela área técnica (0,46
-  m do treinador, semente 7). Agora o giro que sairia do campo com o alvo dentro vira de uma vez: mín 0,46 → 2,23 m. Muda a
-  partida (o painel do CI roda de novo); o treino fica igual (`alvoCalmo` só existe com `m.times`).
+não muda):
+- `teste-tecnicos` T13 (treinador × jogador ≥ 0,5 m) — PENDENTE: o ponto calmo da IA (`ia-tatica.js alvoCalmo`) gira aos
+  poucos e, com a bola saindo pela lateral, o caminho girado levava o jogador 106 em arco 4,75 m para fora da linha, pela
+  área técnica, a 6,5 m/s junto do fundo dela (0,46 m do treinador, semente 7). O treinador não tem para onde fugir (está no
+  fundo da área e o jogador passa entre ele e o campo). Corrigir na IA (o giro que sairia do campo vira de uma vez:
+  mín 0,46 → 2,23 m, 216fac2c) dispara em ~3/4 das partidas — mesmo só dentro da área técnica — e reembaralha a amostra de
+  todos os testes da partida: no CI do 216fac2c reprovaram por pouco 4 que passavam (trote da IA 0,60 m, meta ≤ 0,59;
+  tiros livres no alvo 17,7%, meta ≥ 18%; interceptações 10,00, meta ≥ 10,25; PRESSÃO M4). Voltou a partida do 9933ea0e; o
+  caso fica com a correção dos treinadores robustos da main (golaco/replay-robusto) ou com uma rodada própria de IA.
 - T5 (mão ≤ 0,15 m por passo): a reação ao gol misturava as juntas em 0,2 s fixos e a mão que vinha das costas para os
   braços em V corria 9 m/s (0,152 m num passo). A mistura da reação cresce com o caminho da mão (`TECNICOS.maoPicoGol` 8,1
   m/s no pico do smoothstep, a mesma conta da troca comum): 0,152 → 0,146 m, com a mão acima da cabeça ainda em 0,28–0,37 s.
@@ -303,7 +307,17 @@ não muda, menos o T13, que era da IA):
 - `teste-replay-anel` G9 (olho do treinador ≤ 0,15 m da cabeça): no pulo/agachar de uma vez da reação ao gol o atraso da
   gaussiana levava a lente a 0,157 m. O olho suavizado fica a ≤ 4 cm do bruto (`REPLAY.treinador.olhoMax`).
 - G8 (≥ 48 gols com autor na amostra): com ~1,6 gol por partida, 28 partidas davam 44; a amostra cresceu para 36.
-- G7 (a boca do gol no quadro da 1ª pessoa em chute − 0,5 s; apareceu com a trajetória nova do T13, semente 9): o
+- G7 (a boca do gol no quadro da 1ª pessoa em chute − 0,5 s; apareceu com a trajetória do 216fac2c, semente 9 — o caso real
+  fica corrigido mesmo sem ela): o
   cruzamento rasteiro chegava a 140° do gol e, puxando o olhar 60% da bola para o gol, a boca do gol ficava a 54° do centro
   (fora dos 45° do quadro). O olhar antes do chute fica a ≤ 30° da boca do gol na horizontal (`REPLAY.primeira.golAntes`):
   54 → 38°, no quadro nas três telas.
+
+Candidato do passe certo sem o corte por zona (o que sobrou do 9080b9ba): `IA_ATAQUE.riscoMentalidade` × 1,2 (o condutor
+aceita mais risco no passe para a frente; Opta/PL: 28,7% dos passes terminam no último terço, aqui ~9%) e
+`utilidade.cruzamentoP` com um na área 0,06 → 0,2 (The Analyst: ~3,7% dos passes são cruzamentos, aqui ~1,3%). Na partida do
+9933ea0e, `teste-intercepta` A (12 partidas, sementes 301–312): passe certo 86,7 → 86,0%, interceptações 10,79 → 10,25 (meta
+≥ 10,25: no limite), último terço 9,4 → 11,0% dos passes, cruzamentos 1,3 → 2,4%, chutes por partida 6,6 → 8,5. O
+`teste-defesa-corrida` reprovava os gols do roteiro sprint com 12 partidas (1,58; a mesma conta foi de 1,42 a 1,67 entre
+versões que não mexem na defesa da arrancada): com 24 partidas, 1,21 (9933ea0e) → 1,29 (candidato), meta ≤ 1,5 — a amostra
+cresceu para 24. Decisão pelo painel de 144 do CI.

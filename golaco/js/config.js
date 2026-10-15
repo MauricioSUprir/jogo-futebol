@@ -1195,7 +1195,9 @@ export const IA_ATAQUE = {
   //  - enfiada: no ponto da corrida a enfiadaLeads m do corredor (a força sai do ponto): rasteira a
   //    vEnfiada m/s (cortável no caminho) ou alta por cima da linha a vEnfiadaAlta m/s (× enfiadaAltaP);
   //  - lançamento: chance lancamentoP (bola alta disputada);
-  //  - cruzamento: chance cruzamentoP[n] com n de linha na área (ou a ≤ cruzamentoRaio m dela, entrando)
+  //  - cruzamento: chance cruzamentoP[n] com n de linha na área (ou a ≤ cruzamentoRaio m dela, entrando) (15/10: com um só
+  //    na área 0,06 → 0,2 — o time quase não cruzava: ~1,3% dos passes, a PL cruza ~3,7%, 34,7 por jogo, 24% certos, The
+  //    Analyst; com o cabeceio na bola rolando o cruzamento para um rende gol de cabeça)
   //    e valor cruzamentoV;
   //  - chute: xG = xgA·θ^xgB (θ = ângulo da boca do gol, teto xgMax) × (1 − bloqueio·risco da linha)
   //    × chute (× chuteLonge de fora da área) − chutePosse·posse; mira a miraPoste m do poste longe do
@@ -1218,13 +1220,15 @@ export const IA_ATAQUE = {
   utilidade: {
     posse: 0, posseMeuCampo: 0.025, posseRetomada: [0.02, 2], vPasse: 12, vEnfiada: 15, vChute: 25, passeMax: 40, erroDist: 0.25, pressaoRecebe: 3.5, pressaoValor: 0.5,
     passePress: 0.2, impedido: 0.3, enfiadaLeads: [6, 10, 14], vEnfiadaAlta: 13, enfiadaAltaP: 0.7, lancamentoP: 0.5, cruzamentoV: 0.35,
-    cruzamentoP: [0.01, 0.06, 0.35, 0.4], cruzamentoRaio: 1,
+    cruzamentoP: [0.02, 0.2, 0.4, 0.45], cruzamentoRaio: 1,
     xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 3.0, chuteLonge: 0.25, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
     passoAngConduz: 0.5, conduzDist: 5, conduz: 0.85, conduzSolta: [1.5, 4, 0.35], vConduz: 5.5, magConduz: 0.9,
     manterRaio: 3, manterPeso: 0.7, manterLado: 0.4, manterTerco: { u: 17.5, peso: 0.55, lado: 0.25 }, manterArea: [0.95, 0.7], manterPerto: 9,
     protegeDist: 1.5, protegeP: 0.7, protegeMax: 1.0, correrLivre: 10, correrAte: 25, curtaPerto: 2.5,
   },
-  riscoMentalidade: [0.8, 0.9, 1.0, 1.1, 1.25], // risco de passe aceito, por mentalidade (−2..+2)
+  // (15/10, passe certo e volume de ataque com a defesa que corta o passe: ×1,2 — o time que só tocava para o lado acertava
+  // 86,7% e só ~9% dos passes terminavam no último terço; PL 2019/20: 28,7%, o mínimo da série Opta desde 2006/07)
+  riscoMentalidade: [0.96, 1.08, 1.2, 1.32, 1.5], // risco de passe aceito, por mentalidade (−2..+2)
   // faixa do cruzamento (|z| > zLateral, u > xTerco); o ataque à área começa com a bola em u > xAtiva e
   // |z| > zAtiva (quem vai precisa de tempo para chegar)
   cruzamento: { zLateral: 20.16, xTerco: 30, zAtiva: 15, xAtiva: 17.5 },
