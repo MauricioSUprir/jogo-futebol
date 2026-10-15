@@ -12,13 +12,19 @@
 //    o plano inteiro, sem tremer);
 //  - 'saot': a ANÁLISE semiautomática (replay-saot.js): o quadro do passe congelado, só os jogadores do lance, a câmera
 //    em órbita do alto até o quadro final oblíquo e fora do centro (calculado uma vez por roteiro), parede, plano, pulsos
-//    e a decisão (`cena(dt)` diz ao main.js o que desenhar; o selo vai para o terço de baixo do HUD).
+//    e a decisão (`cena(dt)` diz ao main.js o que desenhar; o selo vai para o terço de baixo do HUD);
+//  - 'primeira' (12/10): a 1ª PESSOA do autor do gol (replay-olhos.js: o olho na cabeça gravada, estabilizado, e o olhar
+//    na bola e no gol), campo de visão HORIZONTAL de 90° fixo, plano de recorte próximo de 0,10 m; `desenho()` diz ao main.js
+//    que o autor fica sem cabeça e tronco (ocultar) e quando a bola some (perto da lente);
+//  - 'treinador' (12/10): a VISÃO DO TREINADOR do time que marcou — parte 1, o que ele vê (teleobjetiva fixa; ele sai da
+//    lista de desenho) e, no `corte`, a parte 2: ele reagindo, da câmera parada no gramado (replay-olhos.js).
 // Pós-gol: o gol fica PENDENTE (aoGol) e o replay só entra quando o pós-gol chega na vez dele (depoisDoGol). Hoje
 // quem chama é a saída de bola; a cena de comemoração (outra frente) entra ANTES e chama depoisDoGol quando acabar.
 import * as THREE from 'three';
 import { CAMPO, REPLAY } from '../config.js';
 import { criarCamera } from './camera.js';
 import { jogadorNoTick, defensorDaLinha, bolaNoTick } from './replay-anel.js';
+import { cameraPrimeira, cameraTreinador, fovVerticalDe, cameraLateral, tecnicosNoTick, zLateralDoPlano } from './replay-olhos.js';
 import {
   roteiroGol, roteiroImpedimento, roteiroMenu, duracao, criarRelogio, iniciarRelogio, pararRelogio, avancarRelogio,
   planoAtual, velocidadeAgora, linhaDoReplay, tempoSaot, roteiroLegalTeste,
@@ -48,11 +54,17 @@ export function criarDiretor({ anel, aspecto }) {
   // análise semiautomática: o quadro final (uma vez por roteiro), a câmera da órbita, a fase e o que desenhar
   const enqS = {}, camS = {}, faseS = {};
   let planoS = null, ultimoImped = null, reduzir = false, reduzirForcado = null;
+  // 1ª pessoa e treinador: a câmera do quadro e o que o main.js desenha diferente (ocultar o autor, tirar o treinador,
+  // esconder a bola perto da lente)
+  const camP = {}, camT = {}, _tecs = [], _lat = { x: 0, y: 0, z: 0 };
+  const desenhoX = { ocultar: null, sem: null, semBola: false };
   const cenaS = {
     ativa: false, tipo: null, ids: [], parede: 0, plano: 0, pulsoDef: 0, pulsoAtac: 0, batidaDef: 0, batidaAtac: 0, cor: 0,
     selo: 0, decidido: false, mesmaLinha: false, fase: null, t: 0, cena: null,
   };
   const _cenaInativa = { ativa: false };
+  /** "Reduzir movimento" agora (o forçado dos testes, senão o do sistema): sem 1ª pessoa no roteiro do gol. */
+  const reduzirAgora = () => reduzirForcado ?? (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   /** fov vertical de um plano fixo: f em 16:9 ou mais largo; mais estreito abre para a mesma largura. */
   function fovFixo(f) {
@@ -60,8 +72,8 @@ export function criarDiretor({ anel, aspecto }) {
     if (a >= ASPECTO_TV) return f;
     return (2 * Math.atan(Math.tan((f * Math.PI) / 360) * ASPECTO_TV / a) * 180) / Math.PI;
   }
-  function ajustarFov(f) {
-    if (Math.abs(camera.fov - f) > 1e-4 || camera.aspect !== aspectoAtual) { camera.fov = f; camera.aspect = aspectoAtual; camera.updateProjectionMatrix(); }
+  function ajustarFov(f, perto = 0.5) {
+    if (Math.abs(camera.fov - f) > 1e-4 || camera.aspect !== aspectoAtual || camera.near !== perto) { camera.fov = f; camera.aspect = aspectoAtual; camera.near = perto; camera.updateProjectionMatrix(); }
   }
 
   /**
@@ -122,10 +134,31 @@ export function criarDiretor({ anel, aspecto }) {
       const Lt = REPLAY.lateral;
       if (corte) seg.cx = seg.lx - s * Lt.recuo;
       seg.cx += (seg.lx - s * Lt.recuo - seg.cx) * k;
-      camera.position.set(seg.cx, Lt.altura, CAMPO.meioZ + Lt.fora);
+      // nunca dentro de um treinador gravado: com um deles perto do caminho dela no plano, ela fica na frente da área técnica
+      // o plano INTEIRO (o z é decidido uma vez por plano: antes pulava 2,5 m no meio dele); e sempre a ≥ 0,6 m deles
+      if (seg.planoLat !== p) { seg.planoLat = p; seg.zLat = zLateralDoPlano(anel, p.de, p.ate, s); }
+      cameraLateral(seg.cx, tecnicosNoTick(anel, Math.round(rel.t), _tecs), _lat, seg.zLat);
+      camera.position.set(_lat.x, _lat.y, _lat.z);
       camera.lookAt(seg.lx, 0.9, seg.lz);
       ajustarFov(fovFixo(Lt.fov));
       _foco.x = seg.lx; _foco.z = seg.lz;
+      return _foco;
+    }
+    if (p.cam === 'primeira' && p.enq) {
+      cameraPrimeira(p.enq, rel.t, camP);
+      camera.position.set(camP.x, camP.y, camP.z);
+      camera.lookAt(camP.lx, camP.ly, camP.lz);
+      ajustarFov(fovVerticalDe(camP.fovH, aspectoAtual), REPLAY.primeira.perto);
+      _foco.x = camP.x; _foco.z = camP.z;
+      return _foco;
+    }
+    if (p.cam === 'treinador' && p.enq) {
+      cameraTreinador(p.enq, rel.t, aspectoAtual, pequena, camT);
+      camera.position.set(camT.x, camT.y, camT.z);
+      camera.lookAt(camT.lx, camT.ly, camT.lz);
+      ajustarFov(camT.fov);
+      // a sombra acompanha o que o quadro mostra: na parte 1 o campo lá longe; na parte 2 ele
+      _foco.x = camT.parte === 1 ? clamp(camT.lx, -CAMPO.meioX, CAMPO.meioX) : camT.lx; _foco.z = camT.parte === 1 ? clamp(camT.lz, -CAMPO.meioZ, CAMPO.meioZ) : camT.lz;
       return _foco;
     }
     if (p.cam === 'saot') {
@@ -170,6 +203,11 @@ export function criarDiretor({ anel, aspecto }) {
         quadros: rel.quadros, duracao: duracao(ro), golaco: !!ro?.golaco, fotoTick: ro?.fotoTick ?? null, linhaX: ro?.linhaX ?? null,
         chuteTick: ro?.chuteTick ?? null, golTick: ro?.golTick ?? null, de: p?.de ?? null, ate: p?.ate ?? null,
         checagem: !!ro?.checagem, cams: ro ? ro.planos.map(q => q.cam) : [], saot,
+        // 1ª pessoa e treinador: o autor, o treinador, o corte e a parte agora, o campo de visão
+        autor: p?.cam === 'primeira' ? p.autor : null, tecnico: p?.cam === 'treinador' ? p.tecnico : null, corte: p?.corte ?? null,
+        parte: p?.cam === 'treinador' ? (p.corte != null && rel.t >= p.corte ? 2 : 1) : null,
+        fovH: p?.cam === 'primeira' ? REPLAY.primeira.fovH : p?.cam === 'treinador' && p.enq ? p.enq.fovH : null,
+        duracoes: ro ? ro.planos.map(q => +(q.congela ? 0 : (q.ate - q.de) / 60 / q.vel).toFixed(3)) : [],
       };
     },
     redimensionar(a, peq) {
@@ -178,17 +216,20 @@ export function criarDiretor({ anel, aspecto }) {
       if (planoS && rel.ativo) enquadrarSaot(anel, planoS.saot, aspectoAtual, enqS);
     },
     // ---------------------------------------------------------------- gatilhos
-    /** Gol (evento 'gol'): fica pendente até o pós-gol chegar na vez do replay. g = {golTick, chuteTick, lado}. */
+    /**
+     * Gol (evento 'gol'): fica pendente até o pós-gol chegar na vez do replay. g = {golTick, chuteTick, lado, time, autor,
+     * contra, desvio, tipoChute}.
+     */
     aoGol(g) { gol = { ...g }; ultimoGol = gol; },
     get golPendente() { return gol; },
     /**
      * GANCHO DO PÓS-GOL: o roteiro do replay do gol pendente (e o esquece), ou null. Ordem da transmissão: gol →
      * comemoração (outra frente: chama isto quando acabar) → replay → saída de bola. Hoje quem chama é a saída.
      */
-    depoisDoGol() { const g = gol; gol = null; return g ? roteiroGol(anel, g) : null; },
+    depoisDoGol() { const g = gol; gol = null; return g ? roteiroGol(anel, { ...g, reduzirMovimento: reduzirAgora() }) : null; },
     descartarGol() { gol = null; },
     /** Roteiro do último gol de novo (API e prints; golaco força o plano lateral). */
-    reverGol(golaco) { return ultimoGol ? roteiroGol(anel, { ...ultimoGol, golaco: golaco ?? undefined }) : null; },
+    reverGol(golaco, opc = {}) { return ultimoGol ? roteiroGol(anel, { ...ultimoGol, golaco: golaco ?? undefined, reduzirMovimento: reduzirAgora(), ...opc }) : null; },
     /** Roteiro do impedimento ({fotoTick, apitoTick, linhaX, idImpedido, time, lado, defensor, por}); guarda o último. */
     impedimento(i) { ultimoImped = { ...i }; return roteiroImpedimento(anel, i); },
     /** Roteiro do "Replay" da pausa (últimos 10 s; com a checagem de posição legal no fim, se houver). */
@@ -243,6 +284,25 @@ export function criarDiretor({ anel, aspecto }) {
       cenaS.batidaDef = faseS.batidaDef; cenaS.batidaAtac = faseS.batidaAtac; cenaS.cor = faseS.cor; cenaS.selo = faseS.selo;
       cenaS.decidido = faseS.decidido; cenaS.fase = faseS.fase; cenaS.t = faseS.t;
       return cenaS;
+    },
+    /**
+     * O que o quadro do replay desenha diferente (12/10): {ocultar: id do autor na 1ª pessoa (sem cabeça e tronco), sem: id do
+     * treinador fora da lista (parte 1 da visão dele), semBola: a bola perto da lente (1ª pessoa)}.
+     */
+    desenho() {
+      const p = planoAtual(rel);
+      desenhoX.ocultar = null; desenhoX.sem = null; desenhoX.semBola = false;
+      if (p && p.cam === 'primeira' && p.enq) { desenhoX.ocultar = p.autor; cameraPrimeira(p.enq, rel.t, camP); desenhoX.semBola = camP.bolaSome; }
+      if (p && p.cam === 'treinador' && !(p.corte != null && rel.t >= p.corte)) desenhoX.sem = p.tecnico;
+      return desenhoX;
+    },
+    /** A câmera da 1ª pessoa / do treinador no tick fracionário t do plano atual (testes): {x, y, z, lx, ly, lz, fov | fovH, parte}. */
+    cameraExtra(t = rel.t) {
+      const p = planoAtual(rel);
+      if (!p || !p.enq) return null;
+      if (p.cam === 'primeira') return { ...cameraPrimeira(p.enq, t, {}), fov: fovVerticalDe(REPLAY.primeira.fovH, aspectoAtual) };
+      if (p.cam === 'treinador') return { ...cameraTreinador(p.enq, t, aspectoAtual, pequena, {}) };
+      return null;
     },
     /** "Reduzir movimento" (testes: força; null volta a seguir o sistema no próximo roteiro). */
     set reduzirMovimento(v) { reduzirForcado = v == null ? null : !!v; if (v != null) reduzir = !!v; },

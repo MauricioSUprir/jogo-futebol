@@ -11,9 +11,14 @@
 // semiautomática congelada no passe (P2 'saot': render/replay-saot.js; Premier League/FA 2025, FIFA 2022). A checagem de
 // POSIÇÃO LEGAL (a mesma análise, verde) entra no fim do replay do gol e do "Replay" da pausa quando o lance foi
 // apertado (replay-saot.js checagemLegal). Um plano 'saot' é SÓ congelado (de = ate = o passe; congela.s = a análise).
+// 3ª e 4ª câmeras do gol (pedidos do dono de 12/10): depois de TV, atrás [e lateral] entram a 1ª PESSOA do autor
+// ('primeira', 0,6×) e a VISÃO DO TREINADOR do time que marcou ('treinador', 1×, com o `corte` da parte 1 — o que ele vê —
+// para a parte 2 — ele reagindo), com orçamento próprio (REPLAY.gol.extras); a checagem de posição legal continua por
+// último. Os planos de antes ficam campo a campo iguais (planosExtrasGol só acrescenta).
 import { REPLAY, CAMPO } from '../config.js';
-import { bolaNoTick } from './replay-anel.js';
+import { bolaNoTick, jogadorNoTick } from './replay-anel.js';
 import { cenaImpedimento, checagemLegal, faseSaot, duracaoSaot } from './replay-saot.js';
+import { enquadrarPrimeira, enquadrarTreinador, corpoNaLente } from './replay-olhos.js';
 
 const s60 = s => Math.round(s * 60);
 const _b = { x: 0, y: 0, z: 0 };
@@ -47,14 +52,23 @@ export function ehGolaco(anel, chuteTick, lado) {
  * fim (REPLAY.saot.legal.dura s) e o orçamento cresce REPLAY.saot.extraGol s (12 → 13 s; golaço 14 → 15): primeiro
  * encolhe o plano de TV (nunca começando depois de 0,5 s antes do passe checado), depois o de trás do gol; se ainda não
  * couber, sai sem checagem. Sem checagem o roteiro é exatamente o de antes.
+ * Extras (12/10; g.extras === false desliga): g.autor (id do autor de verdade), g.contra, g.desvio, g.tipoChute ('chute' |
+ * 'cabeceio'), g.reduzirMovimento — a 1ª pessoa e a visão do treinador entram antes da checagem (planosExtrasGol).
  */
 export function roteiroGol(anel, g) {
   const base = montarGol(anel, g, null);
-  if (!base || g.time == null || g.checagem === false) return base;
-  // o passe checado tem de caber no plano de TV com 0,5 s antes dele: a partir do começo mais cedo possível da TV
-  const cena = checagemLegal(anel, { golTick: g.golTick, time: g.time, lado: g.lado, de: base.iniTV + 30 });
-  if (!cena) return base;
-  return montarGol(anel, g, cena) ?? base;
+  let r = base;
+  if (base && g.time != null && g.checagem !== false) {
+    // o passe checado tem de caber no plano de TV com 0,5 s antes dele: a partir do começo mais cedo possível da TV
+    const cena = checagemLegal(anel, { golTick: g.golTick, time: g.time, lado: g.lado, de: base.iniTV + 30 });
+    if (cena) r = montarGol(anel, g, cena) ?? base;
+  }
+  // 3ª e 4ª câmeras: logo antes da checagem (que fica por último); a parte antiga não muda (orçamento próprio)
+  if (r && g.extras !== false) {
+    const ex = planosExtrasGol(anel, { ...g, chuteTick: g.chuteTick != null && anel.slot(g.chuteTick) >= 0 ? g.chuteTick : null }, r);
+    if (ex.length) { const i = r.planos.findIndex(p => p.cam === 'saot'); r.planos.splice(i < 0 ? r.planos.length : i, 0, ...ex); }
+  }
+  return r;
 }
 
 /** Os planos do gol; `chk` = a cena de posição legal (null: o roteiro de sempre). Null se não couber. */
@@ -101,6 +115,76 @@ function montarGol(anel, g, chk) {
   Object.defineProperty(r, 'iniTV', { value: iniTV, enumerable: false });
   if (chk) { r.planos.push(planoSaot(chk)); r.checagem = true; }
   return r;
+}
+
+const durPlano = p => (p.ate - p.de) / 60 / p.vel;
+/**
+ * Os planos extras do replay do gol (12/10): a 1ª PESSOA do autor e a VISÃO DO TREINADOR do time que marcou. g = {golTick,
+ * chuteTick (null = sem chute), lado, time, autor, contra, desvio, tipoChute, reduzirMovimento}; base = o roteiro de antes
+ * (os planos dele não mudam). Regras:
+ *  - nenhum plano atravessa um corte (começa depois do último antes do chute; acaba antes do primeiro depois do gol);
+ *  - 1ª pessoa: chute − antes a gol + depois, 0,6× (sem gol contra, sem autor ou chute no anel, sem "reduzir movimento");
+ *    outro corpo a < 0,3 m da lente no quadro corta o fim dela (fica se sobrar ≥ sobraMin s reais; senão sai);
+ *  - treinador (id 210 + time): parte 1 de chute − antes até gol + corte, parte 2 até gol + fim (sem lugar para a câmera ou
+ *    com < parte2Min s, sai só a parte 2); o plano com < planoMin s sai;
+ *  - extras ≤ REPLAY.gol.extras.maximo s: encolhe o começo da 1ª pessoa (até chute − primeiraMin), o fim da parte 2 (até
+ *    gol + parte2Min) e o começo da parte 1 (até chute − parte1Min), nessa ordem.
+ * Cada plano leva o enquadramento (replay-olhos.js) fora da enumeração (o roteiro impresso fica pequeno).
+ */
+export function planosExtrasGol(anel, g, base) {
+  const out = [];
+  if (!base || g.time == null) return out;
+  const F = REPLAY.primeira, Tr = REPLAY.treinador, X = REPLAY.gol.extras;
+  const { golTick, lado } = g;
+  const chute = g.chuteTick != null && anel.slot(g.chuteTick) >= 0 ? g.chuteTick : null;
+  const cDepois = anel.primeiroCorte(golTick + 1, Math.min(anel.ultimo, golTick + s60(Math.max(Tr.fim, F.depois) + 0.5)));
+  const fimMax = cDepois != null ? cDepois - 1 : anel.ultimo;
+  // o começo: depois do último corte ATÉ O GOL (contraprova 15/10: um corte entre o chute e o gol — o autor levado longe no
+  // passo seguinte ao chute, como no gol roteirizado dos testes — era atravessado: a 1ª pessoa começava no autor do outro
+  // lado do campo e a câmera pulava 52 m no meio do plano)
+  const inicio = t => { let de = Math.max(anel.primeiro, t); const c = anel.ultimoCorte(de, golTick); if (c != null) de = c; return de; };
+  // 1ª pessoa (só com a corrida antes do chute no anel: ≥ extras.primeiraMin s dela depois do último corte)
+  let prim = null;
+  if (chute != null && !g.contra && !g.reduzirMovimento && g.autor != null && jogadorNoTick(anel, chute, g.autor)) {
+    prim = { de: inicio(chute - s60(F.antes)), ate: Math.min(fimMax, golTick + s60(F.depois)), vel: F.vel, cam: 'primeira', autor: g.autor, chuteTick: chute, golTick, lado: lado >= 0 ? 1 : -1, tipoChute: g.tipoChute ?? 'chute', desvio: !!g.desvio };
+    if (prim.ate <= prim.de || prim.de > chute - s60(X.primeiraMin)) prim = null;
+  }
+  // treinador do time que marcou (no gol contra, o que ganhou o gol: g.time)
+  let tr = null;
+  const tec = 210 + (g.time === 1 ? 1 : 0);
+  const ref = chute ?? Math.max(anel.primeiro, golTick - 45);
+  if (jogadorNoTick(anel, golTick, tec)) {
+    const corte = golTick + s60(Tr.corte);
+    tr = { de: inicio(ref - s60(Tr.antes)), corte: corte <= fimMax ? corte : null, ate: Math.min(fimMax, golTick + s60(Tr.fim)), vel: Tr.vel, cam: 'treinador', tecnico: tec, golTick, chuteTick: ref, lado: lado >= 0 ? 1 : -1 };
+    if (tr.corte == null || (tr.ate - tr.corte) / 60 < Tr.parte2Min) { tr.ate = Math.min(tr.ate, tr.corte ?? tr.ate); tr.corte = null; }
+  }
+  // orçamento dos extras
+  const total = () => (prim ? durPlano(prim) : 0) + (tr ? durPlano(tr) : 0);
+  let exc = total() - X.maximo;
+  if (exc > 0 && prim) { const lim = Math.max(prim.de, chute - s60(X.primeiraMin)); prim.de = Math.min(lim, prim.de + Math.ceil(exc * 60 * prim.vel)); exc = total() - X.maximo; }
+  if (exc > 0 && tr && tr.corte != null) { const lim = tr.corte + s60(X.parte2Min); tr.ate = Math.max(Math.min(tr.ate, lim), tr.ate - Math.ceil(exc * 60 * tr.vel)); exc = total() - X.maximo; }
+  if (exc > 0 && tr) { const lim = Math.max(tr.de, ref - s60(X.parte1Min)); tr.de = Math.min(lim, tr.de + Math.ceil(exc * 60 * tr.vel)); exc = total() - X.maximo; }
+  if (exc > 1e-9 && prim) { prim = null; }
+  // enquadramentos (e o corte pela lente na 1ª pessoa)
+  if (prim) {
+    let e = enquadrarPrimeira(anel, prim);
+    if (e) {
+      const t = corpoNaLente(anel, e, F.corpo, prim.autor);
+      if (t >= 0) {
+        if ((t - 1 - prim.de) / 60 / prim.vel >= F.sobraMin) { prim.ate = t - 1; prim.cortadoPelaLente = true; e = enquadrarPrimeira(anel, prim); }
+        else e = null;
+      }
+    }
+    if (e) { Object.defineProperty(prim, 'enq', { value: e, enumerable: false, writable: true }); out.push(prim); }
+  }
+  if (tr && durPlano(tr) >= Tr.planoMin) {
+    const e = enquadrarTreinador(anel, tr);
+    if (e) {
+      if (tr.corte != null && !e.parte2) { tr.ate = tr.corte; tr.corte = null; e.corte = null; e.ate = tr.ate; }
+      if (durPlano(tr) >= Tr.planoMin) { Object.defineProperty(tr, 'enq', { value: e, enumerable: false, writable: true }); out.push(tr); }
+    }
+  }
+  return out;
 }
 
 /** O plano da análise semiautomática: só congelado no passe (de = ate), a câmera 'saot', `cena` de replay-saot.js. */

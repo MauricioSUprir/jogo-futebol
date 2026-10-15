@@ -430,6 +430,21 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   intervalo > 150 ms ou 1º toque ≥ 0,18 s = chute. hash-igual IGUAL; hash-partida: demo IGUAL, humano IGUAL com a janela zerada e a cavadinha
   desligada (só a cavadinha muda a partida). Teste: `teste-cavadinha` (padrão; `--js` mede a base) e `teste-controles`
   (K, B, CHUTE duas vezes, reaperto no mesmo quadro, repetição da tecla, toque cancelado). Pesquisa: `PESQUISA-ETAPA2.md` §2.7a.
+- **Área técnica, treinadores e as câmeras 3 e 4 do replay do gol** (pedidos de 12/10; `PESQUISA-ESTADIO.md` §12–§13,
+  contrato "Área técnica, treinadores e as câmeras 3 e 4" no `CONTRATOS.md`): as duas áreas técnicas (Regra 1) na malha das
+  linhas; dois treinadores FICTÍCIOS (`js/tecnicos.js`, puro, ids 210/211, kits `tecnico0`/`tecnico1`) com a locomoção do
+  jogo num mundo à parte, só lendo a partida (hash igual): observam, instruem, aplaudem, reclamam, comemoram e sentem o gol,
+  nunca saem da área nem tapam a TV; `treinadorDoTime(T, t)` é o GANCHO da frente `golaco/cenas-jogo`. Replay do gol: TV →
+  atrás → [lateral] → 1ª PESSOA do autor (0,6×; olho estabilizado dentro da cabeça, sem balanço; giro ≤ 85°/s; o gol no
+  quadro antes do chute) → VISÃO DO TREINADOR (o que ele vê → corte → ele reagindo) → [checagem]; "Pular" em qualquer plano.
+  Testes: `teste-tecnicos` (T1–T16, padrão), `teste-replay-anel` G1–G13 (28 partidas), `teste-replay` G1–G6 (celular
+  844×390 Média: chamadas e CPU por plano), `teste-tecnicos-tela` (CI). A animação da passada balança a cabeça até ±9 cm:
+  o "≤ 6 cm do olho bruto" da 1ª pessoa vale na horizontal. Contraprova (15/10): os planos novos procuram o último corte
+  até o GOL (um corte entre o chute e o gol fazia a câmera da 1ª pessoa pular 52 m; sem corrida antes do chute, sem 1ª
+  pessoa — B19 e `teste-replay` G7); a lateral do golaço decide o z uma vez por plano (pulava 2,5 m ao passar por um
+  treinador — T15); o treinador que andou numa cena com o mundo parado (substituição) marca corte no anel
+  (`REPLAY.saltoTecnico`; deslizava ~3 m no replay — `teste-tecnicos-tela` V7); o gol roteirizado `{marcarChute}` tem 60
+  passos de corrida antes do chute (o corte do teletransporte fica antes dele).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

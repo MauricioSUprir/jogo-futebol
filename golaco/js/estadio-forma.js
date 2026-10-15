@@ -251,3 +251,41 @@ export function solidoEm(x, y, z, folga = 0.3, fora = true) {
 export function noCorredorDoTunel(x, y, z) {
   return z > T.z - 0.5 && z < T.z + T.profundidade && Math.abs(x) < T.largura / 2 && y < T.altura;
 }
+
+// ------------------------------------------------------------------ área técnica (IFAB, Regra 1)
+const AT = ESTADIO.areaTecnica;
+/**
+ * A área técnica do time (0: o mandante, no banco de x < 0; 1: o visitante, x > 0): {time, lado (−1 | +1), x0, x1 (x0 <
+ * x1), z0 (a frente: a borda de fora da linha), z1 (o fundo, encostado nas placas), poligono: [[x, z] × 4]}.
+ */
+export function areaTecnica(time) {
+  const s = time === 1 ? 1 : -1;
+  const a = s * AT.x[0], b = s * AT.x[1];
+  const x0 = Math.min(a, b), x1 = Math.max(a, b), z0 = AT.z[0], z1 = AT.z[1];
+  return { time: time === 1 ? 1 : 0, lado: s, x0, x1, z0, z1, poligono: [[x0, z0], [x1, z0], [x1, z1], [x0, z1]] };
+}
+
+/** O ponto (x, z) está dentro da área técnica do time, a ≥ `margem` m das bordas? */
+export function dentroAreaTecnica(time, x, z, margem = 0) {
+  const s = time === 1 ? 1 : -1, ax = x * s;
+  return ax >= AT.x[0] + margem && ax <= AT.x[1] - margem && z >= AT.z[0] + margem && z <= AT.z[1] - margem;
+}
+
+/**
+ * As 6 linhas desenhadas (3 de cada área: a frente e os dois lados; o fundo são as placas e o banco), como retângulos
+ * {time, lado: 'frente' | 'dentro' | 'fora', x0, x1, z0, z1} — a linha fica PARA DENTRO da área (a borda de fora na medida,
+ * como as linhas do campo). Os lados começam onde a frente acaba (sem desenho em dobro no canto).
+ */
+export function retasAreaTecnica() {
+  const L = AT.linha, out = [];
+  for (const t of [0, 1]) {
+    const a = areaTecnica(t), perto = t === 1 ? a.x0 : a.x1, longe = t === 1 ? a.x1 : a.x0;
+    out.push({ time: t, lado: 'frente', x0: a.x0, x1: a.x1, z0: a.z0, z1: a.z0 + L });
+    // lado de dentro (perto do túnel) e de fora (perto da bandeirinha), cada um com a linha para dentro da área
+    const xd = t === 1 ? [perto, perto + L] : [perto - L, perto];
+    const xf = t === 1 ? [longe - L, longe] : [longe, longe + L];
+    out.push({ time: t, lado: 'dentro', x0: xd[0], x1: xd[1], z0: a.z0 + L, z1: a.z1 });
+    out.push({ time: t, lado: 'fora', x0: xf[0], x1: xf[1], z0: a.z0 + L, z1: a.z1 });
+  }
+  return out;
+}
