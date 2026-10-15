@@ -14,8 +14,9 @@
 //
 // Onde ficam: em x, o centro do banco + 0,3·(bola.x − centro) (mola crítica de 1,5 s); em z, 36,2. RECUO (não tapar a TV):
 // a bola prevista 1,5 s à frente perto da linha de cá, ou lateral/falta/escanteio do lado de cá perto dele → z 39,2 (de
-// costas, ≤ 2 m/s). ESQUIVA: o caminho previsto da bola (rolagem exata de bola.js) a < 0,75 m no próximo 1 s → sai da
-// linha dela (≤ 3 m/s); jogador previsto perto → afasta. Anda ≤ 1,4 m/s com ≤ 1,5 m/s².
+// costas, ≤ 2 m/s). ESQUIVA: o caminho previsto da bola (rolagem exata de bola.js) a < 0,75 m no próximo 1 s ou o de um
+// jogador a < 1,6 m (e mais, com a curva que ele pode fazer) nos próximos 2 s → vai para o lugar da área com mais folga até
+// todos, prevendo o próprio corpo (≤ 3 m/s; esquivar). Anda ≤ 1,4 m/s com ≤ 1,5 m/s².
 //
 // Estados (Smith & Cushion 2006: o silêncio é a maior categoria; Copa 2022: 2,03 gestos táticos/min × 0,73 emocionais):
 // observa (posturas: braços cruzados, mãos na cintura, mão no queixo, mãos atrás das costas, agachado — raro), anda,
@@ -31,7 +32,7 @@
 //   treinadorDoTime(T, t) (o ator de cena do gancho das cenas) e kitTecnico(time).
 import { PASSO, CAMPO, TECNICOS as TC } from './config.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado } from './jogador.js';
-import { pose, alturaQuadril, J, NJ, RAIO_CABECA, ikBraco } from './anim.js';
+import { pose, alturaQuadril, J, NJ, RAIO_CABECA, ikBraco, BRACO, ANTEBRACO } from './anim.js';
 import { difAng, normAng } from './mat.js';
 import { hash01 } from './rng.js';
 import { maoEm, poseAgachado, G_SOCO, G_V, G_PUNHO, G_CINTURA, G_AVIAO } from './comemoracao.js';
@@ -63,6 +64,7 @@ export function criarLeitura() {
     placar: [0, 0],
     eventos: ev, nEventos: 0,
     perto: new Float64Array(4 * 30), nPerto: 0,     // jogadores perto das áreas técnicas: x, z, vx, vz
+    pertoId: new Int32Array(30),                     // e o id de cada um (a curva de quem corre: tecnicos.js esquivar)
   };
 }
 
@@ -77,7 +79,7 @@ function evento(L, tipo, time, forca = 0) {
 /**
  * Lê o mundo da partida DEPOIS do passo (nada é escrito): a bola, a posse (em time), o lado que cada time ataca, a parada,
  * o placar, os eventos do passo que os treinadores olham (gol, chute/cabeceio, defesa, trave, fora, impedimento, falta,
- * cartão, pênalti marcado, roubada, intervalo, fim, saída) e os jogadores perto das áreas técnicas (z > 31).
+ * cartão, pênalti marcado, roubada, intervalo, fim, saída) e os jogadores perto das áreas técnicas (z > 26, |x| < 25,4).
  */
 export function leituraDoMundo(m, eventos, L = criarLeitura()) {
   const p = m.partida;
@@ -111,11 +113,14 @@ export function leituraDoMundo(m, eventos, L = criarLeitura()) {
     else if (t === 'fimDeJogo') evento(L, 'fim', -1);
     else if (t === 'saida') evento(L, 'saida', -1);
   }
+  // (15/10: a faixa vai 8 m para dentro do campo e 8 m além da área em x — quem vem correndo para a área técnica é visto
+  // ≥ 1 s antes de chegar; com 3 m, a 8,5 m/s, ele chegava em 0,6 s)
   L.nPerto = 0;
   for (const j of m.jogadores) {
-    if (j.z < MZ - 3 || Math.abs(j.x) > TC.xLim[1] + 4 || L.nPerto >= 30) continue;
+    if (j.z < MZ - 8 || Math.abs(j.x) > TC.xLim[1] + 8 || L.nPerto >= 30) continue;
     const o = L.nPerto * 4;
     L.perto[o] = j.x; L.perto[o + 1] = j.z; L.perto[o + 2] = j.vx; L.perto[o + 3] = j.vz;
+    L.pertoId[L.nPerto] = j.id;
     L.nPerto++;
   }
   return L;
@@ -160,7 +165,7 @@ function criarTecnico(t, mini) {
     snap: novoParam(), faseG: -1, hUlt: -Math.PI / 2, ultP: { agacha: 0, pitch: 0, pulo: 0 },
     ant: new Float32Array(NJ * 3), atu: new Float32Array(NJ * 3),
     x0: cx, z0: TC.zBase, r0: -Math.PI / 2, x1: cx, z1: TC.zBase, r1: -Math.PI / 2,
-    maoAnt: new Float64Array(6),
+    maoAnt: new Float64Array(6), maoOk: false, espera: 0,
   };
   return tec;
 }
@@ -358,7 +363,8 @@ function atualizarEstado(T, tc, L) {
     // (as palmas depois da comemoração: a próxima vez que ele aplaudir é com outra variante)
     if (tc.estado === 'comemora') comecar(T, tc, 'aplaude', 0, TC.comemora.palmas);
     else if (tc.estado === 'sofreu' && tc.vamos) { tc.vamos = false; comecar(T, tc, 'vamos', 0, TC.sofreu.vamos); tc.ultimo.estado = 'sofreu'; tc.ultimo.variante = tc.prev.variante; }
-    else if (tc.estado === 'fim') comecar(T, tc, 'fim', tc.variante, 1e6);
+    // (o fim segue no mesmo gesto, sem recomeçar — 15/10: recomeçado, o mesmo (gesto, variante) contava duas vezes)
+    else if (tc.estado === 'fim') tc.ate = k + s60(1e6);
     else if (tc.fimPendente >= 0) { comecar(T, tc, 'fim', tc.fimPendente, 1e6); tc.fimPendente = -1; }
     else voltarObserva(T, tc);
   }
@@ -398,56 +404,112 @@ function preverBola(L) {
   return k;
 }
 
-/** Alvo de esquiva (sai da linha da bola) em tc.ex/ez, ou false. */
-function esquivaBola(tc, L) {
-  const b = L.bola, j = tc.j, E = TC.esquiva;
-  if (L.estado == null) return false;
-  const d0 = Math.hypot(b.x - j.x, b.z - j.z), v = Math.hypot(b.vx, b.vz);
-  if (d0 > E.janela * Math.max(v, 1) + 3 || b.z < MZ - 12) return false;
-  const n = preverBola(L);
-  let dm = Infinity, im = -1;
-  // a primeira amostra é o agora (a bola parada perto dele também conta)
-  for (let i = -1; i < n; i++) {
-    const x = i < 0 ? b.x : _amostra[i * 3], y = i < 0 ? b.y : _amostra[i * 3 + 1], z = i < 0 ? b.z : _amostra[i * 3 + 2];
-    if (y > E.alturaMax) continue;
-    const d = Math.hypot(x - j.x, z - j.z);
-    if (d < dm) { dm = d; im = i; }
+/**
+ * A curva de quem está perto das áreas técnicas (rad/s: o quanto a velocidade dele girou desde o passo de antes, filtrado;
+ * só correndo a > 1 m/s; no máximo E.ladoMax / v: a aceleração de lado). Em T.curva[id] (ids até 127), com o passo em que
+ * foi medida em T.curvaK[id] (um passo deles por passo da partida; sem medida no passo de antes, 0).
+ */
+function medirCurvas(T, L) {
+  if (!T.curva) { T.curva = new Float64Array(128); T.curvaK = new Int32Array(128).fill(-9); T.cvx = new Float64Array(128); T.cvz = new Float64Array(128); }
+  const E = TC.esquiva;
+  for (let i = 0; i < (L.nPerto | 0); i++) {
+    const id = L.pertoId ? L.pertoId[i] & 127 : -1;
+    if (id < 0) continue;
+    const o = i * 4, vx = L.perto[o + 2], vz = L.perto[o + 3], v = Math.hypot(vx, vz);
+    let w = 0;
+    if (T.curvaK[id] === T.k - 1 && v > 1 && Math.hypot(T.cvx[id], T.cvz[id]) > 1) {
+      const d = Math.atan2(T.cvx[id] * vz - T.cvz[id] * vx, T.cvx[id] * vx + T.cvz[id] * vz) / PASSO, lim = E.ladoMax / v;
+      w = T.curva[id] + (clamp(d, -lim, lim) - T.curva[id]) * 0.3;
+    }
+    T.curva[id] = w; T.curvaK[id] = T.k; T.cvx[id] = vx; T.cvz[id] = vz;
   }
-  if (dm >= E.raio) return false;
-  // direção da bola perto dele: sai na perpendicular, do lado em que ele já está (o mais livre dentro da área)
-  let dx = b.vx, dz = b.vz;
-  const dl = Math.hypot(dx, dz);
-  if (dl < 0.3) { dx = j.x - b.x; dz = j.z - b.z; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l; tc.ex = j.x + dx * E.sai; tc.ez = j.z + dz * E.sai; return true; }
-  dx /= dl; dz /= dl;
-  const px = im < 0 ? b.x : _amostra[im * 3], pz = im < 0 ? b.z : _amostra[im * 3 + 2];
-  let nx = -dz, nz = dx;
-  if ((j.x - px) * nx + (j.z - pz) * nz < 0) { nx = -nx; nz = -nz; }
-  const a = tc.area, m = TC.margem;
-  let ex = px + nx * E.sai, ez = pz + nz * E.sai;
-  if (ex < a.x0 + TC.margemX || ex > a.x1 - TC.margemX || ez < a.z0 + m || ez > a.z1 - m) { ex = px - nx * E.sai; ez = pz - nz * E.sai; }
-  tc.ex = ex; tc.ez = ez;
-  return true;
 }
 
 /**
- * Afasta de jogador previsto perto (a < TC.esquiva.jogador m agora ou em até prevJogador s, em linha reta): alvo em
- * tc.ex/ez, ou false. Ele vai para TRÁS (as placas: nenhum jogador passa de z ~37 — o corpo do jogador fica no campo ou
- * na faixa de fora) e um pouco para o lado contrário ao do jogador; quem corre pela linha passa na frente dele.
+ * ESQUIVA (15/10, frente "replay robusto": o treinador sai da frente de quem corre perto da área técnica — um lateral que
+ * passou da linha de fundo da área correndo pelo fundo dela, a 6 m/s, chegou a 0,46 m dele: a esquiva de antes mandava
+ * SEMPRE para o fundo, z 39,2, e a da bola tinha a vez sobre a dos jogadores). As ameaças: o caminho previsto da bola no
+ * próximo 1 s (rolagem exata, abaixo de alturaMax; raio E.raio) e o dos jogadores perto nos próximos E.prevJogador s (com a
+ * curva medida; raio E.jogador, crescendo). Se o caminho para o alvo de agora (bx, bz) passa perto de alguma, ele vai para o lugar da área que deixa
+ * a MAIOR folga até todas, prevendo o próprio corpo (a rampa de TC.vel.acelRapida até TC.vel.rapido, de 1/12 em 1/12 s)
+ * — candidatos em volta dele (16 direções × 3 distâncias), o alvo de agora e onde ele está —, evitando (E.tv) a frente da
+ * TV com a bola perto da linha de cá (o x da bola: o raio da TV fica no plano dela). Alvo em tc.ex/ez, ou false.
  */
-function esquivaJogador(tc, L) {
-  const j = tc.j, E = TC.esquiva;
-  let fx = 0, achou = false;
-  for (let i = 0; i < L.nPerto; i++) {
-    const o = i * 4;
-    for (let q = 0; q <= 4; q++) {
-      const t = E.prevJogador * q / 4;
-      const x = L.perto[o] + L.perto[o + 2] * t, z = L.perto[o + 1] + L.perto[o + 3] * t;
-      const dx = j.x - x, dz = j.z - z, d = Math.hypot(dx, dz);
-      if (d < E.jogador) { fx += (dx >= 0 ? 1 : -1) * (E.jogador - d); achou = true; }
+const NQB = 12, NQ = Math.round(TC.esquiva.prevJogador * NQB), _ameaca = new Float64Array(3 * NQ * 33), _tv = [0];   // amostras a cada 1/12 s
+function esquivar(T, tc, L, bx, bz) {
+  const j = tc.j, E = TC.esquiva, b = L.bola;
+  if (L.estado == null) return false;
+  // a bola: o caminho previsto (12 amostras no próximo E.janela s) — longe dele ou do outro lado do campo, nada
+  let n = 0;
+  const d0 = Math.hypot(b.x - j.x, b.z - j.z), vb = Math.hypot(b.vx, b.vz);
+  if (!(d0 > E.janela * Math.max(vb, 1) + 3 || b.z < MZ - 12)) {
+    const nb = preverBola(L);
+    for (let q = 0; q < NQ; q++) {
+      const i = Math.min(nb - 1, q), o = (n * NQ + q) * 3;
+      _ameaca[o] = _amostra[i * 3]; _ameaca[o + 2] = _amostra[i * 3 + 2]; _ameaca[o + 1] = q >= NQB || _amostra[i * 3 + 1] > E.alturaMax ? NaN : E.raio;
     }
+    if (nb > 0) n++;
   }
-  if (!achou) return false;
-  tc.ex = j.x + clamp(fx, -1, 1) * 0.6; tc.ez = TC.recuo.z;
+  // os jogadores a ≤ 14 m dele: pela velocidade de agora e pela curva que ele vem fazendo (medirCurvas), com o raio
+  // crescendo com o que uma curva diferente tiraria do caminho (½·E.curva·t², até E.curvaMax: quem corre pode virar)
+  for (let i = 0; i < L.nPerto && n < 33; i++) {
+    const o4 = i * 4;
+    let x = L.perto[o4], z = L.perto[o4 + 1], vx = L.perto[o4 + 2], vz = L.perto[o4 + 3];
+    if (Math.hypot(x - j.x, z - j.z) > 14) continue;
+    const id = L.pertoId ? L.pertoId[i] & 127 : -1, w = id >= 0 && T.curvaK?.[id] === T.k ? T.curva[id] : 0;
+    const cw = Math.cos(w / NQB), sw = Math.sin(w / NQB);
+    for (let q = 0; q < NQ; q++) {
+      const t = (q + 1) / NQB, o = (n * NQ + q) * 3;
+      const nvx = vx * cw - vz * sw, nvz = vx * sw + vz * cw;
+      vx = nvx; vz = nvz; x += vx / NQB; z += vz / NQB;
+      _ameaca[o] = x; _ameaca[o + 2] = z; _ameaca[o + 1] = E.jogador + Math.min(E.curvaMax, 0.5 * E.curva * t * t);
+    }
+    n++;
+  }
+  if (!n) return false;
+  const a = tc.area, mz = TC.margem, mx = TC.margemX;
+  // (contraprova 15/10: os lugares da esquiva ficam E.borda m mais para dentro dos lados e da frente — saindo em disparada
+  // da quina da área, de lado para o corpo virado para a bola, ou freando na frente dela, o pé pousava até 0,42 m do centro
+  // e saía da área: T2 na partida da cabeceio-ia, T19; 0,35 m: no --estresse a folga do T19 fica 0,047 m, com 0,25 ficava 0,013)
+  const x0 = a.x0 + mx + E.borda, x1 = a.x1 - mx - E.borda, z0 = a.z0 + mz + E.borda, z1 = a.z1 - mz;
+  const tv = L.emJogo && b.z > MZ - 12 && b.y < 3;
+  // a folga (m além do raio de cada ameaça; até E.folga) indo para (cx, cz), o corpo previsto passo a passo; _tv[0]: o
+  // caminho passa pela frente da TV (no plano do x da bola, antes do recuo)
+  const folga = (cx, cz) => {
+    let px = j.x, pz = j.z, vx = j.vx, vz = j.vz, pior = E.folga;
+    _tv[0] = 0;
+    const dt = 1 / NQB, A = TC.vel.acelRapida * 0.85, V = TC.vel.rapido * 0.95;
+    for (let q = 0; q < NQ; q++) {
+      let ux = cx - px, uz = cz - pz;
+      const d = Math.hypot(ux, uz), vd = d > 1e-6 ? Math.min(V, d * TC.vel.ganho * 2) : 0;
+      if (d > 1e-6) { ux /= d; uz /= d; } else { ux = 0; uz = 0; }
+      let ax = ux * vd - vx, az = uz * vd - vz;
+      const am = Math.hypot(ax, az);
+      if (am > A * dt) { ax *= A * dt / am; az *= A * dt / am; }
+      vx += ax; vz += az; px += vx * dt; pz += vz * dt;
+      if (tv && q < NQB && Math.abs(px - b.x) < E.tvX && pz < TC.recuo.z - 0.06) _tv[0] = 1;
+      for (let k = 0; k < n; k++) {
+        const o = (k * NQ + q) * 3, r = _ameaca[o + 1];
+        if (r !== r) continue;   // a bola alta (NaN): passa por cima
+        const f = Math.hypot(px - _ameaca[o], pz - _ameaca[o + 2]) - r;
+        if (f < pior) pior = f;
+      }
+    }
+    return pior;
+  };
+  const f0 = folga(bx, bz);
+  if (f0 >= 0) return false;      // o caminho de agora já passa longe de tudo
+  let melhor = -Infinity, ex = bx, ez = bz;
+  const tenta = (cx, cz) => {
+    cx = clamp(cx, x0, x1); cz = clamp(cz, z0, z1);
+    let v = folga(cx, cz) - 0.03 * Math.hypot(cx - bx, cz - bz);
+    // pela frente da TV (a bola perto da linha de cá e ele no x dela, antes do recuo): pior
+    if (_tv[0] || (tv && Math.abs(cx - b.x) < E.tvX && cz < TC.recuo.z - 0.06)) v -= E.tv;
+    if (v > melhor) { melhor = v; ex = cx; ez = cz; }
+  };
+  tenta(bx, bz); tenta(j.x, j.z);
+  for (const r of [1.0, 2.0, 3.0]) for (let q = 0; q < 16; q++) tenta(j.x + r * Math.cos(q * Math.PI / 8), j.z + r * Math.sin(q * Math.PI / 8));
+  tc.ex = ex; tc.ez = ez;
   return true;
 }
 
@@ -491,8 +553,9 @@ function mover(T, tc, L) {
   let rapido = false;
   if (tc.estado === 'comemora' && k < tc.corre.ate) { tx = tc.corre.x; vmax = TC.vel.rapido; acel = TC.vel.acelRapida; rapido = true; }
   else if (tc.estado === 'comemora' || tc.estado === 'sofreu') { tx = j.x; tz = clamp(j.z, a.z0 + m, a.z1 - m); if (k < tc.recuoAte) tz = TC.recuo.z; }
-  // esquiva (a bola, um jogador): sai já, mais depressa
-  if (esquivaBola(tc, L) || esquivaJogador(tc, L)) { tc.esquivaAte = k + s60(0.6); tc.exG = tc.ex; tc.ezG = tc.ez; }
+  // esquiva (a bola, os jogadores): sai já, mais depressa, para o lugar com mais folga
+  tx = clamp(tx, a.x0 + mx, a.x1 - mx); tz = clamp(tz, a.z0 + m, a.z1 - m);
+  if (esquivar(T, tc, L, tx, tz)) { tc.esquivaAte = k + s60(0.6); tc.exG = tc.ex; tc.ezG = tc.ez; }
   if (k < tc.esquivaAte) { tx = tc.exG; tz = tc.ezG; vmax = TC.vel.rapido; acel = TC.vel.acelRapida; rapido = true; }
   tx = clamp(tx, a.x0 + mx, a.x1 - mx); tz = clamp(tz, a.z0 + m, a.z1 - m);
   // modo do movimento: rápido (recuo, esquiva, corrida da comemoração) até o corpo voltar ao passo de andar
@@ -539,6 +602,7 @@ function mover(T, tc, L) {
 /** Um passo (1/60 s) dos dois: estado, posição (locomoção do jogo), olhar e pose. */
 export function passoTecnicos(T, L) {
   const tecs = T.tecs, mini = T.mini;
+  medirCurvas(T, L);
   for (const tc of tecs) atualizarEstado(T, tc, L);
   for (const tc of tecs) {
     // olhar: a bola (sem bola em jogo: o campo à frente); devagar (τ TC.olhar.tau)
@@ -792,20 +856,16 @@ function poseTec(T, tc, L) {
   pose(j, mini, o);
   // agachar ou levantar devagar (o corpo inteiro desce 0,3 m; as mãos vão junto)
   // (comemorando, ele levanta mais depressa: TC.comemora.levanta s)
-  const durMix = Math.abs(tc.snap.agacha - _pb.agacha) > 0.3 ? Math.max(tc.mix, tc.estado === 'comemora' ? TC.comemora.levanta : TC.misturaAgacha) : tc.mix;
+  const a = tc.snap;
+  const reacao = tc.estado === 'comemora' || tc.estado === 'sofreu';
+  const durMix = Math.abs(a.agacha - _pb.agacha) > 0.3 ? Math.max(tc.mix, tc.estado === 'comemora' ? TC.comemora.levanta : TC.misturaAgacha) : tc.mix;
   const sMix = suave((k - tc.troca) * PASSO / durMix);
-  const p = sMix < 1 ? _pm : _pb;
-  if (sMix < 1) {
-    const a = tc.snap;
-    misturarMao(a.e, _pb.e, sMix, _pm.e); misturarMao(a.d, _pb.d, sMix, _pm.d);
-    _pm.agacha = lerp(a.agacha, _pb.agacha, sMix); _pm.pitch = lerp(a.pitch, _pb.pitch, sMix); _pm.pulo = lerp(a.pulo, _pb.pulo, sMix);
-    // o arco da troca (medido no 1º passo dela): a mão que iria em linha reta pela cabeça passa pela FRENTE do corpo
-    _pm.e.arco = _pm.d.arco = (tc.arcoMix || 0) * Math.sin(Math.PI * sMix);
-  } else { _pb.e.m2 = null; _pb.d.m2 = null; }
-  _pb.e.arco = _pb.d.arco = 0;
-  tc.ultP.agacha = p.agacha; tc.ultP.pitch = p.pitch; tc.ultP.pulo = p.pulo;
+  const agacha = sMix < 1 ? lerp(a.agacha, _pb.agacha, sMix) : _pb.agacha;
+  const pitch = sMix < 1 ? lerp(a.pitch, _pb.pitch, sMix) : _pb.pitch;
+  const pulo = sMix < 1 ? lerp(a.pulo, _pb.pulo, sMix) : _pb.pulo;
+  tc.ultP.agacha = agacha; tc.ultP.pitch = pitch; tc.ultP.pulo = pulo;
   // agachado (os pés ficam; joelhos para a frente)
-  if (p.agacha > 0) poseAgachado(o, j, suave(p.agacha));
+  if (agacha > 0) poseAgachado(o, j, suave(agacha));
   // torção do tronco para o lado do olhar (mola crítica de TC.olhar.tronco s, até troncoMax do quadril)
   const alvoT = clamp(difAng(j.rumo, tc.olhar), -TC.olhar.troncoMax, TC.olhar.troncoMax);
   const w = 2 / TC.olhar.tronco;
@@ -816,46 +876,100 @@ function poseTec(T, tc, L) {
   tc.hUlt = h;
   // cabeça: no olhar, até cabecaMax do tronco (o comprimento do pescoço fixo)
   const yaw = h + clamp(difAng(h, tc.olhar), -TC.olhar.cabecaMax, TC.olhar.cabecaMax);
-  cabecaOlhando(o, yaw, p.pitch, T.pescoco);
+  cabecaOlhando(o, yaw, pitch, T.pescoco);
   // troca de gesto comum (TC.mistura) com a mão longe do alvo novo (das costas para cima da cabeça): a mistura dura o
   // bastante para o pico do smoothstep (1,5 × a velocidade média) ficar em TC.maoPico m/s — medido UMA vez, no 1º passo da
-  // troca, com as duas mãos (a foto e o alvo no mundo, pelos ombros e pela cabeça desta pose); as reações ao gol ficam
-  // explosivas (TC.comemora.sobe, TC.misturaGol)
+  // troca, com as duas mãos (a foto e o alvo no mundo, pelos ombros e pela cabeça desta pose)
   // (e a linha reta da mão passando a < RMIN + 5 cm do centro da cabeça — das costas para cima dela — ganha um ARCO pela
   // frente, TC.arcoMao m no meio: sem ele a mão empurrada para fora da cabeça dava a volta nela de uma vez)
+  // As REAÇÕES AO GOL (15/10, frente "replay robusto": de QUALQUER gesto ou postura — as mãos nas costas, na cabeça,
+  // agachado): explosivas, mas com o pico da mão em TC.maoPicoGol m/s (a mistura cresce com a distância, como na troca
+  // comum; das costas para o soco no ar a mão passava de 0,15 m por passo) e as mãos independentes do levantar do agachado
+  // (antes o agachado esticava a mistura das mãos para TC.comemora.levanta: a mão passava do topo da cabeça a 0,42 s do
+  // gol); na comemoração, a mão passa do topo da cabeça em TC.comemora.cruza s depois do gol (com as mãos já perto do
+  // topo — o lamento da bola na trave, o rebote no gol —, a mistura espera alguns passos: antes passava a 0,23 s).
   if (tc.mixMedido !== tc.troca) {
-    tc.mixMedido = tc.troca; tc.arcoMix = 0;
-    if (tc.mix === TC.mistura && sMix < 1) {
-      let d = 0, perto = Infinity;
-      const ic = J.cabeca * 3;
-      for (const [lado, a, b] of [[-1, tc.snap.e, _pb.e], [1, tc.snap.d, _pb.d]]) {
-        const pa = alvoMao(a, o, h, lado, a.m === 'p' || a.w <= 0 ? _modoN : a, _al), xa = pa.x, ya = pa.y, za = pa.z;
-        const pb = alvoMao(b, o, h, lado, b.m === 'p' || b.w <= 0 ? _modoN : b, _al2);
+    tc.mixMedido = tc.troca; tc.arcoMix = 0; tc.espera = 0;
+    if ((tc.mix === TC.mistura || reacao) && sMix < 1) {
+      let d = 0, perto = Infinity, uCruza = Infinity;
+      const ic = J.cabeca * 3, topo = o[ic + 1] + RAIO_CABECA * 1.1;
+      for (const [lado, ma, mb] of [[-1, a.e, _pb.e], [1, a.d, _pb.d]]) {
+        const pa = alvoMao(ma, o, h, lado, ma.m === 'p' || ma.w <= 0 ? _modoN : ma, _al), xa = pa.x, ya = pa.y, za = pa.z;
+        const pb = alvoMao(mb, o, h, lado, mb.m === 'p' || mb.w <= 0 ? _modoN : mb, _al2);
         d = Math.max(d, Math.hypot(pb.x - xa, pb.y - ya, pb.z - za));
         for (let u = 0.1; u < 0.95; u += 0.1) perto = Math.min(perto, Math.hypot(xa + (pb.x - xa) * u - o[ic], ya + (pb.y - ya) * u - o[ic + 1], za + (pb.z - za) * u - o[ic + 2]));
+        // comemoração: em que fração da mistura a mão passa do topo da cabeça (no alcance do braço)
+        if (tc.estado === 'comemora') {
+          const iO = (lado < 0 ? J.ombroE : J.ombroD) * 3, ya2 = alcanceY(o, iO, xa, ya, za), yb2 = alcanceY(o, iO, pb.x, pb.y, pb.z);
+          if (yb2 > topo + 0.01) uCruza = Math.min(uCruza, ya2 >= topo ? 0 : suaveInv((topo - ya2) / (yb2 - ya2)));
+        }
       }
       if (perto < RMIN + 0.05) { tc.arcoMix = TC.arcoMao; d += TC.arcoMao; }
-      tc.mix = Math.max(TC.mistura, 1.5 * d / TC.maoPico);
-    } else if (sMix < 1 && (tc.mix === TC.comemora.sobe || tc.mix === TC.misturaGol)) {
-      // a reação ao gol continua explosiva, mas a mão que vem de longe (das costas para os braços em V) não passa de
-      // TC.maoPicoGol m/s no pico do smoothstep: com 0,2 s fixos, 1,2 m de caminho davam 9 m/s (0,152 m num passo; o
-      // teste-tecnicos T5 pede ≤ 0,15 m por passo) — 15/10, gols da partida do #471
-      let d = 0;
-      for (const [lado, a, b] of [[-1, tc.snap.e, _pb.e], [1, tc.snap.d, _pb.d]]) {
-        const pa = alvoMao(a, o, h, lado, a.m === 'p' || a.w <= 0 ? _modoN : a, _al), xa = pa.x, ya = pa.y, za = pa.z;
-        const pb = alvoMao(b, o, h, lado, b.m === 'p' || b.w <= 0 ? _modoN : b, _al2);
-        d = Math.max(d, Math.hypot(pb.x - xa, pb.y - ya, pb.z - za));
+      if (!reacao) tc.mix = Math.max(TC.mistura, 1.5 * d / TC.maoPico);
+      else {
+        let D = Math.max(tc.mix, 1.5 * d / TC.maoPicoGol);
+        if (tc.estado === 'comemora' && Number.isFinite(uCruza) && T.golTick >= 0) {
+          const [c0, c1] = TC.comemora.cruza, t0 = (k - 1 - T.golTick) * PASSO;
+          // tarde: a mistura encurta até o teto da velocidade; cedo: espera
+          if (uCruza > 0 && t0 + uCruza * D > c1) D = Math.max(1.5 * d / TC.maoPicoGol, (c1 - t0) / uCruza);
+          tc.espera = Math.max(0, Math.round((c0 - t0 - uCruza * D) / PASSO));
+        }
+        tc.mix = D;
       }
-      tc.mix = Math.max(tc.mix, 1.5 * d / TC.maoPicoGol);
     }
   }
-  // braços (alvos do ombro/cabeça desta pose; a esquerda antes: a direita pode apontar o pulso dela) e a mão fora da cabeça
-  aplicarMao(o, h, -1, p.e);
-  aplicarMao(o, h, 1, p.d);
+  // as mãos: a mistura delas (a reação com a espera e a duração dela; o resto, com o agachado)
+  const sMao = reacao ? suave((k - tc.troca - tc.espera) * PASSO / tc.mix) : sMix;
+  let pe = _pb.e, pd = _pb.d;
+  if (sMao < 1) {
+    misturarMao(a.e, _pb.e, sMao, _pm.e); misturarMao(a.d, _pb.d, sMao, _pm.d);
+    // o arco da troca (medido no 1º passo dela): a mão que iria em linha reta pela cabeça passa pela FRENTE do corpo
+    _pm.e.arco = _pm.d.arco = (tc.arcoMix || 0) * Math.sin(Math.PI * sMao);
+    pe = _pm.e; pd = _pm.d;
+  } else { _pb.e.m2 = null; _pb.d.m2 = null; }
+  _pb.e.arco = _pb.d.arco = 0;
+  // braços (alvos do ombro/cabeça desta pose; a esquerda antes: a direita pode apontar o pulso dela), nunca mais que
+  // TC.maoPassoMax m por passo (a rede de segurança: a soma do corpo, da torção e do gesto) e a mão fora da cabeça
+  aplicarMao(o, h, -1, pe);
+  aplicarMao(o, h, 1, pd);
+  if (tc.maoOk) { limitarMao(o, -1, tc.maoAnt, pulo); limitarMao(o, 1, tc.maoAnt, pulo); }
   maoForaDaCabeca(o, h, -1); maoForaDaCabeca(o, h, 1);
   // pulinho (o corpo inteiro sobe: os pés saem do chão)
-  tc.noAr = p.pulo > 0;
-  if (p.pulo > 0) for (let i = 1; i < o.length; i += 3) o[i] += p.pulo;
+  tc.noAr = pulo > 0;
+  if (pulo > 0) for (let i = 1; i < o.length; i += 3) o[i] += pulo;
+  // as mãos deste passo (o limite do próximo)
+  for (const [q, iM] of [[0, J.maoE * 3], [3, J.maoD * 3]]) { tc.maoAnt[q] = o[iM]; tc.maoAnt[q + 1] = o[iM + 1]; tc.maoAnt[q + 2] = o[iM + 2]; }
+  tc.maoOk = true;
+}
+
+/** Inversa do smoothstep em [0, 1] (bisseção: só no 1º passo de uma reação). */
+function suaveInv(y) {
+  if (y <= 0) return 0;
+  if (y >= 1) return 1;
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (suave(m) < y) lo = m; else hi = m; }
+  return (lo + hi) / 2;
+}
+
+/** A altura da mão com o alvo (x, y, z) no alcance do braço (do ombro em o[iO]: BRACO + ANTEBRACO). */
+function alcanceY(o, iO, x, y, z) {
+  const dx = x - o[iO], dy = y - o[iO + 1], dz = z - o[iO + 2], d = Math.hypot(dx, dy, dz), L = BRACO + ANTEBRACO - 0.005;
+  return d > L ? o[iO + 1] + dy * L / d : y;
+}
+
+/**
+ * Rede de segurança da mão (lado −1/+1): a mais de TC.maoPassoMax m de onde estava no passo anterior (ant: 6 floats, as
+ * duas, já com o pulinho daquele passo; `pulo` = o deste, que entra depois), ela fica no limite, na mesma direção, e o
+ * braço refaz o IK com o cotovelo do lado em que estava.
+ */
+function limitarMao(o, lado, ant, pulo) {
+  const iM = (lado < 0 ? J.maoE : J.maoD) * 3, q = lado < 0 ? 0 : 3;
+  const dx = o[iM] - ant[q], dy = o[iM + 1] + pulo - ant[q + 1], dz = o[iM + 2] - ant[q + 2], d = Math.hypot(dx, dy, dz);
+  if (d <= TC.maoPassoMax) return;
+  const k = TC.maoPassoMax / d, tx = ant[q] + dx * k, ty = ant[q + 1] + dy * k - pulo, tz = ant[q + 2] + dz * k;
+  const iO = (lado < 0 ? J.ombroE : J.ombroD) * 3, iC = (lado < 0 ? J.cotoveloE : J.cotoveloD) * 3;
+  const px = o[iC] - (o[iO] + o[iM]) / 2, py = o[iC + 1] - (o[iO + 1] + o[iM + 1]) / 2, pz = o[iC + 2] - (o[iO + 2] + o[iM + 2]) / 2;
+  ikBraco(o[iO], o[iO + 1], o[iO + 2], tx, ty, tz, px, py, pz, o, iC / 3, iM / 3);
 }
 
 // ------------------------------------------------------------------------------------------------ câmeras de cinema

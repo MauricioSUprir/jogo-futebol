@@ -17,15 +17,8 @@ const antigos = r => JSON.stringify({ ...r, planos: r.planos.filter(p => p.cam !
 export async function medirSemente(pastaJs, sem, opc = {}) {
   const imp = f => import(pathToFileURL(path.join(pastaJs, f)).href);
   const { criarGravador } = await import(pathToFileURL(path.join(path.dirname(new URL(import.meta.url).pathname), 'anel-node.mjs')).href);
-  const RR = await imp('render/replay-roteiro.js'), RA = await imp('render/replay-anel.js'), RO = await imp('render/replay-olhos.js');
-  const AG = await imp('render/autor-gol.js'), C = await imp('config.js'), EF = await imp('estadio-forma.js');
-  const { J, SEGMENTOS, RAIO_CABECA } = await imp('anim.js');
-  // G13: os segmentos do próprio autor que a 1ª pessoa DESENHA (jogador3d.js OCULTA.cabeca | OCULTA.tronco tira a cabeça,
-  // o pescoço, o peito, os ombros e os braços: a mesma regra pelo nome das juntas)
-  const NOME = Object.fromEntries(Object.entries(J).map(([n, i]) => [i, n]));
-  const VISIVEL_1P = SEGMENTOS.map(([a, b]) => { const nm = NOME[a] + ' ' + NOME[b]; return !(/pescoco|peito|ombro|cotovelo|mao|cabeca/.test(nm) || (NOME[a] === 'lombar' && NOME[b] === 'peito')); });
-  const REF = opc.ref ? await import(pathToFileURL(path.join(opc.ref, 'render/replay-roteiro.js')).href) : null;
-  const { REPLAY, CAMPO } = C;
+  const RA = await imp('render/replay-anel.js'), AG = await imp('render/autor-gol.js');
+  const { medirGol } = await criarMedidor(pastaJs, opc);
   const GR = await criarGravador(pastaJs);
   const S = GR.novaPartida(sem, { minutosPorTempo: opc.min });
   const ag = AG.criarAutorGol();
@@ -34,7 +27,6 @@ export async function medirSemente(pastaJs, sem, opc = {}) {
   let pend = null;
   const g12 = { comparados: 0, diferentes: 0 };
   const o57 = new Float32Array(57);
-  const telas = [[16 / 9, false], [844 / 390, true], [568 / 320, true]];
   for (let i = 0; i < 400000 && S.m.partida.estado !== 'fim'; i++) {
     const evs = GR.passo(S);
     AG.autorEventos(ag, evs, S.m.tick, timeDe);
@@ -55,11 +47,31 @@ export async function medirSemente(pastaJs, sem, opc = {}) {
       };
     }
     if (pend && evs.some(e => e.tipo === 'saida' || e.tipo === 'intervalo' || e.tipo === 'fimDeJogo')) {
+      if (opc.aoGol) opc.aoGol(S.a, pend);
       gols.push(medirGol(S.a, pend));
       pend = null;
     }
   }
   return { sem, gols, g12 };
+}
+
+/**
+ * As medidas de um gol no anel (a mesma conta do teste): {medirGol(anel, g)} com g = {golTick, chuteTick, lado, time, autor,
+ * contra, desvio, tipoChute}. opc.ref: a pasta js da versão de comparação do G2.
+ */
+export async function criarMedidor(pastaJs, opc = {}) {
+  const imp = f => import(pathToFileURL(path.join(pastaJs, f)).href);
+  const RR = await imp('render/replay-roteiro.js'), RA = await imp('render/replay-anel.js'), RO = await imp('render/replay-olhos.js');
+  const C = await imp('config.js'), EF = await imp('estadio-forma.js');
+  const { J, SEGMENTOS, RAIO_CABECA } = await imp('anim.js');
+  // G13: os segmentos do próprio autor que a 1ª pessoa DESENHA (jogador3d.js OCULTA.cabeca | OCULTA.tronco tira a cabeça,
+  // o pescoço, o peito, os ombros e os braços: a mesma regra pelo nome das juntas)
+  const NOME = Object.fromEntries(Object.entries(J).map(([n, i]) => [i, n]));
+  const VISIVEL_1P = SEGMENTOS.map(([a, b]) => { const nm = NOME[a] + ' ' + NOME[b]; return !(/pescoco|peito|ombro|cotovelo|mao|cabeca/.test(nm) || (NOME[a] === 'lombar' && NOME[b] === 'peito')); });
+  const REF = opc.ref ? await import(pathToFileURL(path.join(opc.ref, 'render/replay-roteiro.js')).href) : null;
+  const { REPLAY, CAMPO } = C;
+  const telas = [[16 / 9, false], [844 / 390, true], [568 / 320, true]];
+  return { medirGol };
 
   // ---------------------------------------------------------------------------------------------- um gol
   function medirGol(a, g) {

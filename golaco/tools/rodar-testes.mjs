@@ -75,6 +75,9 @@ const LISTA = [
   ['cena de substituição: quem sai pela linha mais perto (Regra 3.3), quem entra pelo meio, placa, câmera; o mundo não muda', 'teste-substituicao.mjs'],
   // Área técnica e treinadores (dono, 12/10: "quero a área técnica e o treinador")
   ['área técnica (Regra 1) e os 2 treinadores: dentro da área, pé plantado, gestos, olham a bola, reagem ao gol, nunca tapam a TV, hash igual', 'teste-tecnicos.mjs'],
+  // (15/10, frente "replay robusto") os casos sem partida no --estresse: a reação ao gol de qualquer gesto e quem corre
+  // perto da área técnica de 16 direções (segundos de CPU; as 72 partidas do --estresse ficam fora do CI)
+  ['treinadores sem partida (--estresse): a reação ao gol de qualquer gesto e quem corre perto da área técnica', 'teste-tecnicos.mjs', ['--so-sinteticos', '--estresse']],
   // Etapa 4: regras (IFAB)
   ['impedimento (Regra 11: cenas, tiro livre indireto, árbitro independente) e acréscimos (Regra 7.3)', 'teste-impedimento.mjs'],
   ['faltas, vantagem, cartões e expulsão (Regra 12), tiro livre direto e pênalti (Regra 14)', 'teste-faltas.mjs'],
