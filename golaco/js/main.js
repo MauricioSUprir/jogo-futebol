@@ -2353,10 +2353,14 @@ const api = {
   },
   definirSom(v) { comando('som', v ? 'ligado' : 'desligado'); },
   definirVolume(v) { comando('volume', v); },
-  /** Ponto do mundo → pixel CSS na tela (testes: "direita no analógico = direita na tela"). */
+  /**
+   * Ponto do mundo → pixel CSS na tela (testes: "direita no analógico = direita na tela"). `atras`: o ponto está atrás da
+   * câmera (ou além do plano de fundo) — a projeção dele cai espelhada DENTRO da tela, mas ele não está no quadro (a câmera
+   * do gol de costas para a área técnica; tools/teste-tecnicos-tela.mjs V1/V8).
+   */
   naTela(x, y, z) {
     const v = new THREE.Vector3(x, y, z).project(cam.camera);
-    return { x: (v.x + 1) / 2 * window.innerWidth, y: (1 - v.y) / 2 * window.innerHeight };
+    return { x: (v.x + 1) / 2 * window.innerWidth, y: (1 - v.y) / 2 * window.innerHeight, atras: v.z > 1 };
   },
 };
 function resumoTime(t) {

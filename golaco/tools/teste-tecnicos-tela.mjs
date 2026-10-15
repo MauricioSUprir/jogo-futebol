@@ -4,7 +4,9 @@
 //   V1 nos instantes em que a câmera de TV mostra o lado do banco (um treinador INTEIRO dentro do quadro), os
 //      treinadores APARECEM: o mesmo quadro desenhado com × sem eles (estadio.mostrarTecnicos, só o desenho) muda ≥ 40 px
 //      (a 1/2 da resolução) em ≥ 90% dos instantes (≥ 8 instantes medidos); a linha da frente da área técnica dele também
-//      no quadro (algum dos 5 pontos dela);
+//      no quadro (algum dos 5 pontos dela). "Dentro do quadro" = na tela E na frente da câmera (naTela .atras): um ponto
+//      atrás da câmera cai espelhado dentro da tela — a câmera do gol (depois de um gol, na área e de costas para a área
+//      técnica) contava o treinador atrás dela como "no quadro" (15/10: 3 dos 20 instantes, 0 px, na partida do #471);
 //   V2 custo no desenho: as chamadas de desenho com × sem os treinadores IGUAIS (eles vão no manequim instanciado; as
 //      linhas da área técnica na malha das linhas) e os triângulos a mais ≤ 2 × os de um boneco;
 //   V3 custo na CPU do quadro (medirQuadro, sem o desenho): a página com os treinadores × a mesma partida com
@@ -17,9 +19,13 @@
 //      ≥ 0,6 m da cápsula deles em todos os quadros;
 //   V7 (contraprova 15/10) depois de cada uma dessas cenas, no anel do replay: todo passo em que um treinador "anda" mais que
 //      REPLAY.saltoTecnico desde o passo gravado antes (os passos da cena não são gravados) é um CORTE — senão o replay
-//      seguinte (o "Replay" da pausa, o gol logo depois da troca) o desliza ~3 m num passo.
-// Na versão sem os treinadores (origin/main antes desta frente) V1, V2, V4 e V6 reprovam (não existem).
-//   node tools/teste-tecnicos-tela.mjs [--raiz <pasta do jogo>] [--so V1,V6]
+//      seguinte (o "Replay" da pausa, o gol logo depois da troca) o desliza ~3 m num passo;
+//   V8 (15/10) o critério "no quadro" do V1 sem depender da partida: uma câmera parada na área, na altura da câmera do
+//      gol (2,6 m), de COSTAS para cada treinador (ele 37 m atrás dela, no eixo: a projeção espelhada cai no meio da tela)
+//      → ele NÃO conta (e não aparece: < 40 px com × sem); a mesma câmera de frente para ele a 15 m → conta e aparece
+//      (≥ 40 px). Com o naTela antigo (sem .atras; --raiz da main de 15/10) a câmera de costas o contava.
+// Na versão sem os treinadores (origin/main antes desta frente) V1, V2, V4, V6 e V8 reprovam (não existem).
+//   node tools/teste-tecnicos-tela.mjs [--raiz <pasta do jogo>] [--so V1,V6]   (--so V1 roda V1–V4 e V8)
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 
@@ -53,6 +59,7 @@ if (!SO || SO.has('V1')) try {
       meta('V1 os treinadores aparecem na TV do celular com o banco no quadro', 'sem treinadores (estadio.tecnicos/mostrarTecnicos não existem)', 'existem', false);
       meta('V2 chamadas de desenho iguais com × sem os treinadores; triângulos a mais ≤ 2 bonecos', 'sem treinadores', 'existem', false);
       meta('V4 as linhas da área técnica no gramado', 'sem área técnica', 'existem', false);
+      meta('V8 o "no quadro" do V1 não conta quem está atrás da câmera', 'sem treinadores', 'existem', false);
     } else {
       // ---------------------------------------------------------------- V1 + V2
       const r = await pg.evaluate(async () => {
@@ -63,7 +70,8 @@ if (!SO || SO.has('V1')) try {
         const cx = off.getContext('2d', { willReadFrequently: true });
         const ler = () => { cx.drawImage(cv, 0, 0, off.width, off.height); return cx.getImageData(0, 0, off.width, off.height).data; };
         const W = window.innerWidth, H = window.innerHeight;
-        const dentro = p => p && p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= H;
+        // no quadro: na tela e NA FRENTE da câmera (atrás dela a projeção cai espelhada dentro da tela)
+        const dentro = p => p && !p.atras && p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= H;
         const frente = retasAreaTecnica().filter(q => q.lado === 'frente');
         const inst = [], cham = [], semInst = { n: 0 };
         let k = 0;
@@ -132,6 +140,42 @@ if (!SO || SO.has('V1')) try {
       });
       meta('V4 as linhas da área técnica no gramado (câmera parada perto, sem os treinadores): mais claras que a grama ao lado',
         v4.map(o => `área ${o.time}: linha ${f2(o.linha)} × grama ${f2(o.grama)} (${o.n} pontos)`).join(' · '), '≥ +25 nas duas', v4.length === 2 && v4.every(o => o.n >= 6 && o.linha >= o.grama + 25));
+      // ---------------------------------------------------------------- V8 (atrás da câmera não é "no quadro")
+      const v8 = await pg.evaluate(() => {
+        const g = window.__golaco;
+        const cv = document.querySelector('canvas');
+        const off = document.createElement('canvas'); off.width = 422; off.height = 195; // a 1/2, como o V1
+        const cx = off.getContext('2d', { willReadFrequently: true });
+        const ler = () => { cx.drawImage(cv, 0, 0, off.width, off.height); return cx.getImageData(0, 0, off.width, off.height).data; };
+        const W = window.innerWidth, H = window.innerHeight;
+        const naTelaXY = p => p && p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= H;
+        const dentro = p => naTelaXY(p) && !p.atras;                                   // o MESMO critério do V1
+        const pts = t => [[0, 1.8], [0, 0.03], [-0.4, 1], [0.4, 1]].map(([dx, y]) => g.naTela(t.x + dx, y, t.z));
+        const difPx = () => {
+          g.estadio.mostrarTecnicos(true); g.desenhar(); const a = ler();
+          g.estadio.mostrarTecnicos(false); g.desenhar(); const b = ler();
+          g.estadio.mostrarTecnicos(true);
+          let n = 0;
+          for (let i = 0; i < a.length; i += 4) if ((Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2])) / 3 > 20) n++;
+          return n;
+        };
+        const plano = (l, t) => { g.cameraLivre(l); g.desenhar(); const p = pts(t); return { conta: p.every(dentro), xy: p.every(naTelaXY), px: difPx() }; };
+        const out = [];
+        for (const t of g.estadio.tecnicos.lista) {
+          const s = t.x < 0 ? -1 : 1;
+          // a câmera do gol depois de um gol (render/camera.js CAMERA_GOL: 6,5 m antes da linha, 13 m para o lado da TV,
+          // 2,6 m de altura) fica a ~(29, 23) m do treinador do lado dela; aqui, de costas para ele, no eixo
+          const de = [t.x + 29 * s, 2.6, t.z - 23];
+          const costas = plano({ de, para: [2 * de[0] - t.x, 2.6, 2 * de[2] - t.z], fov: 27 }, t);
+          const frente = plano({ de: [t.x, 4, t.z - 15], para: [t.x, 1, t.z], fov: 27 }, t);
+          out.push({ id: t.id, costas, frente });
+        }
+        g.cameraLivre(null); g.desenhar();
+        return out;
+      });
+      meta('V8 o "no quadro" do V1 não conta quem está atrás da câmera (câmera na área de costas para cada treinador; de frente, conta)',
+        v8.map(o => `${o.id}: de costas ${o.costas.conta ? 'CONTA' : 'não conta'} (na tela pelo x/y: ${o.costas.xy ? 'sim' : 'não'}; ${o.costas.px} px) · de frente ${o.frente.conta ? 'conta' : 'NÃO conta'} (${o.frente.px} px)`).join(' · '),
+        'de costas: não conta e < 40 px; de frente: conta e ≥ 40 px', v8.length === 2 && v8.every(o => !o.costas.conta && o.costas.px < 40 && o.frente.conta && o.frente.px >= 40));
     }
     // ------------------------------------------------------------------ V3 (CPU do quadro com × sem os treinadores)
     const B = await abrirPagina(URL0 + '&tecnicos=0');

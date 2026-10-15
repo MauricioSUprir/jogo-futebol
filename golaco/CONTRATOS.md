@@ -218,7 +218,8 @@ vez por passo de simulação; o desenho interpola entre a pose anterior e a atua
   desenha interpolando com `alfa`. `window.__golaco` = `{mundo, hash(), passos, alfa, render
   ({bola, jogador, camera, quadros, alfa} do último quadro desenhado), pausar(), rodarPassos(n,
   roteiro), reiniciar(opc), relogio:{usarManual, avancar(ms, {desenhar})}, forcarEntrada(e),
-  estado(), desenhar(), cameraLivre({de, para, fov} | null), naTela(x, y, z) → px CSS}`.
+  estado(), desenhar(), cameraLivre({de, para, fov} | null), naTela(x, y, z) → {x, y} px CSS e `atras` (o ponto atrás da
+  câmera: a projeção dele cai espelhada dentro da tela — "no quadro" é na tela E `!atras`)}`.
   Parâmetros: `?semente ?q ?hora ?camera ?demo ?marcador ?prints ?qps ?toque ?entalhe`.
 - `render/jogador3d.js`: todas as cápsulas de todos os jogadores num `InstancedMesh` (atributos
   por instância: raios, comprimento, achatamento, cores e padrão); cabeça e cabelo instanciados.
@@ -643,7 +644,8 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
   ms —; G5 um toque no meio da 1ª pessoa pula tudo; G6 nada some; G7 a câmera dos planos novos sem salto entre quadros), `teste-tecnicos-tela` (navegador, CI: visíveis na TV do
   celular com o banco no quadro, chamadas iguais com e sem eles, CPU do quadro × `?tecnicos=0`, as linhas no gramado e,
   V6, a cena de substituição: eles andam com ela, longe dos atores e da câmera; V7, depois dela, o salto deles entre dois
-  passos gravados só com corte).
+  passos gravados só com corte; V8, quem está atrás da câmera — a do gol, de costas para a área técnica — não conta como
+  "no quadro").
 - **Anel e cenas com o mundo parado (contraprova 15/10)**: os passos que os treinadores dão numa cena com a simulação
   parada (a substituição) não vão para o anel; no passo gravado seguinte, um treinador a > `REPLAY.saltoTecnico` (0,25 m)
   do último passo gravado marca CORTE (`main.js gravarNoAnel`; `tools/lib/anel-node.mjs` igual) — senão o replay seguinte
