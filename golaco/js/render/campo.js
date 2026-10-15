@@ -19,6 +19,7 @@ export const REDE_TRAMA = { celula: 0.12, fio: 0.006, opacMin: 0.85, longe: 0.32
 export const LUZ_GOL = { redeDia: 0xaaadab, redeNoite: 0xaaadab, armDia: 0x2a2c2b, armNoite: 0x5a5c5b };
 import { cameraNoLadoDeCa } from './torcida-dados.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ } from './luz-falsa.js';
+import { retasAreaTecnica } from '../estadio-forma.js';
 
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
 const L = CAMPO.linha, h = L / 2;
@@ -132,6 +133,12 @@ function criarLinhas(detalhe) {
       while (da < -Math.PI) da += Math.PI * 2;
       arco(cx, cz, CAMPO.raioEscanteio - h, a0, a0 + da, 16);
     }
+  }
+  // as duas ÁREAS TÉCNICAS (IFAB Regra 1; estadio-forma.js retasAreaTecnica: 3 linhas de cada, para dentro da área, na
+  // mesma malha — nenhuma chamada de desenho a mais): cada retângulo vira a linha central dele, sem esticar as pontas
+  for (const r of retasAreaTecnica()) {
+    if (r.x1 - r.x0 >= r.z1 - r.z0) { const zc = (r.z0 + r.z1) / 2; quad(r.x0, zc, r.x1, zc, -HG, HG); }
+    else { const xc = (r.x0 + r.x1) / 2; quad(xc, r.z0, xc, r.z1, -HG, HG); }
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));

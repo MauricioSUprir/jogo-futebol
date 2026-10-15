@@ -65,6 +65,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node golaco/tools/teste-comemoracao-tela.mjs
+      - name: Área técnica e treinadores na tela (celular — visíveis com o banco no quadro, chamadas iguais, CPU)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node golaco/tools/teste-tecnicos-tela.mjs
       - name: Cena de substituição e faixa ENTRA/SAI (fila depois do replay, pular, pausa, celular, nada encosta; hash igual)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

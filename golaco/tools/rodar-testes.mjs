@@ -70,6 +70,8 @@ const LISTA = [
   ['replay: a cena semiautomática do impedimento e a checagem de posição legal (durações, critério, câmera, selo, coerência)', 'teste-saot.mjs'],
   ['comemoração do gol: cena pura (locomoção, golpes, gestos, abraço, quem sofreu, câmera; o mundo não muda)', 'teste-comemoracao.mjs'],
   ['cena de substituição: quem sai pela linha mais perto (Regra 3.3), quem entra pelo meio, placa, câmera; o mundo não muda', 'teste-substituicao.mjs'],
+  // Área técnica e treinadores (dono, 12/10: "quero a área técnica e o treinador")
+  ['área técnica (Regra 1) e os 2 treinadores: dentro da área, pé plantado, gestos, olham a bola, reagem ao gol, nunca tapam a TV, hash igual', 'teste-tecnicos.mjs'],
   // Etapa 4: regras (IFAB)
   ['impedimento (Regra 11: cenas, tiro livre indireto, árbitro independente) e acréscimos (Regra 7.3)', 'teste-impedimento.mjs'],
   ['faltas, vantagem, cartões e expulsão (Regra 12), tiro livre direto e pênalti (Regra 14)', 'teste-faltas.mjs'],
