@@ -317,7 +317,9 @@ function espalmar(m, j, d, sentido) {
       // tentativa mais aberta e mais alta (passa por cima de quem está na área)
       const longe = dLinha > E.perto;
       const zAlvo = lado * (longe ? E.zAberta + 3 * r1 + 2 * abre : CAMPO.gol.largura / 2 + 1.0 + 1.8 * r1 + abre);
-      const xAlvo = longe ? gx - sentido * dLinha * 0.5 : gx + sentido * (0.6 + 0.4 * tent);
+      // (disputa de pênaltis, disputa.js — só nela: o contato fica a ~0,7 m da linha, no meio do gol, e a espalmada "por
+      // fora da trave" mirando atrás da linha entrava em 3 de 4; lá ela sai para o lado e para a frente, longe da linha)
+      const xAlvo = longe ? gx - sentido * dLinha * 0.5 : m.disputa ? gx - sentido * (dLinha + 1.5 + 0.5 * tent) : gx + sentido * (0.6 + 0.4 * tent);
       let ux = xAlvo - b.p.x, uz = zAlvo - b.p.z;
       const l = MD.hypot(ux, uz) || 1;
       ux /= l; uz /= l;

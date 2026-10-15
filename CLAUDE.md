@@ -501,6 +501,14 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   base: o Estádio Golaço de hoje com o nome "Estádio Total Match" e o mosaico "TOTAL MATCH". A geometria não muda (trilhos
   de câmera e a bola). Testes: `teste-identidade` (E1–E8), `teste-prejogo` item 14. Mexeu em main.js,
   hud.js, partida.js, acoes.js ou nos desenhos de estádio/torcida? Rodar também `teste-tm-tela` e o `testar-3d`.
+- **Modo Pênaltis 3D** (dono, 15/10: "crie uma versão só de jogador de pênaltis" → "modo de pênaltis 3d igual ao golaço, só
+  que versão de pênaltis"; contrato "Disputa de pênaltis" no `CONTRATOS.md`): `?modo=penaltis`, "Pênaltis" no "Modo de jogo" e,
+  no TM, "Pênaltis 3D" em "Mais modos" (`legacy-total-match/js/penaltis3d.js`, o pedido com `modo: "penaltis"`). `js/disputa.js`
+  (puro; IFAB Regra 10: 5 alternadas com fim antecipado, alternadas, fila dos cobradores, moeda pelo `m.rng`) usa a MESMA
+  cobrança do pênalti da partida (`partida.js prepararPenalti/cobrar`); o cobrador anda até a marca pela locomoção (`j.guia`
+  de quem está 'parado' no `sim.js`); a câmera atrás do cobrador (o analógico pelo yaw dela); `js/disputa-tela.js` (bolinhas,
+  só o CHUTE). Os dois só por import dinâmico. Sem o modo, `hash-igual`/`hash-partida` IGUAIS. Testes: `teste-disputa` (Node),
+  `teste-penaltis-tela` (CI) e `legacy-total-match/ferramentas/testar-penaltis.mjs` (senha do Viverde só por `TM_SENHA_VIVERDE`).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

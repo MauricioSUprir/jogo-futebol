@@ -1662,3 +1662,31 @@ export const TECNICOS = {
     sofreu: ['cabecaCosta', 'cabecaAgacha', 'cabecaCruza'],
   },
 };
+
+// ------------------------------------------------------------------- Disputa de pênaltis (modo Pênaltis 3D, 15/10)
+// IFAB Regra 10 ("tiros do ponto penal"): todos num gol só, 5 cobranças alternadas por time (acaba antes quando um não
+// alcança mais o outro), empatou → alternadas até um converter e o outro não com o mesmo número de cobranças; cada jogador
+// só bate de novo depois de todos do time; quem começa e o gol, pela moeda (m.rng). Os que esperam ficam no círculo central;
+// o goleiro do time que bate, na linha de fundo onde ela encontra a linha da área (fora dela). Puro: js/disputa.js (a mesma
+// cobrança de pênalti da partida: partida.js prepararPenalti/cobrar). Tempos em s; m; m/s.
+export const DISPUTA = {
+  cobrancas: 5,                 // por time antes das alternadas (Regra 10)
+  // o cobrador entra (corte) a `dist` m atrás da marca e `lado` m do meio, e anda até a bola: `vel` m/s, freando a
+  // `freio` m/s² (o pedido cai como √(2·freio·d)); chegou a ≤ `chegou` m (ou passou de `max` s): a cobrança é montada
+  caminhada: { dist: 5.0, lado: 1.3, vel: 2.5, freio: 1.8, chegou: 0.07, max: 5 },
+  esperaHumano: 3,              // s a mais que PARTIDA.cobrancaHumanoMax para o humano bater (depois a IA bate por ele)
+  pronta: 0.9,                  // s da montagem até o apito (na partida, PARTIDA.montagemPor.penalti: lá ninguém andou até a bola)
+  // força da cobrança da IA (o sorteio de PARTIDA.penaltiIA.forca levado a esta faixa): com a da partida (0,62–0,9: 25–29
+  // m/s, a bola alta no canto) o goleiro da disputa defendia 6% e o humano que acertava o lado quase nunca chegava; com
+  // 0,35–0,65 (~22 m/s, a do canhão da partida, teste-faltas C) a IA converte ~78% (real: ~70–76%), defesa ~8%, fora ~13%
+  // (teste-disputa D; a bola espalmada que entra é gol — Regra 10)
+  forcaIA: [0.35, 0.65],
+  // fim da cobrança (Regra 10: a bola parou, saiu ou não pode mais entrar): gol; o goleiro com ela nas mãos; fora do campo;
+  // voltando do gol (≥ `volta` m/s, a ≥ `longe` m da linha) depois de tocar o goleiro ou a trave; parada (< `parada` m/s no
+  // chão, depois de `minimo` s); ou `max` s depois do chute
+  fimChute: { volta: 0.3, longe: 0.6, parada: 0.5, minimo: 0.35, max: 4.5 },
+  reacao: { gol: 2.0, erro: 1.9, trote: 3.0, anda: 1.3 }, // s da reação (e m/s do cobrador voltando ao círculo)
+  // círculo central: as duas filas de frente para o gol (o time que começa mais perto), `passo` m entre os jogadores
+  circulo: { x: [1.7, 0.1], passo: 0.95 },
+  esquina: 0.9,                 // m além da linha da área (o goleiro do time que bate, na linha de fundo)
+};

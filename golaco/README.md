@@ -175,7 +175,7 @@ muda não troca o passe por CONTER no meio).
 cd golaco && python3 -m http.server 8000   # http://localhost:8000
 ```
 
-Parâmetros da página: `?modo=partida|ataque|conducao` (padrão: partida), `?min=N` (minutos reais por tempo),
+Parâmetros da página: `?modo=partida|ataque|conducao|penaltis` (padrão: partida; `penaltis` = só a disputa de pênaltis, o modo Pênaltis 3D), `?min=N` (minutos reais por tempo),
 `?semente=N`, `?demo=1` (a IA joga pelo humano), `?q=baixa|media|alta`, `?hora=dia|noite`, `?camera=tv|aproximada`,
 `?toque=1`, `?qps=1`, `?prejogo=0|1|curto|escalacao` (o pré-jogo fica desligado com `?prints=1`, `?demo=1` e nos testes automatizados).
 

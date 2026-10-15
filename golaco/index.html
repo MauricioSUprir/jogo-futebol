@@ -207,17 +207,18 @@
         </button>
       </div>
       <div class="menu-corpo">
-        <!-- ações por modo: data-so="partida" só na partida; data-so="treino" só nos treinos -->
+        <!-- ações por modo: data-so="partida" só na partida; data-so="treino" só nos treinos; "penaltis" na disputa de pênaltis
+             (os valores separados por espaço: vale em qualquer um deles) -->
         <div class="menu-acoes" id="menu-acoes">
           <!-- Continuar e o Replay (dos últimos 10 s) na mesma linha: a pausa continua cabendo sem rolar no celular deitado -->
           <div class="linha-continuar">
             <button class="btn btn-primario" type="button" data-cmd="continuar" id="btn-continuar">Continuar</button>
-            <button class="btn btn-replay" type="button" data-cmd="replay" data-so="partida" title="Replay dos últimos 10 s" aria-label="Replay dos últimos 10 s">
+            <button class="btn btn-replay" type="button" data-cmd="replay" data-so="partida penaltis" title="Replay dos últimos 10 s" aria-label="Replay dos últimos 10 s">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.5 9.2v5.6l4.6-2.8z" fill="currentColor"/></svg>Replay
             </button>
           </div>
           <button class="btn" type="button" data-cmd="editar-time" data-so="partida">Editar time <small>escalação e tática</small></button>
-          <button class="btn" type="button" data-cmd="reiniciar-partida" data-so="partida" id="btn-reiniciar-partida">Reiniciar partida</button>
+          <button class="btn" type="button" data-cmd="reiniciar-partida" data-so="partida penaltis" id="btn-reiniciar-partida">Reiniciar partida</button>
           <!-- Total Match (?tm; hud.js aplicarModoNoMenu): sem ?tm ficam escondidos -->
           <button class="btn" type="button" data-cmd="simular-resto" id="btn-simular-resto" hidden>Simular o resto <small>até o apito final</small></button>
           <button class="btn" type="button" data-cmd="voltar-tm" id="btn-voltar-tm" hidden>Voltar ao Total Match</button>
@@ -230,7 +231,11 @@
         <!-- "Modo de jogo": a partida e os treinos (abre no lugar da lista de ações) -->
         <div class="menu-acoes" id="menu-modos" hidden>
           <button class="btn btn-voltar" type="button" data-cmd="modos-voltar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button>
-          <button class="btn" type="button" data-cmd="modo" data-valor="partida" aria-pressed="false">Partida <small>Golaço FC × Ventania FC</small></button>
+          <!-- a partida e a disputa de pênaltis lado a lado (numa linha só: o submenu continua cabendo sem rolar no celular deitado) -->
+          <div class="linha-cenas" role="group" aria-label="Jogos">
+            <button class="btn" type="button" data-cmd="modo" data-valor="partida" aria-pressed="false">Partida <small>Golaço FC × Ventania FC</small></button>
+            <button class="btn" type="button" data-cmd="modo" data-valor="penaltis" id="btn-modo-penaltis" aria-pressed="false">Pênaltis <small>disputa 3D</small></button>
+          </div>
           <button class="btn" type="button" data-cmd="modo" data-valor="ataque" aria-pressed="false">Treino de ataque <small>6 contra 4</small></button>
           <button class="btn" type="button" data-cmd="modo" data-valor="conducao" aria-pressed="false">Treino de condução <small>bola no pé</small></button>
           <!-- pré-jogo da partida (as cenas antes da saída de bola e as escalações): cada toque passa para o próximo —

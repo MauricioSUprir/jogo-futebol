@@ -27,6 +27,10 @@ const TEXTO_EVENTO = {
   edicaoRecusada: { t: 'Mudança no time recusada', ms: 2400, prio: 3 },
   // (a substituição feita não vira aviso de texto: a faixa ENTRA/SAI de TV — faixaSubst — mostra quem entra e quem sai)
   reinicio: { t: 'Partida reiniciada', ms: 1200 },
+  // disputa de pênaltis (modo Pênaltis): o comando da vez, na 1ª vez que o humano bate e que defende
+  penaltisBate: { t: 'Sua vez: mire e segure o CHUTE', ms: 3600, forte: true },
+  penaltisDefende: { t: 'Defenda: escolha o lado antes do chute', ms: 3600, forte: true },
+  reinicioDisputa: { t: 'Disputa reiniciada', ms: 1200 },
 };
 // faixa ENTRA/SAI (pedido do dono de 12/10: "embaixo, no modelo, a informação de quem entra e quem sai"; a exceção dele à
 // regra sem narração: só sigla, ▲/▼, ENTRA/SAI, número e nome). Tempos em s (config.js SUBST.faixa).
@@ -94,7 +98,7 @@ export function criarHud(opc) {
   let timerFaixa = null;
   let modoAtual = null, fimDeJogo = false;
   let ajudaDaPausa = false; // a Ajuda foi aberta pela pausa: fechar volta para ela
-  const NOME_MODO = { partida: 'partida', ataque: 'treino de ataque', conducao: 'treino de condução' };
+  const NOME_MODO = { partida: 'partida', ataque: 'treino de ataque', conducao: 'treino de condução', penaltis: 'pênaltis' };
   /** Sigla, escudo e nome (só para leitores de tela: nenhum texto novo na tela) de cada time no placar. */
   function escreverTimes() {
     times.forEach((t, i) => {
@@ -258,11 +262,16 @@ export function criarHud(opc) {
   }
   /** Itens do menu pelo modo (partida × treinos) e pelo fim de jogo. */
   function aplicarModoNoMenu() {
-    const partida = modoAtual === 'partida';
+    // a disputa de pênaltis (modo Pênaltis) é um jogo como a partida: o topo e a pausa dela (data-so "partida penaltis":
+    // Replay e Reiniciar; o Editar time é só da partida)
+    const penaltis = modoAtual === 'penaltis';
+    const partida = modoAtual === 'partida' || penaltis;
     // na partida o topo fica só com placar, minimapa e menu (sem o painel "Conduzindo"/posição/km/h:
     // é narração na tela); nos treinos o painel continua (é o retorno do exercício)
     raiz.classList.toggle('em-partida', partida);
-    document.querySelectorAll('#menu [data-so]').forEach(b => { b.hidden = b.dataset.so !== (partida ? 'partida' : 'treino'); });
+    raiz.classList.toggle('em-penaltis', penaltis);
+    const so = penaltis ? 'penaltis' : partida ? 'partida' : 'treino';
+    document.querySelectorAll('#menu [data-so]').forEach(b => { b.hidden = !b.dataset.so.split(' ').includes(so); });
     // marcador de treino só no treino de condução (no de ataque a defesa já marca)
     if (el.marcador && !partida) el.marcador.closest('button').hidden = modoAtual === 'ataque';
     if (el.estadoModo) el.estadoModo.textContent = NOME_MODO[modoAtual] ?? '';
@@ -271,7 +280,7 @@ export function criarHud(opc) {
     const fim = partida && fimDeJogo;
     if (el.continuar) el.continuar.hidden = fim;
     if (el.reiniciarPartida) {
-      el.reiniciarPartida.textContent = fim ? 'Jogar de novo' : 'Reiniciar partida';
+      el.reiniciarPartida.textContent = fim ? 'Jogar de novo' : penaltis ? 'Reiniciar disputa' : 'Reiniciar partida';
       el.reiniciarPartida.classList.toggle('btn-primario', fim);
     }
     // Total Match (?tm): a partida é a do TM — sem Reiniciar nem a troca para os treinos (voltariam ao Golaço ×
@@ -282,9 +291,15 @@ export function criarHud(opc) {
       const modos = $('btn-modos');
       if (modos && modos.firstChild && modos.firstChild.nodeType === 3) modos.firstChild.textContent = 'Cenas da partida ';
       if (el.estadoModo) { el.estadoModo.hidden = true; el.estadoModo.style.display = 'none'; }
-      if (el.modos) el.modos.querySelectorAll('[data-cmd="modo"]').forEach(b => { b.hidden = true; });
+      if (el.modos) el.modos.querySelectorAll('[data-cmd="modo"]').forEach(b => { b.hidden = true; if (b.parentElement?.classList.contains('linha-cenas')) b.parentElement.hidden = true; });
       const sim = $('btn-simular-resto'), volta = $('btn-voltar-tm');
-      if (sim) sim.hidden = !partida || fim;
+      if (sim) {
+        sim.hidden = !partida || fim;
+        const sm = sim.querySelector('small');
+        if (sm) sm.textContent = penaltis ? 'até o fim da disputa' : 'até o apito final';
+      }
+      // a disputa de pênaltis do TM não tem pré-jogo nem substituição: sem o submenu "Cenas da partida"
+      if (modos) modos.hidden = penaltis;
       if (volta) { volta.hidden = !fim; volta.classList.toggle('btn-primario', fim); }
       if (opc.tm.trava) document.querySelectorAll('#menu [data-cmd="editar-time"]').forEach(b => { b.hidden = true; });
     }

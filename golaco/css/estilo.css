@@ -463,6 +463,7 @@ html:not(.com-toque) .chip-nomes { display: none; }
 .btn-replay { flex: none; justify-content: center; gap: 7px; }
 /* "Modo de jogo": as cenas da partida (pré-jogo e substituição) lado a lado, o nome em cima e o estado embaixo */
 .linha-cenas { display: flex; gap: 8px; }
+.linha-cenas[hidden] { display: none; }
 .linha-cenas .btn { flex: 1 1 0; min-width: 0; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; padding: 4px 12px; line-height: 1.2; }
 .btn-replay svg { width: 18px; height: 18px; flex: none; }
 /* no PC as três opções ficam uma embaixo da outra, como as outras */
