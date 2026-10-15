@@ -196,11 +196,12 @@ pede à passada que tire o pé do toque do chão a tempo, e o toque espera por e
     CORRER/MOD — `magParaVelocidade`). Enquanto vira, `decidir` não troca o rumo da condução (`ia.viradaOk === false`);
     quando a virada cabe, o compromisso recomeça (`ia.opDesde`). Vale também com uma ação carregando (o corpo segue o
     pedido de condução).
-  - **domínio marcado não sobra com a bola de outro** (`sim.js`, laço do movimento, para todos — IA e humano): com
-    `m.posse` de OUTRO jogador (no pé ou na mão do goleiro), o `cond.toque` de tipo `'dominio'` é apagado antes de
-    `movimentoRecepcao` — só a bola livre (`tentarDominio`) refazia ou apagava o plano, e o plano velho guiava o corpo
-    (em corrida reto até o ponto do toque; de frente ou assistido a ≤ 1 m/s) até a bola ficar livre de novo. Medida:
-    `teste-nao-passa` meta 4 (episódios de ≥ 2 passos).
+  - **domínio marcado não sobra com a bola de outro** (`sim.js`, laço do movimento, só o controlado do humano — sem a
+    IA jogando por ele): com `m.posse` de OUTRO jogador (no pé ou na mão do goleiro), o `cond.toque` de tipo `'dominio'`
+    é apagado antes de `movimentoRecepcao` — só a bola livre (`tentarDominio`) refazia ou apagava o plano, e o plano
+    velho guiava o corpo (em corrida reto até o ponto do toque; de frente ou assistido a ≤ 1 m/s) até a bola ficar livre
+    de novo, sem obedecer ao analógico. Medida: `teste-nao-passa` meta 4 (episódios de ≥ 2 passos do controlado). Na IA
+    o plano velho fica (pendência: apagado para todos, a defesa da IA perdia a intensidade calibrada na #471).
 - **Previsões sem alocar (Etapa 3, plano 4.3):** `preverBola(b, n)` → `{xs, zs, ys, rol}` e `preverCorpo(m, j, n,
   ...)` → `{n, xs, zs, rs, ss, fs}` devolvem vetores **SÓ DE LEITURA e reaproveitados** (dois jogos que se revezam:
   a resposta vale até a SEGUNDA previsão nova seguinte; os vetores podem ter mais de n + 1 posições — use só 0..n).

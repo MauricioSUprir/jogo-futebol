@@ -467,12 +467,14 @@ export function passo(m, entradas) {
       mv = movimentoComBola(m, j);
     } else {
       j.pedidoPedalada = false;
-      // (só na partida) a bola no pé ou na mão de OUTRO: o domínio marcado era de um passe ou de uma bola livre que já
-      // acabou — o plano velho seguia guiando o corpo (movimentoRecepcao: em corrida até o ponto do toque, de frente ou
-      // assistido a ≤ 1 m/s) até a bola ficar livre de novo, porque só a bola livre (tentarDominio) refaz ou apaga o plano
-      // (contraprova, 15/10: o adversário a 7 m/s seguiu reto 0,6 s para o ponto de um passe que o outro já tinha
-      // dominado e passou 3,7 m da bola; teste-nao-passa meta 4)
-      if (m.partida && m.posse != null && j.cond?.toque?.tipo === 'dominio') j.cond.toque = null;
+      // (só na partida, o controlado do humano) a bola no pé ou na mão de OUTRO: o domínio marcado era de um passe ou de
+      // uma bola livre que já acabou — o plano velho seguia guiando o corpo (movimentoRecepcao: em corrida até o ponto do
+      // toque, de frente ou assistido a ≤ 1 m/s) até a bola ficar livre de novo, porque só a bola livre (tentarDominio)
+      // refaz ou apaga o plano: o controlado não obedecia ao analógico (teste-nao-passa meta 4). Na IA o plano velho fica
+      // (pendência): apagado para todos, a IA perdia a intensidade calibrada na #471 — o adversário que ia cortar e
+      // seguia para o ponto do passe pressionava o recebedor (12 partidas do teste-intercepta: 11,38 → 10,04
+      // interceptações por time, passe certo 86,1 → 87,3%; no CI, 8 testes da defesa, faltas e PRESSÃO reprovaram)
+      if (m.partida && m.posse != null && j.cond?.toque?.tipo === 'dominio' && ehControlado(m, j) && !m.iaJoga?.[j.time]) j.cond.toque = null;
       mv = movimentoAereo(m, j, movimentoRecepcao(m, j, movimentoBase(j, j.ix, j.iz, j.imag, j.botoes, false, j.rumo, null)));
       // IA sem a bola andando/trotando olha para a bola (passo de lado ou de costas, como no jogo de
       // verdade); antes andava de costas para o lance. Contínuo: quanto mais devagar, mais o tronco

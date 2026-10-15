@@ -485,3 +485,20 @@ outro ficou com ela — a carga é da frente das faltas, #480). O medidor deixa 
 parte (coluna "fora da conta"): quem acabou de ter a bola roubada e ainda não pode dominar, e quem foi empurrado
 (a velocidade do corpo mudou ≥ 0,8 m/s num passo, `medir-passa.mjs EMPURRAO`; a freada normal é ~0,1 m/s por passo).
 Com isso: **0,38 (16 em 42) / 0 / 0 / 0** nas metas 1–4; fora da conta 3 roubados e 1 empurrado (3 com a bola perdida).
+
+**O plano velho só sai do controlado do humano (CI de 6b1d4d7c, 15/10).** Com a limpeza para todos, o CI deu 50/58: oito
+testes reprovaram — `teste-intercepta` A (10,04 interceptações por time, meta ≥ 10,25; passe certo 87,3%, meta ≤ 86,5%),
+`teste-defesa-corrida` (12% das arrancadas do humano chegando à área, meta ≤ 5%), `teste-faltas` D (1,47 por partida, meta
+≥ 1,5), `teste-pressao-humano` M5 (78%, meta ≥ 80%), e quatro que dependem do lance sorteado (`teste-replay-anel` G6,
+`teste-substituicao` S4, `teste-tecnicos` T8, `teste-botoes` B14b). Na triagem (cópias da lógica, mesmas sementes): sem a
+limpeza na IA, o `teste-intercepta` A volta a 11,38 / 86,1% e defesa-corrida, faltas D (1,86), substituição, treinadores e
+o G6 do replay passam — o adversário que tinha marcado o domínio para cortar um passe e seguia para o ponto do toque
+pressionava o recebedor de graça, e a calibração da #471 conta com isso. Fica: a limpeza só para o controlado do humano
+(o defeito que a pessoa vê — o jogador não obedece ao analógico), meta 4 contada nas cenas do humano (57 episódios do
+controlado nas cenas 'frente' e 'lado' antes → 0); na IA, pendência (apagar o plano exige recalibrar a defesa da IA junto).
+Nas 42: **0,40 (17) / 0 / 0 / 0**. O B14b do `teste-botoes` reprovava pela guarda da amostra ("sem escolha ≥ 3": main 3/10,
+a frente 2/9 — a comparação vencida × sem escolha passava): 20 sementes em vez de 10 (vencida 7/16, sem escolha 3/19).
+Sobra o `teste-pressao-humano` M2 (com o botão, um companheiro a ≤ 2 m do condutor em ≤ 1,5 s): 51% (25/49; main 63%, 27/43;
+meta ≥ 60%) — igual sem limpeza nenhuma (vem das viradas e do domínio embalado da IA: o condutor que domina andando é
+mais difícil de alcançar em 1,5 s); com a limpeza para todos o M2 dava 63% e o M5 caía a 78%. A PRESSÃO é de outra frente:
+fica para a decisão.

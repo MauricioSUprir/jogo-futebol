@@ -765,7 +765,9 @@ if (faz('B14')) {
   // B14b: a escolha do TROCAR vencida (o meu time teve a bola depois) não desliga a troca automática do passe do adversário
   // quando o controlado volta a ser o escolhido (a perda com ele mais perto): igual a sem escolha nenhuma
   const rb = { sem: [0, 0], vencida: [0, 0] };
-  for (const sem of [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]) {
+  // (20 sementes: com 10, a guarda "sem ≥ 3" ficava no limite — main 3/10, a frente do domínio 2/9 — e reprovava pela
+  // amostra, não pela comparação vencida × sem escolha; as metas não mudam)
+  for (let sem = 11; sem <= 30; sem++) {
     const m = novaPartida(sem, 200);
     let achou = false;
     for (let i = 0; i < 3000 && !achou; i++) {

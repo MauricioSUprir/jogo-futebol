@@ -29,7 +29,7 @@
 //     dominado (ou que o goleiro já tinha na mão) seguia guiando o corpo — só a bola livre refazia ou apagava o plano: em
 //     corrida o corpo ia reto até o ponto do toque, de frente ou assistido a ≤ 1 m/s (12118 t 11047 #109, nas sementes
 //     novas: 7 m/s reto 0,6 s para o ponto de um passe que o humano já tinha dominado, 3,67 m além da bola) — agora a
-//     partida apaga o plano assim que a bola é de outro (sim.js);
+//     partida apaga o plano do controlado do humano assim que a bola é de outro (sim.js; na IA, pendência);
 //  G. (depois da junção com a #471, 15/10) fora da conta, listados à parte: quem acabou de ter a bola roubada e ainda não
 //     pode dominar (o bote da #471 manda a bola para o lado ou para trás no caminho do condutor: 3169 t 6291 #10 e 2220
 //     t 17834 #7, 2 m "atrás" e o adversário com ela) e quem foi empurrado por trombada (2220 t 5359 #105: parado com a
@@ -44,9 +44,9 @@
 //  2. bola de passe para outro, lenta, colada (≤ 0,6 m) no pé de quem não é o recebedor por ≥ 0,2 s sem ele tocar: 0
 //     (o adversário de quem passou ou o companheiro dele);
 //  3. depois de passar da bola, o adversário fica com ela: 0;
-//  4. (contraprova da rodada final) domínio marcado que sobra com a bola no pé de outro por ≥ 2 passos: 0 (antes da
-//     correção F, nestas 42: 290, 93 do controlado; com o F e a junção com a #471: 0 — e 0,38 / 0 / 0 nas metas 1–3,
-//     com o G; ver o PESQUISA.md §6).
+//  4. (contraprova da rodada final) domínio marcado que sobra com a bola no pé de outro por ≥ 2 passos, do controlado do
+//     humano (cenas 'frente' e 'lado'): 0 (antes da correção F, nestas 42: 290 de todos, 93 do controlado; a coluna da
+//     tabela mostra todos — na IA o plano velho fica, pendência; ver o PESQUISA.md §6).
 //   node tools/teste-nao-passa.mjs [--js <pasta js>] [--detalhe] [--par 3] [--json casos.json]
 // (uma partida por processo, até --par ao mesmo tempo: as 42 partidas levavam 687 s no CI num processo só)
 import { fork } from 'node:child_process';
@@ -97,7 +97,7 @@ await Promise.all(Array.from({ length: nPar }, async () => {
 const ordem = new Map(FILA.map((x, k) => [`${x.cena} ${x.sem}`, k]));
 res.sort((a, b) => ordem.get(`${a.cena} ${a.sem}`) - ordem.get(`${b.cena} ${b.sem}`));
 const n = res.length;
-const todos = res.flatMap(r => r.cs), bloq = res.flatMap(r => r.bl), velhos = res.flatMap(r => r.pv);
+const todos = res.flatMap(r => r.cs), bloq = res.flatMap(r => r.bl), velhos = res.filter(r => r.cena !== 'ia').flatMap(r => r.pv).filter(x => x.hum);
 const perdeu = todos.filter(c => c.perdeu);
 const lin = [['cena', 'partidas', 'passou da bola', 'do controlado', 'perdeu a bola', 'bola atrás p50 / máx (m)', 'passe colado no pé de outro', 'domínio velho (do controlado)', 'fora da conta: roubado / empurrado (perdeu)']];
 for (const [cena] of CENAS) {
@@ -117,7 +117,7 @@ const metas = [
   ['"passou da bola" por partida (todos)', `${fmt(porPartida, 2)} (${todos.length} em ${n})`, '≤ 0,5', porPartida <= 0.5],
   ['passe lento colado no pé de quem não é o recebedor, sem tocar (≥ 0,2 s)', `${bloq.length}`, '0', bloq.length === 0],
   ['passou da bola e o adversário ficou com ela', `${perdeu.length}`, '0', perdeu.length === 0],
-  ['domínio marcado que sobra com a bola no pé de outro (≥ 2 passos; guiava o corpo)', `${velhos.length}`, '0', velhos.length === 0],
+  ['domínio marcado que sobra com a bola no pé de outro, do controlado do humano (≥ 2 passos; guiava o corpo)', `${velhos.length}`, '0', velhos.length === 0],
 ];
 console.log('\n' + tabelaTexto([['Meta', 'Medido', 'Alvo', 'Resultado'], ...metas.map(x => [x[0], x[1], x[2], x[3] ? 'PASSOU' : 'REPROVOU'])]));
 process.exit(metas.every(x => x[3]) ? 0 : 1);
