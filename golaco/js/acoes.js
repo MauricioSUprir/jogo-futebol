@@ -6,7 +6,7 @@
 // Com a bola, a ação sai no próximo toque possível (toque marcado com tipo 'acao', o pé de apoio
 // no chão); com a bola chegando, sai de primeira no tick do domínio.
 
-import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, GOLEIRO, LATERAL, AEREO } from './config.js';
+import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, GOLEIRO, LATERAL, AEREO, RECEPCAO, CABECEIO } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { normal } from './rng.js';
@@ -28,8 +28,12 @@ const BOTOES_ACAO = [
  * de um botão segurado e o pedido ainda não executado (ex.: CHUTE apertado enquanto o passe ia,
  * para bater de primeira). Os botões segurados contam como já apertados no novo jogador (não viram
  * carga nem troca falsa), e a ação virtual que a IA segurava nele é descartada.
+ * Trava "só o meu jogador" (m.trava = {time: id}; o Rumo ao Estrelato do Total Match, partida.js criarPartida): o controle
+ * nunca sai do travado — a troca para outro é recusada (devolve false; sem m.trava, sempre true, como antes).
  */
 export function assumirControle(m, time, novo) {
+  const trava = m.trava?.[time];
+  if (trava != null && novo.id !== trava) return false;
   const antigo = m.jogadores.find(o => o.id === m.controlado[time]);
   m.controlado[time] = novo.id;
   const mask = m.botoesTimeAgora?.[time] ?? 0;
@@ -40,6 +44,7 @@ export function assumirControle(m, time, novo) {
     if (antigo.pedido && m.posse !== antigo.id) { novo.pedido = antigo.pedido; antigo.pedido = null; }
     if (antigo.mira) { novo.mira = antigo.mira; antigo.mira = null; }
   }
+  return true;
 }
 
 /** Lado do gol que o time ataca (+1 ataca x = +52,5). */
@@ -373,7 +378,10 @@ function girar(ux, uz, a) {
 function finalizarChute(m, j, pe, tipo, v, w, alvo, para, extra = {}) {
   const b = m.bola;
   chutar(b, v, w);
-  if (v.y <= 0.01) chutarRasteiro(b, v.x, v.z);
+  // a batida para baixo (ou reta) só vira bola ROLANDO com a bola no chão ou na altura do pé: no ar ela sai voando de onde
+  // está (antes o cabeceio a gol, com elevação negativa, aparecia no chão aos pés de quem cabeceou no mesmo quadro — o
+  // "teleporte" da contraprova de 11/10: 200 de 200 cabeceios a gol)
+  if (v.y <= 0.01 && (b.rolando || b.p.y <= RECEPCAO.alturaPe)) chutarRasteiro(b, v.x, v.z);
   const c = j.cond;
   const sv = MD.hypot(v.x, v.z) || 1;
   c.ult = { tick: m.tick, pe, bx: b.p.x, bz: b.p.z, dx: v.x / sv, dz: v.z / sv, v: MD.hypot(v.x, v.y, v.z), tipo };
@@ -397,10 +405,7 @@ function marcarRecebedor(m, r, x, z, tipo, tick) {
   if (r.posicao === 'GOL') return;
   if (m.humanos && m.humanos.includes(r.time) && m.controlado) {
     // o controle passa para quem vai receber (como nos jogos de futebol atuais)
-    if (m.controlado[r.time] !== r.id) {
-      assumirControle(m, r.time, r);
-      m.eventos.push({ tipo: 'troca', id: r.id, auto: true });
-    }
+    if (m.controlado[r.time] !== r.id && assumirControle(m, r.time, r)) m.eventos.push({ tipo: 'troca', id: r.id, auto: true });
   }
 }
 
@@ -421,8 +426,8 @@ export function executarAcao(m, j, pe, primeira = false) {
   }
   j.miraAuto = p.dir ?? null; // reposição automática do goleiro: direção fixa, sem o analógico
   const b = m.bola;
-  if (b.p.y > 0.6 && p.tipo !== 'chute') return executarCabeceio(m, j, p);
-  if (b.p.y > 1.2) return executarCabeceio(m, j, p);
+  // de cabeça só com a bola acima de CABECEIO.alturaPedido (abaixo: o voleio/passe de primeira com o pé, da altura dela)
+  if (b.p.y > CABECEIO.alturaPedido) return executarCabeceio(m, j, p);
   if (p.tipo === 'chute') {
     // no chute a pressão só pesa de perto (< 12 m) e pouco; de primeira, ×1,15 (StatsBomb)
     const lado = ataca(m, j.time);
@@ -866,7 +871,9 @@ export function executarCabeceio(m, j, p) {
   const attr = j.par.attr.cabeceio;
   // quem ganhou a disputa pelo alto agora (sim.js) cabeceia pressionado: mais dispersão. O cabeceio a gol na bola parada
   // (Etapa 4) espalha como o de verdade (Opta: ~1/3 no alvo)
-  const e0 = m.partida && p.tipo === 'chute' && m.voo?.bolaParada ? cfg.erroGolBolaParada : [0.12, 0.03];
+  // (entrega "cabeceio na bola rolando", 12/10: o cabeceio a gol espalha como o de verdade em toda bola — Opta: ~40% no
+  // alvo —, não só na bola parada; os outros cabeceios ficam com a dispersão de antes)
+  const e0 = p.tipo === 'chute' ? cfg.erroGol : [0.12, 0.03];
   const sig = lerp(e0[0], e0[1], attr / 100) * (j.disputa === m.tick ? AEREO.erroDisputa : 1);
   let ux, uz, s, el;
   let para = null;
@@ -874,13 +881,19 @@ export function executarCabeceio(m, j, p) {
     const gx = lado * CAMPO.meioX;
     const meio = CAMPO.gol.largura / 2;
     const mr = mira(j);
-    const zM = mr && mr.mag > 0.3 ? clamp(mr.z * meio, -meio + 0.4, meio - 0.4) : (b.p.z > 0 ? -1.5 : 1.5);
+    // sem o analógico, o lado longe do goleiro — sem procurar o canto: a cabeçada não tem a precisão do chute (Opta: ~40%
+    // no alvo); a dispersão faz o resto
+    const gk = goleiroAdversario(m, j.time);
+    const zM = mr && mr.mag > 0.3 ? clamp(mr.z * meio, -meio + 0.4, meio - 0.4) : ((gk ? gk.z : b.p.z) > 0 ? -1 : 1) * CABECEIO.zGol;
     ux = gx - b.p.x; uz = zM - b.p.z;
     const D = MD.hypot(ux, uz) || 1; ux /= D; uz /= D;
     // força própria do cabeceio com corrida (Becker 2021: ~8,3 m/s) + parte da bola que chega
     const vIn = MD.hypot(b.v.x, b.v.y, b.v.z);
     s = clamp(lerp(cfg.potencia[0], cfg.potencia[1], attr / 100) + cfg.redirecao * vIn, cfg.v[0], cfg.v[1]);
-    el = -0.08; // cabeçada para baixo
+    // a elevação que põe a bola BAIXA na linha do gol (CABECEIO.yGol; o melhor cabeceador mira mais baixo), como o chute
+    // (antes −0,08 fixo: de ~2,1 m a bola descia nas pernas da defesa)
+    const yM = lerp(CABECEIO.yGol[1], CABECEIO.yGol[0], attr / 100);
+    el = elevacaoParaAltura({ x: b.p.x, y: b.p.y, z: b.p.z }, ux, uz, Math.max(1, D - 0.4), s, yM);
   } else if (p.tipo === 'passe') {
     para = escolherAlvo(m, j, 'passe');
     const tx = para ? para.x : j.x + dirPedida(j).x * 10, tz = para ? para.z : j.z + dirPedida(j).z * 10;
@@ -888,6 +901,13 @@ export function executarCabeceio(m, j, p) {
     const D = MD.hypot(ux, uz) || 1; ux /= D; uz /= D;
     s = clamp(D * 0.9 + 3, 6, 14);
     el = 0.25;
+  } else if (p.auto) {
+    // afastar sem botão (cabeceio.js intencaoCabeceio): para longe do meu gol e para o lado da bola — nunca de volta para
+    // o meio da minha área (a bola que volta na frente do gol vira chance deles)
+    const sz = b.p.z >= 0 ? 1 : -1;
+    ux = lado; uz = sz * CABECEIO.ladoAfasta;
+    const l = MD.hypot(ux, uz) || 1; ux /= l; uz /= l;
+    s = CABECEIO.vAfasta; el = CABECEIO.elAfasta;
   } else {
     const d = dirPedida(j);
     ux = d.x * 0.4 + lado * 0.6; uz = d.z * 0.4;

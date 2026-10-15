@@ -15,7 +15,8 @@ const SVG_PULAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6l7 6
 const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /**
- * opc = {aoProximo(), aoPularTudo(), aoComecar(), comToque: () => bool}. Devolve {raiz, escalacao, mostrar(v),
+ * opc = {aoProximo(), aoPularTudo(), aoComecar(), comToque: () => bool, identidade? (identidade.js: com ?tm, os escudos
+ * ao lado dos nomes e o nome do estádio na abertura; a escalação com o escudo e a cor de cada time)}. Devolve {raiz, escalacao, mostrar(v),
  * abertura(times | null), faixas(k), preto(a), modo(nome), atualizar(agoraMs), pularVisivel}.
  */
 export function criarPrejogoTela(opc) {
@@ -28,7 +29,8 @@ export function criarPrejogoTela(opc) {
   raiz.innerHTML = '<i class="pj-faixa pj-faixa-cima" aria-hidden="true"></i><i class="pj-faixa pj-faixa-baixo" aria-hidden="true"></i>'
     + '<i class="pj-esc-fundo" aria-hidden="true"></i>';
   document.body.appendChild(raiz);
-  const escalacao = criarEscalacaoTela(raiz);
+  const ident = opc.identidade && opc.identidade.tm ? opc.identidade : null;
+  const escalacao = criarEscalacaoTela(raiz, ident);
   const preto = document.createElement('i');
   preto.className = 'pj-preto';
   preto.setAttribute('aria-hidden', 'true');
@@ -37,7 +39,9 @@ export function criarPrejogoTela(opc) {
   const ab = document.createElement('div');
   ab.className = 'pj-abertura';
   ab.hidden = true;
-  ab.innerHTML = '<div class="pj-ab-marca">GOLAÇO</div><h1 class="pj-ab-jogo"></h1><p class="pj-ab-chama"></p>';
+  // (Total Match, html.tm: a marca é a do TM — na tela a logo pelo css/tm.css; o texto fica para o leitor de tela)
+  const marcaJogo = document.documentElement.classList.contains('tm') ? 'Total Match' : 'GOLAÇO';
+  ab.innerHTML = `<div class="pj-ab-marca">${marcaJogo}</div><h1 class="pj-ab-jogo"></h1><p class="pj-ab-chama"></p>`;
   raiz.appendChild(ab);
   // Pular
   const pular = document.createElement('button');
@@ -93,7 +97,19 @@ export function criarPrejogoTela(opc) {
       raiz.classList.toggle('na-abertura', naAbertura);
       if (times) {
         const nome = t => ELENCOS[times[t].elenco]?.nome ?? '';
-        ab.querySelector('.pj-ab-jogo').innerHTML = `<span>${esc(nome(0))}</span><i aria-hidden="true">×</i><span>${esc(nome(1))}</span>`;
+        if (ident) {
+          // Total Match: o escudo de cada time ao lado do nome (a mesma imagem do TM) e o nome do estádio embaixo
+          const escudo = t => `<img class="pj-ab-escudo" alt="" src="${esc(ident.times[t].escudo.url).replace(/"/g, '&quot;')}" style="height:1.15em;width:auto;max-width:1.4em;object-fit:contain;vertical-align:-0.18em;margin:0 0.3em">`;
+          ab.querySelector('.pj-ab-jogo').innerHTML = `<span>${escudo(0)}${esc(nome(0))}</span><i aria-hidden="true">×</i><span>${esc(nome(1))}${escudo(1)}</span>`;
+          let est = ab.querySelector('.pj-ab-estadio');
+          if (!est) {
+            est = document.createElement('p');
+            est.className = 'pj-ab-estadio';
+            est.style.cssText = 'margin:0;font-size:clamp(12px,1.7vw,17px);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--texto-2,#b9c2c6)';
+            ab.insertBefore(est, ab.querySelector('.pj-ab-chama'));
+          }
+          est.textContent = ident.estadio.nome;
+        } else ab.querySelector('.pj-ab-jogo').innerHTML = `<span>${esc(nome(0))}</span><i aria-hidden="true">×</i><span>${esc(nome(1))}</span>`;
         ab.querySelector('.pj-ab-chama').textContent = opc.comToque() ? 'Toque para começar' : 'Clique ou aperte Enter para começar';
         pular.classList.remove('visivel');
       }

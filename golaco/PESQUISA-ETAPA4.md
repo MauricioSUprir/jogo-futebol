@@ -203,3 +203,189 @@ adversário dentro da área (erro na saída de bola 35 → 32% dos gols). Duas c
 gatilho do condutor lento só contra o humano (63,5% — não era a causa; descartado) e `GOLEIRO.logit.c0Partida` −0,1 só na
 partida: 6–16,5 m 59,0%, total 68,0%, de fora da área 86,8%, gols 2,13, impedimentos 1,15, bola parada 29% — tudo o que
 estava na meta continua nela (a amostra de 144 varia ±4 pontos nessa faixa: ~420 chutes no alvo).
+
+## 6. Cabeceio na bola rolando e IA intensa com responsabilidade (pedidos do dono de 11/10)
+
+Pedidos: "os jogadores não cabeceiam a bola, de jeito nenhum" e "o jogo tem que ser mais intenso, ninguém do outro time
+corre, ninguém marca, mas tem que marcar com responsabilidade e consciência, a IA tem que ser mais inteligente".
+Diagnóstico e contraprova (scratch `diag11/cabeceio*`, `diag11/ia-intensa*`): o cabeceio a gol era teletransportado para
+o chão no mesmo tick (`finalizarChute` punha a bola rolando), ninguém pulava (o toque aéreo só marcava a bola que passava a
+0,6 m, sem tempo de subir), a disputa pelo alto só existia na bola parada e o painel tinha 0 gol de cabeça na bola rolando.
+Na defesa, contra quem arranca com a bola o 1º homem ficava parado ou subindo no corredor (3,0 m/s para o próprio gol com o
+condutor a 3 m), quem foi batido seguia como 1º homem, a bola roubada saía para a frente do condutor (26% das roubadas
+desfeitas pelo mesmo jogador em 1 s) e 30–41% das arrancadas do próprio campo chegavam à área contra o bloco armado.
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| The Analyst (Opta), "fewer headed goals" (theanalyst.com/articles/premier-league-fewer-headed-goals-2024-25) | PL 2023/24: 203 de 1.246 gols de cabeça (16%); ~4,0 cabeceios a gol por jogo, ~1,6 no alvo (~40%); 34,7 cruzamentos por jogo, 8,4 certos (24%) | Linha "gols de cabeça" do painel (8–18%); `ACOES.cabeceio.erroGol` calibrado no canhão de cruzamentos pelo no alvo (~40%) e gol (10–13%) por cabeceio a gol |
+| The FA, "Heading guidance — professional football" (2021, dados Opta) | Cabeceios por jogo: zagueiros 7,02, meias 4,93, atacantes 3,65 | A intenção sem botão (`intencaoCabeceio`): no meu terço afasta, na área adversária a gol, no meio passe — quem defende cabeceia mais (o volume do painel é informativo) |
+| Premier League (premierleague.com/news/3854577) | Times de jogo aéreo passam de 600 duelos pelo alto por temporada (~17 por jogo) | Ordem de grandeza dos duelos pelo alto no jogo corrido (linha informativa do painel) |
+| Fílter et al. 2022 (MMU) | No cabeceio com corrida a cabeça passa ~0,56 m da estatura; último apoio ~0,24 s | `CABECEIO.salto` (o quadril sobe 0,40–0,65 m pela impulsão), `alcanceCabeceio` pela cabeça desenhada, `preparoPulo` |
+| Becker 2021 (RPTU) | Força própria do cabeceio com corrida ~8,3 m/s | `ACOES.cabeceio.potencia` (já da Etapa 2) + `redirecao` |
+| Mancini et al. 2022, Sports Medicine and Health Science (pmc.ncbi.nlm.nih.gov/articles/PMC9453686) | No pouso do cabeceio com salto o joelho toca o chão com 19–24° de flexão e chega a 69–90°; a altura do pulo de cabeceio fica ~2,5 cm abaixo do salto vertical máximo | `CABECEIO.amortece` (o quadril baixa depois do pouso), o pulo um pouco abaixo do máximo |
+| Fases do cabeceio com salto (Shewchenko 2005; Bauer 2001) | Preparação (agacha), impulsão com os braços, extensão do tronco para trás na subida, chicote para a frente no contato, no alto do pulo | `quadroPulo` (`agacha`, braços, `arco`, peso da inclinação) e o contato no alto do pulo (`tc`) |
+| Tese da Universidade de Atenas sobre os escanteios da Copa América 2021 (pergamos.lib.uoa.gr/uoa/dl/frontend/en/browse/3329322; 175 escanteios, Wyscout) | O ataque faz o 1º contato em 52,6% dos escanteios; 8 gols (4,6%) | `AEREO.zonaBolaParada` (quem defende ataca a bola só na zona dele) e `ataqueBolaParada` (quem ataca vem na corrida, no tempo da cobrança) — o canhão de escanteios do `teste-bolas-paradas` (meta 35–62%) |
+| FIFA Training Centre, "Goalkeeping fundamentals: defending the penalty area"; Keeperstop, "Dealing with crosses" | O goleiro lê se o cruzamento vai ao 1º pau, ao meio ou ao 2º pau e se ajusta antes; postura aberta para acompanhar a bola até o 2º pau | `GOLEIRO.leCruzamento`: a bissetriz do ponto onde a bola desce para a cabeça, não da bola no ar (no escanteio ele ficava no 1º pau e a cabeçada no 2º entrava) |
+| Wyscout, glossário PPDA (dataglossary.wyscout.com/ppda) | PPDA médio ~11 (6,7–18,2 nas ligas) | O `teste-pressao` (grupo `etapa3`) |
+| Forcher et al. 2024, "Is a compact organization important for defensive success in elite football?" (Universidade de Viena) | A compactação dos jogadores mais perto da bola pesa no sucesso defensivo | Só o 1º e o 2º homem vão à bola; o bloco do corredor acompanha no lugar dele na forma (`acompanhaCorredor`) |
+| Andrienko et al. 2017, "Visual analysis of pressure in football" (City, University of London) | A pressão cai com a distância e com o defensor atrás do atacante | O batido deixa de ser o 1º homem (`batido`, `batidoPaga`) |
+| Metrica Sports, dados de amostra (github.com/metrica-sports/sample-data) | Com o condutor rápido, ~51% dos defensores a mais de 4 m/s | Referência da contraprova para não exagerar o bloco inteiro correndo (`fBloco` < 1) |
+| EA SPORTS FC 27, Pitch Notes (ea.com) | Defesa por "contain"/"jockey" com corrida e o desarme na hora certa | `acompanhar`: conter pela velocidade (a conta do CONTER do humano) e fechar até o bote perto do gol; desarme sem parar de correr |
+| Sportsessionplanner, 1 × 1 (já citada na §17 da Etapa 3) | Fechar, conter e dar o bote quando o atacante dá a chance | `IA_DEFESA.corrida.engaja`: longe do gol atrasa a arrancada, perto ele tira a bola |
+| FBref (dados Opta), "2023-2024 Premier League Defensive Action Stats" (fbref.com/en/comps/9/2023-2024/defense) | Interceptações por time por jogo: média 8,49 (6,13 o Manchester City a 9,95 o Brentford) | Pedido do dono de 12/10 ("a defesa mal intercepta passe"): linha do painel e referência do `teste-intercepta` em interceptações por time por partida. As nossas partidas têm ~1/3 dos passes e quase nenhum outro jeito de errar o passe (no real ~11% dos passes errados são interceptações; aqui ~60%), então a meta é interceptar mais que a base (8,75) e no máximo 14, com o passe certo no real |
+| Opta via The Analyst e Premier League (temporada 2023/24) | ~941 passes por jogo (os dois times) e ~780 certos por jogo → passe certo ≈ 82,9% | Meta do `teste-intercepta`: passe certo 80–86,5% (o real ~80–85% com a margem da amostra; a publicada ficava em 88–89%) |
+| FIFA Training Centre, defesa por zona (já citada acima) | O marcador fica do lado da bola e do gol do homem dele, pronto para cortar a linha de passe sem perder o homem | `ia-tatica.js pontoMarcacao`: o marcador (individual ou da zona) puxado `linhaDePasse.sombra[pressão]` para a linha de passe do condutor, a `sombraDist` m do homem |
+| Opta, definição de interceptação ("a player intercepts a pass by moving into the line of the intended pass") e tempo de reação a um estímulo visual no esporte (~0,2 s) | O corte é ler a trajetória e chegar à linha antes do recebedor | `cortaPasse`: o 1º ponto da trajetória (`preverBola`) que o defensor alcança da velocidade que leva, com 0,2 s de leitura e 0,1 s antes do recebedor; e no `sim.js` o recebedor que só marcou o domínio não tira a vez de quem foi cortar (antes o canhão do passe arriscado cortava 1 de 92 passes alcançáveis) |
+| Contraprova de 11/10 (`diag11/ia-intensa-contraprova`) | Só correr não para a arrancada; falta o desarme lado a lado e não subir no corredor; o trote não pode virar "arrancada" | A ordem das mudanças (bote com `semDominioAte` e a bola para o lado do defensor; acompanhar sem subir; filtro da pressa; o batido; o 1º homem além da linha de engajamento) e `corrida.v` = 6,3 m/s |
+
+**Medido** (13/10; o painel de 144 no GitHub não pôde ser disparado daqui — `workflow_dispatch` com 403 para a integração
+da sessão —, então 48 partidas locais, sementes 1001–1048, as MESMAS na main e na branch; ± = intervalo de 95% dos gols):
+
+| Medida (painel) | main (base) | branch | Meta |
+|---|---|---|---|
+| gols por partida | 1,79 ± 0,35 | 1,50 ± 0,35 | 2,3–3,5 |
+| chutes por partida (time 0 / time 1) | 8,5 (4,2 / 4,3) | 6,6 (3,5 / 3,1) | — |
+| conversão / no alvo | 19,9% / 62,7% | 22,4% / 67,8% | 9–14% / 28–38% |
+| chutes de fora da área / gols de fora | 34,6% / 12,3% | 43,8% / 19,7% | 35–40% / 12–18% |
+| passe certo | 88,7% | 85,9% | 75–88% (Opta: 82,9%) |
+| interceptações por time por partida | 8,09 | 11,88 | 8,5–14 (PL: 8,5) |
+| posses que chegam ao último terço | 46,4% | 41,2% | 35–45% |
+| impedimentos por partida | 1,15 | 1,17 | ≥ 1 |
+| goleiro: total / 6–16,5 m / de fora | 69,2 / 58,1 / 88,9% | 67,6 / 54,2 / 83,6% | 66–72 / 55–60 / 80–90% |
+| origem dos gols: trabalhada / contra-ataque / roubada alta / bola parada | 23 / 10 / 47 / 19% | 36 / 18 / 31 / 14% | bola parada 20–30% |
+| gols de cabeça | 6,2% | 9,9% | 8–18% (PL: 16%) |
+| duelos pelo alto por partida (bola rolando) | 1,6 (0,0) | 3,5 (1,9) | — |
+
+Onde foram os gols (ablação com `--set`, 48 partidas cada, a mesma base): a defesa contra a arrancada com `corrida.v`
+6,3 m/s levava os gols a 0,90 (sem ela, 1,60) — o condutor da IA ainda acelerando ligava o bloco inteiro e o contra-ataque
+morria; com 6,8 m/s (só a disparada de verdade; o humano com a bola vai a 7,6) 1,50. O corte do passe sozinho quase não
+muda os gols (sem ele, 1,10 contra 0,90), nem a sombra na linha de passe (1,19). O que caiu foi o gol de roubada alta
+(47% dos gols na main, ~0,8 por partida — no real ~10–15%): a defesa nova perde menos bola perto da área. Calibrado:
+`GOLEIRO.logit.c0Partida` −0,1 → −0,35 (o goleiro tinha ido a 75–79% com menos chances claras), `IA_ATAQUE.contra` bonus
+1,0 e 8 s (a retomada no meio vira contra-ataque), `utilidade.chute` 3,0. Falta ~0,3 gol para a main e ~0,8 para a meta:
+volume de ataque (chutes 6,6 contra 8,5) — a calibração final fica com a condução curta, como combinado. Testes:
+`teste-intercepta` (base: 1/92 passes alcançáveis cortados, passe certo 88,7%, 8,75 interceptações; agora 20/34 = 59%,
+85,1%, 11,29; homem livre 77,8% → 75,6%), `teste-cabeceio` e `teste-defesa-corrida` (a base reprova 8 e 6 metas); o defensor do corredor ultrapassado
+ficou em 3,3–3,6 m/s (meta ≥ 5; base 3,0) — PENDENTE, não reprova.
+
+## 7. Volume de ataque com a defesa que corta o passe (rodada de 13/10)
+
+Pedido: trazer de volta o volume de ataque sem afrouxar a defesa nova (os chutes tinham caído de 9,2 para 6,8 por partida
+no painel de 144 do CI, os gols de 1,81 para 1,42). Diagnóstico (scratch `cabia/dbg-terco.mjs`, sementes 1001–1016): no
+último terço as posses eram as mesmas da main (14,9 por partida) — faltavam ações em cada uma (passes 25 → 20, cruzamentos
+4,1 → 2,8, chutes da área 3,6 → 2,1), e o gol de roubada alta caía de 1,0 para 0,4 por partida (na main, 30% das
+roubadas a ≤ 40 m do gol viravam gol — Opta: ~2%).
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| FIFA Training Centre, "Third player combinations" (fifatrainingcentre.com/en/game/game-analysis/in-possession/third-player-combinations.php) | A combinação em quatro fases: o passe, a devolução de primeira, a corrida para o espaço que o marcador do passador não acompanha e o passe final | A tabela da IA (`tabelaIA`): o passe curto no campo de ataque com espaço à frente sai com a corrida do passador, e quem recebe vê a devolução como enfiada. A devolução de primeira foi medida e saiu (chutes 7,6 → 6,2 e passe certo 85 → 82% em 48 partidas) |
+| American Soccer Analysis, "Where goals come from: playing the killer final ball" (2021) | Enfiada: chute de ~0,30 de xG; o cutback acontece ~1,6 vez por partida com 32% de acerto; os dois convertem bem mais que o cruzamento | Valorizar a bola no espaço para quem corre (a tabela vira enfiada). O "passe para quem finaliza" (o valor do passe pela chance de gol do recebedor) foi medido e não mudou os gols (1,73 → 1,71 em 48 partidas): não entrou |
+| StatsBomb, "How do Headers compare to Shots?" | Da mesma zona o cabeceio marca ~62% do chute; 95% dos cabeceios são do meio da área | `utilidade.cruzamentoV` 0,25 → 0,35 (com o cabeceio na bola rolando o cruzamento rende gol), sem passar da faixa de gols de cabeça (12–13%; PL 16%) |
+| Opta Analyst, "Premier League pressing stats" (2024) | PL 2024/25: 2,5 roubadas altas que terminam em chute por jogo, 0,3 em gol (13% dos chutes delas; 15–17% das roubadas altas terminam em chute) | O gol de roubada alta da main (~0,7 por partida, 37% dos gols) é o defeito antigo (a saída de bola roubada perto da área); a branch fica mais perto do real e não se buscou de volta esse gol |
+
+Também medido e descartado (48 partidas, `--set`): o condutor cauteloso (`manterPeso` 0,85 / `manterLado` 0,7: chutes 7,6 →
+4,9), o ousado no campo todo (0,55 / 0,25: chutes 8,4, mas no meio-campo ia para cima da PRESSÃO do humano e sobravam
+menos bolas longas — os duelos pelo alto com a bola rolando caíam para ~1,5), mais gente na área no cruzamento
+(`TATICA.naArea`) e a defesa da arrancada só a partir de 7,2 m/s (o humano em disparada passava a fazer 1,9 gol por
+partida no `teste-defesa-corrida`, meta ≤ 1,5).
+
+Medido (painel do CI, 144 partidas, main × branch, mesmas sementes): ver o relatório do PR #471.
+
+### 7.1 Rodada de 14/10 — onde o volume se perde (diagnóstico, 24–48 partidas locais, decisão no CI)
+
+- **O passador que confere a linha** (Jordet et al. 2020, *Frontiers in Psychology*, "Scanning, contextual factors, and
+  association with performance in English Premier League footballers", 9.574 posses: o jogador olha em volta mais antes de
+  passar do que antes de qualquer outra ação, e quem olha mais acerta mais o passe). Medido: ~16 passes por partida saíam
+  com a linha fechada no toque (risco ≥ 0,8 pela conta do `riscoCaminho`) tendo < 0,2 na decisão — a carga do botão e a
+  espera do pé de apoio levam 0,3–0,9 s e a marcação na linha de passe fecha a linha nesse tempo; 2/3 deles eram perdidos
+  (um terço das perdas do meio-campo). Desistir do passe quando a linha fecha derrubou esses passes de 16,2 para 3,3 por
+  partida, mas não trouxe volume (7,4 → 7,6 chutes, 1,71 → 1,67 gol em 48) e as interceptações voltaram ao nível da base
+  (13,1 → 8,0 por time, teste-intercepta A pede ≥ base + 1,5) com o passe certo em 88,6% (meta 80–86,5%): boa parte das
+  interceptações novas eram erro do passador. Não entrou — fica para o dono decidir (IA que passa melhor × defesa que
+  intercepta mais); uma versão pela `visao` (quem olha mais vê a linha fechar) é o meio-termo natural.
+- **Ablação da defesa nova** (48 partidas, base = a branch, 7,4 chutes; a main nas mesmas sementes: 9,4): sem a sombra da
+  linha de passe 7,2; sem o corte do passe 7,8; goleiro sem ler o cruzamento 8,0; sem a defesa da arrancada 8,1. Nenhuma
+  peça explica sozinha: cada uma tira ~0,5 chute (a soma dá a diferença). O que falta são os chutes da área sem ser de
+  cabeça (5,06 → 3,44 por partida) e os escanteios (2,33 → 1,69); os cabeceios a gol quase não mudam (1,44 → 1,19).
+- **Pesos do ataque não trazem volume** (48 partidas): `utilidade.chute` 3,6 → 7,1 chutes; `primeira.xg` 0,08 → 7,4;
+  `cruzamentoV` 0,45 → 7,5 (base 7,4). O condutor que encara no último terço (`manterTerco`) parecia neutro em 48 (7,4 ×
+  7,5) mas vale ~0,4 chute nas 144 do CI (7,3 × 6,9) — de novo, 48 partidas enganam.
+- No painel do CI com a IA jogando pelo humano do time 0, só o time 1 perde chute (4,7 → 3,2); sem o controle humano
+  (`m.humanos = []`) os dois perdem parecido: a causa é geral, não do lado do humano.
+
+### 7.2 Rodada de 15/10 — passe certo, PRESSÃO que corre e gols (triagem em 48 partidas locais, decisão no CI)
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| Premier League / Opta, "Season trends: Quality on rise as midfield takes focus" (premierleague.com/news/1745761) | A parte dos passes que terminam no último terço caiu de ~38% (2006/07) para 28,7% (2019/20), o mínimo da série | Diagnóstico: com a defesa que corta o passe, só ~10% dos nossos passes terminam no último terço e 94% dos passes curtos (< 15 m) dão certo (o meio-campo acerta 91,5%, o último terço só 52%) — o time troca passe de lado. Linha informativa no `teste-intercepta` A |
+| Opta via Premier League, "Opta Analyst on long balls" (premierleague.com/en/news/4426039) e Planet Football / Opta (long ball = passe de mais de 35 jardas; 47,3% certos na média da PL) | 2025/26: 849 passes por jogo, 82,6% certos; o lançamento acerta menos da metade | O lançamento mais cedo (`lancamentoMin` 25, `lancamentoP` 0,6–0,8) foi medido: os nossos lançamentos acertam ~0–4% (bola alta sem ninguém ganhando) e os gols caíam (1,31 em 48); não entrou |
+| The Analyst (Opta), PL 2023/24: 34,7 cruzamentos por jogo, 24% certos (já citada na §6) | Cruzar é ~3,7% dos passes | Aqui ~1,4% (o cruzamento quase só sai com 2+ na área) — ver o candidato abaixo |
+| Driblab, "on-ball pressures" (driblab.com/blog/arrigo-on-ball-pressures); StatsBomb, "Under Pressure" (blogarchive.statsbomb.com) | Passe "sob pressão" = defensor a ≤ 2 m do passador; a taxa de acerto cai sob pressão | Medido no jogo: livre 93,6%, adversário a 2–4 m 89,5%, a ≤ 2 m 72,9% — a queda existe; o excesso de acerto está no passe curto sem pressão no meio-campo |
+| EA SPORTS FC 27, Pitch Notes (ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive) | Alcance de interceptação da IA reduzido; o defensor controlado alcança mais que o da IA | O corte da IA segue pela física (leitura 0,2 s, nada de corte mágico); a folga por zona do candidato abaixo seguia isso |
+| Reynolds, "Steering Behaviors For Autonomous Characters" (GDC 1999), *obstacle avoidance*; GameDev.net, "American football AI" (gamedev.net/forums/topic/461155) | O agente olha à frente na direção do movimento e desvia do obstáculo mais perto que cruza o caminho; em jogos de futebol americano o recebedor soma "ir ao ponto" e "fugir dos adversários" | `defesa.js desviarCorpos` (ENTROU): o chamado da PRESSÃO em disparada contorna o corpo mais perto à frente (0,7 s de corrida, a 0,8 m dele) — trombadas com quem não é o condutor 4,2 → 2,1 por 100 lances, M5 80 → 83% |
+
+**Candidato medido e NÃO adotado** (9080b9ba, revertido): corte com a folga por zona (`IA_DEFESA.livre.antes` [meu terço,
+meio, terço deles] = [0,2, 0,05, 0,1]), `riscoMentalidade` × 1,2 e `cruzamentoP` com um na área 0,06 → 0,2. No
+`teste-intercepta` resolvia o passe certo (86,5 → 84,4%, interceptações 10,75, chutes 6,7 → 9,7 nas 12 partidas), mas no
+painel de 144 do CI os gols ficaram em 1,70 (main 1,85; antes 1,71), o goleiro de 6 a 16,5 m saiu da faixa (60,0%) e 7 testes
+reprovaram (duelos pelo alto 1,25 por partida, gols do sprint 1,58, faltas 1,25 por partida, PRESSÃO M1 e M4, e os do replay
+e dos treinadores da #479). Lição de novo: a triagem em 48 partidas (V7 +0,25 gol) não resolve efeitos de 0,2 gol, e os
+testes no fio da navalha mudam com qualquer trajetória nova.
+
+Diagnóstico do M5 (o chamado a > 4 m, ≥ 1 s depois, a ≥ vCorrida): ~1.000 dos ~5.400 passos que reprovavam eram o chamado
+pedindo disparada (CORRER, analógico cheio) e ainda acelerando — no passe do adversário o alvo muda de lado, o corpo freia
+na linha (jogador.js: inversão além de 112°) e arranca de novo; parte vinha de trombadas. Testados e descartados: contar a
+inversão no tempo de chegada da escolha (`tempoChegada`: +1 ponto no M5, dentro da variação de 8 partidas) e a histerese só
+sem curva grande (sem ganho). Achado e NÃO aplicado (pendência): o domínio marcado de quem ia receber o passe cortado ficava
+de pé com a bola no pé do adversário (~1.000 passos por partida, de frente a até 1 m/s, até 3,7 s); tirá-lo melhora a
+reação na hora da perda, mas derruba o M3 da PRESSÃO (o 2º companheiro mais perto em 2 s: Δ 1,89 → 1,39 m, meta 1,5) — com
+o recebedor livre para recompor, ele fica perto do condutor com e sem o botão — e o M5 (83 → 77%).
+
+Defeito de desenho corrigido (o que a leitura 0,15 do corte tinha exposto, §7.1 do relatório de 14/10, aparecia de novo com a
+trajetória nova): no pulo do cabeceio o pé que saía do chão no meio do passo caía para o chão no 1º passo do voo
+(`cabeceio.js pesNoAr`: 6,8 cm num quadro, 1,11× o limite do `teste-patinacao`). Agora ele parte da altura que tinha e a
+sobra some até o pouso (`teste-cabeceio` F4: 3 quadros acima do limite → 0, pior 1,05× → 0,77×). Muda o treino em passos
+raros (`hash-igual`: ataque-roteiro diferente a partir do passo 4800 da semente 3, um pulo com o pé no ar).
+
+Defeitos da câmera e dos treinadores que os gols da partida do #471 expuseram (CI do 9933ea0e; desenho, o hash da partida
+não muda):
+- `teste-tecnicos` T13 (treinador × jogador ≥ 0,5 m) — PENDENTE: o ponto calmo da IA (`ia-tatica.js alvoCalmo`) gira aos
+  poucos e, com a bola saindo pela lateral, o caminho girado levava o jogador 106 em arco 4,75 m para fora da linha, pela
+  área técnica, a 6,5 m/s junto do fundo dela (0,46 m do treinador, semente 7). O treinador não tem para onde fugir (está no
+  fundo da área e o jogador passa entre ele e o campo). Corrigir na IA (o giro que sairia do campo vira de uma vez:
+  mín 0,46 → 2,23 m, 216fac2c) dispara em ~3/4 das partidas — mesmo só dentro da área técnica — e reembaralha a amostra de
+  todos os testes da partida: no CI do 216fac2c reprovaram por pouco 4 que passavam (trote da IA 0,60 m, meta ≤ 0,59;
+  tiros livres no alvo 17,7%, meta ≥ 18%; interceptações 10,00, meta ≥ 10,25; PRESSÃO M4). Voltou a partida do 9933ea0e; o
+  caso fica com a correção dos treinadores robustos da main (golaco/replay-robusto) ou com uma rodada própria de IA.
+- T5 (mão ≤ 0,15 m por passo): a reação ao gol misturava as juntas em 0,2 s fixos e a mão que vinha das costas para os
+  braços em V corria 9 m/s (0,152 m num passo). A mistura da reação cresce com o caminho da mão (`TECNICOS.maoPicoGol` 8,1
+  m/s no pico do smoothstep, a mesma conta da troca comum): 0,152 → 0,146 m, com a mão acima da cabeça ainda em 0,28–0,37 s.
+- T7 (comemoração ≥ 3 s): artefato do teste — o laço parava no apito final e cortava a comemoração de um gol nos últimos
+  segundos (2,48 s). A medida segue 3,6 s depois do fim sem andar a partida (o T8 conta os gestos só até o apito, como
+  antes): 2,48–3,50 → 3,50 s.
+- `teste-replay-anel` G9 (olho do treinador ≤ 0,15 m da cabeça): no pulo/agachar de uma vez da reação ao gol o atraso da
+  gaussiana levava a lente a 0,157 m. O olho suavizado fica a ≤ 4 cm do bruto (`REPLAY.treinador.olhoMax`).
+- G8 (≥ 48 gols com autor na amostra): com ~1,6 gol por partida, 28 partidas davam 44; a amostra cresceu para 36.
+- G7 (a boca do gol no quadro da 1ª pessoa em chute − 0,5 s; apareceu com a trajetória do 216fac2c, semente 9 — o caso real
+  fica corrigido mesmo sem ela): o
+  cruzamento rasteiro chegava a 140° do gol e, puxando o olhar 60% da bola para o gol, a boca do gol ficava a 54° do centro
+  (fora dos 45° do quadro). O olhar antes do chute fica a ≤ 30° da boca do gol na horizontal (`REPLAY.primeira.golAntes`):
+  54 → 38°, no quadro nas três telas.
+
+Candidato do passe certo sem o corte por zona (o que sobrou do 9080b9ba): `IA_ATAQUE.riscoMentalidade` × 1,2 (o condutor
+aceita mais risco no passe para a frente; Opta/PL: 28,7% dos passes terminam no último terço, aqui ~9%) e
+`utilidade.cruzamentoP` com um na área 0,06 → 0,2 (The Analyst: ~3,7% dos passes são cruzamentos, aqui ~1,3%). Na partida do
+9933ea0e, `teste-intercepta` A (12 partidas, sementes 301–312): passe certo 86,7 → 86,0%, interceptações 10,79 → 10,25 (meta
+≥ 10,25: no limite), último terço 9,4 → 11,0% dos passes, cruzamentos 1,3 → 2,4%, chutes por partida 6,6 → 8,5. O
+`teste-defesa-corrida` reprovava os gols do roteiro sprint com 12 partidas (1,58; a mesma conta foi de 1,42 a 1,67 entre
+versões que não mexem na defesa da arrancada): com 24 partidas, 1,21 (9933ea0e) → 1,29 (candidato), meta ≤ 1,5 — a amostra
+cresceu para 24. Decisão pelo painel de 144 do CI.
+
+Gols de fora da área (painel do bf918606: 11,5%, meta 12–18%; goleiro de 16,5 m ou mais 86,2%, meta ~85%):
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| Premier League / Opta, "Why are players shooting less from long range this season?" (premierleague.com/news/4272809) e Jonathan Wilson (The Guardian, dados Opta) | 2024/25: 11,5% dos gols de fora da área, o mínimo desde 1992; 2006/07: 20,2%; desde 2003/04, 14,3% em média, com o chute de longe convertendo ~3,7% | O nosso 11,5% é o do ano mais baixo; a meta 12–18% fica com a média. O chute de fora daqui já converte ~6,7% (poucos chutes e precisos demais: 65% no alvo), então o ajuste não aumenta o volume de chutes de longe (`chuteLonge` fica em 0,25, os chutes de fora já estão em 36,9%, meta 35–40%) |
+| The Analyst / Premier League, goleiros 2024/25 (premierleague.com/news/4293708; theanalyst.com) | O melhor goleiro da PL defende 73,5% dos chutes no alvo; o pior, 51,5% | O total daqui (69,2%) fica na meta 66–72%; o ajuste mexe só no chute de longe |
+`GOLEIRO.logit.cLongePartida` −0,035 por m de chute além de 15 m do goleiro (só na partida; o treino e o pênalti não mudam):
+`teste-bolas-paradas` D4 (tiros livres de 18–31 m) gol 8,5% (meta 2–12%), `teste-goleiro` e `teste-mergulho` PASSOU,
+hash-igual IGUAL. Decisão pelo painel de 144 do CI.

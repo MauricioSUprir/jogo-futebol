@@ -8,6 +8,8 @@
   <meta name="description" content="GOLAÇO — futebol 3D no navegador: partida 11×11 com formações, táticas e Editar time na pausa.">
   <title>GOLAÇO</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307090a'/%3E%3Cpath d='M14 46 26 18h24L38 46z' fill='%2319e07a'/%3E%3C/svg%3E">
+  <!-- ?tm (partida do Total Match): html.tm antes do CSS; a folha dele e o tm-cara.js vêm depois do importmap -->
+  <script>if (/[?&]tm=[^&]/.test(location.search)) document.documentElement.classList.add('tm');</script>
   <link rel="stylesheet" href="css/estilo.css">
   <link rel="stylesheet" href="css/editor.css">
   <link rel="stylesheet" href="css/prejogo.css">
@@ -19,6 +21,9 @@
     }
   }
   </script>
+  <!-- html.tm: css/tm.css por último, pelo parser (bloqueia o desenho: nada pisca), e js/tm-cara.js — depois do importmap
+       (módulo antes dele faz o navegador ignorar o mapa). Sem ?tm nada disso é baixado -->
+  <script>if (document.documentElement.classList.contains('tm')) { document.write('<link rel="stylesheet" href="css/tm.css">'); import('./js/tm-cara.js').catch(function () {}); }</script>
 </head>
 <body>
   <canvas id="tela" class="tela" aria-label="Campo 3D"></canvas>
@@ -213,6 +218,9 @@
           </div>
           <button class="btn" type="button" data-cmd="editar-time" data-so="partida">Editar time <small>escalação e tática</small></button>
           <button class="btn" type="button" data-cmd="reiniciar-partida" data-so="partida" id="btn-reiniciar-partida">Reiniciar partida</button>
+          <!-- Total Match (?tm; hud.js aplicarModoNoMenu): sem ?tm ficam escondidos -->
+          <button class="btn" type="button" data-cmd="simular-resto" id="btn-simular-resto" hidden>Simular o resto <small>até o apito final</small></button>
+          <button class="btn" type="button" data-cmd="voltar-tm" id="btn-voltar-tm" hidden>Voltar ao Total Match</button>
           <button class="btn" type="button" data-cmd="recomecar" data-so="treino">Recomeçar <small>bola no pé</small></button>
           <button class="btn" type="button" data-cmd="maquina" data-so="treino">Máquina de passes</button>
           <button class="btn btn-alternar" type="button" data-cmd="marcador" data-so="treino" aria-pressed="false">Marcador de treino <small id="estado-marcador">desligado</small></button>

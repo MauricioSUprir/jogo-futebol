@@ -15,7 +15,9 @@
 //     parado a 6 m/s leva ~1,1 s no perfil de aceleração do jogo), a ≥ vCorrida em ≥ 80% dos ticks;
 //  M6 marca visível: com o pedido valendo e um condutor adversário, o escolhido existe para o desenho (defesa.js
 //     pressionadorVisivel) em 100% dos ticks;
-//  M7 dobra a marcação: com o 1º homem da IA (≠ controlado) já apertando por conta própria, o escolhido é OUTRO em ≥ 95%.
+//  M7 dobra a marcação: com o 1º homem da IA (≠ controlado) já apertando por conta própria, o escolhido é OUTRO em ≥ 95%;
+//  M8 contorna (15/10): em disparada, o chamado não tromba em quem está no caminho (companheiro ou adversário que não é o
+//     condutor): ≤ 3 trombadas por 100 casos (base 799ab53b: 4,2 — ia reto, perdia ~1,8 m/s e recomeçava a arrancada).
 // AMOSTRA (15/10): 32 partidas (sementes 7001–7032, modelos alternados como antes), uma por processo filho (--par, padrão
 // 3). Com 8, a mesma lógica passava ou reprovava pelo sorteio dos lances: na main (c2f76d69), em 16 conjuntos disjuntos
 // de 8 partidas (sementes 7001–7032, 7101–7132, 7201–7232, 7301–7332), o M1 ia de 0,80 a 2,02 m, o M2 de 48 a 73%, a
@@ -61,7 +63,7 @@ if (args.includes('--filho')) {
   const r = x => ({
     d1: x.d[Math.round(1 / PASSO)], d15: x.d[Math.round(1.5 / PASSO)], t2: x.t2, perdeu: x.perdeu, s2: seg2(x.dj[K2]),
     faltas: x.faltas, alcBote: x.alcBote, rouba: x.rouba, corre: x.corre, correTot: x.correTot, corre1: x.corre1, correTot1: x.correTot1,
-    marcaOk: x.marcaOk, marcaTot: x.marcaTot, p1Dobra: x.p1Dobra, p1Tot: x.p1Tot,
+    marcaOk: x.marcaOk, marcaTot: x.marcaTot, p1Dobra: x.p1Dobra, p1Tot: x.p1Tot, choques: x.choques ?? 0,
   });
   const msg = { s, casos: casos.map(c => ({ sem: c.sem, modelo: c.modelo, d0: c.d0, h0: c.h0, A: r(c.A), B: r(c.B) })) };
   await new Promise(ok => process.send(msg, ok));
@@ -122,6 +124,10 @@ const mo = soma(casos, c => c.B.marcaOk), mt = soma(casos, c => c.B.marcaTot);
 reg('M6 marca visível: o escolhido existe para o desenho com o pedido valendo', pc(mo, mt), '100%', mt > 0 && mo === mt);
 const pd = soma(casos, c => c.B.p1Dobra), pt = soma(casos, c => c.B.p1Tot);
 reg('M7 1º homem da IA já apertando: o botão chama OUTRO (dobra a marcação)', pt ? pc(pd, pt) : '— (sem o estado apertaProprio)', '≥ 95%', pt > 0 && pd >= 0.95 * pt);
+// M8 o chamado contorna quem está no caminho (defesa.js desvio): trombadas dele em disparada com quem não é o condutor,
+// por 100 casos (base 799ab53b: ~11)
+const chq = soma(casos, c => c.B.choques);
+reg('M8 o chamado contorna: trombadas em disparada com quem não é o condutor, por 100 casos', `${fmt(100 * chq / Math.max(1, casos.length), 1)} (${chq} em ${casos.length})`, '≤ 3', casos.length > 0 && 100 * chq / casos.length <= 3);
 // informativos
 const d1A = med(L.map(c => c.A.d1)), d1B = med(L.map(c => c.B.d1));
 reg('(diagnóstico) o mais perto em 1,0 s: sem → com', `${fmt(d1A)} → ${fmt(d1B)} m (Δ ${fmt(d1A - d1B)})`, 'Δ ≥ 2,0 m', true, true);

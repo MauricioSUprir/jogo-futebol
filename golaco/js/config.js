@@ -448,8 +448,16 @@ export const ACOES = {
   // erroGolBolaParada: o cabeceio PARA O GOL na bola parada (escanteio, falta, lateral) espalha como o real (Opta: ~1/3
   // dos cabeceios a gol no alvo). Na bola rolando fica como antes até a entrega do cabeceio (valendo em todo cabeceio
   // derrubou os gols de bola rolando: painel de 144, 1,78 → 1,67)
-  cabeceio: { alcanceSalto: 2.45, alturaPeito: [0.45, 1.7], v: [6, 17], potencia: [6, 8.5], redirecao: 0.35,
-    erroGolBolaParada: [0.3, 0.1] }, // rad (cabeceio 0 → 100)
+  // (entrega "cabeceio na bola rolando", 12/10: o alcance sai da cabeça DESENHADA + o pulo desenhado — cabeceio.js
+  // alcanceCabeceio —, alturaPeito[1] 1,7 → 1,55 (a bola na altura do rosto é de cabeça, não de peito) e o erro do
+  // cabeceio a gol vale em toda bola (erroGol; antes só na bola parada: com o cabeceio a gol teletransportado para o
+  // chão a conta não importava). O da bola parada ficou igual ao da bola rolando: com o cabeceio a gol de verdade, o
+  // erroGolBolaParada antigo ([0,3, 0,1] rad) fazia 32% de gols por cabeceio a gol no escanteio (o real: ~13%, Opta PL
+  // 23/24: 203 gols de cabeça em ~1.500 cabeceios a gol) e 12,6% dos escanteios virando gol. erroGol [0,55, 0,25] → [0,5,
+  // 0,22]: com o goleiro lendo o cruzamento (GOLEIRO.leCruzamento) o cabeceio a gol do canhão de cruzamentos ia 29% no
+  // alvo e 6% em gol; [0,45, 0,2] dava 45% e 19% (Opta: ~40% no alvo, 10–13% em gol)
+  cabeceio: { alcanceSalto: 2.45, alturaPeito: [0.45, 1.55], v: [6, 17], potencia: [6, 8.5], redirecao: 0.35,
+    erroGol: [0.5, 0.22] }, // rad (cabeceio 0 → 100)
   // domínio no peito/coxa: a bola morre com ~5–10% da velocidade (Iga & Nunome 2016: 9,73 → 0,52 m/s)
   dominioAereo: { sobra: [0.12, 0.05] },
   pressaoDist: 2.2,           // m — adversário mais perto que isso pressiona o batedor
@@ -462,6 +470,9 @@ export const ACOES = {
     // abaixo de vParado m/s e sem tocar na bola há semToque s, a bola parada à frente do pé não está "colada": quem
     // chega ao alcance dela tenta tirar — e ganha pela mesma chance da DIVIDIDA do humano (defesa.js chanceDividida)
     vParado: 2.0, semToque: 0.1,
+    // (só na partida; entrega "IA intensa" de 12/10) com o condutor a mais de vLado m/s, a bola tirada sai para o lado do
+    // defensor e `tras` (fração) para trás no caminho do condutor — e ele fica DEFESA_HUMANO.dividida.semDominio s sem domínio
+    vLado: 3, tras: 0.7,
     // bola a menos disto do condutor: "colada" no pé dele — o bote não alcança (condução curta de 12/10: calibrável
     // aqui sem mexer no código; CONDUCAO.passosPorToque deixa a bola mais perto do pé)
     colada: 0.305,
@@ -490,7 +501,10 @@ export const GOLEIRO = {
   // `ladoMin`: o humano só escolhe o canto com a componente do analógico AO LONGO da linha do gol (|iz|) ≥ ladoMin × o
   // módulo (0,38 ≈ sen 22,5°: o setor de 45° em volta do horizontal da tela de TV — para o batedor ou para o gol — não
   // escolhe; a diagonal do teclado, 45°, escolhe); abaixo disso, ou solto, fica no meio (partida.js ladoPenaltiHumano)
-  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72, passo: 0.5, ladoMin: 0.38, picoPanenka: 0.5 },
+  // c0Partida: o do pênalti, separado do da bola rolando (logit.c0Partida): o canhão do pênalti (77/18/5%) e o
+  // teste-botoes B6d foram calibrados com −0,1; a recalibração da bola rolando (−0,3, rodada do volume de ataque) zerava
+  // as defesas de pênalti no painel de 144 (15% → 0%)
+  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72, passo: 0.5, ladoMin: 0.38, picoPanenka: 0.5, c0Partida: -0.1 },
   reacao: [0.25, 0.19],       // s depois do toque (ruim → bom)
   alcanceEmPe: 0.9,           // m: mão de lado sem mergulhar
   bracoReflexo: 1.6,          // m: perna/braço esticados no reflexo, sem tirar o corpo do lugar
@@ -505,13 +519,30 @@ export const GOLEIRO = {
   // c0Partida: só na partida (o treino não muda). Com as regras de 11/10 (adversário fora da área no tiro de meta, sem
   // recuo agarrado) saíram gols fáceis de 6 a 16,5 m e as defesas nessa faixa foram a 60,8% (meta 55–60%; painel de 144
   // partidas); −0,1 no logit → 59,0%, total 68,0%, de fora da área 86,8% (todas na meta)
-  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.1 },
+  // cTempo/vRef (partida; entrega "cabeceio na bola rolando", 12/10): a bola mais lenta que dChute / vRef s até o goleiro dá
+  // cTempo por s a mais no logit — o cabeceio a gol (~12 m/s) de 8 m era defendido em 6% (o real: ~70% dos no alvo). Só no
+  // cabeceio a gol (m.voo.tipo 'cabeceio'): valendo em todo chute, as defesas de 6 a 16,5 m iam de 57,5% a 66,7% (64
+  // partidas do painel; meta 55–60%). Com a defesa que corta o passe e acompanha a arrancada (entrega "cabeceio + IA
+  // intensa", 12/10) sobram menos chances claras e o goleiro foi a 75–79% (48 partidas): c0Partida −0,35 → 67,6% / 54,2% /
+  // 83,6% (48 partidas, sementes 1001–1048; a faixa de 6 a 16,5 m ~1 ponto abaixo da meta, dentro do sorteio da amostra).
+  // No painel de 144 do CI (rodada "volume de ataque", 13/10) a faixa de 6 a 16,5 m ficou em 60–61,5% (meta 55–60%) com
+  // −0,35/−0,5; com o condutor que entra na área (utilidade.manterPeso) os chutes ficam mais perto e as defesas caem
+  // sozinhas: −0,3 deixou a faixa de 6 a 16,5 m em 53,0% no CI → −0,15 → 60,9% (com a troca aérea e a defesa da
+  // arrancada a 7,0 m/s) → −0,3 de novo
+  // cLongePartida/dLonge (partida; 15/10): −cLongePartida no logit por m de chute além de dLonge m do goleiro — com o
+  // condutor que arrisca o passe para a frente os gols de fora da área ficaram em 11,5% (meta 12–18%; Opta/PL: 14,3% em
+  // média desde 2003/04, 11,5% em 2024/25, o mínimo) e o goleiro de 16,5 m ou mais em 86,2% (meta ~85%, 80–90%)
+  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.3, cTempo: 6, vRef: 20, cLongePartida: -0.035, dLonge: 15 },
   // segurar × espalmar (StatsBomb): em pé, de longe ~60%; no mergulho ~25%; de perto ~23%
   segurar: { emPe: 0.6, mergulho: 0.25, perto: 0.23 },
   alturaMax: 2.45,            // m alcançados com a mão no alto
   profundidade: [1.2, 2.1],   // m da linha: bola a 6 m → a 20 m ou mais
   profundidadeLonge: 3.5,     // m com a bola a 40 m ou mais
-  saida1x1Max: 4,             // m: contra quem domina a bola, fecha o ângulo sem passar disso
+  // cruzamento do adversário no ar (entrega "cabeceio na bola rolando", 12/10): a bissetriz é a do PONTO onde a bola desce
+  // para a cabeça (a y m, nos próximos ticks, a até dist m da linha), não a da bola no ar — no escanteio o goleiro ficava no
+  // 1º pau (a bissetriz da bandeira) e a cabeçada no 2º entrava em 56% (o real: ~13% dos cabeceios a gol, Opta)
+  leCruzamento: { y: 2.4, ticks: 90, dist: 22 },
+  saida1x1Max: 4,            // m: contra quem domina a bola, fecha o ângulo sem passar disso
   vRecuo: 4.2,                // m/s voltando para o gol (bola por cima: cavadinha)
   recuoDefesa: [0.3, 0.75],   // chance de tirar a bola por cima ao chegar (sem folga → com 0,3 s)
   saidaMax: 35,               // m da linha até onde sai com o botão
@@ -804,6 +835,69 @@ export const AEREO = {
   ladoGol: 0.35,              // vantagem (logit) de quem está do lado do próprio gol
   erroDisputa: 1.8,           // o cabeceio de quem ganhou a disputa espreme mais (pressão no salto)
   perdeuSalto: 0.6,           // s — quem perdeu a disputa não toca na bola alta por isto (ainda no ar, caindo)
+  // JOGO CORRIDO (entrega "cabeceio na bola rolando", 12/10): a disputa vale também fora da bola parada. No toque aéreo
+  // marcado (sim.js agendarDisputa), o adversário de linha que chega a até `vai` m do ponto do contato antes de sair do
+  // chão (com `folgaT` s de folga) vai disputar: corre para lá (do lado do gol dele) e pula junto. Quem ganha: a nota no
+  // alto, quem está mais perto da bola no contato (`kDist` por m de diferença, no logit) e, só a até `ladoGolDist` m do gol
+  // de quem defende, o lado do gol (`ladoGolRolando`). Meta: a defesa ganha 30–50% dos cruzamentos disputados
+  vai: 1.0, folgaT: 0.1, kDist: 3.0, ladoGolRolando: 0.1, ladoGolDist: 35, iniciativa: 0.5,
+  folgaRival: 0.25,           // m — quem pulou para disputar entra na disputa com a cabeça desenhada a até isto a mais da bola
+  raspao: { fica: 0.55, desvio: 0.6, sobe: 1.0 }, // ...e, ganhando assim, desvia a bola de raspão (fração da velocidade, rad, m/s)
+  // bola parada (escanteio, falta, lateral): quem defende ataca a bola só na SUA zona — o ponto do cabeceio (sim.js
+  // pontoDeCabeceio) a até zonaBolaParada m de onde ele está; quem ataca corre para a bola. Com todos indo a qualquer
+  // ponto da trajetória a defesa tocava primeiro em 68% dos escanteios (o real: o ataque ganha 52,6% do 1º contato,
+  // Copa América 2021; meta do teste-bolas-paradas 35–62%). (Atrasar a leitura da defesa em 0,3–0,5 s não mudou nada:
+  // 32,5% e 31,7% — ela já está no caminho da bola)
+  zonaBolaParada: 1.0,
+  // alguém (companheiro ou adversário) já vai à bola de cabeça chegando até juntoTicks depois de mim: eu não corro para ela
+  // também (o adversário disputa pelo agendarDisputa)
+  juntoTicks: 6,
+  // ...e na disputa da bola parada quem ataca vem na corrida, no tempo da cobrança: + ataqueBolaParada no logit (com a
+  // defesa só na zona, o ataque ficava com 36,7% do 1º contato; com zona 0,8 m e +0,4: 42,5%; +0,8: 48,3% e 12,1% dos
+  // escanteios em gol; o lado do gol, AEREO.ladoGol, continua valendo)
+  ataqueBolaParada: 0.6,
+};
+
+// Cabeceio na bola rolando (entrega "cabeceio + IA intensa", 12/10; pedido do dono, 11/10: "os jogadores não cabeceiam
+// a bola, de jeito nenhum"; cabeceio.js). O pulo é DESENHADO e a física fica presa ao desenho: o contato só vale com a
+// cabeça desenhada (anim.js pose no tick do contato) a até `folga` m da bola, superfície com superfície. Biomecânica
+// (PESQUISA-ETAPA4.md §6): no pulo de cabeceio com corrida a cabeça passa ~0,56 m da estatura (Fílter 2022); o último
+// apoio dura ~0,2–0,25 s; o tronco arqueia na subida e chicoteia para a frente no contato, no alto do pulo (Shewchenko
+// 2005; Bauer 2001).
+export const CABECEIO = {
+  salto: [0.4, 0.65],         // m — o quadril sobe no máximo isto no pulo, pela impulsão (0 → 100)
+  minPulo: 0.04,              // m — precisando subir menos que isto, cabeceia sem pular (o tronco e o pescoço vão à bola)
+  margem: 0.06,               // m — o pulo sobe isto a mais que a conta de pé (correndo o quadril fica mais baixo)
+  ombro: 0.4,                 // m — na disputa, o rival fica isto de lado da linha da bola...
+  recua: 0.15,                // m — ...e isto antes dela (a ~0,6 m de quem ia na bola: ombro com ombro, 2 × raio do corpo)
+  conforto: 0.12,             // m — o ponto do cabeceio prefere a bola isto abaixo do alcance do pulo...
+  desce: 0.25,                // s — ...esperando no máximo isto depois do 1º ponto que ele alcança
+  disputaPerto: 6,            // m — vai antes à bola de cabeça (sem botão, num passe de cabeça) só com um adversário a até isto
+  antes: 0.1,                 // s — o corpo chega ao ponto do pulo isto antes de sair do chão
+  agacha: [0.12, 0.08],       // s e m — antes de sair do chão o quadril baixa isto (contramovimento) nesse tempo
+  amortece: [0.15, 0.07],     // s e m — depois de pousar o quadril baixa isto (amortece a queda) nesse tempo
+  peVel: 2.8,                 // m/s — o pé subindo no pulo (teste de patinação: o pé de quem está parado anda até 3 m/s)
+  vooMin: 0.37,               // s — o voo dura pelo menos isto (os pés vão de onde saíram ao pouso sem passar do limite)
+  vSaida: 3.5,                // m/s — velocidade horizontal máxima na saída do pulo (no ar o corpo segue com ela)
+  impulso: 2.5,               // m/s — o último apoio muda a velocidade horizontal em até isto (para o ponto do contato)
+  hyPe: 0.943,                // m — quadril de pé, sem a passada (anim.js: 0,985 − 0,03 − 0,012)
+  pescoco: 0.65,              // m — do quadril ao centro da cabeça pelo tronco (anim.js: 0,17 + 0,22 + 0,13 + 0,13)
+  contato: 0.225,             // m — do centro da bola ao da cabeça encostando (raio da cabeça 0,115 + raio da bola 0,11)
+  folga: 0.08,                // m — o contato vale com as superfícies a até isto
+  inclina: [0.6, 0.85],       // rad — o tronco inclina até [0] para a cabeça ir à bola (até [1] com a bola abaixo da cabeça)
+  arco: 0.22,                 // rad — o tronco arqueia para trás na subida e chicoteia para a frente no contato
+  janela: [0.22, 0.25],       // s — sem pulo, o tronco vai à bola nestes tempos antes e depois do contato
+  chega: 0.3,                 // m — o corpo vai ao ponto em que a bola chega isto à frente dele (a testa vai nela)
+  longe: 1.4,                 // m — mais longe que isto do ponto na hora de sair do chão, não pula (o pulo não alcança)
+  alturaPedido: 1.25,         // m — com botão, abaixo disto não sai cabeceio (peito ou voleio)
+  // intenção sem botão (cabeceio.js intencaoCabeceio): na área adversária, a gol a até `gol` m do gol; no meu terço,
+  // afastar; no resto, passe de cabeça. Bola entre alturaPedido e alturaPeito[1]: de cabeça só para o gol ou para afastar
+  gol: 15,
+  // afastar: para longe do meu gol e para o lado da bola (nunca para o meio da minha área)
+  vAfasta: 16, elAfasta: 0.62, ladoAfasta: 0.55,
+  // a gol: mira a bola baixa na linha do gol (onde o goleiro alcança menos), entre yGol[0] e yGol[1] m, a zGol m do meio,
+  // do lado longe do goleiro (sem o analógico)
+  yGol: [0.3, 1.1], zGol: 0.8,
 };
 
 // Impedimento (IFAB Regra 11; impedimento.js). Posição de impedimento: no campo adversário (sem a linha do meio) e
@@ -835,8 +929,10 @@ export const FALTAS = {
   // homem); a chance de antes a partir de `cheia` m/s, × (1 + porForca · (f − min)) acima; `janela` s: a memória do choque
   // dos corpos (a colisão zera a aproximação); a mais de `alcance` m entre os centros não há contato (corpo 0,3 + perna até
   // a bola ACOES.boteIA.alcance 0,65 + o pé do condutor ~0,25). Pedido do dono, 15/10 ("faltas muito forçadas e sem
-  // sentido"; tools/teste-faltas-sentido.mjs)
-  forca: { min: 1.0, cheia: 1.5, porForca: 0.5, janela: 0.33, alcance: 1.2 },
+  // sentido"; tools/teste-faltas-sentido.mjs). porForca 0,5 → 1,0 na junção com a main (#471, 15/10): com a IA intensa
+  // (defesa da arrancada, bote de frente na bola) os botes que entram no homem ficaram mais raros e fortes, e as 12 partidas
+  // IA × IA do teste-faltas foram a 1,42 falta por partida (meta 1,5–5; a main 2,00: bote 14 → 5); com 1,0, 1,75 (bote 10)
+  forca: { min: 1.0, cheia: 1.5, porForca: 1.0, janela: 0.33, alcance: 1.2 },
   // DIVIDIDA do humano que não ganha a bola com o pé no condutor (defesa.js resolverBote): as mesmas chances do bote da
   // IA, com a força do contato (faltas.js chanceFaltaDividida; sem o × naArea/naChanceClara)
   dividida: { perdeu: 1.0, tocou: 0.6 },
@@ -995,7 +1091,11 @@ export const IA_DEFESA = {
   apertoLado: 2,              // m — na Alta com gatilho o 2º aperta junto, fechando o lado de dentro
   antecipaContem: 0,          // s — a contenção e a contrapressão miram este tanto à frente pela velocidade do condutor (o aperto, IA.antecipaPressao)
   giroPressa: [3, 1.75],      // rad/s do rumo de quem pressiona (bola livre, aperto, contenção); virada além de [1] rad vai de uma vez
-  livre: { histerese: 0.25, margem: 0.2, disputa: null }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele — null: arranca em toda bola solta (com 0,6 s o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; medido com 32 partidas)
+  // (partida, pedido do dono de 12/10: "a defesa mal intercepta passe") no passe do adversário no ar vai à bola quem alcança
+  // a trajetória dela antes do recebedor: `le` s para ler o passe e `antes` s de folga (ia-tatica.js cortaPasse; o corpo
+  // acelera a `acel` m/s² até a arrancada; a bola rasteira ou até `alturaMax` m, nos próximos `horizonte` ticks; decidido,
+  // segue até `segue` ticks depois do ponto)
+  livre: { histerese: 0.25, margem: 0.2, disputa: null, le: 0.2, antes: 0.1, acel: 7, alturaMax: 1.0, horizonte: 120, segue: 12 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele — null: arranca em toda bola solta (com 0,6 s o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; medido com 32 partidas)
   contemLead: 0.9,            // s — quem contém mira à frente pela velocidade do ponto (tira o atraso do filtro, 0,2 s, e do modo pressa, ~0,7 s: sem isso ele corria ao lado do condutor, a 0,6 m)
   // contrapressão: janela (s), quantos, a ≤ raio m da bola, e só com a perda fora do meu terço (u >
   // campo; ou perto da lateral) e sem estar em inferioridade a ≤ raio m (no máximo `inferioridade` a
@@ -1009,7 +1109,12 @@ export const IA_DEFESA = {
   // pressão Alta: a zona fecha a linha de passe do condutor para o adversário reivindicado (a até
   // alcance m do condutor), num ponto a `ponto` do caminho; e reivindica também quem está até
   // `frente` m à frente da referência (sobe para pressionar a construção)
-  linhaDePasse: { pressao: [false, false, true], alcance: 25, ponto: 0.65, frente: 6 },
+  // (pedido do dono de 12/10, "a defesa mal intercepta passe"; FBref/Opta, PL 2023/24: 8,5 interceptações por time por
+  // jogo, ~1,8 por 100 passes do adversário; passe certo ~83%, 780 de 941 por jogo) quem marca um adversário — individual
+  // ou na zona — fica puxado sombra[pressão] para a linha de passe do condutor para ele, a sombraDist m do homem (o lado da
+  // bola, "deny"; com o condutor a mais de sombraMin m dele); no passe, quem alcança a trajetória antes do recebedor corta
+  // (livre.le, livre.antes)
+  linhaDePasse: { pressao: [false, false, true], alcance: 25, ponto: 0.65, frente: 6, sombra: [0.35, 0.55, 0.7], sombraDist: 1.2, sombraMin: 4 },
   individualArea: 20,         // m do meu gol: dentro disso, marcação individual dos atacantes na área
   frentePaga: 7,              // m a mais na distância ao condutor para ser o 1º homem vindo da frente da bola
   defesaPaga: 4,              // m a mais para quem é da linha de defesa, com a bola à frente da referência dele
@@ -1022,6 +1127,42 @@ export const IA_DEFESA = {
   // fica parado: a contenção durava para sempre (Sportsessionplanner, 1 × 1: fechar, conter e dar o bote quando o
   // atacante dá a chance)
   lento: { v: 2.0, s: [0.8, 0.5, 0.3], longe: 0.5, aperto: 0.2 },
+  // CONDUTOR RÁPIDO (entrega "IA intensa", 12/10; pedido do dono, 11/10: "ninguém do outro time corre, ninguém marca, mas
+  // tem que marcar com responsabilidade"; contraprova de 11/10: contra quem arranca com a bola, o 1º homem ficava parado ou
+  // subindo no corredor — 3,0 m/s para o próprio gol com o condutor a 3 m —, quem foi batido seguia como 1º homem e o bloco
+  // trotava). Com o condutor adversário de linha a mais de `v` m/s (filtrada) vindo para o meu gol (≥ metade da velocidade
+  // nessa direção; desliga abaixo de v − hist):
+  //  - o 1º homem e o 2º acompanham pela VELOCIDADE (a do condutor + ganho × (ponto − corpo): a conta do CONTER do humano,
+  //    defesa.js entradaVelocidade, com o CORRER pela velocidade pedida): o 1º na linha condutor → gol a dist[0] + dist[1]·v m
+  //    (entre dist[2] e dist[3]); apertando (gatilho, perigo), a `aperto` m; o 2º na cobertura a cobre[0] + cobre[1]·v m (no
+  //    máximo IA_DEFESA.cobertura);
+  //  - do lado do gol e a menos de recua[0] m dele, nunca sobe: a velocidade para o meu gol é pelo menos a dele − recua[1]
+  //    longe do gol, − recua[2] perto (engaja): recuando quase junto ele atrasa a arrancada (5,8 m/s para o gol com o
+  //    condutor a 3 m), mas sem frear perto do gol o condutor entrava na área em 40% das arrancadas contra o bloco armado;
+  //  - quem ficou mais de `batido` m atrás do condutor paga `batidoPaga` m para ser o 1º homem (com alguém do lado do gol a
+  //    até batidoFrente m dele): o 1º homem passa adiante (Andrienko 2017: o defensor batido pressiona pouco);
+  //  - o bloco do lado do gol a até `raio` m do condutor e a até `corredor` m de lado da linha dele acompanha no ritmo de
+  //    fBloco × a velocidade dele (sem o teto do trote; CORRER com mais de `correLonge` m de atraso), e a recomposição liga
+  //    com `liga` m de atraso (no jogo organizado eram TATICA.recomp.ligaOrganizado);
+  //  - ninguém além do 1º e do 2º vai na bola (a forma: Forcher 2024, a compactação dos 5 mais perto da bola); quem está
+  //    no caminho dele (a até `caminho` m da linha condutor → gol, do lado do gol, a menos de recua[0] m) recua junto para a
+  //    cobertura, pela velocidade — parado no lugar da forma era ultrapassado a ~0 m/s;
+  //  - conter não é para sempre: com o condutor a menos de engaja[1] m do meu gol a distância do 1º homem encolhe até
+  //    `aperto` (engaja[0] m), ao alcance do bote — longe do gol ele atrasa a arrancada, perto ele tira a bola (1 × 1:
+  //    fechar, conter e dar o bote antes da área). Com o contém sem fim, o condutor TROTANDO entrava na área em 53% das
+  //    arrancadas do próprio campo (base 4%)
+  //  - v = 6,8 m/s: a arrancada de verdade (o humano em disparada com a bola vai a 7,6 m/s; o trote, ~5,6 m/s, fica com a
+  //    defesa de sempre, que já o parava: 4% chegavam à área). Com 6,3 m/s (a definição da contraprova de 11/10) o condutor
+  //    da IA ainda acelerando já ligava o bloco inteiro e o contra-ataque morria: painel de 48 partidas (sementes
+  //    1001–1048), gols 0,90 → 1,50 por partida com 6,8 (sem a defesa da arrancada: 1,60). Rodada "volume de ataque"
+  //    (13/10): 7,0 — com 7,2 o roteiro do humano em disparada passava a fazer 1,9 gol por partida (teste-defesa-corrida,
+  //    meta ≤ 1,5); com 7,0, 1,33.
+  corrida: { v: 7.0, hist: 0.8, dist: [1.5, 0.35, 2, 5], aperto: 1.0, engaja: [30, 45], cobre: [4, 0.6], ganho: 3, recua: [10, 0.5, 1.5],
+    batido: 1, batidoPaga: 12, batidoFrente: 15, raio: 25, corredor: 14, fBloco: 0.85, correLonge: 8, liga: 8, caminho: 2.5 },
+  // filtro do ponto de quem pressiona (ia-tatica.js alvoPressa): trocando de papel (contém ↔ aperta, 1º ↔ 2º homem) o
+  // filtro só recomeça com o ponto novo a mais de `saltoPressa` m (antes recomeçava a cada troca e o avanço de 0,9 s sumia
+  // por 0,3–0,5 s: contraprova de 11/10)
+  saltoPressa: 3,
 };
 
 // ----------------------------------------------------------------------------- Parte 3: com bola
@@ -1047,7 +1188,19 @@ export const IA_ATAQUE = {
   // jogadores de linha deles entre a bola e o gol deles → por `s` s o time joga o contra-ataque: transição
   // ofensiva com bônus `bonus` nas opções à frente e sem a posse da retomada (utilidade.posseRetomada).
   // Tenga 2010; Armatas 2022; PESQUISA-ETAPA3.md §16.5.
-  contra: { atras: 6, campo: -30, s: 6, bonus: 0.5 },
+  // (entrega "cabeceio + IA intensa", 12/10: com a defesa cortando o passe — ~12 interceptações por time por partida — a
+  // retomada no meio vira contra-ataque de verdade: bonus 0,5 → 1,0 e s 6 → 8; gols de contra-ataque 16% → 18–26% dos
+  // gols no painel de 48)
+  contra: { atras: 6, campo: -30, s: 8, bonus: 1.0 },
+  // Tabela da IA (ia-ataque.js tabelaIA; rodada "volume de ataque", 13/10 — FIFA Training Centre, third player
+  // combinations): o passe de dMin–dMax m (no máximo `tras` m para trás), do campo a partir de uMin m, com `livre` m livres
+  // à frente do passador, sai com o modificador (acoes.js tabela: ele arranca para o espaço); no máximo `max` por time
+  // DESLIGADA (null) em 14/10: em 16 partidas a IA começava ~17 tabelas por partida e só ~3,6 viravam devolução para quem
+  // correu (1,3 chegavam); o passador que sai correndo deixava a vaga, e sem ela o volume SOBE (48 partidas: chutes 7,2 →
+  // 8,1, gols 1,73 → 1,83). Com ela, o corredor que recebe a devolução embalado levava o chamado da PRESSÃO do humano a
+  // atropelá-lo (teste-pressao-humano M3/M4) e mexia nos lances do TROCAR (teste-botoes B14b). O código fica (ia-ataque.js
+  // tabelaIA) para uma tabela que só sai com a devolução provável
+  tabela: null,
   // Finalização de primeira (ia-ataque.js primeiraIA): recebendo passe rasteiro na área num ponto com chance de gol
   // ≥ xg, aperta CHUTE com a força `forca` para o pedido nascer `folga` s antes da bola (bola até alturaMax m).
   primeira: { xg: 0.12, forca: 0.6, folga: 0.25, alturaMax: 0.6 },
@@ -1061,27 +1214,40 @@ export const IA_ATAQUE = {
   //  - enfiada: no ponto da corrida a enfiadaLeads m do corredor (a força sai do ponto): rasteira a
   //    vEnfiada m/s (cortável no caminho) ou alta por cima da linha a vEnfiadaAlta m/s (× enfiadaAltaP);
   //  - lançamento: chance lancamentoP (bola alta disputada);
-  //  - cruzamento: chance cruzamentoP[n] com n de linha na área (ou a ≤ cruzamentoRaio m dela, entrando)
+  //  - cruzamento: chance cruzamentoP[n] com n de linha na área (ou a ≤ cruzamentoRaio m dela, entrando) (15/10: com um só
+  //    na área 0,06 → 0,2 — o time quase não cruzava: ~1,3% dos passes, a PL cruza ~3,7%, 34,7 por jogo, 24% certos, The
+  //    Analyst; com o cabeceio na bola rolando o cruzamento para um rende gol de cabeça)
   //    e valor cruzamentoV;
   //  - chute: xG = xgA·θ^xgB (θ = ângulo da boca do gol, teto xgMax) × (1 − bloqueio·risco da linha)
   //    × chute (× chuteLonge de fora da área) − chutePosse·posse; mira a miraPoste m do poste longe do
-  //    goleiro; força chuteForca (perto → longe);
+  //    goleiro; força chuteForca (perto → longe); chute 2,5 → 3,0 na entrega "cabeceio + IA intensa" (12/10: com a
+  //    defesa que corta o passe e acompanha a arrancada o time finaliza o que tem) e chuteLonge 0,3 → 0,25 (o chute de
+  //    fora fica com o peso de antes, 0,75: gols de fora 21–24% → 15%); cruzamentoV 0,25 → 0,35 (o cabeceio na bola
+  //    rolando rende gol: o cruzamento vale mais);
   //  - conduzir: 7 direções a passoAngConduz rad, conduzDist m à frente, × conduz (o tempo que leva);
   //    chance de manter pelos adversários a < manterRaio m do caminho (manterPeso; de lado/atrás
-  //    manterLado), × manterArea[0] dentro da área e [1] a < manterPerto m do gol; quem segura a bola
+  //    manterLado), × manterArea[0] dentro da área e [1] a < manterPerto m do gol (rodada "volume de ataque", 13/10:
+  //    no último terço, a partir de manterTerco.u m, peso e lado de manterTerco — o condutor encara o marcador e entra na
+  //    área; valendo no campo todo, com 0,85/0,7 os chutes caíam de 7,6 para 4,9 por partida e com 0,55/0,25 subiam para
+  //    8,4, mas no meio-campo o condutor ia para cima da PRESSÃO do humano. Só no último terço: no painel de 144 do CI
+  //    sem ele os chutes caem de 7,3 para 6,9 por partida (14/10; em 48 partidas pareciam iguais, 7,4 × 7,5), mas com ele
+  //    o chamado da PRESSÃO corre menos — teste-pressao-humano M5 72%, meta 80%, PENDENTE: o condutor que encara para
+  //    perto do marcador e as aproximações do chamado ficam curtas, quase só a aceleração); quem segura a bola
   //    perde valor (conduzSolta: de [0] s a [1] s, até [2]×); analógico magConduz; CORRER com
   //    correrLivre m livres à frente (transição ou antes de correrAte m), condução curta com < curtaPerto m;
   //  - proteger: adversário a < protegeDist m, chance protegeP, no máximo protegeMax s por posse.
   utilidade: {
     posse: 0, posseMeuCampo: 0.025, posseRetomada: [0.02, 2], vPasse: 12, vEnfiada: 15, vChute: 25, passeMax: 40, erroDist: 0.25, pressaoRecebe: 3.5, pressaoValor: 0.5,
-    passePress: 0.2, impedido: 0.3, enfiadaLeads: [6, 10, 14], vEnfiadaAlta: 13, enfiadaAltaP: 0.7, lancamentoP: 0.5, cruzamentoV: 0.25,
-    cruzamentoP: [0.01, 0.06, 0.35, 0.4], cruzamentoRaio: 1,
-    xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 2.5, chuteLonge: 0.3, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
+    passePress: 0.2, impedido: 0.3, enfiadaLeads: [6, 10, 14], vEnfiadaAlta: 13, enfiadaAltaP: 0.7, lancamentoP: 0.5, cruzamentoV: 0.35,
+    cruzamentoP: [0.02, 0.2, 0.4, 0.45], cruzamentoRaio: 1,
+    xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 3.0, chuteLonge: 0.25, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
     passoAngConduz: 0.5, conduzDist: 5, conduz: 0.85, conduzSolta: [1.5, 4, 0.35], vConduz: 5.5, magConduz: 0.9,
-    manterRaio: 3, manterPeso: 0.7, manterLado: 0.4, manterArea: [0.95, 0.7], manterPerto: 9,
+    manterRaio: 3, manterPeso: 0.7, manterLado: 0.4, manterTerco: { u: 17.5, peso: 0.55, lado: 0.25 }, manterArea: [0.95, 0.7], manterPerto: 9,
     protegeDist: 1.5, protegeP: 0.7, protegeMax: 1.0, correrLivre: 10, correrAte: 25, curtaPerto: 2.5,
   },
-  riscoMentalidade: [0.8, 0.9, 1.0, 1.1, 1.25], // risco de passe aceito, por mentalidade (−2..+2)
+  // (15/10, passe certo e volume de ataque com a defesa que corta o passe: ×1,2 — o time que só tocava para o lado acertava
+  // 86,7% e só ~9% dos passes terminavam no último terço; PL 2019/20: 28,7%, o mínimo da série Opta desde 2006/07)
+  riscoMentalidade: [0.96, 1.08, 1.2, 1.32, 1.5], // risco de passe aceito, por mentalidade (−2..+2)
   // faixa do cruzamento (|z| > zLateral, u > xTerco); o ataque à área começa com a bola em u > xAtiva e
   // |z| > zAtiva (quem vai precisa de tempo para chegar)
   cruzamento: { zLateral: 20.16, xTerco: 30, zAtiva: 15, xAtiva: 17.5 },
@@ -1166,12 +1332,15 @@ export const DEFESA_HUMANO = {
   // o corpo anda pela velocidade (a do condutor + `ganho` × (ponto − corpo), até `aproxMax` m/s mais rápido que ele; por
   // trás dele, a menos de `trasPerto` m, fechando no máximo a `trasAprox` m/s: abaixo da carga por trás,
   // FALTAS.carga.vMin). `filtro`: s da velocidade do condutor.
+  // (13/10, com o condutor da IA que faz tabela e encara: chega 2,5 → 2,0 e aproxMax 4 → 5 — o escolhido chegava a ≤ 2 m
+  // em 1,5 s em 57–60% dos casos no teste-pressao-humano M2, meta ≥ 60%; agora 63%; o bote do escolhido só abaixo de
+  // FALTAS.bote.vLivre e não por trás: sim.js boteIA, da auditoria dos botões, #474)
   // "Chegada rápida, freada no fim" (defesa.js chegaFreando; teste-pressao-humano M4/M5, 15/10): a aproximação ao condutor
   // segue a curva de freada de `freioChegada` × o freio do corpo dele, que encosta a `contato` m/s (abaixo de
   // FALTAS.forca.min: o contato não entra no homem) — com o condutor vindo, a velocidade DELE na hora do contato; quem vem
   // atrás guarda a margem da freada do condutor (semAtropelar.reacao/perto). `desvio`: olha `T` s à frente e passa a
   // ≥ 2 raios + `folga` m de quem estiver no caminho (corpos a até `alcance` m). `depois`: s em que quem deixou de ser o
-  // chamado segue com o bote com responsabilidade e sem falta tática (sim.js boteIA, defesa.js chamadoDaPressao).
+  // chamado segue com o bote com responsabilidade e sem falta tática (sim.js boteIA, defesa.js chamadoRecente).
   // sem atropelar (defesa.js semAtropelar; pedido do dono, 15/10): o time jogado por uma pessoa entra no condutor
   // adversário (ou no recebedor do passe) no máximo a (v_dele − reacao · JOGADOR.freioGiro · (1 − folga/perto)⁺)⁺ +
   // √(chega² + 2 · freio · folga)
@@ -1180,8 +1349,8 @@ export const DEFESA_HUMANO = {
   // margem inteira com os corpos encostando, sumindo em rampa até `perto` m de folga
   semAtropelar: { freio: 3.0, chega: 1.0, reacao: 0.25, perto: 3.0 },
   pressao: {
-    validade: 1, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.5, contorno: 1.2,
-    naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.435, filtro: 0.2, ganho: 3, aproxMax: 4, trasPerto: 1.5, trasAprox: 0.5,
+    validade: 1, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.0, contorno: 1.2,
+    naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.435, filtro: 0.2, ganho: 3, aproxMax: 5, trasPerto: 1.5, trasAprox: 0.5,
     freioChegada: 0.9, contato: 0.8, desvio: { T: 0.6, folga: 0.25, alcance: 6 }, depois: 0.5,
   },
 };
@@ -1304,21 +1473,33 @@ export const REPLAY = {
   // quadro corta o plano (fica se sobrar ≥ `sobraMin` s reais).
   primeira: {
     vel: 0.6, antes: 0.9, depois: 0.4, frente: 0.085, cima: 0.03, sigmaXZ: 0.08, mediaY: 0.33,
-    prendeXZ: 0.02, yMin: -0.14, yMax: 0.16, sigmaY: 0.22, raioCabeca: 0.148,
+    prendeXZ: 0.02, yMin: -0.14, yMax: 0.16, sigmaY: 0.26, raioCabeca: 0.148, olhoHMin: 0.035,
     baixaAntes: 0.3, baixaDepois: 0.2, puxaAntes: 0.6, puxaGol: 0.35, sigmaOlhar: 0.10, sigmaCabeceio: 0.14,
     giroMax: 85, sigmaGiro: 0.05,
     arfagem: [-60, 15], arfagemAntes: -18, fovH: 90, perto: 0.10, bolaSome: 0.35, corpo: 0.3, sobraMin: 1.2,
     cabeceioOlhaGol: 0.15, puxaCabeceio: 0.5,
+    // a lente a < solidoFolga m de algo sólido (o gol inteiro, as placas...) ou o próprio quadril/pernas a < proprio m dela
+    // também cortam o plano (15/10: o autor que entrava no gol depois de marcar levava a lente para dentro da trave)
+    solidoFolga: 0.12, proprio: 0.25,
+    // m — o alvo do olhar nunca a menos disto à frente do olho na direção do gol (a bola no pé ou por cima da cabeça)
+    pisoFrente: 0.6,
+    // ° — antes do chute, o rumo do olhar a no máximo isto do centro da boca do gol (ela no quadro de 90°); s antes do chute
+    // — o olhar desce do gol para o ponto do contato de desce[0] a desce[1] (em linha, no ângulo) e fica nele até chute + `pe`
+    // (no lugar da troca seca a chute − baixaAntes); nos `desceAntes` s antes da descida, ele já vem baixando até
+    // `arfagemDesce`° (a boca do gol ainda no quadro)
+    golAngMax: 32, desce: [0.30, 0.04], pe: 0.05, desceAntes: 0.3, arfagemDesce: -20,
+    // σ do olhar em volta do chute: [σ s, até ± s do chute, entrando até ± s]
+    sigmaChute: [0.03, 0.08, 0.25],
   },
   // VISÃO DO TREINADOR do time que marcou (render/replay-olhos.js): parte 1 = o que ele vê (olho na cabeça gravada,
-  // gaussiana σ `sigmaOlho`; olhar a meio caminho da bola suavizada e do centro da boca do gol, σ `sigmaOlhar`;
-  // teleobjetiva FIXA no plano com o quadro de `largura` m na distância do gol, fov vertical em [fovMin, fovMax]; ele sai da
-  // lista de desenho), de chute − `antes` a gol + `corte`; parte 2 = corte seco para ele reagindo, de gol + corte a gol +
-  // `fim`: câmera parada no gramado (z = meioZ − `recuoZ`, altura `altura`), girando por gaussiana σ `sigmaGiro` para
-  // segui-lo, fov `fov`° (16:9; ×0,88 no celular), ele no terço esquerdo, a área técnica, o banco e a torcida de cá atrás.
-  // Parte 2 com < `parte2Min` s sai; o plano com < `planoMin` s sai.
+  // gaussiana σ `sigmaOlho` presa a ≤ `prende` m do olho bruto; olhar a meio caminho da bola suavizada e do centro da
+  // boca do gol, σ `sigmaOlhar`; teleobjetiva FIXA no plano com o quadro de `largura` m na distância do gol, fov vertical
+  // em [fovMin, fovMax]; ele sai da lista de desenho), de chute − `antes` a gol + `corte`; parte 2 = corte seco para ele
+  // reagindo, de gol + corte a gol + `fim`: câmera parada no gramado (z = meioZ − `recuoZ`, altura `altura`), girando por
+  // gaussiana σ `sigmaGiro` para segui-lo, fov `fov`° (16:9; ×0,88 no celular), ele no terço esquerdo, a área técnica, o
+  // banco e a torcida de cá atrás. Parte 2 com < `parte2Min` s sai; o plano com < `planoMin` s sai.
   treinador: {
-    vel: 1, antes: 0.8, corte: 0.3, fim: 2.3, frente: 0.10, cima: 0.03, sigmaOlho: 0.1, sigmaOlhar: 0.12, puxaGol: 0.5,
+    vel: 1, antes: 0.8, corte: 0.3, fim: 2.3, frente: 0.10, cima: 0.03, sigmaOlho: 0.1, prende: 0.04, sigmaOlhar: 0.12, puxaGol: 0.5,
     bolaNdc: 0.8, largura: 30, fovMin: 9, fovMax: 24,
     recuoZ: 0.7, altura: 1.5, fov: 30, sigmaGiro: 0.25, terco: 1 / 3, parte2Min: 0.8, planoMin: 1.0,
     dist: [4.5, 9], corpoMin: 0.6,
@@ -1388,6 +1569,7 @@ export const SUBST = {
   escalona: 0.35,             // s entre um reserva e o próximo
   teto: 6.5,                  // s — nenhuma cena passa disto (até 5 + 5 pares)
   velSai: 2.2,                // m/s — quem sai anda firme (IFAB 2026/27: sair em até 10 s)
+  velSaiMax: 2.35,            // m/s — quem atrasou (contornou alguém parado) apressa até isto para cruzar no horário
   freioSai: 2.0,              // m/s² — freada depois de cruzar a linha (para a ~alemLinha m dela)
   velEntra: 3.2,              // m/s — quem entra trota para a vaga
   distSai: [3.0, 3.6],        // m da linha no 1º quadro do plano dele (pelo hash)
@@ -1462,14 +1644,20 @@ export const TECNICOS = {
   // margem do centro do corpo dentro da área em z e em x (os pés ficam a ≤ ~0,3 m do centro andando de lado; a régua
   // dos pés é 0,15 m); o recuo (z 39,2) cabe na de z
   margem: 0.5, margemX: 0.55,
-  // esquiva: o caminho previsto da bola (rolagem exata de bola.js) a < `raio` m no próximo `janela` s → sai da linha
-  // até `sai` m dela; jogador previsto a < `jogador` m → afasta
-  esquiva: { raio: 0.75, janela: 1.0, sai: 1.25, alturaMax: 2.3, jogador: 1.6, prevJogador: 1.0 },
+  // esquiva (tecnicos.js esquivar): o caminho previsto da bola (rolagem exata de bola.js) a < `raio` m no próximo `janela` s
+  // ou o de um jogador (por `prevJogador` s, com a curva que ele vem fazendo — até `ladoMax` m/s² de lado —, o raio `jogador`
+  // crescendo ½·`curva`·t², até + curvaMax: ele pode virar diferente) → vai para o lugar da área com a maior folga até
+  // todos (contada até `folga` m; − `tv` com o caminho ou o lugar a < `tvX` m do x da bola perto da linha de cá, antes do
+  // recuo: o raio da TV); os lugares da esquiva a mais `borda` m dos lados e da frente da área (o pé da disparada)
+  esquiva: { raio: 0.75, janela: 1.0, alturaMax: 2.3, jogador: 1.6, prevJogador: 2.0, curva: 1.5, curvaMax: 1.0, folga: 1.2, tv: 0.5, tvX: 0.7, ladoMax: 6, borda: 0.35 },
   // olhar: a cabeça segue a bola até `cabecaMax` rad do tronco; o tronco vem atrás (mola `tronco` s, até `troncoMax` rad
   // do quadril); o corpo de frente para o campo, virando até `corpoMax` rad para o lado da bola
   olhar: { cabecaMax: 1.22, tronco: 0.8, troncoMax: 0.6, corpoMax: 0.75, tau: 0.12, virarAnda: 0.7 },
   mistura: 0.35,              // s — toda troca de gesto mistura as juntas (smoothstep)
   maoPico: 6.5,               // m/s — o pico da mão na troca comum: a mistura cresce com a distância (1,5·d/maoPico)
+  // m/s — o pico da mão nas reações ao gol (comemora/sofreu: explosivas; das costas para o soco no ar) e m — a rede de
+  // segurança: a mão nunca anda mais que isto num passo (o corpo, a torção e o gesto juntos; T5: ≤ 0,15)
+  maoPicoGol: 7.5, maoPassoMax: 0.14,
   arcoMao: 0.25,              // m — a mão que iria pela cabeça na troca comum passa pela frente (o arco no meio dela)
   misturaGol: 0.2,            // s — o gol sofrido: as mãos vão para a cabeça (a comemoração usa comemora.sobe)
   misturaAgacha: 0.7,         // s — agachar e levantar (o corpo inteiro desce 0,3 m; as mãos vão junto)
@@ -1486,7 +1674,9 @@ export const TECNICOS = {
   tensao: 22,                 // m do gol de lá: lance de perigo do time (sem palmas: ele olha a chance)
   reclama: { dura: [1.5, 2.5] },
   lamenta: { dura: [1.5, 2.5], janela: 2.5 },
-  comemora: { comeca: [0.2, 0.23], dura: [4, 6], sobe: 0.2, levanta: 0.3, corre: [3, 6], socos: 2.0, pulo: 0.08, palmas: 2.5 },
+  // comemora: a reação começa em `comeca` s do gol; a mão passa do topo da cabeça em `cruza` s do gol (de qualquer gesto: a
+  // mistura das mãos encurta ou espera; T7: 0,25–0,40)
+  comemora: { comeca: [0.2, 0.23], cruza: [0.28, 0.36], dura: [4, 6], sobe: 0.2, levanta: 0.3, corre: [3, 6], socos: 2.0, pulo: 0.08, palmas: 2.5 },
   sofreu: { comeca: [0.25, 0.3], cabeca: [2, 3], depois: 2, vamos: 1.5 },
   intervalo: { dura: [2, 3] },
   // variantes de cada gesto (nomes para os testes; a ordem é a do sorteio)

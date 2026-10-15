@@ -9,6 +9,7 @@ import { clamp, lerp, difAng } from './mat.js';
 import { uniforme } from './rng.js';
 import { criarBola, passoBola, chutar } from './bola.js';
 import { maoPermitida, registrarToque } from './regras-goleiro.js';
+import { preverBola } from './conducao.js';
 
 const DT = PASSO;
 const MEIO = CAMPO.gol.largura / 2;
@@ -81,10 +82,16 @@ export function alcanceGoleiro(tau, fator = 1) {
  * ajustada pelos atributos, e zero além do alcance físico (com folga). `partida`: soma GOLEIRO.logit.c0Partida
  * (o equilíbrio da partida; o treino não muda).
  */
-export function chanceDefesa(lateral, dChute, altura, alcance, attr, partida = false) {
+export function chanceDefesa(lateral, dChute, altura, alcance, attr, partida = false, tVoo = null, c0Partida = null) {
   const L = GOLEIRO.logit;
   const nivel = ((attr.reflexo + attr.mergulho + attr.posicionamento) / 3 - 72) / 100;
-  const lg = L.c0 + (partida ? L.c0Partida : 0) + L.cLat * lateral + L.cDist * dChute + L.cAlt * altura + L.attr * nivel;
+  // (c0Partida: o do pênalti, GOLEIRO.penalti.c0Partida — a calibração dele é a própria)
+  let lg = L.c0 + (partida ? (c0Partida ?? L.c0Partida) : 0) + L.cLat * lateral + L.cDist * dChute + L.cAlt * altura + L.attr * nivel;
+  // (partida) a bola bem mais lenta que um chute da mesma distância (cabeceio, chute fraco, desvio) dá ao goleiro o tempo a
+  // mais: a logística foi ajustada com chutes (~20 m/s); cTempo por s além de dChute / vRef
+  if (partida && tVoo != null) lg += L.cTempo * Math.max(0, tVoo - dChute / L.vRef);
+  // (partida) de longe a logística do treino defendia demais para os gols de fora da área (GOLEIRO.logit.cLongePartida)
+  if (partida && L.cLongePartida) lg += L.cLongePartida * Math.max(0, dChute - L.dLonge);
   const p = 1 / (1 + MD.exp(-lg));
   const fis = clamp((alcance + GOLEIRO.folgaAlcance - lateral) / GOLEIRO.folgaAlcance, 0, 1);
   return p * fis;
@@ -142,7 +149,9 @@ export function lerChute(m, j) {
   const alcance = alcanceGoleiro(tau, lerp(0.9, 1.08, a.mergulho / 100));
   const alturaOk = plano.y < GOLEIRO.alturaMax + (dist < 1 ? 0.2 : 0);
   const dChute = MD.hypot(b.p.x - j.x, b.p.z - j.z);
-  let pDefesa = alturaOk ? chanceDefesa(dist, dChute, plano.y, alcance, a, !!m.partida) : 0;
+  // (o tempo de voo só conta no cabeceio a gol: GOLEIRO.logit.cTempo)
+  let pDefesa = alturaOk ? chanceDefesa(dist, dChute, plano.y, alcance, a, !!m.partida, m.voo && m.voo.tipo === 'cabeceio' ? plano.ticks * DT : null,
+    ehPenalti ? GOLEIRO.penalti.c0Partida : null) : 0;
   // Panenka com o goleiro que ficou no meio: tempo de sobra — pega (encaixa) a que alcança, como o recuo; a que passa
   // por cima dele ainda alta ele busca voltando para a linha (recuoBolaAlta)
   const panenkaNoMeio = panenka && !palpiteErrado && j.palpite === 0;
@@ -238,6 +247,10 @@ const idDefesa = d => (d.lido ?? -1) * 4096 + d.tick;
 export function aplicarDefesa(m, j) {
   const d = j.defesa;
   if (!d || d.fora || m.tick !== d.tick - 1) return;
+  // bola morta (partida: impedimento ou falta apitados com o chute no ar, a parada ainda sem cobrar — Regra 9.2): não há
+  // defesa, ninguém fica com a bola; o goleiro só segue o mergulho desenhado (teste-partida C: na semente 1 o chute do
+  // impedido ia para as mãos dele 30 passos antes da montagem do tiro livre)
+  if (m.parada && !m.parada.rolou) { d.fora = true; return; }
   if (!d.sucesso) { m.eventos.push({ tipo: 'goleiroBatido', id: j.id }); return; }
   const b = m.bola;
   // a bola não está onde a defesa foi lida (desviou num corpo, na trave ou num domínio depois da leitura): não há
@@ -420,12 +433,15 @@ export function movimentoGoleiro(m, j, humano) {
     return { dx: dx / dd, dz: dzz / dd, vel: j.par.vArrancada * 0.95, rumoAlvo: olhar };
   }
   j.saindo = false;
-  // posição: bissetriz, mais adiantado com a bola longe
-  const dBola = MD.hypot(b.p.x - gx, b.p.z);
+  // posição: bissetriz, mais adiantado com a bola longe (cruzamento do adversário no ar: a do ponto onde ela desce para a
+  // cabeça — GOLEIRO.leCruzamento)
+  const pc = pontoDoCruzamento(m, j, gx);
+  const bx = pc ? pc.x : b.p.x, bz = pc ? pc.z : b.p.z;
+  const dBola = MD.hypot(bx - gx, bz);
   const P = GOLEIRO.profundidade;
   const dLinha = dBola <= 20 ? lerp(P[0], P[1], clamp((dBola - 6) / 14, 0, 1))
     : lerp(P[1], GOLEIRO.profundidadeLonge, clamp((dBola - 20) / 20, 0, 1));
-  const p = pontoBissetriz(b.p.x, b.p.z, gx, dLinha);
+  const p = pontoBissetriz(bx, bz, gx, dLinha);
   // tiro livre com barreira (Etapa 4): ela tapa o lado do 1º pau; o goleiro fica para o lado do 2º
   const pr = m.parada;
   const pz = pr && !pr.rolou && pr.barreira && pr.barreira.n > 0 && pr.time !== j.time ? p.z + pr.barreira.ladoLongo * BARREIRA.goleiro : p.z;
@@ -433,6 +449,24 @@ export function movimentoGoleiro(m, j, humano) {
   const dd = MD.hypot(dx, dz);
   const vel = Math.min(4.5, dd * 3);
   return { dx: dd > 1e-6 ? dx / dd : 0, dz: dd > 1e-6 ? dz / dd : 0, vel, rumoAlvo: olhar };
+}
+
+const _pc = { x: 0, z: 0 };
+/**
+ * Cruzamento (ou lançamento) do adversário no ar: o ponto em que a bola desce para a altura da cabeça
+ * (GOLEIRO.leCruzamento.y) perto do meu gol, pela física do jogo (conducao.js preverBola) — {x, z} reaproveitado, ou null.
+ */
+function pontoDoCruzamento(m, j, gx) {
+  const v = m.voo, b = m.bola, L = GOLEIRO.leCruzamento;
+  if (!v || v.time === j.time || (v.tipo !== 'cruzamento' && v.tipo !== 'lancamento') || m.posse != null || m.naMao != null || b.p.y <= 1) return null;
+  const { xs, zs, ys } = preverBola(b, L.ticks);
+  for (let i = 1; i <= L.ticks; i++) {
+    if (ys[i] > L.y || ys[i] >= ys[i - 1]) continue;
+    if (Math.abs(xs[i] - gx) > L.dist || Math.abs(zs[i]) > L.dist) return null;
+    _pc.x = xs[i]; _pc.z = zs[i];
+    return _pc;
+  }
+  return null;
 }
 
 /**

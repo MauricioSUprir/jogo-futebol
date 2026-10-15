@@ -404,19 +404,22 @@ function tiroLivre(s, t, u, w) {
 {
   const tipos = {}, lat = { n: 0, fica: 0 };
   let paradaMax = 0, nan = false;
-  for (let s = 2001; s < 2009; s++) {
+  // (E2 precisa de laterais: com menos de 8 nas 8 partidas, segue com mais sementes, até 16 partidas — com a defesa que corta
+  // o passe e acompanha a arrancada, 8 partidas chegaram a ter só 3 laterais; o E1 olha só as 8 primeiras)
+  for (let s = 2001; s < 2009 || (lat.n < 8 && s < 2017); s++) {
+    const so2 = s >= 2009;
     const m = P.criarPartida({ semente: s });
     let ini = null, l = null;
     for (let i = 0; i < 2 * 4 * 3600 + 4000 && m.partida.estado !== 'fim'; i++) {
       const ev = P.passoPartida(m, P.entradaDemoPartida(m));
       for (const e of ev) {
-        if (e.tipo === 'cobranca') tipos[e.parada] = (tipos[e.parada] ?? 0) + 1;
+        if (e.tipo === 'cobranca' && !so2) tipos[e.parada] = (tipos[e.parada] ?? 0) + 1;
         if (e.tipo === 'passe' && e.modo === 'lateral') { l = { time: jog(m, e.id)?.time, tick: m.tick, c: e.id }; lat.n++; }
       }
       if (l && m.posse != null && m.posse !== l.c) { const d = jog(m, m.posse); if (d) { if (d.time === l.time) lat.fica++; l = null; } }
       if (l && m.tick - l.tick > 300) l = null;
       const pr = m.parada;
-      if (pr && !pr.rolou && m.partida.estado === 'parada') { if (ini == null) ini = pr.inicio; paradaMax = Math.max(paradaMax, (m.tick - ini) * PASSO); } else ini = null;
+      if (pr && !pr.rolou && m.partida.estado === 'parada') { if (ini == null) ini = pr.inicio; if (!so2) paradaMax = Math.max(paradaMax, (m.tick - ini) * PASSO); } else ini = null;
       if (!Number.isFinite(m.bola.p.x) || !Number.isFinite(m.bola.p.y)) nan = true;
     }
   }

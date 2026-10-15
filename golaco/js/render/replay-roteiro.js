@@ -18,7 +18,7 @@
 import { REPLAY, CAMPO } from '../config.js';
 import { bolaNoTick, jogadorNoTick } from './replay-anel.js';
 import { cenaImpedimento, checagemLegal, faseSaot, duracaoSaot } from './replay-saot.js';
-import { enquadrarPrimeira, enquadrarTreinador, corpoNaLente } from './replay-olhos.js';
+import { enquadrarPrimeira, enquadrarTreinador, corpoNaLente, lenteRuimPrimeira } from './replay-olhos.js';
 
 const s60 = s => Math.round(s * 60);
 const _b = { x: 0, y: 0, z: 0 };
@@ -165,15 +165,32 @@ export function planosExtrasGol(anel, g, base) {
   if (exc > 0 && tr && tr.corte != null) { const lim = tr.corte + s60(X.parte2Min); tr.ate = Math.max(Math.min(tr.ate, lim), tr.ate - Math.ceil(exc * 60 * tr.vel)); exc = total() - X.maximo; }
   if (exc > 0 && tr) { const lim = Math.max(tr.de, ref - s60(X.parte1Min)); tr.de = Math.min(lim, tr.de + Math.ceil(exc * 60 * tr.vel)); exc = total() - X.maximo; }
   if (exc > 1e-9 && prim) { prim = null; }
-  // enquadramentos (e o corte pela lente na 1ª pessoa)
+  // enquadramentos e os cortes da 1ª pessoa: os passos RUINS do plano — outro corpo a < `corpo` m da lente no quadro, a
+  // lente dentro de algo sólido (o gol, as placas...; folga `solidoFolga`) ou perto do chão, o próprio corpo a < `proprio`
+  // m dela — depois do chute acabam o plano antes (fica se sobrar ≥ sobraMin s reais); antes do chute, ele começa depois do
+  // último (fica com ≥ extras.primeiraMin s antes do chute); senão sai. O enquadramento muda com o plano (a suavização e o
+  // limite do giro vão até a borda): de novo, até não sobrar nenhum (15/10: um corte só deixava passar o que o
+  // enquadramento novo trazia; a lente dentro do gol nem era olhada)
   if (prim) {
     let e = enquadrarPrimeira(anel, prim);
-    if (e) {
-      const t = corpoNaLente(anel, e, F.corpo, prim.autor);
-      if (t >= 0) {
-        if ((t - 1 - prim.de) / 60 / prim.vel >= F.sobraMin) { prim.ate = t - 1; prim.cortadoPelaLente = true; e = enquadrarPrimeira(anel, prim); }
-        else e = null;
+    const ruins = [];
+    for (let it = 0; e; it++) {
+      ruins.length = 0;
+      corpoNaLente(anel, e, F.corpo, prim.autor, ruins);
+      lenteRuimPrimeira(anel, e, F.solidoFolga, F.proprio, ruins);
+      if (!ruins.length) break;
+      if (it >= 6) { e = null; break; }
+      let antes = -1, depois = Infinity;
+      for (const t of ruins) { if (t < prim.chuteTick) antes = Math.max(antes, t); else depois = Math.min(depois, t); }
+      if (antes >= 0) {
+        if (antes + 1 > prim.chuteTick - s60(X.primeiraMin)) { e = null; break; }
+        prim.de = antes + 1;
       }
+      if (depois < Infinity) {
+        if ((depois - 1 - prim.de) / 60 / prim.vel < F.sobraMin) { e = null; break; }
+        prim.ate = depois - 1; prim.cortadoPelaLente = true;
+      }
+      e = enquadrarPrimeira(anel, prim);
     }
     if (e) { Object.defineProperty(prim, 'enq', { value: e, enumerable: false, writable: true }); out.push(prim); }
   }

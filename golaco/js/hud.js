@@ -45,6 +45,8 @@ const ROTULO_CARGA = {
 const COR_MAPA = {
   t0: '#19e07a', t0gol: '#c6ff3d', t1: '#93a3ae', t1gol: '#d0631f', bola: '#ffffff',
 };
+// (com ?tm as cores dos times vêm da identidade — definirTimes — e voltam a estas sem ela)
+const COR_MAPA_PADRAO = { ...COR_MAPA };
 // times fictícios: siglas e escudos do placar (treino; na partida vêm do elenco por definirTimes). O escudo é o id de um
 // <symbol id="escudo-..."> do index.html (desenhados lá, fictícios); o visitante do treino veste o branco do Ventania
 const TIMES_TREINO = [{ sigla: 'GLÇ', nome: 'Golaço', escudo: 'golaco' }, { sigla: 'VIS', nome: 'Visitante', escudo: 'ventania' }];
@@ -97,9 +99,38 @@ export function criarHud(opc) {
   function escreverTimes() {
     times.forEach((t, i) => {
       if (el.siglas[i]) el.siglas[i].textContent = t.sigla;
-      if (el.escudos[i]) el.escudos[i].setAttribute('href', `#escudo-${ESCUDOS.has(t.escudo) ? t.escudo : TIMES_TREINO[i].escudo}`);
-      if (el.timesPlacar[i]) el.timesPlacar[i].setAttribute('aria-label', t.nome ?? t.sigla);
+      // Total Match (t.escudoUrl, identidade.js extrasPlacar): o escudo-imagem num <symbol> próprio e a cor do time
+      if (el.escudos[i]) el.escudos[i].setAttribute('href', t.escudoUrl ? `#${simboloEscudoTm(i, t.escudoUrl)}` : `#escudo-${ESCUDOS.has(t.escudo) ? t.escudo : TIMES_TREINO[i].escudo}`);
+      const faixaCor = el.timesPlacar[i]?.querySelector('.placar-cor');
+      if (faixaCor && (t.cor || faixaCor.style.background)) faixaCor.style.background = t.cor ?? '';
+      if (el.timesPlacar[i]) {
+        if (t.cor) el.timesPlacar[i].style.setProperty('--cor-time', t.cor); else if (el.timesPlacar[i].style.getPropertyValue('--cor-time')) el.timesPlacar[i].style.removeProperty('--cor-time');
+        el.timesPlacar[i].setAttribute('aria-label', t.nome ?? t.sigla);
+      }
     });
+    // cores do minimapa: as do time (Total Match) ou as de sempre
+    const m0 = times[0]?.mapa, m1 = times[1]?.mapa;
+    Object.assign(COR_MAPA, m0 && m1 ? { t0: m0.lin, t0gol: m0.gol, t1: m1.lin, t1gol: m1.gol } : COR_MAPA_PADRAO);
+  }
+  /** <symbol id="escudo-tm-i"> com a imagem do escudo (o mesmo viewBox dos escudos desenhados) no sprite do index.html. */
+  function simboloEscudoTm(i, url) {
+    const id = `escudo-tm-${i}`;
+    let sb = document.getElementById(id);
+    if (!sb) {
+      const ns = 'http://www.w3.org/2000/svg';
+      const sprite = document.querySelector('svg.sprite') ?? document.body.appendChild(document.createElementNS(ns, 'svg'));
+      sb = document.createElementNS(ns, 'symbol');
+      sb.id = id;
+      sb.setAttribute('viewBox', '0 0 20 22');
+      const im = document.createElementNS(ns, 'image');
+      im.setAttribute('x', '0'); im.setAttribute('y', '0'); im.setAttribute('width', '20'); im.setAttribute('height', '22');
+      im.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      sb.appendChild(im);
+      sprite.appendChild(sb);
+    }
+    const im = sb.firstChild;
+    if (im.getAttribute('href') !== url) im.setAttribute('href', url);
+    return id;
   }
   escreverTimes();
 
@@ -242,6 +273,20 @@ export function criarHud(opc) {
     if (el.reiniciarPartida) {
       el.reiniciarPartida.textContent = fim ? 'Jogar de novo' : 'Reiniciar partida';
       el.reiniciarPartida.classList.toggle('btn-primario', fim);
+    }
+    // Total Match (?tm): a partida é a do TM — sem Reiniciar nem a troca para os treinos (voltariam ao Golaço ×
+    // Ventania), com "Simular o resto" (até o apito) e, no fim, "Voltar ao Total Match"; com a trava ("só o meu
+    // jogador"), sem Editar time. O submenu vira "Cenas da partida": só o pré-jogo e a cena de substituição
+    if (opc.tm) {
+      if (el.reiniciarPartida) el.reiniciarPartida.hidden = true;
+      const modos = $('btn-modos');
+      if (modos && modos.firstChild && modos.firstChild.nodeType === 3) modos.firstChild.textContent = 'Cenas da partida ';
+      if (el.estadoModo) { el.estadoModo.hidden = true; el.estadoModo.style.display = 'none'; }
+      if (el.modos) el.modos.querySelectorAll('[data-cmd="modo"]').forEach(b => { b.hidden = true; });
+      const sim = $('btn-simular-resto'), volta = $('btn-voltar-tm');
+      if (sim) sim.hidden = !partida || fim;
+      if (volta) { volta.hidden = !fim; volta.classList.toggle('btn-primario', fim); }
+      if (opc.tm.trava) document.querySelectorAll('#menu [data-cmd="editar-time"]').forEach(b => { b.hidden = true; });
     }
   }
   function mostrarSubmenu(v) {
@@ -410,8 +455,8 @@ export function criarHud(opc) {
       g.beginPath(); g.arc(X(prox.x), Z(prox.z), r + 1.4 * dpr, 0, Math.PI * 2); g.stroke();
     }
     if (ctrl) {
-      // controlado: ponto maior com anel branco
-      g.fillStyle = COR_MAPA.t0;
+      // controlado: ponto maior com anel branco (na cor do time dele: com o Total Match o humano pode ser o visitante)
+      g.fillStyle = ctrl.time === 1 ? COR_MAPA.t1 : COR_MAPA.t0;
       g.beginPath(); g.arc(X(ctrl.x), Z(ctrl.z), r * 1.35, 0, Math.PI * 2); g.fill();
       g.strokeStyle = '#ffffff'; g.lineWidth = dpr * 1.1;
       g.beginPath(); g.arc(X(ctrl.x), Z(ctrl.z), r * 1.35 + 1.2 * dpr, 0, Math.PI * 2); g.stroke();
@@ -624,7 +669,8 @@ export function criarHud(opc) {
       }
     },
     /**
-     * Faixa no meio da tela: f = {titulo, placar, ms?, botao?} (botao = "Jogar de novo") ou null.
+     * Faixa no meio da tela: f = {titulo, placar, ms?, botao?, botaoTexto?, botaoCmd?} (botao = "Jogar de novo"; com o
+     * Total Match, "Voltar ao Total Match" / "Simular o resto" pelo texto e o comando) ou null.
      * Sem ms, fica até ser trocada (fim de jogo). No modo de prints só aparece com forcar.
      */
     faixa(f, forcar = false) {
@@ -633,6 +679,8 @@ export function criarHud(opc) {
       if (!f || (prints && !forcar)) { el.faixa.hidden = true; el.faixa.classList.remove('forcada'); return; }
       el.faixaTitulo.textContent = f.titulo ?? '';
       el.faixaPlacar.textContent = f.placar ?? '';
+      el.faixaBotao.textContent = f.botaoTexto ?? 'Jogar de novo';
+      el.faixaBotao.dataset.cmd = f.botaoCmd ?? 'reiniciar-partida';
       el.faixaBotao.hidden = !f.botao;
       el.faixa.classList.toggle('forcada', !!forcar);
       el.faixa.hidden = false;

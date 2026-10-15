@@ -1,5 +1,5 @@
 /* Total Match — service worker (app instalável + offline) */
-var CACHE = "total-match-v367";
+var CACHE = "total-match-v368";
 /* Concha do app: caminhos base (sem ?v=) — combinados por ignoreSearch. */
 var SHELL = [
   "./", "./index.html", "./manifest.webmanifest",
@@ -40,9 +40,9 @@ self.addEventListener("fetch", function (e) {
   var url = new URL(req.url);
   // só cuidamos do próprio site; Firebase/CDNs seguem direto pela rede
   if (url.origin !== self.location.origin) return;
-  // o motor 3D (futebol3d/) vai direto pela rede: arquivos grandes (corpo, rostos, captura de
+  // o motor 3D (golaco/; o antigo futebol3d/ de reserva) vai direto pela rede: arquivos grandes (corpo, rostos, captura de
   // movimento) que não cabem no cache e que, sem internet, não servem (o three.js vem de CDN)
-  if (url.pathname.indexOf("/futebol3d/") >= 0) return;
+  if (url.pathname.indexOf("/futebol3d/") >= 0 || url.pathname.indexOf("/golaco/") >= 0) return;
 
   // Rede primeiro (fresco quando online); cache como reserva offline.
   e.respondWith(

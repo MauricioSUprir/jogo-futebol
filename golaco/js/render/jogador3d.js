@@ -43,6 +43,8 @@ function sorteio(id, s) {
 
 // Padrões (ver o fragment shader). 2 = antebraço do goleiro (manga comprida e luva).
 const P = { liso: 0, manga: 1, luva: 2, tronco: 3, gola: 4, coxa: 5, meiao: 6, chuteira: 7 };
+// padrão da camisa (uniformes do Total Match; identidade.js PADROES): somado ao iPad do tronco e da gola
+const PADRAO_FRAC = { plain: 0, stripes: 0.1, halves: 0.2, sash: 0.3, hoops: 0.4 };
 
 function nomeJ(i) { return Object.keys(J).find(k => J[k] === i) ?? ''; }
 
@@ -56,7 +58,8 @@ function estilo(seg) {
   if (tem('lombar', 'peito')) return { achata: 0.68, pad: P.tronco, c: ['camisa', 'pele', 'acento'], sup: true };
   if (tem('peito', 'pescoco')) return { achata: 0.78, pad: P.gola, c: ['camisa', 'pele', 'acento'], sup: true };
   if (tem('ombroE', 'ombroD')) return { achata: 0.85, pad: P.liso, c: ['camisa', 'pele', 'acento'], sup: true };
-  if (/^ombro/.test(a) && /^cotovelo/.test(b)) return { achata: 1, pad: P.manga, c: ['camisa', 'pele', 'acento'], sup: true };
+  // manga: a cor da manga do uniforme (`manga`; os uniformes sem ela caem na camisa em escreverCores)
+  if (/^ombro/.test(a) && /^cotovelo/.test(b)) return { achata: 1, pad: P.manga, c: ['manga', 'pele', 'acento'], sup: true };
   if (tem('quadrilE', 'quadrilD')) return { achata: 0.84, pad: P.liso, c: ['calcao', 'pele', 'acento'], sup: false, r: [0.088, 0.088] };
   if (/^quadril/.test(a) && /^joelho/.test(b)) return { achata: 1, pad: P.coxa, c: ['calcao', 'pele', 'acento'], sup: false };
   if (/^joelho/.test(a) && /^tornozelo/.test(b)) return { achata: 1, pad: P.meiao, c: ['meiao', 'pele', 'acento'], sup: false };
@@ -177,7 +180,30 @@ function materialSegmentos() {
         varying float vPad;
         varying float vT;
         varying vec2 vLocal;
-        float faixa(float t, float a, float w) { return smoothstep(a - w, a + w, t); }`)
+        float faixa(float t, float a, float w) { return smoothstep(a - w, a + w, t); }
+        // padrões dos uniformes do Total Match (iPad do tronco/gola: +0.1 listras verticais, +0.2 metades, +0.3 faixa
+        // diagonal, +0.4 aros); 1 = a 2ª cor. L = (lado, frente) na seção da cápsula; t ao longo do segmento
+        float padraoCamisa(float q, vec2 L, float t, bool tronco) {
+          float sl = clamp(L.x / max(length(L), 1e-3), -1.0, 1.0);
+          if (q < 0.15) {
+            float x = asin(sl) * 1.5915;           // 5 pares de listras de um lado ao outro do peito
+            float tri = abs(fract(x) - 0.5);
+            float aa = fwidth(x) * 0.75 + 0.02;
+            return smoothstep(0.25 - aa, 0.25 + aa, tri);
+          } else if (q < 0.25) {
+            float aa = fwidth(sl) + 0.02;
+            return smoothstep(-aa, aa, sl);
+          } else if (q < 0.35) {
+            float d = sl * 0.9 + (t - 0.5) * (tronco ? 1.2 : 0.35) - (tronco ? 0.0 : 0.55);
+            float aa = fwidth(d) + 0.02;
+            return 1.0 - smoothstep(0.22 - aa, 0.22 + aa, abs(d));
+          }
+          if (!tronco) return 0.0;
+          float x = t * 2.6;
+          float tri = abs(fract(x) - 0.5);
+          float aa = fwidth(x) * 0.75 + 0.02;
+          return smoothstep(0.25 - aa, 0.25 + aa, tri);
+        }`)
       .replace('#include <color_fragment>', `#include <color_fragment>
         {
           vec3 cor = vC1;
@@ -196,9 +222,13 @@ function materialSegmentos() {
           } else if (p > 1.5 && p < 2.5) {     // goleiro: manga comprida, punho e luva
             cor = mix(cor, vC3, faixa(t, 0.66, w));
             cor = mix(cor, vC2, faixa(t, 0.74, w));
-          } else if (p > 2.5 && p < 3.5) {     // tronco: listras laterais
-            cor = mix(cor, vC3, faixa(lado, 0.94, wl) * meio);
+          } else if (p > 2.5 && p < 3.5) {     // tronco: listras laterais (liso) ou o padrão do uniforme (2ª cor)
+            float q = p - 3.0;
+            if (q < 0.05) cor = mix(cor, vC3, faixa(lado, 0.94, wl) * meio);
+            else cor = mix(cor, vC3, padraoCamisa(q, vLocal, t, true));
           } else if (p > 3.5 && p < 4.5) {     // gola e pescoço
+            float q = p - 4.0;
+            if (q > 0.05) cor = mix(cor, vC3, padraoCamisa(q, vLocal, t, false) * (1.0 - faixa(t, 0.6, w)));
             cor = mix(cor, vC3, faixa(t, 0.62, w));
             cor = mix(cor, vC2, faixa(t, 0.78, w));
           } else if (p > 4.5 && p < 5.5) {     // coxa: calção com listra, depois a pele
@@ -213,7 +243,7 @@ function materialSegmentos() {
           diffuseColor.rgb = cor;
         }`);
   };
-  mat.customProgramCacheKey = () => 'manequim-v3';
+  mat.customProgramCacheKey = () => 'manequim-v4';
   return mat;
 }
 
@@ -357,7 +387,15 @@ export function criarJogadores3D(cena, qualidade) {
   anelProx.name = 'indicador-proximo';
   cena.add(anelProx);
 
-  const kitsLin = Object.fromEntries(Object.entries(KITS).map(([k, kit]) => [k, Object.fromEntries(Object.entries(kit).map(([nome, hex]) => [nome, new THREE.Color(hex)]))]));
+  // cores lineares de cada uniforme (só os campos '#rrggbb'); `padrao` (o do Total Match: listras, metades, faixa,
+  // aros) vira a fração do iPad do tronco e da gola (PADRAO_FRAC; liso = 0, os uniformes de hoje)
+  const linKit = kit => {
+    const o = {};
+    for (const [nome, v] of Object.entries(kit)) if (typeof v === 'string' && v[0] === '#') o[nome] = new THREE.Color(v);
+    o.padrao = PADRAO_FRAC[kit.padrao] ?? 0;
+    return o;
+  };
+  const kitsLin = Object.fromEntries(Object.entries(KITS).map(([k, kit]) => [k, linKit(kit)]));
   // índice do uniforme (sem alocar no quadro): o do elenco, se vier; senão o do time e da função
   const NOMES_KIT = Object.keys(KITS);
   const IDX_KIT = Object.fromEntries(NOMES_KIT.map((k, i) => [k, i]));
@@ -383,7 +421,7 @@ export function criarJogadores3D(cena, qualidade) {
       aC1.setXYZ(i, c1.r, c1.g, c1.b);
       aC2.setXYZ(i, c2.r, c2.g, c2.b);
       aC3.setXYZ(i, c3.r, c3.g, c3.b);
-      aPad.setX(i, e.pad);
+      aPad.setX(i, e.pad === P.tronco || e.pad === P.gola ? e.pad + kit.padrao : e.pad);
     }
     aC1.needsUpdate = aC2.needsUpdate = aC3.needsUpdate = aPad.needsUpdate = true;
     cabecas.setColorAt(vaga, pele);
@@ -440,6 +478,15 @@ export function criarJogadores3D(cena, qualidade) {
      * 22 + quem entra + o quarto árbitro; remontar ali subia um buffer novo para a GPU no meio dela).
      */
     reservar(n) { if (n > cap) montar(n); },
+    /**
+     * Uniformes da partida (identidade.js, só com ?tm): reescreve as chaves que já existem (linha0, goleiro0, linha1,
+     * goleiro1, arbitro) com as cores resolvidas sem confusão — o elenco do Total Match aponta para elas (a chave do
+     * cache por vaga não muda de tamanho) — e reescreve as cores de todas as vagas no próximo quadro.
+     */
+    definirKits(mapa) {
+      for (const [k, kit] of Object.entries(mapa || {})) if (kit && IDX_KIT[k] != null) kitsLin[k] = linKit(kit);
+      vagaDe.clear();
+    },
     /**
      * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, pressiona, x, z, rumo,
      * tecnico?, ocultar?}]

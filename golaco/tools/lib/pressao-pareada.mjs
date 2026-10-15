@@ -46,8 +46,8 @@ export async function medirPressaoPareada(JS, { sementes = [1, 2], min = 4, T = 
     return { x: dx / d, z: dz / d, botoes: d > 4 ? BOTAO.CORRER : 0 };
   }
   function ramo(m, com, modelo, cond0) {
-    const r = { d: [], t2: null, alcBote: null, faltas: 0, origens: {}, perdeu: null, corre: 0, correTot: 0, corre1: 0, correTot1: 0, dj: {}, esc1: -1, marcaOk: 0, marcaTot: 0, p1Dobra: 0, p1Tot: 0, rouba: false };
-    let segue = true, esc = -1, escDesde = 0;
+    const r = { d: [], t2: null, alcBote: null, faltas: 0, origens: {}, perdeu: null, corre: 0, correTot: 0, corre1: 0, correTot1: 0, dj: {}, esc1: -1, marcaOk: 0, marcaTot: 0, p1Dobra: 0, p1Tot: 0, rouba: false, choques: 0 };
+    let segue = true, esc = -1, escDesde = 0, spAnt = -1;
     for (let i = 1; i <= NT; i++) {
       const dAntes = condutorAdv(m);
       const e = entradaHumano(m, modelo);
@@ -67,8 +67,17 @@ export async function medirPressaoPareada(JS, { sementes = [1, 2], min = 4, T = 
         if (r.esc1 < 0 && id >= 0) r.esc1 = id;
         // (a partir do 2º passo com o botão: no 1º o pedido ainda não estava gravado quando o time decidiu)
         if (i >= 2 && dAntes && D.pressaoPedida(m, 0)) { r.marcaTot++; if (id >= 0) r.marcaOk++; }
-        if (id !== esc) { esc = id; escDesde = i; }
         const q = id >= 0 ? S.jogadorPorId(m, id) : null;
+        // trombada do escolhido em disparada com quem não é o condutor (sim.js colisaoCorpos: a velocidade cai > 0,6 m/s num
+        // passo, correndo a mais de 3 m/s, com alguém além do condutor a menos de 0,7 m)
+        if (q && id === esc && d) {
+          const sp = Math.hypot(q.vx, q.vz);
+          if (spAnt > 3 && spAnt - sp > 0.6) {
+            for (const o of m.jogadores) if (o !== q && o.id !== d.id && Math.hypot(o.x - q.x, o.z - q.z) < 0.7) { r.choques++; break; }
+          }
+        }
+        spAnt = q ? Math.hypot(q.vx, q.vz) : -1;
+        if (id !== esc) { esc = id; escDesde = i; }
         if (q && d && Math.hypot(q.x - d.x, q.z - d.z) > 4 && (i - escDesde) * PASSO >= 0.5) {
           r.correTot++;
           if (Math.hypot(q.vx, q.vz) >= q.par.vCorrida) r.corre++;

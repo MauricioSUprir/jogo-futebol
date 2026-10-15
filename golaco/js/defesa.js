@@ -92,7 +92,7 @@ const _alvoP = { x: 0, z: 0, vx: 0, vz: 0 };
  * Entrada (velocidade pedida → analógico) que leva o corpo a andar com velocidade (vx, vz): a inversa de
  * jogador.js velocidadeDesejada (sem a bola). Acima da corrida, CORRER pela velocidade do corpo (st.corre).
  */
-function entradaVelocidade(j, vx, vz, st, botoes) {
+export function entradaVelocidade(j, vx, vz, st, botoes) {
   const s = MD.hypot(vx, vz);
   const par = j.par;
   // acima da corrida só o CORRER chega lá, e ele é tudo ou nada (vai à arrancada): liga enquanto o corpo
@@ -319,6 +319,19 @@ function resolverBote(m, j, h) {
 /** PRESSÃO segurado: pede à IA tática que um companheiro aperte o condutor (contrato). */
 export function pedidoPressao(m, j) {
   (m.pedidoPressao ??= {})[j.time] = m.tick;
+}
+
+/**
+ * j é o chamado da PRESSÃO do time (o último escolhido de pressionadorDe dentro da validade do pedido, com o pedido
+ * valendo)? No passe do adversário ele segue a PRESSÃO até o ponto de chegada (entradaPressao), não entra no corte do
+ * passe (ia-tatica.js vaiNaLivre): cortando, ele saía da aproximação da PRESSÃO e, com o domínio do recebedor longe
+ * dele, recomeçava do parado (teste-pressao-humano M5, o chamado que corre de verdade). Sem o botão, sempre false (a
+ * partida IA × IA não muda).
+ */
+export function chamadoDaPressao(m, j) {
+  if (!pressaoPedida(m, j.time)) return false;
+  const c = m.pressaoHumano?.[j.time];
+  return !!c && c.ult === j.id && c.ultTick >= 0 && m.tick - c.ultTick <= seg(P.validade);
 }
 
 /** O pedido de PRESSÃO do time está valendo neste tick? */
@@ -573,12 +586,13 @@ function desvio(m, j, o, ux, uz, v) {
 const _dv = { x: 0, z: 0 };
 
 /**
- * j é (ou foi há até P.depois s) o chamado da PRESSÃO? (sim.js boteIA: o bote com responsabilidade e sem falta tática.)
+ * j é (ou foi há até P.depois s) o chamado da PRESSÃO? (sim.js boteIA: o bote com responsabilidade e sem falta tática.
+ * O chamadoDaPressao, mais estrito — o chamado de agora, com o pedido valendo —, é o do corte do passe: ia-tatica.js.)
  * O chamado que deixa de ser chamado (o botão passou para outro, o pedido acabou) volta à IA ainda embalado da disparada:
  * sem a margem, o bote da IA saía de frente a ~4 m/s entrando no homem (teste-pressao-humano M4, 15/10). Só existe com o
  * PRESSÃO apertado (j.pressaoH nasce em entradaPressao): a IA × IA não muda.
  */
-export function chamadoDaPressao(m, j) {
+export function chamadoRecente(m, j) {
   const st = j.pressaoH;
   return !!st && st.tick >= 0 && m.tick - st.tick <= seg(P.depois) && !desligado(m);
 }

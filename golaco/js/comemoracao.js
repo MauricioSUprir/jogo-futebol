@@ -25,6 +25,7 @@ import { difAng } from './mat.js';
 import { passoCorpo, passoPassada, passoPeDesenhado } from './jogador.js';
 import { pose, alturaQuadril, J, NJ, ik, ikBraco } from './anim.js';
 import { mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho } from './goleiro.js';
+import { passoCorpoNoAr, pesNoAr } from './cabeceio.js';
 import { hash32 } from './rng.js';
 
 const C = COMEMORACAO;
@@ -171,6 +172,10 @@ export function copiaJogador(j) {
   const c = { ...j };
   c.pes = [{ ...j.pes[0] }, { ...j.pes[1] }];
   c.mergulho = j.posicao === 'GOL' && j.mergulho ? clonar(j.mergulho) : null;
+  // pulo do cabeceio (cabeceio.js; contraprova de 14/10): quem já saiu do chão termina o pulo (o gol de cabeça de muito
+  // perto sai com ele no ar — antes a cena o andava pela passada no chão e a pelve caía 0,19 m num tick); o pulo que ainda
+  // não saiu do chão não sai mais. Cópia: a cena nunca escreve no plano do mundo
+  c.cab = j.cab && (j.cab.saiu || !(j.cab.h > 0)) ? clonar(j.cab) : null; c.disputaAlta = null;
   c.cond = null; c.defesa = null; c.travaApoio = null; c.alvo = null; c.recebe = null; c.corrida = null; c.carga = null;
   c.pedido = null; c.mira = null; c.miraAuto = null; c.conter = null; c.defH = null; c.salto = null; c.arremesso = null;
   c.segura = null; c.saindo = null; c.ia = null; c.iaA = null; c.iaT = null; c.recep = null; c.contorno = null;
@@ -248,6 +253,12 @@ function para(c, vel, rumo) {
   return d;
 }
 
+/** O corpo de j anda pelo pulo do cabeceio no passo que leva ao estado do tick t (da saída ao pouso; sim.js voando)? */
+function voandoCab(j, t) {
+  const c = j.cab;
+  return !!c && c.saiu && t > c.td && t <= c.tp;
+}
+
 /** Fronteiras das fases depois que a finalização começa (tick c.k). */
 function iniciarFinal(c, a) {
   c.kFinal = c.k;
@@ -279,6 +290,18 @@ function guardarPes(a) {
   }
 }
 
+/** Vaga do colega no abraço (em out): em volta do autor (ou do alvo, enquanto ele não chega), do lado do campo. */
+const _vg = { x: 0, z: 0 };
+function vagaColega(c, a, out) {
+  const au = c.autor.j, al = c.alvo;
+  const perto = c.kFinal >= 0 || Math.hypot(au.x - al.x, au.z - al.z) < 4;
+  const cx = perto ? au.x : al.x, cz = perto ? au.z : al.z;
+  const base = Math.atan2(-al.uz, -al.ux); // do alvo para dentro do campo
+  const ang = base + (a.slot - (c.nColegas - 1) / 2) * C.colegas.abertura;
+  out.x = cx + Math.cos(ang) * C.colegas.vaga; out.z = cz + Math.sin(ang) * C.colegas.vaga;
+  return out;
+}
+
 function desejo(c, a, t) {
   const j = a.j, au = c.autor.j;
   switch (a.papel) {
@@ -301,13 +324,8 @@ function desejo(c, a, t) {
     case COLEGA: {
       const rAut = Math.atan2(au.z - j.z, au.x - j.x);
       if (t < a.t0) return para(c, 0, rAut);
-      const al = c.alvo;
-      const perto = c.kFinal >= 0 || Math.hypot(au.x - al.x, au.z - al.z) < 4;
-      const cx = perto ? au.x : al.x, cz = perto ? au.z : al.z;
-      const base = Math.atan2(-al.uz, -al.ux); // do alvo para dentro do campo
-      const ang = base + (a.slot - (c.nColegas - 1) / 2) * C.colegas.abertura;
-      const vx = cx + Math.cos(ang) * C.colegas.vaga, vz = cz + Math.sin(ang) * C.colegas.vaga;
-      const ex = vx - j.x, ez = vz - j.z, de = Math.hypot(ex, ez);
+      const vg = vagaColega(c, a, _vg);
+      const ex = vg.x - j.x, ez = vg.z - j.z, de = Math.hypot(ex, ez);
       if (de < 0.25) return para(c, 0, rAut);
       const dd = c._d;
       dd.dx = ex / de; dd.dz = ez / de; dd.vel = Math.min(j.par.vArrancada * C.colegas.vel, 0.6 + de * 1.6);
@@ -392,6 +410,9 @@ export function passoCena(c) {
     if (a.desliza) { deslizar(a); continue; }
     if (a.ajoelhado) continue;
     if (a.goleiro && j.mergulho && mergulhoAtivo(j, mF.tick + 1)) { passoMergulho(mF, j); a.mergulha = true; a.fixo = true; continue; }
+    // no ar (pulo do cabeceio, até o pouso): o corpo segue a velocidade da saída, como na simulação (sim.js)
+    a.voa = voandoCab(j, mF.tick + 1);
+    if (a.voa) { passoCorpoNoAr(mF, j); continue; }
     if (a.papel === GOLEIRO_SOFREU || a.papel === CONTRA) a.fixo = a.agacha > 0.02;
     const d = desejo(c, a, t);
     if (a.desliza) { deslizar(a); continue; }
@@ -401,9 +422,10 @@ export function passoCena(c) {
   for (const a of c.ordem) {
     if (a.mergulha) { fixarMergulho(mF, a.j); pesMergulho(mF, a.j); continue; }
     if (a.desliza || a.ajoelhado) continue;
+    if (a.voa) { pesNoAr(mF, a.j); continue; } // os pés no ar e plantados no pouso (cabeceio.js)
     passoPassada(a.j, false, PASSO, null, null);
   }
-  for (const a of c.ordem) if (!a.mergulha && !a.desliza && !a.ajoelhado) passoPeDesenhado(a.j, mF, PASSO);
+  for (const a of c.ordem) if (!a.mergulha && !a.desliza && !a.ajoelhado && !a.voa) passoPeDesenhado(a.j, mF, PASSO);
   mF.tick++;
   c.k++;
   for (const a of c.ordem) if (!a.desliza && !a.ajoelhado) a.j.quadril = alturaQuadril(a.j, mF);
@@ -819,35 +841,108 @@ function direcaoReacao(rumo, giro) {
 }
 const GIROS_REACAO = [0, 0.5, -0.5, 1.0, -1.0];
 const _cr = { de: [0, 0, 0] };
+// Quadros da câmera da reação (tangente da meia largura e giro do eixo) no pior formato de tela: o PC sem deslocar (até
+// 2,2:1) e o celular deitado (fov × celular, até 2,2:1) com quem reage no terço esquerdo — o eixo gira para o lado
+// (−fz, fx) do olhar (ajustarCelular). Contraprova de 15/10: o custo só olhava o quadro do PC, e no celular o quadro
+// vai ~1/3 mais longe para um lado.
+const ASPECTO_MAX = 2.2;
+const QUADROS_REACAO = (() => {
+  const R = C.camera.reacao, tPC = Math.tan((R.fov * Math.PI) / 360) * ASPECTO_MAX;
+  const tCel = Math.tan((R.fov * C.camera.celular * Math.PI) / 360) * ASPECTO_MAX, b = Math.atan(tCel * C.camera.terco);
+  return [{ th: tPC, cos: 1, sin: 0 }, { th: tCel, cos: Math.cos(b), sin: Math.sin(b) }];
+})();
+/**
+ * Quanto um corpo em (dx, dz) da lente (olhar unitário f, no chão) está colado nela DENTRO de algum dos quadros: 2,2 m
+ * menos a profundidade (0 fora). A régua do teste: < 2 m de profundidade e dentro do quadro (meia largura × 1,1); aqui
+ * com folga (2,2 m e o corpo, 0,4 m de lado).
+ */
+function custoLente(dx, dz, fx, fz) {
+  let pior = 0;
+  for (let i = 0; i < QUADROS_REACAO.length; i++) {
+    const q = QUADROS_REACAO[i], ax = fx * q.cos - fz * q.sin, az = fz * q.cos + fx * q.sin;
+    const z = dx * ax + dz * az, lado = Math.abs(dz * ax - dx * az);
+    if (z > -0.2 && z < 2.2 && lado < Math.max(0, z) * q.th * 1.1 + 0.4 && 2.2 - z > pior) pior = 2.2 - z;
+  }
+  return pior;
+}
+/**
+ * Destino do ator agora (em out: o ponto onde ele para e a velocidade pedida), o mesmo desejo da cena sem andar: o colega
+ * vai para a vaga do abraço, quem sofreu para a saída, o resto do time até `resto.para` m do grupo; o autor (parado na
+ * finalização) e quem está preso num golpe (deslize, ajoelhado, mergulho, agachado, no ar) ficam onde estão.
+ */
+const _dst = { x: 0, z: 0, vel: 0 };
+function destinoAtor(c, a, out) {
+  const j = a.j, au = c.autor.j;
+  out.x = j.x; out.z = j.z; out.vel = 0;
+  if (a.fixo || a.desliza || a.ajoelhado || a.voa || a.mergulha) return out;
+  if (a.papel === COLEGA) {
+    vagaColega(c, a, out);
+    const de = Math.hypot(out.x - j.x, out.z - j.z);
+    out.vel = de < 0.25 ? 0 : Math.min(j.par.vArrancada * C.colegas.vel, 0.6 + de * 1.6);
+  } else if (a.papel === SOFREU) {
+    const tx = c.s * C.sofreu.meio, tz = j.z * 0.6, d = Math.hypot(tx - j.x, tz - j.z);
+    if (d >= 0.5) { out.x = tx; out.z = tz; out.vel = Math.min(C.sofreu.vel, d * 0.8); }
+  } else if (a.papel === RESTO && !a.goleiro) {
+    const dx = au.x - j.x, dz = au.z - j.z, d = Math.hypot(dx, dz);
+    if (d > C.resto.para) {
+      const k = (d - C.resto.para) / d;
+      out.x = j.x + dx * k; out.z = j.z + dz * k; out.vel = Math.min(C.resto.vel, (d - C.resto.para) * 1.2 + 0.4);
+    }
+  }
+  return out;
+}
+/**
+ * Posições previstas (x, z) de cada ator a cada `dt` s, do tick de agora até `T` s, em buf (ator i, amostra n →
+ * buf[(n·nAtores + i)·2]): cada um anda reto para o destino (destinoAtor) na maior entre a velocidade de agora e a pedida
+ * e para nele. Antes era posição + velocidade × t, que passava do ponto de quem estava chegando.
+ */
+let _prev = new Float64Array(0);
+function preverAtores(c, T, dt) {
+  const n = c.atores.length, ns = Math.floor(T / dt + 1e-9) + 1;
+  if (_prev.length < n * ns * 2) _prev = new Float64Array(n * ns * 2);
+  for (let i = 0; i < n; i++) {
+    const a = c.atores[i], j = a.j;
+    destinoAtor(c, a, _dst);
+    const ex = _dst.x - j.x, ez = _dst.z - j.z, d = Math.hypot(ex, ez);
+    const v = d > 1e-6 ? Math.max(Math.hypot(j.vx, j.vz), _dst.vel) : 0, ux = d > 1e-6 ? ex / d : 0, uz = d > 1e-6 ? ez / d : 0;
+    for (let k = 0; k < ns; k++) {
+      const anda = Math.min(d, v * k * dt), q = (k * n + i) * 2;
+      _prev[q] = j.x + ux * anda; _prev[q + 1] = j.z + uz * anda;
+    }
+  }
+  return ns;
+}
 /**
  * Giro da câmera da reação (rad em volta de quem reage), escolhido UMA vez no começo da reação: o primeiro de GIROS_REACAO
- * (0 = o plano de sempre, que só muda se tiver gente de verdade na frente) com menos gente na frente da lente (a < 2,2 m,
- * dentro do ângulo do quadro) ou entre a lente e quem reage no próximo segundo (posição + velocidade × t). Contraprova: um
- * jogador do time que sofreu, andando para a saída, passava colado na lente (um corpo a 2 m enche a altura do quadro) em
- * ~15% das cenas curtas.
+ * (0 = o plano de sempre, que só muda se tiver gente de verdade na frente) com menos gente colada na lente (a < 2,2 m de
+ * profundidade, dentro do quadro do PC ou do celular) ou entre a lente e quem reage, na reação INTEIRA (até o fim da cena;
+ * as posições previstas por preverAtores). Contraprovas: um jogador do time que sofreu, andando para a saída, passava
+ * colado na lente (um corpo a 2 m enche a altura do quadro) em ~15% das cenas curtas; e (15/10) na cena curta a reação
+ * dura até 2 s, mas o custo só olhava o 1º segundo — um colega correndo para o abraço passou rente à lente no celular.
  */
+const DT_GIRO = 0.05;
 function escolherGiroReacao(c) {
-  const r = c.reacao ?? c.autor, R = C.camera.reacao, rj = r.j;
+  const r = c.reacao ?? c.autor, R = C.camera.reacao, rj = r.j, n = c.atores.length, ir = c.atores.indexOf(r);
+  const ns = preverAtores(c, Math.max(0, c.kFim - c.k) * PASSO, DT_GIRO);
   let melhor = 0, menor = Infinity;
   for (const giro of GIROS_REACAO) {
     const d = direcaoReacao(rj.rumo, giro), dx = d.x, dz = d.z;
     let custo = 0;
-    // custo = integral no tempo (m·s): amostras a cada 0,1 s
-    for (let t = 0, T = c.curta ? C.curta.reacao : C.reacao; t <= T + 1e-9; t += 0.1) {
-      const sx = rj.x + rj.vx * t, sz = rj.z + rj.vz * t;
+    // custo = integral no tempo (m·s)
+    for (let k = 0; k < ns; k++) {
+      const sx = _prev[(k * n + ir) * 2], sz = _prev[(k * n + ir) * 2 + 1];
       _cr.de[0] = sx + dx * R.dist; _cr.de[1] = R.altura; _cr.de[2] = sz + dz * R.dist;
       limitarCamera(_cr);
       const cx = _cr.de[0], cz = _cr.de[2], ex = sx - cx, ez = sz - cz, el2 = ex * ex + ez * ez || 1, el = Math.sqrt(el2);
-      for (const a of c.atores) {
-        if (a === r) continue;
-        const px = a.j.x + a.j.vx * t, pz = a.j.z + a.j.vz * t;
-        // na frente da lente (distância ao longo do olhar) e de lado (perpendicular a ele)
-        const u = ((px - cx) * ex + (pz - cz) * ez) / el2, frente = u * el, lado = Math.hypot(px - cx - ex * u, pz - cz - ez * u);
-        // colado na lente, dentro do ângulo do quadro (meia largura ~0,6 da distância + o corpo)
-        const dc = Math.hypot(px - cx, pz - cz);
-        if (frente > 0 && dc < 2.2 && lado < frente * 0.6 + 0.4) custo += (2.2 - dc) * 0.1;
+      const fx = ex / el, fz = ez / el;
+      for (let i = 0; i < n; i++) {
+        if (i === ir) continue;
+        const px = _prev[(k * n + i) * 2], pz = _prev[(k * n + i) * 2 + 1];
+        // colado na lente, dentro do quadro do PC ou do celular
+        custo += custoLente(px - cx, pz - cz, fx, fz) * DT_GIRO;
         // entre a lente e quem reage (perto da linha de visão)
-        if (u > 0.05 && u < 0.95 && lado < 0.8) custo += (0.8 - lado) * 0.1;
+        const u = ((px - cx) * ex + (pz - cz) * ez) / el2, lado = Math.hypot(px - cx - ex * u, pz - cz - ez * u);
+        if (u > 0.05 && u < 0.95 && lado < 0.8) custo += (0.8 - lado) * DT_GIRO;
       }
     }
     // o plano de sempre (giro 0) só muda com gente de verdade na frente (um corpo cruzando a linha de visão por ~0,2 s já

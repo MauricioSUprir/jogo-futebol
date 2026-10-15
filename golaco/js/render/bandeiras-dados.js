@@ -47,8 +47,10 @@ export const TEXTOS_FAIXAS = TEXTOS;
 /**
  * Faixas, na ordem de prioridade (a Baixa desenha as 8 primeiras): {texto, fundo, letra, detalhe, setor (0 lado de
  * lá, 1 fundo +x, 2 fundo −x), centro (x ou z na mureta), larg (m), slot (linha do atlas)}.
+ * textos (só com ?tm; identidade.js faixas): os 12 [texto, fundo, letra, detalhe, cor do detalhe?] com os nomes dos
+ * times do Total Match, na MESMA ordem dos lugares (9 e 11 no setor visitante). Sem eles, os de hoje.
  */
-export function faixas() {
+export function faixas(textos = TEXTOS) {
   const A = ARQUIBANCADA;
   // 8 no lado de lá (o que a câmera de TV mostra), depois a organizada e o setor visitante
   const pos = [
@@ -56,8 +58,8 @@ export function faixas() {
     [1, -6, 14], [2, -4, 13], [0, 56.5, 9.5], [2, 9, 11],
   ];
   return pos.map(([setor, c, larg], i) => {
-    const [texto, fundo, letra, detalhe] = TEXTOS[i];
-    return { texto, fundo, letra, detalhe, setor, centro: c, larg, slot: i, z: setor === 0 ? -A.frenteZ : null, x: setor === 0 ? null : (setor === 1 ? 1 : -1) * A.fundoX0 };
+    const [texto, fundo, letra, detalhe, detalheCor] = textos[i] ?? TEXTOS[i];
+    return { texto, fundo, letra, detalhe, ...(detalheCor ? { detalheCor } : {}), setor, centro: c, larg, slot: i, z: setor === 0 ? -A.frenteZ : null, x: setor === 0 ? null : (setor === 1 ? 1 : -1) * A.fundoX0 };
   });
 }
 
