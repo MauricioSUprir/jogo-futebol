@@ -253,3 +253,29 @@ Medido (painel do CI, 144 partidas, main × branch, mesmas sementes): ver o rela
   7,5) mas vale ~0,4 chute nas 144 do CI (7,3 × 6,9) — de novo, 48 partidas enganam.
 - No painel do CI com a IA jogando pelo humano do time 0, só o time 1 perde chute (4,7 → 3,2); sem o controle humano
   (`m.humanos = []`) os dois perdem parecido: a causa é geral, não do lado do humano.
+
+### 7.2 Rodada de 15/10 — passe certo, PRESSÃO que corre e gols (triagem em 48 partidas locais, decisão no CI)
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| Premier League / Opta, "Season trends: Quality on rise as midfield takes focus" (premierleague.com/news/1745761) | A parte dos passes que terminam no último terço caiu de ~38% (2006/07) para 28,7% (2019/20), o mínimo da série | Diagnóstico: com a defesa que corta o passe, só ~10% dos nossos passes terminavam no último terço e 94% dos passes curtos (< 15 m) davam certo — o time trocava passe de lado. `IA_ATAQUE.riscoMentalidade` × 1,2 (o condutor aceita mais risco na linha de passe): 9,6 → 11% no último terço; linha informativa no `teste-intercepta` A |
+| Opta via Premier League, "Opta Analyst on long balls" (premierleague.com/en/news/4426039) e Planet Football / Opta (long ball = passe de mais de 35 jardas; 47,3% certos na média da PL) | 2025/26: 849 passes por jogo, 82,6% certos; o lançamento acerta menos da metade | O lançamento mais cedo (`lancamentoMin` 25, `lancamentoP` 0,6) foi medido: os nossos lançamentos acertam ~0–4% (bola alta disputada sem ninguém ganhando) e os gols caíam (1,31 em 48); não entrou |
+| The Analyst (Opta), PL 2023/24: 34,7 cruzamentos por jogo, 24% certos (já citada na §6) | Cruzar é ~3,7% dos passes | Aqui eram ~1,4% (o cruzamento quase só saía com 2+ na área). `cruzamentoP` com um na área 0,06 → 0,2: 2,4% dos passes, gols de cabeça 10–17% (meta 8–18%) |
+| Driblab, "on-ball pressures" (driblab.com/blog/arrigo-on-ball-pressures); StatsBomb, "Under Pressure" (blogarchive.statsbomb.com) | Passe "sob pressão" = defensor a ≤ 2 m do passador; a taxa de acerto cai sob pressão (Kroos ~90% pressionado é exceção) | Medido no jogo: livre 93,6%, adversário a 2–4 m 89,5%, a ≤ 2 m 72,9% — a queda existe; o excesso de acerto estava no passe curto sem pressão e no meio-campo |
+| EA SPORTS FC 27, Pitch Notes (ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive) | Alcance de interceptação da IA reduzido; o defensor controlado alcança mais que o da IA | O corte da IA continua pela física (leitura 0,2 s), com a folga sobre o recebedor por zona (`IA_DEFESA.livre.antes` [0,2, 0,05, 0,1]: no meu terço só com folga — o passe no último terço dava certo 52%, ~70% no real —, no meio vai na bola — o meio-campo acertava 91,5% —, no terço deles como antes) — o "não alcançável" do canhão segue ≤ 15% |
+| Reynolds, "Steering Behaviors For Autonomous Characters" (GDC 1999), *obstacle avoidance*; GameDev.net, "American football AI" (gamedev.net/forums/topic/461155) | O agente olha à frente na direção do movimento e desvia do obstáculo mais perto que cruza o caminho; em jogos de futebol americano o recebedor soma "ir ao ponto" e "fugir dos adversários" | `defesa.js desviarCorpos`: o chamado da PRESSÃO em disparada contorna o corpo mais perto à frente (0,7 s de corrida, a 0,8 m dele) — trombadas com quem não é o condutor 4,2 → 2,1 por 100 lances, M5 80 → 83–85% |
+
+Diagnóstico do M5 (o chamado a > 4 m, ≥ 1 s depois, a ≥ vCorrida): ~1.000 dos ~5.400 passos que reprovavam eram o chamado
+pedindo disparada (CORRER, analógico cheio) e ainda acelerando — no passe do adversário o alvo muda de lado, o corpo freia
+na linha (jogador.js: inversão além de 112°) e arranca de novo; parte vinha de trombadas. Testados e descartados: contar a
+inversão no tempo de chegada da escolha (`tempoChegada`: +1 ponto no M5, dentro da variação de 8 partidas) e a histerese só
+sem curva grande (sem ganho). Achado e NÃO aplicado (pendência): o domínio marcado de quem ia receber o passe cortado ficava
+de pé com a bola no pé do adversário (~1.000 passos por partida, de frente a até 1 m/s, até 3,7 s); tirá-lo melhora a
+reação na hora da perda, mas derruba o M3 da PRESSÃO (o 2º companheiro mais perto em 2 s: Δ 1,89 → 1,39 m, meta 1,5) — com
+o recebedor livre para recompor, ele fica perto do condutor com e sem o botão — e o M5 (83 → 77%).
+
+Defeito de desenho corrigido (o que a leitura 0,15 do corte tinha exposto, §7.1 do relatório de 14/10, aparecia de novo com a
+trajetória nova): no pulo do cabeceio o pé que saía do chão no meio do passo caía para o chão no 1º passo do voo
+(`cabeceio.js pesNoAr`: 6,8 cm num quadro, 1,11× o limite do `teste-patinacao`). Agora ele parte da altura que tinha e a
+sobra some até o pouso (`teste-cabeceio` F4: 3 quadros acima do limite → 0, pior 1,05× → 0,77×). Muda o treino em passos
+raros (`hash-igual`: ataque-roteiro diferente a partir do passo 4800 da semente 3, um pulo com o pé no ar).

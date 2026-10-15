@@ -181,6 +181,7 @@ function tempoCorte(o, x, z) {
 }
 
 const _corte = { i: 0, x: 0, z: 0, t: 0 };
+const TERCO = 17.5; // m do meio: a linha dos terços
 /**
  * O 1º ponto da trajetória da bola (conducao.js preverBola: a física do jogo; rasteira ou até `alturaMax` m) a que o
  * chega a tempo, com `le` s de leitura. {i (ticks), x, z, t} reaproveitado, ou null.
@@ -219,7 +220,10 @@ function cortaPasse(m, j, v, Lv, atual) {
   const pr = r ? pontoDeCorte(m, r, 0) : null;
   const tr = pr ? pr.i * PASSO : Infinity;
   const pj = pontoDeCorte(m, j, L.le);
-  if (!pj || !(pj.i * PASSO + L.antes <= tr)) return false;
+  // folga sobre o recebedor pela zona do ponto do corte (no sentido do ataque do meu time: meu terço, meio, terço deles)
+  const uC = pj ? pj.x * m.ataca[j.time] : 0;
+  const antes = Array.isArray(L.antes) ? L.antes[uC < -TERCO ? 0 : uC > TERCO ? 2 : 1] : L.antes;
+  if (!pj || !(pj.i * PASSO + antes <= tr)) return false;
   const tj = pj.i - (j.id === atual ? 6 : 0), cj = { i: pj.i, x: pj.x, z: pj.z };
   for (const o of m.jogadores) {
     if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;

@@ -1075,8 +1075,11 @@ export const IA_DEFESA = {
   // (partida, pedido do dono de 12/10: "a defesa mal intercepta passe") no passe do adversário no ar vai à bola quem alcança
   // a trajetória dela antes do recebedor: `le` s para ler o passe e `antes` s de folga (ia-tatica.js cortaPasse; o corpo
   // acelera a `acel` m/s² até a arrancada; a bola rasteira ou até `alturaMax` m, nos próximos `horizonte` ticks; decidido,
-  // segue até `segue` ticks depois do ponto)
-  livre: { histerese: 0.25, margem: 0.2, disputa: null, le: 0.2, antes: 0.1, acel: 7, alturaMax: 1.0, horizonte: 120, segue: 12 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele — null: arranca em toda bola solta (com 0,6 s o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; medido com 32 partidas)
+  // segue até `segue` ticks depois do ponto). `antes` por zona do ponto do corte, no sentido do meu ataque: [meu terço, meio,
+  // terço deles] (15/10: no meu terço só com folga, 0,2 s — perto do meu gol quem tenta o corte e não chega deixa o homem
+  // livre na cara do gol, e o passe no último terço dava certo só 52% das vezes, ~70% no real; no meio a defesa vai na bola,
+  // 0,05 s — o passe do meio-campo dava certo 91,5% —; no terço deles, 0,1 s como antes)
+  livre: { histerese: 0.25, margem: 0.2, disputa: null, le: 0.2, antes: [0.2, 0.05, 0.1], acel: 7, alturaMax: 1.0, horizonte: 120, segue: 12 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele — null: arranca em toda bola solta (com 0,6 s o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; medido com 32 partidas)
   contemLead: 0.9,            // s — quem contém mira à frente pela velocidade do ponto (tira o atraso do filtro, 0,2 s, e do modo pressa, ~0,7 s: sem isso ele corria ao lado do condutor, a 0,6 m)
   // contrapressão: janela (s), quantos, a ≤ raio m da bola, e só com a perda fora do meu terço (u >
   // campo; ou perto da lateral) e sem estar em inferioridade a ≤ raio m (no máximo `inferioridade` a
@@ -1195,7 +1198,9 @@ export const IA_ATAQUE = {
   //  - enfiada: no ponto da corrida a enfiadaLeads m do corredor (a força sai do ponto): rasteira a
   //    vEnfiada m/s (cortável no caminho) ou alta por cima da linha a vEnfiadaAlta m/s (× enfiadaAltaP);
   //  - lançamento: chance lancamentoP (bola alta disputada);
-  //  - cruzamento: chance cruzamentoP[n] com n de linha na área (ou a ≤ cruzamentoRaio m dela, entrando)
+  //  - cruzamento: chance cruzamentoP[n] com n de linha na área (ou a ≤ cruzamentoRaio m dela, entrando) (15/10: com um só
+  //    na área 0,06 → 0,2 — o time quase não cruzava: ~1,7% dos passes, a PL cruza ~3,7%, 34,7 por jogo, 24% certos, The
+  //    Analyst; com o cabeceio na bola rolando o cruzamento para um rende gol de cabeça)
   //    e valor cruzamentoV;
   //  - chute: xG = xgA·θ^xgB (θ = ângulo da boca do gol, teto xgMax) × (1 − bloqueio·risco da linha)
   //    × chute (× chuteLonge de fora da área) − chutePosse·posse; mira a miraPoste m do poste longe do
@@ -1218,13 +1223,15 @@ export const IA_ATAQUE = {
   utilidade: {
     posse: 0, posseMeuCampo: 0.025, posseRetomada: [0.02, 2], vPasse: 12, vEnfiada: 15, vChute: 25, passeMax: 40, erroDist: 0.25, pressaoRecebe: 3.5, pressaoValor: 0.5,
     passePress: 0.2, impedido: 0.3, enfiadaLeads: [6, 10, 14], vEnfiadaAlta: 13, enfiadaAltaP: 0.7, lancamentoP: 0.5, cruzamentoV: 0.35,
-    cruzamentoP: [0.01, 0.06, 0.35, 0.4], cruzamentoRaio: 1,
+    cruzamentoP: [0.02, 0.2, 0.4, 0.45], cruzamentoRaio: 1,
     xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 3.0, chuteLonge: 0.25, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
     passoAngConduz: 0.5, conduzDist: 5, conduz: 0.85, conduzSolta: [1.5, 4, 0.35], vConduz: 5.5, magConduz: 0.9,
     manterRaio: 3, manterPeso: 0.7, manterLado: 0.4, manterTerco: { u: 17.5, peso: 0.55, lado: 0.25 }, manterArea: [0.95, 0.7], manterPerto: 9,
     protegeDist: 1.5, protegeP: 0.7, protegeMax: 1.0, correrLivre: 10, correrAte: 25, curtaPerto: 2.5,
   },
-  riscoMentalidade: [0.8, 0.9, 1.0, 1.1, 1.25], // risco de passe aceito, por mentalidade (−2..+2)
+  // (15/10, volume de ataque com a defesa que corta o passe: ×1,2 — com a interceptação nova o time que só toca para o lado
+  // não chegava ao último terço; PL 2019/20: 28,7% dos passes terminam no último terço, o mínimo da série Opta desde 2006/07)
+  riscoMentalidade: [0.96, 1.08, 1.2, 1.32, 1.5], // risco de passe aceito, por mentalidade (−2..+2)
   // faixa do cruzamento (|z| > zLateral, u > xTerco); o ataque à área começa com a bola em u > xAtiva e
   // |z| > zAtiva (quem vai precisa de tempo para chegar)
   cruzamento: { zLateral: 20.16, xTerco: 30, zAtiva: 15, xAtiva: 17.5 },

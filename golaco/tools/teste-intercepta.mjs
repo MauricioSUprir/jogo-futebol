@@ -39,7 +39,7 @@ async function partida(sem) {
   const P = await import(pathToFileURL(path.join(JS, 'partida.js')).href);
   const M = await import(pathToFileURL(path.join(AQUI, 'lib/partida-medidas.mjs')).href);
   const m = P.criarPartida({ semente: sem, minutosPorTempo: 4 });
-  const R = { sem, passes: [0, 0], ok: [0, 0], intercept: [0, 0], bloqueios: [0, 0], recepcoes: 0, livres: 0 };
+  const R = { sem, passes: [0, 0], ok: [0, 0], intercept: [0, 0], bloqueios: [0, 0], recepcoes: 0, livres: 0, terco: 0, cruz: 0, chutes: 0 };
   const porId = new Map(m.jogadores.map(j => [j.id, j]));
   let passe = null, vBola = 0;
   const N = Math.round(2 * 4 * 3600 + 3600);
@@ -50,10 +50,16 @@ async function partida(sem) {
       const j = e.id != null ? porId.get(e.id) : null;
       if (e.tipo === 'gol' || e.tipo === 'fora' || e.tipo === 'saida') passe = null;
       else if (e.tipo === 'bateuCorpo' && passe) passe.bloqueio = true;
-      else if (j && M.ehChute(m, e)) passe = null;
+      else if (j && M.ehChute(m, e)) { passe = null; R.chutes++; }
       else if (e.tipo === 'passe' && j) {
         passe = j.posicao !== 'GOL' ? { time: j.time, para: m.voo && m.voo.de === j.id ? m.voo.para : null } : null;
-        if (passe) R.passes[j.time]++;
+        if (passe) {
+          R.passes[j.time]++;
+          // o passe termina no último terço (o ponto de chegada, no sentido do ataque de quem passou) e o cruzamento
+          const v = m.voo && m.voo.de === j.id ? m.voo : null;
+          if (v && v.alvo && M.uDe(m, j.time, v.alvo.x) > 17.5) R.terco++;
+          if (v && v.tipo === 'cruzamento') R.cruz++;
+        }
       }
     }
     const rolando = m.partida.estado === 'jogo' && !(m.parada && !m.parada.rolou) && m.foraDesde == null && m.golTick == null;
@@ -204,6 +210,7 @@ if (SO.includes('A')) {
   console.log(`A: ${NP} partidas IA × IA de 2 × 4 min (sementes ${S0}–${S0 + NP - 1}); ${f(passes / NP, 0)} passes por partida; interceptações por 100 passes do adversário ${f(100 * inter / passes, 2)} (informativo: as partidas têm ~1/3 dos passes de um jogo real); passes bloqueados ${f(soma(r => r.bloqueios[0] + r.bloqueios[1]) / (2 * NP), 2)} por time por partida`);
   reg('A', 'interceptações por time por partida', `${f(porTime, 2)} (base ${f(INTER_BASE, 2)})`, `≥ base + 1,5 e ≤ 14 (PL 23/24: 8,5)`, porTime >= INTER_BASE + 1.5 && porTime <= 14);
   reg('A', 'passe certo', `${f(certo)}%`, '80–86,5% (PL 23/24: 82,9%)', certo >= 80 && certo <= 86.5);
+  console.log(`A (informativo): passes que terminam no último terço ${f(100 * soma(r => r.terco) / passes)}% (PL 2019/20: 28,7%); cruzamentos ${f(100 * soma(r => r.cruz) / passes)}% dos passes (PL: ~3,7%); chutes por partida ${f(soma(r => r.chutes) / NP)}`);
   reg('A', 'homem livre: recepção no último terço sem a IA a até 3 m', `${f(100 * livre)}% de ${soma(r => r.recepcoes)} (base ${f(100 * LIVRE_BASE)}%)`, '≤ base + 3 pontos', livre <= LIVRE_BASE + 0.03);
 }
 if (SO.includes('B')) {

@@ -1544,7 +1544,9 @@ corrido só na partida.
   `preparoPulo(h)` (s do pedido ao contato), `planejarPulo(m, j, tc, bx, by, bz, ux, uz, nx, nz, folgaAlc)` → `j.cab` ou
   null (não alcança), `puloAtivo(j, t)`, `noAr(j, t)`, `quadroPulo(c, t, out)` → `{off, w, arco, braco}` (o que a pose lê),
   `sairDoChao(m, j)` (em `td`: velocidade de saída para o ponto, no máximo `vSaida`; longe demais do ponto, cancela),
-  `passoCorpoNoAr(m, j)` (balístico), `pesNoAr(m, j)` (os pés saem de onde estavam e pousam parados em `lx/lz`),
+  `passoCorpoNoAr(m, j)` (balístico), `pesNoAr(m, j)` (os pés saem de onde estavam e pousam parados em `lx/lz`; o pé que
+  saiu no meio do balanço parte da altura que tinha, `cab.y0[p]` acima do tornozelo no chão, e essa sobra some até o pouso —
+  15/10, `teste-cabeceio` F4: antes ele caía ~7 cm no 1º passo do voo),
   `intencaoCabeceio(m, j, y)` → `{tipo: 'chute' | 'lancamento' | 'passe', forca, auto: true}` (a gol na área adversária a até
   `CABECEIO.gol` m, afastar no meu terço, passe no resto; null para passe com a bola na altura do peito).
 - `anim.js`: a pose lê `j.cab` (função pura do estado): o quadril no pulo (`hyPulo`), o tronco inclinado para a bola com o
@@ -1608,7 +1610,9 @@ corrido só na partida.
   ponto a `sombraDist` m de `a` na linha de passe do condutor para ele.
 - Corte do passe (`ia-tatica.js cortaPasse`, só na partida): no passe do adversário com destino, vai cortar quem do time
   chega a um ponto da TRAJETÓRIA (`conducao.js preverBola`, rasteira ou até `livre.alturaMax` m, `livre.horizonte` ticks)
-  com `livre.le` s de leitura, `livre.antes` s antes de o recebedor chegar a ela (a mesma conta, sem leitura). Tempo de
+  com `livre.le` s de leitura, `livre.antes` s antes de o recebedor chegar a ela (a mesma conta, sem leitura; `antes` pode
+  ser `[meu terço, meio, terço deles]`, pela zona do ponto do corte no sentido do ataque do meu time — 15/10: [0,2, 0,05,
+  0,1]). Tempo de
   chegada (`tempoCorte`): da velocidade que já leva na direção do ponto, a `livre.acel` m/s² até a arrancada, o pé a 0,5 m.
   Só o primeiro do time (6 ticks de vantagem para quem já ia); decidido, segue até a bola passar (`j.iaT.corte = {chave:
   voo.tickChave, x, z, ate}`, `livre.segue` ticks de folga), direto ao ponto em disparada, sem o filtro da pressa (ramo
