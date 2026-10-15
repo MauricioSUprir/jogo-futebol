@@ -51,7 +51,7 @@ if (!fs.existsSync(path.join(JS, 'faltas.js'))) {
 const P = await imp('partida.js');
 const F = await imp('faltas.js');
 const E = await imp('escalacao.js');
-const { FALTAS, PARTIDA, CAMPO } = await imp('config.js');
+const { FALTAS, PARTIDA, CAMPO, ACOES } = await imp('config.js');
 const PASSO = 1 / 60;
 
 // parte D: as partidas inteiras em processos filhos (começam já e correm junto com as partes A–C)
@@ -194,6 +194,9 @@ function apitar(m, f) {
 { // (2) vantagem e a volta
   const { m, A, D } = cena({ ax: 15, avx: 6, dx: 13.8, dvx: 3, outros: 'frente' });
   const f = F.montarFalta(m, D, A, 'bote', true);
+  // depois da falta no bote o defensor descansa, como em sim.js boteIA (sem isso, colado atrás do atacante na vantagem,
+  // ele podia segurá-lo de novo: faltas.js faltaTatica 'segurar')
+  D.descansoBote = ACOES.boteIA.descanso;
   const ev = apitar(m, f);
   const deu = ev.some(e => e.tipo === 'vantagem') && !m.parada;
   // o defensor pega a bola 1 s depois (dentro do prazo)

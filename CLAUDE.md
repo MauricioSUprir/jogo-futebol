@@ -40,6 +40,12 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   (A), urgente); "não quero a linha de impedimento durante o jogo; quando o jogo parar por impedimento, no replay mostra a
   linha" (entra em (C)); (F) gol e replay: "as redes têm que ser brancas, com movimentação quando a bola toca, em véu de
   noiva"; "o replay não funciona"; "não tem cena de comemoração!!!".
+  **Pedidos do dono de 15/10 — FILA, nesta ordem (cada item = PR):** (1) goleiro se movimentando melhor, espalmadas e
+  encaixes mais realistas e defendendo mais as bolas fáceis que as difíceis (junto com a saída no 1×1 e no cruzamento);
+  (2) chute com a barra cheia mais alto, com chance de acertar o ângulo (hoje vai a meia altura); (3) lançamento mais
+  reto e rápido (hoje vai muito alto); (4) movimentação melhor e jogo mais tenso.
+  **Modo enxuto (dono, 15/10: "diminui os testes, para diminuir o tempo"):** localmente só os testes do que a mudança
+  afeta, o CI do PR decide o resto, sem contraprova separada (quem fez relê o próprio diff antes do push).
   **Pedido do dono depois da Etapa 2:** "o movimento dos jogadores tá meio estranho, ajeite; quando a bola pega no
   goleiro, trava; quero que tenha como editar o time quando pausa; quero uma movimentação melhor e um jogo mais
   intenso". Plano: (1) PR de correções — trava no goleiro + movimento estranho — ENTREGUE (seção "Correções depois

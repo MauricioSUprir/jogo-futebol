@@ -76,6 +76,65 @@ impedimentos de verdade, junto com o corredor que passa da linha enquanto o pass
 | Vantagem (fração das faltas) | — | 90% | ~6% (só a vantagem clara) |
 | Pênalti: gol / defesa / fora (canhão) | ~76 / 18 / 6% | 58 / 42 / 0,3% (o goleiro esperava a bola) | 77 / 18 / 5% (600 cobranças) |
 
+## 3b. Faltas com sentido (pedido do dono, 15/10: "faltas muito forçadas e sem sentido")
+
+O dono jogou a versão publicada no celular, contra a IA: "tem umas loucuras aí, umas forçadas de barra pra ter falta".
+
+| Fonte | O que diz | Onde entrou |
+|---|---|---|
+| IFAB, Leis do Jogo 2026/27, Regra 12.1 (texto da The FA) | Tiro livre direto quando o jogador **carrega, dá o bote/disputa, segura**... de modo imprudente, temerário ou com força excessiva. **Imprudente** = "falta de atenção ou de cuidado ao fazer o desafio, ou age sem precaução"; **temerário** = "sem ligar para o perigo ou para as consequências para o adversário" (amarelo) | A falta nasce da força com que o defensor ENTRA no condutor, não da direção da chegada: `faltas.js forcaContato` (a velocidade dele para dentro do condutor, limitada pela aproximação; 0 a mais de 1,2 m — corpo 0,3 + perna até a bola 0,65 + o pé dele) e `fatorForca` (até 1 m/s, o passo, é contato incidental). Carga nas costas a ≥ 3 m/s = temerária. Segurar quem passou também fora do contra-ataque (sem cartão) |
+| idem (o que a regra pune é o desafio de quem entra) | O condutor que recua para dentro de quem estava atrás faz o contato; quem acabou de perder a bola e segue a corrida não "carrega" | `faltaNaCarga` exige `forcaContato ≥ carga.vMin` (de quem entrou) e ignora quem tocou na bola há < `carga.perdeu` s |
+| OLBG / Premier League 2024/25 (§3: ~22,8 faltas e 0,23 pênalti por jogo) + The Athletic (2024/25: ~57 min de bola rolando) | ~0,40 falta por minuto de bola rolando; ~1% das faltas vira pênalti | Referência do `teste-faltas-sentido` (faltas por minuto); o defensor na própria área e na chance clara evita entrar no homem (`bote.naArea` 0,4, `bote.naChanceClara` 0,2, como a carga já fazia): aqui 4–8% das faltas viravam pênalti |
+| Física do corpo (`config.js JOGADOR.freio` 6,2 e `freioGiro` 8 m/s²; tempo de reação ~0,25 s) | Quem segue colado na mesma velocidade não freia a tempo quando o da frente freia mais forte | `defesa.js semAtropelar`: o time jogado por uma pessoa chega freando no condutor e guarda a folga para a freada dele no tempo de reação (a velocidade dele − 0,25 · 8 m/s) |
+
+**Diagnóstico na main** (`tools/lib/faltas-registro.mjs`: toda falta com o estado de antes do passo; o time 0 jogado como uma
+pessoa — 'persegue' = analógico na bola e CORRER a mais de 4 m; 'pressao' = + PRESSÃO segurado; 'dribla' = conduz 3 s em
+zigue-zague; 'demo' = IA × IA; 12 partidas por modelo, sementes 2001…, 3001…, 6001…, 1001… e 1013…; faltas por partida):
+
+| Categoria | persegue | pressão | dribla | IA × IA |
+|---|---|---|---|---|
+| IA: bote com contato < 1 m/s | 1,50 | 1,92 | 5,42 | 0,58 |
+| IA: bote com contato ≥ 1 m/s | 0,42 | 0,58 | 2,25 | 0,63 |
+| IA: carga por trás | 0,00 | 0,50 | 0,67 | 0,13 |
+| IA: segurar (contra-ataque) | 0,33 | 0,17 | 0,50 | 0,21 |
+| pessoa: carga de quem só corria atrás (controlado / chamado da PRESSÃO) | 1,83 | 1,67 | 2,42 | 0,29 |
+| pessoa: outras (dividida, companheiros) | 0,33 | 0,50 | 0,58 | 0,17 |
+| **Total** | **4,42** | **5,33** | **11,83** | **2,00** |
+| amarelos · vermelhos · pênaltis | 0,67 · 0,08 · 0,00 | 0,75 · 0 · 0,17 | 2,00 · 1,08 · 1,17 | 0,54 · 0,04 · 0,17 |
+
+Causas: (1) o bote da IA virava falta pela direção da chegada e pela velocidade do defensor (`chanceFaltaBote`), sem olhar se
+ele entrava no condutor: nos modelos com uma pessoa, a mediana da força de contato das faltas de bote era 0,00–0,26 m/s (o
+defensor recuando de frente ou acompanhando de lado, com a bola mais perto dele); (2) o controlado da pessoa, com o analógico
+na bola, chegava por trás a ~5,6 m/s num condutor a ~2,6 m/s, e a trombada virava carga (50%). Com as duas juntas, 2/3 a 3/4
+das faltas eram "sem sentido".
+
+**Depois** (as mesmas sementes):
+
+| Categoria | persegue | pressão | dribla | IA × IA |
+|---|---|---|---|---|
+| IA: bote com contato < 1 m/s | 0 | 0 | 0 | 0 |
+| IA: bote com contato ≥ 1 m/s | 1,17 | 1,00 | 2,75 | 0,54 |
+| IA: carga por trás | 0,17 | 0,17 | 0,33 | 0,13 |
+| IA: segurar (contra-ataque e fora dele) | 0,92 | 0,33 | 2,42 | 0,63 |
+| pessoa: carga de quem só corria atrás | 0 | 0,50 | 0 | 0,17 (IA) |
+| pessoa: outras | 0,33 | 0,50 | 0,25 | 0,25 |
+| **Total** | **2,58** | **2,50** | **5,75** | **1,71** |
+| amarelos · vermelhos · pênaltis | 0,42 · 0 · 0,08 | 0,83 · 0,08 · 0,08 | 1,00 · 0,08 · 0,17 | 0,58 · 0 · 0,08 |
+
+**Contraprova** (mesma régua, `teste-faltas-sentido` A8–A13 e B4; reprovam no commit e9d88eed): (1) a DIVIDIDA da pessoa
+seguia pela régua antiga (sem a força do contato) — no modelo 'dividida' (DIVIDIDA com a bola a ≤ 1,5 m) 60% das faltas
+dela eram com o corpo entrando a < 1 m/s (8 partidas: 15 de 25; de frente recuando, 17% de chance de falta): agora
+`chanceFaltaDividida` é a mesma régua do bote da IA (0 sem o corpo entrar; de lado a 3 m/s 71%, por trás forte 95%);
+(2) o 'segurar' saía com o condutor parado de costas, andando ou com o defensor alcançando (~1/3 das 'segurar': o
+condutor a < 3 m/s ou indo para trás) — agora só segura quem escapa dele (`tatica.escapa` 3 m/s, `tatica.ganhando`
+0,5); (3) na própria área o cuidado do defensor (`bote.naArea` 0,4) virava roubada LIMPA com o mesmo contato que fora
+dela é falta (de lado entrando a ~2,5 m/s: 69% limpo dentro × 29% fora) — agora o defensor tira o corpo
+(`BOTE_EVITADO`, sem bote) e a fração limpa é a mesma (29% × 29%), com o pênalti mantido em 31%.
+
+A mediana da força de contato dos botes da IA que viram falta passou para 2,5–3,8 m/s. Pendente: na IA × IA o jogo tem 0,21
+falta por minuto de bola rolando (main 0,25; real ~0,40) — faltam as faltas que o jogo ainda não tem (no alto, segurar na
+bola parada); não foi reposto à custa de botes sem contato.
+
 ## 4. Bolas paradas: lateral, tiro de meta, escanteio e barreira (IFAB Regras 13, 15 e 16)
 
 | Fonte | O que diz | Onde entrou |

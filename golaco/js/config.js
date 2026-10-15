@@ -934,15 +934,31 @@ export const FALTAS = {
   // condutor), × (1 + porVel · (v − vLivre)⁺) pela velocidade de quem chega, × lerp(desarme 40 → 90: 1,3 → 0,7)
   // (× lento com o condutor parado/lento, abaixo de ACOES.boteIA.vParado: o bote nele chega devagar e de perto — sem
   // isso ~30% das tentativas viravam falta e o humano ganhava tiro livre só por ficar parado)
-  // naBola: o bote de frente na bola já solta do pé do condutor, sem entrar nele (faltas.js faltaNoBote; 14/10)
-  bote: { frente: 0.2, lado: 0.42, tras: 0.8, porVel: 0.12, vLivre: 4, desarme: [1.3, 0.7], lento: 0.4, naBola: 0.4 },
-  // DIVIDIDA do humano que não ganha a bola com o pé no condutor (defesa.js resolverBote): as mesmas chances
+  // × naArea na própria área (pênalti) e × naChanceClara na chance clara de gol (vermelho): ali o defensor evita entrar no
+  // homem, como na carga (real: ~1% das faltas vira pênalti — 0,23 por jogo para 22,8 faltas; aqui eram 4–8%)
+  bote: { frente: 0.2, lado: 0.42, tras: 0.8, porVel: 0.12, vLivre: 4, desarme: [1.3, 0.7], lento: 0.4, naArea: 0.4, naChanceClara: 0.2 },
+  // força do contato no bote da IA (faltas.js forcaContato/fatorForca: a velocidade com que o defensor entra no condutor,
+  // limitada pela aproximação): até `min` m/s (o passo) é contato incidental (desarme limpo: ele chega na bola antes do
+  // homem); a chance de antes a partir de `cheia` m/s, × (1 + porForca · (f − min)) acima; `janela` s: a memória do choque
+  // dos corpos (a colisão zera a aproximação); a mais de `alcance` m entre os centros não há contato (corpo 0,3 + perna até
+  // a bola ACOES.boteIA.alcance 0,65 + o pé do condutor ~0,25). Pedido do dono, 15/10 ("faltas muito forçadas e sem
+  // sentido"; tools/teste-faltas-sentido.mjs). porForca 0,5 → 1,0 na junção com a main (#471, 15/10): com a IA intensa
+  // (defesa da arrancada, bote de frente na bola) os botes que entram no homem ficaram mais raros e fortes, e as 12 partidas
+  // IA × IA do teste-faltas foram a 1,42 falta por partida (meta 1,5–5; a main 2,00: bote 14 → 5); com 1,0, 1,75 (bote 10)
+  forca: { min: 1.0, cheia: 1.5, porForca: 1.0, janela: 0.33, alcance: 1.2 },
+  // DIVIDIDA do humano que não ganha a bola com o pé no condutor (defesa.js resolverBote): as mesmas chances do bote da
+  // IA, com a força do contato (faltas.js chanceFaltaDividida; sem o × naArea/naChanceClara)
   dividida: { perdeu: 1.0, tocou: 0.6 },
-  // carga por trás (sim.js colisaoCorpos): o marcador bate no condutor por trás fechando a ≥ vMin m/s
-  carga: { vMin: 1.8, chance: 0.5, naChanceClara: 0.2 },
+  // carga por trás (sim.js colisaoCorpos): o marcador ENTRA no condutor por trás a ≥ vMin m/s (faltas.js forcaContato: a
+  // velocidade dele para dentro do condutor, limitada pela aproximação — o condutor que recua para dentro de quem estava
+  // atrás não é carga dele); a ≥ `temeraria` m/s nas costas é temerária (amarelo: IFAB Regra 12.1, "sem ligar para o perigo" para o adversário)
+  // `perdeu` s: quem tocou na bola há menos disso (acabou de perdê-la no bote) e tromba no ladrão segue o embalo — não é carga
+  carga: { vMin: 1.8, chance: 0.5, naChanceClara: 0.2, temeraria: 3.0, perdeu: 0.5 },
   // falta tática (o marcador batido segura o condutor no contra-ataque: SPA → amarelo): chance por passo colado (não
-  // na chance clara de gol: seria vermelho, e o defensor sabe)
-  tatica: { dist: 1.4, chancePorPasso: 0.012 },
+  // na chance clara de gol: seria vermelho, e o defensor sabe); `semSPA`: fora do contra-ataque ele também segura (sem
+  // cartão, origem 'segurar'; nunca na própria área), só com o condutor ESCAPANDO dele — se afastando a ≥ `escapa` m/s,
+  // com ele sem ganhar terreno (aproximação ≤ `ganhando` m/s) — faltas.js faltaTatica/escapando
+  tatica: { dist: 1.4, chancePorPasso: 0.012, semSPA: 0.002, escapa: 3.0, ganhando: 0.5 },
   temerario: 6.0,             // m/s — chegando por trás acima disto: temerário (amarelo)
   excessivo: 7.6,             // m/s — por trás acima disto: força excessiva (sorteio pelo `excessivoP`)
   excessivoP: 0.25,
@@ -1325,22 +1341,34 @@ export const DEFESA_HUMANO = {
   },
   // PRESSÃO (segurar): grava m.pedidoPressao[time] = tick (contrato da Parte 0). Pedido do dono, 11/10 ("o botão de
   // pressão não funciona"), como o "teammate pressure" do EA FC: vai quem CHEGA PRIMEIRO (defesa.js pressionadorDe:
-  // tempo de chegada com aceleração `acel` m/s² e freada `freio` m/s² ao ponto a `colado` m do corpo do condutor, do lado
-  // do gol, adiantado pela corrida dele até `leadMax` s; quem já vai leva `histerese` s de vantagem) — com o 1º homem da
-  // IA já apertando, o botão chama o segundo. Aproximação em disparada até `chega` m do condutor (vindo por trás,
-  // contorna a `contorno` m dele) e disputa na bola, pelo lado do gol (`naBola` m antes dela, adiantada `leadDisputa` s),
-  // e vai na bola solta a mais de `bolaSolta` m do pé dele. Na disputa o corpo anda pela velocidade (a do condutor +
-  // `ganho` × (ponto − corpo), até `aproxMax` m/s mais rápido que ele; por trás dele, a menos de `trasPerto` m, fechando
-  // no máximo a `trasAprox` m/s: abaixo da carga por trás, FALTAS.carga.vMin). `filtro`: s da velocidade do condutor.
+  // tempo de chegada pelo perfil de aceleração do corpo, com a inversão, ao ponto a `colado` m do corpo do condutor, do
+  // lado do gol, adiantado pela corrida dele até `leadMax` s; quem já vai leva `histerese` s de vantagem) — com o 1º homem
+  // da IA já apertando, o botão chama o segundo. Aproximação em disparada até `chega` m do condutor (vindo por trás,
+  // contorna a `contorno` m dele; desviando dos outros corpos no caminho: `desvio`) e disputa na bola, pelo lado do gol
+  // (`naBola` m antes dela, adiantada `leadDisputa` s), e vai na bola solta a mais de `bolaSolta` m do pé dele. Na disputa
+  // o corpo anda pela velocidade (a do condutor + `ganho` × (ponto − corpo), até `aproxMax` m/s mais rápido que ele; por
+  // trás dele, a menos de `trasPerto` m, fechando no máximo a `trasAprox` m/s: abaixo da carga por trás,
+  // FALTAS.carga.vMin). `filtro`: s da velocidade do condutor.
   // (13/10, com o condutor da IA que faz tabela e encara: chega 2,5 → 2,0 e aproxMax 4 → 5 — o escolhido chegava a ≤ 2 m
   // em 1,5 s em 57–60% dos casos no teste-pressao-humano M2, meta ≥ 60%; agora 63%; o bote do escolhido só abaixo de
   // FALTAS.bote.vLivre e não por trás: sim.js boteIA, da auditoria dos botões, #474)
+  // "Chegada rápida, freada no fim" (defesa.js chegaFreando; teste-pressao-humano M4/M5, 15/10): a aproximação ao condutor
+  // segue a curva de freada de `freioChegada` × o freio do corpo dele, que encosta a `contato` m/s (abaixo de
+  // FALTAS.forca.min: o contato não entra no homem) — com o condutor vindo, a velocidade DELE na hora do contato; quem vem
+  // atrás guarda a margem da freada do condutor (semAtropelar.reacao/perto). `desvio`: olha `T` s à frente e passa a
+  // ≥ 2 raios + `folga` m de quem estiver no caminho (corpos a até `alcance` m). `depois`: s em que quem deixou de ser o
+  // chamado segue com o bote com responsabilidade e sem falta tática (sim.js boteIA, defesa.js chamadoRecente).
+  // sem atropelar (defesa.js semAtropelar; pedido do dono, 15/10): o time jogado por uma pessoa entra no condutor
+  // adversário (ou no recebedor do passe) no máximo a (v_dele − reacao · JOGADOR.freioGiro · (1 − folga/perto)⁺)⁺ +
+  // √(chega² + 2 · freio · folga)
+  // m/s (folga = distância − 2 raios): a curva de freada a `freio` m/s² que encosta a ~chega m/s, abaixo da carga
+  // (FALTAS.carga.vMin), e quem vem atrás guarda a folga para a freada do condutor (até 8 m/s²) no tempo de reação — a
+  // margem inteira com os corpos encostando, sumindo em rampa até `perto` m de folga
+  semAtropelar: { freio: 3.0, chega: 1.0, reacao: 0.25, perto: 3.0 },
   pressao: {
-    validade: 1, acel: 7, freio: 6.2, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.0, contorno: 1.2,
-    naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.435, filtro: 0.2, ganho: 3, aproxMax: 5, trasPerto: 1.5, trasAprox: 1.4,
-    // em disparada, contorna o corpo mais perto à frente (defesa.js desviarCorpos): olha `olha` s da corrida (pelo menos
-    // `min` m; a velocidade conta a partir de vMin m/s) e passa a `lado` m dele (2 raios do corpo + folga)
-    desvio: { olha: 0.7, min: 1.5, vMin: 3, lado: 0.8 },
+    validade: 1, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.0, contorno: 1.2,
+    naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.435, filtro: 0.2, ganho: 3, aproxMax: 5, trasPerto: 1.5, trasAprox: 0.5,
+    freioChegada: 0.9, contato: 0.8, desvio: { T: 0.6, folga: 0.25, alcance: 6 }, depois: 0.5,
   },
 };
 

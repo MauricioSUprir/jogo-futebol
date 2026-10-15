@@ -1382,6 +1382,33 @@ Sai em PRs menores; cada um acrescenta a sua parte aqui. Pesquisa e números em 
   API de testes: `__golaco.faltaDeTeste({area, cartao, doMeu})`.
 - Testes: `teste-faltas` (padrão): cenas, vantagem e volta, pênalti montado, 2º amarelo/expulsão/editor, goleiro
   expulso, canhão de 400 pênaltis, 12 partidas.
+- **Faltas com sentido** (pedido do dono, 15/10: "faltas muito forçadas e sem sentido"; `PESQUISA-ETAPA4.md` §3b):
+  `forcaContato(m, d, c)` = a velocidade com que o defensor ENTRA no condutor, limitada pela aproximação dos dois
+  (min(v_d · n, (v_d − v_c) · n)⁺) ou a guardada no choque dos corpos (`guardarChoque`, chamada em `sim.js colisaoCorpos`
+  antes da resposta, só na partida; `j.choque {id, tick, f}`: a maior dos últimos `FALTAS.forca.janela` s); 0 a mais de
+  `FALTAS.forca.alcance` m entre os centros (corpo + perna até a bola + o pé dele: não há contato). O bote da IA
+  (`faltaNoBote`) vira falta com a chance de antes × `fatorForca(f)` (0 até `FALTAS.forca.min` — o passo, contato
+  incidental —, rampa até `cheia`, × (1 + `porForca` · (f − min)) acima — `porForca` 1,0 desde a junção com a main
+  (#471): 0,5 deixava as 12 partidas IA × IA do teste-faltas em 1,42 falta por partida (meta 1,5–5) —; × `bote.naArea` na própria área e
+  × `bote.naChanceClara` na chance clara de gol — ali o defensor evita entrar no homem, como na carga; teto 0,95): o desarme
+  sem entrar no homem é limpo (a IA leva a bola). Evitar é tirar o corpo: o sorteio que seria falta fora da área e o
+  cuidado descarta devolve `BOTE_EVITADO` (sim.js boteIA: sem bote, descansa) — a fração de botes limpos com o mesmo
+  contato é igual dentro e fora da área (contraprova de 15/10: dentro da área o bote forte virava roubada limpa). A
+  DIVIDIDA da pessoa usa a mesma régua (`chanceFaltaDividida(m, d, c, motivo)` = min(0,95, chanceFaltaBote × fatorForca) ×
+  `dividida[motivo]`, sem o cuidado da área). A carga (`faltaNaCarga`) exige `forcaContato ≥ carga.vMin` (o condutor que recua para dentro
+  de quem estava atrás não é carga dele) e não vale para quem tocou na bola há menos de `carga.perdeu` s (o embalo de quem
+  acabou de perder a bola no bote); nas costas a ≥ `carga.temeraria` m/s é temerária (amarelo; Regra 12.1). Segurar
+  (`faltaTatica`): o marcador batido colado por trás segura — no ataque promissor `tatica.chancePorPasso` por passo
+  (origem 'tatica', amarelo: SPA), fora dele `tatica.semSPA` (origem 'segurar', o cartão pela regra geral) só com o
+  condutor escapando dele (se afastando a ≥ `tatica.escapa` m/s, ele sem ganhar terreno: aproximação ≤ `tatica.ganhando`)
+  e nunca na própria área.
+  `defesa.js semAtropelar(m, j, mv)` (sim.js, só na partida, só no time jogado por uma pessoa — `m.humanos` sem
+  `m.iaJoga`; o controlado, os companheiros da IA e o chamado da PRESSÃO a ≤ `pressao.chega` m): a velocidade pedida
+  para dentro do condutor adversário (ou do recebedor do passe dele) fica ≤ (a dele se afastando − `reacao` ·
+  `JOGADOR.freioGiro` · (1 − folga/`perto`)⁺)⁺ + √(chega² + 2 · freio · folga) (`DEFESA_HUMANO.semAtropelar`: quem vem
+  atrás guarda a folga para a freada do condutor no tempo de reação, só perto); a de lado fica; a DIVIDIDA saindo não muda. A demo e o time da IA não mudam.
+  Teste: `teste-faltas-sentido` (padrão; registro de toda falta com o contexto em `tools/lib/faltas-registro.mjs`; o
+  árbitro do teste mede a força do contato com os corpos encostando ou a ≤ 1,2 m, antes ou depois da locomoção do passo).
 
 ### Bolas paradas (Regras 13, 15 e 16) e disputa pelo alto
 Pedido do dono (seção 8). Tudo só com `m.partida`: o treino fica bit a bit igual (`hash-igual`).
@@ -1505,7 +1532,9 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
 
 ### PRESSÃO (`defesa.js`; o desenho em `render/jogador3d.js`)
 - `pressionadorDe(m, time, excluir = -1)` → id de quem chega primeiro ao ponto de encontro (a `pressao.colado` m do corpo
-  do condutor, do lado do gol, adiantado pela corrida dele até `leadMax` s; tempo com `acel`/`freio`; quem já ia leva
+  do condutor, do lado do gol, adiantado pela corrida dele até `leadMax` s; tempo pelo perfil de aceleração do corpo,
+  `tempoChegada`: x(t) = vA·t − (vA − v0)/k·(1 − e^(−k·t)), k = acel0/vTeto, v0 = a velocidade que ele já tem na direção do
+  ponto, e quem corre para o outro lado antes freia na linha até parar com `freioGiro`; quem já ia leva
   `histerese` s — só se o ponto não pede a inversão dele, além de `JOGADOR.angInversao` do sentido da corrida: no passe
   do adversário, quem teria de frear na linha até parar cede para quem chega primeiro), sem o controlado, o goleiro e
   `excluir` (nunca exclui quem já ia). Uma vez por tick em `m.pressaoHumano[time] = {tick, id}`.
@@ -1513,17 +1542,24 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
   desenho: setas âmbar acima da cabeça, `indicador-pressao`).
 - `entradaPressao(m, j)`: bola solta do pé do condutor (> `bolaSolta` m) e eu mais perto → vou na bola; a mais de
   `chega` m → disparada (analógico cheio + CORRER) ao ponto de encontro, contornando o condutor a `contorno` m se venho
-  por trás; perto → pela velocidade (a do condutor + `ganho` × (ponto − corpo), até `aproxMax` m/s a mais; por trás,
-  fechando no máximo `trasAprox` m/s), mirando `naBola` m antes da bola, do lado do gol. Estado `j.pressaoH = {corre}`.
-  Em todos os trechos (também no passe do adversário, no recebedor `voo.para`) ele **chega freando**: a velocidade
-  PEDIDA com que fecha no corpo do adversário fica em √(2 · `freio` · (d − 2 raios)) + `trasAprox`; longe disso, a
-  disparada de antes. É o pedido, não a garantia do contato: o corpo segue o pedido com o atraso de `JOGADOR.tauVel`
-  (freando a 6,2 m/s², ~1,1 m/s acima dele) e o CORRER segue ligado enquanto a velocidade pedida passa da corrida — o
-  chega freando tira a maior parte dos contatos, mas os que sobram ainda chegam acima de `FALTAS.carga.vMin`
-  (contraprova 14/10, teste-pressao-humano, sementes 7001–7008: contatos do chamado por trás do condutor 12 na main →
-  3 aqui, 2 deles fechando a 2,9–3,1 m/s; não de frente 31 → 11, acima de 1,8 m/s 23 → 8). A curva com a folga do atraso
-  (pedido τ·a abaixo, alvo 1,6 m/s no contato) foi medida e não resolveu (8 de 9 contatos não de frente seguiam acima
-  de 1,8 m/s): pendência.
+  por trás (do lado do gol dele ou nas costas dele pela corrida dele, `faltas.js chegada`); perto → pela velocidade (a do
+  condutor + `ganho` × (ponto − corpo), até `aproxMax` m/s a mais; por trás, fechando no máximo `trasAprox` m/s pela
+  velocidade de AGORA do condutor), mirando `naBola` m antes da bola, do lado do gol. No passe do adversário corre para
+  `colado` m do ponto de chegada (o mesmo ponto em que `pressionadorDe` mede quem chega primeiro). Estado
+  `j.pressaoH = {corre, tick}` (`tick`: o último passo em que ele foi o chamado).
+  Em todos os trechos a disparada **desvia dos outros corpos** (`desvio`: a aproximação máxima prevista em `desvio.T` s;
+  passa a ≥ 2 raios + `desvio.folga` m) e **chega freando** (`chegaFreando`, "chegada rápida, freada no fim"): a
+  velocidade PEDIDA com que fecha no corpo do adversário (também o recebedor `voo.para`) fica na curva
+  √(c² + 2 · a · folga) − margem, a = `freioChegada` × o freio do corpo, c = `contato` (abaixo de `FALTAS.forca.min`); com o
+  condutor vindo, além de dEng = 2 raios + (vCorrida² − contato²)/(2a) (onde quem chega correndo tem de começar a frear)
+  a curva vale para a velocidade DELE (+ a do condutor vindo: segue em disparada) e, dentro, no referencial do condutor
+  (c + a do condutor vindo); a margem é a da freada do condutor que se afasta (`semAtropelar.reacao/perto`); com o corpo
+  já acima da curva, o pedido fica abaixo dela pelo excesso (o corpo segue o pedido com o atraso de `JOGADOR.tauVel` e a
+  aceleração de lado limitada: correndo ao lado de um condutor rápido ele trombava nas costas dele).
+- `chamadoRecente(m, j)` → j é (ou foi há até `depois` s) o chamado (pelo `j.pressaoH.tick`; só existe com o PRESSÃO
+  apertado). `sim.js boteIA`: o chamado não faz falta tática (`faltaTatica`: parar o contra-ataque com falta é da pessoa,
+  pela DIVIDIDA) e só dá o bote abaixo de `FALTAS.bote.vLivre` m/s, fora das costas do condutor e sem o corpo entrar no
+  dele (`faltas.js forcaContato` ≤ `FALTAS.forca.min`, inclusive o choque recente).
 - `ia-tatica.js`: `B.apertaProprio` (o 1º aperta por conta própria); `B.pedido` é calculado ANTES do aperto, com
   `excluir = p1` quando ele já aperta (o botão chama outro); quem foi chamado no tick anterior (`B.pedidoTick`) não é o
   1º nem o 2º homem do bloco; `B.aperta1 = B.apertaProprio` (o botão soma um jogador, não dois).
@@ -1568,7 +1604,11 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
   `__golaco.indicadores` (`{pressao: {x, y, z} | null, oito: {x, z, segmentos, total} | null}`).
 
 ### Testes
-`teste-parado`, `teste-pressao-humano` (pareado, `tools/lib/pressao-pareada.mjs`) e `teste-goleiro-regras` no padrão;
+`teste-parado`, `teste-pressao-humano` (pareado, `tools/lib/pressao-pareada.mjs`; 32 partidas, uma por processo — com 8 a
+mesma lógica passava ou reprovava pelo sorteio dos lances; nas 128 partidas da main o M4 ficava acima da meta, 1,58× as
+faltas, e o M5 no limite, 80,6% — o chamado fazia falta demais e corria de menos; corrigido com a chegada pelo perfil de
+aceleração, a curva de chegada, o desvio e o bote sem entrar no corpo: `PESQUISA-ETAPA3.md` §17.3) e `teste-goleiro-regras`
+no padrão;
 `teste-defesa-humano` (a meta antiga do PRESSÃO, que passava sem o botão, virou a pareada); `teste-controles` (celular:
 a marca do PRESSÃO, o PEGAR, o goleiro andando com a bola e o anel); `teste-goleiro-trava` segue medindo o treino;
 `teste-entrada` (O/RB no ataque = PEGAR); `teste-taticas` mede a forma com `IA_DEFESA.lento` desligado (a cena prende a
@@ -1680,9 +1720,10 @@ corrido só na partida.
   a IA × IA não usa a PRESSÃO: o painel não muda com isso).
 - Falta no bote (`faltas.js faltaNoBote`, 14/10): de frente, com o defensor sem entrar no condutor (a velocidade dele na
   direção do condutor ≤ 0: corre para o próprio gol ou fica) e a bola já solta do pé do condutor (≥ `ACOES.boteIA.bolaSolta`),
-  a chance de falta é × `FALTAS.bote.naBola` (0,4): ele joga a bola antes do homem. Era o desarme da defesa da arrancada
-  contra o condutor em disparada que empurra a bola 0,6–0,8 m (50 das 67 faltas da IA no humano no teste-defesa-corrida
-  eram botes de frente, quase todos assim).
+  ele joga a bola antes do homem. Era o desarme da defesa da arrancada contra o condutor em disparada que empurra a bola
+  0,6–0,8 m (50 das 67 faltas da IA no humano no teste-defesa-corrida eram botes de frente, quase todos assim). Na junção
+  com as faltas com sentido (15/10) o × `FALTAS.bote.naBola` saiu: a força do contato (`forcaContato` × `fatorForca`) já dá
+  chance zero a quem não entra no condutor (a velocidade dele na direção do condutor ≤ 0) — uma régua só para o bote.
 - Calibração (painel de 48, 13/10): `IA_DEFESA.corrida.v` 6,8 (só a disparada de verdade liga a defesa da arrancada),
   `GOLEIRO.logit.c0Partida` −0,35, `IA_ATAQUE.contra` {s: 8, bonus: 1,0}, `utilidade.chute` 3,0.
 - Volume de ataque (rodada de 13/10, painel de 144 do CI): **tabela da IA** (`ia-ataque.js tabelaIA`, `IA_ATAQUE.tabela`; DESLIGADA
@@ -1712,14 +1753,15 @@ corrido só na partida.
   `bolaSolta` 0,435 da condução curta. O chamado (`defesa.js chamadoDaPressao`: o último escolhido dentro da validade, com
   o pedido valendo) não entra no corte do passe (`ia-tatica.js vaiNaLivre`): segue a PRESSÃO até o ponto de chegada. Sem
   o botão nada disso liga (o painel IA × IA não muda).
-- O chamado da PRESSÃO contorna quem está no caminho (15/10; `defesa.js desviarCorpos`, `DEFESA_HUMANO.pressao.desvio`
-  {olha 0,7 s, min 1,5 m, vMin 3 m/s, lado 0,8 m}): em toda `corridaAte` (aproximação do condutor, bola solta do pé dele e
-  o ponto de chegada do passe do adversário), o corpo mais perto à frente na linha da corrida — companheiro ou adversário,
-  não o alvo nem os goleiros —, onde ele vai estar quando o chamado chegar lá, a menos de `lado` m da linha → o ponto passa
-  a `lado` m dele, do lado em que o chamado já está. Antes ele ia reto, trombava (`sim.js colisaoCorpos`: ~1,8 m/s a menos)
-  e recomeçava a arrancada. Medida: `teste-pressao-humano` M8 (trombadas com quem não é o condutor por 100 casos: base
-  799ab53b 4,2 → 2,1; meta ≤ 3) e M5 (80 → 83% com 8 partidas; 81 → 83% com 16). A partida IA × IA não muda (hash-partida
-  `demo` IGUAL; só as cenas `humano`, que apertam PRESSÃO, mudam).
+- O chamado da PRESSÃO contorna quem está no caminho (15/10; `defesa.js desvio`, `DEFESA_HUMANO.pressao.desvio`
+  {T 0,6 s, folga 0,25 m, alcance 6 m}): em toda `corridaAte` (aproximação do condutor, bola solta do pé dele e o ponto de
+  chegada do passe do adversário), o corpo de outro jogador — companheiro ou adversário, não o alvo — que na aproximação
+  máxima prevista (Reynolds 1999) dos próximos `T` s passa a menos de 2 raios + `folga` m faz o rumo girar o necessário
+  para passar a essa distância, do lado em que ele já está. Antes ele ia reto, trombava (`sim.js colisaoCorpos`: ~1,8 m/s
+  a menos) e recomeçava a arrancada. Na junção com a main (#471, que trouxe outro desvio, `desviarCorpos`, pelo ponto a
+  `lado` m do corpo) ficou um só: medidos os dois na mesma lógica integrada (`teste-pressao-humano`, 32 partidas, sementes
+  7001–7032), M8 1,3 (este) × 1,8 (`desviarCorpos`) trombadas por 100 casos (meta ≤ 3; base 799ab53b 4,2) e M1–M7 iguais
+  dentro do sorteio (M5 84,1 × 83,8%). A partida IA × IA não muda (só as cenas `humano`, que apertam PRESSÃO, mudam).
 
 ### Testes
 `teste-cabeceio` (canhão de cruzamentos, pose, teleporte, partidas demo, humano) e `teste-defesa-corrida` (humano
@@ -1771,11 +1813,12 @@ e de perto).
   quem cobrou fica fora da bola livre e da bola alta (`candidatosBolaLivre`, `ia-tatica.js vaiNaLivre`) até outro jogador
   tocar (posse, mão, `ultimoToque`, `bateuCorpo`).
 - **PRESSÃO** (`defesa.js`): `passeAdversario(m, time)` — no passe do adversário o pedido segue valendo e o chamado corre
-  para `m.voo.alvo` (pelo lado do meu gol) e para a `pressao.chega` m dele (freia no último metro; de lá a disputa aperta
-  o recebedor); `m.pressaoHumano[time] = {tick, id, ult, ultTick}`: a histerese vale para o último escolhido dentro de
+  para `m.voo.alvo` (pelo lado do meu gol) até `pressao.colado` m dele (freia no último metro; a curva de chegada no
+  recebedor e o bote sem entrar no corpo não o deixam atropelar o domínio); `m.pressaoHumano[time] = {tick, id, ult, ultTick}`: a histerese vale para o último escolhido dentro de
   `DEFESA_HUMANO.pressao.validade`. Na troca automática (`sim.js ganhouPosse`) o chamado fica fora (segue apertando; o
-  humano vai para o mais perto depois dele). `sim.js boteIA`: o chamado (`j.ia.ramo === 'pressaoHumano'`) não dá o bote
-  acima de `FALTAS.bote.vLivre` m/s nem por trás do condutor (`faltas.js chegada`) — `teste-pressao-humano` M4 4 → 5.
+  humano vai para o mais perto depois dele). `sim.js boteIA`: o chamado (`defesa.js chamadoRecente`) não dá o bote
+  acima de `FALTAS.bote.vLivre` m/s, nem por trás do condutor (`faltas.js chegada`), nem com o corpo entrando no dele
+  (`forcaContato` > `FALTAS.forca.min`), e não faz falta tática.
 - **Bola parada** (`partida.js cobrar`): os botões do cobrador humano valem na montagem; o pedido feito antes de `pronta`
   espera (renovado) e sai em `pronta`; o CHUTE fora do pênalti e do tiro livre direto vira `passe` (saída) ou
   `lancamento` (o resto; no lateral, o arremesso longo). No pênalti e no tiro livre direto o CHUTE (a cobrança a gol) só
