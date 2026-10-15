@@ -445,3 +445,31 @@ por partida — a FRAÇÃO de fora cai 38,6 → 37,3 → **33,5%** (meta 35–40
 domínio e chega mais à área, não porque chuta menos de longe; gols de fora 18,1 → 17,8 → 11,9% (0,33 → 0,31 → 0,25 por
 partida; meta 12–18%); passe certo 88,5 → 88,0 → 88,1% (meta ≤ 88%); goleiro 68,8 → 71,9 → 69,7%; faltas 2,2 → 2,0 → 1,8
 por partida. Decisão do dono (pendência): aceitar a fração de chutes de fora abaixo da faixa com mais gols e chutes de dentro.
+
+**Contraprova da rodada final (15/10): sementes novas e o domínio velho.** O `teste-nao-passa` com as MESMAS regras em
+84 partidas de sementes que a rodada não usou (dois lotes de 42: ia 5101…, frente 6101…, lado 7101… e ia 8101…,
+frente 9101…, lado 10101…; 2 × 3 min): "passou da bola" 0,26 e 0,52 por partida (meta ≤ 0,5), passe colado 0 e 0, e
+**passou e o adversário ficou com ela 1 e 1** (meta 0) — a main, no 1º lote, 0,90 / 11 / 8. A melhora da frente é
+grande e se repete fora da amostra, mas a meta 3 = 0 em 42 não é robusta: o que sobra é ~1 caso por 42 partidas, de
+categorias diferentes a cada sorteio — o adversário que marcou o domínio de um passe para cortar e não chega ao ponto
+(o replanejamento em corrida para ~17 passos antes e o plano velho segue; 7305 t 2652 #10, 5,93 m), a proteção decidida a
+4,4 m/s que vira condução de novo depois do compromisso com a bola parada no pé (8169 t 1371 #110; o "perdeu" foi a bola
+batendo no corpo do adversário, ele ficou com ela), a trombada de quem pressiona a 7 m/s no recebedor parado (5237 t 21490
+#110: o corpo empurrado a 3,6 m/s para longe da bola; é da frente das faltas, #480) e, com a correção abaixo, o humano
+roteirizado com o domínio aéreo amortecido ao lado do corpo (2220 t 21061 #3: fora da janela do roteiro o controlado
+recebe com a entrada de recepção da IA e conduz com a do condutor, com a física do humano). Em outros 24 lances do
+humano roteirizado (analógico solto na chegada, CORRER segurado, inversão de 150–180° logo depois do domínio): 1 caso do
+humano (0,34 m), nenhum perdido.
+
+Achado e corrigido: **o domínio marcado sobrava com a bola no pé de outro.** Só a bola livre (`sim.js bolaLivre` →
+`tentarDominio`) refaz ou apaga o plano de domínio; quando outro jogador ficava com a bola (o recebedor dominava, o
+adversário cortava, o goleiro pegava), o `cond.toque` de quem tinha marcado o domínio continuava e `movimentoRecepcao`
+seguia guiando o corpo — em corrida reto até o ponto do toque (12118 t 11047 #109: 7 m/s por 0,6 s para o ponto de um
+passe que o humano já tinha dominado, 3,67 m além da bola), de frente ou assistido a ≤ 1 m/s (`VEL_RECEPCAO`) virado
+para a bola, até ela ficar livre de novo — também o controlado do humano depois de um corte do passe para ele. Nas 42
+partidas do teste: 290 episódios de ≥ 2 passos (6,9 por partida; 93 do controlado; na main 7,5 por partida em 6
+partidas medidas à parte) → 0. Agora a partida apaga o plano assim que a bola é de outro (só na partida: o treino fica
+bit a bit igual). Nas 42 do teste: 0,29 → **0,21** "passou da bola" por partida, passe colado 0 → 0, domínio velho 290 →
+0 — e o sorteio novo dos lances traz 1 "perdeu" (o caso 2220 acima: meta 3 de 0 → 1). Nos dois lotes novos: 0,50 / 1 / 1
+e 0,19 / 0 / 1 (o passe colado que aparece, 6288 t 19403 #111, é o cortador com o toque marcado e a bola a 4,96 m/s
+barrado pelo `soMarcou` — a junção com o `cortandoPasse` da #471 cobre esse caso).
