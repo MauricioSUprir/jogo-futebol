@@ -1808,3 +1808,105 @@ IGUAL; o hash Node = Chromium do `teste-carga` continua).
   continua sem encostar; no treino de ataque com o minimapa e o painel nada encosta e a marca fica; a árvore de
   acessibilidade tem "Golaço FC" e "Ventania FC" (contraprova de 13/10). `--so-placar` roda só essa parte
   (sem os 2 min de jogo).
+
+## Ponte com o Total Match (15/10; contrato)
+Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Match (TM). O TM grava o pedido em
+`localStorage["tm3d:pedido:<id>"]` e abre `golaco/index.html?tm=<id>` num iframe (lado do TM: `legacy-total-match/js/tm3d.js`).
+**Sem `?tm` nada muda**: `hash-partida`/`hash-igual` IGUAIS, a mesma tela, os mesmos testes.
+- **`ponte-tm.js`** (página): `ID_TM`, `PEDIDO_TM` (lidos na importação, síncronos), `NO_QUADRO`, `MENSAGENS`, `sementeTM(id)`
+  (a semente da partida pelo id: cada partida do TM é outro jogo), `avisarTM(tipo, extra)` (`window.parent.postMessage({tipo,
+  id, ...}, location.origin)`), `gravarResultadoTM(r)`, `fimTM(r)` (grava + `tm3d:fim`; fora do quadro volta a `../index.html`)
+  e `sairTM()` (`tm3d:sair`: o TM simula do começo — sem WebGL 2, pedido sumido, falha ao subir o 3D).
+- **`tm-times.js`** (puro): `timesDoPedido(pedido)` → `{elencos: [tmcasa, tmfora], times: {0, 1}, humano, trava, mapa}`. Time 0 =
+  mandante do TM (`home`). Ids 1001–1018 (casa) e 2001–2018 (fora); `mapa[id] = {tmId, nome (o curto do TM), lado}`. Formação
+  do TM → `FORMACAO_TM` (as 6 do jogo). Os 11 primeiros do pedido vão às vagas pelo `hungaro` com custo = distância (m) entre a
+  vaga da prancheta do TM (`slot`, convertida por `ANCORAS_Y`) e a vaga do GOLAÇO × 10 + posição × 20 (natural 0, alternativa
+  1, fora 3); o goleiro fica no GOL. Atributos: ficha com `attr` explícito — o gerador do jogo (`elenco.js gerarAtributos`) pelo
+  nível COMPRIMIDO (`NIVEL_TM`: 74 + (overall − 74) × 0,5, 58–88), o perfil do TM (pac/sho/pas/dri/def/phy/gk − overall)
+  puxando cada chave até ±6 (`PERFIL_TM`) e a nota na posição de volta ao nível; altura do `look.height`; pé do `foot`. O
+  jogador da trava que veio no banco entra no lugar do titular mais parecido (com a vaga dele).
+- **`elenco.js`**: `registrarElenco(el)` (ELENCOS + fichas; o mesmo id substitui) e `atributosDe` devolve a cópia do `attr`
+  explícito (as fichas do Golaço/Ventania não têm `attr`: bits iguais); `gerarAtributos(jog)` = o gerador sem o cache.
+- **`partida.js`**: `criarPartida({..., humano = 0, trava = null})` — o papel 'humano' e o controlado no time `humano`;
+  `m.timeHumano`; com a trava (só se o travado estiver em campo no time do humano) `m.trava = {[humano]: id}` e o controlado
+  começa nele. `passoPartida` entrega a entrada ao time `m.timeHumano ?? 0`; `entradaDemoPartida` joga pelo controlado dele.
+  `m.timeHumano`/`m.trava` ficam fora do hash.
+- **Trava "só o meu jogador"** (Rumo ao Estrelato): `acoes.js assumirControle` recusa (devolve `false`) a troca para outro
+  jogador do time travado — todo chamador passa por ela (troca, passe, posse, bola parada, goleiro, expulsão, substituição) e
+  só empurra o evento 'troca' se a troca valeu; `sim.js` move o goleiro do time travado pela IA quando ele não é o travado;
+  `escalacao.js aplicarEdicao` recusa a substituição do travado (código 4). Travado expulso: o controlado fica sem jogador
+  (o time inteiro com a IA; a página mostra "Você foi expulso" com o "Simular o resto"). Página: TROCAR e GOLEIRO mascarados
+  na entrada; `#btn-trocar`, `#btn-goleiro` e `#btn-trocar-mao` escondidos.
+- **`sumula.js`** (puro): `criarSumula()`, `sumulaPasso(s, m, eventos)` (logo depois de cada `passoPartida`), `resultadoTM(s, m,
+  mapa)` no formato do contrato do TM — `{homeGoals, awayGoals, gols: [{lado (beneficiado), tmId, nome, minuto, penalti, contra,
+  assist}], cartoes: [{lado, tmId, nome, minuto, cor: 'yellow'|'red'}], stats: {possession, shots, onTarget}, jogador? (só com a
+  trava: {tmId, nota 4,5–10, gols, assist, toques, passes})}`. Autor pelo `render/autor-gol.js`; pênalti = evento 'penalti'
+  'gol' no mesmo passo; assistência = o último passe que chegou ao autor (o desvio do adversário no chute não a tira); chute,
+  no alvo e posse com as definições do painel (`tools/lib/partida-medidas.mjs`; o gol sem o chute aberto conta como chute no
+  alvo); 2º amarelo = 'yellow' + 'red'; minuto = o do placar (1–45 no 1º tempo, 46–90 no 2º; os acréscimos ficam em 45/90).
+- **`main.js`** (só com `?tm`): os elencos registrados e toda partida criada com os times/humano/trava do pedido; `modoPagina`
+  sempre a partida; a súmula alimentada em `rodarPasso`; `tm3d:pronto` no `api.pronto`; o resultado gravado já no apito; a
+  faixa do fim com "Voltar ao Total Match" (`data-cmd="voltar-tm"` → `fimTM`); **"Simular o resto"** (`data-cmd="simular-resto"`):
+  fecha pré-jogo, replay, comemoração, substituição e editor, a IA joga pelo humano (`entradaDemoPartida`) e `passoPartida` roda
+  em pedaços de 30 ms por quadro SEM desenhar, com a faixa "Simulando o resto da partida… 63' · FLA 1 × 0 PAL"; no apito, a faixa
+  do fim. `window.__golaco.tm = {id, pedido, humano, trava, mapa, controlado, simulando, mensagens, sumula(), resultado(),
+  simularResto() (Promise), resultadoGravado()}` (null sem `?tm`).
+- **`hud.js` / `index.html`**: `criarHud({tm: {trava, timeHumano}})` — a pausa sem "Reiniciar partida" e "Modo de jogo", com
+  `#btn-simular-resto` (até o apito) e `#btn-voltar-tm` (no fim); sem "Editar time" com a trava. `faixa({..., botaoTexto,
+  botaoCmd})`. O ponto do controlado no minimapa na cor do time dele.
+- **Testes**: `teste-ponte-tm` (Node, padrão; P1 sem recuo, P2 tm-times, P3 humano no visitante, P4 trava, P5 resultado de
+  partidas inteiras, P6 súmula com eventos montados; os pedidos em `tools/lib/pedidos-tm.mjs`) e `teste-tm-tela` (navegador; o
+  TM imitado por um quadro pai na mesma origem: pronto, pausa, Simular o resto, faixa, `tm3d:fim`, Estrelato no celular, sem
+  `?tm` nada muda; `--pedido <arquivo>` usa um pedido de verdade do TM).
+
+## Identidade visual de cada time (Total Match, 15/10)
+Pedido do dono: "a logo dos times, torcida, e estádio adaptáveis a cada time". Só DESENHO (render/DOM): nada entra no mundo
+nem no hash; a geometria (placas, arquibancadas) não muda.
+- **`js/identidade.js`** (puro): `IDENTIDADE_PADRAO` = exatamente as constantes de hoje (referência dos testes; os desenhos
+  não a leem). `identidadeDoPedido(pedido)` → `{tm: true, neutro, publico, times: [{nome, sigla, cores, forte, outra,
+  escura, escudo: {url, gerado, img}}], kits: {linha0, goleiro0, linha1, goleiro1, arbitro}, uniformes: {escolha,
+  medidas}, torcida: {casa, fora, mosaico, acentos, foraLados}, mosaico: {texto}, faixas (12), festa, paineis (4),
+  arquibancada, escanteio, fachada, torcedoresFora, estadio: {nome, placa}, hud: {mapa, faixa, placar}}`. Time 0 =
+  mandante. Uniformes sem confusão por ΔE₀₀ (CIEDE2000; `deltaCamisas` = metade a cor vista de longe, metade a cor
+  dominante mais parecida): visitante casa → fora → terceiro (≥ `LIMIAR.linha` 25; nenhum ≥ 15 → o mandante troca
+  também; ainda assim → uniforme de reserva branco/preto/cinza), `kitEscolhido` respeitado, goleiros ≥ 25 dos 2 de linha
+  e do outro goleiro, árbitro ≥ 22 dos 4 (azul, preto, amarelo, vermelho, ...). Kit do TM → `{camisa, manga, calcao,
+  meiao, chuteira, acento, sola, luva, padrao (plain|stripes|halves|sash|hoops), segunda}`. Paletas ≥ 10 cores com
+  neutros; faixas `[texto, fundo, letra, detalhe, corDoDetalhe?]` com letra ≥ 3:1 (9 e 11 = visitante); minimapa ≥ 22 do
+  branco da bola, ≥ 3:1 no fundo, ≥ 25 entre os times; jogo neutro: estádio "Arena Central", cores do TM, torcida 45%
+  misturada; `publico` 0,1–1 = ocupação.
+- **Página**: `render/identidade-pagina.js identidadeDaPagina()` — null sem `?tm` (identidade.js nem é baixado: import
+  dinâmico); com `?tm` decodifica os escudos (≤ 1,5 s; falhou → `urlEscudoSigla`, a sigla nas cores) ANTES de
+  `criarCampo`/`criarTorcida`. main.js: `IDENT` → `criarCampo({identidade})`, `criarTorcida({identidade, mascara:
+  mascaraDaIdentidade})`, `jog3d.definirKits(IDENT.kits)`, `criarPrejogo({identidade})`, `COR_TIME` (faixa ENTRA/SAI) e
+  `timesDoMundo` com `extrasPlacar` (`{escudoUrl, cor, corTexto, mapa}` → hud.js `<symbol id="escudo-tm-i">` com `<image>`,
+  a cor do time na faixa do placar e `COR_MAPA`). `__golaco.identidade`.
+- **Desenhos** (todos com `identidade.tm`; sem ela o código de hoje): `jogador3d.js definirKits` (manga, padrões no shader
+  `manequim-v4`: iPad do tronco/gola + 0,1–0,4), `campo.js` (placas `texPlacas(paineis, escudos)`, cadeiras/friso/mosaico
+  `texArquibancada(cores, mascaraTexto)`, escanteio `texBandeira(cores)`), `torcida.js`/`torcida-dados.js
+  gerarTorcidaNiveis(mascara, paletas)` (os MESMOS lugares e sorteios), `bandeiras.js`/`bandeiras-dados.js faixas(textos)`
+  (bandeirões e bandeira com o escudo), `estadio-fora.js` (placa com escudo e nome em 1 ou 2 linhas, fachada, cobertura,
+  túnel, cantos, torcedores), `prejogo-tela.js` (escudos e estádio na abertura), `escalacao-tela.js` (escudo e cor).
+- **Teste**: `teste-identidade` (Node, padrão): padrão = constantes de hoje (torcida byte a byte), ΔE₀₀ nos pares de Sharma
+  et al., 7 pedidos difíceis (dois vermelhos, azul × árbitro azul, preto-e-branco × branco-e-preto, 3 uniformes iguais,
+  escolhido que confunde, sem identidade, neutro com público baixo) e a torcida do TM (mesmos lugares, público, neutro).
+
+## Cara do Total Match no modo ?tm (15/10)
+Pedido do dono: "deixa os botões, menu, tudo com a cara do total match". Só DOM/CSS (hash igual); sem `?tm` nada é baixado.
+- **`index.html`**: um `<script>` antes do CSS põe `html.tm` (só com `?tm=<id>` não vazio); outro DEPOIS do importmap escreve
+  `<link rel="stylesheet" href="css/tm.css">` pelo parser (última folha, bloqueia o desenho: nada pisca com a cara do
+  GOLAÇO) e importa `js/tm-cara.js` (módulo antes do importmap faria o navegador ignorar o mapa).
+- **`css/tm.css`**: TUDO sob `html.tm`; a cara sai do `legacy-total-match/css/styles.css` (preto #050807, painel #0f1612, verde
+  #22c55e/#4ade80, texto #eef5f0, fraco #8a9d90, botão principal em pílula com `linear-gradient(120deg,#34d572,#1fae55)`,
+  cartões com raio 14–18 px e borda fina, segmentados separados). Variáveis `--tm-*` para peças novas; as do GOLAÇO
+  (`--verde`, `--preto`, `--fonte`...) apontam para as do TM. Fonte `'Inter TM'` (nome próprio: a "Inter" do `.faixa-subst`
+  não baixa nada sem `?tm`), em `assets/tm/fontes` (OFL). Logo do TM no placar (`assets/tm/simbolo.png`), no carregamento,
+  na abertura do pré-jogo, na tela "Gire o celular" (`assets/tm/logo.png`), no título da pausa/ajuda/editor e ao lado de
+  "Escalação". Sem itálico nem inclinação: o GOL! e a vinheta do replay têm `@keyframes tm-*` retos, ligados só em
+  `prefers-reduced-motion: no-preference`. O que o jogo MEDE fica igual: peso/espaçamento dos nomes dos botões de toque,
+  alturas de 48 px. Celular deitado (360–480 px de altura): a faixa do intervalo/fim desce para baixo do lugar do aviso
+  (ancorada pelo topo; com a linha ENTRA/SAI no topo, mais 42 px).
+- **`js/tm-cara.js`** (página): título, `theme-color`, ícone, "Total Match" na marca do carregamento (o texto fica para o
+  leitor de tela; na tela a logo), o texto do `#girar`; pede os 5 pesos da Inter e, quando chegam (ou falham), põe
+  `<html data-fontes-tm="ok|falhou">` e manda `tm:fontes` na window → main.js `entrada.reposicionar()` + `hud.ajustarTopo()`
+  (os nomes dos botões são medidos pelo canvas). `prejogo-tela.js`: a marca da abertura vira "Total Match" com `html.tm`.

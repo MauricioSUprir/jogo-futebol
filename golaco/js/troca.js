@@ -139,7 +139,7 @@ function avaliar(m, t, st, ctrl) {
 }
 
 function trocar(m, t, st, novo) {
-  assumirControle(m, t, novo);
+  if (!assumirControle(m, t, novo)) return; // trava "só o meu jogador" (Total Match): o controle não sai do travado
   m.eventos.push({ tipo: 'trocaAerea', id: novo.id });
   if (!st.primeira || st.trocas > 0) st.correcoes++;
   st.trocas++;

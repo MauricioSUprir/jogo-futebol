@@ -1635,6 +1635,26 @@
     ]);
   }
   function escudoDe(s, cls) { return escudoEl(escudoCfg(s), s && s.cor || "#22c55e", siglaDe(s), cls); }
+  // o mesmo escudo como imagem (SVG em data URL): vai para a partida em 3D (placar, estádio, torcida)
+  function escudoSvg(cfg, cor, sigla) {
+    cfg = cfg || {}; cor = cor || "#22c55e";
+    var d = FORMAS[cfg.forma] || FORMAS.classico, tinta = claro(cor) ? "#0b1410" : "#ffffff";
+    var ic = TM.ic ? TM.ic(cfg.simb || "star") : null, miolo = "", cheio = false;
+    try { miolo = (ic && ic.innerHTML) || ""; cheio = !!(ic && ic.getAttribute && /\bcheio\b/.test(ic.getAttribute("class") || "")); } catch (e) { miolo = ""; }
+    function esc(t) { return String(t || "").replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 112" width="250" height="280">' +
+      '<defs><clipPath id="c"><path d="' + d + '"/></clipPath><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/>' +
+      '<stop offset="1" stop-color="#000" stop-opacity=".28"/></linearGradient></defs>' +
+      '<path d="' + d + '" fill="' + esc(cor) + '"/>' +
+      '<g clip-path="url(#c)"><rect x="38" y="0" width="24" height="112" fill="#000" fill-opacity=".16"/><rect x="0" y="0" width="100" height="112" fill="url(#g)"/></g>' +
+      '<path d="' + d + '" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="3.5"/>' +
+      (miolo ? '<g transform="translate(29 19) scale(1.75)" color="' + tinta + '" fill="' + (cheio ? tinta : "none") + '" stroke="' + (cheio ? "none" : tinta) +
+        '" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">' + miolo + '</g>' : '') +
+      (sigla ? '<text x="50" y="86" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="20" letter-spacing="1.6" fill="' + tinta + '">' + esc(sigla) + '</text>' : '') +
+      '</svg>';
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  }
   function siglaAuto(nome) {
     var ps = String(nome || "").trim().split(/\s+/).filter(Boolean);
     if (!ps.length) return "TUC";
@@ -1901,7 +1921,9 @@
     });
     // a cor do escudo vira a cor do uniforme no 3D
     var cor = s.cor || "#22c55e";
-    return { id: "utteam", name: nomeExibido(s), short: siglaDe(s), players: players, colors: { primary: cor, secondary: claro(cor) ? "#111111" : "#ffffff" } };
+    var ec = escudoCfg(s);
+    return { id: "utteam", name: nomeExibido(s), short: siglaDe(s), players: players, colors: { primary: cor, secondary: claro(cor) ? "#111111" : "#ffffff" },
+             escudoUT: { forma: ec.forma, simb: ec.simb, cor: cor } };
   }
 
   /* ================= eventos (para os módulos: temporada, evoluções, modos) =================
@@ -1938,7 +1960,7 @@
     statsOf: statsOf, cardEl: cardEl, showCard: showCard, autoFill: autoFill, gastaJogo: gastaJogo, penFisica: penFisica,
     podeJogar: podeJogar, temContrato: temContrato, ehEmprestimo: ehEmprestimo, podeVender: podeVender,
     objBump: objBump, utTeam: utTeam, goUT: goUT, utTop: utTop, wallet: wallet,
-    escudoDe: escudoDe, escudoEl: escudoEl, nomeExibido: nomeExibido, siglaDe: siglaDe, painelVinculos: painelVinculos, separaCampo: separaCampo,
+    escudoDe: escudoDe, escudoEl: escudoEl, escudoSvg: escudoSvg, nomeExibido: nomeExibido, siglaDe: siglaDe, painelVinculos: painelVinculos, separaCampo: separaCampo,
     DIVS: DIVS, divInfo: divInfo, nomeClube: nomeClube, nomeLiga: nomeLiga, nomePais: nomePais,
     on: on, emit: emit
   };

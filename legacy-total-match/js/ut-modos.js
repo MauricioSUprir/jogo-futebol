@@ -222,7 +222,12 @@
     return {
       seed: seed, alvo: alvo, nome: nome, tag: opt.tag || tagSort, sigla: sigla, f: f, ov: ov, chem: ch.team, ds: ds,
       esc: esc, cor: cor, tema: tema, ref: ref, reforco: reforco,
-      team: (function () { var t = timeDe(ds, ch.per, nome, sigla, f, reforco, banco); t.colors = { primary: cor, secondary: "#ffffff" }; return t; })()
+      team: (function () {
+        var t = timeDe(ds, ch.per, nome, sigla, f, reforco, banco);
+        t.colors = { primary: cor, secondary: "#ffffff" };
+        t.escudoUT = { forma: esc.forma, simb: esc.simb, cor: cor };   // o escudo desenhado vai para o 3D
+        return t;
+      })()
     };
   }
   function temaTexto(e) {

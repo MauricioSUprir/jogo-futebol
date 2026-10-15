@@ -1,34 +1,37 @@
 /* ================= TOTAL MATCH 3D — partidas em 3D =================
-   O jogo é um só: o Total Match. O motor 3D (pasta futebol3d/, no mesmo site — era
-   o GOLAÇO) roda a partida do seu time quando você escolhe "Jogar em 3D".
+   O jogo é um só: o Total Match. O motor 3D (pasta golaco/, no mesmo site — o GOLAÇO novo) roda a
+   partida do seu time quando você escolhe "Jogar em 3D". O motor antigo (futebol3d/) continua
+   publicado como reserva e lê os mesmos campos da versão 1 do pedido.
 
    Como os dois conversam (mesmo endereço = mesmo armazenamento do navegador):
-     TM → localStorage["tm3d:pedido:<id>"] = { v, id, titulo, home, away, userSide, controle }
-          e abre o 3D num quadro (iframe) por cima do TM: futebol3d/index.html?tm=<id>
+     TM → localStorage["tm3d:pedido:<id>"] = { v, id, titulo, home, away, userSide, controle, partida }
+          e abre o 3D num quadro (iframe) por cima do TM: golaco/index.html?tm=<id>
      3D → window.parent.postMessage({ tipo: "tm3d:pronto" | "tm3d:fim" | "tm3d:sair", id, resultado })
           (o resultado também fica em localStorage["tm3d:resultado:<id>"], se a mensagem se perder)
-   Os times vão no formato de time do 3D (futebol3d/tools/CONTRACTS.md): nome, sigla, cores,
-   uniformes, escudo e os jogadores (11 titulares na ordem do TM + reservas) com atributos,
-   posição e aparência. Cada jogador leva o tmId: o resultado volta com quem marcou de verdade.
+   Cada time leva nome, sigla, cores, uniformes, os jogadores (11 titulares na ordem da prancheta
+   + reservas) com atributos, posição e aparência, e a identidade (v2): o MESMO escudo que o TM
+   mostra (TM.img.clubImg/nationImg; Ultimate: o escudo desenhado), bandeira, liga, técnico e o
+   estádio (nome, capacidade, foto). A partida leva mando neutro, público e clássico (simOpts).
+   Cada jogador leva o tmId: o resultado volta com quem marcou de verdade.
    O 3D cuida só dos 90 minutos; prorrogação e pênaltis continuam com o Total Match.
-   Os titulares vão com a vaga da prancheta do TM (slot): o 3D põe cada um na posição mais parecida.
-   resultado = { homeGoals, awayGoals, gols: [{ lado: 0|1, tmId, nome, minuto, penalti, contra }],
+   resultado = { homeGoals, awayGoals, gols: [{ lado: 0|1, tmId, nome, minuto, penalti, contra, assist }],
                  cartoes: [{ lado, tmId, nome, minuto, cor }], stats: { possession, shots, onTarget },
-                 jogador?: { tmId, nota, gols, assist } }   (o lado do 3D está em futebol3d/js/ponte-tm.js)
-   Se o 3D não abrir (sem WebGL, sem internet para o three.js), a partida é simulada. */
+                 jogador?: { tmId, nota, gols, assist } }   (o lado do 3D está em golaco/js/ponte-tm.js)
+   Se o 3D não abrir (sem WebGL 2, sem internet para o three.js), a partida é simulada. */
 (function (global) {
   "use strict";
   var TM = global.TM;
   var el = TM.ui.el;
 
   var api = {
-    PASTA: "futebol3d/index.html",          // os testes trocam por uma página de ensaio
+    PASTA: "golaco/index.html",            // os testes trocam por uma página de ensaio
     ESPERA_MS: 30000                          // sem sinal do 3D nesse tempo: oferece simular
   };
 
   /* ---------- utilidades ---------- */
+  // o motor 3D (golaco/) precisa de WebGL 2
   function webgl() {
-    try { var c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); } catch (e) { return false; }
+    try { var c = document.createElement("canvas"); return !!c.getContext("webgl2"); } catch (e) { return false; }
   }
   function hash(s) { var h = 2166136261; s = String(s); for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
   function sorteio(seed) {
@@ -132,6 +135,47 @@
     var ops = GOLEIRO.filter(function (c) { return cores.every(function (x) { return dist(c, x) > 120; }); });
     return escolhe(ops.length ? ops : GOLEIRO, r);
   }
+  /* ---------- identidade do time (v2): a MESMA imagem que o TM mostra ---------- */
+  // caminho do site (assets/...) vira endereço absoluto: o 3D roda em outra pasta do mesmo site
+  function abs(s) {
+    if (!s) return null;
+    if (/^(data:|blob:|https?:)/i.test(s)) return s;
+    try { return new URL(s, global.location.href).href; } catch (e) { return s; }
+  }
+  function srcDe(fn, x) { try { var im = fn(x, ""); return (im && im.getAttribute && im.getAttribute("src")) || null; } catch (e) { return null; } }
+  function nomeDe(v) { return typeof v === "string" ? v : (v && v.name) || ""; }
+  // escudo grande demais (PNG importado em data URL) não cabe no pedido: o 3D desenha a sigla
+  var ESCUDO_MAX = 220000;
+  function identidade(time, clube, nac, p1, sigla) {
+    var I = TM.img || {}, D = TM.data || {}, esc = null, tipo = null, st = null, lg = null, paisN = null, foto = null;
+    if (clube && I.clubImg) { esc = srcDe(I.clubImg, clube); tipo = clube.crestData ? "importado" : /^data:/i.test(esc || "") ? "gerado" : "real"; }
+    else if (nac && I.nationImg) { esc = srcDe(I.nationImg, nac); tipo = "selecao"; }
+    else if (time.escudoUT && TM.ut && TM.ut._i && TM.ut._i.escudoSvg) {
+      try { esc = TM.ut._i.escudoSvg(time.escudoUT, time.escudoUT.cor || p1, sigla); tipo = "ultimate"; } catch (e) { esc = null; }
+    }
+    if (esc && esc.length > ESCUDO_MAX) { esc = null; tipo = null; }
+    try { if (clube && D.stadium) st = D.stadium(clube); } catch (e) {}
+    try { if (clube && D.league) lg = D.league(clube.homeLeagueId || clube.leagueId); } catch (e) {}
+    try { paisN = nac || (lg && lg.nation && D.nationByName ? D.nationByName(lg.nation) : null); } catch (e) {}
+    if (clube && I.stadiumImg) foto = srcDe(I.stadiumImg, clube);
+    return {
+      escudo: abs(esc), escudoTipo: esc ? tipo : null,
+      bandeira: paisN && I.flagImg ? abs(srcDe(I.flagImg, paisN)) : null,
+      pais: paisN ? (paisN.name || "") : "", liga: lg ? (lg.name || "") : "", tecnico: nomeDe((clube || nac || {}).coach),
+      estadio: st && st.name ? { nome: st.name, capacidade: st.capacity || 0, foto: abs(foto) } : null
+    };
+  }
+  // contexto da partida (v2): mando neutro, público (0,1–1) e clássico, pelo simOpts do modo
+  function partidaDe(o, home, away) {
+    var so = o.simOpts || {}, a = o.teamA || {}, b = o.teamB || {}, ca = a.club || null, cb = b.club || null, D = TM.data || {};
+    var classico = so.derby != null ? !!so.derby : false;
+    try { if (so.derby == null && ca && cb && D.areRivals) classico = !!D.areRivals(ca.id, cb.id); } catch (e) {}
+    var nomeCl = null;
+    try { if (classico && ca && cb && D.derbyName) nomeCl = D.derbyName(ca.id, cb.id) || null; } catch (e) {}
+    var pub = typeof so.crowd === "number" && isFinite(so.crowd) ? Math.max(0.1, Math.min(1, so.crowd)) : 0.75;
+    return { neutro: !!so.neutral, publico: Math.round(pub * 100) / 100, classico: classico, nomeClassico: nomeCl,
+             competicao: o.title || "", estadio: so.neutral ? null : (home.identidade && home.identidade.estadio) || null };
+  }
   /* time = time do motor do TM ({ id, name, short?, players, club?, nation?, colors?, kitVariant? }) */
   function time3d(time, formacao) {
     var clube = time.club || null, nac = time.nation || null;
@@ -165,6 +209,7 @@
         gkAway: kit(gk2, gk2, gk2, gk2, "plain", contraste(gk2), contraste(gk2), contraste(gk2))
       },
       kitEscolhido: (kv === 0 || kv === 1 || kv === 2) ? kv : null,
+      identidade: identidade(time, clube, nac, p1, sigla),
       players: jogs, tm: true
     };
   }
@@ -223,8 +268,17 @@
 
   /* ---------- quadro do 3D por cima do TM ---------- */
   var ativo = null;
+  // pedidos/resultados que sobraram (TM fechado com o 3D aberto, aba solta): só existe um 3D aberto por vez
+  function limpaSobras() {
+    try {
+      var velhas = [];
+      for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && /^tm3d:(pedido|resultado):/.test(k)) velhas.push(k); }
+      velhas.forEach(function (k) { localStorage.removeItem(k); });
+    } catch (e) {}
+  }
   function abre3d(pedido, fns) {
     if (ativo) fecha3d();
+    limpaSobras();
     try { localStorage.setItem("tm3d:pedido:" + pedido.id, JSON.stringify(pedido)); } catch (e) { fns.falhou("Sem espaço para preparar a partida 3D."); return; }
     var aviso = el("div", { class: "tm3d-aviso", text: "Abrindo o estádio 3D…" });
     var quadro = el("iframe", { class: "tm3d-quadro", src: api.PASTA + "?tm=" + encodeURIComponent(pedido.id), allow: "fullscreen; autoplay; gamepad", title: "Partida em 3D" });
@@ -300,16 +354,18 @@
      cfg = o mesmo cfg do TM.matchview.play (teamA, teamB, result, pauseSide, formation,
      formationB, title, controle?). Ao fim, o result vira o do 3D e a tela de jogo do TM
      mostra o placar na hora (velocidade instantânea), seguindo o fluxo normal do modo. */
+  // v2 = v1 + identidade de cada time + partida (o motor antigo ignora os campos novos)
   function novoPedido(o) {
+    var home = time3d(o.teamA, o.formation), away = time3d(o.teamB, o.formationB);
     return {
-      v: 1, id: "j" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36),
+      v: 2, id: "j" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36),
       titulo: o.title || "Partida", origem: (TM.ui.current && TM.ui.current()) || "",
-      home: time3d(o.teamA, o.formation), away: time3d(o.teamB, o.formationB),
+      home: home, away: away, partida: partidaDe(o, home, away),
       userSide: o.userSide === 1 ? "away" : "home", controle: o.controle || null
     };
   }
   /* partida 3D fora da tela de jogo do TM (ex.: Rumo ao Estrelato, que tem a própria súmula):
-     o = { teamA, teamB, formation?, formationB?, userSide: 0|1, controle?: { tmId }, title }
+     o = { teamA, teamB, formation?, formationB?, userSide: 0|1, controle?: { tmId }, title, simOpts? }
      fns.fim(resultado3d) | fns.sair() (voltou sem jogar: o modo simula como sempre) */
   function jogar3d(o, fns) {
     abre3d(novoPedido(o), { fim: fns.fim, sair: fns.sair,
@@ -317,7 +373,7 @@
   }
   function jogarCfg(screen, cfg, playOrig) {
     var pedido = novoPedido({ teamA: cfg.teamA, teamB: cfg.teamB, formation: cfg.formation, formationB: cfg.formationB,
-      userSide: cfg.pauseSide === 1 ? 1 : 0, controle: cfg.controle, title: cfg.title });
+      userSide: cfg.pauseSide === 1 ? 1 : 0, controle: cfg.controle, title: cfg.title, simOpts: cfg.simOpts });
     abre3d(pedido, {
       fim: function (r3) {
         aplicaResultado(cfg.result, r3, cfg.teamA, cfg.teamB);
@@ -351,6 +407,7 @@
   api.preferencia = preferencia;
   api.salvaPreferencia = salvaPreferencia;
   api.time3d = time3d;
+  api.novoPedido = novoPedido;
   api.aplicaResultado = aplicaResultado;
   api.jogarCfg = jogarCfg;
   api.jogar3d = jogar3d;

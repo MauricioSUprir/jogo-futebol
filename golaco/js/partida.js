@@ -84,27 +84,35 @@ export function vagaDoJogador(timeEstado, id) {
 /**
  * Cria a partida. opc: {semente, minutosPorTempo = PARTIDA.minutosPorTempo, iaClassica = false,
  * elencos = ['golaco', 'ventania'], times?: {0: {formacao, vagas, tatica}, 1: {...}}, saida = 0
- * (quem dá a saída do 1º tempo), log}. O time 0 é o do humano: o controlado começa no cobrador.
+ * (quem dá a saída do 1º tempo), humano = 0 (o time do humano: 0 = o mandante, como sempre foi; 1 = o visitante —
+ * o Total Match manda o lado do usuário), trava = null (id: "só o meu jogador", o controle nunca sai dele — o Rumo ao
+ * Estrelato do Total Match; acoes.js assumirControle), log}. O controlado começa no cobrador da saída do time do humano
+ * (com a trava, no travado). m.timeHumano e m.trava ficam fora do hash (o controlado entra nele, como antes).
  * iaClassica: true só para os testes medirem o "antes" (a IA do treino no 11×11).
  */
 export function criarPartida(opc = {}) {
   const elencos = opc.elencos ?? ['golaco', 'ventania'];
   const saida = opc.saida ?? 0;
+  const h = opc.humano === 1 ? 1 : 0;
   const times = { 0: estadoInicialTime(elencos[0], opc.times?.[0]), 1: estadoInicialTime(elencos[1], opc.times?.[1]) };
   const ataca0 = { 0: 1, 1: -1 };
-  const ctrl0 = cobradorDaSaida(times[0]);
+  // o travado só vale se estiver em campo no time do humano (senão o humano joga como sempre, sem trava)
+  const trava = opc.trava != null && Object.values(times[h].vagas).includes(opc.trava) ? opc.trava : null;
+  const ctrl0 = trava ?? cobradorDaSaida(times[h]);
   const desc = [];
   for (const t of [0, 1]) {
     for (const v of FORMACOES[times[t].formacao].vagas) {
       const id = times[t].vagas[v.id];
       desc.push({
         id, x: 0, z: 0, rumo: ataca0[t] > 0 ? 0 : Math.PI, attr: atributosDe(fichaDe(id)), time: t,
-        papel: t === 0 && id === ctrl0 ? 'humano' : 'ia', posicao: FUNCAO[v.pos],
+        papel: t === h && id === ctrl0 ? 'humano' : 'ia', posicao: FUNCAO[v.pos],
       });
     }
   }
-  const m = criarMundo({ semente: opc.semente ?? 1, jogadores: desc, bola: { x: 0, z: 0 }, posse: null, ataca: ataca0, log: opc.log, controlado: { 0: ctrl0 } });
+  const m = criarMundo({ semente: opc.semente ?? 1, jogadores: desc, bola: { x: 0, z: 0 }, posse: null, ataca: ataca0, log: opc.log, controlado: { [h]: ctrl0 } });
   m.modo = 'partida';
+  m.timeHumano = h;
+  if (trava != null) m.trava = { [h]: trava };
   m.times = times;
   for (const j of m.jogadores) { vestirVaga(m, j, vagaDoJogador(times[j.time], j.id)); j.iaT = null; }
   const min = opc.minutosPorTempo ?? PARTIDA.minutosPorTempo;
@@ -215,12 +223,12 @@ function fecharMontagem(m, c, levado) {
   // o humano do time que cobra controla o cobrador; o do outro time, o jogador de linha mais perto da bola
   for (const t of m.humanos) {
     if (t === pr.time) {
-      if (m.controlado[t] !== c.id) { assumirControle(m, t, c); m.eventos.push({ tipo: 'troca', id: c.id, auto: true }); }
+      if (m.controlado[t] !== c.id && assumirControle(m, t, c)) m.eventos.push({ tipo: 'troca', id: c.id, auto: true });
     } else if (pr.tipo === 'penalti' || (pr.barreira && pr.barreira.n > 0)) {
       // pênalti contra: o humano controla o goleiro (escolhe o lado com o analógico); tiro livre com barreira: também
       // (quem está na barreira fica parado até a cobrança)
       const g = m.jogadores.find(o => o.time === t && o.posicao === 'GOL');
-      if (g && m.controlado[t] !== g.id) { assumirControle(m, t, g); m.eventos.push({ tipo: 'troca', id: g.id, auto: true }); }
+      if (g && m.controlado[t] !== g.id && assumirControle(m, t, g)) m.eventos.push({ tipo: 'troca', id: g.id, auto: true });
     } else {
       let mel = null, dm = Infinity;
       for (const o of m.jogadores) {
@@ -228,7 +236,7 @@ function fecharMontagem(m, c, levado) {
         const d = MD.hypot(o.x - pr.x, o.z - pr.z);
         if (d < dm) { dm = d; mel = o; }
       }
-      if (mel && m.controlado[t] !== mel.id) { assumirControle(m, t, mel); m.eventos.push({ tipo: 'troca', id: mel.id, auto: true }); }
+      if (mel && m.controlado[t] !== mel.id && assumirControle(m, t, mel)) m.eventos.push({ tipo: 'troca', id: mel.id, auto: true });
     }
   }
 }
@@ -1239,12 +1247,13 @@ function expulsar(m, j) {
       if (!s.pendente.substituicoes.length && Object.keys(s.vagas).every(k => s.vagas[k] === s.pendente.vagas[k])) s.pendente = null;
     }
   }
-  // goleiro expulso: o de linha mais perto do próprio gol vai para o gol
+  // goleiro expulso: o de linha mais perto do próprio gol vai para o gol (com a trava do Total Match, o travado só se não
+  // sobrar mais ninguém: o usuário do "só o meu jogador" não vira goleiro; sem m.trava, igual a antes)
   if (j.posicao === 'GOL') {
-    const gx = -m.ataca[t] * CAMPO.meioX;
+    const gx = -m.ataca[t] * CAMPO.meioX, tv = m.trava?.[t] ?? null;
     let mel = null, dm = Infinity;
     for (const o of m.jogadores) {
-      if (o.time !== t) continue;
+      if (o.time !== t || (o.id === tv && m.jogadores.some(q => q.time === t && q.id !== tv))) continue;
       const d = MD.hypot(o.x - gx, o.z);
       if (d < dm) { dm = d; mel = o; }
     }
@@ -1469,7 +1478,7 @@ export function regrasPartida(m) {
 }
 
 /**
- * Um passo da partida (1/60 s). entrada = {x, z, botoes} do humano (time 0). acoes: lista com
+ * Um passo da partida (1/60 s). entrada = {x, z, botoes} do humano (do time m.timeHumano: 0 se não veio). acoes: lista com
  * ações-objeto (a edição {tipo: 'editarTime', ...}, aplicada ANTES do passo e gravada em m.log) e
  * ações-texto (a página cuida de 'reiniciar', criando outra partida). Intervalo e fim: o mundo fica
  * parado (só o relógio do tick anda). Devolve os eventos do passo.
@@ -1494,7 +1503,7 @@ export function passoPartida(m, entrada, acoes) {
     m.eventos = [];
     cobrar(m, entrada);
     const evCobranca = m.eventos;
-    passo(m, { 0: entrada });
+    passo(m, { [m.timeHumano ?? 0]: entrada });
     if (evCobranca.length) m.eventos = evCobranca.concat(m.eventos);
   }
   regrasPartida(m);
@@ -1504,9 +1513,12 @@ export function passoPartida(m, entrada, acoes) {
   return m.eventos;
 }
 
-/** Demonstração/testes: a IA joga pelo controlado do time 0 (como o ?demo=1 do treino). */
+/**
+ * Demonstração/testes: a IA joga pelo controlado do time do humano (m.timeHumano; 0 se não veio), como o ?demo=1 do
+ * treino — também o "Simular o resto" do Total Match.
+ */
 export function entradaDemoPartida(m) {
-  const j = jogadorPorId(m, m.controlado[0]);
+  const j = jogadorPorId(m, m.controlado[m.timeHumano ?? 0]);
   if (!j) return { x: 0, z: 0, botoes: 0 };
   const pr = m.parada;
   if (pr && !pr.rolou && pr.cobrador === j.id) {

@@ -28,8 +28,12 @@ const BOTOES_ACAO = [
  * de um botão segurado e o pedido ainda não executado (ex.: CHUTE apertado enquanto o passe ia,
  * para bater de primeira). Os botões segurados contam como já apertados no novo jogador (não viram
  * carga nem troca falsa), e a ação virtual que a IA segurava nele é descartada.
+ * Trava "só o meu jogador" (m.trava = {time: id}; o Rumo ao Estrelato do Total Match, partida.js criarPartida): o controle
+ * nunca sai do travado — a troca para outro é recusada (devolve false; sem m.trava, sempre true, como antes).
  */
 export function assumirControle(m, time, novo) {
+  const trava = m.trava?.[time];
+  if (trava != null && novo.id !== trava) return false;
   const antigo = m.jogadores.find(o => o.id === m.controlado[time]);
   m.controlado[time] = novo.id;
   const mask = m.botoesTimeAgora?.[time] ?? 0;
@@ -40,6 +44,7 @@ export function assumirControle(m, time, novo) {
     if (antigo.pedido && m.posse !== antigo.id) { novo.pedido = antigo.pedido; antigo.pedido = null; }
     if (antigo.mira) { novo.mira = antigo.mira; antigo.mira = null; }
   }
+  return true;
 }
 
 /** Lado do gol que o time ataca (+1 ataca x = +52,5). */
@@ -400,10 +405,7 @@ function marcarRecebedor(m, r, x, z, tipo, tick) {
   if (r.posicao === 'GOL') return;
   if (m.humanos && m.humanos.includes(r.time) && m.controlado) {
     // o controle passa para quem vai receber (como nos jogos de futebol atuais)
-    if (m.controlado[r.time] !== r.id) {
-      assumirControle(m, r.time, r);
-      m.eventos.push({ tipo: 'troca', id: r.id, auto: true });
-    }
+    if (m.controlado[r.time] !== r.id && assumirControle(m, r.time, r)) m.eventos.push({ tipo: 'troca', id: r.id, auto: true });
   }
 }
 

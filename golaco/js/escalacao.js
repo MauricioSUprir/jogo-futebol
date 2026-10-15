@@ -378,6 +378,9 @@ export function aplicarEdicao(m, ed) {
   if (!t) return { ok: false, codigo: 2, motivo: 'Time inexistente', pendente: false };
   const val = validarEdicao(t, ed, t.elenco);
   if (!val.ok) return { ok: false, codigo: val.codigo, motivo: val.motivo, pendente: false };
+  // trava "só o meu jogador" (Rumo ao Estrelato do Total Match): o travado não sai (o controle não tem para onde ir)
+  const trava = m.trava?.[ed.time];
+  if (trava != null && (ed.substituicoes ?? []).some(q => q && q.sai === trava)) return { ok: false, codigo: 4, motivo: 'Você não pode ser substituído', pendente: false };
   const subs = (ed.substituicoes ?? []).map(s => ({ sai: s.sai, entra: s.entra }));
   // vagas imediatas: cada um que entra ainda é o que sai
   const imediatas = ordenar(ed.formacao, ed.vagas);

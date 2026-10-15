@@ -448,7 +448,9 @@ export function passo(m, entradas) {
     } else if (j.papel === 'parado') {
       mv = { dx: 1, dz: 0, vel: 0, rumoAlvo: j.rumo };
     } else if (j.posicao === 'GOL' && !goleiroComoLinha(m, j)) {
-      mv = movimentoGoleiro(m, j, m.humanos.includes(j.time));
+      // (com a trava "só o meu jogador" do Total Match, o goleiro que não é o travado decide sozinho, como o da IA: senão
+      // ele só sairia do gol com o botão GOLEIRO, que o travado não tem)
+      mv = movimentoGoleiro(m, j, m.humanos.includes(j.time) && !(m.trava?.[j.time] != null && m.trava[j.time] !== j.id));
       // defesa desenhada (mergulho, salto, em pé): o corpo anda pela conta do mergulho, não pela locomoção
       if (mergulhoAtivo(j, m.tick + 1)) { passoMergulho(m, j); continue; }
       // partida: o goleiro do humano com a bola nas mãos anda pelo analógico até a borda da área (nunca sai dela)
@@ -539,8 +541,7 @@ export function passo(m, entradas) {
     aplicarDefesa(m, j);
     // encaixou: com o goleiro do time humano, o controle vai para ele como no "pegou" (antes o encaixe
     // deixava o controle na linha e o pegou o passava ao goleiro: dois comportamentos para a mesma bola)
-    if (m.naMao === j.id && antes !== j.id && m.humanos.includes(j.time) && m.controlado[j.time] !== j.id) {
-      assumirControle(m, j.time, j);
+    if (m.naMao === j.id && antes !== j.id && m.humanos.includes(j.time) && m.controlado[j.time] !== j.id && assumirControle(m, j.time, j)) {
       m.eventos.push({ tipo: 'troca', id: j.id, auto: true });
     }
   }
@@ -1058,8 +1059,7 @@ function ganhaDisputa(m, j, o, bp) {
 /** O jogador ganhou a posse: o controle humano vai para ele (time humano). */
 function ganhouPosse(m, j) {
   registrarToque(m, j, 'posse');
-  if (m.humanos.includes(j.time) && m.controlado[j.time] !== j.id) {
-    assumirControle(m, j.time, j);
+  if (m.humanos.includes(j.time) && m.controlado[j.time] !== j.id && assumirControle(m, j.time, j)) {
     m.eventos.push({ tipo: 'troca', id: j.id, auto: true });
   }
   j.recebe = null;
@@ -1079,7 +1079,7 @@ function ganhouPosse(m, j) {
       const d = MD.hypot(o.x - m.bola.p.x, o.z - m.bola.p.z);
       if (d < dm) { dm = d; mel = o; }
     }
-    if (mel && m.controlado[t] !== mel.id) { assumirControle(m, t, mel); m.eventos.push({ tipo: 'troca', id: mel.id, auto: true }); }
+    if (mel && m.controlado[t] !== mel.id && assumirControle(m, t, mel)) m.eventos.push({ tipo: 'troca', id: mel.id, auto: true });
   }
 }
 
@@ -1151,7 +1151,7 @@ function goleiroComBola(m, g) {
         const d = MD.hypot(o.x - a.x, o.z - a.z);
         if (d < dm) { dm = d; mel = o; }
       }
-      if (mel) { assumirControle(m, g.time, mel); m.eventos.push({ tipo: 'troca', id: mel.id, auto: true }); }
+      if (mel && assumirControle(m, g.time, mel)) m.eventos.push({ tipo: 'troca', id: mel.id, auto: true });
     }
   }
 }
@@ -1299,8 +1299,7 @@ function trocarJogador(m, entradas) {
       else if (!(agora & BOTAO.TROCAR)) st[t] = -1;
       if (st[t] >= 0 && m.tick - st[t] === Math.round(GOLEIRO.trocarGoleiro / PASSO)) {
         const g = m.jogadores.find(o => o.time === t && o.posicao === 'GOL');
-        if (g && m.controlado[t] !== g.id && !(m.posse === j.id && m.naMao !== j.id)) {
-          assumirControle(m, t, g);
+        if (g && m.controlado[t] !== g.id && !(m.posse === j.id && m.naMao !== j.id) && assumirControle(m, t, g)) {
           (m.trocaManual ??= {})[t] = { tick: m.tick, id: g.id, goleiro: true };
           m.eventos.push({ tipo: 'troca', id: g.id, goleiro: true });
           continue;
@@ -1310,8 +1309,7 @@ function trocarJogador(m, entradas) {
     // com a bola no pé o TROCAR não tira o controle de quem conduz; com a bola nas mãos do
     // goleiro, TROCAR passa o controle para um jogador de linha e a IA repõe
     const comBola = m.posse === j.id && m.naMao !== j.id;
-    if (apertou && !comBola && melhor && melhor.id !== j.id) {
-      assumirControle(m, t, melhor);
+    if (apertou && !comBola && melhor && melhor.id !== j.id && assumirControle(m, t, melhor)) {
       (m.trocaManual ??= {})[t] = { tick: m.tick, id: melhor.id, goleiro: false };
       m.eventos.push({ tipo: 'troca', id: melhor.id });
     }

@@ -40,11 +40,12 @@ export function tamanhoEscalacao(W, H, vertical = false) {
 }
 
 /**
- * Cria a escalação dentro de `raiz` (o #prejogo). Devolve {montar(times), mostrar(e), esconder(), estado}.
+ * Cria a escalação dentro de `raiz` (o #prejogo). ident (identidade.js, só com ?tm): a cor de cada time e o escudo dele
+ * em cima do nome. Devolve {montar(times), mostrar(e), esconder(), estado}.
  * e = prejogo-roteiro.js escalacaoEm(r, t) ({time, entrando, saindo, saiTime, cheia}) mais tau (s desde que a folha
  * começou a entrar) para a cascata das cartas.
  */
-export function criarEscalacaoTela(raiz) {
+export function criarEscalacaoTela(raiz, ident = null) {
   const folhas = [0, 1].map(t => {
     const s = document.createElement('section');
     s.className = 'pj-esc';
@@ -59,9 +60,21 @@ export function criarEscalacaoTela(raiz) {
   const estado = { visivel: false, time: null, cheia: null };
   let ultimoTam = '';
 
-  function montarFolha(f, tm) {
+  function montarFolha(f, tm, t) {
     const el = ELENCOS[tm.elenco];
-    f.s.style.setProperty('--cor-time', COR_UNIFORME[el?.uniforme?.linha] ?? '#19e07a');
+    f.s.style.setProperty('--cor-time', ident ? ident.hud.placar[t] : COR_UNIFORME[el?.uniforme?.linha] ?? '#19e07a');
+    if (ident) {
+      // o escudo do time (a mesma imagem do Total Match) em cima da faixa
+      let im = f.s.querySelector('.pj-esc-escudo');
+      if (!im) {
+        im = document.createElement('img');
+        im.className = 'pj-esc-escudo';
+        im.alt = '';
+        im.style.cssText = 'display:block;width:auto;height:clamp(40px,11vh,92px);max-width:100%;object-fit:contain;object-position:left center';
+        f.s.querySelector('.pj-esc-info').prepend(im);
+      }
+      im.src = ident.times[t].escudo.url;
+    }
     f.s.querySelector('.pj-esc-nome').textContent = el?.nome ?? '';
     f.s.querySelector('.pj-esc-forma').textContent = tm.formacao;
     f.s.setAttribute('aria-label', `Escalação: ${el?.nome ?? ''}, ${tm.formacao}`);
@@ -126,7 +139,7 @@ export function criarEscalacaoTela(raiz) {
   return {
     estado,
     /** Monta as duas folhas com os times da partida (m.times: só leitura). */
-    montar(times) { folhas.forEach((f, t) => montarFolha(f, times[t])); },
+    montar(times) { folhas.forEach((f, t) => montarFolha(f, times[t], t)); },
     /**
      * Mostra pelo estado do roteiro: e = {time, entrando, saindo, saiTime, cheia, tau, tauSai}. A que entra vem da
      * esquerda (−110% → 0); a que sai vai para a direita (0 → 110%).
