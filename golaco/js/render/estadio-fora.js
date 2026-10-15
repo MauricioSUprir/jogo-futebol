@@ -7,6 +7,8 @@
 // textura e prédios instanciados com as janelas no shader), árvores, carros e torcedores chegando (o mesmo material
 // da torcida). Texturas desenhadas por código (nada a baixar); à noite a faixa de LED, a placa e as janelas acendem.
 //
+// Estádio real do mandante (TM pro): fachada, face de dentro e marquise por render/fachada-estilos.js (baixado só aí).
+//
 // Orçamento (PESQUISA-PREJOGO.md §3): ≤ 13 chamadas de desenho e ~20 mil triângulos a mais nos planos de fora (no
 // pior, o aéreo: ≤ 40 chamadas e ≤ 130 mil triângulos na Média); nos planos de dentro só a fachada, a cobertura, os
 // cantos e o túnel (modoFora(false)). Na Baixa: sem prédios, árvores, carros e torcedores. Nada projeta sombra.
@@ -54,7 +56,8 @@ function geometria(pos, nrm, uv, cor = null, idx = null) {
 
 // ------------------------------------------------------------------ texturas (canvas)
 const TILE_FACHADA = 12;   // m de fachada por repetição da textura
-function texFachada(aniso, emissiva, fa = FACHADA_PADRAO) {
+function texFachada(aniso, emissiva, fa = FACHADA_PADRAO, estilos = null) {
+  if (estilos) return estilos.texFachadaEstilo(aniso, emissiva, fa);
   const W = 512, H = 512, F = FORA.fachada;
   const c = criarCanvas(W, H), g = c.getContext('2d');
   const yPx = y => H - (y / F.altura) * H;      // y (m) → linha do canvas
@@ -97,15 +100,17 @@ function texFachada(aniso, emissiva, fa = FACHADA_PADRAO) {
 }
 
 /**
- * Placa com o nome do estádio na fachada. Com ?tm (ident): o escudo do mandante no lugar do símbolo (jogo neutro: o
- * símbolo na cor do Total Match) e o nome do estádio dele; nome comprido demais para uma linha → duas linhas.
+ * Placa com o nome do estádio na fachada. Com ?tm (ident): no estádio real, o escudo do mandante e o nome real (com
+ * contorno escuro: a fachada pode ser clara); senão o símbolo do TM; nome comprido demais para uma linha → duas linhas.
  */
 function texPlaca(ident = null) {
   const W = 1024, H = 160;
   const c = criarCanvas(W, H), g = c.getContext('2d');
   g.clearRect(0, 0, W, H);
-  const img = ident && !ident.neutro ? imagemEscudo(ident, 0) : null;
-  if (!(img && desenharEscudo(g, img, 4, 4, 140, 152))) {
+  const real = !!(ident && ident.estadio && ident.estadio.real);
+  const img = real ? imagemEscudo(ident, 0) : null;
+  const simbolo = ident && !real ? ident.estadio?.simboloImg ?? null : null;
+  if (!(img && desenharEscudo(g, img, 4, 4, 140, 152)) && !(simbolo && desenharEscudo(g, simbolo, 4, 18, 140, 124))) {
     // símbolo da marca (o paralelogramo verde do placar)
     g.fillStyle = ident ? ident.fachada.simbolo : '#19e07a';
     g.beginPath(); g.moveTo(14, 140); g.lineTo(54, 20); g.lineTo(130, 20); g.lineTo(90, 140); g.closePath(); g.fill();
@@ -113,6 +118,8 @@ function texPlaca(ident = null) {
   g.fillStyle = '#ffffff';
   g.font = '900 104px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
   g.textBaseline = 'middle';
+  if (real) { g.lineWidth = 8; g.lineJoin = 'round'; g.strokeStyle = 'rgba(0,0,0,0.55)'; }
+  const escrever = (l, x, y) => { if (real) g.strokeText(l, x, y); g.fillText(l, x, y); };
   const texto = ident ? ident.estadio.placa : FORA.placa.texto;
   const larg = g.measureText(texto).width;
   const k = Math.min(1, (W - 170) / larg);
@@ -121,9 +128,9 @@ function texPlaca(ident = null) {
     g.font = '900 70px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
     [texto.slice(0, esp), texto.slice(esp + 1)].forEach((l, i) => {
       const kl = Math.min(1, (W - 170) / g.measureText(l).width);
-      g.save(); g.translate(152, H / 2 + (i ? 38 : -34)); g.scale(kl, 1); g.fillText(l, 0, 0); g.restore();
+      g.save(); g.translate(152, H / 2 + (i ? 38 : -34)); g.scale(kl, 1); escrever(l, 0, 0); g.restore();
     });
-  } else { g.save(); g.translate(152, H / 2 + 4); g.scale(k, 1); g.fillText(texto, 0, 0); g.restore(); }
+  } else { g.save(); g.translate(152, H / 2 + 4); g.scale(k, 1); escrever(texto, 0, 0); g.restore(); }
   return texturaCanvas(c, { aniso: 4 });
 }
 
@@ -131,10 +138,11 @@ function texCobertura(fa = FACHADA_PADRAO) {
   const W = 256, H = 64;
   const c = criarCanvas(W, H), g = c.getContext('2d');
   const grad = g.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#e9eef0'); grad.addColorStop(1, '#c7cfd3');
+  const cc = fa.coberturaTons ?? null;   // estádio real (identidade.js)
+  grad.addColorStop(0, cc ? cc.claro : '#e9eef0'); grad.addColorStop(1, cc ? cc.escuro : '#c7cfd3');
   g.fillStyle = grad; g.fillRect(0, 0, W, H - 10);
   // nervuras a cada repetição (6 m)
-  g.fillStyle = '#8f999e'; g.fillRect(0, 0, 10, H - 10);
+  g.fillStyle = cc ? cc.nervura : '#8f999e'; g.fillRect(0, 0, 10, H - 10);
   g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(10, 0, 4, H - 10);
   // a faixa de baixo do canvas: a testeira da borda de dentro (verde-escura com friso verde)
   g.fillStyle = fa.testeira; g.fillRect(0, H - 10, W, 10);
@@ -193,7 +201,7 @@ function texBairro(aniso) {
 }
 
 // ------------------------------------------------------------------ peças
-function criarFachada(aniso, fa = FACHADA_PADRAO) {
+function criarFachada(aniso, fa = FACHADA_PADRAO, estilos = null) {
   const F = FORA.fachada;
   const pts = contorno(F.hx, F.hz, F.raio);
   const pos = [], nrm = [], uv = [], idx = [];
@@ -204,7 +212,8 @@ function criarFachada(aniso, fa = FACHADA_PADRAO) {
     uv.push(u, 0, u, 1);
   }
   for (let i = 0; i < pts.length - 1; i++) { const a = 2 * i; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
-  const mat = new THREE.MeshLambertMaterial({ map: texFachada(aniso, false, fa), emissiveMap: texFachada(aniso, true, fa), emissive: 0xffffff, emissiveIntensity: 0, side: THREE.DoubleSide });
+  const mat = new THREE.MeshLambertMaterial({ map: texFachada(aniso, false, fa, estilos), emissiveMap: texFachada(aniso, true, fa, estilos), emissive: 0xffffff, emissiveIntensity: 0, side: THREE.DoubleSide });
+  if (estilos) estilos.fachadaPorDentro(mat);
   const m = new THREE.Mesh(geometria(pos, nrm, uv, null, idx), mat);
   m.name = 'fora-fachada';
   return m;
@@ -222,21 +231,25 @@ function criarPlaca(ident = null) {
   return m;
 }
 
-function criarCobertura(fa = FACHADA_PADRAO) {
+function criarCobertura(fa = FACHADA_PADRAO, tr = null) {
   const F = FORA.fachada, C = FORA.cobertura;
   const fora = contorno(F.hx, F.hz, F.raio), dentro = contorno(C.hx, C.hz, C.raio);
   const beiral = contorno(F.hx + F.beiral, F.hz + F.beiral, F.raio + F.beiral);
   const pos = [], nrm = [], uv = [], idx = [];
   const n = fora.length;
-  // 4 anéis: testeira de baixo, borda de dentro (em cima), fachada, beiral — u pela fachada (6 m), v do canvas
+  // 4 anéis: testeira de baixo, borda de dentro (em cima), fachada, beiral — u pela fachada (6 m), v do canvas; com
+  // trechos (tr: os do anel que ficam, identidade.js), um 5º: o arremate de 1,6 m em cima da fachada onde não há cobertura
   const aneis = [
     { pts: dentro, y: C.yDentro - 1.6, v: 0.01 }, { pts: dentro, y: C.yDentro, v: 0.15 },
     { pts: fora, y: C.yFora, v: 0.8 }, { pts: beiral, y: C.yFora - 0.25, v: 0.84 },
   ];
+  if (tr) aneis.push({ pts: contorno(F.hx - 1.6, F.hz - 1.6, F.raio - 1.6), y: C.yFora, v: 0.8 });
   for (const a of aneis) a.pts.forEach((p, i) => { pos.push(p.x, a.y, p.z); nrm.push(0, 1, 0); uv.push(fora[i].s / 6, a.v); });
-  for (let r = 0; r < aneis.length - 1; r++) for (let i = 0; i < n - 1; i++) {
-    const a = r * n + i, b = a + n;
-    idx.push(a, b, a + 1, a + 1, b, b + 1);
+  const quad = (r1, r2, i) => { const a = r1 * n + i, b = r2 * n + i; idx.push(a, b, a + 1, a + 1, b, b + 1); };
+  if (!tr) { for (let r = 0; r < 3; r++) for (let i = 0; i < n - 1; i++) quad(r, r + 1, i); }
+  else for (let i = 0; i < n - 1; i++) {
+    if (tr[i]) { quad(0, 1, i); quad(1, 2, i); } else quad(4, 2, i);
+    quad(2, 3, i);
   }
   const g = geometria(pos, nrm, uv, null, idx);
   g.computeVertexNormals();
@@ -485,11 +498,12 @@ export function criarEstadioFora(cena, opc = {}) {
   // no túnel e nos cantos, e as camisas de quem chega (só desenho; nenhuma medida muda)
   const ident = opc.identidade && opc.identidade.tm ? opc.identidade : null;
   const fa = ident ? ident.fachada : FACHADA_PADRAO;
+  const estilos = ident && ident.estilos && ident.estilos.ESTILOS.has(fa.estilo) ? ident.estilos : null;   // estádio real
   const uNoite = { value: 0 };
   const grupo = new THREE.Group();
   grupo.name = 'estadio-fora';
   // estrutura (vista também de dentro)
-  const estrutura = [criarFachada(aniso, fa), criarPlaca(ident), criarCobertura(fa), criarCantos(aniso, q, ident ? ident.arquibancada : null), ...criarTunel(fa)];
+  const estrutura = [criarFachada(aniso, fa, estilos), criarPlaca(ident), criarCobertura(fa, estilos && fa.trechos), criarCantos(aniso, q, ident ? ident.arquibancada : null), ...criarTunel(fa)];
   // o entorno (só nos planos de fora)
   const comEntorno = opc.entorno !== false;
   const entorno = comEntorno ? [criarEsplanada(aniso, q), criarBairro(aniso)] : [];
@@ -500,6 +514,7 @@ export function criarEstadioFora(cena, opc = {}) {
   }
   for (const m of [...estrutura, ...entorno]) { m.castShadow = false; m.receiveShadow = false; grupo.add(m); }
   cena.add(grupo);
+  const marquise = estilos ? estilos.esconderMarquise(cena, fa.cobertura) : null;   // sem cobertura: some no pré-jogo
   const [fachada, placa] = estrutura;
   const cantos = estrutura[3];
   const [esplanada, bairro] = entorno;
@@ -507,6 +522,7 @@ export function criarEstadioFora(cena, opc = {}) {
     const noite = h === 'noite';
     uNoite.value = noite ? 1 : 0;
     fachada.material.emissiveIntensity = noite ? 0.9 : 0;
+    if (estilos) fachada.material.color.setScalar(noite ? 0.6 : 1);   // o LED e as luzes de dentro aparecem acesos
     placa.material.color.setHex(noite ? 0xffffff : 0xeaf6ee);
     // à noite o chão de fora só tem a luz que escapa do estádio e da rua (as luzes da cena são as dos refletores)
     cantos.material.color.setScalar(noite ? 0.42 : 1);
@@ -525,6 +541,7 @@ export function criarEstadioFora(cena, opc = {}) {
       if (disposto) return;
       disposto = true;
       cena.remove(grupo);
+      if (marquise) marquise();
       const texs = new Set();
       grupo.traverse(o => {
         if (o.geometry) o.geometry.dispose();
