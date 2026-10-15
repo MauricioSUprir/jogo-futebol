@@ -1449,7 +1449,7 @@ export const TECNICOS = {
   // crescendo ½·`curva`·t², até + curvaMax: ele pode virar diferente) → vai para o lugar da área com a maior folga até
   // todos (contada até `folga` m; − `tv` com o caminho ou o lugar a < `tvX` m do x da bola perto da linha de cá, antes do
   // recuo: o raio da TV); os lugares da esquiva a mais `borda` m dos lados e da frente da área (o pé da disparada)
-  esquiva: { raio: 0.75, janela: 1.0, alturaMax: 2.3, jogador: 1.6, prevJogador: 2.0, curva: 1.5, curvaMax: 1.0, folga: 1.2, tv: 0.5, tvX: 0.7, ladoMax: 6, borda: 0.25 },
+  esquiva: { raio: 0.75, janela: 1.0, alturaMax: 2.3, jogador: 1.6, prevJogador: 2.0, curva: 1.5, curvaMax: 1.0, folga: 1.2, tv: 0.5, tvX: 0.7, ladoMax: 6, borda: 0.35 },
   // olhar: a cabeça segue a bola até `cabecaMax` rad do tronco; o tronco vem atrás (mola `tronco` s, até `troncoMax` rad
   // do quadril); o corpo de frente para o campo, virando até `corpoMax` rad para o lado da bola
   olhar: { cabecaMax: 1.22, tronco: 0.8, troncoMax: 0.6, corpoMax: 0.75, tau: 0.12, virarAnda: 0.7 },
