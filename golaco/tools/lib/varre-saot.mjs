@@ -155,7 +155,9 @@ if (!isMainThread && workerData?.varreSaot) {
     const eg = evs.find(e => e.tipo === 'gol');
     if (eg) {
       const g = { golTick: S.m.tick, chuteTick: chute && S.m.tick - chute < 240 ? chute : null, lado: S.m.bola.p.x > 0 ? 1 : -1, time: eg.time };
-      const r = RR.roteiroGol(S.a, g);
+      // a parte do replay que esta cena mede (tv, atras [, lateral] e a checagem): sem as câmeras 3 e 4 do gol (12/10: a 1ª
+      // pessoa e o treinador têm orçamento próprio, medido no teste-replay-anel G1–G13; versões sem elas ignoram o campo)
+      const r = RR.roteiroGol(S.a, { ...g, extras: false });
       const hoje = roteiroGolHoje(S.a, g, REPLAY, CAMPO, RA.bolaNoTick);
       const it = { tick: g.golTick, time: g.time, lado: g.lado, golaco: !!r?.golaco, dur: RR.duracao(r), checagem: !!r?.checagem, planos: r ? r.planos.map(p => p.cam) : [] };
       it.durHoje = RR.duracao(hoje);
