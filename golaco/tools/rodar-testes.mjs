@@ -5,7 +5,10 @@
 //   node tools/rodar-testes.mjs --etapa3     (padrão + o grupo 'etapa3')
 //   node tools/rodar-testes.mjs --so etapa3  (só o grupo 'etapa3')
 //   node tools/rodar-testes.mjs --par 2      (no máximo 2 testes ao mesmo tempo; padrão: um por núcleo)
-// Cada linha: [nome, arquivo, argumentos (opcional), grupo (opcional; padrão = 'padrao')].
+// Cada linha: [nome, arquivo, argumentos (opcional), grupo (opcional; padrão = 'padrao'), processos (opcional)].
+// processos: o teste roda suas partidas em vários processos (--par k); ele ocupa k vagas (k = o pedido, até --par) e
+// sai PRIMEIRO, sozinho com suas k vagas — assim leva ~1/k do tempo em vez de disputar a CPU com os outros (o
+// teste-nao-passa levava 687 s no CI num processo só). A ordem do resultado continua a da lista.
 // Grupo 'etapa3' (Etapa 3): marcadores que saem com "AGUARDANDO PARTE N" e testes novos que ainda
 // não passaram 5 vezes seguidas com sementes diferentes (plano 5). Não entram no padrão, para o CI
 // da main continuar verde. Quando o teste de uma parte estiver pronto, ela tira o 'etapa3' da linha
@@ -49,7 +52,7 @@ const LISTA = [
   // Etapa 3 (partida 11×11, tática, IA e Editar time)
   ['custo da partida 11×11 (razão partida ÷ treino ≤ 2,5×)', 'teste-custo.mjs'],
   ['partida 11×11: relógio, intervalo, fim e recomeços (Parte 1)', 'teste-partida.mjs'],
-  ['ninguém passa da bola quase dominada (42 partidas: IA × IA e o humano roteirizado no celular)', 'teste-nao-passa.mjs'],
+  ['ninguém passa da bola quase dominada (42 partidas: IA × IA e o humano roteirizado no celular)', 'teste-nao-passa.mjs', [], 'padrao', 4],
   ['Editar time: elenco, formações, encaixe, edição e substituição (Parte 1)', 'teste-editor.mjs'],
   ['forma do time sem e com a bola (Parte 2)', 'teste-forma.mjs', [], 'etapa3'],
   ['táticas do Editar time movem a forma (Parte 2)', 'teste-taticas.mjs'],
@@ -110,7 +113,7 @@ const iPar = process.argv.indexOf('--par');
 const parPedido = iPar >= 0 ? Math.max(1, Math.floor(+process.argv[iPar + 1] || 1)) : null;
 const nPar = parPedido ?? Math.max(2, Math.min(TESTES.length, os.cpus().length || 2));
 const res = new Array(TESTES.length);
-let prox = 0, impresso = 0;
+let impresso = 0;
 function imprimir() {
   while (impresso < TESTES.length && res[impresso]) {
     const r = res[impresso], [nome] = TESTES[impresso];
@@ -119,14 +122,26 @@ function imprimir() {
     impresso++;
   }
 }
-async function trabalhador() {
-  while (prox < TESTES.length) {
-    const i = prox++;
-    res[i] = await rodar(TESTES[i][1], TESTES[i][2]);
-    imprimir();
-  }
-}
-await Promise.all(Array.from({ length: nPar }, trabalhador));
+// vagas: cada teste ocupa 1 (ou k = os processos dele, até nPar); os de vários processos saem primeiro
+const vagas = TESTES.map(([, , , , k]) => (k ? Math.max(1, Math.min(nPar, k)) : 1));
+const ordem = TESTES.map((_, i) => i).sort((a, b) => vagas[b] - vagas[a] || a - b);
+await new Promise(fim => {
+  let k = 0, ocupadas = 0, feitos = 0;
+  const lancar = () => {
+    while (k < ordem.length) {
+      const i = ordem[k], v = vagas[i];
+      if (ocupadas > 0 && ocupadas + v > nPar) break;
+      k++; ocupadas += v;
+      const args = TESTES[i][4] ? [...(TESTES[i][2] ?? []), '--par', String(v)] : TESTES[i][2];
+      rodar(TESTES[i][1], args).then(r => {
+        res[i] = r; ocupadas -= v; feitos++;
+        imprimir();
+        if (feitos === TESTES.length) fim(); else lancar();
+      });
+    }
+  };
+  if (TESTES.length) lancar(); else fim();
+});
 const falhas = res.filter(r => !r.ok);
 console.log(`\n${res.length - falhas.length}/${res.length} testes passaram em ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 process.exit(falhas.length ? 1 : 0);

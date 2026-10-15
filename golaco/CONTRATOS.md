@@ -189,6 +189,13 @@ pede à passada que tire o pé do toque do chão a tempo, e o toque espera por e
     correr colado no pé); e o goleiro adversário só com a bola nessa velocidade (o de quem passou, nunca). Mesma forma do
     `soMarcou` da branch do cabeceio (PR #471), que lá deixa seguir quem corta o passe (`cortandoPasse`) e o controlado
     do humano — na junção, as condições se somam (OU).
+  - **virada da IA compatível com o embalo** (`ia-ataque.js viradaComEmbalo`, só o condutor da IA tática — o humano
+    vira como pede): até `IA_ATAQUE.condutor.virada.janela` s depois da posse nova e acima de `vMin` m/s, se o rumo
+    pedido está a mais de `anguloEmbalado(v)` (conducao.js) da corrida, a entrada vira só até esse limite (× `curva`) e
+    a inclinação pede a velocidade em que o resto do ângulo cabe (`velocidadeParaAngulo`, no mínimo `vFim`; sem
+    CORRER/MOD — `magParaVelocidade`). Enquanto vira, `decidir` não troca o rumo da condução (`ia.viradaOk === false`);
+    quando a virada cabe, o compromisso recomeça (`ia.opDesde`). Vale também com uma ação carregando (o corpo segue o
+    pedido de condução).
 - **Previsões sem alocar (Etapa 3, plano 4.3):** `preverBola(b, n)` → `{xs, zs, ys, rol}` e `preverCorpo(m, j, n,
   ...)` → `{n, xs, zs, rs, ss, fs}` devolvem vetores **SÓ DE LEITURA e reaproveitados** (dois jogos que se revezam:
   a resposta vale até a SEGUNDA previsão nova seguinte; os vetores podem ter mais de n + 1 posições — use só 0..n).

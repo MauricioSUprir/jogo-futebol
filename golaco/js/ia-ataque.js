@@ -44,6 +44,7 @@ import { faseDoTime } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
 import { estadoIA, blocoDoTime, alvoCalmo } from './ia-tatica.js';
 import { restricaoParada } from './partida.js';
+import { anguloEmbalado, velocidadeParaAngulo, magParaVelocidade } from './conducao.js';
 
 const DT = PASSO;
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
@@ -666,7 +667,7 @@ export function condutorTatico(m, j) {
   const lado = A.lado;
   const nova = m.tick - ia.ultCond > 1; // acabou de pegar a bola
   ia.ultCond = m.tick;
-  if (nova) { ia.op = ''; ia.mira = null; ia.desde = m.tick; }
+  if (nova) { ia.op = ''; ia.mira = null; ia.desde = m.tick; ia.viradaOk = false; ia.virando = false; }
   let extra = 0;
   if (j.iaAcao) { if (m.tick < j.iaAcao.ate) extra = j.iaAcao.bot; else j.iaAcao = null; }
   // ação pedida: fixa a mira no alvo escolhido (pedido.dir → miraAuto em acoes.js executarAcao)
@@ -687,7 +688,42 @@ export function condutorTatico(m, j) {
   let mag = IA_ATAQUE.utilidade.magConduz, botoes = extra;
   if (ia.correr) botoes |= BOTAO.CORRER;
   if (ia.curta) { mag = 0.6; botoes |= BOTAO.MOD; }
-  return { x: ia.du * lado * mag, z: ia.dw * lado * mag, botoes };
+  return viradaComEmbalo(m, j, ia, ia.du * lado * mag, ia.dw * lado * mag, botoes);
+}
+
+/**
+ * Virada compatível com o embalo logo depois de ganhar a bola (pedido do dono, 15/10: "jogadores passam da bola quando
+ * estão com ela praticamente dominada"; PESQUISA.md §6). Quem domina embalado — vindo ao encontro do passe ou correndo
+ * atrás da bola — e quer ir para outro lado (o jogo, o gol) não pede a virada inteira no 1º toque de condução: com o
+ * corpo a s m/s ele vira no máximo anguloEmbalado(s) (a mesma conta do 1º toque orientado do humano embalado) e pede a
+ * velocidade em que o ângulo que falta cabe (velocidadeParaAngulo) — freia e curva, e a virada inteira sai quando a
+ * velocidade baixa (o "angle–velocity trade-off" de Dos'Santos 2018: 45° a ~4,7–5,8 m/s, 90° a ~3,8–4,4, 135–180° a
+ * ~3,4–4 m/s, com a freada nas passadas de antes; o corte rápido de 90° leva 3–5 passadas e sai arredondado). Antes ele
+ * pedia 90–130° a 5–7 m/s no tick seguinte ao domínio: o toque mandava a bola na linha nova e o corpo embalado passava
+ * 1–2 m dela. Vale até `IA_ATAQUE.condutor.virada.janela` s depois da posse nova ou até a virada caber no
+ * embalo, e também para a ação carregando (o corpo segue o pedido de condução). Só a IA: o humano vira como pedir.
+ */
+function viradaComEmbalo(m, j, ia, x, z, botoes) {
+  const V = IA_ATAQUE.condutor.virada;
+  if (!V || ia.viradaOk) return { x, z, botoes };
+  if (m.tick - ia.desde > seg(V.janela)) { ia.viradaOk = true; return { x, z, botoes }; }
+  const s = MD.hypot(j.vx, j.vz), mq = MD.hypot(x, z);
+  if (s <= V.vMin) { ia.viradaOk = true; return { x, z, botoes }; }
+  if (mq < 0.3) return { x, z, botoes }; // parado de propósito (proteção): não é virada
+  const aV = MD.atan2(j.vz, j.vx), d = difAng(aV, MD.atan2(z, x)), th = Math.abs(d);
+  const lim = anguloEmbalado(s);
+  if (th <= lim) {
+    // a virada coube: o compromisso com o rumo recomeça agora (trocar o rumo logo no fim da curva deixava a bola, tocada
+    // na direção da curva, fora do alcance do pé)
+    if (ia.virando) { ia.virando = false; ia.opDesde = m.tick; }
+    ia.viradaOk = true;
+    return { x, z, botoes };
+  }
+  // vira o que o embalo deixa (V.curva × lim) e freia para a velocidade em que o resto cabe
+  ia.virando = true;
+  const a = aV + (d < 0 ? -1 : 1) * lim * V.curva;
+  const mg = Math.min(mq, magParaVelocidade(j.par, Math.max(V.vFim, velocidadeParaAngulo(th))));
+  return { x: MD.cos(a) * mg, z: MD.sin(a) * mg, botoes: botoes & ~(BOTAO.CORRER | BOTAO.MOD) };
 }
 
 /**
@@ -874,6 +910,9 @@ function decidir(m, j, A, ia, cobranca) {
   if (!melhor) return;
   // compromisso: a direção de condução só muda depois de compromisso s (uma ação vale na hora)
   if (melhor === 'conduz' && atual === 'conduz' && m.tick - ia.opDesde < seg(cfg.compromisso)) return;
+  // (e, virando com o embalo logo depois de ganhar a bola, até a virada caber: viradaComEmbalo — trocar o rumo no meio
+  // da curva deixava a bola tocada na direção do meio da curva e o corpo indo para o rumo novo)
+  if (melhor === 'conduz' && atual === 'conduz' && ia.viradaOk === false) return;
   if (atual === 'protege' && melhor !== 'protege' && melhor === 'conduz' && m.tick - ia.opDesde < seg(cfg.compromisso)) return;
   if (melhor !== atual || mAlvo !== ia.alvo) ia.opDesde = m.tick;
   ia.op = melhor; ia.alvo = mAlvo;

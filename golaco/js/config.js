@@ -1039,7 +1039,11 @@ export const IA_ATAQUE = {
   // Condutor: reavalia a cada avaliaTicks (10 Hz), histerese 1,25× e compromisso 0,5 s; chute até
   // chuteMax m (chuteMaxOfensivo com mentalidade ≥ +1); lançamento ≥ lancamentoMin m; transição
   // ofensiva: +transOfBonus nas opções à frente.
-  condutor: { avaliaTicks: 6, histerese: 1.25, compromisso: 0.5, chuteMax: 28, chuteMaxOfensivo: 30, lancamentoMin: 30, transOfBonus: 0.2 },
+  condutor: { avaliaTicks: 6, histerese: 1.25, compromisso: 0.5, chuteMax: 28, chuteMaxOfensivo: 30, lancamentoMin: 30, transOfBonus: 0.2,
+    // virada compatível com o embalo logo depois de ganhar a bola (ia-ataque.js viradaComEmbalo; pedido do dono, 15/10):
+    // até `janela` s depois da posse nova, acima de `vMin` m/s, o pedido vira no máximo `curva` × anguloEmbalado(v) da
+    // corrida e a velocidade pedida é a em que o resto do ângulo cabe (velocidadeParaAngulo), no mínimo `vFim` m/s
+    virada: { janela: 1.0, vMin: 3.0, curva: 1.0, vFim: 2.0 } },
   // Contra-ataque (ia-ataque.js contraAtaque; correções da contraprova, PR "IA intensa"): retomada em jogo corrido
   // com a bola a mais de `campo` m do meio para o lado de cá (u, referencial de quem retoma) e no máximo `atras`
   // jogadores de linha deles entre a bola e o gol deles → por `s` s o time joga o contra-ataque: transição

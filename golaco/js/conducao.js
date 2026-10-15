@@ -637,7 +637,7 @@ export function executarToque(m, j, pe, tipo, freio = false) {
 }
 
 /** Inclinação do analógico (0–1, sem CORRER) que pede a velocidade v com a bola (velocidadeDesejada), por bisseção. */
-function magParaVelocidade(par, v) {
+export function magParaVelocidade(par, v) {
   if (velocidadeDesejada(par, 1, false, false, true) <= v) return 1;
   let a = 0, b = 1;
   for (let k = 0; k < 24; k++) { const c = 0.5 * (a + b); if (velocidadeDesejada(par, c, false, false, true) < v) a = c; else b = c; }
@@ -774,6 +774,11 @@ const DO = CONDUCAO.dominioOrientado;
  */
 export function anguloEmbalado(v) {
   return clamp(1.5707963267948966 - (v - DO.vLado) * DO.queda, DO.angMin, 3.141592653589793);
+}
+/** A conta inversa: a velocidade (m/s) em que anguloEmbalado chega a th rad (Infinity até DO.angMin; ≥ 0). */
+export function velocidadeParaAngulo(th) {
+  if (th <= DO.angMin) return Infinity;
+  return Math.max(0, DO.vLado + (1.5707963267948966 - th) / DO.queda);
 }
 // Segurando o rumo à espera do toque do corte, o corpo já começa a ir para o lado pedido (a
 // velocidade até CORTE_DESVIO do rumo em que estava; o tronco até CORTE_TRONCO): responde ao

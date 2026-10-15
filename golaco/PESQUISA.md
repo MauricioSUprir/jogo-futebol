@@ -404,3 +404,29 @@ corrida para o ataque (0,50 / 2). Também medido: na IA embalada o condutor, 2 t
 corrida em 59% dos domínios (vem ao encontro e vira para o jogo) e a < 45° em 23%; o 1º toque que acompanha a corrida
 (`CONDUCAO.dominioIA`) ficou 2× mais forte (mediana 1,8 → 3,7 m/s; bola a > 1,5 m do pé logo depois 1,1% → 2,9%), mas
 perder a bola em 1 s (1,8% → 2,0%) e a bola > 1 m atrás dele (1,8% → 2,2%) ficam dentro do sorteio (907 domínios).
+
+**Viradas da IA logo depois do domínio (15/10, final).** Os casos que sobraram foram separados por quem vira: nas 42
+partidas, 14 da IA (os 11 do time 1 e 3 da IA jogando pelo controlado na cena IA × IA) e 4 do humano roteirizado. Das
+viradas de 87–123° com a bola a mais de 1 m atrás, 8 eram da IA (6,3–7,3 m/s, e o único "perdeu") e 3 do humano. Na IA
+a causa é a DECISÃO: o condutor (`ia-ataque.js decidir`) escolhe o rumo da condução em volta do gol adversário sem olhar
+o corpo; quem vem ao encontro do passe ou corre atrás da bola fica com ela a 5–7 m/s indo para o lado de lá e pede
+90–155° no tick seguinte. Pesquisa:
+
+| Fonte | Dado | O que aproveitamos |
+|---|---|---|
+| Dos'Santos, Thomas, Comfort e Jones 2018, "The Effect of Angle and Velocity on Change of Direction Biomechanics: An Angle-Velocity Trade-Off" (Sports Med; revisão, PMC6132493) | Quanto mais fechada a mudança de direção, menor a velocidade de chegada: 45° a ~4,7–5,8 m/s, 90° a ~3,8–4,4, 135° a ~3,5–4,8 e 180° a ~3,4–4,0 m/s (médias de chegada; no pé de apoio bem menos); acima de ~60° a freada começa na penúltima passada e se espalha por várias antes do pé de apoio | A IA só pede a virada que o embalo deixa: `anguloEmbalado(v)` (90° a 4,5 m/s, −0,3 rad por m/s, mínimo 43° — a mesma conta do 1º toque orientado do humano embalado, que já batia com a tabela) e pede a velocidade em que o resto cabe (`velocidadeParaAngulo`, a conta inversa) |
+| Schot et al. (citado na mesma revisão): no piloto, o corte de 90° rápido levava 3–5 passadas e saía arredondado | A mudança rápida de direção é uma curva com freada, não um degrau | O pedido gira junto com o corpo (curva no limite do embalo a cada tick) e o rumo da condução fica fixo até a virada caber; depois o compromisso de 0,5 s recomeça (trocar o rumo no fim da curva deixava a bola, tocada no meio da curva, fora do alcance do pé) |
+| McGuckian et al. 2018 ("Don't turn blind", scanning e orientação do corpo antes de receber) e o resumo da FIFA Training Centre sobre Aksum (scanning × orientação para a frente) | Quem olha antes de receber já se orienta para onde vai jogar; a orientação do corpo antes da bola é o que decide o 1º toque | A virada passa a acontecer ANTES do 1º toque de condução e no ritmo do corpo (a IA não "decide" um rumo que o corpo não acompanha); o domínio da IA embalada (`CONDUCAO.dominioIA`) continua no sentido da corrida |
+
+Medido nas mesmas 42 partidas (`teste-nao-passa`, 4 processos): "passou da bola" 0,43 → **0,29** por partida (18 → 12),
+passe lento colado 0 → 0, **passou e o adversário ficou com ela 1 → 0**. Da IA: 14 → 5 casos, viradas a mais de 60° 8 → 0,
+bola atrás no máximo 1,95 → 0,46 m. Do humano roteirizado (a lógica dele não mudou; os lances mudam com a IA): 4 → 7
+casos, 0 perdidos, e uma virada embalada (130° a 5,6 m/s, a bola 1,06 m atrás) — **pendência do dono**: o humano vira
+como pede (o `teste-cortes` exige o corte de 90° correndo em ≤ 0,4 s); amortecer o corte embalado do humano é a troca
+resposta × realismo que é dele decidir. Tentativas medidas e descartadas: a virada com a condução curta (MOD) durante a
+curva (0,60 / perdeu 3: a freada até 2,6 m/s em cada passo deixava o corpo passar), a curva sem segurar o rumo da
+decisão (0,26 / perdeu 1: a decisão trocava o rumo no meio da curva) e segurando o rumo só até a virada caber, sem
+recomeçar o compromisso (0,36 / perdeu 1: o rumo trocava logo no fim da curva, com a bola de lado). `teste-conducao-curta` C (IA × IA): com 6 partidas
+a mediana bola–corpo na corrida ficou 0,5712 m (meta ≤ 0,57; ramo 0,5648, main 0,5577) — nos ticks da virada ela é a
+mesma do resto (0,579 × 0,571 m; no trote 0,569 × 0,589): é o sorteio dos lances. Com 12 partidas (a amostra que o
+cabeçalho já pedia antes do merge) 0,5630 × ramo 0,5644 × main 0,5609 — o CI passa a rodar as 12 (amostra só cresce).
