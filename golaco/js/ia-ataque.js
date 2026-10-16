@@ -694,16 +694,9 @@ export function condutorTatico(m, j) {
 }
 
 /**
- * Virada compatível com o embalo logo depois de ganhar a bola (pedido do dono, 15/10: "jogadores passam da bola quando
- * estão com ela praticamente dominada"; PESQUISA.md §6). Quem domina embalado — vindo ao encontro do passe ou correndo
- * atrás da bola — e quer ir para outro lado (o jogo, o gol) não pede a virada inteira no 1º toque de condução: com o
- * corpo a s m/s ele vira no máximo anguloEmbalado(s) (a mesma conta do 1º toque orientado do humano embalado) e pede a
- * velocidade em que o ângulo que falta cabe (velocidadeParaAngulo) — freia e curva, e a virada inteira sai quando a
- * velocidade baixa (o "angle–velocity trade-off" de Dos'Santos 2018: 45° a ~4,7–5,8 m/s, 90° a ~3,8–4,4, 135–180° a
- * ~3,4–4 m/s, com a freada nas passadas de antes; o corte rápido de 90° leva 3–5 passadas e sai arredondado). Antes ele
- * pedia 90–130° a 5–7 m/s no tick seguinte ao domínio: o toque mandava a bola na linha nova e o corpo embalado passava
- * 1–2 m dela. Vale até `IA_ATAQUE.condutor.virada.janela` s depois da posse nova ou até a virada caber no
- * embalo, e também para a ação carregando (o corpo segue o pedido de condução). Só a IA: o humano vira como pedir.
+ * Virada compatível com o embalo logo depois de ganhar a bola (só a IA; pedido do dono, 15/10): a s m/s vira no máximo
+ * anguloEmbalado(s) e pede a velocidade em que o resto cabe (velocidadeParaAngulo; Dos'Santos 2018, "angle–velocity
+ * trade-off"), até IA_ATAQUE.condutor.virada.janela s depois da posse nova (CONTRATOS.md, "Ninguém passa da bola").
  */
 function viradaComEmbalo(m, j, ia, x, z, botoes) {
   const V = IA_ATAQUE.condutor.virada;
@@ -715,8 +708,7 @@ function viradaComEmbalo(m, j, ia, x, z, botoes) {
   const aV = MD.atan2(j.vz, j.vx), d = difAng(aV, MD.atan2(z, x)), th = Math.abs(d);
   const lim = anguloEmbalado(s);
   if (th <= lim) {
-    // a virada coube: o compromisso com o rumo recomeça agora (trocar o rumo logo no fim da curva deixava a bola, tocada
-    // na direção da curva, fora do alcance do pé)
+    // a virada coube: o compromisso com o rumo recomeça agora
     if (ia.virando) { ia.virando = false; ia.opDesde = m.tick; }
     ia.viradaOk = true;
     return { x, z, botoes };
@@ -914,8 +906,7 @@ function decidir(m, j, A, ia, cobranca) {
   if (!melhor) return;
   // compromisso: a direção de condução só muda depois de compromisso s (uma ação vale na hora)
   if (melhor === 'conduz' && atual === 'conduz' && m.tick - ia.opDesde < seg(cfg.compromisso)) return;
-  // (e, virando com o embalo logo depois de ganhar a bola, até a virada caber: viradaComEmbalo — trocar o rumo no meio
-  // da curva deixava a bola tocada na direção do meio da curva e o corpo indo para o rumo novo)
+  // (nem virando com o embalo logo depois de ganhar a bola: viradaComEmbalo)
   if (melhor === 'conduz' && atual === 'conduz' && ia.viradaOk === false) return;
   if (atual === 'protege' && melhor !== 'protege' && melhor === 'conduz' && m.tick - ia.opDesde < seg(cfg.compromisso)) return;
   if (melhor !== atual || mAlvo !== ia.alvo) ia.opDesde = m.tick;
