@@ -4,6 +4,8 @@
 //   3D → window.parent.postMessage({ tipo: 'tm3d:pronto' | 'tm3d:fim' | 'tm3d:sair', id, resultado }, location.origin)
 //        (o resultado também fica em localStorage["tm3d:resultado:<id>"], se a mensagem se perder)
 // Lado do TM: legacy-total-match/js/tm3d.js. Sem ?tm na página, nada daqui é usado (PEDIDO_TM = null).
+// Pênaltis 3D: o pedido com modo: 'penaltis' abre só a disputa de pênaltis (main.js + disputa.js) e o resultado é
+// { penaltis: { vencedor, placar, cobrancas } } (disputa.js resultadoPenaltisTM).
 // Página (lê a URL e o localStorage): a lógica pura da conversão fica em tm-times.js e sumula.js.
 
 function lerId() {

@@ -149,18 +149,38 @@ function timesDoTM() {
   } catch (_) { return null; }
 }
 const TM = timesDoTM();
+// Total Match, modo Pênaltis 3D (o pedido com modo: 'penaltis'): a disputa com os times do pedido, sem a trava
+const PENALTIS_TM = !!TM && PEDIDO_TM?.modo === 'penaltis';
 // o time do humano: 0 (o mandante) sem ?tm; com ?tm, o lado do usuário no TM (o time 0 é sempre o mandante do TM)
 const TIME_HUMANO = TM ? TM.humano : 0;
-const TRAVA_TM = TM ? TM.trava : null;
+const TRAVA_TM = TM && !PENALTIS_TM ? TM.trava : null;
 
 const params = new URLSearchParams(location.search);
 const PRINTS = params.get('prints') === '1';
 // modo da página: a partida (padrão) ou um dos treinos; o menu "Modo de jogo" troca sem recarregar (com ?tm, sempre a partida)
-const MODOS = ['partida', 'ataque', 'conducao'];
-let modoPagina = TM ? 'partida' : MODOS.includes(params.get('modo')) ? params.get('modo') : 'partida';
+// (o modo Pênaltis 3D — a disputa de pênaltis, pedido do dono de 15/10 — também: ?modo=penaltis ou o pedido do TM)
+const MODOS = ['partida', 'ataque', 'conducao', 'penaltis'];
+let modoPagina = TM ? (PENALTIS_TM ? 'penaltis' : 'partida') : MODOS.includes(params.get('modo')) ? params.get('modo') : 'partida';
+// modo Pênaltis: a lógica (disputa.js) e as bolinhas (disputa-tela.js) por import dinâmico — fora do download sem ele
+let MOD_DISP = null, TELA_DISP = null;
+async function carregarDisputa() {
+  if (!MOD_DISP) [MOD_DISP, TELA_DISP] = await Promise.all([import('./disputa.js'), import('./disputa-tela.js')]);
+  return MOD_DISP;
+}
+if (modoPagina === 'penaltis') await carregarDisputa();
 const MIN_PARAM = +params.get('min') > 0 ? +params.get('min') : undefined;
 const DEMO_ON = params.get('demo') === '1';
 const SEMENTE = Math.max(1, Math.floor(+params.get('semente') || (ID_TM ? sementeTM(ID_TM) : 1)));
+// disputa de pênaltis: "Jogar de novo" passa à semente seguinte (outra moeda, outras cobranças). Sem ?semente nem ?tm, cada
+// disputa nova (a 1ª, Reiniciar, Jogar de novo, a volta pelo Modo de jogo) tem a semente SORTEADA aqui na página — antes
+// toda disputa começava igual (a mesma moeda, o mesmo lado do goleiro da IA; revisão de 16/10). A semente fica no mundo
+// (m.semente): o hash continua valendo, e os testes passam ?semente.
+let rodadaDisputa = 0;
+const SEMENTE_FIXA = !!params.get('semente') || !!ID_TM;
+function sementeDisputa() {
+  if (SEMENTE_FIXA) return SEMENTE + rodadaDisputa;
+  try { const u = new Uint32Array(1); crypto.getRandomValues(u); return (u[0] % 999999) + 1; } catch (_) { return Math.floor(Math.random() * 999999) + 1; }
+}
 const CHAVE_PREFS = 'golaco.prefs.v1';
 
 if (params.get('entalhe') === '1') document.documentElement.classList.add('entalhe-simulado');
@@ -221,6 +241,12 @@ function criarMundoTreino(opc = {}) {
   if (o.modo === undefined) o.modo = modoPagina;
   // (com ?tm: os times do pedido, o humano no lado do usuário e a trava — em toda recriação do mundo; sem ?tm, humano 0 e
   // sem trava: a partida de sempre)
+  if (o.modo === 'penaltis') {
+    return MOD_DISP.criarDisputa({
+      semente: opc.semente ?? sementeDisputa(), times: o.times ?? TM?.times, elencos: o.elencos ?? (TM ? ELENCOS_TM : undefined),
+      humano: o.humano ?? TIME_HUMANO, comeca: o.comeca, gol: o.gol,
+    });
+  }
   if (o.modo === 'partida') {
     return criarPartida({
       semente: o.semente, minutosPorTempo: o.minutosPorTempo ?? MIN_PARAM, saida: o.saida, times: o.times ?? TM?.times,
@@ -230,8 +256,18 @@ function criarMundoTreino(opc = {}) {
   return S.criarTreino(o);
 }
 /** Um passo: partida (passoPartida) ou treino (passoTreino) — as mesmas funções dos testes em Node. */
-function passoDoMundo(m, e, acoes) { return m.modo === 'partida' ? passoPartida(m, e, acoes) : S.passoTreino(m, e, acoes); }
-function entradaDemoDoMundo(m) { return m.modo === 'partida' ? entradaDemoPartida(m) : (S.entradaDemo ? S.entradaDemo(m) : null); }
+function passoDoMundo(m, e, acoes) {
+  if (m.disputa) return MOD_DISP.passoDisputa(m, e);
+  return m.modo === 'partida' ? passoPartida(m, e, acoes) : S.passoTreino(m, e, acoes);
+}
+function entradaDemoDoMundo(m) {
+  if (m.disputa) return MOD_DISP.entradaDemoDisputa(m);
+  return m.modo === 'partida' ? entradaDemoPartida(m) : (S.entradaDemo ? S.entradaDemo(m) : null);
+}
+/** Partida ou disputa de pênaltis (os dois têm m.partida e os times): o que vale para "o jogo" e não para os treinos. */
+const ehJogo = m => m.modo === 'partida' || m.modo === 'penaltis';
+/** Rumo da câmera no chão para o analógico: na disputa, o da câmera atrás do cobrador (esquerda/direita da tela). */
+function yawEntrada() { return mundo.disputa && MOD_DISP ? MOD_DISP.yawDisputa(mundo) : cam.yaw; }
 function novoMundo(opc) {
   const ini = DEMO_ON && S.DEMO && modoPagina === 'conducao' ? S.DEMO.inicio : { x: 0, z: 0, rumo: 0 };
   return criarMundoTreino({ ...ini, marcador: params.get('marcador') === '1', ...opc });
@@ -415,6 +451,8 @@ function rodarPasso(entrada, acoes) {
   for (const j of mundo.jogadores) {
     const e = estadoDe(j);
     pose(j, mundo, e.atu);
+    // disputa de pênaltis: os gestos da reação e do fim por cima da pose (só desenho)
+    if (mundo.disputa) MOD_DISP.poseDisputa(mundo, j, e.atu);
     e.x1 = j.x; e.z1 = j.z; e.r1 = j.rumo; e.visto = contPassos;
     if (Math.hypot(e.x1 - e.x0, e.z1 - e.z0) > 2) {
       e.ant.set(e.atu); e.x0 = e.x1; e.z0 = e.z1; e.r0 = e.r1;
@@ -550,8 +588,42 @@ const textoPlacar = () => {
   const t = hud.times;
   return `${t[0].sigla} ${mundo.placar?.[0] ?? 0} × ${mundo.placar?.[1] ?? 0} ${t[1].sigla}`;
 };
+/**
+ * Eventos da disputa de pênaltis (true = tratado aqui; o resto segue o caminho da partida): o gol só com o "GOL!" e o placar
+ * pulsando (sem a câmera do gol, o replay automático nem a comemoração: a disputa tem a reação dela e a câmera dela), as
+ * dicas de comando na 1ª vez que o humano bate e defende, e a faixa do fim.
+ */
+const dicaDisputa = { bate: false, defende: false };
+function eventoDisputa(ev) {
+  const t = ev.tipo;
+  if (t === 'gol') { hud.evento(ev); return true; }
+  if (t === 'fimDeJogo' || t === 'saida' || t === 'intervalo' || t === 'disputaCobranca') return true;
+  if (t === 'disputaCobrador') {
+    // (sem toque, a tecla do CHUTE no texto: no PC não há botão CHUTE na tela; revisão de 16/10)
+    const toque = document.documentElement.classList.contains('com-toque');
+    if (ev.time === TIME_HUMANO && !dicaDisputa.bate) { dicaDisputa.bate = true; hud.evento('penaltisBate', toque ? {} : { texto: 'Sua vez: mire e segure K (no controle, B)' }); }
+    else if (ev.time !== TIME_HUMANO && !dicaDisputa.defende) { dicaDisputa.defende = true; hud.evento('penaltisDefende'); }
+    return true;
+  }
+  if (t === 'disputaFim') { fimDaDisputa(); return true; }
+  return false;
+}
+/** A faixa do fim da disputa ("X venceu nos pênaltis", o placar) com "Jogar de novo" ou, com ?tm, "Voltar ao Total Match". */
+function faixaFimDisputa() {
+  const D = mundo.disputa;
+  const venc = D && D.vencedor != null ? hud.times[D.vencedor]?.nome ?? '' : '';
+  hud.faixa({ titulo: `${venc} venceu nos pênaltis`, placar: textoPlacar(), botao: true,
+    botaoTexto: TM ? 'Voltar ao Total Match' : 'Jogar de novo', botaoCmd: TM ? 'voltar-tm' : 'reiniciar-partida' });
+}
+function fimDaDisputa() {
+  // Total Match: o resultado fica gravado já no apito (o TM lê de lá se a mensagem se perder)
+  if (TM) gravarResultadoTM(resultadoAtualTM());
+  hud.definirEstado({ fim: true });
+  faixaFimDisputa();
+}
 function tratarEvento(ev) {
   const t = ev.tipo;
+  if (mundo.disputa && eventoDisputa(ev)) return;
   // gol: "GOL!" (sem autor nem minuto escritos: nada de narração na tela), placar pulsando e o efeito da câmera
   if (t === 'gol') {
     hud.evento(ev);
@@ -676,6 +748,8 @@ function eventosIniciais() {
   for (const ev of evs) emocaoEvento(emocao, ev, _ctxEmocao);
   const ds = consumirDisparos(emocao);
   for (const d of ds) tocarSom(d);
+  // disputa de pênaltis: o 1º cobrador já vem na criação (a dica de comando da 1ª cobrança)
+  if (mundo.disputa) for (const ev of evs) eventoDisputa(ev);
 }
 
 // [texto, forte] — pares fixos (nada é alocado por quadro)
@@ -718,6 +792,8 @@ let ultimoQuadro = null;
 let corteCamera = true;
 let kmhVisto = 0;
 const lista = [];
+const planoDisputa = { nome: null, de: [0, 0, 0], para: [0, 0, 0], fov: 30 }; // o plano da câmera da disputa (reaproveitado)
+let telaDisp = null;      // as bolinhas da disputa (disputa-tela.js), criadas no 1º quadro da disputa
 // posição DESENHADA (interpolada no quadro) do jogador `id` — os marcadores do gramado andam com o corpo desenhado
 const _posDes = { x: 0, z: 0 };
 function posDesenhada(id) {
@@ -851,6 +927,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   alvoCam.ax = vooAtivo ? voo.alvo.x : NaN; alvoCam.az = vooAtivo ? voo.alvo.z : NaN;
   if (cenaSub) cameraSubst();
   else if (cenaGol) cameraComemoracao();
+  // disputa de pênaltis: os planos dela (atrás do cobrador, a reação, o círculo) pela câmera de cinema (corte na troca)
+  else if (mundo.disputa) cam.definirCinema(MOD_DISP.planoCameraDisputa(mundo, planoDisputa, posDesenhada));
   cam.atualizar(dt, alvoCam, corteCamera);
   corteCamera = false;
   const f = cam.foco();
@@ -916,7 +994,12 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     if (_pt.atras) hud.cartao(null); else { _cartao.x = _pt.x; _cartao.y = _pt.y; _cartao.cor = uc.cor; hud.cartao(_cartao); }
   } else hud.cartao(null);
   hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
-  hud.relogio(mundo.partida ? lerRelogio() : null);
+  hud.relogio(mundo.partida && !mundo.disputa ? lerRelogio() : null);
+  // disputa: as bolinhas e quem bate (escreve no DOM só quando muda)
+  if (mundo.disputa && TELA_DISP) {
+    telaDisp ??= TELA_DISP.criarTelaDisputa({ times: () => hud.times, nome: id => { const f = fichaDe(id); return f ? { num: f.num, nome: f.camisa ?? f.nome } : null; } });
+    telaDisp.atualizar(mundo, TIME_HUMANO);
+  }
   hud.minimapa(agoraMs, mundo, idC, idProx);
   // medidas do quadro (medirQuadro): o desenho (GPU por software aqui) fica de fora da CPU
   const fim = performance.now();
@@ -957,7 +1040,7 @@ function iniciarComemoracao(ev) {
   cenaGol = criarCenaComemoracao(plano, mundo);
   cenaEstado = 'rodando'; cenaRapida = false; cenaCortou = false;
   // o que já está segurado (o chute do gol) não pula: só um aperto novo, depois de COMEM.pularDepois
-  cenaBotoes = entrada ? entrada.ler(cam.yaw).botoes : 0;
+  cenaBotoes = entrada ? entrada.ler(yawEntrada()).botoes : 0;
   hud.comemoracao(true);
 }
 
@@ -1103,7 +1186,7 @@ function iniciarSubst(item) {
   cenaSub = criarCenaSubst(plano, mundo);
   entrada?.limparPulsos();
   // o que já está segurado não pula (só um aperto novo, depois de SUBST.pularDepois)
-  subBotoes = entrada ? entrada.ler(cam.yaw).botoes : 0;
+  subBotoes = entrada ? entrada.ler(yawEntrada()).botoes : 0;
   encerrarEfeitosGol();
   hud.substituicao(true);
   mostrarFaixaSub(item.pares, infoFaixaCena());
@@ -1264,7 +1347,7 @@ function desenharReplay(dt, agoraMs, renderizar = true) {
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
   hud.carga(null); hud.cartao(null);
   hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
-  hud.relogio(mundo.partida ? lerRelogio() : null);
+  hud.relogio(mundo.partida && !mundo.disputa ? lerRelogio() : null);
   { const ms = performance.now() - tq; custoReplay.v[custoReplay.n & 4095] = ms; custoReplay.n++; custoReplay.ms += ms; }
   if (renderizar) cena3d.desenhar(diretor.camera);
   render.bola.x = _bpR.x; render.bola.y = _bpR.y; render.bola.z = _bpR.z;
@@ -1296,7 +1379,7 @@ function iniciarReplay(ro) {
   if (!diretor.iniciar(ro)) return false;
   // o que já está segurado não pula (só um aperto novo); os apertos curtos já vistos não contam
   entrada?.limparPulsos();
-  replayBotoes = entrada ? entrada.ler(cam.yaw).botoes : 0;
+  replayBotoes = entrada ? entrada.ler(yawEntrada()).botoes : 0;
   encerrarEfeitosGol();
   hud.replay(true);
   return true;
@@ -1367,21 +1450,21 @@ function quadro(agoraMs, desenhar = true) {
   ultimoQuadro = agoraMs;
   // pré-jogo: o laço da partida fica parado (tick 0) e o diretor desenha; em pé no celular ou escondida, para
   if (prejogo && prejogo.ativo) {
-    entrada.ler(cam.yaw);
+    entrada.ler(yawEntrada());
     laco.ultimo = agoraMs;
     const emPe = retratoBloqueado();
     if (prejogo.quadro(emPe || document.hidden ? 0 : dtReal, agoraMs, desenhar && !emPe, emPe)) return;
   }
   // "Simular o resto" (Total Match): os passos rodam em pedaços fora daqui (simularResto), sem desenhar; o laço só espera
-  if (simulandoTM) { laco.ultimo = agoraMs; entrada.ler(cam.yaw, agoraMs); entrada.consumirAcoes(); return; }
+  if (simulandoTM) { laco.ultimo = agoraMs; entrada.ler(yawEntrada(), agoraMs); entrada.consumirAcoes(); return; }
   const dt = Math.min(0.1, dtReal);
   ultimoAgora = agoraMs;
-  const ent = entrada.ler(cam.yaw, agoraMs);
+  const ent = entrada.ler(yawEntrada(), agoraMs);
   for (const a of entrada.consumirAcoes()) tratarAcao(a);
   // a pausa (menu, Ajuda, editor, celular em pé) acabou de fechar: nada apertado nela vira jogada ao voltar — a tecla ou o
   // botão do controle ainda segurado só vale depois de solto e apertado de novo (antes Esc → K → Esc chutava ao voltar)
   const pz = pausado();
-  if (pausaAntes && !pz) { entrada.soltarTudo(true); entrada.ler(cam.yaw, agoraMs); }
+  if (pausaAntes && !pz) { entrada.soltarTudo(true); entrada.ler(yawEntrada(), agoraMs); }
   pausaAntes = pz;
   entrada.definirMenu?.(hud.menuAberto || hud.ajudaAberta);
   if (cenaSub) {
@@ -1425,7 +1508,7 @@ function quadro(agoraMs, desenhar = true) {
       entrada.passoUsou(e.botoes);
       rodarPasso(e, ac);
       // o aperto curto (tocou e soltou entre dois passos) já foi visto por um passo
-      if (i === 0) { entrada.limparPulsos(true); ent.botoes = entrada.ler(cam.yaw, agoraMs).botoes; }
+      if (i === 0) { entrada.limparPulsos(true); ent.botoes = entrada.ler(yawEntrada(), agoraMs).botoes; }
       // o replay (gol, impedimento) ou a cena de substituição começou neste passo: os passos que sobraram não rodam (a
       // simulação espera)
       if ((diretor && diretor.ativo) || cenaSub) break;
@@ -1520,7 +1603,7 @@ function tratarAcao(a) {
   if (pausado()) return;
   if (a === 'camera') { comando('camera', cam.modo === 'tv' ? 'aproximada' : 'tv'); return; }
   // R/M/N: só nos treinos (R não recomeça a partida sem confirmação: isso é "Reiniciar partida")
-  if (mundo.modo === 'partida' && (a === 'recomecar' || a === 'maquina' || a === 'marcador')) { hud.evento('soTreino'); return; }
+  if (ehJogo(mundo) && (a === 'recomecar' || a === 'maquina' || a === 'marcador')) { hud.evento('soTreino'); return; }
   if (a === 'marcador' && mundo.modo === 'ataque') { hud.evento('semMarcador'); return; }
   if (a === 'recomecar' || a === 'maquina' || a === 'marcador') {
     filaAcoes.push(a);
@@ -1549,6 +1632,8 @@ function aoFecharEditor() {
 /** Troca o modo da página (partida ou treino) sem recarregar; o endereço guarda a escolha. */
 function trocarModo(v) {
   if (!MODOS.includes(v)) return;
+  // os Pênaltis carregam a disputa na 1ª vez (import dinâmico) e trocam depois
+  if (v === 'penaltis' && !MOD_DISP) { carregarDisputa().then(() => trocarModo(v)).catch(() => {}); return; }
   modoPagina = v;
   try {
     const u = new URL(location.href);
@@ -1601,18 +1686,20 @@ function fimDoPrejogo() {
 // ------------------------------------------------------------------ Total Match (?tm)
 /** O resultado do contrato (§2) pela súmula da partida de agora (sumula.js). */
 function resultadoAtualTM() {
+  if (TM && mundo.disputa) return MOD_DISP.resultadoPenaltisTM(mundo, TM.mapa);
   return TM && sumulaTM ? resultadoTM(sumulaTM, mundo, TM.mapa) : null;
 }
 /** Quantos ms de simulação por quadro no "Simular o resto" (o resto do quadro fica para a página respirar). */
 const FATIA_SIMULACAO = 30;
 let textoSimulando = '';
 function mostrarSimulando() {
-  const t = `${minutoTM(mundo)}' · ${textoPlacar()}`;
+  const t = mundo.disputa ? textoPlacar() : `${minutoTM(mundo)}' · ${textoPlacar()}`;
   if (t === textoSimulando) return;
   textoSimulando = t;
-  hud.faixa({ titulo: 'Simulando o resto da partida…', placar: t });
+  hud.faixa({ titulo: mundo.disputa ? 'Simulando o resto da disputa…' : 'Simulando o resto da partida…', placar: t });
   hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
-  hud.relogio(lerRelogio());
+  // (a disputa não tem relógio: o placar dela fica sem ele também enquanto simula)
+  hud.relogio(mundo.disputa ? null : lerRelogio());
 }
 /**
  * "Simular o resto" (Total Match; contrato §5): fecha as cenas (pré-jogo, replay, comemoração, substituição, editor), a
@@ -1621,7 +1708,7 @@ function mostrarSimulando() {
  * resultado gravado. Devolve uma Promise com o resultado (os testes esperam por ela).
  */
 function simularResto() {
-  if (!TM || mundo.modo !== 'partida' || !mundo.partida) return Promise.resolve(null);
+  if (!TM || !ehJogo(mundo) || !mundo.partida) return Promise.resolve(null);
   if (simulandoTM) return simulandoTM.promessa;
   if (prejogo && prejogo.ativo) { prejogo.cancelar(); entrada?.bloquear?.(false); }
   if (diretor && diretor.ativo) fimReplay(false);
@@ -1641,6 +1728,8 @@ function simularResto() {
     if (!simulandoTM) return;
     const t0 = performance.now();
     while (mundo.partida.estado !== 'fim' && performance.now() - t0 < FATIA_SIMULACAO) {
+      // disputa de pênaltis: a IA bate e defende pelo humano até o fim (sem súmula: o resultado é o da disputa)
+      if (mundo.disputa) { MOD_DISP.passoDisputa(mundo, MOD_DISP.entradaDemoDisputa(mundo)); contPassos++; passosTotais++; continue; }
       // a edição na fila (Editar time) entra no 1º passo, como no laço da página
       const ac = edicaoNaFila ? [edicaoNaFila] : null;
       edicaoNaFila = null;
@@ -1661,7 +1750,8 @@ function simularResto() {
     hud.definirEstado({ fim: true });
     const r = resultadoAtualTM();
     gravarResultadoTM(r);
-    hud.faixa({ titulo: 'Fim de jogo', placar: textoPlacar(), botao: true, botaoTexto: 'Voltar ao Total Match', botaoCmd: 'voltar-tm' });
+    if (mundo.disputa) faixaFimDisputa();
+    else hud.faixa({ titulo: 'Fim de jogo', placar: textoPlacar(), botao: true, botaoTexto: 'Voltar ao Total Match', botaoCmd: 'voltar-tm' });
     ok(r);
   };
   requestAnimationFrame(fatia);
@@ -1681,13 +1771,13 @@ function comando(c, v) {
     case 'voltar-tm': hud.fecharMenu(); voltarAoTM(); break;
     case 'recomecar': case 'maquina': case 'marcador':
       hud.fecharMenu();
-      if (mundo.modo === 'partida') { hud.evento('soTreino'); break; }
+      if (ehJogo(mundo)) { hud.evento('soTreino'); break; }
       if (c === 'marcador' && mundo.modo === 'ataque') { hud.evento('semMarcador'); break; }
       filaAcoes.push(c); if (c === 'recomecar') hud.evento('recomecar'); break;
     case 'editar-time': abrirEditor(); break;
     // "Replay" da pausa: os últimos 10 s (até o último corte), com a simulação parada; volta ao jogo no fim
     case 'replay': {
-      if (mundo.modo !== 'partida' || !diretor) break;
+      if (!ehJogo(mundo) || !diretor) break;
       // nada para rever (menos de 0,5 s gravados desde o mundo novo): a pausa fica aberta
       const ro = diretor.menu();
       if (!ro) break;
@@ -1715,7 +1805,15 @@ function comando(c, v) {
       break;
     case 'reiniciar-partida':
       hud.fecharMenu();
-      if (mundo.modo !== 'partida') break;
+      if (!ehJogo(mundo)) break;
+      // disputa de pênaltis: outra moeda a cada "Jogar de novo" (com ?semente, a seguinte; no meio, a mesma disputa do
+      // começo); sem ?semente, outra semente sorteada (sementeDisputa)
+      if (mundo.disputa) {
+        if (mundo.disputa.estado === 'fim') rodadaDisputa++;
+        trocarMundo(novoMundo());
+        hud.evento('reinicioDisputa');
+        break;
+      }
       // "Jogar de novo" (fim de jogo): o pré-jogo da preferência; "Reiniciar partida" no meio: só a escalação
       trocarMundo(novoMundo(), { prejogo: mundo.partida?.estado === 'fim' ? 'preferencia' : 'escalacao' });
       if (!prejogo?.ativo) hud.evento('reinicio');
@@ -1942,7 +2040,10 @@ function trocarMundo(m, opc = {}) {
   encerrarComemoracao(); ultimaFinal = null;
   anel.limpar();
   if (diretor) diretor.limpar();
-  if (cam) { cam.encerrarGol(); cam.planoGeral(false); }
+  if (cam) { cam.encerrarGol(); cam.planoGeral(false); cam.definirCinema(null); }
+  // disputa de pênaltis: as bolinhas saem (outro modo) e as dicas voltam a aparecer na próxima disputa
+  if (telaDisp && !mundo.disputa) telaDisp.limpar();
+  dicaDisputa.bate = false; dicaDisputa.defende = false;
   hud.esconderGol();
   if (editor.aberto) editor.fechar();
   iniciarEstados();
@@ -2033,6 +2134,13 @@ const api = {
     simularResto() { return simularResto(); },
     resultadoGravado() { try { return JSON.parse(localStorage.getItem('tm3d:resultado:' + ID_TM) || 'null'); } catch (_) { return null; } },
   } : null,
+  /**
+   * Disputa de pênaltis (null fora dela): o resumo (disputa.js resumoDisputa), as bolinhas da tela (disputa-tela.js) e o
+   * plano da câmera agora.
+   */
+  get disputa() { return mundo.disputa && MOD_DISP ? MOD_DISP.resumoDisputa(mundo) : null; },
+  telaDisputa() { return telaDisp ? telaDisp.estado() : null; },
+  get planoCamera() { return cam ? cam.cinema : null; },
   /** Cópia de m.times[t] (partida) ou null. */
   estadoTime(t = TIME_HUMANO) { return mundo.times?.[t] ? structuredClone(mundo.times[t]) : null; },
   /** A tela "Editar time" (aberto, abrir, voltar = PRONTO, esc, aba, rascunho). */

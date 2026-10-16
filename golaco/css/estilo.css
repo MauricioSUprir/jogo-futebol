@@ -463,6 +463,9 @@ html:not(.com-toque) .chip-nomes { display: none; }
 .btn-replay { flex: none; justify-content: center; gap: 7px; }
 /* "Modo de jogo": as cenas da partida (pré-jogo e substituição) lado a lado, o nome em cima e o estado embaixo */
 .linha-cenas { display: flex; gap: 8px; }
+.linha-cenas[hidden] { display: none; }
+/* o estado embaixo do nome numa linha só (a linha da Partida e dos Pênaltis: o texto que quebrava fazia a pausa rolar 2 px) */
+.linha-cenas .btn small { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .linha-cenas .btn { flex: 1 1 0; min-width: 0; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; padding: 4px 12px; line-height: 1.2; }
 .btn-replay svg { width: 18px; height: 18px; flex: none; }
 /* no PC as três opções ficam uma embaixo da outra, como as outras */
@@ -513,6 +516,10 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 .ajuda-colunas dt { display: inline; font-size: 12px; font-weight: 700; color: var(--texto); }
 .ajuda-colunas dd { display: inline; margin: 0 0 0 6px; font-size: 12px; color: var(--texto-2); }
 .ajuda-colunas dd::after { content: ""; display: block; height: 7px; }
+/* disputa de pênaltis: o item "Pênaltis" só nela, e o pênalti da partida (câmera de TV: cima/baixo) sai da ajuda dela */
+.ajuda-colunas .so-disputa { display: none; }
+html.modo-penaltis .ajuda-colunas dt.so-disputa, html.modo-penaltis .ajuda-colunas dd.so-disputa { display: inline; }
+html.modo-penaltis .ajuda-colunas .so-partida-pen { display: none; }
 .nota { margin: 12px 0 0; font-size: 11px; color: var(--texto-2); line-height: 1.45; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 10px; }
 /* créditos dos sons (CC BY pede o nome dos autores onde o som toca) */
 .nota.creditos { margin: 0 20px 16px; }
