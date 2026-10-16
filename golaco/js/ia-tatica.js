@@ -40,7 +40,7 @@ import { goleiroNoPe } from './regras-goleiro.js';
 import { apoioTatico, condutorTatico, primeiraIA } from './ia-ataque.js';
 import { faseDoTime, posicaoTatica } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
-import { restricaoParada } from './partida.js';
+import { restricaoParada, ganchosLivre } from './partida.js';
 import { alvoBolaParada } from './bolas-paradas.js';
 import { entradaPressao, pressaoPedida, pressionadorDe, entradaVelocidade, passeAdversario, chamadoDaPressao } from './defesa.js';
 
@@ -619,6 +619,8 @@ function referencias(m, t, B, f, adv) {
     }
     B.ref[2 * k] = _r.x; B.ref[2 * k + 1] = _r.z;
   }
+  // Modo Livre (livre.js): com poucos de linha, as referências das vagas ocupadas se juntam perto da bola
+  if (m.livre) ganchosLivre.comprimir(m, t, B.ref, B.bolaRef);
   // zona: cada adversário perto de uma referência (≤ zona.raio m) e no nível dela ou atrás (do lado
   // do meu gol: o que ataca as costas da zona; o da frente é do bloco que sobe com a bola) é
   // reivindicado por no máximo um jogador do meio (e da frente, na pressão Alta), o par mais perto

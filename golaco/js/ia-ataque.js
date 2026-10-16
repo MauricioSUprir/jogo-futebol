@@ -35,7 +35,7 @@
 //    virtuais (acaoIA) e fixa a mira no pedido (pedido.dir → miraAuto, o mesmo caminho da reposição do
 //    goleiro). Transição ofensiva: +20% nas opções à frente; corridas sem exigir o condutor de frente.
 
-import { IA_ATAQUE, TATICA, CAMPO, PASSO, BOTAO, IA, PARTIDA, ACOES } from './config.js';
+import { IA_ATAQUE, TATICA, CAMPO, PASSO, BOTAO, IA, PARTIDA, ACOES, LIVRE } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { para, acaoIA } from './ia.js';
@@ -256,6 +256,9 @@ function estadoAtaque(m, t) {
     const u = o.x * lado;
     if (u > u1) { u2 = u1; d2 = d1; u1 = u; d1 = o; } else if (u > u2) { u2 = u; d2 = o; }
   }
+  // (Modo Livre, livre.js: não há impedimento — a linha fica só como a referência da forma; com menos de 2 adversários,
+  // sem o penúltimo, ela fica a LIVRE.linhaSemDefesa m da linha de fundo: antes o time não passava da bola)
+  if (m.livre && u2 === -Infinity) u2 = MX - LIVRE.linhaSemDefesa;
   A.linha = Math.max(u2, m.bola.p.x * lado, 0);
   A.defLinha = A.linha === u2 ? d2 : null; // o defensor que faz a linha (se é ele, e não a bola/o meio)
   // corrida que já passou da linha e não recebe em corridas.alemMax s: acaba e ele volta (impedido, pressa) —
@@ -801,7 +804,8 @@ function decidir(m, j, A, ia, cobranca) {
     if (o.time !== j.time || o === j || o.posicao === 'GOL' || o.papel === 'parado' || indo(m, o)) continue;
     const ou = o.x * lado, ow = o.z * lado;
     const L = MD.hypot(o.x - j.x, o.z - j.z);
-    const imp = !cobranca && ou > A.linha + 0.3; // impedido agora (Regra 11, impedimento.js: tocar a bola vira tiro livre)
+    // impedido agora (Regra 11, impedimento.js: tocar a bola vira tiro livre); no Modo Livre não há impedimento
+    const imp = !cobranca && !m.livre && ou > A.linha + 0.3;
     const press = clamp((U.pressaoRecebe - advMaisPerto(m, j.time, o.x, o.z)) / (U.pressaoRecebe - 1), 0, 1);
     if (L >= ACOES.passe.dMin && L <= U.passeMax) {
       // P: ninguém corta a linha × precisão (passe longo erra mais) × o recebedor não perde na hora

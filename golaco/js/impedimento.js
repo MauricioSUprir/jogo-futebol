@@ -78,6 +78,8 @@ const _toques = [];
  * Devolve null sem infração.
  */
 export function regraImpedimento(m) {
+  // Modo Livre (livre.js): não há impedimento — nenhuma foto, nenhuma infração
+  if (m.livre) { m.partida.imped = null; return null; }
   const p = m.partida;
   _toques.length = 0;
   let direto = false;

@@ -67,6 +67,7 @@ export const TEMPOS_NODE = {
   'teste-identidade.mjs': 1,
   'teste-ponte-tm.mjs': 21,
   'teste-disputa.mjs': 16,
+  'teste-livre.mjs': 40,
   // ainda fora da main (ramo golaco/dominio-sem-passar): 687 s num processo só no CI
   'teste-nao-passa.mjs': 687,
 };

@@ -1,4 +1,5 @@
-// Faltas e cartões (IFAB Regra 12; Etapa 4). Puro (sorteios pelo m.rng); constantes em config.js FALTAS; só na partida.
+// Faltas e cartões (IFAB Regra 12; Etapa 4). Puro (sorteios pelo m.rng); constantes em config.js FALTAS; só na partida;
+// no Modo Livre (m.livre) não há falta nenhuma: o bote e a dividida seguem como lances limpos.
 // Ganchos: sim.js boteIA (bote da IA, falta tática/segurar), defesa.js resolverBote (DIVIDIDA), sim.js colisaoCorpos
 // (carga, guardarChoque). A falta vira m.faltaPendente e o evento 'falta'; partida.js decide vantagem, tiro livre ou
 // pênalti e o cartão (Regra 12.1: imprudente, temerária = amarelo, força excessiva = vermelho; 12.3: SPA amarelo, DOGSO
@@ -170,7 +171,7 @@ export const BOTE_SEM_GANHAR = Object.freeze({ semGanhar: true });
  * Devolve a falta montada, BOTE_EVITADO (ele tirou o corpo: sem bote) ou null (bote limpo: a IA leva a bola como antes).
  */
 export function faltaNoBote(m, d, c, lento = false) {
-  if (!m.partida) return null;
+  if (!m.partida || m.livre) return null; // (Modo Livre: sem faltas — livre.js)
   // falta é o corpo entrando no condutor (forcaContato × fatorForca); na área/chance clara ele TIRA O CORPO (BOTE_EVITADO)
   const cuidado = (naAreaDe(m, d.time, c.x, c.z) ? FALTAS.bote.naArea : 1) * (chanceClara(m, c, d) ? FALTAS.bote.naChanceClara : 1);
   const pb = Math.min(0.95, chanceFaltaBote(d, c)), ff = fatorForca(forcaContato(m, d, c));
@@ -193,7 +194,7 @@ export function faltaNoBote(m, d, c, lento = false) {
  * segura quem escapa (FALTAS.tatica.semSPA, sem cartão: 'segurar'; nunca na própria área). Chance por passo; só na partida.
  */
 export function faltaTatica(m, d, c) {
-  if (!m.partida || m.posse !== c.id) return null;
+  if (!m.partida || m.livre || m.posse !== c.id) return null;
   if (MD.hypot(d.x - c.x, d.z - c.z) > FALTAS.tatica.dist) return null;
   if (chegada(d, c) !== 'tras') return null;
   if (chanceClara(m, c, d)) return null;
@@ -217,7 +218,7 @@ function escapando(d, c) {
  * outro um adversário chegando por trás a ≥ FALTAS.carga.vMin, sorteia a falta. Só na partida.
  */
 export function faltaNaCarga(m, a, b, rv) {
-  if (!m.partida || m.posse == null || rv < FALTAS.carga.vMin) return null;
+  if (!m.partida || m.livre || m.posse == null || rv < FALTAS.carga.vMin) return null;
   let c = null, d = null;
   if (a.id === m.posse) { c = a; d = b; } else if (b.id === m.posse) { c = b; d = a; }
   if (!c || d.time === c.time || d.posicao === 'GOL') return null;

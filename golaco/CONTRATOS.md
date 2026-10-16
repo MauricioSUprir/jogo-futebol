@@ -2215,3 +2215,57 @@ de meta; a linha da trajetória com mira, força e curva no escanteio e na falta
   download inicial, câmera atrás do
   cobrador nos 4 tipos e no pênalti contra, cobrador e alvo no quadro, nada na lente, a linha ≥ 150 px e ≤ +1 chamada,
   some no chute, a volta para a TV sem salto, teclado e botões CURVA).
+
+## Modo Livre — o treino N contra M (16/10; contrato)
+Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores
+que eu escolher, contra a quantidade de jogadores que eu escolher, pode ser adaptável durante a partida" (a Arena de Treino do
+EA FC). `?modo=livre` (sem `?tm`: Golaço FC × Ventania FC), "Modo Livre <small>N contra M</small>" no "Modo de jogo" da pausa
+(linha própria; os dois treinos numa `.linha-cenas`: o submenu segue com 5 linhas) e, com `?tm`, o pedido com `modo: "livre"`.
+**Sem o Livre nada muda**: `hash-partida`/`hash-igual` IGUAIS contra a base; `livre.js` e `livre-pagina.js` só por import
+dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,99 MB).
+- **`livre.js`** (puro; constantes `config.js LIVRE`, o porquê de cada número no cabeçalho do arquivo). O mundo é o da
+  partida (`criarPartida`, sem a trava; o relógio com `LIVRE.relogioMin` minutos por tempo: nunca acaba) com `m.modo =
+  'livre'` e `m.livre = {linha: [a, b], goleiro: [g0, g1], fora: {id: jogador guardado}, ajustes, pressao: [da tática]}`,
+  FORA do `hashMundo`. A escolha por time: 0 a 10 de linha (o time do humano ≥ 1) e o goleiro à parte (11 sem goleiro não
+  existe: as formações têm 10 vagas de linha); o número da pausa é o TOTAL (linha + goleiro).
+  - Quem está fora fica na vaga como buraco (`m.times[t].expulsos`, o mesmo da expulsão) e guardado em `m.livre.fora`; os de
+    linha ocupam sempre as vagas de maior prioridade (`prioridadeVagas(formacao)` por `LIVRE.prioridade`: 4-3-3 → ZE, ATA, VOL,
+    PE, ZD, PD, MCE, LE, LD, MCD — o PE antes do 2º zagueiro, medido); todo jogador em campo tem vaga válida.
+  - `criarLivre({semente, elencos, times, humano, linha, goleiro, log})`, `ajustarJogadores(m, escolha)` (sem recomeçar: quem
+    fica não se mexe; quem sai = a vaga de menor prioridade, `LIVRE.saidaDist` m mais longe da bola valendo uma posição, nunca
+    o controlado — a bola dele fica solta onde estava, a mão do goleiro solta, o controle passa; quem entra = um jogador novo
+    da vaga, `teleportar`ado no ponto tático dela juntado como o da IA, a ≥ `LIVRE.afastar` m de todos; com a bola parada
+    montada, ela é montada de novo; evento `livreAjuste {linha, goleiro, saiu, entrou}`), `recomecarLivre(m, 'meio' | 'pe')`
+    (saída do time do humano | a bola no pé do controlado; o placar fica), `passoLivre(m, entrada, acoes)` (as ações-objeto
+    `{tipo: 'livreAjuste', linha, goleiro}` e `{tipo: 'livreRecomecar', onde}` ANTES do passo, gravadas em `m.log`, e o
+    `passoPartida`), `entradaDemoLivre`, `normalizarEscolha`, `escolhaDoMundo`, `resumoLivre`.
+  - Regras: as da partida com os ramos de `m.livre` — sem impedimento (`impedimento.js regraImpedimento`; na IA a linha só
+    como forma, sem recusar passe, e a `LIVRE.linhaSemDefesa` m da linha de fundo com menos de 2 adversários: `ia-ataque.js`),
+    sem faltas nem cartões (`faltas.js`, `defesa.js`), sem relógio nem intervalo. Gol vale; a saída é do time que sofreu se ele
+    tiver alguém de linha, senão do outro (`partida.js montarSaida` + `temLinha`); bola fora pela partida quando quem cobra tem
+    alguém de linha (o tiro de meta pelo goleiro dele vale), senão a cobrança passa ao outro (`cobrancaSemLinha`: escanteio ↔
+    tiro de meta, lateral e tiro livre no mesmo ponto). As regras do goleiro continuam. O único de linha do time que cobrou toca
+    de novo (`m.cobrou` limpo; senão a bola ficava parada para sempre no 1 contra 0).
+  - IA: as referências das vagas ocupadas juntas perto da bola com poucos de linha (`comprimirLivre`, `LIVRE.compressao`) e a
+    pressão Alta com até `LIVRE.pressaoAlta` de linha (jogo reduzido; acima, a tática do time).
+  - Ganchos (`partida.js ganchosLivre = {cobranca, comprimir}`): o `livre.js` os liga ao ser carregado; a partida e a IA só os
+    chamam com `m.livre` (`regrasPartida` na montagem da bola parada; `ia-tatica.js referencias`).
+- **`livre-pagina.js`** (DOM, import dinâmico com o `livre.js`): `criarPaginaLivre({hud, logica, mundo, timeHumano,
+  pedidoLivre, comando, acao, soltar})` — a escolha na visão do humano ([meu, adversário]; salva em `localStorage
+  golaco.livre.v1`, em try/catch; com `?tm`, o `livre` do pedido como valor inicial), a pausa MÍNIMA posta no DOM na 1ª vez
+  (os botões `data-so="livre"` "Jogadores <small>N contra M</small>" e "Recomeçar <small>bola no meio</small> | Bola no meu pé";
+  o submenu `#menu-livre`: Voltar, "Meu time − N + [Goleiro]", "Adversário − M + [Goleiro]", Jogar) e a fila da mudança (a
+  ação-objeto entra no 1º passo depois da pausa, como a edição do time). O acabamento da pausa e a Câmera do Livre ficam para
+  a próxima entrega (comentários "Câmera do Livre" no `main.js`).
+- **`main.js` / `hud.js` / `index.html`**: `MODOS` com 'livre'; `LIVRE_TM` (pedido `modo: "livre"`: sem trava; "Voltar ao Total
+  Match" sempre na pausa, sem "Simular o resto" nem "Modo de jogo", e manda `tm3d:fim` com `{livre: {placar: [casa, fora]}}`
+  — o TM não conta em nada); entrando no Livre a pausa abre no submenu Jogadores (nunca com `?prints=1`/`?demo=1`); o placar
+  de TV sem o relógio; R = a bola no pé; `data-so="livre"` e `em-livre`; Replay da pausa vale; Editar time escondido.
+  `window.__golaco.livre = {escolha(), ajustar({linha: [a, b], goleiro: [g0, g1]}) (índices dos TIMES; entra no próximo
+  passo), recomecar('meio' | 'pe'), naFila}`.
+- **Pedido do TM**: `livre: {linha: [casa, fora], goleiro: [casa, fora]}` (opcional; os índices dos times do pedido).
+- **Testes**: `teste-livre` (Node, padrão): A montagem N × M nas bordas e sorteadas, B mudar no meio do jogo (bola no pé de quem
+  sai, controlado, goleiro com a bola nas mãos, bola parada montada), C IA × IA de 2 min (3×3 e 5×5 com os goleiros, 10
+  sementes: posse troca com a bola rolando média ≥ 6, chutes ≥ 2, ≤ 10% do tempo dos de linha a > 40 m da bola; 1×0 sem
+  goleiros: chutes e distância), D recomeços com um time sem ninguém de linha, E determinismo e nada vaza para a partida, F o
+  goleiro sozinho no canhão do teste-goleiro = o da partida.

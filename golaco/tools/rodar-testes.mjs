@@ -114,6 +114,8 @@ const LISTA = [
   ['ponte com o Total Match: pedido → times, humano no visitante, trava "só o meu jogador", súmula e resultado', 'teste-ponte-tm.mjs'],
   // Modo Pênaltis 3D (dono, 15/10: "crie uma versão só de jogador de pênaltis"): a disputa pela Regra 10 da IFAB
   ['disputa de pênaltis (Regra 10): 5 alternadas, fim antecipado, alternadas, fila dos cobradores, lugares, goleiro na linha, fim da cobrança, IA × IA até o fim, humano bate e defende, cavadinha repetida, resultado do TM', 'teste-disputa.mjs'],
+  // Modo Livre 3D (dono, 16/10: "um modo livre, como no fifa ... a quantidade de jogadores que eu escolher"): N contra M
+  ['modo livre: montagem N × M nas bordas, mudar no meio do jogo, IA × IA 3×3/5×5/1×0 (posse, chutes, ninguém longe), recomeços sem cobrador nulo, determinismo, goleiro sozinho', 'teste-livre.mjs'],
 ];
 const argv = process.argv.slice(2);
 const iSo = argv.indexOf('--so');
