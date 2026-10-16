@@ -504,6 +504,8 @@ export function dadosEstadio(e, nomeReserva = '') {
     padrao: ESCOLHA(e.cadeiras_padrao, PADROES_CADEIRAS, 'liso'),
     aneis: Number.isFinite(an) ? Math.max(1, Math.min(3, an)) : 2,
     marca: String(e.marca || ''), confianca: ESCOLHA(e.confianca, ['alta', 'media', 'baixa'], 'baixa'),
+    // a forma própria do estádio (estadio-planta.js valida; sem ela, a forma de sempre)
+    forma: e.forma && typeof e.forma === 'object' && !Array.isArray(e.forma) ? e.forma : null,
   };
 }
 

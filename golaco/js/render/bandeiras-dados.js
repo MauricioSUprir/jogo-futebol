@@ -43,6 +43,9 @@ const TEXTOS = [
   ['FORÇA VENTANIA', '#2b3238', '#e9ecee', 'verde'],
 ];
 export const TEXTOS_FAIXAS = TEXTOS;
+// estádio com forma própria (estadio-planta.js, sob demanda: render/estadio-real.js ligarForma): os lugares DELE
+let forma = null;
+export function definirFormaBandeiras(p) { forma = p || null; }
 
 /**
  * Faixas, na ordem de prioridade (a Baixa desenha as 8 primeiras): {texto, fundo, letra, detalhe, setor (0 lado de
@@ -51,6 +54,10 @@ export const TEXTOS_FAIXAS = TEXTOS;
  * times do Total Match, na MESMA ordem dos lugares (9 e 11 no setor visitante). Sem eles, os de hoje.
  */
 export function faixas(textos = TEXTOS) {
+  if (forma) return forma.faixas(faixasPadrao(textos));
+  return faixasPadrao(textos);
+}
+function faixasPadrao(textos) {
   const A = ARQUIBANCADA;
   // 8 no lado de lá (o que a câmera de TV mostra), depois a organizada e o setor visitante
   const pos = [
@@ -69,6 +76,7 @@ export function faixas(textos = TEXTOS) {
  * Fileiras 0–5 da frente do lado de lá e 1–7 da organizada (fundo +x, z −18…18), espalhadas (nunca duas a < 4 m).
  */
 export function bandeiras() {
+  if (forma) return forma.bandeiras(BANDEIRAS.bandeiras.alta, BANDEIRAS.mao);
   const A = ARQUIBANCADA, B = BANDEIRAS;
   const r = geradorTorcida(20261012);
   const lista = [];
@@ -100,6 +108,7 @@ export function bandeiras() {
  * 10 m nas fileiras da frente, no meio) e a organizada (24 × 14 m, fundo +x).
  */
 export function bandeiroes() {
+  if (forma) return forma.bandeiroes(BANDEIRAS.bandeirao.altura);
   const A = ARQUIBANCADA, B = BANDEIRAS.bandeirao;
   const out = [];
   {
