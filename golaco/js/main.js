@@ -1699,7 +1699,8 @@ function tratarAcao(a) {
   }
   if (a === 'qps') { hud.mostrarQps(!hud.qpsVisivel); return; }
   if (pausado()) return;
-  if (a === 'camera') { comando('camera', cam.modo === 'tv' ? 'aproximada' : 'tv'); return; }
+  // (no Livre a C/R3 passa pelas 6 câmeras dele)
+  if (a === 'camera') { comando('camera', mundo.livre ? 'proxima' : cam.modo === 'tv' ? 'aproximada' : 'tv'); return; }
   // Modo Livre: R = a bola no pé do controlado
   if (mundo.livre && a === 'recomecar') { filaAcoes.push({ tipo: 'livreRecomecar', onde: 'pe' }); hud.evento('recomecar'); return; }
   // R/M/N: só nos treinos (R não recomeça a partida sem confirmação: isso é "Reiniciar partida")
@@ -1881,6 +1882,8 @@ function paginaLivre() {
   PAG_LIVRE ??= MOD_PAG_LIVRE.criarPaginaLivre({
     hud, logica: MOD_LIVRE, mundo: () => mundo, timeHumano: TIME_HUMANO, pedidoLivre: LIVRE_TM ? PEDIDO_TM?.livre ?? null : null,
     comando, acao: a => filaAcoes.push(a), soltar: () => entrada?.soltarTudo(),
+    // a câmera do Livre (render/camera-livre.js): a da página, as prefs, o rumo do ataque do meu time e ?camera=
+    camera: () => cam, prefs, salvarPrefs, dirAtaque: () => mundo.ataca?.[TIME_HUMANO] ?? 1, cameraPedida: params.get('camera'),
   });
   return PAG_LIVRE;
 }
@@ -1981,9 +1984,9 @@ function comando(c, v) {
       hud.definirEstado({ hora: v });
       prefs.hora = v; salvarPrefs(prefs);
       break;
-    // (Câmera do Livre: as câmeras novas — Ampla, Alta, Atrás, Jogador; Altura e Distância — e a tecla C/R3 ciclando por
-    // todas só no Livre entram aqui e no tratarAcao 'camera'; o yaw fixo do ataque do meu time, no yawEntrada)
     case 'camera':
+      // Modo Livre: as 6 câmeras dele (livre-pagina.js; o rumo fixo do ataque do meu time vem pelo cam.yaw)
+      if (mundo.livre && PAG_LIVRE?.camera(v)) break;
       if (v !== 'tv' && v !== 'aproximada') break;
       cam.definirModo(v);
       hud.definirEstado({ camera: v });
@@ -2053,6 +2056,7 @@ async function iniciar() {
   cena3d = criarCena({ canvas, qualidade: qAtual, hora });
   cam = criarCamera(window.innerWidth / window.innerHeight);
   cam.definirModo(camInicial);
+  PAG_LIVRE?.ligarCamera(!!mundo.livre);
   // identidade visual: com ?tm, os escudos decodificados ANTES dos canvas do estádio e da torcida (desenhados uma vez só)
   IDENT = await identidadeDaPagina();
   if (IDENT) { COR_TIME[0] = IDENT.hud.faixa[0]; COR_TIME[1] = IDENT.hud.faixa[1]; }
@@ -2194,6 +2198,7 @@ function trocarMundo(m, opc = {}) {
   hud.definirEstado({ marcador: marcadorLigado(mundo), modoTreino: mundo.modo, fim: false });
   hud.definirTimes(timesDoMundo(mundo));
   hud.faixa(null);
+  PAG_LIVRE?.ligarCamera(!!mundo.livre);
   if (mundo.livre) PAG_LIVRE?.marcar();
   // pré-jogo (Jogar de novo, Reiniciar partida, troca para a partida) ou o apito do início já: o 'saida' que criarPartida deixou
   let mp = 'desligado';

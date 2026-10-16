@@ -101,12 +101,14 @@ export function criarCamera(aspecto) {
     corte: false,             // próximo atualizar corta (sem mola): fim da câmera do gol sem saída
     cinema: null,             // plano de cinema da comemoração ({nome, de, para, fov}) ou null
     bp: { s: 0, plano: null, p: new Array(14).fill(0), ok: false }, // de, para, fov (0–6) e velocidades (7–13)
+    extra: null,              // Modo Livre: as câmeras dele (render/camera-livre.js) por cima da câmera de jogo
   };
   // câmera de cinema: o nome do plano (mudou = corte), onde o plano começou e para onde olha
   const cin = { nome: null, de0: [0, 0, 0], para: [0, 0, 0], reduz: false };
   const yaw = -Math.PI / 2;
   const _p = {};
   const _foco = { x: 0, z: 0 };
+  const interno = { camera, est, p: _p, fovPara };
   function perfil() {
     // TV ↔ aproximada pela transição; paisagem ↔ retrato pelo formato da tela (1,25 → 0,75)
     const s = suave(est.mistura);
@@ -239,9 +241,11 @@ export function criarCamera(aspecto) {
   }
   return {
     camera,
-    get yaw() { return yaw; },
+    get yaw() { return est.extra ? est.extra.yaw : yaw; },
     get modo() { return est.modo; },
-    definirModo(m) { if (PERFIS[m]) est.modo = m; },
+    definirModo(m) { if (PERFIS[m] || est.extra?.modos.includes(m)) est.modo = m; },
+    /** Modo Livre (render/camera-livre.js) ou null: os modos, o rumo e a pose dele valem por cima da câmera de jogo. */
+    definirExtra(x) { est.extra = x || null; if (!x && !PERFIS[est.modo]) est.modo = 'tv'; },
     alternarModo() { est.modo = est.modo === 'tv' ? 'aproximada' : 'tv'; return est.modo; },
     /** a = largura/altura da tela; pequena = celular (fecha mais o plano). */
     redimensionar(a, pequena = false) { est.aspecto = a; est.pequena = !!pequena; },
@@ -298,6 +302,7 @@ export function criarCamera(aspecto) {
         mola(est, 'z', 'vz', fz, wr * 0.8, dt);
       }
       posicionar(p);
+      if (est.extra && !est.cinema && !(g.ativo && g.fechado) && !est.geral && !est.livre) est.extra.atualizar(dt, alvo, corte, interno);
     },
     /** Foco atual da câmera (para a sombra acompanhar a jogada; na câmera do gol, a boca do gol). */
     foco() {
@@ -305,7 +310,7 @@ export function criarCamera(aspecto) {
       if (est.cinema && cin.nome) { _foco.x = cin.para[0]; _foco.z = cin.para[2]; }
       else if (g.ativo && g.fechado) { _foco.x = g.x - Math.sign(g.x || 1) * 6; _foco.z = clamp(g.z, -3.66, 3.66) * 0.5; }
       else if (est.geral) { _foco.x = 0; _foco.z = 0; }
-      else { _foco.x = est.x; _foco.z = est.z; }
+      else { const e = est.extra?.foco ?? est; _foco.x = e.x; _foco.z = e.z; }
       return _foco;
     },
     /**

@@ -33,6 +33,7 @@ const TEXTO_EVENTO = {
   reinicioDisputa: { t: 'Disputa reiniciada', ms: 1200 },
   // Modo Livre: a mudança de jogadores feita ("5 contra 3": o texto vem do livre-pagina.js)
   livreAjuste: { t: 'Jogadores atualizados', ms: 1600, forte: true, prio: 2 },
+  livreCamera: { t: 'Câmera', ms: 1200, prio: 2 },
 };
 // faixa ENTRA/SAI (pedido do dono de 12/10: "embaixo, no modelo, a informação de quem entra e quem sai"; a exceção dele à
 // regra sem narração: só sigla, ▲/▼, ENTRA/SAI, número e nome). Tempos em s (config.js SUBST.faixa).
@@ -310,9 +311,10 @@ export function criarHud(opc) {
       if (opc.tm.trava) document.querySelectorAll('#menu [data-cmd="editar-time"]').forEach(b => { b.hidden = true; });
     }
   }
+  const fecharSubLivre = () => document.querySelectorAll('.submenu-livre').forEach(e => { e.hidden = true; });
   function mostrarSubmenu(v) {
     if (!el.acoes || !el.modos) return;
-    const lv = $('menu-livre'); if (lv) lv.hidden = true; // (o submenu Jogadores do Livre: livre-pagina.js)
+    fecharSubLivre(); // (os submenus Jogadores e Câmera do Livre: livre-pagina.js)
     el.acoes.hidden = v; el.modos.hidden = !v;
     const alvo = v ? el.modos.querySelector('[aria-pressed="true"]') ?? el.modos.querySelector('button') : $('btn-modos');
     alvo?.focus({ preventScroll: true });
@@ -617,7 +619,7 @@ export function criarHud(opc) {
       if (acao === 'voltar') {
         if (raizAberta === el.ajuda) cmd('fechar-ajuda');
         else if (el.modos && !el.modos.hidden) cmd('modos-voltar');
-        else if ($('menu-livre') && !$('menu-livre').hidden) cmd('livre-voltar');
+        else if (document.querySelector('.submenu-livre:not([hidden])')) cmd('livre-voltar');
         else cmd('continuar');
         return;
       }
@@ -646,7 +648,7 @@ export function criarHud(opc) {
       el.ajuda.hidden = true; el.menu.hidden = false;
       if (el.acoes) el.acoes.hidden = false;
       if (el.modos) el.modos.hidden = true;
-      const lv = $('menu-livre'); if (lv) lv.hidden = true;
+      fecharSubLivre();
       const alvo = (foco && el.menu.querySelector(foco)) || [...el.menu.querySelectorAll('#menu-acoes .btn-primario')].find(b => !b.hidden);
       alvo?.focus({ preventScroll: true });
     },

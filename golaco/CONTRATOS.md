@@ -2255,8 +2255,32 @@ dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,
   golaco.livre.v1`, em try/catch; com `?tm`, o `livre` do pedido como valor inicial), a pausa MÍNIMA posta no DOM na 1ª vez
   (os botões `data-so="livre"` "Jogadores <small>N contra M</small>" e "Recomeçar <small>bola no meio</small> | Bola no meu pé";
   o submenu `#menu-livre`: Voltar, "Meu time − N + [Goleiro]", "Adversário − M + [Goleiro]", Jogar) e a fila da mudança (a
-  ação-objeto entra no 1º passo depois da pausa, como a edição do time). O acabamento da pausa e a Câmera do Livre ficam para
-  a próxima entrega (comentários "Câmera do Livre" no `main.js`).
+  ação-objeto entra no 1º passo depois da pausa, como a edição do time). A pausa do Livre (HTML e CSS postos na 1ª vez, ≤ 5
+  linhas, sem rolar em 844×390): Continuar | Replay; Jogadores | Câmera (`.linha-cenas`); Recomeçar <small>bola no meio</small>
+  | Bola no meu pé; Modo de jogo (com `?tm`, "Voltar ao Total Match"); Ajuda — sem Editar time nem Reiniciar. Submenus
+  `.submenu-livre` (o hud.js os fecha e o "voltar" do controle sai deles): `#menu-livre` (Jogadores) e `#menu-camera-livre`
+  (as 6 câmeras em 2 linhas de 3, "Altura − N +", "Distância − N +"); na coluna das opções o segmentado TV | Aproximada dá
+  lugar ao botão `#opcao-camera-livre` com o nome da câmera (abre o submenu; `html.em-livre`). Cara do TM em `css/tm.css`.
+- **Câmeras do Livre** (`render/camera-livre.js`, carregado pelo `livre-pagina.js`: fora do download sem o Livre). As do EA FC
+  (fifplay.com/fc-25-camera-settings, fifauteam.com/fc-26-camera): TV e Aproximada (as de hoje), Ampla (Co-op: 62 m de largura
+  no foco, 24 m de altura, 46 m atrás), Alta (Tactical: 52 m de altura, 24 m atrás, 65°, 76 m de largura), Atrás (End to End:
+  19 m atrás do foco pelo comprimento, 9,5 m de altura, olhando 12 m adiante, fov 42°) e Jogador (Pro: 7,5 m atrás e 3,9 m
+  acima do controlado, olhando 7 m adiante no chão: ele a ~3/4 da altura do quadro, fov 48°); Altura e Distância 0–20 (10 = o perfil; 0 = 0,6×, 20 = 1,5×; a
+  Distância abre o plano junto). `render/camera.js` ganhou só o gancho: `definirExtra(x)` (x.atualizar roda DEPOIS de
+  posicionar a câmera de jogo, fora da câmera do gol, de cinema, do plano geral e da livre dos prints), `yaw` = o do extra,
+  `definirModo` aceita os modos dele e `foco()` o dele — sem o Livre o extra é null e nada muda. Rumo: as de lado em −π/2; Atrás
+  e Jogador com o rumo FIXO do ataque do time do humano (`m.ataca`, 0 ou π) — o `yawEntrada` do main.js lê `cam.yaw`:
+  analógico para cima = para o gol que eu ataco. Troca com o mesmo rumo: transição de 0,6 s; rumo diferente: corte. Limites
+  (`segurarPose`): de lado, perto do lado de cá a câmera fica dentro da caixa da arquibancada de cá (y ≤ 26, z ≤ 70: ela sai do
+  desenho) ou na frente dela (z ≤ 43,5); Atrás/Jogador antes das placas do fundo (|x| ≤ 58); Jogador ≥ 3,2 m de altura; depois
+  sobe até sair de qualquer sólido (`estadio-forma.js solidoEm`). Prefs da página (`golaco.prefs.v1`): `cameraLivre` e
+  `cameraAjuste {altura, distancia}`; a da partida (`camera`) não muda e volta ao sair do Livre. C/R3 no Livre = a próxima
+  das 6 (aviso de comando "Câmera: <nome>"). `?camera=<uma das 6>` abre o Livre nela. Na partida, nos treinos e nos pênaltis
+  nada muda. `__golaco.livre.cameras` (os nomes), `.camera` ({modo, anterior, transicao, yaw, dir, fa, fd, altura,
+  distancia}), `.ajustarCamera({altura, distancia})`; `__golaco.definirCamera(nome)` vale para as 6 no Livre. Custo no celular Média
+  (ao vivo, 300 quadros, 5 contra 5): TV 26–33 chamadas e 66 mil triângulos, Ampla 25–32 e 69 mil, Alta 24–30 e 56 mil, Atrás
+  24–36 (quase sempre 29–31: o lado de cá entra no quadro) e 82 mil (máx. 92 mil), Jogador 24–35 e 78 mil; a TV da partida 11
+  × 11 fica em 26–29 e 94 mil (máx. 100 mil): triângulos sempre abaixo dela, chamadas ≤ o teto do pré-jogo (40).
 - **`main.js` / `hud.js` / `index.html`**: `MODOS` com 'livre'; `LIVRE_TM` (pedido `modo: "livre"`: sem trava; "Voltar ao Total
   Match" sempre na pausa, sem "Simular o resto" nem "Modo de jogo", e manda `tm3d:fim` com `{livre: {placar: [casa, fora]}}`
   — o TM não conta em nada); entrando no Livre a pausa abre no submenu Jogadores (nunca com `?prints=1`/`?demo=1`); o placar
@@ -2269,3 +2293,8 @@ dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,
   sementes: posse troca com a bola rolando média ≥ 6, chutes ≥ 2, ≤ 10% do tempo dos de linha a > 40 m da bola; 1×0 sem
   goleiros: chutes e distância), D recomeços com um time sem ninguém de linha, E determinismo e nada vaza para a partida, F o
   goleiro sozinho no canhão do teste-goleiro = o da partida.
+  `teste-livre-tela` (navegador, CI e deploy): A a varredura das poses em Node (as 6 câmeras × Altura/Distância × 3 telas × 2
+  rumos × focos na borda + transições: fora de sólido, sem arquibancada na frente do campo; a contraprova sem os limites
+  reprova), B as 6 câmeras pela pausa no PC Alta de dia (a bola e o controlado no quadro, os pontos do gramado à vista com cor
+  de grama), C a tecla C, o rumo do analógico, transição × corte, Altura/Distância salvas e de volta na partida, D a pausa e
+  os submenus sem rolar no celular 844×390 e as 6 câmeras de noite, E 568×320 sem nada encostando, F `?tm`.
