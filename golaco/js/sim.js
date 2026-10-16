@@ -17,7 +17,7 @@ import {
 } from './conducao.js';
 import { MD } from './matdet.js';
 import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, executarCabeceio, ataca, assumirControle } from './acoes.js';
-import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol, mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho, maoNaBola } from './goleiro.js';
+import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol, mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho, maoNaBola, abafar, goleiroSaiNoAlto } from './goleiro.js';
 import { entradaIA } from './ia.js';
 import { ACOES } from './config.js';
 // Etapa 3 (partida 11×11): tudo isto só liga com m.times — o treino continua bit a bit igual
@@ -535,6 +535,10 @@ export function passo(m, entradas) {
     else if (j.posicao !== 'GOL' && guiadoPelaIA(m, j)) boteIA(m, j);
     else if ((j.defH || ((j.botoes | j.botoesAnt) & BOTAO.DIVIDIDA)) && ehControlado(m, j)) dividida(m, j); // Etapa 3
   }
+  // partida: o goleiro cai nos pés da bola do toque longo do dono adversário (goleiro.js abafar; GOLEIRO.realista.abafa)
+  if (m.partida && m.posse != null && m.naMao == null) {
+    for (const j of js) if (j.posicao === 'GOL' && !goleiroComoLinha(m, j) && abafar(m, j)) { ganhouPosse(m, j); break; }
+  }
   // 4) goleiros leem o chute e defendem
   for (const j of js) {
     if (j.posicao !== 'GOL') continue;
@@ -697,7 +701,9 @@ function bolaLivre(m) {
     // no meio da defesa desenhada (o corpo já está no quadro do próximo tick), só com a mão desenhada na bola
     // a própria espalmada não volta para as mãos logo depois (GOLEIRO.reagarra)
     const espalmou = m.ultimoToque && m.ultimoToque.id === g.id && (m.tick - m.ultimoToque.tick) * PASSO < GOLEIRO.reagarra;
-    if (naArea && !espalmou && MD.hypot(b.p.x - g.x, b.p.z - g.z) < 1.0 && b.p.y < 2.2 && MD.hypot(b.v.x, b.v.z) < 9
+    // (partida: indo na bola solta da área — goleiro.js varrer — pega também a mais rápida, até GOLEIRO.realista.varre.vPega)
+    const vPega = m.partida && g.varre && g.varre.ok ? GOLEIRO.realista.varre.vPega : 9;
+    if (naArea && !espalmou && MD.hypot(b.p.x - g.x, b.p.z - g.z) < 1.0 && b.p.y < 2.2 && MD.hypot(b.v.x, b.v.z) < vPega
       && (!mergulhoAtivo(g, m.tick + 1) || maoNaBola(g, m.tick + 1, b.p))) {
       m.naMao = g.id; m.posse = g.id; g.segura = { desde: m.tick };
       b.v.x = 0; b.v.y = 0; b.v.z = 0; m.voo = null;
@@ -834,6 +840,8 @@ function bolaAltaNoCorpo(m, j) {
   }
   if (j.perdeuAlto != null && (m.tick - j.perdeuAlto) * PASSO < AEREO.perdeuSalto) return false;
   if (noArAgora(m, j)) return false; // no ar (pulo de outro cabeceio): não marca outro toque
+  // partida: o goleiro do time vai sair nessa bola no alto ("deixa!"): o companheiro não vai nela (salvo o do humano)
+  if (m.partida && (!ehControlado(m, j) || m.iaJoga?.[j.time]) && goleiroSaiNoAlto(m, j)) return false;
   // indo disputar o toque de um adversário (agendarDisputa): o pulo dele é o da disputa — não planeja outro por cima
   if (j.disputaAlta && m.tick <= j.disputaAlta.tc) return ESPERA;
   const peito = ACOES.cabeceio.alturaPeito[1];

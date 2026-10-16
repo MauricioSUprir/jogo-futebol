@@ -17,7 +17,7 @@
 import { JOGADOR, PASSO, G, CONDUCAO, GOLEIRO, LATERAL, CABECEIO } from './config.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { progressoBalanco } from './jogador.js';
-import { mergulhoAtivo, quadroMergulho, maosMergulho, eixosMergulho, MAO_PRONTA_FRENTE, MAO_PRONTA_BAIXO } from './goleiro.js';
+import { mergulhoAtivo, quadroMergulho, maosMergulho, eixosMergulho, MAO_PRONTA_FRENTE, MAO_PRONTA_BAIXO, baseGoleiro } from './goleiro.js';
 import { alturaSalto } from './bolas-paradas.js';
 import { puloAtivo, quadroPulo, inclinacaoAte } from './cabeceio.js';
 
@@ -120,7 +120,8 @@ function pesEQuadril(j, m) {
   // desenhado da simulação: jogador.js passoPeDesenhado)
 
   // ---- quadril: altura nominal + balanço da passada, limitada pelo alcance das pernas
-  const agach = 0.03 + 0.05 * clamp(s / 7, 0, 1);
+  // (partida: o goleiro na base dobra os joelhos — goleiro.js baseGoleiro)
+  const agach = 0.03 + 0.05 * clamp(s / 7, 0, 1) + GOLEIRO.realista.mov.agacha * baseGoleiro(m, j, s);
   let hy = 0.985 - agach;
   // balanço vertical: mais baixo no meio do apoio, mais alto no voo
   const bob = (0.012 + 0.03 * clamp(s / 6, 0, 1)) * Math.cos(2 * Math.PI * (j.fase % 1));
@@ -209,7 +210,7 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
   por(out, J.pelve, px, hy, pz);
 
   // ---- tronco: inclinação para a frente (velocidade + aceleração) e para o lado (curva)
-  let pitch = 0.03 + 0.022 * s + Math.atan2(af, G) * 0.8;
+  let pitch = 0.03 + 0.022 * s + Math.atan2(af, G) * 0.8 + GOLEIRO.realista.mov.inclina * baseGoleiro(m, j, s);
   pitch = clamp(pitch, -0.3, 0.42);
   const roll = clamp(Math.atan2(al, G) * 0.7, -0.35, 0.35);
   // vetor "para cima" do tronco: gira em torno do eixo direito (pitch) e da frente (roll)

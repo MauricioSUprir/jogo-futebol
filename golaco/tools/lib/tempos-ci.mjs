@@ -60,6 +60,7 @@ export const TEMPOS_NODE = {
   'teste-parado.mjs': 7,
   'teste-pressao-humano.mjs': 306,
   'teste-goleiro-regras.mjs': 146,
+  'teste-goleiro-realista.mjs': 150, // (estimado: 8 sementes do canhão do goleiro em 4 processos, ~100 s na máquina de dev)
   'teste-bolas-paradas.mjs': 237,
   'teste-botoes.mjs': 95,
   'teste-cortejo.mjs': 4,

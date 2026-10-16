@@ -11,7 +11,7 @@
 //   fase      passada em PASSOS (float): o pé j toca o chão quando fase cruza um inteiro n
 //             com n ≡ j (mod 2); fica no chão por 2·carga passos.
 
-import { JOGADOR, PASSADA, ATRIBUTOS_PADRAO, ENTRADA, PASSO, GESTO, CONDUCAO, BOLA } from './config.js';
+import { JOGADOR, PASSADA, ATRIBUTOS_PADRAO, ENTRADA, PASSO, GESTO, CONDUCAO, BOLA, GOLEIRO } from './config.js';
 import { clamp, difAng, normAng, tabela, porAtributo, lerp } from './mat.js';
 import { MD } from './matdet.js';
 
@@ -72,6 +72,9 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     // cabeceio na bola rolando (cabeceio.js): o pulo, a disputa marcada, o tick da disputa ganha e o da perdida
     cab: undefined, disputaAlta: undefined, disputa: undefined, perdeuAlto: undefined,
     porHumano: undefined, // os botões deste passo vêm da pessoa (sim.js; cavadinha por dois toques, acoes.js)
+    // goleiro realista (goleiro.js, só na partida): a base larga dos pés, parado na zona do ponto, a bola solta na área,
+    // a saída no cruzamento lida e o descanso depois de tentar abafar
+    baseGk: undefined, gkParado: undefined, varre: undefined, altoLido: undefined, abafaAte: undefined,
   };
   return j;
 }
@@ -335,7 +338,8 @@ export function passoPassada(j, comBola, dt, ev, saida = null) {
       // outros pés no ar terminam o passo depressa (antes desciam ao chão num quadro só) —
       // inclusive o que não é o do toque: ajeita os pés antes de receber
       if (pe.puxa > 0 || (toqueVindo && saida.pe === p)) gestoParado = true;
-      else ritmoFim = PASSADA.ritmoFimPasso;
+      // (partida: o goleiro parando na base termina o passo mais depressa — GOLEIRO.realista.mov.ritmoFim: fica "set")
+      else ritmoFim = j.baseGk != null ? GOLEIRO.realista.mov.ritmoFim : PASSADA.ritmoFimPasso;
     }
   }
   ritmo = gestoParado ? Math.min(ritmo, PASSADA.ritmoGestoParado) : Math.max(ritmo, ritmoFim);
@@ -450,8 +454,10 @@ export function pontoPouso(j, p, carga, f, tempoAtePouso = 0, semCruzar = false,
   // rumo previsto no pouso (o tronco continua girando)
   const rumo = j.rumo + clamp(j.giro, -6, 6) * Math.min(tempoAtePouso, 0.25);
   const rx = -MD.sin(rumo), rz = MD.cos(rumo);
-  let x = j.x + j.vx * tm + rx * lado * PASSADA.afastamentoLateral;
-  let z = j.z + j.vz * tm + rz * lado * PASSADA.afastamentoLateral;
+  // (partida: o goleiro andando devagar pousa os pés numa base mais larga — goleiro.js velPosicao, j.baseGk)
+  const afast = j.baseGk != null && j.vx * j.vx + j.vz * j.vz < 4 ? j.baseGk : PASSADA.afastamentoLateral;
+  let x = j.x + j.vx * tm + rx * lado * afast;
+  let z = j.z + j.vz * tm + rz * lado * afast;
   const o = j.pes[1 - p];
   // só no passo lateral de verdade (devagar e de lado): recuando ou freando, empurrar o pouso para o
   // lado deixava a perna de apoio esticada além do alcance (pé plantado arrastado na pose)
