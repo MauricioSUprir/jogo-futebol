@@ -345,6 +345,7 @@ export const BOTAO = {
   TROCAR: 1024,
   GOLEIRO: 2048,
   PEGAR: 4096,                // goleiro com a bola no pé, na área: pega com a mão (o "Pick Up Ball" do EA FC)
+  EFEITO_E: 8192, EFEITO_D: 16384, // curva da cobrança mirada (mira.js)
 };
 
 // Atributos padrão (0–100).
@@ -718,6 +719,18 @@ export const PARTIDA = {
     porImpedimento: 0,                // a parada do impedimento é rápida (tiro livre na hora)
     max: { 1: 5, 2: 10 },
   },
+};
+
+// Cobrança mirada da bola parada da pessoa (mira.js; contrato no CONTRATOS.md)
+export const MIRA = {
+  gira: 0.7, cone: { escanteio: 0.9, tiroLivre: 1.2, tiroDeMeta: 1.3 },
+  curvaPasso: 0.25, curvaRepete: 0.15,
+  giro: 38, giroAtrib: [0.7, 1],
+  alta: { elev: 0.42, v: [14, 31] },
+  tensa: { elev: 0.2, v: [17, 33] },
+  distChute: 35,
+  linhaChute: 4, semBarreira: 11, direcao: 12,
+  forcaPadrao: 0.55, erro: 1, maxPontos: 200, // erro: × o do cobrador (0 nos testes)
 };
 
 // Bolas paradas da Etapa 4 (lateral.js; partida.js). Lateral (IFAB Regra 15): de frente para o campo, parte de cada pé

@@ -25,6 +25,8 @@ function mola(est, kx, kv, alvo, w, dt) {
   est[kx] = alvo + (y + j1 * dt) * e;
   est[kv] = (est[kv] - j1 * w * dt) * e;
 }
+// câmera da bola parada (plano: render/bola-parada.js): entra em `entra` s (no corte, direto) e volta em `sai` s
+const BP = { entra: 0.6, sai: 1.1, mola: 7 };
 
 
 export const MODOS_CAMERA = ['tv', 'aproximada'];
@@ -98,6 +100,7 @@ export function criarCamera(aspecto) {
     geral: false,             // plano geral (intervalo, fim)
     corte: false,             // próximo atualizar corta (sem mola): fim da câmera do gol sem saída
     cinema: null,             // plano de cinema da comemoração ({nome, de, para, fov}) ou null
+    bp: { s: 0, plano: null, p: new Array(14).fill(0), ok: false }, // de, para, fov (0–6) e velocidades (7–13)
   };
   // câmera de cinema: o nome do plano (mudou = corte), onde o plano começou e para onde olha
   const cin = { nome: null, de0: [0, 0, 0], para: [0, 0, 0], reduz: false };
@@ -215,6 +218,24 @@ export function criarCamera(aspecto) {
       camera.position.set(est.x, p.altura, est.z + p.distancia);
       camera.lookAt(est.x, p.olharY, est.z);
     }
+    // bola parada: mistura posição, direção do olhar e fov (sem salto)
+    const bp = est.bp, e = suave(bp.s), q = bp.p;
+    if (!bp.ok || !e) return;
+    _a.copy(camera.position); _b.set(q[0], q[1], q[2]);
+    _d1.set(est.x, p.olharY, est.z).sub(_a).normalize();
+    _d2.set(q[3], q[4], q[5]).sub(_b).normalize();
+    camera.position.lerpVectors(_a, _b, e);
+    camera.lookAt(_a.copy(camera.position).add(_d1.lerp(_d2, e).normalize()));
+    camera.fov = lerp(camera.fov, fovFixo(q[6]), e); camera.updateProjectionMatrix();
+  }
+  const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d1 = new THREE.Vector3(), _d2 = new THREE.Vector3();
+  function atualizarBP(dt, corte) {
+    const bp = est.bp, pl = bp.plano;
+    if (!pl) { bp.s = Math.max(0, bp.s - dt / BP.sai); if (!bp.s) bp.ok = false; return; }
+    const alvo = [...pl.de, ...pl.para, pl.fov], novo = !bp.ok || corte || bp.s <= 0;
+    for (let i = 0; i < 7; i++) if (novo) { bp.p[i] = alvo[i]; bp.p[7 + i] = 0; } else mola(bp.p, i, 7 + i, alvo[i], BP.mola, dt);
+    bp.ok = true;
+    bp.s = corte ? 1 : Math.min(1, bp.s + dt / BP.entra);
   }
   return {
     camera,
@@ -268,6 +289,7 @@ export function criarCamera(aspecto) {
       fx = clamp(fx, -p.limX, p.limX);
       fz = clamp(fz, p.limZ0, p.limZ1);
       if (est.corte) { corte = true; est.corte = false; }
+      atualizarBP(dt, corte);
       if (!est.iniciado || corte) {
         est.x = fx; est.z = fz; est.vx = 0; est.vz = 0; est.iniciado = true;
       } else {
@@ -306,6 +328,8 @@ export function criarCamera(aspecto) {
     definirCinema(p) { est.cinema = p || null; if (!p) cin.nome = null; },
     /** Nome do plano de cinema agora ('steadicam', 'contraplano', 'reacao') ou null. */
     get cinema() { return est.cinema && cin.nome ? cin.nome : null; },
+    bolaParada(pl) { est.bp.plano = pl || null; },
+    get misturaBolaParada() { return est.bp.s; },
     /** Câmera livre para prints de conferência: {de:[x,y,z], para:[x,y,z], fov?} ou null. */
     definirLivre(l) { est.livre = l ? { de: [...l.de], para: [...l.para], fov: l.fov } : null; },
   };

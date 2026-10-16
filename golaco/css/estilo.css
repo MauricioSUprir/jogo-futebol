@@ -310,6 +310,7 @@ html.topo-c4 .placar-relogio { padding: 0 5px; }
   display: block; height: 100%; width: 0; border-radius: 3px;
   background: linear-gradient(90deg, var(--verde-2), var(--verde) 60%, #b9ffd9);
 }
+
 /* partida: só a barra, menor e sem o rótulo ("PASSE", "CHUTE": o texto fica no DOM, escondido) */
 html.em-partida .carga-tipo { display: none; }
 html.em-partida .carga-barra { width: 44px; height: 6px; }
@@ -400,6 +401,7 @@ html.nomes-botoes .btn-toque span { display: block; text-shadow: 0 1px 2px rgba(
 /* TROCAR com a bola nas mãos do goleiro do humano (partida): só com a classe goleiro-mao (main.js) — no toque o TROCAR é da
    defesa e o goleiro com a bola é ataque; o Q do teclado e o LB do controle já trocavam */
 .toque:not(.goleiro-mao) .btn-trocar-mao { display: none; }
+html:not(.cobranca-mirada) .btn-efeito, html.cobranca-mirada .btn-pegar, html.cobranca-mirada .btn-trocar-mao { display: none; }
 @keyframes bt-aparece { from { transform: scale(0.82); opacity: 0; } to { transform: none; } }
 
 /* ------------------------------------------------------------------ janelas (menu e ajuda) */

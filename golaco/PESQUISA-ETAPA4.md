@@ -330,3 +330,29 @@ Gols de fora da área (painel do bf918606: 11,5%, meta 12–18%; goleiro de 16,5
 `GOLEIRO.logit.cLongePartida` −0,035 por m de chute além de 15 m do goleiro (só na partida; o treino e o pênalti não mudam):
 `teste-bolas-paradas` D4 (tiros livres de 18–31 m) gol 8,5% (meta 2–12%), `teste-goleiro` e `teste-mergulho` PASSOU,
 hash-igual IGUAL. Decisão pelo painel de 144 do CI.
+
+## 12. Bolas paradas no estilo FIFA: câmera atrás do cobrador e linha de trajetória com curva (pedido do dono, 16/10)
+
+Pedido (com a imagem do EA FC: câmera baixa atrás e ao lado do cobrador do escanteio, uma linha amarela → azul saindo da
+bola e o rótulo "CHIP" embaixo): "nos escanteios, pênaltis, faltas e tiros de meta, quero que tenha igual no fifa, uma
+espécie de 3ª pessoa, quase uma 1ª pessoa mas não é, que fica atrás do jogador [...] e eu quero que tenha essa linha no
+escanteio, e na falta, que tenha como colocar curva".
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| Red Bull, "EA Sports FC 25 set piece guide" (redbull.com/gb-en/ea-sports-fc-25-set-piece-guide) e Team Gullit, "EA FC 25 set pieces" (teamgullit.com/ea-sports-fc-25/set-pieces) | Falta: o analógico esquerdo mira (alinhando com a barreira), o direito põe a curva, a força é segurar o chute (~1,5 barra perto da área, ~2,5 mais longe); o atributo do cobrador manda na curva e na precisão | A divisão dos controles: o analógico GIRA a mira, a carga do botão é a força e a curva é um controle à parte (analógico direito no controle; Z/X no teclado; dois botões CURVA no toque); o efeito máximo e o erro saem do atributo (`MIRA.giroAtrib`; o erro do chute/lançamento do jogo) |
+| fut.gg, "FIFA 23 Guide: How To Take Free Kicks"; Charlie Intel, "FIFA 23 set pieces" (charlieintel.com/fifa-23/fifa-23-set-pieces-free-kicks-corners-penalties-188966) | No sistema novo de falta a linha de trajetória mostra só os primeiros metros; um texto diz o tipo de batida que está montada; a força pelo botão | No CHUTE a gol a linha vai só até 4 m além da barreira (`MIRA.linhaChute`; sem barreira, 11 m): mostra se passa por cima dela e como a curva começa, não onde entra (a falta continua difícil). O rótulo de COMANDO do tipo (ALTA, TENSA, CHUTE, CURTA, LONGA) embaixo, no lugar do "CHIP" da imagem |
+| A imagem do dono (EA FC) | Câmera baixa (~altura de uma pessoa), atrás e um pouco ao lado do cobrador, a área no meio do quadro; a linha sai da bola até a área (escanteio: a trajetória inteira) | `CAMERA_BOLA_PARADA`: 4,6 m atrás, 1,9 m para o lado (o cobrador fica de um lado da bola), 2,6 m de altura; o olhar e o fov pela conta (a bola a 76% da altura do quadro, o alvo a 40%). No escanteio, no tiro livre longe e no cruzamento a linha vai até a bola cair |
+| Passmore et al. 2012; Whiteside 2010 (já na §4 e na PESQUISA-ETAPA2) | Magnus pela razão de giro; efeito de 30–40 rad/s no chute de falta | A curva é giro no eixo vertical (`MIRA.giro` 38 rad/s × 0,7–1 pelo atributo) pela MESMA física da bola (bola.js): a linha é a simulação passo a passo da própria bola (`mira.js simularLinha`), então a bola de verdade passa a 0,0 cm dela sem o erro do cobrador (`teste-mira` A) |
+
+Medido (`teste-mira` E, canhão de 96 escanteios e 96 tiros livres diretos de 18–30 m com o humano roteirizado; a mesma conta
+na main com o humano de antes: o analógico para a zona / o canto e o botão):
+
+| | antes (main) | depois (mira perfeita pela linha) | real |
+|---|---|---|---|
+| escanteio do humano: gol em ≤ 8 s | 5,2% (5/96) | 10,4% (10/96) | 2,6% (Copa 2022); a IA × IA do jogo: ~13% (`teste-bolas-paradas` C3) |
+| tiro livre direto do humano: gol · no alvo | 3,1% · 11,5% | 8,3% · 13,5% | 5–7% (pedido); Opta 2,4–4,4% |
+
+O roteirizado do "depois" é o teto: acha a melhor mira simulando a trajetória INTEIRA (a pessoa só vê os primeiros metros
+na falta) e acerta a força no tick. Os dois ficam nas faixas dos canhões da IA (escanteio ≤ 12%, falta 2–12%). O gol de
+escanteio acima do real é o do jogo inteiro (o goleiro ainda não sai no cruzamento: pendência da Etapa 4, parte 3b).
