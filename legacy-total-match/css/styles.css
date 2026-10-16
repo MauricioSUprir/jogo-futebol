@@ -6559,8 +6559,14 @@ body.theme-light .ut-tab.utk-aba.on .utk-badge{background:#ffffff;color:#0f7a3a}
   .vit-palco.grade .vit-trilho { --cols: 4; }
 }
 @media (min-width: 1100px) {
-  .screen.vit > .vit-mais { --cols: 9; }
+  /* os 10 atalhos (com o Pênaltis 3D) numa linha só; até 1099 px, 5 por linha = 2 linhas cheias */
+  .screen.vit > .vit-mais { --cols: 10; }
   .vit-mais-b { padding: 16px 6px 14px; font-size: 12.5px; }
+}
+/* celular (grade de 3): o atalho que sobraria sozinho na última linha (10 = 3+3+3+1) ocupa a linha inteira, ícone ao lado
+   do nome — sem um botão perdido no canto */
+@media (max-width: 759px) {
+  .vit-mais > .vit-mais-b:last-child:nth-child(3n+1) { grid-column: 1 / -1; flex-direction: row; justify-content: center; }
 }
 /* celular deitado (pouca altura): todos na mesma linha, com cartas menores para caber o ENTRAR */
 @media (min-width: 760px) and (max-height: 520px) {

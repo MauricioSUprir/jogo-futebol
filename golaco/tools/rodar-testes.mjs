@@ -105,7 +105,7 @@ const LISTA = [
   // Ponte com o Total Match (15/10): o pedido do TM vira os times, o humano no lado do usuário, a trava e a súmula
   ['ponte com o Total Match: pedido → times, humano no visitante, trava "só o meu jogador", súmula e resultado', 'teste-ponte-tm.mjs'],
   // Modo Pênaltis 3D (dono, 15/10: "crie uma versão só de jogador de pênaltis"): a disputa pela Regra 10 da IFAB
-  ['disputa de pênaltis (Regra 10): 5 alternadas, fim antecipado, alternadas, fila dos cobradores, lugares, IA × IA até o fim, humano bate e defende, resultado do TM', 'teste-disputa.mjs'],
+  ['disputa de pênaltis (Regra 10): 5 alternadas, fim antecipado, alternadas, fila dos cobradores, lugares, goleiro na linha, fim da cobrança, IA × IA até o fim, humano bate e defende, cavadinha repetida, resultado do TM', 'teste-disputa.mjs'],
 ];
 const argv = process.argv.slice(2);
 const iSo = argv.indexOf('--so');

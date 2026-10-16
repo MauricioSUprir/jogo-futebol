@@ -280,14 +280,19 @@
       velhas.forEach(function (k) { localStorage.removeItem(k); });
     } catch (e) {}
   }
+  // textos do quadro (o X, a confirmação e o aviso de demora): a partida é simulada quando o 3D não vem; os Pênaltis 3D
+  // (jogarPenaltis) não simulam nada — só voltam à escolha dos times (fns.textos)
+  var TEXTOS_PARTIDA = { quadro: "Partida em 3D", sair: "Voltar e simular", confirma: "Sair do 3D?",
+    confirmaTexto: "A partida é simulada do começo, como sem o 3D.", confirmaBotao: "Simular", demora: "Simular a partida" };
   function abre3d(pedido, fns) {
     if (ativo) fecha3d();
     limpaSobras();
+    var T = Object.assign({}, TEXTOS_PARTIDA, fns.textos || {});
     try { localStorage.setItem("tm3d:pedido:" + pedido.id, JSON.stringify(pedido)); } catch (e) { fns.falhou("Sem espaço para preparar a partida 3D."); return; }
     var aviso = el("div", { class: "tm3d-aviso", text: "Abrindo o estádio 3D…" });
-    var quadro = el("iframe", { class: "tm3d-quadro", src: api.PASTA + "?tm=" + encodeURIComponent(pedido.id), allow: "fullscreen; autoplay; gamepad", title: "Partida em 3D" });
-    var sair = el("button", { class: "tm3d-sair", type: "button", title: "Voltar e simular", on: { click: function () {
-      TM.ui.confirm("Sair do 3D?", "A partida é simulada do começo, como sem o 3D.", "Simular", function () { termina("sair"); });
+    var quadro = el("iframe", { class: "tm3d-quadro", src: api.PASTA + "?tm=" + encodeURIComponent(pedido.id), allow: "fullscreen; autoplay; gamepad", title: T.quadro });
+    var sair = el("button", { class: "tm3d-sair", type: "button", title: T.sair, on: { click: function () {
+      TM.ui.confirm(T.confirma, T.confirmaTexto, T.confirmaBotao, function () { termina("sair"); });
     } } }, [TM.ic("x")]);
     var tela = el("div", { class: "tm3d-tela" }, [aviso, quadro, sair]);
     document.body.appendChild(tela);
@@ -296,7 +301,7 @@
     var espera = setTimeout(function () {
       if (pronto || acabou) return;
       aviso.textContent = "O 3D está demorando para abrir.";
-      aviso.appendChild(el("button", { class: "btn small", text: "Simular a partida", on: { click: function () { termina("sair"); } } }));
+      aviso.appendChild(el("button", { class: "btn small", text: T.demora, on: { click: function () { termina("sair"); } } }));
     }, api.ESPERA_MS);
     function lerResultado() { try { var t = localStorage.getItem("tm3d:resultado:" + pedido.id); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
     function ouvir(e) {
@@ -387,7 +392,10 @@
     abre3d(novoPedido(Object.assign({}, o, { modo: "penaltis", title: o.title || "Disputa de pênaltis" })), {
       fim: function (r3) { if (r3 && r3.penaltis) fns.fim(r3); else if (fns.sair) fns.sair(); },
       sair: function () { if (fns.sair) fns.sair(); },
-      falhou: function (msg) { TM.ui.toast(msg || "O 3D não abriu.", "alerta"); if (fns.sair) fns.sair(); }
+      falhou: function (msg) { TM.ui.toast(msg || "O 3D não abriu.", "alerta"); if (fns.sair) fns.sair(); },
+      // nada é simulado: sair volta à escolha dos times, sem resultado
+      textos: { quadro: "Pênaltis em 3D", sair: "Sair dos pênaltis", confirma: "Sair dos pênaltis 3D?",
+        confirmaTexto: "A disputa não conta e você volta à escolha dos times.", confirmaBotao: "Sair", demora: "Voltar" }
     });
     return true;
   }

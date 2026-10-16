@@ -171,6 +171,16 @@ if (modoPagina === 'penaltis') await carregarDisputa();
 const MIN_PARAM = +params.get('min') > 0 ? +params.get('min') : undefined;
 const DEMO_ON = params.get('demo') === '1';
 const SEMENTE = Math.max(1, Math.floor(+params.get('semente') || (ID_TM ? sementeTM(ID_TM) : 1)));
+// disputa de pênaltis: "Jogar de novo" passa à semente seguinte (outra moeda, outras cobranças). Sem ?semente nem ?tm, cada
+// disputa nova (a 1ª, Reiniciar, Jogar de novo, a volta pelo Modo de jogo) tem a semente SORTEADA aqui na página — antes
+// toda disputa começava igual (a mesma moeda, o mesmo lado do goleiro da IA; revisão de 16/10). A semente fica no mundo
+// (m.semente): o hash continua valendo, e os testes passam ?semente.
+let rodadaDisputa = 0;
+const SEMENTE_FIXA = !!params.get('semente') || !!ID_TM;
+function sementeDisputa() {
+  if (SEMENTE_FIXA) return SEMENTE + rodadaDisputa;
+  try { const u = new Uint32Array(1); crypto.getRandomValues(u); return (u[0] % 999999) + 1; } catch (_) { return Math.floor(Math.random() * 999999) + 1; }
+}
 const CHAVE_PREFS = 'golaco.prefs.v1';
 
 if (params.get('entalhe') === '1') document.documentElement.classList.add('entalhe-simulado');
@@ -233,7 +243,7 @@ function criarMundoTreino(opc = {}) {
   // sem trava: a partida de sempre)
   if (o.modo === 'penaltis') {
     return MOD_DISP.criarDisputa({
-      semente: o.semente, times: o.times ?? TM?.times, elencos: o.elencos ?? (TM ? ELENCOS_TM : undefined),
+      semente: opc.semente ?? sementeDisputa(), times: o.times ?? TM?.times, elencos: o.elencos ?? (TM ? ELENCOS_TM : undefined),
       humano: o.humano ?? TIME_HUMANO, comeca: o.comeca, gol: o.gol,
     });
   }
@@ -589,7 +599,9 @@ function eventoDisputa(ev) {
   if (t === 'gol') { hud.evento(ev); return true; }
   if (t === 'fimDeJogo' || t === 'saida' || t === 'intervalo' || t === 'disputaCobranca') return true;
   if (t === 'disputaCobrador') {
-    if (ev.time === TIME_HUMANO && !dicaDisputa.bate) { dicaDisputa.bate = true; hud.evento('penaltisBate'); }
+    // (sem toque, a tecla do CHUTE no texto: no PC não há botão CHUTE na tela; revisão de 16/10)
+    const toque = document.documentElement.classList.contains('com-toque');
+    if (ev.time === TIME_HUMANO && !dicaDisputa.bate) { dicaDisputa.bate = true; hud.evento('penaltisBate', toque ? {} : { texto: 'Sua vez: mire e segure K (no controle, B)' }); }
     else if (ev.time !== TIME_HUMANO && !dicaDisputa.defende) { dicaDisputa.defende = true; hud.evento('penaltisDefende'); }
     return true;
   }
@@ -1686,7 +1698,8 @@ function mostrarSimulando() {
   textoSimulando = t;
   hud.faixa({ titulo: mundo.disputa ? 'Simulando o resto da disputa…' : 'Simulando o resto da partida…', placar: t });
   hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
-  hud.relogio(lerRelogio());
+  // (a disputa não tem relógio: o placar dela fica sem ele também enquanto simula)
+  hud.relogio(mundo.disputa ? null : lerRelogio());
 }
 /**
  * "Simular o resto" (Total Match; contrato §5): fecha as cenas (pré-jogo, replay, comemoração, substituição, editor), a
@@ -1793,10 +1806,11 @@ function comando(c, v) {
     case 'reiniciar-partida':
       hud.fecharMenu();
       if (!ehJogo(mundo)) break;
-      // disputa de pênaltis: outra moeda a cada "Jogar de novo" (a semente seguinte); no meio, a mesma disputa do começo
+      // disputa de pênaltis: outra moeda a cada "Jogar de novo" (com ?semente, a seguinte; no meio, a mesma disputa do
+      // começo); sem ?semente, outra semente sorteada (sementeDisputa)
       if (mundo.disputa) {
         if (mundo.disputa.estado === 'fim') rodadaDisputa++;
-        trocarMundo(novoMundo({ semente: SEMENTE + rodadaDisputa }));
+        trocarMundo(novoMundo());
         hud.evento('reinicioDisputa');
         break;
       }
@@ -2002,7 +2016,6 @@ function timesDoMundo(m) {
   return [0, 1].map(t => { const e = ELENCOS[m.times[t].elenco]; return { sigla: e.sigla, nome: e.nome, escudo: e.id, ...extrasPlacar(IDENT, t) }; });
 }
 
-let rodadaDisputa = 0;   // "Jogar de novo" na disputa: a semente seguinte (outra moeda, outras cobranças)
 function trocarMundo(m, opc = {}) {
   // um pré-jogo tocando (mundo novo pela API, troca de modo): sai sem apitar
   if (prejogo && prejogo.ativo) { prejogo.cancelar(); entrada?.bloquear?.(false); }

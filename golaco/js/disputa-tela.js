@@ -34,11 +34,16 @@ const CSS = `
 /* botões de toque na disputa: só o CHUTE quando o humano bate (a fase de ataque do jogo já o mostra); defendendo, nenhum */
 html.modo-penaltis .toque .btn-toque:not(#btn-chute) { display: none !important; }
 html.modo-penaltis:not(.penaltis-bate) .toque #btn-chute { display: none !important; }
-html.modo-penaltis .dica { display: none; }
+/* (a dica de teclas do PC — "H controles · Esc menu" — fica, como na partida: no toque o estilo.css já a esconde) */
 /* os avisos (as dicas da vez) descem para baixo das bolinhas: no celular o aviso largo passava por cima delas */
 html.modo-penaltis .aviso { top: calc(var(--sa-t) + var(--m) + var(--placar-h) + 74px); }
-/* o minimapa não diz nada na disputa (todos parados, a câmera atrás do cobrador) e tapava a bola na marca */
-html.modo-penaltis .minimapa { display: none !important; }
+/* o minimapa não diz nada na disputa (todos parados, a câmera atrás do cobrador) e tapava a bola na marca; o botão
+   "Minimapa" da pausa sai junto (não mudava nada na tela) */
+html.modo-penaltis .minimapa, html.modo-penaltis #chip-minimapa { display: none !important; }
+/* celular baixo (568×320): a faixa do fim, no meio da tela, cobria a ponta das bolinhas — desce para baixo delas */
+@media (max-height: 359px) {
+  html.modo-penaltis .faixa { top: calc(var(--sa-t) + var(--m) + var(--placar-h) + 56px); transform: translateX(-50%); }
+}
 `;
 
 const JANELA = 7; // bolinhas visíveis por time (as alternadas longas mostram as últimas)

@@ -507,7 +507,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   (puro; IFAB Regra 10: 5 alternadas com fim antecipado, alternadas, fila dos cobradores, moeda pelo `m.rng`) usa a MESMA
   cobrança do pênalti da partida (`partida.js prepararPenalti/cobrar`); o cobrador anda até a marca pela locomoção (`j.guia`
   de quem está 'parado' no `sim.js`); a câmera atrás do cobrador (o analógico pelo yaw dela); `js/disputa-tela.js` (bolinhas,
-  só o CHUTE). Os dois só por import dinâmico. Sem o modo, `hash-igual`/`hash-partida` IGUAIS. Testes: `teste-disputa` (Node),
+  só o CHUTE). Os dois só por import dinâmico. Sem o modo, `hash-igual`/`hash-partida` IGUAIS. Revisão (16/10): o goleiro
+  que defende NA linha até o chute (Regra 14), a cobrança só acaba quando a bola não pode mais entrar (e depois dela nenhum
+  gol conta), 'defesa' só com toque do goleiro, o goleiro da IA lê a cavadinha repetida, a semente sorteada sem `?semente`. Testes: `teste-disputa` (Node),
   `teste-penaltis-tela` (CI) e `legacy-total-match/ferramentas/testar-penaltis.mjs` (senha do Viverde só por `TM_SENHA_VIVERDE`).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,

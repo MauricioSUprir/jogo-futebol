@@ -1683,8 +1683,19 @@ export const DISPUTA = {
   forcaIA: [0.35, 0.65],
   // fim da cobrança (Regra 10: a bola parou, saiu ou não pode mais entrar): gol; o goleiro com ela nas mãos; fora do campo;
   // voltando do gol (≥ `volta` m/s, a ≥ `longe` m da linha) depois de tocar o goleiro ou a trave; parada (< `parada` m/s no
-  // chão, depois de `minimo` s); ou `max` s depois do chute
-  fimChute: { volta: 0.3, longe: 0.6, parada: 0.5, minimo: 0.35, max: 4.5 },
+  // chão, depois de `minimo` s); ou `max` s depois do chute. Voltando ou parada, só acaba se a física da bola sem ninguém
+  // no caminho (`previsao` s) não cruza a linha entre as traves e, voltando, não passa a < `alcanceGoleiro` m (abaixo de
+  // `alturaGoleiro` m) do goleiro — no corpo dele ela ainda desvia para dentro (revisão de 16/10: a bola na trave que voltava
+  // pela boca do gol era dada como perdida e entrava depois, no goleiro)
+  fimChute: { volta: 0.3, longe: 0.6, parada: 0.5, minimo: 0.35, max: 4.5, previsao: 1.5, alcanceGoleiro: 1.2, alturaGoleiro: 2.2 },
+  // Regra 14 (vale na Regra 10): o goleiro que defende fica NA linha do gol até o chute — o centro a `goleiroLinha` m dela
+  // (um pé sobre a linha de 0,12 m). Na partida a parede o deixa a até 0,6 m e a IA dele vai para a bissetriz a 1,2–2,1 m
+  // (ficava a ~0,6 m em toda cobrança da disputa; só a disputa muda: partida.js restricaoPenalti, goleiro.js)
+  goleiroLinha: 0.1,
+  // o goleiro lê a cavadinha repetida: com `n` cavadinhas nas últimas `ultimas` cobranças do time que bate, ele fica no meio
+  // com a chance meio[n − 1] (sem nenhuma, a da partida: GOLEIRO.penalti.palpite, 12%) — sem isso a cavadinha repetida do
+  // humano convertia ~93% sem risco, contra ~76% do chute no canto (revisão de 16/10)
+  leituraCavadinha: { ultimas: 3, meio: [0.3, 0.45, 0.55] },
   reacao: { gol: 2.0, erro: 1.9, trote: 3.0, anda: 1.3 }, // s da reação (e m/s do cobrador voltando ao círculo)
   // círculo central: as duas filas de frente para o gol (o time que começa mais perto), `passo` m entre os jogadores
   circulo: { x: [1.7, 0.1], passo: 0.95 },

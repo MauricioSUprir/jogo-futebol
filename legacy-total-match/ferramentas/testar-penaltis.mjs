@@ -19,7 +19,11 @@
      7 "Jogar de novo" abre o 3D outra vez com os mesmos times;
      8 nada sobre nada nas duas telas do modo (360, 390 e 844×390 do celular; 1280 do PC): nenhum botão encostado em outro,
        nada fora da tela, sem rolagem de lado;
-     9 nenhum erro de página (no TM e dentro do 3D).
+     9 nenhum erro de página (no TM e dentro do 3D);
+    10 "Mais modos" com os 10 atalhos: numa linha só no PC (1280) e, no celular (360, grade de 3), nenhum sozinho num canto
+       da última linha (revisão de 16/10: o "Perfil" ia sozinho para uma 2ª linha no PC);
+    11 o quadro do 3D nos Pênaltis não promete simular: o X, a confirmação e o aviso de demora com os textos da disputa
+       (revisão de 16/10: "Sair do 3D? A partida é simulada…" / "Simular a partida", e nada era simulado).
    O Chromium headless não passa pelo proxy: o three.js (jsdelivr) vem do cache de golaco/tools/lib/navegador.mjs. */
 import fs from "fs";
 import path from "path";
@@ -98,6 +102,25 @@ const mais = await p.evaluate(() => {
   return b ? { texto: b.textContent.trim(), icone: !!b.querySelector(".tm-ic, svg"), emoji: /\p{Extended_Pictographic}/u.test(b.textContent) } : null;
 });
 confere("1 'Pênaltis 3D' em Mais modos (ícone + nome, sem emoji)", !!mais && mais.icone && !mais.emoji, mais);
+// 10) a grade do "Mais modos": PC numa linha; celular sem um atalho sozinho num canto da última linha
+const grade = [];
+for (const [w, h] of [[1280, 800], [360, 740]]) {
+  await p.setViewportSize({ width: w, height: h });
+  await p.evaluate(() => TM.ui.go("modes"));
+  await p.waitForTimeout(500);
+  grade.push(await p.evaluate(w => {
+    const bs = [...document.querySelectorAll(".vit-mais-b")].filter(b => b.offsetParent !== null).map(b => b.getBoundingClientRect());
+    const linhas = [...new Set(bs.map(r => Math.round(r.top)))];
+    const ult = bs.filter(r => Math.round(r.top) === linhas[linhas.length - 1]);
+    const larg = Math.max(...bs.map(r => r.right)) - Math.min(...bs.map(r => r.left));
+    return { tela: w, n: bs.length, linhas: linhas.length, ultima: ult.length, larguraUltima: ult.length === 1 ? Math.round(ult[0].width / larg * 100) : null };
+  }, w));
+}
+await p.setViewportSize({ width: 390, height: 844 });
+await p.evaluate(() => TM.ui.go("modes"));
+await p.waitForTimeout(400);
+confere("10 'Mais modos': os 10 atalhos numa linha no PC; no celular nenhum sozinho num canto da última linha",
+  grade[0].n === 10 && grade[0].linhas === 1 && grade[1].n === 10 && (grade[1].ultima > 1 || grade[1].larguraUltima >= 95), grade);
 await p.evaluate(() => [...document.querySelectorAll(".vit-mais-b")].find(x => /Pênaltis 3D/.test(x.textContent)).click());
 await p.waitForTimeout(700);
 const tela = await p.evaluate(() => ({ rota: TM.ui.current(), txt: document.querySelector(".screen.is-active, .screen")?.innerText || "" }));
@@ -202,6 +225,34 @@ if (fr) {
     await p.waitForFunction(() => TM.ui.current() === "penaltis3d-fim" && !document.querySelector(".tm3d-tela"), null, { timeout: 15000 }).catch(() => {});
   }
 }
+
+// 11) o quadro do 3D nos Pênaltis: os textos da disputa (nada é simulado) — o 3D numa página que não existe e a demora curta
+const quadroTxt = await p.evaluate(async () => {
+  const A = TM.tm3d, pasta = A.PASTA, espera = A.ESPERA_MS;
+  A.PASTA = "nada-aqui.html"; A.ESPERA_MS = 700;
+  const saiu = { n: 0 };
+  try {
+    const S = TM.penaltis3d.setup, time = id => S.source === "nation" ? TM.engine.teamFromNation(id) : TM.engine.teamFromClub(id);
+    A.jogarPenaltis({ teamA: time(S.teamA), teamB: time(S.teamB), userSide: 0 },
+      { fim: () => {}, sair: () => { saiu.n++; } });
+    const x = document.querySelector(".tm3d-sair"), q = document.querySelector(".tm3d-quadro");
+    const r = { titulo: x?.title, quadro: q?.title };
+    x?.click();
+    await new Promise(ok => setTimeout(ok, 150));
+    const sh = document.querySelector(".sheet-overlay .sheet");
+    r.confirma = sh ? sh.innerText.replace(/\s+/g, " ").trim() : null;
+    sh?.querySelector(".sheet-item.cancel")?.click();
+    await new Promise(ok => setTimeout(ok, 900));
+    r.demora = document.querySelector(".tm3d-aviso")?.innerText.replace(/\s+/g, " ").trim() ?? null;
+    [...document.querySelectorAll(".tm3d-aviso button")].find(b => b.offsetParent !== null)?.click();
+    await new Promise(ok => setTimeout(ok, 100));
+    r.fechou = !document.querySelector(".tm3d-tela"); r.sair = saiu.n; r.rota = TM.ui.current();
+    return r;
+  } finally { A.PASTA = pasta; A.ESPERA_MS = espera; A.fechar(); }
+});
+confere("11 quadro dos Pênaltis 3D: o X, a confirmação e o aviso de demora sem prometer simular",
+  !!quadroTxt.titulo && !/simul/i.test(quadroTxt.titulo) && !/simul/i.test(quadroTxt.confirma || "simul") && /pênaltis/i.test(quadroTxt.confirma || "")
+    && !/simul/i.test(quadroTxt.demora || "simul") && /demorando/i.test(quadroTxt.demora || "") && quadroTxt.fechou && quadroTxt.sair === 1 && /pênaltis/i.test(quadroTxt.quadro || ""), quadroTxt);
 
 // 8) nada sobre nada nas duas telas
 const n1 = await nadaSobreNada("penaltis3d", "tela");

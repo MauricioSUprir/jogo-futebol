@@ -29,7 +29,7 @@ const TEXTO_EVENTO = {
   reinicio: { t: 'Partida reiniciada', ms: 1200 },
   // disputa de pênaltis (modo Pênaltis): o comando da vez, na 1ª vez que o humano bate e que defende
   penaltisBate: { t: 'Sua vez: mire e segure o CHUTE', ms: 3600, forte: true },
-  penaltisDefende: { t: 'Defenda: escolha o lado antes do chute', ms: 3600, forte: true },
+  penaltisDefende: { t: 'Defenda: esquerda ou direita antes do chute', ms: 3600, forte: true },
   reinicioDisputa: { t: 'Disputa reiniciada', ms: 1200 },
 };
 // faixa ENTRA/SAI (pedido do dono de 12/10: "embaixo, no modelo, a informação de quem entra e quem sai"; a exceção dele à

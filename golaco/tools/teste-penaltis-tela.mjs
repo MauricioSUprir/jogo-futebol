@@ -16,6 +16,13 @@
 //      "Simular o resto" até o fim, a faixa com "Voltar ao Total Match" e o pai recebe 'tm3d:fim' com {penaltis: ...} igual
 //      ao gravado.
 //   7  Nenhum erro no console em nenhuma tela.
+//   Revisão de 16/10 (cada item reprovava antes):
+//   8  PC: a dica de teclas (H controles · Esc menu) aparece, e o aviso da 1ª cobrança do humano diz a tecla (K); na pausa
+//      não há o botão "Minimapa" (não fazia nada na disputa); a Ajuda tem o item "Pênaltis" (esquerda/direita) e não diz o
+//      "cima ou baixo" do pênalti da partida.
+//   9  A faixa do fim não encosta nas bolinhas nas telas baixas de celular (568×320, 667×375; antes cobria em 568×320).
+//  10  Sem ?semente: a disputa sorteia a semente (a 1ª, "Reiniciar disputa" e a volta pelo Modo de jogo, todas diferentes).
+//  11  ?tm: durante o "Simular o resto" o placar fica sem o relógio da partida (0' 1º T).
 //   node tools/teste-penaltis-tela.mjs
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -47,18 +54,20 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
     const g = window.__golaco, rel = document.getElementById('placar-relogio');
     const mm = document.getElementById('minimapa');
     return { modo: g.mundo.modo, d: g.disputa, siglas: [document.getElementById('sigla-0').textContent, document.getElementById('sigla-1').textContent],
-      relogio: !!rel && !rel.hidden && getComputedStyle(rel).display !== 'none', mapa: !!mm && getComputedStyle(mm).display !== 'none', tela: g.telaDisputa() };
+      relogio: !!rel && !rel.hidden && getComputedStyle(rel).display !== 'none', mapa: !!mm && getComputedStyle(mm).display !== 'none', tela: g.telaDisputa(),
+      dica: (() => { const d = document.getElementById('dica'); return !!d && getComputedStyle(d).display !== 'none'; })() };
   });
   const cx = { disputa: await caixa(pg, '#disputa'), placar: await caixa(pg, '.placar'), menu: await caixa(pg, '#btn-menu') };
   meta('1 PC: a disputa abre (Golaço × Ventania), placar sem relógio, sem minimapa, bolinhas abaixo do placar sem encostar',
     `modo ${ini.modo}, ${ini.siglas.join(' × ')}, ${ini.d?.estado}; relógio ${ini.relogio ? 'VISÍVEL' : 'escondido'}; minimapa ${ini.mapa ? 'VISÍVEL' : 'escondido'}; bolinhas ${ini.tela?.linhas?.join(' / ')} em y ${cx.disputa ? cx.disputa.t.toFixed(0) : '-'} (placar até ${cx.placar ? cx.placar.b.toFixed(0) : '-'})`,
     ini.modo === 'penaltis' && ini.siglas.join() === 'GLÇ,VNT' && !!ini.d && !ini.relogio && !ini.mapa && ini.tela?.visivel && !!cx.disputa && cx.disputa.t >= cx.placar.b + 2 && !encosta(cx.disputa, cx.menu));
-  const planos = new Set(), vezes = new Set();
+  const planos = new Set(), vezes = new Set(), avisos = new Set();
   let d = null, okBolas = true, okPlacar = true;
   for (let k = 0; k < 60 * 6 * 30 && !(d && d.estado === 'fim'); k += 30) {
     d = await quadros(pg, 30);
-    const v = await pg.evaluate(() => ({ plano: window.__golaco.planoCamera, tela: window.__golaco.telaDisputa(), gols: [document.getElementById('gols-0').textContent, document.getElementById('gols-1').textContent] }));
+    const v = await pg.evaluate(() => ({ plano: window.__golaco.planoCamera, tela: window.__golaco.telaDisputa(), gols: [document.getElementById('gols-0').textContent, document.getElementById('gols-1').textContent], aviso: document.getElementById('aviso')?.textContent?.trim() }));
     if (v.plano) planos.add(v.plano);
+    if (v.aviso) avisos.add(v.aviso);
     if (v.tela?.vez) vezes.add(v.tela.vez);
     if (v.gols.join() !== d.placar.join()) okPlacar = false;
     // as bolinhas de cada time = as cobranças dele (g convertido, x perdido) — as últimas 7
@@ -73,6 +82,40 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
     d?.estado === 'fim' && ['abertura', 'cobranca', 'reacao', 'fim'].every(p => planos.has(p)) && okPlacar && okBolas && vezes.size >= 4);
   await quadros(pg, 60, true);
   const faixa = await pg.evaluate(() => ({ vis: !document.getElementById('faixa').hidden, titulo: document.getElementById('faixa-titulo').textContent, placar: document.getElementById('faixa-placar').textContent, botao: document.getElementById('faixa-botao').textContent.trim(), cmd: document.getElementById('faixa-botao').dataset.cmd }));
+  // 8) a pausa (sem o botão "Minimapa") e a Ajuda da disputa
+  const pausa = await pg.evaluate(async () => {
+    window.__golaco.abrirMenu();
+    await new Promise(r => requestAnimationFrame(r));
+    const chip = document.getElementById('chip-minimapa');
+    const r = { minimapa: !!chip && getComputedStyle(chip).display !== 'none' && chip.getBoundingClientRect().width > 0 };
+    document.querySelector('#menu [data-cmd="ajuda"]').click();
+    await new Promise(ok => requestAnimationFrame(ok));
+    const vis = e => !!e && getComputedStyle(e).display !== 'none' && e.getClientRects().length > 0;
+    const aj = document.getElementById('ajuda');
+    r.itens = [...aj.querySelectorAll('dd.so-disputa')].filter(vis).map(e => e.textContent);
+    // (innerText deixa de fora o que está com display: none)
+    r.cimaBaixo = aj.innerText.includes('cima ou para baixo');
+    document.querySelector('#ajuda [data-cmd="fechar-ajuda"]')?.click();
+    document.querySelector('#menu [data-cmd="continuar"]')?.click();
+    return r;
+  });
+  meta('8 PC: a dica de teclas aparece; o aviso de bater diz a tecla (K); sem "Minimapa" na pausa; Ajuda com "Pênaltis" (esquerda/direita), sem o "cima ou baixo"',
+    `dica ${ini.dica ? 'visível' : 'ESCONDIDA'}; avisos [${[...avisos].join(' | ')}]; Minimapa na pausa ${pausa.minimapa ? 'VISÍVEL' : 'fora'}; Ajuda: ${pausa.itens.length} itens "Pênaltis", "cima ou baixo" ${pausa.cimaBaixo ? 'AINDA' : 'fora'}`,
+    ini.dica && [...avisos].some(a => /\bK\b/.test(a)) && !pausa.minimapa && pausa.itens.length === 3 && pausa.itens.every(t => /esquerda/.test(t) && /direita/.test(t)) && !pausa.cimaBaixo);
+  // 9) a faixa do fim nas telas baixas de celular (a mesma disputa, a janela menor)
+  const baixas = [];
+  for (const [w, h] of [[568, 320], [667, 375]]) {
+    await pg.setViewportSize({ width: w, height: h });
+    await quadros(pg, 2, true);
+    const c = { disputa: await caixa(pg, '#disputa'), faixa: await caixa(pg, '#faixa'), placar: await caixa(pg, '.placar') };
+    baixas.push({ tela: `${w}×${h}`, encosta: encosta(c.disputa, c.faixa) || encosta(c.placar, c.faixa), dentro: !!c.faixa && c.faixa.b <= h && c.faixa.t >= 0, disputa: c.disputa, faixa: c.faixa });
+  }
+  await pg.setViewportSize({ width: 1280, height: 720 });
+  await quadros(pg, 2, true);
+  const fx = r => (r ? `[${[r.l, r.t, r.r, r.b].map(v => v.toFixed(0)).join(',')}]` : '-');
+  meta('9 a faixa do fim não encosta nas bolinhas nem no placar nas telas baixas (568×320, 667×375) e cabe na tela',
+    baixas.map(b => `${b.tela}: ${b.encosta ? 'ENCOSTA' : 'livre'}${b.dentro ? '' : ' FORA DA TELA'} (bolinhas ${fx(b.disputa)}, faixa ${fx(b.faixa)})`).join('; '),
+    baixas.every(b => !b.encosta && b.dentro));
   const nomeVenc = d.vencedor === 0 ? 'Golaço FC' : 'Ventania FC';
   await pg.click('#faixa-botao');
   await quadros(pg, 20, true);
@@ -155,6 +198,29 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
   await s.navegador.close();
 }
 
+// ------------------------------------------------------------------ 10 sem ?semente: a semente sorteada a cada disputa
+{
+  const s = await abrir({ largura: 1280, altura: 720 });
+  const pg = s.pagina;
+  await pg.goto(`${srv.url}?modo=penaltis&${Q}`, { waitUntil: 'load' });
+  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+  await pg.evaluate(() => window.__golaco.relogio.usarManual(true));
+  await quadros(pg, 5, true);
+  const sem = [await pg.evaluate(() => window.__golaco.mundo.semente)];
+  await pg.evaluate(() => { window.__golaco.abrirMenu(); document.getElementById('btn-reiniciar-partida').click(); });
+  await quadros(pg, 5, true);
+  sem.push(await pg.evaluate(() => window.__golaco.mundo.semente));
+  await pg.evaluate(() => { window.__golaco.abrirMenu(); document.getElementById('btn-modos').click(); document.querySelector('#menu-modos [data-valor="partida"]').click(); });
+  await quadros(pg, 5, true);
+  await pg.evaluate(() => { window.__golaco.abrirMenu(); document.getElementById('btn-modos').click(); document.querySelector('#menu-modos [data-valor="penaltis"]').click(); });
+  await quadros(pg, 5, true);
+  sem.push(await pg.evaluate(() => window.__golaco.mundo.modo === 'penaltis' ? window.__golaco.mundo.semente : null));
+  meta('10 sem ?semente: a semente da disputa é sorteada (a 1ª, Reiniciar disputa, a volta pelo Modo de jogo)', `sementes ${sem.join(', ')}`,
+    sem.every(x => Number.isInteger(x) && x >= 1) && new Set(sem).size === sem.length);
+  meta('7d sem ?semente: sem erro no console', s.erros.length ? s.erros.slice(0, 3).join(' | ') : 'nenhum', s.erros.length === 0);
+  await s.navegador.close();
+}
+
 // ------------------------------------------------------------------ 6 Total Match (?tm), pedido com modo "penaltis"
 {
   const pedido = { ...PED_A, id: 'tP', modo: 'penaltis' };
@@ -181,9 +247,17 @@ document.body.appendChild(f);
   await pg.waitForFunction(() => window.__msgs.some(m => m.tipo === 'tm3d:pronto'), null, { timeout: 10000 }).catch(() => {});
   const info = await fr.evaluate(() => { const g = window.__golaco; return { modo: g.mundo.modo, d: g.disputa, siglas: [document.getElementById('sigla-0').textContent, document.getElementById('sigla-1').textContent], humano: g.tm.humano, trava: g.tm.trava }; });
   const r = await fr.evaluate(async () => {
-    const res = await window.__golaco.tm.simularResto();
-    return { res, gravado: window.__golaco.tm.resultadoGravado(), titulo: document.getElementById('faixa-titulo').textContent, botao: document.getElementById('faixa-botao').textContent.trim(), d: window.__golaco.disputa };
+    // 11) durante a simulação: o placar sem o relógio da partida
+    const p = window.__golaco.tm.simularResto();
+    await new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(ok)));
+    const rel = document.getElementById('placar-relogio');
+    const relogioDurante = !!rel && !rel.hidden && getComputedStyle(rel).display !== 'none';
+    const faixaDurante = document.getElementById('faixa-titulo').textContent;
+    const res = await p;
+    return { res, gravado: window.__golaco.tm.resultadoGravado(), titulo: document.getElementById('faixa-titulo').textContent, botao: document.getElementById('faixa-botao').textContent.trim(), d: window.__golaco.disputa, relogioDurante, faixaDurante };
   });
+  meta('11 ?tm: durante o "Simular o resto" o placar fica sem o relógio da partida', `"${r.faixaDurante}": relógio ${r.relogioDurante ? 'VISÍVEL' : 'escondido'}`,
+    /Simulando o resto da disputa/.test(r.faixaDurante) && !r.relogioDurante);
   await fr.click('#faixa-botao');
   await pg.waitForFunction(() => window.__msgs.some(m => m.tipo === 'tm3d:fim'), null, { timeout: 10000 }).catch(() => {});
   const msgs = await pg.evaluate(() => window.__msgs.map(m => ({ ...m })));

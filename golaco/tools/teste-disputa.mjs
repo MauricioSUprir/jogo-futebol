@@ -12,7 +12,12 @@
 //   E) o humano roteirizado: bate (mira e força pelo analógico e pelo CHUTE — o canto do lado do analógico, sem a IA bater
 //      por ele) e defende (o lado do analógico antes do chute é o do mergulho; acertando o lado, defende); parado, a IA bate
 //      por ele depois do prazo (a disputa nunca trava);
-//   F) determinismo (a mesma semente = o mesmo hash e as mesmas cobranças) e o resultado no contrato do Total Match.
+//   F) determinismo (a mesma semente = o mesmo hash e as mesmas cobranças) e o resultado no contrato do Total Match;
+//   G) o fim da cobrança pela Regra 10 (revisão de 16/10): a bola que volta da trave pela boca do gol, bate no goleiro e
+//      entra é gol (antes: 'fora' e o gol contado depois, na reação); dado o resultado, nenhum gol conta e nenhuma bola
+//      dada como perdida entra depois; 'defesa' só com o goleiro tocando (o 'goleiroBatido' — ele NÃO chegou — contava
+//      como toque: o chute que passava rente à trave, por fora, virava 'defesa'); o goleiro na linha no chute (C4);
+//      a cavadinha repetida do humano não converte sem risco (E4: o goleiro lê as cavadinhas da disputa).
 //   node tools/teste-disputa.mjs [--js <pasta js>] [--rapido]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -34,9 +39,12 @@ if (!DS) {
   reg('disputa de pênaltis (js/disputa.js)', 'não existe', 'existe', false);
 } else {
   const { criarDisputa, passoDisputa, entradaDemoDisputa, vencedorDisputa, timeDaCobranca, cobradorDa, resumoDisputa, resultadoPenaltisTM, DISPUTA_ESTADOS } = DS;
-  const { DISPUTA, CAMPO, PASSO, BOTAO, PARTIDA } = await imp('config.js');
+  const { DISPUTA, CAMPO, PASSO, BOTAO, PARTIDA, BOLA } = await imp('config.js');
   const { hashMundo, jogadorPorId } = await imp('sim.js');
+  const { teleportar } = await imp('partida.js');
   const MX = CAMPO.meioX;
+  // a bola passou inteira da linha do gol G entre as traves, por baixo do travessão (pela posição, sem olhar o m.golTick)
+  const entrou = (b, G) => b.p.x * G >= MX + BOLA.raio && b.p.x * G - MX < 1.5 && Math.abs(b.p.z) < CAMPO.gol.largura / 2 && b.p.y < CAMPO.gol.altura;
 
   // ------------------------------------------------------------ A. a regra pura
   {
@@ -99,12 +107,16 @@ if (!DS) {
   const resIA = { gol: 0, defesa: 0, fora: 0 };
   let fimOk = 0, depois = 0, abab = 0, filaOk = 0, placarOk = 0, umFim = 0, tMax = 0, tSoma = 0, ordemGol = 0, ordemOk = 0;
   let circ = 0, circN = 0, esquina = 0, esqN = 0, linhaGol = 0, linhaN = 0, marca = 0, marcaN = 0, tocouCam = 0, saltoMax = 0, levadoMax = 0, cobrMax = 0, montou = -1;
+  // G: gol fora do chute (depois do resultado), bola dada como perdida que entrou depois, 'defesa' sem toque do goleiro;
+  // C4: o goleiro que defende no tick do chute (o centro e o pé mais perto da linha)
+  let golDepois = 0, entrouDepois = 0, defN = 0, defSemToque = 0, chuteN = 0, gkCentroMax = 0, gkPeMax = 0;
+  const exG = [];
   for (let s = 1; s <= NB; s++) {
     const m = criarDisputa({ semente: s });
     const D = m.disputa;
     let n = 0, fins = 0;
     const kick = [];
-    let ant = null;
+    let ant = null, vigia = false, toqueGk = false;
     while (D.estado !== 'fim' && n < 60 * 600) {
       const est = D.estado;
       const c0 = D.cobrador != null ? jogadorPorId(m, D.cobrador) : null;
@@ -119,7 +131,20 @@ if (!DS) {
       }
       ant = D.estado === 'caminhada' ? D.cobrador : null;
       for (const e of ev) {
+        if (e.tipo === 'gol' && est !== 'chute') { golDepois++; if (exG.length < 4) exG.push(`gol na ${est} (semente ${s}, t${m.tick})`); }
+        if ((e.tipo === 'defesa' || e.tipo === 'bateuCorpo') && e.id === D.goleiro) toqueGk = true;
+        if (e.tipo === 'cobranca' && e.parada === 'penalti') {
+          // C4 (Regra 14): no chute, o goleiro que defende na linha (o centro e o pé mais perto dela)
+          const gk = jogadorPorId(m, D.goleiro);
+          if (gk) {
+            chuteN++;
+            gkCentroMax = Math.max(gkCentroMax, MX - gk.x * D.gol);
+            gkPeMax = Math.max(gkPeMax, Math.min(...gk.pes.map(p => MX - p.x * D.gol)));
+          }
+          toqueGk = false;
+        }
         if (e.tipo === 'cobrancaPenalti') {
+          vigia = false;
           montou = m.tick;
           levadoMax = Math.max(levadoMax, e.levado);
           // C: o lugar de cada um com a cobrança montada
@@ -132,9 +157,15 @@ if (!DS) {
           }
         }
         if (e.tipo === 'cobranca' && montou >= 0) cobrMax = Math.max(cobrMax, (m.tick - montou) * PASSO);
-        if (e.tipo === 'disputaCobranca') { kick.push(e); res[e.resultado]++; if (e.time === 1) resIA[e.resultado]++; }
+        if (e.tipo === 'disputaCobranca') {
+          kick.push(e); res[e.resultado]++; if (e.time === 1) resIA[e.resultado]++;
+          if (e.resultado !== 'gol') vigia = true;
+          if (e.resultado === 'defesa') { defN++; if (!toqueGk && m.naMao !== D.goleiro) { defSemToque++; if (exG.length < 4) exG.push(`defesa sem toque (semente ${s}, k ${e.k})`); } }
+        }
         if (e.tipo === 'disputaFim') fins++;
       }
+      // G: a bola de uma cobrança já perdida não entra depois (até a próxima montagem)
+      if (vigia && entrou(m.bola, D.gol)) { entrouDepois++; vigia = false; if (exG.length < 4) exG.push(`entrou depois de perdida (semente ${s}, t${m.tick})`); }
     }
     const r = resumoDisputa(m);
     tMax = Math.max(tMax, n * PASSO); tSoma += n * PASSO;
@@ -157,6 +188,8 @@ if (!DS) {
   reg('C1. Na cobrança: os que esperam no círculo central (≤ 9,15 m do centro)', `${circ}/${circN}`, 'todos', circ === circN && circN > 0);
   reg('C2. Goleiro do time que bate na linha de fundo, fora da área; o que defende na linha entre as traves; cobrador na marca', `esquina ${esquina}/${esqN}, linha ${linhaGol}/${linhaN}, marca ${marca}/${marcaN}`, 'todos', esquina === esqN && linhaGol === linhaN && marca === marcaN && marcaN > 0);
   reg('C3. Caminhada: a bola parada na marca, o cobrador anda até ela (passo ≤ 0,1 m; levado na montagem ≤ 0,1 m)', `bola mexeu ${tocouCam}; maior passo ${fmt(saltoMax, 3)} m; levado ${fmt(levadoMax, 3)} m`, '0; ≤ 0,1; ≤ 0,1', tocouCam === 0 && saltoMax <= 0.1 && levadoMax <= 0.1);
+  reg('C4. Regra 14: no chute, o goleiro que defende NA linha (centro e pé mais perto dela; a linha tem 0,12 m)', `${chuteN} chutes: centro até ${fmt(gkCentroMax, 2)} m, pé até ${fmt(gkPeMax, 2)} m da linha`, 'centro ≤ 0,2 m; pé ≤ 0,12 m (antes 0,56–0,67 / 0,45–0,50)', chuteN > 0 && gkCentroMax <= 0.2 && gkPeMax <= 0.12);
+  reg('G2. IA × IA: dado o resultado, nenhum gol conta e nenhuma bola dada como perdida entra; \'defesa\' só com o goleiro tocando', `gol depois do resultado ${golDepois}; entrou depois ${entrouDepois}; defesa sem toque ${defSemToque}/${defN}${exG.length ? ' — ' + exG.join('; ') : ''}`, '0; 0; 0', golDepois === 0 && entrouDepois === 0 && defSemToque === 0);
   const nT = res.gol + res.defesa + res.fora;
   reg('B4. Ritmo: a bola rola a ≤ 4 s da montagem (IA e demo)', `${fmt(cobrMax, 2)} s`, '≤ 4 s', cobrMax <= 4);
 
@@ -233,6 +266,91 @@ if (!DS) {
     let k = 0, ia = 0;
     while (m.disputa.estado !== 'fim' && k++ < 60 * 600) for (const q of passoDisputa(m, { x: 0, z: 0, botoes: 0 })) if (q.tipo === 'cobranca' && jogadorPorId(m, q.id).time === 0) ia++;
     reg('E3. Humano parado: a IA bate por ele depois do prazo e a disputa acaba', `${m.disputa.estado}, ${ia} cobranças dele pela IA, ${fmt(k * PASSO, 0)} s`, 'fim', m.disputa.estado === 'fim' && ia >= 3);
+  }
+
+  // ------------------------------------------------------------ G. cenas montadas: o fim da cobrança
+  {
+    // até o chute da 1ª cobrança (a IA pelos dois)
+    const ateChute = s => {
+      const m = criarDisputa({ semente: s });
+      let n = 0;
+      while (m.disputa.estado !== 'chute' && n++ < 60 * 60) passoDisputa(m, entradaDemoDisputa(m));
+      return m;
+    };
+    // roda até o resultado e mais a reação (até a próxima caminhada): {res, golDepois, entrou, toque}
+    const ateResultado = m => {
+      const D = m.disputa, k0 = D.cobrancas.length, G = D.gol;
+      let res = null, golDepois = 0, cruzou = false, toque = false;
+      for (let i = 0; i < 60 * 12; i++) {
+        const est = D.estado;
+        for (const e of passoDisputa(m, entradaDemoDisputa(m))) {
+          if (e.tipo === 'disputaCobranca') res = e.resultado;
+          if (e.tipo === 'gol' && est !== 'chute') golDepois++;
+          if (e.tipo === 'bateuCorpo' && e.id === D.goleiro) toque = true;
+        }
+        if (entrou(m.bola, G)) cruzou = true;
+        if (D.cobrancas.length > k0 && D.estado !== 'reacao') break;
+      }
+      return { res, golDepois, cruzou, toque };
+    };
+    // G1: a bola volta da trave pela boca do gol (o estado da semente 1085 da revisão: 13 m/s de lado, 5 m/s para fora), com
+    // o goleiro PARADO em vários pontos do caminho; onde ela bate nele e entra, tem de ser gol (e nada conta depois)
+    let casos = 0, entraram = 0, certos = 0, golDep = 0;
+    const errados = [];
+    for (const gx of [51.0, 51.1, 51.2, 51.3]) for (const gz of [0.6, 0.9, 1.2, 1.5]) {
+      const m = ateChute(1), D = m.disputa, G = D.gol, b = m.bola, gk = jogadorPorId(m, D.goleiro);
+      b.p.x = G * 52.36; b.p.y = 0.37; b.p.z = 3.62; b.v.x = -G * 5.03; b.v.y = -1.81; b.v.z = -13.01;
+      b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = false;
+      teleportar(gk, G * gx, gz, G > 0 ? Math.PI : 0);
+      gk.defesa = null; gk.mergulho = null; gk.palpite = null; gk.papel = 'parado';
+      D.trave = true;
+      const r = ateResultado(m);
+      casos++; golDep += r.golDepois;
+      if (r.cruzou) { entraram++; if (r.res === 'gol') certos++; else errados.push(`goleiro em (${gx}, ${gz}): ${r.res}`); }
+    }
+    reg('G1. Bola na trave que volta pela boca do gol, bate no goleiro e entra: gol (cena montada, goleiro parado em 16 pontos)', `${entraram} entraram: ${certos} gol${errados.length ? ' — ' + errados.join('; ') : ''}; gol contado depois do resultado ${golDep}`, '≥ 1 entrou; todas gol; 0', entraram >= 1 && certos === entraram && golDep === 0);
+    // G3: o goleiro batido (mergulhou para o lado errado: 'goleiroBatido', sem tocar) e o chute por fora, rente à trave → 'fora'
+    const resB = [];
+    for (const s of [1, 2]) for (const lado of [1, -1]) {
+      const m = ateChute(s), D = m.disputa, G = D.gol, b = m.bola, gk = jogadorPorId(m, D.goleiro);
+      const dx = G * CAMPO.marcaPenalti, dz = lado * 4.4, L = Math.hypot(dx, dz), V = 22;
+      b.p.x = G * (MX - CAMPO.marcaPenalti); b.p.y = BOLA.raio; b.p.z = 0; b.v.x = V * dx / L; b.v.y = 3; b.v.z = V * dz / L;
+      b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = false;
+      // o plano da defesa que falha (como o do palpite errado no goleiro.js lerChute): mergulho para o outro lado
+      gk.palpite = -lado * 2.2;
+      gk.defesa = { chave: m.voo?.tickChave, lido: m.tick, tick: m.tick + 24, inicio: m.tick + 2, z: -lado * 2.2, y: 0.55, sucesso: false, tipo: 'falhou',
+        mergulha: true, proprio: false, lado: -lado, xPlano: G * (MX - 0.3), bx: G * (MX - 0.3), by: 0.55, bz: -lado * 2.2, palpite: true };
+      let batido = false;
+      const D0 = D.cobrancas.length;
+      for (let i = 0; i < 60 * 6 && D.cobrancas.length === D0; i++) for (const e of passoDisputa(m, entradaDemoDisputa(m))) if (e.tipo === 'goleiroBatido' && e.id === gk.id) batido = true;
+      resB.push(`${batido ? 'batido' : 'sem batido'} → ${D.cobrancas[D0]?.resultado}`);
+    }
+    reg('G3. Goleiro batido (mergulhou para o outro lado, sem tocar) e o chute por fora: \'fora\', não \'defesa\'', resB.join('; '), 'batido → fora (4)', resB.length === 4 && resB.every(x => x === 'batido → fora'));
+  }
+
+  // ------------------------------------------------------------ E4. a cavadinha repetida do humano
+  {
+    // o humano começa e bate SEMPRE de cavadinha (dois toques rápidos no CHUTE, o analógico para o gol)
+    let n = 0, cav = 0, gol = 0, prim = 0, primGol = 0;
+    for (let s = 1; s <= (RAPIDO ? 6 : 16); s++) {
+      const m = criarDisputa({ semente: 300 + s, comeca: 0, humano: 0 });
+      const D = m.disputa;
+      let t0 = -1, k = 0, minhas = 0;
+      while (D.estado !== 'fim' && k++ < 60 * 600) {
+        let e = { x: 0, z: 0, botoes: 0 };
+        const pr = m.parada;
+        if (D.estado === 'cobranca' && pr && !pr.rolou && D.vez === 0) {
+          if (m.tick >= pr.pronta + 6 && t0 < 0) t0 = m.tick;
+          const f = t0 >= 0 ? m.tick - t0 : -1;
+          e = { x: 0.3 * D.gol, z: 0, botoes: (f >= 0 && f < 3) || (f >= 5 && f < 8) ? BOTAO.CHUTE : 0 };
+        } else if (D.estado !== 'cobranca') t0 = -1;
+        for (const q of passoDisputa(m, e)) if (q.tipo === 'disputaCobranca' && q.time === 0) {
+          n++; if (q.cavadinha) cav++; if (q.resultado === 'gol') gol++;
+          if (minhas++ === 0) { prim++; if (q.resultado === 'gol') primGol++; }
+        }
+      }
+    }
+    reg('E4. Cavadinha repetida do humano: o goleiro da IA lê (fica mais no meio) — sem estratégia que converte sem risco', `${cav}/${n} cavadinhas: ${pct(gol, n)} gol (a 1ª da disputa ${pct(primGol, prim)}; chute no canto ~76%, antes ~93%)`, 'todas cavadinha; ≤ 75% no total; a 1ª ≥ 75%', n > 0 && cav === n && gol / n <= 0.75 && primGol / prim >= 0.75);
   }
 
   // ------------------------------------------------------------ F. determinismo e Total Match

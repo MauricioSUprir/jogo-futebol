@@ -39,7 +39,7 @@
 // locomoção, e nunca a posição do corpo (os pés seguem pela passada). Nenhuma parada passa de
 // PARTIDA.paradaMax (8 s).
 
-import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META, ESCANTEIO, BARREIRA } from './config.js';
+import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META, ESCANTEIO, BARREIRA, DISPUTA } from './config.js';
 import { criarMundo, passo, jogadorPorId, misturarHash, aplicarEntrada } from './sim.js';
 import { criarBola } from './bola.js';
 import { MD } from './matdet.js';
@@ -619,7 +619,8 @@ function foraDaBarreira(br, out) {
 function restricaoPenalti(m, p, j, out) {
   const lado = m.ataca[p.time], gx = lado * CAMPO.meioX;
   if (j.time !== p.time && j.posicao === 'GOL') {
-    out.x = gx - lado * clamp((gx - out.x) * lado, 0, 0.6);
+    // (disputa de pênaltis: NA linha — Regra 14, um pé sobre ela no chute — a DISPUTA.goleiroLinha m; a partida segue com 0,6)
+    out.x = gx - lado * clamp((gx - out.x) * lado, 0, m.disputa ? DISPUTA.goleiroLinha : 0.6);
     // o goleiro do humano: só o passo para o lado escolhido (GOLEIRO.penalti.passo), não até a trave (sim.js
     // goleiroComoLinha); a IA, a largura do gol
     const humano = m.humanos.includes(j.time) && m.controlado[j.time] === j.id && !m.iaJoga?.[j.time];

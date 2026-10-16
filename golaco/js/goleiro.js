@@ -3,7 +3,7 @@
 // alcance real, encaixe ou espalmada, bola nas mãos e reposição, e saída (botão GOLEIRO
 // segurado ou 1×1). Puro: sem three.js nem DOM; sorteios pelo gerador do mundo.
 
-import { GOLEIRO, CAMPO, PASSO, BOLA, BOTAO, JOGADOR, G, BARREIRA } from './config.js';
+import { GOLEIRO, CAMPO, PASSO, BOLA, BOTAO, JOGADOR, G, BARREIRA, DISPUTA } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { uniforme } from './rng.js';
@@ -441,11 +441,14 @@ export function movimentoGoleiro(m, j, humano) {
   const bx = pc ? pc.x : b.p.x, bz = pc ? pc.z : b.p.z;
   const dBola = MD.hypot(bx - gx, bz);
   const P = GOLEIRO.profundidade;
-  const dLinha = dBola <= 20 ? lerp(P[0], P[1], clamp((dBola - 6) / 14, 0, 1))
+  const pr = m.parada;
+  // disputa de pênaltis (disputa.js), a cobrança montada: na linha do gol até o chute (Regra 14, que vale na Regra 10) — na
+  // partida ele vai para a bissetriz e a parede do pênalti o segura a até 0,6 m (só a disputa muda: o hash da partida é o mesmo)
+  const naLinha = m.disputa && pr && !pr.rolou && pr.tipo === 'penalti' && pr.time !== j.time;
+  const dLinha = naLinha ? DISPUTA.goleiroLinha : dBola <= 20 ? lerp(P[0], P[1], clamp((dBola - 6) / 14, 0, 1))
     : lerp(P[1], GOLEIRO.profundidadeLonge, clamp((dBola - 20) / 20, 0, 1));
   const p = pontoBissetriz(bx, bz, gx, dLinha);
   // tiro livre com barreira (Etapa 4): ela tapa o lado do 1º pau; o goleiro fica para o lado do 2º
-  const pr = m.parada;
   const pz = pr && !pr.rolou && pr.barreira && pr.barreira.n > 0 && pr.time !== j.time ? p.z + pr.barreira.ladoLongo * BARREIRA.goleiro : p.z;
   const dx = p.x - j.x, dz = pz - j.z;
   const dd = MD.hypot(dx, dz);

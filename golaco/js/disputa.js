@@ -13,8 +13,10 @@
 //  - quem começa pela moeda (m.rng; opc.comeca nos testes);
 //  - os que esperam ficam no círculo central (duas filas de frente para o gol, o time que começa mais perto), o goleiro do
 //    time que bate na linha de fundo onde ela encontra a linha da área (fora dela);
+//  - o goleiro que defende fica na linha do gol até o chute (Regra 14, que vale na Regra 10: DISPUTA.goleiroLinha);
 //  - a cobrança acaba quando a bola entra, sai, para ou não pode mais entrar (voltando do gol depois de tocar o goleiro ou
-//    a trave) — a bola que bate no goleiro e entra é gol.
+//    a trave, sem cruzar a linha nem passar pelo goleiro na física prevista) — a bola que bate no goleiro e entra é gol; dado
+//    o resultado, a bola está morta (m.golTick: nenhum gol conta depois dele).
 // Estados (m.disputa.estado): 'caminhada' (o cobrador entra a DISPUTA.caminhada.dist m da marca — corte de câmera — e anda
 // até a bola pela locomoção do jogo: j.guia, o pedido de movimento que o sim.js usa para quem está 'parado'), 'cobranca'
 // (a parada do pênalti montada: prepararPenalti), 'chute' (a bola rolou: esperando o fim da cobrança), 'reacao' (o resultado
@@ -27,10 +29,11 @@
 // mãos na cabeça no erro, o goleiro com o punho na defesa, o time que venceu no fim) e planoCameraDisputa (atrás do
 // cobrador, a reação de frente para quem reage, o círculo na abertura e no fim).
 
-import { DISPUTA, PARTIDA, CAMPO, PASSO, BOTAO, BOLA } from './config.js';
+import { DISPUTA, PARTIDA, CAMPO, PASSO, BOTAO, BOLA, GOLEIRO } from './config.js';
 import { MD } from './matdet.js';
 import { uniforme } from './rng.js';
-import { criarBola } from './bola.js';
+import { criarBola, passoBola } from './bola.js';
+import { profundidadeVeu } from './rede-forma.js';
 import { passo, jogadorPorId } from './sim.js';
 import { assumirControle } from './acoes.js';
 import { criarPartida, bolaMorta, prepararPenalti, cobrar, rolou, teleportar, entradaCobranca } from './partida.js';
@@ -40,6 +43,8 @@ export const ESTADOS_DISPUTA = ['caminhada', 'cobranca', 'chute', 'reacao', 'fim
 export const RESULTADOS = ['gol', 'defesa', 'fora'];
 const seg = s => Math.round(s / PASSO);
 const NEUTRA = Object.freeze({ x: 0, z: 0, botoes: 0 });
+// m.golTick com a bola morta (o mesmo MORTA do partida.js): o sim.js (verificarGol) não conta gol enquanto não for null
+const BOLA_MORTA = -2;
 
 // ------------------------------------------------------------------------------------ a regra (Regra 10)
 
@@ -111,7 +116,7 @@ export function criarDisputa(opc = {}) {
     ordem: { 0: [], 1: [] }, vagas: {},
     cobrancas: [], placar: [0, 0], chutes: [0, 0], vencedor: null,
     vez: null, cobrador: null, goleiro: null, goleiroCobra: null,
-    chuteTick: -1, tocou: false, trave: false, ultima: null, alvo: { x: 0, z: 0 },
+    chuteTick: -1, tocou: false, trave: false, cavadinha: false, ultima: null, alvo: { x: 0, z: 0 },
   };
   for (const t of [0, 1]) D.ordem[t] = ordemCobradores(m, t);
   vagasCirculo(m, D);
@@ -145,7 +150,7 @@ function iniciarCobranca(m) {
       const s = k % 2 ? -1 : 1;
       x = mx - G * C.dist; z = s * C.lado; r = MD.atan2(-z, mx - x); sempre = true;
     } else if (j === gk) {
-      x = G * (CAMPO.meioX - 0.3); z = 0; r = G > 0 ? Math.PI : 0; sempre = true;
+      x = G * (CAMPO.meioX - DISPUTA.goleiroLinha); z = 0; r = G > 0 ? Math.PI : 0; sempre = true;
     } else if (j === gkC) {
       x = G * (CAMPO.meioX - 0.45); z = -(CAMPO.area.largura / 2 + DISPUTA.esquina); r = MD.atan2(-z, mx - x); sempre = true;
     } else {
@@ -163,7 +168,7 @@ function iniciarCobranca(m) {
   }
   D.estado = 'caminhada'; D.desde = m.tick;
   D.vez = t; D.cobrador = c.id; D.goleiro = gk ? gk.id : null; D.goleiroCobra = gkC && gkC !== c ? gkC.id : null;
-  D.chuteTick = -1; D.tocou = false; D.trave = false;
+  D.chuteTick = -1; D.tocou = false; D.trave = false; D.cavadinha = false;
   // o ponto em que ele para: 0,4 m atrás da bola, de frente para o gol (o mesmo de partida.js cobradorNoPonto)
   D.alvo.x = mx - G * 0.4; D.alvo.z = 0;
   m.eventos.push({ tipo: 'disputaCobrador', time: t, id: c.id, n: n + 1, k });
@@ -203,7 +208,31 @@ function montarCobranca(m) {
   const W = PARTIDA.penaltiIA.forca, F = DISPUTA.forcaIA;
   pr.forca = F[0] + (F[1] - F[0]) * (pr.forca - W[0]) / (W[1] - W[0]);
   pr.pronta = Math.min(pr.pronta, m.tick + seg(DISPUTA.pronta));
+  if (gk) lerCavadinhas(m, gk, pr);
   D.estado = 'cobranca'; D.desde = m.tick;
+}
+
+/**
+ * O goleiro lê o cobrador do outro time (DISPUTA.leituraCavadinha): com cavadinhas nas últimas cobranças desse time na
+ * disputa, o lado sorteado na montagem (partida.js prepararPenalti) passa a ficar no meio com a chance da tabela; os lados
+ * seguem meio a meio. Um sorteio a mais (m.rng) só depois de uma cavadinha: a disputa sem elas sorteia igual. O goleiro do
+ * humano escolhe pelo analógico na hora do chute (partida.js rolou) — este palpite é o da demo/IA.
+ */
+function lerCavadinhas(m, gk, pr) {
+  const D = m.disputa, L = DISPUTA.leituraCavadinha;
+  let n = 0, k = 0;
+  for (let i = D.cobrancas.length - 1; i >= 0 && k < L.ultimas; i--) {
+    const c = D.cobrancas[i];
+    if (c.time !== D.vez) continue;
+    k++;
+    if (c.cavadinha) n++;
+  }
+  if (n === 0) return;
+  const pMeio = L.meio[Math.min(n, L.meio.length) - 1], u = uniforme(m.rng);
+  const lado = GOLEIRO.penalti.palpite[GOLEIRO.penalti.palpite.length - 1][0];
+  if (u < pMeio) gk.palpite = 0;
+  else if (gk.palpite === 0) gk.palpite = (u - pMeio) / (1 - pMeio) < 0.5 ? -lado : lado;
+  pr.palpite = gk.palpite;
 }
 
 // ------------------------------------------------------------------------------------ passo
@@ -254,7 +283,10 @@ function regrasDisputa(m) {
         b.p.x = pr.x; b.p.z = pr.z; b.p.y = BOLA.raio; b.v.x = 0; b.v.y = 0; b.v.z = 0; b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = true;
       }
     }
-    if (!m.parada || m.parada.rolou) { D.estado = 'chute'; D.desde = m.tick; D.chuteTick = m.tick; }
+    if (!m.parada || m.parada.rolou) {
+      D.estado = 'chute'; D.desde = m.tick; D.chuteTick = m.tick;
+      D.cavadinha = m.voo?.tipo === 'cavadinha';
+    }
   } else if (D.estado === 'chute') {
     const res = fimDaCobranca(m);
     if (res) concluir(m, res);
@@ -286,13 +318,17 @@ function segurarBolaNaMao(m) {
 /**
  * Fim da cobrança (Regra 10): 'gol' (entrou, também depois de tocar o goleiro ou a trave), 'defesa' (o goleiro tocou e ela
  * não entrou) ou 'fora' (não entrou sem o goleiro tocar: para fora, na trave); null enquanto ela ainda pode entrar.
+ * O toque do goleiro é a defesa dele ou a bola no corpo dele — o 'goleiroBatido' (goleiro.js aplicarDefesa) é justamente
+ * quando ele NÃO chega (o chute rente à trave que saía virava 'defesa'). Voltando do gol ou parada, a cobrança só acaba
+ * quando a bola não pode mais entrar (aindaPodeEntrar): antes a bola que batia na trave e cruzava a boca do gol era dada
+ * como perdida e entrava depois, no goleiro.
  */
 function fimDaCobranca(m) {
   const D = m.disputa, F = DISPUTA.fimChute, G = D.gol, gk = D.goleiro;
   let outro = false, gol = false;
   for (const e of m.eventos) {
     if (e.tipo === 'gol') gol = true;
-    else if ((e.tipo === 'defesa' || e.tipo === 'goleiroBatido' || e.tipo === 'bateuCorpo') && e.id === gk) D.tocou = true;
+    else if ((e.tipo === 'defesa' || e.tipo === 'bateuCorpo') && e.id === gk) D.tocou = true;
     else if (e.tipo === 'bateuCorpo') outro = true;
     else if (e.tipo === 'trave') D.trave = true;
   }
@@ -304,10 +340,34 @@ function fimDaCobranca(m) {
   const b = m.bola, dt = (m.tick - D.chuteTick) * PASSO;
   const R = BOLA.raio;
   const fora = Math.abs(b.p.x) > CAMPO.meioX + R || Math.abs(b.p.z) > CAMPO.meioZ + R;
+  if (fora || dt > F.max) return semGol;
   const volta = (D.tocou || D.trave) && b.v.x * G < -F.volta && CAMPO.meioX - b.p.x * G > F.longe;
   const parada = dt > F.minimo && MD.hypot(b.v.x, MD.hypot(b.v.y, b.v.z)) < F.parada && b.p.y < 0.3;
-  if (fora || volta || parada || dt > F.max) return semGol;
+  if ((volta || parada) && !aindaPodeEntrar(m, volta && gk != null ? jogadorPorId(m, gk) : null)) return semGol;
   return null;
+}
+
+const _bp = criarBola(0, 0);
+/**
+ * A bola ainda pode entrar? A mesma física do jogo (bola.js passoBola: traves, véu, placas) por DISPUTA.fimChute.previsao s,
+ * sem ninguém no caminho: true se ela cruza a linha do gol da disputa entre as traves, por baixo do travessão e aquém do véu
+ * (a conta do sim.js verificarGol), ou, com `gk`, se passa ao alcance do goleiro (o corpo dele pode desviá-la para dentro).
+ */
+function aindaPodeEntrar(m, gk) {
+  const F = DISPUTA.fimChute, G = m.disputa.gol, b = m.bola;
+  Object.assign(_bp.p, b.p); Object.assign(_bp.v, b.v); Object.assign(_bp.w, b.w); _bp.rolando = b.rolando;
+  const n = seg(F.previsao);
+  for (let i = 1; i <= n; i++) {
+    passoBola(_bp, null);
+    const p = _bp.p;
+    if (p.x * G >= CAMPO.meioX + BOLA.raio) {
+      const y = p.y < 0 ? 0 : p.y;
+      return Math.abs(p.z) < CAMPO.gol.largura / 2 && y < CAMPO.gol.altura && p.x * G - CAMPO.meioX <= profundidadeVeu(y);
+    }
+    if (gk && p.y < F.alturaGoleiro && MD.hypot(p.x - gk.x, p.z - gk.z) < F.alcanceGoleiro) return true;
+    if (_bp.rolando && _bp.v.x === 0 && _bp.v.z === 0) return false;
+  }
+  return false;
 }
 
 /** O resultado da cobrança: placar, a lista, o vencedor (se já saiu) e a reação. */
@@ -316,14 +376,17 @@ function concluir(m, res) {
   const n = ++D.chutes[t];
   if (res === 'gol') D.placar[t]++;
   const k = D.cobrancas.length;
-  const c = { time: t, id: D.cobrador, resultado: res, n, k };
+  const c = { time: t, id: D.cobrador, resultado: res, n, k, cavadinha: D.cavadinha };
   D.cobrancas.push(c);
   D.ultima = c;
   m.partida.penaltiAberto = null;
+  // o resultado saiu: a bola está morta (Regra 10) — nenhum gol conta depois dele (a bola que ainda rolasse para dentro na
+  // reação somava no m.placar e mostrava o "GOL!" de uma cobrança já perdida)
+  m.golTick = BOLA_MORTA;
   for (const o of m.jogadores) if (o.palpite != null) o.palpite = null;
   D.vencedor = vencedorDisputa(D.placar, D.chutes);
   D.estado = 'reacao'; D.desde = m.tick;
-  m.eventos.push({ tipo: 'disputaCobranca', time: t, id: c.id, resultado: res, n, k, placar: [D.placar[0], D.placar[1]] });
+  m.eventos.push({ tipo: 'disputaCobranca', time: t, id: c.id, resultado: res, n, k, cavadinha: c.cavadinha, placar: [D.placar[0], D.placar[1]] });
 }
 
 /** Fim da disputa: todos param, eventos disputaFim e fimDeJogo (o apito final, a torcida, os treinadores). */
