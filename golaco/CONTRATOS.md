@@ -1873,8 +1873,8 @@ nem no hash; a geometria (placas, arquibancadas) não muda.
   e do outro goleiro, árbitro ≥ 22 dos 4 (azul, preto, amarelo, vermelho, ...). Kit do TM → `{camisa, manga, calcao,
   meiao, chuteira, acento, sola, luva, padrao (plain|stripes|halves|sash|hoops), segunda}`. Paletas ≥ 10 cores com
   neutros; faixas `[texto, fundo, letra, detalhe, corDoDetalhe?]` com letra ≥ 3:1 (9 e 11 = visitante); minimapa ≥ 22 do
-  branco da bola, ≥ 3:1 no fundo, ≥ 25 entre os times; jogo neutro: estádio "Arena Central", cores do TM, torcida 45%
-  misturada; `publico` 0,1–1 = ocupação.
+  branco da bola, ≥ 3:1 no fundo, ≥ 25 entre os times; jogo neutro: o Estádio Total Match (seção "Estádio de cada clube"),
+  torcida 45% misturada; `publico` 0,1–1 = ocupação.
 - **Página**: `render/identidade-pagina.js identidadeDaPagina()` — null sem `?tm` (identidade.js nem é baixado: import
   dinâmico); com `?tm` decodifica os escudos (≤ 1,5 s; falhou → `urlEscudoSigla`, a sigla nas cores) ANTES de
   `criarCampo`/`criarTorcida`. main.js: `IDENT` → `criarCampo({identidade})`, `criarTorcida({identidade, mascara:
@@ -1890,6 +1890,76 @@ nem no hash; a geometria (placas, arquibancadas) não muda.
 - **Teste**: `teste-identidade` (Node, padrão): padrão = constantes de hoje (torcida byte a byte), ΔE₀₀ nos pares de Sharma
   et al., 7 pedidos difíceis (dois vermelhos, azul × árbitro azul, preto-e-branco × branco-e-preto, 3 uniformes iguais,
   escolhido que confunde, sem identidade, neutro com público baixo) e a torcida do TM (mesmos lugares, público, neutro).
+
+## Estádio de cada clube no pré-jogo (Total Match, 15/10)
+Pedido do dono: na edição pro (licenciada) o estádio REAL do mandante; na pública, o Estádio Golaço com o nome do jogo. Só
+DESENHO (hash igual): a geometria não muda (fachada |x| 93 / |z| 79 / 27,6 m, anel da cobertura, arquibancadas e placas são
+os sólidos dos trilhos do pré-jogo e da bola). Sem `?tm` nada muda no desenho (estádio de fora e cadeiras bit a bit iguais)
+nem nos arquivos baixados: a base, `identidade.js` e `render/fachada-estilos.js` só vêm com `?tm` (os dois últimos só na pro
+com o estádio achado); o código dos módulos de sempre cresce ~3 KB (`render/estadio-fora.js` +1,6 KB,
+`render/identidade-pagina.js` +1,4 KB, `render/texturas.js` +0,2 KB), nenhum arquivo novo (`teste-carga`, ≤ 4 MB).
+- **`js/identidade.js`** (puro): `identidadeDoPedido(pedido, base)` — `pedido.edicao === 'pro'`, jogo não neutro e o estádio
+  achado em `base` (pelo `home.identidade.estadio.nome`, senão `home.stadium`) → `estadio = {nome (o real), placa, real: true,
+  edicao, motivo: 'real', chave, dados}`, `fachada = {estilo, cor, cor2, ledCor, aneis, cobertura, coberturaCor, trechos (os
+  72 trechos do anel que ficam, `trechoCoberto`; null em 'total'), coberturaTons, led (o da faixa de dia; null sem LED),
+  ledNoite, letreiro, testeira (a cobertura escurecida), testeiraFriso, tunel, simbolo}`,
+  `arquibancada = {friso (a fachada_cor2 se aparece na parede, senão a cor do mandante), mosaico, cadeira, cadeira2, tom, tom2,
+  padrao, aneis}`, mosaico da torcida = o nome do mandante. Senão (pública, neutro, sem a base, estádio fora dela) → o
+  **Estádio Total Match** (`ESTADIO_TM`): `fachada`/`arquibancada` = as de `IDENTIDADE_PADRAO` (as cores de hoje), nome
+  "Estádio Total Match", placa "ESTÁDIO TOTAL MATCH", mosaico "TOTAL MATCH" com a torcida no verde do Golaço (mandante de
+  camisa verde, ΔE₀₀ < 20 do #19e07a: a torcida do mosaico em branco #f2f4f3, senão o mosaico some na torcida verde — só a
+  camisa muda; as cadeiras do mosaico continuam #0d8447, o estádio inteiro bit a bit o padrão), `motivo` 'publica' |
+  'neutro' | 'sem-base' | 'sem-dado'. Escudos, uniformes, torcida, cachecóis, faixas, bandeirões,
+  placas de publicidade e bandeira de escanteio seguem os times (como antes). `normalizarNomeEstadio(nome)` = a chave da
+  base (NFKD sem acento, minúsculas, ß/ø/æ/œ/ł/đ/ð/þ/ı/ħ/ŧ trocadas, o resto que não é a–z/0–9 vira espaço simples, sem
+  espaço nas pontas): a MESMA função grava a base e procura nela. `dadosEstadio(e)` valida (cores `#rrggbb`, escolhas das
+  listas `ESTILOS_FACHADA`/`COBERTURAS`/`PADROES_CADEIRAS`, anéis 1–3; o que vier quebrado usa a reserva), `acharEstadio`,
+  `baseValida`, `TRECHOS_COBERTURA` e `trechoCoberto(tipo, i)` (os 72 trechos do contorno do anel, na ordem de
+  `render/estadio-fora.js contorno`: x+ 0–7, canto 8–17, lado de cá 18–25, canto 26–35, x− 36–43, canto 44–53, lado de lá
+  54–61, canto 62–71).
+- **Base** `assets/tm/estadios.json` = `{versao: 1, estadios: {"<nome normalizado>": {nome, cidade?, fachada_estilo:
+  'vidro'|'concreto'|'metal'|'membrana'|'tijolo'|'trelica'|'paineis', fachada_cor, fachada_cor2, fachada_led|null, cobertura:
+  'total'|'lados'|'parcial'|'nenhuma', cobertura_cor, cadeiras_cor, cadeiras_cor2|null, cadeiras_padrao:
+  'liso'|'misto'|'faixas'|'mosaico', aneis 1–3, marca?, confianca?, ...}}, homonimos?: {"<nome normalizado>": [Estadio &
+  {clubes: [nome do clube no TM, ...]}]}}` (campos a mais são ignorados). **Estádios de mesmo nome** (ex.: "estadio
+  centenario" = Montevidéu do Montevideo City Torque × Caxias do Sul do Caxias): `acharEstadio(base, nomes, clube)` usa a
+  entrada de `homonimos[chave]` cujo `clubes` tem o `home.name` do pedido; nenhum clube bate (ou sem `homonimos`) →
+  `estadios[chave]`.
+- **`render/identidade-pagina.js`**: na pro sem jogo neutro a base é baixada JUNTO com identidade.js (`fetch`, tempo limite
+  `ESPERA_BASE_MS` 2,5 s, abortado; falhou, passou do tempo ou fora do formato = como a pública, `motivo` 'sem-base'); no
+  estádio genérico, `estadio.simboloImg` = o símbolo do TM (`assets/tm/simbolo.png`, o do placar) decodificado junto com os
+  escudos; no estádio real, `identidade.estilos` = o módulo `render/fachada-estilos.js` e `arquibancada.corCadeira` = a
+  `corCadeiraReal` dele (import dinâmico: sem `?tm` pro nada disso é baixado; falhou = o Estádio Golaço nas cores do estádio,
+  com o anel inteiro e as letras do mosaico).
+- **Desenho** (`render/estadio-fora.js`; o que só o estádio real usa fica em `render/fachada-estilos.js`): placa com o nome
+  real e o escudo do mandante (o nome com contorno escuro de 8 px: a fachada pode ser clara) ou o símbolo do TM e
+  "ESTÁDIO TOTAL MATCH"; fachada por estilo (`fachada-estilos.js texFachadaEstilo`: o mesmo ladrilho de 12 × 27,6 m com a base, o portão e o
+  letreiro; o pano de 5,2 a 24 m pelo estilo — vidro: montantes de 1,5 m e travessas; concreto: paredão com a fôrma, uma
+  galeria por anel e pilares a cada 3 m; metal: lâminas de 0,5 m; membrana: almofadas em losango de 2 × 2,35 m; tijolo:
+  alvenaria com janelas por anel; treliça: aço em X a cada 6 m; painéis: mosaico de 2 cores de 1,5 m — com as faixas dos
+  anéis; a faixa de LED na cor `fachada_led` (sem LED, cornija) e, à noite, o LED e as luzes de dentro no mapa de brilho com
+  o pano a 60% da luz de fora); a face de DENTRO da fachada (DoubleSide; aparece onde a cobertura foi tirada) é um muro liso
+  e apagado, sem o desenho de fora nem o LED (`fachadaPorDentro`: o material troca de programa, a malha e a chamada são as
+  mesmas); cobertura pela cor (`texCobertura` com `fachada.coberturaTons`) e pelos trechos do anel (`fachada.trechos`:
+  'total' = os 72, 'lados' = os lados compridos com 4 de 10 trechos de cada canto, 'parcial' = só o lado de LÁ — a tribuna
+  diante da câmera de TV, a que tem a marquise no jogo, então o estádio do pré-jogo e o do jogo são o mesmo —, 'nenhuma' =
+  nenhum; onde não há cobertura, um arremate de 1,6 m em cima da fachada) — a mesma 1 malha; em 'nenhuma' a marquise da
+  arquibancada de lá e o teto curto da de cá (`render/campo.js`, malhas 'arquibancada-lado'/'arquibancada-ca') somem no
+  pré-jogo (`esconderMarquise`: os triângulos acima de 25,2 m viram pontos, a mesma malha e a mesma chamada) e voltam
+  inteiros no `dispose` do lado de fora (o jogo fica com o estádio dele; os sólidos dos trilhos não mudam;
+  `marquiseEscondida()` para os testes); cadeiras dos cantos e do jogo (`texturas.js texArquibancada` com
+  `cores.corCadeira` = `fachada-estilos.js corCadeiraReal` pelo `padrao`: liso; misto = as duas cores salpicadas com um
+  pouco de branco; faixas = anéis alternados pelas fileiras, com 1 anel os setores entre corredores; mosaico = liso com as
+  letras na 2ª cor — as letras nas cadeiras só no 'mosaico'). Custo igual ao de hoje (as mesmas chamadas por plano;
+  triângulos ≤): celular Média de dia, pior plano 40 chamadas / ≤ 123,3 mil triângulos (sem `?tm` 40 / 127,3 mil). À noite
+  o pior plano do celular dá 44 chamadas em todas as variantes, também sem `?tm` (já era assim antes do estádio de cada
+  clube; pendente à parte: a meta de 40 do pré-jogo foi medida de dia).
+- **Teste**: `teste-identidade` seção E (E1 a base no formato, E2 a normalização, E3 pública, E3b pública com mandante de
+  camisa verde, E4/E4b pro achado, E5 pro sem dado/sem base/neutro, E6 campos quebrados, E7 cada estádio do arquivo achado
+  pelo nome, E7b os homônimos — ensaio e arquivo —, E8 os trechos da cobertura e `fachada.trechos`; `--base <arquivo>`
+  confere outra base); `teste-prejogo` item 14 (navegador, CI: `?tm` pro no celular Média de dia, Aflitos concreto/'nenhuma' e
+  BUKO Stadion vidro/'parcial' — o estádio achado com o desenho dele, cada plano com cor, ≤ 40 chamadas / ≤ 130 mil
+  triângulos, a marquise escondida só no pré-jogo da 'nenhuma' e de volta no jogo, 0 erros).
 
 ## Cara do Total Match no modo ?tm (15/10)
 Pedido do dono: "deixa os botões, menu, tudo com a cara do total match". Só DOM/CSS (hash igual); sem `?tm` nada é baixado.

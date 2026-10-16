@@ -247,7 +247,7 @@ export function mascaraTexto(texto, kMax = Infinity) {
  * Cadeiras da arquibancada: fileiras (degrau, assento, encosto), corredores e o nome
  * GOLAÇO em cadeiras verdes no meio. A faixa de cima (v > 0,95) é a cor das paredes.
  * cores (identidade.js arquibancada, só com ?tm): {friso, mosaico, cadeira, tom, tom2} pelo mandante; mascara: a do
- * mosaico do mandante (mascaraTexto) — sem elas, as de hoje.
+ * mosaico do mandante (mascaraTexto) — sem elas, as de hoje. Estádio real: cores.corCadeira (fachada-estilos.js).
  */
 export function texArquibancada(aniso, comTexto = true, W = 2048, cores = null, mascaraTm = null) {
   const H = W / 4;
@@ -266,7 +266,8 @@ export function texArquibancada(aniso, comTexto = true, W = 2048, cores = null, 
   const nA = Math.round(ARQ.comprimento / ARQ.assentoLarg);
   const wA = W / nA;
   // máscara do texto (uma célula por cadeira); a torcida (torcida.js) põe camisas verdes nela
-  const mascara = comTexto ? (mascaraTm ?? mascaraGolaco()) : null;
+  const real = cores?.corCadeira ?? null;   // estádio real do TM: as letras só no padrão 'mosaico'
+  const mascara = comTexto && !(real && cores.padrao !== 'mosaico') ? (mascaraTm ?? mascaraGolaco()) : null;
   const rnd = gerador(comTexto ? 5 : 9);
   for (let f = 0; f < nF; f++) {
     const y0 = topo + f * hF;
@@ -294,7 +295,7 @@ export function texArquibancada(aniso, comTexto = true, W = 2048, cores = null, 
       if (texto) cor = '#12b866';
       else {
         const r = rnd();
-        cor = cores ? (r < 0.06 ? cores.tom : r < 0.12 ? cores.tom2 : cores.cadeira) : r < 0.06 ? '#2a3033' : r < 0.12 ? '#0f5233' : '#14181a';
+        cor = real ? real(cores, f, a, nF, r) : cores ? (r < 0.06 ? cores.tom : r < 0.12 ? cores.tom2 : cores.cadeira) : r < 0.06 ? '#2a3033' : r < 0.12 ? '#0f5233' : '#14181a';
       }
       g.fillStyle = cor;
       g.fillRect(x0 + 0.6, y0 + hF * 0.22, wA - 1.2, hF * 0.55);
