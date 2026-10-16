@@ -64,8 +64,10 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   para o projeto novo.
 - **Direção do produto (dono, 16/10): "o modo jogável 3D substituirá todos os modos simulação, e o jogo será um jogo
   jogável"** — todo modo do Total Match vai virar partida jogável no GOLAÇO (`golaco/`); peça nova já nasce pensando nisso
-  (nada novo só para a simulação). Em seguida: **online 1×1** (duas pessoas, cada uma no seu aparelho, salas privadas por
-  código, sem chat; pedido de 16/10, pesquisa e contrato no scratchpad da sessão → `golaco/CONTRATOS.md` "Online").
+  (nada novo só para a simulação). O `golaco/` é PROTÓTIPO: tudo será incorporado e vira o Total Match — modo novo
+  entra pelo TM (Mais modos), não no menu do golaco. Em seguida: **online 1×1** (duas pessoas, cada uma no seu aparelho,
+  salas privadas por código, sem chat; conexão SEM CONTA e grátis — WebRTC P2P com sinalização pública, transporte
+  plugável; só no TM; contrato → `golaco/CONTRATOS.md` "Online").
 - Tudo em **português do Brasil**: textos da interface, comentários e mensagens de commit.
 - Sempre mandar o **link do jogo/app** (GitHub Pages) fora do artifact. **Prints: NÃO mandar mais ao dono** (12/10: "esquece os
   print"); os testes de navegador continuam conferindo a tela, só não se enviam as imagens. Ritmo: uma máquina com várias frentes
