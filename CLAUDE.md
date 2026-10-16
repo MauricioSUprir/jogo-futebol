@@ -519,6 +519,21 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   que defende NA linha até o chute (Regra 14), a cobrança só acaba quando a bola não pode mais entrar (e depois dela nenhum
   gol conta), 'defesa' só com toque do goleiro, o goleiro da IA lê a cavadinha repetida, a semente sorteada sem `?semente`. Testes: `teste-disputa` (Node),
   `teste-penaltis-tela` (CI) e `legacy-total-match/ferramentas/testar-penaltis.mjs` (senha do Viverde só por `TM_SENHA_VIVERDE`).
+- **Modo Livre 3D** (dono, 16/10: "um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores que
+  eu escolher, contra a quantidade de jogadores que eu escolher, pode ser adaptável durante a partida, assim como a câmera";
+  contrato "Modo Livre" no `CONTRATOS.md`): `?modo=livre`, "Modo Livre <small>N contra M</small>" no "Modo de jogo" e, no TM,
+  "Modo Livre 3D" em "Mais modos" (`legacy-total-match/js/livre3d.js`, `TM.tm3d.jogarLivre`, pedido com `modo: "livre"` e
+  `livre: {linha, goleiro}`; volta sem resultado). `js/livre.js` (puro; `config.js LIVRE`): o mundo da partida com `m.livre`
+  (FORA do hash), 0–10 de linha por lado (o meu ≥ 1) + goleiro liga/desliga; mudar na pausa NÃO recomeça (quem sai vira
+  buraco na vaga, quem entra aparece na vaga tática; o controlado nunca sai); sem relógio, impedimento (nem na IA:
+  `LIVRE.linhaSemDefesa`), faltas e cartões; time sem jogador de linha passa as cobranças ao outro; IA comprimida perto da bola
+  com poucos jogadores e pressão Alta até 7 de linha. Ganchos `ganchosLivre` no `partida.js` (ligados pelo livre.js).
+  Página (`js/livre-pagina.js`, submenus Jogadores e Câmera, Recomeçar/Bola no meu pé, API `__golaco.livre`), câmeras
+  (`render/camera-livre.js`: TV, Aproximada, Ampla, Alta, Atrás, Jogador + Altura/Distância 0–20; Atrás/Jogador com o rumo
+  FIXO do ataque do meu time, o analógico por ele; C/R3 cicla; nada atravessa arquibancada/placas; bola e controlado sempre no
+  quadro) e `render/cantos-livre.js` (fecha os cantos de cá) — tudo SÓ por import dinâmico. Sem o modo, `hash-partida`/
+  `hash-igual` IGUAIS. Testes: `teste-livre` (Node), `teste-livre-tela` (CI e deploy), `legacy-total-match/ferramentas/
+  testar-livre.mjs` (senha do Viverde só por `TM_SENHA_VIVERDE`). Pendente para o dono: as câmeras novas também na partida.
 - **Bolas paradas no estilo FIFA** (pedido de 16/10; `mira.js` na lógica; `render/bola-parada.js` + `mira-linha.js` SOB
   DEMANDA; PESQUISA-ETAPA4.md §12, contrato "Cobrança mirada" no CONTRATOS.md): câmera atrás do cobrador no
   escanteio, falta, pênalti e tiro de meta do humano (e no pênalti contra), o analógico pela câmera dela; na cobrança da
@@ -734,6 +749,9 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   (`rae.js` preparaPartida/timesDaPartida; nota, gols e assistências vêm do 3D). O service worker não guarda nada de
   `golaco/` nem de `futebol3d/`. Teste de ponta a ponta: `node ferramentas/testar-3d.mjs` (como montar o site no topo do
   arquivo; `--publica` para a edição pública).
+  Modos só em 3D em "Mais modos": **Pênaltis 3D** (`js/penaltis3d.js`, `jogarPenaltis`, o resultado com as cobranças) e
+  **Modo Livre 3D** (`js/livre3d.js`, `jogarLivre`, treino N contra M que não conta em nada); os dois com o seletor do jogo
+  rápido (Viverde em Especiais, com a senha). Testes: `ferramentas/testar-penaltis.mjs` e `ferramentas/testar-livre.mjs`.
 
 ## LANCE A LANCE (`simulador/`) — simulador de partidas (a "bolinha")
 - Canvas 2D, ES modules, **sem build e sem dependências externas**. Identidade: grafite + verde-limão.
