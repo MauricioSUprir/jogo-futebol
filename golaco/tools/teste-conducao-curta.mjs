@@ -10,8 +10,10 @@
 //     7 m/s contados como no teste-conducao.
 //  B. Escada: os metros por toque crescem com a velocidade (andar < trote < corrida < disparada) e a disparada
 //     fica ≥ 1,3× a corrida (com CORRER, um toque por passada, mais longo — como no jogo real).
-//  C. IA × IA: N partidas de 2 × 2 min (sementes 1017, 1034, …; 6 no CI, 12 antes do merge com --ia 12): bola–corpo
-//     do condutor de linha (bola no chão, jogo rolando) e a % do tempo com a bola a mais de 0,7 m, por faixa.
+//  C. IA × IA: N partidas de 2 × 2 min (sementes 1017, 1034, …; 12 — a amostra de antes do merge — também no CI desde
+//     15/10: com 6, a mediana da corrida variava ±0,01 m só pelo sorteio dos lances e uma mudança da IA que não mexe na
+//     distância dos próprios toques passava ou reprovava por 0,005 m): bola–corpo do condutor de linha (bola no chão,
+//     jogo rolando) e a % do tempo com a bola a mais de 0,7 m, por faixa.
 //  D. Desenho: chuteira (cápsula tornozelo–ponta, na pose) dentro da bola, nos quadros das cenas A — trava contra
 //     recuo (61,3% na base, medido no teste-conducao; a meta PENDENTE de ≤ 1% continua lá).
 //
@@ -25,7 +27,7 @@ const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const JS = path.resolve(arg('--js', path.join(AQUI, '../js')));
-const NIA = +arg('--ia', 6);
+const NIA = +arg('--ia', 12);
 const MIN_IA = 2;
 const detalhe = args.includes('--detalhe');
 const imp = f => import(pathToFileURL(path.join(JS, f)).href);

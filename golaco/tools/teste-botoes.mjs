@@ -764,8 +764,10 @@ if (faz('B14')) {
     r.vencida[1] >= 12 && r.vencida[0] === r.vencida[1] && r.vencida[0] >= 0.9 * r.vencida[1] && r.vencida[0] >= r.sem[0] * r.vencida[1] / Math.max(1, r.sem[1]));
   // B14b: a escolha do TROCAR vencida (o meu time teve a bola depois) não desliga a troca automática do passe do adversário
   // quando o controlado volta a ser o escolhido (a perda com ele mais perto): igual a sem escolha nenhuma
+  // (amostra 10 → 40 sementes, 15/10: com 10 o "sem ≥ 3" reprovava pelo sorteio dos lances — a main dava 3/10 e a junção
+  // com as faltas com sentido 1/9; com as 40, 13/38 e 13/36, a mesma taxa)
   const rb = { sem: [0, 0], vencida: [0, 0] };
-  for (const sem of [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]) {
+  for (let sem = 11; sem <= 50; sem++) {
     const m = novaPartida(sem, 200);
     let achou = false;
     for (let i = 0; i < 3000 && !achou; i++) {

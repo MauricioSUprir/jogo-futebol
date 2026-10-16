@@ -636,32 +636,49 @@ function assunto(c, ip) {
   return c.sai.find(x => x.par === pl.par) ?? c.sai[0];
 }
 
-/** Custo da câmera em (cx, cz): gente perto da lente (inválida) e gente entre a lente e o assunto (oclusão). */
-function custoCamera(c, ip, cx, cz, dur) {
-  const sujeito = assunto(c, ip);
-  let oclusao = 0, duro = 0;
-  for (const a of c.atores) {
-    if (a === sujeito) continue;
-    const p = previsto(a, _pt);
+/**
+ * As posições que o custo de uma câmera lê (cada ator nas amostras e o assunto) não dependem da câmera: calculadas uma vez
+ * por escolha, e não uma vez por candidata (eram até ~40 candidatas × ~26 atores × 7 amostras; a criação da cena passava
+ * de 3 ms no CI). As mesmas contas na mesma ordem: o custo sai bit a bit igual.
+ */
+function prepararCusto(c, ip, dur) {
+  const sujeito = assunto(c, ip), entra = c.plano.planos[ip].nome === 'entra';
+  let ns = 0;
+  while (ns < SAMPLES.length && SAMPLES[ns] <= dur + 1e-9) ns++;
+  const outros = c.atores.filter(a => a !== sujeito);
+  const pos = new Float64Array(outros.length * ns * 2), subj = new Float64Array(ns * 2);
+  for (let i = 0; i < outros.length; i++) {
+    const a = outros[i];
+    const p = previsto(a, _pt), px = p.x, pz = p.z;
     // quem também anda (os outros que saem e os reservas): a reta deles nas amostras
-    const movel = a.tipo === SAI_T || a.tipo === ENTRA_T;
-    for (const u of SAMPLES) {
-      if (u > dur + 1e-9) break;
-      let ax = p.x, az = p.z;
-      if (movel) {
-        if (a.tipo === SAI_T) {
-          caminhoSai(c, a, u, _pt);
-          ax = _pt.x; az = _pt.z;
-        } else if (c.plano.planos[ip].nome === 'entra') {
-          // os outros reservas: entre a espera e o ponto de cruzar
-          const f = clamp((u - S.sinal - S.escalona * a.ordem) / 1.0, 0, 1);
-          ax = lerp(a.j.x, c.plano.pares[a.par].espera.cx, f); az = lerp(a.j.z, MZ - 0.5, f);
-        }
+    for (let s = 0; s < ns; s++) {
+      const u = SAMPLES[s];
+      let ax = px, az = pz;
+      if (a.tipo === SAI_T) {
+        caminhoSai(c, a, u, _pt);
+        ax = _pt.x; az = _pt.z;
+      } else if (a.tipo === ENTRA_T && entra) {
+        // os outros reservas: entre a espera e o ponto de cruzar
+        const f = clamp((u - S.sinal - S.escalona * a.ordem) / 1.0, 0, 1);
+        ax = lerp(a.j.x, c.plano.pares[a.par].espera.cx, f); az = lerp(a.j.z, MZ - 0.5, f);
       }
+      pos[(i * ns + s) * 2] = ax; pos[(i * ns + s) * 2 + 1] = az;
+    }
+  }
+  for (let s = 0; s < ns; s++) { const q = assuntoEm(c, ip, SAMPLES[s], _q); subj[s * 2] = q.x; subj[s * 2 + 1] = q.z; }
+  return { n: outros.length, ns, pos, subj, entra };
+}
+
+/** Custo da câmera em (cx, cz): gente perto da lente (inválida) e gente entre a lente e o assunto (oclusão). */
+function custoCamera(pre, cx, cz) {
+  const { n, ns, pos, subj } = pre;
+  let oclusao = 0, duro = 0;
+  for (let i = 0; i < n; i++) {
+    for (let s = 0; s < ns; s++) {
+      const ax = pos[(i * ns + s) * 2], az = pos[(i * ns + s) * 2 + 1];
       const da = Math.hypot(ax - cx, az - cz);
       if (da < S.lenteMin + 0.5) { duro += S.lenteMin + 0.5 - da; continue; }
-      const q = assuntoEm(c, ip, u, _q);
-      const ex = q.x - cx, ez = q.z - cz, el2 = ex * ex + ez * ez || 1;
+      const ex = subj[s * 2] - cx, ez = subj[s * 2 + 1] - cz, el2 = ex * ex + ez * ez || 1;
       const w = ((ax - cx) * ex + (az - cz) * ez) / el2;
       if (w > 0.05 && w < 0.97) {
         const lado = Math.hypot(ax - cx - ex * w, az - cz - ez * w);
@@ -676,11 +693,9 @@ function custoCamera(c, ip, cx, cz, dur) {
   }
   // o assunto também nunca colado na lente; no ENTRA (fov fixo) nunca mais perto do que a distância em que o corpo
   // inteiro cabe no quadro (com a vaga para o lado da lente ele vinha correndo para ela e a cabeça saía por cima)
-  const dMin = c.plano.planos[ip].nome === 'entra' ? D_CABE_ENTRA : S.lenteMin + 1;
-  for (const u of SAMPLES) {
-    if (u > dur + 1e-9) break;
-    const q = assuntoEm(c, ip, u, _q);
-    const dq = Math.hypot(q.x - cx, q.z - cz);
+  const dMin = pre.entra ? D_CABE_ENTRA : S.lenteMin + 1;
+  for (let s = 0; s < ns; s++) {
+    const dq = Math.hypot(subj[s * 2] - cx, subj[s * 2 + 1] - cz);
     if (dq < dMin) duro += dMin - dq;
   }
   // alguém perto da lente: a câmera só fica se não houver outra — e então a que deixa todos mais longe
@@ -699,13 +714,14 @@ function escolherCamera(c, ip) {
   const pl = c.plano.planos[ip];
   if (!pl) return null;
   const dur = pl.t1 - pl.t0;
+  const pre = prepararCusto(c, ip, dur);
   let melhor = null, menor = Infinity;
   const tentar = (x, y, z) => {
     if (Math.abs(x) > PLACAS_X - 0.5 || Math.abs(z) > PLACAS_Z - 0.5) return false;
     // nunca dentro do gol (nem da rede), da arquibancada, das placas ou dos bancos
     if (Math.abs(x) > MX - 0.5 && Math.abs(z) < S.golRaio) return false;
     if (solidoEm(x, y, z, 0.3, false)) return false;
-    const custo = custoCamera(c, ip, x, z, dur);
+    const custo = custoCamera(pre, x, z);
     if (custo < menor - 1e-9) { menor = custo; melhor = { x, y, z }; }
     return custo <= 1e-9;
   };

@@ -13,12 +13,19 @@
 //     vazia (nunca o gol), mudar a formação deixa o buraco fora do gol, 2 min de jogo depois sem erro e sem ele na bola;
 //     (5) goleiro expulso → o de linha mais perto do gol vai para o gol.
 //  C. Canhão de 400 pênaltis (IA × goleiro IA): gol 70–82%, defesa 12–24%, fora 2–10% (meta do dono: ~76/18/6).
-//  D. 12 partidas IA × IA: faltas 1,5–5 por partida; amarelos 10–30% das faltas (teste binomial: reprova se a contagem prova que
-//     está fora da faixa); vermelhos ≤ 0,2 por partida (teste de Poisson: reprova se a contagem prova mais que isso);
-//     nenhuma parada passa de 8 s; nada de NaN.
+//  D. 36 partidas IA × IA (sementes 1001–1036; eram 12 até 15/10): faltas 1,5–5 por partida; amarelos 10–30% das faltas
+//     (teste binomial: reprova se a contagem prova que está fora da faixa); vermelhos ≤ 0,2 por partida (teste de Poisson:
+//     reprova se a contagem prova mais que isso); nenhuma parada passa de 8 s; nada de NaN. AMOSTRA: com ~2 faltas por
+//     partida a contagem de 12 partidas é de Poisson com desvio de ~0,4 por partida, e uma mudança que não mexe nas faltas
+//     passava ou reprovava a meta de 1,5 pelo sorteio dos lances (15/10, a IA do domínio-sem-passar: 1,42 nas 1001–1012,
+//     2,33 nas 1013–1036; a lógica de antes 2,00 / 1,96 e a main 1,75 / 2,50). As 36 em 3 fatias de 12, uma por processo
+//     filho (--par, padrão 3), enquanto o processo principal faz as partes A–C.
 //
 //   node tools/teste-faltas.mjs              (lógica do repositório)
 //   node tools/teste-faltas.mjs --js <pasta> (outra cópia da lógica; a publicada antes desta parte → REPROVA)
+//   node tools/teste-faltas.mjs --par 3      (no máximo 3 fatias da parte D ao mesmo tempo)
+import { fork } from 'node:child_process';
+import os from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -44,8 +51,57 @@ if (!fs.existsSync(path.join(JS, 'faltas.js'))) {
 const P = await imp('partida.js');
 const F = await imp('faltas.js');
 const E = await imp('escalacao.js');
-const { FALTAS, PARTIDA, CAMPO } = await imp('config.js');
+const { FALTAS, PARTIDA, CAMPO, ACOES } = await imp('config.js');
 const PASSO = 1 / 60;
+
+// parte D: as partidas inteiras em processos filhos (começam já e correm junto com as partes A–C)
+const D_SEM0 = 1001, D_N = 36, D_FATIA = 12;
+/** Partidas IA × IA inteiras das sementes s0 … s0 + n − 1: as contagens da parte D. */
+function partidasD(s0, n) {
+  let faltas = 0, amar = 0, verm = 0, nan = false, paradaMax = 0;
+  for (let s = s0; s < s0 + n; s++) {
+    const m = P.criarPartida({ semente: s });
+    let inicio = null;
+    for (let i = 0; i < 2 * 4 * 3600 + 4000; i++) {
+      const ev = P.passoPartida(m, P.entradaDemoPartida(m));
+      for (const e of ev) {
+        if (e.tipo === 'falta') faltas++;
+        if (e.tipo === 'cartao') { if (e.cor === 'amarelo') amar++; else if (!e.segundo || e.motivo === 'segundoAmarelo') verm++; }
+      }
+      const pr = m.parada;
+      if (pr && !pr.rolou && m.partida.estado === 'parada') { if (inicio == null) inicio = pr.inicio; paradaMax = Math.max(paradaMax, (m.tick - inicio) * PASSO); }
+      else inicio = null;
+      if (!Number.isFinite(m.bola.p.x)) nan = true;
+      // as contagens dos acréscimos (gols, substituições, impedimentos, faltas, cartões) valem nos dois tempos
+      for (const k of ['gols', 'subs', 'imped', 'faltas', 'cartoes']) if (!Number.isFinite(m.partida.contagem[k])) nan = true;
+      if (m.partida.estado === 'fim') break;
+    }
+  }
+  return { faltas, amar, verm, nan, paradaMax };
+}
+if (args.includes('--filho-d')) {
+  const r = partidasD(+arg('--s0'), +arg('--n'));
+  await new Promise(ok => process.send(r, ok));
+  process.exit(0);
+}
+const filhosD = (async () => {
+  const fatias = [];
+  for (let s0 = D_SEM0; s0 < D_SEM0 + D_N; s0 += D_FATIA) fatias.push([s0, Math.min(D_FATIA, D_SEM0 + D_N - s0)]);
+  const nPar = Math.max(1, Math.min(fatias.length, os.availableParallelism?.() ?? os.cpus().length, +arg('--par', 3)));
+  const res = [];
+  let prox = 0;
+  await Promise.all(Array.from({ length: nPar }, async () => {
+    while (prox < fatias.length) {
+      const [s0, n] = fatias[prox++];
+      res.push(await new Promise((ok, erro) => {
+        const c = fork(fileURLToPath(import.meta.url), [...args, '--filho-d', '--s0', String(s0), '--n', String(n)]);
+        c.on('message', ok); c.on('error', erro);
+        c.on('exit', cod => { if (cod) erro(new Error(`parte D, sementes ${s0}–${s0 + n - 1}: saiu com ${cod}`)); });
+      }));
+    }
+  }));
+  return res;
+})();
 
 /** Partida com a bola rolando e o time 0 atacando +x: o atacante A (time 0) com a bola e o defensor D (time 1). */
 function cena({ ax = 20, az = 0, avx = 6, dx = 18.8, dz = 0, dvx = 7, outros = 'longe', sem = 1 } = {}) {
@@ -138,6 +194,9 @@ function apitar(m, f) {
 { // (2) vantagem e a volta
   const { m, A, D } = cena({ ax: 15, avx: 6, dx: 13.8, dvx: 3, outros: 'frente' });
   const f = F.montarFalta(m, D, A, 'bote', true);
+  // depois da falta no bote o defensor descansa, como em sim.js boteIA (sem isso, colado atrás do atacante na vantagem,
+  // ele podia segurá-lo de novo: faltas.js faltaTatica 'segurar')
+  D.descansoBote = ACOES.boteIA.descanso;
   const ev = apitar(m, f);
   const deu = ev.some(e => e.tipo === 'vantagem') && !m.parada;
   // o defensor pega a bola 1 s depois (dentro do prazo)
@@ -251,28 +310,11 @@ function apitar(m, f) {
 
 // ------------------------------------------------------------------ D. partidas inteiras
 {
-  const N = 12;
+  const N = D_N;
   let faltas = 0, amar = 0, verm = 0, nan = false, paradaMax = 0;
-  for (let s = 1001; s < 1001 + N; s++) {
-    const m = P.criarPartida({ semente: s });
-    let inicio = null;
-    for (let i = 0; i < 2 * 4 * 3600 + 4000; i++) {
-      const ev = P.passoPartida(m, P.entradaDemoPartida(m));
-      for (const e of ev) {
-        if (e.tipo === 'falta') faltas++;
-        if (e.tipo === 'cartao') { if (e.cor === 'amarelo') amar++; else if (!e.segundo || e.motivo === 'segundoAmarelo') verm++; }
-      }
-      const pr = m.parada;
-      if (pr && !pr.rolou && m.partida.estado === 'parada') { if (inicio == null) inicio = pr.inicio; paradaMax = Math.max(paradaMax, (m.tick - inicio) * PASSO); }
-      else inicio = null;
-      if (!Number.isFinite(m.bola.p.x)) nan = true;
-      // as contagens dos acréscimos (gols, substituições, impedimentos, faltas, cartões) valem nos dois tempos
-      for (const k of ['gols', 'subs', 'imped', 'faltas', 'cartoes']) if (!Number.isFinite(m.partida.contagem[k])) nan = true;
-      if (m.partida.estado === 'fim') break;
-    }
-  }
+  for (const r of await filhosD) { faltas += r.faltas; amar += r.amar; verm += r.verm; nan ||= r.nan; paradaMax = Math.max(paradaMax, r.paradaMax); }
   const f2 = v => v.toFixed(2).replace('.', ',');
-  reg('D. faltas por partida (12 partidas IA × IA)', f2(faltas / N), '1,5–5', faltas / N >= 1.5 && faltas / N <= 5);
+  reg(`D. faltas por partida (${N} partidas IA × IA)`, f2(faltas / N), '1,5–5', faltas / N >= 1.5 && faltas / N <= 5);
   // vermelhos: poucos por partida (~0,1), então em N partidas a contagem é de Poisson. Reprova só se ela PROVA a taxa
   // acima de 0,2 por partida (P(X ≥ contagem | λ = 0,2·N) < 5%); com "verm / N ≤ 0,2" direto, 12 partidas com a taxa
   // real de 0,10–0,13 (painel de 144) reprovavam em 12–21% das rodadas só por sorteio

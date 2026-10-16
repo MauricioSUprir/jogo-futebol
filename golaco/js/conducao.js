@@ -62,6 +62,7 @@ export function adversarioMaisPerto(m, j) {
 /** Em proteção? (modificador segurado e marcador perto) */
 export function emProtecao(m, j) {
   if (!temBotao(j, BOTAO.MOD)) return null;
+  if (m.partida && j.vx * j.vx + j.vz * j.vz > CONDUCAO.protecaoVmax * CONDUCAO.protecaoVmax) return null;
   const a = adversarioMaisPerto(m, j);
   if (!a || a.d > CONDUCAO.protecaoDist) return null;
   return a.o;
@@ -619,6 +620,31 @@ function passosDoToque(j, c, s, dom) {
  * tipo: 'conducao' | 'dominio' | 'ajuste' | 'protecao' (a puxada de sola é executarPuxada)
  */
 export function executarToque(m, j, pe, tipo, freio = false) {
+  // domínio da IA embalada (só na partida): o 1º toque com o corpo seguindo a corrida (CONDUCAO.dominioIA)
+  const s0 = MD.hypot(j.vx, j.vz);
+  if (tipo !== 'dominio' || !m.partida || j.porHumano || s0 < CONDUCAO.dominioIA.vMin || recepcaoAtiva(m, j)) {
+    executarToqueCom(m, j, pe, tipo, freio);
+    return;
+  }
+  const ix = j.ix, iz = j.iz, imag = j.imag, intRumo = j.intRumo, intW = j.intW, botoes = j.botoes;
+  const ux = j.vx / s0, uz = j.vz / s0;
+  j.ix = ux; j.iz = uz; j.intRumo = MD.atan2(uz, ux); j.intW = 0;
+  j.botoes = botoes & ~(BOTAO.CORRER | BOTAO.MOD);
+  j.imag = magParaVelocidade(j.par, s0);
+  if (j.imag >= 1 && velocidadeDesejada(j.par, 1, false, false, true) < s0) j.botoes |= BOTAO.CORRER;
+  executarToqueCom(m, j, pe, tipo, freio);
+  j.ix = ix; j.iz = iz; j.imag = imag; j.intRumo = intRumo; j.intW = intW; j.botoes = botoes;
+}
+
+/** Inclinação do analógico (0–1, sem CORRER) que pede a velocidade v com a bola (velocidadeDesejada), por bisseção. */
+export function magParaVelocidade(par, v) {
+  if (velocidadeDesejada(par, 1, false, false, true) <= v) return 1;
+  let a = 0, b = 1;
+  for (let k = 0; k < 24; k++) { const c = 0.5 * (a + b); if (velocidadeDesejada(par, c, false, false, true) < v) a = c; else b = c; }
+  return 0.5 * (a + b);
+}
+
+function executarToqueCom(m, j, pe, tipo, freio) {
   const c = j.cond;
   const b = m.bola;
   c.cortePendente = null;
@@ -748,6 +774,11 @@ const DO = CONDUCAO.dominioOrientado;
  */
 export function anguloEmbalado(v) {
   return clamp(1.5707963267948966 - (v - DO.vLado) * DO.queda, DO.angMin, 3.141592653589793);
+}
+/** A conta inversa: a velocidade (m/s) em que anguloEmbalado chega a th rad (Infinity até DO.angMin; ≥ 0). */
+export function velocidadeParaAngulo(th) {
+  if (th <= DO.angMin) return Infinity;
+  return Math.max(0, DO.vLado + (1.5707963267948966 - th) / DO.queda);
 }
 // Segurando o rumo à espera do toque do corte, o corpo já começa a ir para o lado pedido (a
 // velocidade até CORTE_DESVIO do rumo em que estava; o tronco até CORTE_TRONCO): responde ao

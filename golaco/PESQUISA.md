@@ -353,3 +353,152 @@ Medido no jogo (`tools/teste-conducao-curta.mjs`, humano sozinho e 6 partidas IA
 2,88 toques/s e 1,98 → 0,99 m; corrida 1,85 → 2,53 toques/s, 3,0 → 2,2 m por toque; disparada 3,5 m por toque e
 ~1,1 toque por passada (igual); bola–corpo no trote 0,48 → 0,42 m (IA 0,67 → 0,58 m antes da defesa recalibrada; depois dela 0,588 em 6 partidas e
 0,595 em 12 — a meta ≤ 0,59 com 12 partidas, condição de merge, ficou 0,005 m acima).
+
+## 6. "Passou da bola" (pedido do dono de 15/10)
+
+Pedido: "jogadores passam da bola quando estão com ela praticamente dominada, ajeite". Medido antes de mexer
+(`tools/medir-passa.mjs`): o jogador que é da bola (condutor, recebedor ou com o domínio marcado, ou o mais perto da bola
+solta) chega a ≤ 1 m dela, no chão e a ≤ 4 m/s, correndo com ela à frente, e o corpo passa por ela sem ninguém mais
+tocar (a bola ≥ 0,3 m atrás do quadril, ≤ 0,8 m de lado, ele ainda indo para a frente, sem a bola mandada para trás);
+fora da conta o corte/inversão pedidos (analógico a mais de 60° de onde ele vinha) com a bola até 1 m atrás. 24
+partidas na versão publicada (d3725f55; IA × IA e o humano roteirizado como no celular): **1,33 por partida**, bola até
+2,85 m atrás, 3 perdidas para o adversário. Nas versões antigas (972b1ff3, antes da condução curta) os números eram os
+mesmos: **sempre existiu**, não veio da condução curta. Cada caso foi reprisado da foto do mundo (structuredClone, a
+continuação é bit a bit) para achar a causa e conferir a correção no mesmo lance; três causas corrigidas (CONTRATOS.md,
+recepção) e uma que fica para depois (abaixo).
+
+| Fonte | Dado | O que aproveitamos |
+|---|---|---|
+| Universidade de Tsukuba (comunicado de 08/2026, captura 3D de quem recebe correndo e passa em seguida) | A transição recebe → passa é mais rápida sem a última passada rápida demais na chegada à bola e com pouco rebote da bola para a frente no 1º toque | O 1º toque de quem recebe embalado acompanha o corpo: a bola sai no ritmo da corrida (nem morta no pé, que o corpo atropela, nem longe) — `CONDUCAO.dominioIA` |
+| Sessões de treino de recepção (sportsessionplanner: "receiving — furthest foot, positive first touch") | O 1º toque "positivo" leva a bola para o lado em que o jogador vai, fora dos pés | A IA embalada domina para a frente, no sentido da corrida; o condutor muda de rumo depois, com a bola à frente |
+| Madden NFL 17 (notas dos desenvolvedores sobre a bola solta) e a crítica ao "fight for the fumble" | A recuperação da bola solta tem de seguir o estado físico da bola: quando já é claro quem a alcançou, a animação/decisão de outro não deve tomar a vez | O passe lento colado no pé do adversário é dele — o recebedor que só marcou o domínio não encerra a vez (`RECEPCAO.passeLento`) |
+
+Depois da correção: no `teste-nao-passa` (18 partidas de 2 × 3 min, IA × IA e o humano roteirizado a 30 qps) 0,89 →
+0,39 por partida, passe lento colado no pé de outro 5 → 0 e bola perdida depois de passar dela 6 → 0; nas reprises dos
+48 casos da publicada, 35 → 15 ainda passam (quase todos cortes de 40–60° a 4–6 m/s com o passo de apoio 0,3–0,5 m além
+da bola: é o corte, não a bola dominada). **Fica para depois:** a bola ao lado do pé, fora do alcance da frente do pé,
+logo depois do domínio (ele vai buscá-la e corre ao lado dela a ~0,6 m até passar; lado 1102 t 19824 #107). O toque com a
+parte de dentro/fora do pé (o alcance do domínio) resolvia, mas tirava os chutes de fora da área no painel — em toda a
+condução 31,6% / 33,2% e só logo depois do domínio 32,1% / 33,7% (sementes 1001–1024 / 1025–1048; main 39,4% / 39,2%; meta
+35–40%); sem ele 40,7% / 35,8% / 37,2% (com 1049–1072; main 34,8%). Gols por partida, sem ele: 1,46 / 1,38 / 2,21 × main
+2,25 / 1,67 / 1,83 (± 0,5 em 24 partidas: dentro do sorteio).
+
+O hash da partida muda de propósito a partir do passo ~300 (`hash-partida`); o treino fica bit a bit igual
+(`hash-igual`). Com o hash novo, três itens que estão na beira da meta também na main mudam de lado pelo sorteio dos
+estados (medido): `teste-partida` C "posse troca ≥ 10 em todas" (semente 7: 9 trocas, a maior posse 41 s × 70 s na main;
+nas sementes 9–20 a main tem mínimo 10 e a correção 11, média 18,5 × 18,6); `teste-pressao-humano` M5 (76% × 81%; PAREADO
+nos mesmos estados da main, 81,2% × 81,4%; nas sementes 7201 a main reprova com 79% e a correção passa com 83%);
+`teste-bolas-paradas` C3 (gol em 18,3% dos escanteios, p = 0,03; PAREADO nos mesmos estados, 262 escanteios: 12,6% × 12,6%).
+
+**Contraprova (15/10).** Com mais 24 partidas (3101–3492; o `teste-nao-passa` passa de 18 para 42) a correção reprovava
+duas metas que nas 18 primeiras passavam: passe lento colado no pé de outro 1 (o COMPANHEIRO de quem passou — a vez só
+seguia para o adversário; corrigido: segue para quem estiver com a bola lenta no pé, dos dois times) e "passou e o
+adversário ficou com ela" 1. Nas 42: publicada 0,81 / 12 / 7 → correção 0,43 / 0 / 1. O que sobra NÃO são cortes de
+40–60°: 10 dos 18 casos são viradas de 87–123° a 4,7–7,3 m/s logo depois do domínio (o 2º toque manda a bola na linha
+do analógico, como o `teste-cortes` pede — "o corte de 90° correndo responde em ≤ 0,4 s" —, e o corpo embalado passa
+1,0–1,95 m dela; o único "perdeu" é um deles, IA a 6,3 m/s virando 119°). É a mesma troca entre resposta e realismo da
+pendência do dono "corte de 90° a ~7 m/s em 2–3 apoios (PESQUISA pede 3–5)". Duas tentativas medidas nas mesmas 42
+partidas e descartadas: toque de freio no 1º toque de condução depois do domínio além de `anguloEmbalado(v)` (0,43 →
+0,67, perdeu 1 → 4: a bola parada onde o corpo "para" e ele, virando, não para) e o domínio da IA embalada só com a
+corrida para o ataque (0,50 / 2). Também medido: na IA embalada o condutor, 2 ticks depois do domínio, vai a ≥ 90° da
+corrida em 59% dos domínios (vem ao encontro e vira para o jogo) e a < 45° em 23%; o 1º toque que acompanha a corrida
+(`CONDUCAO.dominioIA`) ficou 2× mais forte (mediana 1,8 → 3,7 m/s; bola a > 1,5 m do pé logo depois 1,1% → 2,9%), mas
+perder a bola em 1 s (1,8% → 2,0%) e a bola > 1 m atrás dele (1,8% → 2,2%) ficam dentro do sorteio (907 domínios).
+
+**Viradas da IA logo depois do domínio (15/10, final).** Os casos que sobraram foram separados por quem vira: nas 42
+partidas, 14 da IA (os 11 do time 1 e 3 da IA jogando pelo controlado na cena IA × IA) e 4 do humano roteirizado. Das
+viradas de 87–123° com a bola a mais de 1 m atrás, 8 eram da IA (6,3–7,3 m/s, e o único "perdeu") e 3 do humano. Na IA
+a causa é a DECISÃO: o condutor (`ia-ataque.js decidir`) escolhe o rumo da condução em volta do gol adversário sem olhar
+o corpo; quem vem ao encontro do passe ou corre atrás da bola fica com ela a 5–7 m/s indo para o lado de lá e pede
+90–155° no tick seguinte. Pesquisa:
+
+| Fonte | Dado | O que aproveitamos |
+|---|---|---|
+| Dos'Santos, Thomas, Comfort e Jones 2018, "The Effect of Angle and Velocity on Change of Direction Biomechanics: An Angle-Velocity Trade-Off" (Sports Med; revisão, PMC6132493) | Quanto mais fechada a mudança de direção, menor a velocidade de chegada: 45° a ~4,7–5,8 m/s, 90° a ~3,8–4,4, 135° a ~3,5–4,8 e 180° a ~3,4–4,0 m/s (médias de chegada; no pé de apoio bem menos); acima de ~60° a freada começa na penúltima passada e se espalha por várias antes do pé de apoio | A IA só pede a virada que o embalo deixa: `anguloEmbalado(v)` (90° a 4,5 m/s, −0,3 rad por m/s, mínimo 43° — a mesma conta do 1º toque orientado do humano embalado, que já batia com a tabela) e pede a velocidade em que o resto cabe (`velocidadeParaAngulo`, a conta inversa) |
+| Schot et al. (citado na mesma revisão): no piloto, o corte de 90° rápido levava 3–5 passadas e saía arredondado | A mudança rápida de direção é uma curva com freada, não um degrau | O pedido gira junto com o corpo (curva no limite do embalo a cada tick) e o rumo da condução fica fixo até a virada caber; depois o compromisso de 0,5 s recomeça (trocar o rumo no fim da curva deixava a bola, tocada no meio da curva, fora do alcance do pé) |
+| McGuckian et al. 2018 ("Don't turn blind", scanning e orientação do corpo antes de receber) e o resumo da FIFA Training Centre sobre Aksum (scanning × orientação para a frente) | Quem olha antes de receber já se orienta para onde vai jogar; a orientação do corpo antes da bola é o que decide o 1º toque | A virada passa a acontecer ANTES do 1º toque de condução e no ritmo do corpo (a IA não "decide" um rumo que o corpo não acompanha); o domínio da IA embalada (`CONDUCAO.dominioIA`) continua no sentido da corrida |
+
+Medido nas mesmas 42 partidas (`teste-nao-passa`, 4 processos): "passou da bola" 0,43 → **0,29** por partida (18 → 12),
+passe lento colado 0 → 0, **passou e o adversário ficou com ela 1 → 0**. Da IA: 14 → 5 casos, viradas a mais de 60° 8 → 0,
+bola atrás no máximo 1,95 → 0,46 m. Do humano roteirizado (a lógica dele não mudou; os lances mudam com a IA): 4 → 7
+casos, 0 perdidos, e uma virada embalada (130° a 5,6 m/s, a bola 1,06 m atrás) — **pendência do dono**: o humano vira
+como pede (o `teste-cortes` exige o corte de 90° correndo em ≤ 0,4 s); amortecer o corte embalado do humano é a troca
+resposta × realismo que é dele decidir. Tentativas medidas e descartadas: a virada com a condução curta (MOD) durante a
+curva (0,60 / perdeu 3: a freada até 2,6 m/s em cada passo deixava o corpo passar), a curva sem segurar o rumo da
+decisão (0,26 / perdeu 1: a decisão trocava o rumo no meio da curva) e segurando o rumo só até a virada caber, sem
+recomeçar o compromisso (0,36 / perdeu 1: o rumo trocava logo no fim da curva, com a bola de lado). `teste-conducao-curta` C (IA × IA): com 6 partidas
+a mediana bola–corpo na corrida ficou 0,5712 m (meta ≤ 0,57; ramo 0,5648, main 0,5577) — nos ticks da virada ela é a
+mesma do resto (0,579 × 0,571 m; no trote 0,569 × 0,589): é o sorteio dos lances. Com 12 partidas (a amostra que o
+cabeçalho já pedia antes do merge) 0,5630 × ramo 0,5644 × main 0,5609 — o CI passa a rodar as 12 (amostra só cresce).
+Outros efeitos na bateria (os lances mudam com a IA): `teste-faltas` D com 12 partidas 1,42 falta por partida (17; a meta
+pede 1,5 = 18) — nas 36 sementes 1001–1036 2,03 × ramo 1,97 × main 2,25 (Poisson: ~0,4 de desvio em 12 partidas); a parte D
+passa a ter 36 partidas, em 3 processos (21,9% de amarelos, 3 vermelhos em 36, parada mais longa 5,9 s). `teste-tecnicos` T8
+achou um defeito dos treinadores (`tecnicos.js`): com o gol nos acréscimos do 1º tempo, a saída do 2º tempo caía nos 30 s
+do "vamos" e ele saía de novo (vamos:0 duas vezes seguidas; sementes 13 e 17) — agora uma vez por gol (`tc.vamosGol`).
+`teste-pressao-humano` M4 (faltas do time 0 com o PRESSÃO ≤ 1,5 × sem + 2) reprova: 9 → 19 (o ramo antes desta correção já
+reprovava, 5 → 10; a main 4 → 6). Quase tudo é carga por trás (15 de 19) de quem persegue o condutor que acabou de pegar a
+bola, a 2–4 m/s — o que a #480 ("faltas com sentido": quem só corre atrás não atropela) corrige: com a lógica da #480
+aplicada por cima desta (cópia em rascunho) 2 → 5 (passa) e o `teste-faltas` D 1,67 nas 12 primeiras (1,58 nas 36).
+Painel do CI (144 partidas, as mesmas sementes; main 1d85907b → ramo antes da virada 1a0e4f1b → com a virada e0cde400): gols
+1,85 → 1,75 → **2,10** (meta 2,3–3,5), chutes 8,6 → 8,6 → 9,3, de dentro da área ~5,3 → 5,4 → 6,2 e de fora 3,3 → 3,2 → 3,1
+por partida — a FRAÇÃO de fora cai 38,6 → 37,3 → **33,5%** (meta 35–40%) porque o ataque perde menos bolas logo depois do
+domínio e chega mais à área, não porque chuta menos de longe; gols de fora 18,1 → 17,8 → 11,9% (0,33 → 0,31 → 0,25 por
+partida; meta 12–18%); passe certo 88,5 → 88,0 → 88,1% (meta ≤ 88%); goleiro 68,8 → 71,9 → 69,7%; faltas 2,2 → 2,0 → 1,8
+por partida. Decisão do dono (pendência): aceitar a fração de chutes de fora abaixo da faixa com mais gols e chutes de dentro.
+
+**Contraprova da rodada final (15/10): sementes novas e o domínio velho.** O `teste-nao-passa` com as MESMAS regras em
+84 partidas de sementes que a rodada não usou (dois lotes de 42: ia 5101…, frente 6101…, lado 7101… e ia 8101…,
+frente 9101…, lado 10101…; 2 × 3 min): "passou da bola" 0,26 e 0,52 por partida (meta ≤ 0,5), passe colado 0 e 0, e
+**passou e o adversário ficou com ela 1 e 1** (meta 0) — a main, no 1º lote, 0,90 / 11 / 8. A melhora da frente é
+grande e se repete fora da amostra, mas a meta 3 = 0 em 42 não é robusta: o que sobra é ~1 caso por 42 partidas, de
+categorias diferentes a cada sorteio — o adversário que marcou o domínio de um passe para cortar e não chega ao ponto
+(o replanejamento em corrida para ~17 passos antes e o plano velho segue; 7305 t 2652 #10, 5,93 m), a proteção decidida a
+4,4 m/s que vira condução de novo depois do compromisso com a bola parada no pé (8169 t 1371 #110; o "perdeu" foi a bola
+batendo no corpo do adversário, ele ficou com ela), a trombada de quem pressiona a 7 m/s no recebedor parado (5237 t 21490
+#110: o corpo empurrado a 3,6 m/s para longe da bola; é da frente das faltas, #480) e, com a correção abaixo, o humano
+roteirizado com o domínio aéreo amortecido ao lado do corpo (2220 t 21061 #3: fora da janela do roteiro o controlado
+recebe com a entrada de recepção da IA e conduz com a do condutor, com a física do humano). Em outros 24 lances do
+humano roteirizado (analógico solto na chegada, CORRER segurado, inversão de 150–180° logo depois do domínio): 1 caso do
+humano (0,34 m), nenhum perdido.
+
+Achado e corrigido: **o domínio marcado sobrava com a bola no pé de outro.** Só a bola livre (`sim.js bolaLivre` →
+`tentarDominio`) refaz ou apaga o plano de domínio; quando outro jogador ficava com a bola (o recebedor dominava, o
+adversário cortava, o goleiro pegava), o `cond.toque` de quem tinha marcado o domínio continuava e `movimentoRecepcao`
+seguia guiando o corpo — em corrida reto até o ponto do toque (12118 t 11047 #109: 7 m/s por 0,6 s para o ponto de um
+passe que o humano já tinha dominado, 3,67 m além da bola), de frente ou assistido a ≤ 1 m/s (`VEL_RECEPCAO`) virado
+para a bola, até ela ficar livre de novo — também o controlado do humano depois de um corte do passe para ele. Nas 42
+partidas do teste: 290 episódios de ≥ 2 passos (6,9 por partida; 93 do controlado; na main 7,5 por partida em 6
+partidas medidas à parte) → 0. Agora a partida apaga o plano assim que a bola é de outro (só na partida: o treino fica
+bit a bit igual). Nas 42 do teste: 0,29 → **0,21** "passou da bola" por partida, passe colado 0 → 0, domínio velho 290 →
+0 — e o sorteio novo dos lances traz 1 "perdeu" (o caso 2220 acima: meta 3 de 0 → 1). Nos dois lotes novos: 0,50 / 1 / 1
+e 0,19 / 0 / 1 (o passe colado que aparece, 6288 t 19403 #111, é o cortador com o toque marcado e a bola a 4,96 m/s
+barrado pelo `soMarcou` — a junção com o `cortandoPasse` da #471 cobre esse caso).
+
+**Junção com a #471 (main aa16c901, 15/10).** No `sim.js bolaLivre` as duas formas do `soMarcou` se somam (OU): quem
+só marcou o domínio não tira a vez de quem está com a bola lenta no pé (esta frente) nem do adversário que corta o passe
+ou do controlado do humano (#471); o goleiro adversário pega como na #471. Nas 42 do `teste-nao-passa` depois da junção:
+"passou da bola" 0,48 por partida (20), passe colado 0, domínio velho 0 — e **3 "perdeu", nenhum da recepção ou da
+condução**: dois do bote novo da #471 (a bola tirada sai para o lado ou para trás no caminho do condutor, que fica sem
+poder dominar, `cond.semDominioAte`, e corre por cima dela: 3169 t 6291 #10, 2220 t 17834 #7, ~2 m) e uma trombada
+(2220 t 5359 #105: parado com a bola dominada, empurrado de 1,0 para 3,7 m/s num passo só por quem pressionava, e o
+outro ficou com ela — a carga é da frente das faltas, #480). O medidor deixa esses dois casos fora da conta e os lista à
+parte (coluna "fora da conta"): quem acabou de ter a bola roubada e ainda não pode dominar, e quem foi empurrado
+(a velocidade do corpo mudou ≥ 0,8 m/s num passo, `medir-passa.mjs EMPURRAO`; a freada normal é ~0,1 m/s por passo).
+Com isso: **0,38 (16 em 42) / 0 / 0 / 0** nas metas 1–4; fora da conta 3 roubados e 1 empurrado (3 com a bola perdida).
+
+**O plano velho só sai do controlado do humano (CI de 6b1d4d7c, 15/10).** Com a limpeza para todos, o CI deu 50/58: oito
+testes reprovaram — `teste-intercepta` A (10,04 interceptações por time, meta ≥ 10,25; passe certo 87,3%, meta ≤ 86,5%),
+`teste-defesa-corrida` (12% das arrancadas do humano chegando à área, meta ≤ 5%), `teste-faltas` D (1,47 por partida, meta
+≥ 1,5), `teste-pressao-humano` M5 (78%, meta ≥ 80%), e quatro que dependem do lance sorteado (`teste-replay-anel` G6,
+`teste-substituicao` S4, `teste-tecnicos` T8, `teste-botoes` B14b). Na triagem (cópias da lógica, mesmas sementes): sem a
+limpeza na IA, o `teste-intercepta` A volta a 11,38 / 86,1% e defesa-corrida, faltas D (1,86), substituição, treinadores e
+o G6 do replay passam — o adversário que tinha marcado o domínio para cortar um passe e seguia para o ponto do toque
+pressionava o recebedor de graça, e a calibração da #471 conta com isso. Fica: a limpeza só para o controlado do humano
+(o defeito que a pessoa vê — o jogador não obedece ao analógico), meta 4 contada nas cenas do humano (57 episódios do
+controlado nas cenas 'frente' e 'lado' antes → 0); na IA, pendência (apagar o plano exige recalibrar a defesa da IA junto).
+Nas 42: **0,40 (17) / 0 / 0 / 0**. O B14b do `teste-botoes` reprovava pela guarda da amostra ("sem escolha ≥ 3": main 3/10,
+a frente 2/9 — a comparação vencida × sem escolha passava): 20 sementes em vez de 10 (vencida 7/16, sem escolha 3/19).
+Sobra o `teste-pressao-humano` M2 (com o botão, um companheiro a ≤ 2 m do condutor em ≤ 1,5 s): 51% (25/49; main 63%, 27/43;
+meta ≥ 60%) — igual sem limpeza nenhuma (vem das viradas e do domínio embalado da IA: o condutor que domina andando é
+mais difícil de alcançar em 1,5 s); com a limpeza para todos o M2 dava 63% e o M5 caía a 78%. A PRESSÃO é de outra frente:
+fica para a decisão.

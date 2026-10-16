@@ -3,7 +3,7 @@
 // mesma partida bit a bit (ver hashMundo).
 
 import { profundidadeVeu } from './rede-forma.js';
-import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, BOLA, GOLEIRO, IA, AEREO, CABECEIO, TROCA_AEREA, DEFESA_HUMANO, FALTAS } from './config.js';
+import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, BOLA, GOLEIRO, IA, AEREO, CABECEIO, TROCA_AEREA, DEFESA_HUMANO, FALTAS, RECEPCAO } from './config.js';
 import { criarRng, entre, uniforme, normal } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
@@ -13,7 +13,7 @@ import { alcanceCabeceio, planejarPulo, sairDoChao, passoCorpoNoAr, pesNoAr, int
 import { clamp, difAng, quantizar, lerp } from './mat.js';
 import {
   criarCond, controlarComBola, movimentoComBola, movimentoBase, movimentoRecepcao, tentarDominio, verificarPerda,
-  executarToque, saidaParaToque, atualizarGesto, peLivre, preverBola,
+  executarToque, saidaParaToque, atualizarGesto, peLivre, noAlcance, preverBola,
 } from './conducao.js';
 import { MD } from './matdet.js';
 import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, executarCabeceio, ataca, assumirControle } from './acoes.js';
@@ -25,11 +25,11 @@ import { ACOES } from './config.js';
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
 import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe, cortandoPasse } from './ia-tatica.js';
 import { trocaAerea, alvoAereo, escolhaManual } from './troca.js';
-import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida } from './defesa.js';
+import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida, semAtropelar, chamadoRecente } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada, ladoPenaltiHumano } from './partida.js';
 import { planejarRecepcao } from './recepcao.js';
-import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta, chegada } from './faltas.js';
+import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta, chegada, guardarChoque, forcaContato, BOTE_EVITADO, BOTE_SEM_GANHAR } from './faltas.js';
 // Regras da mão do goleiro e o goleiro jogando com o pé (pedido do dono, 11/10; só na partida)
 import { maoPermitida, motivoSemMao, registrarToque, estadoMao, paredeAreaMao, naPropriaArea, goleiroNoPe } from './regras-goleiro.js';
 import { lateralSegurando, segurarLateral } from './lateral.js';
@@ -187,6 +187,8 @@ function colisaoCorpos(m) {
       p.x -= nx * pen * wp; p.z -= nz * pen * wp;
       q.x += nx * pen * wq; q.z += nz * pen * wq;
       const rv = (q.vx - p.vx) * nx + (q.vz - p.vz) * nz;
+      // (só na partida) a força com que cada um entrou no outro, antes da resposta (faltas.js forcaContato)
+      if (rv < 0 && m.partida) guardarChoque(m, p, q, nx, nz);
       // Etapa 4 (só na partida): carga por trás no condutor (faltas.js; o árbitro decide nas regras)
       if (rv < 0 && m.partida && m.posse != null && (p.id === m.posse || q.id === m.posse) && !m.faltaPendente) {
         const f = faltaNaCarga(m, p, q, -rv);
@@ -295,42 +297,37 @@ function boteIA(m, j) {
   const dono = jogadorPorId(m, m.posse);
   if (!dono || dono.time === j.time) return;
   const b = m.bola, cfg = ACOES.boteIA;
-  // Etapa 4 (só na partida): o marcador batido, colado atrás do condutor no ataque promissor, segura (falta tática)
-  if (m.partida && !m.faltaPendente) {
+  // Etapa 4 (só na partida): o marcador batido, colado atrás do condutor, segura — o chamado da PRESSÃO não (parar o
+  // contra-ataque com falta é decisão da pessoa, pela DIVIDIDA)
+  const chamado = m.partida && chamadoRecente(m, j);
+  if (m.partida && !m.faltaPendente && !chamado) {
     const ft = faltaTatica(m, j, dono);
     if (ft) { registrarFalta(m, ft); dono.vx *= 0.3; dono.vz *= 0.3; j.descansoBote = cfg.descanso; return; }
   }
   if (b.p.y > 0.5) return;
   const dB = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   if (dB > cfg.alcance) return;
-  // o companheiro chamado pelo PRESSÃO do humano aperta com responsabilidade: não dá o bote embalado (acima de
-  // FALTAS.bote.vLivre m/s) nem por trás do condutor — chega, freia e tira. Seguindo o recebedor depois do passe, os
-  // botes assim viravam falta (teste-pressao-humano M4: 4 → 9 faltas com o botão)
-  if (m.partida && j.ia && j.ia.ramo === 'pressaoHumano' && m.tick - j.ia.tick <= 1
-    && (MD.hypot(j.vx, j.vz) > FALTAS.bote.vLivre || chegada(j, dono) === 'tras')) return;
+  // o chamado pelo PRESSÃO do humano aperta com responsabilidade: sem bote embalado (> FALTAS.bote.vLivre), por trás ou
+  // com o corpo entrando no condutor (> FALTAS.forca.min) — chega, freia e tira a bola ("delay, don't dive in")
+  if (chamado && (MD.hypot(j.vx, j.vz) > FALTAS.bote.vLivre || chegada(j, dono) === 'tras' || forcaContato(m, j, dono) > FALTAS.forca.min)) return;
   const dD = MD.hypot(b.p.x - dono.x, b.p.z - dono.z);
-  // (só na partida) condutor parado ou lento (abaixo de vParado m/s) e sem tocar na bola há semToque s: a bola parada à
-  // frente do pé dele (a condução a deixa a ~0,345 m do corpo) não está "colada" — quem chega ao alcance dela tenta
-  // tirar. Antes o bote nunca chegava ao sorteio contra quem ficava parado (o defensor não fica mais perto da bola que
-  // o condutor: corpos de 0,3 m de raio) — pedido do dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola"
+  // (só na partida) condutor parado/lento (< vParado m/s) sem tocar há semToque s: a bola à frente do pé não está
+  // "colada" — quem chega ao alcance dela tenta tirar (dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega")
   const ultT = dono.cond?.ult;
   const lento = !!m.partida && MD.hypot(dono.vx, dono.vz) < cfg.vParado && !(ultT && (m.tick - ultT.tick) * PASSO < cfg.semToque);
-  // colada no pé de quem conduz: não alcança — a não ser que ela esteja ENCOSTADA no corpo do marcador com os dois
-  // andando juntos (o condutor empurrando a bola nele): aí ela está entre os dois e é disputada. Só com o marcador à
-  // frente ou de lado (faltas.js chegada): nas costas do condutor a bola não está entre os dois — o bote por trás dela
-  // era quase sempre falta (FALTAS.bote.tras; teste-pressao-humano M4, 14/10)
+  // colada no pé de quem conduz: não alcança — salvo ENCOSTADA no marcador à frente ou de lado, os dois andando juntos
   const encostada = dB <= cfg.encostada && MD.hypot(j.vx - dono.vx, j.vz - dono.vz) <= cfg.encostadaVrel
     && chegada(j, dono) !== 'tras';
   if (!lento && !encostada && (dD < cfg.colada || dB > dD)) return;
   if (uniforme(m.rng) >= cfg.chancePorPasso) return;
-  // Etapa 4 (só na partida): o bote que chega pode ser falta (faltas.js: chegada, velocidade, desarme) — a bola fica
-  // com o condutor (desequilibrado) e o árbitro decide nas regras (vantagem, tiro livre, pênalti, cartão)
+  // Etapa 4 (só na partida): o bote que chega pode ser falta (faltas.js); o árbitro decide nas regras
   if (m.partida && !m.faltaPendente) {
-    const f = faltaNoBote(m, j, dono);
+    const f = faltaNoBote(m, j, dono, lento);
+    if (f === BOTE_EVITADO) { j.descansoBote = cfg.descanso; return; }
+    if (f === BOTE_SEM_GANHAR) { j.descansoBote = cfg.descanso; m.eventos.push({ tipo: 'boteErrado', id: j.id }); return; }
     if (f) { registrarFalta(m, f); dono.vx *= 0.5; dono.vz *= 0.5; j.descansoBote = cfg.descanso; return; }
   }
-  // contra o condutor parado/lento o bote em pé ganha pela mesma chance da DIVIDIDA do humano (desarme × drible/controle,
-  // 35–65%: simetria — o humano já tirava a bola do condutor parado da IA); errou, descansa (o condutor que reage escapa)
+  // contra o condutor parado/lento o bote ganha pela chance da DIVIDIDA do humano (simetria); errou, descansa
   if (lento && uniforme(m.rng) >= chanceDividida(j, dono, b.p.x, b.p.z)) {
     j.descansoBote = cfg.descanso;
     m.eventos.push({ tipo: 'boteErrado', id: j.id });
@@ -339,9 +336,7 @@ function boteIA(m, j) {
   // tira: para longe de quem conduzia
   let ux = b.p.x - dono.x, uz = b.p.z - dono.z;
   const l = MD.hypot(ux, uz) || 1; ux /= l; uz /= l;
-  // (só na partida; entrega "IA intensa" de 12/10) com o condutor embalado, a bola sai para o lado do defensor e um pouco
-  // para trás no caminho do condutor — "para longe dele" era ADIANTE no caminho dele, e o mesmo condutor, embalado,
-  // pegava de novo: 26% das roubadas da IA na arrancada do humano (contraprova de 11/10)
+  // (só na partida) com o condutor embalado, a bola sai para o lado do defensor e um pouco para trás (senão ele pegava)
   const vD = MD.hypot(dono.vx, dono.vz);
   if (m.partida && vD > cfg.vLado) {
     const cx = dono.vx / vD, cz = dono.vz / vD;
@@ -469,6 +464,9 @@ export function passo(m, entradas) {
       mv = movimentoComBola(m, j);
     } else {
       j.pedidoPedalada = false;
+      // (só na partida, o controlado do humano) a bola com OUTRO: o domínio marcado acabou — o plano velho seguia guiando
+      // o corpo e ele não obedecia ao analógico (teste-nao-passa meta 4; na IA fica: CONTRATOS.md, "Ninguém passa da bola")
+      if (m.partida && m.posse != null && j.cond?.toque?.tipo === 'dominio' && ehControlado(m, j) && !m.iaJoga?.[j.time]) j.cond.toque = null;
       mv = movimentoAereo(m, j, movimentoRecepcao(m, j, movimentoBase(j, j.ix, j.iz, j.imag, j.botoes, false, j.rumo, null)));
       // IA sem a bola andando/trotando olha para a bola (passo de lado ou de costas, como no jogo de
       // verdade); antes andava de costas para o lance. Contínuo: quanto mais devagar, mais o tronco
@@ -496,6 +494,8 @@ export function passo(m, entradas) {
     // CONTER (defesa.js): o controlado acompanhando o condutor fica de frente para ele (j.conter só
     // existe depois do CONTER apertado: o treino não muda)
     if (j.conter && m.posse !== j.id) mv = troncoConter(m, j, mv);
+    // partida: o time jogado por uma pessoa não atropela o condutor adversário (defesa.js semAtropelar; a demo não muda)
+    if (m.partida && m.posse !== j.id && j.posicao !== 'GOL' && m.humanos.includes(j.time) && !m.iaJoga?.[j.time]) mv = semAtropelar(m, j, mv);
     // partida: na bola parada, ninguém entra no raio (e quem está dentro sai) pela locomoção
     if (m.parada) mv = paredeParada(m, j, mv);
     passoCorpo(j, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, PASSO, m.posse === j.id);
@@ -657,17 +657,15 @@ function bolaLivre(m) {
   const alvo = m.voo && m.voo.para != null ? m.voo.para : null;
   const nc = candidatosBolaLivre(m, alvo);
   const passou = m.voo && m.voo.de != null && m.tick - (m.voo.tick0 ?? 0) < 6 ? m.voo.de : null;
-  // passe do adversário rasteiro no ar (só na partida; pedido do dono de 12/10, "a defesa mal intercepta passe"): quem só
-  // MARCOU o domínio (o recebedor esperando a bola chegar) não tira a vez do adversário que foi cortar o passe (a IA em
-  // ia-tatica.js cortaPasse, ou o controlado pelo humano) — ele toca na bola antes se chegar à linha antes (antes o
-  // recebedor com o toque marcado encerrava a vez de todo mundo e o defensor no caminho só cortava com a bola batendo no
-  // corpo). Os outros seguem como antes (com todos os adversários: 12 interceptações por time por partida, acima do real)
+  // passe para outro (só na partida): quem só MARCOU o domínio não tira a vez de quem está com a bola lenta no pé
+  // (RECEPCAO.passeLento; pedido do dono, 15/10: ele passava por ela) nem do adversário que foi cortar o passe rasteiro
+  // (ia-tatica.js cortaPasse, ou o controlado pelo humano; pedido de 12/10)
   const vooCorte = m.partida && m.voo && m.voo.para != null && m.voo.time != null ? m.voo : null;
   let soMarcou = false;
   for (let k = 0; k < nc; k++) {
     const j = _cands[k];
     if (j.id === passou) continue; // quem acabou de bater não domina a própria bola
-    if (soMarcou && (j.time === vooCorte.time || !(cortandoPasse(m, j) || (ehControlado(m, j) && !m.iaJoga?.[j.time])))) continue;
+    if (soMarcou && !bolaLentaNoPe(m, j) && (j.time === vooCorte.time || !(cortandoPasse(m, j) || (ehControlado(m, j) && !m.iaJoga?.[j.time])))) continue;
     if (naParada(m) && j.id !== m.parada.cobrador) continue; // partida: só o cobrador
     // toque aéreo vencido (a hora passou): não segura a bola livre para quem não vai mais nela
     const ta = j.cond?.toque;
@@ -689,6 +687,7 @@ function bolaLivre(m) {
   // o goleiro pega a bola solta perto dele (dentro da área)
   for (const g of m.jogadores) {
     if (g.posicao !== 'GOL') continue;
+    // (com o recebedor só com o domínio marcado: o goleiro de quem passou não pega)
     if (soMarcou && g.time === vooCorte.time) continue;
     if (naParada(m) && g.id !== m.parada.cobrador) continue; // partida: só o cobrador
     const gx = linhaDoGol(m, g);
@@ -707,6 +706,12 @@ function bolaLivre(m) {
       return;
     }
   }
+}
+
+/** A bola, no chão e lenta (até RECEPCAO.passeLento m/s), está ao alcance do pé de j agora (o alcance do domínio)? */
+function bolaLentaNoPe(m, j) {
+  const b = m.bola;
+  return b.v.x * b.v.x + b.v.z * b.v.z <= RECEPCAO.passeLento * RECEPCAO.passeLento && noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y, true);
 }
 
 /** De primeira: com uma ação pedida, bate na bola que chega em vez de dominar. */

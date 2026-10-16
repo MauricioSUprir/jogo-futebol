@@ -1,22 +1,9 @@
-// Botões de defesa do jogador do humano (Etapa 3, Parte 4; plano 2.8): CONTER (segurar: acompanha o
-// condutor entre a bola e o gol, de frente para ele), DIVIDIDA (borda: bote em pé, o pé sai na direção
-// da bola) e PRESSÃO (segurar: o companheiro que chega primeiro persegue o condutor e disputa a bola, com uma marca em
-// cima dele no desenho). CARRINHO fica na Etapa 4 (precisa de
-// falta e cartão). Pura: sem three.js nem DOM; só MD e m.rng. Constantes em config.js DEFESA_HUMANO.
-//
-// Ganchos em sim.js (valem também no treino, mas só agem com os bits CONTER/DIVIDIDA/PRESSÃO
-// apertados ou com o estado j.defH ligado — nenhum roteiro do treino aperta esses bits; a PRESSÃO só é lida pela IA
-// tática da partida):
-//  - passo 1 (entradas), jogador controlado: entradaConter(m, j, e) → entrada que substitui a do
-//    analógico (ou null = usa a do humano); pedidoPressao(m, j) com PRESSÃO segurado;
-//  - passo 3 (desarmes), jogador controlado: dividida(m, j).
-// Estado do humano na defesa: j.defH = null (nada) | {bote: null | {tick0, contato, cond, longe, pe, bx,
-// bz}, semReacaoAte: tick, tick} — o bote em andamento e o tempo sem reação depois de errar. Com
-// j.defH ligado os dois ganchos rodam a cada passo; no fim volta a null. j.conter guarda o filtro da
-// velocidade do condutor e a histerese do CORRER (não é lido pelo sim.js).
-//
-// iaClassica (m.partida.iaClassica, o "antes" dos testes): nada disto age — o jogo de antes da Etapa 3
-// não tinha botões de defesa.
+// Botões de defesa do jogador do humano (Etapa 3, Parte 4; plano 2.8): CONTER (acompanha o condutor entre a bola e o
+// gol), DIVIDIDA (bote em pé) e PRESSÃO (o companheiro que chega primeiro aperta o condutor; marca no desenho). Pura;
+// constantes em config.js DEFESA_HUMANO. Ganchos em sim.js (só agem com os bits apertados ou j.defH ligado; a PRESSÃO
+// só na IA tática da partida): entradaConter/pedidoPressao (passo 1) e dividida (passo 3), semAtropelar. Estado:
+// j.defH = null | {bote: null | {tick0, contato, cond, longe, pe, bx, bz}, semReacaoAte, tick}; j.conter (filtro e
+// histerese do CORRER). iaClassica (o "antes" dos testes): nada disto age. Contrato: CONTRATOS.md.
 
 import { BOTAO, CAMPO, PASSO, ENTRADA, DEFESA_HUMANO, FALTAS, JOGADOR } from './config.js';
 import { MD } from './matdet.js';
@@ -26,10 +13,10 @@ import { chutarRasteiro } from './bola.js';
 import { ataca } from './acoes.js';
 import { para } from './ia.js';
 import { estadoIA } from './ia-tatica.js';
-import { chanceFaltaBote, montarFalta, registrarFalta } from './faltas.js';
+import { chanceFaltaDividida, montarFalta, registrarFalta, chegada } from './faltas.js';
 import { registrarToque } from './regras-goleiro.js';
 
-const C = DEFESA_HUMANO.conter, D = DEFESA_HUMANO.dividida, P = DEFESA_HUMANO.pressao;
+const C = DEFESA_HUMANO.conter, D = DEFESA_HUMANO.dividida, P = DEFESA_HUMANO.pressao, SA = DEFESA_HUMANO.semAtropelar;
 const seg = s => Math.round(s / PASSO);
 const TICKS_BOTE = seg(D.tempo);
 const SEM_CORRER = ~BOTAO.CORRER;
@@ -277,11 +264,10 @@ function resolverBote(m, j, h) {
       if (!ganhou) motivo = 'perdeu';
     }
   }
-  // Etapa 4 (só na partida): a dividida que não ganha a bola com o pé no condutor pode ser falta (faltas.js) — a
-  // mesma chance do bote da IA (chegada, velocidade, desarme) × FALTAS.dividida[motivo]
+  // Etapa 4 (só na partida): a dividida que não ganha a bola com o pé no condutor pode ser falta (faltas.js)
   let falta = null;
   if (!ganhou && m.partida && d0 && (motivo === 'perdeu' || motivo === 'tocou') && !m.faltaPendente) {
-    const pF = chanceFaltaBote(j, d0) * (FALTAS.dividida[motivo] ?? 0);
+    const pF = chanceFaltaDividida(m, j, d0, motivo);
     if (uniforme(m.rng) < pF) {
       const v = MD.hypot(j.vx, j.vz);
       const exc = v >= FALTAS.excessivo && uniforme(m.rng) < FALTAS.excessivoP;
@@ -363,14 +349,30 @@ function pontoEncontro(m, time, o, d0, vx, vz, out) {
 const _pc = { x: 0, z: 0, ux: 0, uz: 0, t: 0 };
 
 /**
- * Tempo (s) para o jogador o chegar ao ponto (px, pz): distância na arrancada + o que falta acelerar (partindo da
- * velocidade que ele já tem na direção do ponto) + a freada se ele vai para o outro lado.
+ * Tempo (s) de o chegar a (px, pz) em disparada pelo perfil de aceleração do corpo (jogador.js passoCorpo): x(t) = vA·t −
+ * (vA − v0)/k · (1 − e^(−k·t)), k = acel0/vTeto; na inversão freia na linha antes (CONTRATOS.md, PRESSÃO).
  */
 function tempoChegada(o, px, pz) {
-  const dx = px - o.x, dz = pz - o.z, d = MD.hypot(dx, dz);
+  let dx = px - o.x, dz = pz - o.z, d = MD.hypot(dx, dz);
   if (d < 1e-6) return 0;
-  const vr = (o.vx * dx + o.vz * dz) / d, vA = o.par.vArrancada;
-  return d / vA + (vA - Math.max(0, Math.min(vA, vr))) / (2 * P.acel) + Math.max(0, -vr) / P.freio;
+  const par = o.par, vA = par.vArrancada, k = par.acel0 / par.vTeto, s = MD.hypot(o.vx, o.vz);
+  let v0 = (o.vx * dx + o.vz * dz) / d, t0 = 0;
+  if (s > JOGADOR.vGiroLivre && v0 < COS_INVERSAO * s) {
+    t0 = s / par.freioGiro;
+    const l = s / (2 * par.freioGiro);
+    dx -= o.vx * l; dz -= o.vz * l; d = MD.hypot(dx, dz);
+    v0 = 0;
+  }
+  v0 = Math.max(0, v0);
+  if (v0 >= vA) return t0 + d / v0;
+  // Newton (x(t) convexa e crescente)
+  const falta = (vA - v0) / k;
+  let t = (d + falta) / vA;
+  for (let i = 0; i < 3; i++) {
+    const e = MD.exp(-k * t);
+    t -= (vA * t - falta * (1 - e) - d) / (vA - (vA - v0) * e);
+  }
+  return t0 + t;
 }
 
 /**
@@ -418,10 +420,8 @@ function inverte(o, px, pz) {
 const COS_INVERSAO = MD.cos(JOGADOR.angInversao);
 
 /**
- * Chega freando (o chamado não atropela o adversário o: carga por trás, FALTAS.carga.vMin): a velocidade pedida (vx, vz)
- * fecha no corpo de o no máximo o que ainda dá para frear (P.freio) até encostar (2 raios) a P.trasAprox m/s. Escreve em
- * _vf {x, z} e devolve true se limitou. Sem isso o chamado entrava na disputa (P.chega m) a ~7 m/s fechando a ~6,8 m/s
- * — no passe do adversário ele chegava em disparada no recebedor — e trombava nas costas dele (M4, 14/10).
+ * Chega freando (o chamado não atropela o — carga, FALTAS.forca): o pedido (vx, vz) fecha em o no máximo pela curva de
+ * freada que encosta a P.contato m/s (conta no CONTRATOS.md, PRESSÃO). Escreve em _vf {x, z}; true se limitou.
  */
 function chegaFreando(j, o, vx, vz) {
   _vf.x = vx; _vf.z = vz;
@@ -429,25 +429,100 @@ function chegaFreando(j, o, vx, vz) {
   if (dc < 1e-6) return false;
   const nx = rx / dc, nz = rz / dc;
   const fecha = (vx - o.vx) * nx + (vz - o.vz) * nz;
-  const max = Math.sqrt(2 * P.freio * Math.max(0, dc - 2 * JOGADOR.raio)) + P.trasAprox;
-  if (fecha <= max) return false;
-  _vf.x -= (fecha - max) * nx; _vf.z -= (fecha - max) * nz;
+  const folga = Math.max(0, dc - 2 * JOGADOR.raio);
+  const vo = o.vx * nx + o.vz * nz; // > 0: o se afasta de j; < 0: vem
+  const a = P.freioChegada * j.par.freio, perto = Math.max(0, 1 - folga / SA.perto);
+  const margem = Math.min(Math.max(0, vo), SA.reacao * JOGADOR.freioGiro) * perto;
+  // o condutor vindo: além de dEng a curva vale para a velocidade de j; perto, no referencial do condutor
+  const vem = Math.max(0, -vo), c0 = P.contato;
+  const dEng = 2 * JOGADOR.raio + (j.par.vCorrida * j.par.vCorrida - c0 * c0) / (2 * a);
+  const c = dc > dEng ? c0 : c0 + vem;
+  const max = Math.sqrt(c * c + 2 * a * folga) + (dc > dEng ? vem : 0) - margem;
+  // com o corpo já acima da curva, pede a curva menos o excesso (o corpo segue o pedido com atraso)
+  const fechaCorpo = (j.vx - o.vx) * nx + (j.vz - o.vz) * nz;
+  const alvo = max - Math.max(0, fechaCorpo - max);
+  if (fecha <= alvo) return false;
+  const corte = fecha - alvo;
+  _vf.x -= corte * nx; _vf.z -= corte * nz;
   return true;
 }
 const _vf = { x: 0, z: 0 };
 
 /**
- * Disparada na direção (dx, dz) chegando freando no adversário o (chegaFreando); sem limite, o direto de antes. Contorna
- * quem está no caminho (desviarCorpos).
+ * Sem atropelar (sim.js, só na partida, o time jogado por uma pessoa): a velocidade pedida para dentro do condutor
+ * adversário (ou do recebedor do passe) fica na curva de freada que encosta a ~SA.chega m/s (conta no CONTRATOS.md,
+ * "Faltas com sentido"; teste-faltas-sentido B2). A de lado fica; a DIVIDIDA saindo não muda. Devolve mv ou um novo {…mv, dx, dz, vel}.
  */
+export function semAtropelar(m, j, mv) {
+  if (j.defH && j.defH.bote) return mv;
+  let o = condutorAdversario(m, j);
+  if (!o && m.posse == null) { const pv = passeAdversario(m, j.time); if (pv && pv.para != null) o = porId(m, pv.para); }
+  if (!o || o.time === j.time) return mv;
+  const rx = o.x - j.x, rz = o.z - j.z, dc = MD.hypot(rx, rz);
+  if (dc < 1e-6) return mv;
+  // o chamado da PRESSÃO longe corre pela conta dele (entradaPressao)
+  if (dc > P.chega && j.ia && j.ia.ramo === 'pressaoHumano' && m.tick - j.ia.tick <= 1) return mv;
+  const nx = rx / dc, nz = rz / dc;
+  let vx = mv.dx * mv.vel, vz = mv.dz * mv.vel;
+  const entra = vx * nx + vz * nz;
+  const folga = Math.max(0, dc - 2 * JOGADOR.raio);
+  const vAfasta = Math.max(0, o.vx * nx + o.vz * nz - SA.reacao * JOGADOR.freioGiro * Math.max(0, 1 - folga / SA.perto));
+  const max = vAfasta + Math.sqrt(SA.chega * SA.chega + 2 * SA.freio * folga);
+  if (entra <= max) return mv;
+  vx -= (entra - max) * nx; vz -= (entra - max) * nz;
+  const v = MD.hypot(vx, vz);
+  if (v < 1e-6) return { ...mv, vel: 0 };
+  return { ...mv, dx: vx / v, dz: vz / v, vel: v };
+}
+
+/** Disparada na direção (dx, dz) desviando dos corpos (desvio) e chegando freando em o (chegaFreando). */
 function corridaAte(m, j, o, dx, dz, st) {
-  desviarCorpos(m, j, o, dx, dz);
-  dx = _dv.x; dz = _dv.z;
   const l = MD.hypot(dx, dz);
-  if (!o || l < 1e-6) return direto(j, dx, dz, true);
+  if (l < 1e-6) return direto(j, dx, dz, true);
   const v = j.par.vArrancada;
-  if (!chegaFreando(j, o, (dx / l) * v, (dz / l) * v)) return direto(j, dx, dz, true);
+  let ux = dx / l, uz = dz / l;
+  if (desvio(m, j, o, ux, uz, v)) { ux = _dv.x; uz = _dv.z; }
+  if (!o || !chegaFreando(j, o, ux * v, uz * v)) return direto(j, ux, uz, true);
   return entradaVelocidade(j, _vf.x, _vf.z, st, 0);
+}
+
+/**
+ * Desvio dos corpos no caminho (Reynolds 1999, aproximação máxima prevista em P.desvio.T s): o rumo (ux, uz) gira o
+ * bastante para passar a 2 raios + P.desvio.folga m do mais iminente. Escreve em _dv {x, z}; true se desviou.
+ */
+function desvio(m, j, o, ux, uz, v) {
+  const R = 2 * JOGADOR.raio + P.desvio.folga, T = P.desvio.T, A = P.desvio.alcance;
+  const wx = ux * v, wz = uz * v;
+  let melhor = null, tMin = Infinity;
+  for (const p of m.jogadores) {
+    if (p === j || p === o || p.papel === 'parado') continue;
+    const rx = p.x - j.x, rz = p.z - j.z, d = MD.hypot(rx, rz);
+    if (d > A || d < 1e-6) continue;
+    const ex = p.vx - wx, ez = p.vz - wz, e2 = ex * ex + ez * ez;
+    if (e2 < 1e-6) continue;
+    const t = -(rx * ex + rz * ez) / e2;
+    if (t <= 0 || t > T) continue;
+    const cx = rx + ex * t, cz = rz + ez * t;
+    if (MD.hypot(cx, cz) >= R) continue;
+    if (t < tMin) { tMin = t; melhor = p; }
+  }
+  if (!melhor) return false;
+  const rx = melhor.x + melhor.vx * tMin - j.x, rz = melhor.z + melhor.vz * tMin - j.z;
+  const L = rx * ux + rz * uz, lat = -rx * uz + rz * ux, D = MD.hypot(rx, rz);
+  if (D < 1e-6) return false;
+  const lado = lat >= 0 ? -1 : 1;
+  const ang = MD.atan2(Math.abs(lat), Math.max(L, 1e-6)), preciso = MD.asin(Math.min(1, R / D)) - ang;
+  if (preciso <= 0) return false;
+  const c = MD.cos(preciso), sn = MD.sin(preciso) * lado;
+  _dv.x = ux * c - uz * sn; _dv.z = ux * sn + uz * c;
+  return true;
+}
+const _dv = { x: 0, z: 0 };
+
+/** j é (ou foi há até P.depois s) o chamado da PRESSÃO? (sim.js boteIA: bote com responsabilidade, sem falta tática) */
+export function chamadoRecente(m, j) {
+  const st = j.pressaoH;
+  return !!st && st.tick >= 0 && m.tick - st.tick <= seg(P.depois) && !desligado(m);
 }
 
 /**
@@ -463,23 +538,22 @@ export function pressionadorVisivel(m, time) {
  * Entrada do companheiro escolhido por pressionadorDe (a IA tática a dá a ele: ia-tatica.js semBola), com o pedido
  * valendo e um condutor adversário; senão null. Em duas fases:
  *  - APROXIMAÇÃO (a mais de P.chega m do condutor): em disparada (CORRER, analógico cheio, sem o filtro da IA), em linha
- *    reta até o ponto da disputa adiantado pela velocidade do condutor (até P.leadMax s); vindo por trás dele, contorna
- *    pelo lado (não atravessa o corpo do condutor: carga por trás);
+ *    reta até o ponto da disputa adiantado pela velocidade do condutor (até P.leadMax s), com desvio e chegaFreando;
+ *    vindo por trás dele, contorna pelo lado (não atravessa o corpo do condutor: carga por trás);
  *  - DISPUTA: o ponto a P.colado m do corpo do condutor, do lado do meu gol — a bola fica ao alcance do bote (sim.js
  *    boteIA, 0,65 m) — e, com a bola solta do pé (a mais de P.bolaSolta m dele) e eu mais perto, vai na bola.
  */
 export function entradaPressao(m, j) {
   if (!pressaoPedida(m, j.time)) return null;
-  // passe do adversário: o chamado corre em disparada para onde a bola vai, pelo lado do meu gol, e para a P.chega m do
-  // ponto de chegada — de lá a disputa (abaixo) aperta o recebedor com a velocidade limitada. Chegando colado, em
-  // disparada, ele atropelava o recebedor no domínio (faltas com o botão 4 → 13 no teste-pressao-humano M4)
+  // passe do adversário: em disparada até P.colado m do ponto de chegada, pelo lado do meu gol (chegaFreando no recebedor)
   const pv = m.posse == null ? passeAdversario(m, j.time) : null;
-  const st = j.pressaoH ??= { corre: false };
+  const st = j.pressaoH ??= { corre: false, tick: -1 };
   if (pv) {
     if (pressionadorDe(m, j.time) !== j.id) return null;
     estadoIA(m, j).ramo = 'pressaoHumano';
+    st.tick = m.tick;
     const gx = -ataca(m, j.time) * CAMPO.meioX - pv.alvo.x, gz = -pv.alvo.z, g = MD.hypot(gx, gz) || 1;
-    const dx = pv.alvo.x + (gx / g) * P.chega - j.x, dz = pv.alvo.z + (gz / g) * P.chega - j.z, d = MD.hypot(dx, dz);
+    const dx = pv.alvo.x + (gx / g) * P.colado - j.x, dz = pv.alvo.z + (gz / g) * P.colado - j.z, d = MD.hypot(dx, dz);
     // perto do ponto, freia (o analógico proporcional à distância): espera o recebedor ali
     if (d < 1) return { x: dx, z: dz, botoes: 0 };
     // em disparada, chegando freando no recebedor (ele vem ao encontro da bola)
@@ -492,6 +566,7 @@ export function entradaPressao(m, j) {
   const a = Math.min(1, PASSO / P.filtro);
   s.cvx += (d0.vx - s.cvx) * a; s.cvz += (d0.vz - s.cvz) * a;
   s.ramo = 'pressaoHumano';
+  st.tick = m.tick;
   const b = m.bola.p;
   // bola solta do pé do condutor e eu mais perto dela: vou na bola (chegando freando no condutor)
   const dbC = MD.hypot(b.x - d0.x, b.z - d0.z), dbJ = MD.hypot(b.x - j.x, b.z - j.z);
@@ -509,10 +584,11 @@ export function entradaPressao(m, j) {
     _pc.ux = gx / g; _pc.uz = gz / g;
     tx = b.x + _pc.ux * P.naBola + s.cvx * P.leadDisputa; tz = b.z + _pc.uz * P.naBola + s.cvz * P.leadDisputa;
   }
-  // vindo por trás do condutor (do lado do gol dele) com o corpo dele no caminho: contorna pelo lado (atravessar o
-  // corpo dele é carga por trás — falta)
+  // vindo por trás do condutor (do lado do gol dele ou nas costas dele: faltas.js chegada) com o corpo dele no caminho:
+  // contorna pelo lado (atravessar o corpo dele é carga por trás — falta)
   const rx = j.x - d0.x, rz = j.z - d0.z;
-  if (rx * _pc.ux + rz * _pc.uz < 0) {
+  const atras = rx * _pc.ux + rz * _pc.uz < 0 || chegada(j, d0) === 'tras';
+  if (atras) {
     const dx = tx - j.x, dz = tz - j.z, L = MD.hypot(dx, dz) || 1;
     const cx = d0.x - j.x, cz = d0.z - j.z, ao = (cx * dx + cz * dz) / L;
     const lat = (-cx * dz + cz * dx) / L;
@@ -529,46 +605,15 @@ export function entradaPressao(m, j) {
   let rvx = vx - s.cvx, rvz = vz - s.cvz;
   const rl = MD.hypot(rvx, rvz);
   if (rl > P.aproxMax) { rvx *= P.aproxMax / rl; rvz *= P.aproxMax / rl; }
-  if (rx * _pc.ux + rz * _pc.uz < 0 && dc < P.trasPerto) {
-    const nx = (d0.x - j.x) / (dc || 1), nz = (d0.z - j.z) / (dc || 1), ap = rvx * nx + rvz * nz;
-    if (ap > P.trasAprox) { rvx -= (ap - P.trasAprox) * nx; rvz -= (ap - P.trasAprox) * nz; }
-  }
   vx = s.cvx + rvx; vz = s.cvz + rvz;
+  // (pela velocidade de agora do condutor: com a filtrada, quem corta ou freia levava a trombada nas costas)
+  if (atras && dc < P.trasPerto) {
+    const nx = (d0.x - j.x) / (dc || 1), nz = (d0.z - j.z) / (dc || 1), ap = (vx - d0.vx) * nx + (vz - d0.vz) * nz;
+    if (ap > P.trasAprox) { vx -= (ap - P.trasAprox) * nx; vz -= (ap - P.trasAprox) * nz; }
+  }
   chegaFreando(j, d0, vx, vz);
   return entradaVelocidade(j, _vf.x, _vf.z, st, 0);
 }
-
-/**
- * O chamado da PRESSÃO em disparada contorna quem está no caminho (companheiro ou adversário — não o alvo o): o corpo mais
- * perto à frente, a até P.desvio.olha s da corrida (pelo menos P.desvio.min m, no máximo até o ponto), onde ele vai estar
- * quando eu chegar lá, a menos de P.desvio.lado m da linha → o ponto passa a P.desvio.lado m do lado dele, pelo lado em que
- * eu já estou. Antes ele ia reto e trombava (sim.js colisaoCorpos: ~1,8 m/s a menos por trombada; 4,2 trombadas com quem não
- * é o condutor por 100 lances do teste-pressao-humano, muitas com adversários no passe deles) e recomeçava a arrancada
- * (M5, 15/10: 80 → 83%; M8 4,2 → 2,1). Só a PRESSÃO do humano: a partida IA × IA não muda. Escreve em _dv {x, z}.
- */
-function desviarCorpos(m, j, o, dx, dz) {
-  _dv.x = dx; _dv.z = dz;
-  const D = P.desvio, L = MD.hypot(dx, dz);
-  if (!D || L < 1e-6) return _dv;
-  const ux = dx / L, uz = dz / L, s = Math.max(MD.hypot(j.vx, j.vz), D.vMin);
-  const alc = Math.min(L, Math.max(D.min, s * D.olha));
-  let mAo = Infinity, mx = 0, mz = 0, mLat = 0;
-  for (const q of m.jogadores) {
-    if (q === j || q === o || q.posicao === 'GOL') continue;
-    const ao0 = (q.x - j.x) * ux + (q.z - j.z) * uz;
-    if (ao0 <= 0 || ao0 > alc + 1) continue;
-    const t = ao0 / s, rx = q.x + q.vx * t - j.x, rz = q.z + q.vz * t - j.z;
-    const ao = rx * ux + rz * uz, lat = -rx * uz + rz * ux;
-    if (ao <= 0 || ao > alc || Math.abs(lat) >= D.lado || ao >= mAo) continue;
-    mAo = ao; mx = rx; mz = rz; mLat = lat;
-  }
-  if (mAo === Infinity) return _dv;
-  // passa do lado contrário ao do corpo (ele à esquerda da linha → eu pela direita), a D.lado m dele
-  const lado = mLat >= 0 ? -1 : 1;
-  _dv.x = mx - uz * lado * D.lado; _dv.z = mz + ux * lado * D.lado;
-  return _dv;
-}
-const _dv = { x: 0, z: 0 };
 
 /** Analógico cheio na direção (dx, dz), com CORRER. */
 function direto(j, dx, dz, correr) {
