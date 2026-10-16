@@ -1335,6 +1335,8 @@ Pesquisa: `PESQUISA-RECEPCAO-GOLEIRO.md` (seção 4: as correções da contrapro
 ## Etapa 4 — regras (IFAB), goleiro, bolas paradas e equilíbrio (contrato)
 
 Sai em PRs menores; cada um acrescenta a sua parte aqui. Pesquisa e números em `PESQUISA-ETAPA4.md`.
+O goleiro da partida (chance de defesa pela folga física, encaixe × espalmada, set, 1×1, bola solta e saída no
+cruzamento) tem o contrato próprio: "Goleiro realista (16/10)", no fim deste arquivo.
 
 ### Impedimento (Regra 11) e acréscimos (Regra 7.3)
 - `impedimento.js` (puro): `penultimoAdversario(m, t)`, `linhaImpedimento(m, t, out)` → `{u, x, defensor}` (o maior entre
@@ -2215,3 +2217,102 @@ de meta; a linha da trajetória com mira, força e curva no escanteio e na falta
   download inicial, câmera atrás do
   cobrador nos 4 tipos e no pênalti contra, cobrador e alvo no quadro, nada na lente, a linha ≥ 150 px e ≤ +1 chamada,
   some no chute, a volta para a TV sem salto, teclado e botões CURVA).
+
+## Goleiro realista (16/10; contrato) — defesa pela dificuldade, encaixe × espalmada, set, 1×1 e saída no cruzamento
+
+Pedido do dono (15/10: "os goleiros se movimentando melhor e as espalmas e as seguradas de bola mais realistas, ele defende
+mais bolas difíceis do que fáceis") e a pendência #114 (parte 3b da Etapa 4: sair no 1×1 e no cruzamento). **Tudo só na
+partida** (`m.partida`) e fora do pênalti: o treino e o pênalti seguem a logística de antes (`hash-igual` IGUAL; o
+`hash-partida` muda desde o 1º passo, porque o goleiro já se posiciona diferente). Constantes em `config.js
+GOLEIRO.realista`; pesquisa e números em `PESQUISA-ETAPA4.md` §13.
+
+### Chance de defesa (`goleiro.js lerChute`)
+- `alcanceReal(tau, fator)`: o alcance lateral da mão em `tau` s — o deslocamento do mergulho de antes (`aMergulho`,
+  `vMergulho`, `deslocMax`) mais o braço, que cresce de `alcance.emPe` para `reflexo` em `tReflexo` s e para `esticado` em
+  `tEsticar` s (o corpo parado não leva a mão a 1,6 m em 0,15 s).
+- `atrasoDoEstado(j, lat)` (s): `semBase` sem os dois pés no chão ou andando a ≥ `vParado` m/s, mais o tempo de frear
+  quando ele anda para o lado contrário da bola. O estado do goleiro no chute passa a contar.
+- Folga = `alcanceReal(tau − atraso)` − lateral (m), com `folgaCabeceio` m a mais no cabeceio a gol (lento, lido pelo corpo
+  de quem cabeceia). `chanceReal(lateral, altura, alcance, attr)`: logit = `c0 + cFolga·folga + GOLEIRO.logit.attr·nível`,
+  menos `cAlto·(y − yAlto)·cFolga` na bola alta longe do corpo (lateral > `altoLado`), vezes o limite físico de antes
+  (`folgaAlcance`). A distância do chute só entra pelo tempo de voo: a bola de longe e lenta é fácil; a forte no canto, não.
+- Bola no corpo (lateral ≤ `corpo` m e altura ≤ `corpoAlto` m): defesa certa (`j.defesa.corpo = true`).
+- Encaixe (`segura`): `corpo` no corpo; senão `emPe[k]` ou `mergulho[k]` pela altura (k: < 1 m, 1–1,8 m, ≥ 1,8 m), vezes
+  `1 + kV·(vRef − v)` (limitado a `vMin`–`vMax`; a bola forte escapa mais), no mergulho vezes `folga ÷ folgaPlena` (mínimo
+  `minFolga`: a da ponta dos dedos é espalmada), vezes o reflexo (0,85–1,15).
+- Defendida sem encaixe: `j.defesa.rebote` (a bola escapa e cai perto, de lado) na bola em pé a ≥ `rebote.vEmPe` m/s e, com
+  `rebote.mergulhoBaixo`, no mergulho rasteiro (< `yBaixo` m) de perto (< `perto` m); o resto espalma para fora como antes.
+- `j.defesa` ganha `real`, `corpo`, `rebote` e `bloqueio`; o evento `leituraGoleiro` da partida traz também
+  `{folga, corpo, lat, y, t, v, mergulha}`.
+
+### Nada atravessa o goleiro (`aplicarDefesa`, `iniciarMergulho`)
+- Batido, o desenho fica fora do caminho da bola: o corpo a `batido.corpo` m e a mão a `batido.mao` m dela (`g.curta`;
+  no treino 0,4 e 0,35, como antes). A bola no corpo que a mão desenhada não alcança vira espalmada (rebote pelo sorteio
+  abaixo).
+- `corpoNaBola(j, tick, p)`: a bola toca o corpo desenhado (tronco do quadril à cabeça e as duas pernas do quadro do
+  mergulho, raios `bloqueio.tronco`/`perna`; de pé, um cilindro até `bloqueio.alto` m). `corpoNoCaminho(m, j)`: agora ou nos
+  próximos `bloqueio.ticks` passos. Goleiro batido com a bola passando pelo corpo, em qualquer tick do lance: vira defesa
+  (`d.bloqueio`, espalmada) — `uniforme ≥ bloqueio.fora` → rebote perto, senão desvio para fora.
+- `estadoEspalmada(b, gx, sentido)` → 0 fora do perigo, 1 jogável na zona perigosa, 2 entra no gol (`espalmadaSegura` =
+  0). `espalmar` na partida: sem direção segura, fica a 1ª que não entra no gol (antes a última tentativa valia mesmo
+  entrando: 1,6% das espalmadas do canhão iam para o próprio gol); se todas entram, bem aberta para o lado dela, um pouco
+  para a frente e para cima.
+- `rebater(m, j, d, sentido)`: a bola sai a `fv`·v (na faixa `rebote.v` m/s), para a frente, aberta `rebote.ang` rad para
+  o lado em que estava (nunca para o meio nem para o gol), subindo `rebote.vy` m/s.
+
+### Movimento (`movimentoGoleiro`, `velPosicao`; `jogador.js`, `anim.js`)
+- `velPosicao(m, j, dd, vel, cabeceioVindo)`: parado dentro de `mov.zona` m do ponto, com histerese (sai além de `zonaSai`
+  m; com ameaça — o dono adversário com a bola a < `ameaca` m do gol — `zonaSaiAmeaca`). Com o chute armado do dono
+  (`chuteArmado`: carga ou pedido de CHUTE) ou o cruzamento chegando à cabeça em < `setCruz` s: fica set (só corrige além
+  de `setRaio` m, a ≤ `vSet` m/s). Perto do ponto anda em passos curtos (`vAjuste`; com ameaça `vAjusteAmeaca`). Parado,
+  até `giraSet` rad da bola ele só acompanha com os olhos.
+- Com o dono adversário conduzindo a < `ameaca` m do gol, a bissetriz mira a bola `antecipa` s à frente (chega antes do
+  chute e fica set). Com a bola perto da linha de fundo (escanteio, cruzamento da ponta) a profundidade vai para
+  `linhaPerto` m, interpolando pela distância da bola à linha do gol ao longo do campo (até `linhaU` m).
+- Base: `j.baseGk` (= `mov.base` m andando a < `vBase` m/s): `jogador.js pontoPouso` pousa os pés mais abertos (só abaixo
+  de 2 m/s) e `passoPassada` termina o passo com `mov.ritmoFim` (para e fica com os dois pés no chão).
+  `baseGoleiro(m, j, s)` (0–1, contínuo pela velocidade; 0 fora da partida e com a bola nas mãos): `anim.js` baixa o
+  quadril `mov.agacha` m e inclina o tronco `mov.inclina` rad; `iniciarMergulho` parte da mesma inclinação (sem salto).
+- Campos novos do jogador, declarados em `criarJogador` (a mesma classe oculta do V8 — sem eles a partida ficava ~35%
+  mais lenta): `baseGk`, `gkParado`, `varre`, `altoLido`, `abafaAte`.
+
+### 1×1 e bola solta (`umXumPartida`, `saida1x1Partida`, `abafar`, `varrer`)
+- `umXumPartida(m, j)` (o `deveSair` da IA na partida; a regra "ninguém do meu time a menos de 0,8× minha distância"
+  saiu): o dono adversário com a bola a ≤ `umXum.dist` m do gol, dentro da largura da área, vindo para o gol (ou a ≤ 11 m),
+  sem companheiro de linha a < `cobre` m da linha dono → gol nem a < `colado` m dele. Evento `saidaGoleiro {modo: '1x1'}`.
+- `saida1x1Partida`: a bola baixa do toque longo (a > `colado` m do pé do dono, a mão valendo, ele chega 0,1 s antes do
+  dono) — ele corre nela; senão fecha na bissetriz até `umXum.max` m da linha, `antes` m antes da bola, a `v`·arrancada;
+  com o chute armado, set.
+- `abafar(m, g)` (sim.js, depois dos botes, com a bola dominada): a bola baixa (< `abafa.y` m) e lenta (< `vMax` m/s) a ≤
+  `alcance` m dele (+ `saindo` m saindo), mais perto dele que do pé do dono, na área com a mão: sorteio pelo reflexo
+  (`abafa.p`). Pegou → a bola nas mãos (`ganhouPosse`, evento `defesa {modo: 'abafou'}`); errou → descansa `descanso` s
+  (`g.abafaAte`).
+- `varrer(m, j, gx)`: a bola sem dono na área, baixa (≤ `varre.y` m), a ≤ `dist` m da linha, que ele alcança antes de todo
+  adversário (folga `folga` s, também no caminho dela) e sem companheiro chegando bem antes: corre nela (evento
+  `saidaGoleiro {modo: 'bolaSolta'}`); indo nela, o "pegou" do `sim.js bolaLivre` aceita até `varre.vPega` m/s (9 antes).
+  O passe do próprio time para outro companheiro não é bola solta. Recalculado a cada 4 passos (`j.varre`).
+
+### Saída no cruzamento (`saidaNoAlto`, `goleiroSaiNoAlto`)
+- Chamada no começo de `lerChute`. A bola do adversário no ar (cruzamento, lançamento, escanteio, falta levantada; não o
+  chute nem o cabeceio), com a bola em jogo: o 1º ponto da trajetória (`conducao.js preverBola`) com altura em `cruz.y` m,
+  a ≤ `dist` m da linha, |z| ≤ `largura` m e a mão valendo, a que ele chega (`reacao` + corrida × `fCorre` + pulo `salto` +
+  `chegaAntes`, em s) antes de todo adversário cabecear (folga `folga` s; o pulo pela conta do `cabeceio.js`). Contestado
+  (adversário a < `contesta` s do ponto) ou a bola a > `vSoco` m/s no ponto: soco; senão encaixe; sorteio `cruz.p`.
+  Reavaliada a cada `cada` passos; já correndo, desiste antes do pulo se não chega mais (`tolera` s) e volta.
+- "Deixa!": os companheiros que iam cabecear essa bola e ainda não saíram do chão desistem (salvo o controlado do humano);
+  `sim.js bolaAltaNoCorpo` não planeja outro cabeceio por cima dele (`goleiroSaiNoAlto`).
+- O corpo corre de frente para o ponto (de frente para a bola a menos de `vira` m) e pula pelo desenho (`iniciarMergulho`
+  tipo `'salto'`; a bola abaixo de 1,45 m, `'peito'`). `aplicarDefesa` só encaixa ou soca com a mão desenhada a ≤
+  `cruz.mao` m da bola; senão a bola passa (`saidaFalhou {longe: true}`). `socar`: `soco.v` m/s, elevação `soco.el` rad,
+  aberto `soco.lado` rad para o lado da bola, para longe do gol.
+- Eventos: `saidaGoleiro {modo: 'cruzamento', soco}`, `defesa {modo: 'encaixe' | 'soco', saidaAlta: true}`,
+  `saidaFalhou {id, longe?, desvio?}`; depois do contato quem ia cabecear perde o plano.
+
+### Testes e medidas
+`teste-goleiro-realista` (padrão; `tools/lib/goleiro-canhao.mjs`, o mesmo canhão do `medir-goleiro.mjs`): 8 partidas IA ×
+IA, 12 cópias do mundo no meio de cada uma (a bola no pé de um atacante a 8–32 m do gol); de cada cópia, chutes no gol a
+14–30 m/s com a mira uniforme (na hora e a 6–16,5 m) e escanteios. Metas A (defesa pela dificuldade física: lateral e
+tempo de voo, sem a conta do jogo), B (segura × espalma, espalmada nunca no gol, rebote), C (set com o chute armado, sem
+saltos, pés cruzados), D (1×1 e bola solta nas partidas) e E (saída no escanteio; guarda do gol de escanteio). `--js
+<pasta>` mede outra lógica (a da main: reprova 14 de 17). `medir-goleiro.mjs` (informativo) dá o relatório inteiro
+(seções 1–4). O gol de escanteio ainda acima do real (2,6%) vem do duelo pelo alto, não do goleiro: pendência da Etapa 4.5.
