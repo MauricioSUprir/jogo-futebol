@@ -48,7 +48,7 @@ const TEXTO = 'Golaço FC: entra 22 Wallace Pimenta, sai 9 Diego Albuquerque';
 async function pagina(url, opc = {}) {
   const nav = await abrir({ largura: opc.largura ?? 1280, altura: opc.altura ?? 720, dpr: opc.dpr ?? 1, toque: opc.toque });
   await nav.pagina.goto(srv.url + url, { waitUntil: 'load', timeout: 600000 });
-  await nav.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 600000 });
+  await nav.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 600000 });
   await nav.pagina.evaluate(() => window.__golaco.relogio.usarManual(true));
   return { ...nav, fechar: async () => { errosTodos.push(...nav.erros); await nav.navegador.close(); } };
 }
@@ -522,7 +522,7 @@ for (const L of roda('L') ? LAYOUTS.filter(L => !telas || telas.some(t => L.nome
         p2.on('pageerror', e => errosTodos.push(String(e)));
         await pg.close();
         await p2.goto(srv.url + '?q=media&hora=noite&semente=7&comemoracao=0&replay=0&toque=1&entalhe=1', { waitUntil: 'domcontentloaded', timeout: 600000 });
-        await p2.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 600000 });
+        await p2.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 600000 });
         const lido = await p2.evaluate(() => ({ texto: document.getElementById('estado-subst').textContent, ligada: window.__golaco.cenaSubst.ligada() }));
         meta('T8 a opção "Cena de substituição" (no "Modo de jogo", sem rolar) salva e lida depois de recarregar', `${op.antes} → ${op.depois} (salvo ${op.salvo}; o submenu rola ${op.rola} px); recarregada: "${lido.texto}" (${lido.ligada})`,
           'ligada → só a faixa; false; ≤ 0 px; só a faixa', op.antes === 'ligada' && op.depois === 'só a faixa' && op.salvo === false && op.rola <= 0 && lido.texto === 'só a faixa' && lido.ligada === false);

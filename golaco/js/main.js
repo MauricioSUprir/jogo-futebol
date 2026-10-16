@@ -106,11 +106,9 @@ import { pressionadorVisivel } from './defesa.js';
 import { relogioMao, maoPermitida } from './regras-goleiro.js';
 import { assumirControle } from './acoes.js';
 import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
-import { criarEditorTime } from './editor-time.js';
 import { criarPrejogo } from './render/prejogo.js';
 import { PREJOGO } from './prejogo-roteiro.js';
 import { criarAnel, lerQuadro, tempoEstadio as tempoEstadioAnel, jogadorNoTick, marcasDoPasso } from './render/replay-anel.js';
-import { criarDiretor } from './render/replay.js';
 import { criarTecnicos, criarLeitura, leituraDoMundo, passoTecnicos, afastarDeTecnicos, infoTecnicos, IDS_TECNICOS, kitTecnico } from './tecnicos.js';
 import { OCULTA } from './render/jogador3d.js';
 import {
@@ -228,8 +226,9 @@ function temWebGL2() {
 
 // (tm: a pausa do Total Match — sem Reiniciar nem Modo de jogo, com "Simular o resto"; sem Editar time com a trava)
 const hud = criarHud({ aoComando: comando, tm: TM ? { trava: TRAVA_TM != null, timeHumano: TIME_HUMANO } : null });
-// "Editar time" (partida): a tela entrega a edição no PRONTO (aoPronto) e solta a entrada ao fechar
-const editor = criarEditorTime({ raiz: document.getElementById('editar-time'), aoPronto: ed => aoPronto(ed), aoFechar: () => aoFecharEditor() });
+// "Editar time" (partida; editor-time.js sob demanda: carregarSobDemanda): a tela entrega a edição no PRONTO (aoPronto)
+// e solta a entrada ao fechar. null até chegar
+let editor = null;
 if (PRINTS) hud.modoPrints();
 document.documentElement.classList.toggle('noite', hora === 'noite');
 
@@ -277,10 +276,69 @@ function novoMundo(opc) {
 }
 let mundo = novoMundo();
 const estJ = new Map();   // id → {ant, atu, des, x0, z0, x1, z1, r0, r1}
-// Replay: o anel (alocado uma vez) e o diretor (criado no iniciar(): câmeras three.js). replayAuto: o ajuste da pausa
-// (?replay=0|1 força; senão o salvo; senão REPLAY.automatico).
+// Replay: o anel (alocado uma vez; grava desde o 1º passo) e o diretor (render/replay.js sob demanda: carregarSobDemanda;
+// câmeras three.js; null até chegar). replayAuto: o ajuste da pausa (?replay=0|1 força; senão o salvo; senão
+// REPLAY.automatico).
 const anel = criarAnel({ ticks: Math.round(CFG.REPLAY.segundos / PASSO), vagas: CFG.REPLAY.vagas, nj: NJ });
 let diretor = null;
+let golSemDiretor = null;      // o gol que espera o replay baixar (dados do aoGol), até a saída de bola
+const REPLAY_ATRASO_MAX = 45;  // passos: o replay do impedimento que chegou depois do apito ainda entra até aqui
+// ------------------------------------------------------------------ sob demanda (config.js SOB_DEMANDA)
+// O que não desenha o 1º quadro fica fora do download inicial (tools/teste-carga.mjs cobra a folga): o diretor do replay
+// (render/replay.js com o roteiro, as câmeras e a análise semiautomática) e o "Editar time" (editor-time.js + o CSS dele,
+// na mesma posição da cascata de antes: antes do prejogo.css e do tm.css). Pré-carga no 1º gesto ou ociosa depois do 1º
+// quadro (agendarSobDemanda); quem precisa antes pede aqui e usa quando chega. Só desenho e tela: o hash não muda.
+const SOB = {
+  replay: {
+    carga: null, ok: false,
+    baixar: () => import('./render/replay.js'),
+    criar(md) {
+      diretor = md.criarDiretor({ anel, aspecto: window.innerWidth / window.innerHeight });
+      if (cam) diretor.redimensionar(window.innerWidth / window.innerHeight, Math.min(window.innerWidth, window.innerHeight) < 520);
+    },
+  },
+  editor: {
+    carga: null, ok: false,
+    baixar: () => Promise.all([import('./editor-time.js'), cssSobDemanda('css/editor.css', 'css/prejogo.css')]).then(([md]) => md),
+    criar(md) { editor = md.criarEditorTime({ raiz: document.getElementById('editar-time'), aoPronto: ed => aoPronto(ed), aoFechar: () => aoFecharEditor() }); },
+  },
+};
+/** Folha de estilo sob demanda, ANTES de `antes` (a ordem da cascata de quando vinha no index.html); resolve no load. */
+function cssSobDemanda(href, antes) {
+  return new Promise(ok => {
+    if (document.querySelector(`link[rel="stylesheet"][href="${href}"]`)) { ok(); return; }
+    const l = document.createElement('link');
+    l.rel = 'stylesheet'; l.href = href;
+    l.onload = l.onerror = () => ok();
+    const ref = document.querySelector(`link[rel="stylesheet"][href="${antes}"]`);
+    if (ref) ref.before(l); else document.head.append(l);
+  });
+}
+/** Carrega (uma vez) o módulo sob demanda `nome`, ou todos sem nome. Promise; falha de rede: tenta de novo no próximo pedido. */
+function carregarSobDemanda(nome) {
+  if (!nome) return Promise.all(Object.keys(SOB).map(n => carregarSobDemanda(n)));
+  const s = SOB[nome];
+  return s.carga ??= s.baixar().then(md => { s.criar(md); s.ok = true; }, e => { s.carga = null; throw e; });
+}
+/** Pré-carga: no 1º gesto (toque, clique, tecla) ou SOB_DEMANDA.esperaMs depois do 1º quadro, num momento ocioso. */
+function agendarSobDemanda() {
+  const EV = ['pointerdown', 'keydown', 'touchstart'];
+  let feito = false;
+  const vai = () => {
+    if (feito) return;
+    feito = true;
+    for (const e of EV) window.removeEventListener(e, vai, true);
+    const r = () => { carregarSobDemanda().catch(() => {}); };
+    if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(r, { timeout: CFG.SOB_DEMANDA.ociosoMs }); else setTimeout(r, 0);
+  };
+  for (const e of EV) window.addEventListener(e, vai, { capture: true, passive: true });
+  setTimeout(vai, CFG.SOB_DEMANDA.esperaMs);
+}
+/** fn(diretor) já, ou quando o replay chegar (se `valer()` ainda disser que vale). */
+function comDiretor(fn, valer = () => true) {
+  if (diretor) { fn(diretor); return; }
+  carregarSobDemanda('replay').then(() => { if (diretor && valer()) fn(diretor); }, () => {});
+}
 let replayAuto = params.get('replay') === '0' ? false : params.get('replay') === '1' ? true : typeof prefs.replay === 'boolean' ? prefs.replay : CFG.REPLAY.automatico;
 const custoGravar = { n: 0, ms: 0 }, custoReplay = { n: 0, ms: 0, v: new Float64Array(4096) };
 const listaR = [];
@@ -633,14 +691,18 @@ function tratarEvento(ev) {
     // partida: corte para a câmera do gol (até a saída); treino: zoom/tremor leve (até o recomeço)
     if (cam) cam.efeitoGol((mundo.bola.p.x > 0 ? 1 : -1) * CFG.CAMPO.meioX, mundo.bola.p.z, { fechado: !!mundo.partida });
     // replay: o gol fica pendente até o pós-gol chegar na vez dele (o chute que vale o gol: autor-gol.js)
-    // (o autor de verdade, gol contra, desvio e o tipo do toque: a 1ª pessoa do replay)
-    if (diretor && mundo.partida) {
+    // (o autor de verdade, gol contra, desvio e o tipo do toque: a 1ª pessoa do replay). Replay ainda não baixado (gol
+    // antes da pré-carga): pede já e o gol entra quando ele chegar — se a saída de bola ainda não passou (golSemDiretor)
+    if (mundo.partida) {
       const g = autorGol.gol, deAgora = g.ativo && g.tick === mundo.tick;
-      diretor.aoGol({
+      const dg = {
         golTick: mundo.tick, chuteTick: autorGol.chute.ativo ? autorGol.chute.tick : null, lado: mundo.bola.p.x > 0 ? 1 : -1, time: ev.time,
         autor: deAgora ? g.id : (ev.autor ?? null), contra: deAgora ? !!g.contra : false, desvio: deAgora ? !!g.desvio : false,
         tipoChute: autorGol.chute.ativo ? autorGol.chute.tipo : null,
-      });
+      };
+      const m0 = mundo;
+      golSemDiretor = diretor ? null : dg;
+      comDiretor(d => { golSemDiretor = null; d.aoGol(dg); }, () => golSemDiretor === dg && mundo === m0);
     }
     // comemoração (só na partida): começa já, da cópia do mundo neste tick
     if (mundo.partida && comemoracaoLigada) iniciarComemoracao(ev);
@@ -653,13 +715,18 @@ function tratarEvento(ev) {
   // — a câmera CORTA para a jogada nova (sem atravessar o campo) e o km/h não fica descendo
   // (o "GOL!" e a câmera do gol acabam aqui: no treino a bola volta em 1 s — contraprova M8)
   if (t === 'recomeco' || t === 'saida' || t === 'cobrancaPenalti' || t === 'corteBolaParada') { corteCamera = true; kmhVisto = 0; encerrarEfeitosGol(); if (cam) cam.planoGeral(false); }
-  // depois do gol, o replay entra na saída de bola (com todos já montados: o roteiro para antes do corte)
+  // depois do gol, o replay entra na saída de bola (com todos já montados: o roteiro para antes do corte); o gol que
+  // esperava o replay baixar e não chegou a tempo fica sem replay
+  if (t === 'saida' || t === 'intervalo' || t === 'fimDeJogo' || t === 'recomeco') golSemDiretor = null;
   if (t === 'saida' && diretor?.golPendente) posGol();
   // impedimento: o replay no apito, com a linha no quadro do passe (a foto da Regra 11: ev.tickFoto) e a análise
   // semiautomática (o defensor da linha vem do evento)
-  if (t === 'impedimento' && replayAuto && diretor && mundo.partida) {
-    const ro = diretor.impedimento({ fotoTick: ev.tickFoto, apitoTick: mundo.tick, linhaX: ev.linhaX, idImpedido: ev.id, time: ev.time, lado: mundo.ataca?.[ev.time] ?? 1, defensor: ev.defensor ?? null, por: ev.por ?? null });
-    if (iniciarReplay(ro)) linhaNoReplay = mundo.tick;
+  // (replay ainda não baixado: pede já e entra quando chegar, se ainda for o mesmo apito, até REPLAY_ATRASO_MAX passos)
+  if (t === 'impedimento' && replayAuto && mundo.partida) {
+    const di = { fotoTick: ev.tickFoto, apitoTick: mundo.tick, linhaX: ev.linhaX, idImpedido: ev.id, time: ev.time, lado: mundo.ataca?.[ev.time] ?? 1, defensor: ev.defensor ?? null, por: ev.por ?? null };
+    const m0 = mundo;
+    comDiretor(d => { if (iniciarReplay(d.impedimento(di))) linhaNoReplay = di.apitoTick; },
+      () => mundo === m0 && mundo.tick - di.apitoTick <= REPLAY_ATRASO_MAX && !cenaGol && !cenaSub && !diretor.ativo);
   }
   // partida: intervalo, fim, edição do time e substituição (intervalo e fim: plano geral do estádio). Gol no último
   // lance do tempo: o replay dele vem antes da faixa
@@ -829,7 +896,7 @@ const _queda = { x: 0, z: 0 };
 const mqRetrato = window.matchMedia('(orientation: portrait)');
 function retratoBloqueado() { return mqRetrato.matches && document.documentElement.classList.contains('com-toque'); }
 
-function pausado() { return hud.menuAberto || hud.ajudaAberta || editor.aberto || retratoBloqueado(); }
+function pausado() { return hud.menuAberto || hud.ajudaAberta || !!editor?.aberto || retratoBloqueado(); }
 
 // uniforme de cada jogador pelo elenco (partida); null no treino (o desenho usa o do time)
 const kitCache = new Map();
@@ -1591,7 +1658,7 @@ function tratarAcao(a) {
   // pré-jogo: a pausa (Esc, P, Start) pula direto para o jogo
   if (prejogo && prejogo.ativo) { prejogo.acao(a); return; }
   // com o editor aberto nada chega ao jogo: só a pausa (Start do controle), que aplica e fecha
-  if (editor.aberto) { if (a === 'pausa') editor.voltar(); return; }
+  if (editor?.aberto) { if (a === 'pausa') editor.voltar(); return; }
   // replay: qualquer ação (Esc, Start, R, C, H...) só pula o replay — não abre a pausa nem chega ao jogo
   if (diretor && diretor.ativo && !pausado() && a !== 'qps') { fimReplay(true); return; }
   // comemoração: qualquer ação (Esc, Enter, R, C, H...) só pula a cena (depois de 0,5 s) — não abre a pausa nem chega ao jogo
@@ -1623,6 +1690,12 @@ function tratarAcao(a) {
 /** Abre o "Editar time" (partida): a pausa some e a tela mostra o time (ou a edição na fila). */
 function abrirEditor() {
   if (mundo.modo !== 'partida' || !mundo.times) return false;
+  // a tela ainda não baixou (antes da pré-carga): pede e abre quando chegar (pela pausa: se ela ainda estiver aberta)
+  if (!editor) {
+    const m0 = mundo, peloMenu = hud.menuAberto;
+    carregarSobDemanda('editor').then(() => { if (mundo === m0 && (!peloMenu || hud.menuAberto)) abrirEditor(); }, () => {});
+    return true;
+  }
   hud.fecharMenu(); hud.fecharAjuda();
   entrada?.soltarTudo();
   entrada?.bloquear?.(true);
@@ -1725,7 +1798,7 @@ function simularResto() {
   if (cenaSub) { cenaSub = null; if (cam) cam.definirCinema(null); }
   hud.substituicao(false); hud.esconderFaixaSubst();
   filaCenas.length = 0; somAdiado.length = 0; substNoPasso.length = 0; faixaSub2T.length = 0;
-  if (editor.aberto) editor.fechar();
+  if (editor?.aberto) editor.fechar();
   hud.fecharMenu(); hud.fecharAjuda();
   entrada?.soltarTudo();
   encerrarEfeitosGol();
@@ -1786,7 +1859,9 @@ function comando(c, v) {
     case 'editar-time': abrirEditor(); break;
     // "Replay" da pausa: os últimos 10 s (até o último corte), com a simulação parada; volta ao jogo no fim
     case 'replay': {
-      if (!ehJogo(mundo) || !diretor) break;
+      if (!ehJogo(mundo)) break;
+      // o replay ainda não baixou (antes da pré-carga): pede e volta aqui quando chegar (a pausa fica aberta até lá)
+      if (!diretor) { carregarSobDemanda('replay').then(() => { if (hud.menuAberto) comando('replay'); }, () => {}); break; }
       // nada para rever (menos de 0,5 s gravados desde o mundo novo): a pausa fica aberta
       const ro = diretor.menu();
       if (!ro) break;
@@ -1925,7 +2000,6 @@ async function iniciar() {
   cena3d = criarCena({ canvas, qualidade: qAtual, hora });
   cam = criarCamera(window.innerWidth / window.innerHeight);
   cam.definirModo(camInicial);
-  diretor = criarDiretor({ anel, aspecto: window.innerWidth / window.innerHeight });
   // identidade visual: com ?tm, os escudos decodificados ANTES dos canvas do estádio e da torcida (desenhados uma vez só)
   IDENT = await identidadeDaPagina();
   if (IDENT) { COR_TIME[0] = IDENT.hud.faixa[0]; COR_TIME[1] = IDENT.hud.faixa[1]; }
@@ -2008,6 +2082,8 @@ async function iniciar() {
   adapt.inicio = performance.now();
   hud.pronto();
   api.pronto = true;
+  // o replay e o "Editar time" (fora do download inicial): pré-carga no 1º gesto ou ociosa depois deste 1º quadro
+  agendarSobDemanda();
   // Total Match: o 3D está no ar (o TM esconde o aviso e o X dele)
   if (TM) avisarTM('tm3d:pronto');
   const aoQuadro = t => {
@@ -2054,7 +2130,7 @@ function trocarMundo(m, opc = {}) {
   if (telaDisp && !mundo.disputa) telaDisp.limpar();
   dicaDisputa.bate = false; dicaDisputa.defende = false;
   hud.esconderGol();
-  if (editor.aberto) editor.fechar();
+  if (editor?.aberto) editor.fechar();
   iniciarEstados();
   corteCamera = true;
   if (entrada) entrada.definirFase(fase.atual, fase.agora, fase.posseRival);
@@ -2154,15 +2230,24 @@ const api = {
   bolaParada: { carregar: carregarBP, get estado() { return bp.tela?.estado(mundo, cam, bp.plano) ?? null; }, linha(v) { bp.linha = !!v; }, pontos: () => bp.tela?.pontos(mundo) ?? [] },
   /** Cópia de m.times[t] (partida) ou null. */
   estadoTime(t = TIME_HUMANO) { return mundo.times?.[t] ? structuredClone(mundo.times[t]) : null; },
+  /**
+   * Módulos sob demanda (config.js SOB_DEMANDA): ja() pede todos já (sem esperar a pré-carga) e devolve true quando
+   * chegaram — os testes de navegador esperam por ele depois do pronto (waitForFunction); estado = {replay, editor}.
+   */
+  sobDemanda: {
+    ja() { if (!SOB.replay.ok || !SOB.editor.ok) carregarSobDemanda().catch(() => {}); return SOB.replay.ok && SOB.editor.ok; },
+    get carregado() { return SOB.replay.ok && SOB.editor.ok; },
+    get estado() { return { replay: SOB.replay.ok, editor: SOB.editor.ok }; },
+  },
   /** A tela "Editar time" (aberto, abrir, voltar = PRONTO, esc, aba, rascunho). */
   editor: {
-    get aberto() { return editor.aberto; },
+    get aberto() { return !!editor?.aberto; },
     abrir() { return abrirEditor(); },
-    voltar() { return editor.voltar(); },
-    esc() { return editor.esc(); },
-    get aba() { return editor.aba; },
-    get modo() { return editor.modo; },
-    get rascunho() { return editor.rascunho; },
+    voltar() { return editor?.voltar(); },
+    esc() { return editor?.esc(); },
+    get aba() { return editor?.aba ?? null; },
+    get modo() { return editor?.modo ?? null; },
+    get rascunho() { return editor?.rascunho ?? null; },
   },
   /**
    * Tempos por quadro (ms) desde a última vez que foi zerado: sim (simulação), pose, jogadores
@@ -2353,7 +2438,7 @@ const api = {
       times: mundo.times ? { 0: resumoTime(mundo.times[0]), 1: resumoTime(mundo.times[1]) } : null,
       relogio: mundo.partida ? { tempo: mundo.partida.tempo, minuto: minutoDeJogo(mundo), estado: mundo.partida.estado, acrescimo: acrescimoDeJogo(mundo) } : null,
       parada: mundo.parada ? { ...mundo.parada } : null,
-      edicaoNaFila: !!edicaoNaFila, editorAberto: editor.aberto, menuAberto: hud.menuAberto,
+      edicaoNaFila: !!edicaoNaFila, editorAberto: !!editor?.aberto, menuAberto: hud.menuAberto,
       marcador: marcadorLigado(mundo), qualidade: qAtual, escolhaQualidade: escolhaQ, hora, camera: cam ? cam.modo : camInicial,
       desenhoChamadas: cena3d ? cena3d.info().render.calls : 0,
       desenhoTriangulos: cena3d ? cena3d.info().render.triangles : 0,

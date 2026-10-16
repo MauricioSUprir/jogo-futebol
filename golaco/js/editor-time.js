@@ -21,7 +21,7 @@ import * as ESC from './escalacao.js';
 import { ELENCOS, POSICOES, fichaDe, atributosDe, notaNaPosicao, encaixeNaVaga, numerosCarta, notaTime, estrelas } from './elenco.js';
 import { FORMACOES, ORDEM_FORMACOES } from './formacoes.js';
 import { posicaoTatica } from './tatica.js';
-import { svgCampinho } from './campinho.js';
+import { svgCampinho, posicaoNaTela } from './campinho.js';
 import { PARTIDA, TATICA, CAMPO } from './config.js';
 import { aoTocar } from './toque-botao.js';
 
@@ -90,16 +90,8 @@ export function modoDaTela(w, h) {
   return 'empe';
 }
 
-/**
- * Posição (px, centro) de cada vaga no campinho de largura W × altura H para cartas cw × ch
- * (tela §5): deitado/PC na horizontal (gol à esquerda; col positivo embaixo = lado direito do time);
- * em pé na vertical (gol embaixo; col positivo à direita). Pura (o teste de layout pode chamar).
- */
-export function posicaoNaTela(vaga, W, H, cw, ch, vertical) {
-  const Wc = W - 12, Hc = H - 12;
-  if (!vertical) return { x: 6 + cw / 2 + vaga.fila * (Wc - cw) / 4, y: 6 + ch / 2 + (vaga.col + 2) * (Hc - ch) / 4 };
-  return { x: 6 + cw / 2 + (vaga.col + 2) * (Wc - cw) / 4, y: Hc + 6 - ch / 2 - vaga.fila * (Hc - ch) / 4 };
-}
+// posicaoNaTela (a posição de cada vaga no campinho) mora em campinho.js: a escalação do pré-jogo usa sem baixar esta tela
+export { posicaoNaTela };
 
 /** Tamanho das cartas do campinho W × H (tela §5): nada encosta (passo ≥ carta + 6 px de folga). */
 export function tamanhoCarta(modo, W, H) {

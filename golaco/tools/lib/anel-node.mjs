@@ -6,8 +6,25 @@
 // teste-replay-anel) e o medir-saot.
 //   const G = await criarGravador(pastaJs);  const S = G.novaPartida(semente, {comoPagina});  G.passo(S) → eventos
 // comoPagina: a entrada da IA pelo humano chega como a página (?demo=1) entrega (lib/acha-gol.mjs).
+import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+
+// Custo de gravar SEM a espera do fio na fila do escalonador (16/10, frente "cenas robustas"; como o teste-custo): o 2º
+// campo de /proc/thread-self/schedstat (ns de espera acumulada), lido sem alocar; sem o arquivo, 0 (vale a parede). Com a
+// máquina dividida (4 testes ao lado), a parede media a vez dos outros processos: 66,8 e 95,3 µs por passo no C5 com a
+// gravação de ~20 µs.
+let esperaMs = () => 0;
+try {
+  const fdE = fs.openSync('/proc/thread-self/schedstat', 'r'), bE = Buffer.alloc(128);
+  const ler = () => {
+    const n = fs.readSync(fdE, bE, 0, 128, 0);
+    let k = 0; while (k < n && bE[k] !== 32) k++; k++;
+    let v = 0; while (k < n && bE[k] >= 48 && bE[k] <= 57) { v = v * 10 + bE[k] - 48; k++; }
+    return v / 1e6;
+  };
+  ler(); esperaMs = ler;
+} catch { /* sem schedstat: a parede */ }
 
 export async function criarGravador(pastaJs) {
   const imp = f => import(pathToFileURL(path.join(pastaJs, f)).href);
@@ -26,7 +43,9 @@ export async function criarGravador(pastaJs) {
     const est = new Map();
     const bAnt = { x: m.bola.p.x, y: m.bola.p.y, z: m.bola.p.z };
     const T = TE && opc.tecnicos !== false ? TE.criarTecnicos(m.times, semente) : null;
-    return { m, a, est, bAnt, ms: 0, n: 0, comoPagina: !!opc.comoPagina, semente, T, L: T ? TE.criarLeitura() : null };
+    // medirCusto: o custo de gravar também SEM a espera na fila e sem os `aquece` primeiros passos (o JIT): msLimpo/nLimpo
+    return { m, a, est, bAnt, ms: 0, n: 0, comoPagina: !!opc.comoPagina, semente, T, L: T ? TE.criarLeitura() : null,
+      medir: !!opc.medirCusto, aquece: opc.aquece ?? 600, msLimpo: 0, nLimpo: 0 };
   }
   function entrada(S) {
     const e = PA.entradaDemoPartida(S.m);
@@ -56,7 +75,7 @@ export async function criarGravador(pastaJs) {
       g.x = tc.j.x; g.z = tc.j.z;
     }
     S.bAnt.x = m.bola.p.x; S.bAnt.y = m.bola.p.y; S.bAnt.z = m.bola.p.z;
-    const tg = performance.now();
+    const e0 = S.medir ? esperaMs() : 0, tg = performance.now();
     a.inicio(m.tick, m.tick * C.PASSO, cortou);
     let v = 0;
     for (const j of m.jogadores) { const e = est.get(j.id); a.jogador(v++, j.id, j.time, j.posicao === 'GOL', j.x, j.z, j.rumo, e.atu); }
@@ -69,7 +88,9 @@ export async function criarGravador(pastaJs) {
       else for (const e of ev) a.marcar(e.tipo === 'gol' ? 2 : e.tipo === 'chute' || e.tipo === 'cabeceio' ? 1 : 0);
     }
     a.fim(m.bola.p, m.bola.q);
-    S.ms += performance.now() - tg; S.n++;
+    const dg = performance.now() - tg;
+    S.ms += dg; S.n++;
+    if (S.medir && S.n > S.aquece) { S.msLimpo += Math.max(0, dg - (esperaMs() - e0)); S.nLimpo++; }
     return ev;
   }
   return { PA, RA, C, NJ, P, TE, novaPartida, passo };

@@ -51,7 +51,7 @@ try {
   for (const P of PERFIS) {
     const { navegador, contexto, pagina: pg, erros } = await abrir(P);
     await pg.goto(`${srv.url}?prints=1&prejogo=1&semente=3&${P.url}`, { waitUntil: 'load' });
-    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
     const feitos = [];
     const salvar = async (n, nome) => {
       const arq = path.join(SAIDA, `${P.nome}-${String(n).padStart(2, '0')}-${nome}.png`);

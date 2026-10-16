@@ -570,6 +570,14 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
     cabeça na bola e braços por IK; a mistura de um gesto para o outro cresce com o caminho da mão: ≤ `maoPico` m/s no
     pico da troca comum e ≤ `maoPicoGol` m/s na reação ao gol — `comemora.sobe`/`misturaGol` só crescem com a mão vindo de
     longe, T5 ≤ 0,15 m por passo); `poseTecnico(tec, out)` (57 floats no mundo: o formato do anel e do desenho);
+  - (16/10, frente "cenas robustas") o pé no ar POUSA DENTRO da área: o ponto de pouso da passada fica preso a
+    `TECNICOS.margemPe` m das bordas (`pousoNaArea`, depois de `passoPassada`) — o passo lateral sem cruzar as pernas
+    empurrava o pé até 0,7 m do centro, para fora da área (T2, T20); as VARIANTES vão por RODÍZIO: cada volta usa todas,
+    nunca a mesma (gesto, variante) seguida, na ordem da sequência de Weyl da semente (a j-ésima vez do gesto:
+    frac(semente·φ + treinador + gesto + j·(√2 − 1))) — equidistribuídas em qualquer faixa de sementes seguidas (T8, T21);
+    as palmas depois da comemoração também entram no rodízio; o "vamos" na saída, uma vez por gol; a rede de segurança da
+    mão (≤ `maoPassoMax` m por passo) e o "fora da cabeça" em duas voltas (o "fora da cabeça" sozinho, depois dela, passava
+    a mão de 0,15 m num passo na troca de um gesto para outro andando: T22);
   - `ESTADOS` = observa, instrui, aplaude, reclama, lamenta, comemora, sofreu, intervalo, fim, vamos (variantes em
     `TECNICOS.variantes`); `infoTecnicos(T)` → por treinador `{id, time, x, z, rumo, v, estado, variante, varianteNome,
     postura, olhar, noAr, rapido, recuo, esquiva}` (testes e API);
@@ -614,7 +622,12 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
   chute − 0,48 s a − 0,07 s) para o ponto do contato e nele até chute + 0,05 s, depois a bola e a bola puxada 35%, também a
   ≤ `golAngMax`° do centro da boca (cabeceio: depois do contato, a bola); depois do fim do plano o olhar fica o do último
   passo dele (os passos de fora não puxam o de dentro); o alvo nunca a < `pisoFrente` m à frente do olho na direção do gol; σ 0,03 s em volta do
-  chute; giro ≤ 85°/s por `limitarGiro(yaw, arf, n, L)`); `cameraPrimeira(e, t, out)`; `corpoNaLente(anel, e, dmin, sem,
+  chute; giro ≤ 85°/s por `limitarGiro(yaw, arf, n, L)`; 16/10, frente "cenas robustas": a altura presa pela esfera e por
+  [yMin, yMax] vira uma correção DILATADA por gaussiana — σ `sigmaPrende`, começa antes e acaba depois, sem degrau; só as
+  presas acima de `prendeMin` m (5 mm: a pequena num passo só, no fundo da passada, também é degrau — G17) de antes de
+  chute − `prendeAntes` s, e nada no cabeceio (o salto logo depois do agachado) — e a
+  GARANTIA da boca do gol: em chute − 0,5 s e de chute + `golDe` s ao gol, o centro da boca a ≤ `golMargem` da meia tela nas
+  duas telas, pela correção mínima de rumo/arfagem, dilatada com σ `sigmaGol` — `garantirGol`); `cameraPrimeira(e, t, out)`; `corpoNaLente(anel, e, dmin, sem,
   todos?)` e `lenteRuimPrimeira(anel, e, folga, proprio, todos?)` (o 1º passo ruim, ou todos na lista); `enquadrarTreinador(anel, p)` → parte 1 (o olho na cabeça dele — presa a ≤ `REPLAY.treinador.prende` m do olho bruto —, teleobjetiva fixa
   com 30 m na distância do gol) + `parte2` (`parte2Treinador`: câmera parada no gramado com ele inteiro — pés e alto da
   cabeça da pose — no terço esquerdo, fora dos sólidos, ≥ 0,6 m de qualquer corpo, o lugar com menos gente na frente);
@@ -763,7 +776,9 @@ ligada, desligada e em Node (`teste-substituicao-tela` T1).
   tick com a MESMA locomoção do jogo (`passoCorpo → passoPassada → passoPeDesenhado → alturaQuadril → pose`), desvio
   de Reynolds para quem anda (quem sai rente ao gol só desvia para FORA dele), separação a 0,55 m (dois com a vez colados:
   cede o de depois — quem sai antes de quem entra, o par de antes primeiro), quem freou e assentou fica fixo (sem custo;
-  quem vem correndo para fora e pararia a < 0,9 m das placas tira só a velocidade para fora e escorrega ao longo delas); `avancarCenaSubst(c, dt)`
+  quem vem correndo para fora e pararia a < 0,9 m das placas CURVA para dentro freando — o pedido a 1,45 rad da velocidade,
+  para dentro, na velocidade de agora: −freio na linha e latCorte de lado; 16/10, antes ele pedia só a velocidade ao longo
+  delas, sem frear, e encostava nelas: S4, S9); `avancarCenaSubst(c, dt)`
   (devolve `alfa`), `tempoCenaSubst`, `duracaoCenaSubst`, `planoEm(c, t)`, `placaNasMaos(c, pose, out)`, `paresDaPlaca(c,
   t, out)` ({indice, n, time, entra, sai, corEntra: 'verde', corSai: 'vermelho'}: troca a cada `placaTroca` s, o do humano
   primeiro), `planoCameraSubst(c, {pequena, aspecto}, out)` → `{nome: 'sai' | 'sai2' | 'entra' | 'fim', de, para, fov}`

@@ -48,7 +48,7 @@ const imp = f => import(pathToFileURL(path.join(raiz, 'js', f)).href);
 async function abrirPagina(t, q = '') {
   const s = await abrir({ largura: t.largura, altura: t.altura, dpr: t.dpr ?? 1, toque: !!t.toque });
   await s.pagina.goto(`${srv.url}?q=baixa${t.entalhe ? '&entalhe=1' : ''}${q}`, { waitUntil: 'load' });
-  await s.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+  await s.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
   await s.pagina.evaluate(() => window.__golaco.relogio.usarManual(true));
   return s;
 }

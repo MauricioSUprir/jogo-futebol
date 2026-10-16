@@ -40,7 +40,7 @@ const srv = await servidor(0, raiz);
 async function pagina(url, opc = {}) {
   const nav = await abrir({ largura: opc.largura ?? 1280, altura: opc.altura ?? 720, dpr: opc.dpr ?? 1, toque: opc.toque });
   await nav.pagina.goto(srv.url + url, { waitUntil: 'load' });
-  await nav.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+  await nav.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
   await nav.pagina.evaluate(() => window.__golaco.relogio.usarManual(true));
   return { ...nav, fechar: async () => { errosTodos.push(...nav.erros); await nav.navegador.close(); } };
 }
