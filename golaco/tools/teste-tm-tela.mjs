@@ -67,7 +67,7 @@ async function abrirTM(pedido, t) {
   let fr = null;
   for (let i = 0; i < 200 && !fr; i++) { fr = s.pagina.frames().find(f => /[?&]tm=/.test(f.url())); if (!fr) await s.pagina.waitForTimeout(50); }
   if (!fr) throw new Error('o quadro do jogo não abriu');
-  await fr.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+  await fr.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
   return { ...s, fr };
 }
 const msgs = pg => pg.evaluate(() => window.__msgs.map(m => ({ ...m })));
@@ -187,7 +187,7 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
   const s = await abrir({ largura: 1280, altura: 720 });
   const pg = s.pagina;
   await pg.goto(`${srv.url}?${Q}`, { waitUntil: 'load' });
-  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
   const tm = await pg.evaluate(() => window.__golaco.tm);
   const it = await itensDaPausa(pg);
   const placar = [await textoDe(pg, '#sigla-0'), await textoDe(pg, '#sigla-1')];

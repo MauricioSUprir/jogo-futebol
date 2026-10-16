@@ -80,7 +80,7 @@ const mp3 = [];
 contexto.on('request', r => { if (/\.mp3(\?|$)/.test(r.url())) mp3.push(r.url().split('/').pop()); });
 try {
   await pg.goto(`${srv.url}?q=alta&hora=dia&semente=5&replay=0&comemoracao=0`, { waitUntil: 'load' });
-  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
   const tem = await pg.evaluate(() => !!window.__golaco.estadio);
   meta('A página tem o estádio (torcida, rede, som)', String(tem), 'true', tem);
   if (!tem) throw new Error('página sem o estádio (versão publicada)');
@@ -341,7 +341,7 @@ try {
   // a página aberta já com o som desligado: o gesto não cria contexto e nada baixa (nem depois dos 4 s)
   const mp3Antes = mp3.length;
   await pg.reload({ waitUntil: 'load' });
-  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
   await pg.mouse.click(640, 400);
   await pg.keyboard.press('ArrowLeft');
   await pg.waitForTimeout(5500);
@@ -622,7 +622,7 @@ try {
     const { navegador: nav, pagina, erros: errosCel } = await abrir({ largura: w, altura: h, dpr: 2, toque: true });
     try {
       await pagina.goto(`${srv.url}?q=baixa&toque=1&entalhe=1&semente=5&prints=1&replay=0&comemoracao=0`, { waitUntil: 'load' });
-      await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+      await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
       const r = await pagina.evaluate(async () => {
         const g = window.__golaco;
         g.mostrarEvento({ tipo: 'gol', time: 0 }, { fixo: true });
@@ -655,7 +655,7 @@ try {
   const { navegador: nav, pagina, erros: errosCel } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
   try {
     await pagina.goto(`${srv.url}?q=media&demo=1&semente=4&toque=1&hora=dia&replay=0&comemoracao=0`, { waitUntil: 'load' });
-    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
     const r = await pagina.evaluate(() => {
       const g = window.__golaco;
       g.relogio.usarManual(true);
@@ -694,7 +694,7 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
     const { navegador: nav, pagina, erros: errosCa } = await abrir(o);
     try {
       await pagina.goto(`${srv.url}?q=${q}&demo=1&semente=4&hora=dia&replay=0&comemoracao=0`, { waitUntil: 'load' });
-      await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+      await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
       const r = await pagina.evaluate(() => {
         const g = window.__golaco;
         g.relogio.usarManual(true);
@@ -768,7 +768,7 @@ try {
   const { navegador: nav, pagina, erros: errosLat } = await abrir({ largura: 1280, altura: 720 });
   try {
     await pagina.goto(`${srv.url}?q=media&semente=3&hora=dia&replay=0&comemoracao=0`, { waitUntil: 'load' });
-    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
     const r = await pagina.evaluate(() => {
       const g = window.__golaco;
       g.relogio.usarManual(true);

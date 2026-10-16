@@ -45,7 +45,7 @@ for (const c of CONFIGS) {
   pg.on('response', r => { if (r.status() === 404 && !/\/js\/rede-forma\.js(\?|$)/.test(r.url())) outros404.push(r.url()); });
   try {
     await pg.goto(`${srv.url}?prints=1&semente=5&q=${c.q}&hora=${c.hora}${c.toque ? '&toque=1' : ''}`, { waitUntil: 'load' });
-    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
     const r = await pg.evaluate(async cfg => {
       const g = window.__golaco;
       g.relogio.usarManual(true);

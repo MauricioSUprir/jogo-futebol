@@ -716,7 +716,7 @@ for (const c of CENAS) {
     const sem = c.semente === 'gol' ? GOL.semente : c.semente === 'imped' ? IMPED.semente : c.semente === 'golPagina' ? GOLP.semente : c.semente === 'golCasa' ? GOLC.semente : c.semente === 'legal' ? LEGAL.semente : (c.semente ?? 3);
     // a comemoração só nas cenas dela e nas do replay (que vem depois dela)
     await pagina.goto(`${srv.url}?${c.semPrints ? '' : 'prints=1&'}semente=${sem}&${c.url}${c.replay ? '' : '&replay=0'}${c.replay || c.comemoracao ? '' : '&comemoracao=0'}${c.subst ? '&substituicao=1' : ''}`, { waitUntil: 'load', timeout: 180000 });
-    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
     // N segundos de simulação a 60 Hz com relógio manual (sem render: mais rápido)
     await pagina.evaluate(seg => {
       const g = window.__golaco;

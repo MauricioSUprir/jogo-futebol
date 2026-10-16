@@ -37,7 +37,7 @@ for (const c of CENAS) {
   const { navegador, pagina, erros } = await abrir({ largura: c.largura, altura: c.altura, dpr: c.dpr, toque: c.toque });
   try {
     await pagina.goto(`${srv.url}?prints=1&semente=3&modo=conducao&replay=0&${c.url}`, { waitUntil: 'load' });
-    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
     // corre em linha reta (para o lado de lá do campo) até a marcha assentar, com o relógio manual
     const nota = await pagina.evaluate(mc => {
       const g = window.__golaco;

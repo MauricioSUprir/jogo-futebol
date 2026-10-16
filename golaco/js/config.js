@@ -1340,6 +1340,17 @@ export const TROCA_AEREA = {
   analogicoSolto: 0.25,       // |e| ≤ isto: assistência leva o controlado ao ponto de queda
 };
 
+// ------------------------------------------------------------------------ Sob demanda (página: nunca muda o hash)
+// Código que não desenha o 1º quadro fica fora do download inicial (tools/teste-carga.mjs cobra a folga até os 4 MB):
+// o diretor do replay (render/replay.js + roteiro, câmeras e análise semiautomática) e o "Editar time" (editor-time.js +
+// css/editor.css) chegam por import() no main.js. Pré-carga no 1º gesto (toque, clique, tecla) ou, sem gesto, `esperaMs`
+// depois do 1º quadro, sempre num momento ocioso (requestIdleCallback); quem precisa antes (gol, impedimento, "Replay"
+// e "Editar time" da pausa) pede na hora e usa quando chega.
+export const SOB_DEMANDA = {
+  esperaMs: 8000,             // ms depois do 1º quadro sem gesto (o teste-carga mede o download inicial antes disso)
+  ociosoMs: 2000,             // ms de prazo do requestIdleCallback
+};
+
 // ------------------------------------------------------------------------ Replay (render: nunca muda o hash)
 // Replay da transmissão (pedidos do dono de 11/10: "o replay não funciona"; "quando o jogo parar por impedimento, no
 // replay vai mostrar a linha"). render/replay-anel.js grava os últimos `segundos` do que foi DESENHADO; os roteiros

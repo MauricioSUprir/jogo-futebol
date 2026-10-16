@@ -3,7 +3,7 @@
 // time, da mesma forma". Cada time numa folha que ocupa a tela: a coluna do time (faixa na cor do uniforme, o nome e a
 // formação) e o campinho grande com as 11 cartas (número, nome de camisa e posição de cada titular) — os dados da
 // escalação (m.times, lidos antes do 1º passo: só leitura), nenhum outro texto (sem narração). O campinho é o do
-// "Editar time" (campinho.js e posicaoNaTela de editor-time.js); nada encosta de 568×320 a 1920×1080 (folga ≥ 8 px,
+// "Editar time" (campinho.js: svgCampinho e posicaoNaTela); nada encosta de 568×320 a 1920×1080 (folga ≥ 8 px,
 // letra ≥ 10 px; tools/teste-prejogo.mjs confere).
 //
 // O movimento sai do relógio do roteiro (prejogo-roteiro.js escalacaoEm: entrando/saindo 0–1), não de transição do
@@ -12,8 +12,7 @@
 // outra entra. Com "reduzir movimento" do sistema: só esmaece.
 import { ELENCOS, fichaDe } from './elenco.js';
 import { FORMACOES } from './formacoes.js';
-import { posicaoNaTela } from './editor-time.js';
-import { svgCampinho } from './campinho.js';
+import { svgCampinho, posicaoNaTela } from './campinho.js';
 
 // cor da faixa do time pelo uniforme de linha (fictícios: o Golaço FC preto e verde, o Ventania FC branco)
 const COR_UNIFORME = { linha0: '#19e07a', linha1: '#e9ecee' };

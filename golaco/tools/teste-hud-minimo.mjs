@@ -47,7 +47,7 @@ const soPlacar = args.includes('--so-placar');
 const res = [];
 const meta = (nome, medido, alvo, ok) => res.push({ nome, medido, alvo, ok: !!ok });
 const srv = await servidor(0, raiz);
-const pronta = pg => pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+const pronta = pg => pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
 
 // formas do HUD visíveis (no navegador): retângulos e círculos; e o texto visível fora do placar
 const FORMAS = () => {

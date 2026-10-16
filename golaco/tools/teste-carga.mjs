@@ -1,7 +1,9 @@
 // Teste de carga da página (navegador, PC 1280×720):
 //   1) carrega sem erro no console;
 //   2) o canvas não está vazio (print sem o HUD: variação de cor e gramado verde);
-//   3) download inicial (nosso servidor + CDN) ≤ 4 MB;
+//   3) download inicial (nosso servidor + CDN) ≤ 4 MB, com folga ≥ 120 KB (FOLGA_MIN), e o código que não desenha o 1º
+//      quadro fora dele (SOB_DEMANDA_ARQ: o replay e o "Editar time" chegam por import() depois — main.js
+//      carregarSobDemanda); no fim, a pré-carga ociosa (sem gesto nenhum) trouxe tudo sem erro;
 //   4) laço de passo fixo: 1 s de relógio manual a 60, 120 e 144 Hz = 60 passos;
 //   5) determinismo Node = Chromium: 600 passos com o MESMO roteiro de entradas (correr,
 //      modificador, pedalada, passe, chute, marcador e máquina de passes) no treino de ataque
@@ -21,6 +23,10 @@ import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 
 const LIMITE_BYTES = 4 * 1024 * 1024;
+// folga mínima até os 4 MB (código novo cabe sem estourar a meta; antes: ~1 KB) e o que NÃO pode estar no download
+// inicial (sob demanda: config.js SOB_DEMANDA)
+const FOLGA_MIN = 120 * 1024;
+const SOB_DEMANDA_ARQ = ['js/render/replay.js', 'js/render/replay-roteiro.js', 'js/render/replay-olhos.js', 'js/render/replay-saot.js', 'js/editor-time.js', 'css/editor.css'];
 const N_PASSOS = 600;
 const args = process.argv.slice(2);
 const urlExterna = args.includes('--url') ? args[args.indexOf('--url') + 1] : null;
@@ -31,7 +37,7 @@ const DS = args.includes('--semente') ? Math.max(0, Math.floor(+args[args.indexO
 const SEMENTE = 7 + DS;
 const { criarTreino, passoTreino } = await imp('sessao.js');
 const { hashMundo } = await imp('sim.js');
-const { BOTAO } = await imp('config.js');
+const { BOTAO, SOB_DEMANDA } = await imp('config.js');
 const { MD } = await imp('matdet.js');
 const P = await imp('partida.js').catch(() => null);
 const ESC = await imp('escalacao.js').catch(() => null);
@@ -134,12 +140,22 @@ function meta(nome, medido, alvo, ok) { resultados.push({ nome, medido, alvo, ok
 const srv = urlExterna ? null : await servidor(0, raiz);
 const url = urlExterna ?? srv.url;
 const { navegador, contexto, pagina, erros, cdnBytes } = await abrir({ largura: 1280, altura: 720 });
+// os arquivos do jogo pedidos (caminho relativo à página), na ordem
+const pedidos = [];
+pagina.on('request', r => { const u = r.url(); if (u.startsWith(url)) pedidos.push(u.slice(url.length).split('?')[0]); });
 try {
   const t0 = Date.now();
   await pagina.goto(url, { waitUntil: 'load' });
   await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
-  const tCarga = (Date.now() - t0) / 1000;
+  const tPronto = Date.now();
+  const tCarga = (tPronto - t0) / 1000;
   await pagina.waitForTimeout(2500); // alguns quadros no laço real
+  // o download inicial: o que chegou até aqui (1º quadro + 2,5 s de jogo: os sons da torcida chegam ~0,6 s depois do 1º
+  // quadro); a pré-carga ociosa do que fica sob demanda vem depois (SOB_DEMANDA.esperaMs, sem gesto)
+  const bytesSrv = srv ? srv.bytes() : 0;
+  const bytesCdn = cdnBytes();
+  const pedidosIniciais = [...pedidos];
+  const tMedida = (Date.now() - tPronto) / 1000;
   const quadrosReais = await pagina.evaluate(() => window.__golaco.render.quadros);
 
   // 1) erros no console
@@ -177,11 +193,12 @@ try {
   const okCanvas = est.desvio > 8 && est.cores > 60 && est.verde > 0.3;
   meta('Canvas não vazio', `desvio ${est.desvio.toFixed(1)}, ${est.cores} cores, ${(est.verde * 100).toFixed(0)}% verde`, 'desvio > 8, > 60 cores, > 30% verde', okCanvas);
 
-  // 3) bytes baixados
-  const bytesSrv = srv ? srv.bytes() : 0;
-  const bytesCdn = cdnBytes();
+  // 3) bytes baixados (contados logo depois dos 2,5 s de jogo, lá em cima)
   const total = bytesSrv + bytesCdn;
   meta('Download inicial', `${(total / 1048576).toFixed(2)} MB (nosso ${(bytesSrv / 1024).toFixed(0)} KB + CDN ${(bytesCdn / 1024).toFixed(0)} KB)`, '≤ 4 MB', total <= LIMITE_BYTES && (srv ? bytesSrv > 0 : true));
+  meta('Folga no download inicial (até os 4 MB)', `${((LIMITE_BYTES - total) / 1024).toFixed(1)} KB (medido ${tMedida.toFixed(1)} s depois do 1º quadro)`, `≥ ${FOLGA_MIN / 1024} KB`, LIMITE_BYTES - total >= FOLGA_MIN);
+  const noInicial = SOB_DEMANDA_ARQ.filter(a => pedidosIniciais.includes(a));
+  meta('Sob demanda fora do download inicial (replay e Editar time)', noInicial.length ? `baixados: ${noInicial.join(', ')}` : `nenhum dos ${SOB_DEMANDA_ARQ.length}`, 'nenhum', noInicial.length === 0);
 
   // 4) passo fixo a 60/120/144 Hz com relógio manual
   const laco = await pagina.evaluate(() => {
@@ -348,6 +365,14 @@ try {
   });
   const okTremor = tremor.v > 0.005 && tremor.d2 < tremor.v * 0.1 && tremor.vaivem === 0;
   meta('Câmera sem tremor a 144 Hz (curva + arrancada)', `2ª dif. máx ${(tremor.d2 * 1000).toFixed(2)} mm/quadro² · anda ${(tremor.v * 1000).toFixed(1)} mm/quadro · vai-e-volta ${tremor.vaivem} (inversões ${tremor.inversoes})`, '2ª dif. < 10% do passo, 0 vai-e-volta', okTremor);
+
+  // pré-carga ociosa: sem gesto nenhum, o replay e o "Editar time" chegam sozinhos depois do 1º quadro (SOB_DEMANDA.esperaMs)
+  const espera = (SOB_DEMANDA?.esperaMs ?? 0) + 20000;
+  const chegou = await pagina.waitForFunction(() => window.__golaco.sobDemanda?.carregado, null, { timeout: Math.max(1000, espera - (Date.now() - tPronto)) }).then(() => true, () => false);
+  const tChegou = (Date.now() - tPronto) / 1000;
+  const faltam = SOB_DEMANDA_ARQ.filter(a => !pedidos.includes(a));
+  const estSob = await pagina.evaluate(() => window.__golaco.sobDemanda?.estado ?? null);
+  meta('Pré-carga ociosa: o replay e o Editar time chegaram sem gesto', chegou && !faltam.length ? `sim (até ${tChegou.toFixed(1)} s depois do 1º quadro)` : `não (${JSON.stringify(estSob)}; faltam ${faltam.join(', ') || '—'})`, 'sim, sem erro', chegou && !faltam.length && erros.length === 0);
 
   // a página continua viva depois de tudo
   await pagina.waitForTimeout(500);
