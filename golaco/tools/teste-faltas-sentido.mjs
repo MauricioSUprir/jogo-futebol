@@ -24,7 +24,10 @@
 //      alcançando: 0 em 3000 passos; A12 (de verdade) segurar quem escapa do batido (5 m/s): 0,05–0,5% por passo, sem
 //      cartão;
 //   A13 bote forte na própria área: o defensor tira o corpo (BOTE_EVITADO) — a fração de botes limpos dentro da área é a
-//      de fora (|Δ| ≤ 8 pontos; o mesmo contato é falta no campo todo) e a falta dentro existe (pênalti).
+//      de fora (|Δ| ≤ 8 pontos; o mesmo contato é falta no campo todo) e a falta dentro existe (pênalti);
+//   A14 o bote sem o corpo entrar (A1, A2) não vira roubada limpa: o condutor segura o contato e segue
+//      (BOTE_SEM_GANHAR) com a chance que antes era a da falta (chanceFaltaBote, ± 5 pontos) — sem isso a roubada da IA
+//      subia ~0,7 por partida e o ataque perdia volume (junção #480 + #481).
 //  B. Partidas com o time 0 jogado como uma pessoa (faltas-registro: 'persegue', 'pressao', 'dribla'; o árbitro do teste
 //     mede a força do contato pela foto antes do passo — a de quando os corpos encostam nos últimos 0,33 s):
 //   B1 faltas de bote da IA com o contato a < 1 m/s: ≤ 0,1 por partida (main: ~2 por partida);
@@ -83,17 +86,19 @@ function cena({ dx, dz = 0, dvx = 0, dvz = 0, cvx = 0, cvz = 0, crumo = 0, bola 
   m.eventos = [];
   return { m, C, D };
 }
-/** Fração de sorteios do bote da IA que viram falta (e o grau/cartão da 1ª), que ele evita (F.BOTE_EVITADO: tira o corpo) e
- * que saem limpos (null: a IA leva a bola). */
+/** Fração de sorteios do bote da IA que viram falta (e o grau/cartão da 1ª), que ele evita (F.BOTE_EVITADO: tira o corpo),
+ * em que o condutor segura sem falta (F.BOTE_SEM_GANHAR: sg) e que saem limpos (null: a IA leva a bola). pb: a chance do
+ * bote de antes da força do contato (chanceFaltaBote). */
 function sorteiaBote(o, N = 400) {
   const { m, C, D } = cena(o);
-  let n = 0, ev = 0, f1 = null;
+  let n = 0, ev = 0, sg = 0, f1 = null;
   for (let i = 0; i < N; i++) {
     const f = F.faltaNoBote(m, D, C);
     if (f && f.evitado) ev++;
+    else if (f && f.semGanhar) sg++;
     else if (f) { n++; f1 ??= f; }
   }
-  return { p: n / N, f1, n, N, ev, limpo: (N - n - ev) / N };
+  return { p: n / N, f1, n, N, ev, sg, pb: F.chanceFaltaBote(D, C), limpo: (N - n - ev - sg) / N };
 }
 /** Faltas de segurar (faltas.js faltaTatica) em N passos com a cena parada: {n, N, f1}. */
 function sorteiaSegurar(o, N = 3000) {
@@ -125,6 +130,11 @@ function sorteiaCarga(o, N = 400) {
   // A3: a bola encostada no defensor (à frente do condutor, a 0,62 m), os dois andando a 1,6 e 1,2 m/s
   const a3 = sorteiaBote({ dx: 0.95, dz: 0.1, dvx: 1.2, cvx: 1.6, bola: [0.55, 0.05] });
   reg('A3 bola encostada no defensor andando junto (≤ 1 m/s de diferença)', `falta em ${pc(a3.n, a3.N)}`, '0', a3.n === 0);
+  // A14: o bote sem o corpo entrar (A1 de frente, A2 de lado) deixou de ser falta, mas não virou roubada limpa: o condutor
+  // segura o contato e segue com a chance que antes era a da falta (chanceFaltaBote; faltas.js BOTE_SEM_GANHAR)
+  const segura = a => Math.abs(a.sg / a.N - a.pb) <= 0.05 && a.sg > 0;
+  reg('A14 bote sem o corpo entrar (A1 · A2): o condutor segura sem falta (não vira roubada limpa)', `segura ${pc(a1.sg, a1.N)} · ${pc(a2.sg, a2.N)} (antes da força: ${pc(Math.round(a1.pb * a1.N), a1.N)} · ${pc(Math.round(a2.pb * a2.N), a2.N)})`,
+    'a chance de antes ± 5 pontos', segura(a1) && segura(a2));
   // A4: por trás, o defensor a 7 m/s e o condutor a 3 m/s, a 0,8 m (a bola ao alcance dele, do lado)
   const a4 = sorteiaBote({ dx: -0.8, dz: 0.15, dvx: 7, cvx: 3, bola: [-0.3, 0.35] });
   reg('A4 (de verdade) bote por trás entrando forte: falta, temerário + amarelo', `falta em ${pc(a4.n, a4.N)} · ${a4.f1 ? `${a4.f1.grau}/${a4.f1.cartao}` : '—'}`, '≥ 70% · temerario/amarelo',

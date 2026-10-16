@@ -1391,7 +1391,11 @@ Sai em PRs menores; cada um acrescenta a sua parte aqui. Pesquisa e números em 
   incidental —, rampa até `cheia`, × (1 + `porForca` · (f − min)) acima — `porForca` 1,0 desde a junção com a main
   (#471): 0,5 deixava as 12 partidas IA × IA do teste-faltas em 1,42 falta por partida (meta 1,5–5) —; × `bote.naArea` na própria área e
   × `bote.naChanceClara` na chance clara de gol — ali o defensor evita entrar no homem, como na carga; teto 0,95): o desarme
-  sem entrar no homem é limpo (a IA leva a bola). Evitar é tirar o corpo: o sorteio que seria falta fora da área e o
+  sem entrar no homem não é falta, mas também não ganha sempre: fora do condutor parado/lento, com a chance de antes ×
+  `bote.semCorpo` × (1 − fatorForca) ele devolve `BOTE_SEM_GANHAR` (sim.js boteIA: o condutor segura o contato e segue, o
+  defensor descansa, evento `boteErrado`) — sem isso a falta "do nada" virava roubada limpa (+0,7 roubada por partida no
+  painel da junção #480 + #481, o ataque perdia volume; teste-faltas-sentido A14); o resto é limpo (a IA leva a bola).
+  Evitar é tirar o corpo: o sorteio que seria falta fora da área e o
   cuidado descarta devolve `BOTE_EVITADO` (sim.js boteIA: sem bote, descansa) — a fração de botes limpos com o mesmo
   contato é igual dentro e fora da área (contraprova de 15/10: dentro da área o bote forte virava roubada limpa). A
   DIVIDIDA da pessoa usa a mesma régua (`chanceFaltaDividida(m, d, c, motivo)` = min(0,95, chanceFaltaBote × fatorForca) ×

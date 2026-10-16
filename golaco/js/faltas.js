@@ -193,12 +193,14 @@ export function chanceFaltaDividida(m, d, c, motivo) {
 
 /** faltaNoBote: o defensor tirou o corpo (na própria área ou na chance clara) — o bote não sai neste passo. */
 export const BOTE_EVITADO = Object.freeze({ evitado: true });
+/** faltaNoBote: o bote chegou sem o corpo entrar no condutor e não ganhou a bola — ele segura o contato e segue. */
+export const BOTE_SEM_GANHAR = Object.freeze({ semGanhar: true });
 
 /**
  * O bote da IA (sim.js boteIA, depois do sorteio de que ele chega) é falta? Sorteia pelo m.rng (só na partida).
  * Devolve a falta montada, BOTE_EVITADO (ele tirou o corpo: sem bote) ou null (bote limpo: a IA leva a bola como antes).
  */
-export function faltaNoBote(m, d, c) {
+export function faltaNoBote(m, d, c, lento = false) {
   if (!m.partida) return null;
   // o bote da IA só sai com a bola mais perto do defensor que do condutor (ou parada/encostada nele): ele chega na bola
   // antes do homem. Falta é o desafio sem cuidado que leva o corpo para dentro do condutor — pela força do contato
@@ -210,9 +212,19 @@ export function faltaNoBote(m, d, c) {
   // não o árbitro deixar passar — o bote que entraria no homem seguia como desarme limpo, e o mesmo contato era falta fora
   // da área e roubada limpa dentro dela (contraprova de 15/10). A régua do contato é a mesma no campo todo (IFAB Regra 12)
   const cuidado = (naAreaDe(m, d.time, c.x, c.z) ? FALTAS.bote.naArea : 1) * (chanceClara(m, c, d) ? FALTAS.bote.naChanceClara : 1);
-  const p = Math.min(0.95, chanceFaltaBote(d, c) * fatorForca(forcaContato(m, d, c)));
+  const pb = Math.min(0.95, chanceFaltaBote(d, c)), ff = fatorForca(forcaContato(m, d, c));
+  const p = Math.min(0.95, pb * ff);
   const u = uniforme(m.rng);
-  if (u >= p) return null;
+  if (u >= p) {
+    // o bote que chega sem o corpo entrar no condutor (contato abaixo de FALTAS.forca.min, ou entre min e cheia) não é
+    // falta, mas também não ganha sempre: com a chance que antes era a da falta (a chegada, a velocidade, o desarme —
+    // chanceFaltaBote) × semCorpo × (1 − fatorForca), o condutor segura o contato e segue com a bola (BOTE_SEM_GANHAR; o
+    // defensor descansa como no bote errado). Sem isso a falta "do nada" virava roubada limpa: +0,7 roubada por partida
+    // e o ataque perdia a posse perto da área (junção #480 + #481, painel de 144: chutes 8,5 → 8,2, de fora 36,9 →
+    // 31,6%). Contra o condutor parado/lento quem decide é chanceDividida (sim.js boteIA): ali não entra
+    if (!lento && u < p + FALTAS.bote.semCorpo * pb * Math.max(0, 1 - ff)) return BOTE_SEM_GANHAR;
+    return null;
+  }
   if (u >= p * cuidado) return BOTE_EVITADO;
   const v = MD.hypot(d.vx, d.vz);
   const exc = chegada(d, c) === 'tras' && v >= FALTAS.excessivo && uniforme(m.rng) < FALTAS.excessivoP;
