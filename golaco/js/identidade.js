@@ -10,8 +10,10 @@
 //     escolhe casa/fora/terceiro, os goleiros ficam longe dos uniformes de linha e o árbitro longe de todos;
 //   - paletas da torcida (≥ 10 cores com neutros), cachecóis, mosaico das cadeiras, faixas com os nomes dos times
 //     (textos FICTÍCIOS de torcida; as posições 9 e 11 ficam com o visitante), bandeiras e bandeirões;
-//   - placas de publicidade ('TOTAL MATCH' + mandante + escudo + neutra), cadeiras/friso/mosaico pelo mandante,
-//     bandeira de escanteio, fachada/cobertura/túnel do estádio de fora e o nome do estádio (jogo neutro → genérico);
+//   - placas de publicidade ('TOTAL MATCH' + mandante + escudo + neutra), bandeira de escanteio pelo mandante;
+//   - o estádio (15/10): na edição pro com jogo não neutro, o estádio REAL do mandante achado na base estadios.json
+//     (fachada por estilo e cores, LED, cobertura, cadeiras, nome e escudo na placa); senão o Estádio Golaço de hoje
+//     com o nome "Estádio Total Match" e o mosaico "TOTAL MATCH" (ESTADIO_TM);
 //   - cores do HUD com contraste (placar, faixa ENTRA/SAI, minimapa longe do branco da bola e do outro time).
 // Tudo é DESENHO (render/DOM): nada daqui entra na simulação nem no hash.
 
@@ -450,18 +452,149 @@ export function urlEscudoSigla(sigla, cor1, cor2) {
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgEscudoSigla(sigla, cor1, cor2));
 }
 
+// ------------------------------------------------------------------ estádio de cada clube (Total Match, 15/10)
+// Pedido do dono (15/10): na edição pro (licenciada) o pré-jogo mostra o estádio REAL do mandante (fachada, cobertura,
+// cadeiras); na pública, no jogo neutro e quando a base não tem o estádio, o Estádio Golaço de hoje com o nome
+// "Estádio Total Match" e o mosaico "TOTAL MATCH". A base (golaco/assets/tm/estadios.json) é carregada pela página
+// (render/identidade-pagina.js: só com ?tm, edição pro e jogo não neutro) e chega aqui como `base`; as chaves são o nome
+// normalizado (normalizarNomeEstadio). Só DESENHO: a geometria do estádio não muda (fachada, anel da cobertura e
+// arquibancadas são os sólidos dos trilhos do pré-jogo e da bola) — muda a textura/cor da fachada, o LED, quais pedaços
+// do anel da cobertura ficam e a cor dela, as cadeiras (cores e padrão), o nome e o escudo na placa.
+
+/** O estádio genérico (edição pública, jogo neutro, estádio fora da base). */
+export const ESTADIO_TM = Object.freeze({ nome: 'Estádio Total Match', placa: 'ESTÁDIO TOTAL MATCH', mosaico: 'TOTAL MATCH' });
+export const ESTILOS_FACHADA = Object.freeze(['vidro', 'concreto', 'metal', 'membrana', 'tijolo', 'trelica', 'paineis']);
+export const COBERTURAS = Object.freeze(['total', 'lados', 'parcial', 'nenhuma']);
+export const PADROES_CADEIRAS = Object.freeze(['liso', 'misto', 'faixas', 'mosaico']);
+
+// letras que a decomposição Unicode não separa do acento (ß, ø, æ, ł, ı...)
+const LETRAS_ESPECIAIS = { 'ß': 'ss', 'ø': 'o', 'æ': 'ae', 'œ': 'oe', 'ł': 'l', 'đ': 'd', 'ð': 'd', 'þ': 'th', 'ı': 'i', 'ħ': 'h', 'ŧ': 't' };
+/**
+ * Nome do estádio → chave da base: minúsculas, sem acento, só letras/números (a–z, 0–9) e espaço simples, sem espaço nas
+ * pontas ("Estádio Nabi Abi Chedid" → "estadio nabi abi chedid", "Beira-Rio" → "beira rio", "Diyarbakır" → "diyarbakir",
+ * "1º de Maio" → "1o de maio", "MAC³PARK" → "mac3park"). A MESMA função grava a base e procura nela.
+ */
+export function normalizarNomeEstadio(nome) {
+  return String(nome ?? '').normalize('NFKD').replace(/\p{M}+/gu, '').toLowerCase()
+    .replace(/[ßøæœłđðþıħŧ]/g, c => LETRAS_ESPECIAIS[c])
+    .replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+const ESCOLHA = (v, lista, padrao) => (lista.includes(v) ? v : padrao);
+/**
+ * Um estádio da base ({nome, cidade, fachada_estilo, fachada_cor, fachada_cor2, fachada_led, cobertura, cobertura_cor,
+ * cadeiras_cor, cadeiras_cor2, cadeiras_padrao, aneis, marca, confianca, fontes}) → os dados validados para o desenho
+ * (cores '#rrggbb', escolhas dentro das listas, anéis 1–3). Sem o essencial (não é objeto): null.
+ */
+export function dadosEstadio(e, nomeReserva = '') {
+  if (!e || typeof e !== 'object' || Array.isArray(e)) return null;
+  const cor = corValida(e.fachada_cor) ?? '#c9ccca';
+  const L = lab(cor)[0];
+  const cor2 = corValida(e.fachada_cor2) ?? comL(cor, L > 50 ? L - 32 : L + 32);
+  const cadeira = corValida(e.cadeiras_cor) ?? '#3b4246';
+  const an = Math.round(Number(e.aneis));
+  return {
+    nome: String(e.nome || nomeReserva || '').trim() || String(nomeReserva || ''),
+    cidade: String(e.cidade || ''),
+    estilo: ESCOLHA(e.fachada_estilo, ESTILOS_FACHADA, 'concreto'),
+    cor, cor2, led: corValida(e.fachada_led),
+    cobertura: ESCOLHA(e.cobertura, COBERTURAS, 'total'),
+    coberturaCor: corValida(e.cobertura_cor) ?? '#d9dee1',
+    cadeira, cadeira2: corValida(e.cadeiras_cor2),
+    padrao: ESCOLHA(e.cadeiras_padrao, PADROES_CADEIRAS, 'liso'),
+    aneis: Number.isFinite(an) ? Math.max(1, Math.min(3, an)) : 2,
+    marca: String(e.marca || ''), confianca: ESCOLHA(e.confianca, ['alta', 'media', 'baixa'], 'baixa'),
+  };
+}
+
+/**
+ * Procura o estádio na base ({versao, estadios: {"<nome normalizado>": Estadio}}) pelos nomes dados, na ordem (o de
+ * `identidade.estadio.nome` e o `stadium` do pedido). Devolve {chave, dados} ou null.
+ */
+/** A base no formato ({estadios: {...}}, não lista)? */
+export function baseValida(base) { return !!(base && typeof base === 'object' && base.estadios && typeof base.estadios === 'object' && !Array.isArray(base.estadios)); }
+export function acharEstadio(base, nomes, clube = '') {
+  const tab = baseValida(base) ? base.estadios : null;
+  if (!tab) return null;
+  for (const n of nomes) {
+    const chave = normalizarNomeEstadio(n);
+    if (!chave || !Object.prototype.hasOwnProperty.call(tab, chave)) continue;
+    // estádios de mesmo nome em países diferentes (Estádio Centenário × Estadio Centenario): o do clube mandante
+    const homs = base.homonimos && Array.isArray(base.homonimos[chave]) ? base.homonimos[chave] : null;
+    const ent = (homs && homs.find(h => Array.isArray(h.clubes) && h.clubes.includes(clube))) || tab[chave];
+    const dados = dadosEstadio(ent, String(n).trim());
+    if (dados) return { chave, dados };
+  }
+  return null;
+}
+
+// Trechos do anel da cobertura (render/estadio-fora.js contorno: nReta 8, nArco 10 por lado, 72 ao todo, nesta ordem): x+
+// 0–7, canto (+,+) 8–17, lado de cá (z+) 18–25, canto (−,+) 26–35, x− 36–43, canto (−,−) 44–53, lado de lá (z−) 54–61,
+// canto (+,−) 62–71. Só se TIRAM trechos do anel: a forma (estadio-forma.js alturaCobertura, a dos trilhos) não muda.
+export const TRECHOS_COBERTURA = Object.freeze({ n: 72, ca: [18, 25], la: [54, 61], canto: 4 });   // nos 'lados', 4 de 10 de cada canto
+/**
+ * O trecho i (0–71) do anel fica coberto? 'total' (ou sem tipo): todos; 'lados': os 2 lados compridos com um pouco dos
+ * cantos; 'parcial': só o lado de LÁ (z−: a tribuna diante da câmera de TV, a que tem a marquise no jogo — render/campo.js —,
+ * então o estádio do pré-jogo e o do jogo são o mesmo); 'nenhuma': nenhum (e a marquise some no pré-jogo:
+ * render/fachada-estilos.js esconderMarquise).
+ */
+export function trechoCoberto(tipo, i) {
+  if (tipo === 'nenhuma') return false;
+  if (tipo !== 'lados' && tipo !== 'parcial') return true;
+  const T = TRECHOS_COBERTURA, perto = ([a, b]) => i >= a - T.canto && i <= b + T.canto;
+  return perto(T.la) || (tipo === 'lados' && perto(T.ca));
+}
+
+/** Fachada do estádio real: estilo, cores, LED, anéis, cobertura e os detalhes (letreiro, testeira, túnel, símbolo). */
+function fachadaReal(d, vivo) {
+  const Lc = lab(d.coberturaCor)[0];
+  return {
+    estilo: d.estilo, cor: d.cor, cor2: d.cor2, ledCor: d.led, aneis: d.aneis,
+    cobertura: d.cobertura, coberturaCor: d.coberturaCor,
+    // os trechos do anel que ficam (render/estadio-fora.js criarCobertura); null = o anel inteiro
+    trechos: d.cobertura === 'total' ? null : Array.from({ length: TRECHOS_COBERTURA.n }, (_, i) => trechoCoberto(d.cobertura, i)),
+    // tons da textura da cobertura (render/estadio-fora.js texCobertura): o claro de cima, o escuro de baixo e as nervuras
+    coberturaTons: { claro: comL(d.coberturaCor, Math.min(98, Lc + 5)), escuro: comL(d.coberturaCor, Math.max(4, Lc - 6)), nervura: comL(d.coberturaCor, Math.max(4, Lc - 24)) },
+    // a faixa de LED de dia (apagada: a cor mais escura) e de noite (acesa); sem LED, sem faixa
+    led: d.led ? comL(d.led, Math.max(36, Math.min(58, lab(d.led)[0] - 10))) : null, ledNoite: d.led,
+    letreiro: d.led ?? vivo,
+    // testeira (a borda de dentro da cobertura): a cor da cobertura mais escura, com o friso no LED ou na cor do mandante
+    testeira: comL(d.coberturaCor, Math.max(22, Math.min(70, Lc - 24))), testeiraFriso: d.led ?? vivo, tunel: vivo, simbolo: vivo,
+  };
+}
+/** Cadeiras do estádio real: cor, 2ª cor, padrão (liso, misto, faixas, mosaico), anéis e o friso do parapeito. */
+function arquibancadaReal(d, vivo) {
+  const L = lab(d.cadeira)[0];
+  // friso do parapeito: a 2ª cor da fachada, se aparece na parede cinza-escura; senão a cor do mandante
+  const PAREDE = '#2b3235';
+  const friso = deltaE(d.cor2, PAREDE) >= 15 ? d.cor2 : comL(vivo, Math.max(45, Math.min(65, lab(vivo)[0])));
+  // 2ª cor das cadeiras (misto/faixas/mosaico): a da base, se diferente da 1ª; senão a 1ª mais clara ou mais escura
+  const c2 = d.cadeira2 && deltaE(d.cadeira2, d.cadeira) >= 10 ? d.cadeira2 : comL(d.cadeira, L > 55 ? L - 30 : L + 30);
+  // o mosaico (letras nas cadeiras) na 2ª cor, se ela contrasta; senão claro/escuro
+  const mosaico = deltaE(c2, d.cadeira) >= 20 ? c2 : textoSobre(d.cadeira) === CLARO ? '#e9ecec' : '#15191b';
+  return {
+    friso, mosaico, cadeira: d.cadeira, cadeira2: c2,
+    // variação sutil das cadeiras (as que a luz pega diferente)
+    tom: comL(d.cadeira, Math.max(4, L - 8)), tom2: comL(d.cadeira, Math.min(96, L + 6)),
+    padrao: d.padrao, aneis: d.aneis,
+  };
+}
+
 // ------------------------------------------------------------------ identidade do pedido do TM
 
-const ESTADIO_NEUTRO = 'Arena Central';
 const urlEscudo = u => (typeof u === 'string' && /^(data:image\/|https?:\/\/|\/|\.\.?\/)/i.test(u.trim()) ? u.trim() : null);
 
 /**
- * Identidade da partida a partir do pedido do TM (contrato §1: {home, away, partida: {neutro, publico, competicao}}).
- * Time 0 = mandante (home), time 1 = visitante. Nunca falha: o que faltar no pedido vem da reserva.
+ * Identidade da partida a partir do pedido do TM (contrato §1: {home, away, partida: {neutro, publico, competicao},
+ * edicao: 'pro'|'public'}). Time 0 = mandante (home), time 1 = visitante. `base` (a de estadios.json, só na edição pro com
+ * jogo não neutro): o estádio real do mandante; sem ele, o Estádio Total Match. Nunca falha: o que faltar vem da reserva.
  */
-export function identidadeDoPedido(pedido) {
+export function identidadeDoPedido(pedido, base = null) {
   const casa = pedido?.home || {}, fora = pedido?.away || {};
   const neutro = !!pedido?.partida?.neutro;
+  const edicao = pedido?.edicao === 'pro' ? 'pro' : 'public';
+  const achado = edicao === 'pro' && !neutro ? acharEstadio(base, [casa?.identidade?.estadio?.nome, casa?.stadium], String(casa?.name || '')) : null;
+  const real = achado ? achado.dados : null;
   const pub = Number(pedido?.partida?.publico);
   const publico = Number.isFinite(pub) ? Math.max(0.1, Math.min(1, pub)) : 1;
   const cc = coresDoTime(casa), cf = coresDoTime(fora);
@@ -476,20 +609,32 @@ export function identidadeDoPedido(pedido) {
     };
   };
   const times = [time(casa, cc, 0), time(fora, cf, 1)];
-  // estádio: o do mandante (identidade.estadio.nome, senão stadium); jogo neutro → um nome genérico fictício
-  const nomeEst = neutro ? ESTADIO_NEUTRO : (String(casa?.identidade?.estadio?.nome || casa?.stadium || '').trim() || `Arena ${times[0].nome}`);
-  // cores do estádio: as do mandante (jogo neutro: as do Total Match)
+  // estádio: o real do mandante (edição pro, jogo não neutro, achado na base) ou o Estádio Total Match
+  const nomePedido = String(casa?.identidade?.estadio?.nome || casa?.stadium || '').trim();
+  const nomeEst = real ? (real.nome || nomePedido) : ESTADIO_TM.nome;
+  // cores do mandante (jogo neutro: as do Total Match) para os detalhes que seguem o time (escanteio, túnel do estádio real)
   const ce = neutro ? coresDoTime({ colors: { primary: '#22c55e', secondary: '#050807' } }) : cc;
-  // mosaico das cadeiras: a cor que mais se destaca da maioria da torcida (a primária) e das cadeiras escuras,
-  // preferindo as do time
-  const CADEIRA = '#14181a';
-  const candM = [[ce.secundaria, 25], [ce.forte, 25], [comL(ce.forte, 78), 12], [CLARO, 8], ['#ffd23d', -12]];
-  let mos = candM[0][0], vm = -Infinity;
-  for (const [h, b] of candM) { const v = Math.min(deltaE(h, ce.primaria), 0.7 * deltaE(h, CADEIRA)) + b; if (v > vm + 1e-9) { vm = v; mos = h; } }
-  const mosTex = croma(mos) < 14 ? (lab(mos)[0] > 50 ? '#cfd4d7' : '#0b0d0e') : comL(mos, 48);
-  const textoMosaico = neutro ? 'TOTAL MATCH' : nomeCurto(casa, 12);
   const forte = ce.forte, Lf = lab(forte)[0];
   const vivo = croma(forte) < 14 ? forte : comL(forte, Math.max(55, Math.min(80, Lf)));
+  const P = IDENTIDADE_PADRAO;
+  let mos, arquibancada, fachada;
+  if (real) {
+    // mosaico da torcida: a cor que mais se destaca da maioria da torcida (a primária) e das cadeiras do estádio,
+    // preferindo as do time
+    arquibancada = arquibancadaReal(real, vivo);
+    const candM = [[ce.secundaria, 25], [ce.forte, 25], [comL(ce.forte, 78), 12], [CLARO, 8], ['#ffd23d', -12]];
+    let vm = -Infinity;
+    for (const [h, b] of candM) { const v = Math.min(deltaE(h, ce.primaria), 0.7 * deltaE(h, real.cadeira)) + b; if (v > vm + 1e-9) { vm = v; mos = h; } }
+    fachada = fachadaReal(real, vivo);
+  } else {
+    // Estádio Total Match: o Estádio Golaço de hoje (cadeiras, friso, fachada, cobertura e LED nas cores PADRÃO, também
+    // as cadeiras do mosaico); a torcida do mosaico "TOTAL MATCH" no verde do Golaço — num mandante de camisa verde (a
+    // torcida inteira da mesma cor, o mosaico sumiria), em branco: só a camisa de quem está no mosaico muda
+    arquibancada = { ...P.arquibancada };
+    fachada = { ...P.fachada };
+    mos = deltaE(P.torcida.mosaico, cc.primaria) >= 20 ? P.torcida.mosaico : CLARO;
+  }
+  const textoMosaico = real ? nomeCurto(casa, 12) : ESTADIO_TM.mosaico;
   const gol0 = un.kits.goleiro0.camisa, gol1 = un.kits.goleiro1.camisa;
   const mapa = coresMapa(cc, cf, gol0, gol1, corDeLonge(un.kits.linha0), corDeLonge(un.kits.linha1));
   // placar e faixa ENTRA/SAI: a cor de cada time; dois times da mesma cor → o visitante pela outra cor dele (ou a da
@@ -519,17 +664,20 @@ export function identidadeDoPedido(pedido) {
       texto: nomeCurto(casa, 12), letra: sigla3(casa?.short, casa?.name).slice(0, 1), sigla: sigla3(casa?.short, casa?.name), escudo: 0,
     },
     paineis: paineisTM(casa, cc, neutro, pedido?.partida?.competicao),
-    arquibancada: { friso: comL(vivo, Math.max(45, Math.min(65, lab(vivo)[0]))), mosaico: mosTex, cadeira: CADEIRA, tom: '#2a3033', tom2: comL(forte, Math.max(18, Math.min(32, Lf - 20))) },
+    arquibancada,
     escanteio: { fundo: forte, faixa: escanteioFaixa },
-    fachada: {
-      led: comL(vivo, Math.max(40, Math.min(62, lab(vivo)[0]))), ledNoite: vivo, letreiro: vivo,
-      testeira: comL(forte, Math.max(10, Math.min(22, Lf - 30))), testeiraFriso: vivo, tunel: vivo, simbolo: vivo,
-    },
+    fachada,
     torcedoresFora: {
       casa: [cc.primaria, cc.forte, cc.secundaria, comL(cc.forte, Math.min(90, lab(cc.forte)[0] + 12)), '#2b3238'],
       fora: [cf.primaria, cf.secundaria, '#2b3238'],
     },
-    estadio: { nome: nomeEst, placa: maiusc(nomeEst) },
+    // real: o estádio do mandante achado na base (edição pro, jogo não neutro); motivo do genérico: 'publica' | 'neutro' |
+    // 'sem-base' (a base não veio) | 'sem-dado' (o estádio não está nela)
+    estadio: {
+      nome: nomeEst, placa: maiusc(nomeEst), real: !!real, edicao,
+      motivo: real ? 'real' : edicao !== 'pro' ? 'publica' : neutro ? 'neutro' : baseValida(base) ? 'sem-dado' : 'sem-base',
+      chave: achado ? achado.chave : null, dados: real,
+    },
     hud: { mapa, faixa, placar: [p0, p1] },
   };
 }

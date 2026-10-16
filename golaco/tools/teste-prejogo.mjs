@@ -27,15 +27,20 @@
 //  12) pular de qualquer instante (3 modos, da abertura ao fim; botão Pular, Esc e pularTudo): jogo no tick 0 com o
 //      hash de criarPartida e o estádio do jogo de volta (near/far, placas inteiras, HUD);
 //  13) a pausa cabe sem rolar no celular deitado (também com "Modo de jogo" aberto) e "Pré-jogo da partida" passa pelos
-//      4 modos e salva.
+//      4 modos e salva;
+//  14) o estádio REAL do Total Match (?tm, edição pro; contrato "Estádio de cada clube"), celular 844×390 Média de dia, 2
+//      estilos e as coberturas que tiram mais do anel — Aflitos (concreto, 'nenhuma') e BUKO Stadion (vidro, 'parcial'):
+//      o estádio achado na base com o desenho dele, cada plano com cor, ≤ 40 chamadas e ≤ 130 mil triângulos, a marquise
+//      escondida só no pré-jogo da 'nenhuma' (de volta no jogo) e 0 erros.
 // Na versão publicada não há pré-jogo (reprova no item 1).
-//   node tools/teste-prejogo.mjs [--raiz <pasta do jogo>]
+//   node tools/teste-prejogo.mjs [--raiz <pasta do jogo>] [--so-tm (só o item 14)]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 
 const args = process.argv.slice(2);
 const raiz = path.resolve(args.includes('--raiz') ? args[args.indexOf('--raiz') + 1] : RAIZ);
+const soTm = args.includes('--so-tm');
 const imp = f => import(pathToFileURL(path.join(raiz, 'js', f)).href);
 const { criarPartida, passoPartida } = await imp('partida.js');
 const { hashMundo } = await imp('sim.js');
@@ -133,7 +138,7 @@ const PERFIS = [
 const memoria = {};
 try {
   // ---------------------------------------------------------------- 1b) sem ?prejogo, com webdriver: não liga
-  {
+  if (!soTm) {
     const { navegador, pagina: pg, erros } = await abrir({ largura: 1280, altura: 720 });
     await pg.goto(`${srv.url}?semente=${SEMENTE}&q=media`, { waitUntil: 'load' });
     await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
@@ -145,7 +150,7 @@ try {
     await navegador.close();
   }
 
-  for (const P of PERFIS) {
+  for (const P of soTm ? [] : PERFIS) {
     const { navegador, contexto, pagina: pg, erros } = await abrir({ largura: P.largura, altura: P.altura, dpr: P.dpr, toque: P.toque });
     await pg.goto(`${srv.url}?prejogo=1&semente=${SEMENTE}&q=${P.q}&hora=dia${P.toque ? '&toque=1' : ''}`, { waitUntil: 'load' });
     await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
@@ -346,7 +351,7 @@ try {
     await navegador.close();
   }
   // Esc no PC (pular tudo) e a memória (item 8)
-  {
+  if (!soTm) {
     const { navegador, pagina: pg, erros } = await abrir({ largura: 1280, altura: 720 });
     await pg.goto(`${srv.url}?prejogo=1&semente=${SEMENTE}&q=alta&hora=dia`, { waitUntil: 'load' });
     await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
@@ -394,6 +399,47 @@ try {
       const mem = await pg.evaluate(() => { const e = window.__golaco.estado(); return { geometrias: e.geometrias, texturas: e.texturas }; });
       meta('Memória: geometrias e texturas depois do pré-jogo = as do jogo sem ele', `com pré-jogo ${mem.geometrias} geo / ${mem.texturas} tex; sem ${memoria.sem.geometrias} / ${memoria.sem.texturas}`, 'iguais', mem.geometrias === memoria.sem.geometrias && mem.texturas === memoria.sem.texturas);
       meta('PC (Esc): sem erro no console', `${erros.length}`, '0', erros.length === 0);
+    }
+    await navegador.close();
+  }
+  // ---------------------------------------------------------------- 14) estádio real do Total Match (edição pro)
+  {
+    const { PED_A } = await import(new URL('./lib/pedidos-tm.mjs', import.meta.url).href);
+    const CASOS_TM = [['Aflitos', 'concreto', 'nenhuma'], ['BUKO Stadion', 'vidro', 'parcial']];
+    const ids = CASOS_TM.map((_, i) => `prejogo-tm-${i}`);
+    const { navegador, contexto, pagina: pg, erros } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
+    await contexto.addInitScript(lista => { for (const [k, v] of lista) try { localStorage.setItem(k, v); } catch (_) { /* nada */ } },
+      CASOS_TM.map(([nome], i) => ['tm3d:pedido:' + ids[i], JSON.stringify({ ...PED_A, id: ids[i], edicao: 'pro', home: { ...PED_A.home, stadium: nome } })]));
+    for (const [i, [nome, estilo, cob]] of CASOS_TM.entries()) {
+      const nErros = erros.length;
+      await pg.goto(`${srv.url}?tm=${ids[i]}&prejogo=1&semente=${SEMENTE}&q=media&hora=dia&toque=1`, { waitUntil: 'load' });
+      await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+      const est = await pg.evaluate(() => {
+        const g = window.__golaco, id = g.identidade;
+        g.relogio.usarManual(true); g.relogio.avancar(16); g.relogio.avancar(16);
+        if (!g.prejogo) return null;
+        g.prejogo.comecar(); g.relogio.avancar(16);
+        return { nome: id?.estadio?.nome, real: !!id?.estadio?.real, estilo: id?.fachada?.estilo, cob: id?.fachada?.cobertura, estilos: !!id?.estilos, planos: g.prejogo.planos };
+      });
+      if (!est) { meta(`TM pro ${nome}: pré-jogo na página`, 'não existe', 'existe', false); continue; }
+      meta(`TM pro ${nome}: o estádio real achado na base, com o desenho dele (${estilo}, cobertura ${cob})`, `"${est.nome}" real ${est.real} · ${est.estilo}/${est.cob} · fachada-estilos.js ${est.estilos ? 'carregado' : 'não'}`, `"${nome}" true · ${estilo}/${cob} · carregado`, est.nome === nome && est.real && est.estilo === estilo && est.cob === cob && est.estilos);
+      let piorCham = 0, piorTri = 0, marqMin = Infinity, marqMax = 0;
+      const ruins = [], custos = [];
+      for (const p of est.planos) {
+        const r = await pg.evaluate(t => { const g = window.__golaco, pj = g.prejogo; pj.irPara(t - 0.04); g.relogio.avancar(16); g.relogio.avancar(16); const d = pj.desenho; return { plano: pj.plano, cham: d.chamadas, tri: d.triangulos, marq: g.identidade.estilos?.marquiseEscondida ? g.identidade.estilos.marquiseEscondida() : -1 }; }, (p.t0 + p.t1) / 2);
+        const e = await estatisticas(contexto, await pg.screenshot());
+        if (r.plano !== p.id || e.desvio < 8 || e.cores < 40) ruins.push(`${p.id} (${r.plano}; desvio ${f1(e.desvio)}, ${e.cores} cores)`);
+        piorCham = Math.max(piorCham, r.cham); piorTri = Math.max(piorTri, r.tri);
+        marqMin = Math.min(marqMin, r.marq); marqMax = Math.max(marqMax, r.marq);
+        custos.push(`${p.id} ${r.cham}/${Math.round(r.tri / 1000)}k`);
+      }
+      meta(`TM pro ${nome}: cada plano aparece (o plano certo, print com cor)`, ruins.length ? ruins.join('; ') : `${est.planos.length} planos`, 'todos', ruins.length === 0 && est.planos.length >= 11);
+      meta(`TM pro ${nome}: ≤ 40 chamadas de desenho e ≤ 130 mil triângulos em todo plano (celular Média)`, `pior ${piorCham} chamadas, ${f1(piorTri / 1000)} mil tri (${custos.join(' ')})`, '≤ 40; ≤ 130 mil', piorCham <= 40 && piorTri <= 130000);
+      // a marquise de lá e o teto curto de cá (render/campo.js): somem no pré-jogo SEM cobertura e voltam inteiros no jogo
+      const fim = await pg.evaluate(() => { const g = window.__golaco; g.prejogo.pularTudo(); g.relogio.avancar(16); return { ativo: g.prejogo.ativo, tick: g.estado().tick, marq: g.identidade.estilos?.marquiseEscondida ? g.identidade.estilos.marquiseEscondida() : -1 }; });
+      const okMarq = cob === 'nenhuma' ? marqMin > 0 : marqMax === 0;
+      meta(`TM pro ${nome}: a marquise ${cob === 'nenhuma' ? 'escondida em todo o pré-jogo' : 'no lugar (o lado de lá coberto)'}; no jogo, a malha inteira de volta`, `triângulos escondidos no pré-jogo ${marqMin}–${marqMax}; depois de pular: ${fim.marq} (ativo ${fim.ativo}, tick ${fim.tick})`, `${cob === 'nenhuma' ? '> 0' : '0'}; 0 (false, 0)`, okMarq && fim.marq === 0 && !fim.ativo && fim.tick === 0);
+      meta(`TM pro ${nome}: sem erro no console`, `${erros.length - nErros}${erros.length > nErros ? ': ' + erros.slice(nErros, nErros + 2).join(' | ') : ''}`, '0', erros.length === nErros);
     }
     await navegador.close();
   }

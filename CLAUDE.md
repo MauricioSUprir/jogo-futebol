@@ -496,7 +496,16 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   dinâmico). Testes: `teste-ponte-tm`, `teste-identidade` (padrão), `teste-tm-tela` (navegador, fora do CI); ponta a ponta
   com o TM: `node legacy-total-match/ferramentas/testar-3d.mjs`. Pausa do TM: o submenu "Modo de jogo" vira "Cenas da
   partida" (pré-jogo e substituição, sem os treinos). Nota do travado na escala do Rumo ao Estrelato (média ~7,2, ≥ 8 em
-  ~25%, como a simulação do TM). Mexeu em main.js,
+  ~25%, como a simulação do TM).
+- **Estádio de cada clube no pré-jogo** (dono, 15/10: "pesquisa como eles são e altera eles nas cenas pré-jogo ... com
+  todos os estádios"; contrato "Estádio de cada clube no pré-jogo" no `golaco/CONTRATOS.md`): na edição PRO (pedido
+  `edicao: "pro"`, jogo não neutro) o estádio REAL do mandante sai da base `golaco/assets/tm/estadios.json` (os 524
+  estádios do TM pesquisados — foto do TM + web; a pesquisa com as fontes em `golaco/tools/estadios/pesquisa.json`;
+  homônimos pelo clube mandante): fachada por estilo (vidro, concreto, metal, membrana, tijolo, treliça, painéis;
+  `render/fachada-estilos.js`, só baixado nesse caso), cores e LED, cobertura total/lados/parcial/nenhuma, cadeiras
+  (liso/misto/faixas/mosaico, também no jogo) e o nome real na placa. Edição PÚBLICA, jogo neutro ou estádio fora da
+  base: o Estádio Golaço de hoje com o nome "Estádio Total Match" e o mosaico "TOTAL MATCH". A geometria não muda (trilhos
+  de câmera e a bola). Testes: `teste-identidade` (E1–E8), `teste-prejogo` item 14. Mexeu em main.js,
   hud.js, partida.js, acoes.js ou nos desenhos de estádio/torcida? Rodar também `teste-tm-tela` e o `testar-3d`.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
@@ -688,6 +697,12 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   (7 larguras; tem que dar 0).
 - Antes de publicar: `python3 ferramentas/conferir-estilos.py` (botão sem estilo = visual padrão do
   navegador) e versão nova em `index.html` (`?v=NNN`) + `sw.js` (`total-match-vNNN`).
+- **Viverde FC** (dono, 15/10; `js/viverde.js`): time especial nas duas edições, com o elenco do dono (17 jogadores; posições
+  declaradas sem perder nota — `posicoes`/`notaPos`/`todas`, lidas em `competitions.js`), no jogo rápido (seção "Especiais"
+  do seletor) e na carreira (botão na entrada da Master League; entra no lugar de um clube da liga — customClub com
+  `fixo: "viverde"`). Para jogar com ele: SENHA (só o SHA-256 no código; nunca escrever a senha em arquivo/commit; o aparelho
+  lembra). O clube do jogo rápido fica fora das ligas, do mercado e das convocações (`especial`). Escudo provisório em
+  `assets/viverde/escudo.svg` até a logo do dono chegar.
 - **Partidas em 3D** (`js/tm3d.js`; dono, 09/10: o GOLAÇO vira o motor 3D do TM, tudo num jogo só; 15/10: o motor passa a
   ser o GOLAÇO NOVO, `golaco/`): antes de toda partida do seu time (matchview com `pauseSide`) aparece Jogar em 3D / Simular
   (Config → "Partidas do seu time": Perguntar / Sempre 3D / Sempre simular; só com WebGL 2). O 3D (`golaco/index.html?tm=<id>`,
