@@ -95,7 +95,7 @@ contexto.on('requestfinished', async r => {
 });
 try {
   await pg.goto(`${srv.url}?q=media&hora=dia&semente=3&demo=1&toque=1`, { waitUntil: 'load' });
-  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
   prontoEm = Date.now();
   await pg.touchscreen.tap(422, 220);
   await pg.waitForFunction(() => window.__golaco.estadio.som?.estado === 'rodando', null, { timeout: 10000 }).catch(() => {});
@@ -174,7 +174,7 @@ try {
   try {
     await b2.contexto.addInitScript(() => { delete window.AudioContext; delete window.webkitAudioContext; });
     await b2.pagina.goto(`${srv.url}?q=baixa&semente=3`, { waitUntil: 'load' });
-    await b2.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+    await b2.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
     estSem = await b2.pagina.evaluate(() => window.__golaco.estadio.som?.estado ?? 'sem som');
     hSemAudio = await hashNaPagina(b2.pagina);
   } catch (e) { estSem = 'erro: ' + e.message.slice(0, 80); } finally { await b2.navegador.close(); }

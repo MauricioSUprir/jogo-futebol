@@ -47,7 +47,7 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
   const s = await abrir({ largura: 1280, altura: 720 });
   const pg = s.pagina;
   await pg.goto(`${srv.url}?modo=penaltis&demo=1&semente=3&${Q}`, { waitUntil: 'load' });
-  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
   await pg.evaluate(() => window.__golaco.relogio.usarManual(true));
   await quadros(pg, 30, true);
   const ini = await pg.evaluate(() => {
@@ -133,7 +133,7 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
   const s = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
   const pg = s.pagina;
   await pg.goto(`${srv.url}?modo=penaltis&semente=5&toque=1&${Q}`, { waitUntil: 'load' });
-  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
   await pg.evaluate(() => window.__golaco.relogio.usarManual(true));
   const visiveis = () => pg.evaluate(() => [...document.querySelectorAll('#toque .btn-toque')].filter(b => { const st = getComputedStyle(b); return !b.hidden && st.display !== 'none' && st.visibility !== 'hidden' && b.getBoundingClientRect().width > 0; }).map(b => b.id));
   let outros = new Set(), chuteFora = 0, chuteNaVez = 0, nVez = 0;
@@ -203,7 +203,7 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
   const s = await abrir({ largura: 1280, altura: 720 });
   const pg = s.pagina;
   await pg.goto(`${srv.url}?modo=penaltis&${Q}`, { waitUntil: 'load' });
-  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
   await pg.evaluate(() => window.__golaco.relogio.usarManual(true));
   await quadros(pg, 5, true);
   const sem = [await pg.evaluate(() => window.__golaco.mundo.semente)];
@@ -243,7 +243,7 @@ document.body.appendChild(f);
   await pg.goto(url, { waitUntil: 'load' });
   let fr = null;
   for (let i = 0; i < 200 && !fr; i++) { fr = pg.frames().find(f => /[?&]tm=/.test(f.url())); if (!fr) await pg.waitForTimeout(50); }
-  await fr.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+  await fr.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
   await pg.waitForFunction(() => window.__msgs.some(m => m.tipo === 'tm3d:pronto'), null, { timeout: 10000 }).catch(() => {});
   const info = await fr.evaluate(() => { const g = window.__golaco; return { modo: g.mundo.modo, d: g.disputa, siglas: [document.getElementById('sigla-0').textContent, document.getElementById('sigla-1').textContent], humano: g.tm.humano, trava: g.tm.trava }; });
   const r = await fr.evaluate(async () => {
