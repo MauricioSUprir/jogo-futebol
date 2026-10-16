@@ -34,6 +34,11 @@
 //      TM (as câmeras em pílula), 4 contra 2 no "Jogar", a pausa com "Voltar ao Total Match" (sem Modo de jogo, Simular o
 //      resto, Reiniciar e Editar time) sem rolar em 844×390, e o clique manda tm3d:fim com {livre: {placar}} ao pai.
 //   G  Nenhum erro no console em nenhuma tela.
+//   H  A junção com a main (16/10): H1 a bola parada do humano (tiro de meta, escanteio) com as câmeras TV, Alta e Atrás do
+//      Livre mostra a câmera atrás do cobrador (#490: a do Livre cobria o plano e o analógico girava por ele, escondido) e a
+//      "direita" leva o fim da linha da mira para a direita na tela; depois da cobrança, de volta à câmera do Livre sem
+//      salto; H2 mudar os jogadores na pausa no meio da cobrança mirada: a mira fica e o cobrador e a câmera não somem; H3 R
+//      ("Bola no meu pé") no meio do gol descarta o replay daquele gol (antes tocava na próxima saída sem gol).
 //   node tools/teste-livre-tela.mjs
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -695,6 +700,130 @@ document.body.appendChild(f);
     `${msgs.map(m => m.tipo).join(', ')} · ${fim ? JSON.stringify(fim.resultado) : 'sem tm3d:fim'}`,
     !!fim && Array.isArray(fim.resultado?.livre?.placar) && fim.resultado.livre.placar.length === 2 && !('homeGoals' in fim.resultado));
   meta('G4 ?tm: sem erro no console', s.erros.length ? s.erros.slice(0, 3).join(' | ') : 'nenhum', s.erros.length === 0);
+  errosTodos.push(...s.erros);
+  await s.navegador.close();
+}
+
+// ------------------------------------------------------------------ H: a junção com a main (#490 e o replay)
+{
+  const s = await abrir({ largura: 1280, altura: 720 });
+  const pg = s.pagina;
+  await pg.goto(`${srv.url}?modo=livre&q=baixa&hora=dia&replay=0&comemoracao=0&substituicao=0&semente=5`, { waitUntil: 'load' });
+  await pronta(pg);
+  await pg.evaluate(() => { window.__golaco.relogio.usarManual(true); document.getElementById('btn-livre-jogar').click(); });
+  await quadros(pg, 30);
+  await pg.evaluate(() => window.__golaco.bolaParada.carregar());
+  await quadros(pg, 20);
+  /** A bola parada de teste do meu time montada, com o controlado cobrando. */
+  const montar = async tipo => {
+    await pg.evaluate(t => window.__golaco.bolaParadaDeTeste(t), tipo);
+    for (let k = 0; k < 40; k++) {
+      await quadros(pg, 10);
+      if (await pg.evaluate(t => { const m = window.__golaco.mundo, pr = m.parada; return pr?.tipo === t && pr.cobrador != null && pr.cobrador === m.controlado[0]; }, tipo)) return true;
+    }
+    return false;
+  };
+  const fimLinha = () => pg.evaluate(() => { const g = window.__golaco, p = g.bolaParada.pontos(); if (!p.length) return null; const q = p[Math.min(p.length - 1, 40)]; return g.naTela(q[0], q[1], q[2]); });
+  const linhasH1 = []; let okH1 = true;
+  for (const [cam, tipo] of [['tv', 'tiroDeMeta'], ['alta', 'escanteio'], ['atras', 'tiroDeMeta']]) {
+    await pg.evaluate(c => window.__golaco.definirCamera(c), cam);
+    await quadros(pg, 5);
+    const montou = await montar(tipo);
+    await quadros(pg, 90);
+    const e = await pg.evaluate(() => { const g = window.__golaco, b = g.bolaParada.estado, c = g.render.camera; return { ativa: !!b?.ativa, mistura: b?.mistura ?? 0, de: b?.plano?.de ?? null, cam: [c.x, c.y, c.z], modo: g.livre.camera?.modo }; });
+    const dist = e.de ? Math.hypot(...e.de.map((v, i) => v - e.cam[i])) : Infinity;
+    const a = await fimLinha();
+    await pg.keyboard.down('ArrowRight'); await quadros(pg, 40);
+    const b = await fimLinha();
+    await pg.keyboard.up('ArrowRight'); await quadros(pg, 2);
+    const dx = a && b ? b.x - a.x : 0, dy = a && b ? b.y - a.y : 0;
+    // a cobrança (PASSE) e a volta à câmera do Livre: o maior passo da câmera por quadro enquanto a mistura sai
+    await pg.keyboard.down('KeyJ'); await quadros(pg, 12); await pg.keyboard.up('KeyJ');
+    const volta = await pg.evaluate(() => {
+      const g = window.__golaco;
+      let ant = null, maior = 0, mistura = 1;
+      for (let i = 0; i < 200 && mistura > 0; i++) {
+        g.relogio.avancar(1000 / 60, { desenhar: false });
+        const c = g.render.camera, p = [c.x, c.y, c.z];
+        mistura = g.bolaParada.estado?.mistura ?? 0;
+        if (ant) maior = Math.max(maior, Math.hypot(p[0] - ant[0], p[1] - ant[1], p[2] - ant[2]));
+        ant = p;
+      }
+      return { maior, mistura };
+    });
+    const bom = montou && e.modo === cam && e.ativa && e.mistura >= 0.99 && dist <= 0.5 && dx > 40 && Math.abs(dx) > Math.abs(dy) && volta.mistura === 0 && volta.maior <= 3;
+    if (!bom) okH1 = false;
+    linhasH1.push(`${cam}/${tipo}${bom ? '' : ' [FALHOU]'}: ${montou ? '' : 'NÃO MONTOU; '}câmera a ${dist.toFixed(1)} m do plano (mistura ${e.mistura.toFixed(2)}); "direita" ${dx.toFixed(0)}/${dy.toFixed(0)} px; volta à do Livre ${volta.mistura === 0 ? 'sim' : 'NÃO'}, maior passo ${volta.maior.toFixed(2)} m/quadro`);
+    await pg.evaluate(() => window.__golaco.livre.recomecar('pe'));
+    await quadros(pg, 10);
+  }
+  meta('H1 PC: a bola parada do humano no Livre (TV, Alta, Atrás) mostra a câmera atrás do cobrador (#490) e a "direita" leva o fim da linha da mira para a direita na tela; depois da cobrança volta à câmera do Livre sem salto (antes a do Livre cobria o plano: a linha descia 66 px na TV)',
+    linhasH1.join('; '), okH1);
+
+  // H2: mudar os jogadores na pausa no meio da cobrança mirada — a mira e a curva ficam, a câmera/linha não somem
+  await pg.evaluate(() => window.__golaco.definirCamera('tv'));
+  const montouH2 = await montar('escanteio');
+  await quadros(pg, 60);
+  await pg.keyboard.down('ArrowRight'); await quadros(pg, 25); await pg.keyboard.up('ArrowRight'); await quadros(pg, 2);
+  const h2a = await pg.evaluate(() => { const m = window.__golaco.mundo; return { ang: m.parada?.mira?.ang ?? null, curva: m.parada?.mira?.curva ?? null, cob: m.parada?.cobrador ?? null }; });
+  const h2 = await pg.evaluate(() => {
+    const g = window.__golaco, e = g.livre.escolha();
+    g.abrirMenu();
+    g.livre.ajustar({ linha: [e.linha[0], e.linha[1] === 7 ? 4 : 7], goleiro: e.goleiro });
+    document.getElementById('btn-continuar').click();
+    const r = { quadros: 0, semCobrador: 0, outraMira: 0, semCamera: 0, entrou: null };
+    for (let i = 0; i < 60; i++) {
+      g.relogio.avancar(1000 / 60, { desenhar: false });
+      const m = g.mundo, pr = m.parada, b = g.bolaParada.estado;
+      r.quadros++;
+      if (!pr || pr.cobrador == null || pr.cobrador !== m.controlado[0]) r.semCobrador++;
+      if (!pr?.mira) r.outraMira++; else r.ang = pr.mira.ang;
+      if (!b?.ativa) r.semCamera++;
+    }
+    r.escolha = g.livre.escolha().linha.join('×');
+    return r;
+  });
+  const okH2 = montouH2 && h2a.ang != null && h2.semCobrador === 0 && h2.semCamera === 0 && h2.outraMira === 0 && Math.abs(h2.ang - h2a.ang) < 1e-9;
+  meta('H2 PC: mudar os jogadores na pausa no meio da cobrança mirada (escanteio, o adversário 4 ↔ 7): a mira da pessoa fica e o cobrador, a câmera e a linha não somem (antes ~50 passos sem cobrador e a mira de volta ao padrão)',
+    `${montouH2 ? '' : 'NÃO MONTOU; '}mira ${h2a.ang?.toFixed(3)} → ${h2.ang?.toFixed(3) ?? '—'}; em ${h2.quadros} quadros: sem cobrador ${h2.semCobrador}, sem a câmera ${h2.semCamera}, sem mira ${h2.outraMira}; agora ${h2.escolha}`, okH2);
+  meta('G5 H (bola parada): sem erro no console', s.erros.length ? s.erros.slice(0, 3).join(' | ') : 'nenhum', s.erros.length === 0);
+  errosTodos.push(...s.erros);
+  await s.navegador.close();
+}
+// H3: R ("Bola no meu pé") no meio do gol — o replay daquele gol é descartado (nem toca, nem fica para a próxima saída)
+{
+  const s = await abrir({ largura: 1280, altura: 720 });
+  const pg = s.pagina;
+  await pg.goto(`${srv.url}?modo=livre&q=baixa&hora=dia&replay=1&comemoracao=0&substituicao=0&semente=7`, { waitUntil: 'load' });
+  await pronta(pg);
+  const r = await pg.evaluate(async () => {
+    const g = window.__golaco, av = n => { for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); };
+    g.relogio.usarManual(true); document.getElementById('btn-livre-jogar').click();
+    av(30);
+    // o diretor do replay baixado (sob demanda: o "Replay" da pausa o pede)
+    for (let k = 0; k < 100 && !g.replay.estado; k++) { g.abrirMenu(); document.querySelector('#menu [data-cmd="replay"]').click(); await new Promise(f => setTimeout(f, 50)); }
+    for (let i = 0; i < 900 && g.replay.estado?.ativo; i++) av(1);
+    if (g.estado().menuAberto) g.fecharMenu();
+    g.livre.ajustar({ linha: [3, 0], goleiro: [false, false] });
+    av(5);
+    const pl = () => [g.mundo.placar[0], g.mundo.placar[1]], p0 = pl();
+    for (let n = 0; n < 9000; n++) { g.rodarPassos(1, 'demo'); if (g.mundo.placar[0] !== p0[0] || g.mundo.placar[1] !== p0[1]) break; }
+    av(20);
+    const gol = { placar: pl(), estado: g.mundo.partida.estado, pendente: !!g.replay.golPendente };
+    g.livre.recomecar('pe');
+    const r1 = [];
+    for (let k = 0; k < 120; k++) { av(1); if (g.replay.estado?.ativo) r1.push(g.replay.estado.tipo); }
+    const depoisR = { estado: g.mundo.partida.estado, pendente: !!g.replay.golPendente, replay: [...new Set(r1)] };
+    av(180);
+    g.livre.recomecar('meio');
+    const r2 = [];
+    for (let k = 0; k < 600; k++) { av(1); if (g.replay.estado?.ativo) r2.push(g.replay.estado.tipo); }
+    return { gol, depoisR, saida: { replay: [...new Set(r2)], placar: pl() } };
+  });
+  meta('H3 PC: R ("Bola no meu pé") no meio do gol descarta o replay daquele gol — nem toca, nem entra na próxima saída sem gol ("Recomeçar bola no meio"); antes ficava pendente e tocava lá',
+    `gol ${r.gol.placar.join('×')} (${r.gol.estado}, pendente ${r.gol.pendente ? 'sim' : 'não'}); depois do R: ${r.depoisR.estado}, pendente ${r.depoisR.pendente ? 'SIM' : 'não'}, replay [${r.depoisR.replay.join(', ')}]; na saída sem gol: replay [${r.saida.replay.join(', ')}], placar ${r.saida.placar.join('×')}`,
+    r.gol.pendente && !r.depoisR.pendente && r.depoisR.replay.length === 0 && r.saida.replay.length === 0 && r.saida.placar.join() === r.gol.placar.join());
+  meta('G6 H3 (replay): sem erro no console', s.erros.length ? s.erros.slice(0, 3).join(' | ') : 'nenhum', s.erros.length === 0);
   errosTodos.push(...s.erros);
   await s.navegador.close();
 }

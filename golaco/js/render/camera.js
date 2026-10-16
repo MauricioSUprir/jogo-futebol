@@ -221,13 +221,20 @@ export function criarCamera(aspecto) {
       camera.lookAt(est.x, p.olharY, est.z);
     }
     // bola parada: mistura posição, direção do olhar e fov (sem salto)
+    if (est.bp.ok && suave(est.bp.s)) misturarBP(_d1.set(est.x, p.olharY, est.z).sub(camera.position).normalize());
+  }
+  /**
+   * Mistura o plano da bola parada (render/bola-parada.js) por cima da pose que a câmera tem agora; d1 = a direção do olhar
+   * dela (normalizada). A câmera de jogo (posicionar) e, no Modo Livre, a câmera dele (depois de est.extra.atualizar: senão
+   * ela cobria o plano e o analógico girava pelo rumo de uma câmera escondida — bp.yaw no main.js).
+   */
+  function misturarBP(d1) {
     const bp = est.bp, e = suave(bp.s), q = bp.p;
     if (!bp.ok || !e) return;
     _a.copy(camera.position); _b.set(q[0], q[1], q[2]);
-    _d1.set(est.x, p.olharY, est.z).sub(_a).normalize();
     _d2.set(q[3], q[4], q[5]).sub(_b).normalize();
     camera.position.lerpVectors(_a, _b, e);
-    camera.lookAt(_a.copy(camera.position).add(_d1.lerp(_d2, e).normalize()));
+    camera.lookAt(_a.copy(camera.position).add(d1.lerp(_d2, e).normalize()));
     camera.fov = lerp(camera.fov, fovFixo(q[6]), e); camera.updateProjectionMatrix();
   }
   const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d1 = new THREE.Vector3(), _d2 = new THREE.Vector3();
@@ -302,7 +309,11 @@ export function criarCamera(aspecto) {
         mola(est, 'z', 'vz', fz, wr * 0.8, dt);
       }
       posicionar(p);
-      if (est.extra && !est.cinema && !(g.ativo && g.fechado) && !est.geral && !est.livre) est.extra.atualizar(dt, alvo, corte, interno);
+      if (est.extra && !est.cinema && !(g.ativo && g.fechado) && !est.geral && !est.livre) {
+        est.extra.atualizar(dt, alvo, corte, interno);
+        // a bola parada do humano também no Livre, misturada por cima da câmera dele (a mesma mola, a mesma entrada e saída)
+        if (est.bp.ok && suave(est.bp.s)) misturarBP(camera.getWorldDirection(_d1));
+      }
     },
     /** Foco atual da câmera (para a sombra acompanhar a jogada; na câmera do gol, a boca do gol). */
     foco() {

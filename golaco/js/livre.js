@@ -43,7 +43,7 @@
 // referencias) e cobrancaSemLinha (partida.js regrasPartida, na montagem da bola parada). Assim a partida não carrega o
 // código do Livre (teste-carga).
 
-import { LIVRE, CAMPO, BOLA, PARTIDA } from './config.js';
+import { LIVRE, CAMPO, BOLA, PARTIDA, PASSO } from './config.js';
 import { MD } from './matdet.js';
 import { clamp } from './mat.js';
 import { jogadorPorId } from './sim.js';
@@ -336,7 +336,17 @@ export function ajustarJogadores(m, e, opc = {}) {
   const p = m.partida, pr = m.parada;
   if (!opc.inicio && p.estado === 'parada' && pr && !pr.rolou && (saiu.length || entrou.length)) {
     if (pr.tipo === 'saida') montarSaida(m, pr.time);
-    else { bolaMorta(m, pr.tipo, pr.time, pr.x, pr.z); p.estado = 'parada'; p.desde = m.tick; }
+    else {
+      bolaMorta(m, pr.tipo, pr.time, pr.x, pr.z); p.estado = 'parada'; p.desde = m.tick;
+      // a cobrança mirada da pessoa (mira.js: só geometria — o ponto, o tipo e o time, que não mudam) segue com a mira e a
+      // curva que ela já tinha escolhido, se o cobrador continua em campo (partida.js cobrar: pr.mira ??= criarMira), e é
+      // montada de novo já no próximo passo, sem o 1 s da bola fora (PARTIDA.foraEspera): a câmera atrás do cobrador, a
+      // linha e o painel não somem e voltam
+      if (pr.mira && pr.cobrador != null && jogadorPorId(m, pr.cobrador)) {
+        m.parada.mira = { ...pr.mira, rep: [-1, -1] };
+        m.parada.inicio -= Math.round(PARTIDA.foraEspera / PASSO);
+      }
+    }
   }
   m.eventos.push({ tipo: 'livreAjuste', linha: esc.linha.slice(), goleiro: esc.goleiro.slice(), saiu, entrou });
   return { ok: true, linha: esc.linha.slice(), goleiro: esc.goleiro.slice(), saiu, entrou };

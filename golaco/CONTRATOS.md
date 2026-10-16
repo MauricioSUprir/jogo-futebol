@@ -2235,7 +2235,9 @@ dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,
     fica não se mexe; quem sai = a vaga de menor prioridade, `LIVRE.saidaDist` m mais longe da bola valendo uma posição, nunca
     o controlado — a bola dele fica solta onde estava, a mão do goleiro solta, o controle passa; quem entra = um jogador novo
     da vaga, `teleportar`ado no ponto tático dela juntado como o da IA, a ≥ `LIVRE.afastar` m de todos; com a bola parada
-    montada, ela é montada de novo; evento `livreAjuste {linha, goleiro, saiu, entrou}`), `recomecarLivre(m, 'meio' | 'pe')`
+    montada, ela é montada de novo — a cobrança mirada da pessoa (#490) com o cobrador ainda em campo guarda a mira e a curva
+    e é montada já no passo seguinte, sem o 1 s da bola fora: a câmera atrás do cobrador e a linha não somem; evento
+    `livreAjuste {linha, goleiro, saiu, entrou}`), `recomecarLivre(m, 'meio' | 'pe')`
     (saída do time do humano | a bola no pé do controlado; o placar fica), `passoLivre(m, entrada, acoes)` (as ações-objeto
     `{tipo: 'livreAjuste', linha, goleiro}` e `{tipo: 'livreRecomecar', onde}` ANTES do passo, gravadas em `m.log`, e o
     `passoPartida`), `entradaDemoLivre`, `normalizarEscolha`, `escolhaDoMundo`, `resumoLivre`.
@@ -2245,7 +2247,9 @@ dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,
     defesa nem volta com pressa por estar à frente dela, a corrida não acaba por isso e o passe para quem está lá vale.
     Antes a linha só mudava com menos de 2 adversários e o Livre 11 × 11 jogava como a partida: à frente da defesa, voltando
     ~40% do tempo e 1,3% dos passes; agora ~3% e ~5%, `teste-livre` G),
-    sem faltas nem cartões (`faltas.js`, `defesa.js`), sem relógio nem intervalo. Gol vale; a saída é do time que sofreu se ele
+    sem faltas nem cartões (`faltas.js`, `defesa.js`: o bote da IA decide pelo MESMO sorteio da partida — #481 — e o que seria
+    falta ou "tirou o corpo" vira `BOTE_SEM_GANHAR`, contato sem apito com o condutor seguindo; o limpo rouba; a DIVIDIDA do
+    humano que seria falta segue sem falta; `teste-livre` H), sem relógio nem intervalo. Gol vale; a saída é do time que sofreu se ele
     tiver alguém de linha, senão do outro (`partida.js montarSaida` + `temLinha`); bola fora pela partida quando quem cobra tem
     alguém de linha (o tiro de meta pelo goleiro dele vale), senão a cobrança passa ao outro (`cobrancaSemLinha`: escanteio ↔
     tiro de meta, lateral e tiro livre no mesmo ponto). As regras do goleiro continuam. O único de linha do time que cobrou toca
@@ -2272,7 +2276,10 @@ dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,
   acima do controlado, olhando 7 m adiante no chão: ele a ~3/4 da altura do quadro, fov 48°); Altura e Distância 0–20 (10 = o perfil; 0 = 0,6×, 20 = 1,5×; a
   Distância abre o plano junto). `render/camera.js` ganhou só o gancho: `definirExtra(x)` (x.atualizar roda DEPOIS de
   posicionar a câmera de jogo, fora da câmera do gol, de cinema, do plano geral e da livre dos prints), `yaw` = o do extra,
-  `definirModo` aceita os modos dele e `foco()` o dele — sem o Livre o extra é null e nada muda. Rumo: as de lado em −π/2; Atrás
+  `definirModo` aceita os modos dele e `foco()` o dele — sem o Livre o extra é null e nada muda. A bola parada do humano
+  (#490, `render/bola-parada.js`) vale também no Livre: o plano dela é misturado DEPOIS do extra (`misturarBP`, a mesma mola,
+  entrada e saída da partida) — antes a câmera do Livre cobria o plano e o analógico girava pelo `bp.yaw` de uma câmera
+  escondida (a mira descia na tela em vez de ir para o lado; `teste-livre-tela` H1). Rumo: as de lado em −π/2; Atrás
   e Jogador com o rumo FIXO do ataque do time do humano (`m.ataca`, 0 ou π) — o `yawEntrada` do main.js lê `cam.yaw`:
   analógico para cima = para o gol que eu ataco. Troca com o mesmo rumo: transição de 0,6 s; rumo diferente: corte. Limites
   (`segurarPose`): de lado, perto do lado de cá a câmera fica dentro da caixa da arquibancada de cá (y ≤ 26, z ≤ 70: ela sai do
@@ -2297,7 +2304,8 @@ dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,
   — o TM não conta em nada); entrando no Livre a pausa abre no submenu Jogadores (nunca com `?prints=1`/`?demo=1`); o placar
   de TV sem o relógio; R = a bola no pé; `data-so="livre"` e `em-livre`; Replay da pausa vale; Editar time escondido.
   `window.__golaco.livre = {escolha(), ajustar({linha: [a, b], goleiro: [g0, g1]}) (índices dos TIMES; entra no próximo
-  passo), recomecar('meio' | 'pe'), naFila}`.
+  passo), recomecar('meio' | 'pe'), naFila}`. R / "Bola no meu pé" no meio do gol (evento `recomeco` com `livre`) descarta o
+  replay daquele gol (`diretor.descartarGol`): nem toca, nem fica para a próxima saída sem gol (`teste-livre-tela` H3).
 - **Pedido do TM**: `livre: {linha: [casa, fora], goleiro: [casa, fora]}` (opcional; os índices dos times do pedido).
 - **Testes**: `teste-livre` (Node, padrão): A montagem N × M nas bordas e sorteadas, B mudar no meio do jogo (bola no pé de quem
   sai, controlado, goleiro com a bola nas mãos, bola parada montada), C IA × IA de 2 min (3×3 e 5×5 com os goleiros, 20
@@ -2305,11 +2313,16 @@ dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,
   7,2) —: posse troca com a bola rolando média ≥ 6, chutes ≥ 2, ≤ 10% do tempo dos de linha a > 40 m da bola; 1×0 sem
   goleiros: chutes e distância), D recomeços com um time sem ninguém de linha, E determinismo e nada vaza para a partida, F o
   goleiro sozinho no canhão do teste-goleiro = o da partida, G sem impedimento na IA (Livre 11 × 11: quem está à frente da
-  defesa adversária não volta por isso — ≤ 15% voltando, antes 43% — e recebe o passe — ≥ 2%, antes 0,9%).
+  defesa adversária não volta por isso — ≤ 15% voltando, antes 43% — e recebe o passe — ≥ 2%, antes 0,9%), H o bote da IA
+  pela régua da partida (o mesmo estado do gerador com e sem `m.livre`: limpo = roubada, o resto = sem ganhar, 0 faltas;
+  antes todo bote no sorteio roubava). B2 aceita o goleiro controlado (cobrando um tiro de meta): fica em campo e controlado.
   `teste-livre-tela` (navegador, CI e deploy): A a varredura das poses em Node (as 6 câmeras × Altura/Distância × 3 telas × 2
   rumos × focos na borda + transições: fora de sólido, sem arquibancada na frente do campo; a contraprova sem os limites
   reprova; A3 a câmera não pula — ≤ 0,6 m com o foco andando 0,05 m, o limite antigo pulava 14 m —, A4 a bola e o controlado
   no quadro nas bordas do campo nos dois rumos — antes 1632 de 6600 fora —, A5 o corte do Jogador), B as 6 câmeras pela pausa
   no PC Alta de dia (a bola e o controlado no quadro, os pontos do gramado à vista com cor de grama; B0b nada cortado na pausa;
   B2 os cantos — céu em Atrás/Jogador 2,1–2,3% da tela → ~0%; B3 a bola no pé na pequena área e nos cantos do meu gol), C a tecla C, o rumo do analógico, transição × corte, Altura/Distância salvas e de volta na partida, D a pausa e
-  os submenus sem rolar no celular 844×390 e as 6 câmeras de noite, E 568×320 sem nada encostando, F `?tm`.
+  os submenus sem rolar no celular 844×390 e as 6 câmeras de noite, E 568×320 sem nada encostando, F `?tm`, H a junção com a
+  main: H1 a bola parada do humano (TV, Alta, Atrás) com a câmera atrás do cobrador e a "direita" levando a mira para a
+  direita na tela, e a volta à câmera do Livre sem salto; H2 mudar os jogadores na pausa no meio da cobrança mirada sem perder
+  a mira nem a câmera; H3 R no meio do gol sem replay pendente.

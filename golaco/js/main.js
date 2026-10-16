@@ -739,6 +739,9 @@ function tratarEvento(ev) {
   // esperava o replay baixar e não chegou a tempo fica sem replay
   if (t === 'saida' || t === 'intervalo' || t === 'fimDeJogo' || t === 'recomeco') golSemDiretor = null;
   if (t === 'saida' && diretor?.golPendente) posGol();
+  // Modo Livre: R / "Bola no meu pé" no meio do gol (recomeço sem saída de bola) = "quero jogar já": o replay daquele gol
+  // não toca — nem fica guardado para a próxima saída sem gol ("Recomeçar bola no meio")
+  if (t === 'recomeco' && ev.livre && diretor?.golPendente) diretor.descartarGol();
   // impedimento: o replay no apito, com a linha no quadro do passe (a foto da Regra 11: ev.tickFoto) e a análise
   // semiautomática (o defensor da linha vem do evento)
   // (replay ainda não baixado: pede já e entra quando chegar, se ainda for o mesmo apito, até REPLAY_ATRASO_MAX passos)

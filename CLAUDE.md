@@ -526,7 +526,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `livre: {linha, goleiro}`; volta sem resultado). `js/livre.js` (puro; `config.js LIVRE`): o mundo da partida com `m.livre`
   (FORA do hash), 0–10 de linha por lado (o meu ≥ 1) + goleiro liga/desliga; mudar na pausa NÃO recomeça (quem sai vira
   buraco na vaga, quem entra aparece na vaga tática; o controlado nunca sai); sem relógio, impedimento (nem na IA:
-  `LIVRE.linhaSemDefesa`), faltas e cartões; time sem jogador de linha passa as cobranças ao outro; IA comprimida perto da bola
+  `LIVRE.linhaSemDefesa`), faltas e cartões (o bote que seria falta = contato sem apito, `BOTE_SEM_GANHAR`); a câmera da bola
+  parada (#490) entra por cima das do Livre; R no meio do gol descarta o replay dele; time sem jogador de linha passa as cobranças ao outro; IA comprimida perto da bola
   com poucos jogadores e pressão Alta até 7 de linha. Ganchos `ganchosLivre` no `partida.js` (ligados pelo livre.js).
   Página (`js/livre-pagina.js`, submenus Jogadores e Câmera, Recomeçar/Bola no meu pé, API `__golaco.livre`), câmeras
   (`render/camera-livre.js`: TV, Aproximada, Ampla, Alta, Atrás, Jogador + Altura/Distância 0–20; Atrás/Jogador com o rumo

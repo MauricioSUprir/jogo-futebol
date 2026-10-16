@@ -1,5 +1,6 @@
 // Faltas e cartões (IFAB Regra 12; Etapa 4). Puro (sorteios pelo m.rng); constantes em config.js FALTAS; só na partida;
-// no Modo Livre (m.livre) não há falta nenhuma: o bote e a dividida seguem como lances limpos.
+// no Modo Livre (m.livre) não há falta nenhuma: o bote da IA que seria falta vira BOTE_SEM_GANHAR (contato sem apito) e a
+// dividida que seria falta segue como lance sem falta.
 // Ganchos: sim.js boteIA (bote da IA, falta tática/segurar), defesa.js resolverBote (DIVIDIDA), sim.js colisaoCorpos
 // (carga, guardarChoque). A falta vira m.faltaPendente e o evento 'falta'; partida.js decide vantagem, tiro livre ou
 // pênalti e o cartão (Regra 12.1: imprudente, temerária = amarelo, força excessiva = vermelho; 12.3: SPA amarelo, DOGSO
@@ -171,7 +172,7 @@ export const BOTE_SEM_GANHAR = Object.freeze({ semGanhar: true });
  * Devolve a falta montada, BOTE_EVITADO (ele tirou o corpo: sem bote) ou null (bote limpo: a IA leva a bola como antes).
  */
 export function faltaNoBote(m, d, c, lento = false) {
-  if (!m.partida || m.livre) return null; // (Modo Livre: sem faltas — livre.js)
+  if (!m.partida) return null;
   // falta é o corpo entrando no condutor (forcaContato × fatorForca); na área/chance clara ele TIRA O CORPO (BOTE_EVITADO)
   const cuidado = (naAreaDe(m, d.time, c.x, c.z) ? FALTAS.bote.naArea : 1) * (chanceClara(m, c, d) ? FALTAS.bote.naChanceClara : 1);
   const pb = Math.min(0.95, chanceFaltaBote(d, c)), ff = fatorForca(forcaContato(m, d, c));
@@ -182,6 +183,9 @@ export function faltaNoBote(m, d, c, lento = false) {
     if (!lento && MD.hypot(c.vx, c.vz) < FALTAS.bote.semCorpoV && u < p + FALTAS.bote.semCorpo * pb * Math.max(0, 1 - ff)) return BOTE_SEM_GANHAR;
     return null;
   }
+  // Modo Livre (sem faltas: livre.js): pelo MESMO sorteio, o bote que seria falta (ou que ele evitaria) é contato sem ganhar
+  // a bola e sem apito — o condutor segura e segue, como a DIVIDIDA do humano que seria falta (defesa.js)
+  if (m.livre) return BOTE_SEM_GANHAR;
   if (u >= p * cuidado) return BOTE_EVITADO;
   const v = MD.hypot(d.vx, d.vz);
   const exc = chegada(d, c) === 'tras' && v >= FALTAS.excessivo && uniforme(m.rng) < FALTAS.excessivoP;

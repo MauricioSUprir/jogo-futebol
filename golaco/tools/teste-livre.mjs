@@ -19,6 +19,8 @@
 //   F) o goleiro sozinho no gol defende: o canhão do teste-goleiro no Livre 1 × só o goleiro = o canhão no mundo de sempre.
 //   G) sem impedimento, nem na IA (contrato §1): no Livre 11 × 11 os companheiros do condutor à frente da defesa adversária
 //      não voltam por causa da linha (na partida ~36% do tempo voltando; antes da correção, no Livre, ~40%) e recebem o passe.
+//   H) o bote da IA no Livre decide pelo mesmo sorteio da partida (faltas.js): a falta e o "tirou o corpo" viram contato sem
+//      apito (BOTE_SEM_GANHAR: o condutor segura), o limpo rouba — antes todo bote que chegava ao sorteio roubava.
 //   node tools/teste-livre.mjs [--js <pasta js>] [--sementes N (C: 20)]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -132,6 +134,7 @@ if (!LV) {
     const relato = [];
     let okFica = true, okBola = true, okCtrl = true, okEntra = true, okPes = true, okSegue = true, nAcoes = 0;
     let errosB = [];
+    const ctrlGoleiro = []; // no "humano para 1" o controlado era o goleiro (cobrando um tiro de meta, com a bola nas mãos)
     /** Aplica a escolha agora (como a ação do passo) e confere o que a meta B pede. */
     function mudar(m, e, nome) {
       nAcoes++;
@@ -188,12 +191,16 @@ if (!LV) {
         mudar(m, e, `s${sem} tira com a bola no pé`);
         segue(m, 20, `s${sem} tira com a bola no pé`);
       }
-      // 2) o controlado nunca sai: o humano de 5 para 1 de linha
+      // 2) o controlado nunca sai: o humano de 5 para 1 de linha. O controlado pode ser o GOLEIRO (cobrando um tiro de meta,
+      //    com a bola nas mãos): ele fica em campo e controlado; "de linha" só se cobra de quem era de linha
       {
         const e = escolhaDoMundo(m); e.linha[0] = 1;
-        const c = m.controlado[0];
+        const c = m.controlado[0], jc = jogadorPorId(m, c), eraLinha = !!jc && ehLinha(jc);
         mudar(m, e, `s${sem} humano para 1`);
-        if (!jogadorPorId(m, c) || !ehLinha(jogadorPorId(m, c))) { okCtrl = false; errosB.push(`s${sem}: o controlado ${c} saiu`); }
+        const jd = jogadorPorId(m, c);
+        if (!jd || jd.time !== 0 || (eraLinha && !ehLinha(jd))) { okCtrl = false; errosB.push(`s${sem}: o controlado ${c} saiu`); }
+        else if (m.controlado[0] !== c) { okCtrl = false; errosB.push(`s${sem}: o controlado ${c} ficou em campo, mas o controle passou a ${m.controlado[0]}`); }
+        else if (!eraLinha) ctrlGoleiro.push(`s${sem} o goleiro ${c}${m.parada ? ` (${m.parada.tipo})` : ''}`);
         segue(m, 20, `s${sem} humano para 1`);
       }
       // 3) põe de volta (10 de linha de cada lado, sem goleiros) e depois 11×11
@@ -241,7 +248,7 @@ if (!LV) {
       segue(m, 15, `s${sem} depois do lateral`);
     }
     reg('B1. Quem fica não se mexe e a bola fica onde estava (solta, se era de quem saiu)', okFica && okBola ? `${nAcoes} mudanças` : errosB.slice(0, 2).join(' | '), 'nenhum teletransporte', okFica && okBola);
-    reg('B2. O controlado nunca sai (o goleiro sai só pela escolha: o controle passa)', okCtrl ? 'sempre em campo' : errosB.find(x => x.includes('controlado')), 'sempre', okCtrl);
+    reg('B2. O controlado nunca sai (o goleiro sai só pela escolha: o controle passa)', okCtrl ? `sempre em campo${ctrlGoleiro.length ? ` (controlado de linha e ${ctrlGoleiro.join(', ')})` : ''}` : errosB.find(x => x.includes('controlado')), 'sempre', okCtrl);
     reg('B3. Quem entra: parado, papel ia, a ≥ LIVRE.afastar m de todos, pés plantados no corpo', okEntra && okPes ? 'certo' : `${okEntra ? '' : 'lugar/estado'} ${okPes ? '' : 'pés'} ${errosB.find(x => x.includes('entrou')) ?? ''}`, 'sempre', okEntra && okPes);
     reg('B4. Sem NaN nem jogador sem vaga, e o jogo segue (20 s depois de cada mudança; bola parada montada de novo)', okSegue ? relato.slice(0, 3).join(' · ') + ' …' : errosB.slice(0, 2).join(' | '), 'sempre', okSegue);
   }
@@ -525,6 +532,46 @@ if (!LV) {
     reg(`G. Sem impedimento na IA (Livre 11 × 11, ${NG} × ${SG} s): quem está à frente da defesa adversária não volta por isso e recebe o passe`,
       erroG ?? `voltando ${fmt(100 * fv, 1)}% de ${n} amostras; ${passesImp}/${passes} passes para eles (${fmt(100 * fp, 1)}%)`,
       'voltando ≤ 15%, passes ≥ 2%', !erroG && n > 200 && fv <= 0.15 && fp >= 0.02);
+  }
+
+  // ------------------------------------------------------------ H. o bote da IA no Livre pela régua da partida (junção, #481)
+  // O bote que chega ao sorteio decide pelo MESMO sorteio da partida (faltas.js faltaNoBote); no Livre a falta e o "tirou o
+  // corpo" viram BOTE_SEM_GANHAR (contato sem apito: o condutor segura e segue), nunca roubada limpa. Antes o filtro do Livre
+  // no topo cortava o sorteio e todo bote que chegava a ele roubava (29 de 29 numa amostra; pela régua, 19 limpos). Cada
+  // amostra (condutor e adversário a ≤ 3 m, bola rolando, IA × IA 4 × 4 com os goleiros) sorteia as duas versões a partir do
+  // MESMO estado do gerador (devolvido depois: o jogo não muda) — com m.livre e sem ele.
+  {
+    const FT = await imp('faltas.js');
+    let n = 0, limpo = 0, semR = 0, faltaR = 0, errados = 0, erroH = null, ex = null;
+    try {
+      for (const sem of [31, 32, 33, 34, 35, 36]) {
+        const m = criarLivre({ semente: sem, linha: [4, 4], goleiro: [true, true] });
+        for (let k = 0; k < seg(60); k++) {
+          passoLivre(m, entradaDemoLivre(m), null);
+          if (k % 6 || m.posse == null || m.partida.estado !== 'jogo' || m.faltaPendente) continue;
+          const c = jogadorPorId(m, m.posse);
+          if (!c) continue;
+          for (const d of m.jogadores) {
+            if (d.time === c.time || Math.hypot(d.x - c.x, d.z - c.z) > 3) continue;
+            for (const lento of [false, true]) {
+              const s0 = m.rng.s.slice(), volta = () => { for (let i = 0; i < s0.length; i++) m.rng.s[i] = s0[i]; };
+              const rL = FT.faltaNoBote(m, d, c, lento);
+              volta();
+              const L = m.livre;
+              let rR;
+              try { m.livre = null; rR = FT.faltaNoBote(m, d, c, lento); } finally { m.livre = L; volta(); }
+              n++;
+              if (rR === null) limpo++; else if (rR === FT.BOTE_SEM_GANHAR) semR++; else faltaR++;
+              const esperado = rR === null ? null : FT.BOTE_SEM_GANHAR;
+              if (rL !== esperado) { errados++; ex ??= `s${sem} t${m.tick}: régua ${rR === null ? 'limpo' : rR === FT.BOTE_SEM_GANHAR ? 'sem ganhar' : rR === FT.BOTE_EVITADO ? 'evitado' : 'falta'} → Livre ${rL === null ? 'roubada' : rL === FT.BOTE_SEM_GANHAR ? 'sem ganhar' : rL === FT.BOTE_EVITADO ? 'evitado' : 'falta'}`; }
+            }
+          }
+        }
+      }
+    } catch (e) { erroH = e.message; }
+    reg('H. Bote da IA no Livre pela régua da partida: limpo = roubada; falta, "tirou o corpo" e sem ganhar = contato sem apito (o condutor segura)',
+      erroH ?? `${n} sorteios — régua: ${limpo} limpos, ${semR} sem ganhar, ${faltaR} falta/evitado; Livre: ${errados ? `${errados} diferentes (${ex})` : `${limpo} roubadas, ${semR + faltaR} sem ganhar, 0 faltas`}`,
+      'roubadas do Livre = limpos da régua; 0 faltas', !erroH && n >= 200 && faltaR > 0 && errados === 0);
   }
 }
 
