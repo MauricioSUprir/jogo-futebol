@@ -368,7 +368,9 @@ try {
 
   // pré-carga ociosa: sem gesto nenhum, o replay e o "Editar time" chegam sozinhos depois do 1º quadro (SOB_DEMANDA.esperaMs)
   const espera = (SOB_DEMANDA?.esperaMs ?? 0) + 20000;
-  const chegou = await pagina.waitForFunction(() => window.__golaco.sobDemanda?.carregado, null, { timeout: Math.max(1000, espera - (Date.now() - tPronto)) }).then(() => true, () => false);
+  // (as medidas de antes gastam boa parte do orçamento na máquina do CI: a espera nunca fica abaixo de 15 s — com 1 s
+  // os dois chegavam logo depois do fim da espera e o item reprovava com o estado {replay: true, editor: true})
+  const chegou = await pagina.waitForFunction(() => window.__golaco.sobDemanda?.carregado, null, { timeout: Math.max(15000, espera - (Date.now() - tPronto)) }).then(() => true, () => false);
   const tChegou = (Date.now() - tPronto) / 1000;
   const faltam = SOB_DEMANDA_ARQ.filter(a => !pedidos.includes(a));
   const estSob = await pagina.evaluate(() => window.__golaco.sobDemanda?.estado ?? null);
