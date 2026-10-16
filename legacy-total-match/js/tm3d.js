@@ -17,7 +17,11 @@
    resultado = { homeGoals, awayGoals, gols: [{ lado: 0|1, tmId, nome, minuto, penalti, contra, assist }],
                  cartoes: [{ lado, tmId, nome, minuto, cor }], stats: { possession, shots, onTarget },
                  jogador?: { tmId, nota, gols, assist } }   (o lado do 3D está em golaco/js/ponte-tm.js)
-   Se o 3D não abrir (sem WebGL 2, sem internet para o three.js), a partida é simulada. */
+   Se o 3D não abrir (sem WebGL 2, sem internet para o three.js), a partida é simulada.
+   Pênaltis 3D (dono, 15/10: "modo de pênaltis 3d igual ao golaço, só que versão de pênaltis"; js/penaltis3d.js): o mesmo
+   pedido com modo: "penaltis" abre só a DISPUTA de pênaltis (Regra 10 da IFAB) com os dois times; o usuário bate com os
+   cobradores do time dele e defende com o goleiro dele. Resultado (sem homeGoals):
+   { penaltis: { vencedor: 0|1, placar: [casa, fora], cobrancas: [{ lado, tmId, nome, resultado: "gol"|"defesa"|"fora" }] } } */
 (function (global) {
   "use strict";
   var TM = global.TM;
@@ -276,14 +280,19 @@
       velhas.forEach(function (k) { localStorage.removeItem(k); });
     } catch (e) {}
   }
+  // textos do quadro (o X, a confirmação e o aviso de demora): a partida é simulada quando o 3D não vem; os Pênaltis 3D
+  // (jogarPenaltis) não simulam nada — só voltam à escolha dos times (fns.textos)
+  var TEXTOS_PARTIDA = { quadro: "Partida em 3D", sair: "Voltar e simular", confirma: "Sair do 3D?",
+    confirmaTexto: "A partida é simulada do começo, como sem o 3D.", confirmaBotao: "Simular", demora: "Simular a partida" };
   function abre3d(pedido, fns) {
     if (ativo) fecha3d();
     limpaSobras();
+    var T = Object.assign({}, TEXTOS_PARTIDA, fns.textos || {});
     try { localStorage.setItem("tm3d:pedido:" + pedido.id, JSON.stringify(pedido)); } catch (e) { fns.falhou("Sem espaço para preparar a partida 3D."); return; }
     var aviso = el("div", { class: "tm3d-aviso", text: "Abrindo o estádio 3D…" });
-    var quadro = el("iframe", { class: "tm3d-quadro", src: api.PASTA + "?tm=" + encodeURIComponent(pedido.id), allow: "fullscreen; autoplay; gamepad", title: "Partida em 3D" });
-    var sair = el("button", { class: "tm3d-sair", type: "button", title: "Voltar e simular", on: { click: function () {
-      TM.ui.confirm("Sair do 3D?", "A partida é simulada do começo, como sem o 3D.", "Simular", function () { termina("sair"); });
+    var quadro = el("iframe", { class: "tm3d-quadro", src: api.PASTA + "?tm=" + encodeURIComponent(pedido.id), allow: "fullscreen; autoplay; gamepad", title: T.quadro });
+    var sair = el("button", { class: "tm3d-sair", type: "button", title: T.sair, on: { click: function () {
+      TM.ui.confirm(T.confirma, T.confirmaTexto, T.confirmaBotao, function () { termina("sair"); });
     } } }, [TM.ic("x")]);
     var tela = el("div", { class: "tm3d-tela" }, [aviso, quadro, sair]);
     document.body.appendChild(tela);
@@ -292,7 +301,7 @@
     var espera = setTimeout(function () {
       if (pronto || acabou) return;
       aviso.textContent = "O 3D está demorando para abrir.";
-      aviso.appendChild(el("button", { class: "btn small", text: "Simular a partida", on: { click: function () { termina("sair"); } } }));
+      aviso.appendChild(el("button", { class: "btn small", text: T.demora, on: { click: function () { termina("sair"); } } }));
     }, api.ESPERA_MS);
     function lerResultado() { try { var t = localStorage.getItem("tm3d:resultado:" + pedido.id); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
     function ouvir(e) {
@@ -357,7 +366,7 @@
   // v2 = v1 + identidade de cada time + partida (o motor antigo ignora os campos novos)
   function novoPedido(o) {
     var home = time3d(o.teamA, o.formation), away = time3d(o.teamB, o.formationB);
-    return {
+    var p = {
       v: 2, id: "j" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36),
       titulo: o.title || "Partida", origem: (TM.ui.current && TM.ui.current()) || "",
       home: home, away: away, partida: partidaDe(o, home, away),
@@ -365,6 +374,9 @@
       edicao: (function () { try { return TM.storage.edition() === "pro" ? "pro" : "public"; } catch (e) { return "public"; } })(),
       userSide: o.userSide === 1 ? "away" : "home", controle: o.controle || null
     };
+    // Pênaltis 3D: só a disputa (o golaco abre direto nela); sem o campo, a partida de sempre
+    if (o.modo === "penaltis") { p.modo = "penaltis"; p.controle = null; }
+    return p;
   }
   /* partida 3D fora da tela de jogo do TM (ex.: Rumo ao Estrelato, que tem a própria súmula):
      o = { teamA, teamB, formation?, formationB?, userSide: 0|1, controle?: { tmId }, title, simOpts? }
@@ -372,6 +384,20 @@
   function jogar3d(o, fns) {
     abre3d(novoPedido(o), { fim: fns.fim, sair: fns.sair,
       falhou: function (msg) { TM.ui.toast(msg || "O 3D não abriu: partida simulada.", "alerta"); fns.sair(); } });
+  }
+  /* Pênaltis 3D: o = { teamA, teamB, userSide: 0|1, title?, simOpts? }; fns.fim(resultado3d) com resultado3d.penaltis |
+     fns.sair() (o 3D não abriu ou o usuário saiu) */
+  function jogarPenaltis(o, fns) {
+    if (!webgl()) { TM.ui.toast("Este aparelho não tem WebGL 2, que os pênaltis em 3D precisam.", "alerta"); if (fns.sair) fns.sair(); return false; }
+    abre3d(novoPedido(Object.assign({}, o, { modo: "penaltis", title: o.title || "Disputa de pênaltis" })), {
+      fim: function (r3) { if (r3 && r3.penaltis) fns.fim(r3); else if (fns.sair) fns.sair(); },
+      sair: function () { if (fns.sair) fns.sair(); },
+      falhou: function (msg) { TM.ui.toast(msg || "O 3D não abriu.", "alerta"); if (fns.sair) fns.sair(); },
+      // nada é simulado: sair volta à escolha dos times, sem resultado
+      textos: { quadro: "Pênaltis em 3D", sair: "Sair dos pênaltis", confirma: "Sair dos pênaltis 3D?",
+        confirmaTexto: "A disputa não conta e você volta à escolha dos times.", confirmaBotao: "Sair", demora: "Voltar" }
+    });
+    return true;
   }
   function jogarCfg(screen, cfg, playOrig) {
     var pedido = novoPedido({ teamA: cfg.teamA, teamB: cfg.teamB, formation: cfg.formation, formationB: cfg.formationB,
@@ -413,6 +439,7 @@
   api.aplicaResultado = aplicaResultado;
   api.jogarCfg = jogarCfg;
   api.jogar3d = jogar3d;
+  api.jogarPenaltis = jogarPenaltis;
   api.escolha = escolha;
   api.fechar = fecha3d;
   TM.tm3d = api;

@@ -39,7 +39,7 @@
 // locomoção, e nunca a posição do corpo (os pés seguem pela passada). Nenhuma parada passa de
 // PARTIDA.paradaMax (8 s).
 
-import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META, ESCANTEIO, BARREIRA } from './config.js';
+import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META, ESCANTEIO, BARREIRA, DISPUTA } from './config.js';
 import { criarMundo, passo, jogadorPorId, misturarHash, aplicarEntrada } from './sim.js';
 import { criarBola } from './bola.js';
 import { MD } from './matdet.js';
@@ -166,8 +166,11 @@ export function teleportar(j, x, z, rumo) {
 // a bola rola (cobrança).
 const MORTA = -2;
 
-/** Bola morta (fora, gol ou começo do tempo): a parada começa SEM cobrador (ninguém toca a bola). */
-function bolaMorta(m, tipo, time, x, z) {
+/**
+ * Bola morta (fora, gol ou começo do tempo): a parada começa SEM cobrador (ninguém toca a bola). Exportada para a disputa
+ * de pênaltis (disputa.js: a bola na marca enquanto o cobrador anda até ela).
+ */
+export function bolaMorta(m, tipo, time, x, z) {
   encerrarParada(m);
   if (m.partida) {
     m.partida.imped = null; // bola morta: nenhuma jogada vale para o impedimento
@@ -493,6 +496,18 @@ function montarPenalti(m) {
     const recuo = Math.abs(z) < 8 ? CAMPO.marcaPenalti + PARTIDA.raio.penalti + 1.2 : CAMPO.area.profundidade + 1.2 + (Math.abs(k) % 2) * 1.6;
     teleportar(o, gx - lado * recuo, z, lado > 0 ? 0 : Math.PI);
   });
+  prepararPenalti(m, c, gk);
+}
+
+/**
+ * O cobrador `c` na marca (pr.x, pr.z) e a cobrança montada: prazo, atraso e o controle do humano (fecharMontagem), o
+ * canto e a força da IA e o lado do goleiro `gk` sorteados (m.rng), evento `cobrancaPenalti`. A parte do montarPenalti
+ * depois de levar os outros para fora da área — a disputa de pênaltis (disputa.js) usa só esta (os outros ficam no círculo
+ * central). Mesma ordem de sorteios de antes (hash igual).
+ */
+export function prepararPenalti(m, c, gk) {
+  const pr = m.parada;
+  const t = pr.time, lado = m.ataca[t];
   const levado = cobradorNoPonto(m, c, pr.x, pr.z, lado > 0 ? 0 : Math.PI);
   m.partida.estado = 'parada'; m.partida.desde = m.tick;
   fecharMontagem(m, c, levado);
@@ -604,7 +619,8 @@ function foraDaBarreira(br, out) {
 function restricaoPenalti(m, p, j, out) {
   const lado = m.ataca[p.time], gx = lado * CAMPO.meioX;
   if (j.time !== p.time && j.posicao === 'GOL') {
-    out.x = gx - lado * clamp((gx - out.x) * lado, 0, 0.6);
+    // (disputa de pênaltis: NA linha — Regra 14, um pé sobre ela no chute — a DISPUTA.goleiroLinha m; a partida segue com 0,6)
+    out.x = gx - lado * clamp((gx - out.x) * lado, 0, m.disputa ? DISPUTA.goleiroLinha : 0.6);
     // o goleiro do humano: só o passo para o lado escolhido (GOLEIRO.penalti.passo), não até a trave (sim.js
     // goleiroComoLinha); a IA, a largura do gol
     const humano = m.humanos.includes(j.time) && m.controlado[j.time] === j.id && !m.iaJoga?.[j.time];
@@ -936,7 +952,7 @@ export function entradaCobranca(m, j) {
  * de PARTIDA.cobrancaHumanoMax s — e, com o pedido feito (botão solto), a cobrança sai já, pela mesma
  * ação do jogo (executarAcao). Devolve true se a bola rolou.
  */
-function cobrar(m, entrada) {
+export function cobrar(m, entrada) {
   const pr = m.parada;
   if (!pr || pr.rolou || pr.cobrador == null) return false;
   const c = jogadorPorId(m, pr.cobrador);
@@ -1047,8 +1063,8 @@ export function ladoPenaltiHumano(j) {
   return mod > 1e-6 && Math.abs(iz) >= GOLEIRO.penalti.ladoMin * mod ? (iz > 0 ? 1 : -1) : 0;
 }
 
-/** A bola rolou: fim da parada (o cobrador volta a se mexer), evento `cobranca`. */
-function rolou(m) {
+/** A bola rolou: fim da parada (o cobrador volta a se mexer), evento `cobranca`. Exportada para a disputa de pênaltis. */
+export function rolou(m) {
   const pr = m.parada;
   pr.rolou = true;
   // quem cobrou não toca a bola de novo antes de outro jogador (Regras 13, 14, 15, 16, 17 — a saída também, Regra 8):

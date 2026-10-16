@@ -867,6 +867,7 @@
       { cat: "ONLINE",   nome: "Copa Online",           tag: "Todos entram com o código, o mata-mata é sorteado e bot completa.", rota: "copa", capa: MB + "capa-copa.jpg", bg: MB + "online.jpg", pos: "74% 50%", cor: "244,114,182" }
     ];
     var MAIS = [
+      { ic: "🥅", nome: "Pênaltis 3D", rota: "penaltis3d" },
       { ic: "💎", nome: "Dream Team", rota: "dream" }, { ic: "🎲", nome: "Draft", rota: "draft" },
       { ic: "🪙", nome: "Arena", rota: "arena" },      { ic: "🏟️", nome: "Grupo", rota: "groupcomp" },
       { ic: "✏️", nome: "Editor", rota: "editor" },    { ic: "💾", nome: "Carreiras", rota: "saves" },

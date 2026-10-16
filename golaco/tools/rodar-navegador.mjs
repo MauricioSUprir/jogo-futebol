@@ -27,6 +27,7 @@ const LISTA = [
   ['comemoração do gol (cena, câmera de cinema, pular, celular; simulação segura e hash igual)', 'teste-comemoracao-tela.mjs', { deploy: true }],
   ['área técnica e treinadores na tela (celular — visíveis com o banco no quadro, chamadas iguais, CPU)', 'teste-tecnicos-tela.mjs'],
   ['cena de substituição e faixa ENTRA/SAI (fila depois do replay, pular, pausa, celular, nada encosta; hash igual)', 'teste-substituicao-tela.mjs', { deploy: true }],
+  ['Pênaltis 3D (disputa até o fim, bolinhas, faixa, teclado com a câmera atrás do cobrador, celular, ?tm)', 'teste-penaltis-tela.mjs', { deploy: true }],
   // informativo até passar 5 vezes seguidas (a CPU da simulação no celular simulado ainda passa do teto do plano 4.1)
   ['desempenho no celular simulado (CPU 4×, informativo)', 'teste-desempenho-celular.mjs', { informativo: true }],
 ];
