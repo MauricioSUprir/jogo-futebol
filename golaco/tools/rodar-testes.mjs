@@ -102,6 +102,7 @@ const LISTA = [
   ['PRESSÃO perceptível: com × sem o botão (pareado), marca, um a mais na pressão', 'teste-pressao-humano.mjs'],
   ['goleiro pelas Leis do Jogo (mão só na área, recuo, 8 s) e na mão do humano (anda, TROCAR, PEGAR)', 'teste-goleiro-regras.mjs'],
   ['bolas paradas: lateral com as mãos e 3 opções (Regra 15), tiro de meta (16), escanteio por zonas, barreira (13)', 'teste-bolas-paradas.mjs'],
+  ['cobrança mirada (escanteio, falta, tiro de meta da pessoa): a linha = a física, curva, controles, canhão roteirizado, a IA não usa', 'teste-mira.mjs'],
   // Auditoria dos botões (dono, 12/10: "ainda tem botões que não funcionam"): o efeito de cada botão no mundo
   ['botões: toque aéreo vencido, troca sem desfazer o TROCAR, PRESSÃO no passe, bola parada, pênalti, cruzamento rasteiro, primeira, barreira', 'teste-botoes.mjs'],
   // Pré-jogo (pedido de 11/10): o cortejo do túnel até a fila e o roteiro com os trilhos de câmera (contas puras)

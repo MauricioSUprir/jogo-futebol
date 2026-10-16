@@ -6,7 +6,7 @@
 // Com a bola, a ação sai no próximo toque possível (toque marcado com tipo 'acao', o pé de apoio
 // no chão); com a bola chegando, sai de primeira no tick do domínio.
 
-import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, GOLEIRO, LATERAL, AEREO, RECEPCAO, CABECEIO } from './config.js';
+import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, GOLEIRO, LATERAL, AEREO, RECEPCAO, CABECEIO, MIRA } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { normal } from './rng.js';
@@ -17,6 +17,7 @@ import {
 import { procurarOportunidade, preverBola } from './conducao.js';
 import { passoCorpo, copiaCinematica, infoPassada } from './jogador.js';
 import { registrarChute } from './regras-goleiro.js';
+import { chuteMirado, simularLinha } from './mira.js';
 
 const DT = PASSO;
 const BOTOES_ACAO = [
@@ -436,9 +437,11 @@ export function executarAcao(m, j, pe, primeira = false) {
     const em = (primeira ? ACOES.chute.primeiraErro : 1) * (1 + (perto ? ACOES.chute.pressaoErro : 0) * pressaoSobre(m, j)) * multPeFraco(j, pe)
       * (p.penalti && !p.cavadinha ? ACOES.chute.penaltiErro : 1) // a pressão da cobrança do pênalti
       * (p.barreira ? ACOES.chute.faltaErro : 1); // o tiro livre por cima da barreira: subir e descer no gol é difícil
+    if (p.mirada && !p.cavadinha && m.parada?.mira) return cobrancaMirada(m, j, pe, p, em);
     return chute(m, j, pe, p, em);
   }
   const erroMult = (primeira ? ACOES.primeiraErro : 1) * (1 + 0.8 * pressaoSobre(m, j)) * multPeFraco(j, pe);
+  if (p.mirada && m.parada?.mira) return cobrancaMirada(m, j, pe, p, erroMult);
   switch (p.tipo) {
     case 'passe': return passeRasteiro(m, j, pe, p, erroMult);
     case 'enfiada': return enfiada(m, j, pe, p, erroMult);
@@ -446,6 +449,29 @@ export function executarAcao(m, j, pe, primeira = false) {
     case 'chute': return chute(m, j, pe, p, erroMult);
     default: return false;
   }
+}
+
+const _pm = new Float64Array(MIRA.maxPontos * 3);
+/** Cobrança mirada (mira.js: a conta da linha) + o erro do cobrador (o do chute / do lançamento do jogo). */
+function cobrancaMirada(m, j, pe, p, em) {
+  const b = m.bola.p, mi = m.parada.mira, t = p.mirada.tipo, ch = t === 'chute', c = ACOES.chute, a = j.par.attr;
+  const r = chuteMirado(m, j, m.parada, t, p.forca, mi.ang, mi.curva), n = simularLinha(m, r.v, r.w, _pm), Y = ACOES.cruzamento.yAlto;
+  let k = n - 1; // o fim da linha; no cruzamento, onde ela desce à altura da cabeça
+  if (!ch) for (let i = 1, sb = 0; i < n; i++) { const y = _pm[i * 3 + 1]; if (y > Y + 0.3) sb = 1; if (sb && y <= Y && y < _pm[i * 3 - 2]) { k = i; break; } }
+  const ax = _pm[k * 3], az = _pm[k * 3 + 2], alvo = { x: ax, z: az };
+  const sig = em * MIRA.erro * (ch ? lerp(c.erroRuim, c.erroBom, a.finalizacao / 100) * (1 + MD.hypot(ataca(m, j.time) * CAMPO.meioX - b.x, b.z) / 25) * (p.forca > 0.9 ? c.forcaMaxErro : 1)
+    : lerp(ACOES.lancamento.erroRuim, ACOES.lancamento.erroBom, a.passeLongo / 100) * 0.7 / 40); // (±m a 40 m → ângulo e força)
+  const ea = normal(m.rng) * sig, e2 = normal(m.rng) * sig * (ch ? 0.6 : 0.5);
+  const v = r.v, sH = MD.hypot(v.x, v.z) || 1, u = girar(v.x / sH, v.z / sH, ea);
+  const el = MD.atan2(v.y, sH) + (ch ? e2 : 0), sv = MD.hypot(v.x, v.y, v.z) * (ch ? 1 : 1 + e2);
+  const vf = { x: u.x * sv * MD.cos(el), y: sv * MD.sin(el), z: u.z * sv * MD.cos(el) };
+  if (ch) return finalizarChute(m, j, pe, Math.abs(mi.curva) >= 0.25 ? 'colocado' : 'chute', vf, r.w, alvo, null, { voo: { alto: false, mira: { y: _pm[k * 3 + 1], z: az }, mirada: true }, ticks: k }), true;
+  let rc = null, dr = 14;
+  for (const o of m.jogadores) { const d = MD.hypot(o.x - ax, o.z - az); if (o.time === j.time && o.id !== j.id && o.posicao !== 'GOL' && d < dr) { dr = d; rc = o; } }
+  const tv = ax * ataca(m, j.time) > CAMPO.meioX - 22 && Math.abs(az) < 24 ? 'cruzamento' : 'lancamento';
+  finalizarChute(m, j, pe, tv, vf, r.w, alvo, rc, { voo: { alto: true, tenso: t === 'tensa', mirada: true }, ticks: k });
+  if (rc) marcarRecebedor(m, rc, ax, az, tv, m.tick + k);
+  return true;
 }
 
 function passeRasteiro(m, j, pe, p, erroMult) {

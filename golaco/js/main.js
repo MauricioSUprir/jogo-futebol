@@ -266,7 +266,10 @@ function entradaDemoDoMundo(m) {
 /** Partida ou disputa de pênaltis (os dois têm m.partida e os times): o que vale para "o jogo" e não para os treinos. */
 const ehJogo = m => m.modo === 'partida' || m.modo === 'penaltis';
 /** Rumo da câmera no chão para o analógico: na disputa, o da câmera atrás do cobrador (esquerda/direita da tela). */
-function yawEntrada() { return mundo.disputa && MOD_DISP ? MOD_DISP.yawDisputa(mundo) : cam.yaw; }
+function yawEntrada() { return mundo.disputa && MOD_DISP ? MOD_DISP.yawDisputa(mundo) : (bp.yaw ?? cam.yaw); }
+// bola parada no estilo FIFA (render/bola-parada.js, sob demanda): câmera atrás do cobrador (bp.yaw), linha e painel
+const bp = { tela: null, carga: null, yaw: null, plano: null, linha: true };
+const carregarBP = () => (bp.carga ??= import('./render/bola-parada.js').then(md => { bp.tela = md.criarTelaBolaParada(cena3d.cena, document.getElementById('hud')); }));
 function novoMundo(opc) {
   const ini = DEMO_ON && S.DEMO && modoPagina === 'conducao' ? S.DEMO.inicio : { x: 0, z: 0, rumo: 0 };
   return criarMundoTreino({ ...ini, marcador: params.get('marcador') === '1', ...opc });
@@ -996,6 +999,10 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   else if (cenaGol) cameraComemoracao();
   // disputa de pênaltis: os planos dela (atrás do cobrador, a reação, o círculo) pela câmera de cinema (corte na troca)
   else if (mundo.disputa) cam.definirCinema(MOD_DISP.planoCameraDisputa(mundo, planoDisputa, posDesenhada));
+  if (!bp.carga && mundo.partida && /^(esc|tiro|pen)/.test(mundo.parada?.tipo)) carregarBP();
+  bp.plano = bp.tela && !cenaSub && !cenaGol ? bp.tela.camera(mundo, TIME_HUMANO) : null;
+  bp.yaw = bp.plano?.yaw ?? null;
+  cam.bolaParada(bp.plano?.plano);
   cam.atualizar(dt, alvoCam, corteCamera);
   corteCamera = false;
   const f = cam.foco();
@@ -1024,6 +1031,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     else linhaImped.atualizar(mundo, dt, renderizar);
     marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
   }
+  if (bp.tela) bp.tela.desenhar(cenaGol || cenaSub ? null : mundo, cam.camera, dt, bp.linha);
   campo.atualizar(agoraMs / 1000, cam.camera, renderizar);
   torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
@@ -1405,6 +1413,7 @@ function desenharReplay(dt, agoraMs, renderizar = true) {
   // análise; o selo da decisão no terço de baixo (só no quadro final)
   marcas.grupo.visible = false;
   marcasLat.atualizar(mundo, semPosicao, agoraMs / 1000, dt);
+  if (bp.tela) bp.tela.esconder();
   linhaImped.mostrar(diretor.linha(dt));
   linhaImped.mostrarSaot(sc.ativa ? sc : null);
   hud.terco(sc.ativa && sc.decidido ? sc : null);
@@ -2217,6 +2226,8 @@ const api = {
   get disputa() { return mundo.disputa && MOD_DISP ? MOD_DISP.resumoDisputa(mundo) : null; },
   telaDisputa() { return telaDisp ? telaDisp.estado() : null; },
   get planoCamera() { return cam ? cam.cinema : null; },
+  // bola parada (testes): o módulo sob demanda, o estado, a linha só no desenho, os pontos da linha
+  bolaParada: { carregar: carregarBP, get estado() { return bp.tela?.estado(mundo, cam, bp.plano) ?? null; }, linha(v) { bp.linha = !!v; }, pontos: () => bp.tela?.pontos(mundo) ?? [] },
   /** Cópia de m.times[t] (partida) ou null. */
   estadoTime(t = TIME_HUMANO) { return mundo.times?.[t] ? structuredClone(mundo.times[t]) : null; },
   /**
