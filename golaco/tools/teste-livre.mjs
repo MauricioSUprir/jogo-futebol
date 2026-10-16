@@ -9,7 +9,7 @@
 //      numa saída e num lateral montados — o cobrador sai e o time dele fica sem linha): quem fica não se mexe, a bola fica
 //      onde estava, o controlado nunca sai, quem entra
 //      aparece no ponto da vaga com os pés plantados, sem NaN nem jogador sem vaga, e o jogo segue (20 s depois);
-//   C) IA × IA de 2 min: 3×3 e 5×5 (total de cada lado, com os goleiros; 10 sementes) com a posse trocando (média ≥ 6, com
+//   C) IA × IA de 2 min: 3×3 e 5×5 (total de cada lado, com os goleiros; 20 sementes) com a posse trocando (média ≥ 6, com
 //      a bola rolando), chutes (média ≥ 2) e ≤ 10% do tempo dos de linha a > 40 m da bola na pior semente; 1×0 (sem
 //      goleiros; 4 sementes): chutes ≥ 2 e a distância (a posse não troca: não há adversário); 1+GK × 0+GK informativo;
 //   D) gol e bola fora sem cobrador nulo (o time sem ninguém de linha passa a cobrança: lateral, escanteio → tiro de meta,
@@ -17,7 +17,9 @@
 //   E) determinismo (a mesma semente e as mesmas mudanças nos mesmos ticks = o mesmo hash) e o Livre não vaza para a
 //      partida (a mesma partida antes e depois de rodar o Livre: o mesmo hash; hash-partida/hash-igual comparam com a base);
 //   F) o goleiro sozinho no gol defende: o canhão do teste-goleiro no Livre 1 × só o goleiro = o canhão no mundo de sempre.
-//   node tools/teste-livre.mjs [--js <pasta js>] [--sementes N (C: 10)]
+//   G) sem impedimento, nem na IA (contrato §1): no Livre 11 × 11 os companheiros do condutor à frente da defesa adversária
+//      não voltam por causa da linha (na partida ~36% do tempo voltando; antes da correção, no Livre, ~40%) e recebem o passe.
+//   node tools/teste-livre.mjs [--js <pasta js>] [--sementes N (C: 20)]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { tabelaTexto, fmt } from './lib/medidas.mjs';
@@ -25,9 +27,9 @@ import { tabelaTexto, fmt } from './lib/medidas.mjs';
 const args = process.argv.slice(2);
 const pastaJs = args.includes('--js') ? path.resolve(args[args.indexOf('--js') + 1]) : path.resolve(path.dirname(new URL(import.meta.url).pathname), '../js');
 const imp = f => import(pathToFileURL(path.join(pastaJs, f)).href);
-// (C: 10 sementes de 2 min no 3×3 e no 5×5 — com 6, a média das trocas de posse do 3×3 variava de 7 a 10 entre os lotes —
-// e 4 no 1×0)
-const NSEM = args.includes('--sementes') ? Math.max(1, +args[args.indexOf('--sementes') + 1] || 10) : 10;
+// (C: 20 sementes de 2 min no 3×3 e no 5×5 — as trocas de posse do 3×3 variam ~2,8 por semente: com 6 a média ia de 7 a
+// 10 entre os lotes, com 10 ainda ±0,9; 60 sementes, sem o impedimento na IA do Livre: 6,3 — e 4 no 1×0)
+const NSEM = args.includes('--sementes') ? Math.max(1, +args[args.indexOf('--sementes') + 1] || 20) : 20;
 
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
 let falhas = 0;
@@ -485,6 +487,44 @@ if (!LV) {
     // (30 chutes por célula: o sorteio da defesa sozinho dá ~±12 pontos de diferença numa célula; o total, ~±4)
     const dif = Math.abs(somaL / Math.max(1, nL) - somaB / Math.max(1, nB));
     reg('F. Goleiro sozinho (Livre 1 × só o goleiro): o canhão do teste-goleiro igual ao da partida (os outros 21 parados longe)', `total ${fmt(100 * somaL / Math.max(1, nL), 0)}% × ${fmt(100 * somaB / Math.max(1, nB), 0)}% (${nL} no alvo); pior célula ±${fmt(100 * pior, 0)}`, 'total ±6 pontos, célula ±20', dif <= 0.06 && pior <= 0.20);
+  }
+
+  // ------------------------------------------------------------ G. sem impedimento, nem na IA (contrato §1; revisão de 16/10)
+  // Os companheiros do condutor à frente do penúltimo adversário e da bola (+ 1 m, no campo de lá): na partida a IA os traz
+  // de volta para a linha (voltando a > 1,5 m/s ~36% do tempo); no Livre ninguém volta por isso e o passe para eles sai.
+  // Antes da correção a linha da IA só mudava com menos de 2 adversários: no Livre 11 × 11 eles voltavam ~40% do tempo
+  // (6 sementes × 2 min), mais que na partida, e quase não recebiam o passe (1,3% dos passes)
+  {
+    const NG = 3, SG = 60;
+    let n = 0, volta = 0, passes = 0, passesImp = 0, erroG = null;
+    try {
+      for (let sem = 1; sem <= NG; sem++) {
+        const m = criarLivre({ semente: sem, linha: [10, 10], goleiro: [true, true] });
+        for (let i = 0; i < seg(SG); i++) {
+          const vooAntes = m.voo;
+          passoLivre(m, entradaDemoLivre(m), null);
+          const imped = t => {
+            const lado = m.ataca[t];
+            let u1 = -Infinity, u2 = -Infinity;
+            for (const o of m.jogadores) { if (o.time === t) continue; const u = o.x * lado; if (u > u1) { u2 = u1; u1 = u; } else if (u > u2) u2 = u; }
+            const lin = Math.max(u2, m.bola.p.x * lado, 0) + 1;
+            return m.jogadores.filter(o => o.time === t && ehLinha(o) && o.x * lado > lin);
+          };
+          const v = m.voo;
+          if (v && v !== vooAntes && v.para != null && ['passe', 'enfiada', 'lancamento', 'enfiadaAlta', 'cruzamento'].includes(v.tipo)) {
+            passes++;
+            if (imped(v.time).some(o => o.id === v.para)) passesImp++;
+          }
+          const c = m.posse != null ? jogadorPorId(m, m.posse) : null;
+          if (m.partida.estado !== 'jogo' || m.parada || !c || !ehLinha(c)) continue;
+          for (const o of imped(c.time)) { if (o === c) continue; n++; if (o.vx * m.ataca[c.time] < -1.5) volta++; }
+        }
+      }
+    } catch (e) { erroG = e.message; }
+    const fv = volta / Math.max(1, n), fp = passesImp / Math.max(1, passes);
+    reg(`G. Sem impedimento na IA (Livre 11 × 11, ${NG} × ${SG} s): quem está à frente da defesa adversária não volta por isso e recebe o passe`,
+      erroG ?? `voltando ${fmt(100 * fv, 1)}% de ${n} amostras; ${passesImp}/${passes} passes para eles (${fmt(100 * fp, 1)}%)`,
+      'voltando ≤ 15%, passes ≥ 2%', !erroG && n > 200 && fv <= 0.15 && fp >= 0.02);
   }
 }
 

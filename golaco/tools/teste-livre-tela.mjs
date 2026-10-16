@@ -6,21 +6,30 @@
 //      (estadio-forma.js; a arquibancada de cá só com a câmera dentro da caixa dela, que sai do desenho), nenhuma com
 //      arquibancada, parede ou teto na frente do campo (raios pelo quadro até o gramado), Jogador ≥ 3,2 m de altura e ≥ 3 m
 //      da cabeça do controlado. A2: sem os limites (segurarPose) a mesma varredura reprova — ela enxerga o problema.
+//      A3 a câmera não pula (o foco andando 0,05 m: ≤ 0,6 m; o limite antigo da caixa de cá pulava 14 m), A4 a bola e o
+//      controlado (pés e cabeça) dentro das margens do quadro (camera-livre.js QUADRO: acima do minimapa) nas bordas do
+//      campo — a pequena área e os cantos do meu gol, as laterais, o outro gol — nos dois rumos, A5 o corte do Jogador na
+//      troca de controlado para longe (revisão de 16/10).
 //   B  PC 1280×720 Alta, de dia: ?modo=livre abre a pausa no submenu Jogadores com o "Jogar"; cada câmera escolhida PELA
 //      PAUSA (Câmera → o botão → Voltar → Continuar), com a bola no pé do controlado: o quadro não vazio, a bola e o
 //      controlado (cabeça, cintura e pés) no quadro, a câmera fora de sólido e a ≥ 3 m do controlado, os pontos do gramado à
-//      vista com cor de grama (nada atravessando a arquibancada nem a cobertura) e a fração de grama na tela.
+//      vista com cor de grama (nada atravessando a arquibancada nem a cobertura) e a fração de grama na tela. B0b a pausa no
+//      PC sem texto cortado ("Meu time", "Adversário", os subtítulos dos treinos); B2 os cantos do lado de cá fechados (o céu
+//      em Atrás e Jogador); B3 a bola no pé na pequena área e nos cantos do meu gol: a bola e o controlado no quadro, a bola
+//      acima do minimapa.
 //   C  PC: C cicla pelas 6 câmeras (com o aviso "Câmera: …"); Atrás e Jogador com o rumo do ataque do meu time e o
 //      analógico para cima levando o controlado para o gol que eu ataco (na TV, para o lado de lá); TV → Ampla com transição
 //      e TV → Atrás com corte; Altura e Distância (−/+ na pausa) sobem e afastam a câmera; a escolha fica salva (recarregar
-//      volta com a câmera e o ajuste); na partida (Modo de jogo) a câmera volta a ser a da partida (TV/Aproximada).
+//      volta com a câmera e o ajuste); na partida (Modo de jogo) a câmera volta a ser a da partida (TV/Aproximada), sem os
+//      cantos do Livre; C6 o −/+ no limite fica apagado sem perder o foco (o controle) e o aperto a mais não muda nada.
 //   D  Celular 844×390 Média, de noite (toque, entalhe): a pausa do Livre (Continuar | Replay; Jogadores | Câmera;
 //      Recomeçar | Bola no meu pé; Modo de jogo; Ajuda — sem Editar time e sem Reiniciar) e os submenus Jogadores, Câmera e
 //      Modo de jogo (com "Modo Livre N contra M") cabem SEM ROLAR e nada encosta; na coluna das opções o nome da câmera
 //      no lugar do TV | Aproximada; as 6 câmeras de noite com as conferências do B e o custo de desenho de cada uma dentro do
 //      teto do jogo no celular (≤ 40 chamadas, ≤ 130 mil triângulos: o do pré-jogo).
 //   E  568×320 (toque, entalhe): a barra da pausa sem nada encostando nem passando da janela, os botões do Livre sem
-//      encostar uns nos outros (a pausa rola nessa tela, como a da partida: medido e mostrado).
+//      encostar uns nos outros (a pausa rola nessa tela, como a da partida: medido e mostrado). Em toda pausa medida, nada
+//      cortado: os botões, os nomes das linhas do Livre e os subtítulos <small>.
 //   F  ?tm (o quadro do Total Match imitado, pedido com modo "livre" e livre {linha [3, 2], goleiro [sim, não]}): a cara do
 //      TM (as câmeras em pílula), 4 contra 2 no "Jogar", a pausa com "Voltar ao Total Match" (sem Modo de jogo, Simular o
 //      resto, Reiniciar e Editar time) sem rolar em 844×390, e o clique manda tm3d:fim com {livre: {placar}} ao pai.
@@ -74,9 +83,11 @@ function varrer(semLimites) {
   const P = nova(), Q = nova(), M = nova();
   const fat = [0, 5, 10, 15, 20].map(CL.fatorAjuste);
   const perfil = (m, peq) => (m === 'tv' ? (peq ? TVC : TV) : m === 'aproximada' ? AP : CL.PERFIS_LIVRE[m]);
-  const focos = (m, peq) => {
+  const focos = (m, peq, fd = 1) => {
     const Pf = perfil(m, peq);
-    if (Pf.limX != null) return { xs: [-Pf.limX, -Pf.limX / 2, 0, Pf.limX / 2, Pf.limX], zs: [Pf.limZ0, (Pf.limZ0 + Pf.limZ1) / 2, Pf.limZ1] };
+    // (Ampla/Alta: os limites do foco encolhem com a Distância — camera-livre.js limitesLateral)
+    const L = m === 'ampla' || m === 'alta' ? CL.limitesLateral(Pf, fd) : Pf;
+    if (Pf.limX != null) return { xs: [-L.limX, -L.limX / 2, 0, L.limX / 2, L.limX], zs: [L.limZ0, (L.limZ0 + L.limZ1) / 2, L.limZ1] };
     if (m === 'atras') return { xs: [-(MX - 4), -30, 0, 30, MX - 4], zs: [-(MZ - 4), 0, MZ - 4] };
     return { xs: [-(MX + 2), -MX + 3, -30, 0, 30, MX - 3, MX + 2], zs: [-(MZ + 2), -20, 0, 20, MZ + 2] };
   };
@@ -91,7 +102,7 @@ function varrer(semLimites) {
   for (const [asp, peq] of [[16 / 9, false], [844 / 390, true], [4 / 3, false]]) {
     for (const fa of fat) for (const fd of fat) for (const dir of [1, -1]) {
       for (const m of CL.CAMERAS_LIVRE) {
-        const { xs, zs } = focos(m, peq);
+        const { xs, zs } = focos(m, peq, fd);
         for (const fx of xs) for (const fz of zs) {
           pose(m, fx, fz, fa, fd, dir, asp, peq, P);
           confere(P, asp, `${m} tela ${asp.toFixed(2)} altura ×${fa.toFixed(2)} distância ×${fd.toFixed(2)} rumo ${dir} foco (${fx}, ${fz})`);
@@ -103,7 +114,7 @@ function varrer(semLimites) {
       }
       // transições: a meio caminho entre duas câmeras de mesmo rumo, no mesmo foco (o lugar do controlado e da bola)
       for (const [a, b] of PARES) {
-        const { xs, zs } = focos(a, peq);
+        const { xs, zs } = focos(a, peq, fd);
         for (const fx of xs) for (const fz of zs) {
           pose(a, fx, fz, fa, fd, dir, asp, peq, P); pose(b, fx, fz, fa, fd, dir, asp, peq, Q);
           for (let i = 0; i < 3; i++) { M.de[i] = (P.de[i] + Q.de[i]) / 2; M.para[i] = (P.para[i] + Q.para[i]) / 2; }
@@ -124,6 +135,121 @@ function varrer(semLimites) {
     `${a.poses} poses, ${a.falhas.length} falhas${a.falhas.length ? ': ' + a.falhas.slice(0, 4).join(' | ') : ''} (${Date.now() - t0} ms com a contraprova)`, a.falhas.length === 0 && a.poses > 10000);
   meta('A2 contraprova: sem os limites da câmera do Livre (segurarPose) a mesma varredura reprova',
     `${b.falhas.length} falhas sem os limites (${tipos.slice(0, 6).join('; ')})`, b.falhas.length > 0);
+}
+
+// A3–A5 (revisão de 16/10): a câmera não pula, a bola e o controlado ficam no quadro nas bordas do campo, e o Jogador corta
+// na troca de controlado para longe. A câmera de verdade (criarCameraLivre) com uma câmera falsa que guarda a pose; o foco
+// da TV/Aproximada (o de camera.js) = o controlado preso nos limites dela (a bola no pé: o pior caso perto da borda).
+{
+  const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
+  const TV = { largura: CAMERA.largura, distancia: CAMERA.distancia, altura: CAMERA.altura, olharY: 0, limX: MX - 14, limZ0: -MZ + 12, limZ1: MZ - 11, retrato: 0 };
+  const TVC = { ...TV, ...CAMERA.celular };
+  const AP = { largura: CAMERA.aproximada.largura, distancia: CAMERA.aproximada.distancia, altura: CAMERA.aproximada.altura, olharY: 0.6, limX: MX - 3, limZ0: -MZ + 3, limZ1: MZ - 2, retrato: 0 };
+  const fovParaDe = (a, peq) => p => {   // a conta de camera.js fovPara (paisagem)
+    let larg = p.largura;
+    if (a < 16 / 9) larg *= Math.sqrt(Math.max(a, 1.25) / (16 / 9));
+    if (peq) larg *= CAMERA.telaPequena;
+    return (2 * Math.atan(larg / 2 / Math.hypot(p.distancia, p.altura - p.olharY) / a) * 180) / Math.PI;
+  };
+  const nova = () => ({ de: [0, 0, 0], para: [0, 0, 0], fov: 0 });
+  const fat = [0, 5, 10, 15, 20];
+  // A3: continuidade — o foco andando de 0,05 em 0,05 m pela faixa toda: a câmera anda ≤ 0,6 m (o degrau de 0,5 m da subida
+  // por cima do travessão é o único salto que sobra). Contraprova: o limite antigo da caixa de cá (a borda mais perto)
+  const limiteAntigo = (m, p) => {
+    const S = CL.SEGURANCA, d = p.de;
+    if (!['tv', 'aproximada', 'ampla', 'alta'].includes(m)) return CL.segurarPose(m, p);
+    if (d[2] > S.zCaMax) d[2] = S.zCaMax;
+    if (d[2] > S.zCa && d[1] > S.yCa) { if (d[1] - S.yCa > d[2] - S.zCa) d[2] = S.zCa; else d[1] = S.yCa; }
+    return p;
+  };
+  const saltos = segura => {
+    let pior = 0, onde = '';
+    for (const [asp, peq] of [[16 / 9, false], [844 / 390, true]]) for (const a of fat) for (const dd of fat) {
+      const fa = CL.fatorAjuste(a), fd = CL.fatorAjuste(dd);
+      for (const m of CL.CAMERAS_LIVRE) {
+        const lado = !['atras', 'jogador'].includes(m);
+        const Pf = m === 'tv' ? (peq ? TVC : TV) : m === 'aproximada' ? AP : CL.PERFIS_LIVRE[m];
+        const L = m === 'ampla' || m === 'alta' ? CL.limitesLateral(Pf, fd) : Pf;
+        const linhas = lado ? [0, L.limX] : [0, 30, -30];
+        for (const fixo of linhas) for (const dir of lado ? [1] : [1, -1]) {
+          let ant = null;
+          const ini = lado ? L.limZ0 : -(MX - 4), fimF = lado ? L.limZ1 : MX - 4;
+          for (let v = ini; v <= fimF + 1e-9; v += 0.05) {
+            const p = nova();
+            if (lado) CL.poseLateral(Pf, fixo, v, fa, fd, asp, peq, p, m === 'tv' || m === 'aproximada' ? fovParaDe(asp, peq) : null);
+            else CL.poseComprimento(m, v, fixo, dir, fa, fd, asp, p);
+            segura(m, p);
+            if (ant) { const sl = Math.hypot(p.de[0] - ant[0], p.de[1] - ant[1], p.de[2] - ant[2]); if (sl > pior) { pior = sl; onde = `${m} altura ${a} distância ${dd} ${lado ? `z ${v.toFixed(2)}` : `x ${v.toFixed(2)}`}`; } }
+            ant = p.de;
+          }
+        }
+      }
+    }
+    return { pior, onde };
+  };
+  const c = saltos(CL.segurarPose), c0 = saltos(limiteAntigo);
+  meta('A3 a câmera não pula: o foco andando de 0,05 em 0,05 m (6 câmeras × Altura/Distância 0–20 × 2 telas), a câmera anda ≤ 0,6 m; contraprova: o limite antigo da caixa de cá (a borda mais perto) pula',
+    `maior passo ${c.pior.toFixed(2)} m (${c.onde}); com o limite antigo ${c0.pior.toFixed(1)} m (${c0.onde})`, c.pior <= 0.6 && c0.pior > 2);
+
+  // A4: a bola e o controlado (pés e cabeça) dentro das margens do quadro (QUADRO: acima do minimapa do PC) nas bordas do campo,
+  // nos dois rumos — a pequena área e os cantos do MEU lado (escanteio contra, tiro de meta), as laterais, o outro gol
+  const camFalsa = () => {
+    const c = { fov: 30, aspect: 16 / 9, pos: [0, 0, 0], alvo: [0, 0, 0], updateProjectionMatrix() {}, lookAt(x, y, z) { c.alvo = [x, y, z]; } };
+    c.position = { set(x, y, z) { c.pos = [x, y, z]; } };
+    return c;
+  };
+  const ndc = (c, x, y, z) => {
+    const f = [c.alvo[0] - c.pos[0], c.alvo[1] - c.pos[1], c.alvo[2] - c.pos[2]], lf = Math.hypot(...f); f[0] /= lf; f[1] /= lf; f[2] /= lf;
+    const r = [-f[2], 0, f[0]], lr = Math.hypot(r[0], r[2]); r[0] /= lr; r[2] /= lr;
+    const u = [-r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1]];
+    const d = [x - c.pos[0], y - c.pos[1], z - c.pos[2]], zz = d[0] * f[0] + d[1] * f[1] + d[2] * f[2];
+    const tv = Math.tan(c.fov * Math.PI / 360);
+    return [(d[0] * r[0] + d[2] * r[2]) / zz / (tv * c.aspect), (d[0] * u[0] + d[1] * u[1] + d[2] * u[2]) / zz / tv, zz];
+  };
+  const Q = CL.QUADRO, eps = 0.02;
+  let casos = 0; const falhas = [];
+  for (const [asp, peq] of [[16 / 9, false], [844 / 390, true]]) for (const dir of [1, -1]) {
+    const lugares = [[-dir * 51, 0], [-dir * 47, 8], [-dir * 52, 33], [-dir * 52, -33], [0, 32], [0, -32], [dir * 40, 32], [-dir * 40, -32], [dir * 51, 0], [dir * 52, 33], [0, 0]];
+    for (const a of fat) for (const dd of fat) for (const m of CL.CAMERAS_LIVRE) for (const [x, z] of lugares) {
+      casos++;
+      const cam = CL.criarCameraLivre({ dir: () => dir });
+      cam.definirAjuste({ altura: a, distancia: dd });
+      const camera = camFalsa();
+      const Pf = m === 'tv' ? (peq ? TVC : TV) : AP;
+      const est = { modo: m, aspecto: asp, pequena: peq, x: Math.max(-Pf.limX, Math.min(Pf.limX, x)), z: Math.max(Pf.limZ0, Math.min(Pf.limZ1, z)) };
+      const bx = x + 0.35 * dir;
+      const alvo = { jx: x, jz: z, jvx: 0, jvz: 0, bx, bz: z, ax: NaN, az: NaN };
+      cam.atualizar(1 / 60, alvo, true, { camera, est, p: Pf, fovPara: fovParaDe(asp, peq) });
+      camera.aspect = asp;
+      const b = ndc(camera, bx, 0.11, z), pe = ndc(camera, x, 0, z), cab = ndc(camera, x, 1.8, z);
+      const ok = b[2] > 0 && Math.abs(b[0]) <= Q.x + eps && b[1] <= Q.cima + eps && b[1] >= Q.baixo - eps
+        && pe[2] > 0 && Math.abs(pe[0]) <= Q.x + eps && pe[1] >= Q.baixo - eps && cab[2] > 0 && Math.abs(cab[0]) <= Q.x + eps && cab[1] <= Q.cima + eps;
+      if (!ok && falhas.length < 400) falhas.push(`${m} ${peq ? 'celular' : 'PC'} rumo ${dir} altura ${a} distância ${dd} (${x}, ${z}): bola ${b[0].toFixed(2)}/${b[1].toFixed(2)}, pés ${pe[0].toFixed(2)}/${pe[1].toFixed(2)}`);
+    }
+  }
+  meta('A4 a bola e o controlado (pés e cabeça) no quadro, acima do minimapa (6 câmeras × Altura/Distância 0–20 × 2 telas × 2 rumos × a pequena área e os cantos do meu lado, as laterais, o outro gol)',
+    `${casos} casos, ${falhas.length} fora${falhas.length ? ': ' + falhas.slice(0, 4).join(' | ') : ''}`, falhas.length === 0 && casos > 5000);
+
+  // A5: Jogador — a troca de controlado para longe (a 25 m) corta: o novo no quadro já no quadro seguinte
+  {
+    const cam = CL.criarCameraLivre({ dir: () => 1 });
+    const camera = camFalsa();
+    const est = { modo: 'jogador', aspecto: 16 / 9, pequena: false, x: 0, z: 0 };
+    const I = { camera, est, p: TV, fovPara: fovParaDe(16 / 9, false) };
+    const alvo = { jx: -10, jz: 5, jvx: 0, jvz: 0, bx: -9.6, bz: 5, ax: NaN, az: NaN };
+    for (let i = 0; i < 60; i++) cam.atualizar(1 / 60, alvo, i === 0, I);
+    Object.assign(alvo, { jx: 12, jz: -8, bx: 12.4, bz: -8 });
+    cam.atualizar(1 / 60, alvo, false, I);
+    camera.aspect = 16 / 9;
+    const pe = ndc(camera, 12, 0, -8), cortes = cam.resumo().cortesJogador;
+    // e a troca para perto (a 5 m) segue pela mola (sem corte)
+    Object.assign(alvo, { jx: 15, jz: -4, bx: 15.4, bz: -4 });
+    cam.atualizar(1 / 60, alvo, false, I);
+    const cortes2 = cam.resumo().cortesJogador;
+    meta('A5 Jogador: a troca de controlado para longe (25 m) corta e o novo fica no quadro no quadro seguinte; para perto (5 m) segue pela mola',
+      `${cortes} corte(s); o novo em ${pe[0].toFixed(2)}/${pe[1].toFixed(2)}; troca para perto: ${cortes2 - cortes} corte(s)`,
+      cortes === 1 && pe[2] > 0 && Math.abs(pe[0]) <= 1 && Math.abs(pe[1]) <= 1 && cortes2 === cortes);
+  }
 }
 
 // ------------------------------------------------------------------ navegador
@@ -195,6 +321,36 @@ const conferirCameras = async (pg, rot) => {
   return { ok, texto: `${rot}: ${linhas.join('; ')}`, custo };
 };
 
+// ------------------------------------------------------------------ a pausa (B, D, E, F)
+/** A pausa como está: rola (px), as linhas visíveis da lista aberta, os textos, encostos entre os botões à vista. */
+const PAUSA = () => {
+  const j = document.querySelector('.janela-menu');
+  const lista = [...document.querySelectorAll('#menu .menu-acoes')].find(e => !e.hidden);
+  const vis = e => !!e && !e.hidden && e.offsetParent !== null && e.getBoundingClientRect().height > 0;
+  const filhos = lista ? [...lista.children].filter(vis) : [];
+  const botoes = [...document.querySelectorAll('#menu button')].filter(vis);
+  const enc = [];
+  for (let a = 0; a < botoes.length; a++) for (let b = a + 1; b < botoes.length; b++) {
+    const A = botoes[a], B = botoes[b];
+    if (A.contains(B) || B.contains(A)) continue;
+    const ra = A.getBoundingClientRect(), rb = B.getBoundingClientRect();
+    const gap = Math.max(rb.left - ra.right, ra.left - rb.right, rb.top - ra.bottom, ra.top - rb.bottom);
+    if (gap < 2) enc.push(`${A.textContent.trim().slice(0, 14)} × ${B.textContent.trim().slice(0, 14)}`);
+  }
+  // (cortado: o botão, o nome das linhas do Livre — "Meu time", "Adversário", "Altura", "Distância" — e os subtítulos
+  // <small> dos botões, que cortam com reticências)
+  const textos = [...botoes, ...[...document.querySelectorAll('#menu .livre-rotulo, #menu button small')].filter(vis)];
+  const cortados = textos.filter(b => b.scrollWidth > b.clientWidth + 1).map(b => b.textContent.trim().slice(0, 16));
+  const jr = j.getBoundingClientRect();
+  const fora = botoes.filter(b => { const r = b.getBoundingClientRect(); return r.right > jr.right + 0.5 || r.left < jr.left - 0.5; }).map(b => b.textContent.trim().slice(0, 14));
+  return {
+    rola: j.scrollHeight - j.clientHeight, id: lista?.id, linhas: filhos.length, textos: filhos.map(e => e.textContent.replace(/\s+/g, ' ').trim()),
+    encosta: enc, cortados, fora,
+  };
+};
+const okPausa = p => p.rola <= 0 && p.linhas <= 5 && p.encosta.length === 0 && p.cortados.length === 0 && p.fora.length === 0;
+const txtPausa = p => `rola ${p.rola} px, ${p.linhas} linhas [${p.textos.join(' / ')}]${p.encosta.length ? '; ENCOSTA: ' + p.encosta.slice(0, 3).join(', ') : ''}${p.cortados.length ? '; CORTADO: ' + p.cortados.join(', ') : ''}${p.fora.length ? '; FORA: ' + p.fora.join(', ') : ''}`;
+
 // ------------------------------------------------------------------ B e C: PC 1280×720, Alta, de dia
 {
   const s = await abrir({ largura: 1280, altura: 720 });
@@ -208,6 +364,13 @@ const conferirCameras = async (pg, rot) => {
   meta('B0 PC: ?modo=livre abre a pausa no submenu Jogadores com o "Jogar" (o mundo "livre"; câmera TV sem escolha salva)',
     `modo ${ini.modo}, pausa ${ini.menu ? 'aberta' : 'FECHADA'}, Jogadores ${ini.jogadores ? 'à vista' : 'NÃO'}, Jogar ${ini.jogar ? 'à vista' : 'NÃO'}, ações ${ini.acoes ? 'À VISTA' : 'escondidas'}, câmera ${ini.camera}`,
     ini.modo === 'livre' && ini.menu && ini.jogadores && ini.jogar && !ini.acoes && ini.camera === 'tv');
+  {
+    const P = PAUSA.toString().replace(/^/, '(') + ')';
+    const jog = await pg.evaluate(P => eval(P)(), P);
+    const modos = await pg.evaluate(P => { document.querySelector('#menu-livre [data-cmd="livre-voltar"]').click(); document.getElementById('btn-modos').click(); const r = eval(P)(); document.querySelector('#menu-modos [data-cmd="modos-voltar"]').click(); document.getElementById('btn-livre-jogadores').click(); return r; }, P);
+    meta('B0b PC 1280×720: o submenu Jogadores ("Meu time", "Adversário" inteiros) e o Modo de jogo (os subtítulos dos treinos) sem nada cortado nem encostando',
+      `Jogadores: ${txtPausa(jog)} · Modo de jogo: ${txtPausa(modos)}`, okPausa(jog) && jog.id === 'menu-livre' && okPausa(modos) && modos.id === 'menu-modos');
+  }
   await pg.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); document.getElementById('btn-livre-jogar').click(); });
   await quadros(pg, 60);
   const B = await conferirCameras(pg, 'PC Alta, dia');
@@ -265,6 +428,64 @@ const conferirCameras = async (pg, rot) => {
     `TV → Ampla: de ${tr.ampla.anterior} a ${(tr.ampla.transicao * 100).toFixed(0)}% no 1º quadro, ${tr.amplaFim.anterior == null ? 'terminada' : 'AINDA'} em 1 s; Ampla → Atrás: ${tr.atras.anterior == null ? 'corte' : `transição de ${tr.atras.anterior}`}`,
     tr.ampla.anterior === 'tv' && tr.ampla.transicao < 0.2 && tr.amplaFim.anterior == null && tr.atras.anterior == null && tr.atras.transicao === 1);
 
+  // B2–B3 (revisão de 16/10), 1 de linha contra só o goleiro (ninguém tira a bola no meio da medida), Altura/Distância 10:
+  //   B2 os cantos do lado de cá fechados no Livre (render/cantos-livre.js): Atrás e Jogador olham pelo comprimento e
+  //      mostravam o vão entre o fundo e a arquibancada de cá — céu, o chão verde de fora, o mastro (antes: céu 2,1–2,3% da
+  //      tela em média e 4,1% no pior lugar; depois ~0%);
+  //   B3 com a bola no pé do controlado na pequena área e nos cantos do MEU gol (o escanteio contra, o tiro de meta), a bola
+  //      e o controlado no quadro e a bola acima do minimapa (≤ 87% da altura) em Atrás, Jogador e TV (antes, em Atrás, a
+  //      bola a 130–140% da altura: fora)
+  {
+    await pg.evaluate(() => { const g = window.__golaco; g.livre.ajustar({ linha: [1, 0], goleiro: [false, true] }); g.livre.ajustarCamera({ altura: 10, distancia: 10 }); });
+    await quadros(pg, 20);
+    const dir = await pg.evaluate(() => window.__golaco.mundo.ataca[0]);
+    const lugar = async (c, x, z) => {
+      await pg.evaluate(([c, x, z]) => {
+        const g = window.__golaco;
+        g.definirCamera(c);
+        const j = g.mundo.jogadores.find(o => o.id === g.estado().jogador.id);
+        j.x = x; j.z = z; j.vx = 0; j.vz = 0;
+        g.livre.recomecar('pe');
+      }, [c, x, z]);
+      await quadros(pg, 70, true);
+      return pg.evaluate(() => {
+        const g = window.__golaco;
+        g.desenhar();
+        const cv = document.querySelector('canvas'), W = innerWidth, H = innerHeight;
+        const off = document.createElement('canvas'); off.width = Math.round(W / 2); off.height = Math.round(H / 2);
+        const cx = off.getContext('2d', { willReadFrequently: true });
+        cx.drawImage(cv, 0, 0, off.width, off.height);
+        const d = cx.getImageData(0, 0, off.width, off.height).data;
+        let ceu = 0;
+        // céu de dia: azul-claro (o azul passa o vermelho e o verde, claro)
+        for (let i = 0; i < d.length; i += 4) { const r = d[i], gg = d[i + 1], b = d[i + 2]; if (b > r + 15 && b >= gg && r + gg + b > 420) ceu++; }
+        const e = g.estado(), j = e.jogador, bo = e.bola;
+        const dentro = p => !p.atras && p.x >= 1 && p.x <= W - 1 && p.y >= 1 && p.y <= H - 1;
+        const pb = g.naTela(bo.x, bo.y + 0.11, bo.z);
+        return { ceu: ceu / (d.length / 4), bola: dentro(pb), bolaY: pb.y / H, ctrl: !!j && [0.05, 1, 1.8].every(y => dentro(g.naTela(j.x, y, j.z))) };
+      });
+    };
+    const ceu = {}, cantos = await pg.evaluate(() => window.__golaco.livre.cantos);
+    for (const c of ['atras', 'jogador']) {
+      const v = [];
+      for (const x of [0, 20, 40]) for (const z of [0, 15, 28]) v.push((await lugar(c, x * dir, z)).ceu);
+      ceu[c] = { media: v.reduce((a, b) => a + b, 0) / v.length, max: Math.max(...v) };
+    }
+    meta('B2 PC: os cantos do lado de cá fechados no Livre — Atrás e Jogador no campo de ataque (9 lugares) com céu ≤ 0,8% da tela em média e ≤ 1,2% no pior lugar (antes 2,1% em Atrás e 2,3% no Jogador, 4,1% no pior lugar: o vão do canto)',
+      `cantos ${cantos == null ? 'NÃO estão na cena' : cantos ? 'na cena' : 'ESCONDIDOS'}; ${['atras', 'jogador'].map(c => `${CL.NOME_CAMERA[c]}: céu ${(100 * ceu[c].media).toFixed(2)}% (pior ${(100 * ceu[c].max).toFixed(2)}%)`).join('; ')}`,
+      cantos === true && ['atras', 'jogador'].every(c => ceu[c].media <= 0.008 && ceu[c].max <= 0.012));
+    const lin = []; let okB3 = true;
+    for (const c of ['atras', 'jogador', 'tv']) for (const [x, z] of [[-51 * dir, 0], [-47 * dir, 8], [-52 * dir, 33], [-52 * dir, -33]]) {
+      const m = await lugar(c, x, z);
+      const ok = m.bola && m.ctrl && m.bolaY <= 0.87;
+      if (!ok) okB3 = false;
+      lin.push(`${CL.NOME_CAMERA[c]} (${x}, ${z}): bola ${m.bola ? `a ${(100 * m.bolaY).toFixed(0)}%` : 'FORA'}, controlado ${m.ctrl ? 'sim' : 'NÃO'}`);
+    }
+    meta('B3 PC: a bola no pé na pequena área e nos cantos do meu gol — a bola e o controlado no quadro e a bola acima do minimapa (≤ 87% da altura) em Atrás, Jogador e TV', lin.join('; '), okB3);
+    await pg.evaluate(() => window.__golaco.livre.ajustar({ linha: [4, 4], goleiro: [true, true] }));
+    await quadros(pg, 5);
+  }
+
   // C4: Altura e Distância pela pausa (−/+), salvas; recarregar volta com a câmera e o ajuste
   const aj = await pg.evaluate(() => {
     const g = window.__golaco, av = n => { for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); };
@@ -295,6 +516,30 @@ const conferirCameras = async (pg, rot) => {
     aj.altura === '14' && aj.distancia === '5' && aj.y1 > aj.y0 + 3 && aj.d2 < aj.d1 - 2 && aj.prefs?.cameraLivre === 'alta' && aj.prefs?.cameraAjuste?.altura === 14 && aj.prefs?.cameraAjuste?.distancia === 5
       && volta.camera === 'alta' && volta.ajuste.altura === 14 && volta.ajuste.distancia === 5);
 
+  // C6: o −/+ no limite (Altura 20, Meu time 11) fica apagado sem perder o foco (o controle navegando a pausa): com
+  //   `disabled` o foco ia para o <body> e a cruz voltava ao 1º botão da pausa; e o aperto a mais não muda nada
+  const lim = await pg.evaluate(() => {
+    const g = window.__golaco;
+    g.abrirMenu(); document.getElementById('btn-livre-camera').click();
+    const sub = document.getElementById('menu-camera-livre'), mais = sub.querySelector('[data-cmd="livre-ajuste-mais"][data-valor="altura"]');
+    mais.focus();
+    for (let i = 0; i < 9; i++) mais.click();
+    const r = { altura: document.getElementById('livre-ajuste-altura').textContent, focoA: document.activeElement === mais, apagadoA: mais.getAttribute('aria-disabled') };
+    sub.querySelector('[data-cmd="livre-voltar"]').click();
+    document.getElementById('btn-livre-jogadores').click();
+    const mm = document.querySelector('#menu-livre [data-cmd="livre-mais"][data-valor="meu"]');
+    mm.focus();
+    for (let i = 0; i < 12; i++) mm.click();
+    r.meu = document.getElementById('livre-n-meu').textContent; r.focoM = document.activeElement === mm; r.apagadoM = mm.getAttribute('aria-disabled');
+    for (let i = 0; i < 6; i++) document.querySelector('#menu-livre [data-cmd="livre-menos"][data-valor="meu"]').click();
+    document.getElementById('btn-livre-jogar').click();
+    return r;
+  });
+  meta('C6 PC: o −/+ no limite (Altura 20, Meu time 11) fica apagado com o foco nele (o controle não perde a posição na pausa) e o aperto a mais não muda o número',
+    `Altura ${lim.altura} (foco ${lim.focoA ? 'no +' : 'PERDIDO'}, apagado ${lim.apagadoA}); Meu time ${lim.meu} (foco ${lim.focoM ? 'no +' : 'PERDIDO'}, apagado ${lim.apagadoM})`,
+    lim.altura === '20' && lim.focoA && lim.apagadoA === 'true' && lim.meu === '11' && lim.focoM && lim.apagadoM === 'true');
+  await quadros(pg, 5);
+
   // C5: na partida (Modo de jogo) a câmera volta a ser a da partida; o segmentado TV | Aproximada de volta
   const part = await pg.evaluate(async () => {
     const g = window.__golaco;
@@ -304,44 +549,19 @@ const conferirCameras = async (pg, rot) => {
     for (let i = 0; i < 40 && g.mundo.modo !== 'partida'; i++) await new Promise(r => setTimeout(r, 50));
     g.abrirMenu();
     const vis = e => !!e && e.offsetParent !== null && getComputedStyle(e).display !== 'none';
-    const r = { modo: g.mundo.modo, camera: g.camera, seg: vis(document.querySelector('.segmentado[data-grupo="camera"]')), botao: vis(document.getElementById('opcao-camera-livre')), livre: vis(document.getElementById('btn-livre-camera')) };
+    const r = { modo: g.mundo.modo, camera: g.camera, seg: vis(document.querySelector('.segmentado[data-grupo="camera"]')), botao: vis(document.getElementById('opcao-camera-livre')), livre: vis(document.getElementById('btn-livre-camera')), cantos: g.livre.cantos };
     g.fecharMenu();
     return r;
   });
-  meta('C5 PC: de volta à partida (Modo de jogo), a câmera é a da partida (TV/Aproximada), com o TV | Aproximada na pausa e sem os botões do Livre',
-    `modo ${part.modo}, câmera ${part.camera}, segmentado ${part.seg ? 'à vista' : 'ESCONDIDO'}, botão da câmera do Livre ${part.botao ? 'À VISTA' : 'escondido'}, Jogadores | Câmera ${part.livre ? 'À VISTA' : 'escondido'}`,
-    part.modo === 'partida' && ['tv', 'aproximada'].includes(part.camera) && part.seg && !part.botao && !part.livre);
+  meta('C5 PC: de volta à partida (Modo de jogo), a câmera é a da partida (TV/Aproximada), com o TV | Aproximada na pausa, sem os botões do Livre e sem os cantos dele',
+    `modo ${part.modo}, câmera ${part.camera}, segmentado ${part.seg ? 'à vista' : 'ESCONDIDO'}, botão da câmera do Livre ${part.botao ? 'À VISTA' : 'escondido'}, Jogadores | Câmera ${part.livre ? 'À VISTA' : 'escondido'}, cantos ${part.cantos ? 'À VISTA' : 'escondidos'}`,
+    part.modo === 'partida' && ['tv', 'aproximada'].includes(part.camera) && part.seg && !part.botao && !part.livre && part.cantos !== true);
   meta('G1 PC: sem erro no console', s.erros.length ? s.erros.slice(0, 3).join(' | ') : 'nenhum', s.erros.length === 0);
   errosTodos.push(...s.erros);
   await s.navegador.close();
 }
 
 // ------------------------------------------------------------------ D: celular 844×390, Média, de noite
-/** A pausa como está: rola (px), as linhas visíveis da lista aberta, os textos, encostos entre os botões à vista. */
-const PAUSA = () => {
-  const j = document.querySelector('.janela-menu');
-  const lista = [...document.querySelectorAll('#menu .menu-acoes')].find(e => !e.hidden);
-  const vis = e => !!e && !e.hidden && e.offsetParent !== null && e.getBoundingClientRect().height > 0;
-  const filhos = lista ? [...lista.children].filter(vis) : [];
-  const botoes = [...document.querySelectorAll('#menu button')].filter(vis);
-  const enc = [];
-  for (let a = 0; a < botoes.length; a++) for (let b = a + 1; b < botoes.length; b++) {
-    const A = botoes[a], B = botoes[b];
-    if (A.contains(B) || B.contains(A)) continue;
-    const ra = A.getBoundingClientRect(), rb = B.getBoundingClientRect();
-    const gap = Math.max(rb.left - ra.right, ra.left - rb.right, rb.top - ra.bottom, ra.top - rb.bottom);
-    if (gap < 2) enc.push(`${A.textContent.trim().slice(0, 14)} × ${B.textContent.trim().slice(0, 14)}`);
-  }
-  const cortados = botoes.filter(b => b.scrollWidth > b.clientWidth + 1).map(b => b.textContent.trim().slice(0, 16));
-  const jr = j.getBoundingClientRect();
-  const fora = botoes.filter(b => { const r = b.getBoundingClientRect(); return r.right > jr.right + 0.5 || r.left < jr.left - 0.5; }).map(b => b.textContent.trim().slice(0, 14));
-  return {
-    rola: j.scrollHeight - j.clientHeight, id: lista?.id, linhas: filhos.length, textos: filhos.map(e => e.textContent.replace(/\s+/g, ' ').trim()),
-    encosta: enc, cortados, fora,
-  };
-};
-const okPausa = p => p.rola <= 0 && p.linhas <= 5 && p.encosta.length === 0 && p.cortados.length === 0 && p.fora.length === 0;
-const txtPausa = p => `rola ${p.rola} px, ${p.linhas} linhas [${p.textos.join(' / ')}]${p.encosta.length ? '; ENCOSTA: ' + p.encosta.slice(0, 3).join(', ') : ''}${p.cortados.length ? '; CORTADO: ' + p.cortados.join(', ') : ''}${p.fora.length ? '; FORA: ' + p.fora.join(', ') : ''}`;
 {
   const s = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
   const pg = s.pagina;

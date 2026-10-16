@@ -3,7 +3,8 @@
    jogadores que eu escolher, contra a quantidade de jogadores que eu escolher, pode ser adaptável durante a partida, assim
    como a camera". É a Arena de Treino do GOLAÇO 3D: escolhe os dois times como na Partida Rápida (clubes ou seleções; o
    Viverde FC em "Especiais", com a senha) e treina no estádio 3D (TM.tm3d.jogarLivre: o mesmo quadro e a mesma ponte das
-   partidas 3D, com modo: "livre" no pedido). Quantos jogadores ficam em cada time (de 1 a 11, com ou sem goleiro) e a
+   partidas 3D, com modo: "livre" no pedido). Quantos jogadores ficam em cada time (o seu de 1 a 11, o adversário de 0 a 11
+   — ninguém = treino de finalização e condução —, com ou sem goleiro) e a
    câmera se escolhem na pausa do 3D, a qualquer hora (o 3D lembra a última escolha). Sem relógio e sem resultado: ao sair,
    volta a esta tela e nada conta (nem placar, nem estatística, nem carreira).
    Precisa de WebGL 2 (como as partidas 3D): sem ele, o botão avisa e não abre. */
@@ -35,7 +36,7 @@
     screen.appendChild(TM.ui.topbar("🏋️ Modo Livre 3D", function () { TM.ui.go("modes"); }));
     var body = el("div", { class: "panel-narrow livre3d" });
     screen.appendChild(body);
-    body.appendChild(el("p", { class: "intro-text livre3d-intro", text: "Treino livre no estádio 3D, como a Arena de Treino: você escolhe quantos jogadores cada time tem, de 1 a 11, com ou sem goleiro, e muda isso e a câmera na pausa, a qualquer hora. Sem relógio e sem resultado: nada conta." }));
+    body.appendChild(el("p", { class: "intro-text livre3d-intro", text: "Treino livre no estádio 3D, como a Arena de Treino: você escolhe quantos jogadores cada time tem (o seu de 1 a 11, o adversário de 0 a 11, com ou sem goleiro) e muda isso e a câmera na pausa, a qualquer hora. Sem relógio e sem resultado: nada conta." }));
 
     var srcSeg = el("div", { class: "segmented full" });
     [["club", "Clubes"], ["nation", "Seleções"]].forEach(function (o) {

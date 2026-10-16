@@ -22,13 +22,19 @@ import { CAMERAS_LIVRE, NOME_CAMERA, AJUSTE, criarCameraLivre, fatorAjuste } fro
 const CHAVE = 'golaco.livre.v1';
 const SETA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const CSS = `
-.livre-time { display: flex; align-items: center; gap: 6px; min-height: 48px; }
-.livre-rotulo { flex: 1 1 auto; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.livre-time { display: flex; flex-wrap: wrap; align-items: center; column-gap: 6px; row-gap: 2px; min-height: 48px; }
+/* o nome inteiro: "Meu time" e "Adversário" numa linha própria, com o −/+ e o Goleiro embaixo (ao lado deles o nome
+   cortava: "Adversá…" no PC, "M." e "A.." em 740×360; quebrando só quando não cabe, as duas linhas ficavam diferentes);
+   Altura e Distância (sem o Goleiro) cabem ao lado e só descem se faltar espaço */
+.livre-rotulo { flex: 1 0 auto; font-weight: 700; white-space: nowrap; }
+.livre-lado .livre-rotulo { flex-basis: 100%; line-height: 1.2; }
+.livre-ctrl { display: flex; align-items: center; gap: 6px; flex: none; margin-left: auto; }
+.livre-lado .livre-ctrl { margin-left: 0; }
 .livre-time .btn { flex: none; justify-content: center; padding: 0 10px; }
 .livre-passo { width: 44px; font-size: 20px; }
 .livre-n { flex: none; width: 2.2em; text-align: center; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .livre-gol[aria-pressed="false"] { opacity: 0.55; }
-#menu-livre .btn:disabled, #menu-camera-livre .btn:disabled { opacity: 0.4; cursor: default; }
+#menu-livre .btn[aria-disabled="true"], #menu-camera-livre .btn[aria-disabled="true"] { opacity: 0.4; cursor: default; }
 /* as linhas do Livre nas ações: o nome numa linha só (quebrado, "Bola no meu pé" fazia a pausa rolar 6 px em 844×390) */
 #menu-acoes .linha-cenas[data-so="livre"] .btn { padding-left: 10px; padding-right: 10px; white-space: nowrap; }
 /* as 6 câmeras em 2 linhas de 3; a do meio mais larga (Aproximada, Atrás): com 3 iguais, "Aproximada" cortava em 844×390 */
@@ -100,15 +106,15 @@ export function criarPaginaLivre(ctx) {
     }
     const modos = $('menu-modos');
     if (modos) {
-      const lado = (id, nome) => `<div class="livre-time" role="group" aria-label="${nome}"><span class="livre-rotulo">${nome}</span>
+      const lado = (id, nome) => `<div class="livre-time livre-lado" role="group" aria-label="${nome}"><span class="livre-rotulo">${nome}</span><span class="livre-ctrl">
 <button class="btn livre-passo" type="button" data-cmd="livre-menos" data-valor="${id}" aria-label="Um a menos: ${nome}">−</button>
 <output class="livre-n" id="livre-n-${id}" aria-live="polite"></output>
 <button class="btn livre-passo" type="button" data-cmd="livre-mais" data-valor="${id}" aria-label="Um a mais: ${nome}">+</button>
-<button class="btn livre-gol" type="button" data-cmd="livre-goleiro" data-valor="${id}" aria-pressed="true" aria-label="Goleiro: ${nome}">Goleiro</button></div>`;
-      const linhaAjuste = (id, nome) => `<div class="livre-time" role="group" aria-label="${nome}"><span class="livre-rotulo">${nome}</span>
+<button class="btn livre-gol" type="button" data-cmd="livre-goleiro" data-valor="${id}" aria-pressed="true" aria-label="Goleiro: ${nome}">Goleiro</button></span></div>`;
+      const linhaAjuste = (id, nome) => `<div class="livre-time" role="group" aria-label="${nome}"><span class="livre-rotulo">${nome}</span><span class="livre-ctrl">
 <button class="btn livre-passo" type="button" data-cmd="livre-ajuste-menos" data-valor="${id}" aria-label="${nome}: menos">−</button>
 <output class="livre-n" id="livre-ajuste-${id}" aria-live="polite"></output>
-<button class="btn livre-passo" type="button" data-cmd="livre-ajuste-mais" data-valor="${id}" aria-label="${nome}: mais">+</button></div>`;
+<button class="btn livre-passo" type="button" data-cmd="livre-ajuste-mais" data-valor="${id}" aria-label="${nome}: mais">+</button></span></div>`;
       const t = doc.createElement('template');
       // o submenu Jogadores (abre no lugar da lista de ações, como o "Modo de jogo"): o TOTAL de cada lado (de linha +
       // goleiro), −/+ um de linha e o goleiro liga/desliga; vale ao sair da pausa (Jogar ou Continuar), sem recomeçar
@@ -132,7 +138,7 @@ ${linhaAjuste('distancia', 'Distância')}</div>`;
       b.setAttribute('aria-label', 'Câmera do Modo Livre');
       seg.after(b);
     }
-    for (const b of doc.querySelectorAll('#menu [data-cmd^="livre-"]')) aoTocar(b, () => ctx.comando(b.dataset.cmd, b.dataset.valor));
+    for (const b of doc.querySelectorAll('#menu [data-cmd^="livre-"]')) aoTocar(b, () => { if (b.getAttribute('aria-disabled') !== 'true') ctx.comando(b.dataset.cmd, b.dataset.valor); });
   }
 
   // ---------------------------------------------------------------- a câmera (render/camera-livre.js por cima de camera.js)
@@ -142,6 +148,14 @@ ${linhaAjuste('distancia', 'Distância')}</div>`;
   const camLivre = criarCameraLivre({ dir: () => ctx.dirAtaque?.() ?? 1 });
   camLivre.definirAjuste(ajuste);
   const salvar = () => { try { ctx.salvarPrefs?.(prefs); } catch (_) { /* sem armazenamento */ } };
+  /**
+   * −/+ no limite fica apagado e não faz nada (aria-disabled; o toque nele é ignorado em montarDom), mas continua com o foco:
+   * com `disabled` o foco do controle ia para o <body> e a cruz voltava ao 1º botão da pausa (o A seguinte apertava o
+   * Minimapa); passando o foco para o par, o A seguinte voltava o número.
+   */
+  function desligar(b, v) {
+    if (b) b.setAttribute('aria-disabled', String(!!v));
+  }
   // a câmera escolhida (o ctx.camera() só existe depois do iniciar() do main.js: aqui nada o lê antes de ligarCamera)
   let modoCam = CAMERAS_LIVRE.includes(prefs[CHAVE_CAM]) ? prefs[CHAVE_CAM] : 'tv';
   /** O botão "Câmera <nome>", o da coluna das opções, as 6 do submenu e Altura/Distância. */
@@ -153,12 +167,32 @@ ${linhaAjuste('distancia', 'Distância')}</div>`;
       const o = $(`livre-ajuste-${k}`); if (o) o.textContent = String(ajuste[k]);
       const q = s => $('menu-camera-livre')?.querySelector(`[data-cmd="${s}"][data-valor="${k}"]`);
       const menos = q('livre-ajuste-menos'), mais = q('livre-ajuste-mais');
-      if (menos) menos.disabled = ajuste[k] <= AJUSTE.min;
-      if (mais) mais.disabled = ajuste[k] >= AJUSTE.max;
+      desligar(menos, ajuste[k] <= AJUSTE.min);
+      desligar(mais, ajuste[k] >= AJUSTE.max);
     }
+  }
+  // os cantos do lado de cá (render/cantos-livre.js; só no Livre): Atrás e Jogador olham pelo comprimento e deixavam o vão
+  // entre o fundo e a arquibancada de cá à vista. O módulo vem na 1ª vez; o material é o dos fundos do jogo, que só existe
+  // depois do criarCampo (o iniciar liga a câmera antes): espera ele por alguns quadros
+  let cantos = null, cantosPedidos = false;
+  function ligarCantos(v) {
+    if (!doc) return;
+    if (cantos) { cantos.visivel(v && !!ctx.mundo()?.livre); return; }
+    if (!v || cantosPedidos) return;
+    cantosPedidos = true;
+    import('./render/cantos-livre.js').then(M => {
+      const tentar = n => {
+        const cena = ctx.cena?.(), mat = cena?.getObjectByName('arquibancada-fundos')?.material;
+        if (!mat) { if (n < 900) requestAnimationFrame(() => tentar(n + 1)); else cantosPedidos = false; return; }
+        cantos = M.criarCantosLivre(cena, mat);
+        cantos.visivel(!!ctx.mundo()?.livre);
+      };
+      tentar(0);
+    }).catch(() => { cantosPedidos = false; });
   }
   /** Liga (no Livre) ou desliga a câmera do Livre na câmera da página; desligando, volta a da partida (prefs.camera). */
   function ligarCamera(v) {
+    ligarCantos(v);
     const c = ctx.camera?.();
     if (!c) return;
     if (v) {
@@ -207,8 +241,8 @@ ${linhaAjuste('distancia', 'Distância')}</div>`;
       const q = s => $('menu-livre')?.querySelector(`[data-cmd="${s}"][data-valor="${lado}"]`);
       q('livre-goleiro')?.setAttribute('aria-pressed', String(L.goleiro[k]));
       const menos = q('livre-menos'), mais = q('livre-mais');
-      if (menos) menos.disabled = L.linha[k] <= (k === 0 ? 1 : 0);
-      if (mais) mais.disabled = L.linha[k] >= LIVRE.linhaMax;
+      desligar(menos, L.linha[k] <= (k === 0 ? 1 : 0));
+      desligar(mais, L.linha[k] >= LIVRE.linhaMax);
     });
     for (const id of ['estado-livre', 'estado-modo-livre']) { const e = $(id); if (e) e.textContent = textoEscolha(L); }
   }
@@ -314,6 +348,8 @@ ${linhaAjuste('distancia', 'Distância')}</div>`;
       get naFila() { return naFila ? { ...naFila } : null; },
       /** As câmeras do Livre (os nomes de definirCamera). */
       cameras: CAMERAS_LIVRE.slice(),
+      /** Os cantos do lado de cá (render/cantos-livre.js): à vista (true), escondidos (false) ou ainda não na cena (null). */
+      get cantos() { return cantos ? cantos.mesh.visible : null; },
       /** A câmera do Livre agora: {modo, anterior, transicao, yaw, dir, fa, fd, altura, distancia}. */
       get camera() { return { ...camLivre.resumo(), altura: ajuste.altura, distancia: ajuste.distancia }; },
       /** Altura e Distância (0–20) como na pausa; devolve o ajuste. */

@@ -21,7 +21,15 @@
 // sai do desenho (torcida-dados.js cameraNoLadoDeCa: é onde a TV de hoje fica) — e nenhuma arquibancada fica entre a
 // câmera e o campo: perto do lado de cá a câmera fica DENTRO da caixa dela (y ≤ 26) ou na frente dela (z ≤ 43,5); Atrás e
 // Jogador nunca passam das placas do fundo (|x| ≤ 58); Jogador fica a ≥ 3,2 m de altura (acima de qualquer cabeça: nada
-// atravessa o modelo do controlado, a ≥ 6 m dele) e ≥ 3,2 m acima do travessão quando passa atrás do gol.
+// atravessa o modelo do controlado, a ≥ 6 m dele) e ≥ 3,2 m acima do travessão quando passa atrás do gol. Saindo da caixa da
+// arquibancada de cá, a câmera anda pela reta até o ponto olhado (contínua: nada de pular de uma borda para a outra).
+//
+// Enquadramento (`enquadrar`, depois dos limites): a bola e os pés do controlado ficam dentro das margens do quadro (QUADRO:
+// dos lados, em cima e acima do minimapa do PC e dos botões do celular, embaixo); se não ficam — Atrás perto do meu gol, com
+// o recuo cortado pelas placas; a Distância baixa nas laterais e nos cantos —, o ponto olhado anda para eles o mínimo que
+// basta (a câmera não sai do lugar seguro). Os limites do foco das de lado encolhem com a Distância (`limitesLateral`).
+// Jogador: na troca de controlado para longe do foco, corte (a mola levava ~0,6 s, com ele fora do quadro e a câmera
+// varrendo o campo a até ~90 m/s).
 import { CAMPO, CAMERA } from '../config.js';
 import { solidoEm } from '../estadio-forma.js';
 import { cameraNoLadoDeCa, ARQUIBANCADA } from './torcida-dados.js';
@@ -47,6 +55,14 @@ export const PERFIS_LIVRE = {
   jogador: { recuo: 7.5, altura: 3.9, adiante: 7, olharY: 0.2, fov: 48, antecipa: 0.18, bolaZ: 0.3, bolaZMax: 4 },
 };
 const LATERAIS = new Set(['tv', 'aproximada', 'ampla', 'alta']);
+/**
+ * Margens do quadro (NDC, −1..1) para a bola e o controlado (os pés e a cabeça): dos lados, em cima e embaixo — −0,7 fica acima do
+ * minimapa do PC (no pé da tela, a partir de ~−0,75) e dos botões do celular. `perto`: um ponto a menos disto à frente da
+ * câmera (atrás dela, ou embaixo dela) não entra no enquadramento — girar até ele seria virar a câmera.
+ */
+export const QUADRO = { x: 0.92, cima: 0.9, baixo: -0.7, perto: 1.5 };
+/** Jogador: a troca de controlado corta quando o alvo pula mais que `salto` m num quadro e fica a mais de `longe` m do foco. */
+export const CORTE_JOGADOR = { salto: 3, longe: 8 };
 export const SEGURANCA = {
   xFundo: CAMPO.meioX + CAMPO.entorno - 0.5,  // 58 m: Atrás e Jogador nunca passam das placas do fundo
   zCa: ARQUIBANCADA.frenteZ - 1,              // 43,5 m: daqui para trás, a caixa da arquibancada de cá
@@ -104,9 +120,16 @@ export function segurarPose(modo, out) {
   const S = SEGURANCA, d = out.de;
   if (LATERAIS.has(modo)) {
     if (d[2] > S.zCaMax) d[2] = S.zCaMax;
-    // na caixa da arquibancada de cá e acima dela: a arquibancada voltaria ao desenho entre a câmera e o campo
+    // na caixa da arquibancada de cá e acima dela (a arquibancada voltaria ao desenho entre a câmera e o campo): a câmera
+    // anda pela reta até o ponto olhado até sair dela (z = 43,5 ou y = 26, o que vier primeiro) e o plano abre na mesma
+    // conta (a mesma largura no ponto olhado). Contínua: antes ela ia para a borda mais perto, e trocar de borda pulava até
+    // 14 m num quadro (Ampla com a Altura 20, com o controlado andando para o lado de cá)
     if (d[2] > S.zCa && d[1] > S.yCa) {
-      if (d[1] - S.yCa > d[2] - S.zCa) d[2] = S.zCa; else d[1] = S.yCa;
+      const p = out.para;
+      const lz = d[2] > p[2] ? (d[2] - S.zCa) / (d[2] - p[2]) : 1, ly = d[1] > p[1] ? (d[1] - S.yCa) / (d[1] - p[1]) : 1;
+      const l = Math.min(lz, ly, 0.9);
+      for (let i = 0; i < 3; i++) d[i] += (p[i] - d[i]) * l;
+      out.fov = (2 * Math.atan(Math.tan((out.fov * Math.PI) / 360) / (1 - l)) * 180) / Math.PI;
     }
   } else {
     d[0] = clamp(d[0], -S.xFundo, S.xFundo);
@@ -114,6 +137,76 @@ export function segurarPose(modo, out) {
     if (modo === 'jogador' && d[1] < S.yJogador) d[1] = S.yJogador;
   }
   for (let k = 0; k < 24 && poseBloqueada(d[0], d[1], d[2]); k++) d[1] += 0.5;
+  return out;
+}
+
+/**
+ * Limites do foco de Ampla/Alta com a Distância fd: com o plano mais fechado (fd < 1) a margem até a borda do campo encolhe
+ * junto (antes, fixa, com a Distância 0 a bola na lateral de lá e nos cantos saía do quadro). out = {limX, limZ0, limZ1}.
+ */
+export function limitesLateral(P, fd, out = {}) {
+  const k = Math.min(1, fd);
+  out.limX = MX - (MX - P.limX) * k; out.limZ0 = -MZ + (P.limZ0 + MZ) * k; out.limZ1 = MZ - (MZ - P.limZ1) * k;
+  return out;
+}
+
+const _f = [0, 0, 0], _rr = [0, 0, 0], _u = [0, 0, 0], _p0 = [0, 0, 0], _t = [0, 0, 0];
+/** A base da câmera (frente, direita, cima) da pose — a do lookAt do three.js com o "cima" em y. */
+function baseDa(out) {
+  const d = out.de, p = out.para;
+  let fx = p[0] - d[0], fy = p[1] - d[1], fz = p[2] - d[2];
+  const lf = Math.hypot(fx, fy, fz) || 1; fx /= lf; fy /= lf; fz /= lf;
+  let rx = -fz, rz = fx;
+  const lr = Math.hypot(rx, rz) || 1; rx /= lr; rz /= lr;
+  _f[0] = fx; _f[1] = fy; _f[2] = fz; _rr[0] = rx; _rr[1] = 0; _rr[2] = rz;
+  _u[0] = -rz * fy; _u[1] = rz * fx - rx * fz; _u[2] = rx * fy;
+}
+/** Os pontos (bits de `sel`) cabem nas margens da pose? */
+function cabe(out, aspecto, pts, n, sel) {
+  baseDa(out);
+  const tv = Math.tan((out.fov * Math.PI) / 360), th = tv * aspecto, d = out.de, Q = QUADRO;
+  for (let k = 0; k < n; k++) {
+    if (!(sel & (1 << k))) continue;
+    const vx = pts[3 * k] - d[0], vy = pts[3 * k + 1] - d[1], vz = pts[3 * k + 2] - d[2];
+    const z = vx * _f[0] + vy * _f[1] + vz * _f[2];
+    if (z < Q.perto) return false;
+    const x = (vx * _rr[0] + vz * _rr[2]) / (z * th), y = (vx * _u[0] + vy * _u[1] + vz * _u[2]) / (z * tv);
+    if (x > Q.x || x < -Q.x || y > Q.cima || y < Q.baixo) return false;
+  }
+  return true;
+}
+function olharPara(out, s) { for (let i = 0; i < 3; i++) out.para[i] = _p0[i] + (_t[i] - _p0[i]) * s; }
+/**
+ * Enquadra a pose: pts = [x, y, z, …] (n ≤ 8; o 1º é a bola — fica sempre no quadro, se os dois não couberem). Os pontos à
+ * frente da câmera (≥ QUADRO.perto) fora das margens: o ponto olhado anda para o meio deles o mínimo que basta (bisseção;
+ * contínuo nos pontos). Pura; devolve out.
+ */
+export function enquadrar(out, aspecto, pts, n) {
+  baseDa(out);
+  let sel = 0;
+  for (let k = 0; k < n; k++) {
+    const vx = pts[3 * k] - out.de[0], vy = pts[3 * k + 1] - out.de[1], vz = pts[3 * k + 2] - out.de[2];
+    if (vx * _f[0] + vy * _f[1] + vz * _f[2] >= QUADRO.perto) sel |= 1 << k;
+  }
+  if (!sel || cabe(out, aspecto, pts, n, sel)) return out;
+  for (let i = 0; i < 3; i++) _p0[i] = out.para[i];
+  const alvo = s => {
+    let c = 0; _t[0] = _t[1] = _t[2] = 0;
+    for (let k = 0; k < n; k++) if (s & (1 << k)) { c++; for (let i = 0; i < 3; i++) _t[i] += pts[3 * k + i]; }
+    for (let i = 0; i < 3; i++) _t[i] /= c;
+  };
+  alvo(sel);
+  olharPara(out, 1);
+  // os dois longe demais um do outro para caberem juntos: a bola primeiro
+  if (!cabe(out, aspecto, pts, n, sel) && (sel & 1) && sel !== 1) { sel = 1; alvo(sel); olharPara(out, 1); }
+  if (!cabe(out, aspecto, pts, n, sel)) return out;
+  let lo = 0, hi = 1;
+  for (let it = 0; it < 14; it++) {
+    const m = (lo + hi) / 2;
+    olharPara(out, m);
+    if (cabe(out, aspecto, pts, n, sel)) hi = m; else lo = m;
+  }
+  olharPara(out, hi);
   return out;
 }
 
@@ -163,6 +256,7 @@ export function criarCameraLivre(opc = {}) {
   for (const m of ['ampla', 'alta', 'atras', 'jogador']) focos[m] = { x: 0, z: 0, vx: 0, vz: 0 };
   let iniciado = false, atual = null, anterior = null, t = TRANSICAO, fa = 1, fd = 1, dir = 1;
   const pA = novaPose(), pB = novaPose(), fim = novaPose();
+  const _pts = [0, 0, 0, 0, 0, 0, 0, 0, 0];
   const _foco = { x: 0, z: 0 };
 
   /** Foco das câmeras de lado novas (a conta da TV em camera.js, com os pesos do perfil). */
@@ -175,8 +269,10 @@ export function criarCameraLivre(opc = {}) {
     let fx = alvo.jx + dbx * w + alvo.jvx * P.antecipa, fz = alvo.jz + dbz * w + alvo.jvz * P.antecipa;
     fx = clamp(fx, alvo.bx - larg * 0.38, alvo.bx + larg * 0.38);
     fz = clamp(fz, alvo.bz - larg * 0.24, alvo.bz + larg * 0.24);
-    k.ax = clamp(fx, -P.limX, P.limX); k.az = clamp(fz, P.limZ0, P.limZ1);
+    const L = limitesLateral(P, fd, _lim);
+    k.ax = clamp(fx, -L.limX, L.limX); k.az = clamp(fz, L.limZ0, L.limZ1);
   }
+  const _lim = { limX: 0, limZ0: 0, limZ1: 0 };
   /** Foco de Atrás: entre o controlado e a bola; a bola entre 3 m atrás e 14 m adiante do foco, ≤ 9 m de lado. */
   function alvoAtras(alvo, k) {
     const P = PERFIS_LIVRE.atras;
@@ -191,16 +287,25 @@ export function criarCameraLivre(opc = {}) {
     k.ax = clamp(fx, -MX + 4, MX - 4); k.az = clamp(fz, -MZ + 4, MZ - 4);
   }
   const _k = { ax: 0, az: 0 };
+  // o alvo do Jogador no quadro de antes (a troca de controlado = o alvo pula)
+  const jogAntes = { x: 0, z: 0, ok: false };
+  let cortesJogador = 0;
   function andarFocos(dt, alvo, corte) {
     const wr = CAMERA.rigidez;
     for (const m of ['ampla', 'alta', 'atras', 'jogador']) {
       const f = focos[m];
+      let pula = false;
       if (m === 'jogador') {
         const P = PERFIS_LIVRE.jogador;
         _k.ax = alvo.jx + alvo.jvx * P.antecipa; _k.az = alvo.jz + alvo.jvz * P.antecipa;
+        // troca de controlado (o alvo pulou) para longe do foco: corte — com a mola o novo ficava até ~0,6 s fora do quadro
+        pula = jogAntes.ok && Math.hypot(_k.ax - jogAntes.x, _k.az - jogAntes.z) > CORTE_JOGADOR.salto
+          && Math.hypot(_k.ax - f.x, _k.az - f.z) > CORTE_JOGADOR.longe;
+        jogAntes.x = _k.ax; jogAntes.z = _k.az; jogAntes.ok = true;
+        if (pula && iniciado && !corte) cortesJogador++;
       } else if (m === 'atras') alvoAtras(alvo, _k);
       else alvoLateral(PERFIS_LIVRE[m], alvo, _k);
-      if (corte || !iniciado) { f.x = _k.ax; f.z = _k.az; f.vx = 0; f.vz = 0; continue; }
+      if (corte || !iniciado || pula) { f.x = _k.ax; f.z = _k.az; f.vx = 0; f.vz = 0; continue; }
       const w = m === 'jogador' ? 6 : wr;
       mola(f, 'x', 'vx', _k.ax, w, dt);
       mola(f, 'z', 'vz', _k.az, m === 'atras' || m === 'jogador' ? w : w * 0.8, dt);
@@ -227,7 +332,7 @@ export function criarCameraLivre(opc = {}) {
     /** Altura e Distância (0–20; 10 = o perfil). */
     definirAjuste(a) { fa = fatorAjuste(a?.altura); fd = fatorAjuste(a?.distancia); },
     /** Estado para os testes: o modo, o de antes (na transição), a fração dela, o rumo e os fatores. */
-    resumo() { return { modo: atual, anterior: t < TRANSICAO ? anterior : null, transicao: Math.min(1, t / TRANSICAO), yaw: yawDe(atual ?? 'tv', dir), dir, fa, fd }; },
+    resumo() { return { modo: atual, anterior: t < TRANSICAO ? anterior : null, transicao: Math.min(1, t / TRANSICAO), yaw: yawDe(atual ?? 'tv', dir), dir, fa, fd, cortesJogador }; },
     /**
      * camera.js: depois de posicionar a câmera de jogo (TV/aproximada) — fora a câmera do gol, a de cinema, o plano geral e
      * a livre dos prints. Troca a pose pela do modo (est.modo), com a transição e os limites.
@@ -244,6 +349,9 @@ export function criarCameraLivre(opc = {}) {
       andarFocos(dt, alvo, corte);
       pose(modo, I, alvo, fim);
       segurarPose(modo, fim);
+      // a bola, os pés e a cabeça do controlado no quadro (a bola no chão: o ponto dela no gramado)
+      _pts[0] = alvo.bx; _pts[1] = 0.11; _pts[2] = alvo.bz; _pts[3] = alvo.jx; _pts[4] = 0; _pts[5] = alvo.jz;
+      _pts[6] = alvo.jx; _pts[7] = 1.8; _pts[8] = alvo.jz;
       if (t < TRANSICAO) {
         t += dt;
         pose(anterior, I, alvo, pA);
@@ -252,8 +360,9 @@ export function criarCameraLivre(opc = {}) {
         for (let i = 0; i < 3; i++) { pB.de[i] = lerp(pA.de[i], fim.de[i], s); pB.para[i] = lerp(pA.para[i], fim.para[i], s); }
         pB.fov = lerp(pA.fov, fim.fov, s);
         segurarPose(modo, pB);
+        enquadrar(pB, I.est.aspecto, _pts, 3);
         aplicar(I.camera, I.est.aspecto, pB);
-      } else aplicar(I.camera, I.est.aspecto, fim);
+      } else aplicar(I.camera, I.est.aspecto, enquadrar(fim, I.est.aspecto, _pts, 3));
       return true;
     },
     /** A pose pura de um modo com um foco dado (testes em Node): {de, para, fov}. */

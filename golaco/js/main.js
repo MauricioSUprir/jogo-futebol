@@ -1884,6 +1884,7 @@ function paginaLivre() {
     comando, acao: a => filaAcoes.push(a), soltar: () => entrada?.soltarTudo(),
     // a câmera do Livre (render/camera-livre.js): a da página, as prefs, o rumo do ataque do meu time e ?camera=
     camera: () => cam, prefs, salvarPrefs, dirAtaque: () => mundo.ataca?.[TIME_HUMANO] ?? 1, cameraPedida: params.get('camera'),
+    cena: () => cena3d?.cena,
   });
   return PAG_LIVRE;
 }

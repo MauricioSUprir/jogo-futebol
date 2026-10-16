@@ -30,8 +30,9 @@
 // LIVRE.afastar m de quem já está em campo. Com uma bola parada montada, ela é montada de novo com quem ficou.
 //
 // Regras (passoLivre = passoPartida com m.livre): sem relógio (minutos por tempo LIVRE.relogioMin: nunca acaba; o relógio
-// fica escondido na página), sem intervalo, sem impedimento (impedimento.js; na IA a linha fica só como forma e nenhum
-// passe é recusado por ela — com menos de 2 adversários ela fica a LIVRE.linhaSemDefesa m da linha de fundo: ia-ataque.js),
+// fica escondido na página), sem intervalo, sem impedimento (impedimento.js; nem na IA: a linha dela fica a
+// LIVRE.linhaSemDefesa m da linha de fundo, só como forma — ninguém preso atrás da defesa nem voltando por estar à frente
+// dela, nenhum passe recusado: ia-ataque.js tetoLinha; teste-livre G),
 // sem faltas nem cartões (faltas.js, defesa.js). Gol vale e o placar conta; a saída é do time que sofreu se ele tiver
 // alguém de linha, senão do outro (partida.js montarSaida); bola fora: lateral, escanteio e tiro de meta da partida quando
 // o time que cobra tem alguém de linha (o tiro de meta pelo goleiro, ou pelo de linha sem ele), senão a cobrança passa

@@ -2239,8 +2239,12 @@ dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,
     (saída do time do humano | a bola no pé do controlado; o placar fica), `passoLivre(m, entrada, acoes)` (as ações-objeto
     `{tipo: 'livreAjuste', linha, goleiro}` e `{tipo: 'livreRecomecar', onde}` ANTES do passo, gravadas em `m.log`, e o
     `passoPartida`), `entradaDemoLivre`, `normalizarEscolha`, `escolhaDoMundo`, `resumoLivre`.
-  - Regras: as da partida com os ramos de `m.livre` — sem impedimento (`impedimento.js regraImpedimento`; na IA a linha só
-    como forma, sem recusar passe, e a `LIVRE.linhaSemDefesa` m da linha de fundo com menos de 2 adversários: `ia-ataque.js`),
+  - Regras: as da partida com os ramos de `m.livre` — sem impedimento (`impedimento.js regraImpedimento`; nem na IA:
+    a linha `A.linha` do `ia-ataque.js` deixa de ser o penúltimo adversário e fica a `LIVRE.linhaSemDefesa` m da linha de
+    fundo (ou na bola), só como a forma — o centroavante espera na entrada da área; `tetoLinha`: ninguém fica preso atrás da
+    defesa nem volta com pressa por estar à frente dela, a corrida não acaba por isso e o passe para quem está lá vale.
+    Antes a linha só mudava com menos de 2 adversários e o Livre 11 × 11 jogava como a partida: à frente da defesa, voltando
+    ~40% do tempo e 1,3% dos passes; agora ~3% e ~5%, `teste-livre` G),
     sem faltas nem cartões (`faltas.js`, `defesa.js`), sem relógio nem intervalo. Gol vale; a saída é do time que sofreu se ele
     tiver alguém de linha, senão do outro (`partida.js montarSaida` + `temLinha`); bola fora pela partida quando quem cobra tem
     alguém de linha (o tiro de meta pelo goleiro dele vale), senão a cobrança passa ao outro (`cobrancaSemLinha`: escanteio ↔
@@ -2272,8 +2276,15 @@ dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,
   e Jogador com o rumo FIXO do ataque do time do humano (`m.ataca`, 0 ou π) — o `yawEntrada` do main.js lê `cam.yaw`:
   analógico para cima = para o gol que eu ataco. Troca com o mesmo rumo: transição de 0,6 s; rumo diferente: corte. Limites
   (`segurarPose`): de lado, perto do lado de cá a câmera fica dentro da caixa da arquibancada de cá (y ≤ 26, z ≤ 70: ela sai do
-  desenho) ou na frente dela (z ≤ 43,5); Atrás/Jogador antes das placas do fundo (|x| ≤ 58); Jogador ≥ 3,2 m de altura; depois
-  sobe até sair de qualquer sólido (`estadio-forma.js solidoEm`). Prefs da página (`golaco.prefs.v1`): `cameraLivre` e
+  desenho) ou na frente dela (z ≤ 43,5) — saindo da caixa, ela anda pela reta até o ponto olhado e o plano abre na mesma conta
+  (contínua: a borda mais perto pulava até 14 m num quadro); Atrás/Jogador antes das placas do fundo (|x| ≤ 58); Jogador
+  ≥ 3,2 m de altura; depois sobe até sair de qualquer sólido (`estadio-forma.js solidoEm`). Enquadramento (`enquadrar`, em
+  todas as 6): a bola e o controlado (pés e cabeça) dentro de `QUADRO` (|x| ≤ 0,92, y de −0,7 — acima do minimapa do PC — a
+  0,9); fora disso o ponto olhado anda para eles o mínimo que basta (Atrás perto do meu gol, a Distância baixa nas bordas);
+  os limites do foco de Ampla/Alta encolhem com a Distância (`limitesLateral`). Jogador: a troca de controlado para longe
+  (o alvo pula > 3 m e fica a > 8 m do foco: `CORTE_JOGADOR`) corta. Os cantos do lado de cá (`render/cantos-livre.js`,
+  só no Livre, pelo `livre-pagina.js`): o degrau de `FORA.canto` e as paredes de trás com o material dos fundos do jogo
+  (Atrás e Jogador olham pelo comprimento e mostravam o vão: céu, o chão de fora, o mastro); +1 chamada, 152 triângulos. Prefs da página (`golaco.prefs.v1`): `cameraLivre` e
   `cameraAjuste {altura, distancia}`; a da partida (`camera`) não muda e volta ao sair do Livre. C/R3 no Livre = a próxima
   das 6 (aviso de comando "Câmera: <nome>"). `?camera=<uma das 6>` abre o Livre nela. Na partida, nos treinos e nos pênaltis
   nada muda. `__golaco.livre.cameras` (os nomes), `.camera` ({modo, anterior, transicao, yaw, dir, fa, fd, altura,
@@ -2289,12 +2300,16 @@ dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,
   passo), recomecar('meio' | 'pe'), naFila}`.
 - **Pedido do TM**: `livre: {linha: [casa, fora], goleiro: [casa, fora]}` (opcional; os índices dos times do pedido).
 - **Testes**: `teste-livre` (Node, padrão): A montagem N × M nas bordas e sorteadas, B mudar no meio do jogo (bola no pé de quem
-  sai, controlado, goleiro com a bola nas mãos, bola parada montada), C IA × IA de 2 min (3×3 e 5×5 com os goleiros, 10
-  sementes: posse troca com a bola rolando média ≥ 6, chutes ≥ 2, ≤ 10% do tempo dos de linha a > 40 m da bola; 1×0 sem
+  sai, controlado, goleiro com a bola nas mãos, bola parada montada), C IA × IA de 2 min (3×3 e 5×5 com os goleiros, 20
+  sementes — as trocas do 3×3 variam ~2,8 por semente: sem o impedimento na IA, 6,7 nas 20 do teste e 6,6 em 60 (antes
+  7,2) —: posse troca com a bola rolando média ≥ 6, chutes ≥ 2, ≤ 10% do tempo dos de linha a > 40 m da bola; 1×0 sem
   goleiros: chutes e distância), D recomeços com um time sem ninguém de linha, E determinismo e nada vaza para a partida, F o
-  goleiro sozinho no canhão do teste-goleiro = o da partida.
+  goleiro sozinho no canhão do teste-goleiro = o da partida, G sem impedimento na IA (Livre 11 × 11: quem está à frente da
+  defesa adversária não volta por isso — ≤ 15% voltando, antes 43% — e recebe o passe — ≥ 2%, antes 0,9%).
   `teste-livre-tela` (navegador, CI e deploy): A a varredura das poses em Node (as 6 câmeras × Altura/Distância × 3 telas × 2
   rumos × focos na borda + transições: fora de sólido, sem arquibancada na frente do campo; a contraprova sem os limites
-  reprova), B as 6 câmeras pela pausa no PC Alta de dia (a bola e o controlado no quadro, os pontos do gramado à vista com cor
-  de grama), C a tecla C, o rumo do analógico, transição × corte, Altura/Distância salvas e de volta na partida, D a pausa e
+  reprova; A3 a câmera não pula — ≤ 0,6 m com o foco andando 0,05 m, o limite antigo pulava 14 m —, A4 a bola e o controlado
+  no quadro nas bordas do campo nos dois rumos — antes 1632 de 6600 fora —, A5 o corte do Jogador), B as 6 câmeras pela pausa
+  no PC Alta de dia (a bola e o controlado no quadro, os pontos do gramado à vista com cor de grama; B0b nada cortado na pausa;
+  B2 os cantos — céu em Atrás/Jogador 2,1–2,3% da tela → ~0%; B3 a bola no pé na pequena área e nos cantos do meu gol), C a tecla C, o rumo do analógico, transição × corte, Altura/Distância salvas e de volta na partida, D a pausa e
   os submenus sem rolar no celular 844×390 e as 6 câmeras de noite, E 568×320 sem nada encostando, F `?tm`.
