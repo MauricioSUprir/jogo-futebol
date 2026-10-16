@@ -324,8 +324,7 @@ export const RECEPCAO = {
   // bola livre: o adversário que chega antes dele por mais que isto (s) fica com ela — o controlado não é puxado
   folgaAdversario: 0.3,
   // (só na partida) passe para outro: com a bola até isto (m/s), no chão e ao alcance do pé de um adversário de quem
-  // passou, ele domina mesmo com o recebedor só com o domínio MARCADO (sim.js bolaLivre) — antes o toque marcado do
-  // recebedor (sempre adiante, ele correndo atrás da bola) tirava a vez de todo mundo e o defensor passava pela bola
+  // passou, ele domina mesmo com o recebedor só com o domínio MARCADO (sim.js bolaLivre; teste-nao-passa)
   passeLento: 4.0,
 };
 
@@ -935,18 +934,16 @@ export const FALTAS = {
   // (× lento com o condutor parado/lento, abaixo de ACOES.boteIA.vParado: o bote nele chega devagar e de perto — sem
   // isso ~30% das tentativas viravam falta e o humano ganhava tiro livre só por ficar parado)
   // × naArea na própria área (pênalti) e × naChanceClara na chance clara de gol (vermelho): ali o defensor evita entrar no
-  // homem, como na carga (real: ~1% das faltas vira pênalti — 0,23 por jogo para 22,8 faltas; aqui eram 4–8%)
-  // semCorpo: o bote que chega sem o corpo entrar no condutor não ganha a bola com semCorpo × a chance da chegada × (1 −
-  // fatorForca) — ele segura o contato e segue (faltas.js BOTE_SEM_GANHAR; fora do condutor parado/lento)
-  bote: { frente: 0.2, lado: 0.42, tras: 0.8, porVel: 0.12, vLivre: 4, desarme: [1.3, 0.7], lento: 0.4, naArea: 0.4, naChanceClara: 0.2, semCorpo: 1.0 },
+  // homem, como na carga (real: ~1% das faltas vira pênalti); semCorpo: o bote sem o corpo entrar no condutor não ganha
+  // com semCorpo × a chance da chegada × (1 − fatorForca) (faltas.js BOTE_SEM_GANHAR), só com o condutor abaixo de
+  // semCorpoV m/s (na corrida a bola vai à frente do pé: quem chega antes leva) e fora do condutor parado/lento
+  bote: { frente: 0.2, lado: 0.42, tras: 0.8, porVel: 0.12, vLivre: 4, desarme: [1.3, 0.7], lento: 0.4, naArea: 0.4, naChanceClara: 0.2, semCorpo: 1.0, semCorpoV: 4.8 },
   // força do contato no bote da IA (faltas.js forcaContato/fatorForca: a velocidade com que o defensor entra no condutor,
   // limitada pela aproximação): até `min` m/s (o passo) é contato incidental (desarme limpo: ele chega na bola antes do
   // homem); a chance de antes a partir de `cheia` m/s, × (1 + porForca · (f − min)) acima; `janela` s: a memória do choque
   // dos corpos (a colisão zera a aproximação); a mais de `alcance` m entre os centros não há contato (corpo 0,3 + perna até
   // a bola ACOES.boteIA.alcance 0,65 + o pé do condutor ~0,25). Pedido do dono, 15/10 ("faltas muito forçadas e sem
-  // sentido"; tools/teste-faltas-sentido.mjs). porForca 0,5 → 1,0 na junção com a main (#471, 15/10): com a IA intensa
-  // (defesa da arrancada, bote de frente na bola) os botes que entram no homem ficaram mais raros e fortes, e as 12 partidas
-  // IA × IA do teste-faltas foram a 1,42 falta por partida (meta 1,5–5; a main 2,00: bote 14 → 5); com 1,0, 1,75 (bote 10)
+  // sentido"; teste-faltas-sentido). porForca 0,5 → 1,0 na junção com a #471 (teste-faltas D: 1,42 → 1,75 por partida)
   forca: { min: 1.0, cheia: 1.5, porForca: 1.0, janela: 0.33, alcance: 1.2 },
   // DIVIDIDA do humano que não ganha a bola com o pé no condutor (defesa.js resolverBote): as mesmas chances do bote da
   // IA, com a força do contato (faltas.js chanceFaltaDividida; sem o × naArea/naChanceClara)
@@ -1360,12 +1357,8 @@ export const DEFESA_HUMANO = {
   // atrás guarda a margem da freada do condutor (semAtropelar.reacao/perto). `desvio`: olha `T` s à frente e passa a
   // ≥ 2 raios + `folga` m de quem estiver no caminho (corpos a até `alcance` m). `depois`: s em que quem deixou de ser o
   // chamado segue com o bote com responsabilidade e sem falta tática (sim.js boteIA, defesa.js chamadoRecente).
-  // sem atropelar (defesa.js semAtropelar; pedido do dono, 15/10): o time jogado por uma pessoa entra no condutor
-  // adversário (ou no recebedor do passe) no máximo a (v_dele − reacao · JOGADOR.freioGiro · (1 − folga/perto)⁺)⁺ +
-  // √(chega² + 2 · freio · folga)
-  // m/s (folga = distância − 2 raios): a curva de freada a `freio` m/s² que encosta a ~chega m/s, abaixo da carga
-  // (FALTAS.carga.vMin), e quem vem atrás guarda a folga para a freada do condutor (até 8 m/s²) no tempo de reação — a
-  // margem inteira com os corpos encostando, sumindo em rampa até `perto` m de folga
+  // sem atropelar (defesa.js semAtropelar, a conta está lá): o time jogado por uma pessoa encosta no condutor adversário
+  // a ~`chega` m/s pela curva de freada de `freio` m/s², guardando a margem da freada dele no tempo `reacao` até `perto` m
   semAtropelar: { freio: 3.0, chega: 1.0, reacao: 0.25, perto: 3.0 },
   pressao: {
     validade: 1, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.0, contorno: 1.2,

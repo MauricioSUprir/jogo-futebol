@@ -184,8 +184,7 @@ export function chanceFaltaBote(d, c) {
  * Chance de a DIVIDIDA do humano que não ganhou a bola (defesa.js resolverBote; motivo 'perdeu' ou 'tocou') ser falta: a
  * MESMA régua do bote da IA — chegada, velocidade, desarme e a força do contato (fatorForca(forcaContato): o pé que sai
  * na bola sem o corpo entrar no condutor é desarme errado, não falta) — × FALTAS.dividida[motivo]. Sem o cuidado da área
- * e da chance clara (FALTAS.bote.naArea/naChanceClara: ali quem decide entrar é a pessoa). Contraprova de 15/10: só o
- * bote da IA tinha ganhado a força do contato, e ~60% das faltas da DIVIDIDA eram com o corpo entrando a < 1 m/s.
+ * e da chance clara (FALTAS.bote.naArea/naChanceClara: ali quem decide entrar é a pessoa).
  */
 export function chanceFaltaDividida(m, d, c, motivo) {
   return Math.min(0.95, chanceFaltaBote(d, c) * fatorForca(forcaContato(m, d, c))) * (FALTAS.dividida[motivo] ?? 0);
@@ -204,25 +203,19 @@ export function faltaNoBote(m, d, c, lento = false) {
   if (!m.partida) return null;
   // o bote da IA só sai com a bola mais perto do defensor que do condutor (ou parada/encostada nele): ele chega na bola
   // antes do homem. Falta é o desafio sem cuidado que leva o corpo para dentro do condutor — pela força do contato
-  // (forcaContato × fatorForca). Contato a passo (o defensor recuando de frente, acompanhando de lado, a bola encostada)
-  // é desarme limpo. Pedido do dono, 15/10 ("faltas muito forçadas e sem sentido": 53% das faltas da IA no humano que
-  // conduz eram com o defensor entrando a < 1 m/s; tools/teste-faltas-sentido.mjs)
-  // na própria área (seria pênalti) e na chance clara de gol (seria vermelho) o defensor evita entrar no homem, como na
-  // carga: × FALTAS.bote.naArea, × FALTAS.bote.naChanceClara. Evitar é TIRAR O CORPO (BOTE_EVITADO: sem bote neste passo),
-  // não o árbitro deixar passar — o bote que entraria no homem seguia como desarme limpo, e o mesmo contato era falta fora
-  // da área e roubada limpa dentro dela (contraprova de 15/10). A régua do contato é a mesma no campo todo (IFAB Regra 12)
+  // (forcaContato × fatorForca); contato a passo é desarme limpo (pedido do dono, 15/10: "faltas muito forçadas e sem
+  // sentido"; teste-faltas-sentido). Na própria área e na chance clara o defensor evita entrar no homem (× naArea,
+  // × naChanceClara): TIRA O CORPO (BOTE_EVITADO), não é o árbitro deixar passar — a régua é a mesma no campo todo
   const cuidado = (naAreaDe(m, d.time, c.x, c.z) ? FALTAS.bote.naArea : 1) * (chanceClara(m, c, d) ? FALTAS.bote.naChanceClara : 1);
   const pb = Math.min(0.95, chanceFaltaBote(d, c)), ff = fatorForca(forcaContato(m, d, c));
   const p = Math.min(0.95, pb * ff);
   const u = uniforme(m.rng);
   if (u >= p) {
-    // o bote que chega sem o corpo entrar no condutor (contato abaixo de FALTAS.forca.min, ou entre min e cheia) não é
-    // falta, mas também não ganha sempre: com a chance que antes era a da falta (a chegada, a velocidade, o desarme —
-    // chanceFaltaBote) × semCorpo × (1 − fatorForca), o condutor segura o contato e segue com a bola (BOTE_SEM_GANHAR; o
-    // defensor descansa como no bote errado). Sem isso a falta "do nada" virava roubada limpa: +0,7 roubada por partida
-    // e o ataque perdia a posse perto da área (junção #480 + #481, painel de 144: chutes 8,5 → 8,2, de fora 36,9 →
-    // 31,6%). Contra o condutor parado/lento quem decide é chanceDividida (sim.js boteIA): ali não entra
-    if (!lento && u < p + FALTAS.bote.semCorpo * pb * Math.max(0, 1 - ff)) return BOTE_SEM_GANHAR;
+    // o bote que chega sem o corpo entrar no condutor não é falta, mas também não ganha sempre: com a chance que antes era
+    // a da falta × semCorpo × (1 − fatorForca) o condutor segura o contato e segue (BOTE_SEM_GANHAR; junção #480 + #481:
+    // sem isso a falta "do nada" virava roubada limpa, +0,7 por partida). Só abaixo de semCorpoV m/s (na corrida a bola
+    // vai à frente do pé: quem chega nela antes leva) e fora do condutor parado/lento (ali decide chanceDividida)
+    if (!lento && MD.hypot(c.vx, c.vz) < FALTAS.bote.semCorpoV && u < p + FALTAS.bote.semCorpo * pb * Math.max(0, 1 - ff)) return BOTE_SEM_GANHAR;
     return null;
   }
   if (u >= p * cuidado) return BOTE_EVITADO;
@@ -236,8 +229,7 @@ export function faltaNoBote(m, d, c, lento = false) {
  * FALTAS.tatica.dist) — num ataque promissor (não na chance clara: seria vermelho) puxa a camisa (SPA: amarelo). Fora do
  * ataque promissor ele também segura, menos (FALTAS.tatica.semSPA por passo; IFAB Regra 12.1, "segura o adversário": tiro
  * livre direto, sem cartão — origem 'segurar'), e nunca na própria área (seria pênalti: ele evita). Chance por passo; só
- * na partida. Pedido do dono, 15/10: sem as faltas sem contato, a IA × IA caía para ~1,1 falta por partida (real ~0,40 por
- * minuto de bola rolando ≈ 3 por partida daqui); segurar quem passou é falta de verdade que só existia no contra-ataque.
+ * na partida (sem as faltas sem contato a IA × IA caía para ~1,1 falta por partida).
  */
 export function faltaTatica(m, d, c) {
   if (!m.partida || m.posse !== c.id) return null;
@@ -245,8 +237,7 @@ export function faltaTatica(m, d, c) {
   if (chegada(d, c) !== 'tras') return null;
   if (chanceClara(m, c, d)) return null;
   const spa = ataquePromissor(m, c);
-  // fora do contra-ataque ele só segura quem está ESCAPANDO dele (escapando): segurar o condutor parado, andando ou que
-  // ele está alcançando não tem motivo — era falta "do nada" (contraprova de 15/10: ~1/3 das 'segurar')
+  // fora do contra-ataque ele só segura quem está ESCAPANDO dele (escapando): o parado, o que anda ou o que ele alcança não
   const p = spa ? FALTAS.tatica.chancePorPasso : naAreaDe(m, d.time, c.x, c.z) || !escapando(d, c) ? 0 : FALTAS.tatica.semSPA;
   if (!(p > 0) || uniforme(m.rng) >= p) return null;
   return montarFalta(m, d, c, spa ? 'tatica' : 'segurar', false);

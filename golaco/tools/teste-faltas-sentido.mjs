@@ -25,9 +25,9 @@
 //      cartão;
 //   A13 bote forte na própria área: o defensor tira o corpo (BOTE_EVITADO) — a fração de botes limpos dentro da área é a
 //      de fora (|Δ| ≤ 8 pontos; o mesmo contato é falta no campo todo) e a falta dentro existe (pênalti);
-//   A14 o bote sem o corpo entrar (A1, A2) não vira roubada limpa: o condutor segura o contato e segue
-//      (BOTE_SEM_GANHAR) com a chance que antes era a da falta (chanceFaltaBote, ± 5 pontos) — sem isso a roubada da IA
-//      subia ~0,7 por partida e o ataque perdia volume (junção #480 + #481).
+//   A14 o bote sem o corpo entrar (A1) não vira roubada limpa: o condutor segura o contato e segue (BOTE_SEM_GANHAR) com
+//      a chance que antes era a da falta (chanceFaltaBote, ± 5 pontos) — sem isso a roubada da IA subia ~0,7 por partida e
+//      o ataque perdia volume (junção #480 + #481); na corrida (A2, ≥ FALTAS.bote.semCorpoV) quem chega antes leva (0).
 //  B. Partidas com o time 0 jogado como uma pessoa (faltas-registro: 'persegue', 'pressao', 'dribla'; o árbitro do teste
 //     mede a força do contato pela foto antes do passo — a de quando os corpos encostam nos últimos 0,33 s):
 //   B1 faltas de bote da IA com o contato a < 1 m/s: ≤ 0,1 por partida (main: ~2 por partida);
@@ -130,11 +130,12 @@ function sorteiaCarga(o, N = 400) {
   // A3: a bola encostada no defensor (à frente do condutor, a 0,62 m), os dois andando a 1,6 e 1,2 m/s
   const a3 = sorteiaBote({ dx: 0.95, dz: 0.1, dvx: 1.2, cvx: 1.6, bola: [0.55, 0.05] });
   reg('A3 bola encostada no defensor andando junto (≤ 1 m/s de diferença)', `falta em ${pc(a3.n, a3.N)}`, '0', a3.n === 0);
-  // A14: o bote sem o corpo entrar (A1 de frente, A2 de lado) deixou de ser falta, mas não virou roubada limpa: o condutor
-  // segura o contato e segue com a chance que antes era a da falta (chanceFaltaBote; faltas.js BOTE_SEM_GANHAR)
+  // A14: o bote sem o corpo entrar (A1 de frente, condutor a 4 m/s) deixou de ser falta, mas não virou roubada limpa: o
+  // condutor segura o contato e segue com a chance que antes era a da falta (chanceFaltaBote; faltas.js BOTE_SEM_GANHAR);
+  // na corrida (A2, 5 m/s ≥ FALTAS.bote.semCorpoV) a bola vai à frente do pé e quem chega nela antes leva (0)
   const segura = a => Math.abs(a.sg / a.N - a.pb) <= 0.05 && a.sg > 0;
-  reg('A14 bote sem o corpo entrar (A1 · A2): o condutor segura sem falta (não vira roubada limpa)', `segura ${pc(a1.sg, a1.N)} · ${pc(a2.sg, a2.N)} (antes da força: ${pc(Math.round(a1.pb * a1.N), a1.N)} · ${pc(Math.round(a2.pb * a2.N), a2.N)})`,
-    'a chance de antes ± 5 pontos', segura(a1) && segura(a2));
+  reg('A14 bote sem o corpo entrar: o condutor segura sem falta (A1) · na corrida não (A2)', `segura ${pc(a1.sg, a1.N)} (antes da força: ${pc(Math.round(a1.pb * a1.N), a1.N)}) · ${pc(a2.sg, a2.N)}`,
+    'a chance de antes ± 5 pontos · 0', segura(a1) && a2.sg === 0);
   // A4: por trás, o defensor a 7 m/s e o condutor a 3 m/s, a 0,8 m (a bola ao alcance dele, do lado)
   const a4 = sorteiaBote({ dx: -0.8, dz: 0.15, dvx: 7, cvx: 3, bola: [-0.3, 0.35] });
   reg('A4 (de verdade) bote por trás entrando forte: falta, temerário + amarelo', `falta em ${pc(a4.n, a4.N)} · ${a4.f1 ? `${a4.f1.grau}/${a4.f1.cartao}` : '—'}`, '≥ 70% · temerario/amarelo',
