@@ -1212,7 +1212,7 @@ export const IA_ATAQUE = {
   //    × chute (× chuteLonge de fora da área) − chutePosse·posse; mira a miraPoste m do poste longe do
   //    goleiro; força chuteForca (perto → longe); chute 2,5 → 3,0 na entrega "cabeceio + IA intensa" (12/10: com a
   //    defesa que corta o passe e acompanha a arrancada o time finaliza o que tem) e chuteLonge 0,3 → 0,25 (o chute de
-  //    fora fica com o peso de antes, 0,75: gols de fora 21–24% → 15%; 0,28 na junção #480 + #481: chutes de fora 32,7%); cruzamentoV 0,25 → 0,35 (o cabeceio na bola
+  //    fora fica com o peso de antes, 0,75: gols de fora 21–24% → 15%); cruzamentoV 0,25 → 0,35 (o cabeceio na bola
   //    rolando rende gol: o cruzamento vale mais);
   //  - conduzir: 7 direções a passoAngConduz rad, conduzDist m à frente, × conduz (o tempo que leva);
   //    chance de manter pelos adversários a < manterRaio m do caminho (manterPeso; de lado/atrás
@@ -1230,7 +1230,7 @@ export const IA_ATAQUE = {
     posse: 0, posseMeuCampo: 0.025, posseRetomada: [0.02, 2], vPasse: 12, vEnfiada: 15, vChute: 25, passeMax: 40, erroDist: 0.25, pressaoRecebe: 3.5, pressaoValor: 0.5,
     passePress: 0.2, impedido: 0.3, enfiadaLeads: [6, 10, 14], vEnfiadaAlta: 13, enfiadaAltaP: 0.7, lancamentoP: 0.5, cruzamentoV: 0.35,
     cruzamentoP: [0.02, 0.2, 0.4, 0.45], cruzamentoRaio: 1,
-    xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 3.0, chuteLonge: 0.28, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
+    xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 3.0, chuteLonge: 0.25, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
     passoAngConduz: 0.5, conduzDist: 5, conduz: 0.85, conduzSolta: [1.5, 4, 0.35], vConduz: 5.5, magConduz: 0.9,
     manterRaio: 3, manterPeso: 0.7, manterLado: 0.4, manterTerco: { u: 17.5, peso: 0.55, lado: 0.25 }, manterArea: [0.95, 0.7], manterPerto: 9,
     protegeDist: 1.5, protegeP: 0.7, protegeMax: 1.0, correrLivre: 10, correrAte: 25, curtaPerto: 2.5,
