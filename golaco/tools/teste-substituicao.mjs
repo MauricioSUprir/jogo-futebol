@@ -410,16 +410,35 @@ if (detalhe) for (const { caso, r } of res) console.log(`s${caso.semente} ${caso
 }
 // S6 custo (tempo de CPU do processo: a máquina dividida não conta a fila do escalonador)
 {
+  // a criação mede a parede MENOS a espera do fio na fila do escalonador (2º campo de /proc/thread-self/schedstat, em ns;
+  // a mesma conta do teste-custo e do teste-comemoracao): no CI dividido a parede de 0,3 ms passava de 3 ms só pela fila.
+  // Sem o arquivo (outro sistema), vale a parede.
+  let espera = () => 0;
+  try {
+    const fd = fs.openSync('/proc/thread-self/schedstat', 'r'), buf = Buffer.alloc(128);
+    const ler = () => {
+      const n = fs.readSync(fd, buf, 0, 128, 0);
+      let k = 0; while (k < n && buf[k] !== 32) k++; k++;
+      let v = 0; while (k < n && buf[k] >= 48 && buf[k] <= 57) { v = v * 10 + buf[k] - 48; k++; }
+      return v / 1e6;
+    };
+    ler(); espera = ler;
+  } catch { /* sem schedstat: a parede */ }
   let melhor = Infinity, tentativas = 0, criarMax = Infinity;
   // (a 1ª passada aquece o JIT; as medidas valem da 2ª em diante; repete sozinha se reprovar, até 4 vezes)
   for (; tentativas < 5 && (melhor > 0.6 || criarMax > 3); tentativas++) {
     let cpu = 0, ticks = 0, criar = 0;
     for (const caso of validos) {
       const plano = SU.planejarSubstituicao(caso.m, caso.subs, { timeHumano: 0, posAntes: id => caso.antes.get(id) ?? null });
-      // a criação (uma vez por cena, ~0,3 ms): a melhor de 3 no relógio de parede (o tempo de CPU do processo soma as
-      // linhas do coletor de lixo de outras horas)
+      // a criação (uma vez por cena, ~0,3 ms): a melhor de 3 na parede sem a fila do escalonador (o tempo de CPU do
+      // processo soma as linhas do coletor de lixo de outras horas)
       let c = null, melhorCriar = Infinity;
-      for (let r = 0; r < 3; r++) { const t0 = performance.now(); c = SU.criarCenaSubst(plano, caso.m); melhorCriar = Math.min(melhorCriar, performance.now() - t0); }
+      for (let r = 0; r < 3; r++) {
+        const e0 = espera(), t0 = performance.now();
+        c = SU.criarCenaSubst(plano, caso.m);
+        const parede = performance.now() - t0;
+        melhorCriar = Math.min(melhorCriar, Math.max(0, parede - (espera() - e0)));
+      }
       criar = Math.max(criar, melhorCriar);
       const u2 = process.cpuUsage();
       while (!c.acabou) { SU.passoCenaSubst(c); ticks++; }
@@ -431,7 +450,7 @@ if (detalhe) for (const { caso, r } of res) console.log(`s${caso.semente} ${caso
     criarMax = Math.min(criarMax, criar);
   }
   reg('S6 custo médio da cena por tick (CPU; 49 cenas)', `${f3(melhor)} ms (${tentativas - 1} medida${tentativas > 2 ? 's' : ''} depois de aquecer)`, '≤ 0,6 ms', melhor <= 0.6);
-  reg('S6 criação da cena com a pré-rolagem de quem sai (a pior das 49)', `${f2(criarMax)} ms`, '≤ 3 ms', criarMax <= 3);
+  reg('S6 criação da cena com a pré-rolagem de quem sai (a pior das 49; parede sem a fila do escalonador)', `${f2(criarMax)} ms`, '≤ 3 ms', criarMax <= 3);
 }
 // S7 câmera
 {
