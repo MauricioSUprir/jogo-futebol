@@ -360,19 +360,32 @@ function desejo(c, a, t) {
   // para fora do campo e não para antes delas (a freada: v²/(2·freio)) tira só a velocidade para fora e escorrega ao
   // longo delas (contraprova de 15/10: um jogador correndo a 7,7 m/s para fora da lateral no tiro de meta parava 0,8 m
   // dentro da faixa das placas)
+  // (15/10, frente "cenas robustas": pedir só a velocidade ao longo das placas não tirava a de fora a tempo — passoCorpo
+  // limita a de lado — e, com um resto de velocidade para fora, o pedido se repetia a cada tick SEM frear: na lógica do
+  // domínio-sem-passar, um jogador a 7,7 m/s na diagonal para a lateral de lá no tiro de meta encostou nas placas, z −39,63,
+  // e correu 25 m ao longo delas a 5 m/s a cena inteira — S4, 335 ticks. Agora ele CURVA para dentro freando: o pedido a
+  // CURVA_PLACAS rad da velocidade, para o lado de dentro, na velocidade de agora — passoCorpo dá −freio na linha e latCorte
+  // de lado, juntos ~12 m/s² contra a placa, a freada mais forte que o corpo tem; ele para antes de LIM e a velocidade ao
+  // longo delas cai junto)
   const v = Math.hypot(j.vx, j.vz);
   if (v > 0.3 && !a.fixo) {
     const k = v / (2 * j.par.freio), px = j.x + j.vx * k, pz = j.z + j.vz * k;
-    const tx = Math.abs(px) > LIM_X && px * j.vx > 0 ? 0 : j.vx, tz = Math.abs(pz) > LIM_Z && pz * j.vz > 0 ? 0 : j.vz;
-    if (tx !== j.vx || tz !== j.vz) {
-      const vt = Math.hypot(tx, tz);
-      return vt > 1e-6 ? rumoA(c, tx, tz, vt, j.rumo) : para(c, 0, j.rumo);
+    const ox = Math.abs(px) > LIM_X && px * j.vx > 0 ? Math.sign(px) : 0, oz = Math.abs(pz) > LIM_Z && pz * j.vz > 0 ? Math.sign(pz) : 0;
+    if (ox || oz) {
+      const hx = j.vx / v, hz = j.vz / v, cs = Math.cos(CURVA_PLACAS), sn = Math.sin(CURVA_PLACAS);
+      // os dois giros possíveis da velocidade: o que aponta mais para dentro (menos para as placas)
+      const ax = hx * cs - hz * sn, az = hx * sn + hz * cs, bx = hx * cs + hz * sn, bz = -hx * sn + hz * cs;
+      const ua = ax * ox + az * oz <= bx * ox + bz * oz, dx = ua ? ax : bx, dz = ua ? az : bz;
+      return rumoA(c, dx, dz, v, Math.atan2(dz, dx));
     }
   }
   return para(c, 0, j.rumo);
 }
 // até onde quem freia pode ir (o centro do corpo): 0,9 m antes das placas
 const LIM_X = PLACAS_X - 0.9, LIM_Z = PLACAS_Z - 0.9;
+// rad — a curva de quem vai para as placas: acima de JOGADOR.angCorte + 0,2 (latCorte inteiro) e abaixo de angInversao −
+// 0,35 (sem a freada na linha da inversão, que não tira nada de lado)
+const CURVA_PLACAS = 1.45;
 
 /**
  * Desvio de quem anda (Reynolds, "Steering Behaviors", GDC 1999: evitar obstáculos): alguém à frente (até 1,8 m) e perto

@@ -45,7 +45,7 @@ const srv = await servidor(0, raiz);
 async function abrirPagina(url) {
   const nav = await abrir(CEL);
   await nav.pagina.goto(srv.url + url, { waitUntil: 'load' });
-  await nav.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+  await nav.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
   await nav.pagina.evaluate(() => window.__golaco.relogio.usarManual(true));
   return nav;
 }

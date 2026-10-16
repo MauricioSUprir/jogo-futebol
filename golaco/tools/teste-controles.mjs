@@ -181,7 +181,7 @@ async function conferirTodosLayouts(pagina) {
   const { navegador, pagina, erros } = await abrir({ largura: 1280, altura: 720 });
   try {
     await pagina.goto(srv.url + '?q=baixa', { waitUntil: 'load' });
-    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
     // movimento: modo condução (um jogador, Etapa 1)
     await pagina.evaluate(() => { window.__golaco.reiniciar({ semente: 2, modo: 'conducao' }); window.__golaco.relogio.usarManual(true); });
     await pagina.mouse.click(640, 400);
@@ -547,7 +547,7 @@ async function conferirTodosLayouts(pagina) {
   const { navegador, contexto, pagina, erros } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
   try {
     await pagina.goto(srv.url + '?q=baixa&entalhe=1', { waitUntil: 'load' });
-    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
     await pagina.evaluate(() => { window.__golaco.reiniciar({ semente: 2, modo: 'conducao' }); window.__golaco.relogio.usarManual(true); });
     const visivel = await pagina.evaluate(() => !document.getElementById('toque').hidden);
     meta('Celular: controles de toque aparecem sozinhos', String(visivel), visivel);
@@ -1004,7 +1004,7 @@ for (const t of [
   const { navegador, pagina, erros } = await abrir({ largura: t.largura, altura: t.altura, dpr: 2, toque: true });
   try {
     await pagina.goto(srv.url + '?q=baixa' + (t.entalhe ? '&entalhe=1' : ''), { waitUntil: 'load' });
-    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
     await pagina.evaluate(() => { window.__golaco.relogio.usarManual(true); });
     const ep = await quadros(pagina, 2);
     const relVis = await pagina.evaluate(() => { const r = document.getElementById('placar-relogio'); return !!r && !r.hidden && r.offsetWidth > 0; });
@@ -1021,7 +1021,7 @@ for (const t of [
   const { navegador, pagina, erros } = await abrir({ largura: t.largura, altura: t.altura, dpr: 2, toque: true });
   try {
     await pagina.goto(srv.url + '?q=baixa' + (t.entalhe ? '&entalhe=1' : ''), { waitUntil: 'load' });
-    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
     await pagina.evaluate(() => { window.__golaco.relogio.usarManual(true); });
     // 2 s de jogo em pé, segurando o analógico e tocando onde ficam os botões
     const x0 = Math.round(t.largura * 0.25), y0 = Math.round(t.altura * 0.8);
@@ -1066,7 +1066,7 @@ for (const t of [
   const { navegador, pagina, erros } = await abrir({ largura: 420, altura: 800, dpr: 1, toque: false });
   try {
     await pagina.goto(srv.url + '?q=baixa', { waitUntil: 'load' });
-    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
     const pc = await pagina.evaluate(() => {
       const g = window.__golaco; g.relogio.usarManual(true);
       const t0 = g.estado().tick;
@@ -1084,7 +1084,7 @@ for (const t of [
   const { navegador, pagina, erros } = await abrir({ largura: 640, altura: 360, dpr: 1, toque: false });
   try {
     await pagina.goto(srv.url + '?q=baixa&demo=1&replay=0&comemoracao=0', { waitUntil: 'load' });
-    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
     const dp = await pagina.evaluate(() => {
       const g = window.__golaco;
       const out = { n: 0, cav: 0, tipos: {} };

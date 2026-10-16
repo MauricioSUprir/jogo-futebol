@@ -144,7 +144,7 @@ try {
     const { navegador, pagina: pg, erros } = await abrir(P);
     pg.setDefaultTimeout(300000); // (máquina carregada: o desenho por software demora)
     await pg.goto(`${srv.url}?prints=1&demo=1&replay=0&semente=5&${P.url}`, { waitUntil: 'load' });
-    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
     // a partida em andamento (saída feita, a torcida e o estádio prontos)
     await pg.evaluate(() => { const g = window.__golaco; g.pausar(true); g.relogio.usarManual(true); g.rodarPassos(400, 'demo'); g.relogio.avancar(16); });
     // os lances pelo alto na câmera de TV (a do jogo) e, no mesmo quadro, de perto (câmera livre de conferência, do lado

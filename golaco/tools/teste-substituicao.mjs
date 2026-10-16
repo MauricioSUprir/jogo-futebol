@@ -18,7 +18,8 @@
 //      criação (com a pré-rolagem) ≤ 3 ms;
 //   S7 lente ≥ 2,5 m de todo ator (PC e celular); câmera nunca dentro da arquibancada, das placas ou do gol; o ator
 //      principal no quadro em ≥ 95% dos quadros de cada plano, com os pés acima dos 20% de baixo no celular;
-//   S8 paresDaPlaca certo (verde = entra, vermelho = sai, o do humano primeiro); o quarto árbitro com o kit 'arbitro'.
+//   S8 paresDaPlaca certo (verde = entra, vermelho = sai, o do humano primeiro); o quarto árbitro com o kit 'arbitro';
+//   S9 (15/10, sem partida) quem corre para as placas na hora da troca nunca encosta nelas e para (ver o item).
 // "Antes" (sem js/substituicao.js): o reserva SURGE no lugar de quem saiu no mesmo tick (0 s de cena) — o teste REPROVA.
 // --estresse: mais 48 sementes (289 cenas; ~1 min) — a contraprova de 14/10 achou com elas defeitos que as 8 do CI não
 // pegavam (e que a mudança de estados de uma mescla da main expôs: a câmera colada em quem parava de lado, quem sai rente
@@ -465,6 +466,48 @@ if (detalhe) for (const { caso, r } of res) console.log(`s${caso.semente} ${caso
   reg('S8 placa: os números certos (verde entra, vermelho sai), o do humano primeiro, par a par', `${seq.map(p => `[▲${p.entra} ▼${p.sai} t${p.time}]`).join(' ')}; ordem dos times ${ordem.join(',')}`, 'certos; humano primeiro; passa de par em par', certos && humanoPrimeiro && troca);
   const q = SU.infoAtoresSubst(c).find(a => a.tipo === 'quarto');
   reg('S8 o quarto árbitro com o kit dos árbitros', q ? `id ${q.id}, kit ${q.kit}, time ${q.time}` : 'não existe', "id 203, kit 'arbitro'", !!q && q.id === 203 && q.kit === 'arbitro');
+}
+// S9 (15/10, frente "cenas robustas") quem corre para as placas na hora da troca, SEM partida nova (determinístico): numa
+// cena do canhão, um jogador que não troca é posto correndo para as placas (as 4: a lateral de lá e a de cá, as 2 linhas de
+// fundo, longe do gol) a 2, 3 e 4 m delas, a 3–8,5 m/s, de 15° a 75° da reta para fora (dos dois lados), nos casos em que o
+// corpo consegue parar antes (a velocidade para fora vn ≤ √(2·11·(d − 0,4)): 11 m/s² ~ 87% da freada mais forte do corpo,
+// √(freio² + latCorte²) ≈ 12,6 — a −freio na linha e latCorte de lado juntos): ele nunca encosta nelas (|z| ≤ 39,6,
+// |x| ≤ 58,1) e para (≤ 0,3 m/s no fim da cena).
+// (Na lógica do domínio-sem-passar, semente 3, tiro de meta: um jogador a 7,7 m/s na diagonal para a lateral de lá, a 2 m das
+// placas, encostou nelas e correu 25 m ao longo delas a 5 m/s a cena inteira — o pedido sem a velocidade para fora se
+// repetia sem frear; S4, 335 ticks.)
+{
+  const base = validos.find(c => c.tipo === 'lateral' && c.n === 1) ?? validos[0];
+  const trocam = new Set(base.subs.flatMap(p => [p.sai, p.entra]));
+  const PZ = MZ + CAMPO.entorno, PX = MX + CAMPO.entorno;
+  let n = 0, placas = 0, naoParou = 0, pior = null, piorFolga = Infinity;
+  for (const [eixo, s] of [['z', -1], ['z', 1], ['x', -1], ['x', 1]]) for (const d of [2, 3, 4]) for (const v of [3, 5, 7.7, 8.5]) for (const ag of [15, 30, 45, 60, 75]) for (const lado of [-1, 1]) {
+    const vn = v * Math.cos(ag * Math.PI / 180);
+    if (vn > Math.sqrt(2 * 11 * (d - 0.4))) continue;
+    const m = structuredClone(base.m);
+    const j = m.jogadores.find(o => !trocam.has(o.id) && o.posicao !== 'GOL');
+    // a reta para fora (nx, nz) e a de lado (tx, tz)
+    const nx = eixo === 'x' ? s : 0, nz = eixo === 'z' ? s : 0, tx = eixo === 'z' ? 1 : 0, tz = eixo === 'x' ? 1 : 0;
+    const x = eixo === 'x' ? s * (PX - d) : 25 * lado, z = eixo === 'z' ? s * (PZ - d) : 15 * lado;
+    const ux = nx * Math.cos(ag * Math.PI / 180) + tx * lado * Math.sin(ag * Math.PI / 180), uz = nz * Math.cos(ag * Math.PI / 180) + tz * lado * Math.sin(ag * Math.PI / 180);
+    P.teleportar(j, x, z, Math.atan2(uz, ux));
+    j.vx = ux * v; j.vz = uz * v;
+    const plano = SU.planejarSubstituicao(m, base.subs, { timeHumano: 0, posAntes: id => base.antes.get(id) ?? null });
+    const c = SU.criarCenaSubst(plano, m);
+    const a = c.atores.find(o => o.id === j.id);
+    let fora = 0, folga = Infinity;
+    while (!c.acabou) {
+      SU.passoCenaSubst(c);
+      const q = a.j;
+      folga = Math.min(folga, 39.6 - Math.abs(q.z), 58.1 - Math.abs(q.x));
+      if (Math.abs(q.z) > 39.6 || Math.abs(q.x) > 58.1) fora++;
+    }
+    n++;
+    if (fora) { placas++; if (!pior) pior = `${eixo}${s > 0 ? '+' : '−'} a ${d} m, ${v} m/s a ${ag}° (${lado > 0 ? '+' : '−'}): ${fora} ticks, folga ${f2(folga)} m`; }
+    if (Math.hypot(a.j.vx, a.j.vz) > 0.3) naoParou++;
+    piorFolga = Math.min(piorFolga, folga);
+  }
+  reg('S9 quem corre para as placas na hora da troca (sem partida): nunca encosta nelas e para', `${n} corridas: ${placas} encostam${pior ? ' (1ª: ' + pior + ')' : ''}; ${naoParou} sem parar no fim; a menor folga até as placas ${f2(piorFolga)} m`, '0; 0', n > 0 && placas === 0 && naoParou === 0);
 }
 imprimir();
 process.exit(falhas ? 1 : 0);
