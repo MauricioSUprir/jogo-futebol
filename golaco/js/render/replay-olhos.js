@@ -221,11 +221,15 @@ export function enquadrarPrimeira(anel, p) {
       desce[i] = Math.max(0, y - (cy + Math.min(F.yMax, vMax)));
       sobe[i] = Math.max(0, cy + Math.max(F.yMin, -vMax) - y);
     }
-    // (só as presas GRANDES — mais que prendeMin m: o tranco — e de ANTES da batida — até chute − prendeAntes s — são
-    // dilatadas; as outras, como a do corpo que se abaixa para bater, ficam só no passo, como antes: dilatada, a descida da
-    // batida baixava o olho até 10 cm de 1 s antes a 0,5 s depois do chute, perto da perna que sobe, e a lente ruim tirava a
-    // 1ª pessoa do gol — G8 82% → 76% na lógica da faltas-sentido)
-    const gD = new Float64Array(n), gS = new Float64Array(n), kAte = p.chuteTick - s60(F.prendeAntes);
+    // (só as presas de ANTES da batida — até chute − prendeAntes s — e acima de prendeMin m são dilatadas; a do corpo que se
+    // abaixa para bater fica só no passo, como antes: dilatada, a descida da batida baixava o olho até 10 cm de 1 s antes a
+    // 0,5 s depois do chute, perto da perna que sobe, e a lente ruim tirava a 1ª pessoa do gol — G8 82% → 76% na lógica da
+    // faltas-sentido. prendeMin 0,03 → 0,005, 16/10: a presa PEQUENA num passo só — no fundo da passada correndo, a cabeça
+    // 2,3 cm mais baixa num passo, semente 29 do domínio-sem-passar — também é degrau: 1,2 cm no passo, balanço 1,24–1,43 cm;
+    // G17. No CABECEIO nada é dilatado, como antes: o salto logo depois do agachado, a cabeça subindo 30 cm em 7 passos, batia
+    // na esfera de baixo com o olho baixado de antemão e a lente ruim tirava a 1ª pessoa — semente 22; o G6 não mede o balanço
+    // do cabeceio)
+    const gD = new Float64Array(n), gS = new Float64Array(n), kAte = cab ? -Infinity : p.chuteTick - s60(F.prendeAntes);
     for (let i = 0; i < n; i++) { if (w0 + i >= kAte) continue; gD[i] = desce[i] > F.prendeMin ? desce[i] : 0; gS[i] = sobe[i] > F.prendeMin ? sobe[i] : 0; }
     const sg = F.sigmaPrende * 60, dD = dilatar(gD, n, sg, new Float64Array(n)), dS = dilatar(gS, n, sg, new Float64Array(n));
     for (let i = 0; i < n; i++) olho[i * 3 + 1] += Math.max(sobe[i], dS[i]) - Math.max(desce[i], dD[i]);

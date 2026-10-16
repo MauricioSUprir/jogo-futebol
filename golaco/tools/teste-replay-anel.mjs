@@ -48,6 +48,8 @@
 //       residual correndo ≤ 1 cm e o olho a ≤ 0,15 m da cabeça em cada gol (ver o item);
 //   G16 (16/10) gol de perto pelo canto, SINTÉTICO: a boca do gol no quadro em chute − 0,5 s e de chute + 0,3 s ao gol em
 //       cada gol, com a bola longe do centro dela (ver o item).
+//   G17 (16/10) a passada CORRENDO com o sobe-e-desce grande e um passo mais fundo, SINTÉTICO: o balanço residual ≤ 1 cm e o
+//       olho a ≤ 0,15 m da cabeça em cada gol (ver o item).
 // Na versão sem replay os módulos não existem: o teste reprova.
 // 15/10 (frente "replay robusto"): --estresse = 3× as sementes (84); a amostra do G8 (≥ 48 gols com autor) cresce com as
 // sementes seguintes, em ordem, até + 20 (nunca escolhe sementes).
@@ -344,7 +346,7 @@ async function itensG() {
   if (!RO || !RR.planosExtrasGol) { reg('G 3ª e 4ª câmeras do gol (render/replay-olhos.js, planosExtrasGol)', 'não existem', 'existem', false); return; }
   // --so-g5: só o pênalti (diagnóstico)
   if (args.includes('--so-g5')) { await itemG5(RO); return; }
-  if (args.includes('--so-g14')) { await itemG14(); await itemG15(); await itemG16(); return; }
+  if (args.includes('--so-g14')) { await itemG14(); await itemG15(); await itemG16(); await itemG17(); return; }
   const C = await imp('config.js');
   const { REPLAY, CAMPO } = C;
   const { J, NJ } = await imp('anim.js');
@@ -491,6 +493,7 @@ async function itensG() {
   await itemG14();
   await itemG15();
   await itemG16();
+  await itemG17();
   {
     const g = comAutor.find(x => x.temPrimeira);
     reg('G1b "reduzir movimento": sem 1ª pessoa (o resto igual)', g ? 'conferido no G5 (mesmo gol, com e sem)' : 'sem gol com autor', '-', true);
@@ -676,6 +679,61 @@ async function itemG16() {
   }
   reg('G16 gol de perto pelo canto (sem partida): a boca do gol no quadro em chute − 0,5 s e de chute + 0,3 s ao gol em cada gol (as metas do G7)',
     `${casos} gols: ${ruins} ruins${ex ? ` (${ex})` : ''}; o centro da boca até ${fmt(piorNdc, 2)} da meia tela (${piorEx}); bola no quadro ${fmt(100 * bIn / Math.max(1, bN), 1)}% (informativo)`, '0', ruins === 0);
+}
+
+/**
+ * G17 (16/10, frente "cenas robustas") a passada CORRENDO com o sobe-e-desce grande e um passo mais fundo, sem partida
+ * (determinístico): o autor corre a 6 m/s para o gol e chuta; a cabeça sobe e desce ±A m na passada (2,8 Hz; A 0,10/0,12 —
+ * na partida, até ±0,12) e, no fundo de uma passada a ~k passos do chute (k 20/30/40), desce E m a mais num passo só (E 0/
+ * 0,015/0,025; um tropeço da passada): o balanço residual da 1ª pessoa correndo (a medida do G6) ≤ 1 cm e o olho a ≤ 0,15 m
+ * da cabeça em cada gol com ela (as metas do G6); presente em ≥ 80% (a do G8). (Na lógica do domínio-sem-passar, semente 29:
+ * no fundo da passada a 37 passos do chute a cabeça desceu 2,3 cm a mais num passo, a esfera em volta dela puxou o olho
+ * 1,2 cm para baixo só naquele passo — a presa pequena, abaixo de prendeMin, não era dilatada — e o G6 viu 1,24 cm.)
+ */
+async function itemG17() {
+  const { criarMedidor } = await import(pathToFileURL(path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib/replay-g.mjs')).href);
+  const { medirGol } = await criarMedidor(pastaJs);
+  const RA = await imp('render/replay-anel.js'), C = await imp('config.js');
+  const { criarJogador } = await imp('jogador.js');
+  const { pose, NJ, J } = await imp('anim.js');
+  const { REPLAY, PASSO } = C;
+  const j0 = criarJogador(9, 0, 0, 0, {}, 0);
+  const mini = { tick: 0, posse: null, naMao: null, parada: null, voo: null, bola: { p: { x: 0, y: -10, z: 0 }, v: { x: 0, y: 0, z: 0 }, q: { x: 0, y: 0, z: 0, w: 1 } }, jogadores: [j0] };
+  const P0 = pose(j0, mini, new Float32Array(NJ * 3)), Pt = new Float32Array(NJ * 3);
+  // o que desce com o tronco (os pés e as canelas ficam); o tronco correndo mais baixo: a cabeça em 1,45 m na média (a da
+  // partida correndo)
+  const FICA = new Set([J.tornozeloE, J.tornozeloD, J.pontaE, J.pontaD, J.joelhoE, J.joelhoD].filter(k => k != null));
+  const base = 1.45 - P0[J.cabeca * 3 + 1];
+  const ch = 400, gol = ch + 40, W = 2 * Math.PI * 2.8 * PASSO;
+  let casos = 0, ruins = 0, ex = '', residMax = 0, olhoMax = 0, presentes = 0;
+  for (const A of [0.10, 0.12]) for (const E of [0, 0.015, 0.025]) for (const k of [20, 30, 40]) for (const zs of [1, -1]) {
+    casos++;
+    const a = RA.criarAnel({ ticks: Math.round(REPLAY.segundos / PASSO), vagas: REPLAY.vagas, nj: NJ });
+    // o fundo da passada (cos = −1) mais perto de ch − k
+    const tFundo = Math.round((Math.round(((ch - k) * W - Math.PI) / (2 * Math.PI)) * 2 * Math.PI + Math.PI) / W);
+    const z = zs * 6;
+    for (let t = 0; t <= gol + 150; t++) {
+      const x = 32 - 6 * (ch - Math.min(t, ch + 10)) * PASSO;
+      const dy = base + A * Math.cos(W * t) - (t === tFundo ? E : 0);
+      for (let q = 0; q < NJ; q++) { Pt[q * 3] = P0[q * 3] + x; Pt[q * 3 + 1] = P0[q * 3 + 1] + (FICA.has(q) ? 0 : dy); Pt[q * 3 + 2] = P0[q * 3 + 2] + z; }
+      a.inicio(t, t * PASSO, false);
+      a.jogador(0, 9, 0, false, x, z, 0, Pt);
+      let b;
+      if (t <= ch) b = { x: x + 0.6, y: 0.11, z };
+      else { const u = Math.min(1, (t - ch) / (gol - ch)); b = { x: (x + 0.6) + (52.6 - (x + 0.6)) * u, y: 0.11 + 0.9 * Math.sin(Math.PI * u * 0.8), z: z + (0.5 * zs - z) * u }; }
+      if (a.marcar) a.marcar(t === ch ? 1 : t === gol ? 2 : 0);
+      a.fim(b, { x: 0, y: 0, z: 0, w: 1 });
+    }
+    const g = { golTick: gol, chuteTick: ch, lado: 1, time: 0, autor: 9, contra: false, desvio: false, tipoChute: 'chute' };
+    const m = medirGol(a, g);
+    const nome = `sobe-e-desce ±${fmt(A, 2)} m, ${fmt(100 * E, 1)} cm a mais no fundo da passada a ${ch - tFundo} passos do chute, z ${z}`;
+    if (!m.p) continue;
+    presentes++;
+    residMax = Math.max(residMax, m.p.resid); olhoMax = Math.max(olhoMax, m.p.olhoCab);
+    if (!(m.p.resid <= 0.01) || !(m.p.olhoCab <= 0.15) || !(m.p.nCorrendo > 10)) { ruins++; if (!ex) ex = `${nome}: balanço ${fmt(100 * m.p.resid, 2)} cm, olho–cabeça ${fmt(m.p.olhoCab, 3)} m, ${m.p.nCorrendo} passos correndo`; }
+  }
+  reg('G17 a passada correndo com o sobe-e-desce grande e um passo mais fundo (sem partida): balanço residual da 1ª pessoa correndo ≤ 1 cm e olho a ≤ 0,15 m da cabeça em cada gol com ela (as metas do G6); presente em ≥ 80% (a do G8)',
+    `${casos} gols: ${ruins} ruins${ex ? ` (${ex})` : ''}; balanço até ${fmt(100 * residMax, 2)} cm; olho–cabeça até ${fmt(olhoMax, 3)} m; presente em ${presentes}/${casos}`, '0; ≤ 1 cm; ≤ 0,15 m; ≥ 80%', ruins === 0 && presentes >= 0.8 * casos);
 }
 
 async function itemG5(RO) {
