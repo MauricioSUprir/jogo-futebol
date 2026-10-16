@@ -1445,7 +1445,7 @@ export const REPLAY = {
   // quadro corta o plano (fica se sobrar ≥ `sobraMin` s reais).
   primeira: {
     vel: 0.6, antes: 0.9, depois: 0.4, frente: 0.085, cima: 0.03, sigmaXZ: 0.08, mediaY: 0.33,
-    prendeXZ: 0.02, yMin: -0.14, yMax: 0.16, sigmaY: 0.26, raioCabeca: 0.148, olhoHMin: 0.035,
+    prendeXZ: 0.02, yMin: -0.14, yMax: 0.16, sigmaY: 0.26, raioCabeca: 0.148, olhoHMin: 0.035, sigmaPrende: 0.4, prendeMin: 0.005, prendeAntes: 0.3,
     baixaAntes: 0.3, baixaDepois: 0.2, puxaAntes: 0.6, puxaGol: 0.35, sigmaOlhar: 0.10, sigmaCabeceio: 0.14,
     giroMax: 85, sigmaGiro: 0.05,
     arfagem: [-60, 15], arfagemAntes: -18, fovH: 90, perto: 0.10, bolaSome: 0.35, corpo: 0.3, sobraMin: 1.2,
@@ -1460,6 +1460,9 @@ export const REPLAY = {
     // (no lugar da troca seca a chute − baixaAntes); nos `desceAntes` s antes da descida, ele já vem baixando até
     // `arfagemDesce`° (a boca do gol ainda no quadro)
     golAngMax: 32, desce: [0.30, 0.04], pe: 0.05, desceAntes: 0.3, arfagemDesce: -20,
+    // a GARANTIA da boca do gol no quadro (replay-olhos.js garantirGol): de chute + golDe s ao gol (e em chute − 0,5 s), o
+    // centro dela a ≤ golMargem da meia tela nas duas telas; a correção dilatada por gaussiana de σ sigmaGol s
+    golDe: 0.25, golMargem: 0.9, sigmaGol: 0.15,
     // σ do olhar em volta do chute: [σ s, até ± s do chute, entrando até ± s]
     sigmaChute: [0.03, 0.08, 0.25],
   },
@@ -1616,6 +1619,8 @@ export const TECNICOS = {
   // margem do centro do corpo dentro da área em z e em x (os pés ficam a ≤ ~0,3 m do centro andando de lado; a régua
   // dos pés é 0,15 m); o recuo (z 39,2) cabe na de z
   margem: 0.5, margemX: 0.55,
+  // m — o pé no ar pousa a pelo menos isto das bordas da área (tecnicos.js pousoNaArea; a régua do T2 é 0,15 m)
+  margemPe: 0.2,
   // esquiva (tecnicos.js esquivar): o caminho previsto da bola (rolagem exata de bola.js) a < `raio` m no próximo `janela` s
   // ou o de um jogador (por `prevJogador` s, com a curva que ele vem fazendo — até `ladoMax` m/s² de lado —, o raio `jogador`
   // crescendo ½·`curva`·t², até + curvaMax: ele pode virar diferente) → vai para o lugar da área com a maior folga até
