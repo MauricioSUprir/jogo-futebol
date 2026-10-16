@@ -978,8 +978,13 @@ function poseTec(T, tc, L) {
   // TC.maoPassoMax m por passo (a rede de segurança: a soma do corpo, da torção e do gesto) e a mão fora da cabeça
   aplicarMao(o, h, -1, pe);
   aplicarMao(o, h, 1, pd);
-  if (tc.maoOk) { limitarMao(o, -1, tc.maoAnt, pulo); limitarMao(o, 1, tc.maoAnt, pulo); }
-  maoForaDaCabeca(o, h, -1); maoForaDaCabeca(o, h, 1);
+  // (as duas regras juntas, duas voltas — 16/10, frente "cenas robustas": o "fora da cabeça" depois da rede de segurança
+  // empurrava a mão mais 1,4 cm além dela, 0,154 m num passo, na troca do lamenta para o reclama andando com o tronco
+  // torcido; T22)
+  for (let volta = 0; volta < 2; volta++) {
+    if (tc.maoOk) { limitarMao(o, -1, tc.maoAnt, pulo); limitarMao(o, 1, tc.maoAnt, pulo); }
+    maoForaDaCabeca(o, h, -1); maoForaDaCabeca(o, h, 1);
+  }
   // pulinho (o corpo inteiro sobe: os pés saem do chão)
   tc.noAr = pulo > 0;
   if (pulo > 0) for (let i = 1; i < o.length; i += 3) o[i] += pulo;

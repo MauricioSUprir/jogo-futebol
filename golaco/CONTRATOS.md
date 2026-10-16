@@ -575,7 +575,9 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
     empurrava o pé até 0,7 m do centro, para fora da área (T2, T20); as VARIANTES vão por RODÍZIO: cada volta usa todas,
     nunca a mesma (gesto, variante) seguida, na ordem da sequência de Weyl da semente (a j-ésima vez do gesto:
     frac(semente·φ + treinador + gesto + j·(√2 − 1))) — equidistribuídas em qualquer faixa de sementes seguidas (T8, T21);
-    as palmas depois da comemoração também entram no rodízio; o "vamos" na saída, uma vez por gol;
+    as palmas depois da comemoração também entram no rodízio; o "vamos" na saída, uma vez por gol; a rede de segurança da
+    mão (≤ `maoPassoMax` m por passo) e o "fora da cabeça" em duas voltas (o "fora da cabeça" sozinho, depois dela, passava
+    a mão de 0,15 m num passo na troca de um gesto para outro andando: T22);
   - `ESTADOS` = observa, instrui, aplaude, reclama, lamenta, comemora, sofreu, intervalo, fim, vamos (variantes em
     `TECNICOS.variantes`); `infoTecnicos(T)` → por treinador `{id, time, x, z, rumo, v, estado, variante, varianteNome,
     postura, olhar, noAr, rapido, recuo, esquiva}` (testes e API);

@@ -50,6 +50,8 @@
 //       dentro da área (margem 0,15 m) em 100% dos passos (ver o item);
 //   T21 (16/10) as variantes de cada gesto equilibradas em qualquer faixa de 24 sementes seguidas, sem partida: cada uma
 //       ≥ 15% do gesto e nunca o mesmo (gesto, variante) duas vezes seguidas (ver o item).
+//   T22 (16/10) de qualquer postura ou gesto para qualquer gesto, andando, sem partida: a mão ≤ 0,15 m por passo e longe
+//       da cabeça (as metas do T5) em 100% dos passos (ver o item).
 // As partidas seguem `depoisFim` s depois do apito final (como a página: o laço continua com o mundo parado, e o último
 // gol tem a cena dele): o gol nos últimos segundos media a comemoração só até o apito (2,48 s na cópia do domínio).
 // --estresse: 3× as sementes das partidas (72) e do T17 (12); 2× as direções do T18 e do T19.
@@ -487,6 +489,70 @@ async function itemT21() {
     '0; ≥ 15%; 0', ruins.length === 0 && rep === 0);
 }
 
+// ------------------------------------------------------------------------------------------------ T22
+/**
+ * (16/10, frente "cenas robustas") a troca de QUALQUER postura ou gesto para qualquer gesto, andando, sem partida
+ * (determinístico): em 4 sementes (8 no --estresse; o rodízio muda as variantes de uma para outra), das 5 posturas do
+ * "observa", parado e andando ~1 m/s de lado, com a bola na frente ou de lado (o tronco torcido), o gesto A do lance
+ * (reclama, desarme, defesa, instrui, lamenta, aplaudir) e, 1,1 s depois, o gesto B (todos os pares): a mão ≤ 0,15 m por
+ * passo e a ≥ RAIO_CABECA + 0,02 m da cabeça (as metas do T5) em 100% dos passos. (Na lógica da faltas-sentido, semente
+ * 19: do lamenta para o reclama "pulso", andando a 0,96 m/s com o tronco torcido 31°, a rede de segurança segurava a mão a
+ * 0,14 m e o "fora da cabeça", depois dela, empurrava mais 1,4 cm: 0,154 m num passo.)
+ */
+async function itemT22() {
+  const { PASSO } = await imp('config.js');
+  const { J, RAIO_CABECA } = await imp('anim.js');
+  const GESTOS = ['reclama', 'desarme', 'defesa', 'instrui', 'lamenta', 'aplaudir'];
+  const NS22 = ESTRESSE ? 8 : 4;
+  let n = 0, maoPasso = 0, maoPassoEx = '', maoCab = Infinity, maoCabEx = '', ruins = 0;
+  for (let sem = 1; sem <= NS22; sem++) for (const post of [0, 1, 2, 3, 4]) for (const gA of GESTOS) for (const gB of GESTOS) for (const anda of [0, 1]) for (const lado of [0, 1]) {
+    const T = TE.criarTecnicos(null, sem), L = TE.leituraVazia(TE.criarLeitura());
+    L.estado = 'jogo'; L.emJogo = true; L.bola.y = 0.11; L.ataca[0] = 1; L.ataca[1] = -1;
+    // a bola: na frente da área (x 0 e ±11) ou de lado (perto da linha de fundo: o tronco torce para ela)
+    const bx = q => (lado ? (q ? 40 : -40) : (q ? 11 : -11)), bz = lado ? 25 : 10;
+    L.bola.x = bx(0); L.bola.z = bz;
+    for (const tc of T.tecs) { tc.postura = post; tc.posturaAte = 1e9; }
+    for (let i = 0; i < 90; i++) { L.nEventos = 0; TE.passoTecnicos(T, L); }
+    const ev = (tipo, time) => { const e = L.eventos[L.nEventos++]; e.tipo = tipo; e.time = time; e.forca = 3; };
+    const gesto = g => {
+      if (g === 'instrui') for (const tc of T.tecs) tc.instruiEm = T.k;
+      else if (g === 'lamenta') { ev('chute', 0); ev('chute', 1); ev('trave', -1); L.bola.x = 50; }
+      else if (g === 'aplaudir') ev('aplaudir', -1);
+      else { ev(g, 0); ev(g, 1); }
+    };
+    const ant = [null, null], kB = Math.round(1.1 / PASSO);
+    let caso = false;
+    for (let k = 0; k < kB + Math.round(2.5 / PASSO); k++) {
+      L.nEventos = 0;
+      // andando: a bola vai e volta devagar e ele acompanha de lado (~1 m/s); no lamenta, a bola na linha de fundo (a trave)
+      L.bola.x = bx(0) + (anda ? 14 * Math.sin(k * PASSO * 1.2) : 0);
+      if (k === 0) gesto(gA);
+      if (k === kB) gesto(gB);
+      TE.passoTecnicos(T, L);
+      T.tecs.forEach((tc, q) => {
+        const o = tc.atu, ic = J.cabeca * 3;
+        const maos = [J.maoE, J.maoD].map(i => [o[i * 3], o[i * 3 + 1], o[i * 3 + 2]]);
+        for (const mm of maos) {
+          const d = Math.hypot(mm[0] - o[ic], mm[1] - o[ic + 1], mm[2] - o[ic + 2]);
+          if (d < maoCab) { maoCab = d; maoCabEx = `semente ${sem}, postura ${post}, ${gA} → ${gB}: ${tc.id} ${tc.estado}/${tc.variante}`; }
+          if (d < RAIO_CABECA + 0.02) caso = true;
+        }
+        if (ant[q]) for (let p = 0; p < 2; p++) {
+          const d = Math.hypot(maos[p][0] - ant[q][p][0], maos[p][1] - ant[q][p][1], maos[p][2] - ant[q][p][2]);
+          if (d > maoPasso) { maoPasso = d; maoPassoEx = `semente ${sem}, postura ${post}, ${gA} → ${gB}${anda ? ', andando' : ''}${lado ? ', bola de lado' : ''}: ${tc.id} ${tc.estado}/${tc.variante} aos ${fmt((T.k - tc.desde) * PASSO, 2)} s`; }
+          if (d > 0.15) caso = true;
+        }
+        ant[q] = maos;
+      });
+    }
+    n++;
+    if (caso) ruins++;
+  }
+  reg('T22 de qualquer postura ou gesto para qualquer gesto, andando (sem partida): a mão ≤ 0,15 m por passo e longe da cabeça (as metas do T5)',
+    `${n} casos (${NS22} sementes): ${ruins} com a mão fora; a mão até ${fmt(maoPasso, 3)} m por passo (${maoPassoEx}); mão–cabeça ≥ ${fmt(maoCab, 3)} m (${maoCabEx})`,
+    `0; ≤ 0,15 m; ≥ ${fmt(RAIO_CABECA + 0.02, 3)} m`, ruins === 0);
+}
+
 // ------------------------------------------------------------------------------------------------ T18
 /** Quem corre perto da área técnica e a bola rolando para ela (sem partida; as direções dobram no --estresse). */
 async function itemT18() {
@@ -612,7 +678,8 @@ if (!TE || !EF) {
 
   // ---------------------------------------------------------------- partidas (processos filhos)
   // --so S: só a semente S (diagnóstico); --so-sinteticos: só o T17 e o T18
-  if (args.includes('--so-sinteticos')) { await itemT17(); await itemT18(); await itemT19(); await itemT20(); await itemT21(); console.log(tabelaTexto(linhas)); process.exit(falhas ? 1 : 0); }
+  if (args.includes('--so-t22')) { await itemT22(); console.log(tabelaTexto(linhas)); process.exit(falhas ? 1 : 0); }
+  if (args.includes('--so-sinteticos')) { await itemT17(); await itemT18(); await itemT19(); await itemT20(); await itemT21(); await itemT22(); console.log(tabelaTexto(linhas)); process.exit(falhas ? 1 : 0); }
   const SEMENTES = args.includes('--so') ? [+arg('--so')] : Array.from({ length: NS }, (_, i) => i + 1);
   const res = [];
   const nPar = Math.max(1, Math.min(SEMENTES.length, os.availableParallelism?.() ?? os.cpus().length, +arg('--par', 2)));
@@ -839,6 +906,7 @@ if (!TE || !EF) {
   await itemT19();
   await itemT20();
   await itemT21();
+  await itemT22();
   console.log(`${res.length} partidas (sementes 1–${NS}) de 2 × ${MIN_TEMPO} min (+ ${DEPOIS_FIM} s depois do apito final), ${nPar} processos, ${((Date.now() - t0) / 1000).toFixed(0)} s${ESTRESSE ? ' (--estresse)' : ''}`);
 }
 
