@@ -22,8 +22,8 @@
 // observa (posturas: braços cruzados, mãos na cintura, mão no queixo, mãos atrás das costas, agachado — raro), anda,
 // instrui (na perda da posse, defendendo no próprio campo, bola parada a favor no ataque, lateral do lado dele; ≤ 1 a
 // cada TECNICOS.instrui.intervalo s), aplaude, reclama, lamenta, COMEMORA (gol do time: a mão acima da cabeça em 0,25–
-// 0,40 s), SOFREU (gol contra o time: mãos na cabeça em ≤ 0,6 s), intervalo e fim. Variantes sorteadas por hash, nunca o
-// mesmo (gesto, variante) duas vezes seguidas.
+// 0,40 s), SOFREU (gol contra o time: mãos na cabeça em ≤ 0,6 s), intervalo e fim. Variantes por rodízio (cada volta usa
+// todas, na ordem da sequência de Weyl da semente), nunca o mesmo (gesto, variante) duas vezes seguidas.
 //
 // Contrato:
 //   criarTecnicos(times, semente) → T;  criarLeitura() → L;  leituraDoMundo(m, eventos, L) (só lê);
@@ -155,7 +155,7 @@ function criarTecnico(t, mini) {
     prev: { estado: 'observa', variante: 0, desde: 0, postura: 0 }, troca: -1e9,
     ultimo: { estado: '', variante: -1 }, ultimaPostura: -1,
     ultimoInstrui: -1e9, instruiEm: -1, ultimoAplauso: -1e9, defendeDesde: -1, ultimoChute: -1e9,
-    pendente: null, pendenteEm: -1, pendenteV: 0, aponta: 1, possePrev: null, paradaVista: NaN, vamos: false, exG: cx, ezG: TC.zBase,
+    pendente: null, pendenteEm: -1, pendenteV: 0, aponta: 1, possePrev: null, paradaVista: NaN, vamos: false, vamosGol: -1, exG: cx, ezG: TC.zBase,
     passeNoAr: false, passes: 0, fimPendente: -1, construindoDesde: -1, mixMedido: -1e9,
     olhar: -Math.PI / 2, tronco: 0, vTronco: 0, cabecaPitch: 0,
     corre: { ate: -1, x: cx },
@@ -190,13 +190,38 @@ export function criarTecnicos(times, semente = 1) {
 // ------------------------------------------------------------------------------------------------ sorteios (rng.js)
 const rnd = (T, tc, sal) => hash01(T.semente, tc.id, T.k * 64 + sal);
 const entre = (T, tc, sal, [a, b]) => a + (b - a) * rnd(T, tc, sal);
-/** Variante de um gesto: sorteada entre as n, nunca a mesma (gesto, variante) da última vez. */
+/**
+ * Variante de um gesto por RODÍZIO (16/10, frente "cenas robustas"; antes: sorteada a cada vez, e um gesto raro — a trave,
+ * o gol, ~1 por treinador e partida — saía desequilibrado na soma das partidas: lamenta 47/15/38% em 34 na lógica do
+ * domínio-sem-passar, T8 ≥ 15%): cada volta usa as n variantes uma vez, nunca a mesma (gesto, variante) da última vez, na
+ * ordem da sequência de Weyl da semente (a j-ésima vez: frac(semente·φ + … + j·(√2 − 1)) — equidistribuída em qualquer
+ * faixa de sementes seguidas: cada variante sai em ~1/n delas, em vez do sorteio, que com ~1 vez por partida variava ±40%).
+ * As marcadas por fora (as palmas depois da comemoração, o aplauso do pré-jogo) contam na volta (comecar marca).
+ */
+const PHI = (Math.sqrt(5) - 1) / 2, RAIZ2 = Math.SQRT2 - 1, ORDEM_GESTO = { instrui: 0.13, aplaude: 0.29, reclama: 0.41, lamenta: 0.57, comemora: 0.71, sofreu: 0.83 };
 function sortearVariante(T, tc, estado, sal) {
   const n = TC.variantes[estado]?.length ?? 1;
+  if (n <= 1) return 0;
   const ult = tc.ultimo.estado === estado ? tc.ultimo.variante : -1;
-  let k = Math.floor(rnd(T, tc, sal) * (ult >= 0 ? n - 1 : n));
-  if (ult >= 0 && k >= ult) k++;
-  return Math.min(n - 1, k);
+  const r = voltaDe(tc, estado), cheia = (1 << n) - 1, semUlt = ult >= 0 ? cheia & ~(1 << ult) : cheia;
+  let livres = semUlt & ~r.usadas;
+  if (!livres) livres = semUlt;
+  // a j-ésima vez do gesto na partida: frac(semente·φ + treinador + gesto + j·(√2 − 1)) — para cada j, equidistribuída nas
+  // sementes seguidas; dentro da partida, uma volta sem repetir (já usada ou a última: a próxima livre)
+  const u = T.semente * PHI + tc.time * 0.5 + (ORDEM_GESTO[estado] ?? 0) + r.n * RAIZ2;
+  let k = Math.floor((u - Math.floor(u)) * n);
+  for (let q = 0; q < n && !(livres >> k & 1); q++) k = (k + 1) % n;
+  return k;
+}
+/** A volta do rodízio do gesto (as variantes já usadas nela, bits; quantas o treinador já fez nesta partida). */
+function voltaDe(tc, estado) { return ((tc.rodizio ??= {})[estado] ??= { usadas: 0, n: 0 }); }
+/** Marca a variante do gesto na volta (cheia: começa outra). */
+function marcarVariante(tc, estado, v) {
+  const n = TC.variantes[estado]?.length ?? 1;
+  if (n <= 1) return;
+  const r = voltaDe(tc, estado), cheia = (1 << n) - 1;
+  if ((r.usadas & cheia) === cheia) r.usadas = 0;
+  r.usadas |= 1 << v; r.n++;
 }
 /** Postura do "observa": as 4 em pé sorteadas (nunca a mesma de antes); o agachado, raro. */
 function sortearPostura(T, tc, emPe = false) {
@@ -217,7 +242,7 @@ function comecar(T, tc, estado, variante, dura) {
   tc.estado = estado; tc.variante = variante; tc.desde = T.k; tc.ate = T.k + Math.max(1, s60(dura));
   // apontando: o braço do lado da bola no começo (não troca de braço no meio do gesto)
   tc.aponta = difAng(tc.j.rumo + tc.tronco, tc.olhar) >= 0 ? 1 : -1;
-  if (estado !== 'observa') { tc.ultimo.estado = estado; tc.ultimo.variante = variante; }
+  if (estado !== 'observa') { tc.ultimo.estado = estado; tc.ultimo.variante = variante; marcarVariante(tc, estado, variante); }
 }
 function voltarObserva(T, tc) {
   sortearPostura(T, tc);
@@ -286,7 +311,11 @@ function atualizarEstado(T, tc, L) {
       case 'passe': if (e.time === t) tc.passeNoAr = true; break;
       case 'saida':
         // palmas de "vamos" na saída de quem sofreu o gol (o "sofreu" ainda no começo encurta e as palmas vêm depois)
-        if (T.golTime >= 0 && T.golTime !== t && k - T.golTick < s60(30)) {
+        // (uma vez por gol — 15/10: com o gol nos acréscimos do 1º tempo, a saída do 2º tempo ainda caía nos 30 s e o
+        // "vamos" saía de novo, o mesmo (gesto, variante) duas vezes seguidas; sementes 13 e 17 do teste-tecnicos com a IA
+        // do domínio-sem-passar)
+        if (T.golTime >= 0 && T.golTime !== t && k - T.golTick < s60(30) && tc.vamosGol !== T.golTick) {
+          tc.vamosGol = T.golTick;
           if (tc.estado === 'sofreu') { tc.vamos = true; tc.ate = Math.min(tc.ate, Math.max(k, tc.desde + s60(TC.sofreu.cabeca[0])) + s60(0.8)); }
           else comecar(T, tc, 'vamos', 0, TC.sofreu.vamos);
         }
@@ -360,8 +389,9 @@ function atualizarEstado(T, tc, L) {
   } else { tc.instruiEm = -1; tc.defendeDesde = -1; }
   // fim do estado
   if (k >= tc.ate) {
-    // (as palmas depois da comemoração: a próxima vez que ele aplaudir é com outra variante)
-    if (tc.estado === 'comemora') comecar(T, tc, 'aplaude', 0, TC.comemora.palmas);
+    // (as palmas depois da comemoração: a variante pelo rodízio do aplauso — 16/10: sempre a 0, ela passava da metade dos
+    // aplausos de quem aplaude pouco; T21)
+    if (tc.estado === 'comemora') comecar(T, tc, 'aplaude', sortearVariante(T, tc, 'aplaude', 44), TC.comemora.palmas);
     else if (tc.estado === 'sofreu' && tc.vamos) { tc.vamos = false; comecar(T, tc, 'vamos', 0, TC.sofreu.vamos); tc.ultimo.estado = 'sofreu'; tc.ultimo.variante = tc.prev.variante; }
     // (o fim segue no mesmo gesto, sem recomeçar — 15/10: recomeçado, o mesmo (gesto, variante) contava duas vezes)
     else if (tc.estado === 'fim') tc.ate = k + s60(1e6);
@@ -614,7 +644,7 @@ export function passoTecnicos(T, L) {
     const c = mover(T, tc, L);
     passoCorpo(j, c.dx, c.dz, c.vel, c.rumo, j.par, PASSO, false);
   }
-  for (const tc of tecs) passoPassada(tc.j, false, PASSO, null, null);
+  for (const tc of tecs) { passoPassada(tc.j, false, PASSO, null, null); pousoNaArea(tc); }
   for (const tc of tecs) passoPeDesenhado(tc.j, mini, PASSO);
   mini.tick++;
   T.k++;
@@ -623,6 +653,22 @@ export function passoTecnicos(T, L) {
     tc.ant.set(tc.atu); tc.x0 = tc.x1; tc.z0 = tc.z1; tc.r0 = tc.r1;
     poseTec(T, tc, L);
     tc.x1 = tc.j.x; tc.z1 = tc.j.z; tc.r1 = tc.j.rumo;
+  }
+}
+
+/**
+ * O pé no ar pousa DENTRO da área técnica (a TECNICOS.margemPe m das bordas; 16/10, frente "cenas robustas"): o ponto de
+ * pouso da passada (jogador.js pontoPouso, refeito a cada passo) fica preso no retângulo, e o pé desenhado vai de onde saiu
+ * (dentro) até ele em linha — o pé nunca sai da área, ande o corpo como andar. (Na lógica da faltas-sentido, semente 13: o
+ * treinador voltando do recuo pela quina da área, de frente para a bola 31° fora do caminho, andava "de lado" para o tronco
+ * e o passo lateral sem cruzar as pernas — semCruzar — empurrou o pé esquerdo 0,41 m para fora do centro: T2, 46 passos
+ * com o pé a 0,14 m da borda.)
+ */
+function pousoNaArea(tc) {
+  const a = tc.area, mp = TC.margemPe;
+  for (const pe of tc.j.pes) {
+    if (pe.apoio) continue;
+    pe.lx = clamp(pe.lx, a.x0 + mp, a.x1 - mp); pe.lz = clamp(pe.lz, a.z0 + mp, a.z1 - mp);
   }
 }
 

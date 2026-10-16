@@ -88,6 +88,23 @@ function gaussianaVar(src, n, sigs, out) {
   }
   return out;
 }
+/**
+ * Dilatação por gaussiana (16/10): out[i] = máx_k src[k]·exp(−(i − k)²/(2σ²)) (σ em passos; src ≥ 0). out ≥ src em cada
+ * passo e muda devagar (a correção que um passo precisa começa antes e acaba depois dele, sem degrau): o jeito de cumprir
+ * um limite duro por passo sem tranco.
+ */
+function dilatar(src, n, sig, out) {
+  const R = Math.max(1, Math.ceil(3 * sig)), w = new Float64Array(2 * R + 1);
+  for (let k = -R; k <= R; k++) w[k + R] = Math.exp(-(k * k) / (2 * sig * sig));
+  out.fill(0, 0, n);
+  for (let k = 0; k < n; k++) {
+    const v = src[k];
+    if (!(v > 0)) continue;
+    for (let i = Math.max(0, k - R); i <= Math.min(n - 1, k + R); i++) { const c = v * w[i - k + R]; if (c > out[i]) out[i] = c; }
+  }
+  return out;
+}
+
 /** Média móvel centrada de `janela` passos da componente c (bordas repetidas). */
 function mediaMovel(src, n, dim, c, janela, out) {
   const R = Math.max(0, Math.floor(janela / 2));
@@ -191,6 +208,28 @@ export function enquadrarPrimeira(anel, p) {
   gaussiana(bruto, n, 3, F.sigmaXZ * 60, olho);
   mediaMovel(bruto, n, 3, 1, Math.round(F.mediaY * 60), olho);
   if (F.sigmaY > 0) { const ys = new Float64Array(n), yo = new Float64Array(n); for (let i = 0; i < n; i++) ys[i] = olho[i * 3 + 1]; gaussiana(ys, n, 1, F.sigmaY * 60, yo); for (let i = 0; i < n; i++) olho[i * 3 + 1] = yo[i]; }
+  // a altura presa pela cabeça SEM tranco (16/10, frente "cenas robustas"): o quanto cada passo passa da faixa que a esfera
+  // de raioCabeca deixa na vertical (com o olho já recuado até olhoHMin na horizontal) e de [yMin, yMax] vira uma correção
+  // DILATADA por gaussiana (σ sigmaPrende): ela começa antes e acaba depois, sem degrau, e a presa abaixo quase nunca age.
+  // (Na lógica do domínio-sem-passar, semente 32: a cabeça desceu 28 cm em 0,1 s — um agachado andando —, a esfera puxou o
+  // olho 8 cm para baixo em 3 passos e, 15 passos depois, correndo, a média móvel do G6 ainda via o degrau: balanço 1,12 cm.)
+  {
+    const vMax = Math.sqrt(F.raioCabeca * F.raioCabeca - F.olhoHMin * F.olhoHMin) - 0.002;
+    const desce = new Float64Array(n), sobe = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const cy = cabeca[i * 3 + 1], y = olho[i * 3 + 1];
+      desce[i] = Math.max(0, y - (cy + Math.min(F.yMax, vMax)));
+      sobe[i] = Math.max(0, cy + Math.max(F.yMin, -vMax) - y);
+    }
+    // (só as presas GRANDES — mais que prendeMin m: o tranco — e de ANTES da batida — até chute − prendeAntes s — são
+    // dilatadas; as outras, como a do corpo que se abaixa para bater, ficam só no passo, como antes: dilatada, a descida da
+    // batida baixava o olho até 10 cm de 1 s antes a 0,5 s depois do chute, perto da perna que sobe, e a lente ruim tirava a
+    // 1ª pessoa do gol — G8 82% → 76% na lógica da faltas-sentido)
+    const gD = new Float64Array(n), gS = new Float64Array(n), kAte = p.chuteTick - s60(F.prendeAntes);
+    for (let i = 0; i < n; i++) { if (w0 + i >= kAte) continue; gD[i] = desce[i] > F.prendeMin ? desce[i] : 0; gS[i] = sobe[i] > F.prendeMin ? sobe[i] : 0; }
+    const sg = F.sigmaPrende * 60, dD = dilatar(gD, n, sg, new Float64Array(n)), dS = dilatar(gS, n, sg, new Float64Array(n));
+    for (let i = 0; i < n; i++) olho[i * 3 + 1] += Math.max(sobe[i], dS[i]) - Math.max(desce[i], dD[i]);
+  }
   for (let i = 0; i < n; i++) {
     const dx = olho[i * 3] - bruto[i * 3], dz = olho[i * 3 + 2] - bruto[i * 3 + 2], d = Math.hypot(dx, dz);
     if (d > F.prendeXZ) { const k = F.prendeXZ / d; olho[i * 3] = bruto[i * 3] + dx * k; olho[i * 3 + 2] = bruto[i * 3 + 2] + dz * k; }
@@ -317,6 +356,7 @@ export function enquadrarPrimeira(anel, p) {
   // curta por cima (a aceleração suave)
   limitarGiro(yaw, arfA, n, F.giroMax * GRAU / (60 * F.vel));
   const yawS = gaussiana(yaw, n, 1, F.sigmaGiro * 60, new Float64Array(n)), arfS = gaussiana(arfA, n, 1, F.sigmaGiro * 60, new Float64Array(n));
+  garantirGol(yawS, arfS, olho, w0, n, p, gx, gy, F);
   const dir = new Float64Array(n * 3), bolaSome = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
     dir[i * 3] = Math.cos(yawS[i]) * Math.cos(arfS[i]); dir[i * 3 + 1] = Math.sin(arfS[i]); dir[i * 3 + 2] = Math.sin(yawS[i]) * Math.cos(arfS[i]);
@@ -324,6 +364,52 @@ export function enquadrarPrimeira(anel, p) {
     if (b && Math.hypot(b.x - olho[i * 3], b.y - olho[i * 3 + 1], b.z - olho[i * 3 + 2]) < F.bolaSome) bolaSome[i] = 1;
   }
   return { tipo: 'primeira', de: p.de, ate: p.ate, w0, n, olho, dir, bruto, cabeca, bolaSome, fovH: F.fovH, perto: F.perto, autor: p.autor };
+}
+
+// a boca do gol no quadro (16/10, frente "cenas robustas") ---------------------------------------------------------------
+const TELAS_1P = [16 / 9, 844 / 390], _q = { x: 0, y: 0, z: 0 };
+/** O centro da boca do gol (gx, gy, 0), visto do olho (ox, oy, oz) com rumo `ya` e arfagem `ar`, cabe nas duas telas (margem m)? */
+function golCabe(ox, oy, oz, ya, ar, gx, gy, fovH, m) {
+  const lx = ox + Math.cos(ya) * Math.cos(ar), ly = oy + Math.sin(ar), lz = oz + Math.sin(ya) * Math.cos(ar);
+  for (const asp of TELAS_1P) {
+    projetar(ox, oy, oz, lx, ly, lz, fovVerticalDe(fovH, asp), asp, gx, gy, 0, _q);
+    if (!(_q.z > 0.05 && Math.abs(_q.x) <= m && Math.abs(_q.y) <= m)) return false;
+  }
+  return true;
+}
+/**
+ * GARANTIA da boca do gol no quadro (16/10): em chute − 0,5 s e de chute + golDe s ao gol, o centro da boca do gol dentro das
+ * duas telas (16:9 e o celular deitado) com margem golMargem. Em cada passo em que ele sai, a correção MÍNIMA de rumo e
+ * arfagem para o centro da boca (bisseção na reta até ele); as correções são DILATADAS por gaussiana (σ sigmaGol: começam
+ * antes e acabam depois, sem tranco) e somadas ao olhar suavizado; duas voltas. (Na lógica da faltas-sentido, semente 11:
+ * cabeçada a 3 m da linha para o canto, o autor seguindo a 7,7 m/s até 0,7 m do gol — a bola de lado, a 70°, e o centro da
+ * boca a −20°: a suavização e o limite do giro não chegavam a tempo e ele saiu do quadro nos 2 últimos passos, G7 38/39.)
+ */
+function garantirGol(yaw, arf, olho, w0, n, p, gx, gy, F) {
+  const ch = p.chuteTick, d0 = ch + s60(F.golDe), m = F.golMargem, sg = F.sigmaGol * 60;
+  const pY = new Float64Array(n), nY = new Float64Array(n), pA = new Float64Array(n), nA = new Float64Array(n), t1 = new Float64Array(n), t2 = new Float64Array(n);
+  for (let volta = 0; volta < 2; volta++) {
+    let algum = false;
+    pY.fill(0); nY.fill(0); pA.fill(0); nA.fill(0);
+    for (let i = 0; i < n; i++) {
+      const t = w0 + i;
+      if (!((t >= d0 && t <= p.golTick) || Math.abs(t - (ch - 30)) <= 2)) continue;
+      const ox = olho[i * 3], oy = olho[i * 3 + 1], oz = olho[i * 3 + 2], y0 = yaw[i], a0 = arf[i];
+      if (golCabe(ox, oy, oz, y0, a0, gx, gy, F.fovH, m)) continue;
+      let yg = Math.atan2(-oz, gx - ox);
+      yg += 2 * Math.PI * Math.round((y0 - yg) / (2 * Math.PI));
+      const ag = Math.atan2(gy - oy, Math.hypot(gx - ox, oz));
+      let lo = 0, hi = 1;
+      for (let it = 0; it < 14; it++) { const u = (lo + hi) / 2; if (golCabe(ox, oy, oz, y0 + (yg - y0) * u, a0 + (ag - a0) * u, gx, gy, F.fovH, m)) hi = u; else lo = u; }
+      const dy = (yg - y0) * hi, da = (ag - a0) * hi;
+      if (dy > 0) pY[i] = dy; else nY[i] = -dy;
+      if (da > 0) pA[i] = da; else nA[i] = -da;
+      algum = true;
+    }
+    if (!algum) return;
+    dilatar(pY, n, sg, t1); dilatar(nY, n, sg, t2); for (let i = 0; i < n; i++) yaw[i] += t1[i] - t2[i];
+    dilatar(pA, n, sg, t1); dilatar(nA, n, sg, t2); for (let i = 0; i < n; i++) arf[i] += t1[i] - t2[i];
+  }
 }
 
 /** Câmera da 1ª pessoa no passo fracionário t: out {x, y, z, lx, ly, lz (ponto do olhar), fovH, bolaSome}. */
