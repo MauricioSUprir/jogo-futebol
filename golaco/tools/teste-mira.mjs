@@ -4,7 +4,7 @@
 //
 // Metas:
 //  A. A linha É a física: com o erro do cobrador zerado (MIRA.erro = 0), a bola de verdade (a partida inteira rodando:
-//     cobrar → passo) passa a ≤ 3 cm da linha prevista (mira.js preverMira/simularLinha) em todos os ticks do voo —
+//     cobrar → passo) passa a ≤ 3 cm da linha prevista (mira-linha.js preverMira, mira.js simularLinha) em todos os ticks do voo —
 //     escanteio ALTA sem e com curva, TENSA com curva, tiro livre direto (CHUTE) com barreira e curva.
 //  B. A curva vai para o lado certo: com o efeito +1 a bola cai/cruza a linha do gol ≥ 1,5 m à DIREITA de quem bate (da
 //     linha sem efeito), com −1 à esquerda; no escanteio e no tiro livre.
@@ -45,7 +45,7 @@ const temMira = fs.existsSync(path.join(JS, 'mira.js'));
 const P = await imp('partida.js');
 const C = await imp('config.js');
 const { uniforme } = await imp('rng.js');
-const M = temMira ? await imp('mira.js') : null;
+const M = temMira ? { ...(await imp('mira.js')), ...(await imp('mira-linha.js')) } : null;
 const { CAMPO, BOTAO, PASSO, ACOES, MIRA } = C;
 const MX = CAMPO.meioX;
 const f1 = v => v.toFixed(1).replace('.', ','), f2 = v => v.toFixed(2).replace('.', ',');

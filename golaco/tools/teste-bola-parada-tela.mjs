@@ -14,6 +14,7 @@
 //     Z/X; no celular com toque os dois botões CURVA aparecem (só na cobrança mirada), sem encostar em outro botão, e o
 //     toque no da direita põe +0,25.
 //  6  Nenhum erro no console.
+//  0  O módulo (render/bola-parada.js) não está no download inicial: carregado sob demanda.
 //   node tools/teste-bola-parada-tela.mjs [--prints <pasta>]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -81,7 +82,11 @@ for (const tela of TELAS) {
   await pg.goto(`${srv.url}?semente=5&q=${tela.q}&replay=0&comemoracao=0`, { waitUntil: 'load' });
   await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
   await pg.evaluate(() => window.__golaco.relogio.usarManual(true));
+  // o módulo da bola parada é carregado sob demanda (fora do download inicial): antes, nada dele na página
+  const antes = await pg.evaluate(() => ({ mod: performance.getEntriesByType('resource').some(r => /bola-parada\.js/.test(r.name)), painel: !!document.getElementById('mira') }));
+  await pg.evaluate(() => window.__golaco.bolaParada.carregar());
   await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 300; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); });
+  meta(`0 ${tela.nome}: o módulo da bola parada fica fora do download inicial (sob demanda)`, `antes: módulo ${antes.mod ? 'baixado' : 'não'}, painel ${antes.painel ? 'existe' : 'não'}`, !antes.mod && !antes.painel);
   const q1 = [], q2 = [], q3 = [];
   for (const tipo of TIPOS) {
     const e = await montar(pg, tipo);

@@ -511,12 +511,13 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   que defende NA linha até o chute (Regra 14), a cobrança só acaba quando a bola não pode mais entrar (e depois dela nenhum
   gol conta), 'defesa' só com toque do goleiro, o goleiro da IA lê a cavadinha repetida, a semente sorteada sem `?semente`. Testes: `teste-disputa` (Node),
   `teste-penaltis-tela` (CI) e `legacy-total-match/ferramentas/testar-penaltis.mjs` (senha do Viverde só por `TM_SENHA_VIVERDE`).
-- **Bolas paradas no estilo FIFA** (pedido de 16/10; `mira.js`, `render/linha-mira.js`, `render/camera.js`
-  CAMERA_BOLA_PARADA; PESQUISA-ETAPA4.md §12, contrato "Cobrança mirada" no CONTRATOS.md): câmera atrás do cobrador no
+- **Bolas paradas no estilo FIFA** (pedido de 16/10; `mira.js` na lógica; `render/bola-parada.js` + `mira-linha.js` SOB
+  DEMANDA; PESQUISA-ETAPA4.md §12, contrato "Cobrança mirada" no CONTRATOS.md): câmera atrás do cobrador no
   escanteio, falta, pênalti e tiro de meta do humano (e no pênalti contra), o analógico pela câmera dela; na cobrança da
   PESSOA o analógico gira a mira, a carga é a força e Z/X (analógico direito, botões CURVA) põem curva; a linha é a física
   da bola passo a passo (a bola real passa a 0 cm dela sem o erro do cobrador; na falta só até 4 m além da barreira). A IA
-  não usa (hash-partida da demo IGUAL). Testes: `teste-mira` (Node) e `teste-bola-parada-tela` (navegador).
+  não usa (hash-partida da demo IGUAL). Testes: `teste-mira` (Node) e `teste-bola-parada-tela` (navegador). **O download
+  inicial está no teto** (`teste-carga` 4 MB: sobram ~0,6 KB): código novo que não precisa do começo vai sob demanda.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

@@ -310,25 +310,6 @@ html.topo-c4 .placar-relogio { padding: 0 5px; }
   display: block; height: 100%; width: 0; border-radius: 3px;
   background: linear-gradient(90deg, var(--verde-2), var(--verde) 60%, #b9ffd9);
 }
-/* cobrança mirada (mira.js): embaixo no meio, logo abaixo da bola (a câmera atrás do cobrador põe a bola a ~76% da
-   altura): o tipo da cobrança (comando) e o efeito — a marca anda no trilho de −1 a +1 (--curva); no PC, Z e X dos lados */
-.mira-cobranca {
-  position: absolute; left: 50%; bottom: calc(var(--sa-b) + 8px); transform: translateX(-50%);
-  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 10px 5px;
-  background: rgba(7, 9, 10, 0.62); border: 1px solid rgba(255, 216, 74, 0.45); border-radius: 8px;
-  pointer-events: none; z-index: 1;
-}
-.mira-cobranca[hidden] { display: none; }
-.mira-tipo { font-size: 12px; font-weight: 900; letter-spacing: 0.16em; color: #ffd84a; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); }
-.mira-efeito { display: flex; align-items: center; gap: 6px; }
-.mira-trilho { position: relative; display: block; width: 72px; height: 4px; border-radius: 2px;
-  background: linear-gradient(90deg, rgba(58, 160, 255, 0.55), rgba(255, 255, 255, 0.25) 50%, rgba(58, 160, 255, 0.55)); }
-.mira-trilho::before { content: ''; position: absolute; left: 50%; top: -2px; width: 1px; height: 8px; background: rgba(255, 255, 255, 0.5); }
-.mira-trilho i { position: absolute; top: 50%; left: calc(50% + var(--curva, 0) * 36px); width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px;
-  border-radius: 50%; background: #ffd84a; box-shadow: 0 0 6px rgba(255, 216, 74, 0.8); transition: left 0.08s; }
-.mira-kbd { font: 800 9px/1 var(--fonte); color: var(--texto-2); padding: 2px 4px; border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 3px; }
-html.com-toque .mira-kbd, .mira-cobranca.sem-efeito .mira-efeito { display: none; }
-html.mira-visivel .minimapa { display: none; }
 
 /* partida: só a barra, menor e sem o rótulo ("PASSE", "CHUTE": o texto fica no DOM, escondido) */
 html.em-partida .carga-tipo { display: none; }
@@ -420,12 +401,7 @@ html.nomes-botoes .btn-toque span { display: block; text-shadow: 0 1px 2px rgba(
 /* TROCAR com a bola nas mãos do goleiro do humano (partida): só com a classe goleiro-mao (main.js) — no toque o TROCAR é da
    defesa e o goleiro com a bola é ataque; o Q do teclado e o LB do controle já trocavam */
 .toque:not(.goleiro-mao) .btn-trocar-mao { display: none; }
-/* efeito (CURVA) da cobrança mirada: só no escanteio e no tiro livre da pessoa (html.cobranca-mirada, main.js), nas vagas
-   d e e do 2º anel — o PEGAR e o TROCAR da bola na mão (as mesmas vagas) não valem nessa hora */
-html:not(.cobranca-mirada) .btn-efeito { display: none; }
-html.cobranca-mirada .btn-pegar, html.cobranca-mirada .btn-trocar-mao { display: none; }
-.btn-efeito svg { stroke: #ffd84a; }
-.btn-efeito.ativo svg { stroke: var(--preto); }
+html:not(.cobranca-mirada) .btn-efeito, html.cobranca-mirada .btn-pegar, html.cobranca-mirada .btn-trocar-mao { display: none; }
 @keyframes bt-aparece { from { transform: scale(0.82); opacity: 0; } to { transform: none; } }
 
 /* ------------------------------------------------------------------ janelas (menu e ajuda) */
@@ -659,7 +635,6 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
 }
 .btn-replay-pular svg { width: 18px; height: 18px; fill: none; stroke: var(--verde); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 html.com-toque .btn-replay-pular { display: flex; }
-html.em-replay .mira-cobranca, html.em-comemoracao .mira-cobranca,
 html.em-replay .minimapa, html.em-replay .btn-menu, html.em-replay .aviso, html.em-replay .carga, html.em-replay .cartao-icone,
 html.em-replay .dica, html.em-replay .painel-jogo, html.em-replay .gol-tela, html.em-replay .faixa, html.em-replay .toque,
 html.em-replay .qps { display: none; }

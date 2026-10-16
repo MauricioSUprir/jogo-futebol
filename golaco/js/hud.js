@@ -84,9 +84,7 @@ export function criarHud(opc) {
     reiniciarPartida: $('btn-reiniciar-partida'), dica: $('dica'), replay: $('replay'), replayFaixa: $('replay-faixa'),
     comemoracao: $('comemoracao'), substituicao: $('substituicao'), faixaSub: $('faixa-subst'),
     terco: $('terco'),
-    mira: $('mira'), miraTipo: $('mira-tipo'), miraMarca: $('mira-marca'),
   };
-  const miraVista = { vis: false, rot: '', curva: null, efeito: null };
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
   let ultimoHud = -1, tercoTipo = null;
   const ultimoTexto = { vel: '', modo: '', posicao: null, forte: false };
@@ -560,22 +558,6 @@ export function criarHud(opc) {
       el.carga.classList.add('visivel');
       el.carga.classList.toggle('cheia', c.forca >= 0.999);
     },
-    /**
-     * Cobrança mirada (mira.js preverMira): info = null (some) ou {rotulo, curva −1..1, efeito (mostra o trilho do efeito)}.
-     * Escreve no DOM só quando muda.
-     */
-    mira(info) {
-      if (!el.mira) return;
-      const vis = !!info;
-      // (com o painel, o minimapa sai: no PC ele fica no mesmo lugar, embaixo no meio)
-      if (vis !== miraVista.vis) { el.mira.hidden = !vis; miraVista.vis = vis; document.documentElement.classList.toggle('mira-visivel', vis); }
-      if (!vis) return;
-      if (info.rotulo !== miraVista.rot) { el.miraTipo.textContent = info.rotulo; miraVista.rot = info.rotulo; }
-      if (info.curva !== miraVista.curva) { el.miraMarca.style.setProperty('--curva', String(info.curva)); miraVista.curva = info.curva; }
-      const ef = info.efeito !== false;
-      if (ef !== miraVista.efeito) { el.mira.classList.toggle('sem-efeito', !ef); miraVista.efeito = ef; }
-    },
-    get miraVisivel() { return miraVista.vis ? { rotulo: miraVista.rot, curva: miraVista.curva } : null; },
     /** Cartão em cima de quem levou: c = null (some) ou {x, y (px CSS, a cabeça), cor: 'amarelo' | 'vermelho'}. */
     cartao(c) {
       if (!el.cartao) return;

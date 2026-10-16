@@ -2097,17 +2097,19 @@ de meta; a linha da trajetória com mira, força e curva no escanteio e na falta
   (`MIRA.alta/tensa.elev`), velocidade na faixa pela força, o giro do cruzamento do jogo + o efeito (`wy = −curva × giro ×
   atributo`); CHUTE = a velocidade do chute do jogo (`ACOES.chute.v` × finalização), com o efeito por cima da falta
   (`giroFalta`) e a elevação que passa por cima da barreira (`BARREIRA.alturaPassar` na distância dela) ou que chega em
-  `yAlvo` pela força. **A mesma conta** no chute de verdade (`acoes.js cobrancaMirada`) e na linha (`preverMira` →
-  `simularLinha`: `bola.js passoBola` passo a passo até a bola tocar o chão, bater em algo ou cruzar a linha de fundo; no
-  CHUTE só até `linhaChute` m além da barreira). Por cima, o erro do cobrador (o do chute do jogo: finalização, distância,
+  `yAlvo` pela força. **A mesma conta** no chute de verdade (`acoes.js cobrancaMirada`) e na linha (`mira-linha.js
+  preverMira` → `mira.js simularLinha`: `bola.js passoBola` passo a passo até a bola tocar o chão, bater em algo ou cruzar
+  a linha de fundo; no CHUTE só até `linhaChute` m além da barreira). Por cima, o erro do cobrador (o do chute do jogo: finalização, distância,
   força no máximo, `faltaErro` com barreira; no cruzamento o do lançamento: passe longo, ±m a 40 m, em ângulo e em força)
   × `MIRA.erro` (os testes zeram). O ponto do voo (`m.voo.alvo`) e quem vai nela saem da trajetória prevista (cruzamento:
   onde desce a `yAlto`); `m.voo.mirada = true`.
-- **Tela** (só lê o mundo; o hash não muda): `render/linha-mira.js` (uma fita virada para a câmera, amarela → azul,
-  desbotando no fim; mais apagada antes de carregar; 1 chamada de desenho; some no chute); o rótulo e o trilho do efeito
-  no HUD (`#mira`, `hud.mira`; Z/X só sem toque); `html.cobranca-mirada` mostra os botões CURVA (e esconde PEGAR e TROCAR
-  da bola na mão, das mesmas vagas).
-- **Câmera da bola parada** (`render/camera.js CAMERA_BOLA_PARADA`, `planoBolaParada`; main.js `cameraBolaParada`): no
+- **Tela** (só lê o mundo; o hash não muda), em `render/bola-parada.js` + `mira-linha.js`, carregados **sob demanda**
+  (main.js `carregarBP`, na 1ª bola morta de escanteio/tiro livre/tiro de meta/pênalti: fora do download inicial, que
+  está no teto de 4 MB do `teste-carga` — sobram ~0,6 KB): a linha (uma fita virada para a câmera, miolo amarelo → azul e
+  bordas escuras, desbotando no fim; mais apagada antes de carregar; 1 chamada de desenho; some no chute); o painel `#mira`
+  (rótulo e trilho do efeito; Z/X só sem toque; o CSS dele vem no módulo; com ele o minimapa sai: `html.mira-visivel`);
+  `html.cobranca-mirada` mostra os botões CURVA (e esconde PEGAR e TROCAR da bola na mão, das mesmas vagas).
+- **Câmera da bola parada** (`render/bola-parada.js CAMERA_BOLA_PARADA`, `planoBolaParada`; a mistura em `render/camera.js`): no
   escanteio, tiro livre, tiro de meta e pênalti com o cobrador sendo o controlado do humano e no pênalti CONTRA (atrás do
   cobrador adversário). Lado: o que fica mais para dentro do campo (empate: à esquerda de quem bate). Nada sólido na lente
   (`estadio-forma.js solidoEm`, folga 0,4 m) nem jogador a < 1 m: chega para a frente e sobe. A mistura com a TV entra em
@@ -2116,6 +2118,7 @@ de meta; a linha da trajetória com mira, força e curva no escanteio e na falta
   tela = direita de quem bate (no pênalti contra, o goleiro escolhe o lado pela tela).
 - **Testes**: `teste-mira` (Node, padrão: A a bola = a linha a ≤ 3 cm; B curva para o lado certo; C controles, rótulos,
   a linha some no chute, tiro de meta; D o erro continua; E canhão do humano roteirizado, escanteio ≤ 12% e falta 2–12%;
-  F a IA não usa) e `teste-bola-parada-tela` (navegador, CI: PC 1280×720 e celular 844×390 e 568×320 — câmera atrás do
+  F a IA não usa) e `teste-bola-parada-tela` (navegador, CI: PC 1280×720 e celular 844×390 e 568×320 — o módulo fora do
+  download inicial, câmera atrás do
   cobrador nos 4 tipos e no pênalti contra, cobrador e alvo no quadro, nada na lente, a linha ≥ 150 px e ≤ +1 chamada,
   some no chute, a volta para a TV sem salto, teclado e botões CURVA).
