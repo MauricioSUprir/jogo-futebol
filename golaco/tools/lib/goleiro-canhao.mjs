@@ -2,7 +2,9 @@
 // medidas do goleiro e, de cópias do mundo no MEIO dela (a bola no pé de um atacante a 8–32 m do gol), chutes de canhão
 // 'natural' (na hora, o goleiro como a IA o deixou) e 'perto' (bola e chutador a 6–16,5 m, 0,75 s para ele se arrumar) e
 // escanteios. Só mede — não muda nada do jogo. Funciona com qualquer cópia da lógica (o.js: a pasta js).
-//   medirSemente(sem, { js, estados, k, kp, ke, min }) → { sem, naturais, canhao, mov, esc, cruz, saidas, gols }
+//   medirSemente(sem, { js, estados, k, kp, ke, kf, k1, k1c, min }) → { sem, naturais, canhao, finais, contra, mov, esc, cruz,
+//     saidas, gols } — kf: chutes 'colocado'/'cavadinha' por cópia (finais); k1/k1c: contra-ataques 1×1 por cópia, sem e
+//     com a cavadinha da IA (contra)
 //   emParalelo(arquivo, sems, par, argsFilho) — roda medirSemente em processos (o arquivo responde com servirFilho)
 import { fork } from 'node:child_process';
 import path from 'node:path';
@@ -47,6 +49,7 @@ export function emParalelo(arquivo, sems, par, argsFilho = [], log = true) {
 
 export async function medirSemente(sem, o = {}) {
   const JS = o.js, NEST = o.estados ?? 12, K = o.k ?? 10, KP = o.kp ?? 10, KE = o.ke ?? 2, MIN = o.min ?? 4;
+  const KF = o.kf ?? 0, K1 = o.k1 ?? 0, K1C = o.k1c ?? 0;
   const imp = f => import(pathToFileURL(path.join(JS, f)).href);
   const P = await imp('partida.js');
   const S = await imp('sim.js');
@@ -54,7 +57,9 @@ export async function medirSemente(sem, o = {}) {
   const B = await imp('bola.js');
   const RG = await imp('regras-goleiro.js');
   const { uniforme } = await imp('rng.js');
-  const { CAMPO, GOLEIRO, PASSO } = await imp('config.js');
+  const { CAMPO, GOLEIRO, PASSO, ACOES } = await imp('config.js');
+  const A = await imp('acoes.js');
+  const AN = await imp('anim.js');
   const M = await import(pathToFileURL(path.join(AQUI, 'partida-medidas.mjs')).href);
   const MX = CAMPO.meioX, MEIO = CAMPO.gol.largura / 2;
   const jog = (m, id) => m.jogadores.find(o => o.id === id);
@@ -95,7 +100,13 @@ export async function medirSemente(sem, o = {}) {
   let aberto = null;
   const esc = { n: 0, gols: 0, gkToca: 0, chutes: 0 }, cruz = { n: 0, gols: 0, gkToca: 0, chutes: 0 };
   let escAb = null, cruzAb = null;
-  const saidas = { '1x1': 0, botao: 0, cruzamento: 0, bolaSolta: 0 };
+  const saidas = { '1x1': 0, botao: 0, cruzamento: 0, bolaSolta: 0, bolaSoltaChute: 0 };
+  // (finalização do adversário: chute, colocado, cavadinha ou cabeceio a gol — o critério do evento 'chute' de acoes.js)
+  const finalizacao = v => !!v && (v.tipo === 'chute' || v.tipo === 'colocado' || v.tipo === 'cavadinha' || (v.tipo === 'cabeceio' && v.cabeceio === 'chute'));
+  // pose do goleiro (anim.js, função pura): o quadril no passo em que a bola entra na mão dele ou sai dela
+  const poseGk = new Float32Array(AN.NJ * 3), kPelve = AN.J.pelve * 3;
+  const pelveAnt = [null, null], naMaoAnt = [false, false];
+  const pose = { trocas: 0, saltos: 0, max: 0 };
   for (let i = 0; i < N; i++) {
     // estado do goleiro ANTES do passo (o chute sai dentro do passo)
     const pre = [goleiroDe(m, 0), goleiroDe(m, 1)].map(g => (g ? estadoGoleiro(m, g) : null));
@@ -131,11 +142,26 @@ export async function medirSemente(sem, o = {}) {
         }
       }
       R.xAnt = g.x; R.zAnt = g.z; R.rAnt = g.rumo;
+      // pose: fora do mergulho desenhado, o quadril não pula no passo em que a bola entra ou sai da mão dele
+      const naMao = m.naMao === g.id;
+      if (GK.mergulhoAtivo(g, m.tick) || !vivo) { pelveAnt[t] = null; naMaoAnt[t] = naMao; continue; }
+      AN.pose(g, m, poseGk);
+      const y = poseGk[kPelve + 1];
+      if (pelveAnt[t] != null && naMao !== naMaoAnt[t]) {
+        const dy = Math.abs(y - pelveAnt[t]);
+        pose.trocas++; if (dy > pose.max) pose.max = dy; if (dy > 0.03) pose.saltos++;
+      }
+      pelveAnt[t] = y; naMaoAnt[t] = naMao;
     }
     // ---- eventos
     for (const e of ev) {
       const j = e.id != null ? jog(m, e.id) : null;
       if (e.tipo === 'saidaGoleiro') saidas[e.modo && saidas[e.modo] != null ? e.modo : 'botao']++;
+      // a "bola solta" com a finalização do adversário no ar (ou com a defesa dessa bola já lida) não é bola solta
+      if (e.tipo === 'saidaGoleiro' && e.modo === 'bolaSolta' && j) {
+        const v = m.voo, d = j.defesa;
+        if ((v && v.time !== j.time && finalizacao(v)) || (v && d && !d.fora && d.chave === v.tickChave)) { saidas.bolaSolta--; saidas.bolaSoltaChute++; }
+      }
       if (e.tipo === 'cobranca' && e.parada === 'escanteio' && j) { esc.n++; escAb = { t: j.time, tick: m.tick, chute: false, toca: false }; }
       if (e.tipo === 'passe' && e.modo === 'cruzamento' && j && !(escAb && m.tick - escAb.tick < 30)) { cruz.n++; cruzAb = { t: j.time, tick: m.tick, chute: false, toca: false }; }
       for (const ab of [escAb, cruzAb]) {
@@ -173,7 +199,7 @@ export async function medirSemente(sem, o = {}) {
   if (aberto) { aberto.res ??= 'fora'; naturais.push(aberto); }
 
   // ------------------------------------------------------------------ canhão
-  const canhao = [];
+  const canhao = [], finais = [], contra = [];
   for (let e = 0; e < estados.length; e++) {
     for (let k = 0; k < K + KP; k++) {
       const q = structuredClone(estados[e].m);
@@ -264,6 +290,102 @@ export async function medirSemente(sem, o = {}) {
       }
       canhao.push(reg);
     }
+    // finalizações que não são cruzamento — o chute colocado (MOD + CHUTE) e a cavadinha — do atacante posto a 16–28 m
+    // (colocado) ou 10–18 m (cavadinha, com o goleiro a 3–5 m da linha), só ele e o goleiro no lance, pelo executarAcao
+    // de verdade: o goleiro lê o chute (nunca "sai no cruzamento") e a leitura não é trocada por outro plano
+    for (let k = 0; k < KF; k++) {
+      const q = structuredClone(estados[e].m);
+      for (let i = 0; i < 2 * k + e + 3; i++) uniforme(q.rng);
+      q.humanos = [];
+      const a = jog(q, estados[e].dono);
+      const g = goleiroDe(q, 1 - a.time);
+      if (!a || !g) continue;
+      const cav = k % 2 === 1;
+      const gx = gxDe(q, g), s = Math.sign(gx);
+      const r = sorteador(sem * 6007 + e * 97 + k * 13 + 5);
+      const d = cav ? 10 + 8 * r() : 16 + 12 * r(), ang = (r() * 2 - 1) * 0.4;
+      const bx = gx - s * d * Math.cos(ang), bz = d * Math.sin(ang);
+      const rumo = Math.atan2(-bz, gx - bx);
+      P.teleportar(a, bx - Math.cos(rumo) * 0.35, bz - Math.sin(rumo) * 0.35, rumo);
+      const pg = GK.pontoBissetriz(bx, bz, gx, cav ? 3 + 2 * r() : 1 + r());
+      P.teleportar(g, pg.x, pg.z, rumo + Math.PI);
+      Object.assign(q.bola.p, { x: bx, y: 0.11, z: bz }); Object.assign(q.bola.v, { x: 0, y: 0, z: 0 }); Object.assign(q.bola.w, { x: 0, y: 0, z: 0 });
+      q.bola.rolando = true; q.posse = a.id; q.voo = null; q.naMao = null;
+      for (const o of q.jogadores) if (o !== a && o !== g && Math.hypot(o.x - bx, o.z - bz) < 25) P.teleportar(o, -s * 10 + (o.id % 7), (o.id % 11) - 5, o.rumo);
+      a.pedido = cav ? { tipo: 'chute', forca: 0.35 + 0.3 * r(), mod: false, cavadinha: true, humano: true, tick: q.tick }
+        : { tipo: 'chute', forca: 0.55 + 0.3 * r(), mod: true, humano: true, tick: q.tick };
+      a.mira = { x: Math.cos(rumo + (r() * 2 - 1) * 0.12), z: Math.sin(rumo + (r() * 2 - 1) * 0.12), mag: 1 };
+      if (!A.executarAcao(q, a, 1, false) || !q.voo || q.voo.tipo !== (cav ? 'cavadinha' : 'colocado')) continue;
+      const reg = { tipo: q.voo.tipo, chave: q.voo.tickChave, saiAlto: false, trocada: false, res: null };
+      let lida = false;
+      for (let i = 0; i < 240 && !reg.res; i++) {
+        const ev = P.passoPartida(q, P.entradaDemoPartida(q));
+        for (const x of ev) {
+          if (x.id === g.id && x.tipo === 'saidaGoleiro' && x.modo === 'cruzamento') { reg.saiAlto = true; if (lida) reg.trocada = true; }
+          if (x.id === g.id && x.tipo === 'leituraGoleiro') lida = true;
+          if (x.id === g.id && x.tipo === 'defesa') reg.res = 'defesa';
+          if (x.tipo === 'gol') reg.res = x.time === a.time ? 'gol' : 'contra';
+          if (x.tipo === 'fora') reg.res ??= 'fora';
+        }
+        if (g.defesa && g.defesa.saidaAlta && g.defesa.chave === reg.chave) reg.saiAlto = true;
+        if (q.parada && !q.parada.rolou) reg.res ??= 'parada';
+      }
+      reg.res ??= 'fora';
+      finais.push(reg);
+    }
+    // contra-ataque 1×1 (k1 lances sem a cavadinha da IA, k1c com ela; a mesma montagem do canhão da revisão): o dono da
+    // bola posto a 20–26 m do gol (±0,45 rad), todos os outros de linha 12–22 m atrás da bola; a IA decide o lance
+    for (let k = 0; k < K1 + K1C; k++) {
+      const comCav = k >= K1;
+      const q = structuredClone(estados[e].m);
+      for (let i = 0; i < 5 * k + e + 1; i++) uniforme(q.rng);
+      q.humanos = [];
+      const a = jog(q, estados[e].dono);
+      const g = a ? goleiroDe(q, 1 - a.time) : null;
+      if (!a || !g) continue;
+      const gx = gxDe(q, g), s = Math.sign(gx);
+      const r = sorteador(sem * 7919 + e * 131 + k * 17 + 3);
+      const d = 20 + 6 * r(), ang = (r() * 2 - 1) * 0.45;
+      const bx = gx - s * d * Math.cos(ang), bz = d * Math.sin(ang);
+      const rumo = Math.atan2(-bz, gx - bx);
+      P.teleportar(a, bx - Math.cos(rumo) * 0.45, bz - Math.sin(rumo) * 0.45, rumo);
+      q.posse = null; q.voo = null; q.naMao = null;
+      Object.assign(q.bola.p, { x: bx, y: 0.11, z: bz }); Object.assign(q.bola.v, { x: 0, y: 0, z: 0 }); Object.assign(q.bola.w, { x: 0, y: 0, z: 0 });
+      q.bola.rolando = true;
+      q.ultimoToque = { id: a.id, time: a.time, tick: q.tick };
+      for (const o of q.jogadores) {
+        if (o === a || o.posicao === 'GOL') continue;
+        P.teleportar(o, bx - s * (12 + 10 * r()), -25 + 50 * r(), Math.atan2(0, s));
+      }
+      const cav0 = ACOES.cavadinha.goleiroFora;
+      if (!comCav) ACOES.cavadinha.goleiroFora = 1e9; // (como o humano: o chute de um toque dele nunca vira cavadinha)
+      const reg = { comCav, res: null, modo: null, prof: null };
+      let tChute = null;
+      for (let i = 0; i < 480 && !reg.res; i++) {
+        const ev = P.passoPartida(q, P.entradaDemoPartida(q));
+        if (q.partida.estado === 'fim') break;
+        for (const x of ev) {
+          const j = x.id != null ? jog(q, x.id) : null;
+          if (tChute == null) {
+            if (j && j.time === a.time && M.ehChute(q, x)) { tChute = q.tick; reg.modo = x.modo; reg.prof = Math.abs(gx - g.x); }
+            else if (x.tipo === 'defesa' && j === g) reg.res = 'gkGanhou';
+            else if (j && j.time !== a.time && (x.tipo === 'roubada' || x.tipo === 'dividida')) reg.res = 'roubou';
+            else if (x.tipo === 'falta' || x.tipo === 'fora' || x.tipo === 'gol' || (j && j.time === a.time && x.tipo === 'passe')) reg.res = 'outro';
+          } else {
+            if (x.tipo === 'gol') reg.res = x.time === a.time ? 'gol' : 'contra';
+            else if (x.tipo === 'defesa' && j === g) reg.res = 'defesa';
+            else if (x.tipo === 'bateuCorpo' && j && j.time !== a.time && j.posicao !== 'GOL') reg.res = 'bloqueado';
+            else if (x.tipo === 'fora') reg.res = 'fora';
+          }
+          if (reg.res) break;
+        }
+        if (!reg.res && tChute == null && q.posse != null) { const dn = jog(q, q.posse); if (dn && dn.time !== a.time) reg.res = dn === g ? 'gkGanhou' : 'roubou'; }
+        if (!reg.res && tChute != null && q.tick - tChute > 240) reg.res = 'fora';
+      }
+      ACOES.cavadinha.goleiroFora = cav0;
+      reg.res ??= 'tempo';
+      contra.push(reg);
+    }
   }
   // movimento: resumo
   const movR = mov.map(R => {
@@ -271,7 +393,7 @@ export async function medirSemente(sem, o = {}) {
     const p = f => v.length ? v[Math.min(v.length - 1, Math.floor(f * v.length))] : 0;
     return { ticks: R.ticks, p50: p(0.5), p90: p(0.9), p99: p(0.99), acimaDe3: R.acimaDe3, acimaDe4: R.acimaDe4, inv: R.inv, lateral: R.lateral, cruz: R.cruz, saltoPos: R.saltoPos, saltoRumo: R.saltoRumo, erroAlvo: R.erroAlvo, armado: R.armado, armadoSet: R.armadoSet };
   });
-  return { sem, naturais, canhao, mov: movR, esc, cruz, saidas, gols: [m.placar[0], m.placar[1]] };
+  return { sem, naturais, canhao, finais, contra, pose, mov: movR, esc, cruz, saidas, gols: [m.placar[0], m.placar[1]] };
 
   // ------------------------------------------------------------------ auxiliares do filho
   function sorteador(s0) { let s = (s0 >>> 0) || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
@@ -314,7 +436,7 @@ export async function medirSemente(sem, o = {}) {
     const noAlvo = Math.abs(linha.z) < MEIO - 0.05 && linha.y < CAMPO.gol.altura - 0.05;
     return {
       vb, noAlvo, zLinha: linha.z, yLinha: linha.y, lat: Math.abs(plano.z - g.z), yPl: plano.y, tVoo: plano.ticks * PASSO,
-      vPl: plano.v, dTrave: MEIO - Math.abs(linha.z), gz0: g.z, gx0: g.x,
+      vPl: plano.v, dTrave: MEIO - Math.abs(linha.z), gz0: g.z, gx0: g.x, dGk: Math.hypot(b.p.x - g.x, b.p.z - g.z),
     };
   }
 

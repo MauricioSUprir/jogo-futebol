@@ -17,7 +17,7 @@ import {
 } from './conducao.js';
 import { MD } from './matdet.js';
 import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, executarCabeceio, ataca, assumirControle } from './acoes.js';
-import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol, mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho, maoNaBola, abafar, goleiroSaiNoAlto } from './goleiro.js';
+import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol, mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho, maoNaBola, abafar, goleiroSaiNoAlto, atualizarBaseGoleiro } from './goleiro.js';
 import { entradaIA } from './ia.js';
 import { ACOES } from './config.js';
 // Etapa 3 (partida 11×11): tudo isto só liga com m.times — o treino continua bit a bit igual
@@ -437,6 +437,13 @@ export function passo(m, entradas) {
       if (c && c.h > 0 && !c.saiu && m.tick >= c.td) sairDoChao(m, j);
       if (voando(j, m.tick + 1)) { passoCorpoNoAr(m, j); continue; }
     }
+    // partida: a base de goleiro (j.baseGk: pés abertos e o fim de passo da base, jogador.js) só vale no movimento de
+    // goleiro — indo como jogador de linha (a bola no pé, o analógico do humano) ela ficava velha (velPosicao não roda);
+    // e a pose da base (anim.js) anda para o alvo sem salto (goleiro.js atualizarBaseGoleiro)
+    if (m.partida && j.posicao === 'GOL') {
+      if ((j.baseGk != null || j.setGk) && goleiroComoLinha(m, j)) { j.baseGk = null; j.setGk = false; }
+      atualizarBaseGoleiro(m, j);
+    }
     if (j.papel === 'marcador') {
       if (j.descanso > 0) { j.descanso--; mv = { dx: MD.cos(j.rumo), dz: MD.sin(j.rumo), vel: 0, rumoAlvo: j.rumo }; }
       else mv = moverMarcador(m, j);
@@ -702,7 +709,9 @@ function bolaLivre(m) {
     // a própria espalmada não volta para as mãos logo depois (GOLEIRO.reagarra)
     const espalmou = m.ultimoToque && m.ultimoToque.id === g.id && (m.tick - m.ultimoToque.tick) * PASSO < GOLEIRO.reagarra;
     // (partida: indo na bola solta da área — goleiro.js varrer — pega também a mais rápida, até GOLEIRO.realista.varre.vPega)
-    const vPega = m.partida && g.varre && g.varre.ok ? GOLEIRO.realista.varre.vPega : 9;
+    // (só com a ida à bola solta calculada NESTE passo — goleiro.js varrer, j.varre.vivo: o plano velho, de antes de um
+    // chute ou de um mergulho, não vale)
+    const vPega = m.partida && g.varre && g.varre.ok && g.varre.vivo === m.tick ? GOLEIRO.realista.varre.vPega : 9;
     if (naArea && !espalmou && MD.hypot(b.p.x - g.x, b.p.z - g.z) < 1.0 && b.p.y < 2.2 && MD.hypot(b.v.x, b.v.z) < vPega
       && (!mergulhoAtivo(g, m.tick + 1) || maoNaBola(g, m.tick + 1, b.p))) {
       m.naMao = g.id; m.posse = g.id; g.segura = { desde: m.tick };

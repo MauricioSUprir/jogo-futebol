@@ -669,16 +669,19 @@ export const GOLEIRO = {
     // GOLEIRO.aMergulho)
     semBase: 0.08, vParado: 0.7,
     // SEGURAR × ESPALMAR (StatsBomb, 1.893 defesas: segura 47%; em pé baixa/média/alta 55/52/42%; mergulho 34/22/4%):
-    // [rasteira (< 1 m), meia altura, alta (≥ 1,8 m)]; no corpo `corpo`; × (1 + kV·(vRef − v)) pela velocidade da bola no
-    // plano (forte segura menos), entre vMin e vMax; no mergulho, × a folga (f / folgaPlena, até 1, no mínimo minFolga): na
-    // ponta dos dedos espalma
-    segura: { emPe: [0.66, 0.6, 0.45], mergulho: [0.4, 0.26, 0.05], corpo: 0.92, vRef: 18, kV: 0.035, vMin: 0.55, vMax: 1.3, folgaPlena: 0.9, minFolga: 0.35 },
-    // REBOTE (a bola que não fica nas mãos): em pé / no corpo ela escapa e cai perto, de lado (StatsBomb: 21% das defesas
-    // viram rebote perigoso; no peito 52%, nos pés 23–46%); no mergulho rasteiro de perto (chute a < perto m), em
-    // `mergulhoBaixo` das espalmadas — o resto do mergulho espalma para FORA (linha de fundo, por cima, bem aberta). A bola
-    // sai a fração `fv` da velocidade (entre v[0] e v[1] m/s), a ang[0]–ang[1] rad da frente do gol para o lado dela, subindo
-    // vy m/s — nunca para dentro do gol
-    rebote: { mergulhoBaixo: 0.3, vEmPe: 19, perto: 16.5, yBaixo: 0.7, fv: 0.28, v: [3, 7.5], ang: [0.6, 1.25], vy: [0.6, 2.2] },
+    // [rasteira (< 1 m), meia altura, alta (≥ 1,8 m)], × (1 + kV·(vRef − v)) pela velocidade da bola no plano (forte segura
+    // menos), entre vMin e vMax; no mergulho, × a folga (f / folgaPlena, até 1, no mínimo minFolga): na ponta dos dedos
+    // espalma. A bola NO CORPO segura pela distância do chute ao gol (`corpoDist`, [m, fração], interpolada: StatsBomb, 729
+    // defesas a < 0,5 m de lado — < 12 m 32%, 12–16,5 m 40%, 16,5–25 m 59%, ≥ 25 m 79%, no meio de cada faixa; antes 0,92
+    // fixo, sem fonte: o chute de perto no corpo era encaixado em 72%)
+    segura: { emPe: [0.66, 0.6, 0.45], mergulho: [0.4, 0.26, 0.05], corpoDist: [[9, 0.32], [14.25, 0.4], [20.75, 0.59], [28, 0.79]], vRef: 18, kV: 0.035, vMin: 0.55, vMax: 1.3, folgaPlena: 0.9, minFolga: 0.35 },
+    // REBOTE (a bola que não fica nas mãos): a fração que vai para FORA (espalmar: pela linha de fundo ou por cima do
+    // travessão) é a da StatsBomb pela técnica e pela altura [< 1 m, 1–1,8 m, ≥ 1,8 m] — 1.006 defesas não seguras
+    // ("Touched Out" ÷ não seguras): em pé 26/30/72%, no mergulho 36/52/76% (a difícil, alta ou no mergulho, sai mais); o
+    // resto escapa e cai perto, de lado (rebater; StatsBomb: 21% das defesas viram rebote perigoso): a bola sai a fração
+    // `fv` da velocidade (entre v[0] e v[1] m/s), a ang[0]–ang[1] rad da frente do gol para o lado dela, subindo vy m/s —
+    // nunca para dentro do gol
+    rebote: { foraEmPe: [0.26, 0.3, 0.72], foraMergulho: [0.36, 0.52, 0.76], fv: 0.28, v: [3, 7.5], ang: [0.6, 1.25], vy: [0.6, 2.2] },
     // MOVIMENTO (posicionando): parado dentro de `zona` m do ponto (histerese: volta a andar a mais de `zonaSai` m); com o
     // chute armado do adversário (a carga ou o pedido do CHUTE do dono da bola) ele fica "set": freia e só corrige a mais
     // de `setRaio` m, a até vSet m/s; ajustando perto do ponto (a menos de `perto` m) anda a até vAjuste m/s (passos
@@ -688,12 +691,18 @@ export const GOLEIRO = {
     // bissetriz pela bola `antecipa` s à frente. Parado, até `giraSet` rad da bola só olha (não vira o corpo); o cruzamento
     // que chega à cabeça em menos de `setCruz` s também pede o set. Bola perto da linha de fundo: a até `linhaPerto` m da
     // linha (interpolando até a bola a `linhaU` m dela ao longo do campo). ritmoFim: o passo termina mais depressa na base
-    mov: { zona: 0.1, zonaSai: 0.22, setRaio: 0.7, vSet: 1.0, perto: 1.2, vAjuste: 2.4, base: 0.17, vBase: 1.5, agacha: 0.07, inclina: 0.18,
-      ameaca: 26, zonaSaiAmeaca: 0.45, vAjusteAmeaca: 1.6, giraSet: 0.6, setCruz: 0.35, linhaPerto: 1.5, linhaU: 16, antecipa: 0.35, ritmoFim: 6.5 },
-    // 1×1 (IA; The FA: fecha o ângulo, fica set no chute, cai nos pés na bola ganhável): sai com o dono da bola adversário a
+    mov: { zona: 0.1, zonaSai: 0.22, setRaio: 1.2, vSet: 1.0, perto: 1.2, vAjuste: 2.4, base: 0.17, vBase: 1.5, agacha: 0.07, inclina: 0.18,
+      ameaca: 26, zonaSaiAmeaca: 0.45, vAjusteAmeaca: 1.6, giraSet: 0.6, setCruz: 0.35, linhaPerto: 1.5, linhaU: 16, antecipa: 0.35, ritmoFim: 6.5,
+      // a pose da base (j.baseF) vai de 0 a 1 em tBase s (sem salto quando a bola entra ou sai da mão); parado na base, o
+      // passo de ajuste só sai com o corpo a mais de `alcanceSet` m de um pé (PASSADA.alcanceParado nos outros: 0,3)
+      tBase: 0.25, alcanceSet: 0.45,
+      // freando set a menos de vSetPes m/s, ele não tira mais um pé do chão (o passo no ar termina depressa, ritmoFim)
+      vSetPes: 1.0 },
+    // 1×1 (IA; The FA: fica set e cai na bola ganhável; IDA Valencia: sai no toque longo): com o dono da bola adversário a
     // até `dist` m do gol, sem companheiro de linha entre ele e o gol (a até `cobre` m da linha dono → gol e mais perto do
-    // gol) nem colado nele (`colado` m); vai na bissetriz até `max` m da linha (no máximo `antes` m antes da bola)
-    umXum: { dist: 20, cobre: 2.2, colado: 1.3, max: 5.5, antes: 2.6, v: 0.85 },
+    // gol) nem colado nele (`colado` m), ele só sai na bola do toque longo (a mais de `colado` m do pé do dono) a que chega
+    // `chega` s antes do dono; senão fica na posição de sempre (StatsBomb 1×1: defesa 70,5% a < 2 m da linha, 41,9% a 4–6 m)
+    umXum: { dist: 20, cobre: 2.2, colado: 1.3, chega: 0.1 },
     // ABAFAR (cair nos pés / pegar a bola do toque longo): a bola baixa (até `y` m) e devagar (até `vMax` m/s) a até `alcance`
     // m dele (+ `saindo` saindo no 1×1), na área com a mão valendo, mais perto dele que do pé do dono (o toque longo); um
     // sorteio por tentativa (`p` pelo reflexo), e depois `descanso` s sem tentar
@@ -993,6 +1002,12 @@ export const CABECEIO = {
   gol: 15,
   // afastar: para longe do meu gol e para o lado da bola (nunca para o meio da minha área)
   vAfasta: 16, elAfasta: 0.62, ladoAfasta: 0.55,
+  // (partida) o afastamento pela física do contato (acoes.js afastarReal): a testa vira até `giro` rad do rumo do corpo
+  // (pescoço e tronco no salto) e a bola sai na direção dela com `en` da velocidade normal que trazia devolvida mais
+  // `vTesta` m/s da testa; sem ângulo para longe do próprio gol, para cima (`elFuga` rad). Conferido pelo destino dos cortes
+  // de cabeça de cruzamento da StatsBomb (348 partidas, medido aqui: escanteio em 22% na pequena área, 7% a 5,5–11 m e 0,7%
+  // a 11–16,5 m; lateral 7–10%) — nas partidas IA × IA, 17% / 8% / 5% (24 partidas)
+  afastaReal: { giro: 1.0, en: 0.5, vTesta: 7, elFuga: 1.05 },
   // a gol: mira a bola baixa na linha do gol (onde o goleiro alcança menos), entre yGol[0] e yGol[1] m, a zGol m do meio,
   // do lado longe do goleiro (sem o analógico)
   yGol: [0.3, 1.1], zGol: 0.8,
