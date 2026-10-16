@@ -109,11 +109,11 @@ for (const tela of TELAS) {
       for (let i = 0; i < a.length; i += 4) if ((Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2])) / 3 > 18) n++;
       return { n: n * 4, ca, cb, vis: g.bolaParada.estado.linha.visivel, hud: g.bolaParada.estado.hud };
     });
-    if (PRINTS && tela.toque && tela.largura === 844 && (tipo === 'escanteio' || tipo === 'falta')) {
-      await pg.evaluate(() => { const g = window.__golaco; g.relogio.avancar(1000 / 60); });
-      await pg.screenshot({ path: path.join(PRINTS, `bola-parada-${tipo}-844x390.png`) });
+    // prints (a linha acende em 0,15 s depois de religada: 20 quadros)
+    if (PRINTS && (tela.largura === 844 || tela.largura === 1280) && (tipo === 'escanteio' || tipo === 'falta')) {
+      await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 20; i++) g.relogio.avancar(1000 / 60, { desenhar: i === 19 }); });
+      await pg.screenshot({ path: path.join(PRINTS, `bola-parada-${tipo}-${tela.largura}x${tela.altura}.png`) });
     }
-    if (PRINTS && !tela.toque && (tipo === 'escanteio' || tipo === 'falta')) await pg.screenshot({ path: path.join(PRINTS, `bola-parada-${tipo}-1280x720.png`) });
     // chute (LANÇAMENTO; no pênalti o CHUTE; no contra o goleiro espera) e a volta para a TV
     const volta = await pg.evaluate(tipo => {
       const g = window.__golaco, B = tipo === 'penalti' ? 32 : 16;
