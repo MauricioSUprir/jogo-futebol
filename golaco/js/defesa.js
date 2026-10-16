@@ -266,7 +266,8 @@ function resolverBote(m, j, h) {
   }
   // Etapa 4 (só na partida): a dividida que não ganha a bola com o pé no condutor pode ser falta (faltas.js)
   let falta = null;
-  if (!ganhou && m.partida && d0 && (motivo === 'perdeu' || motivo === 'tocou') && !m.faltaPendente) {
+  // (no Modo Livre não há falta: m.livre)
+  if (!ganhou && m.partida && !m.livre && d0 && (motivo === 'perdeu' || motivo === 'tocou') && !m.faltaPendente) {
     const pF = chanceFaltaDividida(m, j, d0, motivo);
     if (uniforme(m.rng) < pF) {
       const v = MD.hypot(j.vx, j.vz);

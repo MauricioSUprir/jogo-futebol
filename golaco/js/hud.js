@@ -31,6 +31,9 @@ const TEXTO_EVENTO = {
   penaltisBate: { t: 'Sua vez: mire e segure o CHUTE', ms: 3600, forte: true },
   penaltisDefende: { t: 'Defenda: esquerda ou direita antes do chute', ms: 3600, forte: true },
   reinicioDisputa: { t: 'Disputa reiniciada', ms: 1200 },
+  // Modo Livre: a mudança de jogadores feita ("5 contra 3": o texto vem do livre-pagina.js)
+  livreAjuste: { t: 'Jogadores atualizados', ms: 1600, forte: true, prio: 2 },
+  livreCamera: { t: 'Câmera', ms: 1200, prio: 2 },
 };
 // faixa ENTRA/SAI (pedido do dono de 12/10: "embaixo, no modelo, a informação de quem entra e quem sai"; a exceção dele à
 // regra sem narração: só sigla, ▲/▼, ENTRA/SAI, número e nome). Tempos em s (config.js SUBST.faixa).
@@ -98,7 +101,7 @@ export function criarHud(opc) {
   let timerFaixa = null;
   let modoAtual = null, fimDeJogo = false;
   let ajudaDaPausa = false; // a Ajuda foi aberta pela pausa: fechar volta para ela
-  const NOME_MODO = { partida: 'partida', ataque: 'treino de ataque', conducao: 'treino de condução', penaltis: 'pênaltis' };
+  const NOME_MODO = { partida: 'partida', ataque: 'treino de ataque', conducao: 'treino de condução', penaltis: 'pênaltis', livre: 'modo livre' };
   /** Sigla, escudo e nome (só para leitores de tela: nenhum texto novo na tela) de cada time no placar. */
   function escreverTimes() {
     times.forEach((t, i) => {
@@ -265,12 +268,15 @@ export function criarHud(opc) {
     // a disputa de pênaltis (modo Pênaltis) é um jogo como a partida: o topo e a pausa dela (data-so "partida penaltis":
     // Replay e Reiniciar; o Editar time é só da partida)
     const penaltis = modoAtual === 'penaltis';
-    const partida = modoAtual === 'partida' || penaltis;
+    // o Modo Livre também é um jogo (o placar de TV, sem o relógio; data-so "livre": Jogadores e os recomeços dele)
+    const livre = modoAtual === 'livre';
+    const partida = modoAtual === 'partida' || penaltis || livre;
     // na partida o topo fica só com placar, minimapa e menu (sem o painel "Conduzindo"/posição/km/h:
     // é narração na tela); nos treinos o painel continua (é o retorno do exercício)
     raiz.classList.toggle('em-partida', partida);
     raiz.classList.toggle('em-penaltis', penaltis);
-    const so = penaltis ? 'penaltis' : partida ? 'partida' : 'treino';
+    raiz.classList.toggle('em-livre', livre);
+    const so = livre ? 'livre' : penaltis ? 'penaltis' : partida ? 'partida' : 'treino';
     document.querySelectorAll('#menu [data-so]').forEach(b => { b.hidden = !b.dataset.so.split(' ').includes(so); });
     // marcador de treino só no treino de condução (no de ataque a defesa já marca)
     if (el.marcador && !partida) el.marcador.closest('button').hidden = modoAtual === 'ataque';
@@ -294,18 +300,21 @@ export function criarHud(opc) {
       if (el.modos) el.modos.querySelectorAll('[data-cmd="modo"]').forEach(b => { b.hidden = true; if (b.parentElement?.classList.contains('linha-cenas')) b.parentElement.hidden = true; });
       const sim = $('btn-simular-resto'), volta = $('btn-voltar-tm');
       if (sim) {
-        sim.hidden = !partida || fim;
+        sim.hidden = !partida || fim || livre;
         const sm = sim.querySelector('small');
         if (sm) sm.textContent = penaltis ? 'até o fim da disputa' : 'até o apito final';
       }
-      // a disputa de pênaltis do TM não tem pré-jogo nem substituição: sem o submenu "Cenas da partida"
-      if (modos) modos.hidden = penaltis;
-      if (volta) { volta.hidden = !fim; volta.classList.toggle('btn-primario', fim); }
+      // a disputa de pênaltis do TM não tem pré-jogo nem substituição: sem o submenu "Cenas da partida" (nem o Livre)
+      if (modos) modos.hidden = penaltis || livre;
+      // no Livre o "Voltar ao Total Match" fica sempre (no lugar do Modo de jogo): o treino não tem fim
+      if (volta) { volta.hidden = !fim && !livre; volta.classList.toggle('btn-primario', fim); }
       if (opc.tm.trava) document.querySelectorAll('#menu [data-cmd="editar-time"]').forEach(b => { b.hidden = true; });
     }
   }
+  const fecharSubLivre = () => document.querySelectorAll('.submenu-livre').forEach(e => { e.hidden = true; });
   function mostrarSubmenu(v) {
     if (!el.acoes || !el.modos) return;
+    fecharSubLivre(); // (os submenus Jogadores e Câmera do Livre: livre-pagina.js)
     el.acoes.hidden = v; el.modos.hidden = !v;
     const alvo = v ? el.modos.querySelector('[aria-pressed="true"]') ?? el.modos.querySelector('button') : $('btn-modos');
     alvo?.focus({ preventScroll: true });
@@ -610,6 +619,7 @@ export function criarHud(opc) {
       if (acao === 'voltar') {
         if (raizAberta === el.ajuda) cmd('fechar-ajuda');
         else if (el.modos && !el.modos.hidden) cmd('modos-voltar');
+        else if (document.querySelector('.submenu-livre:not([hidden])')) cmd('livre-voltar');
         else cmd('continuar');
         return;
       }
@@ -638,6 +648,7 @@ export function criarHud(opc) {
       el.ajuda.hidden = true; el.menu.hidden = false;
       if (el.acoes) el.acoes.hidden = false;
       if (el.modos) el.modos.hidden = true;
+      fecharSubLivre();
       const alvo = (foco && el.menu.querySelector(foco)) || [...el.menu.querySelectorAll('#menu-acoes .btn-primario')].find(b => !b.hidden);
       alvo?.focus({ preventScroll: true });
     },

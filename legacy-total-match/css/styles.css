@@ -6558,15 +6558,27 @@ body.theme-light .ut-tab.utk-aba.on .utk-badge{background:#ffffff;color:#0f7a3a}
 @media (min-width: 760px) and (max-width: 1099px) {
   .vit-palco.grade .vit-trilho { --cols: 4; }
 }
+/* os 11 atalhos (com o Pênaltis 3D e o Modo Livre 3D): até 1279 px, 6 + 5 centralizados — com 5 por linha o último ia
+   sozinho para uma 3ª linha e, com os 11 numa linha abaixo de 1280 px, "Modo Livre 3D" e "Dream Team" quebravam em duas */
+@media (min-width: 760px) and (max-width: 1279px) {
+  .screen.vit > .vit-mais { --cols: 6; }
+}
 @media (min-width: 1100px) {
-  /* os 10 atalhos (com o Pênaltis 3D) numa linha só; até 1099 px, 5 por linha = 2 linhas cheias */
-  .screen.vit > .vit-mais { --cols: 10; }
   .vit-mais-b { padding: 16px 6px 14px; font-size: 12.5px; }
 }
-/* celular (grade de 3): o atalho que sobraria sozinho na última linha (10 = 3+3+3+1) ocupa a linha inteira, ícone ao lado
-   do nome — sem um botão perdido no canto */
+/* de 1280 px para cima, os 11 numa linha só */
+@media (min-width: 1280px) {
+  .screen.vit > .vit-mais { --cols: 11; }
+}
+/* celular (3 por linha, numa grade de 6 colunas): a última linha sempre cheia, sem buraco no fim nem um botão perdido
+   no canto — o que sobra sozinho (3+3+3+1) ocupa a linha inteira e os dois que sobram (11 = 3+3+3+2) meia linha cada,
+   com o ícone ao lado do nome */
 @media (max-width: 759px) {
+  .vit-mais { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .vit-mais > .vit-mais-b { grid-column: span 2; min-width: 0; }
   .vit-mais > .vit-mais-b:last-child:nth-child(3n+1) { grid-column: 1 / -1; flex-direction: row; justify-content: center; }
+  .vit-mais > .vit-mais-b:nth-last-child(2):nth-child(3n+1),
+  .vit-mais > .vit-mais-b:last-child:nth-child(3n+2) { grid-column: span 3; flex-direction: row; justify-content: center; }
 }
 /* celular deitado (pouca altura): todos na mesma linha, com cartas menores para caber o ENTRAR */
 @media (min-width: 760px) and (max-height: 520px) {
@@ -6646,3 +6658,9 @@ body.tm3d-aberto{overflow:hidden}
 .pen3d-res{flex:0 0 auto;font-size:11.5px;font-weight:700;color:var(--text-dim)}
 .pen3d-cob.ok .pen3d-res{color:var(--gold)}
 .pen3d-cob.erro .pen3d-res{color:#f05252}
+
+/* ---------- Modo Livre 3D (o treino livre no GOLAÇO 3D: js/livre3d.js) ---------- */
+.livre3d-intro{margin:0 0 12px;font-size:13.5px}
+.livre3d .chosen-team:not(.empty){cursor:pointer}
+.livre3d-aviso{margin:12px 0 0;font-size:13px}
+.livre3d-jogar.is-off{opacity:.5}

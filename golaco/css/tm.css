@@ -229,6 +229,16 @@ html.tm .btn-primario:focus-visible { outline: 2px solid #86efac; outline-offset
 html.tm .btn-replay { padding: 0 16px; }
 html.tm .btn-alternar[aria-pressed="true"] small { color: var(--tm-verde-cl); }
 html.tm #menu-modos .btn[aria-pressed="true"] { border-color: var(--tm-verde); }
+/* Modo Livre (js/livre-pagina.js põe o HTML): −/+ redondos, o número e o goleiro ligado em verde, as 6 câmeras em pílula
+   (a escolhida no degradê, como os segmentados) e o nome da câmera na coluna das opções */
+html.tm .livre-time .btn { padding: 0 12px; }
+html.tm .livre-time .livre-passo { padding: 0; }
+html.tm .livre-n { color: var(--tm-verde-cl); }
+html.tm .livre-gol[aria-pressed="true"] { border-color: var(--tm-verde); color: var(--tm-verde-cl); }
+html.tm .livre-cameras .btn { padding: 0 6px; font-weight: 600; }
+html.tm .livre-cameras .btn[aria-pressed="true"] { background: var(--tm-ativo); color: var(--tm-preto); border-color: transparent; font-weight: 700; }
+html.tm.em-livre .btn-camera-livre { background: var(--tm-ativo); color: var(--tm-preto); border: 1px solid transparent; outline: 0; font-weight: 700; }
+html.tm.em-livre .btn-camera-livre:focus-visible { outline: 2px solid #86efac; outline-offset: 1px; }
 
 /* opções: os segmentados do TM (botões separados, o escolhido em degradê) */
 html.tm .opcao-rotulo { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; color: var(--tm-verde-cl); }

@@ -149,16 +149,19 @@ function timesDoTM() {
 const TM = timesDoTM();
 // Total Match, modo Pênaltis 3D (o pedido com modo: 'penaltis'): a disputa com os times do pedido, sem a trava
 const PENALTIS_TM = !!TM && PEDIDO_TM?.modo === 'penaltis';
+// Total Match, Modo Livre 3D (pedido com modo: 'livre'; livre.js): sem trava e sem resultado ({livre: {placar}})
+const LIVRE_TM = !!TM && PEDIDO_TM?.modo === 'livre';
 // o time do humano: 0 (o mandante) sem ?tm; com ?tm, o lado do usuário no TM (o time 0 é sempre o mandante do TM)
 const TIME_HUMANO = TM ? TM.humano : 0;
-const TRAVA_TM = TM && !PENALTIS_TM ? TM.trava : null;
+const TRAVA_TM = TM && !PENALTIS_TM && !LIVRE_TM ? TM.trava : null;
 
 const params = new URLSearchParams(location.search);
 const PRINTS = params.get('prints') === '1';
 // modo da página: a partida (padrão) ou um dos treinos; o menu "Modo de jogo" troca sem recarregar (com ?tm, sempre a partida)
 // (o modo Pênaltis 3D — a disputa de pênaltis, pedido do dono de 15/10 — também: ?modo=penaltis ou o pedido do TM)
-const MODOS = ['partida', 'ataque', 'conducao', 'penaltis'];
-let modoPagina = TM ? (PENALTIS_TM ? 'penaltis' : 'partida') : MODOS.includes(params.get('modo')) ? params.get('modo') : 'partida';
+// (o Modo Livre, dono 16/10, também: ?modo=livre ou o pedido do TM com modo 'livre')
+const MODOS = ['partida', 'ataque', 'conducao', 'penaltis', 'livre'];
+let modoPagina = TM ? (PENALTIS_TM ? 'penaltis' : LIVRE_TM ? 'livre' : 'partida') : MODOS.includes(params.get('modo')) ? params.get('modo') : 'partida';
 // modo Pênaltis: a lógica (disputa.js) e as bolinhas (disputa-tela.js) por import dinâmico — fora do download sem ele
 let MOD_DISP = null, TELA_DISP = null;
 async function carregarDisputa() {
@@ -166,6 +169,14 @@ async function carregarDisputa() {
   return MOD_DISP;
 }
 if (modoPagina === 'penaltis') await carregarDisputa();
+// Modo Livre: livre.js (a lógica) e livre-pagina.js (a escolha, a pausa, a fila, a API) por import dinâmico — fora do
+// download sem ele; PAG_LIVRE nasce no 1º uso, com o HUD já criado (paginaLivre)
+let MOD_LIVRE = null, MOD_PAG_LIVRE = null, PAG_LIVRE = null;
+async function carregarLivre() {
+  if (!MOD_LIVRE) [MOD_LIVRE, MOD_PAG_LIVRE] = await Promise.all([import('./livre.js'), import('./livre-pagina.js')]);
+  return MOD_LIVRE;
+}
+if (modoPagina === 'livre') await carregarLivre();
 const MIN_PARAM = +params.get('min') > 0 ? +params.get('min') : undefined;
 const DEMO_ON = params.get('demo') === '1';
 const SEMENTE = Math.max(1, Math.floor(+params.get('semente') || (ID_TM ? sementeTM(ID_TM) : 1)));
@@ -246,6 +257,13 @@ function criarMundoTreino(opc = {}) {
       humano: o.humano ?? TIME_HUMANO, comeca: o.comeca, gol: o.gol,
     });
   }
+  if (o.modo === 'livre') {
+    const e = paginaLivre().escolhaTimes();
+    return MOD_LIVRE.criarLivre({
+      semente: o.semente, times: o.times ?? TM?.times, elencos: o.elencos ?? (TM ? ELENCOS_TM : undefined), humano: o.humano ?? TIME_HUMANO,
+      linha: o.linha ?? e.linha, goleiro: o.goleiro ?? e.goleiro,
+    });
+  }
   if (o.modo === 'partida') {
     return criarPartida({
       semente: o.semente, minutosPorTempo: o.minutosPorTempo ?? MIN_PARAM, saida: o.saida, times: o.times ?? TM?.times,
@@ -257,14 +275,16 @@ function criarMundoTreino(opc = {}) {
 /** Um passo: partida (passoPartida) ou treino (passoTreino) — as mesmas funções dos testes em Node. */
 function passoDoMundo(m, e, acoes) {
   if (m.disputa) return MOD_DISP.passoDisputa(m, e);
+  if (m.livre) return MOD_LIVRE.passoLivre(m, e, acoes);
   return m.modo === 'partida' ? passoPartida(m, e, acoes) : S.passoTreino(m, e, acoes);
 }
 function entradaDemoDoMundo(m) {
   if (m.disputa) return MOD_DISP.entradaDemoDisputa(m);
+  if (m.livre) return MOD_LIVRE.entradaDemoLivre(m);
   return m.modo === 'partida' ? entradaDemoPartida(m) : (S.entradaDemo ? S.entradaDemo(m) : null);
 }
-/** Partida ou disputa de pênaltis (os dois têm m.partida e os times): o que vale para "o jogo" e não para os treinos. */
-const ehJogo = m => m.modo === 'partida' || m.modo === 'penaltis';
+/** Partida, disputa de pênaltis ou Modo Livre (todos têm m.partida e os times): o "jogo", não os treinos. */
+const ehJogo = m => m.modo === 'partida' || m.modo === 'penaltis' || m.modo === 'livre';
 /** Rumo da câmera no chão para o analógico: na disputa, o da câmera atrás do cobrador (esquerda/direita da tela). */
 function yawEntrada() { return mundo.disputa && MOD_DISP ? MOD_DISP.yawDisputa(mundo) : (bp.yaw ?? cam.yaw); }
 // bola parada no estilo FIFA (render/bola-parada.js, sob demanda): câmera atrás do cobrador (bp.yaw), linha e painel
@@ -719,6 +739,9 @@ function tratarEvento(ev) {
   // esperava o replay baixar e não chegou a tempo fica sem replay
   if (t === 'saida' || t === 'intervalo' || t === 'fimDeJogo' || t === 'recomeco') golSemDiretor = null;
   if (t === 'saida' && diretor?.golPendente) posGol();
+  // Modo Livre: R / "Bola no meu pé" no meio do gol (recomeço sem saída de bola) = "quero jogar já": o replay daquele gol
+  // não toca — nem fica guardado para a próxima saída sem gol ("Recomeçar bola no meio")
+  if (t === 'recomeco' && ev.livre && diretor?.golPendente) diretor.descartarGol();
   // impedimento: o replay no apito, com a linha no quadro do passe (a foto da Regra 11: ev.tickFoto) e a análise
   // semiautomática (o defensor da linha vem do evento)
   // (replay ainda não baixado: pede já e entra quando chegar, se ainda for o mesmo apito, até REPLAY_ATRASO_MAX passos)
@@ -748,6 +771,7 @@ function tratarEvento(ev) {
     if (diretor?.golPendente && posGol()) filaCenas.push(faixa); else faixa();
     return;
   }
+  if (t === 'livreAjuste') { PAG_LIVRE?.evento(ev); return; }
   if (t === 'timeEditado') {
     if (ev.time !== TIME_HUMANO) return;
     hud.evento(ev, { texto: ev.pendente ? 'Substituição na próxima parada' : 'Time atualizado' });
@@ -1069,7 +1093,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     if (_pt.atras) hud.cartao(null); else { _cartao.x = _pt.x; _cartao.y = _pt.y; _cartao.cor = uc.cor; hud.cartao(_cartao); }
   } else hud.cartao(null);
   hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
-  hud.relogio(mundo.partida && !mundo.disputa ? lerRelogio() : null);
+  hud.relogio(mundo.partida && !mundo.disputa && !mundo.livre ? lerRelogio() : null);
   // disputa: as bolinhas e quem bate (escreve no DOM só quando muda)
   if (mundo.disputa && TELA_DISP) {
     telaDisp ??= TELA_DISP.criarTelaDisputa({ times: () => hud.times, nome: id => { const f = fichaDe(id); return f ? { num: f.num, nome: f.camisa ?? f.nome } : null; } });
@@ -1423,7 +1447,7 @@ function desenharReplay(dt, agoraMs, renderizar = true) {
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
   hud.carga(null); hud.cartao(null);
   hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
-  hud.relogio(mundo.partida && !mundo.disputa ? lerRelogio() : null);
+  hud.relogio(mundo.partida && !mundo.disputa && !mundo.livre ? lerRelogio() : null);
   { const ms = performance.now() - tq; custoReplay.v[custoReplay.n & 4095] = ms; custoReplay.n++; custoReplay.ms += ms; }
   if (renderizar) cena3d.desenhar(diretor.camera);
   render.bola.x = _bpR.x; render.bola.y = _bpR.y; render.bola.z = _bpR.z;
@@ -1576,8 +1600,9 @@ function quadro(agoraMs, desenhar = true) {
       // (o travado do TM expulso: ninguém do time é dele — a entrada não vai para o mundo)
       const e = DEMO_ON ? (entradaDemoDoMundo(mundo) ?? ent) : cenaGol || expulsoAvisado ? ENTRADA_NEUTRA : ent;
       let ac = filaAcoes.length ? filaAcoes.splice(0) : null;
-      // a edição do time entra ANTES das outras ações, no 1º passo depois da pausa
+      // a edição do time entra ANTES das outras ações, no 1º passo depois da pausa (e a mudança de jogadores do Livre)
       if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
+      { const al = PAG_LIVRE?.tirarDaFila(); if (al) ac = ac ? [al, ...ac] : [al]; }
       // o que este passo vê dos botões (o reaperto entre dois passos vira solto + apertado: entrada.js). ANTES do passo:
       // o replay que começa dentro dele (impedimento, gol na saída) limpa isso (limparPulsos) — depois, a tecla
       // segurada no apito ficava como "vista" o replay inteiro e não pulava mais
@@ -1677,7 +1702,10 @@ function tratarAcao(a) {
   }
   if (a === 'qps') { hud.mostrarQps(!hud.qpsVisivel); return; }
   if (pausado()) return;
-  if (a === 'camera') { comando('camera', cam.modo === 'tv' ? 'aproximada' : 'tv'); return; }
+  // (no Livre a C/R3 passa pelas 6 câmeras dele)
+  if (a === 'camera') { comando('camera', mundo.livre ? 'proxima' : cam.modo === 'tv' ? 'aproximada' : 'tv'); return; }
+  // Modo Livre: R = a bola no pé do controlado
+  if (mundo.livre && a === 'recomecar') { filaAcoes.push({ tipo: 'livreRecomecar', onde: 'pe' }); hud.evento('recomecar'); return; }
   // R/M/N: só nos treinos (R não recomeça a partida sem confirmação: isso é "Reiniciar partida")
   if (ehJogo(mundo) && (a === 'recomecar' || a === 'maquina' || a === 'marcador')) { hud.evento('soTreino'); return; }
   if (a === 'marcador' && mundo.modo === 'ataque') { hud.evento('semMarcador'); return; }
@@ -1716,6 +1744,8 @@ function trocarModo(v) {
   if (!MODOS.includes(v)) return;
   // os Pênaltis carregam a disputa na 1ª vez (import dinâmico) e trocam depois
   if (v === 'penaltis' && !MOD_DISP) { carregarDisputa().then(() => trocarModo(v)).catch(() => {}); return; }
+  // o Livre também; ele entra com a pausa aberta no submenu Jogadores (o "Jogar" começa)
+  if (v === 'livre' && !MOD_LIVRE) { carregarLivre().then(() => trocarModo(v)).catch(() => {}); return; }
   modoPagina = v;
   try {
     const u = new URL(location.href);
@@ -1723,6 +1753,7 @@ function trocarModo(v) {
     history.replaceState(null, '', u);
   } catch (_) { /* sem history (arquivo local): segue */ }
   trocarMundo(novoMundo(), { prejogo: v === 'partida' ? 'preferencia' : null });
+  if (v === 'livre' && !PRINTS && !DEMO_ON) paginaLivre().abrirJogadores();
 }
 
 /**
@@ -1769,6 +1800,7 @@ function fimDoPrejogo() {
 /** O resultado do contrato (§2) pela súmula da partida de agora (sumula.js). */
 function resultadoAtualTM() {
   if (TM && mundo.disputa) return MOD_DISP.resultadoPenaltisTM(mundo, TM.mapa);
+  if (TM && mundo.livre) return { livre: { placar: [mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0] } };
   return TM && sumulaTM ? resultadoTM(sumulaTM, mundo, TM.mapa) : null;
 }
 /** Quantos ms de simulação por quadro no "Simular o resto" (o resto do quadro fica para a página respirar). */
@@ -1842,11 +1874,37 @@ function simularResto() {
 /** "Voltar ao Total Match": manda o resultado (tm3d:fim); antes do apito final, simula o resto primeiro. */
 function voltarAoTM() {
   if (!TM) return;
+  // Modo Livre: volta já, sem simular nem resultado
+  if (mundo.livre) { fimTM(resultadoAtualTM()); return; }
   if (mundo.partida?.estado === 'fim') { fimTM(resultadoAtualTM()); return; }
   simularResto().then(r => { if (r) fimTM(r); });
 }
 
+// Modo Livre: a parte da página (livre-pagina.js; pausa mínima — o acabamento e a Câmera do Livre entram depois)
+function paginaLivre() {
+  PAG_LIVRE ??= MOD_PAG_LIVRE.criarPaginaLivre({
+    hud, logica: MOD_LIVRE, mundo: () => mundo, timeHumano: TIME_HUMANO, pedidoLivre: LIVRE_TM ? PEDIDO_TM?.livre ?? null : null,
+    comando, acao: a => filaAcoes.push(a), soltar: () => entrada?.soltarTudo(),
+    // a câmera do Livre (render/camera-livre.js): a da página, as prefs, o rumo do ataque do meu time e ?camera=
+    camera: () => cam, prefs, salvarPrefs, dirAtaque: () => mundo.ataca?.[TIME_HUMANO] ?? 1, cameraPedida: params.get('camera'),
+    cena: () => cena3d?.cena,
+  });
+  return PAG_LIVRE;
+}
+/** O "N contra M" da linha Modo Livre do "Modo de jogo" sem o módulo (a última escolha salva). */
+function rotuloModoLivre() {
+  const el = document.getElementById('estado-modo-livre');
+  if (!el || PAG_LIVRE) return;
+  try {
+    const e = JSON.parse(localStorage.getItem('golaco.livre.v1') || 'null');
+    const t = k => (e?.linha?.[k] ?? 4) + (e?.goleiro?.[k] === false ? 0 : 1);
+    if (e) el.textContent = `${t(0)} contra ${t(1)}`;
+  } catch (_) { /* sem armazenamento */ }
+}
+
 function comando(c, v) {
+  // Modo Livre: o submenu Jogadores e os recomeços (livre-pagina.js)
+  if (c.startsWith('livre-')) { PAG_LIVRE?.comando(c, v); return; }
   switch (c) {
     case 'continuar': hud.fecharMenu(); break;
     case 'simular-resto': hud.fecharMenu(); simularResto(); break;
@@ -1931,6 +1989,8 @@ function comando(c, v) {
       prefs.hora = v; salvarPrefs(prefs);
       break;
     case 'camera':
+      // Modo Livre: as 6 câmeras dele (livre-pagina.js; o rumo fixo do ataque do meu time vem pelo cam.yaw)
+      if (mundo.livre && PAG_LIVRE?.camera(v)) break;
       if (v !== 'tv' && v !== 'aproximada') break;
       cam.definirModo(v);
       hud.definirEstado({ camera: v });
@@ -2000,6 +2060,7 @@ async function iniciar() {
   cena3d = criarCena({ canvas, qualidade: qAtual, hora });
   cam = criarCamera(window.innerWidth / window.innerHeight);
   cam.definirModo(camInicial);
+  PAG_LIVRE?.ligarCamera(!!mundo.livre);
   // identidade visual: com ?tm, os escudos decodificados ANTES dos canvas do estádio e da torcida (desenhados uma vez só)
   IDENT = await identidadeDaPagina();
   if (IDENT) { COR_TIME[0] = IDENT.hud.faixa[0]; COR_TIME[1] = IDENT.hud.faixa[1]; }
@@ -2086,6 +2147,9 @@ async function iniciar() {
   agendarSobDemanda();
   // Total Match: o 3D está no ar (o TM esconde o aviso e o X dele)
   if (TM) avisarTM('tm3d:pronto');
+  // Modo Livre: a pausa aberta no submenu Jogadores (o "Jogar" começa)
+  rotuloModoLivre();
+  if (mundo.livre && !PRINTS && !DEMO_ON) paginaLivre().abrirJogadores();
   const aoQuadro = t => {
     requestAnimationFrame(aoQuadro);
     if (!relogioManual) quadro(t);
@@ -2109,6 +2173,7 @@ function trocarMundo(m, opc = {}) {
   laco.acum = 0; laco.ultimo = null;
   filaAcoes.length = 0;
   edicaoNaFila = null;
+  PAG_LIVRE?.limparFila();
   // Total Match: a súmula é do mundo novo
   if (TM) { sumulaTM = criarSumula(); expulsoAvisado = false; simulandoTM = null; }
   kitCache.clear();
@@ -2137,6 +2202,8 @@ function trocarMundo(m, opc = {}) {
   hud.definirEstado({ marcador: marcadorLigado(mundo), modoTreino: mundo.modo, fim: false });
   hud.definirTimes(timesDoMundo(mundo));
   hud.faixa(null);
+  PAG_LIVRE?.ligarCamera(!!mundo.livre);
+  if (mundo.livre) PAG_LIVRE?.marcar();
   // pré-jogo (Jogar de novo, Reiniciar partida, troca para a partida) ou o apito do início já: o 'saida' que criarPartida deixou
   let mp = 'desligado';
   if (opc.prejogo && mundo.modo === 'partida') { mp = modoPrejogo(); if (mp !== 'desligado' && opc.prejogo === 'escalacao') mp = 'escalacao'; }
@@ -2183,8 +2250,9 @@ const api = {
         else if (roteiro === 'demo') e = entradaDemoDoMundo(mundo);
         else e = roteiro;
         e = e ?? { x: 0, z: 0, botoes: 0 };
-        // a edição na fila (Editar time / editarTime) entra no 1º passo, como no laço da página
+        // a edição na fila (Editar time / editarTime) entra no 1º passo, como no laço da página (e a do Livre)
         if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
+        { const al = PAG_LIVRE?.tirarDaFila(); if (al) ac = ac ? [al, ...ac] : [al]; }
         rodarPasso({ x: e.x ?? 0, z: e.z ?? 0, botoes: e.botoes ?? 0, iaCobra: !!(e.ia || e.iaCobra) }, ac);
       }
     } finally { emRodarPassos = false; }
@@ -2228,6 +2296,10 @@ const api = {
   get planoCamera() { return cam ? cam.cinema : null; },
   // bola parada (testes): o módulo sob demanda, o estado, a linha só no desenho, os pontos da linha
   bolaParada: { carregar: carregarBP, get estado() { return bp.tela?.estado(mundo, cam, bp.plano) ?? null; }, linha(v) { bp.linha = !!v; }, pontos: () => bp.tela?.pontos(mundo) ?? [] },
+  /** Modo Livre: escolha(), ajustar({linha, goleiro}), recomecar('meio' | 'pe'), naFila (livre-pagina.js api; null fora). */
+  get livre() { return PAG_LIVRE ? PAG_LIVRE.api : { escolha: () => null, ajustar: () => null, recomecar: () => null, naFila: null }; },
+  /** Carrega o Livre (livre.js + livre-pagina.js) antes de um reiniciar({modo: 'livre'}) — o trocarModo já carrega. */
+  carregarLivre() { return carregarLivre().then(() => true); },
   /** Cópia de m.times[t] (partida) ou null. */
   estadoTime(t = TIME_HUMANO) { return mundo.times?.[t] ? structuredClone(mundo.times[t]) : null; },
   /**

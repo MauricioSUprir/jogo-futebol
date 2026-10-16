@@ -19,7 +19,7 @@
     "coach-honours": ["trofeu", "Carreira"], "coach-totw": ["estadio", "Carreira"],
     "coach-shortlist": ["cartas", "Carreira"], "club-ct": ["tunel", "Clube"],
     "club-sponsors": ["mesa", "Clube"],
-    "quick": ["bola", "Jogar"], "penaltis3d": ["bola", "Jogar"], "compmode": ["trofeu", "Jogar"], "compmode-list": ["trofeu", "Jogar"],
+    "quick": ["bola", "Jogar"], "penaltis3d": ["bola", "Jogar"], "livre3d": ["estadio", "Treino"], "compmode": ["trofeu", "Jogar"], "compmode-list": ["trofeu", "Jogar"],
     "online": ["gamer", "Online"], "copa": ["chave", "Online"], "groupcomp": ["estadio", "Online"],
     "dream": ["cartas", "Modo"], "draft": ["cartas", "Modo"], "arena": ["moedas", "Total Coins"],
     "coins": ["moedas", "Total Coins"], "saves": ["tunel", "Modo"], "competicoes": ["trofeu", "Informações"],

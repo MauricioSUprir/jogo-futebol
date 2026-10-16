@@ -76,6 +76,19 @@ export function cobradorDaSaida(timeEstado) {
   return timeEstado.vagas[mel.id];
 }
 
+/** O time `t` tem alguém de linha em campo? (Na partida sempre; no Modo Livre pode não ter: livre.js.) */
+export function temLinha(m, t) {
+  for (const o of m.jogadores) if (o.time === t && o.posicao !== 'GOL') return true;
+  return false;
+}
+
+/**
+ * Ganchos do Modo Livre: livre.js os liga ao ser carregado (import dinâmico) e eles só rodam com m.livre — no 11×11
+ * ficam null e nunca são chamados. cobranca(m, pr): o time da bola morta sem ninguém de linha passa a cobrança;
+ * comprimir(m, t, ref, bola): as referências da IA com poucos de linha (ia-tatica.js referencias).
+ */
+export const ganchosLivre = { cobranca: null, comprimir: null };
+
 /** Vaga (id) em que o jogador `id` está no time. */
 export function vagaDoJogador(timeEstado, id) {
   for (const k in timeEstado.vagas) if (timeEstado.vagas[k] === id) return k;
@@ -262,6 +275,8 @@ const _p = { x: 0, z: 0 };
  * círculo), o cobrador no centro com a bola, m.parada = saída. Teleporte (corte de câmera).
  */
 export function montarSaida(m, time) {
+  // Modo Livre: o time sem ninguém de linha não dá a saída — o outro dá (no 11×11 nunca acontece)
+  if (!temLinha(m, time) && temLinha(m, 1 - time)) time = 1 - time;
   const cobrador = cobradorDaSaida(m.times[time]);
   if (!m.parada || m.parada.tipo !== 'saida' || m.parada.cobrador != null) bolaMorta(m, 'saida', time, 0, 0);
   m.parada.time = time; m.parada.x = 0; m.parada.z = 0;
@@ -1464,6 +1479,7 @@ export function regrasPartida(m) {
       // bola morta esperando a montagem
       if (m.tick - pr.inicio < seg(PARTIDA.foraEspera)) return;
       aplicarPendentes(m, 0); aplicarPendentes(m, 1);
+      if (m.livre) ganchosLivre.cobranca(m, pr);
       if (pr.tipo === 'tiroDeMeta') montarTiroDeMeta(m);
       else if (pr.tipo === 'penalti') montarPenalti(m);
       else montarBolaParada(m);

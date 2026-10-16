@@ -21,7 +21,12 @@
    Pênaltis 3D (dono, 15/10: "modo de pênaltis 3d igual ao golaço, só que versão de pênaltis"; js/penaltis3d.js): o mesmo
    pedido com modo: "penaltis" abre só a DISPUTA de pênaltis (Regra 10 da IFAB) com os dois times; o usuário bate com os
    cobradores do time dele e defende com o goleiro dele. Resultado (sem homeGoals):
-   { penaltis: { vencedor: 0|1, placar: [casa, fora], cobrancas: [{ lado, tmId, nome, resultado: "gol"|"defesa"|"fora" }] } } */
+   { penaltis: { vencedor: 0|1, placar: [casa, fora], cobrancas: [{ lado, tmId, nome, resultado: "gol"|"defesa"|"fora" }] } }
+   Modo Livre 3D (dono, 16/10: "um modo livre, como no fifa, um modo de treino ... a quantidade de jogadores que eu escolher";
+   js/livre3d.js): o mesmo pedido com modo: "livre" abre o treino livre (sem relógio, quantos jogadores em cada time e a
+   câmera escolhidos na pausa do 3D), sem trava ("só o meu jogador") e, se vier, com a escolha inicial
+   livre: { linha: [casa, fora] (0–10; o time do usuário ≥ 1), goleiro: [bool, bool] }. Não tem resultado: tanto
+   'tm3d:sair' quanto 'tm3d:fim' ({ livre: { placar } }) só voltam à tela do modo — nada conta. */
 (function (global) {
   "use strict";
   var TM = global.TM;
@@ -376,7 +381,26 @@
     };
     // Pênaltis 3D: só a disputa (o golaco abre direto nela); sem o campo, a partida de sempre
     if (o.modo === "penaltis") { p.modo = "penaltis"; p.controle = null; }
+    // Modo Livre 3D: o treino livre (o golaco abre na escolha de jogadores); a escolha inicial é opcional
+    else if (o.modo === "livre") {
+      p.modo = "livre"; p.controle = null;
+      var lv = livreDe(o.livre, o.userSide === 1 ? 1 : 0);
+      if (lv) p.livre = lv;
+    }
     return p;
+  }
+  /* Modo Livre: a escolha inicial de jogadores, conferida (o 3D confere de novo): de linha 0–10 em cada time, o time do
+     usuário com ≥ 1 de linha (o humano precisa de alguém para controlar) e o goleiro de cada um ligado ou desligado.
+     Sem a escolha (ou sem linha): null — o 3D começa com a última que ele guardou (5 contra 5 na primeira vez). */
+  function livreDe(l, humano) {
+    if (!l || !l.linha || typeof l.linha.length !== "number") return null;
+    var linha = [0, 1].map(function (t) {
+      var n = Math.round(Number(l.linha[t]));
+      if (!isFinite(n)) n = 4;
+      return Math.max(t === humano ? 1 : 0, Math.min(10, n));
+    });
+    var goleiro = [0, 1].map(function (t) { return !l.goleiro || l.goleiro[t] == null ? true : !!l.goleiro[t]; });
+    return { linha: linha, goleiro: goleiro };
   }
   /* partida 3D fora da tela de jogo do TM (ex.: Rumo ao Estrelato, que tem a própria súmula):
      o = { teamA, teamB, formation?, formationB?, userSide: 0|1, controle?: { tmId }, title, simOpts? }
@@ -396,6 +420,21 @@
       // nada é simulado: sair volta à escolha dos times, sem resultado
       textos: { quadro: "Pênaltis em 3D", sair: "Sair dos pênaltis", confirma: "Sair dos pênaltis 3D?",
         confirmaTexto: "A disputa não conta e você volta à escolha dos times.", confirmaBotao: "Sair", demora: "Voltar" }
+    });
+    return true;
+  }
+  /* Modo Livre 3D: o = { teamA, teamB, userSide: 0|1, title?, simOpts?, livre?: { linha: [a, b], goleiro: [g0, g1] } };
+     fns.sair() quando o usuário sai do treino (ou o 3D não abre) e fns.fim(resultado3d) com resultado3d.livre (o placar do
+     treino, só informativo) — sem fns.fim, o fim também chama fns.sair. Nada é simulado nem registrado. */
+  function jogarLivre(o, fns) {
+    if (!webgl()) { TM.ui.toast("Este aparelho não tem WebGL 2, que o Modo Livre 3D precisa.", "alerta"); if (fns.sair) fns.sair(); return false; }
+    abre3d(novoPedido(Object.assign({}, o, { modo: "livre", title: o.title || "Modo Livre" })), {
+      fim: function (r3) { if (fns.fim) fns.fim(r3 || null); else if (fns.sair) fns.sair(); },
+      sair: function () { if (fns.sair) fns.sair(); },
+      falhou: function (msg) { TM.ui.toast(msg || "O 3D não abriu.", "alerta"); if (fns.sair) fns.sair(); },
+      // nada é simulado: sair volta à escolha dos times, sem resultado
+      textos: { quadro: "Modo Livre em 3D", sair: "Sair do Modo Livre", confirma: "Sair do Modo Livre 3D?",
+        confirmaTexto: "O treino não conta e você volta à escolha dos times.", confirmaBotao: "Sair", demora: "Voltar" }
     });
     return true;
   }
@@ -440,6 +479,7 @@
   api.jogarCfg = jogarCfg;
   api.jogar3d = jogar3d;
   api.jogarPenaltis = jogarPenaltis;
+  api.jogarLivre = jogarLivre;
   api.escolha = escolha;
   api.fechar = fecha3d;
   TM.tm3d = api;

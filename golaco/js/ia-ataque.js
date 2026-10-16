@@ -35,7 +35,7 @@
 //    virtuais (acaoIA) e fixa a mira no pedido (pedido.dir → miraAuto, o mesmo caminho da reposição do
 //    goleiro). Transição ofensiva: +20% nas opções à frente; corridas sem exigir o condutor de frente.
 
-import { IA_ATAQUE, TATICA, CAMPO, PASSO, BOTAO, IA, PARTIDA, ACOES } from './config.js';
+import { IA_ATAQUE, TATICA, CAMPO, PASSO, BOTAO, IA, PARTIDA, ACOES, LIVRE } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { para, acaoIA } from './ia.js';
@@ -256,14 +256,21 @@ function estadoAtaque(m, t) {
     const u = o.x * lado;
     if (u > u1) { u2 = u1; d2 = d1; u1 = u; d1 = o; } else if (u > u2) { u2 = u; d2 = o; }
   }
+  // (Modo Livre, livre.js: não há impedimento — nem na IA. A linha deixa de ser o penúltimo adversário: fica a
+  // LIVRE.linhaSemDefesa m da linha de fundo (ou na bola, se ela passou dali), só como a FORMA — o centroavante espera na
+  // entrada da área, como num jogo sem impedimento; ninguém fica preso atrás da defesa nem volta com pressa por estar à
+  // frente dela (tetoLinha, abaixo). Antes a linha só mudava com menos de 2 adversários: com 2 ou mais (o goleiro conta)
+  // ela continuava a do impedimento, e o Livre 11 × 11 jogava como a partida — revisão de 16/10)
+  if (m.livre) { u2 = MX - LIVRE.linhaSemDefesa; d2 = null; }
   A.linha = Math.max(u2, m.bola.p.x * lado, 0);
   A.defLinha = A.linha === u2 ? d2 : null; // o defensor que faz a linha (se é ele, e não a bola/o meio)
   // corrida que já passou da linha e não recebe em corridas.alemMax s: acaba e ele volta (impedido, pressa) —
   // esperando o passe atrás da linha até o fim da `espera`, alguém ficava em posição de impedimento ~25% do
   // tempo com a bola (teste-apoio: real 8–25%, Metrica 16%; PR "IA intensa")
   // (com o ataque à área valendo — a bola de lado no terço final —, quem passou da linha fica: é o cruzamento)
+  // (Modo Livre: sem impedimento, quem passou da linha fica — a corrida acaba só pela `espera`, acima)
   const AM = IA_ATAQUE.corridas.alemMax;
-  if (AM != null && !A.area.ativo) {
+  if (AM != null && !A.area.ativo && !m.livre) {
     for (const o of m.jogadores) {
       const s = o.iaA;
       if (o.time !== t || !s || !s.corrida || !o.corrida) continue;
@@ -311,7 +318,7 @@ function estadoAtaque(m, t) {
     // bola no centro) eles ficam ~7 m atrás da linha; puxados para ela, a forma com a bola saía da
     // tabela (teste-taticas) — eles chegam lá pelas corridas nas costas
     if (naLinha && vg && vg.grupo === 'ata' && !PONTA[o.posDetalhe]) r.u = Math.max(r.u, A.linha - IA_ATAQUE.naLinha);
-    r.u = clamp(r.u, -MX + IA.recuoMin, A.linha - folgaLinha(A, o));
+    r.u = clamp(r.u, -MX + IA.recuoMin, tetoLinha(m, A, o));
   }
   // os 2 apoios: os de linha mais perto do condutor (2 m de vantagem para quem já apoia)
   A.apoio[0] = -1; A.apoio[1] = -1;
@@ -359,6 +366,16 @@ function folgaLinha(A, o) {
   const d = A.defLinha;
   if (d && d.x * A.lado > o.x * A.lado && MD.hypot(d.x - o.x, d.z - o.z) < IA_ATAQUE.empurraRaio) return IA_ATAQUE.empurraFolga;
   return IA_ATAQUE.impedimentoFolga;
+}
+
+/**
+ * Até onde (u) o jogador o vai sem ficar impedido: a linha menos a folga. No Modo Livre (livre.js) não há impedimento
+ * (contrato: "nem na IA"): a linha A.linha (lá, a LIVRE.linhaSemDefesa m da linha de fundo) fica só como a FORMA — o
+ * centroavante espera nela, na entrada da área; sem costas a atacar, não há corrida nas costas (campoMin) — e nada segura
+ * ninguém atrás dela: só o fundo do campo.
+ */
+function tetoLinha(m, A, o) {
+  return m.livre ? MX - 2 : A.linha - folgaLinha(A, o);
 }
 
 /**
@@ -463,7 +480,7 @@ export function apoioTatico(m, j) {
     // ponto que foge, o apoio ficava a 5–7 m do condutor)
     const ta = IA_ATAQUE.apoio.antecipa;
     tu = (A.cond.x + A.cond.vx * ta) * lado + ia.ofu; tw = (A.cond.z + A.cond.vz * ta) * lado + ia.ofw;
-    tu = Math.min(tu, A.linha - folgaLinha(A, j));
+    tu = Math.min(tu, tetoLinha(m, A, j));
     // longe do ponto, vai com pressa (trotando, o apoio não acompanhava o condutor e ficava colado nele)
     if (MD.hypot(tu * lado - j.x, tw * lado - j.z) > IA_ATAQUE.apoio.pressa) pressa = true;
     // colado no condutor (ele veio para cima do apoio): abre para longe dele primeiro
@@ -471,14 +488,14 @@ export function apoioTatico(m, j) {
     if (dc < IA_ATAQUE.apoio.colado && dc > 0.3) {
       const k = IA_ATAQUE.apoio.dist[0] / dc;
       tu = (A.cond.x + (j.x - A.cond.x) * k) * lado; tw = (A.cond.z + (j.z - A.cond.z) * k) * lado;
-      tu = Math.min(tu, A.linha - folgaLinha(A, j));
+      tu = Math.min(tu, tetoLinha(m, A, j));
     }
   } else if (ia.papel === 'area' && A.area.ativo) {
     const zn = A.area.zonas[ia.zona] ?? A.area.zonas[0];
     tu = zn.x * lado; tw = zn.z * lado;
     // antes do cruzamento, espera na linha (sem impedimento); com a bola no ar, ataca a zona
     if (m.posse == null && m.voo && m.voo.tipo === 'cruzamento') pressa = true;
-    else tu = Math.min(tu, A.linha - folgaLinha(A, j));
+    else tu = Math.min(tu, tetoLinha(m, A, j));
     // longe do ponto, ataca a área correndo (quem chega atrasado não cabeceia)
     if (MD.hypot(tu * lado - j.x, tw * lado - j.z) > IA_ATAQUE.areaCorre) pressa = true;
   } else {
@@ -501,8 +518,8 @@ export function apoioTatico(m, j) {
   tu = clamp(tu, -MX + IA.recuoMin, MX - 2);
   tw = clamp(tw, -MZ + 1.5, MZ - 1.5);
   restricaoParada(m, j, tu * lado, tw * lado, _r);
-  // impedido (depois de uma corrida, ou a linha subiu): volta rápido para a linha (FC 26)
-  if (ia.papel !== 'area' && j.x * lado > A.linha && j.x * lado > 0) pressa = true;
+  // impedido (depois de uma corrida, ou a linha subiu): volta rápido para a linha (FC 26); no Modo Livre não há impedimento
+  if (!m.livre && ia.papel !== 'area' && j.x * lado > A.linha && j.x * lado > 0) pressa = true;
   // o ataque avançou e ele ficou para trás: sobe correndo (a referência anda com a bola a ~k·v da
   // bola; trotando, o time inteiro ficava atrás da jogada)
   if ((_r.x - j.x) * lado > IA_ATAQUE.sobeCorrendo) pressa = true;
@@ -519,7 +536,7 @@ export function apoioTatico(m, j) {
     calmo = alvoCalmo(m, j, _r.x, _r.z, _c);
     _r.x = calmo.x; _r.z = calmo.z;
   }
-  contornar(m, j, ia, _r, ia.papel === 'area' && pressa ? Infinity : A.linha - folgaLinha(A, j), lado);
+  contornar(m, j, ia, _r, ia.papel === 'area' && pressa ? Infinity : tetoLinha(m, A, j), lado);
   j.ia.ramo = ia.papel === 'ref' ? 'apoioRef' : ia.papel === 'apoio' ? 'apoioCurto' : 'area';
   if (calmo && !pressa) return para(j, _r.x, _r.z, calmo.mag, calmo.correr, 0, calmo.modo);
   return para(j, _r.x, _r.z, 1, true, 0, pressa ? 'pressa' : 'calma');
@@ -592,7 +609,7 @@ function pontoDeApoio(m, j, A, ia) {
   const r = _ref; r.u = ru; r.w = rw;
   if (ia.ofCond !== c.id) { ia.ofTem = false; ia.ofCond = c.id; }
   const nota = (ou, ow) => {
-    const pu = clamp(cu + ou, -MX + IA.recuoMin, Math.min(MX - 2, A.linha - folgaLinha(A, j)));
+    const pu = clamp(cu + ou, -MX + IA.recuoMin, Math.min(MX - 2, tetoLinha(m, A, j)));
     const pw = clamp(cw + ow, -MZ + 1.5, MZ - 1.5);
     if (MD.hypot(pu - r.u, pw - r.w) > cfg.raioRef) return -Infinity;
     const px = pu * lado, pz = pw * lado;
@@ -801,7 +818,8 @@ function decidir(m, j, A, ia, cobranca) {
     if (o.time !== j.time || o === j || o.posicao === 'GOL' || o.papel === 'parado' || indo(m, o)) continue;
     const ou = o.x * lado, ow = o.z * lado;
     const L = MD.hypot(o.x - j.x, o.z - j.z);
-    const imp = !cobranca && ou > A.linha + 0.3; // impedido agora (Regra 11, impedimento.js: tocar a bola vira tiro livre)
+    // impedido agora (Regra 11, impedimento.js: tocar a bola vira tiro livre); no Modo Livre não há impedimento
+    const imp = !cobranca && !m.livre && ou > A.linha + 0.3;
     const press = clamp((U.pressaoRecebe - advMaisPerto(m, j.time, o.x, o.z)) / (U.pressaoRecebe - 1), 0, 1);
     if (L >= ACOES.passe.dMin && L <= U.passeMax) {
       // P: ninguém corta a linha × precisão (passe longo erra mais) × o recebedor não perde na hora

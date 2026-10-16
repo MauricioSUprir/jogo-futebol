@@ -219,7 +219,7 @@
           <!-- Continuar e o Replay (dos últimos 10 s) na mesma linha: a pausa continua cabendo sem rolar no celular deitado -->
           <div class="linha-continuar">
             <button class="btn btn-primario" type="button" data-cmd="continuar" id="btn-continuar">Continuar</button>
-            <button class="btn btn-replay" type="button" data-cmd="replay" data-so="partida penaltis" title="Replay dos últimos 10 s" aria-label="Replay dos últimos 10 s">
+            <button class="btn btn-replay" type="button" data-cmd="replay" data-so="partida penaltis livre" title="Replay dos últimos 10 s" aria-label="Replay dos últimos 10 s">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.5 9.2v5.6l4.6-2.8z" fill="currentColor"/></svg>Replay
             </button>
           </div>
@@ -242,8 +242,12 @@
             <button class="btn" type="button" data-cmd="modo" data-valor="partida" aria-pressed="false" aria-label="Partida: Golaço FC × Ventania FC">Partida <small>11 contra 11</small></button>
             <button class="btn" type="button" data-cmd="modo" data-valor="penaltis" id="btn-modo-penaltis" aria-pressed="false" aria-label="Pênaltis: disputa de pênaltis em 3D">Pênaltis <small>disputa 3D</small></button>
           </div>
-          <button class="btn" type="button" data-cmd="modo" data-valor="ataque" aria-pressed="false">Treino de ataque <small>6 contra 4</small></button>
-          <button class="btn" type="button" data-cmd="modo" data-valor="conducao" aria-pressed="false">Treino de condução <small>bola no pé</small></button>
+          <!-- o Modo Livre (livre.js; a pausa dele vem do livre-pagina.js) e os treinos lado a lado: 5 linhas, sem rolar -->
+          <button class="btn" type="button" data-cmd="modo" data-valor="livre" id="btn-modo-livre" aria-pressed="false">Modo Livre <small id="estado-modo-livre">5 contra 5</small></button>
+          <div class="linha-cenas" role="group" aria-label="Treinos">
+            <button class="btn" type="button" data-cmd="modo" data-valor="ataque" aria-pressed="false" aria-label="Treino de ataque: 6 contra 4">Ataque <small>6 contra 4</small></button>
+            <button class="btn" type="button" data-cmd="modo" data-valor="conducao" aria-pressed="false" aria-label="Treino de condução: bola no pé">Condução <small>bola no pé</small></button>
+          </div>
           <!-- pré-jogo da partida (as cenas antes da saída de bola e as escalações): cada toque passa para o próximo —
                completo, curto, só escalação, desligado; salvo (js/main.js modoPrejogo). Aqui e não nas opções: com uma
                linha a mais a pausa rolava no celular deitado (ela tem de caber inteira) -->
@@ -341,8 +345,8 @@
             <dt>Defesa: <kbd>J</kbd></dt><dd>Segure: conter (acompanha quem está com a bola)</dd>
             <dt>Defesa: <kbd>K</kbd></dt><dd>Dividida (bote em pé)</dd>
             <dt>Defesa: <kbd>O</kbd></dt><dd>Segure: um companheiro pressiona</dd>
-            <dt><kbd>R</kbd> <kbd>M</kbd> <kbd>N</kbd></dt><dd>Recomeçar, máquina de passes, marcador (só nos treinos)</dd>
-            <dt><kbd>C</kbd></dt><dd>Câmera TV / aproximada</dd>
+            <dt><kbd>R</kbd> <kbd>M</kbd> <kbd>N</kbd></dt><dd>Recomeçar, máquina de passes, marcador (só nos treinos; no Modo Livre, R põe a bola no pé)</dd>
+            <dt><kbd>C</kbd></dt><dd>Câmera TV / aproximada (no Modo Livre, as 6 câmeras)</dd>
             <dt><kbd>H</kbd> / <kbd>Esc</kbd></dt><dd>Esta ajuda / pausa e menu</dd>
           </dl>
         </section>

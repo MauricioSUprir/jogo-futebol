@@ -1,5 +1,5 @@
 /* Total Match — service worker (app instalável + offline) */
-var CACHE = "total-match-v370";
+var CACHE = "total-match-v372";
 /* Concha do app: caminhos base (sem ?v=) — combinados por ignoreSearch. */
 var SHELL = [
   "./", "./index.html", "./manifest.webmanifest",
@@ -10,7 +10,7 @@ var SHELL = [
   "assets/fontes/inter-700.woff2", "assets/fontes/inter-800.woff2", "assets/fontes/inter-900.woff2",
   "js/vendor/qrcode.js",
   "js/icones.js", "js/cenas.js", "js/rng.js", "js/data.js", "js/placeholders.js", "js/storage.js", "js/notify.js",
-  "js/engine.js", "js/ui.js", "js/settings.js", "js/saves.js", "js/quick.js", "js/penaltis3d.js",
+  "js/engine.js", "js/ui.js", "js/settings.js", "js/saves.js", "js/quick.js", "js/penaltis3d.js", "js/livre3d.js",
   "js/competitions.js", "js/coach.js", "js/carreira.js", "js/desempregado.js", "js/selecao.js", "js/rae.js", "js/rae-mercado.js", "js/director.js", "js/saf.js", "js/finance.js", "js/preseason.js", "js/disputa.js", "js/offers.js", "js/worldleagues.js", "js/build.js", "js/ultimate.js", "js/ut-modos.js", "js/ut-evolucoes.js", "js/ut-temporada.js", "js/ut-dme.js", "js/ut-draft.js", "js/ut-mercado.js", "js/utonline.js", "js/arena.js",
   "js/compmode.js", "js/tournament.js", "js/groupcomp.js", "js/matchview.js", "js/tm3d.js", "js/pitch2d.js", "js/scout.js",
   "js/net.js", "js/fairplay.js", "js/online.js", "js/copa.js", "js/account.js", "js/coins.js", "js/news.js", "js/newsroom.js", "js/messenger.js", "js/social.js", "js/editor.js", "js/app.js",
