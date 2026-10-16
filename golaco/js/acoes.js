@@ -6,7 +6,7 @@
 // Com a bola, a ação sai no próximo toque possível (toque marcado com tipo 'acao', o pé de apoio
 // no chão); com a bola chegando, sai de primeira no tick do domínio.
 
-import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, GOLEIRO, LATERAL, AEREO, RECEPCAO, CABECEIO } from './config.js';
+import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, GOLEIRO, LATERAL, AEREO, RECEPCAO, CABECEIO, MIRA } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { normal } from './rng.js';
@@ -17,6 +17,7 @@ import {
 import { procurarOportunidade, preverBola } from './conducao.js';
 import { passoCorpo, copiaCinematica, infoPassada } from './jogador.js';
 import { registrarChute } from './regras-goleiro.js';
+import { chuteMirado, simularLinha } from './mira.js';
 
 const DT = PASSO;
 const BOTOES_ACAO = [
@@ -436,9 +437,11 @@ export function executarAcao(m, j, pe, primeira = false) {
     const em = (primeira ? ACOES.chute.primeiraErro : 1) * (1 + (perto ? ACOES.chute.pressaoErro : 0) * pressaoSobre(m, j)) * multPeFraco(j, pe)
       * (p.penalti && !p.cavadinha ? ACOES.chute.penaltiErro : 1) // a pressão da cobrança do pênalti
       * (p.barreira ? ACOES.chute.faltaErro : 1); // o tiro livre por cima da barreira: subir e descer no gol é difícil
+    if (p.mirada && !p.cavadinha && m.parada?.mira) return cobrancaMirada(m, j, pe, p, em);
     return chute(m, j, pe, p, em);
   }
   const erroMult = (primeira ? ACOES.primeiraErro : 1) * (1 + 0.8 * pressaoSobre(m, j)) * multPeFraco(j, pe);
+  if (p.mirada && m.parada?.mira) return cobrancaMirada(m, j, pe, p, erroMult);
   switch (p.tipo) {
     case 'passe': return passeRasteiro(m, j, pe, p, erroMult);
     case 'enfiada': return enfiada(m, j, pe, p, erroMult);
@@ -446,6 +449,65 @@ export function executarAcao(m, j, pe, primeira = false) {
     case 'chute': return chute(m, j, pe, p, erroMult);
     default: return false;
   }
+}
+
+const _ptsMira = new Float64Array(MIRA.maxPontos * 3);
+/**
+ * Cobrança mirada da pessoa (mira.js; partida.js cobrar): a velocidade e o giro PRETENDIDOS (mira.js chuteMirado: a mesma
+ * conta da linha da tela) e, por cima, o erro do cobrador — no CHUTE o do chute do jogo (finalização, distância, força no
+ * máximo, falta com barreira: erroMult); no cruzamento/lançamento o do lançamento do jogo (passe longo, ±m a 40 m), em
+ * ângulo e em força. MIRA.erro = 0 (testes): a bola segue a linha. O ponto do voo (m.voo.alvo) e quem vai nela saem da
+ * trajetória prevista: onde a bola desce à altura da cabeça (cruzamento) ou cruza a linha do gol (chute).
+ */
+function cobrancaMirada(m, j, pe, p, erroMult) {
+  const b = m.bola, pr = m.parada, mi = pr.mira, tipo = p.mirada.tipo;
+  const r = chuteMirado(m, j, pr, tipo, p.forca, mi.ang, mi.curva, {});
+  const n = simularLinha(m, r.v, r.w, _ptsMira);
+  // ponto do voo: cruzamento = a 1ª vez que desce a ≤ yAlto depois do ápice (ou a queda); chute = o fim (a linha do gol)
+  let k = n - 1;
+  if (tipo !== 'chute') {
+    let subiu = false;
+    for (let i = 1; i < n; i++) {
+      const y = _ptsMira[i * 3 + 1], y0 = _ptsMira[i * 3 - 2];
+      if (y > ACOES.cruzamento.yAlto + 0.3) subiu = true;
+      if (subiu && y < y0 && y <= ACOES.cruzamento.yAlto) { k = i; break; }
+    }
+  }
+  const ax = _ptsMira[k * 3], ay = _ptsMira[k * 3 + 1], az = _ptsMira[k * 3 + 2];
+  const L = Math.max(5, MD.hypot(ax - b.p.x, az - b.p.z));
+  let ea, ee = 0, es = 0;
+  if (tipo === 'chute') {
+    const cfg = ACOES.chute, gx = ataca(m, j.time) * CAMPO.meioX;
+    const dGol = MD.hypot(gx - b.p.x, b.p.z);
+    const sig = lerp(cfg.erroRuim, cfg.erroBom, j.par.attr.finalizacao / 100) * (1 + dGol / 25) * erroMult * (p.forca > 0.9 ? cfg.forcaMaxErro : 1) * MIRA.erro;
+    ea = normal(m.rng) * sig; ee = normal(m.rng) * sig * 0.6;
+  } else {
+    // o erro do lançamento do jogo (m no ponto de queda, ×0,7 por eixo) em ângulo e em força (o alcance ∝ v²)
+    const sig = lerp(ACOES.lancamento.erroRuim, ACOES.lancamento.erroBom, j.par.attr.passeLongo / 100) * (L / 40) * erroMult * MIRA.erro;
+    ea = normal(m.rng) * sig * 0.7 / L; es = normal(m.rng) * sig * 0.7 / (2 * L);
+  }
+  const v = r.v, sH = MD.hypot(v.x, v.z) || 1;
+  const u = girar(v.x / sH, v.z / sH, ea);
+  const el = MD.atan2(v.y, sH) + ee, sv = MD.hypot(v.x, v.y, v.z) * (1 + es);
+  const vf = { x: u.x * sv * MD.cos(el), y: sv * MD.sin(el), z: u.z * sv * MD.cos(el) };
+  if (tipo === 'chute') {
+    const curvo = Math.abs(mi.curva) >= 0.25;
+    finalizarChute(m, j, pe, curvo ? 'colocado' : 'chute', vf, r.w, { x: ax, z: az }, null, { voo: { alto: false, mira: { y: ay, z: az }, mirada: true }, ticks: k });
+    return true;
+  }
+  // quem vai na bola: o companheiro de linha mais perto do ponto (a ≤ 14 m); cruzamento perto da área, lançamento longe
+  let rc = null, dr = 14;
+  for (const o of m.jogadores) {
+    if (o.time !== j.time || o.id === j.id || o.posicao === 'GOL') continue;
+    const d = MD.hypot(o.x - ax, o.z - az);
+    if (d < dr) { dr = d; rc = o; }
+  }
+  const lado = ataca(m, j.time);
+  const naArea = ax * lado > CAMPO.meioX - 22 && Math.abs(az) < 24;
+  const tv = naArea ? 'cruzamento' : 'lancamento';
+  finalizarChute(m, j, pe, tv, vf, r.w, { x: ax, z: az }, rc, { voo: { alto: true, tenso: tipo === 'tensa', mirada: true }, ticks: k });
+  if (rc) marcarRecebedor(m, rc, ax, az, tv, m.tick + k);
+  return true;
 }
 
 function passeRasteiro(m, j, pe, p, erroMult) {

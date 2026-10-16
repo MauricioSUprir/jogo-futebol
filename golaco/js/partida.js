@@ -56,6 +56,7 @@ import { naAreaDe } from './faltas.js';
 import { limparRegraMao, segundosNaMao, pontoTiroLivreMao } from './regras-goleiro.js';
 import { segurarLateral, opcoesLateral, opcaoMirada, alvoLongoNaArea, vMaxArremesso } from './lateral.js';
 import { alvoBolaParada, papeisEscanteio, pontoEscanteio, pontoMarcador, bolaParadaAtiva, barreiraDoTiroLivre } from './bolas-paradas.js';
+import { TIPOS_MIRA, criarMira, atualizarMira, tipoMirado, comTrajetoria } from './mira.js';
 
 export const ESTADOS = ['jogo', 'parada', 'gol', 'intervalo', 'fim'];
 export const TIPOS_PARADA = ['saida', 'lateral', 'escanteio', 'tiroDeMeta', 'tiroLivre', 'penalti'];
@@ -983,9 +984,23 @@ export function cobrar(m, entrada) {
     c.porHumano = !!entrada && !entrada.ia && !entrada.iaCobra;
     aplicarEntrada(c, aGol && m.tick < pr.pronta && entrada ? { x: entrada.x ?? 0, z: entrada.z ?? 0, botoes: (entrada.botoes ?? 0) & ~BOTAO.CHUTE } : entrada, m.tick);
     c.pedidoPedalada = false; // parado não pedala (o pedido ficaria para depois da cobrança)
+    // cobrança mirada (pedido do dono, 16/10; mira.js): a pessoa no escanteio, tiro livre ou tiro de meta — o analógico
+    // gira a mira, os botões de efeito põem curva, a carga é a força (a IA e a demo não: a partida IA × IA não muda)
+    if (c.porHumano && TIPOS_MIRA.includes(pr.tipo)) {
+      pr.mira ??= criarMira(m, pr);
+      atualizarMira(m, c, pr.mira, pr.tipo);
+    }
     atualizarBotoesAcao(m, c);
     // bola parada não é chutada a gol — menos o pênalti e o tiro livre direto: o CHUTE (o botão maior, que aparece na
     // cobrança) vira a cobrança padrão do tipo — passe na saída, lançamento no resto (antes era jogado fora)
+    // cobrança mirada: o tipo pelo botão (ALTA, TENSA, CHUTE com a trajetória da linha; CURTA/LONGA = o passe do jogo na
+    // direção da mira) — a mira e a curva valem as da hora do chute (acoes.js cobrancaMirada lê m.parada.mira)
+    // (uma vez por pedido: o pedido que espera a bola pronta já convertido não muda de tipo)
+    if (c.pedido && pr.mira && !c.pedido.cavadinha && c.pedido.mirada === undefined) {
+      const tm = tipoMirado(m, pr, c.pedido.tipo, c.pedido.mod);
+      if (comTrajetoria(tm)) { c.pedido.mirada = { tipo: tm }; c.pedido.tipo = tm === 'chute' ? 'chute' : 'lancamento'; c.pedido.mod = false; }
+      else c.pedido.mirada = null;
+    }
     if (c.pedido && c.pedido.tipo === 'chute' && pr.tipo !== 'penalti' && !(pr.tipo === 'tiroLivre' && pr.direto)) {
       c.pedido.tipo = pr.tipo === 'saida' ? 'passe' : 'lancamento';
       c.pedido.mod = false;
@@ -1007,6 +1022,9 @@ export function cobrar(m, entrada) {
   if (pr.tipo === 'penalti') c.pedido.penalti = true; // a pressão da cobrança (acoes.js: erro do chute)
   // tiro livre com barreira: o chute (da IA e do humano) busca passar por cima dela (acoes.js chute)
   if (pr.barreira && pr.barreira.n > 0 && c.pedido.tipo === 'chute') c.pedido.barreira = { dist: pr.barreira.dist, altura: BARREIRA.alturaPassar };
+  // a direção da mira da pessoa (a do passe do jogo na CURTA/LONGA; executarAcao a põe em j.miraAuto)
+  if (pr.mira && !iaAssume) c.pedido.dir = { x: MD.cos(pr.mira.ang), z: MD.sin(pr.mira.ang) };
+  else if (c.pedido.mirada) c.pedido.mirada = null;
   const ok = executarAcao(m, c, c.par.attr.pePreferido ?? 1, false);
   c.miraAuto = null; // a direção da cobrança não vale para o próximo passe dele
   if (!ok) return false;

@@ -345,6 +345,10 @@ export const BOTAO = {
   TROCAR: 1024,
   GOLEIRO: 2048,
   PEGAR: 4096,                // goleiro com a bola no pé, na área: pega com a mão (o "Pick Up Ball" do EA FC)
+  // efeito da cobrança mirada (bola parada do humano, mira.js): cada aperto passa a curva um degrau para a esquerda /
+  // direita de quem bate (teclas Z/X, analógico direito do controle, os dois botões de efeito no toque)
+  EFEITO_E: 8192,
+  EFEITO_D: 16384,
 };
 
 // Atributos padrão (0–100).
@@ -718,6 +722,30 @@ export const PARTIDA = {
     porImpedimento: 0,                // a parada do impedimento é rápida (tiro livre na hora)
     max: { 1: 5, 2: 10 },
   },
+};
+
+// Cobrança mirada da bola parada do humano (pedido do dono, 16/10, "igual no FIFA": mira.js; PESQUISA-ETAPA4.md §12):
+// escanteio, tiro livre e tiro de meta da PESSOA (a IA e a demo cobram como antes). O analógico GIRA a mira (o lado do
+// analógico na câmera atrás do cobrador; `gira` rad/s com ele todo para o lado, até `cone` rad da direção de partida),
+// a carga do botão é a força e o efeito anda em degraus de `curvaPasso` (segurar repete a cada `curvaRepete` s) até ±1.
+// Tipos: ALTA (LANÇAMENTO; elevação `alta.elev`, velocidade na faixa `alta.v` pela força), TENSA (CHUTE ou E+LANÇAMENTO
+// fora do tiro livre direto), CHUTE (tiro livre direto a ≤ `distChute` m do gol: a velocidade do chute do jogo; com
+// barreira, a elevação que passa por cima dela) e CURTA/LONGA (PASSE/ENFIADA e o tiro de meta: só a direção, o passe
+// do jogo). Efeito: giro no eixo vertical de até `giro` rad/s (× `giroAtrib` pelo atributo: finalização no CHUTE, passe
+// longo no cruzamento). A linha mostra a intenção pela MESMA física da bola; o erro do cobrador (atributo, pressão,
+// `erro` ×) vem depois — no CHUTE ela só mostra até `linhaChute` m além da barreira (FIFA 23: a linha mostra só os
+// primeiros metros da falta), no resto até a bola cair (ou cruzar a linha de fundo).
+export const MIRA = {
+  gira: 0.7, cone: { escanteio: 0.9, tiroLivre: 1.2, tiroDeMeta: 1.3 },
+  curvaPasso: 0.25, curvaRepete: 0.15,
+  giro: 38, giroAtrib: [0.7, 1],
+  alta: { elev: 0.42, v: [14, 31] },
+  tensa: { elev: 0.2, v: [17, 33] },
+  distChute: 35,
+  linhaChute: 4, semBarreira: 11, direcao: 12,
+  forcaPadrao: 0.55,          // força da linha antes de carregar (o tempo para mirar é o de sempre: PARTIDA.cobrancaHumanoMax)
+  erro: 1,                    // × o erro do cobrador (os testes zeram para conferir a linha com a física)
+  maxPontos: 200,
 };
 
 // Bolas paradas da Etapa 4 (lateral.js; partida.js). Lateral (IFAB Regra 15): de frente para o campo, parte de cada pé

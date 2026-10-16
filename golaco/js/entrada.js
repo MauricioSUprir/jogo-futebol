@@ -11,10 +11,10 @@
 // L lançamento; I enfiada (goleiro com a bola nas mãos: solta no chão); Shift correr; E modificador (colocado /
 // enfiada alta / cruzamento tenso; condução curta e proteção; dois toques = pedalada); Q trocar (segurar 0,4 s: o
 // goleiro, na partida); G goleiro (defesa; segurar = sai do gol); R recomeçar; M máquina de passes; N marcador; C câmera;
-// H ou F1 ajuda; Esc pausa.
+// H ou F1 ajuda; Esc pausa; Z / X efeito (curva) para a esquerda / direita na cobrança mirada (escanteio e tiro livre).
 // Controle: analógico esquerdo; A passe / CONTER; B chute / DIVIDIDA; X lançamento; Y enfiada /
 // goleiro (segurar); RB PEGAR / PRESSÃO (defesa, segurar); LB trocar (segurar: o goleiro); RT correr; LT modificador;
-// Start pausa; View ajuda; R3 câmera. (O mapa da defesa é o do EA FC: segurar A = conter, B = bote em pé, segurar
+// Start pausa; View ajuda; R3 câmera; analógico direito para o lado = efeito na cobrança mirada. (O mapa da defesa é o do EA FC: segurar A = conter, B = bote em pé, segurar
 // RB = companheiro pressiona.) Na pausa e na Ajuda: cruz/analógico escolhem o botão, A confirma, B volta.
 // G só vale na defesa (como o Y do controle). Os botões que mudam de sentido pela fase (J, K, O, G, A, B, Y, RB) têm o
 // sentido FIXADO NO APERTO, pela fase do mundo NAQUELE passo (sem a histerese de 0,25 s dos botões visíveis):
@@ -53,6 +53,8 @@ export const TECLA_BIT = {
   KeyL: BOTAO.LANCAMENTO, KeyI: BOTAO.ENFIADA,
   KeyQ: BOTAO.TROCAR, KeyE: BOTAO.MOD,
   ShiftLeft: BOTAO.CORRER, ShiftRight: BOTAO.CORRER,
+  // efeito (curva) da cobrança mirada (mira.js): Z = para a esquerda, X = para a direita de quem bate
+  KeyZ: BOTAO.EFEITO_E, KeyX: BOTAO.EFEITO_D,
 };
 // Botões físicos que mudam de sentido pela fase: [bit no ataque, bit na defesa] (0 = nada). Teclas pelo
 // `code`; botões do controle como 'pad:A' etc. (plano 2.8; mapa da defesa do EA FC)
@@ -124,6 +126,10 @@ export const BOTOES_TOQUE = [
   // teclado e o LB do controle já faziam; no toque o TROCAR é da defesa) — só aparece nessa hora (main.js definirGoleiroMao)
   { id: 'btn-trocar-mao', bit: 'TROCAR', fase: 'ataque', vaga: 'e', rotulo: 'TROCAR' },
   { id: 'btn-correr', bit: 'CORRER', fase: 'ambas', vaga: 'correr', rotulo: 'CORRER' },
+  // efeito da cobrança mirada (escanteio e tiro livre da pessoa: mira.js) — só aparecem nessa hora (html.cobranca-mirada,
+  // main.js), no 2º anel (as vagas do PEGAR e do TROCAR da bola na mão, que nunca valem junto com eles)
+  { id: 'btn-efeito-e', bit: 'EFEITO_E', fase: 'ataque', vaga: 'e', rotulo: 'CURVA' },
+  { id: 'btn-efeito-d', bit: 'EFEITO_D', fase: 'ataque', vaga: 'd', rotulo: 'CURVA' },
 ];
 // diâmetro de cada vaga (px CSS com tamanho 100%); nada fica abaixo de 48 px
 const DIAM = { grande: 104, a: 80, b: 72, c: 76, d: 68, e: 68, correr: 76 };
@@ -359,6 +365,11 @@ export function criarEntrada(opc = {}) {
     }
     antes[i] = p;
   }
+  // analógico direito para o lado (o efeito da cobrança mirada): um botão virtual por lado, índices fora dos do controle
+  function seguraEixo(i, p, bit) {
+    if (p && !bloqueada) { bPad |= bit; if (!antes[i]) pulsos |= bit; } else if (antes[i]) soltas |= bit;
+    antes[i] = p;
+  }
   function borda(i, acao) {
     const p = apertado(i);
     if (p && !antes[i] && (!bloqueada || PASSA_BLOQUEADA.has(acao))) emitir(acao);
@@ -399,6 +410,9 @@ export function criarEntrada(opc = {}) {
     segura(PAD.LB, BOTAO.TROCAR);
     seguraFase(PAD.Y, 'pad:Y');
     seguraFase(PAD.RB, 'pad:RB');
+    const rx = gp.axes[2] ?? 0;
+    seguraEixo(100, rx < -0.55, BOTAO.EFEITO_E);
+    seguraEixo(101, rx > 0.55, BOTAO.EFEITO_D);
     borda(PAD.START, 'pausa'); borda(PAD.VIEW, 'ajuda'); borda(PAD.R3, 'camera');
     if (bloqueada) { fPad.ax = 0; fPad.ay = 0; fPad.mag = 0; fPad.botoes = 0; return fPad; }
     fPad.ax = a.x; fPad.ay = a.y; fPad.mag = a.mag; fPad.botoes = bPad;

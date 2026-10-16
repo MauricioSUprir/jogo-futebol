@@ -2073,3 +2073,49 @@ módulos novos (`disputa.js`, `disputa-tela.js`) só por import dinâmico (fora 
   pelo teclado com a câmera atrás do cobrador, só o CHUTE, nada encosta; "Modo de jogo"; `?tm` até o `tm3d:fim`) e
   `legacy-total-match/ferramentas/testar-penaltis.mjs` (ponta a ponta no site montado: menu, seletor, Viverde com a senha de
   `TM_SENHA_VIVERDE`, 3D, Simular o resto, resultado no TM, Jogar de novo, nada sobre nada).
+
+## Cobrança mirada e câmera da bola parada (16/10; contrato)
+
+Pedido do dono (com a imagem do EA FC): câmera "quase 1ª pessoa" atrás do cobrador nos escanteios, faltas, pênaltis e tiros
+de meta; a linha da trajetória com mira, força e curva no escanteio e na falta. Pesquisa: PESQUISA-ETAPA4.md §12.
+
+- **Quem**: só a PESSOA cobrando (partida.js `cobrar`, a entrada sem `ia`/`iaCobra`, `c.porHumano`) escanteio, tiro livre
+  ou tiro de meta. A IA, a demo e o humano depois de `PARTIDA.cobrancaHumanoMax` (a IA cobra por ele) cobram como antes:
+  a partida IA × IA não muda (`tools/hash-partida.mjs`: demo IGUAL; a cena "humano" muda a partir da 1ª bola parada dele).
+- **Estado** (`mira.js`, puro): `m.parada.mira = {ang0, ang, curva, cone, rep}` criado no 1º tick da pessoa
+  (`criarMira`: `ang0` = a direção do alvo padrão `alvoPadrao` — escanteio: a marca do pênalti; tiro livre direto a ≤
+  `MIRA.distChute` m: o meio do gol; outro tiro livre: 30 m na direção do gol; tiro de meta: 35 m para a frente).
+  `atualizarMira` a cada tick: o componente do analógico para o LADO de `ang0` gira a mira (`MIRA.gira` rad/s, até
+  `cone[tipo]`); `BOTAO.EFEITO_E`/`EFEITO_D` (teclas Z/X, analógico direito do controle, botões CURVA do toque nas vagas d e e)
+  passam a curva um degrau de `curvaPasso` (segurar repete a cada `curvaRepete` s), de −1 a +1 (+ = para a direita de quem
+  bate); no tiro de meta a curva fica 0.
+- **Tipo pelo botão** (`tipoMirado`): LANÇAMENTO = ALTA (E + LANÇAMENTO = TENSA); CHUTE = CHUTE no tiro livre direto a ≤
+  `distChute` m, TENSA no resto; PASSE/ENFIADA = CURTA; tiro de meta = LONGA (sem botão: CURTA só com PASSE/ENFIADA). ALTA,
+  TENSA e CHUTE têm a trajetória (`pedido.mirada = {tipo}`; o pedido vira `lancamento`/`chute`); CURTA e LONGA são o passe
+  do jogo na direção da mira (`pedido.dir` → `j.miraAuto`). A cavadinha por dois toques segue a de sempre.
+- **A conta** (`chuteMirado(m, j, pr, tipo, forca, ang, curva)` → `{v, w}`): ALTA/TENSA = elevação fixa
+  (`MIRA.alta/tensa.elev`), velocidade na faixa pela força, o giro do cruzamento do jogo + o efeito (`wy = −curva × giro ×
+  atributo`); CHUTE = a velocidade do chute do jogo (`ACOES.chute.v` × finalização), com o efeito por cima da falta
+  (`giroFalta`) e a elevação que passa por cima da barreira (`BARREIRA.alturaPassar` na distância dela) ou que chega em
+  `yAlvo` pela força. **A mesma conta** no chute de verdade (`acoes.js cobrancaMirada`) e na linha (`preverMira` →
+  `simularLinha`: `bola.js passoBola` passo a passo até a bola tocar o chão, bater em algo ou cruzar a linha de fundo; no
+  CHUTE só até `linhaChute` m além da barreira). Por cima, o erro do cobrador (o do chute do jogo: finalização, distância,
+  força no máximo, `faltaErro` com barreira; no cruzamento o do lançamento: passe longo, ±m a 40 m, em ângulo e em força)
+  × `MIRA.erro` (os testes zeram). O ponto do voo (`m.voo.alvo`) e quem vai nela saem da trajetória prevista (cruzamento:
+  onde desce a `yAlto`); `m.voo.mirada = true`.
+- **Tela** (só lê o mundo; o hash não muda): `render/linha-mira.js` (uma fita virada para a câmera, amarela → azul,
+  desbotando no fim; mais apagada antes de carregar; 1 chamada de desenho; some no chute); o rótulo e o trilho do efeito
+  no HUD (`#mira`, `hud.mira`; Z/X só sem toque); `html.cobranca-mirada` mostra os botões CURVA (e esconde PEGAR e TROCAR
+  da bola na mão, das mesmas vagas).
+- **Câmera da bola parada** (`render/camera.js CAMERA_BOLA_PARADA`, `planoBolaParada`; main.js `cameraBolaParada`): no
+  escanteio, tiro livre, tiro de meta e pênalti com o cobrador sendo o controlado do humano e no pênalti CONTRA (atrás do
+  cobrador adversário). Lado: o que fica mais para dentro do campo (empate: à esquerda de quem bate). Nada sólido na lente
+  (`estadio-forma.js solidoEm`, folga 0,4 m) nem jogador a < 1 m: chega para a frente e sobe. A mistura com a TV entra em
+  `entra` s (o corte da montagem entra direto) e volta em `sai` s no chute (posição, direção do olhar e fov misturados:
+  sem salto). Com ela o analógico vira mundo pelo rumo dela (`yawEntrada` = a direção bola → alvo padrão): direita da
+  tela = direita de quem bate (no pênalti contra, o goleiro escolhe o lado pela tela).
+- **Testes**: `teste-mira` (Node, padrão: A a bola = a linha a ≤ 3 cm; B curva para o lado certo; C controles, rótulos,
+  a linha some no chute, tiro de meta; D o erro continua; E canhão do humano roteirizado, escanteio ≤ 12% e falta 2–12%;
+  F a IA não usa) e `teste-bola-parada-tela` (navegador, CI: PC 1280×720 e celular 844×390 e 568×320 — câmera atrás do
+  cobrador nos 4 tipos e no pênalti contra, cobrador e alvo no quadro, nada na lente, a linha ≥ 150 px e ≤ +1 chamada,
+  some no chute, a volta para a TV sem salto, teclado e botões CURVA).

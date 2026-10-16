@@ -87,7 +87,9 @@ import { criarCena } from './render/cena.js';
 import { criarCampo } from './render/campo.js';
 import { criarBola3D } from './render/bola3d.js';
 import { criarJogadores3D } from './render/jogador3d.js';
-import { criarCamera } from './render/camera.js';
+import { criarCamera, planoBolaParada } from './render/camera.js';
+import { criarLinhaMira } from './render/linha-mira.js';
+import { preverMira, alvoPadrao, chuteAGol } from './mira.js';
 import { criarMarcas } from './render/marcas.js';
 import { criarLinhaImpedimento } from './render/linha-impedimento.js';
 import { criarMarcasLateral } from './render/marcas-lateral.js';
@@ -267,7 +269,11 @@ function entradaDemoDoMundo(m) {
 /** Partida ou disputa de pênaltis (os dois têm m.partida e os times): o que vale para "o jogo" e não para os treinos. */
 const ehJogo = m => m.modo === 'partida' || m.modo === 'penaltis';
 /** Rumo da câmera no chão para o analógico: na disputa, o da câmera atrás do cobrador (esquerda/direita da tela). */
-function yawEntrada() { return mundo.disputa && MOD_DISP ? MOD_DISP.yawDisputa(mundo) : cam.yaw; }
+function yawEntrada() {
+  if (mundo.disputa && MOD_DISP) return MOD_DISP.yawDisputa(mundo);
+  // bola parada com a câmera atrás do cobrador: o analógico pela câmera dela (cameraBolaParada, do último quadro)
+  return yawBP ?? cam.yaw;
+}
 function novoMundo(opc) {
   const ini = DEMO_ON && S.DEMO && modoPagina === 'conducao' ? S.DEMO.inicio : { x: 0, z: 0, rumo: 0 };
   return criarMundoTreino({ ...ini, marcador: params.get('marcador') === '1', ...opc });
@@ -782,6 +788,42 @@ iniciarEstados();
 
 // ------------------------------------------------------------------ 3D
 let cena3d, campo, bola3d, jog3d, cam, entrada, marcas, linhaImped, marcasLat, torcida, som = null;
+let linhaMira = null, htmlMirada = false, linhaMiraOff = false;
+// Câmera da BOLA PARADA (render/camera.js CAMERA_BOLA_PARADA; pedido do dono, 16/10): atrás do cobrador no escanteio, tiro
+// livre, tiro de meta e pênalti do humano e no pênalti contra (atrás do cobrador adversário). planoBP = o plano deste
+// quadro; yawBP = o rumo dela no chão (o analógico vira mundo por ele: a esquerda/direita da tela), ou null sem ela.
+const TIPOS_CAM_BP = ['escanteio', 'tiroLivre', 'tiroDeMeta', 'penalti'];
+const planoBP = { de: [0, 0, 0], para: [0, 0, 0], fov: 50 }, _alvoBP = {};
+let yawBP = null, ladoBP = 0, chaveBP = '';
+const ptsMira = new Float64Array(CFG.MIRA.maxPontos * 3), infoMira = {};
+/** O plano da câmera da bola parada agora (ou null); atualiza yawBP. Só lê o mundo. */
+function cameraBolaParada() {
+  const m = mundo, pr = m.parada;
+  yawBP = null;
+  if (!m.partida || m.disputa || !pr || pr.rolou || pr.cobrador == null || !TIPOS_CAM_BP.includes(pr.tipo)) return null;
+  if (!m.humanos?.includes(TIME_HUMANO) || m.iaJoga?.[TIME_HUMANO]) return null;
+  const meu = pr.time === TIME_HUMANO && m.controlado?.[TIME_HUMANO] === pr.cobrador;
+  const contra = pr.tipo === 'penalti' && pr.time !== TIME_HUMANO;
+  if (!meu && !contra) return null;
+  alvoPadrao(m, pr, _alvoBP);
+  const ty = pr.tipo === 'penalti' || chuteAGol(m, pr) ? 1.0 : 0;
+  const dx = _alvoBP.x - pr.x, dz = _alvoBP.z - pr.z, d = Math.hypot(dx, dz) || 1;
+  // o lado da câmera: o que fica mais para dentro do campo (no escanteio, longe das placas); empate = à esquerda de quem
+  // bate (o cobrador fica à direita da bola no quadro, como na imagem do EA FC). Fixo durante a cobrança
+  const chave = `${pr.tipo}/${pr.inicio}/${pr.cobrador}`;
+  if (chave !== chaveBP) {
+    const C = CFG.CAMPO, fora = s => {
+      const x = pr.x - dx / d * 4.6 + (-dz / d) * 1.9 * s, z = pr.z - dz / d * 4.6 + (dx / d) * 1.9 * s;
+      return Math.max(0, Math.abs(x) - C.meioX) + Math.max(0, Math.abs(z) - C.meioZ);
+    };
+    const fe = fora(-1), fd = fora(1);
+    ladoBP = fd < fe - 0.05 ? 1 : -1;
+    chaveBP = chave;
+  }
+  planoBolaParada(pr.x, pr.z, _alvoBP.x, ty, _alvoBP.z, ladoBP, cam.camera.aspect, mundo.jogadores, planoBP);
+  yawBP = Math.atan2(dz, dx);
+  return planoBP;
+}
 let prejogo = null;
 let ultimoAgora = 0;      // o relógio do laço no último quadro (ms; o manual nos testes): a faixa ENTRA/SAI conta por ele
 const laco = criarLaco();
@@ -929,6 +971,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   else if (cenaGol) cameraComemoracao();
   // disputa de pênaltis: os planos dela (atrás do cobrador, a reação, o círculo) pela câmera de cinema (corte na troca)
   else if (mundo.disputa) cam.definirCinema(MOD_DISP.planoCameraDisputa(mundo, planoDisputa, posDesenhada));
+  // bola parada do humano (e o pênalti contra): a câmera atrás do cobrador; fora das cenas
+  cam.bolaParada(!cenaSub && !cenaGol ? cameraBolaParada() : (yawBP = null));
   cam.atualizar(dt, alvoCam, corteCamera);
   corteCamera = false;
   const f = cam.foco();
@@ -957,6 +1001,13 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     else linhaImped.atualizar(mundo, dt, renderizar);
     marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
   }
+  // linha da cobrança mirada (mira.js preverMira: a física da bola) e o rótulo do tipo + o efeito; html.cobranca-mirada
+  // mostra os botões de efeito no toque (não no tiro de meta: só a direção)
+  const vm = !cenaGol && !cenaSub ? preverMira(mundo, ptsMira, infoMira) : null;
+  linhaMira.atualizar(ptsMira, vm && !linhaMiraOff ? vm.n : 0, linhaMiraOff ? null : vm, cam.camera, dt);
+  const efeito = !!vm && mundo.parada?.tipo !== 'tiroDeMeta';
+  hud.mira(vm ? { rotulo: vm.rotulo, curva: vm.curva, efeito } : null);
+  if (efeito !== htmlMirada) { htmlMirada = efeito; document.documentElement.classList.toggle('cobranca-mirada', efeito); }
   campo.atualizar(agoraMs / 1000, cam.camera, renderizar);
   torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
@@ -1338,6 +1389,7 @@ function desenharReplay(dt, agoraMs, renderizar = true) {
   // análise; o selo da decisão no terço de baixo (só no quadro final)
   marcas.grupo.visible = false;
   marcasLat.atualizar(mundo, semPosicao, agoraMs / 1000, dt);
+  linhaMira.atualizar(ptsMira, 0, null, diretor.camera, dt); // a linha da cobrança mirada não aparece no replay
   linhaImped.mostrar(diretor.linha(dt));
   linhaImped.mostrarSaot(sc.ativa ? sc : null);
   hud.terco(sc.ativa && sc.decidido ? sc : null);
@@ -1938,6 +1990,7 @@ async function iniciar() {
   marcas = criarMarcas(cena3d.cena, { timeHumano: TIME_HUMANO }); // só a bola alta do meu time ganha marca
   linhaImped = criarLinhaImpedimento(cena3d.cena);
   marcasLat = criarMarcasLateral(cena3d.cena);
+  linhaMira = criarLinhaMira(cena3d.cena);
   const sombras = QUALIDADE[qAtual].sombras;
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
@@ -2141,6 +2194,28 @@ const api = {
   get disputa() { return mundo.disputa && MOD_DISP ? MOD_DISP.resumoDisputa(mundo) : null; },
   telaDisputa() { return telaDisp ? telaDisp.estado() : null; },
   get planoCamera() { return cam ? cam.cinema : null; },
+  /**
+   * Bola parada (testes de navegador): a câmera atrás do cobrador (ativa, mistura com a TV, plano, rumo do analógico), a
+   * linha da cobrança mirada (visível, pontos, opacidade), o rótulo do HUD e a mira do mundo. linha(false) esconde só a
+   * linha no desenho (o custo com × sem); pontos() = a trajetória prevista agora [[x, y, z], ...].
+   */
+  bolaParada: {
+    get estado() {
+      const pr = mundo.parada, p = cam?.camera.position;
+      return {
+        ativa: yawBP != null, mistura: cam ? cam.misturaBolaParada : 0, yaw: yawBP,
+        plano: yawBP != null ? { de: [...planoBP.de], para: [...planoBP.para], fov: planoBP.fov } : null,
+        alvo: yawBP != null ? { x: _alvoBP.x, z: _alvoBP.z } : null,
+        camera: p ? { x: p.x, y: p.y, z: p.z, fov: cam.camera.fov } : null,
+        linha: linhaMira ? linhaMira.estado : null, hud: hud.miraVisivel, tipo: pr?.tipo ?? null, rolou: !!pr?.rolou,
+        cobrador: pr?.cobrador ?? null, bola: pr ? { x: pr.x, z: pr.z } : null,
+        mira: pr?.mira ? { ang0: pr.mira.ang0, ang: pr.mira.ang, curva: pr.mira.curva } : null,
+        classe: document.documentElement.classList.contains('cobranca-mirada'),
+      };
+    },
+    linha(v) { linhaMiraOff = !v; },
+    pontos() { const r = preverMira(mundo, ptsMira, {}); return r ? Array.from({ length: r.n }, (_, i) => [ptsMira[i * 3], ptsMira[i * 3 + 1], ptsMira[i * 3 + 2]]) : []; },
+  },
   /** Cópia de m.times[t] (partida) ou null. */
   estadoTime(t = TIME_HUMANO) { return mundo.times?.[t] ? structuredClone(mundo.times[t]) : null; },
   /** A tela "Editar time" (aberto, abrir, voltar = PRONTO, esc, aba, rascunho). */

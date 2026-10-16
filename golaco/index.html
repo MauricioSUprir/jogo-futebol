@@ -85,6 +85,13 @@
       <span class="carga-tipo" id="carga-tipo"></span>
     </div>
 
+    <!-- cobrança mirada (escanteio, tiro livre, tiro de meta da pessoa: mira.js): o tipo da cobrança (aviso de COMANDO, não
+         narração) e o efeito — a marca anda de −1 a +1; no PC as teclas do efeito dos lados -->
+    <div id="mira" class="mira-cobranca" data-caixa="mira" aria-hidden="true" hidden>
+      <b class="mira-tipo" id="mira-tipo">ALTA</b>
+      <span class="mira-efeito"><kbd class="mira-kbd">Z</kbd><span class="mira-trilho"><i id="mira-marca"></i></span><kbd class="mira-kbd">X</kbd></span>
+    </div>
+
     <!-- cartão do árbitro em cima de quem levou (Regra 12; sem texto: sem narração na tela) -->
     <div id="cartao-icone" class="cartao-icone" aria-hidden="true"></div>
 
@@ -157,6 +164,13 @@
     </button>
     <button id="btn-trocar-mao" class="btn-toque btn-trocar-mao" data-caixa="btn-trocar-mao" data-fase="ataque" type="button" aria-label="Trocar de jogador (goleiro com a bola nas mãos: a IA repõe)">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h14l-4-4M20 15.5H6l4 4"/></svg><span>TROCAR</span>
+    </button>
+    <!-- efeito (curva) da cobrança mirada: só no escanteio e no tiro livre da pessoa (html.cobranca-mirada, main.js) -->
+    <button id="btn-efeito-e" class="btn-toque btn-efeito" data-caixa="btn-efeito-e" data-fase="ataque" type="button" aria-label="Curva para a esquerda (cobrança)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 20C17 11 13 6.5 6 6"/><path d="M9.6 2.6 6 6l3.6 3.4"/></svg><span>CURVA</span>
+    </button>
+    <button id="btn-efeito-d" class="btn-toque btn-efeito" data-caixa="btn-efeito-d" data-fase="ataque" type="button" aria-label="Curva para a direita (cobrança)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20C7 11 11 6.5 18 6"/><path d="M14.4 2.6 18 6l-3.6 3.4"/></svg><span>CURVA</span>
     </button>
     <button id="btn-correr" class="btn-toque btn-correr" data-caixa="btn-correr" data-fase="ambas" type="button" aria-label="Correr (segure)">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6l6 6-6 6M12.5 6l6 6-6 6"/></svg><span>CORRER</span>
@@ -328,9 +342,10 @@
             <dt><kbd>E</kbd></dt><dd>Modificador: chute colocado, enfiada pelo alto, cruzamento tenso; condução curta e proteção</dd>
             <dt><kbd>E</kbd> <kbd>E</kbd></dt><dd>Dois toques rápidos: pedalada</dd>
             <dt><kbd>Q</kbd></dt><dd>Trocar de jogador; segure: vai para o goleiro (partida)</dd>
+            <dt><kbd>Z</kbd> <kbd>X</kbd></dt><dd>Escanteio e falta: curva para a esquerda / direita (o analógico gira a mira; segure o botão para a força)</dd>
             <dt>Defesa: <kbd>G</kbd></dt><dd>Segure: o goleiro sai do gol</dd>
             <dt>Goleiro: <kbd>O</kbd></dt><dd>Com a bola no pé, na área: pega com a mão (não no recuo de um companheiro)</dd>
-            <dt>Goleiro</dt><dd>As setas o movem, com e sem a bola nas mãos. Com ela: J rola, L ou K é o chutão, I solta no chão; até 8 s.<span class="so-partida-pen"> No pênalti contra, as setas para cima ou para baixo (para uma das traves) escolhem o canto; sem isso, ele fica no meio</span></dd>
+            <dt>Goleiro</dt><dd>As setas o movem, com e sem a bola nas mãos. Com ela: J rola, L ou K é o chutão, I solta no chão; até 8 s.<span class="so-partida-pen"> No pênalti contra (a câmera atrás do batedor), as setas para a esquerda ou para a direita escolhem o canto; sem isso, ele fica no meio</span></dd>
             <dt>Defesa: <kbd>J</kbd></dt><dd>Segure: conter (acompanha quem está com a bola)</dd>
             <dt>Defesa: <kbd>K</kbd></dt><dd>Dividida (bote em pé)</dd>
             <dt>Defesa: <kbd>O</kbd></dt><dd>Segure: um companheiro pressiona</dd>
@@ -350,9 +365,10 @@
             <dt><kbd>X</kbd></dt><dd>Lançamento / cruzamento (dois toques: rasteiro)</dd>
             <dt><kbd>RB</kbd></dt><dd>Goleiro com a bola no pé, na área: pega com a mão. Defesa: segure, um companheiro pressiona</dd>
             <dt><kbd>LB</kbd></dt><dd>Trocar de jogador; segure: vai para o goleiro (partida)</dd>
-            <dt>Goleiro</dt><dd>O analógico o move, com e sem a bola nas mãos.<span class="so-partida-pen"> No pênalti contra, o analógico para cima ou para baixo (para uma das traves) escolhe o canto; sem isso, ele fica no meio</span></dd>
+            <dt>Goleiro</dt><dd>O analógico o move, com e sem a bola nas mãos.<span class="so-partida-pen"> No pênalti contra (a câmera atrás do batedor), o analógico para a esquerda ou para a direita escolhe o canto; sem isso, ele fica no meio</span></dd>
             <dt><kbd>RT</kbd></dt><dd>Correr (arrancada)</dd>
             <dt><kbd>LT</kbd></dt><dd>Modificador (colocado, enfiada alta, cruzamento tenso, proteção)</dd>
+            <dt>Analógico direito</dt><dd>Escanteio e falta: curva para a esquerda / direita</dd>
             <dt><kbd>R3</kbd></dt><dd>Câmera</dd>
             <dt><kbd>Start</kbd> / <kbd>View</kbd></dt><dd>Pausa e menu / esta ajuda</dd>
             <dt>Na pausa</dt><dd>Cruz ou analógico escolhem, <kbd>A</kbd> confirma, <kbd>B</kbd> volta</dd>
@@ -366,7 +382,7 @@
             <dt>Metade esquerda</dt><dd>Analógico: encoste o dedo onde quiser e arraste</dd>
             <dt>Com a bola</dt><dd>CHUTE (o maior), PASSE (seta), ENFIADA (seta cortando a linha), LANÇAMENTO (curva; dois toques na ponta: cruzamento rasteiro) e CORRER (seta dupla), em arco ao alcance do polegar</dd>
             <dt>Sem a bola</dt><dd>TROCAR (o maior; segure: vai para o goleiro), GOLEIRO (segure: ele sai), PRESSÃO (segure: um companheiro aperta), DIVIDIDA (toque: bote; segure: conter) e CORRER</dd>
-            <dt>Goleiro</dt><dd>Segure TROCAR para controlar o goleiro; o analógico o move, com e sem a bola nas mãos. Bola no pé, na área: PEGAR (mão; não aparece no recuo de um companheiro). Bola nas mãos: PASSE rola, LANÇAMENTO ou CHUTE é o chutão, ENFIADA solta no chão, TROCAR passa para um jogador de linha; até 8 s.<span class="so-partida-pen"> No pênalti contra, o analógico para cima ou para baixo (para uma das traves) escolhe o canto; sem isso, ele fica no meio</span></dd>
+            <dt>Goleiro</dt><dd>Segure TROCAR para controlar o goleiro; o analógico o move, com e sem a bola nas mãos. Bola no pé, na área: PEGAR (mão; não aparece no recuo de um companheiro). Bola nas mãos: PASSE rola, LANÇAMENTO ou CHUTE é o chutão, ENFIADA solta no chão, TROCAR passa para um jogador de linha; até 8 s.<span class="so-partida-pen"> No pênalti contra (a câmera atrás do batedor), o analógico para a esquerda ou para a direita escolhe o canto; sem isso, ele fica no meio</span></dd>
             <dt>Segurar</dt><dd>Mais força (a barra aparece perto do jogador)</dd>
             <dt>Botão do topo</dt><dd>Pausa e menu (Editar time na partida, treinos, câmera)</dd>
           </dl>

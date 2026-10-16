@@ -16,14 +16,16 @@
 // bola antecipa a queda (vai parte do caminho até m.voo.alvo); a mola deixa tudo suave.
 import * as THREE from 'three';
 import { CAMERA, CAMPO } from '../config.js';
+import { solidoEm } from '../estadio-forma.js';
 
 /** Mola crítica exata (a mesma de util.js molaCritica), escrevendo no estado: sem alocar. */
-function mola(est, kx, kv, alvo, w, dt) {
+function mola(est, kx, kv, alvo, w, dt, vel = est) {
+  const kv2 = kv ?? kx;
   const y = est[kx] - alvo;
-  const j1 = est[kv] + y * w;
+  const j1 = vel[kv2] + y * w;
   const e = Math.exp(-w * dt);
   est[kx] = alvo + (y + j1 * dt) * e;
-  est[kv] = (est[kv] - j1 * w * dt) * e;
+  vel[kv2] = (vel[kv2] - j1 * w * dt) * e;
 }
 
 
@@ -79,6 +81,64 @@ export const CAMERA_GOL = {
 // "Reduzir movimento" do sistema: a câmera não anda dentro do plano (fica onde o plano começou e só gira para o assunto).
 // Plano geral do estádio no intervalo e no fim (a torcida inteira no quadro, também no celular).
 export const CAMERA_GERAL = { de: [0, 34, 78], para: [0, 3, -16], fov: 31 };
+// Câmera da BOLA PARADA (pedido do dono, 16/10: "igual no fifa, uma espécie de 3ª pessoa, quase uma 1ª pessoa mas não é,
+// que fica atrás do jogador"; PESQUISA-ETAPA4.md §12): no escanteio, tiro livre, tiro de meta e pênalti do humano (e no
+// pênalti contra, atrás do cobrador adversário), atrás do cobrador `atras` m, para o lado `lado` m (o cobrador fica de
+// um lado da bola no quadro, sem tapar a bola nem o alvo) e na altura `altura` m (um pouco acima da cabeça). O olhar e o
+// fov saem da conta: a bola a `bolaY` da altura do quadro (de cima) e o alvo a `alvoY` (fov vertical entre `fov`).
+// Nada sólido na lente: se a posição cai num sólido (placas, gol, arquibancada: estadio-forma.js solidoEm) ou a menos de
+// `folgaJogador` m de alguém, a câmera chega para a frente e sobe (`tentativas`). Entra em `entra` s (o corte da montagem
+// entra direto) e, no chute, volta para a TV em `sai` s acompanhando a bola (as duas poses são misturadas: sem salto).
+export const CAMERA_BOLA_PARADA = {
+  atras: 4.6, lado: 1.9, altura: 2.6, bolaY: 0.76, alvoY: 0.4, fov: [40, 74],
+  folgaSolido: 0.4, folgaJogador: 1.0, tentativas: 6, entra: 0.6, sai: 1.1, mola: 7,
+};
+/**
+ * Plano da câmera da bola parada (puro: sem three.js): bola (bx, bz), alvo (tx, ty, tz), lado (−1 = a câmera à esquerda
+ * de quem bate), aspecto da tela e os jogadores (para não ficar dentro de ninguém). Escreve {de: [x,y,z], para: [x,y,z],
+ * fov (vertical, graus), recuo, subiu} em `out`.
+ */
+export function planoBolaParada(bx, bz, tx, ty, tz, lado, aspecto, jogadores, out) {
+  const C = CAMERA_BOLA_PARADA;
+  out.de ??= [0, 0, 0]; out.para ??= [0, 0, 0];
+  let dx = tx - bx, dz = tz - bz;
+  const D = Math.hypot(dx, dz) || 1;
+  dx /= D; dz /= D;
+  const rx = -dz, rz = dx; // direita de quem bate
+  let atras = C.atras, alt = C.altura, ld = C.lado;
+  let px = 0, py = 0, pz = 0, k = 0;
+  for (; k <= C.tentativas; k++) {
+    px = bx - dx * atras + rx * ld * lado; pz = bz - dz * atras + rz * ld * lado; py = alt;
+    let livre = !solidoEm(px, py, pz, C.folgaSolido, false);
+    if (livre && py < 2.3) for (const j of jogadores) if (Math.hypot(j.x - px, j.z - pz) < C.folgaJogador) { livre = false; break; }
+    if (livre) break;
+    atras *= 0.82; alt += 0.55; ld *= 0.9;
+  }
+  out.recuo = atras; out.subiu = alt - C.altura;
+  // olhar e fov: a bola em bolaY e o alvo em alvoY (ângulos abaixo do horizonte, na mesma vertical do quadro)
+  const hb = Math.hypot(bx - px, bz - pz), ht = Math.hypot(tx - px, tz - pz);
+  const tb = Math.atan2(py - 0.11, hb), tt = Math.atan2(py - ty, ht);
+  // para um arfagem p: t = tan(fov/2) pela bola; procura p (bissecção) que põe o alvo em alvoY
+  const yAlvo = p => { const t = Math.tan(tb - p) / (2 * (C.bolaY - 0.5)); return 0.5 - Math.tan(p - tt) / (2 * t); };
+  let lo = tt - 0.3, hi = tb - 0.02;
+  for (let i = 0; i < 30; i++) { const m = (lo + hi) / 2; if (yAlvo(m) > C.alvoY) lo = m; else hi = m; }
+  let p = (lo + hi) / 2;
+  let t = Math.tan(tb - p) / (2 * (C.bolaY - 0.5));
+  // fov vertical nos limites (telas mais estreitas que 16:9 abrem para a mesma largura: fovFixo faz isso depois)
+  const f = Math.max(C.fov[0], Math.min(C.fov[1], (2 * Math.atan(t) * 180) / Math.PI));
+  t = Math.tan((f * Math.PI) / 360);
+  // com o fov limitado, a bola fica em bolaY de novo (o alvo sobe ou desce um pouco)
+  p = tb - Math.atan(t * 2 * (C.bolaY - 0.5));
+  // o ponto olhado: na direção da bola→alvo vista da câmera, com a arfagem p
+  let lx = (bx + tx) / 2 - px, lz = (bz + tz) / 2 - pz;
+  const ll = Math.hypot(lx, lz) || 1;
+  lx /= ll; lz /= ll;
+  out.de[0] = px; out.de[1] = py; out.de[2] = pz;
+  out.para[0] = px + lx * 10; out.para[1] = py - Math.tan(p) * 10; out.para[2] = pz + lz * 10;
+  out.fov = f;
+  void aspecto;
+  return out;
+}
 const reduzMovimento = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -98,6 +158,9 @@ export function criarCamera(aspecto) {
     geral: false,             // plano geral (intervalo, fim)
     corte: false,             // próximo atualizar corta (sem mola): fim da câmera do gol sem saída
     cinema: null,             // plano de cinema da comemoração ({nome, de, para, fov}) ou null
+    // câmera da bola parada: s = mistura com a TV (0 = TV, 1 = atrás do cobrador), alvo = o plano pedido (ou null), a
+    // pose seguida por mola (de/para/fov) e se já começou
+    bp: { s: 0, plano: null, de: [0, 0, 0], vde: [0, 0, 0], para: [0, 0, 0], vpara: [0, 0, 0], fov: 50, vfov: 0, iniciado: false, corte: false },
   };
   // câmera de cinema: o nome do plano (mudou = corte), onde o plano começou e para onde olha
   const cin = { nome: null, de0: [0, 0, 0], para: [0, 0, 0], reduz: false };
@@ -215,6 +278,45 @@ export function criarCamera(aspecto) {
       camera.position.set(est.x, p.altura, est.z + p.distancia);
       camera.lookAt(est.x, p.olharY, est.z);
     }
+    // bola parada: mistura a pose da TV com a de trás do cobrador (posição, ponto olhado e fov: nenhum salto na volta)
+    const bp = est.bp;
+    if (bp.s > 0 && bp.iniciado) {
+      const e = suave(bp.s);
+      _tvPos.copy(camera.position);
+      _tvOlha.set(est.x, p.olharY, est.z);
+      _bpPos.set(bp.de[0], bp.de[1], bp.de[2]);
+      _bpOlha.set(bp.para[0], bp.para[1], bp.para[2]);
+      camera.position.lerpVectors(_tvPos, _bpPos, e);
+      // o ponto olhado anda pela distância (a da TV a ~45 m, a da bola parada a 10 m): mistura a DIREÇÃO
+      _d1.subVectors(_tvOlha, _tvPos).normalize();
+      _d2.subVectors(_bpOlha, _bpPos).normalize();
+      _d1.lerp(_d2, e).normalize();
+      _tvOlha.copy(camera.position).addScaledVector(_d1, 10);
+      camera.lookAt(_tvOlha);
+      const fv = lerp(camera.fov, fovFixo(bp.fov), e);
+      if (Math.abs(camera.fov - fv) > 1e-4) { camera.fov = fv; camera.updateProjectionMatrix(); }
+    }
+  }
+  const _tvPos = new THREE.Vector3(), _tvOlha = new THREE.Vector3(), _bpPos = new THREE.Vector3(), _bpOlha = new THREE.Vector3();
+  const _d1 = new THREE.Vector3(), _d2 = new THREE.Vector3();
+  /** Um quadro da câmera da bola parada: a mistura anda e a pose segue o plano por mola (no corte, direto). */
+  function atualizarBolaParada(dt, corte) {
+    const bp = est.bp, pl = bp.plano;
+    if (pl) {
+      const C = CAMERA_BOLA_PARADA;
+      if (!bp.iniciado || corte || bp.s <= 0) {
+        for (let i = 0; i < 3; i++) { bp.de[i] = pl.de[i]; bp.para[i] = pl.para[i]; bp.vde[i] = 0; bp.vpara[i] = 0; }
+        bp.fov = pl.fov; bp.vfov = 0; bp.iniciado = true;
+      } else {
+        for (let i = 0; i < 3; i++) { mola(bp.de, i, null, pl.de[i], C.mola, dt, bp.vde); mola(bp.para, i, null, pl.para[i], C.mola, dt, bp.vpara); }
+        const y = bp.fov - pl.fov, j1 = bp.vfov + y * C.mola, ex = Math.exp(-C.mola * dt);
+        bp.fov = pl.fov + (y + j1 * dt) * ex; bp.vfov = (bp.vfov - j1 * C.mola * dt) * ex;
+      }
+      bp.s = corte ? 1 : Math.min(1, bp.s + dt / C.entra);
+    } else if (bp.s > 0) {
+      bp.s = Math.max(0, bp.s - dt / CAMERA_BOLA_PARADA.sai);
+      if (bp.s === 0) bp.iniciado = false;
+    }
   }
   return {
     camera,
@@ -268,6 +370,7 @@ export function criarCamera(aspecto) {
       fx = clamp(fx, -p.limX, p.limX);
       fz = clamp(fz, p.limZ0, p.limZ1);
       if (est.corte) { corte = true; est.corte = false; }
+      atualizarBolaParada(dt, corte);
       if (!est.iniciado || corte) {
         est.x = fx; est.z = fz; est.vx = 0; est.vz = 0; est.iniciado = true;
       } else {
@@ -306,6 +409,13 @@ export function criarCamera(aspecto) {
     definirCinema(p) { est.cinema = p || null; if (!p) cin.nome = null; },
     /** Nome do plano de cinema agora ('steadicam', 'contraplano', 'reacao') ou null. */
     get cinema() { return est.cinema && cin.nome ? cin.nome : null; },
+    /**
+     * Câmera da bola parada: o plano {de:[x,y,z], para:[x,y,z], fov} (planoBolaParada; o mesmo objeto, atualizado a cada
+     * quadro) ou null — a câmera volta para a TV em CAMERA_BOLA_PARADA.sai s, misturando as duas poses.
+     */
+    bolaParada(pl) { est.bp.plano = pl || null; },
+    /** Mistura da câmera da bola parada agora (0 = TV, 1 = atrás do cobrador). */
+    get misturaBolaParada() { return est.bp.s; },
     /** Câmera livre para prints de conferência: {de:[x,y,z], para:[x,y,z], fov?} ou null. */
     definirLivre(l) { est.livre = l ? { de: [...l.de], para: [...l.para], fov: l.fov } : null; },
   };
