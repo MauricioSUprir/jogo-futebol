@@ -116,6 +116,8 @@ const LISTA = [
   ['disputa de pênaltis (Regra 10): 5 alternadas, fim antecipado, alternadas, fila dos cobradores, lugares, goleiro na linha, fim da cobrança, IA × IA até o fim, humano bate e defende, cavadinha repetida, resultado do TM', 'teste-disputa.mjs'],
   // Modo Livre 3D (dono, 16/10: "um modo livre, como no fifa ... a quantidade de jogadores que eu escolher"): N contra M
   ['modo livre: montagem N × M nas bordas, mudar no meio do jogo, IA × IA 3×3/5×5/1×0 (posse, chutes, ninguém longe), recomeços sem cobrador nulo, determinismo, goleiro sozinho', 'teste-livre.mjs'],
+  // Online 1×1 (dono, 16/10: "duas pessoas consigam jogar uma contra a outra"; contrato "Online 1×1" no CONTRATOS.md)
+  ['online, etapa 0: nada de Math não exata, Math.random nem relógio no passo com 2 humanos (partida inteira, 2 sementes), sort total, nenhum ** na lógica', 'teste-math-proibido.mjs'],
 ];
 const argv = process.argv.slice(2);
 const iSo = argv.indexOf('--so');

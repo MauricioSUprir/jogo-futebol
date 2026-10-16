@@ -19,6 +19,7 @@ import { gerarAtributos, notaNaPosicao, PESOS, CHAVES } from './elenco.js';
 import { FORMACOES, hungaro } from './formacoes.js';
 import { TATICA_PADRAO } from './tatica.js';
 import { clamp } from './mat.js';
+import { MD } from './matdet.js';
 
 /** Ids dos elencos do TM e a base dos ids dos jogadores (casa, fora). */
 export const ELENCOS_TM = ['tmcasa', 'tmfora'];
@@ -133,7 +134,7 @@ function slotEmMetros(slot) {
 function custoVaga(jog, v) {
   const pen = jog.pos === v.pos ? 0 : jog.alt.includes(v.pos) ? 1 : 3;
   const s = jog._slot;
-  const d = s ? Math.hypot(s.x - v.sem.x, s.z - v.sem.z) : 0;
+  const d = s ? MD.hypot(s.x - v.sem.x, s.z - v.sem.z) : 0; // MD: o mesmo custo (e a mesma vaga) em todo motor JS
   return Math.round(d * 10) + pen * 20;
 }
 

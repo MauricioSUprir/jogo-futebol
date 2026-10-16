@@ -251,7 +251,9 @@ export function mudarFormacao(rasc, formacao) {
   const fora = rasc.expulsos ?? [];
   r.vagas = encaixar(Object.values(rasc.vagas).filter(id => !fora.includes(id)), formacao, rasc.elenco, rasc.vagas);
   if (fora.length) {
-    const vazias = FORMACOES[formacao].vagas.filter(v => r.vagas[v.id] == null).map(v => v.id).sort((a, b) => (a === 'GOL') - (b === 'GOL'));
+    // (comparador total: empate pela ordem das vagas na formação — a mesma ordem do sort estável de antes; online 1×1)
+    const vazias = FORMACOES[formacao].vagas.filter(v => r.vagas[v.id] == null).map((v, i) => ({ id: v.id, i }))
+      .sort((a, b) => (a.id === 'GOL') - (b.id === 'GOL') || a.i - b.i).map(v => v.id);
     fora.forEach((id, k) => { if (vazias[k] != null) r.vagas[vazias[k]] = id; });
   }
   r.formacao = formacao;

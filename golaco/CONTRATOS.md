@@ -2326,3 +2326,45 @@ dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,
   main: H1 a bola parada do humano (TV, Alta, Atrás) com a câmera atrás do cobrador e a "direita" levando a mira para a
   direita na tela, e a volta à câmera do Livre sem salto; H2 mudar os jogadores na pausa no meio da cobrança mirada sem perder
   a mira nem a câmera; H3 R no meio do gol sem replay pendente.
+
+## Online 1×1 — duas pessoas, cada uma no seu aparelho (16/10; contrato)
+Pedido do dono (16/10): "implementar esse novo golaço, no modo online, para que duas pessoas consigam jogar uma contra a
+outra". A partida 11×11 de hoje, cada pessoa controlando um time no seu aparelho, por TROCA DE ENTRADAS (lockstep com
+atraso de entrada: o mundo é o mesmo nos dois porque a simulação é determinística e só as entradas viajam). Entrada só no
+Total Match (Mais modos → "Online 3D"; o golaco não ganha entrada de menu). O plano inteiro (netcode, formato na rede,
+transporte, sala, esperas, desconexão, etapas) está no contrato do online da sessão; aqui ficam as peças do golaco, na
+ordem das etapas. **Fora do online nada muda**: `hash-partida`/`hash-igual` IGUAIS em toda etapa.
+
+### Etapa 0 — determinismo blindado
+Dois aparelhos de motores diferentes (V8 de outra versão, SpiderMonkey, JavaScriptCore) têm de chegar ao MESMO mundo
+com as mesmas entradas. As funções de Math que o IEEE 754 não obriga a darem o mesmo resultado (sin, cos, tan, asin, acos,
+atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no último bit entre eles; a lógica já usava o MD
+(`matdet.js`, fdlibm), mas sobravam:
+- **`anim.js`** (pesEQuadril, pose, poseMergulho): a pose ENTRA na simulação — `sim.js` guarda `j.quadril =
+  alturaQuadril(j, m)` a cada passo, a cabeça desenhada decide o cabeceio (`cabecaNaBola`) e o goleiro parte de `j.quadril`
+  no mergulho (`goleiro.js`). Tudo pelo MD agora (44 chamadas). Medido antes (relatório do online, `sensibilidade-math`):
+  com Math de outro motor, `j.quadril` diferia a partir do tick 26 (o hash ficou igual em 4 × 30 mil ticks por sorte da
+  amostra, não por garantia).
+- **`tm-times.js`** (custo do húngaro das vagas do pedido do TM): `MD.hypot` — um empate de ulp trocaria a vaga de um
+  jogador num aparelho só.
+- **`**`** (não dá para instrumentar): `anim.js` e `cabeceio.js` trocaram `a ** 2` por `a * a` (o mesmo valor no V8, que
+  calcula `x ** 2` como `x * x`).
+- **`.sort(`** com comparador total (o resultado de um comparador inconsistente — empate que devolve 1 dos dois lados, NaN —
+  depende do algoritmo de cada motor): `partida.js` (porVaga, + desempate pelo id) e `escalacao.js` (as vagas vazias dos
+  expulsos, + desempate pela ordem das vagas na formação: a mesma ordem do sort estável de antes). Os outros 9 da lógica já
+  desempatavam pelo id.
+- O que é LOCAL nunca entra no passo: yaw da câmera (`controle.js paraMundo` converte o analógico antes de quantizar),
+  preferências, qps, `m.timeHumano` (fora do hash; o caminho de 2 humanos não o lê).
+- Hash: `hash-partida --ref aeb1c685` (4 sementes × 2 cenas × 2 min por tempo; e 8 × 2 × 4 min, a partida inteira: 1568
+  hashes) e `hash-igual --ref aeb1c685` (20 sementes × 3 min) IGUAIS — no V8 o MD e o Math dão o mesmo `j.quadril` quase
+  sempre e a diferença de ulp que sobra não mudou nenhuma decisão nessas partidas (não é garantia de hash igual em toda
+  partida: a etapa 0 podia mudá-lo, e uma partida que divergisse seria só a base nova).
+- **Teste `teste-math-proibido`** (Node, padrão): (A) troca as funções proibidas de Math, `Math.random`, `Date.now` e
+  `performance.now` por versões que contam, ANTES de importar a lógica, e conta só dentro da janela do passo (os times do
+  pedido do TM, `criarPartida`, `passoPartida` com uma edição de cada time e a `entradaDemoPartida` do bit IA): partida
+  inteira com 2 humanos, 2 sementes (a 2ª com os times de um pedido do TM), analógico e botões sorteados e quantizados a
+  1/1024 — meta 0 chamadas (na base: 5,4 milhões em 2 × 2 min); (B) o TEXTO de todo módulo do grafo de imports de
+  `partida.js` e `tm-times.js` (31 módulos; pega os caminhos que as partidas não visitaram, como o pênalti) sem função
+  proibida, relógio nem `**` fora dos comentários — meta 0 linhas (na base: 13); (C) todo `.sort(` com comparador dentro do
+  passo sai estritamente ordenado nos dois sentidos (empate só entre valores idênticos). `--onde` lista de onde vêm as
+  chamadas; `--sementes N --min M` encurta.

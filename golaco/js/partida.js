@@ -502,7 +502,7 @@ function montarPenalti(m) {
   if (gk) teleportar(gk, gx - lado * 0.3, 0, lado > 0 ? Math.PI : 0);
   // os outros (fora o goleiro de quem cobra): na beira da área (meia-lua no meio), alternando os times
   const outros = m.jogadores.filter(o => o !== c && o !== gk && !(o.time === t && o.posicao === 'GOL'));
-  const porVaga = (a, b) => (a.vagaIdx ?? 0) - (b.vagaIdx ?? 0);
+  const porVaga = (a, b) => (a.vagaIdx ?? 0) - (b.vagaIdx ?? 0) || a.id - b.id; // total: desempate pelo id (online 1×1)
   const ataque = outros.filter(o => o.time === t).sort(porVaga), defesa = outros.filter(o => o.time !== t).sort(porVaga);
   const fila = [];
   while (ataque.length || defesa.length) { if (defesa.length) fila.push(defesa.shift()); if (ataque.length) fila.push(ataque.shift()); }

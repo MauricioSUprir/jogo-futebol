@@ -13,9 +13,13 @@
 //    balanço) e, para cima, no máximo QUADRIL_SOBE (altura guardada pela simulação,
 //    alturaQuadril) — o tornozelo preso pelo joelho não salta com o quadril.
 // Sem three.js nem DOM. Saída: posições das juntas no mundo (Float32Array).
+// Só MD (matdet.js) nas funções não exatas: a pose entra na simulação (sim.js j.quadril pela alturaQuadril e a cabeça
+// desenhada no cabeceio, cabecaNaBola; goleiro.js parte de j.quadril no mergulho) e tem de sair igual em todo motor JS
+// (online 1×1: tools/teste-math-proibido.mjs).
 
 import { JOGADOR, PASSO, G, CONDUCAO, GOLEIRO, LATERAL, CABECEIO } from './config.js';
 import { clamp, lerp, difAng } from './mat.js';
+import { MD } from './matdet.js';
 import { progressoBalanco } from './jogador.js';
 import { mergulhoAtivo, quadroMergulho, maosMergulho, eixosMergulho, MAO_PRONTA_FRENTE, MAO_PRONTA_BAIXO } from './goleiro.js';
 import { alturaSalto } from './bolas-paradas.js';
@@ -105,9 +109,9 @@ function por(out, i, x, y, z) { out[i * 3] = x; out[i * 3 + 1] = y; out[i * 3 + 
  */
 function pesEQuadril(j, m) {
   const tick = m.tick;
-  const s = Math.hypot(j.vx, j.vz);
+  const s = MD.hypot(j.vx, j.vz);
   const h = j.rumo;
-  const fx = Math.cos(h), fz = Math.sin(h);   // frente
+  const fx = MD.cos(h), fz = MD.sin(h);   // frente
   const rx = -fz, rz = fx;                    // direita
   const af = j.ax * fx + j.az * fz;           // aceleração para a frente
   const al = j.ax * rx + j.az * rz;           // aceleração para a direita
@@ -123,19 +127,19 @@ function pesEQuadril(j, m) {
   const agach = 0.03 + 0.05 * clamp(s / 7, 0, 1);
   let hy = 0.985 - agach;
   // balanço vertical: mais baixo no meio do apoio, mais alto no voo
-  const bob = (0.012 + 0.03 * clamp(s / 6, 0, 1)) * Math.cos(2 * Math.PI * (j.fase % 1));
+  const bob = (0.012 + 0.03 * clamp(s / 6, 0, 1)) * MD.cos(2 * Math.PI * (j.fase % 1));
   hy -= bob;
   // deslocamento lateral do quadril sobre o pé de apoio (pequeno) e na pedalada
-  let lat = 0.025 * clamp(1 - s / 4, 0, 1) * Math.sin(Math.PI * j.fase);
+  let lat = 0.025 * clamp(1 - s / 4, 0, 1) * MD.sin(Math.PI * j.fase);
   if (c && c.pedalada) {
     const tp = clamp((tick - c.pedalada.tick0) * PASSO / CONDUCAO.pedaladaDuracao, 0, 1);
-    lat += c.pedalada.lado * 0.12 * Math.sin(Math.PI * tp);
+    lat += c.pedalada.lado * 0.12 * MD.sin(Math.PI * tp);
   }
   const px = j.x + rx * lat, pz = j.z + rz * lat;
   // rotação do quadril com a passada (pequena) — o ombro gira ao contrário
-  const torcao = 0.08 * clamp(s / 5, 0.2, 1) * Math.sin(Math.PI * j.fase);
+  const torcao = 0.08 * clamp(s / 5, 0.2, 1) * MD.sin(Math.PI * j.fase);
   const qh = h + torcao;
-  const qrx = -Math.sin(qh), qrz = Math.cos(qh);
+  const qrx = -MD.sin(qh), qrz = MD.cos(qh);
   // O pé no balanço também segura o quadril: na saída exatamente como o pé no chão (a perna
   // alcança o pé que acabou de sair) e, no fim do balanço, pelo ponto de pouso (a perna alcança o
   // ponto onde o pé vai ser plantado — e não o pé esticado à frente antes de recuar para o pouso).
@@ -143,7 +147,7 @@ function pesEQuadril(j, m) {
   // O peso vai de 0 a 1 e volta a 0 pela fase do balanço: o quadril não salta quando o pé sai do
   // chão (o pé que ficou para trás segurava o quadril baixo) nem quando pousa.
   const hyNom = hy;
-  const alcance = (x, y, z, qx, qz) => y + Math.sqrt(Math.max(0, LMAX * LMAX - (x - qx) ** 2 - (z - qz) ** 2)) - 0.002;
+  const alcance = (x, y, z, qx, qz) => y + Math.sqrt(Math.max(0, LMAX * LMAX - (x - qx) * (x - qx) - (z - qz) * (z - qz))) - 0.002;
   for (let p = 0; p < 2; p++) {
     const pe = pes[p];
     const lado = p === 0 ? -1 : 1;
@@ -209,11 +213,11 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
   por(out, J.pelve, px, hy, pz);
 
   // ---- tronco: inclinação para a frente (velocidade + aceleração) e para o lado (curva)
-  let pitch = 0.03 + 0.022 * s + Math.atan2(af, G) * 0.8;
+  let pitch = 0.03 + 0.022 * s + MD.atan2(af, G) * 0.8;
   pitch = clamp(pitch, -0.3, 0.42);
-  const roll = clamp(Math.atan2(al, G) * 0.7, -0.35, 0.35);
+  const roll = clamp(MD.atan2(al, G) * 0.7, -0.35, 0.35);
   // vetor "para cima" do tronco: gira em torno do eixo direito (pitch) e da frente (roll)
-  const cp = Math.cos(pitch), sp = Math.sin(pitch), cr = Math.cos(roll), sr = Math.sin(roll);
+  const cp = MD.cos(pitch), sp = MD.sin(pitch), cr = MD.cos(roll), sr = MD.sin(roll);
   let ux = fx * sp * cr + rx * sr * cp;
   let uy = cp * cr;
   let uz = fz * sp * cr + rz * sr * cp;
@@ -226,12 +230,12 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
     if (q.w > 0) {
       inclinacaoAte(px, hy, pz, cb.bx, cb.by, cb.bz, _ic);
       let dx = cb.bx - px, dz = cb.bz - pz;
-      const L = Math.hypot(dx, dz);
+      const L = MD.hypot(dx, dz);
       if (L > 1e-3) { dx /= L; dz /= L; } else { dx = fx; dz = fz; }
       const a = _ic.a * q.w - CABECEIO.arco * q.arco;
-      const lx = dx * Math.sin(a), ly = Math.cos(a), lz = dz * Math.sin(a);
+      const lx = dx * MD.sin(a), ly = MD.cos(a), lz = dz * MD.sin(a);
       ux += (lx - ux) * q.w; uy += (ly - uy) * q.w; uz += (lz - uz) * q.w;
-      const l = Math.hypot(ux, uy, uz) || 1;
+      const l = MD.hypot(ux, uy, uz) || 1;
       ux /= l; uy /= l; uz /= l;
     }
   }
@@ -251,7 +255,7 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
   // goleiro com a bola nas mãos: as palmas dos dois lados da bola (goleiro.js bolaNaMao; o encaixe desenhado
   // termina nesse mesmo ponto — sem salto de braço ao acabar a defesa)
   const segura = j.posicao === 'GOL' && m.naMao === j.id;
-  const sgx = Math.cos(j.rumo), sgz = Math.sin(j.rumo);
+  const sgx = MD.cos(j.rumo), sgz = MD.sin(j.rumo);
   // lateral (Regra 15): o cobrador segura a bola com as duas mãos atrás da cabeça e a leva no arco do arremesso (a bola
   // do estado: lateral.js segurarLateral); depois da soltura os braços seguem o arremesso por LATERAL.seguimento s
   const pr = m.parada;
@@ -259,8 +263,8 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
   let segue = -1;
   if (!lat && j.arremesso) { const t = (m.tick - j.arremesso.tick) * PASSO; if (t >= 0 && t < LATERAL.seguimento) segue = t / LATERAL.seguimento; }
   const oh = h - torcao * 1.4;
-  const orx = -Math.sin(oh), orz = Math.cos(oh);
-  const ofx = Math.cos(oh), ofz = Math.sin(oh);
+  const orx = -MD.sin(oh), orz = MD.cos(oh);
+  const ofx = MD.cos(oh), ofz = MD.sin(oh);
   const amp = lerp(0.25, 0.95, clamp(s / 7, 0, 1));
   const flex = lerp(0.35, 1.45, clamp(s / 5, 0, 1));
   for (let lado = -1; lado <= 1; lado += 2) {
@@ -272,18 +276,18 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
     const oz = pei[2] + uz * 0.07 + orz * lado * 0.19;
     por(out, iO, ox, oy, oz);
     // braço esquerdo vai à frente quando a perna direita vai à frente
-    const balanco = amp * Math.sin(Math.PI * j.fase) * (lado < 0 ? 1 : -1);
+    const balanco = amp * MD.sin(Math.PI * j.fase) * (lado < 0 ? 1 : -1);
     const abre = 0.12 + (c && c.pedalada ? 0.35 : 0);
     // direção do braço: para baixo girado para a frente por "balanco" e para fora por "abre"
-    const bx = ofx * Math.sin(balanco) + orx * lado * Math.sin(abre);
-    const by = -Math.cos(balanco) * Math.cos(abre);
-    const bz = ofz * Math.sin(balanco) + orz * lado * Math.sin(abre);
+    const bx = ofx * MD.sin(balanco) + orx * lado * MD.sin(abre);
+    const by = -MD.cos(balanco) * MD.cos(abre);
+    const bz = ofz * MD.sin(balanco) + orz * lado * MD.sin(abre);
     const cxp = ox + bx * 0.29, cyp = oy + by * 0.29, czp = oz + bz * 0.29;
     por(out, iC, cxp, cyp, czp);
     const a2 = balanco + flex;
-    const fbx = ofx * Math.sin(a2) + orx * lado * 0.08;
-    const fby = -Math.cos(a2);
-    const fbz = ofz * Math.sin(a2) + orz * lado * 0.08;
+    const fbx = ofx * MD.sin(a2) + orx * lado * 0.08;
+    const fby = -MD.cos(a2);
+    const fbz = ofz * MD.sin(a2) + orz * lado * 0.08;
     por(out, iM, cxp + fbx * 0.26, cyp + fby * 0.26, czp + fbz * 0.26);
     if (pronto > 0) {
       // goleiro: mãos prontas à frente da cintura (a mesma espera da defesa desenhada — goleiro.js maosMergulho)
@@ -303,7 +307,7 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
     } else if (segue >= 0) {
       // depois da soltura: as mãos seguem para a frente e para baixo; no fim voltam ao balanço da passada
       const e = suave(segue), ar = j.arremesso;
-      const afx = Math.cos(ar.rumo), afz = Math.sin(ar.rumo);
+      const afx = MD.cos(ar.rumo), afz = MD.sin(ar.rumo);
       const fr = LATERAL.soltaFrente + 0.3 * e, yy = LATERAL.soltaAltura - 0.75 * e;
       const w = segue < 0.6 ? 1 : (1 - segue) / 0.4;
       const tx = j.x + afx * fr - afz * lado * BOLA_MAO.palma, tz = j.z + afz * fr + afx * lado * BOLA_MAO.palma;
@@ -328,13 +332,13 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
     por(out, iQ, qx, qy, qz);
     const pe = pes[p];
     const pr = pe.rumo ?? h;
-    const pfx = Math.cos(pr), pfz = Math.sin(pr);
+    const pfx = MD.cos(pr), pfz = MD.sin(pr);
     // joelho aponta para a frente do pé (um pouco para fora)
     ik(qx, qy, qz, pe.x, pe.y, pe.z, pfx + qrx * lado * 0.1, 0.05, pfz + qrz * lado * 0.1, out, iJ, iT);
     const tx = out[iT * 3], ty = out[iT * 3 + 1], tz = out[iT * 3 + 2];
     // ponta do pé: no chão quando apoiado; no balanço aponta um pouco para baixo
-    const incl = pe.apoio ? 0 : -0.35 * Math.sin(Math.PI * (pe.u ?? 0));
-    por(out, iP, tx + pfx * 0.17 * Math.cos(incl), Math.max(0.025, ty - 0.055 + 0.17 * Math.sin(incl)), tz + pfz * 0.17 * Math.cos(incl));
+    const incl = pe.apoio ? 0 : -0.35 * MD.sin(Math.PI * (pe.u ?? 0));
+    por(out, iP, tx + pfx * 0.17 * MD.cos(incl), Math.max(0.025, ty - 0.055 + 0.17 * MD.sin(incl)), tz + pfz * 0.17 * MD.cos(incl));
     if (info) {
       info.pes = info.pes || [{}, {}];
       info.pes[p].apoio = pe.apoio;
