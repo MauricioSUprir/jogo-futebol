@@ -446,7 +446,9 @@ export function passo(m, entradas) {
       if (j.descanso > 0) { j.descanso--; mv = { dx: MD.cos(j.rumo), dz: MD.sin(j.rumo), vel: 0, rumoAlvo: j.rumo }; }
       else mv = moverMarcador(m, j);
     } else if (j.papel === 'parado') {
-      mv = { dx: 1, dz: 0, vel: 0, rumoAlvo: j.rumo };
+      // j.guia (só a disputa de pênaltis, disputa.js): o pedido de movimento já pronto — o cobrador andando até a marca e
+      // a reação depois da cobrança, pela locomoção de sempre; sem ele (a partida e o treino), parado como antes
+      mv = j.guia ?? { dx: 1, dz: 0, vel: 0, rumoAlvo: j.rumo };
     } else if (j.posicao === 'GOL' && !goleiroComoLinha(m, j)) {
       // (com a trava "só o meu jogador" do Total Match, o goleiro que não é o travado decide sozinho, como o da IA: senão
       // ele só sairia do gol com o botão GOLEIRO, que o travado não tem)

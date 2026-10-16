@@ -1980,3 +1980,96 @@ Pedido do dono: "deixa os botões, menu, tudo com a cara do total match". Só DO
   leitor de tela; na tela a logo), o texto do `#girar`; pede os 5 pesos da Inter e, quando chegam (ou falham), põe
   `<html data-fontes-tm="ok|falhou">` e manda `tm:fontes` na window → main.js `entrada.reposicionar()` + `hud.ajustarTopo()`
   (os nomes dos botões são medidos pelo canvas). `prejogo-tela.js`: a marca da abertura vira "Total Match" com `html.tm`.
+
+## Disputa de pênaltis — o modo Pênaltis 3D (15/10; contrato)
+Pedido do dono (15/10): "crie uma versão só de jogador de pênaltis" → "modo de pênaltis 3d igual ao golaço, só que versão de
+pênaltis". `?modo=penaltis` (sem `?tm`: Golaço FC × Ventania FC), o botão "Pênaltis" no "Modo de jogo" da pausa (na linha da
+Partida) e, com `?tm`, o pedido do TM com `modo: "penaltis"`. **Sem o modo nada muda**: `hash-partida`/`hash-igual` IGUAIS; os
+módulos novos (`disputa.js`, `disputa-tela.js`) só por import dinâmico (fora do download do teste-carga).
+- **`disputa.js`** (puro; constantes `config.js DISPUTA`). O mundo é o da partida (`criarPartida` com os times do pedido, sem a
+  trava) com `m.modo = 'penaltis'` e `m.disputa = {estado, desde, gol (±1), primeiro (0|1), ordem: {0, 1} (ids), vagas: {id:
+  {x, z}}, cobrancas: [{time, id, resultado, n, k, cavadinha}], placar: [a, b], chutes: [a, b], vencedor, vez, cobrador,
+  goleiro, goleiroCobra, chuteTick, tocou, trave, cavadinha, ultima, alvo}`; `m.placar` = o placar da disputa.
+  - Regra 10 da IFAB: `timeDaCobranca(primeiro, k)` (ABAB), `vencedorDisputa(placar, chutes, n = 5)` (nas 5: um não alcança
+    mais o outro; depois, com o mesmo número de cobranças, quem fez mais), `ordemCobradores(m, t)` (os de linha pela
+    finalização, o goleiro por último) e `cobradorDa(ordem, n)` (a fila dá a volta: ninguém bate a 2ª antes de todos). O gol e
+    quem começa pela moeda (`m.rng`; `opc.gol`/`opc.comeca` forçam, a moeda sai do rng igual).
+  - `criarDisputa({semente, elencos, times, humano, comeca, gol})` → o mundo com a 1ª cobrança começando. A cada cobrança
+    (`iniciarCobranca`): `m.ataca` põe o time da vez atacando o gol da disputa; `partida.js bolaMorta(m, 'penalti')` com a bola
+    na marca (ninguém toca nela); todos 'parado'; os que esperam no círculo central (duas filas de frente para o gol), o goleiro
+    que defende NA linha do gol até o chute (Regra 14, que vale na Regra 10: o centro a `DISPUTA.goleiroLinha` m dela, um pé
+    sobre ela; `partida.js restricaoPenalti` e `goleiro.js movimentoGoleiro` com `m.disputa` — na partida ele segue na
+    bissetriz, segurado a 0,6 m), o do time que bate na linha de fundo além da linha da área (`DISPUTA.esquina`), o cobrador a
+    `caminhada.dist` m atrás da marca (corte de câmera); o humano controla o cobrador dele ou o goleiro dele.
+  - Estados: `caminhada` (o cobrador anda até 0,4 m atrás da bola pela locomoção do jogo: `j.guia` — o pedido de movimento
+    pronto que o `sim.js` usa para quem está 'parado'; sem `j.guia`, parado como sempre) → `cobranca` (`partida.js
+    prepararPenalti`: a mesma montagem do pênalti da partida, o goleiro que defende vira 'ia'; `pr.inicio` + `esperaHumano` s,
+    `pr.pronta` em `DISPUTA.pronta` s e a força da IA na faixa `DISPUTA.forcaIA`) → `chute` (a bola rolou: `partida.js cobrar`/
+    `rolou`) → `reacao` (`DISPUTA.reacao` s; o cobrador volta ao círculo trotando no gol, andando no erro; o goleiro com a bola
+    nas mãos não repõe) → a próxima cobrança ou `fim`.
+  - Fim da cobrança (Regra 10): `gol` (entrou, também depois de tocar o goleiro ou a trave), `defesa` (o goleiro TOCOU — a
+    defesa dele ou a bola no corpo dele; o `goleiroBatido` é justamente quando ele não chega — e ela não entrou: nas mãos dele,
+    saiu, voltando do gol, parou ou `fimChute.max` s) ou `fora`. Voltando do gol ou parada, a cobrança só acaba se a física da
+    bola sem ninguém no caminho (`bola.js passoBola` por `fimChute.previsao` s) não cruza a linha entre as traves e, voltando,
+    não passa a < `alcanceGoleiro` m do goleiro (o corpo dele ainda pode desviá-la para dentro). Dado o resultado, a bola está
+    morta (`m.golTick` = MORTA): nenhum gol conta depois dele (revisão de 16/10: a bola na trave que voltava pela boca do gol
+    era dada como perdida e entrava depois, no goleiro, com o "GOL!" na tela).
+  - O goleiro da IA lê a cavadinha repetida (`DISPUTA.leituraCavadinha`): com `n` cavadinhas nas últimas 3 cobranças do time
+    que bate, ele fica no meio com a chance `meio[n − 1]` (30/45/55%; sem nenhuma, os 12% da partida). Um sorteio a mais do
+    `m.rng` só depois de uma cavadinha (a disputa sem elas sorteia igual). Medido: a cavadinha repetida do humano convertia 93%
+    (o chute no canto, ~76%); agora a 1ª da disputa 100% e todas ~58%.
+  - `passoDisputa(m, entrada)`: a entrada do humano só vale com a cobrança montada — batendo, o analógico e o CHUTE (a cavadinha
+    com dois toques é a do pênalti da partida); defendendo, só o analógico (o lado antes do chute: `partida.js
+    ladoPenaltiHumano`). Eventos: `disputaCobrador {time, id, n, k}`, `apito {motivo: 'cobranca'}` (bola pronta),
+    `disputaCobranca {time, id, resultado, n, k, placar}`, `disputaFim {vencedor, placar}` + `fimDeJogo` (a torcida e os
+    treinadores), além dos da cobrança. `entradaDemoDisputa(m)` (a IA pelo humano: `iaCobra` batendo; o goleiro para o lado
+    sorteado), `resumoDisputa(m)` (cópia), `resultadoPenaltisTM(m, mapa)` → `{penaltis: {vencedor, placar: [casa, fora],
+    cobrancas: [{lado, tmId, nome, resultado}]}}` (sem `homeGoals`; null antes do fim).
+  - Desenho (só lê o mundo; hash igual): `poseDisputa(m, j, o)` (os gestos da comemoração por cima da pose: braços para cima no
+    gol, mãos na cabeça no erro, o punho do goleiro na defesa, quem venceu pulando de braços para cima no fim),
+    `planoCameraDisputa(m, out, pos)` (`abertura`/`fim`: o círculo; `cobranca`: atrás e acima do cobrador; `reacao`: de frente
+    para quem reage, andando com ele) e `yawDisputa(m)` (o analógico vira mundo pela câmera da cobrança: esquerda/direita da
+    tela = esquerda/direita de quem bate e o lado do mergulho).
+- **Mudanças nos módulos de sempre (sem mudar nada fora da disputa)**: `partida.js` exporta `bolaMorta`, `cobrar`, `rolou` e
+  `prepararPenalti` (a parte do `montarPenalti` depois de levar os outros para fora da área; a mesma ordem de sorteios);
+  `sim.js` lê `j.guia` de quem está 'parado'; `goleiro.js espalmar` com `m.disputa` manda a bola espalmada perto da linha para o
+  lado e para a frente (a "por fora da trave" mirando atrás da linha entrava em 3 de 4 na disputa); `partida.js
+  restricaoPenalti` e `goleiro.js movimentoGoleiro` com `m.disputa`: o goleiro que defende na linha (`DISPUTA.goleiroLinha`).
+- **`disputa-tela.js`** (DOM, import dinâmico): `criarTelaDisputa({times, nome})` → `{atualizar(m, timeHumano), limpar(),
+  estado()}` — as bolinhas abaixo do placar (convertido verde, perdido vermelho com traço, a bater vazia, a da vez pulsando; 5
+  por time e uma a mais por rodada das alternadas, as últimas 7), "Bate: nº nome" na cor do time, e as classes do `<html>`
+  `modo-penaltis` (nenhum botão de toque além do CHUTE; sem minimapa nem o botão "Minimapa" da pausa; o aviso abaixo das
+  bolinhas; em telas de até 359 px de altura a faixa do fim desce para baixo das bolinhas — em 568×320 cobria a ponta delas;
+  a dica de teclas do PC fica, como na partida), `penaltis-bate` (a cobrança do humano montada: o CHUTE aparece) e
+  `penaltis-defende`.
+- **`main.js`**: `MODOS` com 'penaltis' (o import dinâmico na 1ª vez); `passoDoMundo`/`entradaDemoDoMundo` pela disputa; os gestos
+  depois da pose; a câmera de cinema pelos planos da disputa; o placar sem relógio; o gol só com o "GOL!" (sem câmera do gol,
+  replay automático, comemoração nem pré-jogo); as dicas de comando na 1ª vez que o humano bate e defende
+  (`hud.js TEXTO_EVENTO penaltisBate/penaltisDefende`; sem toque, o aviso de bater diz a tecla: "segure K (no controle, B)"; o
+  de defender, "esquerda ou direita antes do chute"); a faixa do fim "X venceu nos pênaltis" + "GLÇ 5 × 4 VNT" com "Jogar de
+  novo" ou, com `?tm`, "Voltar ao Total Match" (o resultado gravado no apito; "Simular o resto" joga a disputa pela IA até o
+  fim, o placar sem relógio). A semente da disputa (`sementeDisputa`): com `?semente` (ou `?tm`), a da página e a seguinte a
+  cada "Jogar de novo" (no meio, "Reiniciar disputa" repete a do começo); sem elas, SORTEADA na página a cada disputa nova (a
+  1ª, Reiniciar, Jogar de novo, a volta pelo Modo de jogo) — antes toda disputa começava igual (a mesma moeda, os mesmos lados
+  do goleiro da IA). Ela fica no mundo (`m.semente`): o hash continua valendo. `window.__golaco.disputa` (o resumo), `telaDisputa()` e `planoCamera`.
+- **`hud.js` / `index.html`**: `data-so` aceita vários modos ("partida penaltis": Replay e Reiniciar; o Editar time é só da
+  partida); `em-penaltis` no `<html>`; "Reiniciar disputa"; com `?tm` o "Simular o resto" diz "até o fim da disputa" e o
+  submenu "Cenas da partida" some. A Ajuda tem o item "Pênaltis" em cada coluna (`.so-disputa`, só com `modo-penaltis`: bater
+  e defender pela esquerda/direita da tela) e, na disputa, esconde o "No pênalti contra, cima ou baixo" da partida
+  (`.so-partida-pen`; a câmera de TV da partida é de lado).
+- **Total Match** (`legacy-total-match`): `js/penaltis3d.js` (rotas `penaltis3d` — o seletor do jogo rápido para "Seu time" e
+  "Adversário", o Viverde FC em "Especiais" com a senha — e `penaltis3d-fim` — o pôster do fim "X venceu nos pênaltis", o
+  placar e as cobranças de cada time, "Jogar de novo" e "Voltar"); "Pênaltis 3D" em "Mais modos"; `tm3d.js jogarPenaltis(o,
+  fns)` (o mesmo `abre3d`, o pedido com `modo: "penaltis"` e sem `controle`; sem WebGL 2 avisa e não abre; os textos do quadro
+  são os dele — `fns.textos`: "Sair dos pênaltis 3D?" / "A disputa não conta…" / "Sair" e "Voltar" no aviso de demora; os
+  da partida prometiam "a partida é simulada" e nada era simulado). "Mais modos" com 10 atalhos: 10 numa linha no PC (≥ 1100
+  px), 5 + 5 até 1099 px e, no celular (3 por linha), o que sobraria sozinho ocupa a última linha inteira.
+- **Testes**: `teste-disputa` (Node, padrão: A regra — árbitro independente em 3000 sequências, casos, fila; B IA × IA até o fim
+  em 24 sementes; C os lugares e a caminhada, C4 o goleiro na linha no chute; D a cobrança da IA ~73/12/15 em 32 disputas; E o
+  humano roteirizado bate no canto do analógico e defende pelo lado escolhido, parado a IA bate por ele, E4 a cavadinha
+  repetida; F determinismo e o resultado do TM; G o fim da cobrança — G1 a bola da trave que bate no goleiro e entra é gol,
+  G2 nada conta depois do resultado e 'defesa' só com toque, G3 o goleiro batido e o chute para fora = 'fora'),
+  `teste-penaltis-tela` (navegador, CI e deploy: PC com a demo até o fim, bolinhas, planos, faixa e "Jogar de novo"; celular
+  pelo teclado com a câmera atrás do cobrador, só o CHUTE, nada encosta; "Modo de jogo"; `?tm` até o `tm3d:fim`) e
+  `legacy-total-match/ferramentas/testar-penaltis.mjs` (ponta a ponta no site montado: menu, seletor, Viverde com a senha de
+  `TM_SENHA_VIVERDE`, 3D, Simular o resto, resultado no TM, Jogar de novo, nada sobre nada).

@@ -207,17 +207,18 @@
         </button>
       </div>
       <div class="menu-corpo">
-        <!-- ações por modo: data-so="partida" só na partida; data-so="treino" só nos treinos -->
+        <!-- ações por modo: data-so="partida" só na partida; data-so="treino" só nos treinos; "penaltis" na disputa de pênaltis
+             (os valores separados por espaço: vale em qualquer um deles) -->
         <div class="menu-acoes" id="menu-acoes">
           <!-- Continuar e o Replay (dos últimos 10 s) na mesma linha: a pausa continua cabendo sem rolar no celular deitado -->
           <div class="linha-continuar">
             <button class="btn btn-primario" type="button" data-cmd="continuar" id="btn-continuar">Continuar</button>
-            <button class="btn btn-replay" type="button" data-cmd="replay" data-so="partida" title="Replay dos últimos 10 s" aria-label="Replay dos últimos 10 s">
+            <button class="btn btn-replay" type="button" data-cmd="replay" data-so="partida penaltis" title="Replay dos últimos 10 s" aria-label="Replay dos últimos 10 s">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.5 9.2v5.6l4.6-2.8z" fill="currentColor"/></svg>Replay
             </button>
           </div>
           <button class="btn" type="button" data-cmd="editar-time" data-so="partida">Editar time <small>escalação e tática</small></button>
-          <button class="btn" type="button" data-cmd="reiniciar-partida" data-so="partida" id="btn-reiniciar-partida">Reiniciar partida</button>
+          <button class="btn" type="button" data-cmd="reiniciar-partida" data-so="partida penaltis" id="btn-reiniciar-partida">Reiniciar partida</button>
           <!-- Total Match (?tm; hud.js aplicarModoNoMenu): sem ?tm ficam escondidos -->
           <button class="btn" type="button" data-cmd="simular-resto" id="btn-simular-resto" hidden>Simular o resto <small>até o apito final</small></button>
           <button class="btn" type="button" data-cmd="voltar-tm" id="btn-voltar-tm" hidden>Voltar ao Total Match</button>
@@ -230,7 +231,11 @@
         <!-- "Modo de jogo": a partida e os treinos (abre no lugar da lista de ações) -->
         <div class="menu-acoes" id="menu-modos" hidden>
           <button class="btn btn-voltar" type="button" data-cmd="modos-voltar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button>
-          <button class="btn" type="button" data-cmd="modo" data-valor="partida" aria-pressed="false">Partida <small>Golaço FC × Ventania FC</small></button>
+          <!-- a partida e a disputa de pênaltis lado a lado (numa linha só: o submenu continua cabendo sem rolar no celular deitado) -->
+          <div class="linha-cenas" role="group" aria-label="Jogos">
+            <button class="btn" type="button" data-cmd="modo" data-valor="partida" aria-pressed="false" aria-label="Partida: Golaço FC × Ventania FC">Partida <small>11 contra 11</small></button>
+            <button class="btn" type="button" data-cmd="modo" data-valor="penaltis" id="btn-modo-penaltis" aria-pressed="false" aria-label="Pênaltis: disputa de pênaltis em 3D">Pênaltis <small>disputa 3D</small></button>
+          </div>
           <button class="btn" type="button" data-cmd="modo" data-valor="ataque" aria-pressed="false">Treino de ataque <small>6 contra 4</small></button>
           <button class="btn" type="button" data-cmd="modo" data-valor="conducao" aria-pressed="false">Treino de condução <small>bola no pé</small></button>
           <!-- pré-jogo da partida (as cenas antes da saída de bola e as escalações): cada toque passa para o próximo —
@@ -313,6 +318,7 @@
         <section>
           <h3>Teclado</h3>
           <dl>
+            <dt class="so-disputa">Pênaltis</dt><dd class="so-disputa">Batendo: as setas miram, segure <kbd>K</kbd> e solte (dois toques rápidos: cavadinha). Defendendo: <kbd>←</kbd> ou <kbd>→</kbd> (esquerda ou direita da tela) antes do chute escolhem o canto; sem isso, o goleiro fica no meio</dd>
             <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou setas</dt><dd>Mover / conduzir (mira do passe e do chute)</dd>
             <dt><kbd>J</kbd></dt><dd>Passe (segure: mais força)</dd>
             <dt><kbd>K</kbd></dt><dd>Chute (segure: mais força)</dd>
@@ -324,7 +330,7 @@
             <dt><kbd>Q</kbd></dt><dd>Trocar de jogador; segure: vai para o goleiro (partida)</dd>
             <dt>Defesa: <kbd>G</kbd></dt><dd>Segure: o goleiro sai do gol</dd>
             <dt>Goleiro: <kbd>O</kbd></dt><dd>Com a bola no pé, na área: pega com a mão (não no recuo de um companheiro)</dd>
-            <dt>Goleiro</dt><dd>As setas o movem, com e sem a bola nas mãos. Com ela: J rola, L ou K é o chutão, I solta no chão; até 8 s. No pênalti contra, as setas para cima ou para baixo (para uma das traves) escolhem o canto; sem isso, ele fica no meio</dd>
+            <dt>Goleiro</dt><dd>As setas o movem, com e sem a bola nas mãos. Com ela: J rola, L ou K é o chutão, I solta no chão; até 8 s.<span class="so-partida-pen"> No pênalti contra, as setas para cima ou para baixo (para uma das traves) escolhem o canto; sem isso, ele fica no meio</span></dd>
             <dt>Defesa: <kbd>J</kbd></dt><dd>Segure: conter (acompanha quem está com a bola)</dd>
             <dt>Defesa: <kbd>K</kbd></dt><dd>Dividida (bote em pé)</dd>
             <dt>Defesa: <kbd>O</kbd></dt><dd>Segure: um companheiro pressiona</dd>
@@ -336,6 +342,7 @@
         <section>
           <h3>Controle</h3>
           <dl>
+            <dt class="so-disputa">Pênaltis</dt><dd class="so-disputa">Batendo: o analógico mira, segure <kbd>B</kbd> e solte (dois toques rápidos: cavadinha). Defendendo: o analógico para a esquerda ou a direita da tela antes do chute escolhe o canto</dd>
             <dt>Analógico esquerdo</dt><dd>Mover / mirar</dd>
             <dt><kbd>A</kbd></dt><dd>Passe. Defesa: segure, conter</dd>
             <dt><kbd>B</kbd></dt><dd>Chute. Defesa: dividida</dd>
@@ -343,7 +350,7 @@
             <dt><kbd>X</kbd></dt><dd>Lançamento / cruzamento (dois toques: rasteiro)</dd>
             <dt><kbd>RB</kbd></dt><dd>Goleiro com a bola no pé, na área: pega com a mão. Defesa: segure, um companheiro pressiona</dd>
             <dt><kbd>LB</kbd></dt><dd>Trocar de jogador; segure: vai para o goleiro (partida)</dd>
-            <dt>Goleiro</dt><dd>O analógico o move, com e sem a bola nas mãos. No pênalti contra, o analógico para cima ou para baixo (para uma das traves) escolhe o canto; sem isso, ele fica no meio</dd>
+            <dt>Goleiro</dt><dd>O analógico o move, com e sem a bola nas mãos.<span class="so-partida-pen"> No pênalti contra, o analógico para cima ou para baixo (para uma das traves) escolhe o canto; sem isso, ele fica no meio</span></dd>
             <dt><kbd>RT</kbd></dt><dd>Correr (arrancada)</dd>
             <dt><kbd>LT</kbd></dt><dd>Modificador (colocado, enfiada alta, cruzamento tenso, proteção)</dd>
             <dt><kbd>R3</kbd></dt><dd>Câmera</dd>
@@ -355,10 +362,11 @@
         <section>
           <h3>Toque</h3>
           <dl>
+            <dt class="so-disputa">Pênaltis</dt><dd class="so-disputa">Batendo: o analógico mira, segure o CHUTE e solte (dois toques: cavadinha). Defendendo: o analógico para a esquerda ou a direita da tela antes do chute escolhe o canto</dd>
             <dt>Metade esquerda</dt><dd>Analógico: encoste o dedo onde quiser e arraste</dd>
             <dt>Com a bola</dt><dd>CHUTE (o maior), PASSE (seta), ENFIADA (seta cortando a linha), LANÇAMENTO (curva; dois toques na ponta: cruzamento rasteiro) e CORRER (seta dupla), em arco ao alcance do polegar</dd>
             <dt>Sem a bola</dt><dd>TROCAR (o maior; segure: vai para o goleiro), GOLEIRO (segure: ele sai), PRESSÃO (segure: um companheiro aperta), DIVIDIDA (toque: bote; segure: conter) e CORRER</dd>
-            <dt>Goleiro</dt><dd>Segure TROCAR para controlar o goleiro; o analógico o move, com e sem a bola nas mãos. Bola no pé, na área: PEGAR (mão; não aparece no recuo de um companheiro). Bola nas mãos: PASSE rola, LANÇAMENTO ou CHUTE é o chutão, ENFIADA solta no chão, TROCAR passa para um jogador de linha; até 8 s. No pênalti contra, o analógico para cima ou para baixo (para uma das traves) escolhe o canto; sem isso, ele fica no meio</dd>
+            <dt>Goleiro</dt><dd>Segure TROCAR para controlar o goleiro; o analógico o move, com e sem a bola nas mãos. Bola no pé, na área: PEGAR (mão; não aparece no recuo de um companheiro). Bola nas mãos: PASSE rola, LANÇAMENTO ou CHUTE é o chutão, ENFIADA solta no chão, TROCAR passa para um jogador de linha; até 8 s.<span class="so-partida-pen"> No pênalti contra, o analógico para cima ou para baixo (para uma das traves) escolhe o canto; sem isso, ele fica no meio</span></dd>
             <dt>Segurar</dt><dd>Mais força (a barra aparece perto do jogador)</dd>
             <dt>Botão do topo</dt><dd>Pausa e menu (Editar time na partida, treinos, câmera)</dd>
           </dl>
