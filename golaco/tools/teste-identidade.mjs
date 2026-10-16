@@ -9,8 +9,13 @@
 //      uniforme escolhido que confunde, time sem identidade nem uniformes, jogo neutro com público baixo — uniformes sem
 //      confusão (ΔE₀₀ mínimos), paletas ≥ 10 cores com neutros, faixas com os nomes (9 e 11 do visitante, letra legível),
 //      placas, estádio, cores do HUD (contraste, longe do branco da bola e do outro time), escudo de reserva, público;
-//   D) a torcida com as paletas do TM: os MESMOS lugares, só as camisas mudam; o público tira gente; jogo neutro mistura.
-//   node tools/teste-identidade.mjs [--js <pasta js>]
+//   D) a torcida com as paletas do TM: os MESMOS lugares, só as camisas mudam; o público tira gente; jogo neutro mistura;
+//   E) o estádio de cada clube (contrato de 15/10): edição pública, jogo neutro e estádio fora da base → o Estádio Golaço de
+//      hoje com o nome "Estádio Total Match" e o mosaico "TOTAL MATCH" (cores PADRÃO); edição pro com o estádio achado na
+//      base (assets/tm/estadios.json) → o nome real e as cores/estilo/cobertura/cadeiras do arquivo; a normalização do
+//      nome (a chave da base); a base no formato; mandante de camisa verde na pública (só a camisa do mosaico da torcida
+//      muda); estádios de mesmo nome (`homonimos`: o do clube mandante); os trechos da cobertura (só se tiram pedaços do anel).
+//   node tools/teste-identidade.mjs [--js <pasta js>] [--base <estadios.json>]
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -193,8 +198,9 @@ if (I) {
     // placas, estádio e mosaico
     const pn = id.paineis;
     const okPn = pn.length === 4 && pn[0].texto === 'TOTAL MATCH' && (c.neutro ? !pn.some(x => x.detalhe === 'escudo') : pn.some(x => x.detalhe === 'escudo') && pn.some(x => x.texto === nomeCasa));
-    const okEst = c.neutro ? id.estadio.nome === 'Arena Central' : id.estadio.nome === (c.p.home.identidade?.estadio?.nome || c.p.home.stadium || `Arena ${c.p.home.name}`);
-    reg(`C ${c.nome}: placas, estádio e mosaico`, `placas ${pn.map(x => x.texto).join(' | ')} · estádio "${id.estadio.nome}" · mosaico "${id.mosaico.texto}"`, c.neutro ? 'TOTAL MATCH + neutras · nome genérico' : 'TOTAL MATCH + mandante + escudo · estádio do mandante', okPn && okEst && id.mosaico.texto.length > 0);
+    // (pedidos sem `edicao` = edição pública: o Estádio Total Match; o estádio real é a seção E)
+    const okEst = I.ESTADIO_TM ? id.estadio.nome === I.ESTADIO_TM.nome && id.estadio.real === false : id.estadio.nome.length > 0;
+    reg(`C ${c.nome}: placas, estádio e mosaico`, `placas ${pn.map(x => x.texto).join(' | ')} · estádio "${id.estadio.nome}" · mosaico "${id.mosaico.texto}"`, c.neutro ? 'TOTAL MATCH + neutras · Estádio Total Match' : 'TOTAL MATCH + mandante + escudo · Estádio Total Match (pública)', okPn && okEst && id.mosaico.texto.length > 0);
     // HUD
     const m = id.hud.mapa, FUNDO_MAPA = '#061a0f', FUNDO_HUD = '#0b1012';
     const okMapa = ['t0', 't1', 't0gol', 't1gol'].every(x => I.deltaE(m[x], '#ffffff') >= 22 && I.contraste(m[x], FUNDO_MAPA) >= 3)
@@ -247,6 +253,163 @@ if (I) {
     reg('D3 jogo neutro: as duas torcidas misturadas nos lados', `visitantes no lado de lá: ${fmt(100 * fracFora(base), 1)}% (hoje) → ${fmt(100 * fracFora(neu), 1)}% (neutro)`, 'hoje ≤ 5% · neutro 35–55%', fracFora(base) <= 0.05 && fracFora(neu) >= 0.35 && fracFora(neu) <= 0.55);
   }
   if (args.includes('--resumo')) console.log(resumo.join('\n') + '\n');
+
+  // ---------------------------------------------------------------- E) o estádio de cada clube (Total Match, 15/10)
+  if (!I.ESTADIO_TM || !I.normalizarNomeEstadio) reg('E estádio de cada clube (ESTADIO_TM, normalizarNomeEstadio, base)', 'não existe (o estádio do mandante pelas cores dele)', 'existe', false);
+  else {
+    const arqBase = args.includes('--base') ? path.resolve(args[args.indexOf('--base') + 1]) : path.resolve(pastaJs, '../assets/tm/estadios.json');
+    let BASE = null, erroBase = null;
+    try { BASE = JSON.parse(fs.readFileSync(arqBase, 'utf8')); } catch (e) { erroBase = e.message; }
+    const ESTILOS = ['vidro', 'concreto', 'metal', 'membrana', 'tijolo', 'trelica', 'paineis'], COB = ['total', 'lados', 'parcial', 'nenhuma'], PAD = ['liso', 'misto', 'faixas', 'mosaico'];
+    const hexN = v => v === null || hex(v);
+    // E1 a base no formato do contrato: {versao: 1, estadios: {"<nome normalizado>": Estadio}}, chave = normalizar(nome)
+    {
+      const ents = BASE && BASE.estadios && typeof BASE.estadios === 'object' ? Object.entries(BASE.estadios) : [];
+      const ruins = [];
+      for (const [k, e] of ents) {
+        const pb = [];
+        if (k !== I.normalizarNomeEstadio(k) || k !== I.normalizarNomeEstadio(e.nome)) pb.push('chave');
+        if (!ESTILOS.includes(e.fachada_estilo)) pb.push('estilo');
+        if (!hex(e.fachada_cor) || !hex(e.fachada_cor2) || !hexN(e.fachada_led) || !hex(e.cobertura_cor) || !hex(e.cadeiras_cor) || !hexN(e.cadeiras_cor2)) pb.push('cor');
+        if (!COB.includes(e.cobertura)) pb.push('cobertura');
+        if (!PAD.includes(e.cadeiras_padrao)) pb.push('padrão');
+        if (!(Number.isInteger(e.aneis) && e.aneis >= 1 && e.aneis <= 3)) pb.push('anéis');
+        // (os campos que o desenho não usa — cidade, marca, confiança, fontes — podem faltar; se vierem, no formato)
+        if ((e.confianca != null && !['alta', 'media', 'baixa'].includes(e.confianca)) || (e.cidade != null && typeof e.cidade !== 'string') || (e.marca != null && typeof e.marca !== 'string') || (e.fontes != null && !Array.isArray(e.fontes))) pb.push('campos');
+        if (pb.length) ruins.push(`${k}: ${pb.join(', ')}`);
+      }
+      const estilos = new Set(ents.map(([, e]) => e.fachada_estilo)), coberturas = new Set(ents.map(([, e]) => e.cobertura));
+      reg('E1 base dos estádios (assets/tm/estadios.json) no formato do contrato', erroBase ? `não abriu: ${erroBase}` : `versão ${BASE.versao} · ${ents.length} estádios · ${estilos.size} estilos · ${coberturas.size} coberturas${ruins.length ? ' · fora do formato: ' + ruins.slice(0, 4).join('; ') : ''}`,
+        'versão 1 · ≥ 4 estádios · chave = nome normalizado · cores #rrggbb · escolhas das listas', !erroBase && BASE.versao === 1 && ents.length >= 4 && ruins.length === 0);
+    }
+    // E2 normalização do nome (a chave da base): minúsculas, sem acento, só letras/números e espaço simples
+    {
+      const casos = [['Maracanã', 'maracana'], ['Estádio Nabi Abi Chedid', 'estadio nabi abi chedid'], ['  Beira-Rio ', 'beira rio'], ['Diyarbakır Stadium', 'diyarbakir stadium'],
+        ["St. James' Park", 'st james park'], ['1º de Maio', '1o de maio'], ['MAC³PARK Stadion', 'mac3park stadion'], ['Cetilar® Arena', 'cetilar arena'], ['Estadio Municipal El Molinón – Enrique Castro "Quini"', 'estadio municipal el molinon enrique castro quini'],
+        ['Weserstadion  BREMEN', 'weserstadion bremen'], ['Stadion Miejski (Łódź)', 'stadion miejski lodz'], [null, ''], [undefined, '']];
+      const errados = casos.filter(([a, b]) => I.normalizarNomeEstadio(a) !== b);
+      const idem = casos.every(([a]) => I.normalizarNomeEstadio(I.normalizarNomeEstadio(a)) === I.normalizarNomeEstadio(a));
+      reg('E2 nome normalizado (chave da base)', errados.length ? errados.map(([a, b]) => `"${a}" → "${I.normalizarNomeEstadio(a)}" (esperado "${b}")`).join('; ') : `${casos.length} de ${casos.length} certos · idempotente ${idem ? 'sim' : 'não'}`, 'todos certos · idempotente', !errados.length && idem);
+    }
+    // pedidos: o mandante com o estádio da base (pelo identidade.estadio.nome e, sem ele, pelo stadium)
+    const BASE_T = { versao: 1, estadios: {
+      'arena do vale': { nome: 'Arena do Vale', cidade: 'Vale', fachada_estilo: 'membrana', fachada_cor: '#e7ecef', fachada_cor2: '#8a949a', fachada_led: '#e2231a', cobertura: 'lados', cobertura_cor: '#f4f6f6', cadeiras_cor: '#c8102e', cadeiras_cor2: '#f2f2f2', cadeiras_padrao: 'faixas', aneis: 3, marca: 'membrana que acende', confianca: 'alta', fontes: [] },
+      'estadio do povo': { nome: 'Estádio do Povo', cidade: 'Rio', fachada_estilo: 'tijolo', fachada_cor: '#8e3b2a', fachada_cor2: '#d8d0c0', fachada_led: null, cobertura: 'parcial', cobertura_cor: '#5b6166', cadeiras_cor: '#1f5fbf', cadeiras_cor2: null, cadeiras_padrao: 'mosaico', aneis: 1, marca: 'tijolo', confianca: 'media', fontes: [] },
+    } };
+    const comEd = (p, edicao) => ({ ...JSON.parse(JSON.stringify(p)), edicao });
+    const pPub = comEd(ped(AZUL, FLA), 'public'), pPro = comEd(ped(AZUL, FLA), 'pro');
+    const pProSem = comEd(ped(BRA, FLA), 'pro');                                  // mandante sem estádio na base
+    const pProNeutro = comEd(ped(AZUL, FLA, { neutro: true }), 'pro');
+    const pProStadium = comEd(ped(FLA, AZUL), 'pro');                             // achado pelo `stadium` ("Estádio do Povo")
+    const P = I.IDENTIDADE_PADRAO;
+    // E3 pública: o Estádio Golaço de hoje com o nome "Estádio Total Match" (mesmo com a base na mão)
+    {
+      const id = I.identidadeDoPedido(pPub, BASE_T), id0 = I.identidadeDoPedido(pPub);
+      const okNome = id.estadio.nome === 'Estádio Total Match' && id.estadio.placa === 'ESTÁDIO TOTAL MATCH' && id.mosaico.texto === 'TOTAL MATCH' && !id.estadio.real && id.estadio.motivo === 'publica';
+      const okCores = igual(id.fachada, { ...P.fachada }) && igual(id.arquibancada, { ...P.arquibancada }) && igual(id0.fachada, id.fachada) && igual(id0.arquibancada, id.arquibancada);
+      const okTimes = id.paineis[0].texto === 'TOTAL MATCH' && id.torcida.casa.length >= 10 && id.faixas.some(f => f[0].includes(id.times[0].sigla) || f[0].includes(I.nomeCurto(AZUL, 14)));
+      reg('E3 pública: "Estádio Total Match" com as cores PADRÃO do Golaço (fachada, LED, cobertura, cadeiras, friso)', `"${id.estadio.nome}" · placa "${id.estadio.placa}" · mosaico "${id.mosaico.texto}" (${id.torcida.mosaico}) · fachada ${okCores ? '= padrão' : 'DIFERENTE'} · times ${okTimes ? 'pelos times' : 'não'}`,
+        'nome/placa/mosaico do TM · cores = padrão · torcida, faixas e placas pelos times', okNome && okCores && okTimes);
+    }
+    // E3b pública com o mandante de camisa VERDE (a torcida inteira verde: o mosaico verde sumiria): o estádio continua o
+    // de hoje bit a bit (fachada, cadeiras, friso e as cadeiras do mosaico em #0d8447); só a camisa de quem está no mosaico
+    // da torcida vai para o branco (#f2f4f3). Com o mandante azul (E3), o verde do Golaço (#19e07a).
+    {
+      const VERDE = time({ name: 'Verdão do Litoral', short: 'VDL', c1: '#009c3b', c2: '#ffdf00',
+        kits: { home: kit('#009c3b', '#ffdf00'), away: kit('#ffffff', '#009c3b'), third: kit('#0b3d2a', '#ffdf00'), gk: gk('#2459d6'), gkAway: gk('#111111') } });
+      const casos = [['pública', I.identidadeDoPedido(comEd(ped(VERDE, FLA), 'public'), BASE_T)], ['pro sem o estádio', I.identidadeDoPedido(comEd(ped(VERDE, FLA), 'pro'), BASE_T)]];
+      const ruins = casos.filter(([, id]) => !(id.estadio.nome === 'Estádio Total Match' && igual(id.fachada, { ...P.fachada }) && igual(id.arquibancada, { ...P.arquibancada }) && id.arquibancada.mosaico === '#0d8447' && id.torcida.mosaico === '#f2f4f3' && id.mosaico.texto === 'TOTAL MATCH'));
+      const azul = I.identidadeDoPedido(pPub, BASE_T).torcida.mosaico;
+      reg('E3b pública com mandante VERDE: estádio PADRÃO bit a bit (cadeiras do mosaico #0d8447); a torcida do mosaico em branco', `${casos.map(([n, id]) => `${n}: cadeiras do mosaico ${id.arquibancada.mosaico}, torcida do mosaico ${id.torcida.mosaico}, estádio ${igual(id.fachada, { ...P.fachada }) && igual(id.arquibancada, { ...P.arquibancada }) ? '= padrão' : 'DIFERENTE'}`).join(' · ')} · mandante azul: torcida ${azul}`,
+        'cadeiras #0d8447 e o resto = padrão · torcida #f2f4f3 (verde) e #19e07a (azul)', ruins.length === 0 && azul === P.torcida.mosaico);
+    }
+    // E4 pro com o estádio achado: o nome real e as cores/estilo do arquivo
+    {
+      const id = I.identidadeDoPedido(pPro, BASE_T), e = BASE_T.estadios['arena do vale'];
+      const f = id.fachada, a = id.arquibancada;
+      const ok = id.estadio.real && id.estadio.nome === 'Arena do Vale' && id.estadio.placa === 'ARENA DO VALE' && id.estadio.chave === 'arena do vale' && id.estadio.motivo === 'real'
+        && f.estilo === e.fachada_estilo && f.cor === e.fachada_cor && f.cor2 === e.fachada_cor2 && f.ledCor === e.fachada_led && f.ledNoite === e.fachada_led && f.cobertura === e.cobertura && f.coberturaCor === e.cobertura_cor && f.aneis === e.aneis
+        && a.cadeira === e.cadeiras_cor && a.cadeira2 === e.cadeiras_cor2 && a.padrao === e.cadeiras_padrao && a.aneis === e.aneis && a.friso === e.fachada_cor2
+        && id.mosaico.texto === I.nomeCurto(AZUL, 12) && todasCores({ f, a }).every(hex);
+      const okPlaca = id.paineis.some(x => x.detalhe === 'escudo');
+      reg('E4 pro com o estádio do mandante na base: o nome real e as cores, o estilo, a cobertura e as cadeiras do arquivo', `"${id.estadio.nome}" (${id.estadio.chave}) · ${f.estilo} ${f.cor}/${f.cor2} LED ${f.ledCor} · cobertura ${f.cobertura} ${f.coberturaCor} · cadeiras ${a.padrao} ${a.cadeira}/${a.cadeira2} · friso ${a.friso}`,
+        'tudo do arquivo · placa com o nome real', ok && okPlaca);
+      const id2 = I.identidadeDoPedido(pProStadium, BASE_T), f2 = id2.fachada, a2 = id2.arquibancada;
+      const ok2 = id2.estadio.real && id2.estadio.nome === 'Estádio do Povo' && f2.estilo === 'tijolo' && f2.ledCor === null && f2.led === null && f2.cobertura === 'parcial' && a2.padrao === 'mosaico'
+        && hex(a2.cadeira2) && I.deltaE(a2.cadeira2, a2.cadeira) >= 10 && I.deltaE(a2.mosaico, a2.cadeira) >= 20 && todasCores({ f2, a2 }).every(hex);
+      reg('E4b pro achado pelo `stadium` (sem identidade.estadio): sem LED, 2ª cor das cadeiras e o mosaico com contraste', `"${id2.estadio.nome}" · ${f2.estilo}, LED ${f2.ledCor}, cobertura ${f2.cobertura} · cadeiras ${a2.cadeira}/${a2.cadeira2}, mosaico ${a2.mosaico}`, 'achado · ΔE₀₀ ≥ 10 (2ª cor) e ≥ 20 (mosaico)', ok2);
+    }
+    // E5 pro sem o estádio na base, sem a base (não carregou) ou jogo neutro → como a pública
+    {
+      const casos = [['sem-dado', I.identidadeDoPedido(pProSem, BASE_T)], ['sem-base', I.identidadeDoPedido(pPro, null)], ['sem-base', I.identidadeDoPedido(pPro, { versao: 1, estadios: [] })], ['neutro', I.identidadeDoPedido(pProNeutro, BASE_T)]];
+      const ruins = casos.filter(([m, id]) => !(id.estadio.nome === 'Estádio Total Match' && !id.estadio.real && id.estadio.motivo === m && id.mosaico.texto === 'TOTAL MATCH' && igual(id.fachada, { ...P.fachada }) && igual(id.arquibancada, { ...P.arquibancada })));
+      reg('E5 pro sem o estádio na base, sem a base ou jogo neutro: como a pública', casos.map(([m, id]) => `${m}: "${id.estadio.nome}" (${id.estadio.motivo})`).join(' · '), 'Estádio Total Match com as cores padrão', ruins.length === 0);
+    }
+    // E6 um estádio com campos quebrados na base: nunca falha, cores e escolhas válidas (as de reserva)
+    {
+      let ok = true, txt = '';
+      try {
+        const b = { versao: 1, estadios: { 'arena do vale': { nome: 'Arena do Vale', fachada_estilo: 'neon', fachada_cor: 'azul', fachada_cor2: 12, fachada_led: 'xyz', cobertura: 'meia', cobertura_cor: null, cadeiras_cor: '#12', cadeiras_padrao: 'xadrez', aneis: 9 } } };
+        const id = I.identidadeDoPedido(pPro, b), f = id.fachada, a = id.arquibancada;
+        ok = id.estadio.real && ESTILOS.includes(f.estilo) && COB.includes(f.cobertura) && PAD.includes(a.padrao) && f.aneis >= 1 && f.aneis <= 3 && f.ledCor === null && todasCores({ f, a }).every(hex);
+        txt = `${f.estilo}, ${f.cobertura}, ${a.padrao}, ${f.aneis} anéis, cores ${todasCores({ f, a }).every(hex) ? 'válidas' : 'INVÁLIDAS'}`;
+        // e a mesma base com um item que não é objeto: como a pública
+        const id2 = I.identidadeDoPedido(pPro, { versao: 1, estadios: { 'arena do vale': 'oi' } });
+        ok = ok && !id2.estadio.real;
+      } catch (e) { ok = false; txt = String(e); }
+      reg('E6 estádio com campos quebrados: sem erro, escolhas e cores de reserva', txt, 'sem erro · válidas', ok);
+    }
+    // E7 a base de verdade (o arquivo) com um pedido pro do mandante de cada estádio dela: todos achados
+    if (BASE && BASE.estadios) {
+      const ents = Object.values(BASE.estadios);
+      const achados = ents.filter(e => { const t = time({ name: 'Mandante', short: 'MAN', c1: '#2459d6', c2: '#ffffff', estadioObj: { nome: e.nome, capacidade: 1, foto: null }, kits: AZUL.kits }); const id = I.identidadeDoPedido(comEd(ped(t, FLA), 'pro'), BASE); return id.estadio.real && id.estadio.nome === e.nome; });
+      reg('E7 base do arquivo: cada estádio é achado pelo nome do pedido', `${achados.length} de ${ents.length}`, 'todos', achados.length === ents.length && ents.length > 0);
+    }
+    // E7b estádios de MESMO nome (base.homonimos: {"<chave>": [Estadio & {clubes: [nome do clube no TM]}]}): o do clube
+    // mandante; outro clube com esse nome de estádio → estadios[chave]. Numa base de ensaio (sempre) e na do arquivo (Caxias ×
+    // Montevideo City Torque no "Estádio Centenário"), cada homônimo no formato e achado pelo clube dele
+    {
+      const H = { ...BASE_T, homonimos: { 'arena do vale': [{ ...BASE_T.estadios['arena do vale'], cidade: 'Outra Cidade', fachada_estilo: 'tijolo', fachada_cor: '#7a2e22', clubes: ['Azulão do Vale'] }] } };
+      const meu = I.identidadeDoPedido(pPro, H), outro = I.identidadeDoPedido(comEd(ped(time({ name: 'Outro Clube', short: 'OUT', c1: '#2459d6', c2: '#ffffff', stadium: 'Arena do Vale', kits: AZUL.kits }), FLA), 'pro'), H);
+      const okEnsaio = meu.estadio.real && meu.estadio.dados.cidade === 'Outra Cidade' && meu.fachada.estilo === 'tijolo' && meu.fachada.cor === '#7a2e22'
+        && outro.estadio.real && outro.estadio.dados.cidade === 'Vale' && outro.fachada.estilo === 'membrana';
+      const txt = [`ensaio: Azulão → ${meu.estadio.dados?.cidade} (${meu.fachada.estilo}), outro clube → ${outro.estadio.dados?.cidade} (${outro.fachada.estilo})`];
+      let okArq = true;
+      const homs = BASE && BASE.homonimos && typeof BASE.homonimos === 'object' ? Object.entries(BASE.homonimos) : [];
+      for (const [k, lista] of homs) {
+        if (!Array.isArray(lista) || !BASE.estadios[k]) { okArq = false; txt.push(`${k}: fora do formato`); continue; }
+        for (const h of lista) {
+          const fmt = I.normalizarNomeEstadio(h.nome) === k && ESTILOS.includes(h.fachada_estilo) && COB.includes(h.cobertura) && PAD.includes(h.cadeiras_padrao) && hex(h.fachada_cor) && Array.isArray(h.clubes) && h.clubes.length > 0;
+          const achados = (h.clubes || []).map(cl => I.identidadeDoPedido(comEd(ped(time({ name: cl, short: 'HOM', c1: '#2459d6', c2: '#ffffff', stadium: h.nome, kits: AZUL.kits }), FLA), 'pro'), BASE));
+          const ok = fmt && achados.length > 0 && achados.every(id => id.estadio.real && id.estadio.nome === h.nome && id.estadio.dados.cidade === h.cidade && id.fachada.cor === h.fachada_cor);
+          okArq = okArq && ok;
+          txt.push(`${h.clubes?.join('/')} → ${achados[0]?.estadio.nome} (${achados[0]?.estadio.dados?.cidade}, ${achados[0]?.fachada.cor})${ok ? '' : ' ERRADO'}`);
+        }
+        // um clube de fora da lista com o mesmo nome de estádio: a entrada principal
+        const p0 = BASE.estadios[k], id0 = I.identidadeDoPedido(comEd(ped(time({ name: 'Clube Sem Homônimo', short: 'CSH', c1: '#2459d6', c2: '#ffffff', stadium: p0.nome, kits: AZUL.kits }), FLA), 'pro'), BASE);
+        const ok0 = id0.estadio.real && id0.estadio.dados.cidade === (p0.cidade || '') && id0.fachada.cor === p0.fachada_cor;
+        okArq = okArq && ok0;
+        txt.push(`outro clube → ${id0.estadio.nome} (${id0.estadio.dados?.cidade})${ok0 ? '' : ' ERRADO'}`);
+      }
+      if (BASE && !homs.length) txt.push('a base do arquivo não tem homônimos');
+      reg('E7b estádios de mesmo nome (homonimos): o do clube mandante; outro clube → a entrada principal', txt.join(' · '), 'ensaio e arquivo: cada clube no estádio dele', okEnsaio && okArq);
+    }
+    // E8 os trechos da cobertura (identidade.js trechoCoberto → fachada.trechos): só se TIRAM pedaços do anel; 'parcial' =
+    // o lado de lá (o da marquise do jogo: render/campo.js)
+    if (I.trechoCoberto && I.TRECHOS_COBERTURA) {
+      const n = I.TRECHOS_COBERTURA.n, conta = t => Array.from({ length: n }, (_, i) => I.trechoCoberto(t, i));
+      const tot = conta('total'), la = conta('lados'), pa = conta('parcial'), ne = conta('nenhuma'), sem = conta(undefined);
+      const q = l => l.filter(Boolean).length;
+      const ladoCa = i => i >= 18 && i <= 25, ladoLa = i => i >= 54 && i <= 61, fundo = i => (i >= 0 && i <= 7) || (i >= 36 && i <= 43);
+      const ok = q(tot) === n && q(sem) === n && q(ne) === 0
+        && la.every((v, i) => (ladoCa(i) || ladoLa(i) ? v : true) && (fundo(i) ? !v : true)) && pa.every((v, i) => (ladoLa(i) ? v : true) && (ladoCa(i) || fundo(i) ? !v : true))
+        && pa.every((v, i) => !v || la[i]) && la.every((v, i) => !v || tot[i]);
+      // e a identidade leva os trechos ao desenho (render/estadio-fora.js): 'total' = null (o anel inteiro, o de hoje)
+      const tr = cob => { const b = { versao: 1, estadios: { 'arena do vale': { ...BASE_T.estadios['arena do vale'], cobertura: cob } } }; return I.identidadeDoPedido(pPro, b).fachada.trechos; };
+      const okId = tr('total') === null && igual(tr('lados'), la) && igual(tr('parcial'), pa) && igual(tr('nenhuma'), ne);
+      reg('E8 cobertura: total / lados / parcial / nenhuma = pedaços do anel (nunca fora dele)', `trechos cobertos: total ${q(tot)}, lados ${q(la)}, parcial ${q(pa)} (lado de lá), nenhuma ${q(ne)} (de ${n}) · na identidade ${okId ? 'iguais' : 'DIFERENTES'}`, 'total ⊇ lados ⊇ parcial · lados sem os fundos · parcial só o lado de lá · fachada.trechos = esses', ok && okId);
+    } else reg('E8 cobertura: total / lados / parcial / nenhuma', 'sem trechoCoberto (identidade.js)', 'existe', false);
+  }
 }
 
 console.log(tabelaTexto(linhas));
