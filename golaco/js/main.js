@@ -946,7 +946,13 @@ function marcarCondutor() {
   const livre = !!e && !cenaGol && !cenaSub && !(diretor && diretor.ativo) && !(prejogo && prejogo.ativo) && !PRINTS;
   if (livre) projetar(lerp(e.x0, e.x1, alfa), 2.2, lerp(e.z0, e.z1, alfa), _ptNome);
   if (!livre || _ptNome.atras) { if (!elNome.hidden) elNome.hidden = true; return; }
-  if (nomeId !== id) { const f = fichaDe(id); elNome.textContent = f ? (f.camisa ?? f.nome ?? '') : ''; nomeId = id; }
+  if (nomeId !== id) {
+    // a caixa: número + nome da camisa (texto puro, nunca HTML)
+    const f = fichaDe(id), num = document.createElement('b'), nome = document.createElement('span');
+    num.className = 'nc-num'; num.textContent = f && f.num != null ? String(f.num) : '';
+    nome.className = 'nc-nome'; nome.textContent = f ? (f.camisa ?? f.nome ?? '') : '';
+    elNome.replaceChildren(...(num.textContent ? [num] : []), nome); nomeId = id;
+  }
   elNome.style.transform = `translate(${_ptNome.x.toFixed(1)}px, ${_ptNome.y.toFixed(1)}px) translate(-50%, -100%)`;
   if (elNome.hidden) elNome.hidden = false;
 }
