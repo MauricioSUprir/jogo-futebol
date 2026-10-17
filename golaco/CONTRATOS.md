@@ -2368,3 +2368,22 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   proibida, relógio nem `**` fora dos comentários — meta 0 linhas (na base: 13); (C) todo `.sort(` com comparador dentro do
   passo sai estritamente ordenado nos dois sentidos (empate só entre valores idênticos). `--onde` lista de onde vêm as
   chamadas; `--sementes N --min M` encurta.
+
+### Etapa 1 — dois humanos na lógica
+- `criarPartida({humanos: [0, 1], humano: <o MEU lado>})`: os dois times controlados por pessoas. Cada time humano começa
+  com o MESMO controlado que teria sozinho (o cobrador da saída; o outro, quem a montagem da saída escolhe). `m.trava` só
+  vale com 1 humano. `m.timeHumano` = o meu lado (fora do hash; o caminho de 2 humanos não o lê). Sem a opção:
+  `[humano]`, bit a bit como antes.
+- `passoPartida(m, {0: e0, 1: e1}, acoes)` com 2 humanos: a entrada de cada time vai só para o controlado dele; a bola
+  parada é cobrada pela entrada do time do COBRADOR (`cobrar(m, entradas[c.time])`). Com 1 humano, `entrada` continua
+  sendo a do time do humano.
+- `entradaDemoPartida(m, time = m.timeHumano)`: a IA joga pelo controlado daquele time (o bit IA do online: menu/editor
+  aberto, ausência). Escreve no mundo (`j.ia`, `j.iaT`): no online roda DENTRO do passo, nos dois aparelhos, no mesmo
+  ponto (time 0 antes do 1). `m.iaJoga[t]` segue a marca `ia` da entrada de cada time.
+- Já era por time (nada mudou): troca, TROCAR/GOLEIRO/PRESSÃO, a assistência de recepção, a marcação do controlado.
+- **Teste `teste-dois-humanos`** (Node, padrão): A cada cobrança (saída, lateral, escanteio, tiro de meta, tiro livre,
+  pênalti, dos dois times) sai pelo humano DAQUELE time, com o outro apertando sem parar (48/48), e ninguém cobra pelo
+  humano parado antes do prazo (48/48); B a entrada de um time nunca muda o que o controlado do outro e o time dele
+  recebem (o mesmo passo de novo com a entrada do outro trocada; os outros jogadores são IA e reagem ao mundo, que muda
+  de verdade com a jogada do outro: 0 de 3.996); C TROCAR/GOLEIRO/PRESSÃO de cada um só no time dele; D o bit IA (m.iaJoga
+  e IA × humano até o fim); E criarPartida e o caminho de 1 humano bit a bit. `hash-partida`/`hash-igual` IGUAIS.

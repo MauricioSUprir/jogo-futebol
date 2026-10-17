@@ -168,9 +168,13 @@ for (let k = 0; k < meios.length; k++) {
 
 // ------------------------------------------------------------------ B, C, D1) partidas de 2 humanos
 const LIMIAR = 1e-12;
+// O que vem da ENTRADA do time T: os campos do controlado dele (sem o bit IA) e os do time. Os outros jogadores de T são
+// IA e reagem ao mundo — e o mundo muda de verdade com a jogada do outro no mesmo passo (a cobrança dele sai antes do
+// passo, o passe dele muda a bola): isso é jogo, não entrada vazando de um time para o outro.
 function camposTime(m, T) {
   const o = [];
-  for (const j of m.jogadores) if (j.time === T) o.push([j.id, j.botoesTime ?? 0, j.botoes ?? 0, j.ix ?? 0, j.iz ?? 0, j.imag ?? 0, j.intRumo ?? 0]);
+  const c = m.iaJoga?.[T] ? null : S.jogadorPorId(m, m.controlado[T]);
+  if (c) o.push([c.id, c.botoesTime ?? 0, c.botoes ?? 0, c.ix ?? 0, c.iz ?? 0, c.imag ?? 0, c.intRumo ?? 0]);
   o.push(['time', m.botoesTimeAgora?.[T] ?? 0, m.pedidoPressao?.[T] ?? -1, m.iaJoga?.[T] ? 1 : 0]);
   return o;
 }
@@ -201,10 +205,14 @@ function sondar(m, T) {
       const a = structuredClone(m);
       passoN(a, { 0: NEUTRA, 1: NEUTRA });
       const antesO = a.controlado[O];
+      // no passo neutro o controlado pode ter dominado a bola (TROCAR nunca troca com a bola no pé) ou trocado sozinho
+      if (a.posse === a.controlado[T] || a.controlado[T] !== ctrl.id || a.parada || a.naMao != null) return sondarResto(m, T, O);
       const ev = passoN(a, ents2(T, { x: 0, z: 0, botoes: BOTAO.TROCAR }, NEUTRA));
       const mi = ev.find(e => e.tipo === 'troca' && !e.auto && !e.goleiro);
       const jt = mi ? S.jogadorPorId(a, mi.id) : null;
-      const okA = !!jt && jt.time === T && a.controlado[T] === jt.id && a.controlado[O] === antesO;
+      // o outro time pode trocar sozinho no mesmo passo (bola alta: trocaAerea; passe: troca automática) — isso é dele
+      const oTrocouSo = ev.some(e => (e.tipo === 'trocaAerea' || (e.tipo === 'troca' && e.auto)) && S.jogadorPorId(a, e.id)?.time === O);
+      const okA = !!jt && jt.time === T && a.controlado[T] === jt.id && (a.controlado[O] === antesO || oTrocouSo);
       const b = structuredClone(m);
       passoN(b, { 0: NEUTRA, 1: NEUTRA });
       const evB = passoN(b, ents2(T, NEUTRA, { x: 0, z: 0, botoes: BOTAO.TROCAR }));
@@ -212,6 +220,9 @@ function sondar(m, T) {
       sondas.TROCAR[T].push({ ok: okA && okB, motivo: !okA ? 'o TROCAR do time não trocou o controlado dele' : !okB ? 'o TROCAR do outro time trocou o controlado deste' : '' });
     }
   }
+  sondarResto(m, T, O);
+}
+function sondarResto(m, T, O) {
   // GOLEIRO: o goleiro de T (não controlado, sem defesa nem mergulho, ainda não saindo) e o adversário com a bola
   {
     const g = m.jogadores.find(o => o.time === T && o.posicao === 'GOL');
@@ -249,6 +260,10 @@ for (let sem = 1; sem <= NSEM; sem++) {
         const a = structuredClone(m), b = structuredClone(m);
         P.passoPartida(a, e, null);
         P.passoPartida(b, ents2(T, e[T], trocada(e[1 - T], rb)), null);
+        // a troca AUTOMÁTICA de T (passe do outro, bola alta: troca.js) depende do mundo — com ela o controlado muda de
+        // verdade e não há o que comparar
+        const auto = x => x.eventos.some(ev => ev.tipo === 'troca' && ev.auto && S.jogadorPorId(x, ev.id)?.time === T);
+        if (a.controlado[T] !== b.controlado[T] && (auto(a) || auto(b))) continue;
         resB.casos++;
         if (!iguais(camposTime(a, T), camposTime(b, T)) && resB.falhas.length < 1e6) resB.falhas.push({ sem, tick: m.tick, T });
       }
@@ -292,10 +307,14 @@ for (let sem = 1; sem <= 2; sem++) for (const LIA of [0, 1]) {
 const resE = [];
 {
   const m = P.criarPartida({ semente: 9, humanos: [0, 1], humano: 1, trava: 5 });
-  const c0 = P.cobradorDaSaida(m.times[0]), c1 = P.cobradorDaSaida(m.times[1]);
-  const ok = m.humanos.join() === '0,1' && m.controlado[0] === c0 && m.controlado[1] === c1 && S.jogadorPorId(m, c0).papel !== 'ia'
-    && S.jogadorPorId(m, c1).papel !== 'ia' && m.trava == null && m.timeHumano === 1;
-  resE.push(['E1 humanos [0, 1]: controlados = cobradores da saída dos dois, papel humano, sem trava, timeHumano = o meu lado', ok]);
+  // cada time humano fica com o MESMO controlado que teria sozinho (o da saída é o cobrador; o outro, quem a montagem
+  // da saída escolhe — fecharMontagem —, como na partida de 1 humano)
+  // (o papel 'humano' é só a marca inicial do cobrador — o controle segue m.controlado —, então compara-se o time inteiro)
+  const um = [P.criarPartida({ semente: 9, humano: 0 }), P.criarPartida({ semente: 9, humano: 1 })];
+  const papeis = (x, t) => x.jogadores.filter(j => j.time === t).map(j => `${j.id}:${j.papel}`).join();
+  const ok = m.humanos.join() === '0,1' && [0, 1].every(t => m.controlado[t] === um[t].controlado[t] && papeis(m, t) === papeis(um[t], t))
+    && m.trava == null && m.timeHumano === 1;
+  resE.push(['E1 humanos [0, 1]: controlados = os de cada um sozinho (o cobrador da saída), papel humano, sem trava, timeHumano = o meu lado', ok]);
 }
 for (const h of [0, 1]) {
   const a = P.criarPartida({ semente: 11 + h, humano: h }), b = P.criarPartida({ semente: 11 + h, humano: h, humanos: [h] });
@@ -329,7 +348,7 @@ for (const v of ['A1', 'A2']) {
     `${pct(ok, r.length)}: ${porTipo}`, '100%', ok === r.length && r.length === 6 * 2 * NSEM);
   for (const x of r.filter(y => !y.ok).slice(0, 6)) console.log(`  ${v} falhou: ${x.tipo} do time ${x.T}: ${x.motivo}`);
 }
-linha('B a entrada de um time não muda a de nenhum jogador do outro (passo repetido com a do outro trocada)', `${resB.falhas.length} de ${resB.casos} casos`, '0 casos', resB.falhas.length === 0 && resB.casos > 0);
+linha('B a entrada de um time não muda a do controlado do outro nem a do time dele (passo repetido com a do outro trocada)', `${resB.falhas.length} de ${resB.casos} casos`, '0 casos', resB.falhas.length === 0 && resB.casos > 0);
 for (const x of resB.falhas.slice(0, 5)) console.log(`  B falhou: semente ${x.sem}, tick ${x.tick}, time ${x.T}`);
 for (const [nome, chave] of [['C1 TROCAR', 'TROCAR'], ['C2 GOLEIRO (saída do goleiro)', 'GOLEIRO'], ['C3 PRESSÃO', 'PRESSAO']]) {
   const r = sondas[chave], n0 = r[0].length, n1 = r[1].length, ok0 = r[0].filter(x => x.ok).length, ok1 = r[1].filter(x => x.ok).length;

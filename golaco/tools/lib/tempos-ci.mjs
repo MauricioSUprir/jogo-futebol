@@ -70,6 +70,7 @@ export const TEMPOS_NODE = {
   'teste-livre.mjs': 60,
   // online 1×1 (medidos aqui, máquina dividida; acertar pelo log do CI)
   'teste-math-proibido.mjs': 30,
+  'teste-dois-humanos.mjs': 140,
   // ainda fora da main (ramo golaco/dominio-sem-passar): 687 s num processo só no CI
   'teste-nao-passa.mjs': 687,
 };
