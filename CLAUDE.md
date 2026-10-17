@@ -68,11 +68,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   entra pelo TM (Mais modos), não no menu do golaco. **Online 1×1** (pedido de 16/10; seção "Online 1×1" abaixo): duas
   pessoas, cada uma no seu aparelho, salas privadas por código, sem chat; conexão SEM CONTA e grátis (WebRTC P2P, a
   sinalização pelo Firebase que o TM já tem, sem TURN); só no TM.
-- **Pedidos do dono de 17/10** (ENTREGUES no mesmo dia, menos o 4): (1) o NOME em cima do jogador com a bola
-  (`main.js marcarCondutor`, `#nome-condutor` fora do #hud — exceção pedida à "sem narração"); (2) os overalls da tela iguais
-  aos do TM (`elenco.js notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos); (3)
-  o campinho da escalação do jogo sempre EM PÉ (`escalacao-tela.js`); **(4) FILA: cena de substituição no online** (hoje
-  desligada no online porque seguraria a simulação de um lado só).
+- **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME em cima do jogador com a bola (`main.js marcarCondutor`,
+  `#nome-condutor` fora do #hud — exceção pedida à "sem narração") e (2) os overalls da tela iguais aos do TM (`elenco.js
+  notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos). **FILA (dono: "o 3 e 4
+  fica pra dps"):** (3) o campinho da escalação do jogo EM PÉ (retrato), não deitado (`escalacao-tela.js`); (4) a cena de
+  substituição no online (hoje desligada no online porque seguraria a simulação de um lado só).
 - Tudo em **português do Brasil**: textos da interface, comentários e mensagens de commit.
 - Sempre mandar o **link do jogo/app** (GitHub Pages) fora do artifact. **Prints: NÃO mandar mais ao dono** (12/10: "esquece os
   print"); os testes de navegador continuam conferindo a tela, só não se enviam as imagens. Ritmo: uma máquina com várias frentes

@@ -98,8 +98,7 @@ export function criarEscalacaoTela(raiz, ident = null) {
   function layout(f) {
     const W = f.area.clientWidth, H = f.area.clientHeight;
     if (!(W > 0 && H > 0)) return;
-    // em pé sempre (dono, 17/10: "o campinho pra jogo tem que ser em pé, e não deitado")
-    const vertical = true;
+    const vertical = W / H < 0.95;
     const chave = `${W}x${H}`;
     if (f.tam === chave) return;
     f.tam = chave;
