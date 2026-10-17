@@ -68,10 +68,10 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   entra pelo TM (Mais modos), não no menu do golaco. **Online 1×1** (pedido de 16/10; seção "Online 1×1" abaixo): duas
   pessoas, cada uma no seu aparelho, salas privadas por código, sem chat; conexão SEM CONTA e grátis (WebRTC P2P, a
   sinalização pelo Firebase que o TM já tem, sem TURN); só no TM.
-- **Pedidos do dono de 17/10 (FILA, para quando ele mandar retomar — "está tudo pausado, pra não gastar muito limite"):**
-  (1) no campo, o NOME em cima do jogador com a bola; (2) os overalls na hora do jogo estão DIFERENTES dos de antes do jogo
-  (o que o TM mostra × o que o 3D usa: `tm-times.js`, atributos do TM sem desequilibrar — conferir e igualar); (3) o
-  campinho da escalação do jogo tem de ser EM PÉ (retrato), não deitado; (4) depois: cena de substituição no online (hoje
+- **Pedidos do dono de 17/10** (ENTREGUES no mesmo dia, menos o 4): (1) o NOME em cima do jogador com a bola
+  (`main.js marcarCondutor`, `#nome-condutor` fora do #hud — exceção pedida à "sem narração"); (2) os overalls da tela iguais
+  aos do TM (`elenco.js notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos); (3)
+  o campinho da escalação do jogo sempre EM PÉ (`escalacao-tela.js`); **(4) FILA: cena de substituição no online** (hoje
   desligada no online porque seguraria a simulação de um lado só).
 - Tudo em **português do Brasil**: textos da interface, comentários e mensagens de commit.
 - Sempre mandar o **link do jogo/app** (GitHub Pages) fora do artifact. **Prints: NÃO mandar mais ao dono** (12/10: "esquece os

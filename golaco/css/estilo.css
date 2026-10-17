@@ -759,3 +759,9 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
 html.modo-prints .dica, html.modo-prints .aviso, html.modo-prints .gol-tela, html.modo-prints .carregando, html.modo-prints .replay-faixa { display: none; }
 html.modo-prints .faixa:not(.forcada) { display: none; }
 html.sem-hud .hud, html.sem-hud .toque, html.sem-hud .replay, html.sem-hud .comemoracao, html.sem-hud .terco { display: none; }
+
+/* o nome em cima do jogador com a bola (dono, 17/10; main.js marcarCondutor) */
+#nome-condutor { position: fixed; left: 0; top: 0; z-index: 4; pointer-events: none; white-space: nowrap;
+  font: 700 12px/1 Inter, system-ui, sans-serif; letter-spacing: .02em; color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 4px rgba(0,0,0,.7); will-change: transform; }
+#nome-condutor[hidden] { display: none; }
