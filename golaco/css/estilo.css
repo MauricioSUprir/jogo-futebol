@@ -762,7 +762,12 @@ html.modo-prints .faixa:not(.forcada) { display: none; }
 html.sem-hud .hud, html.sem-hud .toque, html.sem-hud .replay, html.sem-hud .comemoracao, html.sem-hud .terco { display: none; }
 
 /* o nome em cima do jogador com a bola (dono, 17/10; main.js marcarCondutor) */
+/* nome do condutor numa caixa (dono, 17/10: "bota dentro de um quadrado"): número em verde + nome da camisa */
 #nome-condutor { position: fixed; left: 0; top: 0; z-index: 4; pointer-events: none; white-space: nowrap;
-  font: 700 12px/1 Inter, system-ui, sans-serif; letter-spacing: .02em; color: #fff;
-  text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 4px rgba(0,0,0,.7); will-change: transform; }
+  display: flex; align-items: center; gap: 5px; padding: 3px 7px 3px 5px; box-sizing: border-box;
+  background: rgba(5, 8, 7, 0.82); border: 1px solid rgba(255, 255, 255, 0.14); border-left: 3px solid var(--verde);
+  border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  font: 700 11px/1 Inter, system-ui, sans-serif; letter-spacing: .03em; color: #fff; will-change: transform; }
+#nome-condutor .nc-num { color: var(--verde); font-weight: 900; font-variant-numeric: tabular-nums; }
+#nome-condutor .nc-nome { text-transform: uppercase; }
 #nome-condutor[hidden] { display: none; }
