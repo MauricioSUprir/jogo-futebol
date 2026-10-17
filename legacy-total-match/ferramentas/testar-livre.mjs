@@ -7,7 +7,7 @@
    Viverde fica de fora (o item 4 sai como "pulado") e o "Seu time" é um clube comum.
    Passa por:
      1 "Modo Livre 3D" em "Mais modos" (ícone + nome, sem emoji) e a tela do modo (Seu time, Adversário, Treinar em 3D);
-     2 "Mais modos" com os 11 atalhos: numa linha no PC (1280); no tablet (820) nenhum sozinho numa linha; no celular (360,
+     2 "Mais modos" com os 12 atalhos (com o Online 3D): numa linha no PC (1280); no tablet (820) nenhum sozinho numa linha; no celular (360,
        grade de 3) a última linha cheia, sem buraco no fim nem um atalho perdido no canto;
      3 o seletor dos dois times (o do jogo rápido): o adversário é um clube das ligas;
      4 o Viverde FC em "Especiais" pede a senha: a errada é recusada, a certa libera e ele vira o "Seu time";
@@ -113,7 +113,7 @@ const mais = await p.evaluate(() => {
 });
 confere("1 'Modo Livre 3D' em Mais modos (ícone + nome, sem emoji)", !!mais && mais.icone && !mais.emoji, mais);
 
-// 2) a grade do "Mais modos" com 11 atalhos
+// 2) a grade do "Mais modos" com 12 atalhos (o Online 3D é o 12º)
 const grade = [];
 for (const [w, h] of [[1280, 800], [820, 1180], [360, 740]]) {
   await p.setViewportSize({ width: w, height: h });
@@ -135,8 +135,8 @@ await p.evaluate(() => TM.ui.go("modes"));
 await espera(400);
 await print("2-mais-modos-celular");
 const [g1280, g820, g360] = grade;
-confere("2 'Mais modos': 11 atalhos numa linha no PC; no tablet nenhum sozinho numa linha; no celular a última linha cheia",
-  g1280.n === 11 && g1280.linhas.length === 1 && g820.n === 11 && g820.linhas.every(n => n > 1) && g360.n === 11 && g360.ultimaCheia, grade);
+confere("2 'Mais modos': 12 atalhos numa linha no PC; no tablet nenhum sozinho numa linha; no celular a última linha cheia",
+  g1280.n === 12 && g1280.linhas.length === 1 && g820.n === 12 && g820.linhas.every(n => n > 1) && g360.n === 12 && g360.ultimaCheia, grade);
 
 await p.evaluate(() => [...document.querySelectorAll(".vit-mais-b")].find(x => /Modo Livre 3D/.test(x.textContent)).click());
 await espera(700);

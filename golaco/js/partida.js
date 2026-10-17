@@ -99,33 +99,38 @@ export function vagaDoJogador(timeEstado, id) {
  * Cria a partida. opc: {semente, minutosPorTempo = PARTIDA.minutosPorTempo, iaClassica = false,
  * elencos = ['golaco', 'ventania'], times?: {0: {formacao, vagas, tatica}, 1: {...}}, saida = 0
  * (quem dá a saída do 1º tempo), humano = 0 (o time do humano: 0 = o mandante, como sempre foi; 1 = o visitante —
- * o Total Match manda o lado do usuário), trava = null (id: "só o meu jogador", o controle nunca sai dele — o Rumo ao
- * Estrelato do Total Match; acoes.js assumirControle), log}. O controlado começa no cobrador da saída do time do humano
- * (com a trava, no travado). m.timeHumano e m.trava ficam fora do hash (o controlado entra nele, como antes).
+ * o Total Match manda o lado do usuário), humanos = [humano] (os times controlados por pessoas: [0, 1] = o online 1×1,
+ * cada pessoa no seu aparelho; com 2, `humano` é só o MEU lado, m.timeHumano — o caminho de 2 humanos nunca o lê),
+ * trava = null (id: "só o meu jogador", o controle nunca sai dele — o Rumo ao Estrelato do Total Match; acoes.js
+ * assumirControle; só com 1 humano), log}. O controlado de cada time humano começa no cobrador da saída dele (com a
+ * trava, no travado). m.timeHumano e m.trava ficam fora do hash (o controlado entra nele, como antes).
  * iaClassica: true só para os testes medirem o "antes" (a IA do treino no 11×11).
  */
 export function criarPartida(opc = {}) {
   const elencos = opc.elencos ?? ['golaco', 'ventania'];
   const saida = opc.saida ?? 0;
   const h = opc.humano === 1 ? 1 : 0;
+  // online 1×1: os dois times humanos (na ordem dos times; sem a opção, só o do humano — bit a bit como antes)
+  const humanos = Array.isArray(opc.humanos) && opc.humanos.length ? [0, 1].filter(t => opc.humanos.includes(t)) : [h];
   const times = { 0: estadoInicialTime(elencos[0], opc.times?.[0]), 1: estadoInicialTime(elencos[1], opc.times?.[1]) };
   const ataca0 = { 0: 1, 1: -1 };
-  // o travado só vale se estiver em campo no time do humano (senão o humano joga como sempre, sem trava)
-  const trava = opc.trava != null && Object.values(times[h].vagas).includes(opc.trava) ? opc.trava : null;
-  const ctrl0 = trava ?? cobradorDaSaida(times[h]);
+  // o travado só vale com 1 humano e em campo no time dele (senão o humano joga como sempre, sem trava)
+  const trava = humanos.length === 1 && humanos[0] === h && opc.trava != null && Object.values(times[h].vagas).includes(opc.trava) ? opc.trava : null;
+  const ctrl0 = {};
+  for (const t of humanos) ctrl0[t] = t === h && trava != null ? trava : cobradorDaSaida(times[t]);
   const desc = [];
   for (const t of [0, 1]) {
     for (const v of FORMACOES[times[t].formacao].vagas) {
       const id = times[t].vagas[v.id];
       desc.push({
         id, x: 0, z: 0, rumo: ataca0[t] > 0 ? 0 : Math.PI, attr: atributosDe(fichaDe(id)), time: t,
-        papel: t === h && id === ctrl0 ? 'humano' : 'ia', posicao: FUNCAO[v.pos],
+        papel: humanos.includes(t) && id === ctrl0[t] ? 'humano' : 'ia', posicao: FUNCAO[v.pos],
       });
     }
   }
-  const m = criarMundo({ semente: opc.semente ?? 1, jogadores: desc, bola: { x: 0, z: 0 }, posse: null, ataca: ataca0, log: opc.log, controlado: { [h]: ctrl0 } });
+  const m = criarMundo({ semente: opc.semente ?? 1, jogadores: desc, bola: { x: 0, z: 0 }, posse: null, ataca: ataca0, log: opc.log, controlado: ctrl0 });
   m.modo = 'partida';
-  m.timeHumano = h;
+  m.timeHumano = humanos.includes(h) ? h : humanos[0];
   if (trava != null) m.trava = { [h]: trava };
   m.times = times;
   for (const j of m.jogadores) { vestirVaga(m, j, vagaDoJogador(times[j.time], j.id)); j.iaT = null; }
@@ -1524,7 +1529,9 @@ export function regrasPartida(m) {
 }
 
 /**
- * Um passo da partida (1/60 s). entrada = {x, z, botoes} do humano (do time m.timeHumano: 0 se não veio). acoes: lista com
+ * Um passo da partida (1/60 s). entrada = {x, z, botoes} do humano (do time m.timeHumano: 0 se não veio); com DOIS times
+ * humanos (online 1×1, criarPartida({humanos: [0, 1]})), {0: e0, 1: e1} — a entrada de cada time vai só para o controlado
+ * dele e a da bola parada para o cobrador pela entrada do time DELE (com 1 humano, bit a bit como antes). acoes: lista com
  * ações-objeto (a edição {tipo: 'editarTime', ...}, aplicada ANTES do passo e gravada em m.log) e
  * ações-texto (a página cuida de 'reiniciar', criando outra partida). Intervalo e fim: o mundo fica
  * parado (só o relógio do tick anda). Devolve os eventos do passo.
@@ -1547,9 +1554,13 @@ export function passoPartida(m, entrada, acoes) {
   else {
     // a cobrança sai antes do passo (os eventos dela entram de novo depois: o passo zera m.eventos)
     m.eventos = [];
-    cobrar(m, entrada);
+    if (m.humanos.length > 1) {
+      // dois humanos: a cobrança pela entrada do time do cobrador (sem cobrador montado, o cobrar não faz nada)
+      const pr = m.parada, c = pr && !pr.rolou && pr.cobrador != null ? jogadorPorId(m, pr.cobrador) : null;
+      cobrar(m, c ? entrada?.[c.time] ?? null : null);
+    } else cobrar(m, entrada);
     const evCobranca = m.eventos;
-    passo(m, { [m.timeHumano ?? 0]: entrada });
+    passo(m, m.humanos.length > 1 ? entrada : { [m.timeHumano ?? 0]: entrada });
     if (evCobranca.length) m.eventos = evCobranca.concat(m.eventos);
   }
   regrasPartida(m);
@@ -1560,11 +1571,13 @@ export function passoPartida(m, entrada, acoes) {
 }
 
 /**
- * Demonstração/testes: a IA joga pelo controlado do time do humano (m.timeHumano; 0 se não veio), como o ?demo=1 do
- * treino — também o "Simular o resto" do Total Match.
+ * Demonstração/testes: a IA joga pelo controlado do time `time` (padrão: o do humano, m.timeHumano; 0 se não veio), como o
+ * ?demo=1 do treino — também o "Simular o resto" do Total Match e, no online 1×1, o lado com o bit IA (menu ou editor
+ * aberto, ausência). Escreve no mundo (j.ia, j.iaT: memória da IA): no online roda DENTRO do passo, nos dois aparelhos,
+ * no mesmo ponto (antes do passoPartida, o time 0 antes do 1).
  */
-export function entradaDemoPartida(m) {
-  const j = jogadorPorId(m, m.controlado[m.timeHumano ?? 0]);
+export function entradaDemoPartida(m, time = m.timeHumano ?? 0) {
+  const j = jogadorPorId(m, m.controlado[time]);
   if (!j) return { x: 0, z: 0, botoes: 0 };
   const pr = m.parada;
   if (pr && !pr.rolou && pr.cobrador === j.id) {
