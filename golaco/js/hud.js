@@ -310,6 +310,13 @@ export function criarHud(opc) {
       if (volta) { volta.hidden = !fim && !livre; volta.classList.toggle('btn-primario', fim); }
       if (opc.tm.trava) document.querySelectorAll('#menu [data-cmd="editar-time"]').forEach(b => { b.hidden = true; });
     }
+    // Online 1×1 (com ou sem o TM): nada que mexa no jogo de um lado só — sem Replay da pausa, Simular o resto, Reiniciar,
+    // Modo de jogo/Cenas; "Voltar ao Total Match" só no fim (a pausa e o "Sair da partida" vêm do online-pagina.js)
+    if (opc.online) {
+      for (const sel of ['[data-cmd="replay"]', '#btn-simular-resto', '#btn-reiniciar-partida', '#btn-modos']) document.querySelectorAll('#menu ' + sel).forEach(b => { b.hidden = true; });
+      const volta = $('btn-voltar-tm');
+      if (volta) volta.hidden = !fimDeJogo || !opc.tm;
+    }
   }
   const fecharSubLivre = () => document.querySelectorAll('.submenu-livre').forEach(e => { e.hidden = true; });
   function mostrarSubmenu(v) {

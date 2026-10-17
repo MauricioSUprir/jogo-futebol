@@ -26,7 +26,12 @@
    js/livre3d.js): o mesmo pedido com modo: "livre" abre o treino livre (sem relógio, quantos jogadores em cada time e a
    câmera escolhidos na pausa do 3D), sem trava ("só o meu jogador") e, se vier, com a escolha inicial
    livre: { linha: [casa, fora] (0–10; o time do usuário ≥ 1), goleiro: [bool, bool] }. Não tem resultado: tanto
-   'tm3d:sair' quanto 'tm3d:fim' ({ livre: { placar } }) só voltam à tela do modo — nada conta. */
+   'tm3d:sair' quanto 'tm3d:fim' ({ livre: { placar } }) só voltam à tela do modo — nada conta.
+   Online 3D (dono, 16/10: "duas pessoas consigam jogar uma contra a outra"; js/online3d.js): o pedido pronto, montado pelo
+   anfitrião da sala, com modo: "online" e online: { sala, semente, nomes, D0, proto, lado } (TM.tm3d.jogarOnline). A
+   ligação entre os aparelhos fica na página do TM: a cada 'tm3d:pronto' (ou 'tm3d:pedePorta') o quadro recebe uma
+   MessagePort ('tm3d:porta'; o protocolo está no topo de js/online3d.js). O fim volta com os dados da mensagem
+   (fns.fim(resultado, dados) / fns.sair(dados): dados.abandono, dados.online). */
 (function (global) {
   "use strict";
   var TM = global.TM;
@@ -297,7 +302,7 @@
     var aviso = el("div", { class: "tm3d-aviso", text: "Abrindo o estádio 3D…" });
     var quadro = el("iframe", { class: "tm3d-quadro", src: api.PASTA + "?tm=" + encodeURIComponent(pedido.id), allow: "fullscreen; autoplay; gamepad", title: T.quadro });
     var sair = el("button", { class: "tm3d-sair", type: "button", title: T.sair, on: { click: function () {
-      TM.ui.confirm(T.confirma, T.confirmaTexto, T.confirmaBotao, function () { termina("sair"); });
+      TM.ui.confirm(T.confirma, T.confirmaTexto, T.confirmaBotao, function () { termina("sair", null, T.sairDados || null); });
     } } }, [TM.ic("x")]);
     var tela = el("div", { class: "tm3d-tela" }, [aviso, quadro, sair]);
     document.body.appendChild(tela);
@@ -313,17 +318,23 @@
       if (e.origin !== global.location.origin || !e.data || e.data.id !== pedido.id) return;
       if (e.source && quadro.contentWindow && e.source !== quadro.contentWindow) return;
       // com o 3D no ar, o botão de sair é o do próprio 3D (pausa): o X do TM some para não ficar por cima do placar
-      if (e.data.tipo === "tm3d:pronto") { pronto = true; aviso.style.display = "none"; sair.style.display = "none"; }
-      else if (e.data.tipo === "tm3d:fim") termina("fim", e.data.resultado || lerResultado());
-      else if (e.data.tipo === "tm3d:sair") termina("sair");
+      if (e.data.tipo === "tm3d:pronto") {
+        pronto = true; aviso.style.display = "none"; sair.style.display = "none";
+        if (fns.pronto) fns.pronto(quadro.contentWindow, pedido.id);
+      }
+      // o quadro pede a porta de novo (Online 3D: recarregou ou perdeu a dela)
+      else if (e.data.tipo === "tm3d:pedePorta") { if (fns.pronto) fns.pronto(quadro.contentWindow, pedido.id); }
+      else if (e.data.tipo === "tm3d:fim") termina("fim", e.data.resultado || lerResultado(), e.data);
+      else if (e.data.tipo === "tm3d:sair") termina("sair", null, e.data);
     }
-    function termina(como, res) {
+    // dados = a mensagem do 3D (o Online 3D lê dados.abandono e dados.online); os outros modos ignoram
+    function termina(como, res, dados) {
       if (acabou) return;
       acabou = true;
       clearTimeout(espera);
       fecha3d();
       try { localStorage.removeItem("tm3d:pedido:" + pedido.id); localStorage.removeItem("tm3d:resultado:" + pedido.id); } catch (e) {}
-      if (como === "fim" && res) fns.fim(res); else fns.sair();
+      if (como === "fim" && res) fns.fim(res, dados || null); else fns.sair(dados || null);
     }
     global.addEventListener("message", ouvir);
     ativo = { tela: tela, ouvir: ouvir };
@@ -438,6 +449,23 @@
     });
     return true;
   }
+  /* Online 3D (js/online3d.js): o pedido já vem pronto (o anfitrião monta e manda ao convidado; cada aparelho põe o
+     próprio id, userSide e online.lado). fns.pronto(janelaDoQuadro, id) a cada 'tm3d:pronto'/'tm3d:pedePorta' (entrega
+     a MessagePort); fns.fim(resultado3d, dados) | fns.sair(dados) — dados = a mensagem do 3D (abandono, online);
+     o X do quadro antes do 3D ficar pronto também é abandono ({ abandono: true }). */
+  function jogarOnline(pedido, fns) {
+    if (!webgl()) { TM.ui.toast("Este aparelho não tem WebGL 2, que o Online 3D precisa.", "alerta"); if (fns.sair) fns.sair(null); return false; }
+    if (!pedido || pedido.modo !== "online" || !pedido.online || !pedido.home || !pedido.away || !pedido.id) { if (fns.sair) fns.sair(null); return false; }
+    abre3d(pedido, {
+      pronto: fns.pronto,
+      fim: function (r3, dados) { if (fns.fim) fns.fim(r3, dados); },
+      sair: function (dados) { if (fns.sair) fns.sair(dados); },
+      falhou: function (msg) { TM.ui.toast(msg || "O 3D não abriu.", "alerta"); if (fns.sair) fns.sair(null); },
+      textos: { quadro: "Partida online em 3D", sair: "Sair da partida", confirma: "Sair da partida online?",
+        confirmaTexto: "Conta como derrota por W.O.", confirmaBotao: "Sair", demora: "Sair", sairDados: { abandono: true } }
+    });
+    return true;
+  }
   function jogarCfg(screen, cfg, playOrig) {
     var pedido = novoPedido({ teamA: cfg.teamA, teamB: cfg.teamB, formation: cfg.formation, formationB: cfg.formationB,
       userSide: cfg.pauseSide === 1 ? 1 : 0, controle: cfg.controle, title: cfg.title, simOpts: cfg.simOpts });
@@ -480,6 +508,7 @@
   api.jogar3d = jogar3d;
   api.jogarPenaltis = jogarPenaltis;
   api.jogarLivre = jogarLivre;
+  api.jogarOnline = jogarOnline;
   api.escolha = escolha;
   api.fechar = fecha3d;
   TM.tm3d = api;

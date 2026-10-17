@@ -20,7 +20,7 @@
      8 nada sobre nada nas duas telas do modo (360, 390 e 844×390 do celular; 1280 do PC): nenhum botão encostado em outro,
        nada fora da tela, sem rolagem de lado;
      9 nenhum erro de página (no TM e dentro do 3D);
-    10 "Mais modos" com todos os atalhos (10 com o Pênaltis 3D; 11 com o Modo Livre 3D): numa linha só no PC (1280) e, no
+    10 "Mais modos" com todos os atalhos (10 com o Pênaltis 3D; 11 com o Modo Livre 3D; 12 com o Online 3D): numa linha só no PC (1280) e, no
        celular (360, grade de 3), nenhum sozinho num canto da última linha (revisão de 16/10: o "Perfil" ia sozinho para
        uma 2ª linha no PC);
     11 o quadro do 3D nos Pênaltis não promete simular: o X, a confirmação e o aviso de demora com os textos da disputa

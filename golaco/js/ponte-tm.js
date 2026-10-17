@@ -60,11 +60,14 @@ function voltarAoTM() {
   try { location.href = new URL('../index.html', location.href).href; } catch (_) { /* sem location: nada */ }
 }
 
-/** Fim da partida: grava o resultado, manda 'tm3d:fim' com ele e, fora do quadro, volta para o TM. */
-export function fimTM(resultado) {
+/**
+ * Fim da partida: grava o resultado, manda 'tm3d:fim' com ele e, fora do quadro, volta para o TM. extra vai junto na
+ * mensagem (Online 3D: {online: {hashFinal, wo?: {vencedor, motivo}, dessinc?}} — o TM lê dados.online).
+ */
+export function fimTM(resultado, extra = null) {
   if (!ID_TM) return false;
   gravarResultadoTM(resultado);
-  avisarTM('tm3d:fim', { resultado });
+  avisarTM('tm3d:fim', { resultado, ...(extra ?? {}) });
   if (!NO_QUADRO) voltarAoTM();
   return true;
 }
