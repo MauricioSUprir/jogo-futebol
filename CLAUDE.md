@@ -65,9 +65,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 - **Direção do produto (dono, 16/10): "o modo jogável 3D substituirá todos os modos simulação, e o jogo será um jogo
   jogável"** — todo modo do Total Match vai virar partida jogável no GOLAÇO (`golaco/`); peça nova já nasce pensando nisso
   (nada novo só para a simulação). O `golaco/` é PROTÓTIPO: tudo será incorporado e vira o Total Match — modo novo
-  entra pelo TM (Mais modos), não no menu do golaco. Em seguida: **online 1×1** (duas pessoas, cada uma no seu aparelho,
-  salas privadas por código, sem chat; conexão SEM CONTA e grátis — WebRTC P2P com sinalização pública, transporte
-  plugável; só no TM; contrato → `golaco/CONTRATOS.md` "Online").
+  entra pelo TM (Mais modos), não no menu do golaco. **Online 1×1** (pedido de 16/10; seção "Online 1×1" abaixo): duas
+  pessoas, cada uma no seu aparelho, salas privadas por código, sem chat; conexão SEM CONTA e grátis (WebRTC P2P, a
+  sinalização pelo Firebase que o TM já tem, sem TURN); só no TM.
 - Tudo em **português do Brasil**: textos da interface, comentários e mensagens de commit.
 - Sempre mandar o **link do jogo/app** (GitHub Pages) fora do artifact. **Prints: NÃO mandar mais ao dono** (12/10: "esquece os
   print"); os testes de navegador continuam conferindo a tela, só não se enviam as imagens. Ritmo: uma máquina com várias frentes
@@ -541,6 +541,21 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   quadro) e `render/cantos-livre.js` (fecha os cantos de cá) — tudo SÓ por import dinâmico. Sem o modo, `hash-partida`/
   `hash-igual` IGUAIS. Testes: `teste-livre` (Node), `teste-livre-tela` (CI e deploy), `legacy-total-match/ferramentas/
   testar-livre.mjs` (senha do Viverde só por `TM_SENHA_VIVERDE`). Pendente para o dono: as câmeras novas também na partida.
+- **Online 1×1** (dono, 16/10: "duas pessoas consigam jogar uma contra a outra, no modo jogável"; contrato "Online 1×1" no
+  `CONTRATOS.md`, etapas 0–3): **troca de entradas** (lockstep com atraso D de 3–10 passos, sem rollback) — a simulação é
+  determinística nos dois aparelhos (etapa 0: a pose e o húngaro do TM pelo `matdet.js`, `.sort(` com desempate total;
+  `teste-math-proibido`), a partida aceita dois humanos (etapa 1: `criarPartida({humanos: [0, 1]})`, `passoPartida(m, {0, 1})`,
+  a cobrança pela entrada do time do cobrador; `teste-dois-humanos`), `js/online.js` (puro, etapa 2: 6 bytes por entrada,
+  D que só sobe, freio de quem está à frente, ações pelo canal confiável, hash a cada 60 passos; `teste-online` com a
+  rede de mentira `tools/lib/rede-memoria.mjs`) e a página (etapa 3: `js/online-pagina.js` + `main.js quadroOnline` — só
+  roda o passo com as duas entradas; replay/comemoração/pausa/celular em pé seguram só o MEU lado e o outro espera; menu e
+  editor abertos = bit IA; pausa combinada 3 × 60 s; W.O.; dessincronia; `teste-online-tela` com duas abas pelo
+  BroadcastChannel, `?online=<sala>&transporte=bc&lado=0|1&ia=1`). Lado do TM: `legacy-total-match/js/online3d.js` (sala
+  `salas3d/{código}` no Firebase do TM, WebRTC com STUN e sem TURN, a ligação mora na página do TM e passa ao quadro por
+  uma MessagePort — protocolo no topo do arquivo; `TM.tm3d.jogarOnline`). Testes do TM: `ferramentas/testar-online3d.mjs`
+  (banco falso, WebRTC de verdade no loopback; `--golaco` = com o GOLAÇO de verdade). Sem o online, `hash-partida`/
+  `hash-igual` IGUAIS. Pendente (fora da v1): convite pela lista de amigos, indicador de sinal no HUD, reconexão depois de
+  recarregar, TURN (precisa de conta de adulto), rollback.
 - **Bolas paradas no estilo FIFA** (pedido de 16/10; `mira.js` na lógica; `render/bola-parada.js` + `mira-linha.js` SOB
   DEMANDA; PESQUISA-ETAPA4.md §12, contrato "Cobrança mirada" no CONTRATOS.md): câmera atrás do cobrador no
   escanteio, falta, pênalti e tiro de meta do humano (e no pênalti contra), o analógico pela câmera dela; na cobrança da
@@ -759,6 +774,9 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   Modos só em 3D em "Mais modos": **Pênaltis 3D** (`js/penaltis3d.js`, `jogarPenaltis`, o resultado com as cobranças) e
   **Modo Livre 3D** (`js/livre3d.js`, `jogarLivre`, treino N contra M que não conta em nada); os dois com o seletor do jogo
   rápido (Viverde em Especiais, com a senha). Testes: `ferramentas/testar-penaltis.mjs` e `ferramentas/testar-livre.mjs`.
+  **Online 3D** (`js/online3d.js`, `jogarOnline`; dono, 16/10): sala privada por código/link (`?online3d=`), o anfitrião
+  aceita ou recusa, cada um escolhe o SEU time, o anfitrião monta o pedido `modo: "online"`, só o anfitrião grava h2h e
+  ranking, sair no meio = W.O. (fair play). Teste `ferramentas/testar-online3d.mjs [--golaco]`.
 
 ## LANCE A LANCE (`simulador/`) — simulador de partidas (a "bolinha")
 - Canvas 2D, ES modules, **sem build e sem dependências externas**. Identidade: grafite + verde-limão.

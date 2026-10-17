@@ -4,7 +4,9 @@
    WebRtcHideLocalIpsWithMdns). O Firebase NUNCA é o de verdade: o SDK do gstatic é trocado por um falso que fala com um
    banco em memória aqui no Node (o mesmo js/net.js do TM roda por cima dele: login anônimo, número, presença…), com
    transação, ouvintes e onDisconnect (rodam quando a página recarrega ou fecha). O quadro do 3D é uma página de ensaio
-   (__eco3d.html, servida aqui) que lê o pedido, recebe a porta e ecoa — o GOLAÇO ainda não tem o online.
+   (__eco3d.html, servida aqui) que lê o pedido, recebe a porta e ecoa. Com --golaco, o GOLAÇO de verdade no lugar dele: a
+   partida online entre os dois aparelhos (a IA joga pelos dois pelo bit IA do menu aberto) com o mesmo jogo nos dois —
+   itens G1–G3, e o teste acaba ali.
    O site precisa estar montado como no GitHub Pages: o TM na raiz e o 3D em /golaco/. Ex.:
      mkdir -p /tmp/site && for f in legacy-total-match/*; do ln -sfn "$PWD/$f" /tmp/site/; done && ln -sfn "$PWD/golaco" /tmp/site/golaco
      (cd /tmp/site && python3 -m http.server 8283)
@@ -34,11 +36,14 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
-const { playwright } = await import(path.join(AQUI, "../../golaco/tools/lib/navegador.mjs"));
+const { playwright, rotearCdn } = await import(path.join(AQUI, "../../golaco/tools/lib/navegador.mjs"));
 const args = process.argv.slice(2).filter(a => !a.startsWith("--"));
 const BASE = (args[0] || "http://127.0.0.1:8283").replace(/\/$/, "");
 const PASTA = args[1] || "/tmp/testar-online3d";
 const SENHA = process.env.TM_SENHA_VIVERDE || "";
+// --golaco: no lugar do quadro de ensaio, o GOLAÇO de verdade (a partida online entre os dois aparelhos, a IA jogando pelos
+// dois pelo bit IA do menu aberto): o mesmo jogo nos dois (os hashes a cada 60 passos), e o teste acaba ali (itens G)
+const GOLACO = process.argv.includes("--golaco");
 fs.mkdirSync(PASTA, { recursive: true });
 
 /* ---------------- o banco falso (Firebase Realtime Database em memória) ---------------- */
@@ -228,6 +233,7 @@ async function aparelho(nome, uid, viewport, opc) {
   await cx.route(/^https:\/\/www\.gstatic\.com\//, r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
   await cx.route(/^https:\/\/www\.gstatic\.com\/firebasejs\/[^/]+\/firebase-app-compat\.js/, r => r.fulfill({ status: 200, contentType: "text/javascript", body: SDK_FALSO }));
   await cx.route(/__eco3d\.html/, r => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: ECO_HTML }));
+  if (GOLACO) await rotearCdn(cx);   // o three.js do GOLAÇO pelo cache local (o Chromium daqui não passa pelo proxy)
   await cx.exposeBinding("__fb", (src, cid, op, a) => banco.chamada(src.page, cid, op, a));
   await cx.addInitScript(([uid, nome, pro]) => {
     window.__fbUid = uid;
@@ -249,7 +255,7 @@ const B = await aparelho("Bruno", "uidBruno", { width: 1280, height: 800 }, { to
 for (const cl of [A, B]) {
   await cl.p.goto(BASE + "/index.html", { waitUntil: "load" });
   await cl.p.waitForFunction(() => window.TM && TM.online3d && TM.tm3d && TM.ui && TM.data, null, { timeout: 60000 });
-  await cl.p.evaluate(() => { TM.tm3d.PASTA = "__eco3d.html"; });
+  await cl.p.evaluate(g => { if (!g) TM.tm3d.PASTA = "__eco3d.html"; }, GOLACO);
 }
 
 const falhas = [], ok = [];
@@ -403,7 +409,7 @@ try {
   const cod2 = (await est(A)).codigo;
   await B.p.goto(BASE + "/index.html?online3d=" + cod2, { waitUntil: "load" });
   await B.p.waitForFunction(() => window.TM && TM.online3d, null, { timeout: 60000 });
-  await B.p.evaluate(() => { TM.tm3d.PASTA = "__eco3d.html"; });
+  await B.p.evaluate(g => { if (!g) TM.tm3d.PASTA = "__eco3d.html"; }, GOLACO);
   const bLink = await fase(B, "aguardaAceite", 20000);
   const aEntrou2 = await fase(A, "entrou");
   confere("5 entrar pelo LINK (?online3d=): o Bruno entra direto e a Ana vê o pedido", bLink && aEntrou2 && (await est(B)).codigo === cod2);
@@ -481,6 +487,37 @@ try {
   await clica(B, "^Pronto$");
   const aViu = await ate(A, () => /Bruno está pronto/.test(document.body.innerText), null, 6000);
   await clica(A, "^Pronto$");
+  if (GOLACO) {
+    const quadroG = async (cl, ms = 180000) => {
+      const t0 = Date.now();
+      while (Date.now() - t0 < ms) {
+        const fr = cl.p.frames().find(f => /golaco\/index\.html\?tm=/.test(f.url()));
+        if (fr && await fr.evaluate(() => !!(window.__golaco && window.__golaco.pronto && window.__golaco.online)).catch(() => false)) return fr;
+        await espera(300);
+      }
+      return null;
+    };
+    const [gA, gB] = await Promise.all([quadroG(A), quadroG(B)]);
+    if (!gA || !gB) for (const cl of [A, B]) for (const f of cl.p.frames()) console.log("  quadro", cl.nome, f.url().slice(0, 140), JSON.stringify(await f.evaluate(() => ({ g: !!window.__golaco, pronto: window.__golaco?.pronto, online: !!window.__golaco?.online, erro: document.querySelector('#erro, .erro, #carregando')?.textContent?.slice(0, 200) ?? null, pedido: (() => { try { const id = new URLSearchParams(location.search).get('tm'); const p = JSON.parse(localStorage.getItem('tm3d:pedido:' + id)); return p ? { modo: p.modo, online: !!p.online, home: !!p.home } : null; } catch (e) { return String(e); } })() })).catch(e => String(e).slice(0, 200))));
+    confere("G1 os dois GOLAÇOs abrem com o pedido online", !!gA && !!gB);
+    if (gA && gB) {
+      for (const g of [gA, gB]) await g.evaluate(() => window.__golaco.abrirMenu());   // a IA joga pelos dois (bit IA)
+      const ateN = (g, n) => g.waitForFunction(k => (window.__golaco.online?.n ?? 0) >= k, n, { timeout: 360000 }).then(() => true, () => false);
+      const [ra, rb] = await Promise.all([ateN(gA, 900), ateN(gB, 900)]);
+      const ler = g => g.evaluate(() => { const o = window.__golaco.online; return { n: o.n, D: o.D, rtt: o.rtt, lado: o.lado, hashes: o.hashes, conexao: o.conexao, placar: o.placar }; });
+      const oa = await ler(gA), ob = await ler(gB);
+      const mh = new Map(oa.hashes), com = ob.hashes.filter(([n]) => mh.has(n)), dif = com.filter(([n, h]) => mh.get(n) !== h).length;
+      confere("G2 a partida anda nos dois aparelhos (WebRTC de verdade pela porta do TM) com o mesmo jogo",
+        ra && rb && com.length >= 5 && dif === 0 && oa.lado === 0 && ob.lado === 1,
+        { n: [oa.n, ob.n], D: [oa.D, ob.D], rtt: [oa.rtt, ob.rtt], comuns: com.length, dif, conexao: [oa.conexao, ob.conexao], placar: [oa.placar, ob.placar] });
+      await print(A, "G-ana"); await print(B, "G-bruno");
+    }
+    confere("G3 nenhum erro de página (nos dois aparelhos)", erros.length === 0, erros.slice(0, 4));
+    console.log(`\nOK: ${ok.length}${falhas.length ? `  FALHAS: ${falhas.length}\n` + falhas.join("\n") : ""}`);
+    console.log(`\ntestar-online3d --golaco: ${falhas.length ? "REPROVOU" : "PASSOU"} (${ok.length} ok, ${falhas.length} falhas)`);
+    await nav.close();
+    process.exit(falhas.length ? 1 : 0);
+  }
   const [fA, fB] = await Promise.all([quadroDe(A), quadroDe(B)]);
   let pedA = null, pedB = null, portaA = null, portaB = null;
   if (fA && fB) {

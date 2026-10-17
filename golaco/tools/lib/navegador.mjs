@@ -62,6 +62,25 @@ function tipoPorUrl(u) {
   return 'application/octet-stream';
 }
 
+/**
+ * O CDN (jsdelivr, unpkg, Google Fonts) servido do cache local num contexto do Playwright (o Chromium daqui não passa pelo
+ * proxy). Também para os testes do Total Match que montam o contexto à mão (testar-online3d --golaco). Devolve {bytes()}.
+ */
+export async function rotearCdn(contexto) {
+  let bytes = 0;
+  await contexto.route(/^https:\/\/(cdn\.jsdelivr\.net|unpkg\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\//, async rota => {
+    const u = rota.request().url();
+    try {
+      const corpo = cdnLocal(u);
+      bytes += corpo.length;
+      await rota.fulfill({ status: 200, body: corpo, headers: { 'Content-Type': tipoPorUrl(u), 'Access-Control-Allow-Origin': '*' } });
+    } catch (e) {
+      await rota.fulfill({ status: 502, body: String(e) });
+    }
+  });
+  return { bytes: () => bytes };
+}
+
 /** Carrega o Playwright instalado globalmente. */
 export function playwright() {
   const req = createRequire(import.meta.url);
@@ -87,20 +106,11 @@ export async function abrir(opc = {}) {
     hasTouch: !!opc.toque,
     isMobile: !!opc.toque,
   });
-  let cdnBytes = 0;
-  await contexto.route(/^https:\/\/(cdn\.jsdelivr\.net|unpkg\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\//, async rota => {
-    const u = rota.request().url();
-    try {
-      const corpo = cdnLocal(u);
-      cdnBytes += corpo.length;
-      await rota.fulfill({ status: 200, body: corpo, headers: { 'Content-Type': tipoPorUrl(u), 'Access-Control-Allow-Origin': '*' } });
-    } catch (e) {
-      await rota.fulfill({ status: 502, body: String(e) });
-    }
-  });
+  const cdn = await rotearCdn(contexto);
+  const cdnBytes = cdn.bytes;
   const pagina = await contexto.newPage();
   const erros = [];
   pagina.on('pageerror', e => erros.push(String(e)));
   pagina.on('console', msg => { if (msg.type() === 'error') erros.push(msg.text()); });
-  return { navegador, contexto, pagina, erros, cdnBytes: () => cdnBytes };
+  return { navegador, contexto, pagina, erros, cdnBytes };
 }
