@@ -151,9 +151,20 @@ const TM = timesDoTM();
 const PENALTIS_TM = !!TM && PEDIDO_TM?.modo === 'penaltis';
 // Total Match, Modo Livre 3D (pedido com modo: 'livre'; livre.js): sem trava e sem resultado ({livre: {placar}})
 const LIVRE_TM = !!TM && PEDIDO_TM?.modo === 'livre';
-// o time do humano: 0 (o mandante) sem ?tm; com ?tm, o lado do usuário no TM (o time 0 é sempre o mandante do TM)
-const TIME_HUMANO = TM ? TM.humano : 0;
-const TRAVA_TM = TM && !PENALTIS_TM && !LIVRE_TM ? TM.trava : null;
+// Total Match, Online 3D (pedido com modo 'online'; online.js + online-pagina.js): dois humanos, cada um no seu aparelho,
+// por troca de entradas (contrato "Online 1×1"). Nos testes, sem o TM: ?online=<sala>&transporte=bc&lado=0|1 (duas abas)
+const ONLINE_TM = !!TM && PEDIDO_TM?.modo === 'online' && !!PEDIDO_TM?.online;
+const PARAMS0 = new URLSearchParams(location.search);
+const ONLINE_BC = !ID_TM && !!PARAMS0.get('online') && PARAMS0.get('transporte') === 'bc';
+const ONLINE = ONLINE_TM || ONLINE_BC;
+const LADO_ONLINE = ONLINE_TM ? (PEDIDO_TM.online.lado === 1 ? 1 : 0) : ONLINE_BC && PARAMS0.get('lado') === '1' ? 1 : 0;
+// o time do humano: 0 (o mandante) sem ?tm; com ?tm, o lado do usuário no TM (o time 0 é sempre o mandante do TM); no online, o
+// MEU lado (o anfitrião é o 0)
+const TIME_HUMANO = ONLINE ? LADO_ONLINE : TM ? TM.humano : 0;
+const TRAVA_TM = TM && !PENALTIS_TM && !LIVRE_TM && !ONLINE_TM ? TM.trava : null;
+// online: a sessão (online.js, pura) e a página (online-pagina.js: transporte, avisos, pausa combinada) só por import dinâmico
+const [MOD_ON, MOD_PAG_ON] = ONLINE ? await Promise.all([import('./online.js'), import('./online-pagina.js')]) : [null, null];
+let PAG_ONLINE = null;
 
 const params = new URLSearchParams(location.search);
 const PRINTS = params.get('prints') === '1';
@@ -179,7 +190,9 @@ async function carregarLivre() {
 if (modoPagina === 'livre') await carregarLivre();
 const MIN_PARAM = +params.get('min') > 0 ? +params.get('min') : undefined;
 const DEMO_ON = params.get('demo') === '1';
-const SEMENTE = Math.max(1, Math.floor(+params.get('semente') || (ID_TM ? sementeTM(ID_TM) : 1)));
+// (online: a semente é a do anfitrião — o id do pedido é diferente em cada aparelho)
+const SEMENTE = ONLINE_TM ? ((PEDIDO_TM.online.semente >>> 0) % 999999) + 1
+  : Math.max(1, Math.floor(+params.get('semente') || (ID_TM ? sementeTM(ID_TM) : 1)));
 // disputa de pênaltis: "Jogar de novo" passa à semente seguinte (outra moeda, outras cobranças). Sem ?semente nem ?tm, cada
 // disputa nova (a 1ª, Reiniciar, Jogar de novo, a volta pelo Modo de jogo) tem a semente SORTEADA aqui na página — antes
 // toda disputa começava igual (a mesma moeda, o mesmo lado do goleiro da IA; revisão de 16/10). A semente fica no mundo
@@ -236,7 +249,7 @@ function temWebGL2() {
 }
 
 // (tm: a pausa do Total Match — sem Reiniciar nem Modo de jogo, com "Simular o resto"; sem Editar time com a trava)
-const hud = criarHud({ aoComando: comando, tm: TM ? { trava: TRAVA_TM != null, timeHumano: TIME_HUMANO } : null });
+const hud = criarHud({ aoComando: comando, tm: TM ? { trava: TRAVA_TM != null, timeHumano: TIME_HUMANO } : null, online: ONLINE });
 // "Editar time" (partida; editor-time.js sob demanda: carregarSobDemanda): a tela entrega a edição no PRONTO (aoPronto)
 // e solta a entrada ao fechar. null até chegar
 let editor = null;
@@ -265,15 +278,20 @@ function criarMundoTreino(opc = {}) {
     });
   }
   if (o.modo === 'partida') {
-    return criarPartida({
+    const m = criarPartida({
       semente: o.semente, minutosPorTempo: o.minutosPorTempo ?? MIN_PARAM, saida: o.saida, times: o.times ?? TM?.times,
       elencos: o.elencos ?? (TM ? ELENCOS_TM : undefined), humano: o.humano ?? TIME_HUMANO, trava: o.trava !== undefined ? o.trava : TRAVA_TM,
+      humanos: ONLINE ? [0, 1] : undefined,
     });
+    if (ONLINE) m.online = true; // (fora do hash: o passo é o passoOnline com as duas entradas)
+    return m;
   }
   return S.criarTreino(o);
 }
 /** Um passo: partida (passoPartida) ou treino (passoTreino) — as mesmas funções dos testes em Node. */
+const FNS_ONLINE = { passoPartida, entradaDemoPartida };
 function passoDoMundo(m, e, acoes) {
+  if (m.online) return MOD_ON.passoOnline(m, e, acoes, FNS_ONLINE);
   if (m.disputa) return MOD_DISP.passoDisputa(m, e);
   if (m.livre) return MOD_LIVRE.passoLivre(m, e, acoes);
   return m.modo === 'partida' ? passoPartida(m, e, acoes) : S.passoTreino(m, e, acoes);
@@ -394,7 +412,7 @@ const _leituraVazia = [];
 // jogo"); senão desligada nos testes automatizados (webdriver), nos prints e na demonstração; senão SUBST.ligada.
 const SUBC = CFG.SUBST;
 const substParam = params.get('substituicao');
-let substLigada = substParam === '1' ? true : substParam === '0' ? false
+let substLigada = ONLINE ? false : substParam === '1' ? true : substParam === '0' ? false
   : typeof prefs.substituicao === 'boolean' ? prefs.substituicao : (navigator.webdriver || PRINTS || DEMO_ON) ? false : SUBC.ligada;
 let cenaSub = null;          // a cena em andamento (o laço segura a simulação)
 let subBotoes = 0;           // botões segurados no começo: só pulam depois de soltos e apertados de novo
@@ -511,7 +529,8 @@ function rodarPasso(entrada, acoes) {
   estadoAntesPasso = mundo.partida?.estado ?? null;
   substNoPasso.length = 0;
   const t0 = agoraMs();
-  const eventos = passoDoMundo(mundo, entradaDoTime(entrada), acoes) ?? mundo.eventos ?? [];
+  // (online: a entrada já vem com os dois times, {0, 1}, decodificada pela sessão)
+  const eventos = passoDoMundo(mundo, mundo.online ? entrada : entradaDoTime(entrada), acoes) ?? mundo.eventos ?? [];
   // súmula do Total Match (só lê o mundo e os eventos do passo)
   if (sumulaTM && mundo.modo === 'partida') sumulaPasso(sumulaTM, mundo, eventos);
   const t1 = agoraMs();
@@ -920,7 +939,10 @@ const _queda = { x: 0, z: 0 };
 const mqRetrato = window.matchMedia('(orientation: portrait)');
 function retratoBloqueado() { return mqRetrato.matches && document.documentElement.classList.contains('com-toque'); }
 
-function pausado() { return hud.menuAberto || hud.ajudaAberta || !!editor?.aberto || retratoBloqueado(); }
+function pausado() {
+  if (mundo.online) return retratoBloqueado() || !!PAG_ONLINE?.pausado;
+  return hud.menuAberto || hud.ajudaAberta || !!editor?.aberto || retratoBloqueado();
+}
 
 // uniforme de cada jogador pelo elenco (partida); null no treino (o desenho usa o do time)
 const kitCache = new Map();
@@ -1552,6 +1574,7 @@ function quadro(agoraMs, desenhar = true) {
   if (prejogo && prejogo.ativo) {
     entrada.ler(yawEntrada());
     laco.ultimo = agoraMs;
+    if (mundo.online && PAG_ONLINE) PAG_ONLINE.enviarPacote(agoraMs, 0);
     const emPe = retratoBloqueado();
     if (prejogo.quadro(emPe || document.hidden ? 0 : dtReal, agoraMs, desenhar && !emPe, emPe)) return;
   }
@@ -1567,7 +1590,8 @@ function quadro(agoraMs, desenhar = true) {
   if (pausaAntes && !pz) { entrada.soltarTudo(true); entrada.ler(yawEntrada(), agoraMs); }
   pausaAntes = pz;
   entrada.definirMenu?.(hud.menuAberto || hud.ajudaAberta);
-  if (cenaSub) {
+  if (mundo.online && PAG_ONLINE) quadroOnline(dt, ent, agoraMs);
+  else if (cenaSub) {
     // cena de substituição: a simulação fica parada (como no replay; o laço não recupera o tempo); pausa, aba escondida e
     // celular em pé congelam a cena (ela volta de onde parou); um aperto novo depois de 0,5 s pula
     laco.ultimo = agoraMs;
@@ -1626,6 +1650,63 @@ function quadro(agoraMs, desenhar = true) {
   else desenharQuadro(dt, agoraMs, desenhar && !retratoBloqueado());
   medirQps(dtReal, agoraMs);
   adaptarQualidade(dtReal, agoraMs);
+}
+
+/**
+ * Online 1×1 (contrato "Online 1×1"): o laço pela sessão (online.js). Só roda o passo com as DUAS entradas dele; a minha
+ * lida agora vale para o passo n + D. O que é local — o replay, a comemoração, a minha pausa, o celular em pé — só segura
+ * a MINHA simulação (sem passo, sem entrada nova): o outro espera sozinho ("Aguardando…"). Menu, Ajuda e o editor
+ * abertos NÃO param o jogo: a minha entrada vai com o bit IA (a IA joga pelo meu controlado, nos dois aparelhos). Um
+ * pacote por quadro; o hash do mundo a cada 60 passos (dessincronia).
+ */
+let dtMedioOn = PASSO;
+// testes do online sem pessoa (?online=…&ia=1): a IA joga pelo meu controlado o tempo todo (o bit IA)
+const IA_ONLINE_TESTE = ONLINE_BC && params.get('ia') === '1';
+const trintaQps = () => dtMedioOn > 0.025;
+function quadroOnline(dt, ent, agoraMs) {
+  const s = PAG_ONLINE.s;
+  dtMedioOn += (dt - dtMedioOn) * 0.05;
+  const segPausa = PAG_ONLINE.quadro(agoraMs, { fim: mundo.partida?.estado === 'fim' });
+  let segura = segPausa || retratoBloqueado() || PAG_ONLINE.encerrado;
+  if (diretor && diretor.ativo) {
+    segura = true;
+    if (botaoPula(ent.botoes)) fimReplay(true);
+    else if (!diretor.avancar(dt)) fimReplay(false);
+  } else if (cenaGol && !segura) quadroComemoracao(dt, ent);
+  let quer = 0, rodou = 0, segurou = false;
+  if (!segura) {
+    const r = avancarLaco(laco, agoraMs);
+    quer = MOD_ON.passosDoQuadro(s, r.passos, agoraMs);
+    alfa = r.alfa;
+  } else laco.ultimo = agoraMs;
+  const ia = IA_ONLINE_TESTE || hud.menuAberto || hud.ajudaAberta || !!editor?.aberto;
+  for (let i = 0; i < quer; i++) {
+    // a comemoração rodando segura a montagem da saída (como fora do online: só a MINHA simulação espera)
+    if (seguraSimulacao()) { segurou = true; break; }
+    if (!MOD_ON.podePassar(s)) break;
+    const { e, acoes } = MOD_ON.entradas(s);
+    rodarPasso(e, acoes);
+    MOD_ON.passou(s);
+    MOD_ON.ajustarAtraso(s, trintaQps());
+    const n = s.n - 1;
+    if (n % MOD_ON.HASH_CADA === 0) { const h = hashMundo(mundo); MOD_ON.registrarHash(s, n, h); PAG_ONLINE.enviarControle({ tipo: 'hash', n, h }); }
+    // a minha entrada do passo n + D (a leitura do quadro; do 2º passo em diante a mesma leitura: `repete`) e, se o
+    // editor entregou, a edição do MEU time (vai pelo canal confiável, marcada na entrada)
+    const acao = edicaoNaFila && edicaoNaFila.time === TIME_HUMANO ? edicaoNaFila : null;
+    edicaoNaFila = null;
+    const minha = ia ? { x: 0, z: 0, botoes: 0, ia: true } : { x: ent.x, z: ent.z, botoes: ent.botoes, repete: i > 0 };
+    entrada.passoUsou(minha.botoes);
+    const nProd = MOD_ON.produzir(s, minha, acao);
+    if (acao) PAG_ONLINE.enviarControle({ tipo: 'acao', n: nProd, acao });
+    if (i === 0) { entrada.limparPulsos(true); ent.botoes = entrada.ler(yawEntrada(), agoraMs).botoes; }
+    rodou++;
+    if ((diretor && diretor.ativo) || cenaSub) break;
+  }
+  const parado = quer > 0 && rodou === 0 && !segurou;
+  MOD_ON.marcarParado(s, parado, agoraMs);
+  // parado esperando o outro: o tempo parado não é recuperado depois (correr para alcançar gasta a folga do atraso D)
+  if (parado || segurou) { laco.acum = Math.min(laco.acum, laco.passo / 2); if (segurou) alfa = 1; }
+  PAG_ONLINE.enviarPacote(agoraMs, (trintaQps() ? MOD_ON.E_30QPS : 0) | (ia ? MOD_ON.E_MENU : 0));
 }
 
 function medirQps(dt, agora) {
@@ -1766,6 +1847,8 @@ function modoPrejogo() {
   if (p === '1') return 'completo';
   if (PREJOGO.modos.includes(p)) return p;
   if (navigator.webdriver || PRINTS || DEMO_ON) return 'desligado';
+  // online: o curto (ou menos, se a preferência for menos) — o outro espera o pré-jogo mais longo dos dois
+  if (ONLINE) return prefs.prejogo === 'desligado' || prefs.prejogo === 'escalacao' ? prefs.prejogo : 'curto';
   return PREJOGO.modos.includes(prefs.prejogo) ? prefs.prejogo : 'completo';
 }
 const NOME_PREJOGO = { completo: 'completo', curto: 'curto', escalacao: 'só escalação', desligado: 'desligado' };
@@ -1874,6 +1957,7 @@ function simularResto() {
 /** "Voltar ao Total Match": manda o resultado (tm3d:fim); antes do apito final, simula o resto primeiro. */
 function voltarAoTM() {
   if (!TM) return;
+  if (mundo.online) { fimTM(resultadoAtualTM(), { online: { hashFinal: hashMundo(mundo) >>> 0 } }); return; }
   // Modo Livre: volta já, sem simular nem resultado
   if (mundo.livre) { fimTM(resultadoAtualTM()); return; }
   if (mundo.partida?.estado === 'fim') { fimTM(resultadoAtualTM()); return; }
@@ -2053,6 +2137,21 @@ async function iniciar() {
     // Total Match: o 3D não roda aqui — o TM simula a partida (sem esperar os 30 s do aviso dele)
     if (ID_TM) sairTM();
     return;
+  }
+  // online: a sessão e o transporte ANTES do 'tm3d:pronto' (o TM entrega a porta em resposta a ele)
+  if (ONLINE && !PAG_ONLINE) {
+    const on = ONLINE_TM ? PEDIDO_TM.online : null;
+    PAG_ONLINE = MOD_PAG_ON.criarPaginaOnline({
+      lado: LADO_ONLINE, D: on ? on.D0 : +params.get('D') || 4, nomes: on?.nomes ?? ['Lado 0', 'Lado 1'],
+      transporte: ONLINE_TM ? 'porta' : 'bc', sala: on ? on.sala : params.get('online'),
+      ao: {
+        menuPausar: () => { if (PAG_ONLINE.pausar(performance.now())) hud.fecharMenu(); },
+        // sair no meio = derrota (fair play no TM); o 'abandono' vai antes, para o outro ver o W.O. na hora
+        menuSair: () => { hud.fecharMenu(); PAG_ONLINE.sair(); setTimeout(() => { if (TM) avisarTM('tm3d:sair', { abandono: true }); }, 400); },
+        wo: (vencedor, motivo) => { if (TM) fimTM(resultadoAtualTM(), { online: { wo: { vencedor, motivo }, hashFinal: hashMundo(mundo) >>> 0 } }); },
+        dessinc: info => { if (TM) fimTM(null, { online: { dessinc: true, n: info?.n ?? null } }); },
+      },
+    });
   }
   hud.progresso('Preparando o gramado…');
   await proximoQuadro();
@@ -2298,6 +2397,15 @@ const api = {
   bolaParada: { carregar: carregarBP, get estado() { return bp.tela?.estado(mundo, cam, bp.plano) ?? null; }, linha(v) { bp.linha = !!v; }, pontos: () => bp.tela?.pontos(mundo) ?? [] },
   /** Modo Livre: escolha(), ajustar({linha, goleiro}), recomecar('meio' | 'pe'), naFila (livre-pagina.js api; null fora). */
   get livre() { return PAG_LIVRE ? PAG_LIVRE.api : { escolha: () => null, ajustar: () => null, recomecar: () => null, naFila: null }; },
+  /** Online 1×1 (testes): o estado da sessão — passo, atraso, RTT, paradas, os hashes guardados ([n, h]) e o placar. */
+  get online() {
+    if (!PAG_ONLINE) return null;
+    const s = PAG_ONLINE.s;
+    return { lado: s.lado, n: s.n, D: s.D, rtt: s.rtt, paradas: s.paradas, dessinc: s.dessinc, hashes: [...s.hashesLoc.entries()],
+      placar: [mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0], estado: mundo.partida?.estado ?? null, tick: mundo.tick,
+      conexao: MOD_ON.estadoConexao(s, performance.now()).estado, pausado: PAG_ONLINE.pausado, pausasRestam: PAG_ONLINE.pausasRestam,
+      pausar: () => PAG_ONLINE.pausar(performance.now()), retomar: () => PAG_ONLINE.retomar(performance.now()) };
+  },
   /** Carrega o Livre (livre.js + livre-pagina.js) antes de um reiniciar({modo: 'livre'}) — o trocarModo já carrega. */
   carregarLivre() { return carregarLivre().then(() => true); },
   /** Cópia de m.times[t] (partida) ou null. */

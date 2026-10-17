@@ -91,5 +91,6 @@ export const TEMPOS_NAVEGADOR = {
   'teste-substituicao-tela.mjs': 164,
   'teste-penaltis-tela.mjs': 60,
   'teste-livre-tela.mjs': 120,
+  'teste-online-tela.mjs': 160,
   'teste-desempenho-celular.mjs': 35,
 };
