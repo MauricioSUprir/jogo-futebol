@@ -119,6 +119,7 @@ const LISTA = [
   // Online 1×1 (dono, 16/10: "duas pessoas consigam jogar uma contra a outra"; contrato "Online 1×1" no CONTRATOS.md)
   ['online, etapa 0: nada de Math não exata, Math.random nem relógio no passo com 2 humanos (partida inteira, 2 sementes), sort total, nenhum ** na lógica', 'teste-math-proibido.mjs'],
   ['online, etapa 1: dois humanos — cada cobrança pelo humano DAQUELE time, a entrada de um time não vaza para o outro, TROCAR/GOLEIRO/PRESSÃO por time, bit IA, 1 humano bit a bit igual', 'teste-dois-humanos.mjs'],
+  ['online, etapa 2: a sessão de troca de entradas — formato, o mesmo jogo nos dois em 5 redes (perda, 30 qps, degrau, rajada), paradas, edições, ausência, dessincronia, custo', 'teste-online.mjs'],
 ];
 const argv = process.argv.slice(2);
 const iSo = argv.indexOf('--so');

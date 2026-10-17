@@ -71,6 +71,7 @@ export const TEMPOS_NODE = {
   // online 1×1 (medidos aqui, máquina dividida; acertar pelo log do CI)
   'teste-math-proibido.mjs': 30,
   'teste-dois-humanos.mjs': 140,
+  'teste-online.mjs': 30,
   // ainda fora da main (ramo golaco/dominio-sem-passar): 687 s num processo só no CI
   'teste-nao-passa.mjs': 687,
 };

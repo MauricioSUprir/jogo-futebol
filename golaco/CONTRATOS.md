@@ -2387,3 +2387,30 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   recebem (o mesmo passo de novo com a entrada do outro trocada; os outros jogadores são IA e reagem ao mundo, que muda
   de verdade com a jogada do outro: 0 de 3.996); C TROCAR/GOLEIRO/PRESSÃO de cada um só no time dele; D o bit IA (m.iaJoga
   e IA × humano até o fim); E criarPartida e o caminho de 1 humano bit a bit. `hash-partida`/`hash-igual` IGUAIS.
+
+### Etapa 2 — a sessão de troca de entradas (`js/online.js`, puro)
+- **Lockstep com atraso de entrada D** (3–10 passos; o rollback ficou fora: medido, não cabe no celular e quebraria som,
+  "GOL!", comemoração e replay). O passo n só roda com as DUAS entradas de n; a minha lida agora vale para n + D. Os D
+  primeiros passos são neutros (vão e voltam como os outros). Cada lado decide o PRÓPRIO D (cada entrada leva o passo
+  dela: não precisa combinar) e ele só SOBE (`ajustarAtraso`, pelo RTT p95 e pelos 30 qps de qualquer um; subir k =
+  produzir já k entradas repetindo a última, sem a AÇÃO).
+- **Tudo que é local sincroniza sozinho:** pausa, replay, comemoração, editor aberto — quem está nelas não roda passo nem
+  produz entrada, e o outro PARA esperando (sem mensagem nenhuma). Do gol até a saída as entradas valem neutras nos dois
+  (`passoOnline`: a cena é local, a regra não). Menu aberto sem parar = bit IA: a IA joga pelo meu controlado DENTRO do
+  passo, nos dois (time 0 antes do 1: ela escreve na memória da IA).
+- **Formato:** 6 bytes por entrada (x e z ±1024 em 12 bits, botões 15 bits + `repete`, bits IA e AÇÃO); a entrada LOCAL
+  passa pela mesma codificação antes da simulação (`quantizada`). Pacote do canal 'jogo' com todas as entradas não
+  confirmadas (até 16), o ack, o passo atual e o eco do relógio (RTT); inválido = descartado.
+- **Relógio:** quem fica à frente (média de ~0,5 s da vantagem > 1 passo) roda 1 passo a menos no quadro
+  (`passosDoQuadro`, como a vantagem de quadro do GGPO); parado esperando o outro, o tempo parado NÃO é recuperado
+  depois (correr para alcançar gasta a folga do D e vira outra parada).
+- **Ações** (a edição do time): marcadas na entrada do passo (bit AÇÃO) e mandadas pelo canal confiável; quem recebe
+  espera a ação antes de rodar aquele passo; a de time trocado é recusada.
+- **Dessincronia:** `hashMundo` a cada 60 passos pelo canal de controle; a 1ª diferença acusa (`s.dessinc`).
+- **Conexão para a tela:** `estadoConexao` — 'instavel' sem pacote há 0,75 s, 'aguardando' parado ou sem pacote há 5 s.
+- **Teste `teste-online`** (Node, padrão; `tools/lib/rede-memoria.mjs`): O1 formato (100 mil + extremos; pacotes
+  inválidos), O2 o mesmo jogo nos dois = a referência sem rede em 5 redes (15±10; 40±20 com 2% de perda; 80±40 com 5%;
+  B a 30 qps com relógio 0,5% mais rápido; 10% duplicados + degrau 20→120→20 ms + rajada de 300 ms), com replays locais,
+  menu (bit IA) e edições dos dois lados: 0 diferenças; O3 ≤ 1 parada a cada 10 s fora dos replays (medido 0,17–0,33);
+  O7 edições aplicadas nos dois, a de time trocado recusada; O9 ausência de 20 s ("aguardando" em 5,0 s, jogo igual
+  depois); O10 dessincronia acusada nos dois em ≤ 64 passos; O12 ~15 µs por quadro, ~10 KB/s por sentido.
