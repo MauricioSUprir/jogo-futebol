@@ -930,6 +930,26 @@ function projetar(x, y, z, out) {
   return out;
 }
 const _pt = { x: 0, y: 0, atras: false };
+// o NOME em cima do jogador com a bola (dono, 17/10): o nome de camisa acima da cabeça, só com a bola no pé, no jogo
+// (fora do pré-jogo, das cenas e do replay); um elemento só, fora do #hud (só desenho: o hash não muda)
+let elNome = null, nomeId = null;
+const _ptNome = { x: 0, y: 0, atras: false };
+function marcarCondutor() {
+  if (!elNome) {
+    elNome = document.createElement('div');
+    elNome.id = 'nome-condutor';
+    elNome.setAttribute('aria-hidden', 'true');
+    document.body.append(elNome);
+  }
+  const id = mundo.posse;
+  const e = id != null ? estJ.get(id) : null;
+  const livre = !!e && !cenaGol && !cenaSub && !(diretor && diretor.ativo) && !(prejogo && prejogo.ativo) && !PRINTS;
+  if (livre) projetar(lerp(e.x0, e.x1, alfa), 2.2, lerp(e.z0, e.z1, alfa), _ptNome);
+  if (!livre || _ptNome.atras) { if (!elNome.hidden) elNome.hidden = true; return; }
+  if (nomeId !== id) { const f = fichaDe(id); elNome.textContent = f ? (f.camisa ?? f.nome ?? '') : ''; nomeId = id; }
+  elNome.style.transform = `translate(${_ptNome.x.toFixed(1)}px, ${_ptNome.y.toFixed(1)}px) translate(-50%, -100%)`;
+  if (elNome.hidden) elNome.hidden = false;
+}
 const _carga = { x: 0, y: 0, forca: 0, tipo: '' };
 const _queda = { x: 0, z: 0 };
 
@@ -1079,6 +1099,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   }
   if (bp.tela) bp.tela.desenhar(cenaGol || cenaSub ? null : mundo, cam.camera, dt, bp.linha);
   campo.atualizar(agoraMs / 1000, cam.camera, renderizar);
+  marcarCondutor();
   torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
   const td0 = performance.now();

@@ -68,6 +68,25 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   entra pelo TM (Mais modos), não no menu do golaco. **Online 1×1** (pedido de 16/10; seção "Online 1×1" abaixo): duas
   pessoas, cada uma no seu aparelho, salas privadas por código, sem chat; conexão SEM CONTA e grátis (WebRTC P2P, a
   sinalização pelo Firebase que o TM já tem, sem TURN); só no TM.
+- **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME em cima do jogador com a bola (`main.js marcarCondutor`,
+  `#nome-condutor` fora do #hud — exceção pedida à "sem narração") e (2) os overalls da tela iguais aos do TM (`elenco.js
+  notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos). **FILA (dono: "o 3 e 4
+  fica pra dps"):** (3) o campinho da escalação do jogo EM PÉ (retrato), não deitado (`escalacao-tela.js`); (4) a cena de
+  substituição no online (hoje desligada no online porque seguraria a simulação de um lado só). Também a escalação
+  editada no TM antes do jogo agora vale no 3D (v374: formação do lado certo jogando fora, posições arrastadas pelo
+  `TM.comp.fieldSlot`, sem o montador automático por cima da do usuário).
+  **Mais para a fila (dono, 17/10: "coloca na lista para depois com limite"):** (5) o goleiro ESPALMA bola alta (hoje
+  só rasteira e meia altura; `goleiro.js`/`anim.js` mergulho, `maoAlcanca`, `teste-mergulho`); (6) na cena de comemoração,
+  a FOTO do autor com o número e o nome (`comemoracao.js` + a tela; a foto vem do pedido do TM); (7) o placar com mais a
+  cara do Total Match, um pouco MAIOR e o relógio com os SEGUNDOS além dos minutos (`hud.js`, `teste-hud-minimo` H10 —
+  continua cabendo no orçamento de HUD do celular).
+  **Ainda para a fila (dono, 17/10: "isso tudo pra depois"):** (8) **URGENTE, o 1º quando voltar:** "A IA NÃO CORRE, NEM
+  PRA DEFENDER, NEM PRA ATACAR, tem que ser mais difícil" — sem a bola, com a bola e na recomposição (medir antes com
+  `teste-intensidade`/`teste-transicao`/o painel: distância e disparadas por jogador, PPDA; comparar com a main); (9)
+  editar o TEMPO de jogo e a DIFICULDADE (na pausa/antes do jogo e vindo do TM pelo pedido); (10) botão de CARRINHO
+  (dividida deslizando; falta/cartão pela Regra 12 em `faltas.js`; cabe no orçamento de HUD do celular); (11) clássico mais
+  PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores (bote mais forte, mais contato), não pelo árbitro (o pedido do TM
+  já traz `partida.classico`).
 - Tudo em **português do Brasil**: textos da interface, comentários e mensagens de commit.
 - Sempre mandar o **link do jogo/app** (GitHub Pages) fora do artifact. **Prints: NÃO mandar mais ao dono** (12/10: "esquece os
   print"); os testes de navegador continuam conferindo a tela, só não se enviam as imagens. Ritmo: uma máquina com várias frentes

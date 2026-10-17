@@ -18,7 +18,7 @@
 // campinho são posicionadas pela fila/coluna da vaga (tela §5) e recalculadas a cada mudança de tamanho.
 
 import * as ESC from './escalacao.js';
-import { ELENCOS, POSICOES, fichaDe, atributosDe, notaNaPosicao, encaixeNaVaga, numerosCarta, notaTime, estrelas } from './elenco.js';
+import { ELENCOS, POSICOES, fichaDe, atributosDe, notaNaPosicao, notaExibida, encaixeNaVaga, numerosCarta, notaTime, estrelas } from './elenco.js';
 import { FORMACOES, ORDEM_FORMACOES } from './formacoes.js';
 import { posicaoTatica } from './tatica.js';
 import { svgCampinho, posicaoNaTela } from './campinho.js';
@@ -216,8 +216,9 @@ export function criarEditorTime(opc) {
     if (p && p.sai === id) return 'sai';
     return 'reserva';
   }
-  function notaNaVaga(id, pos) { const j = fichaDe(id); return j ? notaNaPosicao(atributosDe(j), pos) : 0; }
-  function notaNatural(id) { const j = fichaDe(id); return j ? notaNaPosicao(atributosDe(j), j.pos) : 0; }
+  // a nota da tela (a do Total Match nos times dele: elenco.js notaExibida)
+  function notaNaVaga(id, pos) { const j = fichaDe(id); return j ? notaExibida(j, pos) : 0; }
+  function notaNatural(id) { const j = fichaDe(id); return j ? notaExibida(j, j.pos) : 0; }
   function substContagem() {
     const r = R();
     return `Subst. ${r.subs.feitas + r.substituicoes.length}/${PARTIDA.subsMax} · paradas ${r.subs.paradas}/${PARTIDA.paradasMax}`;

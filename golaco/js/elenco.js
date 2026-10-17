@@ -250,6 +250,20 @@ export function numerosCarta(attr) {
 }
 
 /**
+ * A nota que a TELA mostra (dono, 17/10: "os overais estão diferentes na hora do jogo, do que antes do jogo"): o jogador
+ * do Total Match (ficha com `ovrTM`, tm-times.js) mostra o overall do TM na posição dele, e fora dela a diferença do
+ * jogo de volta para a escala do TM (o nível do jogo é o do TM comprimido pela metade: × 2). Os do GOLAÇO, a nota de
+ * sempre. Só a tela: a simulação usa os atributos.
+ */
+export function notaExibida(jog, pos) {
+  if (!jog) return 0;
+  const a = atributosDe(jog), n = notaNaPosicao(a, pos ?? jog.pos);
+  if (!Number.isFinite(jog.ovrTM)) return n;
+  const r = Math.round(jog.ovrTM + 2 * (n - notaNaPosicao(a, jog.pos)));
+  return r < 1 ? 1 : r > 99 ? 99 : r;
+}
+
+/**
  * Nota do time (tela §7.7): geral = média das 11 notas na vaga; ATA = vagas da fila 4; MEI = filas
  * 2–3; DEF = fila 1 + GOL. `vagas` = {vagaId: id}; `formacao` = objeto da formação (formacoes.js)
  * ou a lista de vagas dela.
@@ -260,7 +274,7 @@ export function notaTime(vagas, formacao) {
   for (const v of lista) {
     const jog = fichaDe(vagas[v.id]);
     if (!jog) continue;
-    const n = notaNaPosicao(atributosDe(jog), v.pos);
+    const n = notaExibida(jog, v.pos);
     const g = v.fila >= 4 ? 'ata' : v.fila >= 2 ? 'mei' : 'def';
     soma.geral[0] += n; soma.geral[1]++;
     soma[g][0] += n; soma[g][1]++;
