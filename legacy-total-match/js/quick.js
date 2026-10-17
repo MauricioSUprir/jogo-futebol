@@ -107,6 +107,7 @@
     var rest = all.filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; });
     var t = setup.source === "nation" ? TM.engine.teamFromNation(id, xi.concat(rest)) : TM.engine.teamFromClub(id, xi.concat(rest));
     t.formation = st.formation; t.tactic = st.tactic;
+    t.posicoes = st.pos ? JSON.parse(JSON.stringify(st.pos)) : null;   // posições arrastadas no campinho (o 3D usa)
     return t;
   }
   TM.ui.register("quick-lineup", function (screen, params) {

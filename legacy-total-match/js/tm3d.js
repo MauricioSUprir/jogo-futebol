@@ -118,17 +118,25 @@
     var F = (TM.comp && TM.comp.FORMATIONS) || {};
     var xi = ps.slice(0, 11);
     var gols = xi.filter(function (p) { return p.pos === "GK"; }).length;
-    var pronta = !!F[formacao] && xi.length === 11 && gols === 1 && xi[0].pos === "GK";
+    // escalação montada pelo usuário (formação ou posições do time): vale como está, sem o montador
+    var doUsuario = !!(time.formation || time.posicoes);
+    var pronta = !!F[formacao] && xi.length === 11 && (doUsuario || (gols === 1 && xi[0].pos === "GK"));
+    var remontada = false;
     if (!pronta && TM.comp && TM.comp.buildBestLineup && ps.length >= 11) {
       var lu = TM.comp.buildBestLineup(ps, F[formacao] ? formacao : "auto");
       var porId = {}; ps.forEach(function (p) { porId[p.id] = p; });
       var tit = lu.starters.map(function (id) { return porId[id]; }).filter(Boolean), usado = {};
       tit.forEach(function (p) { usado[p.id] = 1; });
       ps = tit.concat(ps.filter(function (p) { return !usado[p.id]; }));
-      formacao = lu.formation;
+      formacao = lu.formation; remontada = true;
     }
     if (!F[formacao]) formacao = "4-4-2";
-    return { players: ps, formacao: formacao, vagas: F[formacao] || [] };
+    var vagas = (F[formacao] || []).slice();
+    // posição LIVRE arrastada no campinho do TM: a vaga do titular é a dela (TM.comp.fieldSlot)
+    if (!remontada && time.posicoes && TM.comp && TM.comp.fieldSlot) {
+      for (var i = 0; i < 11; i++) { var cp = time.posicoes[i]; if (cp && isFinite(cp[0]) && isFinite(cp[1])) vagas[i] = TM.comp.fieldSlot(cp[0], cp[1]); }
+    }
+    return { players: ps, formacao: formacao, vagas: vagas };
   }
   function kit(shirt, sleeves, shorts, socks, pattern, second, trim, number, collar) {
     return { shirt: shirt, sleeves: sleeves, shorts: shorts, socks: socks, pattern: pattern, second: second, trim: trim, number: number,
@@ -203,7 +211,7 @@
     var casa = uniformeTM(chave, p1, p2, 0), fora = uniformeTM(chave, p1, p2, 1), terceiro = uniformeTM(chave, p1, p2, 2);
     var gk1 = goleiroLonge([p1, p2, terceiro.shirt], r), gk2 = goleiroLonge([p1, p2, terceiro.shirt, gk1], r);
     var sigla = (base.short || time.short || String(time.name || "TME").replace(/[^A-Za-zÀ-ú]/g, "").slice(0, 3)).toUpperCase().slice(0, 3);
-    var esc = escalacao(time, formacao || time.formation);
+    var esc = escalacao(time, time.formation || formacao);
     var jogs = esc.players.slice(0, 18).map(function (p, i) { return jogador3d(p, i, i < 11 ? esc.vagas[i] : null); });
     var xi = jogs.slice(0, 11), nota = xi.length ? Math.round(xi.reduce(function (s, p) { return s + p.overall; }, 0) / xi.length) : 70;
     var estadio = null; try { estadio = clube && TM.data.stadium ? TM.data.stadium(clube).name : null; } catch (e) {}
@@ -381,7 +389,10 @@
      mostra o placar na hora (velocidade instantânea), seguindo o fluxo normal do modo. */
   // v2 = v1 + identidade de cada time + partida (o motor antigo ignora os campos novos)
   function novoPedido(o) {
-    var home = time3d(o.teamA, o.formation), away = time3d(o.teamB, o.formationB);
+    // o cfg.formation do TM é a do time do usuário: jogando fora, ela é a do time B
+    var fA = o.formation, fB = o.formationB;
+    if (o.userSide === 1 && fB == null) { fB = fA; fA = null; }
+    var home = time3d(o.teamA, fA), away = time3d(o.teamB, fB);
     var p = {
       v: 2, id: "j" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36),
       titulo: o.title || "Partida", origem: (TM.ui.current && TM.ui.current()) || "",

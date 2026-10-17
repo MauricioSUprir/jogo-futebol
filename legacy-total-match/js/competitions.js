@@ -342,7 +342,8 @@
     var xi = xiIds.map(function (id, i) { var p = resolvePlayer(career, id); return p ? adjustForSlot(p, lineupSlot(career, i)) : null; }).filter(Boolean);
     var inXi = {}; xi.forEach(function (p) { inXi[p.id] = 1; });
     var rest = rosterPlayers(career).filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; });
-    return { id: club.id, name: club.name, players: xi.concat(rest), club: club };
+    return { id: club.id, name: club.name, players: xi.concat(rest), club: club, formation: formation,
+             posicoes: career.lineup && career.lineup.pos ? JSON.parse(JSON.stringify(career.lineup.pos)) : null };
   }
   function oppTeam(career, clubId) { var c = TM.data.club(clubId); return { id: c.id, name: c.name, players: oppPlayers(career, clubId), club: c }; }
   function anyTeam(career, clubId) { return clubId === career.teamId ? userTeam(career) : oppTeam(career, clubId); }
@@ -2024,7 +2025,8 @@
     var xi = lu.starters.map(function (id, i) { var p = TM.data.player(id); return p ? adjustForSlot(p, slotForLineup(lu, i)) : null; }).filter(Boolean);
     var inxi = {}; xi.forEach(function (p) { inxi[p.id] = 1; });
     var rest = career.nation.squad.map(TM.data.player).filter(function (p) { return p && !inxi[p.id]; });
-    return { id: nat.id, name: nat.name, players: xi.concat(rest), nation: nat };
+    return { id: nat.id, name: nat.name, players: xi.concat(rest), nation: nat, formation: lu.formation,
+             posicoes: lu.pos ? JSON.parse(JSON.stringify(lu.pos)) : null };
   }
   function oppNationTeam(natId) { var n = TM.data.nation(natId); return { id: n.id, name: n.name, players: TM.data.nationSquad(natId), nation: n }; }
 
