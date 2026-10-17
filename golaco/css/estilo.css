@@ -688,9 +688,10 @@ html.em-substituicao .toque, html.em-substituicao .qps, html.em-substituicao .go
 .fs-conta:empty { display: none; }
 /* PC, no jogo: não chega ao minimapa do meio (112 px de largura no meio da tela) */
 .faixa-subst.jogo { max-width: calc(50vw - 56px - var(--sa-l) - 64px - 10px); }
-/* celular, na cena: embaixo à esquerda, sem chegar ao "Pular" (112 px + margens à direita) */
+/* celular, na cena: embaixo à esquerda, sem chegar ao "Pular" (≥ 112 px, ~124 com a fonte de reserva, + margens à direita;
+   com 160 px a folga dependia da fonte e ficava em 2–4 px em 568×320 com entalhe) */
 html.com-toque .faixa-subst {
-  left: calc(var(--sa-l) + 14px); bottom: calc(var(--sa-b) + 14px); min-width: 0; max-width: calc(100vw - var(--sa-l) - var(--sa-r) - 160px);
+  left: calc(var(--sa-l) + 14px); bottom: calc(var(--sa-b) + 14px); min-width: 0; max-width: calc(100vw - var(--sa-l) - var(--sa-r) - 190px);
   max-height: 64px; padding: 5px 12px 5px 6px; gap: 8px;
 }
 html.com-toque .fs-sigla { font-size: 12px; padding: 4px 6px; }
