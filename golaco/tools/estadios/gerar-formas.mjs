@@ -109,6 +109,7 @@ export function formaDaPesquisa(e) {
     marcas,
     entorno: { tipo: E.tipo, relevo: E.relevo, agua: E.agua },
     capacidade: e.capacidade,
+    orientacao: Number.isFinite(e.orientacao_graus) ? e.orientacao_graus : null,
     letreiro: e.nome_oficial,
   };
   if (pistaCor) forma.pistaCor = pistaCor;

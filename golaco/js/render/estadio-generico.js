@@ -684,7 +684,22 @@ function criarFachada(P, aniso, fa, q) {
     for (let i = 0; i + 1 < pts.length; i++) { const a = base + 2 * i; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
   };
   const N = q === 'alta' ? 240 : 160;
-  if (!P.abertos) {
+  if (P.casca) {
+    // a pele: anéis do perfil da casca (do chão à cobertura), u pelo comprimento no chão, v pela altura
+    const perfis = [];
+    for (let i = 0; i <= N; i++) { const th = -Math.PI + (2 * Math.PI * i) / N; perfis.push({ th, p: P.perfilCasca(th) }); }
+    const nA = perfis[0].p.length;
+    let s = 0;
+    const us = perfis.map((q, i) => { if (i > 0) { const a = perfis[i - 1], r0 = a.p[0][0], r1 = q.p[0][0]; s += Math.hypot(r1 * Math.cos(q.th) - r0 * Math.cos(a.th), r1 * Math.sin(q.th) - r0 * Math.sin(a.th)); } return s / 12; });
+    const ytopo = Math.max(...perfis.map(q => q.p[nA - 1][1]));
+    const base = 0;
+    for (let i = 0; i <= N; i++) for (let k = 0; k < nA; k++) {
+      const [r, y] = perfis[i].p[k];
+      pos.push(r * Math.cos(perfis[i].th), y, r * Math.sin(perfis[i].th));
+      uv.push(us[i], y / Math.max(ytopo, 1));
+    }
+    for (let i = 0; i < N; i++) for (let k = 0; k + 1 < nA; k++) { const a = base + i * nA + k, b = a + nA; idx.push(a, a + 1, b, a + 1, b + 1, b); }
+  } else if (!P.abertos) {
     const pts = [];
     for (let i = 0; i <= N; i++) { const th = -Math.PI + (2 * Math.PI * i) / N, r = P.rFach(th); pts.push({ x: r * Math.cos(th), z: r * Math.sin(th), y: P.yFach(th) }); }
     faixa(pts);
@@ -714,7 +729,8 @@ function criarFachada(P, aniso, fa, q) {
 }
 /** A placa com o nome do estádio em cima da entrada principal (o lado de cá, +z). */
 function criarPlacaG(P, tex) {
-  const zF = P.rFach(Math.PI / 2), yF = P.yFach(Math.PI / 2);
+  const pc = P.perfilCasca(Math.PI / 2);
+  const zF = pc ? pc[2][0] + 0.8 : P.rFach(Math.PI / 2), yF = pc ? pc[2][1] + 4 : P.yFach(Math.PI / 2);
   const larg = clampN(yF * 1.7, 18, 52), alt = larg * 160 / 1024;
   const g = new THREE.PlaneGeometry(larg, alt);
   g.translate(0, clampN(yF - alt / 2 - 1.2, alt / 2 + 3, 40), zF + 0.6);
@@ -803,6 +819,8 @@ function criarChaoBairro(P, q, aniso) {
   // as ruas entre as quadras de estadio-generico.js predios (centros em 44·i): a quadra centrada no ladrilho
   tex.offset.set(((-M + 22) / 44) % 1, ((-M + 22) / 44) % 1);
   const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: tex }));
+  // as ruas giradas como as quadras (estadio-generico.js predios: o mesmo giro)
+  m.rotation.y = -P.forma.giroBairro;
   m.name = 'fora-chao';
   return m;
 }

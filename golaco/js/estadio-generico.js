@@ -94,7 +94,7 @@ export function validarFormaGenerica(f) {
   if (!familia || f.entorno === 'maracana') return null;
   const D = PADRAO_FAMILIA[familia];
   const pista = familia === 'pista' || !!f.pista;
-  const n0 = N_PLANTA[f.planta] ?? D.n;
+  const n0 = Number.isFinite(Number(f.n)) && f.n !== null ? clamp(Number(f.n), 2, 30) : (N_PLANTA[f.planta] ?? D.n);
   const rec = Array.isArray(f.recuo) ? f.recuo : [];
   // o recuo: a 1ª fileira fica fora das placas (6 m das linhas) com folga; na pista, fora da raia 8
   const PZ = CAMPO.meioZ + CAMPO.entorno + 0.14, PX = CAMPO.meioX + CAMPO.entorno + 0.14;
@@ -171,6 +171,8 @@ export function validarFormaGenerica(f) {
     marcas, entorno, capacidade, pistaCor: corOk(f.pistaCor) ?? '#a9472f', piso: corOk(f.piso),
     letreiro: typeof f.letreiro === 'string' && f.letreiro.trim() ? f.letreiro.trim().slice(0, 40).toUpperCase() : '',
     semente: hashTexto(f.letreiro ?? familia) ^ Math.round(capacidade),
+    // o giro da malha de ruas do bairro em volta (a orientação real do campo, se a pesquisa achou; senão pela semente)
+    giroBairro: (Number.isFinite(Number(f.orientacao)) && f.orientacao !== null ? Number(f.orientacao) : (hashTexto(f.letreiro ?? familia) % 70) - 35) * RAD,
   };
 }
 
@@ -432,6 +434,18 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   /** Raio da face de fora da fachada no ângulo th (nos cantos abertos: a de trás da arquibancada dele). */
   const rFach = th => rB(th) + recuoFach;
   const yFach = th => Math.max(yTopo(th) + 2.6, 8);
+  // a CASCA (a pele de almofadas da Allianz Arena, a membrana que sobe até a cobertura): a fachada de membrana com a
+  // cobertura fechada sai do chão um pouco para fora, abaulada, e dobra para dentro até a borda de fora da cobertura
+  const casca = !abertos && (F.fachada.estilo === 'membrana' || F.marcas.some(m => m.tipo === 'pele_led')) && (F.cobertura.tipo === 'total' || F.cobertura.tipo === 'retratil' || F.cobertura.tipo === 'anel');
+  const BOJO = 7;
+  /** O perfil da casca no ângulo th: [[r, y]…] do chão até a borda da cobertura (ou null sem casca). */
+  function perfilCasca(th) {
+    if (!casca) return null;
+    const c = cobEm(th), r0 = rFach(th), yt = c ? c.yFora + 0.6 : yFach(th), rt = c ? c.fora - 0.4 : r0;
+    const out = [];
+    for (let i = 0; i <= 6; i++) { const u = i / 6, a = u * Math.PI; out.push([r0 + BOJO * Math.sin(a * 0.62) * (1 - u * 0.35) + (rt - r0) * u * u, yt * (1 - Math.cos(a)) / 2]); }
+    return out;
+  }
 
   // ---------------------------------------------------------------- lugares da torcida
   // quantos torcedores desenhados: ~1 por lugar até ~20 mil; nos grandes, até ~25 mil (cada um vale vários lugares)
@@ -507,7 +521,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   let _lugares = null;
 
   // ---------------------------------------------------------------- marcas próprias (arco, torres, mastros, telões)
-  const rMax = Math.max(...Array.from({ length: 72 }, (_, i) => rFach(-Math.PI + (i * Math.PI) / 36)));
+  const rMax = Math.max(...Array.from({ length: 72 }, (_, i) => rFach(-Math.PI + (i * Math.PI) / 36))) + (casca ? BOJO : 0);
   const yMax = Math.max(...LADOS.map((_, k) => topoLado(k)));
   const MARCAS_P = montarMarcas();
   function montarMarcas() {
@@ -613,8 +627,8 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
       }
     }
     if (!fora) return null;
-    // a fachada (a casca de 2 m em volta)
-    if (r > Math.max(rf - 3, b + 0.4) - f && r <= rf + 1.2 + f && y <= yFach(th) + 0.6 + f) {
+    // a fachada (a casca de 2 m em volta; a pele abaulada da casca vai até BOJO m para fora)
+    if (r > Math.max(rf - 3, b + 0.4) - f && r <= rf + (casca ? BOJO + 0.6 : 1.2) + f && y <= (casca ? (cobEm(th)?.yFora ?? yFach(th)) + 1.2 : yFach(th) + 0.6) + f) {
       const [px, pz] = ponto(th, 1);
       if (temArquibancadaFolga(px, pz, f + 2)) return 'fachada';
     }
@@ -721,7 +735,8 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     const tipo = E.tipo;
     const dens = { urbano_denso: 0.85, residencial: 0.62, parque: 0.25, industrial: 0.45, campo_aberto: 0.1, orla: 0.6, campus: 0.35 }[tipo];
     for (let i = -28; i <= 28; i++) for (let k = -28; k <= 28; k++) {
-      const cx = i * Q, cz = k * Q;
+      const gx = i * Q, gz = k * Q, cg = Math.cos(F.giroBairro), sg = Math.sin(F.giroBairro);
+      const cx = gx * cg - gz * sg, cz = gx * sg + gz * cg;
       const d = Math.hypot(cx, cz);
       if (d < R0 || d > R1) continue;
       if (naAgua(cx, cz, 30)) continue;
@@ -738,7 +753,8 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
       else { lx = 14 + r() * 14; lz = 13 + r() * 14; h = 9 + r() * (14 + 30 * longe); }
       // dentro da quadra (as ruas de 9 m entre elas ficam livres: render/estadio-generico.js pinta o chão na mesma grade)
       lx = Math.min(lx, Q - 13); lz = Math.min(lz, Q - 13);
-      lista.push({ x: cx + (r() - 0.5) * (Q - 13 - lx), z: cz + (r() - 0.5) * (Q - 13 - lz), lx, lz, h, rumo: 0, cor });
+      const ox = (r() - 0.5) * (Q - 13 - lx), oz = (r() - 0.5) * (Q - 13 - lz);
+      lista.push({ x: cx + ox * cg - oz * sg, z: cz + ox * sg + oz * cg, lx, lz, h, rumo: F.giroBairro, cor });
     }
     _predios = lista;
     return lista;
@@ -1006,7 +1022,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
 
   return {
     forma: F, familia: F.familia, generica: true,
-    rF, rB, rFach, yFach, ponto, sDe, perfil, perfilLado, tipoEm, nos: NOS, sAneis, setor, psi, thDivisa, pesos, ladoEm,
+    rF, rB, rFach, yFach, casca, perfilCasca, ponto, sDe, perfil, perfilLado, tipoEm, nos: NOS, sAneis, setor, psi, thDivisa, pesos, ladoEm,
     temArquibancada, trechos, uDe, XP, ZP, abertos, yTopo, topoLado, cobEm, alturaCobEm, cobContinua, luzDoSol,
     get lugares() { return _lugares ?? (_lugares = gerarLugares()); },
     solido, cameraNoLadoDeCa, noDegrau, torres: TORRES, marcas: MARCAS_P,
