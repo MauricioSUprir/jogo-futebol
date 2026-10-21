@@ -2054,6 +2054,62 @@ com o estádio achado); o código dos módulos de sempre cresce ~3 KB (`render/e
   BUKO Stadion vidro/'parcial' — o estádio achado com o desenho dele, cada plano com cor, ≤ 40 chamadas / ≤ 130 mil
   triângulos, a marquise escondida só no pré-jogo da 'nenhuma' e de volta no jogo, 0 erros).
 
+## Estádios de forma genérica (21/10)
+Pedido do dono (21/10, depois do Maracanã): "quero isso com todos os estádios do jogo, ele pesquisou o estádio, olhou
+direitinho e fez detalhes certinho". Só DESENHO (hash igual): placas, gols, túnel (boca em z = `ESTADIO.tunel.z`) e bancos são
+os de `config.js`. Sem `?tm` pro nada disso é baixado (o download inicial não muda).
+- **`js/estadio-generico.js`** (puro): `validarFormaGenerica(f)` → a forma completa (ou null: sem família conhecida ou o
+  Maracanã, `entorno: 'maracana'`, que é de `estadio-planta.js`); `criarPlantaGenerica(forma, {dividida})` → a planta com a
+  MESMA interface da do Maracanã (`lugares`, `solido`, `cameraNoLadoDeCa`, `faixas`, `bandeiras`, `bandeiroes`,
+  `sinalizadores`, `ajustarPlano`, `ajustarAbertura`, `cameraGeral`) e as contas do desenho (`rF`/`rB`/`ponto`/`sDe`,
+  `perfil(s, θ)`, `perfilLado(k, s)`, `tipoEm`, `sAneis`, `trechos(nCol)`, `temArquibancada`, `cobEm(θ)`, `alturaCobEm`,
+  `perfilCasca`, `torres`, `marcas`, `predios`, `arvores`, `carros`, `estacionamentos`, `canteiros`, `torcedoresFora`, `agua`,
+  `relevo`). Famílias: **tigela** (bacia oval), **inglesa** (4 retas de cantos abertos), **arena** (retangular de cantos
+  fechados), **pista** (a curva de atletismo oficial: retas de 84,39 m, raio 36,5 m, 8 raias de 1,22 m), **pequeno**.
+  Contas por ângulo polar θ como no Maracanã: 1ª e última fileira em superelipse de semi-eixos POR QUADRANTE (a pista: a
+  curva de atletismo), a fileira s pela interpolação radial; a altura do degrau pelo perfil de cada lado (`la` lado de lá,
+  `fa` fundo +x, `fb` fundo −x, `ca` lado de cá = o setor 0–3), misturada nos cantos fechados (±14° de ψ; nos parciais o
+  canto desce); nos cantos ABERTOS a arquibancada termina numa reta (|x| ≤ X nos lados, |z| ≤ Z nos fundos) e o canto fica
+  vazio. Perfil de 1–3 anéis com a face dos camarotes (vidro) ou do corredor entre eles. A 1ª fileira contém a quina das
+  placas com ≥ 1,5 m e a do lado de cá fica na boca do túnel (mais longe na pista ou com recuo grande: a caixa do túnel por
+  cima). Cobertura: anel/total/retrátil contínuas ou por arquibancada/parcial (só os lados cobertos), sustentação por
+  treliça, pilares (cobertura quase plana), mastros, cabos/anel de compressão, balanço ou arco; sem cobertura, 4 torres de
+  refletor (ou as estruturas sobre os lados: `torres_luz` com lado). Casca: fachada de membrana (ou `pele_led`) com a
+  cobertura fechada sai do chão abaulada (7 m) e dobra até a borda da cobertura. Marcas próprias: arco, torres, rampas em
+  espiral, mastros, telão (pendurado na cobertura ou em cima da arquibancada), estátua, cúpula, pele de LED. Entorno pelo
+  tipo (urbano denso, residencial, parque, industrial, campo aberto, orla, campus: a esplanada, a densidade e a altura dos
+  prédios), relevo (morros/montanhas no horizonte), água (rio, canal, lago, mar) e a malha de ruas girada (`orientacao`).
+  Lugares: ~1 torcedor por lugar até ~20 mil, até 25,5 mil nos grandes (os de cima um pouco maiores e mais espaçados).
+- **`render/estadio-generico.js`**: `ligarForma`, `criarTigela` (as 5 malhas de sempre: 'arquibancada-lado',
+  'arquibancada-fundos' com a pista/o piso pintado, 'arquibancada-ca' com o túnel, os bancos e a cobertura de cá — fora do
+  desenho com a câmera atrás da 1ª fileira de cá —, 'cobertura' e 'cobertura-estrutura' com as lâmpadas acesas à noite pelo
+  mapa de brilho) e `criarForaForma` (fachada pelo estilo de `fachada-estilos.js`, a placa, o túnel, 'fora-marcas' — marcas,
+  água e relevo numa malha —, esplanada, chão do bairro, prédios, árvores, carros, torcedores; ≤ 40 chamadas por plano no
+  celular Média). `render/identidade-pagina.js` escolhe: forma com `entorno 'maracana'` → a do Maracanã; outra → esta.
+- **Base**: `assets/tm/estadios.json` → `estadios[chave].forma = {familia, planta?, n?, cantos?, pista?, recuo: [lateral,
+  fundo], lados: {la|fa|fb|ca: [profundidade, altura, anéis, coberta 0/1, camarotes 0/1]}, cob: {tipo, mat, cor, sust, alto,
+  estr}, fach: {estilo, cor, cor2, led}, cad: [cores], padrao, marcas: [{tipo, lado?, n?, alto?, cor?}], entorno: {tipo,
+  relevo, agua, lado?}, pistaCor?, piso?, orientacao?, capacidade, letreiro}`, gerado por `tools/estadios/gerar-formas.mjs` a
+  partir da pesquisa (`tools/estadios/pesquisa-forma-*.json`: os agentes com a foto do TM e 2+ fontes por estádio) e dos
+  ajustes da revisão contra as fotos (`tools/estadios/ajustes-forma.json`, por cima).
+- **Campos da revisão** (21/10, os defeitos repetidos que a revisão contra as fotos achou): `cob.comp` (m coberto no meio de
+  cada lado coberto: a marquise só no centro da principal; `cobEm` devolve null fora dele, a chapa, os sólidos e a sombra
+  seguem); `fach.estilo 'talude'` (o barranco de grama — ou de pedra, com a cor escura — do topo da arquibancada ao chão,
+  `dTal` = 0,95 × a altura, 5–20 m, com a escadaria; a fachada vira esse barranco, o `rFach` passa a ser a base dele e a
+  entrada principal é o bloco `portal` com a placa no lado de cá); `fach.casca false` (a membrana sem a casca abaulada); o
+  `concreto` é o MURO do estádio (pilares a cada 6 m, a fresta de ventilação no alto, uma seteira por pano: antes as
+  galerias por anel pareciam prédio de escritórios); padrões de cadeira `setores` (blocos de 6 m alternados) e `raios` (a 1ª
+  cor cortada por faixas finas da 2ª); marcas `bola` (a escultura da praça, os 12 gomos pretos), `cubo` (o cubo de vídeo no
+  meio, só com a cobertura contínua), `torres_luz` com lado E n (n torres enfileiradas atrás daquele lado; com lado de lá/cá
+  sem n, as duas estruturas largas; sem lado e n > 4, espalhadas em volta), `torres` com lado (atrás do meio dele; as sem
+  rampa coladas na fachada). Limite de peças por marca: colunas 300, mastros 48, torres de luz 16, o resto 24. As raias da
+  pista só no tartan (a cor saturada): o anel de terra ou de asfalto da pista antiga fica liso. Os 2 bandeirões sempre por
+  slot (0 lado de lá, 1 organizada; o que a forma não tem fica `vazio`, no subsolo — o shader da torcida e o das bandeiras
+  leem 2: o Barradão, sem o lado de lá, quebrava a página).
+- **Testes**: `teste-estadio-generico` (Node, padrão; os 5 de exemplo + a base inteira: G1 forma válida/quina/túnel, G2
+  lugares no degrau e fora dos sólidos, G3 festa, G4 câmera de TV, G5 trilhos do pré-jogo, G6 clássico, G7 desempenho, G8 sem
+  forma nada muda); `teste-prejogo` item 14 com os Aflitos; prints de conferência `tools/prints-estadios.mjs`.
+
 ## Cara do Total Match no modo ?tm (15/10)
 Pedido do dono: "deixa os botões, menu, tudo com a cara do total match". Só DOM/CSS (hash igual); sem `?tm` nada é baixado.
 - **`index.html`**: um `<script>` antes do CSS põe `html.tm` (só com `?tm=<id>` não vazio); outro DEPOIS do importmap escreve

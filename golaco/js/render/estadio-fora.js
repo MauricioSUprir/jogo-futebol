@@ -407,8 +407,7 @@ function criarPredios(uNoite, L = predios()) {
   return m;
 }
 
-function criarArvores() {
-  const L = arvores();
+function criarArvores(L = arvores()) {
   const tronco = new THREE.CylinderGeometry(0.035, 0.05, 0.45, 5); tronco.translate(0, 0.225, 0);
   const copa = new THREE.IcosahedronGeometry(0.32, 0); copa.translate(0, 0.68, 0);
   const g = juntarGeometrias([tronco, copa], [new THREE.Color(0x5a4330), new THREE.Color(0x3f7a35)]);
@@ -492,7 +491,7 @@ function criarTorcedores(material, tf = null, L = torcedoresFora()) {
 export function criarEstadioFora(cena, opc = {}) {
   // estádio com forma própria (render/estadio-real.js, sob demanda): a estrutura e o entorno dele, com as peças daqui
   const f3 = opc.identidade?.tm && opc.identidade.forma3d;
-  if (f3) return f3.real.criarForaForma(cena, opc, f3.planta, { criarTunel, criarBairro, criarPredios, criarCarros, criarTorcedores, texPlaca });
+  if (f3) return f3.real.criarForaForma(cena, opc, f3.planta, { criarTunel, criarBairro, criarPredios, criarCarros, criarTorcedores, texPlaca, criarArvores });
   const q = opc.qualidade ?? 'media', aniso = opc.aniso ?? 4;
   // com ?tm (identidade.js): o nome do estádio e o escudo do mandante na placa, as cores dele na fachada, na cobertura,
   // no túnel e nos cantos, e as camisas de quem chega (só desenho; nenhuma medida muda)

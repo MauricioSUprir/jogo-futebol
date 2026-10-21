@@ -246,7 +246,7 @@ export function criarBandeiras(cena, opc = {}) {
     const q = Q[k];
     for (; fi < B.faixas[q]; fi++) faixa(lFaixas[fi]);
     for (; bi < B.bandeiras[q]; bi++) bandeira(lBand[bi]);
-    if (k === 0) for (const b of lBand2) bandeirao(b);
+    if (k === 0) for (const b of lBand2) if (!b.vazio) bandeirao(b);
     cont[q] = pos.length / 3;
   }
   const geo = new THREE.BufferGeometry();

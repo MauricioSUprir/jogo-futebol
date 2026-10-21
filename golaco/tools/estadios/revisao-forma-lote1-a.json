@@ -1,0 +1,540 @@
+[
+ {
+  "chave": "estadio da luz",
+  "nota_antes": 6,
+  "problemas": [
+   "Fachada em mosaico de painéis vermelhos e brancos: a Luz de verdade é clara por fora (branco/prata, vidro e estrutura metálica). O vermelho forte é só dos arcos",
+   "Na vista aérea só aparecem 2 dos 4 arcos vermelhos (faltam o do lado de cá e o do fundo −x)",
+   "Os arcos parecem finos e baixos perto dos de 43 m reais, que dominam a silhueta",
+   "Duas estátuas iguais no mesmo ponto da praça (desenhadas uma por cima da outra)",
+   "Visto de dentro, o forro da cobertura sai verde-escuro (é do desenho). Na Luz ele é claro e translúcido, com a treliça vermelha à mostra",
+   "Cadeiras vermelhas certas, mas sem as letras brancas (fica para as marcas fictícias)"
+  ],
+  "ajustes": {
+   "fach": {
+    "estilo": "vidro",
+    "cor": "#c5ced3",
+    "cor2": "#e9ebec"
+   },
+   "marcas": [
+    {
+     "tipo": "estatua",
+     "lado": "ca"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "castelao",
+  "nota_antes": 5,
+  "problemas": [
+   "Faltam as 60 colunas treliçadas brancas em curva que sobem pela fachada e passam por cima da borda do teto (a marca do Castelão)",
+   "Fachada de lâminas cinza uniformes: a real é uma pele prateada de inox com a faixa de vidro escuro em volta",
+   "Oval e teto branco vistos de cima estão parecidos",
+   "Bairro em volta com muitos prédios médios e altos: o real é de casas baixas com telhado de barro e poucos prédios",
+   "Forro da cobertura verde-escuro visto de dentro (é do desenho). O real é claro"
+  ],
+  "ajustes": {
+   "fach": {
+    "cor": "#aab3ba",
+    "cor2": "#3f4b55"
+   },
+   "marcas": [
+    {
+     "tipo": "mastros",
+     "n": 24,
+     "alto": 31,
+     "cor": "#f2f3f1"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "saitama stadium 2002",
+  "nota_antes": 4,
+  "problemas": [
+   "A cobertura do lado de lá só cobre o meio da arquibancada: as duas asas reais cobrem as laterais inteiras e passam das pontas",
+   "4 torres de refletor nos cantos que o estádio não tem (os refletores ficam nas asas da cobertura)",
+   "Fachada parece um prédio de escritórios com janelas em fita. A real é de concreto com pilares inclinados enormes, pórticos e a treliça da asa à mostra",
+   "Faixa verde-água no alto da fachada que não existe (o verde-azulado é só o pano de vidro da entrada)",
+   "Só um telão: há um atrás de cada gol",
+   "As asas são uma chapa plana. As reais são curvas, com as pontas viradas para cima (não dá para fazer na forma)"
+  ],
+  "ajustes": {
+   "cob": {
+    "tipo": "por_arquibancada"
+   },
+   "fach": {
+    "cor2": "#8f9391"
+   },
+   "marcas": [
+    {
+     "tipo": "telao"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "tottenham hotspur stadium",
+  "nota_antes": 4,
+  "problemas": [
+   "Visto de cima é um caixote de cantos apertados: o real é bem arredondado, quase oval por fora",
+   "Fachada escura demais (azul-marinho dominando). Os painéis reais são prata e cinza claro e médio, com o grande pano de vidro na base",
+   "Cobertura branca lisa: a real é cinza metálica, com o anel de vidro na borda de dentro",
+   "Bairro de arranha-céus: em volta há casas geminadas de tijolo, prédios médios e poucas torres",
+   "Estátua marrom na praça que não existe: o galo dourado fica no alto da cobertura da South Stand",
+   "Forro da cobertura verde-escuro visto de dentro (é do desenho)"
+  ],
+  "ajustes": {
+   "n": 4,
+   "cob": {
+    "cor": "#b3b8bd"
+   },
+   "fach": {
+    "cor": "#c3c7cb",
+    "cor2": "#7c848b"
+   },
+   "marcas": [],
+   "entorno": {
+    "tipo": "residencial"
+   }
+  }
+ },
+ {
+  "chave": "estadio da curuzu",
+  "nota_antes": 6,
+  "problemas": [
+   "Cantos fechados com arquibancada baixa: na Curuzu as 4 arquibancadas são separadas (as laterais têm 98 e 115 m e os fundos 75–77 m), com os cantos abertos",
+   "Fachada contínua azul com janelas, como uma arena: a real são muros de concreto pintados de azul-celeste e branco, sem fachada monumental",
+   "Esplanada grande com estacionamentos e gramados em volta: o estádio real fica espremido no miolo do quarteirão, colado às ruas e aos prédios",
+   "Falta a faixa de camarotes envidraçados coberta no alto do tobogã",
+   "Torres de apartamentos em volta e cadeiras azuis e brancas estão parecidas"
+  ],
+  "ajustes": {
+   "cantos": "abertos"
+  }
+ },
+ {
+  "chave": "spotify camp nou",
+  "nota_antes": 6,
+  "problemas": [
+   "Bacia oval de 3 anéis sem cobertura confere com o estado de 2026",
+   "4 torres de refletor nos cantos que o Camp Nou não tem (não dá para tirar pela forma sem cobertura)",
+   "Fachada parece um prédio de janelas em fita com a base azul-marinho. A nova tem terraços abertos com beirais brancos horizontais e vidro",
+   "Os 3 anéis aparecem prontos e cheios: em out/2026 o 3º anel e os camarotes ainda estão em obra, com gruas",
+   "Prédios do entorno mais altos que os de 6 a 12 andares de Les Corts"
+  ],
+  "ajustes": {}
+ },
+ {
+  "chave": "estadio banorte",
+  "nota_antes": 5,
+  "problemas": [
+   "A cobertura branca cobre quase toda a arquibancada e deixa um furo pequeno: a marquise real cobre só o anel de cima (furo de ~220 × 130 m, estreita atrás dos gols)",
+   "Faltam as 66 colunas inclinadas que se abrem no alto e seguram a cobertura (a marca da fachada)",
+   "Fachada bege com janelas em fita e a base vinho: a real é de concreto aberto (bandejas e rampas à mostra entre as colunas) e o vermelho é só a faixa do alto com o nome",
+   "A estátua é um boneco marrom de 9 m: El Sol Rojo, de Calder, é uma escultura vermelha de 25,8 m na esplanada",
+   "A faixa vermelha no alto, os telões atrás dos gols e o bairro com as montanhas estão certos"
+  ],
+  "ajustes": {
+   "marcas": [
+    {
+     "tipo": "estatua",
+     "alto": 25.8,
+     "cor": "#c8102e"
+    },
+    {
+     "tipo": "telao"
+    },
+    {
+     "tipo": "mastros",
+     "n": 24,
+     "alto": 46,
+     "cor": "#e4e2dc"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "nissan stadium",
+  "nota_antes": 5,
+  "problemas": [
+   "A foto do Total Match é do Nissan Stadium de Nashville (EUA), não do de Yokohama. Comparei pela pesquisa e pelo que se sabe do estádio japonês.",
+   "A pista sai vermelho-vivo (#c8102e). A de Yokohama é vermelho-tijolo, puxada para o terracota.",
+   "As arquibancadas ficam longe demais. Na família pista o recuo lateral é a folga depois da raia 8, e o código corta o 22 da pesquisa em 14: a 1ª fileira fica a ~26 m da lateral, quando a pesquisa dá ~22 m (folga ~10 m depois da pista).",
+   "Só existe um telão (no fundo +x). São dois, um no alto de cada curva.",
+   "A treliça da cobertura sai cinza-aço. A de verdade é de tubos de aço branco-prateados.",
+   "Vista de cima, a cobertura é uma laje branca contínua até a 1ª fileira. A real cobre ~3/4 das cadeiras e deixa as fileiras da frente descobertas (o anel não tem esse ajuste).",
+   "A fachada é um tambor liso com janelas em fita. A real tem o concreto pré-moldado aparente, as escadarias largas e o deck de pedestres em volta (o estilo concreto não desenha isso).",
+   "Por baixo, a cobertura sai verde-escura no desenho em vez de branca (vale para todos os estádios desta leva)."
+  ],
+  "ajustes": {
+   "recuo": [
+    10,
+    40
+   ],
+   "pistaCor": "#b4483a",
+   "cob": {
+    "estr": "#dfe3e6"
+   },
+   "marcas": [
+    {
+     "tipo": "telao"
+    },
+    {
+     "tipo": "estatua"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "stadio olimpico",
+  "nota_antes": 6,
+  "problemas": [
+   "Só existe um telão. São dois, um no alto de cada curva (Nord e Sud), pendurados sob a cobertura, como na foto.",
+   "A borda de dentro da cobertura fica só 6 m acima da última fileira. Pela pesquisa, o anel fica a ~29 m do chão de fora e o campo está 4,5 m abaixo dele, então a borda de dentro fica ~10 m acima do topo. Na foto, a cobertura passa bem acima da curva.",
+   "O rio usa o lado padrão. O Tibre fica atrás da Tribuna Tevere, que é a oposta (la); o Monte Mario fica atrás da principal.",
+   "De fora, o estádio é um tambor alto com janelas em fita até a cobertura. O real é mais baixo, meio enterrado no vale, com a cobertura branca 'flutuando' sobre pilares brancos e o anel de treliça à mostra (o estilo não desenha isso).",
+   "O resto confere com a foto: tigela de um anel, pista coberta de verde e cadeiras azuis."
+  ],
+  "ajustes": {
+   "cob": {
+    "alto": 34
+   },
+   "marcas": [
+    {
+     "tipo": "telao"
+    },
+    {
+     "tipo": "estatua"
+    }
+   ],
+   "entorno": {
+    "lado": "la"
+   }
+  }
+ },
+ {
+  "chave": "riyadh air metropolitano",
+  "nota_antes": 4,
+  "problemas": [
+   "Vista de cima, o estádio é uma caixa quase quadrada de cantos vivos, com a abertura retangular. O real é uma tigela contínua de contorno arredondado/oval, e a abertura da cobertura é uma elipse (foto).",
+   "A fachada tem uma faixa vermelha no alto e a base bordô (vêm da cor2 vermelha). O real é concreto cinza aparente, bruto, com a borda branca e ondulada da cobertura por cima.",
+   "A fachada acende em vermelho à noite (led). No real quem acende é a cobertura; o concreto da fachada não acende (só uma cortina de LED de 24 × 6 m no oeste).",
+   "A estrutura da cobertura (anel e nervuras) sai cinza-aço. Na foto é toda branca.",
+   "Falta a Peineta (o topo curvo em forma de pente no lado oeste); não existe marca para isso.",
+   "Por dentro confere: 3 anéis e cadeiras vermelhas."
+  ],
+  "ajustes": {
+   "familia": "tigela",
+   "planta": "oval",
+   "fach": {
+    "cor2": "#8f8d88",
+    "led": null
+   },
+   "cob": {
+    "estr": "#e8e8e4"
+   }
+  }
+ },
+ {
+  "chave": "prince moulay abdellah stadium",
+  "nota_antes": 5,
+  "problemas": [
+   "A fachada é um mosaico de quadrados bege-claro e bege-escuro que parece camuflagem. A real é uma pele dourada/champanhe de triângulos de alumínio, em padrão de folhas de palmeira, com as aberturas escuras entre eles; o losango da membrana fica mais perto disso.",
+   "A treliça debaixo da cobertura sai cinza-claro. Na foto é aço escuro, quase preto, com a faixa de LED na borda.",
+   "Os telões ficam no meio dos fundos; no real ficam nos cantos (o jogo não oferece essa posição).",
+   "Por dentro confere com a foto: cadeiras vermelhas, anéis altos e íngremes e a cobertura quase toda fechada."
+  ],
+  "ajustes": {
+   "fach": {
+    "estilo": "membrana",
+    "cor2": "#5f5442"
+   },
+   "cob": {
+    "estr": "#2f3337"
+   }
+  }
+ },
+ {
+  "chave": "gazprom arena",
+  "nota_antes": 3,
+  "problemas": [
+   "A foto do Total Match é do Estádio Petrovsky, não da Gazprom Arena. Comparei pela pesquisa.",
+   "Vista de cima, o estádio é uma caixa retangular de cantos arredondados. A Gazprom Arena é REDONDA: a 'nave espacial' de Kurokawa, com uma cúpula de 286 m.",
+   "Os 8 mastros saem amarelos (a cor padrão, a do Signal Iduna Park). Os de verdade são brancos.",
+   "A sustentação 'mastros' põe, além dos 8 mastros, postes cinza finos com cabos atrás de cada arquibancada, que não existem.",
+   "A marca 'cúpula' desenha um ginásio de cúpula ao lado, que não existe: a cúpula é a própria cobertura.",
+   "Aparece uma faixa azul no alto da fachada de dia, vinda do LED sem confirmação. A real é o pano de vidro sob a borda prateada da cúpula.",
+   "Os mastros reais são inclinados para fora; no jogo ficam em pé (não há campo para isso)."
+  ],
+  "ajustes": {
+   "familia": "tigela",
+   "lados": {
+    "la": [
+     65,
+     42,
+     2,
+     1,
+     1
+    ],
+    "ca": [
+     65,
+     42,
+     2,
+     1,
+     1
+    ]
+   },
+   "cob": {
+    "sust": "cabos"
+   },
+   "fach": {
+    "led": null
+   },
+   "marcas": [
+    {
+     "tipo": "mastros",
+     "n": 8,
+     "alto": 110,
+     "cor": "#eceef0"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "orange velodrome",
+  "nota_antes": 5,
+  "problemas": [
+   "Com os cantos 'parciais', a cobertura e as arquibancadas afundam em V nos 4 cantos e o estádio vira uma coroa. Desde a reforma de 2014 os cantos são fechados, e a cobertura é uma onda suave: alta sobre a Ganay e mais baixa nas viragens.",
+   "A casca tem losangos (almofadas de ETFE). A do Vélodrome é membrana branca lisa com costuras verticais (o estilo não tem essa opção).",
+   "Aparece uma faixa azul no alto da casca de dia, que não existe no real: a membrana só acende branca, por dentro, à noite.",
+   "Embaixo, a base é preta e lisa. A real tem lâminas verticais pretas e brancas com vidros azuis e uma escadaria de pedra larga na frente.",
+   "A placa ainda diz ORANGE VÉLODROME; desde 02/07/2026 o nome é CEPAC Vélodrome.",
+   "Por dentro confere: tigela com a Ganay mais alta e cadeiras claras/azul-celeste."
+  ],
+  "ajustes": {
+   "cantos": "fechados"
+  }
+ },
+ {
+  "chave": "morumbi",
+  "nota_antes": 5,
+  "problemas": [
+   "Falta a faixa vermelha em volta do gramado (a antiga pista pintada, com as ondas brancas e pretas atrás dos gols). No jogo sai grama verde até a arquibancada, porque o vermelho foi para pistaCor, que só vale na família pista.",
+   "As duas estruturas de refletores ficam altas demais (80 m, como portais acima do estádio). Na foto, a treliça de luz fica pouco acima do anel de cima, inclinada sobre a arquibancada: ~60 m.",
+   "A fachada é bege, com janelas em fita e a faixa preta no topo. No real, o alto do anel é concreto claro, a faixa preta com o nome em vermelho fica logo abaixo e embaixo vêm os pilares e as rampas (o estilo não controla onde fica a faixa).",
+   "Conferem com a foto: o contorno oval, a falta de cobertura, as cadeiras vermelhas, os dois anéis e o telão no fundo."
+  ],
+  "ajustes": {
+   "piso": "#a8363c",
+   "marcas": [
+    {
+     "tipo": "torres_luz",
+     "lado": "la",
+     "alto": 60
+    },
+    {
+     "tipo": "telao",
+     "lado": "fa"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "estadio mas monumental",
+  "nota_antes": 6,
+  "problemas": [
+   "O telão está do lado da câmera de TV; o real (2024) fica em cima da cabeceira Sívori (fundo +x).",
+   "O Rio da Prata está atrás do lado errado: fica a nordeste, atrás da Sívori.",
+   "A fachada parece um prédio de escritórios com fileiras de janelas. O real é concreto branco com as costas das arquibancadas, as escadas externas à mostra e faixas vermelhas; a Sívori tem placas de alumínio vermelhas e brancas.",
+   "Os refletores estão em 4 torres altas nos cantos, fora do estádio. No real, os postes de luz ficam em cima da borda da arquibancada alta (não dá para ajustar pela forma).",
+   "Faltam a banda vermelha atravessando as cadeiras das populares e as insígnias CARP/1901."
+  ],
+  "ajustes": {
+   "marcas": [
+    {
+     "tipo": "telao",
+     "lado": "fa"
+    }
+   ],
+   "entorno": {
+    "lado": "fa"
+   }
+  }
+ },
+ {
+  "chave": "santiago bernabeu",
+  "nota_antes": 6,
+  "problemas": [
+   "O teto de cima está branco brilhante com nervuras radiais. O real é prateado-metálico como a fachada: vira uma caixa prateada só.",
+   "As treliças da cobertura vistas de dentro estão cinza-escuras; as reais são claras (branco/cinza-claro), como na foto.",
+   "À noite a pele de LED acende vermelha (a cor padrão); a do Bernabéu acende branca ou nas cores do clube.",
+   "As lamelas estão desenhadas na vertical; as reais são tiras de aço inox horizontais e onduladas (não dá para ajustar pelo estilo).",
+   "A parte de baixo da cobertura aparece verde, com a luz refletida do gramado (é do desenho, não da forma).",
+   "Falta o videomarcador contínuo de 360° pendurado na cobertura (só há telões nos fundos)."
+  ],
+  "ajustes": {
+   "cob": {
+    "cor": "#c4c8cc",
+    "estr": "#e4e6e8"
+   },
+   "marcas": [
+    {
+     "tipo": "telao"
+    },
+    {
+     "tipo": "pele_led",
+     "cor": "#eef2ff"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "signal iduna park",
+  "nota_antes": 5.5,
+  "problemas": [
+   "Sobram mastros cinza com cabos em volta do estádio inteiro (a sustentação 'mastros'). No real, o teto é preso só pelos 8 pilones amarelos.",
+   "Os pilones amarelos são varetas finas; os reais são treliças em A, duas em cada canto (não dá para ajustar o formato).",
+   "A fachada tem uma faixa amarela no topo e a base cor de oliva. O real é concreto cinza com vidro e escadas à mostra; o amarelo fica só nos pilones.",
+   "Faltam as treliças brancas em cima do teto e as placas solares escuras que desenham o '09' na Nordtribüne.",
+   "Falta o Stadion Rote Erde com a pista vermelha colado a leste."
+  ],
+  "ajustes": {
+   "cob": {
+    "sust": "trelica",
+    "estr": "#e6e8e9"
+   },
+   "fach": {
+    "cor2": "#5c6268"
+   }
+  }
+ },
+ {
+  "chave": "san siro",
+  "nota_antes": 5,
+  "problemas": [
+   "No alto da fachada há uma faixa larga rosa e vermelha, e a base é vinho. O San Siro é todo de concreto claro; o vermelho fica só nas vigas do teto.",
+   "As 11 torres saem todas iguais, de 68 m, passando do teto. No real, só as 4 de canto sobem acima do teto e seguram as vigas; as outras vão até o alto do 3º anel.",
+   "Faltam as 4 vigas-treliça vermelhas gigantes em cima do teto, formando o retângulo com as pontas para fora; só há um zigue-zague vermelho fino na borda.",
+   "O teto está branco com nervuras radiais; o real é de policarbonato translúcido cinza sobre uma grelha de aço.",
+   "A fachada tem janelas de prédio; a real tem as rampas helicoidais em fita dando a volta inteira.",
+   "As cadeiras saem salpicadas de várias cores; no real cada setor tem a sua cor (vermelho a oeste, laranja a leste, verde ao norte, azul ao sul)."
+  ],
+  "ajustes": {
+   "cob": {
+    "cor": "#b9c1c5"
+   },
+   "fach": {
+    "cor2": "#b3ad9f"
+   },
+   "marcas": [
+    {
+     "tipo": "rampas_espiral",
+     "n": 4,
+     "alto": 68,
+     "cor": "#d4cfc3"
+    },
+    {
+     "tipo": "rampas_espiral",
+     "n": 6,
+     "alto": 50,
+     "cor": "#d4cfc3"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "allianz arena",
+  "nota_antes": 4,
+  "problemas": [
+   "De dia, as juntas dos losangos estão vermelhas, e há uma faixa vermelha no topo e a base vinho. A pele real é branco-prateada com juntas cinza; o vermelho só aparece à noite, aceso.",
+   "Parece uma caixa de paredes retas com um teto chato separado. O real é a casca de bote inflável, abaulada e contínua da esplanada até a abertura do teto.",
+   "Vista de cima, a forma está quadrada demais; a real é bem arredondada (as placas forçam a 1ª fileira a ficar reta nos cantos).",
+   "As cadeiras saem salpicadas de vermelho e cinza; no real o anel do meio é todo vermelho e os de baixo e de cima são cinza.",
+   "Faltam a esplanada elevada sobre o estacionamento, com o caminho em serpentina, e o letreiro azul 'Allianz Arena' na pele."
+  ],
+  "ajustes": {
+   "fach": {
+    "cor2": "#c3c9cf"
+   },
+   "cad": [
+    "#8c8f93",
+    "#dc052d"
+   ],
+   "padrao": "faixas"
+  }
+ },
+ {
+  "chave": "olympiastadion",
+  "nota_antes": 5,
+  "problemas": [
+   "Há 4 torres cilíndricas grossas nos cantos (as duas marcas 'torres' caem nos cantos, uma delas com 77 m). No real não há torres em volta: as duas torres quadradas do Olympisches Tor ficam só na entrada leste, e o Glockenturm fica longe, atrás do Maifeld.",
+   "A arquibancada começa 14 m depois da raia 8, longe demais; a real começa a poucos metros da pista. O contorno sai mais largo que os 303 × 228 m reais.",
+   "A fachada é alta, de prédio com janelas. A real é uma colunata baixa (~17 m) de pilares quadrados de calcário, porque o anel de baixo fica enterrado.",
+   "Falta a abertura do anel (teto e arquibancada) no Marathontor, a oeste."
+  ],
+  "ajustes": {
+   "recuo": [
+    4,
+    4
+   ],
+   "lados": {
+    "la": [
+     64,
+     31,
+     2,
+     1,
+     1
+    ],
+    "ca": [
+     64,
+     31,
+     2,
+     1,
+     1
+    ],
+    "fa": [
+     59,
+     31,
+     2,
+     1,
+     0
+    ],
+    "fb": [
+     59,
+     31,
+     2,
+     1,
+     0
+    ]
+   },
+   "marcas": []
+  }
+ },
+ {
+  "chave": "old trafford",
+  "nota_antes": 5.5,
+  "problemas": [
+   "As treliças tubulares brancas dos tetos não aparecem: a sustentação 'balanco' não desenha nada, e a cor branca da estrutura fica sem uso. Elas são a marca do estádio vista de fora e de dentro.",
+   "Por dentro, os tetos dos cantos do sul saem com cunhas brancas quebradas onde o canto desce (é do desenho).",
+   "A fachada é toda de tijolo com janelas iguais. A real mistura tijolo, painéis azul-escuros e grandes panos de vidro, com o letreiro vermelho MANCHESTER UNITED na East Stand.",
+   "As duas estátuas caem no mesmo ponto, uma em cima da outra.",
+   "O canal está do lado errado: o Bridgewater Canal fica ao norte, atrás da Sir Alex Ferguson Stand.",
+   "Faltam o relógio de Munique no canto sudeste e a linha de trem colada ao sul."
+  ],
+  "ajustes": {
+   "cob": {
+    "sust": "trelica"
+   },
+   "marcas": [
+    {
+     "tipo": "estatua"
+    }
+   ],
+   "entorno": {
+    "lado": "la"
+   }
+  }
+ }
+]

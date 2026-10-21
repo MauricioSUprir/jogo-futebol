@@ -67,6 +67,7 @@ export const TEMPOS_NODE = {
   'teste-prejogo-roteiro.mjs --forma maracana': 0.3,
   'teste-identidade.mjs': 1,
   'teste-estadio-forma.mjs': 1,
+  'teste-estadio-generico.mjs': 60,
   'teste-ponte-tm.mjs': 21,
   'teste-disputa.mjs': 16,
   'teste-livre.mjs': 60,

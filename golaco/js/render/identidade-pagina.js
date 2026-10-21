@@ -61,12 +61,20 @@ export async function identidadeDaPagina(pedido = PEDIDO_TM) {
   const est = ident.estadio.real
     ? import('./fachada-estilos.js').then(m => { ident.estilos = m; ident.arquibancada.corCadeira = m.corCadeiraReal; }, e => console.warn('estádio:', e))
     : carregar(urlTm('simbolo.png'), ESPERA_ESCUDO_MS).then(img => { ident.estadio.simboloImg = img; });
-  // a forma própria do estádio (estadio-planta.js + render/estadio-real.js, só aqui): a tigela, a cobertura, a fachada
-  const forma = ident.estadio.real && ident.estadio.dados?.forma
-    ? Promise.all([import('../estadio-planta.js'), import('./estadio-real.js')]).then(([P, real]) => {
-      const planta = P.criarPlanta(P.validarForma(ident.estadio.dados.forma), ident.torcida);
-      if (planta) { ident.forma3d = { planta, real }; real.ligarForma(planta); }
-    }, e => console.warn('forma do estádio:', e))
+  // a forma própria do estádio (só aqui): o Maracanã pela planta dele (estadio-planta.js + render/estadio-real.js); os
+  // outros pela planta genérica das famílias (estadio-generico.js + render/estadio-generico.js)
+  const fb = ident.estadio.real ? ident.estadio.dados?.forma : null;
+  const generica = !!fb && fb.entorno !== 'maracana';
+  const forma = fb
+    ? (generica
+      ? Promise.all([import('../estadio-generico.js'), import('./estadio-generico.js')]).then(([P, real]) => {
+        const planta = P.criarPlantaGenerica(fb, ident.torcida);
+        if (planta) { ident.forma3d = { planta, real }; real.ligarForma(planta); }
+      }, e => console.warn('forma do estádio:', e))
+      : Promise.all([import('../estadio-planta.js'), import('./estadio-real.js')]).then(([P, real]) => {
+        const planta = P.criarPlanta(P.validarForma(fb), ident.torcida);
+        if (planta) { ident.forma3d = { planta, real }; real.ligarForma(planta); }
+      }, e => console.warn('forma do estádio:', e)))
     : null;
   await Promise.all(ident.times.map(async T => {
     let img = await carregar(T.escudo.url, ESPERA_ESCUDO_MS);

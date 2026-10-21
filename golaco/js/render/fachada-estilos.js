@@ -10,7 +10,7 @@ import { ARQUIBANCADA as A } from './torcida-dados.js';
 import { criarCanvas, texturaCanvas } from './util.js';
 
 const TILE_FACHADA = 12;   // m de fachada por repetição da textura (o mesmo de render/estadio-fora.js)
-export const ESTILOS = new Set(['vidro', 'concreto', 'metal', 'membrana', 'tijolo', 'trelica', 'paineis']);
+export const ESTILOS = new Set(['vidro', 'concreto', 'aberto', 'metal', 'membrana', 'tijolo', 'trelica', 'paineis', 'talude']);
 const rgbDe = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 const hexDe = c => '#' + c.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
 /** Mistura duas cores '#rrggbb' (t = peso da 2ª), clareia e escurece. */
@@ -60,30 +60,47 @@ export function texFachadaEstilo(aniso, emissiva, fa) {
     for (let i = 0; i <= 8; i++) ret(i * 1.5 - 0.07, Y0, i * 1.5 + 0.07, Y1, mont);
     faixasAneis(0.55, noite ? (led ? led : '#000') : clarear(c2, 0.2));
   } else if (e === 'concreto') {
-    // concreto aparente: o paredão com as marcas da fôrma, uma galeria aberta por anel (o escuro de dentro, com a sombra
-    // da laje de cima), os pilares a cada 3 m passando na frente e as vigas dos anéis
+    // o MURO de concreto do estádio (não um prédio de escritórios: a revisão contra as fotos): os painéis lisos com as
+    // marcas da fôrma e as manchas da chuva, os pilares saltados a cada 6 m, a junta fina de cada anel, a fresta de
+    // ventilação escura no alto (com as lâminas) e uma seteira estreita de escada por pano — à noite só a fresta e as
+    // seteiras deixam passar a luz de dentro
     if (!noite) {
       ret(0, Y0, T, Y1, c1);
-      for (let x = 0; x < T; x += 0.6) ret(x, Y0, x + 0.035, Y1, 'rgba(0,0,0,0.07)');
-      for (let y = Y0; y < Y1; y += 1.2) ret(0, y, T, y + 0.04, 'rgba(0,0,0,0.05)');
+      for (let x = 0; x < T; x += 1.2) ret(x, Y0, x + 0.03, Y1, 'rgba(0,0,0,0.06)');
+      for (let y = Y0; y < Y1; y += 0.6) ret(0, y, T, y + 0.025, 'rgba(0,0,0,0.04)');
+      for (let i = 0; i < 12; i++) {
+        const sm = sorte(i, 0, 11);
+        if (sm < 0.5) continue;
+        const gr = g.createLinearGradient(0, Y(Y1), 0, Y(Y1 - 7 * sm));
+        gr.addColorStop(0, 'rgba(0,0,0,0.12)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = gr; g.fillRect(X(i + 0.15), Y(Y1), X(0.55), Y(Y1 - 7 * sm) - Y(Y1));
+      }
     } else ret(0, Y0, T, Y1, '#000');
-    for (let k = 0; k < an; k++) {
-      const yb = nivel(k), h = nivel(k + 1) - yb, a0 = yb + 0.2 * h, a1 = yb + 0.64 * h;
-      if (!noite) {
-        ret(0, a0, T, a1, mix('#15191c', c2, 0.22));
-        const gr = g.createLinearGradient(0, Y(a1), 0, Y(a1 - 0.35 * (a1 - a0)));
-        gr.addColorStop(0, 'rgba(0,0,0,0.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-        g.fillStyle = gr; g.fillRect(0, Y(a1), W, Y(a1 - 0.35 * (a1 - a0)) - Y(a1));
-        ret(0, a0 - 0.12, T, a0, clarear(c1, 0.2));
-      } else for (let i = 0; i < 4; i++) for (const d of i === 3 ? [0, -T] : [0]) ret(i * 3 + 1.9 + d, a0, i * 3 + 4.1 + d, a1, luz(0.6, sorte(i, k, 3)));
+    const v0 = Y1 - 2.6, v1 = Y1 - 1.3;
+    ret(0, v0, T, v1, noite ? luz(0.5, 0.6) : mix('#15191c', c2, 0.2));
+    if (!noite) for (let x = 0; x < T; x += 0.4) ret(x, v0, x + 0.12, v1, clarear(c1, 0.03));
+    const s0 = Y0 + (Y1 - Y0) * 0.28, s1 = Y0 + (Y1 - Y0) * 0.7, fenda = noite ? null : mix('#14181b', c2, 0.25);
+    ret(2.75, s0, 3.25, s1, fenda ?? luz(0.75, 0.5));
+    ret(8.75, s0 + 1.4, 9.25, s1 + 1.4, fenda ?? luz(0.55, 0.3));
+    for (const [x0, x1] of [[0, 0.5], [5.5, 6.5], [11.5, 12]]) {
+      ret(x0, Y0, x1, Y1, noite ? '#000' : clarear(c1, 0.05));
+      if (!noite) { if (x0 > 0) ret(x0, Y0, x0 + 0.1, Y1, clarear(c1, 0.2)); if (x1 < T) ret(x1 - 0.12, Y0, x1, Y1, escurecer(c1, 0.22)); }
     }
-    for (let i = 0; i < 4; i++) {
-      const x = i * 3 + 1.1;
-      ret(x, Y0, x + 0.8, Y1, noite ? '#000' : clarear(c1, 0.06));
-      if (!noite) { ret(x, Y0, x + 0.12, Y1, clarear(c1, 0.22)); ret(x + 0.66, Y0, x + 0.8, Y1, escurecer(c1, 0.25)); }
+    for (let k = 1; k < an; k++) ret(0, nivel(k) - 0.12, T, nivel(k) + 0.12, noite ? (led ?? '#000') : escurecer(c1, 0.14));
+  } else if (e === 'aberto') {
+    // concreto ABERTO (os estádios antigos: Morumbi, Banorte, Saitama): o esqueleto à mostra — pilares a cada 6 m, as
+    // bandejas de cada anel e as rampas em diagonal na frente do escuro de dentro (as costas das arquibancadas)
+    ret(0, Y0, T, Y1, noite ? '#000' : mix('#14181b', c2, 0.15));
+    if (noite) for (let k = 0; k < an * 2; k++) ret(0, Y0 + (Y1 - Y0) * (k + 0.3) / (an * 2), T, Y0 + (Y1 - Y0) * (k + 0.55) / (an * 2), luz(0.35, sorte(k, 1, 8)));
+    const cor = noite ? '#000' : c1;
+    // a rampa: duas fitas em diagonal que sobem e voltam a cada ladrilho
+    if (!noite) for (const [x0, x1] of [[0, T / 2], [T, T / 2]]) {
+      g.strokeStyle = clarear(c1, 0.08); g.lineWidth = X(0.55);
+      g.beginPath(); g.moveTo(X(x0), Y(Y0 + 0.6)); g.lineTo(X(x1), Y(Y0 + (Y1 - Y0) * 0.48)); g.stroke();
+      g.beginPath(); g.moveTo(X(x1), Y(Y0 + (Y1 - Y0) * 0.52)); g.lineTo(X(x0), Y(Y1 - 0.6)); g.stroke();
     }
-    for (let k = 0; k <= an; k++) ret(0, nivel(k) - 0.3, T, nivel(k) + 0.3, noite ? '#000' : clarear(c1, 0.12));
-    if (noite && led) for (let k = 1; k < an; k++) ret(0, nivel(k) + 0.18, T, nivel(k) + 0.3, led);
+    for (let k = 0; k <= an * 2; k++) { const y = Y0 + (Y1 - Y0) * k / (an * 2); ret(0, y - 0.22, T, y + 0.22, cor); if (!noite) ret(0, y - 0.22, T, y - 0.12, escurecer(c1, 0.25)); }
+    for (const x of [0.3, 6.3]) { ret(x, Y0, x + 0.9, Y1, cor); if (!noite) { ret(x, Y0, x + 0.15, Y1, clarear(c1, 0.15)); ret(x + 0.75, Y0, x + 0.9, Y1, escurecer(c1, 0.3)); } }
   } else if (e === 'metal') {
     // lâminas verticais (brises) a cada 0,5 m na frente de um fundo escuro; as faixas dos anéis em chapa lisa
     ret(0, Y0, T, Y1, noite ? '#000' : escurecer(c2, 0.4));
@@ -178,6 +195,47 @@ export function texFachadaEstilo(aniso, emissiva, fa) {
     ret(4.4, 0, 7.6, 3.6, '#ffd9a0');
   }
   ret(4.6, 3.85, 7.4, 4.2, fa.letreiro);
+  const t = texturaCanvas(c, { aniso, repetir: true });
+  t.wrapT = THREE.ClampToEdgeWrapping;
+  return t;
+}
+
+/**
+ * O TALUDE (estilo 'talude' da forma genérica: o barranco do topo da arquibancada ao chão): o ladrilho de 48 m (u) ×
+ * 27,6 m descendo o barranco (v = 1 no alto): a grama aparada em faixas (ou a pedra em blocos, se fa.cor não for verde),
+ * a escadaria de concreto no meio com os corrimãos, o meio-fio no alto e a canaleta embaixo. À noite, só os postes da
+ * escadaria.
+ */
+export function texTalude(aniso, emissiva, fa) {
+  const W = 512, H = 512, TL = 48, AL = 27.6;
+  const c = criarCanvas(W, H), g = c.getContext('2d');
+  const X = x => (x / TL) * W, Y = d => (d / AL) * H;        // d: metros descendo do alto
+  const ret = (x0, d0, x1, d1, cor) => { g.fillStyle = cor; g.fillRect(X(x0), Y(d0), X(x1) - X(x0), Y(d1) - Y(d0)); };
+  const c1 = fa.cor, [r, gg, b] = rgbDe(c1), verde = gg > r + 6 && gg > b + 6;
+  const conc = '#c4c0b5';
+  if (emissiva) {
+    ret(0, 0, TL, AL, '#000');
+    for (let d = 2; d < AL; d += 5) ret(21.4, d, 21.9, d + 0.5, rgba(QUENTE, 0.9));
+  } else {
+    ret(0, 0, TL, AL, c1);
+    if (verde) {
+      for (let d = 0, k = 0; d < AL; d += 1.6, k++) ret(0, d, TL, d + 1.6, k % 2 ? clarear(c1, 0.07) : escurecer(c1, 0.05));
+      for (let i = 0; i < 900; i++) { const x = sorte(i, 1, 12) * TL, d = sorte(i, 2, 12) * AL; ret(x, d, x + 0.3, d + 0.3, sorte(i, 3, 12) > 0.5 ? clarear(c1, 0.12) : escurecer(c1, 0.12)); }
+    } else {
+      // pedra: blocos irregulares
+      for (let j = 0; j < 30; j++) for (let i = 0; i < 40; i++) {
+        const x0 = i * 1.2 + (j % 2 ? 0.6 : 0), d0 = j * 0.92, s = sorte(i, j, 13);
+        ret(x0 + 0.05, d0 + 0.05, x0 + 1.15, d0 + 0.87, s < 0.5 ? escurecer(c1, 0.15 * s) : clarear(c1, 0.12 * (s - 0.5)));
+      }
+    }
+    // a escadaria no meio (3 m) com os degraus e os corrimãos
+    ret(22.5, 0, 25.5, AL, conc);
+    for (let d = 0; d < AL; d += 0.38) ret(22.5, d, 25.5, d + 0.06, 'rgba(0,0,0,0.28)');
+    for (const x of [22.5, 25.42]) ret(x, 0, x + 0.08, AL, '#3b4044');
+    for (let d = 2; d < AL; d += 5) ret(21.5, d, 21.8, d + 0.3, '#4a4f53');
+    ret(0, 0, TL, 0.5, mix(conc, '#ffffff', 0.25));
+    ret(0, AL - 0.6, TL, AL, escurecer(conc, 0.15));
+  }
   const t = texturaCanvas(c, { aniso, repetir: true });
   t.wrapT = THREE.ClampToEdgeWrapping;
   return t;

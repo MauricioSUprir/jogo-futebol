@@ -108,7 +108,13 @@ export function bandeiras() {
  * 10 m nas fileiras da frente, no meio) e a organizada (24 × 14 m, fundo +x).
  */
 export function bandeiroes() {
-  if (forma) return forma.bandeiroes(BANDEIRAS.bandeirao.altura);
+  if (forma) {
+    // sempre os 2, pelo slot (o shader da torcida e o das bandeiras leem 2; a festa abre pelo slot): o que a forma não tem
+    // (estádio sem a arquibancada de lá ou sem o fundo +x, como o Barradão) fica vazio, fora do desenho, no subsolo
+    const l = forma.bandeiroes(BANDEIRAS.bandeirao.altura);
+    return [[0, 'lado'], [1, 'organizada']].map(([slot, nome]) => l.find(b => b.slot === slot)
+      ?? { nome, A: [0, -500, 0], U: [1, 0, 0], V: [0, 0, 1], N: [0, 1, 0], larg: 1, prof: 1, slot, vazio: true });
+  }
   const A = ARQUIBANCADA, B = BANDEIRAS.bandeirao;
   const out = [];
   {
