@@ -478,7 +478,7 @@ export function criarTigela(P, opc = {}) {
           E.barra([A[0], A[1] + 0.25, A[2]], [D[0], D[1] + 0.25, D[2]], 0.12, escuraE, uvE);
         }
         if (sust === 'anel_compressao' || sust === 'cabos') E.barra([A[0], A[1] - 0.4, A[2]], [B[0], B[1] - 0.4, B[2]], 1.1, estr, uvE);
-        if (sust === 'mastros' && j % 6 === 3) {
+        if (sust === 'mastros' && j % 6 === 3 && !P.marcas.some(mm => mm.tipo === 'mastros')) {
           // o mastro atrás da arquibancada e os dois cabos até a frente da cobertura
           const ex = A[0] - D[0], ez = A[2] - D[2], l = Math.hypot(ex, ez) || 1;
           const M0 = [A[0] + (ex / l) * 4, 0, A[2] + (ez / l) * 4], M1 = [M0[0], A[1] + 16, M0[2]];
@@ -488,7 +488,8 @@ export function criarTigela(P, opc = {}) {
         }
       }
       // o arco por cima da arquibancada (a sustentação em arco, de ponta a ponta)
-      if (C.sust === 'arco' && Le) {
+      if (C.sust === 'arco') {
+        const La = Le ?? Lc, uvA = Le ? UV_NORMAL : UV_BRANCO;
         const va = pts.filter(Boolean);
         if (va.length > 3) {
           const p0 = va[0], p1 = va[va.length - 1];
@@ -499,8 +500,8 @@ export function criarTigela(P, opc = {}) {
             const x = pp.de[0] * 0.5 + pp.fo[0] * 0.5, z = pp.de[1] * 0.5 + pp.fo[1] * 0.5;
             arco.push([x, lerpN(meio - 2, alto, 1 - (2 * t - 1) ** 2), z]);
           }
-          for (let i = 0; i < N; i++) Le.barra(arco[i], arco[i + 1], 1.6, cor(C.estr ?? '#e9eaea'), UV_NORMAL);
-          for (let i = 2; i < N - 1; i += 3) Le.barra(arco[i], [arco[i][0], meio, arco[i][2]], 0.12, escuraE, UV_NORMAL);
+          for (let i = 0; i < N; i++) La.barra(arco[i], arco[i + 1], 1.6, cor(C.estr ?? '#e9eaea'), uvA);
+          for (let i = 2; i < N - 1; i += 3) La.barra(arco[i], [arco[i][0], meio, arco[i][2]], 0.12, escuraE, uvA);
         }
       }
     }
@@ -598,7 +599,9 @@ export function criarForaForma(cena, opc, P, pecas) {
   const grupo = new THREE.Group();
   grupo.name = 'estadio-fora';
   const fa = {
-    ...(ident?.fachada ?? {}), estilo: F.fachada.estilo, cor: F.fachada.cor, cor2: F.fachada.cor2,
+    // a 2ª cor (as faixas, a base, os montantes) puxada para a 1ª: a revisão contra as fotos achou faixas e bases vermelhas
+    // e vinho onde a fachada de verdade é de uma cor só — a cor do clube fica nas cadeiras e nas marcas
+    ...(ident?.fachada ?? {}), estilo: F.fachada.estilo, cor: F.fachada.cor, cor2: '#' + cor(F.fachada.cor2).lerp(cor(F.fachada.cor), 0.45).getHexString(),
     ledCor: F.fachada.led ?? (F.marcas.some(m => m.tipo === 'pele_led') ? F.marcas.find(m => m.tipo === 'pele_led').cor : null),
     aneis: Math.max(...Object.values(F.lados).map(l => l.aneis)),
   };

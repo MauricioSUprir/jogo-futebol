@@ -98,7 +98,7 @@ export function validarFormaGenerica(f) {
   const rec = Array.isArray(f.recuo) ? f.recuo : [];
   // o recuo: a 1ª fileira fica fora das placas (6 m das linhas) com folga; na pista, fora da raia 8
   const PZ = CAMPO.meioZ + CAMPO.entorno + 0.14, PX = CAMPO.meioX + CAMPO.entorno + 0.14;
-  const lat = clamp(num(rec[0], D.recuo[0]), PZ - CAMPO.meioZ + 1.4, 48), fun = clamp(num(rec[1], D.recuo[1]), PX - CAMPO.meioX + 1.4, 60);
+  const lat = clamp(num(rec[0], D.recuo[0]), PZ - CAMPO.meioZ + 1.65, 48), fun = clamp(num(rec[1], D.recuo[1]), PX - CAMPO.meioX + 1.65, 60);
   const ladoBruto = k => (f.lados && Array.isArray(f.lados[k]) ? f.lados[k] : null);
   const capacidade = clamp(num(f.capacidade, 40000), 3000, 120000);
   // sem os lados: uma estimativa pela capacidade (as 4 iguais, ~0,5 m² por lugar)
@@ -126,7 +126,7 @@ export function validarFormaGenerica(f) {
     frente = { la: CAMPO.meioZ + lat, fa: CAMPO.meioX + fun, fb: CAMPO.meioX + fun, ca: Math.max(ESTADIO.tunel.z, CAMPO.meioZ + lat), n: n0 };
     // a 1ª fileira contém a quina das placas com folga ≥ 1,5 m na diagonal (senão abre o n)
     const thq = Math.atan2(PZ, PX), rq = Math.hypot(PX, PZ);
-    for (let k = 0; k < 60 && raioSuper(thq, frente.fa, frente.la, frente.n) < rq + 1.5; k++) frente.n += 0.25;
+    for (let k = 0; k < 240 && raioSuper(thq, frente.fa, frente.la, frente.n) < rq + 1.5; k++) frente.n += 0.25;
   }
   const cobB = f.cob && typeof f.cob === 'object' ? f.cob : {};
   let cobTipo = COBERTURAS.includes(cobB.tipo) ? cobB.tipo : D.cob;
@@ -512,6 +512,13 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
         lista.push(k, f, i, x, y, z, s > 0.5 ? ESC * 1.08 : ESC, im, luzDoSol(x, y + 1.2, z));
       }
     }
+    // o teto da torcida (25,5 mil: a Alta do celular): acima dele sai um a cada tanto, sem buraco (pelo sorteio fixo)
+    if (lista.length / 9 > 25500) {
+      const k = 25500 / (lista.length / 9);
+      let w = 0;
+      for (let i = 0; i < lista.length; i += 9) if (h2(i / 9, 9173) < k) { for (let c = 0; c < 9; c++) lista[w + c] = lista[i + c]; w += 9; }
+      lista.length = w;
+    }
     const n = lista.length / 9;
     return {
       n, fileiras: NF, dividida,
@@ -540,7 +547,9 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
         const n = m.n || (m.tipo === 'rampas_espiral' ? 11 : 4), lista = [];
         for (let i = 0; i < n; i++) {
           const th = n === 4 ? (-135 + 90 * i) * RAD : -Math.PI + ((i + 0.5) * 2 * Math.PI) / n;
-          const r = rFach(th) + 9;
+          // fora da fachada também nos ângulos vizinhos (perto dos cantos o raio muda depressa)
+          let rf = 0; for (let d = -14; d <= 14; d += 2) rf = Math.max(rf, rFach(th + d * RAD));
+          const r = rf + 8.5 + 3;
           lista.push({ x: r * Math.cos(th), z: r * Math.sin(th), raio: 8.5, alto: m.alto || yMax + 6 });
         }
         out.push({ tipo: m.tipo, torres: lista, espiral: m.tipo === 'rampas_espiral', cor: m.cor ?? '#b9b5aa' });
@@ -562,15 +571,22 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
           // arquibancada, atrás do parapeito, nos postes
           const c = cobEm(th);
           let r = rB(th) + 1.4, y = topoLado(k) + 1.2 + alt / 2 + 0.4;
+          let pendurado = false;
           if (c) {
-            const rr = c.dentro + 5, yc = lerp(c.yFora, c.yDentro, (c.fora - rr) / (c.fora - c.dentro)) - 1.8 - alt / 2;
-            const sAbaixo = clamp((rr - rF(th)) / Math.max(1e-6, rB(th) - rF(th)), 0, 1);
-            if (yc - alt / 2 >= perfil(sAbaixo, th) + 4) { r = rr; y = yc; } else continue;
+            for (const dd of [5, 2.5, 8, 11]) {
+              const rr = c.dentro + dd, yc = lerp(c.yFora, c.yDentro, (c.fora - rr) / (c.fora - c.dentro)) - 1.8 - alt / 2;
+              const sAbaixo = clamp((rr - rF(th)) / Math.max(1e-6, rB(th) - rF(th)), 0, 1);
+              if (yc - alt / 2 >= perfil(sAbaixo, th) + 3.2) { r = rr; y = yc; pendurado = true; break; }
+            }
+            // sem vão debaixo da cobertura: em cima dela, na borda de fora (o telão de cima do teto)
+            if (!pendurado) { r = c.fora - 2; y = c.yFora + 1.2 + alt / 2; }
           }
-          out.push({ tipo: 'telao', k, x: r * Math.cos(th), z: r * Math.sin(th), y, th, larg, alt, pendurado: !!c });
+          out.push({ tipo: 'telao', k, x: r * Math.cos(th), z: r * Math.sin(th), y, th, larg, alt, pendurado });
         }
       } else if (m.tipo === 'estatua') {
-        out.push({ tipo: 'estatua', x: 0, z: rFach(Math.PI / 2) + 34, alto: m.alto || 9 });
+        // na praça da entrada principal; mais de uma: lado a lado
+        const ne = out.filter(o => o.tipo === 'estatua').length;
+        out.push({ tipo: 'estatua', x: [0, -16, 16, -32, 32][ne % 5], z: rFach(Math.PI / 2) + 34 + (ne > 2 ? 10 : 0), alto: m.alto || 9 });
       } else if (m.tipo === 'cupula') {
         // um ginásio de cúpula ao lado (o Maracanãzinho do Mineirinho, o Ginásio do Ibirapuera…)
         const th = angLado[m.lado ?? 'fb'], r = rFach(th) + 90;
@@ -603,7 +619,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     }
     // a parede de trás (o parapeito da última fileira) e o miolo até a fachada
     const rf = rFach(th);
-    if (r > b - f && r <= rf + f && b - a >= 2.5) {
+    if (!noTunel && r > b - f && r <= rf + f && b - a >= 2.5) {
       const [px, pz] = ponto(th, 1);
       if (temArquibancadaFolga(px, pz, f) && y <= yTopo(th) + 1.3 + f) return 'parede de trás';
     }
@@ -628,12 +644,12 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     }
     if (!fora) return null;
     // a fachada (a casca de 2 m em volta; a pele abaulada da casca vai até BOJO m para fora)
-    if (r > Math.max(rf - 3, b + 0.4) - f && r <= rf + (casca ? BOJO + 0.6 : 1.2) + f && y <= (casca ? (cobEm(th)?.yFora ?? yFach(th)) + 1.2 : yFach(th) + 0.6) + f) {
+    if (!noTunel && r > Math.max(rf - 3, b + 0.4) - f && r <= rf + (casca ? BOJO + 0.6 : 1.2) + f && y <= (casca ? (cobEm(th)?.yFora ?? yFach(th)) + 1.2 : yFach(th) + 0.6) + f) {
       const [px, pz] = ponto(th, 1);
       if (temArquibancadaFolga(px, pz, f + 2)) return 'fachada';
     }
     for (const m of MARCAS_P) {
-      if (m.tipo === 'torres' || m.tipo === 'rampas_espiral') for (const t of m.torres) if (Math.hypot(x - t.x, z - t.z) <= t.raio + 2.4 + f && y <= t.alto + 1 + f) return 'torre';
+      if (m.tipo === 'torres' || m.tipo === 'rampas_espiral') for (const t of m.torres) if (Math.hypot(x - t.x, z - t.z) <= t.raio * 0.62 + t.raio * 0.38 + 1.2 + f && y <= t.alto + 1.2 + f) return 'torre';
       if (m.tipo === 'mastros') for (const t of m.mastros) if (Math.hypot(x - t.x, z - t.z) <= 1.6 + f && y <= t.alto + 1 + f) return 'mastro';
       if (m.tipo === 'arco' && arcoPerto(m, x, y, z, f)) return 'arco';
       if (m.tipo === 'estatua' && Math.hypot(x - m.x, z - m.z) <= 3.5 + f && y <= m.alto + 1 + f) return 'estátua';
@@ -679,7 +695,9 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     const th = Math.atan2(p.z, p.x), r = Math.hypot(p.x, p.z);
     const c = cobEm(th);
     const yLim = Math.max(c ? Math.max(c.yFora, c.yDentro) : 0, yTopo(th)) + 30;
-    return setor(p.x, p.z) === 3 && r > rF(th) - 1 && p.y < yLim;
+    // também debaixo/dentro da cobertura de cá que avança sobre o campo (as arenas pequenas: a borda a 15–19 m)
+    const r0 = Math.min(rF(th), c ? c.dentro : Infinity) - 1;
+    return setor(p.x, p.z) === 3 && r > r0 && p.y < yLim;
   }
 
   // ---------------------------------------------------------------- torres de refletor (sem cobertura) e entorno
@@ -996,7 +1014,10 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   const zD = Math.min(Fr.ca - 1.9, CAMPO.meioZ + CAMPO.entorno + 2.6);
   const dentroDe = [[24, 1.9, zD], [30, 2.0, zD - 0.1], [36, 2.1, zD - 0.3]];
   const xFa = Fr.fa + 0.5 * Math.max(LD[1].prof, 8), yFa = 0.7 * topoLado(1) + 4;
-  const dentroPara = [[xFa, yFa, 14], [xFa + 4, yFa + 1, 10], [xFa + 8, yFa + 2, 6]];
+  const dentroPara = [[xFa, yFa, 14], [xFa + 4, yFa + 1, 10], [xFa + 8, yFa + 2, 6]].map((p, i) => {
+    const d = dentroDe[i], h = Math.hypot(p[0] - d[0], p[2] - d[2]);
+    return [p[0], Math.min(p[1], d[1] + h * Math.tan(17 * RAD)), p[2]];
+  });
   const geralDe = temCa ? [acima(Math.atan2(1, -0.08), 0.6, 6), acima(Math.atan2(1, 0.08), 0.6, 6)] : [[-8, 24.5, 64], [8, 24.5, 64]];
   const altoDe = temLaL ? [acima(Math.atan2(-1, -0.1), 0.35, 4), acima(Math.atan2(-1, 0.1), 0.35, 4)] : [[-6, 21, -50], [6, 20, -50]];
   const PLANOS = {
@@ -1010,14 +1031,35 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     visitantes: { cam: { de: [[-Fr.fb + 20, 2.5, 18], [-Fr.fb + 20, 2.8, 14]], para: temLado(2) ? [acima(Math.PI - 0.05, 0.25, 1.5), acima(Math.PI + 0.05, 0.25, 1.5)] : [[-70, 7, 0], [-70, 7, -4]], fov: [38, 38], suave: 0.3 } },
     geral: { cam: { de: geralDe, para: [[0, 0, -12], [0, 0, -12]], fov: [54, 54], suave: 0.3 } },
   };
+  // nenhum plano olhando mais que 17° para cima (o roteiro aceita até 20°): o alvo desce o que for preciso
+  for (const q of Object.values(PLANOS)) {
+    if (!q.cam) continue;
+    q.cam.para = q.cam.para.map((p, i) => {
+      const d = q.cam.de[Math.min(i, q.cam.de.length - 1)], h = Math.hypot(p[0] - d[0], p[2] - d[2]);
+      return [p[0], Math.min(p[1], d[1] + h * Math.tan(17 * RAD)), p[2]];
+    });
+  }
   /** Troca, no lugar, a câmera dos planos que dependem do estádio (prejogo-roteiro.js criarRoteiro chama antes das curvas). */
   function ajustarPlano(p) {
     const q = PLANOS[p.id];
     if (q && q.cam) p.cam = { ...p.cam, ...q.cam };
     if (q && q.orbita) p.orbita = { ...q.orbita };
-    if (p.orbitaComum) p.orbita = orbitaEsc ?? (orbitaEsc = { ...p.orbita, raio: [Math.min(58, Fr.la + 8), Math.min(58, Fr.la + 8)], altura: [22, 22] });
+    if (p.orbitaComum) p.orbita = orbitaEsc ?? (orbitaEsc = { ...p.orbita, raio: [Math.min(58, Fr.la + 8), Math.min(58, Fr.la + 8)], altura: [alturaEscalacao(p.orbita), alturaEscalacao(p.orbita)] });
   }
   let orbitaEsc = null;
+  /** A altura da órbita das escalações (22 m; nos estádios de cobertura baixa, o que couber debaixo dela e fora dos sólidos). */
+  function alturaEscalacao(o) {
+    const raio = Math.min(58, Fr.la + 8), [a0, a1] = o.ang ?? [74, 99.3], c = o.centro ?? [0, 0];
+    for (let h = 22; h >= 7; h -= 0.5) {
+      let livre = true;
+      for (let a = a0; a <= a1 + 1e-6 && livre; a += (a1 - a0) / 12) {
+        const x = c[0] + raio * Math.cos(a * RAD), z = c[1] + raio * Math.sin(a * RAD);
+        if (solido(x, h, z, 0.9, true)) livre = false;
+      }
+      if (livre) return h;
+    }
+    return 22;
+  }
   // ninguém sentado a menos de 3,5 m das lentes dos planos de dentro
   function PLANOS_LENTES() {
     const pts = [...geralDe, ...altoDe];

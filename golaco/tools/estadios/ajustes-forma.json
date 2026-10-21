@@ -1,0 +1,298 @@
+{
+ "estadio da luz": {
+  "fach": {
+   "estilo": "vidro",
+   "cor": "#c5ced3",
+   "cor2": "#e9ebec"
+  },
+  "marcas": [
+   {
+    "tipo": "estatua",
+    "lado": "ca"
+   }
+  ]
+ },
+ "castelao": {
+  "fach": {
+   "cor": "#aab3ba",
+   "cor2": "#3f4b55"
+  },
+  "marcas": [
+   {
+    "tipo": "mastros",
+    "n": 24,
+    "alto": 31,
+    "cor": "#f2f3f1"
+   }
+  ]
+ },
+ "saitama stadium 2002": {
+  "cob": {
+   "tipo": "por_arquibancada"
+  },
+  "fach": {
+   "cor2": "#8f9391"
+  },
+  "marcas": [
+   {
+    "tipo": "telao"
+   }
+  ]
+ },
+ "tottenham hotspur stadium": {
+  "n": 4,
+  "cob": {
+   "cor": "#b3b8bd"
+  },
+  "fach": {
+   "cor": "#c3c7cb",
+   "cor2": "#7c848b"
+  },
+  "marcas": [],
+  "entorno": {
+   "tipo": "residencial"
+  }
+ },
+ "estadio da curuzu": {
+  "cantos": "abertos"
+ },
+ "estadio banorte": {
+  "marcas": [
+   {
+    "tipo": "estatua",
+    "alto": 25.8,
+    "cor": "#c8102e"
+   },
+   {
+    "tipo": "telao"
+   },
+   {
+    "tipo": "mastros",
+    "n": 24,
+    "alto": 46,
+    "cor": "#e4e2dc"
+   }
+  ]
+ },
+ "nissan stadium": {
+  "recuo": [
+   10,
+   40
+  ],
+  "pistaCor": "#b4483a",
+  "cob": {
+   "estr": "#dfe3e6"
+  },
+  "marcas": [
+   {
+    "tipo": "telao"
+   },
+   {
+    "tipo": "estatua"
+   }
+  ]
+ },
+ "stadio olimpico": {
+  "cob": {
+   "alto": 34
+  },
+  "marcas": [
+   {
+    "tipo": "telao"
+   },
+   {
+    "tipo": "estatua"
+   }
+  ],
+  "entorno": {
+   "lado": "la"
+  }
+ },
+ "riyadh air metropolitano": {
+  "familia": "tigela",
+  "planta": "oval",
+  "fach": {
+   "cor2": "#8f8d88",
+   "led": null
+  },
+  "cob": {
+   "estr": "#e8e8e4"
+  }
+ },
+ "prince moulay abdellah stadium": {
+  "fach": {
+   "estilo": "membrana",
+   "cor2": "#5f5442"
+  },
+  "cob": {
+   "estr": "#2f3337"
+  }
+ },
+ "gazprom arena": {
+  "familia": "tigela",
+  "lados": {
+   "la": [
+    65,
+    42,
+    2,
+    1,
+    1
+   ],
+   "ca": [
+    65,
+    42,
+    2,
+    1,
+    1
+   ]
+  },
+  "cob": {
+   "sust": "cabos"
+  },
+  "fach": {
+   "led": null
+  },
+  "marcas": [
+   {
+    "tipo": "mastros",
+    "n": 8,
+    "alto": 110,
+    "cor": "#eceef0"
+   }
+  ]
+ },
+ "orange velodrome": {
+  "cantos": "fechados"
+ },
+ "morumbi": {
+  "piso": "#a8363c",
+  "marcas": [
+   {
+    "tipo": "torres_luz",
+    "lado": "la",
+    "alto": 60
+   },
+   {
+    "tipo": "telao",
+    "lado": "fa"
+   }
+  ]
+ },
+ "estadio mas monumental": {
+  "marcas": [
+   {
+    "tipo": "telao",
+    "lado": "fa"
+   }
+  ],
+  "entorno": {
+   "lado": "fa"
+  }
+ },
+ "santiago bernabeu": {
+  "cob": {
+   "cor": "#c4c8cc",
+   "estr": "#e4e6e8"
+  },
+  "marcas": [
+   {
+    "tipo": "telao"
+   },
+   {
+    "tipo": "pele_led",
+    "cor": "#eef2ff"
+   }
+  ]
+ },
+ "signal iduna park": {
+  "cob": {
+   "sust": "trelica",
+   "estr": "#e6e8e9"
+  },
+  "fach": {
+   "cor2": "#5c6268"
+  }
+ },
+ "san siro": {
+  "cob": {
+   "cor": "#b9c1c5"
+  },
+  "fach": {
+   "cor2": "#b3ad9f"
+  },
+  "marcas": [
+   {
+    "tipo": "rampas_espiral",
+    "n": 4,
+    "alto": 68,
+    "cor": "#d4cfc3"
+   },
+   {
+    "tipo": "rampas_espiral",
+    "n": 6,
+    "alto": 50,
+    "cor": "#d4cfc3"
+   }
+  ]
+ },
+ "allianz arena": {
+  "fach": {
+   "cor2": "#c3c9cf"
+  },
+  "cad": [
+   "#8c8f93",
+   "#dc052d"
+  ],
+  "padrao": "faixas"
+ },
+ "olympiastadion": {
+  "recuo": [
+   4,
+   4
+  ],
+  "lados": {
+   "la": [
+    64,
+    31,
+    2,
+    1,
+    1
+   ],
+   "ca": [
+    64,
+    31,
+    2,
+    1,
+    1
+   ],
+   "fa": [
+    59,
+    31,
+    2,
+    1,
+    0
+   ],
+   "fb": [
+    59,
+    31,
+    2,
+    1,
+    0
+   ]
+  },
+  "marcas": []
+ },
+ "old trafford": {
+  "cob": {
+   "sust": "trelica"
+  },
+  "marcas": [
+   {
+    "tipo": "estatua"
+   }
+  ],
+  "entorno": {
+   "lado": "la"
+  }
+ }
+}

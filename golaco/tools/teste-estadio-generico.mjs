@@ -14,7 +14,7 @@
 //       20–60°, o túnel por dentro do corredor;
 //   G6) clássico: cada metade com a sua torcida; G7) desempenho: a planta ≤ 60 ms e os lugares ≤ 700 ms (Node);
 //   G8) sem forma nada muda (os sólidos num grid e a torcida de hoje).
-//   node tools/teste-estadio-generico.mjs [--js <pasta js>] [--so chave1,chave2] [--rapido (só os 5 de exemplo)]
+//   node tools/teste-estadio-generico.mjs [--js <pasta js>] [--so chave1,chave2] [--rapido (só os 5 de exemplo)] [--extra <json>]
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -49,6 +49,8 @@ if (!G) {
   const BD = await imp('render/bandeiras-dados.js');
   const R = await imp('prejogo-roteiro.js');
   const base = JSON.parse(fs.readFileSync(path.join(pastaJs, '../assets/tm/estadios.json'), 'utf8'));
+  // --extra <json>: estádios a mais por cima da base ({chave: {nome, forma}}; as formas novas antes de irem para a base)
+  if (arg('--extra', null)) Object.assign(base.estadios, JSON.parse(fs.readFileSync(path.resolve(arg('--extra')), 'utf8')));
   const SO = arg('--so', null)?.split(',') ?? null;
   const casos = Object.entries(EXEMPLOS).map(([k, f]) => [k, f, null]);
   if (!args.includes('--rapido')) for (const [k, e] of Object.entries(base.estadios)) if (e.forma && e.forma.entorno !== 'maracana') casos.push([k, e.forma, e]);

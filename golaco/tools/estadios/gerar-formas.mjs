@@ -100,7 +100,8 @@ export function formaDaPesquisa(e) {
     familia: e.tipo === 'pista' || e.pista_atletismo ? (e.tipo === 'pequeno' ? 'pequeno' : 'pista') : e.tipo,
     planta: e.planta, cantos: e.cantos === 'nao_se_aplica' ? undefined : e.cantos,
     pista: !!e.pista_atletismo,
-    recuo: [e.recuo_m?.lateral ?? null, e.recuo_m?.fundo ?? null],
+    // na pista o recuo da planta é a folga DEPOIS da raia 8 (a pesquisa mede da linha lateral: a raia 8 termina a ~12,3 m)
+    recuo: [e.recuo_m?.lateral == null ? null : (e.tipo === 'pista' || e.pista_atletismo ? Math.max(1.5, e.recuo_m.lateral - 12.3) : e.recuo_m.lateral), e.recuo_m?.fundo ?? null],
     lados,
     cob: { tipo: C.tipo, mat: C.material, cor: hex(C.cor) ?? corDoTexto(C.cor), sust: C.sustentacao, alto: C.altura_m || null, estr: corEstr ?? (C.sustentacao === 'arco' ? arco?.cor ?? null : null) },
     fach: { estilo: F.estilo, cor: hex(F.cor), cor2: hex(F.cor2), led },
