@@ -546,7 +546,16 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `render/fachada-estilos.js`, só baixado nesse caso), cores e LED, cobertura total/lados/parcial/nenhuma, cadeiras
   (liso/misto/faixas/mosaico, também no jogo) e o nome real na placa. Edição PÚBLICA, jogo neutro ou estádio fora da
   base: o Estádio Golaço de hoje com o nome "Estádio Total Match" e o mosaico "TOTAL MATCH". A geometria não muda (trilhos
-  de câmera e a bola). Testes: `teste-identidade` (E1–E8), `teste-prejogo` item 14. Mexeu em main.js,
+  de câmera e a bola). **Forma própria** (dono, 16/10: "não tem nada a ver com o maracanã"; 21/10, depois de ver a prévia:
+  "quero isso com todos os estádios do jogo, ele pesquisou o estádio, olhou direitinho e fez detalhes certinho"):
+  `js/estadio-planta.js` (puro, a fonte única das contas: forma, lugares da torcida, sólidos da câmera, trilhos) com a 1ª
+  família, a TIGELA OVAL COM ANEL DE COBERTURA (o Maracanã de hoje, medidas reais; `estadios.json` → `forma`), e
+  `render/estadio-real.js` (o desenho, sob demanda, com o entorno próprio do Maracanã: Maracanãzinho, trilhos, Mangueira,
+  Cristo); 4 rodadas com fotos de referência. Teste `teste-estadio-forma` (padrão). **Plano dos lotes (dono, 21/10:
+  "em lotes")**: (1) publicar o Maracanã; (2) as outras famílias — 4 arquibancadas à inglesa (cantos abertos/fechados),
+  arena moderna fechada, com pista de atletismo, pequeno —; (3) lote 1 de estádios: os 56 do Brasil + os 58 com ≥ 50 mil
+  lugares (pesquisa de cada um: forma, medidas, anéis, cobertura, fachada, marcas próprias e entorno; detalhes próprios
+  nos famosos); depois os outros 409 em lotes, um PR por lote. Mexeu em main.js,
   hud.js, partida.js, acoes.js ou nos desenhos de estádio/torcida? Rodar também `teste-tm-tela` e o `testar-3d`.
 - **Modo Pênaltis 3D** (dono, 15/10: "crie uma versão só de jogador de pênaltis" → "modo de pênaltis 3d igual ao golaço, só
   que versão de pênaltis"; contrato "Disputa de pênaltis" no `CONTRATOS.md`): `?modo=penaltis`, "Pênaltis" no "Modo de jogo" e,
@@ -594,8 +603,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   escanteio, falta, pênalti e tiro de meta do humano (e no pênalti contra), o analógico pela câmera dela; na cobrança da
   PESSOA o analógico gira a mira, a carga é a força e Z/X (analógico direito, botões CURVA) põem curva; a linha é a física
   da bola passo a passo (a bola real passa a 0 cm dela sem o erro do cobrador; na falta só até 4 m além da barreira). A IA
-  não usa (hash-partida da demo IGUAL). Testes: `teste-mira` (Node) e `teste-bola-parada-tela` (navegador). **O download
-  inicial está no teto** (`teste-carga` 4 MB: sobram ~0,6 KB): código novo que não precisa do começo vai sob demanda.
+  não usa (hash-partida da demo IGUAL). Testes: `teste-mira` (Node) e `teste-bola-parada-tela` (navegador). **Download
+  inicial** (`teste-carga` 4 MB): desde 21/10 os sons da torcida (~1,4 MB de MP3) baixam no 1º GESTO (`render/som.js`;
+  antes dele nada toca) — 3,88 → 2,57 MB, folga ~1,4 MB; código novo que não precisa do começo continua sob demanda.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

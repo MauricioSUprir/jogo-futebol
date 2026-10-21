@@ -14,8 +14,9 @@
 //
 // Política de reprodução automática (MDN, "Autoplay guide for media and Web Audio APIs"; Chrome, "Autoplay
 // policy"): o AudioContext só é criado e retomado (resume) dentro de um gesto do usuário — toque, clique ou
-// tecla. Até lá nada toca e nada é criado (sem aviso no console). Os arquivos baixam DEPOIS da página abrir
-// (atrasoCarga ou no primeiro gesto, o que vier antes). Os laços tocam de loopInicio a loopFim (margem periódica
+// tecla. Até lá nada toca e nada é criado (sem aviso no console). Os arquivos baixam no PRIMEIRO GESTO (antes dele
+// nada pode tocar; 21/10: baixando 4 s depois da página pronta, os ~1,4 MB de MP3 entravam no download inicial que o
+// teste-carga mede — e no celular gastavam dados de quem nem ligou o som). Os laços tocam de loopInicio a loopFim (margem periódica
 // do MP3: sem buraco nem estalo na volta). Página escondida: o contexto suspende. Pausa: a torcida abaixa e fica
 // abafada (filtro passa-baixas).
 // LIBERAÇÃO ROBUSTA (pedido de 11/10; WebKit 237322 e 276016, PESQUISA-ESTADIO.md §6):
@@ -58,7 +59,6 @@ export const SOM = {
   cantos: ['canto', 'cantoB', 'cantoC', 'cantoD'],
   cantosNaMemoria: 2,     // cantos decodificados ao mesmo tempo (o que toca e o próximo)
   volumePadrao: 0.8,
-  atrasoCarga: 4000,      // ms depois da página pronta (se ninguém tocar antes)
   pausaGanho: 0.35,       // a torcida na pausa
   pausaFiltro: 900,       // Hz do passa-baixas na pausa
   apitoPendente: 6000,    // ms — o apito da saída que chegou antes do primeiro gesto ainda toca até isto
@@ -383,15 +383,10 @@ export function criarSom(opc = {}) {
   const _chaves = { ambiente: { alvo: -1 }, agito: { alvo: -1 }, batucada: { alvo: -1 } };
 
   const api = {
-    /** Registra os ouvintes do primeiro gesto e agenda o download (depois da página abrir). */
+    /** Registra os ouvintes do primeiro gesto (o download sai nele: desbloquear → baixar; desligado, ao ligar). */
     iniciar() {
       if (!Ctx) { estado = 'sem-audio'; mudou(); return; }
       if (ligado) ouvirGestos(true);
-      setTimeout(() => {
-        if (!ligado) return; // desligado: não baixa (baixa quando ligar)
-        const vai = () => baixar();
-        if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(vai, { timeout: 2000 }); else vai();
-      }, SOM.atrasoCarga);
       document.addEventListener('visibilitychange', () => {
         if (!ctx) return;
         if (document.hidden) ctx.suspend().then(atualizarEstado, () => {});
