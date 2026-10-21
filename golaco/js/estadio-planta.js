@@ -479,7 +479,7 @@ export function criarPlanta(formaBruta) {
   const K = Math.max(Fa.a, Fa.b) / 93;      // ~1,6: quanto maior que o Estádio Golaço
   const PLANOS = {
     // o drone do lado de lá (NE) olhando para o Maracanãzinho e o maciço da Tijuca ao fundo (como as aéreas de referência)
-    aereo: { orbita: { centro: [0, 0], olhar: [-30, 40, 50], raio: [430, 340], altura: [175, 132], ang: [-80, -54], fov: 42 } },
+    aereo: { orbita: { centro: [0, 0], olhar: [-30, 24, 40], raio: [430, 340], altura: [175, 132], ang: [-80, -54], fov: 42 } },
     // a grua na praça do pórtico da rampa de lá (UERJ): o letreiro e, subindo por cima do pórtico, a rampa e a fachada
     // (as costelas em gancho e o colar de almofadas no quadro final)
     fachada: { cam: { de: [[-30, 2.2, -300], [-18, 12, -282], [-8, 26, -259]], para: [[0, 6.5, -250], [0, 11, -200], [0, 12, -160]], fov: [44, 40], suave: 0.7 } },
