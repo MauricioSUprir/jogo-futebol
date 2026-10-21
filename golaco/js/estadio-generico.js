@@ -454,11 +454,26 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   }
   /** 1 ao sol, ~0,66 na sombra da cobertura (o sol do dia de render/cena.js). */
   const SOLD = [-0.42, 0.74, 0.52];
+  // a cobertura por ângulo numa tabela (só para a sombra: 25 mil lugares × 22 passos de cobEm pesavam metade da conta dos
+  // lugares no CI; 4096 ângulos = 0,09°, menos de 0,2 m na borda da sombra)
+  let _cobTab = null;
+  const NCT = 4096;
+  function alturaCobSombra(x, z) {
+    if (!_cobTab) { _cobTab = new Array(NCT); for (let i = 0; i < NCT; i++) _cobTab[i] = cobEm(-Math.PI + (2 * Math.PI * (i + 0.5)) / NCT); }
+    const th = Math.atan2(z, x);
+    let i = Math.floor(((th + Math.PI) / (2 * Math.PI)) * NCT);
+    const c = _cobTab[i < 0 ? 0 : i >= NCT ? NCT - 1 : i];
+    if (!c) return null;
+    const r = Math.hypot(x, z);
+    if (r < c.dentro || r > c.fora) return null;
+    if (abertos && !temArquibancada(...pontoNaMesmaFileira(x, z))) return null;
+    return lerp(c.yFora, c.yDentro, (c.fora - r) / (c.fora - c.dentro));
+  }
   function luzDoSol(x, y, z) {
     if (C.tipo === 'nenhuma') return 1;
     // o raio até o sol: passa pela chapa da cobertura (de baixo para cima) em algum passo?
     for (let t = 3; t <= 66; t += 3) {
-      const yc = alturaCobEm(x + SOLD[0] * t, z + SOLD[2] * t);
+      const yc = alturaCobSombra(x + SOLD[0] * t, z + SOLD[2] * t);
       if (yc != null && y + SOLD[1] * t >= yc - 0.3 && y + SOLD[1] * (t - 3) <= yc + 0.3) return 0.66;
     }
     return 1;
