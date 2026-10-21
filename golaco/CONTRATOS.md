@@ -2092,6 +2092,20 @@ os de `config.js`. Sem `?tm` pro nada disso é baixado (o download inicial não 
   relevo, agua, lado?}, pistaCor?, piso?, orientacao?, capacidade, letreiro}`, gerado por `tools/estadios/gerar-formas.mjs` a
   partir da pesquisa (`tools/estadios/pesquisa-forma-*.json`: os agentes com a foto do TM e 2+ fontes por estádio) e dos
   ajustes da revisão contra as fotos (`tools/estadios/ajustes-forma.json`, por cima).
+- **Campos da revisão** (21/10, os defeitos repetidos que a revisão contra as fotos achou): `cob.comp` (m coberto no meio de
+  cada lado coberto: a marquise só no centro da principal; `cobEm` devolve null fora dele, a chapa, os sólidos e a sombra
+  seguem); `fach.estilo 'talude'` (o barranco de grama — ou de pedra, com a cor escura — do topo da arquibancada ao chão,
+  `dTal` = 0,95 × a altura, 5–20 m, com a escadaria; a fachada vira esse barranco, o `rFach` passa a ser a base dele e a
+  entrada principal é o bloco `portal` com a placa no lado de cá); `fach.casca false` (a membrana sem a casca abaulada); o
+  `concreto` é o MURO do estádio (pilares a cada 6 m, a fresta de ventilação no alto, uma seteira por pano: antes as
+  galerias por anel pareciam prédio de escritórios); padrões de cadeira `setores` (blocos de 6 m alternados) e `raios` (a 1ª
+  cor cortada por faixas finas da 2ª); marcas `bola` (a escultura da praça, os 12 gomos pretos), `cubo` (o cubo de vídeo no
+  meio, só com a cobertura contínua), `torres_luz` com lado E n (n torres enfileiradas atrás daquele lado; com lado de lá/cá
+  sem n, as duas estruturas largas; sem lado e n > 4, espalhadas em volta), `torres` com lado (atrás do meio dele; as sem
+  rampa coladas na fachada). Limite de peças por marca: colunas 300, mastros 48, torres de luz 16, o resto 24. As raias da
+  pista só no tartan (a cor saturada): o anel de terra ou de asfalto da pista antiga fica liso. Os 2 bandeirões sempre por
+  slot (0 lado de lá, 1 organizada; o que a forma não tem fica `vazio`, no subsolo — o shader da torcida e o das bandeiras
+  leem 2: o Barradão, sem o lado de lá, quebrava a página).
 - **Testes**: `teste-estadio-generico` (Node, padrão; os 5 de exemplo + a base inteira: G1 forma válida/quina/túnel, G2
   lugares no degrau e fora dos sólidos, G3 festa, G4 câmera de TV, G5 trilhos do pré-jogo, G6 clássico, G7 desempenho, G8 sem
   forma nada muda); `teste-prejogo` item 14 com os Aflitos; prints de conferência `tools/prints-estadios.mjs`.

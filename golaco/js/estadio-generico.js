@@ -33,10 +33,10 @@ export const LADOS = Object.freeze(['la', 'fa', 'fb', 'ca']);          // o índ
 const COBERTURAS = ['anel', 'por_arquibancada', 'total', 'retratil', 'parcial', 'nenhuma'];
 const SUSTENTA = ['trelica', 'mastros', 'cabos', 'balanco', 'arco', 'pilares', 'anel_compressao', 'nenhuma'];
 const MATERIAIS = ['membrana', 'metal', 'policarbonato', 'vidro', 'concreto', 'misto', 'nenhum'];
-const ESTILOS = ['vidro', 'concreto', 'aberto', 'metal', 'membrana', 'tijolo', 'trelica', 'paineis'];
-const PADROES = ['liso', 'misto', 'faixas', 'mosaico'];
+const ESTILOS = ['vidro', 'concreto', 'aberto', 'metal', 'membrana', 'tijolo', 'trelica', 'paineis', 'talude'];
+const PADROES = ['liso', 'misto', 'faixas', 'mosaico', 'setores', 'raios'];
 const ENTORNOS = ['urbano_denso', 'residencial', 'parque', 'industrial', 'campo_aberto', 'orla', 'campus'];
-const MARCAS = ['arco', 'torres', 'torres_luz', 'rampas_espiral', 'mastros', 'colunas', 'vigas', 'telao', 'letreiro', 'relogio', 'estatua', 'cupula', 'pele_led', 'outro'];
+const MARCAS = ['arco', 'torres', 'torres_luz', 'rampas_espiral', 'mastros', 'colunas', 'vigas', 'telao', 'letreiro', 'relogio', 'estatua', 'cupula', 'pele_led', 'bola', 'cubo', 'outro'];
 
 // a pista de atletismo oficial (World Athletics: 400 m, raio de dentro 36,5 m, 8 raias de 1,22 m; as retas de 84,39 m)
 export const PISTA = Object.freeze({ meiaReta: 42.195, raio: 36.5, raias: 8, raia: 1.22 });
@@ -61,7 +61,18 @@ const PADRAO_FAMILIA = {
   pista: { y0: 2.4, n: 2.2, cantos: 'fechados', recuo: [0, 0], cob: 'parcial' },
   pequeno: { y0: 0.9, n: 12, cantos: 'abertos', recuo: [8, 10], cob: 'parcial' },
 };
+// quantas peças cada marca pode ter (as 288 colunas do Mané Garrincha, os 60 pórticos do Castelão, os 32 pilones do Borussia-Park)
+const N_MARCA = { colunas: 300, mastros: 48, torres_luz: 16 };
 const N_PLANTA = { oval: 2.5, retangular: 12, retangular_cantos_curvos: 5, cantos: 5, ferradura: 2.8, irregular: 4 };
+
+/** A cor do talude: a dada se for verde (grama) ou escura (a pedra do Olímpico Universitário); a clara de concreto da
+ * pesquisa (a cor do paredão que o talude troca) vira a grama. */
+function corTalude(c) {
+  if (!c) return '#5f8a3e';
+  const r = parseInt(c.slice(1, 3), 16), g = parseInt(c.slice(3, 5), 16), b = parseInt(c.slice(5, 7), 16);
+  if (g > r + 6 && g > b + 6) return c;
+  return 0.299 * r + 0.587 * g + 0.114 * b < 110 ? c : '#5f8a3e';
+}
 
 // ------------------------------------------------------------------ curvas em polar
 /** Raio polar da superelipse de semi-eixos a (em x) e b (em z) no ângulo θ (expoente n). */
@@ -157,6 +168,8 @@ export function validarFormaGenerica(f) {
     estr: corOk(cobB.estr),
     // quanto da profundidade a cobertura cobre (do fundo para a frente; 1 = até a 1ª fileira)
     cobre: Number.isFinite(Number(cobB.cobre)) && cobB.cobre !== null ? clamp(Number(cobB.cobre), 0.3, 1.1) : null,
+    // o comprimento coberto (m), centrado no meio de cada lado coberto (a marquise só no centro da principal); null = o lado todo
+    comp: Number.isFinite(Number(cobB.comp)) && cobB.comp !== null ? clamp(Number(cobB.comp), 20, 400) : null,
     // a altura da borda de dentro acima do topo da arquibancada (m)
     folga: clamp(num(cobB.alto, NaN) - Math.max(...LADOS.map(k => lados[k].alto)), 3, 22),
   };
@@ -164,12 +177,14 @@ export function validarFormaGenerica(f) {
   const fachB = f.fach && typeof f.fach === 'object' ? f.fach : {};
   const fachada = {
     estilo: ESTILOS.includes(fachB.estilo) ? fachB.estilo : 'concreto',
-    cor: corOk(fachB.cor) ?? '#bfc2c0', cor2: corOk(fachB.cor2) ?? '#5b6266', led: corOk(fachB.led),
+    cor: fachB.estilo === 'talude' ? corTalude(corOk(fachB.cor)) : corOk(fachB.cor) ?? '#bfc2c0', cor2: corOk(fachB.cor2) ?? '#5b6266', led: corOk(fachB.led),
+    // a casca abaulada da membrana (Allianz Arena); false = só a base, com a membrana do teto por cima
+    casca: fachB.casca !== false,
   };
   const cadeiras = (Array.isArray(f.cad) ? f.cad.map(corOk).filter(Boolean) : []).slice(0, 4);
   if (!cadeiras.length) cadeiras.push('#3b4246');
   const marcas = (Array.isArray(f.marcas) ? f.marcas : []).filter(m => m && MARCAS.includes(m.tipo)).slice(0, 8).map(m => ({
-    tipo: m.tipo, lado: LADOS.includes(m.lado) ? m.lado : null, n: clamp(Math.round(num(m.n, 0)), 0, 24), alto: clamp(num(m.alto, 0), 0, 180),
+    tipo: m.tipo, lado: LADOS.includes(m.lado) ? m.lado : null, n: clamp(Math.round(num(m.n, 0)), 0, N_MARCA[m.tipo] ?? 24), alto: clamp(num(m.alto, 0), 0, 180),
     cor: corOk(m.cor), texto: typeof m.texto === 'string' ? m.texto.slice(0, 30) : null,
   }));
   const ent = f.entorno && typeof f.entorno === 'object' ? f.entorno : {};
@@ -409,6 +424,11 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     const k = ladoEm(th);
     if (!cobContinua && !LD[k].coberta) return null;
     if (!cobContinua && LD[k].prof <= 0) return null;
+    if (C.comp && !cobContinua) {
+      // só o trecho do meio do lado (pela 1ª fileira: x nos lados, z nos fundos)
+      const [px, pz] = ponto(th, 0);
+      if ((k === 0 || k === 3 ? Math.abs(px) : Math.abs(pz)) > C.comp / 2) return null;
+    }
     const a = rF(th), b = rB(th), D = b - a;
     if (D < 2.5) return null;
     const yt = yTopo(th);
@@ -447,11 +467,15 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   // ---------------------------------------------------------------- fachada (o pré-jogo)
   const recuoFach = 2.6;
   /** Raio da face de fora da fachada no ângulo th (nos cantos abertos: a de trás da arquibancada dele). */
-  const rFach = th => rB(th) + recuoFach;
+  // o TALUDE (os estádios num buraco do terreno ou cercados de barrancos: o Café, o Centenario): em vez do paredão, o
+  // barranco de grama (ou de pedra) do topo da arquibancada até o chão, dTal m para fora; a entrada no lado de cá
+  const talude = !abertos && F.fachada.estilo === 'talude';
+  const dTal = th => (talude ? clamp(0.95 * yTopo(th), 5, 20) : 0);
+  const rFach = th => rB(th) + recuoFach + dTal(th);
   const yFach = th => Math.max(yTopo(th) + 2.6, 8);
   // a CASCA (a pele de almofadas da Allianz Arena, a membrana que sobe até a cobertura): a fachada de membrana com a
   // cobertura fechada sai do chão um pouco para fora, abaulada, e dobra para dentro até a borda de fora da cobertura
-  const casca = !abertos && (F.fachada.estilo === 'membrana' || F.marcas.some(m => m.tipo === 'pele_led')) && (F.cobertura.tipo === 'total' || F.cobertura.tipo === 'retratil' || F.cobertura.tipo === 'anel');
+  const casca = !abertos && !talude && F.fachada.casca !== false && (F.fachada.estilo === 'membrana' || F.marcas.some(m => m.tipo === 'pele_led')) && (F.cobertura.tipo === 'total' || F.cobertura.tipo === 'retratil' || F.cobertura.tipo === 'anel');
   const BOJO = 7;
   /** O perfil da casca no ângulo th: [[r, y]…] do chão até a borda da cobertura (ou null sem casca). */
   function perfilCasca(th) {
@@ -489,7 +513,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     const lista = [];
     const mt = T.largura / 2 + 0.4, topoTunel = T.altura + T.laje + 0.3;
     const M = 4320;
-    const lentes = PLANOS_LENTES();
+    const lentes = PLANOS_LENTES(), ARCOS = MARCAS_P.filter(m => m.tipo === 'arco');
     for (let j = 0; j < NF; j++) {
       const f = NF - 1 - j;            // 0 = a de cima
       const sj = (j + 0.5) / NF;
@@ -515,6 +539,8 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
         if (g < 1.25 || (g > 6 && g < 7.25)) continue;
         if (z > 0 && Math.abs(x) < mt && y < topoTunel) continue;
         if (lentes(x, y, z)) continue;
+        // ninguém com a cabeça no arco das marcas (as pontas dele descem até a arquibancada: o Dragão)
+        if (ARCOS.length && ARCOS.some(m => arcoPerto(m, x, y + 1.7 * ESC * 1.08, z, 0.4))) continue;
         const hs = h2(i, j * 31 + 7);
         // as cadeiras soltas à mostra (as brechas) e a última fileira (debaixo do parapeito) vazia
         if (hs < 0.06 || s > 0.985) continue;
@@ -558,16 +584,24 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
         const dist = rB(th) * 0.92;
         out.push({ tipo: 'arco', k, lado, meia, dist, alto: m.alto || Math.max(yMax + 50, meia * 0.85), raio: 3.6, cor: m.cor ?? '#e9eaea' });
       } else if (m.tipo === 'torres' || m.tipo === 'rampas_espiral') {
-        // torres cilíndricas em volta da fachada (as do San Siro: 11 torres com a rampa em espiral, 50 m)
-        const n = m.n || (m.tipo === 'rampas_espiral' ? 11 : 4), lista = [];
-        for (let i = 0; i < n; i++) {
-          const th = n === 4 ? (-135 + 90 * i) * RAD : -Math.PI + ((i + 0.5) * 2 * Math.PI) / n;
+        // torres cilíndricas em volta da fachada (as do San Siro: 11 torres com a rampa em espiral, 50 m); as sem rampa
+        // (as de circulação) coladas na fachada; com lado, atrás do meio dele (n 1 = a torre única do Centenario)
+        const esp = m.tipo === 'rampas_espiral', raio = esp ? 8.5 : 6, lista = [];
+        const ths = [];
+        if (m.lado) {
+          const k = LADOS.indexOf(m.lado), n = m.n || 1, span = n === 1 ? 0 : (k === 0 || k === 3 ? 0.6 * CAMPO.meioX : 0.55 * CAMPO.meioZ);
+          for (let i = 0; i < n; i++) ths.push(thNoLado(k, n === 1 ? 0 : -span + (2 * span * i) / (n - 1)));
+        } else {
+          const n = m.n || (esp ? 11 : 4);
+          for (let i = 0; i < n; i++) ths.push(n === 4 ? (-135 + 90 * i) * RAD : -Math.PI + ((i + 0.5) * 2 * Math.PI) / n);
+        }
+        for (const th of ths) {
           // fora da fachada também nos ângulos vizinhos (perto dos cantos o raio muda depressa)
           let rf = 0; for (let d = -14; d <= 14; d += 2) rf = Math.max(rf, rFach(th + d * RAD));
-          const r = rf + 8.5 + 3;
-          lista.push({ x: r * Math.cos(th), z: r * Math.sin(th), raio: 8.5, alto: m.alto || yMax + 6 });
+          const r = rf + (esp ? raio + 3 : raio * 0.62 + 0.6);
+          lista.push({ x: r * Math.cos(th), z: r * Math.sin(th), raio, alto: m.alto || yMax + (esp ? 6 : 2) });
         }
-        out.push({ tipo: m.tipo, torres: lista, espiral: m.tipo === 'rampas_espiral', cor: m.cor ?? '#b9b5aa' });
+        out.push({ tipo: m.tipo, torres: lista, espiral: esp, cor: m.cor ?? '#b9b5aa' });
       } else if (m.tipo === 'mastros') {
         // os mastros (pilones) por fora que seguram a cobertura pelos cabos (os 8 amarelos do Signal Iduna Park)
         const n = m.n || 8, lista = [];
@@ -614,10 +648,18 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
           }
           out.push({ tipo: 'telao', k, x: r * Math.cos(th), z: r * Math.sin(th), y, th, larg, alt, pendurado });
         }
-      } else if (m.tipo === 'estatua') {
-        // na praça da entrada principal; mais de uma: lado a lado
-        const ne = out.filter(o => o.tipo === 'estatua').length;
-        out.push({ tipo: 'estatua', x: [0, -16, 16, -32, 32][ne % 5], z: rFach(Math.PI / 2) + 34 + (ne > 2 ? 10 : 0), alto: m.alto || 9 });
+      } else if (m.tipo === 'estatua' || m.tipo === 'bola') {
+        // na praça da entrada principal; mais de uma (estátuas e a bola gigante): lado a lado
+        const ne = out.filter(o => o.tipo === 'estatua' || o.tipo === 'bola').length;
+        const x = [0, -16, 16, -32, 32][ne % 5], z = rFach(Math.PI / 2) + 34 + (ne > 2 ? 10 : 0);
+        if (m.tipo === 'bola') out.push({ tipo: 'bola', x, z, raio: clamp((m.alto || 3.5) / 2, 1, 6), y0: 1.4 });
+        else out.push({ tipo: 'estatua', x, z, alto: m.alto || 9 });
+      } else if (m.tipo === 'cubo') {
+        // o cubo de vídeo pendurado no meio do campo (Veltins-Arena), debaixo da altura da borda de dentro da cobertura
+        if (!cobContinua) continue;
+        const ys = [-Math.PI / 2, 0, Math.PI, Math.PI / 2].map(th => cobEm(th)).filter(Boolean).map(c => c.yDentro);
+        if (!ys.length) continue;
+        out.push({ tipo: 'cubo', lado: 9, alt: 6, y: Math.min(...ys) - 7 });
       } else if (m.tipo === 'cupula') {
         // um ginásio de cúpula ao lado (o Maracanãzinho do Mineirinho, o Ginásio do Ibirapuera…)
         const th = angLado[m.lado ?? 'fb'], r = rFach(th) + 90;
@@ -628,7 +670,24 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
         out.push({ tipo: 'pele_led', cor: m.cor ?? F.fachada.led ?? '#e03030' });
       }
     }
+    if (talude) {
+      // a entrada principal no barranco do lado de cá: o bloco de concreto com os portões (a placa do nome em cima)
+      const zf = rFach(Math.PI / 2);
+      out.push({ tipo: 'portal', hx: 22, z0: zf - Math.min(9, dTal(Math.PI / 2) * 0.6), z1: zf + 1.2, alto: 9 });
+    }
     return out;
+  }
+  /** O θ da fileira s do lado k (0 lá, 1 fundo +x, 2 fundo −x, 3 cá) na posição u (x nos lados, z nos fundos). */
+  function thNoLado(k, u, s = 1) {
+    const [t0, t1] = [[-Math.PI, 0], [-Math.PI / 2, Math.PI / 2], [Math.PI / 2, 1.5 * Math.PI], [0, Math.PI]][k];
+    let melhor = (t0 + t1) / 2, bd = Infinity;
+    for (let i = 1; i < 360; i++) {
+      let th = t0 + ((t1 - t0) * i) / 360;
+      if (th > Math.PI) th -= 2 * Math.PI;
+      const [x, z] = ponto(th, s), d = Math.abs((k === 0 || k === 3 ? x : z) - u);
+      if (d < bd) { bd = d; melhor = th; }
+    }
+    return melhor;
   }
 
   // ---------------------------------------------------------------- sólidos (a câmera de cinema fica fora deles)
@@ -650,7 +709,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     }
     // a parede de trás (o parapeito da última fileira) e o miolo até a fachada
     const rf = rFach(th);
-    if (!noTunel && r > b - f && r <= rf + f && b - a >= 2.5) {
+    if (!noTunel && r > b - f && r <= (talude ? b + recuoFach : rf) + f && b - a >= 2.5) {
       const [px, pz] = ponto(th, 1);
       if (temArquibancadaFolga(px, pz, f) && y <= yTopo(th) + 1.3 + f) return 'parede de trás';
     }
@@ -669,6 +728,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     }
     for (const m of MARCAS_P) {
       if (m.tipo === 'vigas' && y >= m.y - m.alto - f && y <= m.y + 1 + f && ((Math.abs(Math.abs(x) - m.hx) <= 2 + f && Math.abs(z) <= m.hz + 25) || (Math.abs(Math.abs(z) - m.hz) <= 2 + f && Math.abs(x) <= m.hx + 25))) return 'viga';
+      if (m.tipo === 'cubo' && Math.abs(x) <= m.lado / 2 + f && Math.abs(z) <= m.lado / 2 + f && Math.abs(y - m.y) <= m.alt / 2 + f) return 'cubo';
       if (m.tipo === 'telao') {
         const lx = (x - m.x) * -Math.sin(m.th) + (z - m.z) * Math.cos(m.th), lr = (x - m.x) * Math.cos(m.th) + (z - m.z) * Math.sin(m.th);
         if (Math.abs(lx) <= m.larg / 2 + f && Math.abs(lr) <= 1.2 + f && y >= m.y - m.alt / 2 - (m.pendurado ? 0 : 3) - f && y <= m.y + m.alt / 2 + (m.pendurado ? 3 : 0) + f) return 'telão';
@@ -676,12 +736,18 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     }
     if (!fora) return null;
     // a fachada (a casca de 2 m em volta; a pele abaulada da casca vai até BOJO m para fora)
-    if (!noTunel && r > Math.max(rf - 3, b + 0.4) - f && r <= rf + (casca ? BOJO + 0.6 : 1.2) + f && y <= (casca ? (cobEm(th)?.yFora ?? yFach(th)) + 1.2 : yFach(th) + 0.6) + f) {
+    if (talude && !noTunel && r > b - f && r <= rf + 0.6 + f) {
+      // o barranco: do topo da arquibancada (atrás da última fileira) ao chão na base
+      const [px, pz] = ponto(th, 1), h = (yTopo(th) + 1.2) * clamp((rf + 0.6 - r) / Math.max(1, rf + 0.6 - b), 0, 1);
+      if (y <= h + 0.4 + f && temArquibancadaFolga(px, pz, f + 2)) return 'talude';
+    } else if (!noTunel && r > Math.max(rf - 3, b + 0.4) - f && r <= rf + (casca ? BOJO + 0.6 : 1.2) + f && y <= (casca ? (cobEm(th)?.yFora ?? yFach(th)) + 1.2 : yFach(th) + 0.6) + f) {
       const [px, pz] = ponto(th, 1);
       if (temArquibancadaFolga(px, pz, f + 2)) return 'fachada';
     }
     for (const m of MARCAS_P) {
-      if (m.tipo === 'torres' || m.tipo === 'rampas_espiral') for (const t of m.torres) if (Math.hypot(x - t.x, z - t.z) <= t.raio * 0.62 + t.raio * 0.38 + 1.2 + f && y <= t.alto + 1.2 + f) return 'torre';
+      if (m.tipo === 'torres' || m.tipo === 'rampas_espiral') for (const t of m.torres) if (Math.hypot(x - t.x, z - t.z) <= t.raio * (m.espiral ? 1 : 0.62) + 1.2 + f && y <= t.alto + 1.2 + f) return 'torre';
+      if (m.tipo === 'bola' && (Math.hypot(x - m.x, y - m.y0 - m.raio, z - m.z) <= m.raio + f || (Math.hypot(x - m.x, z - m.z) <= 1.4 + f && y <= m.y0 + f))) return 'bola';
+      if (m.tipo === 'portal' && Math.abs(x) <= m.hx + f && z >= m.z0 - f && z <= m.z1 + f && y <= m.alto + f) return 'portal';
       if (m.tipo === 'mastros') for (const t of m.mastros) if (Math.hypot(x - t.x, z - t.z) <= 1.6 + f && y <= t.alto + 1 + f) return 'mastro';
       if (m.tipo === 'arco' && arcoPerto(m, x, y, z, f)) return 'arco';
       if (m.tipo === 'estatua' && Math.hypot(x - m.x, z - m.z) <= 3.5 + f && y <= m.alto + 1 + f) return 'estátua';
@@ -756,16 +822,32 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
       }
       return out;
     }
-    if (luz && luz.lado && (luz.lado === 'la' || luz.lado === 'ca')) {
+    const altoTorre = luz?.alto || Math.max(yMax + 18, 38);
+    if (luz && luz.lado && (luz.lado === 'la' || luz.lado === 'ca') && !luz.n) {
       // as estruturas de refletores por cima dos lados (o Morumbi): uma atrás de cada lado comprido
       for (const th of [-Math.PI / 2, Math.PI / 2]) { const r = rB(th) + 4; out.push({ x: 0, z: r * Math.sin(th), alto: luz.alto || Math.max(yMax + 30, 60), larga: true }); }
+      return out;
+    }
+    const atras = th => { const k = ladoEm(th); return (LD[k].prof > 0 && temArquibancada(...ponto(th, 1)) ? rB(th) : rF(th)) + 6; };
+    if (luz && luz.lado) {
+      // n torres enfileiradas atrás de um lado (as 4 de São Januário atrás da leste; 2 mastros atrás de um fundo)
+      const k = LADOS.indexOf(luz.lado), n = luz.n || 2, span = n === 1 ? 0 : (k === 0 || k === 3 ? 0.72 * CAMPO.meioX : 0.62 * CAMPO.meioZ);
+      for (let i = 0; i < n; i++) {
+        const th = thNoLado(k, n === 1 ? 0 : -span + (2 * span * i) / (n - 1)), r = atras(th);
+        out.push({ x: r * Math.cos(th), z: r * Math.sin(th), alto: altoTorre });
+      }
+      return out;
+    }
+    if (luz && luz.n > 4) {
+      // mais de 4 sem lado: espalhadas em volta, atrás da última fileira
+      for (let i = 0; i < luz.n; i++) { const th = -Math.PI + ((i + 0.5) * 2 * Math.PI) / luz.n, r = atras(th); out.push({ x: r * Math.cos(th), z: r * Math.sin(th), alto: altoTorre }); }
       return out;
     }
     for (const g of [45, 135, -45, -135]) {
       const th = Math.atan2(Math.sin(g * RAD) * bF(Math.sin(g * RAD)), Math.cos(g * RAD) * aF(Math.cos(g * RAD)));
       // nos cantos abertos, no vão do canto; nos fechados, atrás da última fileira
       const r = abertos ? rF(th) + 6 : rB(th) + 6;
-      out.push({ x: r * Math.cos(th), z: r * Math.sin(th), alto: luz?.alto || Math.max(yMax + 18, 38) });
+      out.push({ x: r * Math.cos(th), z: r * Math.sin(th), alto: altoTorre });
     }
     return out;
   })();
@@ -1246,7 +1328,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
 
   return {
     forma: F, familia: F.familia, generica: true,
-    rF, rB, rFach, yFach, casca, perfilCasca, ponto, sDe, perfil, perfilLado, tipoEm, nos: NOS, sAneis, setor, psi, thDivisa, pesos, ladoEm,
+    rF, rB, rFach, yFach, casca, perfilCasca, talude, dTal, ponto, sDe, perfil, perfilLado, tipoEm, nos: NOS, sAneis, setor, psi, thDivisa, pesos, ladoEm,
     temArquibancada, trechos, uDe, XP, ZP, abertos, yTopo, topoLado, cobEm, alturaCobEm, cobContinua, luzDoSol,
     get lugares() { return _lugares ?? (_lugares = gerarLugares()); },
     solido, cameraNoLadoDeCa, noDegrau, torres: TORRES, marcas: MARCAS_P,

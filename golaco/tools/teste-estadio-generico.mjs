@@ -116,7 +116,9 @@ if (!G) {
       if (lu < 0 || lu > 1 || lv < 0 || lv > 1) return;
       if ((x - b.A[0]) * b.N[0] + (y + 2.15 * esc - b.A[1]) * b.N[1] + (z - b.A[2]) * b.N[2] > 0) furam++;
     });
-    if (band.length !== 32 || errB || errS.length || encosta || atras || furam) res.g3.push(`${chave}: bandeiras ${band.length - errB}/${band.length}, sinalizadores fora ${errS.length}, faixas encostadas ${encosta}/atrás ${atras}, cabeças no bandeirão ${furam}`);
+    // os 2 bandeirões pelo slot (o shader da torcida e o das bandeiras leem 2: o Barradão, sem o lado de lá, quebrava a página)
+    const bb = BD.bandeiroes(), slotsOk = bb.length === 2 && bb[0].slot === 0 && bb[1].slot === 1 && bb.every(b => Number.isFinite(b.larg));
+    if (band.length !== 32 || errB || errS.length || encosta || atras || furam || !slotsOk) res.g3.push(`${chave}: bandeiras ${band.length - errB}/${band.length}, sinalizadores fora ${errS.length}, faixas encostadas ${encosta}/atrás ${atras}, cabeças no bandeirão ${furam}${slotsOk ? '' : `, bandeirões ${bb.length} (slots ${bb.map(b => b.slot).join('/')})`}`);
     // G4 câmera de TV
     const ruins = [];
     for (const perfil of [{ d: CAMERA.distancia, h: CAMERA.altura }, { d: CAMERA.celular.distancia, h: CAMERA.celular.altura }]) {
@@ -158,7 +160,7 @@ if (!G) {
   reg(`G1 a forma é válida (${nCasos} estádios); a quina das placas (≥ 1,5 m) e a boca do túnel`, lista(res.g1), 'todos', res.g1.length === 0);
   nLug.sort((a, b) => a - b);
   reg('G2 lugares no degrau, fora do túnel e dos sólidos, 3–26 mil, em todo setor com arquibancada', `${lista(res.g2)} (de ${nLug[0] ?? 0} a ${nLug[nLug.length - 1] ?? 0} torcedores)`, 'todos', res.g2.length === 0);
-  reg('G3 festa: 32 bandeiras e sinalizadores no degrau, faixas sem encostar e na frente da mureta, bandeirão sem furar', lista(res.g3), 'todos', res.g3.length === 0);
+  reg('G3 festa: 32 bandeiras e sinalizadores no degrau, faixas sem encostar e na frente da mureta, 2 bandeirões sem furar', lista(res.g3), 'todos', res.g3.length === 0);
   reg('G4 câmera de TV (PC e celular) fora dos sólidos do desenho (o lado de cá escondido atrás da 1ª fileira)', lista(res.g4), 'todos', res.g4.length === 0);
   reg('G5 trilhos do pré-jogo fora dos sólidos (0,5 m), −60…+20°, fov 20–60°, túnel por dentro', lista(res.g5, 2), 'todos', res.g5.length === 0);
   reg('G6 clássico: cada metade com a sua torcida (≥ 95%)', lista(res.g6), 'todos', res.g6.length === 0);

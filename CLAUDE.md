@@ -559,7 +559,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   forma genérica" no `CONTRATOS.md`): `js/estadio-generico.js` (puro; a mesma interface da do Maracanã) + `render/estadio-generico.js`
   (sob demanda) para as 5 famílias; a forma de cada estádio sai da pesquisa por `tools/estadios/gerar-formas.mjs` e da revisão
   contra as fotos (`tools/estadios/ajustes-forma.json`); conferir com `tools/prints-estadios.mjs` (folha por estádio) e o
-  `teste-estadio-generico` (a base inteira). Pesquisa grande: o Workflow roda só 2 agentes por vez nesta máquina — para
+  `teste-estadio-generico` (a base inteira). Os defeitos que se repetem na revisão viram CAMPO da forma (talude, `cob.comp`,
+  torres de luz por lado, cadeiras em setores/raios, bola, cubo; lista no contrato), não ajuste estádio por estádio. Pesquisa grande: o Workflow roda só 2 agentes por vez nesta máquina — para
   ~100 estádios, agentes em segundo plano (Agent) gravando cada fatia num arquivo andam ~4× mais rápido. Mexeu em main.js,
   hud.js, partida.js, acoes.js ou nos desenhos de estádio/torcida? Rodar também `teste-tm-tela` e o `testar-3d`.
 - **Modo Pênaltis 3D** (dono, 15/10: "crie uma versão só de jogador de pênaltis" → "modo de pênaltis 3d igual ao golaço, só

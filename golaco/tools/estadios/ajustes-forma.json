@@ -308,5 +308,876 @@
    "lado": "la"
   }
  },
- "spotify camp nou": {}
+ "spotify camp nou": {},
+ "london stadium": {
+  "cob": {
+   "cor": "#7d8388",
+   "estr": "#f2f3f4"
+  },
+  "fach": {
+   "estilo": "metal",
+   "cor": "#dfe2e4"
+  },
+  "marcas": [
+   {
+    "tipo": "colunas",
+    "n": 24,
+    "cor": "#f2f3f4"
+   }
+  ]
+ },
+ "veltins arena": {
+  "n": 4,
+  "fach": {
+   "led": null
+  },
+  "marcas": [
+   {
+    "tipo": "cubo"
+   }
+  ]
+ },
+ "estadio olimpico universitario": {
+  "fach": {
+   "estilo": "talude",
+   "cor": "#4a4541",
+   "cor2": "#5f5852"
+  },
+  "pistaCor": "#b5493b",
+  "entorno": {
+   "relevo": "montanhas"
+  }
+ },
+ "king abdullah sports city": {
+  "cob": {
+   "sust": "trelica"
+  },
+  "fach": {
+   "estilo": "trelica",
+   "led": "#f2b13a"
+  }
+ },
+ "anfield": {
+  "fach": {
+   "cor": "#e6e8e9",
+   "cor2": "#b9bdc0"
+  }
+ },
+ "mineirao": {
+  "fach": {
+   "estilo": "aberto",
+   "cor2": "#8e897f"
+  },
+  "marcas": [
+   {
+    "tipo": "colunas",
+    "cor": "#b3aea3"
+   },
+   {
+    "tipo": "cupula",
+    "lado": "fa"
+   }
+  ]
+ },
+ "benito villamarin": {
+  "cantos": "fechados",
+  "fach": {
+   "cor2": "#bfbab0",
+   "estilo": "aberto"
+  }
+ },
+ "emirates stadium": {
+  "cob": {
+   "estr": "#eef0f1"
+  },
+  "fach": {
+   "cor": "#6b7f88"
+  },
+  "marcas": [
+   {
+    "tipo": "vigas",
+    "cor": "#eef0f1"
+   },
+   {
+    "tipo": "telao"
+   },
+   {
+    "tipo": "estatua"
+   }
+  ]
+ },
+ "mhparena": {
+  "cob": {
+   "estr": "#f2f2f0"
+  },
+  "marcas": [
+   {
+    "tipo": "telao"
+   },
+   {
+    "tipo": "colunas",
+    "n": 24,
+    "cor": "#f2f2f0"
+   }
+  ],
+  "fach": {
+   "casca": false
+  }
+ },
+ "estadio centenario": {
+  "marcas": [
+   {
+    "tipo": "torres",
+    "n": 1,
+    "alto": 100,
+    "cor": "#f2f2f0",
+    "lado": "la"
+   },
+   {
+    "tipo": "torres_luz"
+   },
+   {
+    "tipo": "telao",
+    "lado": "fa"
+   }
+  ],
+  "fach": {
+   "estilo": "talude"
+  }
+ },
+ "estadio do arruda": {
+  "fach": {
+   "estilo": "aberto"
+  },
+  "marcas": [
+   {
+    "tipo": "torres_luz"
+   }
+  ]
+ },
+ "groupama stadium": {
+  "cob": {
+   "sust": "trelica",
+   "alto": 45
+  },
+  "fach": {
+   "estilo": "aberto"
+  },
+  "marcas": [
+   {
+    "tipo": "telao",
+    "lado": "fa"
+   },
+   {
+    "tipo": "colunas",
+    "n": 24,
+    "cor": "#d9dad7"
+   }
+  ]
+ },
+ "couto pereira": {
+  "padrao": "setores",
+  "marcas": [
+   {
+    "tipo": "torres_luz"
+   }
+  ]
+ },
+ "barradao": {
+  "cantos": "fechados",
+  "fach": {
+   "estilo": "talude",
+   "cor": "#5a8a3c"
+  }
+ },
+ "estadio do cafe": {
+  "pistaCor": "#8a6a50",
+  "fach": {
+   "estilo": "talude"
+  }
+ },
+ "santa cruz": {
+  "pistaCor": "#6b4f40"
+ },
+ "brinco de ouro": {
+  "cad": [
+   "#1d7a43",
+   "#f2f2f2"
+  ],
+  "padrao": "raios"
+ },
+ "fonte luminosa": {
+  "cob": {
+   "sust": "balanco"
+  },
+  "marcas": [
+   {
+    "tipo": "torres_luz",
+    "lado": "fa",
+    "n": 2
+   }
+  ]
+ },
+ "arena independencia": {
+  "marcas": []
+ },
+ "almeidao": {
+  "cob": {
+   "cobre": 0.4
+  },
+  "fach": {
+   "estilo": "aberto"
+  },
+  "marcas": [
+   {
+    "tipo": "torres_luz",
+    "lado": "la",
+    "n": 3
+   },
+   {
+    "tipo": "cupula",
+    "cor": "#f2f2f0"
+   }
+  ]
+ },
+ "estadio olimpico colosso da lagoa": {
+  "padrao": "raios",
+  "marcas": [
+   {
+    "tipo": "torres_luz"
+   },
+   {
+    "tipo": "bola",
+    "alto": 3.5
+   }
+  ]
+ },
+ "sao januario": {
+  "n": 3.5,
+  "marcas": [
+   {
+    "tipo": "torres_luz",
+    "lado": "la",
+    "n": 4
+   }
+  ]
+ },
+ "deutsche bank park": {
+  "familia": "tigela",
+  "planta": "oval",
+  "fach": {
+   "estilo": "aberto"
+  },
+  "marcas": [
+   {
+    "tipo": "cubo"
+   }
+  ]
+ },
+ "volksparkstadion": {
+  "cob": {
+   "estr": "#f2f2f0"
+  },
+  "fach": {
+   "estilo": "trelica",
+   "cor": "#5f666c",
+   "cor2": "#aeb4b8"
+  },
+  "marcas": []
+ },
+ "estadio presidente peron": {
+  "lados": {
+   "ca": [
+    52,
+    30,
+    2,
+    1,
+    1
+   ],
+   "la": [
+    52,
+    30,
+    2,
+    1,
+    0
+   ]
+  },
+  "cob": {
+   "cobre": 0.55,
+   "estr": "#eef0f0"
+  },
+  "marcas": [
+   {
+    "tipo": "torres",
+    "lado": "ca",
+    "n": 1,
+    "alto": 60,
+    "cor": "#f4f4f2"
+   },
+   {
+    "tipo": "telao",
+    "lado": "fa"
+   }
+  ]
+ },
+ "presidente vargas": {
+  "familia": "inglesa",
+  "lados": {
+   "la": [
+    26,
+    10,
+    1,
+    0,
+    0
+   ]
+  },
+  "cob": {
+   "comp": 45
+  }
+ },
+ "alfredo jaconi": {
+  "cob": {
+   "comp": 100
+  },
+  "marcas": []
+ },
+ "arena mrv": {
+  "fach": {
+   "led": "#f4f4f4"
+  },
+  "marcas": [
+   {
+    "tipo": "estatua",
+    "alto": 8
+   },
+   {
+    "tipo": "telao"
+   }
+  ]
+ },
+ "estadio nilton santos": {
+  "fach": {
+   "estilo": "aberto"
+  }
+ },
+ "arena pantanal": {
+  "fach": {
+   "estilo": "metal",
+   "cor": "#86735a",
+   "cor2": "#4e4232"
+  }
+ },
+ "ligga arena": {
+  "cob": {
+   "cor": "#b4bac1"
+  },
+  "fach": {
+   "estilo": "paineis",
+   "cor": "#cfd3d7",
+   "cor2": "#a9afb5"
+  }
+ },
+ "estadio joaquim portugal": {
+  "entorno": {
+   "tipo": "residencial"
+  }
+ },
+ "estadio monumental banco pichincha": {
+  "cob": {
+   "cobre": 0.5
+  },
+  "cad": [
+   "#ffd200",
+   "#f5c400",
+   "#1a1a1a"
+  ]
+ },
+ "arena do gremio": {
+  "n": 4
+ },
+ "johan cruyff arena": {
+  "n": 4
+ },
+ "moises lucarelli": {
+  "pistaCor": "#4f5254",
+  "marcas": [
+   {
+    "tipo": "estatua",
+    "lado": "ca"
+   },
+   {
+    "tipo": "torres",
+    "lado": "fa",
+    "n": 2,
+    "alto": 20,
+    "cor": "#f4f4f2"
+   }
+  ],
+  "cob": {
+   "comp": 60
+  }
+ },
+ "rei pele": {
+  "pistaCor": "#8f8473"
+ },
+ "estadio mario alberto kempes": {
+  "cob": {
+   "cobre": 0.7
+  },
+  "fach": {
+   "estilo": "aberto",
+   "cor": "#b9b7b0",
+   "cor2": "#8a8f94"
+  },
+  "marcas": [
+   {
+    "tipo": "torres_luz"
+   },
+   {
+    "tipo": "colunas",
+    "n": 48,
+    "cor": "#f2f2f0"
+   }
+  ]
+ },
+ "estadio jalisco": {
+  "cob": {
+   "cobre": 0.45
+  },
+  "fach": {
+   "estilo": "aberto"
+  }
+ },
+ "stadio diego armando maradona": {
+  "cob": {
+   "sust": "trelica",
+   "estr": "#3e4247",
+   "cobre": 0.45
+  },
+  "fach": {
+   "estilo": "aberto"
+  },
+  "marcas": [
+   {
+    "tipo": "telao"
+   },
+   {
+    "tipo": "colunas",
+    "n": 28,
+    "cor": "#4a4d52"
+   }
+  ]
+ },
+ "arena conda": {
+  "cad": [
+   "#d9dcd6",
+   "#1d7a43"
+  ]
+ },
+ "orlando scarpelli": {
+  "recuo": [
+   8,
+   11
+  ]
+ },
+ "novelli junior": {
+  "pistaCor": "#bfa67a"
+ },
+ "borussia park": {
+  "cob": {
+   "estr": "#f2f2f0"
+  },
+  "cad": [
+   "#1c1c1c",
+   "#2b2b2b"
+  ],
+  "padrao": "liso",
+  "marcas": [
+   {
+    "tipo": "mastros",
+    "n": 24,
+    "cor": "#f2f2f0",
+    "alto": 40
+   }
+  ]
+ },
+ "la bombonera": {
+  "cantos": "fechados",
+  "marcas": [
+   {
+    "tipo": "telao",
+    "lado": "fa"
+   }
+  ]
+ },
+ "estadio da ressacada": {
+  "cob": {
+   "estr": "#f2f2f0"
+  },
+  "fach": {
+   "estilo": "concreto"
+  },
+  "marcas": [
+   {
+    "tipo": "torres_luz",
+    "cor": "#f2f2f0",
+    "alto": 43
+   },
+   {
+    "tipo": "telao",
+    "lado": "fa"
+   }
+  ]
+ },
+ "estadio nabi abi chedid": {
+  "planta": "retangular",
+  "marcas": [
+   {
+    "tipo": "torres_luz"
+   }
+  ]
+ },
+ "estadio willie davids": {
+  "pistaCor": "#c2452f",
+  "marcas": [
+   {
+    "tipo": "torres_luz",
+    "cor": "#8c9096"
+   },
+   {
+    "tipo": "cupula",
+    "lado": "la"
+   }
+  ]
+ },
+ "etihad stadium": {
+  "cantos": "parciais"
+ },
+ "san mames": {
+  "fach": {
+   "estilo": "metal",
+   "cor2": "#dcdcdc",
+   "casca": false
+  },
+  "marcas": [
+   {
+    "tipo": "pele_led",
+    "cor": "#d71920"
+   },
+   {
+    "tipo": "estatua"
+   }
+  ]
+ },
+ "hill dickinson stadium": {
+  "fach": {
+   "estilo": "metal",
+   "cor": "#a24c33"
+  },
+  "marcas": [
+   {
+    "tipo": "torres",
+    "lado": "la",
+    "n": 1,
+    "alto": 25,
+    "cor": "#8b3a2e"
+   },
+   {
+    "tipo": "telao"
+   },
+   {
+    "tipo": "estatua"
+   }
+  ]
+ },
+ "st james park": {
+  "planta": "retangular_cantos_curvos",
+  "n": 8,
+  "cantos": "fechados",
+  "cob": {
+   "sust": "trelica"
+  },
+  "fach": {
+   "cor": "#9aa3aa",
+   "cor2": "#f2f2f0"
+  },
+  "cad": [
+   "#151515",
+   "#f2f2f2"
+  ],
+  "padrao": "liso",
+  "entorno": {
+   "lado": "fa"
+  }
+ },
+ "rams park": {
+  "fach": {
+   "estilo": "concreto",
+   "cor": "#b3b1ab",
+   "cor2": "#6a6c6e"
+  }
+ },
+ "vila belmiro": {
+  "cob": {
+   "cobre": 0.5
+  }
+ },
+ "dr jorge ismael de biasi": {
+  "cob": {
+   "comp": 70
+  }
+ },
+ "batistao": {
+  "cob": {
+   "cobre": 0.5,
+   "alto": 18
+  },
+  "marcas": [
+   {
+    "tipo": "torres_luz",
+    "n": 6,
+    "cor": "#8c9096"
+   }
+  ]
+ },
+ "estadio jose maria de campos maia": {
+  "marcas": [
+   {
+    "tipo": "cupula",
+    "lado": "fa",
+    "cor": "#fde100"
+   },
+   {
+    "tipo": "torres_luz"
+   }
+  ]
+ },
+ "serrinha": {
+  "marcas": [
+   {
+    "tipo": "torres_luz"
+   }
+  ]
+ },
+ "estadio jonas duarte": {
+  "n": 3,
+  "cob": {
+   "comp": 110
+  },
+  "marcas": [
+   {
+    "tipo": "torres_luz",
+    "lado": "ca",
+    "n": 3
+   },
+   {
+    "tipo": "telao",
+    "lado": "fb"
+   }
+  ]
+ },
+ "stade pierre mauroy": {
+  "fach": {
+   "cor2": "#b6bcc2"
+  },
+  "marcas": [
+   {
+    "tipo": "telao"
+   }
+  ]
+ },
+ "beira rio": {
+  "cob": {
+   "estr": "#b3262b"
+  },
+  "fach": {
+   "cor2": "#d9dcdc"
+  },
+  "marcas": [
+   {
+    "tipo": "telao"
+   },
+   {
+    "tipo": "cupula",
+    "lado": "fa"
+   }
+  ]
+ },
+ "estadio jose alvalade": {
+  "fach": {
+   "cor2": "#0f5130"
+  },
+  "marcas": [
+   {
+    "tipo": "mastros",
+    "cor": "#1f7a3a",
+    "n": 4,
+    "alto": 60
+   },
+   {
+    "tipo": "torres",
+    "cor": "#1f7a3a"
+   }
+  ]
+ },
+ "estadio do dragao": {
+  "cob": {
+   "sust": "trelica"
+  },
+  "marcas": [
+   {
+    "tipo": "arco",
+    "lado": "la",
+    "alto": 58,
+    "cor": "#f2f2f0"
+   },
+   {
+    "tipo": "arco",
+    "lado": "ca",
+    "alto": 58,
+    "cor": "#f2f2f0"
+   },
+   {
+    "tipo": "telao"
+   }
+  ]
+ },
+ "arena fonte nova": {
+  "lados": {
+   "fb": [
+    0,
+    0,
+    1,
+    0,
+    0
+   ]
+  },
+  "marcas": [
+   {
+    "tipo": "colunas",
+    "n": 40,
+    "cor": "#c9ccce"
+   },
+   {
+    "tipo": "telao",
+    "lado": "fa"
+   }
+  ]
+ },
+ "max morlock stadion": {
+  "cad": [
+   "#c8102e"
+  ],
+  "padrao": "liso",
+  "marcas": [
+   {
+    "tipo": "torres_luz",
+    "alto": 72
+   },
+   {
+    "tipo": "telao"
+   }
+  ]
+ },
+ "rheinenergiestadion": {
+  "fach": {
+   "led": null
+  },
+  "marcas": [
+   {
+    "tipo": "mastros",
+    "n": 4,
+    "alto": 72,
+    "cor": "#8c9096"
+   }
+  ]
+ },
+ "estadio baenao": {
+  "lados": {
+   "la": [
+    9,
+    5,
+    1,
+    0,
+    0
+   ]
+  },
+  "marcas": [
+   {
+    "tipo": "estatua",
+    "alto": 3,
+    "cor": "#2f3237"
+   },
+   {
+    "tipo": "torres_luz"
+   }
+  ]
+ },
+ "1o de maio": {
+  "planta": "ferradura",
+  "n": 5,
+  "cantos": "fechados",
+  "lados": {
+   "fb": [
+    0,
+    0,
+    1,
+    0,
+    0
+   ]
+  },
+  "cob": {
+   "comp": 45
+  }
+ },
+ "estadio etelvino mendonca": {
+  "cob": {
+   "comp": 60
+  },
+  "marcas": [
+   {
+    "tipo": "torres_luz",
+    "n": 8
+   }
+  ]
+ },
+ "onesio brasileiro alvarenga": {
+  "cad": [
+   "#c8102e",
+   "#ffffff"
+  ],
+  "padrao": "raios"
+ },
+ "germano kruger": {
+  "cob": {
+   "comp": 60
+  }
+ },
+ "estadio municipal carlos zamith": {
+  "fach": {
+   "estilo": "aberto"
+  }
+ },
+ "augusto bauer": {
+  "cob": {
+   "comp": 78
+  }
+ },
+ "estadio major jose levy sobrinho": {
+  "cob": {
+   "comp": 100
+  },
+  "fach": {
+   "estilo": "talude"
+  },
+  "padrao": "setores"
+ },
+ "heriberto hulse": {
+  "padrao": "setores",
+  "cad": [
+   "#f2c400",
+   "#f2f2f2",
+   "#1a1a1a"
+  ]
+ }
 }

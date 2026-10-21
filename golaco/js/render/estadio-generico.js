@@ -21,7 +21,7 @@ import { definirLadoDeCa } from './torcida-dados.js';
 import { definirFormaBandeiras } from './bandeiras-dados.js';
 import { PONTOS_SINALIZADOR } from './festa.js';
 import { CAMERA_GERAL } from './camera.js';
-import { texFachadaEstilo, fachadaPorDentro } from './fachada-estilos.js';
+import { texFachadaEstilo, texTalude, fachadaPorDentro } from './fachada-estilos.js';
 import { PISTA } from '../estadio-generico.js';
 
 const RAD = Math.PI / 180;
@@ -124,6 +124,9 @@ function texCadeiras(P, q, aniso) {
     if (padrao === 'misto') { const x = r(); return x < 0.56 ? pal[0] : x < 0.86 ? pal[1] : pal[2] ?? pal[0]; }
     if (padrao === 'faixas') return pal[Math.min(pal.length - 1, Math.floor((k / NR) * Math.min(3, pal.length)))];
     if (padrao === 'mosaico') return ((Math.floor(xs * 4) + Math.floor(k / 5)) % 3 === 0) ? pal[1] : pal[0];
+    // setores: blocos alternados de 6 m (os degraus pintados em faixas); raios: a 1ª cor cortada por faixas finas da 2ª
+    if (padrao === 'setores') return xs < 0.5 ? pal[0] : pal[1];
+    if (padrao === 'raios') return xs % 0.5 < 0.1 ? pal[1] : pal[0];
     const x = r(); return x < 0.9 ? pal[0] : tom(pal[0], 0.86);
   };
   for (let k = 0; k < NR; k++) {
@@ -349,7 +352,9 @@ export function criarTigela(P, opc = {}) {
     };
     faixa(R0 - 0.3, R1 + 0.4, 0.014, tartan);
     faixa(R1 + 0.4, Math.max(R1 + 0.6, Rf - 0.2), 0.013, borda);
-    for (let k = 0; k <= Pi.raias; k++) { const R = R0 + k * Pi.raia; faixa(R - 0.025, R + 0.025, 0.017, linha); }
+    // as raias só no tartan (a cor saturada); o anel de terra ou de asfalto da pista antiga (Café, Rei Pelé) não tem linhas
+    const [cr, cg, cb] = [1, 3, 5].map(i => parseInt(F.pistaCor.slice(i, i + 2), 16)), mx = Math.max(cr, cg, cb);
+    if (mx > 0 && (mx - Math.min(cr, cg, cb)) / mx >= 0.5) for (let k = 0; k <= Pi.raias; k++) { const R = R0 + k * Pi.raia; faixa(R - 0.025, R + 0.025, 0.017, linha); }
     // o meio-fio de dentro (concreto branco) — a pista passa por baixo das placas (as placas são as do jogo)
     faixa(R0 - 0.45, R0 - 0.3, 0.02, cor(0xdedbd2));
   }
@@ -554,6 +559,19 @@ export function criarTigela(P, opc = {}) {
         }
         continue;
       }
+      if (m.tipo === 'cubo') {
+        // o cubo de vídeo no meio do campo: a caixa escura com uma tela em cada face e os cabos até a borda da cobertura
+        Le.caixa(0, m.y, 0, m.lado, m.alt, m.lado, 0, cab, 6, UV_NORMAL);
+        for (let f = 0; f < 4; f++) {
+          const h = (f * Math.PI) / 2, nx = Math.cos(h), nz = Math.sin(h);
+          Le.caixa(nx * (m.lado / 2 + 0.03), m.y, nz * (m.lado / 2 + 0.03), 0.05, m.alt - 0.7, m.lado - 0.7, h, cor(0x6a90b8), 1, UV_ACESO);
+        }
+        for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+          const th = Math.atan2(sz, sx), c = P.cobEm(th);
+          if (c) Le.barra([sx * m.lado / 2, m.y + m.alt / 2, sz * m.lado / 2], [c.dentro * Math.cos(th), c.yDentro - 1, c.dentro * Math.sin(th)], 0.12, cab, UV_NORMAL);
+        }
+        continue;
+      }
       if (m.tipo === 'telao') {
         Le.caixa(m.x, m.y, m.z, m.larg, m.alt, 1.2, m.th + Math.PI / 2, cab, 6, UV_NORMAL);
         const nx = -Math.cos(m.th), nz = -Math.sin(m.th);
@@ -728,6 +746,27 @@ function criarFachada(P, aniso, fa, q) {
       uv.push(us[i], y / Math.max(ytopo, 1));
     }
     for (let i = 0; i < N; i++) for (let k = 0; k + 1 < nA; k++) { const a = base + i * nA + k, b = a + nA; idx.push(a, a + 1, b, a + 1, b + 1, b); }
+  } else if (P.talude) {
+    // o barranco: do topo da arquibancada (atrás da última fileira) ao chão na base, com um ombro no meio; u pelo
+    // comprimento na base, v pela distância descendo o barranco (a textura de grama ou de pedra com as escadarias)
+    const perfisT = [];
+    for (let i = 0; i <= N; i++) {
+      const th = -Math.PI + (2 * Math.PI * i) / N, rb = P.rB(th) + 0.6, rf = P.rFach(th) + 0.6, yt = P.yTopo(th) + 1.2;
+      perfisT.push({ th, p: [[rb, yt], [lerpN(rb, rf, 0.45), yt * 0.6], [rf, 0]] });
+    }
+    let s = 0;
+    for (let i = 0; i <= N; i++) {
+      const q2 = perfisT[i];
+      if (i > 0) { const a = perfisT[i - 1], r0 = a.p[2][0], r1 = q2.p[2][0]; s += Math.hypot(r1 * Math.cos(q2.th) - r0 * Math.cos(a.th), r1 * Math.sin(q2.th) - r0 * Math.sin(a.th)); }
+      let d = 0;
+      for (let k = 0; k < 3; k++) {
+        const [r, y] = q2.p[k];
+        if (k > 0) d += Math.hypot(r - q2.p[k - 1][0], y - q2.p[k - 1][1]);
+        pos.push(r * Math.cos(q2.th), y, r * Math.sin(q2.th));
+        uv.push(s / 48, 1 - d / 27.6);
+      }
+    }
+    for (let i = 0; i < N; i++) for (let k = 0; k < 2; k++) { const a = i * 3 + k, b = a + 3; idx.push(a, b, a + 1, a + 1, b, b + 1); }
   } else if (!P.abertos) {
     const pts = [];
     for (let i = 0; i <= N; i++) { const th = -Math.PI + (2 * Math.PI * i) / N, r = P.rFach(th); pts.push({ x: r * Math.cos(th), z: r * Math.sin(th), y: P.yFach(th) }); }
@@ -750,8 +789,9 @@ function criarFachada(P, aniso, fa, q) {
   g.setIndex(idx);
   g.computeVertexNormals();
   g.computeBoundingSphere();
-  const mat = new THREE.MeshLambertMaterial({ map: texFachadaEstilo(aniso, false, fa), emissiveMap: texFachadaEstilo(aniso, true, fa), emissive: 0xffffff, emissiveIntensity: 0, side: THREE.DoubleSide });
-  fachadaPorDentro(mat);
+  const tex = P.talude ? texTalude : texFachadaEstilo;
+  const mat = new THREE.MeshLambertMaterial({ map: tex(aniso, false, fa), emissiveMap: tex(aniso, true, fa), emissive: 0xffffff, emissiveIntensity: 0, side: THREE.DoubleSide });
+  if (!P.talude) fachadaPorDentro(mat);
   const m = new THREE.Mesh(g, mat);
   m.name = 'fora-fachada';
   return m;
@@ -759,7 +799,7 @@ function criarFachada(P, aniso, fa, q) {
 /** A placa com o nome do estádio em cima da entrada principal (o lado de cá, +z). */
 function criarPlacaG(P, tex) {
   const pc = P.perfilCasca(Math.PI / 2);
-  const zF = pc ? pc[2][0] + 0.8 : P.rFach(Math.PI / 2), yF = pc ? pc[2][1] + 4 : P.yFach(Math.PI / 2);
+  const zF = pc ? pc[2][0] + 0.8 : P.rFach(Math.PI / 2) + (P.talude ? 1.3 : 0), yF = pc ? pc[2][1] + 4 : P.talude ? 10.5 : P.yFach(Math.PI / 2);
   const larg = clampN(yF * 1.7, 18, 52), alt = larg * 160 / 1024;
   const g = new THREE.PlaneGeometry(larg, alt);
   g.translate(0, clampN(yF - alt / 2 - 1.2, alt / 2 + 3, 40), zF + 0.6);
@@ -824,6 +864,26 @@ function criarMarcas(P, comEntorno = true, corClube = '#c8102e', corClube2 = '#f
       L.cilindro(m.x, 3.2, m.z, 3.2 + m.alto * 0.55, 0.9, cor(0x7b6a4a), 8, 0.7, UV_NORMAL);
       L.cilindro(m.x, 3.2 + m.alto * 0.55, m.z, 3.2 + m.alto * 0.7, 0.6, cor(0x7b6a4a), 8, 0.5, UV_NORMAL);
       L.barra([m.x, 3.2 + m.alto * 0.6, m.z], [m.x + 1.2, 3.2 + m.alto, m.z], 0.45, cor(0x7b6a4a), UV_NORMAL);
+    } else if (m.tipo === 'bola') {
+      // a bola gigante da praça (escultura): os 12 gomos pretos nos vértices do icosaedro, o resto branco, no pedestal
+      tem = true;
+      L.cilindro(m.x, 0, m.z, m.y0, 1.6, conc, 10, 1.3, UV_NORMAL);
+      const cy = m.y0 + m.raio, fi = (1 + Math.sqrt(5)) / 2;
+      const ico = [[0, 1, fi], [0, -1, fi], [0, 1, -fi], [0, -1, -fi], [1, fi, 0], [-1, fi, 0], [1, -fi, 0], [-1, -fi, 0], [fi, 0, 1], [-fi, 0, 1], [fi, 0, -1], [-fi, 0, -1]].map(v => { const l = Math.hypot(...v); return v.map(c => c / l); });
+      const NLa = 12, NLo = 24, branco = cor(0xf4f4f2), preto = cor(0x1d1f21);
+      const pt = (i, j) => { const la = -Math.PI / 2 + (Math.PI * i) / NLa, lo = (2 * Math.PI * j) / NLo; return [Math.cos(la) * Math.cos(lo), Math.sin(la), Math.cos(la) * Math.sin(lo)]; };
+      for (let i = 0; i < NLa; i++) for (let j = 0; j < NLo; j++) {
+        const ps = [pt(i, j), pt(i, j + 1), pt(i + 1, j + 1), pt(i + 1, j)];
+        const c = ps.reduce((a, p) => a.map((v, k) => v + p[k] / 4), [0, 0, 0]);
+        const gomo = ico.some(v => v[0] * c[0] + v[1] * c[1] + v[2] * c[2] > 0.93 * Math.hypot(...c));
+        L.q4(...ps.map(p => [m.x + p[0] * m.raio, cy + p[1] * m.raio, m.z + p[2] * m.raio]), gomo ? preto : branco, UV_NORMAL);
+      }
+    } else if (m.tipo === 'portal') {
+      // a entrada principal no talude: o bloco de concreto com os portões escuros
+      tem = true;
+      L.caixa(0, m.alto / 2, (m.z0 + m.z1) / 2, m.hx * 2, m.alto, m.z1 - m.z0, 0, conc, 6, UV_NORMAL);
+      L.caixa(0, m.alto - 0.5, m.z1 + 0.05, m.hx * 2 + 0.6, 1, 0.3, 0, cor(0xd9d6cc), 6, UV_NORMAL);
+      for (let i = -3; i <= 3; i++) L.caixa(i * 5.6, 2.1, m.z1 + 0.06, 3.6, 4.2, 0.1, 0, cor(0x23272a), 1, UV_NORMAL);
     } else if (m.tipo === 'cupula') {
       tem = true;
       L.cilindro(m.x, 0, m.z, m.parede, m.raio, cor(0xd8d6cf), 40, m.raio, UV_NORMAL);

@@ -1,0 +1,1618 @@
+[
+ {
+  "chave": "london stadium",
+  "nota_antes": 5,
+  "problemas": [
+   "Cobertura quase branca vista de cima; a de verdade é cinza (a membrana cinza com os raios claros dos cabos e a borda de dentro translúcida)",
+   "Falta o anel de treliça BRANCA por cima da borda de fora da cobertura e os pilares brancos inclinados em volta, a marca do estádio (a estrutura saía cinza-aço)",
+   "Fachada em losangos de treliça na parede toda; a de verdade é uma saia clara de painéis dobrados com a faixa vinho de imagens do West Ham em cima",
+   "A ArcelorMittal Orbit (a torre vermelha ao lado) não tem tipo de marca"
+  ],
+  "ajustes": {
+   "cob": {
+    "cor": "#7d8388",
+    "estr": "#f2f3f4"
+   },
+   "fach": {
+    "estilo": "metal",
+    "cor": "#dfe2e4"
+   },
+   "marcas": [
+    {
+     "tipo": "colunas",
+     "n": 24,
+     "cor": "#f2f3f4"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "veltins arena",
+  "nota_antes": 6,
+  "problemas": [
+   "Contorno visto de cima muito quadrado, de quinas vivas; o de verdade é um retângulo de cantos bem arredondados (quase octogonal)",
+   "Fachada marcada para acender (LED branco); a de verdade é a caixa de vidro com a luz de dentro, só o letreiro VELTINS acende",
+   "O cubo de vídeo pendurado no meio do campo não tem tipo de marca (ficam os telões dos fundos)"
+  ],
+  "ajustes": {
+   "n": 4,
+   "fach": {
+    "led": null
+   }
+  }
+ },
+ {
+  "chave": "estadio olimpico universitario",
+  "nota_antes": 5,
+  "problemas": [
+   "Fachada de prédio (parede de concreto com janelas e faixa vermelha no alto); a de verdade é o talude de pedra vulcânica escura, sem janelas, com a borda de concreto cinza por cima (o vermelho é a esplanada de tezontle, não a fachada)",
+   "Pista vermelho-vivo; a de verdade é vermelho-tijolo",
+   "Falta o horizonte de montanhas do vale do México (serra do Ajusco ao sul)",
+   "O relevo de Diego Rivera, o pebetero de 1968 e a caixa de imprensa no alto da Poniente não têm tipo de marca"
+  ],
+  "ajustes": {
+   "fach": {
+    "estilo": "paineis",
+    "cor": "#4a4541",
+    "cor2": "#5f5852"
+   },
+   "pistaCor": "#b5493b",
+   "entorno": {
+    "relevo": "montanhas"
+   }
+  }
+ },
+ {
+  "chave": "king abdullah sports city",
+  "nota_antes": 6,
+  "problemas": [
+   "Cobertura lisa, sem estrutura à mostra; a de verdade tem as treliças brancas triangulares em balanço bem visíveis na borda de dentro",
+   "Fachada em mosaico de quadrados bege; a de verdade é o tambor claro perfurado em treliça de losangos (os muxarabis da Jidá antiga)",
+   "LED amarelo-limão; o brilho da fachada à noite é âmbar/dourado"
+  ],
+  "ajustes": {
+   "cob": {
+    "sust": "trelica"
+   },
+   "fach": {
+    "estilo": "trelica",
+    "led": "#f2b13a"
+   }
+  }
+ },
+ {
+  "chave": "anfield",
+  "nota_antes": 5,
+  "problemas": [
+   "Fachada em mosaico rosado (o tijolo misturado ao branco); a da Main Stand de hoje é de painéis metálicos branco-acinzentados (o tijolo vermelho fica na base e nas torres de escada)",
+   "A treliça branca por cima do telhado sai em todas as arquibancadas; de verdade só na Main Stand e na Anfield Road (a forma não separa por lado)",
+   "Visto de cima o telhado parece uma tenda contínua que afunda em 'V' nos cantos; de verdade são 4 telhados separados, de alturas bem diferentes",
+   "As cadeiras de verdade ficam a ~5–6 m do campo; o jogo não deixa passar do mínimo de 7,7 m"
+  ],
+  "ajustes": {
+   "fach": {
+    "cor": "#e6e8e9",
+    "cor2": "#b9bdc0"
+   }
+  }
+ },
+ {
+  "chave": "mineirao",
+  "nota_antes": 4,
+  "problemas": [
+   "Fachada fechada com fileiras de janelas; a de verdade é o esqueleto aberto de concreto entre os pórticos, com os níveis de circulação à mostra",
+   "Faltam os 88 pórticos de concreto em leque, inclinados para fora e passando da cobertura (o serrilhado visto de cima, a marca do Mineirão)",
+   "Cobertura toda branca até a fachada; de verdade a membrana branca é o anel de dentro e o de fora é a marquise de concreto dos pórticos",
+   "Falta o Mineirinho (o ginásio de cúpula) ao lado, do lado oposto ao da lagoa"
+  ],
+  "ajustes": {
+   "fach": {
+    "estilo": "aberto",
+    "cor2": "#8e897f"
+   },
+   "marcas": [
+    {
+     "tipo": "colunas",
+     "cor": "#b3aea3"
+    },
+    {
+     "tipo": "cupula",
+     "lado": "fa"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "benito villamarin",
+  "nota_antes": 5,
+  "problemas": [
+   "Os cantos entre o Fondo e os dois Goles descem em 'V' (cantos parciais); de verdade as três arquibancadas descobertas formam uma ferradura contínua de cantos curvos na altura toda",
+   "Faixas verdes no alto da fachada; a de verdade é toda de concreto claro (o verde só no letreiro REAL BETIS e no escudo)",
+   "Fachada com fileiras de janelas; a de verdade tem os triângulos em baixo-relevo embaixo e as nervuras inclinadas do anfiteatro à mostra em cima",
+   "A Preferencia foi demolida em set/2025 (obra até ~2028); ficou a configuração 2017–2025, a casa do Betis"
+  ],
+  "ajustes": {
+   "cantos": "fechados",
+   "fach": {
+    "cor2": "#bfbab0"
+   }
+  }
+ },
+ {
+  "chave": "emirates stadium",
+  "nota_antes": 5,
+  "problemas": [
+   "Falta a marca do Emirates vista de cima: as 4 treliças brancas gigantes em retângulo por cima da cobertura, com as pontas para fora até os tripés. No jogo o teto é um disco branco liso, só com nervuras",
+   "A estrutura à mostra sai cinza-aço: no estádio de verdade as treliças da cobertura são brancas",
+   "A fachada está clara demais e fica rosada com as faixas vermelhas. A de verdade é um vidro cinza-azulado escuro entre núcleos de concreto, e o vermelho fica nos murais"
+  ],
+  "ajustes": {
+   "cob": {
+    "estr": "#eef0f1"
+   },
+   "fach": {
+    "cor": "#6b7f88"
+   },
+   "marcas": [
+    {
+     "tipo": "vigas",
+     "cor": "#eef0f1"
+    },
+    {
+     "tipo": "telao"
+    },
+    {
+     "tipo": "estatua"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "mhparena",
+  "nota_antes": 5,
+  "problemas": [
+   "Mastros errados: o jogo põe 8 pilones com cabos, no estilo do Signal Iduna Park. A MHPArena tem uma fileira de colunas brancas finas de aço em toda a volta, do chão até o anel de compressão por cima da membrana",
+   "O anel de compressão e a estrutura à mostra saem cinza-aço; na de verdade são brancos",
+   "A fachada de membrana vira uma casca abaulada com losangos, que lembra a Allianz Arena. Na de verdade se vê a membrana branca do teto sobre uma base baixa de concreto cinza e vidro. Não ajustei: com o estilo vidro ou concreto o paredão sairia escuro e alto, e de cima ficaria menos parecido"
+  ],
+  "ajustes": {
+   "cob": {
+    "estr": "#f2f2f0"
+   },
+   "marcas": [
+    {
+     "tipo": "telao"
+    },
+    {
+     "tipo": "colunas",
+     "n": 24,
+     "cor": "#f2f2f0"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "estadio centenario",
+  "nota_antes": 3,
+  "problemas": [
+   "Erro grave: a marca 'torres' sem n desenha 4 cilindros brancos de 100 m em volta do estádio. O Centenario tem UMA torre só, a Torre de los Homenajes, atrás do meio da Tribuna Olímpica",
+   "Limite do motor: a marca 'torres' não aceita lado. Com n 1 a torre fica atrás do fundo +x (fa), e a de verdade fica atrás do lado de lá (la). Falta um lado para as torres (ou uma marca de torre única)",
+   "A fachada 'concreto' parece um prédio de escritórios com 3 andares de janelas. O de verdade é uma tigela de concreto de 1930 pintada de claro, com rampas e taludes de terra por fora. Não ajustei por falta de certeza do estilo"
+  ],
+  "ajustes": {
+   "marcas": [
+    {
+     "tipo": "torres",
+     "n": 1,
+     "alto": 100,
+     "cor": "#f2f2f0"
+    },
+    {
+     "tipo": "torres_luz"
+    },
+    {
+     "tipo": "telao",
+     "lado": "fa"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "estadio do arruda",
+  "nota_antes": 5,
+  "problemas": [
+   "A fachada 'concreto' tem fileiras de janelas, como um prédio. O Arruda mostra por fora o concreto aparente do anel superior (1982), com pilares e rampas: é o estilo 'aberto'",
+   "Torres de refletor com 20 m ficam mais baixas que o anel superior (~30 m). Na foto a torre treliçada passa bem acima da arquibancada, então tirei o alto e fica o padrão do motor"
+  ],
+  "ajustes": {
+   "fach": {
+    "estilo": "aberto"
+   },
+   "marcas": [
+    {
+     "tipo": "torres_luz"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "groupama stadium",
+  "nota_antes": 4,
+  "problemas": [
+   "A sustentação 'pilares' põe postes no meio das arquibancadas. O Groupama não tem pilar nenhum na visão: a cobertura é de treliça de aço (vista por baixo na foto) e se apoia em pilares finos de aço por FORA, na borda da esplanada",
+   "Faltam os pilares externos finos que seguram o dossel branco em volta, a 'floresta'",
+   "A fachada 'concreto' parece um prédio de escritórios com janelas. A de verdade é o concreto bruto das arquibancadas, com escadas e rampas à mostra debaixo do dossel: é o estilo 'aberto'",
+   "Com a treliça, a borda de dentro passa a subir pela folga (alto 53 = 15 m acima da última fileira). Na foto a borda fica pouco acima da última fileira, então baixei para 45"
+  ],
+  "ajustes": {
+   "cob": {
+    "sust": "trelica",
+    "alto": 45
+   },
+   "fach": {
+    "estilo": "aberto"
+   },
+   "marcas": [
+    {
+     "tipo": "telao",
+     "lado": "fa"
+    },
+    {
+     "tipo": "colunas",
+     "n": 24,
+     "cor": "#d9dad7"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "couto pereira",
+  "nota_antes": 4,
+  "problemas": [
+   "Mastros errados: o jogo põe pilones amarelos com cabos, no estilo do Signal Iduna Park. O Couto Pereira tem torres de refletor treliçadas de aço atrás das arquibancadas, nos cantos",
+   "Cadeiras em 'faixas' (anel de baixo verde, de cima branco). Na foto e na pesquisa são blocos verdes e brancos alternados nos setores, nos dois anéis"
+  ],
+  "ajustes": {
+   "padrao": "mosaico",
+   "marcas": [
+    {
+     "tipo": "torres_luz"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "ilha do retiro",
+  "nota_antes": 5,
+  "problemas": [
+   "A foto do TM é noturna e só mostra a torcida e os refletores: o contorno, a cobertura e a fachada não dá para conferir por ela",
+   "Fachada vermelha lisa com duas galerias escuras em toda a volta parece prédio novo; o real é concreto antigo pintado de vermelho e preto (sem foto de fora para trocar o estilo com segurança, mantido)",
+   "Cobertura das sociais de chapa branca com nervuras: material e forma reais não conferidos (pesquisa com confiança baixa, mantido)",
+   "Recuo de 20 m atrás dos gols e o contorno (n = 5) são estimativas da pesquisa; nada na foto contradiz, mantido"
+  ],
+  "ajustes": {}
+ },
+ {
+  "chave": "barradao",
+  "nota_antes": 3,
+  "problemas": [
+   "Os prints aéreo, fachada e dentro não saíram, e o do jogo mostra o estádio padrão (faixas GOLAÇO, times GLÇ × VNT, arquibancada cheia do lado oposto, que no real é aberto); a forma valida e monta a planta em Node, então o problema está no print/página — conferir",
+   "Cantos 'parciais' deixam o canto mais baixo que os lados; na foto o canto entre a lateral das cabines e a cabeceira é chanfrado e sobe até o topo, na mesma altura das duas (só desce para o lado aberto)",
+   "O prédio das cabines branco no alto da lateral ('ESTÁDIO MANOEL BARRADAS') e a encosta com mata atrás das cabeceiras não têm marca na forma (sem tipo que caiba)",
+   "Ferradura aberta no lado oposto, sem cobertura, degraus vermelhos e relevo de morros conferem com a foto e a pesquisa"
+  ],
+  "ajustes": {
+   "cantos": "fechados"
+  }
+ },
+ {
+  "chave": "estadio do cafe",
+  "nota_antes": 5,
+  "problemas": [
+   "Pista vermelha de tartan com raias brancas; a do Café é de terra/saibro marrom (foto do TM e satélite)",
+   "Fachada alta de concreto com janelas em toda a volta; o real fica num buraco natural do terreno — por fora só o anel baixo de concreto e taludes de grama (a forma não tem campo para isso, mantido)",
+   "Ferradura aberta para o centro da cidade, gramado largo atrás do gol e cobertura só na lateral principal conferem com a foto"
+  ],
+  "ajustes": {
+   "pistaCor": "#8a6a50"
+  }
+ },
+ {
+  "chave": "santa cruz",
+  "nota_antes": 5,
+  "problemas": [
+   "Pista vermelha de tartan; a do Santa Cruz é de terra escura/saibro (foto do TM e satélite da pesquisa)",
+   "Fachada alta e lisa com janelas; o real é o anel de concreto de 1968 com rampas e o bulevar encostado (sem foto de fora atual para trocar o estilo, mantido)",
+   "Cobertura da lateral principal: na foto antiga parece marquise de concreto, a pesquisa pelo satélite diz chapa clara — mantido",
+   "Torre de refletores em treliça atrás da arquibancada e as cadeiras vermelhas e brancas conferem"
+  ],
+  "ajustes": {
+   "pistaCor": "#6b4f40"
+  }
+ },
+ {
+  "chave": "brinco de ouro",
+  "nota_antes": 5,
+  "problemas": [
+   "Cadeiras em faixas horizontais (verde embaixo, branco no meio, cinza em cima); no real o anel é todo pintado de verde com as faixas brancas radiais (foto do TM e satélite)",
+   "O Tobogã (lado oposto) é concreto cinza no real; a forma não tem cor por lado, então fica verde como o resto do anel",
+   "Fachada de dois andares de janelas igual em toda a volta; no real as curvas são baixas e só a tribuna coberta tem o prédio com janelas sob a marquise grossa de concreto (sem campo para isso, mantido)",
+   "A foto py-guarani.jpg é de outro estádio (Paraguai), ignorada"
+  ],
+  "ajustes": {
+   "cad": [
+    "#1d7a43"
+   ],
+   "padrao": "liso"
+  }
+ },
+ {
+  "chave": "fonte luminosa",
+  "nota_antes": 6,
+  "problemas": [
+   "Cobertura com treliça em zigue-zague na borda de dentro; na foto a borda é uma testeira lisa com os refletores e a chapa sai em balanço das colunas atrás da última fileira (com mãos-francesas pequenas em cima)",
+   "A torre de refletores real é de dois mastros atrás da curva; no jogo são postes nos cantos (nenhuma marca descreve torre atrás do gol, mantido)",
+   "Telhado contínuo em todo o anel, degraus de concreto cinza e o gramado largo atrás dos gols conferem com a foto e a pesquisa"
+  ],
+  "ajustes": {
+   "cob": {
+    "sust": "balanco"
+   }
+  }
+ },
+ {
+  "chave": "estadio major jose levy sobrinho",
+  "nota_antes": 5,
+  "problemas": [
+   "A cobertura branca pega a arquibancada oeste inteira e entra nas curvas; a de verdade só cobre ~100 m no centro da oeste",
+   "A fachada é um paredão alto com janelas; o Limeirão de verdade é um anel de concreto de 1977 cercado de gramados e taludes, com o muro branco no topo da leste",
+   "O pórtico de refletores em treliça sobre a leste aparece como uma fileira de postes soltos (aproximação aceitável)",
+   "Os degraus pintados em faixas pretas e brancas alternadas com escadas vermelhas viram 3 faixas largas (preta, branca, azul) por profundidade"
+  ],
+  "ajustes": {}
+ },
+ {
+  "chave": "arena independencia",
+  "nota_antes": 5,
+  "problemas": [
+   "As 4 torres cilíndricas cinza soltas na praça, longe do estádio e mais altas que as arquibancadas, não existem: as torres de circulação de verdade são caixas de vidro escuro encaixadas nos cantos, entre as arquibancadas, na altura da cobertura",
+   "A fachada da principal parece um prédio de escritórios de 4 andares; a de verdade é a estrutura de concreto pré-moldado cinza colada nas ruas do Horto",
+   "Os nomes e o escudo do América pintados no telhado branco não aparecem (sem campo para isso)"
+  ],
+  "ajustes": {
+   "marcas": []
+  }
+ },
+ {
+  "chave": "aflitos",
+  "nota_antes": 6,
+  "problemas": [
+   "O 'NÁUTICO' em letras brancas gigantes sobre o vermelho da leste vira só blocos vermelhos e brancos (sem campo para o letreiro na arquibancada)",
+   "A fachada branca com janelas em volta é genérica; o de verdade é espremido entre prédios, com muros brancos e vermelhos",
+   "Os mastros finos de refletor atrás da leste e das cabeceiras saem como 4 torres de canto (aproximação aceitável)"
+  ],
+  "ajustes": {}
+ },
+ {
+  "chave": "almeidao",
+  "nota_antes": 5,
+  "problemas": [
+   "A marquise de concreto da sombra cobre a arquibancada oeste inteira até a 1ª fileira; a de verdade é segmentada e só cobre parte das fileiras de cima",
+   "A fachada é um paredão fechado com janelas; o Almeidão de verdade é o anel de concreto aparente de 1975 com o esqueleto à mostra (pilares, rampas e blocos de acesso salientes no oeste)",
+   "As torres de luz de treliça ficam nos 4 cantos; na foto são 3 torres em fila no alto da arquibancada sol (aproximação aceitável)",
+   "A cor da pista não confere com a foto (parece faixa cinza, não vermelha), mas sem certeza não foi mudada"
+  ],
+  "ajustes": {
+   "cob": {
+    "cobre": 0.4
+   },
+   "fach": {
+    "estilo": "aberto"
+   }
+  }
+ },
+ {
+  "chave": "estadio olimpico colosso da lagoa",
+  "nota_antes": 4,
+  "problemas": [
+   "A 'estátua' de bronze de ~9 m na praça não existe: a marca de verdade é uma bola de futebol de 3,5 m de diâmetro, que o desenho de estátua não representa",
+   "As cadeiras saem em 3 anéis por profundidade (verde embaixo, amarelo no meio, branco em cima); o de verdade é o anel verde cortado por faixas amarelas radiais",
+   "A fachada tem a mesma altura em volta toda, mas as arquibancadas leste e das curvas são rasas (~7 m)"
+  ],
+  "ajustes": {
+   "padrao": "mosaico",
+   "marcas": [
+    {
+     "tipo": "torres_luz"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "sao januario",
+  "nota_antes": 5,
+  "problemas": [
+   "Os lados compridos (social e leste) saem abaulados como uma oval; no de verdade são retos e paralelos, com a curva norte em semicírculo (ferradura clássica)",
+   "A cobertura da curva norte desce até a 1ª fileira; a de verdade é o anel branco só sobre a parte de cima da curva",
+   "As 4 torres de luz em treliça ficam todas atrás da arquibancada leste no de verdade; no jogo vão para os cantos",
+   "Faltam o 'VASCO' branco na leste preta e os painéis com a cruz de malta e o CRVG na frente da social (sem campo para isso)",
+   "A fachada neocolonial de 1927 da social vira o mesmo paredão com janelas em volta da ferradura toda"
+  ],
+  "ajustes": {
+   "n": 3.5
+  }
+ },
+ {
+  "chave": "deutsche bank park",
+  "nota_antes": 4,
+  "problemas": [
+   "Visto de cima é um caixote retangular: o real é OVAL por fora (a borda branca da cobertura é uma elipse), com a tigela de cantos curvos colada no campo por dentro",
+   "Fachada fechada com janelas em fita, como prédio de escritórios: a real é o esqueleto de concreto claro aberto, com os pilares altos, as bandejas dos andares e os guarda-corpos à mostra",
+   "4 torres de refletor nos cantos que o estádio não tem (os refletores ficam na borda de dentro da cobertura); as duas torres brancas da foto são prédios à parte, fora do estádio",
+   "Cobertura lisa com nervuras: a real são as almofadas de membrana branca sobre a roda de cabos (não dá na forma)",
+   "Telões nos fundos: o real é um cubo de vídeo único pendurado sobre o círculo central (não dá na forma)"
+  ],
+  "ajustes": {
+   "familia": "tigela",
+   "planta": "oval",
+   "fach": {
+    "estilo": "aberto"
+   },
+   "marcas": [
+    {
+     "tipo": "telao"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "volksparkstadion",
+  "nota_antes": 4,
+  "problemas": [
+   "4 torres cilíndricas enormes nos cantos que não existem (as torres de escada brancas reais são estreitas e coladas na fachada)",
+   "Só 8 mastros grossos e soltos: o real tem a coroa de mastros brancos finos em volta toda, passando ~14 m acima da membrana, com os cabos até a borda de dentro",
+   "Fachada de lâminas cinza fechada: a real é a estrutura de aço cinza aparente e vazada, em vários andares",
+   "Cantos vistos de cima quase em quina: os reais são bem arredondados (entre a arena e a tigela; não dá exato na forma)"
+  ],
+  "ajustes": {
+   "cob": {
+    "estr": "#f2f2f0"
+   },
+   "fach": {
+    "estilo": "trelica",
+    "cor": "#5f666c",
+    "cor2": "#aeb4b8"
+   },
+   "marcas": []
+  }
+ },
+ {
+  "chave": "estadio presidente peron",
+  "nota_antes": 4,
+  "problemas": [
+   "4 torres cilíndricas em volta: o real tem só o obelisco branco e esbelto de ~60 m ao lado do estádio (a forma só põe a torre única no fundo +x)",
+   "Visto de cima é um oval alongado (213 × 165 m): o real é quase um círculo, o 'Cilindro', com as laterais mais fundas que as cabeceiras",
+   "A cobertura cobre a arquibancada inteira: a real cobre só o anel de cima; o anel de baixo é descoberto",
+   "A treliça da borda da cobertura é branca na foto (no desenho, cinza)"
+  ],
+  "ajustes": {
+   "lados": {
+    "ca": [
+     52,
+     30,
+     2,
+     1,
+     1
+    ],
+    "la": [
+     52,
+     30,
+     2,
+     1,
+     0
+    ]
+   },
+   "cob": {
+    "cobre": 0.55,
+    "estr": "#eef0f0"
+   },
+   "marcas": [
+    {
+     "tipo": "torres",
+     "n": 1,
+     "alto": 60,
+     "cor": "#f4f4f2"
+    },
+    {
+     "tipo": "telao",
+     "lado": "fa"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "presidente vargas",
+  "nota_antes": 5,
+  "problemas": [
+   "A cobertura pega a principal inteira: a real é só a marquise branca sobre as cadeiras sociais no meio da principal (~45 m)",
+   "Visto de cima sai oval, com as laterais curvas: o real é um retângulo de cantos arredondados com as laterais retas, encaixado no quarteirão do Benfica",
+   "Oposta rasa demais (22 m): pelo contorno do OSM (146 m de largura, 88 m por dentro) as laterais têm ~29 m; na principal entra o prédio da tribuna atrás",
+   "Cadeiras azuis e anel único baixo estão certos"
+  ],
+  "ajustes": {
+   "familia": "inglesa",
+   "lados": {
+    "la": [
+     26,
+     10,
+     1,
+     0,
+     0
+    ]
+   },
+   "cob": {
+    "comp": 45
+   }
+  }
+ },
+ {
+  "chave": "alfredo jaconi",
+  "nota_antes": 5,
+  "problemas": [
+   "8 mastros verdes gigantes com cabos em volta do estádio: não existem (só há um mastro de bandeira, e as bandeiras já são automáticas)",
+   "As coberturas das laterais entram pelos cantos: as reais são planas, só no trecho reto de cada lateral (OSM: 107 e 96 m)",
+   "Fachada contínua de concreto com janelas, como arena fechada: o real é um estádio de encosta, com o prédio principal e muros com grade (não dá na forma)",
+   "Na principal o nível de baixo (Social) é descoberto, só o de cima fica sob o telhado; o desenho cobre tudo (o 'cobre' valeria também para a oposta, que é toda coberta)"
+  ],
+  "ajustes": {
+   "cob": {
+    "comp": 100
+   },
+   "marcas": []
+  }
+ },
+ {
+  "chave": "heriberto hulse",
+  "nota_antes": 6,
+  "problemas": [
+   "Visto de cima é um retângulo de quinas vivas: o real é octogonal, com os cantos chanfrados (não dá na forma sem virar oval)",
+   "Fachada com galerias escuras em fita: a real é um paredão branco com a base de painéis amarelos e portões pretos (o estilo não tem a base colorida)",
+   "Cadeiras em faixas por fileira: as reais são blocos alternados amarelos, brancos e pretos pelos setores",
+   "Cobertura total cinza, arquibancadas baixas coladas no campo e as cores aurinegras estão certas"
+  ],
+  "ajustes": {}
+ },
+ {
+  "chave": "arena mrv",
+  "nota_antes": 6,
+  "problemas": [
+   "Fachada quase toda branca com linhas finas; a de verdade tem as listras verticais pretas e brancas da camisa do Galo bem marcadas (não há estilo de listras largas; fica o metal)",
+   "Fachada sem LED, mas a de verdade tem mais de 50 mil pontos de LED e acende à noite",
+   "Escultura do Galo na esplanada com 9 m; a de verdade tem ~8 m",
+   "O anel de cima do setor Sul (Inter Sul) não tem cadeiras (concreto das organizadas): não há como marcar por anel"
+  ],
+  "ajustes": {
+   "fach": {
+    "led": "#f4f4f4"
+   },
+   "marcas": [
+    {
+     "tipo": "estatua",
+     "alto": 8
+    },
+    {
+     "tipo": "telao"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "estadio nilton santos",
+  "nota_antes": 6,
+  "problemas": [
+   "Fachada como muro liso de concreto com frestas; a de verdade é o esqueleto de concreto aparente com as bandejas, as rampas e as escadas à mostra",
+   "Os arcos brancos saem em cima dos quatro lados (um por lado); os de verdade são 4 arcos só sobre as laterais (2 em cada, cada um sobre meia lateral) — não há tipo para arcos pela metade",
+   "A cobertura afunda sobre os fundos acompanhando as arquibancadas baixas; a de verdade dá a volta quase na mesma altura, com um vão grande acima dos setores Norte e Sul"
+  ],
+  "ajustes": {
+   "fach": {
+    "estilo": "aberto"
+   }
+  }
+ },
+ {
+  "chave": "allianz parque",
+  "nota_antes": 6,
+  "problemas": [
+   "As 5 torres saem como cilindros soltos na esplanada; sem certeza da forma das de verdade (núcleos de acesso que seguram a cobertura), ficam",
+   "A malha de aço inox tecida (tiras horizontais e verticais) vira só lâminas verticais do estilo metal",
+   "A arquibancada curva do Gol Norte não aparece (a planta é igual nos dois fundos)"
+  ],
+  "ajustes": {}
+ },
+ {
+  "chave": "arena pantanal",
+  "nota_antes": 5,
+  "problemas": [
+   "Fachada em losangos de almofadas (ETFE); a de verdade é a tela técnica cor de bronze em pórticos verticais de aço, com brises — listras verticais",
+   "A pele de bronze de verdade dá a volta pelos cantos abertos numa altura menor que as arquibancadas (envolve a base inteira); no jogo cada arquibancada tem a parede até o topo e os cantos ficam vazios — sem campo para isso",
+   "Faltam as caixas brancas verticais de circulação nas pontas de cada cobertura (sem tipo de marca)"
+  ],
+  "ajustes": {
+   "fach": {
+    "estilo": "metal",
+    "cor": "#86735a",
+    "cor2": "#4e4232"
+   }
+  }
+ },
+ {
+  "chave": "ligga arena",
+  "nota_antes": 6,
+  "problemas": [
+   "Fachada em lâminas verticais cinza-escuras; a de verdade é a caixa de chapas lisas prateadas claras, em painéis de tons um pouco diferentes",
+   "Cobertura branca vista de cima; a de verdade é cinza (mais escura que a faixa branca do alto da fachada), com a treliça escura dos trilhos do teto retrátil no meio",
+   "Com o LED vermelho a faixa do alto sai vermelha de dia; a de verdade é branca de dia e acende em vermelho só à noite (limite do desenho)"
+  ],
+  "ajustes": {
+   "cob": {
+    "cor": "#b4bac1"
+   },
+   "fach": {
+    "estilo": "paineis",
+    "cor": "#cfd3d7",
+    "cor2": "#a9afb5"
+   }
+  }
+ },
+ {
+  "chave": "estadio joaquim portugal",
+  "nota_antes": 5,
+  "problemas": [
+   "Entorno de prédios altos (urbano denso); o bairro Matosinhos em São João del-Rei é de casas baixas de telhado de barro e galpões",
+   "A cobertura da arquibancada social sai inclinada; a de verdade é um teto metálico baixo e plano sobre pilares com a testeira branca",
+   "Quantas torres de refletor são (4 nos cantos ou outra conta) não foi confirmado: ficam as 4"
+  ],
+  "ajustes": {
+   "entorno": {
+    "tipo": "residencial"
+   }
+  }
+ },
+ {
+  "chave": "estadio monumental banco pichincha",
+  "nota_antes": 5,
+  "problemas": [
+   "a cobertura das laterais vai do fundo até a 1ª fileira; na real a marquise só cobre o anel de cima (palcos e suítes), o anel de baixo fica descoberto",
+   "cadeiras com manchas vermelhas; na real as arquibancadas são pintadas de amarelo, com poucos detalhes pretos",
+   "fachada amarela de janelas em fileira parece prédio de escritórios; os prédios de suítes atrás das laterais não aparecem (sem campo para isso)"
+  ],
+  "ajustes": {
+   "cob": {
+    "cobre": 0.5
+   },
+   "cad": [
+    "#ffd200",
+    "#f5c400",
+    "#1a1a1a"
+   ]
+  }
+ },
+ {
+  "chave": "arena do gremio",
+  "nota_antes": 6,
+  "problemas": [
+   "contorno de fora quadrado demais; na real a casca é um oval de cantos largos, com as laterais levemente curvas",
+   "falta o beiral branco com as treliças radiais à mostra no alto da fachada (sem campo para isso)",
+   "na real a faixa de painéis azuis fica entre bandas brancas (o beiral em cima e a base de concreto embaixo); no jogo o azul vai da base ao topo"
+  ],
+  "ajustes": {
+   "n": 4
+  }
+ },
+ {
+  "chave": "johan cruyff arena",
+  "nota_antes": 5,
+  "problemas": [
+   "contorno muito quadrado; visto de cima o anel de fora é quase oval ('disco voador')",
+   "arcos desenhados em todas as arquibancadas; na real são só duas vigas-arco treliçadas ao longo das laterais, de torre a torre dos cantos",
+   "as torres dos cantos viraram silos grossos; na real são colunas brancas finas com coroas redondas, ao lado de caixas de escada de concreto",
+   "fachada de janelas em fileira; na real o estádio fica elevado sobre a rua, com pilares inclinados e escadas diagonais por fora"
+  ],
+  "ajustes": {
+   "n": 4
+  }
+ },
+ {
+  "chave": "estadio raulino de oliveira",
+  "nota_antes": 6,
+  "problemas": [
+   "no geral confere: pista azul, as duas laterais cobertas com a treliça branca, curvas baixas descobertas, torres de refletor nos cantos",
+   "faltam a rotunda de entrada com telhado cônico atrás da principal e o VOLTA REDONDA em letras pretas nas cadeiras amarelas da oposta (sem campo para isso)"
+  ],
+  "ajustes": {}
+ },
+ {
+  "chave": "moises lucarelli",
+  "nota_antes": 4,
+  "problemas": [
+   "pista de atletismo vermelha; na real é um anel de asfalto cinza-escuro (a antiga pista, usada como estacionamento)",
+   "4 torres cilíndricas brancas em volta não existem; as duas torres reais são retangulares, coladas na fachada art déco do portão leste",
+   "a fachada art déco branca com escotilhas redondas e o letreiro preto virou parede de janelas",
+   "a cobertura da social vai de ponta a ponta da lateral; na real só cobre o trecho central"
+  ],
+  "ajustes": {
+   "pistaCor": "#4f5254",
+   "marcas": [
+    {
+     "tipo": "estatua",
+     "lado": "ca"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "rei pele",
+  "nota_antes": 5,
+  "problemas": [
+   "pista de atletismo vermelha; na real é um anel de terra/saibro (a antiga pista) entre o campo e a arquibancada",
+   "a reta (principal) tem cobertura própria na real; no jogo o anel de concreto cobre a volta toda igual"
+  ],
+  "ajustes": {
+   "pistaCor": "#8f8473"
+  }
+ },
+ {
+  "chave": "estadio mario alberto kempes",
+  "nota_antes": 5,
+  "problemas": [
+   "a fachada é uma casca fechada com X de treliça; a real é aberta: as costas de concreto cinza das arquibancadas com os pilares tubulares brancos da cobertura passando na frente",
+   "as costelas brancas da cobertura (treliças radiais que descem até o chão em volta do anel) não aparecem",
+   "a cobertura vai até a 1ª fileira; a de 2011 cobre só a parte de trás (~70%), as fileiras de baixo junto à pista ficam ao sol",
+   "a cobertura parece um anel contínuo; a real é em 4 setores com vãos onde ficam as torres de luz"
+  ],
+  "ajustes": {
+   "cob": {
+    "cobre": 0.7
+   },
+   "fach": {
+    "estilo": "aberto",
+    "cor": "#b9b7b0",
+    "cor2": "#8a8f94"
+   },
+   "marcas": [
+    {
+     "tipo": "torres_luz"
+    },
+    {
+     "tipo": "colunas",
+     "n": 48,
+     "cor": "#f2f2f0"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "estadio jalisco",
+  "nota_antes": 5,
+  "problemas": [
+   "a cobertura cobre a arquibancada inteira; a real (chapa ondulada fina em balanço) cobre só o anel de cima, o anel de baixo (28 fileiras) fica descoberto",
+   "a fachada é um prédio fechado com fileiras de janelas; a real é a tigela de concreto de 1960/1970 com o esqueleto à mostra (pórticos do anel de cima e rampas)"
+  ],
+  "ajustes": {
+   "cob": {
+    "cobre": 0.45
+   },
+   "fach": {
+    "estilo": "aberto"
+   }
+  }
+ },
+ {
+  "chave": "stadio diego armando maradona",
+  "nota_antes": 4,
+  "problemas": [
+   "duas torres cilíndricas enormes por fora que não existem; o que há são os pilones treliçados de aço escuro (28) em volta que seguram a cobertura de 1990",
+   "pilares no meio da torcida (sust pilares); a cobertura real é de treliça de aço apoiada por fora, sem pilar na frente das arquibancadas",
+   "a cobertura vai até a 1ª fileira; a real cobre só o 3º anel e o alto do 2º (com os refletores na borda), o 1º anel e quase todo o 2º ficam descobertos",
+   "a fachada é um prédio fechado com janelas; a real é o concreto bruto de 1959 com o esqueleto à mostra e a estrutura de aço escura do 3º anel por cima"
+  ],
+  "ajustes": {
+   "cob": {
+    "sust": "trelica",
+    "estr": "#3e4247",
+    "cobre": 0.45
+   },
+   "fach": {
+    "estilo": "aberto"
+   },
+   "marcas": [
+    {
+     "tipo": "telao"
+    },
+    {
+     "tipo": "colunas",
+     "n": 28,
+     "cor": "#4a4d52"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "arena conda",
+  "nota_antes": 6,
+  "problemas": [
+   "cadeiras amarelas espalhadas pela arquibancada; o amarelo é só das escadas, as cadeiras são verdes e cinza-claras"
+  ],
+  "ajustes": {
+   "cad": [
+    "#d9dcd6",
+    "#1d7a43"
+   ]
+  }
+ },
+ {
+  "chave": "orlando scarpelli",
+  "nota_antes": 6,
+  "problemas": [
+   "o campo fica longe demais da torcida (14 m nas laterais e 22 m nos fundos); na foto o alambrado e a 1ª fileira ficam a poucos metros das linhas, laterais e fundo"
+  ],
+  "ajustes": {
+   "recuo": [
+    8,
+    11
+   ]
+  }
+ },
+ {
+  "chave": "novelli junior",
+  "nota_antes": 5,
+  "problemas": [
+   "pista de atletismo vermelha (tartan) em volta do campo; o estádio não tem pista de atletismo, o anel em volta é de terra batida clara (a pista antiga)",
+   "a cabeceira do escudo é reta e larga, de cadeiras vermelhas com o escudo preto no meio; a família pista a desenha em curva e pequena",
+   "a principal coberta vira um prédio fechado de dois andares com janelas"
+  ],
+  "ajustes": {
+   "pistaCor": "#bfa67a"
+  }
+ },
+ {
+  "chave": "borussia park",
+  "nota_antes": 6,
+  "problemas": [
+   "Só 8 mastros lisos com cabos (no aéreo aparecem 4 ou 5); o de verdade tem em toda a volta os pilones treliçados BRANCOS de ~40 m que seguram a cobertura (~32, um por campo de aço; o tipo vai até 24)",
+   "A treliça da borda de dentro da cobertura sai cinza-aço; no de verdade toda a estrutura à mostra é branca",
+   "Cadeiras salpicadas de preto e branco (xadrez); na foto são todas escuras (pretas) com só as escadas claras"
+  ],
+  "ajustes": {
+   "cob": {
+    "estr": "#f2f2f0"
+   },
+   "cad": [
+    "#1c1c1c",
+    "#2b2b2b"
+   ],
+   "padrao": "liso",
+   "marcas": [
+    {
+     "tipo": "mastros",
+     "n": 24,
+     "cor": "#f2f2f0",
+     "alto": 40
+    }
+   ]
+  }
+ },
+ {
+  "chave": "la bombonera",
+  "nota_antes": 4,
+  "problemas": [
+   "Quatro cilindros gigantes de concreto em volta do estádio (a marca 'torres'): não existem; as 'torres' da pesquisa são as duas pontas com sacadas do prédio dos palcos, e esse tipo de marca não as representa",
+   "Os cantos 'parciais' afundam a ferradura nos quatro cantos (o 'S' do aéreo e do dentro); a de verdade é uma bacia contínua de 3 bandejas na mesma altura em volta dos dois fundos, que só termina no prédio dos palcos",
+   "Fachada azul sem a faixa amarela larga no meio, com as escoras inclinadas amarelas das bandejas (a cara do estádio); a faixa de cima sai bege. Nenhum estilo desenha a faixa: não ajustei"
+  ],
+  "ajustes": {
+   "cantos": "fechados",
+   "marcas": [
+    {
+     "tipo": "telao",
+     "lado": "fa"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "estadio bbva",
+  "nota_antes": 5,
+  "problemas": [
+   "Caixa de paredes retas em pé com a quina viva até um teto quase plano; o de verdade é uma casca contínua e abaulada de gomos de alumínio, do chão até a abertura do teto, sem separação entre fachada e cobertura. A casca do jogo só sai com o estilo membrana (losangos de almofada, cara de Allianz Arena) e perderia os gomos verticais que o estilo metal já desenha bem: não ajustei",
+   "Visto de cima o contorno de fora é mais arredondado (quase oval) que o retângulo de cantos curvos do jogo; o recuo de 9 m força a 1ª fileira retangular, não há campo para arredondar só o de fora",
+   "Falta a fileira de 'guelras' inclinadas de ventilação em volta da casca (sem tipo de marca)"
+  ],
+  "ajustes": {}
+ },
+ {
+  "chave": "estadio da ressacada",
+  "nota_antes": 4,
+  "problemas": [
+   "Dois pórticos gigantes (duas colunas e a viga de refletores, como o Morumbi) por cima dos lados compridos: errado; o de verdade tem 4 torres de refletores BRANCAS de ~43 m (AVAÍ escrito na vertical), uma em cada canto, duas nas pontas da principal",
+   "Fachada em mosaico de pixels azuis, brancos e cinza em toda a volta; a de verdade é o concreto pintado de azul, com o prédio da principal em faixas horizontais azuis e brancas",
+   "A oposta coberta de ponta a ponta; na de verdade só o centro (setores C, D e E) tem o telhado plano branco (não dá para cobrir só o meio de um lado)",
+   "A borda da frente da cobertura da principal é azul na foto (a testeira sai cinza)"
+  ],
+  "ajustes": {
+   "cob": {
+    "estr": "#f2f2f0"
+   },
+   "fach": {
+    "estilo": "concreto"
+   },
+   "marcas": [
+    {
+     "tipo": "torres_luz",
+     "cor": "#f2f2f0",
+     "alto": 43
+    },
+    {
+     "tipo": "telao",
+     "lado": "fa"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "estadio nabi abi chedid",
+  "nota_antes": 4,
+  "problemas": [
+   "Sem os prints aéreo, da fachada e de dentro (o do jogo mostra o estádio padrão do Golaço); avaliei pela foto e pela forma",
+   "torres_luz com lado 'ca' desenha os pórticos de refletores do Morumbi por cima dos lados compridos; o de verdade tinha torres treliçadas de aço nos cantos (a da foto) e a fileira de refletores na borda da cobertura da principal",
+   "Planta 'irregular' (n 4) curva as arquibancadas; as de verdade são retas, de estrutura metálica modular, separadas nos cantos",
+   "A visitante/cinza ficava a ~35 m da linha de fundo e a branca colada no gol (um recuo só para os dois fundos: não ajustei)",
+   "O estádio foi demolido em 2025 e a Arena Red Bull ainda está em obra (entrega 2029–2030); a forma segue o último estado"
+  ],
+  "ajustes": {
+   "planta": "retangular",
+   "marcas": [
+    {
+     "tipo": "torres_luz"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "estadio willie davids",
+  "nota_antes": 6,
+  "problemas": [
+   "Pista vermelho-carmim (quase magenta); a da foto é vermelho-alaranjada (tartan)",
+   "Falta o Ginásio Chico Neto, a cúpula branca colada ao estádio do lado leste (a oposta), que aparece em toda foto aérea",
+   "A cobertura da tribuna oeste é uma fileira de abóbadas brancas em meia-lua sobre pilares; no jogo é uma laje inclinada lisa (nenhuma sustentação desenha as abóbadas: não ajustei)"
+  ],
+  "ajustes": {
+   "pistaCor": "#c2452f",
+   "marcas": [
+    {
+     "tipo": "torres_luz",
+     "cor": "#8c9096"
+    },
+    {
+     "tipo": "cupula",
+     "lado": "la"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "etihad stadium",
+  "nota_antes": 7,
+  "problemas": [
+   "A borda do teto sai reta e na mesma altura em volta; o de verdade é a 'montanha-russa': os cantos (mais baixos, 2 anéis) afundam entre as 4 arquibancadas de 3 anéis",
+   "A foto do TM é o Docklands Stadium de Melbourne (ex-Etihad), ignorada"
+  ],
+  "ajustes": {
+   "cantos": "parciais"
+  }
+ },
+ {
+  "chave": "san mames",
+  "nota_antes": 6,
+  "problemas": [
+   "Fachada em losangos com casca abaulada (estilo Allianz) e faixa vermelha; a de verdade é uma pele quase vertical de lâminas brancas torcidas em faixas horizontais, toda branca de dia",
+   "A pele de LED acende branca; o San Mamés acende vermelho (com branco) à noite",
+   "A foto do TM é o San Mamés antigo (com o arco, demolido), ignorada"
+  ],
+  "ajustes": {
+   "fach": {
+    "estilo": "metal",
+    "cor2": "#dcdcdc",
+    "casca": false
+   },
+   "marcas": [
+    {
+     "tipo": "pele_led",
+     "cor": "#d71920"
+    },
+    {
+     "tipo": "estatua"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "hill dickinson stadium",
+  "nota_antes": 5,
+  "problemas": [
+   "Quatro torres cilíndricas vermelhas nos cantos que não existem; a marca é UMA torre hidráulica antiga de tijolo, na Fan Plaza do lado leste (oposta)",
+   "Fachada toda de tijolo com janelas de prédio; a de verdade é a base em faixas verticais de tijolo e painéis pretos (os armazéns da doca), com a casca de alumínio prateado em cima"
+  ],
+  "ajustes": {
+   "fach": {
+    "estilo": "metal",
+    "cor": "#a24c33"
+   },
+   "marcas": [
+    {
+     "tipo": "torres",
+     "lado": "la",
+     "n": 1,
+     "alto": 25,
+     "cor": "#8b3a2e"
+    },
+    {
+     "tipo": "telao"
+    },
+    {
+     "tipo": "estatua"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "st james park",
+  "nota_antes": 4,
+  "problemas": [
+   "Os cantos afundam (parciais); no de verdade o canto Milburn–Leazes é cheio e alto (o 'L' gigante debaixo de um teto só) e os outros cantos são fechados, curvos",
+   "A 1ª fileira sai muito arredondada (planta irregular = n 4); as 4 arquibancadas são retas e coladas no campo",
+   "Sem a treliça branca à mostra do teto em balanço do 'L' (Milburn/Leazes)",
+   "Fachada com o aço cinza-escuro em X; o aço de St James' é BRANCO sobre o fechamento cinza",
+   "Cadeiras salpicadas de preto e branco; na foto são quase todas pretas",
+   "O lago (Leazes Park) fica atrás da Leazes End (norte, fundo +x), não do outro fundo"
+  ],
+  "ajustes": {
+   "planta": "retangular_cantos_curvos",
+   "n": 8,
+   "cantos": "fechados",
+   "cob": {
+    "sust": "trelica"
+   },
+   "fach": {
+    "cor": "#9aa3aa",
+    "cor2": "#f2f2f0"
+   },
+   "cad": [
+    "#151515",
+    "#f2f2f2"
+   ],
+   "padrao": "liso",
+   "entorno": {
+    "lado": "fa"
+   }
+  }
+ },
+ {
+  "chave": "rams park",
+  "nota_antes": 6,
+  "problemas": [
+   "Fachada em mosaico de painéis vermelho e branco; a de verdade é de concreto aparente cinza, rústico de propósito (StadiumDB), com o vermelho e o amarelo só na iluminação da noite"
+  ],
+  "ajustes": {
+   "fach": {
+    "estilo": "concreto",
+    "cor": "#b3b1ab",
+    "cor2": "#6a6c6e"
+   }
+  }
+ },
+ {
+  "chave": "vila belmiro",
+  "nota_antes": 6,
+  "problemas": [
+   "A cobertura da principal desce sobre a arquibancada inteira; a de verdade é uma cobertura metálica leve só sobre as fileiras de cima (o anel de cima e as cabines)"
+  ],
+  "ajustes": {
+   "cob": {
+    "cobre": 0.5
+   }
+  }
+ },
+ {
+  "chave": "dr jorge ismael de biasi",
+  "nota_antes": 5,
+  "problemas": [
+   "a cobertura da principal vai de ponta a ponta do lado; na real o telhado cinza fica só sobre a tribuna/prédio social, no meio da lateral",
+   "a fachada da principal é um paredão branco por todo o lado; na real é um prédio social de 2–3 andares só no trecho da tribuna",
+   "os dois cantos de lá saem curvos e cheios; na real só um canto fecha (a curva do fundo até a oposta), o outro é aberto",
+   "o mosaico amarelo/preto sai em retalhos pequenos; na real a oposta é amarela com o bloco preto do tigre no meio e os fundos com listras de tigre"
+  ],
+  "ajustes": {
+   "cob": {
+    "comp": 70
+   }
+  }
+ },
+ {
+  "chave": "batistao",
+  "nota_antes": 6,
+  "problemas": [
+   "as coberturas das laterais cobrem a profundidade inteira; na real a da oposta é uma laje branca reta só sobre as fileiras de cima, logo acima do topo",
+   "4 torres de refletor nos cantos; na real 3 torres altas atrás de cada lateral (a foto mostra as 3 enfileiradas atrás da oposta)",
+   "as cadeiras saem misturadas vinho/azul/branco; na real metade do anel vinho e metade azul em blocos grandes",
+   "a cobertura da tribuna em módulos de abóbada branca não aparece (sai como laje reta)"
+  ],
+  "ajustes": {
+   "cob": {
+    "cobre": 0.5,
+    "alto": 18
+   },
+   "marcas": [
+    {
+     "tipo": "torres_luz",
+     "n": 6,
+     "cor": "#8c9096"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "estadio jose maria de campos maia",
+  "nota_antes": 5,
+  "problemas": [
+   "sem foto de referência: a forma é a estimativa da pesquisa (OSM e foto aérea)",
+   "o ginásio de cúpula fica atrás do fundo norte; pela pesquisa ele fica ao lado do canto sul-oeste, junto do fundo sul (a curva descoberta)",
+   "a fachada inteira sai em painéis amarelos; o mosaico de quadrados verdes e amarelos é só no bloco do fundo norte e o prédio social da principal é branco"
+  ],
+  "ajustes": {
+   "marcas": [
+    {
+     "tipo": "cupula",
+     "lado": "fa",
+     "cor": "#fde100"
+    },
+    {
+     "tipo": "torres_luz"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "serrinha",
+  "nota_antes": 6,
+  "problemas": [
+   "o telão está em cima do tobogã sul; na real fica numa estrutura metálica atrás do gol norte, o fundo sem arquibancada (o gerador não põe telão em lado sem arquibancada: tirado para não ficar no lugar errado)",
+   "o letreiro 'TOBOGÃ FORÇA' com o escudo no alto do tobogã não aparece",
+   "o pórtico de treliça branca no alto da arquibancada leste não aparece",
+   "as torres de refletor ficam nos cantos; na real os postes ficam atrás das laterais, um pouco para dentro das pontas"
+  ],
+  "ajustes": {
+   "marcas": [
+    {
+     "tipo": "torres_luz"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "estadio jonas duarte",
+  "nota_antes": 6,
+  "problemas": [
+   "o contorno sai em elipse; na real são retas compridas nas laterais (a tribuna é um prédio reto) e curvas semicirculares nos fundos",
+   "as coberturas das laterais seguem a curva para dentro dos cantos; na real são lajes retas só sobre o trecho reto das duas laterais",
+   "4 torres de refletor nos cantos; na real 3 torres altas enfileiradas diante da fachada da tribuna",
+   "o telão está no fundo da direita (vendo da tribuna); a foto aérea mostra o placar no alto da curva das cadeiras azuis, à esquerda",
+   "as cadeiras saem misturadas; na real a curva da esquerda é azul e a da direita de degraus brancos"
+  ],
+  "ajustes": {
+   "n": 3,
+   "cob": {
+    "comp": 110
+   },
+   "marcas": [
+    {
+     "tipo": "torres_luz",
+     "lado": "ca",
+     "n": 3
+    },
+    {
+     "tipo": "telao",
+     "lado": "fb"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "stade pierre mauroy",
+  "nota_antes": 6.5,
+  "problemas": [
+   "Fachada em xadrez de cinza-claro e cinza-escuro muito contrastado; a de verdade é uma pele prateada quase uniforme de tubos de policarbonato translúcido (só tons próximos de cinza)",
+   "Só um telão (no fundo +x); o estádio tem os telões pendurados no teto perto dos DOIS fundos"
+  ],
+  "ajustes": {
+   "fach": {
+    "cor2": "#b6bcc2"
+   },
+   "marcas": [
+    {
+     "tipo": "telao"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "beira rio",
+  "nota_antes": 6,
+  "problemas": [
+   "A saia de membrana por fora sai com losangos e uma faixa rosada/vermelha no alto; as folhas de verdade são brancas, sem vermelho",
+   "A treliça debaixo da cobertura sai branca; na foto a estrutura de aço sob as folhas é vermelha",
+   "Falta o Gigantinho (o ginásio de cúpula vizinho, do lado da cabeceira norte)"
+  ],
+  "ajustes": {
+   "cob": {
+    "estr": "#b3262b"
+   },
+   "fach": {
+    "cor2": "#d9dcdc"
+   },
+   "marcas": [
+    {
+     "tipo": "telao"
+    },
+    {
+     "tipo": "cupula",
+     "lado": "fa"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "estadio jose alvalade",
+  "nota_antes": 6.5,
+  "problemas": [
+   "Fachada em mosaico verde com quadrados BRANCOS; depois da reforma (2023–2025) os azulejos coloridos saíram e a fachada ficou verde (sem o branco)",
+   "Telões pendurados nos dois fundos; hoje são painéis de LED nas varandas entre os anéis (na foto não há telão no fundo)"
+  ],
+  "ajustes": {
+   "fach": {
+    "cor2": "#0f5130"
+   },
+   "marcas": [
+    {
+     "tipo": "mastros",
+     "cor": "#1f7a3a",
+     "n": 4,
+     "alto": 60
+    },
+    {
+     "tipo": "torres",
+     "cor": "#1f7a3a"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "estadio do dragao",
+  "nota_antes": 5,
+  "problemas": [
+   "A sustentação 'arco' põe um arco baixo em cada uma das 4 arquibancadas (de cima parecem 4 cristas onduladas); no de verdade são só DOIS arcos treliçados brancos de ~178 m, sobre as laterais, nascendo nos cantos e subindo acima do teto",
+   "Os topos têm planos de teto próprios, sem arco"
+  ],
+  "ajustes": {
+   "cob": {
+    "sust": "trelica"
+   },
+   "marcas": [
+    {
+     "tipo": "arco",
+     "lado": "la",
+     "alto": 58,
+     "cor": "#f2f2f0"
+    },
+    {
+     "tipo": "arco",
+     "lado": "ca",
+     "alto": 58,
+     "cor": "#f2f2f0"
+    },
+    {
+     "tipo": "telao"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "arena fonte nova",
+  "nota_antes": 5,
+  "problemas": [
+   "O fundo sul sai como uma arquibancada baixa coberta e o teto dá a volta inteira; a de verdade é uma FERRADURA aberta para o Dique do Tororó (sem arquibancada, esplanada no nível do campo), o teto em U",
+   "Fachada parece uma caixa fechada de brises; faltam os pilares cinza inclinados em volta, que seguram o anel de compressão e marcam o estádio (na foto, ~20 na metade visível)"
+  ],
+  "ajustes": {
+   "lados": {
+    "fb": [
+     0,
+     0,
+     1,
+     0,
+     0
+    ]
+   },
+   "marcas": [
+    {
+     "tipo": "colunas",
+     "n": 40,
+     "cor": "#c9ccce"
+    },
+    {
+     "tipo": "telao",
+     "lado": "fa"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "max morlock stadion",
+  "nota_antes": 5,
+  "problemas": [
+   "As 4 peças dos cantos saem como mastros AMARELOS com cabos até o teto; as de verdade são as 4 torres de refletores de 71,5 m (cinza, com os refletores no alto), sem cabos",
+   "Cadeiras com blocos brancos espalhados por todo o estádio (padrão mosaico); as de verdade são vermelhas, o branco é só o letreiro NÜRNBERG numa arquibancada"
+  ],
+  "ajustes": {
+   "cad": [
+    "#c8102e"
+   ],
+   "padrao": "liso",
+   "marcas": [
+    {
+     "tipo": "torres_luz",
+     "alto": 72
+    },
+    {
+     "tipo": "telao"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "rheinenergiestadion",
+  "nota_antes": 6,
+  "problemas": [
+   "As 4 torres treliçadas de 72 m dos cantos, que seguram as 4 coberturas pelos cabos, saem como postes finos de refletor com a cabeça de holofotes, perto da quina do campo. O certo é o marco 'mastros' (pilones por fora segurando a cobertura por cabos), atrás das quinas das arquibancadas. Conferido no print: 4 pilones de 72 m nos cantos, sem holofote; os refletores ficam na borda da cobertura.",
+   "Os cabos do 'mastros' vão para o ângulo do canto aberto (o vão) e quase não aparecem. Nas fotos, cada torre manda cabos para as coberturas das duas arquibancadas vizinhas (limite do desenho).",
+   "Fachada com a faixa vermelha de LED no alto: o que acende em vermelho e branco à noite são as 4 torres, não a fachada (a pesquisa diz o mesmo). Tirei o led."
+  ],
+  "ajustes": {
+   "fach": {
+    "led": null
+   },
+   "marcas": [
+    {
+     "tipo": "mastros",
+     "n": 4,
+     "alto": 72,
+     "cor": "#8c9096"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "neo quimica arena",
+  "nota_antes": 6,
+  "problemas": [
+   "A cobertura de verdade é uma TAMPA plana e branca (caixa retangular com o vão sobre o campo), na mesma altura nos 4 lados: as treliças de 170 m passam por cima dos fundos baixos de 15 m. No jogo ela desce até os fundos e vira uma sela (cobEm segue o yTopo de cada lado: ~51 m na oeste, ~41 m na leste e ~21 m nos fundos). Não dá para corrigir pelos campos da forma sem inventar fundos de 40 m. Precisa de uma cobertura total plana no gerador (ex.: cob.plana, na altura do lado mais alto).",
+   "Os lados passam do teto do validador: ca 57 m vira ~45 m e la 51 m vira ~35 m. Os 57/51 da pesquisa são a altura dos prédios e não da última fileira; o resultado fica perto do real, então não mexi.",
+   "A fachada leste inteira é um telão de LED de 170 × 20 m e o jogo não tem como acender só um lado. Deixei sem led para não acender a fachada inteira."
+  ],
+  "ajustes": {}
+ },
+ {
+  "chave": "estadio baenao",
+  "nota_antes": 1,
+  "problemas": [
+   "ERRO: hoje a forma NÃO carrega. render/bandeiras.js:263 (criarBandeiras) lê lBand2[0].larg e lBand2[1].larg, mas estadio-generico.js bandeiroes() só cria o bandeirão do lado de lá com la ≥ ~8,9 m (profLa = 0,45·la ≥ 4) e o da organizada com fa ≥ 8 m. Com la 6 m dá TypeError e o pré-jogo e o jogo ficam com o Estádio Golaço padrão (print: 'forma nenhuma'). Qualquer forma com la < 9 m, la 0 (ferradura sem a oposta) ou fa < 8 m quebra do mesmo jeito: corrigir no bandeiras.js (aceitar 0 ou 1 bandeirão).",
+   "Para carregar já, a oposta foi de 6 para 9 m de profundidade (5 m de altura; ainda são poucos degraus baixos junto ao muro). Conferido em print: carrega e não tem erro no console.",
+   "O resto bate com a foto e a pesquisa (com a forma carregada): fundo de concreto azul-marinho de 18 m, lateral coberta rasa sobre pilares, cantos abertos, muro azul-marinho e branco, leão (estátua)."
+  ],
+  "ajustes": {
+   "lados": {
+    "la": [
+     9,
+     5,
+     1,
+     0,
+     0
+    ]
+   }
+  }
+ },
+ {
+  "chave": "1o de maio",
+  "nota_antes": 5,
+  "problemas": [
+   "O contorno sai fechado nos 4 lados, mas um fundo (o nordeste) é ABERTO: só existe a curva do canto leste, porque a ampliação ficou inacabada. A foto mostra a ponta da arquibancada principal terminando reta, sem fundo. O outro fundo, em curva, liga-se às laterais (como na foto). Passei para ferradura de cantos fechados com o fb vazio e n 5, para não arredondar a planta como a ferradura padrão (2,8). O vazio fica no fb (−x) porque o fa vazio quebra o bandeirão da organizada.",
+   "A cobertura de laje cobre a principal inteira, mas na foto ela é só o trecho central (~1/3 de 115 m, com as cabines em cima): comp 45.",
+   "Cantos 'parciais' com o fundo inteiro do outro lado viravam uma tigela cheia. Com a ferradura, o canto da principal com o fundo aberto também desce (no real ali não tem nada; é o limite da ferradura)."
+  ],
+  "ajustes": {
+   "planta": "ferradura",
+   "n": 5,
+   "cantos": "fechados",
+   "lados": {
+    "fb": [
+     0,
+     0,
+     1,
+     0,
+     0
+    ]
+   },
+   "cob": {
+    "comp": 45
+   }
+  }
+ },
+ {
+  "chave": "antonio accioly",
+  "nota_antes": 6,
+  "problemas": [
+   "No geral confere: 4 arquibancadas retas separadas com os cantos abertos, coberturas metálicas brancas leves com treliça, cadeiras brancas com vermelho, muro rubro-negro, faixa vermelha em volta do gramado e torres de refletor brancas com a cabeça escura nos cantos (como na foto).",
+   "A foto é ambígua quanto a qual lado é descoberto (o fundo da esquerda parece sem teto). A pesquisa diz que os 4 são cobertos, então sem certeza não mudei nada."
+  ],
+  "ajustes": {}
+ },
+ {
+  "chave": "estadio etelvino mendonca",
+  "nota_antes": 5,
+  "problemas": [
+   "Os refletores são vários postes altos em volta (a foto mostra 6 só na metade do lado de lá), não 4 torres nos cantos: torres_luz n 8, espalhadas atrás da última fileira.",
+   "A tribuna coberta é um trecho com telhado de fibrocimento ('trecho', na pesquisa), mas o jogo cobre o lado de cá inteiro e ainda entra na curva do canto: comp 60, centrado.",
+   "O muro de fora no real é branco e liso (baixo, com a grade de postes azuis no alto, o letreiro 'O MENDONÇÃO' e as placas). O estilo concreto desenha a fresta escura e as seteiras, que num muro baixo ficam grandes e parecem janelas. Não há estilo de muro liso baixo (limite do desenho)."
+  ],
+  "ajustes": {
+   "cob": {
+    "comp": 60
+   },
+   "marcas": [
+    {
+     "tipo": "torres_luz",
+     "n": 8
+    }
+   ]
+  }
+ },
+ {
+  "chave": "onesio brasileiro alvarenga",
+  "nota_antes": 6,
+  "problemas": [
+   "cadeiras em xadrez vermelho e branco (mosaico); no real os degraus são vermelhos cortados pelas escadas brancas, com as letras VILA NOVA só num trecho",
+   "o contorno baixo e retangular com cantos mais baixos, sem cobertura e com os postes confere com a foto"
+  ],
+  "ajustes": {
+   "cad": [
+    "#c8102e",
+    "#ffffff"
+   ],
+   "padrao": "raios"
+  }
+ },
+ {
+  "chave": "germano kruger",
+  "nota_antes": 5,
+  "problemas": [
+   "a cobertura da Sócio Diamante pega o lado principal inteiro; no real o teto plano cobre só um trecho de ~60 m da principal",
+   "o fundo sul em meia-lua e a principal fora do centro não cabem na forma genérica (não ajustado)"
+  ],
+  "ajustes": {
+   "cob": {
+    "comp": 60
+   }
+  }
+ },
+ {
+  "chave": "estadio municipal carlos zamith",
+  "nota_antes": 6,
+  "problemas": [
+   "por fora o muro liso de concreto; no real as duas arquibancadas mostram o esqueleto de concreto (costas em degraus e pilares) com as bordas salmão",
+   "as duas laterais retas descobertas, sem fundos e com a pintura salmão conferem com a foto"
+  ],
+  "ajustes": {
+   "fach": {
+    "estilo": "aberto"
+   }
+  }
+ },
+ {
+  "chave": "arena barra fc",
+  "nota_antes": 6,
+  "problemas": [
+   "sem foto nem prints do estádio para conferir; a forma (só a principal coberta com treliça, setor visitante baixo do outro lado e fundos sem arquibancada, vale com morros) confere com a pesquisa"
+  ],
+  "ajustes": {}
+ },
+ {
+  "chave": "augusto bauer",
+  "nota_antes": 6,
+  "problemas": [
+   "a cobertura da principal vai de ponta a ponta do lado; no real o bloco coberto da principal tem ~78 m (OSM 78 × 22 m)",
+   "a cobertura branca do fundo leste, a lateral oposta baixa e o fundo oeste baixo descoberto conferem com a pesquisa"
+  ],
+  "ajustes": {
+   "cob": {
+    "comp": 78
+   }
+  }
+ },
+ {
+  "chave": "barradao",
+  "nota_antes": 5,
+  "problemas": [
+   "por fora aparece um paredão curvo de concreto em volta de tudo; o Barradão é escavado no morro: por fora é encosta de grama e mata subindo até o topo das arquibancadas (talude), com casas no alto",
+   "o contorno em U (principal + duas cabeceiras ligadas por cantos chanfrados, lado leste aberto) confere com a foto",
+   "o prédio das cabines com o letreiro no alto da principal e o prédio administrativo branco no lado aberto não têm marca própria"
+  ],
+  "ajustes": {
+   "fach": {
+    "estilo": "talude",
+    "cor": "#5a8a3c"
+   }
+  }
+ },
+ {
+  "chave": "estadio nabi abi chedid",
+  "nota_antes": 6,
+  "problemas": [
+   "demolido entre set e dez/2025: a forma é a do último estado (até abr/2025), o que dá para fazer sem inventar a arena nova ainda em obras",
+   "a cabeceira do visitante (−x) ficava a ~35 m da linha de fundo no real; aqui fica colada como as outras (o recuo é um só para os dois fundos)",
+   "as cores das cadeiras por setor (Azul, Amarela, Vermelha, Branca, Preta, Cinza) não estão confirmadas; a foto do TM é antiga, de antes da Red Bull, com arquibancadas metálicas brancas"
+  ],
+  "ajustes": {}
+ },
+ {
+  "chave": "arena barra fc",
+  "nota_antes": 6,
+  "problemas": [
+   "sem foto para conferir; a principal coberta de concreto cinza com faixa azul, o setor visitante baixo do outro lado e os fundos vazios batem com a pesquisa",
+   "o setor visitante real tem ~500 lugares (um bloco curto); aqui ele ocupa a lateral inteira (não há campo para o comprimento de um lado)",
+   "as letras 'BARRA FC' em cadeiras brancas no anel de cima da principal não dá para conferir nos prints"
+  ],
+  "ajustes": {}
+ },
+ {
+  "chave": "estadio baenao",
+  "nota_antes": 5,
+  "problemas": [
+   "a estátua sai com 9 m na praça e parece um tronco marrom; a do Baenão é o leão escuro do Remo, de ~2 m, num canto na beira do gramado",
+   "a faixa de escudos dourados no alto da arquibancada de fundo de concreto não tem marca",
+   "o resto (principal rasa coberta sobre pilares, lateral oposta baixa, fundo de concreto alto e fundo metálico, muros azul-marinho) confere com a foto e a pesquisa"
+  ],
+  "ajustes": {
+   "marcas": [
+    {
+     "tipo": "estatua",
+     "alto": 3,
+     "cor": "#2f3237"
+    },
+    {
+     "tipo": "torres_luz"
+    }
+   ]
+  }
+ },
+ {
+  "chave": "estadio municipal carlos zamith",
+  "nota_antes": 6,
+  "problemas": [
+   "as duas laterais retas descobertas de degraus de concreto cinza e os fundos vazios conferem com a foto",
+   "por fora aparece um muro cinza liso; no real são as costas em degraus de concreto aparente com as bordas pintadas de salmão (o salmão quase não aparece no print)",
+   "os postes de refletor ficam atrás das arquibancadas no real (aqui nos 4 cantos); sem certeza de quantos são, não mudei"
+  ],
+  "ajustes": {}
+ }
+]
