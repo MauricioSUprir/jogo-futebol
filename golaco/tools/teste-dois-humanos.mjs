@@ -212,7 +212,11 @@ function sondar(m, T) {
       const jt = mi ? S.jogadorPorId(a, mi.id) : null;
       // o outro time pode trocar sozinho no mesmo passo (bola alta: trocaAerea; passe: troca automática) — isso é dele
       const oTrocouSo = ev.some(e => (e.tipo === 'trocaAerea' || (e.tipo === 'troca' && e.auto)) && S.jogadorPorId(a, e.id)?.time === O);
-      const okA = !!jt && jt.time === T && a.controlado[T] === jt.id && (a.controlado[O] === antesO || oTrocouSo);
+      // o novo controlado pode jogar a bola no mesmo passo (o cabeceio de passe sem botão, cabeceio.js) e a troca
+      // automática no passe leva o controle ao recebedor: a ordem troca → passe DELE → troca automática no time T
+      const iM = ev.indexOf(mi), iP = jt ? ev.findIndex((e, i) => i > iM && e.tipo === 'passe' && e.id === jt.id) : -1;
+      const tAuto = iP < 0 ? null : ev.find((e, i) => i > iP && e.tipo === 'troca' && e.auto && S.jogadorPorId(a, e.id)?.time === T);
+      const okA = !!jt && jt.time === T && (a.controlado[T] === jt.id || (tAuto && a.controlado[T] === tAuto.id)) && (a.controlado[O] === antesO || oTrocouSo);
       const b = structuredClone(m);
       passoN(b, { 0: NEUTRA, 1: NEUTRA });
       const evB = passoN(b, ents2(T, NEUTRA, { x: 0, z: 0, botoes: BOTAO.TROCAR }));
