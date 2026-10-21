@@ -85,11 +85,14 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   humano roteirizado de `tools/lib/humano-roteiro.mjs`: agressivo/conduz/calmo/passivo). A IA adversária DEFENDE forte
   (1º defensor a ~1,5–2 m do humano, ~1,6–2,7 botes/min, o humano fica ~1–2 s com a bola) e recompõe a ~6 m/s; o que não
   corria era o ATAQUE: a subida com a jogada estava desligada (`IA_ATAQUE.sobeCorrendo` 1000) — religada com histerese e
-  só com o ataque progredindo, só no time da IA sem pessoa e só quem está a > `sobeLonge` 10 m do condutor (`IA.modos.sobe`,
-  corrida firme sem sprint): a IA atacando contra o humano 159 → ~177 m/min, corridas à frente da bola 0,44 → 0,61 por
-  instante (subindo também os companheiros do humano, a arrancada trotando dele chegava à área em 11% — teste-defesa-
-  corrida; subindo os de perto do condutor, o chamado da PRESSÃO chegava menos — teste-pressao-humano M2 66 → 59%).
-  Junto: passe desviado no corpo de outro perde o recebedor (`sim.js`, só na partida) e o recuo do treinador prevê 2 s. Testado e NÃO entrou (medido): condução mais rápida (correrLivre/correrAte/magConduz)
+  só com o ataque progredindo, só no time da IA CONTRA uma pessoa jogando de verdade (`m.humanos` do outro lado sem
+  `m.iaJoga`) e só quem está a > `sobeLonge` 12 m do condutor (`IA.modos.sobe`, corrida firme sem sprint): a IA atacando
+  contra o humano 159 → ~177 m/min, corridas à frente da bola 0,44 → 0,59 por instante. A partida IA × IA (a demo, o
+  painel, o Simular o resto) fica BIT A BIT igual (`hash-partida --ref`: demo IGUAL) — valendo também nela, cada rodada
+  do CI reprovava outros testes de eventos raros (substituição, comemoração, treinadores, cabeceio, não passa da bola);
+  subindo os companheiros do humano, a arrancada trotando dele chegava à área em 11% (teste-defesa-corrida); subindo os de
+  perto do condutor, o chamado da PRESSÃO chegava menos (teste-pressao-humano M2 66 → 59%). Lição: mudança de IA que
+  vale na IA × IA mexe em todas as partidas dos testes; quando o pedido é sobre o jogo contra a pessoa, ligar só nele. Testado e NÃO entrou (medido): condução mais rápida (correrLivre/correrAte/magConduz)
   e mais corridas nas costas (recarga/max/vCondutor) — pouco ganho e vai-e-volta 8,3 → 9,8–10,4/min. PENDENTE: os
   COMPANHEIROS do humano quase não apertam (1º a ~7,5–8 m do condutor, 0,1–0,2 bote/min com o humano parado) — o
   controlado é o 1º homem quando está perto, `semAtropelar` vale para o time todo do humano e a IA com a bola toca em

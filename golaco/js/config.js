@@ -1264,7 +1264,7 @@ export const IA_ATAQUE = {
   sobeCorrendo: 6,
   sobeSai: 1.5,
   sobeProgride: 2,            // m/s — só sobe com a bola ou o condutor indo para o gol a isto ou mais
-  sobeLonge: 10,              // m — e só quem está a mais que isto do condutor (os de perto não amontoam nele)
+  sobeLonge: 12,              // m — e só quem está a mais que isto do condutor (os de perto não amontoam nele)
   antecipa: 0.9,              // s — as referências usam a bola daqui a isto (o time anda com o passe)...
   antecipaFiltro: 0.5,        // s — ...filtrada (constante de tempo; sem saltos a cada toque)
   pressaMin: 0.6,             // s — quem entra na pressa fica nela por isto (sem trocar de modo a cada tick)
@@ -1643,7 +1643,7 @@ export const TECNICOS = {
   // recuo (não tapar a TV): a bola prevista daqui a `previsao` s em z ≥ zBola a ≤ dx m em x dele, ou lateral/falta/
   // escanteio do lado de cá a ≤ `parada` m → z = `z` (1,85 m de corpo em z 39,2 não cruza o raio da TV do celular — 46 m
   // atrás do foco, 12,3 m de altura — nem com a bola na linha: z ≥ 39,14 m; tools/teste-tecnicos.mjs T11)
-  recuo: { z: 39.2, previsao: 2.0, zBola: 24, dx: 16, parada: 18, segura: 1.2 }, // previsao 1,5 → 2,0 s (21/10: a bola rápida rente à linha chegava com ele no meio do recuo — teste-tecnicos T11)
+  recuo: { z: 39.2, previsao: 1.5, zBola: 24, dx: 16, parada: 18, segura: 1.2 },
   // velocidades: anda (≤ 1,4 m/s, ≤ 1,5 m/s²), recua de costas (≤ 2), comemora/esquiva (≤ 3, ≤ 6 m/s²)
   vel: { anda: 1.35, acel: 1.25, recua: 2.0, rapido: 3.0, acelRapida: 5.5, ganho: 1.6, freiaBorda: 2.5 },
   // margem do centro do corpo dentro da área em z e em x (os pés ficam a ≤ ~0,3 m do centro andando de lado; a régua

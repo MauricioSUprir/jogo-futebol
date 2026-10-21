@@ -229,9 +229,6 @@ function colisaoBolaCorpo(m) {
       // a bola desviada não passa mais onde o domínio aéreo / cabeceio marcado esperava: o plano cai (o jogador ia
       // para o ponto antigo enquanto a bola fugia — contraprova M4: até 3 m em lançamento que bate no corpo)
       for (const o of m.jogadores) if (o.cond && o.cond.toque && o.cond.toque.tipo === 'aereo') o.cond.toque = null;
-      // (só na partida) o passe desviado no corpo de outro não é mais do recebedor: a vez dele na bola (e a recepção
-      // assistida) acabam — quem estava na bola desviada a deixava passar até o domínio dele (teste-nao-passa 2)
-      if (m.partida && m.voo && m.voo.para != null && m.voo.para !== j.id) m.voo.para = null;
       const dono = m.posse != null ? jogadorPorId(m, m.posse) : null;
       if (dono) dono.cond.bolaDesviada = true;
     }

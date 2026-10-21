@@ -525,15 +525,17 @@ export function apoioTatico(m, j) {
   // trotando, o time inteiro ficava atrás da jogada), com histerese: entra a sobeCorrendo m, sai a sobeSai m
   // (só com o ataque progredindo: a bola ou o condutor indo para o gol a ≥ sobeProgride m/s — com a referência que oscila
   // ou volta, subir em corrida virava vai-e-volta)
-  // (só no time da IA, sem pessoa: o adversário fica mais intenso — "tem que ser mais difícil" — e o time do humano
-  // não muda; com os companheiros do humano subindo, a arrancada trotando dele chegava à área em 11% contra ≤ 5%,
-  // teste-defesa-corrida, e o online com dois humanos fica igual)
+  // (só no time da IA CONTRA uma pessoa: o adversário dela fica mais intenso — "tem que ser mais difícil" —, o time da
+  // pessoa não muda (com os companheiros dela subindo, a arrancada trotando chegava à área em 11% contra ≤ 5%,
+  // teste-defesa-corrida) e a partida IA × IA (o painel, o Simular o resto) e o online com dois humanos ficam iguais)
   const atras = (_r.x - j.x) * lado;
   const vAvanco = Math.max(m.bola.v.x * lado, A.cond ? A.cond.vx * lado : 0);
   // (e só quem está longe do condutor, a > sobeLonge m: os de perto subindo em corrida amontoavam o condutor e o chamado
   // da PRESSÃO do humano chegava menos — teste-pressao-humano M2 66% → 59%)
   const longe = !A.cond || MD.hypot(A.cond.x - j.x, A.cond.z - j.z) > IA_ATAQUE.sobeLonge;
-  ia.subindo = !m.humanos?.includes(j.time) && ((atras > IA_ATAQUE.sobeCorrendo && vAvanco >= IA_ATAQUE.sobeProgride && longe)
+  // (a pessoa jogando de verdade: com a marca `ia` na entrada dela — a demo, o Simular o resto — m.iaJoga liga e não sobe)
+  const contraPessoa = !!m.humanos?.includes(1 - j.time) && !m.iaJoga?.[1 - j.time] && !m.humanos.includes(j.time);
+  ia.subindo = contraPessoa && ((atras > IA_ATAQUE.sobeCorrendo && vAvanco >= IA_ATAQUE.sobeProgride && longe)
     || (ia.subindo && ia.subTick === m.tick - 1 && atras > IA_ATAQUE.sobeSai));
   ia.subTick = m.tick;
   // a pressa fica por pressaMin s (ligar e desligar a cada tick trocava o modo e o alvo do para())
