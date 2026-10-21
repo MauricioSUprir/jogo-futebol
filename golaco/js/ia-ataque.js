@@ -525,10 +525,13 @@ export function apoioTatico(m, j) {
   // trotando, o time inteiro ficava atrás da jogada), com histerese: entra a sobeCorrendo m, sai a sobeSai m
   // (só com o ataque progredindo: a bola ou o condutor indo para o gol a ≥ sobeProgride m/s — com a referência que oscila
   // ou volta, subir em corrida virava vai-e-volta)
+  // (só no time da IA, sem pessoa: o adversário fica mais intenso — "tem que ser mais difícil" — e o time do humano
+  // não muda; com os companheiros do humano subindo, a arrancada trotando dele chegava à área em 11% contra ≤ 5%,
+  // teste-defesa-corrida, e o online com dois humanos fica igual)
   const atras = (_r.x - j.x) * lado;
   const vAvanco = Math.max(m.bola.v.x * lado, A.cond ? A.cond.vx * lado : 0);
-  ia.subindo = (atras > IA_ATAQUE.sobeCorrendo && vAvanco >= IA_ATAQUE.sobeProgride)
-    || (ia.subindo && ia.subTick === m.tick - 1 && atras > IA_ATAQUE.sobeSai);
+  ia.subindo = !m.humanos?.includes(j.time) && ((atras > IA_ATAQUE.sobeCorrendo && vAvanco >= IA_ATAQUE.sobeProgride)
+    || (ia.subindo && ia.subTick === m.tick - 1 && atras > IA_ATAQUE.sobeSai));
   ia.subTick = m.tick;
   // a pressa fica por pressaMin s (ligar e desligar a cada tick trocava o modo e o alvo do para())
   if (pressa) ia.pressaAte = m.tick + seg(IA_ATAQUE.pressaMin);

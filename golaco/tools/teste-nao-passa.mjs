@@ -99,11 +99,11 @@ res.sort((a, b) => ordem.get(`${a.cena} ${a.sem}`) - ordem.get(`${b.cena} ${b.se
 const n = res.length;
 const todos = res.flatMap(r => r.cs), bloq = res.flatMap(r => r.bl), velhos = res.filter(r => r.cena !== 'ia').flatMap(r => r.pv).filter(x => x.hum);
 const perdeu = todos.filter(c => c.perdeu);
-const lin = [['cena', 'partidas', 'passou da bola', 'do controlado', 'perdeu a bola', 'bola atrás p50 / máx (m)', 'passe colado no pé de outro', 'domínio velho (do controlado)', 'fora da conta: roubado / empurrado (perdeu)']];
+const lin = [['cena', 'partidas', 'passou da bola', 'do controlado', 'perdeu a bola', 'bola atrás p50 / máx (m)', 'passe colado no pé de outro', 'domínio velho (do controlado)', 'fora da conta: roubado / empurrado / trave (perdeu)']];
 for (const [cena] of CENAS) {
   const rr = res.filter(r => r.cena === cena), cs = rr.flatMap(r => r.cs), at = cs.map(c => c.atras).sort((a, b) => a - b);
   lin.push([cena, rr.length, cs.length, cs.filter(c => c.hum).length, cs.filter(c => c.perdeu).length, at.length ? `${fmt(at[Math.floor(at.length / 2)], 2)} / ${fmt(at[at.length - 1], 2)}` : '—', rr.flatMap(r => r.bl).length, `${rr.flatMap(r => r.pv).length} (${rr.flatMap(r => r.pv).filter(x => x.hum).length})`,
-    (fo => `${fo.filter(c => c.fora === 'roubado').length} / ${fo.filter(c => c.fora === 'empurrado').length} (${fo.filter(c => c.perdeu).length})`)(rr.flatMap(r => r.fo))]);
+    (fo => `${fo.filter(c => c.fora === 'roubado').length} / ${fo.filter(c => c.fora === 'empurrado').length} / ${fo.filter(c => c.fora === 'trave').length} (${fo.filter(c => c.perdeu).length})`)(rr.flatMap(r => r.fo))]);
 }
 console.log(`"Passou da bola" na partida — lógica de ${path.relative(process.cwd(), JS) || '.'} (${n} partidas de 2 × ${MIN} min; ${nPar} processos, ${fmt((Date.now() - t0) / 1000, 0)} s)`);
 console.log(tabelaTexto(lin));
