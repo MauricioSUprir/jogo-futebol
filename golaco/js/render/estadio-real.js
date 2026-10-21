@@ -174,11 +174,13 @@ function texCobertura(P, emissiva) {
     linha(0.5, 0.05, 0.5, 1);
     // o nó escuro do mastro (o "colar" na linha dos mastros)
     g.fillStyle = '#3b4146'; g.beginPath(); g.arc(1, y(vm), 4.5, 0, 2 * Math.PI); g.arc(0, y(vm), 4.5, 0, 2 * Math.PI); g.fill();
-    // painéis solares (azul-marinho) na borda de fora e o anel de compressão cinza
-    g.fillStyle = '#1f2b45'; g.fillRect(0, y(0.05), W, y(0.012) - y(0.05));
-    g.fillStyle = 'rgba(160,170,190,0.45)';
-    for (let x = 0; x < W; x += 8) g.fillRect(x, y(0.05), 1, y(0.012) - y(0.05));
-    g.fillStyle = '#b9bdc0'; g.fillRect(0, y(0.012), W, H - y(0.012));
+    // painéis solares (azul-marinho) NA BORDA de fora (rodada 3: "a faixa azul-escura fica na borda, não um pouco para
+    // dentro"): do friso cinza-claro da calha (a face do anel, v < 0,008) até ~4,6 m para dentro, com a grade dos módulos
+    g.fillStyle = '#1c2742'; g.fillRect(0, y(0.075), W, y(0.008) - y(0.075));
+    g.fillStyle = 'rgba(150,162,186,0.4)';
+    for (let x = 0; x < W; x += 8) g.fillRect(x, y(0.075), 1, y(0.008) - y(0.075));
+    for (const v of [0.03, 0.052]) g.fillRect(0, y(v), W, 1);
+    g.fillStyle = '#c9cdd0'; g.fillRect(0, y(0.008), W, H - y(0.008));
     // a borda de dentro: o cabo e a fileira de refletores
     // a borda de dentro: a treliça escura do anel de tração com a fileira contínua de refletores
     g.fillStyle = '#4a5056'; g.fillRect(0, 0, W, y(0.978));
@@ -230,8 +232,11 @@ function texLetreiro(texto) {
   return texturaCanvas(c, { aniso: 4 });
 }
 
-// o sol do dia (render/cena.js HORAS.dia solDir): a sombra de um ponto a h m de altura cai SOMBRA·h m no chão
-const SOL = (() => { const v = [-0.42, 0.74, 0.52], l = Math.hypot(...v); return v.map(c => c / l); })();
+// o sol dos planos de FORA (rodada 3: "luz chapada, o estádio parece colado no chão; sem sombra projetada"): o sol da
+// manhã do Rio, de nordeste (+x é o norte, +z o leste), a ~38° de altura — de lado para o drone (as sombras compridas
+// no quadro) e de frente para o pórtico leste. A luz da cena segue este rumo só nos planos de fora (criarForaForma); a
+// sombra de um ponto a h m de altura cai SOMBRA·h m no chão
+const SOL = (() => { const v = [0.5, 0.62, 0.6], l = Math.hypot(...v); return v.map(c => c / l); })();
 const SOMBRA = [-SOL[0] / SOL[1], -SOL[2] / SOL[1]];
 
 /**
@@ -247,16 +252,27 @@ function texEsplanada(P, S, aniso) {
   const ret = (x0, z0, x1, z1) => g.fillRect(px(x0), pz(z0), (x1 - x0) * k, (z1 - z0) * k);
   const circ = (x, z, r) => { g.beginPath(); g.arc(px(x), pz(z), r * k, 0, 2 * Math.PI); g.fill(); };
   const elip = (x, z, a, b) => { g.beginPath(); g.ellipse(px(x), pz(z), a * k, b * k, 0, 0, 2 * Math.PI); g.fill(); };
-  g.fillStyle = '#a19f9a'; g.fillRect(0, 0, S, S);
-  g.fillStyle = 'rgba(0,0,0,0.06)';
+  // (rodada 3: "concreto cinza, menos verde e mais escuro")
+  g.fillStyle = '#8d8b86'; g.fillRect(0, 0, S, S);
+  g.fillStyle = 'rgba(0,0,0,0.07)';
   for (let v = -M; v <= M; v += 6) { g.fillRect(px(v), 0, Math.max(1, 0.12 * k), S); g.fillRect(0, pz(v), S, Math.max(1, 0.12 * k)); }
+  // manchas do concreto velho (sem padrão de grade)
+  { const rr = gerador(9911); for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(${rr() < 0.5 ? '0,0,0' : '255,255,255'},${0.025 + rr() * 0.035})`; elip((rr() - 0.5) * 2 * M, (rr() - 0.5) * 2 * M, 8 + rr() * 30, 6 + rr() * 22); } }
   // o anel de circulação em volta da fachada (concreto mais claro, 14 m)
-  g.fillStyle = '#b3b1ab'; elip(0, 0, P.forma.fachada.a + 16, P.forma.fachada.b + 16);
-  // gramados e canteiros (com as palmeiras) e o verde em volta do Maracanãzinho
-  g.fillStyle = '#5b8743';
+  g.fillStyle = '#a3a19b'; elip(0, 0, P.forma.fachada.a + 16, P.forma.fachada.b + 16);
+  // gramados e canteiros e o verde em volta do Maracanãzinho (verde de grama do Rio, gasto, nada saturado)
+  g.fillStyle = '#56693f';
   const Mz = E.maracanazinho;
   circ(Mz.x, Mz.z, Mz.r + 18);
   for (const [x0, z0, x1, z1] of E.gramados) ret(x0, z0, x1, z1);
+  // os estacionamentos (asfalto com as vagas pintadas e alguns carros, só no chão; rodada 3, ref-01)
+  { const rr = gerador(4242), CARROS = ['#cfcfcc', '#2b2e33', '#8d939a', '#6b2a2c', '#b8bbbd', '#3a4656', '#5a5e63', '#c4c1ba'];
+    for (const [x0, z0, x1, z1] of E.estacPintados ?? []) {
+      g.fillStyle = '#55585b'; ret(x0, z0, x1, z1);
+      g.fillStyle = 'rgba(235,235,230,0.55)';
+      for (let z = z0 + 3; z < z1 - 2; z += 13) { ret(x0 + 2, z - 0.05, x1 - 2, z + 0.05); for (let x = x0 + 2; x < x1 - 2; x += 2.6) { ret(x - 0.05, z - 5, x + 0.05, z); ret(x - 0.05, z, x + 0.05, z + 5); } }
+      for (let z = z0 + 3; z < z1 - 2; z += 13) for (let x = x0 + 3.3; x < x1 - 3; x += 2.6) for (const dz of [-2.5, 2.5]) if (rr() < 0.22) { g.fillStyle = CARROS[Math.floor(rr() * CARROS.length)]; ret(x - 0.85, z + dz - 2.1, x + 0.85, z + dz + 2.1); }
+    } }
   // as vias de serviço da esplanada (asfalto) até o anel de circulação
   g.fillStyle = '#56595b';
   ret(-M, -8, -P.forma.fachada.a - 14, 8); ret(P.forma.fachada.a + 14, -8, M, 8);
@@ -275,7 +291,7 @@ function texEsplanada(P, S, aniso) {
   g.fillStyle = '#b2483a'; elip(Ce.x, Ce.z, Ce.a, Ce.b);
   g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = Math.max(1, 0.1 * k);
   for (let l = 0; l <= 8; l++) { g.beginPath(); g.ellipse(px(Ce.x), pz(Ce.z), (Ce.a - 1.22 * l) * k, (Ce.b - 1.22 * l) * k, 0, 0, 2 * Math.PI); g.stroke(); }
-  g.fillStyle = '#4f8a3c'; elip(Ce.x, Ce.z, Ce.a - 10.5, Ce.b - 10.5);
+  g.fillStyle = '#4e6d3b'; elip(Ce.x, Ce.z, Ce.a - 10.5, Ce.b - 10.5);
   // avenida em volta (asfalto) e o rio Maracanã canalizado no lado de cá
   g.fillStyle = '#4a4d50';
   ret(-M, -M, M, -M + 14); ret(-M, M - 14, M, M); ret(-M, -M, -M + 14, M); ret(M - 14, -M, M, M);
@@ -298,7 +314,7 @@ function texEsplanada(P, S, aniso) {
   const caixaS = (x0, z0, x1, z1, h) => { const [dx, dz] = D(h); for (let f = 0; f <= 1; f += 0.125) poli([[x0 + dx * f, z0 + dz * f], [x1 + dx * f, z0 + dz * f], [x1 + dx * f, z1 + dz * f], [x0 + dx * f, z1 + dz * f]]); };
   // a fachada e a cobertura (~30 m): a elipse arrastada pela sombra
   const Fa = P.forma.fachada;
-  for (let f = 0; f <= 1; f += 0.05) { const [dx, dz] = D(29 * f); gs.beginPath(); gs.ellipse(px(dx), pz(dz), (Fa.a + 2) * k, (Fa.b + 2) * k, 0, 0, 2 * Math.PI); gs.fill(); }
+  for (let f = 0; f <= 1; f += 0.04) { const [dx, dz] = D(31 * f); gs.beginPath(); gs.ellipse(px(dx), pz(dz), (Fa.a + 4) * k, (Fa.b + 4) * k, 0, 0, 2 * Math.PI); gs.fill(); }
   // o Maracanãzinho
   for (let f = 0; f <= 1; f += 0.1) { const [dx, dz] = D((Mz.parede + Mz.cupula) * f); gs.beginPath(); gs.arc(px(Mz.x + dx), pz(Mz.z + dz), (Mz.r + 1.5 - 18 * f * f) * k, 0, 2 * Math.PI); gs.fill(); }
   // as rampas (o tabuleiro sobre os pilares: a faixa da sombra deslocada pela altura de cada ponto) e os pórticos
@@ -321,7 +337,7 @@ function texEsplanada(P, S, aniso) {
     gs.beginPath(); gs.ellipse(px(p.x + dx), pz(p.z + dz), 3.4 * k, 2.6 * k, Math.atan2(SOMBRA[1], SOMBRA[0]), 0, 2 * Math.PI); gs.fill();
     gs.lineWidth = Math.max(1, 0.5 * k); gs.strokeStyle = '#000'; gs.beginPath(); gs.moveTo(px(p.x), pz(p.z)); gs.lineTo(px(p.x + dx * 0.92), pz(p.z + dz * 0.92)); gs.stroke();
   }
-  g.globalAlpha = 0.42; g.drawImage(cs, 0, 0); g.globalAlpha = 1;
+  g.globalAlpha = 0.5; g.drawImage(cs, 0, 0); g.globalAlpha = 1;
   return texturaCanvas(c, { aniso });
 }
 
@@ -337,12 +353,12 @@ function texBairro(P, S, aniso) {
   const r = gerador(7316);
   g.fillStyle = '#6b6c69'; g.fillRect(0, 0, S, S);
   const TELHA = ['#9a6450', '#a8735a', '#8c5f4c', '#b07e62'], LAJE = ['#a7a49c', '#bcb8ae', '#8f8c86', '#d8d4ca', '#c9bfae', '#e2dfd8'];
-  const VERDE = ['#3f6b33', '#4b7a3a', '#365e2c', '#557f41'];
+  const VERDE = ['#34512c', '#3e5c33', '#2d4626', '#465f38'];
   for (const q of P.bairro().quadras) {
     g.save(); g.translate(px(q.x), pz(q.z)); g.rotate(q.rumo);
     const l = q.l * k;
     if (q.tipo === 'verde') {
-      g.fillStyle = '#5d8445'; g.fillRect(-l / 2, -l / 2, l, l);
+      g.fillStyle = '#4c6340'; g.fillRect(-l / 2, -l / 2, l, l);
       for (let i = 0; i < 14; i++) { g.fillStyle = VERDE[i % 4]; g.beginPath(); g.arc((r() - 0.5) * l, (r() - 0.5) * l, (2 + r() * 3) * k, 0, 2 * Math.PI); g.fill(); }
     } else {
       // os lotes: telhados de casas e lajes (no prédio, a laje fica embaixo da caixa)
@@ -360,11 +376,12 @@ function texBairro(P, S, aniso) {
   const Mg = E.mangueira;
   // a favela (rodada 2: "casas baixas AVERMELHADAS e densas subindo um morro VERDE, não marrom"): tijolo e reboco nas
   // encostas de baixo, a mata no alto do morro
-  const CORES = ['#a3553a', '#b5654a', '#8f4a36', '#c27a5a', '#9c4f3a', '#d9c9b0', '#c99a63', '#e2ddd2', '#b0624a', '#a8a39a'];
-  g.fillStyle = '#4c7a3a'; g.beginPath(); g.arc(px(Mg.x), pz(Mg.z), Mg.r * 1.05 * k, 0, 2 * Math.PI); g.fill();
+  // (rodada 3: "tijolo laranja e mato escuro, não grama de campo")
+  const CORES = ['#b0603a', '#c27045', '#9c5233', '#c98a5a', '#a85a38', '#d6c6ad', '#c4925c', '#ddd7cb', '#b86a44', '#a39e95', '#bf6b3f'];
+  g.fillStyle = '#3b4a2f'; g.beginPath(); g.arc(px(Mg.x), pz(Mg.z), Mg.r * 1.05 * k, 0, 2 * Math.PI); g.fill();
   for (let i = 0; i < 16000; i++) {
     const a = r() * 2 * Math.PI, d = Math.sqrt(r()) * Mg.r * 1.04, x = Mg.x + d * Math.cos(a), z = Mg.z + d * Math.sin(a);
-    if (d < Mg.r * (0.4 + r() * 0.14) || r() < 0.12) { g.fillStyle = r() < 0.6 ? '#3f6a32' : '#4f7a3c'; g.fillRect(px(x), pz(z), 4 * k, 4 * k); continue; }
+    if (d < Mg.r * (0.4 + r() * 0.14) || r() < 0.12) { g.fillStyle = r() < 0.6 ? '#33432a' : '#435334'; g.fillRect(px(x), pz(z), 4 * k, 4 * k); continue; }
     g.fillStyle = CORES[Math.floor(r() * CORES.length)];
     g.fillRect(px(x), pz(z), (2 + r() * 4) * k, (2 + r() * 3) * k);
   }
@@ -435,6 +452,23 @@ export function criarTigela(P, opc = {}) {
       for (let j = 0; j + 1 < ths.length; j++) if (!(pular && pular(k, ths[j], ths[j + 1]))) L.quad(i0[j], i0[j + 1], i1[j + 1], i1[j]);
     }
   }
+  // o muro dos camarotes de cima (rodada 3: "um vão preto entre o último degrau e a cobertura; no real a fileira de
+  // camarotes envidraçados e uma borda cinza-clara"): a tampa do parapeito até o muro, o concreto claro, a faixa de vidro
+  // e a borda de cima, virados para o campo; na sombra da cobertura um pouco mais escuro
+  const yM0 = Pf.yTopo + Pf.parapeito, yM1 = yM0 + (Pf.muro ?? 3.4), dR = Pf.muroR ?? 1.4;
+  const concM = cor(0xd2d1cb), vidroM = cor(0x5f7282), friso = cor(0xe4e3de);
+  // (fora da Alta sem o friso nem a tampa: o celular Média está no teto de triângulos no plano alto)
+  const faixasMuro = q === 'alta' ? [[yM0, yM0 + 0.55, concM], [yM0 + 0.55, yM1 - 0.75, vidroM], [yM1 - 0.75, yM1 - 0.6, friso], [yM1 - 0.6, yM1, concM]]
+    : [[yM0 - 0.2, yM0 + 0.55, concM], [yM0 + 0.55, yM1 - 0.7, vidroM], [yM1 - 0.7, yM1, concM]];
+  function muro(L, ths) {
+    const pt = (th, dr, y) => { const r = P.rB(th) + dr; return [r * Math.cos(th), y, r * Math.sin(th)]; };
+    const sombra = (th, y) => (tom(...pt(th, dR, y)) === BRANCO ? 1 : 0.78);
+    for (let j = 0; j + 1 < ths.length; j++) {
+      const a = ths[j], b = ths[j + 1];
+      if (q === 'alta') L.q4(pt(a, 0, yM0), pt(b, 0, yM0), pt(b, dR, yM0), pt(a, dR, yM0), concM.clone().multiplyScalar(sombra(a, yM0)));
+      for (const [y0, y1, c] of faixasMuro) L.q4(pt(a, dR, y0), pt(b, dR, y0), pt(b, dR, y1), pt(a, dR, y1), c.clone().multiplyScalar(sombra(a, y1)));
+    }
+  }
   const g = new THREE.Group();
   g.name = 'tigela';
   const malhas = [];
@@ -442,6 +476,7 @@ export function criarTigela(P, opc = {}) {
   {
     const L = malha();
     faixas(L, colunas(...setores[0]));
+    muro(L, colunas(...setores[0]));
     const m = new THREE.Mesh(L.geo(), mat); m.name = 'arquibancada-lado'; malhas.push(m);
   }
   // fundos + o piso azul em volta das placas (o anel todo: a câmera de TV dentro do lado de cá também o vê)
@@ -449,6 +484,8 @@ export function criarTigela(P, opc = {}) {
     const L = malha();
     faixas(L, colunas(...setores[1]));
     faixas(L, colunas(...setores[2]));
+    muro(L, colunas(...setores[1]));
+    muro(L, colunas(...setores[2]));
     const azul = cor(0x2e62a6), hx = GRAMA.lx / 2, hz = GRAMA.lz / 2;
     const ths = colunas(-Math.PI, Math.PI);
     const ii = [], oo = [];
@@ -467,6 +504,7 @@ export function criarTigela(P, opc = {}) {
     const L = malha(true);
     const ths = colunas(setores[3][0], setores[3][1], [thA, thB]);
     faixas(L, ths, (k, a, b) => k < 2 && a >= thA - 1e-9 && b <= thB + 1e-9);
+    muro(L, ths);
     const conc = cor(0xb9b7b0), escuro = c2 => cor(0x9d9c97).multiplyScalar(c2);
     const time = cor(opc.ident?.fachada?.tunel ?? '#c4161c');
     const sC = Pf.sInf * (ytt - Pf.y0) / (Pf.yInf - Pf.y0);
@@ -581,7 +619,9 @@ function criarCobertura(P, q) {
   membrana.name = 'cobertura';
   // estrutura: a passarela técnica (com os refletores), os mastros em losango, os cabos de baixo e os 4 telões
   const E = malha();
-  const cinza = cor(0x7d848a), cabo = cor(0xa3a9ad), escuro = cor(0x3d4349), luz = cor(0xdfe4e8), tela = cor(0x14181c);
+  // (rodada 3: "por dentro uma faixa preta de treliças cruzadas, parece rede de pesca; no real as treliças radiais são
+  // CINZA-CLARO e regulares, o tom é claro e luminoso"): a estrutura de aço em cinza-claro, a passarela em cinza médio
+  const cinza = cor(0x9da4a9), cabo = cor(0xb9bfc3), escuro = cor(0x7f878d), claro = cor(0xc9ced1), luz = cor(0xeef2f4), tela = cor(0x14181c);
   const yP = C.yPassarela, NK = q === 'baixa' ? 60 : 120;
   const anel = (u, y0, y1, c, rd = 0) => {
     const a = [], b = [];
@@ -622,14 +662,13 @@ function criarCobertura(P, q) {
     // os cabos de baixo: do anel de compressão à passarela e dela à borda de dentro
     if (q !== 'baixa') {
       fita(p(0.02, C.yFora - (C.anel ?? 1.6)), p(P.uMastro, yP - 0.6), 0.16, cabo);
-      // os cabos em LEQUE da passarela até o anel de dentro (rodada 2; ref-07)
-      const dth = Math.PI / C.eixos * 0.7;
-      for (const d of [-dth, 0, dth]) { const [x1, z1, r1] = P.pontoCob(th + d, 0.995), f1 = (r1 - 0.3) / r1; fita(p(P.uMastro, yP - 0.6), [x1 * f1, C.yDentro - 1.5, z1 * f1], 0.16, cabo); }
-      // a treliça radial por baixo da membrana (banzo de cima, de baixo e as diagonais)
+      // da passarela ao anel de dentro um cabo só por eixo (os três em leque viravam "rede de pesca")
+      { const [x1, z1, r1] = P.pontoCob(th, 0.995), f1 = (r1 - 0.3) / r1; fita(p(P.uMastro, yP - 0.6), [x1 * f1, C.yDentro - 1.5, z1 * f1], 0.16, cabo); }
+      // a treliça radial por baixo da membrana (banzo de cima, de baixo e os montantes; as diagonais só na Alta), cinza-claro
       const ut = [0.03, 0.22, 0.42, P.uMastro, 0.84, 0.985];
       const top = ut.map(u => p(u, P.alturaCob(u) + amp(u) * AMP_N - 0.35));
       const bai = ut.map((u, i) => { const t2 = top[i]; return [t2[0], t2[1] - (0.3 + 1.9 * Math.sin(Math.PI * Math.min(1, u * 1.15))), t2[2]]; });
-      for (let i = 0; i + 1 < ut.length; i++) { fita(top[i], top[i + 1], 0.22, escuro); fita(bai[i], bai[i + 1], 0.18, escuro); if (q === 'alta') fita(top[i], bai[i + 1], 0.12, cinza); }
+      for (let i = 0; i + 1 < ut.length; i++) { fita(top[i], top[i + 1], 0.3, claro); fita(bai[i], bai[i + 1], 0.24, claro); { const t2 = top[i + 1], b2 = bai[i + 1], ex = -Math.sin(th) * 0.09, ez = Math.cos(th) * 0.09; E.q4([t2[0] - ex, t2[1], t2[2] - ez], [t2[0] + ex, t2[1], t2[2] + ez], [b2[0] + ex, b2[1], b2[2] + ez], [b2[0] - ex, b2[1], b2[2] - ez], cabo); } if (q === 'alta') fita(top[i], bai[i + 1], 0.1, cabo); }
     }
     // o "colar" de nós escuros na linha dos mastros (o círculo pontilhado das aéreas) e os cabos radiais por cima
     const yM2 = P.alturaCob(P.uMastro) + amp(P.uMastro) * AMP_N;
@@ -648,13 +687,22 @@ function criarCobertura(P, q) {
   // os 4 telões perto dos cantos, pendurados e virados para o campo
   for (const t of P.TELOES) {
     const h = t.th + Math.PI / 2;
-    E.caixa(t.x, t.y, t.z, t.larg + 0.6, t.alt + 0.6, 1.2, h, escuro);
+    E.caixa(t.x, t.y, t.z, t.larg + 0.6, t.alt + 0.6, 1.2, h, cor(0x2a2f34));
     const nx = -Math.cos(t.th), nz = -Math.sin(t.th), ex = Math.cos(h), ez = Math.sin(h);
     const cx = t.x + nx * 0.62, cz = t.z + nz * 0.62;
     E.q4([cx - ex * t.larg / 2, t.y - t.alt / 2, cz - ez * t.larg / 2], [cx + ex * t.larg / 2, t.y - t.alt / 2, cz + ez * t.larg / 2], [cx + ex * t.larg / 2, t.y + t.alt / 2, cz + ez * t.larg / 2], [cx - ex * t.larg / 2, t.y + t.alt / 2, cz - ez * t.larg / 2], tela);
     for (const s of [-1, 1]) fita([t.x + ex * s * 4, t.y + t.alt / 2 + 0.3, t.z + ez * s * 4], [t.x + ex * s * 4, P.alturaCob(0.88) - 0.5, t.z + ez * s * 4], 0.2, cinza, true);
   }
+  // o rebate da arquibancada e da membrana clara nas faces viradas para baixo (rodada 3: a treliça por baixo ficava
+  // verde-escura com a luz do hemisfério de baixo, que é a da grama)
   const matE = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  const uRebateE = { value: 0.55 };
+  matE.onBeforeCompile = sh => {
+    sh.uniforms.uRebate = uRebateE;
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uRebate;')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ vec3 nW = inverseTransformDirection(normal, viewMatrix); totalEmissiveRadiance += diffuseColor.rgb * uRebate * (0.35 + 0.65 * max(0.0, -nW.y)); }');
+  };
+  matE.customProgramCacheKey = () => 'cobertura-estrutura-rebate';
   const estrutura = new THREE.Mesh(E.geo(), matE);
   estrutura.name = 'cobertura-estrutura';
   return {
@@ -664,6 +712,7 @@ function criarCobertura(P, q) {
       matM.emissiveIntensity = noite ? 1.4 : 0;
       matM.color.setScalar(noite ? 0.5 : 1);
       uTransl.value = noite ? 0.28 : 1.1;
+      uRebateE.value = noite ? 0.12 : 0.55;
     },
   };
 }
@@ -681,12 +730,15 @@ function criarEstrutura(P, q) {
   const normal = t => { const nx = Math.cos(t) / A, nz = Math.sin(t) / B, l = Math.hypot(nx, nz); return [nx / l, nz / l]; };
   const pt = (t, n, y) => { const [x, z] = base(t), [nx, nz] = normal(t); return [x + nx * n, y, z + nz * n]; };
   // concreto aparente CINZA (rodada 1: o fundo azul-marinho parecia vidro); rodada 2: entre as costelas os pavimentos de
-  // circulação ABERTOS — a sombra quase preta lá dentro e as lajes cinza finas em ritmo horizontal (ref-03, ref-04)
-  const conc = cor(0x9a9c9c), concClaro = cor(0xb4b5b1), concEsc = cor(0x85878a), fundo = cor(0x2a2f33), terreo = cor(0x33383c);
-  const almof = cor(0xf4f3ee), lajeTopo = cor(0x8d8e8c), vao = cor(0x2f3439), grade = cor(0x9aa1a6);
+  // circulação ABERTOS. Rodada 3 ("as faixas das rampas e dos corredores são cinza-claro, com vãos escuros só no meio";
+  // "costelas grossas"; "a almofada branca CONVEXA entre cada par, logo abaixo da borda da cobertura"; "um 2º anel
+  // horizontal mais abaixo"): guarda-corpos altos e claros, o fundo em sombra (não preto), costelas de 2,7 m, almofadas
+  // abauladas também na largura e as duas vigas fortes (a marquise de +5 m e o anel das rampas a ~11,6 m)
+  const conc = cor(0xa9aaa7), concClaro = cor(0xc9c9c4), concEsc = cor(0x8e9092), fundo = cor(0x40474c), terreo = cor(0x4a5055);
+  const almof = cor(0xf6f5f0).multiplyScalar(1.22), almofLado = cor(0xdcdbd5), lajeTopo = cor(0x8d8e8c), vao = cor(0x2f3439), grade = cor(0xa9b0b5);
   const KT = q === 'alta' ? 180 : q === 'baixa' ? 90 : 120;
   const ts = Array.from({ length: KT + 1 }, (_, j) => (2 * Math.PI * j) / KT);
-  // parede recuada escura (o fundo dos vãos) e o térreo
+  // parede recuada (o fundo dos vãos, na sombra) e o térreo
   const faixa = (n0, y0, n1, y1, c, recuo = 0) => {
     const a = [], b = [];
     for (const t of ts) { a.push(L.v(...pt(t, n0 - recuo, y0), 0.7, 0.005, c)); b.push(L.v(...pt(t, n1 - recuo, y1), 0.7, 0.008, c)); }
@@ -694,17 +746,20 @@ function criarEstrutura(P, q) {
   };
   faixa(P.nFachada(0), 0, P.nFachada(5), 5, terreo, 2.6);
   faixa(P.nFachada(5), 5, P.nFachada(Fa.cinta), Fa.cinta, fundo, 2.6);
-  // as lajes com guarda-corpo (frente e topo) e a cinta
-  const lajes = q === 'baixa' ? [8.2, 15.4, Fa.cinta] : [4.6, 8.2, 11.8, 15.4, 18.6, Fa.cinta];
+  // os guarda-corpos (frente, topo e fundo), a viga do anel das rampas e a cinta embaixo das almofadas
+  const lajes = q === 'baixa' ? [11.6, 16.4, Fa.cinta] : [8.4, 11.6, 14.4, 17.4, Fa.cinta];
   for (const y of lajes) {
-    const n = P.nFachada(y) - 0.25, alt = y === Fa.cinta ? 1.5 : 0.62;
-    faixa(n, y - alt, n, y, y === Fa.cinta ? conc : concClaro);
-    faixa(n, y, n - 2.4, y, concEsc);
-    faixa(n, y - alt, n - 2.4, y - alt, cor(0xa9a7a0));
+    const forte = y === Fa.cinta || y === 11.6;
+    const n = P.nFachada(y) - 0.25 + (y === 11.6 ? 0.5 : 0), alt = y === Fa.cinta ? 1.9 : forte ? 1.7 : 1.15, fundoL = forte ? 3.0 : 2.4;
+    faixa(n, y - alt, n, y, forte ? conc : concClaro);
+    faixa(n, y, n - fundoL, y, concEsc);
+    faixa(n, y - alt, n - fundoL, y - alt, cor(0xa9a7a0));
   }
-  // marquise do anel de circulação (+5 m) avançando 3 m
-  faixa(3.2, 5.25, 3.2, 4.65, concClaro);
-  faixa(3.2, 5.25, 0, 5.25, concEsc);
+  // a marquise do anel de circulação (+5 m): a laje grossa avançando 4,6 m, com a frente e o guarda-corpo
+  faixa(4.6, 4.3, 4.6, 5.5, concClaro);
+  faixa(4.6, 5.5, 0, 5.5, concEsc);
+  faixa(4.6, 4.3, 0, 4.3, cor(0xa9a7a0));
+  faixa(4.45, 5.5, 4.45, 6.5, concClaro);
   // a laje do topo (de dentro da fachada até a parede de trás da tigela), escura, e o friso amarelo dos acessos no térreo
   {
     const a = [], b = [];
@@ -715,41 +770,43 @@ function criarEstrutura(P, q) {
     for (let j = 0; j < KT; j++) L.quad(a[j], a[j + 1], b[j + 1], b[j]);
   }
   // costelas (gancho) e almofadas, por eixo
-  const NS = q === 'baixa' ? 5 : 8;
   const perfilC = P.COSTELA.filter((_, i) => q !== 'baixa' || i % 2 === 0 || i === P.COSTELA.length - 1);
+  // a almofada: o perfil na altura [n, y] e o abaulado na largura (meio cilindro deitado: +1,1 m no meio da baia)
+  const NU = q === 'baixa' ? 2 : q === 'alta' ? 6 : 5;
+  const perfilA = q === 'baixa' ? [[3.8, 21.2], [4.8, 23.4], [3.4, 26.2], [1.6, 26.9]] : [[3.8, 21.2], [4.7, 22.4], [4.8, 24.4], [3.4, 26.2], [1.6, 26.9]];
   for (let k = 0; k < NE; k++) {
     const t = (2 * Math.PI * (k + 0.5)) / NE;
     const [nx, nz] = normal(t), ex = -nz, ez = nx;
     const [bx, bz] = base(t);
-    const w = 0.85;
     const P3 = (n, y, e) => [bx + nx * n + ex * e, y, bz + nz * n + ez * e];
     for (let i = 0; i + 1 < perfilC.length; i++) {
       const [n0, y0] = perfilC[i], [n1, y1] = perfilC[i + 1];
-      const d0 = y0 > Fa.cinta ? 1.4 : 2.4, d1 = y1 > Fa.cinta ? 1.4 : 2.4;
+      const d0 = y0 > Fa.cinta ? 1.6 : 3.0, d1 = y1 > Fa.cinta ? 1.6 : 3.0;
+      // a costela afina um pouco embaixo (1,1 m de meia largura no chão, 1,35 m da cinta para cima)
+      const w0 = y0 >= Fa.cinta ? 1.35 : 1.1 + 0.25 * y0 / Fa.cinta, w1 = y1 >= Fa.cinta ? 1.35 : 1.1 + 0.25 * y1 / Fa.cinta;
       // face de fora, os dois lados e (no gancho) a de dentro
-      L.q4(P3(n0, y0, -w), P3(n0, y0, w), P3(n1, y1, w), P3(n1, y1, -w), conc);
-      L.q4(P3(n0, y0, w), P3(n0 - d0, y0, w), P3(n1 - d1, y1, w), P3(n1, y1, w), concEsc);
-      L.q4(P3(n0 - d0, y0, -w), P3(n0, y0, -w), P3(n1, y1, -w), P3(n1 - d1, y1, -w), concEsc);
-      if (y0 >= Fa.cinta - 0.1) L.q4(P3(n0 - d0, y0, w), P3(n0 - d0, y0, -w), P3(n1 - d1, y1, -w), P3(n1 - d1, y1, w), concEsc);
+      L.q4(P3(n0, y0, -w0), P3(n0, y0, w0), P3(n1, y1, w1), P3(n1, y1, -w1), conc);
+      L.q4(P3(n0, y0, w0), P3(n0 - d0, y0, w0), P3(n1 - d1, y1, w1), P3(n1, y1, w1), concEsc);
+      L.q4(P3(n0 - d0, y0, -w0), P3(n0, y0, -w0), P3(n1, y1, -w1), P3(n1 - d1, y1, -w1), concEsc);
+      if (y0 >= Fa.cinta - 0.1) L.q4(P3(n0 - d0, y0, w0), P3(n0 - d0, y0, -w0), P3(n1 - d1, y1, -w1), P3(n1 - d1, y1, w1), concEsc);
     }
-    // almofada: painel convexo branco entre esta costela e a próxima (meio cilindro deitado)
-    const t0 = t + (0.9 / A), t1 = (2 * Math.PI * (k + 1.5)) / NE - (0.9 / A);
-    // (rodada 2: por DENTRO do gancho, que passa por fora dela e dobra por cima)
-    const NU = q === 'baixa' ? 2 : 4, perfilA = q === 'baixa' ? [[3.4, 21.5], [4.2, 23.7], [2.0, 26.2]] : [[3.4, 21.4], [4.2, 22.5], [4.0, 24.6], [2.2, 26.4]];
+    // almofada: painel convexo branco entre esta costela e a próxima, por DENTRO do gancho, abaulado nas duas direções
+    const t0 = t + (1.3 / A), t1 = (2 * Math.PI * (k + 1.5)) / NE - (1.3 / A);
     const gA = [];
     for (let iu = 0; iu <= NU; iu++) {
-      const tt = t0 + ((t1 - t0) * iu) / NU;
-      gA.push(perfilA.map(([n, y]) => L.v(...pt(tt, n, y), 0.7, 0.005, almof)));
+      const tt = t0 + ((t1 - t0) * iu) / NU, bojo = 1.1 * Math.sin((Math.PI * iu) / NU);
+      gA.push(perfilA.map(([n, y], iv) => L.v(...pt(tt, n + bojo * (iv > 0 && iv < perfilA.length - 1 ? 1 : 0.35), y), 0.7, 0.005, iu === 0 || iu === NU ? almofLado : almof)));
     }
     for (let iu = 0; iu < NU; iu++) for (let iv = 0; iv + 1 < perfilA.length; iv++) L.quad(gA[iu][iv], gA[iu + 1][iv], gA[iu + 1][iv + 1], gA[iu][iv + 1]);
-    // os acessos: o vão escuro do portão, a placa amarela "ACESSO ..." (no letreiro, com textura) e os gradis de fila
+    // os acessos (rodada 3: "grades de acesso e faixas amarelas de setor na base da fachada"): o vão escuro do portão, as
+    // placas amarelas "ACESSO ..." (no letreiro, com textura) em dois vãos seguidos e os gradis de fila na frente
     if (k % 5 === 1) {
-      const ta = t + 1.2 / A, tb = t + 9 / A;
+      const ta = t + 1.4 / A, tb = t + 9 / A;
       L.q4(pt(ta, -2.5, 0.05), pt(tb, -2.5, 0.05), pt(tb, -2.5, 3.2), pt(ta, -2.5, 3.2), vao);
       if (q !== 'baixa') {
-        const ga = t - 2 / A, gb = t + 12 / A, ng = 8;
-        for (const yy of [0.12, 1.02]) L.q4(pt(ga, 7, yy), pt(gb, 7, yy), pt(gb, 7, yy + 0.07), pt(ga, 7, yy + 0.07), grade);
-        for (let i = 0; i <= ng; i++) { const tt = ga + ((gb - ga) * i) / ng; L.q4(pt(tt - 0.04 / A, 7, 0), pt(tt + 0.04 / A, 7, 0), pt(tt + 0.04 / A, 7, 1.1), pt(tt - 0.04 / A, 7, 1.1), grade); }
+        const ga = t - 6 / A, gb = t + 26 / A, ng = 22;
+        for (const yy of [0.12, 1.02]) L.q4(pt(ga, 8, yy), pt(gb, 8, yy), pt(gb, 8, yy + 0.07), pt(ga, 8, yy + 0.07), grade);
+        for (let i = 0; i <= ng; i++) { const tt = ga + ((gb - ga) * i) / ng; L.q4(pt(tt - 0.04 / A, 8, 0), pt(tt + 0.04 / A, 8, 0), pt(tt + 0.04 / A, 8, 1.1), pt(tt - 0.04 / A, 8, 1.1), grade); }
       }
     }
   }
@@ -800,7 +857,7 @@ function criarEstrutura(P, q) {
     faixaArco(Pt.r - 8, yb, Pt.r + 7, yb, concClaro, 1.05);
     const ND = 5;
     for (let d = 0; d < ND; d++) {
-      const r0 = Pt.r + 7 + d * 1.3, r1 = r0 + 1.3, y0 = yb * (1 - d / ND), y1 = yb * (1 - (d + 1) / ND), k = 1.08 + d * 0.05;
+      const r0 = Pt.r + 7 + d * 1.3, r1 = r0 + 1.3, y0 = yb * (1 - d / ND), y1 = yb * (1 - (d + 1) / ND), k = 1.12 + d * 0.08;
       faixaArco(r0, y1, r0, y0, espelho, k);
       if (d < ND - 1) faixaArco(r0, y1, r1, y1, piso, k);
     }
@@ -821,18 +878,24 @@ function criarEstrutura(P, q) {
       }
       for (const rr of [Pt.r - 2, Pt.r + 2.2]) { faixaArco(rr, yT - 1.0, rr, yT - 0.7, tubo); faixaArco(rr - 0.15, yT - 1.0, rr + 0.15, yT - 1.0, tubo); }
     }
-    // as colunas (lisas, do chão à viga)
+    // as colunas (lisas, do chão à viga) e, na fileira de fora, os postes de luz em cima da viga (ref-05)
     for (const rr of [rI, rE]) for (let i = 0; i < NA; i++) {
       const th = thI(i, NA - 1);
       L.cilindro(rr * Math.cos(th), yb, rr * Math.sin(th), yT, 0.66, coluna, q === 'baixa' ? 8 : 16);
+      if (rr === rE && i % 2 === 0 && q !== 'baixa') {
+        const x = (rr + 1.5) * Math.cos(th), z = (rr + 1.5) * Math.sin(th);
+        L.coluna(x, yT + 1.0, z, yT + 8.5, 0.13, poste, 5);
+        L.caixa(x, yT + 8.6, z, 1.1, 0.3, 0.5, th, poste, 6);
+      }
     }
     // a laje das letras: a laje fina sobre os gradis e a faixa curva grossa na frente (as letras vão na face de fora)
     faixaArco(rI + 0.7, 5.9, Pt.r + 5, 5.9, sombra);
     faixaArco(rI + 0.7, 6.6, Pt.r + 7, 6.6, concClaro);
     faixaArco(rI + 0.7, 5.9, rI + 0.7, 6.6, coluna);
-    faixaArco(Pt.r + 5, 4.4, Pt.r + 7, 4.4, sombra);
+    // (rodada 3: a frente da faixa INCLINADA — a de baixo 0,5 m mais para fora —, como a da ref-05)
+    faixaArco(Pt.r + 5, 4.4, Pt.r + 7.5, 4.4, sombra);
     faixaArco(Pt.r + 5, 4.4, Pt.r + 5, 5.9, coluna);
-    faixaArco(Pt.r + 7, 4.4, Pt.r + 7, 6.6, coluna);
+    faixaArco(Pt.r + 7.5, 4.4, Pt.r + 7, 6.6, coluna);
     // os gradis com as catracas, embaixo da faixa (as placas de setor vão no letreiro)
     if (q !== 'baixa') {
       const gr = Pt.r + 4.9, NG = 90;
@@ -876,7 +939,7 @@ function criarLetreiro(P) {
     for (let i = 0; i <= NSeg; i++) {
       // visto de fora, a esquerda de quem lê fica em −x no lado de cá (+z) e em +x no de lá (−z)
       const u = i / NSeg, th = thC + meia * (1 - 2 * u);
-      for (const [y, v] of [[4.85, 2 / 3], [6.15, 1]]) { pos.push(r * Math.cos(th), y, r * Math.sin(th)); uv.push(u, v); }
+      for (const [y, v] of [[4.85, 2 / 3], [6.15, 1]]) { const ry = r + 0.5 * (1 - (y - 4.4) / 2.2); pos.push(ry * Math.cos(th), y, ry * Math.sin(th)); uv.push(u, v); }
     }
     for (let i = 0; i < NSeg; i++) { const a = b + 2 * i; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
     // as placas de setor nos gradis embaixo da faixa (D no Leste, A no Oeste)
@@ -887,16 +950,19 @@ function criarLetreiro(P) {
       idx.push(b2, b2 + 2, b2 + 1, b2 + 1, b2 + 2, b2 + 3);
     }
   }
-  // as placas dos acessos (a cada 5 eixos, embaixo da marquise do anel de circulação)
+  // as placas dos acessos (a cada 5 eixos): a faixa amarela na frente da marquise do anel de circulação, três seguidas
+  // (rodada 3; ref-04: "ACESSO SUL C" repetida ao longo da marquise)
   const Fa = P.forma.fachada, A = Fa.a, B = Fa.b, NE = Fa.eixos;
   const pt = (t, n, y) => { let nx = Math.cos(t) / A, nz = Math.sin(t) / B; const l = Math.hypot(nx, nz); nx /= l; nz /= l; return [A * Math.cos(t) + nx * n, y, B * Math.sin(t) + nz * n]; };
   for (let k = 1; k < NE; k += 5) {
-    const t = (2 * Math.PI * (k + 0.5)) / NE, ta = t + 1.2 / A, tb = t + 9 / A;
+    const t = (2 * Math.PI * (k + 0.5)) / NE;
     const [x, , z] = pt(t, 0, 0), g = Math.atan2(z, x) / RAD;
     const i = Math.abs(g) <= 45 ? 0 : Math.abs(g) >= 135 ? 1 : g > 0 ? 2 : 3;
-    const b = pos.length / 3;
-    for (const [tt, u] of [[tb, i / 4], [ta, (i + 1) / 4]]) for (const [y, v] of [[3.35, 1 / 3], [4.35, 2 / 3]]) { pos.push(...pt(tt, 3.27, y)); uv.push(u, v); }
-    idx.push(b, b + 2, b + 1, b + 1, b + 2, b + 3);
+    for (const [d0, d1] of [[-6, 1], [1.6, 8.6], [9.2, 16.2]]) {
+      const ta = t + d0 / A, tb = t + d1 / A, b = pos.length / 3;
+      for (const [tt, u] of [[tb, i / 4], [ta, (i + 1) / 4]]) for (const [y, v] of [[4.42, 1 / 3], [5.38, 2 / 3]]) { pos.push(...pt(tt, 4.66, y)); uv.push(u, v); }
+      idx.push(b, b + 2, b + 1, b + 1, b + 2, b + 3);
+    }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -911,40 +977,48 @@ function criarLetreiro(P) {
 function criarMarcos(P, q) {
   const L = malha(), E = P.entorno;
   const branco = cor(0xecebe6), cinzaC = cor(0xc9c8c2), escuro = cor(0x50565b), bronze = cor(0x6b5034), pedra = cor(0xb9b4a6);
-  // Maracanãzinho (ref-10): o anel de pilares de concreto com o vidro escuro entre eles, a borda saliente, a cúpula branca
-  // baixa com as nervuras radiais e a lanterna do óculo no meio
+  // Maracanãzinho (ref-10; rodada 3: "branco e liso demais; é concreto cinza-claro, com o anel de contrafortes inclinados
+  // por fora, o tambor de vidro e a lanterna circular no topo"): o tambor de vidro escuro, os contrafortes de concreto
+  // inclinados (largos no chão, encostando na borda de cima), a borda saliente, a cúpula de concreto cinza-claro com as
+  // nervuras e a lanterna
   {
     const M = E.maracanazinho, N = q === 'baixa' ? 24 : 48, NR = 6;
-    const pilarC = cor(0xc9c7c0), vidroM = cor(0x3e464d), nerv = cor(0xd9d8d2);
+    const concM = cor(0xbdbcb5), vidroM = cor(0x3a434b), nerv = cor(0xcac9c3), contra = cor(0xb1b0aa), contraL = cor(0x9a9993);
     const P2 = (r, a, y) => [M.x + r * Math.cos(a), y, M.z + r * Math.sin(a)];
     for (let j = 0; j < N; j++) {
-      const a0 = (2 * Math.PI * j) / N, a1 = (2 * Math.PI * (j + 1)) / N, am = (a0 + a1) / 2;
+      const a0 = (2 * Math.PI * j) / N, a1 = (2 * Math.PI * (j + 1)) / N;
       L.q4(P2(M.r - 0.6, a0, 0), P2(M.r - 0.6, a1, 0), P2(M.r - 0.6, a1, M.parede), P2(M.r - 0.6, a0, M.parede), vidroM);
-      L.q4(P2(M.r + 1.2, am - 0.012, 0), P2(M.r + 1.2, am + 0.012, 0), P2(M.r + 1.2, am + 0.012, M.parede), P2(M.r + 1.2, am - 0.012, M.parede), pilarC);
+    }
+    // os contrafortes: a cada 2 vãos, de 5,5 m para fora no chão até a borda no alto (face de fora e os dois lados)
+    for (let j = 0; j < N; j += 2) {
+      const a = (2 * Math.PI * j) / N, da = 0.9 / M.r;
+      const fo = (rr, y, s2) => P2(rr, a + s2 * da, y);
+      L.q4(fo(M.r + 5.5, 0, -1), fo(M.r + 5.5, 0, 1), fo(M.r + 1.6, M.parede + 0.6, 1), fo(M.r + 1.6, M.parede + 0.6, -1), contra);
+      for (const s2 of [-1, 1]) L.q4(fo(M.r - 0.4, 0, s2), fo(M.r + 5.5, 0, s2), fo(M.r + 1.6, M.parede + 0.6, s2), fo(M.r - 0.4, M.parede + 0.6, s2), contraL);
     }
     const anel = (r, y, c) => Array.from({ length: N + 1 }, (_, j) => { const a = (2 * Math.PI * j) / N; return L.v(M.x + r * Math.cos(a), y, M.z + r * Math.sin(a), 0.7, 0.005, c); });
-    let prev = anel(M.r + 1.6, M.parede + 1.4, branco);
+    let prev = anel(M.r + 1.6, M.parede + 1.4, concM);
     for (let k = 1; k <= NR; k++) {
       const f = k / NR, r = (M.r + 1.6) * Math.cos(f * Math.PI / 2 * 0.9), y = M.parede + 1.4 + (M.cupula - 1.4) * Math.sin(f * Math.PI / 2 * 0.9);
-      const cur = anel(Math.max(r, 9), y, branco);
+      const cur = anel(Math.max(r, 9), y, concM);
       for (let j = 0; j < N; j++) L.quad(prev[j], prev[j + 1], cur[j + 1], cur[j]);
       prev = cur;
     }
-    // nervuras radiais (fitas claras por cima da cúpula)
+    // nervuras radiais (fitas mais claras por cima da cúpula)
     for (let j = 0; j < N; j += 2) {
-      const a = (2 * Math.PI * j) / N, dx = -Math.sin(a) * 0.35, dz = Math.cos(a) * 0.35;
+      const a = (2 * Math.PI * j) / N, dx = -Math.sin(a) * 0.45, dz = Math.cos(a) * 0.45;
       for (let k = 0; k < NR; k++) {
         const f0 = k / NR, f1 = (k + 1) / NR;
         const r0 = (M.r + 1.6) * Math.cos(f0 * Math.PI / 2 * 0.9), r1 = Math.max(9, (M.r + 1.6) * Math.cos(f1 * Math.PI / 2 * 0.9));
-        const y0 = M.parede + 1.5 + (M.cupula - 1.4) * Math.sin(f0 * Math.PI / 2 * 0.9), y1 = M.parede + 1.5 + (M.cupula - 1.4) * Math.sin(f1 * Math.PI / 2 * 0.9);
+        const y0 = M.parede + 1.6 + (M.cupula - 1.4) * Math.sin(f0 * Math.PI / 2 * 0.9), y1 = M.parede + 1.6 + (M.cupula - 1.4) * Math.sin(f1 * Math.PI / 2 * 0.9);
         const A0 = P2(r0, a, y0), A1 = P2(r1, a, y1);
         L.q4([A0[0] - dx, y0, A0[2] - dz], [A0[0] + dx, y0, A0[2] + dz], [A1[0] + dx, y1, A1[2] + dz], [A1[0] - dx, y1, A1[2] - dz], nerv);
       }
     }
-    // a lanterna do óculo e a borda saliente
+    // a lanterna do óculo (o tambor envidraçado e o chapéu) e a borda saliente
     const yT = M.parede + M.cupula;
-    const l0 = anel(9, yT - 0.6, cinzaC), l1 = anel(9, yT + 2.6, escuro), l2 = anel(4, yT + 4.2, cinzaC);
-    for (let j = 0; j < N; j++) { L.quad(l0[j], l0[j + 1], l1[j + 1], l1[j]); L.quad(l1[j], l1[j + 1], l2[j + 1], l2[j]); }
+    const l0 = anel(9, yT - 0.6, concM), l1 = anel(9, yT + 2.8, vidroM), l2 = anel(9.6, yT + 3.2, concM), l3 = anel(4, yT + 4.4, concM);
+    for (let j = 0; j < N; j++) { L.quad(l0[j], l0[j + 1], l1[j + 1], l1[j]); L.quad(l1[j], l1[j + 1], l2[j + 1], l2[j]); L.quad(l2[j], l2[j + 1], l3[j + 1], l3[j]); }
     const fr0 = anel(M.r + 2.2, M.parede - 0.3, cinzaC), fr1 = anel(M.r + 2.2, M.parede + 1.5, cinzaC);
     for (let j = 0; j < N; j++) L.quad(fr0[j], fr0[j + 1], fr1[j + 1], fr1[j]);
   }
@@ -1112,21 +1186,34 @@ function criarPrediosRio(uNoite, L) {
   return m;
 }
 
-/** As copas de árvore do bairro (octaedros instanciados, verdes variados, achatados). */
-function criarArvoresBairro(L) {
-  // a copa redonda: o octaedro com a normal da esfera (sem a facetada de pirâmide)
-  const g = new THREE.OctahedronGeometry(1, 0);
-  const pa = g.attributes.position, na = g.attributes.normal;
-  for (let i = 0; i < pa.count; i++) { const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), l = Math.hypot(x, y, z) || 1; na.setXYZ(i, x / l, y / l, z / l); }
-  g.scale(1, 0.75, 1); g.translate(0, 1.1, 0);
-  const m = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color: 0xffffff }), L.length);
+/** As copas de árvore do bairro (icosaedros — octaedros fora da Alta — instanciados e amassados, verdes escuros). */
+function criarArvoresBairro(L, q) {
+  // a copa (rodada 3: "árvores que parecem bolhas de baixo polígono"): o icosaedro com os vértices puxados para dentro e
+  // para fora (copa irregular, de várias massas), a normal da esfera e o pé mais escuro (a sombra da própria copa)
+  // (fora da Alta o octaedro: 8 triângulos, o celular Média está no teto do aéreo)
+  const g = q === 'alta' ? new THREE.IcosahedronGeometry(1, 0) : new THREE.OctahedronGeometry(1, 0);
+  g.deleteAttribute('uv');
+  const pa = g.attributes.position, cores = [];
+  const amassa = (x, y, z) => 0.78 + 0.34 * (0.5 + 0.5 * Math.sin(5.1 * x + 3.7 * y + 2.3 * z));
+  for (let i = 0; i < pa.count; i++) {
+    const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), k = amassa(x, y, z);
+    pa.setXYZ(i, x * k, y * k * 0.8, z * k);
+    const f = 0.62 + 0.38 * (y + 1) / 2;
+    cores.push(f, f, f);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(cores, 3));
+  g.computeVertexNormals();
+  const na = g.attributes.normal;
+  for (let i = 0; i < pa.count; i++) { const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), l = Math.hypot(x, y, z) || 1; na.setXYZ(i, 0.5 * na.getX(i) + 0.5 * x / l, 0.5 * na.getY(i) + 0.5 * y / l, 0.5 * na.getZ(i) + 0.5 * z / l); }
+  g.translate(0, 1.0, 0);
+  const m = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }), L.length);
   const M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), Pv = new THREE.Vector3(), S = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0), C = new THREE.Color();
   const r = gerador(5151);
   L.forEach((a, i) => {
     Q.setFromAxisAngle(Y, r() * 6.28);
-    M4.compose(Pv.set(a.x, 0, a.z), Q, S.set(a.raio, a.raio * (0.9 + r() * 0.5), a.raio));
+    M4.compose(Pv.set(a.x, 0, a.z), Q, S.set(a.raio * (0.85 + r() * 0.3), a.raio * (0.95 + r() * 0.45), a.raio * (0.85 + r() * 0.3)));
     m.setMatrixAt(i, M4);
-    m.setColorAt(i, C.setHSL(0.26 + r() * 0.06, 0.4, 0.17 + r() * 0.09));
+    m.setColorAt(i, C.setHSL(0.25 + r() * 0.07, 0.32 + r() * 0.12, 0.13 + r() * 0.08));
   });
   m.instanceMatrix.needsUpdate = true;
   m.computeBoundingSphere();
@@ -1143,7 +1230,9 @@ function criarMontanhas() {
   const R = 2900, NA = 120, a0 = 92 * RAD, a1 = 214 * RAD;
   // (rodada 2: o maciço VERDE e alto, com os morros recortados; o Corcovado é um pico do maciço — sozinho e pontudo
   // parecia o Pão de Açúcar)
-  const picos = [[124, 450, 4.2, 1], [118, 390, 6, 1], [131, 410, 5, 1], [157, 500, 7, 1], [149, 460, 5, 1.1], [140, 380, 6, 1], [110, 260, 9, 1], [178, 360, 10, 1], [196, 300, 8, 1], [101, 200, 6, 1]];
+  // (rodada 3: "bolhas verdes de desenho; o real é azul-acinzentado pela névoa, com o recorte AGULHADO do Corcovado e o
+  // Cristo bem pequeno"): o Corcovado é uma agulha (ag > 1,2: o pico pontudo) e os outros picos recortados
+  const picos = [[124, 470, 2.4, 1.5], [118, 360, 5, 1.3], [131, 400, 4, 1.3], [157, 500, 6, 1.3], [149, 450, 4, 1.4], [140, 370, 5, 1.3], [110, 250, 8, 1], [178, 350, 9, 1.3], [196, 300, 7, 1.3], [101, 200, 6, 1]];
   const alt = a => {
     let h = 90 + 40 * Math.sin(a * 7.3) + 25 * Math.sin(a * 19.1);
     for (const [c, hp, w, ag] of picos) { const d = Math.abs(a / RAD - c) / w; h = Math.max(h, hp * Math.exp(-Math.pow(d, ag > 1.2 ? 1.1 : 2) * (ag > 1.2 ? 1.4 : 0.9))); }
@@ -1151,7 +1240,7 @@ function criarMontanhas() {
   };
   const pos = [], cr = [], idx = [];
   // azul-acinzentado com o recorte nítido (rodada 1: "planos pálidos"), o pé na névoa do ar quente
-  const perto = cor(0x557157), longe = cor(0x6d8878), base = cor(0x9fb0ae);
+  const perto = cor(0x5f7480), longe = cor(0x7a8d99), base = cor(0xa9b8c2);
   for (let j = 0; j <= NA; j++) {
     const a = a0 + ((a1 - a0) * j) / NA, h = alt(a / RAD * RAD), x = Math.cos(a), z = Math.sin(a);
     const rr = R + 250 * Math.sin(a * 3.1);
@@ -1164,11 +1253,11 @@ function criarMontanhas() {
   const ac = 124 * RAD, hc = alt(ac), xc = Math.cos(ac) * (R + 250 * Math.sin(ac * 3.1) + 120), zc = Math.sin(ac) * (R + 250 * Math.sin(ac * 3.1) + 120);
   const ex = -Math.sin(ac), ez = Math.cos(ac), b0 = pos.length / 3;
   const quadC = (e0, y0, e1, y1) => { const b = pos.length / 3; for (const [e, y] of [[e0, y0], [e1, y0], [e1, y1], [e0, y1]]) { pos.push(xc + ex * e, hc + y, zc + ez * e); cr.push(0.95, 0.95, 0.93); } idx.push(b, b + 1, b + 2, b, b + 2, b + 3); };
-  quadC(-2.6, -4, 2.6, 21); quadC(-11, 14.5, 11, 17.5); quadC(-5, -10, 5, -3);
+  quadC(-1.4, -2, 1.4, 12); quadC(-6.5, 8.2, 6.5, 10); quadC(-3, -6, 3, -1.6);
   void b0;
   // os morros verdes mais perto (as encostas da Tijuca e de Vila Isabel, ~1,7 km ao S/SO), mata escura com o pé enevoado
   {
-    const RN = 1700, N2 = 60, c0 = 138 * RAD, c1 = 262 * RAD, verde = cor(0x4d6a4a), verde2 = cor(0x5d7a55), pe = cor(0x8d9e9c);
+    const RN = 1700, N2 = 60, c0 = 138 * RAD, c1 = 262 * RAD, verde = cor(0x4f6560), verde2 = cor(0x5c716b), pe = cor(0x96a6aa);
     const b = pos.length / 3;
     for (let j = 0; j <= N2; j++) {
       const a = c0 + ((c1 - c0) * j) / N2, x = Math.cos(a), z = Math.sin(a);
@@ -1214,15 +1303,22 @@ function criarMontanhas() {
 function criarPalmeiras(P) {
   const L = P.palmeiras();
   const pos = [], cr = [];
-  const tronco = cor(0x9a9488), folha = cor(0x3e6b2f);
+  // palmeira-imperial (rodada 3: "troncos finos marrom-acinzentados, nada de folhas de desenho animado"): o tronco liso e
+  // fino (0,5 m num de 22 m), o palmito verde no alto e 10 folhas compridas e estreitas, arqueadas e caídas na ponta
+  const tronco = cor(0x8c8679), palmito = cor(0x6a8550), folha = cor(0x3d6233), folha2 = cor(0x4a7039);
   const q = (a, b, c, d, k) => { for (const p of [a, b, c, a, c, d]) { pos.push(...p); cr.push(k.r, k.g, k.b); } };
-  for (let i = 0; i < 4; i++) {
-    const a0 = (i / 4) * 2 * Math.PI, a1 = ((i + 1) / 4) * 2 * Math.PI, r0 = 0.03, r1 = 0.022;
-    q([r0 * Math.cos(a0), 0, r0 * Math.sin(a0)], [r0 * Math.cos(a1), 0, r0 * Math.sin(a1)], [r1 * Math.cos(a1), 0.92, r1 * Math.sin(a1)], [r1 * Math.cos(a0), 0.92, r1 * Math.sin(a0)], tronco);
+  for (let i = 0; i < 5; i++) {
+    const a0 = (i / 5) * 2 * Math.PI, a1 = ((i + 1) / 5) * 2 * Math.PI, r0 = 0.014, r1 = 0.011, r2 = 0.013;
+    q([r0 * Math.cos(a0), 0, r0 * Math.sin(a0)], [r0 * Math.cos(a1), 0, r0 * Math.sin(a1)], [r1 * Math.cos(a1), 0.8, r1 * Math.sin(a1)], [r1 * Math.cos(a0), 0.8, r1 * Math.sin(a0)], tronco);
+    q([r1 * Math.cos(a0), 0.8, r1 * Math.sin(a0)], [r1 * Math.cos(a1), 0.8, r1 * Math.sin(a1)], [r2 * Math.cos(a1), 0.9, r2 * Math.sin(a1)], [r2 * Math.cos(a0), 0.9, r2 * Math.sin(a0)], palmito);
   }
-  for (let i = 0; i < 7; i++) {
-    const a = (i / 7) * 2 * Math.PI, ca = Math.cos(a), sa = Math.sin(a), px = -sa * 0.05, pz = ca * 0.05;
-    q([-px, 0.93, -pz], [px, 0.93, pz], [ca * 0.24 + px * 0.3, 0.86, sa * 0.24 + pz * 0.3], [ca * 0.24 - px * 0.3, 0.86, sa * 0.24 - pz * 0.3], folha);
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * 2 * Math.PI + (i % 2) * 0.15, ca = Math.cos(a), sa = Math.sin(a), px = -sa * 0.018, pz = ca * 0.018;
+    const sobe = i % 3 === 0 ? 0.05 : 0.0, k = i % 2 ? folha : folha2;
+    // dois trechos: sobe e abre até o meio, cai até a ponta
+    const m1 = [ca * 0.09, 0.95 + sobe, sa * 0.09], m2 = [ca * 0.17, 0.84 + sobe * 0.4, sa * 0.17];
+    q([-px * 0.5, 0.9, -pz * 0.5], [px * 0.5, 0.9, pz * 0.5], [m1[0] + px, m1[1], m1[2] + pz], [m1[0] - px, m1[1], m1[2] - pz], k);
+    q([m1[0] - px, m1[1], m1[2] - pz], [m1[0] + px, m1[1], m1[2] + pz], [m2[0] + px * 0.3, m2[1], m2[2] + pz * 0.3], [m2[0] - px * 0.3, m2[1], m2[2] - pz * 0.3], k);
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -1235,7 +1331,7 @@ function criarPalmeiras(P) {
     Qt.setFromAxisAngle(Y, r() * 6.28);
     M4.compose(Pv.set(p.x, 0, p.z), Qt, S.set(p.h, p.h, p.h));
     m.setMatrixAt(i, M4);
-    m.setColorAt(i, C.setHSL(0.27, 0.15, 0.8 + r() * 0.25));
+    m.setColorAt(i, C.setHSL(0.27, 0.1, 0.85 + r() * 0.15));
   });
   m.instanceMatrix.needsUpdate = true;
   m.computeBoundingSphere();
@@ -1280,7 +1376,7 @@ export function criarForaForma(cena, opc, P, pecas) {
   // Mangueira numa malha, os prédios bege/brancos/ocre, as copas de árvore, as palmeiras, os marcos e quem chega
   const entorno = comEntorno ? [criarEsplanada(P, aniso, q), criarChaoBairro(P, aniso, q), criarMontanhas()] : [];
   if (comEntorno && q !== 'baixa') {
-    entorno.push(criarPrediosRio(uNoite, P.predios()), criarArvoresBairro(P.bairro().arvores), criarPalmeiras(P), criarMarcos(P, q));
+    entorno.push(criarPrediosRio(uNoite, P.predios()), criarArvoresBairro(P.bairro().arvores, q), criarPalmeiras(P), criarMarcos(P, q));
     const t = pecas.criarTorcedores(opc.materialTorcida, ident.torcedoresFora, P.torcedoresFora());
     if (t) entorno.push(t);
   } else if (comEntorno) entorno.push(criarMarcos(P, q));
@@ -1305,6 +1401,7 @@ export function criarForaForma(cena, opc, P, pecas) {
   // sol alto e duro, quase sem névoa (as montanhas com o recorte nítido) e o rebate do chão neutro (concreto, não grama).
   // Só nos planos de fora; de dentro (e no jogo) a luz de render/cena.js volta igual.
   let hora = opc.hora ?? 'dia', fora = false, salvo = null;
+  const _v = new THREE.Vector3();
   const ceu = cena.getObjectByName('ceu'), hemi = cena.children.find(o => o.isHemisphereLight), sol = cena.children.find(o => o.isDirectionalLight);
   function luzDoRio(v) {
     const liga = v && hora !== 'noite';
@@ -1312,19 +1409,21 @@ export function criarForaForma(cena, opc, P, pecas) {
       salvo = {
         topo: ceu?.material.uniforms.uTopo.value.getHex(), hor: ceu?.material.uniforms.uHorizonte.value.getHex(), baixo: ceu?.material.uniforms.uBaixo.value.getHex(),
         nevoa: cena.fog?.color.getHex(), hc: hemi?.color.getHex(), hg: hemi?.groundColor.getHex(), hi: hemi?.intensity, si: sol?.intensity,
+        solDir: ceu?.material.uniforms.uSolDir?.value.clone(),
       };
-      if (ceu) { const U = ceu.material.uniforms; U.uTopo.value.setHex(0x2f73d0); U.uHorizonte.value.setHex(0xa9c8e8); U.uBaixo.value.setHex(0xa3b4c0); }
-      if (hemi) { hemi.color.setHex(0xc4d8f0); hemi.groundColor.setHex(0xb0a898); hemi.intensity = 1.5; }
-      if (sol) sol.intensity = 3.7;
+      // (rodada 3: um pouco menos de luz do céu — a sombra aparece — e a névoa azulada longe)
+      if (ceu) { const U = ceu.material.uniforms; U.uTopo.value.setHex(0x2f73d0); U.uHorizonte.value.setHex(0xb4cbe2); U.uBaixo.value.setHex(0xa3b4c0); U.uSolDir?.value.set(...SOL); }
+      if (hemi) { hemi.color.setHex(0xbcd0ea); hemi.groundColor.setHex(0x9c968b); hemi.intensity = 1.25; }
+      if (sol) sol.intensity = 3.9;
     } else if (!liga && salvo) {
-      if (ceu) { const U = ceu.material.uniforms; U.uTopo.value.setHex(salvo.topo); U.uHorizonte.value.setHex(salvo.hor); U.uBaixo.value.setHex(salvo.baixo); }
+      if (ceu) { const U = ceu.material.uniforms; U.uTopo.value.setHex(salvo.topo); U.uHorizonte.value.setHex(salvo.hor); U.uBaixo.value.setHex(salvo.baixo); if (salvo.solDir) U.uSolDir?.value.copy(salvo.solDir); }
       if (cena.fog && salvo.nevoa != null) cena.fog.color.setHex(salvo.nevoa);
       if (hemi) { hemi.color.setHex(salvo.hc); hemi.groundColor.setHex(salvo.hg); hemi.intensity = salvo.hi; }
       if (sol) sol.intensity = salvo.si;
       salvo = null;
     }
     // a névoa do diretor (render/prejogo.js entrarPlano) já foi posta antes de modoFora: aqui ela vai bem mais longe
-    if (liga && cena.fog) { cena.fog.color.setHex(0xa9c8e8); cena.fog.near = 900; cena.fog.far = 5200; }
+    if (liga && cena.fog) { cena.fog.color.setHex(0xb4cbe2); cena.fog.near = 700; cena.fog.far = 4200; }
   }
   definirHora(hora);
   let disposto = false;
@@ -1333,7 +1432,9 @@ export function criarForaForma(cena, opc, P, pecas) {
     // de dentro a tigela e a cobertura tapam a fachada, as rampas e os pórticos (fora do desenho; o túnel fica)
     modoFora(v) { for (const m of entorno) m.visible = !!v; fachada.visible = placa.visible = !!v; fora = !!v; luzDoRio(fora); },
     definirHora,
-    atualizar() {},
+    // o sol de fora: render/cena.js acompanhar() repõe a luz pelo rumo do jogo a cada quadro; aqui (depois dele, antes de
+    // desenhar) ela vem do rumo de SOL, no mesmo alvo
+    atualizar() { if (fora && hora !== 'noite' && sol) { sol.position.copy(sol.target.position).add(_v.set(...SOL).multiplyScalar(80)); } },
     dispose() {
       if (disposto) return;
       disposto = true;

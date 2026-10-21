@@ -663,7 +663,10 @@ export function identidadeDoPedido(pedido, base = null) {
     times,
     kits: un.kits, uniformes: { escolha: un.escolha, medidas: un.medidas },
     torcida: {
-      casa: paletaTorcida(cc), fora: paletaTorcida(cf), mosaico: mos, acentos: [corCachecol(cc), corCachecol(cf)],
+      // clássico dividido com as primárias parecidas (rodada 3 da prévia do Maracanã: "no Fla-Flu a metade tricolor
+      // parecia manchas verdes soltas na massa vermelha"): a torcida visitante veste a 2ª cor (ΔE₀₀ < 30)
+      casa: paletaTorcida(cc), fora: dividida && deltaE(cc.primaria, cf.primaria) < 30 && deltaE(cc.primaria, cf.secundaria) >= 30 ? paletaTorcida({ ...cf, primaria: cf.secundaria, secundaria: cf.primaria, forte: cf.secundaria }) : paletaTorcida(cf),
+      mosaico: mos, acentos: [corCachecol(cc), corCachecol(cf)],
       // fora do setor visitante: 3% de visitantes espalhados pelos lados (jogo neutro: quase metade)
       foraLados: neutro ? 0.45 : 0.03,
       dividida,
