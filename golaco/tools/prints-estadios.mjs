@@ -12,7 +12,7 @@ import { PED_A } from './lib/pedidos-tm.mjs';
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
-const SAIDA = path.join(RAIZ, 'tools', 'saida', 'estadios');
+const SAIDA = process.env.SAIDA_PRINTS ? path.resolve(process.env.SAIDA_PRINTS) : path.join(RAIZ, 'tools', 'saida', 'estadios');
 fs.mkdirSync(SAIDA, { recursive: true });
 const base = JSON.parse(fs.readFileSync(path.join(RAIZ, 'assets', 'tm', 'estadios.json'), 'utf8'));
 const extra = arg('--json', null) ? JSON.parse(fs.readFileSync(path.resolve(arg('--json')), 'utf8')) : {};

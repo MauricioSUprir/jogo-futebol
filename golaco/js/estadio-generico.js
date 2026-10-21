@@ -991,14 +991,19 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   const thCa = Math.PI / 2, thLa = -Math.PI / 2;
   const zFach = rFach(thCa), yF = yFach(thCa);
   const temCa = LD[3].prof > 0, temLaL = LD[0].prof > 0;
-  const dentroDe = temCa ? [acima(Math.atan2(0.62, -0.5), 0.55, 4.5), acima(Math.atan2(0.62, -0.32), 0.55, 4.5), acima(Math.atan2(0.62, -0.16), 0.55, 4.4)] : [[-46, 23, 64], [-33, 23, 63.5], [-20, 23, 63]];
+  // de dentro (o estádio cheio): da beira do campo, atrás das placas do lado de cá (fora da arquibancada de cá: ela fica no
+  // desenho), olhando para o fundo +x e a cobertura, como o plano do Maracanã
+  const zD = Math.min(Fr.ca - 1.9, CAMPO.meioZ + CAMPO.entorno + 2.6);
+  const dentroDe = [[24, 1.9, zD], [30, 2.0, zD - 0.1], [36, 2.1, zD - 0.3]];
+  const xFa = Fr.fa + 0.5 * Math.max(LD[1].prof, 8), yFa = 0.7 * topoLado(1) + 4;
+  const dentroPara = [[xFa, yFa, 14], [xFa + 4, yFa + 1, 10], [xFa + 8, yFa + 2, 6]];
   const geralDe = temCa ? [acima(Math.atan2(1, -0.08), 0.6, 6), acima(Math.atan2(1, 0.08), 0.6, 6)] : [[-8, 24.5, 64], [8, 24.5, 64]];
   const altoDe = temLaL ? [acima(Math.atan2(-1, -0.1), 0.35, 4), acima(Math.atan2(-1, 0.1), 0.35, 4)] : [[-6, 21, -50], [6, 20, -50]];
   const PLANOS = {
     aereo: { orbita: { centro: [0, 0], olhar: [0, 10, 0], raio: [300 * K, 238 * K], altura: [140 * K, 96 * K], ang: [38, 62], fov: 38 } },
     // a grua da praça da entrada (o lado de cá): de longe e baixo, subindo para a fachada
     fachada: { cam: { de: [[-52, 1.8, zFach + 80], [-36, 4.5, zFach + 66], [-20, 8, zFach + 54]], para: [[0, yF * 0.45, zFach], [0, yF * 0.52, zFach - 1], [0, yF * 0.6, zFach - 2]], fov: [50, 42], suave: 0.7 } },
-    dentro: { cam: { de: dentroDe, para: [[-6, 4, -22], [0, 4, -22], [6, 4, -22]], fov: [52, 50], suave: 0.5 } },
+    dentro: { cam: { de: dentroDe, para: dentroPara, fov: [60, 58], suave: 0.5 } },
     alto: { cam: { de: altoDe, para: [[0, 0.5, 7], [0, 0.5, 5.5]], fov: [26, 25], suave: 0.5 } },
     organizada: { cam: { de: [[Fr.fa - 22, 3.0, -20], [Fr.fa - 22, 3.4, -16]], para: temLado(1) ? [acima(0.02 - 0.2, 0.25, 1.5), acima(0.02, 0.25, 1.5)] : [[70, 8, -2], [70, 8.5, 2]], fov: [40, 40], suave: 0.3 } },
     ladoDeLa: { cam: { de: [[-6, 2.2, -Fr.la + 7], [2, 2.2, -Fr.la + 7]], para: temLaL ? [acima(Math.atan2(-1, -0.12), 0.22, 1.5), acima(Math.atan2(-1, 0.06), 0.22, 1.5)] : [[-12, 9, -56], [4, 9, -56]], fov: [30, 30], suave: 0.2 } },
@@ -1015,7 +1020,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   let orbitaEsc = null;
   // ninguém sentado a menos de 3,5 m das lentes dos planos de dentro
   function PLANOS_LENTES() {
-    const pts = [...dentroDe, ...geralDe, ...altoDe];
+    const pts = [...geralDe, ...altoDe];
     return (x, y, z) => pts.some(p => Math.hypot(x - p[0], y - p[1], z - p[2]) < 3.5);
   }
   /** A câmera da abertura ("Toque para começar"), mais longe e mais alta na mesma proporção do estádio. */

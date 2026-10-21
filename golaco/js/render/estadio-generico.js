@@ -307,7 +307,9 @@ export function criarTigela(P, opc = {}) {
   for (const m of malhas) { m.castShadow = false; m.receiveShadow = false; g.add(m); }
   // a cobertura dos outros lados e a estrutura
   const texE = texEstrutura(false), texEm = texEstrutura(true);
-  const matCob = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, side: THREE.DoubleSide });
+  // a chapa da cobertura: um pouco de brilho próprio (por baixo a luz que chega é a do chão, verde: sem ele o forro
+  // ficava verde-escuro)
+  const matCob = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, side: THREE.DoubleSide, emissive: 0x3a3c3e });
   const matEst = new THREE.MeshLambertMaterial({ map: texE, emissiveMap: texEm, emissive: 0xffffff, emissiveIntensity: 0, vertexColors: true, side: THREE.DoubleSide });
   {
     const Lc = malha(), Le = malha();
@@ -319,7 +321,7 @@ export function criarTigela(P, opc = {}) {
   }
   g.userData.materiais = [mat, matCob];
   g.userData.ladoDeCa = ca;
-  g.userData.definirHora = h => { const n = h === 'noite'; matEst.emissiveIntensity = n ? 1 : 0; matEst.color.setScalar(n ? 0.5 : 1); };
+  g.userData.definirHora = h => { const n = h === 'noite'; matEst.emissiveIntensity = n ? 1 : 0; matEst.color.setScalar(n ? 0.5 : 1); matCob.emissive.setHex(n ? 0x1a1b1c : 0x3a3c3e); };
   return g;
 
   // ---------------------------------------------------------------- peças
@@ -370,7 +372,7 @@ export function criarTigela(P, opc = {}) {
     // a laje (o teto do túnel saliente) e a frente dela
     const zFr = F.frente.ca;
     const yT = P.perfilLado(3, sTunel), [, zT] = P.ponto(Math.PI / 2, sTunel);
-    L.q4([-mt, ytt, z0], [mt, ytt, z0], [mt, ytt, zT], [-mt, ytt, zT], zFr > z0 + 0.5 ? cor(0x6f7275) : conc);
+    L.q4([-mt, ytt, z0], [mt, ytt, z0], [mt, ytt, zT], [-mt, ytt, zT], cor(zFr > z0 + 0.5 ? 0x6f7275 : 0x8a8c8e));
     if (zFr > z0 + 0.5) {
       // a caixa de concreto por cima da pista (as paredes de fora)
       for (const s of [-1, 1]) L.q4([s * mt, 0, z0], [s * mt, 0, zFr], [s * mt, ytt, zFr], [s * mt, ytt, z0], cor(0x8a8c8e));
