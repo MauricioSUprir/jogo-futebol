@@ -38,7 +38,9 @@ export const TIGELA_PADRAO = Object.freeze({
   // até 10,6 m, ~16°, e o de cima mais em pé)
   // (rodada 3: "um vão preto entre o último degrau e a cobertura; no real é a fileira de camarotes e uma borda cinza-clara")
   // o muro dos camarotes de cima: `muro` m acima do parapeito, com a faixa de vidro, a `muroR` m atrás da última fileira
-  perfil: { y0: 1.8, sInf: 0.42, yInf: 10.6, sCam: 0.02, yCam: 12.0, yTopo: 24.2, curva: 1.1, parapeito: 1.2, laje: 24.0, muro: 3.4, muroR: 1.4 },
+  // (rodada 4: "a bacia de DOIS anéis com uma faixa no meio; o Maracanã de hoje é UM anel contínuo"): o degrau entre os
+  // anéis vira o espelho de 0,4 m do corredor de circulação (0,7 m de piso), onde abrem os vomitórios
+  perfil: { y0: 1.8, sInf: 0.42, yInf: 10.6, sCam: 0.012, yCam: 11.0, yTopo: 24.2, curva: 1.1, parapeito: 1.2, laje: 24.0, muro: 3.4, muroR: 1.4 },
   // lugares da torcida: fileiras (inferior, superior), passo na fileira (m) e escala do torcedor (o de cima vale ~2)
   fileiras: [32, 22], passo: [0.66, 0.88], escala: [1, 1.3],
   corredores: 60, corredorU: 0.08,
@@ -46,7 +48,9 @@ export const TIGELA_PADRAO = Object.freeze({
   // rodada 2: o furo ~10% maior (172 × 134; "160 × 122 em 296 × 259 parece pequeno" nas aéreas), a linha dos nós a ~2/3
   // da profundidade e o relevo dos cones entre os nós (`cone`: o pico no nó e o vale no meio da baia, em m)
   // rodada 3: os vincos em cone mais fundos ("gomos planos e iguais" vistos de cima)
-  cobertura: { a: 148, b: 129, prof: 62, yFora: 30.6, yMastro: 35.5, yDentro: 33, mastro: 41, yPassarela: 22, eixos: 60, anel: 1.6, cone: 2.4, vale: 1.4 },
+  // rodada 4 ("de cima uma coroa de dentes; no real a membrana é quase lisa, só com as costuras radiais"; "do chão os cones
+  // furam o céu como tenda de circo"): o relevo raso
+  cobertura: { a: 148, b: 129, prof: 62, yFora: 30.6, yMastro: 35.5, yDentro: 33, mastro: 41, yPassarela: 22, eixos: 60, anel: 1.6, cone: 0.6, vale: 0.4 },
   fachada: { a: 152, b: 133, cinta: 21, alto: 27.6, eixos: 60 },
   // rodada 2: UMA rampa reta e larga (18 m) com guarda-corpo baixo (antes duas pistas, que pareciam um V) e o pórtico com
   // os degraus em leque (5 de 0,18 m)
@@ -55,6 +59,10 @@ export const TIGELA_PADRAO = Object.freeze({
   cadeiras: ['#f2c21b', '#2e6fc0', '#e9e9e4'],
   entorno: 'maracana',
 });
+
+/** Os vomitórios (rodada 4, ref-08): a boca escura no meio de cada gomo (g em graus dentro da fatia de 6°), nas
+ * `fileiras` de cima do anel de baixo — a textura das cadeiras e os lugares da torcida usam o MESMO vão. */
+export const VOM = Object.freeze({ fileiras: 3, g0: 2.3, g1: 3.7 });
 
 // ------------------------------------------------------------------ superelipse em polar
 /** Raio polar da superelipse (a, b, n) no ângulo θ. */
@@ -221,7 +229,23 @@ export function criarPlanta(formaBruta, opc = {}) {
     // (rodada 3: "gramados verde-saturado demais; no real é esplanada de concreto cinza com estacionamentos grandes e
     // árvores esparsas" — sobram 7 gramados; os outros viraram estacionamentos, só pintados no chão)
     gramados: [[-340, 150, -230, 340], [-340, -340, -200, -260], [-150, 300, 80, 340], [150, -330, 260, -250], [175, -150, 300, -60], [175, 40, 225, 160], [240, 260, 330, 335]],
-    estacPintados: [[-300, -200, -205, -110], [-290, -105, -215, -20], [-335, -250, -250, -160], [-260, -330, -160, -272], [-150, -330, -60, -282], [60, 292, 160, 334], [-130, -250, -62, -192], [-200, -90, -176, 90]],
+    estacPintados: [[-300, -200, -215, -110], [-290, -105, -215, -20], [-335, -250, -250, -160], [-260, -330, -175, -272], [-130, -330, -60, -282], [60, 292, 160, 334], [-130, -250, -62, -192], [-205, 0, -181, 90]],
+  };
+  // a rampa CURVA de concreto (rodada 4, ref-01: "faltam as duas rampas grandes da vista de cima"): a helicoidal de 3
+  // pavimentos encostada na fachada do lado da UERJ (a boca virada para a fachada) e a passarela comprida sobre pilares
+  // que sai dela por cima da esplanada e da avenida até o campus (a passarela da UERJ)
+  {
+    const t = -158 * RAD, bx = Fa.a * Math.cos(t), bz = Fa.b * Math.sin(t);
+    let nx = Math.cos(t) / Fa.a, nz = Math.sin(t) / Fa.b; const l = Math.hypot(nx, nz); nx /= l; nz /= l;
+    E.rampaCurva = { x: bx + nx * 27, z: bz + nz * 27, nx, nz, r0: 8, r1: 21, niveis: [3.7, 7.3, 10.9] };
+    const a = [E.rampaCurva.x - 6, E.rampaCurva.z - 19], b = [-150, -405];
+    E.passarelaUerj = { a, b, y: 9.6, larg: 7 };
+  }
+  const naRampaUerj = (x, z, m = 0) => {
+    const Rc = E.rampaCurva, Pu = E.passarelaUerj;
+    if (Math.hypot(x - Rc.x, z - Rc.z) < Rc.r1 + m) return true;
+    const dx = Pu.b[0] - Pu.a[0], dz = Pu.b[1] - Pu.a[1], t = clamp(((x - Pu.a[0]) * dx + (z - Pu.a[1]) * dz) / (dx * dx + dz * dz), 0, 1);
+    return Math.hypot(x - Pu.a[0] - dx * t, z - Pu.a[1] - dz * t) < Pu.larg / 2 + m;
   };
   // distância (com sinal) à reta dos trilhos
   const distTrilho = (x, z) => { const T = E.trilhos; return (x - T.p[0]) * T.d[1] - (z - T.p[1]) * T.d[0]; };
@@ -246,6 +270,9 @@ export function criarPlanta(formaBruta, opc = {}) {
     const M = 2880;   // amostras da fileira (0,125°)
     const T = ESTADIO.tunel, mt = T.largura / 2 + 0.4, topoTunel = T.altura + T.laje + 0.3;
     const passoCorr = 360 / F.corredores, largCorr = passoCorr * F.corredorU;
+    // ninguém a menos de 6 m da lente do plano de dentro do pré-jogo (rodada 4: "torcedores quadrados colados na câmera")
+    const lente = PLANOS.dentro.cam.de, l0 = lente[0], l1 = lente[lente.length - 1];
+    const pertoDaLente = (x, y, z) => { const xa = l0[0] - 4, xb = l1[0] + 16, xc = clamp(x, xa, xb); return z > 0 && Math.hypot(x - xc, z - l0[2]) < 7 && y < 9; };
     for (let f = 0; f < NF; f++) {
       const j = NF - 1 - f;                                    // da frente (0) para cima
       const inf = j < nI;
@@ -269,7 +296,14 @@ export function criarPlanta(formaBruta, opc = {}) {
         // borda da cobertura) e manchas soltas, mais no setor visitante (fundo −x); rodada 2: sem o vão ao lado de cada
         // escada ("vãos regulares" que dividiam a bacia em blocos) e, no clássico, a divisa vazia no meio dos lados
         const hs = h2(i, f);
-        if (!inf && j - nI >= nS - 4 && hs < 0.7) continue;
+        // (rodada 4: "gente de pé em cima da viga da cobertura"): as 3 de cima vazias (as cadeiras debaixo da borda)
+        if (!inf && j - nI >= nS - 3) continue;
+        if (!inf && j - nI === nS - 4 && hs < 0.7) continue;
+        // as cadeiras soltas à mostra entre a torcida (o mosaico amarelo/azul/branco nas brechas) e os vomitórios: a boca
+        // escura no meio de cada gomo, nas 3 fileiras de cima do anel de baixo (o mesmo vão da textura)
+        if (hs < 0.05) continue;
+        if (inf && j >= nI - VOM.fileiras && g >= VOM.g0 && g <= VOM.g1) continue;
+        if (pertoDaLente(x, y, z)) continue;
         if (h2(Math.floor((th / RAD + 180) / 1.6), Math.floor(j / 3) + 977) < (st === 2 && !dividida ? 0.26 : 0.22)) continue;
         if (dividida && Math.abs(x) < 3 && (st === 0 || st === 3)) continue;
         // mosaico (a máscara de 250 × 36 do lado de lá): o anel de cima do lado de lá (no clássico, não: cada metade é de um)
@@ -334,6 +368,8 @@ export function criarPlanta(formaBruta, opc = {}) {
     const Mz = E.maracanazinho, dm = Math.hypot(x - Mz.x, z - Mz.z);
     if (dm <= Mz.r + f) { const h = Mz.parede + Mz.cupula * Math.sqrt(Math.max(0, 1 - (dm / Mz.r) ** 2)); if (y <= h + f) return 'maracanãzinho'; }
     if (Math.hypot(x - E.bellini.x, z - E.bellini.z) <= 3.2 + f && y <= 11 + f) return 'bellini';
+    if (y <= E.rampaCurva.niveis[2] + 1.3 + f && Math.hypot(x - E.rampaCurva.x, z - E.rampaCurva.z) <= E.rampaCurva.r1 + f) return 'rampa curva';
+    if (y <= E.passarelaUerj.y + 4.4 + f && naRampaUerj(x, z, f)) return 'passarela';
     if (r > E.esplanada - 40) {
       for (const p of predios()) {
         const c = Math.cos(-p.rumo), sn = Math.sin(-p.rumo);
@@ -403,13 +439,13 @@ export function criarPlanta(formaBruta, opc = {}) {
       const n = Math.round(((x1 - x0) * (z1 - z0)) / 600);
       for (let a = 0; a < n; a++) {
         const x = x0 + 6 + r() * (x1 - x0 - 12), z = z0 + 6 + r() * (z1 - z0 - 12);
-        if (Math.hypot(x, z) < rFach(Math.atan2(z, x)) + 30 || naRampa(x, z, 8) || Math.abs(distTrilho(x, z)) < E.trilhos.larg + 26) continue;
+        if (Math.hypot(x, z) < rFach(Math.atan2(z, x)) + 30 || naRampa(x, z, 8) || naRampaUerj(x, z, 8) || Math.abs(distTrilho(x, z)) < E.trilhos.larg + 26) continue;
         arv.push({ x, z, raio: 4 + r() * 4 });
       }
     }
 
     // as fileiras de árvores na borda da esplanada (dentro da avenida) e nas vias de serviço
-    const livreE = (x, z) => !naRampa(x, z, 10) && Math.abs(distTrilho(x, z)) > E.trilhos.larg + 26 && Math.hypot(x - E.maracanazinho.x, z - E.maracanazinho.z) > E.maracanazinho.r + 10
+    const livreE = (x, z) => !naRampa(x, z, 10) && !naRampaUerj(x, z, 8) && Math.abs(distTrilho(x, z)) > E.trilhos.larg + 26 && Math.hypot(x - E.maracanazinho.x, z - E.maracanazinho.z) > E.maracanazinho.r + 10
       && ((x - E.celio.x) / (E.celio.a + 14)) ** 2 + ((z - E.celio.z) / (E.celio.b + 22)) ** 2 > 1 && Math.hypot(x - E.aquatico.x - 20, z - E.aquatico.z) > 60 && Math.hypot(x - E.bellini.x, z - E.bellini.z) > 40;
     const Mb = E.esplanada - 22;
     for (let t = -Mb; t <= Mb; t += 13) for (const [x, z] of [[t, -Mb], [t, Mb], [-Mb, t], [Mb, t]]) if (livreE(x, z)) arv.push({ x: x + (r() - 0.5) * 2, z: z + (r() - 0.5) * 2, raio: 3.2 + r() * 2.6 });
@@ -428,7 +464,7 @@ export function criarPlanta(formaBruta, opc = {}) {
     const livre = (x, z) => {
       const th = Math.atan2(z, x), rr = Math.hypot(x, z);
       if (rr < rFach(th) + 12) return false;
-      if (naRampa(x, z, 6) || noEstac(x, z, 4)) return false;
+      if (naRampa(x, z, 6) || noEstac(x, z, 4) || naRampaUerj(x, z, 6)) return false;
       if (Math.hypot(x - E.maracanazinho.x, z - E.maracanazinho.z) < E.maracanazinho.r + 8) return false;
       if (Math.hypot(x - E.aquatico.x, z - E.aquatico.z) < 34) return false;
       if (((x - E.celio.x) / (E.celio.a + 10)) ** 2 + ((z - E.celio.z) / (E.celio.b + 10)) ** 2 < 1) return false;
@@ -437,8 +473,9 @@ export function criarPlanta(formaBruta, opc = {}) {
     };
     // rodada 3 ("palmeiras demais, grossas, tapando a fachada; no real poucas palmeiras-imperiais finas numa fileira só"):
     // UMA fileira de cada lado da rampa de cá (a entrada leste) e a avenida do Bellini, nada em volta da fachada
-    for (let z = 262; z < 336; z += 14) for (const x of [-40, 40]) if (livre(x, z)) lista.push({ x: x + (r() - 0.5), z, h: 22 + r() * 5 });
-    for (let z = zFach0 + 22; z < R.zFim - 8; z += 15) for (const x of [-(R.larg / 2 + 8), R.larg / 2 + 8]) lista.push({ x, z, h: 21 + r() * 5 });
+    // (rodada 4: "palmeiras grandes demais no primeiro plano da fachada"; e nenhuma na frente da lente do pórtico leste)
+    for (let z = 290; z < 336; z += 14) for (const x of [-40, 40]) if (livre(x, z)) lista.push({ x: x + (r() - 0.5), z, h: 20 + r() * 4 });
+    for (let z = zFach0 + 22; z < R.zFim - 8; z += 15) for (const x of [-(R.larg / 2 + 8), R.larg / 2 + 8]) lista.push({ x, z, h: 13 + r() * 4 });
     _palmeiras = lista;
     return lista;
   }
@@ -468,7 +505,7 @@ export function criarPlanta(formaBruta, opc = {}) {
         const az = R.portico.r + 13 + r() * 36, x = (r() - 0.5) * (40 + az - R.portico.r);
         const t = lado < 0 && r() < 0.5 ? 1 : 0;
         // (rodada 3: ninguém colado na lente do plano do pórtico leste, que passa ao pé dos degraus)
-        if (lado > 0 && x > 22 && az < 282) continue;
+        if (lado > 0 && x > 22 && az < 290) continue;
         lista.push({ x, y: 0.06, z: lado * az, time: t });
       }
     }
@@ -476,7 +513,7 @@ export function criarPlanta(formaBruta, opc = {}) {
     for (let i = 0; i < 380; i++) {
       const th = r() * 2 * Math.PI, rr = rFach(th) + 5 + r() * 18;
       const x = rr * Math.cos(th), z = rr * Math.sin(th);
-      if (naRampa(x, z, 1) || noEstac(x, z, 2)) continue;
+      if (naRampa(x, z, 1) || noEstac(x, z, 2) || naRampaUerj(x, z, 2)) continue;
       lista.push({ x, y: 0.06, z, time: x < -80 ? (r() < 0.6 ? 1 : 0) : (r() < 0.05 ? 1 : 0) });
     }
     _torcedores = lista;
@@ -592,7 +629,9 @@ export function criarPlanta(formaBruta, opc = {}) {
     // rodada 3 ("a câmera colada vê o pórtico de lado e de baixo: vira gaiola; o quadro certo é o da ref-05"): o pórtico
     // LESTE (o de cá, ao sol da manhã), na altura do olho a ~15 m da ponta do "FILHO", o letreiro em diagonal indo embora
     // para a esquerda e as colunas ritmando; a grua sobe por cima da rampa até a fachada
-    fachada: { cam: { de: [[54, 1.7, 271], [44, 1.7, 269], [33, 1.75, 266.8], [30, 1.9, 266.3], [22, 11, 262], [12, 25, 250]], para: [[-14, 6, 251], [-16, 6.1, 250.5], [-18, 6.3, 250], [-18, 6.5, 249], [-8, 10.5, 215], [0, 13, 150]], fov: [50, 44], suave: 0.7 } },
+    // rodada 4 ("o quadro baixo e perto demais: corta o topo das colunas e perde os postes, a ponta da cobertura e o morro"):
+    // a lente a 2,4 m e ~8 m mais para trás, olhando um pouco mais para cima, com o quadro mais aberto
+    fachada: { cam: { de: [[60, 2.4, 281], [50, 2.4, 279], [40, 2.5, 277], [35, 2.8, 275.5], [24, 12, 266], [12, 25, 250]], para: [[-14, 8.6, 251], [-16, 8.7, 250.5], [-18, 8.9, 250], [-18, 9.1, 249], [-8, 11, 215], [0, 13, 150]], fov: [54, 44], suave: 0.7 } },
     // de dentro olhando PARA CIMA (ref-07): a cobertura branca com a treliça e os refletores no terço de cima do quadro
     // (rodada 3: "a cobertura vira uma faixa reta, baixa e preta"): da beira do campo, atrás das placas, como a ref-07 —
     // o campo à esquerda, a bacia de cá indo embora à direita e a cobertura em leque por cima, com os telões no eixo
@@ -619,7 +658,7 @@ export function criarPlanta(formaBruta, opc = {}) {
   return {
     forma: F, familia: 'tigela',
     rF, rB, rCobFora, rCobDentro, rFach, ponto, sDe, perfil, vDe, nos, sC, setor, psi, thDivisa,
-    nosCob, alturaCob, pontoCob, uCob, uMastro, cone, luzDoSol, dividida, COSTELA, nFachada, yRampa, entorno: E, distTrilho, estacionamentos: ESTAC, TELOES,
+    nosCob, alturaCob, pontoCob, uCob, uMastro, cone, luzDoSol, dividida, COSTELA, nFachada, yRampa, entorno: E, distTrilho, estacionamentos: ESTAC, TELOES, vom: VOM,
     get lugares() { return _lugares ?? (_lugares = gerarLugares()); },
     solido, cameraNoLadoDeCa, noDegrau,
     predios, bairro, palmeiras, carros, torcedoresFora,

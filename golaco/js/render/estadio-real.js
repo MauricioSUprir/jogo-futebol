@@ -25,6 +25,7 @@ import { PONTOS_SINALIZADOR } from './festa.js';
 import { CAMERA_GERAL } from './camera.js';
 
 const RAD = Math.PI / 180;
+const clampN = (v, a, b) => (v < a ? a : v > b ? b : v);
 const cor = h => new THREE.Color(h);
 const BRANCO = cor(0xffffff);
 
@@ -111,15 +112,11 @@ function texCadeiras(P, q, aniso) {
   g.fillStyle = '#c8c6c0'; g.fillRect(0, yPx(0.04), W, 3);
   g.fillStyle = '#b8b6af'; g.fillRect(0, 0, W, yPx(0.97));
   g.fillStyle = '#8d8b85'; g.fillRect(0, yPx(0.97) - 2, W, 2);
-  // camarotes (vidro escuro com caixilhos) e a laje
-  // (rodada 1: uma LINHA fina de vidro entre os anéis, não uma faixa escura grossa — a bacia é contínua)
+  // o corredor de circulação entre os dois lances (rodada 4: "UM anel contínuo, sem a faixa no meio"): o espelho de
+  // concreto de 0,4 m e o piso — uma linha fina, não mais a faixa de vidro dos camarotes
   const vI = P.nos[1][2], vG = P.nos[2][2], vL = P.nos[3][2];
-  const gv = g.createLinearGradient(0, yPx(vG), 0, yPx(vI));
-  gv.addColorStop(0, '#4a5862'); gv.addColorStop(1, '#2c363e');
-  g.fillStyle = gv; g.fillRect(0, yPx(vG), W, yPx(vI) - yPx(vG));
-  g.fillStyle = '#8d979f';
-  for (let x = 0; x < W; x += W / 24) g.fillRect(x, yPx(vG), 1.5, yPx(vI) - yPx(vG));
-  g.fillStyle = '#dedcd5'; g.fillRect(0, yPx(vL), W, yPx(vG) - yPx(vL));
+  g.fillStyle = '#7b7a75'; g.fillRect(0, yPx(vG), W, yPx(vI) - yPx(vG));
+  g.fillStyle = '#9f9d97'; g.fillRect(0, yPx(vL), W, yPx(vG) - yPx(vL));
   // fileiras: [v0, v1, n, pesos (amarelo, azul, branco)] — as de cima valem 2 cadeiras por lugar da torcida
   const tiers = [[0.04, vI, P.forma.fileiras[0], [0.46, 0.24, 0.30]], [vL, 0.97, 2 * P.forma.fileiras[1], [0.27, 0.52, 0.21]]];
   const corr = P.forma.corredorU / 2;   // a textura tem 2 fatias: corredor no começo de cada uma
@@ -142,10 +139,25 @@ function texCadeiras(P, q, aniso) {
     }
     // corredores (escada de concreto)
     for (const lado of [0, 0.5]) {
-      // as escadas radiais de concreto (rodada 2: claras — escuras, dividiam a bacia em blocos)
-      g.fillStyle = '#a3a19b'; g.fillRect(lado * W, yPx(v1), corr * W, yPx(v0) - yPx(v1));
-      g.fillStyle = 'rgba(0,0,0,0.16)';
-      for (let k = 0; k < 2 * n; k++) g.fillRect(lado * W, yPx(v0) - k * (yPx(v0) - yPx(v1)) / (2 * n), corr * W, 1);
+      // as escadas radiais (rodada 4, ref-08: "os corredores radiais ESCUROS que cortam a bacia em gomos" — o concreto
+      // cinza das escadas com os degraus na sombra; rodada 2 tinha clareado)
+      g.fillStyle = '#6c6a65'; g.fillRect(lado * W, yPx(v1), corr * W, yPx(v0) - yPx(v1));
+      g.fillStyle = 'rgba(0,0,0,0.28)';
+      for (let k = 0; k < 2 * n; k++) g.fillRect(lado * W, yPx(v0) - k * (yPx(v0) - yPx(v1)) / (2 * n), corr * W, 1.5);
+      g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect((lado + corr) * W - 1.5, yPx(v1), 1.5, yPx(v0) - yPx(v1));
+    }
+  }
+  // os vomitórios (ref-08): a boca escura no meio de cada gomo, nas fileiras de cima do anel de baixo, com as muretas
+  // de concreto dos lados (os lugares da torcida deixam o MESMO vão: P.vom)
+  {
+    const V = P.vom, nI = P.forma.fileiras[0], hRow = (yPx(0.04) - yPx(vI)) / nI;
+    const ya = yPx(vI) + 0.5, yb = yPx(vI) + V.fileiras * hRow;
+    for (const lado of [0, 0.5]) {
+      const x0 = (lado + (V.g0 / 6) * 0.5) * W, x1 = (lado + (V.g1 / 6) * 0.5) * W;
+      g.fillStyle = '#8f8d87'; g.fillRect(x0 - 3, ya, x1 - x0 + 6, yb - ya);
+      const gr = g.createLinearGradient(0, ya, 0, yb);
+      gr.addColorStop(0, '#15181b'); gr.addColorStop(1, '#2b2f33');
+      g.fillStyle = gr; g.fillRect(x0, ya, x1 - x0, yb - ya - 2);
     }
   }
   const t = texturaCanvas(c, { aniso, repetir: true });
@@ -163,15 +175,16 @@ function texCobertura(P, emissiva) {
     const gr = g.createLinearGradient(0, y(0), 0, y(1));
     gr.addColorStop(0, '#f1f1ed'); gr.addColorStop(1, '#fbfbf8');
     g.fillStyle = gr; g.fillRect(0, 0, W, H);
-    // costuras dos painéis em losango (deltoide): da nervura na linha dos mastros ao vale nas duas bordas
-    g.strokeStyle = 'rgba(120,124,126,0.55)'; g.lineWidth = 1.2;
+    // (rodada 4: "de cima uma coroa de dentes com triângulos grandes; no real a membrana é quase lisa, só as costuras
+    // RADIAIS finas"; "por baixo linhas cruzadas como vidro trincado"): nada de losango, só costuras radiais
     const linha = (u0, v0, u1, v1) => { g.beginPath(); g.moveTo(u0 * W, y(v0)); g.lineTo(u1 * W, y(v1)); g.stroke(); };
-    for (const u of [0, 1]) { linha(u, vm, 0.5, 0.06); linha(u, vm, 0.5, 0.995); }
-    // as nervuras (o cabo de cada eixo; por baixo são os "raios" escuros da ref-07) e o cabo de vale
-    g.strokeStyle = 'rgba(112,116,120,0.9)'; g.lineWidth = 3.5;
+    g.strokeStyle = 'rgba(150,154,156,0.35)'; g.lineWidth = 1;
+    for (const u of [0.25, 0.75]) linha(u, 0.08, u, 0.98);
+    // as nervuras (o cabo de cada eixo) e o cabo de vale, finos
+    g.strokeStyle = 'rgba(118,122,126,0.75)'; g.lineWidth = 2.2;
     linha(0, 0, 0, 1); linha(1, 0, 1, 1);
-    g.strokeStyle = 'rgba(150,154,156,0.7)'; g.lineWidth = 2;
-    linha(0.5, 0.05, 0.5, 1);
+    g.strokeStyle = 'rgba(150,154,156,0.5)'; g.lineWidth = 1.4;
+    linha(0.5, 0.08, 0.5, 1);
     // o nó escuro do mastro (o "colar" na linha dos mastros)
     g.fillStyle = '#3b4146'; g.beginPath(); g.arc(1, y(vm), 4.5, 0, 2 * Math.PI); g.arc(0, y(vm), 4.5, 0, 2 * Math.PI); g.fill();
     // painéis solares (azul-marinho) NA BORDA de fora (rodada 3: "a faixa azul-escura fica na borda, não um pouco para
@@ -229,6 +242,14 @@ function texLetreiro(texto) {
     g.fillStyle = '#ffffff'; g.font = '800 96px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
     g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(l, i * h + h / 2, 2.5 * h + 4);
   });
+  // as faces dos cubos amarelos dos acessos (ref-04: a letra do setor em cada face): E, C, D, A
+  ['E', 'C', 'D', 'A'].forEach((l, i) => {
+    const x0 = 256 + i * h;
+    g.fillStyle = '#f2c21b'; g.fillRect(x0, 2 * h, h, h);
+    g.fillStyle = '#d4a210'; g.fillRect(x0, 2 * h, h, 5); g.fillRect(x0, 3 * h - 5, h, 5); g.fillRect(x0, 2 * h, 5, h); g.fillRect(x0 + h - 5, 2 * h, 5, h);
+    g.fillStyle = '#1d1d1d'; g.font = '800 92px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(l, x0 + h / 2, 2.5 * h + 4);
+  });
   return texturaCanvas(c, { aniso: 4 });
 }
 
@@ -267,11 +288,18 @@ function texEsplanada(P, S, aniso) {
   for (const [x0, z0, x1, z1] of E.gramados) ret(x0, z0, x1, z1);
   // os estacionamentos (asfalto com as vagas pintadas e alguns carros, só no chão; rodada 3, ref-01)
   { const rr = gerador(4242), CARROS = ['#cfcfcc', '#2b2e33', '#8d939a', '#6b2a2c', '#b8bbbd', '#3a4656', '#5a5e63', '#c4c1ba'];
+    // (rodada 4: "estacionamentos em grade de pontinhos, jogo de tabuleiro"): o asfalto gasto com manchas e remendos, as
+    // vagas pintadas apagadas e poucos carros, juntos perto da entrada de cada um (dia de jogo: o público vem de trem)
     for (const [x0, z0, x1, z1] of E.estacPintados ?? []) {
-      g.fillStyle = '#55585b'; ret(x0, z0, x1, z1);
-      g.fillStyle = 'rgba(235,235,230,0.55)';
-      for (let z = z0 + 3; z < z1 - 2; z += 13) { ret(x0 + 2, z - 0.05, x1 - 2, z + 0.05); for (let x = x0 + 2; x < x1 - 2; x += 2.6) { ret(x - 0.05, z - 5, x + 0.05, z); ret(x - 0.05, z, x + 0.05, z + 5); } }
-      for (let z = z0 + 3; z < z1 - 2; z += 13) for (let x = x0 + 3.3; x < x1 - 3; x += 2.6) for (const dz of [-2.5, 2.5]) if (rr() < 0.22) { g.fillStyle = CARROS[Math.floor(rr() * CARROS.length)]; ret(x - 0.85, z + dz - 2.1, x + 0.85, z + dz + 2.1); }
+      g.fillStyle = '#4f5254'; ret(x0, z0, x1, z1);
+      for (let i = 0; i < 26; i++) { g.fillStyle = `rgba(${rr() < 0.5 ? '0,0,0' : '200,200,195'},${0.04 + rr() * 0.06})`; elip(x0 + rr() * (x1 - x0), z0 + rr() * (z1 - z0), 3 + rr() * 9, 2 + rr() * 6); }
+      g.fillStyle = 'rgba(225,225,220,0.16)';
+      for (let z = z0 + 3; z < z1 - 2; z += 13) { ret(x0 + 2, z - 0.05, x1 - 2, z + 0.05); for (let x = x0 + 2; x < x1 - 2; x += 2.6) { ret(x - 0.04, z - 5, x + 0.04, z); ret(x - 0.04, z, x + 0.04, z + 5); } }
+      const zE = rr() < 0.5 ? z0 : z1;
+      for (let z = z0 + 3; z < z1 - 2; z += 13) for (let x = x0 + 3.3; x < x1 - 3; x += 2.6) for (const dz of [-2.5, 2.5]) {
+        const perto = 1 - Math.min(1, Math.abs(z + dz - zE) / Math.max(20, (z1 - z0) * 0.5));
+        if (rr() < 0.03 + 0.3 * perto * perto) { g.fillStyle = CARROS[Math.floor(rr() * CARROS.length)]; ret(x - 0.85, z + dz - 2.1, x + 0.85, z + dz + 2.1); }
+      }
     } }
   // as vias de serviço da esplanada (asfalto) até o anel de circulação
   g.fillStyle = '#56595b';
@@ -346,6 +374,7 @@ function texEsplanada(P, S, aniso) {
  * de árvore, praças), as ruas entre elas, o leito dos trilhos com a Av. Radial Oeste, a favela no Morro da Mangueira
  * (o morro usa este mesmo mapa, projetado de cima) e as sombras dos prédios.
  */
+const h2b = (a, b) => { let t = Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263); t = Math.imul(t ^ (t >>> 13), 1274126177); return ((t ^ (t >>> 16)) >>> 0) / 4294967296; };
 function texBairro(P, S, aniso) {
   const E = P.entorno, M = E.bairro, k = S / (2 * M);
   const c = criarCanvas(S, S), g = c.getContext('2d');
@@ -377,13 +406,25 @@ function texBairro(P, S, aniso) {
   // a favela (rodada 2: "casas baixas AVERMELHADAS e densas subindo um morro VERDE, não marrom"): tijolo e reboco nas
   // encostas de baixo, a mata no alto do morro
   // (rodada 3: "tijolo laranja e mato escuro, não grama de campo")
-  const CORES = ['#b0603a', '#c27045', '#9c5233', '#c98a5a', '#a85a38', '#d6c6ad', '#c4925c', '#ddd7cb', '#b86a44', '#a39e95', '#bf6b3f'];
+  const CORES = ['#b0603a', '#c27045', '#9c5233', '#c98a5a', '#a85a38', '#d6c6ad', '#c4925c', '#ddd7cb', '#b86a44', '#a39e95', '#bf6b3f', '#9c9a94', '#b5b2aa'];
   g.fillStyle = '#3b4a2f'; g.beginPath(); g.arc(px(Mg.x), pz(Mg.z), Mg.r * 1.05 * k, 0, 2 * Math.PI); g.fill();
-  for (let i = 0; i < 16000; i++) {
-    const a = r() * 2 * Math.PI, d = Math.sqrt(r()) * Mg.r * 1.04, x = Mg.x + d * Math.cos(a), z = Mg.z + d * Math.sin(a);
-    if (d < Mg.r * (0.4 + r() * 0.14) || r() < 0.12) { g.fillStyle = r() < 0.6 ? '#33432a' : '#435334'; g.fillRect(px(x), pz(z), 4 * k, 4 * k); continue; }
-    g.fillStyle = CORES[Math.floor(r() * CORES.length)];
-    g.fillRect(px(x), pz(z), (2 + r() * 4) * k, (2 + r() * 3) * k);
+  // (rodada 4: "a Mangueira parece um tapete granulado"): as casas em BLOCOS seguindo as curvas de nível (terraços de
+  // 9 m), cada casa de 6 a 11 m com a laje cinza ou o tijolo e a parede de baixo na sombra, as vielas entre elas e
+  // manchas de mato; o topo do morro é mata
+  for (let d = Mg.r * 0.42; d < Mg.r * 1.04; d += 7 + r() * 4) {
+    let a = r() * 0.2;
+    while (a < 2 * Math.PI) {
+      const w = 6 + r() * 5, da = w / d, x = Mg.x + d * Math.cos(a + da / 2), z = Mg.z + d * Math.sin(a + da / 2);
+      const topo = Mg.r * (0.46 + 0.1 * Math.sin(3 * a + 1.1) + 0.05 * Math.sin(7 * a));
+      if (d > topo && h2b(Math.floor(a * 5 + d / 61), Math.floor(d / 41)) > 0.22) {
+        g.save(); g.translate(px(x), pz(z)); g.rotate(a + da / 2 + Math.PI / 2);
+        const prof = 6 + r() * 2.5;
+        g.fillStyle = CORES[Math.floor(r() * CORES.length)]; g.fillRect(-w * k / 2, -prof * k / 2, w * k, prof * k);
+        g.fillStyle = 'rgba(25,20,15,0.42)'; g.fillRect(-w * k / 2, prof * k / 2 - Math.max(1, 1.3 * k), w * k, Math.max(1, 1.3 * k));
+        g.restore();
+      }
+      a += da + (r() < 0.18 ? (2 + r() * 2.5) / d : 0.8 / d);
+    }
   }
   // os trilhos (o pátio da SuperVia, largo) e a Av. Radial Oeste
   const T = E.trilhos;
@@ -496,6 +537,15 @@ export function criarTigela(P, opc = {}) {
       ii.push(L.v(ri * c, 0.012, ri * s, 0.7, 0.005, azul)); oo.push(L.v(ro * c, 0.012, ro * s, 0.75, 0.006, azul));
     }
     for (let j = 0; j + 1 < ths.length; j++) L.quad(ii[j], ii[j + 1], oo[j + 1], oo[j]);
+    // (rodada 4: "na câmera do jogo nada diz Maracanã: falta a faixa azul em volta do gramado"): a faixa azul (3,5 m nos lados, 2,9 m atrás dos gols) na
+    // frente das placas, nos 4 lados (no lado de cá, fora da frente dos bancos e da área técnica)
+    {
+      const fx = hx - 2.9, fz = hz - 3.5, yA = 0.03, w = 0.004;
+      const ret = (x0, z0, x1, z1) => { const a = L.v(x0, yA, z0, 0.7, w, azul), b = L.v(x1, yA, z0, 0.75, w, azul), c = L.v(x1, yA, z1, 0.75, w, azul), d = L.v(x0, yA, z1, 0.7, w, azul); L.quad(a, d, c, b); };
+      ret(-hx, -hz, hx, -fz);
+      ret(-hx, fz, -19, hz); ret(19, fz, hx, hz);
+      ret(-hx, -fz, -fx, fz); ret(fx, -fz, hx, fz);
+    }
     const m = new THREE.Mesh(L.geo(), mat); m.name = 'arquibancada-fundos'; malhas.push(m);
   }
   // lado de cá: o túnel no meio (as cadeiras cortadas em cima da boca), os bancos de reservas
@@ -506,7 +556,8 @@ export function criarTigela(P, opc = {}) {
     faixas(L, ths, (k, a, b) => k < 2 && a >= thA - 1e-9 && b <= thB + 1e-9);
     muro(L, ths);
     const conc = cor(0xb9b7b0), escuro = c2 => cor(0x9d9c97).multiplyScalar(c2);
-    const time = cor(opc.ident?.fachada?.tunel ?? '#c4161c');
+    // (rodada 4: "o túnel com o arco rosa enorme não existe assim; a saída é discreta"): a moldura de concreto escuro
+    const time = cor(0x55585b);
     const sC = Pf.sInf * (ytt - Pf.y0) / (Pf.yInf - Pf.y0);
     const pt = (th, s, y) => { const [x, z] = P.ponto(th, s); return [x, y, z]; };
     // a laje (teto do túnel saliente) e o espelho atrás dela
@@ -545,7 +596,8 @@ export function criarTigela(P, opc = {}) {
     }
     // a boca do túnel com a cobertura retrátil de acrílico (o túnel sanfonado que sai até perto das placas) e os arcos
     {
-      const zA = z0 - 4.2, RX = ti + 0.35, RY = ya + 0.5, NT = 10;
+      const zA = z0 - 2.4, RX = ti + 0.1, RY = ya + 0.1, NT = 10;
+      acril.setHex(0x59636b);
       const ptA = (k, z) => { const a = (Math.PI * k) / NT; return [RX * Math.cos(a), RY * Math.sin(a), z]; };
       for (let k = 0; k < NT; k++) L.q4(ptA(k, zA), ptA(k + 1, zA), ptA(k + 1, z0), ptA(k, z0), acril);
       for (const z of [zA, zA + 1.4, zA + 2.8, z0 - 0.05]) for (let k = 0; k < NT; k++) { const [xa2, ya2] = ptA(k, 0), [xb2, yb2] = ptA(k + 1, 0); L.q4([xa2, ya2 + 0.02, z - 0.08], [xb2, yb2 + 0.02, z - 0.08], [xb2, yb2 + 0.02, z + 0.08], [xa2, ya2 + 0.02, z + 0.08], metal); }
@@ -606,7 +658,7 @@ function criarCobertura(P, q) {
   geo.deleteAttribute('color');
   // por baixo a membrana translúcida bem clara, "quase brilhando" (rodada 2; ref-07/ref-08)
   const uCreme = { value: new THREE.Color(0xf4f0e6) }, uTransl = { value: 1.1 };
-  const matM = new THREE.MeshLambertMaterial({ map: texCobertura(P, false), emissiveMap: texCobertura(P, true), emissive: 0xffffff, emissiveIntensity: 0, side: THREE.DoubleSide, flatShading: q !== 'baixa' });
+  const matM = new THREE.MeshLambertMaterial({ map: texCobertura(P, false), emissiveMap: texCobertura(P, true), emissive: 0xffffff, emissiveIntensity: 0, side: THREE.DoubleSide });
   matM.onBeforeCompile = sh => {
     sh.uniforms.uCreme = uCreme; sh.uniforms.uTransl = uTransl;
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uCreme;\nuniform float uTransl;')
@@ -621,7 +673,9 @@ function criarCobertura(P, q) {
   const E = malha();
   // (rodada 3: "por dentro uma faixa preta de treliças cruzadas, parece rede de pesca; no real as treliças radiais são
   // CINZA-CLARO e regulares, o tom é claro e luminoso"): a estrutura de aço em cinza-claro, a passarela em cinza médio
-  const cinza = cor(0x9da4a9), cabo = cor(0xb9bfc3), escuro = cor(0x7f878d), claro = cor(0xc9ced1), luz = cor(0xeef2f4), tela = cor(0x14181c);
+  // (rodada 4, ref-07/ref-08: "a treliça radial GROSSA cinza-escuro em leque regular, com a passarela de refletores bem
+  // marcada"): as treliças radiais em cinza-escuro e mais altas, sem os cabos finos soltos, a passarela escura
+  const cinza = cor(0x6d7378), cabo = cor(0x80878c), escuro = cor(0x474d52), claro = cor(0x5e6469), luz = cor(0xeef2f4), tela = cor(0x14181c);
   const yP = C.yPassarela, NK = q === 'baixa' ? 60 : 120;
   const anel = (u, y0, y1, c, rd = 0) => {
     const a = [], b = [];
@@ -661,20 +715,19 @@ function criarCobertura(P, q) {
     for (const dr of [-1.6, 1.6]) { fita(p(P.uMastro, yP + 0.6), p(P.uMastro, yM, dr), 0.4, cinza, true); fita(p(P.uMastro, yM, dr), p(P.uMastro, yTopo), 0.4, cinza, true); }
     // os cabos de baixo: do anel de compressão à passarela e dela à borda de dentro
     if (q !== 'baixa') {
-      fita(p(0.02, C.yFora - (C.anel ?? 1.6)), p(P.uMastro, yP - 0.6), 0.16, cabo);
-      // da passarela ao anel de dentro um cabo só por eixo (os três em leque viravam "rede de pesca")
-      { const [x1, z1, r1] = P.pontoCob(th, 0.995), f1 = (r1 - 0.3) / r1; fita(p(P.uMastro, yP - 0.6), [x1 * f1, C.yDentro - 1.5, z1 * f1], 0.16, cabo); }
-      // a treliça radial por baixo da membrana (banzo de cima, de baixo e os montantes; as diagonais só na Alta), cinza-claro
+      // a treliça radial por baixo da membrana (banzo de cima, de baixo e os montantes; as diagonais só na Alta): a viga
+      // em leque de cada eixo, da borda de fora à de dentro, mais alta no meio (até 2,6 m)
       const ut = [0.03, 0.22, 0.42, P.uMastro, 0.84, 0.985];
       const top = ut.map(u => p(u, P.alturaCob(u) + amp(u) * AMP_N - 0.35));
-      const bai = ut.map((u, i) => { const t2 = top[i]; return [t2[0], t2[1] - (0.3 + 1.9 * Math.sin(Math.PI * Math.min(1, u * 1.15))), t2[2]]; });
-      for (let i = 0; i + 1 < ut.length; i++) { fita(top[i], top[i + 1], 0.3, claro); fita(bai[i], bai[i + 1], 0.24, claro); { const t2 = top[i + 1], b2 = bai[i + 1], ex = -Math.sin(th) * 0.09, ez = Math.cos(th) * 0.09; E.q4([t2[0] - ex, t2[1], t2[2] - ez], [t2[0] + ex, t2[1], t2[2] + ez], [b2[0] + ex, b2[1], b2[2] + ez], [b2[0] - ex, b2[1], b2[2] - ez], cabo); } if (q === 'alta') fita(top[i], bai[i + 1], 0.1, cabo); }
+      const bai = ut.map((u, i) => { const t2 = top[i]; return [t2[0], t2[1] - (0.4 + 2.2 * Math.sin(Math.PI * Math.min(1, u * 1.15))), t2[2]]; });
+      for (let i = 0; i + 1 < ut.length; i++) { fita(top[i], top[i + 1], 0.55, claro); fita(bai[i], bai[i + 1], 0.45, claro); { const t2 = top[i + 1], b2 = bai[i + 1], ex = -Math.sin(th) * 0.14, ez = Math.cos(th) * 0.14; E.q4([t2[0] - ex, t2[1], t2[2] - ez], [t2[0] + ex, t2[1], t2[2] + ez], [b2[0] + ex, b2[1], b2[2] + ez], [b2[0] - ex, b2[1], b2[2] - ez], cabo); } if (q === 'alta') fita(top[i], bai[i + 1], 0.14, cabo); }
     }
     // o "colar" de nós escuros na linha dos mastros (o círculo pontilhado das aéreas) e os cabos radiais por cima
     const yM2 = P.alturaCob(P.uMastro) + amp(P.uMastro) * AMP_N;
     const [cxm, czm] = P.pontoCob(th, P.uMastro);
     // (rodada 2: mais destacado — a fileira de nós escuros a ~2/3 da profundidade nas aéreas)
-    E.caixa(cxm, yM2 + 0.12, czm, 2.0, 0.45, 2.0, th, cor(0x30363b));
+    // (rodada 4: do chão os nós altos e escuros viravam "dentes" na borda): o nó baixo, cinza-médio
+    E.caixa(cxm, yM2 + 0.06, czm, 1.8, 0.2, 1.8, th, cor(0x5d6368));
     if (q !== 'baixa') {
       const us2 = [0.035, 0.3, P.uMastro, (P.uMastro + 1) / 2, 0.985];
       for (let i = 0; i + 1 < us2.length; i++) fita(p(us2[i], P.alturaCob(us2[i]) + amp(us2[i]) * AMP_N + 0.14), p(us2[i + 1], P.alturaCob(us2[i + 1]) + amp(us2[i + 1]) * AMP_N + 0.14), 0.32, cinza);
@@ -691,7 +744,10 @@ function criarCobertura(P, q) {
     const nx = -Math.cos(t.th), nz = -Math.sin(t.th), ex = Math.cos(h), ez = Math.sin(h);
     const cx = t.x + nx * 0.62, cz = t.z + nz * 0.62;
     E.q4([cx - ex * t.larg / 2, t.y - t.alt / 2, cz - ez * t.larg / 2], [cx + ex * t.larg / 2, t.y - t.alt / 2, cz + ez * t.larg / 2], [cx + ex * t.larg / 2, t.y + t.alt / 2, cz + ez * t.larg / 2], [cx - ex * t.larg / 2, t.y + t.alt / 2, cz - ez * t.larg / 2], tela);
-    for (const s of [-1, 1]) fita([t.x + ex * s * 4, t.y + t.alt / 2 + 0.3, t.z + ez * s * 4], [t.x + ex * s * 4, P.alturaCob(0.88) - 0.5, t.z + ez * s * 4], 0.2, cinza, true);
+    // (rodada 4: "os telões parecem soltos no ar"): a viga de aço em cima, de uma treliça radial à outra, e os 4 tirantes
+    const yv = P.alturaCob(0.88) - 1.0;
+    E.caixa(t.x, yv, t.z, t.larg + 6, 0.7, 0.8, h, escuro, 5);
+    for (const s of [-1, -0.45, 0.45, 1]) fita([t.x + ex * s * (t.larg / 2 - 0.4), t.y + t.alt / 2 + 0.3, t.z + ez * s * (t.larg / 2 - 0.4)], [t.x + ex * s * (t.larg / 2 - 0.4), yv, t.z + ez * s * (t.larg / 2 - 0.4)], 0.22, cinza, true);
   }
   // o rebate da arquibancada e da membrana clara nas faces viradas para baixo (rodada 3: a treliça por baixo ficava
   // verde-escura com a luz do hemisfério de baixo, que é a da grama)
@@ -734,8 +790,13 @@ function criarEstrutura(P, q) {
   // "costelas grossas"; "a almofada branca CONVEXA entre cada par, logo abaixo da borda da cobertura"; "um 2º anel
   // horizontal mais abaixo"): guarda-corpos altos e claros, o fundo em sombra (não preto), costelas de 2,7 m, almofadas
   // abauladas também na largura e as duas vigas fortes (a marquise de +5 m e o anel das rampas a ~11,6 m)
-  const conc = cor(0xa9aaa7), concClaro = cor(0xc9c9c4), concEsc = cor(0x8e9092), fundo = cor(0x40474c), terreo = cor(0x4a5055);
-  const almof = cor(0xf6f5f0).multiplyScalar(1.22), almofLado = cor(0xdcdbd5), lajeTopo = cor(0x8d8e8c), vao = cor(0x2f3439), grade = cor(0xa9b0b5);
+  // rodada 4 (ref-03/ref-04: "tudo branco de plástico; o real é concreto CINZA envelhecido, brancas só as almofadas"; "as
+  // galerias parecem prédio de apartamentos: no real são faixas FUNDAS de sombra com guarda-corpo fino"): o concreto
+  // cinza-médio com a variação de cada costela (sujeira), o fundo das galerias em sombra funda e os guarda-corpos finos
+  const conc = cor(0x8b8c88), concClaro = cor(0x9d9d98), concEsc = cor(0x6f7174), fundo = cor(0x2a3034), terreo = cor(0x343a3e);
+  const almof = cor(0xf6f5f0).multiplyScalar(1.1), almofLado = cor(0xd6d5cf), lajeTopo = cor(0x7d7e7c), vao = cor(0x262b30), grade = cor(0x9aa1a6);
+  const amarelo = cor(0xe9b41c), amareloSob = cor(0xb98c12), corrimao = cor(0x585b5e);
+  const sujo = (c, k) => c.clone().multiplyScalar(0.86 + 0.18 * (0.5 + 0.5 * Math.sin(k * 12.9898 + 4.1) * Math.cos(k * 3.7)));
   const KT = q === 'alta' ? 180 : q === 'baixa' ? 90 : 120;
   const ts = Array.from({ length: KT + 1 }, (_, j) => (2 * Math.PI * j) / KT);
   // parede recuada (o fundo dos vãos, na sombra) e o térreo
@@ -750,15 +811,18 @@ function criarEstrutura(P, q) {
   const lajes = q === 'baixa' ? [11.6, 16.4, Fa.cinta] : [8.4, 11.6, 14.4, 17.4, Fa.cinta];
   for (const y of lajes) {
     const forte = y === Fa.cinta || y === 11.6;
-    const n = P.nFachada(y) - 0.25 + (y === 11.6 ? 0.5 : 0), alt = y === Fa.cinta ? 1.9 : forte ? 1.7 : 1.15, fundoL = forte ? 3.0 : 2.4;
+    const n = P.nFachada(y) - 0.25 + (y === 11.6 ? 0.5 : 0), alt = y === Fa.cinta ? 1.9 : forte ? 1.0 : 0.42, fundoL = forte ? 3.0 : 2.4;
     faixa(n, y - alt, n, y, forte ? conc : concClaro);
     faixa(n, y, n - fundoL, y, concEsc);
-    faixa(n, y - alt, n - fundoL, y - alt, cor(0xa9a7a0));
+    // a laje fina: por baixo só nas vigas fortes; nas galerias o corrimão fino de metal (a 1,05 m) por cima do vão escuro
+    if (forte) faixa(n, y - alt, n - fundoL, y - alt, cor(0x8f8d87));
+    else faixa(n - 0.15, y + 0.98, n - 0.15, y + 1.08, corrimao);
   }
-  // a marquise do anel de circulação (+5 m): a laje grossa avançando 4,6 m, com a frente e o guarda-corpo
-  faixa(4.6, 4.3, 4.6, 5.5, concClaro);
+  // a marquise do anel de circulação (+5 m): a laje grossa avançando 4,6 m, com a frente AMARELA larga dos acessos (ref-04:
+  // "a faixa amarela larga que corre o estádio todo", com as placas "ACESSO ..." do letreiro) e o guarda-corpo
+  faixa(4.6, 3.9, 4.6, 5.5, amarelo);
   faixa(4.6, 5.5, 0, 5.5, concEsc);
-  faixa(4.6, 4.3, 0, 4.3, cor(0xa9a7a0));
+  faixa(4.6, 3.9, 0, 3.9, amareloSob);
   faixa(4.45, 5.5, 4.45, 6.5, concClaro);
   // a laje do topo (de dentro da fachada até a parede de trás da tigela), escura, e o friso amarelo dos acessos no térreo
   {
@@ -779,16 +843,17 @@ function criarEstrutura(P, q) {
     const [nx, nz] = normal(t), ex = -nz, ez = nx;
     const [bx, bz] = base(t);
     const P3 = (n, y, e) => [bx + nx * n + ex * e, y, bz + nz * n + ez * e];
+    const cC = sujo(conc, k), cE = sujo(concEsc, k);
     for (let i = 0; i + 1 < perfilC.length; i++) {
       const [n0, y0] = perfilC[i], [n1, y1] = perfilC[i + 1];
       const d0 = y0 > Fa.cinta ? 1.6 : 3.0, d1 = y1 > Fa.cinta ? 1.6 : 3.0;
       // a costela afina um pouco embaixo (1,1 m de meia largura no chão, 1,35 m da cinta para cima)
       const w0 = y0 >= Fa.cinta ? 1.35 : 1.1 + 0.25 * y0 / Fa.cinta, w1 = y1 >= Fa.cinta ? 1.35 : 1.1 + 0.25 * y1 / Fa.cinta;
       // face de fora, os dois lados e (no gancho) a de dentro
-      L.q4(P3(n0, y0, -w0), P3(n0, y0, w0), P3(n1, y1, w1), P3(n1, y1, -w1), conc);
-      L.q4(P3(n0, y0, w0), P3(n0 - d0, y0, w0), P3(n1 - d1, y1, w1), P3(n1, y1, w1), concEsc);
-      L.q4(P3(n0 - d0, y0, -w0), P3(n0, y0, -w0), P3(n1, y1, -w1), P3(n1 - d1, y1, -w1), concEsc);
-      if (y0 >= Fa.cinta - 0.1) L.q4(P3(n0 - d0, y0, w0), P3(n0 - d0, y0, -w0), P3(n1 - d1, y1, -w1), P3(n1 - d1, y1, w1), concEsc);
+      L.q4(P3(n0, y0, -w0), P3(n0, y0, w0), P3(n1, y1, w1), P3(n1, y1, -w1), cC);
+      L.q4(P3(n0, y0, w0), P3(n0 - d0, y0, w0), P3(n1 - d1, y1, w1), P3(n1, y1, w1), cE);
+      L.q4(P3(n0 - d0, y0, -w0), P3(n0, y0, -w0), P3(n1, y1, -w1), P3(n1 - d1, y1, -w1), cE);
+      if (y0 >= Fa.cinta - 0.1) L.q4(P3(n0 - d0, y0, w0), P3(n0 - d0, y0, -w0), P3(n1 - d1, y1, -w1), P3(n1 - d1, y1, w1), cE);
     }
     // almofada: painel convexo branco entre esta costela e a próxima, por DENTRO do gancho, abaulado nas duas direções
     const t0 = t + (1.3 / A), t1 = (2 * Math.PI * (k + 1.5)) / NE - (1.3 / A);
@@ -813,7 +878,8 @@ function criarEstrutura(P, q) {
   // ---- rampas e pórticos, nos dois lados compridos (rodada 2: UMA rampa reta e larga — antes duas pistas, que pareciam
   // um V —, com o guarda-corpo baixo de concreto, subindo de longe até o anel do 2º pavimento sobre pilares cilíndricos)
   // (as colunas e as faixas brancas do pórtico um pouco acima de 1 na cor do vértice: o branco na sombra continua branco)
-  const deck = cor(0xc9c6bd), deckBaixo = cor(0x77756f), pilar = cor(0xcdcac2), poste = cor(0x5f6468), coluna = cor(0xf4f2ec).multiplyScalar(1.3);
+  // (rodada 4: "o branco do pórtico estourado"): as colunas e as faixas num branco que não satura ao sol
+  const deck = cor(0xb3b1aa), deckBaixo = cor(0x66645f), pilar = cor(0xa9a7a0), poste = cor(0x5f6468), coluna = cor(0xd8d6cf);
   const borda = cor(0xd9d7d0), guarda = cor(0xcfccc4);
   const z0 = Fa.b + 1.5;
   for (const lado of [1, -1]) {
@@ -853,8 +919,13 @@ function criarEstrutura(P, q) {
     const thI = (i, n, k = 1) => thC - meia * k + (2 * meia * k * i) / n;
     const faixaArco = (r0, y0, r1, y1, c, k = 1) => { for (let i = 0; i < NSeg; i++) { const a0 = thI(i, NSeg, k), a1 = thI(i + 1, NSeg, k); L.q4(arco(r0, a0, y0), arco(r0, a1, y0), arco(r1, a1, y1), arco(r1, a0, y1), c); } };
     const rI = Pt.r - 5.5, rE = Pt.r + 5.5, yT = Pt.alt;
-    // a plataforma e os degraus em leque (5 de yb/5, piso de 1,3 m, cada um mais largo)
-    faixaArco(Pt.r - 8, yb, Pt.r + 7, yb, concClaro, 1.05);
+    // a plataforma e os degraus em leque (5 de yb/5, piso de 1,3 m, cada um mais largo); (rodada 4: "luz chapada, sem a
+    // sombra da laje no chão") a faixa da plataforma na sombra da laje das letras (o sol de fora, SOMBRA) mais escura
+    {
+      const dz = SOMBRA[1] * 6.6 * lado, s0 = clampN(rI + 0.7 + dz, Pt.r - 8, Pt.r + 7), s1 = clampN(Pt.r + 7.5 + dz, Pt.r - 8, Pt.r + 7);
+      const pisoP = cor(0xb9b7b0), pisoS = cor(0x56544f);
+      for (const [a, b, c] of [[Pt.r - 8, s0, pisoP], [s0, s1, pisoS], [s1, Pt.r + 7, pisoP]]) if (b - a > 0.05) faixaArco(a, yb, b, yb, c, 1.05);
+    }
     const ND = 5;
     for (let d = 0; d < ND; d++) {
       const r0 = Pt.r + 7 + d * 1.3, r1 = r0 + 1.3, y0 = yb * (1 - d / ND), y1 = yb * (1 - (d + 1) / ND), k = 1.12 + d * 0.08;
@@ -879,8 +950,23 @@ function criarEstrutura(P, q) {
       for (const rr of [Pt.r - 2, Pt.r + 2.2]) { faixaArco(rr, yT - 1.0, rr, yT - 0.7, tubo); faixaArco(rr - 0.15, yT - 1.0, rr + 0.15, yT - 1.0, tubo); }
     }
     // as colunas (lisas, do chão à viga) e, na fileira de fora, os postes de luz em cima da viga (ref-05)
+    // o fundo do pórtico atrás dos gradis (rodada 4: "através do gradil aparece o estádio, como um prédio separado; no
+    // real o pórtico encosta na fachada"): o muro de concreto com as portas escuras, aberto só na boca da rampa
+    for (let i = 0; i < NSeg; i++) {
+      const a0 = thI(i, NSeg), a1 = thI(i + 1, NSeg), xm = (rI - 1) * Math.cos((a0 + a1) / 2);
+      if (Math.abs(xm) < R.larg / 2 + 1) continue;
+      L.q4(arco(rI - 1, a0, yb), arco(rI - 1, a1, yb), arco(rI - 1, a1, 5.9), arco(rI - 1, a0, 5.9), i % 3 === 1 ? vao : cor(0x8a8882));
+    }
     for (const rr of [rI, rE]) for (let i = 0; i < NA; i++) {
       const th = thI(i, NA - 1);
+      // a sombra da coluna no chão (o sol de fora; até a borda de dentro da plataforma)
+      {
+        const cx = rr * Math.cos(th), cz = rr * Math.sin(th), sx = SOMBRA[0] * yT, sz = SOMBRA[1] * yT, ls = Math.hypot(sx, sz);
+        const dentro = sz * Math.sign(cz) < 0, folga = dentro ? Math.abs(cz) - (Pt.r - 8) : Pt.r + 7 - Math.abs(cz);
+        const lim = Math.min(1, Math.max(0, folga / Math.max(1e-3, Math.abs(sz))));
+        const fx = sx * lim, fz = sz * lim, ox = (-sz / ls) * 0.62, oz = (sx / ls) * 0.62, yS = yb + 0.015;
+        if (lim > 0.02) L.q4([cx - ox, yS, cz - oz], [cx + ox, yS, cz + oz], [cx + fx + ox, yS, cz + fz + oz], [cx + fx - ox, yS, cz + fz - oz], cor(0x504e4a));
+      }
       L.cilindro(rr * Math.cos(th), yb, rr * Math.sin(th), yT, 0.66, coluna, q === 'baixa' ? 8 : 16);
       if (rr === rE && i % 2 === 0 && q !== 'baixa') {
         const x = (rr + 1.5) * Math.cos(th), z = (rr + 1.5) * Math.sin(th);
@@ -954,15 +1040,30 @@ function criarLetreiro(P) {
   // (rodada 3; ref-04: "ACESSO SUL C" repetida ao longo da marquise)
   const Fa = P.forma.fachada, A = Fa.a, B = Fa.b, NE = Fa.eixos;
   const pt = (t, n, y) => { let nx = Math.cos(t) / A, nz = Math.sin(t) / B; const l = Math.hypot(nx, nz); nx /= l; nz /= l; return [A * Math.cos(t) + nx * n, y, B * Math.sin(t) + nz * n]; };
-  for (let k = 1; k < NE; k += 5) {
+  // (rodada 4, ref-04: "a faixa amarela larga que corre o estádio todo, com os cubos amarelos das letras"): as placas em
+  // toda a volta da frente amarela da marquise (duas por vão, na altura dela) e um cubo com a letra do setor por acesso
+  const cubo = (cx, cy, cz, lado, rumo, i) => {
+    const u0 = (256 + i * 128) / 2048, u1 = (256 + (i + 1) * 128) / 2048, ch = Math.cos(rumo), sh = Math.sin(rumo), m = lado / 2;
+    const P4 = (a, yy, b) => [cx + ch * a - sh * b, cy + yy, cz + sh * a + ch * b];
+    for (const [a0, b0, a1, b1] of [[-m, m, m, m], [m, m, m, -m], [m, -m, -m, -m], [-m, -m, -m, m]]) {
+      const b = pos.length / 3;
+      for (const [aa, bb, u] of [[a0, b0, u0], [a1, b1, u1]]) for (const [yy, v] of [[-m, 0], [m, 1 / 3]]) { pos.push(...P4(aa, yy, bb)); uv.push(u, v); }
+      idx.push(b, b + 2, b + 1, b + 1, b + 2, b + 3);
+    }
+    const b = pos.length / 3;
+    for (const [aa, bb] of [[-m, -m], [m, -m], [m, m], [-m, m]]) { pos.push(...P4(aa, m, bb)); uv.push(u0 + 0.01, 0.17); }
+    idx.push(b, b + 2, b + 1, b, b + 3, b + 2);
+  };
+  for (let k = 0; k < NE; k++) {
     const t = (2 * Math.PI * (k + 0.5)) / NE;
     const [x, , z] = pt(t, 0, 0), g = Math.atan2(z, x) / RAD;
     const i = Math.abs(g) <= 45 ? 0 : Math.abs(g) >= 135 ? 1 : g > 0 ? 2 : 3;
-    for (const [d0, d1] of [[-6, 1], [1.6, 8.6], [9.2, 16.2]]) {
+    for (const [d0, d1] of [[-6.2, 0.6], [1.2, 8.0]]) {
       const ta = t + d0 / A, tb = t + d1 / A, b = pos.length / 3;
-      for (const [tt, u] of [[tb, i / 4], [ta, (i + 1) / 4]]) for (const [y, v] of [[4.42, 1 / 3], [5.38, 2 / 3]]) { pos.push(...pt(tt, 4.66, y)); uv.push(u, v); }
+      for (const [tt, u] of [[tb, i / 4], [ta, (i + 1) / 4]]) for (const [y, v] of [[4.0, 1 / 3], [5.4, 2 / 3]]) { pos.push(...pt(tt, 4.66, y)); uv.push(u, v); }
       idx.push(b, b + 2, b + 1, b + 1, b + 2, b + 3);
     }
+    if (k % 5 === 1) { const [cx, , cz] = pt(t + 9.5 / A, 5.6, 0); cubo(cx, 6.75, cz, 2.3, Math.atan2(cz, cx) + Math.PI / 4, i); }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -983,7 +1084,7 @@ function criarMarcos(P, q) {
   // nervuras e a lanterna
   {
     const M = E.maracanazinho, N = q === 'baixa' ? 24 : 48, NR = 6;
-    const concM = cor(0xbdbcb5), vidroM = cor(0x3a434b), nerv = cor(0xcac9c3), contra = cor(0xb1b0aa), contraL = cor(0x9a9993);
+    const concM = cor(0xa9a8a2), vidroM = cor(0x323a41), nerv = cor(0xcac9c3), contra = cor(0xb1b0aa), contraL = cor(0x9a9993);
     const P2 = (r, a, y) => [M.x + r * Math.cos(a), y, M.z + r * Math.sin(a)];
     for (let j = 0; j < N; j++) {
       const a0 = (2 * Math.PI * j) / N, a1 = (2 * Math.PI * (j + 1)) / N;
@@ -997,12 +1098,14 @@ function criarMarcos(P, q) {
       for (const s2 of [-1, 1]) L.q4(fo(M.r - 0.4, 0, s2), fo(M.r + 5.5, 0, s2), fo(M.r + 1.6, M.parede + 0.6, s2), fo(M.r - 0.4, M.parede + 0.6, s2), contraL);
     }
     const anel = (r, y, c) => Array.from({ length: N + 1 }, (_, j) => { const a = (2 * Math.PI * j) / N; return L.v(M.x + r * Math.cos(a), y, M.z + r * Math.sin(a), 0.7, 0.005, c); });
-    let prev = anel(M.r + 1.6, M.parede + 1.4, concM);
+    // (rodada 4, ref-10: "claro e liso demais; falta o anel escuro de janelas e a lanterna mais marcada"): o 1º anel da
+    // cúpula é o anel de janelas (vidro escuro, cortado pelas nervuras claras), o resto concreto cinza
+    let prev = anel(M.r + 1.6, M.parede + 1.4, vidroM);
     for (let k = 1; k <= NR; k++) {
       const f = k / NR, r = (M.r + 1.6) * Math.cos(f * Math.PI / 2 * 0.9), y = M.parede + 1.4 + (M.cupula - 1.4) * Math.sin(f * Math.PI / 2 * 0.9);
-      const cur = anel(Math.max(r, 9), y, concM);
+      const cur = anel(Math.max(r, 9), y, k <= 2 ? vidroM : concM);
       for (let j = 0; j < N; j++) L.quad(prev[j], prev[j + 1], cur[j + 1], cur[j]);
-      prev = cur;
+      prev = k === 2 ? anel(Math.max(r, 9), y, concM) : cur;
     }
     // nervuras radiais (fitas mais claras por cima da cúpula)
     for (let j = 0; j < N; j += 2) {
@@ -1017,7 +1120,7 @@ function criarMarcos(P, q) {
     }
     // a lanterna do óculo (o tambor envidraçado e o chapéu) e a borda saliente
     const yT = M.parede + M.cupula;
-    const l0 = anel(9, yT - 0.6, concM), l1 = anel(9, yT + 2.8, vidroM), l2 = anel(9.6, yT + 3.2, concM), l3 = anel(4, yT + 4.4, concM);
+    const l0 = anel(9, yT - 0.6, vidroM), l1 = anel(9, yT + 2.8, vidroM), l2 = anel(9.6, yT + 3.2, cor(0x8e908f)), l3 = anel(4, yT + 4.4, cor(0x8e908f));
     for (let j = 0; j < N; j++) { L.quad(l0[j], l0[j + 1], l1[j + 1], l1[j]); L.quad(l1[j], l1[j + 1], l2[j + 1], l2[j]); L.quad(l2[j], l2[j + 1], l3[j + 1], l3[j]); }
     const fr0 = anel(M.r + 2.2, M.parede - 0.3, cinzaC), fr1 = anel(M.r + 2.2, M.parede + 1.5, cinzaC);
     for (let j = 0; j < N; j++) L.quad(fr0[j], fr0[j + 1], fr1[j + 1], fr1[j]);
@@ -1044,6 +1147,53 @@ function criarMarcos(P, q) {
     for (let d = 0; d < 5; d++) L.caixa(Ce.x, 0.6 + d * 0.9, zt - d * 1.4, 70, 1.2 + d * 1.8, 1.4, 0, cinzaC, 5);
     L.caixa(Ce.x, 11, zt - 4, 74, 0.5, 10, 0, branco, 6);
     for (const dx of [-30, -10, 10, 30]) L.coluna(Ce.x + dx, 0, zt - 8.5, 11, 0.3, cinzaC, 4);
+  }
+  // a rampa CURVA (rodada 4, ref-01): 3 pavimentos em hélice encostados na fachada (a boca virada para ela), cada um com o
+  // piso, a borda grossa de concreto por fora (a "fita" que se vê do alto), a mureta de dentro, o núcleo e os pilares; a
+  // ponte curta do último pavimento até o anel das rampas da fachada
+  {
+    const Rc = E.rampaCurva, NS = q === 'alta' ? 20 : 14, conc2 = cor(0xa3a29c), borda2 = cor(0xbdbcb5), sob = cor(0x6a6964), nuc = cor(0x8f8e88);
+    const aF = Math.atan2(-Rc.nz, -Rc.nx), a0 = aF + 0.75, a1 = aF + 2 * Math.PI - 0.75;
+    const pc = (r, a, y) => [Rc.x + r * Math.cos(a), y, Rc.z + r * Math.sin(a)];
+    Rc.niveis.forEach((yN, iN) => {
+      const yA = iN ? Rc.niveis[iN - 1] : 0.3;
+      for (let i = 0; i < NS; i++) {
+        const u0 = i / NS, u1 = (i + 1) / NS, b0 = a0 + (a1 - a0) * u0, b1 = a0 + (a1 - a0) * u1;
+        const y0 = yA + (yN - yA) * u0, y1 = yA + (yN - yA) * u1;
+        L.q4(pc(Rc.r0, b0, y0), pc(Rc.r1, b0, y0), pc(Rc.r1, b1, y1), pc(Rc.r0, b1, y1), conc2);
+        L.q4(pc(Rc.r0, b0, y0 - 0.6), pc(Rc.r1, b0, y0 - 0.6), pc(Rc.r1, b1, y1 - 0.6), pc(Rc.r0, b1, y1 - 0.6), sob);
+        L.q4(pc(Rc.r1, b0, y0 - 0.6), pc(Rc.r1, b1, y1 - 0.6), pc(Rc.r1, b1, y1 + 1.2), pc(Rc.r1, b0, y0 + 1.2), borda2);
+        L.q4(pc(Rc.r0, b0, y0 - 0.6), pc(Rc.r0, b1, y1 - 0.6), pc(Rc.r0, b1, y1 + 1.0), pc(Rc.r0, b0, y0 + 1.0), conc2);
+      }
+    });
+    L.cilindro(Rc.x, 0, Rc.z, Rc.niveis[2] + 1.0, Rc.r0 - 0.4, nuc, q === 'alta' ? 14 : 10);
+    if (q !== 'baixa') for (let i = 0; i < 8; i++) { const [cx, , cz] = pc(Rc.r1 - 1.2, a0 + ((a1 - a0) * (i + 0.5)) / 8, 0); L.coluna(cx, 0, cz, Rc.niveis[0] - 0.6, 0.5, sob, 5); }
+    // a ponte: do núcleo até a face da fachada (o centro fica a 27 m da base dela, pela normal)
+    const [px0, , pz0] = pc(Rc.r0, aF, 0);
+    const pf = [Rc.x - Rc.nx * 25.4, Rc.z - Rc.nz * 25.4], yP = Rc.niveis[2], ex = -Rc.nz * 3.5, ez = Rc.nx * 3.5;
+    L.q4([px0 - ex, yP, pz0 - ez], [px0 + ex, yP, pz0 + ez], [pf[0] + ex, yP, pf[1] + ez], [pf[0] - ex, yP, pf[1] - ez], conc2);
+    L.q4([px0 - ex, yP - 0.8, pz0 - ez], [px0 + ex, yP - 0.8, pz0 + ez], [pf[0] + ex, yP - 0.8, pf[1] + ez], [pf[0] - ex, yP - 0.8, pf[1] - ez], sob);
+  }
+  // a passarela da UERJ (rodada 4, ref-01: "a passarela longa sobre pilares"): da rampa curva, por cima da esplanada e da
+  // avenida, até o campus — o tabuleiro, as muretas, a cobertura fina de painéis escuros e os pilares em pares
+  {
+    const Pu = E.passarelaUerj, [ax, az] = Pu.a, [bx, bz] = Pu.b, dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz);
+    const tx = dx / l, tz = dz / l, ex = -tz * Pu.larg / 2, ez = tx * Pu.larg / 2, y = Pu.y;
+    const tab = cor(0xaeada7), mur = cor(0xc2c1ba), sob2 = cor(0x6b6a65), teto = cor(0x2e3846), tetoB = cor(0xd0cfc8);
+    const A = [ax, az], B = [bx, bz];
+    const q2 = (p0, p1, o0, o1, c) => L.q4([p0[0] + ex * o0, p0[1], p0[2] + ez * o0], [p1[0] + ex * o0, p1[1], p1[2] + ez * o0], [p1[0] + ex * o1, p1[1], p1[2] + ez * o1], [p0[0] + ex * o1, p0[1], p0[2] + ez * o1], c);
+    const at = (p, yy) => [p[0], yy, p[1]];
+    q2(at(A, y), at(B, y), -1, 1, tab);
+    q2(at(A, y - 0.9), at(B, y - 0.9), -1, 1, sob2);
+    q2(at(A, y + 3.6), at(B, y + 3.6), -1.15, 1.15, teto);
+    q2(at(A, y + 3.45), at(B, y + 3.45), -1.15, 1.15, tetoB);
+    for (const o of [-1, 1]) L.q4([ax + ex * o, y - 0.9, az + ez * o], [bx + ex * o, y - 0.9, bz + ez * o], [bx + ex * o, y + 1.1, bz + ez * o], [ax + ex * o, y + 1.1, az + ez * o], mur);
+    const NPi = Math.floor(l / 16);
+    for (let i = 1; i < NPi; i++) {
+      const cx = ax + tx * i * 16, cz = az + tz * i * 16;
+      for (const o of [-0.7, 0.7]) L.coluna(cx + ex * o, 0, cz + ez * o, y - 0.9, 0.42, sob2, q === 'baixa' ? 4 : 5);
+      if (q !== 'baixa' && i % 2 === 0) for (const o of [-1.05, 1.05]) L.coluna(cx + ex * o, y + 1.1, cz + ez * o, y + 3.45, 0.12, cor(0x7d8186), 4);
+    }
   }
   // os postes altos de luz da esplanada
   if (q !== 'baixa') for (let i = 0; i < 16; i++) {
@@ -1211,9 +1361,11 @@ function criarArvoresBairro(L, q) {
   const r = gerador(5151);
   L.forEach((a, i) => {
     Q.setFromAxisAngle(Y, r() * 6.28);
-    M4.compose(Pv.set(a.x, 0, a.z), Q, S.set(a.raio * (0.85 + r() * 0.3), a.raio * (0.95 + r() * 0.45), a.raio * (0.85 + r() * 0.3)));
+    // (rodada 4: "árvores-bolinha de polígonos"): a copa larga e achatada (vista do alto lê como copa, não bola), o verde
+    // de cada uma diferente
+    M4.compose(Pv.set(a.x, 0, a.z), Q, S.set(a.raio * (0.95 + r() * 0.4), a.raio * (0.55 + r() * 0.3), a.raio * (0.95 + r() * 0.4)));
     m.setMatrixAt(i, M4);
-    m.setColorAt(i, C.setHSL(0.25 + r() * 0.07, 0.32 + r() * 0.12, 0.13 + r() * 0.08));
+    m.setColorAt(i, C.setHSL(0.2 + r() * 0.13, 0.22 + r() * 0.16, 0.11 + r() * 0.1));
   });
   m.instanceMatrix.needsUpdate = true;
   m.computeBoundingSphere();
@@ -1305,20 +1457,30 @@ function criarPalmeiras(P) {
   const pos = [], cr = [];
   // palmeira-imperial (rodada 3: "troncos finos marrom-acinzentados, nada de folhas de desenho animado"): o tronco liso e
   // fino (0,5 m num de 22 m), o palmito verde no alto e 10 folhas compridas e estreitas, arqueadas e caídas na ponta
-  const tronco = cor(0x8c8679), palmito = cor(0x6a8550), folha = cor(0x3d6233), folha2 = cor(0x4a7039);
+  // (rodada 4: "as folhas ainda têm cara de leque de papel verde-limão"): o verde-oliva acinzentado e a folha como uma
+  // RÁQUIS fina arqueada com os folíolos caídos dos dois lados (duas cortinas estreitas inclinadas para baixo)
+  const tronco = cor(0x8c8679), palmito = cor(0x6f7d58), folha = cor(0x4a573a), folha2 = cor(0x5d6a47);
   const q = (a, b, c, d, k) => { for (const p of [a, b, c, a, c, d]) { pos.push(...p); cr.push(k.r, k.g, k.b); } };
   for (let i = 0; i < 5; i++) {
     const a0 = (i / 5) * 2 * Math.PI, a1 = ((i + 1) / 5) * 2 * Math.PI, r0 = 0.014, r1 = 0.011, r2 = 0.013;
     q([r0 * Math.cos(a0), 0, r0 * Math.sin(a0)], [r0 * Math.cos(a1), 0, r0 * Math.sin(a1)], [r1 * Math.cos(a1), 0.8, r1 * Math.sin(a1)], [r1 * Math.cos(a0), 0.8, r1 * Math.sin(a0)], tronco);
     q([r1 * Math.cos(a0), 0.8, r1 * Math.sin(a0)], [r1 * Math.cos(a1), 0.8, r1 * Math.sin(a1)], [r2 * Math.cos(a1), 0.9, r2 * Math.sin(a1)], [r2 * Math.cos(a0), 0.9, r2 * Math.sin(a0)], palmito);
   }
-  for (let i = 0; i < 10; i++) {
-    const a = (i / 10) * 2 * Math.PI + (i % 2) * 0.15, ca = Math.cos(a), sa = Math.sin(a), px = -sa * 0.018, pz = ca * 0.018;
-    const sobe = i % 3 === 0 ? 0.05 : 0.0, k = i % 2 ? folha : folha2;
-    // dois trechos: sobe e abre até o meio, cai até a ponta
-    const m1 = [ca * 0.09, 0.95 + sobe, sa * 0.09], m2 = [ca * 0.17, 0.84 + sobe * 0.4, sa * 0.17];
-    q([-px * 0.5, 0.9, -pz * 0.5], [px * 0.5, 0.9, pz * 0.5], [m1[0] + px, m1[1], m1[2] + pz], [m1[0] - px, m1[1], m1[2] - pz], k);
-    q([m1[0] - px, m1[1], m1[2] - pz], [m1[0] + px, m1[1], m1[2] + pz], [m2[0] + px * 0.3, m2[1], m2[2] + pz * 0.3], [m2[0] - px * 0.3, m2[1], m2[2] - pz * 0.3], k);
+  const NF = 12, TS = [0, 0.35, 0.7, 1];
+  for (let i = 0; i < NF; i++) {
+    const a = (i / NF) * 2 * Math.PI + (i % 2) * 0.2, ca = Math.cos(a), sa = Math.sin(a), pxu = -sa, pzu = ca;
+    const sobe = i % 3 === 0 ? 0.06 : i % 3 === 1 ? 0.02 : -0.02, cai = 0.1 + (i % 4) * 0.025, Lf = 0.15 + (i % 3) * 0.015;
+    const R = TS.map(t => [ca * Lf * t, 0.91 + sobe * Math.sin(Math.PI * t * 0.8) - cai * t * t, sa * Lf * t]);
+    for (let j = 0; j + 1 < TS.length; j++) {
+      const w0 = 0.006 * (1 - 0.6 * TS[j]), w1 = 0.006 * (1 - 0.6 * TS[j + 1]), r0 = R[j], r1 = R[j + 1];
+      q([r0[0] - pxu * w0, r0[1], r0[2] - pzu * w0], [r0[0] + pxu * w0, r0[1], r0[2] + pzu * w0], [r1[0] + pxu * w1, r1[1], r1[2] + pzu * w1], [r1[0] - pxu * w1, r1[1], r1[2] - pzu * w1], folha2);
+      // os folíolos: de cada lado uma cortina que cai a ~50° (comprimento menor na ponta)
+      const c0 = 0.034 * (1 - 0.65 * TS[j]) * (j ? 1 : 0.5), c1 = 0.034 * (1 - 0.65 * TS[j + 1]);
+      for (const sg of [-1, 1]) {
+        const e0 = [r0[0] + sg * pxu * c0 * 0.62, r0[1] - c0 * 0.78, r0[2] + sg * pzu * c0 * 0.62], e1 = [r1[0] + sg * pxu * c1 * 0.62, r1[1] - c1 * 0.78, r1[2] + sg * pzu * c1 * 0.62];
+        q(r0, r1, e1, e0, folha);
+      }
+    }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -1414,7 +1576,7 @@ export function criarForaForma(cena, opc, P, pecas) {
       // (rodada 3: um pouco menos de luz do céu — a sombra aparece — e a névoa azulada longe)
       if (ceu) { const U = ceu.material.uniforms; U.uTopo.value.setHex(0x2f73d0); U.uHorizonte.value.setHex(0xb4cbe2); U.uBaixo.value.setHex(0xa3b4c0); U.uSolDir?.value.set(...SOL); }
       if (hemi) { hemi.color.setHex(0xbcd0ea); hemi.groundColor.setHex(0x9c968b); hemi.intensity = 1.25; }
-      if (sol) sol.intensity = 3.9;
+      if (sol) sol.intensity = 3.4;
     } else if (!liga && salvo) {
       if (ceu) { const U = ceu.material.uniforms; U.uTopo.value.setHex(salvo.topo); U.uHorizonte.value.setHex(salvo.hor); U.uBaixo.value.setHex(salvo.baixo); if (salvo.solDir) U.uSolDir?.value.copy(salvo.solDir); }
       if (cena.fog && salvo.nevoa != null) cena.fog.color.setHex(salvo.nevoa);
