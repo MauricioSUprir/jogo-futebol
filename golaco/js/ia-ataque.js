@@ -530,7 +530,10 @@ export function apoioTatico(m, j) {
   // teste-defesa-corrida, e o online com dois humanos fica igual)
   const atras = (_r.x - j.x) * lado;
   const vAvanco = Math.max(m.bola.v.x * lado, A.cond ? A.cond.vx * lado : 0);
-  ia.subindo = !m.humanos?.includes(j.time) && ((atras > IA_ATAQUE.sobeCorrendo && vAvanco >= IA_ATAQUE.sobeProgride)
+  // (e só quem está longe do condutor, a > sobeLonge m: os de perto subindo em corrida amontoavam o condutor e o chamado
+  // da PRESSÃO do humano chegava menos — teste-pressao-humano M2 66% → 59%)
+  const longe = !A.cond || MD.hypot(A.cond.x - j.x, A.cond.z - j.z) > IA_ATAQUE.sobeLonge;
+  ia.subindo = !m.humanos?.includes(j.time) && ((atras > IA_ATAQUE.sobeCorrendo && vAvanco >= IA_ATAQUE.sobeProgride && longe)
     || (ia.subindo && ia.subTick === m.tick - 1 && atras > IA_ATAQUE.sobeSai));
   ia.subTick = m.tick;
   // a pressa fica por pressaMin s (ligar e desligar a cada tick trocava o modo e o alvo do para())
