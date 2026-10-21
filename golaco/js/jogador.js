@@ -73,8 +73,8 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     cab: undefined, disputaAlta: undefined, disputa: undefined, perdeuAlto: undefined,
     porHumano: undefined, // os botões deste passo vêm da pessoa (sim.js; cavadinha por dois toques, acoes.js)
     // goleiro realista (goleiro.js, só na partida): a base larga dos pés, parado na zona do ponto, a bola solta na área,
-    // a saída no cruzamento lida e o descanso depois de tentar abafar
-    baseGk: undefined, gkParado: undefined, varre: undefined, altoLido: undefined, abafaAte: undefined,
+    // a saída no cruzamento lida, o descanso depois de tentar abafar e a base desenhada (0–1, a pose: anim.js)
+    baseGk: undefined, gkParado: undefined, varre: undefined, altoLido: undefined, abafaAte: undefined, baseF: undefined, setGk: undefined,
   };
   return j;
 }
@@ -282,20 +282,22 @@ export function passoPassada(j, comBola, dt, ev, saida = null) {
   const s = Math.sqrt(j.vx * j.vx + j.vz * j.vz);
   const f = freqPassada(s, comBola), carga = cargaPassada(s);
   const ambosNoChao = j.pes[0].apoio && j.pes[1].apoio;
-  const ativa = passadaAtiva(j, s);
+  // (partida: o goleiro set — goleiro.js velPosicao, j.setGk — freando devagar não tira mais um pé do chão: planta os dois)
+  const ativa = passadaAtiva(j, s) && !(j.setGk && s < GOLEIRO.realista.mov.vSetPes);
   let pedido = saida && ambosNoChao ? saida : null;
   if (!ativa && ambosNoChao && !pedido) {
     // parado (ou andando bem devagar, como o goleiro ajeitando a posição) com o corpo se
     // afastando de um pé: dá um passo com esse pé (antes os pés ficavam para trás e a perna
     // esticada arrastava o pé plantado)
-    let longe = -1, dl = PASSADA.alcanceParado;
+    // (partida: o goleiro set — goleiro.js velPosicao, j.setGk — segura os pés plantados até `alcanceSet` m)
+    let longe = -1, dl = j.setGk ? GOLEIRO.realista.mov.alcanceSet : PASSADA.alcanceParado;
     for (let p = 0; p < 2; p++) {
       const d = distanciaDoApoio(j, p);
       if (d > dl) { dl = d; longe = p; }
     }
     // sem a bola, parado depois de virar o tronco (olhando a bola): pés cruzados em relação ao
     // tronco ou base aberta demais também pedem um passo (o pé mais longe do lugar dele)
-    if (longe < 0 && !comBola) {
+    if (longe < 0 && !comBola && !j.setGk) {
       const rx = -MD.sin(j.rumo), rz = MD.cos(j.rumo);
       const larg = (j.pes[1].x - j.pes[0].x) * rx + (j.pes[1].z - j.pes[0].z) * rz; // > 0: direito à direita
       if (larg < -PASSADA.cruzadoParado || larg > PASSADA.baseMaxParado) {
