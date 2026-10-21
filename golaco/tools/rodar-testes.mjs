@@ -108,8 +108,11 @@ const LISTA = [
   // Pré-jogo (pedido de 11/10): o cortejo do túnel até a fila e o roteiro com os trilhos de câmera (contas puras)
   ['pré-jogo: cortejo do túnel até a fila (pés, colisão, vaga, rumo, custo, hash da partida)', 'teste-cortejo.mjs'],
   ['pré-jogo: roteiro, escalações de 10 s, pular e trilhos de câmera fora dos sólidos', 'teste-prejogo-roteiro.mjs'],
+  ['pré-jogo no Maracanã (forma própria): os trilhos ajustados fora dos sólidos dele', 'teste-prejogo-roteiro.mjs', ['--forma', 'maracana']],
   // Total Match (dono, 15/10: "a logo dos times, torcida, e estádio adaptáveis a cada time"): identidade visual
   ['identidade dos times: padrão = hoje, uniformes sem confusão (ΔE₀₀), torcida, faixas, placas, HUD do TM e o estádio (real na pro, Estádio Total Match na pública)', 'teste-identidade.mjs'],
+  // Estádio com forma própria (dono, 16/10: "não tem nada a ver com o maracanã"): a tigela do Maracanã (estadio-planta.js)
+  ['estádio com forma própria (Maracanã): medidas da pesquisa, torcida no degrau, festa no lugar, câmera de TV, sem forma nada muda', 'teste-estadio-forma.mjs'],
   // Ponte com o Total Match (15/10): o pedido do TM vira os times, o humano no lado do usuário, a trava e a súmula
   ['ponte com o Total Match: pedido → times, humano no visitante, trava "só o meu jogador", súmula e resultado', 'teste-ponte-tm.mjs'],
   // Modo Pênaltis 3D (dono, 15/10: "crie uma versão só de jogador de pênaltis"): a disputa pela Regra 10 da IFAB

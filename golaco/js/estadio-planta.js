@@ -34,7 +34,7 @@ export const TIGELA_PADRAO = Object.freeze({
   // perfil: y da mureta, fração e y do fim do anel inferior, camarote (degrau de vidro até yCam, laje até sCam), topo
   perfil: { y0: 1.8, sInf: 0.27, yInf: 9.2, sCam: 0.03, yCam: 12.6, yTopo: 25.5, curva: 1.25, parapeito: 1.2, laje: 25.3 },
   // lugares da torcida: fileiras (inferior, superior), passo na fileira (m) e escala do torcedor (o de cima vale ~2)
-  fileiras: [24, 30], passo: [0.78, 1.12], escala: [1, 1.3],
+  fileiras: [24, 30], passo: [0.74, 1.05], escala: [1, 1.3],
   corredores: 60, corredorU: 0.08,
   cobertura: { a: 148, b: 129, prof: 68, yFora: 29.2, yMastro: 34.5, yDentro: 33, mastro: 46, yPassarela: 21, eixos: 60 },
   fachada: { a: 152, b: 133, cinta: 21, alto: 27.6, eixos: 60 },
@@ -418,12 +418,16 @@ export function criarPlanta(formaBruta) {
   function thFundo(sx, z) { let lo = -Math.PI / 2 + 0.01, hi = Math.PI / 2 - 0.01; for (let k = 0; k < 40; k++) { const m = (lo + hi) / 2; if (rF(m) * Math.sin(m) < z) lo = m; else hi = m; } const t = (lo + hi) / 2; return sx > 0 ? t : Math.PI - t; }
   /** Faixas na mureta: as mesmas 12 (textos e ordem de bandeiras-dados.js), nos trechos retos da 1ª fileira. */
   function faixas(lista) {
-    const C0 = [-30, -16, 2, 18, -40, 30, 40, -2, 0, 0, 10, 0];
+    // as do lado de lá lado a lado, na ordem de antes, 10% mais curtas, no trecho quase reto da mureta (|x| ≲ 48 m)
+    const la = lista.map((f, i) => ({ f, i })).filter(o => o.f.setor === 0).sort((p, q2) => p.f.centro - q2.f.centro);
+    const KL = 0.9, VAO = 1.2, centros = new Map();
+    let x = -(la.reduce((s2, o) => s2 + o.f.larg * KL, 0) + VAO * (la.length - 1)) / 2;
+    for (const o of la) { const l = o.f.larg * KL; centros.set(o.i, [x + l / 2, l]); x += l + VAO; }
+    const zF = xx => { const th = thLadoDeLa(xx); return rF(th) * Math.sin(th); };
     return lista.map((f, i) => {
       if (f.setor === 0) {
-        const c = clamp(C0[i] ?? f.centro, -40 + f.larg / 2, 40 - f.larg / 2);
-        const zF = x => { const th = thLadoDeLa(x); return rF(th) * Math.sin(th); };
-        return { ...f, centro: c, z: Math.max(zF(c), zF(c - f.larg / 2), zF(c + f.larg / 2)) };
+        const [c, l] = centros.get(i);
+        return { ...f, centro: c, larg: l, z: Math.max(zF(c), zF(c - l / 2), zF(c + l / 2)) };
       }
       const s = f.setor === 1 ? 1 : -1;
       return { ...f, x: s * Math.min(rF(thFundo(s, f.centro - f.larg / 2)) * Math.abs(Math.cos(thFundo(s, f.centro - f.larg / 2))), rF(thFundo(s, f.centro + f.larg / 2)) * Math.abs(Math.cos(thFundo(s, f.centro + f.larg / 2)))) };
@@ -474,21 +478,25 @@ export function criarPlanta(formaBruta) {
   // ---------------------------------------------------------------- pré-jogo: os planos que dependem do estádio
   const K = Math.max(Fa.a, Fa.b) / 93;      // ~1,6: quanto maior que o Estádio Golaço
   const PLANOS = {
-    aereo: { orbita: { centro: [0, 0], olhar: [0, 6, 0], raio: [470, 380], altura: [175, 118], ang: [-74, -48], fov: 40 } },
-    fachada: { cam: { de: [[-96, 2.2, -262], [-80, 6, -236], [-62, 10.5, -214]], para: [[-18, 9, -150], [-12, 13, -146], [-6, 16, -141]], fov: [46, 40], suave: 0.7 } },
-    dentro: { cam: { de: [[-52, 20, 62], [-36, 20.5, 61], [-18, 21, 60]], para: [[-8, 3, -30], [0, 3, -30], [8, 3, -30]], fov: [50, 48], suave: 0.5 } },
+    // o drone do lado de lá (NE) olhando para o Maracanãzinho e o maciço da Tijuca ao fundo (como as aéreas de referência)
+    aereo: { orbita: { centro: [0, 0], olhar: [-40, 55, 60], raio: [540, 430], altura: [160, 118], ang: [-80, -54], fov: 42 } },
+    // a grua na praça do pórtico da rampa de lá (UERJ): o letreiro, depois a rampa e a fachada
+    fachada: { cam: { de: [[-26, 1.8, -298], [-18, 7, -284], [-10, 14, -269]], para: [[0, 5.8, -252], [0, 10, -205], [0, 16, -150]], fov: [44, 40], suave: 0.7 } },
+    dentro: { cam: { de: [[-46, 20, 62], [-32, 20.5, 61], [-18, 21, 60]], para: [[-8, 3, -30], [0, 3, -30], [8, 3, -30]], fov: [50, 48], suave: 0.5 } },
     organizada: { cam: { de: [[48, 3.0, -20], [48, 3.4, -15]], para: [[84, 6.2, -3], [84, 6.6, 2]], fov: [40, 40], suave: 0.3 } },
     ladoDeLa: { cam: { de: [[-6, 2.2, -34], [2, 2.2, -34]], para: [[-12, 6.5, -55], [4, 6.5, -55]], fov: [30, 30], suave: 0.2 } },
     visitantes: { cam: { de: [[-48, 2.5, 18], [-48, 2.8, 14]], para: [[-84, 6, 0], [-84, 6, -4]], fov: [40, 40], suave: 0.3 } },
-    geral: { cam: { de: [[-10, 23, 60], [10, 23, 60]], para: [[0, 0, -16], [0, 0, -16]], fov: [56, 56], suave: 0.3 } },
+    geral: { cam: { de: [[-8, 23, 60], [8, 23, 60]], para: [[0, 0, -16], [0, 0, -16]], fov: [56, 56], suave: 0.3 } },
   };
   /** Troca, no lugar, a câmera dos planos que dependem do estádio (prejogo-roteiro.js criarRoteiro chama antes das curvas). */
   function ajustarPlano(p) {
     const q = PLANOS[p.id];
     if (q && q.cam) p.cam = { ...p.cam, ...q.cam };
     if (q && q.orbita) p.orbita = { ...q.orbita };
-    if (p.orbitaComum) p.orbita = { ...p.orbita, raio: [52, 52], altura: [20, 20] };
+    // a das escalações: o MESMO objeto nas duas (o mesmo fundo)
+    if (p.orbitaComum) p.orbita = orbitaEsc ?? (orbitaEsc = { ...p.orbita, raio: [52, 52], altura: [20, 20] });
   }
+  let orbitaEsc = null;
   /** A câmera da abertura ("Toque para começar"), mais longe e mais alta na mesma proporção do estádio. */
   function ajustarAbertura(c) { c.px *= 1.42; c.pz *= 1.42; c.py *= 1.3; c.ly = 6; return c; }
 
@@ -500,7 +508,7 @@ export function criarPlanta(formaBruta) {
     solido, cameraNoLadoDeCa, noDegrau,
     predios, palmeiras, carros, torcedoresFora,
     faixas, bandeiras, bandeiroes, sinalizadores,
-    ajustarPlano, ajustarAbertura, escala: K,
+    ajustarPlano, ajustarAbertura, escala: K, planos: PLANOS,
     // o plano geral do intervalo e do fim (camera.js CAMERA_GERAL): debaixo da borda da cobertura, olhando o campo
     cameraGeral: { de: [0, 27, 58], para: [0, 3, -16], fov: 40 },
   };

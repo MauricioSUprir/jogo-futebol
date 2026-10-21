@@ -65,6 +65,7 @@ export const TEMPOS_NODE = {
   'teste-cortejo.mjs': 4,
   'teste-prejogo-roteiro.mjs': 0.3,
   'teste-identidade.mjs': 1,
+  'teste-estadio-forma.mjs': 1,
   'teste-ponte-tm.mjs': 21,
   'teste-disputa.mjs': 16,
   'teste-livre.mjs': 60,

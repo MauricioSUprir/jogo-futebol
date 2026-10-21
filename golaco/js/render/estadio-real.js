@@ -155,7 +155,6 @@ function texCobertura(P, emissiva) {
     g.strokeStyle = 'rgba(120,124,126,0.55)'; g.lineWidth = 1.2;
     const linha = (u0, v0, u1, v1) => { g.beginPath(); g.moveTo(u0 * W, y(v0)); g.lineTo(u1 * W, y(v1)); g.stroke(); };
     for (const u of [0, 1]) { linha(u, vm, 0.5, 0.06); linha(u, vm, 0.5, 0.995); }
-    for (let k = 1; k < 4; k++) { linha(0, vm * k / 4, 1, vm * k / 4); }
     g.strokeStyle = 'rgba(150,154,156,0.7)'; g.lineWidth = 2;
     linha(0, 0, 0, 1); linha(1, 0, 1, 1); linha(0.5, 0.05, 0.5, 1);
     // o nó escuro do mastro (o "colar" na linha dos mastros)
@@ -269,7 +268,7 @@ function texFavela() {
 export function criarTigela(P, opc = {}) {
   const q = opc.qualidade ?? 'media', aniso = opc.aniso ?? 4;
   const Pf = P.forma.perfil, T = ESTADIO.tunel;
-  const K = q === 'alta' ? 160 : q === 'baixa' ? 96 : 128;
+  const K = q === 'alta' ? 160 : q === 'baixa' ? 84 : 104;
   const dTh = (2 * Math.PI) / K;
   const tex = texCadeiras(P, q, aniso);
   const mat = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, side: THREE.DoubleSide });
@@ -402,7 +401,7 @@ function criarCobertura(P, q) {
     const th = -Math.PI + (2 * Math.PI * j) / N, nerv = j % (N / C.eixos) === 0;
     us.forEach((u, k) => {
       const [x, z] = P.pontoCob(th, u);
-      const y = P.alturaCob(u) + (q === 'baixa' ? 0 : amp(u) * (nerv ? 0.35 : -0.75));
+      const y = P.alturaCob(u) + (q === 'baixa' ? 0 : amp(u) * (nerv ? 0.5 : -1.35));
       linhas[k].push(L.v(x, y, z, (th / (2 * Math.PI)) * C.eixos, u));
     });
   }
@@ -430,7 +429,7 @@ function criarCobertura(P, q) {
   membrana.name = 'cobertura';
   // estrutura: a passarela técnica (com os refletores), os mastros em losango, os cabos de baixo e os 4 telões
   const E = malha();
-  const cinza = cor(0x7d848a), escuro = cor(0x3d4349), luz = cor(0xdfe4e8), tela = cor(0x14181c);
+  const cinza = cor(0x7d848a), cabo = cor(0xa3a9ad), escuro = cor(0x3d4349), luz = cor(0xdfe4e8), tela = cor(0x14181c);
   const yP = C.yPassarela, NK = q === 'baixa' ? 60 : 120;
   const anel = (u, y0, y1, c, rd = 0) => {
     const a = [], b = [];
@@ -465,7 +464,7 @@ function criarCobertura(P, q) {
     const yM = (yP + 0.6 + yTopo) / 2;
     for (const dr of [-1.6, 1.6]) { fita(p(P.uMastro, yP + 0.6), p(P.uMastro, yM, dr), 0.4, cinza, true); fita(p(P.uMastro, yM, dr), p(P.uMastro, yTopo), 0.4, cinza, true); }
     // os cabos de baixo: do anel de compressão à passarela e dela à borda de dentro
-    if (q !== 'baixa') { fita(p(0.02, C.yFora - 1.9), p(P.uMastro, yP - 0.6), 0.3, cinza); fita(p(P.uMastro, yP - 0.6), p(0.995, C.yDentro - 0.4), 0.3, cinza); }
+    if (q !== 'baixa') { fita(p(0.02, C.yFora - 1.9), p(P.uMastro, yP - 0.6), 0.16, cabo); fita(p(P.uMastro, yP - 0.6), p(0.995, C.yDentro - 0.4), 0.16, cabo); }
   }
   // os 4 telões perto dos cantos, pendurados e virados para o campo
   for (const t of P.TELOES) {
@@ -502,8 +501,8 @@ function criarEstrutura(P, q) {
   const base = t => [A * Math.cos(t), B * Math.sin(t)];
   const normal = t => { const nx = Math.cos(t) / A, nz = Math.sin(t) / B, l = Math.hypot(nx, nz); return [nx / l, nz / l]; };
   const pt = (t, n, y) => { const [x, z] = base(t), [nx, nz] = normal(t); return [x + nx * n, y, z + nz * n]; };
-  const conc = cor(0xaaa8a1), concClaro = cor(0xc9c7c1), concEsc = cor(0x8e8c86), fundo = cor(0x3a3f44), terreo = cor(0x55595c);
-  const almof = cor(0xeceae4), vidro = cor(0x5d7686), amarelo = cor(0xe8b52a), lajeTopo = cor(0x6f7275);
+  const conc = cor(0xb3b1aa), concClaro = cor(0xd6d4cd), concEsc = cor(0x96948d), fundo = cor(0x4b5157), terreo = cor(0x5f6366);
+  const almof = cor(0xf4f3ee), vidro = cor(0x6a8394), amarelo = cor(0xe8b52a), lajeTopo = cor(0x6f7275);
   const KT = q === 'alta' ? 180 : q === 'baixa' ? 90 : 120;
   const ts = Array.from({ length: KT + 1 }, (_, j) => (2 * Math.PI * j) / KT);
   // parede recuada escura (o fundo dos vãos) e o térreo
@@ -517,10 +516,10 @@ function criarEstrutura(P, q) {
   // as lajes com guarda-corpo (frente e topo) e a cinta
   const lajes = q === 'baixa' ? [9.5, 17.5, Fa.cinta] : [9.5, 13.5, 17.5, Fa.cinta];
   for (const y of lajes) {
-    const n = P.nFachada(y) - 0.3, alt = y === Fa.cinta ? 1.2 : 0.75;
+    const n = P.nFachada(y) - 0.25, alt = y === Fa.cinta ? 1.5 : 1.05;
     faixa(n, y - alt, n, y, y === Fa.cinta ? conc : concClaro);
-    faixa(n, y, n - 2.2, y, concEsc);
-    faixa(n, y - alt, n - 2.2, y - alt, concEsc);
+    faixa(n, y, n - 2.4, y, concEsc);
+    faixa(n, y - alt, n - 2.4, y - alt, cor(0xa9a7a0));
   }
   // marquise do anel de circulação (+5 m) avançando 3 m
   faixa(3.2, 5.25, 3.2, 4.65, concClaro);
@@ -529,7 +528,7 @@ function criarEstrutura(P, q) {
   {
     const a = [], b = [];
     for (const t of ts) {
-      const [x, , z] = pt(t, -2.4, 0), th = Math.atan2(z, x), rB = P.rB(th) + 0.5;
+      const [x, , z] = pt(t, 1.2, 0), th = Math.atan2(z, x), rB = P.rB(th) + 0.5;
       a.push(L.v(x, P.forma.perfil.laje, z, 0.7, 0.005, lajeTopo)); b.push(L.v(rB * Math.cos(th), P.forma.perfil.laje, rB * Math.sin(th), 0.7, 0.008, lajeTopo));
     }
     for (let j = 0; j < KT; j++) L.quad(a[j], a[j + 1], b[j + 1], b[j]);
@@ -541,7 +540,7 @@ function criarEstrutura(P, q) {
     const t = (2 * Math.PI * (k + 0.5)) / NE;
     const [nx, nz] = normal(t), ex = -nz, ez = nx;
     const [bx, bz] = base(t);
-    const w = 0.65;
+    const w = 0.85;
     const P3 = (n, y, e) => [bx + nx * n + ex * e, y, bz + nz * n + ez * e];
     for (let i = 0; i + 1 < perfilC.length; i++) {
       const [n0, y0] = perfilC[i], [n1, y1] = perfilC[i + 1];
@@ -554,7 +553,7 @@ function criarEstrutura(P, q) {
     }
     // almofada: painel convexo branco entre esta costela e a próxima (meio cilindro deitado)
     const t0 = t + (0.9 / A), t1 = (2 * Math.PI * (k + 1.5)) / NE - (0.9 / A);
-    const NU = q === 'baixa' ? 2 : 4, perfilA = q === 'baixa' ? [[1.6, 21.5], [2.5, 23.7], [0.9, 26]] : [[1.6, 21.5], [2.45, 22.6], [2.5, 24.4], [0.9, 26.1]];
+    const NU = q === 'baixa' ? 2 : 4, perfilA = q === 'baixa' ? [[1.6, 21.5], [2.9, 23.7], [0.9, 26]] : [[1.6, 21.4], [2.85, 22.5], [2.95, 24.5], [1.0, 26.2]];
     const grade = [];
     for (let iu = 0; iu <= NU; iu++) {
       const tt = t0 + ((t1 - t0) * iu) / NU;
@@ -865,7 +864,8 @@ export function criarForaForma(cena, opc, P, pecas) {
   let disposto = false;
   return {
     grupo,
-    modoFora(v) { for (const m of entorno) m.visible = !!v; },
+    // de dentro a tigela e a cobertura tapam a fachada, as rampas e os pórticos (fora do desenho; o túnel fica)
+    modoFora(v) { for (const m of entorno) m.visible = !!v; fachada.visible = placa.visible = !!v; },
     definirHora,
     atualizar() {},
     dispose() {
