@@ -115,11 +115,7 @@ import {
   planejarComemoracao, criarCena as criarCenaComemoracao, avancarCena, planoCamera, criarPlanoCamera, faseCena,
   tempoCena, duracaoCena, infoAtores,
 } from './comemoracao.js';
-import {
-  planejarSubstituicao, criarCenaSubst, avancarCenaSubst, planoCameraSubst, criarPlanoCameraSubst, tempoCenaSubst,
-  duracaoCenaSubst, infoAtoresSubst, consumirEventosSubst, paresDaPlaca, placaNasMaos, planoEm,
-} from './substituicao.js';
-import { criarPlacaSubst } from './render/placa-subst.js';
+// (js/substituicao.js, a cena de substituição: sob demanda — SOB.subst; sem ela a troca sai só com a faixa ENTRA/SAI)
 // Total Match (?tm=<id>; ponte-tm.js): os times do pedido, o lado do humano, a trava "só o meu jogador" e a súmula
 import { ID_TM, PEDIDO_TM, avisarTM, fimTM, sairTM, gravarResultadoTM, sementeTM, MENSAGENS as MENSAGENS_TM } from './ponte-tm.js';
 import { registrarElenco } from './elenco.js';
@@ -335,6 +331,13 @@ const SOB = {
       if (cam) diretor.redimensionar(window.innerWidth / window.innerHeight, Math.min(window.innerWidth, window.innerHeight) < 520);
     },
   },
+  // a cena de substituição (js/substituicao.js; só depois de uma parada com troca: sem o módulo ainda, só a faixa)
+  subst: {
+    carga: null, ok: false,
+    // (com a placa do quarto árbitro, render/placa-subst.js: criada quando a cena 3D existir)
+    baixar: () => Promise.all([import('./substituicao.js'), import('./render/placa-subst.js')]),
+    criar([md, mp]) { SUBM = md; planoCamSub = md.criarPlanoCameraSubst(); PLACA = mp; if (cena3d && !placaSub) placaSub = mp.criarPlacaSubst(cena3d.cena); },
+  },
   editor: {
     carga: null, ok: false,
     baixar: () => Promise.all([import('./editor-time.js'), cssSobDemanda('css/editor.css', 'css/prejogo.css')]).then(([md]) => md),
@@ -415,12 +418,16 @@ const substParam = params.get('substituicao');
 let substLigada = ONLINE ? false : substParam === '1' ? true : substParam === '0' ? false
   : typeof prefs.substituicao === 'boolean' ? prefs.substituicao : (navigator.webdriver || PRINTS || DEMO_ON) ? false : SUBC.ligada;
 let cenaSub = null;          // a cena em andamento (o laço segura a simulação)
+// (forçada pelo endereço — os testes dela —: o módulo da cena já vem no começo, sem esperar a pré-carga ociosa)
+if (substParam === '1' && !ONLINE) queueMicrotask(() => carregarSobDemanda('subst').catch(() => {}));
 let subBotoes = 0;           // botões segurados no começo: só pulam depois de soltos e apertados de novo
 const substNoPasso = [];     // as trocas do passo (com a posição de quem saiu no tick anterior: o anel do replay)
 const faixaSub2T = [];       // trocas do intervalo: a faixa na saída do 2º tempo
 let estadoAntesPasso = null; // estado da partida antes do passo (a troca do fim do intervalo não abre cena)
 let emRodarPassos = false;   // a API dos testes (rodarPassos) nunca abre a cena
-const planoCamSub = criarPlanoCameraSubst();
+let planoCamSub = null;         // (SOB.subst: criarPlanoCameraSubst quando o módulo chega)
+let SUBM = null;               // o módulo js/substituicao.js (sob demanda)
+let PLACA = null;              // o módulo render/placa-subst.js (sob demanda, junto)
 const custoSub = { n: 0, ms: 0 };
 const _evSub = [], _placa = { x: 0, y: 0, z: 0, rumo: 0 }, _parPlaca = {};
 let placaSub = null;
@@ -1085,9 +1092,9 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   // a placa do quarto árbitro nas mãos dele (o par da vez; o do humano primeiro); fora da cena, some
   if (placaSub) {
     if (cenaSub) {
-      const q = cenaSub.quarto, pp = paresDaPlaca(cenaSub, tempoCenaSubst(cenaSub), _parPlaca);
+      const q = cenaSub.quarto, pp = SUBM.paresDaPlaca(cenaSub, SUBM.tempoCenaSubst(cenaSub), _parPlaca);
       placaSub.mostrar(pp.entra, pp.sai);
-      placaSub.atualizar(placaNasMaos(cenaSub, q.des ?? q.atu, _placa), renderizar);
+      placaSub.atualizar(SUBM.placaNasMaos(cenaSub, q.des ?? q.atu, _placa), renderizar);
     } else placaSub.atualizar(null, renderizar);
   }
   if (cenaGol || cenaSub) {
@@ -1315,7 +1322,9 @@ function decidirSubst(eventos) {
     if (estadoAntesPasso === 'intervalo') faixaDoIntervalo();
     return;
   }
-  const item = { tipo: substLigada && !emRodarPassos ? 'subst' : 'faixaSub', pares };
+  // (sem o módulo da cena ainda — sob demanda —, só a faixa; e pede o módulo para a próxima)
+  if (substLigada && !SUBM) carregarSobDemanda('subst').catch(() => {});
+  const item = { tipo: substLigada && !emRodarPassos && SUBM ? 'subst' : 'faixaSub', pares };
   if ((diretor && diretor.ativo) || filaCenas.length || cenaSub) filaCenas.push(item);
   else if (item.tipo === 'subst') iniciarSubst(item);
   else mostrarFaixaSub(pares);
@@ -1330,8 +1339,8 @@ function faixaDoIntervalo() {
 
 /** Começa a cena (o mundo segurado no tick das trocas: só cópias). */
 function iniciarSubst(item) {
-  const plano = planejarSubstituicao(mundo, item.pares, { timeHumano: TIME_HUMANO, posAntes: id => item.pares.find(p => p.sai === id)?.antes ?? null });
-  cenaSub = criarCenaSubst(plano, mundo);
+  const plano = SUBM.planejarSubstituicao(mundo, item.pares, { timeHumano: TIME_HUMANO, posAntes: id => item.pares.find(p => p.sai === id)?.antes ?? null });
+  cenaSub = SUBM.criarCenaSubst(plano, mundo);
   entrada?.limparPulsos();
   // o que já está segurado não pula (só um aperto novo, depois de SUBST.pularDepois)
   subBotoes = entrada ? entrada.ler(yawEntrada()).botoes : 0;
@@ -1345,7 +1354,7 @@ const _faixaCena = { pagina: 0, destaque: 'sai' };
 /** A página da faixa na cena: o par do plano (SAI, SAI2); no ENTRA passa de par em par; o destaque é quem está no quadro. */
 function infoFaixaCena() {
   const c = cenaSub;
-  const t = tempoCenaSubst(c), ip = planoEm(c, t), pl = c.plano.planos[ip];
+  const t = SUBM.tempoCenaSubst(c), ip = SUBM.planoEm(c, t), pl = c.plano.planos[ip];
   if (!pl || pl.nome === 'entra') {
     // no ENTRA, do 3º par em diante (o 1º e o 2º já passaram no SAI e no SAI2; os outros, no jogo depois do corte —
     // hud.js fila), sem trocar de página a menos de 0,5 s do corte (antes uma página piscava 0,1 s no fim)
@@ -1359,14 +1368,14 @@ function infoFaixaCena() {
 /** Um quadro da cena (fora da pausa): o pulo, o relógio dela, as palmas de quem cruzou a linha e a faixa. */
 function quadroSubst(dt, ent) {
   const c = cenaSub;
-  if (tempoCenaSubst(c) < SUBC.pularDepois) subBotoes |= ent.botoes;
+  if (SUBM.tempoCenaSubst(c) < SUBC.pularDepois) subBotoes |= ent.botoes;
   else {
     const novos = ent.botoes & ~subBotoes;
     subBotoes &= ent.botoes;
     if (novos) { fimSubst(true); return; }
   }
   const t0 = performance.now();
-  avancarCenaSubst(c, dt);
+  SUBM.avancarCenaSubst(c, dt);
   // os treinadores andam os passos da cena com o mundo parado (como na comemoração), vendo os atores dela perto das áreas
   // técnicas (quem sai para a ~1,2 m da linha; quem entra cruza no meio): saem da frente deles
   if (tecnicos && c.ticksUltimo > 0) {
@@ -1380,7 +1389,7 @@ function quadroSubst(dt, ent) {
   // quem saiu cruzou a linha: palmas da torcida do time dele (relógio do desenho)
   if (c.eventos.length) {
     _ctxEmocao.t = tempoEstadio(); _ctxEmocao.bola = mundo.bola.p; _ctxEmocao.ataca = mundo.ataca;
-    for (const ev of consumirEventosSubst(c, _evSub)) emocaoEvento(emocao, ev, _ctxEmocao);
+    for (const ev of SUBM.consumirEventosSubst(c, _evSub)) emocaoEvento(emocao, ev, _ctxEmocao);
     const ds = consumirDisparos(emocao);
     for (const d of ds) tocarSom(d);
   }
@@ -1389,7 +1398,7 @@ function quadroSubst(dt, ent) {
 
 /** O plano de câmera da cena no quadro (cortes pelo nome do plano). */
 function cameraSubst() {
-  planoCameraSubst(cenaSub, { pequena: Math.min(window.innerWidth, window.innerHeight) < 520, aspecto: window.innerWidth / window.innerHeight }, planoCamSub);
+  SUBM.planoCameraSubst(cenaSub, { pequena: Math.min(window.innerWidth, window.innerHeight) < 520, aspecto: window.innerWidth / window.innerHeight }, planoCamSub);
   // a câmera de ala (na beira do campo do lado de cá: z de meioZ + 1,5 a + 2,5) nunca dentro de um treinador
   if (tecnicos) afastarDeTecnicos(planoCamSub.de, tecnicos, 0.6);
   if (planoCamSub.nome !== 'fim') cam.definirCinema(planoCamSub);
@@ -1412,7 +1421,7 @@ function atoresNaLeitura(atores, L) {
 
 /** Pula a cena (só ela: a faixa fica os 4 s). Antes de SUBST.pularDepois, nada. */
 function pularSubst() {
-  if (!cenaSub || tempoCenaSubst(cenaSub) < SUBC.pularDepois) return;
+  if (!cenaSub || SUBM.tempoCenaSubst(cenaSub) < SUBC.pularDepois) return;
   fimSubst(true);
 }
 
@@ -1449,7 +1458,7 @@ function proximaCena() {
     if (typeof it === 'function') { it(); continue; }
     // o "Replay" pedido na pausa durante a cena de substituição
     if (it.tipo === 'replay') { if (iniciarReplay(it.ro)) return; continue; }
-    if (it.tipo === 'subst' && substLigada && mundo.partida) { iniciarSubst(it); return; }
+    if (it.tipo === 'subst' && substLigada && mundo.partida && SUBM) { iniciarSubst(it); return; }
     mostrarFaixaSub(it.pares);
   }
   tocarAdiados();
@@ -2048,6 +2057,7 @@ function comando(c, v) {
       // "Modo de jogo" → "Cena de substituição": ligada ↔ só a faixa (a faixa ENTRA/SAI fica sempre); salvo
       substLigada = !substLigada;
       prefs.substituicao = substLigada; salvarPrefs(prefs);
+      if (substLigada) carregarSobDemanda('subst').catch(() => {});
       marcarSubst();
       break;
     case 'replayAuto':
@@ -2258,8 +2268,8 @@ async function iniciar() {
   });
   marcarPrejogo();
   marcarSubst();
-  // a placa do quarto árbitro (cena de substituição): criada uma vez; pré-carga no 1º quadro desenhado
-  placaSub = criarPlacaSubst(cena3d.cena);
+  // a placa do quarto árbitro (cena de substituição, sob demanda): criada uma vez, quando o módulo chegar
+  if (PLACA && !placaSub) placaSub = PLACA.criarPlacaSubst(cena3d.cena);
   if (!comecarPrejogo(modoPrejogo(), true)) eventosIniciais();
   if (params.get('qps') === '1') hud.mostrarQps(true);
   hud.ajustarTopo();
@@ -2821,14 +2831,14 @@ const api = {
     get estado() {
       const c = cenaSub;
       if (!c) return null;
-      const t = tempoCenaSubst(c), ip = planoEm(c, t);
+      const t = SUBM.tempoCenaSubst(c), ip = SUBM.planoEm(c, t);
       return {
-        plano: c.plano.planos[ip]?.nome ?? 'fim', tempo: t, total: duracaoCenaSubst(c), k: c.k, tick: c.plano.tick,
+        plano: c.plano.planos[ip]?.nome ?? 'fim', tempo: t, total: SUBM.duracaoCenaSubst(c), k: c.k, tick: c.plano.tick,
         pares: c.plano.pares.map(p => ({ time: p.time, sai: p.sai, entra: p.entra, goleiro: p.goleiro, saida: { ...p.saida }, vaga: { ...p.vaga }, numSai: p.numSai, numEntra: p.numEntra })),
         planos: c.plano.planos.map(p => ({ ...p })), camera: cam?.cinema ?? null,
       };
     },
-    atores() { return cenaSub ? infoAtoresSubst(cenaSub) : null; },
+    atores() { return cenaSub ? SUBM.infoAtoresSubst(cenaSub) : null; },
     get camera() { return { nome: planoCamSub.nome, de: [...planoCamSub.de], para: [...planoCamSub.para], fov: planoCamSub.fov, posicao: cam ? { x: cam.camera.position.x, y: cam.camera.position.y, z: cam.camera.position.z } : null, fovReal: cam ? cam.camera.fov : null }; },
     /** Caixa (px CSS) da pose DESENHADA de um ator (padrão: o principal do plano): {x0, y0, x1, y1, altura, dentro, atras}. */
     naTela(id) {
@@ -2836,7 +2846,7 @@ const api = {
       if (!c || !cam) return null;
       let a = null;
       if (id != null) a = c.atores.find(q => q.id === id);
-      else { const pl = c.plano.planos[planoEm(c, tempoCenaSubst(c))]; a = !pl || pl.nome === 'entra' ? c.entra[0] : c.sai.find(q => q.par === pl.par); }
+      else { const pl = c.plano.planos[SUBM.planoEm(c, SUBM.tempoCenaSubst(c))]; a = !pl || pl.nome === 'entra' ? c.entra[0] : c.sai.find(q => q.par === pl.par); }
       if (!a || !a.des) return null;
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, atras = false;
       for (let i = 0; i < NJ; i++) {

@@ -646,11 +646,9 @@ export const GOLEIRO = {
     // chute (sem olhar a velocidade): a bola no corpo de perto entrava 35% e a de 3 m de lado de 25–30 m era defendida
     // 70–85%. Além do alcance a chance cai a zero em GOLEIRO.folgaAlcance (como antes).
     c0: -1.4, cFolga: 2.0, cAlto: 0.6, yAlto: 1.6, altoLado: 1.2,
-    // DE LONGE (a bola que "mexe" no ar e a leitura tardia do ponto de passagem): a chance (não o alcance físico) perde
-    // `erroLonge` m de folga por m de voo além de `dLonge` m do goleiro. StatsBomb, 348 partidas, medido aqui: 85,4% de
-    // defesa nos chutes no alvo de ≥ 16,5 m (1.126) e 64,8% a ≥ 2,5 m de lado com o chute a ≥ 22 m dele (105); sem isto,
-    // nas partidas, 90% (a folga crescia com o tempo de voo e quase toda bola de longe era alcançada com sobra)
-    erroLonge: 0.04, dLonge: 14,
+    // DE LONGE (a leitura da bola que "mexe" no ar): a chance perde `erroLonge` m de folga por m além de `dLonge` m dele,
+    // inteira até `latErro[0]` m de lado e nada a partir de `latErro[1]` (StatsBomb: PESQUISA-ETAPA4.md §13.1)
+    erroLonge: 0.09, dLonge: 14, latErro: [2, 3.5],
     // o alcance da mão (m) no tempo depois da reação (goleiro.js alcanceReal): em pé `emPe`; o braço/perna do reflexo
     // chega a `reflexo` em tReflexo s e o corpo esticado a `esticado` em tEsticar s (somam o deslocamento do mergulho)
     alcance: { emPe: 0.8, reflexo: 0.9, tReflexo: 0.4, esticado: 2.3, tEsticar: 0.6 },
@@ -680,12 +678,9 @@ export const GOLEIRO = {
     // defesas a < 0,5 m de lado — < 12 m 32%, 12–16,5 m 40%, 16,5–25 m 59%, ≥ 25 m 79%, no meio de cada faixa; antes 0,92
     // fixo, sem fonte: o chute de perto no corpo era encaixado em 72%)
     segura: { emPe: [0.66, 0.6, 0.45], mergulho: [0.4, 0.26, 0.05], corpoDist: [[9, 0.32], [14.25, 0.4], [20.75, 0.59], [28, 0.79]], vRef: 18, kV: 0.035, vMin: 0.55, vMax: 1.3, folgaPlena: 0.9, minFolga: 0.35 },
-    // REBOTE (a bola que não fica nas mãos): a fração que vai para FORA (espalmar: pela linha de fundo ou por cima do
-    // travessão) é a da StatsBomb pela técnica e pela altura [< 1 m, 1–1,8 m, ≥ 1,8 m] — 1.006 defesas não seguras
-    // ("Touched Out" ÷ não seguras): em pé 26/30/72%, no mergulho 36/52/76% (a difícil, alta ou no mergulho, sai mais); o
-    // resto escapa e cai perto, de lado (rebater; StatsBomb: 21% das defesas viram rebote perigoso): a bola sai a fração
-    // `fv` da velocidade (entre v[0] e v[1] m/s), a ang[0]–ang[1] rad da frente do gol para o lado dela, subindo vy m/s —
-    // nunca para dentro do gol
+    // REBOTE (a bola que não fica nas mãos): vai para FORA (linha de fundo ou travessão) com a fração da StatsBomb pela
+    // técnica e altura [< 1, 1–1,8, ≥ 1,8 m] (`foraEmPe`/`foraMergulho`); o resto cai perto, de lado: `fv` da velocidade
+    // (entre v[0] e v[1] m/s), a ang[0]–ang[1] rad da frente do gol, subindo vy m/s — nunca para dentro do gol
     rebote: { foraEmPe: [0.26, 0.3, 0.72], foraMergulho: [0.36, 0.52, 0.76], fv: 0.28, v: [3, 7.5], ang: [0.6, 1.25], vy: [0.6, 2.2] },
     // MOVIMENTO (posicionando): parado dentro de `zona` m do ponto (histerese: volta a andar a mais de `zonaSai` m); com o
     // chute armado do adversário (a carga ou o pedido do CHUTE do dono da bola) ele fica "set": freia e só corrige a mais
@@ -703,16 +698,15 @@ export const GOLEIRO = {
       tBase: 0.25, alcanceSet: 0.45,
       // freando set a menos de vSetPes m/s, ele não tira mais um pé do chão (o passo no ar termina depressa, ritmoFim)
       vSetPes: 1.0 },
-    // 1×1 (IA; The FA: fica set e cai na bola ganhável; IDA Valencia: sai no toque longo): com o dono da bola adversário a
-    // até `dist` m do gol, sem companheiro de linha entre ele e o gol (a até `cobre` m da linha dono → gol e mais perto do
-    // gol) nem colado nele (`colado` m), ele só sai na bola do toque longo (a mais de `colado` m do pé do dono) a que chega
-    // `chega` s antes do dono; senão fica na posição de sempre (StatsBomb 1×1: defesa 70,5% a < 2 m da linha, 41,9% a 4–6 m)
+    // 1×1 (IA): o dono adversário a até `dist` m do gol, sem companheiro de linha a `cobre` m da linha dono → gol nem a
+    // `colado` m dele; corre só na bola do toque longo a que chega `chega` s antes do dono (PESQUISA-ETAPA4.md §13.1)
     umXum: { dist: 20, cobre: 2.2, colado: 1.3, chega: 0.1 },
     // ABAFAR (cair nos pés / pegar a bola do toque longo): a bola baixa (até `y` m) e devagar (até `vMax` m/s) a até `alcance`
     // m dele (+ `saindo` saindo no 1×1), na área com a mão valendo, mais perto dele que do pé do dono (o toque longo); um
     // sorteio por tentativa (`p` pelo reflexo), e depois `descanso` s sem tentar
     abafa: { y: 0.6, vMax: 9, alcance: 0.95, saindo: 0.45, p: [0.55, 0.85], descanso: 0.5 },
-    // BOLA SOLTA NA ÁREA (o "Keeper Sweeper" da StatsBomb, ~1 por goleiro por partida): rasteira/baixa, o goleiro vai nela
+    // BOLA SOLTA NA ÁREA (o "Keeper Sweeper" da StatsBomb, ~1 por goleiro por partida; 0,061 por chute na área, medido aqui:
+    // 512 em 8.417 chutes): rasteira/baixa, o goleiro vai nela
     // quando chega antes de todo adversário com `folga` s, no máximo a `dist` m da linha, com a mão valendo no ponto (o
     // caminho previsto por `horizonte` passos); indo nela, pega (sim.js bolaLivre) até `vPega` m/s (9 nos outros casos)
     varre: { folga: 0.3, dist: 15, y: 1.2, horizonte: 150, vPega: 12 },
@@ -1007,29 +1001,19 @@ export const CABECEIO = {
   gol: 15,
   // afastar: para longe do meu gol e para o lado da bola (nunca para o meio da minha área)
   vAfasta: 16, elAfasta: 0.62, ladoAfasta: 0.55,
-  // (partida) o afastamento pela física do contato (acoes.js afastarReal): a testa vira até `giro` rad do rumo do corpo
-  // (pescoço e tronco no salto) e a bola sai na direção dela com `en` da velocidade normal que trazia devolvida mais
-  // `vTesta` m/s da testa; sem ângulo para longe do próprio gol, para cima (`elFuga` rad). Conferido pelo destino dos cortes
-  // de cabeça de cruzamento da StatsBomb (348 partidas, medido aqui: escanteio em 22% na pequena área, 7% a 5,5–11 m e 0,7%
-  // a 11–16,5 m; lateral 7–10%) — nas partidas IA × IA, 17% / 8% / 5% (24 partidas)
+  // (partida) o afastamento pela física da testa (acoes.js afastarReal): vira até `giro` rad do corpo, devolve `en` da
+  // velocidade normal + `vTesta` m/s; sem ângulo, para cima (`elFuga`). StatsBomb: PESQUISA-ETAPA4.md §13.1
   afastaReal: { giro: 1.0, en: 0.5, vTesta: 7, elFuga: 1.05 },
   // a gol: mira a bola baixa na linha do gol (onde o goleiro alcança menos), entre yGol[0] e yGol[1] m, a zGol m do meio,
   // do lado longe do goleiro (sem o analógico)
   yGol: [0.3, 1.1], zGol: 0.8,
 };
 
-// BLOQUEIO COM A PERNA (partida; sim.js bloqueioPerna — o treino não muda). StatsBomb open data, 348 partidas, medido
-// aqui (PESQUISA-ETAPA4.md §13): 27,4% dos chutes são bloqueados (15,6% de < 11 m, 36,1% de 16,5–25 m) e 25,8% dos
-// bloqueados viram escanteio (9,8% lateral, 3,0% tiro de meta, 35,1% a defesa fica, 14,6% outro chute); o bloqueio é a
-// maior origem dos escanteios (42%: de chute 1,7 e de passe baixo saindo da linha de fundo 2,0 por partida). Aqui a
-// bola só batia no corpo (0,31 m do centro) e só 4,8% dos chutes eram bloqueados. O defensor que está a até `dist` m de
-// quem chuta (ou de quem passa baixo — passe, cruzamento, enfiada — a até `fundo` m da linha de fundo que ele defende) e
-// de frente para ele (até `frente` rad) estica a perna: a bola baixa (até `alto` m) que passa a até `perna` m do centro
-// dele nos primeiros `ticks` passos bate na perna com a chance p (de p[0] com a bola a 0,31 m a p[1] no fim do alcance;
-// × (1 + `kAttr`·(desarme − 70)/100)), sorteada uma vez por bola e defensor. A bola sai pela física do contato com a perna
-// (um cilindro atravessado no caminho): a normal sobe `phi` rad (a bola bate acima do eixo da canela e sobe) e vira até
-// `psi` rad para o lado (a perna em diagonal); restituição `e` (bola × canela) — de frente ela volta para quem chutou, de
-// raspão desvia e segue (por cima do travessão, pela linha de fundo).
+// BLOQUEIO COM A PERNA (partida; sim.js bloqueioPerna; StatsBomb: 27,4% dos chutes bloqueados, 25,8% deles viram
+// escanteio — PESQUISA-ETAPA4.md §13.1; contrato no CONTRATOS.md): o defensor a ≤ `dist` m de quem chutou (ou passou
+// baixo a ≤ `fundo` m da linha de fundo dele) e de frente (≤ `frente` rad) bloqueia a bola baixa (≤ `alto` m; o passe a <
+// `pertoPasse` m do pé, ≤ `altoPasse`) que passa a < `perna` m dele nos primeiros `ticks` passos, com a chance p (pelo
+// alcance; × `kAttr` pelo desarme); a bola reflete na canela (normal sobe `phi`, vira `psi` ± `psiVar` rad; restituição e)
 export const BLOQUEIO = {
   perna: 1.0, alto: 0.8, altoPasse: 1.3, pertoPasse: 3, dist: 7, fundo: 16.5, frente: 2.2, ticks: 30, p: [0.95, 0.5], kAttr: 0.5,
   phi: [0, 0.5], psi: [0.1, 0.6], psiVar: 0.3, e: 0.45,

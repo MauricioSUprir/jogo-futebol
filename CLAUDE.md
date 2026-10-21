@@ -171,8 +171,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   Aleatoriedade só por `rng.js` (sfc32 com semente no mundo); mesma semente = mesmo hash (`hashMundo`). Pose =
   função pura do estado (`anim.js`). Contratos em `golaco/CONTRATOS.md`, constantes em `golaco/js/config.js`.
   Coordenadas: x = comprimento (±52,5), z = largura (±34), y para cima, rumo h → (cos h, 0, sin h).
-  Código que não desenha o 1º quadro entra sob demanda (import() + pré-carga ociosa; hoje o replay e o Editar time:
-  `main.js` carregarSobDemanda, `config.js` SOB_DEMANDA); o teste-carga cobra a folga (≥ 120 KB até os 4 MB) e a lista.
+  Código que não desenha o 1º quadro entra sob demanda (import() + pré-carga ociosa; hoje o replay, o Editar time e a cena de
+  substituição com a placa: `main.js` carregarSobDemanda, `config.js` SOB_DEMANDA); o teste-carga cobra a folga (≥ 120 KB até os 4 MB) e a lista.
 - Condução (Etapa 1, `js/conducao.js`): sem ímã — o toque calcula a velocidade da bola pela MESMA conta da rolagem
   (`bola.js` velParaDistancia, exata) para chegar ao ponto do pé no próximo toque, prevendo o próprio corpo com a
   mesma função de locomoção (`jogador.js` passoCorpo). Toque sincronizado com a passada (pé de apoio no chão), um

@@ -220,8 +220,9 @@ export function lerChute(m, j) {
     corpo = alturaOk && dist <= RL.corpo && plano.y <= RL.corpoAlto;
     folgaR = alcR - dist;
     // (de longe a bola "mexe" no ar — a leitura do ponto de passagem erra mais: a chance perde `erroLonge` m de folga por m
-    // de voo além de `dLonge` m dele; o alcance físico, o encaixe e a bola no corpo não mudam)
-    const erroL = RL.erroLonge * Math.max(0, dChute - RL.dLonge);
+    // de voo além de `dLonge` m dele, inteira até `latErro[0]` m de lado e sumindo até `latErro[1]` m — a do canto, que já
+    // pede o mergulho inteiro, não; o alcance físico, o encaixe e a bola no corpo não mudam)
+    const erroL = RL.erroLonge * Math.max(0, dChute - RL.dLonge) * clamp((RL.latErro[1] - dist) / (RL.latErro[1] - RL.latErro[0]), 0, 1);
     pDefesa = corpo ? 1 : alturaOk ? chanceReal(dist, plano.y, alcR - erroL, a) : 0;
   } else {
     // (o tempo de voo só conta no cabeceio a gol: GOLEIRO.logit.cTempo)
@@ -329,10 +330,9 @@ function saidaNoAlto(m, j) {
     if (m.tick < d.tick) d.fora = true;
     return false;
   }
-  // (nenhuma finalização — chute, colocado, cavadinha, cabeceio — e nunca por cima da leitura de chute desta bola: o
-  // colocado e a cavadinha viravam "cruzamento", a saída trocava a defesa já lida e o goleiro levava o gol)
+  // (nenhuma finalização — chute, colocado, cavadinha, cabeceio: o colocado e a cavadinha viravam "cruzamento", a saída
+  // trocava a defesa já lida e o goleiro levava o gol; a saída abandonada relê o chute em lerChute)
   if (!v || v.time === j.time || v.tipo === 'cabeceio' || vooFinalizacao(v) || b.rolando || b.p.y < 0.3) return false;
-  if (d && !d.fora && !d.saidaAlta && d.chave === v.tickChave) return false;
   if (m.disputa || (m.parada && !m.parada.rolou) || mergulhoAtivo(j, m.tick + 1)) return false;
   // reavaliada a cada C.cada ticks enquanto a bola voa (os jogadores andam)
   const A = j.altoLido;
@@ -897,13 +897,9 @@ function velPosicao(m, j, dd, vel, cabeceioVindo = false) {
 }
 
 /**
- * 1×1 na partida (GOLEIRO.realista.umXum): ele só sai quando chega antes — a bola baixa do toque longo do dono (a mais de
- * `colado` m do pé dele, com a mão valendo, e ele chega `chega` s antes do dono) — e vai nela (e cai nela: abafar,
- * sim.js). Com a bola no pé do dono ele fica na posição de sempre, perto da linha e set com o chute armado (devolve null:
- * movimentoGoleiro segue para o posicionamento). The FA ("Different saving actions"): ficar set e cair só na bola
- * ganhável; IDA Valencia: sair no toque longo; StatsBomb (1×1 no alvo, medido aqui): defesa 70,5% com o goleiro a < 2 m da
- * linha, 68,4% a 2–4 m e 41,9% a 4–6 m. (Antes ele corria na bissetriz até 5,5 m da linha e chegava andando no chute: no
- * canhão de contra-ataque a defesa caiu de 59 para 45% e a IA cavava em 58% dos lances — ACOES.cavadinha.goleiroFora 5 m.)
+ * 1×1 na partida (GOLEIRO.realista.umXum): só corre na bola baixa do toque longo do dono (a mais de `colado` m do pé, a mão
+ * valendo, chegando `chega` s antes) e cai nela (abafar, sim.js); senão null: o posicionamento de sempre, set no chute
+ * armado (sair na bissetriz até 2,5–5,5 m baixava a defesa do 1×1: PESQUISA-ETAPA4.md §13.1).
  */
 function saida1x1Partida(m, j, olhar) {
   const U = GOLEIRO.realista.umXum, b = m.bola;
