@@ -5,7 +5,7 @@
 //   F2) medidas da pesquisa: furo da cobertura 160 × 122 (± 5 m), profundidade da cobertura 68 m, fachada ~304 × 266,
 //       a última fileira a ~25 m;
 //   F3) os lugares da torcida: no degrau (≤ 5 cm), nenhum na boca do túnel nem com a cabeça dentro de um sólido, nos 4
-//       setores; a torcida de cada qualidade com o MESMO número de torcedores de hoje (± 15%);
+//       setores; a torcida de cada qualidade com até 15% a mais e até 30% a menos de torcedores que a de hoje (cadeiras à mostra);
 //   F4) a festa no lugar: sinalizadores e bandeiras de mastro no degrau, faixas sem se encostar e na frente da mureta,
 //       bandeirões sem furar a cabeça de ninguém (o mais alto, 2,15 m, embaixo do pano);
 //   F5) a câmera de TV (PC e celular, a bola em qualquer lugar do campo) nunca dentro da cobertura nem de um sólido que
@@ -82,8 +82,10 @@ if (!PL) {
     const tF = TD.gerarTorcidaNiveis(null, null, L);
     const conta = d => { const c = [0, 0, 0]; for (const g of d.faixas) for (let q = 0; q < 3; q++) c[q] += g.porNivel[q]; return [c[0], c[0] + c[1], c[0] + c[1] + c[2]]; };
     const ca = conta(tAntes), cf = conta(tF);
-    const okQ = cf.every((v, q) => Math.abs(v - ca[q]) / ca[q] <= 0.15);
-    reg('F3 torcida por qualidade (Baixa/Média/Alta) como a de hoje (± 15%)', `${cf.join('/')} × hoje ${ca.join('/')}`, '± 15%', okQ);
+    // até 15% a MAIS (o custo no celular) e até 30% a menos: a rodada 1 da prévia deixa ~15% das cadeiras do mosaico à
+    // mostra (escadas, fileiras de cima, manchas, setor visitante) — "o vermelho em 100% apaga o Maracanã"
+    const okQ = cf.every((v, q) => (v - ca[q]) / ca[q] <= 0.15 && (ca[q] - v) / ca[q] <= 0.3);
+    reg('F3 torcida por qualidade (Baixa/Média/Alta): +15% / −30% da de hoje', `${cf.join('/')} × hoje ${ca.join('/')}`, '+15% / −30%', okQ);
     // F4 festa
     const sinal = P.sinalizadores(), errS = [];
     for (const k of ['organizada', 'quinas', 'visitante']) for (const [x, y, z] of sinal[k]) { const e = Math.abs(P.perfil(P.sDe(x, z)) - y); if (e > 0.05 || P.sDe(x, z) < 0) errS.push(`${k} ${fmt(e * 100, 0)} cm`); }
