@@ -648,6 +648,9 @@ export const IA = {
     // não aumentava a pressão — medido)
     pressa: { vAlvo: null, retoma: 0.6, dist: 4, magMin: 0.25, corre: [3, 1.5], freia: false },
     calma: { vAlvo: 9, retoma: 1.2, dist: 14, magMin: 0.2, corre: [14, 10], freia: true },
+    // sobe com o ataque (IA_ATAQUE.sobeCorrendo; dono, 17/10: "a IA não corre pra atacar"): o ponto filtrado da calma, a
+    // corrida firme logo (dist curta) e sem o sprint (o CORRER desligado); freia na linha antes de inverter
+    sobe: { vAlvo: 9, retoma: 1.2, dist: 3, magMin: 0.2, corre: [Infinity, Infinity], freia: true },
   },
   giroParado: 8,              // rad/s: giro máximo do tronco parado da IA sem a bola (o humano: JOGADOR.giroCorpoParado)
   trocaMarcacao: 3,           // m: a marcação só troca de homem se a nova for isto melhor (antes trocava ~18×/min)
@@ -1255,7 +1258,13 @@ export const IA_ATAQUE = {
   // |z| > zAtiva (quem vai precisa de tempo para chegar)
   cruzamento: { zLateral: 20.16, xTerco: 30, zAtiva: 15, xAtiva: 17.5 },
   areaCorre: 6,               // m — quem vai à área e está mais longe que isto do ponto vai correndo (pressa)
-  sobeCorrendo: 1000,         // m — alvo mais que isto à frente: sobe correndo (pressa; desligado: o tronco tremia)
+  // m — com o alvo mais que sobeCorrendo à frente, sobe em corrida firme (IA.modos.sobe) até ficar a menos de sobeSai
+  // (histerese; era 1000 = desligado desde a Etapa 3: com a pressa ligando e desligando o tronco tremia e o jogador
+  // andava-corria em ciclos). Dono, 17/10: "A IA NÃO CORRE ... NEM PRA ATACAR" (medir-corrida.mjs)
+  sobeCorrendo: 6,
+  sobeSai: 1.5,
+  sobeProgride: 2,            // m/s — só sobe com a bola ou o condutor indo para o gol a isto ou mais
+  sobeLonge: 12,              // m — e só quem está a mais que isto do condutor (os de perto não amontoam nele)
   antecipa: 0.9,              // s — as referências usam a bola daqui a isto (o time anda com o passe)...
   antecipaFiltro: 0.5,        // s — ...filtrada (constante de tempo; sem saltos a cada toque)
   pressaMin: 0.6,             // s — quem entra na pressa fica nela por isto (sem trocar de modo a cada tick)
