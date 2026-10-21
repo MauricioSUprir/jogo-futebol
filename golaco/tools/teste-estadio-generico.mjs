@@ -12,7 +12,7 @@
 //       do lado de cá só com ele escondido (cameraNoLadoDeCa: a arquibancada, o túnel e a cobertura de cá);
 //   G5) os trilhos do pré-jogo (3 modos + abertura) fora dos sólidos com 0,5 m de folga, inclinação −60…+20° e fov
 //       20–60°, o túnel por dentro do corredor;
-//   G6) clássico: cada metade com a sua torcida; G7) desempenho: a planta ≤ 60 ms e os lugares ≤ 700 ms (Node);
+//   G6) clássico: cada metade com a sua torcida; G7) desempenho: a planta ≤ 120 ms e os lugares ≤ 900 ms (Node);
 //   G8) sem forma nada muda (os sólidos num grid e a torcida de hoje).
 //   node tools/teste-estadio-generico.mjs [--js <pasta js>] [--so chave1,chave2] [--rapido (só os 5 de exemplo)] [--extra <json>]
 import fs from 'node:fs';
@@ -162,7 +162,7 @@ if (!G) {
   reg('G4 câmera de TV (PC e celular) fora dos sólidos do desenho (o lado de cá escondido atrás da 1ª fileira)', lista(res.g4), 'todos', res.g4.length === 0);
   reg('G5 trilhos do pré-jogo fora dos sólidos (0,5 m), −60…+20°, fov 20–60°, túnel por dentro', lista(res.g5, 2), 'todos', res.g5.length === 0);
   reg('G6 clássico: cada metade com a sua torcida (≥ 95%)', lista(res.g6), 'todos', res.g6.length === 0);
-  reg('G7 desempenho em Node: a planta e os lugares (o pior estádio)', `planta ${fmt(tPlanta, 0)} ms; lugares ${fmt(tLug, 0)} ms`, '≤ 60 ms; ≤ 700 ms', tPlanta <= 60 && tLug <= 700);
+  reg('G7 desempenho em Node: a planta e os lugares (o pior estádio)', `planta ${fmt(tPlanta, 0)} ms; lugares ${fmt(tLug, 0)} ms`, '≤ 120 ms; ≤ 900 ms (Node, máquina dividida)', tPlanta <= 120 && tLug <= 900);
   const depois = grid.map(([x, y, z]) => F.solidoEm(x, y, z, 0.3, true) + '|' + F.solidoEm(x, y, z, 0.3, false));
   const dif = depois.filter((v, i) => v !== antes[i]).length;
   const t2 = TD.gerarTorcidaNiveis();

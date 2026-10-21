@@ -10,7 +10,7 @@ import { ARQUIBANCADA as A } from './torcida-dados.js';
 import { criarCanvas, texturaCanvas } from './util.js';
 
 const TILE_FACHADA = 12;   // m de fachada por repetição da textura (o mesmo de render/estadio-fora.js)
-export const ESTILOS = new Set(['vidro', 'concreto', 'metal', 'membrana', 'tijolo', 'trelica', 'paineis']);
+export const ESTILOS = new Set(['vidro', 'concreto', 'aberto', 'metal', 'membrana', 'tijolo', 'trelica', 'paineis']);
 const rgbDe = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 const hexDe = c => '#' + c.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
 /** Mistura duas cores '#rrggbb' (t = peso da 2ª), clareia e escurece. */
@@ -84,6 +84,20 @@ export function texFachadaEstilo(aniso, emissiva, fa) {
     }
     for (let k = 0; k <= an; k++) ret(0, nivel(k) - 0.3, T, nivel(k) + 0.3, noite ? '#000' : clarear(c1, 0.12));
     if (noite && led) for (let k = 1; k < an; k++) ret(0, nivel(k) + 0.18, T, nivel(k) + 0.3, led);
+  } else if (e === 'aberto') {
+    // concreto ABERTO (os estádios antigos: Morumbi, Banorte, Saitama): o esqueleto à mostra — pilares a cada 6 m, as
+    // bandejas de cada anel e as rampas em diagonal na frente do escuro de dentro (as costas das arquibancadas)
+    ret(0, Y0, T, Y1, noite ? '#000' : mix('#14181b', c2, 0.15));
+    if (noite) for (let k = 0; k < an * 2; k++) ret(0, Y0 + (Y1 - Y0) * (k + 0.3) / (an * 2), T, Y0 + (Y1 - Y0) * (k + 0.55) / (an * 2), luz(0.35, sorte(k, 1, 8)));
+    const cor = noite ? '#000' : c1;
+    // a rampa: duas fitas em diagonal que sobem e voltam a cada ladrilho
+    if (!noite) for (const [x0, x1] of [[0, T / 2], [T, T / 2]]) {
+      g.strokeStyle = clarear(c1, 0.08); g.lineWidth = X(0.55);
+      g.beginPath(); g.moveTo(X(x0), Y(Y0 + 0.6)); g.lineTo(X(x1), Y(Y0 + (Y1 - Y0) * 0.48)); g.stroke();
+      g.beginPath(); g.moveTo(X(x1), Y(Y0 + (Y1 - Y0) * 0.52)); g.lineTo(X(x0), Y(Y1 - 0.6)); g.stroke();
+    }
+    for (let k = 0; k <= an * 2; k++) { const y = Y0 + (Y1 - Y0) * k / (an * 2); ret(0, y - 0.22, T, y + 0.22, cor); if (!noite) ret(0, y - 0.22, T, y - 0.12, escurecer(c1, 0.25)); }
+    for (const x of [0.3, 6.3]) { ret(x, Y0, x + 0.9, Y1, cor); if (!noite) { ret(x, Y0, x + 0.15, Y1, clarear(c1, 0.15)); ret(x + 0.75, Y0, x + 0.9, Y1, escurecer(c1, 0.3)); } }
   } else if (e === 'metal') {
     // lâminas verticais (brises) a cada 0,5 m na frente de um fundo escuro; as faixas dos anéis em chapa lisa
     ret(0, Y0, T, Y1, noite ? '#000' : escurecer(c2, 0.4));

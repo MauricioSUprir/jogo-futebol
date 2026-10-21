@@ -74,6 +74,15 @@ function marcaDoJogo(m, e) {
   void e;
   return out;
 }
+const REGIOES = {
+  br: ['Brazil'], latam: ['Mexico', 'Uruguay', 'Argentina', 'Ecuador', 'Colombia', 'Chile', 'Peru', 'Paraguay', 'Bolivia', 'Venezuela', 'Costa Rica'],
+  eu_norte: ['Germany', 'England', 'Netherlands', 'Russia', 'Scotland', 'Belgium', 'Austria', 'Switzerland', 'Denmark', 'Sweden', 'Norway', 'Poland', 'Ukraine', 'Czech Republic', 'Wales', 'Ireland'],
+  eu_sul: ['Spain', 'Portugal', 'France', 'Italy', 'Turkey', 'Greece', 'Croatia', 'Serbia'],
+  mena: ['Saudi Arabia', 'Morocco', 'Qatar', 'Egypt', 'United Arab Emirates', 'Algeria', 'Tunisia', 'Iran'],
+  asia: ['Japan', 'South Korea', 'China', 'India', 'Australia'], na: ['United States', 'USA', 'Canada'],
+};
+/** A região das cores do entorno pelo país (o da base; sem ele, Brasil). */
+export function regiaoDoPais(p) { for (const [k, l] of Object.entries(REGIOES)) if (l.includes(p)) return k; return 'br'; }
 /** A forma do jogo a partir de um estádio da pesquisa. */
 export function formaDaPesquisa(e) {
   const lados = {};
@@ -135,6 +144,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     const forma = formaDaPesquisa(e);
     const aj = ajustes[e.chave];
     if (aj) for (const [k, v] of Object.entries(aj)) forma[k] = v && typeof v === 'object' && !Array.isArray(v) && forma[k] && typeof forma[k] === 'object' ? { ...forma[k], ...v } : v;
+    // a região (as cores das casas e dos telhados em volta): pelo país do estádio
+    if (!forma.regiao) forma.regiao = regiaoDoPais(ent.pais);
     ent.forma = forma;
     // a capacidade pesquisada corrige a da base (a do TM pode estar errada)
     if (Number.isFinite(e.capacidade) && e.capacidade > 1000) ent.capacidade = e.capacidade;

@@ -510,6 +510,15 @@ export function criarTigela(P, opc = {}) {
   function estruturaExtra(Le) {
     const estr = cor(F.cobertura.estr ?? '#8f969b'), cab = cor(0x3b4146), lamp = cor(0xf4f6f8);
     for (const t of P.torres) {
+      if (t.poste) {
+        // o poste de refletores no alto da arquibancada descoberta (a cabeça virada para o meio do campo)
+        const h = Math.atan2(-t.z, -t.x), yb = t.alto - 14;
+        Le.cilindro(t.x, yb, t.z, t.alto - 1, 0.22, estr, 6, 0.16, UV_NORMAL);
+        Le.caixa(t.x, t.alto - 0.6, t.z, 0.5, 1.6, 3.6, h, cab, 6, UV_NORMAL);
+        const nx = Math.cos(h), nz = Math.sin(h);
+        for (const jj of [-1, 0, 1]) Le.caixa(t.x + nx * 0.28 - nz * jj * 1.1, t.alto - 0.6, t.z + nz * 0.28 + nx * jj * 1.1, 0.06, 1.2, 0.9, h, lamp, 1, UV_ACESO);
+        continue;
+      }
       if (t.larga) {
         // a estrutura de refletores por cima do lado comprido (duas colunas e a viga com a fileira de luz)
         for (const s of [-1, 1]) Le.cilindro(s * 62, 0, t.z, t.alto, 1.4, estr, 6, 0.9, UV_NORMAL);
@@ -529,6 +538,22 @@ export function criarTigela(P, opc = {}) {
       }
     }
     for (const m of P.marcas) {
+      if (m.tipo === 'vigas') {
+        // o retângulo de vigas-treliça por cima da cobertura (banzo de cima, de baixo e as diagonais), as pontas para fora
+        const c = cor(m.cor), y1 = m.y, y0 = m.y - m.alto;
+        const lados = [[[-m.hx - 22, -m.hz], [m.hx + 22, -m.hz]], [[-m.hx - 22, m.hz], [m.hx + 22, m.hz]], [[-m.hx, -m.hz - 22], [-m.hx, m.hz + 22]], [[m.hx, -m.hz - 22], [m.hx, m.hz + 22]]];
+        for (const [a, b] of lados) {
+          Le.barra([a[0], y1, a[1]], [b[0], y1, b[1]], 1.4, c, UV_NORMAL);
+          Le.barra([a[0], y0, a[1]], [b[0], y0, b[1]], 1.1, c, UV_NORMAL);
+          const L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.round(L / 8);
+          for (let i = 0; i < n; i++) {
+            const t0 = i / n, t1 = (i + 1) / n, p = t => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+            const [x0, z0] = p(t0), [x1, z1] = p(t1);
+            Le.barra([x0, i % 2 ? y0 : y1, z0], [x1, i % 2 ? y1 : y0, z1], 0.5, c, UV_NORMAL);
+          }
+        }
+        continue;
+      }
       if (m.tipo === 'telao') {
         Le.caixa(m.x, m.y, m.z, m.larg, m.alt, 1.2, m.th + Math.PI / 2, cab, 6, UV_NORMAL);
         const nx = -Math.cos(m.th), nz = -Math.sin(m.th);
@@ -610,14 +635,14 @@ export function criarForaForma(cena, opc, P, pecas) {
   const estrutura = [fachada, placa, ...pecas.criarTunel(ident?.fachada ?? fa)];
   // as marcas próprias, a água e os morros numa malha só (o pré-jogo do celular tem ≤ 40 chamadas por plano)
   const comEntorno = opc.entorno !== false;
-  const marcas = criarMarcas(P, comEntorno);
+  const corClube = ident?.times?.[0]?.cores?.primaria ?? '#c8102e', corClube2 = ident?.times?.[0]?.cores?.secundaria ?? '#ffffff';
+  const marcas = criarMarcas(P, comEntorno, corClube, corClube2);
   if (marcas) estrutura.push(marcas);
   const entorno = [];
   if (comEntorno) {
     entorno.push(criarChaoEsplanada(P, q, aniso), criarChaoBairro(P, q, aniso));
     if (q !== 'baixa') {
-      entorno.push(pecas.criarPredios(uNoite, P.predios()));
-      if (pecas.criarArvores) entorno.push(pecas.criarArvores(P.arvores()));
+      entorno.push(criarPrediosG(uNoite, P.predios()), criarArvoresG(P.arvores(), P.forma.semente));
       const cs = P.carros(); if (cs.length) entorno.push(pecas.criarCarros(cs));
       const t = pecas.criarTorcedores(opc.materialTorcida, ident?.torcedoresFora, P.torcedoresFora());
       if (t) entorno.push(t);
@@ -748,11 +773,12 @@ function criarPlacaG(P, tex) {
  * As marcas próprias de fora (torres com rampa em espiral, mastros e cabos, estátua, ginásio de cúpula) e, com o entorno,
  * a água (rio, canal, lago ou mar) e os morros/montanhas do horizonte: uma malha só (cor por vértice).
  */
-function criarMarcas(P, comEntorno = true) {
+function criarMarcas(P, comEntorno = true, corClube = '#c8102e', corClube2 = '#ffffff') {
   const L = malha();
   let tem = false;
   if (comEntorno && aguaNaMalha(L, P)) tem = true;
   if (comEntorno && relevoNaMalha(L, P)) tem = true;
+  if (comEntorno) { avenidaNaMalha(L, P); pecasNaMalha(L, P, corClube, corClube2); tem = true; }
   const conc = cor(0xc9c6bd), esc = cor(0x6d7276);
   for (const m of P.marcas) {
     if (m.tipo === 'torres' || m.tipo === 'rampas_espiral') {
@@ -770,6 +796,15 @@ function criarMarcas(P, comEntorno = true) {
             L.q4(p(a0, r1, y0), p(a1, r1, y1), p(a1, r1, y1 + 1.1), p(a0, r1, y0 + 1.1), esc, UV_NORMAL);
           }
         }
+      }
+    } else if (m.tipo === 'colunas') {
+      tem = true;
+      // as colunas em volta da fachada: do chão até a borda da cobertura, abrindo para fora no meio (a curva do Castelão)
+      const c = cor(m.cor);
+      for (const cc of m.colunas) {
+        const N = 5, pts = [];
+        for (let i = 0; i <= N; i++) { const u = i / N, r = cc.r0 + Math.sin(Math.PI * u) * (cc.alto ? 0 : 2.2) + (cc.alto ? u * 4 : 0), y = cc.y1 * u; pts.push([r * Math.cos(cc.th), y, r * Math.sin(cc.th)]); }
+        for (let i = 0; i < N; i++) L.barra(pts[i], pts[i + 1], m.larg, c, UV_NORMAL);
       }
     } else if (m.tipo === 'mastros') {
       tem = true;
@@ -831,6 +866,160 @@ function criarChaoBairro(P, q, aniso) {
   // as ruas giradas como as quadras (estadio-generico.js predios: o mesmo giro)
   m.rotation.y = -P.forma.giroBairro;
   m.name = 'fora-chao';
+  return m;
+}
+/** A avenida em volta da esplanada: o asfalto em anel, a faixa do meio tracejada e a calçada de fora. */
+function avenidaNaMalha(L, P) {
+  const A = P.avenida, N = 200, y = 0.075;
+  const asf = cor(0x3f4245), faixa = cor(0xe8d36a), calc = cor(0xa9a69e), meio = (A.r0 + A.r1) / 2;
+  const p = (th, r, yy = y) => [r * Math.cos(th), yy, r * Math.sin(th)];
+  for (let i = 0; i < N; i++) {
+    const a = (2 * Math.PI * i) / N, b = (2 * Math.PI * (i + 1)) / N, m = (a + b) / 2;
+    if (P.naAgua(Math.cos(m) * meio, Math.sin(m) * meio, 2)) continue;
+    L.q4(p(a, A.r0), p(b, A.r0), p(b, A.r1), p(a, A.r1), asf, UV_NORMAL);
+    L.q4(p(a, A.r1), p(b, A.r1), p(b, A.r1 + 3.2), p(a, A.r1 + 3.2), calc, UV_NORMAL);
+    if (i % 2 === 0) L.q4(p(a, meio - 0.12, y + 0.01), p(b, meio - 0.12, y + 0.01), p(b, meio + 0.12, y + 0.01), p(a, meio + 0.12, y + 0.01), faixa, UV_NORMAL);
+  }
+}
+/** As peças da rua e da praça (estadio-generico.js pecasRua) numa malha só. */
+function pecasNaMalha(L, P, corClube, corClube2) {
+  const metal = cor(0x6b7075), lamp = cor(0xfff1d0), conc = cor(0xbab7af), vidro = cor(0x7d93a3), esc = cor(0x2c3034);
+  const lonas = ['#c8102e', '#1d4f91', '#f2c21b', '#1f7a3a', '#f2f2f0'].map(cor), clube = cor(corClube), clube2 = cor(corClube2);
+  const ads = ['#e8e5dc', '#1d4f91', '#f2c21b', '#c8102e', '#2b2f33'].map(cor);
+  for (const q of P.pecasRua()) {
+    const h = q.rumo ?? 0, ch = Math.cos(h), sh = Math.sin(h);
+    if (q.tipo === 'poste') {
+      L.cilindro(q.x, 0, q.z, q.alto, 0.13, metal, 6, 0.09, UV_NORMAL);
+      const hx = q.x + ch * 1.4, hz = q.z + sh * 1.4;
+      L.barra([q.x, q.alto, q.z], [hx, q.alto, hz], 0.12, metal, UV_NORMAL);
+      L.caixa(hx, q.alto - 0.12, hz, 0.9, 0.22, 0.4, h, lamp, 6, UV_ACESO);
+    } else if (q.tipo === 'mastro') {
+      L.cilindro(q.x, 0, q.z, q.alto, 0.1, cor(0xd8dadc), 6, 0.07, UV_NORMAL);
+      L.q4([q.x, q.alto - 0.2, q.z], [q.x + 3, q.alto - 0.35, q.z + 0.15], [q.x + 3, q.alto - 2.1, q.z + 0.15], [q.x, q.alto - 2.0, q.z], q.faixa ? clube2 : clube, UV_NORMAL);
+    } else if (q.tipo === 'bilheteria') {
+      L.caixa(q.x, 1.4, q.z, 5, 2.8, 3, h + Math.PI / 2, conc, 5, UV_NORMAL);
+      L.caixa(q.x - sh * 0.01, 1.7, q.z + ch * 0.01, 4.2, 0.9, 3.05, h + Math.PI / 2, vidro, 2, UV_NORMAL);
+      L.caixa(q.x, 3.0, q.z, 5.6, 0.3, 3.6, h + Math.PI / 2, clube, 6, UV_NORMAL);
+    } else if (q.tipo === 'banca') {
+      L.caixa(q.x, 1.2, q.z, 2.6, 2.4, 2.2, h, cor(0x2f6b3a), 5, UV_NORMAL);
+      L.caixa(q.x, 2.5, q.z, 3.2, 0.2, 2.8, h, cor(0x245a2f), 6, UV_NORMAL);
+    } else if (q.tipo === 'barraca') {
+      // a barraca de ambulante: 4 pés e a lona em pirâmide na cor dela, o balcão embaixo
+      const lona = lonas[q.cor % lonas.length], w = 1.5;
+      for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) L.cilindro(q.x + (a * ch - b * sh) * w, 0, q.z + (a * sh + b * ch) * w, 2.2, 0.05, metal, 4, 0.05, UV_NORMAL);
+      const P4 = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [q.x + (a * ch - b * sh) * (w + 0.3), 2.2, q.z + (a * sh + b * ch) * (w + 0.3)]);
+      for (let i = 0; i < 4; i++) { const t = [q.x, 3.1, q.z], a = P4[i], b = P4[(i + 1) % 4]; L.q4(a, b, t, t, lona, UV_NORMAL); }
+      L.caixa(q.x, 0.5, q.z, 2.6, 1.0, 1.0, h, cor(0xd8d2c2), 5, UV_NORMAL);
+    } else if (q.tipo === 'outdoor') {
+      for (const sx of [-1, 1]) L.cilindro(q.x + ch * sx * 3.5, 0, q.z + sh * sx * 3.5, 5, 0.18, metal, 6, 0.18, UV_NORMAL);
+      L.caixa(q.x, 6.8, q.z, 10, 3.8, 0.35, h, esc, 6, UV_NORMAL);
+      // a arte (fictícia): duas cores do anúncio
+      const a1 = ads[q.n % ads.length], a2 = ads[(q.n + 2) % ads.length];
+      for (const sz of [-1, 1]) {
+        const o = sz * 0.19, ox = -sh * o, oz = ch * o;
+        L.q4([q.x - ch * 4.8 + ox, 5.1, q.z - sh * 4.8 + oz], [q.x + ch * 4.8 + ox, 5.1, q.z + sh * 4.8 + oz], [q.x + ch * 4.8 + ox, 8.5, q.z + sh * 4.8 + oz], [q.x - ch * 4.8 + ox, 8.5, q.z - sh * 4.8 + oz], a1, UV_NORMAL);
+        L.q4([q.x - ch * 4.8 + ox, 7.6, q.z - sh * 4.8 + oz * 1.02], [q.x + ch * 1.0 + ox, 7.6, q.z + sh * 1.0 + oz * 1.02], [q.x + ch * 1.0 + ox, 8.4, q.z + sh * 1.0 + oz * 1.02], [q.x - ch * 4.8 + ox, 8.4, q.z - sh * 4.8 + oz * 1.02], a2, UV_NORMAL);
+      }
+    } else if (q.tipo === 'onibus') {
+      L.caixa(q.x, 2.6, q.z, 4.2, 0.15, 1.8, h, metal, 6, UV_NORMAL);
+      L.caixa(q.x - sh * 0.8, 1.35, q.z + ch * 0.8, 4.0, 2.3, 0.06, h, vidro, 6, UV_NORMAL);
+      for (const sx of [-1, 1]) L.cilindro(q.x + ch * sx * 1.9, 0, q.z + sh * sx * 1.9, 2.6, 0.06, metal, 4, 0.06, UV_NORMAL);
+      L.caixa(q.x, 0.45, q.z, 2.6, 0.12, 0.45, h, conc, 6, UV_NORMAL);
+    } else if (q.tipo === 'ponte') {
+      // o tabuleiro sobre o rio, o guarda-corpo dos dois lados e os pilares na água
+      L.caixa(q.x, 6, q.z, q.comp, 1.2, 14, h, conc, 6, UV_NORMAL);
+      for (const sz of [-1, 1]) L.caixa(q.x - sh * sz * 6.8, 7.1, q.z + ch * sz * 6.8, q.comp, 1.0, 0.25, h, cor(0x8d9094), 6, UV_NORMAL);
+      for (const sx of [-0.25, 0.25]) L.caixa(q.x + ch * sx * q.comp, 3, q.z + sh * sx * q.comp, 2.2, 6, 10, h, cor(0x9c998f), 4, UV_NORMAL);
+      L.caixa(q.x, 6.62, q.z, q.comp, 0.05, 9, h, cor(0x3f4245), 1, UV_NORMAL);
+    }
+  }
+}
+/** Prédios e casas (instanciados; a parede com as janelas no shader, acesas à noite por sorteio) com o telhado de 2
+ * águas nas casas (a mesma malha: os vértices do telhado descem até a laje nos prédios de teto plano). */
+function criarPrediosG(uNoite, L) {
+  const caixa = new THREE.BoxGeometry(1, 1, 1); caixa.translate(0, 0.5, 0);
+  // o telhado: o prisma da cumeeira ao longo de x, de y 1 a 1,38 (× a altura do prédio)
+  const tp = [-0.52, 1, -0.54, 0.52, 1, -0.54, 0.52, 1.38, 0, -0.52, 1.38, 0, -0.52, 1, 0.54, 0.52, 1, 0.54];
+  const tel = new THREE.BufferGeometry();
+  tel.setAttribute('position', new THREE.Float32BufferAttribute(tp, 3));
+  tel.setIndex([0, 3, 1, 1, 3, 2, 4, 5, 2, 4, 2, 3, 0, 4, 3, 1, 2, 5]);
+  tel.computeVertexNormals();
+  const cx = caixa.toNonIndexed(), tx = tel.toNonIndexed();
+  const g = new THREE.BufferGeometry();
+  const pos = [...cx.attributes.position.array, ...tx.attributes.position.array], nrm = [...cx.attributes.normal.array, ...tx.attributes.normal.array];
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+  g.setAttribute('aParte', new THREE.Float32BufferAttribute([...new Array(cx.attributes.position.count).fill(0), ...new Array(tx.attributes.position.count).fill(1)], 1));
+  const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.uNoite = uNoite;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aParte;\nattribute float aTel;\nattribute vec3 aCorTel;\nvarying vec3 vMP;\nvarying vec3 vNP;\nvarying float vParte;\nvarying vec3 vCorTel;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        if (aParte > 0.5) transformed.y = 1.0 + (transformed.y - 1.0) * aTel;`)
+      .replace('#include <project_vertex>', `#include <project_vertex>
+        vMP = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
+        vNP = normalize(mat3(instanceMatrix) * objectNormal);
+        vParte = aParte; vCorTel = aCorTel;`);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+        uniform float uNoite;
+        varying vec3 vMP;
+        varying vec3 vNP;
+        varying float vParte;
+        varying vec3 vCorTel;
+        float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }`)
+      .replace('#include <map_fragment>', `#include <map_fragment>
+        float jan = 0.0; vec2 cel = vec2(0.0);
+        if (vParte > 0.5) diffuseColor.rgb = vCorTel;
+        else if (abs(vNP.y) < 0.5) {
+          vec2 t = normalize(vec2(-vNP.z, vNP.x));
+          vec2 q = vec2(dot(vMP.xz, t) / 2.7, vMP.y / 3.2);
+          cel = floor(q);
+          vec2 f = fract(q);
+          jan = step(0.22, f.x) * step(f.x, 0.78) * step(0.3, f.y) * step(f.y, 0.8) * step(1.0, vMP.y);
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.13, 0.17, 0.2), jan * 0.72);
+          // a porta/vitrine no térreo e a sombra do pé da parede
+          diffuseColor.rgb *= 0.82 + 0.18 * smoothstep(0.0, 1.2, vMP.y);
+        } else diffuseColor.rgb *= 0.8;`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        totalEmissiveRadiance += jan * uNoite * step(0.6, h21(cel + vMP.xz * 0.013)) * vec3(1.0, 0.82, 0.55) * 0.85;`);
+  };
+  mat.customProgramCacheKey = () => 'fora-predios-telhado';
+  const m = new THREE.InstancedMesh(g, mat, L.length);
+  const aTel = new Float32Array(L.length), aCor = new Float32Array(3 * L.length);
+  const M4 = new THREE.Matrix4(), Qt = new THREE.Quaternion(), Pp = new THREE.Vector3(), S = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0), C = new THREE.Color();
+  L.forEach((p, i) => {
+    Qt.setFromAxisAngle(Y, -p.rumo);
+    M4.compose(Pp.set(p.x, 0, p.z), Qt, S.set(p.lx, p.h, p.lz));
+    m.setMatrixAt(i, M4);
+    m.setColorAt(i, C.set(p.cor ?? '#c9c2b3'));
+    aTel[i] = p.telhado ? 1 : 0;
+    C.set(p.corTel ?? '#8f4a2c'); aCor[3 * i] = C.r; aCor[3 * i + 1] = C.g; aCor[3 * i + 2] = C.b;
+  });
+  g.setAttribute('aTel', new THREE.InstancedBufferAttribute(aTel, 1));
+  g.setAttribute('aCorTel', new THREE.InstancedBufferAttribute(aCor, 3));
+  m.instanceMatrix.needsUpdate = true;
+  m.computeBoundingSphere();
+  m.name = 'fora-predios';
+  return m;
+}
+/** Árvores leves (copa em cone de 7 lados e o tronco), instanciadas, com o verde variando. */
+function criarArvoresG(L, semente) {
+  const tronco = new THREE.CylinderGeometry(0.06, 0.09, 0.4, 5, 1, true); tronco.translate(0, 0.2, 0);
+  const copa = new THREE.ConeGeometry(0.42, 0.75, 7, 1, false); copa.translate(0, 0.72, 0);
+  const g = juntarGeometrias([tronco, copa], [cor(0x5a4330), cor(0x3f7a35)]);
+  const m = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), L.length);
+  const M4 = new THREE.Matrix4(), Qt = new THREE.Quaternion(), Pp = new THREE.Vector3(), S = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0), C = new THREE.Color();
+  const r = gerador(semente + 8);
+  L.forEach((a, i) => {
+    Qt.setFromAxisAngle(Y, r() * 6.28);
+    const k = a.raio / 0.42;
+    M4.compose(Pp.set(a.x, 0, a.z), Qt, S.set(k, a.h, k));
+    m.setMatrixAt(i, M4);
+    m.setColorAt(i, C.setHSL(0.25 + r() * 0.08, 0.42 + r() * 0.15, 0.62 + r() * 0.3));
+  });
+  m.instanceMatrix.needsUpdate = true;
+  m.computeBoundingSphere();
+  m.name = 'fora-arvores';
   return m;
 }
 /** A água na malha das marcas (a −0,1 m: por cima do chão do bairro, −0,25, e por baixo da esplanada, 0,05). */

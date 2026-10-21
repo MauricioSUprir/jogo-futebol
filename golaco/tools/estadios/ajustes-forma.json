@@ -19,9 +19,8 @@
   },
   "marcas": [
    {
-    "tipo": "mastros",
-    "n": 24,
-    "alto": 31,
+    "tipo": "colunas",
+    "n": 60,
     "cor": "#f2f3f1"
    }
   ]
@@ -31,7 +30,8 @@
    "tipo": "por_arquibancada"
   },
   "fach": {
-   "cor2": "#8f9391"
+   "cor2": "#8f9391",
+   "estilo": "aberto"
   },
   "marcas": [
    {
@@ -67,12 +67,17 @@
     "tipo": "telao"
    },
    {
-    "tipo": "mastros",
-    "n": 24,
-    "alto": 46,
+    "tipo": "colunas",
+    "n": 66,
     "cor": "#e4e2dc"
    }
-  ]
+  ],
+  "cob": {
+   "cobre": 0.55
+  },
+  "fach": {
+   "estilo": "aberto"
+  }
  },
  "nissan stadium": {
   "recuo": [
@@ -81,7 +86,8 @@
   ],
   "pistaCor": "#b4483a",
   "cob": {
-   "estr": "#dfe3e6"
+   "estr": "#dfe3e6",
+   "cobre": 0.75
   },
   "marcas": [
    {
@@ -176,7 +182,10 @@
     "tipo": "telao",
     "lado": "fa"
    }
-  ]
+  ],
+  "fach": {
+   "estilo": "aberto"
+  }
  },
  "estadio mas monumental": {
   "marcas": [
@@ -232,6 +241,10 @@
     "n": 6,
     "alto": 50,
     "cor": "#d4cfc3"
+   },
+   {
+    "tipo": "vigas",
+    "cor": "#c62828"
    }
   ]
  },
@@ -294,5 +307,6 @@
   "entorno": {
    "lado": "la"
   }
- }
+ },
+ "spotify camp nou": {}
 }

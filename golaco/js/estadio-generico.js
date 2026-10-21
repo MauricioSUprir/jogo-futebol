@@ -33,13 +33,25 @@ export const LADOS = Object.freeze(['la', 'fa', 'fb', 'ca']);          // o índ
 const COBERTURAS = ['anel', 'por_arquibancada', 'total', 'retratil', 'parcial', 'nenhuma'];
 const SUSTENTA = ['trelica', 'mastros', 'cabos', 'balanco', 'arco', 'pilares', 'anel_compressao', 'nenhuma'];
 const MATERIAIS = ['membrana', 'metal', 'policarbonato', 'vidro', 'concreto', 'misto', 'nenhum'];
-const ESTILOS = ['vidro', 'concreto', 'metal', 'membrana', 'tijolo', 'trelica', 'paineis'];
+const ESTILOS = ['vidro', 'concreto', 'aberto', 'metal', 'membrana', 'tijolo', 'trelica', 'paineis'];
 const PADROES = ['liso', 'misto', 'faixas', 'mosaico'];
 const ENTORNOS = ['urbano_denso', 'residencial', 'parque', 'industrial', 'campo_aberto', 'orla', 'campus'];
-const MARCAS = ['arco', 'torres', 'torres_luz', 'rampas_espiral', 'mastros', 'telao', 'letreiro', 'relogio', 'estatua', 'cupula', 'pele_led', 'outro'];
+const MARCAS = ['arco', 'torres', 'torres_luz', 'rampas_espiral', 'mastros', 'colunas', 'vigas', 'telao', 'letreiro', 'relogio', 'estatua', 'cupula', 'pele_led', 'outro'];
 
 // a pista de atletismo oficial (World Athletics: 400 m, raio de dentro 36,5 m, 8 raias de 1,22 m; as retas de 84,39 m)
 export const PISTA = Object.freeze({ meiaReta: 42.195, raio: 36.5, raias: 8, raia: 1.22 });
+const Q = 44;   // a quadra do bairro (m; as ruas de 9 m entre elas: render/estadio-generico.js pinta o chão na mesma grade)
+
+/** As cores das casas e dos prédios e dos telhados por região (a do país do estádio; tools/estadios/gerar-formas.mjs). */
+export const PALETAS = {
+  br: { paredes: ['#e8e2d4', '#d9c9a8', '#f0ece2', '#c9a46a', '#b9c8c9', '#e7d1b0', '#d7b8a0', '#a9b9a0', '#f2e6c8', '#c4b9a6', '#e0b6a0', '#9fb5c4'], telhados: ['#a5542f', '#8f4a2c', '#b8643a', '#9b5a3c'], casaPlana: 0.25 },
+  latam: { paredes: ['#e9d9b9', '#d9b48a', '#f0e6d4', '#c98f72', '#e2c1a8', '#bfc7b5', '#f2e2c2', '#d4a59a'], telhados: ['#a5542f', '#8f4a2c', '#7f7a72'], casaPlana: 0.45 },
+  eu_norte: { paredes: ['#8b3a2e', '#9c4a36', '#7a3b30', '#b5a48c', '#d6d0c4', '#a7a296', '#8e5a46', '#c9c2b3'], telhados: ['#4a4f55', '#5a5f66', '#6b4a3a', '#3f4448'] },
+  eu_sul: { paredes: ['#ead9b8', '#e2c79a', '#f1e9d8', '#d9b48a', '#c9a07a', '#e8d8c4', '#d6c3a5'], telhados: ['#b0603a', '#9e5534', '#c0703f'] },
+  mena: { paredes: ['#d8c3a0', '#e4d3b4', '#cdb28a', '#efe6d2', '#c9b79c'], telhados: ['#cdb28a'], casaPlana: 1 },
+  asia: { paredes: ['#d9dcdf', '#c8ccd0', '#e8e8e6', '#b5bcc2', '#d6d0c4'], telhados: ['#4f5a66', '#5e6b78', '#6b5a4f'] },
+  na: { paredes: ['#c9c2b3', '#a9a093', '#d8d4cc', '#8c9096', '#b8a48e', '#e0dbd0'], telhados: ['#3d3f42', '#56514a', '#4a4a48'] },
+};
 
 /** Por família: a 1ª fileira (m acima do gramado), o expoente da planta, os cantos e o recuo [lateral, fundo] padrão. */
 const PADRAO_FAMILIA = {
@@ -143,6 +155,8 @@ export function validarFormaGenerica(f) {
     sust: SUSTENTA.includes(cobB.sust) ? cobB.sust : (cobTipo === 'anel' ? 'anel_compressao' : cobTipo === 'total' || cobTipo === 'retratil' ? 'trelica' : 'balanco'),
     // a cor da estrutura à mostra (as treliças vermelhas do San Siro, os arcos vermelhos da Luz); sem ela, cinza-aço
     estr: corOk(cobB.estr),
+    // quanto da profundidade a cobertura cobre (do fundo para a frente; 1 = até a 1ª fileira)
+    cobre: Number.isFinite(Number(cobB.cobre)) && cobB.cobre !== null ? clamp(Number(cobB.cobre), 0.3, 1.1) : null,
     // a altura da borda de dentro acima do topo da arquibancada (m)
     folga: clamp(num(cobB.alto, NaN) - Math.max(...LADOS.map(k => lados[k].alto)), 3, 22),
   };
@@ -172,6 +186,7 @@ export function validarFormaGenerica(f) {
     letreiro: typeof f.letreiro === 'string' && f.letreiro.trim() ? f.letreiro.trim().slice(0, 40).toUpperCase() : '',
     semente: hashTexto(f.letreiro ?? familia) ^ Math.round(capacidade),
     // o giro da malha de ruas do bairro em volta (a orientação real do campo, se a pesquisa achou; senão pela semente)
+    regiao: Object.prototype.hasOwnProperty.call({ br: 1, latam: 1, eu_norte: 1, eu_sul: 1, mena: 1, asia: 1, na: 1 }, f.regiao) ? f.regiao : 'br',
     giroBairro: (Number.isFinite(Number(f.orientacao)) && f.orientacao !== null ? Number(f.orientacao) : (hashTexto(f.letreiro ?? familia) % 70) - 35) * RAD,
   };
 }
@@ -387,7 +402,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   const C = F.cobertura;
   const cobContinua = C.tipo === 'anel' || C.tipo === 'total' || C.tipo === 'retratil';
   // quanto da profundidade a cobertura deixa de fora (o anel do Mineirão cobre quase tudo; a total passa da 1ª fileira)
-  const sDentro = C.tipo === 'total' || C.tipo === 'retratil' ? -0.06 : C.tipo === 'anel' ? 0.04 : 0;
+  const sDentro = C.cobre != null ? 1 - C.cobre : C.tipo === 'total' || C.tipo === 'retratil' ? -0.06 : C.tipo === 'anel' ? 0.04 : 0;
   /** A cobertura no ângulo th: {fora, dentro (raios), yFora, yDentro} ou null (sem cobertura ali). */
   function cobEm(th) {
     if (C.tipo === 'nenhuma') return null;
@@ -561,6 +576,22 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
           lista.push({ x: r * Math.cos(th), z: r * Math.sin(th), th, alto: m.alto || yMax + 22 });
         }
         out.push({ tipo: 'mastros', mastros: lista, cor: m.cor ?? '#f2c21b' });
+      } else if (m.tipo === 'colunas') {
+        // as colunas da fachada (as 60 treliçadas do Castelão, os pórticos do Mineirão, as 288 do Mané Garrincha): em pé
+        // em volta, do chão até passar da borda da cobertura (ou do topo), a curva para fora pelo `alto` extra
+        const n = m.n || 60, lista = [];
+        for (let i = 0; i < n; i++) {
+          const th = -Math.PI + ((i + 0.5) * 2 * Math.PI) / n;
+          if (abertos && !temArquibancada(...ponto(th, 1))) continue;
+          const c = cobEm(th), r0 = rFach(th) + (casca ? BOJO : 0) + 1.2;
+          lista.push({ th, r0, y1: Math.max(yFach(th), c ? c.yFora : 0) + (m.alto ? 0 : 2.5), alto: m.alto || 0 });
+        }
+        out.push({ tipo: 'colunas', colunas: lista, cor: m.cor ?? '#eef0f0', larg: n > 120 ? 0.9 : 1.6 });
+      } else if (m.tipo === 'vigas') {
+        // as vigas-treliça gigantes por cima da cobertura em retângulo (as vermelhas do San Siro), com as pontas para fora
+        const c0 = cobEm(-Math.PI / 2), c1 = cobEm(0);
+        const hx = Math.max(CAMPO.meioX + 4, (c1 ? c1.dentro : Fr.fa) + 2), hz = Math.max(CAMPO.meioZ + 4, (c0 ? c0.dentro : Fr.la) + 2);
+        out.push({ tipo: 'vigas', hx, hz, y: Math.max(...LADOS.map((_, k) => topoLado(k))) + (C.folga ?? 6) + 6, alto: 7, cor: m.cor ?? '#c62828' });
       } else if (m.tipo === 'telao') {
         // telões em cima dos fundos (um em cada; com lado, só nele)
         const ks = m.lado ? [LADOS.indexOf(m.lado)] : [1, 2];
@@ -634,9 +665,10 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     // torres de refletor (sem cobertura)
     for (const t of TORRES) {
       if (t.larga) { if (Math.abs(z - t.z) <= 3 + f && Math.abs(x) <= 60 + f && y >= t.alto - 8 - f && y <= t.alto + 1 + f) return 'refletor'; if (Math.abs(z - t.z) <= 1.5 + f && Math.abs(Math.abs(x) - 62) <= 1.5 + f && y <= t.alto + f) return 'refletor'; continue; }
-      if (Math.hypot(x - t.x, z - t.z) <= (y > t.alto - 4 ? 3.4 : 0.7) + f && y <= t.alto + 1 + f) return 'refletor';
+      if (Math.hypot(x - t.x, z - t.z) <= (y > t.alto - (t.poste ? 2.5 : 4) ? (t.poste ? 2.2 : 3.4) : (t.poste ? 0.4 : 0.7)) + f && y <= t.alto + 1 + f) return 'refletor';
     }
     for (const m of MARCAS_P) {
+      if (m.tipo === 'vigas' && y >= m.y - m.alto - f && y <= m.y + 1 + f && ((Math.abs(Math.abs(x) - m.hx) <= 2 + f && Math.abs(z) <= m.hz + 25) || (Math.abs(Math.abs(z) - m.hz) <= 2 + f && Math.abs(x) <= m.hx + 25))) return 'viga';
       if (m.tipo === 'telao') {
         const lx = (x - m.x) * -Math.sin(m.th) + (z - m.z) * Math.cos(m.th), lr = (x - m.x) * Math.cos(m.th) + (z - m.z) * Math.sin(m.th);
         if (Math.abs(lx) <= m.larg / 2 + f && Math.abs(lr) <= 1.2 + f && y >= m.y - m.alt / 2 - (m.pendurado ? 0 : 3) - f && y <= m.y + m.alt / 2 + (m.pendurado ? 3 : 0) + f) return 'telão';
@@ -653,6 +685,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
       if (m.tipo === 'mastros') for (const t of m.mastros) if (Math.hypot(x - t.x, z - t.z) <= 1.6 + f && y <= t.alto + 1 + f) return 'mastro';
       if (m.tipo === 'arco' && arcoPerto(m, x, y, z, f)) return 'arco';
       if (m.tipo === 'estatua' && Math.hypot(x - m.x, z - m.z) <= 3.5 + f && y <= m.alto + 1 + f) return 'estátua';
+      if (m.tipo === 'colunas') for (const cc of m.colunas) { const cx = cc.r0 * Math.cos(cc.th), cz = cc.r0 * Math.sin(cc.th); if (Math.hypot(x - cx, z - cz) <= m.larg + 1 + f && y <= cc.y1 + 1 + f) return 'coluna'; }
       if (m.tipo === 'cupula') { const d = Math.hypot(x - m.x, z - m.z); if (d <= m.raio + f) { const h = m.parede + m.alto * Math.sqrt(Math.max(0, 1 - (d / m.raio) ** 2)); if (y <= h + f) return 'cúpula'; } }
     }
     if (r > rMax + 30) {
@@ -661,6 +694,12 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
         const lx = (x - p.x) * c - (z - p.z) * sn, lz = (x - p.x) * sn + (z - p.z) * c;
         if (Math.abs(lx) <= p.lx / 2 + f && Math.abs(lz) <= p.lz / 2 + f && y <= p.h + f) return 'prédio';
       }
+    }
+    if (r > rMax + 4) for (const p of pecasRua()) {
+      const d = Math.hypot(x - p.x, z - p.z);
+      if (p.tipo === 'poste' || p.tipo === 'mastro') { if (d <= 0.5 + f && y <= p.alto + 1 + f) return p.tipo; continue; }
+      if (p.tipo === 'ponte') { const c = Math.cos(-p.rumo), sn = Math.sin(-p.rumo), lx = (x - p.x) * c - (z - p.z) * sn, lz = (x - p.x) * sn + (z - p.z) * c; if (Math.abs(lx) <= p.comp / 2 + f && Math.abs(lz) <= 9 + f && y <= 7 + f) return 'ponte'; continue; }
+      if (d <= (p.tipo === 'outdoor' ? 6.5 : 3.2) + f && y <= (p.tipo === 'outdoor' ? 9.5 : 3.6) + f) return p.tipo;
     }
     if (r > rMax + 8) for (const p of arvores()) if (Math.hypot(x - p.x, z - p.z) <= (y > p.h * 0.45 ? p.raio : 0.4) + f && y <= p.h + f) return 'árvore';
     return null;
@@ -705,6 +744,18 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     const luz = F.marcas.find(m => m.tipo === 'torres_luz');
     if (C.tipo !== 'nenhuma' && C.tipo !== 'parcial' && !luz) return [];
     const out = [];
+    // sem as torres pedidas pela pesquisa: nos estádios grandes os refletores ficam em postes no alto das arquibancadas
+    // descobertas (o Camp Nou, o Monumental: a revisão contra as fotos não achou as 4 torres de canto); torres de canto só
+    // no estádio pequeno
+    if (!luz && F.familia !== 'pequeno') {
+      for (let i = 0; i < 48; i++) {
+        const th = -Math.PI + ((i + 0.5) * 2 * Math.PI) / 48, k = ladoEm(th);
+        if (LD[k].prof <= 0 || LD[k].coberta || !temArquibancada(...ponto(th, 1))) continue;
+        const [x, z] = ponto(th, 1), r = Math.hypot(x, z) + 0.8;
+        out.push({ x: r * Math.cos(th), z: r * Math.sin(th), alto: yTopo(th) + 14, poste: true });
+      }
+      return out;
+    }
     if (luz && luz.lado && (luz.lado === 'la' || luz.lado === 'ca')) {
       // as estruturas de refletores por cima dos lados (o Morumbi): uma atrás de cada lado comprido
       for (const th of [-Math.PI / 2, Math.PI / 2]) { const r = rB(th) + 4; out.push({ x: 0, z: r * Math.sin(th), alto: luz.alto || Math.max(yMax + 30, 60), larga: true }); }
@@ -720,7 +771,8 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   })();
   const E = F.entorno;
   // a esplanada pelo tipo do bairro: colada na cidade densa, larga no parque e no campo
-  const rEsplanada = rMax + ({ urbano_denso: 34, residencial: 52, parque: 88, industrial: 70, campo_aberto: 96, orla: 58, campus: 78 }[E.tipo] ?? 60);
+  const apertado = (F.familia === 'pequeno' || F.familia === 'inglesa') && (E.tipo === 'urbano_denso' || E.tipo === 'residencial');
+  const rEsplanada = rMax + (apertado ? 20 : ({ urbano_denso: 34, residencial: 52, parque: 88, industrial: 70, campo_aberto: 96, orla: 58, campus: 78 }[E.tipo] ?? 60));
   let _predios = null, _arvores = null, _torcedores = null, _agua = undefined;
   /** A água (rio/canal: faixa; lago: disco; mar: meio-plano) do lado E.lado: {tipo, ...} ou null. */
   function agua() {
@@ -750,36 +802,67 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   function predios() {
     if (_predios) return _predios;
     const r = gerador(F.semente + 11), lista = [];
-    const Q = 44, R0 = rEsplanada + 20, R1 = 1150;
-    const tipo = E.tipo;
-    const dens = { urbano_denso: 0.85, residencial: 0.62, parque: 0.25, industrial: 0.45, campo_aberto: 0.1, orla: 0.6, campus: 0.35 }[tipo];
+    const R0 = rEsplanada + 22, R1 = 1150;
+    const tipo = E.tipo, PAL = PALETAS[F.regiao] ?? PALETAS.br;
+    const dens = { urbano_denso: 0.88, residencial: 0.72, parque: 0.3, industrial: 0.5, campo_aberto: 0.14, orla: 0.66, campus: 0.4 }[tipo];
+    const cg = Math.cos(F.giroBairro), sg = Math.sin(F.giroBairro);
+    // as quadras de perto para longe (o teto de prédios fica com as de perto, as que aparecem grandes)
+    const quadras = [];
     for (let i = -28; i <= 28; i++) for (let k = -28; k <= 28; k++) {
-      const gx = i * Q, gz = k * Q, cg = Math.cos(F.giroBairro), sg = Math.sin(F.giroBairro);
-      const cx = gx * cg - gz * sg, cz = gx * sg + gz * cg;
-      const d = Math.hypot(cx, cz);
-      if (d < R0 || d > R1) continue;
-      if (naAgua(cx, cz, 30)) continue;
-      // a praça da entrada principal (a grua do plano da fachada passa por ela)
-      if (cz > 0 && Math.abs(cx) < 75 && cz < rFach(Math.PI / 2) + 130) continue;
-      // o parque: a cidade começa depois de ~420 m
+      const gx = i * Q, gz = k * Q, cx = gx * cg - gz * sg, cz = gx * sg + gz * cg, d = Math.hypot(cx, cz);
+      if (d < R0 || d > R1 || naAgua(cx, cz, 30) || naPraca(cx, cz, 30)) continue;
       if (tipo === 'parque' && d < R0 + 200) continue;
+      quadras.push({ cx, cz, d });
+    }
+    quadras.sort((p, q) => p.d - q.d);
+    const TETO = 1300;
+    const poe = (cx, cz, ox, oz, lx, lz, h, tel, cor, corTel) => lista.push({ x: cx + ox * cg - oz * sg, z: cz + ox * sg + oz * cg, lx, lz, h, rumo: F.giroBairro, cor, corTel, telhado: tel });
+    for (const { cx, cz, d } of quadras) {
+      if (lista.length >= TETO) break;
       if (r() > dens * (0.6 + 0.4 * clamp((d - R0) / 400, 0, 1))) continue;
-      const longe = clamp((d - R0) / 700, 0, 1);
-      let lx, lz, h, cor = Math.floor(r() * 16);
-      if (tipo === 'industrial' && r() < 0.7) { lx = 24 + r() * 28; lz = 18 + r() * 22; h = 7 + r() * 6; cor = 4; }
-      else if (tipo === 'campo_aberto' || (tipo === 'residencial' && r() < 0.55)) { lx = 10 + r() * 8; lz = 9 + r() * 8; h = 4 + r() * 4; }
-      else if (tipo === 'urbano_denso') { lx = 16 + r() * 18; lz = 16 + r() * 18; h = 14 + r() * (24 + 50 * longe) + (r() < 0.08 ? 40 : 0); }
+      const longe = clamp((d - R0) / 700, 0, 1), U = Q - 13;
+      const parede = () => PAL.paredes[Math.floor(r() * PAL.paredes.length)], telha = () => PAL.telhados[Math.floor(r() * PAL.telhados.length)];
+      const casas = tipo === 'campo_aberto' || (tipo === 'residencial' && r() < 0.68) || (tipo === 'orla' && r() < 0.3 && !naAgua(cx, cz, 160)) || (tipo === 'parque' && r() < 0.5);
+      if (casas && d < 700) {
+        // as casas: 2 a 4 por quadra (de frente para a rua), telhado de 2 águas na cor da região
+        const n = 2 + Math.floor(r() * 3);
+        for (let c = 0; c < n && lista.length < TETO; c++) {
+          const lx = 8 + r() * 4, lz = 8 + r() * 3, h = 3.2 + r() * 3.6 * (r() < 0.3 ? 1.6 : 1);
+          const ox = (c % 2 ? 1 : -1) * (U / 4) + (r() - 0.5) * 2, oz = (c < 2 ? -1 : 1) * (U / 4) + (r() - 0.5) * 2;
+          poe(cx, cz, ox, oz, lx, lz, h, PAL.casaPlana && r() < PAL.casaPlana ? 0 : 1, parede(), telha());
+        }
+        continue;
+      }
+      let lx, lz, h, tel = 0, cor = parede();
+      if (tipo === 'industrial' && r() < 0.7) { lx = 24 + r() * 7; lz = 18 + r() * 10; h = 7 + r() * 6; cor = '#9aa1a6'; tel = r() < 0.5 ? 1 : 0; }
+      else if (casas) { lx = 10 + r() * 8; lz = 9 + r() * 8; h = 4 + r() * 4; tel = 1; }
+      else if (tipo === 'urbano_denso') { lx = 16 + r() * 15; lz = 16 + r() * 15; h = 14 + r() * (24 + 50 * longe) + (r() < 0.08 ? 40 : 0); }
       else if (tipo === 'orla' && naAgua(cx, cz, 160)) { lx = 18 + r() * 12; lz = 16 + r() * 10; h = 30 + r() * 50; }
-      else if (tipo === 'campus') { lx = 30 + r() * 40; lz = 16 + r() * 16; h = 10 + r() * 18; }
-      else { lx = 14 + r() * 14; lz = 13 + r() * 14; h = 9 + r() * (14 + 30 * longe); }
-      // dentro da quadra (as ruas de 9 m entre elas ficam livres: render/estadio-generico.js pinta o chão na mesma grade)
-      lx = Math.min(lx, Q - 13); lz = Math.min(lz, Q - 13);
-      const ox = (r() - 0.5) * (Q - 13 - lx), oz = (r() - 0.5) * (Q - 13 - lz);
-      lista.push({ x: cx + ox * cg - oz * sg, z: cz + ox * sg + oz * cg, lx, lz, h, rumo: F.giroBairro, cor });
+      else if (tipo === 'campus') { lx = 22 + r() * 9; lz = 16 + r() * 14; h = 10 + r() * 18; tel = r() < 0.3 ? 1 : 0; }
+      else { lx = 14 + r() * 14; lz = 13 + r() * 14; h = 9 + r() * (10 + 22 * longe); }
+      lx = Math.min(lx, U); lz = Math.min(lz, U);
+      poe(cx, cz, (r() - 0.5) * (U - lx), (r() - 0.5) * (U - lz), lx, lz, h, tel, cor, telha());
     }
     _predios = lista;
     return lista;
   }
+  /** O lado de quem anda na rua: a praça da entrada principal (a grua do plano da fachada passa por ela, |x| < 75). */
+  function naPraca(x, z, m = 0) { return z > 0 && Math.abs(x) < 75 + m && z < rFach(Math.PI / 2) + 130 + m; }
+  /** As ruas (as linhas entre as quadras, giradas como elas): [{a: [x, z], b: [x, z], rumo}] de perto (≤ 720 m). */
+  let _ruas = null;
+  function ruas() {
+    if (_ruas) return _ruas;
+    const out = [], cg = Math.cos(F.giroBairro), sg = Math.sin(F.giroBairro), L = 720;
+    const rot = (gx, gz) => [gx * cg - gz * sg, gx * sg + gz * cg];
+    for (let i = -17; i <= 17; i++) {
+      const c = (i + 0.5) * Q;
+      out.push({ a: rot(c, -L), b: rot(c, L), rumo: F.giroBairro + Math.PI / 2 }, { a: rot(-L, c), b: rot(L, c), rumo: F.giroBairro });
+    }
+    _ruas = out;
+    return out;
+  }
+  /** A avenida em volta da esplanada (o anel de asfalto, 2 pistas): {r0, r1}. */
+  const AVENIDA = { r0: rEsplanada + 1, r1: rEsplanada + 15 };
   /** Árvores: a borda da esplanada, a praça da entrada (lado de cá) e o verde do entorno: [{x, z, h, raio}]. */
   function arvores() {
     if (_arvores) return _arvores;
@@ -800,6 +883,21 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
       const th = r() * 2 * Math.PI, rr = rMax + 30 + r() * (E.tipo === 'parque' ? 330 : 120);
       const x = rr * Math.cos(th), z = rr * Math.sin(th);
       if (livre(x, z)) lista.push({ x, z, h: 8 + r() * 7, raio: 3 + r() * 2.5 });
+    }
+    // as árvores das calçadas (na rua de perto, a cada ~18 m, nos dois lados; menos na cidade densa e nos galpões)
+    const pRua = { urbano_denso: 0.25, industrial: 0.2, campo_aberto: 0.5 }[E.tipo] ?? 0.6;
+    let nRua = 0;
+    for (const rua of ruas()) {
+      const dx = rua.b[0] - rua.a[0], dz = rua.b[1] - rua.a[1], L = Math.hypot(dx, dz), ux = dx / L, uz = dz / L, nx = -uz, nz = ux;
+      for (let t = 9; t < L && nRua < 360; t += 18) {
+        const cx = rua.a[0] + ux * t, cz = rua.a[1] + uz * t, d = Math.hypot(cx, cz);
+        if (d < AVENIDA.r1 + 10 || d > 560 || r() > pRua) continue;
+        for (const lado of [-1, 1]) {
+          const x = cx + nx * 5.6 * lado, z = cz + nz * 5.6 * lado;
+          if (naAgua(x, z, 4) || naPraca(x, z, 2)) continue;
+          lista.push({ x, z, h: 6 + r() * 5, raio: 2.2 + r() * 1.6 }); nRua++;
+        }
+      }
     }
     for (const t of MARCAS_P) if (t.tipo === 'cupula') for (let i = lista.length - 1; i >= 0; i--) if (Math.hypot(lista[i].x - t.x, lista[i].z - t.z) < t.raio + 8) lista.splice(i, 1);
     _arvores = lista;
@@ -858,16 +956,89 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     _canteiros = out;
     return out;
   }
-  /** Carros nos estacionamentos: [{x, z, rumo, cor}]. */
+  /** Carros: nos estacionamentos, rodando e parados nas ruas de perto e nas duas pistas da avenida: [{x, z, rumo, cor}]. */
   function carros() {
     if (_carros) return _carros;
     const r = gerador(F.semente + 16), lista = [];
     for (const e of estacionamentos()) for (let z = e.z[0] + 4; z < e.z[1] - 3; z += 6.5) for (let x = e.x[0] + 2; x < e.x[1] - 2; x += 2.7) {
-      if (r() < 0.55) continue;
+      if (r() < 0.45) continue;
       lista.push({ x, z: z + 2.4 + (r() - 0.5) * 0.3, rumo: Math.PI / 2 + (r() < 0.5 ? 0 : Math.PI) + (r() - 0.5) * 0.08, cor: Math.floor(r() * 8) });
+    }
+    // a avenida: as duas mãos, em fila com os vãos do trânsito (dia de jogo: devagar e cheio)
+    const A = AVENIDA, nA = Math.round((2 * Math.PI * (A.r0 + A.r1) / 2) / 11);
+    for (let i = 0; i < nA; i++) for (const [rr, sent] of [[A.r0 + 4, 1], [A.r1 - 4, -1]]) {
+      if (r() < 0.35) continue;
+      const th = (2 * Math.PI * (i + r() * 0.5)) / nA, x = rr * Math.cos(th), z = rr * Math.sin(th);
+      if (naAgua(x, z, 4)) continue;
+      lista.push({ x, z, rumo: -(th + sent * Math.PI / 2), cor: Math.floor(r() * 8) });
+    }
+    // as ruas de perto: carros rodando no meio e estacionados junto da calçada
+    const R0 = AVENIDA.r1 + 6;
+    for (const rua of ruas()) {
+      const dx = rua.b[0] - rua.a[0], dz = rua.b[1] - rua.a[1], L = Math.hypot(dx, dz), ux = dx / L, uz = dz / L, nx = -uz, nz = ux;
+      for (let t = 0; t < L; t += 7 + r() * 16) {
+        const cx = rua.a[0] + ux * t, cz = rua.a[1] + uz * t, d = Math.hypot(cx, cz);
+        if (d < R0 || d > 640 || naAgua(cx, cz, 8) || naPraca(cx, cz, 4)) continue;
+        if (r() < 0.55) continue;
+        const lado = r() < 0.5 ? -1 : 1, parado = r() < 0.55, off = parado ? 3.4 : 1.4;
+        lista.push({ x: cx + nx * off * lado, z: cz + nz * off * lado, rumo: -Math.atan2(uz, ux) + (lado < 0 ? Math.PI : 0), cor: Math.floor(r() * 8) });
+        if (lista.length > 760) break;
+      }
     }
     _carros = lista;
     return lista;
+  }
+  /**
+   * As peças da rua e da praça (o desenho junta numa malha): postes de luz (avenida e praça), bancas e barracas de
+   * ambulante, bilheterias, mastros com as bandeiras do clube, outdoors, pontos de ônibus, as pontes do rio:
+   * [{tipo, x, z, rumo, ...}].
+   */
+  let _pecas = null;
+  function pecasRua() {
+    if (_pecas) return _pecas;
+    const r = gerador(F.semente + 17), out = [];
+    const A = AVENIDA, zF = rFach(Math.PI / 2) + (casca ? BOJO : 0);
+    // postes na beira da avenida (os dois lados) e na praça
+    const nP = Math.round((2 * Math.PI * A.r1) / 34);
+    for (let i = 0; i < nP; i++) for (const rr of [A.r0 - 1.2, A.r1 + 1.2]) {
+      const th = (2 * Math.PI * (i + (rr > A.r0 ? 0.5 : 0))) / nP, x = rr * Math.cos(th), z = rr * Math.sin(th);
+      // (fora do corredor da grua do plano da fachada, que cruza a avenida na praça)
+      if (!naAgua(x, z, 3) && !(z > 0 && Math.abs(x) < 62)) out.push({ tipo: 'poste', x, z, rumo: th + (rr > A.r0 ? Math.PI : 0), alto: 9 });
+    }
+    for (let z = zF + 16; z < Math.min(A.r0 - 6, zF + 110); z += 18) for (const x of [-66, 66]) out.push({ tipo: 'poste', x, z, rumo: x < 0 ? 0 : Math.PI, alto: 8 });
+    // mastros com bandeiras na frente da entrada principal (a cor do clube: o desenho pinta)
+    for (let i = 0; i < 6; i++) out.push({ tipo: 'mastro', x: -30 + i * 12, z: zF + 9, alto: 12, faixa: i % 2 });
+    // bilheterias junto da fachada (4 lados)
+    for (const th of [Math.PI / 2 + 0.35, Math.PI / 2 - 0.35, -Math.PI / 2 + 0.3, -Math.PI / 2 - 0.3, 0.25, Math.PI - 0.25]) {
+      const rr = rFach(th) + (casca ? BOJO : 0) + 7;
+      out.push({ tipo: 'bilheteria', x: rr * Math.cos(th), z: rr * Math.sin(th), rumo: th });
+    }
+    // bancas e barracas de ambulante pela praça (o lado +x: a grua do plano da fachada passa pelo −x)
+    for (let i = 0; i < 26; i++) {
+      const x = 10 + r() * 56, z = zF + 22 + r() * Math.max(20, Math.min(A.r0 - 10, zF + 100) - zF - 22);
+      if (out.some(o => o.tipo !== 'poste' && Math.hypot(o.x - x, o.z - z) < 7)) continue;
+      out.push({ tipo: r() < 0.3 ? 'banca' : 'barraca', x, z, rumo: (r() - 0.5) * 0.6, cor: Math.floor(r() * 5) });
+    }
+    // outdoors virados para a avenida e pontos de ônibus
+    for (let i = 0; i < 10; i++) {
+      const th = (2 * Math.PI * (i + 0.25)) / 10, rr = A.r1 + 9, x = rr * Math.cos(th), z = rr * Math.sin(th);
+      if (!naAgua(x, z, 10) && !naPraca(x, z, 10)) out.push({ tipo: 'outdoor', x, z, rumo: th + Math.PI / 2, n: i });
+    }
+    for (let i = 0; i < 5; i++) {
+      const th = (2 * Math.PI * (i + 0.6)) / 5, rr = A.r1 + 3, x = rr * Math.cos(th), z = rr * Math.sin(th);
+      if (!naAgua(x, z, 5)) out.push({ tipo: 'onibus', x, z, rumo: th + Math.PI / 2 });
+    }
+    // pontes por cima do rio/canal (perpendiculares, a cada ~320 m)
+    const Ag = agua();
+    if (Ag && (Ag.tipo === 'rio' || Ag.tipo === 'canal')) {
+      const ex = -Ag.nz, ez = Ag.nx;
+      for (const sx of [-1, 0, 1]) {
+        const t = Ag.d + Ag.larg / 2, s0 = sx * 320 + 60;
+        out.push({ tipo: 'ponte', x: Ag.nx * t + ex * s0, z: Ag.nz * t + ez * s0, rumo: Math.atan2(Ag.nz, Ag.nx), comp: Ag.larg + 24 });
+      }
+    }
+    _pecas = out;
+    return out;
   }
   /** Os morros/montanhas do horizonte: [{th (centro), larg (rad), alto, dist}] (o desenho faz o recorte). */
   function relevo() {
@@ -1079,7 +1250,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     temArquibancada, trechos, uDe, XP, ZP, abertos, yTopo, topoLado, cobEm, alturaCobEm, cobContinua, luzDoSol,
     get lugares() { return _lugares ?? (_lugares = gerarLugares()); },
     solido, cameraNoLadoDeCa, noDegrau, torres: TORRES, marcas: MARCAS_P,
-    predios, arvores, torcedoresFora, agua, naAgua, relevo, rEsplanada, rMax, yMax, estacionamentos, canteiros, carros, uTh: arcoMeio,
+    predios, arvores, torcedoresFora, agua, naAgua, relevo, rEsplanada, rMax, yMax, estacionamentos, canteiros, carros, pecasRua, ruas, avenida: AVENIDA, uTh: arcoMeio,
     faixas, bandeiras, bandeiroes, sinalizadores,
     ajustarPlano, ajustarAbertura, escala: K, planos: PLANOS, cameraGeral,
   };
