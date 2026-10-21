@@ -632,6 +632,98 @@ export const GOLEIRO = {
     tAbraca: 0.25,    // s para trazer a bola encaixada para junto do peito
     tMaoRebote: 0.15, // s para as mãos irem de onde estavam (defesa anterior) às da defesa nova no rebote
   },
+  // Goleiro realista (pedido do dono, 15/10: "os goleiros se movimentando melhor e as espalmas e as seguradas de bola mais
+  // realistas, ele defende mais bolas difíceis do que fáceis"; e a pendência #114: sair no 1×1 e no cruzamento). SÓ NA
+  // PARTIDA (m.partida; o treino segue bit a bit igual) e fora do pênalti (que tem a calibração própria, `penalti`).
+  // Pesquisa e fontes: PESQUISA-ETAPA4.md §13 (StatsBomb open data, 348 partidas, medido aqui; The FA; Ibrahim 2019);
+  // contrato: CONTRATOS.md "Goleiro realista (16/10)".
+  realista: {
+    // CHANCE DE DEFESA pela FOLGA física: f = (alcance da mão no tempo que sobra depois da reação e do estado dele —
+    // goleiro.js alcanceReal e atrasoDoEstado) − (distância lateral da bola no plano dele), em m; logit = c0 + cFolga·f +
+    // logit.attr·nível − cAlto·(y − yAlto)·cFolga (bola alta longe do corpo, a mais de `altoLado` m: como se o alcance fosse
+    // cAlto·(y − yAlto) m menor — o canto alto é o mais difícil). c0: a chance com a folga zero (a bola na ponta da mão,
+    // ~22%). Antes a chance subia com a DISTÂNCIA do
+    // chute (sem olhar a velocidade): a bola no corpo de perto entrava 35% e a de 3 m de lado de 25–30 m era defendida
+    // 70–85%. Além do alcance a chance cai a zero em GOLEIRO.folgaAlcance (como antes).
+    c0: -1.4, cFolga: 2.0, cAlto: 0.6, yAlto: 1.6, altoLado: 1.2,
+    // DE LONGE (a leitura da bola que "mexe" no ar): a chance perde `erroLonge` m de folga por m além de `dLonge` m dele,
+    // inteira até `latErro[0]` m de lado e nada a partir de `latErro[1]` (StatsBomb: PESQUISA-ETAPA4.md §13.1)
+    erroLonge: 0.09, dLonge: 14, latErro: [2, 3.5],
+    // o alcance da mão (m) no tempo depois da reação (goleiro.js alcanceReal): em pé `emPe`; o braço/perna do reflexo
+    // chega a `reflexo` em tReflexo s e o corpo esticado a `esticado` em tEsticar s (somam o deslocamento do mergulho)
+    alcance: { emPe: 0.8, reflexo: 0.9, tReflexo: 0.4, esticado: 2.3, tEsticar: 0.6 },
+    // o cabeceio a gol: a bola lenta cuja direção ele lê no corpo de quem cabeceia — `folgaCabeceio` m a mais de alcance
+    // (Opta/StatsBomb: ~70% dos cabeceios no alvo são defendidos; sem isso, 38% e 26% dos gols eram de cabeça)
+    folgaCabeceio: 0.5,
+    // batido (o sorteio não deu defesa): o mergulho desenhado leva o ombro só até `corpo` m antes da bola e a mão fica `mao`
+    // m curta — o corpo não entra no caminho dela (antes: 0,4 e 0,35 m, e a bola passava por dentro do goleiro desenhado)
+    batido: { corpo: 1.0, mao: 0.6 },
+    // e se, mesmo assim, o corpo desenhado está no caminho da bola no contato (ou nos `ticks` seguintes: ele vinha
+    // embalado para o lado dela): ela bate nele — o tronco do quadril até `tronco[1]` m pelo eixo, raio `tronco[0]`; as
+    // pernas até os tornozelos, raio `perna`; de pé, o corpo até `alto` m — e escapa perto (o rebote) ou, em `fora` das vezes,
+    // desvia para fora (a espalmada de sempre: por cima ou pela linha de fundo)
+    bloqueio: { tronco: [0.22, 0.8], perna: 0.13, alto: 1.75, ticks: 8, fora: 0.5 },
+    // bola NO CORPO (a até `corpo` m de lado e abaixo de `corpoAlto`): o corpo está no caminho — é sempre parada (encaixe
+    // ou bloqueio que escapa); nada atravessa o goleiro (antes o sorteio que falhava deixava a bola passar pelo corpo
+    // desenhado: 58 gols "pelo corpo" no canhão de 2.535 chutes)
+    corpo: 0.45, corpoAlto: 1.75,
+    // ESTADO no chute (StatsBomb: "Set" 75,7% × "Moving" 39,3% de defesa): sem base — os dois pés no chão e mais devagar que
+    // vParado m/s — a reação demora semBase s a mais; andando para o lado contrário da bola, mais o tempo de frear (v /
+    // GOLEIRO.aMergulho)
+    semBase: 0.08, vParado: 0.7,
+    // SEGURAR × ESPALMAR (StatsBomb, 1.893 defesas: segura 47%; em pé baixa/média/alta 55/52/42%; mergulho 34/22/4%):
+    // [rasteira (< 1 m), meia altura, alta (≥ 1,8 m)], × (1 + kV·(vRef − v)) pela velocidade da bola no plano (forte segura
+    // menos), entre vMin e vMax; no mergulho, × a folga (f / folgaPlena, até 1, no mínimo minFolga): na ponta dos dedos
+    // espalma. A bola NO CORPO segura pela distância do chute ao gol (`corpoDist`, [m, fração], interpolada: StatsBomb, 729
+    // defesas a < 0,5 m de lado — < 12 m 32%, 12–16,5 m 40%, 16,5–25 m 59%, ≥ 25 m 79%, no meio de cada faixa; antes 0,92
+    // fixo, sem fonte: o chute de perto no corpo era encaixado em 72%)
+    segura: { emPe: [0.66, 0.6, 0.45], mergulho: [0.4, 0.26, 0.05], corpoDist: [[9, 0.32], [14.25, 0.4], [20.75, 0.59], [28, 0.79]], vRef: 18, kV: 0.035, vMin: 0.55, vMax: 1.3, folgaPlena: 0.9, minFolga: 0.35 },
+    // REBOTE (a bola que não fica nas mãos): vai para FORA (linha de fundo ou travessão) com a fração da StatsBomb pela
+    // técnica e altura [< 1, 1–1,8, ≥ 1,8 m] (`foraEmPe`/`foraMergulho`); o resto cai perto, de lado: `fv` da velocidade
+    // (entre v[0] e v[1] m/s), a ang[0]–ang[1] rad da frente do gol, subindo vy m/s — nunca para dentro do gol
+    rebote: { foraEmPe: [0.26, 0.3, 0.72], foraMergulho: [0.36, 0.52, 0.76], fv: 0.28, v: [3, 7.5], ang: [0.6, 1.25], vy: [0.6, 2.2] },
+    // MOVIMENTO (posicionando): parado dentro de `zona` m do ponto (histerese: volta a andar a mais de `zonaSai` m); com o
+    // chute armado do adversário (a carga ou o pedido do CHUTE do dono da bola) ele fica "set": freia e só corrige a mais
+    // de `setRaio` m, a até vSet m/s; ajustando perto do ponto (a menos de `perto` m) anda a até vAjuste m/s (passos
+    // curtos); `base`: m do centro a cada pé andando a menos de vBase m/s (a base larga: Ibrahim 2019, 75% da perna), com o
+    // quadril `agacha` m mais baixo e o tronco `inclina` rad para a frente (anim.js, pela velocidade). Com AMEAÇA (o dono
+    // adversário com a bola a menos de `ameaca` m do gol): histerese `zonaSaiAmeaca`, ajuste a vAjusteAmeaca m/s e a
+    // bissetriz pela bola `antecipa` s à frente. Parado, até `giraSet` rad da bola só olha (não vira o corpo); o cruzamento
+    // que chega à cabeça em menos de `setCruz` s também pede o set. Bola perto da linha de fundo: a até `linhaPerto` m da
+    // linha (interpolando até a bola a `linhaU` m dela ao longo do campo). ritmoFim: o passo termina mais depressa na base
+    mov: { zona: 0.1, zonaSai: 0.22, setRaio: 1.2, vSet: 1.0, perto: 1.2, vAjuste: 2.4, base: 0.17, vBase: 1.5, agacha: 0.07, inclina: 0.18,
+      ameaca: 26, zonaSaiAmeaca: 0.45, vAjusteAmeaca: 1.6, giraSet: 0.6, setCruz: 0.35, linhaPerto: 1.5, linhaU: 16, antecipa: 0.35, ritmoFim: 6.5,
+      // a pose da base (j.baseF) vai de 0 a 1 em tBase s (sem salto quando a bola entra ou sai da mão); parado na base, o
+      // passo de ajuste só sai com o corpo a mais de `alcanceSet` m de um pé (PASSADA.alcanceParado nos outros: 0,3)
+      tBase: 0.25, alcanceSet: 0.45,
+      // freando set a menos de vSetPes m/s, ele não tira mais um pé do chão (o passo no ar termina depressa, ritmoFim)
+      vSetPes: 1.0 },
+    // 1×1 (IA): o dono adversário a até `dist` m do gol, sem companheiro de linha a `cobre` m da linha dono → gol nem a
+    // `colado` m dele; corre só na bola do toque longo a que chega `chega` s antes do dono (PESQUISA-ETAPA4.md §13.1)
+    umXum: { dist: 20, cobre: 2.2, colado: 1.3, chega: 0.1 },
+    // ABAFAR (cair nos pés / pegar a bola do toque longo): a bola baixa (até `y` m) e devagar (até `vMax` m/s) a até `alcance`
+    // m dele (+ `saindo` saindo no 1×1), na área com a mão valendo, mais perto dele que do pé do dono (o toque longo); um
+    // sorteio por tentativa (`p` pelo reflexo), e depois `descanso` s sem tentar
+    abafa: { y: 0.6, vMax: 9, alcance: 0.95, saindo: 0.45, p: [0.55, 0.85], descanso: 0.5 },
+    // BOLA SOLTA NA ÁREA (o "Keeper Sweeper" da StatsBomb, ~1 por goleiro por partida; 0,061 por chute na área, medido aqui:
+    // 512 em 8.417 chutes): rasteira/baixa, o goleiro vai nela
+    // quando chega antes de todo adversário com `folga` s, no máximo a `dist` m da linha, com a mão valendo no ponto (o
+    // caminho previsto por `horizonte` passos); indo nela, pega (sim.js bolaLivre) até `vPega` m/s (9 nos outros casos)
+    varre: { folga: 0.3, dist: 15, y: 1.2, horizonte: 150, vPega: 12 },
+    // SAÍDA NO CRUZAMENTO (StatsBomb, 348 partidas: o goleiro toca em 10,7% dos escanteios longos — soco 62% — e intervém em
+    // 8,2% dos cruzamentos na área — encaixe 60%; 92% de sucesso): a bola do adversário no ar; o 1º ponto da trajetória a
+    // y[0]–y[1] m de altura, na área com a mão valendo e a até `dist` m da linha (|z| ≤ `largura`), a que ele chega
+    // (reação `reacao` s + corrida + `salto` s do pulo desenhado) antes de todo adversário cabecear, com `folga` s; o
+    // contestado (adversário chegando até `contesta` s depois) ou a bola rápida (> vSoco m/s) é socado; encaixe/soco dão
+    // certo com `p` (o resto: ele sai e a bola passa). Corre a vCorre·arrancada (a conta do tempo × fCorre, chegando
+    // `chegaAntes` s antes do pulo; de frente para a bola só a menos de `vira` m), o corpo `atras` m do lado do gol do ponto;
+    // a trajetória prevista por `ticks` passos, relida a cada `cada`; desiste se não chega mais (`tolera` s); a mão
+    // desenhada tem de estar a até `mao` m da bola
+    cruz: { y: [1.2, 2.2], dist: 8.5, largura: 10, reacao: 0.22, salto: 0.45, folga: 0, contesta: 0.3, vSoco: 21, p: 0.93, vCorre: 0.92, ticks: 110, mao: 0.35, cada: 6, atras: 0.3,
+      fCorre: 1.08, chegaAntes: 0.1, vira: 1.2, tolera: 0.08 },
+    // SOCO: a bola sai a v m/s, subindo el rad, para longe do gol e para o lado dela (até lado rad da frente do gol)
+    soco: { v: [13, 17], el: [0.45, 0.75], lado: [0.35, 1.0] },
+  },
 };
 
 // IA sem a bola: chegar ao ponto sem tremedeira (dono, 09/10: "o movimento dos jogadores tá meio
@@ -912,9 +1004,22 @@ export const CABECEIO = {
   gol: 15,
   // afastar: para longe do meu gol e para o lado da bola (nunca para o meio da minha área)
   vAfasta: 16, elAfasta: 0.62, ladoAfasta: 0.55,
+  // (partida) o afastamento pela física da testa (acoes.js afastarReal): vira até `giro` rad do corpo, devolve `en` da
+  // velocidade normal + `vTesta` m/s; sem ângulo, para cima (`elFuga`). StatsBomb: PESQUISA-ETAPA4.md §13.1
+  afastaReal: { giro: 1.0, en: 0.5, vTesta: 7, elFuga: 1.05 },
   // a gol: mira a bola baixa na linha do gol (onde o goleiro alcança menos), entre yGol[0] e yGol[1] m, a zGol m do meio,
   // do lado longe do goleiro (sem o analógico)
   yGol: [0.3, 1.1], zGol: 0.8,
+};
+
+// BLOQUEIO COM A PERNA (partida; sim.js bloqueioPerna; StatsBomb: 27,4% dos chutes bloqueados, 25,8% deles viram
+// escanteio — PESQUISA-ETAPA4.md §13.1; contrato no CONTRATOS.md): o defensor a ≤ `dist` m de quem chutou (ou passou
+// baixo a ≤ `fundo` m da linha de fundo dele) e de frente (≤ `frente` rad) bloqueia a bola baixa (≤ `alto` m; o passe a <
+// `pertoPasse` m do pé, ≤ `altoPasse`) que passa a < `perna` m dele nos primeiros `ticks` passos, com a chance p (pelo
+// alcance; × `kAttr` pelo desarme); a bola reflete na canela (normal sobe `phi`, vira `psi` ± `psiVar` rad; restituição e)
+export const BLOQUEIO = {
+  perna: 1.0, alto: 0.8, altoPasse: 1.3, pertoPasse: 3, dist: 7, fundo: 16.5, frente: 2.2, ticks: 30, p: [0.95, 0.5], kAttr: 0.5,
+  phi: [0, 0.5], psi: [0.1, 0.6], psiVar: 0.3, e: 0.45,
 };
 
 // Impedimento (IFAB Regra 11; impedimento.js). Posição de impedimento: no campo adversário (sem a linha do meio) e

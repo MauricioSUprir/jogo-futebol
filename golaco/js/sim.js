@@ -3,7 +3,7 @@
 // mesma partida bit a bit (ver hashMundo).
 
 import { profundidadeVeu } from './rede-forma.js';
-import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, BOLA, GOLEIRO, IA, AEREO, CABECEIO, TROCA_AEREA, DEFESA_HUMANO, FALTAS, RECEPCAO } from './config.js';
+import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, BOLA, GOLEIRO, IA, AEREO, CABECEIO, TROCA_AEREA, DEFESA_HUMANO, FALTAS, RECEPCAO, BLOQUEIO } from './config.js';
 import { criarRng, entre, uniforme, normal } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
@@ -17,7 +17,7 @@ import {
 } from './conducao.js';
 import { MD } from './matdet.js';
 import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, executarCabeceio, ataca, assumirControle } from './acoes.js';
-import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol, mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho, maoNaBola } from './goleiro.js';
+import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol, mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho, maoNaBola, abafar, goleiroSaiNoAlto, atualizarBaseGoleiro } from './goleiro.js';
 import { entradaIA } from './ia.js';
 import { ACOES } from './config.js';
 // Etapa 3 (partida 11×11): tudo isto só liga com m.times — o treino continua bit a bit igual
@@ -202,7 +202,79 @@ function colisaoCorpos(m) {
   }
 }
 
+/**
+ * Bloqueio com a perna (partida; config.js BLOQUEIO): logo depois do chute — ou do passe baixo perto da linha de fundo —
+ * o defensor perto de quem bateu e de frente para ele estica a perna; a bola baixa que passa ao alcance dela (a reta do
+ * passo, de (x0, z0) até onde a bola está) bate na perna com a chance sorteada uma vez por bola e defensor, e sai pela
+ * física do contato (reflexão na canela atravessada no caminho). Devolve true se bloqueou.
+ */
+function bloqueioPerna(m, x0, z0) {
+  const v = m.voo, b = m.bola, B = BLOQUEIO;
+  if (!v || m.posse != null || m.naMao != null || naParada(m) || b.p.y > B.altoPasse) return false;
+  const chute = v.tipo === 'chute' || v.tipo === 'colocado';
+  const passe = v.tipo === 'passe' || v.tipo === 'cruzamento' || v.tipo === 'enfiada';
+  // (também no passo do chute: o toque do defensor fica como o último — partida.js atualizarUltimoToque — e a bola desviada
+  // pela linha de fundo é escanteio)
+  const idade = m.tick - (v.tick0 ?? m.tick);
+  if ((!chute && !passe) || idade < 0 || idade > B.ticks) return false;
+  let st = m.bloq;
+  if (!st || st.chave !== v.tickChave) {
+    const k = v.de != null ? jogadorPorId(m, v.de) : null;
+    st = m.bloq = { chave: v.tickChave, x: k ? k.x : x0, z: k ? k.z : z0, feitos: [] };
+    // o passe só perto da linha de fundo que o defensor defende (o cruzamento rasteiro, o passe para trás da linha)
+    if (passe && CAMPO.meioX - st.x * ataca(m, v.time) > B.fundo) st.feitos = null;
+  }
+  if (!st.feitos) return false;
+  // a bola baixa (até `alto` m); o passe/cruzamento ainda perto do pé de quem cruzou (a até `pertoPasse` m), até `altoPasse`
+  // m — o marcador que fecha o cruzamento bloqueia com a perna levantada, a coxa ou o quadril
+  if (b.p.y > (passe && MD.hypot(b.p.x - st.x, b.p.z - st.z) < B.pertoPasse ? B.altoPasse : B.alto)) return false;
+  const sx = b.p.x - x0, sz = b.p.z - z0, s2 = sx * sx + sz * sz;
+  for (const j of m.jogadores) {
+    if (j.time === v.time || j.posicao === 'GOL' || j.papel === 'parado' || j.papel === 'marcador') continue;
+    if (st.feitos.includes(j.id) || voando(j, m.tick)) continue;
+    // o ponto do caminho da bola mais perto dele: neste passo (ou no começo dele, se já passou); ainda à frente, espera
+    const t = s2 > 1e-9 ? Math.max(0, ((j.x - x0) * sx + (j.z - z0) * sz) / s2) : 1;
+    if (t > 1) continue;
+    const cx = x0 + sx * t, cz = z0 + sz * t;
+    const d = MD.hypot(cx - j.x, cz - j.z);
+    if (d >= B.perna || d < RAIO_CORPO_BOLA) continue; // (no corpo: colisaoBolaCorpo)
+    if (MD.hypot(j.x - st.x, j.z - st.z) > B.dist) continue;
+    if (Math.abs(difAng(j.rumo, MD.atan2(st.z - j.z, st.x - j.x))) > B.frente) continue;
+    st.feitos.push(j.id);
+    const k = (d - RAIO_CORPO_BOLA) / (B.perna - RAIO_CORPO_BOLA);
+    const des = j.par.attr.desarme ?? 70;
+    const p = lerp(B.p[0], B.p[1], k) * (1 + B.kAttr * (des - 70) / 100);
+    if (uniforme(m.rng) >= p) continue;
+    // a perna atravessada no caminho: perto do corpo a bola bate de frente na canela (a normal volta contra ela); na
+    // ponta do pé, de raspão (a normal vira para fora, do lado dele para o da bola: ela segue desviada). A normal vira psi
+    // da frente (de psi[0] a psi[1] pelo alcance, ± psiVar) e sobe phi (a bola acima do eixo da canela)
+    const vh = MD.hypot(b.v.x, b.v.z);
+    if (vh < 1) continue;
+    const ux = b.v.x / vh, uz = b.v.z / vh;
+    let lx = cx - j.x, lz = cz - j.z;
+    const ll = MD.hypot(lx, lz) || 1; lx /= ll; lz /= ll;
+    const phi = lerp(B.phi[0], B.phi[1], uniforme(m.rng));
+    const psi = clamp(lerp(B.psi[0], B.psi[1], k) + (2 * uniforme(m.rng) - 1) * B.psiVar, 0, 1.5);
+    const ch = MD.cos(phi), cp = MD.cos(psi), sp = MD.sin(psi);
+    const nx = (-ux * cp + lx * sp) * ch, nz = (-uz * cp + lz * sp) * ch, ny = MD.sin(phi);
+    const vn = b.v.x * nx + b.v.y * ny + b.v.z * nz;
+    if (vn >= 0) continue;
+    b.p.x = cx; b.p.z = cz;
+    b.v.x -= (1 + B.e) * vn * nx; b.v.y -= (1 + B.e) * vn * ny; b.v.z -= (1 + B.e) * vn * nz;
+    b.w.x *= 0.3; b.w.y *= 0.3; b.w.z *= 0.3;
+    if (b.v.y > 0.01) { b.rolando = false; if (b.p.y < BOLA.raio) b.p.y = BOLA.raio; }
+    else if (b.rolando) { b.v.y = 0; b.w.x = b.v.z / BOLA.raio; b.w.z = -b.v.x / BOLA.raio; }
+    m.eventos.push({ tipo: 'bateuCorpo', id: j.id, bloqueio: true });
+    registrarToque(m, j, 'corpo');
+    m.desvio = m.tick;
+    for (const o of m.jogadores) if (o.cond && o.cond.toque && o.cond.toque.tipo === 'aereo') o.cond.toque = null;
+    return true;
+  }
+  return false;
+}
+
 /** Bola batendo nas pernas de quem não está conduzindo. */
+const RAIO_CORPO_BOLA = 0.2 + 0.11; // m: o corpo (as pernas) + o raio da bola
 function colisaoBolaCorpo(m) {
   const b = m.bola;
   if (b.p.y > 0.9) return;
@@ -215,7 +287,7 @@ function colisaoBolaCorpo(m) {
     if (j.defesa && !j.defesa.fora && m.tick <= j.defesa.tick + 2) continue;
     const dx = b.p.x - j.x, dz = b.p.z - j.z;
     const d = MD.hypot(dx, dz);
-    const lim = 0.2 + 0.11;
+    const lim = RAIO_CORPO_BOLA;
     if (d >= lim || d < 1e-9) continue;
     const nx = dx / d, nz = dz / d;
     b.p.x = j.x + nx * lim; b.p.z = j.z + nz * lim;
@@ -437,6 +509,13 @@ export function passo(m, entradas) {
       if (c && c.h > 0 && !c.saiu && m.tick >= c.td) sairDoChao(m, j);
       if (voando(j, m.tick + 1)) { passoCorpoNoAr(m, j); continue; }
     }
+    // partida: a base de goleiro (j.baseGk: pés abertos e o fim de passo da base, jogador.js) só vale no movimento de
+    // goleiro — indo como jogador de linha (a bola no pé, o analógico do humano) ela ficava velha (velPosicao não roda);
+    // e a pose da base (anim.js) anda para o alvo sem salto (goleiro.js atualizarBaseGoleiro)
+    if (m.partida && j.posicao === 'GOL') {
+      if ((j.baseGk != null || j.setGk) && goleiroComoLinha(m, j)) { j.baseGk = null; j.setGk = false; }
+      atualizarBaseGoleiro(m, j);
+    }
     if (j.papel === 'marcador') {
       if (j.descanso > 0) { j.descanso--; mv = { dx: MD.cos(j.rumo), dz: MD.sin(j.rumo), vel: 0, rumoAlvo: j.rumo }; }
       else mv = moverMarcador(m, j);
@@ -535,6 +614,10 @@ export function passo(m, entradas) {
     else if (j.posicao !== 'GOL' && guiadoPelaIA(m, j)) boteIA(m, j);
     else if ((j.defH || ((j.botoes | j.botoesAnt) & BOTAO.DIVIDIDA)) && ehControlado(m, j)) dividida(m, j); // Etapa 3
   }
+  // partida: o goleiro cai nos pés da bola do toque longo do dono adversário (goleiro.js abafar; GOLEIRO.realista.abafa)
+  if (m.partida && m.posse != null && m.naMao == null) {
+    for (const j of js) if (j.posicao === 'GOL' && !goleiroComoLinha(m, j) && abafar(m, j)) { ganhouPosse(m, j); break; }
+  }
   // 4) goleiros leem o chute e defendem
   for (const j of js) {
     if (j.posicao !== 'GOL') continue;
@@ -554,7 +637,9 @@ export function passo(m, entradas) {
   } else if (m.parada && segurarLateral(m)) {
     // lateral (Etapa 4): a bola nas duas mãos (atrás da cabeça ou no arco do arremesso), sem física
   } else {
+    const bx0 = m.bola.p.x, bz0 = m.bola.p.z;
     passoBola(m.bola, m.eventos);
+    if (m.partida) bloqueioPerna(m, bx0, bz0);
     colisaoBolaCorpo(m);
     if (m.partida && m.partida.barreira) colisaoBarreira(m); // tiro livre: a bola na barreira que pula (Etapa 4)
   }
@@ -697,7 +782,11 @@ function bolaLivre(m) {
     // no meio da defesa desenhada (o corpo já está no quadro do próximo tick), só com a mão desenhada na bola
     // a própria espalmada não volta para as mãos logo depois (GOLEIRO.reagarra)
     const espalmou = m.ultimoToque && m.ultimoToque.id === g.id && (m.tick - m.ultimoToque.tick) * PASSO < GOLEIRO.reagarra;
-    if (naArea && !espalmou && MD.hypot(b.p.x - g.x, b.p.z - g.z) < 1.0 && b.p.y < 2.2 && MD.hypot(b.v.x, b.v.z) < 9
+    // (partida: indo na bola solta da área — goleiro.js varrer — pega também a mais rápida, até GOLEIRO.realista.varre.vPega)
+    // (só com a ida à bola solta calculada NESTE passo — goleiro.js varrer, j.varre.vivo: o plano velho, de antes de um
+    // chute ou de um mergulho, não vale)
+    const vPega = m.partida && g.varre && g.varre.ok && g.varre.vivo === m.tick ? GOLEIRO.realista.varre.vPega : 9;
+    if (naArea && !espalmou && MD.hypot(b.p.x - g.x, b.p.z - g.z) < 1.0 && b.p.y < 2.2 && MD.hypot(b.v.x, b.v.z) < vPega
       && (!mergulhoAtivo(g, m.tick + 1) || maoNaBola(g, m.tick + 1, b.p))) {
       m.naMao = g.id; m.posse = g.id; g.segura = { desde: m.tick };
       b.v.x = 0; b.v.y = 0; b.v.z = 0; m.voo = null;
@@ -834,6 +923,8 @@ function bolaAltaNoCorpo(m, j) {
   }
   if (j.perdeuAlto != null && (m.tick - j.perdeuAlto) * PASSO < AEREO.perdeuSalto) return false;
   if (noArAgora(m, j)) return false; // no ar (pulo de outro cabeceio): não marca outro toque
+  // partida: o goleiro do time vai sair nessa bola no alto ("deixa!"): o companheiro não vai nela (salvo o do humano)
+  if (m.partida && (!ehControlado(m, j) || m.iaJoga?.[j.time]) && goleiroSaiNoAlto(m, j)) return false;
   // indo disputar o toque de um adversário (agendarDisputa): o pulo dele é o da disputa — não planeja outro por cima
   if (j.disputaAlta && m.tick <= j.disputaAlta.tc) return ESPERA;
   const peito = ACOES.cabeceio.alturaPeito[1];

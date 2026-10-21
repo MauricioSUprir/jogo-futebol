@@ -101,6 +101,9 @@ const LISTA = [
   ['jogador parado com a bola: a IA fecha e dá o bote (condutor lento)', 'teste-parado.mjs'],
   ['PRESSÃO perceptível: com × sem o botão (pareado), marca, um a mais na pressão', 'teste-pressao-humano.mjs'],
   ['goleiro pelas Leis do Jogo (mão só na área, recuo, 8 s) e na mão do humano (anda, TROCAR, PEGAR)', 'teste-goleiro-regras.mjs'],
+  // Pedido do dono de 15/10 ("defende mais bolas difíceis do que fáceis", espalmar e segurar realistas, movimento) e a
+  // pendência #114 (sai no 1×1 e no cruzamento): canhão de estados do meio da partida em 4 processos
+  ['goleiro realista: defende a fácil e não a difícil, segura × espalma, set no chute, 1×1, bola solta e saída no cruzamento', 'teste-goleiro-realista.mjs', [], 'padrao', 4],
   ['bolas paradas: lateral com as mãos e 3 opções (Regra 15), tiro de meta (16), escanteio por zonas, barreira (13)', 'teste-bolas-paradas.mjs'],
   ['cobrança mirada (escanteio, falta, tiro de meta da pessoa): a linha = a física, curva, controles, canhão roteirizado, a IA não usa', 'teste-mira.mjs'],
   // Auditoria dos botões (dono, 12/10: "ainda tem botões que não funcionam"): o efeito de cada botão no mundo

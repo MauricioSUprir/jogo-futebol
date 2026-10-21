@@ -26,7 +26,7 @@ const LIMITE_BYTES = 4 * 1024 * 1024;
 // folga mínima até os 4 MB (código novo cabe sem estourar a meta; antes: ~1 KB) e o que NÃO pode estar no download
 // inicial (sob demanda: config.js SOB_DEMANDA)
 const FOLGA_MIN = 120 * 1024;
-const SOB_DEMANDA_ARQ = ['js/render/replay.js', 'js/render/replay-roteiro.js', 'js/render/replay-olhos.js', 'js/render/replay-saot.js', 'js/editor-time.js', 'css/editor.css'];
+const SOB_DEMANDA_ARQ = ['js/render/replay.js', 'js/render/replay-roteiro.js', 'js/render/replay-olhos.js', 'js/render/replay-saot.js', 'js/editor-time.js', 'css/editor.css', 'js/substituicao.js', 'js/render/placa-subst.js'];
 const N_PASSOS = 600;
 const args = process.argv.slice(2);
 const urlExterna = args.includes('--url') ? args[args.indexOf('--url') + 1] : null;
@@ -198,7 +198,7 @@ try {
   meta('Download inicial', `${(total / 1048576).toFixed(2)} MB (nosso ${(bytesSrv / 1024).toFixed(0)} KB + CDN ${(bytesCdn / 1024).toFixed(0)} KB)`, '≤ 4 MB', total <= LIMITE_BYTES && (srv ? bytesSrv > 0 : true));
   meta('Folga no download inicial (até os 4 MB)', `${((LIMITE_BYTES - total) / 1024).toFixed(1)} KB (medido ${tMedida.toFixed(1)} s depois do 1º quadro)`, `≥ ${FOLGA_MIN / 1024} KB`, LIMITE_BYTES - total >= FOLGA_MIN);
   const noInicial = SOB_DEMANDA_ARQ.filter(a => pedidosIniciais.includes(a));
-  meta('Sob demanda fora do download inicial (replay e Editar time)', noInicial.length ? `baixados: ${noInicial.join(', ')}` : `nenhum dos ${SOB_DEMANDA_ARQ.length}`, 'nenhum', noInicial.length === 0);
+  meta('Sob demanda fora do download inicial (replay, Editar time e cena de substituição)', noInicial.length ? `baixados: ${noInicial.join(', ')}` : `nenhum dos ${SOB_DEMANDA_ARQ.length}`, 'nenhum', noInicial.length === 0);
 
   // 4) passo fixo a 60/120/144 Hz com relógio manual
   const laco = await pagina.evaluate(() => {
