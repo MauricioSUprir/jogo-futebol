@@ -555,7 +555,12 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   "em lotes")**: (1) publicar o Maracanã; (2) as outras famílias — 4 arquibancadas à inglesa (cantos abertos/fechados),
   arena moderna fechada, com pista de atletismo, pequeno —; (3) lote 1 de estádios: os 56 do Brasil + os 58 com ≥ 50 mil
   lugares (pesquisa de cada um: forma, medidas, anéis, cobertura, fachada, marcas próprias e entorno; detalhes próprios
-  nos famosos); depois os outros 409 em lotes, um PR por lote. Mexeu em main.js,
+  nos famosos); depois os outros 409 em lotes, um PR por lote. **Planta genérica** (lote 1, 21/10; contrato "Estádios de
+  forma genérica" no `CONTRATOS.md`): `js/estadio-generico.js` (puro; a mesma interface da do Maracanã) + `render/estadio-generico.js`
+  (sob demanda) para as 5 famílias; a forma de cada estádio sai da pesquisa por `tools/estadios/gerar-formas.mjs` e da revisão
+  contra as fotos (`tools/estadios/ajustes-forma.json`); conferir com `tools/prints-estadios.mjs` (folha por estádio) e o
+  `teste-estadio-generico` (a base inteira). Pesquisa grande: o Workflow roda só 2 agentes por vez nesta máquina — para
+  ~100 estádios, agentes em segundo plano (Agent) gravando cada fatia num arquivo andam ~4× mais rápido. Mexeu em main.js,
   hud.js, partida.js, acoes.js ou nos desenhos de estádio/torcida? Rodar também `teste-tm-tela` e o `testar-3d`.
 - **Modo Pênaltis 3D** (dono, 15/10: "crie uma versão só de jogador de pênaltis" → "modo de pênaltis 3d igual ao golaço, só
   que versão de pênaltis"; contrato "Disputa de pênaltis" no `CONTRATOS.md`): `?modo=penaltis`, "Pênaltis" no "Modo de jogo" e,
