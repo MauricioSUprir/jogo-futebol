@@ -170,8 +170,11 @@ const LISTAS = {
 // no curto as filas ficam com 5 s (a câmera anda o mesmo trilho, mais rápido)
 const DUR_CURTO = { dentro: 5, filaMandante: 5, filaVisitante: 5 };
 
-/** Roteiro de um modo: {modo, planos: [{...plano, t0, t1, i}], total, blocos: [{nome, t0, t1}], fimCenas}. */
-export function criarRoteiro(modo = 'completo') {
+/**
+ * Roteiro de um modo: {modo, planos: [{...plano, t0, t1, i}], total, blocos: [{nome, t0, t1}], fimCenas}. ajuste(p): o
+ * estádio com forma própria (estadio-planta.js ajustarPlano) troca a câmera dos planos que dependem dele, antes das curvas.
+ */
+export function criarRoteiro(modo = 'completo', ajuste = null) {
   if (!LISTAS[modo]) modo = 'completo';
   const ids = LISTAS[modo];
   const planos = [];
@@ -191,8 +194,9 @@ export function criarRoteiro(modo = 'completo') {
   }
   planos.forEach((p, i) => {
     p.i = i;
-    if (p.cam) { p.curvaDe = criarCurva(p.cam.de); p.curvaPara = criarCurva(p.cam.para); }
     if (p.orbitaComum) p.orbita = ORBITA_ESCALACAO;
+    if (ajuste) ajuste(p);
+    if (p.cam) { p.curvaDe = criarCurva(p.cam.de); p.curvaPara = criarCurva(p.cam.para); }
   });
   const blocos = [];
   for (const p of planos) {

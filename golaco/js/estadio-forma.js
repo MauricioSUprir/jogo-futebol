@@ -170,6 +170,10 @@ export function torcedoresFora() {
 
 // ------------------------------------------------------------------ sólidos (a câmera de cinema fica fora deles)
 const T = ESTADIO.tunel;
+// estádio com forma própria (estadio-planta.js, sob demanda: render/estadio-real.js ligarForma): a tigela, a cobertura,
+// a fachada e o entorno são os DELE; o gramado (placas, gols, bancos, o corredor do túnel) é o mesmo
+let forma = null;
+export function definirForma(p) { forma = p || null; }
 const BANCOS = ESTADIO.bancos;
 /**
  * O ponto (x, y, z) está dentro (ou a menos de `folga` m) de algo sólido? Devolve o nome ou null. `fora`: conta
@@ -182,8 +186,9 @@ export function solidoEm(x, y, z, folga = 0.3, fora = true) {
   const ax = Math.abs(x), az = Math.abs(z);
   // túnel do lado de cá: o corredor por dentro é livre (e a boca)
   const noTunel = z > 0 && ax < T.largura / 2 - f && y < T.altura - f && z > T.z - 2 && z < T.z + T.profundidade - f;
+  if (forma) { const s = forma.solido(x, y, z, f, fora, noTunel); if (s) return s; }
   // arquibancadas dos lados (lá: z −; cá: z +)
-  if (ax <= A.meioComprimento + f && az >= A.frenteZ - f && az <= A.frenteZ + A.profLado + f) {
+  else if (ax <= A.meioComprimento + f && az >= A.frenteZ - f && az <= A.frenteZ + A.profLado + f) {
     if (!noTunel) {
       if (y <= seatLado(az) + f) return z < 0 ? 'arquibancada de lá' : (ax < T.largura / 2 + 0.4 + f && y < T.altura + T.laje + f ? 'túnel (paredes)' : 'arquibancada de cá');
       if (az >= A.frenteZ + A.profLado - f && y <= A.yTopoLado + 5 + f) return z < 0 ? 'parede de lá' : 'parede de cá';
@@ -199,7 +204,7 @@ export function solidoEm(x, y, z, folga = 0.3, fora = true) {
     }
   }
   // fundos (atrás dos gols): de z −74,5 a +44,5
-  if (ax >= A.fundoX0 - f && ax <= A.fundoX0 + A.profFundo + f && z >= -(A.frenteZ + A.profLado) - f && z <= A.frenteZ + f) {
+  if (!forma && ax >= A.fundoX0 - f && ax <= A.fundoX0 + A.profFundo + f && z >= -(A.frenteZ + A.profLado) - f && z <= A.frenteZ + f) {
     if (y <= seatFundo(ax) + f) return x > 0 ? 'fundo +x' : 'fundo −x';
     if (ax >= A.fundoX0 + A.profFundo - f && y <= A.yTopoFundo + 5 + f) return 'parede do fundo';
   }
@@ -211,6 +216,7 @@ export function solidoEm(x, y, z, folga = 0.3, fora = true) {
   if (ax >= CAMPO.meioX - 0.15 - f && ax <= CAMPO.meioX + CAMPO.gol.profundidade + f && az <= CAMPO.gol.largura / 2 + 0.2 + f && y <= CAMPO.gol.altura + 0.2 + f) return 'gol';
   // bancos de reservas (lado de cá)
   if (z > 0 && ax >= BANCOS.x[0] - 0.3 - f && ax <= BANCOS.x[1] + 0.3 + f && z >= BANCOS.z[0] - 0.6 - f && z <= BANCOS.z[1] + f && y <= BANCOS.altura + 0.15 + f) return 'banco';
+  if (forma) return null;
   // torres dos refletores (±72, ±56) e o painel no alto
   {
     const d = Math.hypot(ax - 72, az - 56);

@@ -159,7 +159,6 @@ function luzDoSol(sol) {
 }
 const SOL_DIA = (() => { const s = [-0.42, 0.74, 0.52], l = Math.hypot(...s); return s.map(v => v / l); })();
 const LUZ = { dia: luzDoSol(SOL_DIA), noite: [0.44, 0.41, 0.41, 0.42] };
-const BANDEIROES = bandeiroes();
 
 
 /**
@@ -170,6 +169,7 @@ const BANDEIROES = bandeiroes();
  */
 export function criarTorcida(cena, opc) {
   const ident = opc.identidade && opc.identidade.tm ? opc.identidade : null;
+  const BANDEIROES = bandeiroes();   // aqui (não na carga): um estádio com forma própria troca os lugares antes
   const uni = {
     ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog),
     uAtlas: { value: null }, uTamAtlas: { value: new THREE.Vector2(1, 1) },
@@ -199,7 +199,7 @@ export function criarTorcida(cena, opc) {
   /** Monta TODOS os torcedores (os da Alta) uma vez; a qualidade só escolhe quantos desenhar. */
   function montar() {
     desmontar();
-    const d = gerarTorcidaNiveis(opc.mascara ?? null, ident ? { ...ident.torcida, publico: ident.publico } : null);
+    const d = gerarTorcidaNiveis(opc.mascara ?? null, ident ? { ...ident.torcida, publico: ident.publico } : null, ident?.forma3d?.planta.lugares);
     dados = d;
     const [cw, ch] = TORCIDA.atlas;
     const at = atlasTorcida(cw, ch);
