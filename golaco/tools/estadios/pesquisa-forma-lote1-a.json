@@ -1,0 +1,2751 @@
+[
+ {
+  "chave": "nissan stadium",
+  "nome_oficial": "Nissan Stadium (Estádio Internacional de Yokohama)",
+  "capacidade": 72327,
+  "tipo": "pista",
+  "planta": "oval",
+  "cantos": "fechados",
+  "pista_atletismo": true,
+  "recuo_m": {
+   "lateral": 22,
+   "fundo": 40
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Main Stand",
+    "aneis": 2,
+    "altura_m": 40,
+    "profundidade_m": 50,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Anel superior em balanço 10 m sobre o inferior, inclinação de 30°; 1ª fileira só 75 cm acima do campo; no 1º anel só da 19ª fileira para trás fica sob o teto. Altura e profundidade estimadas (beiral a 43,86 m)."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Back Stand",
+    "aneis": 2,
+    "altura_m": 40,
+    "profundidade_m": 50,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Letras NISSAN STADIUM vermelhas no fundo de cadeiras azul-claras. Medidas estimadas."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Side Stand Norte",
+    "aneis": 2,
+    "altura_m": 36,
+    "profundidade_m": 45,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Curva atrás do gol, segue a pista; telão grande (~22,5 × 9 m) no alto. Medidas estimadas."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Side Stand Sul",
+    "aneis": 2,
+    "altura_m": 36,
+    "profundidade_m": 45,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Igual à norte, com o outro telão no alto. Medidas estimadas."
+   }
+  ],
+  "cobertura": {
+   "tipo": "anel",
+   "material": "metal",
+   "cor": "#d8dde2",
+   "sustentacao": "trelica",
+   "altura_m": 52,
+   "notas": "Anel contínuo branco-prateado de treliça de tubos de aço galvanizado com chapa de inox; mais largo e mais alto sobre as laterais (51,96 m no ponto mais alto, beiral a 43,86 m) e mais estreito nas curvas, cobrindo ~3/4 das cadeiras (as fileiras da frente ficam descobertas)."
+  },
+  "fachada": {
+   "estilo": "concreto",
+   "cor": "#c9c9c5",
+   "cor2": "#e8e8e6",
+   "descricao": "Prédio de 7 andares em concreto pré-moldado protendido cinza-claro: pilares grossos em ritmo regular com a estrutura das arquibancadas aparente, beiral fino prateado da cobertura no alto, grandes escadarias que sobem a um deck de pedestres que dá a volta no estádio (o térreo é piscinão de cheia do rio Tsurumi).",
+   "led": "iluminação externa com LED colorido (full color)"
+  },
+  "cadeiras": {
+   "cores": [
+    "#4a8fd0",
+    "#8fc0e6",
+    "#c8102e"
+   ],
+   "padrao": "mosaico",
+   "texto": "NISSAN STADIUM (letras vermelhas nas cadeiras azul-claras da Back Stand)"
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "outro",
+    "descricao": "Anel de cobertura em 'crescente': visto de lado sobe nas laterais e desce nas curvas, branco-prateado, sobre o oval",
+    "posicao": "cobertura inteira"
+   },
+   {
+    "tipo": "telao",
+    "descricao": "Dois telões grandes (~22,5 × 9 m) no alto das curvas",
+    "posicao": "fundo_a e fundo_b"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Pista de atletismo de 9 raias (vermelho-tijolo) com fosso de 2,5 m entre a pista e a torcida",
+    "posicao": "em volta do campo"
+   },
+   {
+    "tipo": "estatua",
+    "descricao": "Pira 'Rising Rose, Rising Iris' de 19,98 m",
+    "posicao": "fora, portão norte"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Deck elevado de pedestres com escadarias largas contornando o estádio",
+    "posicao": "fora, em volta"
+   }
+  ],
+  "entorno": {
+   "tipo": "parque",
+   "relevo": "plano",
+   "agua": "rio",
+   "descricao": "No Parque Shin-Yokohama, uma várzea de contenção de cheias do rio Tsurumi (ao norte), com campos de treino, o campo de atletismo de Kozukue (pista vermelha) ao lado e uma rodovia elevada passando junto; ao sul casas baixas e, ao leste, os prédios de Shin-Yokohama.",
+   "marcos": [
+    "rio Tsurumi",
+    "rodovia elevada ao lado",
+    "campo de atletismo de Kozukue",
+    "prédios de Shin-Yokohama",
+    "Yokohama Arena"
+   ]
+  },
+  "orientacao_graus": 140,
+  "foto_confere": false,
+  "notas": "A foto do Total Match (jp-yokohama-f-marinos.jpg) é do Nissan Stadium de Nashville (EUA, Tennessee Titans), não do de Yokohama. Cores das cadeiras pela lembrança das fotos e pelo texto da Wikipédia japonesa (fundo azul-claro com letras vermelhas na Back Stand) — conferir.",
+  "fontes": [
+   "https://www.nissan-stadium.jp/english/site.php",
+   "https://www.nissan-stadium.jp/stadium/gaiyo.php",
+   "https://ja.wikipedia.org/wiki/横浜国際総合競技場",
+   "https://en.wikipedia.org/wiki/International_Stadium_Yokohama",
+   "https://stadiumdb.com/stadiums/jpn/yokohama_international_stadium",
+   "https://tabiiro.jp/higaeri/article/nissan-stadium/",
+   "https://www.openstreetmap.org/way/119477181",
+   "https://commons.wikimedia.org/wiki/File:International_Stadium_Yokohama_aerial_shot.jpg",
+   "https://commons.wikimedia.org/wiki/File:20250104_International_Stadium_Yokohama_130632.jpg"
+  ],
+  "confianca": "media"
+ },
+ {
+  "chave": "stadio olimpico",
+  "nome_oficial": "Stadio Olimpico",
+  "capacidade": 70634,
+  "tipo": "pista",
+  "planta": "oval",
+  "cantos": "fechados",
+  "pista_atletismo": true,
+  "recuo_m": {
+   "lateral": 27,
+   "fundo": 44
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Tribuna Monte Mario",
+    "aneis": 1,
+    "altura_m": 24,
+    "profundidade_m": 45,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Lado oeste, com a tribuna de honra, imprensa e as áreas VIP de 2008; o morro Monte Mario arborizado fica atrás. Campo rebaixado 4,5 m; ~18 m do campo ao topo em 1953, laterais subiram ~6 m em 1990 (altura estimada)."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Tribuna Tevere",
+    "aneis": 1,
+    "altura_m": 24,
+    "profundidade_m": 45,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Lado leste, do lado do rio Tibre; ~140 m de comprimento."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Curva Nord",
+    "aneis": 1,
+    "altura_m": 22,
+    "profundidade_m": 45,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Curva semicircular da torcida da Lazio; telão no alto."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Curva Sud",
+    "aneis": 1,
+    "altura_m": 22,
+    "profundidade_m": 45,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Curva semicircular da torcida da Roma; telão no alto."
+   }
+  ],
+  "cobertura": {
+   "tipo": "anel",
+   "material": "membrana",
+   "cor": "#f4f4f0",
+   "sustentacao": "anel_compressao",
+   "altura_m": 30,
+   "notas": "Cobertura de 1990 (Majowiecki): anel externo de aço treliçado de 13 m de altura a ~29 m do chão sobre 12 pilares + 4 apoios, anel interno de aço preso por cabos radiais, membrana branca de fibra de vidro com teflon pendurada em 88 cabos; cobre todas as cadeiras com o campo aberto."
+  },
+  "fachada": {
+   "estilo": "concreto",
+   "cor": "#e3dccb",
+   "cor2": "#ffffff",
+   "descricao": "Paredes externas de concreto claro com placas de travertino (resto da Tribuna Tevere de 1953) e, por cima, o anel branco de aço da cobertura sobre pilares tubulares brancos com escadas em espiral dentro; o estádio fica meio enterrado no vale, na base do Monte Mario.",
+   "led": ""
+  },
+  "cadeiras": {
+   "cores": [
+    "#1f4fb0",
+    "#0e2d6b",
+    "#4f7fd6"
+   ],
+   "padrao": "misto",
+   "texto": ""
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "outro",
+    "descricao": "Anel branco de membrana sobre cabos com o anel de compressão de aço aparente por fora, apoiado em pilares brancos",
+    "posicao": "cobertura inteira"
+   },
+   {
+    "tipo": "telao",
+    "descricao": "Telões no alto das duas curvas",
+    "posicao": "fundo_a e fundo_b"
+   },
+   {
+    "tipo": "estatua",
+    "descricao": "Stadio dei Marmi vizinho, cercado por estátuas de mármore de atletas",
+    "posicao": "fora, ao lado (Foro Italico)"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Obelisco de mármore e Fontana della Sfera na entrada do Foro Italico",
+    "posicao": "fora, perto da ponte Duca d'Aosta"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Pista de atletismo (tartan) em volta do campo, coberta por tapete verde nos jogos de futebol (como na foto)",
+    "posicao": "em volta do campo"
+   }
+  ],
+  "entorno": {
+   "tipo": "parque",
+   "relevo": "morros",
+   "agua": "rio",
+   "descricao": "No complexo esportivo do Foro Italico, num vale ao pé do Monte Mario (morro coberto de pinheiros-mansos) e na margem direita do Tibre; avenidas arborizadas, o Stadio dei Marmi e o obelisco ao lado.",
+   "marcos": [
+    "Monte Mario",
+    "rio Tibre",
+    "Stadio dei Marmi",
+    "obelisco do Foro Italico",
+    "pinheiros-mansos"
+   ]
+  },
+  "orientacao_graus": 166,
+  "foto_confere": true,
+  "notas": "Reforma de ~150 milhões de euros prevista de 2027 a 2030 (meta Euro 2032); hoje vale a forma de 1990 com a reforma de 2008. Capacidade oficial 70.634 (a StadiumDB cita ~60 mil em uso).",
+  "fontes": [
+   "https://stadiumdb.com/stadiums/ita/stadio_olimpico_roma",
+   "https://stadiumdb.com/news/2026/10/italy_stadio_olimpico_to_undergo_renovation_euro_2032_final_is_the_goal",
+   "https://www.openstreetmap.org/way/667711166",
+   "https://www.openstreetmap.org/relation/8365200"
+  ],
+  "confianca": "alta"
+ },
+ {
+  "chave": "riyadh air metropolitano",
+  "nome_oficial": "Riyadh Air Metropolitano",
+  "capacidade": 70692,
+  "tipo": "arena",
+  "planta": "retangular_cantos_curvos",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 7,
+   "fundo": 9
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Lateral Oeste (La Peineta)",
+    "aneis": 3,
+    "altura_m": 40,
+    "profundidade_m": 60,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "A arquibancada antiga da Peineta (1994) mantida, com o anel de baixo novo escavado (campo ~15 m abaixo do chão); imprensa no centro do anel superior; aqui o anel alto contínuo não existe. Altura estimada."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Lateral Este",
+    "aneis": 3,
+    "altura_m": 42,
+    "profundidade_m": 65,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Arquibancada nova com a faixa longa de camarotes (94 no estádio); anel superior com vista bem do alto. Medidas estimadas."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Fondo Norte",
+    "aneis": 3,
+    "altura_m": 40,
+    "profundidade_m": 60,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Anéis contínuos com as laterais. Medidas estimadas."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Fondo Sur",
+    "aneis": 3,
+    "altura_m": 40,
+    "profundidade_m": 60,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Lado da torcida organizada (Frente Atlético) e do telão sul. Medidas estimadas."
+   }
+  ],
+  "cobertura": {
+   "tipo": "anel",
+   "material": "membrana",
+   "cor": "#f2f2ee",
+   "sustentacao": "anel_compressao",
+   "altura_m": 42,
+   "notas": "Coroa ondulada de 46.500 m² em 96 gomos de PTFE branco dobrados como origami (~83.000 m² de membrana), anel externo de compressão de aço de altura dupla, anel interno de tração e duas camadas de cabos radiais (Schlaich Bergermann); altura de 32 a 42 m, cobre 96% do público; acende em cores à noite."
+  },
+  "fachada": {
+   "estilo": "concreto",
+   "cor": "#a9a7a2",
+   "cor2": "#c8102e",
+   "descricao": "Concreto aparente bruto com aberturas em ritmo; no lado oeste a fachada curva em forma de pente (La Peineta) e, por cima de tudo, a borda branca e ondulada da cobertura. O clube planeja (2026) uma pele nova para esconder o concreto.",
+   "led": "cortina de LED de 24 × 6 m na fachada oeste; a cobertura acende em vermelho e branco à noite (estádio 100% LED)"
+  },
+  "cadeiras": {
+   "cores": [
+    "#c8102e",
+    "#ffffff"
+   ],
+   "padrao": "liso",
+   "texto": "ATLÉTICO DE MADRID e 1903 escritos com cadeiras brancas no vermelho"
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "outro",
+    "descricao": "La Peineta: a antiga arquibancada de concreto com o topo curvo em forma de pente de cabelo",
+    "posicao": "principal (oeste)"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Coroa de membrana branca ondulada em 96 gomos, acesa em vermelho/branco à noite",
+    "posicao": "cobertura inteira"
+   },
+   {
+    "tipo": "letreiro",
+    "descricao": "ATLÉTICO DE MADRID e 1903 em cadeiras brancas",
+    "posicao": "nas arquibancadas, anéis do meio e de baixo"
+   },
+   {
+    "tipo": "telao",
+    "descricao": "Placar de vídeo de 360° instalado em 2025",
+    "posicao": "em volta do estádio, sob a cobertura (posição exata não confirmada)"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Paseo de los Jugadores Centenarios: calçada com placas dos jogadores",
+    "posicao": "fora, numa lateral"
+   }
+  ],
+  "entorno": {
+   "tipo": "residencial",
+   "relevo": "plano",
+   "agua": "nenhuma",
+   "descricao": "Bairro de Rosas (San Blas-Canillejas), no leste de Madrid, ao lado da rodovia M-40, com grandes estacionamentos e terrenos abertos em volta, conjuntos de prédios residenciais a oeste e perto do aeroporto de Barajas (aviões baixos).",
+   "marcos": [
+    "rodovia M-40",
+    "aeroporto de Barajas",
+    "shopping Plenilunio",
+    "Plaza de Grecia"
+   ]
+  },
+  "orientacao_graus": 171,
+  "foto_confere": true,
+  "fontes": [
+   "https://stadiumdb.com/stadiums/esp/estadio_metropolitano",
+   "https://es.wikipedia.org/wiki/Estadio_Metropolitano_(Madrid)",
+   "https://en.wikipedia.org/wiki/Metropolitano_Stadium",
+   "https://www.maffeis.it/?p=1951",
+   "https://www.fcc.es/en/w/el-wanda-metropolitano-construido-por-fcc-abre-sus-puertas",
+   "https://www.atleticodemadrid.com/galerias/colocada-la-cortina-led-de-la-fachada-oeste",
+   "https://www.openstreetmap.org/way/4409945",
+   "https://www.openstreetmap.org/relation/7525256"
+  ],
+  "confianca": "alta"
+ },
+ {
+  "chave": "prince moulay abdellah stadium",
+  "nome_oficial": "Stade Prince Moulay Abdellah",
+  "capacidade": 68700,
+  "tipo": "arena",
+  "planta": "retangular_cantos_curvos",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 7,
+   "fundo": 6
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Tribuna Oeste",
+    "aneis": 3,
+    "altura_m": 40,
+    "profundidade_m": 55,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Camarote real no centro, VVIP, VIP, lounges e camarotes; número de anéis e medidas estimados."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Tribuna Leste",
+    "aneis": 3,
+    "altura_m": 40,
+    "profundidade_m": 55,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Três anéis com lounges e camarotes; o anel de camarotes do nível 2 faz um U em volta do campo. Altura estimada."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Tribuna Norte",
+    "aneis": 2,
+    "altura_m": 35,
+    "profundidade_m": 45,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Estimada pela foto."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "South Kop",
+    "aneis": 2,
+    "altura_m": 40,
+    "profundidade_m": 50,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Kop íngreme de 23 mil lugares atrás do gol sul, anel superior em balanço 8 m acima do inferior; torcida do AS FAR. Altura estimada."
+   }
+  ],
+  "cobertura": {
+   "tipo": "total",
+   "material": "metal",
+   "cor": "#b9ae96",
+   "sustentacao": "trelica",
+   "altura_m": 45,
+   "notas": "Casca metálica contínua que é fachada e teto ao mesmo tempo, fechando os 360° contra o vento; por baixo, treliça de aço escura com faixa de LED na borda (foto). Cor de cima e altura estimadas."
+  },
+  "fachada": {
+   "estilo": "paineis",
+   "cor": "#c9b48a",
+   "cor2": "#8a7a5c",
+   "descricao": "Fachada paramétrica de 100.000 m² feita de 19.200 triângulos de alumínio cor champanhe/dourado, todos de tamanhos diferentes, desenhando folhas de palmeira entrelaçadas e o bordado 'Point de Fez'; sai do meio da floresta de eucaliptos do cinturão verde.",
+   "led": "70 km de barras de LED (60 quadros/s): ao anoitecer a fachada vira uma tela animada multicor"
+  },
+  "cadeiras": {
+   "cores": [
+    "#c1121f"
+   ],
+   "padrao": "liso",
+   "texto": ""
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "outro",
+    "descricao": "Pele dourada de triângulos de alumínio em padrão de folhas de palmeira, que acende como tela de LED",
+    "posicao": "fachada inteira"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "South Kop de dois anéis, com o de cima em balanço 8 m sobre o de baixo",
+    "posicao": "fundo_b (sul)"
+   },
+   {
+    "tipo": "telao",
+    "descricao": "Dois telões grandes nos cantos",
+    "posicao": "cantos"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Camarote real no meio da tribuna",
+    "posicao": "principal (oeste)"
+   }
+  ],
+  "entorno": {
+   "tipo": "parque",
+   "relevo": "plano",
+   "agua": "nenhuma",
+   "descricao": "No sudoeste de Rabat, no Complexo Esportivo Moulay Abdellah, cercado pela floresta de eucaliptos do cinturão verde, com a ferrovia e as estradas para Casablanca ao lado e uma grande esplanada aberta ao sul; o Atlântico fica a alguns quilômetros.",
+   "marcos": [
+    "Stade Olympique de Rabat (21 mil, cobertura em crescente) ao lado",
+    "ginásio coberto de 10 mil lugares",
+    "floresta de eucaliptos",
+    "ferrovia"
+   ]
+  },
+  "orientacao_graus": 164,
+  "foto_confere": true,
+  "notas": "Estádio reconstruído do zero (aberto em 05/09/2025; Populous com Oualalou + Choi); a Wikipédia cita 69.500 lugares, a Populous 68.700.",
+  "fontes": [
+   "https://populous.com/showcases/prince-moulay-abdellah-stadium",
+   "https://stadiumdb.com/stadiums/mar/stade_prince_moulay_abdellah",
+   "https://www.designboom.com/architecture/19200-golden-triangles-luminous-facade-populous-stadium-morocco-oualalou-choi-oplusc-09-22-2025/",
+   "https://en.wikipedia.org/wiki/Prince_Moulay_Abdellah_Stadium",
+   "https://www.openstreetmap.org/way/280548113",
+   "https://www.openstreetmap.org/relation/3728408"
+  ],
+  "confianca": "media"
+ },
+ {
+  "chave": "gazprom arena",
+  "nome_oficial": "Gazprom Arena (Estádio Krestovsky)",
+  "capacidade": 68134,
+  "tipo": "arena",
+  "planta": "oval",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 10,
+   "fundo": 12
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Tribuna Oeste",
+    "aneis": 2,
+    "altura_m": 42,
+    "profundidade_m": 55,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Bacia contínua de 2 anéis com uma fileira de camarotes (104) entre eles dando a volta; nome do setor e medidas estimados."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Tribuna Leste",
+    "aneis": 2,
+    "altura_m": 42,
+    "profundidade_m": 55,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Igual à principal. Medidas estimadas."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Curva Norte",
+    "aneis": 2,
+    "altura_m": 45,
+    "profundidade_m": 55,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "As curvas são um pouco mais altas que as laterais. Medidas estimadas."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Curva Sul",
+    "aneis": 2,
+    "altura_m": 45,
+    "profundidade_m": 55,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Medidas estimadas."
+   }
+  ],
+  "cobertura": {
+   "tipo": "retratil",
+   "material": "metal",
+   "cor": "#d9dcdf",
+   "sustentacao": "mastros",
+   "altura_m": 75,
+   "notas": "Cúpula de 286 m de diâmetro e ~71.000 m², ~75 m de altura; o miolo de 224 × 92 m é feito de duas folhas que correm e abrem um vão de 190 × 90 m. Segurada por 8 mastros inclinados que atravessam o teto e chegam a ~110 m."
+  },
+  "fachada": {
+   "estilo": "vidro",
+   "cor": "#b9c7d3",
+   "cor2": "#d9dcdf",
+   "descricao": "A 'nave espacial' de Kisho Kurokawa: volume redondo prateado coberto pela cúpula metálica, com paredes de vidro em volta, os 8 mastros brancos espetados para o alto e escadarias com colunatas e fontes no acesso leste.",
+   "led": "iluminação noturna da fachada (normalmente em azul; não confirmado)"
+  },
+  "cadeiras": {
+   "cores": [
+    "#1d5aa8",
+    "#59a7dd",
+    "#ffffff"
+   ],
+   "padrao": "mosaico",
+   "texto": ""
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "mastros",
+    "descricao": "8 mastros inclinados de ~110 m saindo da cobertura",
+    "posicao": "em volta da cúpula"
+   },
+   {
+    "tipo": "cupula",
+    "descricao": "Cúpula prateada de 286 m com o teto retrátil de duas folhas no meio",
+    "posicao": "cobertura"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Campo retrátil que sai rolando para fora do estádio (plataforma de ~7.000–8.400 t)",
+    "posicao": "sai por um dos fundos, do lado da água"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Escadarias com colunatas e fontes no acesso",
+    "posicao": "fora, lado leste"
+   }
+  ],
+  "entorno": {
+   "tipo": "orla",
+   "relevo": "plano",
+   "agua": "mar",
+   "descricao": "Na ponta oeste da ilha Krestovsky, no delta do Neva, com água em volta e o Golfo da Finlândia na frente; parque (Parque Primorsky da Vitória) a leste, pontes novas (rua Yakhtennaya e a estaiada do Diâmetro Oeste) e, do outro lado da baía, a torre Lakhta Center.",
+   "marcos": [
+    "Lakhta Center (462 m)",
+    "Golfo da Finlândia",
+    "ponte estaiada do Diâmetro Oeste (ZSD)",
+    "Parque Primorsky da Vitória"
+   ]
+  },
+  "orientacao_graus": 6,
+  "foto_confere": false,
+  "notas": "A foto do Total Match (rus-zenit.jpg) é do Estádio Petrovsky (o antigo do Zenit, à beira do Neva), não da Gazprom Arena. A StadiumDB diz que o teto retrátil virou cúpula fixa; a Wikipédia (en/ru) diz retrátil com as duas folhas — ficou o retrátil. Capacidade citada varia: 62.315 (StadiumDB), 67.800, 68.000 (Wikipédia), 68.134 (OSM). Cores das cadeiras não confirmadas em texto.",
+  "fontes": [
+   "https://stadiumdb.com/stadiums/rus/krestovskiy_stadion",
+   "https://ru.wikipedia.org/wiki/Газпром_Арена",
+   "https://en.wikipedia.org/wiki/Krestovsky_Stadium",
+   "https://www.football-stadiums.co.uk/grounds/krestovsky-stadium/",
+   "https://www.openstreetmap.org/relation/8841754"
+  ],
+  "confianca": "media"
+ },
+ {
+  "chave": "orange velodrome",
+  "nome_oficial": "CEPAC Vélodrome (Stade Vélodrome)",
+  "capacidade": 67394,
+  "tipo": "tigela",
+  "planta": "oval",
+  "cantos": "parciais",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 8,
+   "fundo": 10
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Tribune Jean-Bouin",
+    "aneis": 2,
+    "altura_m": 35,
+    "profundidade_m": 50,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "~18.851 lugares, tribuna presidencial, imprensa e camarotes (80 no estádio). Altura e anéis estimados."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Tribune Gustave-Ganay",
+    "aneis": 3,
+    "altura_m": 43,
+    "profundidade_m": 55,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "A maior (~22.321 lugares): 43 m de altura, a cobertura chega a 61 m por cima dela; cadeiras brancas e azul-celeste."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Virage Nord Patrice-de-Peretti",
+    "aneis": 2,
+    "altura_m": 30,
+    "profundidade_m": 45,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Curva (herança do velódromo), ~12.947 lugares, torcidas organizadas. Medidas estimadas."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Virage Sud Chevalier-Roze",
+    "aneis": 2,
+    "altura_m": 30,
+    "profundidade_m": 45,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Curva, ~12.935 lugares, torcidas organizadas. Medidas estimadas."
+   }
+  ],
+  "cobertura": {
+   "tipo": "total",
+   "material": "membrana",
+   "cor": "#f5f5f2",
+   "sustentacao": "trelica",
+   "altura_m": 65,
+   "notas": "Membrana de fibra de vidro com PTFE branco-fosco, translúcida e leitosa, ~65.000 m², esticada sobre estrutura de aço de ~5.500–6.000 t apoiada em 4 mastros plantados entre as tribunas; forma ondulada de 'onda/disco voador', mais alta sobre a Ganay (61–65 m do gramado); cobre todos os lugares e acende por dentro à noite."
+  },
+  "fachada": {
+   "estilo": "membrana",
+   "cor": "#f2f2f0",
+   "cor2": "#2b2b2b",
+   "descricao": "A saia branca da cobertura desce em curva e forma a fachada; embaixo dela uma faixa de lâminas verticais escuras com janelas de vidro azul e, na entrada, uma escadaria monumental de pedra clara; o nome do estádio em letras azuis no branco (hoje 'CEPAC Vélodrome').",
+   "led": "membrana iluminada por dentro à noite (branco, às vezes nas cores do OM)"
+  },
+  "cadeiras": {
+   "cores": [
+    "#f2f2f2",
+    "#5aa9e0"
+   ],
+   "padrao": "misto",
+   "texto": ""
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "outro",
+    "descricao": "Cobertura branca ondulada em 'onda' / 'disco voador', translúcida, que vira fachada",
+    "posicao": "cobertura inteira"
+   },
+   {
+    "tipo": "letreiro",
+    "descricao": "Nome do estádio em letras azuis sobre a membrana branca (CEPAC Vélodrome desde 02/07/2026; antes Orange Vélodrome)",
+    "posicao": "fachada da entrada principal"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Escadaria monumental larga que sobe até a entrada",
+    "posicao": "fora, frente da fachada"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "As duas viragens curvas atrás dos gols, cheias de bandeirões das torcidas",
+    "posicao": "fundo_a e fundo_b"
+   }
+  ],
+  "entorno": {
+   "tipo": "urbano_denso",
+   "relevo": "morros",
+   "agua": "rio",
+   "descricao": "Bairro de Sainte-Marguerite/Prado, no sul de Marselha: torres residenciais, o Palais des Sports e o Stade Delort ao lado, o riacho Huveaune perto; ao fundo os morros calcários (maciço das Calanques) e a basílica de Notre-Dame de la Garde no alto de uma colina; o mar fica a ~2 km.",
+   "marcos": [
+    "Notre-Dame de la Garde",
+    "maciço das Calanques",
+    "Palais des Sports",
+    "Stade Delort",
+    "Boulevard Michelet"
+   ]
+  },
+  "orientacao_graus": 158,
+  "foto_confere": true,
+  "notas": "Desde 02/07/2026 o nome oficial é CEPAC Vélodrome (naming de 7 anos); a foto do Total Match ainda mostra 'Orange Vélodrome' na fachada. Cadeiras: fontes dizem 'todas brancas' e a Ganay 'branca e azul' — ficou maioria branca com azul-celeste.",
+  "fontes": [
+   "https://fr.wikipedia.org/wiki/Stade_Vélodrome",
+   "https://www.batiweb.com/actualites/evenement-du-batiment/embleme-pour-ses-architectes-le-nouveau-velodrome-est-inaugure-ce-jeudi-25211",
+   "https://taiyo-europe.com/the-ptfe-glass-roof-construction-of-the-stade-velodrome-in-marseille/",
+   "https://www.groupebpce.com/en/all-the-latest-news/cepac-velodrome-marseilles-famous-stadium-takes-a-new-name/",
+   "https://madeinmarseille.net/actualite/206569-naming-le-stade-velodrome-change-officiellement-de-nom-et-devient-le-cepac-velodrome/",
+   "https://projets-architecte-urbanisme.fr/chantier-travaux-stade-velodrome-olympique-marseille/",
+   "https://www.info-stades.fr/forum/viewtopic.php?t=7",
+   "https://stadiumdb.com/stadiums/fra/stade_velodrome",
+   "https://www.openstreetmap.org/way/258497433",
+   "https://www.openstreetmap.org/way/466491650"
+  ],
+  "confianca": "media"
+ },
+ {
+  "chave": "morumbi",
+  "nome_oficial": "MorumBIS (Estádio Cícero Pompeu de Toledo)",
+  "capacidade": 66795,
+  "tipo": "tigela",
+  "planta": "oval",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 25,
+   "fundo": 35
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Lateral das cabines (tribuna de honra)",
+    "aneis": 2,
+    "altura_m": 33,
+    "profundidade_m": 50,
+    "coberta": false,
+    "camarotes": true,
+    "notas": "Bacia oval contínua: anel superior enorme de concreto em balanço e anel inferior (cadeiras) embaixo dele, com camarotes entre os dois; só o anel inferior fica coberto pela marquise do superior (~35 mil lugares cobertos). Medidas estimadas pelo contorno do OSM (anel superior ~36 m de largura)."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Lateral oposta",
+    "aneis": 2,
+    "altura_m": 33,
+    "profundidade_m": 50,
+    "coberta": false,
+    "camarotes": true,
+    "notas": "Igual à principal. Medidas estimadas."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Arquibancada Norte",
+    "aneis": 2,
+    "altura_m": 33,
+    "profundidade_m": 48,
+    "coberta": false,
+    "camarotes": false,
+    "notas": "Curva atrás do gol; telão no alto de um dos fundos. Medidas estimadas."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Arquibancada Sul",
+    "aneis": 2,
+    "altura_m": 33,
+    "profundidade_m": 48,
+    "coberta": false,
+    "camarotes": false,
+    "notas": "Curva atrás do gol. Medidas estimadas."
+   }
+  ],
+  "cobertura": {
+   "tipo": "nenhuma",
+   "material": "nenhum",
+   "cor": "",
+   "sustentacao": "nenhuma",
+   "altura_m": 0,
+   "notas": "Sem cobertura: o anel superior fica a céu aberto; a marquise é o próprio anel superior em balanço, que cobre o inferior. Houve projeto de cobertura (alvará de 2012) que não foi feito."
+  },
+  "fachada": {
+   "estilo": "concreto",
+   "cor": "#bdbab3",
+   "cor2": "#111111",
+   "descricao": "Anel de concreto aparente de Vilanova Artigas (patrimônio tombado), com uma faixa branca/cinza no alto e uma faixa preta mais embaixo com o nome do clube em vermelho; pilares de concreto e rampas por baixo do anel; avenidas e estacionamento em volta.",
+   "led": ""
+  },
+  "cadeiras": {
+   "cores": [
+    "#c8102e"
+   ],
+   "padrao": "liso",
+   "texto": ""
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "outro",
+    "descricao": "Anel superior gigante de concreto em balanço, visto de cima como um oval vermelho contínuo",
+    "posicao": "todo o estádio"
+   },
+   {
+    "tipo": "torres",
+    "descricao": "Duas grandes estruturas metálicas (~80 m) com os refletores em linha horizontal sobre as laterais",
+    "posicao": "principal e oposta, no alto"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Faixa em volta do gramado (antiga pista) pintada de vermelho, com ondas brancas e pretas atrás dos gols",
+    "posicao": "em volta do campo"
+   },
+   {
+    "tipo": "letreiro",
+    "descricao": "Nome do clube em letras vermelhas na faixa preta da fachada",
+    "posicao": "fachada"
+   },
+   {
+    "tipo": "telao",
+    "descricao": "Telão no alto do anel superior",
+    "posicao": "fundo"
+   }
+  ],
+  "entorno": {
+   "tipo": "residencial",
+   "relevo": "morros",
+   "agua": "nenhuma",
+   "descricao": "Bairro nobre do Morumbi (Zona Oeste de São Paulo), em terreno de morros: casas com quintais e muitas árvores em volta, avenidas largas e, ao fundo, um paredão de prédios altos residenciais.",
+   "marcos": [
+    "prédios altos do Morumbi",
+    "Paraisópolis",
+    "Palácio dos Bandeirantes",
+    "Praça Roberto Gomes Pedrosa"
+   ]
+  },
+  "orientacao_graus": 173,
+  "foto_confere": true,
+  "notas": "Nome MorumBIS pelo naming de 3 anos com a Mondelez desde dez/2023. Capacidade: 66.795 (Wikipédia), 67.428 (StadiumDB). Distância do campo à torcida estimada (o Morumbi tem a torcida longe, com a faixa da antiga pista no meio).",
+  "fontes": [
+   "https://pt.wikipedia.org/wiki/Estádio_do_Morumbi",
+   "https://stadiumdb.com/stadiums/bra/estadio_do_morumbi",
+   "https://www.openstreetmap.org/way/457901486",
+   "https://www.openstreetmap.org/relation/9943539"
+  ],
+  "confianca": "media"
+ },
+ {
+  "chave": "estadio da luz",
+  "nome_oficial": "Estádio do Sport Lisboa e Benfica (Estádio da Luz)",
+  "capacidade": 68100,
+  "tipo": "arena",
+  "planta": "retangular_cantos_curvos",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 8,
+   "fundo": 10
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Bancada central (tribuna presidencial)",
+    "aneis": 3,
+    "altura_m": 30,
+    "profundidade_m": 50,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Três anéis com o contorno ondulado que os arcos acompanham; lado poente/nascente da tribuna não confirmado. Medidas estimadas."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Bancada lateral oposta",
+    "aneis": 3,
+    "altura_m": 30,
+    "profundidade_m": 50,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Medidas estimadas."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Topo Norte",
+    "aneis": 3,
+    "altura_m": 28,
+    "profundidade_m": 45,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Medidas estimadas."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Topo Sul",
+    "aneis": 3,
+    "altura_m": 28,
+    "profundidade_m": 45,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Medidas estimadas."
+   }
+  ],
+  "cobertura": {
+   "tipo": "total",
+   "material": "policarbonato",
+   "cor": "#e9edf0",
+   "sustentacao": "arco",
+   "altura_m": 43,
+   "notas": "Cobertura de policarbonato translúcido (deixa passar a luz) que parece flutuar sobre as bancadas, pendurada em quatro arcos de aço vermelhos de 43 m, um sobre cada lado, desenhados para seguir o contorno ondulado dos três anéis; nos cantos a cobertura afunda entre os arcos."
+  },
+  "fachada": {
+   "estilo": "paineis",
+   "cor": "#e6e6e6",
+   "cor2": "#e30613",
+   "descricao": "Volume claro (branco/prata) com estrutura metálica e painéis translúcidos, os quatro arcos vermelhos aparecendo por cima de tudo; praça larga na entrada com a estátua de Eusébio e a águia do clube.",
+   "led": ""
+  },
+  "cadeiras": {
+   "cores": [
+    "#d50f25",
+    "#ffffff"
+   ],
+   "padrao": "liso",
+   "texto": "nomes de patrocinadores escritos com cadeiras brancas no vermelho (no jogo trocar por marcas fictícias)"
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "arco",
+    "descricao": "Quatro arcos de aço vermelhos de 43 m que seguram a cobertura",
+    "posicao": "um sobre cada lado"
+   },
+   {
+    "tipo": "estatua",
+    "descricao": "Estátua de Eusébio",
+    "posicao": "fora, entrada principal"
+   },
+   {
+    "tipo": "estatua",
+    "descricao": "Águia, símbolo do clube (e a águia Vitória que voa sobre o campo antes dos jogos)",
+    "posicao": "fora, entrada / sobre o campo"
+   },
+   {
+    "tipo": "letreiro",
+    "descricao": "Letras brancas nas cadeiras vermelhas",
+    "posicao": "anéis do meio e de cima"
+   }
+  ],
+  "entorno": {
+   "tipo": "urbano_denso",
+   "relevo": "plano",
+   "agua": "nenhuma",
+   "descricao": "São Domingos de Benfica, em Lisboa: a Segunda Circular (via expressa) passa ao lado, o shopping Centro Colombo com suas torres fica vizinho, os pavilhões do clube e o museu Cosme Damião em volta; prédios residenciais e a igreja de Nossa Senhora da Luz perto.",
+   "marcos": [
+    "Centro Colombo e Torres Colombo",
+    "Segunda Circular",
+    "Pavilhão Fidelidade",
+    "Museu Cosme Damião"
+   ]
+  },
+  "orientacao_graus": 164,
+  "foto_confere": true,
+  "notas": "Capacidade 68.100 depois da 1ª fase de ampliação (julho de 2025); antes 64.642/65.647.",
+  "fontes": [
+   "https://stadiumdb.com/stadiums/por/estadio_da_luz",
+   "https://pt.wikipedia.org/wiki/Estádio_da_Luz",
+   "https://www.openstreetmap.org/way/54756292",
+   "https://www.openstreetmap.org/relation/9143921"
+  ],
+  "confianca": "alta"
+ },
+ {
+  "chave": "castelao",
+  "nome_oficial": "Arena Castelão (Estádio Governador Plácido Castelo)",
+  "capacidade": 63903,
+  "tipo": "tigela",
+  "planta": "oval",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 10,
+   "fundo": 12
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Setor Premium / tribuna",
+    "aneis": 2,
+    "altura_m": 22,
+    "profundidade_m": 50,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "A tribuna principal foi refeita do zero com escritórios e hospitalidade; o anel inferior foi avançado 30 m para o campo na reforma de 2011–2013 (público a ~10 m dos jogadores). Altura estimada."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Lateral oposta",
+    "aneis": 2,
+    "altura_m": 22,
+    "profundidade_m": 50,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Anel superior original de 1973 mantido (~70% das superiores preservadas). Altura estimada."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Setor Norte",
+    "aneis": 2,
+    "altura_m": 22,
+    "profundidade_m": 48,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Curva contínua. Medidas estimadas."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Setor Sul",
+    "aneis": 2,
+    "altura_m": 22,
+    "profundidade_m": 48,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Curva contínua. Medidas estimadas."
+   }
+  ],
+  "cobertura": {
+   "tipo": "total",
+   "material": "metal",
+   "cor": "#e7ecea",
+   "sustentacao": "trelica",
+   "altura_m": 30,
+   "notas": "Cobre 100% do público: telha metálica opaca, branca/cinza-clara, com uma faixa de policarbonato translúcido (~8.000 m²) na borda interna; segurada por 60 colunas de aço treliçadas que sobem por fora. Altura estimada (OSM dá 27 m para o prédio)."
+  },
+  "fachada": {
+   "estilo": "metal",
+   "cor": "#8e9aa3",
+   "cor2": "#ffffff",
+   "descricao": "Pele translúcida de metal expandido de aço inox sobre o vidro escuro em volta da bacia, cortada pelas 60 colunas treliçadas brancas que sobem em curva e passam por cima da borda do teto (inspiradas nos pilares inclinados de concreto originais); base de concreto e uma esplanada enorme em volta.",
+   "led": ""
+  },
+  "cadeiras": {
+   "cores": [
+    "#e8e8e3"
+   ],
+   "padrao": "liso",
+   "texto": ""
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "outro",
+    "descricao": "60 colunas de aço treliçadas brancas em curva, como costelas, subindo pela fachada",
+    "posicao": "fachada inteira"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Faixa de vidro/inox brilhante em volta do oval com o teto branco por cima, visto de cima",
+    "posicao": "fachada e cobertura"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Esplanada de concreto de ~78.850 m² com estacionamento subterrâneo",
+    "posicao": "fora, em volta"
+   }
+  ],
+  "entorno": {
+   "tipo": "residencial",
+   "relevo": "plano",
+   "agua": "nenhuma",
+   "descricao": "Bairro Boa Vista/Castelão, em Fortaleza, na Avenida Alberto Craveiro: casas baixas de telhado de barro e poucos prédios em volta, terreno plano, com a esplanada e estacionamentos grandes ao redor do estádio.",
+   "marcos": [
+    "Avenida Alberto Craveiro",
+    "casario baixo em volta",
+    "esplanada do Castelão"
+   ]
+  },
+  "orientacao_graus": 5,
+  "foto_confere": true,
+  "notas": "As fotos do Ceará e do Fortaleza são do Castelão de Fortaleza. A do Maranhão (br3-maranhao.jpg) é OUTRO estádio: o Castelão de São Luís (Estádio Governador João Castelo), com pista de atletismo e arquibancadas sem cobertura — o Maranhão não deveria usar esta chave. Cadeiras quase brancas segundo a reportagem da instalação; podem ter setores de outra cor.",
+  "fontes": [
+   "https://www.archdaily.com/501871/castelao-arena-vigliecca-and-associados",
+   "https://pt.wikipedia.org/wiki/Estádio_Governador_Plácido_Castelo",
+   "https://stadiumdb.com/stadiums/bra/estadio_castelao",
+   "https://brasilengenharia.com/portal/noticias/destaque/3090-castelao-recebe-as-primeiras-cadeiras-com-tecnologia-anti-impacto-e-anti-incendio",
+   "https://extranet.worldstainless.org/files/issf/non-image-files/PDF/Sports/Castel%C3%A3o%20Arena.pdf",
+   "https://diariodonordeste.verdesmares.com.br/opiniao/colunistas/igor-pires/castelao-foi-testado-como-aviao-e-antecipou-tecnologia-usada-em-superpredios-de-fortaleza-1.3734749",
+   "https://www.openstreetmap.org/relation/7211708",
+   "https://www.openstreetmap.org/way/491374499"
+  ],
+  "confianca": "media"
+ },
+ {
+  "chave": "saitama stadium 2002",
+  "nome_oficial": "Saitama Stadium 2002",
+  "capacidade": 63700,
+  "tipo": "tigela",
+  "planta": "retangular_cantos_curvos",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 14,
+   "fundo": 19
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Main Stand",
+    "aneis": 2,
+    "altura_m": 35,
+    "profundidade_m": 55,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Lateral comprida (~200 m) sob uma das 'asas' da cobertura. Altura e profundidade estimadas."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Back Stand",
+    "aneis": 2,
+    "altura_m": 35,
+    "profundidade_m": 55,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Sob a outra asa da cobertura; faixa de LED ao longo do anel de cima. Medidas estimadas."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "North Side Stand",
+    "aneis": 2,
+    "altura_m": 30,
+    "profundidade_m": 45,
+    "coberta": false,
+    "camarotes": false,
+    "notas": "Atrás do gol norte, sem cobertura: a torcida do Urawa, toda vermelha nos jogos; telão Aurora Vision. Medidas estimadas."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "South Side Stand",
+    "aneis": 2,
+    "altura_m": 30,
+    "profundidade_m": 45,
+    "coberta": false,
+    "camarotes": false,
+    "notas": "Atrás do gol sul, sem cobertura; telão. Medidas estimadas."
+   }
+  ],
+  "cobertura": {
+   "tipo": "parcial",
+   "material": "membrana",
+   "cor": "#f0f0ec",
+   "sustentacao": "trelica",
+   "altura_m": 58,
+   "notas": "Duas coberturas separadas em forma de asa (inspiradas em duas garças brancas de asas abertas), membrana branca sobre treliça espacial de aço, só sobre as laterais (Main e Back); atrás dos gols não há cobertura. ~58 m de altura (skyscraperpage)."
+  },
+  "fachada": {
+   "estilo": "concreto",
+   "cor": "#c4c2bd",
+   "cor2": "#6f9fa8",
+   "descricao": "Base de concreto cinza com pilares inclinados e pórticos aparentes, um grande pano de vidro verde-azulado na entrada e as duas asas brancas da cobertura saltando por cima, curvadas nas pontas.",
+   "led": ""
+  },
+  "cadeiras": {
+   "cores": [
+    "#9cc3a6",
+    "#5f8fc0"
+   ],
+   "padrao": "misto",
+   "texto": ""
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "outro",
+    "descricao": "Duas asas de membrana branca sobre treliça, só nas laterais, com as pontas curvadas para cima",
+    "posicao": "sobre principal e oposta"
+   },
+   {
+    "tipo": "telao",
+    "descricao": "Dois telões Aurora Vision",
+    "posicao": "fundo_a e fundo_b"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Arquibancada norte do Urawa toda de vermelho com bandeirões",
+    "posicao": "fundo_a (norte)"
+   }
+  ],
+  "entorno": {
+   "tipo": "parque",
+   "relevo": "plano",
+   "agua": "nenhuma",
+   "descricao": "No Parque Saitama Stadium 2002, em Urawa-Misono: três campos de treino, gramados e estacionamentos em volta, numa planície de subúrbio com áreas agrícolas e baixas construções; a rodovia 122 passa a oeste e a via expressa Tohoku perto.",
+   "marcos": [
+    "campos de treino anexos",
+    "rodovia 122",
+    "estação Urawa-Misono",
+    "plantações em volta"
+   ]
+  },
+  "orientacao_graus": 0,
+  "foto_confere": true,
+  "notas": "Cores das cadeiras pela foto do Commons (verde-claro) e pela Wikipédia japonesa (Main e Back em azul e verde) — conferir.",
+  "fontes": [
+   "https://ja.wikipedia.org/wiki/埼玉スタジアム2002",
+   "https://en.wikipedia.org/wiki/Saitama_Stadium_2002",
+   "https://www.eye.co.jp/projects/examples/detail/id/sps13/cid/6/sid/19/",
+   "https://www.theguardian.com/football/worldcup2002/story/0,11224,722857,00.html",
+   "https://skyscraperpage.com/b94266",
+   "https://commons.wikimedia.org/wiki/File:Saitama_Stadium_200113b23.jpg",
+   "https://www.openstreetmap.org/way/1500640642",
+   "https://www.openstreetmap.org/way/119665760"
+  ],
+  "confianca": "media"
+ },
+ {
+  "chave": "tottenham hotspur stadium",
+  "nome_oficial": "Tottenham Hotspur Stadium",
+  "capacidade": 62850,
+  "tipo": "arena",
+  "planta": "retangular_cantos_curvos",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 8,
+   "fundo": 5
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "West Stand",
+    "aneis": 4,
+    "altura_m": 33,
+    "profundidade_m": 45,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Túnel, bancos e cabines; os dois anéis do meio são só premium e o de baixo em parte. 1ª fileira a ~7,97 m do campo. Profundidade estimada."
+   },
+   {
+    "lado": "oposta",
+    "nome": "East Stand",
+    "aneis": 4,
+    "altura_m": 34,
+    "profundidade_m": 45,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Quatro anéis como a West; do lado da Tottenham High Road. Profundidade estimada."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "North Stand",
+    "aneis": 3,
+    "altura_m": 35.5,
+    "profundidade_m": 45,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "A mais alta (35,5 m). Número de anéis e profundidade estimados."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "South Stand",
+    "aneis": 1,
+    "altura_m": 34,
+    "profundidade_m": 50,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Um anel só com 17.500 lugares, inclinação de até 35°, 1ª fileira a 4,99 m do campo; o campo retrátil se esconde embaixo dela; galo dourado no alto do teto."
+   }
+  ],
+  "cobertura": {
+   "tipo": "total",
+   "material": "misto",
+   "cor": "#c9ccd0",
+   "sustentacao": "cabos",
+   "altura_m": 48,
+   "notas": "Sistema tensionado de 54 cabos radiais de cima e 54 de baixo, dois anéis internos ligados por 'colunas voadoras' que levam os refletores; 810 cassetes de metal/acústicos por baixo, membrana polimérica metálica por cima e uma faixa interna de vidro (287 seções) na borda; forma externa chega a 48 m."
+  },
+  "fachada": {
+   "estilo": "paineis",
+   "cor": "#b8bcc0",
+   "cor2": "#2a3a4a",
+   "descricao": "4.801 painéis perfurados de aço e alumínio em tons de prata e cinza num padrão 'pixelado', alguns inclinados, sobre uma base de concreto pré-moldado; no lado sul um pano de vidro de 7.000 m² mostra a estrutura em árvore por trás e se abre para a grande praça sul.",
+   "led": "iluminação dinâmica à noite (branco e azul)"
+  },
+  "cadeiras": {
+   "cores": [
+    "#132257"
+   ],
+   "padrao": "liso",
+   "texto": ""
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "estatua",
+    "descricao": "Galo dourado de 4,5 m em cima da bola",
+    "posicao": "alto da cobertura da South Stand"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "South Stand de um anel só, enorme e íngreme (17.500)",
+    "posicao": "fundo_b (sul)"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Skywalk: passarela no teto para visitantes",
+    "posicao": "cobertura, lado sul"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Campo retrátil em 3 bandejas que some sob a South Stand, com o sintético da NFL 1,6 m abaixo",
+    "posicao": "campo / sob a South Stand"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Pano de vidro gigante de 7.000 m²",
+    "posicao": "fachada sul, sobre a praça"
+   }
+  ],
+  "entorno": {
+   "tipo": "urbano_denso",
+   "relevo": "plano",
+   "agua": "nenhuma",
+   "descricao": "Na Tottenham High Road, norte de Londres: ruas de casas geminadas de tijolo, prédios residenciais novos e algumas torres altas em volta, campinhos e quadras ao leste (Northumberland Park) e uma praça grande ao sul do estádio.",
+   "marcos": [
+    "Tottenham High Road",
+    "casas geminadas de tijolo",
+    "torres residenciais novas",
+    "Northumberland Park"
+   ]
+  },
+  "orientacao_graus": 176,
+  "foto_confere": true,
+  "fontes": [
+   "https://stadiumdb.com/stadiums/eng/tottenham_hotspur_stadium",
+   "https://www.openstreetmap.org/way/636941979",
+   "https://www.openstreetmap.org/relation/7708006"
+  ],
+  "confianca": "alta"
+ },
+ {
+  "chave": "estadio da curuzu",
+  "nome_oficial": "Estádio Leônidas Sodré de Castro (Banpará Curuzu)",
+  "capacidade": 16200,
+  "tipo": "inglesa",
+  "planta": "retangular",
+  "cantos": "parciais",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 4,
+   "fundo": 5
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Tobogã / arquibancada central (Doutor Fiel)",
+    "aneis": 1,
+    "altura_m": 14,
+    "profundidade_m": 23,
+    "coberta": false,
+    "camarotes": true,
+    "notas": "Lado sudeste, voltado para a Av. João Paulo II. É a arquibancada mais alta, em degraus de concreto, com a faixa de 31 camarotes envidraçados no alto (ampliados em 2024) e a imprensa embaixo. No OSM tem 98 × 23,7 m. Altura estimada pela foto."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Arquibancada da Almirante Barroso",
+    "aneis": 1,
+    "altura_m": 8,
+    "profundidade_m": 12,
+    "coberta": false,
+    "camarotes": false,
+    "notas": "Lado noroeste, colada na Av. Almirante Barroso (por onde passa o BRT). No OSM tem 115 × 12,4 m. Na foto aparecem blocos de cadeiras azuis e brancas alternados. O nome é estimado: o clube não dá nome oficial a ela."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Curuzu",
+    "aneis": 1,
+    "altura_m": 7,
+    "profundidade_m": 13,
+    "coberta": false,
+    "camarotes": false,
+    "notas": "Atrás do gol sudoeste, na Travessa Curuzu. Tem 75 × 13 m, em degraus de concreto pintados em faixas azul-celeste e brancas. Há projeto de mais 1 ou 2 andares atrás dos gols, sem data."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Chaco",
+    "aneis": 1,
+    "altura_m": 7,
+    "profundidade_m": 12,
+    "coberta": false,
+    "camarotes": false,
+    "notas": "Atrás do gol nordeste, na Travessa do Chaco. Tem 77 × 12 m. O imóvel vizinho foi demolido para a ampliação futura até cerca de 20 mil lugares."
+   }
+  ],
+  "cobertura": {
+   "tipo": "parcial",
+   "material": "metal",
+   "cor": "#d9d9d9",
+   "sustentacao": "pilares",
+   "altura_m": 15,
+   "notas": "Só a faixa de camarotes no alto do tobogã é coberta, e os bancos de reservas têm cobertura de acrílico desde 2010. O resto da torcida fica a céu aberto. Estimado pela foto."
+  },
+  "fachada": {
+   "estilo": "concreto",
+   "cor": "#2f8fd8",
+   "cor2": "#f4f4f4",
+   "descricao": "Muros e portões de concreto pintados de azul-celeste e branco, com o escudo do Paysandu; a torcida revitalizou a pintura em 2021. O estádio fica no miolo do quarteirão, cercado de prédios e casas, sem fachada monumental.",
+   "led": ""
+  },
+  "cadeiras": {
+   "cores": [
+    "#2f8fd8",
+    "#f4f4f4"
+   ],
+   "padrao": "faixas",
+   "texto": ""
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "outro",
+    "descricao": "Tobogã: a arquibancada alta com a fileira de camarotes envidraçados em cima",
+    "posicao": "lado sudeste (principal)"
+   },
+   {
+    "tipo": "telao",
+    "descricao": "Placar eletrônico de 15 × 2,5 m, doado pelo Robgol em 2009",
+    "posicao": "atrás de um dos gols (estimado)"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Torres residenciais coladas ao estádio, como o Ed. Joinville (18 andares, ~70 m), aparecendo atrás das arquibancadas",
+    "posicao": "em volta, sobretudo a sudeste"
+   }
+  ],
+  "entorno": {
+   "tipo": "urbano_denso",
+   "relevo": "plano",
+   "agua": "nenhuma",
+   "marcos": [
+    "Av. Almirante Barroso com a via do BRT (noroeste)",
+    "torres de apartamentos do bairro do Marco",
+    "Travessa Curuzu e Travessa do Chaco"
+   ],
+   "descricao": "Bairro do Marco, em Belém: quarteirão urbano plano, com ruas estreitas, casas e torres de 15 a 25 andares em volta. A Av. Almirante Barroso passa colada no lado noroeste."
+  },
+  "orientacao_graus": 33.5,
+  "foto_confere": true,
+  "fontes": [
+   "foto do TM legacy-total-match/assets/estadios/br3-paysandu.jpg (confere)",
+   "capacidade do lote (1.688.255.000) estava errada: o oficial é 16.200 (CNEF/Wikipédia); depois dos camarotes de 2024, ~15.800",
+   "https://pt.wikipedia.org/wiki/Est%C3%A1dio_Le%C3%B4nidas_Sodr%C3%A9_de_Castro",
+   "https://en.wikipedia.org/wiki/Est%C3%A1dio_da_Curuzu",
+   "https://dol.com.br/esporte/esporte-para/844595/paysandu-tem-projeto-para-ampliar-curuzu-para-20-mil-lugares",
+   "https://www.oliberal.com/esportes/paysandu/torcedores-do-paysandu-criticam-obras-na-curuzu-vai-diminuir-a-capacidade-1.480557",
+   "https://dol.com.br/esporte/paysandu/946464/paysandu-realiza-demolicao-de-imovel-com-foco-na-ampliacao-da-curuzu",
+   "https://dol.com.br/esporte/esporte-para/887126/paysandu-curuzu-pode-ganhar-novos-andares-nas-arquibancadas",
+   "https://www.openstreetmap.org/way/233043123 (campo: eixo 33,5°)",
+   "https://www.openstreetmap.org/way/656564681 (arquibancadas 656564679/680/681/682)"
+  ],
+  "confianca": "media"
+ },
+ {
+  "chave": "spotify camp nou",
+  "nome_oficial": "Spotify Camp Nou",
+  "capacidade": 62652,
+  "tipo": "tigela",
+  "planta": "oval",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 8,
+   "fundo": 11
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Tribuna (lateral oeste)",
+    "aneis": 3,
+    "altura_m": 48,
+    "profundidade_m": 45,
+    "coberta": false,
+    "camarotes": true,
+    "notas": "Lado oeste-sudoeste, na Av. Arístides Maillol, onde ficam o museu e o Palau Blaugrana. Em out/2026 o 1º e o 2º anel estão prontos e abertos. O anel duplo de camarotes VIP (entre o 2º e o 3º anel) e o 3º anel seguem em obra. O 3º anel novo tem a mesma altura em todo o contorno; os ~48 m são estimados a partir dos 46,6 m do antigo."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Lateral (leste)",
+    "aneis": 3,
+    "altura_m": 48,
+    "profundidade_m": 45,
+    "coberta": false,
+    "camarotes": true,
+    "notas": "Lado leste-nordeste, com o mesmo perfil da tribuna. No estádio antigo, o 'MES QUE UN CLUB' amarelo ficava aqui."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Gol Nord",
+    "aneis": 3,
+    "altura_m": 48,
+    "profundidade_m": 42,
+    "coberta": false,
+    "camarotes": false,
+    "notas": "Cabeceira norte-noroeste, do lado da Av. Diagonal. Reabriu em mar/2026 só no anel de baixo (fase 1C, +14 mil lugares); o 2º e o 3º anel continuam fechados ou em obra. Leva um logo Spotify menor."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Gol Sud",
+    "aneis": 3,
+    "altura_m": 48,
+    "profundidade_m": 42,
+    "coberta": false,
+    "camarotes": false,
+    "notas": "Cabeceira sul-sudeste, na Travessera de les Corts. Também leva um logo Spotify menor."
+   }
+  ],
+  "cobertura": {
+   "tipo": "nenhuma",
+   "material": "nenhum",
+   "cor": "#f2f2f2",
+   "sustentacao": "nenhuma",
+   "altura_m": 0,
+   "notas": "HOJE (out/2026) o estádio está sem cobertura: o teto antigo da tribuna foi demolido. O projeto (Nikken Sekkei + Pascual i Ausió) prevê um anel sobre 100% das arquibancadas, em membrana e painéis translúcidos com ~18 mil m² de placas fotovoltaicas, sustentado por cabos e anel de compressão, com 3 telões pendurados e um Skywalk a ~70 m. Os pilares do teto já estão instalados. O clube volta a Montjuïc em 2027–28 para montá-lo; o fim da obra está previsto entre 2027 e 2029."
+  },
+  "fachada": {
+   "estilo": "concreto",
+   "cor": "#ecebe6",
+   "cor2": "#004d98",
+   "descricao": "Fachada nova em camadas, no lugar do concreto de 1957: três níveis de terraços abertos com beirais brancos horizontais dando a volta no estádio, com vidro e a circulação à mostra atrás. Hoje a estrutura do 3º anel e as gruas aparecem por cima. Logo Spotify nos fundos.",
+   "led": "faixas de LED nos beirais (azul-grená à noite) previstas no projeto; parciais em 2026"
+  },
+  "cadeiras": {
+   "cores": [
+    "#004d98",
+    "#a50044"
+   ],
+   "padrao": "mosaico",
+   "texto": "MÉS QUE UN CLUB (previsto no projeto; o escudo do Barça é formado pelas cadeiras do lado oposto)"
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "outro",
+    "descricao": "Obra do 3º anel com gruas e a estrutura metálica à mostra (out/2026)",
+    "posicao": "todo o contorno, no alto"
+   },
+   {
+    "tipo": "letreiro",
+    "descricao": "'MÉS QUE UN CLUB' escrito nas cadeiras e o escudo do Barça formado pelas cadeiras em frente (previsto)",
+    "posicao": "laterais (estimado)"
+   },
+   {
+    "tipo": "telao",
+    "descricao": "3 telões grandes pendurados sob a futura cobertura (previsto)",
+    "posicao": "sob o anel da cobertura"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Skywalk semicircular saindo do 3º anel e passando por cima do campo a ~70 m (previsto)",
+    "posicao": "alto da cobertura"
+   }
+  ],
+  "entorno": {
+   "tipo": "urbano_denso",
+   "relevo": "morros",
+   "agua": "nenhuma",
+   "marcos": [
+    "Serra de Collserola com o Tibidabo e a Torre de Collserola ao fundo (noroeste)",
+    "Palau Blaugrana colado a oeste-sudoeste",
+    "Av. Diagonal ao norte",
+    "prédios de Les Corts"
+   ],
+   "descricao": "Les Corts, em Barcelona: quarteirões densos de prédios de 6 a 12 andares em volta, a Av. Diagonal ao norte e a serra de Collserola atrás. O terreno é quase plano e sobe em direção à serra."
+  },
+  "orientacao_graus": 158,
+  "foto_confere": true,
+  "fontes": [
+   "foto do TM legacy-total-match/assets/estadios/es-barcelona.jpg (confere, mas é aérea ANTIGA, de antes da reforma: mostra o teto velho da tribuna e o 'MES QUE UN CLUB' amarelo)",
+   "capacidade do lote (99.354) é a antiga; hoje 62.652 (fase 1C, mar/2026), 105 mil no fim da obra",
+   "https://en.wikipedia.org/wiki/Camp_Nou",
+   "https://stadiumdb.com/stadiums/esp/camp_nou",
+   "https://stadiumdb.com/news/2024/08/spain_camp_nou_will_regain_the_clubs_motto_and_get_a_skywalk",
+   "https://prod.beinsports.com/en-us/soccer/articles-video/the-curious-seat-arrangement-at-the-new-camp-nou-2024-10-11",
+   "https://es.ara.cat/deportes/fc-barcelona/joya-corona-camp-nou-hara-esperar_1_5723159.html",
+   "https://www.football-espana.net/2026/04/02/april-2027-barcelona-set-target-to-have-camp-nou-operating-at-capacity",
+   "https://www.cnnchile.com/deportes/barcelona-aforo-spotify-camp-nou-62-mil-personas-2026/",
+   "https://www.openstreetmap.org/way/35815805 (campo: eixo 158°)",
+   "https://www.openstreetmap.org/way/34607291"
+  ],
+  "confianca": "media"
+ },
+ {
+  "chave": "estadio banorte",
+  "nome_oficial": "Estadio Banorte (Estadio Azteca)",
+  "capacidade": 87523,
+  "tipo": "tigela",
+  "planta": "oval",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 14,
+   "fundo": 16
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Lado oeste (imprensa e palcos)",
+    "aneis": 2,
+    "altura_m": 40,
+    "profundidade_m": 62,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Dois anéis separados por um anel de palcos (camarotes). O anel de baixo se apoia no talude da escavação: o campo fica 9,5 m abaixo da rua. As cabines de imprensa e os skyboxes novos ficam no alto do lado oeste (reforma de 2016). Cada lado tem 4 setores, com frestas estreitas nos cantos (juntas sísmicas). Alturas estimadas."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Lado leste",
+    "aneis": 2,
+    "altura_m": 40,
+    "profundidade_m": 62,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Mesmo perfil do oeste, do lado da Calzada de Tlalpan. A área de hospitalidade do anel de baixo foi refeita em 2016."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Cabecera norte",
+    "aneis": 2,
+    "altura_m": 38,
+    "profundidade_m": 60,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Telão atrás do gol (LED desde 2015). Aqui a cobertura é mais estreita (~21 m pelo OSM) e só cobre a parte de cima."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Cabecera sul",
+    "aneis": 2,
+    "altura_m": 38,
+    "profundidade_m": 60,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Igual à norte, com telão atrás do gol."
+   }
+  ],
+  "cobertura": {
+   "tipo": "anel",
+   "material": "misto",
+   "cor": "#e6e6e6",
+   "sustentacao": "trelica",
+   "altura_m": 45,
+   "notas": "Marquise contínua de treliça de aço em balanço, apoiada nas 66 colunas inclinadas. Cobre o anel de cima e os palcos; o anel de baixo e as primeiras fileiras ficam descobertos. Pelo OSM, a marquise tem ~49 m nas laterais e ~21 m atrás dos gols (furo de ~220 × 130 m). Na reforma de 2024–26 a estrutura foi pintada de branco e preto, ganhou cobertura elástica nova e a borda externa foi revestida de lona vermelha #d0202a com o nome. Altura estimada."
+  },
+  "fachada": {
+   "estilo": "concreto",
+   "cor": "#bdb9b0",
+   "cor2": "#d0202a",
+   "descricao": "Concreto aparente: 66 colunas levemente inclinadas que se abrem para fora no alto e seguram a cobertura, com as bandejas e as rampas à mostra entre elas. No topo corre a faixa vermelha contínua com 'ESTADIO BANORTE' em letras brancas e o logo. A forma oval é austera, já comparada a um vulcão. Em volta, uma esplanada de concreto com faixas vermelhas pintadas no chão.",
+   "led": "iluminação LED nova da fachada e telas externas (reforma de 2026: mais de 2.200 m² de telas LED dentro e fora)"
+  },
+  "cadeiras": {
+   "cores": [
+    "#c8102e",
+    "#ffffff",
+    "#8e9196"
+   ],
+   "padrao": "misto",
+   "texto": "BANORTE (cadeiras brancas no meio das vermelhas do anel de baixo; retiradas em abr/2026 para a Copa por regra da FIFA, podem voltar)"
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "estatua",
+    "descricao": "'El Sol Rojo', escultura de aço vermelha de Alexander Calder, com 25,8 m",
+    "posicao": "esplanada de entrada"
+   },
+   {
+    "tipo": "letreiro",
+    "descricao": "Faixa vermelha com 'ESTADIO BANORTE' em letras brancas",
+    "posicao": "todo o contorno, na borda da cobertura"
+   },
+   {
+    "tipo": "telao",
+    "descricao": "Duas fitas de LED de 360° entre o 1º e o 2º anel, mais os telões atrás dos gols",
+    "posicao": "interno"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "As 66 colunas de concreto inclinadas que se abrem no alto",
+    "posicao": "fachada inteira"
+   }
+  ],
+  "entorno": {
+   "tipo": "residencial",
+   "relevo": "montanhas",
+   "agua": "nenhuma",
+   "marcos": [
+    "Calzada de Tlalpan e a estação Estadio Azteca do trem ligeiro (leste)",
+    "Serra do Ajusco ao sul",
+    "bairros de Santa Úrsula e Coyoacán"
+   ],
+   "descricao": "Sul da Cidade do México (Coyoacán/Tlalpan), a 2.240 m de altitude. O estádio fica no meio de uma esplanada de concreto e estacionamentos, cercado por bairros residenciais baixos e árvores, com as montanhas do Ajusco no horizonte."
+  },
+  "orientacao_graus": 6.4,
+  "foto_confere": true,
+  "fontes": [
+   "fotos do TM mx-america.jpg e mx-cruz-azul.jpg (iguais; confere): aérea de 2025, ainda em obra, com a treliça da cobertura sem revestimento e a faixa vermelha 'ESTADIO BANORTE'",
+   "https://en.wikipedia.org/wiki/Estadio_Azteca",
+   "https://stadiumdb.com/stadiums/mex/estadio_azteca",
+   "https://www.foxsports.com.mx/2025/12/26/estadio-banorte-muestra-avances-de-su-remodelacion-incluyendo-butacas-rumbo-al-mundial-video/",
+   "https://www.foxsports.com.mx/2026/04/02/por-que-retiran-algunas-butacas-del-estadio-banorte-tras-el-partido-entre-mexico-y-portugal/",
+   "https://www.milenio.com/futbol-internacional/mundial/estadio-banorte-recibe-una-nueva-cubierta-para-la-fachada-del-techo",
+   "https://www.tudn.com/mundial-2026/asi-modernizacion-estadio-azteca-mundial-2026",
+   "https://www.openstreetmap.org/way/118934909 (campo: eixo 6,4°)",
+   "https://www.openstreetmap.org/way/4758704 (contorno 261 × 228 m, anéis internos)"
+  ],
+  "confianca": "media"
+ },
+ {
+  "chave": "estadio mas monumental",
+  "nome_oficial": "Estadio Monumental (chamado Mâs Monumental de 2022 a ago/2026)",
+  "capacidade": 85018,
+  "tipo": "tigela",
+  "planta": "oval",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 10,
+   "fundo": 11
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Tribuna San Martín",
+    "aneis": 3,
+    "altura_m": 32,
+    "profundidade_m": 57,
+    "coberta": false,
+    "camarotes": true,
+    "notas": "Lado leste: tribuna social e de imprensa, palcos com circulação de 360° e o paddock envidraçado do túnel. Três níveis: a baja inferior nova (2022–23), colada ao campo, que foi rebaixado 1,5 m quando a pista saiu; a media; e a alta. Altura estimada."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Tribuna Belgrano",
+    "aneis": 3,
+    "altura_m": 32,
+    "profundidade_m": 57,
+    "coberta": false,
+    "camarotes": true,
+    "notas": "Lado oeste, ao longo da Av. Udaondo (antiga Av. Río de la Plata, que deu à tribuna seu nome antigo). A Belgrano baja inferior nova (2023) tem a bandeira do River em cadeiras vermelhas e brancas."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Sívori",
+    "aneis": 3,
+    "altura_m": 30,
+    "profundidade_m": 62,
+    "coberta": false,
+    "camarotes": true,
+    "notas": "Cabeceira norte-nordeste, voltada para o Rio da Prata; foi ela que fechou a 'ferradura' (1958 e 1978). A popular baja tem a faixa vermelha e o telão de 2024 fica em cima. Por fora, placas de alumínio vermelhas e brancas (2024) com LED (set/2026)."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Centenario",
+    "aneis": 3,
+    "altura_m": 30,
+    "profundidade_m": 62,
+    "coberta": false,
+    "camarotes": true,
+    "notas": "Cabeceira sul-sudoeste, junto à Av. Figueroa Alcorta (antiga Av. Centenario). Popular baja e palcos Centenario."
+   }
+  ],
+  "cobertura": {
+   "tipo": "nenhuma",
+   "material": "nenhum",
+   "cor": "#f2f2f2",
+   "sustentacao": "nenhuma",
+   "altura_m": 0,
+   "notas": "Hoje o estádio é a céu aberto. Em 2026 começou a última fase da obra (Grupo ENG, pelo menos 36 meses): um 4º anel de 360° (~101 mil lugares) e uma cobertura translúcida e acústica sobre 100% das arquibancadas, com projeto técnico da Schlaich Bergermann Partner. Ela terá dois telões de 25 × 8 m pendurados sobre a Sívori e a Centenario, e um Skywalk."
+  },
+  "fachada": {
+   "estilo": "concreto",
+   "cor": "#eeeeee",
+   "cor2": "#e30613",
+   "descricao": "Anel de concreto armado de 1938 pintado de branco, com faixas vermelhas e as escadas e rampas externas à mostra. A fachada da Sívori foi revestida em 2024 com placas de alumínio vermelhas e brancas. Em volta fica o complexo do clube: quadras, Instituto River e estacionamento de 3 níveis.",
+   "led": "LED na fachada externa da Sívori (set/2026); por dentro, anel de LED de 360° nas tribunas medias (jan/2025)"
+  },
+  "cadeiras": {
+   "cores": [
+    "#4a4d52",
+    "#e30613",
+    "#ffffff"
+   ],
+   "padrao": "faixas",
+   "texto": "CARP e 1901 (insígnias pintadas em vermelho nas populares baixas, uma em cada cabeceira)"
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "telao",
+    "descricao": "Anel de LED de 360° nas tribunas medias e o telão principal novo (2024)",
+    "posicao": "interno; telão sobre a Sívori"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Faixa vermelha (a banda da camisa do River) atravessando as fileiras de cadeiras cinza",
+    "posicao": "populares e plateas baixas"
+   },
+   {
+    "tipo": "letreiro",
+    "descricao": "Fachada vermelha e branca da Sívori, com LED",
+    "posicao": "cabeceira norte-nordeste"
+   }
+  ],
+  "entorno": {
+   "tipo": "residencial",
+   "relevo": "plano",
+   "agua": "rio",
+   "marcos": [
+    "Rio da Prata a ~600 m a nordeste",
+    "Av. Lugones (autopista) e a Costanera",
+    "torres de Núñez e Belgrano",
+    "complexo esportivo do River"
+   ],
+   "descricao": "Bairro de Núñez/Belgrano, em Buenos Aires: terreno plano ganho ao rio, entre avenidas largas (Udaondo, Figueroa Alcorta e Lidoro Quinteros) e o complexo do clube. Atrás aparece o skyline de prédios de Núñez e Belgrano e, a nordeste, a costa do Rio da Prata."
+  },
+  "orientacao_graus": 10.5,
+  "foto_confere": false,
+  "fontes": [
+   "foto do TM ar-river-plate.jpg: CONFERE, mas é de antes de 2020 (ainda com pista de atletismo e cadeiras brancas com a banda vermelha; hoje não há pista e as cadeiras são cinza)",
+   "foto do TM uy-river-plate.jpg: NÃO confere, é o Parque Federico Saroldi (River Plate de Montevidéu), outro estádio (homônimo)",
+   "https://es.wikipedia.org/wiki/Estadio_Monumental_(River_Plate)",
+   "https://lapaginamillonaria.com/riverplate/El-render-final-del-Monumental-mas-rojo-y-menos-gris-en-las-tribunas-20230116-0010.html",
+   "https://lapaginamillonaria.com/riverplate/comenzo-la-colocacion-de-las-butacas-en-la-belgrano-inferior-20230522-LPM-4621.html",
+   "https://lapaginamillonaria.com/riverplate/El-nuevo-Monumental-sin-pista-de-atletismo-con-un-tunel-unico-y-las-plateas-mas-cercanas-20200804-0007.html",
+   "https://stadiumdb.com/news/2026/01/argentina_river_plate_unveils_renovation_plan_for_100000capacity_monumental",
+   "https://eleconomista.com.ar/deportes/river-comenzo-mega-obra-convertir-monumental-uno-estadios-mas-grandes-mundo-n94959",
+   "https://www.openstreetmap.org/way/23242896 (campo: eixo 10,5°; contorno ~250 × 210 m, 1ª fileira ~127 × 90 m)"
+  ],
+  "confianca": "media"
+ },
+ {
+  "chave": "santiago bernabeu",
+  "nome_oficial": "Bernabéu (Estadio Santiago Bernabéu até 2025)",
+  "capacidade": 83186,
+  "tipo": "arena",
+  "planta": "retangular_cantos_curvos",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 7,
+   "fundo": 9
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Lateral Este (Padre Damián)",
+    "aneis": 3,
+    "altura_m": 45,
+    "profundidade_m": 90,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Lado leste, ampliado em 2001–06 com um prédio de escritórios, imprensa e palcos VIP. A profundidade até a fachada vem do OSM (~90 m, contando o anexo). O StadiumDB chama este de lado principal. Os 3 anéis ('anfiteatros') ficam entre linhas de camarotes."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Lateral Oeste (Paseo de la Castellana)",
+    "aneis": 3,
+    "altura_m": 45,
+    "profundidade_m": 68,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Lado oeste, com a fachada de lamelas de aço voltada para a Castellana; ~68 m até a fachada pelo OSM."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Fondo Norte (Rafael Salgado)",
+    "aneis": 3,
+    "altura_m": 45,
+    "profundidade_m": 49,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Cabeceira norte; ~49 m até a fachada (OSM)."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Fondo Sur (Concha Espina)",
+    "aneis": 3,
+    "altura_m": 45,
+    "profundidade_m": 49,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Cabeceira sul, com a grada de animação no anel de baixo. ~49 m até a fachada."
+   }
+  ],
+  "cobertura": {
+   "tipo": "retratil",
+   "material": "misto",
+   "cor": "#e3e5e8",
+   "sustentacao": "trelica",
+   "altura_m": 60,
+   "notas": "Uma cobertura fixa sobre todas as arquibancadas, com mais de 9 mil t de aço: 2 treliças de 177 m no sentido leste–oeste e 4 transversais de 144 m. Sobre o campo fica a parte retrátil: 2 painéis, cada um com 5 almofadas infláveis de 72 × 7 m entre 6 treliças de 72,5 m, que fecham em ~15 min. O videomarcador de 360° fica pendurado na cobertura fixa. Altura total do estádio: 60 m."
+  },
+  "fachada": {
+   "estilo": "metal",
+   "cor": "#c9ccd0",
+   "cor2": "#7b8188",
+   "descricao": "Pele contínua de lamelas de aço inoxidável parametrizadas, com frestas que deixam passar luz e ar. Ela fica presa a costelas de aço, pendurada na cobertura fixa, e embrulha o estádio inteiro como uma caixa prateada de cantos arredondados de 60 m, com galerias externas por trás.",
+   "led": "a fachada inteira funciona como tela de LED à noite (cores e imagens)"
+  },
+  "cadeiras": {
+   "cores": [
+    "#3b3f45"
+   ],
+   "padrao": "liso",
+   "texto": ""
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "telao",
+    "descricao": "Videomarcador de 360°: um anel contínuo de tela pendurado na cobertura",
+    "posicao": "alto do anel interno, todo o contorno"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Teto retrátil de almofadas infláveis que fecha sobre o campo",
+    "posicao": "sobre o campo"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Fachada de lamelas de aço inox que vira tela de LED",
+    "posicao": "todo o contorno"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Gramado retrátil, guardado num hipogeu embaixo do estádio",
+    "posicao": "campo"
+   }
+  ],
+  "entorno": {
+   "tipo": "urbano_denso",
+   "relevo": "plano",
+   "agua": "nenhuma",
+   "marcos": [
+    "Paseo de la Castellana (oeste)",
+    "arranha-céus do AZCA ao sul (Torre Picasso)",
+    "Torres KIO (Puerta de Europa) e as Cuatro Torres ao norte, na Castellana"
+   ],
+   "descricao": "Chamartín, em Madri: o estádio ocupa um quarteirão inteiro entre a Castellana, Concha Espina, Padre Damián e Rafael Salgado, cercado de prédios de escritórios e residenciais de 8 a 15 andares. Os arranha-céus do AZCA e as torres do norte aparecem ao longo da Castellana."
+  },
+  "orientacao_graus": 4.2,
+  "foto_confere": true,
+  "fontes": [
+   "foto do TM es-real-madrid.jpg (confere: interior novo, com o videomarcador de 360°, a treliça da cobertura e um mosaico de cartões)",
+   "https://en.wikipedia.org/wiki/Bernab%C3%A9u_(stadium)",
+   "https://stadiumdb.com/stadiums/esp/estadio_santiago_bernabeu",
+   "https://arquitecturaviva.com/obras/remodelacion-del-estadio-santiago-bernabeu",
+   "https://construsoftbimawards.com/remodelacion-estadio-santiago-bernabeu/",
+   "https://www.reasonwhy.es/actualidad/fotos-nuevo-estadio-santiago-bernabeu-2019",
+   "https://lapaginamillonaria.com/riverplate/En-el-Monumental-la-cancha-de-River-se-van-a-poner-las-mismas-butacas-que-en-la-del-Tottenham-20220830-0009.html (cadeiras cinza-escuras no novo Bernabéu)",
+   "https://www.openstreetmap.org/way/1446479375 (campo: eixo 4,2°)",
+   "https://www.openstreetmap.org/way/1507411898 (contorno)"
+  ],
+  "confianca": "media"
+ },
+ {
+  "chave": "signal iduna park",
+  "nome_oficial": "Signal Iduna Park (Westfalenstadion)",
+  "capacidade": 81365,
+  "tipo": "arena",
+  "planta": "retangular_cantos_curvos",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 4,
+   "fundo": 8
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Westtribüne",
+    "aneis": 2,
+    "altura_m": 36,
+    "profundidade_m": 60,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Lado oeste: tribuna de honra, VIP e imprensa. O 2º anel foi acrescentado em 1995–99. Altura estimada; a profundidade até a fachada vem do OSM."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Osttribüne",
+    "aneis": 2,
+    "altura_m": 36,
+    "profundidade_m": 60,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Lado leste (~17 mil lugares), com o anel de baixo maior que o de cima; colada ao Stadion Rote Erde."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Südtribüne (Gelbe Wand)",
+    "aneis": 1,
+    "altura_m": 38,
+    "profundidade_m": 56,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Cabeceira sul: um anel só, muito íngreme, com 24.454 lugares em pé. É a maior arquibancada de pé da Europa, a 'Muralha Amarela'. Altura estimada pela profundidade (~37°)."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Nordtribüne",
+    "aneis": 2,
+    "altura_m": 36,
+    "profundidade_m": 62,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Cabeceira norte, dois anéis (o de cima com cadeiras). A fachada externa é de vidro, com telão; no teto fica o painel solar que desenha o logo do BVB."
+   }
+  ],
+  "cobertura": {
+   "tipo": "total",
+   "material": "metal",
+   "cor": "#e8e8e4",
+   "sustentacao": "mastros",
+   "altura_m": 40,
+   "notas": "Quatro tetos de chapa de aço inclinados para o campo, unidos quando os cantos foram fechados em 2002–03. Eles são presos por 8 pilones de aço amarelos (#fde100) de 62 m, por fora do estádio, dois em cada canto; antes havia colunas nos cantos. Sobre a Nordtribüne há placas solares de 924 kW que desenham o logo do BVB. Altura da borda estimada."
+  },
+  "fachada": {
+   "estilo": "concreto",
+   "cor": "#c9c9c5",
+   "cor2": "#fde100",
+   "descricao": "Por fora aparece a estrutura de concreto cinza das tribunas, com escadas e vigas à mostra, fachadas de vidro nos cantos e na Nordtribüne, e os 8 pilones amarelos em treliça subindo bem acima do teto. Letreiro SIGNAL IDUNA PARK.",
+   "led": "telão externo na fachada da Nordtribüne"
+  },
+  "cadeiras": {
+   "cores": [
+    "#1c1c1c",
+    "#fde100"
+   ],
+   "padrao": "faixas",
+   "texto": ""
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "mastros",
+    "descricao": "8 pilones de aço amarelos de 62 m que seguram o teto por fora, visíveis de toda a cidade",
+    "posicao": "dois em cada canto, por fora"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Gelbe Wand: a Südtribüne inteira em pé, amarela de torcida",
+    "posicao": "cabeceira sul"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Logo do BVB ('09') desenhado pelas placas solares no teto",
+    "posicao": "teto da Nordtribüne"
+   },
+   {
+    "tipo": "telao",
+    "descricao": "4 telões nos cantos, por dentro, e mais 1 na fachada norte",
+    "posicao": "cantos e fachada norte"
+   }
+  ],
+  "entorno": {
+   "tipo": "parque",
+   "relevo": "plano",
+   "agua": "nenhuma",
+   "marcos": [
+    "Stadion Rote Erde colado a leste (pista de atletismo vermelha)",
+    "Westfalenhallen ao norte",
+    "Florianturm (torre de TV de 209 m) no Westfalenpark",
+    "campos de treino e árvores em volta"
+   ],
+   "descricao": "Sul do centro de Dortmund: área de parques e esportes, com o Stadion Rote Erde ao lado, as Westfalenhallen, estacionamentos e árvores. Terreno plano."
+  },
+  "orientacao_graus": 171.9,
+  "foto_confere": true,
+  "fontes": [
+   "foto do TM de-borussia-dortmund.jpg (confere: aérea com os 8 pilones, o '09' no teto e o Rote Erde ao lado)",
+   "https://en.wikipedia.org/wiki/Westfalenstadion",
+   "https://de.wikipedia.org/wiki/Signal_Iduna_Park",
+   "https://www.bvb.de/eng/BVB/Signal-Iduna-Park",
+   "https://stadiumdb.com/stadiums/ger/westfalenstadion",
+   "https://signal-iduna-park.de/en/infos.htm",
+   "https://www.openstreetmap.org/way/17235988 (campo: eixo 171,9°)",
+   "https://www.openstreetmap.org/way/17235929 (contorno 238 × 193 m)"
+  ],
+  "confianca": "alta"
+ },
+ {
+  "chave": "maracana",
+  "nome_oficial": "Estádio Jornalista Mário Filho (Maracanã)",
+  "capacidade": 78838,
+  "tipo": "tigela",
+  "planta": "oval",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 11,
+   "fundo": 20
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Setor Oeste",
+    "aneis": 1,
+    "altura_m": 24.2,
+    "profundidade_m": 73,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Desde 2013 a bacia é contínua, de um anel só. Uma linha fina de camarotes envidraçados separa a parte baixa (mais rasa, até ~10,6 m) da alta (mais em pé). A tribuna de honra e os camarotes do governo ficam no Setor Oeste. Medidas da pesquisa de 16/10 (golaco/js/estadio-planta.js): 1ª fileira em superelipse a ~11 m da lateral e ~20 m atrás dos gols; última fileira em elipse de 272 × 236 m, a 24,2 m de altura."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Setor Leste",
+    "aneis": 1,
+    "altura_m": 24.2,
+    "profundidade_m": 73,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Lado leste-sudeste, voltado para o Maracanãzinho. Mesmo perfil do oeste."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Setor Norte",
+    "aneis": 1,
+    "altura_m": 24.2,
+    "profundidade_m": 63,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Cabeceira norte-nordeste, em curva contínua com as laterais."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Setor Sul",
+    "aneis": 1,
+    "altura_m": 24.2,
+    "profundidade_m": 63,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Cabeceira sul-sudoeste, em curva contínua com as laterais."
+   }
+  ],
+  "cobertura": {
+   "tipo": "anel",
+   "material": "membrana",
+   "cor": "#f2f2f2",
+   "sustentacao": "anel_compressao",
+   "altura_m": 33,
+   "notas": "Anel de membrana branca (fibra de vidro com PTFE) com ~68 m de profundidade constante, em 'roda de bicicleta': anel de compressão externo sobre os 60 pilares da fachada de 1950, anel de tração interno e 60 cabos radiais. A borda de fora fica a ~30,6 m e a linha dos mastros a ~35,5 m; o furo oval sobre o campo tem ~172 × 134 m. Vista de baixo, a membrana é clara e a treliça escura."
+  },
+  "fachada": {
+   "estilo": "concreto",
+   "cor": "#dcdcd6",
+   "cor2": "#8f9396",
+   "descricao": "Fachada original de 1950, tombada: anel oval de concreto cinza-claro (~304 × 266 m) com 60 costelas em gancho e almofadas entre elas e uma cinta horizontal a ~21 m. Duas rampas retas e largas saem do meio dos lados compridos até os pórticos. A borda da cobertura branca parece flutuar acima de tudo.",
+   "led": "iluminação cênica da fachada e da cobertura em cores variáveis (por exemplo, vermelho e preto em jogo do Flamengo)"
+  },
+  "cadeiras": {
+   "cores": [
+    "#f2c21b",
+    "#2e6fc0",
+    "#e9e9e4"
+   ],
+   "padrao": "misto",
+   "texto": ""
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "outro",
+    "descricao": "Anel de cobertura branco com o grande furo oval sobre o campo",
+    "posicao": "topo"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Rampas retas e largas de acesso (anos 1950) terminando em pórticos",
+    "posicao": "meio dos lados compridos"
+   },
+   {
+    "tipo": "estatua",
+    "descricao": "Estátua do Bellini erguendo a Taça Jules Rimet",
+    "posicao": "na frente de uma das rampas, na Av. Maracanã"
+   },
+   {
+    "tipo": "cupula",
+    "descricao": "Maracanãzinho, o ginásio de cúpula vizinho",
+    "posicao": "leste-sudeste, colado"
+   }
+  ],
+  "entorno": {
+   "tipo": "urbano_denso",
+   "relevo": "morros",
+   "agua": "rio",
+   "marcos": [
+    "Maracanãzinho e o Parque Aquático Júlio Delamare",
+    "UERJ",
+    "linha de trem e a estação Maracanã",
+    "Morro da Mangueira",
+    "Maciço da Tijuca com o Cristo Redentor no Corcovado"
+   ],
+   "descricao": "Zona Norte do Rio: o complexo do Maracanã fica cercado pela Av. Rei Pelé (antiga Radial Oeste), pela linha de trem, pela UERJ e pelos bairros densos da Tijuca. O Rio Maracanã passa canalizado ao lado, e a serra da Tijuca com o Cristo fecha o horizonte ao sul."
+  },
+  "orientacao_graus": 31.1,
+  "foto_confere": true,
+  "fontes": [
+   "fotos do TM br-flamengo.jpg e br-fluminense.jpg (iguais; confere: aérea com o anel de cobertura, o Maracanãzinho e as rampas)",
+   "golaco/js/estadio-planta.js e golaco/tools/estadios/pesquisa.json (pesquisa de 16/10: SBP/ArchDaily, Structurae, OSM, Wikipédia, ge.globo 2012 sobre as cores das cadeiras)",
+   "https://pt.wikipedia.org/wiki/Est%C3%A1dio_do_Maracan%C3%A3",
+   "https://www.rj.gov.br/casacivil/sites/default/files/arquivos_paginas/02.%20TERMO%20DE%20REFERENCIA.pdf (tribuna de honra e camarotes no Setor Oeste)",
+   "https://riomemorias.com.br/?p=20933 (estátua do Bellini na Av. Maracanã)",
+   "https://www.openstreetmap.org/way/1361281074 (campo: eixo 31,1°)",
+   "https://www.openstreetmap.org/relation/4587734 (contorno ~318 × 277 m com as rampas)"
+  ],
+  "confianca": "alta"
+ },
+ {
+  "chave": "san siro",
+  "nome_oficial": "Stadio Giuseppe Meazza (San Siro)",
+  "capacidade": 75817,
+  "tipo": "arena",
+  "planta": "retangular_cantos_curvos",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 8,
+   "fundo": 10
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Tribuna Rossa (oeste)",
+    "aneis": 3,
+    "altura_m": 50,
+    "profundidade_m": 60,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Lado oeste: tribuna de honra, Sky Box e imprensa. As 3 torres do meio do lado comprido ficam aqui, e o museu fica na base. Altura do 3º anel estimada."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Tribuna Arancio (leste)",
+    "aneis": 2,
+    "altura_m": 32,
+    "profundidade_m": 40,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Lado leste, o ÚNICO sem 3º anel, voltado para o hipódromo e a Via dei Piccolomini. Altura estimada."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Curva Nord (Verde)",
+    "aneis": 3,
+    "altura_m": 50,
+    "profundidade_m": 65,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Cabeceira norte, torcida da Inter. Tem 2 torres no meio, além das 2 de canto."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Curva Sud (Blu)",
+    "aneis": 3,
+    "altura_m": 50,
+    "profundidade_m": 65,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Cabeceira sul, torcida do Milan. Tem 2 torres no meio, além das 2 de canto."
+   }
+  ],
+  "cobertura": {
+   "tipo": "total",
+   "material": "policarbonato",
+   "cor": "#d6dde0",
+   "sustentacao": "trelica",
+   "altura_m": 65,
+   "notas": "Teto de painéis translúcidos de policarbonato sobre uma grelha de aço. As 4 grandes vigas-treliça VERMELHAS (#c62828) formam um retângulo de ~124 × 75 m logo acima da borda do campo, a ~65 m (OSM), e se apoiam só nas 4 torres de canto. O teto cobre os 3 anéis em volta."
+  },
+  "fachada": {
+   "estilo": "concreto",
+   "cor": "#d9d3c6",
+   "cor2": "#c62828",
+   "descricao": "Concreto claro. As rampas helicoidais do 2º anel (anos 1950) dão a volta em toda a fachada como fitas inclinadas, e as 11 torres cilíndricas estriadas de concreto (1990) têm rampas em espiral por dentro. No alto, as vigas vermelhas do teto saem das 4 torres de canto. Inter e Milan compraram o estádio em 2025 e planejam um novo ao lado; hoje ele segue igual.",
+   "led": ""
+  },
+  "cadeiras": {
+   "cores": [
+    "#c62828",
+    "#ef7d1a",
+    "#2e7d32",
+    "#1565c0"
+   ],
+   "padrao": "misto",
+   "texto": ""
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "torres",
+    "descricao": "11 torres cilíndricas de concreto com rampa em espiral; as 4 de canto (~68 m) seguram o teto",
+    "posicao": "por fora: 4 nos cantos, 2 em cada cabeceira e 3 no lado oeste"
+   },
+   {
+    "tipo": "rampas_espiral",
+    "descricao": "Rampas helicoidais do 2º anel cobrindo toda a fachada",
+    "posicao": "toda a volta"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Vigas-treliça vermelhas do teto formando um retângulo sobre o campo, saindo das torres de canto",
+    "posicao": "topo"
+   }
+  ],
+  "entorno": {
+   "tipo": "residencial",
+   "relevo": "plano",
+   "agua": "nenhuma",
+   "marcos": [
+    "hipódromos de San Siro a leste e sudeste",
+    "Piazzale Angelo Moratti e a esplanada",
+    "Alpes ao norte em dia claro",
+    "skyline de CityLife a leste"
+   ],
+   "descricao": "Bairro de San Siro, no oeste de Milão: grande esplanada e estacionamentos em volta, hipódromos e áreas verdes a leste e prédios residenciais baixos. Terreno plano."
+  },
+  "orientacao_graus": 21.4,
+  "foto_confere": true,
+  "fontes": [
+   "fotos do TM it-inter-de-milao.jpg e it-milan.jpg (iguais; confere: fachada com as torres, as rampas e as vigas vermelhas)",
+   "capacidade: 75.817 pela soma dos anéis na Wikipédia italiana (26.223 + 32.401 + 17.193); o lote dizia 75.923",
+   "https://it.wikipedia.org/wiki/Stadio_Giuseppe_Meazza",
+   "https://areasosta.com/faq/come-sono-suddivisi-i-settori-a-san-siro",
+   "https://www.inter.it/it/notizie/2017-09-9-coloriamo-san-siro-di-nerazzurro-per-inter-spal",
+   "https://ideas.lego.com/projects/4fe51ee8-d865-4c7d-b170-0d204775bf88 (fonte secundária: cores das cadeiras por setor, estimado)",
+   "https://www.openstreetmap.org/way/218520544 (campo: eixo 21,4°)",
+   "https://www.openstreetmap.org/way/218520505 (contorno; torres 218520507/509/514/523 com 68 m; vigas 1246122203–1246122217 com 65 m)"
+  ],
+  "confianca": "media"
+ },
+ {
+  "chave": "allianz arena",
+  "nome_oficial": "Allianz Arena",
+  "capacidade": 75024,
+  "tipo": "arena",
+  "planta": "retangular_cantos_curvos",
+  "cantos": "fechados",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 8.5,
+   "fundo": 8
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Westtribüne (Haupttribüne)",
+    "aneis": 3,
+    "altura_m": 42,
+    "profundidade_m": 70,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Lado oeste. São 3 anéis íngremes no estádio todo (inferior ~21 mil, médio ~24 mil, superior ~25 mil) com faixas de camarotes entre eles. 'MIA SAN MIA' escrito em cadeiras no anel de baixo. A profundidade até a pele (OSM) inclui a casca."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Osttribüne (Gegentribüne)",
+    "aneis": 3,
+    "altura_m": 42,
+    "profundidade_m": 70,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Lado leste, com 'FC BAYERN MÜNCHEN' em cadeiras no anel de cima."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Südkurve",
+    "aneis": 3,
+    "altura_m": 42,
+    "profundidade_m": 69,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Cabeceira sul, da torcida organizada do Bayern; a parte de baixo é de pé (cadeiras Vario)."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Nordkurve",
+    "aneis": 3,
+    "altura_m": 42,
+    "profundidade_m": 69,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Cabeceira norte, com o escudo do Bayern nas cadeiras; setor dos visitantes."
+   }
+  ],
+  "cobertura": {
+   "tipo": "total",
+   "material": "membrana",
+   "cor": "#eef1f4",
+   "sustentacao": "trelica",
+   "altura_m": 50,
+   "notas": "Teto de treliças de aço em balanço coberto por almofadas de ETFE. As da parte de dentro são transparentes e têm persianas que correm para dar sombra. Cobre todas as cadeiras e continua sem emenda na pele da fachada."
+  },
+  "fachada": {
+   "estilo": "membrana",
+   "cor": "#f4f6f8",
+   "cor2": "#dc052d",
+   "descricao": "Casca contínua em forma de bote inflável ('Schlauchboot'), de ~258 × 227 m e 50 m de altura, feita de 2.760 almofadas de ETFE em losango, branco-prateadas de dia e com pontinhos. O estádio fica numa esplanada elevada em cima do maior estacionamento da Europa, com rampas e escadarias largas.",
+   "led": "cada almofada acende sozinha: vermelho nos jogos do Bayern, branco em jogo neutro ou da seleção (aceita outras cores, mas a polícia exige cor única por causa da A9)"
+  },
+  "cadeiras": {
+   "cores": [
+    "#dc052d",
+    "#8c8f93"
+   ],
+   "padrao": "misto",
+   "texto": "MIA SAN MIA (anel inferior oeste), FC BAYERN MÜNCHEN (anel superior leste) e o escudo na Nordkurve; o anel do meio é todo vermelho, o de baixo e o de cima são cinza"
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "outro",
+    "descricao": "Pele de ETFE em losangos que acende inteira em vermelho",
+    "posicao": "toda a fachada e o teto"
+   },
+   {
+    "tipo": "letreiro",
+    "descricao": "'Allianz Arena' em letras azuis na pele",
+    "posicao": "fachada"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Esplanada elevada sobre o estacionamento, com o caminho em serpentina vindo do metrô Fröttmaning",
+    "posicao": "sul"
+   }
+  ],
+  "entorno": {
+   "tipo": "campo_aberto",
+   "relevo": "plano",
+   "agua": "nenhuma",
+   "marcos": [
+    "Fröttmaninger Berg, a colina do antigo aterro, com uma turbina eólica",
+    "Autobahn A9 a leste",
+    "igreja Heilig-Kreuz de Fröttmaning",
+    "estação Fröttmaning da linha U6"
+   ],
+   "descricao": "Norte de Munique, na charneca de Fröttmaning: o estádio fica sozinho num campo aberto, cercado de estacionamentos, pela autoestrada A9 e pela colina do antigo aterro com a turbina eólica. Em dia claro, os Alpes aparecem no horizonte."
+  },
+  "orientacao_graus": 164.7,
+  "foto_confere": true,
+  "fontes": [
+   "foto do TM de-bayern-de-munique.jpg (confere: aérea com a pele branca e a esplanada)",
+   "https://en.wikipedia.org/wiki/Allianz_Arena",
+   "https://www.abendzeitung-muenchen.de/inhalt.fc-bayern-dekoration-jetzt-wird-s-rot-neuer-anstrich-in-der-allianz-arena.8b0cfa9e-6b3f-4267-8b8e-e4879da7a775.html",
+   "https://fcbayern.com/de/allianz-arena/fakten",
+   "https://fcbayern.com/de/news/2018/08/das-aendert-sich-in-der-allianz-arena",
+   "https://stadiumdb.com/designs/ger/allianz_arena",
+   "https://www.openstreetmap.org/way/123121774 (campo: eixo 164,7°)",
+   "https://www.openstreetmap.org/way/1257847557 (contorno 259 × 227 m, 1ª fileira 122 × 86 m)"
+  ],
+  "confianca": "alta"
+ },
+ {
+  "chave": "olympiastadion",
+  "nome_oficial": "Olympiastadion Berlin",
+  "capacidade": 74475,
+  "tipo": "pista",
+  "planta": "oval",
+  "cantos": "fechados",
+  "pista_atletismo": true,
+  "recuo_m": {
+   "lateral": 18,
+   "fundo": 36
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Haupttribüne (sul, Ehrentribüne)",
+    "aneis": 2,
+    "altura_m": 31,
+    "profundidade_m": 62,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Lado sul: tribuna de honra, imprensa e camarotes. O anel inferior tem 42 fileiras (25,4°) e fica enterrado 12 m abaixo do chão, mais 2,65 m do rebaixamento de 2004. O anel superior tem 31 fileiras (23°) sobre pilares. Altura acima do campo estimada."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Gegentribüne (norte)",
+    "aneis": 2,
+    "altura_m": 31,
+    "profundidade_m": 62,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Lado norte, com o mesmo perfil de dois anéis."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Ostkurve",
+    "aneis": 2,
+    "altura_m": 31,
+    "profundidade_m": 64,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Curva leste, da torcida do Hertha, com telões grandes à esquerda e à direita."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "Westkurve / Marathontor",
+    "aneis": 2,
+    "altura_m": 31,
+    "profundidade_m": 64,
+    "coberta": true,
+    "camarotes": false,
+    "notas": "Curva oeste, interrompida no meio pelo Marathontor (portão da maratona com a pira olímpica), que se abre para o Maifeld e o Glockenturm. O teto também é aberto ali."
+   }
+  ],
+  "cobertura": {
+   "tipo": "anel",
+   "material": "membrana",
+   "cor": "#efefeb",
+   "sustentacao": "pilares",
+   "altura_m": 40,
+   "notas": "Anel de 37 mil m² (gmp, 2004) em membrana de fibra de vidro, com uma faixa de painéis transparentes na borda de dentro, sobre 20 pilares de aço finos plantados no anel de cima. Avança até 68 m e é aberto no oeste, sobre o Marathontor. Na borda fica o 'anel de fogo' de refletores. Altura estimada."
+  },
+  "fachada": {
+   "estilo": "concreto",
+   "cor": "#d8cfb9",
+   "cor2": "#ece6d8",
+   "descricao": "Colunata de pilares quadrados revestidos de pedra calcária (Muschelkalk da Francônia; travertino no Marathontor) em volta do oval de 303 × 228 m. Por fora ele tem só ~17 m acima do chão, porque o anel de baixo é enterrado. A entrada leste é o Olympisches Tor, entre duas torres de 35 m com os anéis olímpicos.",
+   "led": ""
+  },
+  "cadeiras": {
+   "cores": [
+    "#7a8591"
+   ],
+   "padrao": "liso",
+   "texto": ""
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "outro",
+    "descricao": "Pista de atletismo AZUL (cor do Hertha) em volta do campo",
+    "posicao": "entre o campo e a torcida"
+   },
+   {
+    "tipo": "torres",
+    "descricao": "Olympisches Tor: duas torres de 35 m (Preußenturm e Bayernturm) com os anéis olímpicos pendurados entre elas",
+    "posicao": "entrada leste"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Marathontor com a pira olímpica, a abertura no anel que mostra o Maifeld",
+    "posicao": "oeste"
+   },
+   {
+    "tipo": "torres",
+    "descricao": "Glockenturm (torre do sino) de 77 m atrás do Maifeld",
+    "posicao": "oeste, ao fundo"
+   }
+  ],
+  "entorno": {
+   "tipo": "parque",
+   "relevo": "plano",
+   "agua": "nenhuma",
+   "marcos": [
+    "Maifeld e o Glockenturm a oeste",
+    "Olympischer Platz a leste",
+    "piscina olímpica (Olympia-Schwimmstadion) ao norte",
+    "bosques do Grunewald e o Teufelsberg ao sul"
+   ],
+   "descricao": "Olympiapark, em Westend/Charlottenburg, no oeste de Berlim: praças monumentais, gramados e bosques. Terreno plano, com o Maifeld e a torre do sino de um lado e a esplanada olímpica do outro."
+  },
+  "orientacao_graus": 81.9,
+  "foto_confere": true,
+  "fontes": [
+   "foto do TM de2-hertha-bsc.jpg (confere: aérea com o anel de cobertura, a abertura do Marathontor e o Maifeld)",
+   "capacidade: 74.475 permanente (en.wiki); a de.wiki fala em 73.856 lugares hoje",
+   "https://en.wikipedia.org/wiki/Olympiastadion_(Berlin)",
+   "https://de.wikipedia.org/wiki/Olympiastadion_Berlin",
+   "https://www.tip-berlin.de/berlin-besucher/sehenswuerdigkeiten/olympiastadion-berlin-geschichte-wissenswertes-besucherinfos/",
+   "https://www.openstreetmap.org/way/8002785 (campo: eixo 81,9°, leste–oeste)",
+   "https://www.openstreetmap.org/way/24296022 (contorno 303 × 228 m; pista 214862229/230)"
+  ],
+  "confianca": "alta"
+ },
+ {
+  "chave": "old trafford",
+  "nome_oficial": "Old Trafford",
+  "capacidade": 74158,
+  "tipo": "inglesa",
+  "planta": "retangular",
+  "cantos": "parciais",
+  "pista_atletismo": false,
+  "recuo_m": {
+   "lateral": 6,
+   "fundo": 4
+  },
+  "arquibancadas": [
+   {
+    "lado": "principal",
+    "nome": "Sir Bobby Charlton Stand (sul)",
+    "aneis": 1,
+    "altura_m": 14,
+    "profundidade_m": 50,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "A antiga Main Stand, ao longo da linha de trem. Tem um anel só (por restrição de obra) e camarotes; ali ficam os bancos, as cabines de TV e o Munich Tunnel. O teto é bem mais baixo. Alturas estimadas; profundidade até a fachada pelo OSM."
+   },
+   {
+    "lado": "oposta",
+    "nome": "Sir Alex Ferguson Stand (norte)",
+    "aneis": 3,
+    "altura_m": 40,
+    "profundidade_m": 67,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "A maior (~26 mil lugares), com 3 anéis (1996), construída sobre a United Road. O teto em balanço tem 58,5 m da parede de trás à borda. Abriga o Red Café e o museu."
+   },
+   {
+    "lado": "fundo_a",
+    "nome": "Stretford End (West Stand)",
+    "aneis": 2,
+    "altura_m": 30,
+    "profundidade_m": 67,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Cabeceira oeste, a torcida mais barulhenta. O 2º anel é de 2000; o quadrante noroeste ganhou 2º anel em 2006."
+   },
+   {
+    "lado": "fundo_b",
+    "nome": "East Stand",
+    "aneis": 2,
+    "altura_m": 30,
+    "profundidade_m": 70,
+    "coberta": true,
+    "camarotes": true,
+    "notas": "Cabeceira leste (Scoreboard End), com fachada de tijolo e vidro para a Sir Matt Busby Way. O quadrante nordeste ganhou 2º anel em 2006."
+   }
+  ],
+  "cobertura": {
+   "tipo": "por_arquibancada",
+   "material": "metal",
+   "cor": "#dfe2e5",
+   "sustentacao": "balanco",
+   "altura_m": 48,
+   "notas": "Cada arquibancada tem seu teto em balanço, sem colunas. Os do norte, oeste e leste são ligados pelos quadrantes do norte e têm as treliças tubulares brancas por cima. O teto da Sir Bobby Charlton fica bem mais baixo, e os cantos do sul são abertos em cima. Altura estimada (a da Sir Alex Ferguson)."
+  },
+  "fachada": {
+   "estilo": "tijolo",
+   "cor": "#8b3a2e",
+   "cor2": "#1f3557",
+   "descricao": "Mistura de tijolo vermelho, painéis azul-escuros e grandes panos de vidro. Na East Stand ficam o letreiro 'MANCHESTER UNITED' e as estátuas. Por cima de tudo, as treliças tubulares brancas que seguram os tetos.",
+   "led": "letreiro 'MANCHESTER UNITED' vermelho iluminado na fachada de vidro da East Stand"
+  },
+  "cadeiras": {
+   "cores": [
+    "#c8102e",
+    "#ffffff"
+   ],
+   "padrao": "liso",
+   "texto": "MANCHESTER UNITED (em cadeiras brancas; estimado)"
+  },
+  "marcas_proprias": [
+   {
+    "tipo": "relogio",
+    "descricao": "Relógio de Munique com a data do desastre (6 de fevereiro de 1958) e a placa em memória",
+    "posicao": "canto sudeste, por fora"
+   },
+   {
+    "tipo": "estatua",
+    "descricao": "United Trinity (Best, Law e Charlton) e a estátua de Sir Matt Busby",
+    "posicao": "na frente da East Stand"
+   },
+   {
+    "tipo": "estatua",
+    "descricao": "Estátua de Sir Alex Ferguson",
+    "posicao": "na frente da Sir Alex Ferguson Stand"
+   },
+   {
+    "tipo": "letreiro",
+    "descricao": "'MANCHESTER UNITED' na fachada de vidro",
+    "posicao": "East Stand"
+   },
+   {
+    "tipo": "outro",
+    "descricao": "Treliças tubulares brancas dos tetos em balanço",
+    "posicao": "em cima das arquibancadas norte, oeste e leste"
+   }
+  ],
+  "entorno": {
+   "tipo": "industrial",
+   "relevo": "plano",
+   "agua": "canal",
+   "marcos": [
+    "Bridgewater Canal ao norte e nordeste",
+    "Manchester Ship Canal, Salford Quays e MediaCityUK",
+    "Imperial War Museum North",
+    "linha de trem Liverpool–Manchester colada ao sul",
+    "Old Trafford Cricket Ground a ~800 m"
+   ],
+   "descricao": "Trafford, na Grande Manchester: zona industrial e de docas, com galpões e estacionamentos. Ao norte ficam o canal e os prédios novos de Salford Quays e MediaCityUK. Terreno plano."
+  },
+  "orientacao_graus": 70.7,
+  "foto_confere": true,
+  "fontes": [
+   "foto do TM en-manchester-united.jpg (confere: fachada da East Stand com tijolo, vidro, o letreiro e as treliças brancas)",
+   "capacidade: 74.158 pela en.wiki (2026); o lote dizia 74.310",
+   "https://en.wikipedia.org/wiki/Old_Trafford",
+   "https://www.openstreetmap.org/way/165256230 (campo: eixo 70,7°)",
+   "https://www.openstreetmap.org/way/351220227 (Sir Alex Ferguson Stand)",
+   "https://www.openstreetmap.org/way/351220232 (Sir Bobby Charlton Stand)",
+   "https://www.openstreetmap.org/way/351220229 (West Stand)",
+   "https://www.openstreetmap.org/way/351220231 (East Stand)"
+  ],
+  "confianca": "alta"
+ }
+]

@@ -701,7 +701,8 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     return out;
   })();
   const E = F.entorno;
-  const rEsplanada = rMax + 70;
+  // a esplanada pelo tipo do bairro: colada na cidade densa, larga no parque e no campo
+  const rEsplanada = rMax + ({ urbano_denso: 34, residencial: 52, parque: 88, industrial: 70, campo_aberto: 96, orla: 58, campus: 78 }[E.tipo] ?? 60);
   let _predios = null, _arvores = null, _torcedores = null, _agua = undefined;
   /** A água (rio/canal: faixa; lago: disco; mar: meio-plano) do lado E.lado: {tipo, ...} ou null. */
   function agua() {
@@ -740,6 +741,8 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
       const d = Math.hypot(cx, cz);
       if (d < R0 || d > R1) continue;
       if (naAgua(cx, cz, 30)) continue;
+      // a praça da entrada principal (a grua do plano da fachada passa por ela)
+      if (cz > 0 && Math.abs(cx) < 75 && cz < rFach(Math.PI / 2) + 130) continue;
       // o parque: a cidade começa depois de ~420 m
       if (tipo === 'parque' && d < R0 + 200) continue;
       if (r() > dens * (0.6 + 0.4 * clamp((d - R0) / 400, 0, 1))) continue;
@@ -764,10 +767,13 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     if (_arvores) return _arvores;
     const r = gerador(F.semente + 12), lista = [];
     const Mb = rEsplanada - 8;
-    const livre = (x, z) => !naAgua(x, z, 6) && !(Math.abs(x) < 34 && z > 0 && z < Mb) && Math.hypot(x, z) > rMax + 14
+    // fora da água, da praça da entrada (a grua do plano da fachada: |x| < 62) e da fachada
+    const livre = (x, z) => !naAgua(x, z, 6) && !(Math.abs(x) < 62 && z > 0 && z < rFach(Math.PI / 2) + 130) && Math.hypot(x, z) > rMax + 14
       && !estacionamentos().some(e => x > e.x[0] - 3 && x < e.x[1] + 3 && z > e.z[0] - 3 && z < e.z[1] + 3);
-    for (let i = 0; i < 160; i++) {
-      const th = (2 * Math.PI * i) / 160 + (r() - 0.5) * 0.01, rr = Mb * (0.98 + 0.04 * r());
+    // a fileira de árvores na borda da esplanada (rala na cidade densa e nos galpões)
+    const nBorda = { urbano_denso: 40, industrial: 50, orla: 110 }[E.tipo] ?? 160;
+    for (let i = 0; i < nBorda; i++) {
+      const th = (2 * Math.PI * i) / nBorda + (r() - 0.5) * 0.04, rr = Mb * (0.98 + 0.04 * r());
       const x = rr * Math.cos(th), z = rr * Math.sin(th);
       if (livre(x, z)) lista.push({ x, z, h: 7 + r() * 5, raio: 2.6 + r() * 1.6 });
     }
