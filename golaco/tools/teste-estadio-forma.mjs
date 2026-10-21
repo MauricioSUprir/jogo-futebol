@@ -2,7 +2,8 @@
 // A 1ª família (tigela oval com anel de cobertura, o Maracanã de assets/tm/estadios.json) contra as metas da pesquisa
 // e contra o que já existe (o gramado e a simulação não mudam):
 //   F1) a forma da base é válida: a 1ª fileira contém a quina das placas com ≥ 1,5 m e passa pela boca do túnel (x = 0);
-//   F2) medidas da pesquisa: furo da cobertura 160 × 122 (± 5 m), profundidade da cobertura 68 m, fachada ~304 × 266,
+//   F2) medidas da pesquisa: furo da cobertura 172 × 134 (± 5 m; o de 160 × 122 da Structurae parecia pequeno nas aéreas,
+//       rodada 2 da prévia), profundidade da cobertura 62 m, fachada ~304 × 266,
 //       a última fileira a ~25 m;
 //   F3) os lugares da torcida: no degrau (≤ 5 cm), nenhum na boca do túnel nem com a cabeça dentro de um sólido, nos 4
 //       setores; a torcida de cada qualidade com até 15% a mais e até 30% a menos de torcedores que a de hoje (cadeiras à mostra);
@@ -10,6 +11,9 @@
 //       bandeirões sem furar a cabeça de ninguém (o mais alto, 2,15 m, embaixo do pano);
 //   F5) a câmera de TV (PC e celular, a bola em qualquer lugar do campo) nunca dentro da cobertura nem de um sólido que
 //       fique no desenho; dentro da tigela de cá só com o lado de cá fora do desenho (cameraNoLadoDeCa);
+//   F7) clássico (torcida dividida, rodada 2 da prévia: "num Fla-Flu o estádio é DIVIDIDO ao meio"): ≥ 95% de cada
+//       metade com a sua torcida (a do mandante em +x, com a organizada), sem mosaico, o bandeirão do lado de lá na metade
+//       do mandante e a sombra da cobertura só nas cadeiras debaixo dela;
 //   F6) sem forma, nada muda: solidoEm igual ao de antes num grid de pontos (definirForma(null)) e a torcida de hoje.
 //   node tools/teste-estadio-forma.mjs [--js <pasta js>]
 import fs from 'node:fs';
@@ -59,7 +63,7 @@ if (!PL) {
       for (let k = 0; k < 720; k++) { const a = (2 * Math.PI * k) / 720, r = P.rCobDentro(a); best = Math.min(best, Math.hypot(cx - r * Math.cos(a), cz - r * Math.sin(a))); }
       profMin = Math.min(profMin, best); profMax = Math.max(profMax, best);
     }
-    reg('F2 furo da cobertura 160 × 122 m (Structurae) e profundidade constante de 68 m', `${fmt(furoX, 1)} × ${fmt(furoZ, 1)} m; profundidade ${fmt(profMin, 1)}–${fmt(profMax, 1)} m`, '± 5 m; 68 ± 1,5 m', Math.abs(furoX - 160) <= 5 && Math.abs(furoZ - 122) <= 5 && profMin >= 66.5 && profMax <= 69.5);
+    reg('F2 furo da cobertura 172 × 134 m (as aéreas) e profundidade constante de 62 m', `${fmt(furoX, 1)} × ${fmt(furoZ, 1)} m; profundidade ${fmt(profMin, 1)}–${fmt(profMax, 1)} m`, '± 5 m; 62 ± 1,5 m', Math.abs(furoX - 172) <= 5 && Math.abs(furoZ - 134) <= 5 && profMin >= 60.5 && profMax <= 63.5);
     reg('F2 fachada ~304 × 266 m (60 eixos) e a última fileira a ~25 m', `${fmt(2 * forma.fachada.a, 0)} × ${fmt(2 * forma.fachada.b, 0)} m, ${forma.fachada.eixos} eixos; topo ${fmt(P.perfil(1), 1)} m`, '300–320 × 260–285; 24–26 m', 2 * forma.fachada.a >= 300 && 2 * forma.fachada.a <= 320 && 2 * forma.fachada.b >= 260 && 2 * forma.fachada.b <= 285 && P.perfil(1) >= 24 && P.perfil(1) <= 26);
 
     // liga a forma (como render/estadio-real.js ligarForma, sem o desenho)
@@ -131,6 +135,27 @@ if (!PL) {
       }
     }
     reg('F5 câmera de TV (PC e celular) fora da cobertura e dos sólidos; dentro do lado de cá só com ele escondido', `${pontos} posições: ${ruins.length} em sólido${ruins.length ? ' (' + ruins.slice(0, 2).join(', ') + ')' : ''}; ${semEsconder.length} na tigela sem esconder; ${nCa} com o lado de cá escondido`, '0; 0', ruins.length === 0 && semEsconder.length === 0);
+    // F7 clássico: a torcida dividida
+    {
+      const Pd = PL.criarPlanta(forma, { dividida: true });
+      const td = TD.gerarTorcidaNiveis(null, null, Pd.lugares);
+      const c = { casa: [0, 0], fora: [0, 0] };
+      for (let i = 0; i < td.n; i++) { const x = td.pos[4 * i], t = td.info[4 * i] > 127; if (Math.abs(x) < 3) continue; c[x > 0 ? 'casa' : 'fora'][t === (x < 0) ? 0 : 1]++; }
+      const fc = c.casa[0] / (c.casa[0] + c.casa[1]), ff = c.fora[0] / (c.fora[0] + c.fora[1]);
+      let mos = 0, sombraFora = 0;
+      Pd.lugares.iterar((st, f, a, x, y, z, esc, im, luz) => { if (im >= 0) mos++; if (luz < 1 && Pd.uCob(x + 0.1, z) < -0.6) sombraFora++; });
+      const bl = Pd.bandeiroes(2.3).find(b => b.nome === 'lado');
+      const xB = bl.A[0] + bl.U[0] / 2;
+      let furaD = 0;
+      Pd.lugares.iterar((st, f, a, x, y, z, esc) => {
+        const d = [x - bl.A[0], y - bl.A[1], z - bl.A[2]];
+        const lu = (d[0] * bl.U[0] + d[1] * bl.U[1] + d[2] * bl.U[2]) / (bl.larg * bl.larg), lv = (d[0] * bl.V[0] + d[1] * bl.V[1] + d[2] * bl.V[2]) / (bl.prof * bl.prof);
+        if (lu < 0 || lu > 1 || lv < 0 || lv > 1) return;
+        if ((x - bl.A[0]) * bl.N[0] + (y + 2.15 * esc - bl.A[1]) * bl.N[1] + (z - bl.A[2]) * bl.N[2] > 0) furaD++;
+      });
+      const bd = Pd.bandeiras(32, 1.45), bdOk = bd.length === 32 && bd.every(b => b.x > 0 && Math.abs(Pd.perfil(Pd.sDe(b.x, b.z)) + 1.45 - b.y) <= 0.05);
+      reg('F7 clássico: cada metade com a sua torcida, sem mosaico, bandeirão e bandeiras na metade do mandante', `+x ${fmt(100 * fc, 1)}% mandante, −x ${fmt(100 * ff, 1)}% visitante; mosaico ${mos}; bandeirão em x ${fmt(xB, 1)} (${furaD} cabeças acima); bandeiras ${bd.length} (${bdOk ? 'todas em +x, no degrau' : 'fora'}); sombra fora da cobertura ${sombraFora}`, '≥ 95%; 0; x > 8; 32 em +x; 0', fc >= 0.95 && ff >= 0.95 && mos === 0 && xB > 8 && furaD === 0 && bdOk && sombraFora === 0);
+    }
     // F6 sem forma: tudo como antes
     F.definirForma(null); TD.definirLadoDeCa(null); BD.definirFormaBandeiras(null);
     const depois = grid.map(([x, y, z]) => F.solidoEm(x, y, z, 0.3, true) + '|' + F.solidoEm(x, y, z, 0.3, false));

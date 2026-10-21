@@ -64,7 +64,7 @@ export async function identidadeDaPagina(pedido = PEDIDO_TM) {
   // a forma própria do estádio (estadio-planta.js + render/estadio-real.js, só aqui): a tigela, a cobertura, a fachada
   const forma = ident.estadio.real && ident.estadio.dados?.forma
     ? Promise.all([import('../estadio-planta.js'), import('./estadio-real.js')]).then(([P, real]) => {
-      const planta = P.criarPlanta(P.validarForma(ident.estadio.dados.forma));
+      const planta = P.criarPlanta(P.validarForma(ident.estadio.dados.forma), ident.torcida);
       if (planta) { ident.forma3d = { planta, real }; real.ligarForma(planta); }
     }, e => console.warn('forma do estádio:', e))
     : null;

@@ -184,7 +184,9 @@ export function gerarTorcidaNiveis(mascara = null, paletas = null, lugares = nul
   const [vz0, vz1] = T.visitante.z;
   const pq = [0, 0, 0];
   // uma cadeira: os MESMOS 7 sorteios por cadeira e na mesma ordem de cadeiras() (o resultado não muda)
-  function cadeira(setor, f, a, x, y, z, esc = 1, im = a + f * nA) {
+  // forma própria: a torcida dividida do clássico (metade de cada uma, a do mandante em +x) e a sombra da cobertura (luz)
+  const dividida = !!(lugares && lugares.dividida);
+  function cadeira(setor, f, a, x, y, z, esc = 1, im = a + f * nA, luz = 1) {
     const g = setor === 3 ? rndCa : rnd;
     const r = g(), r2 = g(), r3 = g(), r4 = g(), r5 = g(), r6 = g(), r7 = g();
     let time = 0, org = 0, mosaico = false;
@@ -195,13 +197,14 @@ export function gerarTorcidaNiveis(mascara = null, paletas = null, lugares = nul
     // as fileiras da frente cheias (a câmera de jogo mostra estas)
     if (frente) for (let q = 0; q < 3; q++) pq[q] = Math.max(pq[q], ocF[q]);
     if (setor === 0 && mascara && im >= 0 && mascara[im]) { mosaico = true; pq[0] = 0.8; pq[1] = 1; pq[2] = 1; }
-    if (setor === 2) {
+    if (setor === 2 && !dividida) {
       if (z >= vz0 && z <= vz1) { time = 1; for (let q = 0; q < 3; q++) pq[q] = Math.max(pq[q], Math.min(1, ocs[q] * 1.05)); }
       else if (z >= vz0 - T.visitante.vazio && z <= vz1 + T.visitante.vazio) { pq[0] = 0; pq[1] = 0; pq[2] = 0; }
     }
     if (setor === 1 && z >= T.organizada.z[0] && z <= T.organizada.z[1]) { org = 1; for (let q = 0; q < 3; q++) pq[q] = Math.max(pq[q], Math.min(1, ocs[q] * 1.15 + 0.08)); }
     // alguns visitantes espalhados pelos lados
     if (lado && !mosaico && r7 < foraLados) time = 1;
+    if (dividida) time = (x < 0) !== (r7 < 0.02) ? 1 : 0;
     // público do Total Match (só desenho): menos gente nas mesmas cadeiras
     if (publico < 1) for (let q = 0; q < 3; q++) pq[q] *= publico;
     let nivel = 3;
@@ -212,9 +215,9 @@ export function gerarTorcidaNiveis(mascara = null, paletas = null, lugares = nul
     const cabelo = r5 < 0.08 ? pele : sorteiaPre(P_CABELO, r4);
     const k = 4 * n;
     tPos[k] = x + (r6 - 0.5) * 0.12; tPos[k + 1] = y; tPos[k + 2] = z; tPos[k + 3] = (0.92 + 0.16 * r5) * esc;
-    tCam[k] = camisa[0]; tCam[k + 1] = camisa[1]; tCam[k + 2] = camisa[2]; tCam[k + 3] = 255;
-    tPel[k] = pele[0]; tPel[k + 1] = pele[1]; tPel[k + 2] = pele[2]; tPel[k + 3] = Math.floor(r6 * 255.99);
-    tCab[k] = cabelo[0]; tCab[k + 1] = cabelo[1]; tCab[k + 2] = cabelo[2]; tCab[k + 3] = 255;
+    tCam[k] = camisa[0] * luz; tCam[k + 1] = camisa[1] * luz; tCam[k + 2] = camisa[2] * luz; tCam[k + 3] = 255;
+    tPel[k] = pele[0] * luz; tPel[k + 1] = pele[1] * luz; tPel[k + 2] = pele[2] * luz; tPel[k + 3] = Math.floor(r6 * 255.99);
+    tCab[k] = cabelo[0] * luz; tCab[k + 1] = cabelo[1] * luz; tCab[k + 2] = cabelo[2] * luz; tCab[k + 3] = 255;
     tInf[k] = time * 255; tInf[k + 1] = setor * 85; tInf[k + 2] = org * 255; tInf[k + 3] = Math.floor(r2 * 255.99);
     tNiv[n] = nivel; tF[n] = f;
     tG[n] = setor < 3 ? setor : (NF - 1 - f < T.caFaixa ? 3 : 4);

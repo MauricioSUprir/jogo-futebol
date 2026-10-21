@@ -359,7 +359,7 @@ function fixaLetra(fundo, letra) { return contraste(fundo, letra) >= 3 ? letra :
  * nome do time; as cores na mesma ordem do padrão (forte, escura, clara, forte escurecida), com a letra corrigida
  * quando o contraste com o fundo fica abaixo de 3:1.
  */
-export function textosFaixas(casa, fora, cc, cf) {
+export function textosFaixas(casa, fora, cc, cf, dividida = false) {
   const N = nomeCurto(casa, 18), S = sigla3(casa?.short, casa?.name);
   const Nf = nomeCurto(fora, 18);
   const P = cc.forte, D = cc.escura, W = CLARO, P2 = cc.forte2;
@@ -378,6 +378,12 @@ export function textosFaixas(casa, fora, cc, cf) {
     ['GUERREIROS DA ARQUIBANCADA', P2, D, 'nenhum'],
     [`FORÇA ${Nf}`, Df, Pf === Df ? W : Pf, 'verde', Pf],
   ];
+  // dividida: as 4 da metade −x do lado de lá (posições 0, 1, 4 e 7 de bandeiras-dados.js) são do visitante
+  if (dividida) {
+    const Sf = sigla3(fora?.short, fora?.name);
+    l[0] = [`FÚRIA ${Sf}`, Df, Pf, 'borda']; l[1] = [`GALERA ${Nf}`, Pf, Df, 'nenhum'];
+    l[4] = [`NAÇÃO ${Nf}`, W, cf.forte2, 'listras']; l[7] = [`VAI, ${Sf}!`, Df, W, 'verde', Pf];
+  }
   return l.map(([t, fu, le, de, dc]) => {
     const r = [t, fu, fixaLetra(fu, le), de];
     if (dc) r.push(deltaE(dc, fu) < 12 ? textoSobre(fu) : dc);
@@ -597,6 +603,10 @@ export function identidadeDoPedido(pedido, base = null) {
   const edicao = pedido?.edicao === 'pro' ? 'pro' : 'public';
   const achado = edicao === 'pro' && !neutro ? acharEstadio(base, [casa?.identidade?.estadio?.nome, casa?.stadium], String(casa?.name || '')) : null;
   const real = achado ? achado.dados : null;
+  // clássico num estádio com forma própria (estadio-planta.js): a torcida dividida ao meio (cada uma atrás de um gol e no
+  // seu lado; a do mandante em +x, com a organizada), as faixas da metade do visitante com o nome dele e as placas sem o
+  // nome de um time só (rodada 2 da prévia do Maracanã: "num Fla-Flu o estádio é DIVIDIDO ao meio")
+  const dividida = !!(real?.forma && pedido?.partida?.classico);
   const pub = Number(pedido?.partida?.publico);
   const publico = Number.isFinite(pub) ? Math.max(0.1, Math.min(1, pub)) : 1;
   const cc = coresDoTime(casa), cf = coresDoTime(fora);
@@ -656,16 +666,17 @@ export function identidadeDoPedido(pedido, base = null) {
       casa: paletaTorcida(cc), fora: paletaTorcida(cf), mosaico: mos, acentos: [corCachecol(cc), corCachecol(cf)],
       // fora do setor visitante: 3% de visitantes espalhados pelos lados (jogo neutro: quase metade)
       foraLados: neutro ? 0.45 : 0.03,
+      dividida,
     },
     mosaico: { texto: textoMosaico },
-    faixas: textosFaixas(casa, fora, cc, cf),
+    faixas: textosFaixas(casa, fora, cc, cf, dividida),
     festa: {
       cores: { VERDE: cc.forte, PRETO: festaPreto, BRANCO: CLARO, VERDE2: cc.forte2 },
       // a letra/nome sobre o fundo escuro do bandeirão (legível: ≥ 2,5:1)
       corLetra: contraste(festaPreto, cc.forte) >= 2.5 ? cc.forte : textoSobre(festaPreto),
       texto: nomeCurto(casa, 12), letra: sigla3(casa?.short, casa?.name).slice(0, 1), sigla: sigla3(casa?.short, casa?.name), escudo: 0,
     },
-    paineis: paineisTM(casa, cc, neutro, pedido?.partida?.competicao),
+    paineis: paineisTM(casa, cc, neutro || dividida, pedido?.partida?.competicao),
     arquibancada,
     escanteio: { fundo: forte, faixa: escanteioFaixa },
     fachada,

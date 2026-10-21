@@ -34,14 +34,20 @@ export const TIGELA_PADRAO = Object.freeze({
   // perfil: y da mureta, fração e y do fim do anel inferior, camarote (degrau de vidro até yCam, laje até sCam), topo
   // (rodada 1 da prévia: o vidro dos camarotes é uma LINHA fina entre os anéis, ~1,8 m — antes 3,4 m pareciam dois
   // estádios —, e o topo a 24,2 m deixa a fresta de céu entre a última fileira e a cobertura, como no panorama de 2021)
-  perfil: { y0: 1.8, sInf: 0.27, yInf: 9.2, sCam: 0.03, yCam: 11.0, yTopo: 24.2, curva: 1.25, parapeito: 1.2, laje: 24.0 },
+  // (rodada 2: "a bacia é quase contínua, com a frente baixa: o anel inferior é maior e mais raso" — 42% da profundidade
+  // até 10,6 m, ~16°, e o de cima mais em pé)
+  perfil: { y0: 1.8, sInf: 0.42, yInf: 10.6, sCam: 0.02, yCam: 12.0, yTopo: 24.2, curva: 1.1, parapeito: 1.2, laje: 24.0 },
   // lugares da torcida: fileiras (inferior, superior), passo na fileira (m) e escala do torcedor (o de cima vale ~2)
-  fileiras: [24, 30], passo: [0.64, 0.86], escala: [1, 1.3],
+  fileiras: [32, 22], passo: [0.66, 0.88], escala: [1, 1.3],
   corredores: 60, corredorU: 0.08,
-  // a borda de fora 2,8 m acima das almofadas (o vão de luz que a faz "flutuar"; a face do anel de compressão tem 1,6 m)
-  cobertura: { a: 148, b: 129, prof: 68, yFora: 30.6, yMastro: 35.5, yDentro: 34, mastro: 46, yPassarela: 22, eixos: 60, anel: 1.6 },
+  // a borda de fora 2,8 m acima das almofadas (o vão de luz que a faz "flutuar"; a face do anel de compressão tem 1,6 m);
+  // rodada 2: o furo ~10% maior (172 × 134; "160 × 122 em 296 × 259 parece pequeno" nas aéreas), a linha dos nós a ~2/3
+  // da profundidade e o relevo dos cones entre os nós (`cone`: o pico no nó e o vale no meio da baia, em m)
+  cobertura: { a: 148, b: 129, prof: 62, yFora: 30.6, yMastro: 35.5, yDentro: 33, mastro: 41, yPassarela: 22, eixos: 60, anel: 1.6, cone: 1.6, vale: 0.9 },
   fachada: { a: 152, b: 133, cinta: 21, alto: 27.6, eixos: 60 },
-  rampas: { larg: 30, zFim: 238, alto: 10.5, portico: { r: 247, larg: 66, alt: 14, base: 0.6 } },
+  // rodada 2: UMA rampa reta e larga (18 m) com guarda-corpo baixo (antes duas pistas, que pareciam um V) e o pórtico com
+  // os degraus em leque (5 de 0,18 m)
+  rampas: { larg: 18, zFim: 238, alto: 10.5, portico: { r: 247, larg: 66, alt: 14, base: 0.9 } },
   letreiro: 'ESTÁDIO MÁRIO FILHO',
   cadeiras: ['#f2c21b', '#2e6fc0', '#e9e9e4'],
   entorno: 'maracana',
@@ -97,7 +103,9 @@ export function validarForma(f) {
  * A planta da tigela: tudo o que o desenho, a torcida, os sólidos e os trilhos precisam saber da forma.
  * forma: a de validarForma (ou o próprio objeto do estadios.json).
  */
-export function criarPlanta(formaBruta) {
+export function criarPlanta(formaBruta, opc = {}) {
+  // dividida (identidade.js torcida.dividida: clássico): metade de cada torcida, a do mandante do lado +x (a organizada)
+  const dividida = !!opc?.dividida;
   const F = formaBruta && formaBruta.perfil && formaBruta.frente && formaBruta.fundo && formaBruta.cobertura ? formaBruta : validarForma(formaBruta ?? {});
   if (!F) return null;
   const Fr = F.frente, Fu = F.fundo, Pf = F.perfil, C = F.cobertura, Fa = F.fachada;
@@ -129,8 +137,8 @@ export function criarPlanta(formaBruta) {
   const sC = Pf.sInf + Pf.sCam;
   const NUP = 6;
   /** Nós do perfil [s, y, v (textura)] na ordem — a malha e os lugares usam a MESMA interpolação linear. */
-  const nos = [[0, Pf.y0, 0.04], [Pf.sInf, Pf.yInf, 0.36], [Pf.sInf + 0.002, Pf.yCam, 0.40], [sC, Pf.yCam, 0.42]];
-  for (let k = 1; k <= NUP; k++) { const u = k / NUP; nos.push([sC + (1 - sC) * u, Pf.yCam + (Pf.yTopo - Pf.yCam) * Math.pow(u, Pf.curva), 0.42 + 0.55 * u]); }
+  const nos = [[0, Pf.y0, 0.04], [Pf.sInf, Pf.yInf, 0.46], [Pf.sInf + 0.002, Pf.yCam, 0.49], [sC, Pf.yCam, 0.51]];
+  for (let k = 1; k <= NUP; k++) { const u = k / NUP; nos.push([sC + (1 - sC) * u, Pf.yCam + (Pf.yTopo - Pf.yCam) * Math.pow(u, Pf.curva), 0.51 + 0.46 * u]); }
   /** y do degrau na fração s da profundidade (linear entre os nós). */
   function perfil(s) {
     if (s <= 0) return Pf.y0;
@@ -161,16 +169,19 @@ export function criarPlanta(formaBruta) {
     for (let i = 1; i < nosCob.length; i++) if (u <= nosCob[i][0]) { const [u0, y0] = nosCob[i - 1], [u1, y1] = nosCob[i]; return y0 + (y1 - y0) * (u - u0) / ((u1 - u0) || 1); }
     return C.yDentro;
   }
+  /** Relevo dos cones (0 nas duas bordas, 1 na linha dos nós): × C.cone na nervura (o nó), × −C.vale no meio da baia. */
+  function cone(u) { const k = u <= uMastro ? u / uMastro : (1 - u) / (1 - uMastro); return Math.pow(clamp(k, 0, 1), 0.85); }
   /** Ponto da cobertura no ângulo th e na fração u (de fora para dentro): [x, z, r]. */
   function pontoCob(th, u) { const r = rCobFora(th) - u * (rCobFora(th) - rCobDentro(th)); return [r * Math.cos(th), r * Math.sin(th), r]; }
   /** u da cobertura no ponto (x, z) (< 0 fora dela, > 1 no furo). */
   function uCob(x, z) { const th = Math.atan2(z, x), o = rCobFora(th), d = rCobDentro(th); return (o - Math.hypot(x, z)) / (o - d); }
 
   // ---------------------------------------------------------------- fachada (costelas em gancho)
-  // perfil da costela [n (para fora da elipse da fachada), y]: vertical até 5 m, encurva para FORA até a cinta e o gancho
-  // dobra para DENTRO até o anel de compressão (que fica 4 m para dentro, a 28 m)
+  // perfil da costela [n (para fora da elipse da fachada), y]: o GANCHO de concreto (rodada 2: "saem do chão inclinadas
+  // para fora, se abrem e, no topo, viram para dentro abraçando a almofada branca") — ~10° para fora até a cinta, sobe
+  // por fora da almofada e dobra para DENTRO até o anel de compressão (4 m para dentro, a 29 m)
   const yAnel = C.yFora - (C.anel ?? 1.6);
-  const COSTELA = [[0, 0], [0, 5], [0.55, 11], [1.35, 17], [1.9, Fa.cinta], [1.75, 23.2], [0.6, 25.6], [-1.6, yAnel - 0.9], [-Fa.a + C.a - 0.3, yAnel]];
+  const COSTELA = [[0, 0], [0.9, 5], [2.0, 10], [3.0, 15], [3.8, Fa.cinta], [4.6, 23], [4.3, 25.2], [2.5, 27.0], [-1.0, yAnel - 0.7], [-Fa.a + C.a - 0.3, yAnel]];
   /** Recuo da face de fora da fachada (n) na altura y (pela costela, só até a cinta). */
   function nFachada(y) {
     if (y >= Fa.cinta) return COSTELA[4][0];
@@ -182,15 +193,17 @@ export function criarPlanta(formaBruta) {
   const R = F.rampas;
   const zFach0 = Fa.b;                         // a fachada em x = 0
   /** y do tabuleiro da rampa em |z| (sobe para a fachada; null fora dela). */
-  function yRampa(az) { if (az < zFach0 - 1 || az > R.zFim) return null; return R.alto * clamp((R.zFim - az) / (R.zFim - zFach0), 0, 1) + 0.6; }
+  function yRampa(az) { if (az < zFach0 - 1 || az > R.zFim) return null; return R.alto * clamp((R.zFim - az) / (R.zFim - zFach0), 0, 1) + (R.portico.base ?? 0.6); }
 
   // ---------------------------------------------------------------- entorno (posições reais no referencial do jogo)
   const E = {
     maracanazinho: { x: -120, z: 181, r: 59, parede: 9, cupula: 19 },
     bellini: { x: 2, z: 280 },
     aquatico: { x: 97, z: 222 },
-    // trilhos (SuperVia + metrô elevado): reta por (214, −129) na direção (0,515; 0,857)
-    trilhos: { p: [214, -129], d: [0.515, 0.857], larg: 44 },
+    // trilhos: o PÁTIO da SuperVia e do metrô no chão (rodada 2: "muitos trilhos paralelos ao lado longo norte/nordeste";
+    // sem viaduto), reta por (214, −129) na direção (0,515; 0,857); a estação Maracanã (plataformas cobertas) em t e a
+    // passarela curva da esplanada por cima dos trilhos até ela
+    trilhos: { p: [214, -129], d: [0.515, 0.857], larg: 64, estacao: { t: -150, comp: 170 } },
     mangueira: { x: 330, z: -900, r: 380, h: 95 },
     uerj: { x: -142, z: -441 },
     // Estádio de Atletismo Célio de Barros (a pista vermelha) ao lado do parque aquático
@@ -198,7 +211,10 @@ export function criarPlanta(formaBruta) {
     esplanada: 340,
     bairro: 1300,      // o chão do bairro (texturas pintadas: telhados, árvores, ruas tortas, a favela no morro)
     // gramados e bosques da esplanada [x0, z0, x1, z1] (o desenho pinta e põe as copas de árvore)
-    gramados: [[-340, 150, -230, 340], [-340, -340, -200, -260], [-150, 300, 80, 340], [-340, -60, -300, 120], [-300, -200, -205, -110], [150, -330, 260, -250], [-330, 200, -250, 330], [175, -150, 300, -60], [-260, -330, -150, -270]],
+    // (rodada 2: "menos praça cinza vazia" — mais gramados com copas grandes)
+    gramados: [[-340, 150, -230, 340], [-340, -340, -200, -260], [-150, 300, 80, 340], [-340, -60, -300, 120], [-300, -200, -205, -110], [150, -330, 260, -250], [-330, 200, -250, 330], [175, -150, 300, -60], [-260, -330, -150, -270],
+      [-200, -100, -175, 90], [-150, -330, -60, -280], [60, 290, 160, 335], [175, 40, 225, 160], [-60, -335, 20, -300], [240, 260, 330, 335], [-335, -250, -250, -160],
+      [-240, 235, -150, 300], [-235, 40, -205, 140], [-290, -110, -215, -20], [-130, -250, -60, -190], [40, 250, 60, 330], [-110, 260, -50, 300]],
   };
   // distância (com sinal) à reta dos trilhos
   const distTrilho = (x, z) => { const T = E.trilhos; return (x - T.p[0]) * T.d[1] - (z - T.p[1]) * T.d[0]; };
@@ -209,6 +225,14 @@ export function criarPlanta(formaBruta) {
    * de torcida-dados.js gerarTorcidaNiveis (cadeira(setor, f, a, x, y, z, escala, iMascara)). f = 0 é a fileira de cima;
    * corredores radiais (os mesmos da textura) e nada em cima da boca do túnel.
    */
+  /** 1 ao sol, ~0,6 na sombra da cobertura (o sol do dia de render/cena.js; o raio até a altura da borda de fora). */
+  const SOLD = [-0.42, 0.74, 0.52];
+  function luzDoSol(x, y, z) {
+    const t = (C.yFora + 1.5 - y) / SOLD[1];
+    if (t <= 0) return 1;
+    const u = uCob(x + SOLD[0] * t, z + SOLD[2] * t);
+    return u >= -0.02 && u <= 1.0 ? 0.66 : 1;
+  }
   function gerarLugares() {
     const [nI, nS] = F.fileiras, NF = nI + nS;
     const lista = [];
@@ -234,25 +258,27 @@ export function criarPlanta(formaBruta) {
         if (g < largCorr + 0.15) continue;
         if (z > 0 && Math.abs(x) < mt && y < topoTunel) continue;
         const st = setor(x, z);
-        // cadeiras à mostra (rodada 1 da prévia: "o vermelho em 100% apaga o Maracanã"): o lugar ao lado de cada escada,
-        // as 3 fileiras de cima (debaixo da borda da cobertura), manchas soltas e mais no setor visitante (fundo −x)
+        // cadeiras à mostra (rodada 1 da prévia: "o vermelho em 100% apaga o Maracanã"): as fileiras de cima (debaixo da
+        // borda da cobertura) e manchas soltas, mais no setor visitante (fundo −x); rodada 2: sem o vão ao lado de cada
+        // escada ("vãos regulares" que dividiam a bacia em blocos) e, no clássico, a divisa vazia no meio dos lados
         const hs = h2(i, f);
-        if ((g < largCorr + 0.15 + passoCorr * 0.09 || g > passoCorr * 0.93) && hs < 0.8) continue;
         if (!inf && j - nI >= nS - 4 && hs < 0.7) continue;
-        if (h2(Math.floor((th / RAD + 180) / 1.6), Math.floor(j / 3) + 977) < (st === 2 ? 0.24 : 0.11)) continue;
-        // mosaico (a máscara de 250 × 36 do lado de lá): o anel de cima do lado de lá
+        if (h2(Math.floor((th / RAD + 180) / 1.6), Math.floor(j / 3) + 977) < (st === 2 && !dividida ? 0.26 : 0.22)) continue;
+        if (dividida && Math.abs(x) < 3 && (st === 0 || st === 3)) continue;
+        // mosaico (a máscara de 250 × 36 do lado de lá): o anel de cima do lado de lá (no clássico, não: cada metade é de um)
         let im = -1;
-        if (st === 0 && !inf) {
+        if (st === 0 && !inf && !dividida) {
           const u = (psi(x, z) + 135) / 90, k = j - nI;
           im = Math.min(249, Math.max(0, Math.floor(u * 250))) + Math.min(35, Math.floor(((nS - 1 - k) * 36) / nS)) * 250;
         }
-        lista.push(st, f, a++, x, y, z, esc, im);
+        // a sombra da cobertura só onde o sol bate (o lado de lá e o fundo +x; os outros dois já ficam de costas para ele)
+        lista.push(st, f, a++, x, y, z, esc, im, st < 2 ? luzDoSol(x, y + 1.2, z) : 1);
       }
     }
-    const n = lista.length / 8;
+    const n = lista.length / 9;
     return {
-      n, fileiras: NF,
-      iterar(cadeira) { for (let i = 0; i < lista.length; i += 8) cadeira(lista[i], lista[i + 1], lista[i + 2], lista[i + 3], lista[i + 4], lista[i + 5], lista[i + 6], lista[i + 7]); },
+      n, fileiras: NF, dividida,
+      iterar(cadeira) { for (let i = 0; i < lista.length; i += 9) cadeira(lista[i], lista[i + 1], lista[i + 2], lista[i + 3], lista[i + 4], lista[i + 5], lista[i + 6], lista[i + 7], lista[i + 8]); },
     };
   }
   let _lugares = null;
@@ -280,7 +306,7 @@ export function criarPlanta(formaBruta) {
     const o = rCobFora(th), d = rCobDentro(th), u = (o - r) / (o - d);
     if (u >= -0.03 && u <= 1.01) {
       const yc = alturaCob(clamp(u, 0, 1));
-      if (Math.abs(y - yc) <= 1.0 + f || (y > yc && u < 0.02)) return 'cobertura';
+      if ((y - yc <= 1.0 + (C.cone ?? 0) + f && yc - y <= 1.0 + (C.vale ?? 0) + f) || (y > yc && u < 0.02)) return 'cobertura';
       if (Math.abs(u - uMastro) * (o - d) <= 1.4 + f && y >= C.yPassarela - 0.6 - f && y <= C.yMastro + f) return 'passarela';
     }
     for (const t of TELOES) {
@@ -350,27 +376,29 @@ export function criarPlanta(formaBruta) {
       const rumo = 0.42 * Math.sin(cx / 420 + 0.7) + 0.35 * Math.cos(cz / 360) + 0.1 * Math.sin((cx + cz) / 230);
       const tijuca = cz > 140 || cx < -170;
       const sx = r();
-      const tipo = sx < 0.1 ? 'verde' : sx < (tijuca ? 0.46 : 0.3) ? 'predio' : 'casas';
+      // (rodada 2: "grade de torres pastel" → prédios médios, mais casas e mais verde com árvore grande e copada)
+      const tipo = sx < 0.17 ? 'verde' : sx < (tijuca ? 0.4 : 0.27) ? 'predio' : 'casas';
       const q = { x: cx, z: cz, l: Q - 7 - r() * 3, rumo, tipo, s: r() };
       quadras.push(q);
       if (tipo === 'predio') {
-        const alto = r() < (tijuca ? 0.34 : 0.14);
-        pred.push({ x: cx + (r() - 0.5) * 4, z: cz + (r() - 0.5) * 4, lx: 12 + r() * 12, lz: 12 + r() * 13, h: alto ? 36 + r() * 26 : 11 + r() * 19, rumo, cor: Math.floor(r() * 16) });
+        const alto = r() < (tijuca ? 0.12 : 0.05);
+        pred.push({ x: cx + (r() - 0.5) * 4, z: cz + (r() - 0.5) * 4, lx: 12 + r() * 12, lz: 12 + r() * 13, h: alto ? 34 + r() * 18 : 10 + r() * 16, rumo, cor: Math.floor(r() * 16) });
       }
       // copas de árvore em 3D só até ~950 m (mais longe a copa é pintada no chão)
       const d = Math.hypot(cx, cz);
-      const nA = d > 950 ? 0 : tipo === 'verde' ? 3 : tipo === 'casas' ? (r() < 0.42 ? 1 : 0) : (r() < 0.2 ? 1 : 0);
-      for (let a = 0; a < nA; a++) arv.push({ x: cx + (r() - 0.5) * (Q - 8), z: cz + (r() - 0.5) * (Q - 8), raio: 2.6 + r() * 3.4 });
+      const nA = d > 950 ? 0 : tipo === 'verde' ? 3 : tipo === 'casas' ? (r() < 0.7 ? 1 : 0) : (r() < 0.4 ? 1 : 0);
+      for (let a = 0; a < nA; a++) arv.push({ x: cx + (r() - 0.5) * (Q - 8), z: cz + (r() - 0.5) * (Q - 8), raio: 4 + r() * 4 });
     }
     // as copas dos gramados e bosques da esplanada (fora das palmeiras, das rampas e dos prédios)
     for (const [x0, z0, x1, z1] of E.gramados) {
-      const n = Math.round(((x1 - x0) * (z1 - z0)) / 900);
+      const n = Math.round(((x1 - x0) * (z1 - z0)) / 600);
       for (let a = 0; a < n; a++) {
         const x = x0 + 6 + r() * (x1 - x0 - 12), z = z0 + 6 + r() * (z1 - z0 - 12);
         if (Math.hypot(x, z) < rFach(Math.atan2(z, x)) + 30 || naRampa(x, z, 8) || Math.abs(distTrilho(x, z)) < E.trilhos.larg + 26) continue;
-        arv.push({ x, z, raio: 3 + r() * 3.5 });
+        arv.push({ x, z, raio: 4 + r() * 4 });
       }
     }
+
     // as fileiras de árvores na borda da esplanada (dentro da avenida) e nas vias de serviço
     const livreE = (x, z) => !naRampa(x, z, 10) && Math.abs(distTrilho(x, z)) > E.trilhos.larg + 26 && Math.hypot(x - E.maracanazinho.x, z - E.maracanazinho.z) > E.maracanazinho.r + 10
       && ((x - E.celio.x) / (E.celio.a + 14)) ** 2 + ((z - E.celio.z) / (E.celio.b + 22)) ** 2 > 1 && Math.hypot(x - E.aquatico.x - 20, z - E.aquatico.z) > 60 && Math.hypot(x - E.bellini.x, z - E.bellini.z) > 40;
@@ -400,6 +428,9 @@ export function criarPlanta(formaBruta) {
     };
     // a praça do Bellini (o eixo da rampa de cá) e a avenida das palmeiras
     for (let z = 262; z < 336; z += 12) for (const x of [-24, 24]) if (livre(x, z)) lista.push({ x: x + (r() - 0.5), z, h: 17 + r() * 6 });
+    // as fileiras de palmeiras-imperiais junto das rampas (os dois lados)
+    // (rodada 2: "sobra concreto claro no chão" — duas fileiras de cada lado)
+    for (const lado of [1, -1]) for (let z = zFach0 + 16; z < R.zFim - 8; z += 11) for (const x of [-(R.larg / 2 + 7), R.larg / 2 + 7, -(R.larg / 2 + 17), R.larg / 2 + 17]) lista.push({ x, z: lado * z + (Math.abs(x) > 20 ? 5 : 0), h: 18 + r() * 5 });
     // anel em volta da fachada (a ~22 m dela), uma a cada ~16 m
     for (let g = 0; g < 360; g += 3.1) {
       const th = g * RAD, rr = rFach(th) + 22 + r() * 6;
@@ -432,8 +463,7 @@ export function criarPlanta(formaBruta) {
     for (const lado of [1, -1]) {
       for (let i = 0; i < 420; i++) {
         const az = zFach0 + 3 + Math.pow(r(), 0.9) * (R.zFim - zFach0 - 6);
-        const x = (r() - 0.5) * (R.larg - 4);
-        if (Math.abs(x) < 2.2) continue;                     // o vão entre as duas pistas
+        const x = (r() - 0.5) * (R.larg - 3);
         lista.push({ x, y: yRampa(az), z: lado * az, time: lado < 0 && r() < 0.5 ? 1 : (r() < 0.06 ? 1 : 0) });
       }
       // a praça na frente do pórtico
@@ -487,9 +517,10 @@ export function criarPlanta(formaBruta) {
     const r = gerador(20261012), lista = [];
     const longe = (x, z) => lista.every(b => Math.hypot(b.x - x, b.z - z) >= 4);
     for (let t = 0; lista.length < n && t < 5000; t++) {
-      const org = r() < 0.3;
-      const d = (org ? 1 + Math.floor(r() * 7) : Math.floor(r() * 6)) * 0.8 + 0.4;
-      const th = org ? thFundo(1, -16 + 32 * r()) : thLadoDeLa(-55 + 110 * r());
+      // no clássico, só na metade do mandante (o lado de lá em +x e a organizada): mais fileiras para caberem as mesmas
+      const org = r() < (dividida ? 0.42 : 0.3);
+      const d = (org ? 1 + Math.floor(r() * 7) : Math.floor(r() * (dividida ? 9 : 6))) * 0.8 + 0.4;
+      const th = org ? thFundo(1, -16 + 32 * r()) : thLadoDeLa(dividida ? 5 + 58 * r() : -55 + 110 * r());
       const p = noDegrau(th, d);
       if (!longe(p.x, p.z)) continue;
       lista.push({ x: p.x, y: p.y + mao, z: p.z, ex: p.ex, ez: p.ez, nx: p.nx, nz: p.nz, desenho: Math.floor(r() * 4) % 4, fase: r() * 2 * Math.PI, org });
@@ -499,8 +530,8 @@ export function criarPlanta(formaBruta) {
   /** Bandeirões (o do lado de lá e o da organizada) pela rampa do anel de baixo, no formato de bandeiras-dados.js. */
   function bandeiroes(altura) {
     const out = [];
-    const rampa = (th, prof, larg, nome, slot, eixoU) => {
-      const p0 = noDegrau(th, 0.4), p1 = noDegrau(th, 0.4 + prof);
+    const rampa = (th, prof, larg, nome, slot, eixoU, pts = null) => {
+      const p0 = pts ? pts[0] : noDegrau(th, 0.4), p1 = pts ? pts[1] : noDegrau(th, 0.4 + prof);
       const V = [p1.x - p0.x, p1.y - p0.y, p1.z - p0.z], L = Math.hypot(...V);
       const Vn = V.map(v => v / L);
       // N: perpendicular a V e a U, para cima
@@ -511,7 +542,22 @@ export function criarPlanta(formaBruta) {
       const A = [p0.x - U[0] * larg / 2, p0.y, p0.z - U[2] * larg / 2].map((v, i) => v + N[i] * altura);
       out.push({ nome, A, U: U.map(v => v * larg), V: Vn.map(v => v * prof), N, larg, prof, slot });
     };
-    rampa(-Math.PI / 2, 10, 40, 'lado', 0, [1, 0, 0]);
+    // no clássico o do lado de lá vai para a metade do mandante (+x)
+    // (o pano ao longo da mureta, quase reta ali, subindo em −z)
+    if (dividida) {
+      const th = thLadoDeLa(29), zf = rF(th) * Math.sin(th) - 0.4, q2 = z => ({ x: 29, y: perfil(sDe(29, z)), z });
+      rampa(th, 10, 34, 'lado', 0, [1, 0, 0], [q2(zf), q2(zf - 10)]);
+      // a mureta encurva um pouco para o campo nas pontas: o pano sobe o que for preciso para nenhuma cabeça furar
+      const b = out[out.length - 1];
+      let sobe = 0;
+      (_lugares ?? (_lugares = gerarLugares())).iterar((st, f, a, x, y, z, esc) => {
+        const d = [x - b.A[0], y - b.A[1], z - b.A[2]];
+        const lu = (d[0] * b.U[0] + d[1] * b.U[1] + d[2] * b.U[2]) / (b.larg * b.larg), lv = (d[0] * b.V[0] + d[1] * b.V[1] + d[2] * b.V[2]) / (b.prof * b.prof);
+        if (lu < 0 || lu > 1 || lv < 0 || lv > 1) return;
+        sobe = Math.max(sobe, d[0] * b.N[0] + (d[1] + 2.2 * esc) * b.N[1] + d[2] * b.N[2]);
+      });
+      b.A = b.A.map((v, i) => v + b.N[i] * sobe);
+    } else rampa(-Math.PI / 2, 10, 40, 'lado', 0, [1, 0, 0]);
     rampa(0, 14, 24, 'organizada', 1, [0, 0, 1]);
     return out;
   }
@@ -527,14 +573,16 @@ export function criarPlanta(formaBruta) {
   // ---------------------------------------------------------------- pré-jogo: os planos que dependem do estádio
   const K = Math.max(Fa.a, Fa.b) / 93;      // ~1,6: quanto maior que o Estádio Golaço
   const PLANOS = {
-    // o drone alto e longe, atrás do gol Sul (−x) e um pouco para o Leste, como as aéreas de referência (ref-02/ref-10):
-    // as DUAS rampas, o Maracanãzinho em primeiro plano à direita, os trilhos e o Morro da Mangueira ao fundo
-    aereo: { orbita: { centro: [0, 0], olhar: [40, 62, -30], raio: [580, 490], altura: [250, 200], ang: [150, 168], fov: 40 } },
+    // o drone alto e longe do lado do Maracanãzinho, como a aérea de referência (ref-10; rodada 2: "colado demais e
+    // cortado"): o Maracanãzinho inteiro embaixo à direita, o estádio no meio, o pátio dos trilhos atrás e a Mangueira
+    aereo: { orbita: { centro: [0, 0], olhar: [-10, 0, 40], raio: [640, 560], altura: [340, 290], ang: [146, 156], fov: 40 } },
     // o pórtico da rampa de lá (UERJ) da ponta onde começa o letreiro (+x), de baixo, ao pé dos degraus (ref-05): a faixa
     // curva com "ESTÁDIO MÁRIO FILHO" indo embora; a grua sobe por cima até a rampa e a fachada (costelas e almofadas)
     fachada: { cam: { de: [[47, 1.6, -277], [44, 1.9, -276], [39, 4, -275], [28, 13, -271], [16, 25, -266]], para: [[-10, 8, -246], [-10, 8, -246], [-10, 9, -238], [-8, 11, -205], [0, 13, -150]], fov: [48, 42], suave: 0.7 } },
     // de dentro olhando PARA CIMA (ref-07): a cobertura branca com a treliça e os refletores no terço de cima do quadro
     dentro: { cam: { de: [[-46, 10.5, 50.5], [-32, 10.2, 49.5], [-18, 10, 48.5]], para: [[-8, 25, -60], [0, 26, -60], [8, 27, -60]], fov: [54, 52], suave: 0.5 } },
+    // o plano alto da fila (rodada 2: "nada no quadro diz Maracanã"): mais aberto, com a bacia de cá e a cobertura em cima
+    alto: { cam: { de: [[-6, 21, -50], [6, 20, -50]], para: [[0, 7, 24], [0, 7, 22]], fov: [44, 42], suave: 0.5 } },
     organizada: { cam: { de: [[48, 3.0, -20], [48, 3.4, -15]], para: [[84, 6.2, -3], [84, 6.6, 2]], fov: [40, 40], suave: 0.3 } },
     ladoDeLa: { cam: { de: [[-6, 2.2, -34], [2, 2.2, -34]], para: [[-12, 6.5, -55], [4, 6.5, -55]], fov: [30, 30], suave: 0.2 } },
     visitantes: { cam: { de: [[-48, 2.5, 18], [-48, 2.8, 14]], para: [[-84, 6, 0], [-84, 6, -4]], fov: [40, 40], suave: 0.3 } },
@@ -555,7 +603,7 @@ export function criarPlanta(formaBruta) {
   return {
     forma: F, familia: 'tigela',
     rF, rB, rCobFora, rCobDentro, rFach, ponto, sDe, perfil, vDe, nos, sC, setor, psi, thDivisa,
-    nosCob, alturaCob, pontoCob, uCob, uMastro, COSTELA, nFachada, yRampa, entorno: E, distTrilho, estacionamentos: ESTAC, TELOES,
+    nosCob, alturaCob, pontoCob, uCob, uMastro, cone, luzDoSol, dividida, COSTELA, nFachada, yRampa, entorno: E, distTrilho, estacionamentos: ESTAC, TELOES,
     get lugares() { return _lugares ?? (_lugares = gerarLugares()); },
     solido, cameraNoLadoDeCa, noDegrau,
     predios, bairro, palmeiras, carros, torcedoresFora,
