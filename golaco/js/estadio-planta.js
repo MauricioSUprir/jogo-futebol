@@ -479,9 +479,10 @@ export function criarPlanta(formaBruta) {
   const K = Math.max(Fa.a, Fa.b) / 93;      // ~1,6: quanto maior que o Estádio Golaço
   const PLANOS = {
     // o drone do lado de lá (NE) olhando para o Maracanãzinho e o maciço da Tijuca ao fundo (como as aéreas de referência)
-    aereo: { orbita: { centro: [0, 0], olhar: [-40, 55, 60], raio: [540, 430], altura: [160, 118], ang: [-80, -54], fov: 42 } },
-    // a grua na praça do pórtico da rampa de lá (UERJ): o letreiro, depois a rampa e a fachada
-    fachada: { cam: { de: [[-26, 1.8, -298], [-18, 7, -284], [-10, 14, -269]], para: [[0, 5.8, -252], [0, 10, -205], [0, 16, -150]], fov: [44, 40], suave: 0.7 } },
+    aereo: { orbita: { centro: [0, 0], olhar: [-30, 40, 50], raio: [430, 340], altura: [175, 132], ang: [-80, -54], fov: 42 } },
+    // a grua na praça do pórtico da rampa de lá (UERJ): o letreiro e, subindo por cima do pórtico, a rampa e a fachada
+    // (as costelas em gancho e o colar de almofadas no quadro final)
+    fachada: { cam: { de: [[-30, 2.2, -300], [-18, 12, -282], [-8, 26, -259]], para: [[0, 6.5, -250], [0, 11, -200], [0, 12, -160]], fov: [44, 40], suave: 0.7 } },
     dentro: { cam: { de: [[-46, 20, 62], [-32, 20.5, 61], [-18, 21, 60]], para: [[-8, 3, -30], [0, 3, -30], [8, 3, -30]], fov: [50, 48], suave: 0.5 } },
     organizada: { cam: { de: [[48, 3.0, -20], [48, 3.4, -15]], para: [[84, 6.2, -3], [84, 6.6, 2]], fov: [40, 40], suave: 0.3 } },
     ladoDeLa: { cam: { de: [[-6, 2.2, -34], [2, 2.2, -34]], para: [[-12, 6.5, -55], [4, 6.5, -55]], fov: [30, 30], suave: 0.2 } },

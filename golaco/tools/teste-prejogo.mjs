@@ -29,9 +29,10 @@
 //  13) a pausa cabe sem rolar no celular deitado (também com "Modo de jogo" aberto) e "Pré-jogo da partida" passa pelos
 //      4 modos e salva;
 //  14) o estádio REAL do Total Match (?tm, edição pro; contrato "Estádio de cada clube"), celular 844×390 Média de dia, 2
-//      estilos e as coberturas que tiram mais do anel — Aflitos (concreto, 'nenhuma') e BUKO Stadion (vidro, 'parcial'):
-//      o estádio achado na base com o desenho dele, cada plano com cor, ≤ 40 chamadas e ≤ 130 mil triângulos, a marquise
-//      escondida só no pré-jogo da 'nenhuma' (de volta no jogo) e 0 erros.
+//      estilos e as coberturas que tiram mais do anel — Aflitos (concreto, 'nenhuma') e BUKO Stadion (vidro, 'parcial') — e
+//      o Maracanã (16/10: a forma própria, tigela oval com o anel de cobertura, estadio-planta.js + render/estadio-real.js):
+//      o estádio achado na base com o desenho dele (o Maracanã com a forma dele carregada), cada plano com cor, ≤ 40
+//      chamadas e ≤ 130 mil triângulos, a marquise escondida só no pré-jogo da 'nenhuma' (de volta no jogo) e 0 erros.
 // Na versão publicada não há pré-jogo (reprova no item 1).
 //   node tools/teste-prejogo.mjs [--raiz <pasta do jogo>] [--so-tm (só o item 14)]
 import path from 'node:path';
@@ -405,12 +406,12 @@ try {
   // ---------------------------------------------------------------- 14) estádio real do Total Match (edição pro)
   {
     const { PED_A } = await import(new URL('./lib/pedidos-tm.mjs', import.meta.url).href);
-    const CASOS_TM = [['Aflitos', 'concreto', 'nenhuma'], ['BUKO Stadion', 'vidro', 'parcial']];
+    const CASOS_TM = [['Aflitos', 'concreto', 'nenhuma'], ['BUKO Stadion', 'vidro', 'parcial'], ['Maracanã', 'concreto', 'total', 'tigela']];
     const ids = CASOS_TM.map((_, i) => `prejogo-tm-${i}`);
     const { navegador, contexto, pagina: pg, erros } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
     await contexto.addInitScript(lista => { for (const [k, v] of lista) try { localStorage.setItem(k, v); } catch (_) { /* nada */ } },
       CASOS_TM.map(([nome], i) => ['tm3d:pedido:' + ids[i], JSON.stringify({ ...PED_A, id: ids[i], edicao: 'pro', home: { ...PED_A.home, stadium: nome } })]));
-    for (const [i, [nome, estilo, cob]] of CASOS_TM.entries()) {
+    for (const [i, [nome, estilo, cob, forma = null]] of CASOS_TM.entries()) {
       const nErros = erros.length;
       await pg.goto(`${srv.url}?tm=${ids[i]}&prejogo=1&semente=${SEMENTE}&q=media&hora=dia&toque=1`, { waitUntil: 'load' });
       await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
@@ -419,10 +420,10 @@ try {
         g.relogio.usarManual(true); g.relogio.avancar(16); g.relogio.avancar(16);
         if (!g.prejogo) return null;
         g.prejogo.comecar(); g.relogio.avancar(16);
-        return { nome: id?.estadio?.nome, real: !!id?.estadio?.real, estilo: id?.fachada?.estilo, cob: id?.fachada?.cobertura, estilos: !!id?.estilos, planos: g.prejogo.planos };
+        return { nome: id?.estadio?.nome, real: !!id?.estadio?.real, estilo: id?.fachada?.estilo, cob: id?.fachada?.cobertura, estilos: !!id?.estilos, forma: id?.forma3d?.planta?.familia ?? null, planos: g.prejogo.planos };
       });
       if (!est) { meta(`TM pro ${nome}: pré-jogo na página`, 'não existe', 'existe', false); continue; }
-      meta(`TM pro ${nome}: o estádio real achado na base, com o desenho dele (${estilo}, cobertura ${cob})`, `"${est.nome}" real ${est.real} · ${est.estilo}/${est.cob} · fachada-estilos.js ${est.estilos ? 'carregado' : 'não'}`, `"${nome}" true · ${estilo}/${cob} · carregado`, est.nome === nome && est.real && est.estilo === estilo && est.cob === cob && est.estilos);
+      meta(`TM pro ${nome}: o estádio real achado na base, com o desenho dele (${estilo}, cobertura ${cob}${forma ? ', forma ' + forma : ''})`, `"${est.nome}" real ${est.real} · ${est.estilo}/${est.cob} · fachada-estilos.js ${est.estilos ? 'carregado' : 'não'} · forma ${est.forma ?? 'nenhuma'}`, `"${nome}" true · ${estilo}/${cob} · carregado · forma ${forma ?? 'nenhuma'}`, est.nome === nome && est.real && est.estilo === estilo && est.cob === cob && est.estilos && est.forma === forma);
       let piorCham = 0, piorTri = 0, marqMin = Infinity, marqMax = 0;
       const ruins = [], custos = [];
       for (const p of est.planos) {

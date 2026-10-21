@@ -439,8 +439,9 @@ function criarCobertura(P, q) {
     }
     for (let j = 0; j < NK; j++) E.quad(a[j], a[j + 1], b[j + 1], b[j]);
   };
-  // a passarela: face de dentro (os refletores, claros), de fora e o fundo
-  anel(P.uMastro, yP - 0.6, yP + 0.6, luz, -1.2);
+  // a passarela: face de dentro (a treliça escura com a fileira de refletores claros embaixo), de fora e o fundo
+  anel(P.uMastro, yP - 0.25, yP + 0.6, escuro, -1.2);
+  anel(P.uMastro, yP - 0.6, yP - 0.25, luz, -1.2);
   anel(P.uMastro, yP - 0.6, yP + 0.6, escuro, 1.2);
   {
     const a = [], b = [];
@@ -501,7 +502,7 @@ function criarEstrutura(P, q) {
   const base = t => [A * Math.cos(t), B * Math.sin(t)];
   const normal = t => { const nx = Math.cos(t) / A, nz = Math.sin(t) / B, l = Math.hypot(nx, nz); return [nx / l, nz / l]; };
   const pt = (t, n, y) => { const [x, z] = base(t), [nx, nz] = normal(t); return [x + nx * n, y, z + nz * n]; };
-  const conc = cor(0xb3b1aa), concClaro = cor(0xd6d4cd), concEsc = cor(0x96948d), fundo = cor(0x4b5157), terreo = cor(0x5f6366);
+  const conc = cor(0xb3b1aa), concClaro = cor(0xd6d4cd), concEsc = cor(0x96948d), fundo = cor(0x62686c), terreo = cor(0x6c7073);
   const almof = cor(0xf4f3ee), vidro = cor(0x6a8394), amarelo = cor(0xe8b52a), lajeTopo = cor(0x6f7275);
   const KT = q === 'alta' ? 180 : q === 'baixa' ? 90 : 120;
   const ts = Array.from({ length: KT + 1 }, (_, j) => (2 * Math.PI * j) / KT);
@@ -623,8 +624,19 @@ function criarEstrutura(P, q) {
     for (const n of [-wl, wl]) L.q4(p(-len / 2, n, yA - 0.7), p(-len / 2, n, yA + 1), p(len / 2, n, yB + 1), p(len / 2, n, Math.max(0, yB - 0.7)), concClaro);
     for (const e of [-18, 0]) for (const n of [-4, 4]) { const [x, , z] = p(e, n, 0); L.coluna(x, 0, z, yA - (yA - yB) * ((e + len / 2) / len) - 0.6, 0.4, pilar, 4); }
   }
-  const m = new THREE.Mesh(L.geo(), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+  // o rebate da esplanada clara: a face virada para baixo (o teto do pórtico, o fundo das rampas e das lajes) recebe luz
+  // de baixo (a luz do hemisfério de baixo é a da grama, escura e verde: o teto do pórtico ficava verde-escuro)
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  const uRebate = { value: 0.5 };
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.uRebate = uRebate;
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uRebate;')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ vec3 nW = inverseTransformDirection(normal, viewMatrix); totalEmissiveRadiance += diffuseColor.rgb * uRebate * max(0.0, -nW.y); }');
+  };
+  mat.customProgramCacheKey = () => 'fachada-rebate';
+  const m = new THREE.Mesh(L.geo(), mat);
   m.name = 'fora-fachada';
+  m.userData.uRebate = uRebate;
   return m;
 }
 
@@ -854,6 +866,7 @@ export function criarForaForma(cena, opc, P, pecas) {
     const noite = h === 'noite';
     uNoite.value = noite ? 1 : 0;
     fachada.material.color.setScalar(noite ? 0.55 : 1);
+    fachada.userData.uRebate.value = noite ? 0.12 : 0.5;
     placa.material.color.setScalar(noite ? 0.7 : 1);
     if (esplanada) esplanada.material.color.setScalar(noite ? 0.3 : 1);
     if (bairro) bairro.material.color.setScalar(noite ? 0.26 : 1);
