@@ -337,7 +337,7 @@ export function criarPrejogo(ctx) {
     if (!m || !m.times || modo === 'desligado' || !PREJOGO.modos.includes(modo)) return false;
     if (st.ativo) encerrar(false);
     st.modo = modo;
-    st.r = criarRoteiro(modo);
+    st.r = criarRoteiro(modo, ctx.identidade?.forma3d?.planta.ajustarPlano);
     st.t = 0; st.tAb = 0; st.i = -1; st.filaPronta = false; st.disparados.clear(); st.terminando = false;
     st.c = criarCortejo(m.times);
     st.tec = criarTecnicos(m.times, m.semente ?? 1); st.tecAcum = 0; st.tecAplaudiu = false;
@@ -443,6 +443,7 @@ export function criarPrejogo(ctx) {
       st.tAb += dt;
       avancarPrevia(PREVIA_MS);
       cameraAbertura(st.tAb, _cam);
+      ctx.identidade?.forma3d?.planta.ajustarAbertura(_cam);
       tela.faixas(0, PREJOGO.letterbox); tela.preto(0); tela.fundoEscalacao(0);
       sinaisEm(st.r, 0, _sin); _sin.agito = 0.15; _sin.filtro = 600; _sin.ganho = 0.5;
       torcidaESom(dt, agoraS, _sin, st.parado);

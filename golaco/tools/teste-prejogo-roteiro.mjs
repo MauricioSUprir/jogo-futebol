@@ -15,7 +15,9 @@
 //   6) a fila com a câmera passando: cada um dos 11 titulares do time passa pelo terço central do quadro (16:9) e a
 //      câmera anda ≥ 8 m.
 // Na versão publicada não há pré-jogo (reprova no import).
-//   node tools/teste-prejogo-roteiro.mjs [--js <pasta js>]
+// --forma <chave>: o estádio com forma própria da base (assets/tm/estadios.json, ex.: maracana; estadio-planta.js): os
+// trilhos ajustados por ele (ajustarPlano/ajustarAbertura) contra os sólidos DELE (estadio-forma.js definirForma).
+//   node tools/teste-prejogo-roteiro.mjs [--js <pasta js>] [--forma maracana]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { tabelaTexto, fmt } from './lib/medidas.mjs';
@@ -35,7 +37,20 @@ if (!R) {
 } else {
   const { criarRoteiro, planoEm, blocoEm, proximoBloco, cameraEm, cameraAbertura, escalacaoEm, pontosDoPlano, PREJOGO } = R;
   const { solidoEm, noCorredorDoTunel } = F;
-  const r = criarRoteiro('completo');
+  // estádio com forma própria (--forma): a planta liga os sólidos e ajusta os planos e a abertura
+  let ajuste = null, ajAbertura = c => c;
+  if (args.includes('--forma')) {
+    const fs = await import('node:fs');
+    const chave = args[args.indexOf('--forma') + 1];
+    const base = JSON.parse(fs.readFileSync(path.join(pastaJs, '../assets/tm/estadios.json'), 'utf8'));
+    const PL = await imp('estadio-planta.js');
+    const planta = PL.criarPlanta(PL.validarForma(base.estadios[chave]?.forma));
+    F.definirForma(planta);
+    ajuste = planta.ajustarPlano; ajAbertura = c => planta.ajustarAbertura(c);
+    linhas.push([`forma: ${chave}`, planta ? planta.familia : 'não achada', '', '']);
+  }
+  const criarRoteiroF = criarRoteiro;
+  const r = criarRoteiroF('completo', ajuste);
   const cenas = r.planos.filter(p => p.bloco === 'cenas');
   const ordem = r.planos.map(p => p.id);
   // 1) ordem e durações
@@ -66,7 +81,7 @@ if (!R) {
   reg('Escalações com o MESMO fundo (órbita contínua de uma para a outra)', `salto ${fmt(salto * 100, 2)} cm; fundo da 1ª ${p0.orbita ? 'órbita' : 'trilho'}, da 2ª ${p1.orbita ? 'órbita' : 'trilho'}`, '< 1 cm; órbita nas duas', salto < 0.01 && p0.orbita && p0.orbita === p1.orbita);
 
   // 3) curto e só escalação
-  const rc = criarRoteiro('curto'), re = criarRoteiro('escalacao');
+  const rc = criarRoteiroF('curto', ajuste), re = criarRoteiroF('escalacao', ajuste);
   reg('Curto: ~40 s (as escalações inteiras)', `${fmt(rc.total, 1)} s (${rc.planos.length} planos: ${rc.planos.map(p => p.id).join(', ')})`, '35–45 s', rc.total >= 35 && rc.total <= 45 && rc.planos.some(p => p.id === 'escalacao1'));
   reg('Só escalação: as duas (~21 s)', `${fmt(re.total, 2)} s (${re.planos.map(p => p.id).join(', ')})`, '20–22 s; 2 planos', re.total >= 20 && re.total <= 22 && re.planos.length === 2);
 
@@ -106,7 +121,7 @@ if (!R) {
   }
   // abertura (órbita pelo tempo real: 2 min)
   for (let t = 0; t < 120; t += 2.4) {
-    const c = cameraAbertura(t, {});
+    const c = ajAbertura(cameraAbertura(t, {}));
     pontos++;
     const s = solidoEm(c.px, c.py, c.pz, FOLGA, true);
     if (s) bloqueios.push(`abertura ${fmt(t, 1)} s: ${s}`);

@@ -693,10 +693,12 @@ export function criarCampo(opc) {
   grupo.add(band.mesh);
   const placas = criarPlacas(aniso, ident);
   grupo.add(placas.frente, placas.corpo);
-  const arq = criarArquibancada(aniso, opc.qualidade, ident);
+  // estádio com forma própria (render/estadio-real.js, sob demanda): a tigela e a cobertura dele, sem as torres
+  const f3 = ident?.forma3d;
+  const arq = f3 ? f3.real.criarTigela(f3.planta, { aniso, qualidade: opc.qualidade, ident, comLuzFalsa }) : criarArquibancada(aniso, opc.qualidade, ident);
   grupo.add(arq);
   const refl = criarRefletores();
-  grupo.add(refl.grupo);
+  if (!f3) grupo.add(refl.grupo);
   const ladoDeCa = arq.userData.ladoDeCa;
   const _frustum = new THREE.Frustum(), _mat = new THREE.Matrix4();
   // pré-carga (como a torcida): no 1º quadro, se a câmera não a vê, a arquibancada do lado de cá vai para a GPU com
@@ -711,6 +713,7 @@ export function criarCampo(opc) {
       uNoite.value = noite ? 1 : 0;
       // arquibancada à noite: só a luz que escapa dos refletores
       for (const m of arq.userData.materiais) m.color.setScalar(noite ? 0.42 : 1);
+      arq.userData.definirHora?.(hora);
       placas.mat.color.setHex(noite ? 0xffffff : 0xd4d4d4);
       // rede e traves brancas também à noite (só a luz dos refletores deixava a rede cinza-escura)
       gols.matRede.emissive.setHex(noite ? LUZ_GOL.redeNoite : LUZ_GOL.redeDia);
