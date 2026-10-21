@@ -603,14 +603,13 @@ export function criarForaForma(cena, opc, P, pecas) {
   const fachada = criarFachada(P, aniso, fa, q);
   const placa = criarPlacaG(P, pecas.texPlaca(ident));
   const estrutura = [fachada, placa, ...pecas.criarTunel(ident?.fachada ?? fa)];
-  const marcas = criarMarcas(P);
-  if (marcas) estrutura.push(marcas);
+  // as marcas próprias, a água e os morros numa malha só (o pré-jogo do celular tem ≤ 40 chamadas por plano)
   const comEntorno = opc.entorno !== false;
+  const marcas = criarMarcas(P, comEntorno);
+  if (marcas) estrutura.push(marcas);
   const entorno = [];
   if (comEntorno) {
     entorno.push(criarChaoEsplanada(P, q, aniso), criarChaoBairro(P, q, aniso));
-    const ag = criarAgua(P); if (ag) entorno.push(ag);
-    const rl = criarRelevo(P); if (rl) entorno.push(rl);
     if (q !== 'baixa') {
       entorno.push(pecas.criarPredios(uNoite, P.predios()));
       if (pecas.criarArvores) entorno.push(pecas.criarArvores(P.arvores()));
@@ -628,14 +627,14 @@ export function criarForaForma(cena, opc, P, pecas) {
     fachada.material.color.setScalar(noite ? 0.6 : 1);
     placa.material.color.setScalar(noite ? 0.75 : 1);
     if (marcas) { marcas.material.color.setScalar(noite ? 0.45 : 1); marcas.material.emissiveIntensity = noite ? 1 : 0; }
-    for (const m of entorno) if (m.name === 'fora-esplanada' || m.name === 'fora-chao' || m.name === 'fora-relevo' || m.name === 'fora-agua') m.material.color.setScalar(noite ? 0.28 : 1);
+    for (const m of entorno) if (m.name === 'fora-esplanada' || m.name === 'fora-chao') m.material.color.setScalar(noite ? 0.28 : 1);
   }
   definirHora(opc.hora ?? 'dia');
   let disposto = false;
   return {
     grupo,
     // de dentro a tigela tapa a fachada (nos cantos abertos ela aparece pelo vão: fica)
-    modoFora(v) { for (const m of entorno) m.visible = !!v; fachada.visible = !!v || P.abertos; placa.visible = !!v; if (marcas) marcas.visible = !!v || P.marcas.some(m => m.tipo === 'arco'); },
+    modoFora(v) { for (const m of entorno) m.visible = !!v; fachada.visible = !!v || P.abertos; placa.visible = !!v; if (marcas) marcas.visible = !!v; },
     definirHora,
     atualizar() { /* nada por quadro */ },
     dispose() {
@@ -740,10 +739,15 @@ function criarPlacaG(P, tex) {
   m.renderOrder = 2;
   return m;
 }
-/** As marcas próprias de fora (torres com rampa em espiral, mastros e cabos, estátua, ginásio de cúpula): uma malha. */
-function criarMarcas(P) {
+/**
+ * As marcas próprias de fora (torres com rampa em espiral, mastros e cabos, estátua, ginásio de cúpula) e, com o entorno,
+ * a água (rio, canal, lago ou mar) e os morros/montanhas do horizonte: uma malha só (cor por vértice).
+ */
+function criarMarcas(P, comEntorno = true) {
   const L = malha();
   let tem = false;
+  if (comEntorno && aguaNaMalha(L, P)) tem = true;
+  if (comEntorno && relevoNaMalha(L, P)) tem = true;
   const conc = cor(0xc9c6bd), esc = cor(0x6d7276);
   for (const m of P.marcas) {
     if (m.tipo === 'torres' || m.tipo === 'rampas_espiral') {
@@ -824,28 +828,29 @@ function criarChaoBairro(P, q, aniso) {
   m.name = 'fora-chao';
   return m;
 }
-function criarAgua(P) {
+/** A água na malha das marcas (a −0,1 m: por cima do chão do bairro, −0,25, e por baixo da esplanada, 0,05). */
+function aguaNaMalha(L, P) {
   const A = P.agua();
-  if (!A) return null;
-  const mat = new THREE.MeshLambertMaterial({ color: 0x3f6f86 });
-  let g;
-  if (A.tipo === 'lago') { g = new THREE.CircleGeometry(A.raio, 48); g.rotateX(-Math.PI / 2); g.translate(A.x, -0.1, A.z); }
-  else {
-    const larg = A.tipo === 'mar' ? 2600 : A.larg, d = A.tipo === 'mar' ? A.d + 1300 : A.d + A.larg / 2;
-    g = new THREE.PlaneGeometry(A.tipo === 'mar' ? 2600 : 2600, larg);
-    g.rotateX(-Math.PI / 2);
-    // a faixa ao longo da perpendicular (nx, nz)
-    g.rotateY(-Math.atan2(A.nz, A.nx) + Math.PI / 2);
-    g.translate(A.nx * d, -0.1, A.nz * d);
+  if (!A) return false;
+  const c = cor(0x3f6f86), y = -0.1;
+  if (A.tipo === 'lago') {
+    const N = 40;
+    for (let i = 0; i < N; i++) {
+      const a0 = (2 * Math.PI * i) / N, a1 = (2 * Math.PI * (i + 1)) / N;
+      L.q4([A.x, y, A.z], [A.x, y, A.z], [A.x + A.raio * Math.cos(a1), y, A.z + A.raio * Math.sin(a1)], [A.x + A.raio * Math.cos(a0), y, A.z + A.raio * Math.sin(a0)], c, UV_NORMAL);
+    }
+    return true;
   }
-  const m = new THREE.Mesh(g, mat);
-  m.name = 'fora-agua';
-  return m;
+  // a faixa (rio/canal) ou o meio-plano (mar) ao longo da perpendicular (nx, nz)
+  const d0 = A.d, d1 = A.tipo === 'mar' ? A.d + 2600 : A.d + A.larg, ex = -A.nz, ez = A.nx, M = 1500;
+  const p = (t, s2) => [A.nx * t + ex * s2, y, A.nz * t + ez * s2];
+  L.q4(p(d0, -M), p(d0, M), p(d1, M), p(d1, -M), c, UV_NORMAL);
+  return true;
 }
-function criarRelevo(P) {
+/** Os morros/montanhas do horizonte na malha das marcas (as cristas em fatias de anel, verdes perto e azuladas longe). */
+function relevoNaMalha(L, P) {
   const lista = P.relevo();
-  if (!lista.length) return null;
-  const L = malha();
+  if (!lista.length) return false;
   const verde = cor(0x5b7451), longe = cor(0x8193a0);
   for (const h of lista) {
     const N = 14;
@@ -853,12 +858,10 @@ function criarRelevo(P) {
       const a0 = h.th - h.larg / 2 + (h.larg * i) / N, a1 = h.th - h.larg / 2 + (h.larg * (i + 1)) / N;
       const f = t => Math.pow(Math.sin(Math.PI * t), 0.8) * (0.8 + 0.2 * Math.sin(17 * t + h.th));
       const y0 = h.alto * f(i / N), y1 = h.alto * f((i + 1) / N);
-      const p = (a, r, y) => [r * Math.cos(a), y, r * Math.sin(a)];
+      const pp = (a, r, y) => [r * Math.cos(a), y, r * Math.sin(a)];
       const c = h.dist > 2000 ? longe : verde;
-      L.q4(p(a0, h.dist, -0.5), p(a1, h.dist, -0.5), p(a1, h.dist - 60, y1), p(a0, h.dist - 60, y0), c);
+      L.q4(pp(a0, h.dist, -0.5), pp(a1, h.dist, -0.5), pp(a1, h.dist - 60, y1), pp(a0, h.dist - 60, y0), c, UV_NORMAL);
     }
   }
-  const m = new THREE.Mesh(L.geo(), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, fog: true }));
-  m.name = 'fora-relevo';
-  return m;
+  return true;
 }

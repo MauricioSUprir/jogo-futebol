@@ -35,6 +35,7 @@
 //      chamadas e ≤ 130 mil triângulos, a marquise escondida só no pré-jogo da 'nenhuma' (de volta no jogo) e 0 erros.
 // Na versão publicada não há pré-jogo (reprova no item 1).
 //   node tools/teste-prejogo.mjs [--raiz <pasta do jogo>] [--so-tm (só o item 14)]
+import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -406,7 +407,11 @@ try {
   // ---------------------------------------------------------------- 14) estádio real do Total Match (edição pro)
   {
     const { PED_A } = await import(new URL('./lib/pedidos-tm.mjs', import.meta.url).href);
-    const CASOS_TM = [['Aflitos', 'concreto', 'nenhuma'], ['BUKO Stadion', 'vidro', 'parcial'], ['Maracanã', 'concreto', 'total', 'tigela']];
+    // sem forma (o Estádio Golaço nas cores dele: concreto sem cobertura e vidro com a parcial), o Maracanã (planta própria)
+    // e um da planta genérica (estadio-generico.js: os Aflitos, a família que a base tiver)
+    const baseEst = JSON.parse(fs.readFileSync(path.join(raiz, 'assets', 'tm', 'estadios.json'), 'utf8')).estadios;
+    const famAflitos = baseEst.aflitos?.forma?.familia ?? null;
+    const CASOS_TM = [['Estadio Alberto Suppici', 'concreto', 'nenhuma'], ['BUKO Stadion', 'vidro', 'parcial'], ['Maracanã', 'concreto', 'total', 'tigela'], ['Aflitos', baseEst.aflitos?.fachada_estilo ?? 'concreto', baseEst.aflitos?.cobertura ?? 'nenhuma', famAflitos]];
     const ids = CASOS_TM.map((_, i) => `prejogo-tm-${i}`);
     const { navegador, contexto, pagina: pg, erros } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
     await contexto.addInitScript(lista => { for (const [k, v] of lista) try { localStorage.setItem(k, v); } catch (_) { /* nada */ } },
@@ -438,8 +443,9 @@ try {
       meta(`TM pro ${nome}: ≤ 40 chamadas de desenho e ≤ 130 mil triângulos em todo plano (celular Média)`, `pior ${piorCham} chamadas, ${f1(piorTri / 1000)} mil tri (${custos.join(' ')})`, '≤ 40; ≤ 130 mil', piorCham <= 40 && piorTri <= 130000);
       // a marquise de lá e o teto curto de cá (render/campo.js): somem no pré-jogo SEM cobertura e voltam inteiros no jogo
       const fim = await pg.evaluate(() => { const g = window.__golaco; g.prejogo.pularTudo(); g.relogio.avancar(16); return { ativo: g.prejogo.ativo, tick: g.estado().tick, marq: g.identidade.estilos?.marquiseEscondida ? g.identidade.estilos.marquiseEscondida() : -1 }; });
-      const okMarq = cob === 'nenhuma' ? marqMin > 0 : marqMax === 0;
-      meta(`TM pro ${nome}: a marquise ${cob === 'nenhuma' ? 'escondida em todo o pré-jogo' : 'no lugar (o lado de lá coberto)'}; no jogo, a malha inteira de volta`, `triângulos escondidos no pré-jogo ${marqMin}–${marqMax}; depois de pular: ${fim.marq} (ativo ${fim.ativo}, tick ${fim.tick})`, `${cob === 'nenhuma' ? '> 0' : '0'}; 0 (false, 0)`, okMarq && fim.marq === 0 && !fim.ativo && fim.tick === 0);
+      // com forma própria a arquibancada do Estádio Golaço (e a marquise dela) nem existe: nada a esconder
+      const okMarq = forma ? marqMax <= 0 : cob === 'nenhuma' ? marqMin > 0 : marqMax === 0;
+      meta(`TM pro ${nome}: a marquise ${cob === 'nenhuma' ? 'escondida em todo o pré-jogo' : 'no lugar (o lado de lá coberto)'}; no jogo, a malha inteira de volta`, `triângulos escondidos no pré-jogo ${marqMin}–${marqMax}; depois de pular: ${fim.marq} (ativo ${fim.ativo}, tick ${fim.tick})`, `${cob === 'nenhuma' ? '> 0' : '0'}; 0 (false, 0)`, okMarq && fim.marq <= 0 && !fim.ativo && fim.tick === 0);
       meta(`TM pro ${nome}: sem erro no console`, `${erros.length - nErros}${erros.length > nErros ? ': ' + erros.slice(nErros, nErros + 2).join(' | ') : ''}`, '0', erros.length === nErros);
     }
     await navegador.close();
