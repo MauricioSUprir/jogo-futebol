@@ -98,7 +98,7 @@ export function planejarPulo(m, j, tc, bx, by, bz, ux, uz, nx = 0, nz = 0, folga
       // sem tempo de subir tudo: o pulo que cabe (mais baixo); se a cabeça não chega, não cabeceia
       nr = nTc - 1;
       if (nr < 3) return null;
-      const hCabe = Math.min(G * (nr * DT) ** 2 / 2, 2 * C.peVel * nr * DT / Math.PI);
+      const hCabe = Math.min(G * ((nr * DT) * (nr * DT)) / 2, 2 * C.peVel * nr * DT / Math.PI);
       if (hCabe < h - 0.05) return null;
       h = Math.min(h, hCabe);
     }

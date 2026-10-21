@@ -2316,3 +2316,228 @@ tempo de voo, sem a conta do jogo), B (segura × espalma, espalmada nunca no gol
 saltos, pés cruzados), D (1×1 e bola solta nas partidas) e E (saída no escanteio; guarda do gol de escanteio). `--js
 <pasta>` mede outra lógica (a da main: reprova 14 de 17). `medir-goleiro.mjs` (informativo) dá o relatório inteiro
 (seções 1–4). O gol de escanteio ainda acima do real (2,6%) vem do duelo pelo alto, não do goleiro: pendência da Etapa 4.5.
+
+## Modo Livre — o treino N contra M (16/10; contrato)
+Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores
+que eu escolher, contra a quantidade de jogadores que eu escolher, pode ser adaptável durante a partida" (a Arena de Treino do
+EA FC). `?modo=livre` (sem `?tm`: Golaço FC × Ventania FC), "Modo Livre <small>N contra M</small>" no "Modo de jogo" da pausa
+(linha própria; os dois treinos numa `.linha-cenas`: o submenu segue com 5 linhas) e, com `?tm`, o pedido com `modo: "livre"`.
+**Sem o Livre nada muda**: `hash-partida`/`hash-igual` IGUAIS contra a base; `livre.js` e `livre-pagina.js` só por import
+dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,99 MB).
+- **`livre.js`** (puro; constantes `config.js LIVRE`, o porquê de cada número no cabeçalho do arquivo). O mundo é o da
+  partida (`criarPartida`, sem a trava; o relógio com `LIVRE.relogioMin` minutos por tempo: nunca acaba) com `m.modo =
+  'livre'` e `m.livre = {linha: [a, b], goleiro: [g0, g1], fora: {id: jogador guardado}, ajustes, pressao: [da tática]}`,
+  FORA do `hashMundo`. A escolha por time: 0 a 10 de linha (o time do humano ≥ 1) e o goleiro à parte (11 sem goleiro não
+  existe: as formações têm 10 vagas de linha); o número da pausa é o TOTAL (linha + goleiro).
+  - Quem está fora fica na vaga como buraco (`m.times[t].expulsos`, o mesmo da expulsão) e guardado em `m.livre.fora`; os de
+    linha ocupam sempre as vagas de maior prioridade (`prioridadeVagas(formacao)` por `LIVRE.prioridade`: 4-3-3 → ZE, ATA, VOL,
+    PE, ZD, PD, MCE, LE, LD, MCD — o PE antes do 2º zagueiro, medido); todo jogador em campo tem vaga válida.
+  - `criarLivre({semente, elencos, times, humano, linha, goleiro, log})`, `ajustarJogadores(m, escolha)` (sem recomeçar: quem
+    fica não se mexe; quem sai = a vaga de menor prioridade, `LIVRE.saidaDist` m mais longe da bola valendo uma posição, nunca
+    o controlado — a bola dele fica solta onde estava, a mão do goleiro solta, o controle passa; quem entra = um jogador novo
+    da vaga, `teleportar`ado no ponto tático dela juntado como o da IA, a ≥ `LIVRE.afastar` m de todos; com a bola parada
+    montada, ela é montada de novo — a cobrança mirada da pessoa (#490) com o cobrador ainda em campo guarda a mira e a curva
+    e é montada já no passo seguinte, sem o 1 s da bola fora: a câmera atrás do cobrador e a linha não somem; evento
+    `livreAjuste {linha, goleiro, saiu, entrou}`), `recomecarLivre(m, 'meio' | 'pe')`
+    (saída do time do humano | a bola no pé do controlado; o placar fica), `passoLivre(m, entrada, acoes)` (as ações-objeto
+    `{tipo: 'livreAjuste', linha, goleiro}` e `{tipo: 'livreRecomecar', onde}` ANTES do passo, gravadas em `m.log`, e o
+    `passoPartida`), `entradaDemoLivre`, `normalizarEscolha`, `escolhaDoMundo`, `resumoLivre`.
+  - Regras: as da partida com os ramos de `m.livre` — sem impedimento (`impedimento.js regraImpedimento`; nem na IA:
+    a linha `A.linha` do `ia-ataque.js` deixa de ser o penúltimo adversário e fica a `LIVRE.linhaSemDefesa` m da linha de
+    fundo (ou na bola), só como a forma — o centroavante espera na entrada da área; `tetoLinha`: ninguém fica preso atrás da
+    defesa nem volta com pressa por estar à frente dela, a corrida não acaba por isso e o passe para quem está lá vale.
+    Antes a linha só mudava com menos de 2 adversários e o Livre 11 × 11 jogava como a partida: à frente da defesa, voltando
+    ~40% do tempo e 1,3% dos passes; agora ~3% e ~5%, `teste-livre` G),
+    sem faltas nem cartões (`faltas.js`, `defesa.js`: o bote da IA decide pelo MESMO sorteio da partida — #481 — e o que seria
+    falta ou "tirou o corpo" vira `BOTE_SEM_GANHAR`, contato sem apito com o condutor seguindo; o limpo rouba; a DIVIDIDA do
+    humano que seria falta segue sem falta; `teste-livre` H), sem relógio nem intervalo. Gol vale; a saída é do time que sofreu se ele
+    tiver alguém de linha, senão do outro (`partida.js montarSaida` + `temLinha`); bola fora pela partida quando quem cobra tem
+    alguém de linha (o tiro de meta pelo goleiro dele vale), senão a cobrança passa ao outro (`cobrancaSemLinha`: escanteio ↔
+    tiro de meta, lateral e tiro livre no mesmo ponto). As regras do goleiro continuam. O único de linha do time que cobrou toca
+    de novo (`m.cobrou` limpo; senão a bola ficava parada para sempre no 1 contra 0).
+  - IA: as referências das vagas ocupadas juntas perto da bola com poucos de linha (`comprimirLivre`, `LIVRE.compressao`) e a
+    pressão Alta com até `LIVRE.pressaoAlta` de linha (jogo reduzido; acima, a tática do time).
+  - Ganchos (`partida.js ganchosLivre = {cobranca, comprimir}`): o `livre.js` os liga ao ser carregado; a partida e a IA só os
+    chamam com `m.livre` (`regrasPartida` na montagem da bola parada; `ia-tatica.js referencias`).
+- **`livre-pagina.js`** (DOM, import dinâmico com o `livre.js`): `criarPaginaLivre({hud, logica, mundo, timeHumano,
+  pedidoLivre, comando, acao, soltar})` — a escolha na visão do humano ([meu, adversário]; salva em `localStorage
+  golaco.livre.v1`, em try/catch; com `?tm`, o `livre` do pedido como valor inicial), a pausa MÍNIMA posta no DOM na 1ª vez
+  (os botões `data-so="livre"` "Jogadores <small>N contra M</small>" e "Recomeçar <small>bola no meio</small> | Bola no meu pé";
+  o submenu `#menu-livre`: Voltar, "Meu time − N + [Goleiro]", "Adversário − M + [Goleiro]", Jogar) e a fila da mudança (a
+  ação-objeto entra no 1º passo depois da pausa, como a edição do time). A pausa do Livre (HTML e CSS postos na 1ª vez, ≤ 5
+  linhas, sem rolar em 844×390): Continuar | Replay; Jogadores | Câmera (`.linha-cenas`); Recomeçar <small>bola no meio</small>
+  | Bola no meu pé; Modo de jogo (com `?tm`, "Voltar ao Total Match"); Ajuda — sem Editar time nem Reiniciar. Submenus
+  `.submenu-livre` (o hud.js os fecha e o "voltar" do controle sai deles): `#menu-livre` (Jogadores) e `#menu-camera-livre`
+  (as 6 câmeras em 2 linhas de 3, "Altura − N +", "Distância − N +"); na coluna das opções o segmentado TV | Aproximada dá
+  lugar ao botão `#opcao-camera-livre` com o nome da câmera (abre o submenu; `html.em-livre`). Cara do TM em `css/tm.css`.
+- **Câmeras do Livre** (`render/camera-livre.js`, carregado pelo `livre-pagina.js`: fora do download sem o Livre). As do EA FC
+  (fifplay.com/fc-25-camera-settings, fifauteam.com/fc-26-camera): TV e Aproximada (as de hoje), Ampla (Co-op: 62 m de largura
+  no foco, 24 m de altura, 46 m atrás), Alta (Tactical: 52 m de altura, 24 m atrás, 65°, 76 m de largura), Atrás (End to End:
+  19 m atrás do foco pelo comprimento, 9,5 m de altura, olhando 12 m adiante, fov 42°) e Jogador (Pro: 7,5 m atrás e 3,9 m
+  acima do controlado, olhando 7 m adiante no chão: ele a ~3/4 da altura do quadro, fov 48°); Altura e Distância 0–20 (10 = o perfil; 0 = 0,6×, 20 = 1,5×; a
+  Distância abre o plano junto). `render/camera.js` ganhou só o gancho: `definirExtra(x)` (x.atualizar roda DEPOIS de
+  posicionar a câmera de jogo, fora da câmera do gol, de cinema, do plano geral e da livre dos prints), `yaw` = o do extra,
+  `definirModo` aceita os modos dele e `foco()` o dele — sem o Livre o extra é null e nada muda. A bola parada do humano
+  (#490, `render/bola-parada.js`) vale também no Livre: o plano dela é misturado DEPOIS do extra (`misturarBP`, a mesma mola,
+  entrada e saída da partida) — antes a câmera do Livre cobria o plano e o analógico girava pelo `bp.yaw` de uma câmera
+  escondida (a mira descia na tela em vez de ir para o lado; `teste-livre-tela` H1). Rumo: as de lado em −π/2; Atrás
+  e Jogador com o rumo FIXO do ataque do time do humano (`m.ataca`, 0 ou π) — o `yawEntrada` do main.js lê `cam.yaw`:
+  analógico para cima = para o gol que eu ataco. Troca com o mesmo rumo: transição de 0,6 s; rumo diferente: corte. Limites
+  (`segurarPose`): de lado, perto do lado de cá a câmera fica dentro da caixa da arquibancada de cá (y ≤ 26, z ≤ 70: ela sai do
+  desenho) ou na frente dela (z ≤ 43,5) — saindo da caixa, ela anda pela reta até o ponto olhado e o plano abre na mesma conta
+  (contínua: a borda mais perto pulava até 14 m num quadro); Atrás/Jogador antes das placas do fundo (|x| ≤ 58); Jogador
+  ≥ 3,2 m de altura; depois sobe até sair de qualquer sólido (`estadio-forma.js solidoEm`). Enquadramento (`enquadrar`, em
+  todas as 6): a bola e o controlado (pés e cabeça) dentro de `QUADRO` (|x| ≤ 0,92, y de −0,7 — acima do minimapa do PC — a
+  0,9); fora disso o ponto olhado anda para eles o mínimo que basta (Atrás perto do meu gol, a Distância baixa nas bordas);
+  os limites do foco de Ampla/Alta encolhem com a Distância (`limitesLateral`). Jogador: a troca de controlado para longe
+  (o alvo pula > 3 m e fica a > 8 m do foco: `CORTE_JOGADOR`) corta. Os cantos do lado de cá (`render/cantos-livre.js`,
+  só no Livre, pelo `livre-pagina.js`): o degrau de `FORA.canto` e as paredes de trás com o material dos fundos do jogo
+  (Atrás e Jogador olham pelo comprimento e mostravam o vão: céu, o chão de fora, o mastro); +1 chamada, 152 triângulos. Prefs da página (`golaco.prefs.v1`): `cameraLivre` e
+  `cameraAjuste {altura, distancia}`; a da partida (`camera`) não muda e volta ao sair do Livre. C/R3 no Livre = a próxima
+  das 6 (aviso de comando "Câmera: <nome>"). `?camera=<uma das 6>` abre o Livre nela. Na partida, nos treinos e nos pênaltis
+  nada muda. `__golaco.livre.cameras` (os nomes), `.camera` ({modo, anterior, transicao, yaw, dir, fa, fd, altura,
+  distancia}), `.ajustarCamera({altura, distancia})`; `__golaco.definirCamera(nome)` vale para as 6 no Livre. Custo no celular Média
+  (ao vivo, 300 quadros, 5 contra 5): TV 26–33 chamadas e 66 mil triângulos, Ampla 25–32 e 69 mil, Alta 24–30 e 56 mil, Atrás
+  24–36 (quase sempre 29–31: o lado de cá entra no quadro) e 82 mil (máx. 92 mil), Jogador 24–35 e 78 mil; a TV da partida 11
+  × 11 fica em 26–29 e 94 mil (máx. 100 mil): triângulos sempre abaixo dela, chamadas ≤ o teto do pré-jogo (40).
+- **`main.js` / `hud.js` / `index.html`**: `MODOS` com 'livre'; `LIVRE_TM` (pedido `modo: "livre"`: sem trava; "Voltar ao Total
+  Match" sempre na pausa, sem "Simular o resto" nem "Modo de jogo", e manda `tm3d:fim` com `{livre: {placar: [casa, fora]}}`
+  — o TM não conta em nada); entrando no Livre a pausa abre no submenu Jogadores (nunca com `?prints=1`/`?demo=1`); o placar
+  de TV sem o relógio; R = a bola no pé; `data-so="livre"` e `em-livre`; Replay da pausa vale; Editar time escondido.
+  `window.__golaco.livre = {escolha(), ajustar({linha: [a, b], goleiro: [g0, g1]}) (índices dos TIMES; entra no próximo
+  passo), recomecar('meio' | 'pe'), naFila}`. R / "Bola no meu pé" no meio do gol (evento `recomeco` com `livre`) descarta o
+  replay daquele gol (`diretor.descartarGol`): nem toca, nem fica para a próxima saída sem gol (`teste-livre-tela` H3).
+- **Pedido do TM**: `livre: {linha: [casa, fora], goleiro: [casa, fora]}` (opcional; os índices dos times do pedido).
+- **Testes**: `teste-livre` (Node, padrão): A montagem N × M nas bordas e sorteadas, B mudar no meio do jogo (bola no pé de quem
+  sai, controlado, goleiro com a bola nas mãos, bola parada montada), C IA × IA de 2 min (3×3 e 5×5 com os goleiros, 20
+  sementes — as trocas do 3×3 variam ~2,8 por semente: sem o impedimento na IA, 6,7 nas 20 do teste e 6,6 em 60 (antes
+  7,2) —: posse troca com a bola rolando média ≥ 6, chutes ≥ 2, ≤ 10% do tempo dos de linha a > 40 m da bola; 1×0 sem
+  goleiros: chutes e distância), D recomeços com um time sem ninguém de linha, E determinismo e nada vaza para a partida, F o
+  goleiro sozinho no canhão do teste-goleiro = o da partida, G sem impedimento na IA (Livre 11 × 11: quem está à frente da
+  defesa adversária não volta por isso — ≤ 15% voltando, antes 43% — e recebe o passe — ≥ 2%, antes 0,9%), H o bote da IA
+  pela régua da partida (o mesmo estado do gerador com e sem `m.livre`: limpo = roubada, o resto = sem ganhar, 0 faltas;
+  antes todo bote no sorteio roubava). B2 aceita o goleiro controlado (cobrando um tiro de meta): fica em campo e controlado.
+  `teste-livre-tela` (navegador, CI e deploy): A a varredura das poses em Node (as 6 câmeras × Altura/Distância × 3 telas × 2
+  rumos × focos na borda + transições: fora de sólido, sem arquibancada na frente do campo; a contraprova sem os limites
+  reprova; A3 a câmera não pula — ≤ 0,6 m com o foco andando 0,05 m, o limite antigo pulava 14 m —, A4 a bola e o controlado
+  no quadro nas bordas do campo nos dois rumos — antes 1632 de 6600 fora —, A5 o corte do Jogador), B as 6 câmeras pela pausa
+  no PC Alta de dia (a bola e o controlado no quadro, os pontos do gramado à vista com cor de grama; B0b nada cortado na pausa;
+  B2 os cantos — céu em Atrás/Jogador 2,1–2,3% da tela → ~0%; B3 a bola no pé na pequena área e nos cantos do meu gol), C a tecla C, o rumo do analógico, transição × corte, Altura/Distância salvas e de volta na partida, D a pausa e
+  os submenus sem rolar no celular 844×390 e as 6 câmeras de noite, E 568×320 sem nada encostando, F `?tm`, H a junção com a
+  main: H1 a bola parada do humano (TV, Alta, Atrás) com a câmera atrás do cobrador e a "direita" levando a mira para a
+  direita na tela, e a volta à câmera do Livre sem salto; H2 mudar os jogadores na pausa no meio da cobrança mirada sem perder
+  a mira nem a câmera; H3 R no meio do gol sem replay pendente.
+
+## Online 1×1 — duas pessoas, cada uma no seu aparelho (16/10; contrato)
+Pedido do dono (16/10): "implementar esse novo golaço, no modo online, para que duas pessoas consigam jogar uma contra a
+outra". A partida 11×11 de hoje, cada pessoa controlando um time no seu aparelho, por TROCA DE ENTRADAS (lockstep com
+atraso de entrada: o mundo é o mesmo nos dois porque a simulação é determinística e só as entradas viajam). Entrada só no
+Total Match (Mais modos → "Online 3D"; o golaco não ganha entrada de menu). O plano inteiro (netcode, formato na rede,
+transporte, sala, esperas, desconexão, etapas) está no contrato do online da sessão; aqui ficam as peças do golaco, na
+ordem das etapas. **Fora do online nada muda**: `hash-partida`/`hash-igual` IGUAIS em toda etapa.
+
+### Etapa 0 — determinismo blindado
+Dois aparelhos de motores diferentes (V8 de outra versão, SpiderMonkey, JavaScriptCore) têm de chegar ao MESMO mundo
+com as mesmas entradas. As funções de Math que o IEEE 754 não obriga a darem o mesmo resultado (sin, cos, tan, asin, acos,
+atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no último bit entre eles; a lógica já usava o MD
+(`matdet.js`, fdlibm), mas sobravam:
+- **`anim.js`** (pesEQuadril, pose, poseMergulho): a pose ENTRA na simulação — `sim.js` guarda `j.quadril =
+  alturaQuadril(j, m)` a cada passo, a cabeça desenhada decide o cabeceio (`cabecaNaBola`) e o goleiro parte de `j.quadril`
+  no mergulho (`goleiro.js`). Tudo pelo MD agora (44 chamadas). Medido antes (relatório do online, `sensibilidade-math`):
+  com Math de outro motor, `j.quadril` diferia a partir do tick 26 (o hash ficou igual em 4 × 30 mil ticks por sorte da
+  amostra, não por garantia).
+- **`tm-times.js`** (custo do húngaro das vagas do pedido do TM): `MD.hypot` — um empate de ulp trocaria a vaga de um
+  jogador num aparelho só.
+- **`**`** (não dá para instrumentar): `anim.js` e `cabeceio.js` trocaram `a ** 2` por `a * a` (o mesmo valor no V8, que
+  calcula `x ** 2` como `x * x`).
+- **`.sort(`** com comparador total (o resultado de um comparador inconsistente — empate que devolve 1 dos dois lados, NaN —
+  depende do algoritmo de cada motor): `partida.js` (porVaga, + desempate pelo id) e `escalacao.js` (as vagas vazias dos
+  expulsos, + desempate pela ordem das vagas na formação: a mesma ordem do sort estável de antes). Os outros 9 da lógica já
+  desempatavam pelo id.
+- O que é LOCAL nunca entra no passo: yaw da câmera (`controle.js paraMundo` converte o analógico antes de quantizar),
+  preferências, qps, `m.timeHumano` (fora do hash; o caminho de 2 humanos não o lê).
+- Hash: `hash-partida --ref aeb1c685` (4 sementes × 2 cenas × 2 min por tempo; e 8 × 2 × 4 min, a partida inteira: 1568
+  hashes) e `hash-igual --ref aeb1c685` (20 sementes × 3 min) IGUAIS — no V8 o MD e o Math dão o mesmo `j.quadril` quase
+  sempre e a diferença de ulp que sobra não mudou nenhuma decisão nessas partidas (não é garantia de hash igual em toda
+  partida: a etapa 0 podia mudá-lo, e uma partida que divergisse seria só a base nova).
+- **Teste `teste-math-proibido`** (Node, padrão): (A) troca as funções proibidas de Math, `Math.random`, `Date.now` e
+  `performance.now` por versões que contam, ANTES de importar a lógica, e conta só dentro da janela do passo (os times do
+  pedido do TM, `criarPartida`, `passoPartida` com uma edição de cada time e a `entradaDemoPartida` do bit IA): partida
+  inteira com 2 humanos, 2 sementes (a 2ª com os times de um pedido do TM), analógico e botões sorteados e quantizados a
+  1/1024 — meta 0 chamadas (na base: 5,4 milhões em 2 × 2 min); (B) o TEXTO de todo módulo do grafo de imports de
+  `partida.js` e `tm-times.js` (31 módulos; pega os caminhos que as partidas não visitaram, como o pênalti) sem função
+  proibida, relógio nem `**` fora dos comentários — meta 0 linhas (na base: 13); (C) todo `.sort(` com comparador dentro do
+  passo sai estritamente ordenado nos dois sentidos (empate só entre valores idênticos). `--onde` lista de onde vêm as
+  chamadas; `--sementes N --min M` encurta.
+
+### Etapa 1 — dois humanos na lógica
+- `criarPartida({humanos: [0, 1], humano: <o MEU lado>})`: os dois times controlados por pessoas. Cada time humano começa
+  com o MESMO controlado que teria sozinho (o cobrador da saída; o outro, quem a montagem da saída escolhe). `m.trava` só
+  vale com 1 humano. `m.timeHumano` = o meu lado (fora do hash; o caminho de 2 humanos não o lê). Sem a opção:
+  `[humano]`, bit a bit como antes.
+- `passoPartida(m, {0: e0, 1: e1}, acoes)` com 2 humanos: a entrada de cada time vai só para o controlado dele; a bola
+  parada é cobrada pela entrada do time do COBRADOR (`cobrar(m, entradas[c.time])`). Com 1 humano, `entrada` continua
+  sendo a do time do humano.
+- `entradaDemoPartida(m, time = m.timeHumano)`: a IA joga pelo controlado daquele time (o bit IA do online: menu/editor
+  aberto, ausência). Escreve no mundo (`j.ia`, `j.iaT`): no online roda DENTRO do passo, nos dois aparelhos, no mesmo
+  ponto (time 0 antes do 1). `m.iaJoga[t]` segue a marca `ia` da entrada de cada time.
+- Já era por time (nada mudou): troca, TROCAR/GOLEIRO/PRESSÃO, a assistência de recepção, a marcação do controlado.
+- **Teste `teste-dois-humanos`** (Node, padrão): A cada cobrança (saída, lateral, escanteio, tiro de meta, tiro livre,
+  pênalti, dos dois times) sai pelo humano DAQUELE time, com o outro apertando sem parar (48/48), e ninguém cobra pelo
+  humano parado antes do prazo (48/48); B a entrada de um time nunca muda o que o controlado do outro e o time dele
+  recebem (o mesmo passo de novo com a entrada do outro trocada; os outros jogadores são IA e reagem ao mundo, que muda
+  de verdade com a jogada do outro: 0 de 3.996); C TROCAR/GOLEIRO/PRESSÃO de cada um só no time dele; D o bit IA (m.iaJoga
+  e IA × humano até o fim); E criarPartida e o caminho de 1 humano bit a bit. `hash-partida`/`hash-igual` IGUAIS.
+
+### Etapa 2 — a sessão de troca de entradas (`js/online.js`, puro)
+- **Lockstep com atraso de entrada D** (3–10 passos; o rollback ficou fora: medido, não cabe no celular e quebraria som,
+  "GOL!", comemoração e replay). O passo n só roda com as DUAS entradas de n; a minha lida agora vale para n + D. Os D
+  primeiros passos são neutros (vão e voltam como os outros). Cada lado decide o PRÓPRIO D (cada entrada leva o passo
+  dela: não precisa combinar) e ele só SOBE (`ajustarAtraso`, pelo RTT p95 e pelos 30 qps de qualquer um; subir k =
+  produzir já k entradas repetindo a última, sem a AÇÃO).
+- **Tudo que é local sincroniza sozinho:** pausa, replay, comemoração, editor aberto — quem está nelas não roda passo nem
+  produz entrada, e o outro PARA esperando (sem mensagem nenhuma). Do gol até a saída as entradas valem neutras nos dois
+  (`passoOnline`: a cena é local, a regra não). Menu aberto sem parar = bit IA: a IA joga pelo meu controlado DENTRO do
+  passo, nos dois (time 0 antes do 1: ela escreve na memória da IA).
+- **Formato:** 6 bytes por entrada (x e z ±1024 em 12 bits, botões 15 bits + `repete`, bits IA e AÇÃO); a entrada LOCAL
+  passa pela mesma codificação antes da simulação (`quantizada`). Pacote do canal 'jogo' com todas as entradas não
+  confirmadas (até 16), o ack, o passo atual e o eco do relógio (RTT); inválido = descartado.
+- **Relógio:** quem fica à frente (média de ~0,5 s da vantagem > 1 passo) roda 1 passo a menos no quadro
+  (`passosDoQuadro`, como a vantagem de quadro do GGPO); parado esperando o outro, o tempo parado NÃO é recuperado
+  depois (correr para alcançar gasta a folga do D e vira outra parada).
+- **Ações** (a edição do time): marcadas na entrada do passo (bit AÇÃO) e mandadas pelo canal confiável; quem recebe
+  espera a ação antes de rodar aquele passo; a de time trocado é recusada.
+- **Dessincronia:** `hashMundo` a cada 60 passos pelo canal de controle; a 1ª diferença acusa (`s.dessinc`).
+- **Conexão para a tela:** `estadoConexao` — 'instavel' sem pacote há 0,75 s, 'aguardando' parado ou sem pacote há 5 s.
+- **Teste `teste-online`** (Node, padrão; `tools/lib/rede-memoria.mjs`): O1 formato (100 mil + extremos; pacotes
+  inválidos), O2 o mesmo jogo nos dois = a referência sem rede em 5 redes (15±10; 40±20 com 2% de perda; 80±40 com 5%;
+  B a 30 qps com relógio 0,5% mais rápido; 10% duplicados + degrau 20→120→20 ms + rajada de 300 ms), com replays locais,
+  menu (bit IA) e edições dos dois lados: 0 diferenças; O3 ≤ 1 parada a cada 10 s fora dos replays (medido 0,17–0,33);
+  O7 edições aplicadas nos dois, a de time trocado recusada; O9 ausência de 20 s ("aguardando" em 5,0 s, jogo igual
+  depois); O10 dessincronia acusada nos dois em ≤ 64 passos; O12 ~15 µs por quadro, ~10 KB/s por sentido.
+
+### Etapa 3 — o online na página (`js/online-pagina.js` + `main.js quadroOnline`)
+- Liga com o pedido do TM `modo: "online"` (`online: {sala, semente, nomes, D0, proto, lado}`; a semente é a do
+  anfitrião) ou, nos testes, `?online=<sala>&transporte=bc&lado=0|1` (duas abas pelo BroadcastChannel; `&ia=1` = a IA pelo
+  meu controlado o tempo todo). `online.js` e `online-pagina.js` só por import dinâmico (o download inicial cresce só o
+  gancho no `main.js`/`hud.js`).
+- Transporte: a MessagePort que o TM entrega em resposta ao 'tm3d:pronto' ({tipo: 'tm3d:porta'}; protocolo no topo de
+  `legacy-total-match/js/online3d.js`, seção 5) — {t:'j', b} pacote, {t:'c', m} controle ('acao', 'hash', 'pausa',
+  'retoma', 'abandono'), {t:'estado'} da ligação; {t:'religar'} depois de 5 s sem nada.
+- `quadroOnline`: só roda o passo com as duas entradas; o MEU replay, a comemoração, a minha pausa e o celular em pé
+  seguram só a minha simulação (o outro espera e mostra "Aguardando <nome>…"); menu, Ajuda e o editor abertos NÃO param
+  (`pausado()` do online) — a minha entrada vai com o bit IA. A edição do MEU time vira AÇÃO (canal confiável). O hash a
+  cada 60 passos; um pacote por quadro (também no pré-jogo, o curto no online).
+- Avisos (`#online-aviso`, no meio da tela; `#online-selo` "Conexão instável"): "Aguardando <nome>…", "Pausado por
+  <nome> · 0:52", "Você pausou" com "Continuar a partida" e a contagem de 3 s, "<nome> saiu da partida. Vitória por W.O.",
+  W.O. oferecido (não automático) depois de 90 s sem nada do outro ("Esperar mais" adia 60 s), dessincronia ("Os dois
+  aparelhos ficaram diferentes por um erro do jogo… nada conta").
+- Pausa do online: "Pausar a partida" (3 por jogador, até 60 s cada; só quem pausou retoma) e "Sair da partida" (dois
+  toques; 'abandono' ao outro e 'tm3d:sair' {abandono: true} ao TM = derrota); sem Replay da pausa, Simular o resto,
+  Reiniciar, Modo de jogo/Cenas e a cena de substituição (seguraria a simulação de um lado só). Fim: 'tm3d:fim'
+  {resultado (a súmula: a mesma nos dois), online: {hashFinal | wo: {vencedor, motivo} | dessinc}} (`fimTM(resultado, extra)`).
+- **Teste `teste-online-tela`** (navegador, CI e deploy): duas abas do mesmo Chromium jogando a mesma partida (IA nos dois
+  lados): P1 andam, P2 os hashes iguais (0 de 12), P3 a pausa de A para os dois, B mostra "Pausado por", depois seguem
+  iguais, P4 o menu aberto não para, P5 a partida inteira (?min=0.25) acaba igual nas duas (0 de 36), P6 a pausa do online
+  em 844×390 sem rolar, 0 erros. (O Chromium sem GPU daqui desenha ~6 quadros/s com duas abas: o teste espera passos, não
+  tempo.)

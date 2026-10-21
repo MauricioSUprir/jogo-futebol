@@ -62,6 +62,31 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   (desde 15/10 o Total Match joga as partidas 3D no `golaco/`; ver "Motor 3D do Total Match" abaixo), até o dono decidir
   aposentá-lo. Não copiar nem ler código do `futebol3d/`
   para o projeto novo.
+- **Direção do produto (dono, 16/10): "o modo jogável 3D substituirá todos os modos simulação, e o jogo será um jogo
+  jogável"** — todo modo do Total Match vai virar partida jogável no GOLAÇO (`golaco/`); peça nova já nasce pensando nisso
+  (nada novo só para a simulação). O `golaco/` é PROTÓTIPO: tudo será incorporado e vira o Total Match — modo novo
+  entra pelo TM (Mais modos), não no menu do golaco. **Online 1×1** (pedido de 16/10; seção "Online 1×1" abaixo): duas
+  pessoas, cada uma no seu aparelho, salas privadas por código, sem chat; conexão SEM CONTA e grátis (WebRTC P2P, a
+  sinalização pelo Firebase que o TM já tem, sem TURN); só no TM.
+- **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME em cima do jogador com a bola (`main.js marcarCondutor`,
+  `#nome-condutor` fora do #hud — exceção pedida à "sem narração") e (2) os overalls da tela iguais aos do TM (`elenco.js
+  notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos). **FILA (dono: "o 3 e 4
+  fica pra dps"):** (3) o campinho da escalação do jogo EM PÉ (retrato), não deitado (`escalacao-tela.js`); (4) a cena de
+  substituição no online (hoje desligada no online porque seguraria a simulação de um lado só). Também a escalação
+  editada no TM antes do jogo agora vale no 3D (v374: formação do lado certo jogando fora, posições arrastadas pelo
+  `TM.comp.fieldSlot`, sem o montador automático por cima da do usuário).
+  **Mais para a fila (dono, 17/10: "coloca na lista para depois com limite"):** (5) o goleiro ESPALMA bola alta (hoje
+  só rasteira e meia altura; `goleiro.js`/`anim.js` mergulho, `maoAlcanca`, `teste-mergulho`); (6) na cena de comemoração,
+  a FOTO do autor com o número e o nome (`comemoracao.js` + a tela; a foto vem do pedido do TM); (7) o placar com mais a
+  cara do Total Match, um pouco MAIOR e o relógio com os SEGUNDOS além dos minutos (`hud.js`, `teste-hud-minimo` H10 —
+  continua cabendo no orçamento de HUD do celular).
+  **Ainda para a fila (dono, 17/10: "isso tudo pra depois"):** (8) **URGENTE, o 1º quando voltar:** "A IA NÃO CORRE, NEM
+  PRA DEFENDER, NEM PRA ATACAR, tem que ser mais difícil" — sem a bola, com a bola e na recomposição (medir antes com
+  `teste-intensidade`/`teste-transicao`/o painel: distância e disparadas por jogador, PPDA; comparar com a main); (9)
+  editar o TEMPO de jogo e a DIFICULDADE (na pausa/antes do jogo e vindo do TM pelo pedido); (10) botão de CARRINHO
+  (dividida deslizando; falta/cartão pela Regra 12 em `faltas.js`; cabe no orçamento de HUD do celular); (11) clássico mais
+  PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores (bote mais forte, mais contato), não pelo árbitro (o pedido do TM
+  já traz `partida.classico`).
 - Tudo em **português do Brasil**: textos da interface, comentários e mensagens de commit.
 - Sempre mandar o **link do jogo/app** (GitHub Pages) fora do artifact. **Prints: NÃO mandar mais ao dono** (12/10: "esquece os
   print"); os testes de navegador continuam conferindo a tela, só não se enviam as imagens. Ritmo: uma máquina com várias frentes
@@ -519,6 +544,37 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   que defende NA linha até o chute (Regra 14), a cobrança só acaba quando a bola não pode mais entrar (e depois dela nenhum
   gol conta), 'defesa' só com toque do goleiro, o goleiro da IA lê a cavadinha repetida, a semente sorteada sem `?semente`. Testes: `teste-disputa` (Node),
   `teste-penaltis-tela` (CI) e `legacy-total-match/ferramentas/testar-penaltis.mjs` (senha do Viverde só por `TM_SENHA_VIVERDE`).
+- **Modo Livre 3D** (dono, 16/10: "um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores que
+  eu escolher, contra a quantidade de jogadores que eu escolher, pode ser adaptável durante a partida, assim como a câmera";
+  contrato "Modo Livre" no `CONTRATOS.md`): `?modo=livre`, "Modo Livre <small>N contra M</small>" no "Modo de jogo" e, no TM,
+  "Modo Livre 3D" em "Mais modos" (`legacy-total-match/js/livre3d.js`, `TM.tm3d.jogarLivre`, pedido com `modo: "livre"` e
+  `livre: {linha, goleiro}`; volta sem resultado). `js/livre.js` (puro; `config.js LIVRE`): o mundo da partida com `m.livre`
+  (FORA do hash), 0–10 de linha por lado (o meu ≥ 1) + goleiro liga/desliga; mudar na pausa NÃO recomeça (quem sai vira
+  buraco na vaga, quem entra aparece na vaga tática; o controlado nunca sai); sem relógio, impedimento (nem na IA:
+  `LIVRE.linhaSemDefesa`), faltas e cartões (o bote que seria falta = contato sem apito, `BOTE_SEM_GANHAR`); a câmera da bola
+  parada (#490) entra por cima das do Livre; R no meio do gol descarta o replay dele; time sem jogador de linha passa as cobranças ao outro; IA comprimida perto da bola
+  com poucos jogadores e pressão Alta até 7 de linha. Ganchos `ganchosLivre` no `partida.js` (ligados pelo livre.js).
+  Página (`js/livre-pagina.js`, submenus Jogadores e Câmera, Recomeçar/Bola no meu pé, API `__golaco.livre`), câmeras
+  (`render/camera-livre.js`: TV, Aproximada, Ampla, Alta, Atrás, Jogador + Altura/Distância 0–20; Atrás/Jogador com o rumo
+  FIXO do ataque do meu time, o analógico por ele; C/R3 cicla; nada atravessa arquibancada/placas; bola e controlado sempre no
+  quadro) e `render/cantos-livre.js` (fecha os cantos de cá) — tudo SÓ por import dinâmico. Sem o modo, `hash-partida`/
+  `hash-igual` IGUAIS. Testes: `teste-livre` (Node), `teste-livre-tela` (CI e deploy), `legacy-total-match/ferramentas/
+  testar-livre.mjs` (senha do Viverde só por `TM_SENHA_VIVERDE`). Pendente para o dono: as câmeras novas também na partida.
+- **Online 1×1** (dono, 16/10: "duas pessoas consigam jogar uma contra a outra, no modo jogável"; contrato "Online 1×1" no
+  `CONTRATOS.md`, etapas 0–3): **troca de entradas** (lockstep com atraso D de 3–10 passos, sem rollback) — a simulação é
+  determinística nos dois aparelhos (etapa 0: a pose e o húngaro do TM pelo `matdet.js`, `.sort(` com desempate total;
+  `teste-math-proibido`), a partida aceita dois humanos (etapa 1: `criarPartida({humanos: [0, 1]})`, `passoPartida(m, {0, 1})`,
+  a cobrança pela entrada do time do cobrador; `teste-dois-humanos`), `js/online.js` (puro, etapa 2: 6 bytes por entrada,
+  D que só sobe, freio de quem está à frente, ações pelo canal confiável, hash a cada 60 passos; `teste-online` com a
+  rede de mentira `tools/lib/rede-memoria.mjs`) e a página (etapa 3: `js/online-pagina.js` + `main.js quadroOnline` — só
+  roda o passo com as duas entradas; replay/comemoração/pausa/celular em pé seguram só o MEU lado e o outro espera; menu e
+  editor abertos = bit IA; pausa combinada 3 × 60 s; W.O.; dessincronia; `teste-online-tela` com duas abas pelo
+  BroadcastChannel, `?online=<sala>&transporte=bc&lado=0|1&ia=1`). Lado do TM: `legacy-total-match/js/online3d.js` (sala
+  `salas3d/{código}` no Firebase do TM, WebRTC com STUN e sem TURN, a ligação mora na página do TM e passa ao quadro por
+  uma MessagePort — protocolo no topo do arquivo; `TM.tm3d.jogarOnline`). Testes do TM: `ferramentas/testar-online3d.mjs`
+  (banco falso, WebRTC de verdade no loopback; `--golaco` = com o GOLAÇO de verdade). Sem o online, `hash-partida`/
+  `hash-igual` IGUAIS. Pendente (fora da v1): convite pela lista de amigos, indicador de sinal no HUD, reconexão depois de
+  recarregar, TURN (precisa de conta de adulto), rollback.
 - **Bolas paradas no estilo FIFA** (pedido de 16/10; `mira.js` na lógica; `render/bola-parada.js` + `mira-linha.js` SOB
   DEMANDA; PESQUISA-ETAPA4.md §12, contrato "Cobrança mirada" no CONTRATOS.md): câmera atrás do cobrador no
   escanteio, falta, pênalti e tiro de meta do humano (e no pênalti contra), o analógico pela câmera dela; na cobrança da
@@ -734,6 +790,12 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   (`rae.js` preparaPartida/timesDaPartida; nota, gols e assistências vêm do 3D). O service worker não guarda nada de
   `golaco/` nem de `futebol3d/`. Teste de ponta a ponta: `node ferramentas/testar-3d.mjs` (como montar o site no topo do
   arquivo; `--publica` para a edição pública).
+  Modos só em 3D em "Mais modos": **Pênaltis 3D** (`js/penaltis3d.js`, `jogarPenaltis`, o resultado com as cobranças) e
+  **Modo Livre 3D** (`js/livre3d.js`, `jogarLivre`, treino N contra M que não conta em nada); os dois com o seletor do jogo
+  rápido (Viverde em Especiais, com a senha). Testes: `ferramentas/testar-penaltis.mjs` e `ferramentas/testar-livre.mjs`.
+  **Online 3D** (`js/online3d.js`, `jogarOnline`; dono, 16/10): sala privada por código/link (`?online3d=`), o anfitrião
+  aceita ou recusa, cada um escolhe o SEU time, o anfitrião monta o pedido `modo: "online"`, só o anfitrião grava h2h e
+  ranking, sair no meio = W.O. (fair play). Teste `ferramentas/testar-online3d.mjs [--golaco]`.
 
 ## LANCE A LANCE (`simulador/`) — simulador de partidas (a "bolinha")
 - Canvas 2D, ES modules, **sem build e sem dependências externas**. Identidade: grafite + verde-limão.

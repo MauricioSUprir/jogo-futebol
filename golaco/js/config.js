@@ -1848,3 +1848,11 @@ export const DISPUTA = {
   circulo: { x: [1.7, 0.1], passo: 0.95 },
   esquina: 0.9,                 // m além da linha da área (o goleiro do time que bate, na linha de fundo)
 };
+
+// ------------------------------------------------------------------- Modo Livre (dono, 16/10; js/livre.js, CONTRATOS.md)
+// (o porquê de cada número: o cabeçalho do livre.js e o teste-livre)
+export const LIVRE = {
+  linhaMax: 10, padrao: { linha: [4, 4], goleiro: [true, true] }, relogioMin: 1e6,
+  prioridade: [['ZAG'], ['ATA', 'SA'], ['VOL', 'MC', 'MEI'], ['PE', 'ME'], ['ZAG'], ['PD', 'MD'], ['VOL', 'MC', 'MEI'], ['LE', 'ADE'], ['LD', 'ADD']],
+  saidaDist: 20, compressao: { nCheio: 10, kx: 0.35, kz: 0.45, bola: 0.5 }, pressaoAlta: 7, linhaSemDefesa: 11, afastar: 1.2,
+};

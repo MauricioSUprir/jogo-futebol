@@ -29,6 +29,8 @@ const LISTA = [
   ['cena de substituição e faixa ENTRA/SAI (fila depois do replay, pular, pausa, celular, nada encosta; hash igual)', 'teste-substituicao-tela.mjs', { deploy: true }],
   ['Pênaltis 3D (disputa até o fim, bolinhas, faixa, teclado com a câmera atrás do cobrador, celular, ?tm)', 'teste-penaltis-tela.mjs', { deploy: true }],
   ['bolas paradas no estilo FIFA (câmera atrás do cobrador nos 4 tipos, nada na lente, linha da cobrança mirada, curva; PC e celular)', 'teste-bola-parada-tela.mjs'],
+  ['Modo Livre (pausa sem rolar, as 6 câmeras pela pausa, C/R3, rumo do ataque, Altura/Distância salvas, celular, ?tm)', 'teste-livre-tela.mjs', { deploy: true }],
+  ['Online 1×1 na tela (duas abas pelo BroadcastChannel: o mesmo jogo, pausa combinada, menu sem parar, a partida inteira, a pausa no celular)', 'teste-online-tela.mjs', { deploy: true }],
   // informativo até passar 5 vezes seguidas (a CPU da simulação no celular simulado ainda passa do teto do plano 4.1)
   ['desempenho no celular simulado (CPU 4×, informativo)', 'teste-desempenho-celular.mjs', { informativo: true }],
 ];

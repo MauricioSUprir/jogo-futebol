@@ -19,6 +19,7 @@ import { gerarAtributos, notaNaPosicao, PESOS, CHAVES } from './elenco.js';
 import { FORMACOES, hungaro } from './formacoes.js';
 import { TATICA_PADRAO } from './tatica.js';
 import { clamp } from './mat.js';
+import { MD } from './matdet.js';
 
 /** Ids dos elencos do TM e a base dos ids dos jogadores (casa, fora). */
 export const ELENCOS_TM = ['tmcasa', 'tmfora'];
@@ -133,7 +134,7 @@ function slotEmMetros(slot) {
 function custoVaga(jog, v) {
   const pen = jog.pos === v.pos ? 0 : jog.alt.includes(v.pos) ? 1 : 3;
   const s = jog._slot;
-  const d = s ? Math.hypot(s.x - v.sem.x, s.z - v.sem.z) : 0;
+  const d = s ? MD.hypot(s.x - v.sem.x, s.z - v.sem.z) : 0; // MD: o mesmo custo (e a mesma vaga) em todo motor JS
   return Math.round(d * 10) + pen * 20;
 }
 
@@ -192,6 +193,8 @@ export function timeDoTM(tm, lado, titular = null) {
       id, num: Number.isInteger(+p.num) && +p.num > 0 ? +p.num : i + 1, nome, camisa: camisaDe(p.name || nome), pos,
       alt: ALT[pos] ?? [], nivel, pe: p.foot === 'E' ? 'E' : 'D', attr: atributosDoTM(p, id, pos, nivel),
       tmId: p.tmId ?? null,
+      // o overall que o TM mostra (só a tela: elenco.js notaExibida; o jogo usa o nível comprimido e os atributos)
+      ovrTM: Number.isFinite(+p.overall) ? Math.round(+p.overall) : null,
     };
     jogadores.push(jog);
     mapa[id] = { tmId: p.tmId ?? null, nome: String(p.name || nome), lado };

@@ -21,7 +21,17 @@
    Pênaltis 3D (dono, 15/10: "modo de pênaltis 3d igual ao golaço, só que versão de pênaltis"; js/penaltis3d.js): o mesmo
    pedido com modo: "penaltis" abre só a DISPUTA de pênaltis (Regra 10 da IFAB) com os dois times; o usuário bate com os
    cobradores do time dele e defende com o goleiro dele. Resultado (sem homeGoals):
-   { penaltis: { vencedor: 0|1, placar: [casa, fora], cobrancas: [{ lado, tmId, nome, resultado: "gol"|"defesa"|"fora" }] } } */
+   { penaltis: { vencedor: 0|1, placar: [casa, fora], cobrancas: [{ lado, tmId, nome, resultado: "gol"|"defesa"|"fora" }] } }
+   Modo Livre 3D (dono, 16/10: "um modo livre, como no fifa, um modo de treino ... a quantidade de jogadores que eu escolher";
+   js/livre3d.js): o mesmo pedido com modo: "livre" abre o treino livre (sem relógio, quantos jogadores em cada time e a
+   câmera escolhidos na pausa do 3D), sem trava ("só o meu jogador") e, se vier, com a escolha inicial
+   livre: { linha: [casa, fora] (0–10; o time do usuário ≥ 1), goleiro: [bool, bool] }. Não tem resultado: tanto
+   'tm3d:sair' quanto 'tm3d:fim' ({ livre: { placar } }) só voltam à tela do modo — nada conta.
+   Online 3D (dono, 16/10: "duas pessoas consigam jogar uma contra a outra"; js/online3d.js): o pedido pronto, montado pelo
+   anfitrião da sala, com modo: "online" e online: { sala, semente, nomes, D0, proto, lado } (TM.tm3d.jogarOnline). A
+   ligação entre os aparelhos fica na página do TM: a cada 'tm3d:pronto' (ou 'tm3d:pedePorta') o quadro recebe uma
+   MessagePort ('tm3d:porta'; o protocolo está no topo de js/online3d.js). O fim volta com os dados da mensagem
+   (fns.fim(resultado, dados) / fns.sair(dados): dados.abandono, dados.online). */
 (function (global) {
   "use strict";
   var TM = global.TM;
@@ -108,17 +118,25 @@
     var F = (TM.comp && TM.comp.FORMATIONS) || {};
     var xi = ps.slice(0, 11);
     var gols = xi.filter(function (p) { return p.pos === "GK"; }).length;
-    var pronta = !!F[formacao] && xi.length === 11 && gols === 1 && xi[0].pos === "GK";
+    // escalação montada pelo usuário (formação ou posições do time): vale como está, sem o montador
+    var doUsuario = !!(time.formation || time.posicoes);
+    var pronta = !!F[formacao] && xi.length === 11 && (doUsuario || (gols === 1 && xi[0].pos === "GK"));
+    var remontada = false;
     if (!pronta && TM.comp && TM.comp.buildBestLineup && ps.length >= 11) {
       var lu = TM.comp.buildBestLineup(ps, F[formacao] ? formacao : "auto");
       var porId = {}; ps.forEach(function (p) { porId[p.id] = p; });
       var tit = lu.starters.map(function (id) { return porId[id]; }).filter(Boolean), usado = {};
       tit.forEach(function (p) { usado[p.id] = 1; });
       ps = tit.concat(ps.filter(function (p) { return !usado[p.id]; }));
-      formacao = lu.formation;
+      formacao = lu.formation; remontada = true;
     }
     if (!F[formacao]) formacao = "4-4-2";
-    return { players: ps, formacao: formacao, vagas: F[formacao] || [] };
+    var vagas = (F[formacao] || []).slice();
+    // posição LIVRE arrastada no campinho do TM: a vaga do titular é a dela (TM.comp.fieldSlot)
+    if (!remontada && time.posicoes && TM.comp && TM.comp.fieldSlot) {
+      for (var i = 0; i < 11; i++) { var cp = time.posicoes[i]; if (cp && isFinite(cp[0]) && isFinite(cp[1])) vagas[i] = TM.comp.fieldSlot(cp[0], cp[1]); }
+    }
+    return { players: ps, formacao: formacao, vagas: vagas };
   }
   function kit(shirt, sleeves, shorts, socks, pattern, second, trim, number, collar) {
     return { shirt: shirt, sleeves: sleeves, shorts: shorts, socks: socks, pattern: pattern, second: second, trim: trim, number: number,
@@ -193,7 +211,7 @@
     var casa = uniformeTM(chave, p1, p2, 0), fora = uniformeTM(chave, p1, p2, 1), terceiro = uniformeTM(chave, p1, p2, 2);
     var gk1 = goleiroLonge([p1, p2, terceiro.shirt], r), gk2 = goleiroLonge([p1, p2, terceiro.shirt, gk1], r);
     var sigla = (base.short || time.short || String(time.name || "TME").replace(/[^A-Za-zÀ-ú]/g, "").slice(0, 3)).toUpperCase().slice(0, 3);
-    var esc = escalacao(time, formacao || time.formation);
+    var esc = escalacao(time, time.formation || formacao);
     var jogs = esc.players.slice(0, 18).map(function (p, i) { return jogador3d(p, i, i < 11 ? esc.vagas[i] : null); });
     var xi = jogs.slice(0, 11), nota = xi.length ? Math.round(xi.reduce(function (s, p) { return s + p.overall; }, 0) / xi.length) : 70;
     var estadio = null; try { estadio = clube && TM.data.stadium ? TM.data.stadium(clube).name : null; } catch (e) {}
@@ -292,7 +310,7 @@
     var aviso = el("div", { class: "tm3d-aviso", text: "Abrindo o estádio 3D…" });
     var quadro = el("iframe", { class: "tm3d-quadro", src: api.PASTA + "?tm=" + encodeURIComponent(pedido.id), allow: "fullscreen; autoplay; gamepad", title: T.quadro });
     var sair = el("button", { class: "tm3d-sair", type: "button", title: T.sair, on: { click: function () {
-      TM.ui.confirm(T.confirma, T.confirmaTexto, T.confirmaBotao, function () { termina("sair"); });
+      TM.ui.confirm(T.confirma, T.confirmaTexto, T.confirmaBotao, function () { termina("sair", null, T.sairDados || null); });
     } } }, [TM.ic("x")]);
     var tela = el("div", { class: "tm3d-tela" }, [aviso, quadro, sair]);
     document.body.appendChild(tela);
@@ -308,17 +326,23 @@
       if (e.origin !== global.location.origin || !e.data || e.data.id !== pedido.id) return;
       if (e.source && quadro.contentWindow && e.source !== quadro.contentWindow) return;
       // com o 3D no ar, o botão de sair é o do próprio 3D (pausa): o X do TM some para não ficar por cima do placar
-      if (e.data.tipo === "tm3d:pronto") { pronto = true; aviso.style.display = "none"; sair.style.display = "none"; }
-      else if (e.data.tipo === "tm3d:fim") termina("fim", e.data.resultado || lerResultado());
-      else if (e.data.tipo === "tm3d:sair") termina("sair");
+      if (e.data.tipo === "tm3d:pronto") {
+        pronto = true; aviso.style.display = "none"; sair.style.display = "none";
+        if (fns.pronto) fns.pronto(quadro.contentWindow, pedido.id);
+      }
+      // o quadro pede a porta de novo (Online 3D: recarregou ou perdeu a dela)
+      else if (e.data.tipo === "tm3d:pedePorta") { if (fns.pronto) fns.pronto(quadro.contentWindow, pedido.id); }
+      else if (e.data.tipo === "tm3d:fim") termina("fim", e.data.resultado || lerResultado(), e.data);
+      else if (e.data.tipo === "tm3d:sair") termina("sair", null, e.data);
     }
-    function termina(como, res) {
+    // dados = a mensagem do 3D (o Online 3D lê dados.abandono e dados.online); os outros modos ignoram
+    function termina(como, res, dados) {
       if (acabou) return;
       acabou = true;
       clearTimeout(espera);
       fecha3d();
       try { localStorage.removeItem("tm3d:pedido:" + pedido.id); localStorage.removeItem("tm3d:resultado:" + pedido.id); } catch (e) {}
-      if (como === "fim" && res) fns.fim(res); else fns.sair();
+      if (como === "fim" && res) fns.fim(res, dados || null); else fns.sair(dados || null);
     }
     global.addEventListener("message", ouvir);
     ativo = { tela: tela, ouvir: ouvir };
@@ -365,7 +389,10 @@
      mostra o placar na hora (velocidade instantânea), seguindo o fluxo normal do modo. */
   // v2 = v1 + identidade de cada time + partida (o motor antigo ignora os campos novos)
   function novoPedido(o) {
-    var home = time3d(o.teamA, o.formation), away = time3d(o.teamB, o.formationB);
+    // o cfg.formation do TM é a do time do usuário: jogando fora, ela é a do time B
+    var fA = o.formation, fB = o.formationB;
+    if (o.userSide === 1 && fB == null) { fB = fA; fA = null; }
+    var home = time3d(o.teamA, fA), away = time3d(o.teamB, fB);
     var p = {
       v: 2, id: "j" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36),
       titulo: o.title || "Partida", origem: (TM.ui.current && TM.ui.current()) || "",
@@ -376,7 +403,26 @@
     };
     // Pênaltis 3D: só a disputa (o golaco abre direto nela); sem o campo, a partida de sempre
     if (o.modo === "penaltis") { p.modo = "penaltis"; p.controle = null; }
+    // Modo Livre 3D: o treino livre (o golaco abre na escolha de jogadores); a escolha inicial é opcional
+    else if (o.modo === "livre") {
+      p.modo = "livre"; p.controle = null;
+      var lv = livreDe(o.livre, o.userSide === 1 ? 1 : 0);
+      if (lv) p.livre = lv;
+    }
     return p;
+  }
+  /* Modo Livre: a escolha inicial de jogadores, conferida (o 3D confere de novo): de linha 0–10 em cada time, o time do
+     usuário com ≥ 1 de linha (o humano precisa de alguém para controlar) e o goleiro de cada um ligado ou desligado.
+     Sem a escolha (ou sem linha): null — o 3D começa com a última que ele guardou (5 contra 5 na primeira vez). */
+  function livreDe(l, humano) {
+    if (!l || !l.linha || typeof l.linha.length !== "number") return null;
+    var linha = [0, 1].map(function (t) {
+      var n = Math.round(Number(l.linha[t]));
+      if (!isFinite(n)) n = 4;
+      return Math.max(t === humano ? 1 : 0, Math.min(10, n));
+    });
+    var goleiro = [0, 1].map(function (t) { return !l.goleiro || l.goleiro[t] == null ? true : !!l.goleiro[t]; });
+    return { linha: linha, goleiro: goleiro };
   }
   /* partida 3D fora da tela de jogo do TM (ex.: Rumo ao Estrelato, que tem a própria súmula):
      o = { teamA, teamB, formation?, formationB?, userSide: 0|1, controle?: { tmId }, title, simOpts? }
@@ -396,6 +442,38 @@
       // nada é simulado: sair volta à escolha dos times, sem resultado
       textos: { quadro: "Pênaltis em 3D", sair: "Sair dos pênaltis", confirma: "Sair dos pênaltis 3D?",
         confirmaTexto: "A disputa não conta e você volta à escolha dos times.", confirmaBotao: "Sair", demora: "Voltar" }
+    });
+    return true;
+  }
+  /* Modo Livre 3D: o = { teamA, teamB, userSide: 0|1, title?, simOpts?, livre?: { linha: [a, b], goleiro: [g0, g1] } };
+     fns.sair() quando o usuário sai do treino (ou o 3D não abre) e fns.fim(resultado3d) com resultado3d.livre (o placar do
+     treino, só informativo) — sem fns.fim, o fim também chama fns.sair. Nada é simulado nem registrado. */
+  function jogarLivre(o, fns) {
+    if (!webgl()) { TM.ui.toast("Este aparelho não tem WebGL 2, que o Modo Livre 3D precisa.", "alerta"); if (fns.sair) fns.sair(); return false; }
+    abre3d(novoPedido(Object.assign({}, o, { modo: "livre", title: o.title || "Modo Livre" })), {
+      fim: function (r3) { if (fns.fim) fns.fim(r3 || null); else if (fns.sair) fns.sair(); },
+      sair: function () { if (fns.sair) fns.sair(); },
+      falhou: function (msg) { TM.ui.toast(msg || "O 3D não abriu.", "alerta"); if (fns.sair) fns.sair(); },
+      // nada é simulado: sair volta à escolha dos times, sem resultado
+      textos: { quadro: "Modo Livre em 3D", sair: "Sair do Modo Livre", confirma: "Sair do Modo Livre 3D?",
+        confirmaTexto: "O treino não conta e você volta à escolha dos times.", confirmaBotao: "Sair", demora: "Voltar" }
+    });
+    return true;
+  }
+  /* Online 3D (js/online3d.js): o pedido já vem pronto (o anfitrião monta e manda ao convidado; cada aparelho põe o
+     próprio id, userSide e online.lado). fns.pronto(janelaDoQuadro, id) a cada 'tm3d:pronto'/'tm3d:pedePorta' (entrega
+     a MessagePort); fns.fim(resultado3d, dados) | fns.sair(dados) — dados = a mensagem do 3D (abandono, online);
+     o X do quadro antes do 3D ficar pronto também é abandono ({ abandono: true }). */
+  function jogarOnline(pedido, fns) {
+    if (!webgl()) { TM.ui.toast("Este aparelho não tem WebGL 2, que o Online 3D precisa.", "alerta"); if (fns.sair) fns.sair(null); return false; }
+    if (!pedido || pedido.modo !== "online" || !pedido.online || !pedido.home || !pedido.away || !pedido.id) { if (fns.sair) fns.sair(null); return false; }
+    abre3d(pedido, {
+      pronto: fns.pronto,
+      fim: function (r3, dados) { if (fns.fim) fns.fim(r3, dados); },
+      sair: function (dados) { if (fns.sair) fns.sair(dados); },
+      falhou: function (msg) { TM.ui.toast(msg || "O 3D não abriu.", "alerta"); if (fns.sair) fns.sair(null); },
+      textos: { quadro: "Partida online em 3D", sair: "Sair da partida", confirma: "Sair da partida online?",
+        confirmaTexto: "Conta como derrota por W.O.", confirmaBotao: "Sair", demora: "Sair", sairDados: { abandono: true } }
     });
     return true;
   }
@@ -440,6 +518,8 @@
   api.jogarCfg = jogarCfg;
   api.jogar3d = jogar3d;
   api.jogarPenaltis = jogarPenaltis;
+  api.jogarLivre = jogarLivre;
+  api.jogarOnline = jogarOnline;
   api.escolha = escolha;
   api.fechar = fecha3d;
   TM.tm3d = api;

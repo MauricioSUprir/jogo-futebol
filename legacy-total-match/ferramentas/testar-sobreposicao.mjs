@@ -1,5 +1,6 @@
 // Teste "nada sobre nada": procura botões/cartões que se encostam ou saem da tela, em 7 larguras (celular, tablet, PC).
 // uso (servidor na pasta do jogo, porta 8207): node ferramentas/testar-sobreposicao.mjs <pasta-dos-prints> [rota: modes|ut|ut-squad...]
+// (outro endereço: TM_BASE=http://127.0.0.1:8283 node ferramentas/testar-sobreposicao.mjs ...)
 import pkg from '/opt/node22/lib/node_modules/playwright/index.js';
 import fs from 'fs';
 const { chromium } = pkg;
@@ -14,7 +15,7 @@ for (const [nome, w, h, dpr, mob] of TAMANHOS) {
   if (mob) { const cdp = await ctx.newCDPSession(p); try { await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 47, left: 0, bottom: 34, right: 0 } }); } catch (e) {} }
   const erros = []; p.on('pageerror', e => erros.push(String(e).slice(0, 200)));
   await p.addInitScript(() => { localStorage.setItem('totalmatch:__edition', 'pro'); localStorage.setItem('totalmatch:su_unlocked', '1'); });
-  await p.goto('http://localhost:8207/index.html', { waitUntil: 'networkidle' });
+  await p.goto((process.env.TM_BASE || 'http://localhost:8207') + '/index.html', { waitUntil: 'networkidle' });
   await p.waitForFunction(() => window.TM && TM.ui && TM.ui.go, { timeout: 40000 });
   await p.waitForTimeout(1200);
   if (ROTA.startsWith('ut')) await p.evaluate(() => { const s = TM.ut._new('Real Suprir'); TM.ut.openPack(s, { n: 26, lo: 66, hi: 82, rare: .4 }); TM.ut.autoFill(s); s.coins = 30000; TM.ut.save(); });

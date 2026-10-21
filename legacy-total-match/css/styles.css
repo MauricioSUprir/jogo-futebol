@@ -6558,15 +6558,31 @@ body.theme-light .ut-tab.utk-aba.on .utk-badge{background:#ffffff;color:#0f7a3a}
 @media (min-width: 760px) and (max-width: 1099px) {
   .vit-palco.grade .vit-trilho { --cols: 4; }
 }
+/* os 12 atalhos (com o Pênaltis 3D, o Modo Livre 3D e o Online 3D): até 1279 px, 6 + 6 — com 5 por linha o último ia
+   sozinho para uma 3ª linha e, com os 11 numa linha abaixo de 1280 px, "Modo Livre 3D" e "Dream Team" quebravam em duas */
+@media (min-width: 760px) and (max-width: 1279px) {
+  .screen.vit > .vit-mais { --cols: 6; }
+}
 @media (min-width: 1100px) {
-  /* os 10 atalhos (com o Pênaltis 3D) numa linha só; até 1099 px, 5 por linha = 2 linhas cheias */
-  .screen.vit > .vit-mais { --cols: 10; }
   .vit-mais-b { padding: 16px 6px 14px; font-size: 12.5px; }
 }
-/* celular (grade de 3): o atalho que sobraria sozinho na última linha (10 = 3+3+3+1) ocupa a linha inteira, ícone ao lado
-   do nome — sem um botão perdido no canto */
+/* de 1280 px para cima, os 12 numa linha só (com o Online 3D); até 1439 px a letra e a folga do lado diminuem um pouco
+   para "Modo Livre 3D" não quebrar em duas (medido: 83 px de texto em 87 px de botão em 1280) */
+@media (min-width: 1280px) {
+  .screen.vit > .vit-mais { --cols: 12; }
+}
+@media (min-width: 1280px) and (max-width: 1439px) {
+  .screen.vit > .vit-mais > .vit-mais-b { padding-left: 3px; padding-right: 3px; font-size: 12px; }
+}
+/* celular (3 por linha, numa grade de 6 colunas): a última linha sempre cheia, sem buraco no fim nem um botão perdido
+   no canto — o que sobra sozinho (3+3+3+1) ocupa a linha inteira e os dois que sobram (11 = 3+3+3+2) meia linha cada,
+   com o ícone ao lado do nome */
 @media (max-width: 759px) {
+  .vit-mais { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .vit-mais > .vit-mais-b { grid-column: span 2; min-width: 0; }
   .vit-mais > .vit-mais-b:last-child:nth-child(3n+1) { grid-column: 1 / -1; flex-direction: row; justify-content: center; }
+  .vit-mais > .vit-mais-b:nth-last-child(2):nth-child(3n+1),
+  .vit-mais > .vit-mais-b:last-child:nth-child(3n+2) { grid-column: span 3; flex-direction: row; justify-content: center; }
 }
 /* celular deitado (pouca altura): todos na mesma linha, com cartas menores para caber o ENTRAR */
 @media (min-width: 760px) and (max-height: 520px) {
@@ -6646,3 +6662,60 @@ body.tm3d-aberto{overflow:hidden}
 .pen3d-res{flex:0 0 auto;font-size:11.5px;font-weight:700;color:var(--text-dim)}
 .pen3d-cob.ok .pen3d-res{color:var(--gold)}
 .pen3d-cob.erro .pen3d-res{color:#f05252}
+
+/* ---------- Modo Livre 3D (o treino livre no GOLAÇO 3D: js/livre3d.js) ---------- */
+.livre3d-intro{margin:0 0 12px;font-size:13.5px}
+.livre3d .chosen-team:not(.empty){cursor:pointer}
+.livre3d-aviso{margin:12px 0 0;font-size:13px}
+.livre3d-jogar.is-off{opacity:.5}
+
+/* ---------- Online 3D (a sala 1×1 do GOLAÇO 3D: js/online3d.js) ---------- */
+.o3d{gap:12px}
+.o3d-intro{margin:0;font-size:13.5px}
+.o3d-nota{margin:2px 0 0;font-size:12px;line-height:1.45;color:var(--text-dim)}
+.o3d-entrar{display:flex;flex-direction:column;gap:8px}
+.o3d-codigo{width:100%;box-sizing:border-box}
+.o3d-erro{margin:0;font-size:13px;line-height:1.4;color:#f05252;text-align:center}
+.o3d-aviso{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:12px;background:var(--black-soft);border:1px solid rgba(232,161,60,.5);font-size:13px;line-height:1.4}
+.o3d-aviso-ic{flex:0 0 auto;display:inline-flex;color:#e8a13c}
+.o3d-aviso-ic .tm-ic{width:18px;height:18px}
+.o3d-cartao{display:flex;flex-direction:column;gap:10px;box-sizing:border-box}
+.o3d-txt{margin:0;text-align:left}
+.o3d-acoes{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}
+.o3d-acoes .btn{flex:1 1 140px;width:auto;max-width:none;min-width:0}
+.o3d .btn.is-off{opacity:.5;pointer-events:none}
+.o3d-fim{margin-top:4px}
+.o3d-sala{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;font-size:12.5px;color:var(--text-dim)}
+.o3d-sala-l{text-transform:uppercase;letter-spacing:.12em;font-weight:800;font-size:11px}
+.o3d-sala-c{font-weight:900;letter-spacing:.2em;color:var(--gold);font-size:14px}
+.o3d-sala-n{min-width:0;overflow-wrap:anywhere}
+.o3d-share{display:flex;flex-direction:column;align-items:center;gap:8px}
+.o3d-code{margin:0}
+.o3d-link{max-width:100%;font-size:12px;color:var(--text-dim);text-align:center;overflow-wrap:anywhere}
+.o3d-qr{margin:2px auto}
+.o3d-ligando{display:flex;align-items:center;gap:10px;font-size:14px;line-height:1.35}
+.o3d-seg{margin-left:auto;flex:0 0 auto;font-variant-numeric:tabular-nums;color:var(--text-dim)}
+.o3d-giro{flex:0 0 auto;width:18px;height:18px;box-sizing:border-box;border-radius:50%;border:2px solid rgba(34,197,94,.25);border-top-color:var(--gold);animation:o3d-giro .9s linear infinite}
+@keyframes o3d-giro{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.o3d-giro{animation:none}}
+.o3d-falha{border-color:rgba(240,82,82,.45)}
+.o3d-con{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text-dim)}
+.o3d-barras{display:inline-flex;align-items:flex-end;gap:2px;height:14px;flex:0 0 auto}
+.o3d-barras i{display:block;width:4px;border-radius:1px;background:var(--line-2)}
+.o3d-barras i:nth-child(1){height:5px}
+.o3d-barras i:nth-child(2){height:9px}
+.o3d-barras i:nth-child(3){height:13px}
+.o3d-con.boa{color:var(--gold)}
+.o3d-con.boa .o3d-barras i{background:var(--gold)}
+.o3d-con.media{color:#e8a13c}
+.o3d-con.media .o3d-barras i:nth-child(-n+2){background:#e8a13c}
+.o3d-con.lenta{color:#f05252}
+.o3d-con.lenta .o3d-barras i:nth-child(1){background:#f05252}
+.o3d-time{cursor:default}
+.o3d-time.meu{cursor:pointer}
+.o3d-time.pronto{border-color:rgba(34,197,94,.6)}
+.o3d-time .chosen-info{min-width:0;flex:1 1 auto}
+.o3d-time .chosen-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.o3d-espera{cursor:default}
+.o3d-sigla{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--panel);font-weight:800;font-size:12px;color:var(--text)}
+.o3d-status{margin:0}

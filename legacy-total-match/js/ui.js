@@ -867,7 +867,8 @@
       { cat: "ONLINE",   nome: "Copa Online",           tag: "Todos entram com o código, o mata-mata é sorteado e bot completa.", rota: "copa", capa: MB + "capa-copa.jpg", bg: MB + "online.jpg", pos: "74% 50%", cor: "244,114,182" }
     ];
     var MAIS = [
-      { ic: "🥅", nome: "Pênaltis 3D", rota: "penaltis3d" },
+      { ic: "🥅", nome: "Pênaltis 3D", rota: "penaltis3d" }, { ic: "🏋️", nome: "Modo Livre 3D", rota: "livre3d" },
+      { icone: "wifi", nome: "Online 3D", rota: "online3d" },   // ícone direto (Lucide), sem emoji
       { ic: "💎", nome: "Dream Team", rota: "dream" }, { ic: "🎲", nome: "Draft", rota: "draft" },
       { ic: "🪙", nome: "Arena", rota: "arena" },      { ic: "🏟️", nome: "Grupo", rota: "groupcomp" },
       { ic: "✏️", nome: "Editor", rota: "editor" },    { ic: "💾", nome: "Carreiras", rota: "saves" },
@@ -1277,7 +1278,7 @@
     screen.appendChild(el("div", { class: "vit-mais-h", text: "Mais modos" }));
     screen.appendChild(el("div", { class: "vit-mais" }, MAIS.map(function (x) {
       return el("button", { class: "vit-mais-b", on: { click: entrar(x.rota) } }, [
-        el("span", { class: "vit-mais-ic", text: x.ic }), el("span", { text: x.nome })
+        x.icone ? el("span", { class: "vit-mais-ic" }, [TM.ic(x.icone)]) : el("span", { class: "vit-mais-ic", text: x.ic }), el("span", { text: x.nome })
       ]);
     })));
     // rodape: o tamanho do mundo do jogo e a versao (para conferir se o aparelho atualizou)
