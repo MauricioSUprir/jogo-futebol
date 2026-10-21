@@ -179,6 +179,7 @@ function novoEstadoJogador() {
     tAval: -1, papel: 'ref',                                          // papel: 'ref' | 'apoio' | 'area'
     ofu: 0, ofw: 0, ofDesde: -1, ofCond: -1, ofTem: false,            // ponto de apoio (rel. ao condutor)
     ultCorrida: -99999, corrida: false, corridaCond: -1, alemDesde: -1, // corrida nas costas (alemDesde: tick em que passou da linha)
+    subindo: false, subTick: -1,                                      // sobe com o ataque (IA_ATAQUE.sobeCorrendo; histerese)
     zona: -1,                                                         // ataque à área
     contorna: 0, contornaDesde: -99999, pressaAte: -1,                // desmarque (lado); pressa até o tick
     ultCond: -2, desde: 0, op: '', opDesde: -1, du: 1, dw: 0, correr: false, curta: false, // condutor
@@ -520,9 +521,15 @@ export function apoioTatico(m, j) {
   restricaoParada(m, j, tu * lado, tw * lado, _r);
   // impedido (depois de uma corrida, ou a linha subiu): volta rápido para a linha (FC 26); no Modo Livre não há impedimento
   if (!m.livre && ia.papel !== 'area' && j.x * lado > A.linha && j.x * lado > 0) pressa = true;
-  // o ataque avançou e ele ficou para trás: sobe correndo (a referência anda com a bola a ~k·v da
-  // bola; trotando, o time inteiro ficava atrás da jogada)
-  if ((_r.x - j.x) * lado > IA_ATAQUE.sobeCorrendo) pressa = true;
+  // o ataque avançou e ele ficou para trás: sobe em corrida firme (a referência anda com a bola a ~k·v da bola;
+  // trotando, o time inteiro ficava atrás da jogada), com histerese: entra a sobeCorrendo m, sai a sobeSai m
+  // (só com o ataque progredindo: a bola ou o condutor indo para o gol a ≥ sobeProgride m/s — com a referência que oscila
+  // ou volta, subir em corrida virava vai-e-volta)
+  const atras = (_r.x - j.x) * lado;
+  const vAvanco = Math.max(m.bola.v.x * lado, A.cond ? A.cond.vx * lado : 0);
+  ia.subindo = (atras > IA_ATAQUE.sobeCorrendo && vAvanco >= IA_ATAQUE.sobeProgride)
+    || (ia.subindo && ia.subTick === m.tick - 1 && atras > IA_ATAQUE.sobeSai);
+  ia.subTick = m.tick;
   // a pressa fica por pressaMin s (ligar e desligar a cada tick trocava o modo e o alvo do para())
   if (pressa) ia.pressaAte = m.tick + seg(IA_ATAQUE.pressaMin);
   else if (m.tick < ia.pressaAte && MD.hypot(_r.x - j.x, _r.z - j.z) > IA.chegou * 3) pressa = true;
@@ -538,6 +545,7 @@ export function apoioTatico(m, j) {
   }
   contornar(m, j, ia, _r, ia.papel === 'area' && pressa ? Infinity : tetoLinha(m, A, j), lado);
   j.ia.ramo = ia.papel === 'ref' ? 'apoioRef' : ia.papel === 'apoio' ? 'apoioCurto' : 'area';
+  if (ia.subindo && !pressa) return para(j, _r.x, _r.z, 1, false, 0, 'sobe');
   if (calmo && !pressa) return para(j, _r.x, _r.z, calmo.mag, calmo.correr, 0, calmo.modo);
   return para(j, _r.x, _r.z, 1, true, 0, pressa ? 'pressa' : 'calma');
 }
