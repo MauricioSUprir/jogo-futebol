@@ -14,6 +14,11 @@
 //      junta guarda ≥ 85% da área do descanso (o raio médio dos vértices divididos entre os dois ossos, ao quadrado);
 //   O6 assets: corpo.bin = o tamanho e o sha256 do corpo.json; triângulos por LOD dentro da tabela (LOD0 ≤ 9,5 mil,
 //      LOD1 ≤ 4,2 mil, LOD2 ≤ 1,9 mil, LOD3 ≤ 0,95 mil); 25 ossos; ≤ 4 influências com soma 255.
+//   O7 postura do desenho (dono, 22/10: "os jogadores parecem meio curvados"; esqueleto.js postura), nas poses das
+//      partidas pela velocidade do jogador: joelho do jogador de linha PARADO (< 0,3 m/s) — mediana da dobra ≤ 20° (a
+//      pose do jogo: ~42°); na DISPARADA (≥ 6 m/s) a mediana do joelho muda ≤ 3° (a corrida fica a do jogo); tronco
+//      correndo (3,6–6 m/s) ≤ 17° de inclinação (jogo ~22°); nada muda NO AR (tornozelo mais baixo ≥ 0,25 m); com as
+//      duas mãos a < 0,3 m (segurando a bola) elas nunca saem do lugar (≤ 1 mm); os pés nunca (≤ 1 mm).
 // Na versão sem o corpo humano (main antes da 5.1a) reprova: o esqueleto e os assets não existem.
 //   node tools/teste-ossos.mjs [--sementes 8] [--detalhe]
 import fs from 'node:fs';
@@ -89,8 +94,8 @@ const dobra = (q, a, b, c) => {
   const k = (ux * vx + uy * vy + uz * vz) / (Math.sqrt(ux * ux + uy * uy + uz * uz) * Math.sqrt(vx * vx + vy * vy + vz * vz) || 1);
   return Math.acos(Math.max(-1, Math.min(1, k))) * 57.29578;
 };
-function medir(chave, po, corte) {
-  E.pele(po, S, 0);
+function medir(chave, po, corte, v = 1.5, peso = 1) {
+  E.pele(po, S, 0, v, peso);
   const D = E.desenho;
   st.amostras++;
   for (let k = 0; k < NOSSOS * 12; k++) if (!Number.isFinite(S[k])) { st.nan++; break; }
@@ -186,6 +191,29 @@ function medirSola(p) {
   if (mn > solaSt.max) solaSt.max = mn;
 }
 
+// ------------------------------------------------------------------------------------------------ O7 postura
+const PS7 = new Float64Array(NJ * 3);
+const pst = { parado: [[], []], disparada: [[], []], troncoCorrida: [[], []], noAr: 0, nAr: 0, maoPresa: 0, nMao: 0, pes: 0 };
+const mediana = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[s.length >> 1] : NaN; };
+const inclinacao = q => { const x = q[JE.pescoco * 3] - q[JE.pelve * 3], y = q[JE.pescoco * 3 + 1] - q[JE.pelve * 3 + 1], z = q[JE.pescoco * 3 + 2] - q[JE.pelve * 3 + 2]; return Math.acos(Math.max(-1, Math.min(1, y / Math.hypot(x, y, z)))) * 57.29578; };
+const dist3 = (a, b, j) => Math.hypot(a[j * 3] - b[j * 3], a[j * 3 + 1] - b[j * 3 + 1], a[j * 3 + 2] - b[j * 3 + 2]);
+function medirPostura(po, v, goleiro) {
+  if (!E.postura) return;
+  const q = E.postura(po, v, goleiro ? 0.4 : 1, PS7);
+  const joelho = r => Math.min(dobra(r, JE.quadrilE, JE.joelhoE, JE.tornozeloE), dobra(r, JE.quadrilD, JE.joelhoD, JE.tornozeloD));
+  if (!goleiro && v < 0.3) { pst.parado[0].push(joelho(po)); pst.parado[1].push(joelho(q)); }
+  if (!goleiro && v >= 6) { pst.disparada[0].push(joelho(po)); pst.disparada[1].push(joelho(q)); }
+  if (!goleiro && v >= 3.6 && v < 6) { pst.troncoCorrida[0].push(inclinacao(po)); pst.troncoCorrida[1].push(inclinacao(q)); }
+  let dMax = 0;
+  for (let k = 0; k < NJ * 3; k++) dMax = Math.max(dMax, Math.abs(q[k] - po[k]));
+  if (Math.min(po[JE.tornozeloE * 3 + 1], po[JE.tornozeloD * 3 + 1]) >= 0.25) { pst.nAr++; if (dMax > 1e-6) pst.noAr++; }
+  const me = JE.maoE * 3, md = JE.maoD * 3;
+  if (Math.hypot(po[me] - po[md], po[me + 1] - po[md + 1], po[me + 2] - po[md + 2]) < 0.3) {
+    pst.nMao++; if (dist3(q, po, JE.maoE) > 0.001 || dist3(q, po, JE.maoD) > 0.001) pst.maoPresa++;
+  }
+  for (const j of [JE.tornozeloE, JE.tornozeloD, JE.pontaE, JE.pontaD]) if (dist3(q, po, j) > 0.001) pst.pes++;
+}
+
 // ------------------------------------------------------------------------------------------------ partidas
 const SALTO_TELEPORTE = 0.5;
 const t0 = Date.now();
@@ -202,14 +230,16 @@ for (let sem = 1; sem <= N_SEM; sem++) {
       const pa = pos.get(j.id);
       const corte = pa && Math.hypot(j.x - pa[0], j.z - pa[1]) > SALTO_TELEPORTE;
       pos.set(j.id, [j.x, j.z]);
-      medir(`s${sem}j${j.id}`, po, corte);
+      const vj = Math.hypot(j.vx, j.vz), gol = j.posicao === 'GOL';
+      medir(`s${sem}j${j.id}`, po, corte, vj, gol ? 0.4 : 1);
+      if (i % 3 === 0) medirPostura(po, vj, gol);
       if (i % 4 === 0) for (let p = 0; p < 2; p++) if (j.pes[p].apoio && j.pes[1 - p].apoio === false || (j.pes[p].apoio && i % 8 === 0)) medirSola(p);
     }
     for (const tc of T.tecs) {
       const pa = pos.get('t' + tc.time);
       const corte = pa && Math.hypot(tc.j.x - pa[0], tc.j.z - pa[1]) > SALTO_TELEPORTE;
       pos.set('t' + tc.time, [tc.j.x, tc.j.z]);
-      medir(`s${sem}t${tc.time}`, tc.atu, corte);
+      medir(`s${sem}t${tc.time}`, tc.atu, corte, pa ? Math.hypot(tc.j.x - pa[0], tc.j.z - pa[1]) * 60 : 0);
     }
   }
 }
@@ -223,7 +253,7 @@ for (const o of [{ semente: 5 }, { semente: 7, time: 1 }, { semente: 9, dist: 14
   cenas++;
   for (let k = 0; k < 2400 && !c.acabou; k++) {
     CM.passoCena(c);
-    c.atores.forEach((at, i) => medir(`c${cenas}a${i}`, at.atu, false));
+    c.atores.forEach((at, i) => medir(`c${cenas}a${i}`, at.atu, false, Math.hypot(at.x1 - at.x0, at.z1 - at.z0) * 60, at.goleiro ? 0.4 : 1));
   }
 }
 const seg = (Date.now() - t0) / 1000;
@@ -280,6 +310,15 @@ const vols = [
   volume('cotovelo E', JE.cotoveloE, [JE.maoE], [1, 0, 0], -Math.PI / 2, [6, 7, 21]),
   volume('cotovelo D', JE.cotoveloD, [JE.maoD], [1, 0, 0], Math.PI / 2, [10, 11, 22]),
 ];
+if (!E.postura) reg('O7 postura do desenho (esqueleto.js postura)', 'não existe', 'existe', false);
+else {
+  const [pj, pd] = pst.parado.map(mediana), [dj, dd] = pst.disparada.map(mediana), [tj, td] = pst.troncoCorrida.map(mediana);
+  reg('O7a joelho do jogador parado (mediana da dobra, desenho)', `${fmt(pj, 1)}° → ${fmt(pd, 1)}° (${pst.parado[0].length} poses)`, '≤ 20°', pd <= 20);
+  reg('O7b joelho na disparada (a corrida do jogo)', `${fmt(dj, 1)}° → ${fmt(dd, 1)}°`, 'muda ≤ 3°', Math.abs(dd - dj) <= 3);
+  reg('O7c tronco correndo 3,6–6 m/s (mediana da inclinação)', `${fmt(tj, 1)}° → ${fmt(td, 1)}°`, '≤ 17°', td <= 17);
+  reg('O7d no ar, mãos juntas (segurando a bola) e pés: nada muda', `no ar ${pst.noAr}/${pst.nAr}; mão ${pst.maoPresa}/${pst.nMao}; pés ${pst.pes}`, '0; 0; 0',
+    pst.noAr === 0 && pst.maoPresa === 0 && pst.pes === 0 && pst.nAr > 0);
+}
 reg('O5 volume na dobra a 90° (área da seção perto da junta ÷ a do descanso)',
   vols.map(v => `${v.nome} ${fmt(v.area * 100, 0)}% (${v.n} v)`).join('; '), '≥ 85% em cada', vols.every(v => v.area >= 0.85 && v.n >= 8));
 

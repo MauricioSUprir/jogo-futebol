@@ -2531,6 +2531,17 @@ manequim) até o rosto de cada jogador chegar.
   uniformes dos KITS (e `definirKits` do TM) aceitam também `gola`, `punho`, `barra`, `numero`, `padraoN`, `padraoLargura`,
   `mangaPadrao` e os nomes de padrão da pesquisa (`listras_verticais`, `listras_horizontais`, `faixa_diagonal`,
   `faixa_horizontal_peito`, `metades`). `__golaco.estadio.corpo` = {pedido, pronto, erro, triangulos, niveis, bonecos}.
+- **Postura do desenho** (dono, 22/10: "os jogadores parecem meio curvados, estranhos"): a pose do jogo dobra o joelho
+  ~42° parado (a altura do quadril é da simulação), inclina o tronco ~22° correndo e a cabeça ~30°. `pele(pose, out, off,
+  v, peso)` passa antes por `postura(pose, v, peso, out)` (exportada, com `POSTURA`): o quadril e tudo acima sobem até
+  6,5 cm com os PÉS no lugar (o joelho refeito pela IK com as medidas do jogo, nenhum abaixo de 10° de dobra), inteiro até
+  2,4 m/s e nada a partir de 5,6 m/s (a corrida fica a do jogo); a inclinação do tronco acima de 9° cai 55% (em volta da
+  pelve); a cabeça que cai à frente do tronco acima de 17° cai 60%. Nada no ar (tornozelo mais baixo ≥ 0,13–0,22 m), deitado
+  (tronco ≥ 32–48°) nem ajoelhado (joelho a < 0,22–0,32 m do chão ou dobrado ≥ 65–85°); com as DUAS mãos a < 0,30–0,45 m
+  (a bola nas mãos do goleiro e do lateral) elas ficam onde o jogo as pôs — senão o braço vai junto, rígido. `v` = a
+  velocidade do boneco em m/s (`main.js` pelos dois últimos passos, o anel do replay pelos passos gravados, a comemoração e
+  a substituição pelos atores; sem ela, 1,5); `peso` 1 (o goleiro 0,4: a base de espera dele é dobrada de verdade). O
+  repouso não muda. Medido nas partidas: joelho parado 38–42° → 10°, tronco correndo 22–24° → 15–17°, cabeça 30° → 23°.
 - **Testes**: `teste-ossos` (Node: juntas ≤ 1 mm, saltos ≤ 0,03%, sola 0–1,5 cm em ≥ 95% do apoio, volume ≥ 85% a 90°,
-  assets), `teste-lod-humano` (Node), `teste-corpo-tela` (navegador, CI: todos desenhados, chamadas ≤ manequim + 1, teto
+  assets, O7 postura: joelho parado ≤ 20°, disparada muda ≤ 3°, tronco correndo ≤ 17°, nada no ar/mãos juntas/pés), `teste-lod-humano` (Node), `teste-corpo-tela` (navegador, CI: todos desenhados, chamadas ≤ manequim + 1, teto
   de triângulos, nada baixado sem `?corpo=humano`, 0 erro).

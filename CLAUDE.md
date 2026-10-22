@@ -68,6 +68,13 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   entra pelo TM (Mais modos), não no menu do golaco. **Online 1×1** (pedido de 16/10; seção "Online 1×1" abaixo): duas
   pessoas, cada uma no seu aparelho, salas privadas por código, sem chat; conexão SEM CONTA e grátis (WebRTC P2P, a
   sinalização pelo Firebase que o TM já tem, sem TURN); só no TM.
+- **Dono, 22/10 (depois do #503):** "você assume o golaço agora, não é mais golaço, é Total Match ... ele já está
+  implementado no Total Match, virou Total Match" — o `golaco/` É o Total Match 3D (eu cuido dele inteiro). Na versão de
+  TESTE com os jogadores reais (edição pro, "Season Update", trancada por chave): "pode botar os patrocinadores sim, é só
+  aquele teste, vamos tirar depois" — patrocínio e marca do fornecedor nas camisas reais são permitidos SÓ nela. "Os
+  jogadores parecem meio curvados, estranhos" → corrigir a postura do corpo novo (só no desenho). FILA logo depois das
+  faces: (1) cena de pós-jogo; (2) cena de intervalo; (3) cenas de cartão; (4) replays de faltas e de jogadas passando na
+  tela enquanto o jogo está parado. Corpo novo funcionando = PR para ele testar (o #503 já foi).
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME em cima do jogador com a bola (`main.js marcarCondutor`,
   `#nome-condutor` fora do #hud — exceção pedida à "sem narração") e (2) os overalls da tela iguais aos do TM (`elenco.js
   notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos). **FILA (dono: "o 3 e 4
@@ -621,7 +628,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   corpo vai no `repouso` do `corpo.json` ou no render). Testes: `teste-ossos`, `teste-lod-humano` (Node), `teste-corpo-tela`
   (navegador). Lições: o tornozelo APOIADO do jogo fica a 8 cm (a pose do treino parado dá 10,2: medir na partida); a torção
   do membro pelas juntas DESENHADAS virava (usar as do jogo na perna); o ombro do desenho tem de subir com o braço (com a
-  queda fixa, o braço erguido esticava e a torção pulava 123°). Rostos reais (versão de teste com senha, edição pro): fotos
+  queda fixa, o braço erguido esticava e a torção pulava 123°); a POSTURA "curvada" (joelho 42° parado) se corrige no
+  desenho (`esqueleto.js postura`: sobe o quadril com os pés no lugar, endireita tronco e cabeça; as mãos juntas na bola
+  ficam) — mão presa no lugar com o ombro subindo fazia o braço pular (O2 66 → 166): o braço vai junto, rígido. Rostos reais (versão de teste com senha, edição pro): fotos
   mais recentes do Commons pelas PÁGINAS (a API dá 429 para o IP desta máquina; miniaturas por thumb.wikimedia.org) e
   as camisas 2026 dos 20 clubes do Brasileirão pesquisadas (cores estimadas por foto; goleiros são o mais incerto).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
