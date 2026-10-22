@@ -271,7 +271,8 @@ export function criarHumano3D(cena, dados, opc = {}) {
     niveis,
     get triangulos() { return tri; },
     /**
-     * itens: [{pose, kit: Float32Array(16 × 4) já linear, ocultar, chave}] — o slot é a posição na lista. alturaPx: a
+     * itens: [{pose, kit: Float32Array(16 × 4) já linear, ocultar, chave, v (m/s), postura (0–1)}] — o slot é a posição na
+     * lista (v e postura: a postura do desenho, esqueleto.js pele). alturaPx: a
      * altura da tela em px reais; teto: o teto de triângulos da qualidade.
      */
     atualizar(itens, camera, alturaPx, teto) {
@@ -286,7 +287,7 @@ export function criarHumano3D(cena, dados, opc = {}) {
         const d = Math.max(0.5, camera.position.distanceTo(centro));
         estLod.alturas[p] = (1.8 * k) / d;
         const off = p * NOSSOS * 12;
-        E.pele(po, ossosF, off);
+        E.pele(po, ossosF, off, it.v, it.postura);
         const ocu = it.ocultar | 0;
         if (ocu) {
           const D = E.desenho;

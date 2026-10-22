@@ -142,6 +142,8 @@ export function lerQuadro(a, t, lista, bp, bq, kitDe = null) {
     it.x = dados[o0 + P] + (dados[o1 + P] - dados[o0 + P]) * f;
     it.z = dados[o0 + P + 1] + (dados[o1 + P + 1] - dados[o0 + P + 1]) * f;
     it.rumo = lerpAng(dados[o0 + P + 2], dados[o1 + P + 2], f);
+    // a velocidade (m/s) entre os dois passos: a postura do desenho (esqueleto.js); no último passo gravado, a do anterior
+    it.v = o1 !== o0 ? Math.hypot(dados[o1 + P] - dados[o0 + P], dados[o1 + P + 1] - dados[o0 + P + 1]) * 60 : (it.v ?? 1.5);
     it.id = id; it.time = a.info[i0] & 1; it.goleiro = (a.info[i0] & 2) !== 0; it.tecnico = (a.info[i0] & 4) !== 0;
     // no replay ninguém está "controlado" (sem anel nem seta: a transmissão não tem cursor); nada oculto (a 1ª pessoa liga
     // o `ocultar` do autor depois, só no plano dela)

@@ -1023,6 +1023,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
       it.pressiona = false; it.relogio = -1; it.tecnico = false; it.ocultar = 0; // (a vaga da lista pode ter sido de um treinador)
       it.kit = a.kit ?? kitDoId(a.id, a.goleiro);
       it.x = lerp(a.x0, a.x1, al); it.z = lerp(a.z0, a.z1, al); it.rumo = lerpAng(a.r0, a.r1, al);
+      it.v = Math.hypot(a.x1 - a.x0, a.z1 - a.z0) / PASSO;
       n++;
     }
   } else if (cenaGol) {
@@ -1036,6 +1037,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
       it.tecnico = false; it.ocultar = 0;
       it.kit = kitDoId(a.id, a.goleiro);
       it.x = lerp(a.x0, a.x1, al); it.z = lerp(a.z0, a.z1, al); it.rumo = lerpAng(a.r0, a.r1, al);
+      it.v = Math.hypot(a.x1 - a.x0, a.z1 - a.z0) / PASSO;
       n++;
     }
   } else for (const j of mundo.jogadores) {
@@ -1050,6 +1052,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     it.tecnico = false; it.ocultar = 0;
     it.kit = kitDe(j);
     it.x = lerp(e.x0, e.x1, alfa); it.z = lerp(e.z0, e.z1, alfa); it.rumo = lerpAng(e.r0, e.r1, alfa);
+    it.v = Math.hypot(e.x1 - e.x0, e.z1 - e.z0) / PASSO; // a postura do desenho (esqueleto.js)
     if (it.controlado) { hx = it.x; hz = it.z; achou = true; }
     n++;
   }

@@ -116,6 +116,7 @@ export function criarEsqueleto(repouso) {
   // para baixo, no chute), mistura com a canela
   const BP = new Float64Array(9), PE_REP = new Float64Array(6);
   let temPeRep = false;
+  let LC = 0.45, LK = 0.45; // coxa e canela do JOGO (do repouso; a postura do desenho refaz o joelho com elas)
   function basePe(po, a, t, q) {
     let fx = po[q] - po[t], fy = po[q + 1] - po[t + 1], fz = po[q + 2] - po[t + 2];
     let l = sq(fx * fx + fy * fy + fz * fz) || 1e-9; fx /= l; fy /= l; fz /= l;
@@ -316,6 +317,8 @@ export function criarEsqueleto(repouso) {
     PE_REP[p * 3 + 2] = dx * BP[6] + dy * BP[7] + dz * BP[8];
   }
   temPeRep = true;
+  LC = sq((R0[JE.joelhoE * 3] - R0[JE.quadrilE * 3]) ** 2 + (R0[JE.joelhoE * 3 + 1] - R0[JE.quadrilE * 3 + 1]) ** 2 + (R0[JE.joelhoE * 3 + 2] - R0[JE.quadrilE * 3 + 2]) ** 2);
+  LK = sq((R0[JE.tornozeloE * 3] - R0[JE.joelhoE * 3]) ** 2 + (R0[JE.tornozeloE * 3 + 1] - R0[JE.joelhoE * 3 + 1]) ** 2 + (R0[JE.tornozeloE * 3 + 2] - R0[JE.joelhoE * 3 + 2]) ** 2);
   {
     const p = JE.peito * 3, n = JE.pescoco * 3;
     let yx = R0[n] - R0[p], yy = R0[n + 1] - R0[p + 1], yz = R0[n + 2] - R0[p + 2];
@@ -342,12 +345,139 @@ export function criarEsqueleto(repouso) {
   for (let h = 0; h < AJ_PAR.length; h++) copiarNaJunta(D0, W0, N_PRINC + h, AJ_PAR[h][0]);
   const INV = inverterRigidas(W0, NOSSOS);
 
+  // ---- POSTURA (dono, 22/10: "os jogadores parecem meio curvados, estranhos"): a pose do jogo dobra o joelho ~42° mesmo
+  // parado (a altura do quadril é da simulação: anim.js, sim.js alturaQuadril — não dá para mexer sem mudar o hash), o
+  // tronco vai a ~22° correndo e a cabeça cai ~30°. Só no DESENHO, antes das juntas do desenho:
+  //  - joelho: o quadril e tudo acima sobem até POSTURA.sobe, com os PÉS NO LUGAR (a IK refaz o joelho; nenhum joelho
+  //    passa de flexMin), inteiro até vJoelho[0] e nada a partir de vJoelho[1] (a corrida fica como a do jogo);
+  //  - tronco: a inclinação acima de inclMin cai a metade (gira em volta da pelve);
+  //  - cabeça: o que ela cai à frente do tronco acima de cabecaMax cai a metade (gira em volta do pescoço);
+  //  - nada no ar (pulo do cabeceio, mergulho: o tornozelo mais baixo acima de ar[0]..ar[1]), deitado (tronco acima de
+  //    inclMax) nem ajoelhado (joelho a < 0,3 m do chão ou dobrado > 65–85°); com as duas mãos juntas (a bola nas mãos
+  //    do goleiro e do lateral) elas ficam onde o jogo as põe; o goleiro com peso menor (a base de espera dele é dobrada
+  //    de verdade).
+  // Contínua em tudo (mínimo e misturas de funções contínuas): nenhum salto novo (teste-ossos O2 e O7).
+  const POSTURA = { sobe: 0.065, flexMin: 10, vJoelho: [2.4, 5.6], inclMin: 9, inclK: 0.55, inclMax: [32, 48], cabecaMax: 17, cabecaK: 0.6, ar: [0.13, 0.22] };
+  // as mãos à parte (a IK do braço do desenho vai até a mão do jogo): com as duas juntas — a bola nas mãos do goleiro e
+  // do lateral — elas não saem do lugar
+  const ACIMA = ['pelve', 'lombar', 'peito', 'pescoco', 'cabeca', 'ombroE', 'cotoveloE', 'ombroD', 'cotoveloD', 'quadrilE', 'quadrilD'].map(n => JE[n]);
+  const TRONCO = ['lombar', 'peito', 'pescoco', 'cabeca', 'ombroE', 'cotoveloE', 'ombroD', 'cotoveloD'].map(n => JE[n]);
+  const MAOS = [[JE.ombroE, JE.maoE], [JE.ombroD, JE.maoD]];
+  const PM = new Float64Array(6), WM = new Float64Array(2);
+  const MAOS_JUNTAS = [0.3, 0.45]; // distância entre as mãos (m): até a 1ª, segurando; a partir da 2ª, soltas
+  const PS = new Float64Array(NJE * 3);
+  const suave = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  /** Dobra (°) na junta b entre a→b e b→c (0 = reta). */
+  function angJunta(po, a, b, c) {
+    const ux = po[b * 3] - po[a * 3], uy = po[b * 3 + 1] - po[a * 3 + 1], uz = po[b * 3 + 2] - po[a * 3 + 2];
+    const wx = po[c * 3] - po[b * 3], wy = po[c * 3 + 1] - po[b * 3 + 1], wz = po[c * 3 + 2] - po[b * 3 + 2];
+    const l = sq((ux * ux + uy * uy + uz * uz) * (wx * wx + wy * wy + wz * wz)) || 1e-9;
+    return Math.acos(Math.max(-1, Math.min(1, (ux * wx + uy * wy + uz * wz) / l))) * 180 / Math.PI;
+  }
+  /** Gira o ponto j de o em volta de c (eixo unitário k) por th. */
+  function girar(o, j, cx, cy, cz, kx, ky, kz, th) {
+    const i = j * 3, x = o[i] - cx, y = o[i + 1] - cy, z = o[i + 2] - cz;
+    const c = Math.cos(th), s = Math.sin(th), d = kx * x + ky * y + kz * z;
+    o[i] = cx + x * c + (ky * z - kz * y) * s + kx * d * (1 - c);
+    o[i + 1] = cy + y * c + (kz * x - kx * z) * s + ky * d * (1 - c);
+    o[i + 2] = cz + z * c + (kx * y - ky * x) * s + kz * d * (1 - c);
+  }
+  /** Joelho por IK (LC, LK) do quadril ao tornozelo, dobrando para o lado do joelho de antes (po). */
+  function ikJoelho(o, po, ih, ij, it) {
+    const h = ih * 3, k = ij * 3, t = it * 3;
+    let ex = o[t] - o[h], ey = o[t + 1] - o[h + 1], ez = o[t + 2] - o[h + 2];
+    const L = sq(ex * ex + ey * ey + ez * ez) || 1e-9; ex /= L; ey /= L; ez /= L;
+    const Lc = Math.min(L, LC + LK - 1e-6);
+    const x = (LC * LC - LK * LK + Lc * Lc) / (2 * Lc), y = sq(Math.max(LC * LC - x * x, 0));
+    let px = po[k] - po[h], py = po[k + 1] - po[h + 1], pz = po[k + 2] - po[h + 2];
+    const pe = px * ex + py * ey + pz * ez; px -= pe * ex; py -= pe * ey; pz -= pe * ez;
+    const lp = sq(px * px + py * py + pz * pz);
+    if (lp < 1e-9) return; // perna do jogo reta: o joelho fica onde estava (já reto)
+    px /= lp; py /= lp; pz /= lp;
+    o[k] = o[h] + ex * x + px * y; o[k + 1] = o[h + 1] + ey * x + py * y; o[k + 2] = o[h + 2] + ez * x + pz * y;
+  }
+  /** A pose po com a postura corrigida, em o. v: velocidade do boneco (m/s); peso: 0–1 (0 = como a do jogo). */
+  function postura(po, v, peso, o) {
+    for (let k = 0; k < NJE * 3; k++) o[k] = po[k];
+    if (!(peso > 0)) return o;
+    const yMin = Math.min(po[JE.tornozeloE * 3 + 1], po[JE.tornozeloD * 3 + 1]);
+    const w = peso * (1 - suave(POSTURA.ar[0], POSTURA.ar[1], yMin));
+    if (w <= 0) return o;
+    // as mãos vão junto com o corpo (o braço inteiro se move rígido: a IK do braço não muda); com as DUAS mãos juntas
+    // (segurando a bola: goleiro, lateral) elas ficam onde o jogo as pôs
+    const me = JE.maoE * 3, md = JE.maoD * 3;
+    const juntas = 1 - suave(MAOS_JUNTAS[0], MAOS_JUNTAS[1], sq((po[me] - po[md]) ** 2 + (po[me + 1] - po[md + 1]) ** 2 + (po[me + 2] - po[md + 2]) ** 2));
+    for (let i = 0; i < 2; i++) {
+      const m3 = MAOS[i][1] * 3;
+      WM[i] = 1 - juntas;
+      PM[i * 3] = po[m3]; PM[i * 3 + 1] = po[m3 + 1]; PM[i * 3 + 2] = po[m3 + 2];
+    }
+    // ajoelhado, deitado, carrinho: nada (o joelho no chão não pode subir; o tronco deitado não "endireita")
+    const flexMax = Math.max(angJunta(po, JE.quadrilE, JE.joelhoE, JE.tornozeloE), angJunta(po, JE.quadrilD, JE.joelhoD, JE.tornozeloD));
+    const joelhoChao = Math.min(po[JE.joelhoE * 3 + 1], po[JE.joelhoD * 3 + 1]);
+    // 1) joelho: sobe o quadril com os pés no lugar
+    const wk = w * (1 - suave(POSTURA.vJoelho[0], POSTURA.vJoelho[1], Number.isFinite(v) ? v : 1.5))
+      * (1 - suave(65, 85, flexMax)) * suave(0.22, 0.32, joelhoChao);
+    if (wk > 0) {
+      const f = POSTURA.flexMin * Math.PI / 180;
+      const dmax = sq(LC * LC + LK * LK + 2 * LC * LK * Math.cos(f));
+      let d = POSTURA.sobe * wk;
+      for (const [ih, it] of [[JE.quadrilE, JE.tornozeloE], [JE.quadrilD, JE.tornozeloD]]) {
+        const h = ih * 3, t = it * 3;
+        const h2 = (po[h] - po[t]) ** 2 + (po[h + 2] - po[t + 2]) ** 2, dy = po[h + 1] - po[t + 1];
+        d = Math.min(d, dmax * dmax > h2 ? sq(dmax * dmax - h2) - dy : 0);
+      }
+      if (d > 1e-5) {
+        for (const j of ACIMA) o[j * 3 + 1] += d;
+        PM[1] += d * WM[0]; PM[4] += d * WM[1];
+        ikJoelho(o, po, JE.quadrilE, JE.joelhoE, JE.tornozeloE);
+        ikJoelho(o, po, JE.quadrilD, JE.joelhoD, JE.tornozeloD);
+      }
+    }
+    // 2) tronco: a inclinação acima de inclMin cai pela metade (eixo horizontal ⟂ à inclinação, na pelve)
+    const p = JE.pelve * 3, n = JE.pescoco * 3;
+    let tx = o[n] - o[p], ty = o[n + 1] - o[p + 1], tz = o[n + 2] - o[p + 2];
+    let lt = sq(tx * tx + ty * ty + tz * tz) || 1e-9;
+    const incl = Math.acos(Math.max(-1, Math.min(1, ty / lt))) * 180 / Math.PI;
+    if (incl > POSTURA.inclMin) {
+      let kx = tz, kz = -tx; const lk = sq(kx * kx + kz * kz); // cima × inclinação = (tz, 0, −tx)
+      if (lk > 1e-6) {
+        kx /= lk; kz /= lk;
+        // deitado (mergulho, queda, carrinho) ou ajoelhado: nada
+        const wt = w * (1 - suave(POSTURA.inclMax[0], POSTURA.inclMax[1], incl)) * (1 - suave(65, 85, flexMax)) * suave(0.22, 0.32, joelhoChao);
+        const th = -(incl - POSTURA.inclMin) * POSTURA.inclK * wt * Math.PI / 180;
+        if (th !== 0) {
+          for (const j of TRONCO) girar(o, j, o[p], o[p + 1], o[p + 2], kx, 0, kz, th);
+          for (let i = 0; i < 2; i++) if (WM[i] > 0) girar(PM, i, o[p], o[p + 1], o[p + 2], kx, 0, kz, th * WM[i]);
+        }
+      }
+    }
+    for (let i = 0; i < 2; i++) { const m3 = MAOS[i][1] * 3; o[m3] = PM[i * 3]; o[m3 + 1] = PM[i * 3 + 1]; o[m3 + 2] = PM[i * 3 + 2]; }
+    // 3) cabeça: o que cai à frente do tronco (peito → pescoço) acima de cabecaMax cai pela metade, no pescoço
+    const c = JE.cabeca * 3, ch = JE.peito * 3;
+    tx = o[n] - o[ch]; ty = o[n + 1] - o[ch + 1]; tz = o[n + 2] - o[ch + 2]; lt = sq(tx * tx + ty * ty + tz * tz) || 1e-9;
+    let hx = o[c] - o[n], hy = o[c + 1] - o[n + 1], hz = o[c + 2] - o[n + 2];
+    const lh = sq(hx * hx + hy * hy + hz * hz) || 1e-9;
+    const ang = Math.acos(Math.max(-1, Math.min(1, (tx * hx + ty * hy + tz * hz) / (lt * lh)))) * 180 / Math.PI;
+    if (ang > POSTURA.cabecaMax) {
+      let kx = ty * hz - tz * hy, ky = tz * hx - tx * hz, kz = tx * hy - ty * hx;
+      const lk = sq(kx * kx + ky * ky + kz * kz);
+      if (lk > 1e-9) {
+        kx /= lk; ky /= lk; kz /= lk;
+        girar(o, JE.cabeca, o[n], o[n + 1], o[n + 2], kx, ky, kz, -(ang - POSTURA.cabecaMax) * POSTURA.cabecaK * w * Math.PI / 180);
+      }
+    }
+    return o;
+  }
+
   /**
    * Matrizes de PELE (S = W × inversa do descanso) dos 25 ossos da pose po (as 19 juntas do jogo, Float32Array como a
    * do anim.js), escritas em out (Float32Array ou Float64Array) a partir de off: 12 floats por osso (3×4 por linhas).
+   * v: a velocidade do boneco (m/s; sem ela, 1,5 = andando); peso 0–1 da postura do desenho (0 = a pose do jogo).
    */
-  function pele(po, out, off = 0) {
-    juntasDesenho(po, D);
+  function pele(po, out, off = 0, v = 1.5, peso = 1) {
+    postura(po, v, peso, PS);
+    juntasDesenho(PS, D);
     mundoDesenho(D, W);
     // escala ao longo do eixo Y de cada osso com eixo
     for (let b = 0; b < N_PRINC; b++) {
@@ -372,6 +502,8 @@ export function criarEsqueleto(repouso) {
   return {
     pele,
     juntasDesenho,
+    postura,
+    POSTURA,
     /** Matrizes de mundo da última pele (com a escala), para os testes. */
     get mundo() { return W; },
     /** As juntas do desenho da última pele e as do descanso. */

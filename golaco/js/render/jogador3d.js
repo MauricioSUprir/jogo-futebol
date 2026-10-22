@@ -631,8 +631,10 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
         itensH.length = nj;
         for (let p = 0; p < nj; p++) {
           const jg = lista[p];
-          const it = itensH[p] ?? (itensH[p] = { pose: null, kit: null, ocultar: 0, chave: 0 });
+          const it = itensH[p] ?? (itensH[p] = { pose: null, kit: null, ocultar: 0, chave: 0, v: 1.5, postura: 1 });
           it.pose = jg.pose; it.kit = linhaKit(jg); it.ocultar = jg.ocultar | 0; it.chave = jg.id;
+          // a postura do desenho (esqueleto.js): pela velocidade do boneco (sem ela, andando); o goleiro com a base de espera
+          it.v = Number.isFinite(jg.v) ? jg.v : 1.5; it.postura = jg.goleiro ? 0.4 : 1;
         }
         const altura = (globalThis.innerHeight || 720) * (globalThis.devicePixelRatio || 1);
         humano.atualizar(itensH, camera, altura, TETO_TRI[qualidade] ?? 6e4);
