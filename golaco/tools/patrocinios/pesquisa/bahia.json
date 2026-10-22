@@ -1,0 +1,174 @@
+{
+ "clube": "Bahia",
+ "chave": "br/Bahia",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Puma",
+  "logo": "bahia__puma.png",
+  "logo_fonte": "https://s3.amazonaws.com/assets-fluminense/sponsors/96/PUMA_Logo_Cat_without-Registration_original.png",
+  "cor_na_camisa": {
+   "casa": "#123a66",
+   "fora": "#ffffff",
+   "terceira": "#d9b36a",
+   "goleiro": "#14294a"
+  }
+ },
+ "patrocinios": [
+  {
+   "nome": "BYD",
+   "posicao": "ombro",
+   "lado": "ambos",
+   "posicao_detalhe": "alto do peito dos dois lados: um acima do escudo (lado esquerdo de quem veste) e outro acima da Puma (lado direito)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "bahia__byd.png",
+   "logo_fonte": "https://repositorio-bahia.s3.amazonaws.com/wp-content/uploads/2026/03/22130334/byd.png",
+   "cor_na_camisa": {
+    "casa": "#123a66",
+    "fora": "#ffffff",
+    "terceira": "#d9b36a",
+    "goleiro": "#14294a"
+   },
+   "largura_rel": 0.15
+  },
+  {
+   "nome": "Famastil",
+   "posicao": "barra_frontal",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "bahia__famastil.png",
+   "logo_fonte": "https://repositorio-bahia.s3.amazonaws.com/wp-content/uploads/2025/11/12193412/logo_famastil_branco.png",
+   "cor_na_camisa": {
+    "casa": "#123a66",
+    "fora": "#ffffff",
+    "terceira": "#d9b36a",
+    "goleiro": "#14294a"
+   },
+   "largura_rel": 0.3
+  },
+  {
+   "nome": "Canaã Alimentos",
+   "posicao": "manga",
+   "lado": "ambos",
+   "orientacao": "vertical",
+   "posicao_detalhe": "nas DUAS mangas, escrito ao longo da manga (lido de baixo para cima); na manga direita o selo do Brasileirão fica logo embaixo",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "bahia__canaa-alimentos.png",
+   "logo_fonte": "https://media-bahia.s3.amazonaws.com/wp-content/uploads/2024/01/15203122/Logo-Canaa-Alimentos.webp",
+   "cor_na_camisa": {
+    "casa": "#123a66",
+    "fora": "#ffffff",
+    "terceira": "#d9b36a",
+    "goleiro": "#14294a"
+   },
+   "largura_rel": 0.14
+  },
+  {
+   "nome": "Banco BMG",
+   "posicao": "acima_numero",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "bahia__banco-bmg.png",
+   "logo_fonte": "https://repositorio-bahia.s3.amazonaws.com/wp-content/uploads/2026/01/05103608/Logo-Bmg-Branco.png",
+   "cor_na_camisa": {
+    "casa": "#123a66",
+    "fora": "#ffffff",
+    "terceira": "#d9b36a",
+    "goleiro": "#14294a"
+   },
+   "largura_rel": 0.36
+  },
+  {
+   "nome": "Viva Sorte Capitalização",
+   "posicao": "abaixo_numero",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "bahia__viva-sorte.png",
+   "logo_fonte": "https://repositorio-bahia.s3.amazonaws.com/wp-content/uploads/2025/06/13151720/viva-sorte.png",
+   "cor_na_camisa": {
+    "casa": "#123a66",
+    "fora": "#ffffff",
+    "terceira": "#d9b36a",
+    "goleiro": "#14294a"
+   },
+   "largura_rel": 0.3
+  },
+  {
+   "nome": "Atacadão dos Pisos",
+   "posicao": "calcao",
+   "posicao_detalhe": "frente do calção, perna direita (a Puma fica embaixo)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "bahia__atacadao-dos-pisos.png",
+   "logo_fonte": "https://repositorio-bahia.s3.amazonaws.com/wp-content/uploads/2024/10/20174456/ATACADAOPISOS-MARCA_branca.png",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#ffffff",
+    "terceira": "#d9b36a",
+    "goleiro": "#14294a"
+   },
+   "largura_rel": 0.15
+  },
+  {
+   "nome": "Axi",
+   "posicao": "calcao",
+   "posicao_detalhe": "parte de trás do calção (aparece nas duas pernas)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "bahia__axi.svg",
+   "logo_fonte": "https://www.axi.com/pt (SVG do cabeçalho do site)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#ffffff",
+    "terceira": "#d9b36a",
+    "goleiro": "#14294a"
+   },
+   "largura_rel": 0.15
+  }
+ ],
+ "fontes": [
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/",
+  "https://bnldata.com.br/medida-provisoria-retira-bets-de-metade-das-camisas-de-clubes-da-serie-a/",
+  "https://www.mktesportivo.com/2026/04/esportiva-bet-assume-o-patrocinio-master-do-esporte-clube-bahia/",
+  "https://focusgn.com/brasil/bahia-encerra-contrato-com-bet-mas-mantem-acordo-com-titulo-de-capitalizacao-do-mesmo-grupo",
+  "https://esporteclubebahia.com.br/ (rodapé PATROCINADORES)",
+  "https://esporteclubebahia.com.br/parceria-retomada/",
+  "https://esporteclubebahia.com.br/reves-fora-2/ (foto Palmeiras x Bahia 08/10/2026)",
+  "https://esporteclubebahia.com.br/deu-bahea-7/ (foto Bahia x Mirassol 11/10/2026, camisa 3)",
+  "https://esporteclubebahia.com.br/reves-na-fonte/ (foto Bahia x Flamengo 18/10/2026)",
+  "https://www.flickr.com/photos/esporteclubebahia/sets/72177720336207282 (vestiário e jogo de 18/10/2026)",
+  "https://www.flickr.com/photos/esporteclubebahia/albums/72177720336207282 (18/10/2026: costas no vestiário com a Canaã nas duas mangas; jogo com '...astil' na barra e o peito vazio)",
+  "https://bnldata.com.br/medida-provisoria-retira-bets-de-metade-das-camisas-de-clubes-da-serie-a/ (18/10/2026: Bahia sem marca no espaço principal)"
+ ],
+ "confianca": "media",
+ "notas": "SEM MÁSTER em outubro de 2026: a Viva Sorte Bet saiu em 17/01, a Esportiva Bet ficou de abril até o fim da Copa do Mundo e, com a MP 1.394/2026 (bets proibidas desde 5–6/10), o peito ficou vazio — conferido nas fotos de 08, 11 e 18/10 (Poder360 18/10 lista o Bahia entre os sete sem máster). Disposição conferida nas fotos do clube: BYD no alto do peito dos dois lados, Famastil na barra da frente, Canaã Alimentos na manga, banco bmg em cima do número, Viva Sorte Capitalização embaixo do número, Atacadão dos Pisos na frente do calção e Axi atrás. Incertezas: (1) em qual manga fica a Canaã (vi na esquerda; a outra manga não apareceu nítida); (2) cores por camisa estimadas pelas fotos (na camisa 1 o BYD de cima do escudo fica sobre a faixa azul e sai branco, o outro sai azul-marinho; na 3 tudo dourado); (3) em 18/10 o time usou a camisa 2 com calção AZUL (não o branco do lançamento), por isso o calção leva logo branco; (4) goleiro: em 18/10 a camisa era amarelo-neon com bmg e Viva Sorte em preto, não a laranja do arquivo de uniformes — a cor do goleiro aqui é a do laranja (azul-marinho) estimada; (5) Brahma/Zé Delivery (anunciados em 08/10) e Consórcio Tradição não aparecem na camisa nas fotos de 11 e 18/10 (ficam em backdrop/placas); Ingresse aparece no meião (fora do formato). O logo da Canaã só existe em 200 px (abaixo dos 400 px pedidos): o site da marca não abre daqui (certificado incompleto). VERIFICAÇÃO (22/10/2026): sem máster confirmado por Poder360 e BNLData (18/10) e pela BNews (28/09: já sem bet no máster quando saiu a MP), e pelas fotos de 18/10 (peito vazio); nenhum anúncio de máster novo até 22/10. Conferido nas fotos de 18/10: bmg em cima do número, Viva Sorte Capitalização embaixo, Famastil na barra (no rodapé do site o arquivo é 'logo_famastil_branco' com o texto 'foxlux': as duas marcas são do Grupo Vellore, e na camisa aparece a Famastil), Atacadão dos Pisos na frente do calção. CORRIGIDO: a Canaã Alimentos vai nas DUAS mangas (foto de costas no vestiário mostra o logo nos dois lados; de frente aparece na manga direita, com o selo do Brasileirão embaixo) — antes estava só na esquerda. Logos conferidos: todos abrem e são as marcas certas; a Canaã continua em 200 px."
+}

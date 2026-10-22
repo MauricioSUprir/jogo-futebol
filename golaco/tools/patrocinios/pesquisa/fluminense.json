@@ -1,0 +1,190 @@
+{
+ "clube": "Fluminense",
+ "chave": "br/Fluminense",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Puma",
+  "logo": "fluminense__puma.png",
+  "logo_fonte": "https://s3.amazonaws.com/assets-fluminense/sponsors/96/PUMA_Logo_Cat_without-Registration_original.png",
+  "cor_na_camisa": {
+   "casa": "#f4efe9",
+   "fora": "#650a18",
+   "terceira": "#e0dccb",
+   "goleiro": "#ffffff"
+  }
+ },
+ "patrocinios": [
+  {
+   "nome": "Superscore",
+   "posicao": "peito",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "fluminense__superscore.svg",
+   "logo_fonte": "https://superscore.live/pt-BR (SVG do cabeçalho, data-test-id=SuperscoreLogo)",
+   "cor_na_camisa": {
+    "casa": "#f4efe9",
+    "fora": "#650a18",
+    "terceira": "#e0dccb",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.55
+  },
+  {
+   "nome": "Superscore",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "costas, em cima do nome",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "fluminense__superscore.svg",
+   "logo_fonte": "https://superscore.live/pt-BR (SVG do cabeçalho)",
+   "cor_na_camisa": {
+    "casa": "#f4efe9",
+    "fora": "#650a18",
+    "terceira": "#e0dccb",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.58
+  },
+  {
+   "nome": "Frescatto",
+   "posicao": "ombro",
+   "lado": "ambos",
+   "posicao_detalhe": "selo pequeno no alto do peito dos dois lados, perto da gola (acima da Puma e acima do escudo)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "fluminense__frescatto.png",
+   "logo_colorido": true,
+   "logo_fonte": "https://s3.amazonaws.com/assets-fluminense/sponsors/2/MARCA_FRESCATTO_PATROCINIO_original.png",
+   "cor_na_camisa": {
+    "casa": "#f4efe9",
+    "fora": "#c8102e",
+    "terceira": "#e0dccb",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.11
+  },
+  {
+   "nome": "Leve Saúde",
+   "posicao": "ombro",
+   "lado": "centro",
+   "posicao_detalhe": "esterno: no meio do alto do peito, entre a Puma e o escudo, acima do máster",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "fluminense__leve-saude.png",
+   "logo_fonte": "https://s3.amazonaws.com/assets-fluminense/sponsors/97/levesaude_original.png (fundo branco tirado)",
+   "cor_na_camisa": {
+    "casa": "#f4efe9",
+    "fora": "#650a18",
+    "terceira": "#e0dccb",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.14
+  },
+  {
+   "nome": "Predialnet",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "dentro do número das costas (no alto de cada algarismo)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "fluminense__predialnet.png",
+   "logo_fonte": "https://s3.amazonaws.com/assets-fluminense/sponsors/87/logo_predialnet_cor_original.png",
+   "cor_na_camisa": {
+    "casa": "#650a18",
+    "fora": "#f4efe9",
+    "terceira": "#035a60",
+    "goleiro": "#1f1d1c"
+   },
+   "largura_rel": 0.08
+  },
+  {
+   "nome": "UNIG (Universidade Iguaçu)",
+   "posicao": "abaixo_numero",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "fluminense__unig.png",
+   "logo_fonte": "https://s3.amazonaws.com/assets-fluminense/sponsors/89/Logo_Colorida_UNIG_-removebg-preview_original.png",
+   "cor_na_camisa": {
+    "casa": "#f4efe9",
+    "fora": "#650a18",
+    "terceira": "#e0dccb",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.3
+  },
+  {
+   "nome": "Mega Seguros",
+   "posicao": "calcao",
+   "posicao_detalhe": "frente do calção, perna direita (o escudo fica na esquerda)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "fluminense__mega-seguros.png",
+   "logo_fonte": "https://s3.amazonaws.com/assets-fluminense/sponsors/101/Logo_Mega_Seguros_original.png",
+   "cor_na_camisa": {
+    "casa": "#650a18",
+    "fora": "#ffffff",
+    "terceira": "#e0dccb",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.12
+  },
+  {
+   "nome": "Zé Delivery",
+   "posicao": "calcao",
+   "posicao_detalhe": "parte de trás do calção, nas DUAS pernas (grená no calção branco)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "fluminense__ze-delivery.png",
+   "logo_fonte": "https://s3.amazonaws.com/assets-fluminense/sponsors/91/ze_delivery_original.png",
+   "cor_na_camisa": {
+    "casa": "#650a18",
+    "fora": "#ffffff",
+    "terceira": "#e0dccb",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.18
+  }
+ ],
+ "fontes": [
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/",
+  "https://bnldata.com.br/medida-provisoria-retira-bets-de-metade-das-camisas-de-clubes-da-serie-a/",
+  "https://static.poder360.com.br/uploads/2026/10/Superscore-passa-a-estampa-blusa-de-times-6-out-2026.pdf",
+  "https://www.netflu.com.br/fluminense-esta-entre-os-cinco-maiores-patrocinios-master-do-brasil-confira/",
+  "http://www.fluminense.com.br/site (rodapé de patrocinadores)",
+  "https://www.flickr.com/photos/oficialflu/sets/72177720336223068 (Fluminense x Santos, 18/10/2026)",
+  "https://www.flickr.com/photos/oficialflu/sets/72177720336276823 (Palmeiras x Fluminense, 21/10/2026, camisa 2)"
+ ],
+ "confianca": "alta",
+ "notas": "Máster: SUPERSCORE (app de estatísticas do grupo Superbet) no lugar da Superbet desde o começo de outubro por causa da MP 1.394/2026; também nas costas em cima do nome. No clássico de 11/10 o clube estampou a frase 'Proibir não é proteger' em protesto (Poder360/BNLData), mas em 18/10 (Santos) e 21/10 (Palmeiras) a camisa já tem SUPERSCORE. Disposição conferida nas fotos oficiais de 18 e 21/10: Frescatto no alto do peito dos dois lados, Leve Saúde no esterno, Predialnet dentro do número, UNIG embaixo do número, Mega Seguros na frente do calção e Zé Delivery atrás. Incertezas: cor exata de cada logo por camisa (estimada nas fotos; na camisa 1 os logos são brancos — o SUPERSCORE tem um contorno grená fino; na 2 grenás; na 3 e no goleiro não vi foto de outubro, estimei creme/branco); a Frescatto sai com as cores próprias (selo vermelho) na camisa branca e branca na tricolor. VERIFICAÇÃO (22/10/2026): Superscore no peito e em cima do nome confirmado por Poder360 e BNLData (18/10) e na foto oficial de 18/10 (Fluminense x Santos, 2048 px): Frescatto no alto do peito, Leve Saúde no esterno, Superscore no peito, Predialnet nos algarismos, UNIG embaixo do número. AJUSTE: o Zé Delivery aparece atrás do calção nas duas pernas (antes só 'parte de trás'). Logos conferidos: todos abrem e são as marcas certas."
+}

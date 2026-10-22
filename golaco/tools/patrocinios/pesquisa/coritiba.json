@@ -1,0 +1,195 @@
+{
+ "clube": "Coritiba",
+ "chave": "br/Coritiba",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Diadora",
+  "logo": "coritiba__diadora.png",
+  "logo_fonte": "https://commons.wikimedia.org/wiki/File:Diadora_logo.svg (miniatura de 3840 px, https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Diadora_logo.svg/3840px-Diadora_logo.svg.png; só a flecha, a parte conectada do desenho, sem a palavra \"diadora\" — é o que vai no peito)",
+  "posicao": "peito, no centro, logo abaixo da gola (o escudo fica no meio das faixas verdes); na camisa vai só o símbolo da flecha",
+  "cor_na_camisa": {
+   "casa": "#111111",
+   "fora": "#ffffff",
+   "terceira": "#203a52",
+   "goleiro": "#ffffff",
+   "goleiro2": "#c8ccd0"
+  },
+  "largura_rel": 0.07
+ },
+ "patrocinios": [
+  {
+   "nome": "Ademicon",
+   "posicao": "ombro",
+   "lado": "ambos",
+   "posicao_detalhe": "alto do peito dos dois lados, acima das faixas (símbolo da casa em cima de 'ADEMICON')",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "coritiba__ademicon-peito.svg",
+   "logo_fonte": "https://www.ademicon.com.br/api/media/file/ademicon.svg (recomposto EMPILHADO: o símbolo da casa centrado em cima de \"ADEMICON\", como no peito na foto de 17/10; nas costas fica o horizontal)",
+   "cor_na_camisa": {
+    "casa": "#111111",
+    "fora": "#ffffff",
+    "terceira": "#203a52",
+    "goleiro": "#ffffff",
+    "goleiro2": "#c8ccd0"
+   },
+   "largura_rel": 0.15
+  },
+  {
+   "nome": "Ademicon (costas)",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "costas, logo abaixo da gola, acima do número",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "coritiba__ademicon.svg",
+   "logo_fonte": "https://www.ademicon.com.br/api/media/file/ademicon.svg",
+   "cor_na_camisa": {
+    "casa": "#111111",
+    "fora": "#ffffff",
+    "terceira": "#203a52",
+    "goleiro": "#ffffff",
+    "goleiro2": "#c8ccd0"
+   },
+   "largura_rel": 0.3
+  },
+  {
+   "nome": "Foxlux",
+   "posicao": "barra_frontal",
+   "posicao_detalhe": "barra da frente, no centro (desde set/2026)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "coritiba__foxlux.png",
+   "logo_fonte": "https://images.seeklogo.com/logo-png/53/1/foxlux-logo-png_seeklogo-535359.png (fundo branco tirado; o clube usa o mesmo logo em https://cdn.fanbase.com.br/fancontent/54/sponsors/sponsor-117-140926150910.png)",
+   "cor_na_camisa": {
+    "casa": "#111111",
+    "fora": "#ffffff",
+    "terceira": "#203a52",
+    "goleiro": "#ffffff",
+    "goleiro2": "#c8ccd0"
+   },
+   "largura_rel": 0.43
+  },
+  {
+   "nome": "JFK Investimentos",
+   "posicao": "abaixo_numero",
+   "posicao_extra": "no_numero",
+   "posicao_detalhe": "dentro do número das costas, embaixo (bem pequeno, com 'investimentos' embaixo)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "coritiba__jfk-investimentos.png",
+   "logo_fonte": "https://cdn.fanbase.com.br/fancontent/54/sponsors/sponsor-21-230626172919.png (fundo branco tirado, ampliado)",
+   "cor_na_camisa": {
+    "casa": "#111111",
+    "fora": "#ffffff",
+    "terceira": "#203a52",
+    "goleiro": "#ffffff",
+    "goleiro2": "#c8ccd0"
+   },
+   "largura_rel": 0.07
+  },
+  {
+   "nome": "Paraná Banco",
+   "posicao": "abaixo_numero",
+   "posicao_detalhe": "costas, abaixo do nome/número (símbolo do sorriso + 'Paraná Banco' em duas linhas)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "coritiba__parana-banco.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Logo_PB.svg (miniatura de 1280 px; recomposto com \"Paraná\" e \"Banco\" em duas linhas ao lado do símbolo, como nas costas, e o sorriso vazado do símbolo)",
+   "cor_na_camisa": {
+    "casa": "#111111",
+    "fora": "#ffffff",
+    "terceira": "#203a52",
+    "goleiro": "#ffffff",
+    "goleiro2": "#c8ccd0"
+   },
+   "largura_rel": 0.26
+  },
+  {
+   "nome": "Master Cargas Brasil",
+   "posicao": "calcao",
+   "lado": "esquerdo",
+   "posicao_detalhe": "calção, frente da perna esquerda de quem veste",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "coritiba__master-cargas.png",
+   "logo_fonte": "https://cdn.fanbase.com.br/fancontent/54/sponsors/sponsor-19-230626172800.png (ampliado; sem o slogan \"TRANSPORTE · LOGÍSTICA · SERVIÇOS · E-COMMERCE\", que não aparece no calção)",
+   "cor_na_camisa": {
+    "casa": "#111111",
+    "fora": "#ffffff",
+    "terceira": "#203a52",
+    "goleiro": "#ffffff",
+    "goleiro2": "#c8ccd0"
+   },
+   "largura_rel": 0.16
+  },
+  {
+   "nome": "DS Indústria de Peças Automotivas",
+   "posicao": "calcao",
+   "lado": "ambos",
+   "posicao_extra": "calcao_tras",
+   "posicao_detalhe": "calção, parte de trás (desde a 19ª rodada, contra o Palmeiras)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "coritiba__ds.png",
+   "logo_fonte": "https://mirassolfc.com.br/cdn/shop/files/5ac87f4f-1_1_b22e23e7-e4f2-4d71-afe4-a8e60cf92ec0.png (mesma marca; o Coritiba usa https://cdn.fanbase.com.br/fancontent/54/sponsors/sponsor-111-240726171739.png)",
+   "cor_na_camisa": {
+    "casa": "#111111",
+    "fora": "#ffffff",
+    "terceira": "#203a52",
+    "goleiro": "#ffffff",
+    "goleiro2": "#c8ccd0"
+   },
+   "largura_rel": 0.16
+  }
+ ],
+ "fontes": [
+  "https://cdn.fanbase.com.br/fancontent/54/media-gallery/news-articles/FabricioBustos-AtleticoMG-1x0-Coritiba_FotoJPPachecoCORITIBA_17-10-2026_01-488.jpg (Atlético-MG x Coritiba, 17/10/2026: frente da camisa 1 e calção)",
+  "https://www.flickr.com/photos/botafogooficial/albums/72177720336138274 (Coritiba x Botafogo, 12/10/2026: costas e calção, camisa rosa de Outubro Rosa)",
+  "https://www.coritiba.com.br/ (patrocinadores: Ademicon, Master Cargas, Paraná Banco, Zé Delivery, JFK Investimentos, DS, Foxlux)",
+  "https://www.abcdacomunicacao.com.br/master-cargas-brasil-e-a-nova-patrocinadora-do-coritiba-ate-2028-e-amplia-presenca-no-futebol-nacional/ (Master Cargas na frente do calção)",
+  "https://maquinadoesporte.com.br/futebol/ainda-sem-patrocinador-principal-coritiba-fecha-com-master-cargas-brasil/",
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/ (18/10: Coritiba não teve bet em 2026; a Reals foi até jan/2026)",
+  "https://mantosdofutebol.com.br/2026/10/sem-bets-nas-camisas-veja-as-solucoes-adotadas-pelos-clubes-do-brasileirao/",
+  "https://www.bandab.com.br/esporte/times/coritiba/coritiba-anuncia-novo-patrocinador-estreia-atletiba/ (11/09: Foxlux \"na barra frontal da camisa\"; o clube \"segue sem o seu chamado patrocinador master\")",
+  "https://www.issoebrasil.com.br/2026/09/as-vesperas-de-completar-30-anos-foxlux.html (25/09: Foxlux na barra frontal, contrato até dez/2027)",
+  "https://diariodopara.com.br/bola/fim-das-bets-veja-os-clubes-que-ja-fecharam-novos-patrocinios/ (05/10: chama a Foxlux de \"espaço máster\" — impreciso, ver notas)",
+  "https://www.footyheadlines.com/pt/7117/clubes-brasileiros-obrigados-a-retirar-patrocinadores-de-apostas-das-camisas-eis-como-estao-a-reagir.html (14/10: Coritiba sem mudança)"
+ ],
+ "confianca": "media",
+ "notas": "Master VAZIO o ano todo depois da Reals Bet (contrato até 31/12/2025, permanência até o fim de janeiro): na foto de 17/10 o meio do peito, abaixo das faixas, está liso. Ademicon nos dois lados do alto do peito e em cima nas costas, Foxlux na barra da frente, JFK dentro do número, Paraná Banco embaixo do número, Master Cargas na frente do calção e DS atrás (vi o DS só na camisa rosa de 12/10). Zé Delivery está na lista de patrocinadores do site mas não achei na camisa (talvez manga — incerto). Em 12/10 o time jogou com a camisa rosa especial (Outubro Rosa 'Sakura') com uma marca pontual 'aam / Amigas...' (campanha) no lugar do master — fora do formato, não incluída. Camisas 2, 3 e goleiros: supus o mesmo desenho; cores estimadas. Logos ampliados: Master Cargas e JFK (fonte com 400 px de caixa). CONFERÊNCIA (verificador, 22/10): a Foxlux (anunciada em 11/09, até dez/2027) é chamada de \"master\"/\"espaço nobre\" por parte da imprensa (Diário do Pará 05/10, Rádio Plug), mas vai na BARRA FRONTAL (Banda B, Isso é Brasil, Rádio Plug) e o meio do peito segue liso na foto de 17/10 — a pesquisa está certa. Mantos do Futebol e footyheadlines: Coritiba sem mudança na rodada sem bets. CORRIGIDO: (1) Diadora: no peito vai só a flecha — logo trocado pela flecha recortada; (2) Ademicon do peito é EMPILHADA (casa em cima do nome; foto de 17/10) — arquivo novo coritiba__ademicon-peito.svg, o horizontal fica nas costas; (3) Paraná Banco em duas linhas e com o sorriso vazado (antes virava um quadrado cheio); (4) Master Cargas sem o slogan."
+}

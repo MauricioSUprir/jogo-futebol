@@ -1,0 +1,361 @@
+{
+ "clube": "Mirassol",
+ "chave": "br/Mirassol",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Athleta",
+  "logo": "mirassol__athleta.png",
+  "logo_fonte": "https://commons.wikimedia.org/wiki/File:Athleta_Sports_Brand_png.png (domínio público; miniatura de 960 px; a Athleta brasileira com as três estrelas, igual ao logo do rodapé do mirassolfc.com.br)",
+  "posicao": "peito, lado direito de quem veste (com as três estrelas em cima)",
+  "cor_na_camisa": {
+   "casa": "#1e4a2c",
+   "fora": "#1e4a2c",
+   "terceira": "#c99a4a",
+   "goleiro": "#dfe9ea",
+   "goleiro2": "#26303e"
+  },
+  "largura_rel": 0.13
+ },
+ "patrocinios": [
+  {
+   "nome": "Guaraná Poty",
+   "posicao": "peito",
+   "posicao_detalhe": "master, meio do peito",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "mirassol__guarana-poty.png",
+   "logo_fonte": "https://images.seeklogo.com/logo-png/11/1/poty-refrigerante-logo-png_seeklogo-111153.png (fundo branco e o anel amarelo tirados: as letras e o contorno ficam, como na camisa de uma cor só; sem o \"Guaraná\" pequeno — o do site do clube, https://mirassolfc.com.br/cdn/shop/files/Frame_70.png, tem só 160 px)",
+   "cor_na_camisa": {
+    "casa": "#1e4a2c",
+    "fora": "#1e4a2c",
+    "terceira": "#c99a4a",
+    "goleiro": "#dfe9ea",
+    "goleiro2": "#26303e"
+   },
+   "largura_rel": 0.55
+  },
+  {
+   "nome": "Rodobens",
+   "posicao": "barra_frontal",
+   "posicao_detalhe": "frente, logo abaixo do master (desde jun/2026)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "mirassol__rodobens.svg",
+   "logo_fonte": "https://www.rodobens.com.br/assets/svg/logo-rodobens-primary.svg",
+   "cor_na_camisa": {
+    "casa": "#1e4a2c",
+    "fora": "#1e4a2c",
+    "terceira": "#c99a4a",
+    "goleiro": "#dfe9ea",
+    "goleiro2": "#26303e"
+   },
+   "largura_rel": 0.42
+  },
+  {
+   "nome": "Seara",
+   "posicao": "ombro",
+   "lado": "ambos",
+   "posicao_detalhe": "alto do peito dos dois lados (uma acima do escudo, outra acima da Athleta)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "mirassol__seara.svg",
+   "logo_fonte": "https://upload.wikimedia.org/wikipedia/commons/5/55/Seara_Alimentos_logo_%282024%29.svg (página https://commons.wikimedia.org/wiki/File:Seara_Alimentos_logo_(2024).svg)",
+   "cor_na_camisa": {
+    "casa": "#1e4a2c",
+    "fora": "#1e4a2c",
+    "terceira": "#c99a4a",
+    "goleiro": "#dfe9ea",
+    "goleiro2": "#26303e"
+   },
+   "largura_rel": 0.15
+  },
+  {
+   "nome": "ecori Energia Solar",
+   "posicao": "ombro",
+   "lado": "centro",
+   "posicao_extra": "peito_alto_centro",
+   "posicao_detalhe": "frente, no centro, entre o escudo/Athleta e o master (só a palavra 'ecori'); também em pé nas laterais das costas",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "mirassol__ecori.png",
+   "logo_fonte": "https://mirassolfc.com.br/cdn/shop/files/logo_ecori_energia_solar_rgb_2.png (só a palavra \"ecori\", sem o \"ENERGIA SOLAR\", como na camisa)",
+   "cor_na_camisa": {
+    "casa": "#1e4a2c",
+    "fora": "#1e4a2c",
+    "terceira": "#c99a4a",
+    "goleiro": "#dfe9ea",
+    "goleiro2": "#26303e"
+   },
+   "largura_rel": 0.14
+  },
+  {
+   "nome": "Construsol",
+   "posicao": "barra_frontal",
+   "lado": "direito",
+   "orientacao": "vertical",
+   "posicao_extra": "lateral",
+   "posicao_detalhe": "frente, em pé ao longo da lateral direita de quem veste (largura_rel = comprimento do logo)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "mirassol__construsol.png",
+   "logo_fonte": "https://mirassolfc.com.br/cdn/shop/files/5f43dd94537ca25fe58fe063f8fb789a.png",
+   "cor_na_camisa": {
+    "casa": "#1e4a2c",
+    "fora": "#1e4a2c",
+    "terceira": "#c99a4a",
+    "goleiro": "#dfe9ea",
+    "goleiro2": "#26303e"
+   },
+   "largura_rel": 0.3
+  },
+  {
+   "nome": "Cozimax",
+   "posicao": "barra_frontal",
+   "lado": "esquerdo",
+   "orientacao": "vertical",
+   "posicao_extra": "lateral",
+   "posicao_detalhe": "frente, em pé ao longo da lateral esquerda de quem veste (largura_rel = comprimento do logo)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "mirassol__cozimax.png",
+   "logo_fonte": "https://mirassolfc.com.br/cdn/shop/files/bf47b7b359ebcdf8ca79fea69814b9a5.png (ampliado de 358 px; o traço branco do símbolo vazado e sem o slogan \"Combina com sua casa\")",
+   "cor_na_camisa": {
+    "casa": "#1e4a2c",
+    "fora": "#1e4a2c",
+    "terceira": "#c99a4a",
+    "goleiro": "#dfe9ea",
+    "goleiro2": "#26303e"
+   },
+   "largura_rel": 0.3
+  },
+  {
+   "nome": "Kodilar",
+   "posicao": "manga",
+   "lado": "ambos",
+   "orientacao": "vertical",
+   "posicao_detalhe": "frente das duas mangas, o oval em pé",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "mirassol__kodilar.png",
+   "logo_fonte": "https://mirassolfc.com.br/cdn/shop/files/baaa4a89-1_1.png",
+   "cor_na_camisa": {
+    "casa": "#1e4a2c",
+    "fora": "#1e4a2c",
+    "terceira": "#c99a4a",
+    "goleiro": "#dfe9ea",
+    "goleiro2": "#26303e"
+   },
+   "largura_rel": 0.13
+  },
+  {
+   "nome": "Natural Life",
+   "posicao": "manga",
+   "lado": "ambos",
+   "posicao_extra": "manga_tras",
+   "posicao_detalhe": "parte de trás das mangas (vista nas costas dos jogadores em 07/10)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "mirassol__natural-life.png",
+   "logo_fonte": "https://images.seeklogo.com/logo-png/35/1/natural-life-logo-png_seeklogo-354203.png (fundo branco tirado; o texto sai vazado da faixa e sem o slogan \"Alimentos do bem\", como na manga)",
+   "cor_na_camisa": {
+    "casa": "#1e4a2c",
+    "fora": "#1e4a2c",
+    "terceira": "#c99a4a",
+    "goleiro": "#dfe9ea",
+    "goleiro2": "#26303e"
+   },
+   "largura_rel": 0.12
+  },
+  {
+   "nome": "RedeSol Supermercados",
+   "posicao": "acima_numero",
+   "posicao_extra": "nuca",
+   "posicao_detalhe": "costas, pequeno, logo abaixo da gola (acima da Pacaembu)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "mirassol__redesol.png",
+   "logo_fonte": "https://mirassolfc.com.br/cdn/shop/files/LOGO_REDESOL_SUPERMERCADOS_RGB.png",
+   "cor_na_camisa": {
+    "casa": "#1e4a2c",
+    "fora": "#1e4a2c",
+    "terceira": "#c99a4a",
+    "goleiro": "#dfe9ea",
+    "goleiro2": "#26303e"
+   },
+   "largura_rel": 0.14
+  },
+  {
+   "nome": "Pacaembu Construtora",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "costas, acima do nome",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "mirassol__pacaembu-construtora.svg",
+   "logo_fonte": "https://pacaembu.com/ (SVG do logo no cabeçalho do site, sem a barra com a seta à direita — nas costas vai só \"PACAEMBU / CONSTRUTORA\"; viewBox corrigido: o \"CONSTRUTORA\" saía cortado embaixo)",
+   "cor_na_camisa": {
+    "casa": "#1e4a2c",
+    "fora": "#1e4a2c",
+    "terceira": "#c99a4a",
+    "goleiro": "#dfe9ea",
+    "goleiro2": "#26303e"
+   },
+   "largura_rel": 0.42
+  },
+  {
+   "nome": "Mtech Pré-moldados",
+   "posicao": "abaixo_numero",
+   "posicao_extra": "no_numero",
+   "posicao_detalhe": "dentro dos algarismos do número das costas (bem pequeno; na camisa é só a palavra 'Mtech')",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "mirassol__mtech.png",
+   "logo_fonte": "https://mirassolfc.com.br/cdn/shop/files/Frame_96_3effb524-9492-4b7d-a322-1b3f25612a43.png (ampliado de 100 px; só a palavra \"Mtech\", sem o quadrado vermelho, a moldura e o \"premoldados protendidos\")",
+   "cor_na_camisa": {
+    "casa": "#1e4a2c",
+    "fora": "#1e4a2c",
+    "terceira": "#c99a4a",
+    "goleiro": "#dfe9ea",
+    "goleiro2": "#26303e"
+   },
+   "largura_rel": 0.06
+  },
+  {
+   "nome": "Santa Maria",
+   "posicao": "abaixo_numero",
+   "posicao_detalhe": "costas, logo abaixo do número",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "mirassol__santa-maria.png",
+   "logo_fonte": "https://mirassolfc.com.br/cdn/shop/files/IMG_5107.png (texto vazado da pílula e sem o slogan \"Cuidamos da sua casa...\", como nas costas)",
+   "cor_na_camisa": {
+    "casa": "#1e4a2c",
+    "fora": "#1e4a2c",
+    "terceira": "#c99a4a",
+    "goleiro": "#dfe9ea",
+    "goleiro2": "#26303e"
+   },
+   "largura_rel": 0.33
+  },
+  {
+   "nome": "DS Indústria de Peças Automotivas",
+   "posicao": "abaixo_numero",
+   "posicao_extra": "costas_baixo",
+   "posicao_detalhe": "costas, perto da barra, abaixo da Santa Maria",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "mirassol__ds.png",
+   "logo_fonte": "https://mirassolfc.com.br/cdn/shop/files/5ac87f4f-1_1_b22e23e7-e4f2-4d71-afe4-a8e60cf92ec0.png",
+   "cor_na_camisa": {
+    "casa": "#1e4a2c",
+    "fora": "#1e4a2c",
+    "terceira": "#c99a4a",
+    "goleiro": "#dfe9ea",
+    "goleiro2": "#26303e"
+   },
+   "largura_rel": 0.36
+  },
+  {
+   "nome": "Lukma",
+   "posicao": "calcao",
+   "lado": "ambos",
+   "posicao_extra": "calcao_tras",
+   "posicao_detalhe": "calção, parte de trás das duas pernas",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "mirassol__lukma.png",
+   "logo_fonte": "https://mirassolfc.com.br/cdn/shop/files/logo_lukma.png",
+   "cor_na_camisa": {
+    "casa": "#1e4a2c",
+    "fora": "#1e4a2c",
+    "terceira": "#c99a4a",
+    "goleiro": "#dfe9ea",
+    "goleiro2": "#26303e"
+   },
+   "largura_rel": 0.16
+  }
+ ],
+ "fontes": [
+  "https://mirassolfc.com.br/ (rodapé com os patrocinadores; fotos do elenco 2º semestre; fotos de 08/10/2026 (Bragantino x Mirassol, costas) e 17/10/2026 (foto oficial do time))",
+  "https://mirassolfc.com.br/cdn/shop/articles/WhatsApp_Image_2026-10-08_at_10.46.05.jpg (costas: RedeSol, Pacaembu, Mtech, Santa Maria, DS, ecori; mangas Natural Life; calção Lukma)",
+  "https://mirassolfc.com.br/cdn/shop/articles/WhatsApp_Image_2026-10-17_at_11.56.56.jpg (frente: Seara, Athleta, ecori, Poty, Rodobens, Kodilar)",
+  "https://mirassolfc.com.br/cdn/shop/articles/athletarosa-pedrozacchi-02.png (camisa Outubro Rosa 2026 com o mesmo desenho de patrocínios)",
+  "https://maquinadoesporte.com.br/?p=234726 (Rodobens logo abaixo do master)",
+  "https://www.meioemensagem.com.br/marketing/seara-anuncia-patrocinio-ao-mirassol (Seara na frente, região do ombro)",
+  "https://www.poder360.com.br/poder-sportsmkt/times-da-serie-a-usam-patrocinios-pontuais-no-lugar-de-bets/ (Mirassol manteve os patrocinadores; Poty na camisa)",
+  "https://www.mktesportivo.com/2026/06/mirassol-anuncia-parceria-estrategica-com-a-rodobens/",
+  "https://diariodopara.com.br/bola/fim-das-bets-veja-os-clubes-que-ja-fecharam-novos-patrocinios/ (05/10: \"A Poty permanece como patrocinadora principal\")",
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/ (18/10: Mirassol com o Guaraná Poty)"
+ ],
+ "confianca": "alta",
+ "notas": "O Mirassol não tinha bet no espaço principal e não mudou com a MP 1.394/2026: Guaraná Poty segue master. Posições conferidas nas fotos de 07/10 e 17/10 (camisa 1). Nas mangas: Kodilar na frente e Natural Life atrás (vi as duas em fotos diferentes do mesmo mês; pode ser uma manga com cada — incerto). Lumavi vai no meião (não está nas posições do formato, ficou de fora). Na camisa 2 e nos goleiros supus o mesmo desenho; cores dos logos estimadas (verde-escuro na 1 e na 2, dourado na 3ª, claro/escuro nos goleiros). Há também goleiro azul (GK3) com logos brancos. Logos ampliados: Cozimax (358 px), Mtech (100 px). O logo do Guaraná Poty é o do seeklogo (só 'Poty', sem 'Guaraná') e o da Athleta não tem as estrelas. CONFERÊNCIA (verificador, 22/10): Poty master confirmado por Poder360 (08/10 e 18/10), Diário do Pará (05/10), Mantos do Futebol e footyheadlines (14/10); posições conferidas nas fotos oficiais de 08/10 (costas), 17/10 (frente) e na camisa Outubro Rosa (Construsol na lateral direita, Cozimax na esquerda, Kodilar nas duas mangas; Natural Life na parte de trás das mangas na foto de 08/10). CORRIGIDO: (1) o logo da Athleta era da Athleta da Gap Inc. (EUA, marca de roupa feminina), outra empresa — trocado pela Athleta brasileira (Commons, domínio público), com as estrelas; (2) logos que viravam mancha na máscara de uma cor: Guaraná Poty (anel amarelo tirado), Mtech (só a palavra), Natural Life, Santa Maria e Cozimax (texto/símbolo vazado e sem slogan); (3) ecori só a palavra; (4) Pacaembu sem a barra com seta e com o \"CONSTRUTORA\" inteiro."
+}
