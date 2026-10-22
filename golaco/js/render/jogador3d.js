@@ -393,7 +393,7 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
   cena.add(anelProx);
 
   // ---- corpo humano (sob demanda)
-  let humano = null, humanoErro = null;
+  let humano = null, humanoErro = null, rostosPedidos = null, versaoRostos = 0;
   const kitsBrutos = { ...KITS };
   if (opc.corpo === 'humano') {
     (async () => {
@@ -403,16 +403,22 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
       cab.colorSpace = THREE.SRGBColorSpace;
       humano = H.criarHumano3D(cena, dados, { qualidade, cabeca: cab });
       humano.definirSombras(sombras);
+      if (rostosPedidos) humano.definirRostos(rostosPedidos.indice, rostosPedidos.base);
+      linhasKit.clear();
     })().catch(e => { humanoErro = String(e?.message ?? e); console.error('corpo humano:', e); });
   }
   const linhasKit = new Map(); // chave da vaga → Float32Array(80)
   const _c = new THREE.Color();
+  let perfilDe = null; // id → {chave (do rosto real), num} (definirPerfis; o Total Match)
   function linhaKit(jg) {
     const nome = NOMES_KIT[kitIdx(jg)];
     const kb = kitsBrutos[nome] ?? KITS.linha0;
-    const pele = pelesLin[Math.floor(sorteio(jg.id, 1) * pelesLin.length)];
-    const num = jg.num ?? (jg.id > 0 && jg.id % 100 > 0 && jg.id % 100 < 100 ? jg.id % 100 : 0);
-    const ch = `${nome}|${jg.id}|${jg.goleiro ? 1 : 0}|${jg.tecnico ? 1 : 0}`;
+    const perfil = perfilDe ? perfilDe(jg.id) : null;
+    const camada = humano && perfil?.chave ? humano.camadaDe(perfil.chave) : 0;
+    const peleReal = humano && perfil?.chave ? humano.peleDe(perfil.chave) : null;
+    const pele = peleReal ? new THREE.Color(peleReal) : pelesLin[Math.floor(sorteio(jg.id, 1) * pelesLin.length)];
+    const num = jg.num ?? perfil?.num ?? (jg.id > 0 && jg.id % 100 > 0 && jg.id % 100 < 100 ? jg.id % 100 : 0);
+    const ch = `${nome}|${jg.id}|${jg.goleiro ? 1 : 0}|${jg.tecnico ? 1 : 0}|${camada}`;
     let L = linhasKit.get(ch);
     if (L) return L;
     L = new Float32Array(80);
@@ -424,7 +430,7 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
     const tipo = TIPO_PADRAO[kb.padrao] ?? 0;
     const n = kb.padraoN ?? (tipo === 1 ? 4 : tipo === 2 ? 5 : 0);
     L[48] = tipo; L[49] = n; L[50] = kb.padraoLargura ?? (n ? 0.5 / n : 0.5); L[51] = kb.mangaPadrao ? 1 : 0;
-    L[52] = jg.goleiro ? 1 : 0; L[53] = jg.tecnico ? 1 : 0; L[54] = jg.tecnico ? 0 : num;
+    L[52] = jg.goleiro ? 1 : 0; L[53] = jg.tecnico ? 1 : 0; L[54] = jg.tecnico ? 0 : num; L[55] = camada;
     _c.set(kb.camisa ?? '#888888');
     const lum = 0.2126 * _c.r + 0.7152 * _c.g + 0.0722 * _c.b;
     put(14, kb.numero, lum > 0.25 ? '#15191b' : '#f2f4f5');
@@ -539,9 +545,18 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
       linhasKit.clear();
     },
     /** O corpo humano (?corpo=humano): pronto, erro, triângulos do último quadro, níveis em uso. */
+    /**
+     * Perfis dos jogadores (Total Match): fn(id) → {chave do rosto real, num} ou null. rostos: {indice, base} — o índice
+     * dos rostos reais e a URL da pasta das texturas (edição pro).
+     */
+    definirPerfis(fn, rostos = null) {
+      perfilDe = fn; linhasKit.clear(); rostosPedidos = rostos;
+      if (humano && rostos) humano.definirRostos(rostos.indice, rostos.base);
+    },
     get humano() {
       return { pedido: opc.corpo === 'humano', pronto: !!humano, erro: humanoErro, triangulos: humano ? humano.triangulos : 0,
-        niveis: humano ? humano.niveis.map(n => n.geo.instanceCount) : null, bonecos: humano ? itensH.length : 0 };
+        niveis: humano ? humano.niveis.map(n => n.geo.instanceCount) : null, bonecos: humano ? itensH.length : 0,
+        rostos: humano ? humano.rostos : null };
     },
     /**
      * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, pressiona, x, z, rumo,
@@ -625,6 +640,7 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
       }
       segs.count = nj * NSEG;
       cabecas.count = cabelos.count = manchas.count = nj;
+      if (humano && humano.versaoRostos !== versaoRostos) { versaoRostos = humano.versaoRostos; linhasKit.clear(); }
       if (humano) {
         // o corpo humano no lugar do manequim (a mancha de contato e as marcas continuam daqui)
         segs.count = 0; cabecas.count = cabelos.count = 0;

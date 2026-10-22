@@ -2151,6 +2151,40 @@ function comando(c, v) {
 }
 
 // ------------------------------------------------------------------ início
+// ---- rostos reais (edição pro do TM): o perfil de cada jogador do pedido e o índice das texturas
+const LIGAS_ROSTOS = ['br'];
+const slugTM = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+function ligarRostosReais() {
+  const base = new URL('../assets/rostos-reais/', import.meta.url);
+  Promise.all(LIGAS_ROSTOS.map(l => fetch(new URL(l + '.json', base)).then(r => (r.ok ? r.json() : {})).catch(() => ({})).then(t => [l, t])))
+    .then(listas => {
+      const indice = {}, ligaDe = {};
+      for (const [l, t] of listas) for (const [k, v] of Object.entries(t)) { indice[k] = v; ligaDe[k] = l; }
+      if (!Object.keys(indice).length) return;
+      const cache = new Map();
+      const perfil = id => {
+        if (cache.has(id)) return cache.get(id);
+        const e = TM.mapa?.[id];
+        let r = null;
+        if (e) {
+          const t = e.lado === 1 ? PEDIDO_TM.away : PEDIDO_TM.home;
+          const p = t?.players?.find(q => q.tmId === e.tmId);
+          if (p) {
+            const fim = `${slugTM(t.name)}__${slugTM(p.nomeCompleto || p.name)}`;
+            const chave = LIGAS_ROSTOS.map(l => `${l}-${fim}`).find(k => indice[k]) ?? null;
+            r = { chave, num: p.num ?? null };
+          }
+        }
+        cache.set(id, r);
+        return r;
+      };
+      // a textura de cada um mora na pasta da liga dele: o índice leva a chave já com a liga ("br-...")
+      const pastas = {};
+      for (const l of LIGAS_ROSTOS) pastas[l] = new URL(l + '/', base);
+      jog3d.definirPerfis(perfil, { indice, base: pastas.br, ligaDe });
+    });
+}
+
 async function iniciar() {
   // Total Match: ?tm sem o pedido (sumiu do armazenamento) — o TM simula a partida
   if (ID_TM && !TM) {
@@ -2209,6 +2243,9 @@ async function iniciar() {
   // a cena de substituição com o máximo de trocas numa parada (5 + 5) desenha 22 + 10 reservas + o quarto árbitro (+ os
   // 2 treinadores)
   jog3d.reservar(22 + 2 * CFG.PARTIDA.subsMax + 1 + (TECNICOS_ON ? IDS_TECNICOS.length : 0));
+  // rostos reais (edição pro do Total Match, a versão de teste com os jogadores reais): cada jogador acha a textura do
+  // rosto dele pela foto do TM ("<liga>-<clube>__<nome>"), carregada só para quem está na partida
+  if (TM && corpoPedido === 'humano' && PEDIDO_TM?.edicao === 'pro') ligarRostosReais();
   marcas = criarMarcas(cena3d.cena, { timeHumano: TIME_HUMANO }); // só a bola alta do meu time ganha marca
   linhaImped = criarLinhaImpedimento(cena3d.cena);
   marcasLat = criarMarcasLateral(cena3d.cena);
