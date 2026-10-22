@@ -98,7 +98,6 @@ const DECL_F = `
 uniform highp sampler2D tKits;
 uniform sampler2D tReg;
 uniform sampler2D tCabeca;
-uniform highp sampler2DArray tRostos;
 uniform sampler2D tDigitos;
 uniform vec4 uNumero; // caixa do número das costas na UV (u0, v0, u1, v1)
 varying vec3 vRest;
@@ -146,17 +145,12 @@ const COR_F = `
 {
   vec3 cor;
   if (vParte > 0.5) {
-    float camada = kit(13).w;
-    if (camada > 0.5) {
-      cor = texture(tRostos, vec3(vUv, camada)).rgb;     // o rosto do próprio jogador (a foto levada à pele da cabeça)
-    } else {
-      vec4 tc = texture(tCabeca, vUv);
-      vec3 pele = kit(11).rgb, tomRB = vec3(0.78, 0.55, 0.43);
-      // a pele da cabeça do Rocketbox no tom do jogador (o cabelo e as sobrancelhas escuros quase não mudam)
-      float lum = dot(tc.rgb, vec3(0.299, 0.587, 0.114));
-      float ehPele = smoothstep(0.18, 0.32, lum);
-      cor = mix(tc.rgb, tc.rgb * pele / tomRB, ehPele);
-    }
+    vec4 tc = texture(tCabeca, vUv);
+    vec3 pele = kit(11).rgb, tomRB = vec3(0.78, 0.55, 0.43);
+    // a pele da cabeça do Rocketbox no tom do jogador (o cabelo e as sobrancelhas escuros quase não mudam)
+    float lum = dot(tc.rgb, vec3(0.299, 0.587, 0.114));
+    float ehPele = smoothstep(0.18, 0.32, lum);
+    cor = mix(tc.rgb, tc.rgb * pele / tomRB, ehPele);
   } else {
     int r = int(texture(tReg, vUv).r * 255.0 + 0.5);
     vec4 k0 = kit(0), k1 = kit(1), pad = kit(12), est = kit(13);
@@ -227,7 +221,7 @@ export function criarHumano3D(cena, dados, opc = {}) {
   let CAP = 0, texOssos, ossosF, texKits, kitsF;
   const uniforms = {
     tOssos: { value: null }, tKits: { value: null }, tReg: { value: texReg },
-    tCabeca: { value: opc.cabeca ?? null }, tDigitos: { value: atlasDigitos() }, tRostos: { value: null },
+    tCabeca: { value: opc.cabeca ?? null }, tDigitos: { value: atlasDigitos() },
     uNumero: { value: new THREE.Vector4() },
   };
   // a caixa do número na UV (regioes.json: na imagem, y para baixo; a UV sobe com o flipY)
@@ -268,37 +262,6 @@ export function criarHumano3D(cena, dados, opc = {}) {
     return { geo, mesh, tri: l.triangulos, slot: null };
   });
   capacidade(32);
-  // rostos reais (edição pro): uma DataArrayTexture com uma camada por jogador da partida (a 0 fica vazia: a cabeça do
-  // Rocketbox); a camada entra quando a imagem chega (versaoRostos muda e a fachada reescreve as linhas do uniforme)
-  const LADO_R = opc.qualidade === 'alta' ? 512 : 256, CAMADAS = 40;
-  const rost = { indice: null, camadas: new Map(), pendentes: new Set(), prox: 1, versao: 0, dados: null, tex: null };
-  function texRostos() {
-    if (rost.tex) return rost.tex;
-    rost.dados = new Uint8Array(LADO_R * LADO_R * 4 * CAMADAS);
-    rost.tex = new THREE.DataArrayTexture(rost.dados, LADO_R, LADO_R, CAMADAS);
-    rost.tex.colorSpace = THREE.SRGBColorSpace;
-    rost.tex.generateMipmaps = true;
-    rost.tex.minFilter = THREE.LinearMipmapLinearFilter; rost.tex.magFilter = THREE.LinearFilter;
-    rost.tex.needsUpdate = true;
-    uniforms.tRostos.value = rost.tex;
-    return rost.tex;
-  }
-  const cv = typeof document !== 'undefined' ? document.createElement('canvas') : null;
-  async function carregarRosto(chave, url, camada) {
-    const img = await new Promise((ok, falha) => { const i = new Image(); i.onload = () => ok(i); i.onerror = falha; i.src = url; });
-    if (!cv) return;
-    cv.width = cv.height = LADO_R;
-    const g = cv.getContext('2d', { willReadFrequently: true });
-    // a DataArrayTexture não vira a imagem (sem flipY em 3D): a linha 0 dos dados é o v = 0 (embaixo)
-    g.setTransform(1, 0, 0, -1, 0, LADO_R);
-    g.drawImage(img, 0, 0, LADO_R, LADO_R);
-    const px = g.getImageData(0, 0, LADO_R, LADO_R).data;
-    texRostos();
-    rost.dados.set(px, camada * LADO_R * LADO_R * 4);
-    rost.tex.needsUpdate = true;
-    rost.camadas.set(chave, camada);
-    rost.versao++;
-  }
   const estLod = criarEstadoLod();
   const centro = new THREE.Vector3();
   const OCULTA_OSSOS_TRONCO = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 21, 22];
@@ -356,24 +319,6 @@ export function criarHumano3D(cena, dados, opc = {}) {
       }
     },
     definirSombras(ligadas) { for (const nv of niveis) nv.mesh.castShadow = ligadas; },
-    /** O índice dos rostos reais ({chave: {nome, pele, foto}}) e a pasta das texturas (edição pro). */
-    definirRostos(indice, base) { rost.indice = indice; rost.base = base; },
-    /** A pele (o tom da foto) do rosto real desta chave, ou null. */
-    peleDe(chave) { return (chave && rost.indice?.[chave]?.pele) || null; },
-    /** A camada do rosto real desta chave (0 = ainda não chegou ou não há; pede a carga na 1ª vez). */
-    camadaDe(chave) {
-      if (!chave || !rost.indice?.[chave]) return 0;
-      const c = rost.camadas.get(chave);
-      if (c != null) return c;
-      if (!rost.pendentes.has(chave) && rost.prox < CAMADAS) {
-        rost.pendentes.add(chave);
-        const camada = rost.prox++;
-        carregarRosto(chave, new URL(chave + '.webp', rost.base).href, camada).catch(e => console.warn('rosto', chave, e));
-      }
-      return 0;
-    },
-    get versaoRostos() { return rost.versao; },
-    get rostos() { return { indice: !!rost.indice, carregados: rost.camadas.size, pedidos: rost.pendentes.size }; },
     definirCabeca(tex) { uniforms.tCabeca.value = tex; },
     dispose() {
       for (const nv of niveis) { cena.remove(nv.mesh); nv.geo.dispose(); }
