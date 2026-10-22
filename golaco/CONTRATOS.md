@@ -2616,3 +2616,58 @@ desenha nada.
     - os decalques entram nos kits só com a base;
     - no máximo 3 máscaras viram mancha.
   - `teste-corpo-tela` C6/C7: na pro, os logos carregam; na pública, nada é pedido.
+
+## Cenas das paradas — replays nas paradas (22/10; contrato; cartão, intervalo e pós-jogo entram nos próximos PRs)
+Pedido do dono: "a cena de pós jogo, e a cena de intervalo, as cenas de cartões, e os replays de faltas e jogadas passando
+na tela enquanto o jogo tá parado". Plano em `PLANO-CENAS.md`; pesquisa em `PESQUISA-CENAS-TV.md` (§0.1 o roteiro da DFL,
+§0.2 SoccerNet-v2, §4 replays nas paradas). **Só desenho**: a simulação fica parada e volta no mesmo tick. Nada entra no
+fecho (`tools/fecho-hash.mjs --diff origin/main` = 0): o `lances.js` só importa do fecho, e o fecho não importa dele.
+
+- **Classificador `js/lances.js`** (puro, no download inicial; `REPLAY_PARADA` mora nele):
+  - `criarLances()`; `lancesPasso(L, m, eventos)` só lê o mundo e os eventos do passo (nada alocado por passo, sem rng;
+    as distâncias pelo `MD`, para os dois aparelhos do online classificarem igual).
+  - Na bola morta (estado 'parada', parada nova, sem cobrador; nunca o gol, o impedimento nem o fim do tempo):
+    `L.lance = {classe 'A' | 'B', tipo, chave (tick do contato ou do chute), fim (tick do desfecho), morta, ateMax, time,
+    ids, x, z, lado, peso, parada}` ou null. Tipos, do mais forte ao mais fraco (`TIPOS_LANCE`): 'penalti', 'vermelho',
+    'trave', 'amarelo', 'faltaPerto', 'espalmada', 'passouPerto'.
+  - Classe A (pênalti; vermelho, também o 2º amarelo; bola na trave com a bola morta em ≤ `chance.mortaAte` s) fura o
+    teto e o espaço. Classe B (amarelo; tiro livre direto a ≤ `faltaPerto` m do centro do gol; espalmada de chute de
+    dentro da área ou a ≥ `chance.vMin` m/s; chute de dentro da área que cruzou a linha a ≤ `chance.perto` m da armação)
+    fica dentro de `porTempo` por tempo e de `espaco` s de bola rolando desde o último replay automático.
+  - Nunca: lateral ou tiro de meta sem lance; chute bloqueado (`bateuCorpo` de outro antes da defesa) sem trave; defesa
+    com o goleiro segurando (ele repõe ao vivo); a trave com a bola já morta (depois do apito: só conta com a bola viva
+    ou morta no próprio passo).
+  - O vermelho com a falta no passo da bola morta (vermelho direto, 2º amarelo sem vantagem, pênalti com vermelho): o
+    expulso sai do mundo nesse passo, então a chave e o desfecho ficam no `ateMax` (o último passo desenhado com ele).
+  - `decidirReplay(L, lance, {tempo, ligado})`; `registrarReplay(L, tick, 'gol' | 'impedimento' | 'parada')` (o gol e o
+    impedimento também recomeçam o espaço).
+  - `montaNoProximoPasso(m)` → 'monta' | 'fimDoTempo' | false: a mesma conta do `partida.js regrasPartida` (com a bola
+    morta sem cobrador, o fim do tempo com os acréscimos vem antes da montagem; a montagem sai com `PARTIDA.foraEspera` s
+    de bola morta). O `teste-replay-paradas` P5 guarda a cópia contra mudanças no `partida.js`.
+- **Roteiro** `render/replay-roteiro.js roteiroParada(anel, lance)` → `{tipo: 'parada', planos (≤ 2), lado, chave, fim,
+  classe, lance, x, z}` ou null:
+  - P1 'tv' 1× de chave − `tv.antes` (encolhe até `tv.antesMin`) até chave + `tv.depois` (chance: desfecho + `tv.depoisChance`).
+  - P2 a `lento.vel`: 'fechada' na falta (chave − `lento.antes` até chave + `lento.depois`), 'atras' na chance (chave −
+    `lento.antesChance` até o desfecho + `lento.depoisChance`).
+  - ≤ `maximo` s (encolhe o começo do P1, depois o P2; ainda passando, o P2 sai); nunca atravessa corte nem passa do
+    `ateMax` (o expulso sai do mundo no passo da bola morta); null com a chave fora do anel. Sem o "depois" (o vermelho
+    no contato), o P2 fica com a aproximação inteira (`lento.antes + lento.depois`) antes da chave; quando o P2 sai, o P1
+    volta a começar em chave − `tv.antes`.
+  - Câmera 'fechada' (`render/replay.js`): a POSIÇÃO da instância de TV do replay (a mola dela) com o campo de visão ×
+    `lento.fov`, e o OLHAR direto no ponto entre o lance (x, z) e a bola (`lento.mistura`) — o foco da TV fica preso
+    dentro do campo e o lance perto da linha de fundo saía do quadro.
+- **Página** (`main.js`):
+  - `rodarPasso` → `passoLances(eventos)`: o lance aceito ARMA o replay (`replayParada`), só fora da API dos testes
+    (`!emRodarPassos`). Desarma em gol, intervalo, fim, recomeço e saída, e quando a parada do lance acaba sem montagem.
+  - `seguraParaReplayParada()` no TOPO da volta do laço (antes da entrada da demo, que escreve no mundo; no online antes de
+    `MOD_ON.podePassar`/`entradas`, com `segurou = true`): com o armado e `montaNoProximoPasso(m)`, o replay começa e a
+    volta para sem rodar o passo. Ordem da TV: 1 s ao vivo (a bola parando, os jogadores chegando) → vinheta → replay →
+    vinheta → o corte da montagem. O pulo é o do replay de hoje; na tela só "REPLAY" e o "Pular" com toque.
+  - O "Replay" da pausa pedido na espera da bola morta desarma o automático daquela parada (a jogada não repete).
+  - TM "só o meu jogador": a faixa "Você foi expulso" da bola morta do replay volta depois dele, com os 6 s dali.
+  - Liga com `?replayParada=0|1` ou com o padrão (`REPLAY_PARADA.ligado`; desligado com webdriver, `?prints=1` e
+    `?demo=1`), E com "Replays: Ligado".
+  - Online: segura só o meu lado (como o replay do gol). Livre, disputa e treinos: o classificador nem é criado.
+  - API `__golaco.replay.paradas`: `{ligado, armado, contagem, ultimoTick, ultimoTipo, historico, forcar(lance), ndc(x, y, z)}`.
+- **Testes:** `teste-replay-paradas` (Node, padrão; P1–P5 e as bordas do roteiro P2b) e `teste-replay-paradas-tela`
+  (navegador, CI; V1–V11).

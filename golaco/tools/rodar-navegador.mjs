@@ -24,6 +24,7 @@ const LISTA = [
   ['rede véu de noiva na tela (forma, branca de dia e de noite, mexe na batida; PC e celular)', 'teste-rede-tela.mjs'],
   ['tela limpa (HUD mínimo no celular e no PC, linha de impedimento só no apito)', 'teste-hud-minimo.mjs', { deploy: true }],
   ['replay (gol, impedimento com a linha, pausa; simulação parada e hash igual)', 'teste-replay.mjs'],
+  ['replays nas paradas (o lance de verdade no passo antes da montagem, simulação parada e hash igual, pular, desligado, celular, online, corpo novo)', 'teste-replay-paradas-tela.mjs'],
   ['comemoração do gol (cena, câmera de cinema, pular, celular; simulação segura e hash igual)', 'teste-comemoracao-tela.mjs', { deploy: true }],
   ['área técnica e treinadores na tela (celular — visíveis com o banco no quadro, chamadas iguais, CPU)', 'teste-tecnicos-tela.mjs'],
   ['cena de substituição e faixa ENTRA/SAI (fila depois do replay, pular, pausa, celular, nada encosta; hash igual)', 'teste-substituicao-tela.mjs', { deploy: true }],

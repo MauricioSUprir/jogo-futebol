@@ -50,6 +50,7 @@ export const TEMPOS_NODE = {
   'teste-rede-veu.mjs': 3,
   'teste-torcida.mjs': 10,
   'teste-replay-anel.mjs': 688,
+  'teste-replay-paradas.mjs': 340,
   'teste-saot.mjs': 215,
   'teste-comemoracao.mjs': 294,
   'teste-substituicao.mjs': 69,
@@ -93,6 +94,8 @@ export const TEMPOS_NAVEGADOR = {
   'teste-rede-tela.mjs': 53,
   'teste-hud-minimo.mjs': 68,
   'teste-replay.mjs': 196,
+  // medido aqui (máquina dividida, carga ~4 em 4 núcleos: 396 s, o online em tempo real ~285 s); acertar pelo log do CI
+  'teste-replay-paradas-tela.mjs': 400,
   'teste-comemoracao-tela.mjs': 80,
   'teste-tecnicos-tela.mjs': 155,
   'teste-substituicao-tela.mjs': 164,
