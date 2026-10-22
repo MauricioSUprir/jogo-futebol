@@ -1,0 +1,162 @@
+{
+  "clube": "Botafogo",
+  "chave": "br/Botafogo",
+  "temporada": "2026",
+  "fornecedor": "Mizuno (desde 22/05/2026; antes Reebok)",
+  "casa": {
+    "nome": "Camisa 1 2026/27",
+    "lancamento": "2026-05-22",
+    "camisa": "#1a1c22",
+    "padrao": "listras_verticais",
+    "padrao_cores": [
+      "#f4f4f6"
+    ],
+    "padrao_n": 4,
+    "padrao_largura": 0.135,
+    "padrao_desc": "listras verticais pretas e brancas de mesma largura (~13,5% da largura da frente cada, mais finas e em maior número que as de antes), com uma PRETA no centro do peito: na frente 3 pretas inteiras + 2 nas bordas e 4 brancas; as listras continuam nas mangas; gola em V preta com filete branco; punhos pretos com filete branco",
+    "mangas": "#1a1c22",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#1a1c22",
+    "gola": {
+      "tipo": "v",
+      "cor": "#1a1c22"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#1a1c22",
+    "calcao_detalhe": null,
+    "meiao": "#1a1c22",
+    "meiao_detalhe": null,
+    "meiao_desc": "preto liso",
+    "fontes": [
+      "https://www.gazetaesportiva.com/times/botafogo/botafogo-lanca-novas-camisas-para-a-temporada-veja/",
+      "https://www.footyheadlines.com/pt/vazaram-as-camisas-titular-e-de-guarda-redes-do-botafogo-26-27-da-mizuno-chega-de-reebok.html",
+      "https://www.footballkitarchive.com/botafogo-2026-home-kit-482675/",
+      "https://maquinadoesporte.com.br/?p=231251"
+    ]
+  },
+  "fora": {
+    "nome": "Camisa 2 2026/27 (preta)",
+    "lancamento": "2026-07-21",
+    "camisa": "#2b2b2b",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "preto mesclado (chumbo) com relevo de listras verticais finas tom sobre tom, inspirado nas camisas do Club de Regatas Botafogo do fim do século XIX; gola polo preta com filete cinza; punhos pretos",
+    "mangas": "#2b2b2b",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#111111",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#111111"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#111111",
+    "calcao_detalhe": null,
+    "meiao": "#111111",
+    "meiao_detalhe": null,
+    "meiao_desc": "preto (não confirmado)",
+    "fontes": [
+      "https://www.tupi.fm/esportes/botafogo-lanca-nova-camisa-preta-mizuno/",
+      "https://www.itatiaia.com.br/esportes/futebol/futebol-nacional/futebol-carioca/botafogo/botafogo-lanca-uniforme-inspirado-no-clube-anterior-a-fusao-entenda/",
+      "https://www.footballkitarchive.com/botafogo-2026-away-kit-498051/"
+    ]
+  },
+  "terceira": {
+    "nome": "Camisa 3 2026/27 (branca)",
+    "lancamento": "2026-05-22",
+    "camisa": "#f1f0ec",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "branco natural com jacquard de arabescos tom sobre tom; gola redonda preta; punhos pretos; monograma de 1904 no lugar do escudo",
+    "mangas": "#f1f0ec",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#111111",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#111111"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#111111",
+    "calcao": "#f1f0ec",
+    "calcao_detalhe": null,
+    "meiao": "#f1f0ec",
+    "meiao_detalhe": null,
+    "meiao_desc": "branco (não confirmado)",
+    "fontes": [
+      "https://www.gazetaesportiva.com/times/botafogo/botafogo-lanca-novas-camisas-para-a-temporada-veja/",
+      "https://www.footballkitarchive.com/botafogo-2026-third-kit-484875/"
+    ]
+  },
+  "goleiro": {
+    "nome": "Camisa de goleiro 2026/27 (laranja)",
+    "lancamento": "2026-05-22",
+    "camisa": "#eda921",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#e09812"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "amarelo-alaranjado com grafismo de chamas tom sobre tom; gola e punhos pretos",
+    "mangas": "#eda921",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#111111",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#111111"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#111111",
+    "calcao": "#eda921",
+    "calcao_detalhe": null,
+    "meiao": "#eda921",
+    "meiao_detalhe": null,
+    "meiao_desc": "laranja (não confirmado)",
+    "fontes": [
+      "https://www.footyheadlines.com/pt/vazaram-as-camisas-titular-e-de-guarda-redes-do-botafogo-26-27-da-mizuno-chega-de-reebok.html",
+      "https://www.footballkitarchive.com/botafogo-2026-gk-1-kit-482709/"
+    ]
+  },
+  "goleiro2": {
+    "nome": "Camisa de goleiro 2 2026/27 (azul)",
+    "lancamento": "2026-07-21",
+    "camisa": "#2a78c6",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#1a5fae"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "azul com grafismo de linhas sinuosas em azul mais escuro/claro; gola e punhos pretos (versão de goleiro do conceito da camisa preta)",
+    "mangas": "#2a78c6",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#1b1a24",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#1b1a24"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#2a78c6",
+    "calcao_detalhe": null,
+    "meiao": "#2a78c6",
+    "meiao_detalhe": null,
+    "meiao_desc": "azul (não confirmado)",
+    "fontes": [
+      "https://www.tupi.fm/esportes/botafogo-lanca-nova-camisa-preta-mizuno/",
+      "https://www.footballkitarchive.com/botafogo-2026-gk-2-kit-498053/"
+    ]
+  },
+  "confianca": "media",
+  "notas": "O Botafogo trocou a Reebok pela Mizuno no meio do ano: de jan a mai/2026 usou as camisas Reebok 2025/26; a Mizuno lançou a listrada e a branca em 22/05/2026 (estreia contra o São Paulo, 17ª rodada) e a preta em 21/07/2026 (estreia 23/07 contra o Vitória). A branca é tratada como \"third\" pela Gazeta e pelo Football Kit Archive e como \"reserva\" por outra fonte; a preta é a camisa 2 (FKA \"Away\"). Em 04/08/2026 saiu ainda uma camisa 3 de manga longa (homenagem ao primeiro uniforme, meião laranja) — não confirmei as cores dela, então não entrou. Calção e meião pretos da listrada confirmados (Footy Headlines); os das camisas preta, branca e dos goleiros não. Cor do número na listrada (branco) não confirmada. Hex estimados por foto. Há ainda uma camisa rosa do Outubro Rosa (20/10/2026), especial."
+}

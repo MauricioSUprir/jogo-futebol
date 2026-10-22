@@ -31,6 +31,7 @@ for t in tri:
     cv2.fillPoly(y_t, [pts], yy, shift=4); cv2.fillPoly(z_t, [pts], zz, shift=4); cv2.fillPoly(x_t, [pts], xx, shift=4)
 # dilata os rótulos para dentro das margens da UV (o filtro do mipmap não pega o fundo)
 vazio = osso_t == 255
+vazio0 = vazio.copy()
 for _ in range(6):
     m = cv2.dilate(np.where(vazio, 0, osso_t.astype(np.int32) + 1).astype(np.uint8), np.ones((3, 3), np.uint8))
     novo = vazio & (m > 0)
@@ -66,6 +67,16 @@ R[vermelho & braco] = 4
 R[vermelho & (coxa | (tronco & (y_t < cintura)))] = 6
 R[vermelho & tronco & (y_t >= cintura) & ~((y_t >= 1.33) & (z_t < 0.12)) & ((z_t >= 0.1) | (y_t >= 1.33))] = 10  # o logotipo do peito (no meio) não
 R[osso_t == 4] = 0
+# ilhas da UV: a camisa e o calção são ilhas separadas na textura do Rocketbox — a fronteira das duas peças é a costura,
+# não a altura do triângulo (que deixava a barra da camisa em dentes de serra). Cada ilha que mistura camisa e calção vai
+# toda para a peça da maioria
+ilhas_n, ilhas = cv2.connectedComponents((~vazio0).astype(np.uint8), connectivity=8)
+for k in range(1, ilhas_n):
+    m = ilhas == k
+    nc = int(np.isin(R[m], [1, 2, 10]).sum()); nk = int(np.isin(R[m], [5]).sum())
+    if nc and nk:
+        if nc >= nk: R[m & (R == 5)] = 1
+        else: R[m & np.isin(R, [1, 2, 10])] = 5
 # no tronco não há pele (o pescoço é da cabeça): o logotipo do peito (letras claras e vermelhas) volta a ser camisa
 R[tronco & (y_t >= cintura) & np.isin(R, [0, 10]) & (z_t < 0.11) & (y_t < 1.33)] = 1
 R[tronco & (y_t >= cintura) & (R == 0)] = 1

@@ -43,6 +43,13 @@ function carregarBase(p) {
   return fetch(urlTm('estadios.json'), { signal: ctl.signal }).then(r => (r.ok ? r.json() : null)).catch(() => null).finally(() => clearTimeout(tempo));
 }
 
+/** As camisas reais da temporada (só na pro, com ou sem jogo neutro); null se falhar ou passar do tempo. */
+function carregarUniformes(p) {
+  if (!p || p.edicao !== 'pro') return null;
+  const ctl = new AbortController(), tempo = setTimeout(() => ctl.abort(), ESPERA_BASE_MS);
+  return fetch(urlTm('uniformes.json'), { signal: ctl.signal }).then(r => (r.ok ? r.json() : null)).catch(() => null).finally(() => clearTimeout(tempo));
+}
+
 /**
  * A identidade da partida desta página: null sem ?tm (os desenhos de hoje) ou a do pedido do TM com os escudos já
  * decodificados (`times[t].escudo.img`; `escudo.url` passa a ser a do escudo de reserva se o do TM não carregou), e
@@ -52,9 +59,9 @@ export async function identidadeDaPagina(pedido = PEDIDO_TM) {
   if (!pedido) return null;
   let ident;
   try {
-    const [mod, base] = await Promise.all([import('../identidade.js'), carregarBase(pedido)]);
+    const [mod, base, uniformes] = await Promise.all([import('../identidade.js'), carregarBase(pedido), carregarUniformes(pedido)]);
     modulo = mod;
-    ident = modulo.identidadeDoPedido(pedido, base);
+    ident = modulo.identidadeDoPedido(pedido, base, uniformes);
   } catch (e) { console.warn('identidade do Total Match:', e); return null; }
   const t0 = performance.now();
   // estádio real: o desenho dele (falhou = o Estádio Golaço nas cores dele); senão o símbolo do TM na placa

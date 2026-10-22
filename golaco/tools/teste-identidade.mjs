@@ -412,6 +412,38 @@ if (I) {
   }
 }
 
+// ------------------------------------------------------------------ F: camisas REAIS da temporada (edição pro, 22/10)
+// a base assets/tm/uniformes.json (tools/uniformes/gerar.mjs a partir da pesquisa): na pro, o clube da base veste a camisa
+// real (pelo nome, sem acento); na pública e fora da base, nada muda; nas duas, os uniformes seguem sem confusão
+if (I) {
+  let base = null;
+  try { base = JSON.parse(fs.readFileSync(path.resolve(pastaJs, '../assets/tm/uniformes.json'), 'utf8')); } catch (_) { base = null; }
+  if (!base || typeof I.comCamisasReais !== 'function') reg('F1 camisas reais da temporada (assets/tm/uniformes.json + comCamisasReais)', 'não existem', 'existem', false);
+  else {
+    const t = (name, pais = 'Brasil') => ({ name, colors: { primary: '#c52613', secondary: '#111111' }, kits: {}, identidade: { pais } });
+    const ped = (ed, a, b) => ({ edicao: ed, partida: { neutro: true }, home: t(a), away: t(b) });
+    const pro = I.identidadeDoPedido(ped('pro', 'Flamengo', 'Sao Paulo'), null, base);
+    const pub = I.identidadeDoPedido(ped('public', 'Flamengo', 'São Paulo'), null, base);
+    const fora = I.identidadeDoPedido(ped('pro', 'Clube Inventado', 'Outro FC'), null, base);
+    const fla = base.clubes.Flamengo.home, sp = base.clubes['São Paulo'];
+    const okPro = pro.kits.linha0.real && pro.kits.linha0.camisa === fla.camisa && pro.kits.linha0.padrao === 'hoops' && pro.kits.linha1.real
+      && [sp.home, sp.away, sp.third].some(k => k && k.camisa === pro.kits.linha1.camisa);
+    const okPub = !pub.kits.linha0.real && !pub.kits.linha1.real, okFora = !fora.kits.linha0.real && !fora.kits.linha1.real;
+    reg('F1 pro: o clube da base veste a camisa real (Flamengo de aros; "Sao Paulo" sem acento acha o São Paulo)', `Flamengo ${pro.kits.linha0.camisa}/${pro.kits.linha0.padrao}${pro.kits.linha0.real ? ' (real)' : ''} · São Paulo ${pro.kits.linha1.camisa}${pro.kits.linha1.real ? ' (real)' : ''}`, 'as reais', okPro);
+    reg('F2 pública e clube fora da base: nada muda (as camisas pelas cores do TM)', `pública ${okPub ? 'sem real' : 'COM REAL'} · fora da base ${okFora ? 'sem real' : 'COM REAL'}`, 'sem real', okPub && okFora);
+    // sem confusão entre os 20 da base, dois a dois (o mandante de casa; o visitante escolhe)
+    let pior = Infinity, ex = '';
+    const nomes = Object.keys(base.clubes);
+    for (const a of nomes) for (const b of nomes) {
+      if (a === b) continue;
+      const r = I.identidadeDoPedido(ped('pro', a, b), null, base);
+      const d = r.uniformes.medidas.linhas;
+      if (d < pior) { pior = d; ex = `${a} × ${b}`; }
+    }
+    reg('F3 os 20 clubes da base dois a dois: as camisas de linha sem confusão (ΔE₀₀ do pior jogo)', `pior ${pior.toFixed(1)} (${ex})`, `≥ ${I.LIMIAR.linhaMin}`, pior >= I.LIMIAR.linhaMin);
+  }
+}
+
 console.log(tabelaTexto(linhas));
 console.log(falhas ? `\nteste-identidade: REPROVOU (${falhas})` : '\nteste-identidade: PASSOU');
 process.exit(falhas ? 1 : 0);

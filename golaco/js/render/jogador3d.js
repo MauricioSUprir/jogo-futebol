@@ -264,8 +264,8 @@ const _v = new THREE.Vector3();
 const _s = new THREE.Vector3();
 
 // Corpo humano (Etapa 5, ?corpo=humano): render/humano3d.js sob demanda; até chegar (e se falhar), o manequim desenha.
-// Linha do uniforme na textura do humano: 16 texels RGBA por boneco (ver humano3d.js COR_F).
-const TIPO_PADRAO = { plain: 0, liso: 0, stripes: 1, listras_verticais: 1, hoops: 2, listras_horizontais: 2, sash: 3, faixa_diagonal: 3, faixa_horizontal_peito: 4, halves: 5, metades: 5 };
+// Linha do uniforme na textura do humano: 20 texels RGBA por boneco (ver humano3d.js COR_F).
+const TIPO_PADRAO = { plain: 0, liso: 0, stripes: 1, listras_verticais: 1, hoops: 2, listras_horizontais: 2, sash: 3, faixa_diagonal: 3, band: 4, faixa_horizontal_peito: 4, halves: 5, metades: 5 };
 const TETO_TRI = { baixa: 3e4, media: 6e4, alta: 1.2e5 };
 
 export function criarJogadores3D(cena, qualidade, opc = {}) {
@@ -405,7 +405,7 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
       humano.definirSombras(sombras);
     })().catch(e => { humanoErro = String(e?.message ?? e); console.error('corpo humano:', e); });
   }
-  const linhasKit = new Map(); // chave da vaga → Float32Array(64)
+  const linhasKit = new Map(); // chave da vaga → Float32Array(80)
   const _c = new THREE.Color();
   function linhaKit(jg) {
     const nome = NOMES_KIT[kitIdx(jg)];
@@ -415,11 +415,11 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
     const ch = `${nome}|${jg.id}|${jg.goleiro ? 1 : 0}|${jg.tecnico ? 1 : 0}`;
     let L = linhasKit.get(ch);
     if (L) return L;
-    L = new Float32Array(64);
+    L = new Float32Array(80);
     const put = (i, hex, alt) => { _c.set(hex ?? alt ?? '#888888'); L[i * 4] = _c.r; L[i * 4 + 1] = _c.g; L[i * 4 + 2] = _c.b; L[i * 4 + 3] = 1; };
     put(0, kb.camisa); put(1, kb.segunda ?? kb.camisa2, kb.acento); put(2, kb.manga, kb.camisa); put(3, kb.gola, kb.acento);
     put(4, kb.punho, kb.acento); put(5, kb.calcao); put(6, kb.barra, kb.calcao); put(7, kb.meiao); put(8, kb.chuteira);
-    put(9, kb.acento); put(10, kb.luva, kb.acento);
+    put(9, kb.acabamento, kb.acento); put(10, kb.luva, kb.acento);
     L[44] = pele.r; L[45] = pele.g; L[46] = pele.b; L[47] = 1;
     const tipo = TIPO_PADRAO[kb.padrao] ?? 0;
     const n = kb.padraoN ?? (tipo === 1 ? 4 : tipo === 2 ? 5 : 0);
@@ -429,6 +429,8 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
     const lum = 0.2126 * _c.r + 0.7152 * _c.g + 0.0722 * _c.b;
     put(14, kb.numero, lum > 0.25 ? '#15191b' : '#f2f4f5');
     put(15, kb.sola, '#0b0d0e');
+    // a faixa do meião (camisas reais): a cor e a = 1 quando existe
+    if (kb.meiaoDetalhe) put(16, kb.meiaoDetalhe); else L[67] = 0;
     linhasKit.set(ch, L);
     return L;
   }

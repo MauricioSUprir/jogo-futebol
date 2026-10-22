@@ -1,0 +1,159 @@
+{
+  "clube": "Remo",
+  "chave": "br/Remo",
+  "temporada": "2026",
+  "fornecedor": "Volt Sport",
+  "casa": {
+    "nome": "Camisa 1 2026 (410 anos de Belém)",
+    "lancamento": "2026-02-03",
+    "camisa": "#1d2333",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "azul-marinho com grafismos tonais sutis (casarões, azulejos, Forte do Presépio) quase invisíveis de longe; gola polo azul-marinho com o V e filetes brancos; punhos brancos",
+    "mangas": "#1d2333",
+    "mangas_padrao": "liso",
+    "punhos": "#f2f2f2",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#1d2333"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#f2f2f2",
+    "calcao_detalhe": null,
+    "meiao": "#f2f2f2",
+    "meiao_detalhe": null,
+    "meiao_desc": "branco",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/02/camisa-titular-clube-do-remo-2026-volt/",
+      "https://www.oliberal.com/esportes/remo/com-homenagem-a-belem-remo-divulga-camisa-oficial-da-temporada-de-2026-1.1080278",
+      "https://www.footballkitarchive.com/clube-do-remo-2026-home-kit-451899/"
+    ]
+  },
+  "fora": {
+    "nome": "Camisa 2 2026 'Raio que o Parta'",
+    "lancamento": "2026-05-16",
+    "camisa": "#efe6d2",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "creme/off-white com grafismos tonais na frente; mangas raglan inteiras em azul-marinho (do pescoço ao punho); gola polo azul-marinho",
+    "mangas": "#152a46",
+    "mangas_padrao": "outra",
+    "punhos": "#152a46",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#152a46"
+    },
+    "ombros": "#152a46",
+    "laterais": null,
+    "numero_cor": "#152a46",
+    "calcao": "#152a46",
+    "calcao_detalhe": "#efe6d2",
+    "meiao": "#152a46",
+    "meiao_detalhe": "#efe6d2",
+    "meiao_desc": "azul-marinho com o alto (canhão) creme e duas faixas creme abaixo",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/05/clube-do-remo-volt-nova-camisa-reserva-2026/",
+      "https://www.footballkitarchive.com/clube-do-remo-2026-away-kit-483524/"
+    ]
+  },
+  "terceira": {
+    "nome": "Camisa 3 2026/27 'Orgulho do Norte'",
+    "lancamento": "2026-09-14",
+    "camisa": "#a32a30",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#8a2329"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "vermelho-vinho com estampa tonal sublimada (mapa do Pará, grafismos marajoaras e palavras) por todo o corpo; gola V transpassada azul-marinho com acabamento branco e dourado; punhos com faixa branca e grafismos",
+    "mangas": "#a32a30",
+    "mangas_padrao": "liso",
+    "punhos": "#f2f2f2",
+    "gola": {
+      "tipo": "transpassada",
+      "cor": "#1d2333"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#f2f2f2",
+    "calcao_detalhe": null,
+    "meiao": "#a32a30",
+    "meiao_detalhe": "#f2f2f2",
+    "meiao_desc": "vinho com detalhes brancos e azul-marinho",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/09/terceira-camisa-remo-2026-2027-volt-sport/",
+      "https://diariodopara.com.br/bola/remo-lanca-camisa-3-vermelha-inspirada-na-cultura-do-para-veja-detalhes-e-valores/",
+      "https://www.footballkitarchive.com/clube-do-remo-2026-third-kit-518853/"
+    ]
+  },
+  "goleiro": {
+    "nome": "Goleiro 1 2026 (verde)",
+    "lancamento": "2026-02-03",
+    "camisa": "#58ab51",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "verde com os mesmos grafismos tonais da camisa 1; gola polo e punhos azul-marinho",
+    "mangas": "#58ab51",
+    "mangas_padrao": "liso",
+    "punhos": "#1d2333",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#1d2333"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#1d2333",
+    "calcao": "#1d2333",
+    "calcao_detalhe": null,
+    "meiao": "#58ab51",
+    "meiao_detalhe": null,
+    "meiao_desc": "verde (estimado)",
+    "fontes": [
+      "https://www.oliberal.com/esportes/remo/com-homenagem-a-belem-remo-divulga-camisa-oficial-da-temporada-de-2026-1.1080278",
+      "https://www.footballkitarchive.com/clube-do-remo-2026-gk-1-kit-451982/"
+    ]
+  },
+  "goleiro2": {
+    "nome": "Goleiro 2 2026 (vinho e azul-marinho)",
+    "lancamento": "2026-05-16",
+    "camisa": "#933242",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#7e2a38"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "corpo vinho com grafismos tonais; mangas raglan inteiras em azul-marinho; gola V azul-marinho",
+    "mangas": "#112b47",
+    "mangas_padrao": "outra",
+    "punhos": "#112b47",
+    "gola": {
+      "tipo": "v",
+      "cor": "#112b47"
+    },
+    "ombros": "#112b47",
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#112b47",
+    "calcao_detalhe": null,
+    "meiao": "#933242",
+    "meiao_detalhe": null,
+    "meiao_desc": "vinho (estimado)",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/05/clube-do-remo-volt-nova-camisa-reserva-2026/",
+      "https://www.footballkitarchive.com/clube-do-remo-2026-gk-2-kit-483525/"
+    ]
+  },
+  "confianca": "alta",
+  "notas": "Camisa 1 apresentada em 03/02/2026 (o Mantos publicou no dia 04 e o Football Kit Archive dá 04/02), estreia contra o Mirassol; calção e meiões BRANCOS. Camisa 2 lançada no sábado 16/05/2026, estreia 17/05 contra a Chapecoense; nas fotos oficiais vai com calção e meião azul-marinho (a matéria não diz). Camisa 3 lançada 14/09/2026 com calção branco e meião vinho; o goleiro ganhou uma 3ª bege na mesma data (calção azul-marinho, meião bege). As três camisas de linha estão em uso em out/2026 (FKA 'Third V2' em jogo de out/2026). As listadas como 'Away 2' 2026 (branca com detalhes azuis) são as de 2025/especiais. Goleiro 2: o Mantos diz que a coleção da camisa 2 teve versão de goleiro, mas não diz a cor; a cor vem da foto do Football Kit Archive. Meião dos goleiros estimado. Hex estimados pelas fotos (o azul-marinho medido #1c202b no render e #152a46 na foto)."
+}

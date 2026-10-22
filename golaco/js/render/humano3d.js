@@ -15,7 +15,7 @@ import { lerCorpo } from './corpo-dados.js';
 import { escolherLods, criarEstadoLod } from './lod-humano.js';
 
 const BASE = new URL('../../assets/jogador/', import.meta.url);
-const TEXELS_KIT = 16;
+const TEXELS_KIT = 20;
 
 /** Carrega o corpo (índice, dados, máscara, normais). */
 export async function carregarHumano() {
@@ -106,7 +106,8 @@ varying float vSlot;
 varying vec4 vMembro;
 vec4 kit(int i) { return texelFetch(tKits, ivec2(i, int(vSlot + 0.5)), 0); }
 float aa(float x, float w) { return smoothstep(-w, w, x); }
-// padrões da camisa pela posição de repouso (x = frente, y = cima, z = direita; o tronco tem ~0,2 m de meia largura)
+// padrões da camisa pela posição de repouso (x = frente, y = cima, z = direita; a camisa vai da barra em y 1,03 à gola em
+// 1,50, com ~0,2 m de meia largura)
 float padrao(float tipo, float n, float larg) {
   vec3 p = vRest;
   if (tipo < 0.5) return 0.0;
@@ -118,20 +119,19 @@ float padrao(float tipo, float n, float larg) {
     float fw = fwidth(x) + 1e-4;
     return aa(f - (0.5 - w), fw);
   }
-  if (tipo < 2.5) {                      // aros (listras horizontais)
-    float per = 0.40 / max(n, 1.0);
-    float y = (p.y - 1.0) / per;
-    float f = abs(fract(y) - 0.5);
-    float w = clamp(larg * 0.40 / per, 0.05, 0.95) * 0.5;
-    return aa(w - f, fwidth(y) + 1e-4);
+  if (tipo < 2.5) {                      // aros: a camisa (barra → ombro) em 2n + 1 faixas iguais, a 2ª cor nas ímpares
+    float t = (p.y - 1.03) / 0.44 * (2.0 * max(n, 1.0) + 1.0);
+    float m = mod(t, 2.0), a = fwidth(t) + 1e-4;
+    float c = smoothstep(1.0 - a, 1.0 + a, m) * (1.0 - smoothstep(2.0 - a, 2.0, m));
+    return t < 0.0 || t > 2.0 * max(n, 1.0) + 1.0 ? 0.0 : c;
   }
   if (tipo < 3.5) {                      // faixa diagonal: do ombro esquerdo (z < 0, alto) ao quadril direito
-    float d = (p.y - 1.16) + 0.75 * p.z;
+    float d = ((p.y - 1.25) + 1.0 * p.z) * 0.7071;
     float w = max(larg, 0.08) * 0.20;
     return aa(w - abs(d), fwidth(d) + 1e-4);
   }
   if (tipo < 4.5) {                      // faixa horizontal no peito
-    float d = p.y - 1.27;
+    float d = p.y - 1.32;
     float w = max(larg, 0.08) * 0.25;
     return aa(w - abs(d), fwidth(d) + 1e-4);
   }
@@ -179,7 +179,11 @@ const COR_F = `
     else if (r == 4) cor = kit(4).rgb;
     else if (r == 5) cor = kit(5).rgb;
     else if (r == 6) cor = kit(6).rgb;
-    else if (r == 7) cor = kit(7).rgb;
+    else if (r == 7) {                                    // meião (a faixa do meio do cano, se houver)
+      cor = kit(7).rgb;
+      vec4 md = kit(16);
+      if (md.a > 0.5) cor = mix(cor, md.rgb, aa(0.035 - abs(vRest.y - 0.30), fwidth(vRest.y) + 1e-4));
+    }
     else if (r == 8) cor = kit(8).rgb;
     else cor = kit(15).rgb;                               // sola
   }

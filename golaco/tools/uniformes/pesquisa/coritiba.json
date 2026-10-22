@@ -1,0 +1,164 @@
+{
+  "clube": "Coritiba",
+  "chave": "br/Coritiba",
+  "temporada": "2026",
+  "fornecedor": "Diadora",
+  "casa": {
+    "nome": "Camisa 1 2026 'Curitiba é Coritiba'",
+    "lancamento": "2026-03-29",
+    "camisa": "#f2f2f2",
+    "padrao": "faixa_horizontal_peito",
+    "padrao_cores": [
+      "#174a49"
+    ],
+    "padrao_n": 2,
+    "padrao_largura": 0.06,
+    "padrao_desc": "branca com jacquard tonal cinza-claro (curvas) por todo o tecido; no peito, na altura do escudo, DUAS faixas horizontais verdes (cada uma ~0,06 da largura do tronco) separadas por um filete branco (~0,02); a faixa total ocupa ~11% da altura do tronco e o escudo fica no centro dela; as costas repetem as faixas; uma faixa verde larga sai da gola, passa pelo ombro (raglan) e desce pela manga até o punho; barra com acabamento verde",
+    "mangas": "#f2f2f2",
+    "mangas_padrao": "outra",
+    "punhos": "#174a49",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#174a49"
+    },
+    "ombros": "#174a49",
+    "laterais": null,
+    "numero_cor": "#174a49",
+    "calcao": "#111111",
+    "calcao_detalhe": null,
+    "meiao": "#f2f2f2",
+    "meiao_detalhe": null,
+    "meiao_desc": "branco",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/03/coritiba-camisa-titular-2026-conceito-curitiba-coritiba/",
+      "https://www.bemparana.com.br/esportes/coritiba/coritiba-lanca-nova-camisa-no-aniversario-de-curitiba-veja-o-preco/",
+      "https://www.footballkitarchive.com/coritiba-fc-2026-home-kit-469712/"
+    ]
+  },
+  "fora": {
+    "nome": "Camisa 2 2026/27 'Jogadeira'",
+    "lancamento": "2026-05-23",
+    "camisa": "#154645",
+    "padrao": "listras_verticais",
+    "padrao_cores": [
+      "#f5f7f6"
+    ],
+    "padrao_n": 7,
+    "padrao_largura": 0.02,
+    "padrao_desc": "verde-escura com riscas brancas FINAS verticais (~0,02 do tronco cada, espaçadas ~0,2), uma no centro do peito; jacquard tonal (postes) quase invisível; parte de cima dos ombros e mangas em branco",
+    "mangas": "#f5f5f5",
+    "mangas_padrao": "outra",
+    "punhos": "#f5f5f5",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#f5f5f5"
+    },
+    "ombros": "#f5f5f5",
+    "laterais": null,
+    "numero_cor": "#f5f5f5",
+    "calcao": "#f5f5f5",
+    "calcao_detalhe": null,
+    "meiao": "#154645",
+    "meiao_detalhe": null,
+    "meiao_desc": "verde",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/05/coritiba-camisa-reserva-2026-2027-jogadeira-diadora/",
+      "https://www.band.com.br/band-parana/noticias/coritiba-lanca-nova-camisa-inspirada-na-noite-curitibana-veja-os-detalhes-202605231208",
+      "https://www.footballkitarchive.com/coritiba-fc-2026-away-kit-485047/"
+    ]
+  },
+  "terceira": {
+    "nome": "Camisa 3 2026/27 'Poty'",
+    "lancamento": "2026-08-18",
+    "camisa": "#d3e9f7",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#c2dcee"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "azul-celeste bem claro com grafismo tonal (araucárias no estilo de Poty Lazzarotto) por todo o corpo; gola polo azul-marinho com recorte em V e filete azul-claro; punhos azul-marinho com faixa de grafismos geométricos azul-claros; barra com acabamento azul-marinho",
+    "mangas": "#d3e9f7",
+    "mangas_padrao": "liso",
+    "punhos": "#203a52",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#203a52"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#203a52",
+    "calcao": "#203a52",
+    "calcao_detalhe": null,
+    "meiao": "#203a52",
+    "meiao_detalhe": null,
+    "meiao_desc": "azul (tom exato não confirmado; estimado azul-marinho)",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/08/coritiba-terceira-camisa-2026-poty-lazzarotto-diadora/",
+      "https://www.footyheadlines.com/pt/6602/lancada-a-terceira-camisa-do-coritiba-26-27-homenagem-a-poty-lazzarotto.html",
+      "https://www.footballkitarchive.com/coritiba-fc-2026-third-kit-510420/"
+    ]
+  },
+  "goleiro": {
+    "nome": "Goleiro 1 2026 (azul)",
+    "lancamento": "2026-03-29",
+    "camisa": "#1d3a9c",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "azul-royal com textura tonal; gola e frisos laterais brancos",
+    "mangas": "#1d3a9c",
+    "mangas_padrao": "liso",
+    "punhos": "#1d3a9c",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#f2f2f2"
+    },
+    "ombros": null,
+    "laterais": "#f2f2f2",
+    "numero_cor": "#f2f2f2",
+    "calcao": "#1d3a9c",
+    "calcao_detalhe": null,
+    "meiao": "#1d3a9c",
+    "meiao_detalhe": null,
+    "meiao_desc": "azul (estimado)",
+    "fontes": [
+      "https://www.footballkitarchive.com/coritiba-fc-2026-gk-1-kit-470491/",
+      "https://www.footballkitarchive.com/coritiba-fc-2026-gk-1-v3-kit-530860/"
+    ]
+  },
+  "goleiro2": {
+    "nome": "Goleiro 2026/27 'Poty' (cinza-escuro)",
+    "lancamento": "2026-08-18",
+    "camisa": "#3a3d42",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#4a4e54"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "cinza-escuro com o mesmo jacquard/grafismo tonal da camisa 3 e detalhes em cinza",
+    "mangas": "#3a3d42",
+    "mangas_padrao": "liso",
+    "punhos": "#5c6168",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#5c6168"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#c8ccd0",
+    "calcao": "#3a3d42",
+    "calcao_detalhe": null,
+    "meiao": "#3a3d42",
+    "meiao_detalhe": null,
+    "meiao_desc": "cinza-escuro (mesma paleta)",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/08/coritiba-terceira-camisa-2026-poty-lazzarotto-diadora/",
+      "https://www.footyheadlines.com/pt/6602/lancada-a-terceira-camisa-do-coritiba-26-27-homenagem-a-poty-lazzarotto.html"
+    ]
+  },
+  "confianca": "alta",
+  "notas": "Camisas 1, 2 e 3 conferidas no Mantos do Futebol + imprensa + Football Kit Archive; as três estão em uso em out/2026 (FKA tem versões V2–V4 da 1 e V2–V3 da 2 até set/2026, só com troca de patrocínio). A 3ª ('Poty') estreou no Brasileirão contra o Corinthians; o calção e o meião dela são 'azuis' (o tom não foi dito; estimei azul-marinho). As listadas como 'Home 2'/'Away 2' 2026 são as de 2025 usadas no começo do ano; a de aros verde-brancos ('Third 2', maio) e a verde especial (08/05) são edições especiais (Manto da Glória/homenagem), não a 3ª oficial. Goleiro 1 azul: só achei no Football Kit Archive (3 versões no ano, a última de out/2026), sem matéria de lançamento; data = a do lançamento da camisa 1 (aproximada). Goleiro 2 = a da coleção Poty (ago/2026); o cinza exato é estimado (não vi foto nítida). Hex estimados pelas fotos (verde medido entre #144343 e #1b4d4e)."
+}
