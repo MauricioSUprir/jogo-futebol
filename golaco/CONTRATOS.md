@@ -2496,3 +2496,41 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   iguais, P4 o menu aberto não para, P5 a partida inteira (?min=0.25) acaba igual nas duas (0 de 36), P6 a pausa do online
   em 844×390 sem rolar, 0 erros. (O Chromium sem GPU daqui desenha ~6 quadros/s com duas abas: o teste espera passos, não
   tempo.)
+
+## Corpo humano realista — Etapa 5.1 (22/10; contrato)
+
+SÓ DESENHO, por cima da simulação: nenhum arquivo do fecho do hash muda (`tools/fecho-hash.mjs --diff origin/main` = 0;
+o fecho tem 37 módulos e inclui a `config.js` e a `comemoracao.js`). Atrás de `?corpo=humano` (o padrão continua o
+manequim) até o rosto de cada jogador chegar.
+
+- **Assets** (`assets/jogador/`, gerados por `tools/humano/`, ver o README): `corpo.json` (o índice: 25 ossos, o
+  `repouso`, os 4 LODs com caixa/blocos e o sha256 do `.bin`) + `corpo.bin` (por LOD e parte — corpo, cabeça: posição
+  int16 na caixa, normal int8, UV uint16, 4 ossos uint8, 4 pesos uint8 com soma 255, índices uint16); `regioes.png` (512²,
+  um canal: 0 pele · 1 camisa · 2 manga · 3 gola · 4 punho · 5 calção · 6 barra · 7 meião · 8 chuteira · 9 sola ·
+  10 acabamento) e `regioes.json` (a caixa da UV do número das costas, na imagem: y para baixo); `pano-normal.webp`;
+  `cabeca-rb.webp`. LODs: 8.146 / 4.000 / 1.798 / 899 triângulos por boneco.
+- **`repouso`** = as juntas do JOGO em pé (x frente, y cima, z direita; o tornozelo apoiado a 8 cm, o pé a 17,9°) +
+  `queda` (0,045) e `abre` (0,012) do ombro do desenho + `sobeTornozelo` (0,035) + `braco`/`antebraco` (0,2865/0,2577).
+- **`js/render/esqueleto.js`** (puro): `criarEsqueleto(repouso)` → `pele(pose, out, off)` escreve as matrizes de PELE
+  (3×4 por linhas, 12 floats por osso) dos 25 ossos (`OSSOS`, `NOMES_OSSOS`: 19 + 6 ajudantes de meio-giro). Juntas do
+  desenho (`juntasDesenho`): o ombro `queda·elevação` abaixo e `abre` para fora no referencial do peito (elevação 1 com o
+  braço solto, 0 erguido), o cotovelo pela IK com a MÃO do jogo (as luvas na bola), o tornozelo preso ao pé (referencial da
+  sola: o pé apoiado não sai do lugar quando a canela inclina). A torção da coxa sai das juntas do JOGO; o pé é rígido (sem
+  escala). Escala ao longo do osso em [0,9; 1,1]. `peleVertice` = a mesma pele linear do shader (testes).
+- **`js/render/lod-humano.js`** (puro): `escolherLods(est, n, itens, tri, teto)` → o nível de cada boneco pela altura em
+  px reais (≥ 280 / 120 / 60), histerese de 10%, ≤ 2 na LOD0, ≤ 3 níveis com gente, teto de triângulos (Baixa 30 mil,
+  Média 60 mil, Alta 120 mil; os mais baixos na tela descem primeiro).
+- **`js/render/humano3d.js`** (sob demanda): um `Mesh` com `InstancedBufferGeometry` por LOD (`iSlot` por instância); as
+  matrizes de pele numa `DataTexture` RGBA32F (75 texels × 1 linha por boneco) e o uniforme noutra (16 texels: camisa,
+  2ª cor, manga, gola, punho, calção, barra, meião, chuteira, acabamento, luva, pele, padrão [tipo, n, largura, manga com
+  padrão], estado [goleiro, treinador, número], cor do número, sola). Padrões pela posição de REPOUSO: 0 liso, 1 listras
+  verticais, 2 aros, 3 faixa diagonal, 4 faixa no peito, 5 metades. Goleiro: manga comprida e luva; treinador: manga
+  comprida e calça. `OCULTA` (1ª pessoa): escala 0 em volta da junta (cabeça no pescoço; tronco e braços no peito).
+- **Fachada** `js/render/jogador3d.js`: `criarJogadores3D(cena, q, {corpo: 'humano'})` — o manequim desenha até o corpo
+  chegar (e se falhar); com ele, as cápsulas ficam em 0 e a mancha de contato e as marcas continuam do manequim. Os
+  uniformes dos KITS (e `definirKits` do TM) aceitam também `gola`, `punho`, `barra`, `numero`, `padraoN`, `padraoLargura`,
+  `mangaPadrao` e os nomes de padrão da pesquisa (`listras_verticais`, `listras_horizontais`, `faixa_diagonal`,
+  `faixa_horizontal_peito`, `metades`). `__golaco.estadio.corpo` = {pedido, pronto, erro, triangulos, niveis, bonecos}.
+- **Testes**: `teste-ossos` (Node: juntas ≤ 1 mm, saltos ≤ 0,03%, sola 0–1,5 cm em ≥ 95% do apoio, volume ≥ 85% a 90°,
+  assets), `teste-lod-humano` (Node), `teste-corpo-tela` (navegador, CI: todos desenhados, chamadas ≤ manequim + 1, teto
+  de triângulos, nada baixado sem `?corpo=humano`, 0 erro).

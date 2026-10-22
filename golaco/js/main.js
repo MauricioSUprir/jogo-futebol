@@ -2199,7 +2199,8 @@ async function iniciar() {
   hud.progresso('Montando os jogadores…');
   await proximoQuadro();
   bola3d = criarBola3D(cena3d.cena, qAtual);
-  jog3d = criarJogadores3D(cena3d.cena, qAtual);
+  // ?corpo=humano: o corpo realista da Etapa 5 (sob demanda; o manequim desenha até ele chegar)
+  jog3d = criarJogadores3D(cena3d.cena, qAtual, { corpo: params.get('corpo') === 'humano' ? 'humano' : null });
   // uniformes do Total Match (resolvidos sem confusão: identidade.js) nas chaves que o elenco dele usa
   if (IDENT) jog3d.definirKits(IDENT.kits);
   // a cena de substituição com o máximo de trocas numa parada (5 + 5) desenha 22 + 10 reservas + o quarto árbitro (+ os
@@ -2942,6 +2943,7 @@ const api = {
     mostrarTecnicos(v) { tecVisiveis = !!v; },
     /** Triângulos de um boneco do manequim (cápsulas, cabeça, cabelo e mancha): o teto do custo dos treinadores. */
     get triangulosBoneco() { return jog3d ? jog3d.triangulosPorBoneco : null; },
+    get corpo() { return jog3d ? jog3d.humano : null; },
     get bolaDesenhada() { return { ..._bpDes }; },
     get efeitoCamera() { return cam ? cam.efeitoAtivo : false; },
     /** 'fechado' (câmera do gol da partida), 'leve' (treino) ou null; e o plano geral (intervalo/fim). */

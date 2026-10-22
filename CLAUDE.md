@@ -612,6 +612,18 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   não usa (hash-partida da demo IGUAL). Testes: `teste-mira` (Node) e `teste-bola-parada-tela` (navegador). **Download
   inicial** (`teste-carga` 4 MB): desde 21/10 os sons da torcida (~1,4 MB de MP3) baixam no 1º GESTO (`render/som.js`;
   antes dele nada toca) — 3,88 → 2,57 MB, folga ~1,4 MB; código novo que não precisa do começo continua sob demanda.
+- **Etapa 5 — corpo humano realista** (dono, 22/10: "vamos trabalhar intensivamente no corpo e face dos jogadores"; plano e
+  pesquisa em `golaco/PESQUISA-ETAPA5.md`, contrato "Corpo humano realista — Etapa 5.1" no `CONTRATOS.md`): o Rocketbox
+  `Sports_Male_02` (MIT) encaixado nas medidas do jogo (`tools/humano/`, README), 25 ossos do desenho pelas juntas
+  (`render/esqueleto.js`, puro), 4 LODs (`render/lod-humano.js`), a pele na GPU e o uniforme pintado por região
+  (`render/humano3d.js`, sob demanda) — atrás de `?corpo=humano` até o rosto chegar. SÓ DESENHO: `tools/fecho-hash.mjs
+  --diff origin/main` tem de dar 0 em todo PR da Etapa 5 (a `config.js` e a `comemoracao.js` são do fecho: constante do
+  corpo vai no `repouso` do `corpo.json` ou no render). Testes: `teste-ossos`, `teste-lod-humano` (Node), `teste-corpo-tela`
+  (navegador). Lições: o tornozelo APOIADO do jogo fica a 8 cm (a pose do treino parado dá 10,2: medir na partida); a torção
+  do membro pelas juntas DESENHADAS virava (usar as do jogo na perna); o ombro do desenho tem de subir com o braço (com a
+  queda fixa, o braço erguido esticava e a torção pulava 123°). Rostos reais (versão de teste com senha, edição pro): fotos
+  mais recentes do Commons pelas PÁGINAS (a API dá 429 para o IP desta máquina; miniaturas por thumb.wikimedia.org) e
+  as camisas 2026 dos 20 clubes do Brasileirão pesquisadas (cores estimadas por foto; goleiros são o mais incerto).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

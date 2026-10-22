@@ -263,7 +263,12 @@ const _q = new THREE.Quaternion();
 const _v = new THREE.Vector3();
 const _s = new THREE.Vector3();
 
-export function criarJogadores3D(cena, qualidade) {
+// Corpo humano (Etapa 5, ?corpo=humano): render/humano3d.js sob demanda; até chegar (e se falhar), o manequim desenha.
+// Linha do uniforme na textura do humano: 16 texels RGBA por boneco (ver humano3d.js COR_F).
+const TIPO_PADRAO = { plain: 0, liso: 0, stripes: 1, listras_verticais: 1, hoops: 2, listras_horizontais: 2, sash: 3, faixa_diagonal: 3, faixa_horizontal_peito: 4, halves: 5, metades: 5 };
+const TETO_TRI = { baixa: 3e4, media: 6e4, alta: 1.2e5 };
+
+export function criarJogadores3D(cena, qualidade, opc = {}) {
   const alta = qualidade === 'alta';
   const geo = geoCapsula(alta ? 14 : 9, alta ? 4 : 2);
   const geoCab = new THREE.SphereGeometry(1, alta ? 24 : 14, alta ? 16 : 10);
@@ -387,6 +392,48 @@ export function criarJogadores3D(cena, qualidade) {
   anelProx.name = 'indicador-proximo';
   cena.add(anelProx);
 
+  // ---- corpo humano (sob demanda)
+  let humano = null, humanoErro = null;
+  const kitsBrutos = { ...KITS };
+  if (opc.corpo === 'humano') {
+    (async () => {
+      const H = await import('./humano3d.js');
+      const dados = await H.carregarHumano();
+      const cab = await new Promise((ok, falha) => new THREE.TextureLoader().load(new URL('../../assets/jogador/cabeca-rb.webp', import.meta.url).href, ok, undefined, falha));
+      cab.colorSpace = THREE.SRGBColorSpace;
+      humano = H.criarHumano3D(cena, dados, { qualidade, cabeca: cab });
+      humano.definirSombras(sombras);
+    })().catch(e => { humanoErro = String(e?.message ?? e); console.error('corpo humano:', e); });
+  }
+  const linhasKit = new Map(); // chave da vaga → Float32Array(64)
+  const _c = new THREE.Color();
+  function linhaKit(jg) {
+    const nome = NOMES_KIT[kitIdx(jg)];
+    const kb = kitsBrutos[nome] ?? KITS.linha0;
+    const pele = pelesLin[Math.floor(sorteio(jg.id, 1) * pelesLin.length)];
+    const num = jg.num ?? (jg.id > 0 && jg.id % 100 > 0 && jg.id % 100 < 100 ? jg.id % 100 : 0);
+    const ch = `${nome}|${jg.id}|${jg.goleiro ? 1 : 0}|${jg.tecnico ? 1 : 0}`;
+    let L = linhasKit.get(ch);
+    if (L) return L;
+    L = new Float32Array(64);
+    const put = (i, hex, alt) => { _c.set(hex ?? alt ?? '#888888'); L[i * 4] = _c.r; L[i * 4 + 1] = _c.g; L[i * 4 + 2] = _c.b; L[i * 4 + 3] = 1; };
+    put(0, kb.camisa); put(1, kb.segunda ?? kb.camisa2, kb.acento); put(2, kb.manga, kb.camisa); put(3, kb.gola, kb.acento);
+    put(4, kb.punho, kb.acento); put(5, kb.calcao); put(6, kb.barra, kb.calcao); put(7, kb.meiao); put(8, kb.chuteira);
+    put(9, kb.acento); put(10, kb.luva, kb.acento);
+    L[44] = pele.r; L[45] = pele.g; L[46] = pele.b; L[47] = 1;
+    const tipo = TIPO_PADRAO[kb.padrao] ?? 0;
+    const n = kb.padraoN ?? (tipo === 1 ? 4 : tipo === 2 ? 5 : 0);
+    L[48] = tipo; L[49] = n; L[50] = kb.padraoLargura ?? (n ? 0.5 / n : 0.5); L[51] = kb.mangaPadrao ? 1 : 0;
+    L[52] = jg.goleiro ? 1 : 0; L[53] = jg.tecnico ? 1 : 0; L[54] = jg.tecnico ? 0 : num;
+    _c.set(kb.camisa ?? '#888888');
+    const lum = 0.2126 * _c.r + 0.7152 * _c.g + 0.0722 * _c.b;
+    put(14, kb.numero, lum > 0.25 ? '#15191b' : '#f2f4f5');
+    put(15, kb.sola, '#0b0d0e');
+    linhasKit.set(ch, L);
+    return L;
+  }
+  const itensH = [];
+
   // cores lineares de cada uniforme (só os campos '#rrggbb'); `padrao` (o do Total Match: listras, metades, faixa,
   // aros) vira a fração do iPad do tronco e da gola (PADRAO_FRAC; liso = 0, os uniformes de hoje)
   const linKit = kit => {
@@ -463,6 +510,7 @@ export function criarJogadores3D(cena, qualidade) {
     get capacidade() { return cap; },
     /** Triângulos de UM boneco (as cápsulas dos segmentos, a cabeça, o cabelo e a mancha de contato). */
     get triangulosPorBoneco() {
+      if (humano && itensH.length) return humano.triangulos / itensH.length + 2;
       const t = g => (g.index ? g.index.count : g.attributes.position.count) / 3;
       return t(segs.geometry) * NSEG + t(cabecas.geometry) + t(cabelos.geometry) + t(manchas.geometry);
     },
@@ -484,8 +532,14 @@ export function criarJogadores3D(cena, qualidade) {
      * cache por vaga não muda de tamanho) — e reescreve as cores de todas as vagas no próximo quadro.
      */
     definirKits(mapa) {
-      for (const [k, kit] of Object.entries(mapa || {})) if (kit && IDX_KIT[k] != null) kitsLin[k] = linKit(kit);
+      for (const [k, kit] of Object.entries(mapa || {})) if (kit && IDX_KIT[k] != null) { kitsLin[k] = linKit(kit); kitsBrutos[k] = kit; }
       vagaDe.clear();
+      linhasKit.clear();
+    },
+    /** O corpo humano (?corpo=humano): pronto, erro, triângulos do último quadro, níveis em uso. */
+    get humano() {
+      return { pedido: opc.corpo === 'humano', pronto: !!humano, erro: humanoErro, triangulos: humano ? humano.triangulos : 0,
+        niveis: humano ? humano.niveis.map(n => n.geo.instanceCount) : null, bonecos: humano ? itensH.length : 0 };
     },
     /**
      * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, pressiona, x, z, rumo,
@@ -569,6 +623,18 @@ export function criarJogadores3D(cena, qualidade) {
       }
       segs.count = nj * NSEG;
       cabecas.count = cabelos.count = manchas.count = nj;
+      if (humano) {
+        // o corpo humano no lugar do manequim (a mancha de contato e as marcas continuam daqui)
+        segs.count = 0; cabecas.count = cabelos.count = 0;
+        itensH.length = nj;
+        for (let p = 0; p < nj; p++) {
+          const jg = lista[p];
+          const it = itensH[p] ?? (itensH[p] = { pose: null, kit: null, ocultar: 0, chave: 0 });
+          it.pose = jg.pose; it.kit = linhaKit(jg); it.ocultar = jg.ocultar | 0; it.chave = jg.id;
+        }
+        const altura = (globalThis.innerHeight || 720) * (globalThis.devicePixelRatio || 1);
+        humano.atualizar(itensH, camera, altura, TETO_TRI[qualidade] ?? 6e4);
+      }
       segs.instanceMatrix.needsUpdate = true;
       aDim.needsUpdate = true;
       cabecas.instanceMatrix.needsUpdate = true;
@@ -618,6 +684,7 @@ export function criarJogadores3D(cena, qualidade) {
     },
     definirSombras(ligadas) {
       sombras = ligadas;
+      humano?.definirSombras(ligadas);
       segs.castShadow = cabecas.castShadow = cabelos.castShadow = ligadas;
       matMancha.opacity = ligadas ? 0.32 : 0.5;
     },
