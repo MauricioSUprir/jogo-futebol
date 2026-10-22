@@ -118,6 +118,7 @@ const LISTA = [
   ['corpo humano: esqueleto do desenho pelas juntas (juntas exatas, sem saltos, sola no chão, dobra com volume) e os assets', 'teste-ossos.mjs'],
   ['corpo humano: nível de detalhe pela altura na tela (histerese, ≤ 2 na LOD0, ≤ 3 níveis, teto de triângulos)', 'teste-lod-humano.mjs'],
   ['rostos reais (edição pro): índice, texturas 512², licença livre e créditos, a foto do TM, tom de pele, foto neutra', 'teste-rostos-reais.mjs'],
+  ['patrocínios nas camisas reais (versão de teste da pro): índice, logos 512 × 256, nada sobrando, decalques nos kits só com a base', 'teste-patrocinios.mjs'],
   // Ponte com o Total Match (15/10): o pedido do TM vira os times, o humano no lado do usuário, a trava e a súmula
   ['ponte com o Total Match: pedido → times, humano no visitante, trava "só o meu jogador", súmula e resultado', 'teste-ponte-tm.mjs'],
   // Modo Pênaltis 3D (dono, 15/10: "crie uma versão só de jogador de pênaltis"): a disputa pela Regra 10 da IFAB

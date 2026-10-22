@@ -71,6 +71,7 @@ export const TEMPOS_NODE = {
   'teste-ossos.mjs': 25,
   'teste-lod-humano.mjs': 1,
   'teste-rostos-reais.mjs': 1,
+  'teste-patrocinios.mjs': 1,
   'teste-ponte-tm.mjs': 21,
   'teste-disputa.mjs': 16,
   'teste-livre.mjs': 60,

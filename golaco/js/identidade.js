@@ -610,7 +610,17 @@ export function comCamisasReais(t, uniformes) {
   const pais = semAcento(t?.identidade?.pais);
   const [, c] = achados.length > 1 ? (achados.find(([, v]) => (v.liga === 'br') === (pais === 'brasil')) ?? achados[0]) : achados[0];
   if (!c?.home) return t;
-  return { ...t, kits: { home: c.home, away: c.away ?? undefined, third: c.third ?? undefined, gk: c.gk ?? undefined, gkAway: c.gkAway ?? undefined }, camisasReais: c.chave ?? true };
+  // patrocínios e a marca do fornecedor (só a versão de TESTE: uniformes.patrocinios, de assets/tm/patrocinios.json):
+  // a lista de decalques de cada camisa (casa, fora, terceira, goleiro) vai DENTRO do kit, com a URL de cada logo
+  const pat = uniformes?.patrocinios?.clubes?.[achados.find(([, v]) => v === c)?.[0]];
+  const base = uniformes?.patrocinios?.base ?? '';
+  const comDecais = (k, lista) => (k && Array.isArray(lista) && lista.length
+    ? { ...k, decais: lista.map(d => ({ ...d, url: base + d.logo })) } : k ?? undefined);
+  return {
+    ...t,
+    kits: { home: comDecais(c.home, pat?.casa), away: comDecais(c.away, pat?.fora), third: comDecais(c.third, pat?.terceira), gk: comDecais(c.gk, pat?.goleiro), gkAway: comDecais(c.gkAway, pat?.goleiro) },
+    camisasReais: c.chave ?? true,
+  };
 }
 
 // ------------------------------------------------------------------ identidade do pedido do TM
