@@ -1,0 +1,268 @@
+{
+ "clube": "Flamengo",
+ "chave": "br/Flamengo",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Adidas",
+  "logo": "flamengo__adidas.svg",
+  "logo_fonte": "https://commons.wikimedia.org/wiki/File:Adidas_2022_logo.svg (original https://upload.wikimedia.org/wikipedia/commons/1/1b/Adidas_2022_logo.svg) — as três barras (Performance)",
+  "cor_na_camisa": {
+   "casa": "#ffffff",
+   "fora": "#d7192e",
+   "terceira": "#ffffff",
+   "goleiro": "#ffffff"
+  },
+  "logo_terceira": "flamengo__adidas-originals.png",
+  "logo_terceira_fonte": "https://commons.wikimedia.org/wiki/File:Adidas_trefoil_logo.svg (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Adidas_trefoil_logo.svg/1280px-Adidas_trefoil_logo.svg.png) — a camisa 3 é da linha Originals e usa o trevo"
+ },
+ "patrocinios": [
+  {
+   "nome": "Proibir não é proteger (campanha)",
+   "posicao": "peito",
+   "posicao_detalhe": "duas linhas ('PROIBIR NÃO É' / 'PROTEGER'), em cima da faixa do peito; em 18/10 a linha de cima ficou sobre o vermelho e a de baixo sobre o preto",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "flamengo__proibir-nao-e-proteger.png",
+   "logo_fonte": "GERADO (texto da campanha em Barlow Condensed 800, renderizado no Chromium) — é uma frase, não há arquivo de marca. Referência: fotos oficiais de 18/10/2026 em https://www.flamengo.com.br/noticias/futebol/flamengo-vence-o-bahia-por-3-a-0-na-fonte-nova-e-segue-na-lideranca-do-brasileirao",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.55,
+   "tipo": "campanha",
+   "logo_aproximado": true,
+   "periodo": "desde 08/10/2026 (Santos x Flamengo, 29ª rodada — Poder360 de 08/10 e Footy Headlines), também no clássico de 11/10 e em 18/10 (Bahia x Flamengo) nos jogos do Brasileirão; na Libertadores fora do Brasil (15/10, Estudiantes x Flamengo em La Plata) o máster foi 'FLAMENGOTV'"
+  },
+  {
+   "nome": "BRB (#NaçãoBRBFla)",
+   "posicao": "ombro",
+   "lado": "ambos",
+   "posicao_detalhe": "dois logos pequenos, um de cada lado do alto do peito (clavícula), logo abaixo da gola; embaixo do 'BRB' vem '#NAÇÃOBRBFLA' em letra miúda (o arquivo é o logo 'banco BRB')",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "flamengo__brb.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:BRB_Logo.png (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1b/BRB_Logo.png/1280px-BRB_Logo.png)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1c1a1b",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.15
+  },
+  {
+   "nome": "Shopee",
+   "posicao": "manga",
+   "lado": "ambos",
+   "posicao_detalhe": "nas duas mangas, em pé ao longo do braço",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "flamengo__shopee.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Shopee.svg (original https://upload.wikimedia.org/wikipedia/commons/f/fe/Shopee.svg) — só a palavra, sem a sacola (recortado)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1c1a1b",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.15,
+   "rotacao": 90
+  },
+  {
+   "nome": "Ademicon",
+   "posicao": "barra_frontal",
+   "posicao_detalhe": "frente, embaixo, perto da barra",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "flamengo__ademicon.svg",
+   "logo_fonte": "https://www.ademicon.com.br/api/media/file/ademicon.svg (cabeçalho do site da marca; tirei o slogan 'consórcio e investimento', que não vai na camisa)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1c1a1b",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.3
+  },
+  {
+   "nome": "Lubrax",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "costas, em cima do nome (desde 01/10/2026)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "flamengo__lubrax.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Lubrax_2025.svg (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5b/Lubrax_2025.svg/1280px-Lubrax_2025.svg.png)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1c1a1b",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.45
+  },
+  {
+   "nome": "Hapvida",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "DENTRO dos algarismos do número das costas (escrito em pé no traço de cada algarismo); desde 01/10 saiu do alto das costas para o número",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "flamengo__hapvida.svg",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Logotipo_da_Hapvida.svg (original https://upload.wikimedia.org/wikipedia/commons/0/04/Logotipo_da_Hapvida.svg)",
+   "cor_na_camisa": {
+    "casa": "#cc1229",
+    "fora": "#ffffff",
+    "terceira": "#cc1229",
+    "goleiro": "#cc1229"
+   },
+   "largura_rel": 0.05,
+   "rotacao": 90
+  },
+  {
+   "nome": "Assist Card",
+   "posicao": "abaixo_numero",
+   "posicao_detalhe": "costas, embaixo do número",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "flamengo__assist-card.png",
+   "logo_fonte": "https://images.seeklogo.com/logo-png/52/1/assist-card-logo-png_seeklogo-523136.png (seeklogo; fundo branco tirado — o site da marca não tem o logo em arquivo)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1c1a1b",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.3
+  },
+  {
+   "nome": "Wap",
+   "posicao": "calcao",
+   "posicao_detalhe": "frente do calção, na perna oposta ao escudo",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "flamengo__wap.svg",
+   "logo_fonte": "https://lojawapio.vtexassets.com/assets/vtex.file-manager-graphql/images/340b5839-cb1a-4aa9-859d-939c9fbbbe5d___a7a127eb7d2c7ee47569e0d7b7560a02.svg (logo do cabeçalho de loja.wap.ind.br)",
+   "cor_na_camisa": {
+    "casa": "#cc1229",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.12
+  },
+  {
+   "nome": "Zé Delivery",
+   "posicao": "calcao",
+   "posicao_detalhe": "parte de trás do calção, um lado",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "flamengo__ze-delivery.png",
+   "logo_fonte": "https://s3.amazonaws.com/assets-fluminense/sponsors/91/ze_delivery_original.png (arquivo oficial distribuído pelo Fluminense; original pequeno, ampliado para 600 px)",
+   "cor_na_camisa": {
+    "casa": "#cc1229",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.12,
+   "logo_colorido_original": true
+  },
+  {
+   "nome": "GAC Motor",
+   "posicao": "calcao",
+   "posicao_detalhe": "parte de trás do calção, o outro lado (símbolo G em cima de 'GAC')",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "flamengo__gac.png",
+   "logo_fonte": "https://images.seeklogo.com/logo-png/62/1/gac-motor-logo-png_seeklogo-622768.png (seeklogo; fundo branco tirado — o site da GAC não abriu daqui)",
+   "cor_na_camisa": {
+    "casa": "#161414",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.1
+  }
+ ],
+ "suspensos_mp_1394": [
+  {
+   "nome": "Betano",
+   "posicao": "peito",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "flamengo__betano.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Betano_logo.svg (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/8/81/Betano_logo.svg/1280px-Betano_logo.svg.png)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.58,
+   "ate": "2026-10-05",
+   "nota": "máster até a MP 1.394/2026; contrato (até 2028) segue, sem substituto anunciado. Ia branca em cima da faixa em todas as camisas"
+  }
+ ],
+ "fontes": [
+  "https://eleconomista.com.ar/deportes/flamengo-desafio-lula-camiseta-prohibicion-apuestas-brasil-n98757/amp (MP 1.394/2026, prazo 05/10)",
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/ (18/10/2026)",
+  "https://www.meioemensagem.com.br/marketing/como-ficam-os-patrocinios-sem-as-bets-na-volta-do-brasileirao (07/10/2026)",
+  "https://www.poder360.com.br/poder-sportsmkt/times-da-serie-a-usam-patrocinios-pontuais-no-lugar-de-bets/",
+  "https://www.mktesportivo.com/2026/05/flamengo-amplia-lideranca-e-dispara-como-camisa-mais-valiosa-do-futebol-brasileiro-em-2026/ (Ademicon barra frontal, BRB clavícula, GAC calção, Shopee)",
+  "https://www.poder360.com.br/poder-sportsmkt/flamengo-e-shopee-estendem-contrato-de-patrocinio-para-2026/ (Shopee nas mangas em 2026)",
+  "https://www.meioemensagem.com.br/marketing/lubrax-volta-ao-uniforme-do-flamengo-apos-17-anos (Lubrax no alto das costas a partir de 01/10; Hapvida vai para dentro dos números)",
+  "https://folhadoleste.com.br/lubrax-volta-uniforme-flamengo-outubro/",
+  "https://diariodopara.com.br/bola/flamengo-fecha-com-gigante-chinesa-e-garante-bolada-milionaria/ (GAC Motor no calção, 26/03/2026)",
+  "https://www.flamengo.com.br/noticias/futebol/flamengo-vence-o-bahia-por-3-a-0-na-fonte-nova-e-segue-na-lideranca-do-brasileirao (fotos oficiais de 18/10/2026: frente, costas e calção)",
+  "https://www.poder360.com.br/poder-sportsmkt/flamengo-entra-em-campo-com-mensagem-contra-proibicao-das-bets/ (08/10/2026: a frase estreou contra o Santos)",
+  "https://www.footyheadlines.com/5965328745/flamengo-replaces-sponsor-with-protest-message-against-brazil-betting-ban.html",
+  "https://www.hoop78.com/artigos/shopee_no_corinthians_por_que_as_bets_sairam_das_camisas (13/10/2026: Shopee segue na manga do Flamengo)"
+ ],
+ "confianca": "alta",
+ "notas": "Em out/2026 a Betano saiu do peito pela MP 1.394/2026 e o clube estampa a frase 'PROIBIR NÃO É PROTEGER' (protesto da ANJL/IBJR) no lugar, desde o clássico de 11/10, inclusive em 18/10 (Bahia x Flamengo). Na Libertadores fora do país apareceu 'FLAMENGOTV' no máster (foto do Football Kit Archive) — não baixei esse logo. Disposição conferida nas fotos oficiais de 18/10 (camisa branca): BRB dos dois lados do alto do peito, adidas à direita, frase na faixa, Ademicon embaixo; costas LUBRAX em cima do nome, Hapvida dentro dos algarismos, ASSIST CARD embaixo do número; calção Wap na frente, Zé Delivery e GAC atrás. Shopee nas mangas: confirmada para 2026 (Poder360) e vista nas fotos do FKA da camisa 1; nas fotos de 18/10 a manga quase não aparece. Cores por camisa estimadas (branco na rubro-negra, na vermelha 3 e no goleiro; preto na branca). O goleiro em 18/10 usou o laranja (o principal da pesquisa é o azul): os logos vão brancos nos dois. Em 18/10 o calção da camisa branca era BRANCO (a pesquisa diz preto): as cores do calção 'fora' foram dadas para o calção preto (logos brancos). A frase e o 'sportingblog' são textos gerados, não arquivos de marca. Orizonti não se aplica (é do Cruzeiro). VERIFICAÇÃO (22/10): CORRIGIDO o início da frase — não foi o clássico de 11/10, foi 08/10 contra o Santos (Poder360, Footy Headlines; o Poder360 de 18/10 diz 'no clássico de 11 e nas últimas duas rodadas'). Conferido nas fotos oficiais de 18/10: BRB dos dois lados do alto do peito, frase na faixa, Ademicon embaixo, LUBRAX em cima do nome, ASSIST CARD embaixo do número, Wap na frente do calção, Zé Delivery e GAC atrás. Shopee nas mangas segue patrocinadora do Flamengo em out/2026 (hoop78, 13/10/2026: 'A empresa também está na manga do Flamengo desde 2025'; Poder360 12/01/2026: contrato de 2026 na manga), mas a manga não aparece nítida nas fotos de 18/10. Lubrax em cima e Hapvida dentro dos números desde 01/10: Meio & Mensagem, Gazeta Esportiva, Itatiaia."
+}

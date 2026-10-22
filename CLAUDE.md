@@ -653,6 +653,11 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   - **A luz da foto** sai pela média local da pele.
   - **A linha no alto da cabeça** era a costura da UV (os dois lados com tons diferentes) + a borda escura das ilhas
     da textura base + normais não soldadas na malha: as três corrigidas.
+  **Patrocínios na versão de teste** (22/10; contrato "Patrocínios nas camisas reais" no `CONTRATOS.md`): só na edição
+  pro, com as camisas reais — 20 clubes, 161 logos (máscaras 512 × 256 em `assets/tm/patrocinios/`, índice
+  `assets/tm/patrocinios.json`, gerados por `tools/patrocinios/gerar.mjs` a partir da pesquisa com as fontes), decalques
+  planos no espaço de repouso no shader (`render/humano3d.js`; peito, ombro, manga, barra, número, calção, fornecedor).
+  Para TIRAR: apagar o índice e a pasta. Testes: `teste-patrocinios` (Node) e `teste-corpo-tela` C6/C7.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

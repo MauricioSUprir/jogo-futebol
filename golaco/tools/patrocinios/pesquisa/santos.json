@@ -1,0 +1,171 @@
+{
+ "clube": "Santos",
+ "chave": "br/Santos",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Umbro",
+  "logo": "santos__umbro.svg",
+  "logo_fonte": "https://commons.wikimedia.org/wiki/File:Umbro_logo_(current).svg (original https://upload.wikimedia.org/wikipedia/commons/2/22/Umbro_logo_%28current%29.svg)",
+  "cor_na_camisa": {
+   "casa": "#151515",
+   "fora": "#ffffff",
+   "terceira": "#ffffff",
+   "goleiro": "#ffffff"
+  }
+ },
+ "patrocinios": [
+  {
+   "nome": "Agibank",
+   "posicao": "peito",
+   "posicao_detalhe": "máster desde 18/10/2026 (Fluminense x Santos), contrato até o fim da temporada, no lugar da Novibet (MP 1.394/2026); entre 05 e 17/10 o peito teve o Instituto Leão do Mar",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "santos__agibank.png",
+   "logo_fonte": "https://media.santosfc.com.br/wp-content/uploads/2022/01/AGIBANK-BRANCO-site-1.png (site do clube; original 300 px, ampliado 3x)",
+   "cor_na_camisa": {
+    "casa": "#151515",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.55
+  },
+  {
+   "nome": "Canção Alimentos",
+   "posicao": "ombro",
+   "lado": "ambos",
+   "logo_colorido": true,
+   "posicao_detalhe": "selo oval 'Canção' no alto do peito dos dois lados (acima da Umbro e acima do escudo)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "santos__cancao-alimentos.png",
+   "logo_fonte": "https://media.santosfc.com.br/wp-content/uploads/2022/01/cert.pdf-1024x724.png (rodapé de patrocinadores de santosfc.com.br)",
+   "cor_na_camisa": {
+    "casa": "#151515",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.14
+  },
+  {
+   "nome": "Kicaldo",
+   "posicao": "manga",
+   "lado": "ambos",
+   "posicao_detalhe": "'Kicaldo' escrito ao longo das duas mangas",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "santos__kicaldo.png",
+   "logo_fonte": "https://kicaldo.com.br/wp-content/uploads/2020/08/kicaldo.png (site da marca; tirei a moldura verde e ampliei 3x)",
+   "cor_na_camisa": {
+    "casa": "#151515",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.15
+  },
+  {
+   "nome": "NR Sports",
+   "posicao": "barra_frontal",
+   "posicao_detalhe": "barra da frente: 'NR Sports' com 'NEYMAR SPORT E MARKETING LTDA' embaixo",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "santos__nr-sports.png",
+   "logo_fonte": "https://nrsports.com.br/wp-content/uploads/2023/07/nrsportslogo.png (site da marca; original 194 px, ampliado 4x)",
+   "cor_na_camisa": {
+    "casa": "#151515",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.4
+  },
+  {
+   "nome": "BaladAPP by Ticketmaster",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "costas, em cima do nome",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "santos__baladapp.png",
+   "logo_fonte": "https://media.santosfc.com.br/wp-content/uploads/2022/01/BALADAPP-LOGO-EM-BRANCO.png (site do clube)",
+   "cor_na_camisa": {
+    "casa": "#151515",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.4
+  },
+  {
+   "nome": "Instituto Projeto Neymar Jr",
+   "posicao": "abaixo_numero",
+   "posicao_detalhe": "costas, logo embaixo do número (símbolo 'njr' + INSTITUTO PROJETO NEYMAR JR)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "santos__instituto-projeto-neymar-jr.svg",
+   "logo_fonte": "https://institutoneymarjr.org.br/wp-content/uploads/2022/10/logo-color.svg (cabeçalho do site do instituto)",
+   "cor_na_camisa": {
+    "casa": "#8a8a8a",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.3
+  },
+  {
+   "nome": "Quartzolit (Saint-Gobain)",
+   "posicao": "abaixo_numero",
+   "posicao_detalhe": "costas, na parte de baixo, embaixo do Instituto Neymar Jr; na camisa 1 branca vai colorido (selo amarelo), nas escuras branco",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "santos__quartzolit.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Quartzolit_logo.png (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Quartzolit_logo.png/1280px-Quartzolit_logo.png)",
+   "cor_na_camisa": {
+    "casa": "#ffe600",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.32
+  }
+ ],
+ "fontes": [
+  "https://www.flickr.com/photos/santosfc/albums/72177720336214072 (Fluminense x Santos, 18/10/2026: camisa 3 preta com Agibank, frente e costas, goleiro azul-marinho)",
+  "https://www.santosfc.com.br/agibank-e-o-novo-patrocinador-master-do-santos-fc/ (16/10/2026)",
+  "https://www.poder360.com.br/poder-sportsmkt/santos-anuncia-agibank-como-novo-patrocinador-master/",
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/ (18/10/2026: Instituto Leão do Mar antes do Agibank)",
+  "https://atletico.com.br/galo-vira-nos-acrescimos-com-golacos-na-arena-mrv/ (foto oficial de Atlético x Santos, 11/10/2026: costas da camisa 1 branca do Santos com Instituto Neymar e Quartzolit amarelo)",
+  "https://www.santosfc.com.br/ (rodapé de patrocinadores: Agibank, Umbro, Kicaldo, Canção, Placo, Zé Delivery, Aiwa, Arkema, allu, BaladAPP, Torcedor Premiado, Claro, Unisanta, ACNUR, Daikin)"
+ ],
+ "confianca": "media",
+ "notas": "Agibank estreou no peito em 18/10 (contrato até o fim de 2026, oito rodadas); antes, a Novibet saiu com a MP 1.394/2026 e o clube usou o peito para o Instituto Leão do Mar. Disposição conferida na camisa 3 preta (18/10): Canção nos dois lados do alto do peito, Kicaldo nas mangas, NR Sports na barra, BaladAPP em cima do nome, Instituto Neymar Jr e Quartzolit embaixo do número; o goleiro (Diógenes, camisa azul-marinho) tem as mesmas costas em branco — a pesquisa de uniforme tem a preta como principal de goleiro. Incertezas: cores na camisa 1 branca (vi só as costas: Quartzolit colorido, Instituto Neymar cinza) e na 2 listrada estimadas; não vi patrocínio no calção; o logo do Agibank no peito é só a palavra 'agibank' (o arquivo veio do site do clube em 300 px e foi ampliado); NR Sports e Kicaldo também ampliados de arquivos pequenos. O Instituto Neymar baixado é colorido (verde/amarelo): na camisa é monocromático. VERIFICAÇÃO (22/10): conferido sem correção — Agibank no peito desde 18/10 (Poder360 16 e 18/10, site do clube, fotos do Flickr de 18/10, o último jogo); Canção dos dois lados do alto do peito, Kicaldo na manga, NR Sports na barra, BaladAPP em cima do nome, Instituto Neymar Jr e Quartzolit embaixo do número batem nas fotos."
+}

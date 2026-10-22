@@ -421,7 +421,7 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
     const ch = `${nome}|${jg.id}|${jg.goleiro ? 1 : 0}|${jg.tecnico ? 1 : 0}|${camada}`;
     let L = linhasKit.get(ch);
     if (L) return L;
-    L = new Float32Array(80);
+    L = new Float32Array(128);
     const put = (i, hex, alt) => { _c.set(hex ?? alt ?? '#888888'); L[i * 4] = _c.r; L[i * 4 + 1] = _c.g; L[i * 4 + 2] = _c.b; L[i * 4 + 3] = 1; };
     put(0, kb.camisa); put(1, kb.segunda ?? kb.camisa2, kb.acento); put(2, kb.manga, kb.camisa); put(3, kb.gola, kb.acento);
     put(4, kb.punho, kb.acento); put(5, kb.calcao); put(6, kb.barra, kb.calcao); put(7, kb.meiao); put(8, kb.chuteira);
@@ -437,8 +437,37 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
     put(15, kb.sola, '#0b0d0e');
     // a faixa do meião (camisas reais): a cor e a = 1 quando existe
     if (kb.meiaoDetalhe) put(16, kb.meiaoDetalhe); else L[67] = 0;
+    // patrocínios (só a versão de teste da pro: kb.decais, de assets/tm/patrocinios.json): até 6, nas linhas 17–28
+    if (humano && kb.decais && !jg.tecnico) escreverDecais(L, kb.decais, kb);
     linhasKit.set(ch, L);
     return L;
+  }
+  // os decalques de um uniforme na linha do kit: A = [camada, posição, largura (m), largura ÷ altura], B = [cor, lado]. A
+  // largura relativa da pesquisa é da frente do tronco (~0,34 m); a altura tem um teto por posição (o logo baixo e comprido
+  // não fica alto demais); a ordem de importância decide quem entra quando passam de 6
+  const POS_DECAL = { peito: 1, ombro: 2, manga: 3, barra_frontal: 4, acima_numero: 5, abaixo_numero: 6, calcao: 7, fornecedor: 8 };
+  const LARG_DECAL = { 1: 0.55, 2: 0.14, 3: 0.16, 4: 0.35, 5: 0.40, 6: 0.35, 7: 0.16, 8: 0.13 };
+  const ALTMAX_DECAL = { 1: 0.11, 2: 0.045, 3: 0.06, 4: 0.055, 5: 0.06, 6: 0.055, 7: 0.055, 8: 0.05 };
+  const ORDEM_DECAL = [1, 8, 5, 3, 2, 7, 4, 6];
+  const LADO_DECAL = { esquerdo: 1, esquerda: 1, direito: 2, direita: 2, ambos: 3 };
+  // a cor do logo some no tecido da mesma cor (o patrocínio branco do calção branco: a pesquisa dá a cor na camisa): com
+  // pouca diferença de brilho do fundo, o logo vai para o contraste
+  const lumHex = h => { _c.set(h || '#888888'); return 0.2126 * _c.r + 0.7152 * _c.g + 0.0722 * _c.b; };
+  const FUNDO_DECAL = { 1: 'camisa', 2: 'camisa', 3: 'manga', 4: 'camisa', 5: 'camisa', 6: 'camisa', 7: 'calcao', 8: 'camisa' };
+  function escreverDecais(L, lista, kb) {
+    const ok = lista.filter(d => POS_DECAL[d.pos]).sort((a, b) => ORDEM_DECAL.indexOf(POS_DECAL[a.pos]) - ORDEM_DECAL.indexOf(POS_DECAL[b.pos])).slice(0, 6);
+    ok.forEach((d, i) => {
+      const pos = POS_DECAL[d.pos], asp = Math.max(0.2, d.asp || 2);
+      let w = (d.larg > 0 ? Math.min(d.larg, 0.8) : LARG_DECAL[pos]) * 0.34;
+      if (w / asp > ALTMAX_DECAL[pos]) w = ALTMAX_DECAL[pos] * asp;
+      const o = (17 + 2 * i) * 4;
+      L[o] = humano.logoDe(d.url); L[o + 1] = pos; L[o + 2] = w; L[o + 3] = asp;
+      let cor = d.cor || '#ffffff';
+      const fundo = kb[FUNDO_DECAL[pos]] ?? kb.camisa, lf = lumHex(fundo);
+      if (Math.abs(lumHex(cor) - lf) < 0.12) cor = lf > 0.25 ? '#15191b' : '#f2f4f5';
+      _c.set(cor);
+      L[o + 4] = _c.r; L[o + 5] = _c.g; L[o + 6] = _c.b; L[o + 7] = LADO_DECAL[d.lado] ?? (pos === 2 ? 3 : 0);
+    });
   }
   const itensH = [];
 
@@ -556,7 +585,7 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
     get humano() {
       return { pedido: opc.corpo === 'humano', pronto: !!humano, erro: humanoErro, triangulos: humano ? humano.triangulos : 0,
         niveis: humano ? humano.niveis.map(n => n.geo.instanceCount) : null, bonecos: humano ? itensH.length : 0,
-        rostos: humano ? humano.rostos : null };
+        rostos: humano ? humano.rostos : null, logos: humano ? humano.logos : null };
     },
     /**
      * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, pressiona, x, z, rumo,
@@ -640,7 +669,7 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
       }
       segs.count = nj * NSEG;
       cabecas.count = cabelos.count = manchas.count = nj;
-      if (humano && humano.versaoRostos !== versaoRostos) { versaoRostos = humano.versaoRostos; linhasKit.clear(); }
+      if (humano && humano.versaoRostos + humano.versaoLogos !== versaoRostos) { versaoRostos = humano.versaoRostos + humano.versaoLogos; linhasKit.clear(); }
       if (humano) {
         // o corpo humano no lugar do manequim (a mancha de contato e as marcas continuam daqui)
         segs.count = 0; cabecas.count = cabelos.count = 0;

@@ -47,7 +47,11 @@ function carregarBase(p) {
 function carregarUniformes(p) {
   if (!p || p.edicao !== 'pro') return null;
   const ctl = new AbortController(), tempo = setTimeout(() => ctl.abort(), ESPERA_BASE_MS);
-  return fetch(urlTm('uniformes.json'), { signal: ctl.signal }).then(r => (r.ok ? r.json() : null)).catch(() => null).finally(() => clearTimeout(tempo));
+  const json = f => fetch(urlTm(f), { signal: ctl.signal }).then(r => (r.ok ? r.json() : null)).catch(() => null);
+  // os patrocínios (só a versão de TESTE da pro; dono, 22/10: "vamos tirar dps") vão junto com as camisas reais
+  return Promise.all([json('uniformes.json'), json('patrocinios.json')])
+    .then(([u, pat]) => (u ? { ...u, patrocinios: pat?.clubes ? { ...pat, base: urlTm('patrocinios/') } : null } : null))
+    .finally(() => clearTimeout(tempo));
 }
 
 /**

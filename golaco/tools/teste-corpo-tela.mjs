@@ -7,6 +7,8 @@
 //   C4 rostos reais (Etapa 5.2, a versão de teste da edição PRO do TM): num pedido pro com jogadores do índice
 //      (assets/rostos-reais/br.json), cada um com rosto real pede a textura dele e todas carregam (carregados = pedidos ≥ 3);
 //   C5 na edição PÚBLICA (o mesmo pedido) e sem o TM nada de rosto real é pedido (nenhum pedido a assets/rostos-reais);
+//   C6 patrocínios (só a versão de teste da pro): no mesmo pedido pro, as máscaras dos logos das camisas reais são
+//      pedidas e todas carregam (carregados = pedidos ≥ 3); C7 na pública nada de patrocínio é pedido;
 //   C8 sem erro no console (shader, textura, carga) nas duas telas.
 // Na versão sem o corpo humano reprova (C0).
 //   node tools/teste-corpo-tela.mjs
@@ -103,11 +105,12 @@ async function rostosNoPedido(edicao) {
   await nav.pagina.waitForFunction(() => window.__golaco.estadio.corpo?.pronto || window.__golaco.estadio.corpo?.erro, null, { timeout: 120000 }).catch(() => {});
   await nav.pagina.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); for (let i = 0; i < 60; i++) g.relogio.avancar(1000 / 60); });
   // as texturas entram uma a uma, a cada quadro: espera todas (ou 20 s)
-  await nav.pagina.waitForFunction(() => { const r = window.__golaco.estadio.corpo?.rostos; window.__golaco.relogio.avancar(1000 / 60); return r && r.pedidos > 0 && r.carregados >= r.pedidos; }, null, { timeout: 20000, polling: 100 }).catch(() => {});
+  await nav.pagina.waitForFunction(() => { const c = window.__golaco.estadio.corpo, r = c?.rostos, l = c?.logos; window.__golaco.relogio.avancar(1000 / 60); return r && r.pedidos > 0 && r.carregados >= r.pedidos && l && l.pedidos > 0 && l.carregados >= l.pedidos; }, null, { timeout: 20000, polling: 100 }).catch(() => {});
   const r = await nav.pagina.evaluate(() => window.__golaco.estadio.corpo?.rostos ?? null);
+  const lg = await nav.pagina.evaluate(() => window.__golaco.estadio.corpo?.logos ?? null);
   const err = nav.erros.slice();
   await nav.navegador.close();
-  return { r, err, baixou: pedidos.filter(u => /assets\/rostos-reais\//.test(u)) };
+  return { r, lg, err, baixou: pedidos.filter(u => /assets\/rostos-reais\//.test(u)), baixouPat: pedidos.filter(u => /assets\/tm\/patrocinios/.test(u)) };
 }
 let rPro = null, rPub = null;
 try { rPro = await rostosNoPedido('pro'); erros.push(...rPro.err.map(e => 'rostos pro: ' + e)); } catch (e) { erros.push('rostos pro: ' + e.message); }
@@ -117,6 +120,10 @@ meta('C4 rostos reais na edição pro: cada jogador com rosto pede a textura e t
   'carregados = pedidos ≥ 3', rPro?.r && rPro.r.indice && rPro.r.pedidos >= 3 && rPro.r.carregados === rPro.r.pedidos);
 meta('C5 na edição pública nada de rosto real é pedido',
   rPub ? `${rPub.baixou.length} pedidos a assets/rostos-reais; rostos ${JSON.stringify(rPub.r)}` : 'não abriu', '0', rPub && rPub.baixou.length === 0 && !(rPub.r?.pedidos > 0));
+meta('C6 patrocínios na edição pro (versão de teste): os logos das camisas reais são pedidos e carregam',
+  rPro?.lg ? `${rPro.lg.carregados}/${rPro.lg.pedidos} logos carregados` : 'não abriu', 'carregados = pedidos ≥ 3', rPro?.lg && rPro.lg.pedidos >= 3 && rPro.lg.carregados === rPro.lg.pedidos);
+meta('C7 na edição pública nada de patrocínio é pedido',
+  rPub ? `${rPub.baixouPat.length} pedidos a assets/tm/patrocinios*; logos ${JSON.stringify(rPub.lg)}` : 'não abriu', '0', rPub && rPub.baixouPat.length === 0 && !(rPub.lg?.pedidos > 0));
 
 const h = humanoCel;
 meta('C0 o corpo humano carrega e desenha todos os bonecos (soma dos níveis = bonecos; ≥ 22)',

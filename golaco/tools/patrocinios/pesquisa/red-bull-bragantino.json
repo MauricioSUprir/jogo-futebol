@@ -1,0 +1,114 @@
+{
+ "clube": "Red Bull Bragantino",
+ "chave": "br/Red Bull Bragantino",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Puma",
+  "logo": "red-bull-bragantino__puma.png",
+  "logo_fonte": "https://s3.amazonaws.com/assets-fluminense/sponsors/96/PUMA_Logo_Cat_without-Registration_original.png",
+  "cor_na_camisa": {
+   "casa": "#d8262a",
+   "fora": "#ffffff",
+   "terceira": "#151515",
+   "goleiro": "#ffffff"
+  }
+ },
+ "patrocinios": [
+  {
+   "nome": "Red Bull",
+   "posicao": "peito",
+   "logo_colorido": true,
+   "posicao_detalhe": "os dois touros com o sol (sem a palavra), no meio do peito",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "red-bull-bragantino__red-bull.svg",
+   "logo_fonte": "https://cdn.worldvectorlogo.com/logos/red-bull-logo.svg (recortado: só os touros e o sol)",
+   "cor_na_camisa": {
+    "casa": "#db0a40",
+    "fora": "#db0a40",
+    "terceira": "#151515",
+    "goleiro": "#db0a40"
+   },
+   "largura_rel": 0.62
+  },
+  {
+   "nome": "Red Bull (Red Bulls)",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "palavra 'Red Bulls' (com S, em arco) no ALTO das costas, logo abaixo da gola, em cima do nome; vermelha com contorno branco na camisa branca",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "red-bull-bragantino__red-bulls-texto.png",
+   "logo_fonte": "recortada da foto oficial de produto da camisa 1 2026 (Footy Headlines, blogger.googleusercontent.com, 1600 px): só a palavra, fundo tirado",
+   "cor_na_camisa": {
+    "casa": "#d8262a",
+    "fora": "#d8262a",
+    "terceira": "#151515",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.48,
+   "logo_aproximado": true
+  },
+  {
+   "nome": "Asaas",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "costas, ENTRE o nome e o número (contrato até o fim de 2027)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "red-bull-bragantino__asaas.png",
+   "logo_fonte": "https://img.redbullbragantino.com/images/e_trim:1:transparent/f_png/2026/4/9/sttqoyvrxewigmndoxxy/asaas (página de parceiros do clube)",
+   "cor_na_camisa": {
+    "casa": "#d8262a",
+    "fora": "#ffffff",
+    "terceira": "#151515",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.36
+  },
+  {
+   "nome": "N&D Prime (Farmina Pet Foods)",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "dentro do número das costas: selo pequeno (folha branca com 'N&D') no PÉ de cada algarismo",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "red-bull-bragantino__nd.png",
+   "logo_fonte": "https://img.redbullbragantino.com/images/e_trim:1:transparent/f_png/2026/2/4/flm5lta2ql7lniqjsxd5/nd (logo N&D da página de parceiros do clube)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#ffffff",
+    "terceira": "#151515",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.08
+  }
+ ],
+ "fontes": [
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/",
+  "https://bnldata.com.br/medida-provisoria-retira-bets-de-metade-das-camisas-de-clubes-da-serie-a/",
+  "https://www.mktesportivo.com/2026/01/red-bull-bragantino-anuncia-novos-patrocinios-para-temporada-2026/",
+  "https://focusgn.com/brasil/ate-2026-red-bull-bragantino-anuncia-a-operadora-betfast-como-nova-patrocinadora",
+  "https://www.redbullbragantino.com/br-pt/noticias (foto de 19/10/2026: Fernando diante do Remo)",
+  "fotos de produto Mantos do Futebol / Netshoes (frente e costas das três camisas)",
+  "https://www.redbullbragantino.com/br-pt/noticias (página de parceiros em 22/10/2026: Puma, Asaas, N&D, Curaprox — a Betfast não está mais)",
+  "https://maquinadoesporte.com.br/futebol/red-bull-bragantino-fecha-patrocinio-com-fintech-asaas-para-as-costas-da-camisa (Asaas entre o nome e o número, até o fim de 2027)",
+  "https://www.mktesportivo.com/wp-content/uploads/2026/01/461296_1188517_n_d___red_bull_bragantino__Easy-Resize.com_-1024x553.jpg (foto de 15/01/2026: ASAAS em cima do número e o selo N&D no pé dos algarismos)",
+  "https://www.footyheadlines.com/pt/vazacao-da-camisa-titular-do-red-bull-bragantino-2026.html (fotos de produto: 'Red Bulls' no alto das costas)"
+ ],
+ "confianca": "media",
+ "notas": "Máster = a própria Red Bull (touros e sol no peito, palavra 'Red Bulls' em cima do número), sem mudança com a MP das bets (Poder360 e BNLData de 18/10). A Betfast (mangas e barra traseira, contrato até o fim de 2026) saiu com a MP 1.394/2026: na foto de 19/10 contra o Remo as mangas estão limpas. N&D Prime (Farmina) no número das costas desde 15/01/2026 (anúncio do clube), não conferido em foto de outubro. Incertezas: a palavra das costas é 'Red Bulls' (com S) e o arquivo só tem 'Red Bull' — o desenho precisa do S ou usar só a palavra; o logo do peito é colorido (vermelho + sol amarelo) nas camisas 1 e 2 e no goleiro (estimado), preto na 3; cor da palavra nas costas da camisa 2 (vermelho com contorno branco na foto de loja); logo da N&D Prime só em 240 px (abaixo dos 400 px pedidos; o maior que a Farmina publica). VERIFICAÇÃO (22/10/2026): máster Red Bull confirmado (Poder360 e BNLData, 18/10) e na foto de 19/10 (touros coloridos no peito, mangas limpas, sem Betfast). CORRIGIDO: (1) FALTAVA a ASAAS (fintech), patrocinadora das costas entre o nome e o número com contrato até o fim de 2027 — está na página de parceiros do clube hoje e na foto de 15/01/2026; entrou como acima_numero com o logo do site do clube (cor na camisa estimada: vermelho na branca, como o nome/número; branco na preta); (2) o logo da palavra das costas era 'Red Bull' (sem S): trocado por 'Red Bulls' recortado da foto oficial de produto (logo_aproximado, 988 px; a palavra fica no alto das costas, logo abaixo da gola, acima do nome); (3) a N&D no número é o selo da folha branca com 'N&D' (não o logo verde da linha Prime): trocado pelo logo do site do clube (323 px; o antigo tinha 240) e a cor na camisa 1 e 2 passou a branco. Ordem nas costas: Red Bulls → nome → Asaas → número (com N&D). Não achei foto de costas de jogo de outubro."
+}

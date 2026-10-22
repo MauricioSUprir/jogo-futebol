@@ -15,7 +15,7 @@ import { lerCorpo } from './corpo-dados.js';
 import { escolherLods, criarEstadoLod } from './lod-humano.js';
 
 const BASE = new URL('../../assets/jogador/', import.meta.url);
-const TEXELS_KIT = 20;
+const TEXELS_KIT = 32;
 
 /** Carrega o corpo (índice, dados, máscara, normais). */
 export async function carregarHumano() {
@@ -99,6 +99,7 @@ uniform highp sampler2D tKits;
 uniform sampler2D tReg;
 uniform sampler2D tCabeca;
 uniform highp sampler2DArray tRostos;
+uniform highp sampler2DArray tLogos;
 uniform sampler2D tDigitos;
 uniform vec4 uNumero; // caixa do número das costas na UV (u0, v0, u1, v1)
 varying vec3 vRest;
@@ -141,6 +142,52 @@ float padrao(float tipo, float n, float larg) {
 float digito(float d, vec2 q) { // q em [0, 1]² dentro da célula do dígito (y para cima)
   return texture(tDigitos, vec2((d + q.x) / 10.0, q.y)).r;
 }
+// PATROCÍNIOS (só a versão de teste da edição pro): até 6 decalques por uniforme nas linhas 17–28 do kit — A = [camada do
+// logo, posição, largura (m), largura ÷ altura], B = [cor, lado]. Projeção plana na posição de REPOUSO (x frente, y cima,
+// z direita do jogador), só na face virada para o plano (a normal de repouso pela derivada da tela); a máscara do logo
+// (512 × 256, o desenho centrado e encaixado) pinta a cor do patrocínio na camisa
+float decalLogo(vec4 A, vec2 uv) {
+  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
+  float asp = max(A.w, 0.05);
+  vec2 t = vec2(0.5 + (uv.x - 0.5) * min(1.0, asp / 2.0), 0.5 + (uv.y - 0.5) * min(1.0, 2.0 / asp));
+  return texture(tLogos, vec3(t, A.x)).r;
+}
+vec3 decais(vec3 cor, int reg) {
+  vec3 p = vRest;
+  vec3 nR = normalize(cross(dFdx(vRest), dFdy(vRest)));
+  for (int i = 0; i < 6; i++) {
+    vec4 A = kit(17 + 2 * i);
+    if (A.x < 0.5) continue;
+    vec4 B = kit(18 + 2 * i);
+    int pos = int(A.y + 0.5), lado = int(B.w + 0.5);
+    float w = A.z, h = A.z / max(A.w, 0.05);
+    float m = 0.0;
+    if (pos == 3) {                                   // manga: a face de fora do braço (no repouso o braço desce ~45°)
+      if (reg != 2) continue;
+      float s = p.z >= 0.0 ? 1.0 : -1.0;
+      if ((lado == 1 && s > 0.0) || ((lado == 0 || lado == 2) && s < 0.0)) continue;
+      vec3 eixo = normalize(vec3(0.0, -0.22, 0.21 * s)), fora = normalize(vec3(0.0, 0.69, 0.72 * s));
+      if (dot(nR, fora) < 0.2) continue;
+      vec3 c = vec3(0.0, 1.375, 0.215 * s), d = p - c;
+      m = decalLogo(A, vec2(0.5 + s * d.x / w, 0.5 - dot(d, eixo) / h));
+    } else if (pos == 5 || pos == 6) {                // costas: em cima e embaixo do número
+      if (reg != 1 || nR.x > -0.25) continue;
+      float cy = pos == 5 ? 1.43 : 1.09;
+      m = decalLogo(A, vec2(0.5 + p.z / w, 0.5 + (p.y - cy) / h));
+    } else {                                          // de frente: peito, ombro, barra, calção, fornecedor
+      if (nR.x < 0.25) continue;
+      if (pos == 7) { if (reg != 5) continue; } else if (reg != 1) continue;
+      float cy = pos == 1 ? 1.27 : pos == 2 ? 1.44 : pos == 4 ? 1.12 : pos == 7 ? 0.95 : 1.40;
+      float cz = 0.0;
+      if (pos == 2) cz = (lado == 1 ? -0.085 : lado == 2 ? 0.085 : (p.z >= 0.0 ? 0.085 : -0.085));
+      if (pos == 7) cz = lado == 2 ? 0.085 : -0.085;  // o calção: na perna esquerda (o padrão)
+      if (pos == 8) cz = 0.085;                       // a marca do fornecedor: no peito direito (o escudo fica no esquerdo)
+      m = decalLogo(A, vec2(0.5 - (p.z - cz) / w, 0.5 + (p.y - cy) / h));
+    }
+    cor = mix(cor, B.rgb, m);
+  }
+  return cor;
+}
 `;
 const COR_F = `
 {
@@ -169,6 +216,7 @@ const COR_F = `
     } else if (r == 1 || r == 10) {
       cor = mix(k0.rgb, k1.rgb, padrao(pad.x, pad.y, pad.z));
       if (r == 10) cor = kit(9).rgb;
+      else cor = decais(cor, 1);
       // número das costas
       if (vRest.x < -0.02 && est.z > 0.5 && vUv.x > uNumero.x && vUv.x < uNumero.z && vUv.y > uNumero.y && vUv.y < uNumero.w) {
         vec2 q = vec2((vUv.x - uNumero.x) / (uNumero.z - uNumero.x), (vUv.y - uNumero.y) / (uNumero.w - uNumero.y));
@@ -180,10 +228,10 @@ const COR_F = `
         } else if (q.x > 0.25 && q.x < 0.75) t = digito(un, vec2((q.x - 0.25) * 2.0, q.y));
         cor = mix(cor, kit(14).rgb, t);
       }
-    } else if (r == 2) cor = mix(kit(2).rgb, k1.rgb, pad.w > 0.5 ? padrao(pad.x, pad.y, pad.z) : 0.0);
+    } else if (r == 2) cor = decais(mix(kit(2).rgb, k1.rgb, pad.w > 0.5 ? padrao(pad.x, pad.y, pad.z) : 0.0), 2);
     else if (r == 3) cor = kit(3).rgb;
     else if (r == 4) cor = kit(4).rgb;
-    else if (r == 5) cor = kit(5).rgb;
+    else if (r == 5) cor = decais(kit(5).rgb, 5);
     else if (r == 6) cor = kit(6).rgb;
     else if (r == 7) {                                    // meião (a faixa do meio do cano, se houver)
       cor = kit(7).rgb;
@@ -227,7 +275,7 @@ export function criarHumano3D(cena, dados, opc = {}) {
   let CAP = 0, texOssos, ossosF, texKits, kitsF;
   const uniforms = {
     tOssos: { value: null }, tKits: { value: null }, tReg: { value: texReg },
-    tCabeca: { value: opc.cabeca ?? null }, tDigitos: { value: atlasDigitos() }, tRostos: { value: null },
+    tCabeca: { value: opc.cabeca ?? null }, tDigitos: { value: atlasDigitos() }, tRostos: { value: null }, tLogos: { value: null },
     uNumero: { value: new THREE.Vector4() },
   };
   // a caixa do número na UV (regioes.json: na imagem, y para baixo; a UV sobe com o flipY)
@@ -284,6 +332,40 @@ export function criarHumano3D(cena, dados, opc = {}) {
     return rost.tex;
   }
   const cv = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+  // patrocínios (versão de teste): as máscaras dos logos (512 × 256, um canal) numa DataArrayTexture, uma camada por logo
+  // dos uniformes da partida (a 0 fica vazia); a camada entra quando a imagem chega (versaoLogos)
+  const LW = 512, LH = 256, CAM_LOGOS = 40;
+  const logos = { camadas: new Map(), pendentes: new Set(), prox: 1, versao: 0, dados: null, tex: null };
+  function texLogos() {
+    if (logos.tex) return logos.tex;
+    logos.dados = new Uint8Array(LW * LH * CAM_LOGOS);
+    logos.tex = new THREE.DataArrayTexture(logos.dados, LW, LH, CAM_LOGOS);
+    logos.tex.format = THREE.RedFormat; logos.tex.type = THREE.UnsignedByteType;
+    logos.tex.generateMipmaps = true; logos.tex.unpackAlignment = 1;
+    logos.tex.minFilter = THREE.LinearMipmapLinearFilter; logos.tex.magFilter = THREE.LinearFilter;
+    logos.tex.anisotropy = 4;
+    logos.tex.needsUpdate = true;
+    uniforms.tLogos.value = logos.tex;
+    return logos.tex;
+  }
+  async function carregarLogo(url, camada) {
+    const img = await new Promise((ok, falha) => { const i = new Image(); i.onload = () => ok(i); i.onerror = falha; i.src = url; });
+    if (!cv) return;
+    cv.width = LW; cv.height = LH;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    g.clearRect(0, 0, LW, LH);
+    g.setTransform(1, 0, 0, -1, 0, LH); // a linha 0 dos dados é o v = 0 (embaixo)
+    g.drawImage(img, 0, 0, LW, LH);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    const px = g.getImageData(0, 0, LW, LH).data;
+    texLogos();
+    const o = camada * LW * LH;
+    for (let i = 0; i < LW * LH; i++) logos.dados[o + i] = px[i * 4 + 3];
+    if (logos.tex.addLayerUpdate) logos.tex.addLayerUpdate(camada);
+    logos.tex.needsUpdate = true;
+    logos.camadas.set(url, camada);
+    logos.versao++;
+  }
   async function carregarRosto(chave, url, camada) {
     const img = await new Promise((ok, falha) => { const i = new Image(); i.onload = () => ok(i); i.onerror = falha; i.src = url; });
     if (!cv) return;
@@ -376,6 +458,19 @@ export function criarHumano3D(cena, dados, opc = {}) {
       return 0;
     },
     get versaoRostos() { return rost.versao; },
+    /** A camada da máscara do logo desta URL (0 = ainda não chegou; pede a carga na 1ª vez). Versão de teste da pro. */
+    logoDe(url) {
+      if (!url) return 0;
+      const c = logos.camadas.get(url);
+      if (c != null) return c;
+      if (!logos.pendentes.has(url) && logos.prox < CAM_LOGOS) {
+        logos.pendentes.add(url);
+        carregarLogo(url, logos.prox++).catch(e => console.warn('patrocínio', url, e));
+      }
+      return 0;
+    },
+    get versaoLogos() { return logos.versao; },
+    get logos() { return { carregados: logos.camadas.size, pedidos: logos.pendentes.size }; },
     get rostos() { return { indice: !!rost.indice, carregados: rost.camadas.size, pedidos: rost.pendentes.size }; },
     definirCabeca(tex) { uniforms.tCabeca.value = tex; },
     dispose() {

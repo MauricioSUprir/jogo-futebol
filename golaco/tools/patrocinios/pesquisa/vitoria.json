@@ -1,0 +1,246 @@
+{
+ "clube": "Vitória",
+ "chave": "br/Vitória",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Volt Sport",
+  "logo": "vitoria__volt.png",
+  "logo_fonte": "https://ecvitoria.com.br/wp-content/uploads/2026/05/VOLT-.webp",
+  "posicao": "peito, lado direito de quem veste, por fora do Plano Brasil Saúde; também no calção",
+  "cor_na_camisa": {
+   "casa": "#ffffff",
+   "fora": "#6e1f2b",
+   "goleiro": "#ffffff",
+   "goleiro2": "#1d2111"
+  },
+  "largura_rel": 0.1
+ },
+ "patrocinios": [
+  {
+   "nome": "Viva Sorte Capitalização",
+   "posicao": "ombro",
+   "lado": "ambos",
+   "posicao_detalhe": "alto do peito dos dois lados, acima do escudo e acima do Plano Brasil",
+   "uniformes": [
+    "casa",
+    "fora",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "vitoria__viva-sorte.png",
+   "logo_fonte": "https://ecvitoria.com.br/wp-content/uploads/2026/05/VIVA-SORTE-.webp",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#6e1f2b",
+    "goleiro": "#ffffff",
+    "goleiro2": "#1d2111"
+   },
+   "largura_rel": 0.15
+  },
+  {
+   "nome": "Plano Brasil Saúde",
+   "posicao": "ombro",
+   "lado": "direito",
+   "posicao_extra": "escudeto",
+   "posicao_detalhe": "escudeto: na altura do escudo, do lado direito de quem veste (o escudo fica no esquerdo), ao lado da Volt",
+   "uniformes": [
+    "casa",
+    "fora",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "vitoria__plano-brasil-saude.png",
+   "logo_fonte": "https://ecvitoria.com.br/wp-content/uploads/2026/05/ID-Plano-Brasil-Saude-principal.webp",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#6e1f2b",
+    "goleiro": "#ffffff",
+    "goleiro2": "#1d2111"
+   },
+   "largura_rel": 0.17
+  },
+  {
+   "nome": "Skokka",
+   "posicao": "barra_frontal",
+   "posicao_detalhe": "frente, no meio da barriga, abaixo do espaço vazio do master: as duas figuras EM CIMA da palavra \"skokka\"",
+   "uniformes": [
+    "casa",
+    "fora",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "vitoria__skokka.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Skokka.png (miniatura de 1280 px; recomposto: as duas figuras, menores, centradas em cima da palavra, como na camisa)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#6e1f2b",
+    "goleiro": "#ffffff",
+    "goleiro2": "#1d2111"
+   },
+   "largura_rel": 0.4,
+   "posicao_extra": "frente_meio_baixo"
+  },
+  {
+   "nome": "BaladAPP by Ticketmaster",
+   "posicao": "barra_frontal",
+   "lado": "direito",
+   "posicao_detalhe": "barra da frente, lado direito de quem veste, ao lado da UniAgro",
+   "uniformes": [
+    "casa",
+    "fora",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "vitoria__baladapp.png",
+   "logo_fonte": "https://media.licdn.com/dms/image/v2/D4D0BAQF3PX8qBLXYGw/company-logo_200_200/B4DZqXE443H0AM-/0/1763471233103/baladapp_logo (logo oficial na página da BaladAPP no LinkedIn, https://www.linkedin.com/company/baladapp; o branco tirado do fundo azul e ampliado de 200 px; substitui o recorte torto da foto)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#6e1f2b",
+    "goleiro": "#ffffff",
+    "goleiro2": "#1d2111"
+   },
+   "largura_rel": 0.18
+  },
+  {
+   "nome": "UniAgro",
+   "posicao": "barra_frontal",
+   "lado": "esquerdo",
+   "posicao_detalhe": "barra da frente, lado esquerdo de quem veste, ao lado da BaladAPP",
+   "uniformes": [
+    "casa",
+    "fora",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "vitoria__uniagro.png",
+   "logo_fonte": "https://ecvitoria.com.br/wp-content/uploads/2026/09/uniagro.jpeg (recorte do logo branco no cartaz oficial do retorno, 02/09/2026)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#6e1f2b",
+    "goleiro": "#ffffff",
+    "goleiro2": "#1d2111"
+   },
+   "largura_rel": 0.18
+  },
+  {
+   "nome": "Alpha Consórcio",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "costas, acima do nome (símbolo 'GA' em cima de 'ALPHA CONSÓRCIO')",
+   "uniformes": [
+    "casa",
+    "fora",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "vitoria__alpha-consorcio.png",
+   "logo_fonte": "https://ecvitoria.com.br/wp-content/uploads/2026/05/ALPHA-.webp",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#6e1f2b",
+    "goleiro": "#ffffff",
+    "goleiro2": "#1d2111"
+   },
+   "largura_rel": 0.4
+  },
+  {
+   "nome": "Supermercados BH",
+   "posicao": "abaixo_numero",
+   "posicao_detalhe": "costas, abaixo do número; o mesmo logo vai atrás no calção",
+   "uniformes": [
+    "casa",
+    "fora",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "vitoria__supermercados-bh.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Logo_supermercado_bh.png (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Logo_supermercado_bh.png/1280px-Logo_supermercado_bh.png)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#6e1f2b",
+    "goleiro": "#ffffff",
+    "goleiro2": "#1d2111"
+   },
+   "largura_rel": 0.34
+  },
+  {
+   "nome": "Supermercados BH (calção)",
+   "posicao": "calcao",
+   "lado": "esquerdo",
+   "posicao_extra": "calcao_tras",
+   "posicao_detalhe": "calção, parte de trás, perna esquerda",
+   "uniformes": [
+    "casa",
+    "fora",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "vitoria__supermercados-bh.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Logo_supermercado_bh.png",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#6e1f2b",
+    "goleiro": "#ffffff",
+    "goleiro2": "#1d2111"
+   },
+   "largura_rel": 0.14
+  },
+  {
+   "nome": "Vapt Blue Tintas",
+   "posicao": "calcao",
+   "lado": "direito",
+   "posicao_extra": "calcao_tras",
+   "posicao_detalhe": "calção, parte de trás, perna direita",
+   "uniformes": [
+    "casa",
+    "fora",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "vitoria__vapt-blue.png",
+   "logo_fonte": "https://ecvitoria.com.br/wp-content/uploads/2026/05/VAPT-BLUE-.webp",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#6e1f2b",
+    "goleiro": "#ffffff",
+    "goleiro2": "#1d2111"
+   },
+   "largura_rel": 0.16
+  },
+  {
+   "nome": "USE Telecom",
+   "posicao": "calcao",
+   "lado": "esquerdo",
+   "posicao_detalhe": "calção, frente da perna esquerda (o símbolo em colchete + \"USE\" grande e \"TELECOM\" embaixo), com a Volt abaixo; nome confirmado: USE Telecom, provedor de internet baiano (minhaoperadora.com.br, atarde.com.br)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "vitoria__use-telecom.png",
+   "logo_fonte": "RECOMPOSTO: o símbolo é o oficial (ícone do site usetelecom.com.br, https://www.google.com/s2/favicons?domain=usetelecom.com.br&sz=256); \"USE\" e \"TELECOM\" escritos em Inter 900/700 imitando o calção (foto 55576857781 de 07/10). O site oficial fica atrás do Cloudflare e não há logo inteiro público — trocar se aparecer o oficial.",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#6e1f2b",
+    "goleiro": "#ffffff",
+    "goleiro2": "#1d2111"
+   },
+   "largura_rel": 0.15
+  }
+ ],
+ "fontes": [
+  "https://www.flickr.com/photos/ecvitoria/albums/72177720336030967 (Vitória x Chapecoense, 07/10/2026: fotos 55576856941 frente, 55576857781 costas e calção, 55576958133 calção)",
+  "https://ecvitoria.com.br/manto-rubro-negro-ganha-novo-patrocinio-ate-o-fim-da-temporada/ (Plano Brasil Saúde no escudeto, desde 23/07)",
+  "https://ecvitoria.com.br/vitoria-anuncia-oficialmente-o-plano-brasil-saude-como-patrocinador/",
+  "https://ecvitoria.com.br/vitoria-anuncia-retorno-da-uniagro-como-patrocinadora-do-clube/ (02/09/2026)",
+  "https://ecvitoria.com.br/ (rodapé: Alpha, Plano Brasil Saúde, Skokka, Vapt Blue, Viva Sorte, Volt, Supermercados BH, Zé Delivery)",
+  "https://ecvitoria.com.br/wp-content/uploads/2026/07/WhatsApp-Image-2026-07-24-at-12.06.04.jpeg (camisa com 7K ainda no master, para comparar)",
+  "https://www.poder360.com.br/poder-sportsmkt/times-da-serie-a-usam-patrocinios-pontuais-no-lugar-de-bets/ (08/10: saiu a Bet7K, Vitória sem master contra a Chape)",
+  "https://www.flickr.com/photos/saopaulofutebolclube/albums/72177720336078795 (São Paulo x Vitória, 10/10/2026: mesmas costas)",
+  "https://mantosdofutebol.com.br/2026/10/sem-bets-nas-camisas-veja-as-solucoes-adotadas-pelos-clubes-do-brasileirao/ (Vitória entre os 5 que jogaram com o espaço principal vazio)",
+  "https://www.footyheadlines.com/pt/7117/clubes-brasileiros-obrigados-a-retirar-patrocinadores-de-apostas-das-camisas-eis-como-estao-a-reagir.html (14/10: Vitória com a camisa \"limpa\", sem master)",
+  "https://www.flickr.com/photos/ecvitoria/albums/72177720336238321 (Corinthians x Vitória, 19/10/2026: camisa listrada com o calção creme; a frente não aparece nas fotos acessíveis)"
+ ],
+ "confianca": "media",
+ "notas": "Master VAZIO em out/2026: a 7K (Bet7K) saiu pela MP 1.394/2026 (prazo 06/10) e nada entrou no meio do peito até o jogo de 07/10 (Poder360, Mantos). O resto foi visto em fotos de 07/10: Viva Sorte nos dois lados do alto do peito, Plano Brasil Saúde no escudeto ao lado da Volt, Skokka grande na barriga, BaladAPP e UniAgro lado a lado na barra, Alpha Consórcio em cima do nome, Supermercados BH embaixo do número e atrás no calção, Vapt Blue atrás no calção e USE Telecom na frente do calção. Não há 3ª camisa em 2026. Camisa 2 (creme) e goleiros: supus o mesmo desenho; cores dos logos estimadas (bordô na 2, escuro no goleiro amarelo). Logos fracos: BaladAPP é recorte de foto (sem logo oficial acessível) e USE Telecom ficou sem arquivo. O nome do provedor no calção parece 'USE Telecom' (o 'P' é o símbolo); confirmar. CONFERÊNCIA (verificador, 22/10): master vazio confirmado por Poder360 (08/10 e 18/10), Mantos do Futebol e footyheadlines (14/10); nenhum anúncio de master novo achado até 22/10; Volt confirmada como fornecedora (Diário do Pará). Posições conferidas nas fotos de 07/10 (frente com Volt no peito direito, BaladAPP à direita e UniAgro à esquerda da barra; costas e calção). CORRIGIDO: (1) Skokka: na camisa as figuras ficam EM CIMA da palavra — logo recomposto empilhado e posicao_extra \"frente_meio_baixo\" (como a Aurora da Chape); (2) BaladAPP: o recorte torto da foto trocado pelo logo oficial (LinkedIn, ampliado); (3) USE Telecom ganhou logo (símbolo oficial + texto recomposto; ver logo_fonte)."
+}

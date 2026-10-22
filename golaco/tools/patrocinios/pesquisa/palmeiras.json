@@ -1,0 +1,223 @@
+{
+ "clube": "Palmeiras",
+ "chave": "br/Palmeiras",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Puma",
+  "logo": "palmeiras__puma.png",
+  "logo_fonte": "https://s3.amazonaws.com/assets-fluminense/sponsors/96/PUMA_Logo_Cat_without-Registration_original.png (gato da Puma oficial, o mesmo arquivo usado pelo lote do Fluminense)",
+  "cor_na_camisa": {
+   "casa": "#ffffff",
+   "fora": "#1d5c3c",
+   "terceira": "#c9a24a",
+   "goleiro": "#ffffff"
+  }
+ },
+ "patrocinios": [
+  {
+   "nome": "Sportingblog",
+   "posicao": "peito",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "palmeiras__sportingblog.png",
+   "logo_fonte": "GERADO e refeito pelo verificador (22/10) como está na camisa: 'sporting' cheio e 'blog' VAZADO (só o contorno), Inter 900 itálica + inclinação — antes era tudo cheio. O arquivo oficial não existe em lugar público (sportingblog.com.br é de terceiro). Referência: fotos oficiais de 21/10 https://www.palmeiras.com.br/wp-content/uploads/2026/10/21102026_cg_palmeiras_destaque_6645_8.jpg e https://s7d1.scene7.com/is/image/SociedadeEsportivaPalmeiras/21102026_cg_palmeiras_6610_17:Large",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1d5c3c",
+    "terceira": "#c9a24a",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.55,
+   "logo_aproximado": true,
+   "periodo": "desde 21/10/2026 (semifinal da Libertadores); nos 4 jogos anteriores, depois da MP 1.394/2026, o espaço ficou VAZIO"
+  },
+  {
+   "nome": "Consórcio Embracon",
+   "posicao": "ombro",
+   "lado": "centro",
+   "posicao_detalhe": "esterno: no alto do peito, entre a Puma e o escudo, logo abaixo da gola (acima de onde fica o máster)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "palmeiras__embracon.svg",
+   "logo_fonte": "https://www.embracon.com.br/img/embracon-logo4.svg (cabeçalho do site da marca)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1d5c3c",
+    "terceira": "#c9a24a",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.13
+  },
+  {
+   "nome": "Cimed",
+   "posicao": "ombro",
+   "lado": "ambos",
+   "posicao_detalhe": "dois logos, um em cada lado do alto do peito, junto da costura do ombro (a imprensa chama de 'ombros')",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "palmeiras__cimed.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Logotipo_da_Cimed.svg (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/1/16/Logotipo_da_Cimed.svg/1280px-Logotipo_da_Cimed.svg.png)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1d5c3c",
+    "terceira": "#c9a24a",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.17
+  },
+  {
+   "nome": "Sil",
+   "posicao": "manga",
+   "lado": "ambos",
+   "posicao_detalhe": "nas duas mangas, em pé (lido de baixo para cima)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "palmeiras__sil.png",
+   "logo_fonte": "https://sil.com.br/_img/2019/logo_original.png?v=4 (site da marca; tem um halo branco em volta, que some ao pintar monocromático) — verificador (22/10): HALO BRANCO TIRADO (pintado de uma cor só, o halo engolia as letras e virava um borrão)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1d5c3c",
+    "terceira": "#c9a24a",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.14,
+   "rotacao": 90
+  },
+  {
+   "nome": "Leapmotor",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "costas, em cima do nome",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "palmeiras__leapmotor.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Leapmotor_logo_en.svg (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/Leapmotor_logo_en.svg/1280px-Leapmotor_logo_en.svg.png)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1d5c3c",
+    "terceira": "#c9a24a",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.55
+  },
+  {
+   "nome": "Uniasselvi",
+   "posicao": "calcao",
+   "posicao_detalhe": "frente do calção, perna esquerda (acima do logo da Puma)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "palmeiras__uniasselvi.png",
+   "logo_fonte": "https://portal.uniasselvi.com.br/public/img/site/logo-desk.webp (site da marca, convertido para PNG)",
+   "cor_na_camisa": {
+    "casa": "#1d5c3c",
+    "fora": "#ffffff",
+    "terceira": "#c9a24a",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.16
+  },
+  {
+   "nome": "D'Itália Móveis",
+   "posicao": "calcao",
+   "posicao_detalhe": "parte de trás do calção, perna DIREITA (a MotoChefe vai na esquerda; foto oficial de 17/10, Athletico x Palmeiras)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "palmeiras__ditalia.png",
+   "logo_fonte": "https://www.ditalia.com.br/wp-content/uploads/2023/05/logo-ditalia.png (site da marca; original 350 px, AMPLIADO para 700 px)",
+   "cor_na_camisa": {
+    "casa": "#1d5c3c",
+    "fora": "#ffffff",
+    "terceira": "#c9a24a",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.14
+  },
+  {
+   "nome": "MotoChefe",
+   "posicao": "calcao",
+   "posicao_detalhe": "parte de trás do calção, perna esquerda (Palmeiras/TMC/Máquina do Esporte)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "palmeiras__motochefe.svg",
+   "logo_fonte": "https://motochefebrasil.com.br/wp-content/uploads/2025/10/Ativo_blck_1.svg (cabeçalho do site da marca)",
+   "cor_na_camisa": {
+    "casa": "#1d5c3c",
+    "fora": "#ffffff",
+    "terceira": "#c9a24a",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.14
+  }
+ ],
+ "suspensos_mp_1394": [
+  {
+   "nome": "Sportingbet",
+   "posicao": "peito",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "palmeiras__sportingbet.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Sportingbet_logo.svg (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b2/Sportingbet_logo.svg/1280px-Sportingbet_logo.svg.png) — verificador: contorno branco tirado (pintado de uma cor só as letras se fundiam)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1d5c3c",
+    "terceira": "#c9a24a",
+    "goleiro": "#1d5c3c"
+   },
+   "largura_rel": 0.58,
+   "ate": "2026-10-05",
+   "nota": "máster de janeiro até a MP 1.394/2026; contrato segue ativo (até dez/2027), só a marca saiu. Cor na camisa pelas fotos de produto (verde na branca, dourado na azul, verde-escuro no goleiro limão; no goleiro vermelho, branco)"
+  }
+ ],
+ "fontes": [
+  "https://eleconomista.com.ar/deportes/flamengo-desafio-lula-camiseta-prohibicion-apuestas-brasil-n98757/amp (MP 1.394/2026, prazo 05/10)",
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/ (18/10/2026)",
+  "https://www.meioemensagem.com.br/marketing/como-ficam-os-patrocinios-sem-as-bets-na-volta-do-brasileirao (07/10/2026)",
+  "https://www.poder360.com.br/poder-sportsmkt/times-da-serie-a-usam-patrocinios-pontuais-no-lugar-de-bets/",
+  "https://www.poder360.com.br/poder-sportsmkt/palmeiras-fecha-patrocinio-com-a-embracon-ate-2028/ (26/07/2026: Embracon no peito, Leapmotor costas, Cimed ombros, Sil mangas, Uniasselvi frente do calção, D'Italia trás do calção)",
+  "https://www.gazetaesportiva.com/?p=3870531 (12/10/2026: Leila diz que o espaço da Sportingbet fica vago enquanto durar a MP)",
+  "https://www.terra.com.br/esportes/futebol/libertadores/como-fluminense-e-palmeiras-driblam-mp-das-bets-na-libertadores,0e6d25ec55b910f3c14c536ab80c70d3lppk413s.html (21/10/2026: Sportingblog no lugar do máster)",
+  "https://www.palmeiras.com.br/noticias/palmeiras-e-motochefe-brasil-fecham-acordo-de-patrocinio-para-calcoes-dos-uniformes-de-jogo-e-treino/",
+  "https://maquinadoesporte.com.br/futebol/palmeiras-fecha-patrocinio-com-leapmotor-para-costas-do-uniforme-por-r-20-milhoes/",
+  "fotos oficiais (Cesar Greco/Palmeiras) em https://www.palmeiras.com.br/wp-content/uploads/2026/10/: 08102026_cg_palmeiras_destaque_3192_19.jpg (camisa 3 azul, sem máster), 11102026_cg_palmeiras_destaque_4418_27.jpg, 17102026_cg_palmeiras_destaque_5769_11.jpg (costas: LEAPMOTOR em cima do nome), 21102026_cg_palmeiras_destaque_6645_8.jpg (sportingblog, Cimed, Embracon, Sil, Uniasselvi)",
+  "https://x.com/DataFutebol/status/2113053692874326163 (21/10/2026: Sportingblog no uniforme contra o Fluminense)",
+  "https://www.threads.com/@avante1914/post/DexkJjKEYcV/ (21/10/2026: SportingBlog no espaço máster)",
+  "https://www.palmeiras.com.br/noticias/palmeiras-elimina-fluminense-nos-penaltis-e-chega-a-final-da-libertadores-pela-oitava-vez/ (fotos de 21/10: time posado com o goleiro limão)"
+ ],
+ "confianca": "media",
+ "notas": "Situação de out/2026: a MP 1.394/2026 tirou a Sportingbet do peito a partir de 06/10; o Palmeiras jogou 4 partidas com o máster vazio e em 21/10 (Libertadores, x Fluminense) estreou 'sportingblog' (plataforma de estatísticas ligada à Sportingbet) no lugar. Se o jogo quiser o estado do Brasileirão de 08–17/10, é só não pintar o 'peito'. O logo do Sportingblog é uma APROXIMAÇÃO gerada por texto (não achei o arquivo oficial). Cores de cada logo por camisa estimadas pelas fotos e pelas versões V2 de produto (branco na verde; verde na branca; dourado #c9a24a na azul). No goleiro (vermelho principal; em 21/10 o goleiro usou o limão) não confirmei Embracon, Cimed nem Sil (a camisa V2 de goleiro mostra só a máster) — ficaram fora do goleiro; a Leapmotor das costas entrou no goleiro por suposição. Dentro dos algarismos do número há um ícone pequeno (provavelmente da Leapmotor) e não confirmei se há algo embaixo do número. A D'Itália só tinha PNG de 350 px (ampliado). Calção: Uniasselvi na frente; D'Itália e MotoChefe atrás (lado exato da D'Itália não confirmado). VERIFICAÇÃO (22/10): máster Sportingblog em 21/10 confirmado por 3 fontes (Terra, DataFut, Avante1914) e pelas fotos oficiais; nada novo depois (a Leapmotor no máster ainda é só negociação, Terra). CORRIGIDO: (1) Embracon, Cimed e Sil ESTÃO no goleiro — na foto posada de 21/10 o goleiro (limão) tem CIMED dos dois lados, Embracon no esterno, Sil na manga e sportingblog, tudo em azul-marinho (~#1c2540) no limão; no goleiro vermelho (o 'goleiro' do arquivo) ficaram brancos, por suposição; (2) logo do Sportingblog refeito com o 'blog' vazado, como na camisa; (3) Sil sem o halo branco; (4) D'Itália na perna direita de trás do calção (MotoChefe na esquerda), foto de 17/10. A tabela da Wikipédia (Avanti/Grupo Fictor) está desatualizada e foi ignorada."
+}

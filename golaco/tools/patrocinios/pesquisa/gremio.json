@@ -1,0 +1,175 @@
+{
+ "clube": "Grêmio",
+ "chave": "br/Grêmio",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "New Balance",
+  "logo": "gremio__new-balance.png",
+  "logo_fonte": "https://commons.wikimedia.org/wiki/File:New_Balance_logo.svg (miniatura 1280 px; só o monograma NB, o mesmo recorte do lote do São Paulo)",
+  "cor_na_camisa": {
+   "casa": "#c9a54a",
+   "fora": "#111216",
+   "terceira": "#c9a54a",
+   "goleiro": "#ffffff"
+  }
+ },
+ "patrocinios": [
+  {
+   "nome": "Tintas Coral",
+   "posicao": "ombro",
+   "lado": "direito",
+   "logo_colorido": true,
+   "fundo_cor": "#d6b13e",
+   "posicao_detalhe": "alto do peito do lado DIREITO de quem veste, na altura do escudo e do lado oposto a ele: selo quadrado dourado com a marca Coral logo ao lado do escudo; a New Balance fica mais para fora, junto da costura da manga (o peito do máster está VAZIO). Corrigido na verificação: não é o esterno",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "gremio__tintas-coral.png",
+   "logo_fonte": "https://images.seeklogo.com/logo-png/18/1/coral-logo-png_seeklogo-187383.png (fundo branco retirado)",
+   "cor_na_camisa": {
+    "casa": "#1d2a5c",
+    "fora": "#1d2a5c",
+    "terceira": "#1d2a5c",
+    "goleiro": "#1d2a5c"
+   },
+   "largura_rel": 0.09
+  },
+  {
+   "nome": "Havan",
+   "posicao": "manga",
+   "lado": "ambos",
+   "posicao_detalhe": "'HAVAN' nas duas mangas, em diagonal ao longo do ombro/manga",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "gremio__havan.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Havan_wordmark.svg (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Havan_wordmark.svg/1280px-Havan_wordmark.svg.png)",
+   "cor_na_camisa": {
+    "casa": "#c9a54a",
+    "fora": "#111216",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.15
+  },
+  {
+   "nome": "Banrisul",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "costas, em cima do nome (símbolo + 'banrisul')",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "gremio__banrisul.png",
+   "logo_fonte": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Banrisul_logotipo_2022.svg (miniatura PNG 1280 px, o mesmo arquivo do lote do Internacional)",
+   "cor_na_camisa": {
+    "casa": "#c9a54a",
+    "fora": "#111216",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.42
+  },
+  {
+   "nome": "Marquespan",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "dentro do número das costas, texto pequeno na vertical em cada algarismo",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "gremio__marquespan.png",
+   "logo_fonte": "https://gremio.blob.core.windows.net/imgs-site/eac47c43b7d6ec3f765cfd4fe9821dbe.png (rodapé de patrocinadores de gremio.net)",
+   "cor_na_camisa": {
+    "casa": "#111216",
+    "fora": "#ffffff",
+    "terceira": "#111216",
+    "goleiro": "#111216"
+   },
+   "largura_rel": 0.06
+  },
+  {
+   "nome": "Unimed Porto Alegre",
+   "posicao": "abaixo_numero",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "gremio__unimed-porto-alegre.png",
+   "logo_fonte": "https://static.internacional.com.br/cms/assets/unimed_d820a2c6fd.png (o mesmo arquivo do lote do Internacional)",
+   "cor_na_camisa": {
+    "casa": "#c9a54a",
+    "fora": "#111216",
+    "terceira": "#c9a54a",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.34
+  },
+  {
+   "nome": "Unifique",
+   "posicao": "calcao",
+   "posicao_detalhe": "frente do calção, perna esquerda, em cima do escudo",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "gremio__unifique.png",
+   "logo_fonte": "https://static.internacional.com.br/cms/assets/unifique_8d323631ee.png (o mesmo arquivo do lote do Internacional)",
+   "cor_na_camisa": {
+    "casa": "#c9a54a",
+    "fora": "#111216",
+    "terceira": "#c9a54a",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.16
+  },
+  {
+   "nome": "Ingresse",
+   "posicao": "calcao",
+   "posicao_detalhe": "parte de trás do calção, embaixo, nas duas pernas",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "gremio__ingresse.png",
+   "logo_fonte": "https://images.seeklogo.com/logo-png/65/1/ingresse-logo-png_seeklogo-656989.png (fundo branco retirado)",
+   "cor_na_camisa": {
+    "casa": "#c9a54a",
+    "fora": "#111216",
+    "terceira": "#c9a54a",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.16
+  }
+ ],
+ "fontes": [
+  "https://www.flickr.com/photos/gremiooficial/albums/72177720336209197 (Grêmio x Cruzeiro, 18/10/2026: peito sem máster, Coral, Havan, Unifique)",
+  "https://www.flickr.com/photos/gremiooficial/albums/72177720336098636 (Gre-Nal 455, 11/10/2026)",
+  "https://www.flickr.com/photos/gremiooficial/albums/72177720335345773 (Gre-Nal 453, 27/08/2026: costas da camisa 1 — Banrisul, número com Marquespan, Unimed, Ingresse no calção)",
+  "https://www.flickr.com/photos/gremiooficial/albums/72177720335370835 (Grêmio x Chapecoense, 30/08/2026, camisa 3: costas)",
+  "https://gremio.net/noticias (rodapé de patrocinadores: Banrisul, Unifique, Havan, Tintas Coral, Marquespan, Unimed Porto Alegre, New Balance)",
+  "https://portaldogremista.com.br/confira-quanto-o-gremio-embolsa-com-patrocinios-em-2026/ (29/05/2026: sem máster; Havan, Ingresse, Coral e Unifique no uniforme)",
+  "https://sportbuzz.com.br/futebol/2026/09/23/gremio-anuncia-novo-patrocinador-master-apos-meses-sem-marca-na-camisa/ (Pitaco anunciada em 23/09)",
+  "https://zonamista.com.br/com-pitaco-como-devera-ser-a-camisa-do-gremio-para-a-proxima-partida/ (27/09: Pitaco não entraria na camisa por causa da MP)",
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/ (18/10/2026: Grêmio jogou sem marca no máster)",
+  "https://www.poder360.com.br/poder-sportsmkt/times-da-serie-a-usam-patrocinios-pontuais-no-lugar-de-bets/ (07/10/2026: Grêmio x Remo sem patrocínio máster)"
+ ],
+ "confianca": "media",
+ "notas": "Sem máster no peito em outubro (a Pitaco, bet anunciada em 23/09, nunca entrou na camisa por causa da MP 1.394/2026; a Alfa saiu em dez/2025) — por isso não há item 'peito'. Na camisa 1 todas as marcas são DOURADAS (os números também: a pesquisa de uniforme estimou número branco, mas as fotos mostram dourado). As costas da camisa 1 vieram de fotos de agosto (Gre-Nal 453) e as da camisa 3 de 30/08 — não achei foto de costas de outubro. A Coral é um selo dourado com a marca dentro (o logo baixado é a marca colorida; 'fundo_cor' = o quadrado). Cores na camisa 2 branca e na de goleiro estimadas (não vi essas camisas em outubro). A Marquespan dentro do número não ficou legível nas fotos (confirmada pela lista do site). VERIFICAÇÃO (22/10): peito vazio confirmado nas fotos oficiais de 18/10 (o último jogo; o próximo é 25/10) e pelo Poder360 (07 e 18/10); a Cimed foi noticiada para 'outro local da camisa' (NSC, 23/09), mas não aparece em nenhuma foto até 18/10 — não entrou. CORRIGIDO: a Tintas Coral não fica no esterno, e sim no peito direito de quem veste, colada ao lado do escudo (fotos de 11 e 18/10) — 'lado' de 'centro' para 'direito'."
+}

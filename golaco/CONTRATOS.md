@@ -2579,3 +2579,40 @@ por PR (a 1ª: o Brasileirão, `br`).
     é a foto do TM; tom de pele (L* 20–80, matiz 30–75°); foto de frente e neutra; pasta ≤ 8 MB;
   - `teste-corpo-tela` C4: num pedido pro, cada jogador com rosto pede e carrega a textura;
   - `teste-corpo-tela` C5: na pública, nada é pedido.
+
+## Patrocínios nas camisas reais — SÓ a versão de teste (22/10; contrato)
+
+Dono, 22/10: "pode botar os patrocinadores sim, lembra que é só aquele teste? vamos tirar dps". Só na edição **pro**,
+junto com as camisas reais. Na pública, o `patrocinios.json` nem é baixado. Para TIRAR: apagar
+`assets/tm/patrocinios.json` e `assets/tm/patrocinios/`. Sem a base, `comCamisasReais` não põe `decais` e o shader não
+desenha nada.
+
+- **Pesquisa** (`tools/patrocinios/pesquisa/<clube>.json`, com as fontes): o máster e os outros patrocinadores da camisa em
+  outubro de 2026, cada um com a posição, os uniformes, a cor na camisa e a largura relativa, mais a marca do fornecedor.
+- **Gerador** (`tools/patrocinios/gerar.mjs <pasta da pesquisa com os logos>`, Chromium): cada logo (SVG ou PNG) vira a
+  MÁSCARA branca em `assets/tm/patrocinios/<clube>/<marca>.webp`, de 512 × 256, com o desenho recortado, centrado e
+  encaixado.
+  - Logo sem transparência: a máscara é a distância à cor da borda.
+  - Logo com forma cheia e texto dentro: o texto sai vazado (Otsu do brilho; a forma é a cor da borda).
+- **Índice** (`assets/tm/patrocinios.json`): `{clubes: {<nome de uniformes.json>: {casa|fora|terceira|goleiro: [{logo, asp,
+  pos, lado, larg, cor, nome}]}}, cheio: {logo: fração cheia}}`.
+  - `pos` ∈ peito, ombro, manga, barra_frontal, acima_numero, abaixo_numero, calcao, fornecedor.
+- **Caminho**:
+  - `render/identidade-pagina.js carregarUniformes` baixa junto (só na pro).
+  - `identidade.js comCamisasReais` põe `decais` (com a `url`) dentro de cada kit real.
+  - `render/jogador3d.js linhaKit` escreve até 6 decalques nas linhas 17–28 do kit (`TEXELS_KIT` 32):
+    - A = [camada do logo, posição, largura em m, largura ÷ altura]; B = [cor, lado];
+    - a largura relativa é da frente do tronco (0,34 m), com um teto de altura por posição;
+    - a ordem quando passa de 6: peito, fornecedor, acima do número, manga, ombro, calção, barra, abaixo do número;
+    - a cor que some no tecido vai para o contraste.
+  - `render/humano3d.js`:
+    - as máscaras ficam numa `DataArrayTexture` R8 de 40 camadas (`logoDe(url)` pede na 1ª vez; só a camada nova sobe);
+    - o shader projeta cada decalque PLANO na posição de repouso, só na face virada para o plano (a normal de repouso pela
+      derivada da tela), na região certa (camisa, manga, calção).
+- **Testes**:
+  - `teste-patrocinios` (Node):
+    - todo clube com camisa real tem decalques;
+    - logos 512 × 256 ≤ 48 KB, nenhum sobrando, ≤ 2 MB;
+    - os decalques entram nos kits só com a base;
+    - no máximo 3 máscaras viram mancha.
+  - `teste-corpo-tela` C6/C7: na pro, os logos carregam; na pública, nada é pedido.

@@ -1,0 +1,128 @@
+{
+ "clube": "Remo",
+ "chave": "br/Remo",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Volt Sport",
+  "logo": "remo__volt.png",
+  "logo_fonte": "https://ecvitoria.com.br/wp-content/uploads/2026/05/VOLT-.webp (mesmo logo da Volt; site da marca dá 403)",
+  "posicao": "peito, lado direito de quem veste; também na frente do calção",
+  "cor_na_camisa": {
+   "casa": "#ffffff",
+   "fora": "#152a46",
+   "terceira": "#ffffff",
+   "goleiro": "#1d2333",
+   "goleiro2": "#ffffff"
+  },
+  "largura_rel": 0.1
+ },
+ "patrocinios": [
+  {
+   "nome": "Banpará",
+   "posicao": "peito",
+   "posicao_detalhe": "master, meio do peito (entrou no lugar da VaideBet a partir de 07/10/2026)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "remo__banpara.png",
+   "logo_fonte": "https://www.banpara.b.br/PortalImagens/2uujzxtq/rgb-logo-horizontal_digital.png (o \"B\" branco do quadrado vermelho vazado: na máscara de uma cor o símbolo virava um quadrado cheio)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#152a46",
+    "terceira": "#ffffff",
+    "goleiro": "#1d2333",
+    "goleiro2": "#ffffff"
+   },
+   "largura_rel": 0.52
+  },
+  {
+   "nome": "GAV Resorts",
+   "posicao": "ombro",
+   "lado": "esquerdo",
+   "posicao_detalhe": "alto do peito, acima do escudo (lado esquerdo de quem veste)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "remo__gav-resorts.svg",
+   "logo_fonte": "https://www.gavresorts.com.br/wp-content/uploads/2024/07/logo-gav-svg.svg",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#152a46",
+    "terceira": "#ffffff",
+    "goleiro": "#1d2333",
+    "goleiro2": "#ffffff"
+   },
+   "largura_rel": 0.11
+  },
+  {
+   "nome": "Gazin",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "costas, parte de cima, acima do nome",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "remo__gazin.svg",
+   "logo_fonte": "https://www.gazin.com.br/ (SVG do logo no cabeçalho do site, data-testid icon-logoGazin; tirados o \".COM.BR\" e o cursor — classes fil2/fil3 — e o viewBox ajustado; na camisa vai só \"GAZIN\" no paralelogramo)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#152a46",
+    "terceira": "#ffffff",
+    "goleiro": "#1d2333",
+    "goleiro2": "#ffffff"
+   },
+   "largura_rel": 0.3
+  },
+  {
+   "nome": "Fatal Model",
+   "posicao": "abaixo_numero",
+   "lado": "direito",
+   "orientacao": "vertical",
+   "posicao_extra": "costas_lateral_numero",
+   "posicao_detalhe": "costas, em pé ao lado do número (lado direito de quem veste); largura_rel = comprimento do logo",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "remo__fatal-model.png",
+   "logo_fonte": "https://upload.wikimedia.org/wikipedia/pt/5/57/Fatal_model.png (página https://pt.wikipedia.org/wiki/Ficheiro:Fatal_model.png)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#152a46",
+    "terceira": "#ffffff",
+    "goleiro": "#1d2333",
+    "goleiro2": "#ffffff"
+   },
+   "largura_rel": 0.26
+  }
+ ],
+ "fontes": [
+  "https://www.flickr.com/photos/197113957@N04/albums/72177720336021697 (Remo x Grêmio, 07/10/2026, camisa 3: fotos 55577325956 e 55576295742 frente com Banpará e GAV; 55577743825 costas com Fatal Model)",
+  "https://www.poder360.com.br/poder-sportsmkt/times-da-serie-a-usam-patrocinios-pontuais-no-lugar-de-bets/ (08/10: Banpará no principal espaço da camisa contra o Grêmio)",
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/ (18/10: Remo com Banpará; saiu a VaideBet)",
+  "https://maquinadoesporte.com.br/futebol/remo-anuncia-patrocinio-da-fatal-model-em-retorno-a-serie-a/ (Fatal Model ao lado da numeração)",
+  "https://diariodopara.com.br/bola/remo-anuncia-nova-patrocinadora-sem-divulgar-valores/ (Gazin na parte superior das costas)",
+  "https://www.clubedoremo.com.br/ (parceiros: Banpará, GAV Resorts, Gazin, Fatal Model, Volt; foto da camisa 1 com Gazin nas costas)",
+  "https://focusgn.com/brasil/remo-fecha-patrocinio-master-com-a-vaidebet-para-a-temporada-2026",
+  "https://mantosdofutebol.com.br/2026/10/sem-bets-nas-camisas-veja-as-solucoes-adotadas-pelos-clubes-do-brasileirao/ (\"Com a saída da VaideBet, o Remo deu maior protagonismo ao Banpará, que já aparecia na parte frontal\")",
+  "https://www.footyheadlines.com/pt/7117/clubes-brasileiros-obrigados-a-retirar-patrocinadores-de-apostas-das-camisas-eis-como-estao-a-reagir.html (14/10: Banpará em destaque)",
+  "https://www.oliberal.com/esportes/remo/remo-lanca-novo-terceiro-uniforme-com-referencias-ao-para-e-a-cultura-amazonica-1.1168576 (14/09: 3ª camisa da Volt, vermelho predominante — a \"vinho\" das fotos)",
+  "https://dol.com.br/esporte/remo/926742/remo-vamos-prorrogar-com-a-volt-confirma-presidente-tonhao (Volt até o fim de 2026)"
+ ],
+ "confianca": "media",
+ "notas": "Com a MP 1.394/2026 a VaideBet saiu e o Banpará (que já era parceiro do clube e tem o naming rights do Baenão) passou ao espaço do master a partir de 07/10. Visto na camisa 3 (vinho) em 07/10: Banpará branco no peito, GAV Resorts acima do escudo, Fatal Model em pé ao lado do número; Gazin em cima nas costas visto na camisa 1. No calção há um logo de saúde com um símbolo de quatro laços e '... SAÚDE' que não consegui identificar (não é a Porto nem o Hospital Porto Dias) — ficou de fora. Nas costas da camisa 3 há também um pequeno emblema branco logo abaixo da gola que não identifiquei. Cores nas camisas 2 e goleiros estimadas (marinho na creme). Não vi foto da camisa 1 de frente em outubro: supus o mesmo desenho da 3. CONFERÊNCIA (verificador, 22/10): Banpará no espaço do master confirmado por Poder360 (08/10 e 18/10), Mantos do Futebol e footyheadlines (14/10); a Volt segue fornecedora em 2026 (O Liberal, DOL). A camisa \"vinho\" de 07/10 é a 3ª camisa lançada em 14/09 (O Liberal: vermelho). Só há fotos dos jogos em casa (o álbum do clube no Flickr não tem jogo fora em outubro); a camisa 1 de frente em outubro segue sem foto. O logo de saúde do calção (símbolo de quatro laços + \"... SAÚDE\") continua sem identificação (busca sem resultado). CORRIGIDO: (1) Banpará com o \"B\" vazado no quadrado; (2) Gazin sem \".com.br\" e sem o cursor."
+}
