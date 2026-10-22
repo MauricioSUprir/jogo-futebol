@@ -358,7 +358,10 @@ if (roda('D')) try {
       '≥ 30 quadros; |x| ≤ 0,6; |y| ≤ 0,8; 0', !!v11 && v11.n >= 30 && v11.pior <= 0.6 && v11.piorY <= 0.8 && v11.atras === 0);
     // V6b: a opção da pausa desligada no meio do jogo: o lance armado não toca
     await pg.evaluate(() => window.__golaco.abrirMenu());
-    await pg.click('#menu .segmentado[data-grupo="replayAuto"] button[data-valor="desligado"]', { timeout: 120000 });
+    // o clique no próprio botão (o handler da pausa): o page.click espera a página "estabilizar" pelo requestAnimationFrame e,
+    // com o relógio manual, chegou a esperar 120 s numa rodada (22/10) — o que se mede aqui é a opção, não o ponteiro
+    await pg.waitForSelector('#menu .segmentado[data-grupo="replayAuto"] button[data-valor="desligado"]', { state: 'visible', timeout: 30000 });
+    await pg.evaluate(() => document.querySelector('#menu .segmentado[data-grupo="replayAuto"] button[data-valor="desligado"]').click());
     await pg.evaluate(() => window.__golaco.fecharMenu());
     const f2b = await forcarLance(pg, 'faltaPerto');
     const v6 = await pg.evaluate(ini => {
