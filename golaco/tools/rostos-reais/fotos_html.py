@@ -166,6 +166,12 @@ import unicodedata
 sem_acento = lambda x: unicodedata.normalize('NFD', x).encode('ascii', 'ignore').decode().lower()
 
 linhas = [l for l in open(cred, encoding='utf-8') if re.match(r'- `' + re.escape(liga) + r'[-_]', l)]
+# os nomes (com sobrenome) de todos os jogadores da liga: a foto de dois jogadores ("Bruno Rodrigues e Joaquín Piquerez")
+# com o rosto maior do OUTRO passava na identidade por pouco (0,50); com outro jogador no título, só com identidade ≥ 0,6
+NOMES_LIGA = [sem_acento(m.group(1)) for m in (re.search(r'\(([^,]+),', l) for l in linhas) if m and ' ' in m.group(1).strip()]
+def cita_outro(titulo, nome):
+    t = sem_acento(titulo).replace('-', ' ').replace('_', ' '); n0 = sem_acento(nome)
+    return any(re.search(r'\b' + re.escape(n) + r'\b', t) for n in NOMES_LIGA if n not in n0 and n0 not in n)
 man_arq = os.path.join(saida, 'manifesto.json')
 manifesto = json.load(open(man_arq)) if os.path.exists(man_arq) else {}
 t0 = time.time()
@@ -235,6 +241,7 @@ for n, l in enumerate(linhas[:MAX]):
         vistos.append({'titulo': cnd['titulo'], 'data': cnd['data'], 'av': av, 'id': idv})
         if not bom(av): continue
         if ref_id is not None and (idv is None or idv < IDENT): continue
+        if (idv is None or idv < 0.6) and (av.get('rostos', 1) > 1 or cita_outro(cnd['titulo'], nome)): continue
         inf = cnd.get('info') or info_arquivo(cnd['titulo'])
         if not inf: continue
         if inf.get('data') and inf.get('fonte_data') == 'Date': cnd['data'] = inf['data']
