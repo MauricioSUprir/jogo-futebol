@@ -5,7 +5,7 @@
 // partida, lendo o mundo; gravados depois dos jogadores com o bit2). Para os testes da cena semiautomática (teste-saot,
 // teste-replay-anel) e o medir-saot.
 //   const G = await criarGravador(pastaJs);  const S = G.novaPartida(semente, {comoPagina});  G.passo(S) → eventos
-// comoPagina: a entrada da IA pelo humano chega como a página (?demo=1) entrega (lib/acha-gol.mjs).
+// comoPagina: a entrada da IA pelo humano chega como a página (?demo=1) entrega — x, z, botões e a marca `iaCobra` (lib/acha-gol.mjs).
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -36,7 +36,7 @@ export async function criarGravador(pastaJs) {
   try { TE = await imp('tecnicos.js'); } catch (_) { TE = null; }
   const P = NJ * 3;
   const ent = { 0: { x: 0, z: 0, botoes: 0 } };
-  Object.defineProperties(ent, { x: { value: 0, writable: true }, z: { value: 0, writable: true }, botoes: { value: 0, writable: true } });
+  Object.defineProperties(ent, { x: { value: 0, writable: true }, z: { value: 0, writable: true }, botoes: { value: 0, writable: true }, iaCobra: { value: false, writable: true } });
   function novaPartida(semente, opc = {}) {
     const m = PA.criarPartida({ semente, minutosPorTempo: opc.minutosPorTempo });
     const a = RA.criarAnel({ ticks: Math.round(C.REPLAY.segundos / C.PASSO), vagas: C.REPLAY.vagas, nj: NJ });
@@ -51,6 +51,9 @@ export async function criarGravador(pastaJs) {
     const e = PA.entradaDemoPartida(S.m);
     if (!S.comoPagina) return e;
     ent[0].x = ent.x = e?.x ?? 0; ent[0].z = ent.z = e?.z ?? 0; ent[0].botoes = ent.botoes = (e?.botoes ?? 0) | 0;
+    // a marca da IA que a página passa (main.js entradaDoTime; lib/acha-gol.mjs): sem ela a cobrança da demo virava cavadinha
+    // e a partida em Node divergia da página (22/10: semente 4 diferente a partir do tick ~1500)
+    ent[0].iaCobra = ent.iaCobra = !!(e && (e.ia || e.iaCobra));
     return ent;
   }
   /** Um passo da partida; com `gravar`, grava no anel como o main.js. Devolve os eventos do passo. */

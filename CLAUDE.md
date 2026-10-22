@@ -462,6 +462,17 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   Contraprova (13/10): o enquadramento confere os sólidos só no candidato que serve (S9: 415 mil → 11 mil chamadas de
   `solidoEm`, mesmo quadro) e só o cabeceio PARA O GOL marca "chute" no anel (`marcasDoPasso`: o de passe não abre a
   análise no "Replay" da pausa).
+- **Replays nas paradas** (dono, 22/10: "os replays de faltas e jogadas passando na tela enquanto o jogo tá parado"; PR 1 do
+  `PLANO-CENAS.md`, contrato "Cenas das paradas" no `CONTRATOS.md`): `js/lances.js` (puro, fora do fecho, no download
+  inicial; `REPLAY_PARADA` mora nele) classifica a bola morta pelos eventos — pênalti, vermelho, trave (classe A, sempre),
+  amarelo, falta a ≤ 25 m do gol, espalmada, chute de dentro da área a ≤ 1,5 m da trave (classe B: ≤ 3 por tempo e ≥ 30 s
+  de bola rolando desde o último replay automático) —; o lance aceito fica ARMADO e toca no passo ANTES da montagem
+  (`montaNoProximoPasso`, a cópia da conta do `regrasPartida`): 1 s ao vivo → TV 1× + 'fechada' (falta) ou 'atras'
+  (chance) 0,5×, ≤ 8 s → a montagem. `seguraParaReplayParada()` fica no TOPO da volta do laço (antes da entrada da demo e,
+  no online, de `podePassar`/`entradas`). ~2,3 por partida (24 partidas), o ar em replay (gol + impedimento + paradas) ~9,7%. `?replayParada=0|1`; desligado com
+  webdriver/prints/demo; vale com "Replays: Ligado". Testes: `teste-replay-paradas` (Node, padrão: árbitro independente,
+  roteiro, orçamento, pureza, predicado) e `teste-replay-paradas-tela` (navegador, CI); ferramentas `lib/paradas-node.mjs`
+  (a página em Node) e `lib/acha-parada.mjs`. Mudou algo no `partida.js regrasPartida`? O P5 reprova: atualizar a cópia.
 - **Pré-jogo** (pedido de 11/10; `PESQUISA-PREJOGO.md`, contrato em `CONTRATOS.md`): antes do 1º passo (tick 0; o apito
   da saída só no fim; hash igual) — abertura "Toque para começar" (libera o som), aéreo de fora, fachada com a torcida
   chegando, o estádio por dentro, túnel, entrada com os árbitros, plano alto da fila se formando, a câmera passando pela

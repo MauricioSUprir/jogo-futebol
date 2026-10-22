@@ -66,10 +66,20 @@
 // ENTRA/SAI (hud.faixaSubst) fica ≥ 4 s, também com a cena pulada ou desligada ("Cena de substituição: só a faixa"). Trocas
 // do intervalo: só a faixa, na saída do 2º tempo. rodarPassos (testes) nunca abre a cena.
 //
+// Replays nas paradas (render; pedido do dono de 22/10: "os replays de faltas e jogadas passando na tela enquanto o jogo tá
+// parado"; PLANO-CENAS.md §2, contrato "Cenas das paradas"): a cada passo o classificador (js/lances.js, puro, só lê)
+// olha os eventos; na bola morta o lance que vale (pênalti, vermelho, trave, amarelo, falta perto do gol, espalmada, chute
+// que passou perto) ARMA o replay (replayParada), que toca no passo ANTES da montagem (lances.js montaNoProximoPasso):
+// 1 s ao vivo → vinheta → TV 1× + o lance fechado/atrás do gol 0,5× (≤ 8 s) → a montagem. A simulação fica PARADA (o laço
+// não roda o passo; a checagem fica no TOPO da volta do laço, antes da entrada da demo e, no online, antes de
+// MOD_ON.podePassar/entradas) e volta no mesmo tick: o hash é o mesmo com e sem o replay. Até 3 por tempo e 30 s de bola
+// rolando desde o último replay automático (a classe A fura os dois). ?replayParada=0|1 força; desligado com webdriver,
+// ?prints=1 e ?demo=1; vale só com "Replays: Ligado".
+//
 // Parâmetros: ?semente=N ?q=baixa|media|alta ?hora=dia|noite ?camera=tv|aproximada ?demo=1
 // ?modo=partida|ataque|conducao (padrão da página: partida) ?min=N (minutos reais por tempo)
 // ?marcador=1 ?prints=1 (cena limpa) ?qps=1 ?toque=1 ?entalhe=1 ?replay=0|1 ?comemoracao=0|1 ?substituicao=0|1
-// ?prejogo=0|1|curto|escalacao ?tecnicos=0|1.
+// ?prejogo=0|1|curto|escalacao ?tecnicos=0|1 ?replayParada=0|1.
 // Pré-jogo (pedido de 11/10; render/prejogo.js): antes do 1º passo da partida — a simulação fica no tick 0 e o apito da
 // saída só toca no fim dele. Desligado por padrão nos testes (navigator.webdriver), nos prints e na demonstração.
 // Testes: window.__golaco (ver o fim do arquivo).
@@ -123,6 +133,8 @@ import { criarPlacaSubst } from './render/placa-subst.js';
 // Total Match (?tm=<id>; ponte-tm.js): os times do pedido, o lado do humano, a trava "só o meu jogador" e a súmula
 import { ID_TM, PEDIDO_TM, avisarTM, fimTM, sairTM, gravarResultadoTM, sementeTM, MENSAGENS as MENSAGENS_TM } from './ponte-tm.js';
 import { registrarElenco } from './elenco.js';
+// replays nas paradas: o classificador de lances (puro; fora do fecho do hash: só lê o mundo e os eventos)
+import { criarLances, lancesPasso, decidirReplay, registrarReplay, montaNoProximoPasso, REPLAY_PARADA } from './lances.js';
 
 const { PASSO, BOTAO, QUALIDADE, VERSAO, FALTAS } = CFG;
 const ID_HUMANO = S.ID_HUMANO ?? 0;
@@ -378,6 +390,15 @@ function comDiretor(fn, valer = () => true) {
   carregarSobDemanda('replay').then(() => { if (diretor && valer()) fn(diretor); }, () => {});
 }
 let replayAuto = params.get('replay') === '0' ? false : params.get('replay') === '1' ? true : typeof prefs.replay === 'boolean' ? prefs.replay : CFG.REPLAY.automatico;
+// Replays nas paradas (lances.js): ?replayParada=0|1 força; senão desligado nos testes automatizados (webdriver), nos prints
+// e na demonstração (os testes de outros assuntos ficam iguais); senão REPLAY_PARADA.ligado. Sempre só com "Replays: Ligado".
+// lances: o classificador da partida (null fora dela: treinos, Livre, disputa); replayParada: o lance ARMADO (toca no passo
+// antes da montagem); histParadas: os que tocaram (API dos testes)
+const RP_PARAM = params.get('replayParada');
+const replayParadaPadrao = RP_PARAM === '1' ? true : RP_PARAM === '0' ? false : (navigator.webdriver || PRINTS || DEMO_ON) ? false : REPLAY_PARADA.ligado;
+const replayParadaLigado = () => replayParadaPadrao && replayAuto;
+let lances = null, replayParada = null;
+const histParadas = [];
 const custoGravar = { n: 0, ms: 0 }, custoReplay = { n: 0, ms: 0, v: new Float64Array(4096) };
 const listaR = [];
 const _bpR = { x: 0, y: 0, z: 0 }, _bqR = { x: 0, y: 0, z: 0, w: 1 }, _qR = new THREE.Quaternion();
@@ -449,6 +470,10 @@ let edicaoNaFila = null;
 let sumulaTM = TM ? criarSumula() : null;
 let simulandoTM = null;      // {promessa} enquanto o "Simular o resto" roda em pedaços (simularResto)
 let expulsoAvisado = false;
+// o tick da expulsão do travado: o replay de parada daquela bola morta esconde a faixa (em-replay) e ela volta depois dele,
+// com os 6 s contando dali (PLANO-CENAS.md R11)
+let expulsoTick = -1;
+const faixaExpulso = () => hud.faixa({ titulo: 'Você foi expulso', placar: textoPlacar(), botao: true, botaoTexto: 'Simular o resto', botaoCmd: 'simular-resto', ms: 6000 });
 
 // medidas por quadro (medirQuadro): simulação, pose, atualização dos jogadores, desenho e o quadro
 // inteiro sem o desenho (CPU que não é da GPU). Anéis de tamanho fixo (nada alocado por quadro).
@@ -508,6 +533,9 @@ function iniciarEstados() {
   // os treinadores do mundo novo (na partida), em pé no centro da área técnica deles
   tecnicos = TECNICOS_ON && mundo.times ? criarTecnicos(mundo.times, mundo.semente ?? SEMENTE) : null;
   tecAlfaCena = false; tecGravado.fill(NaN);
+  // replays nas paradas: o classificador é do mundo novo (só na partida; nada armado)
+  lances = mundo.modo === 'partida' && mundo.partida && !mundo.livre && !mundo.disputa ? criarLances() : null;
+  replayParada = null; histParadas.length = 0;
   for (const j of mundo.jogadores) estadoDe(j);
   copiarBolaDoMundo(bolaAtu);
   copiarBolaDoMundo(bolaAnt);
@@ -568,6 +596,8 @@ function rodarPasso(entrada, acoes) {
   if (bolaAtu.p.distanceTo(bolaAnt.p) > 2.5) { bolaAnt.p.copy(bolaAtu.p); bolaAnt.q.copy(bolaAtu.q); cortou = true; }
   gravarNoAnel(cortou, eventos);
   for (const ev of eventos) tratarEvento(ev);
+  // replays nas paradas: o classificador lê o passo; o lance da bola morta aceito ARMA o replay (nunca pela API dos testes)
+  if (lances) passoLances(eventos);
   // as trocas do passo viram UMA cena (ou só a faixa) — decidido no fim do passo: no gol, as trocas e a 'saida' saem no
   // mesmo tick (as trocas antes) e o replay do gol, que a saída abre, vem primeiro
   if (substNoPasso.length) decidirSubst(eventos);
@@ -767,7 +797,7 @@ function tratarEvento(ev) {
   if (t === 'impedimento' && replayAuto && mundo.partida) {
     const di = { fotoTick: ev.tickFoto, apitoTick: mundo.tick, linhaX: ev.linhaX, idImpedido: ev.id, time: ev.time, lado: mundo.ataca?.[ev.time] ?? 1, defensor: ev.defensor ?? null, por: ev.por ?? null };
     const m0 = mundo;
-    comDiretor(d => { if (iniciarReplay(d.impedimento(di))) linhaNoReplay = di.apitoTick; },
+    comDiretor(d => { if (iniciarReplay(d.impedimento(di))) { linhaNoReplay = di.apitoTick; if (lances) registrarReplay(lances, mundo.tick, 'impedimento'); } },
       () => mundo === m0 && mundo.tick - di.apitoTick <= REPLAY_ATRASO_MAX && !cenaGol && !cenaSub && !diretor.ativo);
   }
   // partida: intervalo, fim, edição do time e substituição (intervalo e fim: plano geral do estádio). Gol no último
@@ -810,8 +840,8 @@ function tratarEvento(ev) {
   }
   // Total Match, "só o meu jogador": o travado foi expulso — o time segue com a IA e a faixa oferece o "Simular o resto"
   if (t === 'cartao' && TRAVA_TM != null && ev.id === TRAVA_TM && ev.cor === 'vermelho' && !expulsoAvisado) {
-    expulsoAvisado = true;
-    hud.faixa({ titulo: 'Você foi expulso', placar: textoPlacar(), botao: true, botaoTexto: 'Simular o resto', botaoCmd: 'simular-resto', ms: 6000 });
+    expulsoAvisado = true; expulsoTick = mundo.tick;
+    faixaExpulso();
   }
   // lances (passe, chute, defesa, lateral...) não viram texto: o hud só mostra o gol e os comandos
   // (o goleiro com a bola na mão repõe sozinho em 3 s — GOLEIRO.esperaHumano)
@@ -1545,6 +1575,8 @@ function iniciarReplay(ro) {
 function posGol() {
   const ro = diretor ? diretor.depoisDoGol() : null;
   const ok = replayAuto && iniciarReplay(ro);
+  // (o replay automático do gol conta no espaço dos replays de parada: nunca dois seguidos)
+  if (ok && lances) registrarReplay(lances, mundo.tick, 'gol');
   // sem replay: os sons tocam já — menos se o passo traz trocas que abrem a cena (eles esperam ela acabar)
   if (!ok && !(substLigada && !emRodarPassos && substNoPasso.length)) tocarAdiados();
   return ok;
@@ -1579,6 +1611,49 @@ function fimReplay(pulou) {
   }
   // a fila: a cena de substituição (gol + troca na mesma parada: depois do replay INTEIRO), as faixas; vazia, os sons
   proximaCena();
+}
+
+// ------------------------------------------------------------------ replays nas paradas (lances.js)
+/**
+ * Depois de cada passo da partida (rodarPasso): o classificador lê os eventos; o lance da bola morta que passa no teto e no
+ * espaço (decidirReplay) fica ARMADO — nunca pela API dos testes (rodarPassos) nem com os replays de parada desligados.
+ * Gol, intervalo, fim e recomeço desarmam (a parada do lance acabou sem a montagem dele).
+ */
+function passoLances(eventos) {
+  const l = lancesPasso(lances, mundo, eventos);
+  if (replayParada) for (const e of eventos) {
+    const t = e.tipo;
+    if (t === 'gol' || t === 'intervalo' || t === 'fimDeJogo' || t === 'recomeco' || t === 'saida') { replayParada = null; break; }
+  }
+  if (l && !emRodarPassos && mundo.partida && decidirReplay(lances, l, { tempo: mundo.partida.tempo, ligado: replayParadaLigado() })) {
+    // (o lance é o objeto reaproveitado do classificador: o armado é uma cópia)
+    replayParada = { ...l, ids: [...l.ids] };
+  }
+}
+
+/**
+ * O TOPO de cada volta do laço (antes da entrada da demo, que escreve no mundo, e no online antes de MOD_ON.podePassar /
+ * entradas, que consomem a fila): com um replay de parada armado e o PRÓXIMO passo montando a bola parada (ou acabando o
+ * tempo: o replay vem antes do intervalo/fim), o replay começa e a volta para sem rodar o passo — a simulação fica no
+ * tick da espera e segue no mesmo tick quando ele acaba (o hash é o mesmo com e sem ele). A parada do lance que acabou
+ * sem montagem (mundo novo, gol...), os replays desligados ou o replay ainda não baixado: desarma sem segurar. Devolve
+ * true se o replay começou.
+ */
+function seguraParaReplayParada() {
+  const lc = replayParada;
+  if (!lc) return false;
+  const m = mundo, pr = m.parada;
+  if (!lances || !m.partida || m.partida.estado !== 'parada' || !pr || pr.inicio !== lc.morta || pr.cobrador != null || !replayParadaLigado()) {
+    replayParada = null; return false;
+  }
+  if (!montaNoProximoPasso(m)) return false;
+  replayParada = null;
+  if (!diretor || !iniciarReplay(diretor.parada(lc))) return false;
+  registrarReplay(lances, m.tick, 'parada');
+  // a faixa "Você foi expulso" desta bola morta ficou escondida pelo replay: volta depois dele (fimReplay → proximaCena)
+  if (expulsoAvisado && lc.morta === expulsoTick) filaCenas.push(faixaExpulso);
+  if (histParadas.length < 64) histParadas.push({ tick: m.tick, morta: lc.morta, chave: lc.chave, classe: lc.classe, tipo: lc.tipo, dur: diretor.estado.duracao, cams: diretor.estado.cams });
+  return true;
 }
 
 /** Durante o replay: um botão APERTADO agora (não o que já estava segurado no começo) pula. */
@@ -1647,6 +1722,9 @@ function quadro(agoraMs, desenhar = true) {
     for (let i = 0; i < nPassos; i++) {
       // a cena rodando segura a montagem da saída: a simulação espera no passo gol + 149
       if (seguraSimulacao()) { segurou = true; break; }
+      // o replay de parada armado começa no passo antes da montagem: a volta para sem rodar o passo (ANTES da entrada da
+      // demo, que escreve no mundo: o tick da espera fica intocado)
+      if (seguraParaReplayParada()) break;
       // durante a cena o humano assiste: a entrada dele não vai para a simulação (a demo segue)
       // do 2º passo do quadro em diante o analógico é a MESMA leitura (sim.js aplicarEntrada: `repete` — um gesto que
       // pulou no passo anterior ainda não acabou de ser lido)
@@ -1713,6 +1791,9 @@ function quadroOnline(dt, ent, agoraMs) {
   for (let i = 0; i < quer; i++) {
     // a comemoração rodando segura a montagem da saída (como fora do online: só a MINHA simulação espera)
     if (seguraSimulacao()) { segurou = true; break; }
+    // o replay de parada (só o MEU lado espera; antes de podePassar/entradas: nada da fila é consumido) — segurou: o
+    // marcarParado não conta a espera como "esperando o outro"
+    if (seguraParaReplayParada()) { segurou = true; break; }
     if (!MOD_ON.podePassar(s)) break;
     const { e, acoes } = MOD_ON.entradas(s);
     rodarPasso(e, acoes);
@@ -1938,6 +2019,11 @@ function simularResto() {
   if (!TM || !ehJogo(mundo) || !mundo.partida) return Promise.resolve(null);
   if (simulandoTM) return simulandoTM.promessa;
   if (prejogo && prejogo.ativo) { prejogo.cancelar(); entrada?.bloquear?.(false); }
+  // (o replay de parada armado não toca: o fim zera o classificador — iniciarEstados)
+  replayParada = null;
+  // (a faixa "Você foi expulso" que esperava o fim do replay não volta: o fimReplay abaixo andaria a fila)
+  const iFx = filaCenas.indexOf(faixaExpulso);
+  if (iFx >= 0) filaCenas.splice(iFx, 1);
   if (diretor && diretor.ativo) fimReplay(false);
   encerrarComemoracao();
   if (cenaSub) { cenaSub = null; if (cam) cam.definirCinema(null); }
@@ -2037,6 +2123,8 @@ function comando(c, v) {
       // nada para rever (menos de 0,5 s gravados desde o mundo novo): a pausa fica aberta
       const ro = diretor.menu();
       if (!ro) break;
+      // pedido na espera da bola morta: o lance da parada armada já está nele — o automático não repete a jogada
+      if (replayParada && mundo.parada?.inicio === replayParada.morta && mundo.parada.cobrador == null) replayParada = null;
       hud.fecharMenu();
       // com a cena de substituição rodando, o replay espera ela acabar (ou ser pulada): antes ele começava por baixo dela,
       // invisível, e a classe em-replay escondia a faixa ENTRA/SAI a cena inteira (contraprova de 14/10)
@@ -2345,7 +2433,7 @@ function trocarMundo(m, opc = {}) {
   edicaoNaFila = null;
   PAG_LIVRE?.limparFila();
   // Total Match: a súmula é do mundo novo
-  if (TM) { sumulaTM = criarSumula(); expulsoAvisado = false; simulandoTM = null; }
+  if (TM) { sumulaTM = criarSumula(); expulsoAvisado = false; expulsoTick = -1; simulandoTM = null; }
   kitCache.clear();
   limparOndas(ondas);
   zerarEmocao(emocao);
@@ -2813,6 +2901,23 @@ const api = {
      * um chute de verdade (render/autor-gol.js: o autor, o tick do chute e o tipo), só no desenho — a simulação não muda.
      */
     chuteDeTeste(id, tipo = 'chute') { autorEventos(autorGol, [{ tipo, id }], mundo.tick, timeDe); },
+    /**
+     * Replays nas paradas (22/10; lances.js): ligado (o padrão da página E "Replays: Ligado"), o lance armado (cópia ou
+     * null), a contagem por tempo, o último replay automático ({tick, tipo}), o histórico dos que tocaram ({tick, morta,
+     * chave, classe, tipo, dur, cams}), o último lance classificado e forcar(lance): arma um lance de teste (toca no passo
+     * antes da montagem da parada em andamento, com `morta` = o início dela).
+     */
+    paradas: {
+      get ligado() { return replayParadaLigado(); },
+      get armado() { return replayParada ? { ...replayParada, ids: [...replayParada.ids] } : null; },
+      get contagem() { return lances ? [...lances.porTempo] : null; },
+      get ultimoTick() { return lances ? lances.ultimoTick : null; },
+      get ultimoTipo() { return lances ? lances.ultimoTipo : null; },
+      get historico() { return histParadas.map(h => ({ ...h, cams: [...(h.cams ?? [])] })); },
+      forcar(l) { replayParada = l ? { classe: 'A', ids: [], ateMax: null, morta: mundo.parada?.inicio ?? -1, ...l } : null; return !!replayParada; },
+      /** O ponto (x, y, z) na câmera do replay agora, em coordenadas normalizadas ({x, y} em −1…1; atras = atrás dela), ou null. */
+      ndc(x, y, z) { if (!diretor?.ativo) return null; _proj.set(x, y, z).project(diretor.camera); return { x: _proj.x, y: _proj.y, atras: _proj.z > 1 }; },
+    },
   },
   /**
    * Comemoração do gol (testes e prints): estado da cena ({fase, t, duracao, autor, alvo, variante, corrida, curta, plano,
