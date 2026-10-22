@@ -4,10 +4,16 @@
 //   C1 chamadas de desenho na TV do celular com o corpo humano ≤ as do manequim + 1 (os 4 níveis, no máximo 3 com gente);
 //   C2 triângulos dos jogadores ≤ o teto da qualidade (Média 60 mil, Alta 120 mil) em todo quadro de 10 s de jogo;
 //   C3 sem o ?corpo=humano nada muda: o corpo não é baixado (nenhum pedido a assets/jogador nem a humano3d.js);
+//   C4 rostos reais (Etapa 5.2, a versão de teste da edição PRO do TM): num pedido pro com jogadores do índice
+//      (assets/rostos-reais/br.json), cada um com rosto real pede a textura dele e todas carregam (carregados = pedidos ≥ 3);
+//   C5 na edição PÚBLICA (o mesmo pedido) e sem o TM nada de rosto real é pedido (nenhum pedido a assets/rostos-reais);
 //   C8 sem erro no console (shader, textura, carga) nas duas telas.
 // Na versão sem o corpo humano reprova (C0).
 //   node tools/teste-corpo-tela.mjs
+import fs from 'node:fs';
+import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
+import { timeTM } from './lib/pedidos-tm.mjs';
 
 const res = [];
 const meta = (nome, medido, alvo, ok) => res.push({ nome, medido, alvo, ok: !!ok });
@@ -59,7 +65,7 @@ try {
   const B = await abrirPagina(CEL, URL0 + '&q=media&toque=1');
   await B.pagina.waitForTimeout(1500);
   maneqCel = await medir(B, 300);
-  const baixou = B.pedidos.filter(u => /assets\/jogador\/|humano3d\.js|esqueleto\.js|corpo-dados\.js/.test(u));
+  const baixou = B.pedidos.filter(u => /assets\/jogador\/|assets\/rostos-reais\/|humano3d\.js|esqueleto\.js|corpo-dados\.js/.test(u));
   meta('C3 sem ?corpo=humano o corpo não é baixado', baixou.length ? baixou.map(u => u.split('/').pop()).join(', ') : 'nenhum pedido', 'nenhum pedido', baixou.length === 0);
   erros.push(...B.erros.map(e => 'celular manequim: ' + e));
   await B.navegador.close();
@@ -72,6 +78,45 @@ try {
   erros.push(...C.erros.map(e => 'PC humano: ' + e));
   await C.navegador.close();
 } catch (e) { erros.push('PC humano: ' + e.message); }
+
+// rostos reais: um pedido do TM (pro e pública) com os jogadores de um clube do índice (o nome do clube e o do jogador
+// dão a chave "br-<clube>__<jogador>", como as fotos do TM)
+const arqIndice = path.join(RAIZ, 'assets/rostos-reais/br.json');
+const indice = fs.existsSync(arqIndice) ? JSON.parse(fs.readFileSync(arqIndice, 'utf8')) : {};
+const porClube = {};
+for (const [k, v] of Object.entries(indice)) { const [cl] = k.slice(3).split('__'); (porClube[cl] ??= []).push(v.nome); }
+const [clube, nomes] = Object.entries(porClube).sort((a, b) => b[1].length - a[1].length)[0] ?? ['', []];
+function pedidoRostos(edicao) {
+  const casa = timeTM(clube.replace(/-/g, ' '), 'CAS', '4-3-3', 80, 11), fora = timeTM('Visitante Teste', 'VIS', '4-2-3-1', 80, 23);
+  casa.players.forEach((p, i) => { if (nomes[i]) p.nomeCompleto = nomes[i]; });
+  return { v: 2, id: 'rr' + edicao, titulo: 'R', origem: 'teste', userSide: 'home', controle: null, edicao,
+    partida: { neutro: true, publico: 0.8, classico: false, nomeClassico: null, competicao: 'Teste' }, home: casa, away: fora };
+}
+async function rostosNoPedido(edicao) {
+  const ped = pedidoRostos(edicao);
+  const nav = await abrir({ largura: 1280, altura: 720 });
+  await nav.contexto.addInitScript(([id, j]) => { localStorage.setItem('tm3d:pedido:' + id, j); }, [ped.id, JSON.stringify(ped)]);
+  const pedidos = [];
+  nav.pagina.on('request', r => pedidos.push(r.url()));
+  await nav.pagina.goto(srv.url + `index.html?tm=${ped.id}&q=media&replay=0&comemoracao=0&prejogo=0&hora=dia&corpo=humano`, { waitUntil: 'load' });
+  await nav.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
+  await nav.pagina.waitForFunction(() => window.__golaco.estadio.corpo?.pronto || window.__golaco.estadio.corpo?.erro, null, { timeout: 120000 }).catch(() => {});
+  await nav.pagina.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); for (let i = 0; i < 60; i++) g.relogio.avancar(1000 / 60); });
+  // as texturas entram uma a uma, a cada quadro: espera todas (ou 20 s)
+  await nav.pagina.waitForFunction(() => { const r = window.__golaco.estadio.corpo?.rostos; window.__golaco.relogio.avancar(1000 / 60); return r && r.pedidos > 0 && r.carregados >= r.pedidos; }, null, { timeout: 20000, polling: 100 }).catch(() => {});
+  const r = await nav.pagina.evaluate(() => window.__golaco.estadio.corpo?.rostos ?? null);
+  const err = nav.erros.slice();
+  await nav.navegador.close();
+  return { r, err, baixou: pedidos.filter(u => /assets\/rostos-reais\//.test(u)) };
+}
+let rPro = null, rPub = null;
+try { rPro = await rostosNoPedido('pro'); erros.push(...rPro.err.map(e => 'rostos pro: ' + e)); } catch (e) { erros.push('rostos pro: ' + e.message); }
+try { rPub = await rostosNoPedido('publica'); erros.push(...rPub.err.map(e => 'rostos pública: ' + e)); } catch (e) { erros.push('rostos pública: ' + e.message); }
+meta('C4 rostos reais na edição pro: cada jogador com rosto pede a textura e todas carregam',
+  rPro?.r ? `${clube}: índice ${rPro.r.indice ? 'sim' : 'não'}; ${rPro.r.carregados}/${rPro.r.pedidos} carregados (${nomes.length} no índice)` : 'sem índice ou não abriu',
+  'carregados = pedidos ≥ 3', rPro?.r && rPro.r.indice && rPro.r.pedidos >= 3 && rPro.r.carregados === rPro.r.pedidos);
+meta('C5 na edição pública nada de rosto real é pedido',
+  rPub ? `${rPub.baixou.length} pedidos a assets/rostos-reais; rostos ${JSON.stringify(rPub.r)}` : 'não abriu', '0', rPub && rPub.baixou.length === 0 && !(rPub.r?.pedidos > 0));
 
 const h = humanoCel;
 meta('C0 o corpo humano carrega e desenha todos os bonecos (soma dos níveis = bonecos; ≥ 22)',

@@ -21,15 +21,38 @@ def bloco(arr):
     blocos.append(b + b'\0' * pad)
     o = off; off += len(b) + pad
     return {'off': o, 'bytes': len(b)}
+def soldar_normais(p, n, ang=60):
+    """Os vértices no MESMO lugar (a costura da UV duplica o vértice) com normais a menos de `ang` graus ficam com a média:
+    sem isso a luz dava um degrau na costura (a linha no alto da cabeça e no meio da testa). Superfícies diferentes que se
+    encostam (os lábios, a pálpebra) ficam com a sua."""
+    chave = np.round(p / 2e-4).astype(np.int64)
+    _, grupo = np.unique(chave, axis=0, return_inverse=True)
+    grupo = grupo.ravel(); out = n.copy(); c = np.cos(np.radians(ang))
+    ordem = np.argsort(grupo, kind='stable'); g = grupo[ordem]
+    cortes = np.flatnonzero(np.diff(g)) + 1
+    for membros in np.split(ordem, cortes):
+        if len(membros) < 2: continue
+        resto = list(membros)
+        while resto:
+            base = resto[0]; junto = [v for v in resto if n[v] @ n[base] >= c]
+            m = n[junto].sum(0); m /= np.linalg.norm(m) + 1e-12
+            out[junto] = m; resto = [v for v in resto if v not in junto]
+    return out
 lods = []
 nivel = 0
 while f'corpo_lod{nivel}_pos' in d.files:
     partes = {}
+    # as normais soldadas nas duas partes juntas (o pescoço: a borda da cabeça encosta na do corpo)
+    _n = {pt: d[f'{pt}_lod{nivel}_nor'].astype(np.float64) for pt in ('corpo', 'cabeca')}
+    for pt in _n: _n[pt] /= np.linalg.norm(_n[pt], axis=1, keepdims=True) + 1e-12
+    _nc = len(_n['corpo'])
+    _sold = soldar_normais(np.vstack([d[f'corpo_lod{nivel}_pos'], d[f'cabeca_lod{nivel}_pos']]).astype(np.float64), np.vstack([_n['corpo'], _n['cabeca']]))
+    soldadas = {'corpo': _sold[:_nc], 'cabeca': _sold[_nc:]}
     for parte in ('corpo', 'cabeca'):
         k = f'{parte}_lod{nivel}_'
         p = d[k + 'pos'].astype(np.float64); mn, mx = p.min(0), p.max(0)
         q = np.round((p - mn) / np.maximum(mx - mn, 1e-9) * 65534 - 32767).astype(np.int16)
-        n = d[k + 'nor'].astype(np.float64); n /= np.linalg.norm(n, axis=1, keepdims=True) + 1e-12
+        n = soldadas[parte]
         tri = d[k + 'tri']
         assert tri.max() < 65536
         partes[parte] = {

@@ -32,3 +32,7 @@ yarn-error.log*
 studylab-server/node_modules
 studylab-server/.env
 studylab/studylab-single.html
+
+# Python (ferramentas)
+__pycache__/
+*.pyc
