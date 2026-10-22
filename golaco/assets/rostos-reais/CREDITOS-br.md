@@ -5,158 +5,113 @@ Cada textura em `br/` é obra DERIVADA da foto abaixo (o rosto levado à pele da
 
 - `br-athletico-paranaense__gilberto-moraes` (Gilberto Moraes) — Sport Lisboa e Benfica — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AGilbertoBenfica2020.jpg — 2020
 - `br-athletico-paranaense__jadson` (Jadson) — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3AJadson-Juventude-Corinthians-jun-2022.jpg — 2022
-- `br-athletico-paranaense__kerwin-vargas` (Kerwin Vargas) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ABrandt_Bronico_NYCFC_v_Charlotte_20_Sep_2025-054.jpg — 2025
-- `br-athletico-paranaense__luiz-gustavo` (Luiz Gustavo) — beIN SPORTS Türkiye — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ADerbide_Fenerbah%C3%A7e_Yedek_Oyuncular_%282021-22_S%C3%BCper_Lig%29.png — 2022
+- `br-athletico-paranaense__kerwin-vargas` (Kerwin Vargas) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AKerwin_Vargas_NYCFC_v_Charlotte_20_Sep_2025-055_%28cropped%29.jpg — 2025
 - `br-athletico-paranaense__stiven-mendoza` (Stiven Mendoza) — Josetramontin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFoto_passaporte.jpg — 2025
-- `br-atletico-mineiro__angelo-preciado` (Ángelo Preciado) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADenil_Castillo_Cote_D%27Ivoire_v_Ecuador_14_June_2026-91.jpg — 2026
-- `br-atletico-mineiro__bernard` (Bernard) — Богдан Заяц — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ABernard_An%C3%ADcio_Caldeira_Duarte_2015c.jpg — 2015
-- `br-atletico-mineiro__everson` (Everson) — Palácio do Planalto from Brasilia, Brasil — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3A16_11_2019_Partida_de_futebol_Santos_e_S%C3%A3o_Paulo_Everson.jpg — 2019
+- `br-atletico-mineiro__alan-minda` (Alan Minda) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAlan_Minda_Cote_D%27Ivoire_v_Ecuador_14_June_2026-187.jpg — 2026
+- `br-atletico-mineiro__bernard` (Bernard) — Богдан Заяц — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ABernard_An%C3%ADcio_Caldeira_Duarte_2015d.jpg — 2015
 - `br-atletico-mineiro__fred` (Fred) — Кирилл Венедиктов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AFred_Brazil_%28cropped_2%29.jpg — 2018
-- `br-atletico-mineiro__gustavo-scarpa` (Gustavo Scarpa) — ImgBB — Attribution — https://commons.wikimedia.org/wiki/File%3A2022-Gustavo-Scarpa-2022.png — 2022
+- `br-atletico-mineiro__gustavo-scarpa` (Gustavo Scarpa) — Equipos de fútbol — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AGustavo_Scarpa_Palmeiras_2022_02_12_Chelsea_-_54593932295.jpg — 2022
 - `br-atletico-mineiro__kevin-castano` (Kevin Castaño) — Fotografía oficial de la Presidencia de Colombia — Public domain — https://commons.wikimedia.org/wiki/File%3AKevin_Casta%C3%B1o%2C_Colombia_NT_presidential_send-off%2C_Jun_2026.jpg — 2026
 - `br-atletico-mineiro__leo-duarte` (Léo Duarte) — Leonardo Duarte — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AL%C3%A9o_Duarte_Basaksehir_%28cropped%29.jpg — 2022
 - `br-atletico-mineiro__lyanco` (Lyanco) — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3ALyanco_Evangelista_Silveira_Neves_Vojnovi%C4%87_2017.jpg — 2017
-- `br-atletico-mineiro__mateo-cassierra` (Mateo Cassierra) — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AMateo_Casierra_in_2025.jpg — 2025
 - `br-atletico-mineiro__reinier` (Reinier) — Real Madrid — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AReinier_2020.png — 2020
 - `br-atletico-mineiro__renan-lodi` (Renan Lodi) — Anna Nessie — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AATL-Madrid-Lokomotiv001-Lodi.jpg — 2019
-- `br-atletico-mineiro__vitor-hugo` (Vitor Hugo) — beIN SPORTS Türkiye — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AVitor_Hugo_-_beIN-Sports-Reklam_%282021%29_%28cropped%29.png — 2021
+- `br-atletico-mineiro__vitor-hugo` (Vitor Hugo) — beIN SPORTS Türkiye — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AVitor_Hugo_Franchescoli_de_Souza_%282020-21_S%C3%BCper_Lig%29_-_Resim1.png — 2021
+- `br-bahia__caio-alexandre` (Caio Alexandre) — Lega Pallavolo Serie A — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ACaio_Alexandre_De_Oliveira_%28Legavolley_2019%29.jpg — 2019
 - `br-bahia__jean-lucas` (Jean Lucas) — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A20191002_Fu%C3%9Fball%2C_M%C3%A4nner%2C_UEFA_Champions_League%2C_RB_Leipzig_-_Olympique_Lyonnais_by_Stepro_StP_0019-2.jpg — 2019
-- `br-botafogo__allan` (Allan) — Palácio do Planalto — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3A2019_Final_da_Copa_Am%C3%A9rica_2019_-_48226559171_%28Allan_Marques_Loureiro%29_%28cropped%29.jpg — 2019
 - `br-botafogo__cristian-medina` (Cristian Medina) — Argentina.gob.ar — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ACristian_Medina%2C_2024_Summer_Olympics.jpg — 2024
-- `br-botafogo__danilo-santos` (Danilo Santos) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADanilo_Santos_Brazil_V_Morocco_13_June_2026-140_%28cropped%29.jpg — 2026
-- `br-botafogo__kaio-pantaleao` (Kaio Pantaleão) — Антон Зайцев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AKaio_Pantale%C3%A3o_2019.jpg — 2019
-- `br-botafogo__warleson` (Warleson) — Cercletitoke — CC0 — https://commons.wikimedia.org/wiki/File%3AWarlesonjuni2024.jpg — 2024
 - `br-chapecoense__giovanni-augusto` (Giovanni Augusto) — Record TV Goiás — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AGiovanni_Augusto_2019.png — 2019
-- `br-chapecoense__kevin-ramirez` (Kevin Ramírez) — Rodrigo Peña Cortés — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AKevin_Ram%C3%ADrez.jpg — 2023
 - `br-chapecoense__vinicius-balieiro` (Vinicius Balieiro) — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3AVinicius_Balieiro_-_Campeonato_Paulista_Sub20-_S%C3%A3o_Caetano_2_x_1_Santos_FC_-_48105549001_%28cropped%29.jpg — 2019
 - `br-corinthians__andre-carrillo` (André Carrillo) — Дмитрий Голубович — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ACSKA_Sporting_%283%29_%28cropped%29.jpg — 2015
 - `br-corinthians__andre-ramalho` (André Ramalho) — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_RB_Salzburg_gegen_LASK_%2814._Februar_2020%29_26.jpg — 2020
 - `br-corinthians__felipe-longo` (Felipe Longo) — Tv Central do Timão — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AFelipe_Longo_goleiro.jpg — 2025
 - `br-corinthians__gabriel-paulista` (Gabriel Paulista) — Valencia CF — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AGabriel_Paulista_2020.jpg — 2020
-- `br-corinthians__gui-negao` (Gui Negão) — TV Central do Timão — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AGui-negao-entrevista-2025_%28cropped%29.png — 2025
 - `br-corinthians__gustavo-henrique` (Gustavo Henrique) — Sportreport — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AGustavo_Henrique_%28Press_Conference%2C_August_2022%29.png — 2022
 - `br-corinthians__jesse-lingard` (Jesse Lingard) — Explicit — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A250831_FC_%EC%84%9C%EC%9A%B8_vs_%EC%95%88%EC%96%91_%28Jesse_Lingard%29_4.jpg — 2025
-- `br-corinthians__pedro-raul` (Pedro Raul) — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3APedro_Raul_-_S%C3%89RIE_A_-_CORINTHIANS_1_X_0_GOI%C3%81S_-_IMG_2324_%28cropped%29.jpg — 2022
 - `br-corinthians__raniele` (Raniele) — TV Botafogo — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ARaniele_2020.png — 2020
 - `br-corinthians__vitinho` (Vitinho) — Дмитрий Голубович — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AGol_2710.jpg — 2017
-- `br-corinthians__yuri-alberto` (Yuri Alberto) — Felipematoslima — CC0 — https://commons.wikimedia.org/wiki/File%3AYuri_Alberto_celebra_gol_contra_o_Palmeiras_em_vit%C3%B3ria_de_2_x_0_pelo_campeonato_brasileiro_2024.jpg — 2025
-- `br-corinthians__zakaria-labyad` (Zakaria Labyad) — .mw-parser-output .commons-creator-table{background-color:#f0f0ff;box-sizing:border-box;font-size:95%;text-align:start;c — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A%D0%9E%D1%82%D0%BA%D1%80%D1%8B%D1%82%D0%B0%D1%8F_%D1%82%D1%80%D0%B5%D0%BD%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0_%C2%AB%D0%90%D1%8F%D0%BA%D1%81%D0%B0%C2%BB_%D0%BF%D0%B5%D1%80%D0%B5%D0%B4_%D0%BC%D0%B0%D1%82%D1%87%D0%B5%D0%BC_%D1%81_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB._27_%D0%B0%D0%B2%D0%B3%D1%83%D1%81%D1%82%D0%B0_2018_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_900376_%28Zakaria_Labyad%29.jpg — 2018
-- `br-coritiba__breno-lopes` (Breno Lopes) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ABreno-lopes-palmeiras-wikipedia-2021.jpg — 2021
 - `br-coritiba__bruno-melo` (Bruno Melo) — SOCCER DIGITAL — CC0 — https://commons.wikimedia.org/wiki/File%3ABruno-Melo-Corinthians-jul-2022.jpg — 2022
 - `br-coritiba__felipe-jonatan` (Felipe Jonatan) — SOCCER DIGITAL — CC0 — https://commons.wikimedia.org/wiki/File%3AFelipe-Jonatan-Santos-jul-2022.jpg — 2022
-- `br-coritiba__josue-pesqueira` (Josué Pesqueira) — Conradoc15 — CC0 — https://commons.wikimedia.org/wiki/File%3AJosue1.jpg — 2023
-- `br-coritiba__jp-chermont` (JP Chermont) — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJP_Chermont_2025-09-26.png — 2025
 - `br-coritiba__maicon` (Maicon) — SOCCER DIGITAL — CC0 — https://commons.wikimedia.org/wiki/File%3AMaicon-Santos-jul-2022.jpg — 2022
-- `br-coritiba__pedro-rocha` (Pedro Rocha) — Кирилл Венедиктов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AZenspb-SM_%288%29.jpg — 2018
-- `br-cruzeiro__cassio` (Cássio) — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3ACassio-Corinthians-Juventude-jul-2022.jpg — 2022
+- `br-cruzeiro__bruno-rodrigues` (Bruno Rodrigues) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ABruno-rodrigues-palmeiras-juventude-out2025.jpg — 2025
+- `br-cruzeiro__cassio` (Cássio) — SOCCER DIGITAL — CC0 — https://commons.wikimedia.org/wiki/File%3ACassio-Corinthians-jul-2022.jpg — 2022
 - `br-cruzeiro__gerson` (Gerson) — Константин Золин — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3A1354783_sPICT_%28cropped%29.jpg — 2025
-- `br-cruzeiro__lucas-silva` (Lucas Silva) — Matias Arraez Crop: MYS77 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3APr%C3%A9sentation_de_Lucas_Silva_%28cropped%29.jpg — 2015
 - `br-cruzeiro__luis-sinisterra` (Luis Sinisterra) — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ALuis_Sinisterra.png — 2024
-- `br-cruzeiro__matheus-pereira` (Matheus Pereira) — Granada — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A20190428_DFL_1._Bundesliga_FCN_-_FCB_DSC_7579.jpg — 2019
 - `br-cruzeiro__wanderson` (Wanderson) — Артем Гусев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AWanderson_Maciel_Sousa_Campos.jpg — 2020
 - `br-flamengo__alex-sandro` (Alex Sandro) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAlex_Sandro_Brazil_V_Morocco_13_June_2026-137_%28cropped%29.jpg — 2026
-- `br-flamengo__anthony-valencia` (Anthony Valencia) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAnthony_Valencia_Cote_D%27Ivoire_v_Ecuador_14_June_2026-46.jpg — 2026
+- `br-flamengo__anthony-valencia` (Anthony Valencia) — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AAnthony_Valencia_02082026_%282%29.jpg — 2026
 - `br-flamengo__ayrton-lucas` (Ayrton Lucas) — Анна Нэсси — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ASPA_SOCHI2019_%283%29.jpg — 2019
 - `br-flamengo__bruno-henrique` (Bruno Henrique) — Douglas Teixeira from Santos, Brasil — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3ABruno_Henrique_%2835129405450%29_%28cropped%29.jpg — 2017
 - `br-flamengo__danilo` (Danilo) — Original: YantsImages / Derivative work: Danyele — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADanilo_at_2026_FIFA_World_Cup_by_YantsImages_%28cropped%29.jpg — 2026
 - `br-flamengo__gonzalo-plata` (Gonzalo Plata) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AGonzalo_Plata_Cote_D%27Ivoire_v_Ecuador_14_June_2026-12.jpg — 2026
-- `br-flamengo__jorge-carrascal` (Jorge Carrascal) — Антон Зайцев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AJorge_Carrascal_in_2022.jpg — 2022
-- `br-flamengo__jorginho` (Jorginho) — محمد امین انصاری — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3A2021_FIFA_Club_World_Cup_Final_-_01_%28Jorginho_com_a_medalha_do_Mundial_de_Clubes%29.jpg — 2022
 - `br-flamengo__leo-ortiz` (Léo Ortiz) — Cleisson Lima — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ALEO_ORTIZ_X_FLU_-_ONE9_CONTENT_-_GABRIEL_NUFFER_2024-7.jpg — 2024
 - `br-flamengo__leo-pereira` (Léo Pereira) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ALeo_Pereira_Brazil_V_Morocco_13_June_2026-136_%28cropped%29.jpg — 2026
-- `br-flamengo__lucas-paqueta` (Lucas Paquetá) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ABrazil_World_Cup_Roster_Brazil_V_Morocco_13_June_2026-72_%28Lucas_Paquet%C3%A1%29.jpg — 2026
-- `br-flamengo__pedro` (Pedro) — Agência Brasília — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3A2023-01-27_Pedro_Guilherme_Abreu_dos_Santos_%28cropped%29.jpg — 2023
-- `br-flamengo__saul-niguez` (Saúl Ñíguez) — محمد امین انصاری — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3A2021_FIFA_Club_World_Cup_Final_-_Sa%C3%BAl_%C3%91%C3%ADguez.jpg — 2022
-- `br-flamengo__vitao` (Vitão) — football.ua — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AVit%C3%A3o2020.jpg — 2020
 - `br-fluminense__agustin-canobbio` (Agustín Canobbio) — Jimmy Baikovicius from Montevideo, Uruguay — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AAgust%C3%ADn_Canobbio_2018.jpg — 2018
-- `br-fluminense__fabio` (Fábio) — Danielcuei. — Public domain — https://commons.wikimedia.org/wiki/File%3AF%C3%A1bio_Deivson_Lopes_Maciel_of_Cruzeiro_EC_%28cropped%29.jpg — 2009
-- `br-fluminense__ganso` (Ganso) — Sergio Savarese from Sao Paulo City / Ipiranga, Brasil — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3ACaf%C3%BA%2C_Ganso_e_Neymar.jpg — 2010
-- `br-fluminense__german-cano` (Germán Cano) — Crismejia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AGECano.jpg — 2012
+- `br-fluminense__ganso` (Ganso) — Sergio Savarese from Sao Paulo City / Ipiranga, Brasil — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AGanso_jogador.jpg — 2009
+- `br-fluminense__german-cano` (Germán Cano) — Scoelho86 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AGermancanoenmedallo_%28cropped%29.jpg — 2015
 - `br-fluminense__guilherme-arana` (Guilherme Arana) — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AGuilherme_Arana_2017.jpg — 2017
-- `br-fluminense__hulk` (Hulk) — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AZ-L2016_%2810%29.jpg — 2016
+- `br-fluminense__hulk` (Hulk) — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ASpar-Zen2015_%283%29.jpg — 2015
 - `br-fluminense__jefferson-savarino` (Jefferson Savarino) — Hayden Schiff from Cincinnati, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AUSAvVEN_2019-06-09_-_Jefferson_Savarino_%2851169633652%29_%28cropped%29.jpg — 2019
-- `br-fluminense__lucho-acosta` (Lucho Acosta) — Hayden Schiff from Cincinnati, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3ACINvNYC_2022-06-29_-_Geoff_Cameron%2C_Nick_Hagglund%2C_Roman_Celentano%2C_Luciano_Acosta_%2852186352542%29_%28cropped%29.jpg — 2022
-- `br-fluminense__otavio` (Otávio) — Adrien33000 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AOt%C3%A1vio_Henrique_Santos_%28cropped%29.jpg — 2018
+- `br-fluminense__lucho-acosta` (Lucho Acosta) — Hayden Schiff — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3ALuciano_Acosta_em_2023_pelo_Cincinnati_na_MLS_%28cropped%29.jpg — 2023
 - `br-fluminense__samuel-xavier` (Samuel Xavier) — Copa do Nordeste — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ASamuel_Xavier.jpg — 2020
-- `br-fluminense__thiago-silva` (Thiago Silva) — محمد امین انصاری — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AThiago_Silva_with_Club_World_Cup_Trophy_2022.jpg — 2022
+- `br-fluminense__yeferson-soteldo` (Yeferson Soteldo) — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AYeferson_Julio_Soteldo_Mart%C3%ADnez.jpg — 2017
 - `br-gremio__caio-paulista` (Caio Paulista) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ACaio-PaulistaPalmeiras-Sao-Paulo-ago24.jpg — 2024
-- `br-gremio__carlos-vinicius` (Carlos Vinícius) — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ACarlos_Vin%C3%ADcius_06042025_%281%29.jpg — 2025
-- `br-gremio__fabian-balbuena` (Fabián Balbuena) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFabian_Balbuena_France_v_Paraguay_4_July_2026-016.jpg — 2026
-- `br-gremio__filip-krovinovic` (Filip Krovinović) — Sport Lisboa e Benfica — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AFilip_Krovinovic_2018.png — 2018
-- `br-gremio__martin-braithwaite` (Martin Braithwaite) — Web Summit — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3A2021_-_Q%26A_SM5_1298_%2851650827642%29.jpg — 2021
-- `br-gremio__tete` (Tetê) — Football.ua — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ATet%C3%AA_in_2021.jpg — 2021
-- `br-gremio__wagner-leonardo` (Wagner Leonardo) — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3AWagner_Leonardo_-_Campeonato_Paulista_Sub20-_S%C3%A3o_Caetano_2_x_1_Santos_FC_-_48105549001.jpg — 2019
+- `br-gremio__fabian-balbuena` (Fabián Balbuena) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFabian_Balbuena_France_v_Paraguay_4_July_2026-052.jpg — 2026
+- `br-gremio__martin-braithwaite` (Martin Braithwaite) — Web Summit — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3A2021_-_Q%26A_SM7_1798_%2851650822487%29.jpg — 2021
 - `br-gremio__walter-kannemann` (Walter Kannemann) — Bruno2803 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AWalter_Kannemann_entreinamento.png — 2017
 - `br-gremio__weverton` (Weverton) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AWeverton_Brazil_V_Morocco_13_June_2026-67_%28cropped%29.jpg — 2026
 - `br-internacional__alan-patrick` (Alan Patrick) — Paulinho Menezes/Portal da Copa — CC BY 3.0 br — https://commons.wikimedia.org/wiki/File%3AAlanPatrickInter2014.jpg — 2014
 - `br-internacional__bruno-henrique` (Bruno Henrique) — Douglas Teixeira from Santos, Brasil — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3ABruno_Henrique_%2835129405450%29_%28cropped%29.jpg — 2017
 - `br-internacional__felix-torres` (Félix Torres) — Club Santos Laguna — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3APedro_Aquino%2C_F%C3%A9lix_Torres.png — 2023
 - `br-internacional__gabriel-mercado` (Gabriel Mercado) — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AGabriel_Mercado.jpg — 2016
-- `br-internacional__juninho` (Juninho) — Medios Públicos EP — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AJuninho-palmeiras-2017.jpg — 2017
-- `br-internacional__kayky` (Kayky) — 0futura — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AKayky_da_Silva_Chagas.jpg — 2021
-- `br-internacional__niclas-eliasson` (Niclas Eliasson) — https://www.flickr.com/photos/anders-h-foto/ — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3ANiclas_Eliasson_2014-05-13.jpg — 2014
-- `br-internacional__thiago-maia` (Thiago Maia) — Agência Brasil Fotografias — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3ABrasil_estreia_contra_a_%C3%81frica_do_Sul_no_Man%C3%A9_Garrincha_%E2%80%94_%D0%BA%D0%BE%D0%BF%D0%B8%D1%8F_%283%29.jpg — 2016
 - `br-internacional__vitinho` (Vitinho) — .mw-parser-output .commons-creator-table{background-color:#f0f0ff;box-sizing:border-box;font-size:95%;text-align:start;c — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AVitinho_in_Dynamo_Kyiv_2021.jpg — 2021
 - `br-mirassol__chico-kim` (Chico Kim) — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3ABrasileir%C3%A3o_A-_Corinthians_2_x_0_Juventude_-_52139779294.jpg — 2022
 - `br-mirassol__reinaldo` (Reinaldo) — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3AReinaldo-Sao-Paulo-Juventude-jun-2022.jpg — 2022
-- `br-mirassol__shaylon` (Shaylon) — Douglas Teixeira from Santos, Brasil — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AShaylon_atuando_pelo_S%C3%A3o_Paulo_em_2017_%2835660138772%29_%28cropped%29.jpg — 2017
-- `br-mirassol__thomazella` (Thomazella) — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3ACopa_Paulista_2019-_EC_S%C3%A3o_Bernardo_1_x_1_%C3%81gua_Santa_-_Thomazella.jpg — 2019
-- `br-palmeiras__agustin-giay` (Agustín Giay) — BugWarp — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AEntrenamiento_Argentina_Sub20_previo_al_mundial_-_BugWarp_%2836%29_%28cropped%29.jpg — 2023
-- `br-palmeiras__andreas-pereira` (Andreas Pereira) — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AAndreas_Pereira_20042025_%284%29.jpg — 2025
+- `br-mirassol__thomazella` (Thomazella) — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3ADRAFT_FUTEBOL_2019-_Express%C3%A3o_Paulista_0_%282%29_x_%283%29_0_%C3%81gua_Santa_-_49191182773_-_Thomazella.jpg — 2019
+- `br-palmeiras__agustin-giay` (Agustín Giay) — Equipos de fútbol — CC0 — https://commons.wikimedia.org/wiki/File%3AAgustin_Giay_Palmeiras_2025_07_05_Chelsea.jpg — 2025
+- `br-palmeiras__arthur-gabriel` (Arthur Gabriel) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AArthur-Palmeiras-Jacuipense-abr26.jpg — 2026
 - `br-palmeiras__bruno-fuchs` (Bruno Fuchs) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ABruno-fuchs-palmeiras-juventude-out2025-4.jpg — 2025
 - `br-palmeiras__emiliano-martinez` (Emiliano Martínez) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AEmiliano-Martinez-palmeiras-internacional-sep2025.jpg — 2025
-- `br-palmeiras__felipe-anderson` (Felipe Anderson) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFelipe-Anderson-Palmeiras-Jacuipense-abr26-2.jpg — 2026
 - `br-palmeiras__gustavo-gomez` (Gustavo Gómez) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AGustavo-Gomez-Palmeiras-Santos-mai26-2.jpg — 2026
-- `br-palmeiras__joaquin-piquerez` (Joaquín Piquerez) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ABruno-rodrigues-joaquin-piquerez-palmeiras-juventude-out2025.jpg — 2025
+- `br-palmeiras__jefte` (Jefté) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJefte-palmeiras-internacional-sep2025.jpg — 2025
 - `br-palmeiras__jose-manuel-lopez` (José Manuel López) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJose_Manuel_Lopez_Argentina_v_Spain_19_July_2026-272.jpg — 2026
-- `br-palmeiras__khellven` (Khellven) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AKhellven-palmeiras-internacional-sep2025-3.jpg — 2025
-- `br-palmeiras__lucas-evangelista` (Lucas Evangelista) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ALucas-Evangelista-Palmeiras-Santos-mai26.jpg — 2026
 - `br-palmeiras__marcelo-lomba` (Marcelo Lomba) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMarcelo-Lomba-Palmeiras-Sao-Paulo-ago24-2.jpg — 2024
-- `br-palmeiras__marlon-freitas` (Marlon Freitas) — Jimmy Baikovicius — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AMarlonFreitasPe%C3%B1arolxBotafogo2024.jpg — 2024
-- `br-palmeiras__mauricio` (Maurício) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMauricio-Palmeiras-Jacuipense-abr26.jpg — 2026
-- `br-palmeiras__murilo` (Murilo) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMurilo-Palmeiras-Jacuipense-abr26.jpg — 2026
-- `br-palmeiras__paulinho` (Paulinho) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3APaulinho-Palmeiras-Santos-mai26_%28cropped%29.jpg — 2026
-- `br-palmeiras__ramon-sosa` (Ramón Sosa) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ARamon_Sosa_France_v_Paraguay_4_July_2026-049.jpg — 2026
+- `br-palmeiras__mauricio` (Maurício) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMauricio-palmeiras-juventude-out2025-2.jpg — 2025
+- `br-palmeiras__murilo` (Murilo) — Equipos de fútbol — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AMurilo_Palmeiras_2025_06_23_Inter_Miami.jpg — 2025
+- `br-palmeiras__ramon-sosa` (Ramón Sosa) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ARamon-Sosa-Palmeiras-Jacuipense-abr26.jpg — 2026
 - `br-palmeiras__vitor-roque` (Vitor Roque) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AVitor-Roque-Palmeiras-Jacuipense-abr26-2.jpg — 2026
-- `br-red-bull-bragantino__eduardo-sasha` (Eduardo Sasha) — César Muñoz/ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AInternacional-2015_%283%29.jpg — 2015
-- `br-red-bull-bragantino__isidro-pitta` (Isidro Pitta) — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3AIsidro-Pitta-Juventude-Corinthians-jun-2022.jpg — 2022
-- `br-remo__alef-manga` (Alef Manga) — Record TV Goiás — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AAlef_Manga.jpg — 2021
-- `br-remo__ivan` (Ivan) — Israel Oliveira / Ponte Preta (Resolução e imagem original alterada para melhor enquadramento) — FAL — https://commons.wikimedia.org/wiki/File%3AIVAN_Goleiro_Ponte_Preta.jpg — 2018
+- `br-remo__ivan` (Ivan) — Кирилл Венедиктов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AIvan_Quaresma_Zenit.jpg — 2022
 - `br-remo__patrick` (Patrick) — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3APatrick_Santos_24-04-2024.png — 2024
 - `br-remo__vitor-bueno` (Vitor Bueno) — .mw-parser-output .commons-creator-table{background-color:#f0f0ff;box-sizing:border-box;font-size:95%;text-align:start;c — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A%D0%92%D0%B8%D1%82%D0%BE%D1%80_%D0%91%D1%83%D1%8D%D0%BD%D0%BE._27_%D0%B0%D0%B2%D0%B3%D1%83%D1%81%D1%82%D0%B0_2018_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_900177_%28cropped%29.jpg — 2018
 - `br-santos__alvaro-barreal` (Álvaro Barreal) — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3A%C3%81lvaro_Barreal_05-08-2025.png — 2025
-- `br-santos__arthur` (Arthur) — Palácio do Planalto — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3A2019_Final_da_Copa_Am%C3%A9rica_2019_-_48226559171_%28Arthur_Melo%29.jpg — 2019
 - `br-santos__benjamin-rollheiser` (Benjamín Rollheiser) — SL Benfica — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ABenjamin_Rollheiser.png — 2024
 - `br-santos__christian-oliva` (Christian Oliva) — Valencia CF — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AChristian_Oliva_2021.png — 2021
-- `br-santos__gabriel-barbosa` (Gabriel Barbosa) — Arthur Miranda — CC0 — https://commons.wikimedia.org/wiki/File%3AGabriel_Barbosa_2022.jpg — 2022
-- `br-santos__gabriel-bontempo` (Gabriel Bontempo) — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AGabriel_Bontempo_28-12-2024.png — 2024
+- `br-santos__gabriel-barbosa` (Gabriel Barbosa) — Marcelo Camargo/Agência Brasil — CC BY 3.0 br — https://commons.wikimedia.org/wiki/File%3AGabriel_Barbosa_2016b.jpg — 2016
 - `br-santos__gabriel-brazao` (Gabriel Brazão) — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AGabriel_Braz%C3%A3o_18-11-2024.png — 2024
 - `br-santos__gonzalo-escobar` (Gonzalo Escobar) — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AGonzalo_Escobar_24-04-2024.png — 2024
+- `br-santos__joao-ananias` (João Ananias) — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJo%C3%A3o_Ananias_08-04-2026.png — 2026
 - `br-santos__joao-paulo` (João Paulo) — SOCCER DIGITAL — CC0 — https://commons.wikimedia.org/wiki/File%3AJoao-Paulo-Santos-jul-2022.jpg — 2022
 - `br-santos__joao-pedro` (João Pedro) — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJo%C3%A3o_Pedro_Santos_28-12-2024.png — 2024
-- `br-santos__joao-schmidt` (João Schmidt) — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJo%C3%A3o_Schmidt_29-03-2024.png — 2024
 - `br-santos__luan-peres` (Luan Peres) — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ALuan_Peres_18-11-2024.png — 2024
 - `br-santos__lucas-verissimo` (Lucas Veríssimo) — Sport Lisboa e Benfica — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ALucas_Ver%C3%ADssimo_2022.png — 2022
-- `br-santos__miguel-terceros` (Miguel Terceros) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMiguel_Terceros_Scotland_v_Bolivia_6_June_2026-47_%28cropped%29.jpg — 2026
-- `br-santos__neymar` (Neymar) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ANeymar_Junior_Brazil_V_Morocco_13_June_2026-145.jpg — 2026
-- `br-santos__rony` (Rony) — NullReason — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ARony-Palmeiras-Santos-jan24.jpg — 2024
+- `br-santos__mateus-xavier` (Mateus Xavier) — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AMateus_Xavier_25-09-2024.png — 2024
+- `br-santos__miguel-terceros` (Miguel Terceros) — TV Franca - Canal 23 — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AMiguel_Terceros_2023.png — 2023
+- `br-santos__nadson` (Nadson) — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ANadson_Juan_2026-09-01.png — 2026
+- `br-santos__neymar` (Neymar) — ليث الراسبي — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A%D9%83%D9%85-%D8%B9%D9%85%D8%B1-%D9%86%D9%8A%D9%85%D8%A7%D8%B1-%D8%AC%D9%88%D9%86%D9%8A%D9%88%D8%B1-%D9%88%D9%8A%D9%83%D9%8A%D8%A8%D9%8A%D8%AF%D9%8A%D8%A7.jpg — 2024
+- `br-santos__pepe-fermino` (Pepê Fermino) — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3APep%C3%AA_Fermino_26-10-2024.png — 2024
+- `br-santos__vinicius-lira` (Vinicius Lira) — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AVinicius_Lira_12-09-2025.png — 2025
 - `br-santos__willian-arao` (Willian Arão) — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AWillian_Ar%C3%A3o_2023_%28cropped%29.jpg — 2023
 - `br-sao-paulo__carlos-coronel` (Carlos Coronel) — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ACarlos_Coronel_Red_Bull_Atlanta_5.31.25-05_%28cropped%29.jpg — 2025
-- `br-sao-paulo__jonathan-calleri` (Jonathan Calleri) — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3ACalleri_%28cropped%29.jpg — 2022
-- `br-sao-paulo__lucas-moura` (Lucas Moura) — Doha Stadium Plus — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3ALucas_PSG_shirt.jpg — 2013
+- `br-sao-paulo__jonathan-calleri` (Jonathan Calleri) — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3AJonathan-Calleri-Sao-Paulo-Juventude-jun-2022_%28cropped%29.jpg — 2022
 - `br-sao-paulo__pablo-maia` (Pablo Maia) — https://www.flickr.com/people/132986455@N04 — Public domain — https://commons.wikimedia.org/wiki/File%3APABLO_MAIA_-_S%C3%A9rie_A_-_S%C3%83O_PAULO_0_X_0_JUVENTUDE_%28cropped%29.jpg — 2022
 - `br-sao-paulo__robert-arboleda` (Robert Arboleda) — Douglas Teixeira from Santos, Brasil — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3ARobert_Arboleda_-_16_de_setembro_de_2018.jpg — 2018
-- `br-sao-paulo__victor-sa` (Victor Sá) — Steindy (talk) 21:29, 5 April 2017 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJo%C3%A3o_Victor_Santos_S%C3%A1_-_Kapfenberger_SV_%2801%29.jpg — 2016
 - `br-sao-paulo__wendell` (Wendell) — Fuguito — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AWendell.jpg — 2014
 - `br-vasco-da-gama__alan-saldivia` (Alan Saldivia) — Carlos Figueroa Rojas — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAlan_Saldivia_Copiap%C3%B3_v_Colo-Colo_20241110_16.jpg — 2024
-- `br-vasco-da-gama__andres-gomez` (Andrés Gómez) — Salt City FC — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ACarlos_Andr%C3%A9s_G%C3%B3mez%2C_May_2024.jpg — 2024
 - `br-vasco-da-gama__carlos-cuesta` (Carlos Cuesta) — PP Comunidad de Madrid — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3A%28Carlos_Cuesta%29_FORO_MADRID_ESPA%C3%91A_SIN_FILTROS._Pablo_Casado%2C_Carlos_Cuesta%2C_Daniel_Lacalle_y_Jose_Luis_Martinez_Almeida._%2845581836112%29_%28cropped%29.jpg — 2018
 - `br-vasco-da-gama__lucas-piton` (Lucas Piton) — SOCCER DIGITAL — CC0 — https://commons.wikimedia.org/wiki/File%3ALucas-Piton-Corinthians-jul-2022.jpg — 2022
-- `br-vasco-da-gama__paulinho` (Paulinho) — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3APaulinho-Palmeiras-Santos-mai26_%28cropped%29.jpg — 2026
 - `br-vasco-da-gama__paulo-henrique` (Paulo Henrique) — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3APaulo-Henrique-Juventude-Corinthians-jun-2022.jpg — 2022
-- `br-vasco-da-gama__robert-renan` (Robert Renan) — Evgeny Asmolov — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ARenan_in_Zenit_%28cropped%29.png — 2023
-- `br-vasco-da-gama__tche-tche` (Tchê Tchê) — Dynamomania.com — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_-_%C2%AB%D0%92%D0%BE%D1%80%D1%81%D0%BA%D0%BB%D0%B0%C2%BB_1-0._25_%D0%B8%D1%8E%D0%BB%D1%8F_2018_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_889537_%28Tch%C3%AA_Tch%C3%AA%29.jpg — 2018
+- `br-vasco-da-gama__tche-tche` (Tchê Tchê) — Dynamomania.com — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_-_%C2%AB%D0%92%D0%BE%D1%80%D1%81%D0%BA%D0%BB%D0%B0%C2%BB_1-0._25_%D0%B8%D1%8E%D0%BB%D1%8F_2018_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_889537.jpg — 2018
 - `br-vitoria__lucas-silva` (Lucas Silva) — Explicit — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A250222_FC_%EC%84%9C%EC%9D%84_vs_%EC%95%88%EC%96%91_%28Lucas_Silva%2C_%EC%9D%B4%EC%8A%B9%EB%AA%A8%29.jpg — 2025
-- `br-vitoria__marinho` (Marinho) — Palácio do Planalto from Brasilia, Brasil — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3A28_12_2020_Jogo_Beneficente_Natal_Sem_Fome_%2850774798663%29_-_Clodoaldo.jpg — 2020
+- `br-vitoria__renato-kayzer` (Renato Kayzer) — Três Pontos — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ARenato_Kayzer_2022.png — 2022
 - `br-vitoria__tomas-pochettino` (Tomás Pochettino) — SOCCER DIGITAL — PDM-owner — https://commons.wikimedia.org/wiki/File%3ASulamericana_CUP_2023_Semifinal_-_Corinthians_x_Fortaleza-CE_-_Tom%C3%A1s_Pochettino_%28cropped%29.jpg — 2023
 - `br-vitoria__walace` (Walace) — Fernando Frazão/Agência Brasil — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AWalace_Souza_Silva.jpg — 2016

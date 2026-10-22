@@ -641,6 +641,18 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   ficam) — mão presa no lugar com o ombro subindo fazia o braço pular (O2 66 → 166): o braço vai junto, rígido. Rostos reais (versão de teste com senha, edição pro): fotos
   mais recentes do Commons pelas PÁGINAS (a API dá 429 para o IP desta máquina; miniaturas por thumb.wikimedia.org) e
   as camisas 2026 dos 20 clubes do Brasileirão pesquisadas (cores estimadas por foto; goleiros são o mais incerto).
+  **Rostos reais 5.2** (`tools/rostos-reais/README.md`, contrato "Rostos reais — Etapa 5.2"): 112 do Brasileirão (de 273;
+  quem não tem foto livre, neutra e conferida fica com a cabeça genérica). Lições:
+  - **A foto manda mais que o processo:** sorriso, boné, língua e cabeça inclinada ficam gravados na pele. Por isso o
+    filtro de expressão pelos blendshapes e mais candidatas pela busca de imagens do Commons (a página
+    Special:MediaSearch).
+  - **A busca traz outras pessoas** (até uma atriz, um "Nicanor" de 1990, a foto com dois jogadores): identidade pelo
+    SFace contra a foto do TM (≥ 0,40), foto com outro jogador citado só com ≥ 0,6.
+  - **A esclera clareia o rosto até o branco** quando o olho é escuro: conferir a exposição pela pele (L* 24–72) e o
+    tom pela faixa de pele.
+  - **A luz da foto** sai pela média local da pele.
+  - **A linha no alto da cabeça** era a costura da UV (os dois lados com tons diferentes) + a borda escura das ilhas
+    da textura base + normais não soldadas na malha: as três corrigidas.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =
