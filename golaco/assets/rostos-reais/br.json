@@ -1,0 +1,2914 @@
+{
+"br-athletico-paranaense__gilberto-moraes": {
+"nome": "Gilberto Moraes",
+"pele": "#d8a49b",
+"foto": {
+"titulo": "File:GilbertoBenfica2020.jpg",
+"data": [
+2020,
+8,
+18
+],
+"autor": "Sport Lisboa e Benfica",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGilbertoBenfica2020.jpg",
+"av": {
+"yaw": -16.2,
+"pitch": -1.6,
+"roll": -1.1,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.03,
+"piscada": 0.28,
+"io": 234.4
+},
+"id": 0.745
+}
+},
+"br-athletico-paranaense__jadson": {
+"nome": "Jadson",
+"pele": "#bd8c65",
+"foto": {
+"titulo": "File:Jadson-Juventude-Corinthians-jun-2022.jpg",
+"data": [
+2022,
+6,
+11
+],
+"autor": "SOCCER DIGITAL",
+"licenca": "Public domain",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AJadson-Juventude-Corinthians-jun-2022.jpg",
+"av": {
+"yaw": 9.4,
+"pitch": 13.7,
+"roll": 5.4,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.02,
+"piscada": 0.09,
+"io": 375.3
+},
+"id": 0.961
+}
+},
+"br-athletico-paranaense__kerwin-vargas": {
+"nome": "Kerwin Vargas",
+"pele": "#845d4c",
+"foto": {
+"titulo": "File:Kerwin Vargas NYCFC v Charlotte 20 Sep 2025-055 (cropped).jpg",
+"data": [
+2025,
+0,
+0
+],
+"autor": "Bryan Berlin",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AKerwin_Vargas_NYCFC_v_Charlotte_20_Sep_2025-055_%28cropped%29.jpg",
+"av": {
+"yaw": -21.8,
+"pitch": -6.0,
+"roll": 3.5,
+"sorriso": 0.01,
+"boca": 0.0,
+"bico": 0.03,
+"piscada": 0.03,
+"io": 220.5
+},
+"id": 0.901
+}
+},
+"br-athletico-paranaense__stiven-mendoza": {
+"nome": "Stiven Mendoza",
+"pele": "#b49584",
+"foto": {
+"titulo": "File:Foto passaporte.jpg",
+"data": [
+2025,
+8,
+7
+],
+"autor": "Josetramontin",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AFoto_passaporte.jpg",
+"av": {
+"yaw": 7.6,
+"pitch": 3.1,
+"roll": -1.3,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.12,
+"piscada": 0.14,
+"io": 127.4
+},
+"id": 0.646
+}
+},
+"br-atletico-mineiro__alan-minda": {
+"nome": "Alan Minda",
+"pele": "#7f5a42",
+"foto": {
+"titulo": "File:Alan Minda Cote D'Ivoire v Ecuador 14 June 2026-187.jpg",
+"data": [
+2026,
+6,
+14
+],
+"autor": "Bryan Berlin",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AAlan_Minda_Cote_D%27Ivoire_v_Ecuador_14_June_2026-187.jpg",
+"av": {
+"yaw": -10.6,
+"pitch": 1.7,
+"roll": 4.2,
+"sorriso": 0.19,
+"boca": 0.07,
+"bico": 0.07,
+"piscada": 0.12,
+"io": 146.6
+},
+"id": 0.763
+}
+},
+"br-atletico-mineiro__bernard": {
+"nome": "Bernard",
+"pele": "#cc9072",
+"foto": {
+"titulo": "File:Bernard Anício Caldeira Duarte 2015d.jpg",
+"data": [
+2015,
+11,
+28
+],
+"autor": "Богдан Заяц",
+"licenca": "CC BY-SA 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ABernard_An%C3%ADcio_Caldeira_Duarte_2015d.jpg",
+"av": {
+"yaw": 9.2,
+"pitch": 8.2,
+"roll": 9.7,
+"sorriso": 0.0,
+"boca": 0.02,
+"bico": 0.05,
+"piscada": 0.02,
+"io": 268.7
+},
+"id": 0.696
+}
+},
+"br-atletico-mineiro__fred": {
+"nome": "Fred",
+"pele": "#9f6a4d",
+"foto": {
+"titulo": "File:Fred Brazil (cropped 2).jpg",
+"data": [
+2018,
+6,
+21
+],
+"autor": "Кирилл Венедиктов",
+"licenca": "CC BY-SA 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AFred_Brazil_%28cropped_2%29.jpg",
+"av": {
+"yaw": 5.2,
+"pitch": 11.3,
+"roll": 2.8,
+"sorriso": 0.18,
+"boca": 0.0,
+"bico": 0.0,
+"piscada": 0.13,
+"io": 328.4
+},
+"id": 0.978
+}
+},
+"br-atletico-mineiro__gustavo-scarpa": {
+"nome": "Gustavo Scarpa",
+"pele": "#ce9274",
+"foto": {
+"titulo": "File:Gustavo Scarpa Palmeiras 2022 02 12 Chelsea - 54593932295.jpg",
+"data": [
+2022,
+2,
+12
+],
+"autor": "Equipos de fútbol",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGustavo_Scarpa_Palmeiras_2022_02_12_Chelsea_-_54593932295.jpg",
+"av": {
+"yaw": 2.7,
+"pitch": -0.6,
+"roll": 4.1,
+"sorriso": 0.48,
+"boca": 0.04,
+"bico": 0.0,
+"piscada": 0.02,
+"io": 304.0
+},
+"id": 0.638
+}
+},
+"br-atletico-mineiro__kevin-castano": {
+"nome": "Kevin Castaño",
+"pele": "#a07068",
+"foto": {
+"titulo": "File:Kevin Castaño, Colombia NT presidential send-off, Jun 2026.jpg",
+"data": [
+2026,
+0,
+0
+],
+"autor": "Fotografía oficial de la Presidencia de Colombia",
+"licenca": "Public domain",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AKevin_Casta%C3%B1o%2C_Colombia_NT_presidential_send-off%2C_Jun_2026.jpg",
+"av": {
+"yaw": -21.1,
+"pitch": 0.8,
+"roll": -5.1,
+"sorriso": 0.01,
+"boca": 0.0,
+"bico": 0.01,
+"piscada": 0.26,
+"io": 303.9
+},
+"id": 0.921
+}
+},
+"br-atletico-mineiro__leo-duarte": {
+"nome": "Léo Duarte",
+"pele": "#cda98e",
+"foto": {
+"titulo": "File:Léo Duarte Basaksehir (cropped).jpg",
+"data": [
+2022,
+9,
+1
+],
+"autor": "Leonardo Duarte",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AL%C3%A9o_Duarte_Basaksehir_%28cropped%29.jpg",
+"av": {
+"yaw": -4.5,
+"pitch": 4.5,
+"roll": -0.4,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.21,
+"piscada": 0.13,
+"io": 268.8
+},
+"id": 0.935
+}
+},
+"br-atletico-mineiro__lyanco": {
+"nome": "Lyanco",
+"pele": "#d2a178",
+"foto": {
+"titulo": "File:Lyanco Evangelista Silveira Neves Vojnović 2017.jpg",
+"data": [
+2017,
+1,
+18
+],
+"autor": "Agencia de Noticias ANDES",
+"licenca": "CC BY-SA 2.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ALyanco_Evangelista_Silveira_Neves_Vojnovi%C4%87_2017.jpg",
+"av": {
+"yaw": -4.8,
+"pitch": -8.5,
+"roll": -1.4,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.04,
+"piscada": 0.15,
+"io": 282.7
+},
+"id": 0.939
+}
+},
+"br-atletico-mineiro__reinier": {
+"nome": "Reinier",
+"pele": "#d09f75",
+"foto": {
+"titulo": "File:Reinier 2020.png",
+"data": [
+2020,
+2,
+23
+],
+"autor": "Real Madrid",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AReinier_2020.png",
+"av": {
+"yaw": 15.6,
+"pitch": 11.0,
+"roll": 0.7,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.0,
+"piscada": 0.07,
+"io": 275.7
+},
+"id": 0.962
+}
+},
+"br-atletico-mineiro__renan-lodi": {
+"nome": "Renan Lodi",
+"pele": "#c5a287",
+"foto": {
+"titulo": "File:ATL-Madrid-Lokomotiv001-Lodi.jpg",
+"data": [
+2019,
+10,
+1
+],
+"autor": "Anna Nessie",
+"licenca": "CC BY-SA 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AATL-Madrid-Lokomotiv001-Lodi.jpg",
+"av": {
+"yaw": -5.0,
+"pitch": -0.4,
+"roll": -0.1,
+"sorriso": 0.0,
+"boca": 0.01,
+"bico": 0.22,
+"piscada": 0.03,
+"io": 346.7
+},
+"id": 0.92
+}
+},
+"br-atletico-mineiro__vitor-hugo": {
+"nome": "Vitor Hugo",
+"pele": "#d6a77d",
+"foto": {
+"titulo": "File:Vitor Hugo Franchescoli de Souza (2020-21 Süper Lig) - Resim1.png",
+"data": [
+2021,
+8,
+12
+],
+"autor": "beIN SPORTS Türkiye",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AVitor_Hugo_Franchescoli_de_Souza_%282020-21_S%C3%BCper_Lig%29_-_Resim1.png",
+"av": {
+"yaw": 5.9,
+"pitch": 3.7,
+"roll": 2.0,
+"sorriso": 0.06,
+"boca": 0.06,
+"bico": 0.0,
+"piscada": 0.04,
+"io": 122.4
+},
+"id": 0.533
+}
+},
+"br-bahia__caio-alexandre": {
+"nome": "Caio Alexandre",
+"pele": "#ca9270",
+"foto": {
+"titulo": "File:Caio Alexandre De Oliveira (Legavolley 2019).jpg",
+"data": [
+2019,
+5,
+25
+],
+"autor": "Lega Pallavolo Serie A",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ACaio_Alexandre_De_Oliveira_%28Legavolley_2019%29.jpg",
+"av": {
+"yaw": 0.6,
+"pitch": -2.1,
+"roll": -1.4,
+"sorriso": 0.09,
+"boca": 0.0,
+"bico": 0.38,
+"piscada": 0.27,
+"io": 462.6
+},
+"id": 0.838
+}
+},
+"br-bahia__jean-lucas": {
+"nome": "Jean Lucas",
+"pele": "#d1a795",
+"foto": {
+"titulo": "File:20191002 Fußball, Männer, UEFA Champions League, RB Leipzig - Olympique Lyonnais by Stepro StP 0019-2.jpg",
+"data": [
+2019,
+10,
+2
+],
+"autor": "Steffen Prößdorf",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3A20191002_Fu%C3%9Fball%2C_M%C3%A4nner%2C_UEFA_Champions_League%2C_RB_Leipzig_-_Olympique_Lyonnais_by_Stepro_StP_0019-2.jpg",
+"av": {
+"yaw": -17.5,
+"pitch": 6.3,
+"roll": 0.8,
+"sorriso": 0.01,
+"boca": 0.0,
+"bico": 0.13,
+"piscada": 0.09,
+"io": 151.9
+},
+"id": 0.522
+}
+},
+"br-botafogo__cristian-medina": {
+"nome": "Cristian Medina",
+"pele": "#d8a67c",
+"foto": {
+"titulo": "File:Cristian Medina, 2024 Summer Olympics.jpg",
+"data": [
+2024,
+7,
+27
+],
+"autor": "Argentina.gob.ar",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ACristian_Medina%2C_2024_Summer_Olympics.jpg",
+"av": {
+"yaw": -12.9,
+"pitch": 0.2,
+"roll": -4.7,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.11,
+"piscada": 0.2,
+"io": 165.5
+},
+"id": 0.972
+}
+},
+"br-chapecoense__giovanni-augusto": {
+"nome": "Giovanni Augusto",
+"pele": "#dca47f",
+"foto": {
+"titulo": "File:Giovanni Augusto 2019.png",
+"data": [
+2019,
+0,
+0
+],
+"autor": "Record TV Goiás",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGiovanni_Augusto_2019.png",
+"av": {
+"yaw": -9.7,
+"pitch": 11.4,
+"roll": -1.3,
+"sorriso": 0.01,
+"boca": 0.15,
+"bico": 0.03,
+"piscada": 0.11,
+"io": 233.7
+},
+"id": 0.954
+}
+},
+"br-chapecoense__vinicius-balieiro": {
+"nome": "Vinicius Balieiro",
+"pele": "#945c43",
+"foto": {
+"titulo": "File:Vinicius Balieiro - Campeonato Paulista Sub20- São Caetano 2 x 1 Santos FC - 48105549001 (cropped).jpg",
+"data": [
+2019,
+6,
+21
+],
+"autor": "SOCCER DIGITAL",
+"licenca": "Public domain",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AVinicius_Balieiro_-_Campeonato_Paulista_Sub20-_S%C3%A3o_Caetano_2_x_1_Santos_FC_-_48105549001_%28cropped%29.jpg",
+"av": {
+"yaw": -3.9,
+"pitch": 13.0,
+"roll": 2.3,
+"sorriso": 0.0,
+"boca": 0.02,
+"bico": 0.08,
+"piscada": 0.13,
+"io": 233.1
+},
+"id": 0.939
+}
+},
+"br-corinthians__andre-carrillo": {
+"nome": "André Carrillo",
+"pele": "#a67552",
+"foto": {
+"titulo": "File:CSKA Sporting (3) (cropped).jpg",
+"data": [
+2015,
+8,
+27
+],
+"autor": "Дмитрий Голубович",
+"licenca": "CC BY-SA 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ACSKA_Sporting_%283%29_%28cropped%29.jpg",
+"av": {
+"yaw": -20.6,
+"pitch": -0.8,
+"roll": -5.7,
+"sorriso": 0.11,
+"boca": 0.0,
+"bico": 0.21,
+"piscada": 0.02,
+"io": 279.3
+},
+"id": 0.954
+}
+},
+"br-corinthians__andre-ramalho": {
+"nome": "André Ramalho",
+"pele": "#cda98e",
+"foto": {
+"titulo": "File:FC RB Salzburg gegen LASK (14. Februar 2020) 26.jpg",
+"data": [
+2020,
+2,
+14
+],
+"autor": "Werner100359",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AFC_RB_Salzburg_gegen_LASK_%2814._Februar_2020%29_26.jpg",
+"av": {
+"yaw": 1.7,
+"pitch": -3.4,
+"roll": -7.4,
+"sorriso": 0.0,
+"boca": 0.07,
+"bico": 0.13,
+"piscada": 0.15,
+"io": 279.6
+},
+"id": 0.781
+}
+},
+"br-corinthians__felipe-longo": {
+"nome": "Felipe Longo",
+"pele": "#d3a78e",
+"foto": {
+"titulo": "File:Felipe Longo goleiro.jpg",
+"data": [
+2025,
+10,
+25
+],
+"autor": "Tv Central do Timão",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AFelipe_Longo_goleiro.jpg",
+"av": {
+"yaw": -16.5,
+"pitch": 7.3,
+"roll": -0.4,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.24,
+"piscada": 0.13,
+"io": 224.4
+},
+"id": 0.963
+}
+},
+"br-corinthians__gabriel-paulista": {
+"nome": "Gabriel Paulista",
+"pele": "#b48e86",
+"foto": {
+"titulo": "File:Gabriel Paulista 2020.jpg",
+"data": [
+2020,
+12,
+2
+],
+"autor": "Valencia CF",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGabriel_Paulista_2020.jpg",
+"av": {
+"yaw": 7.2,
+"pitch": -0.5,
+"roll": -2.3,
+"sorriso": 0.31,
+"boca": 0.12,
+"bico": 0.0,
+"piscada": 0.15,
+"io": 240.6
+},
+"id": 0.572
+}
+},
+"br-corinthians__gustavo-henrique": {
+"nome": "Gustavo Henrique",
+"pele": "#d9a57e",
+"foto": {
+"titulo": "File:Gustavo Henrique (Press Conference, August 2022).png",
+"data": [
+2022,
+8,
+17
+],
+"autor": "Sportreport",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGustavo_Henrique_%28Press_Conference%2C_August_2022%29.png",
+"av": {
+"yaw": 8.0,
+"pitch": 12.8,
+"roll": 5.0,
+"sorriso": 0.0,
+"boca": 0.03,
+"bico": 0.05,
+"piscada": 0.07,
+"io": 218.0
+},
+"id": 0.934
+}
+},
+"br-corinthians__jesse-lingard": {
+"nome": "Jesse Lingard",
+"pele": "#c9aa99",
+"foto": {
+"titulo": "File:250831 FC 서울 vs 안양 (Jesse Lingard) 4.jpg",
+"data": [
+2025,
+0,
+0
+],
+"autor": "Explicit",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3A250831_FC_%EC%84%9C%EC%9A%B8_vs_%EC%95%88%EC%96%91_%28Jesse_Lingard%29_4.jpg",
+"av": {
+"yaw": 17.6,
+"pitch": 7.3,
+"roll": -0.3,
+"sorriso": 0.18,
+"boca": 0.11,
+"bico": 0.0,
+"piscada": 0.21,
+"io": 163.0
+},
+"id": 0.651
+}
+},
+"br-corinthians__raniele": {
+"nome": "Raniele",
+"pele": "#d0a886",
+"foto": {
+"titulo": "File:Raniele 2020.png",
+"data": [
+2020,
+12,
+10
+],
+"autor": "TV Botafogo",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ARaniele_2020.png",
+"av": {
+"yaw": -1.3,
+"pitch": 1.6,
+"roll": 4.0,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.06,
+"piscada": 0.04,
+"io": 282.5
+},
+"id": 0.969
+}
+},
+"br-corinthians__vitinho": {
+"nome": "Vitinho",
+"pele": "#a8785a",
+"foto": {
+"titulo": "File:Gol 2710.jpg",
+"data": [
+2017,
+5,
+8
+],
+"autor": "Дмитрий Голубович",
+"licenca": "CC BY-SA 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGol_2710.jpg",
+"av": {
+"yaw": -9.9,
+"pitch": 8.3,
+"roll": -1.5,
+"sorriso": 0.45,
+"boca": 0.07,
+"bico": 0.19,
+"piscada": 0.1,
+"io": 141.8
+},
+"id": 0.707
+}
+},
+"br-coritiba__bruno-melo": {
+"nome": "Bruno Melo",
+"pele": "#d3a781",
+"foto": {
+"titulo": "File:Bruno-Melo-Corinthians-jul-2022.jpg",
+"data": [
+2022,
+7,
+13
+],
+"autor": "SOCCER DIGITAL",
+"licenca": "CC0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ABruno-Melo-Corinthians-jul-2022.jpg",
+"av": {
+"yaw": 6.6,
+"pitch": -2.6,
+"roll": -0.6,
+"sorriso": 0.0,
+"boca": 0.01,
+"bico": 0.15,
+"piscada": 0.12,
+"io": 396.5
+},
+"id": 0.977
+}
+},
+"br-coritiba__felipe-jonatan": {
+"nome": "Felipe Jonatan",
+"pele": "#cd9c72",
+"foto": {
+"titulo": "File:Felipe-Jonatan-Santos-jul-2022.jpg",
+"data": [
+2022,
+7,
+13
+],
+"autor": "SOCCER DIGITAL",
+"licenca": "CC0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AFelipe-Jonatan-Santos-jul-2022.jpg",
+"av": {
+"yaw": 8.5,
+"pitch": 11.5,
+"roll": 2.7,
+"sorriso": 0.0,
+"boca": 0.01,
+"bico": 0.01,
+"piscada": 0.1,
+"io": 352.1
+},
+"id": 0.486
+}
+},
+"br-coritiba__maicon": {
+"nome": "Maicon",
+"pele": "#d5a77f",
+"foto": {
+"titulo": "File:Maicon-Santos-jul-2022.jpg",
+"data": [
+2022,
+7,
+13
+],
+"autor": "SOCCER DIGITAL",
+"licenca": "CC0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AMaicon-Santos-jul-2022.jpg",
+"av": {
+"yaw": 14.1,
+"pitch": -0.4,
+"roll": 2.6,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.01,
+"piscada": 0.13,
+"io": 304.1
+},
+"id": 0.95
+}
+},
+"br-cruzeiro__bruno-rodrigues": {
+"nome": "Bruno Rodrigues",
+"pele": "#b27c5c",
+"foto": {
+"titulo": "File:Bruno-rodrigues-palmeiras-juventude-out2025.jpg",
+"data": [
+2025,
+10,
+11
+],
+"autor": "NullReason",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ABruno-rodrigues-palmeiras-juventude-out2025.jpg",
+"av": {
+"yaw": -18.5,
+"pitch": 9.0,
+"roll": -2.6,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.29,
+"piscada": 0.46,
+"io": 181.4
+},
+"id": 0.685
+}
+},
+"br-cruzeiro__cassio": {
+"nome": "Cássio",
+"pele": "#d0a886",
+"foto": {
+"titulo": "File:Cassio-Corinthians-jul-2022.jpg",
+"data": [
+2022,
+7,
+13
+],
+"autor": "SOCCER DIGITAL",
+"licenca": "CC0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ACassio-Corinthians-jul-2022.jpg",
+"av": {
+"yaw": 3.1,
+"pitch": 5.7,
+"roll": 4.4,
+"sorriso": 0.0,
+"boca": 0.04,
+"bico": 0.02,
+"piscada": 0.19,
+"io": 308.3
+},
+"id": 0.756
+}
+},
+"br-cruzeiro__gerson": {
+"nome": "Gerson",
+"pele": "#d4a59d",
+"foto": {
+"titulo": "File:1354783 sPICT (cropped).jpg",
+"data": [
+2025,
+7,
+13
+],
+"autor": "Константин Золин",
+"licenca": "CC BY-SA 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3A1354783_sPICT_%28cropped%29.jpg",
+"av": {
+"yaw": 10.5,
+"pitch": 2.7,
+"roll": 4.6,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.15,
+"piscada": 0.11,
+"io": 251.3
+},
+"id": 0.483
+}
+},
+"br-cruzeiro__luis-sinisterra": {
+"nome": "Luis Sinisterra",
+"pele": "#be8366",
+"foto": {
+"titulo": "File:Luis Sinisterra.png",
+"data": [
+2024,
+2,
+9
+],
+"autor": "AFC Bournemouth",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ALuis_Sinisterra.png",
+"av": {
+"yaw": -21.1,
+"pitch": 7.5,
+"roll": -1.2,
+"sorriso": 0.02,
+"boca": 0.0,
+"bico": 0.4,
+"piscada": 0.16,
+"io": 201.3
+},
+"id": 0.957
+}
+},
+"br-cruzeiro__wanderson": {
+"nome": "Wanderson",
+"pele": "#d8a67c",
+"foto": {
+"titulo": "File:Wanderson Maciel Sousa Campos.jpg",
+"data": [
+2020,
+7,
+2
+],
+"autor": "Артем Гусев",
+"licenca": "CC BY-SA 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AWanderson_Maciel_Sousa_Campos.jpg",
+"av": {
+"yaw": 14.3,
+"pitch": 3.8,
+"roll": -1.1,
+"sorriso": 0.01,
+"boca": 0.0,
+"bico": 0.04,
+"piscada": 0.29,
+"io": 363.2
+},
+"id": 0.737
+}
+},
+"br-flamengo__alex-sandro": {
+"nome": "Alex Sandro",
+"pele": "#d89e8a",
+"foto": {
+"titulo": "File:Alex Sandro Brazil V Morocco 13 June 2026-137 (cropped).jpg",
+"data": [
+2026,
+6,
+13
+],
+"autor": "Bryan Berlin",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AAlex_Sandro_Brazil_V_Morocco_13_June_2026-137_%28cropped%29.jpg",
+"av": {
+"yaw": -17.8,
+"pitch": -7.5,
+"roll": -0.9,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.0,
+"piscada": 0.1,
+"io": 282.5
+},
+"id": 0.952
+}
+},
+"br-flamengo__anthony-valencia": {
+"nome": "Anthony Valencia",
+"pele": "#cca990",
+"foto": {
+"titulo": "File:Anthony Valencia 02082026 (2).jpg",
+"data": [
+2026,
+8,
+2
+],
+"autor": "Timmy96",
+"licenca": "CC0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AAnthony_Valencia_02082026_%282%29.jpg",
+"av": {
+"yaw": -13.1,
+"pitch": 8.0,
+"roll": -2.8,
+"sorriso": 0.0,
+"boca": 0.01,
+"bico": 0.32,
+"piscada": 0.14,
+"io": 278.7
+},
+"id": 0.804
+}
+},
+"br-flamengo__ayrton-lucas": {
+"nome": "Ayrton Lucas",
+"pele": "#c08d69",
+"foto": {
+"titulo": "File:SPA SOCHI2019 (3).jpg",
+"data": [
+2019,
+7,
+13
+],
+"autor": "Анна Нэсси",
+"licenca": "CC BY-SA 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ASPA_SOCHI2019_%283%29.jpg",
+"av": {
+"yaw": -13.4,
+"pitch": -2.4,
+"roll": -2.6,
+"sorriso": 0.0,
+"boca": 0.05,
+"bico": 0.34,
+"piscada": 0.07,
+"io": 208.9
+},
+"id": 0.765
+}
+},
+"br-flamengo__bruno-henrique": {
+"nome": "Bruno Henrique",
+"pele": "#885b39",
+"foto": {
+"titulo": "File:Bruno Henrique (35129405450) (cropped).jpg",
+"data": [
+2017,
+6,
+24
+],
+"autor": "Douglas Teixeira from Santos, Brasil",
+"licenca": "CC BY 2.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ABruno_Henrique_%2835129405450%29_%28cropped%29.jpg",
+"av": {
+"yaw": -6.9,
+"pitch": 1.0,
+"roll": -0.1,
+"sorriso": 0.0,
+"boca": 0.02,
+"bico": 0.07,
+"piscada": 0.1,
+"io": 242.0
+},
+"id": 0.738
+}
+},
+"br-flamengo__danilo": {
+"nome": "Danilo",
+"pele": "#b18571",
+"foto": {
+"titulo": "File:Danilo at 2026 FIFA World Cup by YantsImages (cropped).jpg",
+"data": [
+2026,
+6,
+14
+],
+"autor": "Original: YantsImages / Derivative work: Danyele",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ADanilo_at_2026_FIFA_World_Cup_by_YantsImages_%28cropped%29.jpg",
+"av": {
+"yaw": -1.9,
+"pitch": 7.7,
+"roll": 7.0,
+"sorriso": 0.0,
+"boca": 0.01,
+"bico": 0.0,
+"piscada": 0.16,
+"io": 253.4
+},
+"id": 0.926
+}
+},
+"br-flamengo__gonzalo-plata": {
+"nome": "Gonzalo Plata",
+"pele": "#c59990",
+"foto": {
+"titulo": "File:Gonzalo Plata Cote D'Ivoire v Ecuador 14 June 2026-12.jpg",
+"data": [
+2026,
+0,
+0
+],
+"autor": "Bryan Berlin",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGonzalo_Plata_Cote_D%27Ivoire_v_Ecuador_14_June_2026-12.jpg",
+"av": {
+"yaw": 0.9,
+"pitch": 3.8,
+"roll": 0.7,
+"sorriso": 0.0,
+"boca": 0.01,
+"bico": 0.45,
+"piscada": 0.15,
+"io": 117.6
+},
+"id": 0.959
+}
+},
+"br-flamengo__leo-ortiz": {
+"nome": "Léo Ortiz",
+"pele": "#a8756c",
+"foto": {
+"titulo": "File:LEO ORTIZ X FLU - ONE9 CONTENT - GABRIEL NUFFER 2024-7.jpg",
+"data": [
+2024,
+6,
+23
+],
+"autor": "Cleisson Lima",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ALEO_ORTIZ_X_FLU_-_ONE9_CONTENT_-_GABRIEL_NUFFER_2024-7.jpg",
+"av": {
+"yaw": 2.2,
+"pitch": 1.9,
+"roll": -1.1,
+"sorriso": 0.0,
+"boca": 0.01,
+"bico": 0.0,
+"piscada": 0.28,
+"io": 183.4
+},
+"id": 0.952
+}
+},
+"br-flamengo__leo-pereira": {
+"nome": "Léo Pereira",
+"pele": "#dda294",
+"foto": {
+"titulo": "File:Leo Pereira Brazil V Morocco 13 June 2026-136 (cropped).jpg",
+"data": [
+2026,
+6,
+13
+],
+"autor": "Bryan Berlin",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ALeo_Pereira_Brazil_V_Morocco_13_June_2026-136_%28cropped%29.jpg",
+"av": {
+"yaw": 15.6,
+"pitch": 5.4,
+"roll": 4.4,
+"sorriso": 0.0,
+"boca": 0.07,
+"bico": 0.0,
+"piscada": 0.11,
+"io": 248.6
+},
+"id": 0.971
+}
+},
+"br-fluminense__agustin-canobbio": {
+"nome": "Agustín Canobbio",
+"pele": "#9e8070",
+"foto": {
+"titulo": "File:Agustín Canobbio 2018.jpg",
+"data": [
+2018,
+4,
+4
+],
+"autor": "Jimmy Baikovicius from Montevideo, Uruguay",
+"licenca": "CC BY-SA 2.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AAgust%C3%ADn_Canobbio_2018.jpg",
+"av": {
+"yaw": -16.7,
+"pitch": 7.0,
+"roll": -4.0,
+"sorriso": 0.0,
+"boca": 0.03,
+"bico": 0.07,
+"piscada": 0.29,
+"io": 168.4
+},
+"id": 0.962
+}
+},
+"br-fluminense__ganso": {
+"nome": "Ganso",
+"pele": "#bf8367",
+"foto": {
+"titulo": "File:Ganso jogador.jpg",
+"data": [
+2009,
+8,
+16
+],
+"autor": "Sergio Savarese from Sao Paulo City / Ipiranga, Brasil",
+"licenca": "CC BY-SA 2.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGanso_jogador.jpg",
+"av": {
+"yaw": 1.7,
+"pitch": 13.9,
+"roll": -5.4,
+"sorriso": 0.0,
+"boca": 0.02,
+"bico": 0.34,
+"piscada": 0.06,
+"io": 214.5
+},
+"id": 0.672
+}
+},
+"br-fluminense__german-cano": {
+"nome": "Germán Cano",
+"pele": "#cc8f73",
+"foto": {
+"titulo": "File:Germancanoenmedallo (cropped).jpg",
+"data": [
+2015,
+8,
+15
+],
+"autor": "Scoelho86",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGermancanoenmedallo_%28cropped%29.jpg",
+"av": {
+"yaw": 17.7,
+"pitch": -6.0,
+"roll": -4.3,
+"sorriso": 0.01,
+"boca": 0.01,
+"bico": 0.0,
+"piscada": 0.19,
+"io": 351.7
+},
+"id": 0.733
+}
+},
+"br-fluminense__guilherme-arana": {
+"nome": "Guilherme Arana",
+"pele": "#b7885f",
+"foto": {
+"titulo": "File:Guilherme Arana 2017.jpg",
+"data": [
+2017,
+0,
+0
+],
+"autor": "Agencia de Noticias ANDES",
+"licenca": "CC BY-SA 2.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGuilherme_Arana_2017.jpg",
+"av": {
+"yaw": -7.2,
+"pitch": 9.0,
+"roll": -1.3,
+"sorriso": 0.62,
+"boca": 0.07,
+"bico": 0.01,
+"piscada": 0.13,
+"io": 239.3
+},
+"id": 0.949
+}
+},
+"br-fluminense__hulk": {
+"nome": "Hulk",
+"pele": "#d6a77d",
+"foto": {
+"titulo": "File:Spar-Zen2015 (3).jpg",
+"data": [
+2015,
+9,
+26
+],
+"autor": "Вячеслав Евдокимов",
+"licenca": "CC BY-SA 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ASpar-Zen2015_%283%29.jpg",
+"av": {
+"yaw": 3.6,
+"pitch": -5.6,
+"roll": 4.2,
+"sorriso": 0.01,
+"boca": 0.01,
+"bico": 0.01,
+"piscada": 0.15,
+"io": 213.4
+},
+"id": 0.736
+}
+},
+"br-fluminense__jefferson-savarino": {
+"nome": "Jefferson Savarino",
+"pele": "#cfa795",
+"foto": {
+"titulo": "File:USAvVEN 2019-06-09 - Jefferson Savarino (51169633652) (cropped).jpg",
+"data": [
+2019,
+6,
+9
+],
+"autor": "Hayden Schiff from Cincinnati, USA",
+"licenca": "CC BY 2.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AUSAvVEN_2019-06-09_-_Jefferson_Savarino_%2851169633652%29_%28cropped%29.jpg",
+"av": {
+"yaw": -15.2,
+"pitch": -1.5,
+"roll": -5.2,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.04,
+"piscada": 0.28,
+"io": 267.1
+},
+"id": 0.953
+}
+},
+"br-fluminense__lucho-acosta": {
+"nome": "Lucho Acosta",
+"pele": "#cca091",
+"foto": {
+"titulo": "File:Luciano Acosta em 2023 pelo Cincinnati na MLS (cropped).jpg",
+"data": [
+2023,
+5,
+20
+],
+"autor": "Hayden Schiff",
+"licenca": "CC BY 2.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ALuciano_Acosta_em_2023_pelo_Cincinnati_na_MLS_%28cropped%29.jpg",
+"av": {
+"yaw": 9.5,
+"pitch": 8.0,
+"roll": 3.1,
+"sorriso": 0.29,
+"boca": 0.06,
+"bico": 0.01,
+"piscada": 0.38,
+"io": 129.6
+},
+"id": 0.933
+}
+},
+"br-fluminense__samuel-xavier": {
+"nome": "Samuel Xavier",
+"pele": "#c4936a",
+"foto": {
+"titulo": "File:Samuel Xavier.jpg",
+"data": [
+2020,
+2,
+18
+],
+"autor": "Copa do Nordeste",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ASamuel_Xavier.jpg",
+"av": {
+"yaw": 17.2,
+"pitch": -0.7,
+"roll": -6.2,
+"sorriso": 0.13,
+"boca": 0.0,
+"bico": 0.01,
+"piscada": 0.16,
+"io": 264.6
+},
+"id": 0.972
+}
+},
+"br-fluminense__yeferson-soteldo": {
+"nome": "Yeferson Soteldo",
+"pele": "#d8a67c",
+"foto": {
+"titulo": "File:Yeferson Julio Soteldo Martínez.jpg",
+"data": [
+2017,
+2,
+2
+],
+"autor": "Agencia de Noticias ANDES",
+"licenca": "CC BY-SA 2.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AYeferson_Julio_Soteldo_Mart%C3%ADnez.jpg",
+"av": {
+"yaw": -5.3,
+"pitch": 4.2,
+"roll": 0.3,
+"sorriso": 0.0,
+"boca": 0.01,
+"bico": 0.08,
+"piscada": 0.08,
+"io": 221.6
+},
+"id": 0.978
+}
+},
+"br-gremio__caio-paulista": {
+"nome": "Caio Paulista",
+"pele": "#804635",
+"foto": {
+"titulo": "File:Caio-PaulistaPalmeiras-Sao-Paulo-ago24.jpg",
+"data": [
+2024,
+8,
+18
+],
+"autor": "NullReason",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ACaio-PaulistaPalmeiras-Sao-Paulo-ago24.jpg",
+"av": {
+"yaw": 1.3,
+"pitch": 9.1,
+"roll": -8.6,
+"sorriso": 0.0,
+"boca": 0.13,
+"bico": 0.01,
+"piscada": 0.49,
+"io": 172.1
+},
+"id": 0.866
+}
+},
+"br-gremio__fabian-balbuena": {
+"nome": "Fabián Balbuena",
+"pele": "#b47f6b",
+"foto": {
+"titulo": "File:Fabian Balbuena France v Paraguay 4 July 2026-052.jpg",
+"data": [
+2026,
+7,
+4
+],
+"autor": "Bryan Berlin",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AFabian_Balbuena_France_v_Paraguay_4_July_2026-052.jpg",
+"av": {
+"yaw": -16.4,
+"pitch": 14.8,
+"roll": -0.4,
+"sorriso": 0.01,
+"boca": 0.08,
+"bico": 0.0,
+"piscada": 0.15,
+"io": 220.2
+},
+"id": 0.687
+}
+},
+"br-gremio__martin-braithwaite": {
+"nome": "Martin Braithwaite",
+"pele": "#78452b",
+"foto": {
+"titulo": "File:2021 - Q&A SM7 1798 (51650822487).jpg",
+"data": [
+2021,
+11,
+3
+],
+"autor": "Web Summit",
+"licenca": "CC BY 2.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3A2021_-_Q%26A_SM7_1798_%2851650822487%29.jpg",
+"av": {
+"yaw": 9.9,
+"pitch": -7.1,
+"roll": 10.3,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.07,
+"piscada": 0.07,
+"io": 153.0
+},
+"id": 0.687
+}
+},
+"br-gremio__walter-kannemann": {
+"nome": "Walter Kannemann",
+"pele": "#b29087",
+"foto": {
+"titulo": "File:Walter Kannemann entreinamento.png",
+"data": [
+2017,
+0,
+0
+],
+"autor": "Bruno2803",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AWalter_Kannemann_entreinamento.png",
+"av": {
+"yaw": -15.6,
+"pitch": -6.5,
+"roll": -8.1,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.0,
+"piscada": 0.21,
+"io": 190.9
+},
+"id": 0.942
+}
+},
+"br-gremio__weverton": {
+"nome": "Weverton",
+"pele": "#cda98c",
+"foto": {
+"titulo": "File:Weverton Brazil V Morocco 13 June 2026-67 (cropped).jpg",
+"data": [
+2026,
+6,
+13
+],
+"autor": "Bryan Berlin",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AWeverton_Brazil_V_Morocco_13_June_2026-67_%28cropped%29.jpg",
+"av": {
+"yaw": 17.9,
+"pitch": 9.8,
+"roll": 1.6,
+"sorriso": 0.19,
+"boca": 0.0,
+"bico": 0.0,
+"piscada": 0.09,
+"io": 276.1
+},
+"id": 0.978
+}
+},
+"br-internacional__alan-patrick": {
+"nome": "Alan Patrick",
+"pele": "#d6967d",
+"foto": {
+"titulo": "File:AlanPatrickInter2014.jpg",
+"data": [
+2014,
+2,
+20
+],
+"autor": "Paulinho Menezes/Portal da Copa",
+"licenca": "CC BY 3.0 br",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AAlanPatrickInter2014.jpg",
+"av": {
+"yaw": 14.4,
+"pitch": 11.0,
+"roll": 2.3,
+"sorriso": 0.49,
+"boca": 0.0,
+"bico": 0.0,
+"piscada": 0.25,
+"io": 173.8
+},
+"id": 0.615
+}
+},
+"br-internacional__bruno-henrique": {
+"nome": "Bruno Henrique",
+"pele": "#885b39",
+"foto": {
+"titulo": "File:Bruno Henrique (35129405450) (cropped).jpg",
+"data": [
+2017,
+6,
+24
+],
+"autor": "Douglas Teixeira from Santos, Brasil",
+"licenca": "CC BY 2.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ABruno_Henrique_%2835129405450%29_%28cropped%29.jpg",
+"av": {
+"yaw": -6.9,
+"pitch": 1.0,
+"roll": -0.1,
+"sorriso": 0.0,
+"boca": 0.02,
+"bico": 0.07,
+"piscada": 0.1,
+"io": 242.0
+},
+"id": 0.953
+}
+},
+"br-internacional__felix-torres": {
+"nome": "Félix Torres",
+"pele": "#937168",
+"foto": {
+"titulo": "File:Pedro Aquino, Félix Torres.png",
+"data": [
+2023,
+9,
+3
+],
+"autor": "Club Santos Laguna",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3APedro_Aquino%2C_F%C3%A9lix_Torres.png",
+"av": {
+"yaw": 12.0,
+"pitch": 8.1,
+"roll": -0.3,
+"sorriso": 0.0,
+"boca": 0.01,
+"bico": 0.01,
+"piscada": 0.05,
+"io": 102.1
+},
+"id": 0.607
+}
+},
+"br-internacional__gabriel-mercado": {
+"nome": "Gabriel Mercado",
+"pele": "#ca9673",
+"foto": {
+"titulo": "File:Gabriel Mercado.jpg",
+"data": [
+2016,
+4,
+28
+],
+"autor": "Agencia de Noticias ANDES",
+"licenca": "CC BY-SA 2.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGabriel_Mercado.jpg",
+"av": {
+"yaw": 5.1,
+"pitch": -11.3,
+"roll": 0.4,
+"sorriso": 0.01,
+"boca": 0.0,
+"bico": 0.02,
+"piscada": 0.15,
+"io": 296.4
+},
+"id": 0.936
+}
+},
+"br-internacional__vitinho": {
+"nome": "Vitinho",
+"pele": "#dda381",
+"foto": {
+"titulo": "File:Vitinho in Dynamo Kyiv 2021.jpg",
+"data": [
+2021,
+2,
+18
+],
+"autor": ".mw-parser-output .commons-creator-table{background-color:#f0f0ff;box-sizing:border-box;font-size:95%;text-align:start;c",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AVitinho_in_Dynamo_Kyiv_2021.jpg",
+"av": {
+"yaw": -9.8,
+"pitch": 2.8,
+"roll": 0.2,
+"sorriso": 0.0,
+"boca": 0.01,
+"bico": 0.15,
+"piscada": 0.08,
+"io": 224.2
+},
+"id": 0.966
+}
+},
+"br-mirassol__chico-kim": {
+"nome": "Chico Kim",
+"pele": "#cf9974",
+"foto": {
+"titulo": "File:Brasileirão A- Corinthians 2 x 0 Juventude - 52139779294.jpg",
+"data": [
+2022,
+6,
+11
+],
+"autor": "SOCCER DIGITAL",
+"licenca": "Public domain",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ABrasileir%C3%A3o_A-_Corinthians_2_x_0_Juventude_-_52139779294.jpg",
+"av": {
+"yaw": -7.4,
+"pitch": -0.5,
+"roll": -6.3,
+"sorriso": 0.0,
+"boca": 0.1,
+"bico": 0.21,
+"piscada": 0.08,
+"io": 144.0
+},
+"id": 0.831
+}
+},
+"br-mirassol__reinaldo": {
+"nome": "Reinaldo",
+"pele": "#9b6e46",
+"foto": {
+"titulo": "File:Reinaldo-Sao-Paulo-Juventude-jun-2022.jpg",
+"data": [
+2022,
+6,
+26
+],
+"autor": "SOCCER DIGITAL",
+"licenca": "Public domain",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AReinaldo-Sao-Paulo-Juventude-jun-2022.jpg",
+"av": {
+"yaw": 4.8,
+"pitch": -1.4,
+"roll": 6.2,
+"sorriso": 0.16,
+"boca": 0.0,
+"bico": 0.05,
+"piscada": 0.21,
+"io": 183.0
+},
+"id": 0.921
+}
+},
+"br-mirassol__thomazella": {
+"nome": "Thomazella",
+"pele": "#cca990",
+"foto": {
+"titulo": "File:DRAFT FUTEBOL 2019- Expressão Paulista 0 (2) x (3) 0 Água Santa - 49191182773 - Thomazella.jpg",
+"data": [
+2019,
+12,
+8
+],
+"autor": "SOCCER DIGITAL",
+"licenca": "Public domain",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ADRAFT_FUTEBOL_2019-_Express%C3%A3o_Paulista_0_%282%29_x_%283%29_0_%C3%81gua_Santa_-_49191182773_-_Thomazella.jpg",
+"av": {
+"yaw": -0.6,
+"pitch": -0.3,
+"roll": 2.8,
+"sorriso": 0.01,
+"boca": 0.0,
+"bico": 0.08,
+"piscada": 0.3,
+"io": 219.0
+},
+"id": 0.587
+}
+},
+"br-palmeiras__agustin-giay": {
+"nome": "Agustín Giay",
+"pele": "#dda389",
+"foto": {
+"titulo": "File:Agustin Giay Palmeiras 2025 07 05 Chelsea.jpg",
+"data": [
+2025,
+7,
+5
+],
+"autor": "Equipos de fútbol",
+"licenca": "CC0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AAgustin_Giay_Palmeiras_2025_07_05_Chelsea.jpg",
+"av": {
+"yaw": 4.8,
+"pitch": 10.0,
+"roll": 0.9,
+"sorriso": 0.03,
+"boca": 0.0,
+"bico": 0.0,
+"piscada": 0.07,
+"io": 260.2
+},
+"id": 0.477
+}
+},
+"br-palmeiras__arthur-gabriel": {
+"nome": "Arthur Gabriel",
+"pele": "#bd7b6d",
+"foto": {
+"titulo": "File:Arthur-Palmeiras-Jacuipense-abr26.jpg",
+"data": [
+2026,
+4,
+23
+],
+"autor": "NullReason",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AArthur-Palmeiras-Jacuipense-abr26.jpg",
+"av": {
+"yaw": 1.9,
+"pitch": 3.8,
+"roll": 6.3,
+"sorriso": 0.03,
+"boca": 0.0,
+"bico": 0.02,
+"piscada": 0.09,
+"io": 153.3
+},
+"id": 0.644
+}
+},
+"br-palmeiras__bruno-fuchs": {
+"nome": "Bruno Fuchs",
+"pele": "#daa489",
+"foto": {
+"titulo": "File:Bruno-fuchs-palmeiras-juventude-out2025-4.jpg",
+"data": [
+2025,
+10,
+11
+],
+"autor": "NullReason",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ABruno-fuchs-palmeiras-juventude-out2025-4.jpg",
+"av": {
+"yaw": -14.1,
+"pitch": -2.8,
+"roll": 1.2,
+"sorriso": 0.04,
+"boca": 0.01,
+"bico": 0.0,
+"piscada": 0.12,
+"io": 165.2
+},
+"id": 0.725
+}
+},
+"br-palmeiras__emiliano-martinez": {
+"nome": "Emiliano Martínez",
+"pele": "#946653",
+"foto": {
+"titulo": "File:Emiliano-Martinez-palmeiras-internacional-sep2025.jpg",
+"data": [
+2025,
+9,
+13
+],
+"autor": "NullReason",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AEmiliano-Martinez-palmeiras-internacional-sep2025.jpg",
+"av": {
+"yaw": 11.2,
+"pitch": 8.0,
+"roll": -4.1,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.01,
+"piscada": 0.2,
+"io": 211.9
+},
+"id": 0.845
+}
+},
+"br-palmeiras__gustavo-gomez": {
+"nome": "Gustavo Gómez",
+"pele": "#ad7c58",
+"foto": {
+"titulo": "File:Gustavo-Gomez-Palmeiras-Santos-mai26-2.jpg",
+"data": [
+2026,
+5,
+2
+],
+"autor": "NullReason",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGustavo-Gomez-Palmeiras-Santos-mai26-2.jpg",
+"av": {
+"yaw": 9.4,
+"pitch": 3.3,
+"roll": -3.3,
+"sorriso": 0.0,
+"boca": 0.04,
+"bico": 0.03,
+"piscada": 0.06,
+"io": 171.0
+},
+"id": 0.584
+}
+},
+"br-palmeiras__jefte": {
+"nome": "Jefté",
+"pele": "#6d4637",
+"foto": {
+"titulo": "File:Jefte-palmeiras-internacional-sep2025.jpg",
+"data": [
+2025,
+9,
+13
+],
+"autor": "NullReason",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AJefte-palmeiras-internacional-sep2025.jpg",
+"av": {
+"yaw": -2.6,
+"pitch": 8.2,
+"roll": -1.9,
+"sorriso": 0.03,
+"boca": 0.0,
+"bico": 0.0,
+"piscada": 0.2,
+"io": 253.6
+},
+"id": 0.431
+}
+},
+"br-palmeiras__jose-manuel-lopez": {
+"nome": "José Manuel López",
+"pele": "#c7aa9a",
+"foto": {
+"titulo": "File:Jose Manuel Lopez Argentina v Spain 19 July 2026-272.jpg",
+"data": [
+2026,
+7,
+19
+],
+"autor": "Bryan Berlin",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AJose_Manuel_Lopez_Argentina_v_Spain_19_July_2026-272.jpg",
+"av": {
+"yaw": -15.6,
+"pitch": 2.0,
+"roll": -3.8,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.02,
+"piscada": 0.16,
+"io": 202.9
+},
+"id": 0.985
+}
+},
+"br-palmeiras__marcelo-lomba": {
+"nome": "Marcelo Lomba",
+"pele": "#e49f92",
+"foto": {
+"titulo": "File:Marcelo-Lomba-Palmeiras-Sao-Paulo-ago24-2.jpg",
+"data": [
+2024,
+8,
+18
+],
+"autor": "NullReason",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AMarcelo-Lomba-Palmeiras-Sao-Paulo-ago24-2.jpg",
+"av": {
+"yaw": -0.4,
+"pitch": 11.3,
+"roll": -4.2,
+"sorriso": 0.0,
+"boca": 0.08,
+"bico": 0.15,
+"piscada": 0.17,
+"io": 125.4
+},
+"id": 0.475
+}
+},
+"br-palmeiras__mauricio": {
+"nome": "Maurício",
+"pele": "#d3a883",
+"foto": {
+"titulo": "File:Mauricio-palmeiras-juventude-out2025-2.jpg",
+"data": [
+2025,
+10,
+11
+],
+"autor": "NullReason",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AMauricio-palmeiras-juventude-out2025-2.jpg",
+"av": {
+"yaw": -18.0,
+"pitch": 4.6,
+"roll": -1.8,
+"sorriso": 0.0,
+"boca": 0.04,
+"bico": 0.07,
+"piscada": 0.2,
+"io": 127.1
+},
+"id": 0.592
+}
+},
+"br-palmeiras__murilo": {
+"nome": "Murilo",
+"pele": "#cda98c",
+"foto": {
+"titulo": "File:Murilo Palmeiras 2025 06 23 Inter Miami.jpg",
+"data": [
+2025,
+6,
+24
+],
+"autor": "Equipos de fútbol",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AMurilo_Palmeiras_2025_06_23_Inter_Miami.jpg",
+"av": {
+"yaw": -7.9,
+"pitch": 9.3,
+"roll": -0.1,
+"sorriso": 0.04,
+"boca": 0.0,
+"bico": 0.01,
+"piscada": 0.07,
+"io": 313.2
+},
+"id": 0.516
+}
+},
+"br-palmeiras__ramon-sosa": {
+"nome": "Ramón Sosa",
+"pele": "#d09f75",
+"foto": {
+"titulo": "File:Ramon-Sosa-Palmeiras-Jacuipense-abr26.jpg",
+"data": [
+2026,
+4,
+23
+],
+"autor": "NullReason",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ARamon-Sosa-Palmeiras-Jacuipense-abr26.jpg",
+"av": {
+"yaw": -1.2,
+"pitch": 9.8,
+"roll": 1.2,
+"sorriso": 0.02,
+"boca": 0.02,
+"bico": 0.0,
+"piscada": 0.11,
+"io": 258.9
+},
+"id": 0.411
+}
+},
+"br-palmeiras__vitor-roque": {
+"nome": "Vitor Roque",
+"pele": "#d29677",
+"foto": {
+"titulo": "File:Vitor-Roque-Palmeiras-Jacuipense-abr26-2.jpg",
+"data": [
+2026,
+4,
+23
+],
+"autor": "NullReason",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AVitor-Roque-Palmeiras-Jacuipense-abr26-2.jpg",
+"av": {
+"yaw": -17.6,
+"pitch": 12.3,
+"roll": -6.0,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.15,
+"piscada": 0.37,
+"io": 161.7
+},
+"id": 0.511
+}
+},
+"br-remo__ivan": {
+"nome": "Ivan",
+"pele": "#c9aa9a",
+"foto": {
+"titulo": "File:Ivan Quaresma Zenit.jpg",
+"data": [
+2022,
+8,
+20
+],
+"autor": "Кирилл Венедиктов",
+"licenca": "CC BY-SA 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AIvan_Quaresma_Zenit.jpg",
+"av": {
+"yaw": -20.7,
+"pitch": 8.6,
+"roll": 2.4,
+"sorriso": 0.12,
+"boca": 0.0,
+"bico": 0.07,
+"piscada": 0.13,
+"io": 393.7
+},
+"id": 0.917
+}
+},
+"br-remo__patrick": {
+"nome": "Patrick",
+"pele": "#af755c",
+"foto": {
+"titulo": "File:Patrick Santos 24-04-2024.png",
+"data": [
+2024,
+0,
+0
+],
+"autor": "BrazilianDude70",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3APatrick_Santos_24-04-2024.png",
+"av": {
+"yaw": -9.0,
+"pitch": 16.0,
+"roll": -6.4,
+"sorriso": 0.0,
+"boca": 0.02,
+"bico": 0.18,
+"piscada": 0.17,
+"io": 278.4
+},
+"id": 0.943
+}
+},
+"br-remo__vitor-bueno": {
+"nome": "Vitor Bueno",
+"pele": "#c4948a",
+"foto": {
+"titulo": "File:Витор Буэно. 27 августа 2018 года — 900177 (cropped).jpg",
+"data": [
+2018,
+8,
+27
+],
+"autor": ".mw-parser-output .commons-creator-table{background-color:#f0f0ff;box-sizing:border-box;font-size:95%;text-align:start;c",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3A%D0%92%D0%B8%D1%82%D0%BE%D1%80_%D0%91%D1%83%D1%8D%D0%BD%D0%BE._27_%D0%B0%D0%B2%D0%B3%D1%83%D1%81%D1%82%D0%B0_2018_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_900177_%28cropped%29.jpg",
+"av": {
+"yaw": 9.7,
+"pitch": 4.1,
+"roll": -1.2,
+"sorriso": 0.02,
+"boca": 0.0,
+"bico": 0.0,
+"piscada": 0.22,
+"io": 309.3
+},
+"id": 0.96
+}
+},
+"br-santos__alvaro-barreal": {
+"nome": "Álvaro Barreal",
+"pele": "#b57f6f",
+"foto": {
+"titulo": "File:Álvaro Barreal 05-08-2025.png",
+"data": [
+2025,
+8,
+5
+],
+"autor": "BrazilianDude70",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3A%C3%81lvaro_Barreal_05-08-2025.png",
+"av": {
+"yaw": 9.5,
+"pitch": 2.1,
+"roll": -9.9,
+"sorriso": 0.0,
+"boca": 0.03,
+"bico": 0.02,
+"piscada": 0.16,
+"io": 431.8
+},
+"id": 0.902
+}
+},
+"br-santos__benjamin-rollheiser": {
+"nome": "Benjamín Rollheiser",
+"pele": "#ab7056",
+"foto": {
+"titulo": "File:Benjamin Rollheiser.png",
+"data": [
+2024,
+1,
+20
+],
+"autor": "SL Benfica",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ABenjamin_Rollheiser.png",
+"av": {
+"yaw": 2.3,
+"pitch": -0.6,
+"roll": 2.5,
+"sorriso": 0.0,
+"boca": 0.02,
+"bico": 0.0,
+"piscada": 0.18,
+"io": 330.9
+},
+"id": 0.937
+}
+},
+"br-santos__christian-oliva": {
+"nome": "Christian Oliva",
+"pele": "#d5a592",
+"foto": {
+"titulo": "File:Christian Oliva 2021.png",
+"data": [
+2021,
+2,
+1
+],
+"autor": "Valencia CF",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AChristian_Oliva_2021.png",
+"av": {
+"yaw": -14.8,
+"pitch": 0.5,
+"roll": 1.5,
+"sorriso": 0.0,
+"boca": 0.01,
+"bico": 0.07,
+"piscada": 0.1,
+"io": 235.4
+},
+"id": 0.957
+}
+},
+"br-santos__gabriel-barbosa": {
+"nome": "Gabriel Barbosa",
+"pele": "#cda98c",
+"foto": {
+"titulo": "File:Gabriel Barbosa 2016b.jpg",
+"data": [
+2016,
+8,
+7
+],
+"autor": "Marcelo Camargo/Agência Brasil",
+"licenca": "CC BY 3.0 br",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGabriel_Barbosa_2016b.jpg",
+"av": {
+"yaw": 14.2,
+"pitch": 4.2,
+"roll": 2.4,
+"sorriso": 0.0,
+"boca": 0.02,
+"bico": 0.0,
+"piscada": 0.13,
+"io": 137.7
+},
+"id": 0.557
+}
+},
+"br-santos__gabriel-brazao": {
+"nome": "Gabriel Brazão",
+"pele": "#d2a183",
+"foto": {
+"titulo": "File:Gabriel Brazão 18-11-2024.png",
+"data": [
+2024,
+11,
+18
+],
+"autor": "BrazilianDude70",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGabriel_Braz%C3%A3o_18-11-2024.png",
+"av": {
+"yaw": -1.8,
+"pitch": -4.3,
+"roll": 7.0,
+"sorriso": 0.0,
+"boca": 0.05,
+"bico": 0.01,
+"piscada": 0.03,
+"io": 412.6
+},
+"id": 0.561
+}
+},
+"br-santos__gonzalo-escobar": {
+"nome": "Gonzalo Escobar",
+"pele": "#d5a68c",
+"foto": {
+"titulo": "File:Gonzalo Escobar 24-04-2024.png",
+"data": [
+2024,
+4,
+24
+],
+"autor": "BrazilianDude70",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AGonzalo_Escobar_24-04-2024.png",
+"av": {
+"yaw": 7.1,
+"pitch": 3.0,
+"roll": -6.1,
+"sorriso": 0.0,
+"boca": 0.05,
+"bico": 0.03,
+"piscada": 0.17,
+"io": 407.6
+},
+"id": 0.956
+}
+},
+"br-santos__joao-ananias": {
+"nome": "João Ananias",
+"pele": "#9d6958",
+"foto": {
+"titulo": "File:João Ananias 08-04-2026.png",
+"data": [
+2026,
+4,
+8
+],
+"autor": "BrazilianDude70",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AJo%C3%A3o_Ananias_08-04-2026.png",
+"av": {
+"yaw": 4.8,
+"pitch": 2.0,
+"roll": -4.7,
+"sorriso": 0.4,
+"boca": 0.03,
+"bico": 0.05,
+"piscada": 0.17,
+"io": 323.8
+},
+"id": 0.936
+}
+},
+"br-santos__joao-paulo": {
+"nome": "João Paulo",
+"pele": "#d8a67c",
+"foto": {
+"titulo": "File:Joao-Paulo-Santos-jul-2022.jpg",
+"data": [
+2022,
+7,
+13
+],
+"autor": "SOCCER DIGITAL",
+"licenca": "CC0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AJoao-Paulo-Santos-jul-2022.jpg",
+"av": {
+"yaw": 12.0,
+"pitch": -2.2,
+"roll": 2.3,
+"sorriso": 0.0,
+"boca": 0.01,
+"bico": 0.15,
+"piscada": 0.13,
+"io": 338.0
+},
+"id": 0.938
+}
+},
+"br-santos__joao-pedro": {
+"nome": "João Pedro",
+"pele": "#a67a72",
+"foto": {
+"titulo": "File:João Pedro Santos 28-12-2024.png",
+"data": [
+2024,
+12,
+28
+],
+"autor": "BrazilianDude70",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AJo%C3%A3o_Pedro_Santos_28-12-2024.png",
+"av": {
+"yaw": 7.5,
+"pitch": -1.7,
+"roll": -3.3,
+"sorriso": 0.0,
+"boca": 0.03,
+"bico": 0.25,
+"piscada": 0.17,
+"io": 264.8
+},
+"id": 0.943
+}
+},
+"br-santos__luan-peres": {
+"nome": "Luan Peres",
+"pele": "#d5a77f",
+"foto": {
+"titulo": "File:Luan Peres 18-11-2024.png",
+"data": [
+2024,
+11,
+18
+],
+"autor": "BrazilianDude70",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ALuan_Peres_18-11-2024.png",
+"av": {
+"yaw": 1.9,
+"pitch": 2.4,
+"roll": 0.4,
+"sorriso": 0.08,
+"boca": 0.11,
+"bico": 0.0,
+"piscada": 0.03,
+"io": 361.5
+},
+"id": 0.601
+}
+},
+"br-santos__lucas-verissimo": {
+"nome": "Lucas Veríssimo",
+"pele": "#b48f82",
+"foto": {
+"titulo": "File:Lucas Veríssimo 2022.png",
+"data": [
+2022,
+5,
+19
+],
+"autor": "Sport Lisboa e Benfica",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ALucas_Ver%C3%ADssimo_2022.png",
+"av": {
+"yaw": -14.2,
+"pitch": 9.3,
+"roll": -0.9,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.05,
+"piscada": 0.09,
+"io": 311.6
+},
+"id": 0.618
+}
+},
+"br-santos__mateus-xavier": {
+"nome": "Mateus Xavier",
+"pele": "#dca47f",
+"foto": {
+"titulo": "File:Mateus Xavier 25-09-2024.png",
+"data": [
+2024,
+9,
+25
+],
+"autor": "BrazilianDude70",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AMateus_Xavier_25-09-2024.png",
+"av": {
+"yaw": 8.2,
+"pitch": -1.5,
+"roll": -10.3,
+"sorriso": 0.03,
+"boca": 0.0,
+"bico": 0.23,
+"piscada": 0.26,
+"io": 346.1
+},
+"id": 0.941
+}
+},
+"br-santos__miguel-terceros": {
+"nome": "Miguel Terceros",
+"pele": "#d5a39a",
+"foto": {
+"titulo": "File:Miguel Terceros 2023.png",
+"data": [
+2023,
+4,
+4
+],
+"autor": "TV Franca - Canal 23",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AMiguel_Terceros_2023.png",
+"av": {
+"yaw": -10.0,
+"pitch": -1.1,
+"roll": 5.0,
+"sorriso": 0.1,
+"boca": 0.04,
+"bico": 0.01,
+"piscada": 0.1,
+"io": 297.6
+},
+"id": 0.644
+}
+},
+"br-santos__nadson": {
+"nome": "Nadson",
+"pele": "#b37b6c",
+"foto": {
+"titulo": "File:Nadson Juan 2026-09-01.png",
+"data": [
+2026,
+9,
+1
+],
+"autor": "BrazilianDude70",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ANadson_Juan_2026-09-01.png",
+"av": {
+"yaw": 5.1,
+"pitch": 0.9,
+"roll": 6.0,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.02,
+"piscada": 0.07,
+"io": 288.9
+},
+"id": 0.713
+}
+},
+"br-santos__neymar": {
+"nome": "Neymar",
+"pele": "#d69d7b",
+"foto": {
+"titulo": "File:كم-عمر-نيمار-جونيور-ويكيبيديا.jpg",
+"data": [
+2024,
+10,
+6
+],
+"autor": "ليث الراسبي",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3A%D9%83%D9%85-%D8%B9%D9%85%D8%B1-%D9%86%D9%8A%D9%85%D8%A7%D8%B1-%D8%AC%D9%88%D9%86%D9%8A%D9%88%D8%B1-%D9%88%D9%8A%D9%83%D9%8A%D8%A8%D9%8A%D8%AF%D9%8A%D8%A7.jpg",
+"av": {
+"yaw": -6.4,
+"pitch": -0.8,
+"roll": 1.9,
+"sorriso": 0.01,
+"boca": 0.0,
+"bico": 0.02,
+"piscada": 0.31,
+"io": 307.8
+},
+"id": 0.643
+}
+},
+"br-santos__pepe-fermino": {
+"nome": "Pepê Fermino",
+"pele": "#d3a781",
+"foto": {
+"titulo": "File:Pepê Fermino 26-10-2024.png",
+"data": [
+2024,
+10,
+26
+],
+"autor": "BrazilianDude70",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3APep%C3%AA_Fermino_26-10-2024.png",
+"av": {
+"yaw": 3.9,
+"pitch": -6.1,
+"roll": 10.0,
+"sorriso": 0.0,
+"boca": 0.0,
+"bico": 0.08,
+"piscada": 0.12,
+"io": 273.8
+},
+"id": 0.942
+}
+},
+"br-santos__vinicius-lira": {
+"nome": "Vinicius Lira",
+"pele": "#dda381",
+"foto": {
+"titulo": "File:Vinicius Lira 12-09-2025.png",
+"data": [
+2025,
+9,
+12
+],
+"autor": "BrazilianDude70",
+"licenca": "CC BY 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AVinicius_Lira_12-09-2025.png",
+"av": {
+"yaw": 3.3,
+"pitch": 7.9,
+"roll": -3.5,
+"sorriso": 0.1,
+"boca": 0.0,
+"bico": 0.04,
+"piscada": 0.07,
+"io": 278.9
+},
+"id": 0.96
+}
+},
+"br-santos__willian-arao": {
+"nome": "Willian Arão",
+"pele": "#c9aa99",
+"foto": {
+"titulo": "File:Willian Arão 2023 (cropped).jpg",
+"data": [
+2023,
+7,
+9
+],
+"autor": "Вячеслав Евдокимов",
+"licenca": "CC BY-SA 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AWillian_Ar%C3%A3o_2023_%28cropped%29.jpg",
+"av": {
+"yaw": 6.5,
+"pitch": 0.8,
+"roll": 4.6,
+"sorriso": 0.01,
+"boca": 0.03,
+"bico": 0.02,
+"piscada": 0.08,
+"io": 206.5
+},
+"id": 0.596
+}
+},
+"br-sao-paulo__carlos-coronel": {
+"nome": "Carlos Coronel",
+"pele": "#daa57f",
+"foto": {
+"titulo": "File:Carlos Coronel Red Bull Atlanta 5.31.25-05 (cropped).jpg",
+"data": [
+2025,
+5,
+31
+],
+"autor": "Bryan Berlin",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ACarlos_Coronel_Red_Bull_Atlanta_5.31.25-05_%28cropped%29.jpg",
+"av": {
+"yaw": -0.6,
+"pitch": 13.2,
+"roll": 0.5,
+"sorriso": 0.01,
+"boca": 0.03,
+"bico": 0.0,
+"piscada": 0.13,
+"io": 228.8
+},
+"id": 0.94
+}
+},
+"br-sao-paulo__jonathan-calleri": {
+"nome": "Jonathan Calleri",
+"pele": "#d0a888",
+"foto": {
+"titulo": "File:Jonathan-Calleri-Sao-Paulo-Juventude-jun-2022 (cropped).jpg",
+"data": [
+2022,
+6,
+26
+],
+"autor": "SOCCER DIGITAL",
+"licenca": "Public domain",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AJonathan-Calleri-Sao-Paulo-Juventude-jun-2022_%28cropped%29.jpg",
+"av": {
+"yaw": 14.8,
+"pitch": -3.5,
+"roll": 4.6,
+"sorriso": 0.0,
+"boca": 0.06,
+"bico": 0.0,
+"piscada": 0.02,
+"io": 306.7
+},
+"id": 0.931
+}
+},
+"br-sao-paulo__pablo-maia": {
+"nome": "Pablo Maia",
+"pele": "#d0a480",
+"foto": {
+"titulo": "File:PABLO MAIA - Série A - SÃO PAULO 0 X 0 JUVENTUDE (cropped).jpg",
+"data": [
+2022,
+0,
+0
+],
+"autor": "https://www.flickr.com/people/132986455@N04",
+"licenca": "Public domain",
+"pagina": "https://commons.wikimedia.org/wiki/File%3APABLO_MAIA_-_S%C3%A9rie_A_-_S%C3%83O_PAULO_0_X_0_JUVENTUDE_%28cropped%29.jpg",
+"av": {
+"yaw": 13.3,
+"pitch": -0.2,
+"roll": -0.1,
+"sorriso": 0.0,
+"boca": 0.08,
+"bico": 0.0,
+"piscada": 0.19,
+"io": 205.6
+},
+"id": 0.936
+}
+},
+"br-sao-paulo__robert-arboleda": {
+"nome": "Robert Arboleda",
+"pele": "#806559",
+"foto": {
+"titulo": "File:Robert Arboleda - 16 de setembro de 2018.jpg",
+"data": [
+2018,
+0,
+0
+],
+"autor": "Douglas Teixeira from Santos, Brasil",
+"licenca": "CC BY 2.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ARobert_Arboleda_-_16_de_setembro_de_2018.jpg",
+"av": {
+"yaw": -9.6,
+"pitch": 4.1,
+"roll": -2.9,
+"sorriso": 0.0,
+"boca": 0.14,
+"bico": 0.17,
+"piscada": 0.07,
+"io": 332.6
+},
+"id": 0.953
+}
+},
+"br-sao-paulo__wendell": {
+"nome": "Wendell",
+"pele": "#ad7c58",
+"foto": {
+"titulo": "File:Wendell.jpg",
+"data": [
+2014,
+8,
+10
+],
+"autor": "Fuguito",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AWendell.jpg",
+"av": {
+"yaw": 18.4,
+"pitch": 1.6,
+"roll": 4.0,
+"sorriso": 0.03,
+"boca": 0.0,
+"bico": 0.04,
+"piscada": 0.11,
+"io": 322.4
+},
+"id": 0.941
+}
+},
+"br-vasco-da-gama__alan-saldivia": {
+"nome": "Alan Saldivia",
+"pele": "#ca9174",
+"foto": {
+"titulo": "File:Alan Saldivia Copiapó v Colo-Colo 20241110 16.jpg",
+"data": [
+2024,
+11,
+10
+],
+"autor": "Carlos Figueroa Rojas",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AAlan_Saldivia_Copiap%C3%B3_v_Colo-Colo_20241110_16.jpg",
+"av": {
+"yaw": 4.7,
+"pitch": 11.5,
+"roll": 2.8,
+"sorriso": 0.43,
+"boca": 0.08,
+"bico": 0.01,
+"piscada": 0.13,
+"io": 175.3
+},
+"id": 0.643
+}
+},
+"br-vasco-da-gama__carlos-cuesta": {
+"nome": "Carlos Cuesta",
+"pele": "#d1a790",
+"foto": {
+"titulo": "File:(Carlos Cuesta) FORO MADRID ESPAÑA SIN FILTROS. Pablo Casado, Carlos Cuesta, Daniel Lacalle y Jose Luis Martinez Almeida. (45581836112) (cropped).jpg",
+"data": [
+2018,
+10,
+29
+],
+"autor": "PP Comunidad de Madrid",
+"licenca": "CC BY 2.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3A%28Carlos_Cuesta%29_FORO_MADRID_ESPA%C3%91A_SIN_FILTROS._Pablo_Casado%2C_Carlos_Cuesta%2C_Daniel_Lacalle_y_Jose_Luis_Martinez_Almeida._%2845581836112%29_%28cropped%29.jpg",
+"av": {
+"yaw": -16.5,
+"pitch": 5.8,
+"roll": 4.9,
+"sorriso": 0.62,
+"boca": 0.11,
+"bico": 0.0,
+"piscada": 0.13,
+"io": 313.2
+},
+"id": 0.865
+}
+},
+"br-vasco-da-gama__lucas-piton": {
+"nome": "Lucas Piton",
+"pele": "#cda98e",
+"foto": {
+"titulo": "File:Lucas-Piton-Corinthians-jul-2022.jpg",
+"data": [
+2022,
+7,
+13
+],
+"autor": "SOCCER DIGITAL",
+"licenca": "CC0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ALucas-Piton-Corinthians-jul-2022.jpg",
+"av": {
+"yaw": 6.9,
+"pitch": 4.9,
+"roll": -0.8,
+"sorriso": 0.0,
+"boca": 0.01,
+"bico": 0.14,
+"piscada": 0.12,
+"io": 313.0
+},
+"id": 0.942
+}
+},
+"br-vasco-da-gama__paulo-henrique": {
+"nome": "Paulo Henrique",
+"pele": "#d1a076",
+"foto": {
+"titulo": "File:Paulo-Henrique-Juventude-Corinthians-jun-2022.jpg",
+"data": [
+2022,
+6,
+11
+],
+"autor": "SOCCER DIGITAL",
+"licenca": "Public domain",
+"pagina": "https://commons.wikimedia.org/wiki/File%3APaulo-Henrique-Juventude-Corinthians-jun-2022.jpg",
+"av": {
+"yaw": 6.6,
+"pitch": 12.2,
+"roll": 2.5,
+"sorriso": 0.0,
+"boca": 0.04,
+"bico": 0.4,
+"piscada": 0.12,
+"io": 347.2
+},
+"id": 0.91
+}
+},
+"br-vasco-da-gama__tche-tche": {
+"nome": "Tchê Tchê",
+"pele": "#d8a67c",
+"foto": {
+"titulo": "File:Матч «Динамо» - «Ворскла» 1-0. 25 июля 2018 года — 889537.jpg",
+"data": [
+2018,
+0,
+0
+],
+"autor": "Dynamomania.com",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3A%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_-_%C2%AB%D0%92%D0%BE%D1%80%D1%81%D0%BA%D0%BB%D0%B0%C2%BB_1-0._25_%D0%B8%D1%8E%D0%BB%D1%8F_2018_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_889537.jpg",
+"av": {
+"yaw": 20.3,
+"pitch": 5.8,
+"roll": 9.4,
+"sorriso": 0.16,
+"boca": 0.01,
+"bico": 0.04,
+"piscada": 0.23,
+"io": 80.0
+},
+"id": 0.653
+}
+},
+"br-vitoria__lucas-silva": {
+"nome": "Lucas Silva",
+"pele": "#c8aa9c",
+"foto": {
+"titulo": "File:250222 FC 서을 vs 안양 (Lucas Silva, 이승모).jpg",
+"data": [
+2025,
+0,
+0
+],
+"autor": "Explicit",
+"licenca": "CC BY-SA 4.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3A250222_FC_%EC%84%9C%EC%9D%84_vs_%EC%95%88%EC%96%91_%28Lucas_Silva%2C_%EC%9D%B4%EC%8A%B9%EB%AA%A8%29.jpg",
+"av": {
+"yaw": 1.4,
+"pitch": 13.9,
+"roll": 1.8,
+"sorriso": 0.01,
+"boca": 0.0,
+"bico": 0.0,
+"piscada": 0.14,
+"io": 135.7
+},
+"id": 0.798
+}
+},
+"br-vitoria__renato-kayzer": {
+"nome": "Renato Kayzer",
+"pele": "#cba993",
+"foto": {
+"titulo": "File:Renato Kayzer 2022.png",
+"data": [
+2022,
+8,
+15
+],
+"autor": "Três Pontos",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ARenato_Kayzer_2022.png",
+"av": {
+"yaw": 2.7,
+"pitch": -1.3,
+"roll": -2.6,
+"sorriso": 0.0,
+"boca": 0.01,
+"bico": 0.04,
+"piscada": 0.1,
+"io": 285.6
+},
+"id": 0.96
+}
+},
+"br-vitoria__tomas-pochettino": {
+"nome": "Tomás Pochettino",
+"pele": "#c9a99e",
+"foto": {
+"titulo": "File:Sulamericana CUP 2023 Semifinal - Corinthians x Fortaleza-CE - Tomás Pochettino (cropped).jpg",
+"data": [
+2023,
+9,
+26
+],
+"autor": "SOCCER DIGITAL",
+"licenca": "PDM-owner",
+"pagina": "https://commons.wikimedia.org/wiki/File%3ASulamericana_CUP_2023_Semifinal_-_Corinthians_x_Fortaleza-CE_-_Tom%C3%A1s_Pochettino_%28cropped%29.jpg",
+"av": {
+"yaw": -5.3,
+"pitch": 0.2,
+"roll": -4.2,
+"sorriso": 0.0,
+"boca": 0.07,
+"bico": 0.07,
+"piscada": 0.11,
+"io": 283.1
+},
+"id": 0.929
+}
+},
+"br-vitoria__walace": {
+"nome": "Walace",
+"pele": "#8e7262",
+"foto": {
+"titulo": "File:Walace Souza Silva.jpg",
+"data": [
+2016,
+8,
+20
+],
+"autor": "Fernando Frazão/Agência Brasil",
+"licenca": "CC BY 3.0",
+"pagina": "https://commons.wikimedia.org/wiki/File%3AWalace_Souza_Silva.jpg",
+"av": {
+"yaw": 2.2,
+"pitch": 4.6,
+"roll": -3.9,
+"sorriso": 0.47,
+"boca": 0.01,
+"bico": 0.02,
+"piscada": 0.09,
+"io": 280.6
+},
+"id": 0.95
+}
+}
+}

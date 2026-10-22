@@ -74,7 +74,15 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   aquele teste, vamos tirar depois" — patrocínio e marca do fornecedor nas camisas reais são permitidos SÓ nela. "Os
   jogadores parecem meio curvados, estranhos" → corrigir a postura do corpo novo (só no desenho). FILA logo depois das
   faces: (1) cena de pós-jogo; (2) cena de intervalo; (3) cenas de cartão; (4) replays de faltas e de jogadas passando na
-  tela enquanto o jogo está parado. Corpo novo funcionando = PR para ele testar (o #503 já foi).
+  tela enquanto o jogo está parado. Corpo novo funcionando = PR para ele testar (o #503 já foi; a postura no #504).
+  Depois: "verifique as diversas tarefas antigas no jogo e assim que terminar, faça" — auditoria das filas antigas no
+  código (o que está feito × pendente) e a fila resultante executada item a item (um PR cada) depois das cenas acima.
+  **A FILA ESTÁ EM `golaco/FILA.md`** (auditoria de 22/10: 56 itens com status, evidência, plano, horas e se mexe no
+  hash; listas "feito", "depende do dono" e "obsoleto"). Ordem: rostos → patrocínios → cenas (A: pós-jogo, intervalo,
+  cartão, replays de falta/chance, melhores momentos; a base é a branch `origin/golaco/cenas-jogo`, 35 conflitos) →
+  correções curtas (B) → goleiro e chute (C; o PR #493 rascunho `golaco/goleiro-realista` tem CI vermelho) → IA (D) →
+  equilíbrio (E) → pedidos de 17/10 (F) → 3D no lugar da simulação (G) → online (H) → visual/mocap/estádios (I).
+  Ao terminar cada item, marcar na FILA.md (status + PR).
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME em cima do jogador com a bola (`main.js marcarCondutor`,
   `#nome-condutor` fora do #hud — exceção pedida à "sem narração") e (2) os overalls da tela iguais aos do TM (`elenco.js
   notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos). **FILA (dono: "o 3 e 4
@@ -633,6 +641,18 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   ficam) — mão presa no lugar com o ombro subindo fazia o braço pular (O2 66 → 166): o braço vai junto, rígido. Rostos reais (versão de teste com senha, edição pro): fotos
   mais recentes do Commons pelas PÁGINAS (a API dá 429 para o IP desta máquina; miniaturas por thumb.wikimedia.org) e
   as camisas 2026 dos 20 clubes do Brasileirão pesquisadas (cores estimadas por foto; goleiros são o mais incerto).
+  **Rostos reais 5.2** (`tools/rostos-reais/README.md`, contrato "Rostos reais — Etapa 5.2"): 112 do Brasileirão (de 273;
+  quem não tem foto livre, neutra e conferida fica com a cabeça genérica). Lições:
+  - **A foto manda mais que o processo:** sorriso, boné, língua e cabeça inclinada ficam gravados na pele. Por isso o
+    filtro de expressão pelos blendshapes e mais candidatas pela busca de imagens do Commons (a página
+    Special:MediaSearch).
+  - **A busca traz outras pessoas** (até uma atriz, um "Nicanor" de 1990, a foto com dois jogadores): identidade pelo
+    SFace contra a foto do TM (≥ 0,40), foto com outro jogador citado só com ≥ 0,6.
+  - **A esclera clareia o rosto até o branco** quando o olho é escuro: conferir a exposição pela pele (L* 24–72) e o
+    tom pela faixa de pele.
+  - **A luz da foto** sai pela média local da pele.
+  - **A linha no alto da cabeça** era a costura da UV (os dois lados com tons diferentes) + a borda escura das ilhas
+    da textura base + normais não soldadas na malha: as três corrigidas.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

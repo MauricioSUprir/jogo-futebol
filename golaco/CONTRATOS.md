@@ -2545,3 +2545,37 @@ manequim) até o rosto de cada jogador chegar.
 - **Testes**: `teste-ossos` (Node: juntas ≤ 1 mm, saltos ≤ 0,03%, sola 0–1,5 cm em ≥ 95% do apoio, volume ≥ 85% a 90°,
   assets, O7 postura: joelho parado ≤ 20°, disparada muda ≤ 3°, tronco correndo ≤ 17°, nada no ar/mãos juntas/pés), `teste-lod-humano` (Node), `teste-corpo-tela` (navegador, CI: todos desenhados, chamadas ≤ manequim + 1, teto
   de triângulos, nada baixado sem `?corpo=humano`, 0 erro).
+
+## Rostos reais — Etapa 5.2 (22/10; contrato)
+
+A versão de TESTE com os jogadores reais: a edição **pro** do Total Match (`pedido.edicao === 'pro'`, trancada por chave
+no TM), com o corpo humano. SÓ DESENHO: o fecho do hash não muda. Na edição pública e sem o TM nada é pedido. Uma liga
+por PR (a 1ª: o Brasileirão, `br`).
+
+- **Assets** (`assets/rostos-reais/`, gerados por `tools/rostos-reais/`, ver o README):
+  - `<liga>.json`: o índice `{chave: {nome, pele '#rrggbb', foto: {titulo, data, autor, licenca, pagina, av, id}}}`.
+    A chave é `<liga>-<clube>__<jogador>`, o nome da foto do jogador no TM (`legacy-total-match/assets/jogadores/`).
+    O `av` guarda a pose e a expressão da foto (MediaPipe) e o `id` o cosseno do SFace contra a foto do TM.
+  - `<liga>/<chave>.webp`: a textura da cabeça do Rocketbox (UV dela, 512², a linha 0 em cima).
+  - `CREDITOS-<liga>.md`: autor, licença e página de cada foto. A textura é obra derivada, na licença da foto.
+- **`main.js ligarRostosReais()`** (só com o TM, `corpo=humano` e a edição pro):
+  - baixa os índices de `LIGAS_ROSTOS`;
+  - monta o perfil de cada jogador do pedido (`TM.mapa[id]` → o jogador do pedido → a chave
+    `<liga>-${slug(clube)}__${slug(nomeCompleto || name)}`);
+  - entrega tudo em `jog3d.definirPerfis(perfil, {indice, base, ligaDe})`.
+- **`render/humano3d.js`**:
+  - os rostos ficam numa `DataArrayTexture`, `CAMADAS` 40, de `LADO_R` 512 na Alta e 256 nas outras qualidades;
+  - `camadaDe(chave)` pede a textura na 1ª vez que o jogador é desenhado (0 enquanto não chegou);
+  - só a camada nova sobe para a GPU (`addLayerUpdate`);
+  - `peleDe(chave)` dá o tom do corpo;
+  - no shader, com o estado do kit `kit(13).w > 0.5`, a cor da cabeça vem da camada, e senão da cabeça base tingida;
+  - `rostos` = `{indice, carregados, pedidos}`, exposto em `__golaco.estadio.corpo.rostos`.
+- **`render/jogador3d.js`**: `definirPerfis(fn, rostos)`. A linha do kit leva a camada e a pele real, e a chave do cache
+  da linha inclui a camada (a linha refaz quando o rosto chega: `versaoRostos`).
+- **Malha**: as normais dos vértices duplicados na costura da UV são soldadas na exportação (`tools/humano/exportar_bin.py
+  soldar_normais`, < 60°, também entre a cabeça e o corpo no pescoço). Era um degrau de luz na costura em todos os bonecos.
+- **Testes**:
+  - `teste-rostos-reais` (Node): índice completo; WebP 512² ≤ 64 KB, nenhuma sobrando; licença livre e créditos; a chave
+    é a foto do TM; tom de pele (L* 20–80, matiz 30–75°); foto de frente e neutra; pasta ≤ 8 MB;
+  - `teste-corpo-tela` C4: num pedido pro, cada jogador com rosto pede e carrega a textura;
+  - `teste-corpo-tela` C5: na pública, nada é pedido.
