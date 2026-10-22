@@ -74,7 +74,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   aquele teste, vamos tirar depois" — patrocínio e marca do fornecedor nas camisas reais são permitidos SÓ nela. "Os
   jogadores parecem meio curvados, estranhos" → corrigir a postura do corpo novo (só no desenho). FILA logo depois das
   faces: (1) cena de pós-jogo; (2) cena de intervalo; (3) cenas de cartão; (4) replays de faltas e de jogadas passando na
-  tela enquanto o jogo está parado. Corpo novo funcionando = PR para ele testar (o #503 já foi).
+  tela enquanto o jogo está parado. Corpo novo funcionando = PR para ele testar (o #503 já foi; a postura no #504).
+  Depois: "verifique as diversas tarefas antigas no jogo e assim que terminar, faça" — auditoria das filas antigas no
+  código (o que está feito × pendente) e a fila resultante executada item a item (um PR cada) depois das cenas acima.
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME em cima do jogador com a bola (`main.js marcarCondutor`,
   `#nome-condutor` fora do #hud — exceção pedida à "sem narração") e (2) os overalls da tela iguais aos do TM (`elenco.js
   notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos). **FILA (dono: "o 3 e 4
