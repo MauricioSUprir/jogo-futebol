@@ -1,0 +1,211 @@
+# FILA: Total Match 3D (`golaco/`), auditoria das tarefas antigas
+
+Auditoria de 22/10 sobre a HEAD `c1f9c845` (branch `claude/football-game-design-q2tr7a`; a `origin/main` está em `5b39e528`, o #504).
+
+Juntei as 6 áreas (goleiro e chutes, IA, telas e HUD, online e modos, visual e estádio, equilíbrio e regras) com a revisão do cético. Onde as duas discordaram, decidi pela evidência; as decisões estão listadas no fim. Os itens repetidos entre áreas viraram um só.
+
+**Como ler a tabela**
+- Cada linha é um PR: branch → PR → merge → link.
+- Coluna "mexe no hash":
+  - **não**: `hash-igual` e `hash-partida` IGUAIS.
+  - **só com a opção**: IGUAIS quando a opção está desligada.
+  - **só contra a pessoa**: a demo IA × IA continua IGUAL e só a cena "humano" muda.
+  - **sim**: `hash-partida` DIFERENTE de propósito. A base nova vai com `--ref`, e o painel de 144 roda no CI.
+
+**Regras de execução (CLAUDE.md)**
+- Modo enxuto: localmente só os testes que a mudança afeta; o CI decide o resto.
+- Todo item tem um teste que reprova antes e passa depois.
+- Os itens que mexem no hash vão um de cada vez, porque cada um troca os lances de todos os testes estatísticos.
+- Os itens marcados "não" podem andar em paralelo.
+
+## Frente atual (antes da fila)
+
+| ordem | id | tarefa | status | o que falta | plano curto | horas | mexe no hash |
+|---|---|---|---|---|---|---|---|
+| F1 | rostos-br | Rostos reais do Brasileirão na edição pro (a versão de teste) | parcial: o `b3d07083` só existe nesta branch, fora da main, e as texturas ainda são as da 1ª versão | Texturas do processo v3 e o PR para o dono testar | Terminar `tools/rostos-reais` v3 no `br`. Testes: teste-rostos-reais e teste-corpo-tela C4/C5, com `fecho-hash --diff origin/main` = 0. Abrir o PR | ~6 | não |
+| F2 | patrocinios | Patrocínio e marca do fornecedor nas camisas reais, SÓ na versão de teste (dono, 22/10: "vamos tirar dps") | pendente: `tools/uniformes/gerar.mjs:1-4` proíbe, e não há nada em `golaco/js` | Pesquisa 2026 dos 20 clubes, atlas, peito e manga, e uma chave para tirar | `assets/tm/patrocinios-pro.json` num arquivo à parte, que a pública nunca baixa. Atlas WebP sob demanda na caixa UV do peito (`render/humano3d.js`). Chave `PATROCINIO_TESTE`. Caso novo no teste-corpo-tela: a pro desenha, a pública não baixa nada | 6 | não |
+
+A postura "curvada" de 22/10 já foi feita no #504, que está na main.
+
+## FILA
+
+### A. Cenas (dono, 22/10: "logo pra dps das faces")
+
+| ordem | id | tarefa | status | o que falta | plano curto | horas | mexe no hash |
+|---|---|---|---|---|---|---|---|
+| 1 | cena-pos-jogo | Cena de pós-jogo | parcial. Na main só existe a faixa "Fim de jogo" (`main.js:782-791`). `cena-fim.js`, `cena-atores.js` e o `teste-cenas` estão só na `origin/golaco/cenas-jogo` (último commit `1df2ca34`, "sem testes"; base #472; 35 conflitos em 16 arquivos) | Integrar na main de hoje | Branch nova a partir da main. Trazer os módulos puros e os testes (teste-cenas C/E/G e a parte do fim do teste-cenas-tela). Refazer à mão a ligação no `main.js`. Pôr as constantes num módulo fora do fecho (`js/cenas-config.js`). Ligar o `treinadorDoTime` real (`tecnicos.js:1073`). Cena desligada no online, no Livre, na disputa e no "Simular o resto". Conferir com `?corpo=humano`. Rodar teste-tm-tela e testar-3d | 10 | não |
+| 2 | cena-intervalo | Cena de intervalo | parcial. Na main só há a faixa de 3 s (`config.js:682`, `main.js:775-781`). `planejarFim(m, 'intervalo')` existe só na branch | Ligar o tipo 'intervalo' junto com as trocas do intervalo | Feito sobre o PR 1. O laço fica parado no apito até o plano geral. Ordem: replay → cena → faixa de substituição do 2º tempo (`main.js:1308-1332`). Testes: teste-cenas C (intervalo), item novo no teste-cenas-tela e teste-substituicao-tela | 4 | não |
+| 3 | cenas-cartao | Cenas de cartão (amarelo, vermelho, 2º amarelo) com o árbitro em campo | parcial. Na main só há o ícone (`hud.js:578-587`, `main.js:1140-1146`) e não há árbitro em campo. `cena-cartao.js` e `render/cartao3d.js` estão só na branch, e o último commit não rodou os testes | Trazer os módulos, ligar ao evento 'cartao' e validar o "cartão tampado" | Feito sobre o PR 1. O laço fica parado no tick do cartão. Se a vantagem acabou em gol, a cena monta em gol + 149. teste-cenas A (144 cartões, tampado ≤ 10%) e B. `faltaDeTeste({cartao,...})` no navegador. O `#cartao-icone` some durante a cena. Medir o `cartaoNaMao` com o corpo humano | 8 | não |
+| 4 | replay-falta | Replay automático da falta grave (com cartão ou temerária) no apito | pendente. O diretor só tem os gatilhos gol, impedimento e menu (`render/replay.js:223-236`), e o evento 'falta' (`faltas.js:110`) não chega ao replay | Marca no anel, roteiro, gatilho e lugar na fila | Bit2 = falta no `replay-anel.js`. `roteiroFalta` puro em `replay-roteiro.js`, reaproveitando a janela do `roteiroMenu` e sem cruzar corte. No `main.js`, o mesmo caminho do impedimento (`comDiretor`/`iniciarReplay`). Ordem na fila: replay → cena do cartão → cobrança. No máximo 1 por parada, respeitando "Replays automáticos". Casos novos no teste-replay-anel e no teste-replay | 5 | não |
+| 5 | replay-chance | Replay da chance perdida na parada seguinte (tiro de meta, escanteio) | pendente | Marca de chance e roteiro | Bit3 = chance: no alvo e defendida, na trave, ou fora a ≤ 2 m da trave, de até 25 m. `roteiroChance`. Toca na montagem só se o lance ainda está no anel, e termina antes do corte | 3 | não |
+| 6 | melhores-momentos | Jogadas passando na tela no intervalo e no fim | pendente. O anel só guarda 10 s (`config.js REPLAY`) | Guardar os clipes e tocá-los nas cenas | `render/replay-clipes.js` puro: copia o trecho de cada marca em Int16, só com os jogadores perto do lance, até 10 clipes e 8 MB. Toca no plano geral das cenas dos PRs 1 e 2, com "REPLAY" e Pular. Testes: erro ≤ 1 cm, memória e ordem | 6 | não |
+| 7 | comemoracao-cortes | Cortes da torcida e do treinador na comemoração do gol (pedido de 12/10) | parcial. Está só na branch (`20d2e906`; teste-cenas D, teste-comemoracao 14–16). Na main nem o pedido está registrado | Trazer com o gancho real dos treinadores | Fase 'torcida' com os atores e o kFim IDÊNTICOS aos da cena sem cortes (teste-cenas D). Fase 'treinador' pelo `treinadorDoTime`. O `comemoracao.js` é do fecho, então é preciso provar IGUAL. Registrar o pedido no CLAUDE.md | 3 | não |
+
+### B. Correções achadas na auditoria (PRs curtos, sem decisão do dono)
+
+| ordem | id | tarefa | status | o que falta | plano curto | horas | mexe no hash |
+|---|---|---|---|---|---|---|---|
+| 8 | estadio-homonimos | Defeito: o Centenário de Montevidéu perde a tigela quando o mandante é o Montevideo City Torque, e o de Caxias do Sul não tem forma | pendente (defeito). `identidade.js:536-537` prefere o homônimo achado pelo clube; `gerar-formas.mjs:141-149` grava a forma só em `estadios`; o E7b do teste-identidade não confere a forma | Copiar a forma para o homônimo da mesma cidade e pesquisar o de Caxias | O `gerar-formas.mjs` passa a gravar também nos `homonimos`. Meta nova no teste-estadio-generico, que reprova hoje: todo homônimo da mesma cidade de um estádio com forma tem a forma, e todo homônimo do Brasil tem forma | 1,5 | não |
+| 9 | tornozelo-meta | Metas da condução curta que o CLAUDE.md diz que "passaram a valer" e continuam marcadas PENDENTE | parcial. O tornozelo dá 0,30 m (no limite) e o bola–pé dá 0,40–0,59, mas `teste-conducao.mjs:172/175` seguem PENDENTE, e o CI não pega um recuo | Tirar o PENDENTE | As duas linhas viram meta valendo, conferida com 5 sementes. Se faltar folga, ajustar só o desenho do gesto (fecho-hash 0) | 0,5 | não |
+| 10 | docs-sincronia | Textos que contradizem o código | pendente | Corrigir os textos | CLAUDE.md: Panenka (o "2/12" foi resolvido no #475, H4), falta com curva 23,3 m/s, bola–corpo da IA passa com 12, o Brasil com 57 estádios, itens obsoletos. Contrapressão: o valor é `s: [0, 3, 5]` (`config.js:1110`), mas os textos dizem 4/7 (`config.js:1107-1109`, CLAUDE.md, `CONTRATOS.md:1110`, `teste-pressao.mjs:32-33`). Comentário "M5 72%" velho (`config.js:1239-1241`) | 1 | não |
+| 11 | barreira-indireto | Tiro livre indireto a menos de 9,15 m do gol: os defensores na linha do gol entre as traves (Regra 13.2) | pendente. Só o direto monta a barreira (`partida.js:359`). O `restricaoParada` (`partida.js:593-620`) empurra todo defensor que está a menos de 9,15 m da bola, provavelmente o goleiro também (não conferi rodando) | A exceção da 13.2 e a cobrança da IA em dois toques | Caso novo no teste-goleiro-regras G5, que deve reprovar hoje: depois de um recuo agarrado, o goleiro e ≥ 3 defensores na linha, e ninguém fora dela a menos de 9,15 m. `barreiraNaLinha` pura em `bolas-paradas.js`. A exceção no `restricaoParada`. A IA rola curto | 4 | sim (só nesses lances raros) |
+
+### C. Goleiro e chute (fila de 15/10, itens 1–3; 17/10-5; Etapa 4.3b)
+
+| ordem | id | tarefa | status | o que falta | plano curto | horas | mexe no hash |
+|---|---|---|---|---|---|---|---|
+| 12 | 15/10-1 | Goleiro realista: movimento, espalmadas e encaixes, mais defesas nas bolas fáceis, e a saída no 1×1 e no cruzamento (inclui a parte da 3b) | parcial. Tudo está no PR #493: rascunho, `origin/golaco/goleiro-realista`, 5 commits atrás, conflito em `teste-carga.mjs`. CI vermelho em teste-conducao-curta C, teste-intercepta A, teste-nao-passa e navegador 3/3. Na main a defesa ainda é pela distância (`goleiro.js:85/153`) | Juntar a main, achar a causa dos 3 testes, rodar o painel de 144 e fazer o merge | Juntar a main e resolver o teste-carga (a folga cresceu no #501). Corrigir sem afrouxar metas. Rodar o painel de 144 no CI depois de juntar, porque o #500 mudou o jogo contra a pessoa. As 2 pioras declaradas (bola parada 25 → 11%; 1×1 defendido 70 → 39%): calibrar a `saidaNoAlto` até o gol de escanteio ficar em 3–6% com a bola parada ≥ 20%. Registrar C1/D2/E1 como PENDENTE no CLAUDE.md | 8 | sim |
+| 13 | 15/10-2 | Chute com a barra cheia mais alto, com chance de acertar o ângulo | pendente. `config.js:434` `yAlvo [0.35, 1.7]`; `acoes.js:791`; `mira.js:63`. Medido: 0 chutes no ângulo e 8% acima de 1,8 m | A mira alta e o teste | Função pura `alturaMiraChute(forca)` usada em `acoes.js` e em `mira.js`, para a linha ficar a 0 cm da bola (teste-mira). A curva fica igual até a força 0,9, então a IA, o pênalti da IA e o treino não mudam. Acima de 0,9 a mira sobe a ~2,1–2,2 m e o z vai até ±(meio − 0,35). A meta mede a mira com erro 0, separada do sorteio. Casos novos no teste-chutes, de 18–22 m com a barra cheia: ≥ 1,9 m em ≥ 70%, no ângulo em ≥ 25%, por cima em ≤ 25% | 5 | sim (humano; demo IGUAL esperada) |
+| 14 | 17/10-5 | Goleiro espalma bola alta | parcial. O salto e a espalmada por cima existem desde o #457 (`goleiro.js:766/300-330`, teste-mergulho B10), antes do pedido. Encaixe da bola alta em 34–39% (StatsBomb: 4%). O `maosMergulho` põe sempre as duas palmas na bola. Na partida a bola alta quase não chega | Depois do 12 e do 13: a mão de cima e a meta de espalmar | Item novo no teste-mergulho: bola a ≥ 1,9 m e ≥ 1,2 m de lado → espalmada em ≥ 85%, a mão acima da cabeça em ≥ 80% e a bola para fora em ≥ 90%. A mão de cima fica só no `anim.js` (IGUAL). Preferir "por cima" acima de ~2 m no `espalmar` muda a conta (rodar teste-mergulho C e o painel) | 4 | sim (só a parte do espalmar) |
+| 15 | 15/10-3 | Lançamento mais reto e rápido | pendente. `config.js:428` `elev [0.5, 0.72]`; a 45 m sai a 24,8 m/s com ápice de 8,6 m. A meta de tempo de voo do teste-passes (`:141-180`, até o 1º quique) segura a bola alta | Trajetória e meta nova | Pesquisa curta (lançamento rasteiro × alto). Partir do `MIRA.tensa` (`config.js:734`). Elevação de ~16–26°, com o `velParaPousar` no teto físico. Trocar a meta do teste-passes com justificativa escrita: tempo até a RECEPÇÃO, ápice a 40 m ≤ 5,5 m e v0 ≥ 24 m/s, que reprovam hoje. Vale para a IA, o tiro de meta e o chutão. Rodar teste-aereo e teste-aereo-troca | 6 | sim |
+| 16 | 3b-reposicao | Reposição do goleiro com a mão (rolar ou arremessar) e o bate-pronto | parcial. As regras foram feitas no #470. A IA só dá chutão (`sim.js:1129-1136`). O "PASSE com a mão" do humano é um passe com o pé a partir do chão (`goleiro.js:516-521`). Não há o gesto no `anim.js` | A escolha da IA, o voo do arremesso e os gestos | O `goleiroComBola` da IA escolhe entre arremesso curto ou médio (o mesmo `escolherAlvo` e o mesmo risco) e o chutão, pela pressão. Voo `reposicaoMao` saindo da altura da mão. PASSE = arremesso; LANÇAMENTO = bate-pronto. Gesto por `j.arremessoGk`, em pose pura. Teste G10: fração de reposições curtas, nenhuma para dentro da área, e a linha "erro na saída de bola" do painel sem piorar | 5 | sim |
+
+### D. IA intensa ("ninguém corre, ninguém marca": 10/10, 11/10 B, 15/10-4, 17/10-8)
+
+| ordem | id | tarefa | status | o que falta | plano curto | horas | mexe no hash |
+|---|---|---|---|---|---|---|---|
+| 17 | 17/10-8 | Os companheiros do humano apertarem o condutor da IA | parcial. O ataque da IA contra a pessoa entrou no #500. Medido hoje: o 1º companheiro fica a 7,9 m (o da IA adversária, a 2,9 m), faz 0,33 bote/min (IA: 1,72) e chega a ≤ 2 m em 1,33 s | Apertar sem atropelar nem abrir a defesa, e o teste | Diagnóstico: quanto vem da posse curta da IA, da freada do `semAtropelar` e do ramo. Mudança só no time da pessoa (o espelho do `contraPessoa`): o 1º homem aperta pelo gatilho de estado, o 2º cobre, e o `semAtropelar` vale só no último ~1,5 m. Teste novo `teste-companheiros.mjs` (padrão; roteiros passivo e calmo, 8–12 sementes), que reprova hoje: 1º a ≤ 4 m, ≥ 1 bote/min, ≤ 2 m em ≤ 0,8 s, faltas ≤ 1,5× as de antes. Guardas: teste-defesa-corrida (trote ≤ 5%), teste-pressao-humano, teste-faltas-sentido, teste-dois-humanos, teste-online | 8 | só contra a pessoa |
+| 18 | pressao-margem | PRESSÃO do humano no limite das metas (M4 faltas, M5 corre de verdade) e o chamado que cai num zagueiro | pendente. O cabeçalho do teste tem dados de antes do #481 (M4 1,58×, M5 80,6%), `config.js:1239-1241` diz 72%, e o `pressionadorDe` não cobra custo da linha de defesa (PESQUISA-ETAPA3 §17.2) | Remedir e abrir folga | Junto com o 17 ou logo depois, porque os dois mexem no mesmo chamado. Disparada até perto e freada só no fim; não chegar embalado nem por trás; margem contra o zagueiro quando houver um meio-campista a ≤ +0,3 s. 128 partidas antes e depois: M4 ≤ 1,4× e M5 ≥ 83% | 5 | só contra a pessoa |
+| 19 | corredor-5ms | O defensor do corredor ultrapassado recua a 3,3–3,6 m/s, contra a meta de 5 | pendente. `teste-defesa-corrida.mjs:22/227-230` registra null (não reprova) | O recuo e a meta valendo | Ler a quebra por ramo e por zona. Quem foi batido vira e corre pela linha condutor → gol. Só no time da IA contra a pessoa. Trocar o null por meta, com ≥ 20 duelos. Se a física não deixar (virar a ~6 m/s leva ~1,1 s), levar ao dono uma meta com fonte | 5 | só contra a pessoa |
+| 20 | etapa3-ppda | Pressão mais agressiva (PPDA da Média 11,0 × 8,4) e o teste-pressao fora do grupo etapa3 | pendente. Não foi remedido depois de #470/#471/#481. O 11,0 está dentro da meta de 8–16; o problema é o recuo em relação aos 8,4 | Medir; apertar se ficar ≥ ~10 | teste-pressao com 24 sementes. Se der 8–10, só fechar com 5 rodadas e tirar do etapa3. Senão, contrapressão de 4/7 s ou o engaja da Média, só contra a pessoa, com uma variante `--humano` do teste-pressao que reprova antes. Guardas: agressão 58–78% e retomada 34–54% | 4 | só contra a pessoa (ou não, se for só medir) |
+| 21 | etapa3-chutes-humano | Volume de ataque da IA contra a pessoa | pendente. O "10,00 × 10,92" do #458 é o total da partida com a demo, não o jogo contra uma pessoa. Contra o humano só há impressão informativa (`teste-transicao.mjs:313`) | Meta na unidade certa e o volume | Medir com teste-transicao `--humano` e com o medir-corrida (roteiros agressivo e calmo). Meta por TIME, numa partida de 2 × 4 min: ≥ 55% dos chutes de dentro da área e conversão de 8–15%. Mexer só no time da IA contra a pessoa (utilidade do chute, corridas, finalização de primeira, contra-ataque). O teste-transicao `--humano` sai do etapa3 com 5 passagens. Remedir depois do item 12 | 8 | só contra a pessoa |
+| 22 | 15/10-4 | Movimentação melhor e jogo mais tenso: o vai e volta da IA sem a bola no 11×11 | parcial. Nada do movimento mudou depois do #458. Última medida: 8,3/min contra a meta de ≤ 8 (`teste-movimento.mjs:172`). O teste está no etapa3 (`rodar-testes.mjs:71`) | A meta passando e o teste no CI | Foto com 12 sementes. Achar o ramo de quem inverte (`alvoCalmo`, recomposição, respiro, contorno) e ajustar a histerese ou o respiro, nunca a condução que o dono aprovou. A parte "tenso" está nos itens 17 a 21. O teste-movimento `--modo partida` sai do etapa3 com 5 rodadas. Painel de 144 | 10 | sim (IA × IA) |
+| 23 | etapa3-forma | teste-forma: linha de 4 no 1º terço ≤ 5 m; atrás da bola ≥ 8 de 10 | pendente. Nenhum dos 6 testes do grupo está no CI. A medida é de 10/10 (7,3 m; 7,1) | Remedir e corrigir | `rodar-testes --so etapa3` para a foto de hoje (as metas são de antes do #470–#500). Mexer em `TATICA.meioAtras`/`recomp` e na linha de 4 (`ia-tatica.js`), medindo defesa e ataque juntos. Sai do grupo com 5 rodadas | 6 | sim (IA × IA) |
+| 24 | etapa3-apoio | teste-apoio: companheiros à frente em 30–45%, corredor central | pendente. 21,5% em 10/10 | O mesmo do 23 | `IA_ATAQUE.apoio`, corredores e sobreposição. Painel de 144 sem recuo | 6 | sim (IA × IA) |
+| 25 | etapa3-intensidade | teste-intensidade: lances rápidos, conversão e chutes | pendente. 267 m/min contra 180–220, e o teto não tem fonte (`teste-intensidade.mjs:4-8`) | Uma fonte para o teto, ou deixá-lo informativo com a decisão registrada | Pesquisar o p90 por fase (SkillCorner, Metrica). Sem fonte, o teto fica informativo; nunca afrouxar sem fonte. Conversão e chutes saem com o bloco E | 6 | sim (IA × IA) |
+
+### E. Equilíbrio (Etapa 4.4; medir depois da IA, tudo junto)
+
+| ordem | id | tarefa | status | o que falta | plano curto | horas | mexe no hash |
+|---|---|---|---|---|---|---|---|
+| 26 | e4-4-volume | Poucos chutes e precisos demais, conversão alta e poucos chutes de fora | pendente. Painel de 144 do #481: 8,4 chutes por partida; ~62–65% no alvo (meta 28–38%); conversão ~21,7% (meta 9–14%); 32,7% de fora (meta 35–40%) | Volume no último terço e erro do chute | Diagnóstico por posse no último terço (`--json`). Baixar a `utilidade.chutePosse` sob pressão e no último terço, e mexer na `primeira.xg`. Erro maior com pressão ou com o corpo de lado, só na partida (`m.times`; o treino fica IGUAL). Chutes bloqueados com faixa de 20–30%. O candidato riscoMentalidade × 1,2 + cruzamentoP 0,2 JÁ está na main desde o #471, então não é caminho novo. Teste novo `teste-volume-chutes.mjs` (24 partidas: ≥ 14 chutes, ≤ 45% no alvo, conversão ≤ 16%), que reprova hoje. Vigiar os duelos com a bola rolando (≥ 2) e os gols de cabeça (8–18%) | 16 | sim |
+| 27 | e4-4-gols | Gols por partida de 1,82 para 2,3–3,5 | pendente. 1,83 no #471 e 1,82 no #481: a promessa do "cabeceio + IA" não se cumpriu | Calibração final | Depois do 12 e do 26: painel de 144 no CI com 2,3 dentro do intervalo de 95%, goleiro em 66–72% e 55–60% (`c0Partida`), sem recuo. Pôr o critério de gols no teste-volume (≥ 2,1, Poisson) | 4 | sim |
+| 28 | faltas-volume | Faltas que o jogo ainda não tem: no duelo pelo alto e o segurar no escanteio | pendente. 0,21 falta por minuto de bola rolando contra ~0,40 no real (PESQUISA-ETAPA4:134-136). O `faltaNaCarga` exige posse (`faltas.js:225`), então o duelo nunca dá falta | Faltas novas, visíveis no desenho | Em `faltas.js`, a falta no duelo do `cabeceio.js`/`agendarDisputa` pela `forcaContato`, e o segurar na defesa mista do escanteio. Medir no teste-faltas-sentido (0,30–0,40 por minuto, nenhuma falta com contato a passo) e no painel. A falta tem de aparecer no desenho | 6 | sim |
+
+### F. Pedidos de 17/10 ("com limite" / "pra depois")
+
+| ordem | id | tarefa | status | o que falta | plano curto | horas | mexe no hash |
+|---|---|---|---|---|---|---|---|
+| 29 | 17/10-3 | Campinho da escalação em pé | pendente. `escalacao-tela.js:101` (`vertical = W/H < 0.95`), que nunca vale no celular deitado nem no PC | Forçar em pé e fazer caber | `vertical = true`. Cartas pela largura do campo em pé (5 colunas). Em 568×320 a carta perde a linha da posição antes de a letra cair abaixo de 10 px. Item novo no teste-prejogo 4, que reprova hoje: altura > largura e o GOL embaixo. Conferir com o prints-prejogo e rodar o teste-tm-tela | 4 | não |
+| 30 | 17/10-4 | Cena de substituição no online | pendente. `main.js:415` desliga a cena e o `quadroOnline` não chama o `quadroSubst`. Defeito latente: ligada pela API de teste `ligada(v)`, a cena congela e a simulação continua por baixo | Tratar o `cenaSub` no `quadroOnline` e fazer a escolha igual nos dois aparelhos | `segura = true` + `quadroSubst`, como no laço offline (`main.js:1624-1628`). A escolha vem do anfitrião, pelo pedido. P7 novo no teste-online-tela, que reprova hoje: as duas abas abrem a cena no mesmo tick e os hashes ficam iguais. Numerar sem colidir com os itens 42 e 44 | 4 | não |
+| 31 | 17/10-6 | Foto do autor com o número e o nome na comemoração | pendente. O pedido do TM não leva foto (`tm3d.js:100-113`), e não há nada em `tm-times.js`, `comemoracao.js` nem `hud.js` | A foto no pedido, a ficha, o cartão na tela e os testes | `foto` pelo `TM.img.playerPhotoUrl`, só na pro; sem foto, só número e nome, sem desenho por código. A ficha fica fora do hash. `#autor-gol` fora do #hud (como o `#nome-condutor`), no plano da steadicam, sumindo antes do replay; no gol contra, nada. É a 2ª exceção à "sem narração": registrar no CONTRATOS e no CLAUDE. Testes: teste-ponte-tm e teste-comemoracao-tela, que reprovam hoje, e o testar-3d. Opcional: a foto também nas cartas da escalação | 6 | não |
+| 32 | 17/10-7 | Placar com a cara do TM, um pouco maior, e o relógio em MM:SS | pendente. `hud.js:683` escreve só o minuto. A cara do TM do #483 é anterior ao pedido. A H10 b (`teste-hud-minimo.mjs:31-32`) exige o placar "menor" | O relógio, o CSS e a meta nova | `segundoDeJogo(m)` puro, ao lado do `minutoDeJogo`. Acréscimos no formato "47:13" com o "+4". Escrever no DOM só quando muda. Placar ~15–20% maior (28 px no celular, 30 no PC), números ≥ 16 px. Reescrever a H10 com o registro (12/10 pedia menor; 17/10 manda maior), mantendo H1 ≤ 11% e H3 ≤ 15%. Item novo: o relógio avança os segundos | 4 | não |
+| 33 | 17/10-9 | Editar o TEMPO de jogo e a DIFICULDADE (na pausa, antes do jogo e pelo pedido do TM) | pendente. Hoje só existe o `?min=` (`main.js:191/282`). Não há dificuldade em `golaco/js`. O TM já tem Fácil/Normal/Difícil/Lenda (`settings.js:71-74`) | Duração e dificuldade no pedido e na pausa | `mudarDuracao` puro, que mantém o minuto mostrado (proibido no online). Dificuldade só contra a pessoa, com o "normal" bit a bit igual (fora do hash quando é normal). Tabela `DIFICULDADE` pesquisada (níveis do EA FC). O `tm3d.js` passa os dois campos. Testes: teste-partida (duração); teste-dificuldade novo (Fácil < Normal < Difícil em botes e chutes, Normal igual à base); teste-ponte-tm | 9 | só com a opção (normal IGUAL) |
+| 34 | 17/10-10 | Botão de CARRINHO | pendente. Só há reservas: `config.js:344` BOTAO.CARRINHO, `entrada.js:26-27`, `render/esqueleto.js:415/446`. Nada em `defesa.js`, `faltas.js` nem `anim.js` | Lógica, falta e cartão, pose, entrada e testes | `carrinho(m, j)` em `defesa.js`: deslize pela locomoção, contato pelo pé desenhado, e quem erra fica ~1,2 s no chão. `chanceFaltaCarrinho` pela chegada e pela força (Regra 12). Pose no `anim.js`. Entrada: L, X e a vaga 'e' do toque; se o H1 estourar, dois toques na DIVIDIDA. A IA não usa nesta entrega. Testes: `teste-carrinho.mjs`, teste-controles e teste-hud-minimo | 14 | só com o botão (demo IGUAL) |
+| 35 | 17/10-11 | Clássico mais pegado pela agressividade dos jogadores, não pelo árbitro | pendente. `partida.classico` só é lido em `identidade.js:636`, e não existe agressividade | A marca na partida e os multiplicadores | Pesquisa de faltas em clássicos. Constante `CLASSICO` em `config.js` (bote da IA, contenção, carga). `criarPartida({classico})` → `m.classico`. O árbitro fica igual (`faltas.js:143-198`). `teste-classico.mjs` pareado: botes ≥ +25%, faltas +30–60%, vermelhos ≤ 0,2 e chance de falta por contato igual (±10%). teste-ponte-tm. No online, vale o pedido do anfitrião | 7 | só com a opção |
+
+### G. O 3D no lugar da simulação (16/10) e a Etapa 4.4: prorrogação e pênaltis
+
+| ordem | id | tarefa | status | o que falta | plano curto | horas | mexe no hash |
+|---|---|---|---|---|---|---|---|
+| 36 | prorrogacao | Prorrogação na partida 3D (mata-mata) | pendente. `partida.js:8` só tem os tempos 1 e 2, e o `tm3d.js:16` diz "o 3D cuida só dos 90 minutos" | `partida.mataMata` no pedido e os tempos 3 e 4 | Tempos de 15 minutos (Regra 7), troca de lado, 6ª substituição. Súmula com minutos acima de 90. teste-prorrogacao novo, que reprova hoje. Sem mataMata, tudo IGUAL. testar-3d num mata-mata do compmode | 12 | só com a opção |
+| 37 | penaltis-no-jogo | Disputa de pênaltis no mesmo jogo, com o TM usando o resultado | pendente. O `disputa.js` só existe como modo à parte, e o `criarDisputa` cria um mundo novo (`disputa.js:108`) | Partir do mundo da partida, só com quem estava em campo | Uma variante que parte do `m` (expulsos fora) e usa a cobrança do `partida.js`. O `sumula.js` devolve `penaltis`. Cada modo do TM pula a simulação quando `result.em3d`. Vale também para o "Simular o resto". Testes em Node, teste-ponte-tm e testar-3d | 12 | só com a opção |
+| 38 | rae-banco | Rumo ao Estrelato em 3D quando o jogador começa no banco | pendente. `rae.js:759-760` simula quando ele não é titular | A entrada por substituição no minuto do roteiro | `controle: {tmId, entraMin}`. A IA joga pelos dois até a parada depois do minuto; a troca usa o caminho do editor; a `m.trava` só liga depois dela. Caso novo no teste-ponte-tm e testar-3d | 8 | só com a opção |
+| 39 | base-palpite | Partida de Base em 3D e o Palpite da Arena assistido em 3D | pendente. `coach.js:6180-6184` e `arena.js:246-258` não têm pauseSide | Base com pauseSide; Palpite como IA × IA | Base: `pauseSide: 0` e a formação. Palpite: `controle: {assistir: true}`, sem humano e sem botões, porque quem aposta não pode jogar a partida. Deixar isso explícito ao dono no PR. testar-3d e teste-ponte-tm | 5 | só com a opção |
+| 40 | online-simulado | Online antigo (salas) e o Duelo do Ultimate em 3D | pendente. `online.js:1041-1045` e `utonline.js:313/342` são simulados | Oferecer "Jogar em 3D" pelo Online 3D | Reaproveitar o fluxo do `online3d.js` com os times escolhidos. O h2h e o ranking não podem contar em dobro. testar-online3d e testar-ultimate | 10 | não |
+| 41 | auditoria-jogavel | Ferramenta que reprova toda partida do usuário sem caminho 3D | parcial. 12 chamadas têm 3D e 4 não têm (Base, Palpite, Online antigo, Duelo); faltam também o RAE no banco e a prorrogação/pênaltis | A ferramenta | Em `legacy-total-match/ferramentas/`, listar todo `TM.matchview.play`/`TM.engine.simulate` de partida do usuário. Reprova hoje com 4 e passa depois dos itens 36–40 | 2 | não |
+
+### H. Online (o que ficou fora da v1)
+
+| ordem | id | tarefa | status | o que falta | plano curto | horas | mexe no hash |
+|---|---|---|---|---|---|---|---|
+| 42 | online-sinal | Indicador de sinal no HUD do online | parcial. Só existe o selo de TEXTO "Conexão instável" (`online-pagina.js:95-96/175-178`). O RTT é medido (`online.js:242-262`), mas não chega à tela | Barras sem texto | Trocar o selo por 3 barras em SVG, pela mediana e pelo p95 do RTT ('instavel' = 1 barra piscando), atualizadas 2×/s, com folga para o menu. Caso novo no teste-online-tela com atraso de teste, e teste-hud-minimo com `?online` | 3 | não |
+| 43 | online-convite | Convite pela lista de amigos | pendente. O Online 3D só oferece código, link e QR (`online3d.js:910-947`) | O convite com tipo | `sendInvite` com `{tipo: 'online3d', code}`; aceitar leva ao `?online3d=`. Só amigos, sem chat. Caso 'convite' no testar-online3d | 5 | não |
+| 44 | online-reconexao | Voltar à partida depois de recarregar a página | pendente. Há `onDisconnect().remove()` (`online3d.js:139/373/422`) e nada é guardado | Retomar pelo replay das entradas | Log das entradas no `online.js` e `retomarSessao`, que re-simula sem desenhar. No TM, sessionStorage e uma marca "caiu" com prazo de 90 s. O13 no teste-online e caso novo no teste-online-tela | 20 | não |
+
+### I. Visual, Etapa 5 e estádios
+
+| ordem | id | tarefa | status | o que falta | plano curto | horas | mexe no hash |
+|---|---|---|---|---|---|---|---|
+| 45 | graficos-celular | Melhora dos gráficos no celular (Baixa e Média), marcada "Urgente" na fila antiga | parcial. Já existem a sombra de contato (`jogador3d.js:329-336`, `bola3d.js`), a anisotropia 2/4/8 (`cena.js:162`) e o gramado com detalhe (`campo.js:667-670`). A Média não tem antisserrilhado (`config.js:400-404`), e não há teste de imagem | Uma passada medida | Pesquisa (FXAA/SMAA, AgX × ACES). AA barato na Média, gramado e cor de dia. teste-graficos-celular no navegador (serrilhado nas linhas, contraste, chamadas ≤ +2), que reprova hoje, mantendo a CPU p95 ≤ 6 ms. Pedir ao dono 1 minuto com `?perf=1` num celular de verdade | 12 | não |
+| 46 | sombras-dia | Sombra do estádio no gramado e nos jogadores durante o jogo de dia | parcial. O sol e a sombra dos jogadores existem (`cena.js:1-17/106-123`); a sombra da estrutura só aparece nas cadeiras | Uma máscara analítica | `sombraEstadio(x, z, solDir)` pura, pela planta (fora do fecho), como uniform da grama e dos jogadores, sem mapa de sombra novo. teste-sombra-estadio em Node (raio × sólidos) e item novo no teste-estadio | 6 | não |
+| 47 | torcida-ondas | A torcida reagir em onda no gol e na chance | parcial. Pular e levantar os braços está feito (`teste-torcida.mjs:226-230`). A reação é a mesma para o time todo no mesmo instante (`torcida.js:72-75`), e a ola só sai com a torcida calma (`festa.js:11-13/55-56`) | A propagação pela distância | Atraso pela distância ao gol ou ao lance: uniform com o t do evento, a mesma conta em JS e GLSL. Caso novo no teste-torcida, que reprova hoje: quem está perto do gol levanta antes | 4 | não |
+| 48 | fotografos | Fotógrafos atrás do gol | pendente. Não existe nada no `golaco/` | Fazer do zero | Pesquisa (área de mídia da UEFA e da CBF). `fotografos-dados.js` puro: posições depois das placas, poses e mira na bola. `render/fotografos.js` instanciado (1–2 chamadas, LOD baixa), flash por luz falsa. teste-fotografos: fora do campo, das placas, da área técnica e dos trilhos, e o cone vazio na câmera do gol, na "atrás do gol" do replay e na "Atrás" do Livre. Item novo no teste-estadio | 10 | não |
+| 49 | etapa5-1c | Acabamento do corpo nos closes | parcial. O mapa de normais do pano e o tom de pele entraram no #503; as metas não são medidas (PESQUISA-ETAPA5:298-322) | As folgas medidas | Folga cabeça–bola p95 ≤ 2,5 cm, luva–bola ≤ 6 cm em ≥ 90% e volume na dobra ≥ 80%, medidos nos canhões do teste-cabeceio e do teste-mergulho. Compensar só no desenho, nunca no `RAIO_CABECA`. Casos novos no teste-ossos e no teste-corpo-tela | 6 | não |
+| 50 | mocap-5.3a | Mocap: os dados | pendente. Não existem `js/mocap.js` nem `assets/mocap/` | Dados e créditos | PESQUISA-ETAPA5 §4: CMU, Rocketbox, 100STYLE (Mixamo e LAFAN1 vetados). teste-mocap: decodificação com erro ≤ 0,1° | 5 | não |
+| 51 | mocap-5.3b | Mocap: a locomoção pela fase da passada | pendente | A camada A | `js/mocap.js` puro e fora do fecho, aplicado depois da pose e antes do anel. As pernas continuam as da simulação. `?mocap=0` desliga. Metas do teste-mocap na pose desenhada; teste-patinacao | 8 | não |
+| 52 | mocap-5.3c | Mocap: clipes nas cenas (comemoração, fila do pré-jogo, substituição, cartão, fim) | pendente | Clipes e inertialization | Depois dos itens 1–3 | 8 | não |
+| 53 | mocap-5.3d | Mocap: olhar, palma da mão e rolagem do pé | pendente | A pose estendida | PESQUISA-ETAPA5 §4 | 4 | não |
+| 54 | rostos-ligas | Rostos reais das outras ligas na pro, uma liga por PR | pendente. `LIGAS_ROSTOS = ['br']` (`main.js:2158`), e nem o br está na main | Depois do F1 | Ordem en, es, it, de, fr, pt, ar, nl… Para cada liga: `fotos_html.py` → `processar_liga.py` → índice, créditos e `LIGAS_ROSTOS`. O teste-rostos-reais passa a cobrar cada liga da lista | ~5 por liga (40) | não |
+| 55 | estadios-lotes | Estádios em lotes (dono, 21/10): 418 sem forma | pendente. 105 de 523 têm forma (`estadios.json`) | 4 lotes | Lote 2: 30–50 mil (128). Lote 3: 20–30 mil (112). Lote 4: 10–20 mil (116). Lote 5: abaixo de 10 mil (62). Pesquisa em fatias por agentes em 2º plano, gerar-formas e revisão pelas folhas do prints-estadios; defeito que se repete vira campo da forma. Meta nova no teste-estadio-generico: todo estádio do lote com forma válida. teste-carga (folga), teste-tm-tela e testar-3d | ~10 por lote (40) | não |
+| 56 | online-rollback | Rollback no online | pendente e fora da fila ativa. `CONTRATOS.md:2448`: foi medido e não cabe no celular | Só se houver reclamação medida | Antes do rollback: previsão só visual do controlado (render puro) | 40 | não |
+
+**Total:** itens 1–55 somam ~426 h, mais ~12 h da frente atual (F1 e F2). O item 56 fica fora.
+
+## Feito (com a prova)
+
+- **Cantos de torcida o jogo todo.** `render/festa.js:18-35`, 5 gravações de canto e batucada em `assets/sons/`, teste-som-jogo M4/M5 no CI (`rodar-navegador.mjs:23`). PRs #463 e #501.
+- **Torcida pulando e levantando os braços** no gol, na chance e no ataque. `torcida-dados.js:390-427`, `teste-torcida.mjs:226-230`. PRs #456 e #463. As ondas ficaram no item 47.
+- **Disputa pelo alto com a bola rolando.**
+  - Código: `sim.js:875/983` e `cabeceio.js`, do #471.
+  - Teste: teste-cabeceio D, com ≥ 1,5 duelos por partida, no CI.
+  - Painel de 144: os duelos foram de 0,0 para 2,3 por partida, com 15% dos gols de cabeça.
+- **Condução da IA: bola–corpo no trote ≤ 0,59 com 12 partidas.** `teste-conducao-curta.mjs:216`, com 12 partidas por padrão desde o #481 e o CI verde. Só a nota do CLAUDE.md está velha (item 10).
+- **Panenka no pênalti calibrada** (acabou o "2 gols em 12, 9 fora"). Commit `af2c6c12`, no #475; `config.js:447/509`; teste-cavadinha H4 no CI. O ajuste fino que sobrou está em "Depende do dono".
+- **Regras do goleiro da 3b**: mão só dentro da área, recuo (Regra 12.2), 8 s com a bola → escanteio, PEGAR e TROCAR para o goleiro. PR #470; `regras-goleiro.js`, `partida.js:1395-1414/1510-1514`; teste-goleiro-regras G1–G9 no CI. O tiro de meta com o pé veio no #462.
+- **"A IA não corre", 1ª parte** (o ataque da IA contra a pessoa). PR #500; `config.js:1264-1267`, `ia-ataque.js:536-539`.
+- **Postura curvada do corpo novo** (22/10): #504 (`5b39e528`, na main). O corpo novo foi para o dono testar no #503.
+- Registrados como entregues no CLAUDE.md, mas fora desta auditoria: o nome do condutor e os overalls do TM (pedidos 1 e 2 de 17/10).
+
+## Depende do dono
+
+1. **Câmeras do Livre também na partida.** O CLAUDE.md marca "Pendente para o dono", e o pedido de 16/10 era só sobre o Livre. Se ele aceitar: ~6 h, hash IGUAL. Limites: a pausa em 844×390 sem rolar e a câmera da bola parada (#490).
+2. **TURN no Online 1×1.** Precisa de conta de adulto e tem custo de tráfego; o pedido original era "sem conta e grátis".
+3. **Tirar o "Simular" das partidas do usuário**: quando e como. Só depois dos itens 36–41. O caminho sem WebGL 2 e o "Simular o resto" ficam de qualquer jeito.
+4. **Ajuste fino da Panenka.** Hoje são 88,5% de gols em 200 cobranças, contra 77,5% do pênalti comum, e a pesquisa diz que a Panenka entra "tanto quanto ou um pouco menos". Recomendação: um fator só da Panenka (H5, 70–85%), que mexe só no hash do humano. Também é dele a janela de 150–180 ms parado.
+5. **Falta com curva.** Hoje chega a 23,3 m/s aos 27 m, que é a física de túnel (teste-bola caso 7, `pend`); o vídeo dá 17–21. Mexer no arrasto muda todos os voos.
+6. **Corte de 90° a ~7 m/s**: hoje em 2–3 apoios, a pesquisa pede 3–5. Mexe na condução que ele aprovou.
+7. **IA que passa melhor × defesa que intercepta mais**: o passador que desiste quando a linha fecha (PESQUISA-ETAPA4 §7.1). O meio-termo seria pela `visao`.
+8. **Edição pública: rostos fictícios e foto na escalação** (PESQUISA-ETAPA5 §3, perguntas 1 e 3).
+   - Pergunta 1, a fonte e a licença dos rostos: SFHQ-T2I, que é a recomendação, ou os lotes do ChatGPT. Os lotes eram do jogo antigo e teriam de ser refeitos no golaco.
+   - Pergunta 3, a foto na escalação da pública: a premissa dela caducou na pro com os rostos reais.
+   - Depois das respostas: 5.2a–c, ~26 h.
+9. **A régua de chutes do painel**: 20–30 numa partida de 2 × 4 min, que tem ~1/3 dos lances de um jogo real. Confirmar no PR do item 26.
+10. **Perguntas curtas dentro dos próprios PRs:**
+    - os números da partida no plano geral do pós-jogo (item 1);
+    - o Palpite assistido em 3D (item 39);
+    - a meta de 5 m/s do corredor, se esbarrar em limite físico (item 19);
+    - o campinho em pé também no Editar time deitado (item 29).
+
+## Obsoleto
+
+- **08/10, "vai-e-volta da condução da IA".** Era da fila do `futebol3d/`: o laneRisk e o origem-chutes só existem lá. No golaco o equivalente é o item 22, e o condutor da IA já tem histerese (`config.js:1189`).
+- **"Escalação no campinho com fotos"** (fila antiga). Foi entregue no futebol3d (#416, `9ad0dbf4`). O golaco seguiu o pedido (E) de 11/10, entregue no #466. A foto nas cartas fica como opcional no item 31.
+
+## Onde as áreas e o cético discordaram (e o que decidi)
+
+- **Panenka.** A área 1 disse "depende", o cético disse "feito". Decidi: feito para o defeito registrado (o 2/12 foi calibrado no #475, com o H4 no CI). O ajuste fino (88,5% > 77,5%) vai para "Depende do dono" (PESQUISA-ETAPA2:303).
+- **Grupo etapa3.** De "parcial" para pendente: nenhum dos 6 testes está no CI, e o "2/6" é de 10/10. Dividi nos itens 20–25.
+- **PRESSÃO com margem.** De "parcial" para pendente: não há medida de M4/M5 depois do #481.
+- **Indicador de sinal.** A área 3 disse pendente e o cético, parcial; a área 4 disse pendente. Decidi parcial: o selo de texto existe, o indicador contínuo não.
+- **Câmeras do Livre na partida.** A área 3 disse pendente. Decidi "depende do dono": o CLAUDE.md marca "Pendente para o dono", e o pedido de 16/10 era sobre o Livre.
+- **Torcida vibrando.** De "feito" para parcial: as ondas no gol e na chance não existem (item 47).
+- **Gráficos do celular.** Fica parcial, com a premissa corrigida: a Baixa já tem sombra de contato e anisotropia.
+- **Tornozelo.** De "feito" para parcial: o número passa, mas a meta não vale no CI (item 9).
+- **Homônimos.** De "parcial" para pendente: nada foi corrigido (item 8).
+- **Etapa 5.1c.** De "pendente" para parcial: as normais do pano e o tom de pele vieram no #503.
+- **Rostos pelo ChatGPT.** De "obsoleto" para "depende do dono": a pergunta 1 do PESQUISA-ETAPA5 §3 segue aberta para a pública.
+- **Prorrogação e pênaltis.** A área 5 disse parcial e a área 4, pendente. Decidi pendente: não há nada na partida. O `disputa.js` é uma peça a reaproveitar, mas cria um mundo novo.
+- **Equilíbrio.** O plano da área 5 propunha "voltar ao candidato riscoMentalidade × 1,2 + cruzamentoP 0,2", mas ele já está na main desde o #471 (`config.js:1223-1256`). Tirei do plano.
+- **Falta com curva.** O número não mudou com o #462 nem com o #490, porque é física pura (teste-bola caso 7): fica em 23,3 m/s.
+- **3b.** A saída no 1×1 e no cruzamento foi para o item 12, porque o dono a juntou ao goleiro de 15/10. Aqui fica só a reposição (item 16).
+
+## Itens juntados (repetidos entre as áreas)
+
+| Itens das áreas | Viraram |
+|---|---|
+| 15/10-1 + extra-goleiro-3b (as saídas) | item 12 |
+| extra-chutes-precisos + e4-4-volume-chutes + e4-4-conversao | item 26 |
+| extra-barreira-indireto + extra-barreira-indireto-pequena-area | item 11 |
+| 17/10-9 + extra-17/10-9 | item 33 |
+| 17/10-11 + extra-17/10-11 | item 35 |
+| 17/10-3 + extra-escalacao-retrato | item 29 |
+| 17/10-6 + extra-foto-autor-escalacao | item 31 |
+| 17/10-7 + extra-placar-segundos | item 32 |
+| online-sinal + extra-online-sinal | item 42 |
+| etapa4-p4 + extra-prorrogacao-penaltis | itens 36–37 |
+| etapa3-grupo + extra-pendencias-ia-etapa4 | itens 20–25 |
+| replays-paradas | itens 4–6 |
+| livre-cam + extra-livre-cameras + extra-cameras-livre-partida | "Depende do dono" 1 |
+| extra-falta-curva + e2-pend-falta-curva | "Depende do dono" 5 |
+| extra-panenka + e4-cavadinha-penalti | "Feito" + "Depende do dono" 4 |

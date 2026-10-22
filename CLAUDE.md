@@ -77,6 +77,12 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   tela enquanto o jogo está parado. Corpo novo funcionando = PR para ele testar (o #503 já foi; a postura no #504).
   Depois: "verifique as diversas tarefas antigas no jogo e assim que terminar, faça" — auditoria das filas antigas no
   código (o que está feito × pendente) e a fila resultante executada item a item (um PR cada) depois das cenas acima.
+  **A FILA ESTÁ EM `golaco/FILA.md`** (auditoria de 22/10: 56 itens com status, evidência, plano, horas e se mexe no
+  hash; listas "feito", "depende do dono" e "obsoleto"). Ordem: rostos → patrocínios → cenas (A: pós-jogo, intervalo,
+  cartão, replays de falta/chance, melhores momentos; a base é a branch `origin/golaco/cenas-jogo`, 35 conflitos) →
+  correções curtas (B) → goleiro e chute (C; o PR #493 rascunho `golaco/goleiro-realista` tem CI vermelho) → IA (D) →
+  equilíbrio (E) → pedidos de 17/10 (F) → 3D no lugar da simulação (G) → online (H) → visual/mocap/estádios (I).
+  Ao terminar cada item, marcar na FILA.md (status + PR).
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME em cima do jogador com a bola (`main.js marcarCondutor`,
   `#nome-condutor` fora do #hud — exceção pedida à "sem narração") e (2) os overalls da tela iguais aos do TM (`elenco.js
   notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos). **FILA (dono: "o 3 e 4
