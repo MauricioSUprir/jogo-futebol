@@ -1,0 +1,160 @@
+{
+  "clube": "Chapecoense",
+  "chave": "br/Chapecoense",
+  "temporada": "2026",
+  "fornecedor": "Kappa",
+  "casa": {
+    "nome": "Camisa 1 2026 (homenagem ao Atlético Nacional)",
+    "lancamento": "2025-12-15",
+    "camisa": "#0f6652",
+    "padrao": "listras_verticais",
+    "padrao_cores": [
+      "#f2f4f7"
+    ],
+    "padrao_n": 3,
+    "padrao_largura": 0.19,
+    "padrao_desc": "base verde-escura com 3 listras brancas verticais na frente: uma no centro do peito e uma de cada lado (a de fora encosta na costura da manga); as faixas verdes entre elas têm ~0,22 do tronco; costas lisas verdes com friso dourado fino nas costuras",
+    "mangas": "#0f6652",
+    "mangas_padrao": "liso",
+    "punhos": "#cfb07e",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#0f6652"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#0f5e4c",
+    "calcao_detalhe": null,
+    "meiao": "#0f5e4c",
+    "meiao_detalhe": null,
+    "meiao_desc": "verde-escuro liso",
+    "fontes": [
+      "https://chapecoense.com/2025/12/15/chapecoense-e-kappa-lancam-a-camisa-of-1-da-temporada-2026/",
+      "https://mantosdofutebol.com.br/2025/12/camisa-titular-chapecoense-2026-homenagem-atletico-nacional/",
+      "https://www.footballkitarchive.com/chapecoense-2026-home-kit-437039/",
+      "https://maquinadoesporte.com.br/futebol/chapecoense-lanca-camisa-em-homenagem-ao-atletico-nacional/"
+    ]
+  },
+  "fora": {
+    "nome": "Camisa 2 2026",
+    "lancamento": "2026-03-19",
+    "camisa": "#f4f5f8",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "branca com jacquard tonal de linhas onduladas (quase invisível de longe); gola e punhos dourados",
+    "mangas": "#f4f5f8",
+    "mangas_padrao": "liso",
+    "punhos": "#c9ad6a",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#c9ad6a"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#c9ad6a",
+    "calcao": "#f4f5f8",
+    "calcao_detalhe": null,
+    "meiao": "#f4f5f8",
+    "meiao_detalhe": null,
+    "meiao_desc": "branco liso",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/03/camisa-reserva-chapecoense-2026-kappa/",
+      "https://www.footballkitarchive.com/chapecoense-2026-away-kit-467390/"
+    ]
+  },
+  "terceira": {
+    "nome": "Camisa 3 2026/27 'Unidos Para Siempre'",
+    "lancamento": "2026-09-26",
+    "camisa": "#1a4f45",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "verde-escuro esmeralda liso, mangas raglan da mesma cor; gola redonda larga e punhos em amarelo-dourado",
+    "mangas": "#1a4f45",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#f6b12a",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#f6b12a"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#f6b12a",
+    "calcao": "#1a4f45",
+    "calcao_detalhe": null,
+    "meiao": "#1a4f45",
+    "meiao_detalhe": null,
+    "meiao_desc": "verde-escuro liso",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/09/terceira-camisa-chapecoense-2026-2027-homenageia-vitimas-tragedia-2016/",
+      "https://www.footballkitarchive.com/chapecoense-2026-third-kit-525751/",
+      "https://lojadachape.com.br/loja/categoria/Linha%20Oficial/Cole%C3%A7%C3%A3o%202026"
+    ]
+  },
+  "goleiro": {
+    "nome": "Goleiro 1 2026 (homenagem ao Torino)",
+    "lancamento": "2026-01-12",
+    "camisa": "#5e1626",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "grená (bordô) liso; dourado na gola/nuca e nos punhos",
+    "mangas": "#5e1626",
+    "mangas_padrao": "liso",
+    "punhos": "#c9a35e",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#c9a35e"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#c9a35e",
+    "calcao": "#5e1626",
+    "calcao_detalhe": null,
+    "meiao": "#5e1626",
+    "meiao_detalhe": null,
+    "meiao_desc": "grená liso",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/01/camisa-goleiro-chapecoense-2026-homenagem-torino/",
+      "https://www.footyheadlines.com/2026/01/chapecoense-2026-goalkeeper-kit.html",
+      "https://ge.globo.com/sc/futebol/times/chapecoense/noticia/2026/01/12/chape-lanca-camisa-de-goleiros-homenagendo-clube-italiano-marcado-por-tragedia-aerea.ghtml",
+      "https://www.footballkitarchive.com/chapecoense-2026-gk-1-kit-444615/"
+    ]
+  },
+  "goleiro2": {
+    "nome": "Goleiro 2 2026 'Colômbia'",
+    "lancamento": "2026-03-23",
+    "camisa": "#f5c518",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "amarela lisa com mangas raglan; gola azul com filete vermelho por dentro; punhos verde-escuros com filete vermelho (cores da seleção colombiana)",
+    "mangas": "#f5c518",
+    "mangas_padrao": "liso",
+    "punhos": "#12452f",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#1f3f8f"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#12452f",
+    "calcao": "#f5c518",
+    "calcao_detalhe": null,
+    "meiao": "#f5c518",
+    "meiao_detalhe": null,
+    "meiao_desc": "amarelo (estimado)",
+    "fontes": [
+      "https://www.kappa.com.br/camisa-kappa-chapecoense-2026-goleiro-amarela",
+      "https://www.footballkitarchive.com/chapecoense-2026-gk-2-kit-468734/"
+    ]
+  },
+  "confianca": "alta",
+  "notas": "Todas as camisas e datas conferidas em 2+ fontes; a camisa 1 de dez/2025 continua em uso (versão 'V2' com patrocínio novo nas mangas, mesmo desenho, usada na 7ª rodada e depois). Cores em hex ESTIMADAS pelas fotos da loja/divulgação (verde da casa medido entre #0b705e e #1a6150). A 3ª foi lançada em 26/09/2026 e usada no amistoso contra o Atlético Nacional em Medellín (uso no Brasileirão não confirmado). Cor dos números das costas não achada (estimada: branca na 1, dourada na 2, amarela na 3 e no goleiro 1). Calção e meião do goleiro 2 não achados (estimados amarelos). A 2ª versão do uniforme 2 ('Away V2', out/2026) é a mesma camisa com patrocínios novos. Logos da fornecedora nas mangas/peito não entram no desenho."
+}

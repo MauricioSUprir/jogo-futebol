@@ -1,0 +1,161 @@
+{
+  "clube": "Cruzeiro",
+  "chave": "br/Cruzeiro",
+  "temporada": "2026",
+  "fornecedor": "Adidas",
+  "casa": {
+    "nome": "Camisa 1 2026",
+    "lancamento": "2026-01-22",
+    "camisa": "#2f53c2",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "azul royal liso com marca d'água em relevo de mapas da América do Sul (tom sobre tom); cinco estrelas brancas soltas no peito esquerdo (homenagem à Libertadores de 1976)",
+    "mangas": "#2f53c2",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#2f53c2",
+    "gola": {
+      "tipo": "v",
+      "cor": "#2f53c2"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#f5f5f5",
+    "calcao_detalhe": null,
+    "meiao": "#f5f5f5",
+    "meiao_detalhe": null,
+    "meiao_desc": "branco",
+    "fontes": [
+      "https://www.tupi.fm/esportes/nova-camisa-do-cruzeiro-2026-e-lancada-veja-os-detalhes/",
+      "https://www.footyheadlines.com/pt/camisa-titular-do-cruzeiro-2026-vazada-comemorando-50-anos-como-campeao-da-copa-libertadores.html",
+      "https://en.wikipedia.org/wiki/2026_Cruzeiro_Esporte_Clube_season",
+      "https://www.footballkitarchive.com/cruzeiro-ec-2026-home-kit-447865/"
+    ]
+  },
+  "fora": {
+    "nome": "Camisa 2 2026",
+    "lancamento": "2026-05-29",
+    "camisa": "#f4f4f4",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "branca lisa com relevo de estrelas e do mapa do Brasil (tom sobre tom); cinco estrelas azuis soltas no peito; homenagem à Taça Brasil de 1966",
+    "mangas": "#f4f4f4",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#f4f4f4",
+    "gola": {
+      "tipo": "v",
+      "cor": "#f4f4f4"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#2f53c2",
+    "calcao": "#f4f4f4",
+    "calcao_detalhe": null,
+    "meiao": "#f4f4f4",
+    "meiao_detalhe": null,
+    "meiao_desc": "branco (não confirmado)",
+    "fontes": [
+      "https://www.mktesportivo.com/2026/05/adidas-e-cruzeiro-lancam-novo-segundo-uniforme-inspirado-no-historico-elenco-celeste-de-1966/",
+      "https://www.itatiaia.com.br/esportes/futebol/futebol-nacional/futebol-mineiro/cruzeiro/cruzeiro-surpreende-e-revela-nova-camisa-branca-apos-goleada-veja/",
+      "https://www.footballkitarchive.com/cruzeiro-ec-2026-away-kit-484865/"
+    ]
+  },
+  "terceira": {
+    "nome": "Camisa 3 2026",
+    "lancamento": "2026-08-07",
+    "camisa": "#f1efe6",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "off-white liso; nas mangas, acima do punho, duas faixas horizontais: azul royal (larga, ~6 cm) e amarela (fina, ~2,5 cm) logo abaixo dela; gola polo off-white sem botões; escudo fechado no peito",
+    "mangas": "#f1efe6",
+    "mangas_padrao": "outra",
+    "punhos": "#f1efe6",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#f1efe6"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#1e5fb3",
+    "calcao": "#f1efe6",
+    "calcao_detalhe": null,
+    "meiao": "#f1efe6",
+    "meiao_detalhe": null,
+    "meiao_desc": "off-white (não confirmado)",
+    "fontes": [
+      "https://www.footyheadlines.com/pt/6332/lancamento-da-terceira-camisa-do-cruzeiro-para-a-epoca-2026-2027.html",
+      "https://www.hojeemdia.com.br/esportes/cruzeiro/video-cruzeiro-estreia-terceiro-uniforme-contra-o-mirassol-veja-detalhes-da-nova-camisa-1.1128233",
+      "https://www.footballkitarchive.com/cruzeiro-ec-2026-third-kit-500891/"
+    ]
+  },
+  "goleiro": {
+    "nome": "Camisa de goleiro 2026 (cinza)",
+    "lancamento": "2026-01-22",
+    "camisa": "#a2a7ab",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#8e959b"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "cinza-prata com grafismo tom sobre tom discreto; gola e punhos azul-marinho",
+    "mangas": "#a2a7ab",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#151a2d",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#151a2d"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#151a2d",
+    "calcao": "#151a2d",
+    "calcao_detalhe": null,
+    "meiao": "#151a2d",
+    "meiao_detalhe": null,
+    "meiao_desc": "azul-marinho",
+    "fontes": [
+      "https://www.footballkitarchive.com/cruzeiro-ec-2026-gk-1-kit-471898/",
+      "https://en.wikipedia.org/wiki/2026_Cruzeiro_Esporte_Clube_season"
+    ]
+  },
+  "goleiro2": {
+    "nome": "Camisa de goleiro 2026 (verde)",
+    "lancamento": "2026-01-22",
+    "camisa": "#b2e8a0",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#8fd08a"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "verde-claro com grafismo de linhas sinuosas na parte de baixo (modelo de goleiro Adidas 2026)",
+    "mangas": "#b2e8a0",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#b2e8a0",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#b2e8a0"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#2e5e35",
+    "calcao": "#b2e8a0",
+    "calcao_detalhe": null,
+    "meiao": "#b2e8a0",
+    "meiao_detalhe": null,
+    "meiao_desc": "verde",
+    "fontes": [
+      "https://www.footballkitarchive.com/cruzeiro-ec-2026-gk-2-kit-470833/",
+      "https://en.wikipedia.org/wiki/2026_Cruzeiro_Esporte_Clube_season"
+    ]
+  },
+  "confianca": "media",
+  "notas": "Camisa 1 lançada e estreada em 22/01/2026 (Mineiro, contra o Democrata-GV); camisa 2 branca em 29/05/2026; camisa 3 off-white em 07/08/2026 (estreia 09/08 contra o Mirassol). Gola da camisa 1: a Tupi diz que saiu do V, a Footy Headlines diz V — a foto de produto mostra decote em V. Hex estimados por foto (azul medido ~#3256c6). Três listras dos ombros = marca do fornecedor, fora. INCERTO: calção e meião das camisas 2 e 3 (nenhuma fonte cita; pus branco/off-white); qual goleiro é o principal (há cinza com marinho, verde, rosa e laranja em 2026; o Wikipedia lista \"Silver shirt, navy shorts and navy socks\"); datas dos goleiros aproximadas. No início do ano o time também usou camisas de pré-temporada (azul com pala branca e branca com pinceladas azuis), já fora de uso."
+}

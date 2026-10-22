@@ -166,11 +166,13 @@ function congelar(o) {
 // padrões do TM → fração do iPad do tronco (render/jogador3d.js: 3.0 liso, 3.1 listras, 3.2 metades, 3.3 faixa, 3.4 aros)
 export const PADROES = { plain: 0, stripes: 0.1, halves: 0.2, sash: 0.3, hoops: 0.4 };
 // peso da 2ª cor no que se vê de longe (a camisa inteira, de longe, na câmera de TV)
-const PESO_SEGUNDA = { plain: 0, stripes: 0.5, halves: 0.5, sash: 0.18, hoops: 0.5 };
+const PESO_SEGUNDA = { plain: 0, stripes: 0.5, halves: 0.5, sash: 0.18, hoops: 0.5, band: 0.15 };
 
 /** Uniforme do TM ({shirt, sleeves, shorts, socks, pattern, second, trim, ...}) → kit do jogador3d.js. */
 export function kitDoTM(k, reserva = '#808890') {
   k = k || {};
+  // camisa REAL da temporada (edição pro: assets/tm/uniformes.json, tools/uniformes/gerar.mjs): já no formato do desenho
+  if (k.real && corValida(k.camisa)) return { ...k, padrao: Object.prototype.hasOwnProperty.call(PADROES, k.padrao) || k.padrao === 'band' ? k.padrao : 'plain' };
   const camisa = corValida(k.shirt) ?? reserva;
   const padrao = Object.prototype.hasOwnProperty.call(PADROES, k.pattern) ? k.pattern : 'plain';
   const segunda = corValida(k.second) ?? corValida(k.trim) ?? textoSobre(camisa);
@@ -258,7 +260,10 @@ export function resolverUniformes(casa, fora) {
   // goleiros: o do TM (gk, depois gkAway) e as cores de reserva, o primeiro longe dos 2 de linha (e do outro goleiro)
   const opGol = t => {
     const k = (t && t.kits) || {};
-    const l = [k.gk, k.gkAway].filter(Boolean).map(x => { const c = corValida(x.shirt); return c ? { ...kitGoleiroCor(c), ...kitDoTMGoleiro(x) } : null; }).filter(Boolean);
+    const l = [k.gk, k.gkAway].filter(Boolean).map(x => {
+      if (x.real && corValida(x.camisa)) return { ...x, padrao: 'plain' }; // goleiro real: manga comprida e luva pelo desenho
+      const c = corValida(x.shirt); return c ? { ...kitGoleiroCor(c), ...kitDoTMGoleiro(x) } : null;
+    }).filter(Boolean);
     for (const c of GOLEIROS_RESERVA) l.push(kitGoleiroCor(c));
     return l.map((kit, i) => ({ kit, i }));
   };
@@ -588,6 +593,26 @@ function arquibancadaReal(d, vivo) {
   };
 }
 
+// ------------------------------------------------------------------ camisas reais (edição pro, 22/10)
+
+const semAcento = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+/**
+ * O time do pedido com as camisas REAIS da temporada (base assets/tm/uniformes.json: {clubes: {nome: {liga, home, away,
+ * third, gk, gkAway}}}) quando o clube está nela — pelo nome (sem acento) e, com homônimos, pela liga; senão o time como
+ * veio. A camisa real já vem no formato do desenho ({real: true, camisa, segunda, padrao, gola, punho, ...}).
+ */
+export function comCamisasReais(t, uniformes) {
+  const tab = uniformes?.clubes;
+  if (!tab || !t?.name) return t;
+  const nome = semAcento(t.name);
+  const achados = Object.entries(tab).filter(([n]) => semAcento(n) === nome);
+  if (!achados.length) return t;
+  const pais = semAcento(t?.identidade?.pais);
+  const [, c] = achados.length > 1 ? (achados.find(([, v]) => (v.liga === 'br') === (pais === 'brasil')) ?? achados[0]) : achados[0];
+  if (!c?.home) return t;
+  return { ...t, kits: { home: c.home, away: c.away ?? undefined, third: c.third ?? undefined, gk: c.gk ?? undefined, gkAway: c.gkAway ?? undefined }, camisasReais: c.chave ?? true };
+}
+
 // ------------------------------------------------------------------ identidade do pedido do TM
 
 const urlEscudo = u => (typeof u === 'string' && /^(data:image\/|https?:\/\/|\/|\.\.?\/)/i.test(u.trim()) ? u.trim() : null);
@@ -597,10 +622,12 @@ const urlEscudo = u => (typeof u === 'string' && /^(data:image\/|https?:\/\/|\/|
  * edicao: 'pro'|'public'}). Time 0 = mandante (home), time 1 = visitante. `base` (a de estadios.json, só na edição pro com
  * jogo não neutro): o estádio real do mandante; sem ele, o Estádio Total Match. Nunca falha: o que faltar vem da reserva.
  */
-export function identidadeDoPedido(pedido, base = null) {
-  const casa = pedido?.home || {}, fora = pedido?.away || {};
+export function identidadeDoPedido(pedido, base = null, uniformes = null) {
   const neutro = !!pedido?.partida?.neutro;
   const edicao = pedido?.edicao === 'pro' ? 'pro' : 'public';
+  // camisas reais (só na pro): as do clube na base, no lugar das que o TM gera pelas cores
+  const casa = comCamisasReais(pedido?.home || {}, edicao === 'pro' ? uniformes : null);
+  const fora = comCamisasReais(pedido?.away || {}, edicao === 'pro' ? uniformes : null);
   const achado = edicao === 'pro' && !neutro ? acharEstadio(base, [casa?.identidade?.estadio?.nome, casa?.stadium], String(casa?.name || '')) : null;
   const real = achado ? achado.dados : null;
   // clássico num estádio com forma própria (estadio-planta.js): a torcida dividida ao meio (cada uma atrás de um gol e no

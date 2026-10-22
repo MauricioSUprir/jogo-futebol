@@ -68,6 +68,8 @@ export const TEMPOS_NODE = {
   'teste-identidade.mjs': 1,
   'teste-estadio-forma.mjs': 1,
   'teste-estadio-generico.mjs': 60,
+  'teste-ossos.mjs': 25,
+  'teste-lod-humano.mjs': 1,
   'teste-ponte-tm.mjs': 21,
   'teste-disputa.mjs': 16,
   'teste-livre.mjs': 60,
@@ -95,5 +97,6 @@ export const TEMPOS_NAVEGADOR = {
   'teste-penaltis-tela.mjs': 60,
   'teste-livre-tela.mjs': 120,
   'teste-online-tela.mjs': 160,
+  'teste-corpo-tela.mjs': 90,
   'teste-desempenho-celular.mjs': 35,
 };

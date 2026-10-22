@@ -1,0 +1,170 @@
+{
+  "clube": "Flamengo",
+  "chave": "br/Flamengo",
+  "temporada": "2026",
+  "fornecedor": "Adidas",
+  "casa": {
+    "nome": "Camisa 1 2026",
+    "lancamento": "2026-01-16",
+    "camisa": "#161414",
+    "padrao": "listras_horizontais",
+    "padrao_cores": [
+      "#cc1229"
+    ],
+    "padrao_n": 2,
+    "padrao_largura": 0.43,
+    "padrao_desc": "aros horizontais largos e de mesma espessura (~1/5 da altura do tronco cada; ~0,43 da largura da frente): de cima para baixo preto (pala dos ombros), vermelho (altura do peito/escudo), preto, vermelho, preto na barra — 3 pretos e 2 vermelhos; inspirada nos anos 80",
+    "mangas": "#161414",
+    "mangas_padrao": "liso",
+    "punhos": "#161414",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#161414"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#f5f5f5",
+    "calcao_detalhe": null,
+    "meiao": "#cc1229",
+    "meiao_detalhe": "#161414",
+    "meiao_desc": "vermelho com uma faixa preta larga no meio do cano (panturrilha); alto do meião vermelho",
+    "fontes": [
+      "https://maquinadoesporte.com.br/futebol/flamengo-e-adidas-apresentam-uniforme-principal-para-temporada-2026/",
+      "https://www.footyheadlines.com/2025/12/adidas-flamengo-26-27-home-kit.html",
+      "https://en.wikipedia.org/wiki/2026_CR_Flamengo_season",
+      "https://www.footballkitarchive.com/flamengo-2026-home-kit-381911/"
+    ]
+  },
+  "fora": {
+    "nome": "Manto 1 Branco 2026 (camisa 2)",
+    "lancamento": "2026-04-10",
+    "camisa": "#f3f2f4",
+    "padrao": "faixa_horizontal_peito",
+    "padrao_cores": [
+      "#d7192e",
+      "#1c1a1b"
+    ],
+    "padrao_n": 2,
+    "padrao_largura": 0.16,
+    "padrao_desc": "branca com faixa dupla horizontal na altura do patrocínio: vermelha em cima e preta embaixo, cada uma com ~16% da largura do tronco (juntas ~32%), de lado a lado da frente",
+    "mangas": "#f3f2f4",
+    "mangas_padrao": "liso",
+    "punhos": "#d7192e",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#f3f2f4"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#1c1a1b",
+    "calcao": "#1c1a1b",
+    "calcao_detalhe": null,
+    "meiao": "#f3f2f4",
+    "meiao_detalhe": null,
+    "meiao_desc": "branco",
+    "fontes": [
+      "https://en.wikipedia.org/wiki/2026_CR_Flamengo_season",
+      "https://www.footballkitarchive.com/flamengo-2026-away-kit-381910/",
+      "https://www.flamengo.com.br/noticias/institucional/apos-aposentadoria-da-camisa-ii--adidas-e-flamengo-lancam-o-novo--manto-1-branco-"
+    ]
+  },
+  "terceira": {
+    "nome": "Camisa 3 2026 (Originals)",
+    "lancamento": "2026-07-31",
+    "camisa": "#ee4146",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#c8303e"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "vermelho mais claro que o da camisa 1, com grafismo tom sobre tom em diagonal (o emblema do remo repetido em vermelho mais escuro); gola em V branca com filete preto; punhos com faixa branca e filete preto",
+    "mangas": "#ee4146",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#ffffff",
+    "gola": {
+      "tipo": "v",
+      "cor": "#ffffff"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#161414",
+    "calcao_detalhe": null,
+    "meiao": "#ee4146",
+    "meiao_detalhe": null,
+    "meiao_desc": "vermelho",
+    "fontes": [
+      "https://www.footyheadlines.com/2026/05/adidas-flamengo-26-27-third-kit.html",
+      "https://www.opovo.com.br/agencia/jogada10/2026/07/31/flamengo-inova-no-design-e-lanca-terceira-camisa-para-2026.html",
+      "https://www.footballkitarchive.com/flamengo-2026-third-kit-493321/",
+      "https://en.wikipedia.org/wiki/2026_CR_Flamengo_season"
+    ]
+  },
+  "goleiro": {
+    "nome": "Camisa de goleiro 2026 (azul)",
+    "lancamento": "2026-04-10",
+    "camisa": "#2a8ed1",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#0f72c1"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "azul com grafismo de linhas sinuosas em azul mais escuro, concentrado na metade de baixo",
+    "mangas": "#2a8ed1",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#2a8ed1",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#2a8ed1"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#2a8ed1",
+    "calcao_detalhe": null,
+    "meiao": "#2a8ed1",
+    "meiao_detalhe": null,
+    "meiao_desc": "azul",
+    "fontes": [
+      "https://www.footballkitarchive.com/flamengo-2026-gk-2-kit-469521/",
+      "https://www.footballkitarchive.com/flamengo-2026-gk-2-v2-kit-531261/",
+      "https://en.wikipedia.org/wiki/2026_CR_Flamengo_season"
+    ]
+  },
+  "goleiro2": {
+    "nome": "Camisa de goleiro 2026 (laranja)",
+    "lancamento": "2026-04-10",
+    "camisa": "#fe8f57",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#ffb08a"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "laranja com o mesmo grafismo de linhas sinuosas, mais claro, na parte de baixo",
+    "mangas": "#fe8f57",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#fe8f57",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#fe8f57"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#fe8f57",
+    "calcao_detalhe": null,
+    "meiao": "#fe8f57",
+    "meiao_detalhe": null,
+    "meiao_desc": "laranja",
+    "fontes": [
+      "https://www.footballkitarchive.com/flamengo-2026-gk-1-kit-457548/",
+      "https://en.wikipedia.org/wiki/2026_CR_Flamengo_season"
+    ]
+  },
+  "confianca": "alta",
+  "notas": "Camisa 1 lançada em 16/01/2026; a branca (o clube aposentou o nome \"camisa 2\" e a chama de \"Manto 1 Branco\") em 10/04/2026; camisa 3 vermelha (Adidas Originals, escudo do remo) em 31/07/2026. Hex estimados pela foto de produto. As três listras vermelhas nos ombros da camisa 1 e as das mangas da branca são a marca do fornecedor e ficaram de fora (ombros null). O Wikipedia diz meião vermelho com faixa preta larga e o clube diz \"meiões rubro-negros\" (foto confirma: faixa preta no cano). Cor do número da branca (preto) e o lado da faixa no meião da camisa 3 não confirmados. Goleiro: entre os modelos 2026 (laranja, azul, amarelo, cinza e o azul-claro da linha Originals) o azul aparece em jogo em out/2026 (foto de 16/10 no Football Kit Archive), por isso foi posto como principal; data dos goleiros aproximada (fotos de abril/2026)."
+}

@@ -31,6 +31,7 @@ const LISTA = [
   ['bolas paradas no estilo FIFA (câmera atrás do cobrador nos 4 tipos, nada na lente, linha da cobrança mirada, curva; PC e celular)', 'teste-bola-parada-tela.mjs'],
   ['Modo Livre (pausa sem rolar, as 6 câmeras pela pausa, C/R3, rumo do ataque, Altura/Distância salvas, celular, ?tm)', 'teste-livre-tela.mjs', { deploy: true }],
   ['Online 1×1 na tela (duas abas pelo BroadcastChannel: o mesmo jogo, pausa combinada, menu sem parar, a partida inteira, a pausa no celular)', 'teste-online-tela.mjs', { deploy: true }],
+  ['corpo humano no jogo (?corpo=humano: todos desenhados, chamadas, teto de triângulos, nada baixado sem ele)', 'teste-corpo-tela.mjs'],
   // informativo até passar 5 vezes seguidas (a CPU da simulação no celular simulado ainda passa do teto do plano 4.1)
   ['desempenho no celular simulado (CPU 4×, informativo)', 'teste-desempenho-celular.mjs', { informativo: true }],
 ];

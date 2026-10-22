@@ -1,0 +1,168 @@
+{
+  "clube": "São Paulo",
+  "chave": "br/São Paulo",
+  "temporada": "2026",
+  "fornecedor": "New Balance",
+  "casa": {
+    "nome": "Camisa 1 2026",
+    "lancamento": "2026-02-11",
+    "camisa": "#f2f2f4",
+    "padrao": "faixa_horizontal_peito",
+    "padrao_cores": [
+      "#de2a3a",
+      "#f2f2f4",
+      "#22242a"
+    ],
+    "padrao_n": 3,
+    "padrao_largura": 0.12,
+    "padrao_desc": "branca com a faixa tricolor horizontal no peito, de lado a lado: vermelha (~12% da largura do tronco) em cima, filete branco (~6%) e preta (~13%) embaixo, com o escudo por cima; mais filetes tricolores nas laterais; gola em V contornada de vermelho",
+    "mangas": "#f2f2f4",
+    "mangas_padrao": "liso",
+    "punhos": "#f2f2f4",
+    "gola": {
+      "tipo": "v",
+      "cor": "#de2a3a"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#22242a",
+    "calcao": "#f2f2f4",
+    "calcao_detalhe": null,
+    "meiao": "#f2f2f4",
+    "meiao_detalhe": null,
+    "meiao_desc": "branco",
+    "fontes": [
+      "https://www.90min.com/pt-br/nova-camisa-sao-paulo-valor-onde-comprar-data-estreia",
+      "https://www.footyheadlines.com/pt/vaza-da-camisa-titular-do-sao-paulo-2026.html",
+      "https://en.wikipedia.org/wiki/2026_S%C3%A3o_Paulo_FC_season",
+      "https://www.footballkitarchive.com/sao-paulo-fc-2026-home-kit-441290/"
+    ]
+  },
+  "fora": {
+    "nome": "Camisa 2 2026",
+    "lancamento": "2026-04-13",
+    "camisa": "#f2f2f4",
+    "padrao": "listras_verticais",
+    "padrao_cores": [
+      "#de2a3a",
+      "#22242a"
+    ],
+    "padrao_n": 9,
+    "padrao_largura": 0.135,
+    "padrao_desc": "listras verticais vermelhas e pretas alternadas (vermelha no centro do peito), cada uma com ~13,5% da largura da frente, separadas por filetes brancos (~4%); na frente 5 vermelhas (3 inteiras + 2 nas bordas) e 4 pretas; as listras seguem nas mangas e nas costas; ombros pretos; gola polo branca e punhos brancos (inspirada na de 1957)",
+    "mangas": "#de2a3a",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#f2f2f4",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#f2f2f4"
+    },
+    "ombros": "#22242a",
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#22242a",
+    "calcao_detalhe": null,
+    "meiao": "#22242a",
+    "meiao_detalhe": null,
+    "meiao_desc": "preto",
+    "fontes": [
+      "https://tribunadejundiai.com.br/mais/esportes/sao-paulo-divulga-novo-uniforme-away-confira/",
+      "https://www.footyheadlines.com/pt/lancamento-da-camisa-reserva-do-sao-paulo-2026-2027.html",
+      "https://en.wikipedia.org/wiki/2026_S%C3%A3o_Paulo_FC_season",
+      "https://www.footballkitarchive.com/sao-paulo-fc-2026-away-kit-473327/"
+    ]
+  },
+  "terceira": {
+    "nome": "Camisa 3 2026",
+    "lancamento": "2026-07-30",
+    "camisa": "#f3efe8",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "creme/off-white liso e minimalista; filete bordô fino na gola redonda e nos punhos; selo redondo vermelho '96' na barra; costas lisas",
+    "mangas": "#f3efe8",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#7d2d33",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#7d2d33"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#7d2d33",
+    "calcao": "#f3efe8",
+    "calcao_detalhe": null,
+    "meiao": "#f3efe8",
+    "meiao_detalhe": null,
+    "meiao_desc": "creme (não confirmado)",
+    "fontes": [
+      "https://www.footyheadlines.com/pt/6323/lancamento-da-terceira-camisa-do-sao-paulo-26-27.html",
+      "https://www.footballkitarchive.com/sao-paulo-fc-2026-third-kit-500820/"
+    ]
+  },
+  "goleiro": {
+    "nome": "Camisa de goleiro 2026 (azul)",
+    "lancamento": "2026-02-11",
+    "camisa": "#1b5caa",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#0b4793"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "azul com grafismo tom sobre tom de linhas curvas em azul mais escuro; ombros/mangas um pouco mais escuros; gola redonda com faixa escura",
+    "mangas": "#1b5caa",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#1b5caa",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#0b2f66"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#1b5caa",
+    "calcao_detalhe": null,
+    "meiao": "#1b5caa",
+    "meiao_detalhe": null,
+    "meiao_desc": "azul (não confirmado)",
+    "fontes": [
+      "https://www.footballkitarchive.com/sao-paulo-fc-2026-gk-1-kit-454376/",
+      "https://www.footballkitarchive.com/sao-paulo-fc-kits-2026-t450/"
+    ]
+  },
+  "goleiro2": {
+    "nome": "Camisa de goleiro 2026 (vinho)",
+    "lancamento": "2026-02-11",
+    "camisa": "#4f3037",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#5d3e44"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "marrom-vinho com o mesmo grafismo tom sobre tom",
+    "mangas": "#4f3037",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#4f3037",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#4f3037"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#4f3037",
+    "calcao_detalhe": null,
+    "meiao": "#4f3037",
+    "meiao_detalhe": null,
+    "meiao_desc": "vinho (não confirmado)",
+    "fontes": [
+      "https://www.footballkitarchive.com/sao-paulo-fc-2026-gk-2-kit-454375/",
+      "https://www.footballkitarchive.com/sao-paulo-fc-kits-2026-t450/"
+    ]
+  },
+  "confianca": "media",
+  "notas": "Camisa 1 lançada e estreada em 11/02/2026 (contra o Grêmio, 3ª rodada); camisa 2 listrada em 13/04/2026 (estreia 14/04 contra o O'Higgins, Sul-Americana); camisa 3 creme em 30/07/2026. Hex estimados por foto de produto. Na camisa 2 o tronco é branco só nos filetes: se o desenho pintar listras sobre a base, use base branca com listras vermelha/preta alternadas (a vermelha no centro). Calção e meião pretos da camisa 2 (Footy Headlines) e brancos da 1 (Wikipedia/90min). INCERTO: calção/meião da camisa 3 (pus creme), cor exata do filete da 3 (bordô na loja, \"vermelho\" na Footy Headlines; a foto dá ~#7d2d33), qual goleiro é o principal (azul, vinho e cinza, todos de fev/2026 — só achei o Football Kit Archive) e os calções/meiões dos goleiros. Em out/2026 há versão \"V2\" da camisa 1 só com troca de patrocínio."
+}
