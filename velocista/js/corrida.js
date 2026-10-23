@@ -543,6 +543,7 @@ function atualizarCamera(dtReal) {
 
 function quadro() {
   requestAnimationFrame(quadro);
+  if (el.corpo.classList.contains('toque') && matchMedia('(orientation: portrait)').matches) { relogio.getDelta(); return; }   // celular em pé: parado
   const dtReal = Math.min(relogio.getDelta(), 0.05);
   if (J.modo === 'jogando') {
     atualizarJogo(dtReal);

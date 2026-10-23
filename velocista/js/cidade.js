@@ -1,4 +1,4 @@
-// Cidade de RELÂMPAGO: geração determinística por quarteirão. PURO (sem three.js nem DOM).
+// Cidade de THE FLASH: geração determinística por quarteirão. PURO (sem three.js nem DOM).
 // Coordenadas: x e z no plano, y para cima. A cidade é uma grade N×N de células CELL×CELL;
 // cada célula tem um quarteirão BLOCO×BLOCO no meio e meia rua (RUA/2) em cada borda.
 export const CELL = 76;

@@ -370,7 +370,9 @@ document.addEventListener('pointerlockchange', () => {
 });
 el.cena.addEventListener('click', () => { if (J.modo === 'jogando' && !TOQUE && document.pointerLockElement !== el.cena) pedirCaptura(); });
 $('btnContinuar').addEventListener('click', () => { J.modo = 'jogando'; el.pausa.hidden = true; if (!TOQUE) pedirCaptura(); });
-$('btnJogar').addEventListener('click', reiniciar);
+$('btnJogar').addEventListener('click', () => { deitar(); reiniciar(); });
+// no Android, tela cheia + trava deitada; no iPhone a tela "Gire o celular" cuida disso
+function deitar() { if (!TOQUE) return; try { const p = document.documentElement.requestFullscreen?.(); p?.then?.(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {}); } catch { /* sem tela cheia */ } }
 $('btnDeNovo').addEventListener('click', reiniciar);
 
 addEventListener('keydown', (e) => {
@@ -625,9 +627,12 @@ function atualizarBussola() {
 
 // ---------- laço ----------
 const relogio = new THREE.Clock();
+const RETRATO = matchMedia('(orientation: portrait)');
+const emPe = () => TOQUE && RETRATO.matches;     // celular em pé: o jogo fica parado até deitar
 function quadro() {
   requestAnimationFrame(quadro);
   const dt = Math.min(relogio.getDelta(), 0.05);
+  if (emPe()) { teclas.clear(); stick.x = stick.y = 0; toque.correr = toque.vibrar = false; return; }
   if (J.modo === 'jogando') {
     mundo.T = (mundo.T + dt / DIA_SEGUNDOS) % 1;
     passoHeroi(dt); esferasProximas(dt);
