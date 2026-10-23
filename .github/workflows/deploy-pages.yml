@@ -65,6 +65,10 @@ jobs:
           mkdir -p _site/aviao
           cp -r aviao/. _site/aviao/
           rm -rf _site/aviao/tools
+          # RELÂMPAGO (corrida 3D em supervelocidade) fica em /velocista/
+          mkdir -p _site/velocista
+          cp -r velocista/. _site/velocista/
+          rm -rf _site/velocista/tools
           # LANCE A LANCE (simulador de partidas) fica em /simulador/
           mkdir -p _site/simulador
           cp -r simulador/. _site/simulador/
@@ -72,7 +76,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           # Raiz = jogo Total Match.
-          # Subpastas: /financas-casa/, /looklab/, /studylab/, /katseye-central/, /marte/, /aviao/, /futebol3d/, /golaco/ e /simulador/.
+          # Subpastas: /financas-casa/, /looklab/, /studylab/, /katseye-central/, /marte/, /aviao/, /futebol3d/, /golaco/, /velocista/ e /simulador/.
           # O CreateFlow (raiz do repo) é hospedado à parte (Railway), não pelo Pages.
           path: '_site'
       - id: deployment
