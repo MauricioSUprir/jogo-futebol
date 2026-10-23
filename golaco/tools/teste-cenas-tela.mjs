@@ -996,8 +996,10 @@ if (roda('T')) try {
  */
 async function rodadaIntervalo(pg, o) {
   return pg.evaluate(async o => {
-    const g = window.__golaco, ct = window.__ct, m = g.mundo;
+    const g = window.__golaco, ct = window.__ct;
     g.reiniciar({ modo: 'partida', semente: o.semente });
+    // (o mundo NOVO: o reiniciar troca o objeto)
+    const m = g.mundo;
     if (o.golTick != null) {
       g.rodarPassos(Math.max(0, o.golTick - 120 - m.tick), 'demo');
       let q = 0;
@@ -1006,7 +1008,7 @@ async function rodadaIntervalo(pg, o) {
     let n = 0;
     while (m.partida.tempo === 1 && m.partida.acrescimo == null && n < 40000) { g.rodarPassos(30, 'demo'); n += 30; }
     const sons0 = { ...g.estadio.sonsPedidos };
-    const r = { cena: false, fases: [], tickMudou: 0, tick0: null, placar: [...m.placar], lances: g.cenas?.lances?.length ?? null,
+    const r = { cena: false, fases: [], tickMudou: 0, tick0: null, placar: [m.placar[0], m.placar[1]], lances: g.cenas?.lances?.length ?? null,
       tarjaPlacar: 0, tarjaTexto: null, est: 0, estLinhas: null, replayLance: 0, cenaDuranteLance: 0, geralVazio: 0, geral: 0,
       pausaParada: null, proximo: null, pulou: null, fimTick: null, tempo2: null, caixas: [], apitoNoApito: null, quadros: 0 };
     let q = 0, ultimaFase = null, viuApito = false;
