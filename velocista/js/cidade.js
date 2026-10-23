@@ -22,6 +22,8 @@ function mulberry(a) {
   return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 
+import { LAB_CELULA, planoLab } from './lab.js';
+export { LAB_CELULA };
 export const celulaDe = (v) => Math.floor((v + MEIO) / CELL);
 export const centroDe = (i) => (i + 0.5) * CELL - MEIO;
 export const dentro = (i, j) => i >= 0 && j >= 0 && i < N && j < N;
@@ -37,7 +39,8 @@ export function bloco(i, j) {
   const d = Math.hypot(i - (N - 1) / 2, j - (N - 1) / 2);
   const centro = Math.exp(-d / 7);                       // 1 no centro, cai para a periferia
   const sorteio = r();
-  const tipo = sorteio < 0.12 ? 'parque' : sorteio < 0.2 + centro * 0.12 ? 'torre' : 'predios';
+  const ehLab = i === LAB_CELULA[0] && j === LAB_CELULA[1];
+  const tipo = ehLab ? 'lab' : sorteio < 0.12 ? 'parque' : sorteio < 0.2 + centro * 0.12 ? 'torre' : 'predios';
   const b = { i, j, cx, cz, tipo, lotes: [], arvores: [], orbes: [], rects: [], topo: [], carros: [], postes: [] };
   b.rects.push({ x0: cx - BLOCO / 2, x1: cx + BLOCO / 2, z0: cz - BLOCO / 2, z1: cz + BLOCO / 2, y0: -5, y1: CALCADA });
 
@@ -45,7 +48,12 @@ export function bloco(i, j) {
   const x0 = cx - interno / 2, z0 = cz - interno / 2;
   const add = (lote) => { b.lotes.push(lote); b.rects.push({ x0: lote.x0, x1: lote.x1, z0: lote.z0, z1: lote.z1, y0: lote.y0, y1: lote.y1 }); };
 
-  if (tipo === 'parque') {
+  if (tipo === 'lab') {
+    const plano = planoLab(cx, cz);
+    for (const q of plano.rects) b.rects.push(q);
+    b.plano = plano;
+    b.orbes.push({ id: `${i},${j},cortex`, x: cx + 8, y: 1.5, z: cz }, { id: `${i},${j},cont`, x: cx + 19.5, y: 1.5, z: cz - 6 }, { id: `${i},${j},esteira`, x: cx - 19.5, y: 1.5, z: cz + 7 }, { id: `${i},${j},acel`, x: cx, y: 1.5, z: cz + 17 });
+  } else if (tipo === 'parque') {
     const n = 22 + Math.floor(r() * 18);
     for (let k = 0; k < n; k++) b.arvores.push({ x: cx + (r() - 0.5) * (BLOCO - 6), z: cz + (r() - 0.5) * (BLOCO - 6), s: 0.8 + r() * 0.9 });
   } else if (tipo === 'torre') {

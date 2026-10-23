@@ -111,6 +111,19 @@ const col2 = await pagina.evaluate(() => {
 await pagina.waitForTimeout(500);
 ok(await pagina.evaluate(() => window.__rel.J.coletadas) === col2 + 1, 'coleta uma esfera');
 
+// laboratório: de fora, pela porta até o Cortex, e escalar a parede dele
+await pagina.evaluate(() => { const R = window.__rel, P = R.P; R.teclas.clear(); P.parede = null; P.vibrando = false; P.x = -6; P.z = -8; P.y = 0; P.vx = P.vz = 0; R.C.yaw = Math.PI / 4; R.C.pitch = 0.22; R.CAM.dist = 14; R.mundo.T = 0.5; });
+await pagina.waitForTimeout(1500);
+await foto(pagina, 'lab-fora.png');
+await pagina.evaluate(() => { const R = window.__rel; R.CAM.dist = 6.6; });
+await pagina.evaluate(() => { const R = window.__rel, P = R.P; P.x = 38; P.z = -4; P.y = 0.3; P.vx = 0; P.vz = 16; R.C.yaw = 0; R.C.pitch = 0.3; R.teclas.add('w'); });
+const sala = (nome) => pagina.waitForFunction(async (n) => { const m = await import('/js/cidade.js'); const R = window.__rel; return m.bloco(15, 15).plano.dentro(R.P.x, R.P.z, R.P.y) === n; }, nome, { timeout: 90000 }).then(() => true).catch(() => false);
+ok(await sala('atrio'), 'entra no átrio pela porta');
+await foto(pagina, 'lab-atrio.png');
+ok(await sala('cortex'), 'chega ao Cortex');
+await foto(pagina, 'lab-cortex.png');
+await pagina.evaluate(() => window.__rel.teclas.clear());
+
 // dia, entardecer e noite
 for (const [nome, T] of [['dia', 0.5], ['tarde', 0.74], ['noite', 0.95]]) {
   await pagina.evaluate((T) => { const R = window.__rel; R.mundo.T = T; R.P.x = 0; R.P.z = 0; R.P.y = 0; R.P.vx = R.P.vz = 0; R.C.yaw = 0.7; R.C.pitch = 0.35; }, T);

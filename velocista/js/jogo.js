@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CELL, BLOCO, N, MEIO, CALCADA, bloco, celulaDe, centroDe, dentro, todasEsferas, retangulosPerto, chaoEm, empurrar } from './cidade.js';
 import { criarHeroi } from './humano.js';
+import { construirLab } from './lab3d.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
 
 // ---------- constantes ----------
@@ -194,6 +195,7 @@ function construirBloco(b) {
   const props = pega('props', true), roof = pega('roof'), copas = pega('copas'), lamp = pega('lamp');
   // meio-fio entra no balde dos adereços (um desenho a menos): quatro faixas finas
   for (const [x, z, sx, sz] of [[0, -BLOCO / 2 + 0.2, BLOCO, 0.4], [0, BLOCO / 2 - 0.2, BLOCO, 0.4], [-BLOCO / 2 + 0.2, 0, 0.4, BLOCO], [BLOCO / 2 - 0.2, 0, 0.4, BLOCO]]) props.geo(geoCaixa, compor(b.cx + x, CALCADA / 2, b.cz + z, sx, CALCADA, sz), [0.5, 0.51, 0.53]);
+  if (b.tipo === 'lab') { const lab = construirLab(THREE, b.cx, b.cz, { aniso: ANISO }); grupo.add(lab.grupo); geos.push(...lab.geos); dados.lab = lab; labAtivo = lab; }
   for (const l of b.lotes) {
     const lat = pega(`l${l.estilo}-${l.tom}`);
     const loja = l.y0 <= CALCADA + 0.01 && l.x1 - l.x0 > 8 ? pega(`loja${(Math.abs(b.i * 7 + b.j * 3 + Math.round(l.x0)) % 3)}`) : null;
@@ -240,8 +242,10 @@ function construirBloco(b) {
   cena.add(grupo);
   return dados;
 }
+let labAtivo = null;
 function descarregar(chave) {
   const d = carregados.get(chave); if (!d) return;
+  if (d.lab) { d.lab.materiais?.forEach((m) => m.dispose?.()); if (labAtivo === d.lab) labAtivo = null; }
   cena.remove(d.grupo); d.geos.forEach((g) => g.dispose()); d.instancias.forEach((i) => i.dispose());
   for (const r of d.orbes) { const k = orbesAtivos.indexOf(r); if (k >= 0) orbesAtivos.splice(k, 1); }
   carregados.delete(chave);
@@ -624,6 +628,7 @@ function quadro() {
   if (J.modo === 'jogando') {
     mundo.T = (mundo.T + dt / DIA_SEGUNDOS) % 1;
     passoHeroi(dt); esferasProximas(dt);
+    if (labAtivo) labAtivo.atualizar(dt, P.t, mundo.noite, camera, P);
     atualizarQuarteiroes(P.x, P.z, carregados.size < 30 ? 8 : 2);
     if (J.aviso > 0) { J.aviso -= dt; if (J.aviso <= 0) el.aviso.style.opacity = '0'; }
     el.vel.textContent = Math.round((P.parede ? P.parede.v : Math.hypot(P.vx, P.vz)) * 3.6);
