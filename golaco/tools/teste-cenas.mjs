@@ -28,9 +28,10 @@
 //      gol no último lance, vermelho e amarelo no último apito — o time com 10 —, goleiro expulso; metade com o bloco dos
 //      lances): os planos e os tempos do plano, as fases na ordem, a espera dos lances (9,0 s, a cena parada), a tarja do
 //      placar em [4, 12) s, o árbitro apita, corpo e câmera (as contas do A), ninguém dentro de sólido, 2 s depois do apito
-//      ninguém acima de 1,6 m/s, mãos na cintura ≥ 60%, ≥ 2 apertos de mão, o túnel (cada um entrou na boca ou anda para
-//      ela), o campo vazio depois, a bola do apito no ar cai, os treinadores na área técnica, o toque = o próximo bloco e o
-//      pulo = o geral; E (pureza e a saída do 2º tempo no mesmo tick) e G (custo) também cobrem o intervalo.
+//      ninguém acima de 1,6 m/s, mãos na cintura ≥ 60%, os apertos de mão (todo par planejado — só os ao alcance — aperta;
+//      ≥ 60% das cenas com algum), o túnel (cada um entrou na boca ou anda para ela), o campo vazio depois, a bola do apito
+//      no ar cai, os treinadores na área técnica, o toque = o próximo bloco e o pulo = o geral; E (pureza e a saída do 2º
+//      tempo no mesmo tick) e G (custo) também cobrem o intervalo.
 // Na base (sem os módulos) cada seção REPROVA com o motivo.
 //   node tools/teste-cenas.mjs [--js <pasta js>] [--so A,B,C,E,F,G,P] [--detalhe]
 import fs from 'node:fs';
@@ -627,7 +628,7 @@ if (roda('B')) {
 
 // ------------------------------------------------------------------------------------------------ C) intervalo
 // (PLANO-CENAS.md §4.6) 56 intervalos de partidas IA × IA (2 × 0,5 min): 20 do jeito que acabaram, 12 com GOL no último lance
-// (a bola entrando quando faltam ≤ 40 ticks: o apito vem no gol + 150), 10 com VERMELHO no último apito (o time com 10), 4
+// (a bola entrando quando faltam ≤ 40 ticks: o apito vem no fim da pausa do gol), 10 com VERMELHO no último apito (o time com 10), 4
 // com AMARELO no último apito e 10 com o GOLEIRO expulso (DOGSO: o de linha mais perto vai para o gol); metade com o bloco
 // dos lances (2 lances: a cena espera e a página toca), metade sem; com as cópias dos treinadores. Os planos e os tempos
 // são os do plano (não lidos do módulo).
@@ -654,9 +655,10 @@ if (roda('C') || roda('E') || roda('G')) {
               : m => !!LC.forcarCartao(L, m, caso === 'goleiro' ? 'goleiro' : caso, { semBusca: true });
           const x = LC.ateIntervalo(L, sem, { min: 0.5, forcar, margem: 40 });
           if (!x) continue;
-          // o caso valeu? (o gol no último lance: o apito no gol + 150; o cartão: o expulso fora, o time com 10)
+          // o caso valeu? (o gol no último lance: o apito no fim da pausa do gol — PARTIDA.golPausa, ±1 tick do evento; o
+          // cartão: o expulso fora, o time com 10)
           const exp = x.m.expulsos ?? [];
-          if (caso === 'gol' && !(x.forcado && x.golTick != null && x.m.tick - x.golTick === Math.round(C.PARTIDA.golPausa / PASSO))) continue;
+          if (caso === 'gol' && !(x.forcado && x.golTick != null && Math.abs(x.m.tick - x.golTick - Math.round(C.PARTIDA.golPausa / PASSO)) <= 1)) continue;
           if ((caso === 'vermelho' || caso === 'goleiro') && !(x.forcado && exp.length >= 1)) continue;
           if (caso === 'goleiro' && !exp.some(j => j.posicao === 'GOL' || j.vagaId === 'GOL')) continue;
           if (caso === 'amarelo' && !x.forcado) continue;
@@ -774,6 +776,9 @@ function medirIntervalo(c) {
     },
   });
   x.nApertos = [...x.apertos.values()].filter(r => r.max >= 24).length;
+  // os pares planejados (só os ao alcance no intervalo: CENA_FIM.aperto.maxDistIntervalo) — cada um apertou a mão?
+  x.nPares = c.pares.length;
+  x.paresFeitos = c.pares.filter(p => [p.a.id * 1000 + p.b.id, p.b.id * 1000 + p.a.id].some(k => (x.apertos.get(k)?.max ?? 0) >= 24)).length;
   void poseEspera;
   return x;
 }
@@ -804,8 +809,13 @@ if (cenasC.length && roda('C')) {
   reg('C 2,0 s depois do apito ninguém acima de 1,6 m/s', `máx ${f2(v2)} m/s`, '≤ 1,6', v2 <= 1.6);
   const fracC = x => [...x.cintura.values()].filter(q => q.max >= 30).length / Math.max(1, [...x.cintura.keys()].length);
   reg('C mãos na cintura (≤ 0,12 m do quadril, ≥ 0,5 s) no campo', `pior ${f2(100 * Math.min(...cenasC.map(fracC)))}% dos jogadores`, '≥ 60%', cenasC.every(x => fracC(x) >= 0.6));
-  reg('C apertos de mão no campo (mãos direitas ≤ 0,15 m ≥ 0,4 s, pelves 0,8–1,2 m)', `mín ${Math.min(...cenasC.map(x => x.nApertos))}`, '≥ 2', cenasC.every(x => x.nApertos >= 2));
-  if (detalhe) for (const x of cenasC) if (x.nApertos < 2) console.log('apertosC', x.caso, x.sem, x.nApertos, 'pares', x.plano.pares.map(p => `${p.a}-${p.b} ${f2(p.d)}`).join(', '), JSON.stringify([...x.apertos.entries()].filter(([, r]) => r.max > 0).map(([k, r]) => [k, r.max])));
+  // (o intervalo só planeja os pares ao alcance — CENA_FIM.aperto.maxDistIntervalo: o aperto de 1 s acaba antes do túnel;
+  // num apito com todo mundo longe de um adversário não há aperto, e o plano do campo enquadra o árbitro)
+  const nPar = cenasC.reduce((s, x) => s + x.nPares, 0), feitos = cenasC.reduce((s, x) => s + x.paresFeitos, 0);
+  const comAperto = cenasC.filter(x => x.nApertos >= 1).length;
+  reg('C apertos de mão no campo (mãos direitas ≤ 0,15 m ≥ 0,4 s, pelves 0,8–1,2 m): os pares planejados (ao alcance) apertam; cenas com ≥ 1',
+    `${feitos}/${nPar} pares; ${comAperto}/${cenasC.length} cenas (${cenasC.filter(x => x.nApertos >= 2).length} com ≥ 2)`, `todos; ≥ 60% das cenas`, feitos === nPar && comAperto >= 0.6 * cenasC.length);
+  if (detalhe) for (const x of cenasC) if (x.paresFeitos < x.nPares) console.log('apertosC', x.caso, x.sem, x.nApertos, 'pares', x.plano.pares.map(p => `${p.a}-${p.b} ${f2(p.d)}`).join(', '), JSON.stringify([...x.apertos.entries()].filter(([, r]) => r.max > 0).map(([k, r]) => [k, r.max])));
   if (detalhe) for (const x of cenasC) if (!okCorpo(x.r)) console.log('arC', x.caso, x.sem, JSON.stringify(x.r.piorPe), 'bola', x.bolaNoAr);
   // no fim do túnel: cada um dos 22 (os que estão em campo) dentro da boca (sumiu nela) ou andando para ela; depois, cortado
   const tun = x => { const v = [...x.tunel.values()]; return { entrou: v.filter(q => q.entrou).length, andando: v.filter(q => !q.entrou && q.n > 30 && q.cai / q.n >= 0.9).length, n: v.length }; };
@@ -817,7 +827,7 @@ if (cenasC.length && roda('C')) {
   reg('C a bola do apito no ar cai (a física da cópia): no começo do túnel no chão (≤ 0,2 m)', noAr.length ? `${noAr.filter(x => x.bolaTunel <= 0.2).length}/${noAr.length} (a mais alta ${f2(Math.max(...noAr.map(x => x.bolaTunel)))} m)` : 'nenhum apito com a bola no ar nesta amostra', 'todas', noAr.every(x => x.bolaTunel <= 0.2), !noAr.length);
   reg('C os treinadores (cópias) na área técnica até entrarem', `${cenasC.reduce((s, x) => s + x.tecFora, 0)} ticks fora`, '0', cenasC.every(x => x.tecFora === 0));
   const gol = cenasC.filter(x => x.caso === 'gol'), ver = cenasC.filter(x => x.caso === 'vermelho' || x.caso === 'goleiro'), gk = cenasC.filter(x => x.caso === 'goleiro');
-  reg('C os casos: gol no último lance (o apito no gol + 150) / time com 10 / goleiro expulso com um de linha no gol', `${gol.length} / ${ver.filter(x => x.time10).length} de ${ver.length} / ${gk.filter(x => x.gkCampo).length} de ${gk.length}`, '12 / todos / todos', gol.length === 12 && ver.every(x => x.time10) && gk.every(x => x.gkCampo));
+  reg('C os casos: gol no último lance (o apito no fim da pausa do gol) / time com 10 / goleiro expulso com um de linha no gol', `${gol.length} / ${ver.filter(x => x.time10).length} de ${ver.length} / ${gk.filter(x => x.gkCampo).length} de ${gk.length}`, '12 / todos / todos', gol.length === 12 && ver.every(x => x.time10) && gk.every(x => x.gkCampo));
   // o próximo bloco (o toque) e o pulo, nas cópias dos 8 primeiros mundos: campo → lances (ou estatísticas) → estatísticas →
   // geral; o pulo vai direto ao geral; depois de cada salto o campo vazio
   let blocosOk = 0, nb = 0;

@@ -1534,10 +1534,14 @@ function decidirSubst(eventos) {
   else mostrarFaixaSub(pares);
 }
 
-/** As trocas do intervalo na faixa (sem cena), na saída do 2º tempo; depois do replay/cena que estiver na frente. */
+/**
+ * As trocas do intervalo na faixa (sem cena), na saída do 2º tempo; depois do replay/cena que estiver na frente (a cena do
+ * intervalo: a troca feita no "Editar time" da pausa dela entra no plano geral, com o laço solto — a faixa espera a saída,
+ * que acaba a cena).
+ */
 function faixaDoIntervalo() {
   const pares = faixaSub2T.splice(0);
-  if ((diretor && diretor.ativo) || filaCenas.length || cenaSub || cenaCartao) filaCenas.push({ tipo: 'faixaSub', pares });
+  if ((diretor && diretor.ativo) || filaCenas.length || cenaSub || cenaCartao || cenaFim) filaCenas.push({ tipo: 'faixaSub', pares });
   else mostrarFaixaSub(pares);
 }
 
@@ -1886,7 +1890,7 @@ function talvezFaixaExpulso() {
   // a vantagem que acabou em gol: espera a comemoração, a cena do cartão (gol + 149) e o replay do gol (na saída: o
   // diretor ativo); o gol que acabou o 1º tempo: a faixa do intervalo fica e esta sai no 2º tempo; a cena de substituição
   // também esconde as faixas
-  if (cartaoGolPendente || cenaGol || cenaSub || p?.estado === 'gol' || p?.estado === 'intervalo') return;
+  if (cartaoGolPendente || cenaGol || cenaSub || cenaFim || p?.estado === 'gol' || p?.estado === 'intervalo') return;
   if (cenaCartao || filaCenas.some(it => it && it.tipo === 'cartao') || (diretor && diretor.ativo)) return;
   if (replayParada && replayParada.morta === expulsoTick) return;
   expulsoPendente = false;
@@ -2477,12 +2481,13 @@ function quadro(agoraMs, desenhar = true) {
       if (seguraParaReplayParada()) break;
       // a cena do intervalo segura no tick do 'intervalo' até o plano geral (também ANTES da entrada da demo)
       if (seguraIntervalo()) { segurou = true; break; }
-      // durante a cena o humano assiste: a entrada dele não vai para a simulação (a demo segue)
+      // durante a cena o humano assiste: a entrada dele não vai para a simulação (a demo segue) — também no plano geral da
+      // cena do intervalo, com o laço solto (os apertos ali são da cena: o próximo bloco, o pulo)
       // do 2º passo do quadro em diante o analógico é a MESMA leitura (sim.js aplicarEntrada: `repete` — um gesto que
       // pulou no passo anterior ainda não acabou de ser lido)
       ent.repete = i > 0;
       // (o travado do TM expulso: ninguém do time é dele — a entrada não vai para o mundo)
-      const e = DEMO_ON ? (entradaDemoDoMundo(mundo) ?? ent) : cenaGol || expulsoAvisado || golNeutroAgora() ? ENTRADA_NEUTRA : ent;
+      const e = DEMO_ON ? (entradaDemoDoMundo(mundo) ?? ent) : cenaGol || cenaFim || expulsoAvisado || golNeutroAgora() ? ENTRADA_NEUTRA : ent;
       let ac = filaAcoes.length ? filaAcoes.splice(0) : null;
       // a edição do time entra ANTES das outras ações, no 1º passo depois da pausa (e a mudança de jogadores do Livre)
       if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }

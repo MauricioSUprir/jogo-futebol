@@ -123,7 +123,10 @@ export const CENA_FIM = {
   // (da branch golaco/cenas-jogo) atores
   velAnda: 1.4,               // m/s — os pares caminham para o aperto de mão
   lenteLivre: 4.6,            // m — quem não é do plano sai de perto da câmera (os closes têm a lente fechada)
-  aperto: { dist: 0.92, altura: 1.06, pares: 6, maxDist: 6, maxDistFolga: 14, sacode: 2.4, amp: 0.035 },
+  // (no intervalo só os pares ao ALCANCE: a distância entre os pontos onde cada um para ≤ maxDistIntervalo m, andando um para
+  // o outro a velAnda desde tIntervalo s — o aperto de 1 s acaba antes do túnel, aos 4 s; sem a folga: o par mais longe
+  // sairia andando no corte)
+  aperto: { dist: 0.92, altura: 1.06, pares: 6, maxDist: 6, maxDistFolga: 14, maxDistIntervalo: 4.8, tIntervalo: 0.6, sacode: 2.4, amp: 0.035 },
   cintura: 0.62,              // fração com as mãos na cintura no 'campo' do intervalo / no 'neutro'
   joelhos: 2,                 // quantos com as mãos nos joelhos
   // a ELIPSE do túnel (intervalo): os 22 e o trio numa fila de `d` m da boca, andando para ela a `vel` m/s; quem chega à boca
@@ -131,6 +134,13 @@ export const CENA_FIM = {
   // pela elipse seguinte (a torcida): o campo fica vazio no 'geral'
   funil: { d: [2.6, 22], vel: [1.3, 1.5], entra: 44.0 },
   aplauso: { d: [8, 10], z0: 7.2, zMeio: 12.5 },    // PR 4 — a elipse do aplauso à torcida, ao lado do gol
+  // a bola da cena (a cópia do mundo andando pela física): bate no corpo de quem está a `bola.raio` m do centro dele e
+  // volta com `bola.volta` da velocidade (quem anda nela a toca para a frente) — nunca é ela quem empurra o jogador
+  bola: { raio: 0.42, volta: 0.25 },
+  // no corte do começo (o apito): quem vinha correndo para um sólido do estádio (o gol, as placas) e não pararia antes dele
+  // recomeça `solidos.folga` m antes do ponto onde pararia, andando a velAnda (a freada pela locomoção: `solidos.freio` do
+  // freio do jogador)
+  solidos: { folga: 0.8, freio: 0.8, raio: 0.35 },
   // câmera
   camera: {
     apito: { altura: 16, recuo: 30, fov: 34 },

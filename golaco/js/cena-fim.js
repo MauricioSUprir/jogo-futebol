@@ -30,7 +30,7 @@
 // empate, 'neutro' — → 'cumprimentos' (apertos entre adversários e 1 com o árbitro) → 'treinador' (só com o gancho) →
 // 'aplauso' (ELIPSE: o time da pessoa aplaude a própria torcida) → 'torcida' → ['melhor'] → 'placar' → ['estatisticas'] →
 // 'geral'. Nada é alocado por tick.
-import { PASSO, CAMPO } from './config.js';
+import { PASSO, CAMPO, JOGADOR } from './config.js';
 import { CENA_FIM, CENAS, CAMERA_GERAL } from './cenas-config.js';
 import {
   criarBase, adicionarJogador, adicionarArbitro, adicionarNovo, poseInicial, recriarAtor, soltar, irPara, parar,
@@ -40,6 +40,7 @@ import {
 } from './cena-atores.js';
 import { cameraDoPlano } from './prejogo-roteiro.js';
 import { copiarBola, passoBola } from './bola.js';
+import { solidoEm } from './estadio-forma.js';
 
 const K = CENA_FIM;
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
@@ -114,10 +115,22 @@ export function planejarFim(m, tipo, opc = {}) {
   const A = K.aperto;
   const js = m.jogadores.filter(j => j.posicao !== 'GOL');
   const cand = [];
-  for (const a of js) for (const c of js) if (a.time === 0 && c.time === 1) cand.push({ a: a.id, b: c.id, d: Math.hypot(a.x - c.x, a.z - c.z) });
+  // (no intervalo a distância é a dos pontos onde cada um para — quem corria no apito freia pela locomoção: o par que se
+  // afastava não chega a tempo)
+  const px = new Map();
+  for (const j of js) {
+    const v = Math.hypot(j.vx, j.vz), f = K.solidos.freio * (j.par?.freio ?? JOGADOR.freio), k = intervalo && v > 0.05 ? v / (2 * f) : 0;
+    px.set(j, { x: j.x + j.vx * k, z: j.z + j.vz * k });
+  }
+  for (const a of js) for (const c of js) {
+    if (a.time !== 0 || c.time !== 1) continue;
+    const pa = px.get(a), pc = px.get(c);
+    cand.push({ a: a.id, b: c.id, d: Math.hypot(pa.x - pc.x, pa.z - pc.z) });
+  }
   cand.sort((p, q) => p.d - q.d || p.a - q.a || p.b - q.b);
   const usados = new Set(), pares = [];
-  for (const lim of [A.maxDist, A.maxDistFolga]) {
+  // (no intervalo só os pares ao alcance: o aperto acaba antes do túnel — CENA_FIM.aperto.maxDistIntervalo)
+  for (const lim of intervalo ? [A.maxDistIntervalo ?? A.maxDist] : [A.maxDist, A.maxDistFolga]) {
     for (const p of cand) {
       if (pares.length >= A.pares) break;
       if (p.d > lim || usados.has(p.a) || usados.has(p.b)) continue;
@@ -185,8 +198,14 @@ export function criarCenaFim(plano, m) {
   c.grupoV = null; c.grupoP = null;
   if (plano.resultado === 'vitoria') montarGrupos(c);
   for (const a of c.atores) poseInicial(c, a);
-  // ninguém passa por cima da bola (a da cena: cena-atores.js separarDaBola)
+  // quem vinha correndo para o gol ou para as placas: no corte do começo, um pouco antes, andando (longeDosSolidos)
+  for (const a of c.atores) if ((a.time === 0 || a.time === 1) && a.tipo !== 'tecnico') longeDosSolidos(c, a);
+  // a bola da cena é VIVA (a cópia andando pela física): quem encosta nela a toca, e ela bate no corpo e volta
+  // (passoBolaCena: bolaNosAtores) — nunca é ela quem empurra o jogador (o separarDaBola da cena do cartão é para a bola
+  // parada do mundo, que a página desenha no lugar; aqui a página desenha a da cena). Escondida (o goleiro com ela nas mãos),
+  // ninguém se afasta dela
   marcarBola(c);
+  for (const a of c.atores) a.bolaMin = 0;
   c.ip = -1;
   entrarPlano(c, 0);
   return c;
@@ -229,6 +248,50 @@ function montarGrupos(c) {
     g.slice(0, 4).forEach((a, i) => { a.lamento = i; a.podeFixar = false; });
     const o = g[0].j, b = g[1].j, dx = o.x - b.x, dz = o.z - b.z, d = Math.hypot(dx, dz) || 1;
     g[1].alvoX = o.x - (dx / d) * 0.62; g[1].alvoZ = o.z - (dz / d) * 0.62;
+  }
+}
+
+/**
+ * No corte do começo da cena (o apito; ELIPSE do corte, como as de cena-atores.js recriarAtor): quem vinha correndo para um
+ * sólido do estádio (o gol, as placas) e não pararia antes dele pela locomoção (a freada: CENA_FIM.solidos.freio do freio
+ * dele) recomeça `solidos.folga` m antes do ponto onde, andando a velAnda, ele para — com a passada viva. O goleiro numa
+ * defesa desenhada termina a defesa (fica).
+ */
+function longeDosSolidos(c, a) {
+  const j = a.j, v = Math.hypot(j.vx, j.vz), S = K.solidos;
+  if (v < 0.2 || (a.goleiro && j.mergulho)) return;
+  const dx = j.vx / v, dz = j.vz / v, fr = S.freio * (j.par?.freio ?? JOGADOR.freio);
+  const pare = (v * v) / (2 * fr);
+  let bate = Infinity;
+  for (let s = 0.2; s <= pare + S.folga + 1e-9; s += 0.2) {
+    if (solidoEm(j.x + dx * s, 0.9, j.z + dz * s, S.raio, false)) { bate = s; break; }
+  }
+  if (bate === Infinity) return;
+  const va = Math.min(v, K.velAnda), pareA = (va * va) / (2 * fr);
+  const recuo = Math.max(0, pareA + S.folga - bate);
+  const x = j.x - dx * recuo, z = j.z - dz * recuo;
+  // (o ponto de trás também no sólido: fica onde está, parado)
+  if (solidoEm(x, 0.9, z, S.raio, false)) { recriarAtor(c, a, j.x, j.z, j.rumo); return; }
+  recriarAtor(c, a, x, z, j.rumo, { dx, dz, vel: va, ticks: 30 });
+}
+
+/**
+ * A bola viva da cena nos corpos: a ≤ CENA_FIM.bola.raio m do centro de alguém (no chão), ela sai para a borda e a
+ * velocidade dela para dentro dele volta com `bola.volta` (relativa à dele: quem anda nela a toca para a frente).
+ */
+function bolaNosAtores(c) {
+  const b = c.mF.bola, p = b.p, v = b.v, R = K.bola.raio;
+  if (p.y > 0.5) return;
+  for (const a of c.atores) {
+    if (!a.ativo) continue;
+    const j = a.j, dx = p.x - j.x, dz = p.z - j.z, d2 = dx * dx + dz * dz;
+    if (d2 >= R * R) continue;
+    const d = Math.sqrt(d2);
+    let nx = Math.cos(j.rumo), nz = Math.sin(j.rumo);
+    if (d > 1e-6) { nx = dx / d; nz = dz / d; }
+    p.x = j.x + nx * R; p.z = j.z + nz * R;
+    const vr = (v.x - j.vx) * nx + (v.z - j.vz) * nz;
+    if (vr < 0) { const k = (1 + K.bola.volta) * vr; v.x -= k * nx; v.z -= k * nz; }
   }
 }
 
@@ -281,7 +344,8 @@ function desejo(c, a, t) {
   // apito todos desaceleram)
   if (a.par) {
     const p = a.par, o = p.a === a ? p.b : p.a;
-    const t0 = P.resultado === 'intervalo' || P.resultado === 'empate' ? 1.0 : 2.2;
+    // (no intervalo a partir de 0,6 s: o aperto de 1 s acaba antes do túnel, aos 4 s)
+    const t0 = P.resultado === 'intervalo' ? K.aperto.tIntervalo : P.resultado === 'empate' ? 1.0 : 2.2;
     if (t < t0 || p.feito) return parar(c, a, o.j.x, o.j.z);
     const mx = (j.x + o.j.x) / 2, mz = (j.z + o.j.z) / 2, dx = o.j.x - j.x, dz = o.j.z - j.z, d = Math.hypot(dx, dz) || 1;
     const meia = K.aperto.dist / 2;
@@ -481,7 +545,7 @@ function planoAgora(c, t) {
 function passoBolaCena(c) {
   const b = c.mF.bola.p;
   c.bola0.x = c.bola1.x; c.bola0.y = c.bola1.y; c.bola0.z = c.bola1.z;
-  if (c.bolaViva) passoBola(c.mF.bola, null);
+  if (c.bolaViva) { bolaNosAtores(c); passoBola(c.mF.bola, null); }
   c.bola1.x = b.x; c.bola1.y = b.y; c.bola1.z = b.z;
 }
 
@@ -557,13 +621,25 @@ export function duracaoCenaFim(c) { return c.kFim * PASSO; }
 export function seguirCenaFim(c) {
   c.lancesVistos = true;
   c.emLances = false;
+  // o bloco seguinte já no tick da espera (o estado desenhado: c.ip)
+  const ip = planoAgora(c, c.k * PASSO);
+  if (ip !== c.ip && ip < c.plano.planos.length) entrarPlano(c, ip);
+}
+
+/**
+ * O plano do estado desenhado: o do último tick andado (c.ip). (Pelo relógio desenhado, tempoDe, o 1º quadro depois de um
+ * corte com alfa < 1 cairia ainda no plano de antes — a câmera dele com os atores já recriados pela elipse do novo.)
+ */
+function planoDesenhado(c) {
+  const n = c.plano.planos.length;
+  return c.ip >= 0 && c.ip < n ? c.ip : planoAgora(c, tempoDe(c));
 }
 
 /** Nome do plano no estado desenhado ('lances' na espera dos lances; 'fim' quando a cena do fim acaba). */
 export function faseFim(c) {
   if (c.acabou) return 'fim';
   if (c.emLances) return 'lances';
-  const ip = planoAgora(c, tempoDe(c));
+  const ip = planoDesenhado(c);
   return ip < c.plano.planos.length ? c.plano.planos[ip].nome : 'geral';
 }
 /** A tarja do placar com os autores no estado desenhado (no relógio da cena; nunca na espera dos lances). */
@@ -815,8 +891,7 @@ export function planoCameraFim(c, opc, out) {
   out.tunel = false;
   if (c.acabou) { out.nome = 'fim'; return out; }
   if (c.emLances) return planoGeral(c, out, 'lances');
-  const t = tempoDe(c);
-  return planoIndice(c, planoAgora(c, t), t, opc, out);
+  return planoIndice(c, planoDesenhado(c), tempoDe(c), opc, out);
 }
 
 /** O plano ip no tempo t (s) com as posições desenhadas de agora. */
@@ -862,7 +937,7 @@ function planoIndice(c, ip, t, opc, out) {
     }
     case 'aplauso': return definirPlano(out, 'aplauso', cam.x, cam.y, cam.z, cam.olharX, 5.5, cam.olharZ, cam.fov, opc);
     case 'torcida': {
-      const u = (t - pl.t0) / Math.max(0.1, pl.t1 - pl.t0);
+      const u = clamp((t - pl.t0) / Math.max(0.1, pl.t1 - pl.t0), 0, 1);
       const q = cameraDoPlano(cam.trilho, u, _cp, cam.ajuste);
       out.nome = 'torcida';
       out.de[0] = q.px; out.de[1] = q.py; out.de[2] = q.pz; out.para[0] = q.lx; out.para[1] = q.ly; out.para[2] = q.lz; out.fov = q.fov;
