@@ -1,12 +1,18 @@
 import * as THREE from 'three';
-import { CELL, BLOCO, N, MEIO, CALCADA, bloco, celulaDe, centroDe, dentro, todasEsferas, retangulosPerto, chaoEm, empurrar } from './cidade.js';
+import { CELL, BLOCO, N, MEIO, CALCADA, LAB_CELULA, bloco, celulaDe, centroDe, dentro, todasEsferas, retangulosPerto, chaoEm, empurrar } from './cidade.js';
 import { criarHeroi } from './humano.js';
+import { criarMissoes } from './missoes.js';
+import { criarCrimes } from './crimes.js';
+import { criarPortais } from './portais.js';
+import { criarTrafego } from './trafego.js';
+import { criarPedestres } from './pedestres.js';
 import { construirLab } from './lab3d.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
 
 // ---------- constantes ----------
 const TOQUE = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
-const RAIO_CARGA = TOQUE ? 3 : 4;                 // quarteirões carregados em volta (Chebyshev)
+const MOBILE = TOQUE;                             // celular: materiais leves, menos quarteirões e resolução dinâmica
+const RAIO_CARGA = MOBILE ? 2 : 4;                // quarteirões carregados em volta (Chebyshev)
 const CORPO = { raio: 0.45, alt: 1.8 };
 const MOV = { andar: 15, correr: 58, gravidade: 36, pulo: 14.5, puloCorrendo: 19, puloDuplo: 12.5, planeio: 7, giro: 12, escalar: 36, escalaMin: 24, escalaMax: 40, vibrarMin: 12 };
 const ENERGIA = { gasto: 0.17, parede: 0.2, vibrar: 0.28, recarga: 0.05, esfera: 0.3 };
@@ -21,6 +27,7 @@ const $ = (id) => document.getElementById(id);
 const el = {
   corpo: document.body, cena: $('cena'), esferas: $('esferas'), total: $('total'), vel: $('vel'), hora: $('hora'), nivel: $('nivel'),
   aviso: $('aviso'), seta: $('seta'), dist: $('distEsfera'), mapa: $('mapa'), mapaBox: $('mapaBox'),
+  missaoNum: $('missaoNum'), missaoTitulo: $('missaoTitulo'), missaoTexto: $('missaoTexto'), crimeLinha: $('crimeLinha'),
   inicio: $('telaInicio'), pausa: $('telaPausa'), fim: $('telaFim'), fimTexto: $('fimTexto'), btnJogar: $('btnJogar'), carga: $('barraCargaI'), carregando: $('carregando'),
 };
 if (TOQUE) el.corpo.classList.add('toque');
@@ -28,11 +35,18 @@ if (TOQUE) el.corpo.classList.add('toque');
 // ---------- renderizador, cena, céu ----------
 const renderer = new THREE.WebGLRenderer({ canvas: el.cena, antialias: !TOQUE, powerPreference: 'high-performance' });
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, TOQUE ? 1.75 : 2));
+// resolução dinâmica: começa no teto e desce/sobe pelo tempo de quadro (alvo ~45–60 qps no celular)
+const RES = { max: Math.min(devicePixelRatio || 1, 2), min: MOBILE ? 0.75 : 1, pr: 0, media: 1 / 60, conta: 0 };
+RES.pr = RES.max; renderer.setPixelRatio(RES.pr);
 const cena = new THREE.Scene();
-cena.fog = new THREE.Fog(0xbfdcff, 110, RAIO_CARGA * CELL * 0.92);
+cena.fog = new THREE.Fog(0xbfdcff, RAIO_CARGA * CELL * (MOBILE ? 0.45 : 0.36), RAIO_CARGA * CELL * (MOBILE ? 1.05 : 0.92));
 const camera = new THREE.PerspectiveCamera(62, 1, 0.2, RAIO_CARGA * CELL + 160);
-const ANISO = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+const ANISO = Math.min(MOBILE ? 2 : 8, renderer.capabilities.getMaxAnisotropy());
+// no celular, MeshStandard (PBR) vira MeshLambert: as mesmas texturas e emissivos, sem relevo nem reflexo — bem mais barato por pixel
+const SO_PC = ['roughness', 'metalness', 'bumpMap', 'bumpScale', 'normalMap', 'normalScale', 'envMapIntensity', 'roughnessMap', 'metalnessMap', 'envMap'];
+class MaterialLeve extends THREE.MeshLambertMaterial { constructor(p = {}) { const q = { ...p }; for (const k of SO_PC) delete q[k]; super(q); } }
+const MatPadrao = MOBILE ? MaterialLeve : THREE.MeshStandardMaterial;
+const THREE_LAB = MOBILE ? Object.create(THREE, { MeshStandardMaterial: { value: MaterialLeve }, MeshPhysicalMaterial: { value: MaterialLeve } }) : THREE;
 
 const hemi = new THREE.HemisphereLight(0xbfd8ff, 0x403830, 1);
 const sol = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -99,32 +113,33 @@ const matFachada = [];
 for (let k = 0; k < fachadas.length; k++) {
   matFachada.push(TONS.map((c) => {
     const vidro = k === 0;
-    const m = new THREE.MeshStandardMaterial({ map: fachadas[k].mapa, color: c, emissive: 0xffffff, emissiveMap: fachadas[k].emissiva, emissiveIntensity: 0,
+    const m = new MatPadrao({ map: fachadas[k].mapa, color: c, emissive: 0xffffff, emissiveMap: fachadas[k].emissiva, emissiveIntensity: 0,
       bumpMap: fachadas[k].mapa, bumpScale: vidro ? 0.4 : 1.6, roughness: vidro ? 0.18 : 0.82, metalness: vidro ? 0.55 : 0.05, envMapIntensity: vidro ? 1.3 : 0.25 });
     materiaisFachada.push(m); return m;
   }));
 }
-const matLoja = lojas.map((t) => { const m = new THREE.MeshStandardMaterial({ map: t.mapa, emissive: 0xffffff, emissiveMap: t.emissiva, emissiveIntensity: 0, roughness: 0.55, metalness: 0.1, bumpMap: t.mapa, bumpScale: 1.2 }); materiaisFachada.push(m); return m; });
+const matLoja = lojas.map((t) => { const m = new MatPadrao({ map: t.mapa, emissive: 0xffffff, emissiveMap: t.emissiva, emissiveIntensity: 0, roughness: 0.55, metalness: 0.1, bumpMap: t.mapa, bumpScale: 1.2 }); materiaisFachada.push(m); return m; });
 const texTelhado = texturaTelhado(ANISO);
-const matTelhado = new THREE.MeshStandardMaterial({ map: texTelhado, bumpMap: texTelhado, bumpScale: 1.5, roughness: 0.95, metalness: 0 });
+const matTelhado = new MatPadrao({ map: texTelhado, bumpMap: texTelhado, bumpScale: 1.5, roughness: 0.95, metalness: 0 });
 const texCalcada = texturaCalcada(ANISO); texCalcada.repeat.set(BLOCO / CALCADA_M, BLOCO / CALCADA_M);
 const texGrama = texturaGrama(ANISO); texGrama.repeat.set(BLOCO / GRAMA_M, BLOCO / GRAMA_M);
-const matMeioFio = new THREE.MeshStandardMaterial({ color: 0x8a8d93, roughness: 0.9 });
-const matCalcada = new THREE.MeshStandardMaterial({ map: texCalcada, bumpMap: texCalcada, bumpScale: 1.2, roughness: 0.9 });
-const matGrama = new THREE.MeshStandardMaterial({ map: texGrama, roughness: 1 });
+const matMeioFio = new MatPadrao({ color: 0x8a8d93, roughness: 0.9 });
+const matCalcada = new MatPadrao({ map: texCalcada, bumpMap: texCalcada, bumpScale: 1.2, roughness: 0.9 });
+const matGrama = new MatPadrao({ map: texGrama, roughness: 1 });
 const texAsfalto = texturaAsfalto(ANISO); texAsfalto.wrapS = texAsfalto.wrapT = THREE.RepeatWrapping; texAsfalto.repeat.set(N, N);
-const matAsfalto = new THREE.MeshStandardMaterial({ map: texAsfalto, roughness: 0.85, metalness: 0.05 });
-const matProps = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0.35 });
-const matCopa = new THREE.MeshStandardMaterial({ map: texturaCopa(), roughness: 1 });
+const matAsfalto = new MatPadrao({ map: texAsfalto, roughness: 0.85, metalness: 0.05 });
+const matProps = new MatPadrao({ vertexColors: true, roughness: 0.42, metalness: 0.35 });
+const matCopa = new MatPadrao({ map: texturaCopa(), roughness: 1 });
 const matLampada = new THREE.MeshBasicMaterial({ color: 0xffe9b0 });
-const matPoca = new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+const texPoca = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.45, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
+const matPoca = new THREE.MeshBasicMaterial({ map: texPoca, color: 0xffd9a0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
 const geoPoca = new THREE.CircleGeometry(1, 20); geoPoca.rotateX(-Math.PI / 2);
 
 // o asfalto é um plano só para a cidade inteira (a textura de uma célula se repete N × N)
 const asfaltoGeral = new THREE.Mesh(new THREE.PlaneGeometry(N * CELL, N * CELL), matAsfalto); asfaltoGeral.rotation.x = -Math.PI / 2; cena.add(asfaltoGeral);
 
-// reflexo do céu nos vidros: ambiente gerado do próprio céu (de dia); a intensidade cai à noite
-{
+// reflexo do céu nos vidros: ambiente gerado do próprio céu (de dia); a intensidade cai à noite (só no PC)
+if (!MOBILE) {
   const pm = new THREE.PMREMGenerator(renderer), cs = new THREE.Scene();
   const m = new THREE.ShaderMaterial({ side: THREE.BackSide, uniforms: { topo: { value: new THREE.Color(0x4b8fe8) }, horizonte: { value: new THREE.Color(0xe4efff) } }, vertexShader: 'varying vec3 vd; void main(){ vd = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }', fragmentShader: 'uniform vec3 topo; uniform vec3 horizonte; varying vec3 vd; void main(){ float h = vd.y; vec3 c = h > 0.0 ? mix(horizonte, topo, pow(h, 0.5)) : mix(horizonte, vec3(0.28,0.27,0.26), clamp(-h*3.0, 0.0, 1.0)); gl_FragColor = vec4(c, 1.0); }' });
   cs.add(new THREE.Mesh(new THREE.SphereGeometry(50, 24, 12), m));
@@ -197,7 +212,7 @@ function construirBloco(b) {
   const props = pega('props', true), roof = pega('roof'), copas = pega('copas'), lamp = pega('lamp'), poca = pega('poca');
   // meio-fio entra no balde dos adereços (um desenho a menos): quatro faixas finas
   for (const [x, z, sx, sz] of [[0, -BLOCO / 2 + 0.2, BLOCO, 0.4], [0, BLOCO / 2 - 0.2, BLOCO, 0.4], [-BLOCO / 2 + 0.2, 0, 0.4, BLOCO], [BLOCO / 2 - 0.2, 0, 0.4, BLOCO]]) props.geo(geoCaixa, compor(b.cx + x, CALCADA / 2, b.cz + z, sx, CALCADA, sz), [0.5, 0.51, 0.53]);
-  if (b.tipo === 'lab') { const lab = construirLab(THREE, b.cx, b.cz, { aniso: ANISO }); grupo.add(lab.grupo); geos.push(...lab.geos); dados.lab = lab; labAtivo = lab; }
+  if (b.tipo === 'lab') { const lab = construirLab(THREE_LAB, b.cx, b.cz, { aniso: ANISO, intervaloTela: MOBILE ? 1 : 0.2 }); grupo.add(lab.grupo); geos.push(...lab.geos); dados.lab = lab; labAtivo = lab; }
   for (const l of b.lotes) {
     const lat = pega(`l${l.estilo}-${l.tom}`);
     const loja = l.y0 <= CALCADA + 0.01 && l.x1 - l.x0 > 8 ? pega(`loja${(Math.abs(b.i * 7 + b.j * 3 + Math.round(l.x0)) % 3)}`) : null;
@@ -335,7 +350,9 @@ function passoRastro(dt) {
 }
 
 // ---------- estado ----------
-const P = { x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, correndo: false, fase: 0, t: 0, parede: null, vibrando: false };
+const LAB_B = bloco(LAB_CELULA[0], LAB_CELULA[1]);
+const INICIO = { x: LAB_B.plano.entrada.x, z: LAB_B.plano.entrada.z - 9 };     // na rua, de frente para a porta do S.T.A.R. Labs
+const P = { x: INICIO.x, y: 0, z: INICIO.z, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, correndo: false, fase: 0, t: 0, parede: null, vibrando: false };
 const C = { yaw: 0, pitch: CAM.pitch, dist: CAM.dist };
 const J = { modo: 'menu', coletadas: 0, total: 0, aviso: 0, inicioT: 0, alinhar: 0, ignorarMov: 0 };
 const teclas = new Set();
@@ -348,7 +365,7 @@ function reiniciar() {
   esferasColetadas.clear();
   for (const k of [...carregados.keys()]) descarregar(k);
   celAtual = [-999, -999];
-  Object.assign(P, { x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, parede: null, vibrando: false });
+  Object.assign(P, { x: INICIO.x, y: 0, z: INICIO.z, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, parede: null, vibrando: false });
   C.yaw = 0; C.pitch = CAM.pitch;
   J.coletadas = 0; J.modo = 'jogando'; J.inicioT = performance.now();
   mundo.T = 0.4;
@@ -463,7 +480,7 @@ function passoHeroi(dt) {
         P.x = r.x; P.z = r.z; P.vx = (P.x - ox) / sub * 0.98; P.vz = (P.z - oz) / sub * 0.98;
         const depois = Math.hypot(P.vx, P.vz); if (depois > antes) { P.vx *= antes / depois; P.vz *= antes / depois; }
         // de frente para a parede de um prédio, em velocidade: começa a escalar
-        if (r.q && r.q.y0 > 0 && P.correndo && antes >= MOV.escalar && (r.nx * vx0 + r.nz * vz0) / (antes || 1) <= -0.55 && P.y < r.q.y1 - 1.2 && P.energia > 0.05) {
+        if (r.q && r.q.y0 > 0 && r.q.y1 - r.q.y0 > 4 && r.q.x1 - r.q.x0 > 3 && r.q.z1 - r.q.z0 > 3 && P.correndo && antes >= MOV.escalar && (r.nx * vx0 + r.nz * vz0) / (antes || 1) <= -0.55 && P.y < r.q.y1 - 1.2 && P.energia > 0.05) {
           P.parede = { nx: r.nx, nz: r.nz, q: r.q, v: clamp(antes * 0.85, MOV.escalaMin, MOV.escalaMax) };
           P.vx = P.vz = 0; P.vy = 0; P.noChao = false; P.pulos = 1; J.alinhar = 0.8;
           break;
@@ -517,7 +534,7 @@ function esferasProximas(dt) {
       const grupo = r.mesh.parent; if (grupo) grupo.remove(r.mesh);
       for (const d of carregados.values()) { const k = d.orbes.indexOf(r); if (k >= 0) d.orbes.splice(k, 1); }
       orbesAtivos.splice(i, 1);
-      el.esferas.textContent = J.coletadas; avisar(`ESFERA ${J.coletadas} / ${J.total}`);
+      el.esferas.textContent = J.coletadas; missoes.contar('esferas');
       if (J.coletadas >= J.total) fimDeJogo();
     }
   }
@@ -595,7 +612,7 @@ let quadroMapa = 0, ultBussola = 0;
 function desenharMapa() {
   const grande = el.mapaBox.classList.contains('grande');
   const W = el.mapa.width, H = el.mapa.height;
-  const raioM = grande ? 1250 : 210, ppm = (W / 2) / raioM;
+  const raioM = grande ? MEIO + 120 : 210, ppm = (W / 2) / raioM;
   gm.setTransform(1, 0, 0, 1, 0, 0); gm.fillStyle = '#26303f'; gm.fillRect(0, 0, W, H);
   const fx = Math.sin(C.yaw), fz = Math.cos(C.yaw), rx = -fz, rz = fx;
   gm.setTransform(rx * ppm, -fx * ppm, rz * ppm, -fz * ppm, W / 2, H / 2);
@@ -609,32 +626,106 @@ function desenharMapa() {
   }
   gm.fillStyle = '#3fd0ff'; const rr = grande ? 14 : 6;
   for (const o of esferas) if (!esferasColetadas.has(o.id) && Math.abs(o.x - P.x) < raioM * 1.1 && Math.abs(o.z - P.z) < raioM * 1.1) { gm.beginPath(); gm.arc(o.x, o.z, rr, 0, 6.3); gm.fill(); }
+  { const a = alvoAtual(); if (a && a.cor !== '#3fd0ff') { gm.fillStyle = a.cor; gm.beginPath(); gm.arc(a.x, a.z, grande ? 30 : 11, 0, 6.3); gm.fill(); gm.strokeStyle = '#fff'; gm.lineWidth = grande ? 6 : 2.5; gm.stroke(); } }
+  gm.strokeStyle = '#3fe0ff'; gm.lineWidth = grande ? 10 : 4; gm.strokeRect(LAB_B.cx - 30, LAB_B.cz - 30, 60, 60);
   gm.setTransform(1, 0, 0, 1, 0, 0);
+  { // nome do laboratório no mapa (texto sempre de pé)
+    const lx = (LAB_B.cx - P.x) * rx + (LAB_B.cz - P.z) * rz, ly = -((LAB_B.cx - P.x) * fx + (LAB_B.cz - P.z) * fz);
+    if (Math.hypot(lx, ly) < raioM) { gm.fillStyle = '#3fe0ff'; gm.font = `bold ${grande ? 22 : 20}px sans-serif`; gm.textAlign = 'center'; gm.fillText('S.T.A.R. LABS', W / 2 + lx * ppm, H / 2 + ly * ppm - (grande ? 14 : 24)); }
+  }
   const sx = Math.sin(P.h) * rx + Math.cos(P.h) * rz, sy = -(Math.sin(P.h) * fx + Math.cos(P.h) * fz);
   gm.translate(W / 2, H / 2); gm.rotate(Math.atan2(sx, -sy));
   gm.fillStyle = '#ff2b3d'; gm.strokeStyle = '#fff'; gm.lineWidth = 2; gm.beginPath(); gm.moveTo(0, -11); gm.lineTo(8, 9); gm.lineTo(0, 5); gm.lineTo(-8, 9); gm.closePath(); gm.fill(); gm.stroke();
 }
-function atualizarBussola() {
+function esferaMaisPerto() {
   let melhor = null, md = Infinity;
   for (const o of esferas) { if (esferasColetadas.has(o.id)) continue; const d = Math.hypot(o.x - P.x, o.z - P.z); if (d < md) { md = d; melhor = o; } }
+  return melhor;
+}
+// para onde a seta aponta: crime > objetivo da missão > esfera mais perto
+function alvoAtual() {
+  const cr = crimes.marcador(); if (cr) return { ...cr, cor: '#ff4d5e' };
+  const m = missoes.atual;
+  if (m?.tipo === 'portais') { const p = portais.alvo(); if (p) return { ...p, cor: '#ffd23f' }; }
+  if (m?.alvo === 'cortex') return { x: LAB_B.cx, z: LAB_B.cz, cor: '#ffd23f' };
+  const o = esferaMaisPerto(); return o ? { x: o.x, z: o.z, cor: '#3fd0ff' } : null;
+}
+function atualizarBussola() {
+  const melhor = alvoAtual();
   if (!melhor) { el.dist.textContent = '—'; return; }
+  const md = Math.hypot(melhor.x - P.x, melhor.z - P.z);
+  el.seta.querySelector('path').setAttribute('fill', melhor.cor);
   const fx = Math.sin(C.yaw), fz = Math.cos(C.yaw), dx = melhor.x - P.x, dz = melhor.z - P.z;
   const sx = dx * -fz + dz * fx, sy = dx * fx + dz * fz;
   el.seta.style.transform = `rotate(${Math.atan2(sx, sy)}rad)`;
   el.dist.textContent = md >= 1000 ? `${(md / 1000).toFixed(1)} km` : `${Math.round(md)} m`;
 }
 
+// ---------- missões, crimes e portais ----------
+let armazem = null; try { armazem = localStorage; } catch { armazem = null; }
+const missoes = criarMissoes(armazem);
+const crimes = criarCrimes(cena);
+const portais = criarPortais(cena);
+const trafego = criarTrafego(THREE, cena, { mobile: MOBILE });
+const pedestres = criarPedestres(THREE, cena, { mobile: MOBILE });
+function solidoEm() {
+  for (const q of rectsPerto) if (q.y0 >= 0 && q.y1 - q.y0 > 4 && P.x > q.x0 && P.x < q.x1 && P.z > q.z0 && P.z < q.z1 && P.y + 0.9 > q.y0 && P.y + 0.9 < q.y1) return q;
+  return null;
+}
+function passoMissoes(dt) {
+  // prédios atravessados vibrando: conta ao sair do outro lado
+  const q = P.vibrando ? solidoEm() : null;
+  if (J.dentroQ && q !== J.dentroQ && !q) missoes.contar('atravessados');
+  J.dentroQ = q;
+  const m = missoes.atual;
+  if (m?.tipo === 'portais') portais.ativar(); else portais.desativar();
+  const rp = portais.atualizar(dt, P);
+  if (rp?.falhou) avisar('TEMPO ESGOTADO — volte ao 1º portal');
+  const ev = crimes.atualizar(dt, P, { forcar: m?.crime });
+  if (ev?.inicio) avisar(`CRIME: ${ev.nome.toUpperCase()}`);
+  else if (ev) {
+    if (ev.ok) { missoes.contar('crimes'); missoes.contar(ev.tipo); missoes.contar('pontos', 250); avisar(`${ev.nome.toUpperCase()} IMPEDIDO! +250`); }
+    else avisar(ev.tipo === 'queda' ? 'NÃO CHEGOU A TEMPO' : 'O CRIMINOSO ESCAPOU');
+  }
+  const sala = LAB_B.plano.dentro(P.x, P.z, P.y);
+  const feita = missoes.avaliar({ sala, v: Math.hypot(P.vx, P.vz), y: P.y, noChao: P.noChao, portaisFeitos: rp?.feito });
+  if (feita) avisar(`MISSÃO CONCLUÍDA: ${feita.titulo.toUpperCase()}`);
+  // painel
+  const ma = missoes.atual, pr = missoes.progresso();
+  el.missaoNum.textContent = ma ? `Missão ${missoes.indice + 1}/${missoes.total} · ${missoes.stats.pontos} pts` : `Patrulha livre · ${missoes.stats.pontos} pts`;
+  el.missaoTitulo.textContent = ma ? ma.titulo : 'Todas as missões concluídas';
+  let txt = ma ? ma.texto + (pr ? ` (${pr.txt})` : '') : 'Impeça os crimes da cidade';
+  if (ma?.tipo === 'portais') { const e = portais.estado(); txt = e.correndo ? `Portal ${e.indice + 1}/${e.total} · ${Math.ceil(e.restante)} s` : ma.texto; }
+  el.missaoTexto.textContent = txt;
+  const c = crimes.ativo;
+  if (c) { const d = Math.round(Math.hypot(c.x - P.x, c.z - P.z)); el.crimeLinha.textContent = `${c.nome}: ${c.texto}${c.tipo === 'incendio' ? ` (${Math.round((c.progresso || 0) * 100)}%)` : ''} · ${d} m · ${Math.max(0, Math.ceil(c.restante))} s`; el.crimeLinha.hidden = false; }
+  else el.crimeLinha.hidden = true;
+}
+
 // ---------- laço ----------
 const relogio = new THREE.Clock();
 const RETRATO = matchMedia('(orientation: portrait)');
 const emPe = () => TOQUE && RETRATO.matches;     // celular em pé: o jogo fica parado até deitar
+function ajustarResolucao(dtBruto) {
+  if (J.modo !== 'jogando' || dtBruto > 0.5) return;            // aba escondida, carga, pausa: não conta
+  RES.media += (dtBruto - RES.media) * 0.05;
+  if (++RES.conta < 45) return;                                  // decide a cada ~45 quadros
+  RES.conta = 0;
+  let pr = RES.pr;
+  if (RES.media > 1 / 38 && pr > RES.min) pr = Math.max(RES.min, pr - 0.15);
+  else if (RES.media < 1 / 56 && pr < RES.max) pr = Math.min(RES.max, pr + 0.1);
+  if (pr !== RES.pr) { RES.pr = pr; renderer.setPixelRatio(pr); renderer.setSize(innerWidth, innerHeight, false); }
+}
 function quadro() {
   requestAnimationFrame(quadro);
-  const dt = Math.min(relogio.getDelta(), 0.05);
+  const dtBruto = relogio.getDelta(), dt = Math.min(dtBruto, 0.05);
+  ajustarResolucao(dtBruto);
   if (emPe()) { teclas.clear(); stick.x = stick.y = 0; toque.correr = toque.vibrar = false; return; }
   if (J.modo === 'jogando') {
     mundo.T = (mundo.T + dt / DIA_SEGUNDOS) % 1;
     passoHeroi(dt); esferasProximas(dt);
+    passoMissoes(dt);
+    pedestres.atualizar(dt, P, mundo.noite); trafego.atualizar(dt, P, mundo.noite, pedestres.pessoas);
     if (labAtivo) labAtivo.atualizar(dt, P.t, mundo.noite, camera, P);
     atualizarQuarteiroes(P.x, P.z, carregados.size < 30 ? 8 : 2);
     if (J.aviso > 0) { J.aviso -= dt; if (J.aviso <= 0) el.aviso.style.opacity = '0'; }
@@ -656,17 +747,17 @@ addEventListener('resize', redimensionar); redimensionar();
 
 // ---------- carga inicial ----------
 esferas = todasEsferas(); J.total = esferas.length; el.total.textContent = J.total;
-P.x = 0; P.z = 0; heroi.position.set(0, 0, 0);
-camera.position.set(0, 4, -8);
+heroi.position.set(INICIO.x, 0, INICIO.z);
+camera.position.set(INICIO.x, 4, INICIO.z - 8);
 (async function carregar() {
-  atualizarQuarteiroes(0, 0, 0);
-  const lista = desejados(celulaDe(0), celulaDe(0), RAIO_CARGA);
+  atualizarQuarteiroes(INICIO.x, INICIO.z, 0);
+  const lista = desejados(celulaDe(INICIO.x), celulaDe(INICIO.z), RAIO_CARGA);
   let feitos = 0;
   for (const [i, j] of lista) {
     const k = `${i},${j}`; if (!carregados.has(k)) carregados.set(k, construirBloco(bloco(i, j)));
     if (++feitos % 6 === 0) { el.carga.style.width = `${(feitos / lista.length) * 100}%`; await new Promise((r) => setTimeout(r, 0)); }
   }
-  rectsPerto = retangulosPerto(0, 0, 1);
+  rectsPerto = retangulosPerto(INICIO.x, INICIO.z, 1);
   el.carga.style.width = '100%'; el.carregando.hidden = true; $('barraCarga').hidden = true; el.btnJogar.hidden = false;
   // câmera de vitrine: sobe devagar olhando a avenida
   C.yaw = 0.5; C.pitch = 0.5;
@@ -674,4 +765,4 @@ camera.position.set(0, 4, -8);
 })();
 requestAnimationFrame(quadro);
 
-window.__rel = { renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
