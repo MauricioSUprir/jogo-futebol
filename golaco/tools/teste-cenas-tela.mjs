@@ -42,10 +42,13 @@
 //   console sem erros.
 // Na versão sem as cenas (--raiz <cópia da base>) reprova C1–C6, C8, C9, C11 e C12 (só o ícone de hoje; a faixa do expulso
 // sai no apito); C7 e C10 passam lá (não têm o que medir: rev. R16) e ficam de guarda.
-//   node tools/teste-cenas-tela.mjs [--raiz <pasta do jogo>] [--so A,H,R,C,U,L,G,T] [--capturas <pasta>]
+//   node tools/teste-cenas-tela.mjs [--raiz <pasta do jogo>] [--so A,H,R,C,U,L,G,T,I] [--capturas <pasta>]
 //   (A = PC 1280×720: C1–C6; H = hash com × sem a cena: C7 e o ícone com ?cenas=0; R = replay de parada: C9; C = celular
 //   844×390 Média: C3–C5, C8, C10; U = celular com ?corpo=humano: C3, C8; L = 667×375 e 568×320: C4; G = gol: C11;
-//   T = Total Match: C12)
+//   T = Total Match: C12; I = o intervalo (PR 3): I1–I8, I11, I12 — a cena ativa no apito do 1º tempo com o tick parado até
+//   o geral, a tarja do placar com os autores da súmula, os lances do guardador dentro da cena, as estatísticas = súmula,
+//   o hash do 2º tempo igual ao de ?cenas=0, o toque/Pular, a pausa, nada encostando em 844×390/568×320, o apito no plano
+//   do apito e o campo vazio no geral)
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -982,6 +985,134 @@ if (roda('T')) try {
     }
   } finally { await s.navegador.close(); }
 } catch (e) { meta('T execução (C12: Total Match, o travado expulso)', erroCurto(e), 'sem exceção', false); }
+
+// ------------------------------------------------------------------------------------------------ I (intervalo, PR 3)
+/**
+ * A cena do intervalo de uma partida IA × IA de verdade (?demo=1): a semente com um gol no 1º tempo (acharGol, como a página
+ * joga), o gol AO VIVO (o guardador o guarda na saída), a API até o fim do tempo regulamentar (o acréscimo anunciado) e o
+ * laço ao vivo até a saída do 2º tempo. Mede a cena quadro a quadro e devolve o hash no tick `alvo` (pela API depois dela).
+ * o = {semente, golTick, alvo, proximo (o toque no 'campo'), pular (o Pular no 'campo'), pausa (quadros pausados no 'tunel'),
+ * caixas (as tarjas e o painel contra o placar e o "Pular")}.
+ */
+async function rodadaIntervalo(pg, o) {
+  return pg.evaluate(async o => {
+    const g = window.__golaco, ct = window.__ct, m = g.mundo;
+    g.reiniciar({ modo: 'partida', semente: o.semente });
+    if (o.golTick != null) {
+      g.rodarPassos(Math.max(0, o.golTick - 120 - m.tick), 'demo');
+      let q = 0;
+      while (m.tick < o.golTick + 220 && q < 3000) { ct.quadro(false); q++; }
+    }
+    let n = 0;
+    while (m.partida.tempo === 1 && m.partida.acrescimo == null && n < 40000) { g.rodarPassos(30, 'demo'); n += 30; }
+    const sons0 = { ...g.estadio.sonsPedidos };
+    const r = { cena: false, fases: [], tickMudou: 0, tick0: null, placar: [...m.placar], lances: g.cenas?.lances?.length ?? null,
+      tarjaPlacar: 0, tarjaTexto: null, est: 0, estLinhas: null, replayLance: 0, cenaDuranteLance: 0, geralVazio: 0, geral: 0,
+      pausaParada: null, proximo: null, pulou: null, fimTick: null, tempo2: null, caixas: [], apitoNoApito: null, quadros: 0 };
+    let q = 0, ultimaFase = null, viuApito = false;
+    for (; q < 40000; q++) {
+      ct.quadro(false);
+      if (!r.cena && g.cenas?.ativo && g.cenas.tipo === 'intervalo') { r.cena = true; r.tick0 = m.tick; }
+      if (r.cena && !g.cenas.ativo) { r.fimTick = m.tick; break; }
+      if (!r.cena) { if (m.partida.tempo === 2 && m.partida.estado === 'jogo') break; continue; }
+      r.quadros++;
+      const e = g.cenas.estado;
+      if (e.fase !== ultimaFase) {
+        // o apito pedido até o fim do plano 'apito' (R6: sem esperar a cena acabar)
+        if (ultimaFase === 'apito' && !viuApito) { const s1 = g.estadio.sonsPedidos; r.apitoNoApito = Object.keys(s1).filter(k => /apito/i.test(k) && (s1[k] ?? 0) > (sons0[k] ?? 0)); viuApito = true; }
+        r.fases.push(e.fase); ultimaFase = e.fase;
+        if (e.fase === 'campo' && o.proximo && r.proximo == null) { g.cenas.proximo(); r.proximo = g.cenas.estado?.fase ?? 'acabou'; }
+        if (e.fase === 'campo' && o.pular && r.pulou == null) { g.cenas.pular(); r.pulou = { fase: g.cenas.estado?.fase ?? 'acabou', ativo: g.cenas.ativo }; }
+        if (e.fase === 'tunel' && o.pausa && r.pausaParada == null) {
+          const t0 = e.tempo; g.pausar(true);
+          for (let k = 0; k < o.pausa; k++) ct.quadro(false);
+          r.pausaParada = { antes: t0, depois: g.cenas.estado.tempo, tick: m.tick === r.tick0 }; g.pausar(false);
+        }
+      }
+      if (e.fase !== 'geral' && m.tick !== r.tick0) r.tickMudou++;
+      const T = g.cenas.tarjas;
+      if (T?.placar?.visivel) { r.tarjaPlacar++; r.tarjaTexto = { gols: T.placar.gols, autores: T.placar.autores }; }
+      if (T?.estatisticas?.visivel) { r.est++; r.estLinhas = T.estatisticas.linhas; }
+      if (o.caixas && (T?.placar?.visivel || T?.estatisticas?.visivel)) {
+        const C = T.caixas, W = innerWidth, H = innerHeight;
+        for (const k of ['placar', 'estatisticas']) {
+          const b = C[k]; if (!b) continue;
+          const f = (a, c) => (a && c ? Math.max(c.x0 - a.x1, a.x0 - c.x1, c.y0 - a.y1, a.y0 - c.y1) : 99);
+          r.caixas.push({ k, dentro: b.x0 >= 0 && b.y0 >= 0 && b.x1 <= W && b.y1 <= H, placarHud: f(b, C.placarHud), pular: f(b, C.pular) });
+        }
+      }
+      const rp = g.replay.estado;
+      if (rp?.ativo && rp.tipo === 'lance') { r.replayLance++; if (g.cenas.ativo) r.cenaDuranteLance++; }
+      if (e.fase === 'geral') { r.geral++; if (e.vazio && !e.bolaVisivel) r.geralVazio++; }
+    }
+    r.tempo2 = m.partida.tempo === 2;
+    const S = g.cenas?.sumula?.() ?? null;
+    if (S) {
+      const SU = await import('./js/sumula.js');
+      r.sumula = { est: SU.estatisticas(S, 1), gols: S.gols.map(x => ({ time: x.time, minuto: x.minuto, contra: x.contra })) };
+    }
+    if (o.alvo != null) { if (m.tick < o.alvo) g.rodarPassos(o.alvo - m.tick, 'demo'); r.hash = m.tick === o.alvo ? g.hash() : null; r.tickHash = m.tick; }
+    return r;
+  }, o);
+}
+marcar('I');
+if (roda('I')) try {
+  const { acharGol } = await import(pathToFileURL(path.join(AQUI, 'lib/acha-gol.mjs')).href);
+  const GOL = await acharGol({ pastaJs: path.join(RAIZ, 'js'), maxTicks: 13000, comoPagina: true });
+  if (!GOL) throw new Error('nenhuma semente com gol no 1º tempo');
+  const url = c => `?q=baixa&hora=dia&semente=${GOL.semente}&demo=1&cenas=${c}&prejogo=0&comemoracao=0&replay=0&replayParada=0&substituicao=0`;
+  const P1 = await pagina('I1', url(1));
+  let a, b, c, d, z;
+  try {
+    // (o alvo: 25 s depois do fim do 1º tempo — o intervalo de 3 s e o começo do 2º tempo)
+    a = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo: null, pausa: 30 });
+    const alvo = (a.tick0 ?? 14400) + 1500;
+    a = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo, pausa: 30 });
+    c = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo, proximo: true });
+    d = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo, pular: true });
+    const P0 = await pagina('I0', url(0));
+    try { b = await rodadaIntervalo(P0.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo }); } finally { await P0.fechar(); }
+  } finally { await P1.fechar(); }
+  const PC = await pagina('IC', url(1), { largura: 844, altura: 390, dpr: 2, toque: true });
+  try { z = await rodadaIntervalo(PC.pagina, { semente: GOL.semente, golTick: GOL.golTick, caixas: true }); } finally { await PC.fechar(); }
+  const PL = await pagina('IL', url(1), { largura: 568, altura: 320, dpr: 2, toque: true });
+  let zl;
+  try { zl = await rodadaIntervalo(PL.pagina, { semente: GOL.semente, golTick: GOL.golTick, caixas: true }); } finally { await PL.fechar(); }
+
+  meta('I1 a cena ativa no apito do 1º tempo, o mundo.tick parado até o geral, os planos na ordem',
+    a.cena ? `tick ${a.tick0}; fases ${a.fases.join(' → ')}; o tick mudou em ${a.tickMudou} quadros antes do geral; ${a.quadros} quadros` : 'nenhuma cena (só a faixa)',
+    'apito → campo → tunel → torcida → [lances] → estatisticas → geral; 0', a.cena && a.tickMudou === 0 && a.fases[0] === 'apito' && a.fases.includes('estatisticas') && a.fases.at(-1) === 'geral');
+  const gols1 = (a.sumula?.gols ?? []).filter(x => x.minuto <= 45);
+  const autOk = a.tarjaTexto && gols1.every(x => (a.tarjaTexto.autores[x.time] ?? []).some(t => t.includes(`${x.minuto}'`)));
+  meta('I2 a tarja do placar com os autores do 1º tempo (os minutos da súmula) aparece na cena',
+    a.tarjaTexto ? `${a.tarjaPlacar} quadros; "${a.tarjaTexto.gols}" · ${JSON.stringify(a.tarjaTexto.autores)} × súmula ${gols1.map(x => `${x.time}:${x.minuto}'`).join(', ')}` : 'não apareceu',
+    '≥ 1 s; os autores certos', a.tarjaPlacar >= 60 && !!autOk && gols1.length > 0);
+  meta('I3 os lances do 1º tempo (o guardador) tocam dentro da cena, e a cena continua depois deles',
+    `${a.lances ?? '-'} guardados; ${a.replayLance} quadros de lance, a cena ativa em ${a.cenaDuranteLance}; fases ${a.fases.includes('lances') ? 'com' : 'sem'} 'lances'`,
+    '≥ 1 guardado; o lance tocado com a cena ativa', (a.lances ?? 0) >= 1 && a.replayLance > 30 && a.cenaDuranteLance === a.replayLance && a.fases.includes('estatisticas'));
+  const est = a.sumula?.est, linhas = a.estLinhas ?? [];
+  const num = t => +(String(t).match(/\d+/)?.[0] ?? NaN);
+  const estErr = est ? ['posse', 'chutes', 'noAlvo', 'escanteios', 'faltas'].filter(k => { const l = linhas.find(x => x.item === k); return !l || num(l.a) !== est[k][0] || num(l.b) !== est[k][1]; }) : ['sem súmula'];
+  meta('I4 o painel de estatísticas do 1º tempo = a súmula (posse, finalizações, no alvo, escanteios, faltas)',
+    `${a.est} quadros; ${linhas.map(l => `${l.item} ${l.a}–${l.b}`).join(', ')}; diferentes: ${estErr.join(', ') || 'nenhum'}`, 'iguais', a.est > 60 && estErr.length === 0);
+  meta('I5 o hash no mesmo tick do 2º tempo com a cena = o da aba com ?cenas=0 (?demo=1)',
+    `com ${a.hash ?? `não chegou (${a.tickHash})`} × sem ${b.hash ?? `não chegou (${b.tickHash})`}; sem a cena: ${b.cena ? 'teve cena!' : 'sem cena'}`, 'iguais',
+    a.hash != null && a.hash === b.hash && !b.cena);
+  meta('I6 o toque no campo = o próximo bloco; o Pular = a saída do 2º tempo (o mesmo hash)',
+    `toque: campo → ${c.proximo ?? '-'}; pular: ${d.pulou ? (d.pulou.ativo ? `fase ${d.pulou.fase}` : 'acabou') : '-'}, 2º tempo ${d.tempo2}; hash ${c.hash === a.hash ? 'igual' : 'DIFERENTE'} / ${d.hash === a.hash ? 'igual' : 'DIFERENTE'}`,
+    'o bloco seguinte; geral/saída; iguais', c.proximo != null && c.proximo !== 'campo' && d.pulou != null && (!d.pulou.ativo || d.pulou.fase === 'geral') && d.tempo2 && c.hash === a.hash && d.hash === a.hash);
+  meta('I7 a pausa congela a cena (o relógio dela e o mundo)',
+    a.pausaParada ? `tempo ${a.pausaParada.antes.toFixed(2)} → ${a.pausaParada.depois.toFixed(2)} s em 30 quadros pausados; tick ${a.pausaParada.tick ? 'parado' : 'ANDOU'}` : 'não mediu',
+    'parados', !!a.pausaParada && Math.abs(a.pausaParada.depois - a.pausaParada.antes) < 1e-6 && a.pausaParada.tick);
+  const enc = [...(z?.caixas ?? []).map(x => ({ ...x, tela: '844×390' })), ...(zl?.caixas ?? []).map(x => ({ ...x, tela: '568×320' }))];
+  const ruins = enc.filter(x => !x.dentro || x.placarHud < 4 || x.pular < 4);
+  meta('I8 a tarja do placar e o painel não encostam no placar nem no "Pular" e ficam na tela (844×390 e 568×320)',
+    `${enc.length} medidas; ${ruins.length} ruins${ruins.length ? ` (${ruins[0].tela} ${ruins[0].k}: dentro ${ruins[0].dentro}, placar ${ruins[0].placarHud.toFixed(0)} px, Pular ${ruins[0].pular.toFixed(0)} px)` : ''}`,
+    '0 (folga ≥ 4 px)', enc.length > 0 && ruins.length === 0);
+  meta('I11 o apito do intervalo é pedido no plano do apito (não no fim da cena)', a.apitoNoApito ? `pedidos até o fim do apito: ${a.apitoNoApito.join(', ') || 'nenhum'}` : 'não mediu',
+    '≥ 1', (a.apitoNoApito?.length ?? 0) > 0);
+  meta('I12 no geral o campo vazio: nenhum dos 22 nem a bola até o corte da saída', `${a.geralVazio}/${a.geral} quadros do geral vazios`, 'todos', a.geral > 0 && a.geralVazio === a.geral);
+} catch (e) { meta('I execução (intervalo: I1–I8, I11, I12)', erroCurto(e), 'sem exceção', false); }
 
 marcar('fim');
 await srv.fechar();

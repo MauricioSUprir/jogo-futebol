@@ -323,4 +323,36 @@ function partidaInteira(T, opc) {
 }
 
 linhas.push(['tempo', `${((Date.now() - t0) / 1000).toFixed(1).replace('.', ',')} s`, '< 60 s', '']);
+// ------------------------------------------------------------------ P7 as estatísticas das cenas (escanteios, faltas, porTempo)
+// (PLANO-CENAS.md §4.2, R17) contadores INDEPENDENTES contra a súmula numa partida inteira IA × IA: o escanteio pela troca do
+// OBJETO m.parada (nova, de tipo 'escanteio', para o time de quem cobra) e as faltas cometidas pelo lado do `def` no mapa do
+// TM; o porTempo aparece no apito do 1º tempo com os números até ali; o resultadoTM continua só com as chaves de antes.
+if (typeof SU.estatisticas === 'function') {
+  const m = partidaDo(TA, { semente: +arg('--sem-p7', 5), min: Math.max(4, 4 * MIN) });
+  const s = SU.criarSumula();
+  const esc = [0, 0], fal = [0, 0];
+  let prAnt = null, escNoApito = null, passos = 0;
+  while (m.partida.estado !== 'fim' && passos < 200000) {
+    const ev = P.passoPartida(m, P.entradaDemoPartida(m));
+    SU.sumulaPasso(s, m, ev);
+    passos++;
+    const pr = m.parada;
+    if (pr && pr !== prAnt && pr.tipo === 'escanteio' && (pr.time === 0 || pr.time === 1)) esc[pr.time]++;
+    prAnt = pr;
+    for (const e of ev) if (e.tipo === 'falta' && e.def != null && TA.mapa[e.def]) fal[TA.mapa[e.def].lado]++;
+    if (ev.some(e => e.tipo === 'intervalo')) escNoApito = [...esc];
+  }
+  const pt = s.porTempo?.[1];
+  const r = SU.resultadoTM(s, m, TA.mapa);
+  const chaves = Object.keys(r).filter(k => k !== 'jogador').sort().join(',');
+  const chavesSt = Object.keys(r.stats).sort().join(',');
+  reg('P7 escanteios e faltas por time = contadores independentes (partida inteira)',
+    `escanteios ${s.escanteios.join('/')} × ${esc.join('/')} · faltas ${s.faltas.join('/')} × ${fal.join('/')}`, 'iguais',
+    s.escanteios[0] === esc[0] && s.escanteios[1] === esc[1] && s.faltas[0] === fal[0] && s.faltas[1] === fal[1] && esc[0] + esc[1] + fal[0] + fal[1] > 0);
+  reg('P7 porTempo no apito do 1º tempo (os escanteios até ali)', pt ? `escanteios ${pt.escanteios?.join('/')} × ${escNoApito?.join('/')}` : 'sem porTempo',
+    'iguais', !!pt && !!escNoApito && pt.escanteios?.[0] === escNoApito[0] && pt.escanteios?.[1] === escNoApito[1]);
+  reg('P7 o resultadoTM com as chaves de antes (nada novo vai ao TM)', `${chaves} · stats ${chavesSt}`, 'awayGoals,cartoes,gols,homeGoals,stats · stats onTarget,possession,shots',
+    chaves === 'awayGoals,cartoes,gols,homeGoals,stats' && chavesSt === 'onTarget,possession,shots');
+} else reg('P7 as estatísticas das cenas na súmula', 'sumula.js sem estatisticas (versão de antes)', 'existe', false);
+
 fim();
