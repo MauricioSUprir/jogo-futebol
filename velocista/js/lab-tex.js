@@ -1,5 +1,5 @@
-// Texturas procedurais (canvas) do laboratório. Todas ≤ 1024². O emblema é o desenho próprio (estrela num anel); se existir
-// assets/star/logo.png (arquivo do dono, ver assets/star/LEIAME.md) ele o substitui no letreiro, no piso e nas paredes.
+// Texturas procedurais (canvas) do laboratório. Todas ≤ 1024². O emblema é o desenho próprio (estrela num anel); se o
+// assets/star/config.json apontar um arquivo (do dono, ver assets/star/LEIAME.md) ele o substitui no letreiro, no piso e nas paredes.
 export const ROTULOS = [
   'CONTENÇÃO 01', 'CONTENÇÃO 02', 'CONTENÇÃO 03', 'CONTENÇÃO 04', 'CONTENÇÃO 05', 'CONTENÇÃO 06', 'CONTENÇÃO 07', 'CONTENÇÃO 08',
   'CORTEX', 'ESTEIRA DE VELOCIDADE', 'ACELERADOR', 'RECEPÇÃO', 'SAÍDA', 'ALTA ENERGIA', 'ÁREA RESTRITA', 'CONTENÇÃO',
@@ -85,9 +85,19 @@ export function criarTexturas(THREE, aniso = 4) {
   }
   let cLogo, gLogo;
   { const [c, g] = tela(512, 512); cLogo = c; gLogo = g; pintaLogo(g, 256, 256, 250, 'rgba(6,20,34,0.82)'); T.logo = tex(c, { repete: false }); }
+  let cLogoL, gLogoL;                              // painéis largos (10 × 6 m)
+  { const [c, g] = tela(1024, 614); cLogoL = c; gLogoL = g; pintaLogo(g, 512, 307, 290, 'rgba(6,20,34,0.82)'); T.logoL = tex(c, { repete: false }); }
   T.logoDoDono = (img) => {                       // troca o emblema pelo arquivo do dono (e refaz o letreiro)
-    gLogo.clearRect(0, 0, 512, 512); const k = Math.min(512 / img.width, 512 / img.height); gLogo.drawImage(img, (512 - img.width * k) / 2, (512 - img.height * k) / 2, img.width * k, img.height * k); T.logo.needsUpdate = true;
-    if (T.letreiroG) { const g = T.letreiroG; g.fillStyle = '#06121f'; g.fillRect(8, 8, 128, 112); const k2 = Math.min(116 / img.width, 104 / img.height); g.drawImage(img, 72 - img.width * k2 / 2, 64 - img.height * k2 / 2, img.width * k2, img.height * k2); T.letreiro.needsUpdate = true; }
+    const cabe = (g, W, H, m) => { g.clearRect(0, 0, W, H); const k = Math.min((W - 2 * m) / img.width, (H - 2 * m) / img.height); g.drawImage(img, (W - img.width * k) / 2, (H - img.height * k) / 2, img.width * k, img.height * k); };
+    cabe(gLogo, 512, 512, 24); T.logo.needsUpdate = true; cabe(gLogoL, 1024, 614, 60); T.logoL.needsUpdate = true;
+    if (T.letreiroG) {
+      const g = T.letreiroG, gr = g.createLinearGradient(0, 0, 1024, 0); gr.addColorStop(0, '#06121f'); gr.addColorStop(1, '#0b2236'); g.fillStyle = gr; g.fillRect(0, 0, 1024, 128);
+      g.strokeStyle = '#3fe0ff'; g.lineWidth = 4; g.strokeRect(4, 4, 1016, 120);
+      const k = 108 / img.height, w = img.width * k; g.drawImage(img, 28, 10, w, 108);
+      g.fillStyle = '#3fe0ff'; g.textBaseline = 'middle'; g.textAlign = 'left'; g.font = '600 30px Arial, Helvetica, sans-serif'; if ('letterSpacing' in g) g.letterSpacing = '6px';
+      g.fillText('PESQUISA  ·  ENERGIA', 28 + w + 50, 48); g.fillText('VELOCIDADE', 28 + w + 50, 90);
+      T.letreiro.needsUpdate = true;
+    }
   };
   { const [c, g] = tela(1024, 128);
     const gr = g.createLinearGradient(0, 0, 1024, 0); gr.addColorStop(0, '#06121f'); gr.addColorStop(1, '#0b2236'); g.fillStyle = gr; g.fillRect(0, 0, 1024, 128);
@@ -101,7 +111,11 @@ export function criarTexturas(THREE, aniso = 4) {
     g.fillStyle = '#3fe0ff'; g.font = '600 22px Arial, Helvetica, sans-serif'; if ('letterSpacing' in g) g.letterSpacing = '8px';
     g.fillText('PESQUISA  ·  ENERGIA  ·  VELOCIDADE', 154, 102);
     T.letreiroG = g; T.letreiro = tex(c, { repete: false }); }
-  try { const img = new Image(); img.onload = () => T.logoDoDono(img); img.src = new URL('../assets/star/logo.png', import.meta.url).href; } catch { /* sem arquivo: fica o emblema próprio */ }
+  // assets/star/config.json diz qual arquivo usar ({"logo": "logo.png"}); com "logo": null fica o emblema próprio (sem pedido de rede perdido)
+  fetch(new URL('../assets/star/config.json', import.meta.url)).then((r) => r.json()).then((cfg) => {
+    if (!cfg.logo) return;
+    const img = new Image(); img.onload = () => T.logoDoDono(img); img.src = new URL(`../assets/star/${cfg.logo}`, import.meta.url).href;
+  }).catch(() => { /* sem configuração: fica o emblema próprio */ });
 
   // ----- atlas de placas -----
   { const [c, g] = tela(1024, 1024); const cw = 256, ch = 128;

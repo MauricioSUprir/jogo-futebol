@@ -58,7 +58,7 @@ mar.rotation.x = -Math.PI / 2; mar.position.y = -2.5; cena.add(mar);
 
 // ---------- ciclo de dia e noite ----------
 const PALETAS = {
-  noite: { topo: 0x03040c, horizonte: 0x101a35, hemiCeu: 0x2a3a6a, hemiChao: 0x232a40, hemi: 1.15, sol: 0x8aa0e0, solInt: 0.6, neblina: 0x0d1530 },
+  noite: { topo: 0x050816, horizonte: 0x16224a, hemiCeu: 0x4a5f9e, hemiChao: 0x353e5c, hemi: 1.9, sol: 0x9fb4f0, solInt: 1.0, neblina: 0x121c3e },
   crepusculo: { topo: 0x2c3a7a, horizonte: 0xff8f5e, hemiCeu: 0x9a8fb8, hemiChao: 0x3a2a30, hemi: 0.8, sol: 0xff9a60, solInt: 1.0, neblina: 0xc4795a },
   dia: { topo: 0x4b8fe8, horizonte: 0xc6e0ff, hemiCeu: 0xcfe2ff, hemiChao: 0x6a6258, hemi: 1.05, sol: 0xfff4de, solInt: 1.7, neblina: 0xbcd8f5 },
 };
@@ -86,7 +86,7 @@ function atualizarAmbiente(posCam) {
   ceu.position.copy(posCam); estrelas.position.copy(posCam);
   mundo.noite = 1 - suave(-0.15, 0.12, elev);
   estrelas.material.opacity = clamp(mundo.noite * 1.2, 0, 1);
-  const lit = mundo.noite * 1.0;
+  const lit = mundo.noite * 1.0; renderer.toneMappingExposure = 1.05 + 0.3 * mundo.noite; matPoca.opacity = 0.34 * mundo.noite;
   for (const m of materiaisFachada) m.emissiveIntensity = lit;
   matLampada.color.setRGB(0.55 + 0.45 * lit, 0.5 + 0.43 * lit, 0.38 + 0.3 * lit); cena.environmentIntensity = 0.15 + 0.85 * (1 - mundo.noite);
   renderer.setClearColor(cena.fog.color);
@@ -117,6 +117,8 @@ const matAsfalto = new THREE.MeshStandardMaterial({ map: texAsfalto, roughness: 
 const matProps = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0.35 });
 const matCopa = new THREE.MeshStandardMaterial({ map: texturaCopa(), roughness: 1 });
 const matLampada = new THREE.MeshBasicMaterial({ color: 0xffe9b0 });
+const matPoca = new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+const geoPoca = new THREE.CircleGeometry(1, 20); geoPoca.rotateX(-Math.PI / 2);
 
 // o asfalto é um plano só para a cidade inteira (a textura de uma célula se repete N × N)
 const asfaltoGeral = new THREE.Mesh(new THREE.PlaneGeometry(N * CELL, N * CELL), matAsfalto); asfaltoGeral.rotation.x = -Math.PI / 2; cena.add(asfaltoGeral);
@@ -192,7 +194,7 @@ function construirBloco(b) {
   const grupo = new THREE.Group(), geos = [], dados = { grupo, geos, orbes: [], instancias: [] };
   const topoLaje = new THREE.Mesh(geoLajeTopo, b.tipo === 'parque' ? matGrama : matCalcada); topoLaje.position.set(b.cx, 0, b.cz); grupo.add(topoLaje);
   const baldes = new Map(), pega = (k, cor) => { if (!baldes.has(k)) baldes.set(k, new Balde(cor)); return baldes.get(k); };
-  const props = pega('props', true), roof = pega('roof'), copas = pega('copas'), lamp = pega('lamp');
+  const props = pega('props', true), roof = pega('roof'), copas = pega('copas'), lamp = pega('lamp'), poca = pega('poca');
   // meio-fio entra no balde dos adereços (um desenho a menos): quatro faixas finas
   for (const [x, z, sx, sz] of [[0, -BLOCO / 2 + 0.2, BLOCO, 0.4], [0, BLOCO / 2 - 0.2, BLOCO, 0.4], [-BLOCO / 2 + 0.2, 0, 0.4, BLOCO], [BLOCO / 2 - 0.2, 0, 0.4, BLOCO]]) props.geo(geoCaixa, compor(b.cx + x, CALCADA / 2, b.cz + z, sx, CALCADA, sz), [0.5, 0.51, 0.53]);
   if (b.tipo === 'lab') { const lab = construirLab(THREE, b.cx, b.cz, { aniso: ANISO }); grupo.add(lab.grupo); geos.push(...lab.geos); dados.lab = lab; labAtivo = lab; }
@@ -223,11 +225,12 @@ function construirBloco(b) {
     const dx = p.lado === 0 ? 0 : -1.1, dz = p.lado === 0 ? -1.1 : 0;
     props.geo(geoCaixa, compor(p.x + dx * 0.5, CALCADA + 7.2, p.z + dz * 0.5, p.lado === 0 ? 0.1 : 1.2, 0.1, p.lado === 0 ? 1.2 : 0.1), CINZA_ESC);
     lamp.geo(geoCaixa, compor(p.x + dx, CALCADA + 7.1, p.z + dz, p.lado === 0 ? 0.5 : 0.7, 0.12, p.lado === 0 ? 0.7 : 0.5), null);
+    poca.geo(geoPoca, compor(p.x + dx * 3, 0.05, p.z + dz * 3, 7, 1, 7), null);
   }
   for (const [k, bd] of baldes) {
     const g = bd.gerar(); if (!g) continue; geos.push(g);
     let mat;
-    if (k === 'props') mat = matProps; else if (k === 'roof') mat = matTelhado; else if (k === 'copas') mat = matCopa; else if (k === 'lamp') mat = matLampada;
+    if (k === 'props') mat = matProps; else if (k === 'roof') mat = matTelhado; else if (k === 'copas') mat = matCopa; else if (k === 'lamp') mat = matLampada; else if (k === 'poca') mat = matPoca;
     else if (k.startsWith('loja')) mat = matLoja[+k.slice(4)];
     else { const [e, t] = k.slice(1).split('-').map(Number); mat = matFachada[e][t]; }
     const m = new THREE.Mesh(g, mat); grupo.add(m);
@@ -302,7 +305,7 @@ const heroi = new THREE.Group(); const partes = {};
 }
 cena.add(heroi);
 let modelo = null;
-criarHeroi({ aniso: ANISO, lod: TOQUE ? 2 : 1 }).then((m) => { modelo = m; partes.corpo.visible = false; heroi.add(m.grupo); }).catch((e) => console.warn('corpo realista indisponível', e));
+criarHeroi({ aniso: ANISO, lod: 1, mobile: TOQUE }).then((m) => { modelo = m; partes.corpo.visible = false; heroi.add(m.grupo); }).catch((e) => console.warn('corpo realista indisponível', e));
 const sombra = new THREE.Mesh(new THREE.CircleGeometry(0.5, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }));
 sombra.rotation.x = -Math.PI / 2; cena.add(sombra);
 
@@ -310,8 +313,8 @@ sombra.rotation.x = -Math.PI / 2; cena.add(sombra);
 const RASTRO_N = 160;
 const rPos = new Float32Array(RASTRO_N * 3), rVel = new Float32Array(RASTRO_N * 3), rVida = new Float32Array(RASTRO_N);
 const rGeo = new THREE.BufferGeometry(); rGeo.setAttribute('position', new THREE.BufferAttribute(rPos, 3));
-const bolinha = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,230,120,0.8)'); gr.addColorStop(1, 'rgba(255,200,60,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); })();
-const rastro = new THREE.Points(rGeo, new THREE.PointsMaterial({ map: bolinha, color: 0xffe066, size: 0.55, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending }));
+const bolinha = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(120,220,255,0.8)'); gr.addColorStop(1, 'rgba(60,180,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); })();
+const rastro = new THREE.Points(rGeo, new THREE.PointsMaterial({ map: bolinha, color: 0x8fe4ff, size: 0.55, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending }));
 rastro.frustumCulled = false; cena.add(rastro);
 let rIdx = 0;
 for (let k = 0; k < RASTRO_N; k++) rPos[k * 3 + 1] = -100;

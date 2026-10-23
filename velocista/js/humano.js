@@ -1,5 +1,5 @@
 // Corpo humano do herói: o Rocketbox Sports_Male_02 (MIT, ver assets/humano/CREDITOS.md) como SkinnedMesh de 25 ossos,
-// com o uniforme pintado por região, capuz e emblema, e a animação (corrida, sprint, ar, planeio, escalada, vibração)
+// com o uniforme pintado por região, capuz e emblema (herói original, azul e ciano), e a animação (corrida, sprint, ar, planeio, escalada, vibração)
 // calculada por ossos em coordenadas do modelo (x = frente, y = cima, z = direita do personagem).
 import * as THREE from 'three';
 import { lerCorpo } from './corpo-dados.js';
@@ -15,7 +15,7 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
 
 // cores do uniforme por região da máscara (0 pele, 1 camisa, 2 manga, 3 gola, 4 punho, 5 calção, 6 barra, 7 meião, 8 chuteira, 9 sola, 10 acabamento)
-const CORES = [[196, 22, 40], [200, 20, 38], [178, 16, 34], [240, 190, 40], [235, 185, 40], [182, 17, 35], [236, 186, 40], [188, 18, 36], [226, 170, 30], [26, 20, 20], [250, 214, 80]];
+const CORES = [[24, 52, 128], [26, 56, 136], [18, 40, 104], [150, 220, 255], [140, 215, 250], [18, 40, 104], [150, 220, 255], [20, 44, 112], [206, 222, 238], [20, 20, 26], [190, 235, 255]];
 
 function origensDeRepouso(J, rep) {
   const o = new Array(25);
@@ -71,7 +71,7 @@ function malha(parte, esqueleto, material) {
 }
 
 /** Cria o herói. Devolve {grupo, aplicar(est, dt), materiais, dispose()}. */
-export async function criarHeroi({ aniso = 4, lod = 1 } = {}) {
+export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
   const [ind, bin] = await Promise.all([fetch(new URL('corpo.json', BASE)).then((r) => r.json()), fetch(new URL('corpo.bin', BASE)).then((r) => r.arrayBuffer())]);
   const dados = lerCorpo(ind, bin), L = dados.lods[lod];
   const origens = origensDeRepouso(ind.repouso.juntas, ind.repouso);
@@ -84,25 +84,30 @@ export async function criarHeroi({ aniso = 4, lod = 1 } = {}) {
 
   const [texCorpo, texCabeca, texNormal] = await Promise.all([texturaCorpo(aniso), texturaWebp(new URL('cabeca-rb.webp', BASE).href, true, aniso), texturaWebp(new URL('pano-normal.webp', BASE).href, false, aniso)]);
   texNormal.wrapS = texNormal.wrapT = THREE.RepeatWrapping;
-  const matCorpo = new THREE.MeshStandardMaterial({ map: texCorpo, normalMap: texNormal, normalScale: new THREE.Vector2(0.8, 0.8), roughness: 0.42, metalness: 0.22, emissive: 0x2a0004 });
+  const matCorpo = new THREE.MeshStandardMaterial({ map: texCorpo, normalMap: mobile ? null : texNormal, normalScale: new THREE.Vector2(0.5, 0.5), roughness: 0.5, metalness: 0.18, emissive: 0x000a24 });
   const matCabeca = new THREE.MeshStandardMaterial({ map: texCabeca, roughness: 0.65, metalness: 0 });
   const corpo = malha(L.partes.corpo, esqueleto, matCorpo), cabeca = malha(L.partes.cabeca, esqueleto, matCabeca);
   for (const m of [corpo, cabeca]) { raiz.add(m); m.bind(esqueleto, new THREE.Matrix4()); }
 
-  // capuz, orelhas douradas e emblema no peito
-  const vermelho = new THREE.MeshStandardMaterial({ color: 0xc8142a, roughness: 0.4, metalness: 0.25, emissive: 0x2a0004 });
-  const ouro = new THREE.MeshStandardMaterial({ color: 0xf0be28, roughness: 0.28, metalness: 0.65, emissive: 0x5a3c00 });
+  // capuz, crista e emblema no peito
+  const vermelho = new THREE.MeshStandardMaterial({ color: 0x1a3a8a, roughness: 0.4, metalness: 0.25, emissive: 0x000a2a });
+  const ouro = new THREE.MeshStandardMaterial({ color: 0x9fdcff, roughness: 0.28, metalness: 0.6, emissive: 0x1a4a6a });
   const J = ind.repouso.juntas, hc = [0.03, 1.668, 0], jc = J.cabeca;
   const capuz = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 18, Math.PI + 0.95, Math.PI * 2 - 1.9, 0, Math.PI * 0.64), vermelho);
   capuz.scale.set(0.128, 0.122, 0.1); capuz.position.set(hc[0] - jc[0], hc[1] - jc[1], hc[2] - jc[2]); ossos[I.cabeca].add(capuz);
-  for (const l of [-1, 1]) {
-    const asa = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.1, 6), ouro);
-    asa.position.set(hc[0] - jc[0] - 0.02, hc[1] - jc[1] + 0.045, l * 0.1); asa.rotation.set(l * 0.9, 0, 0.9); ossos[I.cabeca].add(asa);
-  }
-  const forma = new THREE.Shape(); forma.moveTo(0.03, 0.1); forma.lineTo(-0.05, -0.01); forma.lineTo(0, -0.01); forma.lineTo(-0.03, -0.1); forma.lineTo(0.05, 0.015); forma.lineTo(0, 0.015); forma.closePath();
-  const emb = new THREE.Mesh(new THREE.ShapeGeometry(forma), new THREE.MeshStandardMaterial({ color: 0xf6c82a, emissive: 0xb88a10, emissiveIntensity: 0.9, side: THREE.DoubleSide }));
-  emb.scale.setScalar(1.15); emb.position.set(0.118, 1.305 - J.peito[1], 0); emb.rotation.y = Math.PI / 2; ossos[I.peito].add(emb);
+  // crista dourada no alto do capuz (de frente para trás)
+  const crista = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.014, 0.024), ouro);
+  crista.position.set(hc[0] - jc[0] - 0.005, hc[1] - jc[1] + 0.122, 0); crista.rotation.z = -0.04; ossos[I.cabeca].add(crista);
+  // emblema próprio do herói: anel dourado com uma faísca de quatro pontas
+  const matEmb = new THREE.MeshStandardMaterial({ color: 0xbfeaff, emissive: 0x3fb4e0, emissiveIntensity: 0.9, side: THREE.DoubleSide });
+  const emb = new THREE.Group();
+  emb.add(new THREE.Mesh(new THREE.RingGeometry(0.058, 0.075, 28), matEmb));
+  const faisca = new THREE.Shape(); faisca.moveTo(0, 0.052); faisca.lineTo(0.014, 0.014); faisca.lineTo(0.052, 0); faisca.lineTo(0.014, -0.014); faisca.lineTo(0, -0.052); faisca.lineTo(-0.014, -0.014); faisca.lineTo(-0.052, 0); faisca.lineTo(-0.014, 0.014); faisca.closePath();
+  emb.add(new THREE.Mesh(new THREE.ShapeGeometry(faisca), matEmb));
+  emb.scale.setScalar(1.25); emb.position.set(0.118, 1.305 - J.peito[1], 0); emb.rotation.y = Math.PI / 2; ossos[I.peito].add(emb);
+  emb.material = matEmb;
 
+  const frente = new THREE.Group();
   // ---------- pose ----------
   const wq = NOMES.map(() => new THREE.Quaternion());      // rotação de mundo (espaço do modelo) de cada osso
   const qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), qc = new THREE.Quaternion(), qi = new THREE.Quaternion();
@@ -123,7 +128,7 @@ export async function criarHeroi({ aniso = 4, lod = 1 } = {}) {
   const par = (a, abd = 0) => tmp.copy(qz(a, abd));
 
   const est = { fase: 0, ar: 0, planeio: 0, parede: 0, vib: 0, pele: 0, tt: 0 };
-  const posAn = new THREE.Vector3(), semente = { s: 1 };
+  const posAn = new THREE.Vector3(), origem = new THREE.Vector3(), semente = { s: 1 };
   const rnd = () => { semente.s = (semente.s * 16807) % 2147483647; return semente.s / 2147483647 - 0.5; };
 
   function aplicar(e, dt) {
@@ -189,11 +194,12 @@ export async function criarHeroi({ aniso = 4, lod = 1 } = {}) {
     // pé no chão: o osso do tornozelo mais baixo toca a altura de repouso
     if (!e.parede && noAr < 0.5) {
       let minY = 9;
-      for (const i of [I.peE, I.peD]) { ossos[i].getWorldPosition(posAn); posAn.sub(raiz.position); if (posAn.y < minY) minY = posAn.y; }
+      frente.getWorldPosition(origem);
+      for (const i of [I.peE, I.peD]) { ossos[i].getWorldPosition(posAn); posAn.sub(origem); posAn.y -= raiz.position.y; if (posAn.y < minY) minY = posAn.y; }
       raiz.position.y = (0.115 - minY) * (1 - noAr * 2);
     }
     // material: vibração = translúcido com brilho
-    matCorpo.emissive.setRGB(0.16 + 0.8 * vj * (0.5 + 0.5 * Math.sin(tt * 90)), 0.0 + 0.25 * vj, 0.02);
+    matCorpo.emissive.setRGB(0.0 + 0.2 * vj, 0.04 + 0.55 * vj * (0.5 + 0.5 * Math.sin(tt * 90)), 0.14 + 0.8 * vj * (0.5 + 0.5 * Math.sin(tt * 90)));
     matCorpo.opacity = 1 - 0.38 * vj; matCorpo.transparent = vj > 0.02;
     matCabeca.opacity = matCorpo.opacity; matCabeca.transparent = matCorpo.transparent;
     return raiz.position.y;
@@ -202,11 +208,11 @@ export async function criarHeroi({ aniso = 4, lod = 1 } = {}) {
   // pose inicial
   aplicar({ v: 0, noChao: true }, 0.016);
   // o modelo olha para +x; o jogo olha para +z (rotação y = -90°)
-  const frente = new THREE.Group(); frente.rotation.y = -Math.PI / 2; frente.add(raiz);
+  frente.rotation.y = -Math.PI / 2; frente.add(raiz);
   const materiais = [matCorpo, matCabeca, vermelho, ouro, texCorpo, texCabeca, texNormal];
   return {
     grupo: frente, aplicar, materiais, ossos, raiz,
-    setVisivelProfundo(prof) { for (const m of [matCorpo, matCabeca, vermelho, ouro, emb.material]) { m.depthTest = !prof; } },
+    setVisivelProfundo(prof) { for (const m of [matCorpo, matCabeca, vermelho, ouro, matEmb]) { m.depthTest = !prof; } },
     dispose() { corpo.geometry.dispose(); cabeca.geometry.dispose(); materiais.forEach((m) => m.dispose?.()); },
   };
 }
