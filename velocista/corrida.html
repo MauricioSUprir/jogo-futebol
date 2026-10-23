@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>RELÂMPAGO — corrida em supervelocidade (modo corrida)</title>
+<meta name="theme-color" content="#07080f">
+<style>
+  :root { --fundo:#07080f; --vermelho:#ff2b3d; --ouro:#ffd23f; --azul:#3fd0ff; --texto:#f4f6ff; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
+  html,body { margin:0; height:100%; background:var(--fundo); color:var(--texto); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overflow:hidden; touch-action:none; }
+  #cena { position:fixed; inset:0; width:100%; height:100%; display:block; }
+  #hud { position:fixed; inset:0; pointer-events:none; padding:max(12px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left)); display:none; }
+  .jogando #hud { display:block; }
+  #topo { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .bloco { background:rgba(7,8,15,.55); border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:6px 12px; backdrop-filter:blur(4px); }
+  .rotulo { font-size:10px; letter-spacing:.14em; text-transform:uppercase; opacity:.65; }
+  .valor { font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; }
+  #vidas { font-size:22px; letter-spacing:4px; color:var(--vermelho); }
+  #forca { position:fixed; left:50%; bottom:max(16px,env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(46vw,320px); }
+  #forca .barra { height:12px; border-radius:99px; background:rgba(255,255,255,.14); overflow:hidden; border:1px solid rgba(255,255,255,.2); }
+  #forca .nivel { height:100%; width:100%; background:linear-gradient(90deg,var(--azul),var(--ouro)); transition:width .08s linear; }
+  #forca .rotulo { text-align:center; margin-bottom:4px; }
+  #combo { position:fixed; top:22%; left:50%; transform:translateX(-50%); font-weight:900; font-size:clamp(20px,5vw,36px); color:var(--ouro); text-shadow:0 0 18px rgba(255,210,63,.7); opacity:0; transition:opacity .25s; }
+  #btnForca { position:fixed; right:max(18px,env(safe-area-inset-right)); bottom:max(18px,env(safe-area-inset-bottom)); width:84px; height:84px; border-radius:50%; border:2px solid var(--ouro); background:rgba(255,210,63,.16); color:var(--ouro); font-weight:800; font-size:11px; letter-spacing:.08em; pointer-events:auto; display:none; }
+  .toque #btnForca { display:block; }
+  .jogando.toque #btnForca { display:block; }
+  #btnForca.ativo { background:rgba(255,210,63,.45); }
+  .tela { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; background:radial-gradient(ellipse at 50% 40%, rgba(255,43,61,.18), rgba(7,8,15,.92) 70%); gap:14px; }
+  .tela[hidden] { display:none; }
+  h1 { margin:0; font-size:clamp(40px,10vw,84px); font-weight:900; letter-spacing:.06em; font-style:italic; color:var(--ouro); text-shadow:0 0 28px rgba(255,43,61,.8), 3px 3px 0 var(--vermelho); }
+  h2 { margin:0; font-size:clamp(28px,7vw,52px); font-weight:900; color:var(--vermelho); }
+  p { margin:0; max-width:520px; line-height:1.5; opacity:.9; }
+  .teclas { display:grid; grid-template-columns:auto auto; gap:6px 18px; font-size:14px; opacity:.85; text-align:left; }
+  kbd { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.25); border-radius:6px; padding:1px 7px; font-family:inherit; font-size:12px; }
+  button.principal { pointer-events:auto; cursor:pointer; border:0; border-radius:99px; padding:14px 42px; font-size:18px; font-weight:800; letter-spacing:.06em; color:#1a0a00; background:linear-gradient(180deg,#ffe58a,var(--ouro)); box-shadow:0 6px 24px rgba(255,210,63,.35); }
+  button.principal:active { transform:translateY(2px); }
+  #recorde { font-size:13px; opacity:.7; }
+  .toque .teclas { display:none; }
+  .so-toque { display:none; }
+  .toque .so-toque { display:block; }
+</style>
+</head>
+<body>
+<canvas id="cena"></canvas>
+
+<div id="hud">
+  <div id="topo">
+    <div class="bloco"><div class="rotulo">Distância</div><div class="valor"><span id="dist">0</span> m</div></div>
+    <div class="bloco" style="text-align:center"><div class="rotulo">Velocidade</div><div class="valor"><span id="vel">0</span> km/h</div></div>
+    <div class="bloco" style="text-align:right"><div class="rotulo">Pontos</div><div class="valor" id="pts">0</div><div id="vidas"></div></div>
+  </div>
+  <div id="combo"></div>
+  <div id="forca"><div class="rotulo">Força da Velocidade</div><div class="barra"><div class="nivel" id="nivel"></div></div></div>
+  <button id="btnForca" type="button">FORÇA</button>
+</div>
+
+<div id="telaInicio" class="tela">
+  <h1>RELÂMPAGO</h1>
+  <p>Você é o velocista mais rápido da cidade. Corra pelas avenidas, desvie do tráfego, pegue as esferas de energia e use a Força da Velocidade para fazer o tempo desacelerar.</p>
+  <div class="teclas">
+    <span><kbd>A</kbd> <kbd>D</kbd> ou <kbd>←</kbd> <kbd>→</kbd></span><span>trocar de faixa</span>
+    <span><kbd>W</kbd> <kbd>Espaço</kbd> ou <kbd>↑</kbd></span><span>pular</span>
+    <span><kbd>S</kbd> ou <kbd>↓</kbd></span><span>deslizar</span>
+    <span><kbd>Shift</kbd> (segurar)</span><span>Força da Velocidade</span>
+  </div>
+  <p class="so-toque">Deslize o dedo para os lados, para cima (pular) e para baixo (deslizar). Segure FORÇA para desacelerar o tempo.</p>
+  <button class="principal" id="btnJogar" type="button">CORRER</button>
+  <div id="recorde"></div>
+</div>
+
+<div id="telaFim" class="tela" hidden>
+  <h2>FIM DA CORRIDA</h2>
+  <div class="valor" style="font-size:40px"><span id="fimPts">0</span> pontos</div>
+  <p id="fimDetalhe"></p>
+  <p id="fimRecorde" style="color:var(--ouro);font-weight:800"></p>
+  <button class="principal" id="btnDeNovo" type="button">CORRER DE NOVO</button>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+<script type="module" src="js/corrida.js"></script>
+</body>
+</html>
