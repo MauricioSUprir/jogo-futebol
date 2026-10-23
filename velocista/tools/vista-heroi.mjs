@@ -5,7 +5,7 @@ import { servidor, abrir } from '../../golaco/tools/lib/navegador.mjs';
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const saida = process.argv[2];
 const srv = await servidor(0, path.join(AQUI, '..'));
-const { navegador, pagina, erros } = await abrir({ largura: 1100, altura: 700 });
+const { navegador, pagina, erros } = await abrir({ largura: 760, altura: 430 });
 await pagina.goto(srv.url);
 await pagina.waitForSelector('#btnJogar:not([hidden])', { timeout: 180000 });
 await pagina.waitForFunction(() => window.__rel.modelo, null, { timeout: 60000 });

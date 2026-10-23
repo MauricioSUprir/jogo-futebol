@@ -333,7 +333,7 @@ cena.add(heroi);
 const raios = criarRaios(cena, { mobile: MOBILE });
 const posfx = criarPosFx(renderer, cena, camera, { mobile: MOBILE });
 let modelo = null;
-criarHeroi({ aniso: ANISO, lod: 1, mobile: TOQUE }).then((m) => { modelo = m; partes.corpo.visible = false; heroi.add(m.grupo); m.grupo.traverse((o) => { if (o.isMesh) o.castShadow = true; }); }).catch((e) => console.warn('corpo realista indisponível', e));
+criarHeroi({ aniso: ANISO, lod: MOBILE ? 1 : 0, mobile: TOQUE }).then((m) => { modelo = m; partes.corpo.visible = false; heroi.add(m.grupo); m.grupo.traverse((o) => { if (o.isMesh) o.castShadow = true; }); }).catch((e) => console.warn('corpo realista indisponível', e));
 const sombra = new THREE.Mesh(new THREE.CircleGeometry(0.5, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }));
 sombra.rotation.x = -Math.PI / 2; cena.add(sombra);
 
