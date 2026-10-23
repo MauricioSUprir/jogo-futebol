@@ -8,7 +8,9 @@
 // embaixo, os autores de cada lado — "Nome 12', 38'", o gol contra "(c)" e o pênalti "(p)", como a tarja da DFL: o placar
 // de transmissão, outra exceção escrita à "sem narração") e o PAINEL DE ESTATÍSTICAS (só rótulos e números, sem frase:
 // wTVision). As duas só dentro da cena; no online (sem cena) a tarja do placar só nos 3 s da faixa do intervalo, com o
-// mundo parado (R10), no centro, embaixo da faixa (o analógico fica embaixo à esquerda).
+// mundo parado (R10), no centro: embaixo da faixa no PC, ACIMA dela com toque (embaixo ficam os botões; o analógico
+// embaixo à esquerda) — sem os autores se com eles ela chegaria ao placar do HUD (caberNoOnline). A tarja do placar CEDE ao
+// painel quando as duas se encostariam (cederAoPainel: a tela baixa com muitos autores).
 // Sob demanda (main.js SOB.cenas, com o css/cenas.css): fora do download inicial. Nada escrito no mundo; texto sempre por
 // textContent (nunca HTML de nome).
 //   criarTelaCenas({raiz}) → {tarja(dados | null), placar(dados | null), estatisticas(dados | null), estado(), caixa(),
@@ -16,7 +18,7 @@
 //   tarja: dados = {cor: 'amarelo' | 'vermelho', segundo, sigla, nomeTime, cor1 (a cor do time), cor2 (o texto por cima
 //          dela), escudo (o href do <symbol> do escudo, ex. '#escudo-golaco'), num, nome, curto}
 //   placar: dados = {times: [{sigla, nome, escudo, cor1, cor2}, …], gols: [a, b], autores: {0: [{nome, gols: [{minuto,
-//          penalti, contra}]}], 1: […]} | null, online (no centro, embaixo da faixa)}
+//          penalti, contra}]}], 1: […]} | null, online (no centro, junto da faixa)}
 //   estatisticas: dados = {titulo ('1º tempo' | 'Partida'), times: [{sigla, escudo, cor1, cor2}, …], itens (CENA_FIM.
 //          estatisticas.itens), valores (sumula.js estatisticas: posse [%, %], chutes, noAlvo, escanteios, faltas,
 //          amarelos, vermelhos)}
@@ -106,6 +108,28 @@ export function criarTelaCenas(opc = {}) {
 
   const vis2 = e => !e.hidden && e.getClientRects().length > 0 && getComputedStyle(e).display !== 'none';
   const caixaDe = e => { if (e.hidden) return null; const r = e.getBoundingClientRect(); return r.width > 0 ? { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom } : null; };
+  // A tarja do placar CEDE ao painel quando as duas se encostariam (folga < FOLGA px): a tela baixa — o celular com 3 ou
+  // mais autores de um lado, a janela estreita do PC — mostra uma peça de cada vez (a tarja sai e não volta enquanto o
+  // painel fica); com folga, as duas juntas como no PC. Conferido quando uma das duas aparece (teste-cenas-tela I8b).
+  const FOLGA = 4;
+  let cedeu = false;
+  const esconderPlacar = () => { if (!tp.hidden) { tp.hidden = true; tp.classList.remove('visivel'); } };
+  // No online com toque a tarja fica acima da faixa "Intervalo" (css/cenas.css): se com os autores ela chegaria ao placar
+  // do HUD (a tela baixa com 3 ou mais autores de um lado), fica só a linha do placar (os autores saem dela).
+  function caberNoOnline() {
+    if (tp.hidden || !tp.classList.contains('online') || tpAut.hidden) return;
+    const a = caixaDe(tp), ph = document.querySelector('[data-caixa="placar"]');
+    const r = ph && ph.getClientRects().length ? ph.getBoundingClientRect() : null;
+    if (!a || !r || r.width <= 0 || Math.max(r.left - a.x1, a.x0 - r.right, r.top - a.y1, a.y0 - r.bottom) >= FOLGA) return;
+    tpAut.hidden = true;
+  }
+  function cederAoPainel() {
+    if (tp.hidden || pe.hidden) return;
+    const a = caixaDe(tp), b = caixaDe(pe);
+    if (!a || !b || Math.max(b.x0 - a.x1, a.x0 - b.x1, b.y0 - a.y1, a.y0 - b.y1) >= FOLGA) return;
+    cedeu = true;
+    esconderPlacar();
+  }
   /** O valor de um item no painel: o número (a posse com %); os cartões como amarelos e vermelhos (mini cartões). */
   function valor(itm, v, t) {
     const span = document.createElement('span'); span.className = 'pe-valor';
@@ -153,10 +177,12 @@ export function criarTelaCenas(opc = {}) {
     /** A tarja do placar com os autores (dados) ou nada (null). Escreve no DOM só quando muda. */
     placar(d) {
       if (!d) {
-        if (!tp.hidden) { tp.hidden = true; tp.classList.remove('visivel'); }
+        esconderPlacar();
         atualPlacar = null;
         return;
       }
+      // (cedeu ao painel: fica fora enquanto ele está na tela)
+      if (cedeu && !pe.hidden) { esconderPlacar(); return; }
       const aut = d.autores ? [0, 1].map(t => (d.autores[t] ?? []).map(textoAutor)) : [[], []];
       const chave = JSON.stringify([d.times?.map(t => [t.sigla, t.escudo, t.cor1]), d.gols, aut, !!d.online]);
       if (chave === atualPlacar && !tp.hidden) return;
@@ -172,12 +198,14 @@ export function criarTelaCenas(opc = {}) {
       tpSr.textContent = `Placar: ${nomes[0]} ${d.gols?.[0] ?? 0}, ${nomes[1]} ${d.gols?.[1] ?? 0}.${aut[0].length || aut[1].length ? ` Gols: ${[...aut[0], ...aut[1]].join('; ')}.` : ''}`;
       tp.hidden = false;
       tp.classList.remove('visivel'); void tp.offsetWidth; tp.classList.add('visivel');
+      caberNoOnline();
+      cederAoPainel();
     },
     /** O painel de estatísticas (dados) ou nada (null). Escreve no DOM só quando muda. */
     estatisticas(d) {
       if (!d) {
         if (!pe.hidden) { pe.hidden = true; pe.classList.remove('visivel'); }
-        atualEst = null;
+        atualEst = null; cedeu = false;
         return;
       }
       const chave = JSON.stringify([d.titulo, d.times?.map(t => [t.sigla, t.escudo, t.cor1]), d.itens, d.valores]);
@@ -201,6 +229,7 @@ export function criarTelaCenas(opc = {}) {
       peSr.textContent = `${d.titulo ?? ''}: ${linhasTexto.map(l => `${l.rotulo} ${l.a} a ${l.b}`).join('; ')}.`;
       pe.hidden = false;
       pe.classList.remove('visivel'); void pe.offsetWidth; pe.classList.add('visivel');
+      cederAoPainel();
     },
     /**
      * As caixas na tela (px CSS) de cada peça visível (testes: nada encosta): {tarja, placar, estatisticas} — null escondida.

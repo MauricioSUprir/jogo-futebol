@@ -17,7 +17,8 @@
 //  - chute: o 'chute' do acoes.js ou o cabeceio PARA O GOL (passe de modo 'cabeceio' com m.voo.cabeceio = 'chute');
 //    no alvo = gol do mesmo time ou 'defesa' de um jogador do outro time em até 4 s (o bloqueio na linha não conta; o gol
 //    que entrou sem o chute aberto — bloqueado, cruzamento direto — conta como chute no alvo: gols ≤ no alvo ≤ chutes);
-//    a defesa só é creditada ao goleiro quando o chute acaba sem gol (espalmada que entra = gol, não defesa);
+//    a defesa só é creditada ao goleiro quando o chute acaba sem gol (espalmada que entra = gol, não defesa); o apito do
+//    1º tempo fecha o chute aberto (ele fica no 1º tempo);
 //  - posse: a cada passo com a bola rolando, o time do dono da bola (no pé ou na mão), senão o do passe/chute no ar;
 //  - cartões: um por evento 'cartao' (o 2º amarelo sai como amarelo + vermelho, como o TM espera);
 //  - minuto: minutoDeJogo (o do placar: 0–45 e 45–90; os acréscimos ficam em 45 e 90), no mínimo 1 no 1º tempo e 46 no 2º;
@@ -172,7 +173,9 @@ export function sumulaPasso(s, m, eventos) {
         break;
       }
       case 'fora': case 'saida': case 'intervalo': case 'apito': case 'impedimento':
-        if (tipo === 'fora') fecharChute(s, false);
+        // (o apito do 1º tempo também fecha o chute aberto: ele conta no 1º tempo — a cópia do porTempo vem depois daqui —
+        // e nada do 2º tempo, um gol ou uma defesa dentro da JANELA_CHUTE, vira o chute de antes do apito em "no alvo")
+        if (tipo === 'fora' || tipo === 'intervalo') fecharChute(s, false);
         s.passe = null; s.passeCerto = null; s.pen = null;
         break;
       case 'cartao': {

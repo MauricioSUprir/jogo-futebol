@@ -103,7 +103,8 @@ export const TEMPOS_NAVEGADOR = {
   'teste-tecnicos-tela.mjs': 155,
   'teste-substituicao-tela.mjs': 164,
   // medido aqui (195 s, máquina livre: PC 25, hash 16, replay 8, celular 61, corpo novo 47, telas 15, gol 9, TM 13); acertar pelo log do CI
-  'teste-cenas-tela.mjs': 320,
+  // (23/10: + o C12d e as caixas sintéticas I8b/I13, mais 2 páginas: T 34 s e I 142 s, 454 s inteiro com a máquina cheia)
+  'teste-cenas-tela.mjs': 380,
   'teste-penaltis-tela.mjs': 60,
   'teste-livre-tela.mjs': 120,
   'teste-online-tela.mjs': 160,

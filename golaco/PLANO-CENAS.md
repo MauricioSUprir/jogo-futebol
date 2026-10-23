@@ -249,8 +249,10 @@ Regras da fila:
 - **Cartão:** um aperto novo depois de `CENAS.pularDepois` (0,5 s) pula: cortina e volta ao vivo. (rev. R10) A tarja
   sai junto com a cena; não fica por cima da bola rolando.
 - **Intervalo e pós-jogo:** como o pré-jogo.
-  - Toque/Enter/A = próximo bloco.
-  - "Pular"/Esc/Start = fim da cena: no intervalo, a saída do 2º tempo; no pós-jogo, a faixa final.
+  - Toque/Enter/A = próximo bloco (no último bloco, o fim da cena); um botão segurado vale uma vez (de novo só depois de
+    solto).
+  - "Pular" (só com toque) = fim da cena: no intervalo, a saída do 2º tempo; no pós-jogo, a faixa final.
+  - Esc/P/Start = a PAUSA (congela a cena; no intervalo, o "Editar time" da Regra 3), não o fim da cena.
 - **Pausa, aba escondida e celular em pé:** congelam a cena, que volta de onde parou (como a `cenaSub`).
 
 ### 1.8 Opções
@@ -558,7 +560,7 @@ Ver §7.2 (adaptado do contrato "Cenas de cartão e de fim de tempo" da branch, 
 
 ## 4. PR 3 — Cena de intervalo
 
-### 4.1 O que o jogador vê (18–30 s; toque = próximo bloco; Pular/Esc = saída do 2º tempo)
+### 4.1 O que o jogador vê (18–30 s; toque/Enter/A = próximo bloco, no geral a saída do 2º tempo; "Pular" (toque) = a saída; Esc/P/Start = a pausa)
 1. **`apito`, 1,5 s:** plano alto; o árbitro apita (`gApito`). O apito do intervalo toca no início, sem adiar. (rev.
    R6) Com gol no último lance, o apito ficou em `somAdiado` (`estadioPasso` adia o passo que traz o `intervalo` com
    gol pendente). A cena chama `tocarAdiados()` ao começar; senão o apito tocaria só no fim da cena, quando a fila
@@ -617,7 +619,8 @@ Ver §7.2 (adaptado do contrato "Cenas de cartão e de fim de tempo" da branch, 
   - No `main.js`, o `desenharReplay` lê `lerQuadro(diretor.fonte, …)` e `tempoEstadioAnel(diretor.fonte, …)`.
   - `iniciarReplay(ro, {fonte, aoFim})`: o replay de DENTRO de uma cena (os lances do intervalo, os "Melhores
     momentos") chama `aoFim` no fim ou no pulo, e não o `proximaCena()`, que tiraria o jogador da cena.
-  - O "Pular" do ramo `diretor.ativo` pula o lance; o Pular/Esc da cena (saída/faixa) pula o resto.
+  - O "Pular" do ramo `diretor.ativo` pula o lance; o "Pular" da cena (saída/faixa; só com toque) pula o resto —
+    Toque/Enter/A andam bloco a bloco e Esc/P/Start abrem a pausa.
   - Roteiro `roteiroLance(fonte, lance)`: um plano 'tv' 1×.
 - **`js/sumula.js`** (fora do fecho):
   - ganha `escanteios[2]`. (rev. R17) Contados na BOLA MORTA (`m.parada` novo com `tipo === 'escanteio'`), não no
@@ -707,7 +710,7 @@ Ver §7.3.
 
 ## 5. PR 4 — Cena de pós-jogo
 
-### 5.1 O que o jogador vê (~34,5 s; toque = próximo bloco; Pular/Esc = faixa final)
+### 5.1 O que o jogador vê (~34,5 s; toque/Enter/A = próximo bloco; "Pular" (toque) = faixa final; Esc/P/Start = a pausa, como no intervalo)
 No `fim` o mundo não muda mais, mas (rev. R5) o `passoPartida` ainda faz `m.tick++` a cada passo. Fora do online, a
 cena SEGURA o laço; no online, o lockstep segue andando o tick e a cena só usa cópias (§5.3). A cena substitui os 22
 congelados no meio da passada.

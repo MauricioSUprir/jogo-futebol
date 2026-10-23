@@ -503,7 +503,10 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `?cenas=0`. Tarja do placar com os autores e painel de estatísticas do 1º tempo (exceções escritas à "sem narração", só
   dentro da cena). A súmula passou a import ESTÁTICO (sempre na partida; escanteios na bola morta, faltas por time,
   porTempo; o `resultadoTM` não muda) — o "sem `?tm` o download não cresce" deixou de valer para ela (folga 1399 → 1347 KB).
-  Testes: `teste-cenas` C, `teste-lances-guarda`, `teste-ponte-tm` P7, `teste-cenas-tela` I.
+  Comandos: Toque/Enter/A = próximo bloco (no geral, a saída), "Pular" (toque) = a saída, Esc/P/Start = a pausa (Editar time).
+  Lição: cena POR BLOCOS precisa da BORDA do aperto (`F.botoes = ent.botoes`; com `&=` o botão segurado contava como novo a
+  cada quadro e atravessava os blocos). Testes: `teste-cenas` C, `teste-lances-guarda`, `teste-ponte-tm` P7/P7b,
+  `teste-cenas-tela` I (e C12d).
 - **Pré-jogo** (pedido de 11/10; `PESQUISA-PREJOGO.md`, contrato em `CONTRATOS.md`): antes do 1º passo (tick 0; o apito
   da saída só no fim; hash igual) — abertura "Toque para começar" (libera o som), aéreo de fora, fachada com a torcida
   chegando, o estádio por dentro, túnel, entrada com os árbitros, plano alto da fila se formando, a câmera passando pela

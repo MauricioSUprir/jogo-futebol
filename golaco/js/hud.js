@@ -729,6 +729,8 @@ export function criarHud(opc) {
       if (f.ms) timerFaixa = setTimeout(() => { el.faixa.hidden = true; }, f.ms);
     },
     get faixaVisivel() { return !!el.faixa && !el.faixa.hidden; },
+    /** O título da faixa na tela (null escondida): quem vai trocá-la sabe qual é (main.js guardarFaixaExpulso). */
+    get faixaTitulo() { return el.faixa && !el.faixa.hidden ? el.faixaTitulo.textContent : null; },
     /** Abre a Ajuda; aberta pela pausa, fechar volta para a pausa (antes o jogo recomeçava sem aviso). */
     abrirAjuda(forcar = false) {
       if (prints && !forcar) return;
