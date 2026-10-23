@@ -465,7 +465,7 @@ function passoHeroi(dt) {
         // de frente para a parede de um prédio, em velocidade: começa a escalar
         if (r.q && r.q.y0 > 0 && P.correndo && antes >= MOV.escalar && (r.nx * vx0 + r.nz * vz0) / (antes || 1) <= -0.55 && P.y < r.q.y1 - 1.2 && P.energia > 0.05) {
           P.parede = { nx: r.nx, nz: r.nz, q: r.q, v: clamp(antes * 0.85, MOV.escalaMin, MOV.escalaMax) };
-          P.vx = P.vz = 0; P.vy = 0; P.noChao = false; P.pulos = 1; J.alinhar = 0.8; avisar('ESCALANDO');
+          P.vx = P.vz = 0; P.vy = 0; P.noChao = false; P.pulos = 1; J.alinhar = 0.8;
           break;
         }
       }
@@ -499,7 +499,6 @@ function escalarPasso(sub, ix, rx, rz) {
   if (P.y >= q.y1 - 0.05) {                           // chegou ao topo: sobe no telhado
     P.y = q.y1; P.x -= w.nx * (CORPO.raio + 1.1); P.z -= w.nz * (CORPO.raio + 1.1);
     P.vx = -w.nx * 7; P.vz = -w.nz * 7; P.vy = 0; P.noChao = true; P.pulos = 0; P.parede = null;
-    avisar('NO TOPO');
   }
 }
 function desprender(salto, dx = 0, dz = 0) {
