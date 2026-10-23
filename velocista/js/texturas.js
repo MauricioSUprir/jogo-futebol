@@ -1,4 +1,4 @@
-// Texturas procedurais (canvas) da cidade de RELÂMPAGO: fachadas (cor + janelas acesas), asfalto, calçada, grama, telhado.
+// Texturas procedurais (canvas) da cidade de THE FLASH: fachadas (cor + janelas acesas), asfalto, calçada, grama, telhado.
 import * as THREE from 'three';
 import { CELL, RUA } from './cidade.js';
 

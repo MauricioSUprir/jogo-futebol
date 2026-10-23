@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>RELÂMPAGO — corrida em supervelocidade (modo corrida)</title>
+<title>THE FLASH — corrida infinita</title>
 <meta name="theme-color" content="#07080f">
 <style>
   :root { --fundo:#07080f; --vermelho:#ff2b3d; --ouro:#ffd23f; --azul:#3fd0ff; --texto:#f4f6ff; }
@@ -39,10 +39,20 @@
   .toque .teclas { display:none; }
   .so-toque { display:none; }
   .toque .so-toque { display:block; }
+  /* celular: obrigatório jogar deitado */
+  #girar { position:fixed; inset:0; z-index:50; display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center; padding:24px; background:#07080f; color:var(--texto); }
+  #girar svg { width:96px; height:96px; animation:girar 2s ease-in-out infinite; }
+  #girar b { font-size:22px; } #girar span { opacity:.75; max-width:300px; line-height:1.5; }
+  @keyframes girar { 0%,20% { transform:rotate(0); } 50%,80% { transform:rotate(-90deg); } 100% { transform:rotate(0); } }
+  @media (orientation: portrait) { .toque #girar { display:flex; } }
+  /* telas iniciais cabem no celular deitado (altura pequena) */
+  @media (max-height: 520px) { .tela { gap:8px; padding:12px 24px; justify-content:safe center; } h1 { font-size:clamp(30px,9vh,56px); } h2 { font-size:clamp(24px,7vh,40px); } .tela p { font-size:13px; line-height:1.4; } button.principal { padding:10px 34px; font-size:16px; } }
 </style>
 </head>
 <body>
 <canvas id="cena"></canvas>
+<div id="girar" role="alert"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd23f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg><b>Gire o celular</b><span>THE FLASH só se joga com o celular deitado.</span></div>
+
 
 <div id="hud">
   <div id="topo">
@@ -56,7 +66,7 @@
 </div>
 
 <div id="telaInicio" class="tela">
-  <h1>RELÂMPAGO</h1>
+  <h1>THE FLASH</h1>
   <p>Você é o velocista mais rápido da cidade. Corra pelas avenidas, desvie do tráfego, pegue as esferas de energia e use a Força da Velocidade para fazer o tempo desacelerar.</p>
   <div class="teclas">
     <span><kbd>A</kbd> <kbd>D</kbd> ou <kbd>←</kbd> <kbd>→</kbd></span><span>trocar de faixa</span>
