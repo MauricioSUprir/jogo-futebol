@@ -1,5 +1,5 @@
-// Texturas procedurais (canvas) do laboratório. Todas ≤ 1024². O emblema é o desenho próprio (estrela num anel); se existir
-// assets/star/logo.png (arquivo do dono, ver assets/star/LEIAME.md) ele o substitui no letreiro, no piso e nas paredes.
+// Texturas procedurais (canvas) do laboratório. Todas ≤ 1024². O emblema é o desenho próprio (estrela num anel); se o
+// assets/star/config.json apontar um arquivo (do dono, ver assets/star/LEIAME.md) ele o substitui no letreiro, no piso e nas paredes.
 export const ROTULOS = [
   'CONTENÇÃO 01', 'CONTENÇÃO 02', 'CONTENÇÃO 03', 'CONTENÇÃO 04', 'CONTENÇÃO 05', 'CONTENÇÃO 06', 'CONTENÇÃO 07', 'CONTENÇÃO 08',
   'CORTEX', 'ESTEIRA DE VELOCIDADE', 'ACELERADOR', 'RECEPÇÃO', 'SAÍDA', 'ALTA ENERGIA', 'ÁREA RESTRITA', 'CONTENÇÃO',
@@ -111,7 +111,11 @@ export function criarTexturas(THREE, aniso = 4) {
     g.fillStyle = '#3fe0ff'; g.font = '600 22px Arial, Helvetica, sans-serif'; if ('letterSpacing' in g) g.letterSpacing = '8px';
     g.fillText('PESQUISA  ·  ENERGIA  ·  VELOCIDADE', 154, 102);
     T.letreiroG = g; T.letreiro = tex(c, { repete: false }); }
-  try { const img = new Image(); img.onload = () => T.logoDoDono(img); img.src = new URL('../assets/star/logo.png', import.meta.url).href; } catch { /* sem arquivo: fica o emblema próprio */ }
+  // assets/star/config.json diz qual arquivo usar ({"logo": "logo.png"}); com "logo": null fica o emblema próprio (sem pedido de rede perdido)
+  fetch(new URL('../assets/star/config.json', import.meta.url)).then((r) => r.json()).then((cfg) => {
+    if (!cfg.logo) return;
+    const img = new Image(); img.onload = () => T.logoDoDono(img); img.src = new URL(`../assets/star/${cfg.logo}`, import.meta.url).href;
+  }).catch(() => { /* sem configuração: fica o emblema próprio */ });
 
   // ----- atlas de placas -----
   { const [c, g] = tela(1024, 1024); const cw = 256, ch = 128;
