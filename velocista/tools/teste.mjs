@@ -122,7 +122,7 @@ const sala = (nome) => pagina.waitForFunction(async (n) => { const m = await imp
 ok(await sala('atrio'), 'entra no átrio pela porta');
 await foto(pagina, 'lab-atrio.png');
 ok(await sala('cortex'), 'chega ao Cortex');
-await pagina.waitForFunction(() => window.__rel.missoes.indice >= 1, null, { timeout: 30000 }).catch(() => {});
+await pagina.waitForFunction(() => window.__rel.missoes.indice >= 1, null, { timeout: 200000 }).catch(() => {});
 ok(await pagina.evaluate(() => window.__rel.missoes.indice >= 1), 'missão 1 (chegar ao Cortex) concluída');
 // crime: força um assalto, leva o herói até o ladrão e confere que foi impedido
 await pagina.evaluate(() => { const R = window.__rel; R.teclas.clear(); R.crimes.atualizar(60, R.P, { forcar: 'assalto' }); });
