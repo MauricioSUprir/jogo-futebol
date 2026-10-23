@@ -108,7 +108,7 @@ await pagina.waitForTimeout(1500);
 const col2 = await pagina.evaluate(() => {
   const R = window.__rel, o = R.orbesAtivos[0].o; R.P.x = o.x; R.P.z = o.z; R.P.y = Math.max(0, o.y - 0.9); R.P.vy = 0; return R.J.coletadas;
 });
-await pagina.waitForTimeout(500);
+await pagina.waitForFunction((n) => window.__rel.J.coletadas > n, col2, { timeout: 60000 }).catch(() => {});
 ok(await pagina.evaluate(() => window.__rel.J.coletadas) === col2 + 1, 'coleta uma esfera');
 
 // laboratório: de fora, pela porta até o Cortex, e escalar a parede dele
