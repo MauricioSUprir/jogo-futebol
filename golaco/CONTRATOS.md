@@ -2617,7 +2617,7 @@ desenha nada.
     - no máximo 3 máscaras viram mancha.
   - `teste-corpo-tela` C6/C7: na pro, os logos carregam; na pública, nada é pedido.
 
-## Cenas das paradas — replays nas paradas e cartão (22/10; contrato; intervalo e pós-jogo entram nos próximos PRs)
+## Cenas das paradas — replays nas paradas, cartão e intervalo (22/10; contrato; o pós-jogo entra no próximo PR)
 Pedido do dono: "a cena de pós jogo, e a cena de intervalo, as cenas de cartões, e os replays de faltas e jogadas passando
 na tela enquanto o jogo tá parado". Plano em `PLANO-CENAS.md`; pesquisa em `PESQUISA-CENAS-TV.md` (§0.1 o roteiro da DFL,
 §0.2 SoccerNet-v2, §4 replays nas paradas). **Só desenho**: a simulação fica parada e volta no mesmo tick. Nada entra no
@@ -2739,8 +2739,10 @@ Porte da branch `golaco/cenas-jogo` (1df2ca34) para fora do fecho: `js/cenas-con
   - TM "só o meu jogador" com o travado expulso: a faixa "Você foi expulso" espera a cena E o replay de parada daquela bola
     morta (`expulsoPendente`, `talvezFaixaExpulso`) e os 6 s contam de quando ela aparece. Na vantagem que acaba em gol ela
     espera também a comemoração, a cena do cartão no gol + 149 e o replay do gol (sai depois dele); no intervalo, o 2º tempo
-    (a faixa do intervalo fica); no fim de jogo ela não sai (fica a do fim, com o "Voltar ao Total Match"); com a cena de
-    substituição, espera ela.
+    (a faixa do intervalo fica) — também a que já estava na tela com os 6 s correndo quando o 1º tempo acabou (o vermelho
+    nos últimos segundos): a faixa "Intervalo" ou a cena do intervalo a tiram e ela volta a ficar pendente
+    (`guardarFaixaExpulso`), de novo com 6 s no 2º tempo; no fim de jogo ela não sai (fica a do fim, com o "Voltar ao Total
+    Match"); com a cena de substituição, espera ela.
   - A comemoração que a cena do cartão tira do desenho no gol + 149 continua valendo para a entrada: o passo da saída
     (gol + 150) vai com a entrada NEUTRA (`golNeutro`), como com a comemoração sem a cena — a mesma entrada por tick com e
     sem a cena (um botão segurado do gol até depois da cena não vira uma borda no passo da montagem).
@@ -2767,3 +2769,91 @@ Porte da branch `golaco/cenas-jogo` (1df2ca34) para fora do fecho: `js/cenas-con
   plano do árbitro e o companheiro depois da elipse; A-L 48 vermelhos na lateral de cá, z = 30; B variedade, E pureza, F
   relógio do estádio, G custo, P o plano da torcida nos trilhos das plantas: Maracanã e 6 genéricos) e `teste-cenas-tela`
   parte `cartao` (navegador, CI e deploy; C6b, C11b, C12b, C12c e o C4 em 560×400 desta revisão).
+
+### Guardador de lances (PR 3, intervalo: a 1ª parte; PLANO-CENAS.md §4.2, R8, R9, R20)
+O intervalo ("lances do 1º tempo") e o fim ("Melhores momentos") tocam lances da partida inteira; o anel do replay só tem
+os últimos 10 s. `render/lances-guarda.js` (puro, sob demanda no `SOB.cenas`; `LANCES_GUARDA` no `cenas-config.js`) COPIA
+cada lance do anel, comprimido, para vagas fixas — só lê o anel: o hash não muda.
+- **Formato:** `LANCES_GUARDA.lances` (6) vagas de ≤ `segundos` (6) s. Os jogadores a `hz` (30) Hz — por vaga: id (Int16),
+  info (Uint8: time, goleiro, treinador), x/z/rumo (Float32) e a pose em Int16 RELATIVA ao x/z do jogador (y absoluto) na
+  `escala` 1/4000 m (±8,19 m; erro ≤ 0,13 mm; fora da faixa satura e conta em `G.saturou`). A bola (p + q), o relógio do
+  estádio, o corte e as marcas de TODO passo (60 Hz). As batidas da bola na rede da janela (até `REDE.maxImpactos`).
+  Memória fixa: 3,54 MB do guardador + 2,19 MB do mini-anel; nada alocado em `guardar` nem em `tocar`.
+- `criarGuarda(LANCES_GUARDA, {vagas, nj})`, `criarMini(G)` (o mini-anel: `criarAnel` com as vagas/nj do anel e
+  `LANCES_GUARDA.mini` passos, com `mini.ondas` = a rede do lance no formato de `rede-onda.js criarOndas`), `limparGuarda(G)`.
+- `janelaDoLance(G, anel, lance, out, {inteira})` → `{de, ate}` ou null: [chave − `antes`, fim + `depois`] s, cortada a
+  `segundos` pelo começo, sem atravessar corte (começa no último até a chave — no gol, até o gol —, acaba antes do primeiro
+  depois do começo), nunca depois de `ateMax`; `inteira`: null se o começo ideal já saiu do anel (o lance guardado tarde).
+- `guardar(G, anel, lance, batidas, {inteira})` → a vaga k ou −1. `lance = {tipo ('gol' | lances.js TIPOS_LANCE), classe
+  ('gol' | 'A' | 'B'), peso? (o gol: `PESO_GOL` = 100; a parada: o de lances.js, 1–7), chave, fim, ateMax?, morta (a chave
+  da parada: a bola morta; o gol: o tick dele), lado, time, ids, x, z, tempo}`. Cheio: sai o de menor peso (o gol nunca sai
+  por uma parada); o mais antigo desempata; o novo de menor peso que todos fica de fora; a mesma parada só troca por uma
+  mais forte (até 1 lance por parada).
+- `tocar(G, k, mini)` → a meta (`lanceGuardado`) ou null: descomprime no mini-anel, NOS MESMOS TICKS do anel de quando foi
+  guardado, a 60 Hz (os jogadores dos passos do meio interpolados: pose e x/z lineares, rumo pelo menor ângulo, casados pelo
+  id; nunca através de corte), e a rede em `mini.ondas`.
+- `listar(G)` (cópias, na ordem em que entraram: `{k, seq, tipo, classe, peso, chave, fim, de, ate, lado, time, ids, x, z,
+  tempo, quadros, batidas, segundos}`); `escolherLances(G, {tempo, max, maxSegundos, cronologica}, out)` → os k para uma cena:
+  primeiro os gols do tempo (na ordem do jogo), depois as paradas pelo peso (empate: a mais nova), até `max` e `maxSegundos`.
+- **Replay de outra fonte** (`render/replay.js`, rev. R8): `diretor.iniciar(ro, fonte = anel)`; os leitores do quadro
+  (`posicionar` 'tv'/'fechada'/'atras'/'lateral', `tecnicosNoTick`, `zLateralDoPlano`, o enquadramento da linha e da análise:
+  `jogadorNoTick`, `defensorDaLinha`, `enquadrarSaot`) leem a fonte; `diretor.fonte`; no fim ou no pulo a fonte volta ao anel.
+  `diretor.lance(fonte, meta)` = `replay-roteiro.js roteiroLance(fonte, lance)`: `{tipo: 'lance', planos: [{de, ate, vel: 1,
+  cam: 'tv'}], lado, chave, fim, classe, lance, x, z}` (sem atravessar corte; null com < 0,5 s).
+- **Página** (`main.js`):
+  - Guardar (com ou sem replay): o gol fica pendente no passo dele (`golGuardar`) e entra no `posGol()` — e no passo da saída,
+    do intervalo ou do fim, também sem diretor ou com "Replays: Desligado" (`guardarGolPendente`). A parada classificada
+    (todo `lancesPasso` não nulo, aceito ou não) fica pendente (`lanceGuardar`) e entra no passo ANTES da montagem
+    (`guardarParadaPendente`, no topo do `seguraParaReplayParada`, antes do replay de parada: `montaNoProximoPasso` 'monta'
+    ou 'fimDoTempo'), quando a janela até o desfecho + 0,5 s já está gravada. Só na partida (onde o classificador existe).
+  - Sem o módulo baixado: pede o `SOB.cenas` e guarda quando chegar (`inteira`, o fim no fim do anel de quando pediu), se
+    ainda for o mesmo mundo.
+  - A memória (`garantirGuarda`) só na partida: quando o módulo chega ou a partida começa com ele já baixado (nos treinos a
+    pré-carga não aloca nada). As últimas 8 batidas da rede ficam num anel pequeno (`batidasRede`, `estadioPasso`).
+  - `iniciarReplay(ro, {fonte, aoFim})`: o replay de dentro de uma cena chama `aoFim(pulou)` no fim ou no pulo, sem andar a
+    fila (`proximaCena`); o mundo novo e o "Simular o resto" descartam o `aoFim`. O `desenharReplay` lê o quadro, o relógio do
+    estádio e a rede pela fonte (`fonte.ondas ?? ondas`).
+  - `tocarLanceGuardado(k, aoFim)` (para as cenas do intervalo e do fim) e `lancesGuardados()`; o mundo novo e o fim do
+    "Simular o resto" esquecem os lances (`iniciarEstados`).
+  - API `__golaco.cenas`: `lances`, `guarda` ({bytes, mini, saturou} | null), `historicoGuarda` ({tick, tipo, classe, chave,
+    fim, k, ms, tarde}), `pendentes` ({gol, parada}), `tocarLance(k)`, `fimLance` ({k, pulou, tick, ms} | null),
+    `escolherLances(o)`.
+- **Teste:** `teste-lances-guarda` (Node, padrão; G1 memória, G2 quantização, G3 tocar — a bola e o relógio exatos, os
+  jogadores do meio = a interpolação, a perda dos 30 Hz e a rede —, G4 prioridade e a escolha, G5 custo, G6 as janelas em 24
+  partidas IA × IA, metade com os replays desligados).
+
+### Cena do intervalo (PR 3; dono, 22/10: "a cena de intervalo"; PLANO-CENAS.md §4)
+- **`js/cena-fim.js`** (puro, sob demanda pelo `SOB.cenas`; a interface já serve ao fim de jogo do PR 4):
+  `planejarFim(m, 'intervalo', {...})`, `criarCenaFim`, `passoCenaFim`, `avancarCenaFim`, `faseFim`, `pularParaGeral`,
+  `proximoBloco`, `tarjaPlacarVisivel`, `infoAtoresFim`. Planos: `apito` 1,5 s → `campo` 2,5 s (o placar pesa no gesto: mãos
+  na cintura, nos joelhos, cabeça baixa de quem perde, apertos de mão) → `tunel` 3,5 s (ELIPSE: o funil para o túnel, a
+  câmera na boca, o vão das placas aberto) → `torcida` 1,5 s → [lances do 1º tempo] → `estatisticas` 6 s → `geral` 3 s. Os
+  treinadores pelo gancho `tecnicos.js treinadorDoTime` (cópias; os vivos parados).
+- **Página** (`main.js`): o evento `intervalo` vira a cena (na fila, depois do replay do gol do último lance e do cartão do
+  último apito); `seguraIntervalo()` segura o laço no tick do evento até o `geral`; ali o laço solta, os 3 s de
+  `PARTIDA.intervalo` correm por baixo com o desenho ainda da cena (o campo vazio) e a `saida` do 2º tempo acaba a cena —
+  no MESMO tick e com o MESMO hash de `?cenas=0`. A cena chama `tocarAdiados()` ao começar (o apito sem esperar). Os lances
+  do 1º tempo vêm do guardador (`escolherLances`: os gols primeiro, depois a parada mais forte; até
+  `CENA_FIM.lances.intervalo`) e tocam pelo diretor com a fonte = o mini-anel e `aoFim` voltando à cena. Toque/Enter/A =
+  próximo bloco (no geral, a saída; depois de `CENAS.pularDepois`; o botão segurado vale UMA vez — de novo só depois de
+  solto: a borda do aperto em `F.botoes`); o "Pular" (só com toque) = a saída; Esc/P/Start = a PAUSA (a cena congela; o
+  `#cena-menu` abre a mesma pausa com toque). Pausa, aba escondida e celular em pé congelam. Editar time na pausa vale como
+  troca do intervalo (Regra 3). Sem o `SOB.cenas` baixado: a faixa de 3 s de antes; no online, a faixa + a tarja do
+  placar só nesses 3 s (sem segurar).
+- **Telas** (`js/cenas-tela.js`, `css/cenas.css`): a tarja do placar (escudo, sigla, placar e os autores do tempo com os
+  minutos, "(c)" e "(p)"; `sumula.js autoresPorTime`) e o painel de estatísticas do 1º tempo (só rótulos e números:
+  posse, finalizações, no alvo, escanteios, faltas, cartões; `sumula.js estatisticas(s, 1)`). Exceções escritas à "sem
+  narração", como a tarja do cartão: só dentro da cena. A tarja (embaixo à esquerda, cresce para cima: uma linha por autor)
+  CEDE ao painel quando as duas se encostariam (folga < 4 px, conferida quando uma delas aparece: `cederAoPainel`) — a
+  tela baixa com 3 ou mais autores de um lado, a janela estreita do PC; com folga, as duas juntas. No online a tarja fica no
+  centro, embaixo da faixa "Intervalo" no PC e ACIMA dela com toque (embaixo ficam os botões); se com os autores ela chegaria
+  ao placar do HUD, fica só a linha do placar (`caberNoOnline`).
+- **`js/sumula.js`**: SEMPRE na partida (import estático: no download inicial; folga do `teste-carga` 1399 → 1347 KB);
+  `escanteios[2]` contados na BOLA MORTA (a parada nova de tipo 'escanteio'), `faltas[2]` cometidas, `porTempo[1]` no apito
+  do 1º tempo — o apito fecha antes o chute ainda aberto (no alvo se o goleiro já tocou), que fica no 1º tempo. O
+  `resultadoTM` (o que vai ao TM) não ganha chaves.
+- **Testes:** `teste-cenas` C (56 intervalos: gol no último lance, time com 10, goleiro expulso; pureza E/E3), 
+  `teste-lances-guarda` (G1–G6), `teste-ponte-tm` P7 (escanteios e faltas contra contadores independentes; as chaves do
+  `resultadoTM`; P7b o chute aberto no apito) e `teste-cenas-tela` seção I (I1–I8, I8b a tarja × o painel com 1–4 autores,
+  I11, I12, I13 a tarja do online × os botões de toque, I14 o botão segurado = um bloco) e C12d (a faixa do expulso que o
+  intervalo tirou volta no 2º tempo).

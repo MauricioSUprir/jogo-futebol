@@ -81,3 +81,75 @@ export const CENA_CARTAO = {
     tunel: { fov: 34 },
   },
 };
+
+// ---------------------------------------------------------------- PR 3 — o guardador de lances (render/lances-guarda.js)
+// Os lances da partida (gols e paradas A/B de js/lances.js) guardados para o intervalo ("lances do 1º tempo") e o fim
+// ("Melhores momentos"): `lances` lances de no máximo `segundos` s a `hz` Hz, a pose em Int16 relativa ao x/z do jogador
+// com a `escala` (1/4000 m: ±8,19 m, erro ≤ 0,13 mm — PLANO-CENAS.md R20: a 1/8000 o mergulho desenhado do goleiro ficava
+// perto da borda) → ~0,58 MB por lance, ~3,5 MB fixos (o anel de 10 s tem 3,36 MB), alocados só na partida (main.js
+// garantirGuarda: nunca nos treinos, onde a pré-carga também roda); a bola e o relógio de todo passo (60 Hz). A janela: [chave − `antes`, fim + `depois`] s (a do CENA_FIM.lances.tvAntes/
+// depois), cortada a `segundos` pelo começo. O mini-anel de tocar: `mini` passos (6 s a 60 Hz) com as vagas/nj do anel, ~2 MB
+export const LANCES_GUARDA = { lances: 6, segundos: 6, hz: 30, escala: 1 / 4000, mini: 360, antes: 2.5, depois: 0.5 };
+
+// ---------------------------------------------------------------- PR 3 (e a interface do PR 4) — intervalo e pós-jogo
+// (js/cena-fim.js; PLANO-CENAS.md §4 e §5, contrato "Cenas das paradas" §7.3). Pesquisa em PESQUISA-CENAS-TV.md.
+export const CENA_FIM = {
+  planos: {
+    // intervalo (18–30 s): os planos de campo (9 s) ≈ DFL 1:00 de "jogadores saindo / autores / técnicos / clima" ÷ 11,25 (o
+    // relógio do jogo) ≈ 5,3 s, arredondado para caber o túnel; depois os blocos de tela — 'lances' (0 s no relógio da cena:
+    // a cena ESPERA ali enquanto a página toca 0–2 lances do guardador pelo diretor do replay) e 'estatisticas' — e o 'geral'
+    // com o laço SOLTO (os 3 s de PARTIDA.intervalo correm por baixo; a 'saida' acaba a cena)
+    intervalo: [['apito', 1.5], ['campo', 2.5], ['tunel', 3.5], ['torcida', 1.5], ['lances', 0], ['estatisticas', 6.0], ['geral', 3.0]],
+    // fim (PR 4): os planos de campo (15,5 s) ≈ DFL 2:30 de campo ÷ 11,25 = 13,3 s
+    vitoria: [['apito', 1.5], ['vencedor', 3.0], ['perdedor', 2.5], ['cumprimentos', 2.0], ['treinador', 2.0], ['aplauso', 2.5], ['torcida', 2.0], ['melhor', 5.0], ['placar', 8.0], ['estatisticas', 6.0], ['geral', 0]],
+    empate: [['apito', 1.5], ['neutro', 3.0], ['cumprimentos', 2.0], ['treinador', 2.0], ['aplauso', 2.5], ['torcida', 2.0], ['melhor', 5.0], ['placar', 8.0], ['estatisticas', 6.0], ['geral', 0]],
+    curto: [['apito', 1.5], ['neutro', 3.0], ['torcida', 2.0], ['placar', 8.0], ['geral', 0]],   // TM: o empate que continua
+  },
+  // a tarja do placar com os autores (js/cenas-tela.js): DFL — +20 s do apito, 8 s, no intervalo e no fim (o atraso de campo
+  // ÷ 11,25 ≈ 1,8 s; aqui depois dos dois primeiros planos, para não cobrir os jogadores); a leitura não encolhe com o relógio
+  // do jogo. Conta no relógio da CENA (parado enquanto um lance do guardador toca: no replay ela some)
+  placar: { entra: 4.0, dura: 8.0 },
+  autores: true,              // false = a tarja só com o placar (PLANO-CENAS.md §9.1: a regra "GOL! sem autor nem minuto" é do
+                              // lance ao vivo, não da tarja de transmissão)
+  // estatísticas: wTVision — "os melhores gráficos escolhem os números que explicam a fase do jogo"; 6 s = o gráfico de evento
+  // da DFL. Só rótulos e números (sem frase)
+  estatisticas: { dura: 6.0, itens: ['posse', 'chutes', 'noAlvo', 'escanteios', 'faltas', 'cartoes'] },
+  // lances do guardador (render/lances-guarda.js escolherLances; a janela de cada um: LANCES_GUARDA.antes/depois): no
+  // intervalo até 2 (os gols do tempo primeiro, depois a parada A/B mais forte); "Melhores momentos" no fim até 6 e ≤ 30 s
+  // (EA FC 25: replay dos gols no pós-jogo; FC 24: introduções longas cortadas porque a maioria pulava → no fim é botão)
+  lances: { intervalo: 2, fim: 6, fimMax: 30 },
+  melhor: { dura: 5.0 },      // PR 4 — Premier League (voto da torcida no apito), Globo ("Craque do Jogo" no gramado)
+  troca: { pares: 1 },        // PR 4 — a troca de camisa (costume do fim de jogo; nenhuma regra proíbe)
+  // (da branch golaco/cenas-jogo) atores
+  velAnda: 1.4,               // m/s — os pares caminham para o aperto de mão
+  lenteLivre: 4.6,            // m — quem não é do plano sai de perto da câmera (os closes têm a lente fechada)
+  // (no intervalo só os pares ao ALCANCE: a distância entre os pontos onde cada um para ≤ maxDistIntervalo m, andando um para
+  // o outro a velAnda desde tIntervalo s — o aperto de 1 s acaba antes do túnel, aos 4 s; sem a folga: o par mais longe
+  // sairia andando no corte)
+  aperto: { dist: 0.92, altura: 1.06, pares: 6, maxDist: 6, maxDistFolga: 14, maxDistIntervalo: 4.8, tIntervalo: 0.6, sacode: 2.4, amp: 0.035 },
+  cintura: 0.62,              // fração com as mãos na cintura no 'campo' do intervalo / no 'neutro'
+  joelhos: 2,                 // quantos com as mãos nos joelhos
+  // a ELIPSE do túnel (intervalo): os 22 e o trio numa fila de `d` m da boca, andando para ela a `vel` m/s; quem chega à boca
+  // (z ≥ entra) some dentro dela (a câmera fica do lado da boca, olhando o campo: eles passam por ela). O resto é cortado
+  // pela elipse seguinte (a torcida): o campo fica vazio no 'geral'
+  funil: { d: [2.6, 22], vel: [1.3, 1.5], entra: 44.0 },
+  aplauso: { d: [8, 10], z0: 7.2, zMeio: 12.5 },    // PR 4 — a elipse do aplauso à torcida, ao lado do gol
+  // a bola da cena (a cópia do mundo andando pela física): bate no corpo de quem está a `bola.raio` m do centro dele e
+  // volta com `bola.volta` da velocidade (quem anda nela a toca para a frente) — nunca é ela quem empurra o jogador
+  bola: { raio: 0.42, volta: 0.25 },
+  // no corte do começo (o apito): quem vinha correndo para um sólido do estádio (o gol, as placas) e não pararia antes dele
+  // recomeça `solidos.folga` m antes do ponto onde pararia, andando a velAnda (a freada pela locomoção: `solidos.freio` do
+  // freio do jogador)
+  solidos: { folga: 0.8, freio: 0.8, raio: 0.35 },
+  // câmera
+  camera: {
+    apito: { altura: 16, recuo: 30, fov: 34 },
+    campo: { dist: 13.5, altura: 2.4, fov: 34 },
+    tunel: { x: 6.5, y: 1.6, z: 38.3, fov: 40 },
+    grupo: { dist: 8, altura: 1.8, fov: 32 },
+    close: { dist: 5.2, altura: 1.55, fov: 30 },
+    aplauso: { atras: 9, altura: 1.8, fov: 40 },
+    cumprimentos: { dist: 8.5, altura: 1.8, fov: 34 },
+    treinador: { fov: 30, altura: 1.5 },
+  },
+};

@@ -6,9 +6,14 @@
 // no mundo do próprio teste.
 //   const L = await carregarCenas(pastaJs);
 //   estadoDoMeio(L, semente, ticks) → m
-//   forcarCartao(L, m, situacao, {x, z}) → {m, eventos, tickCena} | null — situacao: 'amarelo' | 'vermelho' | 'segundo' |
-//      'penalti' | 'vantagemGol' (o cartão guardado sai no gol; a cena é montada em gol + 149, como na página) | 'goleiro';
-//      {x, z} (amarelo, vermelho, segundo): o lance levado para lá (x null = o do condutor) — a lateral de cá, z = 30
+//   forcarCartao(L, m, situacao, {x, z, semBusca}) → {m, eventos, tickCena} | null — situacao: 'amarelo' | 'vermelho' |
+//      'segundo' | 'penalti' | 'vantagemGol' (o cartão guardado sai no gol; a cena é montada em gol + 149, como na página) |
+//      'goleiro'; {x, z} (amarelo, vermelho, segundo): o lance levado para lá (x null = o do condutor) — a lateral de cá, z =
+//      30; semBusca (pênalti, goleiro): o lance perto da área montado já, sem andar a partida procurando um (o fim do tempo)
+//   forcarGol(L, m) → true | false: a bola entrando agora no gol que o time 0 ataca (o gol sai nos passos seguintes)
+//   ateIntervalo(L, semente, {min, forcar(m, fim), margem}) → {m, eventos, forcado, fim, golTick} | null: a partida IA × IA
+//      até o passo do apito do 1º tempo (o evento 'intervalo'); com forcar, chamado UMA vez quando faltam ≤ margem ticks
+//      para o fim do tempo (os acréscimos já anunciados) com a bola rolando — o gol ou o cartão no último lance
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -39,7 +44,7 @@ export function forcarCartao(L, m, situacao, opc = {}) {
   // o pênalti e o goleiro expulso: o lance de verdade perto da área (um time com a bola a ≤ 30 m do gol que ataca; o
   // primeiro que acontecer, de qualquer um dos dois) — a falta dentro da área num estado com a bola no meio-campo deixava
   // a defesa longe (sem companheiro perto)
-  if (situacao === 'penalti' || situacao === 'goleiro') {
+  if ((situacao === 'penalti' || situacao === 'goleiro') && !opc.semBusca) {
     let achou = false;
     for (let i = 0; i < 6000 && !achou; i++) {
       const j = m.posse != null ? porId(m, m.posse) : null;
@@ -49,7 +54,7 @@ export function forcarCartao(L, m, situacao, opc = {}) {
     if (!achou) return null;
   }
   let c = porId(m, m.controlado?.[0]);
-  if (situacao === 'penalti' || situacao === 'goleiro') c = porId(m, m.posse);
+  if ((situacao === 'penalti' || situacao === 'goleiro') && !opc.semBusca) c = porId(m, m.posse);
   if (!c || c.posicao === 'GOL') c = m.jogadores.find(j => j.time === 0 && j.posicao !== 'GOL');
   let d = null;
   if (situacao === 'goleiro') d = m.jogadores.find(j => j.time !== c.time && j.posicao === 'GOL');
@@ -108,4 +113,43 @@ export function forcarCartao(L, m, situacao, opc = {}) {
   const eventos = m.eventos.slice();
   if (!eventos.some(e => e.tipo === 'cartao')) return null;
   return { m, eventos, tickCena: m.tick, punido: d.id, vitima: c.id };
+}
+
+/** A bola entrando agora no gol que o time 0 ataca (longe do goleiro): o gol sai nos passos seguintes. */
+export function forcarGol(L, m) {
+  const { C } = L;
+  const MX = C.CAMPO.meioX;
+  const c = m.jogadores.find(j => j.time === 0 && j.posicao !== 'GOL');
+  if (!c) return false;
+  const lado = m.ataca[0];
+  const pr = m.parada;
+  if (pr && pr.cobrador != null && pr.papel != null) { const c0 = porId(m, pr.cobrador); if (c0 && c0.papel === 'parado') c0.papel = pr.papel; }
+  m.posse = null; m.naMao = null; m.voo = null; m.parada = null; m.partida.estado = 'jogo'; m.golTick = null; m.foraDesde = null;
+  for (const j of m.jogadores) { j.segura = null; j.pedido = null; j.recebe = null; }
+  const gk = m.jogadores.find(j => j.time !== 0 && j.posicao === 'GOL');
+  const zb = gk && gk.z > 0 ? -2.7 : 2.7;
+  const b = m.bola;
+  b.p.x = lado * (MX - 0.5); b.p.y = 0.4; b.p.z = zb; b.v.x = lado * 16; b.v.y = 0; b.v.z = 0; b.rolando = false;
+  if (b.w) { b.w.x = 0; b.w.y = 0; b.w.z = 0; }
+  m.ultimoToque = { id: c.id, time: c.time, tick: m.tick };
+  return true;
+}
+
+/** A partida IA × IA até o passo do apito do 1º tempo (ver o cabeçalho). */
+export function ateIntervalo(L, semente, opc = {}) {
+  const { P } = L;
+  const m = P.criarPartida({ semente, minutosPorTempo: opc.min ?? 0.5 });
+  let forcado = null, fim = null, golTick = null;
+  for (let i = 0; i < 60000; i++) {
+    const p = m.partida;
+    if (opc.forcar && forcado == null && p.acrescimo != null) {
+      fim = p.tick0Tempo + p.ticksPorTempo + Math.round(p.acrescimo * p.ticksPorTempo / 45);
+      // (com a bola rolando ou numa parada: quem força acaba a parada; a bola no ar ou na mão do goleiro, espera)
+      if (fim - m.tick <= (opc.margem ?? 40) && (p.estado === 'jogo' || p.estado === 'parada') && m.naMao == null && !m.voo) forcado = opc.forcar(m, fim) || false;
+    }
+    const ev = P.passoPartida(m, P.entradaDemoPartida(m), null);
+    for (const e of ev) if (e.tipo === 'gol') golTick = m.tick;
+    if (ev.some(e => e.tipo === 'intervalo')) return { m, eventos: ev.slice(), forcado, fim, golTick };
+  }
+  return null;
 }

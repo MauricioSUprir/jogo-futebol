@@ -26,9 +26,12 @@ const LIMITE_BYTES = 4 * 1024 * 1024;
 // folga mínima até os 4 MB (código novo cabe sem estourar a meta; antes: ~1 KB) e o que NÃO pode estar no download
 // inicial (sob demanda: config.js SOB_DEMANDA)
 const FOLGA_MIN = 120 * 1024;
-// (as cenas das paradas, 22/10: a cena do cartão, os atores e as constantes dela, o cartão 3D e a tela das tarjas com o CSS)
+// (as cenas das paradas, 22/10: a cena do cartão, os atores e as constantes dela, o cartão 3D e a tela das tarjas com o CSS;
+// o guardador de lances do intervalo e do fim; a cena do fim de tempo — o intervalo. A súmula, js/sumula.js, entrou no
+// download inicial com a cena do intervalo: ela lê cada passo da partida desde o 1º — PLANO-CENAS.md R4)
 const SOB_DEMANDA_ARQ = ['js/render/replay.js', 'js/render/replay-roteiro.js', 'js/render/replay-olhos.js', 'js/render/replay-saot.js', 'js/editor-time.js', 'css/editor.css',
-  'js/cena-cartao.js', 'js/cena-atores.js', 'js/cenas-config.js', 'js/render/cartao3d.js', 'js/cenas-tela.js', 'css/cenas.css'];
+  'js/cena-cartao.js', 'js/cena-atores.js', 'js/cenas-config.js', 'js/render/cartao3d.js', 'js/cenas-tela.js', 'css/cenas.css', 'js/render/lances-guarda.js',
+  'js/cena-fim.js'];
 // só do estádio real da edição pro do Total Match (render/identidade-pagina.js por import()): nunca no download inicial
 // e sem pré-carga (a página sem ?tm não os pede nunca)
 const SO_TM_PRO_ARQ = ['js/estadio-planta.js', 'js/render/estadio-real.js', 'js/render/fachada-estilos.js'];

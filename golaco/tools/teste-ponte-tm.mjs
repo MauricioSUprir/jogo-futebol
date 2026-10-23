@@ -21,6 +21,8 @@
 //  P6  súmula com eventos montados: assistência, gol contra (lado = beneficiado, autor do outro time, sem assistência),
 //      pênalti (evento 'penalti' no mesmo passo), chute desviado (autor = quem chutou, assistência mantida), 2º amarelo =
 //      amarelo + vermelho, minuto 46 no começo do 2º tempo, posse 50/50 sem bola rolando.
+//  P7  as estatísticas das cenas: escanteios e faltas = contadores independentes, o porTempo no apito do 1º tempo, o
+//      resultadoTM com as chaves de antes; P7b o chute aberto no apito do 1º tempo fecha no apito (fica no 1º tempo).
 //
 //   node tools/teste-ponte-tm.mjs [--js <pasta>] [--min 0.5]   (minutos por tempo: P3 com --min, P4 com 2×, P5-A com 4×)
 import path from 'node:path';
@@ -323,4 +325,63 @@ function partidaInteira(T, opc) {
 }
 
 linhas.push(['tempo', `${((Date.now() - t0) / 1000).toFixed(1).replace('.', ',')} s`, '< 60 s', '']);
+// ------------------------------------------------------------------ P7 as estatísticas das cenas (escanteios, faltas, porTempo)
+// (PLANO-CENAS.md §4.2, R17) contadores INDEPENDENTES contra a súmula numa partida inteira IA × IA: o escanteio pela troca do
+// OBJETO m.parada (nova, de tipo 'escanteio', para o time de quem cobra) e as faltas cometidas pelo lado do `def` no mapa do
+// TM; o porTempo aparece no apito do 1º tempo com os números até ali; o resultadoTM continua só com as chaves de antes.
+if (typeof SU.estatisticas === 'function') {
+  const m = partidaDo(TA, { semente: +arg('--sem-p7', 5), min: Math.max(4, 4 * MIN) });
+  const s = SU.criarSumula();
+  const esc = [0, 0], fal = [0, 0];
+  let prAnt = null, escNoApito = null, passos = 0;
+  while (m.partida.estado !== 'fim' && passos < 200000) {
+    const ev = P.passoPartida(m, P.entradaDemoPartida(m));
+    SU.sumulaPasso(s, m, ev);
+    passos++;
+    const pr = m.parada;
+    if (pr && pr !== prAnt && pr.tipo === 'escanteio' && (pr.time === 0 || pr.time === 1)) esc[pr.time]++;
+    prAnt = pr;
+    for (const e of ev) if (e.tipo === 'falta' && e.def != null && TA.mapa[e.def]) fal[TA.mapa[e.def].lado]++;
+    if (ev.some(e => e.tipo === 'intervalo')) escNoApito = [...esc];
+  }
+  const pt = s.porTempo?.[1];
+  const r = SU.resultadoTM(s, m, TA.mapa);
+  const chaves = Object.keys(r).filter(k => k !== 'jogador').sort().join(',');
+  const chavesSt = Object.keys(r.stats).sort().join(',');
+  reg('P7 escanteios e faltas por time = contadores independentes (partida inteira)',
+    `escanteios ${s.escanteios.join('/')} × ${esc.join('/')} · faltas ${s.faltas.join('/')} × ${fal.join('/')}`, 'iguais',
+    s.escanteios[0] === esc[0] && s.escanteios[1] === esc[1] && s.faltas[0] === fal[0] && s.faltas[1] === fal[1] && esc[0] + esc[1] + fal[0] + fal[1] > 0);
+  reg('P7 porTempo no apito do 1º tempo (os escanteios até ali)', pt ? `escanteios ${pt.escanteios?.join('/')} × ${escNoApito?.join('/')}` : 'sem porTempo',
+    'iguais', !!pt && !!escNoApito && pt.escanteios?.[0] === escNoApito[0] && pt.escanteios?.[1] === escNoApito[1]);
+  reg('P7 o resultadoTM com as chaves de antes (nada novo vai ao TM)', `${chaves} · stats ${chavesSt}`, 'awayGoals,cartoes,gols,homeGoals,stats · stats onTarget,possession,shots',
+    chaves === 'awayGoals,cartoes,gols,homeGoals,stats' && chavesSt === 'onTarget,possession,shots');
+} else reg('P7 as estatísticas das cenas na súmula', 'sumula.js sem estatisticas (versão de antes)', 'existe', false);
+// P7b o chute ainda aberto no apito do 1º tempo fica no 1º tempo: o apito o fecha (no alvo se o goleiro já tocou) ANTES da
+// cópia do porTempo — antes ele fechava no 2º tempo pela JANELA_CHUTE e o "No alvo" dele saía do painel do intervalo e
+// contava no 2º tempo. Procura a 1ª semente (a partir de --sem-p7b, 123) com um chute aberto no passo do apito.
+if (typeof SU.estatisticas === 'function') {
+  let achou = null;
+  for (let k = 0; k < 24 && !achou; k++) {
+    const sem = +arg('--sem-p7b', 123) + k;
+    const m = P.criarPartida({ semente: sem, minutosPorTempo: 4 });
+    const s = SU.criarSumula();
+    let passos = 0;
+    while (m.partida.tempo === 1 && m.partida.estado !== 'fim' && passos < 60000) {
+      const ev = P.passoPartida(m, P.entradaDemoPartida(m));
+      passos++;
+      const apito = ev.some(e => e.tipo === 'intervalo');
+      const aberto = apito && s.aberto ? { ...s.aberto } : null, alvoAntes = [...s.noAlvo];
+      SU.sumulaPasso(s, m, ev);
+      if (!apito) continue;
+      if (aberto) achou = { sem, aberto, alvoAntes, depois: s.aberto, t1: SU.estatisticas(s, 1).noAlvo };
+      break;
+    }
+  }
+  const a = achou;
+  const esperado = a ? a.alvoAntes.map((v, t) => v + (t === a.aberto.time && a.aberto.defendido != null ? 1 : 0)) : null;
+  reg('P7b o chute aberto no apito do 1º tempo fecha no apito (o "No alvo" dele no painel do intervalo)',
+    a ? `semente ${a.sem}: chute do time ${a.aberto.time} (tick ${a.aberto.tick}, goleiro ${a.aberto.defendido ?? '-'}); depois do apito ${a.depois ? 'AINDA ABERTO' : 'fechado'}; no alvo 1º T ${a.t1.join('/')} × ${esperado.join('/')}` : 'nenhuma semente com chute aberto no apito',
+    'fechado; iguais', !!a && !a.depois && a.t1[0] === esperado[0] && a.t1[1] === esperado[1]);
+}
+
 fim();
