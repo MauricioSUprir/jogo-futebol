@@ -330,7 +330,7 @@ function passoRastro(dt) {
 // ---------- estado ----------
 const P = { x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, correndo: false, fase: 0, t: 0, parede: null, vibrando: false };
 const C = { yaw: 0, pitch: CAM.pitch, dist: CAM.dist };
-const J = { modo: 'menu', coletadas: 0, total: 0, aviso: 0, inicioT: 0, alinhar: 0 };
+const J = { modo: 'menu', coletadas: 0, total: 0, aviso: 0, inicioT: 0, alinhar: 0, ignorarMov: 0 };
 const teclas = new Set();
 const stick = { x: 0, y: 0 };
 const toque = { correr: false, vibrar: false };
@@ -359,7 +359,7 @@ let tinhaCaptura = false;
 document.addEventListener('pointerlockchange', () => {
   const tem = document.pointerLockElement === el.cena;
   if (!tem && tinhaCaptura && J.modo === 'jogando') { J.modo = 'pausa'; el.pausa.hidden = false; }
-  tinhaCaptura = tem;
+  tinhaCaptura = tem; J.ignorarMov = 3;                 // o 1º movimento depois de capturar o mouse costuma vir com um salto
 });
 el.cena.addEventListener('click', () => { if (J.modo === 'jogando' && !TOQUE && document.pointerLockElement !== el.cena) pedirCaptura(); });
 $('btnContinuar').addEventListener('click', () => { J.modo = 'jogando'; el.pausa.hidden = true; if (!TOQUE) pedirCaptura(); });
@@ -379,7 +379,7 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => teclas.delete(e.key.toLowerCase()));
 addEventListener('blur', () => teclas.clear());
 function girar(dx, dy, kx, ky) { C.yaw -= dx * kx; C.pitch = clamp(C.pitch + dy * ky, -0.25, 1.35); }
-addEventListener('mousemove', (e) => { if (J.modo !== 'jogando') return; if (document.pointerLockElement === el.cena || e.buttons) girar(e.movementX, e.movementY, 0.0028, 0.0024); });
+addEventListener('mousemove', (e) => { if (J.modo !== 'jogando') return; if (J.ignorarMov > 0) { J.ignorarMov--; return; } if (document.pointerLockElement === el.cena || e.buttons) girar(e.movementX, e.movementY, 0.0028, 0.0024); });
 
 // toque: joystick à esquerda, arrastar para olhar, botões
 if (TOQUE) {

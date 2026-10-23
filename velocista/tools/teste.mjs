@@ -8,7 +8,7 @@ const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const saida = process.argv[2];
 let falhas = 0;
 const ok = (c, msg) => { console.log(`${c ? 'OK ' : 'ERRO'} ${msg}`); if (!c) falhas++; };
-const foto = (p, nome) => saida ? p.screenshot({ path: path.join(saida, nome) }) : null;
+const foto = (p, nome) => saida ? p.screenshot({ path: path.join(saida, nome), timeout: 120000 }) : null;
 
 const srv = await servidor(0, path.join(AQUI, '..'));
 const { navegador, pagina, erros } = await abrir({ largura: 1280, altura: 720 });
@@ -22,7 +22,7 @@ await pagina.waitForTimeout(500);
 ok(await pagina.evaluate(() => window.__rel.J.modo) === 'jogando', 'modo jogando');
 
 // correr para frente
-await pagina.evaluate(() => { window.__rel.teclas.add('w'); });
+await pagina.evaluate(() => { window.__rel.C.yaw = 0; window.__rel.teclas.add('w'); });
 await pagina.waitForFunction(() => window.__rel.P.z > 6, null, { timeout: 30000 }).catch(() => {});
 const m1 = await pagina.evaluate(() => ({ z: window.__rel.P.z, v: Math.hypot(window.__rel.P.vx, window.__rel.P.vz) }));
 ok(m1.z > 5 && m1.v > 5, `corre (z=${m1.z.toFixed(1)}, v=${m1.v.toFixed(1)} m/s)`);
