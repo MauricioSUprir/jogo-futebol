@@ -53,9 +53,11 @@ html.em-replay .tarja-cena, html.em-comemoracao .tarja-cena, html.em-substituica
 
 /* ---- PR 3 (o intervalo): a tarja do PLACAR com os autores (lower third da DFL) e o PAINEL DE ESTATÍSTICAS (só rótulos e
    números: wTVision). Só dentro da cena (no online, a tarja só nos 3 s da faixa do intervalo, no centro). A tarja fica
-   embaixo à esquerda (o mesmo lugar da do cartão: as duas nunca juntas); o painel no meio, sem encostar nela, no placar
-   (em cima à esquerda), no "Pular" (embaixo à direita) nem no botão da pausa (em cima à direita) — 844×390, 667×375 e
-   568×320 conferidos pelo teste-cenas-tela (I8). */
+   embaixo à esquerda (o mesmo lugar da do cartão: as duas nunca juntas) e cresce para cima com os autores (uma linha por
+   autor); o painel no meio, sem encostar no placar (em cima à esquerda), no "Pular" (embaixo à direita) nem no botão da
+   pausa (em cima à direita) — 844×390 e 568×320 pelo teste-cenas-tela I8. Quando a tarja e o painel se encostariam (a
+   tela baixa com 3 ou mais autores de um lado: em 568×320 já com 3; a janela estreita do PC), a tarja SAI quando o painel
+   entra (js/cenas-tela.js cederAoPainel; I8b com 1–4 autores em 844×390, 667×375, 568×320 e no PC 1280×720 e 560×400). */
 .tarja-placar {
   position: absolute; left: calc(var(--sa-l) + 64px); bottom: calc(var(--sa-b) + 64px);
   display: flex; flex-direction: column; gap: 6px; min-width: 0;
@@ -74,7 +76,8 @@ html.em-replay .tarja-cena, html.em-comemoracao .tarja-cena, html.em-substituica
 .tp-lado { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .tp-lado1 { text-align: right; }
 .tp-autor { font-size: 14px; font-weight: 600; color: var(--texto-2, var(--texto)); overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-/* no online: no centro, embaixo da faixa "Intervalo" (o analógico mora embaixo à esquerda) */
+/* no online: no centro, embaixo da faixa "Intervalo" (o analógico mora embaixo à esquerda); com toque, acima dela (a
+   regra do celular, mais adiante) */
 .tarja-placar.online { left: 0; right: 0; margin-inline: auto; width: max-content; bottom: auto; top: calc(50% + 62px); }
 
 .painel-est {
@@ -103,7 +106,9 @@ html.com-toque .tarja-placar {
   left: calc(var(--sa-l) + 14px); bottom: calc(var(--sa-b) + 14px); max-width: calc(100vw - var(--sa-l) - var(--sa-r) - 190px);
   padding: 5px 10px 6px; gap: 3px;
 }
-html.com-toque .tarja-placar.online { left: 0; right: 0; bottom: auto; top: calc(50% + 54px); max-width: calc(100vw - var(--sa-l) - var(--sa-r) - 32px); }
+/* no online com toque: ACIMA da faixa "Intervalo" (embaixo dela ficam os botões de toque à direita, visíveis no online —
+   em 568×320 a tarja cobria o CORRER, o PASSE e a ENFIADA); a faixa tem ~88 px de altura no meio da tela */
+html.com-toque .tarja-placar.online { left: 0; right: 0; top: auto; bottom: calc(50% + 52px); max-width: calc(100vw - var(--sa-l) - var(--sa-r) - 32px); }
 html.com-toque .tp-gols { font-size: 18px; min-width: 48px; }
 html.com-toque .tp-autor { font-size: 11.5px; }
 html.com-toque .tp-autores { column-gap: 12px; }

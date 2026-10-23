@@ -1,4 +1,4 @@
-// Texturas procedurais (canvas) da cidade de RELÂMPAGO: fachadas (cor + janelas acesas), asfalto, calçada, grama, telhado.
+// Texturas procedurais (canvas) da cidade de THE FLASH: fachadas (cor + janelas acesas), asfalto, calçada, grama, telhado.
 import * as THREE from 'three';
 import { CELL, RUA } from './cidade.js';
 
@@ -192,4 +192,44 @@ export function texturaCopa() {
   g.fillStyle = '#2f6b2f'; g.fillRect(0, 0, 128, 128);
   for (let i = 0; i < 700; i++) { const v = r(-25, 25); g.fillStyle = `rgba(${50 + v},${110 + v},${45 + v * 0.4},0.6)`; g.beginPath(); g.arc(rnd() * 128, rnd() * 128, r(2, 7), 0, 6.3); g.fill(); }
   return textura(c);
+}
+
+// ----- térreo comercial: 16 m × 5 m em 1024×320 (cor + emissiva das vitrines e letreiros) -----
+const LOJAS = ['MERCADO', 'FARMÁCIA', 'CAFÉ', 'LIVRARIA', 'PADARIA', 'BANCO', 'ÓTICA', 'ACADEMIA', 'PIZZARIA', 'HOTEL', 'FLORES', 'RESTAURANTE', 'CINEMA', 'LAVANDERIA', 'ELETRÔNICOS'];
+const LETREIRO = ['#b3202a', '#1f5fa8', '#2a7f4f', '#c78a1a', '#6a2a8a', '#222a36', '#d0d4da'];
+export function criarLojas(aniso = 8) {
+  const out = [];
+  for (let k = 0; k < 3; k++) {
+    semente = 5000 + k * 131;
+    const W = 1024, H = 320, [c, g] = tela(W, H), [ce, e] = tela(W, H);
+    g.fillStyle = pick(['#8d8f94', '#6f7278', '#9a9488']); g.fillRect(0, 0, W, H); e.fillStyle = '#000'; e.fillRect(0, 0, W, H);
+    granulado(g, W, H, 6000, 0.12);
+    let x = 0;
+    while (x < W - 60) {
+      const w = Math.min(W - x, Math.floor(r(150, 250)));
+      // pilar
+      g.fillStyle = '#5a5d63'; g.fillRect(x, 0, 12, H);
+      const cx = x + 12, cw = w - 12;
+      // letreiro
+      const cor = pick(LETREIRO), nome = pick(LOJAS);
+      g.fillStyle = cor; g.fillRect(cx + 6, 22, cw - 12, 52);
+      g.fillStyle = '#f4f4f0'; g.font = `bold ${Math.min(34, Math.floor((cw - 30) / nome.length * 1.55))}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(nome, cx + cw / 2, 49);
+      e.fillStyle = '#ffffff'; e.globalAlpha = 0.85; e.font = g.font; e.textAlign = 'center'; e.textBaseline = 'middle'; e.fillText(nome, cx + cw / 2, 49); e.globalAlpha = 1;
+      // toldo
+      if (rnd() < 0.6) { const tc = pick(['#b3202a', '#1f5fa8', '#2a7f4f', '#c78a1a']); for (let s = 0; s < cw - 12; s += 16) { g.fillStyle = (s / 16) % 2 ? tc : '#f1efe6'; g.fillRect(cx + 6 + s, 84, 16, 26); } g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(cx + 6, 108, cw - 12, 4); }
+      // vitrine e porta
+      const vy = 118, vh = H - vy - 18, porta = rnd() < 0.7 ? 56 : 0, vw = cw - 12 - porta - 8;
+      const gr = g.createLinearGradient(0, vy, 0, vy + vh); gr.addColorStop(0, '#6b8aa3'); gr.addColorStop(1, '#1a2430'); g.fillStyle = gr; g.fillRect(cx + 6, vy, vw, vh);
+      g.fillStyle = 'rgba(255,255,255,0.14)'; g.beginPath(); g.moveTo(cx + 6, vy + vh); g.lineTo(cx + 6 + vw * 0.55, vy); g.lineTo(cx + 6 + vw * 0.7, vy); g.lineTo(cx + 6 + vw * 0.15, vy + vh); g.fill();
+      g.strokeStyle = '#2b2f36'; g.lineWidth = 4; g.strokeRect(cx + 6, vy, vw, vh);
+      if (rnd() < 0.8) { e.fillStyle = pick(QUENTE); e.globalAlpha = r(0.45, 0.85); e.fillRect(cx + 10, vy + 4, vw - 8, vh - 8); e.globalAlpha = 1; }
+      // prateleiras / manequins sugeridos
+      g.fillStyle = 'rgba(0,0,0,0.35)'; for (let s = 0; s < 3; s++) g.fillRect(cx + 14, vy + 26 + s * 34, vw - 16, 3);
+      if (porta) { g.fillStyle = '#20262e'; g.fillRect(cx + 6 + vw + 6, vy - 6, porta - 4, vh + 6); g.fillStyle = 'rgba(150,185,215,0.25)'; g.fillRect(cx + 6 + vw + 10, vy - 2, porta - 12, vh * 0.7); g.fillStyle = '#c9ccd2'; g.fillRect(cx + 6 + vw + porta - 8, vy + vh * 0.45, 3, 22); if (rnd() < 0.7) { e.fillStyle = '#ffe2a0'; e.globalAlpha = 0.5; e.fillRect(cx + 6 + vw + 10, vy - 2, porta - 12, vh * 0.7); e.globalAlpha = 1; } }
+      x += w;
+    }
+    g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(0, H - 14, W, 14);          // rodapé
+    out.push({ mapa: textura(c, { aniso }), emissiva: textura(ce, { aniso }) });
+  }
+  return out;
 }

@@ -45,10 +45,12 @@
 //   node tools/teste-cenas-tela.mjs [--raiz <pasta do jogo>] [--so A,H,R,C,U,L,G,T,I,F,FC,FU,FT,FO] [--capturas <pasta>]
 //   (A = PC 1280×720: C1–C6; H = hash com × sem a cena: C7 e o ícone com ?cenas=0; R = replay de parada: C9; C = celular
 //   844×390 Média: C3–C5, C8, C10; U = celular com ?corpo=humano: C3, C8; L = 667×375 e 568×320: C4; G = gol: C11;
-//   T = Total Match: C12; I = o intervalo (PR 3): I1–I8, I11, I12 — a cena ativa no apito do 1º tempo com o tick parado até
+//   T = Total Match: C12 (C12d: o vermelho dele no fim do 1º tempo — a faixa que a cena do intervalo tirou volta no 2º
+//   tempo); I = o intervalo (PR 3): I1–I8, I8b, I11–I14 — a cena ativa no apito do 1º tempo com o tick parado até
 //   o geral, a tarja do placar com os autores da súmula, os lances do guardador dentro da cena, as estatísticas = súmula,
-//   o hash do 2º tempo igual ao de ?cenas=0, o toque/Pular, a pausa, nada encostando em 844×390/568×320, o apito no plano
-//   do apito e o campo vazio no geral)
+//   o hash do 2º tempo igual ao de ?cenas=0, o toque/Pular, a pausa, nada encostando em 844×390/568×320, a tarja × o painel
+//   com 1–4 autores (I8b: a tarja sai quando encostariam), o apito no plano do apito, o campo vazio no geral, a tarja do
+//   online × os botões de toque (I13) e o botão de jogo segurado = um bloco (I14))
 // O PÓS-JOGO (PR 4; PLANO-CENAS.md §5.6; partidas de 2 × 1 min levadas até 40 passos do apito final pela API dos testes —
 // rodarPassos, nenhuma cena no caminho — e o resto pelo laço da página; o placar escrito no mundo nos desfechos forçados):
 //   F (PC 1280×720): F1 a cena começa no apito final (o tick do 'fimDeJogo') com os planos e as durações de cada desfecho
@@ -1026,6 +1028,53 @@ if (roda('T')) try {
         c.erro ?? `${ordC}; a do expulso ${c.primeira ? `mostrada em ${c.primeira.s}@${c.primeira.tick}` : 'nunca'}; no fim: "${c.titulo}" ${c.vista ? 'visível' : 'escondida'}, botão "${c.botao}" ${c.botaoVisto ? 'visível' : 'escondido'}`,
         'nunca; "Fim de jogo" com o botão', !c.erro && c.estado === 'fim' && !c.primeira && /fim de jogo/i.test(c.titulo) && c.vista && /total match/i.test(c.botao) && c.botaoVisto);
     }
+    // C12d: o vermelho do travado nos últimos segundos do 1º tempo (o tempo acaba antes da montagem da falta): a faixa
+    // aparece depois da cena do cartão, o apito chega com ela na tela (os 6 s correndo) e a cena do intervalo a tira — ela
+    // tem de voltar no 2º tempo, ≥ 5 s visível (antes ela sumia de vez: o hud.faixa(null) da cena e o pendente já zerado)
+    {
+      const d = await fr.evaluate(() => {
+        const g = window.__golaco, ct = window.__ct;
+        g.reiniciar({ modo: 'partida', semente: 5 });
+        g.rodarPassos(600, 'demo');
+        let w = 0; while (w < 3000 && g.mundo.partida.estado !== 'jogo') { g.rodarPassos(1, 'demo'); w++; }
+        for (let i = 0; i < 30; i++) ct.quadro(false);
+        const m = g.mundo, p = m.partida, trava = g.tm?.trava ?? null;
+        // o 1º tempo nos acréscimos, acabando 30 passos depois daqui (menos que PARTIDA.foraEspera: a falta não é montada)
+        p.acrescimo = 1;
+        p.tick0Tempo = m.tick - (p.ticksPorTempo + Math.round(p.ticksPorTempo / 45)) + 30;
+        const f = g.faltaDeTeste({ cartao: 'vermelho', doMeu: true });
+        const fx = document.getElementById('faixa'), titulo = () => document.getElementById('faixa-titulo')?.textContent.trim() ?? '';
+        const mostrada = () => !fx.hidden && /expulso/i.test(titulo());
+        const fase = () => (g.cenas?.ativo ? (g.cenas.tipo === 'intervalo' ? 'intervalo' : 'cartao') : g.replay.estado?.ativo ? 'replay:' + g.replay.estado.tipo : `t${p.tempo}`);
+        const seq = [];
+        let n = 0, pulou = false, t2 = null;
+        while (n < 20000) {
+          ct.quadro(false); n++;
+          const sF = fase(), mo = mostrada();
+          const u = seq[seq.length - 1];
+          if (!u || u.s !== sF || u.mo !== mo) seq.push({ s: sF, tick: m.tick, mo });
+          // (a cena do intervalo pulada no 'campo': a saída do 2º tempo em poucos quadros)
+          if (sF === 'intervalo' && !pulou && g.cenas.estado?.fase === 'campo') { g.cenas.pular(); pulou = true; }
+          if (p.tempo === 2 && !g.cenas.ativo) { if (t2 == null) t2 = n; if (mo || n - t2 > 240) break; }
+        }
+        return { trava, def: f?.def ?? null, seq, tempo: p.tempo, mostrada: mostrada(), vista: ct.vis(fx) };
+      });
+      let durD = 0;
+      if (d.mostrada && d.vista) {
+        const t1 = Date.now();
+        let vis = true;
+        while (vis && Date.now() - t1 < 10000) {
+          await s.pagina.waitForTimeout(100);
+          vis = await fr.evaluate(() => { for (let i = 0; i < 6; i++) window.__ct.quadro(false); return window.__ct.vis(document.getElementById('faixa')) && /expulso/i.test(document.getElementById('faixa-titulo')?.textContent ?? ''); });
+        }
+        durD = (Date.now() - t1) / 1000;
+      }
+      const ordD = d.seq.map(x => `${x.s}@${x.tick}${x.mo ? '+faixa' : ''}`).join(' → ');
+      const iT1 = d.seq.findIndex(x => x.s === 't1' && x.mo), iInt = d.seq.findIndex(x => x.s === 'intervalo');
+      meta('C12d TM, o vermelho do travado nos últimos segundos do 1º tempo: a faixa "Você foi expulso" que a cena do intervalo tirou volta no 2º tempo, ≥ 5 s visível',
+        `travado ${d.trava}, a falta dele ${d.def === d.trava ? 'sim' : 'NÃO'}; ${ordD}; no 2º tempo ${d.mostrada ? `visível ${f2(durD)} s` : 'NÃO voltou'}`,
+        'cartao → t1+faixa → intervalo → t2+faixa; ≥ 5 s', d.def === d.trava && iT1 >= 0 && iInt > iT1 && d.tempo === 2 && d.mostrada && durD >= 5);
+    }
   } finally { await s.navegador.close(); }
 } catch (e) { meta('T execução (C12: Total Match, o travado expulso)', erroCurto(e), 'sem exceção', false); }
 
@@ -1035,7 +1084,8 @@ if (roda('T')) try {
  * joga), o gol AO VIVO (o guardador o guarda na saída), a API até o fim do tempo regulamentar (o acréscimo anunciado) e o
  * laço ao vivo até a saída do 2º tempo. Mede a cena quadro a quadro e devolve o hash no tick `alvo` (pela API depois dela).
  * o = {semente, golTick, alvo, proximo (o toque no 'campo'), pular (o Pular no 'campo'), pausa (quadros pausados no 'tunel'),
- * caixas (as tarjas e o painel contra o placar e o "Pular")}.
+ * caixas (as tarjas e o painel contra o placar, o "Pular" e entre si), segurar (a fase em que a tecla J, um botão de jogo,
+ * fica segurada por 6 quadros e é solta: as fases quadro a quadro e o histórico da cena)}.
  */
 async function rodadaIntervalo(pg, o) {
   return pg.evaluate(async o => {
@@ -1053,7 +1103,7 @@ async function rodadaIntervalo(pg, o) {
     const sons0 = { ...g.estadio.sonsPedidos };
     const r = { cena: false, fases: [], tickMudou: 0, tick0: null, placar: [m.placar[0], m.placar[1]], lances: g.cenas?.lances?.length ?? null,
       tarjaPlacar: 0, tarjaTexto: null, est: 0, estLinhas: null, replayLance: 0, cenaDuranteLance: 0, geralVazio: 0, geral: 0,
-      pausaParada: null, proximo: null, pulou: null, fimTick: null, tempo2: null, caixas: [], apitoNoApito: null, quadros: 0, segura: null };
+      pausaParada: null, proximo: null, pulou: null, fimTick: null, tempo2: null, caixas: [], apitoNoApito: null, quadros: 0, segura: null, segurado: null };
     let q = 0, ultimaFase = null, viuApito = false;
     for (; q < 40000; q++) {
       ct.quadro(false);
@@ -1079,6 +1129,20 @@ async function rodadaIntervalo(pg, o) {
           const e2 = g.cenas.ativo ? g.cenas.estado : null;
           r.segura = { ativo: !!g.cenas.ativo, fase: e2?.fase ?? 'acabou', rapido: e2?.rapido ?? null };
         }
+        if (o.segurar && e.fase === o.segurar && r.segurado == null) {
+          // (I14) um aperto de 100 ms de um botão de jogo (J) = UM bloco: o botão segurado não conta como novo a cada quadro
+          const fs = [], nome = () => { const e2 = g.cenas.estado; return e2 ? `${e2.fase}${e2.rapido ? '(rapido)' : ''}` : 'acabou'; };
+          window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyJ', key: 'j' }));
+          for (let k = 0; k < 6; k++) { ct.quadro(false); fs.push(nome()); }
+          window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyJ', key: 'j' }));
+          for (let k = 0; k < 3; k++) { ct.quadro(false); fs.push(nome()); }
+          const h = g.cenas.historicoIntervalo.at(-1);
+          r.segurado = { fases: fs, pulou: !!h?.pulou, rapido: !!h?.fim?.rapido, ativo: g.cenas.ativo };
+          if (!g.cenas.ativo) { r.fimTick = m.tick; break; }
+          const f2 = g.cenas.estado.fase;
+          if (f2 !== ultimaFase) { r.fases.push(f2); ultimaFase = f2; }
+          continue;
+        }
         if (e.fase === 'tunel' && o.pausa && r.pausaParada == null) {
           const t0 = e.tempo; g.pausar(true);
           for (let k = 0; k < o.pausa; k++) ct.quadro(false);
@@ -1091,10 +1155,11 @@ async function rodadaIntervalo(pg, o) {
       if (T?.estatisticas?.visivel) { r.est++; r.estLinhas = T.estatisticas.linhas; }
       if (o.caixas && (T?.placar?.visivel || T?.estatisticas?.visivel)) {
         const C = T.caixas, W = innerWidth, H = innerHeight;
+        const f = (a, c) => (a && c ? Math.max(c.x0 - a.x1, a.x0 - c.x1, c.y0 - a.y1, a.y0 - c.y1) : 99);
         for (const k of ['placar', 'estatisticas']) {
           const b = C[k]; if (!b) continue;
-          const f = (a, c) => (a && c ? Math.max(c.x0 - a.x1, a.x0 - c.x1, c.y0 - a.y1, a.y0 - c.y1) : 99);
-          r.caixas.push({ k, dentro: b.x0 >= 0 && b.y0 >= 0 && b.x1 <= W && b.y1 <= H, placarHud: f(b, C.placarHud), pular: f(b, C.pular) });
+          // (a tarja × o painel: as duas juntas só com folga — I8b)
+          r.caixas.push({ k, dentro: b.x0 >= 0 && b.y0 >= 0 && b.x1 <= W && b.y1 <= H, placarHud: f(b, C.placarHud), pular: f(b, C.pular), entre: f(C.placar, C.estatisticas) });
         }
       }
       const rp = g.replay.estado;
@@ -1111,6 +1176,64 @@ async function rodadaIntervalo(pg, o) {
     return r;
   }, o);
 }
+/**
+ * As caixas das peças da tela das cenas montadas na página (sem partida: a tela nova de cenas-tela.js com nomes longos),
+ * na tela de agora. I13 (online, sem cena: os botões de toque visíveis e a faixa "Intervalo" no meio): a tarja do placar
+ * com 1–3 autores por lado contra os botões de toque, a faixa, o placar do HUD e o botão da pausa. I8b (a cena: em-cena,
+ * com o "Pular" e o botão da pausa com toque): a tarja com 1–4 autores por lado e o painel (nas duas ordens, a tarja
+ * pedida de novo como o main.js faz a cada quadro) — as duas juntas só com folga ≥ 4 px, o painel longe do placar, do
+ * "Pular" e do botão da pausa. As animações de entrada terminadas antes de medir (a caixa final).
+ */
+async function caixasSinteticas(pg) {
+  return pg.evaluate(async () => {
+    const T = await import('./js/cenas-tela.js');
+    const W = innerWidth, H = innerHeight;
+    const times = [{ sigla: 'GLÇ', nome: 'Golaço FC', escudo: '#escudo-golaco', cor1: '#19e07a', cor2: '#07090a' }, { sigla: 'VEN', nome: 'Ventania FC', escudo: '#escudo-ventania', cor1: '#e7eaec', cor2: '#07090a' }];
+    const nomes = ['Albuquerque', 'Vasconcelos', 'Nascimento', 'Bittencourt'];
+    const aut = (n, t) => Array.from({ length: n }, (_, i) => ({ nome: nomes[i] + (t ? 'son' : ''), gols: [{ minuto: 10 + i * 7, penalti: i === 1, contra: false }, ...(i === 0 ? [{ minuto: 44, penalti: false, contra: false }] : [])] }));
+    const est = { titulo: '1º tempo', times, itens: ['posse', 'chutes', 'noAlvo', 'escanteios', 'faltas', 'cartoes'], valores: { posse: [55, 45], chutes: [12, 10], noAlvo: [6, 5], escanteios: [5, 4], faltas: [7, 8], amarelos: [2, 3], vermelhos: [1, 1] } };
+    const vis = e => { if (!e) return false; for (let a = e; a && a !== document.documentElement; a = a.parentElement) { const st = getComputedStyle(a); if (a.hidden || st.display === 'none' || st.visibility === 'hidden') return false; } const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1; };
+    const cx = e => { if (!vis(e)) return null; const r = e.getBoundingClientRect(); return { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom }; };
+    const folga = (a, b) => (a && b ? Math.max(b.x0 - a.x1, a.x0 - b.x1, b.y0 - a.y1, a.y0 - b.y1) : 99);
+    const assentar = () => { for (const a of document.getAnimations()) { try { a.finish(); } catch { /* (infinita) */ } } };
+    const nova = () => { for (const id of ['tarja-placar', 'painel-est', 'tarja-cena']) document.getElementById(id)?.remove(); return T.criarTelaCenas({ raiz: document.getElementById('hud') }); };
+    const out = { tela: `${W}×${H}`, toque: document.documentElement.classList.contains('com-toque'), online: [], cena: [] };
+    // I13: o online (a faixa do intervalo no meio, os botões de toque como no jogo)
+    const fx = document.getElementById('faixa');
+    for (const n of [1, 2, 3]) {
+      const tela = nova();
+      document.getElementById('faixa-titulo').textContent = 'Intervalo';
+      document.getElementById('faixa-placar').textContent = `GLÇ ${n} – ${n} VEN`;
+      fx.hidden = false;
+      tela.placar({ times, gols: [n, n], autores: { 0: aut(n, 0), 1: aut(n, 1) }, online: true });
+      assentar();
+      const tp = cx(document.getElementById('tarja-placar'));
+      const outros = [...document.querySelectorAll('#toque .btn-toque, #faixa, [data-caixa="placar"], #btn-menu')].filter(vis);
+      const ruins = outros.map(e => ({ id: e.id || e.className, f: Math.round(folga(tp, cx(e))) })).filter(x => x.f < 4);
+      const temAut = vis(document.querySelector('#tarja-placar .tp-autores'));
+      out.online.push({ n, tp, dentro: !!tp && tp.x0 >= 0 && tp.y0 >= 0 && tp.x1 <= W && tp.y1 <= H, botoes: outros.filter(e => e.classList.contains('btn-toque')).length, ruins, temAut });
+      tela.placar(null);
+      fx.hidden = true;
+    }
+    // I8b: a cena (em-cena; o "Pular" e o botão da pausa só com toque)
+    document.documentElement.classList.add('em-cena');
+    const cena = document.getElementById('cena'); cena.hidden = false; cena.classList.add('fim-tempo');
+    for (const n of [1, 2, 3, 4]) for (const ordem of ['tarja', 'painel']) {
+      const tela = nova();
+      const P = () => tela.placar({ times, gols: [n + 1, n], autores: { 0: aut(n, 0), 1: aut(n, 1) } });
+      const E = () => tela.estatisticas(est);
+      if (ordem === 'tarja') { P(); E(); P(); } else { E(); P(); P(); }
+      assentar();
+      const tp = cx(document.getElementById('tarja-placar')), pe = cx(document.getElementById('painel-est'));
+      const ph = cx(document.querySelector('[data-caixa="placar"]')), pu = cx(document.getElementById('cena-pular')), me = cx(document.getElementById('cena-menu'));
+      out.cena.push({ n, ordem, tarja: !!tp, painel: !!pe, entre: tp && pe ? folga(tp, pe) : null, painelPlacar: folga(pe, ph), painelPular: folga(pe, pu), painelMenu: folga(pe, me), tarjaPlacar: folga(tp, ph), tarjaPular: folga(tp, pu),
+        dentro: [tp, pe].every(b => !b || (b.x0 >= 0 && b.y0 >= 0 && b.x1 <= W && b.y1 <= H)) });
+    }
+    for (const id of ['tarja-placar', 'painel-est', 'tarja-cena']) document.getElementById(id)?.remove();
+    document.documentElement.classList.remove('em-cena'); cena.hidden = true; cena.classList.remove('fim-tempo');
+    return out;
+  });
+}
 marcar('I');
 if (roda('I')) try {
   const { acharGol } = await import(pathToFileURL(path.join(AQUI, 'lib/acha-gol.mjs')).href);
@@ -1124,7 +1247,7 @@ if (roda('I')) try {
     a = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo: null, pausa: 30 });
     const alvo = (a.tick0 ?? 14400) + 1500;
     a = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo, pausa: 30 });
-    c = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo, proximo: true });
+    c = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo, proximo: true, segurar: 'estatisticas' });
     d = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo, pular: true });
     sg = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo, segura: 6 });
     const P0 = await pagina('I0', url(0));
@@ -1135,6 +1258,19 @@ if (roda('I')) try {
   const PL = await pagina('IL', url(1), { largura: 568, altura: 320, dpr: 2, toque: true });
   let zl;
   try { zl = await rodadaIntervalo(PL.pagina, { semente: GOL.semente, golTick: GOL.golTick, caixas: true }); } finally { await PL.fechar(); }
+  // I8b e I13: a tela das cenas montada na página (a do jogo, sem ?demo: os botões de toque como no jogo), em cada tamanho
+  const sint = [];
+  const urlS = '?q=baixa&hora=dia&cenas=1&prejogo=0&comemoracao=0&replay=0&replayParada=0&substituicao=0';
+  for (const [nome, toque, telas] of [['IS', true, [[844, 390], [667, 375], [568, 320]]], ['IP', false, [[1280, 720], [560, 400]]]]) {
+    const PS = await pagina(nome, urlS, { largura: telas[0][0], altura: telas[0][1], toque });
+    try {
+      for (const [w, h] of telas) {
+        await PS.pagina.setViewportSize({ width: w, height: h });
+        await PS.pagina.waitForTimeout(150);
+        sint.push(await caixasSinteticas(PS.pagina));
+      }
+    } finally { await PS.fechar(); }
+  }
 
   meta('I1 a cena ativa no apito do 1º tempo, o mundo.tick parado até o geral, os planos na ordem',
     a.cena ? `tick ${a.tick0}; fases ${a.fases.join(' → ')}; o tick mudou em ${a.tickMudou} quadros antes do geral; ${a.quadros} quadros` : 'nenhuma cena (só a faixa)',
@@ -1165,14 +1301,29 @@ if (roda('I')) try {
     a.pausaParada ? `tempo ${a.pausaParada.antes.toFixed(2)} → ${a.pausaParada.depois.toFixed(2)} s em 30 quadros pausados; tick ${a.pausaParada.tick ? 'parado' : 'ANDOU'}` : 'não mediu',
     'parados', !!a.pausaParada && Math.abs(a.pausaParada.depois - a.pausaParada.antes) < 1e-6 && a.pausaParada.tick);
   const enc = [...(z?.caixas ?? []).map(x => ({ ...x, tela: '844×390' })), ...(zl?.caixas ?? []).map(x => ({ ...x, tela: '568×320' }))];
-  const ruins = enc.filter(x => !x.dentro || x.placarHud < 4 || x.pular < 4);
+  const ruins = enc.filter(x => !x.dentro || x.placarHud < 4 || x.pular < 4 || x.entre < 4);
   meta('I8 a tarja do placar e o painel não encostam no placar nem no "Pular" e ficam na tela (844×390 e 568×320)',
     `${enc.length} medidas; ${ruins.length} ruins${ruins.length ? ` (${ruins[0].tela} ${ruins[0].k}: dentro ${ruins[0].dentro}, placar ${ruins[0].placarHud.toFixed(0)} px, Pular ${ruins[0].pular.toFixed(0)} px)` : ''}`,
     '0 (folga ≥ 4 px)', enc.length > 0 && ruins.length === 0);
+  const cenaS = sint.flatMap(x => x.cena.map(c => ({ ...c, tela: x.tela, toque: x.toque })));
+  const ruinsS = cenaS.filter(c => !c.painel || !c.dentro || (c.entre != null && c.entre < 4) || c.painelPlacar < 4 || c.painelPular < 4 || c.painelMenu < 4 || c.tarjaPlacar < 4 || c.tarjaPular < 4);
+  const cedeu = cenaS.filter(c => !c.tarja).map(c => `${c.tela}${c.toque ? '' : ' PC'} ${c.n}`);
+  meta('I8b a tarja do placar (1–4 autores por lado) e o painel juntos só com folga ≥ 4 px — senão a tarja sai (844×390, 667×375, 568×320 com toque; 1280×720 e 560×400 no PC)',
+    `${cenaS.length} medidas; ${ruinsS.length} ruins${ruinsS.length ? ` (${ruinsS[0].tela} ${ruinsS[0].n} autores, ordem ${ruinsS[0].ordem}: tarja × painel ${ruinsS[0].entre?.toFixed(1) ?? '-'} px, painel × placar ${ruinsS[0].painelPlacar.toFixed(0)}, × Pular ${ruinsS[0].painelPular.toFixed(0)}, × pausa ${ruinsS[0].painelMenu.toFixed(0)}, dentro ${ruinsS[0].dentro})` : ''}; a tarja saiu em ${[...new Set(cedeu)].join(', ') || 'nenhuma'}`,
+    '0', cenaS.length === 40 && ruinsS.length === 0);
+  const onS = sint.filter(x => x.toque).flatMap(x => x.online.map(o => ({ ...o, tela: x.tela })));
+  const ruinsO = onS.filter(o => !o.tp || !o.dentro || o.botoes === 0 || o.ruins.length);
+  meta('I13 online com toque: a tarja do placar (1–3 autores por lado) nos 3 s da faixa não encosta nos botões de toque, na faixa, no placar nem na pausa (844×390, 667×375, 568×320)',
+    `${onS.length} medidas; ${ruinsO.length} ruins${ruinsO.length ? ` (${ruinsO[0].tela} ${ruinsO[0].n} autores: ${ruinsO[0].ruins.map(x => `${x.id} ${x.f} px`).join(', ') || `botões ${ruinsO[0].botoes}, dentro ${ruinsO[0].dentro}`})` : ''}; sem os autores em ${onS.filter(o => !o.temAut).map(o => `${o.tela} ${o.n}`).join(', ') || 'nenhuma'}`,
+    '0 (folga ≥ 4 px)', onS.length === 9 && ruinsO.length === 0);
+  const sj = c.segurado;
+  meta('I14 um botão de jogo (J) segurado 6 quadros nas estatísticas = UM bloco (o geral; nem a saída nem o pulo)',
+    sj ? `${sj.fases.join(' → ')}; pulou ${sj.pulou}, rápido ${sj.rapido}` : 'não mediu',
+    'só geral; sem pulo', !!sj && sj.fases.every(f => f === 'geral') && !sj.pulou && !sj.rapido && sj.ativo);
   meta('I11 o apito do intervalo é pedido no plano do apito (não no fim da cena)', a.apitoNoApito ? `pedidos até o fim do apito: ${a.apitoNoApito.join(', ') || 'nenhum'}` : 'não mediu',
     '≥ 1', (a.apitoNoApito?.length ?? 0) > 0);
   meta('I12 no geral o campo vazio: nenhum dos 22 nem a bola até o corte da saída', `${a.geralVazio}/${a.geral} quadros do geral vazios`, 'todos', a.geral > 0 && a.geralVazio === a.geral);
-} catch (e) { meta('I execução (intervalo: I1–I8, I11, I12)', erroCurto(e), 'sem exceção', false); }
+} catch (e) { meta('I execução (intervalo: I1–I8, I8b, I11–I14)', erroCurto(e), 'sem exceção', false); }
 
 // ------------------------------------------------------------------------------------------------ F (pós-jogo, PR 4)
 // O que a cena do pós-jogo tem de ser (PLANO-CENAS.md §5.1; o plano 'troca', 1,5 s com a troca de camisa depois da elipse,

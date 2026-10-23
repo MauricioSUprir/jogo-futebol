@@ -1,4 +1,4 @@
-// Cidade de RELÂMPAGO: geração determinística por quarteirão. PURO (sem three.js nem DOM).
+// Cidade de THE FLASH: geração determinística por quarteirão. PURO (sem three.js nem DOM).
 // Coordenadas: x e z no plano, y para cima. A cidade é uma grade N×N de células CELL×CELL;
 // cada célula tem um quarteirão BLOCO×BLOCO no meio e meia rua (RUA/2) em cada borda.
 export const CELL = 76;
@@ -22,6 +22,8 @@ function mulberry(a) {
   return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 
+import { LAB_CELULA, planoLab } from './lab.js';
+export { LAB_CELULA };
 export const celulaDe = (v) => Math.floor((v + MEIO) / CELL);
 export const centroDe = (i) => (i + 0.5) * CELL - MEIO;
 export const dentro = (i, j) => i >= 0 && j >= 0 && i < N && j < N;
@@ -37,15 +39,21 @@ export function bloco(i, j) {
   const d = Math.hypot(i - (N - 1) / 2, j - (N - 1) / 2);
   const centro = Math.exp(-d / 7);                       // 1 no centro, cai para a periferia
   const sorteio = r();
-  const tipo = sorteio < 0.12 ? 'parque' : sorteio < 0.2 + centro * 0.12 ? 'torre' : 'predios';
-  const b = { i, j, cx, cz, tipo, lotes: [], arvores: [], orbes: [], rects: [] };
+  const ehLab = i === LAB_CELULA[0] && j === LAB_CELULA[1];
+  const tipo = ehLab ? 'lab' : sorteio < 0.12 ? 'parque' : sorteio < 0.2 + centro * 0.12 ? 'torre' : 'predios';
+  const b = { i, j, cx, cz, tipo, lotes: [], arvores: [], orbes: [], rects: [], topo: [], carros: [], postes: [] };
   b.rects.push({ x0: cx - BLOCO / 2, x1: cx + BLOCO / 2, z0: cz - BLOCO / 2, z1: cz + BLOCO / 2, y0: -5, y1: CALCADA });
 
   const interno = BLOCO - 4;
   const x0 = cx - interno / 2, z0 = cz - interno / 2;
   const add = (lote) => { b.lotes.push(lote); b.rects.push({ x0: lote.x0, x1: lote.x1, z0: lote.z0, z1: lote.z1, y0: lote.y0, y1: lote.y1 }); };
 
-  if (tipo === 'parque') {
+  if (tipo === 'lab') {
+    const plano = planoLab(cx, cz);
+    for (const q of plano.rects) b.rects.push(q);
+    b.plano = plano;
+    b.orbes.push({ id: `${i},${j},cortex`, x: cx + 8, y: 1.5, z: cz }, { id: `${i},${j},cont`, x: cx + 19.5, y: 1.5, z: cz - 6 }, { id: `${i},${j},esteira`, x: cx - 19.5, y: 1.5, z: cz + 7 }, { id: `${i},${j},acel`, x: cx, y: 1.5, z: cz + 17 });
+  } else if (tipo === 'parque') {
     const n = 22 + Math.floor(r() * 18);
     for (let k = 0; k < n; k++) b.arvores.push({ x: cx + (r() - 0.5) * (BLOCO - 6), z: cz + (r() - 0.5) * (BLOCO - 6), s: 0.8 + r() * 0.9 });
   } else if (tipo === 'torre') {
@@ -85,6 +93,7 @@ export function bloco(i, j) {
       b.orbes.push({ id: `${i},${j},r`, x: ao ? cx + (r() - 0.5) * (BLOCO - 8) : cx - CELL / 2 + (r() - 0.5) * 6, y: 1.4, z: ao ? cz - CELL / 2 + (r() - 0.5) * 6 : cz + (r() - 0.5) * (BLOCO - 8) });
     }
   }
+  detalhes(b, i, j);
   cache.set(chave, b);
   return b;
 }
@@ -112,7 +121,7 @@ export function chaoEm(rects, x, z, y, degrau = 0.7) {
 
 /** Empurra um círculo (x,z,raio) para fora dos sólidos que o corpo (y..y+alt) atravessa. Devolve {x,z,bateu}. */
 export function empurrar(rects, x, z, raio, y, alt = 1.8) {
-  let bateu = false;
+  let bateu = false, nx = 0, nz = 0, golpe = null;
   for (let it = 0; it < 3; it++) {
     for (const q of rects) {
       if (y + alt <= q.y0 + 0.05 || y >= q.y1 - 0.05) continue;       // por cima ou por baixo
@@ -120,13 +129,50 @@ export function empurrar(rects, x, z, raio, y, alt = 1.8) {
       const px = Math.max(q.x0, Math.min(x, q.x1)), pz = Math.max(q.z0, Math.min(z, q.z1));
       let dx = x - px, dz = z - pz, d2 = dx * dx + dz * dz;
       if (d2 >= raio * raio) continue;
-      bateu = true;
-      if (d2 > 1e-9) { const d = Math.sqrt(d2); x = px + (dx / d) * raio; z = pz + (dz / d) * raio; }
+      bateu = true; golpe = q;
+      if (d2 > 1e-9) { const d = Math.sqrt(d2); nx = dx / d; nz = dz / d; x = px + nx * raio; z = pz + nz * raio; }
       else {                                                             // centro dentro do retângulo: sai pelo lado mais perto
         const e = x - q.x0, dd = q.x1 - x, f = z - q.z0, t = q.z1 - z, m = Math.min(e, dd, f, t);
-        if (m === e) x = q.x0 - raio; else if (m === dd) x = q.x1 + raio; else if (m === f) z = q.z0 - raio; else z = q.z1 + raio;
+        if (m === e) { x = q.x0 - raio; nx = -1; nz = 0; } else if (m === dd) { x = q.x1 + raio; nx = 1; nz = 0; } else if (m === f) { z = q.z0 - raio; nx = 0; nz = -1; } else { z = q.z1 + raio; nx = 0; nz = 1; }
       }
     }
   }
-  return { x, z, bateu };
+  return { x, z, bateu, nx, nz, q: golpe };
+}
+
+// ---------- detalhes urbanos: equipamentos de telhado, carros estacionados e postes (outra sequência de sorteio) ----------
+const CORES_CARRO = [[168, 30, 36], [30, 60, 130], [225, 225, 228], [28, 28, 32], [120, 124, 130], [40, 96, 70], [214, 168, 52], [92, 36, 100]];
+function detalhes(b, i, j) {
+  const r = mulberry(hash(i, j, 2));
+  // telhados: caixas de ar-condicionado, casa de máquinas, caixas d'água e antenas
+  for (const l of b.lotes) {
+    const coberto = (x, z, m) => b.lotes.some((o) => o !== l && Math.abs(o.y0 - l.y1) < 0.01 && x > o.x0 - m && x < o.x1 + m && z > o.z0 - m && z < o.z1 + m);
+    const w = l.x1 - l.x0, d = l.z1 - l.z0, n = Math.min(7, 2 + Math.floor((w * d) / 220));
+    for (let k = 0; k < n; k++) {
+      const x = l.x0 + 2.5 + r() * (w - 5), z = l.z0 + 2.5 + r() * (d - 5), t = r();
+      if (coberto(x, z, 3)) continue;
+      if (t < 0.5) { const sx = 1.4 + r() * 2.2, sz = 1.2 + r() * 1.8, sy = 0.9 + r() * 1.3; b.topo.push({ t: 'caixa', x, y: l.y1, z, w: sx, h: sy, d: sz }); b.rects.push({ x0: x - sx / 2, x1: x + sx / 2, z0: z - sz / 2, z1: z + sz / 2, y0: l.y1, y1: l.y1 + sy }); }
+      else if (t < 0.72 && w > 9) { const rr = 1 + r() * 0.7, h = 2.2 + r(); b.topo.push({ t: 'tanque', x, y: l.y1, z, w: rr, h, d: rr }); b.rects.push({ x0: x - rr, x1: x + rr, z0: z - rr, z1: z + rr, y0: l.y1, y1: l.y1 + h }); }
+      else if (l.y1 > 40 || t > 0.9) b.topo.push({ t: 'antena', x, y: l.y1, z, w: 0.12, h: 6 + r() * 12, d: 0.12 });
+      else { const sx = 3 + r() * 3, sz = 3 + r() * 3, sy = 2.6; b.topo.push({ t: 'caixa', x, y: l.y1, z, w: sx, h: sy, d: sz }); b.rects.push({ x0: x - sx / 2, x1: x + sx / 2, z0: z - sz / 2, z1: z + sz / 2, y0: l.y1, y1: l.y1 + sy }); }
+    }
+  }
+  // carros estacionados junto ao meio-fio das duas ruas do quarteirão (norte e oeste; as outras duas são de quem vem depois)
+  const faixa = BLOCO / 2 + 2.3;
+  for (let lado = 0; lado < 2; lado++) {
+    for (let u = -25; u <= 25; u += 7.2) {
+      if (r() < 0.45) continue;
+      const jit = (r() - 0.5) * 1.6, cor = CORES_CARRO[Math.floor(r() * CORES_CARRO.length)];
+      const px = lado === 0 ? b.cx + u + jit : b.cx - faixa, pz = lado === 0 ? b.cz - faixa : b.cz + u + jit;
+      const rot = lado === 0 ? 0 : Math.PI / 2, hx = lado === 0 ? 2.15 : 0.95, hz = lado === 0 ? 0.95 : 2.15;
+      b.carros.push({ x: px, z: pz, rot, cor });
+      b.rects.push({ x0: px - hx, x1: px + hx, z0: pz - hz, z1: pz + hz, y0: 0, y1: 1.45 });
+    }
+  }
+  // postes de luz na calçada (norte e oeste)
+  for (let lado = 0; lado < 2; lado++) for (let u = -22; u <= 22; u += 14.5) {
+    const x = lado === 0 ? b.cx + u : b.cx - BLOCO / 2 + 1.1, z = lado === 0 ? b.cz - BLOCO / 2 + 1.1 : b.cz + u;
+    b.postes.push({ x, z, lado });
+    b.rects.push({ x0: x - 0.15, x1: x + 0.15, z0: z - 0.15, z1: z + 0.15, y0: CALCADA, y1: 7.5 });
+  }
 }

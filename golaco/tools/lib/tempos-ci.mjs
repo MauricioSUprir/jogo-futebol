@@ -103,9 +103,9 @@ export const TEMPOS_NAVEGADOR = {
   'teste-comemoracao-tela.mjs': 80,
   'teste-tecnicos-tela.mjs': 155,
   'teste-substituicao-tela.mjs': 164,
-  // medido aqui (23/10, PR 4, máquina livre: 839 s — cartão 201 s: PC 27, hash 19, replay 7, celular 56, corpo novo 39, telas
-  // 20, gol 10, TM 23; intervalo 68; pós-jogo 569: PC 82, celular 172, corpo novo 200, TM 29, online 86); acertar pelo log do CI
-  'teste-cenas-tela.mjs': 840,
+  // medido aqui (23/10, PR 4, máquina livre: 839 s — cartão 201 s, intervalo 68, pós-jogo 569) + o C12d, o I8b, o I13 e o I14
+  // do #510 (mais 2 páginas, ~180 s); acertar pelo log do CI
+  'teste-cenas-tela.mjs': 1020,
   'teste-penaltis-tela.mjs': 60,
   'teste-livre-tela.mjs': 120,
   'teste-online-tela.mjs': 160,

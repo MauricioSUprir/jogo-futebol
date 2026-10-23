@@ -1,0 +1,25 @@
+// Prints do corpo do herói (parado, correndo, sprint, ar, planeio) de perto, para conferir a malha e a animação.
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { servidor, abrir } from '../../golaco/tools/lib/navegador.mjs';
+const AQUI = path.dirname(fileURLToPath(import.meta.url));
+const saida = process.argv[2];
+const srv = await servidor(0, path.join(AQUI, '..'));
+const { navegador, pagina, erros } = await abrir({ largura: 1100, altura: 700 });
+await pagina.goto(srv.url);
+await pagina.waitForSelector('#btnJogar:not([hidden])', { timeout: 180000 });
+await pagina.waitForFunction(() => window.__rel.modelo, null, { timeout: 60000 });
+await pagina.click('#btnJogar');
+await pagina.waitForTimeout(400);
+await pagina.evaluate(() => { const R = window.__rel; R.CAM.dist = 3.4; R.C.pitch = 0.12; R.C.yaw = 2.2; R.mundo.T = 0.5; });
+const foto = (n) => pagina.screenshot({ path: path.join(saida, `heroi-${n}.png`) });
+await pagina.waitForTimeout(500); await foto('parado');
+await pagina.evaluate(() => { window.__rel.teclas.add('w'); });
+await pagina.waitForFunction(() => Math.hypot(window.__rel.P.vx, window.__rel.P.vz) > 13, null, { timeout: 30000 });
+await foto('correndo');
+await pagina.evaluate(() => { window.__rel.teclas.add('shift'); });
+await pagina.waitForFunction(() => Math.hypot(window.__rel.P.vx, window.__rel.P.vz) > 40, null, { timeout: 30000 });
+await foto('sprint');
+await pagina.keyboard.press('Space'); await pagina.waitForTimeout(250); await foto('ar');
+console.log('erros:', erros.slice(0, 5));
+await navegador.close(); await srv.fechar();

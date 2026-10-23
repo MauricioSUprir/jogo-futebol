@@ -21,6 +21,8 @@
 //  P6  súmula com eventos montados: assistência, gol contra (lado = beneficiado, autor do outro time, sem assistência),
 //      pênalti (evento 'penalti' no mesmo passo), chute desviado (autor = quem chutou, assistência mantida), 2º amarelo =
 //      amarelo + vermelho, minuto 46 no começo do 2º tempo, posse 50/50 sem bola rolando.
+//  P7  as estatísticas das cenas: escanteios e faltas = contadores independentes, o porTempo no apito do 1º tempo, o
+//      resultadoTM com as chaves de antes; P7b o chute aberto no apito do 1º tempo fecha no apito (fica no 1º tempo).
 //
 //  P7  as estatísticas das cenas (escanteios, faltas, porTempo) contra contadores independentes; o resultadoTM com as chaves
 //      de antes.
@@ -362,6 +364,33 @@ if (typeof SU.estatisticas === 'function') {
   reg('P7 o resultadoTM com as chaves de antes (além do `melhor` opcional do P8)', `${chaves} · stats ${chavesSt}`, 'awayGoals,cartoes,gols,homeGoals,stats · stats onTarget,possession,shots',
     chaves === 'awayGoals,cartoes,gols,homeGoals,stats' && chavesSt === 'onTarget,possession,shots');
 } else reg('P7 as estatísticas das cenas na súmula', 'sumula.js sem estatisticas (versão de antes)', 'existe', false);
+// P7b o chute ainda aberto no apito do 1º tempo fica no 1º tempo: o apito o fecha (no alvo se o goleiro já tocou) ANTES da
+// cópia do porTempo — antes ele fechava no 2º tempo pela JANELA_CHUTE e o "No alvo" dele saía do painel do intervalo e
+// contava no 2º tempo. Procura a 1ª semente (a partir de --sem-p7b, 123) com um chute aberto no passo do apito.
+if (typeof SU.estatisticas === 'function') {
+  let achou = null;
+  for (let k = 0; k < 24 && !achou; k++) {
+    const sem = +arg('--sem-p7b', 123) + k;
+    const m = P.criarPartida({ semente: sem, minutosPorTempo: 4 });
+    const s = SU.criarSumula();
+    let passos = 0;
+    while (m.partida.tempo === 1 && m.partida.estado !== 'fim' && passos < 60000) {
+      const ev = P.passoPartida(m, P.entradaDemoPartida(m));
+      passos++;
+      const apito = ev.some(e => e.tipo === 'intervalo');
+      const aberto = apito && s.aberto ? { ...s.aberto } : null, alvoAntes = [...s.noAlvo];
+      SU.sumulaPasso(s, m, ev);
+      if (!apito) continue;
+      if (aberto) achou = { sem, aberto, alvoAntes, depois: s.aberto, t1: SU.estatisticas(s, 1).noAlvo };
+      break;
+    }
+  }
+  const a = achou;
+  const esperado = a ? a.alvoAntes.map((v, t) => v + (t === a.aberto.time && a.aberto.defendido != null ? 1 : 0)) : null;
+  reg('P7b o chute aberto no apito do 1º tempo fecha no apito (o "No alvo" dele no painel do intervalo)',
+    a ? `semente ${a.sem}: chute do time ${a.aberto.time} (tick ${a.aberto.tick}, goleiro ${a.aberto.defendido ?? '-'}); depois do apito ${a.depois ? 'AINDA ABERTO' : 'fechado'}; no alvo 1º T ${a.t1.join('/')} × ${esperado.join('/')}` : 'nenhuma semente com chute aberto no apito',
+    'fechado; iguais', !!a && !a.depois && a.t1[0] === esperado[0] && a.t1[1] === esperado[1]);
+}
 
 // ------------------------------------------------------------------ P8 o melhor em campo no resultado (o pós-jogo, PR 4)
 // (PLANO-CENAS.md §5.2, R18) o resultadoTM ganha SÓ o campo opcional `melhor: {lado, tmId, nome, nota}`: o de maior nota entre

@@ -596,7 +596,21 @@ let expulsoAvisado = false;
 // o tick da expulsão do travado: o replay de parada daquela bola morta esconde a faixa (em-replay) e ela volta depois dele,
 // com os 6 s contando dali (PLANO-CENAS.md R11)
 let expulsoTick = -1;
-const faixaExpulso = () => hud.faixa({ titulo: 'Você foi expulso', placar: textoPlacar(), botao: true, botaoTexto: 'Simular o resto', botaoCmd: 'simular-resto', ms: 6000 });
+const TITULO_EXPULSO = 'Você foi expulso';
+// quando a faixa do expulso apareceu (ultimoAgora, ms): os 6 s dela (guardarFaixaExpulso)
+let expulsoMostrado = -Infinity;
+const faixaExpulso = () => {
+  expulsoMostrado = ultimoAgora;
+  hud.faixa({ titulo: TITULO_EXPULSO, placar: textoPlacar(), botao: true, botaoTexto: 'Simular o resto', botaoCmd: 'simular-resto', ms: 6000 });
+};
+/**
+ * A faixa do expulso ainda na tela (os 6 s dela correndo) vai ser trocada pela faixa "Intervalo" ou tirada pela cena do
+ * intervalo — o vermelho do travado nos últimos segundos do 1º tempo: ela volta a ficar pendente e o talvezFaixaExpulso a
+ * mostra de novo no 2º tempo, com os 6 s contando dali (antes ela sumia de vez: PLANO-CENAS.md R11).
+ */
+function guardarFaixaExpulso() {
+  if (expulsoAvisado && !expulsoPendente && hud.faixaTitulo === TITULO_EXPULSO && ultimoAgora - expulsoMostrado < 6000) expulsoPendente = true;
+}
 
 // medidas por quadro (medirQuadro): simulação, pose, atualização dos jogadores, desenho e o quadro
 // inteiro sem o desenho (CPU que não é da GPU). Anéis de tamanho fixo (nada alocado por quadro).
@@ -1940,6 +1954,7 @@ function talvezFaixaExpulso() {
 // ------------------------------------------------------------------ cena do intervalo (js/cena-fim.js, sob demanda)
 /** A faixa "Intervalo" de hoje (3 s; sem a cena). No online, a tarja do placar com os autores nesses 3 s (R10). */
 function faixaIntervalo() {
+  guardarFaixaExpulso();
   hud.faixa({ titulo: 'Intervalo', placar: textoPlacar(), ms: Math.round((CFG.PARTIDA?.intervalo ?? 3) * 1000) });
   if (ONLINE && telaCenas && mundo.partida?.estado === 'intervalo') tarjaOnline = dadosPlacar(true);
 }
@@ -2103,6 +2118,8 @@ function iniciarCenaFim(item) {
   entrada?.limparPulsos();
   encerrarEfeitosGol();
   if (cam) cam.planoGeral(false);
+  // (a faixa do expulso que a cena tira volta no 2º tempo)
+  guardarFaixaExpulso();
   hud.cena(true, 'fim'); hud.cartao(null); hud.faixa(null);
   alfa = 1;
   corteCamera = true;
