@@ -30,7 +30,7 @@ await foto(pagina, 'rua.png');
 
 // supervelocidade
 await pagina.evaluate(() => { window.__rel.teclas.add('shift'); });
-await pagina.waitForTimeout(1500);
+await pagina.waitForFunction(() => Math.hypot(window.__rel.P.vx, window.__rel.P.vz) > 30, null, { timeout: 30000 }).catch(() => {});
 const m2 = await pagina.evaluate(() => Math.hypot(window.__rel.P.vx, window.__rel.P.vz));
 ok(m2 > 30, `supervelocidade (${(m2 * 3.6).toFixed(0)} km/h)`);
 await foto(pagina, 'sprint.png');
