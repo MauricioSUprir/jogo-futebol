@@ -4,6 +4,8 @@ import { criarHeroi } from './humano.js';
 import { criarMissoes } from './missoes.js';
 import { criarCrimes } from './crimes.js';
 import { criarPortais } from './portais.js';
+import { criarTrafego } from './trafego.js';
+import { criarPedestres } from './pedestres.js';
 import { construirLab } from './lab3d.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
 
@@ -664,6 +666,8 @@ let armazem = null; try { armazem = localStorage; } catch { armazem = null; }
 const missoes = criarMissoes(armazem);
 const crimes = criarCrimes(cena);
 const portais = criarPortais(cena);
+const trafego = criarTrafego(THREE, cena, { mobile: MOBILE });
+const pedestres = criarPedestres(THREE, cena, { mobile: MOBILE });
 function solidoEm() {
   for (const q of rectsPerto) if (q.y0 >= 0 && q.y1 - q.y0 > 4 && P.x > q.x0 && P.x < q.x1 && P.z > q.z0 && P.z < q.z1 && P.y + 0.9 > q.y0 && P.y + 0.9 < q.y1) return q;
   return null;
@@ -721,6 +725,7 @@ function quadro() {
     mundo.T = (mundo.T + dt / DIA_SEGUNDOS) % 1;
     passoHeroi(dt); esferasProximas(dt);
     passoMissoes(dt);
+    pedestres.atualizar(dt, P, mundo.noite); trafego.atualizar(dt, P, mundo.noite, pedestres.pessoas);
     if (labAtivo) labAtivo.atualizar(dt, P.t, mundo.noite, camera, P);
     atualizarQuarteiroes(P.x, P.z, carregados.size < 30 ? 8 : 2);
     if (J.aviso > 0) { J.aviso -= dt; if (J.aviso <= 0) el.aviso.style.opacity = '0'; }
@@ -760,4 +765,4 @@ camera.position.set(INICIO.x, 4, INICIO.z - 8);
 })();
 requestAnimationFrame(quadro);
 
-window.__rel = { missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
