@@ -2767,3 +2767,55 @@ Porte da branch `golaco/cenas-jogo` (1df2ca34) para fora do fecho: `js/cenas-con
   plano do árbitro e o companheiro depois da elipse; A-L 48 vermelhos na lateral de cá, z = 30; B variedade, E pureza, F
   relógio do estádio, G custo, P o plano da torcida nos trilhos das plantas: Maracanã e 6 genéricos) e `teste-cenas-tela`
   parte `cartao` (navegador, CI e deploy; C6b, C11b, C12b, C12c e o C4 em 560×400 desta revisão).
+
+### Guardador de lances (PR 3, intervalo: a 1ª parte; PLANO-CENAS.md §4.2, R8, R9, R20)
+O intervalo ("lances do 1º tempo") e o fim ("Melhores momentos") tocam lances da partida inteira; o anel do replay só tem
+os últimos 10 s. `render/lances-guarda.js` (puro, sob demanda no `SOB.cenas`; `LANCES_GUARDA` no `cenas-config.js`) COPIA
+cada lance do anel, comprimido, para vagas fixas — só lê o anel: o hash não muda.
+- **Formato:** `LANCES_GUARDA.lances` (6) vagas de ≤ `segundos` (6) s. Os jogadores a `hz` (30) Hz — por vaga: id (Int16),
+  info (Uint8: time, goleiro, treinador), x/z/rumo (Float32) e a pose em Int16 RELATIVA ao x/z do jogador (y absoluto) na
+  `escala` 1/4000 m (±8,19 m; erro ≤ 0,13 mm; fora da faixa satura e conta em `G.saturou`). A bola (p + q), o relógio do
+  estádio, o corte e as marcas de TODO passo (60 Hz). As batidas da bola na rede da janela (até `REDE.maxImpactos`).
+  Memória fixa: 3,54 MB do guardador + 2,19 MB do mini-anel; nada alocado em `guardar` nem em `tocar`.
+- `criarGuarda(LANCES_GUARDA, {vagas, nj})`, `criarMini(G)` (o mini-anel: `criarAnel` com as vagas/nj do anel e
+  `LANCES_GUARDA.mini` passos, com `mini.ondas` = a rede do lance no formato de `rede-onda.js criarOndas`), `limparGuarda(G)`.
+- `janelaDoLance(G, anel, lance, out, {inteira})` → `{de, ate}` ou null: [chave − `antes`, fim + `depois`] s, cortada a
+  `segundos` pelo começo, sem atravessar corte (começa no último até a chave — no gol, até o gol —, acaba antes do primeiro
+  depois do começo), nunca depois de `ateMax`; `inteira`: null se o começo ideal já saiu do anel (o lance guardado tarde).
+- `guardar(G, anel, lance, batidas, {inteira})` → a vaga k ou −1. `lance = {tipo ('gol' | lances.js TIPOS_LANCE), classe
+  ('gol' | 'A' | 'B'), peso? (o gol: `PESO_GOL` = 100; a parada: o de lances.js, 1–7), chave, fim, ateMax?, morta (a chave
+  da parada: a bola morta; o gol: o tick dele), lado, time, ids, x, z, tempo}`. Cheio: sai o de menor peso (o gol nunca sai
+  por uma parada); o mais antigo desempata; o novo de menor peso que todos fica de fora; a mesma parada só troca por uma
+  mais forte (até 1 lance por parada).
+- `tocar(G, k, mini)` → a meta (`lanceGuardado`) ou null: descomprime no mini-anel, NOS MESMOS TICKS do anel de quando foi
+  guardado, a 60 Hz (os jogadores dos passos do meio interpolados: pose e x/z lineares, rumo pelo menor ângulo, casados pelo
+  id; nunca através de corte), e a rede em `mini.ondas`.
+- `listar(G)` (cópias, na ordem em que entraram: `{k, seq, tipo, classe, peso, chave, fim, de, ate, lado, time, ids, x, z,
+  tempo, quadros, batidas, segundos}`); `escolherLances(G, {tempo, max, maxSegundos, cronologica}, out)` → os k para uma cena:
+  primeiro os gols do tempo (na ordem do jogo), depois as paradas pelo peso (empate: a mais nova), até `max` e `maxSegundos`.
+- **Replay de outra fonte** (`render/replay.js`, rev. R8): `diretor.iniciar(ro, fonte = anel)`; os leitores do quadro
+  (`posicionar` 'tv'/'fechada'/'atras'/'lateral', `tecnicosNoTick`, `zLateralDoPlano`, o enquadramento da linha e da análise:
+  `jogadorNoTick`, `defensorDaLinha`, `enquadrarSaot`) leem a fonte; `diretor.fonte`; no fim ou no pulo a fonte volta ao anel.
+  `diretor.lance(fonte, meta)` = `replay-roteiro.js roteiroLance(fonte, lance)`: `{tipo: 'lance', planos: [{de, ate, vel: 1,
+  cam: 'tv'}], lado, chave, fim, classe, lance, x, z}` (sem atravessar corte; null com < 0,5 s).
+- **Página** (`main.js`):
+  - Guardar (com ou sem replay): o gol fica pendente no passo dele (`golGuardar`) e entra no `posGol()` — e no passo da saída,
+    do intervalo ou do fim, também sem diretor ou com "Replays: Desligado" (`guardarGolPendente`). A parada classificada
+    (todo `lancesPasso` não nulo, aceito ou não) fica pendente (`lanceGuardar`) e entra no passo ANTES da montagem
+    (`guardarParadaPendente`, no topo do `seguraParaReplayParada`, antes do replay de parada: `montaNoProximoPasso` 'monta'
+    ou 'fimDoTempo'), quando a janela até o desfecho + 0,5 s já está gravada. Só na partida (onde o classificador existe).
+  - Sem o módulo baixado: pede o `SOB.cenas` e guarda quando chegar (`inteira`, o fim no fim do anel de quando pediu), se
+    ainda for o mesmo mundo.
+  - A memória (`garantirGuarda`) só na partida: quando o módulo chega ou a partida começa com ele já baixado (nos treinos a
+    pré-carga não aloca nada). As últimas 8 batidas da rede ficam num anel pequeno (`batidasRede`, `estadioPasso`).
+  - `iniciarReplay(ro, {fonte, aoFim})`: o replay de dentro de uma cena chama `aoFim(pulou)` no fim ou no pulo, sem andar a
+    fila (`proximaCena`); o mundo novo e o "Simular o resto" descartam o `aoFim`. O `desenharReplay` lê o quadro, o relógio do
+    estádio e a rede pela fonte (`fonte.ondas ?? ondas`).
+  - `tocarLanceGuardado(k, aoFim)` (para as cenas do intervalo e do fim) e `lancesGuardados()`; o mundo novo e o fim do
+    "Simular o resto" esquecem os lances (`iniciarEstados`).
+  - API `__golaco.cenas`: `lances`, `guarda` ({bytes, mini, saturou} | null), `historicoGuarda` ({tick, tipo, classe, chave,
+    fim, k, ms, tarde}), `pendentes` ({gol, parada}), `tocarLance(k)`, `fimLance` ({k, pulou, tick, ms} | null),
+    `escolherLances(o)`.
+- **Teste:** `teste-lances-guarda` (Node, padrão; G1 memória, G2 quantização, G3 tocar — a bola e o relógio exatos, os
+  jogadores do meio = a interpolação, a perda dos 30 Hz e a rede —, G4 prioridade e a escolha, G5 custo, G6 as janelas em 24
+  partidas IA × IA, metade com os replays desligados).

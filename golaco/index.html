@@ -192,6 +192,9 @@
        (js/cenas-tela.js) é outra peça, sob demanda. -->
   <div id="cena" class="replay cena" hidden>
     <button id="cena-pular" class="btn-replay-pular" data-caixa="cena-pular" type="button" aria-label="Pular a cena do cartão">Pular<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg></button>
+    <!-- na cena do intervalo (js/cena-fim.js): o toque na camada é o próximo bloco, o "Pular" vai à saída do 2º tempo e este
+         botão abre a pausa (o "Editar time" do intervalo); só com toque (no PC, Esc) -->
+    <button id="cena-menu" class="btn-cena-menu" data-caixa="cena-menu" type="button" aria-label="Pausa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg></button>
   </div>
   <!-- Terço de baixo (js/hud.js terco): o selo da decisão no quadro final da análise semiautomática do replay
        ("IMPEDIMENTO" / "POSIÇÃO LEGAL" — a única exceção à "sem narração"; nada de nome nem minuto). A faixa

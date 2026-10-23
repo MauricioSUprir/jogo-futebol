@@ -23,9 +23,16 @@
 //      junto) e, sem espera, é o relógio de antes (idêntico);
 //   G) custo: CPU do fio por tick ≤ 0,6 ms (a meta da comemoração, teste-comemoracao 12): a mediana de 5 medidas por
 //      situação, a parede MENOS a espera na fila do escalonador (/proc/thread-self/schedstat);
-//   P) o plano da torcida do vermelho no trilho do pré-jogo do estádio (a planta: Maracanã e 6 genéricos, e o padrão).
+//   P) o plano da torcida do vermelho no trilho do pré-jogo do estádio (a planta: Maracanã e 6 genéricos, e o padrão);
+//   C) o INTERVALO (PR 3, PLANO-CENAS.md §4.6; js/cena-fim.js): 56 intervalos de partidas IA × IA (do jeito que acabaram,
+//      gol no último lance, vermelho e amarelo no último apito — o time com 10 —, goleiro expulso; metade com o bloco dos
+//      lances): os planos e os tempos do plano, as fases na ordem, a espera dos lances (9,0 s, a cena parada), a tarja do
+//      placar em [4, 12) s, o árbitro apita, corpo e câmera (as contas do A), ninguém dentro de sólido, 2 s depois do apito
+//      ninguém acima de 1,6 m/s, mãos na cintura ≥ 60%, ≥ 2 apertos de mão, o túnel (cada um entrou na boca ou anda para
+//      ela), o campo vazio depois, a bola do apito no ar cai, os treinadores na área técnica, o toque = o próximo bloco e o
+//      pulo = o geral; E (pureza e a saída do 2º tempo no mesmo tick) e G (custo) também cobrem o intervalo.
 // Na base (sem os módulos) cada seção REPROVA com o motivo.
-//   node tools/teste-cenas.mjs [--js <pasta js>] [--so A,B,E,F,G,P] [--detalhe]
+//   node tools/teste-cenas.mjs [--js <pasta js>] [--so A,B,C,E,F,G,P] [--detalhe]
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -172,7 +179,9 @@ function andarCena(c, fns, opc) {
     ASPECTOS.forEach(([nm, pequena, aspecto], k) => {
       const pc = fns.planoCamera(c, { pequena, aspecto }, pcs[k]);
       nome = pc.nome;
-      if (pc.nome === 'fim' || pc.nome === 'geral') return;
+      // (o plano geral do estádio — camera.js CAMERA_GERAL, o mesmo do jogo — também na espera dos lances e nas estatísticas
+      // do intervalo: fora das contas de câmera de cena)
+      if (pc.nome === 'fim' || pc.nome === 'geral' || pc.nome === 'lances' || pc.nome === 'estatisticas') return;
       const [x, y, z] = pc.de;
       if (EF.solidoEm(x, y, z, 0.2, false)) { r.solido++; r.piorSolido = { nome: pc.nome, de: pc.de.map(v => +v.toFixed(2)), s: EF.solidoEm(x, y, z, 0.2, false) }; }
       if (Math.abs(x) > MX + 5.5 + 1e-6 || Math.abs(z) > MZ + 5.5 + 1e-6) r.foraLimite++;
@@ -616,6 +625,224 @@ if (roda('B')) {
   }
 }
 
+// ------------------------------------------------------------------------------------------------ C) intervalo
+// (PLANO-CENAS.md §4.6) 56 intervalos de partidas IA × IA (2 × 0,5 min): 20 do jeito que acabaram, 12 com GOL no último lance
+// (a bola entrando quando faltam ≤ 40 ticks: o apito vem no gol + 150), 10 com VERMELHO no último apito (o time com 10), 4
+// com AMARELO no último apito e 10 com o GOLEIRO expulso (DOGSO: o de linha mais perto vai para o gol); metade com o bloco
+// dos lances (2 lances: a cena espera e a página toca), metade sem; com as cópias dos treinadores. Os planos e os tempos
+// são os do plano (não lidos do módulo).
+const CF = await tentar('cena-fim.js');
+const cenasC = [];
+const custosC = [];
+const PLANOS_INTERVALO = [['apito', 1.5], ['campo', 2.5], ['tunel', 3.5], ['torcida', 1.5], ['lances', 0], ['estatisticas', 6.0], ['geral', 3.0]];
+const CASOS_C = [['natural', 20], ['gol', 12], ['vermelho', 10], ['amarelo', 4], ['goleiro', 10]];
+const TARJA_C = [4.0, 12.0];      // a tarja do placar: 4 s depois do apito, 8 s (DFL; PLANO-CENAS.md §4.1)
+const BOCA = 44.5, ENTRA = 44.0;  // a boca do túnel (config.js ESTADIO.tunel.z) e onde quem chega some dentro dela
+const VAZIO_C = new Set(['torcida', 'lances', 'estatisticas', 'geral']);
+if (roda('C') || roda('E') || roda('G')) {
+  if (!CF) reg('C cena do intervalo (js/cena-fim.js)', 'não existe: no apito do 1º tempo só a faixa de 3 s com o mundo parado', 'existe', false);
+  else {
+    const L = await LC.carregarCenas(pastaJs);
+    let sem = 300, falhou = [];
+    for (const [caso, n] of CASOS_C) {
+      for (let i = 0; i < n; i++) {
+        let r = null, tent = 0;
+        while (!r && tent < 6) {
+          sem++; tent++;
+          const forcar = caso === 'natural' ? null
+            : caso === 'gol' ? m => LC.forcarGol(L, m)
+              : m => !!LC.forcarCartao(L, m, caso === 'goleiro' ? 'goleiro' : caso, { semBusca: true });
+          const x = LC.ateIntervalo(L, sem, { min: 0.5, forcar, margem: 40 });
+          if (!x) continue;
+          // o caso valeu? (o gol no último lance: o apito no gol + 150; o cartão: o expulso fora, o time com 10)
+          const exp = x.m.expulsos ?? [];
+          if (caso === 'gol' && !(x.forcado && x.golTick != null && x.m.tick - x.golTick === Math.round(C.PARTIDA.golPausa / PASSO))) continue;
+          if ((caso === 'vermelho' || caso === 'goleiro') && !(x.forcado && exp.length >= 1)) continue;
+          if (caso === 'goleiro' && !exp.some(j => j.posicao === 'GOL' || j.vagaId === 'GOL')) continue;
+          if (caso === 'amarelo' && !x.forcado) continue;
+          r = x;
+        }
+        if (!r) { falhou.push(`${caso}#${i}`); continue; }
+        const m = r.m;
+        const h0 = S.hashMundo(m), t0 = m.tick, s0 = serializar(m);
+        const nLances = cenasC.length % 2 ? 2 : 0;
+        const tecs = treinadoresDe(m, `C|${sem}`);
+        const plano = CF.planejarFim(m, 'intervalo', { placar: m.placar, timeHumano: 0, lances: nLances, treinadores: tecs });
+        const c = CF.criarCenaFim(plano, m);
+        const x = medirIntervalo(c);
+        x.hashIgual = S.hashMundo(m) === h0 && m.tick === t0;
+        x.mundoIgual = serializar(m) === s0;
+        x.caso = caso; x.sem = sem; x.nLances = nLances; x.placar = { ...m.placar }; x.expulsos = (m.expulsos ?? []).length;
+        x.time10 = [0, 1].some(t => m.jogadores.filter(j => j.time === t).length === 10);
+        x.gkCampo = [0, 1].every(t => m.jogadores.some(j => j.time === t && j.posicao === 'GOL'));
+        if (cenasC.length < 8) x.copia = structuredClone(m);
+        cenasC.push(x);
+        custosC.push(...x.r.ms);
+      }
+    }
+    cenasC.falhou = falhou;
+  }
+}
+
+/** Uma cena do intervalo: as medidas comuns + o apito, a cintura, os apertos, o túnel, o campo vazio, a bola e os tempos. */
+function medirIntervalo(c) {
+  const P = c.plano;
+  const jogs = c.atores.filter(a => a.time === 0 || a.time === 1).filter(a => a.tipo !== 'tecnico');
+  const arb = c.arbitro, tecs = c.treinadores;
+  const x = {
+    plano: P, v2: 0, piorV2: null, cintura: new Map(), apertos: new Map(), apito: 0, apitoMax: 0, tunel: new Map(), dentroTunel: 0,
+    ativosDepois: 0, bolaDepois: 0, solido: 0, piorSolido: null, esperaK: null, esperaMexeu: false, esperas: 0, depoisEspera: null,
+    tarjaErr: 0, tarjaN: 0, tecFora: 0, bolaNoAr: c.mF.bola.p.y > 0.5, bolaTunel: null, fases: [],
+  };
+  const pCampo = P.planos.find(q => q.nome === 'campo');
+  let fAnt = null, espera = 0, kEspera = -1, poseEspera = null;
+  x.r = andarCena(c, {
+    passo: cc => {
+      if (cc.emLances) {
+        if (kEspera < 0) { kEspera = cc.k; poseEspera = cc.atores.map(a => a.atu.slice()); x.esperaK = cc.k; }
+        espera++; x.esperas++;
+        if (cc.k !== kEspera) x.esperaMexeu = true;
+        if (espera >= 20) CF.seguirCenaFim(cc);
+        return;
+      }
+      CF.passoCenaFim(cc);
+    },
+    planoCamera: CF.planoCameraFim, criarPlano: CF.criarPlanoCameraFim,
+  }, {
+    max: Math.round((P.duracao + 3.0) / PASSO) + 40,
+    por: (cc, t, nome) => {
+      const f = CF.faseFim(cc);
+      if (f !== fAnt) { x.fases.push(f); fAnt = f; if (fAnt === 'estatisticas' && x.esperaK != null && x.depoisEspera == null) x.depoisEspera = cc.k; }
+      // a tarja do placar exatamente em [4, 12) s do relógio da cena e nunca na espera dos lances
+      const tc = cc.k * PASSO, devia = !cc.emLances && tc >= TARJA_C[0] - 1e-9 && tc < TARJA_C[1] - 1e-9;
+      x.tarjaN++; if (CF.tarjaPlacarVisivel(cc) !== devia) x.tarjaErr++;
+      // 2,0 s depois do apito: ninguém acima de 1,6 m/s (todos desaceleram pela locomoção)
+      if (Math.abs(t - 2.0) < PASSO / 2) for (const a of cc.atores) { if (!a.ativo) continue; const v = Math.hypot(a.j.vx, a.j.vz); if (v > x.v2) { x.v2 = v; x.piorV2 = { id: a.id, tipo: a.tipo, v: +v.toFixed(2) }; } }
+      // o árbitro apita: a mão direita na boca (≤ 0,22 m da cabeça) no plano do apito
+      if (f === 'apito' && arb.ativo) {
+        const o = arb.atu, ok = Math.hypot(o[J.maoD * 3] - o[J.cabeca * 3], o[J.maoD * 3 + 1] - o[J.cabeca * 3 + 1], o[J.maoD * 3 + 2] - o[J.cabeca * 3 + 2]) <= 0.22;
+        x.apito = ok ? x.apito + 1 : 0; x.apitoMax = Math.max(x.apitoMax, x.apito);
+      }
+      // ninguém dentro de sólido do estádio (o corpo a 0,9 m; no túnel o vão das placas aberto)
+      for (const a of cc.atores) {
+        if (!a.ativo) continue;
+        const sd = EF.solidoEm(a.j.x, 0.9, a.j.z, 0.2, f === 'tunel');
+        if (sd) { x.solido++; x.piorSolido = { id: a.id, f, x: +a.j.x.toFixed(2), z: +a.j.z.toFixed(2), sd }; }
+      }
+      // os treinadores (cópias) na área técnica até entrarem
+      for (const a of tecs) if (a.ativo && !EF.dentroAreaTecnica(a.timeT, a.j.x, a.j.z, 0.6)) x.tecFora++;
+      for (const a of jogs) {
+        const o = a.atu;
+        // mãos na cintura (≤ 0,12 m da articulação do quadril), contínuo
+        if (pCampo && t >= pCampo.t0 && t < pCampo.t1 && a.ativo) {
+          const ok = Math.hypot(o[J.maoE * 3] - o[J.quadrilE * 3], o[J.maoE * 3 + 1] - o[J.quadrilE * 3 + 1], o[J.maoE * 3 + 2] - o[J.quadrilE * 3 + 2]) <= 0.12
+            && Math.hypot(o[J.maoD * 3] - o[J.quadrilD * 3], o[J.maoD * 3 + 1] - o[J.quadrilD * 3 + 1], o[J.maoD * 3 + 2] - o[J.quadrilD * 3 + 2]) <= 0.12;
+          const q = x.cintura.get(a) ?? { n: 0, max: 0 };
+          q.n = ok ? q.n + 1 : 0; q.max = Math.max(q.max, q.n); x.cintura.set(a, q);
+        }
+        // no túnel: a distância à boca caindo (quem anda) e ninguém visível passando da boca
+        if (f === 'tunel') {
+          const q = x.tunel.get(a) ?? { ant: null, cai: 0, n: 0, entrou: false };
+          if (a.ativo) {
+            const d = Math.hypot(a.j.x, a.j.z - BOCA);
+            if (q.ant != null && a.recriado !== cc.k) { q.n++; if (d < q.ant - 1e-6) q.cai++; }
+            q.ant = d;
+            if (a.j.z > ENTRA + 0.3) x.dentroTunel++;
+          } else if (a.entrou != null) q.entrou = true;
+          x.tunel.set(a, q);
+        }
+        // depois do túnel: ninguém em campo (o campo vazio até a saída)
+        if (VAZIO_C.has(f) && a.ativo) x.ativosDepois++;
+      }
+      if (VAZIO_C.has(f) && cc.bolaVisivel) x.bolaDepois++;
+      if (f === 'tunel' && x.bolaTunel == null) x.bolaTunel = cc.mF.bola.p.y;
+      // apertos de mão: as mãos direitas ≤ 0,15 m e as pelves a 0,8–1,2 m, contínuo
+      const at = cc.atores;
+      for (let p = 0; p < at.length; p++) {
+        const A = at[p]; if (!A.ativo || A.time === 2 || A.tipo === 'tecnico') continue;
+        for (let q = p + 1; q < at.length; q++) {
+          const B = at[q]; if (!B.ativo || B.time === 2 || B.tipo === 'tecnico' || A.time === B.time) continue;
+          const oa = A.atu, ob = B.atu;
+          const dm = Math.hypot(oa[J.maoD * 3] - ob[J.maoD * 3], oa[J.maoD * 3 + 1] - ob[J.maoD * 3 + 1], oa[J.maoD * 3 + 2] - ob[J.maoD * 3 + 2]);
+          const dp = Math.hypot(oa[J.pelve * 3] - ob[J.pelve * 3], oa[J.pelve * 3 + 2] - ob[J.pelve * 3 + 2]);
+          const k = A.id * 1000 + B.id;
+          const r = x.apertos.get(k) ?? { n: 0, max: 0 };
+          r.n = dm <= 0.15 && dp >= 0.8 && dp <= 1.2 ? r.n + 1 : 0; r.max = Math.max(r.max, r.n);
+          x.apertos.set(k, r);
+        }
+      }
+    },
+  });
+  x.nApertos = [...x.apertos.values()].filter(r => r.max >= 24).length;
+  void poseEspera;
+  return x;
+}
+
+if (cenasC.length && roda('C')) {
+  const rs = cenasC.map(x => x.r);
+  const porCaso = Object.fromEntries(CASOS_C.map(([k]) => [k, cenasC.filter(x => x.caso === k).length]));
+  reg('C canhão: 56 intervalos de partidas IA × IA', `${cenasC.length} (${Object.entries(porCaso).map(([k, v]) => `${k} ${v}`).join(', ')})${cenasC.falhou.length ? `; sem estado: ${cenasC.falhou.join(', ')}` : ''}`, '56 (natural 20, gol 12, vermelho 10, amarelo 4, goleiro 10)', cenasC.length === 56);
+  // planos e tempos (os do plano: PLANO-CENAS.md §4.1)
+  const errPl = cenasC.filter(x => {
+    const esp = PLANOS_INTERVALO.filter(([n]) => n !== 'lances' || x.nLances > 0);
+    let t = 0;
+    return x.plano.planos.length !== esp.length || esp.some(([n, d], i) => { const p = x.plano.planos[i]; const ok = p.nome === n && Math.abs(p.t0 - t) < 1e-9 && Math.abs(p.t1 - (t + d)) < 1e-9; t += n === 'geral' ? 0 : d; return !ok; });
+  });
+  reg('C planos e tempos: apito 1,5 → campo 2,5 → túnel 3,5 → torcida 1,5 → [lances] → estatísticas 6,0 → geral 3,0', `${cenasC.length - errPl.length}/${cenasC.length} certas${errPl.length ? `; ex.: ${errPl[0].plano.planos.map(p => `${p.nome} ${f2(p.t0)}–${f2(p.t1)}`).join(', ')}` : ''}; até o geral ${f2(Math.min(...cenasC.map(x => x.plano.duracao)))}–${f2(Math.max(...cenasC.map(x => x.plano.duracao)))} s`, 'todas; 15,0 s', errPl.length === 0 && cenasC.every(x => Math.abs(x.plano.duracao - 15) < 1e-9));
+  const fasesOk = cenasC.filter(x => x.fases.join() === (x.nLances ? 'apito,campo,tunel,torcida,lances,estatisticas,geral' : 'apito,campo,tunel,torcida,estatisticas,geral')).length;
+  reg('C as fases na ordem (com lances: a espera entre a torcida e as estatísticas)', `${fasesOk}/${cenasC.length}${fasesOk < cenasC.length ? ` (ex.: ${cenasC.find(x => !x.fases.join().startsWith('apito'))?.fases ?? cenasC.find(x => x.fases.length < 6)?.fases})` : ''}`, 'todas', fasesOk === cenasC.length);
+  const cl = cenasC.filter(x => x.nLances);
+  reg('C a espera dos lances: no começo do bloco (9,0 s), o relógio da cena parado, depois as estatísticas', `${cl.filter(x => x.esperaK === 540 && !x.esperaMexeu && x.depoisEspera === 540).length}/${cl.length}`, `todas (${cl.length})`, cl.every(x => x.esperaK === 540 && !x.esperaMexeu && x.depoisEspera === 540));
+  reg('C a tarja do placar: visível em [4, 12) s do relógio da cena, nunca na espera dos lances', `${cenasC.reduce((s, x) => s + x.tarjaErr, 0)} ticks errados de ${cenasC.reduce((s, x) => s + x.tarjaN, 0)}`, '0', cenasC.every(x => x.tarjaErr === 0));
+  reg('C o árbitro apita (a mão direita na boca ≥ 0,4 s no plano do apito)', `mín ${f2(Math.min(...cenasC.map(x => x.apitoMax)) / 60)} s`, '≥ 0,4 s', cenasC.every(x => x.apitoMax >= 24));
+  reg('C corpo: NaN, ossos, pé plantado, pé no ar, pelves, saltos só no corte', resumoCorpo(rs), '0, ≤ 5 mm, ≤ 0,05, ≤ 1,0, ≥ 0,40, 0', rs.every(okCorpo));
+  if (detalhe) for (const x of cenasC) if (!okCorpo(x.r)) console.log('corpoC', x.caso, x.sem, JSON.stringify({ osso: x.r.osso, pl: x.r.piorPlantado, pe: x.r.piorPe, pelve: x.r.piorPelve, salto: x.r.piorSalto }));
+  reg('C câmera: fora de sólidos, ≤ 5,5 m além das linhas, fora do gol, lente ≥ 2,5 m', resumoCamera(rs), '0, 0, 0, ≥ 2,5 m', rs.every(okCamera));
+  if (detalhe) for (const x of cenasC) if (!okCamera(x.r)) console.log('cameraC', x.caso, x.sem, JSON.stringify({ lente: x.r.piorLente, solido: x.r.piorSolido }));
+  reg('C ninguém dentro de sólido do estádio (o corpo a 0,9 m; no túnel com o vão das placas aberto)', `${cenasC.reduce((s, x) => s + x.solido, 0)} ticks${cenasC.find(x => x.solido) ? ` (ex.: ${JSON.stringify(cenasC.find(x => x.solido).piorSolido)})` : ''}`, '0', cenasC.every(x => x.solido === 0));
+  const v2 = Math.max(...cenasC.map(x => x.v2));
+  reg('C 2,0 s depois do apito ninguém acima de 1,6 m/s', `máx ${f2(v2)} m/s`, '≤ 1,6', v2 <= 1.6);
+  const fracC = x => [...x.cintura.values()].filter(q => q.max >= 30).length / Math.max(1, [...x.cintura.keys()].length);
+  reg('C mãos na cintura (≤ 0,12 m do quadril, ≥ 0,5 s) no campo', `pior ${f2(100 * Math.min(...cenasC.map(fracC)))}% dos jogadores`, '≥ 60%', cenasC.every(x => fracC(x) >= 0.6));
+  reg('C apertos de mão no campo (mãos direitas ≤ 0,15 m ≥ 0,4 s, pelves 0,8–1,2 m)', `mín ${Math.min(...cenasC.map(x => x.nApertos))}`, '≥ 2', cenasC.every(x => x.nApertos >= 2));
+  if (detalhe) for (const x of cenasC) if (x.nApertos < 2) console.log('apertosC', x.caso, x.sem, x.nApertos, 'pares', x.plano.pares.map(p => `${p.a}-${p.b} ${f2(p.d)}`).join(', '), JSON.stringify([...x.apertos.entries()].filter(([, r]) => r.max > 0).map(([k, r]) => [k, r.max])));
+  if (detalhe) for (const x of cenasC) if (!okCorpo(x.r)) console.log('arC', x.caso, x.sem, JSON.stringify(x.r.piorPe), 'bola', x.bolaNoAr);
+  // no fim do túnel: cada um dos 22 (os que estão em campo) dentro da boca (sumiu nela) ou andando para ela; depois, cortado
+  const tun = x => { const v = [...x.tunel.values()]; return { entrou: v.filter(q => q.entrou).length, andando: v.filter(q => !q.entrou && q.n > 30 && q.cai / q.n >= 0.9).length, n: v.length }; };
+  const tunOk = cenasC.filter(x => { const q = tun(x); return q.entrou + q.andando === q.n && q.entrou >= 1; }).length;
+  const ent = cenasC.map(x => tun(x).entrou);
+  reg('C túnel: no fim dele cada um dos 22 entrou na boca (z ≥ 44,0) ou anda para ela (≥ 90% dos ticks); ninguém passa visível da boca', `${tunOk}/${cenasC.length}; entraram ${Math.min(...ent)}–${Math.max(...ent)} por cena; visíveis além da boca ${cenasC.reduce((s, x) => s + x.dentroTunel, 0)} ticks`, `todas; ≥ 1; 0`, tunOk === cenasC.length && cenasC.every(x => x.dentroTunel === 0));
+  reg('C depois do túnel o campo vazio: ninguém e a bola fora do desenho (cortados pela elipse da torcida)', `${cenasC.reduce((s, x) => s + x.ativosDepois, 0)} atores-tick, bola ${cenasC.reduce((s, x) => s + x.bolaDepois, 0)} ticks`, '0, 0', cenasC.every(x => x.ativosDepois === 0 && x.bolaDepois === 0));
+  const noAr = cenasC.filter(x => x.bolaNoAr);
+  reg('C a bola do apito no ar cai (a física da cópia): no começo do túnel no chão (≤ 0,2 m)', noAr.length ? `${noAr.filter(x => x.bolaTunel <= 0.2).length}/${noAr.length} (a mais alta ${f2(Math.max(...noAr.map(x => x.bolaTunel)))} m)` : 'nenhum apito com a bola no ar nesta amostra', 'todas', noAr.every(x => x.bolaTunel <= 0.2), !noAr.length);
+  reg('C os treinadores (cópias) na área técnica até entrarem', `${cenasC.reduce((s, x) => s + x.tecFora, 0)} ticks fora`, '0', cenasC.every(x => x.tecFora === 0));
+  const gol = cenasC.filter(x => x.caso === 'gol'), ver = cenasC.filter(x => x.caso === 'vermelho' || x.caso === 'goleiro'), gk = cenasC.filter(x => x.caso === 'goleiro');
+  reg('C os casos: gol no último lance (o apito no gol + 150) / time com 10 / goleiro expulso com um de linha no gol', `${gol.length} / ${ver.filter(x => x.time10).length} de ${ver.length} / ${gk.filter(x => x.gkCampo).length} de ${gk.length}`, '12 / todos / todos', gol.length === 12 && ver.every(x => x.time10) && gk.every(x => x.gkCampo));
+  // o próximo bloco (o toque) e o pulo, nas cópias dos 8 primeiros mundos: campo → lances (ou estatísticas) → estatísticas →
+  // geral; o pulo vai direto ao geral; depois de cada salto o campo vazio
+  let blocosOk = 0, nb = 0;
+  const ruinsB = [];
+  for (const x of cenasC.filter(q => q.copia)) {
+    const m = x.copia;
+    const mk = () => CF.criarCenaFim(CF.planejarFim(m, 'intervalo', { placar: m.placar, lances: x.nLances }), m);
+    const c = mk();
+    for (let k = 0; k < 120; k++) CF.passoCenaFim(c);
+    const seq = [CF.faseFim(c)];
+    seq.push(CF.proximoBloco(c));
+    const vazio1 = c.atores.every(a => !a.ativo) && !c.bolaVisivel;
+    if (x.nLances) { CF.passoCenaFim(c); seq.push(CF.faseFim(c)); seq.push(CF.proximoBloco(c)); }
+    seq.push(CF.proximoBloco(c));
+    const c2 = mk();
+    for (let k = 0; k < 60; k++) CF.passoCenaFim(c2);
+    CF.pularParaGeral(c2);
+    const esperado = x.nLances ? 'campo,lances,lances,estatisticas,geral' : 'campo,estatisticas,geral';
+    nb++;
+    const ok = seq.join() === esperado && vazio1 && CF.faseFim(c2) === 'geral' && c2.atores.every(a => !a.ativo) && !c2.bolaVisivel;
+    if (ok) blocosOk++; else ruinsB.push(`${seq.join('→')} (vazio ${vazio1}, pulo ${CF.faseFim(c2)})`);
+  }
+  reg('C o toque = o próximo bloco (campo → lances → estatísticas → geral) e o pulo = o geral, com o campo vazio', `${blocosOk}/${nb}${ruinsB.length ? `; ex.: ${ruinsB[0]}` : ''}`, `todos (${nb})`, nb >= 6 && blocosOk === nb);
+}
+
 // ------------------------------------------------------------------------------------------------ E) pureza
 if (roda('E')) {
   if (!cenasA.length) reg('E pureza: o mundo não muda com a cena', 'sem cenas (a cena do cartão não existe)', 'hashMundo e m.tick iguais; nada escrito', false);
@@ -642,6 +869,29 @@ if (roda('E')) {
       total++; if (ok) iguais++;
     }
     reg('E2 a partida continua do mesmo tick: com a cena × sem ela, 600 passos (hash a cada 100)', `${iguais}/${total} situações iguais`, 'todas (6)', total === SITUACOES.length && iguais === total);
+  }
+  if (!cenasC.length) reg('E pureza do intervalo: o mundo não muda com a cena', 'sem cenas (a cena do intervalo não existe)', 'hashMundo e m.tick iguais; nada escrito', false);
+  else {
+    reg('E pureza do intervalo: hashMundo e m.tick antes = depois; nada escrito no mundo', `${cenasC.filter(x => x.hashIgual).length}/${cenasC.length} · ${cenasC.filter(x => x.mundoIgual).length}/${cenasC.length}`, 'todas · todas', cenasC.every(x => x.hashIgual && x.mundoIgual));
+    // E3: com a cena inteira (os blocos, a espera dos lances) e sem ela, a saída do 2º tempo no MESMO tick e os 600 passos
+    // seguintes com o mesmo hash a cada 100 (o laço da página solta no geral: os 3 s do intervalo correm igual)
+    const L = await LC.carregarCenas(pastaJs);
+    let iguais = 0, total = 0;
+    for (const sem of [41, 42, 43]) {
+      const a = LC.ateIntervalo(L, sem, { min: 0.5 }), b = LC.ateIntervalo(L, sem, { min: 0.5 });
+      if (!a || !b) continue;
+      const c = CF.criarCenaFim(CF.planejarFim(a.m, 'intervalo', { lances: 2 }), a.m);
+      for (let k = 0; k < 2000 && CF.faseFim(c) !== 'geral'; k++) { if (c.emLances) CF.seguirCenaFim(c); else CF.passoCenaFim(c); }
+      let ok = S.hashMundo(a.m) === S.hashMundo(b.m), saidaA = null, saidaB = null;
+      for (let k = 0; k < 800; k++) {
+        const ea = L.P.passoPartida(a.m, L.P.entradaDemoPartida(a.m), null), eb = L.P.passoPartida(b.m, L.P.entradaDemoPartida(b.m), null);
+        if (saidaA == null && ea.some(e => e.tipo === 'saida')) saidaA = a.m.tick;
+        if (saidaB == null && eb.some(e => e.tipo === 'saida')) saidaB = b.m.tick;
+        if ((k + 1) % 100 === 0 && S.hashMundo(a.m) !== S.hashMundo(b.m)) ok = false;
+      }
+      total++; if (ok && saidaA != null && saidaA === saidaB) iguais++;
+    }
+    reg('E3 intervalo: com a cena inteira × sem ela, a saída do 2º tempo no mesmo tick e 800 passos iguais (hash a cada 100)', `${iguais}/${total}`, 'todas (3)', total === 3 && iguais === total);
   }
 }
 
@@ -738,6 +988,26 @@ if (roda('G')) {
     }
     reg(`G custo da cena do cartão por tick (${SITUACOES.length} situações, 24–25 atores; ${comEspera ? 'a mediana de 5, sem a espera na fila do escalonador' : 'a melhor de 5, parede'})`,
       `${por.map(f3).join(' / ')} ms${comEspera ? ` (a melhor parede ${parede.map(f3).join(' / ')}; no canhão, p95 da parede ${f3(p95(custosA))})` : ''}`, '≤ 0,6 ms (a meta da comemoração)', por.length === SITUACOES.length && Math.max(...por) <= 0.6);
+    // o intervalo: 3 intervalos (27 atores), a mediana de 5 de cada, como o cartão
+    if (CF) {
+      const porC = [], parC = [];
+      for (const sem of [51, 52, 53]) {
+        const x = LC.ateIntervalo(L, sem, { min: 0.5 });
+        if (!x) continue;
+        const med = [];
+        let mp = Infinity;
+        for (let rep = 0; rep < 5; rep++) {
+          const c = CF.criarCenaFim(CF.planejarFim(x.m, 'intervalo', { treinadores: treinadoresDe(x.m) }), x.m);
+          const e0 = espera(), t0 = performance.now(); let n = 0;
+          while (CF.faseFim(c) !== 'geral' && n < 2000) { CF.passoCenaFim(c); n++; }
+          const pm = performance.now() - t0, e = espera() - e0;
+          med.push(Math.max(0, pm - e) / n); mp = Math.min(mp, pm / n);
+        }
+        med.sort((a, b) => a - b);
+        porC.push(comEspera ? med[med.length >> 1] : mp); parC.push(mp);
+      }
+      reg('G custo da cena do intervalo por tick (3 intervalos, 27 atores; até o geral)', `${porC.map(f3).join(' / ')} ms${custosC.length ? ` (no canhão C, p95 da parede ${f3(p95(custosC))})` : ''}`, '≤ 0,6 ms', porC.length === 3 && Math.max(...porC) <= 0.6);
+    } else reg('G custo da cena do intervalo por tick', 'sem a cena do intervalo', '≤ 0,6 ms', false);
   }
 }
 

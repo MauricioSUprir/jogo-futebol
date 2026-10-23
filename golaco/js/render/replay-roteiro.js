@@ -306,6 +306,27 @@ export function roteiroParada(anel, lance) {
 }
 
 /**
+ * Roteiro de um LANCE GUARDADO (render/lances-guarda.js; os lances do intervalo e os "Melhores momentos" do fim: PLANO-CENAS.md
+ * §4.2): um plano 'tv' 1× com o trecho inteiro da `fonte` — o mini-anel em que o lance foi descomprimido (tocar) —, sem
+ * atravessar corte (começa no último). lance = a meta do guardador ({tipo, classe, chave, fim, de, ate, lado, x, z}; sem
+ * de/ate, a fonte inteira). Null com a fonte vazia ou menos de 0,5 s.
+ */
+export function roteiroLance(fonte, lance = null) {
+  if (!fonte || fonte.ultimo < 0) return null;
+  let de = Math.max(fonte.primeiro, lance?.de ?? fonte.primeiro);
+  const ate = Math.min(fonte.ultimo, lance?.ate ?? fonte.ultimo);
+  if (ate <= de) return null;
+  const c = fonte.ultimoCorte(de + 1, ate);
+  if (c != null) de = c;
+  if (ate - de < 30) return null;
+  return {
+    tipo: 'lance', planos: [{ de, ate, vel: 1, cam: 'tv' }], lado: (lance?.lado ?? 1) >= 0 ? 1 : -1,
+    chave: lance?.chave ?? null, fim: lance?.fim ?? null, classe: lance?.classe ?? null, lance: lance?.tipo ?? null,
+    x: lance?.x, z: lance?.z,
+  };
+}
+
+/**
  * Roteiro do "Replay" da pausa: os últimos `s` segundos (sem atravessar o último corte), na câmera de TV. Pausa logo
  * depois de uma montagem (falta, lateral, escanteio: menos de `menu.minDepoisCorte` s desde o corte), o que vale rever é
  * o lance ANTES dela — o que parou o jogo —, até o corte (sem atravessar o corte anterior). Com `checar`, a checagem

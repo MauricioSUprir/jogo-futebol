@@ -178,8 +178,14 @@ export function criarHud(opc) {
   el.comemoracao?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('comemoracao-pular'); });
   // cena de substituição: a mesma camada (qualquer toque ou clique pula, depois de 0,5 s — quem decide é o main.js)
   el.substituicao?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('substituicao-pular'); });
-  // cena do cartão (js/cena-cartao.js): a mesma camada (qualquer toque pula depois de 0,5 s — quem decide é o main.js)
-  el.cena?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('cena-pular'); });
+  // cena do cartão (js/cena-cartao.js): a mesma camada (qualquer toque pula depois de 0,5 s — quem decide é o main.js). Na
+  // cena do fim de tempo (js/cena-fim.js, o intervalo) o toque na camada é o PRÓXIMO BLOCO ('cena-toque'), o "Pular" vai à
+  // saída ('cena-pular') e o botão da pausa ('cena-menu') abre a pausa (o "Editar time" do intervalo)
+  el.cena?.addEventListener('pointerdown', e => {
+    e.preventDefault(); engolirClique(e);
+    if (e.target.closest?.('#cena-menu')) { cmd('cena-menu'); return; }
+    cmd(e.target.closest?.('#cena-pular') ? 'cena-pular' : 'cena-toque');
+  });
 
   function marcarGrupo(grupo, valor) {
     document.querySelectorAll(`.segmentado[data-grupo="${grupo}"] button`).forEach(b => {
@@ -840,8 +846,15 @@ export function criarHud(opc) {
      * cartão (o cartão está na mão do árbitro), faixas e botões de toque somem; a camada pega qualquer toque (pular) e o
      * "Pular" aparece só com toque.
      */
-    cena(ativo) {
+    cena(ativo, tipo = 'cartao') {
       ativo = !!ativo;
+      // (o fim de tempo: o botão da pausa na camada e o rótulo do "Pular")
+      if (el.cena) {
+        const fim = ativo && tipo === 'fim';
+        el.cena.classList.toggle('fim-tempo', fim);
+        const b = el.cena.querySelector('#cena-pular');
+        if (b) b.setAttribute('aria-label', fim ? 'Pular o intervalo' : 'Pular a cena do cartão');
+      }
       if (raiz.classList.contains('em-cena') === ativo) return;
       raiz.classList.toggle('em-cena', ativo);
       if (el.cena) el.cena.hidden = !ativo;

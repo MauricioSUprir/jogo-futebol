@@ -55,6 +55,8 @@ export const TEMPOS_NODE = {
   'teste-comemoracao.mjs': 294,
   'teste-substituicao.mjs': 69,
   'teste-cenas.mjs': 90,
+  // (22/10, estimado: 24 partidas em 4 processos, ~70 s numa máquina de 4 vCPU sozinha; no CI dividido, ~2–3×)
+  'teste-lances-guarda.mjs': 200,
   'teste-tecnicos.mjs': 482,
   'teste-tecnicos.mjs --so-sinteticos --estresse': 103,
   'teste-impedimento.mjs': 156,

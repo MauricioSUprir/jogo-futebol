@@ -88,6 +88,26 @@
 // aperto novo depois de 0,5 s. ?cenas=0|1 força; senão a preferência ("Cenas" no "Modo de jogo"); desligada com webdriver,
 // ?prints=1 e ?demo=1; no online, só o ícone de hoje; sem o módulo baixado ainda, o ícone de hoje (sem segurar).
 //
+// Cena do INTERVALO (render; pedido do dono de 22/10: "a cena de intervalo"; PLANO-CENAS.md §4, contrato "Cenas das
+// paradas" §7.3): no apito do 1º tempo (o evento 'intervalo'; depois do replay do gol do último lance e do cartão do último
+// apito, na fila) os 22 viram UMA cena (js/cena-fim.js, pura, sob demanda: SOB.cenas) — o apito, o campo, o túnel, a torcida,
+// 0–2 lances do 1º tempo (os do guardador, pelo diretor do replay com a fonte = o mini-anel), as estatísticas e o plano
+// geral —, com a tarja do placar com os autores e o painel de estatísticas (js/cenas-tela.js: só dentro da cena). A
+// SIMULAÇÃO FICA PARADA no tick do 'intervalo' até o plano 'geral' (seguraIntervalo); ali o laço solta, os 3 s de
+// PARTIDA.intervalo correm por baixo com o desenho ainda da cena (o campo vazio) e a 'saida' acaba a cena — no mesmo tick e
+// com o mesmo hash de sem ela. A cena chama tocarAdiados() ao começar (o apito não espera a fila: R6). Toque/Enter/um botão
+// novo = o próximo bloco; "Pular" = o geral e os passos do intervalo correndo atrás da cortina até a saída; a pausa (Esc;
+// no toque, o botão da camada) congela a cena e o "Editar time" entra no 1º passo depois que o laço solta (troca do
+// intervalo, Regra 3). Desligada com webdriver, ?prints=1 e ?demo=1 e com "Cenas: desligadas"; sem o SOB.cenas baixado ou no
+// online, a faixa de 3 s de hoje (no online com a tarja do placar só nesses 3 s: R10). A súmula (sumula.js) é criada
+// SEMPRE na partida (import estático: os números das estatísticas).
+//
+// Guardador de lances (render; PLANO-CENAS.md §4.2, contrato "Cenas das paradas"): o gol (no posGol(), na saída, no
+// intervalo ou no fim) e a parada A/B (no passo antes da montagem) são copiados do anel, com ou sem replay, para o intervalo
+// e o fim tocarem depois (render/lances-guarda.js, sob demanda: SOB.cenas; a memória só na partida). Um lance guardado toca
+// pelo diretor de sempre com a FONTE = o mini-anel (tocarLanceGuardado → iniciarReplay(ro, {fonte, aoFim})): a simulação fica
+// parada como em todo replay e o fim volta à cena (aoFim), sem andar a fila. Só lê o anel: o hash não muda.
+//
 // Parâmetros: ?semente=N ?q=baixa|media|alta ?hora=dia|noite ?camera=tv|aproximada ?demo=1
 // ?modo=partida|ataque|conducao (padrão da página: partida) ?min=N (minutos reais por tempo)
 // ?marcador=1 ?prints=1 (cena limpa) ?qps=1 ?toque=1 ?entalhe=1 ?replay=0|1 ?comemoracao=0|1 ?substituicao=0|1
@@ -148,14 +168,14 @@ import { ID_TM, PEDIDO_TM, avisarTM, fimTM, sairTM, gravarResultadoTM, sementeTM
 import { registrarElenco } from './elenco.js';
 // replays nas paradas: o classificador de lances (puro; fora do fecho do hash: só lê o mundo e os eventos)
 import { criarLances, lancesPasso, decidirReplay, registrarReplay, montaNoProximoPasso, REPLAY_PARADA } from './lances.js';
+// a súmula da partida (o resultado do TM e as estatísticas das cenas; puro, só lê: fora do fecho do hash)
+import { criarSumula, sumulaPasso, resultadoTM, minutoTM, estatisticas as estatisticasDaSumula, autoresPorTime } from './sumula.js';
 
 const { PASSO, BOTAO, QUALIDADE, VERSAO, FALTAS } = CFG;
 const ID_HUMANO = S.ID_HUMANO ?? 0;
-// Só com ?tm: a conversão do pedido (tm-times.js) e a súmula (sumula.js) por import dinâmico — fora do download do jogo
-// sem ?tm (teste-carga)
-const [MOD_TIMES, MOD_SUMULA] = PEDIDO_TM
-  ? await Promise.all([import('./tm-times.js'), import('./sumula.js')]).catch(() => [null, null]) : [null, null];
-const { criarSumula, sumulaPasso, resultadoTM, minutoTM } = MOD_SUMULA ?? {};
+// Só com ?tm: a conversão do pedido (tm-times.js) por import dinâmico — fora do download do jogo sem ?tm (teste-carga). A
+// súmula (sumula.js) é estática desde a cena do intervalo (PLANO-CENAS.md R4): ela lê cada passo da partida desde o 1º
+const MOD_TIMES = PEDIDO_TM ? await import('./tm-times.js').catch(() => null) : null;
 const ELENCOS_TM = MOD_TIMES?.ELENCOS_TM;
 /**
  * O pedido do TM vira elencos registrados (elenco.js) e os times da partida; sem ?tm, null (o jogo de sempre). Um pedido
@@ -163,7 +183,7 @@ const ELENCOS_TM = MOD_TIMES?.ELENCOS_TM;
  * 'tm3d:sair' e o TM simula na hora, sem esperar os 30 s dele.
  */
 function timesDoTM() {
-  if (!PEDIDO_TM || !MOD_TIMES || !MOD_SUMULA) return null;
+  if (!PEDIDO_TM || !MOD_TIMES) return null;
   try {
     const T = MOD_TIMES.timesDoPedido(PEDIDO_TM);
     for (const el of T.elencos) registrarElenco(el);
@@ -365,18 +385,22 @@ const SOB = {
     baixar: () => Promise.all([import('./editor-time.js'), cssSobDemanda('css/editor.css', 'css/prejogo.css')]).then(([md]) => md),
     criar(md) { editor = md.criarEditorTime({ raiz: document.getElementById('editar-time'), aoPronto: ed => aoPronto(ed), aoFechar: () => aoFecharEditor() }); },
   },
-  // as cenas das paradas (o cartão): a cena pura, as constantes dela (js/cenas-config.js chega junto, pelo import dela), o
-  // cartão 3D, a tela das tarjas e o CSS dela (antes do prejogo.css, como o do editor)
+  // as cenas das paradas (o cartão e o intervalo): as cenas puras, as constantes delas (js/cenas-config.js chega junto, pelo
+  // import delas), o cartão 3D, a tela das tarjas e o CSS dela (antes do prejogo.css, como o do editor); o guardador de lances
+  // (lg: a memória só na partida — garantirGuarda)
   cenas: {
     carga: null, ok: false,
     baixar: () => Promise.all([import('./cena-cartao.js'), import('./cenas-config.js'), import('./render/cartao3d.js'), import('./cenas-tela.js'),
-      cssSobDemanda('css/cenas.css', 'css/prejogo.css')]).then(([cc, cfg, c3, tela]) => ({ cc, cfg, c3, tela })),
+      import('./render/lances-guarda.js'), import('./cena-fim.js'), cssSobDemanda('css/cenas.css', 'css/prejogo.css')]).then(([cc, cfg, c3, tela, lg, cf]) => ({ cc, cfg, c3, tela, lg, cf })),
     criar(md) {
       MOD_CEN = md;
       planoCamCartao = md.cc.criarPlanoCameraCartao();
+      planoCamFim = md.cf.criarPlanoCameraFim();
       telaCenas = md.tela.criarTelaCenas({ raiz: document.getElementById('hud') });
       if (cena3d) cartao3d = md.c3.criarCartao3D(cena3d.cena);
       marcarCenas();
+      // o guardador de lances: a memória só na partida (nos treinos a pré-carga não aloca nada)
+      garantirGuarda();
     },
   },
 };
@@ -426,6 +450,18 @@ const replayParadaPadrao = RP_PARAM === '1' ? true : RP_PARAM === '0' ? false : 
 const replayParadaLigado = () => replayParadaPadrao && replayAuto;
 let lances = null, replayParada = null;
 const histParadas = [];
+// Guardador de lances (render/lances-guarda.js, sob demanda: SOB.cenas; PLANO-CENAS.md §4.2, R9, R20): os gols (no posGol(),
+// com ou sem replay) e as paradas A/B (no passo antes da montagem, com ou sem replay) copiados do anel para o intervalo e
+// o fim. guarda/miniLance: alocados só na partida (garantirGuarda; nunca nos treinos, onde a pré-carga também roda); golGuardar: o
+// gol que espera a saída (ou o intervalo, o fim); lanceGuardar: a parada classificada que espera o passo antes da montagem;
+// batidasRede: as últimas batidas da bola na rede (o `ondas` só guarda as que ainda balançam); histGuarda: o que foi
+// guardado (API dos testes); replayAoFim: o replay de DENTRO de uma cena (os lances do intervalo, os "Melhores momentos")
+// volta a ela no fim ou no pulo, sem andar a fila (iniciarReplay(ro, {fonte, aoFim}); R8)
+let guarda = null, miniLance = null, golGuardar = null, lanceGuardar = null, replayAoFim = null;
+const batidasRede = Array.from({ length: 8 }, () => ({ ativo: false, t0: 0, x: 0, y: 0, z: 0, plano: 0, amp: 0, dx: 0, dy: 0, dz: 0 }));
+let batidaK = 0;
+const histGuarda = [];
+let fimLanceTeste = null;    // o último aoFim do tocarLance da API dos testes
 const custoGravar = { n: 0, ms: 0 }, custoReplay = { n: 0, ms: 0, v: new Float64Array(4096) };
 const listaR = [];
 const _bpR = { x: 0, y: 0, z: 0 }, _bqR = { x: 0, y: 0, z: 0, w: 1 }, _qR = new THREE.Quaternion();
@@ -494,6 +530,15 @@ const custoCartao = { n: 0, ms: 0 };
 const _evCartao = [], _maoCartao = {}, _poseArb = new Float32Array(NJ * 3);
 // a faixa "Você foi expulso" (TM, travado) espera a cena do cartão E o replay de parada daquela bola morta (R11)
 let expulsoPendente = false;
+// Cena do intervalo (js/cena-fim.js, sob demanda: SOB.cenas; PLANO-CENAS.md §4): cenaFim = a cena em andamento ({c (o estado
+// da cena pura), tipo 'intervalo', tick, botoes, geral (o laço solto), rapido (pulada: os passos do intervalo correndo atrás
+// da cortina até a saída), lances (os k do guardador), iLance, tocando, placar, est}); intervaloAgora: o passo trouxe o
+// 'intervalo' (a decisão fica para o fim do passo, depois do cartão do mesmo passo); tarjaOnline: a tarja do placar nos 3 s da
+// faixa do intervalo do online
+let cenaFim = null, intervaloAgora = false, tarjaOnline = null, planoCamFim = null;
+const custoFim = { n: 0, ms: 0 };
+const _evFim = [];
+const histFim = [];          // as cenas do intervalo (API dos testes): {tick, lances, inicio, geral, fim, pulou}
 const ENTRADA_NEUTRA = { x: 0, z: 0, botoes: 0 };
 const PASSOS_GOL = Math.round(CFG.PARTIDA.golPausa / PASSO);
 const bolaAnt = { p: new THREE.Vector3(), q: new THREE.Quaternion() };
@@ -519,9 +564,9 @@ const tempoEstadio = () => Math.max(0, (passosTotais - 1 + alfa) * PASSO) + relE
 const filaAcoes = [];
 // edição do time vinda do "Editar time": entra (uma por vez) no 1º passo depois da pausa
 let edicaoNaFila = null;
-// Total Match: a súmula (sumula.js; a mesma ao vivo e no "Simular o resto"), o "Simular o resto" em andamento e o aviso do
-// travado expulso (uma vez)
-let sumulaTM = TM ? criarSumula() : null;
+// a súmula (sumula.js; a mesma ao vivo e no "Simular o resto"): SEMPRE na partida (as estatísticas das cenas; com ?tm, a do
+// resultado); o "Simular o resto" em andamento e o aviso do travado expulso (uma vez)
+let sumula = criarSumula();
 let simulandoTM = null;      // {promessa} enquanto o "Simular o resto" roda em pedaços (simularResto)
 let expulsoAvisado = false;
 // o tick da expulsão do travado: o replay de parada daquela bola morta esconde a faixa (em-replay) e ela volta depois dele,
@@ -590,6 +635,10 @@ function iniciarEstados() {
   // replays nas paradas: o classificador é do mundo novo (só na partida; nada armado)
   lances = mundo.modo === 'partida' && mundo.partida && !mundo.livre && !mundo.disputa ? criarLances() : null;
   replayParada = null; histParadas.length = 0;
+  // o guardador de lances é da partida (a memória fica: só esquece os lances)
+  golGuardar = null; lanceGuardar = null; histGuarda.length = 0;
+  if (guarda) MOD_CEN.lg.limparGuarda(guarda);
+  garantirGuarda();
   for (const j of mundo.jogadores) estadoDe(j);
   copiarBolaDoMundo(bolaAtu);
   copiarBolaDoMundo(bolaAnt);
@@ -613,8 +662,8 @@ function rodarPasso(entrada, acoes) {
   const t0 = agoraMs();
   // (online: a entrada já vem com os dois times, {0, 1}, decodificada pela sessão)
   const eventos = passoDoMundo(mundo, mundo.online ? entrada : entradaDoTime(entrada), acoes) ?? mundo.eventos ?? [];
-  // súmula do Total Match (só lê o mundo e os eventos do passo)
-  if (sumulaTM && mundo.modo === 'partida') sumulaPasso(sumulaTM, mundo, eventos);
+  // a súmula (só lê o mundo e os eventos do passo; na partida, fora do Livre e da disputa)
+  if (sumula && mundo.modo === 'partida') sumulaPasso(sumula, mundo, eventos);
   const t1 = agoraMs();
   contPassos++;
   passosTotais++;
@@ -660,6 +709,9 @@ function rodarPasso(entrada, acoes) {
   // as trocas feitas NO APITO do intervalo (a edição pendente vale ali, Regra 3): a faixa na saída do 2º tempo — o passo
   // em que o intervalo acaba, também sem troca nova nele (antes elas ficavam guardadas e a faixa nunca aparecia)
   else if (faixaSub2T.length && estadoAntesPasso === 'intervalo' && mundo.partida?.estado !== 'intervalo') faixaDoIntervalo();
+  // o apito do 1º tempo vira a cena do intervalo (ou a faixa de hoje) — no fim do passo, DEPOIS do cartão do mesmo passo
+  // (que vai antes na fila) e do replay do gol do último lance (já começado no tratarEvento)
+  if (intervaloAgora) decidirIntervalo();
   // a faixa "Você foi expulso" do passo: já, ou depois da cena do cartão e do replay de parada que vêm a seguir
   talvezFaixaExpulso();
   atualizarFase();
@@ -830,6 +882,15 @@ function tratarEvento(ev) {
       const m0 = mundo;
       golSemDiretor = diretor ? null : dg;
       comDiretor(d => { golSemDiretor = null; d.aoGol(dg); }, () => golSemDiretor === dg && mundo === m0);
+      // o guardador de lances: o gol entra no posGol() (na saída, no intervalo ou no fim), com ou sem replay
+      if (lances) {
+        const a = dg.autor != null && dg.chuteTick != null ? jogadorNoTick(anel, dg.chuteTick, dg.autor) : null;
+        golGuardar = {
+          tipo: 'gol', classe: 'gol', chave: dg.chuteTick ?? Math.max(0, dg.golTick - 45), fim: dg.golTick, morta: dg.golTick, lado: dg.lado,
+          time: dg.time, ids: dg.autor != null ? [dg.autor] : [], x: a ? a.x : mundo.bola.p.x, z: a ? a.z : mundo.bola.p.z,
+          tempo: mundo.partida.tempo, contra: dg.contra,
+        };
+      }
     }
     // comemoração (só na partida): começa já, da cópia do mundo neste tick
     if (mundo.partida && comemoracaoLigada) iniciarComemoracao(ev);
@@ -837,6 +898,8 @@ function tratarEvento(ev) {
   }
   // a saída (ou o intervalo, o fim, um recomeço) chegou: a cena da comemoração acaba (o replay entra a seguir)
   if (cenaGol && (t === 'saida' || t === 'intervalo' || t === 'fimDeJogo' || t === 'recomeco')) encerrarComemoracao();
+  // a saída do 2º tempo acaba a cena do intervalo (no plano geral, com o laço solto): o corte volta ao vivo
+  if (cenaFim && t === 'saida') fimCenaFim(false);
   if ((t === 'troca' && ev.auto) || t === 'trocaAerea' || t === 'cobranca') return;
   // recomeço (gol, bola fora, R) e saída de bola (gol, início do tempo): todos voltam às posições
   // — a câmera CORTA para a jogada nova (sem atravessar o campo) e o km/h não fica descendo
@@ -845,6 +908,8 @@ function tratarEvento(ev) {
   // depois do gol, o replay entra na saída de bola (com todos já montados: o roteiro para antes do corte); o gol que
   // esperava o replay baixar e não chegou a tempo fica sem replay
   if (t === 'saida' || t === 'intervalo' || t === 'fimDeJogo' || t === 'recomeco') golSemDiretor = null;
+  // (o gol entra no guardador de lances na vez do posGol, também sem replay — sem diretor, desligado, gol fora do anel)
+  if (golGuardar && (t === 'saida' || t === 'intervalo' || t === 'fimDeJogo')) guardarGolPendente();
   if (t === 'saida' && diretor?.golPendente) posGol();
   // Modo Livre: R / "Bola no meu pé" no meio do gol (recomeço sem saída de bola) = "quero jogar já": o replay daquele gol
   // não toca — nem fica guardado para a próxima saída sem gol ("Recomeçar bola no meio")
@@ -861,10 +926,17 @@ function tratarEvento(ev) {
   // partida: intervalo, fim, edição do time e substituição (intervalo e fim: plano geral do estádio). Gol no último
   // lance do tempo: o replay dele vem antes da faixa
   if (t === 'intervalo') {
-    const faixa = () => hud.faixa({ titulo: 'Intervalo', placar: textoPlacar(), ms: Math.round((CFG.PARTIDA?.intervalo ?? 3) * 1000) });
     encerrarEfeitosGol();
     if (cam) cam.planoGeral(true);
-    if (diretor?.golPendente && posGol()) filaCenas.push(faixa); else faixa();
+    // a cena do intervalo (js/cena-fim.js): decidida no fim do passo (decidirIntervalo), depois do cartão do mesmo passo; o
+    // replay do gol do último lance começa já (a cena espera ele na fila). Sem ela (desligada, online, sem o módulo, pela API
+    // dos testes): a faixa de 3 s de hoje (no online com a tarja do placar nesses 3 s)
+    if (podeCenaIntervalo()) {
+      if (diretor?.golPendente) posGol();
+      intervaloAgora = true;
+      return;
+    }
+    if (diretor?.golPendente && posGol()) filaCenas.push(faixaIntervalo); else faixaIntervalo();
     return;
   }
   if (t === 'fimDeJogo') {
@@ -924,7 +996,12 @@ function estadioPasso(eventos) {
   for (let k = 0; k < n; k++) {
     // a bolsa começa no FIM do passo, quando a bola DESENHADA (interpolada de p0 a p1) encosta na rede (com meio passo
     // antes, a bola desenhada dava um pulo para a frente no quadro da batida: a bolsa somava ~9 cm ao passo dela)
-    if (registrarImpacto(ondas, _impactos[k], tFim)) emocaoEvento(emocao, { tipo: 'redeImpacto', vel: _impactos[k].vel }, _ctxEmocao);
+    const imp = registrarImpacto(ondas, _impactos[k], tFim);
+    if (!imp) continue;
+    emocaoEvento(emocao, { tipo: 'redeImpacto', vel: _impactos[k].vel }, _ctxEmocao);
+    // (as últimas batidas, para o guardador de lances: a rede de um gol do 1º tempo balança de novo no intervalo)
+    const bt = batidasRede[batidaK++ % batidasRede.length];
+    bt.ativo = true; bt.t0 = imp.t0; bt.x = imp.x; bt.y = imp.y; bt.z = imp.z; bt.plano = imp.plano; bt.amp = imp.amp; bt.dx = imp.dx; bt.dy = imp.dy; bt.dz = imp.dz;
   }
   for (const ev of eventos) emocaoEvento(emocao, ev, _ctxEmocao);
   const p = _passoEmocao;
@@ -1034,7 +1111,7 @@ function marcarCondutor() {
   }
   const id = mundo.posse;
   const e = id != null ? estJ.get(id) : null;
-  const livre = !!e && !cenaGol && !cenaSub && !cenaCartao && !(diretor && diretor.ativo) && !(prejogo && prejogo.ativo) && !PRINTS;
+  const livre = !!e && !cenaGol && !cenaSub && !cenaCartao && !cenaFim && !(diretor && diretor.ativo) && !(prejogo && prejogo.ativo) && !PRINTS;
   if (livre) projetar(lerp(e.x0, e.x1, alfa), 2.2, lerp(e.z0, e.z1, alfa), _ptNome);
   if (!livre || _ptNome.atras) { if (!elNome.hidden) elNome.hidden = true; return; }
   if (nomeId !== id) {
@@ -1080,9 +1157,15 @@ const kitDe = j => kitDoId(j.id, j.posicao === 'GOL');
 
 function desenharQuadro(dt, agoraMs, renderizar = true) {
   const tq0 = performance.now();
-  // bola interpolada (na cena de substituição, parada onde ela está: no chão se o cobrador de agora é quem entra)
+  // bola interpolada (na cena de substituição, parada onde ela está: no chão se o cobrador de agora é quem entra; na do
+  // intervalo, a bola da cena — a cópia andando pela física —, fora do desenho depois do túnel)
   if (cenaSub) { _bp.x = cenaSub.bola.x; _bp.y = cenaSub.bola.y; _bp.z = cenaSub.bola.z; _qd.copy(bolaAtu.q); }
-  else {
+  else if (cenaFim) {
+    const c = cenaFim.c, al = c.alfa;
+    _bp.x = lerp(c.bola0.x, c.bola1.x, al); _bp.y = lerp(c.bola0.y, c.bola1.y, al); _bp.z = lerp(c.bola0.z, c.bola1.z, al);
+    const q = c.mF.bola.q;
+    _qd.set(q.x, q.y, q.z, q.w);
+  } else {
     _bp.x = lerp(bolaAnt.p.x, bolaAtu.p.x, alfa);
     _bp.y = lerp(bolaAnt.p.y, bolaAtu.p.y, alfa);
     _bp.z = lerp(bolaAnt.p.z, bolaAtu.p.z, alfa);
@@ -1093,6 +1176,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   if (redeLigada) empurraoBola(ondas, _bp, tEst, _emp); else { _emp.x = 0; _emp.y = 0; _emp.z = 0; }
   _bpDes.x = _bp.x + _emp.x; _bpDes.y = _bp.y + _emp.y; _bpDes.z = _bp.z + _emp.z;
   bola3d.atualizar(_bpDes, _qd);
+  if (cenaFim) bola3d.mesh.visible = cenaFim.c.bolaVisivel;
   uniformsRede(ondas, redeLigada ? tEst : -1e9, campo.rede.a, campo.rede.b);
   // jogadores interpolados (quantos houver, dos dois times)
   const idC = idControlado();
@@ -1103,10 +1187,11 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   const rel = mundo.partida ? relogioMao(mundo, TIME_HUMANO) : null;
   let n = 0;
   let hx = 0, hz = 0, achou = false;
-  if (cenaCartao) {
-    // cartão: os atores da cena (as cópias dos 22, o expulso, o árbitro e os treinadores parados na área técnica), sem anel
-    // do controlado; o árbitro com o uniforme dele e os treinadores com o deles
-    const c = cenaCartao.c, al = c.alfa;
+  if (cenaCartao || cenaFim) {
+    // cartão e intervalo: os atores da cena (as cópias dos 22, o expulso, o árbitro, os assistentes e os treinadores parados
+    // na área técnica), sem anel do controlado; o árbitro com o uniforme dele e os treinadores com o deles. No intervalo,
+    // depois do túnel ninguém (o campo vazio até a saída)
+    const c = cenaCartao ? cenaCartao.c : cenaFim.c, al = c.alfa;
     for (const a of c.atores) {
       if (a.ativo === false) continue;
       const des = a.des ?? (a.des = new Float32Array(NJ * 3));
@@ -1165,8 +1250,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   }
   // os treinadores (na partida; também com as cenas da comemoração e da substituição no lugar dos jogadores: os últimos
   // passos deles vieram da cena, que interpola com o alfa dela)
-  // (na cena do cartão os vivos ficam fora: quem aparece é a cópia da cena)
-  if (!cenaCartao) n = anexarTecnicos(lista, n, tecAlfaCena && cenaGol ? cenaGol.alfa : tecAlfaCena && cenaSub ? cenaSub.alfa : alfa);
+  // (nas cenas do cartão e do intervalo os vivos ficam fora: quem aparece é a cópia da cena — no intervalo, até a saída)
+  if (!cenaCartao && !cenaFim) n = anexarTecnicos(lista, n, tecAlfaCena && cenaGol ? cenaGol.alfa : tecAlfaCena && cenaSub ? cenaSub.alfa : alfa);
   lista.length = n;
   const tl1 = performance.now();
   const h = controlado();
@@ -1179,12 +1264,13 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   const vooAtivo = voo && voo.alvo && Number.isFinite(voo.alvo.x) && (voo.tickChegada == null || mundo.tick <= voo.tickChegada);
   alvoCam.ax = vooAtivo ? voo.alvo.x : NaN; alvoCam.az = vooAtivo ? voo.alvo.z : NaN;
   if (cenaCartao) cameraCartao();
+  else if (cenaFim) cameraFim();
   else if (cenaSub) cameraSubst();
   else if (cenaGol) cameraComemoracao();
   // disputa de pênaltis: os planos dela (atrás do cobrador, a reação, o círculo) pela câmera de cinema (corte na troca)
   else if (mundo.disputa) cam.definirCinema(MOD_DISP.planoCameraDisputa(mundo, planoDisputa, posDesenhada));
   if (!bp.carga && mundo.partida && /^(esc|tiro|pen)/.test(mundo.parada?.tipo)) carregarBP();
-  bp.plano = bp.tela && !cenaSub && !cenaGol && !cenaCartao ? bp.tela.camera(mundo, TIME_HUMANO) : null;
+  bp.plano = bp.tela && !cenaSub && !cenaGol && !cenaCartao && !cenaFim ? bp.tela.camera(mundo, TIME_HUMANO) : null;
   bp.yaw = bp.plano?.yaw ?? null;
   cam.bolaParada(bp.plano?.plano);
   cam.atualizar(dt, alvoCam, corteCamera);
@@ -1209,8 +1295,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
       placaSub.atualizar(placaNasMaos(cenaSub, q.des ?? q.atu, _placa), renderizar);
     } else placaSub.atualizar(null, renderizar);
   }
-  if (cenaGol || cenaSub || cenaCartao) {
-    // comemoração: nada do jogo ao vivo no gramado (queda da bola, opções do lateral, linha)
+  if (cenaGol || cenaSub || cenaCartao || cenaFim) {
+    // comemoração e cenas: nada do jogo ao vivo no gramado (queda da bola, opções do lateral, linha)
     marcas.grupo.visible = false;
     marcasLat.atualizar(mundo, semPosicao, agoraMs / 1000, dt);
     linhaImped.mostrar(null);
@@ -1222,7 +1308,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     else linhaImped.atualizar(mundo, dt, renderizar);
     marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
   }
-  if (bp.tela) bp.tela.desenhar(cenaGol || cenaSub || cenaCartao ? null : mundo, cam.camera, dt, bp.linha);
+  if (bp.tela) bp.tela.desenhar(cenaGol || cenaSub || cenaCartao || cenaFim ? null : mundo, cam.camera, dt, bp.linha);
   campo.atualizar(agoraMs / 1000, cam.camera, renderizar);
   marcarCondutor();
   torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar);
@@ -1239,7 +1325,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   else render.queda = null;
   render.quadros++;
   // HUD
-  if (h && !cenaGol && !cenaSub && !cenaCartao) {
+  if (h && !cenaGol && !cenaSub && !cenaCartao && !cenaFim) {
     // intervalo e fim: o mundo fica parado (o corpo guarda a velocidade de antes, o painel mostra 0)
     const parado = mundo.partida && (mundo.partida.estado === 'intervalo' || mundo.partida.estado === 'fim');
     const kmh = parado ? 0 : Math.hypot(h.vx, h.vz) * 3.6;
@@ -1256,7 +1342,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   // cartão do árbitro em cima de quem levou (por FALTAS.icone s; o expulso no lugar em que estava). Quem teve a cena do
   // cartão não ganha o ícone (o cartão esteve na mão do árbitro), nem antes nem depois dela
   const uc = mundo.partida?.ultimoCartao;
-  const semIcone = !!cenaCartao || (uc && (cartaoGolPendente || (cartaoComCena && cartaoComCena.id === uc.id && cartaoComCena.tick === uc.tick)));
+  const semIcone = !!cenaCartao || !!cenaFim || (uc && (cartaoGolPendente || (cartaoComCena && cartaoComCena.id === uc.id && cartaoComCena.tick === uc.tick)));
   if (uc && !semIcone && !cenaGol && !cenaSub && mundo.tick >= uc.tick && (mundo.tick - uc.tick) * PASSO < FALTAS.icone) {
     const jc = mundo.jogadores.find(q => q.id === uc.id);
     projetar(jc ? jc.x : uc.x, 2.25, jc ? jc.z : uc.z, _pt);
@@ -1264,6 +1350,11 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   } else hud.cartao(null);
   hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
   hud.relogio(mundo.partida && !mundo.disputa && !mundo.livre ? lerRelogio() : null);
+  // online: a tarja do placar com os autores só nos 3 s da faixa do intervalo (com o mundo parado: R10)
+  if (tarjaOnline && telaCenas) {
+    if (mundo.partida?.estado === 'intervalo') telaCenas.placar(tarjaOnline);
+    else { telaCenas.placar(null); tarjaOnline = null; }
+  }
   // disputa: as bolinhas e quem bate (escreve no DOM só quando muda)
   if (mundo.disputa && TELA_DISP) {
     telaDisp ??= TELA_DISP.criarTelaDisputa({ times: () => hud.times, nome: id => { const f = fichaDe(id); return f ? { num: f.num, nome: f.camisa ?? f.nome } : null; } });
@@ -1574,6 +1665,13 @@ function proximaCena() {
     if (it.tipo === 'subst' && substLigada && mundo.partida) { iniciarSubst(it); return; }
     // a cena do cartão que esperou o replay (impedimento com o cartão da vantagem) ou outra cena: o mundo segue no tick dela
     if (it.tipo === 'cartao') { if (iniciarCartao(it)) return; continue; }
+    // a cena do intervalo que esperou o replay do gol do último lance (ou o cartão do último apito): o mundo segue no tick
+    // do 'intervalo'; sem ela agora (as cenas desligadas na pausa), a faixa de hoje
+    if (it.tipo === 'intervalo') {
+      if (podeCenaIntervalo() && iniciarCenaFim(it)) return;
+      if (mundo.partida?.estado === 'intervalo') faixaIntervalo();
+      continue;
+    }
     if (it.pares) mostrarFaixaSub(it.pares);
   }
   tocarAdiados();
@@ -1581,7 +1679,7 @@ function proximaCena() {
 
 // ------------------------------------------------------------------ cena do cartão (js/cena-cartao.js, sob demanda)
 /** Ocupado: um replay, a cena de substituição, a do cartão ou a fila andando — a cena nova espera na fila. */
-const cenaOcupada = () => (diretor && diretor.ativo) || !!cenaSub || !!cenaCartao || filaCenas.length > 0;
+const cenaOcupada = () => (diretor && diretor.ativo) || !!cenaSub || !!cenaCartao || !!cenaFim || filaCenas.length > 0;
 /**
  * Fim do passo da partida (rodarPasso): o cartão do passo ganha a cena — o mais grave (escolherCartao: o 2º amarelo vira UM
  * vermelho com `segundo`). Só com as cenas ligadas, o módulo baixado (sem ele: o ícone de hoje, sem segurar; R23), fora
@@ -1795,6 +1893,229 @@ function talvezFaixaExpulso() {
   faixaExpulso();
 }
 
+// ------------------------------------------------------------------ cena do intervalo (js/cena-fim.js, sob demanda)
+/** A faixa "Intervalo" de hoje (3 s; sem a cena). No online, a tarja do placar com os autores nesses 3 s (R10). */
+function faixaIntervalo() {
+  hud.faixa({ titulo: 'Intervalo', placar: textoPlacar(), ms: Math.round((CFG.PARTIDA?.intervalo ?? 3) * 1000) });
+  if (ONLINE && telaCenas && mundo.partida?.estado === 'intervalo') tarjaOnline = dadosPlacar(true);
+}
+/**
+ * A cena do intervalo vale agora? Só com as cenas ligadas, o módulo baixado (sem ele: a faixa de hoje, sem segurar nem
+ * esperar o download: R23), na partida (fora do Livre, da disputa e do online) e fora da API dos testes (rodarPassos).
+ */
+const podeCenaIntervalo = () => !!MOD_CEN?.cf && !emRodarPassos && !!mundo.partida && !mundo.livre && !mundo.disputa && !mundo.online && cenasLigadas();
+/** Fim do passo que trouxe o 'intervalo': a cena já, ou na fila (depois do replay do gol do último lance e do cartão). */
+function decidirIntervalo() {
+  intervaloAgora = false;
+  if (!podeCenaIntervalo()) { faixaIntervalo(); return; }
+  const item = { tipo: 'intervalo', tick: mundo.tick };
+  if (cenaOcupada()) filaCenas.push(item);
+  else iniciarCenaFim(item);
+}
+/** A simulação espera no tick do 'intervalo' (a cena antes do plano geral). */
+const seguraIntervalo = () => !!cenaFim && !cenaFim.geral;
+
+/** Sigla, nome, escudo e as cores dos dois times (as tarjas e o painel das cenas). */
+function timesDaCena() {
+  return [0, 1].map(t => ({
+    sigla: hud.times[t]?.sigla ?? '', nome: hud.times[t]?.nome ?? '', cor1: COR_TIME[t].cor, cor2: COR_TIME[t].texto,
+    escudo: document.getElementById(`escudo-${t}`)?.getAttribute('href') ?? null,
+  }));
+}
+/** A tarja do placar (cenas-tela.js): os times, o placar e os autores (sumula.js autoresPorTime; CENA_FIM.autores). */
+function dadosPlacar(online = false) {
+  const comAutores = MOD_CEN?.cfg.CENA_FIM.autores !== false;
+  const aut = comAutores && sumula ? autoresPorTime(sumula) : null;
+  const nome = id => { const f = id != null ? fichaDe(id) : null; return f ? (f.camisa ?? f.nome ?? String(id)) : ''; };
+  return {
+    times: timesDaCena(), gols: [mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0], online,
+    autores: aut ? { 0: aut[0].map(a => ({ nome: nome(a.id), gols: a.gols })), 1: aut[1].map(a => ({ nome: nome(a.id), gols: a.gols })) } : null,
+  };
+}
+/** O painel de estatísticas do 1º tempo (sumula.js estatisticas; os itens de CENA_FIM.estatisticas). */
+function dadosEstatisticas() {
+  return { titulo: '1º tempo', times: timesDaCena(), itens: MOD_CEN.cfg.CENA_FIM.estatisticas.itens, valores: estatisticasDaSumula(sumula, 1) };
+}
+
+/**
+ * Começa a cena do intervalo (o mundo segurado no tick do 'intervalo': só cópias). Os lances do 1º tempo vêm do guardador
+ * (lances-guarda.js escolherLances: os gols primeiro, depois a parada mais forte). Devolve false se não deu.
+ */
+function iniciarCenaFim(item) {
+  const M = MOD_CEN;
+  if (!M?.cf || !mundo.partida || mundo.partida.estado !== 'intervalo') return false;
+  const ks = guarda ? M.lg.escolherLances(guarda, { tempo: 1, max: M.cfg.CENA_FIM.lances.intervalo }, []) : [];
+  const planta = IDENT?.forma3d?.planta ?? null;
+  const plano = M.cf.planejarFim(mundo, 'intervalo', {
+    placar: mundo.placar, timeHumano: TIME_HUMANO, lances: ks.length,
+    treinadores: tecnicos && tecVisiveis ? [treinadorDoTime(tecnicos, 0), treinadorDoTime(tecnicos, 1)] : null,
+    ajustePlano: planta?.ajustarPlano ?? null, cameraGeral: planta?.cameraGeral ?? null,
+  });
+  cenaFim = {
+    c: M.cf.criarCenaFim(plano, mundo), tipo: 'intervalo', tick: mundo.tick, botoes: entrada ? entrada.ler(yawEntrada()).botoes : 0,
+    geral: false, rapido: false, lances: ks, iLance: 0, tocando: false, placar: dadosPlacar(), est: dadosEstatisticas(),
+  };
+  if (histFim.length < 16) histFim.push({ tick: mundo.tick, lances: [...ks], inicio: ultimoAgora, geral: null, fim: null, pulou: false });
+  // (R6) o apito do intervalo não espera a cena acabar: o que o replay do gol do último lance adiou toca agora
+  tocarAdiados();
+  entrada?.limparPulsos();
+  encerrarEfeitosGol();
+  if (cam) cam.planoGeral(false);
+  hud.cena(true, 'fim'); hud.cartao(null); hud.faixa(null);
+  alfa = 1;
+  corteCamera = true;
+  return true;
+}
+
+/** Um quadro da cena (fora da pausa): o pulo, o relógio dela, os lances, as tarjas, o estádio e a torcida. */
+function quadroFim(dt, ent) {
+  const F = cenaFim, c = F.c, M = MOD_CEN;
+  if (!F.rapido) {
+    if (M.cf.tempoCenaFim(c) < M.cfg.CENAS.pularDepois) F.botoes |= ent.botoes;
+    else {
+      const novos = ent.botoes & ~F.botoes;
+      F.botoes &= ent.botoes;
+      if (novos) { proximoBlocoFim(); if (!cenaFim) return; }
+    }
+  }
+  const t0 = performance.now(), k0 = c.k;
+  if (!F.rapido) M.cf.avancarCenaFim(c, dt);
+  // a torcida reage ao que a cena mostra (render/emocao.js cenaFim: palmas ou vaia pelo placar)
+  M.cf.consumirEventosFim(c, _evFim);
+  if (_evFim.length) {
+    _ctxEmocao.t = tempoEstadio(); _ctxEmocao.bola = mundo.bola.p; _ctxEmocao.ataca = mundo.ataca;
+    for (const ev of _evFim) emocaoEvento(emocao, ev, _ctxEmocao);
+  }
+  // segurando, o estádio anda no relógio do desenho; no geral o laço solto anda o relógio pelos passos
+  if (!F.geral) estadioSegurado(dt);
+  // o bloco dos lances: o próximo lance do guardador pelo diretor (o fim dele volta aqui: aoFimLanceFim)
+  if (c.emLances && !F.tocando) tocarProximoLanceFim();
+  if (!F.geral && M.cf.faseFim(c) === 'geral') entrarGeralFim();
+  atualizarTarjasFim();
+  const ms = performance.now() - t0;
+  custoFim.n += c.k - k0; custoFim.ms += ms; mq.aCena += ms;
+}
+/** As tarjas da cena no relógio dela: o placar (CENA_FIM.placar) e as estatísticas (o plano delas). Fora dos lances. */
+function atualizarTarjasFim() {
+  const F = cenaFim;
+  if (!telaCenas || !F) return;
+  const c = F.c, cf = MOD_CEN.cf;
+  telaCenas.placar(!F.rapido && cf.tarjaPlacarVisivel(c) ? F.placar : null);
+  telaCenas.estatisticas(!F.rapido && cf.faseFim(c) === 'estatisticas' ? F.est : null);
+}
+/** O plano de câmera da cena no quadro (cortes secos pelo nome); o vão das placas no plano do túnel. */
+function cameraFim() {
+  const opc = { pequena: Math.min(window.innerWidth, window.innerHeight) < 520, aspecto: window.innerWidth / window.innerHeight };
+  MOD_CEN.cf.planoCameraFim(cenaFim.c, opc, planoCamFim);
+  if (planoCamFim.nome === 'fim') return;
+  if (vaoCenas) { if (planoCamFim.tunel) vaoCenas.abrir(); else vaoCenas.fechar(); }
+  // a câmera de cinema nunca dentro de um treinador (os vivos ficam onde as cópias da cena estão)
+  if (tecnicos) afastarDeTecnicos(planoCamFim.de, tecnicos, 0.6);
+  cam.definirCinema(planoCamFim);
+}
+/** O próximo lance do guardador (tocarLanceGuardado: a fonte = o mini-anel; o aoFim volta à cena); sem mais, a cena segue. */
+function tocarProximoLanceFim() {
+  const F = cenaFim;
+  while (F.iLance < F.lances.length) {
+    const k = F.lances[F.iLance++];
+    if (tocarLanceGuardado(k, aoFimLanceFim)) { F.tocando = true; return true; }
+  }
+  MOD_CEN.cf.seguirCenaFim(F.c);
+  return false;
+}
+/** O fim (ou o pulo) de um lance da cena: volta a ela (R8) — o próximo lance no quadro seguinte, ou o bloco seguinte. */
+function aoFimLanceFim(pulou) {
+  const F = cenaFim;
+  if (!F) return;
+  F.tocando = false;
+  // (o aperto que pulou o lance não pula também o bloco: ele só vale de novo solto e apertado)
+  F.botoes = entrada ? entrada.ler(yawEntrada()).botoes : 0;
+  if (F.iLance >= F.lances.length) MOD_CEN.cf.seguirCenaFim(F.c);
+  corteCamera = true;
+  void pulou;
+}
+/**
+ * O próximo bloco (toque, Enter, um botão novo depois de CENAS.pularDepois): os planos de campo → os lances → as estatísticas
+ * → o geral; no geral, a saída (pularFim). Um lance tocando é pulado pelo diretor (o ramo do replay no laço).
+ */
+function proximoBlocoFim() {
+  const F = cenaFim;
+  if (!F || F.rapido) return;
+  const M = MOD_CEN.cf;
+  if (M.tempoCenaFim(F.c) < MOD_CEN.cfg.CENAS.pularDepois) return;
+  if (diretor && diretor.ativo && replayAoFim) { fimReplay(true); return; }
+  if (F.geral) { pularFim(); return; }
+  if (F.c.emLances) F.iLance = F.lances.length;
+  M.proximoBloco(F.c);
+  if (M.faseFim(F.c) === 'geral') entrarGeralFim();
+  atualizarTarjasFim();
+  corteCamera = true;
+}
+/**
+ * Pula para a saída do 2º tempo ("Pular" da cena): o plano geral, a cortina, e os passos do intervalo que faltam correm em
+ * poucos quadros (COMEM.passosCortina por quadro) até a saída, que acaba a cena — o mesmo tick e o mesmo hash de sem ela.
+ */
+function pularFim() {
+  const F = cenaFim;
+  if (!F || F.rapido) return;
+  if (MOD_CEN.cf.tempoCenaFim(F.c) < MOD_CEN.cfg.CENAS.pularDepois) return;
+  // (um lance tocando sai sem o próximo)
+  F.iLance = F.lances.length;
+  if (diretor && diretor.ativo && replayAoFim) fimReplay(true);
+  if (!cenaFim) return;
+  MOD_CEN.cf.pularParaGeral(F.c);
+  entrarGeralFim();
+  F.rapido = true;
+  if (histFim.length) histFim[histFim.length - 1].pulou = true;
+  telaCenas?.placar(null); telaCenas?.estatisticas(null);
+  hud.cortina();
+  if (entrada) { entrada.soltarTudo(); entrada.bloquear?.(true); entrada.bloquear?.(false); entrada.limparPulsos(); }
+}
+/** O plano geral: o laço solta (os 3 s do intervalo correm por baixo); o desenho continua o da cena (o campo vazio). */
+function entrarGeralFim() {
+  const F = cenaFim;
+  if (!F || F.geral) return;
+  F.geral = true;
+  if (vaoCenas) vaoCenas.fechar();
+  laco.ultimo = null;
+  if (histFim.length) histFim[histFim.length - 1].geral = { tick: mundo.tick, quando: ultimoAgora };
+}
+/**
+ * Fim da cena (a saída do 2º tempo chegou): corte seco para a câmera de TV, as tarjas saem, a bola e os treinadores vivos
+ * voltam ao desenho e a fila anda. pulou: o aperto que pulou não vira jogada.
+ */
+function fimCenaFim(pulou) {
+  if (!cenaFim) return;
+  const F = cenaFim;
+  cenaFim = null;
+  if (histFim.length) histFim[histFim.length - 1].fim = { tick: mundo.tick, quando: ultimoAgora, rapido: F.rapido };
+  hud.cena(false);
+  telaCenas?.placar(null); telaCenas?.estatisticas(null);
+  if (vaoCenas) vaoCenas.fechar();
+  if (bola3d) bola3d.mesh.visible = true;
+  if (cam) cam.definirCinema(null);
+  corteCamera = true;
+  if (entrada) {
+    if (pulou) { entrada.soltarTudo(); entrada.bloquear?.(true); entrada.bloquear?.(false); }
+    entrada.limparPulsos();
+    entrada.reposicionar?.();
+  }
+  proximaCena();
+}
+/** A cena sai de vez sem andar a fila (mundo novo, "Simular o resto"). */
+function descartarFim() {
+  if (cenaFim) {
+    cenaFim = null;
+    if (cam) cam.definirCinema(null);
+    if (bola3d) bola3d.mesh.visible = true;
+    entrada?.reposicionar?.();
+    if (!cenaCartao) hud.cena(false);
+  }
+  intervaloAgora = false; tarjaOnline = null;
+  telaCenas?.placar(null); telaCenas?.estatisticas(null);
+  if (vaoCenas && !cenaCartao) vaoCenas.fechar();
+}
+
 // ------------------------------------------------------------------ replay
 /**
  * Um quadro do replay, todo a partir do anel (do mundo só o placar e o relógio do HUD, que não mudam durante ele):
@@ -1803,17 +2124,19 @@ function talvezFaixaExpulso() {
  */
 function desenharReplay(dt, agoraMs, renderizar = true) {
   const tq = performance.now();
-  const n = lerQuadro(anel, diretor.tick, listaR, _bpR, _bqR, kitDoId);
+  // a fonte do roteiro: o anel, ou o mini-anel de um lance guardado (com a rede dele: fonte.ondas)
+  const fonte = diretor.fonte ?? anel, ondasR = fonte.ondas ?? ondas;
+  const n = lerQuadro(fonte, diretor.tick, listaR, _bpR, _bqR, kitDoId);
   if (!n) { fimReplay(false); desenharQuadro(dt, agoraMs, renderizar); return; }
   // 1ª pessoa: o autor sem cabeça e tronco (o olho está dentro dela); parte 1 do treinador: ele fora da lista
   const dx = diretor.desenho();
   if (dx.ocultar != null) for (const it of listaR) if (it.id === dx.ocultar) it.ocultar = OCULTA.cabeca | OCULTA.tronco;
-  const tEst = tempoEstadioAnel(anel, diretor.tick);
-  if (redeLigada) empurraoBola(ondas, _bpR, tEst, _emp); else { _emp.x = 0; _emp.y = 0; _emp.z = 0; }
+  const tEst = tempoEstadioAnel(fonte, diretor.tick);
+  if (redeLigada) empurraoBola(ondasR, _bpR, tEst, _emp); else { _emp.x = 0; _emp.y = 0; _emp.z = 0; }
   _bpDes.x = _bpR.x + _emp.x; _bpDes.y = _bpR.y + _emp.y; _bpDes.z = _bpR.z + _emp.z;
   _qR.set(_bqR.x, _bqR.y, _bqR.z, _bqR.w);
   bola3d.atualizar(_bpDes, _qR);
-  uniformsRede(ondas, redeLigada ? tEst : -1e9, campo.rede.a, campo.rede.b);
+  uniformsRede(ondasR, redeLigada ? tEst : -1e9, campo.rede.a, campo.rede.b);
   const f = diretor.posicionar(_bpR, dt * diretor.velocidade, listaR);
   cena3d.acompanhar(f.x, f.z);
   // análise semiautomática: só os jogadores do lance (o impedido, o defensor da linha, quem passou) e a bola
@@ -1862,10 +2185,18 @@ function semId(lista, id) {
   return listaCena;
 }
 
-/** Começa um replay (roteiro do diretor). Devolve false se não deu (sem diretor, roteiro vazio, fora da partida). */
-function iniciarReplay(ro) {
+/**
+ * Começa um replay (roteiro do diretor). Devolve false se não deu (sem diretor, roteiro vazio, fora da partida). opc.fonte:
+ * de onde ele toca (padrão: o anel; o mini-anel de um lance guardado — render/lances-guarda.js tocar); opc.aoFim(pulou): o
+ * replay de DENTRO de uma cena (os lances do intervalo, os "Melhores momentos") volta a ela no fim ou no pulo, em vez de
+ * andar a fila (proximaCena), que tiraria o jogador da cena (R8).
+ */
+function iniciarReplay(ro, opc = {}) {
   if (!diretor || !ro || !mundo.partida) return false;
-  if (!diretor.iniciar(ro)) return false;
+  // o replay de dentro de uma cena tocando (com aoFim): outro sem aoFim não o corta — a cena esperaria um fim que não vem
+  if (diretor.ativo && replayAoFim && !opc.aoFim) return false;
+  if (!diretor.iniciar(ro, opc.fonte ?? anel)) return false;
+  replayAoFim = opc.aoFim ?? null;
   // o que já está segurado não pula (só um aperto novo); os apertos curtos já vistos não contam
   entrada?.limparPulsos();
   replayBotoes = entrada ? entrada.ler(yawEntrada()).botoes : 0;
@@ -1880,6 +2211,8 @@ function iniciarReplay(ro) {
  * Sem replay (desligado, gol fora do anel), os sons adiados tocam já. Devolve true se o replay começou.
  */
 function posGol() {
+  // o guardador de lances: o gol entra aqui com ou sem replay (tratarEvento já chamou na saída, no intervalo e no fim)
+  guardarGolPendente();
   const ro = diretor ? diretor.depoisDoGol() : null;
   const ok = replayAuto && iniciarReplay(ro);
   // (o replay automático do gol conta no espaço dos replays de parada: nunca dois seguidos)
@@ -1916,6 +2249,10 @@ function fimReplay(pulou) {
     if (pulou) { entrada.soltarTudo(); entrada.bloquear?.(true); entrada.bloquear?.(false); }
     entrada.limparPulsos();
   }
+  // o replay de dentro de uma cena volta a ela (sem a fila)
+  const af = replayAoFim;
+  replayAoFim = null;
+  if (af) { af(pulou); return; }
   // a fila: a cena de substituição (gol + troca na mesma parada: depois do replay INTEIRO), as faixas; vazia, os sons
   proximaCena();
   talvezFaixaExpulso();
@@ -1937,6 +2274,77 @@ function passoLances(eventos) {
     // (o lance é o objeto reaproveitado do classificador: o armado é uma cópia)
     replayParada = { ...l, ids: [...l.ids] };
   }
+  // o guardador de lances: toda parada A/B, com ou sem replay (aceito, no teto ou desligado), entra no passo antes da
+  // montagem (guardarParadaPendente), quando a janela até o desfecho + 0,5 s já está gravada (R9)
+  if (l && mundo.partida) lanceGuardar = { ...l, ids: [...l.ids], tempo: mundo.partida.tempo };
+}
+
+/**
+ * O gol pendente (golGuardar) entra no guardador de lances — no posGol() e nos passos que o chamam (a saída, o intervalo, o
+ * fim), com ou sem replay. Sem o módulo (SOB.cenas), pede e guarda quando chegar (guardarLance).
+ */
+function guardarGolPendente() {
+  const g = golGuardar;
+  if (!g) return;
+  golGuardar = null;
+  guardarLance(g);
+}
+
+/**
+ * A parada classificada (lanceGuardar) entra no guardador no passo ANTES da montagem (lances.js montaNoProximoPasso: também
+ * o fim do tempo), o mesmo ponto do replay de parada (seguraParaReplayParada chama isto no topo), com ou sem replay. A parada
+ * que acabou sem a montagem dela (mundo novo, gol): esquece.
+ */
+function guardarParadaPendente() {
+  const lc = lanceGuardar;
+  if (!lc) return;
+  const m = mundo, pr = m.parada;
+  if (!lances || !m.partida || m.partida.estado !== 'parada' || !pr || pr.inicio !== lc.morta || pr.cobrador != null) { lanceGuardar = null; return; }
+  if (!montaNoProximoPasso(m)) return;
+  lanceGuardar = null;
+  guardarLance(lc);
+}
+
+/**
+ * Guarda o lance (o gol ou a parada) agora; sem o módulo baixado (cartão, gol antes da pré-carga), pede o SOB.cenas e
+ * guarda quando chegar — se ainda for o mesmo mundo e a janela ainda estiver no anel (guardar com `inteira`; o fim dela
+ * fica no fim do anel de agora: o que veio depois não é do lance).
+ */
+function guardarLance(l) {
+  if (!lances) return;
+  if (MOD_CEN) { guardarAgora(l, false); return; }
+  const m0 = mundo, lc = { ...l, ateMax: Math.min(l.ateMax ?? Infinity, anel.ultimo) };
+  carregarSobDemanda('cenas').then(() => { if (mundo === m0 && lances && MOD_CEN) guardarAgora(lc, true); }, () => {});
+}
+/**
+ * A memória do guardador e do mini-anel (~5,7 MB), uma vez: na PARTIDA, quando o módulo chega (SOB.cenas) ou quando a partida
+ * começa com ele já baixado (R20: a pré-carga roda também nos treinos — lá nada é alocado), e não no meio de um lance.
+ */
+function garantirGuarda() {
+  if (!MOD_CEN || !lances) return;
+  guarda ??= MOD_CEN.lg.criarGuarda(MOD_CEN.cfg.LANCES_GUARDA, { vagas: anel.vagas, nj: NJ });
+  miniLance ??= MOD_CEN.lg.criarMini(guarda);
+}
+/** Os lances guardados (cópias, na ordem em que entraram: lances-guarda.js listar); [] sem o guardador. */
+function lancesGuardados() { return guarda ? MOD_CEN.lg.listar(guarda) : []; }
+/**
+ * Toca o lance guardado k pelo diretor do replay — para a cena do intervalo (os lances do 1º tempo) e a do fim ("Melhores
+ * momentos"; a escolha: lances-guarda.js escolherLances): descomprime no mini-anel (tocar), o roteiro do lance (um plano
+ * 'tv' 1×: roteiroLance) e o replay com a fonte = o mini-anel; aoFim(pulou) no fim ou no pulo, sem andar a fila (R8). A
+ * simulação fica parada enquanto ele toca (o ramo do diretor no laço). Devolve false se não deu (sem o guardador ou o
+ * diretor, outro replay tocando, fora da partida, a vaga vazia).
+ */
+function tocarLanceGuardado(k, aoFim = null) {
+  if (!guarda || !miniLance || !diretor || diretor.ativo || !mundo.partida) return false;
+  const mt = MOD_CEN.lg.tocar(guarda, k, miniLance);
+  if (!mt) return false;
+  return iniciarReplay(diretor.lance(miniLance, mt), { fonte: miniLance, aoFim });
+}
+function guardarAgora(l, inteira) {
+  garantirGuarda();
+  const t0 = agoraMs();
+  const k = MOD_CEN.lg.guardar(guarda, anel, l, batidasRede, { inteira });
+  if (histGuarda.length < 64) histGuarda.push({ tick: mundo.tick, tipo: l.tipo, classe: l.classe, chave: l.chave, fim: l.fim, k, ms: agoraMs() - t0, tarde: inteira });
 }
 
 /**
@@ -1948,6 +2356,8 @@ function passoLances(eventos) {
  * true se o replay começou.
  */
 function seguraParaReplayParada() {
+  // o guardador de lances no mesmo ponto (com ou sem replay)
+  if (lanceGuardar) guardarParadaPendente();
   const lc = replayParada;
   if (!lc) return false;
   const m = mundo, pr = m.parada;
@@ -2026,9 +2436,21 @@ function quadro(agoraMs, desenhar = true) {
     // replay: a simulação fica parada (como na pausa; o laço não recupera o tempo); um aperto novo pula
     laco.ultimo = agoraMs;
     if (!pausado()) {
+      // (um lance da cena do intervalo: o estádio anda no relógio do desenho, como na cena)
+      if (cenaFim && !cenaFim.geral) estadioSegurado(dt);
       if (botaoPula(ent.botoes)) fimReplay(true);
       else if (!diretor.avancar(dt)) fimReplay(false);
     }
+  } else if (seguraIntervalo()) {
+    // cena do intervalo antes do plano geral: a simulação fica PARADA no tick do 'intervalo' (nenhum passo, nenhuma entrada
+    // vai ao mundo; o laço não recupera o tempo); o estádio anda no relógio do desenho; pausa, aba escondida e celular em
+    // pé congelam a cena; um aperto novo depois de 0,5 s vai ao próximo bloco
+    laco.ultimo = agoraMs;
+    if (!pausado() && !pausaTeste && !document.hidden) {
+      quadroFim(dt, ent);
+      entrada.limparPulsos();
+    }
+    alfa = 1;
   } else if (pausado() || pausaTeste) {
     laco.ultimo = agoraMs;     // ao voltar, não tenta recuperar o tempo parado
     // o aperto feito com o jogo parado não fica guardado para o 1º passo depois da pausa
@@ -2036,9 +2458,13 @@ function quadro(agoraMs, desenhar = true) {
   } else {
     // comemoração: anda no relógio do desenho (um aperto novo depois de 0,5 s pula)
     if (cenaGol) quadroComemoracao(dt, ent);
+    // o plano geral da cena do intervalo (o laço solto: os 3 s do intervalo correm por baixo, a saída acaba a cena)
+    if (cenaFim) quadroFim(dt, ent);
     const r = avancarLaco(laco, agoraMs);
-    // cortina (a comemoração pulada antes da hora): os passos que faltam até a saída, COMEM.passosCortina por quadro
-    const nPassos = cenaGol && cenaRapida ? Math.max(r.passos, COMEM.passosCortina) : r.passos;
+    // cortina (a comemoração pulada antes da hora; o intervalo pulado): os passos que faltam até a saída,
+    // COMEM.passosCortina por quadro
+    const fimRapido = !!cenaFim && cenaFim.rapido;
+    const nPassos = (cenaGol && cenaRapida) || fimRapido ? Math.max(r.passos, COMEM.passosCortina) : r.passos;
     let segurou = false;
     for (let i = 0; i < nPassos; i++) {
       // a cena rodando segura a montagem da saída: a simulação espera no passo gol + 149
@@ -2049,6 +2475,8 @@ function quadro(agoraMs, desenhar = true) {
       // o replay de parada armado começa no passo antes da montagem: a volta para sem rodar o passo (ANTES da entrada da
       // demo, que escreve no mundo: o tick da espera fica intocado)
       if (seguraParaReplayParada()) break;
+      // a cena do intervalo segura no tick do 'intervalo' até o plano geral (também ANTES da entrada da demo)
+      if (seguraIntervalo()) { segurou = true; break; }
       // durante a cena o humano assiste: a entrada dele não vai para a simulação (a demo segue)
       // do 2º passo do quadro em diante o analógico é a MESMA leitura (sim.js aplicarEntrada: `repete` — um gesto que
       // pulou no passo anterior ainda não acabou de ser lido)
@@ -2066,15 +2494,16 @@ function quadro(agoraMs, desenhar = true) {
       rodarPasso(e, ac);
       // o aperto curto (tocou e soltou entre dois passos) já foi visto por um passo
       if (i === 0) { entrada.limparPulsos(true); ent.botoes = entrada.ler(yawEntrada(), agoraMs).botoes; }
-      // o replay (gol, impedimento), a cena de substituição ou a do cartão começou neste passo: os passos que sobraram não
-      // rodam (a simulação espera)
-      if ((diretor && diretor.ativo) || cenaSub || cenaCartao) break;
+      // o replay (gol, impedimento), a cena de substituição, a do cartão ou a do intervalo começou neste passo: os passos que
+      // sobraram não rodam (a simulação espera)
+      if ((diretor && diretor.ativo) || cenaSub || cenaCartao || seguraIntervalo()) break;
       // a cortina acabou na saída (a cena saiu): o resto do quadro é do laço normal
-      if (i >= r.passos - 1 && !cenaGol) break;
+      if (i >= r.passos - 1 && !cenaGol && !(cenaFim && cenaFim.rapido)) break;
     }
     // segurando, o laço não acumula o tempo parado (e o desenho da simulação fica no passo mais novo); a cena do cartão
-    // que começou agora também
-    if (segurou || cenaCartao) { laco.acum = Math.min(laco.acum, laco.passo / 2); alfa = 1; } else alfa = r.alfa;
+    // e a do intervalo que começaram agora também
+    if (segurou || cenaCartao || seguraIntervalo()) { laco.acum = Math.min(laco.acum, laco.passo / 2); alfa = 1; } else alfa = r.alfa;
+
   }
   // a faixa ENTRA/SAI no relógio do laço (na cena, a página do plano; no jogo, pelo tempo)
   hud.faixaSubstQuadro(agoraMs, cenaSub ? infoFaixaCena() : null);
@@ -2209,6 +2638,8 @@ function tratarAcao(a) {
   if (cenaSub && !pausado() && a !== 'qps' && a !== 'pausa') { pularSubst(); return; }
   // cartão: o mesmo (a pausa congela a cena)
   if (cenaCartao && !pausado() && a !== 'qps' && a !== 'pausa') { pularCartao(); return; }
+  // intervalo: qualquer ação MENOS a pausa (a pausa congela a cena e tem o "Editar time") vai ao próximo bloco
+  if (cenaFim && !pausado() && a !== 'qps' && a !== 'pausa') { proximoBlocoFim(); return; }
   if (a === 'pular') return;
   if (a === 'pausa') {
     if (hud.ajudaAberta) { hud.fecharAjuda(); return; }
@@ -2327,7 +2758,7 @@ function fimDoPrejogo() {
 function resultadoAtualTM() {
   if (TM && mundo.disputa) return MOD_DISP.resultadoPenaltisTM(mundo, TM.mapa);
   if (TM && mundo.livre) return { livre: { placar: [mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0] } };
-  return TM && sumulaTM ? resultadoTM(sumulaTM, mundo, TM.mapa) : null;
+  return TM && sumula ? resultadoTM(sumula, mundo, TM.mapa) : null;
 }
 /** Quantos ms de simulação por quadro no "Simular o resto" (o resto do quadro fica para a página respirar). */
 const FATIA_SIMULACAO = 30;
@@ -2358,11 +2789,16 @@ function simularResto() {
   if (iFx >= 0) filaCenas.splice(iFx, 1);
   // (a faixa que esperava a cena do cartão ou o replay também não: o fim do "Simular o resto" mostra a faixa do fim)
   expulsoPendente = false;
+  // (o replay de dentro de uma cena não volta a ela; os lances pendentes do guardador não entram: o fim zera o guardador —
+  // iniciarEstados)
+  replayAoFim = null; golGuardar = null; lanceGuardar = null;
   if (diretor && diretor.ativo) fimReplay(false);
   encerrarComemoracao();
   if (cenaSub) { cenaSub = null; if (cam) cam.definirCinema(null); }
-  // a cena do cartão em andamento, a da vantagem que esperava o gol + 149 e a tarja saem (sem andar a fila: R21)
+  // a cena do cartão em andamento, a da vantagem que esperava o gol + 149 e a tarja saem (sem andar a fila: R21); a do
+  // intervalo e as tarjas dela também
   descartarCartao();
+  descartarFim();
   hud.substituicao(false); hud.esconderFaixaSubst();
   filaCenas.length = 0; somAdiado.length = 0; substNoPasso.length = 0; faixaSub2T.length = 0;
   if (editor?.aberto) editor.fechar();
@@ -2384,7 +2820,7 @@ function simularResto() {
       edicaoNaFila = null;
       const ev = passoPartida(mundo, entradaDemoPartida(mundo), ac);
       contPassos++; passosTotais++;
-      sumulaPasso(sumulaTM, mundo, ev);
+      sumulaPasso(sumula, mundo, ev);
       autorEventos(autorGol, ev, mundo.tick, timeDe);
     }
     mostrarSimulando();
@@ -2459,19 +2895,27 @@ function comando(c, v) {
       // nada para rever (menos de 0,5 s gravados desde o mundo novo): a pausa fica aberta
       const ro = diretor.menu();
       if (!ro) break;
+      // um lance da cena tocando (o intervalo, o fim: iniciarReplay com aoFim): a pausa fica aberta, o lance segue depois dela
+      if (diretor.ativo && replayAoFim) break;
       // pedido na espera da bola morta: o lance da parada armada já está nele — o automático não repete a jogada
       if (replayParada && mundo.parada?.inicio === replayParada.morta && mundo.parada.cobrador == null) replayParada = null;
       hud.fecharMenu();
       // com a cena de substituição rodando, o replay espera ela acabar (ou ser pulada): antes ele começava por baixo dela,
       // invisível, e a classe em-replay escondia a faixa ENTRA/SAI a cena inteira (contraprova de 14/10)
       if (cenaSub || cenaCartao) { filaCenas.unshift({ tipo: 'replay', ro }); break; }
+      // na cena do intervalo, o replay toca DENTRO dela e volta a ela no fim (como um lance do guardador: R8)
+      if (cenaFim) { iniciarReplay(ro, { aoFim: () => { corteCamera = true; if (cenaFim) cenaFim.botoes = entrada ? entrada.ler(yawEntrada()).botoes : 0; } }); break; }
       iniciarReplay(ro);
       break;
     }
     case 'replay-pular': if (diretor?.ativo) fimReplay(true); break;
     case 'comemoracao-pular': pularComemoracao(); break;
     case 'substituicao-pular': pularSubst(); break;
-    case 'cena-pular': pularCartao(); break;
+    // a camada das cenas: o "Pular" (no intervalo, a saída do 2º tempo), o toque na camada (no intervalo, o próximo bloco; no
+    // cartão, o pulo) e o botão da pausa (o intervalo, só com toque)
+    case 'cena-pular': if (cenaFim) pularFim(); else pularCartao(); break;
+    case 'cena-toque': if (cenaFim) proximoBlocoFim(); else pularCartao(); break;
+    case 'cena-menu': entrada?.soltarTudo(); hud.abrirMenu(); break;
     case 'cenas-ciclo':
       // "Modo de jogo" → "Cenas": ligadas ↔ desligadas (desligadas = o ícone do cartão de hoje); salvo
       cenasPref = !cenasLigadas();
@@ -2780,12 +3224,14 @@ function trocarMundo(m, opc = {}) {
   filaAcoes.length = 0;
   edicaoNaFila = null;
   PAG_LIVRE?.limparFila();
-  // Total Match: a súmula é do mundo novo
-  if (TM) { sumulaTM = criarSumula(); expulsoAvisado = false; expulsoTick = -1; simulandoTM = null; }
+  // a súmula é do mundo novo
+  sumula = criarSumula();
+  if (TM) { expulsoAvisado = false; expulsoTick = -1; simulandoTM = null; }
   expulsoPendente = false;
   golNeutro = null;
   kitCache.clear();
   limparOndas(ondas);
+  for (const bt of batidasRede) bt.ativo = false;
   zerarEmocao(emocao);
   zerarAutorGol(autorGol);
   // replay: o anel e o gol pendente são do mundo velho (os sons adiados e a fila de cenas vão junto)
@@ -2796,6 +3242,10 @@ function trocarMundo(m, opc = {}) {
   hud.substituicao(false); hud.esconderFaixaSubst();
   // cartão: a cena em andamento, a da vantagem pendente, a tarja e a memória das variações (o mundo novo começa do zero)
   descartarCartao(); ultimaAmarelo = null; ultimaVermelho = null;
+  // a cena do intervalo (e as tarjas dela; o guardador esquece os lances em iniciarEstados)
+  descartarFim();
+  // (o replay de dentro de uma cena não volta a ela: o mundo é outro)
+  replayAoFim = null;
   if (diretor && diretor.ativo) fimReplay(false);
   encerrarComemoracao(); ultimaFinal = null;
   anel.limpar();
@@ -2892,7 +3342,7 @@ const api = {
     get controlado() { return mundo.controlado?.[TIME_HUMANO] ?? null; },
     get simulando() { return !!simulandoTM; },
     get mensagens() { return MENSAGENS_TM.map(m => ({ ...m })); },
-    sumula() { return sumulaTM ? structuredClone({ ...sumulaTM, autor: undefined }) : null; },
+    sumula() { return sumula ? structuredClone({ ...sumula, autor: undefined }) : null; },
     resultado() { return resultadoAtualTM(); },
     simularResto() { return simularResto(); },
     resultadoGravado() { try { return JSON.parse(localStorage.getItem('tm3d:resultado:' + ID_TM) || 'null'); } catch (_) { return null; } },
@@ -3399,10 +3849,21 @@ const api = {
     get carregado() { return !!MOD_CEN; },
     get ligado() { return cenasLigadas(); },
     ligar(b) { cenasPref = b == null ? (typeof prefs.cenas === 'boolean' ? prefs.cenas : null) : !!b; marcarCenas(); return cenasLigadas(); },
-    get ativo() { return !!cenaCartao; },
-    get tipo() { return cenaCartao ? 'cartao' : null; },
+    get ativo() { return !!cenaCartao || !!cenaFim; },
+    get tipo() { return cenaCartao ? 'cartao' : cenaFim ? cenaFim.tipo : null; },
     get fila() { return filaCenas.map(it => (typeof it === 'function' ? 'faixa' : it.tipo)); },
     get estado() {
+      const F = cenaFim;
+      if (F) {
+        const c = F.c, P = c.plano, M = MOD_CEN.cf;
+        return {
+          tipo: F.tipo, fase: M.faseFim(c), plano: planoCamFim?.nome ?? null, tempo: M.tempoCenaFim(c), duracao: M.duracaoCenaFim(c), k: c.k,
+          tick: P.tick, planos: P.planos.map(p => ({ ...p })), geral: F.geral, rapido: F.rapido, emLances: c.emLances,
+          lances: [...F.lances], iLance: F.iLance, tocando: F.tocando, tLances: P.tLances, tarjaDe: P.tarja ? { ...P.tarja } : null,
+          placarCena: { ...P.placar }, vencedor: P.vencedor, bolaVisivel: c.bolaVisivel, vazio: !!c.vazio, camera: cam?.cinema ?? null,
+          tarjaPlacar: M.tarjaPlacarVisivel(c), atoresAtivos: c.atores.filter(a => a.ativo).length,
+        };
+      }
       const C = cenaCartao;
       if (!C) return null;
       const c = C.c, P = c.plano, M = MOD_CEN.cc;
@@ -3413,8 +3874,27 @@ const api = {
         tarja: telaCenas ? telaCenas.estado().visivel : false,
       };
     },
-    atores() { return cenaCartao ? MOD_CEN.cc.infoAtoresCartao(cenaCartao.c) : null; },
-    pular() { pularCartao(); },
+    atores() { return cenaCartao ? MOD_CEN.cc.infoAtoresCartao(cenaCartao.c) : cenaFim ? MOD_CEN.cf.infoAtoresFim(cenaFim.c) : null; },
+    /** Pula a cena: o cartão acaba; o intervalo vai à saída do 2º tempo (o geral e os passos correndo atrás da cortina). */
+    pular() { if (cenaFim) pularFim(); else pularCartao(); },
+    /** O próximo bloco da cena do intervalo (o toque/Enter): campo → lances → estatísticas → geral → saída. */
+    proximo() { if (cenaFim) proximoBlocoFim(); },
+    /**
+     * As tarjas e o painel agora (cenas-tela.js estado + as caixas px CSS de cada peça: tarja, placar, estatisticas), com o
+     * placar e o "Pular" e o botão da pausa da camada (as caixas, para nada encostar).
+     */
+    get tarjas() {
+      if (!telaCenas) return null;
+      const cx = sel => { const e = document.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(); return r.width > 0 && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden' ? { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom } : null; };
+      return { ...telaCenas.estado(), caixas: { ...telaCenas.caixas(), placarHud: cx('[data-caixa="placar"]'), pular: cx('#cena-pular'), menu: cx('#cena-menu') } };
+    },
+    /** As cenas do intervalo desta página ({tick, lances, inicio, geral: {tick, quando}, fim: {tick, quando, rapido}, pulou}). */
+    get historicoIntervalo() { return histFim.map(h => ({ ...h, lances: [...h.lances] })); },
+    get custoIntervalo() { return { msPorTick: custoFim.ms / Math.max(1, custoFim.n), ticks: custoFim.n }; },
+    /** A tarja do placar do online (nos 3 s da faixa) ou null. */
+    get tarjaOnline() { return tarjaOnline ? structuredClone(tarjaOnline) : null; },
+    /** A súmula da partida agora (escanteios, faltas e porTempo inclusive; sem o autor-gol interno). */
+    sumula() { return sumula ? structuredClone({ ...sumula, autor: undefined }) : null; },
     forcarVariante(cor, v) { if (cor === 'amarelo' || cor === 'vermelho') forcarVariante[cor] = v ?? null; },
     cartaoDeTeste(o = {}) {
       if (!MOD_CEN || !mundo.partida || cenaCartao) return false;
@@ -3434,7 +3914,7 @@ const api = {
       return { x: o[i], y: o[i + 1], z: o[i + 2] };
     },
     naTela(id) {
-      if (!cenaCartao || !cam) return null;
+      if ((!cenaCartao && !cenaFim) || !cam) return null;
       const W = window.innerWidth, H = window.innerHeight;
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, atras = false;
       const ponto = (x, y, z) => {
@@ -3450,7 +3930,7 @@ const api = {
         const v = new THREE.Vector3();
         for (const [u, w] of [[-0.055, -0.08], [0.055, -0.08], [0.055, 0.08], [-0.055, 0.08]]) { v.set(u, w, 0).applyMatrix4(m.matrixWorld); ponto(v.x, v.y, v.z); }
       } else {
-        const c = cenaCartao.c, a = c.atores.find(q => q.id === (id ?? c.plano.id));
+        const c = cenaCartao ? cenaCartao.c : cenaFim.c, a = c.atores.find(q => q.id === (id ?? (cenaCartao ? c.plano.id : c.arbitro.id)));
         if (!a || !a.des) return null;
         for (let i = 0; i < NJ; i++) ponto(a.des[i * 3], a.des[i * 3 + 1], a.des[i * 3 + 2]);
       }
@@ -3464,6 +3944,29 @@ const api = {
     get expulsoPendente() { return expulsoPendente; },
     get custo() { return { msPorTick: custoCartao.ms / Math.max(1, custoCartao.n), ticks: custoCartao.n }; },
     zerarCusto() { custoCartao.n = 0; custoCartao.ms = 0; },
+    /**
+     * O guardador de lances (PR 3; render/lances-guarda.js): lances (os guardados, na ordem em que entraram: {k, tipo, classe,
+     * peso, chave, fim, de, ate, lado, time, ids, x, z, tempo, quadros, batidas, segundos}), guarda ({bytes, mini, saturou} |
+     * null: ainda não alocado), historicoGuarda ({tick, tipo, classe, chave, fim, k (−1: ficou de fora), ms, tarde}),
+     * pendentes ({gol, parada}), tocarLance(k) (testes: tocarLanceGuardado — o lance k pelo diretor, com a fonte = o mini-anel
+     * e o aoFim; a fila não anda; false se não deu), fimLance (o último aoFim: {k, pulou, tick, ms (descomprimir e começar)} |
+     * null) e escolherLances(o).
+     */
+    get lances() { return lancesGuardados(); },
+    get guarda() { return guarda ? { bytes: guarda.bytes, mini: miniLance ? miniLance.bytes : 0, saturou: guarda.saturou } : null; },
+    get historicoGuarda() { return histGuarda.map(h => ({ ...h })); },
+    get pendentes() { return { gol: !!golGuardar, parada: lanceGuardar ? lanceGuardar.tipo : null }; },
+    tocarLance(k) {
+      const t0 = agoraMs();
+      let ms = 0;
+      fimLanceTeste = null;
+      const ok = tocarLanceGuardado(k, pulou => { fimLanceTeste = { k, pulou, tick: mundo.tick, ms }; });
+      ms = agoraMs() - t0;
+      return ok;
+    },
+    /** Os k escolhidos para uma cena (lances-guarda.js escolherLances: o = {tempo, max, maxSegundos, cronologica}). */
+    escolherLances(o) { return guarda ? MOD_CEN.lg.escolherLances(guarda, o, []) : []; },
+    get fimLance() { return fimLanceTeste ? { ...fimLanceTeste } : null; },
   },
   /**
    * Substituição de teste: põe a edição na fila (pares = [{sai, entra, time?}]; padrão 9 → 22 do time 0) e, com `parada`

@@ -204,6 +204,21 @@ export function emocaoEvento(est, ev, ctx) {
     disparar(est, 'palmas', k, 0.6);
     return;
   }
+  // a cena do FIM DE TEMPO (js/cena-fim.js; pedido do dono de 22/10: "a cena de intervalo", "a cena de pós jogo"): no plano
+  // da torcida o placar decide — no intervalo, palmas de quem ganha ou empata e vaia de quem perde; no fim, a festa de quem
+  // ganhou, palmas no empate e o lamento (com vaia) de quem perdeu
+  if (tipo === 'cenaFim') {
+    const p = ev.placar ?? { 0: 0, 1: 0 };
+    for (const k of [0, 1]) {
+      const meu = p[k] ?? 0, deles = p[1 - k] ?? 0, g = est.torcida[k];
+      if (ev.fim === 'intervalo') {
+        if (meu >= deles) { g.palmas = Math.max(g.palmas, 0.6); disparar(est, 'palmas', k, 0.6); } else disparar(est, 'vaia', k, 0.6);
+      } else if (meu > deles) { g.excita = Math.max(g.excita, 0.9); g.palmas = Math.max(g.palmas, 0.9); disparar(est, 'palmas', k, 1); }
+      else if (meu === deles) { g.palmas = Math.max(g.palmas, 0.5); disparar(est, 'palmas', k, 0.5); }
+      else { g.lamento = 1; disparar(est, 'vaia', k, 0.7); }
+    }
+    return;
+  }
   // substituição: na CENA (js/substituicao.js), quem sai cruzou a linha e aplaude — a torcida do time dele aplaude de volta
   // (o evento da simulação, no tick da troca, não traz `cruzou`: as palmas saem no relógio da cena, não antes)
   if (tipo === 'substituicao' && ev.cruzou) {

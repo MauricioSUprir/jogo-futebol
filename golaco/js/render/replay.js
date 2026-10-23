@@ -24,6 +24,11 @@
 //    (js/lances.js), pedido pelo main.js no passo antes da montagem (parada).
 // Pós-gol: o gol fica PENDENTE (aoGol) e o replay só entra quando o pós-gol chega na vez dele (depoisDoGol). Hoje
 // quem chama é a saída de bola; a cena de comemoração (outra frente) entra ANTES e chama depoisDoGol quando acabar.
+// FONTE (22/10, PLANO-CENAS.md R8): um roteiro toca do anel do replay (o padrão) ou de outra fonte no mesmo formato — o
+// mini-anel em que um lance guardado foi descomprimido (render/lances-guarda.js tocar; os lances do intervalo e os
+// "Melhores momentos"): iniciar(ro, fonte). Todos os leitores do quadro (posicionar 'tv'/'fechada'/'atras'/'lateral',
+// os treinadores e o z da lateral, o enquadramento da linha e da análise) leem a fonte; o main.js desenha pela `fonte`
+// (lerQuadro, o relógio do estádio e a rede dela). No fim ou no pulo a fonte volta a ser o anel.
 import * as THREE from 'three';
 import { CAMPO, REPLAY } from '../config.js';
 import { REPLAY_PARADA } from '../lances.js';
@@ -31,7 +36,7 @@ import { criarCamera } from './camera.js';
 import { jogadorNoTick, defensorDaLinha, bolaNoTick } from './replay-anel.js';
 import { cameraPrimeira, cameraTreinador, fovVerticalDe, cameraLateral, tecnicosNoTick, zLateralDoPlano } from './replay-olhos.js';
 import {
-  roteiroGol, roteiroImpedimento, roteiroMenu, roteiroParada, duracao, criarRelogio, iniciarRelogio, pararRelogio, avancarRelogio,
+  roteiroGol, roteiroImpedimento, roteiroMenu, roteiroParada, roteiroLance, duracao, criarRelogio, iniciarRelogio, pararRelogio, avancarRelogio,
   planoAtual, velocidadeAgora, linhaDoReplay, tempoSaot, roteiroLegalTeste,
 } from './replay-roteiro.js';
 import { enquadrarSaot, cameraSaot, faseSaot, checagemLegal } from './replay-saot.js';
@@ -45,6 +50,8 @@ export function criarDiretor({ anel, aspecto }) {
   camera.name = 'camera-replay';
   const tv = criarCamera(aspecto);          // a mesma câmera de TV do jogo, numa instância só do replay
   const rel = criarRelogio();
+  // a fonte do roteiro tocando: o anel (padrão) ou o mini-anel de um lance guardado
+  let src = anel;
   let gol = null;                           // gol pendente {golTick, chuteTick, lado}
   let ultimoGol = null;                     // o último gol (API e prints: rever o replay dele)
   let aspectoAtual = aspecto, pequena = false;
@@ -89,9 +96,9 @@ export function criarDiretor({ anel, aspecto }) {
     const L = REPLAY.linha, zc = CAMPO.meioZ + L.fora, h = L.altura;
     enq.x = ro.linhaX; enq.z = zc;
     let z0 = Infinity, z1 = -Infinity;
-    const imp = jogadorNoTick(anel, ro.fotoTick, ro.idImpedido, _j);
+    const imp = jogadorNoTick(src, ro.fotoTick, ro.idImpedido, _j);
     if (imp) { z0 = Math.min(z0, imp.z); z1 = Math.max(z1, imp.z); }
-    const def = ro.defensor != null && ro.defensor >= 0 ? jogadorNoTick(anel, ro.fotoTick, ro.defensor, _d) : ro.defensor === undefined ? defensorDaLinha(anel, ro.fotoTick, 1 - ro.time, ro.linhaX, 1.5, _d) : null;
+    const def = ro.defensor != null && ro.defensor >= 0 ? jogadorNoTick(src, ro.fotoTick, ro.defensor, _d) : ro.defensor === undefined ? defensorDaLinha(src, ro.fotoTick, 1 - ro.time, ro.linhaX, 1.5, _d) : null;
     if (def) { z0 = Math.min(z0, def.z); z1 = Math.max(z1, def.z); }
     if (!(z1 >= z0)) { z0 = -6; z1 = 6; }
     z0 = clamp(z0 - L.folga, -CAMPO.meioZ - 1, CAMPO.meioZ); z1 = clamp(z1 + L.folga, -CAMPO.meioZ, CAMPO.meioZ + 1);
@@ -113,7 +120,7 @@ export function criarDiretor({ anel, aspecto }) {
       // o replay SABE para onde a bola vai: a câmera de TV antecipa pela velocidade da bola gravada à frente (o jogo ao
       // vivo antecipa pela do controlado), limitada, sem atravessar o fim do plano
       const T = REPLAY.tv, t0 = Math.floor(rel.t), t1 = Math.min(p.ate, t0 + Math.round(T.olhaFrente * 60));
-      const b0 = bolaNoTick(anel, t0, _b0), b1 = t1 > t0 ? bolaNoTick(anel, t1, _b1) : null;
+      const b0 = bolaNoTick(src, t0, _b0), b1 = t1 > t0 ? bolaNoTick(src, t1, _b1) : null;
       let vx = 0, vz = 0;
       if (b0 && b1) {
         vx = (b1.x - b0.x) * 60 / (t1 - t0); vz = (b1.z - b0.z) * 60 / (t1 - t0);
@@ -155,8 +162,8 @@ export function criarDiretor({ anel, aspecto }) {
       seg.cx += (seg.lx - s * Lt.recuo - seg.cx) * k;
       // nunca dentro de um treinador gravado: com um deles perto do caminho dela no plano, ela fica na frente da área técnica
       // o plano INTEIRO (o z é decidido uma vez por plano: antes pulava 2,5 m no meio dele); e sempre a ≥ 0,6 m deles
-      if (seg.planoLat !== p) { seg.planoLat = p; seg.zLat = zLateralDoPlano(anel, p.de, p.ate, s); }
-      cameraLateral(seg.cx, tecnicosNoTick(anel, Math.round(rel.t), _tecs), _lat, seg.zLat);
+      if (seg.planoLat !== p) { seg.planoLat = p; seg.zLat = zLateralDoPlano(src, p.de, p.ate, s); }
+      cameraLateral(seg.cx, tecnicosNoTick(src, Math.round(rel.t), _tecs), _lat, seg.zLat);
       camera.position.set(_lat.x, _lat.y, _lat.z);
       camera.lookAt(seg.lx, 0.9, seg.lz);
       ajustarFov(fovFixo(Lt.fov));
@@ -201,6 +208,8 @@ export function criarDiretor({ anel, aspecto }) {
   const api = {
     camera,
     get ativo() { return rel.ativo; },
+    /** A fonte do roteiro tocando (o anel, ou o mini-anel de um lance guardado): o que o main.js desenha. */
+    get fonte() { return src; },
     get roteiro() { return rel.roteiro; },
     /** Estado para testes e prints. */
     get estado() {
@@ -234,7 +243,7 @@ export function criarDiretor({ anel, aspecto }) {
     redimensionar(a, peq) {
       aspectoAtual = a; pequena = !!peq; tv.redimensionar(a, peq); camera.aspect = a; camera.updateProjectionMatrix();
       // o quadro final da análise depende do aspecto da tela
-      if (planoS && rel.ativo) enquadrarSaot(anel, planoS.saot, aspectoAtual, enqS);
+      if (planoS && rel.ativo) enquadrarSaot(src, planoS.saot, aspectoAtual, enqS);
     },
     // ---------------------------------------------------------------- gatilhos
     /**
@@ -258,6 +267,11 @@ export function criarDiretor({ anel, aspecto }) {
     /** Roteiro do replay de uma parada (o lance da bola morta: lances.js; roteiroParada), ou null. */
     parada(lance) { return roteiroParada(anel, lance); },
     /**
+     * Roteiro de um lance guardado (lances-guarda.js) já descomprimido em `fonte` (o mini-anel: tocar): um plano 'tv' 1×
+     * (roteiroLance). Tocar com iniciar(ro, fonte).
+     */
+    lance(fonte, lance) { return roteiroLance(fonte, lance); },
+    /**
      * Testes e prints: 'impedimento' = o último impedimento de novo (se o passe ainda está no anel); 'legal' = a checagem
      * de posição legal mais apertada do anel, sem exigir chute nem gol. Null se não há.
      */
@@ -265,20 +279,21 @@ export function criarDiretor({ anel, aspecto }) {
     /** A margem (m) da posição legal mais apertada no anel agora (sem exigir chute nem gol; até `limite` m), ou null. */
     legalMaisApertada(limite = 60) { const c = checagemLegal(anel, { teste: true, limite }); return c ? c.margem : null; },
     // ---------------------------------------------------------------- relógio
-    /** Começa um roteiro (false se vazio). */
-    iniciar(ro) {
+    /** Começa um roteiro (false se vazio), tocando da `fonte` (padrão: o anel; o mini-anel de um lance guardado). */
+    iniciar(ro, fonte = anel) {
       if (!iniciarRelogio(rel, ro)) return false;
+      src = fonte ?? anel;
       seg.corte = true;
       if (ro.tipo === 'impedimento') enquadrarLinha(ro);
       // análise semiautomática: o quadro final uma vez por roteiro
       planoS = ro.planos.find(q => q.cam === 'saot') ?? null;
-      if (planoS) enquadrarSaot(anel, planoS.saot, aspectoAtual, enqS);
+      if (planoS) enquadrarSaot(src, planoS.saot, aspectoAtual, enqS);
       reduzir = reduzirForcado ?? (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
       return true;
     },
-    pular() { pararRelogio(rel); planoS = null; },
+    pular() { pararRelogio(rel); planoS = null; src = anel; },
     /** Mundo novo: esquece o gol pendente e para o replay. */
-    limpar() { pararRelogio(rel); gol = null; ultimoGol = null; ultimoImped = null; planoS = null; },
+    limpar() { pararRelogio(rel); gol = null; ultimoGol = null; ultimoImped = null; planoS = null; src = anel; },
     /** Avança dt s reais (false: acabou). */
     avancar(dt) {
       const vivo = avancarRelogio(rel, dt);
