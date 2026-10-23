@@ -1,4 +1,5 @@
-// Texturas procedurais (canvas) dos LABORATÓRIOS ESTRELA. Nada baixado. Todas ≤ 1024².
+// Texturas procedurais (canvas) do laboratório. Todas ≤ 1024². O emblema é o desenho próprio (estrela num anel); se existir
+// assets/star/logo.png (arquivo do dono, ver assets/star/LEIAME.md) ele o substitui no letreiro, no piso e nas paredes.
 export const ROTULOS = [
   'CONTENÇÃO 01', 'CONTENÇÃO 02', 'CONTENÇÃO 03', 'CONTENÇÃO 04', 'CONTENÇÃO 05', 'CONTENÇÃO 06', 'CONTENÇÃO 07', 'CONTENÇÃO 08',
   'CORTEX', 'ESTEIRA DE VELOCIDADE', 'ACELERADOR', 'RECEPÇÃO', 'SAÍDA', 'ALTA ENERGIA', 'ÁREA RESTRITA', 'CONTENÇÃO',
@@ -82,7 +83,12 @@ export function criarTexturas(THREE, aniso = 4) {
     g.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, r = k % 2 ? R * 0.30 : R * 0.68; g[k ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * r, cy + Math.sin(a) * r); } g.closePath();
     g.fillStyle = '#ffffff'; g.fill(); g.lineWidth = R * 0.03; g.strokeStyle = '#3fe0ff'; g.stroke();
   }
-  { const [c, g] = tela(512, 512); pintaLogo(g, 256, 256, 250, 'rgba(6,20,34,0.82)'); T.logo = tex(c, { repete: false }); }
+  let cLogo, gLogo;
+  { const [c, g] = tela(512, 512); cLogo = c; gLogo = g; pintaLogo(g, 256, 256, 250, 'rgba(6,20,34,0.82)'); T.logo = tex(c, { repete: false }); }
+  T.logoDoDono = (img) => {                       // troca o emblema pelo arquivo do dono (e refaz o letreiro)
+    gLogo.clearRect(0, 0, 512, 512); const k = Math.min(512 / img.width, 512 / img.height); gLogo.drawImage(img, (512 - img.width * k) / 2, (512 - img.height * k) / 2, img.width * k, img.height * k); T.logo.needsUpdate = true;
+    if (T.letreiroG) { const g = T.letreiroG; g.fillStyle = '#06121f'; g.fillRect(8, 8, 128, 112); const k2 = Math.min(116 / img.width, 104 / img.height); g.drawImage(img, 72 - img.width * k2 / 2, 64 - img.height * k2 / 2, img.width * k2, img.height * k2); T.letreiro.needsUpdate = true; }
+  };
   { const [c, g] = tela(1024, 128);
     const gr = g.createLinearGradient(0, 0, 1024, 0); gr.addColorStop(0, '#06121f'); gr.addColorStop(1, '#0b2236'); g.fillStyle = gr; g.fillRect(0, 0, 1024, 128);
     g.strokeStyle = '#3fe0ff'; g.lineWidth = 4; g.strokeRect(4, 4, 1016, 120);
@@ -90,11 +96,12 @@ export function criarTexturas(THREE, aniso = 4) {
     g.fillStyle = '#ffffff'; g.textBaseline = 'middle'; g.textAlign = 'left';
     if ('letterSpacing' in g) g.letterSpacing = '3px';
     let px = 62; g.font = `bold ${px}px Arial, Helvetica, sans-serif`;
-    while (g.measureText('LABORATÓRIOS ESTRELA').width > 840 && px > 20) { px -= 2; g.font = `bold ${px}px Arial, Helvetica, sans-serif`; }
-    g.fillText('LABORATÓRIOS ESTRELA', 150, 50);
+    while (g.measureText('S.T.A.R. LABS').width > 840 && px > 20) { px -= 2; g.font = `bold ${px}px Arial, Helvetica, sans-serif`; }
+    g.fillText('S.T.A.R. LABS', 150, 50);
     g.fillStyle = '#3fe0ff'; g.font = '600 22px Arial, Helvetica, sans-serif'; if ('letterSpacing' in g) g.letterSpacing = '8px';
     g.fillText('PESQUISA  ·  ENERGIA  ·  VELOCIDADE', 154, 102);
-    T.letreiro = tex(c, { repete: false }); }
+    T.letreiroG = g; T.letreiro = tex(c, { repete: false }); }
+  try { const img = new Image(); img.onload = () => T.logoDoDono(img); img.src = new URL('../assets/star/logo.png', import.meta.url).href; } catch { /* sem arquivo: fica o emblema próprio */ }
 
   // ----- atlas de placas -----
   { const [c, g] = tela(1024, 1024); const cw = 256, ch = 128;
@@ -129,7 +136,7 @@ export function criarTexturas(THREE, aniso = 4) {
   });
   nova('relogio', (g, t) => {
     fundo(g, '#050b12', '#0c1a28'); const s = Math.floor(t * 4) % 86400, hh = String(Math.floor(s / 3600) % 24).padStart(2, '0'), mm = String(Math.floor(s / 60) % 60).padStart(2, '0'), ss = String(s % 60).padStart(2, '0');
-    txt(g, `${hh}:${mm}:${ss}`, 256, 110, 96, '#ffffff', 'center'); txt(g, 'RECORDE DA ESTEIRA  1.482 km/h', 256, 190, 28, '#3fe0ff', 'center'); txt(g, 'ESTRELA · PESQUISA EM VELOCIDADE', 256, 230, 16, '#9fe9ff', 'center');
+    txt(g, `${hh}:${mm}:${ss}`, 256, 110, 96, '#ffffff', 'center'); txt(g, 'RECORDE DA ESTEIRA  1.482 km/h', 256, 190, 28, '#3fe0ff', 'center'); txt(g, 'S.T.A.R. LABS · PESQUISA EM VELOCIDADE', 256, 230, 16, '#9fe9ff', 'center');
   });
   nova('onda', (g, t) => {
     fundo(g); txt(g, 'ANÁLISE DE PARTÍCULAS', 16, 20, 20, '#3fe0ff');
