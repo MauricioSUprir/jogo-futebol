@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CELL, BLOCO, N, MEIO, CALCADA, LAB_CELULA, bloco, celulaDe, centroDe, dentro, todasEsferas, retangulosPerto, chaoEm, empurrar } from './cidade.js';
 import { criarHeroi } from './humano.js';
+import { iniciarAtualizacao } from './atualizar.js';
 import { criarMissoes } from './missoes.js';
 import { criarCrimes } from './crimes.js';
 import { criarPortais } from './portais.js';
@@ -768,5 +769,8 @@ camera.position.set(INICIO.x, 4, INICIO.z - 8);
   renderer.compile(cena, camera);
 })();
 requestAnimationFrame(quadro);
+
+// versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
+iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
 window.__rel = { trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
