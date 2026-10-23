@@ -1801,8 +1801,13 @@ if (roda('F')) try {
           for (let i = 0; i < 10; i++) cf.quadro(false);
           return { n, tocando, faixaJunto, tickMudou, hashIgual: g.hash() === h0, tipos: [...tipos], hist: g.cenas.historicoPosJogo.at(-1)?.mm ?? null, faixa: cf.faixa(), ativa: g.cenas.ativo };
         });
-        // de novo, e uma tecla pula o lance (volta à faixa; o aperto não vira jogada: o mundo parado)
-        await pg.click('#faixa-botao2', { timeout: 10000 });
+        // de novo, e uma tecla pula o lance (volta à faixa; o aperto não vira jogada: o mundo parado). Este clique e o do "Jogar de
+        // novo" vão pelo DOM: depois de um lance tocado com os quadros na mão, a espera de "estável" do Playwright não termina (o
+        // botão está visível, na frente e com o toque — conferido abaixo); o 1º clique, acima, é o do mouse de verdade
+        const clicavel = sel => pg.evaluate(s => { const e = document.querySelector(s); const r = e.getBoundingClientRect();
+          return !e.hidden && r.width > 0 && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === e && getComputedStyle(e).pointerEvents !== 'none'; }, sel);
+        const clicarDom = async sel => { if (!(await clicavel(sel))) throw new Error(`${sel} não está clicável`); await pg.evaluate(s => document.querySelector(s).click(), sel); };
+        await clicarDom('#faixa-botao2');
         await pg.evaluate(() => { for (let i = 0; i < 40; i++) window.__cf.quadro(false); });
         const antes = await pg.evaluate(() => ({ tocando: !!window.__golaco.replay.estado?.ativo }));
         await pg.keyboard.down('KeyK');
@@ -1816,7 +1821,7 @@ if (roda('F')) try {
         });
         mm2.antes = antes;
         // "Jogar de novo": a cena sai, o mundo é novo, nenhuma tarja nem faixa
-        await pg.click('#faixa-botao', { timeout: 10000 });
+        await clicarDom('#faixa-botao');
         nova = await pg.evaluate(() => {
           const g = window.__golaco, cf = window.__cf;
           for (let i = 0; i < 10; i++) cf.quadro(false);
