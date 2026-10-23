@@ -73,6 +73,8 @@ const CAMPO_MX = 52.5, CAMPO_MZ = 34;
  * do "Modo de jogo": ligadas ↔ desligadas).
  */
 export function criarHud(opc) {
+  /** Tira o foco de dentro de `caixa` (a pausa ou a Ajuda que fechou): nenhum botão escondido fica com o Enter/Espaço. */
+  const soltarFoco = caixa => { const at = document.activeElement; if (caixa && at && at !== document.body && caixa.contains(at)) at.blur(); };
   const $ = id => document.getElementById(id);
   const el = {
     vel: $('vel'), modo: $('modo'), posicao: $('posicao'), aviso: $('aviso'), qps: $('qps'), menu: $('menu'), ajuda: $('ajuda'),
@@ -669,7 +671,9 @@ export function criarHud(opc) {
       const alvo = (foco && el.menu.querySelector(foco)) || [...el.menu.querySelectorAll('#menu-acoes .btn-primario')].find(b => !b.hidden);
       alvo?.focus({ preventScroll: true });
     },
-    fecharMenu() { el.menu.hidden = true; },
+    // (fechando, o foco sai do botão que ficou escondido: com ele lá, o Enter seguinte — que no jogo é o 'pular' — também
+    // CLICAVA o botão escondido, e abrir e fechar a pausa com Esc deixava o foco no "Reiniciar partida")
+    fecharMenu() { el.menu.hidden = true; soltarFoco(el.menu); },
     /** Lista "Modo de jogo" (partida e treinos) no lugar das ações do menu (true) ou de volta (false). */
     submenuModos: mostrarSubmenu,
     /** Siglas, nomes e escudos ({sigla, nome, escudo: id do elenco}) dos dois times (partida: do elenco) ou null (treino). */
@@ -752,7 +756,7 @@ export function criarHud(opc) {
       el.menu.hidden = true; el.ajuda.hidden = false;
     },
     fecharAjuda() {
-      el.ajuda.hidden = true;
+      el.ajuda.hidden = true; soltarFoco(el.ajuda);
       if (ajudaDaPausa) { ajudaDaPausa = false; this.abrirMenu(true, '[data-cmd="ajuda"]'); }
     },
     /** Recalcula o topo do HUD (os controles de toque apareceram ou a tela mudou). */
