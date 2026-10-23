@@ -83,6 +83,10 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   correções curtas (B) → goleiro e chute (C; o PR #493 rascunho `golaco/goleiro-realista` tem CI vermelho) → IA (D) →
   equilíbrio (E) → pedidos de 17/10 (F) → 3D no lugar da simulação (G) → online (H) → visual/mocap/estádios (I).
   Ao terminar cada item, marcar na FILA.md (status + PR).
+  **Dono, 23/10: a fila por CATEGORIAS** (A–I da FILA.md): ele diz qual categoria fazer e nada começa sem o aval dele
+  ("tem algumas coisas a mais que vou te sinalizar, que vc só cmc dps do meu aval"). Os pedidos de 23/10 são os itens 57–63:
+  impedimento pelas partes do corpo (B), pausa igual à do FIFA, minimapa embaixo, nome do condutor nos cantos (F),
+  passada natural, costura da nuca e bordas dos decalques (I).
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME em cima do jogador com a bola (`main.js marcarCondutor`,
   `#nome-condutor` fora do #hud — exceção pedida à "sem narração") e (2) os overalls da tela iguais aos do TM (`elenco.js
   notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos). **FILA (dono: "o 3 e 4
