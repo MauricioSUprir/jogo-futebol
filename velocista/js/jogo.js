@@ -1,6 +1,9 @@
 import * as THREE from 'three';
-import { CELL, BLOCO, N, MEIO, CALCADA, bloco, celulaDe, centroDe, dentro, todasEsferas, retangulosPerto, chaoEm, empurrar } from './cidade.js';
+import { CELL, BLOCO, N, MEIO, CALCADA, LAB_CELULA, bloco, celulaDe, centroDe, dentro, todasEsferas, retangulosPerto, chaoEm, empurrar } from './cidade.js';
 import { criarHeroi } from './humano.js';
+import { criarMissoes } from './missoes.js';
+import { criarCrimes } from './crimes.js';
+import { criarPortais } from './portais.js';
 import { construirLab } from './lab3d.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
 
@@ -22,6 +25,7 @@ const $ = (id) => document.getElementById(id);
 const el = {
   corpo: document.body, cena: $('cena'), esferas: $('esferas'), total: $('total'), vel: $('vel'), hora: $('hora'), nivel: $('nivel'),
   aviso: $('aviso'), seta: $('seta'), dist: $('distEsfera'), mapa: $('mapa'), mapaBox: $('mapaBox'),
+  missaoNum: $('missaoNum'), missaoTitulo: $('missaoTitulo'), missaoTexto: $('missaoTexto'), crimeLinha: $('crimeLinha'),
   inicio: $('telaInicio'), pausa: $('telaPausa'), fim: $('telaFim'), fimTexto: $('fimTexto'), btnJogar: $('btnJogar'), carga: $('barraCargaI'), carregando: $('carregando'),
 };
 if (TOQUE) el.corpo.classList.add('toque');
@@ -344,7 +348,9 @@ function passoRastro(dt) {
 }
 
 // ---------- estado ----------
-const P = { x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, correndo: false, fase: 0, t: 0, parede: null, vibrando: false };
+const LAB_B = bloco(LAB_CELULA[0], LAB_CELULA[1]);
+const INICIO = { x: LAB_B.plano.entrada.x, z: LAB_B.plano.entrada.z - 9 };     // na rua, de frente para a porta do S.T.A.R. Labs
+const P = { x: INICIO.x, y: 0, z: INICIO.z, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, correndo: false, fase: 0, t: 0, parede: null, vibrando: false };
 const C = { yaw: 0, pitch: CAM.pitch, dist: CAM.dist };
 const J = { modo: 'menu', coletadas: 0, total: 0, aviso: 0, inicioT: 0, alinhar: 0, ignorarMov: 0 };
 const teclas = new Set();
@@ -357,7 +363,7 @@ function reiniciar() {
   esferasColetadas.clear();
   for (const k of [...carregados.keys()]) descarregar(k);
   celAtual = [-999, -999];
-  Object.assign(P, { x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, parede: null, vibrando: false });
+  Object.assign(P, { x: INICIO.x, y: 0, z: INICIO.z, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, parede: null, vibrando: false });
   C.yaw = 0; C.pitch = CAM.pitch;
   J.coletadas = 0; J.modo = 'jogando'; J.inicioT = performance.now();
   mundo.T = 0.4;
@@ -526,7 +532,7 @@ function esferasProximas(dt) {
       const grupo = r.mesh.parent; if (grupo) grupo.remove(r.mesh);
       for (const d of carregados.values()) { const k = d.orbes.indexOf(r); if (k >= 0) d.orbes.splice(k, 1); }
       orbesAtivos.splice(i, 1);
-      el.esferas.textContent = J.coletadas; avisar(`ESFERA ${J.coletadas} / ${J.total}`);
+      el.esferas.textContent = J.coletadas; missoes.contar('esferas');
       if (J.coletadas >= J.total) fimDeJogo();
     }
   }
@@ -604,7 +610,7 @@ let quadroMapa = 0, ultBussola = 0;
 function desenharMapa() {
   const grande = el.mapaBox.classList.contains('grande');
   const W = el.mapa.width, H = el.mapa.height;
-  const raioM = grande ? 1250 : 210, ppm = (W / 2) / raioM;
+  const raioM = grande ? MEIO + 120 : 210, ppm = (W / 2) / raioM;
   gm.setTransform(1, 0, 0, 1, 0, 0); gm.fillStyle = '#26303f'; gm.fillRect(0, 0, W, H);
   const fx = Math.sin(C.yaw), fz = Math.cos(C.yaw), rx = -fz, rz = fx;
   gm.setTransform(rx * ppm, -fx * ppm, rz * ppm, -fz * ppm, W / 2, H / 2);
@@ -618,19 +624,78 @@ function desenharMapa() {
   }
   gm.fillStyle = '#3fd0ff'; const rr = grande ? 14 : 6;
   for (const o of esferas) if (!esferasColetadas.has(o.id) && Math.abs(o.x - P.x) < raioM * 1.1 && Math.abs(o.z - P.z) < raioM * 1.1) { gm.beginPath(); gm.arc(o.x, o.z, rr, 0, 6.3); gm.fill(); }
+  { const a = alvoAtual(); if (a && a.cor !== '#3fd0ff') { gm.fillStyle = a.cor; gm.beginPath(); gm.arc(a.x, a.z, grande ? 30 : 11, 0, 6.3); gm.fill(); gm.strokeStyle = '#fff'; gm.lineWidth = grande ? 6 : 2.5; gm.stroke(); } }
+  gm.strokeStyle = '#3fe0ff'; gm.lineWidth = grande ? 10 : 4; gm.strokeRect(LAB_B.cx - 30, LAB_B.cz - 30, 60, 60);
   gm.setTransform(1, 0, 0, 1, 0, 0);
+  { // nome do laboratório no mapa (texto sempre de pé)
+    const lx = (LAB_B.cx - P.x) * rx + (LAB_B.cz - P.z) * rz, ly = -((LAB_B.cx - P.x) * fx + (LAB_B.cz - P.z) * fz);
+    if (Math.hypot(lx, ly) < raioM) { gm.fillStyle = '#3fe0ff'; gm.font = `bold ${grande ? 22 : 20}px sans-serif`; gm.textAlign = 'center'; gm.fillText('S.T.A.R. LABS', W / 2 + lx * ppm, H / 2 + ly * ppm - (grande ? 14 : 24)); }
+  }
   const sx = Math.sin(P.h) * rx + Math.cos(P.h) * rz, sy = -(Math.sin(P.h) * fx + Math.cos(P.h) * fz);
   gm.translate(W / 2, H / 2); gm.rotate(Math.atan2(sx, -sy));
   gm.fillStyle = '#ff2b3d'; gm.strokeStyle = '#fff'; gm.lineWidth = 2; gm.beginPath(); gm.moveTo(0, -11); gm.lineTo(8, 9); gm.lineTo(0, 5); gm.lineTo(-8, 9); gm.closePath(); gm.fill(); gm.stroke();
 }
-function atualizarBussola() {
+function esferaMaisPerto() {
   let melhor = null, md = Infinity;
   for (const o of esferas) { if (esferasColetadas.has(o.id)) continue; const d = Math.hypot(o.x - P.x, o.z - P.z); if (d < md) { md = d; melhor = o; } }
+  return melhor;
+}
+// para onde a seta aponta: crime > objetivo da missão > esfera mais perto
+function alvoAtual() {
+  const cr = crimes.marcador(); if (cr) return { ...cr, cor: '#ff4d5e' };
+  const m = missoes.atual;
+  if (m?.tipo === 'portais') { const p = portais.alvo(); if (p) return { ...p, cor: '#ffd23f' }; }
+  if (m?.alvo === 'cortex') return { x: LAB_B.cx, z: LAB_B.cz, cor: '#ffd23f' };
+  const o = esferaMaisPerto(); return o ? { x: o.x, z: o.z, cor: '#3fd0ff' } : null;
+}
+function atualizarBussola() {
+  const melhor = alvoAtual();
   if (!melhor) { el.dist.textContent = '—'; return; }
+  const md = Math.hypot(melhor.x - P.x, melhor.z - P.z);
+  el.seta.querySelector('path').setAttribute('fill', melhor.cor);
   const fx = Math.sin(C.yaw), fz = Math.cos(C.yaw), dx = melhor.x - P.x, dz = melhor.z - P.z;
   const sx = dx * -fz + dz * fx, sy = dx * fx + dz * fz;
   el.seta.style.transform = `rotate(${Math.atan2(sx, sy)}rad)`;
   el.dist.textContent = md >= 1000 ? `${(md / 1000).toFixed(1)} km` : `${Math.round(md)} m`;
+}
+
+// ---------- missões, crimes e portais ----------
+let armazem = null; try { armazem = localStorage; } catch { armazem = null; }
+const missoes = criarMissoes(armazem);
+const crimes = criarCrimes(cena);
+const portais = criarPortais(cena);
+function solidoEm() {
+  for (const q of rectsPerto) if (q.y0 >= 0 && q.y1 - q.y0 > 4 && P.x > q.x0 && P.x < q.x1 && P.z > q.z0 && P.z < q.z1 && P.y + 0.9 > q.y0 && P.y + 0.9 < q.y1) return q;
+  return null;
+}
+function passoMissoes(dt) {
+  // prédios atravessados vibrando: conta ao sair do outro lado
+  const q = P.vibrando ? solidoEm() : null;
+  if (J.dentroQ && q !== J.dentroQ && !q) missoes.contar('atravessados');
+  J.dentroQ = q;
+  const m = missoes.atual;
+  if (m?.tipo === 'portais') portais.ativar(); else portais.desativar();
+  const rp = portais.atualizar(dt, P);
+  if (rp?.falhou) avisar('TEMPO ESGOTADO — volte ao 1º portal');
+  const ev = crimes.atualizar(dt, P, { forcar: m?.crime });
+  if (ev?.inicio) avisar(`CRIME: ${ev.nome.toUpperCase()}`);
+  else if (ev) {
+    if (ev.ok) { missoes.contar('crimes'); missoes.contar(ev.tipo); missoes.contar('pontos', 250); avisar(`${ev.nome.toUpperCase()} IMPEDIDO! +250`); }
+    else avisar(ev.tipo === 'queda' ? 'NÃO CHEGOU A TEMPO' : 'O CRIMINOSO ESCAPOU');
+  }
+  const sala = LAB_B.plano.dentro(P.x, P.z, P.y);
+  const feita = missoes.avaliar({ sala, v: Math.hypot(P.vx, P.vz), y: P.y, noChao: P.noChao, portaisFeitos: rp?.feito });
+  if (feita) avisar(`MISSÃO CONCLUÍDA: ${feita.titulo.toUpperCase()}`);
+  // painel
+  const ma = missoes.atual, pr = missoes.progresso();
+  el.missaoNum.textContent = ma ? `Missão ${missoes.indice + 1}/${missoes.total} · ${missoes.stats.pontos} pts` : `Patrulha livre · ${missoes.stats.pontos} pts`;
+  el.missaoTitulo.textContent = ma ? ma.titulo : 'Todas as missões concluídas';
+  let txt = ma ? ma.texto + (pr ? ` (${pr.txt})` : '') : 'Impeça os crimes da cidade';
+  if (ma?.tipo === 'portais') { const e = portais.estado(); txt = e.correndo ? `Portal ${e.indice + 1}/${e.total} · ${Math.ceil(e.restante)} s` : ma.texto; }
+  el.missaoTexto.textContent = txt;
+  const c = crimes.ativo;
+  if (c) { const d = Math.round(Math.hypot(c.x - P.x, c.z - P.z)); el.crimeLinha.textContent = `${c.nome}: ${c.texto}${c.tipo === 'incendio' ? ` (${Math.round((c.progresso || 0) * 100)}%)` : ''} · ${d} m · ${Math.max(0, Math.ceil(c.restante))} s`; el.crimeLinha.hidden = false; }
+  else el.crimeLinha.hidden = true;
 }
 
 // ---------- laço ----------
@@ -655,6 +720,7 @@ function quadro() {
   if (J.modo === 'jogando') {
     mundo.T = (mundo.T + dt / DIA_SEGUNDOS) % 1;
     passoHeroi(dt); esferasProximas(dt);
+    passoMissoes(dt);
     if (labAtivo) labAtivo.atualizar(dt, P.t, mundo.noite, camera, P);
     atualizarQuarteiroes(P.x, P.z, carregados.size < 30 ? 8 : 2);
     if (J.aviso > 0) { J.aviso -= dt; if (J.aviso <= 0) el.aviso.style.opacity = '0'; }
@@ -676,17 +742,17 @@ addEventListener('resize', redimensionar); redimensionar();
 
 // ---------- carga inicial ----------
 esferas = todasEsferas(); J.total = esferas.length; el.total.textContent = J.total;
-P.x = 0; P.z = 0; heroi.position.set(0, 0, 0);
-camera.position.set(0, 4, -8);
+heroi.position.set(INICIO.x, 0, INICIO.z);
+camera.position.set(INICIO.x, 4, INICIO.z - 8);
 (async function carregar() {
-  atualizarQuarteiroes(0, 0, 0);
-  const lista = desejados(celulaDe(0), celulaDe(0), RAIO_CARGA);
+  atualizarQuarteiroes(INICIO.x, INICIO.z, 0);
+  const lista = desejados(celulaDe(INICIO.x), celulaDe(INICIO.z), RAIO_CARGA);
   let feitos = 0;
   for (const [i, j] of lista) {
     const k = `${i},${j}`; if (!carregados.has(k)) carregados.set(k, construirBloco(bloco(i, j)));
     if (++feitos % 6 === 0) { el.carga.style.width = `${(feitos / lista.length) * 100}%`; await new Promise((r) => setTimeout(r, 0)); }
   }
-  rectsPerto = retangulosPerto(0, 0, 1);
+  rectsPerto = retangulosPerto(INICIO.x, INICIO.z, 1);
   el.carga.style.width = '100%'; el.carregando.hidden = true; $('barraCarga').hidden = true; el.btnJogar.hidden = false;
   // câmera de vitrine: sobe devagar olhando a avenida
   C.yaw = 0.5; C.pitch = 0.5;
@@ -694,4 +760,4 @@ camera.position.set(0, 4, -8);
 })();
 requestAnimationFrame(quadro);
 
-window.__rel = { RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };

@@ -4,7 +4,7 @@
 export const CELL = 76;
 export const RUA = 16;
 export const BLOCO = CELL - RUA;       // 60
-export const N = 30;                   // 30 × 76 m = 2,28 km de lado
+export const N = 44;                   // 44 × 76 m = 3,34 km de lado
 export const MEIO = (N * CELL) / 2;
 export const CALCADA = 0.3;            // altura do meio-fio
 export const SEMENTE = 20261023;
@@ -65,14 +65,16 @@ export function bloco(i, j) {
     add({ x0: lx - w * 0.3, x1: lx + w * 0.3, z0: lz - p * 0.3, z1: lz + p * 0.3, y0: h, y1: h + 12 + r() * 14, estilo: 0, tom: Math.floor(r() * 3) });
     for (let k = 0; k < 10; k++) { const ax = cx + (r() - 0.5) * (BLOCO - 4), az = cz + (r() - 0.5) * (BLOCO - 4); if (ax < lx - w / 2 - 2 || ax > lx + w / 2 + 2 || az < lz - p / 2 - 2 || az > lz + p / 2 + 2) b.arvores.push({ x: ax, z: az, s: 0.6 + r() * 0.5 }); }
   } else {
-    const nx = 1 + Math.floor(r() * 3), nz = 1 + Math.floor(r() * 2);
+    // bairros: centro de torres, anel de galpões, periferia de casas baixas
+    const bairro = d > 16 ? 'casas' : d > 12.5 && r() < 0.35 ? 'galpao' : 'centro';
+    const nx = bairro === 'casas' ? 3 + Math.floor(r() * 2) : bairro === 'galpao' ? 1 : 1 + Math.floor(r() * 3), nz = bairro === 'casas' ? 2 + Math.floor(r() * 2) : bairro === 'galpao' ? 1 + Math.floor(r() * 2) : 1 + Math.floor(r() * 2);
     const w = (interno - GAP * (nx - 1)) / nx, p = (interno - GAP * (nz - 1)) / nz;
     for (let a = 0; a < nx; a++) for (let c = 0; c < nz; c++) {
       if (r() < 0.12) continue;                                // praça no lugar do prédio
-      const base = 10 + r() * 22;
-      const h = base + centro * r() * 100;
+      const base = bairro === 'casas' ? 5 + r() * 6 : bairro === 'galpao' ? 8 + r() * 5 : 10 + r() * 22;
+      const h = bairro === 'centro' ? base + centro * r() * 100 : base;
       const lx0 = x0 + a * (w + GAP), lz0 = z0 + c * (p + GAP);
-      const estilo = Math.floor(r() * 6), tom = Math.floor(r() * 3);
+      const estilo = bairro === 'casas' ? (r() < 0.6 ? 4 : 1) : bairro === 'galpao' ? 2 : Math.floor(r() * 6), tom = Math.floor(r() * 3);
       add({ x0: lx0, x1: lx0 + w, z0: lz0, z1: lz0 + p, y0: CALCADA, y1: h, estilo, tom });
       if (h > 34 && r() < 0.45) {                               // recuo: torre menor em cima do pódio
         const m = 0.2 + r() * 0.15;
@@ -161,7 +163,7 @@ function detalhes(b, i, j) {
   const faixa = BLOCO / 2 + 2.3;
   for (let lado = 0; lado < 2; lado++) {
     for (let u = -25; u <= 25; u += 7.2) {
-      if (r() < 0.45) continue;
+      if (r() < 0.45 || (b.tipo === 'lab' && Math.abs(u) < 10)) continue;   // a porta do laboratório fica livre
       const jit = (r() - 0.5) * 1.6, cor = CORES_CARRO[Math.floor(r() * CORES_CARRO.length)];
       const px = lado === 0 ? b.cx + u + jit : b.cx - faixa, pz = lado === 0 ? b.cz - faixa : b.cz + u + jit;
       const rot = lado === 0 ? 0 : Math.PI / 2, hx = lado === 0 ? 2.15 : 0.95, hz = lado === 0 ? 0.95 : 2.15;

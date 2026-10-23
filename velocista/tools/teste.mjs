@@ -22,7 +22,7 @@ await pagina.waitForTimeout(500);
 ok(await pagina.evaluate(() => window.__rel.J.modo) === 'jogando', 'modo jogando');
 
 // correr para frente
-await pagina.evaluate(() => { window.__rel.C.yaw = 0; window.__rel.teclas.add('w'); });
+await pagina.evaluate(() => { const R = window.__rel; R.P.x = 0; R.P.z = 0; R.P.y = 0; R.C.yaw = 0; R.teclas.add('w'); });
 await pagina.waitForFunction(() => window.__rel.P.z > 6, null, { timeout: 30000 }).catch(() => {});
 const m1 = await pagina.evaluate(() => ({ z: window.__rel.P.z, v: Math.hypot(window.__rel.P.vx, window.__rel.P.vz) }));
 ok(m1.z > 5 && m1.v > 5, `corre (z=${m1.z.toFixed(1)}, v=${m1.v.toFixed(1)} m/s)`);
@@ -41,7 +41,7 @@ const alvo = await pagina.evaluate(async () => {
   const R = window.__rel, mod = await import('/js/cidade.js');
   const b = mod.bloco(14, 14);
   const l = b.lotes[0] || b.lotes.find(Boolean);
-  const lote = l || mod.bloco(15, 15).lotes[0];
+  const lote = l || mod.bloco(...mod.LAB_CELULA).lotes[0];
   return { x: (lote.x0 + lote.x1) / 2, z0: lote.z0, lote };
 });
 await pagina.evaluate((a) => { const P = window.__rel.P; P.x = a.x; P.z = a.z0 - 30; P.y = 0.3; P.vx = 0; P.vz = 0; window.__rel.C.yaw = 0; window.__rel.teclas.add('w'); window.__rel.teclas.add('shift'); }, alvo);
@@ -59,13 +59,14 @@ ok(await pagina.evaluate(() => !!window.__rel.modelo), 'corpo realista (Rocketbo
 // escalada: de frente para um prédio de 25–45 m a mais de 130 km/h
 const pr = await pagina.evaluate(async () => {
   const mod = await import('/js/cidade.js');
-  for (let i = 13; i <= 17; i++) for (let j = 13; j <= 17; j++) { const b = mod.bloco(i, j); for (const l of b.lotes) if (l.y0 === mod.CALCADA && l.y1 > 22 && l.y1 < 40 && l.x1 - l.x0 > 12 && l.z0 - b.cz < -10 && !(i === 15 && j === 15)) return { x: (l.x0 + l.x1) / 2, zRua: b.cz - 38, lote: l, cz: b.cz }; }
+  for (let i = 19; i <= 25; i++) for (let j = 19; j <= 25; j++) { const b = mod.bloco(i, j); for (const l of b.lotes) if (l.y0 === mod.CALCADA && l.y1 > 22 && l.y1 < 40 && l.x1 - l.x0 > 12 && l.z0 - b.cz < -10 && b.tipo !== 'lab') return { x: (l.x0 + l.x1) / 2, zRua: b.cz - 38, lote: l, cz: b.cz }; }
   return null;
 });
 ok(!!pr, 'achou um prédio de 22–40 m para escalar');
 await pagina.evaluate((a) => { const R = window.__rel, P = R.P; P.x = a.x; P.z = a.zRua; P.y = 0.3; P.vx = 0; P.vz = 46; P.energia = 1; R.C.yaw = 0; R.teclas.clear(); R.teclas.add('w'); R.teclas.add('shift'); }, pr);
-await pagina.waitForFunction(() => window.__rel.P.parede, null, { timeout: 60000 }).catch(() => {});
-const sobe = await pagina.evaluate(() => ({ p: !!window.__rel.P.parede, y: window.__rel.P.y }));
+await pagina.evaluate(() => { window.__rel.subiu = false; const R = window.__rel; const vigia = () => { if (R.P.parede) R.subiu = true; else requestAnimationFrame(vigia); }; vigia(); });
+await pagina.waitForFunction(() => window.__rel.subiu, null, { timeout: 60000 }).catch(() => {});
+const sobe = await pagina.evaluate(() => ({ p: window.__rel.subiu, y: window.__rel.P.y }));
 ok(sobe.p, `escalada começa a mais de 130 km/h (y=${sobe.y.toFixed(1)})`);
 await pagina.waitForFunction(() => window.__rel.P.y > 9 || !window.__rel.P.parede, null, { timeout: 60000 }).catch(() => {});
 await pagina.waitForTimeout(600);
@@ -121,6 +122,16 @@ const sala = (nome) => pagina.waitForFunction(async (n) => { const m = await imp
 ok(await sala('atrio'), 'entra no átrio pela porta');
 await foto(pagina, 'lab-atrio.png');
 ok(await sala('cortex'), 'chega ao Cortex');
+await pagina.waitForFunction(() => window.__rel.missoes.indice >= 1, null, { timeout: 30000 }).catch(() => {});
+ok(await pagina.evaluate(() => window.__rel.missoes.indice >= 1), 'missão 1 (chegar ao Cortex) concluída');
+// crime: força um assalto, leva o herói até o ladrão e confere que foi impedido
+await pagina.evaluate(() => { const R = window.__rel; R.teclas.clear(); R.crimes.atualizar(60, R.P, { forcar: 'assalto' }); });
+const crime = await pagina.evaluate(() => { const c = window.__rel.crimes.ativo; return c && { tipo: c.tipo, x: c.x, z: c.z }; });
+ok(crime && crime.tipo === 'assalto', `um assalto começa (${crime && Math.round(crime.x)}, ${crime && Math.round(crime.z)})`);
+await pagina.evaluate(() => { const R = window.__rel, c = R.crimes.ativo; R.P.x = c.x; R.P.z = c.z; R.P.y = 0; R.P.vx = R.P.vz = 0; });
+await pagina.waitForFunction(() => window.__rel.missoes.stats.crimes >= 1, null, { timeout: 60000 }).catch(() => {});
+ok(await pagina.evaluate(() => window.__rel.missoes.stats.crimes >= 1 && !window.__rel.crimes.ativo), 'alcançar o ladrão impede o assalto');
+await foto(pagina, 'crime.png');
 await foto(pagina, 'lab-cortex.png');
 await pagina.evaluate(() => window.__rel.teclas.clear());
 

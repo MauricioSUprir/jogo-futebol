@@ -1,7 +1,7 @@
 // LABORATÓRIOS ESTRELA — o plano (puro: sem three.js nem DOM). Uma só fonte para a colisão (retângulos) e para o desenho
 // (lab3d.js lê PAREDES, CELAS, CONSOLES... daqui). Coordenadas LOCAIS: u = x - cx, v = z - cz, y para cima.
 // A FRENTE (entrada) olha para -z. Sem aleatoriedade: o plano é determinístico.
-export const LAB_CELULA = [15, 15];
+export const LAB_CELULA = [22, 22];          // célula logo a nordeste do centro da cidade (N = 44)
 export const H = 16;                 // altura do telhado
 export const PISO = 0.3;             // topo da laje do quarteirão (CALCADA)
 export const PORTA_Y = 5;            // topo dos vãos (verga: y0 = 5)
