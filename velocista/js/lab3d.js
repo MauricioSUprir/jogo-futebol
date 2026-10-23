@@ -419,7 +419,7 @@ export function construirLab(THREE, cx, cz, opc = {}) {
     dishG.rotation.y = tempo * 0.35;
     acumTela += dt;
     const perto = !jogador || (Math.abs(jogador.x - cx) < 70 && Math.abs(jogador.z - cz) < 70);
-    if (perto && acumTela > 0.2) { acumTela = 0; TX.redesenhar(tempo); }
+    if (perto && acumTela > (opc.intervaloTela ?? 0.2)) { acumTela = 0; TX.redesenhar(tempo); }
   };
   return { grupo, cupula, geos, materiais, atualizar, luzes: [], texturas: TX.texturas };
 }
