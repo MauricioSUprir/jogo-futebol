@@ -15,10 +15,10 @@ await pagina.evaluate(() => { const R = window.__rel; R.CAM.dist = 5; R.C.pitch 
 const foto = (n) => pagina.screenshot({ path: path.join(saida, `heroi-${n}.png`), timeout: 400000 });
 await pagina.waitForTimeout(500); await foto('parado');
 await pagina.evaluate(() => { window.__rel.teclas.add('w'); });
-await pagina.waitForFunction(() => Math.hypot(window.__rel.P.vx, window.__rel.P.vz) > 13, null, { timeout: 30000 });
+await pagina.waitForFunction(() => Math.hypot(window.__rel.P.vx, window.__rel.P.vz) > 13, null, { timeout: 300000 });
 await foto('correndo');
 await pagina.evaluate(() => { window.__rel.teclas.add('shift'); });
-await pagina.waitForFunction(() => Math.hypot(window.__rel.P.vx, window.__rel.P.vz) > 40, null, { timeout: 30000 });
+await pagina.waitForFunction(() => Math.hypot(window.__rel.P.vx, window.__rel.P.vz) > 40, null, { timeout: 300000 });
 await foto('sprint');
 await pagina.keyboard.press('Space'); await pagina.waitForTimeout(250); await foto('ar');
 console.log('erros:', erros.slice(0, 5));

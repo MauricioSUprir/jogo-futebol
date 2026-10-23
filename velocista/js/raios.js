@@ -8,7 +8,7 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 
 export function criarRaios(cena, { mobile = false } = {}) {
   const maxRaios = mobile ? 26 : NB;
-  const pos = new Float32Array(maxRaios * SEG * 2 * 3), cor = new Float32Array(maxRaios * SEG * 2 * 3);
+  const pos = new Float32Array(maxRaios * SEG * 2 * 3 * 2), cor = new Float32Array(maxRaios * SEG * 2 * 3 * 2);   // cada raio em 2 traços (mais grosso)
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(cor, 3));
   const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
@@ -59,12 +59,13 @@ export function criarRaios(cena, { mobile = false } = {}) {
     for (const r of raios) {
       if (r.vida <= 0) continue;
       r.vida -= dt;
-      const f = Math.max(0, r.vida / r.total), cr = 1.8 * f * (0.6 + r.forca), cg = 1.15 * f * (0.5 + r.forca * 0.6), cb = 0.35 * f;
-      for (let k = 0; k < SEG; k++) {
-        const i = n * 6;
-        pos[i] = r.pts[k * 3]; pos[i + 1] = r.pts[k * 3 + 1]; pos[i + 2] = r.pts[k * 3 + 2];
-        pos[i + 3] = r.pts[k * 3 + 3]; pos[i + 4] = r.pts[k * 3 + 4]; pos[i + 5] = r.pts[k * 3 + 5];
-        cor[i] = cor[i + 3] = cr; cor[i + 1] = cor[i + 4] = cg; cor[i + 2] = cor[i + 5] = cb;
+      const f = Math.max(0, r.vida / r.total), cr = Math.min(1.6, 1.1 * f * (0.7 + r.forca)), cg = Math.min(0.9, 0.62 * f * (0.7 + r.forca)), cb = 0.12 * f;
+      for (let dupla = 0; dupla < 2; dupla++) for (let k = 0; k < SEG; k++) {
+        const i = n * 6, oy = dupla * 0.025, ox = dupla * 0.02;
+        pos[i] = r.pts[k * 3] + ox; pos[i + 1] = r.pts[k * 3 + 1] + oy; pos[i + 2] = r.pts[k * 3 + 2];
+        pos[i + 3] = r.pts[k * 3 + 3] + ox; pos[i + 4] = r.pts[k * 3 + 4] + oy; pos[i + 5] = r.pts[k * 3 + 5];
+        const nucleo = dupla ? 1 : 0.75;                       // o 2º traço mais claro: núcleo do raio
+        cor[i] = cor[i + 3] = cr * nucleo; cor[i + 1] = cor[i + 4] = cg * (dupla ? 1.25 : 1); cor[i + 2] = cor[i + 5] = cb * (dupla ? 2 : 1);
         n++;
       }
     }

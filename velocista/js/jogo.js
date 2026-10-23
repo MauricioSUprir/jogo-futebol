@@ -105,7 +105,7 @@ function atualizarAmbiente(posCam) {
   hemi.intensity = mistN('hemi'); sol.intensity = mistN('solInt') * (elev > -0.05 ? 1 : 0.4);
   // à noite a "luz do sol" vira a lua, do lado oposto
   const dl = elev > -0.05 ? dir : dir.clone().multiplyScalar(-1);
-  vSol.set(P.x, P.y, P.z); sol.position.copy(vSol).addScaledVector(dl, 150); sol.target.position.copy(vSol);
+  vSol.set(heroi.position.x, heroi.position.y, heroi.position.z); sol.position.copy(vSol).addScaledVector(dl, 150); sol.target.position.copy(vSol);
   matCeu.uniforms.sol.value.copy(dir); matCeu.uniforms.brilho.value.setHex(elev > 0.1 ? 0xffe8b0 : 0xff9a60).multiplyScalar(suave(-0.12, 0.05, elev));
   ceu.position.copy(posCam); estrelas.position.copy(posCam);
   mundo.noite = 1 - suave(-0.15, 0.12, elev);
@@ -785,4 +785,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
