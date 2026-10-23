@@ -88,6 +88,8 @@ const LISTA = [
   ['replay: a cena semiautomática do impedimento e a checagem de posição legal (durações, critério, câmera, selo, coerência)', 'teste-saot.mjs'],
   ['comemoração do gol: cena pura (locomoção, golpes, gestos, abraço, quem sofreu, câmera; o mundo não muda)', 'teste-comemoracao.mjs'],
   ['cena de substituição: quem sai pela linha mais perto (Regra 3.3), quem entra pelo meio, placa, câmera; o mundo não muda', 'teste-substituicao.mjs'],
+  // Cenas das paradas (dono, 22/10: "as cenas de cartões")
+  ['cena do cartão: canhão de 144 cartões (árbitro, cartão no alto, IFAB, as 3 + 3 variações, o expulso no túnel, corpo, câmera), variedade, pureza, relógio do estádio e custo', 'teste-cenas.mjs'],
   // Área técnica e treinadores (dono, 12/10: "quero a área técnica e o treinador")
   ['área técnica (Regra 1) e os 2 treinadores: dentro da área, pé plantado, gestos, olham a bola, reagem ao gol, nunca tapam a TV, hash igual', 'teste-tecnicos.mjs'],
   // (15/10, frente "replay robusto") os casos sem partida no --estresse: a reação ao gol de qualquer gesto e quem corre

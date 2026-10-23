@@ -1,0 +1,52 @@
+/* Tela das CENAS das paradas (js/cenas-tela.js; sob demanda com ela: main.js SOB.cenas). A tarja de identificação do
+   jogador com cartão (lower third de TV, no molde da faixa ENTRA/SAI): o cartão desenhado, o escudo e a sigla na cor do
+   time, o número e o nome — nada de motivo nem minuto (DFL: "identificação do jogador com cartão"). Só aparece dentro
+   da cena e sai com ela. Na tela: embaixo à esquerda, longe do placar (em cima à esquerda) e do "Pular" (embaixo à
+   direita, só com toque). */
+.tarja-cena {
+  position: absolute; left: calc(var(--sa-l) + 64px); bottom: calc(var(--sa-b) + 64px);
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+  /* (a janela estreita do PC: a tarja nunca passa da borda direita — o nome corta com reticências dentro da tela) */
+  max-width: min(520px, calc(100vw - var(--sa-l) - var(--sa-r) - 80px));
+  padding: 8px 16px 8px 10px; box-sizing: border-box;
+  background: var(--painel); border-left: 2px solid var(--cor-time, var(--verde)); border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); pointer-events: none; white-space: nowrap;
+  font-family: Inter, var(--fonte); color: var(--texto);
+}
+.tarja-cena[hidden] { display: none; }
+.tarja-cena.visivel { animation: tarja-cena-entra 0.25s ease-out both; }
+@keyframes tarja-cena-entra { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .tarja-cena.visivel { animation: none; } }
+.tc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* o cartão desenhado (as cores do ícone de sempre e do cartão 3D: render/cartao3d.js); o 2º amarelo mostra os dois */
+.tc-cartoes { flex: none; display: flex; align-items: center; }
+.tc-cartao { display: block; width: 18px; height: 25px; border-radius: 3px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); }
+.tc-cartao[hidden] { display: none; }
+.tc-cartao + .tc-cartao { margin-left: -6px; transform: rotate(10deg); }
+.tc-cartao.amarelo { background: #f5c518; }
+.tc-cartao.vermelho { background: #e5484d; }
+.tc-time {
+  flex: none; display: flex; align-items: center; gap: 5px; padding: 4px 8px 4px 5px; border-radius: 5px;
+  background: var(--cor-time, var(--verde)); color: var(--cor-time-texto, var(--preto));
+}
+.tc-escudo { width: 16px; height: 18px; flex: none; }
+.tc-sigla { font-size: 14px; font-weight: 900; letter-spacing: 0.08em; }
+.tc-num { flex: none; font-size: 22px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tc-nome { font-size: 20px; font-weight: 700; color: var(--texto); overflow: hidden; text-overflow: ellipsis; min-width: 0; line-height: 1.15; }
+.tc-nome-curto { display: none; }
+/* celular: embaixo à esquerda, sem chegar ao "Pular" (≥ 112 px + margens à direita: a mesma conta da faixa ENTRA/SAI);
+   o nome da camisa no lugar do completo */
+html.com-toque .tarja-cena {
+  left: calc(var(--sa-l) + 14px); bottom: calc(var(--sa-b) + 14px); max-width: calc(100vw - var(--sa-l) - var(--sa-r) - 190px);
+  max-height: 52px; padding: 5px 12px 5px 7px; gap: 8px;
+}
+html.com-toque .tc-cartao { width: 14px; height: 20px; }
+html.com-toque .tc-sigla { font-size: 12px; }
+html.com-toque .tc-escudo { width: 13px; height: 15px; }
+html.com-toque .tc-time { padding: 3px 6px 3px 4px; }
+html.com-toque .tc-num { font-size: 17px; }
+html.com-toque .tc-nome { font-size: 15px; }
+html.com-toque .tc-nome-completo { display: none; }
+html.com-toque .tc-nome-curto { display: inline; }
+/* no replay (que vem logo depois da cena) e na comemoração ela nunca fica */
+html.em-replay .tarja-cena, html.em-comemoracao .tarja-cena, html.em-substituicao .tarja-cena { display: none; }

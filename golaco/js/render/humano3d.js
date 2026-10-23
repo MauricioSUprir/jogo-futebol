@@ -441,6 +441,8 @@ export function criarHumano3D(cena, dados, opc = {}) {
       }
     },
     definirSombras(ligadas) { for (const nv of niveis) nv.mesh.castShadow = ligadas; },
+    /** As juntas DESENHADAS da pose po (a postura do desenho por cima: esqueleto.js postura), em out (NJ·3). */
+    postura(po, v, peso, out) { return E.postura(po, v, peso, out); },
     /** O índice dos rostos reais ({chave: {nome, pele, foto}}) e a pasta das texturas (edição pro). */
     definirRostos(indice, base) { rost.indice = indice; rost.base = base; },
     /** A pele (o tom da foto) do rosto real desta chave, ou null. */

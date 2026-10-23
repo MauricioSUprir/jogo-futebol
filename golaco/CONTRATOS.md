@@ -2617,7 +2617,7 @@ desenha nada.
     - no máximo 3 máscaras viram mancha.
   - `teste-corpo-tela` C6/C7: na pro, os logos carregam; na pública, nada é pedido.
 
-## Cenas das paradas — replays nas paradas (22/10; contrato; cartão, intervalo e pós-jogo entram nos próximos PRs)
+## Cenas das paradas — replays nas paradas e cartão (22/10; contrato; intervalo e pós-jogo entram nos próximos PRs)
 Pedido do dono: "a cena de pós jogo, e a cena de intervalo, as cenas de cartões, e os replays de faltas e jogadas passando
 na tela enquanto o jogo tá parado". Plano em `PLANO-CENAS.md`; pesquisa em `PESQUISA-CENAS-TV.md` (§0.1 o roteiro da DFL,
 §0.2 SoccerNet-v2, §4 replays nas paradas). **Só desenho**: a simulação fica parada e volta no mesmo tick. Nada entra no
@@ -2671,3 +2671,99 @@ fecho (`tools/fecho-hash.mjs --diff origin/main` = 0): o `lances.js` só importa
   - API `__golaco.replay.paradas`: `{ligado, armado, contagem, ultimoTick, ultimoTipo, historico, forcar(lance), ndc(x, y, z)}`.
 - **Testes:** `teste-replay-paradas` (Node, padrão; P1–P5 e as bordas do roteiro P2b) e `teste-replay-paradas-tela`
   (navegador, CI; V1–V11).
+
+### Cena do cartão (PR 2; dono, 22/10: "as cenas de cartões")
+Porte da branch `golaco/cenas-jogo` (1df2ca34) para fora do fecho: `js/cenas-config.js` (`CENAS`, `CENA_CARTAO`,
+`CAMERA_GERAL`; importado só pelos módulos sob demanda — nem o `main.js` nem a simulação o importam), `js/cena-atores.js` e
+`js/cena-cartao.js` (puros), `render/cartao3d.js`, `js/cenas-tela.js` + `css/cenas.css` — tudo pelo `SOB.cenas` do
+`main.js` (pré-carga no 1º gesto ou ociosa, como o replay e o editor; `tools/teste-carga.mjs SOB_DEMANDA_ARQ`).
+- **`js/cena-atores.js`** (puro; nada alocado por tick, sem rng):
+  - O árbitro e os assistentes (`criarJogador` 200–202, posição 'ARB', kit 'arbitro'); `adicionarNovo` (os treinadores).
+  - `passoAtores` na ordem do `passoCena` da comemoração (desejo → `passoCorpo` → separação → `passoPassada` →
+    `passoPeDesenhado` → quadril → pose + gestos); quem para e fica plantado `CENAS.parado` ticks fica FIXO, respirando.
+  - `recriarAtor` (ELIPSE: só no tick de um corte); `escolherVariante(tick, id, ultima, disponiveis, penultima)` (hash;
+    nunca a anterior).
+  - Os gestos (`gTiraAmarelo`, `gTiraVermelho`, `gCartao` — braço reto, a mão ≥ 0,25 m acima do topo da cabeça —,
+    `gAponta`, `gAnota`, `gAfasta`, `gApito`, `gAbertos`, `gCabeca`, `gDesculpa`, `gSegura`, `gTapinha`, `gAbana`, `gRosto`,
+    `gPalmasAlto`, `gCintura`, `gJoelhos`, `gAperto`) e as posturas (`posturaCabisbaixo`, `cabecaCeu`, `balancaCabeca`).
+  - A câmera: `camValida`, `custoCamera` (a lente longe de onde cada um está, de onde vai parar e do caminho até lá),
+    `melhorCamera`, `fugirDaLente`, `caberNoQuadro`, `definirPlano`/`definirPlanoGrupo`.
+  - `moverJuntas`, `inclinarTronco` e `flexionar` (com `pernaIK` e `ponta`) são CÓPIAS dos da `comemoracao.js` (lá não são
+    exportados e o arquivo é do fecho).
+- **`js/cena-cartao.js`** (puro):
+  - `escolherCartao(eventos)`: o mais grave do passo; o 2º amarelo = UM vermelho com `segundo`.
+  - `planejarCartao(m, cartao, {ultimaAmarelo, ultimaVermelho, variante, timeHumano, posAntes(id), treinadores})`: o
+    expulso (já em `m.expulsos`) na posição desenhada do tick anterior (`posAntes`, pelo anel); os treinadores
+    (`tecnicos.js treinadorDoTime`, ids 210/211) como cópias paradas na área técnica; `assentar` no gol (a vantagem que
+    virou gol: todos freiam fora do quadro, `CENA_CARTAO.assentar` s, antes do 1º plano — a ELIPSE do corte).
+  - `criarCenaCartao(plano, m)` (só cópias; o árbitro e o capitão longe já vêm correndo — pré-rolagem), `passoCenaCartao`,
+    `avancarCenaCartao`, `faseCartao`, `tempoCenaCartao`, `duracaoCenaCartao`, `planoCameraCartao(c, {pequena, aspecto},
+    out)` (`out.tunel` = abrir o vão das placas), `cartaoNaMao(c, pose, out)`, `consumirEventosCartao` (`cartaoCena`,
+    `aplausoExpulso`), `infoAtoresCartao`.
+  - Variações: amarelo `abertos`, `cabeca`, `aceita`; vermelho `cabisbaixo`, `segurado`, `rosto` (A1, A2, V1 e V2 pedem um
+    companheiro a ≤ `CENA_CARTAO.companheiro` m).
+  - Planos e tempos em `CENA_CARTAO.planos`: amarelo `arbitro → reacao → anota` (5,45 s); vermelho `arbitro → reacao →
+    saida → tunel → torcida` (8,9 s); 2º amarelo 9,9 s. O cartão no alto fica ≥ 1,0 s DENTRO do plano do árbitro (o do
+    vermelho direto vai até 2,0 s; o do 2º amarelo até 4,0 s, com a reação, a saída e o túnel mais curtos). Só o capitão e o
+    punido a < `ifab` m do árbitro (A1, V2).
+  - A bola parada do mundo (a página a desenha no lugar do apito): ninguém da cena passa por cima dela — o centro de cada
+    ator fica a ≥ `CENAS.bola` m dela (quem começou mais perto, no máximo onde estava: `marcarBola`/`separarDaBola`), o
+    desvio a contorna e o árbitro não para em cima dela.
+  - Depois da ELIPSE do túnel o companheiro fica no campo (para olhando o expulso sair). A lente do túnel tem candidatas a
+    mais (o V1 de 4,8 a 7,5 m atrás e até 3,2 m de lado; o V2/V3 com |x| de 4 a 10 m e z de 36,5 a 39 m); sem nenhuma livre,
+    a de maior folga até o ator mais perto (`melhorCamera`).
+  - O plano da torcida anda no trilho de torcida do pré-jogo (`prejogo-roteiro.js cameraDoPlano(id, s, out, ajuste)`); num
+    estádio de forma própria, o da planta dele (`planejarCartao` opc `ajustePlano` = `IDENT.forma3d.planta.ajustarPlano`, o
+    mesmo do `criarRoteiro` do pré-jogo).
+- **Página** (`main.js`):
+  - `decidirCartao(eventos)` no fim do `rodarPasso`, ANTES do `decidirSubst` (a substituição do mesmo passo espera na
+    fila). Só com as cenas ligadas, o módulo baixado, fora do online, do Livre, da disputa e da API dos testes
+    (`!emRodarPassos`). A simulação fica PARADA no tick do cartão (o laço não roda passo; nenhuma entrada vai ao mundo) e
+    volta no mesmo tick: o hash é o mesmo com e sem a cena.
+  - Ordem: falta → cartão (no tick do apito) → 1 s ao vivo → replay de parada (armado, `seguraParaReplayParada`) →
+    montagem → substituição; vantagem que virou gol → comemoração → cartão no gol + 149 (`cartaoGolNoPonto`, no topo da
+    volta do laço; a cortina da comemoração pulada para ali e a cena dela sai do desenho) → saída → replay do gol; replay do
+    impedimento → cartão (da fila; o mundo ainda está no tick do apito). Com um replay ou outra cena em andamento, o cartão
+    entra na fila (`{tipo: 'cartao'}` no `proximaCena`).
+  - Os treinadores vivos não andam nem são desenhados durante a cena (a cena desenha cópias): o 1º passo gravado depois
+    dela não vira corte no anel (`REPLAY.saltoTecnico`) e o replay da falta atravessa a cena inteiro.
+  - O estádio anda no relógio do desenho durante a cena (`render/emocao.js criarRelogioEstadio/relogioEstadio`:
+    `relEst.tSegurado`; a rede, o ânimo, a festa e o anel do replay usam o mesmo relógio; sem cena, o de antes).
+  - O desenho usa os atores da cena; o cartão 3D (`render/cartao3d.js`, 11 × 16 cm, 1 chamada só visível) vai na mão
+    DESENHADA do árbitro (`jog3d.poseDesenhada`: com `?corpo=humano`, a postura do desenho por cima); o vão das placas
+    (`render/vao-placas.js`, o mesmo do pré-jogo, que passou a importar dele) abre no plano do túnel; `jog3d.reservar` + 3.
+  - A tarja de identificação (`js/cenas-tela.js`): o cartão desenhado, a sigla, a cor e o escudo do time, o número e o
+    nome — nem motivo nem minuto; entra com o cartão no alto e sai com a cena (≤ `CENAS.tarja` s), nunca por cima da bola
+    rolando. É uma exceção escrita à "sem narração" (como a faixa ENTRA/SAI e o selo IMPEDIMENTO/POSIÇÃO LEGAL). O
+    `#cartao-icone` não aparece para quem teve a cena (nem antes nem depois dela); sem a cena, aparece como antes.
+  - TM "só o meu jogador" com o travado expulso: a faixa "Você foi expulso" espera a cena E o replay de parada daquela bola
+    morta (`expulsoPendente`, `talvezFaixaExpulso`) e os 6 s contam de quando ela aparece. Na vantagem que acaba em gol ela
+    espera também a comemoração, a cena do cartão no gol + 149 e o replay do gol (sai depois dele); no intervalo, o 2º tempo
+    (a faixa do intervalo fica); no fim de jogo ela não sai (fica a do fim, com o "Voltar ao Total Match"); com a cena de
+    substituição, espera ela.
+  - A comemoração que a cena do cartão tira do desenho no gol + 149 continua valendo para a entrada: o passo da saída
+    (gol + 150) vai com a entrada NEUTRA (`golNeutro`), como com a comemoração sem a cena — a mesma entrada por tick com e
+    sem a cena (um botão segurado do gol até depois da cena não vira uma borda no passo da montagem).
+  - Pular: um aperto novo (tecla, botão, clique, toque; a camada `#cena` com o "Pular" no toque) depois de
+    `CENAS.pularDepois` → cortina e corte de volta ao vivo. Pulada ANTES de o cartão subir (`tempos.alto`: nem a tarja nem
+    o cartão 3D apareceram), o `#cartao-icone` de sempre volta em cima de quem levou (a janela de `FALTAS.icone` inteira:
+    o mundo ainda está no tick do cartão). Pausa, aba escondida e celular em pé congelam a cena.
+  - A tarja: no PC `max-width: min(520px, 100vw − as margens − 80px)` (numa janela estreita o nome corta com reticências
+    dentro da tela); no toque, a conta de sempre (sem chegar ao "Pular").
+  - `?cenas=0|1` força; senão `prefs.cenas` ("Cenas <small>ligadas</small>" na linha das cenas do "Modo de jogo", ao lado
+    de Pré-jogo e Substituição); senão desligadas com webdriver, `?prints=1` e `?demo=1`; senão `CENAS.ligadas`. Online:
+    nunca (só o ícone de hoje). Sem o `SOB.cenas` baixado (cartão antes da pré-carga): o ícone de hoje, sem segurar.
+  - "Simular o resto", "Jogar de novo", "Reiniciar" e o mundo novo zeram a cena, o cartão da vantagem pendente, a tarja e
+    a faixa do expulso pendente (`descartarCartao`).
+  - `faltaDeTeste(opc)` aceita `segundo: true` (o 2º amarelo), passa pelo `decidirCartao` e devolve também `cena`.
+  - API `__golaco.cenas`: `{carregado, ligado, ligar(b | null), ativo, tipo, fila, estado ({tipo, fase, plano, tempo,
+    duracao, k, tick, id, time, cor, segundo, variante, apoio, motivo, planos, tempos, camera, tarja}), atores(), pular(),
+    forcarVariante(cor, v), cartaoDeTeste({id, cor, segundo}), cartao3d ({visivel, cor, x, y, z} | null), maoArbitro ({x, y,
+    z} | null), naTela(id | 'cartao'), tarja ({visivel, texto, cartoes, cor, sigla, num, nome, caixa} | null),
+    cartaoGolPendente, cartaoComCena, relogioEstadio, vao, expulsoPendente, custo, zerarCusto()}`;
+    `__golaco.sobDemanda.estado.cenas`.
+- **Testes:** `teste-cenas` (Node, padrão: A canhão de 144 cartões em estados do meio de partidas IA × IA, com as cópias
+  dos treinadores onde os vivos ficam — 6 s de `passoTecnicos` com o mundo parado —, a bola parada, o cartão no alto no
+  plano do árbitro e o companheiro depois da elipse; A-L 48 vermelhos na lateral de cá, z = 30; B variedade, E pureza, F
+  relógio do estádio, G custo, P o plano da torcida nos trilhos das plantas: Maracanã e 6 genéricos) e `teste-cenas-tela`
+  parte `cartao` (navegador, CI e deploy; C6b, C11b, C12b, C12c e o C4 em 560×400 desta revisão).
