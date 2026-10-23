@@ -29,7 +29,7 @@ A postura "curvada" de 22/10 já foi feita no #504, que está na main.
 
 ## FILA
 
-**Dono, 23/10: "vamos dividir por categorias"** — ele diz por qual categoria (A–I) seguir; nada começa sem o aval dele. Os pedidos de 23/10 entraram como os itens 57–63 (B, F e I).
+**Dono, 23/10: "vamos dividir por categorias"** — ele diz por qual categoria (A–I) seguir; nada começa sem o aval dele. Os pedidos de 23/10 entraram como os itens 57–64 (B, F e I).
 
 ### A. Cenas (dono, 22/10: "logo pra dps das faces")
 
@@ -99,6 +99,7 @@ A postura "curvada" de 22/10 já foi feita no #504, que está na main.
 | 58 | 23/10-pausa-fifa | Menu de pausa igual ao do FIFA (dono, 23/10: "não quero ele assim, quero ele igual ao do FIFA") | pendente: espera a foto de referência do dono | O desenho pela referência | Proposta pela foto, cabendo sem rolar em 844×390, 667×375 e 568×320 (teste-editor-tela, teste-hud-minimo), com os mesmos comandos de hoje; o TM (`?tm`) com a cara dele; teste-tm-tela | ~6 | não |
 | 59 | 23/10-minimapa | Minimapa embaixo, no meio (dono, 23/10: "o campinho que está lá em cima tem que ficar lá embaixo") | pendente. Hoje no alto, no meio | A posição | Embaixo no meio, entre o analógico e os botões, no celular e no PC; sem encostar no analógico, nos botões, no "Pular" nem nas faixas (gol, fim de jogo); libera a torcida do alto. teste-hud-minimo (H1 ≤ 11%, H3) e caso novo das caixas em 844×390, 667×375 e 568×320 | 1,5 | não |
 | 60 | 23/10-nome-cantos | O nome do jogador com a bola nos cantos de baixo, não em cima dele (dono, 23/10: "fica tapando e atrapalhando o jogo") | pendente. `main.js marcarCondutor` põe o `#nome-condutor` em cima do jogador (pedido de 17/10) | A posição por time | Time da casa com a bola: canto inferior esquerdo; time de fora: canto inferior direito; colado na borda, abaixo do analógico e dos botões, sem pegar toque. Junto com o 59 (a faixa de baixo simétrica). teste-hud-minimo e teste-controles | 1,5 | não |
+| 64 | 23/10-tela-prejogo | Tela antes do jogo, em QUALQUER modo, no nível da do EA FC (dono, 23/10, com print do FC: "quero que fique NESSE NÍVEL; só altere para o Total Match com cores e etc, mas é do mesmo nível") | pendente. Hoje: o pré-jogo cinematográfico (`render/prejogo.js`) e a escalação no campinho (`escalacao-tela.js`); não há uma tela de entrada da partida | A tela inteira | Referência (FC): barra de cima com os escudos, os uniformes e o horário; a linha estádio · data · árbitro · dificuldade · duração · clima; o campinho GRANDE em perspectiva com as cartas (foto/rosto, nota, nome) na formação e o selo da tática (ex.: pressão alta); as abas de baixo — Jogar partida, Visão tática, Personalizar (o Editar time) — e a linha dos comandos. Cara do TM (Inter, preto e verde, as cartas do TM). Em todo modo (partida, TM, Livre, Pênaltis, online) antes do pré-jogo; cabendo em 844×390, 667×375 e 568×320; teste de tela novo, teste-tm-tela e testar-3d | ~12 | não |
 
 ### G. O 3D no lugar da simulação (16/10) e a Etapa 4.4: prorrogação e pênaltis
 
