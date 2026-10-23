@@ -54,15 +54,17 @@ function estilo(seg) {
   const tem = (x, y) => (a === x && b === y) || (a === y && b === x);
   // raios r: [A, B] substituem os de SEGMENTOS só no desenho (quadril e pelve mais enxutos: a
   // calota da pelve e a do quadril não fazem mais um "volume" de fralda abaixo do calção)
-  if (tem('pelve', 'lombar')) return { achata: 0.74, pad: P.liso, c: ['calcao', 'pele', 'acento'], sup: false, r: [0.118, 0.13] };
+  // (a 3ª cor do calção e do meião — a listra da coxa e a faixa abaixo do joelho — é `acentoCalcao`, que cai no `acento` do
+  // uniforme quando falta: os de sempre não mudam; o kit misto da troca de camisa a leva do dono do calção, não da camisa)
+  if (tem('pelve', 'lombar')) return { achata: 0.74, pad: P.liso, c: ['calcao', 'pele', 'acentoCalcao'], sup: false, r: [0.118, 0.13] };
   if (tem('lombar', 'peito')) return { achata: 0.68, pad: P.tronco, c: ['camisa', 'pele', 'acento'], sup: true };
   if (tem('peito', 'pescoco')) return { achata: 0.78, pad: P.gola, c: ['camisa', 'pele', 'acento'], sup: true };
   if (tem('ombroE', 'ombroD')) return { achata: 0.85, pad: P.liso, c: ['camisa', 'pele', 'acento'], sup: true };
   // manga: a cor da manga do uniforme (`manga`; os uniformes sem ela caem na camisa em escreverCores)
   if (/^ombro/.test(a) && /^cotovelo/.test(b)) return { achata: 1, pad: P.manga, c: ['manga', 'pele', 'acento'], sup: true };
-  if (tem('quadrilE', 'quadrilD')) return { achata: 0.84, pad: P.liso, c: ['calcao', 'pele', 'acento'], sup: false, r: [0.088, 0.088] };
-  if (/^quadril/.test(a) && /^joelho/.test(b)) return { achata: 1, pad: P.coxa, c: ['calcao', 'pele', 'acento'], sup: false };
-  if (/^joelho/.test(a) && /^tornozelo/.test(b)) return { achata: 1, pad: P.meiao, c: ['meiao', 'pele', 'acento'], sup: false };
+  if (tem('quadrilE', 'quadrilD')) return { achata: 0.84, pad: P.liso, c: ['calcao', 'pele', 'acentoCalcao'], sup: false, r: [0.088, 0.088] };
+  if (/^quadril/.test(a) && /^joelho/.test(b)) return { achata: 1, pad: P.coxa, c: ['calcao', 'pele', 'acentoCalcao'], sup: false };
+  if (/^joelho/.test(a) && /^tornozelo/.test(b)) return { achata: 1, pad: P.meiao, c: ['meiao', 'pele', 'acentoCalcao'], sup: false };
   if (/^tornozelo/.test(a) && /^ponta/.test(b)) return { achata: 0.8, pad: P.chuteira, c: ['chuteira', 'pele', 'sola'], sup: false };
   const sup = !/quadril|joelho|tornozelo|ponta|pelve/.test(a + b);
   return { achata: 1, pad: P.liso, c: [parte, 'pele', 'acento'], sup };
@@ -418,7 +420,8 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
     const camada = humano && perfil?.chave ? humano.camadaDe(perfil.chave) : 0;
     const peleReal = humano && perfil?.chave ? humano.peleDe(perfil.chave) : null;
     const pele = peleReal ? new THREE.Color(peleReal) : pelesLin[Math.floor(sorteio(jg.id, 1) * pelesLin.length)];
-    const num = jg.num ?? perfil?.num ?? (jg.id > 0 && jg.id % 100 > 0 && jg.id % 100 < 100 ? jg.id % 100 : 0);
+    // (o kit misto da troca de camisa traz o número do dono da camisa: kb.num)
+    const num = kb.num ?? jg.num ?? perfil?.num ?? (jg.id > 0 && jg.id % 100 > 0 && jg.id % 100 < 100 ? jg.id % 100 : 0);
     const ch = `${nome}|${jg.id}|${jg.goleiro ? 1 : 0}|${jg.tecnico ? 1 : 0}|${camada}`;
     let L = linhasKit.get(ch);
     if (L) return L;
@@ -485,7 +488,33 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
   const NOMES_KIT = Object.keys(KITS);
   const IDX_KIT = Object.fromEntries(NOMES_KIT.map((k, i) => [k, i]));
   const PADRAO_KIT = [[IDX_KIT.linha0, IDX_KIT.goleiro0], [IDX_KIT.linha1, IDX_KIT.goleiro1]];
-  const kitIdx = jg => IDX_KIT[jg.kit] ?? PADRAO_KIT[jg.time === 1 ? 1 : 0][jg.goleiro ? 1 : 0];
+  // o kit MISTO da troca de camisa (a cena do pós-jogo; PLANO-CENAS.md §5.2, R19): `troca:<camisa>:<resto>:<num>` = a camisa
+  // (as cores, o padrão, o número e os patrocínios dela — a versão de teste da edição pro) do kit <camisa> com o calção, o
+  // meião, a chuteira (e o patrocínio do calção) do <resto> e o número <num> (o do dono da camisa). Registrado na 1ª vez que
+  // aparece (um por jogador do par: 2 por partida); SEM chamada a mais — no manequim as cores são atributos por instância,
+  // no corpo novo uma linha da textura dos uniformes (humano3d.js tKits).
+  const CAMPOS_CAMISA = ['camisa', 'segunda', 'camisa2', 'manga', 'gola', 'punho', 'acabamento', 'numero', 'acento', 'padrao', 'padraoN', 'padraoLargura', 'mangaPadrao'];
+  const mistos = new Map(); // nome → [camisa, resto, num]
+  function brutoMisto(camisa, resto, num) {
+    const A = kitsBrutos[camisa] ?? KITS.linha0, B = kitsBrutos[resto] ?? KITS.linha1;
+    const k = { ...B };
+    for (const c of CAMPOS_CAMISA) { if (A[c] !== undefined) k[c] = A[c]; else delete k[c]; }
+    const dA = (A.decais ?? []).filter(d => d.pos !== 'calcao'), dB = (B.decais ?? []).filter(d => d.pos === 'calcao');
+    if (dA.length || dB.length) k.decais = [...dA, ...dB]; else delete k.decais;
+    if (Number.isFinite(num) && num > 0) k.num = num; else delete k.num;
+    // (a listra do calção e a faixa do meião com o acento do dono do calção: estilo() `acentoCalcao`)
+    const acB = B.acentoCalcao ?? B.acento;
+    if (acB !== undefined) k.acentoCalcao = acB; else delete k.acentoCalcao;
+    return k;
+  }
+  function registrarMisto(nome) {
+    const p = nome.split(':');
+    const k = brutoMisto(p[1], p[2], +p[3]);
+    if (IDX_KIT[nome] == null) { IDX_KIT[nome] = NOMES_KIT.length; NOMES_KIT.push(nome); }
+    kitsBrutos[nome] = k; kitsLin[nome] = linKit(k); mistos.set(nome, [p[1], p[2], +p[3]]);
+    return IDX_KIT[nome];
+  }
+  const kitIdx = jg => IDX_KIT[jg.kit] ?? (typeof jg.kit === 'string' && jg.kit.startsWith('troca:') ? registrarMisto(jg.kit) : PADRAO_KIT[jg.time === 1 ? 1 : 0][jg.goleiro ? 1 : 0]);
   const pelesLin = PELES.map(h => new THREE.Color(h));
   const cabelosLin = CABELOS.map(h => new THREE.Color(h));
   const vagaDe = new Map(); // vaga → chave (id, time, goleiro) das cores escritas
@@ -588,9 +617,25 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
      * cache por vaga não muda de tamanho) — e reescreve as cores de todas as vagas no próximo quadro.
      */
     definirKits(mapa) {
-      for (const [k, kit] of Object.entries(mapa || {})) if (kit && IDX_KIT[k] != null) { kitsLin[k] = linKit(kit); kitsBrutos[k] = kit; }
+      for (const [k, kit] of Object.entries(mapa || {})) if (kit && IDX_KIT[k] != null && !k.startsWith('troca:')) { kitsLin[k] = linKit(kit); kitsBrutos[k] = kit; }
+      // (os mistos da troca de camisa saem das bases novas)
+      for (const [nome, [a, b, n]] of mistos) { const k = brutoMisto(a, b, n); kitsBrutos[nome] = k; kitsLin[nome] = linKit(k); }
       vagaDe.clear();
       linhasKit.clear();
+    },
+    /**
+     * As cores escritas no manequim de quem foi desenhado no último quadro (os testes: o kit misto da troca de camisa) —
+     * {tronco, calcao, listra (a 3ª cor da coxa), meiao, faixa (a 3ª do meião)} em RGB linear, ou null.
+     */
+    coresDe(id) {
+      const L = ultimaLista;
+      if (!L || !aC1) return null;
+      const p = L.findIndex(jg => jg.id === id);
+      if (p < 0) return null;
+      const seg = pad => ESTILOS.findIndex(e => e.pad === pad);
+      const rgb = (attr, s) => { const i = p * NSEG + s; return [attr.getX(i), attr.getY(i), attr.getZ(i)]; };
+      const sT = seg(P.tronco), sC = seg(P.coxa), sM = seg(P.meiao);
+      return { tronco: rgb(aC1, sT), calcao: rgb(aC1, sC), listra: rgb(aC3, sC), meiao: rgb(aC1, sM), faixa: rgb(aC3, sM) };
     },
     /** O corpo humano (?corpo=humano): pronto, erro, triângulos do último quadro, níveis em uso. */
     /**
@@ -625,7 +670,9 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
       for (let p = 0; p < nj; p++) {
         const jg = lista[p];
         // cores fixas por vaga (só reescreve quando a vaga muda de dono/time/função/uniforme)
-        const chave = ((jg.id * 8 + kitIdx(jg)) * 2 + (jg.time === 1 ? 1 : 0)) * 2 + (jg.goleiro ? 1 : 0);
+        // (o índice do uniforme por fora do id: os mistos da troca de camisa só crescem — a cada "Jogar de novo" um par novo —
+        // e com 64 por id o 65º colidia com o id seguinte, a cor não era reescrita)
+        const chave = kitIdx(jg) * 1e7 + jg.id * 4 + (jg.time === 1 ? 2 : 0) + (jg.goleiro ? 1 : 0);
         if (vagaDe.get(p) !== chave) { vagaDe.set(p, chave); escreverCores(p, jg); }
         const est = estilosDe(jg);
         const pose = jg.pose;

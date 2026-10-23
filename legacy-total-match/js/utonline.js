@@ -188,7 +188,7 @@
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, settings: settings,
       title: "Ultimate Online · " + (sq.owner || "Jogador"),
-      pauseSide: 0, simOpts: simOpts, formation: teamA.formation, formationB: teamB.formation,
+      pauseSide: 0, simOpts: simOpts, formation: teamA.formation, formationB: teamB.formation, empateContinua: false,
       onBack: function () { TM.ui.go("ut-online-list"); },
       onDone: function () {
         var hs = result.score[0], as = result.score[1];

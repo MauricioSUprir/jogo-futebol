@@ -187,7 +187,23 @@
       estadio: st && st.name ? { nome: st.name, capacidade: st.capacity || 0, foto: abs(foto) } : null
     };
   }
-  // contexto da partida (v2): mando neutro, público (0,1–1) e clássico, pelo simOpts do modo
+  // o empate desta partida CONTINUA no TM (prorrogação ou pênaltis)? o.empateContinua do modo: true/false, ou uma função
+  // (gols da casa, gols de fora) → o modo iria a prorrogação/pênaltis com esse empate (a ida e volta depende do placar). Com a
+  // função: true/false quando todo empate de 0×0 a 6×6 dá a mesma resposta; senão (ou sem o campo) undefined — o 3D usa a
+  // versão curta da cena do pós-jogo no empate, que serve nos dois casos (golaco/PLANO-CENAS.md §5.2)
+  function empateContinuaDe(v) {
+    if (typeof v === "boolean") return v;
+    if (typeof v !== "function") return undefined;
+    var r = null;
+    for (var g = 0; g <= 6; g++) {
+      var x;
+      try { x = !!v(g, g); } catch (e) { return undefined; }
+      if (r === null) r = x; else if (r !== x) return undefined;
+    }
+    return r;
+  }
+  // contexto da partida (v2): mando neutro, público (0,1–1) e clássico, pelo simOpts do modo; empateContinua (o empate vai a
+  // prorrogação/pênaltis no TM: a cena do pós-jogo curta) só quando o modo sabe
   function partidaDe(o, home, away) {
     var so = o.simOpts || {}, a = o.teamA || {}, b = o.teamB || {}, ca = a.club || null, cb = b.club || null, D = TM.data || {};
     var classico = so.derby != null ? !!so.derby : false;
@@ -195,8 +211,11 @@
     var nomeCl = null;
     try { if (classico && ca && cb && D.derbyName) nomeCl = D.derbyName(ca.id, cb.id) || null; } catch (e) {}
     var pub = typeof so.crowd === "number" && isFinite(so.crowd) ? Math.max(0.1, Math.min(1, so.crowd)) : 0.75;
-    return { neutro: !!so.neutral, publico: Math.round(pub * 100) / 100, classico: classico, nomeClassico: nomeCl,
+    var r = { neutro: !!so.neutral, publico: Math.round(pub * 100) / 100, classico: classico, nomeClassico: nomeCl,
              competicao: o.title || "", estadio: so.neutral ? null : (home.identidade && home.identidade.estadio) || null };
+    var ec = empateContinuaDe(o.empateContinua);
+    if (ec !== undefined) r.empateContinua = ec;
+    return r;
   }
   /* time = time do motor do TM ({ id, name, short?, players, club?, nation?, colors?, kitVariant? }) */
   function time3d(time, formacao) {
@@ -479,7 +498,7 @@
   }
   function jogarCfg(screen, cfg, playOrig) {
     var pedido = novoPedido({ teamA: cfg.teamA, teamB: cfg.teamB, formation: cfg.formation, formationB: cfg.formationB,
-      userSide: cfg.pauseSide === 1 ? 1 : 0, controle: cfg.controle, title: cfg.title, simOpts: cfg.simOpts });
+      userSide: cfg.pauseSide === 1 ? 1 : 0, controle: cfg.controle, title: cfg.title, simOpts: cfg.simOpts, empateContinua: cfg.empateContinua });
     abre3d(pedido, {
       fim: function (r3) {
         aplicaResultado(cfg.result, r3, cfg.teamA, cfg.teamB);
@@ -515,6 +534,7 @@
   api.time3d = time3d;
   api.novoPedido = novoPedido;
   api.aplicaResultado = aplicaResultado;
+  api.empateContinuaDe = empateContinuaDe;
   api.jogarCfg = jogarCfg;
   api.jogar3d = jogar3d;
   api.jogarPenaltis = jogarPenaltis;

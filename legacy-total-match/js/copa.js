@@ -503,7 +503,7 @@
       var result = TM.engine.simulate(ta, tb, simOpts);
       TM.matchview.play(screen, {
         teamA: ta, teamB: tb, result: result, title: nomeRodada(v.chave.size, j.r) + " · Copa " + s.code,
-        pauseSide: meuLado, simOpts: simOpts,
+        pauseSide: meuLado, simOpts: simOpts, empateContinua: true,
         onBack: function () { TM.ui.go("copa-chave"); },
         onDone: function () {
           var ga = result.score[0], gb = result.score[1], pen = null, vencedor;

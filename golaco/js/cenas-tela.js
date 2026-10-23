@@ -9,10 +9,15 @@
 // de transmissão, outra exceção escrita à "sem narração") e o PAINEL DE ESTATÍSTICAS (só rótulos e números, sem frase:
 // wTVision). As duas só dentro da cena; no online (sem cena) a tarja do placar só nos 3 s da faixa do intervalo, com o
 // mundo parado (R10), no centro, embaixo da faixa (o analógico fica embaixo à esquerda).
+// PR 4 (o pós-jogo; PLANO-CENAS.md §5.1, §7.4): a TARJA DO MELHOR EM CAMPO (escudo e sigla do time, o número, o nome, o
+// rótulo "Melhor em campo" e a nota com uma casa — a do resultado do TM; outra exceção escrita à "sem narração": é a
+// identificação da transmissão, como a do cartão), só no plano 'melhor' da cena; a tarja do placar final e o painel da
+// partida são os do intervalo (o título "Partida").
 // Sob demanda (main.js SOB.cenas, com o css/cenas.css): fora do download inicial. Nada escrito no mundo; texto sempre por
 // textContent (nunca HTML de nome).
-//   criarTelaCenas({raiz}) → {tarja(dados | null), placar(dados | null), estatisticas(dados | null), estado(), caixa(),
-//     caixas()}
+//   criarTelaCenas({raiz}) → {tarja(dados | null), placar(dados | null), estatisticas(dados | null), melhor(dados | null),
+//     estado(), caixa(), caixas()}
+//   melhor: dados = {sigla, nomeTime, cor1, cor2, escudo, num, nome, curto, nota (número: 8.4 → "8,4")}
 //   tarja: dados = {cor: 'amarelo' | 'vermelho', segundo, sigla, nomeTime, cor1 (a cor do time), cor2 (o texto por cima
 //          dela), escudo (o href do <symbol> do escudo, ex. '#escudo-golaco'), num, nome, curto}
 //   placar: dados = {times: [{sigla, nome, escudo, cor1, cor2}, …], gols: [a, b], autores: {0: [{nome, gols: [{minuto,
@@ -28,6 +33,8 @@ export function textoAutor(a) {
   const mins = (a.gols ?? []).map(g => `${g.minuto}'${g.contra ? ' (c)' : g.penalti ? ' (p)' : ''}`);
   return `${a.nome ?? ''} ${mins.join(', ')}`.trim();
 }
+/** A nota da tarja do melhor em campo: uma casa, com vírgula ("8,4"). Puro. */
+export function textoNota(n) { return Number.isFinite(n) ? n.toFixed(1).replace('.', ',') : ''; }
 /** Os rótulos do painel de estatísticas (só rótulos e números). */
 export const ROTULOS_EST = { posse: 'Posse de bola', chutes: 'Finalizações', noAlvo: 'No alvo', escanteios: 'Escanteios', faltas: 'Faltas', cartoes: 'Cartões' };
 
@@ -103,6 +110,23 @@ export function criarTelaCenas(opc = {}) {
   raiz.append(pe);
   let atualEst = null;
   const linhasTexto = [];
+
+  // ---- a tarja do melhor em campo (PR 4): o mesmo molde da do cartão (lower third), com o rótulo e a nota
+  const tm = document.createElement('div');
+  tm.className = 'tarja-cena tarja-melhor'; tm.id = 'tarja-melhor'; tm.dataset.caixa = 'tarja-melhor';
+  tm.setAttribute('role', 'status'); tm.setAttribute('aria-live', 'polite'); tm.hidden = true;
+  const tmSr = document.createElement('span'); tmSr.className = 'tc-sr';
+  const tmTime = blocoTime('tc-time');
+  const tmNum = document.createElement('b'); tmNum.className = 'tc-num'; tmNum.setAttribute('aria-hidden', 'true');
+  const tmTexto = document.createElement('span'); tmTexto.className = 'tm-texto'; tmTexto.setAttribute('aria-hidden', 'true');
+  const tmNome = document.createElement('span'); tmNome.className = 'tc-nome tc-nome-completo';
+  const tmCurto = document.createElement('span'); tmCurto.className = 'tc-nome tc-nome-curto';
+  const tmRot = document.createElement('span'); tmRot.className = 'tm-rotulo'; tmRot.textContent = 'Melhor em campo';
+  tmTexto.append(tmNome, tmCurto, tmRot);
+  const tmNota = document.createElement('b'); tmNota.className = 'tm-nota'; tmNota.setAttribute('aria-hidden', 'true');
+  tm.append(tmSr, tmTime.el, tmNum, tmTexto, tmNota);
+  raiz.append(tm);
+  let atualMelhor = null;
 
   const vis2 = e => !e.hidden && e.getClientRects().length > 0 && getComputedStyle(e).display !== 'none';
   const caixaDe = e => { if (e.hidden) return null; const r = e.getBoundingClientRect(); return r.width > 0 ? { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom } : null; };
@@ -202,10 +226,32 @@ export function criarTelaCenas(opc = {}) {
       pe.hidden = false;
       pe.classList.remove('visivel'); void pe.offsetWidth; pe.classList.add('visivel');
     },
+    /** A tarja do melhor em campo (dados) ou nada (null). Escreve no DOM só quando muda. */
+    melhor(d) {
+      if (!d) {
+        if (!tm.hidden) { tm.hidden = true; tm.classList.remove('visivel'); }
+        atualMelhor = null;
+        return;
+      }
+      const chave = `${d.sigla}|${d.escudo}|${d.cor1}|${d.num}|${d.nome}|${d.curto}|${d.nota}`;
+      if (chave === atualMelhor && !tm.hidden) return;
+      atualMelhor = chave;
+      pintarTime(tmTime, d);
+      tm.style.setProperty('--cor-time', d.cor1 || '');
+      if (!d.cor1) tm.style.removeProperty('--cor-time');
+      tmNum.textContent = d.num != null && d.num !== '' ? String(d.num) : '';
+      tmNome.textContent = d.nome ?? '';
+      tmCurto.textContent = d.curto ?? d.nome ?? '';
+      tmNota.textContent = textoNota(d.nota);
+      tmSr.textContent = `Melhor em campo: ${tmNum.textContent ? tmNum.textContent + ' ' : ''}${d.nome ?? ''}${d.nomeTime ? ` (${d.nomeTime})` : ''}, nota ${tmNota.textContent}`;
+      tm.hidden = false;
+      tm.classList.remove('visivel'); void tm.offsetWidth; tm.classList.add('visivel');
+    },
     /**
-     * As caixas na tela (px CSS) de cada peça visível (testes: nada encosta): {tarja, placar, estatisticas} — null escondida.
+     * As caixas na tela (px CSS) de cada peça visível (testes: nada encosta): {tarja, placar, estatisticas, melhor} — null
+     * escondida.
      */
-    caixas() { return { tarja: caixaDe(el), placar: caixaDe(tp), estatisticas: caixaDe(pe) }; },
+    caixas() { return { tarja: caixaDe(el), placar: caixaDe(tp), estatisticas: caixaDe(pe), melhor: caixaDe(tm) }; },
     /** Estado (testes): {visivel, texto (o que a tela mostra), cartoes, sigla, num, nome, placar, estatisticas}. */
     estado() {
       const vis = !el.hidden && el.getClientRects().length > 0;
@@ -219,6 +265,10 @@ export function criarTelaCenas(opc = {}) {
           autores: [[...tpA0.children].map(e => e.textContent), [...tpA1.children].map(e => e.textContent)], online: tp.classList.contains('online'),
         },
         estatisticas: { visivel: vis2(pe), titulo: peTit.textContent, linhas: linhasTexto.map(l => ({ ...l })) },
+        melhor: {
+          visivel: vis2(tm), sigla: tmTime.sigla.textContent, num: tmNum.textContent, rotulo: tmRot.textContent, nota: tmNota.textContent,
+          nome: [tmNome, tmCurto].find(e => getComputedStyle(e).display !== 'none')?.textContent ?? '',
+        },
       };
     },
     /** A caixa na tela (px CSS) ou null escondida. */
@@ -228,6 +278,6 @@ export function criarTelaCenas(opc = {}) {
       return r.width > 0 ? { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom } : null;
     },
     get elemento() { return el; },
-    get elementos() { return { tarja: el, placar: tp, estatisticas: pe }; },
+    get elementos() { return { tarja: el, placar: tp, estatisticas: pe, melhor: tm }; },
   };
 }

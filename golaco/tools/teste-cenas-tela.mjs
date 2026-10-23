@@ -42,13 +42,38 @@
 //   console sem erros.
 // Na versão sem as cenas (--raiz <cópia da base>) reprova C1–C6, C8, C9, C11 e C12 (só o ícone de hoje; a faixa do expulso
 // sai no apito); C7 e C10 passam lá (não têm o que medir: rev. R16) e ficam de guarda.
-//   node tools/teste-cenas-tela.mjs [--raiz <pasta do jogo>] [--so A,H,R,C,U,L,G,T,I] [--capturas <pasta>]
+//   node tools/teste-cenas-tela.mjs [--raiz <pasta do jogo>] [--so A,H,R,C,U,L,G,T,I,F,FC,FU,FT,FO] [--capturas <pasta>]
 //   (A = PC 1280×720: C1–C6; H = hash com × sem a cena: C7 e o ícone com ?cenas=0; R = replay de parada: C9; C = celular
 //   844×390 Média: C3–C5, C8, C10; U = celular com ?corpo=humano: C3, C8; L = 667×375 e 568×320: C4; G = gol: C11;
 //   T = Total Match: C12; I = o intervalo (PR 3): I1–I8, I11, I12 — a cena ativa no apito do 1º tempo com o tick parado até
 //   o geral, a tarja do placar com os autores da súmula, os lances do guardador dentro da cena, as estatísticas = súmula,
 //   o hash do 2º tempo igual ao de ?cenas=0, o toque/Pular, a pausa, nada encostando em 844×390/568×320, o apito no plano
 //   do apito e o campo vazio no geral)
+// O PÓS-JOGO (PR 4; PLANO-CENAS.md §5.6; partidas de 2 × 1 min levadas até 40 passos do apito final pela API dos testes —
+// rodarPassos, nenhuma cena no caminho — e o resto pelo laço da página; o placar escrito no mundo nos desfechos forçados):
+//   F (PC 1280×720): F1 a cena começa no apito final (o tick do 'fimDeJogo') com os planos e as durações de cada desfecho
+//      (vitória 36 s, empate 33,5 s; a partida de verdade com um gol roteirizado, a derrota 0–1 e o empate 1–1) e, com o gol
+//      no último lance, depois do replay dele, no mesmo tick; F2 o mundo.tick e o hash parados do apito até a faixa final (e
+//      nela); F3 a tarja do placar final = o placar e os autores da súmula, o painel = as estatísticas da partida, cada um só
+//      no plano dele, nunca dois juntos, nenhum outro texto; F4 a tarja do melhor em campo = sumula.melhorEmCampo (= o argmax
+//      da nota calculado no teste), a ficha e a nota com uma casa, e o close dele; F5 a faixa final com "Jogar de novo" e
+//      "Melhores momentos" (os lances do guardador tocam com o mundo parado e voltam à faixa; um aperto pula o lance; "Jogar de
+//      novo" zera a cena); F5b a troca de camisa (o par de linha com o kit misto; o peito na captura pela camisa do outro);
+//      F6 Enter = o próximo bloco (não antes de 0,5 s); F10 só as cópias dos treinadores na cena (os vivos parados) e, com o
+//      gol no último lance, o apito final pedido no plano do apito (R6);
+//   FC (celular 844×390 Média e 568×320): F1; F6 o toque = o próximo bloco, o "Pular" = a faixa final; F8 as tarjas e a faixa
+//      final (os dois botões) sem encostar em nada e dentro da tela, ≤ 40 chamadas e ≤ 130 mil triângulos no pior plano e a
+//      troca de camisa sem chamada a mais (com × ?troca=0);
+//   FU (celular, ?corpo=humano): F9 o corpo novo pronto, ≤ 40 chamadas, ≤ 130 mil triângulos e os jogadores ≤ 60 mil; a troca
+//      de camisa no corpo novo (o peito na captura) e sem chamada a mais (com × ?troca=0);
+//   FT (Total Match, pedido A): F7 o resultado no localStorage no 1º quadro da cena (com o "melhor" = o da tarja), sem as
+//      estatísticas (vitória 30 s), "Voltar ao Total Match" na faixa e o "tm3d:fim" só no clique; o empate sem
+//      "empateContinua" = o curto (14,5 s); com "empateContinua: false", o empate inteiro sem as estatísticas e, no celular, o
+//      "Pular" leva à faixa com o "Voltar ao Total Match";
+//   FO (online, duas abas pelo BroadcastChannel): F1 a cena roda nas duas sem segurar o laço; F2 no fim só o tick anda (o hash
+//      sem o tick igual nas duas e no tempo; nenhuma dessincronia).
+// Na base sem o pós-jogo (a3821da7: os 22 congelados e só a faixa) reprovam F1, F3–F10 e o F2 fora do online (o tick anda no
+// 'fim'); o F2 do online passa lá (sem cena o lockstep também segue) e fica de guarda.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -72,7 +97,7 @@ const erroCurto = e => String(e?.message ?? e).replace(/\x1b\[[0-9;]*m/g, '').sp
 const errosTodos = [];
 const marcas = [];
 const marcar = n => marcas.push([n, Date.now()]);
-const { PED_C } = await import(pathToFileURL(path.join(AQUI, 'lib/pedidos-tm.mjs')).href);
+const { PED_A, PED_C } = await import(pathToFileURL(path.join(AQUI, 'lib/pedidos-tm.mjs')).href);
 
 // o que a cena tem de ser (PLANO-CENAS.md §3.1: os planos e as durações; não lidos do módulo medido)
 const PLANOS = {
@@ -122,7 +147,22 @@ async function pixel(pg, x, y) {
     return m;
   }, { src: png.toString('base64'), x, y });
 }
-const capturar = async (pg, nome) => { if (pastaCap) await pg.screenshot({ path: path.join(pastaCap, nome + '.png') }); };
+const capturar = async (pg, nome) => { if (pastaCap) await pg.screenshot({ path: path.join(pastaCap, nome + '.png'), timeout: 180000 }); };
+/** Os pixels (média 3×3) de vários pontos [x, y] px CSS numa captura só (o pós-jogo: a captura do Chromium sem GPU é lenta). */
+async function pixels(pg, pts) {
+  const png = await pg.screenshot({ type: 'png', timeout: 180000 });
+  return pg.evaluate(async ({ src, pts }) => {
+    const i = new Image(); i.src = 'data:image/png;base64,' + src; await i.decode();
+    const c = document.createElement('canvas'); c.width = i.width; c.height = i.height;
+    const k = c.getContext('2d'); k.drawImage(i, 0, 0);
+    const s = i.width / window.innerWidth;
+    return pts.map(([x, y]) => {
+      const d = k.getImageData(Math.round(x * s) - 1, Math.round(y * s) - 1, 3, 3).data;
+      const m = [0, 0, 0]; for (let q = 0; q < 9; q++) for (let ch = 0; ch < 3; ch++) m[ch] += d[q * 4 + ch] / 9;
+      return m;
+    });
+  }, { src: png.toString('base64'), pts });
+}
 
 /**
  * Ajudantes na página (window.__ct): visibilidade de verdade (display/visibility/opacidade dos ancestrais e caixa), o ícone
@@ -850,6 +890,9 @@ function htmlQuadro(pedido, q) {
 <script>
 localStorage.setItem('tm3d:pedido:' + ${id}, ${json});
 localStorage.removeItem('tm3d:resultado:' + ${id});
+// (as mensagens do jogo para o TM: o pós-jogo confere que o 'tm3d:fim' só sai no clique)
+window.__msgs = [];
+addEventListener('message', e => { const q = document.getElementById('q'); if (e.origin === location.origin && q && e.source === q.contentWindow) window.__msgs.push(e.data); });
 const f = document.createElement('iframe');
 f.id = 'q'; f.src = 'index.html?tm=' + encodeURIComponent(${id}) + '&${q}';
 f.allow = 'fullscreen; autoplay; gamepad';
@@ -1010,7 +1053,7 @@ async function rodadaIntervalo(pg, o) {
     const sons0 = { ...g.estadio.sonsPedidos };
     const r = { cena: false, fases: [], tickMudou: 0, tick0: null, placar: [m.placar[0], m.placar[1]], lances: g.cenas?.lances?.length ?? null,
       tarjaPlacar: 0, tarjaTexto: null, est: 0, estLinhas: null, replayLance: 0, cenaDuranteLance: 0, geralVazio: 0, geral: 0,
-      pausaParada: null, proximo: null, pulou: null, fimTick: null, tempo2: null, caixas: [], apitoNoApito: null, quadros: 0 };
+      pausaParada: null, proximo: null, pulou: null, fimTick: null, tempo2: null, caixas: [], apitoNoApito: null, quadros: 0, segura: null };
     let q = 0, ultimaFase = null, viuApito = false;
     for (; q < 40000; q++) {
       ct.quadro(false);
@@ -1025,6 +1068,17 @@ async function rodadaIntervalo(pg, o) {
         r.fases.push(e.fase); ultimaFase = e.fase;
         if (e.fase === 'campo' && o.proximo && r.proximo == null) { g.cenas.proximo(); r.proximo = g.cenas.estado?.fase ?? 'acabou'; }
         if (e.fase === 'campo' && o.pular && r.pulou == null) { g.cenas.pular(); r.pulou = { fase: g.cenas.estado?.fase ?? 'acabou', ativo: g.cenas.ativo }; }
+        // (revisão) K SEGURADO o.segura quadros nas estatísticas = um bloco só (o geral): antes um bloco por quadro — do geral
+        // ia também à saída (pularFim)
+        if (e.fase === 'estatisticas' && o.segura && r.segura == null) {
+          const ev = t => window.dispatchEvent(new KeyboardEvent(t, { code: 'KeyK', key: 'k' }));
+          ev('keydown');
+          for (let k = 0; k < o.segura; k++) ct.quadro(false);
+          ev('keyup');
+          ct.quadro(false);
+          const e2 = g.cenas.ativo ? g.cenas.estado : null;
+          r.segura = { ativo: !!g.cenas.ativo, fase: e2?.fase ?? 'acabou', rapido: e2?.rapido ?? null };
+        }
         if (e.fase === 'tunel' && o.pausa && r.pausaParada == null) {
           const t0 = e.tempo; g.pausar(true);
           for (let k = 0; k < o.pausa; k++) ct.quadro(false);
@@ -1064,7 +1118,7 @@ if (roda('I')) try {
   if (!GOL) throw new Error('nenhuma semente com gol no 1º tempo');
   const url = c => `?q=baixa&hora=dia&semente=${GOL.semente}&demo=1&cenas=${c}&prejogo=0&comemoracao=0&replay=0&replayParada=0&substituicao=0`;
   const P1 = await pagina('I1', url(1));
-  let a, b, c, d, z;
+  let a, b, c, d, z, sg;
   try {
     // (o alvo: 25 s depois do fim do 1º tempo — o intervalo de 3 s e o começo do 2º tempo)
     a = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo: null, pausa: 30 });
@@ -1072,6 +1126,7 @@ if (roda('I')) try {
     a = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo, pausa: 30 });
     c = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo, proximo: true });
     d = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo, pular: true });
+    sg = await rodadaIntervalo(P1.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo, segura: 6 });
     const P0 = await pagina('I0', url(0));
     try { b = await rodadaIntervalo(P0.pagina, { semente: GOL.semente, golTick: GOL.golTick, alvo }); } finally { await P0.fechar(); }
   } finally { await P1.fechar(); }
@@ -1103,6 +1158,9 @@ if (roda('I')) try {
   meta('I6 o toque no campo = o próximo bloco; o Pular = a saída do 2º tempo (o mesmo hash)',
     `toque: campo → ${c.proximo ?? '-'}; pular: ${d.pulou ? (d.pulou.ativo ? `fase ${d.pulou.fase}` : 'acabou') : '-'}, 2º tempo ${d.tempo2}; hash ${c.hash === a.hash ? 'igual' : 'DIFERENTE'} / ${d.hash === a.hash ? 'igual' : 'DIFERENTE'}`,
     'o bloco seguinte; geral/saída; iguais', c.proximo != null && c.proximo !== 'campo' && d.pulou != null && (!d.pulou.ativo || d.pulou.fase === 'geral') && d.tempo2 && c.hash === a.hash && d.hash === a.hash);
+  meta('I6b (revisão) um botão de jogo segurado (K, 6 quadros) nas estatísticas = um bloco só (o geral, sem ir também à saída); o mesmo hash',
+    sg?.segura ? `estatisticas → ${sg.segura.ativo ? sg.segura.fase : 'a cena ACABOU'} (pulado ${sg.segura.rapido}); hash ${sg.hash === a.hash ? 'igual' : 'DIFERENTE'}` : 'não mediu',
+    'geral, sem o pulo; igual', !!sg?.segura && sg.segura.ativo && sg.segura.fase === 'geral' && sg.segura.rapido === false && sg.hash === a.hash);
   meta('I7 a pausa congela a cena (o relógio dela e o mundo)',
     a.pausaParada ? `tempo ${a.pausaParada.antes.toFixed(2)} → ${a.pausaParada.depois.toFixed(2)} s em 30 quadros pausados; tick ${a.pausaParada.tick ? 'parado' : 'ANDOU'}` : 'não mediu',
     'parados', !!a.pausaParada && Math.abs(a.pausaParada.depois - a.pausaParada.antes) < 1e-6 && a.pausaParada.tick);
@@ -1115,6 +1173,907 @@ if (roda('I')) try {
     '≥ 1', (a.apitoNoApito?.length ?? 0) > 0);
   meta('I12 no geral o campo vazio: nenhum dos 22 nem a bola até o corte da saída', `${a.geralVazio}/${a.geral} quadros do geral vazios`, 'todos', a.geral > 0 && a.geralVazio === a.geral);
 } catch (e) { meta('I execução (intervalo: I1–I8, I11, I12)', erroCurto(e), 'sem exceção', false); }
+
+// ------------------------------------------------------------------------------------------------ F (pós-jogo, PR 4)
+// O que a cena do pós-jogo tem de ser (PLANO-CENAS.md §5.1; o plano 'troca', 1,5 s com a troca de camisa depois da elipse,
+// entrou no PR 4 — §6 CENA_FIM): os planos até a faixa final e as durações, NÃO lidos do módulo medido. Sem os treinadores
+// (?tecnicos=0) sai o 'treinador'; no TM saem as estatísticas; o empate que continua no TM é o curto.
+const FIM_PLANOS = {
+  vitoria: [['apito', 1.5], ['vencedor', 3], ['perdedor', 2.5], ['cumprimentos', 2], ['troca', 1.5], ['treinador', 2], ['aplauso', 2.5], ['torcida', 2], ['melhor', 5], ['placar', 8], ['estatisticas', 6]],
+  empate: [['apito', 1.5], ['neutro', 3], ['cumprimentos', 2], ['troca', 1.5], ['treinador', 2], ['aplauso', 2.5], ['torcida', 2], ['melhor', 5], ['placar', 8], ['estatisticas', 6]],
+  curto: [['apito', 1.5], ['neutro', 3], ['torcida', 2], ['placar', 8]],
+};
+/** Os planos esperados (o = {troca: false, tecnicos: false, est: false}) e a duração até a faixa final (s). */
+function fimEsperado(tipo, o = {}) {
+  const P = FIM_PLANOS[tipo].filter(([n]) => !(n === 'troca' && o.troca === false) && !(n === 'treinador' && o.tecnicos === false) && !(n === 'estatisticas' && o.est === false));
+  return { tipo, nomes: P.map(p => p[0]), dur: P.reduce((s, p) => s + p[1], 0) };
+}
+// quadros de folga na duração; folga das peças (px); o teto do celular Média (como C8); a troca de camisa (chamadas a mais);
+// o close do melhor em campo (fração da altura da tela, mediana do plano)
+const LIM_FIM = { quadros: 3, folga: 4, chamadas: 40, triangulos: 130000, triCorpoMedia: 60000, trocaChamadas: 1, closeMelhor: 0.3, trocaL: 20 };
+
+/**
+ * Ajudantes do pós-jogo na página (window.__cf; depois do `instalar`): a partida até perto do apito final pela API dos testes
+ * (rodarPassos — nenhuma cena abre no caminho), os quadros até a cena (ou a faixa, sem ela) e a cena quadro a quadro até a
+ * faixa final, medindo em window.__mf: o tick e o hash (parados?), os planos na ordem e quantos quadros cada um, as tarjas
+ * (em que plano, o conteúdo, as caixas), a faixa antes da hora, os textos fora do placar/tarjas/faixa, os treinadores (as
+ * cópias 210/211 da cena e o passo dos vivos), o apito, a troca de camisa, o close do melhor em campo e as chamadas de desenho
+ * por plano.
+ */
+function instalarFim() {
+  const g = window.__golaco, ct = window.__ct;
+  const quadro = (des = false) => g.relogio.avancar(1000 / 60, { desenhar: des });
+  const vis = e => ct.vis(e, false);
+  const faixa = () => {
+    const fx = document.getElementById('faixa');
+    const b = id => { const e = document.getElementById(id); return e ? { texto: e.textContent.trim(), vis: vis(e), caixa: ct.caixa(e, false), cortado: e.scrollWidth > e.clientWidth + 1 } : null; };
+    return { vis: vis(fx), titulo: document.getElementById('faixa-titulo')?.textContent.trim() ?? '', placar: document.getElementById('faixa-placar')?.textContent.trim() ?? '', caixa: ct.caixa(fx, false), botoes: [b('faixa-botao'), b('faixa-botao2')] };
+  };
+  const textosFora = () => {
+    const out = [];
+    for (const e of document.body.querySelectorAll('*')) {
+      // (a dica de teclas do PC — #dica — some por uma animação CSS de 8 s reais que o relógio manual não anda: reposta a
+      // cada reinício, ainda aparece na faixa final dos testes; não é narração)
+      if (e.closest('.placar, .tarja-cena, .tarja-placar, .painel-est, #cena, .carregando, #faixa, #dica')) continue;
+      let t = '';
+      for (const n of e.childNodes) if (n.nodeType === 3) t += n.textContent;
+      t = t.trim();
+      if (t && ct.vis(e)) out.push(t.slice(0, 30));
+    }
+    return out;
+  };
+  // as outras peças do HUD visíveis (data-caixa), menos as tarjas da cena, a dica de teclas do PC e o que é da faixa
+  const SEM = new Set(['tarja-placar', 'painel-est', 'tarja-melhor', 'tarja-cena', 'dica']);
+  const outras = () => [...document.querySelectorAll('[data-caixa]')].filter(e => !SEM.has(e.dataset.caixa) && !e.closest('#faixa') && ct.vis(e)).map(e => ({ k: e.dataset.caixa, c: ct.caixa(e) }));
+  /**
+   * A faixa final (o painel e os botões visíveis) contra a tela, um botão contra o outro e contra as outras peças do HUD:
+   * {n, ruins, botoes, painel (a menor folga do painel: {k, f})}. As animações e transições CSS vão antes ao estado final (o
+   * relógio delas não anda com o relógio manual: um botão de toque ainda entrando contaria como escondido — rev. R24).
+   */
+  const faixaEnc = () => {
+    for (const a of document.getAnimations()) { try { a.finish(); } catch (_) { /* infinita */ } }
+    const W = innerWidth, H = innerHeight, bs = ['faixa-botao', 'faixa-botao2'].map(id => document.getElementById(id)).filter(e => e && vis(e));
+    const out = { n: bs.length, ruins: [], botoes: bs.map(e => e.textContent.trim()), painel: { k: '-', f: 99 } };
+    const os = outras(), fx = document.getElementById('faixa');
+    if (fx && vis(fx)) {
+      const c = ct.caixa(fx, false);
+      if (!(c.x0 >= 0 && c.y0 >= 0 && c.x1 <= W && c.y1 <= H)) out.ruins.push('a faixa fora da tela');
+      for (const o of os) { const f = ct.folga(c, o.c); if (f < out.painel.f) out.painel = { k: o.k, f }; if (f < 4) out.ruins.push(`a faixa × ${o.k} ${f.toFixed(0)} px`); }
+    }
+    // (revisão) os controles de toque não ficam com a faixa final (o arco encostava nos botões dela; a zona do analógico, por
+    // baixo, ficava com o toque da metade esquerda deles)
+    const tq = document.getElementById('toque');
+    out.toque = !!tq && vis(tq);
+    if (document.documentElement.classList.contains('com-toque') && out.toque) out.ruins.push('os controles de toque na tela com a faixa final');
+    bs.forEach((e, i) => {
+      const c = ct.caixa(e, false);
+      // (o toque em 10%, 30%, 50%, 70% e 90% da largura de cada botão, na altura do meio, cai no próprio botão)
+      for (const fx of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+        const h = document.elementFromPoint(c.x0 + fx * (c.x1 - c.x0), (c.y0 + c.y1) / 2);
+        if (!h || !(h === e || e.contains(h))) { out.ruins.push(`${e.id} a ${Math.round(fx * 100)}% da largura cai em ${h ? h.id || h.className || h.tagName : 'nada'}`); break; }
+      }
+      if (!(c.x0 >= 0 && c.y0 >= 0 && c.x1 <= W && c.y1 <= H)) out.ruins.push(`${e.id} fora da tela`);
+      if (e.scrollWidth > e.clientWidth + 1) out.ruins.push(`${e.id} cortado`);
+      for (const o of os) { const f = ct.folga(c, o.c); if (f < 4) out.ruins.push(`${e.id} × ${o.k} ${f.toFixed(0)} px`); }
+      for (let j = i + 1; j < bs.length; j++) { const f = ct.folga(c, ct.caixa(bs[j], false)); if (f < 4) out.ruins.push(`${e.id} × ${bs[j].id} ${f.toFixed(0)} px`); }
+    });
+    return out;
+  };
+  const apitos = () => { const s = g.estadio?.sonsPedidos ?? {}; let n = 0; for (const k of Object.keys(s)) if (/apito/i.test(k)) n += s[k] ?? 0; return n; };
+  // o hash do mundo com o tick no lugar de `t` (o online: no 'fim' só o tick anda — R5); devolve o tick de verdade
+  const hashSemTick = t => { const m = g.mundo, k = m.tick; m.tick = t; try { return g.hash(); } finally { m.tick = k; } };
+  window.__cf = {
+    quadro, faixa, textosFora, apitos, hashSemTick, outras, faixaEnc,
+    /** A partida de agora até `antes` passos do apito final (o placar escrito no MUNDO se vier: só testes). */
+    levar(o = {}) {
+      const m = g.mundo, p = m.partida;
+      if (!p) return null;
+      const antes = o.antes ?? 40;
+      let n = 0;
+      while (n < 400000 && p.estado !== 'fim' && !(p.tempo === 2 && p.acrescimo != null)) {
+        const longe = p.tempo !== 2 || p.estado === 'intervalo' || p.tick0Tempo + p.ticksPorTempo - m.tick > 120;
+        const k = longe ? 60 : 1;
+        g.rodarPassos(k, 'demo'); n += k;
+      }
+      const fim = () => p.tick0Tempo + p.ticksPorTempo + Math.round(p.acrescimo * p.ticksPorTempo / 45);
+      while (n < 400000 && p.estado !== 'fim' && m.tick < fim() - antes) { g.rodarPassos(1, 'demo'); n++; }
+      if (Array.isArray(o.placar)) { m.placar[0] = o.placar[0]; m.placar[1] = o.placar[1]; }
+      return { tick: m.tick, fim: p.estado === 'fim' ? m.tick : fim(), placar: [m.placar[0], m.placar[1]], estado: p.estado, passos: n };
+    },
+    /**
+     * Quadros até a cena do pós-jogo começar ou, sem ela, até a faixa do fim (espera o replay do gol do último lance):
+     * {cena, quadros, tickApito (o tick do 'fimDeJogo'), quadroApito, tickCena, histTick, faixa}.
+     */
+    ateCena(max = 3000) {
+      const m = g.mundo, p = m.partida;
+      let n = 0, tickApito = null, quadroApito = null;
+      for (; n < max; n++) {
+        quadro(false);
+        if (tickApito == null && p.estado === 'fim') { tickApito = m.tick; quadroApito = n; }
+        if (g.cenas?.ativo && g.cenas.tipo === 'fim') break;
+        if (tickApito != null && n - quadroApito > 30 && !g.replay.estado?.ativo && faixa().vis) break;
+      }
+      const cena = !!(g.cenas?.ativo && g.cenas.tipo === 'fim');
+      return { cena, quadros: n, tickApito, quadroApito, tickCena: cena ? m.tick : null, histTick: g.cenas?.historicoPosJogo?.at(-1)?.tick ?? null, faixa: faixa() };
+    },
+    /** Sem a cena (a base): `n` quadros depois do apito — o tick anda? a faixa aparece? */
+    semCena(n = 180) {
+      const m = g.mundo, t0 = m.tick, h0 = g.hash();
+      let mudou = 0;
+      for (let i = 0; i < n; i++) { quadro(false); if (m.tick !== t0) mudou++; }
+      return { tick0: t0, tick: m.tick, tickMudou: mudou, hashIgual: g.hash() === h0, faixa: faixa() };
+    },
+    /** Começa a medida da cena que acabou de abrir (apito0: a contagem dos apitos de antes, para o R6). */
+    iniciar(o = {}) {
+      const m = g.mundo, e0 = g.cenas?.estado;
+      window.__mf = {
+        quadros: 0, tickMudou: 0, hashMudou: 0, tick0: m.tick, hash0: g.hash(), fases: [], saiu: false, faixaQuadros: 0,
+        tarjas: { placar: { n: 0, fases: {}, ultimo: null }, estatisticas: { n: 0, fases: {}, ultimo: null }, melhor: { n: 0, fases: {}, ultimo: null } },
+        juntas: 0, faixaAntes: 0, textos: new Set(), textosFaixa: new Set(),
+        tec: { min210: 99, max210: 0, min211: 99, max211: 0, noPlano: 0, planoN: 0, k0: g.estadio?.tecnicos?.k ?? null, kMudou: 0 },
+        apito0: o.apito0 ?? apitos(), apitoNoApito: null, troca: null, close: [], cx: { n: 0, ruins: 0, pior: null, ks: {}, min: { f: 99 } }, por: {},
+        ini: e0 && e0.tipo === 'fim' ? { tick: e0.tick, resultado: e0.resultado, curto: e0.curto, segura: e0.segura, vencedor: e0.vencedor, planos: e0.planos.map(p => p.nome), duracao: e0.duracao, melhor: e0.melhor, troca: e0.troca, tempo: e0.tempo } : null,
+      };
+      return window.__mf.ini;
+    },
+    /**
+     * Anda a cena medindo (o = {desenhar: N (um quadro desenhado a cada N), caixas, depois (quadros na faixa final), max,
+     * ate: o plano em que para — com `ateQuadros` quadros dentro dele, para a captura de fora}). Devolve {parou, faixa, fase}.
+     */
+    andar(o = {}) {
+      const M = window.__mf, m = g.mundo;
+      if (!M?.ini) return { parou: false, semCena: true };
+      let k = 0, dentro = 0;
+      while (k < (o.max ?? 4000)) {
+        const des = !!o.desenhar && M.quadros % o.desenhar === 0;
+        quadro(des); M.quadros++; k++;
+        if (m.tick !== M.tick0) M.tickMudou++;
+        if (M.quadros % 20 === 0 && g.hash() !== M.hash0) M.hashMudou++;
+        const tk = g.estadio?.tecnicos?.k;
+        if (tk != null && tk !== M.tec.k0) M.tec.kMudou++;
+        const e = g.cenas?.estado;
+        if (!e || e.tipo !== 'fim') { M.saiu = true; break; }
+        const f = e.faixaFinal ? 'faixa' : e.fase;
+        const ult = M.fases[M.fases.length - 1];
+        if (!ult || ult.f !== f) {
+          if (ult?.f === 'apito') M.apitoNoApito = apitos() - M.apito0;
+          M.fases.push({ f, n: 0 });
+        }
+        M.fases[M.fases.length - 1].n++;
+        // as tarjas (o estado da página: rev. R24) — em que plano, o último conteúdo, nunca duas juntas, as caixas
+        const T = g.cenas.tarjas;
+        let juntas = 0;
+        for (const kk of ['placar', 'estatisticas', 'melhor']) {
+          const t = T?.[kk];
+          if (!t?.visivel) continue;
+          juntas++;
+          const r = M.tarjas[kk]; r.n++; r.fases[f] = (r.fases[f] ?? 0) + 1; r.ultimo = t;
+          const b = T.caixas?.[kk];
+          if (o.caixas && b) {
+            // (contra o placar, o "Pular", o botão da pausa e toda outra peça visível do HUD)
+            const W = innerWidth, H = innerHeight;
+            let pert = { k: '-', f: 99 };
+            for (const x of outras()) { const fo = ct.folga(b, x.c); if (fo < pert.f) pert = { k: x.k, f: fo }; }
+            const dentro = b.x0 >= 0 && b.y0 >= 0 && b.x1 <= W && b.y1 <= H;
+            M.cx.n++; M.cx.ks[kk] = (M.cx.ks[kk] ?? 0) + 1;
+            if (pert.f < M.cx.min.f) M.cx.min = { k: kk, perto: pert.k, f: pert.f };
+            const ruim = !dentro || pert.f < 4;
+            if (ruim) M.cx.ruins++;
+            if (ruim && !M.cx.pior) M.cx.pior = { k: kk, fase: f, dentro, perto: pert.k, folga: pert.f };
+          }
+        }
+        if (juntas > 1) M.juntas++;
+        if (!e.faixaFinal && faixa().vis) M.faixaAntes++;
+        if (M.quadros % 3 === 0) for (const t of textosFora()) (e.faixaFinal ? M.textosFaixa : M.textos).add(t);
+        // as cópias dos treinadores na cena (a página desenha os atores ativos dela; os vivos ficam fora)
+        let n0 = 0, n1 = 0;
+        const at = g.cenas.atores() ?? [];
+        for (const a of at) if (a.ativo !== false) { if (a.id === 210) n0++; else if (a.id === 211) n1++; }
+        M.tec.min210 = Math.min(M.tec.min210, n0); M.tec.max210 = Math.max(M.tec.max210, n0);
+        M.tec.min211 = Math.min(M.tec.min211, n1); M.tec.max211 = Math.max(M.tec.max211, n1);
+        if (f === 'treinador') { M.tec.planoN++; if (n0 === 1 && n1 === 1) M.tec.noPlano++; }
+        if (e.trocou && !M.troca) M.troca = { ...e.troca, fase: f, camisaDe: at.filter(a => a.camisaDe != null).map(a => ({ id: a.id, camisaDe: a.camisaDe, time: a.time, goleiro: !!a.goleiro })) };
+        // o close do melhor em campo (a pose desenhada: só nos quadros desenhados)
+        if (des && f === 'melhor' && e.melhor) {
+          const nt = g.cenas.naTela(e.melhor.id);
+          if (nt) M.close.push({ alt: nt.altura / innerHeight, dentro: nt.dentro });
+        }
+        if (des) {
+          const s = g.estado(), p = (M.por[f] ??= { cham: 0, tri: 0, triCorpo: 0, n: 0 });
+          p.n++; p.cham = Math.max(p.cham, s.desenhoChamadas); p.tri = Math.max(p.tri, s.desenhoTriangulos);
+          const corpo = g.estadio.corpo;
+          if (corpo?.pronto) p.triCorpo = Math.max(p.triCorpo, corpo.triangulos);
+        }
+        if (o.ate && f === o.ate && ++dentro >= (o.ateQuadros ?? 1)) return { parou: true, fase: f };
+        if (e.faixaFinal && ++M.faixaQuadros > (o.depois ?? 60)) break;
+      }
+      return { parou: false, faixa: faixa(), fase: g.cenas?.estado?.fase ?? null };
+    },
+    /** A medida (os Set viram listas) com o fim: o tick, o hash, a faixa e o histórico da página. */
+    medida() {
+      const M = window.__mf, m = g.mundo;
+      return { ...M, textos: [...M.textos], textosFaixa: [...M.textosFaixa], tickFim: m.tick, hashIgual: g.hash() === M.hash0, faixa: faixa(), faixaEnc: faixaEnc(), hist: g.cenas?.historicoPosJogo?.at(-1) ?? null, estado: g.cenas?.estado ?? null };
+    },
+  };
+}
+
+/**
+ * O que a súmula diz (na página, com o mundo parado no apito): o melhor em campo (sumula.js melhorEmCampo e, à parte, o
+ * argmax da nota — notaDe — com o desempate gols, assistências, menor id), a ficha dele, os gols (time, minuto, contra,
+ * pênalti) e as estatísticas da partida.
+ */
+const doSumula = pg => pg.evaluate(async () => {
+  const g = window.__golaco, m = g.mundo, S = g.cenas?.sumula?.() ?? null;
+  if (!S) return null;
+  const SU = await import('./js/sumula.js'), E = await import('./js/elenco.js');
+  const exp = new Set((m.expulsos ?? []).map(j => j.id));
+  const cand = [];
+  for (const j of m.jogadores) if ((j.time === 0 || j.time === 1) && !exp.has(j.id)) cand.push([j.id, j.time]);
+  for (const t of [0, 1]) for (const id of m.times?.[t]?.saiu ?? []) if (!exp.has(id) && !cand.some(c => c[0] === id)) cand.push([id, t]);
+  let arg = null;
+  for (const [id, time] of cand) {
+    const nota = SU.notaDe(S, m, id, time), n = S.jog[id] ?? {}, x = { id, time, nota, gols: n.gols ?? 0, assist: n.assist ?? 0 };
+    if (!arg || x.nota > arg.nota || (x.nota === arg.nota && (x.gols > arg.gols || (x.gols === arg.gols && (x.assist > arg.assist || (x.assist === arg.assist && x.id < arg.id)))))) arg = x;
+  }
+  const mc = SU.melhorEmCampo(S, m);
+  const ficha = id => { const f = E.fichaDe(id), el = E.ELENCOS[E.elencoDoJogador(id)]; return f ? { num: String(f.num ?? ''), nome: f.nome ?? '', camisa: f.camisa ?? f.nome ?? '', sigla: el?.sigla ?? '' } : null; };
+  return { mc, arg, ficha: mc ? ficha(mc.id) : null, gols: S.gols.map(x => ({ time: x.time, minuto: x.minuto, contra: !!x.contra, penalti: !!x.penalti, id: x.id })), est: SU.estatisticas(S, null), placar: [m.placar[0], m.placar[1]] };
+});
+
+/**
+ * A troca de camisa na captura: o peito de cada um do par (a mediana do L* de 9 pontos na altura do peito, do lado de FORA
+ * do abraço — a caixa da pose inclui o braço nas costas do outro) — {la, lb} (o do time 0 e o do time 1) e o RGB do meio.
+ */
+async function peitosTroca(pg, na, nb) {
+  const pts = (nt, outro) => {
+    const w = nt.x1 - nt.x0, h = nt.y1 - nt.y0, fora = (nt.x0 + nt.x1) / 2 >= (outro.x0 + outro.x1) / 2;
+    const out = [];
+    for (const fx of [0.55, 0.65, 0.75]) for (const fy of [0.18, 0.22, 0.26]) out.push([fora ? nt.x0 + fx * w : nt.x1 - fx * w, nt.y0 + fy * h]);
+    return out;
+  };
+  const pa = pts(na, nb), pb = pts(nb, na);
+  const cs = await pixels(pg, [...pa, ...pb]);
+  const med = v => [...v].sort((x, y) => x - y)[v.length >> 1];
+  const la = med(cs.slice(0, 9).map(c => lab(c)[0])), lb = med(cs.slice(9).map(c => lab(c)[0]));
+  return { la, lb, rgbA: cs[4].map(Math.round), rgbB: cs[13].map(Math.round) };
+}
+
+/** F1 de uma cena andada até a faixa final: começou no apito, o resultado, os planos na ordem e a duração. */
+function conferirF1(rot, A, M, esp, resEsp) {
+  const nomes = M?.fases?.map(x => x.f) ?? [];
+  const antesFaixa = M?.fases ? M.fases.filter(x => x.f !== 'faixa').reduce((s, x) => s + x.n, 0) : 0;
+  const durOk = Math.abs(antesFaixa / 60 - esp.dur) <= LIM_FIM.quadros / 60 + 1e-9;
+  const ok = A.cena && A.histTick === A.tickApito && A.tickCena === A.tickApito && M.ini?.resultado === resEsp && nomes.join() === [...esp.nomes, 'faixa'].join() && durOk;
+  meta(`F1 ${rot}: a cena começa no apito final (o tick do 'fimDeJogo'), o resultado, os planos na ordem e a duração até a faixa final`,
+    A.cena ? `apito no tick ${A.tickApito}, cena no ${A.tickCena} (histórico ${A.histTick}); ${M.ini?.resultado}${M.ini?.curto ? ' (curto)' : ''}; ${nomes.join(' → ')}; ${f2(antesFaixa / 60)} s` : `nenhuma cena (apito no tick ${A.tickApito}; faixa ${A.faixa?.vis ? `"${A.faixa.titulo}"` : 'não'})`,
+    `${resEsp}; ${esp.nomes.join(' → ')} → faixa; ${f2(esp.dur)} s ± ${LIM_FIM.quadros} quadros`, ok);
+}
+/** F2 fora do online: o tick e o hash parados do apito até a faixa final (e nela). */
+function conferirF2(rot, A, M, S0) {
+  if (A.cena) {
+    meta(`F2 ${rot}: fora do online o mundo.tick e o hashMundo não mudam do apito até a faixa final (e ${M.faixaQuadros} quadros nela)`,
+      `tick ${M.tick0}: mudou em ${M.tickMudou} de ${M.quadros} quadros; hash ${M.hashIgual ? 'igual' : 'DIFERENTE'} (mudou em ${M.hashMudou} amostras); segura ${M.ini?.segura}`,
+      '0; igual; segura', M.quadros > 0 && M.tickMudou === 0 && M.hashMudou === 0 && M.hashIgual && M.ini?.segura === true && M.faixaQuadros > 0);
+  } else {
+    meta(`F2 ${rot}: fora do online o mundo.tick e o hashMundo não mudam do apito até a faixa final`,
+      S0 ? `sem cena: o tick andou ${S0.tick0} → ${S0.tick} (mudou em ${S0.tickMudou} de 180 quadros); hash ${S0.hashIgual ? 'igual' : 'DIFERENTE'}` : 'sem cena', '0; igual', !!S0 && S0.tickMudou === 0 && S0.hashIgual);
+  }
+}
+
+/**
+ * A cena aberta andada até a faixa final (o = as opções do andar: desenhar, caixas, depois), parando no meio do plano da
+ * troca para a captura do peito do par (o = {troca: true}; o quadro desenhado). Devolve {M (a medida), px (a troca)}.
+ */
+async function andarCena(pg, o = {}, nomeCap = null) {
+  await pg.evaluate(() => window.__cf.iniciar());
+  let px = null;
+  if (o.troca) {
+    const r = await pg.evaluate(o => window.__cf.andar({ ...o, ate: 'troca', ateQuadros: 45 }), o);
+    if (r.parou) {
+      const q = await pg.evaluate(() => {
+        const g = window.__golaco;
+        g.relogio.avancar(1000 / 60, { desenhar: true });
+        window.__mf.quadros++;
+        const e = g.cenas.estado, t = e?.troca;
+        if (!t) return null;
+        // (as cores escritas no manequim: o par e um companheiro de linha de cada um com o uniforme de sempre)
+        const ats = g.cenas.atores() ?? [], cor = id => g.estadio.coresJogador?.(id) ?? null;
+        const mate = time => ats.find(a => a.time === time && !a.goleiro && a.ativo !== false && a.id !== t.a && a.id !== t.b && a.camisaDe == null && cor(a.id));
+        const m0 = mate(0), m1 = mate(1);
+        const cores = { a: cor(t.a), b: cor(t.b), m0: m0 ? cor(m0.id) : null, m1: m1 ? cor(m1.id) : null };
+        return { a: t.a, b: t.b, na: g.cenas.naTela(t.a), nb: g.cenas.naTela(t.b), kitA: t.kitA, kitB: t.kitB, cores };
+      });
+      if (q?.na && q?.nb) {
+        px = { ...q, ...(await peitosTroca(pg, q.na, q.nb)) };
+        if (nomeCap) await capturar(pg, nomeCap + '-troca');
+      } else px = q;
+    }
+  }
+  await pg.evaluate(o => window.__cf.andar(o), { desenhar: o.desenhar, caixas: o.caixas, depois: o.depois ?? 60 });
+  const M = await pg.evaluate(() => window.__cf.medida());
+  if (nomeCap) await capturar(pg, nomeCap + '-faixa');
+  return { M, px };
+}
+let golRoteirizado = null;
+/**
+ * Uma partida da página até a cena do pós-jogo (o = {semente, gol: o roteirizado do time 0 antes — o lance guardado dos
+ * melhores momentos —, placar: [casa, fora] | 'vitoria' (a casa um gol à frente) escrito no mundo}) e, com a cena, ela
+ * andada (andarCena; sem ela, 180 quadros: o tick anda?). Devolve {A (ateCena), M, px, X (semCena), lances, gol}.
+ */
+async function posJogo(pg, o = {}, nomeCap = null) {
+  golRoteirizado ??= (await import(pathToFileURL(path.join(AQUI, 'lib/gol-roteirizado.mjs')).href)).golRoteirizado;
+  if (o.reiniciar !== false) await pg.evaluate(s => window.__golaco.reiniciar({ modo: 'partida', semente: s, minutosPorTempo: 1 }), o.semente ?? 7);
+  let gol = null, lances = 0;
+  if (o.gol) {
+    gol = await golRoteirizado(pg, { reiniciar: false, time: 0, marcarChute: true });
+    lances = await pg.evaluate(() => { const g = window.__golaco, cf = window.__cf; let n = 0; while ((g.cenas?.lances?.length ?? 0) < 1 && n < 1200) { cf.quadro(false); n++; } return g.cenas?.lances?.length ?? 0; });
+  }
+  const A = await pg.evaluate(placar => {
+    const cf = window.__cf, m = window.__golaco.mundo;
+    const lev = cf.levar({ antes: 40 });
+    if (placar === 'vitoria') { m.placar[0] = Math.max(m.placar[0], m.placar[1] + 1); lev.placar = [m.placar[0], m.placar[1]]; }
+    else if (Array.isArray(placar)) { m.placar[0] = placar[0]; m.placar[1] = placar[1]; lev.placar = [...placar]; }
+    return { ...cf.ateCena(), lev };
+  }, o.placar ?? null);
+  let M = null, px = null, X = null;
+  if (A.cena) ({ M, px } = await andarCena(pg, o, nomeCap));
+  else X = await pg.evaluate(() => window.__cf.semCena(180));
+  return { A, M, px, X, lances, gol };
+}
+/** A troca de camisa de uma cena medida (o par, os kits mistos e, com a captura, o peito pela camisa trocada). */
+function conferirTroca(rot, M, px, opcTroca = {}) {
+  const t = M?.troca, cd = t?.camisaDe ?? [];
+  const ida = cd.find(x => x.id === t?.a), idb = cd.find(x => x.id === t?.b);
+  const okPar = !!t && !!ida && !!idb && ida.camisaDe === t.b && idb.camisaDe === t.a && !ida.goleiro && !idb.goleiro && t.a !== M.ini.melhor?.id && t.b !== M.ini.melhor?.id && /^troca:/.test(t.kitA ?? '') && /^troca:/.test(t.kitB ?? '');
+  const okPx = !!px && Number.isFinite(px.la) && Number.isFinite(px.lb) && px.la - px.lb >= LIM_FIM.trocaL;
+  meta(`F5b a troca de camisa (${rot}): o par de linha (não o melhor em campo) com a camisa do outro — o kit misto — e o peito na captura pela camisa trocada (L* do time 0 − L* do time 1)`,
+    t ? `${t.a} (time 0) ↔ ${t.b} (time 1) no plano ${t.fase}; kits ${t.kitA} / ${t.kitB}; L* do peito ${px ? `${f2(px.la)} [${px.rgbA}] × ${f2(px.lb)} [${px.rgbB}]` : 'não medido'}` : 'sem troca',
+    `a camisa do outro; ≥ ${LIM_FIM.trocaL}`, okPar && okPx);
+  // (revisão) as cores do manequim do kit misto: o tronco = o do companheiro do OUTRO time; o calção, a listra da coxa, o meião
+  // e a faixa do meião = os do companheiro do PRÓPRIO time (antes a listra e a faixa vinham com o acento da camisa)
+  if (opcTroca.cores) {
+    const C = px?.cores, ig = (u, v) => !!u && !!v && u.every((x, i) => Math.abs(x - v[i]) < 1e-4);
+    const um = (eu, meu, outro) => !!eu && !!meu && !!outro && ig(eu.tronco, outro.tronco) && ['calcao', 'listra', 'meiao', 'faixa'].every(k => ig(eu[k], meu[k]));
+    const hex = v => (v ? '#' + v.map(x => Math.round(Math.min(1, Math.max(0, x)) ** (1 / 2.2) * 255).toString(16).padStart(2, '0')).join('') : '-');
+    meta(`F5b a troca de camisa (${rot}): as cores do kit misto no manequim — a camisa do outro time, o calção e o meião (com a listra e a faixa) do próprio`,
+      C ? `time 0 (${t?.a}): tronco ${hex(C.a?.tronco)} (o do outro ${hex(C.m1?.tronco)}), listra ${hex(C.a?.listra)} e faixa ${hex(C.a?.faixa)} (as do time ${hex(C.m0?.listra)}/${hex(C.m0?.faixa)}); time 1 (${t?.b}): tronco ${hex(C.b?.tronco)} (${hex(C.m0?.tronco)}), listra ${hex(C.b?.listra)} e faixa ${hex(C.b?.faixa)} (${hex(C.m1?.listra)}/${hex(C.m1?.faixa)})` : 'não medido',
+      'iguais', !!C && um(C.a, C.m0, C.m1) && um(C.b, C.m1, C.m0));
+  }
+}
+/** As chamadas e os triângulos do pior plano de uma cena medida (M.por). */
+function piorPlano(M) {
+  let cham = 0, tri = 0, triCorpo = 0, fc = '-', ft = '-';
+  for (const [f, p] of Object.entries(M?.por ?? {})) {
+    if (p.cham > cham) { cham = p.cham; fc = f; }
+    if (p.tri > tri) { tri = p.tri; ft = f; }
+    triCorpo = Math.max(triCorpo, p.triCorpo);
+  }
+  return { cham, tri, triCorpo, fc, ft };
+}
+/** As chamadas com a troca × sem ela (?troca=0), plano a plano (os planos dos dois). */
+function conferirCustoTroca(rot, M1, M0) {
+  const comuns = Object.keys(M1?.por ?? {}).filter(f => M0?.por?.[f]);
+  const difs = comuns.map(f => [f, M1.por[f].cham - M0.por[f].cham]);
+  const pior = difs.reduce((x, d) => (d[1] > x[1] ? d : x), ['-', -Infinity]);
+  meta(`F8 ${rot}: a troca de camisa não custa chamada de desenho (com × ?troca=0, plano a plano; teto +${LIM_FIM.trocaChamadas})`,
+    comuns.length ? `${difs.map(([f, d]) => `${f} ${M1.por[f].cham}/${M0.por[f].cham}`).join(', ')}; a mais no pior: ${pior[1]} (${pior[0]})` : 'sem medida',
+    `≤ +${LIM_FIM.trocaChamadas}`, comuns.length >= 5 && pior[1] <= LIM_FIM.trocaChamadas);
+}
+
+marcar('F');
+if (roda('F')) try {
+  golRoteirizado ??= (await import(pathToFileURL(path.join(AQUI, 'lib/gol-roteirizado.mjs')).href)).golRoteirizado;
+  const P = await pagina('F', '?q=baixa&hora=dia&semente=5&demo=1&cenas=1&prejogo=0&comemoracao=0&replay=0&replayParada=0&substituicao=0');
+  try {
+    const pg = P.pagina;
+    await pg.evaluate(instalarFim);
+    // ---- 1) a partida de verdade: um gol do time 0 (o guardador o guarda na saída: os melhores momentos) e o resto pela demo
+    await pg.evaluate(() => window.__golaco.reiniciar({ modo: 'partida', semente: 5, minutosPorTempo: 1 }));
+    const gol = await golRoteirizado(pg, { reiniciar: false, time: 0, marcarChute: true });
+    const A1 = await pg.evaluate(() => {
+      const g = window.__golaco, cf = window.__cf;
+      let n = 0;
+      while ((g.cenas?.lances?.length ?? 0) < 1 && n < 1200) { cf.quadro(false); n++; }
+      const lances = g.cenas?.lances?.length ?? 0;
+      const lev = cf.levar({ antes: 40 });
+      return { ...cf.ateCena(), lances, lev };
+    });
+    let M1 = null, S1 = null, px = null, X1 = null;
+    // (até o meio do plano da troca, o quadro desenhado: o peito de cada um do par na captura — a camisa do outro)
+    if (A1.cena) { ({ M: M1, px } = await andarCena(pg, { desenhar: 10, depois: 120, troca: true }, 'pc')); S1 = await doSumula(pg); }
+    else X1 = await pg.evaluate(() => window.__cf.semCena(180));
+    const pl1 = A1.lev?.placar ?? [0, 0];
+    const res1 = pl1[0] === pl1[1] ? 'empate' : 'vitoria';
+    const esp1 = fimEsperado(res1);
+    conferirF1(`PC, a partida de verdade (gol roteirizado ${gol?.ok ? 'sim' : 'NÃO'}; ${pl1.join('–')})`, A1, M1 ?? {}, esp1, res1);
+    conferirF2('PC', A1, M1 ?? {}, X1);
+    // F3: a tarja do placar = o placar e os autores da súmula (cada gol com o minuto do lado certo); o painel = as estatísticas
+    {
+      const tp = M1?.tarjas.placar, te = M1?.tarjas.estatisticas;
+      const golsTxt = tp?.ultimo?.gols ?? '';
+      const nums = golsTxt.match(/\d+/g)?.map(Number) ?? [];
+      const aut = tp?.ultimo?.autores ?? [[], []];
+      const golsOk = !!S1 && S1.gols.every(x => (aut[x.time] ?? []).some(t => t.includes(`${x.minuto}'`))) && [0, 1].every(t => (aut[t] ?? []).join(' ').split("'").length - 1 === S1.gols.filter(x => x.time === t).length);
+      meta('F3 a tarja do placar final: o placar do mundo e os autores da súmula (cada gol com o minuto, do lado do time), só no plano do placar',
+        tp?.n ? `${tp.n} quadros em ${JSON.stringify(tp.fases)}; "${golsTxt}" · ${JSON.stringify(aut)} × súmula ${S1?.gols.map(x => `${x.time}:${x.minuto}'${x.contra ? '(c)' : ''}`).join(', ') || 'sem gols'}, placar ${S1?.placar.join('–')}` : 'não apareceu',
+        `${f2(8)} s no plano placar; iguais`, !!tp?.n && Object.keys(tp.fases).join() === 'placar' && Math.abs(tp.n / 60 - 8) <= 0.1 && nums.join() === (S1?.placar ?? []).join() && golsOk && (S1?.gols.length ?? 0) > 0);
+      const linhas = te?.ultimo?.linhas ?? [];
+      const num = t => +(String(t).match(/\d+/)?.[0] ?? NaN);
+      const est = S1?.est;
+      const estErr = est ? ['posse', 'chutes', 'noAlvo', 'escanteios', 'faltas'].filter(k => { const l = linhas.find(x => x.item === k); return !l || num(l.a) !== est[k][0] || num(l.b) !== est[k][1]; }) : ['sem súmula'];
+      meta('F3 o painel de estatísticas da PARTIDA = a súmula (posse, finalizações, no alvo, escanteios, faltas), só no plano das estatísticas',
+        te?.n ? `${te.n} quadros em ${JSON.stringify(te.fases)}; "${te.ultimo?.titulo}": ${linhas.map(l => `${l.item} ${l.a}–${l.b}`).join(', ')}; diferentes: ${estErr.join(', ') || 'nenhum'}` : 'não apareceu',
+        '"Partida"; 6 s; iguais', !!te?.n && Object.keys(te.fases).join() === 'estatisticas' && Math.abs(te.n / 60 - 6) <= 0.1 && te.ultimo?.titulo === 'Partida' && estErr.length === 0);
+    }
+    // F4: a tarja do melhor em campo = sumula.melhorEmCampo (e o argmax da nota calculado aqui), a ficha dele e a nota com uma
+    // casa; o close dele no plano
+    {
+      const tm = M1?.tarjas.melhor, u = tm?.ultimo, mc = S1?.mc, fi = S1?.ficha;
+      const notaTxt = mc ? mc.nota.toFixed(1).replace('.', ',') : '-';
+      const okTarja = !!u && !!fi && u.num === fi.num && (u.nome === fi.nome || u.nome === fi.camisa) && u.sigla === fi.sigla && u.nota === notaTxt && /melhor em campo/i.test(u.rotulo);
+      const closeMed = M1?.close?.length ? [...M1.close].map(c => c.alt).sort((a, b) => a - b)[M1.close.length >> 1] : 0;
+      meta('F4 a tarja do melhor em campo = sumula.melhorEmCampo (= o argmax da nota, desempate gols/assistências/id), com a ficha e a nota com uma casa, só no plano dele; o close dele',
+        tm?.n ? `${tm.n} quadros em ${JSON.stringify(tm.fases)}; "${u?.sigla} ${u?.num} ${u?.nome} · ${u?.rotulo} · ${u?.nota}" × melhorEmCampo ${mc ? `${mc.id} (${notaTxt})` : '-'} = argmax ${S1?.arg?.id ?? '-'} = plano ${M1?.ini?.melhor?.id ?? '-'}; ficha ${fi ? `${fi.sigla} ${fi.num} ${fi.nome}` : '-'}; close (mediana) ${f2(closeMed)} da altura em ${M1?.close?.length ?? 0} quadros` : 'não apareceu',
+        `5 s no plano melhor; iguais; close ≥ ${LIM_FIM.closeMelhor}`, !!tm?.n && Object.keys(tm.fases).join() === 'melhor' && Math.abs(tm.n / 60 - 5) <= 0.1 && !!mc && mc.id === S1.arg.id && mc.id === M1.ini.melhor?.id && okTarja && closeMed >= LIM_FIM.closeMelhor);
+    }
+    // tela: nenhuma tarja fora do plano dela nem duas juntas, a faixa só no fim, nenhum outro texto (sem narração)
+    meta('F3/F4 tela: as tarjas nunca juntas, a faixa do fim só depois dos planos, nenhum texto fora do placar, das tarjas e da faixa',
+      M1 ? `juntas ${M1.juntas} quadros; faixa antes ${M1.faixaAntes}; textos na cena ${M1.textos.length ? JSON.stringify(M1.textos) : 'nenhum'}; na faixa ${M1.textosFaixa.length ? JSON.stringify(M1.textosFaixa) : 'nenhum'}` : 'nenhuma cena',
+      '0; 0; nenhum', !!M1 && M1.juntas === 0 && M1.faixaAntes === 0 && M1.textos.length === 0 && M1.textosFaixa.length === 0);
+    // F10: os treinadores — só as cópias da cena (um 210 e um 211 entre os atores ativos o tempo todo, apertando a mão no plano
+    // deles) e os vivos parados (o passo deles não anda: o laço segurado)
+    meta('F10 os treinadores: só as cópias da cena (no máximo um 210 e um 211; os dois no plano "treinador") e os vivos parados',
+      M1 ? `210: ${M1.tec.min210}–${M1.tec.max210}, 211: ${M1.tec.min211}–${M1.tec.max211} por quadro; no plano treinador os dois em ${M1.tec.noPlano}/${M1.tec.planoN}; o passo dos vivos mudou em ${M1.tec.kMudou} quadros` : 'nenhuma cena',
+      '≤ 1 e ≤ 1; todos; 0', !!M1 && M1.tec.max210 <= 1 && M1.tec.max211 <= 1 && M1.tec.planoN > 0 && M1.tec.noPlano === M1.tec.planoN && M1.tec.kMudou === 0);
+    // a troca de camisa: o par (nunca goleiro, nunca o melhor em campo), cada um com a camisa do outro (o kit misto
+    // 'troca:<camisa>:<resto>:<num>') e, no quadro desenhado, o peito do do time 0 claro (a camisa branca do visitante) e o do
+    // time 1 escuro (a preta do mandante)
+    conferirTroca('PC, manequim', M1, px, { cores: true });
+    // F5: a faixa final com os dois botões; "Melhores momentos" toca o guardador (o mundo parado) e volta à faixa; um aperto
+    // pula o lance e volta à faixa; "Jogar de novo" zera a cena
+    {
+      const fx = M1?.faixa, b = fx?.botoes ?? [];
+      let mm = null, mm2 = null, nova = null;
+      if (M1 && b[1]?.vis) {
+        await pg.click('#faixa-botao2', { timeout: 10000 });
+        mm = await pg.evaluate(() => {
+          const g = window.__golaco, cf = window.__cf, m = g.mundo, t0 = m.tick, h0 = g.hash();
+          let n = 0, tocando = 0, faixaJunto = 0, tickMudou = 0, tipos = new Set();
+          while (n < 60 * 45) {
+            cf.quadro(n % 30 === 0); n++;
+            if (m.tick !== t0) tickMudou++;
+            const r = g.replay.estado;
+            if (r?.ativo) { tocando++; tipos.add(r.tipo); if (cf.faixa().vis) faixaJunto++; }
+            const e = g.cenas.estado;
+            if (n > 10 && !e?.mm && !r?.ativo) break;
+          }
+          for (let i = 0; i < 10; i++) cf.quadro(false);
+          return { n, tocando, faixaJunto, tickMudou, hashIgual: g.hash() === h0, tipos: [...tipos], hist: g.cenas.historicoPosJogo.at(-1)?.mm ?? null, faixa: cf.faixa(), ativa: g.cenas.ativo };
+        });
+        // de novo, e uma tecla pula o lance (volta à faixa; o aperto não vira jogada: o mundo parado)
+        await pg.click('#faixa-botao2', { timeout: 10000 });
+        await pg.evaluate(() => { for (let i = 0; i < 40; i++) window.__cf.quadro(false); });
+        const antes = await pg.evaluate(() => ({ tocando: !!window.__golaco.replay.estado?.ativo }));
+        await pg.keyboard.down('KeyK');
+        await pg.evaluate(() => { for (let i = 0; i < 3; i++) window.__cf.quadro(false); });
+        await pg.keyboard.up('KeyK');
+        mm2 = await pg.evaluate(() => {
+          const g = window.__golaco, cf = window.__cf;
+          let q = 0; while (q < 8 && g.replay.estado?.ativo) { cf.quadro(false); q++; }
+          for (let i = 0; i < 6; i++) cf.quadro(false);
+          return { q, ativo: !!g.replay.estado?.ativo, hist: g.cenas.historicoPosJogo.at(-1)?.mm ?? null, faixa: cf.faixa(), tick: g.mundo.tick, mmEstado: g.cenas.estado?.mm ?? null };
+        });
+        mm2.antes = antes;
+        // "Jogar de novo": a cena sai, o mundo é novo, nenhuma tarja nem faixa
+        await pg.click('#faixa-botao', { timeout: 10000 });
+        nova = await pg.evaluate(() => {
+          const g = window.__golaco, cf = window.__cf;
+          for (let i = 0; i < 10; i++) cf.quadro(false);
+          const T = g.cenas.tarjas;
+          return { ativa: g.cenas.ativo, tick: g.mundo.tick, estado: g.mundo.partida?.estado, faixa: cf.faixa().vis, tarjas: ['placar', 'estatisticas', 'melhor'].filter(k => T?.[k]?.visivel) };
+        });
+      }
+      meta('F5 a faixa final: "Fim de jogo", o placar e os dois botões ("Jogar de novo" e "Melhores momentos", com lance guardado)',
+        fx ? `"${fx.titulo}" "${fx.placar}"; ${b.map(x => (x ? `"${x.texto}" ${x.vis ? 'visível' : 'escondido'}` : '-')).join(', ')}; ${A1.lances} lance(s) guardado(s)` : 'nenhuma faixa',
+        'Fim de jogo; os dois visíveis', !!M1 && fx?.vis && /fim de jogo/i.test(fx.titulo) && /jogar de novo/i.test(b[0]?.texto ?? '') && b[0]?.vis && /melhores momentos/i.test(b[1]?.texto ?? '') && b[1]?.vis && A1.lances >= 1);
+      meta('F5 "Melhores momentos": os lances do guardador tocam (a faixa escondida, o mundo parado) e a faixa volta com os botões',
+        mm ? `${mm.tocando} quadros de replay (${mm.tipos.join(', ')}), a faixa junto em ${mm.faixaJunto}; vistos ${mm.hist?.vistos ?? '-'} de ${mm.hist?.lances?.length ?? '-'}, fim ${mm.hist?.fim}; tick ${mm.tickMudou ? 'ANDOU' : 'parado'}, hash ${mm.hashIgual ? 'igual' : 'DIFERENTE'}; depois a faixa ${mm.faixa.vis ? 'visível' : 'escondida'} com ${mm.faixa.botoes.filter(x => x?.vis).length} botões` : 'não tocou',
+        '> 1 s de lance; 0; vistos todos; parado; a faixa de volta', !!mm && mm.tocando > 60 && mm.faixaJunto === 0 && mm.hist?.fim && !mm.hist.pulou && mm.hist.vistos === mm.hist.lances.length && mm.tickMudou === 0 && mm.hashIgual && mm.faixa.vis && mm.faixa.botoes.every(x => x?.vis) && mm.ativa);
+      meta('F5 um aperto novo pula o lance dos melhores momentos e volta à faixa',
+        mm2 ? `tocando antes do aperto: ${mm2.antes.tocando}; acabou em ${mm2.q} quadros (${mm2.ativo ? 'AINDA tocando' : 'parou'}); pulou ${mm2.hist?.pulou}; faixa ${mm2.faixa.vis ? 'visível' : 'escondida'}` : 'não tocou',
+        'acaba em ≤ 4 quadros; pulou; a faixa', !!mm2 && mm2.antes.tocando && !mm2.ativo && mm2.q <= 4 && mm2.hist?.pulou === true && mm2.faixa.vis && !mm2.mmEstado);
+      meta('F5 "Jogar de novo" zera a cena (o mundo novo, nenhuma tarja, nenhuma faixa)',
+        nova ? `cena ${nova.ativa ? 'ATIVA' : 'fora'}; tick ${nova.tick} (${nova.estado}); faixa ${nova.faixa ? 'VISÍVEL' : 'escondida'}; tarjas ${nova.tarjas.join(', ') || 'nenhuma'}` : 'não clicou',
+        'fora; tick pequeno; nenhuma', !!nova && !nova.ativa && nova.tick < 200 && !nova.faixa && nova.tarjas.length === 0);
+    }
+
+    // ---- 2) e 3) derrota (0–1) e empate (1–1), o placar escrito no mundo: os planos de cada desfecho e o tick parado
+    for (const [rot, placar, tipo, res] of [['derrota 0–1', [0, 1], 'vitoria', 'vitoria'], ['empate 1–1', [1, 1], 'empate', 'empate']]) {
+      const A = await pg.evaluate(placar => {
+        const g = window.__golaco, cf = window.__cf;
+        g.reiniciar({ modo: 'partida', semente: 7, minutosPorTempo: 1 });
+        const lev = cf.levar({ antes: 40, placar });
+        return { ...cf.ateCena(), lev };
+      }, placar);
+      let M = null, X = null;
+      if (A.cena) { await pg.evaluate(() => window.__cf.iniciar()); await pg.evaluate(() => window.__cf.andar({ depois: 30 })); M = await pg.evaluate(() => window.__cf.medida()); } else X = await pg.evaluate(() => window.__cf.semCena(180));
+      conferirF1(`PC, ${rot}${tipo === 'vitoria' ? ' (o visitante vence)' : ''}`, A, M ?? {}, fimEsperado(tipo), res);
+      if (tipo === 'vitoria') meta(`F1 PC, ${rot}: quem venceu é o visitante (vencedor 1) e o melhor em campo existe`, M ? `vencedor ${M.ini?.vencedor}; melhor ${M.ini?.melhor?.id ?? '-'}` : 'nenhuma cena', '1; existe', M?.ini?.vencedor === 1 && M.ini.melhor != null);
+      conferirF2(`PC, ${rot}`, A, M ?? {}, X);
+    }
+
+    // ---- 4) F6: Enter = o próximo bloco (os planos de campo → o melhor → o placar → as estatísticas → a faixa final); antes de
+    // 0,5 s não pula
+    {
+      const A = await pg.evaluate(() => {
+        const g = window.__golaco, cf = window.__cf;
+        g.reiniciar({ modo: 'partida', semente: 7, minutosPorTempo: 1 });
+        cf.levar({ antes: 40, placar: [2, 1] });
+        const a = cf.ateCena();
+        for (let i = 0; i < 12; i++) cf.quadro(false);
+        return a;
+      });
+      const passos = [];
+      let cedo = null, pausa = null;
+      if (A.cena) {
+        await pg.keyboard.press('Enter');
+        cedo = await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 3; i++) window.__cf.quadro(false); return { fase: g.cenas.estado?.fase, t: g.cenas.estado?.tempo }; });
+        // Esc = a pausa (como no intervalo): a cena congela (o relógio dela e o mundo) e volta de onde parou
+        await pg.evaluate(() => { for (let i = 0; i < 30; i++) window.__cf.quadro(false); });
+        const p0 = await pg.evaluate(() => ({ t: window.__golaco.cenas.estado?.tempo, tick: window.__golaco.mundo.tick }));
+        await pg.keyboard.press('Escape');
+        pausa = await pg.evaluate(p0 => {
+          const g = window.__golaco;
+          for (let i = 0; i < 30; i++) window.__cf.quadro(false);
+          return { ...p0, depois: g.cenas.estado?.tempo, tickIgual: g.mundo.tick === p0.tick, fase: g.cenas.estado?.fase, faixa: !!g.cenas.estado?.faixaFinal };
+        }, p0);
+        await pg.keyboard.press('Escape');
+        pausa.volta = await pg.evaluate(t => { for (let i = 0; i < 30; i++) window.__cf.quadro(false); return window.__golaco.cenas.estado?.tempo - t; }, pausa.depois ?? 0);
+        await pg.evaluate(() => { const g = window.__golaco; while (g.cenas.estado && g.cenas.estado.tempo < 0.7) window.__cf.quadro(false); });
+        for (let i = 0; i < 4; i++) {
+          // (a fase de ANTES do aperto: o Enter vira a ação na hora, no evento da tecla — o quadro só desenha)
+          const t0 = await pg.evaluate(() => ({ tick: window.__golaco.mundo.tick, fase: window.__golaco.cenas.estado?.fase }));
+          await pg.keyboard.press('Enter');
+          passos.push(await pg.evaluate(t0 => {
+            const g = window.__golaco, cf = window.__cf, mudou = () => g.cenas.estado?.fase !== t0.fase || g.cenas.estado?.faixaFinal;
+            let q = 0;
+            if (!mudou()) while (q < 4) { cf.quadro(false); q++; if (mudou()) break; }
+            for (let k = 0; k < 20; k++) cf.quadro(false);
+            const e = g.cenas.estado;
+            return { q, fase: e?.faixaFinal ? 'faixa' : e?.fase ?? 'fim', tick: g.mundo.tick === t0.tick };
+          }, t0));
+        }
+      }
+      const seq = passos.map(p => p.fase);
+      meta('F6 PC: Enter antes de 0,5 s não pula; depois, cada Enter = o próximo bloco (melhor → placar → estatísticas → faixa final) em ≤ 2 quadros, o mundo parado',
+        A.cena ? `cedo (${f2(cedo?.t)} s): ${cedo?.fase}; ${passos.map(p => `${p.fase} (${p.q} q)`).join(' → ')}; tick ${passos.every(p => p.tick) ? 'parado' : 'ANDOU'}` : 'nenhuma cena',
+        'apito; melhor → placar → estatisticas → faixa', A.cena && cedo?.fase === 'apito' && seq.join() === 'melhor,placar,estatisticas,faixa' && passos.every(p => p.q <= 2 && p.tick));
+      meta('F6 PC: Esc = a pausa — a cena congela (o relógio dela e o mundo; nem vai à faixa) e volta de onde parou com Esc',
+        pausa ? `tempo ${f2(pausa.t)} → ${f2(pausa.depois)} s em 30 quadros pausados (${pausa.fase}${pausa.faixa ? ', FAIXA' : ''}); tick ${pausa.tickIgual ? 'parado' : 'ANDOU'}; depois de Esc andou ${f2(pausa.volta)} s em 30 quadros` : 'nenhuma cena',
+        'parados; anda ~0,5 s', !!pausa && Math.abs(pausa.depois - pausa.t) < 1e-6 && pausa.tickIgual && !pausa.faixa && pausa.volta > 0.4);
+    }
+    // (revisão) um botão de jogo SEGURADO (K por 6 quadros, depois de 0,5 s) = um bloco só, como o Enter: antes o aperto que
+    // disparava nunca ficava marcado como visto e avançava um bloco por QUADRO (do apito à faixa final)
+    {
+      const A = await pg.evaluate(() => {
+        const g = window.__golaco, cf = window.__cf;
+        g.reiniciar({ modo: 'partida', semente: 7, minutosPorTempo: 1 });
+        cf.levar({ antes: 40, placar: [2, 1] });
+        const a = cf.ateCena();
+        let n = 0;
+        while (a.cena && g.cenas.estado && g.cenas.estado.tempo < 0.7 && n < 200) { cf.quadro(false); n++; }
+        return { cena: a.cena, fase: g.cenas.estado?.fase ?? null };
+      });
+      let seg = null;
+      if (A.cena) {
+        await pg.keyboard.down('KeyK');
+        await pg.evaluate(() => { for (let i = 0; i < 6; i++) window.__cf.quadro(false); });
+        await pg.keyboard.up('KeyK');
+        seg = await pg.evaluate(() => { for (let i = 0; i < 2; i++) window.__cf.quadro(false); const e = window.__golaco.cenas.estado; return { fase: e?.faixaFinal ? 'faixa' : e?.fase ?? 'fim' }; });
+      }
+      meta('F6 PC (revisão): um botão de jogo segurado (K, 6 quadros) = um bloco só (apito → melhor), como o Enter',
+        seg ? `${A.fase} → ${seg.fase}` : 'nenhuma cena', 'apito → melhor', !!seg && A.fase === 'apito' && seg.fase === 'melhor');
+    }
+
+    // ---- 5) o gol no último lance (o replay dele ligado): o gol → o replay do gol → a cena (no tick do apito, que o replay
+    // não andou) e o apito final pedido até o fim do plano do apito (R6: não depois da cena)
+    {
+      const G = await pg.evaluate(async () => {
+        const g = window.__golaco, cf = window.__cf;
+        g.replay.automatico(true);
+        g.reiniciar({ modo: 'partida', semente: 5, minutosPorTempo: 1 });
+        const { criarBola } = await import('./js/bola.js');
+        const { CAMPO } = await import('./js/config.js');
+        g.rodarPassos(600, 'demo');
+        let w = 0; while (w < 3000 && g.mundo.partida.estado !== 'jogo') { g.rodarPassos(1, 'demo'); w++; }
+        const m = g.mundo, p = m.partida, adv = 1, lado = m.ataca[adv];
+        // o 2º tempo nos acréscimos, acabando 60 passos depois daqui: o gol sai antes e o fim chega no passo da saída
+        p.tempo = 2; p.acrescimo = 1;
+        p.tick0Tempo = m.tick - (p.ticksPorTempo + Math.round(p.ticksPorTempo / 45)) + 60;
+        const autor = m.jogadores.find(j => j.time === adv && j.posicao !== 'GOL'), gk = m.jogadores.find(j => j.time === 0 && j.posicao === 'GOL');
+        m.posse = null; m.naMao = null; m.voo = null; m.parada = null; p.estado = 'jogo'; m.golTick = null; m.foraDesde = null;
+        Object.assign(m.bola, criarBola(lado * (CAMPO.meioX - 0.5), gk && gk.z > 0 ? -2.7 : 2.7));
+        m.bola.p.y = 0.4; m.bola.v.x = lado * 16; m.bola.v.y = 0; m.bola.v.z = 0; m.bola.rolando = false;
+        m.ultimoToque = { id: autor.id, time: adv, tick: m.tick };
+        const fase = () => (g.cenas?.ativo && g.cenas.tipo === 'fim' ? 'cena' : g.replay.estado?.ativo ? 'replay:' + g.replay.estado.tipo : p.estado);
+        const seq = [];
+        let n = 0, tickApito = null, cena = null, depoisFaixa = 0, apReplay = null;
+        while (n < 6000) {
+          cf.quadro(false); n++;
+          if (tickApito == null && p.estado === 'fim') tickApito = m.tick;
+          const s = fase();
+          if (seq[seq.length - 1]?.s !== s) seq.push({ s, tick: m.tick, apitos: cf.apitos() });
+          // (os apitos pedidos até o último quadro do replay do gol: o adiado não toca durante ele)
+          if (s === 'replay:gol') apReplay = cf.apitos();
+          if (s === 'cena') { cena = { tick: m.tick, hist: g.cenas.historicoPosJogo.at(-1)?.tick ?? null }; break; }
+          if (tickApito != null && seq.some(x => x.s === 'replay:gol') && !g.replay.estado?.ativo && cf.faixa().vis && ++depoisFaixa > 30) break;
+        }
+        let ate = null;
+        if (cena) {
+          cf.iniciar({ apito0: apReplay ?? cf.apitos() });
+          cf.andar({ ate: 'vencedor' });
+          ate = { apitoNoApito: window.__mf.apitoNoApito, fases: window.__mf.fases.map(x => x.f), tickMudou: window.__mf.tickMudou };
+        }
+        g.replay.automatico(false);
+        return { seq, tickApito, cena, ate, apReplay, placar: [m.placar[0], m.placar[1]] };
+      });
+      const ord = G.seq.map(x => `${x.s}@${x.tick}`).join(' → ');
+      const iR = G.seq.findIndex(x => x.s === 'replay:gol'), iC = G.seq.findIndex(x => x.s === 'cena');
+      meta('F1 o gol no último lance: o gol → o replay do gol → a cena, no tick do apito (o replay não andou o mundo)',
+        `${ord}; apito no tick ${G.tickApito}; ${G.cena ? `cena no ${G.cena.tick} (histórico ${G.cena.hist})` : 'nenhuma cena'}; placar ${G.placar.join('–')}`,
+        'gol → replay:gol → cena; o mesmo tick', iR >= 0 && iC > iR && G.cena?.tick === G.tickApito && G.cena?.hist === G.tickApito);
+      meta('F10 (rev. R6) com o gol no último lance, o apito final é pedido no plano do apito (depois do replay do gol, não depois da cena)',
+        G.ate ? `durante o replay: ${(G.apReplay ?? 0) - (G.seq[iR]?.apitos ?? 0)}; do fim do replay até o fim do plano do apito: ${G.ate.apitoNoApito}; fases ${G.ate.fases.join(' → ')}` : 'nenhuma cena',
+        '0; ≥ 1', !!G.ate && G.ate.apitoNoApito >= 1 && G.apReplay != null && G.apReplay - (G.seq[iR]?.apitos ?? 0) === 0);
+    }
+  } finally { await P.fechar(); }
+} catch (e) { meta('F execução (pós-jogo no PC: F1–F6, F10)', erroCurto(e), 'sem exceção', false); }
+
+// ------------------------------------------------------------------------------------------------ FC (pós-jogo no celular)
+/** F8: as tarjas (contra o placar, o "Pular", a pausa e toda peça visível) e a faixa final (os dois botões) no celular. */
+function conferirTelaCel(rot, R, opc = {}) {
+  const M = R.M, cx = M?.cx, fe = M?.faixaEnc;
+  const ks = Object.keys(cx?.ks ?? {}).sort().join();
+  const esp = opc.est === false ? 'melhor,placar' : 'estatisticas,melhor,placar';
+  meta(`F8 ${rot}: as tarjas (placar final, estatísticas, melhor em campo) dentro da tela e a ≥ ${LIM_FIM.folga} px do placar, do "Pular", da pausa e de toda peça do HUD`,
+    M ? `${cx.n} medidas (${JSON.stringify(cx.ks)}); ${cx.ruins} ruins${cx.pior ? ` (${cx.pior.k} no ${cx.pior.fase}: dentro ${cx.pior.dentro}, ${cx.pior.perto} a ${f2(cx.pior.folga)} px)` : ''}; a menor folga ${cx.min.k} × ${cx.min.perto} ${f2(cx.min.f)} px` : 'nenhuma cena',
+    `as 3 medidas; 0`, !!M && ks === esp && cx.ruins === 0);
+  meta(`F8 ${rot}: a faixa final — o painel e os ${opc.botoes ?? 2} botões dentro da tela, sem cortar o texto, sem encostar um no outro nem em peça do HUD (≥ ${LIM_FIM.folga} px)`,
+    fe ? `${fe.n} botões (${fe.botoes.join(' / ')}); o painel a ${f2(fe.painel.f)} px de ${fe.painel.k}; ${fe.ruins.length ? fe.ruins.join('; ') : 'nada encosta'}` : 'nenhuma faixa',
+    `${opc.botoes ?? 2}; nada`, !!fe && fe.n === (opc.botoes ?? 2) && fe.ruins.length === 0);
+}
+/** F6 no celular: o toque na tela = o próximo bloco (antes de 0,5 s não); o "Pular" = a faixa final. */
+async function toqueCel(pg) {
+  const A = await pg.evaluate(() => {
+    const g = window.__golaco, cf = window.__cf;
+    g.reiniciar({ modo: 'partida', semente: 7, minutosPorTempo: 1 });
+    cf.levar({ antes: 40, placar: [2, 1] });
+    const a = cf.ateCena();
+    for (let i = 0; i < 12; i++) cf.quadro(false);
+    return a;
+  });
+  if (!A.cena) return { cena: false };
+  const vp = pg.viewportSize();
+  await pg.touchscreen.tap(vp.width / 2, vp.height / 2);
+  const cedo = await pg.evaluate(() => { for (let i = 0; i < 3; i++) window.__cf.quadro(false); return { fase: window.__golaco.cenas.estado?.fase, t: window.__golaco.cenas.estado?.tempo }; });
+  await pg.evaluate(() => { const g = window.__golaco; while (g.cenas.estado && g.cenas.estado.tempo < 0.7) window.__cf.quadro(false); });
+  const f0 = await pg.evaluate(() => window.__golaco.cenas.estado?.fase);
+  await pg.touchscreen.tap(vp.width / 2, vp.height / 2);
+  const toque = await pg.evaluate(f0 => {
+    const g = window.__golaco, cf = window.__cf, mudou = () => g.cenas.estado?.fase !== f0;
+    let q = 0;
+    if (!mudou()) while (q < 4) { cf.quadro(false); q++; if (mudou()) break; }
+    return { q, fase: g.cenas.estado?.fase, tick: g.mundo.tick };
+  }, f0);
+  const pul = await pg.evaluate(() => window.__golaco.cenas.tarjas?.caixas?.pular ?? null);
+  let pulo = null;
+  if (pul) {
+    await pg.touchscreen.tap((pul.x0 + pul.x1) / 2, (pul.y0 + pul.y1) / 2);
+    pulo = await pg.evaluate(t0 => {
+      const g = window.__golaco, cf = window.__cf;
+      let q = 0;
+      if (!g.cenas.estado?.faixaFinal) while (q < 4) { cf.quadro(false); q++; if (g.cenas.estado?.faixaFinal) break; }
+      return { q, faixa: !!g.cenas.estado?.faixaFinal, pulou: g.cenas.historicoPosJogo.at(-1)?.pulou ?? null, tick: g.mundo.tick === t0, vis: cf.faixa().vis };
+    }, toque.tick);
+  }
+  return { cena: true, cedo, f0, toque, pul, pulo };
+}
+marcar('FC');
+if (roda('FC')) try {
+  const url = t => `?q=media&hora=dia&semente=5&demo=1&cenas=1&prejogo=0&comemoracao=0&replay=0&replayParada=0&substituicao=0${t ? '' : '&troca=0'}`;
+  const cel = { largura: 844, altura: 390, dpr: 2, toque: true };
+  let r1 = null, r0 = null, rl = null, tq = null, volta = null;
+  const C1 = await pagina('FC', url(true), cel);
+  try {
+    const pg = C1.pagina;
+    await pg.evaluate(instalarFim);
+    // a vitória com o gol roteirizado (o lance guardado: os dois botões da faixa), desenhada a cada 6 quadros
+    r1 = await posJogo(pg, { semente: 5, gol: true, placar: 'vitoria', desenhar: 8, caixas: true, depois: 30 }, 'cel');
+    tq = await toqueCel(pg);
+    // 568×320 (a mesma página, a janela menor): só as caixas
+    await pg.setViewportSize({ width: 568, height: 320 });
+    for (let i = 0; i < 3; i++) await pg.evaluate(() => window.__cf.quadro(true));
+    rl = await posJogo(pg, { semente: 5, gol: true, placar: 'vitoria', caixas: true, depois: 30 }, 'cel568');
+    // (revisão) "Jogar de novo" pelo toque no botão da faixa: a partida nova e os controles de toque de volta
+    const bj = await pg.evaluate(() => { const e = document.getElementById('faixa-botao'); const r = e && window.__ct.vis(e, false) ? e.getBoundingClientRect() : null; return r ? { x: r.left + r.width * 0.2, y: r.top + r.height / 2 } : null; });
+    if (bj) {
+      await pg.touchscreen.tap(bj.x, bj.y);
+      volta = await pg.evaluate(() => {
+        for (let i = 0; i < 6; i++) window.__cf.quadro(true);
+        const g = window.__golaco, t = document.getElementById('toque'), b = document.getElementById('btn-correr');
+        return { fimFaixa: document.documentElement.classList.contains('fim-faixa'), toque: window.__ct.vis(t, false), correr: !!b && window.__ct.vis(b, false), cena: !!g.cenas?.ativo, tick: g.mundo.tick, faixa: window.__cf.faixa().vis };
+      });
+    }
+  } finally { await C1.fechar(); }
+  const C0 = await pagina('FC0', url(false), cel);
+  try { await C0.pagina.evaluate(instalarFim); r0 = await posJogo(C0.pagina, { semente: 5, gol: true, placar: 'vitoria', desenhar: 8, depois: 10 }); } finally { await C0.fechar(); }
+  conferirF1('celular 844×390 Média, vitória', r1.A, r1.M ?? {}, fimEsperado('vitoria'), 'vitoria');
+  conferirTelaCel('celular 844×390', r1);
+  conferirTelaCel('celular 568×320', rl);
+  meta('F8 celular (revisão): "Jogar de novo" pelo toque (a 20% da largura do botão) — a partida nova e os controles de toque de volta (o CORRER na tela)',
+    volta ? `cena ${volta.cena ? 'ATIVA' : 'fora'}; tick ${volta.tick}; faixa ${volta.faixa ? 'VISÍVEL' : 'fora'}; html.fim-faixa ${volta.fimFaixa}; toque ${volta.toque ? 'na tela' : 'FORA'}, CORRER ${volta.correr ? 'na tela' : 'FORA'}` : 'sem o botão',
+    'fora; tick pequeno; fora; false; na tela', !!volta && !volta.cena && volta.tick < 200 && !volta.faixa && !volta.fimFaixa && volta.toque && volta.correr);
+  const pp = piorPlano(r1.M);
+  meta(`F8 celular 844×390 Média (manequim): ≤ ${LIM_FIM.chamadas} chamadas de desenho e ≤ ${LIM_FIM.triangulos / 1000} mil triângulos no pior plano`,
+    r1.M ? `${pp.cham} chamadas (${pp.fc}), ${(pp.tri / 1000).toFixed(0)} mil triângulos (${pp.ft}); ${Object.entries(r1.M.por).map(([f, p]) => `${f} ${p.cham}`).join(', ')}` : 'nenhuma cena',
+    `≤ ${LIM_FIM.chamadas}; ≤ ${LIM_FIM.triangulos / 1000} mil`, !!r1.M && pp.cham > 0 && pp.cham <= LIM_FIM.chamadas && pp.tri <= LIM_FIM.triangulos);
+  conferirCustoTroca('celular, manequim', r1.M, r0?.M);
+  meta('F6 celular: o toque na tela antes de 0,5 s não pula; depois = o próximo bloco (≤ 2 quadros); o "Pular" (≥ 48 px) = a faixa final (≤ 2 quadros), o mundo parado',
+    tq?.cena ? `cedo (${f2(tq.cedo.t)} s): ${tq.cedo.fase}; toque: ${tq.f0} → ${tq.toque.fase} (${tq.toque.q} q); Pular ${tq.pul ? `${f2(tq.pul.y1 - tq.pul.y0)} px` : 'sem caixa'} → ${tq.pulo ? `${tq.pulo.faixa ? 'faixa' : 'NÃO'} (${tq.pulo.q} q), pulou ${tq.pulo.pulou}, tick ${tq.pulo.tick ? 'parado' : 'ANDOU'}` : '-'}` : 'nenhuma cena',
+    'apito; melhor; faixa', !!tq?.cena && tq.cedo.fase === 'apito' && tq.toque.fase === 'melhor' && tq.toque.q <= 2 && !!tq.pul && tq.pul.y1 - tq.pul.y0 >= 48 && tq.pulo?.faixa && tq.pulo.q <= 2 && tq.pulo.pulou === true && tq.pulo.tick && tq.pulo.vis);
+} catch (e) { meta('FC execução (pós-jogo no celular: F1, F6, F8)', erroCurto(e), 'sem exceção', false); }
+
+// ------------------------------------------------------------------------------------------------ FU (celular, ?corpo=humano)
+marcar('FU');
+if (roda('FU')) try {
+  const url = t => `?q=media&hora=dia&semente=7&demo=1&cenas=1&prejogo=0&comemoracao=0&replay=0&replayParada=0&substituicao=0&corpo=humano${t ? '' : '&troca=0'}`;
+  const cel = { largura: 844, altura: 390, dpr: 2, toque: true, corpo: true };
+  let u1 = null, u0 = null, corpo = null;
+  const U1 = await pagina('FU', url(true), cel);
+  try {
+    await U1.pagina.evaluate(instalarFim);
+    corpo = await U1.pagina.evaluate(() => window.__golaco.estadio.corpo);
+    u1 = await posJogo(U1.pagina, { semente: 7, placar: [2, 1], desenhar: 8, depois: 10, troca: true }, 'humano');
+  } finally { await U1.fechar(); }
+  const U0 = await pagina('FU0', url(false), cel);
+  try { await U0.pagina.evaluate(instalarFim); u0 = await posJogo(U0.pagina, { semente: 7, placar: [2, 1], desenhar: 8, depois: 10 }); } finally { await U0.fechar(); }
+  conferirF1('celular, ?corpo=humano, 2–1', u1.A, u1.M ?? {}, fimEsperado('vitoria'), 'vitoria');
+  const pp = piorPlano(u1.M);
+  meta(`F9 ?corpo=humano no celular 844×390 Média: o corpo novo pronto, ≤ ${LIM_FIM.chamadas} chamadas, ≤ ${LIM_FIM.triangulos / 1000} mil triângulos no pior plano e os jogadores ≤ ${LIM_FIM.triCorpoMedia / 1000} mil`,
+    u1.M ? `corpo ${corpo?.pronto ? 'pronto' : corpo?.erro ? `erro ${corpo.erro}` : 'não'}; ${pp.cham} chamadas (${pp.fc}), ${(pp.tri / 1000).toFixed(0)} mil (${pp.ft}), jogadores ${(pp.triCorpo / 1000).toFixed(0)} mil` : 'nenhuma cena',
+    `pronto; ≤ ${LIM_FIM.chamadas}; ≤ ${LIM_FIM.triangulos / 1000} mil; ≤ ${LIM_FIM.triCorpoMedia / 1000} mil`, !!u1.M && !!corpo?.pronto && pp.cham > 0 && pp.cham <= LIM_FIM.chamadas && pp.tri <= LIM_FIM.triangulos && pp.triCorpo > 0 && pp.triCorpo <= LIM_FIM.triCorpoMedia);
+  conferirTroca('celular, corpo novo', u1.M, u1.px);
+  conferirCustoTroca('celular, corpo novo', u1.M, u0?.M);
+} catch (e) { meta('FU execução (pós-jogo com o corpo novo: F9)', erroCurto(e), 'sem exceção', false); }
+
+// ------------------------------------------------------------------------------------------------ FT (pós-jogo no Total Match)
+/** Abre o "TM" (o pedido no localStorage e o jogo num iframe) e devolve {s, fr} com os ajudantes instalados no quadro. */
+async function abrirTM(pedido, q, tela = { largura: 1280, altura: 720 }) {
+  const s = await abrir(tela);
+  const url = `${srv.url}__quadro-tm-${pedido.id}.html`;
+  await s.contexto.route(url, r => r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: htmlQuadro(pedido, q) }));
+  await s.pagina.goto(url, { waitUntil: 'load' });
+  let fr = null;
+  for (let i = 0; i < 400 && !fr; i++) { fr = s.pagina.frames().find(f => /[?&]tm=/.test(f.url())); if (!fr) await s.pagina.waitForTimeout(50); }
+  if (!fr) throw new Error('o quadro do jogo não abriu');
+  await fr.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 600000 });
+  await fr.evaluate(instalar);
+  await fr.evaluate(instalarFim);
+  await fr.evaluate(() => window.__golaco.relogio.usarManual(true));
+  return { s, fr };
+}
+/** No TM: a partida até a cena com o placar e o resultado gravado no localStorage no 1º quadro da cena. */
+const ateCenaTM = (fr, id, placar) => fr.evaluate(({ id, placar }) => {
+  const cf = window.__cf;
+  const lev = cf.levar({ antes: 40, placar });
+  const a = cf.ateCena();
+  const r = localStorage.getItem('tm3d:resultado:' + id);
+  return { ...a, lev, res: r ? JSON.parse(r) : null };
+}, { id, placar });
+marcar('FT');
+if (roda('FT')) try {
+  const Q = 'q=baixa&min=1&cenas=1&prejogo=0&comemoracao=0&replay=0&replayParada=0&substituicao=0';
+  const PED_E = { ...PED_A, id: 'tE', partida: { ...PED_A.partida, empateContinua: false } };
+  // FT1: a vitória (2–1) no PC — o resultado gravado antes da cena, sem as estatísticas, o "tm3d:fim" só no clique
+  {
+    const { s, fr } = await abrirTM(PED_A, Q);
+    try {
+      const A = await ateCenaTM(fr, PED_A.id, [2, 1]);
+      let R = null, msgs0 = null, msgs1 = null;
+      if (A.cena) {
+        R = await andarCena(fr, { depois: 30 });
+        msgs0 = await s.pagina.evaluate(() => window.__msgs.map(m => m?.tipo));
+        await fr.click('#faixa-botao', { timeout: 10000 });
+        await s.pagina.waitForTimeout(1500);
+        msgs1 = await s.pagina.evaluate(() => window.__msgs.filter(m => m?.tipo === 'tm3d:fim').map(m => ({ casa: m.resultado?.homeGoals, fora: m.resultado?.awayGoals, melhor: m.resultado?.melhor ?? null })));
+      }
+      errosTodos.push(...s.erros.map(e => `FT1: ${e}`));
+      const M = R?.M, res = A.res, rm = res?.melhor, tm = M?.tarjas?.melhor?.ultimo;
+      meta('F7 TM: o resultado já está no localStorage no 1º quadro da cena (o placar e o "melhor" opcional = o melhor em campo da cena)',
+        A.cena ? `resultado ${res ? `${res.homeGoals}–${res.awayGoals}, melhor ${rm ? `lado ${rm.lado} ${rm.nome} ${rm.nota}` : 'sem'}` : 'NÃO gravado'}; o melhor da cena ${M?.ini?.melhor ? `${M.ini.melhor.time}/${M.ini.melhor.id} ${M.ini.melhor.nota}` : '-'}; a tarja ${tm ? `"${tm.nome} ${tm.nota}"` : '-'}` : 'nenhuma cena',
+        '2–1; o mesmo melhor e a mesma nota', A.cena && res?.homeGoals === 2 && res?.awayGoals === 1 && !!rm && rm.lado === M?.ini?.melhor?.time && rm.nota === M.ini.melhor.nota && tm?.nota === rm.nota.toFixed(1).replace('.', ','));
+      conferirF1('TM, vitória 2–1 (sem as estatísticas)', A, M ?? {}, fimEsperado('vitoria', { est: false }), 'vitoria');
+      meta('F7 TM: nenhum painel de estatísticas; a faixa final com "Voltar ao Total Match" (sem "Melhores momentos": nenhum lance guardado); o "tm3d:fim" só no clique, com o "melhor"',
+        M ? `painel ${M.tarjas.estatisticas.n} quadros; faixa ${M.faixa.botoes.map(x => (x ? `"${x.texto}" ${x.vis ? 'visível' : 'escondido'}` : '-')).join(', ')}; mensagens antes do clique ${JSON.stringify(msgs0)}; depois ${JSON.stringify(msgs1)}` : 'nenhuma cena',
+        '0; Voltar; nenhuma; 1 com o melhor', !!M && M.tarjas.estatisticas.n === 0 && /voltar ao total match/i.test(M.faixa.botoes[0]?.texto ?? '') && M.faixa.botoes[0]?.vis && !M.faixa.botoes[1]?.vis && !(msgs0 ?? []).includes('tm3d:fim') && msgs1?.length === 1 && msgs1[0].casa === 2 && msgs1[0].fora === 1 && msgs1[0].melhor?.nota === rm?.nota);
+    } finally { await s.navegador.close(); }
+  }
+  // FT2: o empate (1–1) sem o campo empateContinua = a versão curta
+  {
+    const { s, fr } = await abrirTM(PED_A, Q);
+    try {
+      const A = await ateCenaTM(fr, PED_A.id, [1, 1]);
+      const R = A.cena ? await andarCena(fr, { depois: 10 }) : null;
+      errosTodos.push(...s.erros.map(e => `FT2: ${e}`));
+      conferirF1('TM, empate 1–1 sem "empateContinua" (a versão curta)', A, R?.M ?? {}, fimEsperado('curto'), 'empate');
+      meta('F7 TM, a versão curta: curto, sem o melhor em campo (nem a tarja)', R?.M ? `curto ${R.M.ini.curto}; melhor ${R.M.ini.melhor?.id ?? 'nenhum'}; a tarja ${R.M.tarjas.melhor.n} quadros` : 'nenhuma cena',
+        'curto; nenhum; 0', !!R?.M && R.M.ini.curto === true && R.M.ini.melhor == null && R.M.tarjas.melhor.n === 0);
+    } finally { await s.navegador.close(); }
+  }
+  // FT3: o empate com empateContinua false = a versão inteira (sem as estatísticas); no celular, o "Pular" leva à faixa com o
+  // "Voltar ao Total Match" num toque
+  {
+    const { s, fr } = await abrirTM(PED_E, Q, { largura: 844, altura: 390, dpr: 1, toque: true });
+    try {
+      const A = await ateCenaTM(fr, PED_E.id, [1, 1]);
+      let e0 = null, pulo = null;
+      if (A.cena) {
+        e0 = await fr.evaluate(() => { const g = window.__golaco, cf = window.__cf; for (let i = 0; i < 45; i++) cf.quadro(false); const e = g.cenas.estado; return { curto: e.curto, planos: e.planos.map(p => p.nome), resultado: e.resultado }; });
+        const pul = await fr.evaluate(() => window.__golaco.cenas.tarjas?.caixas?.pular ?? null);
+        if (pul) {
+          // (o quadro do jogo ocupa a página inteira: as coordenadas do quadro = as da página)
+          await s.pagina.touchscreen.tap((pul.x0 + pul.x1) / 2, (pul.y0 + pul.y1) / 2);
+          pulo = await fr.evaluate(() => {
+            const g = window.__golaco, cf = window.__cf;
+            let q = 0;
+            if (!g.cenas.estado?.faixaFinal) while (q < 4) { cf.quadro(false); q++; if (g.cenas.estado?.faixaFinal) break; }
+            return { q, faixa: cf.faixa() };
+          });
+        }
+      }
+      errosTodos.push(...s.erros.map(e => `FT3: ${e}`));
+      const esp = fimEsperado('empate', { est: false });
+      meta('F7 TM, empate com "empateContinua: false": a versão inteira do empate (sem as estatísticas); no celular o "Pular" = a faixa com "Voltar ao Total Match" (o 2º toque)',
+        A.cena ? `curto ${e0?.curto}; ${e0?.planos.join(' → ')}; Pular → ${pulo ? `${pulo.faixa.vis ? `faixa "${pulo.faixa.botoes[0]?.texto}" ${pulo.faixa.botoes[0]?.vis ? 'visível' : 'escondido'}` : 'SEM faixa'} em ${pulo.q} quadros` : '-'}` : 'nenhuma cena',
+        `${esp.nomes.join(' → ')} → geral; a faixa em ≤ 2 quadros`, A.cena && e0?.curto === false && e0.planos.join() === [...esp.nomes, 'geral'].join() && pulo?.faixa.vis && pulo.q <= 2 && /voltar ao total match/i.test(pulo.faixa.botoes[0]?.texto ?? '') && pulo.faixa.botoes[0]?.vis);
+    } finally { await s.navegador.close(); }
+  }
+} catch (e) { meta('FT execução (pós-jogo no Total Match: F7)', erroCurto(e), 'sem exceção', false); }
+
+// ------------------------------------------------------------------------------------------------ FO (pós-jogo no online)
+marcar('FO');
+if (roda('FO')) try {
+  const s = await abrir({ largura: 844, altura: 390, dpr: 1, toque: true });
+  try {
+    const sala = 'posjogo' + Date.now();
+    const q = lado => `${srv.url}index.html?online=${sala}&transporte=bc&lado=${lado}&ia=1&semente=7&min=0.12&q=baixa&replay=0&comemoracao=0&prejogo=0&D=4&cenas=1`;
+    const A = s.pagina, B = await s.contexto.newPage();
+    B.on('pageerror', e => errosTodos.push(`FO B: ${e.message}`));
+    B.on('console', m => { if (m.type() === 'error') errosTodos.push(`FO B: ${m.text()}`); });
+    await Promise.all([A.goto(q(0), { waitUntil: 'load' }), B.goto(q(1), { waitUntil: 'load' })]);
+    await Promise.all([A, B].map(p => p.waitForFunction(() => window.__golaco && window.__golaco.pronto && window.__golaco.online && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 600000 })));
+    const fim = p => p.waitForFunction(() => window.__golaco.online?.estado === 'fim', null, { timeout: 900000, polling: 250 }).then(() => true, () => false);
+    const [fa, fb] = await Promise.all([fim(A), fim(B)]);
+    // (o hash com o tick no lugar de 0: no 'fim' só o tick anda — R5)
+    const amostra = p => p.evaluate(() => {
+      const g = window.__golaco, o = g.online, m = g.mundo, e = g.cenas?.estado ?? null;
+      const k = m.tick; m.tick = 0; const hst = g.hash(); m.tick = k;
+      return { tick: k, n: o.n, hst, dessinc: !!o.dessinc, hashes: o.hashes, cena: g.cenas?.ativo ? g.cenas.tipo : null, fase: e?.fase ?? null, segura: e?.segura ?? null, planos: e?.planos?.length ?? 0 };
+    });
+    await A.waitForTimeout(1500);
+    const a1 = await amostra(A), b1 = await amostra(B);
+    await A.waitForTimeout(6000);
+    const a2 = await amostra(A), b2 = await amostra(B);
+    errosTodos.push(...s.erros.map(e => `FO A: ${e}`));
+    const mx = new Map(a2.hashes), comuns = b2.hashes.filter(([n]) => mx.has(n)), difs = comuns.filter(([n, h]) => mx.get(n) !== h).length;
+    meta('F1 online (duas abas pelo BroadcastChannel): a cena do pós-jogo roda nas duas, sem segurar o laço',
+      `fim ${fa}/${fb}; A: ${a1.cena ?? 'sem cena'} (${a1.fase ?? '-'} → ${a2.fase ?? '-'}, segura ${a1.segura}); B: ${b1.cena ?? 'sem cena'} (${b1.fase ?? '-'} → ${b2.fase ?? '-'}, segura ${b1.segura})`,
+      "'fim' nas duas; segura false", fa && fb && a1.cena === 'fim' && b1.cena === 'fim' && a1.segura === false && b1.segura === false);
+    meta('F2 online: no fim só o tick anda — o hash com o tick tirado igual nas duas abas e no tempo, nenhuma dessincronia',
+      `A tick ${a1.tick} → ${a2.tick}, B ${b1.tick} → ${b2.tick}; hash sem o tick A ${a1.hst === a2.hst ? 'igual' : 'MUDOU'}, B ${b1.hst === b2.hst ? 'igual' : 'MUDOU'}, A = B ${a2.hst === b2.hst ? 'sim' : 'NÃO'}; hashes ${difs} diferentes de ${comuns.length} em comum; dessinc ${a2.dessinc || b2.dessinc}`,
+      'anda; iguais; 0', fa && fb && a2.tick > a1.tick && b2.tick > b1.tick && a1.hst === a2.hst && b1.hst === b2.hst && a2.hst === b2.hst && comuns.length >= 5 && difs === 0 && !a2.dessinc && !b2.dessinc);
+  } finally { await s.navegador.close(); }
+} catch (e) { meta('FO execução (pós-jogo no online: F1, F2)', erroCurto(e), 'sem exceção', false); }
 
 marcar('fim');
 await srv.fechar();

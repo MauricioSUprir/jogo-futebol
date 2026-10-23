@@ -307,9 +307,46 @@ export function notaDoJogador(n, opc = {}) {
   return Math.round(Math.max(4.5, Math.min(10, v)) * 10) / 10;
 }
 
+/** Os números de um jogador sem criar a entrada (só lê: quem nunca tocou na bola tem tudo zero). */
+const ZERO = Object.freeze({ toques: 0, passes: 0, passesCertos: 0, chutes: 0, noAlvo: 0, gols: 0, assist: 0, roubadas: 0, desarmes: 0, perdas: 0, defesas: 0, faltas: 0, amarelos: 0, vermelhos: 0, contra: 0 });
+const numerosDe = (s, id) => s.jog[id] ?? ZERO;
+
+/**
+ * A nota do jogador `id` no placar de agora: a MESMA conta e as mesmas opções do `jogador` do resultadoTM (a posição do
+ * jogador em campo ou expulso, os gols sofridos pelo time dele e o saldo; PLANO-CENAS.md R18). time: o time dele (o
+ * substituído já não está em m.jogadores). Só lê.
+ */
+export function notaDe(s, m, id, time = null) {
+  const placar = [m.placar?.[0] ?? 0, m.placar?.[1] ?? 0];
+  const j = jogadorDoId(m, id) ?? (m.expulsos ?? []).find(o => o.id === id) ?? null;
+  const t = time ?? j?.time ?? timeDoId(m, id) ?? 0;
+  return notaDoJogador(numerosDe(s, id), { posicao: j?.posicao ?? null, sofridos: placar[1 - t], saldo: placar[t] - placar[1 - t] });
+}
+
+/**
+ * O MELHOR EM CAMPO (a cena do pós-jogo, PLANO-CENAS.md §5.1; o `melhor` do resultadoTM): a maior nota (notaDe) entre quem
+ * jogou — os de agora em m.jogadores e os substituídos (m.times[t].saiu) —, menos os expulsos; desempate: mais gols, mais
+ * assistências, o menor id. Devolve {id, time, nota, gols, assist} ou null (sem ninguém). Só lê.
+ */
+export function melhorEmCampo(s, m) {
+  const expulsos = new Set((m.expulsos ?? []).map(j => j.id));
+  const cand = [];
+  for (const j of m.jogadores) if ((j.time === 0 || j.time === 1) && !expulsos.has(j.id)) cand.push([j.id, j.time]);
+  for (const t of [0, 1]) for (const id of m.times?.[t]?.saiu ?? []) if (!expulsos.has(id) && !cand.some(c => c[0] === id)) cand.push([id, t]);
+  let melhor = null;
+  for (const [id, time] of cand) {
+    const n = numerosDe(s, id), nota = notaDe(s, m, id, time);
+    const x = { id, time, nota, gols: n.gols, assist: n.assist };
+    if (!melhor || x.nota > melhor.nota || (x.nota === melhor.nota && (x.gols > melhor.gols || (x.gols === melhor.gols && (x.assist > melhor.assist || (x.assist === melhor.assist && x.id < melhor.id)))))) melhor = x;
+  }
+  return melhor;
+}
+
 /**
  * O resultado do contrato (§2) — `lado` = o índice do time no GOLAÇO (0 = mandante). mapa: {id: {tmId, nome, lado}}
- * (tm-times.js). O jogador travado (m.trava) entra em `jogador` com a nota.
+ * (tm-times.js). O jogador travado (m.trava) entra em `jogador` com a nota. O campo OPCIONAL `melhor` ({lado, tmId, nome,
+ * nota}: o melhor em campo, melhorEmCampo — a nota pela mesma conta da do `jogador`) vai junto quando há quem jogou; o TM
+ * ignora o que não conhece (PLANO-CENAS.md §5.2).
  */
 export function resultadoTM(s, m, mapa = {}) {
   const quem = id => (id != null && mapa[id] ? { tmId: mapa[id].tmId ?? null, nome: mapa[id].nome ?? '' } : { tmId: null, nome: '' });
@@ -334,5 +371,7 @@ export function resultadoTM(s, m, mapa = {}) {
       gols: n.gols, assist: n.assist, toques: n.toques, passes: n.passesCertos,
     };
   }
+  const mc = melhorEmCampo(s, m);
+  if (mc) { const a = quem(mc.id); r.melhor = { lado: mc.time, tmId: a.tmId, nome: a.nome, nota: mc.nota }; }
   return r;
 }

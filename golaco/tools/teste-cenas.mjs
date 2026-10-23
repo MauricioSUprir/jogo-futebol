@@ -32,8 +32,16 @@
 //      ≥ 60% das cenas com algum), o túnel (cada um entrou na boca ou anda para ela), o campo vazio depois, a bola do apito
 //      no ar cai, os treinadores na área técnica, o toque = o próximo bloco e o pulo = o geral; E (pureza e a saída do 2º
 //      tempo no mesmo tick) e G (custo) também cobrem o intervalo.
+//   FIM) o PÓS-JOGO (PR 4, PLANO-CENAS.md §5.6; js/cena-fim.js 'fimDeJogo', sumula.js melhorEmCampo): 56 fins de partidas IA × IA
+//      (do jeito que acabaram, gol no último lance, vermelho e amarelo no último apito — o time com 10 —, goleiro expulso e o
+//      empate que continua no TM, a versão curta) em vitória, derrota e empate: os planos e os tempos (vitória 34,5 s, empate
+//      32 s, +1,5 s com a troca de camisa, −2 s sem os treinadores, curto 14,5 s), as fases na ordem, o árbitro apita, corpo e
+//      câmera, ninguém em sólido, os cumprimentos (os pares, o árbitro), a troca de camisa (o par permitido, lado a lado,
+//      abraçados, cada um com a camisa do outro), o melhor em campo = o argmax de um código independente e a nota = a do
+//      resultado do TM, o close dele no quadro, o aperto dos treinadores, as tarjas no plano delas, o toque = o próximo bloco
+//      e a festa/vaia do fim (festa.js/emocao.js 'cenaFim'); E (pureza) e G (custo) também cobrem o pós-jogo.
 // Na base (sem os módulos) cada seção REPROVA com o motivo.
-//   node tools/teste-cenas.mjs [--js <pasta js>] [--so A,B,C,E,F,G,P] [--detalhe]
+//   node tools/teste-cenas.mjs [--js <pasta js>] [--so A,B,C,E,F,FIM,G,P] [--detalhe] [--sem-fim 700] [--min-fim 0.3]
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -182,7 +190,8 @@ function andarCena(c, fns, opc) {
       nome = pc.nome;
       // (o plano geral do estádio — camera.js CAMERA_GERAL, o mesmo do jogo — também na espera dos lances e nas estatísticas
       // do intervalo: fora das contas de câmera de cena)
-      if (pc.nome === 'fim' || pc.nome === 'geral' || pc.nome === 'lances' || pc.nome === 'estatisticas') return;
+      // (e o do placar do pós-jogo)
+      if (pc.nome === 'fim' || pc.nome === 'geral' || pc.nome === 'lances' || pc.nome === 'estatisticas' || pc.nome === 'placar') return;
       const [x, y, z] = pc.de;
       if (EF.solidoEm(x, y, z, 0.2, false)) { r.solido++; r.piorSolido = { nome: pc.nome, de: pc.de.map(v => +v.toFixed(2)), s: EF.solidoEm(x, y, z, 0.2, false) }; }
       if (Math.abs(x) > MX + 5.5 + 1e-6 || Math.abs(z) > MZ + 5.5 + 1e-6) r.foraLimite++;
@@ -853,6 +862,356 @@ if (cenasC.length && roda('C')) {
   reg('C o toque = o próximo bloco (campo → lances → estatísticas → geral) e o pulo = o geral, com o campo vazio', `${blocosOk}/${nb}${ruinsB.length ? `; ex.: ${ruinsB[0]}` : ''}`, `todos (${nb})`, nb >= 6 && blocosOk === nb);
 }
 
+// ------------------------------------------------------------------------------------------------ FIM) pós-jogo
+// (PLANO-CENAS.md §5.6) 56 fins de partidas IA × IA (2 × 0,5 min): 20 do jeito que acabaram, 12 com GOL no último lance, 10
+// com VERMELHO no último apito (o time com 10), 4 com AMARELO, 6 com o GOLEIRO expulso e 4 com o EMPATE QUE CONTINUA no TM
+// (a versão curta); o placar dos que não são de gol escrito no mundo do teste em rodízio (vitória da casa, derrota, empate),
+// com as cópias dos treinadores e o melhor em campo da súmula (sumula.js melhorEmCampo) — conferido contra um código
+// INDEPENDENTE escrito aqui (a nota de cada um que jogou pela fórmula do sumula.js notaDoJogador e o argmax). Os planos e os
+// tempos são os do plano (não lidos do módulo).
+const SU = await tentar('sumula.js');
+const cenasFim = [];
+const custosFim = [];
+const regFim = [];
+const PLANOS_FIM = {
+  vitoria: [['apito', 1.5], ['vencedor', 3.0], ['perdedor', 2.5], ['cumprimentos', 2.0], ['troca', 1.5], ['treinador', 2.0], ['aplauso', 2.5], ['torcida', 2.0], ['melhor', 5.0], ['placar', 8.0], ['estatisticas', 6.0], ['geral', 0]],
+  empate: [['apito', 1.5], ['neutro', 3.0], ['cumprimentos', 2.0], ['troca', 1.5], ['treinador', 2.0], ['aplauso', 2.5], ['torcida', 2.0], ['melhor', 5.0], ['placar', 8.0], ['estatisticas', 6.0], ['geral', 0]],
+  curto: [['apito', 1.5], ['neutro', 3.0], ['torcida', 2.0], ['placar', 8.0], ['geral', 0]],
+};
+const CASOS_FIM = [['natural', 20], ['gol', 12], ['vermelho', 10], ['amarelo', 4], ['goleiro', 6], ['curto', 4]];
+const PLACARES_FIM = [{ 0: 2, 1: 1 }, { 0: 0, 1: 1 }, { 0: 1, 1: 1 }];
+/** A nota de um jogador pela fórmula do sumula.js (escrita de novo aqui, independente). */
+function notaIndep(n, posicao, sofridos, saldo) {
+  const e = Math.max(0, n.passes - n.passesCertos);
+  let v = 6 + n.gols + 0.6 * n.assist + 0.15 * Math.max(0, n.noAlvo - n.gols) - 0.05 * Math.max(0, n.chutes - n.noAlvo)
+    + Math.min(0.6, 0.025 * n.passesCertos) - 0.08 * e + Math.min(0.6, 0.12 * (n.roubadas + n.desarmes)) - 0.12 * n.perdas
+    + 0.3 * n.defesas - 0.3 * n.amarelos - 1.5 * n.vermelhos - 0.1 * n.faltas - 0.8 * n.contra;
+  if (posicao === 'GOL') v -= 0.3 * sofridos; else if (posicao === 'ZAG' || posicao === 'LAT') v -= 0.15 * sofridos;
+  if (saldo > 0) v += 0.3; else if (saldo < 0) v -= 0.3;
+  return Math.round(Math.min(10, Math.max(4.5, v)) * 10) / 10;
+}
+/** O melhor em campo pelo código independente: quem jogou (em campo + substituídos, sem os expulsos), a maior nota. */
+function melhorIndep(s, m) {
+  const zero = { toques: 0, passes: 0, passesCertos: 0, chutes: 0, noAlvo: 0, gols: 0, assist: 0, roubadas: 0, desarmes: 0, perdas: 0, defesas: 0, faltas: 0, amarelos: 0, vermelhos: 0, contra: 0 };
+  const exp = new Set((m.expulsos ?? []).map(j => j.id));
+  const lista = [];
+  for (const j of m.jogadores) if (!exp.has(j.id) && (j.time === 0 || j.time === 1)) lista.push({ id: j.id, time: j.time, posicao: j.posicao });
+  for (const t of [0, 1]) for (const id of m.times[t].saiu) if (!exp.has(id) && !lista.some(q => q.id === id)) lista.push({ id, time: t, posicao: null });
+  let b = null;
+  for (const q of lista) {
+    const n = s.jog[q.id] ?? zero, sof = m.placar[1 - q.time], sal = m.placar[q.time] - m.placar[1 - q.time];
+    const x = { id: q.id, nota: notaIndep(n, q.posicao, sof, sal), gols: n.gols, assist: n.assist };
+    if (!b || x.nota > b.nota || (x.nota === b.nota && (x.gols > b.gols || (x.gols === b.gols && (x.assist > b.assist || (x.assist === b.assist && x.id < b.id)))))) b = x;
+  }
+  return b;
+}
+if (roda('FIM') || roda('E') || roda('G')) {
+  if (!CF || !SU || typeof SU.melhorEmCampo !== 'function' || !CF.tarjaMelhorVisivel) reg('F-fim cena do pós-jogo (js/cena-fim.js fimDeJogo, sumula.js melhorEmCampo)', 'não existe: no apito final só a faixa, os 22 congelados', 'existe', false);
+  else {
+    const L = await LC.carregarCenas(pastaJs);
+    // (--sem-fim N: outra amostra de sementes; --min-fim: os minutos por tempo)
+    let sem = args.includes('--sem-fim') ? +args[args.indexOf('--sem-fim') + 1] : 700, falhou = [], kDesf = 0;
+    const minFim = args.includes('--min-fim') ? +args[args.indexOf('--min-fim') + 1] : 0.3;
+    for (const [caso, n] of CASOS_FIM) {
+      for (let i = 0; i < n; i++) {
+        let r = null, tent = 0;
+        while (!r && tent < 6) {
+          sem++; tent++;
+          const forcar = caso === 'natural' || caso === 'curto' ? null
+            : caso === 'gol' ? m => LC.forcarGol(L, m)
+              : m => !!LC.forcarCartao(L, m, caso === 'goleiro' ? 'goleiro' : caso, { semBusca: true });
+          const x = LC.ateFim(L, sem, { min: minFim, forcar, margem: 40, sumula: SU });
+          if (!x) continue;
+          const exp = x.m.expulsos ?? [];
+          if (caso === 'gol' && !(x.forcado && x.golTick != null && Math.abs(x.m.tick - x.golTick - Math.round(C.PARTIDA.golPausa / PASSO)) <= 1)) continue;
+          if ((caso === 'vermelho' || caso === 'goleiro') && !(x.forcado && exp.length >= 1)) continue;
+          if (caso === 'goleiro' && !exp.some(j => j.posicao === 'GOL' || j.vagaId === 'GOL')) continue;
+          if (caso === 'amarelo' && !x.forcado) continue;
+          r = x;
+        }
+        if (!r) { falhou.push(`${caso}#${i}`); continue; }
+        const m = r.m;
+        // o desfecho: o gol no último lance fica como acabou; o curto é empate; o resto em rodízio (escrito no mundo do teste)
+        if (caso === 'curto') { m.placar[0] = 1; m.placar[1] = 1; }
+        else if (caso !== 'gol') { const pl = PLACARES_FIM[kDesf++ % 3]; m.placar[0] = pl[0]; m.placar[1] = pl[1]; }
+        const melhor = caso === 'curto' ? null : SU.melhorEmCampo(r.sumula, m);
+        const indep = melhorIndep(r.sumula, m);
+        const h0 = S.hashMundo(m), t0 = m.tick, s0 = serializar(m);
+        const tecs = treinadoresDe(m, `F|${sem}`);
+        const plano = CF.planejarFim(m, 'fimDeJogo', { placar: m.placar, timeHumano: cenasFim.length % 2, curto: caso === 'curto', melhor, treinadores: tecs });
+        const c = CF.criarCenaFim(plano, m);
+        const x = medirFim(c);
+        x.hashIgual = S.hashMundo(m) === h0 && m.tick === t0;
+        x.mundoIgual = serializar(m) === s0;
+        x.caso = caso; x.sem = sem; x.placar = { ...m.placar }; x.melhorSu = melhor; x.melhorIndep = indep;
+        x.idsExpulsos = (m.expulsos ?? []).map(j => j.id);
+        x.goleiros = m.jogadores.filter(j => j.posicao === 'GOL' || j.vagaId === 'GOL').map(j => j.id);
+        x.time10 = [0, 1].some(t => m.jogadores.filter(j => j.time === t).length === 10);
+        x.notaTM = melhor ? SU.notaDe(r.sumula, m, melhor.id, melhor.time) : null;
+        if (cenasFim.length < 9) x.copia = { m: structuredClone(m), melhor, tecs: tecs?.map(o => o && { ...o }) ?? null, curto: caso === 'curto' };
+        cenasFim.push(x);
+        custosFim.push(...x.r.ms);
+      }
+    }
+    cenasFim.falhou = falhou;
+    // (revisão) os casos achados na revisão, do jeito dos scripts dela (2 × 0,3 min, o desfecho escrito no mundo, o time da
+    // pessoa pela paridade da semente, os treinadores do gancho): 1427 (1×1) o aperto do árbitro no meio quando a elipse da
+    // troca leva os dois; 1203, 1213 (0×1) e 1219 (2×1) o 2º do lamento correndo atrás do 1º depois dos cumprimentos
+    if (roda('FIM')) for (const [sem2, pl] of [[1427, [1, 1]], [1203, [0, 1]], [1213, [0, 1]], [1219, [2, 1]]]) {
+      const r = LC.ateFim(L, sem2, { min: 0.3, sumula: SU });
+      if (!r) { regFim.push({ sem: sem2, falhou: true }); continue; }
+      const m = r.m;
+      m.placar[0] = pl[0]; m.placar[1] = pl[1];
+      const melhor = SU.melhorEmCampo(r.sumula, m);
+      const plano = CF.planejarFim(m, 'fimDeJogo', { placar: m.placar, timeHumano: sem2 % 2, melhor, treinadores: treinadoresDe(m) });
+      const x = medirFim(CF.criarCenaFim(plano, m));
+      x.sem = sem2; x.caso = 'revisao'; x.placar = { ...m.placar };
+      regFim.push(x);
+    }
+  }
+}
+
+/**
+ * Uma cena do pós-jogo: as medidas comuns + o apito, os apertos (os pares, o árbitro, os treinadores), a troca de camisa, o
+ * melhor em campo no quadro, as tarjas no plano certo, ninguém em sólido e os tempos.
+ */
+function medirFim(c) {
+  const P = c.plano;
+  const arb = c.arbitro;
+  const x = {
+    plano: P, v2: 0, apito: 0, apitoMax: 0, apertos: new Map(), apertosArb: new Map(), apertoArbMax: 0, apertoTr: 0, apertoTrMax: 0,
+    solido: 0, piorSolido: null, fases: [], tarjaErr: 0, tarjaMelhorErr: 0, troca: null, melhorQuadro: { n: 0, dentro: 0, altura: [] },
+    trocaN: 0, trocaJuntos: 0, trocaAbraco: 0, trocaCamisa: 0, trocaVisto: false, melhorVisto: false, treinadorVisto: false,
+    lamCorre: 0, lamCorreEx: null, arbEstica: 0, arbEsticaEx: null, arbCorte: null,
+  };
+  const cumP = P.planos.find(q => q.nome === 'cumprimentos');
+  const pc = [CF.criarPlanoCameraFim(), CF.criarPlanoCameraFim()];
+  let fAnt = null;
+  x.r = andarCena(c, { passo: CF.passoCenaFim, planoCamera: CF.planoCameraFim, criarPlano: CF.criarPlanoCameraFim }, {
+    max: Math.round((P.duracao + 1.0) / PASSO),
+    por: (cc, t) => {
+      const f = CF.faseFim(cc);
+      if (f !== fAnt) { x.fases.push(f); fAnt = f; }
+      if (Math.abs(t - 2.0) < PASSO / 2) for (const a of cc.atores) { if (!a.ativo) continue; const v = Math.hypot(a.j.vx, a.j.vz); if (v > x.v2) x.v2 = v; }
+      if (f === 'apito' && arb.ativo) {
+        const o = arb.atu, ok = Math.hypot(o[J.maoD * 3] - o[J.cabeca * 3], o[J.maoD * 3 + 1] - o[J.cabeca * 3 + 1], o[J.maoD * 3 + 2] - o[J.cabeca * 3 + 2]) <= 0.22;
+        x.apito = ok ? x.apito + 1 : 0; x.apitoMax = Math.max(x.apitoMax, x.apito);
+      }
+      // as tarjas no plano delas (o placar no 'placar'; o melhor no 'melhor')
+      if (CF.tarjaPlacarVisivel(cc) !== (f === 'placar')) x.tarjaErr++;
+      if (CF.tarjaMelhorVisivel(cc) !== (f === 'melhor')) x.tarjaMelhorErr++;
+      for (const a of cc.atores) {
+        if (!a.ativo) continue;
+        const sd = EF.solidoEm(a.j.x, 0.9, a.j.z, 0.2, false);
+        if (sd) { x.solido++; x.piorSolido = { id: a.id, tipo: a.tipo, f, x: +a.j.x.toFixed(2), z: +a.j.z.toFixed(2), sd }; }
+      }
+      // apertos de mão: as mãos direitas ≤ 0,15 m e as pelves a 0,8–1,2 m, contínuo (adversários; o árbitro; os treinadores)
+      const at = cc.atores;
+      for (let p = 0; p < at.length; p++) {
+        const A = at[p]; if (!A.ativo) continue;
+        for (let q = p + 1; q < at.length; q++) {
+          const B = at[q]; if (!B.ativo) continue;
+          const tr = A.tipo === 'tecnico' && B.tipo === 'tecnico', ar = (A === arb || B === arb) && A.tipo !== 'tecnico' && B.tipo !== 'tecnico' && A.tipo !== 'assistente' && B.tipo !== 'assistente';
+          const adv = A.tipo !== 'tecnico' && B.tipo !== 'tecnico' && A.time !== 2 && B.time !== 2 && A.time !== B.time;
+          if (!tr && !ar && !adv) continue;
+          const oa = A.atu, ob = B.atu;
+          const dm = Math.hypot(oa[J.maoD * 3] - ob[J.maoD * 3], oa[J.maoD * 3 + 1] - ob[J.maoD * 3 + 1], oa[J.maoD * 3 + 2] - ob[J.maoD * 3 + 2]);
+          const dp = Math.hypot(oa[J.pelve * 3] - ob[J.pelve * 3], oa[J.pelve * 3 + 2] - ob[J.pelve * 3 + 2]);
+          const ok = dm <= 0.15 && dp >= 0.8 && dp <= 1.2;
+          if (tr) { x.apertoTr = ok ? x.apertoTr + 1 : 0; x.apertoTrMax = Math.max(x.apertoTrMax, x.apertoTr); continue; }
+          if (ar) { const k = A.id * 1000 + B.id, r = x.apertosArb.get(k) ?? { n: 0 }; r.n = ok ? r.n + 1 : 0; x.apertosArb.set(k, r); x.apertoArbMax = Math.max(x.apertoArbMax, r.n); continue; }
+          const k = A.id * 1000 + B.id;
+          const r = x.apertos.get(k) ?? { n: 0, max: 0 };
+          r.n = ok ? r.n + 1 : 0; r.max = Math.max(r.max, r.n);
+          x.apertos.set(k, r);
+        }
+      }
+      // a troca de camisa: no plano dela, os dois lado a lado (pelves 0,4–0,8 m), cada um com a camisa do outro, abraçados (a
+      // mão de dentro a ≤ 0,2 m das costas do outro)
+      if (f === 'troca' && cc.troca) {
+        x.trocaVisto = true;
+        const { a, b } = cc.troca;
+        x.trocaN++;
+        const dp = Math.hypot(a.atu[J.pelve * 3] - b.atu[J.pelve * 3], a.atu[J.pelve * 3 + 2] - b.atu[J.pelve * 3 + 2]);
+        if (dp >= 0.4 && dp <= 0.8) x.trocaJuntos++;
+        if (a.camisaDe === b.id && b.camisaDe === a.id) x.trocaCamisa++;
+        const mao = (o, lado) => (lado > 0 ? J.maoD : J.maoE) * 3;
+        const dCost = (u, v) => { const k = mao(u.atu, u.trocaLado), p = J.peito * 3, h = v.j.rumo; return Math.hypot(u.atu[k] - (v.atu[p] - Math.cos(h) * 0.12), u.atu[k + 1] - (v.atu[p + 1] + 0.06), u.atu[k + 2] - (v.atu[p + 2] - Math.sin(h) * 0.12)); };
+        if (t >= P.planos.find(q => q.nome === 'troca').t0 + 0.3 && dCost(a, b) <= 0.2 && dCost(b, a) <= 0.2) x.trocaAbraco++;
+      }
+      if (f === 'treinador') x.treinadorVisto = true;
+      // (revisão) o 2º do lamento não corre depois dos cumprimentos (o tapinha acabou ali): antes ele perseguia o 1º — também
+      // depois que a elipse da troca o levou — até o fim da cena, passando no close da troca
+      if (cumP && t > cumP.t0 + 0.6) {
+        for (const a of cc.atores) {
+          if (!a.ativo || a.lamento !== 1 || a.aplaude || a.trocaAlvo || a === cc.melhorA) continue;
+          const v = Math.hypot(a.j.vx, a.j.vz);
+          if (v > 1.8) { x.lamCorre++; x.lamCorreEx ??= { id: a.id, t: +t.toFixed(2), f, v: +v.toFixed(2) }; }
+        }
+      }
+      // (revisão) o aperto com o árbitro: no gesto as pelves a ≤ 1,2 m (sem o braço esticado até o outro); cortado por uma
+      // elipse, quem foi levado não volta andando até o outro
+      const pa = cc.parArbitro;
+      if (pa && pa.t0 >= 0 && !pa.cortado && t >= pa.t0 + 0.25 && t <= pa.t0 + 0.7 && arb.ativo && pa.jog.ativo) {
+        const d = Math.hypot(arb.atu[J.pelve * 3] - pa.jog.atu[J.pelve * 3], arb.atu[J.pelve * 3 + 2] - pa.jog.atu[J.pelve * 3 + 2]);
+        if (d > 1.2) { x.arbEstica++; x.arbEsticaEx ??= { t: +t.toFixed(2), f, d: +d.toFixed(2) }; }
+      }
+      if (pa?.cortado && arb.ativo && pa.jog.ativo) {
+        // (o quanto cada um ANDOU na direção do outro depois do corte — pela velocidade: as elipses seguintes, que levam um
+        // deles para outro lugar no corte, não contam)
+        const g = pa.jog.j, dx = arb.j.x - g.x, dz = arb.j.z - g.z, d = Math.hypot(dx, dz) || 1;
+        const aprox = (Math.max(0, (g.vx * dx + g.vz * dz) / d) + Math.max(0, -(arb.j.vx * dx + arb.j.vz * dz) / d)) * PASSO;
+        if (!x.arbCorte) x.arbCorte = { t: +t.toFixed(2), f, d0: +d.toFixed(2), anda: 0 };
+        x.arbCorte.anda += aprox;
+      }
+      // o melhor em campo no close: a cabeça e o peito dentro do quadro (5% de margem) nos dois aspectos; a altura da cabeça
+      // ao peito na tela
+      if (f === 'melhor' && cc.melhorA) {
+        x.melhorVisto = true;
+        const o = cc.melhorA.atu;
+        ASPECTOS.forEach(([, pequena, aspecto], k) => {
+          const q = CF.planoCameraFim(cc, { pequena, aspecto }, pc[k]);
+          const proj = projetor(q, aspecto);
+          const pts = [[o[J.cabeca * 3], o[J.cabeca * 3 + 1] + TOPO, o[J.cabeca * 3 + 2]], [o[J.peito * 3], o[J.peito * 3 + 1], o[J.peito * 3 + 2]], [o[J.pelve * 3], o[J.pelve * 3 + 1], o[J.pelve * 3 + 2]]];
+          let dentro = true, y0 = Infinity, y1 = -Infinity;
+          for (const [px, py, pz] of pts) { proj(px, py, pz, _pr); if (_pr[2] <= 0.1 || Math.abs(_pr[0]) > 0.95 || Math.abs(_pr[1]) > 0.95) dentro = false; y0 = Math.min(y0, _pr[1]); y1 = Math.max(y1, _pr[1]); }
+          x.melhorQuadro.n++; if (dentro) x.melhorQuadro.dentro++; x.melhorQuadro.altura.push((y1 - y0) / 2);
+        });
+      }
+    },
+  });
+  x.nApertos = [...x.apertos.values()].filter(r => r.max >= 24).length;
+  x.nPares = c.pares.length;
+  // (revisão) quando cada par começou o aperto (no fim: no plano dos cumprimentos, vitória e empate)
+  x.paresT0 = c.pares.map(p => p.t0);
+  x.cump = cumP ? [cumP.t0, cumP.t1] : null;
+  x.paresFeitos = c.pares.filter(p => [p.a.id * 1000 + p.b.id, p.b.id * 1000 + p.a.id].some(k => (x.apertos.get(k)?.max ?? 0) >= 24)).length;
+  x.trocaPar = P.troca ? { ...P.troca } : null;
+  return x;
+}
+
+if (cenasFim.length && roda('FIM')) {
+  const rs = cenasFim.map(x => x.r);
+  const porCaso = Object.fromEntries(CASOS_FIM.map(([k]) => [k, cenasFim.filter(x => x.caso === k).length]));
+  const desf = { vitoria: 0, derrota: 0, empate: 0 };
+  for (const x of cenasFim) { const g0 = x.placar[0], g1 = x.placar[1]; desf[g0 > g1 ? 'vitoria' : g0 < g1 ? 'derrota' : 'empate']++; }
+  reg('F-fim canhão: 56 fins de partidas IA × IA', `${cenasFim.length} (${Object.entries(porCaso).map(([k, v]) => `${k} ${v}`).join(', ')}; vitórias ${desf.vitoria}, derrotas ${desf.derrota}, empates ${desf.empate})${cenasFim.falhou.length ? `; sem estado: ${cenasFim.falhou.join(', ')}` : ''}`,
+    '56 (natural 20, gol 12, vermelho 10, amarelo 4, goleiro 6, curto 4); os 3 desfechos', cenasFim.length === 56 && desf.vitoria >= 10 && desf.derrota >= 10 && desf.empate >= 10);
+  // planos e tempos (os do plano; sem o par da troca ou os treinadores, os planos saem sem deixar buraco)
+  const esperado = x => {
+    const k = x.plano.curto ? 'curto' : x.plano.resultado;
+    return PLANOS_FIM[k].filter(([n]) => (n !== 'troca' || x.plano.troca) && (n !== 'treinador' || x.plano.temTreinador) && (n !== 'melhor' || x.plano.melhor));
+  };
+  const errPl = cenasFim.filter(x => {
+    const esp = esperado(x);
+    let t = 0;
+    return x.plano.planos.length !== esp.length || esp.some(([n, d], i) => { const p = x.plano.planos[i]; const ok = p.nome === n && Math.abs(p.t0 - t) < 1e-9 && (n === 'geral' ? p.t1 === Infinity : Math.abs(p.t1 - (t + d)) < 1e-9); t += d; return !ok; });
+  });
+  const durs = k => cenasFim.filter(x => (x.plano.curto ? 'curto' : x.plano.resultado) === k).map(x => x.plano.duracao);
+  const fmt = a => a.length ? [...new Set(a.map(f2))].join('/') : '-';
+  reg('F-fim planos e tempos: vitória 34,5 s (+1,5 a troca), empate 32 s (+1,5), sem treinadores −2 s, curto 14,5 s; até o geral',
+    `${cenasFim.length - errPl.length}/${cenasFim.length} certas${errPl.length ? `; ex.: ${errPl[0].plano.planos.map(p => `${p.nome} ${f2(p.t0)}`).join(', ')}` : ''}; vitória ${fmt(durs('vitoria'))} s, empate ${fmt(durs('empate'))} s, curto ${fmt(durs('curto'))} s`,
+    'todas', errPl.length === 0 && durs('curto').every(d => Math.abs(d - 14.5) < 1e-9));
+  const fasesOk = cenasFim.filter(x => x.fases.join() === esperado(x).map(([n]) => n).join()).length;
+  reg('F-fim as fases na ordem (o estado desenhado: faseFim)', `${fasesOk}/${cenasFim.length}${fasesOk < cenasFim.length ? ` (ex.: ${cenasFim.find(x => x.fases.join() !== esperado(x).map(([n]) => n).join())?.fases.join('>')})` : ''}`, 'todas', fasesOk === cenasFim.length);
+  reg('F-fim o árbitro apita (a mão direita na boca ≥ 0,4 s no plano do apito)', `mín ${f2(Math.min(...cenasFim.map(x => x.apitoMax)) / 60)} s`, '≥ 0,4 s', cenasFim.every(x => x.apitoMax >= 24));
+  reg('F-fim corpo: NaN, ossos, pé plantado, pé no ar, pelves, saltos só no corte', resumoCorpo(rs), '0, ≤ 5 mm, ≤ 0,05, ≤ 1,0, ≥ 0,40, 0', rs.every(okCorpo));
+  if (detalhe) for (const x of cenasFim) if (!okCorpo(x.r)) console.log('corpoFim', x.caso, x.sem, JSON.stringify({ osso: x.r.osso, pl: x.r.piorPlantado, pe: x.r.piorPe, pelve: x.r.piorPelve, salto: x.r.piorSalto }));
+  reg('F-fim câmera: fora de sólidos, ≤ 5,5 m além das linhas, fora do gol, lente ≥ 2,5 m', resumoCamera(rs), '0, 0, 0, ≥ 2,5 m', rs.every(okCamera));
+  if (detalhe) for (const x of cenasFim) if (!okCamera(x.r)) console.log('cameraFim', x.caso, x.sem, JSON.stringify({ lente: x.r.piorLente, solido: x.r.piorSolido }), 'placar', JSON.stringify(x.placar), 'th', x.plano.timeHumano);
+  if (detalhe) for (const x of cenasFim) if (x.solido) console.log('solidoFim', x.caso, x.sem, JSON.stringify(x.piorSolido), 'placar', JSON.stringify(x.placar), 'th', x.plano.timeHumano);
+  reg('F-fim ninguém dentro de sólido do estádio (o corpo a 0,9 m)', `${cenasFim.reduce((s, x) => s + x.solido, 0)} ticks${cenasFim.find(x => x.solido) ? ` (ex.: ${JSON.stringify(cenasFim.find(x => x.solido).piorSolido)})` : ''}`, '0', cenasFim.every(x => x.solido === 0));
+  const v2 = Math.max(...cenasFim.map(x => x.v2));
+  reg('F-fim 2,0 s depois do apito ninguém acima de 1,6 m/s', `máx ${f2(v2)} m/s`, '≤ 1,6', v2 <= 1.6);
+  // os cumprimentos: os pares planejados apertam a mão (a ≤ 6 m, ou até 14 se faltarem pares perto); o árbitro cumprimenta um
+  const comp = cenasFim.filter(x => !x.plano.curto);
+  const nPar = comp.reduce((s, x) => s + x.nPares, 0), feitos = comp.reduce((s, x) => s + x.paresFeitos, 0);
+  // (a ≤ 6 m primeiro; os de 6 a 14 m só entram quando não houve 3 pares a ≤ 6 m)
+  const distOk = comp.every(x => { const ps = x.plano.pares, perto = ps.filter(p => p.d <= 6 + 1e-9).length; return ps.every(p => p.d <= 14 + 1e-9) && (perto >= 3 ? perto === ps.length : true); });
+  reg('F-fim cumprimentos: os pares planejados (≤ 6 m; a folga até 14 m só se faltarem) apertam a mão (mãos ≤ 0,15 m ≥ 0,4 s, pelves 0,8–1,2 m); o árbitro com um',
+    `${feitos}/${nPar} pares (${comp.filter(x => x.nPares >= 3).length}/${comp.length} cenas com ≥ 3; ${comp.reduce((s, x) => s + x.plano.pares.filter(p => p.d <= 6).length, 0)} a ≤ 6 m); árbitro em ${comp.filter(x => x.apertoArbMax >= 24).length}/${comp.length}`,
+    'todos; o árbitro em ≥ 90%', feitos === nPar && distOk && comp.filter(x => x.apertoArbMax >= 24).length >= 0.9 * comp.length);
+  // (revisão) no fim — vitória e EMPATE — os pares apertam a mão no plano dos cumprimentos (antes o empate apertava no
+  // 'neutro' ou até no 'apito', e a câmera dos cumprimentos pegava o par já parado com as mãos na cintura)
+  const t0Ruins = comp.filter(x => x.cump && x.paresT0.some(t0 => t0 >= 0 && (t0 < x.cump[0] - 0.2 - 1e-9 || t0 >= x.cump[1])));
+  const t0s = comp.flatMap(x => (x.cump ? x.paresT0.filter(t0 => t0 >= 0).map(t0 => t0 - x.cump[0]) : []));
+  reg('F-fim os pares apertam a mão no plano dos cumprimentos, na vitória e no empate (o aperto começa entre o corte − 0,2 s e o fim do plano)',
+    `${comp.length - t0Ruins.length}/${comp.length} cenas${t0Ruins.length ? ` (ex.: ${t0Ruins[0].plano.resultado} ${t0Ruins[0].sem}: ${t0Ruins[0].paresT0.map(f2).join(', ')} s com os cumprimentos em ${t0Ruins[0].cump.map(f2).join('–')} s)` : ''}; o começo de ${f2(Math.min(...t0s))} a ${f2(Math.max(...t0s))} s do corte`,
+    `todas (${comp.length})`, comp.length > 0 && t0Ruins.length === 0);
+  {
+    const todasR = [...cenasFim, ...regFim.filter(x => !x.falhou)];
+    const lam = todasR.filter(x => x.lamCorre > 0), est = todasR.filter(x => x.arbEstica > 0);
+    const cort = todasR.filter(x => x.arbCorte), volta = cort.filter(x => x.arbCorte.anda > 1.0);
+    reg('F-fim (revisão) o 2º do lamento não corre depois dos cumprimentos; o aperto do árbitro sem o braço esticado (pelves ≤ 1,2 m); cortado por uma elipse, ninguém volta andando até o outro',
+      `${lam.length} cenas com o 2º do lamento a > 1,8 m/s${lam.length ? ` (ex.: ${lam[0].sem}: ${JSON.stringify(lam[0].lamCorreEx)}, ${lam[0].lamCorre} ticks)` : ''}; ${est.length} com o aperto esticado${est.length ? ` (ex.: ${est[0].sem}: ${JSON.stringify(est[0].arbEsticaEx)})` : ''}; ${cort.length} cortados (${cort.map(x => `${x.sem} no ${x.arbCorte.f} a ${f2(x.arbCorte.d0)} m, ${f2(x.arbCorte.anda)} m andados um para o outro`).join(', ') || '-'}), ${volta.length} voltando; ${regFim.length} casos da revisão (${regFim.map(x => x.sem + (x.falhou ? ' FALHOU' : '')).join(', ')})`,
+      '0; 0; 0', regFim.length === 4 && regFim.every(x => !x.falhou) && lam.length === 0 && est.length === 0 && volta.length === 0);
+  }
+  if (detalhe) for (const x of comp) if (x.paresFeitos < x.nPares) console.log('apertosFim', x.caso, x.sem, 'pares', x.plano.pares.map(p => `${p.a}-${p.b} ${f2(p.d)}`).join(', '), JSON.stringify([...x.apertos.entries()].filter(([, r]) => r.max > 0).map(([k, r]) => [k, r.max])));
+  // a troca de camisa
+  const ct = cenasFim.filter(x => x.trocaPar);
+  const trRuim = ct.filter(x => {
+    const T = x.trocaPar;
+    return x.goleiros.includes(T.a) || x.goleiros.includes(T.b) || x.idsExpulsos.includes(T.a) || x.idsExpulsos.includes(T.b) || T.a === x.melhorSu?.id || T.b === x.melhorSu?.id
+      || x.plano.pares.some(p => [p.a, p.b].includes(T.a) || [p.a, p.b].includes(T.b));
+  });
+  const trJ = ct.filter(x => x.trocaN > 0 && x.trocaJuntos === x.trocaN && x.trocaCamisa === x.trocaN && x.trocaAbraco >= 0.6 * x.trocaN).length;
+  reg('F-fim troca de camisa: um par de adversários de linha (nunca goleiro, expulso, quem aperta a mão nem o melhor), em todo fim que não é o curto; no plano dela lado a lado, cada um com a camisa do outro, abraçados',
+    `${ct.length}/${comp.length} com o par; ${trRuim.length} pares proibidos; ${trJ}/${ct.length} juntos/camisa/abraço (pior abraço ${f2(Math.min(...ct.map(x => x.trocaAbraco / Math.max(1, x.trocaN))))}); sem par no curto ${cenasFim.filter(x => x.plano.curto && x.trocaPar).length === 0}; lados ${[...new Set(ct.map(x => x.trocaPar.sx))].join('/')}`,
+    'todos; 0; todos (abraço ≥ 60% do plano)', ct.length === comp.length && trRuim.length === 0 && trJ === ct.length && cenasFim.every(x => !x.plano.curto || !x.trocaPar));
+  // o melhor em campo = o argmax independente; a nota = a do resultado do TM (sumula.js notaDe, a conta do `jogador`)
+  const mc = cenasFim.filter(x => x.melhorSu);
+  const mcRuim = mc.filter(x => x.melhorSu.id !== x.melhorIndep.id || x.melhorSu.nota !== x.melhorIndep.nota || x.notaTM !== x.melhorSu.nota || x.plano.melhor?.id !== x.melhorSu.id);
+  reg('F-fim melhor em campo = o argmax da nota recalculada por um código independente (quem jogou, sem expulsos); a nota = a do resultado do TM',
+    `${mc.length - mcRuim.length}/${mc.length}${mcRuim.length ? ` (ex.: sumula ${JSON.stringify(mcRuim[0].melhorSu)} × indep ${JSON.stringify(mcRuim[0].melhorIndep)})` : ''}; notas ${f2(Math.min(...mc.map(x => x.melhorSu.nota)))}–${f2(Math.max(...mc.map(x => x.melhorSu.nota)))}`,
+    'todas', mc.length >= 50 && mcRuim.length === 0);
+  const mq = cenasFim.filter(x => x.melhorVisto);
+  const mqOk = mq.filter(x => x.melhorQuadro.n > 0 && x.melhorQuadro.dentro === x.melhorQuadro.n).length;
+  const altMin = Math.min(...mq.flatMap(x => x.melhorQuadro.altura));
+  reg('F-fim o close do melhor em campo: a cabeça, o peito e a pelve no quadro (PC e celular) o plano inteiro; grande na tela', `${mqOk}/${mq.length} cenas; a cabeça→pelve ocupa ≥ ${f2(100 * altMin)}% da altura`, `todas (${mc.length}); ≥ 25%`, mq.length === mc.length && mqOk === mq.length && altMin >= 0.25);
+  // os treinadores: o plano entra com +2 s (só com os dois/um do gancho) e os dois apertam a mão
+  const tr = cenasFim.filter(x => x.plano.temTreinador && !x.plano.curto);
+  reg('F-fim os treinadores (210/211, as cópias do gancho) se cumprimentam na frente do túnel no plano deles (+2,0 s)', `${tr.filter(x => x.apertoTrMax >= 24).length}/${tr.length}`, `todos (${tr.length})`, tr.length > 0 && tr.every(x => x.apertoTrMax >= 24 && x.treinadorVisto));
+  reg('F-fim as tarjas só no plano delas (o placar no "placar"; o melhor no "melhor")', `${cenasFim.reduce((s, x) => s + x.tarjaErr, 0)} / ${cenasFim.reduce((s, x) => s + x.tarjaMelhorErr, 0)} ticks errados`, '0 / 0', cenasFim.every(x => x.tarjaErr === 0 && x.tarjaMelhorErr === 0));
+  const gol = cenasFim.filter(x => x.caso === 'gol'), ver = cenasFim.filter(x => x.caso === 'vermelho' || x.caso === 'goleiro');
+  reg('F-fim os casos: gol no último lance / o time com 10', `${gol.length} / ${ver.filter(x => x.time10).length} de ${ver.length}`, '12 / todos', gol.length === 12 && ver.every(x => x.time10));
+  // o toque = o próximo bloco (campo → melhor → placar → estatísticas → geral) e o pulo = o geral
+  let blocosOk = 0, nb = 0;
+  const ruinsB = [];
+  for (const x of cenasFim.filter(q => q.copia)) {
+    const { m, melhor, tecs, curto } = x.copia;
+    const mk = () => CF.criarCenaFim(CF.planejarFim(m, 'fimDeJogo', { placar: m.placar, curto, melhor, treinadores: tecs }), m);
+    const c = mk();
+    for (let k = 0; k < 120; k++) CF.passoCenaFim(c);
+    const seq = [CF.faseFim(c)];
+    for (let k = 0; k < 5; k++) { const f = CF.proximoBloco(c); if (seq.at(-1) !== f) seq.push(f); CF.passoCenaFim(c); }
+    const c2 = mk();
+    for (let k = 0; k < 60; k++) CF.passoCenaFim(c2);
+    CF.pularParaGeral(c2);
+    const esp = [seq[0], ...(curto ? ['placar', 'geral'] : melhor ? ['melhor', 'placar', 'estatisticas', 'geral'] : ['placar', 'estatisticas', 'geral'])].join();
+    nb++;
+    const ok = seq.join() === esp && CF.faseFim(c2) === 'geral';
+    if (ok) blocosOk++; else ruinsB.push(`${seq.join('→')} (esperado ${esp}; pulo ${CF.faseFim(c2)})`);
+  }
+  reg('F-fim o toque = o próximo bloco (campo → melhor → placar → estatísticas → geral) e o pulo = o geral', `${blocosOk}/${nb}${ruinsB.length ? `; ex.: ${ruinsB[0]}` : ''}`, `todos (${nb})`, nb >= 6 && blocosOk === nb);
+  // a festa e a vaia do fim: no plano da torcida o setor visitante acende os sinalizadores na vitória dele e a casa abre o
+  // bandeirão na dela (render/festa.js 'cenaFim'); a vaia de quem perdeu (render/emocao.js)
+  if (EMO && FE) {
+    const tr2 = [];
+    for (const [pl, nome] of [[{ 0: 2, 1: 1 }, 'casa'], [{ 0: 0, 1: 1 }, 'visitante'], [{ 0: 1, 1: 1 }, 'empate']]) {
+      const est = EMO.criarEmocao();
+      const ctx = { t: 10, timeDe: () => 0, bola: { x: 0, y: 0, z: 0 }, ataca: { 0: 1, 1: -1 } };
+      const f0 = est.festa.acesos ?? 0, b0 = est.festa.bandeirao.n, flares0 = est.festa.flares.filter(q => q.ativo).length;
+      EMO.emocaoEvento(est, { tipo: 'cenaFim', fim: 'fimDeJogo', placar: pl }, ctx);
+      const disp = EMO.consumirDisparos ? EMO.consumirDisparos(est).map(d => `${d.tipo}${d.grupo ?? ''}`) : [];
+      tr2.push({ nome, band: est.festa.bandeirao.n - b0, flares: est.festa.flares.filter(q => q.ativo).length - flares0, vaia: disp.some(d => d.startsWith('vaia')), f0 });
+    }
+    const [cs, vi, em] = tr2;
+    reg('F-fim a festa do fim (o plano da torcida): a casa abre o bandeirão; o visitante acende os sinalizadores; quem perde vaia',
+      tr2.map(q => `${q.nome}: bandeirão +${q.band}, sinalizadores +${q.flares}, vaia ${q.vaia ? 'sim' : 'não'}`).join(' · '), 'casa +1; visitante ≥ 1; vaia na derrota de cada lado, sem vaia no empate',
+      cs.band === 1 && vi.flares >= 1 && cs.vaia && vi.vaia && !em.vaia);
+  }
+}
+
 // ------------------------------------------------------------------------------------------------ E) pureza
 if (roda('E')) {
   if (!cenasA.length) reg('E pureza: o mundo não muda com a cena', 'sem cenas (a cena do cartão não existe)', 'hashMundo e m.tick iguais; nada escrito', false);
@@ -903,6 +1262,8 @@ if (roda('E')) {
     }
     reg('E3 intervalo: com a cena inteira × sem ela, a saída do 2º tempo no mesmo tick e 800 passos iguais (hash a cada 100)', `${iguais}/${total}`, 'todas (3)', total === 3 && iguais === total);
   }
+  if (!cenasFim.length) reg('E pureza do pós-jogo: o mundo não muda com a cena', 'sem cenas (a cena do pós-jogo não existe)', 'hashMundo e m.tick iguais; nada escrito', false);
+  else reg('E pureza do pós-jogo: hashMundo e m.tick antes = depois; nada escrito no mundo', `${cenasFim.filter(x => x.hashIgual).length}/${cenasFim.length} · ${cenasFim.filter(x => x.mundoIgual).length}/${cenasFim.length}`, 'todas · todas', cenasFim.every(x => x.hashIgual && x.mundoIgual));
 }
 
 // ------------------------------------------------------------------------------------------------ P) a torcida nos estádios reais
@@ -1018,6 +1379,27 @@ if (roda('G')) {
       }
       reg('G custo da cena do intervalo por tick (3 intervalos, 27 atores; até o geral)', `${porC.map(f3).join(' / ')} ms${custosC.length ? ` (no canhão C, p95 da parede ${f3(p95(custosC))})` : ''}`, '≤ 0,6 ms', porC.length === 3 && Math.max(...porC) <= 0.6);
     } else reg('G custo da cena do intervalo por tick', 'sem a cena do intervalo', '≤ 0,6 ms', false);
+    // o pós-jogo: 3 fins (27 atores), a mediana de 5 de cada, a cena inteira até o geral
+    if (CF && SU && typeof SU.melhorEmCampo === 'function') {
+      const porF = [], parF = [];
+      for (const sem of [61, 62, 63]) {
+        const x = LC.ateFim(L, sem, { min: 0.5, sumula: SU });
+        if (!x) continue;
+        const melhor = SU.melhorEmCampo(x.sumula, x.m);
+        const med = [];
+        let mp = Infinity;
+        for (let rep = 0; rep < 5; rep++) {
+          const c = CF.criarCenaFim(CF.planejarFim(x.m, 'fimDeJogo', { treinadores: treinadoresDe(x.m), melhor }), x.m);
+          const e0 = espera(), t0 = performance.now(); let n = 0;
+          while (CF.faseFim(c) !== 'geral' && n < 4000) { CF.passoCenaFim(c); n++; }
+          const pm = performance.now() - t0, e = espera() - e0;
+          med.push(Math.max(0, pm - e) / n); mp = Math.min(mp, pm / n);
+        }
+        med.sort((a, b) => a - b);
+        porF.push(comEspera ? med[med.length >> 1] : mp); parF.push(mp);
+      }
+      reg('G custo da cena do pós-jogo por tick (3 fins, 27 atores; até o geral)', `${porF.map(f3).join(' / ')} ms${custosFim.length ? ` (no canhão F-fim, p95 da parede ${f3(p95(custosFim))})` : ''}`, '≤ 0,6 ms', porF.length === 3 && Math.max(...porF) <= 0.6);
+    } else reg('G custo da cena do pós-jogo por tick', 'sem a cena do pós-jogo', '≤ 0,6 ms', false);
   }
 }
 

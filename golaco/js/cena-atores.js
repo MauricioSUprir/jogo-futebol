@@ -590,6 +590,24 @@ export function gPalmasAlto(o, h, t, w) {
   for (const lado of [-1, 1]) maoNoCorpo(o, h, lado, J.cabeca, 0.1, 0.03 + 0.06 * ab, 0.26, w, POLO_FORA);
 }
 
+/** G_PALMAS (o melhor em campo, PR 4): palmas na frente do peito a 2,2 Hz (as mãos a 0,02–0,14 m uma da outra). */
+export function gPalmas(o, h, t, w) {
+  if (w <= 0) return;
+  const ab = 0.5 + 0.5 * Math.cos(2 * Math.PI * 2.2 * t);
+  for (const lado of [-1, 1]) maoNoCorpo(o, h, lado, J.peito, 0.3, 0.01 + 0.06 * ab, 0.02, w, POLO_BAIXO);
+}
+
+/**
+ * G_ABRACO (a troca de camisa, PR 4): lado a lado, o braço do lado `lado` (o de dentro) por trás das costas do outro, a
+ * mão na escápula de lá (alvo = a pose dele, ah = o rumo dele): o "abraçados" de quem sai do campo junto.
+ */
+export function gAbraco(o, h, lado, alvo, ah, w) {
+  if (w <= 0) return;
+  const p = J.peito * 3, fx = Math.cos(ah), fz = Math.sin(ah), rx = -fz, rz = fx;
+  // a escápula do lado de longe dele (de quem abraça: o lado `lado` dele é o de longe)
+  maoEm(o, h, lado, alvo[p] - fx * 0.12 + rx * lado * 0.09, alvo[p + 1] + 0.06, alvo[p + 2] - fz * 0.12 + rz * lado * 0.09, w, POLO_TRAS);
+}
+
 /** G_CINTURA (fim de tempo): as mãos na cintura, na crista do quadril (≤ 0,12 m da articulação do quadril). */
 export function gCintura(o, h, w) {
   if (w <= 0) return;

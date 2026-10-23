@@ -504,6 +504,25 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   dentro da cena). A súmula passou a import ESTÁTICO (sempre na partida; escanteios na bola morta, faltas por time,
   porTempo; o `resultadoTM` não muda) — o "sem `?tm` o download não cresce" deixou de valer para ela (folga 1399 → 1347 KB).
   Testes: `teste-cenas` C, `teste-lances-guarda`, `teste-ponte-tm` P7, `teste-cenas-tela` I.
+- **Cena do pós-jogo** (dono, 22/10: "a cena de pós jogo"; PR 4 do `PLANO-CENAS.md`, contrato "Cenas das paradas"): a mesma
+  `js/cena-fim.js` com `planejarFim(m, 'fimDeJogo')` — apito → vencedor/perdedor (empate: neutro) → cumprimentos → TROCA DE
+  CAMISA (1 par de adversários de linha pelo hash do jogo, abraçados, cada um com a camisa do outro: o kit misto
+  `troca:<camisa>:<resto>:<num>` do `render/jogador3d.js`, com o patrocínio da camisa na versão de teste — 0 chamada a mais
+  medida no celular, manequim e corpo novo) → os treinadores se cumprimentam → aplauso → torcida (festa do bandeirão/
+  sinalizadores de quem ganhou, vaia de quem perdeu) → MELHOR EM CAMPO (`sumula.js melhorEmCampo`; a nota pela mesma conta
+  do `jogador` do `resultadoTM`, que ganha só o campo OPCIONAL `melhor: {lado, tmId, nome, nota}`) → placar final com os
+  autores → estatísticas da partida (não no TM) → a faixa final com "Melhores momentos" (até 6 lances do guardador, os gols
+  primeiro, ≤ 30 s; o Pular volta à faixa). ~34,5 s (36 com a troca; empate 32/33,5; o empate que continua no TM é a versão
+  curta, 14,5 s — `partida.empateContinua`, que o TM v375 manda por modo: `tm3d.js empateContinuaDe`, liga = false,
+  mata-mata = a mesma conta do onDone; sem o campo, curta). Fora do online o laço fica
+  PARADO no tick do `fimDeJogo` até "Jogar de novo" (em `fim` só o tick andaria); NO ONLINE a cena roda sem segurar (o
+  lockstep segue). O resultado do TM continua gravado no apito (a cena não atrasa nada). Tarjas do melhor em campo, do
+  placar final e o painel: exceções escritas à "sem narração", só dentro da cena. API `__golaco.cenas` (tipo 'fim':
+  `fimDeTeste({placar})`, `melhoresMomentos()`, `historicoPosJogo`, `faixaFinal`); `?troca=0` tira a troca. Testes:
+  `teste-cenas` FIM (56 fins nos 3 desfechos; `--sem-fim`/`--min-fim` trocam a amostra), `teste-ponte-tm` P8 (`--base` compara
+  o resto do resultado com a súmula da base), `teste-cenas-tela` F (navegador). Lição: a cena do fim é a 1ª com os 22 em campo
+  o tempo todo — quem foge da lente, a 2ª fileira de câmeras, quem está dentro do gol/atrás das placas no apito e o trilho da
+  torcida só apareceram com 7 amostras de 56 fins (uma amostra só passava).
 - **Pré-jogo** (pedido de 11/10; `PESQUISA-PREJOGO.md`, contrato em `CONTRATOS.md`): antes do 1º passo (tick 0; o apito
   da saída só no fim; hash igual) — abertura "Toque para começar" (libera o som), aéreo de fora, fachada com a torcida
   chegando, o estádio por dentro, túnel, entrada com os árbitros, plano alto da fila se formando, a câmera passando pela
