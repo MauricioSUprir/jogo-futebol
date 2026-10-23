@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { CELL, BLOCO, N, MEIO, CALCADA, LAB_CELULA, bloco, celulaDe, centroDe, dentro, todasEsferas, retangulosPerto, chaoEm, empurrar } from './cidade.js';
 import { criarHeroi } from './humano.js';
+import { criarRaios } from './raios.js';
+import { criarPosFx } from './posfx.js';
 import { iniciarAtualizacao } from './atualizar.js';
 import { criarMissoes } from './missoes.js';
 import { criarCrimes } from './crimes.js';
@@ -51,6 +53,12 @@ const THREE_LAB = MOBILE ? Object.create(THREE, { MeshStandardMaterial: { value:
 
 const hemi = new THREE.HemisphereLight(0xbfd8ff, 0x403830, 1);
 const sol = new THREE.DirectionalLight(0xffffff, 1.5);
+if (!MOBILE) {                                    // sombras de verdade no PC: uma caixa de 90 m que acompanha o herói
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  sol.castShadow = true; sol.shadow.mapSize.set(2048, 2048);
+  Object.assign(sol.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 260 });
+  sol.shadow.bias = -0.0004; sol.shadow.normalBias = 0.5;
+}
 cena.add(hemi, sol, sol.target);
 
 const matCeu = new THREE.ShaderMaterial({
@@ -82,6 +90,7 @@ function misturar(alvo, ca, cb, t) { tmpA.setHex(ca); tmpB.setHex(cb); alvo.copy
 const mundo = { T: 0.4, elev: 1, noite: 0 };
 const materiaisFachada = [];            // para acender as janelas à noite
 
+const vSol = new THREE.Vector3();
 function atualizarAmbiente(posCam) {
   const ang = (mundo.T - 0.25) * Math.PI * 2;
   const dir = new THREE.Vector3(Math.cos(ang) * 0.35, Math.sin(ang), Math.cos(ang) * 0.93).normalize();
@@ -96,7 +105,7 @@ function atualizarAmbiente(posCam) {
   hemi.intensity = mistN('hemi'); sol.intensity = mistN('solInt') * (elev > -0.05 ? 1 : 0.4);
   // à noite a "luz do sol" vira a lua, do lado oposto
   const dl = elev > -0.05 ? dir : dir.clone().multiplyScalar(-1);
-  sol.position.copy(posCam).addScaledVector(dl, 200); sol.target.position.copy(posCam);
+  vSol.set(P.x, P.y, P.z); sol.position.copy(vSol).addScaledVector(dl, 150); sol.target.position.copy(vSol);
   matCeu.uniforms.sol.value.copy(dir); matCeu.uniforms.brilho.value.setHex(elev > 0.1 ? 0xffe8b0 : 0xff9a60).multiplyScalar(suave(-0.12, 0.05, elev));
   ceu.position.copy(posCam); estrelas.position.copy(posCam);
   mundo.noite = 1 - suave(-0.15, 0.12, elev);
@@ -137,7 +146,7 @@ const matPoca = new THREE.MeshBasicMaterial({ map: texPoca, color: 0xffd9a0, tra
 const geoPoca = new THREE.CircleGeometry(1, 20); geoPoca.rotateX(-Math.PI / 2);
 
 // o asfalto é um plano só para a cidade inteira (a textura de uma célula se repete N × N)
-const asfaltoGeral = new THREE.Mesh(new THREE.PlaneGeometry(N * CELL, N * CELL), matAsfalto); asfaltoGeral.rotation.x = -Math.PI / 2; cena.add(asfaltoGeral);
+const asfaltoGeral = new THREE.Mesh(new THREE.PlaneGeometry(N * CELL, N * CELL), matAsfalto); asfaltoGeral.rotation.x = -Math.PI / 2; asfaltoGeral.receiveShadow = !MOBILE; cena.add(asfaltoGeral);
 
 // reflexo do céu nos vidros: ambiente gerado do próprio céu (de dia); a intensidade cai à noite (só no PC)
 if (!MOBILE) {
@@ -208,12 +217,12 @@ const PRETO = [0.08, 0.08, 0.09], CINZA = [0.5, 0.52, 0.55], CINZA_ESC = [0.25, 
 
 function construirBloco(b) {
   const grupo = new THREE.Group(), geos = [], dados = { grupo, geos, orbes: [], instancias: [] };
-  const topoLaje = new THREE.Mesh(geoLajeTopo, b.tipo === 'parque' ? matGrama : matCalcada); topoLaje.position.set(b.cx, 0, b.cz); grupo.add(topoLaje);
+  const topoLaje = new THREE.Mesh(geoLajeTopo, b.tipo === 'parque' ? matGrama : matCalcada); topoLaje.position.set(b.cx, 0, b.cz); topoLaje.receiveShadow = !MOBILE; grupo.add(topoLaje);
   const baldes = new Map(), pega = (k, cor) => { if (!baldes.has(k)) baldes.set(k, new Balde(cor)); return baldes.get(k); };
   const props = pega('props', true), roof = pega('roof'), copas = pega('copas'), lamp = pega('lamp'), poca = pega('poca');
   // meio-fio entra no balde dos adereços (um desenho a menos): quatro faixas finas
   for (const [x, z, sx, sz] of [[0, -BLOCO / 2 + 0.2, BLOCO, 0.4], [0, BLOCO / 2 - 0.2, BLOCO, 0.4], [-BLOCO / 2 + 0.2, 0, 0.4, BLOCO], [BLOCO / 2 - 0.2, 0, 0.4, BLOCO]]) props.geo(geoCaixa, compor(b.cx + x, CALCADA / 2, b.cz + z, sx, CALCADA, sz), [0.5, 0.51, 0.53]);
-  if (b.tipo === 'lab') { const lab = construirLab(THREE_LAB, b.cx, b.cz, { aniso: ANISO, intervaloTela: MOBILE ? 1 : 0.2 }); grupo.add(lab.grupo); geos.push(...lab.geos); dados.lab = lab; labAtivo = lab; }
+  if (b.tipo === 'lab') { const lab = construirLab(THREE_LAB, b.cx, b.cz, { aniso: ANISO, intervaloTela: MOBILE ? 1 : 0.2 }); grupo.add(lab.grupo); if (!MOBILE) lab.grupo.traverse((o) => { if (o.isMesh && !o.material?.transparent) { o.castShadow = true; o.receiveShadow = true; } }); geos.push(...lab.geos); dados.lab = lab; labAtivo = lab; }
   for (const l of b.lotes) {
     const lat = pega(`l${l.estilo}-${l.tom}`);
     const loja = l.y0 <= CALCADA + 0.01 && l.x1 - l.x0 > 8 ? pega(`loja${(Math.abs(b.i * 7 + b.j * 3 + Math.round(l.x0)) % 3)}`) : null;
@@ -250,6 +259,7 @@ function construirBloco(b) {
     else if (k.startsWith('loja')) mat = matLoja[+k.slice(4)];
     else { const [e, t] = k.slice(1).split('-').map(Number); mat = matFachada[e][t]; }
     const m = new THREE.Mesh(g, mat); grupo.add(m);
+    if (!MOBILE && k !== 'lamp' && k !== 'poca') { m.receiveShadow = true; m.castShadow = true; }
   }
   for (const o of b.orbes) {
     if (esferasColetadas.has(o.id)) continue;
@@ -320,8 +330,10 @@ const heroi = new THREE.Group(); const partes = {};
   partes.bracoE = membro(-0.42, 1.5, 0.45, 0.1, vermelho, false); partes.bracoD = membro(0.42, 1.5, 0.45, 0.1, vermelho, false);
 }
 cena.add(heroi);
+const raios = criarRaios(cena, { mobile: MOBILE });
+const posfx = criarPosFx(renderer, cena, camera, { mobile: MOBILE });
 let modelo = null;
-criarHeroi({ aniso: ANISO, lod: 1, mobile: TOQUE }).then((m) => { modelo = m; partes.corpo.visible = false; heroi.add(m.grupo); }).catch((e) => console.warn('corpo realista indisponível', e));
+criarHeroi({ aniso: ANISO, lod: 1, mobile: TOQUE }).then((m) => { modelo = m; partes.corpo.visible = false; heroi.add(m.grupo); m.grupo.traverse((o) => { if (o.isMesh) o.castShadow = true; }); }).catch((e) => console.warn('corpo realista indisponível', e));
 const sombra = new THREE.Mesh(new THREE.CircleGeometry(0.5, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }));
 sombra.rotation.x = -Math.PI / 2; cena.add(sombra);
 
@@ -585,9 +597,8 @@ function animarHeroi(dt) {
   heroi.position.set(P.x, P.y, P.z); heroi.rotation.y = P.h; }
   // sombra no chão logo abaixo
   const chao = chaoEm(rectsPerto, P.x, P.z, P.y + 40, 40);
-  sombra.position.set(P.x, Math.min(chao, P.y) + 0.04, P.z); const e = clamp(1 - (P.y - chao) / 25, 0.25, 1); sombra.scale.setScalar(e); sombra.visible = !P.parede;
-  if (v > 18) emitir(P.x - Math.sin(P.h) * 0.5, P.y + 1, P.z - Math.cos(P.h) * 0.5, Math.min(6, Math.floor(v / 14)), v);
-  passoRastro(dt);
+  sombra.position.set(P.x, Math.min(chao, P.y) + 0.04, P.z); const e = clamp(1 - (P.y - chao) / 25, 0.25, 1); sombra.scale.setScalar(e); sombra.visible = MOBILE && !P.parede;
+  raios.atualizar(dt, P, P.parede ? P.parede.v : v, { vibrando: P.vibrando, parede: P.parede });
 }
 
 // ---------- câmera ----------
@@ -719,7 +730,7 @@ function ajustarResolucao(dtBruto) {
   let pr = RES.pr;
   if (RES.media > 1 / 38 && pr > RES.min) pr = Math.max(RES.min, pr - 0.15);
   else if (RES.media < 1 / 56 && pr < RES.max) pr = Math.min(RES.max, pr + 0.1);
-  if (pr !== RES.pr) { RES.pr = pr; renderer.setPixelRatio(pr); renderer.setSize(innerWidth, innerHeight, false); }
+  if (pr !== RES.pr) { RES.pr = pr; renderer.setPixelRatio(pr); renderer.setSize(innerWidth, innerHeight, false); posfx.tamanho(innerWidth, innerHeight, pr); }
 }
 function quadro() {
   requestAnimationFrame(quadro);
@@ -744,10 +755,11 @@ function quadro() {
   }
   if (J.modo !== 'menu' || carregados.size) { animarHeroi(J.modo === 'jogando' ? dt : 0); atualizarCamera(dt); }
   atualizarAmbiente(camera.position);
-  renderer.render(cena, camera);
+  posfx.ajustar(J.modo === 'jogando' ? Math.min(1, Math.max(0, (Math.hypot(P.vx, P.vz) - 20) / 35)) : 0, mundo.noite);
+  posfx.render();
 }
 
-function redimensionar() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+function redimensionar() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); posfx.tamanho(w, h, RES.pr); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 addEventListener('resize', redimensionar); redimensionar();
 
 // ---------- carga inicial ----------
