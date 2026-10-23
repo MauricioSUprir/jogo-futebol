@@ -394,6 +394,7 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
 
   // ---- corpo humano (sob demanda)
   let humano = null, humanoErro = null, rostosPedidos = null, versaoRostos = 0;
+  let ultimaLista = null;   // a lista do último quadro (poseDesenhada)
   const kitsBrutos = { ...KITS };
   if (opc.corpo === 'humano') {
     (async () => {
@@ -564,6 +565,24 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
      */
     reservar(n) { if (n > cap) montar(n); },
     /**
+     * A pose DESENHADA do jogador `id` no último quadro (cenas das paradas: o cartão 3D vai na mão desenhada do árbitro):
+     * a pose da lista e, com o corpo humano (?corpo=humano), a postura do desenho por cima (esqueleto.js postura: o
+     * quadril sobe, o tronco e a cabeça endireitam e o braço vai junto) — a mesma conta da pele. out: Float32Array(NJ·3).
+     * Devolve out ou null (o id não foi desenhado).
+     */
+    poseDesenhada(id, out) {
+      const L = ultimaLista;
+      if (!L) return null;
+      for (let p = 0; p < L.length; p++) {
+        const jg = L[p];
+        if (jg.id !== id || !jg.pose) continue;
+        if (humano) return humano.postura(jg.pose, Number.isFinite(jg.v) ? jg.v : 1.5, jg.goleiro ? 0.4 : 1, out);
+        out.set(jg.pose);
+        return out;
+      }
+      return null;
+    },
+    /**
      * Uniformes da partida (identidade.js, só com ?tm): reescreve as chaves que já existem (linha0, goleiro0, linha1,
      * goleiro1, arbitro) com as cores resolvidas sem confusão — o elenco do Total Match aponta para elas (a chave do
      * cache por vaga não muda de tamanho) — e reescreve as cores de todas as vagas no próximo quadro.
@@ -597,6 +616,7 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
      * camera: para o tamanho constante da seta acima da cabeça.
      */
     atualizar(lista, camera) {
+      ultimaLista = lista;
       if (lista.length > cap) montar(Math.ceil(lista.length * 1.25));
       const nj = lista.length;
       const mat = segs.instanceMatrix.array;

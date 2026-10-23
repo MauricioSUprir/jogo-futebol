@@ -887,8 +887,9 @@ export const CENA_CARTAO = {
   // "gastam segundos" → curtas, puláveis e com opção de desligar
   planos: {
     amarelo: [['arbitro', 1.95], ['reacao', 2.5], ['anota', 1.0]],
-    vermelho: [['arbitro', 1.9], ['reacao', 2.5], ['saida', 1.5], ['tunel', 2.0], ['torcida', 1.0]],
-    segundo: [['arbitro', 2.9], ['reacao', 2.5], ['saida', 1.5], ['tunel', 2.0], ['torcida', 1.0]],
+    // (revisão do PR 2: o cartão no alto ≥ 1,0 s dentro do plano do árbitro — com 1,9/2,9 o vermelho caía na reação)
+    vermelho: [['arbitro', 2.0], ['reacao', 2.4], ['saida', 1.5], ['tunel', 2.0], ['torcida', 1.0]],
+    segundo: [['arbitro', 4.0], ['reacao', 2.4], ['saida', 1.1], ['tunel', 1.4], ['torcida', 1.0]],
   },
   companheiro: 15, apoioPerto: 6,
   ifab: 4,               // m — só o capitão e o punido mais perto do árbitro ("só o capitão": UEFA EURO 2024, PL 2025-26)

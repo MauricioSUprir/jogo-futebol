@@ -54,6 +54,7 @@ export const TEMPOS_NODE = {
   'teste-saot.mjs': 215,
   'teste-comemoracao.mjs': 294,
   'teste-substituicao.mjs': 69,
+  'teste-cenas.mjs': 90,
   'teste-tecnicos.mjs': 482,
   'teste-tecnicos.mjs --so-sinteticos --estresse': 103,
   'teste-impedimento.mjs': 156,
@@ -99,6 +100,8 @@ export const TEMPOS_NAVEGADOR = {
   'teste-comemoracao-tela.mjs': 80,
   'teste-tecnicos-tela.mjs': 155,
   'teste-substituicao-tela.mjs': 164,
+  // medido aqui (195 s, máquina livre: PC 25, hash 16, replay 8, celular 61, corpo novo 47, telas 15, gol 9, TM 13); acertar pelo log do CI
+  'teste-cenas-tela.mjs': 240,
   'teste-penaltis-tela.mjs': 60,
   'teste-livre-tela.mjs': 120,
   'teste-online-tela.mjs': 160,

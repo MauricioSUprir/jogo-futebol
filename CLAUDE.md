@@ -196,7 +196,7 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   humano realista + mocap + rostos por IA (UV) → 6 estádio, torcida, câmera, replay, comemoração → 7 celular, menus,
   modos e desempenho.
 - Técnica: three.js **0.170.0** por importmap (jsdelivr), ES modules, sem build. Lógica (`js/*.js` exceto `entrada.js`,
-  `main.js`, `hud.js`, as telas `editor-time.js`/`escalacao-tela.js`/`prejogo-tela.js` e `js/render/`) **sem three.js nem DOM**. Passo fixo 1/60 s + desenho interpolado (`laco.js`).
+  `main.js`, `hud.js`, as telas `editor-time.js`/`escalacao-tela.js`/`prejogo-tela.js`/`cenas-tela.js` e `js/render/`) **sem three.js nem DOM**. Passo fixo 1/60 s + desenho interpolado (`laco.js`).
   Aleatoriedade só por `rng.js` (sfc32 com semente no mundo); mesma semente = mesmo hash (`hashMundo`). Pose =
   função pura do estado (`anim.js`). Contratos em `golaco/CONTRATOS.md`, constantes em `golaco/js/config.js`.
   Coordenadas: x = comprimento (±52,5), z = largura (±34), y para cima, rumo h → (cos h, 0, sin h).
@@ -473,6 +473,27 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   webdriver/prints/demo; vale com "Replays: Ligado". Testes: `teste-replay-paradas` (Node, padrão: árbitro independente,
   roteiro, orçamento, pureza, predicado) e `teste-replay-paradas-tela` (navegador, CI); ferramentas `lib/paradas-node.mjs`
   (a página em Node) e `lib/acha-parada.mjs`. Mudou algo no `partida.js regrasPartida`? O P5 reprova: atualizar a cópia.
+- **Cena do cartão** (dono, 22/10: "as cenas de cartões"; PR 2 do `PLANO-CENAS.md`, contrato "Cenas das paradas"): porte da
+  branch `golaco/cenas-jogo` para FORA do fecho — `js/cenas-config.js` (as `CENA_*`, importado só pelos módulos sob demanda),
+  `js/cena-atores.js`/`js/cena-cartao.js` (puros; cópias de `moverJuntas`/`inclinarTronco`/`flexionar` da comemoração),
+  `render/cartao3d.js`, `js/cenas-tela.js` + `css/cenas.css` (tela DOM, como `editor-time.js`), tudo pelo `SOB.cenas` do
+  `main.js`. No fim do passo (`decidirCartao`) o cartão mais grave vira a cena: o árbitro vem e ergue o cartão (3D, na mão
+  DESENHADA: `jog3d.poseDesenhada`), 3 reações de amarelo e 3 de vermelho, o expulso sai pelo túnel (`render/vao-placas.js`,
+  saiu do `prejogo.js`). Simulação PARADA no tick do cartão (hash igual); os treinadores vivos não andam nem são desenhados
+  (cópias na cena: sem corte no anel, o replay da falta vem inteiro); o estádio anda no relógio do desenho (`relEst`). Ordem:
+  falta → cartão → 1 s ao vivo → replay de parada; vantagem que virou gol → comemoração → cartão no gol + 149 (a cortina para
+  ali; todos freiam fora do quadro: `CENA_CARTAO.assentar`) → saída → replay do gol. A TARJA de identificação (cartão, sigla,
+  escudo, número, nome; sem motivo nem minuto) é uma exceção escrita à "sem narração", como a faixa ENTRA/SAI e o selo
+  IMPEDIMENTO/POSIÇÃO LEGAL: só dentro da cena, nunca com a bola rolando. A faixa "Você foi expulso" (TM travado) espera a
+  cena e o replay (também a comemoração e o replay do gol; no intervalo, o 2º tempo; no fim de jogo fica a faixa do fim). A
+  comemoração que a cena encerra no gol + 149 deixa o passo da saída NEUTRO (`golNeutro`: a mesma entrada por tick com e sem
+  a cena). Pulada antes de o cartão subir, volta o ícone de sempre. Ninguém da cena passa por cima da bola parada
+  (`CENAS.bola`; a página desenha a do mundo); o plano da torcida anda no trilho do pré-jogo do estádio de forma própria
+  (`ajustePlano`). "Cenas <small>ligadas</small>" na linha das cenas do "Modo de jogo" (3 botões que crescem pelo texto: numa
+  linha a mais a pausa rolava em 844×390); `?cenas=0|1`; desligada com webdriver/prints/demo; online = o ícone de hoje; sem o
+  módulo baixado = o ícone. API `__golaco.cenas`. Testes: `teste-cenas` (Node, padrão: A canhão de 144 com os treinadores
+  onde os vivos ficam, A-L 48 vermelhos na lateral de cá, B, E, F, G, P os trilhos das plantas) e `teste-cenas-tela`
+  (navegador). Download inicial: folga 1434 → 1399 KB.
 - **Pré-jogo** (pedido de 11/10; `PESQUISA-PREJOGO.md`, contrato em `CONTRATOS.md`): antes do 1º passo (tick 0; o apito
   da saída só no fim; hash igual) — abertura "Toque para começar" (libera o som), aéreo de fora, fachada com a torcida
   chegando, o estádio por dentro, túnel, entrada com os árbitros, plano alto da fila se formando, a câmera passando pela

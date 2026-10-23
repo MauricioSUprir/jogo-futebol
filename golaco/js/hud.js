@@ -69,7 +69,8 @@ const CAMPO_MX = 52.5, CAMPO_MZ = 34;
  * reiniciar-partida, modos, modos-voltar, modo (valor: partida | ataque | conducao), som (ligado |
  * desligado), volume (0–1), minimapa e nomes (sem valor: alterna; tela limpa, 11/10), replay (o "Replay" da pausa),
  * replay-pular, replayAuto (ligado | desligado), comemoracao-pular, substituicao-pular, subst-ciclo (a opção "Cena de
- * substituição" do "Modo de jogo": ligada ↔ só a faixa).
+ * substituição" do "Modo de jogo": ligada ↔ só a faixa), cena-pular (a cena do cartão) e cenas-ciclo (a opção "Cenas"
+ * do "Modo de jogo": ligadas ↔ desligadas).
  */
 export function criarHud(opc) {
   const $ = id => document.getElementById(id);
@@ -85,7 +86,7 @@ export function criarHud(opc) {
     faixa: $('faixa'), faixaTitulo: $('faixa-titulo'), faixaPlacar: $('faixa-placar'), faixaBotao: $('faixa-botao'),
     acoes: $('menu-acoes'), modos: $('menu-modos'), estadoModo: $('estado-modo'), continuar: $('btn-continuar'),
     reiniciarPartida: $('btn-reiniciar-partida'), dica: $('dica'), replay: $('replay'), replayFaixa: $('replay-faixa'),
-    comemoracao: $('comemoracao'), substituicao: $('substituicao'), faixaSub: $('faixa-subst'),
+    comemoracao: $('comemoracao'), substituicao: $('substituicao'), faixaSub: $('faixa-subst'), cena: $('cena'),
     terco: $('terco'),
   };
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
@@ -177,6 +178,8 @@ export function criarHud(opc) {
   el.comemoracao?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('comemoracao-pular'); });
   // cena de substituição: a mesma camada (qualquer toque ou clique pula, depois de 0,5 s — quem decide é o main.js)
   el.substituicao?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('substituicao-pular'); });
+  // cena do cartão (js/cena-cartao.js): a mesma camada (qualquer toque pula depois de 0,5 s — quem decide é o main.js)
+  el.cena?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(e); cmd('cena-pular'); });
 
   function marcarGrupo(grupo, valor) {
     document.querySelectorAll(`.segmentado[data-grupo="${grupo}"] button`).forEach(b => {
@@ -831,6 +834,19 @@ export function criarHud(opc) {
       if (el.substituicao) el.substituicao.hidden = !ativo;
     },
     get substituicaoVisivel() { return !!el.substituicao && !el.substituicao.hidden; },
+    /**
+     * Cena das paradas (o cartão; PLANO-CENAS.md §1.4) ligada/desligada (html.em-cena): do HUD de jogo fica só o placar (a
+     * tarja de identificação é da tela das cenas, js/cenas-tela.js); minimapa, menu, avisos, barra de força, ícone do
+     * cartão (o cartão está na mão do árbitro), faixas e botões de toque somem; a camada pega qualquer toque (pular) e o
+     * "Pular" aparece só com toque.
+     */
+    cena(ativo) {
+      ativo = !!ativo;
+      if (raiz.classList.contains('em-cena') === ativo) return;
+      raiz.classList.toggle('em-cena', ativo);
+      if (el.cena) el.cena.hidden = !ativo;
+    },
+    get cenaVisivel() { return !!el.cena && !el.cena.hidden; },
     /**
      * Faixa ENTRA/SAI: pares (ver quadroFaixaSub) ou null (some); agora = o relógio do laço (ms). Começa no modo da cena
      * se `cena` vier ({pagina, destaque: 'sai' | 'entra'}); senão no do jogo. Fica ≥ 4 s (2,5 s por par; 1,8 com 4 ou
