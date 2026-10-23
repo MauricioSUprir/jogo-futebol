@@ -35,6 +35,8 @@
   .bt { position:absolute; width:78px; height:78px; border-radius:50%; border:2px solid var(--ouro); background:rgba(255,210,63,.14); color:var(--ouro); font-weight:800; font-size:11px; letter-spacing:.06em; pointer-events:auto; touch-action:none; }
   .bt.ativo { background:rgba(255,210,63,.45); }
   #btPular { right:max(22px,env(safe-area-inset-right)); bottom:max(26px,env(safe-area-inset-bottom)); }
+  #btVibrar { right:max(22px,env(safe-area-inset-right)); bottom:max(116px,calc(env(safe-area-inset-bottom) + 90px)); border-color:#ff6b6b; color:#ff6b6b; background:rgba(255,80,80,.14); }
+  #btVibrar.ativo { background:rgba(255,80,80,.45); }
   #btCorrer { right:max(108px,calc(env(safe-area-inset-right) + 86px)); bottom:max(26px,env(safe-area-inset-bottom)); border-color:var(--azul); color:var(--azul); background:rgba(63,208,255,.14); }
   #btCorrer.ativo { background:rgba(63,208,255,.45); }
   .tela { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; background:radial-gradient(ellipse at 50% 40%, rgba(255,43,61,.2), rgba(7,8,15,.9) 70%); gap:14px; z-index:5; overflow:auto; }
@@ -70,6 +72,7 @@
 </div>
 <div id="toque">
   <div id="stick"><i id="stickBola"></i></div>
+  <button class="bt" id="btVibrar" type="button">VIBRAR</button>
   <button class="bt" id="btCorrer" type="button">CORRER</button>
   <button class="bt" id="btPular" type="button">PULAR</button>
 </div>
@@ -82,10 +85,12 @@
     <span>Mouse</span><span>olhar (clique para capturar)</span>
     <span><kbd>Shift</kbd></span><span>supervelocidade (gasta energia)</span>
     <span><kbd>Espaço</kbd></span><span>pular (duas vezes = pulo duplo; segure para planar)</span>
+    <span><kbd>V</kbd> (segurar, em velocidade)</span><span>vibrar: atravessa prédios e objetos</span>
+    <span>Corra de frente para um prédio acima de 130 km/h</span><span>escala a parede até o topo (Shift)</span>
     <span><kbd>M</kbd></span><span>mapa grande</span>
     <span><kbd>H</kbd></span><span>avançar o relógio</span>
   </div>
-  <p class="so-toque">Joystick à esquerda para correr, arraste a tela para olhar. Segure CORRER para a supervelocidade e toque em PULAR (duas vezes = pulo duplo).</p>
+  <p class="so-toque">Joystick à esquerda para correr, arraste a tela para olhar. Segure CORRER para a supervelocidade (acima de 130 km/h, corra contra um prédio para escalar), VIBRAR para atravessar prédios e PULAR (duas vezes = pulo duplo).</p>
   <div id="carregando">Gerando a cidade…</div>
   <div id="barraCarga"><i id="barraCargaI"></i></div>
   <button class="principal" id="btnJogar" type="button" hidden>COMEÇAR</button>
