@@ -480,7 +480,7 @@ function passoHeroi(dt) {
         P.x = r.x; P.z = r.z; P.vx = (P.x - ox) / sub * 0.98; P.vz = (P.z - oz) / sub * 0.98;
         const depois = Math.hypot(P.vx, P.vz); if (depois > antes) { P.vx *= antes / depois; P.vz *= antes / depois; }
         // de frente para a parede de um prédio, em velocidade: começa a escalar
-        if (r.q && r.q.y0 > 0 && P.correndo && antes >= MOV.escalar && (r.nx * vx0 + r.nz * vz0) / (antes || 1) <= -0.55 && P.y < r.q.y1 - 1.2 && P.energia > 0.05) {
+        if (r.q && r.q.y0 > 0 && r.q.y1 - r.q.y0 > 4 && r.q.x1 - r.q.x0 > 3 && r.q.z1 - r.q.z0 > 3 && P.correndo && antes >= MOV.escalar && (r.nx * vx0 + r.nz * vz0) / (antes || 1) <= -0.55 && P.y < r.q.y1 - 1.2 && P.energia > 0.05) {
           P.parede = { nx: r.nx, nz: r.nz, q: r.q, v: clamp(antes * 0.85, MOV.escalaMin, MOV.escalaMax) };
           P.vx = P.vz = 0; P.vy = 0; P.noChao = false; P.pulos = 1; J.alinhar = 0.8;
           break;
