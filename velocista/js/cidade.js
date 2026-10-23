@@ -122,12 +122,13 @@ export function chaoEm(rects, x, z, y, degrau = 0.7) {
 }
 
 /** Empurra um círculo (x,z,raio) para fora dos sólidos que o corpo (y..y+alt) atravessa. Devolve {x,z,bateu}. */
-export function empurrar(rects, x, z, raio, y, alt = 1.8) {
+export function empurrar(rects, x, z, raio, y, alt = 1.8, ignorar = null) {
   let bateu = false, nx = 0, nz = 0, golpe = null;
   for (let it = 0; it < 3; it++) {
     for (const q of rects) {
       if (y + alt <= q.y0 + 0.05 || y >= q.y1 - 0.05) continue;       // por cima ou por baixo
       if (q.y1 <= CALCADA + 0.01 && q.y0 < 0) continue;                 // o quarteirão em si é só chão
+      if (ignorar && ignorar(q)) continue;
       const px = Math.max(q.x0, Math.min(x, q.x1)), pz = Math.max(q.z0, Math.min(z, q.z1));
       let dx = x - px, dz = z - pz, d2 = dx * dx + dz * dz;
       if (d2 >= raio * raio) continue;

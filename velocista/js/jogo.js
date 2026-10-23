@@ -474,7 +474,9 @@ function passoHeroi(dt) {
     P.x += P.vx * sub; P.z += P.vz * sub; P.y += P.vy * sub;
     const lim = MEIO - 4; P.x = clamp(P.x, -lim, lim); P.z = clamp(P.z, -lim, lim);
     if (!P.vibrando) {
-      const r = empurrar(rectsPerto, P.x, P.z, CORPO.raio, P.y, CORPO.alt);
+      // em velocidade, obstáculos baixos (carros, bancos) são pulados: o herói salta por cima em vez de parar
+      const r = empurrar(rectsPerto, P.x, P.z, CORPO.raio, P.y, CORPO.alt, P.saltoAuto > 0 ? ehBaixo : null);
+      if (r.bateu && r.q && ehBaixo(r.q) && Math.hypot(P.vx, P.vz) > 10 && !P.parede) { P.saltoAuto = 0.45; P.vy = Math.max(P.vy, 10.5); P.noChao = false; P.x = ox + P.vx * sub; P.z = oz + P.vz * sub; continue; }
       if (r.bateu) {
         const antes = Math.hypot(P.vx, P.vz), vx0 = P.vx, vz0 = P.vz;
         P.x = r.x; P.z = r.z; P.vx = (P.x - ox) / sub * 0.98; P.vz = (P.z - oz) / sub * 0.98;
@@ -493,9 +495,11 @@ function passoHeroi(dt) {
   }
   // direção do corpo
   if (!P.parede && vh > 1.2) { const alvo = Math.atan2(P.vx, P.vz); let d = alvo - P.h; d = Math.atan2(Math.sin(d), Math.cos(d)); P.h += d * (1 - Math.exp(-MOV.giro * dt)); }
+  if (P.saltoAuto > 0) P.saltoAuto -= dt;
   P.t += dt;
 }
 
+function ehBaixo(q) { return q.y0 >= -0.01 && q.y1 - Math.max(P.y, q.y0) <= 1.8 && q.y1 - q.y0 < 3; }
 function estaDentroDeSolido() {
   for (const q of rectsPerto) { if (q.y0 < 0) continue; if (P.x > q.x0 && P.x < q.x1 && P.z > q.z0 && P.z < q.z1 && P.y + 0.9 > q.y0 && P.y + 0.9 < q.y1) return true; }
   return false;
