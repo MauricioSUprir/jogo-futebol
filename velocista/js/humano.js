@@ -1,5 +1,5 @@
 // Corpo humano do herói: o Rocketbox Sports_Male_02 (MIT, ver assets/humano/CREDITOS.md) como SkinnedMesh de 25 ossos,
-// com o uniforme pintado por região, capuz e emblema (herói original, azul e ciano), e a animação (corrida, sprint, ar, planeio, escalada, vibração)
+// com o uniforme pintado por região, capuz e emblema (herói original: traje vermelho e dourado, emblema e crista próprios), e a animação (corrida, sprint, ar, planeio, escalada, vibração)
 // calculada por ossos em coordenadas do modelo (x = frente, y = cima, z = direita do personagem).
 import * as THREE from 'three';
 import { lerCorpo } from './corpo-dados.js';
@@ -15,7 +15,7 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
 
 // cores do uniforme por região da máscara (0 pele, 1 camisa, 2 manga, 3 gola, 4 punho, 5 calção, 6 barra, 7 meião, 8 chuteira, 9 sola, 10 acabamento)
-const CORES = [[24, 52, 128], [26, 56, 136], [18, 40, 104], [150, 220, 255], [140, 215, 250], [18, 40, 104], [150, 220, 255], [20, 44, 112], [206, 222, 238], [20, 20, 26], [190, 235, 255]];
+const CORES = [[176, 18, 34], [190, 20, 36], [160, 14, 30], [236, 186, 40], [230, 180, 40], [164, 15, 31], [236, 186, 40], [170, 16, 32], [222, 168, 32], [24, 18, 18], [248, 210, 78]];
 
 function origensDeRepouso(J, rep) {
   const o = new Array(25);
@@ -84,14 +84,14 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
 
   const [texCorpo, texCabeca, texNormal] = await Promise.all([texturaCorpo(aniso), texturaWebp(new URL('cabeca-rb.webp', BASE).href, true, aniso), texturaWebp(new URL('pano-normal.webp', BASE).href, false, aniso)]);
   texNormal.wrapS = texNormal.wrapT = THREE.RepeatWrapping;
-  const matCorpo = new THREE.MeshStandardMaterial({ map: texCorpo, normalMap: mobile ? null : texNormal, normalScale: new THREE.Vector2(0.5, 0.5), roughness: 0.5, metalness: 0.18, emissive: 0x000a24 });
+  const matCorpo = new THREE.MeshStandardMaterial({ map: texCorpo, normalMap: mobile ? null : texNormal, normalScale: new THREE.Vector2(0.5, 0.5), roughness: 0.5, metalness: 0.18, emissive: 0x240004 });
   const matCabeca = new THREE.MeshStandardMaterial({ map: texCabeca, roughness: 0.65, metalness: 0 });
   const corpo = malha(L.partes.corpo, esqueleto, matCorpo), cabeca = malha(L.partes.cabeca, esqueleto, matCabeca);
   for (const m of [corpo, cabeca]) { raiz.add(m); m.bind(esqueleto, new THREE.Matrix4()); }
 
   // capuz, crista e emblema no peito
-  const vermelho = new THREE.MeshStandardMaterial({ color: 0x1a3a8a, roughness: 0.4, metalness: 0.25, emissive: 0x000a2a });
-  const ouro = new THREE.MeshStandardMaterial({ color: 0x9fdcff, roughness: 0.28, metalness: 0.6, emissive: 0x1a4a6a });
+  const vermelho = new THREE.MeshStandardMaterial({ color: 0xb8122a, roughness: 0.4, metalness: 0.25, emissive: 0x240004 });
+  const ouro = new THREE.MeshStandardMaterial({ color: 0xf0be28, roughness: 0.28, metalness: 0.6, emissive: 0x5a3c00 });
   const J = ind.repouso.juntas, hc = [0.03, 1.668, 0], jc = J.cabeca;
   const capuz = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 18, Math.PI + 0.95, Math.PI * 2 - 1.9, 0, Math.PI * 0.64), vermelho);
   capuz.scale.set(0.128, 0.122, 0.1); capuz.position.set(hc[0] - jc[0], hc[1] - jc[1], hc[2] - jc[2]); ossos[I.cabeca].add(capuz);
@@ -99,7 +99,7 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
   const crista = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.014, 0.024), ouro);
   crista.position.set(hc[0] - jc[0] - 0.005, hc[1] - jc[1] + 0.122, 0); crista.rotation.z = -0.04; ossos[I.cabeca].add(crista);
   // emblema próprio do herói: anel dourado com uma faísca de quatro pontas
-  const matEmb = new THREE.MeshStandardMaterial({ color: 0xbfeaff, emissive: 0x3fb4e0, emissiveIntensity: 0.9, side: THREE.DoubleSide });
+  const matEmb = new THREE.MeshStandardMaterial({ color: 0xf6c82a, emissive: 0xb88a10, emissiveIntensity: 0.9, side: THREE.DoubleSide });
   const emb = new THREE.Group();
   emb.add(new THREE.Mesh(new THREE.RingGeometry(0.058, 0.075, 28), matEmb));
   const faisca = new THREE.Shape(); faisca.moveTo(0, 0.052); faisca.lineTo(0.014, 0.014); faisca.lineTo(0.052, 0); faisca.lineTo(0.014, -0.014); faisca.lineTo(0, -0.052); faisca.lineTo(-0.014, -0.014); faisca.lineTo(-0.052, 0); faisca.lineTo(-0.014, 0.014); faisca.closePath();
@@ -199,7 +199,7 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
       raiz.position.y = (0.115 - minY) * (1 - noAr * 2);
     }
     // material: vibração = translúcido com brilho
-    matCorpo.emissive.setRGB(0.0 + 0.2 * vj, 0.04 + 0.55 * vj * (0.5 + 0.5 * Math.sin(tt * 90)), 0.14 + 0.8 * vj * (0.5 + 0.5 * Math.sin(tt * 90)));
+    matCorpo.emissive.setRGB(0.14 + 0.8 * vj * (0.5 + 0.5 * Math.sin(tt * 90)), 0.02 + 0.3 * vj, 0.02);
     matCorpo.opacity = 1 - 0.38 * vj; matCorpo.transparent = vj > 0.02;
     matCabeca.opacity = matCorpo.opacity; matCabeca.transparent = matCorpo.transparent;
     return raiz.position.y;
