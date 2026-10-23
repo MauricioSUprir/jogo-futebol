@@ -32,12 +32,12 @@
   .toque.jogando #toque { display:block; }
   #stick { position:absolute; left:max(26px,env(safe-area-inset-left)); bottom:max(26px,env(safe-area-inset-bottom)); width:132px; height:132px; border-radius:50%; background:rgba(255,255,255,.08); border:2px solid rgba(255,255,255,.25); pointer-events:auto; touch-action:none; }
   #stick i { position:absolute; left:50%; top:50%; width:56px; height:56px; margin:-28px; border-radius:50%; background:rgba(255,255,255,.35); }
-  .bt { position:absolute; width:78px; height:78px; border-radius:50%; border:2px solid var(--ouro); background:rgba(255,210,63,.14); color:var(--ouro); font-weight:800; font-size:11px; letter-spacing:.06em; pointer-events:auto; touch-action:none; }
+  .bt { position:absolute; width:78px; height:78px; border-radius:50%; border:2px solid var(--ouro); background:rgba(8,10,18,.55); color:var(--ouro); font-weight:800; font-size:12px; letter-spacing:.06em; text-shadow:0 1px 3px #000, 0 0 6px #000; pointer-events:auto; touch-action:none; backdrop-filter:blur(3px); }
   .bt.ativo { background:rgba(255,210,63,.45); }
   #btPular { right:max(22px,env(safe-area-inset-right)); bottom:max(26px,env(safe-area-inset-bottom)); }
-  #btVibrar { right:max(22px,env(safe-area-inset-right)); bottom:max(116px,calc(env(safe-area-inset-bottom) + 90px)); border-color:#ff6b6b; color:#ff6b6b; background:rgba(255,80,80,.14); }
+  #btVibrar { right:max(22px,env(safe-area-inset-right)); bottom:max(116px,calc(env(safe-area-inset-bottom) + 90px)); border-color:#ff7b7b; color:#ffa0a0; background:rgba(40,8,10,.6); }
   #btVibrar.ativo { background:rgba(255,80,80,.45); }
-  #btCorrer { right:max(108px,calc(env(safe-area-inset-right) + 86px)); bottom:max(26px,env(safe-area-inset-bottom)); border-color:var(--azul); color:var(--azul); background:rgba(63,208,255,.14); }
+  #btCorrer { right:max(108px,calc(env(safe-area-inset-right) + 86px)); bottom:max(26px,env(safe-area-inset-bottom)); border-color:var(--azul); color:#9fe6ff; background:rgba(6,24,36,.6); }
   #btCorrer.ativo { background:rgba(63,208,255,.45); }
   .tela { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; background:radial-gradient(ellipse at 50% 40%, rgba(255,43,61,.2), rgba(7,8,15,.9) 70%); gap:14px; z-index:5; overflow:auto; }
   .tela[hidden] { display:none; }

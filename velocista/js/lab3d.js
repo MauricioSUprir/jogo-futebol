@@ -50,6 +50,7 @@ export function construirLab(THREE, cx, cz, opc = {}) {
   bas('amarelo', { color: 0xffc400 });
   bas('portaCela', { color: 0x3fe0ff, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false });
   bas('letreiro', { map: T.letreiro });
+  bas('logoL', { map: T.logoL, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   bas('logo', { map: T.logo, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   bas('atlas', { map: T.atlas });
   for (const k of Object.keys(TX.telas)) bas(`tela_${k}`, { map: TX.telas[k].t });
@@ -200,8 +201,8 @@ export function construirLab(THREE, cx, cz, opc = {}) {
   box('acoEsc', -22.4, 22.4, 9.7, 15.5, -S - 0.28, -S - 0.02);
   faceZ('letreiro', -22, 22, 9.9, 15.3, -S - 0.3, -1, 1, [0, 1, 0, 1]);
   box('ciano', -22.5, 22.5, 15.5, 15.6, -S - 0.3, -S); box('ciano', -22.5, 22.5, 9.6, 9.7, -S - 0.3, -S);
-  faceX('logo', -5, 5, 8.9, 14.9, S + 0.05, 1, 1, [0, 1, 0, 1]); faceX('logo', -5, 5, 8.9, 14.9, -S - 0.05, -1, 1, [0, 1, 0, 1]);
-  faceZ('logo', -5, 5, 9.3, 15.3, S + 0.05, 1, 1, [0, 1, 0, 1]);
+  faceX('logoL', -5, 5, 8.9, 14.9, S + 0.05, 1, 1, [0, 1, 0, 1]); faceX('logoL', -5, 5, 8.9, 14.9, -S - 0.05, -1, 1, [0, 1, 0, 1]);
+  faceZ('logoL', -5, 5, 9.3, 15.3, S + 0.05, 1, 1, [0, 1, 0, 1]);
   // marquise, portal e guarita
   const M = FRENTE.marquise;
   box(['aco', 'aco', 'aco', 'acoEsc', 'aco', 'aco'], M.u[0], M.u[1], M.y, M.y + 0.5, M.v1, M.v0);
@@ -407,7 +408,7 @@ export function construirLab(THREE, cx, cz, opc = {}) {
   const atualizar = (dt, tempo, noite = 0, camera = null, jogador = null) => {
     const n = Math.max(0, Math.min(1, noite));
     for (const m of interiores) m.emissiveIntensity = 0.08 + 0.5 * n;
-    mat.letreiro.color.setScalar(0.82 + 0.18 * n); mat.logo.color.setScalar(0.85 + 0.15 * n);
+    mat.letreiro.color.setScalar(0.82 + 0.18 * n); mat.logo.color.setScalar(0.85 + 0.15 * n); mat.logoL.color.setScalar(0.85 + 0.15 * n);
     const pulso = 0.55 + 0.45 * Math.sin(tempo * 2.4);
     mat.cianoPulso.color.setRGB(0.1 + 0.15 * pulso, 0.55 + 0.4 * pulso, 0.75 + 0.25 * pulso);
     mat.cupulaLuz.color.setRGB(0.15, 0.6 + 0.3 * Math.sin(tempo * 1.7), 0.9);
