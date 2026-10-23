@@ -102,6 +102,21 @@
 // online, a faixa de 3 s de hoje (no online com a tarja do placar só nesses 3 s: R10). A súmula (sumula.js) é criada
 // SEMPRE na partida (import estático: os números das estatísticas).
 //
+// Cena do PÓS-JOGO (render; pedido do dono de 22/10: "a cena de pós jogo"; PLANO-CENAS.md §5, contrato "Cenas das paradas"
+// §7.4): no apito final (o evento 'fimDeJogo'; depois do replay do gol do último lance e do cartão do último apito, na fila)
+// os 22 viram UMA cena (js/cena-fim.js 'fimDeJogo', pura, sob demanda: SOB.cenas) — o apito, quem ganhou e quem perdeu (no
+// empate, o neutro), os cumprimentos, a TROCA DE CAMISA (o par pelo hash do jogo; o kit misto no render/jogador3d.js, sem
+// chamada a mais), os treinadores se cumprimentando, o aplauso à torcida, a torcida, o MELHOR EM CAMPO (sumula.js
+// melhorEmCampo: a nota é a do resultado do TM) com a tarja dele, o placar final com os autores, as estatísticas da partida
+// (não no TM) e o plano geral com a faixa final ("Jogar de novo" / "Voltar ao Total Match" + "Melhores momentos": os lances
+// do guardador, até 6, os gols primeiro, ≤ 30 s; o Pular volta à faixa). FORA do online a SIMULAÇÃO FICA PARADA no tick do
+// 'fimDeJogo' (em 'fim' só o m.tick andaria; o resultado do TM já foi gravado no apito, antes da cena); NO ONLINE não segura
+// (o lockstep segue com o tick) e a cena só usa cópias. Os treinadores vivos ficam fora do desenho (o mesmo id das cópias).
+// A cena chama tocarAdiados() ao começar (R6). Toque/Enter/um botão novo = o próximo bloco; "Pular" = a faixa final. O
+// empate que continua no TM (partida.empateContinua, sem o campo também) = a versão curta. Desligada com webdriver, ?prints=1
+// e ?demo=1 e com "Cenas: desligadas"; sem o SOB.cenas baixado, a faixa do fim de hoje. Pênaltis 3D: a disputa intercepta o
+// 'fimDeJogo' (sem cena). "Simular o resto": sem cena, a faixa direto.
+//
 // Guardador de lances (render; PLANO-CENAS.md §4.2, contrato "Cenas das paradas"): o gol (no posGol(), na saída, no
 // intervalo ou no fim) e a parada A/B (no passo antes da montagem) são copiados do anel, com ou sem replay, para o intervalo
 // e o fim tocarem depois (render/lances-guarda.js, sob demanda: SOB.cenas; a memória só na partida). Um lance guardado toca
@@ -111,7 +126,7 @@
 // Parâmetros: ?semente=N ?q=baixa|media|alta ?hora=dia|noite ?camera=tv|aproximada ?demo=1
 // ?modo=partida|ataque|conducao (padrão da página: partida) ?min=N (minutos reais por tempo)
 // ?marcador=1 ?prints=1 (cena limpa) ?qps=1 ?toque=1 ?entalhe=1 ?replay=0|1 ?comemoracao=0|1 ?substituicao=0|1
-// ?prejogo=0|1|curto|escalacao ?tecnicos=0|1 ?replayParada=0|1 ?cenas=0|1.
+// ?prejogo=0|1|curto|escalacao ?tecnicos=0|1 ?replayParada=0|1 ?cenas=0|1 ?troca=0 (sem a troca de camisa do pós-jogo).
 // Pré-jogo (pedido de 11/10; render/prejogo.js): antes do 1º passo da partida — a simulação fica no tick 0 e o apito da
 // saída só toca no fim dele. Desligado por padrão nos testes (navigator.webdriver), nos prints e na demonstração.
 // Testes: window.__golaco (ver o fim do arquivo).
@@ -169,7 +184,7 @@ import { registrarElenco } from './elenco.js';
 // replays nas paradas: o classificador de lances (puro; fora do fecho do hash: só lê o mundo e os eventos)
 import { criarLances, lancesPasso, decidirReplay, registrarReplay, montaNoProximoPasso, REPLAY_PARADA } from './lances.js';
 // a súmula da partida (o resultado do TM e as estatísticas das cenas; puro, só lê: fora do fecho do hash)
-import { criarSumula, sumulaPasso, resultadoTM, minutoTM, estatisticas as estatisticasDaSumula, autoresPorTime } from './sumula.js';
+import { criarSumula, sumulaPasso, resultadoTM, minutoTM, estatisticas as estatisticasDaSumula, autoresPorTime, melhorEmCampo } from './sumula.js';
 
 const { PASSO, BOTAO, QUALIDADE, VERSAO, FALTAS } = CFG;
 const ID_HUMANO = S.ID_HUMANO ?? 0;
@@ -294,7 +309,9 @@ function temWebGL2() {
 }
 
 // (tm: a pausa do Total Match — sem Reiniciar nem Modo de jogo, com "Simular o resto"; sem Editar time com a trava)
-const hud = criarHud({ aoComando: comando, tm: TM ? { trava: TRAVA_TM != null, timeHumano: TIME_HUMANO } : null, online: ONLINE });
+// (aoFaixaFinal: a faixa do fim de jogo saiu — os controles de toque voltam: o arco é refeito com eles na tela)
+const hud = criarHud({ aoComando: comando, tm: TM ? { trava: TRAVA_TM != null, timeHumano: TIME_HUMANO } : null, online: ONLINE,
+  aoFaixaFinal: final => { if (!final) try { entrada?.reposicionar?.(); } catch (_) { /* antes de a entrada existir */ } } });
 // "Editar time" (partida; editor-time.js sob demanda: carregarSobDemanda): a tela entrega a edição no PRONTO (aoPronto)
 // e solta a entrada ao fechar. null até chegar
 let editor = null;
@@ -536,6 +553,13 @@ let expulsoPendente = false;
 // 'intervalo' (a decisão fica para o fim do passo, depois do cartão do mesmo passo); tarjaOnline: a tarja do placar nos 3 s da
 // faixa do intervalo do online
 let cenaFim = null, intervaloAgora = false, tarjaOnline = null, planoCamFim = null;
+// Cena do pós-jogo (a mesma js/cena-fim.js, tipo 'fim'; PLANO-CENAS.md §5): fimJogoAgora = o passo trouxe o 'fimDeJogo' (a
+// decisão fica para o fim do passo, depois do cartão do mesmo passo); a cena guarda também segura (fora do online: o laço
+// fica parado no tick do apito), melhor (a tarja), kitTroca (id → o kit misto da troca de camisa) e mm (os "Melhores
+// momentos" tocando: {lances, i, tocando, vistos})
+let fimJogoAgora = false;
+const TROCA_ON = params.get('troca') !== '0';
+const histPos = [];          // as cenas do pós-jogo (API dos testes): {tick, inicio, geral, pulou, planos, melhor, troca, curto, mm}
 const custoFim = { n: 0, ms: 0 };
 const _evFim = [];
 const histFim = [];          // as cenas do intervalo (API dos testes): {tick, lances, inicio, geral, fim, pulou}
@@ -726,6 +750,9 @@ function rodarPasso(entrada, acoes) {
   // o apito do 1º tempo vira a cena do intervalo (ou a faixa de hoje) — no fim do passo, DEPOIS do cartão do mesmo passo
   // (que vai antes na fila) e do replay do gol do último lance (já começado no tratarEvento)
   if (intervaloAgora) decidirIntervalo();
+  // o apito final vira a cena do pós-jogo (ou a faixa de hoje) — no fim do passo, depois do cartão do mesmo passo e do
+  // replay do gol do último lance (já começado no tratarEvento)
+  if (fimJogoAgora) decidirFimJogo();
   // a faixa "Você foi expulso" do passo: já, ou depois da cena do cartão e do replay de parada que vêm a seguir
   talvezFaixaExpulso();
   atualizarFase();
@@ -913,7 +940,7 @@ function tratarEvento(ev) {
   // a saída (ou o intervalo, o fim, um recomeço) chegou: a cena da comemoração acaba (o replay entra a seguir)
   if (cenaGol && (t === 'saida' || t === 'intervalo' || t === 'fimDeJogo' || t === 'recomeco')) encerrarComemoracao();
   // a saída do 2º tempo acaba a cena do intervalo (no plano geral, com o laço solto): o corte volta ao vivo
-  if (cenaFim && t === 'saida') fimCenaFim(false);
+  if (cenaFim && cenaFim.tipo === 'intervalo' && t === 'saida') fimCenaFim(false);
   if ((t === 'troca' && ev.auto) || t === 'trocaAerea' || t === 'cobranca') return;
   // recomeço (gol, bola fora, R) e saída de bola (gol, início do tempo): todos voltam às posições
   // — a câmera CORTA para a jogada nova (sem atravessar o campo) e o km/h não fica descendo
@@ -956,12 +983,18 @@ function tratarEvento(ev) {
   if (t === 'fimDeJogo') {
     // Total Match: o resultado fica gravado já no apito (o TM lê de lá se a mensagem se perder); o botão da faixa volta ao TM
     if (TM) gravarResultadoTM(resultadoAtualTM());
-    const faixa = () => hud.faixa(TM ? { titulo: 'Fim de jogo', placar: textoPlacar(), botao: true, botaoTexto: 'Voltar ao Total Match', botaoCmd: 'voltar-tm' }
-      : { titulo: 'Fim de jogo', placar: textoPlacar(), botao: true });
     hud.definirEstado({ fim: true });
     encerrarEfeitosGol();
     if (cam) cam.planoGeral(true);
-    if (diretor?.golPendente && posGol()) filaCenas.push(faixa); else faixa();
+    // a cena do pós-jogo (js/cena-fim.js 'fimDeJogo'): decidida no fim do passo (decidirFimJogo), depois do cartão do mesmo
+    // passo; o replay do gol do último lance começa já (a cena espera ele na fila). Sem ela (desligada, sem o módulo, pela API
+    // dos testes): a faixa do fim de hoje
+    if (podeCenaFimJogo()) {
+      if (diretor?.golPendente) posGol();
+      fimJogoAgora = true;
+      return;
+    }
+    if (diretor?.golPendente && posGol()) filaCenas.push(faixaFimJogo); else faixaFimJogo();
     return;
   }
   if (t === 'livreAjuste') { PAG_LIVRE?.evento(ev); return; }
@@ -1213,7 +1246,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
       const it = lista[n] ?? (lista[n] = {});
       it.id = a.id; it.time = a.time; it.pose = des; it.controlado = false; it.goleiro = a.goleiro; it.proximo = false;
       it.pressiona = false; it.relogio = -1; it.tecnico = a.tipo === 'tecnico'; it.ocultar = 0;
-      it.kit = a.kit ?? kitDoId(a.id, a.goleiro);
+      // (a troca de camisa do pós-jogo: a camisa do outro com o calção e o meião dele — o kit misto do jogador3d.js)
+      it.kit = (a.camisaDe != null && cenaFim ? kitTrocaDe(cenaFim, a) : null) ?? a.kit ?? kitDoId(a.id, a.goleiro);
       it.x = lerp(a.x0, a.x1, al); it.z = lerp(a.z0, a.z1, al); it.rumo = lerpAng(a.r0, a.r1, al);
       it.v = Math.hypot(a.x1 - a.x0, a.z1 - a.z0) / PASSO;
       n++;
@@ -1690,6 +1724,12 @@ function proximaCena() {
       if (mundo.partida?.estado === 'intervalo') faixaIntervalo();
       continue;
     }
+    // a cena do pós-jogo que esperou o replay do gol do último lance (ou o cartão do último apito); sem ela agora, a faixa
+    if (it.tipo === 'fim') {
+      if (podeCenaFimJogo() && iniciarCenaFim(it)) return;
+      if (mundo.partida?.estado === 'fim') faixaFimJogo();
+      continue;
+    }
     if (it.pares) mostrarFaixaSub(it.pares);
   }
   tocarAdiados();
@@ -1931,8 +1971,105 @@ function decidirIntervalo() {
   if (cenaOcupada()) filaCenas.push(item);
   else iniciarCenaFim(item);
 }
-/** A simulação espera no tick do 'intervalo' (a cena antes do plano geral). */
-const seguraIntervalo = () => !!cenaFim && !cenaFim.geral;
+/**
+ * A simulação espera: no tick do 'intervalo' (a cena antes do plano geral) e no tick do 'fimDeJogo' (a cena do pós-jogo,
+ * fora do online, até ela sair: em 'fim' só o m.tick andaria — R5).
+ */
+const seguraIntervalo = () => !!cenaFim && (cenaFim.tipo === 'fim' ? cenaFim.segura : !cenaFim.geral);
+
+// ------------------------------------------------------------------ cena do pós-jogo (js/cena-fim.js 'fimDeJogo', sob demanda)
+/** A faixa do fim de hoje ("Fim de jogo", o placar e "Jogar de novo" / "Voltar ao Total Match"; sem a cena). */
+function faixaFimJogo() {
+  hud.faixa(TM ? { titulo: 'Fim de jogo', placar: textoPlacar(), botao: true, botaoTexto: 'Voltar ao Total Match', botaoCmd: 'voltar-tm', final: true }
+    : { titulo: 'Fim de jogo', placar: textoPlacar(), botao: true, final: true });
+}
+/**
+ * A cena do pós-jogo vale agora? Só com as cenas ligadas ("Cenas" do Modo de jogo; no ONLINE também — R22: o pós-jogo não
+ * segura nada lá), o módulo baixado (sem ele: a faixa de hoje, sem esperar o download: R23), na partida (fora do Livre e
+ * da disputa) e fora da API dos testes (rodarPassos).
+ */
+const cenaFimLigada = () => cenasPref ?? MOD_CEN?.cfg.CENAS.ligadas ?? true;
+const podeCenaFimJogo = () => !!MOD_CEN?.cf && !emRodarPassos && !!mundo.partida && !mundo.livre && !mundo.disputa && cenaFimLigada();
+/** Fim do passo que trouxe o 'fimDeJogo': a cena já, ou na fila (depois do replay do gol do último lance e do cartão). */
+function decidirFimJogo() {
+  fimJogoAgora = false;
+  if (!podeCenaFimJogo()) { faixaFimJogo(); return; }
+  const item = { tipo: 'fim', tick: mundo.tick };
+  if (cenaOcupada()) filaCenas.push(item);
+  else if (!iniciarCenaFim(item)) faixaFimJogo();
+}
+/** A tarja do melhor em campo (cenas-tela.js): o time, o número, o nome e a nota (a do resultado do TM). */
+function dadosMelhor(mc) {
+  if (!mc) return null;
+  const t = mc.time === 1 ? 1 : 0, f = fichaDe(mc.id), el = ELENCOS[elencoDoJogador(mc.id)], ct = COR_TIME[t];
+  return {
+    sigla: el?.sigla ?? hud.times[t]?.sigla ?? '', nomeTime: el?.nome ?? hud.times[t]?.nome ?? '', cor1: ct.cor, cor2: ct.texto,
+    escudo: document.getElementById(`escudo-${t}`)?.getAttribute('href') ?? null,
+    num: f?.num ?? '', nome: f?.nome ?? String(mc.id), curto: f?.camisa ?? f?.nome ?? String(mc.id), nota: mc.nota,
+  };
+}
+/** O kit misto do ator da troca de camisa (render/jogador3d.js: `troca:<camisa do outro>:<o resto dele>:<número do outro>`). */
+function kitTrocaDe(F, a) {
+  let k = F.kitTroca.get(a.id);
+  if (k === undefined) {
+    const camisa = kitDoId(a.camisaDe, false), resto = kitDoId(a.id, false), f = fichaDe(a.camisaDe);
+    k = camisa && resto ? `troca:${camisa}:${resto}:${f?.num ?? 0}` : null;
+    F.kitTroca.set(a.id, k);
+  }
+  return k;
+}
+/**
+ * A faixa final da cena do pós-jogo (no plano geral): "Fim de jogo", o placar, "Jogar de novo" (com ?tm, "Voltar ao Total
+ * Match") e "Melhores momentos" (só com lances guardados).
+ */
+function faixaFimCena() {
+  const tem = !!guarda && MOD_CEN.lg.escolherLances(guarda, { max: 1 }, []).length > 0;
+  hud.faixa({ titulo: 'Fim de jogo', placar: textoPlacar(), botao: true, botaoTexto: TM ? 'Voltar ao Total Match' : 'Jogar de novo',
+    botaoCmd: TM ? 'voltar-tm' : 'reiniciar-partida', botao2: tem, botao2Texto: 'Melhores momentos', botao2Cmd: 'melhores-momentos', final: true });
+}
+/**
+ * "Melhores momentos" (a faixa final da cena do pós-jogo): até CENA_FIM.lances.fim lances do guardador, os gols primeiro, ≤
+ * fimMax s, na ordem do jogo (lances-guarda.js escolherLances cronologica), um ângulo cada (tocarLanceGuardado: a fonte = o
+ * mini-anel; o aoFim volta aqui, sem andar a fila). O Pular (qualquer aperto novo) volta à faixa. Devolve true se começou.
+ */
+function iniciarMelhores() {
+  const F = cenaFim;
+  if (!F || F.tipo !== 'fim' || !F.geral || F.mm || !guarda || (diretor && diretor.ativo)) return false;
+  const L = MOD_CEN.cfg.CENA_FIM.lances;
+  const ks = MOD_CEN.lg.escolherLances(guarda, { max: L.fim, maxSegundos: L.fimMax, cronologica: true }, []);
+  if (!ks.length) return false;
+  F.mm = { lances: ks, i: 0, tocando: false, vistos: 0, pulou: false };
+  hud.faixa(null);
+  entrada?.limparPulsos();
+  if (histPos.length) histPos[histPos.length - 1].mm = { lances: [...ks], vistos: 0, pulou: false, fim: false };
+  return proximoMelhor();
+}
+/** O próximo lance dos melhores momentos; sem mais, a faixa volta. */
+function proximoMelhor() {
+  const F = cenaFim, mm = F?.mm;
+  if (!mm) return false;
+  while (mm.i < mm.lances.length) {
+    const k = mm.lances[mm.i++];
+    if (tocarLanceGuardado(k, aoFimMelhor)) { mm.tocando = true; mm.vistos++; if (histPos.length && histPos.at(-1).mm) histPos.at(-1).mm.vistos = mm.vistos; return true; }
+  }
+  fimMelhores(false);
+  return false;
+}
+/** O fim (ou o pulo) de um lance dos melhores momentos: o pulo volta à faixa; senão o próximo no quadro seguinte. */
+function aoFimMelhor(pulou) {
+  const F = cenaFim;
+  if (!F?.mm) return;
+  F.mm.tocando = false;
+  corteCamera = true;
+  if (pulou) fimMelhores(true);
+}
+function fimMelhores(pulou) {
+  const F = cenaFim;
+  if (!F) return;
+  if (histPos.length && histPos.at(-1).mm) { histPos.at(-1).mm.pulou = !!pulou; histPos.at(-1).mm.fim = true; }
+  F.mm = null;
+  if (F.tipo === 'fim' && F.geral) faixaFimCena();
+}
 
 /** Sigla, nome, escudo e as cores dos dois times (as tarjas e o painel das cenas). */
 function timesDaCena() {
@@ -1951,9 +2088,9 @@ function dadosPlacar(online = false) {
     autores: aut ? { 0: aut[0].map(a => ({ nome: nome(a.id), gols: a.gols })), 1: aut[1].map(a => ({ nome: nome(a.id), gols: a.gols })) } : null,
   };
 }
-/** O painel de estatísticas do 1º tempo (sumula.js estatisticas; os itens de CENA_FIM.estatisticas). */
-function dadosEstatisticas() {
-  return { titulo: '1º tempo', times: timesDaCena(), itens: MOD_CEN.cfg.CENA_FIM.estatisticas.itens, valores: estatisticasDaSumula(sumula, 1) };
+/** O painel de estatísticas (sumula.js estatisticas; os itens de CENA_FIM.estatisticas): do 1º tempo ou da partida (null). */
+function dadosEstatisticas(tempo = 1) {
+  return { titulo: tempo === 1 ? '1º tempo' : 'Partida', times: timesDaCena(), itens: MOD_CEN.cfg.CENA_FIM.estatisticas.itens, valores: estatisticasDaSumula(sumula, tempo) };
 }
 
 /**
@@ -1961,6 +2098,7 @@ function dadosEstatisticas() {
  * (lances-guarda.js escolherLances: os gols primeiro, depois a parada mais forte). Devolve false se não deu.
  */
 function iniciarCenaFim(item) {
+  if (item.tipo === 'fim') return iniciarPosJogo(item);
   const M = MOD_CEN;
   if (!M?.cf || !mundo.partida || mundo.partida.estado !== 'intervalo') return false;
   const ks = guarda ? M.lg.escolherLances(guarda, { tempo: 1, max: M.cfg.CENA_FIM.lances.intervalo }, []) : [];
@@ -1988,14 +2126,56 @@ function iniciarCenaFim(item) {
   return true;
 }
 
+/**
+ * Começa a cena do pós-jogo (o mundo no tick do 'fimDeJogo': só cópias). O melhor em campo (sumula.js melhorEmCampo: a nota
+ * do resultado do TM), a troca de camisa (?troca=0 tira), as estatísticas da partida (não no TM) e a versão curta no empate
+ * que continua no TM (partida.empateContinua; sem o campo, todo empate no TM). Fora do online SEGURA o laço até a cena sair
+ * (R5); no online não. Devolve false se não deu.
+ */
+function iniciarPosJogo(item) {
+  const M = MOD_CEN;
+  if (!M?.cf || !mundo.partida || mundo.partida.estado !== 'fim') return false;
+  const g0 = mundo.placar?.[0] ?? 0, g1 = mundo.placar?.[1] ?? 0;
+  const curto = !!TM && g0 === g1 && PEDIDO_TM?.partida?.empateContinua !== false;
+  const melhor = sumula && !curto ? melhorEmCampo(sumula, mundo) : null;
+  const planta = IDENT?.forma3d?.planta ?? null;
+  const plano = M.cf.planejarFim(mundo, 'fimDeJogo', {
+    placar: mundo.placar, timeHumano: TIME_HUMANO, curto, melhor, troca: TROCA_ON, estatisticas: !TM,
+    treinadores: tecnicos && tecVisiveis ? [treinadorDoTime(tecnicos, 0), treinadorDoTime(tecnicos, 1)] : null,
+    ajustePlano: planta?.ajustarPlano ?? null, cameraGeral: planta?.cameraGeral ?? null,
+  });
+  cenaFim = {
+    c: M.cf.criarCenaFim(plano, mundo), tipo: 'fim', tick: mundo.tick, botoes: entrada ? entrada.ler(yawEntrada()).botoes : 0,
+    geral: false, rapido: false, lances: [], iLance: 0, tocando: false, placar: dadosPlacar(), est: dadosEstatisticas(null),
+    melhor: dadosMelhor(melhor), segura: !mundo.online, kitTroca: new Map(), mm: null,
+  };
+  if (histPos.length < 16) {
+    histPos.push({ tick: mundo.tick, inicio: ultimoAgora, geral: null, pulou: false, planos: plano.planos.map(p => ({ ...p })), curto,
+      melhor: melhor ? { ...melhor } : null, troca: plano.troca ? { ...plano.troca } : null, segura: !mundo.online, mm: null });
+  }
+  // (R6) o apito final não espera a cena: o que o replay do gol do último lance adiou toca agora
+  tocarAdiados();
+  entrada?.limparPulsos();
+  encerrarEfeitosGol();
+  if (cam) cam.planoGeral(false);
+  hud.cena(true, 'posjogo'); hud.cartao(null); hud.faixa(null);
+  alfa = 1;
+  corteCamera = true;
+  return true;
+}
+
 /** Um quadro da cena (fora da pausa): o pulo, o relógio dela, os lances, as tarjas, o estádio e a torcida. */
 function quadroFim(dt, ent) {
   const F = cenaFim, c = F.c, M = MOD_CEN;
-  if (!F.rapido) {
+  // (o pós-jogo no plano geral: a faixa final com os botões — os apertos não são da cena; os melhores momentos: o próximo
+  // lance quando o anterior acabou)
+  const posGeral = F.tipo === 'fim' && F.geral;
+  if (posGeral && F.mm && !F.mm.tocando && !(diretor && diretor.ativo)) proximoMelhor();
+  if (!F.rapido && !posGeral) {
     if (M.cf.tempoCenaFim(c) < M.cfg.CENAS.pularDepois) F.botoes |= ent.botoes;
     else {
-      // a borda do aperto: o botão que avançou fica em F.botoes enquanto segurado e só vale de novo depois de solto (com
-      // `&=` o J/A segurado contava como novo em todo quadro e atravessava os blocos até a saída do 2º tempo)
+      // (o aperto que disparou fica marcado como visto: só vale de novo solto e apertado — antes o `&=` nunca o guardava e um
+      // botão segurado, ou o pulso de um toque preso no online sem passo, avançava um bloco por QUADRO: do apito à faixa)
       const novos = ent.botoes & ~F.botoes;
       F.botoes = ent.botoes;
       if (novos) { proximoBlocoFim(); if (!cenaFim) return; }
@@ -2009,8 +2189,9 @@ function quadroFim(dt, ent) {
     _ctxEmocao.t = tempoEstadio(); _ctxEmocao.bola = mundo.bola.p; _ctxEmocao.ataca = mundo.ataca;
     for (const ev of _evFim) emocaoEvento(emocao, ev, _ctxEmocao);
   }
-  // segurando, o estádio anda no relógio do desenho; no geral o laço solto anda o relógio pelos passos
-  if (!F.geral) estadioSegurado(dt);
+  // segurando, o estádio anda no relógio do desenho; no geral do intervalo (e no pós-jogo do online) o laço solto anda o
+  // relógio pelos passos
+  if (seguraIntervalo()) estadioSegurado(dt);
   // o bloco dos lances: o próximo lance do guardador pelo diretor (o fim dele volta aqui: aoFimLanceFim)
   if (c.emLances && !F.tocando) tocarProximoLanceFim();
   if (!F.geral && M.cf.faseFim(c) === 'geral') entrarGeralFim();
@@ -2025,6 +2206,7 @@ function atualizarTarjasFim() {
   const c = F.c, cf = MOD_CEN.cf;
   telaCenas.placar(!F.rapido && cf.tarjaPlacarVisivel(c) ? F.placar : null);
   telaCenas.estatisticas(!F.rapido && cf.faseFim(c) === 'estatisticas' ? F.est : null);
+  telaCenas.melhor(!F.rapido && F.melhor && cf.tarjaMelhorVisivel(c) ? F.melhor : null);
 }
 /** O plano de câmera da cena no quadro (cortes secos pelo nome); o vão das placas no plano do túnel. */
 function cameraFim() {
@@ -2067,6 +2249,8 @@ function proximoBlocoFim() {
   const M = MOD_CEN.cf;
   if (M.tempoCenaFim(F.c) < MOD_CEN.cfg.CENAS.pularDepois) return;
   if (diretor && diretor.ativo && replayAoFim) { fimReplay(true); return; }
+  // (o pós-jogo no plano geral: a faixa final — o toque é dos botões dela)
+  if (F.tipo === 'fim' && F.geral) return;
   if (F.geral) { pularFim(); return; }
   if (F.c.emLances) F.iLance = F.lances.length;
   M.proximoBloco(F.c);
@@ -2082,6 +2266,17 @@ function pularFim() {
   const F = cenaFim;
   if (!F || F.rapido) return;
   if (MOD_CEN.cf.tempoCenaFim(F.c) < MOD_CEN.cfg.CENAS.pularDepois) return;
+  // o pós-jogo: direto ao plano geral com a faixa final (o mundo continua parado no apito; nada corre por baixo)
+  if (F.tipo === 'fim') {
+    if (F.geral) return;
+    if (diretor && diretor.ativo && replayAoFim) fimReplay(true);
+    MOD_CEN.cf.pularParaGeral(F.c);
+    if (histPos.length) histPos[histPos.length - 1].pulou = true;
+    entrarGeralFim();
+    corteCamera = true;
+    if (entrada) { entrada.soltarTudo(); entrada.bloquear?.(true); entrada.bloquear?.(false); entrada.limparPulsos(); }
+    return;
+  }
   // (um lance tocando sai sem o próximo)
   F.iLance = F.lances.length;
   if (diretor && diretor.ativo && replayAoFim) fimReplay(true);
@@ -2100,6 +2295,15 @@ function entrarGeralFim() {
   if (!F || F.geral) return;
   F.geral = true;
   if (vaoCenas) vaoCenas.fechar();
+  // o pós-jogo: a faixa final no plano geral (o HUD de sempre do fim volta: os botões dela recebem o toque); fora do online
+  // o laço continua parado no apito (R5)
+  if (F.tipo === 'fim') {
+    hud.cena(false);
+    telaCenas?.placar(null); telaCenas?.estatisticas(null); telaCenas?.melhor(null);
+    faixaFimCena();
+    if (histPos.length) histPos[histPos.length - 1].geral = { tick: mundo.tick, quando: ultimoAgora };
+    return;
+  }
   laco.ultimo = null;
   if (histFim.length) histFim[histFim.length - 1].geral = { tick: mundo.tick, quando: ultimoAgora };
 }
@@ -2125,7 +2329,7 @@ function fimCenaFim(pulou) {
   }
   proximaCena();
 }
-/** A cena sai de vez sem andar a fila (mundo novo, "Simular o resto"). */
+/** A cena sai de vez sem andar a fila (mundo novo, "Simular o resto", "Jogar de novo"). */
 function descartarFim() {
   if (cenaFim) {
     cenaFim = null;
@@ -2134,8 +2338,8 @@ function descartarFim() {
     entrada?.reposicionar?.();
     if (!cenaCartao) hud.cena(false);
   }
-  intervaloAgora = false; tarjaOnline = null;
-  telaCenas?.placar(null); telaCenas?.estatisticas(null);
+  intervaloAgora = false; fimJogoAgora = false; tarjaOnline = null;
+  telaCenas?.placar(null); telaCenas?.estatisticas(null); telaCenas?.melhor(null);
   if (vaoCenas && !cenaCartao) vaoCenas.fechar();
 }
 
@@ -2459,15 +2663,17 @@ function quadro(agoraMs, desenhar = true) {
     // replay: a simulação fica parada (como na pausa; o laço não recupera o tempo); um aperto novo pula
     laco.ultimo = agoraMs;
     if (!pausado()) {
-      // (um lance da cena do intervalo: o estádio anda no relógio do desenho, como na cena)
-      if (cenaFim && !cenaFim.geral) estadioSegurado(dt);
+      // (um lance da cena do intervalo ou dos melhores momentos do pós-jogo: o estádio anda no relógio do desenho, como na
+      // cena — com o laço segurado)
+      if (seguraIntervalo()) estadioSegurado(dt);
       if (botaoPula(ent.botoes)) fimReplay(true);
       else if (!diretor.avancar(dt)) fimReplay(false);
     }
   } else if (seguraIntervalo()) {
-    // cena do intervalo antes do plano geral: a simulação fica PARADA no tick do 'intervalo' (nenhum passo, nenhuma entrada
-    // vai ao mundo; o laço não recupera o tempo); o estádio anda no relógio do desenho; pausa, aba escondida e celular em
-    // pé congelam a cena; um aperto novo depois de 0,5 s vai ao próximo bloco
+    // cena do intervalo antes do plano geral (e a do pós-jogo fora do online, até sair): a simulação fica PARADA no tick do
+    // 'intervalo' / do 'fimDeJogo' (nenhum passo, nenhuma entrada vai ao mundo; o laço não recupera o tempo); o estádio
+    // anda no relógio do desenho; pausa, aba escondida e celular em pé congelam a cena; um aperto novo depois de 0,5 s vai
+    // ao próximo bloco
     laco.ultimo = agoraMs;
     if (!pausado() && !pausaTeste && !document.hidden) {
       quadroFim(dt, ent);
@@ -2559,6 +2765,8 @@ function quadroOnline(dt, ent, agoraMs) {
     if (botaoPula(ent.botoes)) fimReplay(true);
     else if (!diretor.avancar(dt)) fimReplay(false);
   } else if (cenaGol && !segura) quadroComemoracao(dt, ent);
+  // a cena do pós-jogo (no online NÃO segura: o lockstep segue andando o tick do 'fim'; a cena só usa cópias — R5)
+  else if (cenaFim && !segura) quadroFim(dt, ent);
   let quer = 0, rodou = 0, segurou = false;
   if (!segura) {
     const r = avancarLaco(laco, agoraMs);
@@ -2662,8 +2870,9 @@ function tratarAcao(a) {
   if (cenaSub && !pausado() && a !== 'qps' && a !== 'pausa') { pularSubst(); return; }
   // cartão: o mesmo (a pausa congela a cena)
   if (cenaCartao && !pausado() && a !== 'qps' && a !== 'pausa') { pularCartao(); return; }
-  // intervalo: qualquer ação MENOS a pausa (a pausa congela a cena e tem o "Editar time") vai ao próximo bloco
-  if (cenaFim && !pausado() && a !== 'qps' && a !== 'pausa') { proximoBlocoFim(); return; }
+  // intervalo e pós-jogo: qualquer ação MENOS a pausa (a pausa congela a cena e tem o "Editar time" / o "Voltar ao Total
+  // Match") vai ao próximo bloco — menos na faixa final do pós-jogo (as ações de sempre)
+  if (cenaFim && !(cenaFim.tipo === 'fim' && cenaFim.geral) && !pausado() && a !== 'qps' && a !== 'pausa') { proximoBlocoFim(); return; }
   if (a === 'pular') return;
   if (a === 'pausa') {
     if (hud.ajudaAberta) { hud.fecharAjuda(); return; }
@@ -2860,7 +3069,7 @@ function simularResto() {
     const r = resultadoAtualTM();
     gravarResultadoTM(r);
     if (mundo.disputa) faixaFimDisputa();
-    else hud.faixa({ titulo: 'Fim de jogo', placar: textoPlacar(), botao: true, botaoTexto: 'Voltar ao Total Match', botaoCmd: 'voltar-tm' });
+    else hud.faixa({ titulo: 'Fim de jogo', placar: textoPlacar(), botao: true, botaoTexto: 'Voltar ao Total Match', botaoCmd: 'voltar-tm', final: true });
     ok(r);
   };
   requestAnimationFrame(fatia);
@@ -2940,6 +3149,8 @@ function comando(c, v) {
     case 'cena-pular': if (cenaFim) pularFim(); else pularCartao(); break;
     case 'cena-toque': if (cenaFim) proximoBlocoFim(); else pularCartao(); break;
     case 'cena-menu': entrada?.soltarTudo(); hud.abrirMenu(); break;
+    // a faixa final do pós-jogo: os lances do guardador (o Pular volta à faixa)
+    case 'melhores-momentos': iniciarMelhores(); break;
     case 'cenas-ciclo':
       // "Modo de jogo" → "Cenas": ligadas ↔ desligadas (desligadas = o ícone do cartão de hoje); salvo
       cenasPref = !cenasLigadas();
@@ -3880,13 +4091,26 @@ const api = {
       const F = cenaFim;
       if (F) {
         const c = F.c, P = c.plano, M = MOD_CEN.cf;
-        return {
+        const o = {
           tipo: F.tipo, fase: M.faseFim(c), plano: planoCamFim?.nome ?? null, tempo: M.tempoCenaFim(c), duracao: M.duracaoCenaFim(c), k: c.k,
           tick: P.tick, planos: P.planos.map(p => ({ ...p })), geral: F.geral, rapido: F.rapido, emLances: c.emLances,
           lances: [...F.lances], iLance: F.iLance, tocando: F.tocando, tLances: P.tLances, tarjaDe: P.tarja ? { ...P.tarja } : null,
           placarCena: { ...P.placar }, vencedor: P.vencedor, bolaVisivel: c.bolaVisivel, vazio: !!c.vazio, camera: cam?.cinema ?? null,
           tarjaPlacar: M.tarjaPlacarVisivel(c), atoresAtivos: c.atores.filter(a => a.ativo).length,
         };
+        // o pós-jogo: o resultado, a versão curta, se segura o laço, o melhor em campo (o do plano e a tarja), o par da troca
+        // de camisa (os ids e o kit misto desenhado de cada um), o aperto dos treinadores, a faixa final e os melhores momentos
+        if (F.tipo === 'fim') {
+          const kt = id => { const a = c.porId.get(id); return a ? kitTrocaDe(F, a) : null; };
+          Object.assign(o, {
+            resultado: P.resultado, curto: !!P.curto, segura: F.segura, melhor: P.melhor ? { ...P.melhor } : null,
+            tarjaMelhor: M.tarjaMelhorVisivel(c), trocou: !!c.trocou,
+            troca: P.troca ? { ...P.troca, kitA: c.trocou ? kt(P.troca.a) : null, kitB: c.trocou ? kt(P.troca.b) : null } : null,
+            treinadores: c.trPar ? { aperto: c.trPar.t0 >= 0, t0: c.trPar.t0 } : null, faixaFinal: F.geral,
+            mm: F.mm ? { lances: [...F.mm.lances], i: F.mm.i, tocando: F.mm.tocando, vistos: F.mm.vistos } : null,
+          });
+        }
+        return o;
       }
       const C = cenaCartao;
       if (!C) return null;
@@ -3899,10 +4123,51 @@ const api = {
       };
     },
     atores() { return cenaCartao ? MOD_CEN.cc.infoAtoresCartao(cenaCartao.c) : cenaFim ? MOD_CEN.cf.infoAtoresFim(cenaFim.c) : null; },
-    /** Pula a cena: o cartão acaba; o intervalo vai à saída do 2º tempo (o geral e os passos correndo atrás da cortina). */
+    /**
+     * Pula a cena: o cartão acaba; o intervalo vai à saída do 2º tempo (o geral e os passos correndo atrás da cortina); o
+     * pós-jogo vai ao plano geral com a faixa final.
+     */
     pular() { if (cenaFim) pularFim(); else pularCartao(); },
-    /** O próximo bloco da cena do intervalo (o toque/Enter): campo → lances → estatísticas → geral → saída. */
+    /**
+     * O próximo bloco (o toque/Enter): no intervalo campo → lances → estatísticas → geral → saída; no pós-jogo os planos de
+     * campo → melhor → placar → estatísticas → geral (a faixa final).
+     */
     proximo() { if (cenaFim) proximoBlocoFim(); },
+    /**
+     * PÓS-JOGO (testes; PLANO-CENAS.md §5.6): leva a partida de agora até `antes` passos (padrão 30) do apito final pelos
+     * passos da demo SEM abrir cena nenhuma no caminho (como rodarPassos), com o placar forçado se `placar` vier ([casa,
+     * fora]: escrito no MUNDO — só testes; a súmula não ganha os gols). Depois, quadros (relogio.avancar) até a cena começar
+     * (a cena só abre pelo laço da página). Devolve {tick, fim (o tick previsto do apito, sem um gol no caminho), placar} ou
+     * null fora da partida. Os três desfechos: placar [2, 1] (vitória da casa), [0, 1] (derrota) e [1, 1] (empate).
+     */
+    fimDeTeste(o = {}) {
+      const m = mundo, p = m.partida;
+      if (!p || mundo.disputa || mundo.livre) return null;
+      const antes = o.antes ?? 30;
+      const um = () => { emRodarPassos = true; try { rodarPasso(entradaDemoDoMundo(mundo) ?? { x: 0, z: 0, botoes: 0 }, null); } finally { emRodarPassos = false; } };
+      for (let n = 0; n < 500000 && p.estado !== 'fim' && !(p.tempo === 2 && p.acrescimo != null); n++) um();
+      if (p.estado === 'fim') return { tick: m.tick, fim: m.tick, placar: [m.placar[0], m.placar[1]] };
+      const fim = () => p.tick0Tempo + p.ticksPorTempo + Math.round(p.acrescimo * p.ticksPorTempo / 45);
+      for (let n = 0; n < 500000 && p.estado !== 'fim' && m.tick < fim() - antes; n++) um();
+      if (Array.isArray(o.placar)) { m.placar[0] = o.placar[0] | 0; m.placar[1] = o.placar[1] | 0; hud.placar(m.placar[0], m.placar[1]); }
+      return { tick: m.tick, fim: fim(), placar: [m.placar[0], m.placar[1]] };
+    },
+    /** "Melhores momentos" da faixa final do pós-jogo (o mesmo do botão); false se não deu (sem faixa, sem lances). */
+    melhoresMomentos() { return iniciarMelhores(); },
+    /**
+     * As cenas do pós-jogo desta página: {tick, inicio, geral ({tick, quando} | null), pulou, planos, curto, melhor, troca,
+     * segura, mm ({lances, vistos, pulou, fim} | null)}.
+     */
+    get historicoPosJogo() { return histPos.map(h => structuredClone(h)); },
+    /** A faixa final agora: {visivel, titulo, placar, botoes: [{texto, cmd, visivel}]}. */
+    get faixaFinal() {
+      const fx = document.getElementById('faixa');
+      if (!fx) return null;
+      const b = id => { const e = document.getElementById(id); return e ? { texto: e.textContent.trim(), cmd: e.dataset.cmd, visivel: !e.hidden && !fx.hidden && getComputedStyle(fx).display !== 'none' } : null; };
+      return { visivel: !fx.hidden && getComputedStyle(fx).display !== 'none', titulo: document.getElementById('faixa-titulo')?.textContent ?? '',
+        placar: document.getElementById('faixa-placar')?.textContent ?? '', botoes: [b('faixa-botao'), b('faixa-botao2')] };
+    },
+    get custoPosJogo() { return { msPorTick: custoFim.ms / Math.max(1, custoFim.n), ticks: custoFim.n }; },
     /**
      * As tarjas e o painel agora (cenas-tela.js estado + as caixas px CSS de cada peça: tarja, placar, estatisticas), com o
      * placar e o "Pular" e o botão da pausa da camada (as caixas, para nada encostar).
@@ -4061,6 +4326,8 @@ const api = {
     /** Triângulos de um boneco do manequim (cápsulas, cabeça, cabelo e mancha): o teto do custo dos treinadores. */
     get triangulosBoneco() { return jog3d ? jog3d.triangulosPorBoneco : null; },
     get corpo() { return jog3d ? jog3d.humano : null; },
+    /** As cores do manequim de um jogador desenhado no último quadro (render/jogador3d.js coresDe; o kit misto da troca). */
+    coresJogador(id) { return jog3d?.coresDe ? jog3d.coresDe(id) : null; },
     get bolaDesenhada() { return { ..._bpDes }; },
     get efeitoCamera() { return cam ? cam.efeitoAtivo : false; },
     /** 'fechado' (câmera do gol da partida), 'leve' (treino) ou null; e o plano geral (intervalo/fim). */

@@ -132,3 +132,18 @@ html.com-toque .cena.fim-tempo .btn-cena-menu {
 /* um lance do intervalo tocando (o replay por cima da cena): o "Pular" e o botão da pausa da cena saem (o toque na camada
    pula o lance; o "Pular" que se vê é o do replay) */
 html.em-replay .cena.fim-tempo .btn-replay-pular, html.em-replay .cena.fim-tempo .btn-cena-menu { visibility: hidden; }
+
+/* ---- PR 4 (o pós-jogo): a tarja do MELHOR EM CAMPO (o molde da do cartão: embaixo à esquerda, longe do placar e do
+   "Pular") — o time, o número, o nome com o rótulo embaixo e a nota com uma casa (a do resultado do TM). Só no plano
+   'melhor' da cena. */
+.tarja-melhor { gap: 10px; }
+.tm-texto { display: flex; flex-direction: column; min-width: 0; line-height: 1.1; }
+.tm-texto .tc-nome { line-height: 1.12; }
+.tm-rotulo { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--verde); }
+.tm-nota {
+  flex: none; min-width: 44px; padding: 3px 8px; border-radius: 6px; text-align: center; box-sizing: border-box;
+  font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--preto, #07090a); background: var(--verde);
+}
+html.com-toque .tarja-melhor { gap: 7px; }
+html.com-toque .tm-rotulo { font-size: 10px; letter-spacing: 0.1em; }
+html.com-toque .tm-nota { font-size: 16px; min-width: 36px; padding: 2px 6px; }

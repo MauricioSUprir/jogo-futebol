@@ -112,8 +112,10 @@ if (fr) {
   confere("Ultimate: 11 por time e 1 goleiro em cada", ts.every(t => t.n === 11 && t.gols === 1), ts);
   confere("Ultimate: uniformes diferentes", ts[0].camisa !== ts[1].camisa, ts.map(t => t.camisa));
   confere("Ultimate: escudo desenhado do Ultimate no placar (imagem)", ts.every(t => t.escudoImg) && ts.some(t => t.tipo === "ultimate"), ts.map(t => [t.escudo, t.tipo]));
-  const ped = await fr.evaluate(() => ({ v: window.__golaco.tm.pedido.v, neutro: window.__golaco.tm.pedido.partida && window.__golaco.tm.pedido.partida.neutro }));
+  const ped = await fr.evaluate(() => ({ v: window.__golaco.tm.pedido.v, neutro: window.__golaco.tm.pedido.partida && window.__golaco.tm.pedido.partida.neutro, empCont: (window.__golaco.tm.pedido.partida || {}).empateContinua }));
   confere("Ultimate: pedido v2 com jogo neutro", ped.v === 2 && ped.neutro === true, ped);
+  // (Rivais não é mata-mata: o empate é o resultado — a cena do pós-jogo inteira no 3D)
+  confere("Ultimate: o pedido diz que o empate não continua (partida.empateContinua false)", ped.empCont === false, ped);
   await print("02-ultimate-3d");
   const pausa = await pausaDo3d(fr);
   confere("Ultimate: pausa com Simular o resto (sem Reiniciar nem Modo de jogo)", pausa.some(x => /^Simular o resto/.test(x)) && !pausa.some(x => /Reiniciar|Modo de jogo/.test(x)), pausa);
@@ -137,7 +139,12 @@ if (fr) {
   confere("Carreira: 11 por time e 1 goleiro em cada", ts.every(t => t.n === 11 && t.gols === 1), ts.map(t => t.nome + " " + t.n + "/" + t.gols));
   confere("Carreira: escudos do TM no placar (" + (PUBLICA ? "gerados" : "reais") + ")", ts.every(t => t.escudoImg && t.tipo === (PUBLICA ? "gerado" : "real")), ts.map(t => [t.nome, t.tipo]));
   const est = await fr.evaluate(() => ({ nome: window.__golaco.identidade.estadio.nome, tm: (window.__golaco.tm.pedido.home.identidade.estadio || {}).nome, humano: window.__golaco.tm.humano, lado: window.__golaco.tm.pedido.userSide }));
-  confere("Carreira: estádio do mandante e o meu time no lado certo", !!est.nome && (!est.tm || est.nome === est.tm) && est.humano === (est.lado === "away" ? 1 : 0), est);
+  // (na edição pública o 3D usa o Estádio Total Match de propósito — o estádio real do mandante só na pro: golaco/CONTRATOS.md
+  // "Estádio de cada clube no pré-jogo"; antes este teste esperava o nome do TM também na pública e reprovava desde então)
+  confere("Carreira: estádio do mandante (" + (PUBLICA ? "o Estádio Total Match na pública" : "o do TM") + ") e o meu time no lado certo", !!est.nome && (PUBLICA ? est.nome === "Estádio Total Match" : (!est.tm || est.nome === est.tm)) && est.humano === (est.lado === "away" ? 1 : 0), est);
+  // (o 1º jogo da carreira é de liga: o empate não vai a pênaltis — a cena do pós-jogo inteira)
+  const ecC = await fr.evaluate(() => (window.__golaco.tm.pedido.partida || {}).empateContinua);
+  confere("Carreira: jogo de liga = o empate não continua (partida.empateContinua false)", ecC === false, ecC);
   await print("04-carreira-3d");
   const r = await simulaEVolta(fr);
   const fim = await ate(() => TM.ui.current() === "coach-match", "^(Ver resultado|Pular|Avançar)");
@@ -166,6 +173,8 @@ if (fr) {
     return { trava: id, controlado: T.controlado, tmId: id != null && T.mapa[id] ? T.mapa[id].tmId : null, humano: T.humano };
   });
   confere("Estrelato: controle travado no meu jogador", tr.trava != null && tr.controlado === tr.trava && tr.tmId === "rae-me", tr);
+  const ecR = await fr.evaluate(() => (window.__golaco.tm.pedido.partida || {}).empateContinua);
+  confere("Estrelato: jogo da liga = o empate não continua (partida.empateContinua false)", ecR === false, ecR);
   const pausa = await pausaDo3d(fr);
   confere("Estrelato: pausa sem Editar time", pausa.some(x => /^Simular o resto/.test(x)) && !pausa.some(x => /Editar time/.test(x)), pausa);
   // o jogo anda (passos de verdade) e o controle não sai do meu jogador
@@ -178,6 +187,29 @@ if (fr) {
   const res = await p.evaluate(() => ({ sub: [...document.querySelectorAll(".rae-res-s")].map(x => x.textContent), nota: (document.querySelector(".rae-minha .tile-val") || {}).textContent }));
   confere("Estrelato: súmula diz 'Partida jogada em 3D' e traz a nota", res.sub.includes("Partida jogada em 3D") && +res.nota >= 3, res);
   await print("07-estrelato-resultado");
+}
+
+// 4) o empate que continua (golaco/PLANO-CENAS.md §5.2): a conta do pedido e o mata-mata da carreira (a mesma função do
+// coach-play — TM.comp.userPenContext — com a partida pendente de mata-mata: o empate vai a pênaltis = a versão curta)
+{
+  const ec = await p.evaluate(() => {
+    const f = TM.tm3d.empateContinuaDe;
+    const conta = { t: f(true), f: f(false), u: f(undefined), fnT: f(() => true), fnF: f(() => false), fnV: f(h => h === 1), err: f(() => { throw new Error("x"); }) };
+    const w = TM.data.world(), ids = w.leagues[0].clubIds, c = TM.storage.coachCareer();
+    const pend = c.pending;
+    const pedido = mata => {
+      c.pending = mata ? { key: "inter", homeId: ids[0], awayId: ids[1], ko: true, name: "Teste" } : { key: "league", homeId: ids[0], awayId: ids[1], name: "Teste" };
+      const fn = (hs, as) => !!TM.comp.userPenContext(c, hs, as);
+      const ped = TM.tm3d.novoPedido({ teamA: TM.engine.teamFromClub(ids[0]), teamB: TM.engine.teamFromClub(ids[1]), userSide: 0, title: "Teste", simOpts: {}, empateContinua: fn });
+      return JSON.parse(JSON.stringify(ped)).partida.empateContinua;
+    };
+    const r = { conta, mata: pedido(true), liga: pedido(false) };
+    c.pending = pend;
+    return r;
+  });
+  const k = ec.conta;
+  confere("empateContinua: true/false, a função constante e a que depende do placar (sem o campo)", k.t === true && k.f === false && k.u === undefined && k.fnT === true && k.fnF === false && k.fnV === undefined && k.err === undefined, k);
+  confere("empateContinua: o mata-mata da carreira = true, a liga = false (no pedido gravado)", ec.mata === true && ec.liga === false, { mata: ec.mata, liga: ec.liga });
 }
 
 confere("nenhum erro de página (TM e 3D)", erros.length === 0, erros);

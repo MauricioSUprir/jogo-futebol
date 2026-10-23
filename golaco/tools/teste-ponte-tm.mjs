@@ -24,7 +24,14 @@
 //  P7  as estatísticas das cenas: escanteios e faltas = contadores independentes, o porTempo no apito do 1º tempo, o
 //      resultadoTM com as chaves de antes; P7b o chute aberto no apito do 1º tempo fecha no apito (fica no 1º tempo).
 //
-//   node tools/teste-ponte-tm.mjs [--js <pasta>] [--min 0.5]   (minutos por tempo: P3 com --min, P4 com 2×, P5-A com 4×)
+//  P7  as estatísticas das cenas (escanteios, faltas, porTempo) contra contadores independentes; o resultadoTM com as chaves
+//      de antes.
+//  P8  (o pós-jogo, PR 4) o campo OPCIONAL `melhor` do resultadoTM = o argmax independente da nota de quem jogou, com a nota
+//      da mesma conta do `jogador` (o travado melhor em campo: as duas iguais); o resto do resultado igual campo a campo ao
+//      da versão de antes (--base <pasta js da base>: a súmula da base lida nos mesmos passos; sem ele, ao montado de novo).
+//
+//   node tools/teste-ponte-tm.mjs [--js <pasta>] [--min 0.5] [--base <pasta js>]   (minutos por tempo: P3 com --min, P4 com
+//      2×, P5-A com 4×)
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -346,14 +353,15 @@ if (typeof SU.estatisticas === 'function') {
   }
   const pt = s.porTempo?.[1];
   const r = SU.resultadoTM(s, m, TA.mapa);
-  const chaves = Object.keys(r).filter(k => k !== 'jogador').sort().join(',');
+  // (o pós-jogo, PR 4: o campo OPCIONAL `melhor` — conferido no P8; o resto com as chaves de antes)
+  const chaves = Object.keys(r).filter(k => k !== 'jogador' && k !== 'melhor').sort().join(',');
   const chavesSt = Object.keys(r.stats).sort().join(',');
   reg('P7 escanteios e faltas por time = contadores independentes (partida inteira)',
     `escanteios ${s.escanteios.join('/')} × ${esc.join('/')} · faltas ${s.faltas.join('/')} × ${fal.join('/')}`, 'iguais',
     s.escanteios[0] === esc[0] && s.escanteios[1] === esc[1] && s.faltas[0] === fal[0] && s.faltas[1] === fal[1] && esc[0] + esc[1] + fal[0] + fal[1] > 0);
   reg('P7 porTempo no apito do 1º tempo (os escanteios até ali)', pt ? `escanteios ${pt.escanteios?.join('/')} × ${escNoApito?.join('/')}` : 'sem porTempo',
     'iguais', !!pt && !!escNoApito && pt.escanteios?.[0] === escNoApito[0] && pt.escanteios?.[1] === escNoApito[1]);
-  reg('P7 o resultadoTM com as chaves de antes (nada novo vai ao TM)', `${chaves} · stats ${chavesSt}`, 'awayGoals,cartoes,gols,homeGoals,stats · stats onTarget,possession,shots',
+  reg('P7 o resultadoTM com as chaves de antes (além do `melhor` opcional do P8)', `${chaves} · stats ${chavesSt}`, 'awayGoals,cartoes,gols,homeGoals,stats · stats onTarget,possession,shots',
     chaves === 'awayGoals,cartoes,gols,homeGoals,stats' && chavesSt === 'onTarget,possession,shots');
 } else reg('P7 as estatísticas das cenas na súmula', 'sumula.js sem estatisticas (versão de antes)', 'existe', false);
 // P7b o chute ainda aberto no apito do 1º tempo fica no 1º tempo: o apito o fecha (no alvo se o goleiro já tocou) ANTES da
@@ -383,5 +391,79 @@ if (typeof SU.estatisticas === 'function') {
     a ? `semente ${a.sem}: chute do time ${a.aberto.time} (tick ${a.aberto.tick}, goleiro ${a.aberto.defendido ?? '-'}); depois do apito ${a.depois ? 'AINDA ABERTO' : 'fechado'}; no alvo 1º T ${a.t1.join('/')} × ${esperado.join('/')}` : 'nenhuma semente com chute aberto no apito',
     'fechado; iguais', !!a && !a.depois && a.t1[0] === esperado[0] && a.t1[1] === esperado[1]);
 }
+
+// ------------------------------------------------------------------ P8 o melhor em campo no resultado (o pós-jogo, PR 4)
+// (PLANO-CENAS.md §5.2, R18) o resultadoTM ganha SÓ o campo opcional `melhor: {lado, tmId, nome, nota}`: o de maior nota entre
+// quem jogou (os de agora e os substituídos, sem os expulsos) — conferido contra um argmax INDEPENDENTE (a nota de cada um
+// pela fórmula do notaDoJogador, escrita de novo aqui) —, o tmId e o nome do mapa do TM, e a nota pela MESMA conta do
+// `jogador` (com o travado melhor em campo, as duas notas iguais). O resto do resultado igual campo a campo ao de antes (o
+// resultado sem o `melhor` = o de uma súmula idêntica sem a função nova).
+if (typeof SU.melhorEmCampo === 'function') {
+  const zero = { toques: 0, passes: 0, passesCertos: 0, chutes: 0, noAlvo: 0, gols: 0, assist: 0, roubadas: 0, desarmes: 0, perdas: 0, defesas: 0, faltas: 0, amarelos: 0, vermelhos: 0, contra: 0 };
+  const nota = (n, pos, sof, sal) => {
+    const e = Math.max(0, n.passes - n.passesCertos);
+    let v = 6 + n.gols + 0.6 * n.assist + 0.15 * Math.max(0, n.noAlvo - n.gols) - 0.05 * Math.max(0, n.chutes - n.noAlvo)
+      + Math.min(0.6, 0.025 * n.passesCertos) - 0.08 * e + Math.min(0.6, 0.12 * (n.roubadas + n.desarmes)) - 0.12 * n.perdas
+      + 0.3 * n.defesas - 0.3 * n.amarelos - 1.5 * n.vermelhos - 0.1 * n.faltas - 0.8 * n.contra;
+    if (pos === 'GOL') v -= 0.3 * sof; else if (pos === 'ZAG' || pos === 'LAT') v -= 0.15 * sof;
+    if (sal > 0) v += 0.3; else if (sal < 0) v -= 0.3;
+    return Math.round(Math.min(10, Math.max(4.5, v)) * 10) / 10;
+  };
+  const indep = (s, m) => {
+    const exp = new Set((m.expulsos ?? []).map(j => j.id)), lista = [];
+    for (const j of m.jogadores) if (!exp.has(j.id)) lista.push({ id: j.id, time: j.time, pos: j.posicao });
+    for (const t of [0, 1]) for (const id of m.times[t].saiu) if (!exp.has(id) && !lista.some(q => q.id === id)) lista.push({ id, time: t, pos: null });
+    let b = null;
+    for (const q of lista) {
+      const n = s.jog[q.id] ?? zero, x = { id: q.id, time: q.time, nota: nota(n, q.pos, m.placar[1 - q.time], m.placar[q.time] - m.placar[1 - q.time]), gols: n.gols, assist: n.assist };
+      if (!b || x.nota > b.nota || (x.nota === b.nota && (x.gols > b.gols || (x.gols === b.gols && (x.assist > b.assist || (x.assist === b.assist && x.id < b.id)))))) b = x;
+    }
+    return b;
+  };
+  const casos = [];
+  // (--base: a súmula da versão de antes lida nos MESMOS passos — o resto do resultado comparado campo a campo com ela)
+  const BASE = arg('--base', null);
+  const SB = BASE ? await import(pathToFileURL(path.join(path.resolve(BASE), 'sumula.js')).href) : null;
+  // 3 partidas IA × IA do pedido A (o mapa do TM)
+  for (const [ped, sem] of [[TA, 21], [TA, 22], [TA, 23]]) {
+    const m = partidaDo(ped, { semente: sem, min: Math.max(1, MIN) });
+    const s = SU.criarSumula(), sb = SB ? SB.criarSumula() : null;
+    let n = 0;
+    while (m.partida.estado !== 'fim' && n < 200000) { const ev = P.passoPartida(m, P.entradaDemoPartida(m)); SU.sumulaPasso(s, m, ev); if (sb) SB.sumulaPasso(sb, m, ev); n++; }
+    casos.push({ m, s, sb, mapa: ped.mapa });
+  }
+  let ok = 0, okNota = 0, okMapa = 0, okResto = 0;
+  const ex = [];
+  for (const { m, s, sb, mapa } of casos) {
+    const r = SU.resultadoTM(s, m, mapa), b = indep(s, m), mc = SU.melhorEmCampo(s, m);
+    const certo = r.melhor && b && r.melhor.lado === b.time && r.melhor.nota === b.nota && mc.id === b.id;
+    if (certo) ok++; else ex.push(`${JSON.stringify(r.melhor)} × ${JSON.stringify(b)}`);
+    if (r.melhor && r.melhor.nota === SU.notaDe(s, m, mc.id, mc.time)) okNota++;
+    if (r.melhor && mapa[mc.id] && r.melhor.tmId === mapa[mc.id].tmId && r.melhor.nome === mapa[mc.id].nome) okMapa++;
+    // o resto: o resultado sem o `melhor` = o mesmo objeto montado de novo campo a campo (nenhum campo de antes mudou)
+    const { melhor, ...resto } = r;
+    const r2 = sb ? SB.resultadoTM(sb, m, mapa) : SU.resultadoTM(structuredClone(s), m, mapa);
+    delete r2.melhor;
+    if (JSON.stringify(resto) === JSON.stringify(r2) && Object.keys(resto).filter(k => k !== 'jogador').sort().join(',') === 'awayGoals,cartoes,gols,homeGoals,stats') okResto++;
+    void melhor;
+  }
+  reg('P8 resultadoTM.melhor = o argmax independente (quem jogou, sem expulsos; desempate gols → assistências → menor id)', `${ok}/${casos.length}${ex.length ? ` (ex.: ${ex[0]})` : ''}`, `todos (${casos.length})`, ok === casos.length);
+  reg('P8 a nota do melhor = notaDe (a conta do `jogador`); tmId e nome do mapa do TM', `nota ${okNota}/${casos.length} · mapa ${okMapa}/${casos.length}`, 'todos · todos', okNota === casos.length && okMapa === casos.length);
+  reg(`P8 o resto do resultado igual (as chaves de antes, campo a campo${SB ? ' com a versão de antes: --base' : ''})`, `${okResto}/${casos.length}`, 'todos', okResto === casos.length);
+  // o travado melhor em campo: as duas notas iguais (a da tarja = a do TM)
+  {
+    const m = partidaDo(TB, { semente: 31, min: Math.max(1, MIN) });
+    const s = SU.criarSumula();
+    let n = 0;
+    while (m.partida.estado !== 'fim' && n < 200000) { const ev = P.passoPartida(m, P.entradaDemoPartida(m)); SU.sumulaPasso(s, m, ev); n++; }
+    const h = m.timeHumano ?? 0, tv = m.trava?.[h];
+    // (força o travado a ser o melhor: muitos gols na súmula dele — só a súmula do teste)
+    const nt = s.jog[tv] ?? (s.jog[tv] = { ...zero });
+    nt.gols += 5;
+    const r = SU.resultadoTM(s, m, TB.mapa);
+    reg('P8 o travado melhor em campo: melhor.nota = jogador.nota (a tarja = o TM)', `travado ${tv} · melhor ${JSON.stringify(r.melhor)} · jogador.nota ${r.jogador?.nota}`, 'o travado; notas iguais',
+      !!r.melhor && !!r.jogador && r.melhor.tmId === r.jogador.tmId && r.melhor.nota === r.jogador.nota);
+  }
+} else reg('P8 o melhor em campo no resultado (o pós-jogo)', 'sumula.js sem melhorEmCampo (versão de antes)', 'existe', false);
 
 fim();

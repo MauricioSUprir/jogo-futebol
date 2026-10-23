@@ -152,7 +152,7 @@
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, settings: settings, title: "⚡ Relâmpago · Jogo " + (done + 1),
-      pauseSide: 0, simOpts: simOpts, formation: "4-3-3",
+      pauseSide: 0, simOpts: simOpts, formation: "4-3-3", empateContinua: false,
       onBack: function () { TM.ui.go("arena-blitz"); },
       onDone: function () {
         var hs = result.score[0], as = result.score[1];
@@ -184,7 +184,7 @@
     var finished = false;
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, settings: settings, title: "👑 Chefão das Lendas",
-      pauseSide: 0, simOpts: simOpts, formation: "4-3-3",
+      pauseSide: 0, simOpts: simOpts, formation: "4-3-3", empateContinua: false,
       onBack: function () { if (!finished) TM.ui.confirm("Sair do jogo?", "A entrada não volta.", "Sair", function () { TM.ui.go("arena"); }, true); else TM.ui.go("arena"); },
       onDone: function () {
         finished = true;

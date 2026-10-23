@@ -2161,6 +2161,8 @@
     var label = C().wcRoundLabel(c, m);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: "Copa do Mundo · " + label, pauseSide: userSide, simOpts: simOpts, formation: c.nation.lineup && c.nation.lineup.formation,
+      // (o mata-mata empatado vai a pênaltis: TM.tournament.userPenContext)
+      empateContinua: function (hs, as) { return !!(TM.tournament && TM.tournament.userPenContext && TM.tournament.userPenContext(c.nation.wc.tour, hs, as)); },
       onBack: function () { TM.ui.go("coach-nation"); },
       onDone: function () {
         C().applyWorldCupResult(c, result.score[0], result.score[1]);
@@ -2384,6 +2386,7 @@
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: "Eliminatórias · " + c.nation.name, pauseSide: 0, simOpts: simOpts, formation: c.nation.lineup && c.nation.lineup.formation,
+      empateContinua: false,
       onBack: function () { TM.ui.go("coach-nation"); },
       onDone: function () {
         w.played = true; w.hs = result.score[0]; w.as = result.score[1];
@@ -2436,6 +2439,8 @@
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: p.name, leg: legI,
       pauseSide: userSide, simOpts: simOpts, formation: c.lineup && c.lineup.formation,
+      // (o empate vai a pênaltis? a mesma conta do onDone — liga não, mata-mata sim, a volta pelo agregado)
+      empateContinua: function (hs, as) { return !!C().userPenContext(c, hs, as); },
       onBack: function () {
         // sair no meio: se "reiniciar partidas" estiver desligado, o resultado é registrado (sem rejogar)
         if (c.allowRestart) { TM.ui.go("coach-hub"); return; }

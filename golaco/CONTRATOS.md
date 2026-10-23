@@ -2617,7 +2617,7 @@ desenha nada.
     - no máximo 3 máscaras viram mancha.
   - `teste-corpo-tela` C6/C7: na pro, os logos carregam; na pública, nada é pedido.
 
-## Cenas das paradas — replays nas paradas, cartão e intervalo (22/10; contrato; o pós-jogo entra no próximo PR)
+## Cenas das paradas — replays nas paradas, cartão, intervalo e pós-jogo (22/10; contrato)
 Pedido do dono: "a cena de pós jogo, e a cena de intervalo, as cenas de cartões, e os replays de faltas e jogadas passando
 na tela enquanto o jogo tá parado". Plano em `PLANO-CENAS.md`; pesquisa em `PESQUISA-CENAS-TV.md` (§0.1 o roteiro da DFL,
 §0.2 SoccerNet-v2, §4 replays nas paradas). **Só desenho**: a simulação fica parada e volta no mesmo tick. Nada entra no
@@ -2857,3 +2857,86 @@ cada lance do anel, comprimido, para vagas fixas — só lê o anel: o hash não
   `resultadoTM`; P7b o chute aberto no apito) e `teste-cenas-tela` seção I (I1–I8, I8b a tarja × o painel com 1–4 autores,
   I11, I12, I13 a tarja do online × os botões de toque, I14 o botão segurado = um bloco) e C12d (a faixa do expulso que o
   intervalo tirou volta no 2º tempo).
+
+### Cena do pós-jogo (PR 4; dono, 22/10: "a cena de pós jogo"; PLANO-CENAS.md §5, §7.4)
+- **`js/cena-fim.js` `planejarFim(m, 'fimDeJogo', {placar, timeHumano, treinadores, melhor, troca, estatisticas, curto,
+  ajustePlano, cameraGeral})`** (puro, sob demanda pelo `SOB.cenas`; só LÊ o mundo — cópias):
+  - Vitória: `apito` 1,5 → `vencedor` 3,0 → `perdedor` 2,5 → `cumprimentos` 2,0 → [`troca` 1,5] → [`treinador` 2,0] →
+    `aplauso` 2,5 → `torcida` 2,0 → [`melhor` 5,0] → `placar` 8,0 → [`estatisticas` 6,0] → `geral` (até o fim). Empate:
+    `neutro` 3,0 no lugar de `vencedor`/`perdedor`. Curto (o empate que continua no TM): `apito` → `neutro` → `torcida` →
+    `placar` → `geral` (14,5 s; sem cumprimentos, troca, treinadores, melhor nem estatísticas). Automático: vitória 34,5 s
+    (36 com a troca), empate 32 s (33,5), sem os treinadores −2 s, no TM sem as estatísticas −6 s.
+  - Cumprimentos: até 6 pares de adversários (os a ≤ 6 m; os de 6 a 14 m só quando não há 3 a ≤ 6 m) andam um para o outro e
+    apertam a mão NO PLANO `cumprimentos` (vitória e empate: esperam de frente até o corte − 0,2 s; no empate com as mãos na
+    cintura); um jogador de linha cumprimenta o árbitro (UEFA 50.04). Os que vão cumprimentar fogem da lente (só os pares são
+    o assunto). Uma ELIPSE que leva alguém de um aperto (com o par ou com o árbitro, no meio ou ainda por fazer) o encerra no
+    corte (`encerrarAperto`: os dois param onde estão, ninguém volta andando). O 2º do lamento vai ao 1º só até os
+    cumprimentos e enquanto o 1º está no grupo.
+  - **Troca de camisa** (`plano.troca = {a, b, sx}`): 1 par de adversários de linha pelo hash do JOGO (o tick do apito e a
+    semente; sem `m.rng`) — nunca goleiro, expulso, quem aperta a mão nem o melhor em campo. ELIPSE do plano `troca`: lado a
+    lado, abraçados (`cena-atores.js gAbraco`), andando para a câmera; desde ali cada um tem `camisaDe` = o id do outro até o
+    fim da cena. `opc.troca === false` (página: `?troca=0`) tira.
+  - **Treinadores** (com os dois do gancho): ELIPSE do plano `treinador` — os dois na frente do túnel, entre as áreas
+    técnicas, andando um para o outro e apertando a mão (`c.trPar`); com um só, o do vencedor comemora.
+  - **Melhor em campo** (`opc.melhor`, da página: `sumula.js melhorEmCampo`): ELIPSE do plano `melhor` — ele em pé do lado
+    da TV (o substituído vira um ator novo), de frente para a câmera um pouco virado para a torcida dele, batendo palmas
+    (`gPalmas`) e depois o braço erguido; o close da cintura para cima. `tarjaMelhorVisivel(c)` = o plano `melhor`.
+  - `tarjaPlacarVisivel(c)` = o plano `placar` (no fim pela fase). A torcida do placar no plano `torcida` (o evento
+    `cenaFim`; também quando o toque pula o plano): em `emocao.js` palmas de quem ganha, palmas no empate, a vaia e o
+    silêncio de quem perde; em `festa.js` a casa abre o bandeirão (os sinalizadores dela acenderam no apito) e o setor
+    visitante acende os dele. No corte do plano da torcida quem está a < 4,5 m do trilho da câmera reaparece longe.
+  - No corte do apito quem está DENTRO de um sólido (correu atrás da bola para dentro do gol) reaparece fora, para o meio.
+  - Toque/Enter/A = o próximo bloco (`proximoBloco`: os planos de campo → `melhor` → `placar` → `estatisticas` → `geral`);
+    "Pular" (o da cena, no toque) = `pularParaGeral`; Esc/P/Start = a pausa, que congela a cena (no TM ela tem o "Voltar ao
+    Total Match": PLANO §5.3).
+- **`js/sumula.js`**: `notaDe(s, m, id, time)` — a nota pela MESMA conta e opções do `jogador` do `resultadoTM` (a posição
+  em campo ou expulso, os gols sofridos e o saldo do time dele); `melhorEmCampo(s, m)` → `{id, time, nota, gols, assist}`:
+  a maior nota de quem jogou (em `m.jogadores` e os substituídos de `m.times[t].saiu`; os expulsos não), desempate gols →
+  assistências → menor id. O **`resultadoTM`** ganha SÓ o campo OPCIONAL `melhor: {lado, tmId, nome, nota}`; o resto igual
+  campo a campo (o TM ignora o que não conhece; o travado melhor em campo: `melhor.nota === jogador.nota`).
+- **Página** (`main.js`):
+  - O evento `fimDeJogo`: `gravarResultadoTM` no apito como antes (o TM lê de lá se a mensagem se perder; a cena não atrasa
+    nada: o `tm3d:fim` só sai no "Voltar ao Total Match"). A cena entra no fim do passo (`decidirFimJogo`, depois do cartão
+    do mesmo passo) ou na fila `{tipo: 'fim'}` (depois do replay do gol do último lance e do cartão). Sem a cena (desligada,
+    sem o `SOB.cenas`, a API dos testes): a faixa do fim de hoje.
+  - Fora do online a cena SEGURA o laço no tick do `fimDeJogo` até sair (mundo novo): `seguraIntervalo()` com
+    `cenaFim.segura` — em `fim` só o `m.tick` andaria. No ONLINE não segura (o lockstep segue andando o tick; a cena anda no
+    `quadroOnline`, só cópias); as cenas do online seguem desligadas, menos esta (`cenaFimLigada`, sem o `!ONLINE`).
+  - Os treinadores vivos fora do desenho durante a cena (as cópias têm o mesmo id). `tocarAdiados()` ao começar (R6).
+  - No `geral`: a camada da cena sai (`hud.cena(false)`) e a FAIXA FINAL entra: "Fim de jogo", o placar, "Jogar de novo" (com
+    `?tm`, "Voltar ao Total Match") e o 2º botão "Melhores momentos" (`hud.faixa` `botao2/botao2Texto/botao2Cmd`; só com
+    lances guardados): até `CENA_FIM.lances.fim` lances do guardador, os gols primeiro, ≤ `fimMax` s, na ordem do jogo, um
+    ângulo cada (`tocarLanceGuardado` com o `aoFim` voltando à faixa); qualquer pulo volta à faixa.
+  - O kit misto da troca: `troca:<camisa do outro>:<o resto dele>:<número do outro>` no `it.kit` (`kitTrocaDe`).
+  - O toque/botão que avança o bloco fica marcado como visto (`F.botoes = ent.botoes`): só vale de novo solto e apertado (um
+    botão segurado, ou o pulso de um toque preso no online sem passo, é UM bloco — no intervalo também).
+  - A faixa do fim de jogo (a da cena, a de sempre sem ela e a do "Simular o resto") é `hud.faixa({..., final: true})`:
+    `html.fim-faixa` tira os controles de toque enquanto ela está na tela (o arco encostava nos botões dela e a zona do
+    analógico ficava com o toque da metade esquerda deles); qualquer outra faixa (ou nenhuma) os traz de volta
+    (`aoFaixaFinal` → `entrada.reposicionar()`).
+  - TM: sem o bloco de estatísticas; o empate é a versão curta salvo `partida.empateContinua === false` no pedido.
+    "Simular o resto": sem cena. "Jogar de novo"/mundo novo: tudo zera.
+  - Lado do TM (`legacy-total-match/js/tm3d.js`, v375): o `cfg.empateContinua` do modo (true/false ou uma função (gols da
+    casa, gols de fora) → o modo iria a prorrogação/pênaltis com esse empate) vira `partida.empateContinua` no pedido
+    (`empateContinuaDe`: com a função, a resposta quando todo empate de 0×0 a 6×6 concorda; senão o campo fica de fora = a
+    versão curta). Liga, amistosos, jogo rápido, pré-temporada, Eliminatórias, Arena, Dream Team/Draft, Ultimate Online e o
+    Rumo ao Estrelato: false; a carreira (`TM.comp.userPenContext`), o Modo Competição (`userPenContextComp`) e a Copa do
+    Mundo (`TM.tournament.userPenContext`): a mesma conta do onDone; a Copa entre amigos: true; o Ultimate: `!!cfg.mataMata`.
+    A volta com gol fora (a carreira) depende do placar do empate: sem o campo (curto).
+  - Pênaltis 3D: a disputa intercepta o `fimDeJogo` (sem cena). Livre e treinos: sem fim de jogo.
+  - API `__golaco.cenas` (tipo `'fim'`): `estado` (+ `resultado`, `curto`, `segura`, `melhor`, `tarjaMelhor`, `trocou`,
+    `troca` {a, b, sx, kitA, kitB}, `treinadores` {aperto}, `faixaFinal`, `mm`), `fimDeTeste({placar, antes})`,
+    `melhoresMomentos()`, `historicoPosJogo`, `faixaFinal`, `custoPosJogo`; `tarjas.melhor`.
+- **Render:** `render/jogador3d.js` o kit `troca:…` (a camisa — cores, padrão, número e os patrocínios dela na versão de
+  teste — do kit de A, o calção, o meião, a chuteira e o patrocínio do calção de B; no manequim a listra do calção e a faixa
+  do meião são `acentoCalcao`, o acento de B — sem a chave, o `acento` do uniforme), registrado na 1ª vez; SEM chamada a
+  mais nos dois corpos (no manequim as cores são atributos por instância; no corpo novo, uma linha da textura `tKits`). A
+  chave das cores por vaga é `índice do uniforme × 10⁷ + id × 4 + time + goleiro` (os mistos só crescem a cada "Jogar de
+  novo": com 64 índices por id, o 65º colidia com o id seguinte). `coresDe(id)` (testes) lê as cores do manequim.
+- **Telas** (`js/cenas-tela.js`, `css/cenas.css`): a tarja do MELHOR EM CAMPO (escudo e sigla, número, nome, "Melhor em
+  campo" e a nota com uma casa — "6,5"); o placar final e o painel "Partida" são os do intervalo. Exceções escritas à "sem
+  narração": só dentro da cena.
+- **Testes:** `teste-cenas` FIM (56 fins em vitória, derrota e empate: planos e tempos, fases, apito, corpo e câmera,
+  sólidos, cumprimentos, a troca, o melhor = o argmax independente e a nota = a do TM, o close dele, o aperto dos
+  treinadores, as tarjas, o toque = o próximo bloco, a festa do fim; E pureza; G custo), `teste-ponte-tm` P7/P8 (o `melhor`
+  e o resto igual ao da base) e `teste-cenas-tela` seção F (navegador).

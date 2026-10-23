@@ -14,6 +14,9 @@
 //   ateIntervalo(L, semente, {min, forcar(m, fim), margem}) → {m, eventos, forcado, fim, golTick} | null: a partida IA × IA
 //      até o passo do apito do 1º tempo (o evento 'intervalo'); com forcar, chamado UMA vez quando faltam ≤ margem ticks
 //      para o fim do tempo (os acréscimos já anunciados) com a bola rolando — o gol ou o cartão no último lance
+//   ateFim(L, semente, {min, forcar(m, fim), margem, sumula}) → {m, eventos, forcado, fim, golTick, sumula} | null: o mesmo até
+//      o apito FINAL (o evento 'fimDeJogo'; forcar no fim do 2º tempo); com sumula (o módulo sumula.js), a súmula da partida
+//      lida a cada passo (o melhor em campo)
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -150,6 +153,26 @@ export function ateIntervalo(L, semente, opc = {}) {
     const ev = P.passoPartida(m, P.entradaDemoPartida(m), null);
     for (const e of ev) if (e.tipo === 'gol') golTick = m.tick;
     if (ev.some(e => e.tipo === 'intervalo')) return { m, eventos: ev.slice(), forcado, fim, golTick };
+  }
+  return null;
+}
+
+/** A partida IA × IA até o passo do apito final (ver o cabeçalho). */
+export function ateFim(L, semente, opc = {}) {
+  const { P } = L;
+  const m = P.criarPartida({ semente, minutosPorTempo: opc.min ?? 0.5 });
+  const SU = opc.sumula ?? null, s = SU ? SU.criarSumula() : null;
+  let forcado = null, fim = null, golTick = null;
+  for (let i = 0; i < 120000; i++) {
+    const p = m.partida;
+    if (opc.forcar && forcado == null && p.tempo === 2 && p.acrescimo != null) {
+      fim = p.tick0Tempo + p.ticksPorTempo + Math.round(p.acrescimo * p.ticksPorTempo / 45);
+      if (fim - m.tick <= (opc.margem ?? 40) && (p.estado === 'jogo' || p.estado === 'parada') && m.naMao == null && !m.voo) forcado = opc.forcar(m, fim) || false;
+    }
+    const ev = P.passoPartida(m, P.entradaDemoPartida(m), null);
+    if (s) SU.sumulaPasso(s, m, ev);
+    for (const e of ev) if (e.tipo === 'gol') golTick = m.tick;
+    if (ev.some(e => e.tipo === 'fimDeJogo')) return { m, eventos: ev.slice(), forcado, fim, golTick, sumula: s };
   }
   return null;
 }

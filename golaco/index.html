@@ -99,7 +99,12 @@
     <div id="faixa" class="faixa" role="status" hidden>
       <span class="faixa-titulo" id="faixa-titulo">Intervalo</span>
       <span class="faixa-placar" id="faixa-placar"></span>
-      <button class="btn btn-primario faixa-botao" id="faixa-botao" type="button" data-cmd="reiniciar-partida" hidden>Jogar de novo</button>
+      <!-- os botões da faixa: "Jogar de novo" (com ?tm, "Voltar ao Total Match") e, no fim da cena do pós-jogo, "Melhores
+           momentos" (os lances do guardador: js/cena-fim.js, PLANO-CENAS.md §5.1) -->
+      <div class="faixa-botoes" id="faixa-botoes" hidden>
+        <button class="btn btn-primario faixa-botao" id="faixa-botao" type="button" data-cmd="reiniciar-partida" hidden>Jogar de novo</button>
+        <button class="btn faixa-botao faixa-botao2" id="faixa-botao2" type="button" data-cmd="melhores-momentos" hidden>Melhores momentos</button>
+      </div>
     </div>
     <!-- faixa ENTRA/SAI da substituição (lower third de TV; pedido do dono de 12/10 — a exceção dele à regra sem narração:
          só sigla, ▲/▼, ENTRA/SAI, número e nome). Na cena: embaixo à esquerda; no jogo do celular: uma linha no lugar do aviso -->

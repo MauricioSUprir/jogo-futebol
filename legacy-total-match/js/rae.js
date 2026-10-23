@@ -765,7 +765,8 @@
           teamA: prep.casa ? tm.meu : tm.adv, teamB: prep.casa ? tm.adv : tm.meu,
           formation: prep.casa ? tm.formacao : null, formationB: prep.casa ? null : tm.formacao,
           userSide: prep.casa ? 0 : 1, controle: { tmId: "rae-me" }, title: "Rumo ao Estrelato",
-          simOpts: { neutral: false }   // jogo da liga: estádio e torcida do mandante (clássico pelos rivais do TM)
+          simOpts: { neutral: false },  // jogo da liga: estádio e torcida do mandante (clássico pelos rivais do TM)
+          empateContinua: false
         }, {
           fim: function (r3) { TM.ui.go("rae-resultado", { out: jogaPartida(c, prep, r3) }); },
           sair: simula

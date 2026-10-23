@@ -84,6 +84,7 @@ export function criarHud(opc) {
     mapa: $('minimapa'), cartao: $('cartao-icone'), carga: $('carga'), cargaTipo: $('carga-tipo'), cargaNivel: $('carga-nivel'),
     relogio: $('placar-relogio'), minuto: $('relogio'), tempo: $('relogio-tempo'),
     faixa: $('faixa'), faixaTitulo: $('faixa-titulo'), faixaPlacar: $('faixa-placar'), faixaBotao: $('faixa-botao'),
+    faixaBotao2: $('faixa-botao2'), faixaBotoes: $('faixa-botoes'),
     acoes: $('menu-acoes'), modos: $('menu-modos'), estadoModo: $('estado-modo'), continuar: $('btn-continuar'),
     reiniciarPartida: $('btn-reiniciar-partida'), dica: $('dica'), replay: $('replay'), replayFaixa: $('replay-faixa'),
     comemoracao: $('comemoracao'), substituicao: $('substituicao'), faixaSub: $('faixa-subst'), cena: $('cena'),
@@ -711,19 +712,32 @@ export function criarHud(opc) {
       }
     },
     /**
-     * Faixa no meio da tela: f = {titulo, placar, ms?, botao?, botaoTexto?, botaoCmd?} (botao = "Jogar de novo"; com o
-     * Total Match, "Voltar ao Total Match" / "Simular o resto" pelo texto e o comando) ou null.
+     * Faixa no meio da tela: f = {titulo, placar, ms?, botao?, botaoTexto?, botaoCmd?, botao2?, botao2Texto?, botao2Cmd?}
+     * (botao = "Jogar de novo"; com o Total Match, "Voltar ao Total Match" / "Simular o resto" pelo texto e o comando;
+     * botao2 = o 2º botão, "Melhores momentos" no fim da cena do pós-jogo; final = a faixa do fim de jogo: sem os controles
+     * de toque enquanto ela está na tela, html.fim-faixa) ou null.
      * Sem ms, fica até ser trocada (fim de jogo). No modo de prints só aparece com forcar.
      */
     faixa(f, forcar = false) {
       if (!el.faixa) return;
       clearTimeout(timerFaixa);
+      // a faixa FINAL (f.final: o fim de jogo, com os botões): os controles de toque saem enquanto ela está na tela (depois do
+      // apito final não comandam nada; no celular o arco de botões encostava nos botões dela e a zona do analógico, por baixo,
+      // ficava com o toque da metade esquerda deles). Qualquer outra faixa (ou nenhuma) os traz de volta (aoFaixaFinal).
+      const final = !!f?.final && !(prints && !forcar);
+      if (raiz.classList.contains('fim-faixa') !== final) { raiz.classList.toggle('fim-faixa', final); opc?.aoFaixaFinal?.(final); }
       if (!f || (prints && !forcar)) { el.faixa.hidden = true; el.faixa.classList.remove('forcada'); return; }
       el.faixaTitulo.textContent = f.titulo ?? '';
       el.faixaPlacar.textContent = f.placar ?? '';
       el.faixaBotao.textContent = f.botaoTexto ?? 'Jogar de novo';
       el.faixaBotao.dataset.cmd = f.botaoCmd ?? 'reiniciar-partida';
       el.faixaBotao.hidden = !f.botao;
+      if (el.faixaBotao2) {
+        el.faixaBotao2.textContent = f.botao2Texto ?? 'Melhores momentos';
+        el.faixaBotao2.dataset.cmd = f.botao2Cmd ?? 'melhores-momentos';
+        el.faixaBotao2.hidden = !f.botao2;
+      }
+      if (el.faixaBotoes) el.faixaBotoes.hidden = !f.botao && !f.botao2;
       el.faixa.classList.toggle('forcada', !!forcar);
       el.faixa.hidden = false;
       if (f.ms) timerFaixa = setTimeout(() => { el.faixa.hidden = true; }, f.ms);
@@ -851,11 +865,12 @@ export function criarHud(opc) {
     cena(ativo, tipo = 'cartao') {
       ativo = !!ativo;
       // (o fim de tempo: o botão da pausa na camada e o rótulo do "Pular")
+      // (tipo 'fim' = o intervalo; 'posjogo' = o pós-jogo — os dois com o botão da pausa na camada)
       if (el.cena) {
-        const fim = ativo && tipo === 'fim';
+        const fim = ativo && (tipo === 'fim' || tipo === 'posjogo');
         el.cena.classList.toggle('fim-tempo', fim);
         const b = el.cena.querySelector('#cena-pular');
-        if (b) b.setAttribute('aria-label', fim ? 'Pular o intervalo' : 'Pular a cena do cartão');
+        if (b) b.setAttribute('aria-label', tipo === 'posjogo' ? 'Pular para o fim de jogo' : fim ? 'Pular o intervalo' : 'Pular a cena do cartão');
       }
       if (raiz.classList.contains('em-cena') === ativo) return;
       raiz.classList.toggle('em-cena', ativo);

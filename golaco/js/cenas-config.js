@@ -100,10 +100,14 @@ export const CENA_FIM = {
     // a cena ESPERA ali enquanto a página toca 0–2 lances do guardador pelo diretor do replay) e 'estatisticas' — e o 'geral'
     // com o laço SOLTO (os 3 s de PARTIDA.intervalo correm por baixo; a 'saida' acaba a cena)
     intervalo: [['apito', 1.5], ['campo', 2.5], ['tunel', 3.5], ['torcida', 1.5], ['lances', 0], ['estatisticas', 6.0], ['geral', 3.0]],
-    // fim (PR 4): os planos de campo (15,5 s) ≈ DFL 2:30 de campo ÷ 11,25 = 13,3 s
-    vitoria: [['apito', 1.5], ['vencedor', 3.0], ['perdedor', 2.5], ['cumprimentos', 2.0], ['treinador', 2.0], ['aplauso', 2.5], ['torcida', 2.0], ['melhor', 5.0], ['placar', 8.0], ['estatisticas', 6.0], ['geral', 0]],
-    empate: [['apito', 1.5], ['neutro', 3.0], ['cumprimentos', 2.0], ['treinador', 2.0], ['aplauso', 2.5], ['torcida', 2.0], ['melhor', 5.0], ['placar', 8.0], ['estatisticas', 6.0], ['geral', 0]],
-    curto: [['apito', 1.5], ['neutro', 3.0], ['torcida', 2.0], ['placar', 8.0], ['geral', 0]],   // TM: o empate que continua
+    // fim (PR 4; PLANO-CENAS.md §5.1): os planos de campo (15,5 s) ≈ DFL 2:30 de campo ÷ 11,25 = 13,3 s; + 'troca' (1,5 s, a
+    // troca de camisa — um plano só dela, depois de uma ELIPSE: 2,0 s de cumprimentos não cabiam o aperto de mão E o par
+    // trocado) quando há o par; os blocos de tela (melhor em campo, placar, estatísticas) mantêm o tempo de leitura (não
+    // encolhem com o relógio do jogo). Automático: vitória 34,5 s (36 com a troca), empate 32 s (33,5), sem os treinadores
+    // −2 s, no TM sem as estatísticas −6 s
+    vitoria: [['apito', 1.5], ['vencedor', 3.0], ['perdedor', 2.5], ['cumprimentos', 2.0], ['troca', 1.5], ['treinador', 2.0], ['aplauso', 2.5], ['torcida', 2.0], ['melhor', 5.0], ['placar', 8.0], ['estatisticas', 6.0], ['geral', 0]],
+    empate: [['apito', 1.5], ['neutro', 3.0], ['cumprimentos', 2.0], ['troca', 1.5], ['treinador', 2.0], ['aplauso', 2.5], ['torcida', 2.0], ['melhor', 5.0], ['placar', 8.0], ['estatisticas', 6.0], ['geral', 0]],
+    curto: [['apito', 1.5], ['neutro', 3.0], ['torcida', 2.0], ['placar', 8.0], ['geral', 0]],   // TM: o empate que continua (14,5 s)
   },
   // a tarja do placar com os autores (js/cenas-tela.js): DFL — +20 s do apito, 8 s, no intervalo e no fim (o atraso de campo
   // ÷ 11,25 ≈ 1,8 s; aqui depois dos dois primeiros planos, para não cobrir os jogadores); a leitura não encolhe com o relógio
@@ -118,11 +122,27 @@ export const CENA_FIM = {
   // intervalo até 2 (os gols do tempo primeiro, depois a parada A/B mais forte); "Melhores momentos" no fim até 6 e ≤ 30 s
   // (EA FC 25: replay dos gols no pós-jogo; FC 24: introduções longas cortadas porque a maioria pulava → no fim é botão)
   lances: { intervalo: 2, fim: 6, fimMax: 30 },
-  melhor: { dura: 5.0 },      // PR 4 — Premier League (voto da torcida no apito), Globo ("Craque do Jogo" no gramado)
-  troca: { pares: 1 },        // PR 4 — a troca de camisa (costume do fim de jogo; nenhuma regra proíbe)
+  // PR 4 — o MELHOR EM CAMPO (Premier League: o voto da torcida no apito; Globo: o "Craque do Jogo" no gramado logo depois
+  // do jogo): ELIPSE — ele em pé num lugar livre do lado da TV (`x` m do meio para o lado do time da pessoa, `z`), de frente
+  // para a câmera um pouco virado para a torcida, batendo palmas (`palmas` s) e depois o braço erguido para ela; quem
+  // estiver a menos de `livre` m dele reaparece no meio-campo. A tarja (js/cenas-tela.js): número, nome, "Melhor em campo"
+  // e a nota com uma casa — a do resultado do TM (sumula.js notaDe)
+  melhor: { dura: 5.0, x: 18, z: 12, livre: 7, palmas: 3.0, vira: 0.45 },
+  // PR 4 — a TROCA DE CAMISA (costume do fim de jogo; nenhuma regra proíbe): 1 par de adversários de linha (nunca goleiro,
+  // expulso, quem aperta a mão no plano dos cumprimentos nem o melhor em campo) sorteado pelo hash do jogo (sem m.rng); na
+  // ELIPSE do plano 'troca' os dois aparecem lado a lado (`lado` m entre os centros), abraçados (o braço de dentro nas
+  // costas do outro), andando para a câmera a `vel` m/s, cada um com a camisa do outro (o kit misto: camisa — com o
+  // patrocínio dela na versão de teste — do adversário, calção e meião próprios; render/jogador3d.js e humano3d.js, sem
+  // chamada a mais) até o fim da cena. `x`/`z`: onde aparecem (o lado de x pelo hash)
+  troca: { pares: 1, x: 7, z: 13, lado: 0.56, vel: 1.05 },
+  // PR 4 — os TREINADORES se cumprimentam (o plano 'treinador'; só com o gancho tecnicos.js): ELIPSE — os dois entre as
+  // áreas técnicas, na frente do túnel (x = ±`x`, `z`), andando um para o outro e apertando a mão (sem o outro, o do
+  // vencedor comemora sozinho na área técnica)
+  treinadores: { x: 1.25, z: 36.4, vel: 1.2 },
   // (da branch golaco/cenas-jogo) atores
   velAnda: 1.4,               // m/s — os pares caminham para o aperto de mão
   lenteLivre: 4.6,            // m — quem não é do plano sai de perto da câmera (os closes têm a lente fechada)
+  lenteDura: 3.3,             // m — PR 4: no fim nem o assunto do plano chega mais perto que isso da lente (sai de lado)
   // (no intervalo só os pares ao ALCANCE: a distância entre os pontos onde cada um para ≤ maxDistIntervalo m, andando um para
   // o outro a velAnda desde tIntervalo s — o aperto de 1 s acaba antes do túnel, aos 4 s; sem a folga: o par mais longe
   // sairia andando no corte)
@@ -151,5 +171,10 @@ export const CENA_FIM = {
     aplauso: { atras: 9, altura: 1.8, fov: 40 },
     cumprimentos: { dist: 8.5, altura: 1.8, fov: 34 },
     treinador: { fov: 30, altura: 1.5 },
+    // PR 4: os dois treinadores do campo (de lado, um pouco aberto); o par da troca de frente (andando para ela); o close
+    // do melhor em campo (da cintura para cima: o rosto)
+    treinadores: { x: 2.4, z: 31.2, altura: 1.6, fov: 32 },
+    troca: { frente: 6.4, lado: 1.1, altura: 1.6, fov: 30 },
+    melhor: { frente: 3.6, lado: 0.9, altura: 1.62, olhar: 1.38, fov: 25 },
   },
 };
