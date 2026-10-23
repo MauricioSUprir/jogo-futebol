@@ -5,14 +5,15 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 concurrency:
   group: "pages"
   cancel-in-progress: true
 jobs:
-  # GOLAÇO (golaco/): a bateria de testes roda antes de publicar; se algum reprovar, o deploy não
-  # acontece. É o mesmo arquivo do CI do PR (golaco-testes.yml), em partes paralelas (Node em 4
+  # GOLAÇO (golaco/): a bateria de testes roda antes de publicar; se algum reprovar, o golaco NOVO não vai
+  # para o site — continua no ar o golaco do último deploy aprovado — e os outros projetos publicam normalmente. É o mesmo arquivo do CI do PR (golaco-testes.yml), em partes paralelas (Node em 4
   # máquinas, navegador em 3); deploy: true = no navegador só os testes marcados para o deploy.
   testes-golaco:
     uses: ./.github/workflows/golaco-testes.yml
@@ -20,16 +21,22 @@ jobs:
       deploy: true
   deploy:
     needs: testes-golaco
+    # roda mesmo com os testes do golaco reprovados (o golaco é que fica na última versão aprovada)
+    if: ${{ !cancelled() }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/configure-pages@v5
         with:
           enablement: true
       - name: Montar site do Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Total Match continua na raiz do site.
           rm -rf _site
@@ -59,7 +66,17 @@ jobs:
           rm -rf _site/futebol3d/tools
           # GOLAÇO novo (futebol 3D, projeto do zero) fica em /golaco/
           mkdir -p _site/golaco
-          cp -r golaco/. _site/golaco/
+          if [ "${{ needs.testes-golaco.result }}" = "success" ]; then
+            cp -r golaco/. _site/golaco/
+          else
+            # testes do golaco reprovaram: publica o golaco do último deploy que deu certo (o mesmo que já estava no ar)
+            BOM=$(gh run list --workflow deploy-pages.yml --branch main --status success --limit 1 --json headSha --jq '.[0].headSha')
+            if [ -z "$BOM" ]; then echo "Nenhum deploy aprovado encontrado para o golaco"; exit 1; fi
+            echo "Testes do golaco reprovaram: golaco fica na versão de $BOM"
+            mkdir -p _site_golaco_tmp && git archive "$BOM" golaco | tar -x -C _site_golaco_tmp
+            cp -r _site_golaco_tmp/golaco/. _site/golaco/
+            rm -rf _site_golaco_tmp
+          fi
           rm -rf _site/golaco/tools
           # Céu do Rio (simulador de voo) fica em /aviao/
           mkdir -p _site/aviao
@@ -69,6 +86,8 @@ jobs:
           mkdir -p _site/velocista
           cp -r velocista/. _site/velocista/
           rm -rf _site/velocista/tools
+          # THE FLASH: versão do deploy, para o jogo se atualizar sozinho (velocista/js/atualizar.js)
+          echo "{\"v\": \"${GITHUB_SHA}\"}" > _site/velocista/versao.json
           # LANCE A LANCE (simulador de partidas) fica em /simulador/
           mkdir -p _site/simulador
           cp -r simulador/. _site/simulador/
