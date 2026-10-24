@@ -155,7 +155,7 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
   const tmp = new THREE.Quaternion();
   const par = (a, abd = 0) => tmp.copy(qz(a, abd));
 
-  const est = { fase: 0, ar: 0, planeio: 0, parede: 0, vib: 0, pele: 0, tt: 0 };
+  const est = { fase: 0, ar: 0, planeio: 0, parede: 0, vib: 0, pele: 0, tt: 0, luta: 0 };
   const posAn = new THREE.Vector3(), origem = new THREE.Vector3(), semente = { s: 1 };
   const rnd = () => { semente.s = (semente.s * 16807) % 2147483647; return semente.s / 2147483647 - 0.5; };
 
@@ -177,8 +177,12 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
     // coluna
     const twist = 0.2 * (0.4 + 0.6 * r + 0.3 * s2) * Math.sin(ph) * vivo;
     local(0, 0, twist * 0.5, 0);
-    local(1, 0, -twist * 0.5, -0.45 * lean + 0.02 * resp);
-    local(2, 0, -twist * 0.6, -0.45 * lean);
+    // luta: guarda (punhos na frente do rosto) e o tronco gira com o golpe (soco, gancho, raio)
+    est.luta = lerp(est.luta, e.luta || 0, 1 - Math.exp(-8 * dt));
+    const g = e.golpe, giroG = g ? -g.lado * (g.tipo === 'gancho' ? 0.45 : 0.38) * g.k : 0, inclG = g?.tipo === 'gancho' ? 0.12 * g.k : g ? -0.1 * g.k : 0;
+    const lutaInc = 0.12 * est.luta * (1 - est.ar);
+    local(1, 0, -twist * 0.5 + giroG * 0.5, -0.45 * lean + 0.02 * resp - lutaInc * 0.5 + inclG);
+    local(2, 0, -twist * 0.6 + giroG * 0.6, -0.45 * lean - lutaInc * 0.5 + inclG * 0.5);
     local(3, 0, 0, 0.1 * lean);
     local(4, 0, twist * 0.2, 0.5 * lean * (1 - 0.0) - 0.04);
     for (const c of [I.claviculaE, I.claviculaD]) local(c, 0, 0, 0);
@@ -193,7 +197,9 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
       const hipAr = E ? 0.95 : -0.35, kneeAr = E ? 1.25 : 0.55;
       hip = lerp(hip, hipAr * (0.6 + 0.4 * s2), noAr); knee = lerp(knee, kneeAr, noAr);
       hip = lerp(hip, -0.12 + lado * 0.05, est.planeio * noAr); knee = lerp(knee, 0.25, est.planeio * noAr);
-      const abd = lado * 0.035 * (1 - noAr);
+      const Lp = est.luta * (1 - noAr) * (1 - r);               // base de luta: joelhos dobrados, pés afastados, um à frente
+      knee += 0.32 * Lp; hip += 0.16 * Lp + (E ? 0.14 : -0.1) * Lp;
+      const abd = lado * (0.035 + 0.07 * Lp) * (1 - noAr);
       mundo(co, par(hip, abd)); mundo(ca, par(hip - knee, abd * 0.5));
       const dedo = -(hip - knee) * 0.5 - 0.5 * Math.max(0, -Math.sin(p)) * (1 - noAr) - 0.25 * noAr;
       mundo(pe, par(dedo));
@@ -205,7 +211,15 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
       swing = lerp(swing, E ? 1.0 : -0.5, noAr * (1 - est.planeio));
       cot = lerp(cot, 1.2, noAr);
       swing = lerp(swing, 0, est.planeio); cot = lerp(cot, 0.1, est.planeio);
-      const abdB = lerp(lado * 0.8, -lado * 0.84, est.planeio);
+      let abdB = lerp(lado * 0.8, -lado * 0.84, est.planeio);
+      const L = est.luta * (1 - noAr) * (1 - r * 0.8);
+      if (L > 0.01) { swing = lerp(swing, 0.35, L); cot = lerp(cot, 1.55, L); abdB = lerp(abdB, lado * 0.86, L); }
+      if (g && g.k > 0) {
+        const meu = lado === g.lado;
+        if (meu && (g.tipo === 'soco' || g.tipo === 'raio')) { swing = lerp(swing, 1.5, g.k); cot = lerp(cot, 0.04, g.k); abdB = lerp(abdB, lado * 1.0, g.k); }
+        else if (meu && g.tipo === 'gancho') { swing = lerp(swing, 1.2, g.k); cot = lerp(cot, 1.05, g.k); abdB = lerp(abdB, lado * 0.95, g.k); }
+        else { swing = lerp(swing, 0.35, g.k); cot = lerp(cot, 1.6, g.k); abdB = lerp(abdB, lado * 0.86, g.k); }   // o outro braço fica na guarda
+      }
       mundo(br, qz(swing, abdB)); mundo(an, qz(swing + cot, abdB));
       mundo(mao, wq[an].clone());
     }

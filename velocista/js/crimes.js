@@ -1,5 +1,6 @@
 // Crimes pela cidade: assalto (ladrão fugindo a pé), carro em fuga, incêndio (apagar correndo em volta: vórtice) e
-// pessoa caindo de um prédio (chegar embaixo a tempo). Um crime por vez; o próximo nasce a 150–380 m do herói.
+// pessoa caindo de um prédio (chegar embaixo a tempo) e gangue (bandidos na rua: derrotar todos no BATER e nos golpes
+// especiais, ver combate.js). Um crime por vez; o próximo nasce a 150–380 m do herói.
 import * as THREE from 'three';
 import { CELL, N, MEIO, CALCADA, bloco, celulaDe, dentro } from './cidade.js';
 
@@ -8,7 +9,9 @@ const TIPOS = {
   fuga: { nome: 'Carro em fuga', texto: 'Alcance o carro e pare-o', tempo: 90 },
   incendio: { nome: 'Incêndio', texto: 'Corra em volta do prédio para apagar o fogo', tempo: 90 },
   queda: { nome: 'Pessoa caindo', texto: 'Chegue embaixo antes que ela caia', tempo: 12 },
+  gangue: { nome: 'Gangue', texto: 'Derrote os bandidos', tempo: 150 },
 };
+const SORTEIO = ['assalto', 'fuga', 'incendio', 'queda', 'gangue', 'gangue'];     // a gangue sai com mais frequência
 export const NOMES_CRIME = Object.fromEntries(Object.entries(TIPOS).map(([k, v]) => [k, v.nome]));
 
 const eixo = (k) => k * CELL - MEIO;                          // eixo da k-ésima rua
@@ -86,7 +89,7 @@ function andarGrade(c, dist, faixa, fugirDe) {
 }
 
 /** Gerente de crimes. Devolve {atualizar(dt, P, opc) → evento|null, ativo, marcador(), forcar(tipo), dispose()}. */
-export function criarCrimes(cena) {
+export function criarCrimes(cena, { combate = null } = {}) {
   const tex = texFogo();
   const coluna = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 140, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0xff2b3d, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide, fog: false }));
   coluna.geometry.translate(0, 70, 0); coluna.visible = false; cena.add(coluna);
@@ -122,6 +125,10 @@ export function criarCrimes(cena) {
       if (!l) return null;
       c.l = l; c.x = (l.x0 + l.x1) / 2; c.z = (l.z0 + l.z1) / 2; c.raio = Math.hypot(l.x1 - l.x0, l.z1 - l.z0) / 2;
       c.fogo = fogo(tex); c.fogo.position.set(c.x, l.y1 - 1, c.z); c.grupo.add(c.fogo); c.acum = 0; c.ang = null; c.meta = Math.PI * 2 * 3;
+    } else if (tipo === 'gangue') {
+      if (!combate) return null;
+      c.x = lugar.x + rnd(-6, 6); c.z = lugar.z + rnd(-6, 6); c.total = 4 + Math.floor(Math.random() * 3);
+      c.gangue = combate.gerarGangue(c.x, c.z, c.total);
     } else if (tipo === 'queda') {
       const l = predioPerto(lugar.x, lugar.z, 24, 70) || predioPerto(lugar.x, lugar.z, 14);
       if (!l) return null;
@@ -137,6 +144,7 @@ export function criarCrimes(cena) {
   function encerrar(ok) {
     const c = ativo; ativo = null; espera = forcado ? 12 : rnd(35, 60);
     setTimeout(() => cena.remove(c.grupo), ok ? 2500 : 0);
+    if (c.gangue) combate.remover(c.gangue, ok ? 8 : 0.1);
     coluna.visible = false;
     return { tipo: c.tipo, nome: c.nome, ok };
   }
@@ -146,7 +154,7 @@ export function criarCrimes(cena) {
     if (!opc.forcar) forcado = null;
     if (!ativo) {
       espera -= dt; if (espera > 0) return null;
-      const tipo = forcado || pick(Object.keys(TIPOS));
+      const tipo = forcado || pick(combate ? SORTEIO : SORTEIO.filter((t) => t !== 'gangue'));
       ativo = iniciar(tipo, P); if (!ativo) { espera = 5; return null; }
       return { inicio: true, tipo, nome: ativo.nome };
     }
@@ -181,6 +189,11 @@ export function criarCrimes(cena) {
       else c.ang = null;
       c.progresso = Math.min(1, c.acum / c.meta);
       if (c.acum >= c.meta) return encerrar(true);
+    } else if (c.tipo === 'gangue') {
+      const vivos = combate.vivos(c.gangue), ct = combate.centro(c.gangue);
+      if (ct) { c.x = ct.x; c.z = ct.z; }
+      c.progresso = 1 - vivos / c.total; c.restantes = vivos;
+      if (vivos === 0) return encerrar(true);
     } else if (c.tipo === 'queda') {
       const total = 3 + c.h0 / 7, t = 1 - c.restante / total;
       c.y = Math.max(0, c.h0 * (1 - Math.min(1, t * t * 0.4 + t * 0.6))); c.npc.position.y = c.y;
@@ -189,7 +202,7 @@ export function criarCrimes(cena) {
       if (t > 0.1 && d < 3 && dy < 3.5) { c.npc.position.set(P.x, P.y + 0.1, P.z); return encerrar(true); }
       if (c.y <= 0.01) return encerrar(false);
     }
-    coluna.visible = true; coluna.position.set(c.x, 0, c.z);
+    coluna.visible = false;          // o local agora é marcado pelo guia (guia.js)
     if (c.restante <= 0) return encerrar(false);
     return null;
   }

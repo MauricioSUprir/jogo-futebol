@@ -9,6 +9,8 @@ import { criarCrimes } from './crimes.js';
 import { criarPortais } from './portais.js';
 import { criarTrafego } from './trafego.js';
 import { criarPedestres } from './pedestres.js';
+import { criarCombate, ESPECIAIS } from './combate.js';
+import { criarGuia } from './guia.js';
 import { construirLab } from './lab3d.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
 
@@ -29,7 +31,7 @@ const suave = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t 
 const $ = (id) => document.getElementById(id);
 const el = {
   corpo: document.body, cena: $('cena'), esferas: $('esferas'), total: $('total'), vel: $('vel'), hora: $('hora'), nivel: $('nivel'),
-  aviso: $('aviso'), seta: $('seta'), dist: $('distEsfera'), mapa: $('mapa'), mapaBox: $('mapaBox'),
+  aviso: $('aviso'), dano: $('dano'), seta: $('seta'), dist: $('distEsfera'), mapa: $('mapa'), mapaBox: $('mapaBox'),
   missaoNum: $('missaoNum'), missaoTitulo: $('missaoTitulo'), missaoTexto: $('missaoTexto'), crimeLinha: $('crimeLinha'),
   inicio: $('telaInicio'), pausa: $('telaPausa'), fim: $('telaFim'), fimTexto: $('fimTexto'), btnJogar: $('btnJogar'), carga: $('barraCargaI'), carregando: $('carregando'),
 };
@@ -373,7 +375,7 @@ const J = { modo: 'menu', coletadas: 0, total: 0, aviso: 0, inicioT: 0, alinhar:
 const teclas = new Set();
 const stick = { x: 0, y: 0 };
 const toque = { correr: false, vibrar: false };
-let pedidoPulo = false;
+let pedidoPulo = false, pedidoBater = false, pedidoEspecial = null;
 let esferas = [];
 
 function reiniciar() {
@@ -401,6 +403,8 @@ document.addEventListener('pointerlockchange', () => {
   tinhaCaptura = tem; J.ignorarMov = 3;                 // o 1º movimento depois de capturar o mouse costuma vir com um salto
 });
 el.cena.addEventListener('click', () => { if (J.modo === 'jogando' && !TOQUE && document.pointerLockElement !== el.cena) pedirCaptura(); });
+// com o mouse capturado, o clique esquerdo bate
+addEventListener('mousedown', (e) => { if (e.button === 0 && J.modo === 'jogando' && !TOQUE && document.pointerLockElement === el.cena) pedidoBater = true; });
 $('btnContinuar').addEventListener('click', () => { J.modo = 'jogando'; el.pausa.hidden = true; if (!TOQUE) pedirCaptura(); });
 $('btnJogar').addEventListener('click', () => { deitar(); reiniciar(); });
 // no Android, tela cheia + trava deitada; no iPhone a tela "Gire o celular" cuida disso
@@ -413,6 +417,8 @@ addEventListener('keydown', (e) => {
   if (e.repeat) return;
   teclas.add(k);
   if (k === ' ') pedidoPulo = true;
+  else if (k === 'f') pedidoBater = true;
+  else if (Object.values(ESPECIAIS).some((E) => E.teclas.includes(k))) pedidoEspecial = Object.keys(ESPECIAIS).find((t) => ESPECIAIS[t].teclas.includes(k));
   else if (k === 'm') el.mapaBox.classList.toggle('grande');
   else if (k === 'h') mundo.T = (mundo.T + 0.08) % 1;
   else if (k === 'enter' && J.modo === 'menu' && !el.btnJogar.hidden) reiniciar();
@@ -438,6 +444,8 @@ if (TOQUE) {
   bt('btVibrar', () => { toque.vibrar = true; }, () => { toque.vibrar = false; });
   bt('btCorrer', () => { toque.correr = true; }, () => { toque.correr = false; });
   bt('btPular', () => { pedidoPulo = true; teclas.add(' '); }, () => teclas.delete(' '));
+  bt('btBater', () => { pedidoBater = true; });
+  for (const t of Object.keys(ESPECIAIS)) bt(`bt-${t}`, () => { pedidoEspecial = t; });
 }
 
 // ---------- física do herói ----------
@@ -450,6 +458,13 @@ function entradaMov() {
 }
 
 function passoHeroi(dt) {
+  if (combate.ocupado) {                     // golpe em andamento: o combate move o herói; aqui só a altura (gravidade e chão)
+    P.parede = null; P.vibrando = false;
+    P.vy -= MOV.gravidade * dt; P.y += P.vy * dt;
+    const ch = chaoEm(rectsPerto, P.x, P.z, P.y + 1.5);
+    if (P.y <= ch) { P.y = ch; P.vy = 0; P.noChao = true; P.pulos = 0; }
+    P.t += dt; return;
+  }
   const { ix, iz, m } = entradaMov();
   const fx = Math.sin(C.yaw), fz = Math.cos(C.yaw), rx = -fz, rz = fx;
   const dx = fx * iz + rx * ix, dz = fz * iz + rz * ix;
@@ -463,7 +478,7 @@ function passoHeroi(dt) {
   else if (querVibrar && P.energia > 0.08 && vh0 >= MOV.vibrarMin && !P.parede) { P.vibrando = true; avisar('VIBRANDO — atravesse tudo'); }
   if (P.vibrando) P.energia = Math.max(0, P.energia - ENERGIA.vibrar * dt);
   else if (P.correndo) P.energia = Math.max(0, P.energia - (P.parede ? ENERGIA.parede : ENERGIA.gasto) * dt);
-  else P.energia = Math.min(1, P.energia + ENERGIA.recarga * dt * (m < 0.1 ? 3 : 1));
+  else if (!combate.pertoDeBandido(P, 12)) P.energia = Math.min(1, P.energia + ENERGIA.recarga * dt * (m < 0.1 ? 3 : 1));   // no meio da briga não recarrega
   const vmax = ((P.correndo || P.vibrando) ? MOV.correr : MOV.andar) * m;
   const taxa = P.noChao ? (P.correndo ? 5 : 11) : 2.2;
   const k = 1 - Math.exp(-taxa * dt);
@@ -571,7 +586,8 @@ function animarHeroi(dt) {
   const v = Math.hypot(P.vx, P.vz), amp = clamp(v / 10, 0, 1), forte = clamp((v - 15) / 40, 0, 1);
   if (modelo) {
     const vv = P.parede ? P.parede.v : v;
-    modelo.aplicar({ v: vv, noChao: P.noChao, planando: teclas.has(' ') && !P.noChao && P.vy < 0, parede: !!P.parede, vibrando: P.vibrando }, dt);
+    const luta = combate.poseHeroi();
+    modelo.aplicar({ v: luta.corrida ?? vv, noChao: P.noChao, planando: teclas.has(' ') && !P.noChao && P.vy < 0, parede: !!P.parede, vibrando: P.vibrando, golpe: luta.golpe, luta: luta.luta }, dt);
     modelo.setVisivelProfundo(P.vibrando && estaDentroDeSolido());
   }
   P.fase += dt * (4 + v * 0.55);
@@ -610,9 +626,12 @@ function dentroDeSolido(x, y, z) {
 }
 function atualizarCamera(dt) {
   const v = Math.hypot(P.vx, P.vz);
-  const alvo = new THREE.Vector3(P.x, P.y + CAM.alvoY, P.z);
+  const foco = combate.foco;
+  if (foco) { J.foco = J.foco || { x: P.x, z: P.z }; J.foco.x = lerp(J.foco.x, foco.x, 1 - Math.exp(-8 * dt)); J.foco.z = lerp(J.foco.z, foco.z, 1 - Math.exp(-8 * dt)); }
+  else if (J.foco) { J.foco.x = lerp(J.foco.x, P.x, 1 - Math.exp(-10 * dt)); J.foco.z = lerp(J.foco.z, P.z, 1 - Math.exp(-10 * dt)); if (Math.hypot(J.foco.x - P.x, J.foco.z - P.z) < 0.05) J.foco = null; }
+  const alvo = new THREE.Vector3(J.foco ? J.foco.x : P.x, P.y + CAM.alvoY, J.foco ? J.foco.z : P.z);
   const cp = Math.cos(C.pitch), sp = Math.sin(C.pitch), fx = Math.sin(C.yaw), fz = Math.cos(C.yaw);
-  const distIdeal = CAM.dist + clamp(v - 15, 0, 45) * 0.05;
+  const distIdeal = CAM.dist + clamp(v - 15, 0, 45) * 0.05 + 1.3 * combate.poseHeroi().luta;
   let t = 1;
   if (P.parede && J.alinhar > 0) { J.alinhar -= dt; let d = P.h - C.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); C.yaw += d * (1 - Math.exp(-3 * dt)); }
   for (; t > 0.15 && !P.vibrando; t -= 0.07) { const d = distIdeal * t; if (!dentroDeSolido(alvo.x - fx * cp * d, alvo.y + sp * d, alvo.z - fz * cp * d)) break; }
@@ -620,6 +639,7 @@ function atualizarCamera(dt) {
   C.dist = dAlvo < C.dist ? dAlvo : lerp(C.dist, dAlvo, 1 - Math.exp(-6 * dt));
   camera.position.set(alvo.x - fx * cp * C.dist, Math.max(0.6, alvo.y + sp * C.dist), alvo.z - fz * cp * C.dist);
   camera.lookAt(alvo);
+  const tr = combate.tremor; if (tr > 0) { camera.position.x += (Math.random() - 0.5) * tr * 0.5; camera.position.y += (Math.random() - 0.5) * tr * 0.4; camera.position.z += (Math.random() - 0.5) * tr * 0.5; }
   const fovAlvo = CAM.fov + clamp(v - 15, 0, 45) * 0.38;
   camera.fov = lerp(camera.fov, fovAlvo, 1 - Math.exp(-4 * dt)); camera.updateProjectionMatrix();
 }
@@ -644,6 +664,8 @@ function desenharMapa() {
   }
   gm.fillStyle = '#3fd0ff'; const rr = grande ? 14 : 6;
   for (const o of esferas) if (!esferasColetadas.has(o.id) && Math.abs(o.x - P.x) < raioM * 1.1 && Math.abs(o.z - P.z) < raioM * 1.1) { gm.beginPath(); gm.arc(o.x, o.z, rr, 0, 6.3); gm.fill(); }
+  guia.desenharNoMapa(gm, grande ? 9 : 5);
+  for (const e of combate.bandidos) if (e.estado !== 'caido' && e.estado !== 'fugiu') { gm.fillStyle = '#ff4d5e'; gm.beginPath(); gm.arc(e.x, e.z, grande ? 8 : 4, 0, 6.3); gm.fill(); }
   { const a = alvoAtual(); if (a && a.cor !== '#3fd0ff') { gm.fillStyle = a.cor; gm.beginPath(); gm.arc(a.x, a.z, grande ? 30 : 11, 0, 6.3); gm.fill(); gm.strokeStyle = '#fff'; gm.lineWidth = grande ? 6 : 2.5; gm.stroke(); } }
   gm.strokeStyle = '#3fe0ff'; gm.lineWidth = grande ? 10 : 4; gm.strokeRect(LAB_B.cx - 30, LAB_B.cz - 30, 60, 60);
   gm.setTransform(1, 0, 0, 1, 0, 0);
@@ -660,12 +682,45 @@ function esferaMaisPerto() {
   for (const o of esferas) { if (esferasColetadas.has(o.id)) continue; const d = Math.hypot(o.x - P.x, o.z - P.z); if (d < md) { md = d; melhor = o; } }
   return melhor;
 }
-// para onde a seta aponta: crime > objetivo da missão > esfera mais perto
-function alvoAtual() {
-  const cr = crimes.marcador(); if (cr) return { ...cr, cor: '#ff4d5e' };
+// prédio de 50 m ou mais mais perto (alvo da missão de escalar): o ponto da calçada em frente à fachada mais perto
+let predioCache = null, predioT = 0;
+function predioAltoPerto() {
+  if (predioCache && P.t - predioT < 1.5) return predioCache;
+  predioT = P.t; let melhor = null, md = Infinity;
+  const ci = celulaDe(P.x), cj = celulaDe(P.z);
+  for (let i = ci - 8; i <= ci + 8; i++) for (let j = cj - 8; j <= cj + 8; j++) {
+    if (!dentro(i, j)) continue; const b = bloco(i, j); if (b.tipo === 'lab') continue;
+    for (const l of b.lotes) {
+      if (l.y1 < 52 || l.y0 > CALCADA + 0.01) continue;
+      const px = clamp(P.x, l.x0, l.x1), pz = clamp(P.z, l.z0, l.z1), d = Math.hypot(px - P.x, pz - P.z);
+      if (d < md) { md = d; melhor = l; }
+    }
+  }
+  if (!melhor) return (predioCache = null);
+  const l = melhor, mx = (l.x0 + l.x1) / 2, mz = (l.z0 + l.z1) / 2;
+  let px = clamp(P.x, l.x0, l.x1), pz = clamp(P.z, l.z0, l.z1);
+  if (px > l.x0 && px < l.x1 && pz > l.z0 && pz < l.z1) { px = P.x < mx ? l.x0 : l.x1; }
+  const nx = px <= l.x0 ? -1 : px >= l.x1 ? 1 : 0, nz = nx ? 0 : pz <= l.z0 ? -1 : 1;
+  return (predioCache = { x: px + nx * 3, z: pz + nz * 3 });
+}
+// objetivo do guia (feixe, marcador e caminho): crime > objetivo da missão; null quando a missão não tem lugar
+function alvoMissao() {
+  const c = crimes.ativo;
+  if (c) return { x: c.x, z: c.z, cor: '#ff4d5e', rotulo: c.nome };
   const m = missoes.atual;
-  if (m?.tipo === 'portais') { const p = portais.alvo(); if (p) return { ...p, cor: '#ffd23f' }; }
-  if (m?.alvo === 'cortex') return { x: LAB_B.cx, z: LAB_B.cz, cor: '#ffd23f' };
+  if (m?.tipo === 'portais') { const p = portais.alvo(); if (p) return { x: p.x, z: p.z, cor: '#ffd23f', rotulo: 'Portal' }; }
+  if (m?.alvo === 'cortex') {
+    const dentroLab = LAB_B.plano.dentro(P.x, P.z, P.y);
+    const e = LAB_B.plano.entrada;
+    return dentroLab ? { x: LAB_B.cx, z: LAB_B.cz, cor: '#ffd23f', rotulo: 'Cortex' } : { x: e.x, z: e.z - 4, cor: '#ffd23f', rotulo: 'S.T.A.R. Labs' };
+  }
+  if (m?.alvo === 'predioAlto') { const p = predioAltoPerto(); if (p) return { ...p, cor: '#ffd23f', rotulo: 'Prédio de 50 m' }; }
+  if (m?.alvo === 'esfera') { const o = esferaMaisPerto(); if (o) return { x: o.x, z: o.z, cor: '#3fd0ff', rotulo: 'Esfera' }; }
+  return null;
+}
+// para onde a bússola aponta: o objetivo do guia ou a esfera mais perto
+function alvoAtual() {
+  const a = alvoMissao(); if (a) return a;
   const o = esferaMaisPerto(); return o ? { x: o.x, z: o.z, cor: '#3fd0ff' } : null;
 }
 function atualizarBussola() {
@@ -682,7 +737,9 @@ function atualizarBussola() {
 // ---------- missões, crimes e portais ----------
 let armazem = null; try { armazem = localStorage; } catch { armazem = null; }
 const missoes = criarMissoes(armazem);
-const crimes = criarCrimes(cena);
+const combate = criarCombate(cena, { mobile: MOBILE, colide: (x, z, y) => empurrar(rectsPerto, x, z, 0.35, y, 1.7), chao: (x, z, y) => chaoEm(rectsPerto, x, z, y) });
+const crimes = criarCrimes(cena, { combate });
+const guia = criarGuia(cena, { mobile: MOBILE });
 const portais = criarPortais(cena);
 const trafego = criarTrafego(THREE, cena, { mobile: MOBILE });
 const pedestres = criarPedestres(THREE, cena, { mobile: MOBILE });
@@ -716,8 +773,31 @@ function passoMissoes(dt) {
   if (ma?.tipo === 'portais') { const e = portais.estado(); txt = e.correndo ? `Portal ${e.indice + 1}/${e.total} · ${Math.ceil(e.restante)} s` : ma.texto; }
   el.missaoTexto.textContent = txt;
   const c = crimes.ativo;
-  if (c) { const d = Math.round(Math.hypot(c.x - P.x, c.z - P.z)); el.crimeLinha.textContent = `${c.nome}: ${c.texto}${c.tipo === 'incendio' ? ` (${Math.round((c.progresso || 0) * 100)}%)` : ''} · ${d} m · ${Math.max(0, Math.ceil(c.restante))} s`; el.crimeLinha.hidden = false; }
+  if (c) { const d = Math.round(Math.hypot(c.x - P.x, c.z - P.z)); el.crimeLinha.textContent = `${c.nome}: ${c.texto}${c.tipo === 'incendio' ? ` (${Math.round((c.progresso || 0) * 100)}%)` : ''}${c.tipo === 'gangue' ? ` (${c.restantes ?? c.total} de pé)` : ''} · ${d} m · ${Math.max(0, Math.ceil(c.restante))} s`; el.crimeLinha.hidden = false; }
   else el.crimeLinha.hidden = true;
+}
+
+// ---------- golpes ----------
+function direcaoPedida() {
+  const { ix, iz, m } = entradaMov();
+  const fx = Math.sin(C.yaw), fz = Math.cos(C.yaw);
+  if (m > 0.1) return [fx * iz - fz * ix, fz * iz + fx * ix];
+  return [fx, fz];
+}
+function processarGolpes() {
+  if (pedidoBater) { pedidoBater = false; if (!P.parede) { P.vibrando = false; const [dx, dz] = direcaoPedida(); combate.bater(P, dx, dz); } }
+  if (pedidoEspecial) {
+    // apertado no meio de um soco: espera o soco acabar (até 0,6 s)
+    if (combate.ocupado) { if (!J.espT) J.espT = P.t; if (P.t - J.espT > 0.6) { pedidoEspecial = null; J.espT = 0; } return; }
+    const t = pedidoEspecial; pedidoEspecial = null; J.espT = 0;
+    if (P.parede) return;
+    if (P.energia < ESPECIAIS[t].custo) { avisar(`ENERGIA INSUFICIENTE PARA ${ESPECIAIS[t].nome.toUpperCase()}`); return; }
+    P.vibrando = false; const [dx, dz] = direcaoPedida(); combate.especial(t, P, dx, dz);
+  }
+}
+const botoesEsp = Object.keys(ESPECIAIS).map((t) => [t, $(`bt-${t}`), $(`chip-${t}`)]);
+function atualizarBotoesEspeciais() {
+  for (const [t, b, c] of botoesEsp) { const ok = P.energia >= ESPECIAIS[t].custo; b?.classList.toggle('pronto', ok); c?.classList.toggle('pronto', ok); }
 }
 
 // ---------- laço ----------
@@ -736,12 +816,21 @@ function ajustarResolucao(dtBruto) {
 }
 function quadro() {
   requestAnimationFrame(quadro);
-  const dtBruto = relogio.getDelta(), dt = Math.min(dtBruto, 0.05);
+  const dtBruto = relogio.getDelta();
+  let dt = Math.min(dtBruto, 0.05);
+  if (combate.hitstop > 0) { combate.hitstop -= dt; dt *= 0.12; }      // impacto: o tempo quase para por um instante
   ajustarResolucao(dtBruto);
   if (emPe()) { teclas.clear(); stick.x = stick.y = 0; toque.correr = toque.vibrar = false; return; }
   if (J.modo === 'jogando') {
     mundo.T = (mundo.T + dt / DIA_SEGUNDOS) % 1;
+    processarGolpes();
     passoHeroi(dt); esferasProximas(dt);
+    for (const ev of combate.passo(dt, P)) {
+      if (ev.tipo === 'nocaute') { missoes.contar('nocautes'); missoes.contar('pontos', 50); if (ev.especial) missoes.contar('especiais'); }
+      else if (ev.tipo === 'dano') { el.dano.style.opacity = '1'; }
+    }
+    el.dano.style.opacity = String(Math.min(1, combate.dano));
+    atualizarBotoesEspeciais();
     passoMissoes(dt);
     pedestres.atualizar(dt, P, mundo.noite); trafego.atualizar(dt, P, mundo.noite, pedestres.pessoas);
     if (labAtivo) labAtivo.atualizar(dt, P.t, mundo.noite, camera, P);
@@ -756,6 +845,7 @@ function quadro() {
     ultBussola += dt; if (ultBussola > 0.2) { ultBussola = 0; atualizarBussola(); }
   }
   if (J.modo !== 'menu' || carregados.size) { animarHeroi(J.modo === 'jogando' ? dt : 0); atualizarCamera(dt); }
+  if (J.modo === 'jogando') guia.atualizar(dt, alvoMissao(), P, camera);
   atualizarAmbiente(camera.position);
   posfx.ajustar(J.modo === 'jogando' ? Math.min(1, Math.max(0, (Math.hypot(P.vx, P.vz) - 20) / 35)) : 0, mundo.noite);
   posfx.render();
@@ -787,4 +877,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
