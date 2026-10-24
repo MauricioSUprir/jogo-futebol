@@ -40,10 +40,11 @@
 
 ---
 
-## 🧠 D. IA mais intensa — ~58 h ⚙️
+## 🧠 D. IA mais intensa — ~68 h ⚙️ *(em andamento desde 24/10)*
 
 | nº | o que é | horas |
 |---|---|---|
+| 67 | 🆕 ⭐ **A IA correr de verdade, para marcar e para atacar** | 10 |
 | 18 | ⭐ **Botão PRESSÃO funcionando de verdade** | 5 |
 | 17 | Seus companheiros apertarem o condutor da IA | 8 |
 | 19 | Defensor ultrapassado recuar rápido (meta: 5 m/s) | 5 |
