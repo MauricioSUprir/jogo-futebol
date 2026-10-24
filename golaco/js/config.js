@@ -1237,8 +1237,8 @@ export const IA_ATAQUE = {
   //    área; valendo no campo todo, com 0,85/0,7 os chutes caíam de 7,6 para 4,9 por partida e com 0,55/0,25 subiam para
   //    8,4, mas no meio-campo o condutor ia para cima da PRESSÃO do humano. Só no último terço: no painel de 144 do CI
   //    sem ele os chutes caem de 7,3 para 6,9 por partida (14/10; em 48 partidas pareciam iguais, 7,4 × 7,5), mas com ele
-  //    o chamado da PRESSÃO corre menos — teste-pressao-humano M5 72%, meta 80%, PENDENTE: o condutor que encara para
-  //    perto do marcador e as aproximações do chamado ficam curtas, quase só a aceleração); quem segura a bola
+  //    o chamado da PRESSÃO corria menos — teste-pressao-humano M5 72% em 14/10; com a chegada pelo perfil de aceleração
+  //    e o desvio dos corpos, 82,1% ± 0,8 em 23/10, meta 80%); quem segura a bola
   //    perde valor (conduzSolta: de [0] s a [1] s, até [2]×); analógico magConduz; CORRER com
   //    correrLivre m livres à frente (transição ou antes de correrAte m), condução curta com < curtaPerto m;
   //  - proteger: adversário a < protegeDist m, chance protegeP, no máximo protegeMax s por posse.
@@ -1331,18 +1331,28 @@ export const DEFESA_HUMANO = {
     vSai: 3.2,                // m/s — a bola tirada sai para longe do condutor (como o boteIA)
     semDominio: 0.5,          // s — quem perdeu a bola não a domina de novo logo em seguida
   },
-  // PRESSÃO (segurar): grava m.pedidoPressao[time] = tick (contrato da Parte 0). Pedido do dono, 11/10 ("o botão de
-  // pressão não funciona"), como o "teammate pressure" do EA FC: vai quem CHEGA PRIMEIRO (defesa.js pressionadorDe) ao
+  // PRESSÃO (segurar): grava m.pedidoPressao[time] = tick (contrato da Parte 0); o pedido vale até `validade` s depois do
+  // último passo com o botão, só com o time defendendo (a retomada o encerra: defesa.js pressaoPedida/encerrarPressao).
+  // Pedido do dono, 11/10 ("o botão de pressão não funciona"; 23/10: "preciso do botão de pressão funcionando"), como o
+  // "teammate pressure" do EA FC: vai quem CHEGA PRIMEIRO (defesa.js pressionadorDe) ao
   // ponto a `colado` m do condutor, do lado do gol, adiantado até `leadMax` s (`histerese` s de vantagem para quem já vai);
   // disparada até `chega` m (por trás contorna a `contorno` m; `desvio` dos corpos) e disputa na bola (`naBola`,
   // `leadDisputa`, `bolaSolta`; `ganho`, `aproxMax`, `trasPerto`/`trasAprox`, `filtro`); chegada pela curva de freada
   // (`freioChegada`, `contato`; chegaFreando); `depois`: s de bote com responsabilidade de quem deixou de ser o chamado.
   // semAtropelar: o time da pessoa encosta no condutor a ~`chega` m/s. As contas: CONTRATOS.md.
+  // (23/10, D1 da FILA, item 18) `validade` 1 PASSO → 1 s (um toque curto vale ~1 s); `histerese` 0,3 → 0,5 s com o
+  // condutor e `histeresePasse` 1,0 s no passe do adversário (o chamado só troca quando outro chega isso antes: a marca
+  // pulava 1,30 vez em 3 s segurado, ~85% num passe da IA — teste-pressao-humano M11; com 0,5 nos dois, 1,02; com 0,3/1,0,
+  // 0,84; com 1,0 nos dois, 0,72, mas o M2 caía a 63%); `controlado` (a C1: PRESSÃO com o analógico a ≤ `soltoMax` faz o
+  // PRÓPRIO controlado apertar também, defesa.js entradaPressaoPropria) LIGADO — dono, 24/10: "meu jogador aperta também"
+  // (como o Pressão do FC Mobile; no console o RB não mexe no seu jogador): o ganho da bola em 3 s com 1 s de botão
+  // +9,4 → +13,1 pontos.
   semAtropelar: { freio: 3.0, chega: 1.0, reacao: 0.25, perto: 3.0 },
   pressao: {
-    validade: 1, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.0, contorno: 1.2,
+    validade: 1, histerese: 0.5, histeresePasse: 1.0, colado: 0.5, leadMax: 1.2, chega: 2.0, contorno: 1.2,
     naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.435, filtro: 0.2, ganho: 3, aproxMax: 5, trasPerto: 1.5, trasAprox: 0.5,
     freioChegada: 0.9, contato: 0.8, desvio: { T: 0.6, folga: 0.25, alcance: 6 }, depois: 0.5,
+    controlado: true, soltoMax: 0.05,
   },
 };
 

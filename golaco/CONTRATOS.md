@@ -1131,15 +1131,19 @@ quadro() ─ rodarPasso ──▶ passoPartida(m, entrada, acoes)
   parada) ou null; `entradaConter(m, j, e)` → entrada ou null (estado em `j.conter`: filtro da velocidade do condutor e
   histerese do CORRER); `rumoConter(m, j)` → rumo do tronco para a bola com o CONTER valendo neste tick, ou null (o
   `sim.js` usa no passo 2); `chanceDividida(j, d0, bx, bz)`; `dividida(m, j)` (estado em `j.defH`); `pedidoPressao(m,
-  j)` (grava `m.pedidoPressao[time] = tick`); `pressaoPedida(m, time)`; `pressionadorDe(m, time)` → id do companheiro
+  j)` (grava `m.pedidoPressao[time] = tick`); `pressaoPedida(m, time)` (até `pressao.validade` s depois do último passo com
+  o botão, só com o time defendendo e sem bola do time depois do pedido — `m.possePorTime`; `encerrarPressao(m, time)` na
+  retomada); `pressionadorDe(m, time)` → id do companheiro
   que aperta (uma vez por tick, em `m.pressaoHumano[time] = {tick, id}`; −1 = ninguém); `entradaPressao(m, j)` → a
   entrada de referência de quem aperta, ou null (a IA tática decide usar). **`iaClassica` desliga tudo isto.**
 - **`troca.js`**: `trocaAerea(m)` (troca por `assumirControle`, evento `trocaAerea {id}`), `alvoAereo(m, j, e)` → entrada
   ou null. **`iaClassica` desliga** (o "antes" dos testes não troca nem ajuda); também não age com a partida em
   `'gol'`, `'intervalo'` ou `'fim'`.
 - **`entrada.js`** (DOM): `ACOES_TECLA`, `TECLA_BIT`, `SENTIDO_FASE` (botão físico → `[bit no ataque, bit na defesa]`:
-  J/A = PASSE/CONTER, K/B = CHUTE/DIVIDIDA, O/RB = —/PRESSÃO, Y = ENFIADA/GOLEIRO), `criarSentidoFixo(tabela?)` → `{bit(id,
-  apertado, fase), atual(id), soltarTudo()}` (puro: o sentido fica fixo do aperto até soltar, mesmo se a posse mudar),
+  J/A = PASSE/CONTER, K/B = CHUTE/DIVIDIDA, O/RB = PEGAR/PRESSÃO, Y = ENFIADA/GOLEIRO), `criarSentidoFixo(tabela?, rele?)` →
+  `{bit(id, apertado, fase), atual(id), soltarTudo()}` (puro: o sentido fica fixo do aperto até soltar, mesmo se a posse
+  mudar; só os de `rele` — `RELE_NA_DEFESA`, O e RB: o PEGAR é um toque, segurado não faz nada — presos no sentido do
+  ataque passam ao da defesa quando a fase vira defesa; o contrário nunca),
   `BOTOES_TOQUE`, `calcularLayoutToque(W, H, sa, tamanho?, vagas?)`, `criarEntrada(opc)` → entrada com `bloquear(v)` e
   `bloqueada` (o "Editar time" aberto: nada vaza para o jogo, só a pausa). Tela limpa (11/10): ver "Tela limpa" no fim
   (defesa do toque com 5 botões, `criarToqueOuSegura`, `escalaAnalogico`, `ler(yaw, agora)`).
@@ -1181,7 +1185,8 @@ quadro() ─ rodarPasso ──▶ passoPartida(m, entrada, acoes)
   que sai pela linha de fundo e entra rolando por fora não vale); volta a `null` quando a bola rola (cobrança).
   `m.foraDesde` = tick em que a bola saiu (ou null).
 - **`m.iaTime[time]`** (`faseDoTime`) = `{tick, fase: 'com'|'sem', desde, transicao: 'def'|'of'|null, mistura: 0..1}`.
-- **`m.pedidoPressao[time]`** = tick do último PRESSÃO segurado pelo humano daquele time.
+- **`m.pedidoPressao[time]`** = tick do último PRESSÃO segurado pelo humano daquele time (null depois da retomada:
+  `defesa.js encerrarPressao`; o pedido só vale com `m.possePorTime[time]` ≤ ele — o time sem a bola desde o pedido).
 - **Edição** (ação da fila, aplicada no início do tick): `{tipo: 'editarTime', time, base: versao, formacao, vagas: {...11},
   substituicoes: [{sai, entra}], tatica}` — `vagas` é o arranjo final desejado; `substituicoes` é a lista completa.
   Recusada (base velha etc.) → evento `edicaoRecusada {time, motivo}`.
@@ -1560,6 +1565,21 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
   `excluir` (nunca exclui quem já ia). Uma vez por tick em `m.pressaoHumano[time] = {tick, id}`.
 - `pressionadorVisivel(m, time)` → id do chamado no último passo, ou −1 (pura; `main.js` passa `pressiona` na lista do
   desenho: setas âmbar acima da cabeça, `indicador-pressao`).
+- **Validade do pedido** (D1, 23/10; pedido do dono: "preciso do botão de pressão funcionando"): `pressaoPedida(m, time)`
+  vale até `pressao.validade` s (1 s) depois do último passo com o botão — um toque curto chama alguém por ~1 s (antes
+  valia 1 PASSO: o chamado dava uns passos e voltava ao bloco) — e só com o time DEFENDENDO (`defende`: a partida em
+  'jogo' e a bola não é dele — nem no pé, nem nas mãos, nem num voo dele; no intervalo/fim o passo não grava o botão e o
+  pedido ficava "valendo" sem ninguém chamado). A retomada encerra o pedido (o toque de antes não volta a valer se a bola
+  se perde de novo; segurado, o próximo passo grava de novo): `pressaoPedida` exige `m.possePorTime[time]` (o último tick
+  com a bola do time no começo do passo, no pé ou nas mãos) ≤ o pedido — qualquer retomada, também o encaixe e o PEGAR do
+  goleiro, que não passam por `sim.js ganhouPosse` (contraprova de 24/10: o toque voltava na reposição cortada dentro de
+  1 s, 9 de 9; `teste-pressao-humano` M12) — e `ganhouPosse` chama `encerrarPressao(m, j.time)` (a bola ganha e perdida
+  no mesmo passo). A vantagem de quem já vai é `histerese` 0,5 s com o condutor e `histeresePasse` 1,0 s no passe do adversário
+  (era 0,3 nos dois: a marca pulava de jogador 1,30 vez em 3 s segurado, ~85% num passe da IA; teste-pressao-humano M11).
+- **C1, LIGADA** (`pressao.controlado` true; dono, 24/10: "meu jogador aperta também" — como o botão Pressão do FC Mobile; no console o RB não mexe no seu jogador):
+  `entradaPressaoPropria(m, j)` — com o PRESSÃO segurado e o analógico a ≤ `pressao.soltoMax`, o PRÓPRIO controlado
+  também aperta pela mesma perseguição do chamado (`perseguirCondutor`/`corridaAoPasse`, estado em `j.pressaoP`/
+  `j.pressaoPS`; não conta como chamado: `chamadoRecente` não vale para ele). Só com o botão: a demo fica igual.
 - `entradaPressao(m, j)`: bola solta do pé do condutor (> `bolaSolta` m) e eu mais perto → vou na bola; a mais de
   `chega` m → disparada (analógico cheio + CORRER) ao ponto de encontro, contornando o condutor a `contorno` m se venho
   por trás (do lado do gol dele ou nas costas dele pela corrida dele, `faltas.js chegada`); perto → pela velocidade (a do
@@ -1578,8 +1598,12 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
   aceleração de lado limitada: correndo ao lado de um condutor rápido ele trombava nas costas dele).
 - `chamadoRecente(m, j)` → j é (ou foi há até `depois` s) o chamado (pelo `j.pressaoH.tick`; só existe com o PRESSÃO
   apertado). `sim.js boteIA`: o chamado não faz falta tática (`faltaTatica`: parar o contra-ataque com falta é da pessoa,
-  pela DIVIDIDA) e só dá o bote abaixo de `FALTAS.bote.vLivre` m/s, fora das costas do condutor e sem o corpo entrar no
-  dele (`faltas.js forcaContato` ≤ `FALTAS.forca.min`, inclusive o choque recente).
+  pela DIVIDIDA) e o bote dele passa por `boteContidoDoChamado(m, j, dono)` → 'embalado' (FECHANDO no condutor a mais de
+  `FALTAS.bote.vLivre` m/s pela conta do `faltas.js forcaContato`: a MENOR entre a parte da velocidade dele e a da relativa
+  na direção do corpo do condutor — D1: pela velocidade absoluta, o chamado que corria junto do condutor nunca tentava; só
+  pela relativa, o condutor vindo para cima do chamado parado contava como embalo dele, com a falta impossível), 'tras'
+  (nas costas dele, `faltas.js chegada`), 'corpo' (`faltas.js forcaContato` > `FALTAS.forca.min`, inclusive o choque
+  recente) ou null (tenta).
 - `ia-tatica.js`: `B.apertaProprio` (o 1º aperta por conta própria); `B.pedido` é calculado ANTES do aperto, com
   `excluir = p1` quando ele já aperta (o botão chama outro); quem foi chamado no tick anterior (`B.pedidoTick`) não é o
   1º nem o 2º homem do bloco; `B.aperta1 = B.apertaProprio` (o botão soma um jogador, não dois).
@@ -1631,8 +1655,15 @@ aceleração, a curva de chegada, o desvio e o bote sem entrar no corpo: `PESQUI
 no padrão;
 `teste-defesa-humano` (a meta antiga do PRESSÃO, que passava sem o botão, virou a pareada); `teste-controles` (celular:
 a marca do PRESSÃO, o PEGAR, o goleiro andando com a bola e o anel); `teste-goleiro-trava` segue medindo o treino;
-`teste-entrada` (O/RB no ataque = PEGAR); `teste-taticas` mede a forma com `IA_DEFESA.lento` desligado (a cena prende a
-bola parada no pé do condutor).
+`teste-entrada` (O/RB no ataque = PEGAR; preso como PEGAR, vira PRESSÃO quando a fase vira defesa); `teste-taticas` mede a
+forma com `IA_DEFESA.lento` desligado (a cena prende a bola parada no pé do condutor). D1 (23/10): o `teste-pressao-humano`
+mede também TODAS as posses em ramos de 3 s com o humano parado (`pressao-pareada.mjs` `tres`): M9 (botão 1 s: ganhar a
+bola em 3 s ≥ +6 pontos sobre o sem botão), M10 (bola ao alcance do chamado, fora das costas e do corpo entrando: o bote
+liberado em ≥ 90% dos passos), M11 (trocas do chamado em 3 s segurado ≤ 0,8) e M12 (a retomada pela mão do goleiro
+encerra o pedido: o toque de antes não volta na reposição cortada); o `teste-controles` confere o O segurado de antes do
+domínio do adversário (PEGAR → PRESSÃO, com a marca) e o `teste-replay` C7, o O segurado como PEGAR no apito do
+impedimento do meu time: o rele a PRESSÃO no quadro seguinte não é aperto novo (`main.js iniciarReplay` trata o PEGAR
+segurado como PRESSÃO segurado; antes o replay sumia sozinho).
 
 ### Equilíbrio (painel de 144 partidas, mesmas sementes da base)
 `GOLEIRO.logit.c0Partida` (−0,1): `goleiro.js chanceDefesa(..., partida)` soma no logit só na partida (o treino não
@@ -1837,8 +1868,10 @@ e de perto).
   recebedor e o bote sem entrar no corpo não o deixam atropelar o domínio); `m.pressaoHumano[time] = {tick, id, ult, ultTick}`: a histerese vale para o último escolhido dentro de
   `DEFESA_HUMANO.pressao.validade`. Na troca automática (`sim.js ganhouPosse`) o chamado fica fora (segue apertando; o
   humano vai para o mais perto depois dele). `sim.js boteIA`: o chamado (`defesa.js chamadoRecente`) não dá o bote
-  acima de `FALTAS.bote.vLivre` m/s, nem por trás do condutor (`faltas.js chegada`), nem com o corpo entrando no dele
-  (`forcaContato` > `FALTAS.forca.min`), e não faz falta tática.
+  fechando no condutor a mais de `FALTAS.bote.vLivre` m/s pela conta do `forcaContato` (D1, 23/10; antes, pela velocidade
+  absoluta), nem
+  por trás do condutor (`faltas.js chegada`), nem com o corpo entrando no dele (`forcaContato` > `FALTAS.forca.min`) —
+  `defesa.js boteContidoDoChamado` —, e não faz falta tática.
 - **Bola parada** (`partida.js cobrar`): os botões do cobrador humano valem na montagem; o pedido feito antes de `pronta`
   espera (renovado) e sai em `pronta`; o CHUTE fora do pênalti e do tiro livre direto vira `passe` (saída) ou
   `lancamento` (o resto; no lateral, o arremesso longo). No pênalti e no tiro livre direto o CHUTE (a cobrança a gol) só

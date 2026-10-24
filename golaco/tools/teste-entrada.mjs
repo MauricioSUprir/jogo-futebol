@@ -109,6 +109,8 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
       ['pad:A', BOTAO.PASSE, BOTAO.CONTER], ['pad:B', BOTAO.CHUTE, BOTAO.DIVIDIDA],
       ['pad:Y', BOTAO.ENFIADA, BOTAO.GOLEIRO], ['pad:RB', BOTAO.PEGAR, BOTAO.PRESSAO],
     ];
+    // (D1, 23/10) o O/RB preso como PEGAR — um toque, sem uso segurado — relê a fase quando ela vira defesa: PRESSÃO
+    const rele = new Set(['KeyO', 'pad:RB']);
     for (const [id, atq, def] of casos) {
       const sf = criarSentidoFixo();
       // apertado no ataque; a posse muda (defesa) com ele segurado; solto; apertado na defesa; volta o ataque
@@ -117,10 +119,24 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
       const d1 = sf.bit(id, true, 'defesa'), d2 = sf.bit(id, true, 'ataque');
       sf.bit(id, false, 'ataque');
       const a3 = sf.bit(id, true, 'ataque');
-      const ok = a1 === atq && a2 === atq && d1 === def && d2 === def && a3 === atq;
-      reg(`${id}: ${nome(atq)} no ataque, ${nome(def)} na defesa, fixado no aperto`,
+      const a2Meta = rele.has(id) ? def : atq;
+      const ok = a1 === atq && a2 === a2Meta && d1 === def && d2 === def && a3 === atq;
+      reg(`${id}: ${nome(atq)} no ataque, ${nome(def)} na defesa, fixado no aperto${rele.has(id) ? ' (preso no ataque, vira o da defesa)' : ''}`,
         `ataque ${nome(a1)}→(vira defesa) ${nome(a2)}; defesa ${nome(d1)}→(vira ataque) ${nome(d2)}; de novo ${nome(a3)}`,
-        `${nome(atq)}, ${nome(atq)}; ${nome(def)}, ${nome(def)}; ${nome(atq)}`, ok);
+        `${nome(atq)}, ${nome(a2Meta)}; ${nome(def)}, ${nome(def)}; ${nome(atq)}`, ok);
+    }
+    // O/RB apertado no ataque (o adversário ainda vai dominar) e segurado: PEGAR enquanto é ataque, PRESSÃO quando vira
+    // defesa, e fica PRESSÃO se a bola volta (nunca vira PEGAR segurado: o goleiro pegaria o recuo); J preso não relê
+    {
+      const seq = (id, fases) => { const sf = criarSentidoFixo(); return fases.map(f => sf.bit(id, true, f)); };
+      const fases = ['ataque', 'ataque', 'defesa', 'defesa', 'ataque'];
+      const o = seq('KeyO', fases), rb = seq('pad:RB', fases), jj = seq('KeyJ', fases);
+      const P = BOTAO.PRESSAO, G = BOTAO.PEGAR;
+      const okO = [G, G, P, P, P].every((b, i) => o[i] === b && rb[i] === b);
+      const okJ = jj.every(b => b === BOTAO.PASSE);
+      reg('O/RB segurado de antes do domínio do adversário: PEGAR → PRESSÃO quando vira defesa (J segue PASSE)',
+        `O ${o.map(nome).join(' ')}; RB ${rb.map(nome).join(' ')}; J ${jj.map(nome).join(' ')}`,
+        'PEGAR PEGAR PRESSAO PRESSAO PRESSAO; J PASSE', okO && okJ);
     }
     // teclas novas sem conflito com as ações de um toque nem com os bits fixos
     const teclasFase = Object.keys(SENTIDO_FASE).filter(k => !k.startsWith('pad:'));

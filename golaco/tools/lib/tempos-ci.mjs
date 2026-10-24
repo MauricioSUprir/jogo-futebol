@@ -63,7 +63,8 @@ export const TEMPOS_NODE = {
   'teste-impedimento.mjs': 156,
   'teste-faltas.mjs': 302,
   'teste-parado.mjs': 7,
-  'teste-pressao-humano.mjs': 306,
+  // (24/10, D1: + os ramos de 3 s de M9–M11 e o M12; localmente 371 → 496 s com 3 processos numa máquina de 4 vCPU)
+  'teste-pressao-humano.mjs': 420,
   'teste-goleiro-regras.mjs': 146,
   'teste-bolas-paradas.mjs': 237,
   'teste-botoes.mjs': 95,
@@ -97,7 +98,8 @@ export const TEMPOS_NAVEGADOR = {
   'teste-som-jogo.mjs': 105,
   'teste-rede-tela.mjs': 53,
   'teste-hud-minimo.mjs': 68,
-  'teste-replay.mjs': 196,
+  // (24/10, D1: + o C7, uma página até o impedimento do time 0, ~5300 passos; localmente 214 s com outra página junto)
+  'teste-replay.mjs': 225,
   // medido aqui (máquina dividida, carga ~4 em 4 núcleos: 396 s, o online em tempo real ~285 s); acertar pelo log do CI
   'teste-replay-paradas-tela.mjs': 400,
   'teste-comemoracao-tela.mjs': 80,
