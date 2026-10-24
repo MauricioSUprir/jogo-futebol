@@ -20,7 +20,7 @@ const CORPO = { raio: 0.45, alt: 1.8 };
 const MOV = { andar: 15, correr: 58, gravidade: 36, pulo: 14.5, puloCorrendo: 19, puloDuplo: 12.5, planeio: 7, giro: 12, escalar: 36, escalaMin: 24, escalaMax: 40, vibrarMin: 12 };
 const ENERGIA = { gasto: 0.17, parede: 0.2, vibrar: 0.28, recarga: 0.05, esfera: 0.3 };
 const DIA_SEGUNDOS = 480;
-const CAM = { dist: 6.6, alvoY: 1.7, pitch: 0.32 };
+const CAM = { dist: 4.3, alvoY: 1.55, pitch: 0.24, fov: 56 };   // câmera perto, por cima do ombro (o herói ~40% da altura da tela)
 
 // ---------- util ----------
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -39,11 +39,12 @@ if (TOQUE) el.corpo.classList.add('toque');
 const renderer = new THREE.WebGLRenderer({ canvas: el.cena, antialias: !TOQUE, powerPreference: 'high-performance' });
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
 // resolução dinâmica: começa no teto e desce/sobe pelo tempo de quadro (alvo ~45–60 qps no celular)
-const RES = { max: Math.min(devicePixelRatio || 1, 2), min: MOBILE ? 0.75 : 1, pr: 0, media: 1 / 60, conta: 0 };
+// o piso no celular é 1,3 (abaixo disso tudo fica borrado); o custo cai antes pelo borrão de velocidade e pelo bloom
+const RES = { max: Math.min(devicePixelRatio || 1, 2), min: MOBILE ? 1.3 : 1, pr: 0, media: 1 / 60, conta: 0 };
 RES.pr = RES.max; renderer.setPixelRatio(RES.pr);
 const cena = new THREE.Scene();
 cena.fog = new THREE.Fog(0xbfdcff, RAIO_CARGA * CELL * (MOBILE ? 0.45 : 0.36), RAIO_CARGA * CELL * (MOBILE ? 1.05 : 0.92));
-const camera = new THREE.PerspectiveCamera(62, 1, 0.2, RAIO_CARGA * CELL + 160);
+const camera = new THREE.PerspectiveCamera(CAM.fov, 1, 0.2, RAIO_CARGA * CELL + 160);
 const ANISO = Math.min(MOBILE ? 2 : 8, renderer.capabilities.getMaxAnisotropy());
 // no celular, MeshStandard (PBR) vira MeshLambert: as mesmas texturas e emissivos, sem relevo nem reflexo — bem mais barato por pixel
 const SO_PC = ['roughness', 'metalness', 'bumpMap', 'bumpScale', 'normalMap', 'normalScale', 'envMapIntensity', 'roughnessMap', 'metalnessMap', 'envMap'];
@@ -148,8 +149,9 @@ const geoPoca = new THREE.CircleGeometry(1, 20); geoPoca.rotateX(-Math.PI / 2);
 // o asfalto é um plano só para a cidade inteira (a textura de uma célula se repete N × N)
 const asfaltoGeral = new THREE.Mesh(new THREE.PlaneGeometry(N * CELL, N * CELL), matAsfalto); asfaltoGeral.rotation.x = -Math.PI / 2; asfaltoGeral.receiveShadow = !MOBILE; cena.add(asfaltoGeral);
 
-// reflexo do céu nos vidros: ambiente gerado do próprio céu (de dia); a intensidade cai à noite (só no PC)
-if (!MOBILE) {
+// reflexo do céu nos vidros e no traje: ambiente gerado do próprio céu (de dia); a intensidade cai à noite. No celular só
+// os materiais PBR (o herói) usam; a cidade em Lambert ignora
+{
   const pm = new THREE.PMREMGenerator(renderer), cs = new THREE.Scene();
   const m = new THREE.ShaderMaterial({ side: THREE.BackSide, uniforms: { topo: { value: new THREE.Color(0x4b8fe8) }, horizonte: { value: new THREE.Color(0xe4efff) } }, vertexShader: 'varying vec3 vd; void main(){ vd = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }', fragmentShader: 'uniform vec3 topo; uniform vec3 horizonte; varying vec3 vd; void main(){ float h = vd.y; vec3 c = h > 0.0 ? mix(horizonte, topo, pow(h, 0.5)) : mix(horizonte, vec3(0.28,0.27,0.26), clamp(-h*3.0, 0.0, 1.0)); gl_FragColor = vec4(c, 1.0); }' });
   cs.add(new THREE.Mesh(new THREE.SphereGeometry(50, 24, 12), m));
@@ -333,7 +335,7 @@ cena.add(heroi);
 const raios = criarRaios(cena, { mobile: MOBILE });
 const posfx = criarPosFx(renderer, cena, camera, { mobile: MOBILE });
 let modelo = null;
-criarHeroi({ aniso: ANISO, lod: MOBILE ? 1 : 0, mobile: TOQUE }).then((m) => { modelo = m; partes.corpo.visible = false; heroi.add(m.grupo); m.grupo.traverse((o) => { if (o.isMesh) o.castShadow = true; }); }).catch((e) => console.warn('corpo realista indisponível', e));
+criarHeroi({ aniso: ANISO, lod: 0, mobile: TOQUE }).then((m) => { modelo = m; partes.corpo.visible = false; heroi.add(m.grupo); m.grupo.traverse((o) => { if (o.isMesh) o.castShadow = true; }); }).catch((e) => console.warn('corpo realista indisponível', e));
 const sombra = new THREE.Mesh(new THREE.CircleGeometry(0.5, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }));
 sombra.rotation.x = -Math.PI / 2; cena.add(sombra);
 
@@ -610,7 +612,7 @@ function atualizarCamera(dt) {
   const v = Math.hypot(P.vx, P.vz);
   const alvo = new THREE.Vector3(P.x, P.y + CAM.alvoY, P.z);
   const cp = Math.cos(C.pitch), sp = Math.sin(C.pitch), fx = Math.sin(C.yaw), fz = Math.cos(C.yaw);
-  const distIdeal = CAM.dist + clamp(v - 15, 0, 45) * 0.07;
+  const distIdeal = CAM.dist + clamp(v - 15, 0, 45) * 0.05;
   let t = 1;
   if (P.parede && J.alinhar > 0) { J.alinhar -= dt; let d = P.h - C.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); C.yaw += d * (1 - Math.exp(-3 * dt)); }
   for (; t > 0.15 && !P.vibrando; t -= 0.07) { const d = distIdeal * t; if (!dentroDeSolido(alvo.x - fx * cp * d, alvo.y + sp * d, alvo.z - fz * cp * d)) break; }
@@ -618,7 +620,7 @@ function atualizarCamera(dt) {
   C.dist = dAlvo < C.dist ? dAlvo : lerp(C.dist, dAlvo, 1 - Math.exp(-6 * dt));
   camera.position.set(alvo.x - fx * cp * C.dist, Math.max(0.6, alvo.y + sp * C.dist), alvo.z - fz * cp * C.dist);
   camera.lookAt(alvo);
-  const fovAlvo = 62 + clamp(v - 15, 0, 45) * 0.38;
+  const fovAlvo = CAM.fov + clamp(v - 15, 0, 45) * 0.38;
   camera.fov = lerp(camera.fov, fovAlvo, 1 - Math.exp(-4 * dt)); camera.updateProjectionMatrix();
 }
 
@@ -728,7 +730,7 @@ function ajustarResolucao(dtBruto) {
   if (++RES.conta < 45) return;                                  // decide a cada ~45 quadros
   RES.conta = 0;
   let pr = RES.pr;
-  if (RES.media > 1 / 38 && pr > RES.min) pr = Math.max(RES.min, pr - 0.15);
+  if (RES.media > 1 / 34 && pr > RES.min) pr = Math.max(RES.min, pr - 0.15);
   else if (RES.media < 1 / 56 && pr < RES.max) pr = Math.min(RES.max, pr + 0.1);
   if (pr !== RES.pr) { RES.pr = pr; renderer.setPixelRatio(pr); renderer.setSize(innerWidth, innerHeight, false); posfx.tamanho(innerWidth, innerHeight, pr); }
 }

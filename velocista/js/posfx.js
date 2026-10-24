@@ -25,7 +25,9 @@ const BORRAO = {
 };
 
 export function criarPosFx(renderer, cena, camera, { mobile = false } = {}) {
-  const composer = new EffectComposer(renderer);
+  // alvo com MSAA 4× (WebGL 2): tira o serrilhado das bordas, que o pós-processamento perdia (o antialias do canvas não vale aqui)
+  const alvo = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: renderer.capabilities.isWebGL2 ? 4 : 0 });
+  const composer = new EffectComposer(renderer, alvo);
   composer.addPass(new RenderPass(cena, camera));
   const tam = new THREE.Vector2(innerWidth, innerHeight);
   const bloom = new UnrealBloomPass(mobile ? tam.clone().multiplyScalar(0.5) : tam, 0.55, 0.45, 0.82);
@@ -38,6 +40,8 @@ export function criarPosFx(renderer, cena, camera, { mobile = false } = {}) {
     /** velocidade 0..1 (0 = parado), noite 0..1 */
     ajustar(veloc, noite) {
       borrao.uniforms.forca.value += (veloc - borrao.uniforms.forca.value) * 0.15;
+      // no celular o passe do borrão só roda correndo: parado/andando é uma tela cheia a menos por quadro
+      if (mobile) borrao.enabled = borrao.uniforms.forca.value > 0.02;
       bloom.strength = 0.42 + 0.35 * noite + 0.25 * veloc;
       bloom.threshold = 0.85 - 0.12 * noite;
     },
