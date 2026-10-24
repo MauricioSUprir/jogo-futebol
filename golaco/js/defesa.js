@@ -13,7 +13,7 @@ import { chutarRasteiro } from './bola.js';
 import { ataca } from './acoes.js';
 import { para } from './ia.js';
 import { estadoIA } from './ia-tatica.js';
-import { chanceFaltaDividida, montarFalta, registrarFalta, chegada } from './faltas.js';
+import { chanceFaltaDividida, montarFalta, registrarFalta, chegada, forcaContato } from './faltas.js';
 import { registrarToque } from './regras-goleiro.js';
 
 const C = DEFESA_HUMANO.conter, D = DEFESA_HUMANO.dividida, P = DEFESA_HUMANO.pressao, SA = DEFESA_HUMANO.semAtropelar;
@@ -309,6 +309,15 @@ export function pedidoPressao(m, j) {
 }
 
 /**
+ * O time ganhou a bola (sim.js ganhouPosse): o pedido de PRESSÃO dele acaba — o toque antes da retomada não volta a valer
+ * se a bola se perde de novo dentro da validade (segurado, o próximo passo grava de novo). As retomadas sem ganhouPosse (o
+ * encaixe e o PEGAR do goleiro) a pressaoPedida pega por m.possePorTime; esta cobre a bola ganha e perdida no mesmo passo.
+ */
+export function encerrarPressao(m, time) {
+  if (m.pedidoPressao && m.pedidoPressao[time] != null) m.pedidoPressao[time] = null;
+}
+
+/**
  * j é o chamado da PRESSÃO do time (o último escolhido de pressionadorDe dentro da validade do pedido, com o pedido
  * valendo)? No passe do adversário ele segue a PRESSÃO até o ponto de chegada (entradaPressao), não entra no corte do
  * passe (ia-tatica.js vaiNaLivre): cortando, ele saía da aproximação da PRESSÃO e, com o domínio do recebedor longe
@@ -321,10 +330,29 @@ export function chamadoDaPressao(m, j) {
   return !!c && c.ult === j.id && c.ultTick >= 0 && m.tick - c.ultTick <= seg(P.validade);
 }
 
-/** O pedido de PRESSÃO do time está valendo neste tick? */
+/**
+ * O pedido de PRESSÃO do time está valendo neste tick? Até P.validade s depois do último passo com o botão (um toque
+ * curto vale ~1 s; antes valia 1 PASSO e o chamado dava uns passos e voltava ao bloco) e só com o time DEFENDENDO
+ * (defende: a bola em jogo e não é dele). A retomada encerra o pedido: o time que teve a bola DEPOIS dele (m.possePorTime,
+ * gravado no começo de cada passo, também com a bola nas mãos do goleiro) — qualquer retomada, também o encaixe e o PEGAR
+ * do goleiro, que não passam por sim.js ganhouPosse (encerrarPressao); segurado, o pedido do mesmo passo empata e vale.
+ * Pura (o desenho lê por pressionadorVisivel).
+ */
 export function pressaoPedida(m, time) {
   const t = m.pedidoPressao?.[time];
-  return t != null && m.tick - t <= P.validade && !desligado(m);
+  return t != null && m.tick - t <= seg(P.validade) && (m.possePorTime?.[time] ?? -1) <= t && defende(m, time) && !desligado(m);
+}
+
+/**
+ * O time está defendendo: a bola em jogo (na partida, o estado 'jogo' — no intervalo, no fim e nas paradas o passo não
+ * grava o botão e o pedido ficava "valendo" sem ninguém chamado: teste-pressao-humano M6) e ela não é dele (nem no pé,
+ * nem nas mãos do goleiro, nem num voo dele). Pura.
+ */
+function defende(m, time) {
+  if (m.partida && m.partida.estado !== 'jogo') return false;
+  const dono = m.naMao ?? m.posse;
+  if (dono != null) { const o = porId(m, dono); return !o || o.time !== time; }
+  return !(m.voo && m.voo.time === time);
 }
 
 /**
@@ -379,8 +407,9 @@ function tempoChegada(o, px, pz) {
 /**
  * Quem do time aperta o condutor a pedido do humano: o companheiro de linha que CHEGA PRIMEIRO ao condutor (pontoEncontro:
  * o tempo de chegada ao ponto adiantado pela corrida do condutor), sem o controlado, o goleiro e `excluir` (o 1º homem da
- * IA que já aperta por conta própria: o botão dobra a marcação). Quem já vai leva P.histerese s de vantagem (e nunca é
- * o excluído). Uma vez por tick (m.pressaoHumano[time] = {tick, id}; o desenho lê por pressionadorVisivel). -1 = ninguém.
+ * IA que já aperta por conta própria: o botão dobra a marcação). Quem já vai leva P.histerese s de vantagem
+ * (P.histeresePasse no passe do adversário) e nunca é o excluído. Uma vez por tick (m.pressaoHumano[time] = {tick, id};
+ * o desenho lê por pressionadorVisivel). -1 = ninguém.
  */
 export function pressionadorDe(m, time, excluir = -1) {
   const cache = (m.pressaoHumano ??= {});
@@ -392,6 +421,9 @@ export function pressionadorDe(m, time, excluir = -1) {
   // a vantagem (histerese) é do ÚLTIMO escolhido dentro da validade do pedido — não só do tick anterior: no passe do
   // adversário ninguém era chamado e, com o recebedor, outro jogador partia do zero
   const atual = ant && ant.ult >= 0 && m.tick - ant.ultTick <= seg(P.validade) ? ant.ult : -1;
+  // no passe do adversário (o alvo é o ponto de chegada) a vantagem é maior: era ali que a marca pulava de jogador
+  // (~85% das trocas do chamado; teste-pressao-humano M11)
+  const H = m.posse == null ? P.histeresePasse : P.histerese;
   let id = -1;
   if (d0) {
     let mt = Infinity;
@@ -402,7 +434,7 @@ export function pressionadorDe(m, time, excluir = -1) {
       // a vantagem de quem já ia só vale se ele continua indo para lá: com o ponto novo (o passe do adversário mudou o
       // alvo) além de JOGADOR.angInversao do sentido da corrida, ele freia na linha até parar (jogador.js passoCorpo) e
       // quem chega primeiro assume (teste-pressao-humano M5, 14/10: o chamado parado no meio da inversão)
-      if (o.id === atual && !inverte(o, _pc.x, _pc.z)) t -= P.histerese;
+      if (o.id === atual && !inverte(o, _pc.x, _pc.z)) t -= H;
       if (t < mt) { mt = t; id = o.id; }
     }
   }
@@ -527,6 +559,29 @@ export function chamadoRecente(m, j) {
 }
 
 /**
+ * O bote do chamado da PRESSÃO no condutor `dono` fica contido? (sim.js boteIA: "delay, don't dive in") Devolve o motivo
+ * ou null: 'embalado' — FECHANDO no condutor a mais de FALTAS.bote.vLivre m/s, pela mesma conta da força do contato
+ * (faltas.js forcaContato): a MENOR entre a parte da velocidade dele e a da velocidade relativa na direção do corpo do
+ * condutor. Correndo junto do condutor (a relativa ~0) ou parado diante de quem vem para cima dele (a própria ~0) ninguém
+ * entra no corpo de ninguém: pela velocidade absoluta, o chamado que acompanhava o condutor em disparada nunca tentava — o
+ * bote saía em 20% dos passos com a bola ao alcance fora das outras duas travas (teste-pressao-humano M10, main fd6dedb9);
+ * pelo módulo da relativa, 76–85% em 12 partidas (o chamado que passa de lado ou se afasta do condutor com a bola no pé
+ * dele também não tentava); só pela parte da relativa que fecha, 93% — mas o condutor vindo para cima do chamado parado
+ * contava como embalo DELE (a 1,4 m/s, com o chamado a 2,9 m/s, 4,3 > 4: travado com a falta impossível, forcaContato 0);
+ * pela conta do forcaContato, 99% (o que ela libera tem forcaContato ≤ FALTAS.forca.min: falta nova nenhuma).
+ * 'tras' — nas costas dele (faltas.js chegada); 'corpo' — o corpo entrando no dele (faltas.js forcaContato >
+ * FALTAS.forca.min, inclusive o choque recente). Pura.
+ */
+export function boteContidoDoChamado(m, j, dono) {
+  const rx = dono.x - j.x, rz = dono.z - j.z, l = MD.hypot(rx, rz) || 1;
+  const fp = (j.vx * rx + j.vz * rz) / l, fr = ((j.vx - dono.vx) * rx + (j.vz - dono.vz) * rz) / l;
+  if (Math.min(fp, fr) > FALTAS.bote.vLivre) return 'embalado';
+  if (chegada(j, dono) === 'tras') return 'tras';
+  if (forcaContato(m, j, dono) > FALTAS.forca.min) return 'corpo';
+  return null;
+}
+
+/**
  * O companheiro que aperta a pedido do humano no último passo (para a marca do desenho: render/jogador3d.js), ou -1.
  * Pura (só lê o que o passo gravou: o desenho nunca muda a simulação).
  */
@@ -553,21 +608,57 @@ export function entradaPressao(m, j) {
     if (pressionadorDe(m, j.time) !== j.id) return null;
     estadoIA(m, j).ramo = 'pressaoHumano';
     st.tick = m.tick;
-    const gx = -ataca(m, j.time) * CAMPO.meioX - pv.alvo.x, gz = -pv.alvo.z, g = MD.hypot(gx, gz) || 1;
-    const dx = pv.alvo.x + (gx / g) * P.colado - j.x, dz = pv.alvo.z + (gz / g) * P.colado - j.z, d = MD.hypot(dx, dz);
-    // perto do ponto, freia (o analógico proporcional à distância): espera o recebedor ali
-    if (d < 1) return { x: dx, z: dz, botoes: 0 };
-    // em disparada, chegando freando no recebedor (ele vem ao encontro da bola)
-    return corridaAte(m, j, pv.para != null ? porId(m, pv.para) : null, dx, dz, st);
+    return corridaAoPasse(m, j, pv, st);
   }
   const d0 = condutorAdversario(m, j);
   if (!d0 || pressionadorDe(m, j.time) !== j.id) return null;
   const s = estadoIA(m, j);
+  filtrarCondutor(s, d0);
+  s.ramo = 'pressaoHumano';
+  st.tick = m.tick;
+  return perseguirCondutor(m, j, d0, s, st);
+}
+
+/**
+ * PRESSÃO segurado com o analógico SOLTO: o PRÓPRIO controlado também aperta (a C1 do diagnóstico de 23/10, atrás de
+ * P.controlado — LIGADA, dono, 24/10: "meu jogador aperta também"; o controlado parado chega a ≤ 1 m do condutor em
+ * 3 s em 30% das posses com o botão segurado, contra 13% desligada — teste-pressao-humano, linha
+ * "(D1, a C1)"). A mesma perseguição do chamado (perseguirCondutor / corridaAoPasse),
+ * com o estado no próprio jogador (j.pressaoP, j.pressaoPS: não é o chamado — chamadoRecente não vale para ele). Só com o
+ * time defendendo (defende) e um condutor ou um passe do adversário; senão null.
+ */
+export function entradaPressaoPropria(m, j) {
+  if (!P.controlado || desligado(m) || !defende(m, j.time)) return null;
+  const st = j.pressaoP ??= { corre: false, tick: -1 };
+  const pv = m.posse == null ? passeAdversario(m, j.time) : null;
+  if (pv) { st.tick = m.tick; return corridaAoPasse(m, j, pv, st); }
+  const d0 = condutorAdversario(m, j);
+  if (!d0) return null;
+  const s = j.pressaoPS ??= { cond: -1, cvx: 0, cvz: 0 };
+  filtrarCondutor(s, d0);
+  st.tick = m.tick;
+  return perseguirCondutor(m, j, d0, s, st);
+}
+
+/** Velocidade do condutor d0 filtrada (P.filtro s) em s {cond, cvx, cvz}; recomeça do zero com outro condutor. */
+function filtrarCondutor(s, d0) {
   if (s.cond !== d0.id) { s.cond = d0.id; s.cvx = d0.vx; s.cvz = d0.vz; }
   const a = Math.min(1, PASSO / P.filtro);
   s.cvx += (d0.vx - s.cvx) * a; s.cvz += (d0.vz - s.cvz) * a;
-  s.ramo = 'pressaoHumano';
-  st.tick = m.tick;
+}
+
+/** No passe do adversário pv: em disparada até P.colado m do ponto de chegada, do lado do meu gol; freia no último metro. */
+function corridaAoPasse(m, j, pv, st) {
+  const gx = -ataca(m, j.time) * CAMPO.meioX - pv.alvo.x, gz = -pv.alvo.z, g = MD.hypot(gx, gz) || 1;
+  const dx = pv.alvo.x + (gx / g) * P.colado - j.x, dz = pv.alvo.z + (gz / g) * P.colado - j.z, d = MD.hypot(dx, dz);
+  // perto do ponto, freia (o analógico proporcional à distância): espera o recebedor ali
+  if (d < 1) return { x: dx, z: dz, botoes: 0 };
+  // em disparada, chegando freando no recebedor (ele vem ao encontro da bola)
+  return corridaAte(m, j, pv.para != null ? porId(m, pv.para) : null, dx, dz, st);
+}
+
+/** A perseguição ao condutor d0 (aproximação e disputa; ver entradaPressao), com a velocidade filtrada dele em s. */
+function perseguirCondutor(m, j, d0, s, st) {
   const b = m.bola.p;
   // bola solta do pé do condutor e eu mais perto dela: vou na bola (chegando freando no condutor)
   const dbC = MD.hypot(b.x - d0.x, b.z - d0.z), dbJ = MD.hypot(b.x - j.x, b.z - j.z);

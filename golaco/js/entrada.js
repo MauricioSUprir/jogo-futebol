@@ -18,7 +18,9 @@
 // RB = companheiro pressiona.) Na pausa e na Ajuda: cruz/analógico escolhem o botão, A confirma, B volta.
 // G só vale na defesa (como o Y do controle). Os botões que mudam de sentido pela fase (J, K, O, G, A, B, Y, RB) têm o
 // sentido FIXADO NO APERTO, pela fase do mundo NAQUELE passo (sem a histerese de 0,25 s dos botões visíveis):
-// segurar J enquanto a posse muda não troca o passe por CONTER no meio (criarSentidoFixo, pura).
+// segurar J enquanto a posse muda não troca o passe por CONTER no meio (criarSentidoFixo, pura). Só o O/RB preso como
+// PEGAR (um toque: só a borda vale, segurado não faz nada) relê a fase quando ela vira defesa e vira PRESSÃO — apertado
+// logo antes de o adversário dominar a bola, ficava PEGAR o tempo todo segurado e ninguém apertava (D1, 23/10).
 // Toque: analógico flutuante na metade esquerda; à direita, um arco de botões ao alcance do
 // polegar, só com o ícone (os nomes são opção da pausa: html.nomes-botoes). ATAQUE (meu time com a
 // bola): CHUTE (o maior), PASSE, ENFIADA, LANÇAMENTO e CORRER. DEFESA (5 botões, tela limpa de 11/10):
@@ -68,6 +70,10 @@ export const SENTIDO_FASE = {
   'pad:Y': [BOTAO.ENFIADA, BOTAO.GOLEIRO],
   'pad:RB': [BOTAO.PEGAR, BOTAO.PRESSAO],
 };
+// Botões cujo sentido do ATAQUE é uma ação de um toque só (a borda do aperto: PEGAR), sem uso enquanto segurados: presos
+// nele, viram o da defesa quando a fase vira defesa (o contrário nunca: PRESSÃO segurado não vira PEGAR no ataque — o
+// goleiro pegaria a bola do recuo).
+export const RELE_NA_DEFESA = new Set(['KeyO', 'pad:RB']);
 // ações de um toque que passam com a entrada bloqueada (o editor aberto fecha pela pausa)
 const PASSA_BLOQUEADA = new Set(['pausa']);
 // bits em que o reaperto entre dois passos vira solto + apertado (os de segurar continuamente ficam de fora)
@@ -75,17 +81,21 @@ const REAPERTO = ~(BOTAO.CORRER | BOTAO.MOD);
 
 /**
  * Sentido fixado no aperto (pura; os testes em Node chamam): bit(id, apertado, fase) devolve o bit do
- * botão físico `id` — o da fase em que ele foi APERTADO, até ser solto (a posse pode mudar no meio).
+ * botão físico `id` — o da fase em que ele foi APERTADO, até ser solto (a posse pode mudar no meio). Os de `rele`
+ * (RELE_NA_DEFESA) presos no sentido do ataque passam ao da defesa quando a fase vira defesa (e ficam nele até soltar).
  */
-export function criarSentidoFixo(tabela = SENTIDO_FASE) {
+export function criarSentidoFixo(tabela = SENTIDO_FASE, rele = RELE_NA_DEFESA) {
   const fixo = new Map();
   return {
     bit(id, apertado, fase) {
       if (!apertado) { fixo.delete(id); return 0; }
       let b = fixo.get(id);
+      const s = tabela[id];
       if (b === undefined) {
-        const s = tabela[id];
         b = s ? s[fase === 'defesa' ? 1 : 0] : 0;
+        fixo.set(id, b);
+      } else if (fase === 'defesa' && s && b === s[0] && b !== s[1] && rele.has(id)) {
+        b = s[1];
         fixo.set(id, b);
       }
       return b;

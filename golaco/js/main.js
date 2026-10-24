@@ -2427,6 +2427,10 @@ function iniciarReplay(ro, opc = {}) {
   // o que já está segurado não pula (só um aperto novo); os apertos curtos já vistos não contam
   entrada?.limparPulsos();
   replayBotoes = entrada ? entrada.ler(yawEntrada()).botoes : 0;
+  // o O/RB segurado como PEGAR vira PRESSÃO quando a fase vira defesa (entrada.js RELE_NA_DEFESA) — no apito do
+  // impedimento do meu time isso acontece no quadro seguinte ao começo do replay: o mesmo botão segurado não é aperto novo
+  // (sem isto o replay sumia sozinho; teste-replay C9). Solto, o bit sai de replayBotoes (botaoPula) e o aperto novo pula
+  if (replayBotoes & BOTAO.PEGAR) replayBotoes |= BOTAO.PRESSAO;
   encerrarEfeitosGol();
   hud.replay(true);
   return true;

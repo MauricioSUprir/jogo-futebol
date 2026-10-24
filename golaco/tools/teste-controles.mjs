@@ -21,7 +21,8 @@
 //    deitando, a tela some, o jogo anda e nada encosta.
 //  - Partida (Etapa 3; a página abre nela): menu com Editar time e Reiniciar partida, sem Recomeçar,
 //    Máquina e Marcador; placar com o relógio; R/M/N não mexem na partida; teclas da defesa (J
-//    conter, K dividida, O pressão). As cenas de treino pedem modo:'ataque'/'conducao' explícito.
+//    conter, K dividida, O pressão; O apertado com a bola ainda do meu time e segurado vira PRESSÃO quando o adversário
+//    domina — D1, 23/10). As cenas de treino pedem modo:'ataque'/'conducao' explícito.
 //  - Partida, celular (pedidos do dono de 11/10): PRESSÃO segurado pelo toque — a marca (setas âmbar) aparece sobre
 //    quem foi chamado em ≤ 3 quadros e ele chega a ≤ 2,5 m do condutor em 1,5 s; goleiro do humano com a bola no pé —
 //    o PEGAR aparece (sem encostar; também nos layouts de 70–140%) e pega com a mão; com o recuo ele não aparece; com a
@@ -537,6 +538,33 @@ async function conferirTodosLayouts(pagina) {
       const o1 = await rodar(pagina, 30);
       await pagina.keyboard.up('KeyO');
       meta('O logo depois da perda (fase visível ainda ataque): PRESSÃO, não PEGAR', `fase visível ${e3.fase}; máscara ${o1.mask}`, e3.fase === 'ataque' && (o1.mask & BIT.PRESSAO) !== 0 && !(o1.mask & BIT.PEGAR));
+    }
+    // O apertado ANTES de o adversário dominar (a bola ainda do meu time: o goleiro com ela nas mãos, o PEGAR sem uso) e
+    // segurado: PEGAR enquanto é ataque e, quando a fase vira defesa, PRESSÃO — chega ao jogo e a marca aparece (D1, 23/10:
+    // antes o sentido ficava fixado em PEGAR o tempo todo segurado e ninguém apertava)
+    {
+      await pagina.evaluate(() => { const g = window.__golaco; g.reiniciar({ modo: 'partida', semente: 3 }); g.relogio.usarManual(true); for (let i = 0; i < 5; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); g.cenaDeTeste('goleiroMao'); });
+      const a0 = await quadros(pagina, 3);
+      await pagina.keyboard.down('KeyO');
+      const oA = await rodar(pagina, 10);
+      const oD = await pagina.evaluate(() => {
+        const g = window.__golaco;
+        g.cenaDeTeste('pressao');
+        const out = [];
+        for (let k = 0; k < 30; k++) {
+          g.relogio.avancar(1000 / 60, { desenhar: k === 29 });
+          const m = g.mundo, j = m.jogadores.find(o => o.id === m.controlado[0]);
+          out.push({ b: j ? j.botoesTime | 0 : 0, marca: !!g.indicadores?.pressao, fase: g.estado().fase });
+        }
+        return out;
+      });
+      await pagina.keyboard.up('KeyO');
+      const fim = oD.slice(10);
+      const okD = fim.every(q => (q.b & BIT.PRESSAO) !== 0 && !(q.b & BIT.PEGAR));
+      const marcas = oD.filter(q => q.marca).length;
+      meta('O segurado de antes do domínio do adversário: PEGAR no ataque, PRESSÃO quando vira defesa (e a marca aparece)',
+        `fase ${a0.fase}: máscara ${oA.mask}; depois do domínio (fase ${oD[oD.length - 1].fase}): PRESSÃO sem PEGAR em ${fim.filter(q => (q.b & BIT.PRESSAO) && !(q.b & BIT.PEGAR)).length}/${fim.length} quadros, marca em ${marcas}/${oD.length}`,
+        a0.fase === 'ataque' && (oA.mask & BIT.PEGAR) !== 0 && !(oA.mask & BIT.PRESSAO) && okD && marcas >= 10);
     }
     meta('PC sem erro no console', erros.length ? erros.join(' | ') : '0', erros.length === 0);
   } finally { await navegador.close(); }

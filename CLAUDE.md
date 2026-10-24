@@ -553,7 +553,16 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   pé (ganha pela chance da DIVIDIDA; `boteErrado`) e o gatilho de ESTADO `IA_DEFESA.lento` põe o 1º homem a 0,2 m da bola
   e o 2º na cobertura (`FALTAS.bote.lento` 0,4); PRESSÃO = quem CHEGA PRIMEIRO persegue em disparada e disputa a bola
   pela velocidade, do lado do gol, com o 1º homem da IA já apertando chama outro, e setas âmbar acima dele
-  (`pressionadorVisivel`); goleiro (`regras-goleiro.js`, IFAB 12.2/12.3/16): mão só na própria área, sem recuo (o
+  (`pressionadorVisivel`) — D1 (dono, 23/10: "preciso do botão de pressão funcionando"; item 18 da FILA): um toque vale
+  ~1 s (`pressao.validade` em s, só com o time defendendo; qualquer retomada encerra o pedido, também a do goleiro com a
+  mão: `m.possePorTime` e `encerrarPressao`), o chamado tenta o bote correndo junto do condutor (trava "embalado" pela
+  conta do `forcaContato`, a menor entre a própria e a relativa que fecha nele, `boteContidoDoChamado`; as de "por trás" e
+  do corpo entrando ficam), a marca só troca de jogador com `histerese` 0,5 s (condutor) / `histeresePasse`
+  1,0 s (passe da IA) e o O/RB preso como PEGAR vira PRESSÃO quando a fase vira defesa (`entrada.js RELE_NA_DEFESA`; o
+  replay que começa com ele segurado não o vê como aperto novo: `main.js iniciarReplay`, `teste-replay` C7);
+  todas as posses, humano parado, 1 s de botão: ganhar a bola em 3 s +2,3 → +9,4 pontos (`teste-pressao-humano` M9–M12).
+  A C1 (PRESSÃO com o analógico solto faz o PRÓPRIO controlado apertar, `entradaPressaoPropria`) está LIGADA
+  (`DEFESA_HUMANO.pressao.controlado` = true — dono, 24/10: "meu jogador aperta também"; +9,4 → +13,1 pontos); goleiro (`regras-goleiro.js`, IFAB 12.2/12.3/16): mão só na própria área, sem recuo (o
   goleiro domina com o pé; a IA dele passa curto ou dá chutão; a IA de linha só recua seguro), PEGAR (O/RB/botão que só
   aparece com ele com a bola no pé) com recuo ou com a bola que soltou = tiro livre indireto, 8 s com a bola nas mãos =
   escanteio (anel âmbar sem texto nos últimos 5 s; a reposição automática do humano saiu — a demo e a IA repõem),

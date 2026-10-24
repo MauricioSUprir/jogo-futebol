@@ -171,10 +171,15 @@ const LIMIAR = 1e-12;
 // O que vem da ENTRADA do time T: os campos do controlado dele (sem o bit IA) e os do time. Os outros jogadores de T são
 // IA e reagem ao mundo — e o mundo muda de verdade com a jogada do outro no mesmo passo (a cobrança dele sai antes do
 // passo, o passe dele muda a bola): isso é jogo, não entrada vazando de um time para o outro.
-function camposTime(m, T) {
+// (o controlado apertando sozinho pelo PRESSÃO com o analógico solto — a C1, defesa.js entradaPressaoPropria — reage ao
+// mundo como a IA: o analógico dele no passo é do jogo, não da entrada — e se ela vale ou não depende de o time dele estar
+// defendendo, que a jogada do outro no mesmo passo muda — e a disparada dela soma o CORRER aos botões aplicados; os botões
+// da ENTRADA do time continuam comparados)
+const c1Ativa = (m, T) => { const c = m.iaJoga?.[T] ? null : S.jogadorPorId(m, m.controlado[T]); return !!c && c.pressaoP?.tick === m.tick - 1; }; // (o passo já avançou o m.tick)
+function camposTime(m, T, soBotoes = false) {
   const o = [];
   const c = m.iaJoga?.[T] ? null : S.jogadorPorId(m, m.controlado[T]);
-  if (c) o.push([c.id, c.botoesTime ?? 0, c.botoes ?? 0, c.ix ?? 0, c.iz ?? 0, c.imag ?? 0, c.intRumo ?? 0]);
+  if (c) o.push(soBotoes ? [c.id, c.botoesTime ?? 0] : [c.id, c.botoesTime ?? 0, c.botoes ?? 0, c.ix ?? 0, c.iz ?? 0, c.imag ?? 0, c.intRumo ?? 0]);
   o.push(['time', m.botoesTimeAgora?.[T] ?? 0, m.pedidoPressao?.[T] ?? -1, m.iaJoga?.[T] ? 1 : 0]);
   return o;
 }
@@ -212,7 +217,10 @@ function sondar(m, T) {
       const jt = mi ? S.jogadorPorId(a, mi.id) : null;
       // o outro time pode trocar sozinho no mesmo passo (bola alta: trocaAerea; passe: troca automática) — isso é dele
       const oTrocouSo = ev.some(e => (e.tipo === 'trocaAerea' || (e.tipo === 'troca' && e.auto)) && S.jogadorPorId(a, e.id)?.time === O);
-      const okA = !!jt && jt.time === T && a.controlado[T] === jt.id && (a.controlado[O] === antesO || oTrocouSo);
+      // no mesmo passo o time T pode ter dominado a bola com outro jogador: a troca automática dá o controle a quem domina
+      // (sim.js ganhouPosse) depois do TROCAR — vale o TROCAR (o evento manual dele) e a regra da posse
+      const retomou = ev.some(e => e.tipo === 'troca' && e.auto && e.id === a.posse && S.jogadorPorId(a, e.id)?.time === T);
+      const okA = !!jt && jt.time === T && (a.controlado[T] === jt.id || retomou) && (a.controlado[O] === antesO || oTrocouSo);
       const b = structuredClone(m);
       passoN(b, { 0: NEUTRA, 1: NEUTRA });
       const evB = passoN(b, ents2(T, NEUTRA, { x: 0, z: 0, botoes: BOTAO.TROCAR }));
@@ -235,15 +243,18 @@ function sondarResto(m, T, O) {
       sondas.GOLEIRO[T].push({ ok: okA && okB, motivo: !okA ? 'o GOLEIRO do time não tirou o goleiro dele' : !okB ? 'o GOLEIRO do outro time tirou o goleiro deste' : '' });
     }
   }
-  // PRESSÃO: o pedido do time T (m.pedidoPressao[T]) só com o botão de T
+  // PRESSÃO: o pedido do time T (m.pedidoPressao[T]) só com o botão de T. A retomada encerra o pedido do time que ganhou a
+  // bola (D1, 23/10: defesa.js encerrarPressao) — com a bola dele depois do passo, o pedido dele null também vale
   {
     const a = structuredClone(m), b = structuredClone(m);
     const pa = a.pedidoPressao?.[O] ?? null;
     passoN(a, ents2(T, { x: 0, z: 0, botoes: BOTAO.PRESSAO }, NEUTRA));
     const pb = b.pedidoPressao?.[T] ?? null;
     passoN(b, ents2(T, NEUTRA, { x: 0, z: 0, botoes: BOTAO.PRESSAO }));
-    const okA = a.pedidoPressao?.[T] === m.tick && (a.pedidoPressao?.[O] ?? null) === pa;
-    const okB = (b.pedidoPressao?.[T] ?? null) === pb;
+    const timeBola = w => { const d = w.naMao ?? w.posse; return d != null ? S.jogadorPorId(w, d)?.time : null; };
+    const encerrado = (w, X) => (w.pedidoPressao?.[X] ?? null) === null && timeBola(w) === X;
+    const okA = (a.pedidoPressao?.[T] === m.tick || encerrado(a, T)) && ((a.pedidoPressao?.[O] ?? null) === pa || encerrado(a, O));
+    const okB = (b.pedidoPressao?.[T] ?? null) === pb || encerrado(b, T);
     sondas.PRESSAO[T].push({ ok: okA && okB, motivo: !okA ? 'a PRESSÃO do time não marcou o pedido dele (ou marcou o do outro)' : !okB ? 'a PRESSÃO do outro time marcou o pedido deste' : '' });
   }
 }
@@ -265,7 +276,8 @@ for (let sem = 1; sem <= NSEM; sem++) {
         const auto = x => x.eventos.some(ev => ev.tipo === 'troca' && ev.auto && S.jogadorPorId(x, ev.id)?.time === T);
         if (a.controlado[T] !== b.controlado[T] && (auto(a) || auto(b))) continue;
         resB.casos++;
-        if (!iguais(camposTime(a, T), camposTime(b, T)) && resB.falhas.length < 1e6) resB.falhas.push({ sem, tick: m.tick, T });
+        const sb = c1Ativa(a, T) || c1Ativa(b, T);
+        if (!iguais(camposTime(a, T, sb), camposTime(b, T, sb)) && resB.falhas.length < 1e6) resB.falhas.push({ sem, tick: m.tick, T });
       }
     }
     if (i % 97 === 40) for (const T of [0, 1]) sondar(m, T);
