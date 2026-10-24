@@ -4,9 +4,11 @@ export const MISSOES = [
   { id: 'lab', titulo: 'Bem-vindo ao S.T.A.R. Labs', texto: 'Entre no laboratório e vá até o Cortex', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
   { id: 'velocidade', titulo: 'Teste de velocidade', texto: 'Chegue a 200 km/h (segure CORRER)', checar: (c) => c.v * 3.6 >= 200 },
   { id: 'esferas', titulo: 'Recarga', texto: 'Recolha 5 esferas de energia', meta: 5, contador: 'esferas', alvo: 'esfera' },
-  { id: 'escalar', titulo: 'Ponto de vista', texto: 'Escale um prédio de 50 m ou mais', checar: (c) => c.noChao && c.y >= 50 },
+  { id: 'escalar', titulo: 'Ponto de vista', texto: 'Escale um prédio de 50 m ou mais', alvo: 'predioAlto', checar: (c) => c.noChao && c.y >= 50 },
   { id: 'vibrar', titulo: 'Através das paredes', texto: 'Atravesse 3 prédios vibrando', meta: 3, contador: 'atravessados' },
   { id: 'assalto', titulo: 'Primeira patrulha', texto: 'Pare um assalto', meta: 1, contador: 'assalto', crime: 'assalto' },
+  { id: 'gangue', titulo: 'Punhos relâmpago', texto: 'Derrote uma gangue (BATER)', meta: 1, contador: 'gangue', crime: 'gangue' },
+  { id: 'especiais', titulo: 'Golpes especiais', texto: 'Derrube 3 bandidos com golpes especiais', meta: 3, contador: 'especiais', crime: 'gangue' },
   { id: 'portais', titulo: 'Corrida contra o relógio', texto: 'Passe pelos 8 portais em até 70 s', tipo: 'portais' },
   { id: 'fuga', titulo: 'Perseguição', texto: 'Pare um carro em fuga', meta: 1, contador: 'fuga', crime: 'fuga' },
   { id: 'incendio', titulo: 'Vórtice', texto: 'Apague um incêndio correndo em volta do prédio', meta: 1, contador: 'incendio', crime: 'incendio' },
@@ -16,7 +18,7 @@ export const MISSOES = [
 ];
 
 const CHAVE = 'theflash.missoes.v1';
-const STATS0 = { esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, pontos: 0 };
+const STATS0 = { esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
 
 export function criarMissoes(armazem) {
   let salvo = null;
