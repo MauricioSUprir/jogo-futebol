@@ -111,7 +111,7 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
   const texCorpo = texs.cor;
   // couro do traje: brilho de verniz (clearcoat) e relevo dos gomos no PC; no celular só a cor e a rugosidade
   const matCorpo = mobile
-    ? new THREE.MeshStandardMaterial({ map: texCorpo, roughnessMap: texs.rugosidade, roughness: 1, metalness: 0.15, emissive: 0x240004 })
+    ? new THREE.MeshStandardMaterial({ map: texCorpo, roughnessMap: texs.rugosidade, roughness: 1, metalness: 0.15, bumpMap: texs.rugosidade, bumpScale: 1.6, normalMap: texNormal, normalScale: new THREE.Vector2(0.3, 0.3), emissive: 0x240004 })
     : new THREE.MeshPhysicalMaterial({ map: texCorpo, roughnessMap: texs.rugosidade, roughness: 1, metalness: 0.12, bumpMap: texs.rugosidade, bumpScale: 2.2, normalMap: texNormal, normalScale: new THREE.Vector2(0.35, 0.35), clearcoat: 0.55, clearcoatRoughness: 0.32, sheen: 0.4, sheenColor: new THREE.Color(0xff6040), emissive: 0x240004 });
   const matCabeca = new THREE.MeshStandardMaterial({ map: texCabeca, roughness: 0.65, metalness: 0 });
   const corpo = malha(L.partes.corpo, esqueleto, matCorpo), cabeca = malha(L.partes.cabeca, esqueleto, matCabeca);
