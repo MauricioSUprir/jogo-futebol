@@ -38,7 +38,7 @@ await foto('fenda');
 ok(await espera(() => window.__rel.tempo.fendasAbertas === 3), 'vibrando dentro, a fenda fecha');
 await pagina.evaluate(() => window.__rel.teclas.delete('v'));
 ok(await pagina.evaluate(() => window.__rel.missoes.progresso()?.n === 1), 'a fenda fechada conta na missão (1/4)');
-await pagina.evaluate(() => { for (const f of window.__rel.tempo.fendas) if (f.aberta) f.progresso = 1; });
+await pagina.evaluate(() => { for (const f of window.__rel.tempo.fendas) if (f.aberta) f.progresso = 1.5; });
 ok(await espera(() => window.__rel.missoes.atual?.id === 'tunel'), 'as 4 fechadas concluem a missão; vem o túnel do tempo');
 
 // ---- túnel ----
