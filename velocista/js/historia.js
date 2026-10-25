@@ -5,9 +5,11 @@
 //    close e plano aberto), com CARTÕES de capítulo em tela cheia. Toque/Enter/BATER avança; "Pular" encerra.
 // Enredo: há seis semanas o Núcleo Aurora do S.T.A.R. Labs sobrecarregou e um raio atravessou você. Caitlin cuida do seu
 // corpo, Cisco das suas engenhocas. Ato 1 (O Raio): aprender a correr. O Zoom rouba a energia da cidade e, derrotado,
-// fala do "homem de amarelo", que sabia do Núcleo antes da explosão. Ato 2 (O guardião): a cidade dá o nome de Flash.
-// Capítulo 2: as gravações mostram que o Núcleo foi sabotado — era o Flash Reverso, que criou você para roubar a sua
-// velocidade e deu poder ao Zoom. Ele solta o Zoom e os dois atacam o laboratório. Epílogo: o Núcleo liga sozinho.
+// fala do "homem de amarelo", que sabia do Núcleo antes da explosão. Ato 2 (O guardião): Capitão Frio (com a pistola
+// criogênica roubada do laboratório), Onda Térmica e Mago do Tempo — cada um, derrotado, conta que o homem de amarelo o
+// ajudou; a cidade dá o nome de Flash. Capítulo 5: as gravações mostram que o Núcleo foi sabotado — era o Flash Reverso,
+// que criou você para roubar a sua velocidade e deu poder a todos eles. Ele solta o Zoom e os dois atacam o laboratório.
+// Epílogo: o Núcleo liga sozinho.
 
 export const PERSONAGENS = {
   caitlin: { nome: 'Caitlin', sigla: 'CA', cor: '#8fd8ff', papel: 'S.T.A.R. Labs · medicina' },
@@ -15,6 +17,9 @@ export const PERSONAGENS = {
   heroi: { nome: 'Você', sigla: 'EU', cor: '#ffd23f' },
   zoom: { nome: 'Zoom', sigla: 'Z', cor: '#3fa0ff', vilao: true },
   reverso: { nome: 'Flash Reverso', sigla: 'FR', cor: '#ff3b30', vilao: true },
+  frio: { nome: 'Capitão Frio', sigla: 'CF', cor: '#9fe6ff', vilao: true },
+  onda: { nome: 'Onda Térmica', sigla: 'OT', cor: '#ff8a3d', vilao: true },
+  mago: { nome: 'Mago do Tempo', sigla: 'MT', cor: '#7dffa8', vilao: true },
 };
 
 const F = (quem, texto) => ({ quem, texto });
@@ -82,6 +87,63 @@ export const CENAS = {
     F('cisco', 'Vou levar o Zoom para a câmara de contenção. E vou trancar três vezes.'),
     CARTAO('Ato 2', 'O guardião da cidade'),
   ],
+  'cap-frio': [
+    CARTAO('Capítulo 2', 'Frio de rachar'),
+    F('caitlin', 'Alerta no centro: a temperatura de um quarteirão inteiro caiu para trinta graus negativos.'),
+    F('cisco', 'E adivinha: a pistola criogênica do laboratório sumiu semana passada. Ladrão com bom gosto.'),
+  ],
+  'encontro-frio': [
+    F('frio', 'Então o famoso borrão vermelho resolveu aparecer. Eu já estava ficando entediado.'),
+    F('heroi', 'Você roubou o S.T.A.R. Labs.'),
+    F('frio', 'Peguei um brinquedo. Alguém deixou a porta aberta e o código anotado. Gentileza dele.'),
+    F('frio', 'Sabe o que o frio faz com as coisas rápidas, Flash? Deixa elas lentas.'),
+    F('cisco', 'Não deixa o raio de gelo te acertar! Sai da linha e bate quando ele recarregar.'),
+    F('frio', 'Vamos esfriar os ânimos.'),
+  ],
+  'derrotado-frio': [
+    F('frio', 'Tudo bem, tudo bem. Você venceu. Desta vez.'),
+    F('heroi', 'Quem te deu o código do laboratório?'),
+    F('frio', 'Um sujeito de amarelo. Rápido demais para ser gente.'),
+    F('frio', 'Ele disse que você ia aparecer. E que eu ia perder. Odeio quando acertam.'),
+    F('caitlin', 'O homem de amarelo de novo. Ele está testando você.'),
+  ],
+  'cap-onda': [
+    CARTAO('Capítulo 3', 'Fogo cruzado'),
+    F('caitlin', 'Incêndios em série pelo centro. Os bombeiros não conseguem nem chegar perto.'),
+    F('cisco', 'O calor tem a assinatura de energia do Núcleo. Alguém está pondo fogo de propósito.'),
+  ],
+  'encontro-onda': [
+    F('onda', 'Olha só quem veio se esquentar.'),
+    F('heroi', 'Desliga isso antes que alguém se machuque.'),
+    F('onda', 'Desde a explosão, eu sinto o fogo por dentro. E ele quer sair.'),
+    F('onda', 'O homem de amarelo me prometeu que ninguém ia me parar. Nem você.'),
+    F('caitlin', 'Fique longe do jato e saia do chão em chamas!'),
+    F('onda', 'Queima, Flash!'),
+  ],
+  'derrotado-onda': [
+    F('onda', 'Ele mentiu... Ele disse que eu era imparável.'),
+    F('heroi', 'Ele usa vocês. É isso que ele faz.'),
+    F('cisco', 'Câmara de contenção com refrigeração extra para o nosso amigo. Pode deixar.'),
+  ],
+  'cap-mago': [
+    CARTAO('Capítulo 4', 'A tempestade'),
+    F('cisco', 'Gente, o céu ficou verde. Isso nunca é um bom sinal.'),
+    F('caitlin', 'Uma tempestade se formou do nada sobre o centro. Ventos de duzentos por hora e raios a cada segundo.'),
+  ],
+  'encontro-mago': [
+    F('mago', 'Então você é o raio que caiu naquela noite. Eu fui a tempestade.'),
+    F('heroi', 'Ninguém controla o tempo.'),
+    F('mago', 'Eu controlo. Ele me ensinou como.'),
+    F('mago', 'Raios, vento, tornados... e você correndo no meio deles.'),
+    F('cisco', 'Quando o chão brilhar em volta de você, sai dali! E não deixa o tornado te puxar!'),
+    F('mago', 'Que comece a tempestade.'),
+  ],
+  'derrotado-mago': [
+    F('mago', 'O céu... está calmo de novo.'),
+    F('mago', 'Ele disse que eu era só um teste. Que o verdadeiro alvo sempre foi você.'),
+    F('caitlin', 'Frio, Onda Térmica, Mago do Tempo, o Zoom... todos ganharam poder com o Núcleo. E todos falam do mesmo homem.'),
+    F('heroi', 'Então está na hora de descobrir quem ele é.'),
+  ],
   'depois-relatorio': [
     F('caitlin', 'Você fez em semanas o que eu não imaginava em anos.'),
     F('cisco', 'E a cidade inteira está falando de você. Um borrão vermelho que salva pessoas.'),
@@ -92,7 +154,7 @@ export const CENAS = {
     F('cisco', 'Tá bom, é melhor que "Furacão Escarlate". Um pouquinho melhor.'),
   ],
   'cap-reverso': [
-    CARTAO('Capítulo 2', 'O homem de amarelo'),
+    CARTAO('Capítulo 5', 'O homem de amarelo'),
     F('cisco', 'Revi as gravações da noite do acidente. Quadro a quadro.'),
     F('cisco', 'Dois segundos antes da explosão aparece um borrão amarelo e vermelho dentro do Núcleo.'),
     F('caitlin', 'Alguém sabotou o Núcleo Aurora de propósito.'),
@@ -148,6 +210,15 @@ export const RADIO = {
   'derrota-zoom': [F('zoom', 'Lento demais.'), F('caitlin', 'Respira. Corra de lado quando ele avançar e bata quando ele parar.')],
   'derrota-reverso': [F('reverso', 'Previsível.'), F('caitlin', 'Ele também cansa, Flash. Espere a investida passar e bata logo depois.')],
   'derrota-final': [F('reverso', 'Você nunca vai ser rápido o bastante.'), F('cisco', 'Foca num de cada vez. O Zoom cai primeiro!')],
+  'capitulo-frio': [F('cisco', 'O guia mostra onde ele está. Leva um casaco.')],
+  'luta-frio': [F('caitlin', 'O raio de gelo deixa você lento. Saia da linha brilhante e ataque quando ele recarregar.')],
+  'derrota-frio': [F('frio', 'Congelado.'), F('caitlin', 'Depois de cada tiro ele fica parado recarregando. É a sua chance.')],
+  'capitulo-onda': [F('caitlin', 'Ele está no meio do fogo. O guia mostra onde.')],
+  'luta-onda': [F('cisco', 'O lança-chamas tem alcance curto. Fique longe e entre quando ele parar.')],
+  'derrota-onda': [F('onda', 'Torradinho.'), F('caitlin', 'Ataque com os especiais de longe e não pise no fogo.')],
+  'capitulo-mago': [F('cisco', 'O olho da tempestade está marcado no guia.')],
+  'luta-mago': [F('caitlin', 'Os raios caem onde você está. Não fique parado!')],
+  'derrota-mago': [F('mago', 'A tempestade sempre vence.'), F('cisco', 'Corre em volta dele: os raios erram quem não para.')],
   'escapou-zoom': [F('caitlin', 'Perdemos o sinal dele. Ele vai aparecer de novo.')],
   'escapou-reverso': [F('caitlin', 'Ele sumiu do radar. Vai voltar, tenho certeza.')],
 };
@@ -169,7 +240,10 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
   const rRetrato = radio.querySelector('.retrato'), rNome = radio.querySelector('b'), rTexto = radio.querySelector('span');
   const fila = []; let falando = null, tFala = 0;
   function falar(falas) { for (const f of falas) fila.push(f); }
-  const retratos = {};                                       // id → imagem do rosto (equipe.js tira de cada modelo 3D)
+  // o rosto de cada personagem (tools/gerar-retratos.mjs renderiza a partir do modelo 3D); quem não tem fica com a sigla
+  const RETRATOS = ['heroi', 'zoom', 'reverso', 'caitlin', 'cisco', 'frio', 'onda', 'mago'];
+  const retratos = Object.fromEntries(RETRATOS.map((id) => [id, new URL(`../assets/personagens/retratos/${id}.webp`, import.meta.url).href]));
+  for (const url of Object.values(retratos)) new Image().src = url;                    // já baixados quando a 1ª fala aparecer
   function mostrar(el, ret, nome, f) {
     const p = PERSONAGENS[f.quem] || PERSONAGENS.caitlin, img = retratos[f.quem];
     ret.textContent = img ? '' : p.sigla; ret.style.background = img ? `url(${img}) center/cover, ${p.cor}` : p.cor;
