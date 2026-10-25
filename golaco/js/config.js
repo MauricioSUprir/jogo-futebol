@@ -1388,7 +1388,9 @@ export const IA_PESSOA = {
   // teto real nesta definição é 78%: Metrica 68 ± 10). Na calibração final (48 partidas × 2 conjuntos de sementes, 1–48 e
   // 1001–1048): 66 → 11,4 e 8,9 (o 1º acima do teto 10,5); 67 → 9,4 e 8,5; 68 → 9,7 e 8,0 (o 2º abaixo do piso 8) — o PPDA
   // muda entre conjuntos de sementes mais que entre os valores vizinhos
-  engaja: [42, 67, 105],
+  // (D4: com os companheiros da pessoa apertando, o PPDA da IA contra o espelho foi a 11,0 com 67 — o espelho passa a atacar
+  // de outro jeito —; 69 → 9,4, agressão 73,7%, retomada 37,6%; 70 → 10,6: entre valores vizinhos ele varia ±1, a amostra)
+  engaja: [42, 69, 105],
   // Encurtar (semBola, o ponto da zona; o plano D3: "quando a pessoa recebe, além do marcador colado, o 2º e o 3º fecham
   // correndo; quem está entre 4 e 12 m sai do lugar para encurtar"): quem guarda a zona do MEIO ou da FRENTE a até encurta[0]
   // m do condutor da pessoa — a linha de defesa fica na linha (FC 27, Closed Beta: os zagueiros "step towards their marked
@@ -1428,6 +1430,21 @@ export const IA_PESSOA = {
   // vbMax m/s, a velocidade pedida é a da bola + folga + k × (a distância − perto), sem o sprint. Com a marcação do D3 a IA
   // chega à bola solta vinda da pressão a 6–8 m/s; sem isso passava da bola a 2,5 m/s (teste-nao-passa meta 3)
   livreChega: { perto: 1, longe: 5, folga: 1.5, k: 2, vbMax: 5, alturaMax: 0.5 },
+  // ---- D4: os COMPANHEIROS da pessoa apertam o condutor da IA (item 17; dono, 17/10: "A IA NÃO CORRE ... tem que ser mais
+  // difícil" e, ao escolher a categoria D, "bote só na hora certa"). Só no time da pessoa jogando CONTRA a IA
+  // (tatica.js contraPessoa(m, 1 − t); o online com duas pessoas não muda). Medido (teste-ia-corre C, depois do D3): o 1º
+  // companheiro fica a 6,9 m do condutor da IA (o real é 5,2) e a ≤ 5 m dele 36% do tempo (o real 48%): o 1º homem do bloco
+  // era quase sempre o CONTROLADO (o mais perto), que só faz o que a pessoa manda — ninguém mais continha —, e a trava de
+  // atropelar (DEFESA_HUMANO.semAtropelar, freio 3 m/s²) freava o time inteiro desde longe (a 3 m do condutor no máximo
+  // ~4,4 m/s). Aqui: o controlado sai da escolha do 1º e do 2º homem (blocoDoTime) — o companheiro mais perto contém e
+  // o seguinte cobre a `cobertura` m (era IA_DEFESA.cobertura 8,5), com a linha de engajamento `engaja` (a Média era
+  // IA_DEFESA.engaja 66) — e os companheiros (não o controlado: a carga por trás do teste-faltas-sentido B2) chegam na curva
+  // de freada de `freio` m/s² (JOGADOR.freio é 6,2). O BOTE continua só nos gatilhos de sempre (toque pesado, de costas,
+  // condutor lento, recepção; apertaProprio)
+  // (a linha de engajamento dos companheiros: com 67, o 1º a 6,5 m e 39% a ≤ 5 m; com 72, 5,9 m e 43%; com 76 e 80, igual
+  // nisso, mas a retomada da IA contra o espelho caía a 33% — teste-pressao --humano, faixa 34–54%: a pessoa que rouba a bola
+  // com os companheiros perto não a perde mais — e o apoio da IA andando passava do teto do D2, A6/A6b)
+  companheiros: { cobertura: 5, freio: 5, engaja: [42, 72, 105] },
 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca

@@ -422,9 +422,15 @@ export function blocoDoTime(m, t) {
   // (quem aperta a pedido do humano no tick anterior — PRESSÃO segurado — não é o 1º homem: o botão SOMA pressão, e o
   // papel dele no bloco passa ao próximo)
   const pedAnt = B.pedidoTick === m.tick - 1 && pressaoPedida(m, t) ? B.pedido : -1;
+  // (D4, o time da pessoa contra a IA: o controlado — que só faz o que a pessoa manda — não é o 1º nem o 2º homem: o
+  // companheiro mais perto contém e o seguinte cobre; IA_PESSOA.companheiros. Com a bola ALTA no ar a escolha é a de sempre:
+  // o 1º homem ia ao ponto da queda e disputava a bola alta no lugar do controlado — a troca aérea do teste-aereo-troca caía a
+  // 89%; só com a bola no pé, o 1º companheiro ia de 5,9 a 6,3 m do condutor da IA)
+  const semCtrl = humano != null && !(v && v.alto && m.posse == null) && contraPessoa(m, 1 - t) ? humano : -1;
+  B.compPessoa = semCtrl >= 0;
   let p1 = null, d1 = Infinity, at1 = null, dAt1 = Infinity;
   for (const o of js) {
-    if (o.time !== t || !ehLinha(o) || o.id === pedAnt) continue;
+    if (o.time !== t || !ehLinha(o) || o.id === pedAnt || o.id === semCtrl) continue;
     const d = efetiva(o);
     if (d < d1) { d1 = d; p1 = o; }
     if (o.id === B.p1) { at1 = o; dAt1 = d; }
@@ -432,7 +438,7 @@ export function blocoDoTime(m, t) {
   if (at1 && at1 !== p1 && dAt1 < d1 + IA.trocaPressao) p1 = at1;
   let p2 = null, d2 = Infinity, at2 = null, dAt2 = Infinity;
   for (const o of js) {
-    if (o.time !== t || !ehLinha(o) || o === p1 || o.id === pedAnt || o.x * lado > ub + 1) continue;
+    if (o.time !== t || !ehLinha(o) || o === p1 || o.id === pedAnt || o.id === semCtrl || o.x * lado > ub + 1) continue;
     // (quem tem a referência à frente da bola — o atacante que a bola passou — paga frentePaga: a
     // cobertura é do meio; com o atacante cobrindo ~1/4 do tempo, a linha da frente ficava ~6 m
     // atrás da referência e o meio–ataque caía para ~8 m: teste-forma)
@@ -513,7 +519,8 @@ export function blocoDoTime(m, t) {
   // 1º homem: aperta ou contém (o goleiro adversário com a bola na mão não é pressionado: Regra 12.3)
   const dGol = MD.hypot(B.foco.x - meuGol, B.foco.z);
   // (contra a pessoa, a linha de engajamento do D3: IA_PESSOA.engaja — item 20, a Média sai do bloco mais alto)
-  const engajado = dGol <= (contraPessoa(m, t) ? IA_PESSOA.engaja : IA_DEFESA.engaja)[p];
+  // (D4: e os companheiros da pessoa contra a IA, a mesma linha — B.compPessoa)
+  const engajado = dGol <= (contraPessoa(m, t) ? IA_PESSOA.engaja : B.compPessoa ? IA_PESSOA.companheiros.engaja : IA_DEFESA.engaja)[p];
   B.engajado = engajado;
   // gatilho de ESTADO "condutor lento" (pedido do dono, 11/10): o condutor de linha com a velocidade filtrada abaixo de
   // lento.v m/s por lento.s[pressão] s (+ lento.longe s fora da linha de engajamento) → o 1º homem sai do bloco e aperta
@@ -1425,7 +1432,8 @@ function cobrir(m, j, s, B, meuGol, extra) {
   let nx = -uz, nz = ux;
   const sz = fz > 0 ? -1 : 1;
   if (nz * sz < 0) { nx = -nx; nz = -nz; }
-  const d = IA_DEFESA.cobertura, l = IA_DEFESA.coberturaLado;
+  // (D4: o 2º companheiro da pessoa contra a IA cobre mais perto — IA_PESSOA.companheiros.cobertura)
+  const d = B.compPessoa ? IA_PESSOA.companheiros.cobertura : IA_DEFESA.cobertura, l = IA_DEFESA.coberturaLado;
   let cx = fx + ux * d + nx * l;
   // quem cobre da linha de defesa cobre de lado, na altura da linha (no máximo coberturaFundo m atrás da
   // referência dele): 8,5 m para trás do 1º homem, ele quebrava a linha de 4 no meu terço (teste-forma:

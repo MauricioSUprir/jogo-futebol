@@ -3081,6 +3081,24 @@ juntadas na carga do `ia-tatica.js`: `SUAVE_MARCA_P = {...TATICA.suave, ...IA_PE
 - **Pendente**: o defensor do corredor ≥ 5 m/s (`teste-defesa-corrida`, informativo), a recomposição "longe e devagar" ≤ 15%
   e o 2º e o 3º homem a ≤ 5 / ≤ 8,5 m (`teste-ia-corre` M6–M8, informativos) — os porquês nas linhas do teste.
 
+### D4 — os companheiros da pessoa apertam o condutor da IA (item 17; `ia-tatica.js`, `defesa.js`)
+
+Portão `contraPessoa(m, 1 − t)`: o time `t` é o da pessoa e o outro é a IA contra ela (com duas pessoas é falso: o online e o
+`teste-dois-humanos` não mudam). Constantes em `IA_PESSOA.companheiros` (`cobertura`, `freio`, `engaja`). O que muda:
+
+- **1º e 2º homem** (`blocoDoTime`): o controlado sai das duas escolhas (`semCtrl`; `B.compPessoa` marca o time) — o 1º homem
+  era quase sempre ele, o mais perto, e o controlado só faz o que a pessoa manda: ninguém mais continha.
+  Com a bola ALTA no ar (`m.voo.alto`, sem posse) a escolha é a de sempre: o controlado disputa a bola alta (troca aérea).
+- **A linha da IA contra a pessoa** (`IA_PESSOA.engaja`, D3): a Média 67 → 69 (o PPDA contra o espelho do D4 ia a 11,0).
+- **Linha de engajamento**: `IA_PESSOA.companheiros.engaja[pressão]` (Média 72) no lugar do `IA_DEFESA.engaja`.
+- **Cobertura** (`cobrir`): o 2º a `companheiros.cobertura` m (5) do 1º, no lugar de `IA_DEFESA.cobertura` (8,5).
+- **Chegada** (`defesa.js semAtropelar`): os companheiros (não o controlado) na curva de freada de `companheiros.freio`
+  m/s² (5) no lugar de `DEFESA_HUMANO.semAtropelar.freio` (3); o controlado segue com 3 (a carga por trás do
+  `teste-faltas-sentido` B2).
+- **O bote** não muda: só nos gatilhos de sempre (`apertaProprio`: gatilho, perigo, a Alta, o condutor lento).
+- Medido no `teste-ia-corre` C (C1 ≤ 6,2 m e C2 ≥ 40%, valendo; reprovam na main). Recalibrados com o motivo no teste: o V7
+  (teto 238: a IA perde mais a bola e corre mais pelo contexto) e o M1 do `teste-pressao-humano` (com ≤ 2,0 m e Δ ≥ 0,5).
+
 ### A pressão contra a pessoa (`tools/teste-pressao.mjs --humano`; D3, item 20)
 
 - `lib/partida-tatica.mjs`: `criarJogo(L, semente, {humano})` — o time 0 é uma pessoa (sem a marca `ia`): um perfil do

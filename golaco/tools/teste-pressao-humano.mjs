@@ -6,7 +6,9 @@
 // O teste antigo do teste-defesa-humano ("um companheiro a ≤ 2 m em ≤ 2 s") passava SEM o botão (79%).
 // Metas (casos "longos": o condutor ≥ 1,5 s com a bola nos dois ramos e um companheiro a ≤ 12 m no começo):
 //  M0 os dois ramos começam bit a bit iguais (100%);
-//  M1 o mais perto: mediana da distância do companheiro mais perto ao condutor em 1,5 s, com ≤ sem − 1,0 m;
+//  M1 o mais perto: mediana da distância do companheiro mais perto ao condutor em 1,5 s, com o botão ≤ 2,0 m e ≤ sem − 0,5 m
+//     (era "com ≤ sem − 1,0 m": no D4 os companheiros da pessoa passaram a apertar sem o botão — o "sem" foi de ~2,8 a 2,4 m —
+//     e o "com" ficou onde estava, ~1,7–1,8 m: o botão continua levando um até o condutor, mas soma menos);
 //  M2 (guarda) com o botão, um companheiro chega a ≤ 2 m do condutor em ≤ 1,5 s em ≥ 60% (o diagnóstico pedia 70%: do
 //     parado o corpo anda ~6,4 m em 1,5 s, e o companheiro mais perto começa a ~7,5 m na mediana) — desde o D2 (24/10), nos
 //     casos longos com o companheiro mais perto a ≤ 8,5 m no começo (ao alcance em 1,5 s): a IA conduzindo contra a pessoa
@@ -163,7 +165,7 @@ const longo = c => (c.A.perdeu == null || c.A.perdeu >= 1.5) && (c.B.perdeu == n
 const L = casos.filter(longo);
 const NMIN = 20;
 const d15A = med(L.map(c => c.A.d15)), d15B = med(L.map(c => c.B.d15));
-reg('M1 o mais perto: mediana da distância ao condutor em 1,5 s, sem → com o botão', `${fmt(d15A)} → ${fmt(d15B)} m (Δ ${fmt(d15A - d15B)}; n = ${L.length})`, 'Δ ≥ 1,0 m', L.length >= NMIN && d15A - d15B >= 1.0);
+reg('M1 o mais perto: mediana da distância ao condutor em 1,5 s, sem → com o botão', `${fmt(d15A)} → ${fmt(d15B)} m (Δ ${fmt(d15A - d15B)}; n = ${L.length})`, 'com ≤ 2,0 m e Δ ≥ 0,5 m', L.length >= NMIN && d15B <= 2.0 && d15A - d15B >= 0.5);
 // (D2, 24/10: o M2 conta os casos longos AO ALCANCE — o companheiro mais perto a ≤ M2_ALCANCE m no começo: do parado o
 // corpo anda ~6,4 m em 1,5 s, + os 2 m. Com a IA conduzindo contra a pessoa, ela passou a ficar com a bola quando o
 // companheiro mais perto da pessoa está longe — de 9 a 12 m, 27 → 145 casos em 16 partidas —, onde chegar em 1,5 s é quase

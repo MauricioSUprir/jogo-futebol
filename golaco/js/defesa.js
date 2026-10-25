@@ -5,7 +5,7 @@
 // j.defH = null | {bote: null | {tick0, contato, cond, longe, pe, bx, bz}, semReacaoAte, tick}; j.conter (filtro e
 // histerese do CORRER). iaClassica (o "antes" dos testes): nada disto age. Contrato: CONTRATOS.md.
 
-import { BOTAO, CAMPO, PASSO, ENTRADA, DEFESA_HUMANO, FALTAS, JOGADOR } from './config.js';
+import { BOTAO, CAMPO, PASSO, ENTRADA, DEFESA_HUMANO, FALTAS, JOGADOR, IA_PESSOA } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp } from './mat.js';
 import { uniforme } from './rng.js';
@@ -13,6 +13,7 @@ import { chutarRasteiro } from './bola.js';
 import { ataca } from './acoes.js';
 import { para } from './ia.js';
 import { estadoIA } from './ia-tatica.js';
+import { contraPessoa } from './tatica.js';
 import { chanceFaltaDividida, montarFalta, registrarFalta, chegada, forcaContato } from './faltas.js';
 import { registrarToque } from './regras-goleiro.js';
 
@@ -500,7 +501,10 @@ export function semAtropelar(m, j, mv) {
   const entra = vx * nx + vz * nz;
   const folga = Math.max(0, dc - 2 * JOGADOR.raio);
   const vAfasta = Math.max(0, o.vx * nx + o.vz * nz - SA.reacao * JOGADOR.freioGiro * Math.max(0, 1 - folga / SA.perto));
-  const max = vAfasta + Math.sqrt(SA.chega * SA.chega + 2 * SA.freio * folga);
+  // (D4: os companheiros da pessoa contra a IA — não o controlado — chegam numa curva de freada mais forte:
+  // IA_PESSOA.companheiros.freio; o controlado segue a de sempre, a carga por trás do teste-faltas-sentido B2)
+  const fr = m.controlado?.[j.time] !== j.id && contraPessoa(m, 1 - j.time) ? IA_PESSOA.companheiros.freio : SA.freio;
+  const max = vAfasta + Math.sqrt(SA.chega * SA.chega + 2 * fr * folga);
   if (entra <= max) return mv;
   vx -= (entra - max) * nx; vz -= (entra - max) * nz;
   const v = MD.hypot(vx, vz);
