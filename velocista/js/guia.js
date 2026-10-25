@@ -126,7 +126,13 @@ export function criarGuia(cena, { mobile = false } = {}) {
       mkSeta.style.display = ''; mkSeta.setAttribute('transform', `rotate(${(a * 180) / Math.PI + 90})`);
     } else mkSeta.style.display = 'none';
     mk.style.display = 'flex';
-    mk.style.transform = `translate(${(sx * 0.5 + 0.5) * W}px, ${(sy * 0.5 + 0.5) * H}px)`;
+    // o rótulo nunca corta na borda nem fica por cima dos botões (celular: canto de baixo à direita) e dos painéis
+    let px = clamp((sx * 0.5 + 0.5) * W, 85, W - 85), py = clamp((sy * 0.5 + 0.5) * H, 95, H - 120);
+    if (document.body.classList.contains('toque')) {
+      if (px > W - 450 && py > H - 245) py = H - 245;
+      if (px > W - 250 && py < 180) py = 180;
+    }
+    mk.style.transform = `translate(${px}px, ${py}px)`;
     mk.style.color = alvo.cor; mkSvg.style.filter = `drop-shadow(0 0 6px ${alvo.cor})`;
     mkTexto.textContent = (alvo.rotulo ? alvo.rotulo + ' · ' : '') + (dist >= 1000 ? `${(dist / 1000).toFixed(1)} km` : `${Math.round(dist)} m`);
     mk.classList.toggle('perto', dist < 25);

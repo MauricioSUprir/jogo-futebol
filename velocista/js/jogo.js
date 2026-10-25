@@ -12,6 +12,7 @@ import { criarPedestres } from './pedestres.js';
 import { criarCombate, ESPECIAIS } from './combate.js';
 import { criarGuia } from './guia.js';
 import { criarViloes } from './viloes.js';
+import { criarHistoria } from './historia.js';
 import { construirLab } from './lab3d.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
 
@@ -392,6 +393,7 @@ function reiniciar() {
   viloes.abandonar();
   const capUrl = new URLSearchParams(location.search).get('capitulo');      // atalho de teste: ?capitulo=zoom|reverso|final
   if (capUrl) viloes.iniciar(capUrl);
+  rodarCena('prologo', focoHeroi, () => { if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); });
   el.esferas.textContent = '0';
   if (!TOQUE) pedirCaptura();
 }
@@ -408,7 +410,10 @@ document.addEventListener('pointerlockchange', () => {
 });
 el.cena.addEventListener('click', () => { if (J.modo === 'jogando' && !TOQUE && document.pointerLockElement !== el.cena) pedirCaptura(); });
 // com o mouse capturado, o clique esquerdo bate
-addEventListener('mousedown', (e) => { if (e.button === 0 && J.modo === 'jogando' && !TOQUE && document.pointerLockElement === el.cena) pedidoBater = true; });
+addEventListener('mousedown', (e) => {
+  if (e.button !== 0 || TOQUE || document.pointerLockElement !== el.cena) return;
+  if (J.modo === 'jogando') pedidoBater = true; else if (J.modo === 'cena') historia.avancar();
+});
 $('btnContinuar').addEventListener('click', continuar);
 function continuar() { J.modo = 'jogando'; el.pausa.hidden = true; if (!TOQUE) pedirCaptura(); }
 // pausa com a lista dos capítulos dos vilões (jogar o liberado agora, ou de novo os vencidos)
@@ -442,6 +447,7 @@ addEventListener('keydown', (e) => {
   else if (k === 'p') { if (J.modo === 'jogando') pausar(); else if (J.modo === 'pausa') continuar(); }
   else if (k === 'h') mundo.T = (mundo.T + 0.08) % 1;
   else if (k === 'enter' && J.modo === 'menu' && !el.btnJogar.hidden) reiniciar();
+  if (J.modo === 'cena') { if (k === 'enter' || k === ' ' || k === 'f') historia.avancar(); else if (k === 'escape') historia.pular(); }
 });
 addEventListener('keyup', (e) => teclas.delete(e.key.toLowerCase()));
 addEventListener('blur', () => teclas.clear());
@@ -789,7 +795,7 @@ function passoMissoes(dt) {
   }
   const sala = LAB_B.plano.dentro(P.x, P.z, P.y);
   const feita = missoes.avaliar({ sala, v: Math.hypot(P.vx, P.vz), y: P.y, noChao: P.noChao, portaisFeitos: rp?.feito });
-  if (feita) avisar(`MISSÃO CONCLUÍDA: ${feita.titulo.toUpperCase()}`);
+  if (feita) { avisar(`MISSÃO CONCLUÍDA: ${feita.titulo.toUpperCase()}`); historia.missao(feita.id, 'fecha'); if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); }
   // painel
   const ma = missoes.atual, pr = missoes.progresso();
   el.missaoNum.textContent = ma ? `Missão ${missoes.indice + 1}/${missoes.total} · ${missoes.stats.pontos} pts` : `Patrulha livre · ${missoes.stats.pontos} pts`;
@@ -825,6 +831,29 @@ function atualizarBotoesEspeciais() {
   for (const [t, b, c] of botoesEsp) { const ok = P.energia >= ESPECIAIS[t].custo; b?.classList.toggle('pronto', ok); c?.classList.toggle('pronto', ok); }
 }
 
+// ---------- história: cenas e rádio (historia.js) ----------
+const historia = criarHistoria({ armazem });
+const focoHeroi = () => ({ x: P.x, y: P.y, z: P.z });
+/** cena com o jogo parado; quando acaba (ou se já foi vista), `depois` */
+function rodarCena(id, foco, depois, opc) {
+  P.vx = P.vz = 0; teclas.clear(); stick.x = stick.y = 0; toque.correr = toque.vibrar = false;
+  J.modo = 'cena';
+  historia.cena(id, foco, () => { J.modo = 'jogando'; depois?.(); }, opc);
+}
+function eventoVilao(ev) {
+  const id = ev.id;
+  if (ev.tipo === 'dano') J.danoVilao = 1;
+  else if (ev.tipo === 'capitulo') historia.radio(`capitulo-${id}`, { sempre: true });
+  else if (ev.tipo === 'encontro') rodarCena(`encontro-${id}`, () => viloes.foco(), () => { viloes.continuar(); historia.radio(`perseguicao-${id}`); });
+  else if (ev.tipo === 'captura') historia.provocar(id, ev.n);
+  else if (ev.tipo === 'luta') historia.radio(`luta-${id}`);
+  else if (ev.tipo === 'fase2') historia.radio(`fase2-${id}`, { sempre: true });
+  else if (ev.tipo === 'derrota') historia.radio(`derrota-${id}`, { sempre: true });
+  else if (ev.tipo === 'escapou') historia.radio(`escapou-${id}`, { sempre: true });
+  else if (ev.tipo === 'derrotado') rodarCena(`derrotado-${id}`, id === 'final' ? focoHeroi : () => viloes.foco(), () => viloes.continuar());
+  else if (ev.tipo === 'vitoria') missoes.contar('pontos', id === 'final' ? 5000 : 2000);
+}
+
 // ---------- laço ----------
 const relogio = new THREE.Clock();
 const RETRATO = matchMedia('(orientation: portrait)');
@@ -854,10 +883,7 @@ function quadro() {
       if (ev.tipo === 'nocaute') { missoes.contar('nocautes'); missoes.contar('pontos', 50); if (ev.especial) missoes.contar('especiais'); }
       else if (ev.tipo === 'dano') { el.dano.style.opacity = '1'; }
     }
-    for (const ev of viloes.atualizar(dt, P, { missaoIdx: missoes.indice, podeComecar: !crimes.ativo })) {
-      if (ev.tipo === 'dano') J.danoVilao = 1;
-      else if (ev.tipo === 'vitoria') missoes.contar('pontos', ev.id === 'final' ? 5000 : 2000);
-    }
+    for (const ev of viloes.atualizar(dt, P, { missaoIdx: missoes.indice, podeComecar: !crimes.ativo })) eventoVilao(ev);
     J.danoVilao = Math.max(0, (J.danoVilao || 0) - dt * 2);
     el.missao.hidden = viloes.ativo;
     el.dano.style.opacity = String(Math.min(1, Math.max(combate.dano, J.danoVilao)));
@@ -875,8 +901,11 @@ function quadro() {
     if ((quadroMapa++ % 4) === 0) desenharMapa();
     ultBussola += dt; if (ultBussola > 0.2) { ultBussola = 0; atualizarBussola(); }
   }
-  if (J.modo !== 'menu' || carregados.size) { animarHeroi(J.modo === 'jogando' ? dt : 0); atualizarCamera(dt); }
+  historia.atualizar(Math.min(dtBruto, 0.1));
+  if (J.modo === 'cena') { viloes.posar(dt); animarHeroi(dt); if (!historia.camera(camera, dt)) atualizarCamera(dt); }
+  else if (J.modo !== 'menu' || carregados.size) { animarHeroi(J.modo === 'jogando' ? dt : 0); atualizarCamera(dt); }
   if (J.modo === 'jogando') guia.atualizar(dt, alvoMissao(), P, camera);
+  else if (J.modo === 'cena') guia.atualizar(dt, null, P, camera);          // na cena, sem feixe nem setas por cima de quem fala
   atualizarAmbiente(camera.position);
   posfx.ajustar(J.modo === 'jogando' ? Math.min(1, Math.max(0, (Math.hypot(P.vx, P.vz) - 20) / 35)) : 0, mundo.noite);
   posfx.render();
@@ -908,4 +937,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
