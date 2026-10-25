@@ -382,7 +382,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
         // derrotado: cai de joelhos e tomba
         if (v.acao === 'caido') { v.at += dt; v.grupo.rotation.x = -Math.min(1.35, v.at * 2.2); v.grupo.position.y = v.y + 0.1; }
       }
-      v.raios.atualizar(dt, v, vel, { vibrando: v.acao === 'prepara' || v.acao === 'carrega' || C.fase === 'aparece' || C.fase === 'encontro' });
+      v.raios.atualizar(dt, v, vel, { vibrando: v.acao === 'prepara' || v.acao === 'carrega' || C.fase === 'aparece' });   // na conversa, sem os raios por cima do rosto
     }
   }
 

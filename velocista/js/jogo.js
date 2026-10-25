@@ -859,7 +859,7 @@ function rodarCena(id, foco, depois, opc) {
 /** os focos da câmera numa cena com os vilões: o herói e cada vilão do capítulo */
 const focosVilao = () => ({ heroi: focoHeroi, ...Object.fromEntries(viloes.ids.map((v) => [v, () => viloes.foco(v)])) });
 /** no encontro, o herói fica a poucos metros do vilão, de frente para ele (a conversa cabe no quadro) */
-function aproximarHeroi(d = 7.5) {
+function aproximarHeroi(d = 4.8) {
   const f = viloes.foco(); if (!f) return;
   const dx = P.x - f.x, dz = P.z - f.z, n = Math.hypot(dx, dz) || 1;
   if (n > d) {

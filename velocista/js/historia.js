@@ -266,10 +266,10 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
     if ((pl.tipo === 'ombro' || pl.tipo === 'dois') && o) {
       // por trás do ombro de quem ouve, olhando para quem fala (no 'dois', mais aberto e com os dois no quadro)
       let dx = a.x - o.x, dz = a.z - o.z; const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;
-      const atras = pl.tipo === 'dois' ? 3.2 + deriva : 1.5 + deriva * 0.5, lado = (pl.tipo === 'dois' ? 1.6 : 0.7) * pl.lado;
-      px = o.x - dx * atras - dz * lado; pz = o.z - dz * atras + dx * lado; py = o.y + (pl.tipo === 'dois' ? 2.2 : 1.68);
+      const atras = pl.tipo === 'dois' ? 3.2 + deriva : 1.15 + deriva * 0.4, lado = (pl.tipo === 'dois' ? 1.6 : 0.8) * pl.lado;
+      px = o.x - dx * atras - dz * lado; pz = o.z - dz * atras + dx * lado; py = o.y + (pl.tipo === 'dois' ? 2.2 : 1.62);
       if (pl.tipo === 'dois') { lx = (a.x + o.x) / 2; lz = (a.z + o.z) / 2; ly = (a.y + o.y) / 2 + 1.3; fov = 46; }
-      else fov = 36;
+      else { ly = a.y + 1.35; fov = 32; }
     } else if (pl.tipo === 'close') {
       // de frente para quem fala, um pouco de lado, à altura do rosto
       const ref = o || ponto('heroi') || a, h = Math.atan2(ref.x - a.x, ref.z - a.z) + pl.ang;

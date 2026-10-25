@@ -62,7 +62,7 @@ await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; R.
 ok(await espera(() => window.__rel.historia.cenaAtual === 'encontro-zoom'), 'chegar perto abre a cena do encontro');
 ok(await pagina.evaluate(() => window.__rel.viloes.fase === 'encontro' && window.__rel.J.modo === 'cena'), 'a perseguição espera a cena');
 const perto = await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; return Math.hypot(R.P.x - v.x, R.P.z - v.z); });
-ok(perto <= 8, `no encontro o herói fica de frente para o vilão (${perto.toFixed(1)} m)`);
+ok(perto <= 5.5, `no encontro o herói fica de frente para o vilão (${perto.toFixed(1)} m)`);
 await pagina.waitForTimeout(3000);
 await foto('encontro');
 // a câmera corta: outra fala, outro plano
