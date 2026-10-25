@@ -141,10 +141,19 @@ export function criarDiretor({ anel, aspecto }) {
       const lx = Number.isFinite(ro.x) ? ro.x : bp.x, lz = Number.isFinite(ro.z) ? ro.z : bp.z;
       _alvo.jx = lx; _alvo.jz = lz; _alvo.jvx = 0; _alvo.jvz = 0; _alvo.bx = bp.x; _alvo.bz = bp.z;
       tv.atualizar(dtR, _alvo, corte);
-      const M = REPLAY_PARADA.lento.mistura, ax = lx + (bp.x - lx) * M, az = lz + (bp.z - lz) * M;
+      const Ln = REPLAY_PARADA.lento;
+      let ax = lx + (bp.x - lx) * Ln.mistura, az = lz + (bp.z - lz) * Ln.mistura;
       camera.position.copy(tv.camera.position);
+      ajustarFov(tv.camera.fov * Ln.fov);
+      // (o lance nunca sai do quadro: com a bola longe dele — saindo pela linha de fundo para o escanteio —, o olhar no meio do
+      // caminho levava o lance à borda da tela, |x| 0,77 — teste-replay-paradas-tela V11, 25/10; o desvio do olhar fica a no
+      // máximo Ln.quadro da meia-largura do quadro na distância do lance)
+      if (Ln.quadro) {
+        const c = camera.position, ox = ax - lx, oz = az - lz, o = Math.hypot(ox, oz);
+        const lim = Ln.quadro * Math.hypot(lx - c.x, c.y, lz - c.z) * Math.tan(camera.fov * Math.PI / 360) * camera.aspect;
+        if (o > lim) { ax = lx + ox * lim / o; az = lz + oz * lim / o; }
+      }
       camera.lookAt(ax, 0, az);
-      ajustarFov(tv.camera.fov * REPLAY_PARADA.lento.fov);
       _foco.x = ax; _foco.z = az;
       return _foco;
     }

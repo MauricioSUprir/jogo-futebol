@@ -158,15 +158,15 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   sai depois da carga do botão: a roubada desfeita do `teste-defesa-corrida` era o passe decidido no tick da roubada e solto
   ~0,5 s depois na corrida de volta da pessoa — 6,6% desses passes na main, 14% com a marcação nova, ~10% com a leitura;
   Spearman 2018). `teste-ia-corre` seção M (a lógica INSTRUMENTADA: `copiaInstrumentada` grava a distância ao ponto do
-  `para()`; CI com 8 sementes; as metas do D3 com * reprovam só além de 2 ±): aproximação do 1º homem a 4–12 m 2,4 → 6,5 km/h
-  (real 7,4–7,5), "longe e devagar" 31 → 16%, perda 229,7 → 232,4 m/min (dentro do ±), total 171 → 167, vai e volta 4,74 →
-  4,29; `teste-pressao --humano` (padrão; a pessoa "espelho" = a decisão da IA sem a marca `ia`, 48 partidas): PPDA 11,9 →
-  9,7, agressão 72 → 75% (≤ 78), retomada 36 → 41%. NÃO entrou (medido): o sprint mais cedo da recomposição e a frente
+  `para()`; CI com 8 sementes; as metas do D3 com * reprovam só além de 2 ±): aproximação do 1º homem a 4–12 m 2,4 → 6,6 km/h
+  (real 7,4–7,5), "longe e devagar" 31 → 16%, perda 229,7 → 232,0 m/min (dentro do ±; 229,7 na 2ª rodada), total 171 → 165,
+  vai e volta 4,74 → 4,32; `teste-pressao --humano` (padrão; a pessoa "espelho" = a decisão da IA sem a marca `ia`, 48 partidas): PPDA 11,9 →
+  9,4 (12,5 → 8,5 nas sementes 1001–1048), agressão 72 → 74% (≤ 78), retomada 36 → 40%. NÃO entrou (medido): o sprint mais cedo da recomposição e a frente
   sprintando (o "longe e devagar" dela é a ACELERAÇÃO do começo: 95% nos primeiros 0,75 s), a cobertura do 2º homem a 6 m
   pelo modo pressa, o condutor rápido a 6,3 m/s contra a pessoa (vai e volta e roubadas sofridas reprovavam), quem o condutor
   rápido já passou recompondo em disparada (derrubava o defensor do corredor de 3,8 a 2,6 m/s). PENDENTE: o defensor do
-  corredor (3,90 → 3,82 m/s, meta 5 — o recuo começa ~0,8 s antes, a física dá ~4,8), a recomposição "longe e devagar" ≤ 15%
-  (22%) e o 2º/3º homem (7,5/12,8 m; o 2º marcador real fica a 9,6 m). Lições: as medidas da marcação mudam entre calibrações
+  corredor (3,90 → 3,38 m/s, meta 5 — o recuo começa ~0,8 s antes, a física dá ~4,8), a recomposição "longe e devagar" ≤ 15%
+  (22%) e o 2º/3º homem (7,4/12,3 m; o 2º marcador real fica a 9,6 m). Lições: as medidas da marcação mudam entre calibrações
   vizinhas mais que o ± (PPDA 8,4 × 10,8 com o encurtar 0,30 × 0,35; o gol por chute nas arrancadas de 0 a 26%; a roubada
   desfeita 4–9%; o defensor do corredor 2,0–4,7 m/s) — 24–48 partidas, metas que reprovam quando PROVAM (2 ± ou binomial); um
   guarda que sobe em toda calibração tem MECANISMO: rastrear o lance tick a tick antes de calibrar (a desfeita era o passe na

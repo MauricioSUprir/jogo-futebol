@@ -2688,7 +2688,8 @@ fecho (`tools/fecho-hash.mjs --diff origin/main` = 0): o `lances.js` só importa
     volta a começar em chave − `tv.antes`.
   - Câmera 'fechada' (`render/replay.js`): a POSIÇÃO da instância de TV do replay (a mola dela) com o campo de visão ×
     `lento.fov`, e o OLHAR direto no ponto entre o lance (x, z) e a bola (`lento.mistura`) — o foco da TV fica preso
-    dentro do campo e o lance perto da linha de fundo saía do quadro.
+    dentro do campo e o lance perto da linha de fundo saía do quadro. O desvio do olhar fica a no máximo `lento.quadro` da
+    meia-largura do quadro na distância do lance (25/10: com a bola indo para o escanteio, o lance ia a |x| 0,77 da tela).
 - **Página** (`main.js`):
   - `rodarPasso` → `passoLances(eventos)`: o lance aceito ARMA o replay (`replayParada`), só fora da API dos testes
     (`!emRodarPassos`). Desarma em gol, intervalo, fim, recomeço e saída, e quando a parada do lance acaba sem montagem.

@@ -344,30 +344,29 @@ volume da transição já está no teto (229,7 m/min nos 5 s depois da perda; Je
 
 | Medida | Antes (main 2c9e7066, o D2) | Depois | Meta | Real |
 |---|---|---|---|---|
-| M2 aproximação do 1º homem a 4–12 m (km/h) | 2,43 ± 0,64 | 6,46 ± 0,88 | ≥ 5 | 7,4–7,5 |
-| M2a / M2b a 4–7 / 7–12 m (km/h) | 2,54 / 2,41 | 7,25 / 6,08 | (informativas) | 7,4 / 7,5 |
-| M5 marcando: o ponto a > 5 m e o corpo < 4 m/s (%) | 31,08 ± 0,60 | 15,66 ± 0,27 | ≤ 18 | — |
-| M6 ...na recomposição (%) | 27,28 ± 0,69 | 21,98 ± 0,68 | (≤ 15: informativa, a aceleração) | — |
-| M7 / M8 2º e 3º homem (mediana, m) | 6,53 / 11,88 | 7,50 / 12,83 | (≤ 5 / ≤ 8,5: informativas) | 9,6 (2º marcador) |
-| M1 1º homem (mediana, m) | 1,99 | 2,12 | (não aperta mais) | 5,2 |
-| M4 IA marcando: m/min | 209,8 | 217,4 | — | — |
-| V7 IA nos 5 s depois de perder: m/min | 229,7 ± 2,1 | 232,4 ± 2,7 | ≤ 230 (reprova além de 2 ±) | 156 ± 9 (Jerome, transição) |
-| V1 / V2 IA atacando / no total: m/min | 156,0 / 171,4 | 149,4 / 166,6 | ≤ 190 / ≤ 195 | — / 140 |
-| V3 vai e volta por jogador-min | 4,74 ± 0,05 | 4,29 ± 0,05 | ≤ 4,74 (2 ±) | 0,30 |
-| disparadas por minuto | 1,29 | 1,25 | (redistribuir) | 0,14 |
-| V5 roubadas sofridas pela IA por min de bola no pé | 2,33 ± 0,20 | 2,04 ± 0,13 | ≤ 2,78 | — |
-| V4 gols da IA contra o roteiro por partida | 1,33 ± 0,22 | 1,33 ± 0,28 | ≥ 0,92 | — |
-| A11 conversão da IA (%) | 19,8 ± 2,9 | 21,8 ± 4,3 | (informativa) | 8–15 |
-| A1–A10 (o ataque do D2) | — | todas dentro (condutor 11,9 km/h, posse 0,95 s, à área 31,8%) | as do D2 | — |
-| PPDA da IA contra o espelho | 11,90 | 9,72 | 8–10,5 (alvo 9–10,5) | 8,6–9,9 (os que mais apertam) |
-| agressão (recepção com a IA a ≤ 4,6 m em ≤ 2 s) | 71,7% | 75,1% | 58–78% | 68 ± 10% (Metrica) |
-| retomada em ≤ 5 s | 35,9% | 41,3% | 34–54% | 44,1 ± 10% |
-| `teste-defesa-corrida`: roubada desfeita pelo mesmo condutor | 15/368 (4%) | 20/336 (6%) | ≤ 5% (binomial) | — |
-| ...defensor do corredor (mediana, m/s) | 3,90 (61 duelos) | 3,82 (58) | ≥ 5 (pendente) | — |
-| ...arrancadas do bloco armado que chegam à área | 34/251 (14%) | 43/222 (19%) | ≤ 25% | — |
-| ...gols do roteiro sprint · faltas da IA no humano por partida | 0,54 · 1,96 | 0,75 · 1,58 | ≤ 1,5 · ≤ 5 | — |
-| `teste-transicao --humano`: recuo do meio da IA que ficou à frente (m/s) | 6,1 | 6,1 | ≥ 5,5 | — |
-| ...a frente da IA (fica para o contra-ataque, m/s) | 4,0 | 3,5 | — | — |
+| M2 aproximação do 1º homem a 4–12 m (km/h) | 2,43 ± 0,64 | 6,58 ± 0,69 | ≥ 5 | 7,4–7,5 |
+| M2a / M2b a 4–7 / 7–12 m (km/h) | 2,54 / 2,41 | 7,84 / 6,01 | (informativas) | 7,4 / 7,5 |
+| M5 marcando: o ponto a > 5 m e o corpo < 4 m/s (%) | 31,08 ± 0,60 | 15,61 ± 0,27 | ≤ 18 | — |
+| M6 ...na recomposição (%) | 27,28 ± 0,69 | 21,81 ± 0,65 | (≤ 15: informativa, a aceleração) | — |
+| M7 / M8 2º e 3º homem (mediana, m) | 6,53 / 11,88 | 7,39 / 12,30 | (≤ 5 / ≤ 8,5: informativas) | 9,6 (2º marcador) |
+| M1 1º homem (mediana, m) | 1,99 | 2,03 | (não aperta mais) | 5,2 |
+| M4 IA marcando: m/min | 209,8 | 217,1 | — | — |
+| V7 IA nos 5 s depois de perder: m/min | 229,7 ± 2,1 | 232,0 ± 2,2 | ≤ 230 (reprova além de 2 ±) | 156 ± 9 (Jerome, transição) |
+| V1 / V2 IA atacando / no total: m/min | 156,0 / 171,4 | 149,0 / 165,3 | ≤ 190 / ≤ 195 | — / 140 |
+| V3 vai e volta por jogador-min | 4,74 ± 0,05 | 4,32 ± 0,08 | ≤ 4,74 (2 ±) | 0,30 |
+| disparadas por minuto | 1,29 | 1,24 | (redistribuir) | 0,14 |
+| V5 roubadas sofridas pela IA por min de bola no pé | 2,33 ± 0,20 | 1,88 ± 0,14 | ≤ 2,78 | — |
+| V4 gols da IA contra o roteiro por partida | 1,33 ± 0,22 | 1,58 ± 0,30 | ≥ 0,92 | — |
+| A11 conversão da IA (%) | 19,8 ± 2,9 | 26,4 ± 4,5 | (informativa) | 8–15 |
+| A1–A10 (o ataque do D2) | — | todas dentro (condutor 12,0 km/h, posse 0,97 s, à área 34,0%) | as do D2 | — |
+| PPDA da IA contra o espelho (sementes 1–48) | 11,90 | 9,38 | 8–10,5 (alvo 9–10,5) | 8,6–9,9 (os que mais apertam) |
+| agressão (recepção com a IA a ≤ 4,6 m em ≤ 2 s) | 71,7% | 74,4% | 58–78% | 68 ± 10% (Metrica) |
+| retomada em ≤ 5 s | 35,9% | 39,8% | 34–54% | 44,1 ± 10% |
+| `teste-defesa-corrida`: roubada desfeita pelo mesmo condutor | 15/368 (4%) | 18/343 (5%) | ≤ 5% (binomial) | — |
+| ...defensor do corredor (mediana, m/s) | 3,90 (61 duelos) | 3,38 (50) | ≥ 5 (pendente) | — |
+| ...arrancadas do bloco armado que chegam à área | 34/251 (14%) | 49/237 (21%) | ≤ 25% | — |
+| ...gols do roteiro sprint · faltas da IA no humano por partida | 0,54 · 1,96 | 0,54 · 1,63 | ≤ 1,5 · ≤ 5 | — |
+| `teste-transicao --humano`: recuo do meio da IA que ficou à frente (m/s) | 6,1 | (2ª tabela) | ≥ 5,5 | — |
 
 O PPDA "11,0 contra o roteiro" do plano era o da IA × IA (o `teste-pressao` da Média). Contra os roteiros da pessoa e contra o
 construtor (o ataque substituto dos testes no time 0) o PPDA da IA dá ~1,5–3: eles quase não passam diante da pressão — é
@@ -383,23 +382,24 @@ a pessoa muda de propósito.
 
 ### 6.5 Limites e o que fica
 
-- **Item 19 (o defensor do corredor ≥ 5 m/s): não alcançado** (3,90 → 3,82 m/s, 58 duelos). O recuo do 1º homem começa com o
+- **Item 19 (o defensor do corredor ≥ 5 m/s): não alcançado** (3,90 → 3,38 m/s, 50 duelos; 3,35 com 64 na 2ª rodada). O recuo do 1º homem começa com o
   condutor rápido ligado, a ~6 m do defensor e 0,8 s antes de ele passar (mediana de 57 duelos); do ~0,5 m/s de então, a(v) =
   A0·(1 − v/S0) com A0 8,5 m/s² (Alonso-Callejo 2022) dá no máximo ~4,8 m/s em 0,8 s. Para chegar a 5, o recuo tem de começar
   ~1 s antes — o condutor ainda acelerando — e o que foi medido nessa direção (o limiar a 6,3 m/s; o recuo com 4,5 m/s; a
   contenção mais longe; quem já foi passado voltando em disparada, que DERRUBAVA a mediana a 2,6) ou não deu ou quebrou as
   guardas; entre calibrações vizinhas a mediana foi de 2,0 a 4,7 m/s. Proposta ao dono: uma meta de chegada (a arrancada do
-  bloco armado na área ≤ 25%, que passa: 19%, base 14%) no lugar da velocidade, ou o recuo mais cedo valendo também contra a
+  bloco armado na área ≤ 25%, que passa: 21% e 10% nas duas rodadas, base 14%) no lugar da velocidade, ou o recuo mais cedo valendo também contra a
   pessoa no D5 (o vai e volta), quando a guarda dele for outra.
-- **A recomposição "longe e devagar" ≤ 15%: não alcançada** (27,3 → 22,0%): é a aceleração do começo de cada recomposição; só
+- **A recomposição "longe e devagar" ≤ 15%: não alcançada** (27,3 → 21,8%): é a aceleração do começo de cada recomposição; só
   diminui com menos recomposições começando paradas (os de trás já se mexendo) — o D5/D6.
-- **O 2º e o 3º homem ≤ 5 / ≤ 8,5 m: não alcançados** (6,5 → 7,5 e 11,9 → 12,8 m: o 1º homem sai mais cedo — o `engaja` —, e
+- **O 2º e o 3º homem ≤ 5 / ≤ 8,5 m: não alcançados** (6,5 → 7,4 e 11,9 → 12,3 m: o 1º homem sai mais cedo — o `engaja` —, e
   o 2º fica na cobertura dele). O 2º marcador real fica a 9,6 m do portador (Metrica; p25 6,6 m; `PESQUISA-ETAPA3.md` §4.2): a
   IA já fica mais perto que o real, e o "≤ 5 m" poria dois colados no condutor o tempo todo. Ficam informativas.
-- **O volume da perda** ficou 229,7 → 232,4 m/min (dentro do ±; o teto da guarda é 230): é o preço do meio que volta a todo
-  vapor (6,1 m/s). O volume TOTAL da IA caiu (171,4 → 166,6 m/min) e o vai e volta também (4,74 → 4,29).
-- **A roubada desfeita** subiu 4 → 6% (passa na binomial): o passe que o ladrão solta na corrida de volta da pessoa ainda sai
+- **O volume da perda** ficou 229,7 → 232,0 m/min (dentro do ±; 229,7 na 2ª rodada de 48 partidas; o teto da guarda é 230): é o
+  preço do meio que volta a todo vapor (6,1 m/s). O volume TOTAL da IA caiu (171,4 → 165,3 m/min) e o vai e volta também (4,74 →
+  4,32).
+- **A roubada desfeita** subiu 4 → 5% (6% na 2ª rodada; passa na binomial): o passe que o ladrão solta na corrida de volta da pessoa ainda sai
   em ~10% desses passes (6,6% na main). Fica para o D4 (os companheiros da pessoa) ou para a carga do passe da IA
   (cancelar o passe com a linha fechada no meio da carga), que vale também na IA × IA.
-- **A conversão da IA contra o roteiro** foi 19,8 → 21,8% (o real é 8–15%): a IA ganha a bola mais alto. Os companheiros da
+- **A conversão da IA contra o roteiro** foi 19,8 → 26,4% (25,7% na 2ª rodada; o real é 8–15%): a IA ganha a bola mais alto. Os companheiros da
   pessoa (D4) e o goleiro (categoria C).

@@ -27,8 +27,9 @@ export const REPLAY_PARADA = {
   tv: { antes: 2.5, antesMin: 1.0, depois: 1.0, depoisChance: 0.5, vel: 1 },
   // P2: mais fechado e mais lento (patente US7657836: ao vivo → reação → replay fechado e lento); 0,5× = a câmera de
   // trás do gol do replay de hoje (REPLAY.gol.vel[1]). fov: fração do da TV na câmera 'fechada'
-  // mistura: o olhar da 'fechada' fica entre o ponto do lance (0) e a bola (1)
-  lento: { antes: 0.8, depois: 0.6, antesChance: 0.5, depoisChance: 0.4, vel: 0.5, fov: 0.5, mistura: 0.45 },
+  // mistura: o olhar da 'fechada' fica entre o ponto do lance (0) e a bola (1), a no máximo `quadro` da meia-largura do quadro
+  // do ponto do lance (render/replay.js; com a bola longe, o lance ia à borda da tela)
+  lento: { antes: 0.8, depois: 0.6, antesChance: 0.5, depoisChance: 0.4, vel: 0.5, fov: 0.5, mistura: 0.45, quadro: 0.4 },
   // gatilhos (classe B): chute de dentro da área a ≥ vMin m/s espalmado, ou que saiu a ≤ perto m da trave/travessão;
   // a bola morta até mortaAte s depois do chute; falta a ≤ faltaPerto m do centro do gol (PARTIDA.tiroLivreDireto.chuteMax 30)
   chance: { vMin: 22, perto: 1.5, mortaAte: 4 },
