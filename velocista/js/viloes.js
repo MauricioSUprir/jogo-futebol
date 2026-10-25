@@ -337,10 +337,21 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     chama: new THREE.ConeGeometry(1, 1, 18, 1, true).rotateX(-Math.PI / 2).translate(0, 0, 0.5),
     tornado: new THREE.CylinderGeometry(4.2, 0.5, 15, 28, 8, true).translate(0, 7.5, 0),
   };
+  // mancha no chão com a borda sumindo (gradiente radial) e um pouco de textura (gelo rachado / brasa)
+  const texMancha = (() => {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 128; const g = cv.getContext('2d');
+    const r = g.createRadialGradient(64, 64, 4, 64, 64, 64); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.55, 'rgba(255,255,255,0.75)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = r; g.fillRect(0, 0, 128, 128);
+    g.globalCompositeOperation = 'destination-out'; g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 1.2;
+    for (let i = 0; i < 14; i++) { g.beginPath(); let x = 64, y = 64, a = Math.random() * 6.28; g.moveTo(x, y); for (let k = 0; k < 6; k++) { a += (Math.random() - 0.5) * 1.2; x += Math.cos(a) * 9; y += Math.sin(a) * 9; g.lineTo(x, y); } g.stroke(); }
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+  })();
+  const matMancha = (rgb, op) => new THREE.MeshBasicMaterial({ map: texMancha, color: new THREE.Color(...rgb), transparent: true, opacity: op, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
   const matAditivo = (rgb, op) => new THREE.MeshBasicMaterial({ color: new THREE.Color(...rgb), transparent: true, opacity: op, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, toneMapped: false });
   const perigos = [];                                       // {tipo, x, z, r, t, vida, mesh, vx, vz}
   function novoPerigo(tipo, x, z, r, vida, rgb, op, geo = GEO.disco) {
-    const mesh = new THREE.Mesh(geo, matAditivo(rgb, op)); mesh.position.set(x, (chao ? chao(x, z, 2) : 0) + 0.06, z); mesh.scale.setScalar(r);
+    const mesh = new THREE.Mesh(geo, geo === GEO.disco ? matMancha(rgb, op * 1.4) : matAditivo(rgb, op)); mesh.position.set(x, (chao ? chao(x, z, 2) : 0) + 0.06, z); mesh.scale.setScalar(r);
+    if (geo === GEO.disco) mesh.rotation.y = Math.random() * 6.28;
     cena.add(mesh); const p = { tipo, x, z, r, t: 0, vida, mesh, op, vx: 0, vz: 0 }; perigos.push(p); return p;
   }
   function limparPerigos() { for (const p of perigos) { cena.remove(p.mesh); p.mesh.material.dispose(); } perigos.length = 0; }

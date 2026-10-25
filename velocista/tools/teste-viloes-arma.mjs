@@ -22,7 +22,8 @@ await pagina.evaluate(() => { Element.prototype.requestFullscreen = undefined; l
 await pagina.evaluate(() => { window.__rel.mundo.T = 0.45; });
 
 // roda N quadros de lógica com o herói parado onde está (dt fixo do jogo: o quadro real pode ser lento)
-const parado = (n) => pagina.evaluate((n) => new Promise((fim) => { const R = window.__rel; let k = 0; const f = () => { R.P.vx = R.P.vz = 0; if (++k < n) requestAnimationFrame(f); else fim(); }; requestAnimationFrame(f); }), n);
+// espera N quadros com o herói sem entrada nenhuma (o puxão do tornado mexe nele)
+const parado = (n) => pagina.evaluate((n) => new Promise((fim) => { let k = 0; const f = () => { if (++k < n) requestAnimationFrame(f); else fim(); }; requestAnimationFrame(f); }), n);
 
 for (const id of ['frio', 'onda', 'mago']) {
   await pagina.evaluate((id) => window.__rel.viloes.iniciar(id), id);
@@ -34,7 +35,7 @@ for (const id of ['frio', 'onda', 'mago']) {
   ok(await espera(() => window.__rel.viloes.fase === 'luta'), `${id}: chegar perto começa a luta`);
   // o ataque: herói parado no alvo do aviso
   await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; R.P.vida = 1; v.vida = v.perf.vida; v.acao = 'rodeia'; v.at = 0; v.ataques = 0; R.P.x = v.x - 6; R.P.z = v.z; R.P.y = 0; });
-  const aviso = await espera(() => window.__rel.viloes.viloes[0].acao === 'prepara', null, 120000);
+  const aviso = await espera(() => { const v = window.__rel.viloes.viloes[0]; return v.acao === 'prepara' && v.efx && Object.values(v.efx).some((m) => m.visible); }, null, 120000);
   const vis = await pagina.evaluate(() => { const e = window.__rel.viloes.viloes[0].efx; return Object.entries(e).filter(([, m]) => m.visible).map(([k]) => k).join(','); });
   ok(aviso && vis.length > 0, `${id}: o ataque é avisado no chão (${vis})`);
   await foto(`${id}-aviso`);
@@ -57,7 +58,8 @@ for (const id of ['frio', 'onda', 'mago']) {
     // o tornado puxa o herói parado
     await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; v.vida = v.perf.vida; R.P.vida = 1; v.acao = 'rodeia'; v.at = 0; v.ataques = 2; R.P.x = v.x - 9; R.P.z = v.z; });
     await espera(() => window.__rel.viloes.viloes[0].acao === 'dispara', null, 120000);
-    const d0 = await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; return { x: R.P.x, z: R.P.z }; });
+    // o tornado nasce onde o herói estava: o herói sai 5 m para o lado e é puxado de volta
+    const d0 = await pagina.evaluate(() => { const R = window.__rel; R.P.z += 5; R.P.vx = R.P.vz = 0; return { x: R.P.x, z: R.P.z }; });
     await parado(40);
     await foto('mago-tornado');
     const puxou = await pagina.evaluate((d0) => { const R = window.__rel; return Math.hypot(R.P.x - d0.x, R.P.z - d0.z); }, d0);
