@@ -27,6 +27,7 @@
 //   node tools/teste-defesa-corrida.mjs                 (lógica do repositório)
 //   node tools/teste-defesa-corrida.mjs --js <pasta>    (outra cópia, ex.: a base — tem de REPROVAR)
 //   --sementes N (sprint; padrão 24) · --trote N (padrão 6) · --sem0 K (padrão 101) · --par N (processos; padrão 4)
+//   --set CONST.caminho=valorJSON (repetível; triagem de calibração, como o teste-ia-corre)
 import { fork } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -36,12 +37,22 @@ const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const JS = path.resolve(arg('--js', path.join(AQUI, '../js')));
+// --set CONST.caminho=valorJSON (repetível): troca constantes do config.js antes de a lógica carregar (triagem)
+const SETS = args.flatMap((a, i) => (a === '--set' ? [args[i + 1]] : []));
 
 // ------------------------------------------------------------------ processo filho: uma partida com o roteiro
 async function partida(sem, rot) {
   const imp = f => import(pathToFileURL(path.join(JS, f)).href);
+  const C = await imp('config.js');
+  for (const s of SETS) {
+    const chave = s.slice(0, s.indexOf('=')), partes = chave.split('.');
+    let o = C[partes[0]];
+    for (const p of partes.slice(1, -1)) o = o?.[p];
+    if (!o || !(partes[partes.length - 1] in o)) throw new Error(`--set: ${chave} não existe`);
+    o[partes[partes.length - 1]] = JSON.parse(s.slice(s.indexOf('=') + 1));
+  }
   const P = await imp('partida.js');
-  const { BOTAO: B } = await imp('config.js');
+  const { BOTAO: B } = C;
   const M = await import(pathToFileURL(path.join(AQUI, 'lib/partida-medidas.mjs')).href);
   const porId = (m, id) => m.jogadores.find(o => o.id === id);
   const dir = (j, x, z) => { const dx = x - j.x, dz = z - j.z, l = Math.hypot(dx, dz) || 1; return { x: dx / l, z: dz / l }; };
@@ -177,7 +188,7 @@ await Promise.all(Array.from({ length: Math.min(nPar, tarefas.length) }, async (
   while (prox < tarefas.length) {
     const t = tarefas[prox++];
     res.push(await new Promise((ok, erro) => {
-      const c = fork(fileURLToPath(import.meta.url), ['--filho', '--s', String(t.s), '--rot', t.rot, '--js', JS]);
+      const c = fork(fileURLToPath(import.meta.url), ['--filho', '--s', String(t.s), '--rot', t.rot, '--js', JS, ...SETS.flatMap(x => ['--set', x])]);
       c.on('message', ok); c.on('error', erro);
       c.on('exit', (cod, sinal) => { if (cod || sinal) erro(new Error(`semente ${t.s} (${t.rot}): saiu com ${cod ?? sinal}`)); });
     }));

@@ -1359,6 +1359,36 @@ export const IA_PESSOA = {
   // levaram o vai e volta de 8,3 a 9,8–10,4/min — CLAUDE.md, item 8); só os da frente: 17,4 → ~10 por minuto de posse
   corridas: { alemMax: 2.5, espera: 3.5, ultimos: 45, u: [11, 5.5], w: [2, 8] },
   areaCorre: 3,               // m — quem vai à área corre com o ponto a mais que isto (era IA_ATAQUE.areaCorre 6)
+  // ---- D3: a IA MARCA correndo (itens 67-defesa, 19 e 20; dono, 17/10: "A IA NÃO CORRE, NEM PRA DEFENDER, NEM PRA ATACAR,
+  // tem que ser mais difícil"). Medido contra o roteiro (teste-ia-corre seção M; o mapa das travas da categoria D): o 1º
+  // homem já fica a ~2 m do condutor da pessoa (o real é 5,2 m: ele NÃO aperta mais); o que não corria eram o 2º ao 5º —
+  // o teto de trote do ponto calmo (TATICA.suave.trote, ~2,6 m/s até 12 m do ponto) —, a recomposição que freava até parar
+  // antes de virar e o corpo abaixo de 4 m/s com o ponto a mais de 5 m em ~29% do tempo marcando.
+  // Quem marca PERTO da bola (ia-tatica.js alvoCalmo, ramos zona, fechaLinha, linha e cobre, com a bola a até
+  // marcaPerto.bola[0] m; sai a mais de bola[1]): sem o teto do trote, a intensidade d / div (era d / 14, a do modo calma),
+  // o sprint além de `corre` m (era 12) e sem o arranque calmo (TATICA.arranque: 2 s trotando depois de parar). Longe da
+  // bola fica o de sempre (redistribuir: a corrida vai para a tela do celular, ~39,6 m de largura no foco)
+  marcaPerto: { bola: [20, 24], suave: { trote: [1, 0, 0.33], div: 7, corre: 9, arranque: false } },
+  // Cobertura (o 2º homem, ia-tatica.js cobrir): a `dist` m atrás do 1º (era IA_DEFESA.cobertura 8,5), pelo modo pressa com
+  // o ponto a mais de pressa[0] m (sai a menos de pressa[1]) e o CORRER a mais de `corre` m — pelo ponto calmo ele trotava
+  // atrás do lance
+  cobre: { dist: 6, pressa: [4, 2.5], corre: 6 },
+  // Linha de engajamento (item 20; blocoDoTime): o 1º homem sai do bloco com a bola a até engaja[pressão] m do meu gol (a
+  // Média era 66: o PPDA da IA contra o roteiro ficava acima do dos times que mais apertam — Liverpool 2021/22 8,6, Wyscout;
+  // Bournemouth 2024/25 9,9, Opta)
+  engaja: [42, 78, 105],
+  // Recomposição (ia-tatica.js recompor, RECOMP_P): o sprint com mais de `corre` m de atraso (era 11) e com a bola a até
+  // `urgente` m além do meio (era 10) ou vindo a mais de `vUrgente` m/s (era 4); a frente também sprinta nos frenteS s
+  // depois da perda (PLoS One 2024, LaLiga 2: a recomposição é 24,7% das disparadas — 42,5% das dos zagueiros, 29,7% das dos
+  // meias —; Jerome 2024: a transição defensiva, ≤ 6 s depois da perda, é a fase de mais disparada fora dos lances rápidos);
+  // e a virada em ARCO: com o pedido a mais de arco[0] rad do movimento e o corpo a mais de arco[1] m/s, pede o rumo a
+  // arco[2] rad do movimento pelo lado do alvo (alvo quase atrás — a menos de 0,2 rad de 180° —: pelo lado do meu gol), com
+  // o CORRER. Acima de JOGADOR.angInversao (112°) o passoCorpo freia na linha até PARAR e só então vira (~0,6 s parado
+  // vindo a 5 m/s); na curva ele vira pela aceleração lateral do corte (JOGADOR.latCorte) sem parar — a física é a mesma
+  recomp: { corre: 11, urgente: 10, vUrgente: 4, frenteS: null, arco: [1.75, 3, 0.95], longe: null },
+  // Condutor rápido no meu corredor (item 19; acompanhaCorredor): o bloco do corredor sprinta com mais de `correLonge` m de
+  // atraso (era IA_DEFESA.corrida.correLonge 8)
+  corrida: { v: 7.0, correLonge: 4, batidoVolta: 15 },
 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca

@@ -20,9 +20,16 @@
 //  - APOIO PERTO: o time com a bola (fase 'com'), a ≤ 10 m dela, SEM o dono da bola (o "≤ 10 m" das faixas conta também o
 //    condutor — revisão do D2: o apoio curto novo podia sair sem mudar a medida); e o mesmo só com o condutor CONDUZINDO
 //    (bola no pé, ≥ 3 m/s: quem está perto anda enquanto ele leva a bola?);
-//  - vai e volta: a direção inverte (> 135°) em 0,25–1 s, com ≥ 1,5 m/s nos dois instantes (1 por jogador por segundo).
+//  - vai e volta: a direção inverte (> 135°) em 0,25–1 s, com ≥ 1,5 m/s nos dois instantes (1 por jogador por segundo);
+//  - MARCANDO o condutor (D3; a bola no pé de alguém do outro time, rolando): "longe e devagar" = o ponto que a IA pediu ao
+//    para() do ia.js (a distância até ele, depois do filtro do modo; só com a lógica INSTRUMENTADA de copiaInstrumentada)
+//    a mais de 5 m e o corpo abaixo de 4 m/s (o mapa das travas da categoria D: 28,8% do tempo da IA defendendo contra o
+//    roteiro agressivo) — no total e só no ramo 'recompoe' (a recomposição que freia até parar antes de virar: 30%); e o
+//    2º e o 3º defensores mais perto do condutor (mediana; o 1º é o h1).
 // Grupos: contra o humano, 'adv' (a IA adversária, time 1), 'comp' (os companheiros do humano, time 0 sem o controlado) e
 // 'hum' (o controlado); IA × IA, um grupo só ('ia').
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 
@@ -56,13 +63,16 @@ export function novoAcc() {
       perdeu: { r4: [], v1: [], v2: [], ini: [] } },
     ganho: { n: 0, r: [], c1: [], c2: [], c3: [], cmax: [] },
     corr: { n: 0, area: 0, costas: 0, sc: 0, scArea: 0, posseT: 0, dur: [], ramo: {} },
-    h1: { n: 0, d: 0, le2: 0, le5: 0, d1: [], vBin: BINS_1H.map(() => []), aBin: BINS_1H.map(() => []), cBin: BINS_1H.map(() => []), rBin: BINS_1H.map(() => ({})),
+    h1: { n: 0, d: 0, le2: 0, le5: 0, d1: [], d2: [], d3: [], r2: {}, r3: {}, vBin: BINS_1H.map(() => []), aBin: BINS_1H.map(() => []), cBin: BINS_1H.map(() => []), rBin: BINS_1H.map(() => ({})),
       fech: [], fechQq: [], v1ini: [], vMed: [], d0: [], chega: [], chegaN: 0, possesN: 0 },
     cond: { tk: [0, 0, 0, 0, 0], tkG: [0, 0, 0, 0, 0], v: [], posse: [] },
     apoio: { tk: [0, 0, 0, 0, 0], mt: [0, 0, 0, 0, 0] }, // fase 'com', a ≤ 10 m da bola, sem o dono: [banda]
     apoioCond: { tk: [0, 0, 0, 0, 0], mt: [0, 0, 0, 0, 0] }, // ...e com o dono conduzindo (no pé, ≥ V_CONDUZ): [banda]
     ramo: {},
     inv: 0, invRamo: {},
+    // marcando o condutor (bola no pé do outro time): quadros, "longe e devagar" (alvo do para() > 5 m e corpo < 4 m/s),
+    // com o alvo conhecido; o mesmo só no ramo 'recompoe'; e o "longe e devagar" por ramo
+    alvo: { n: 0, comD: 0, ld: 0, rn: 0, rld: 0, ldRamo: {} },
   };
 }
 
@@ -73,6 +83,8 @@ export function novoAcc() {
  */
 export function analisar(R) {
   const { N, X, Z, VX, VZ, PRES, RAMO, BX, BZ, DONO, CTRL, MAO, ROL, AT0, meta, ramos, HUM } = R;
+  const DA = R.DA ?? null; // distância ao ponto pedido ao para() (NaN = sem para() no quadro), com a lógica instrumentada
+  const DAA = R.DAA ?? null; // ...e o ângulo entre a velocidade e o rumo até ele (rad; NaN parado)
   const F = R.fps ?? 60, DT = 1 / F, q = s => Math.max(1, Math.round(s * F));
   const Q1 = q(1), Q05 = q(0.5), Q5 = q(5), Q2 = q(2), Q3 = q(3), Q07 = q(0.7), Q6 = q(6), Q025 = q(0.25), PASSOQ = Math.max(1, Math.round(F / 12));
   const S = meta.length;
@@ -132,8 +144,24 @@ export function analisar(R) {
       const rr = A.ramo[rn] ??= { t: 0, m: 0, hsr: 0, andar: 0, perto: 0, fase: [0, 0, 0, 0] };
       rr.t++; rr.m += v * DT; if (v >= V_HSR) rr.hsr++; if (v < BANDAS[0]) rr.andar++; if (d <= 10) rr.perto++; rr.fase[f - 1]++;
       if (f === 2 || f === 4) { const db = DBIN(d); (rr.atq ??= [0, 0, 0, 0, 0, 0])[2 * db]++; rr.atq[2 * db + 1] += v * DT; }
+      // (e na PERDA — os 5 s depois de perder —, por distância à bola: diagnóstico do volume da transição defensiva)
+      if (f === 3) { const db = DBIN(d); (rr.prd ??= [0, 0, 0, 0, 0, 0])[2 * db]++; rr.prd[2 * db + 1] += v * DT; }
       // condutor (com a bola no pé)
       if (DONO[t] === s && !MAO[t]) { (f === 4 ? A.cond.tkG : A.cond.tk)[b]++; if (t % PASSOQ === 0) A.cond.v.push(v); }
+      // marcando o condutor do outro time (a bola no pé dele): "longe e devagar"
+      if (DONO[t] >= 0 && !MAO[t] && meta[DONO[t]].time !== T) {
+        const da = DA ? DA[k] : NaN, ld = da > 5 && v < 4, rec = rn === 'recompoe';
+        A.alvo.n++; if (Number.isFinite(da)) A.alvo.comD++;
+        if (ld) {
+          A.alvo.ld++;
+          // (por ramo, perto/longe da bola — 20 m — e o que o corpo fazia: parado < 0,3 m/s, reto < 45°, virando, invertendo
+          // > 112° — a inversão do jogador.js —; diagnóstico)
+          const an = DAA ? DAA[k] : NaN, oq = !Number.isFinite(an) ? 'parado' : an < 0.785 ? 'reto' : an < 1.95 ? 'vira' : 'inverte';
+          const ch = `${rn}${d <= 20 ? '≤20' : d <= 30 ? '20-30' : '>30'}${f === 3 ? 'P' : 'S'}:${oq}`;
+          A.alvo.ldRamo[ch] = (A.alvo.ldRamo[ch] ?? 0) + 1;
+        }
+        if (rec) { A.alvo.rn++; if (ld) A.alvo.rld++; }
+      }
       // vai e volta: a direção inverte (> 135°) em 0,25–1 s, com ≥ 1,5 m/s nos dois instantes (1 por jogador por s)
       if (v >= 1.5 && t >= Q1 && t - invUlt[s] >= Q1) {
         for (let qq = Q025; qq <= Q1; qq += Math.max(1, Math.round(F / 12))) {
@@ -316,12 +344,13 @@ export function analisar(R) {
       const c = ROL[t] && !MAO[t] ? condDe(t) : -1;
       if (c < 0 || PRES[K(t, c)] !== 1) { fechaPosse(t); continue; }
       const T = meta[c].time, kc = K(t, c), cx = X[kc], cz = Z[kc];
-      let i1 = -1, d1 = Infinity;
+      // (o 1º, o 2º e o 3º mais perto do condutor)
+      let i1 = -1, d1 = Infinity, d2 = Infinity, d3 = Infinity, i2 = -1, i3 = -1;
       for (let s = 0; s < S; s++) {
         if (meta[s].time === T || PRES[K(t, s)] !== 1) continue;
         if (filtra && grupo(t, s) !== g) continue;
         const d = Math.hypot(X[K(t, s)] - cx, Z[K(t, s)] - cz);
-        if (d < d1) { d1 = d; i1 = s; }
+        if (d < d1) { d3 = d2; i3 = i2; d2 = d1; i2 = i1; d1 = d; i1 = s; } else if (d < d2) { d3 = d2; i3 = i2; d2 = d; i2 = s; } else if (d < d3) { d3 = d; i3 = s; }
       }
       if (i1 < 0 || !Number.isFinite(d1)) { fechaPosse(t); continue; }
       if (pos && pos.c !== c) fechaPosse(t);
@@ -329,7 +358,12 @@ export function analisar(R) {
       if (t - pos.t0 <= Q2) { pos.vs.push(vel(t, pos.i1)); pos.d1fim = d1; }
       if (pos.chega == null && d1 <= 2 && t - pos.t0 <= Q6) pos.chega = (t - pos.t0) / F;
       A.n++; A.d += d1; if (d1 <= 2) A.le2++; if (d1 <= 5) A.le5++;
-      if (t % 3 === 0) A.d1.push(d1);
+      if (t % 3 === 0) {
+        A.d1.push(d1); if (Number.isFinite(d2)) A.d2.push(d2); if (Number.isFinite(d3)) A.d3.push(d3);
+        // (o ramo do 2º e do 3º; diagnóstico)
+        if (i2 >= 0) { const rn = ramos[RAMO[K(t, i2)]]; A.r2[rn] = (A.r2[rn] ?? 0) + 1; }
+        if (i3 >= 0) { const rn = ramos[RAMO[K(t, i3)]]; A.r3[rn] = (A.r3[rn] ?? 0) + 1; }
+      }
       // velocidade e aproximação do 1º homem por faixa de distância (o mesmo jogador no quadro anterior); a do
       // condutor; o ramo do 1º homem
       if (t > 0 && ROL[t - 1] && PRES[K(t - 1, i1)] === 1 && PRES[K(t - 1, c)] === 1 && t % 2 === 0) {
@@ -363,7 +397,12 @@ export function juntar(lista) {
     J.corr.dur.push(...A.corr.dur);
     for (const [r, [n, a]] of Object.entries(A.corr.ramo ?? {})) { const qq = J.corr.ramo[r] ??= [0, 0]; qq[0] += n; qq[1] += a; }
     for (const key of ['n', 'd', 'le2', 'le5', 'chegaN', 'possesN']) J.h1[key] += A.h1[key];
-    for (const key of ['d1', 'fech', 'fechQq', 'v1ini', 'vMed', 'chega', 'd0']) J.h1[key].push(...A.h1[key]);
+    for (const key of ['r2', 'r3']) for (const [r, n] of Object.entries(A.h1[key] ?? {})) J.h1[key][r] = (J.h1[key][r] ?? 0) + n;
+    for (const key of ['d1', 'd2', 'd3', 'fech', 'fechQq', 'v1ini', 'vMed', 'chega', 'd0']) J.h1[key].push(...(A.h1[key] ?? []));
+    if (A.alvo) {
+      for (const key of ['n', 'comD', 'ld', 'rn', 'rld']) J.alvo[key] += A.alvo[key];
+      for (const [r, n] of Object.entries(A.alvo.ldRamo)) J.alvo.ldRamo[r] = (J.alvo.ldRamo[r] ?? 0) + n;
+    }
     for (let b = 0; b < BINS_1H.length; b++) {
       J.h1.vBin[b].push(...A.h1.vBin[b]); J.h1.aBin[b].push(...A.h1.aBin[b]); J.h1.cBin[b].push(...A.h1.cBin[b]);
       for (const [r, n] of Object.entries(A.h1.rBin[b])) J.h1.rBin[b][r] = (J.h1.rBin[b][r] ?? 0) + n;
@@ -375,6 +414,7 @@ export function juntar(lista) {
       const qq = J.ramo[r] ??= { t: 0, m: 0, hsr: 0, andar: 0, perto: 0, fase: [0, 0, 0, 0] };
       qq.t += o.t; qq.m += o.m; qq.hsr += o.hsr; qq.andar += o.andar; qq.perto += o.perto; for (let i = 0; i < 4; i++) qq.fase[i] += o.fase[i];
       if (o.atq) { qq.atq ??= [0, 0, 0, 0, 0, 0]; for (let i = 0; i < 6; i++) qq.atq[i] += o.atq[i]; }
+      if (o.prd) { qq.prd ??= [0, 0, 0, 0, 0, 0]; for (let i = 0; i < 6; i++) qq.prd[i] += o.prd[i]; }
     }
   }
   return J;
@@ -422,7 +462,7 @@ export function resumo(J) {
   out.corr = { ramo: Object.entries(Cr.ramo).sort((a, b) => b[1][0] - a[1][0]).slice(0, 8), porMinPosse: Cr.n / Math.max(1e-9, posseMin), area: Cr.area / Math.max(1, Cr.n), costas: Cr.costas / Math.max(1, Cr.n), scPorMinPosse: Cr.sc / Math.max(1e-9, posseMin), scArea: Cr.scArea / Math.max(1, Cr.sc), durMed: med(Cr.dur), n: Cr.n, posseMin };
   const H = J.h1;
   const topo = o => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([r, n]) => [r, n / Math.max(1, Object.values(o).reduce((a, b) => a + b, 0))]);
-  out.h1 = { dMed: H.d / Math.max(1, H.n), dMediana: med(H.d1), le2: H.le2 / Math.max(1, H.n), le5: H.le5 / Math.max(1, H.n), vBin: H.vBin.map(med), aBin: H.aBin.map(med), cBin: H.cBin.map(med), nBin: H.vBin.map(v => v.length),
+  out.h1 = { dMed: H.d / Math.max(1, H.n), dMediana: med(H.d1), d2Mediana: med(H.d2), d3Mediana: med(H.d3), r2: topo(H.r2), r3: topo(H.r3), le2: H.le2 / Math.max(1, H.n), le5: H.le5 / Math.max(1, H.n), vBin: H.vBin.map(med), aBin: H.aBin.map(med), cBin: H.cBin.map(med), nBin: H.vBin.map(v => v.length),
     rBin: H.rBin.map(topo), fech: med(H.fech), fechQq: med(H.fechQq), vMed2s: med(H.vMed), v1ini: med(H.v1ini), d0: med(H.d0), chega: med(H.chega), chegaFrac: H.chegaN / Math.max(1, H.possesN), posses: H.possesN };
   const ct = J.cond.tk.reduce((a, b) => a + b, 0), cg = J.cond.tkG.reduce((a, b) => a + b, 0);
   out.cond = { faixas: J.cond.tk.map(x => 100 * x / Math.max(1, ct)), faixasGanho: J.cond.tkG.map(x => 100 * x / Math.max(1, cg)), vMed: med(J.cond.v),
@@ -439,8 +479,13 @@ export function resumo(J) {
   out.ramos = Object.entries(J.ramo).filter(([r, o]) => o.t > 0.01 * J.pt || r.startsWith('comBola')).sort((a, b) => b[1].t - a[1].t)
     .map(([r, o]) => ({ r, tempo: 100 * o.t / J.pt, mpm: o.m / (o.t / J.pt * J.seg / 60), hsr: 100 * o.hsr / o.t, andar: 100 * o.andar / o.t, perto: 100 * o.perto / o.t, fase: o.fase.map(x => 100 * x / o.t),
       // atacando (com + ganho), por distância à bola: [% do tempo de jogador atacando, m/min] em ≤ 10, 10–25 e > 25 m
-      atq: o.atq ? [0, 1, 2].map(b => [100 * o.atq[2 * b] / J.pt, o.atq[2 * b + 1] / Math.max(1e-9, o.atq[2 * b] / J.pt * J.seg / 60)]) : null }));
+      atq: o.atq ? [0, 1, 2].map(b => [100 * o.atq[2 * b] / J.pt, o.atq[2 * b + 1] / Math.max(1e-9, o.atq[2 * b] / J.pt * J.seg / 60)]) : null,
+      prd: o.prd ? [0, 1, 2].map(b => [100 * o.prd[2 * b] / J.pt, o.prd[2 * b + 1] / Math.max(1e-9, o.prd[2 * b] / J.pt * J.seg / 60)]) : null }));
   out.invPorMin = J.inv / minJ;
+  // marcando o condutor: % do tempo "longe e devagar" (NaN sem a lógica instrumentada) e só na recomposição; por ramo
+  const AL = J.alvo;
+  out.alvo = { n: AL.n, ld: AL.comD ? 100 * AL.ld / AL.n : NaN, rec: AL.comD ? 100 * AL.rld / Math.max(1, AL.rn) : NaN, recTempo: 100 * AL.rn / Math.max(1, AL.n),
+    ldRamo: Object.entries(AL.ldRamo).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([r, n]) => [r, 100 * n / Math.max(1, AL.n)]) };
   // o vai e volta por ramo (no instante da inversão): a parte de cada ramo no total, por jogador-min
   out.invRamo = Object.entries(J.invRamo).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([r, n]) => [r, n / minJ]);
   out.minJogador = minJ;
@@ -473,16 +518,35 @@ export function imprimir(nome, r) {
   const H = r.h1;
   L.push(`  1º HOMEM sobre o condutor: mediana ${f1(H.dMediana)} m · ≤ 2 m ${f1(100 * H.le2, 0)}% · ≤ 5 m ${f1(100 * H.le5, 0)}% · no domínio a ${f1(H.d0)} m, fecha ${f1(H.fech, 2)} m/s em 2 s`);
   L.push(`     aproximação por distância ${NOMES_1H.map((n, b) => `${n} m (${H.nBin[b]}): ${f1(H.aBin[b] * 3.6)} km/h [${H.rBin[b].map(([a, x]) => `${a} ${f1(100 * x, 0)}%`).join(', ')}]`).join(' · ')}`);
+  L.push(`     2º e 3º homem: ${f1(H.d2Mediana)} m · ${f1(H.d3Mediana)} m (medianas) · ramos do 2º ${H.r2.map(([a, x]) => `${a} ${f1(100 * x, 0)}%`).join(', ')} · do 3º ${H.r3.map(([a, x]) => `${a} ${f1(100 * x, 0)}%`).join(', ')}`);
+  if (Number.isFinite(r.alvo.ld)) L.push(`  MARCANDO o condutor: "longe e devagar" (alvo do para() > 5 m, corpo < 4 m/s) ${f1(r.alvo.ld)}% do tempo · na recomposição (${f1(r.alvo.recTempo, 0)}% do tempo) ${f1(r.alvo.rec)}% · por ramo ${r.alvo.ldRamo.map(([a, x]) => `${a} ${f1(x)}`).join(', ')}`);
   L.push(`  APOIO PERTO (com a bola, ≤ 10 m dela, sem o dono): ${f1(r.apoioPerto.mpm, 0)} m/min · tempo ${fx(r.apoioPerto.tempoPct)} % · alta+disp ${f1(r.apoioPerto.hsrMpm)} m/min`);
   L.push(`     ...com o dono conduzindo (≥ 10,8 km/h; ${f1(100 * r.apoioConduz.min / Math.max(1e-9, r.apoioPerto.min), 0)}% desse tempo): ${f1(r.apoioConduz.mpm, 0)} m/min · tempo ${fx(r.apoioConduz.tempoPct)} % · alta+disp ${f1(r.apoioConduz.hsrMpm)} m/min`);
   L.push(`  CONDUTOR: ${f1(r.cond.vMed * 3.6)} km/h (mediana) · faixas ${fx(r.cond.faixas)} % · posse ${f1(r.cond.posseMed, 2)} s (mediana de ${r.cond.posses}) · ${f1(r.cond.trocasPorMin, 1)} trocas por min de posse`);
   L.push(`  vai e volta: ${f1(r.invPorMin, 2)} inversões (> 135° em 0,25–1 s) por jogador-min · por ramo ${r.invRamo.map(([a, x]) => `${a} ${f1(x, 2)}`).join(', ')}`);
   L.push(`  ramos (≥ 1%): ${r.ramos.map(o => `${o.r} ${f1(o.tempo, 0)}% (${f1(o.mpm, 0)} m/min, andando ${f1(o.andar, 0)}%, ≤ 10 m ${f1(o.perto, 0)}%)`).join(' · ')}`);
   L.push(`  atacando por ramo e distância (% do tempo de jogador · m/min em ≤ 10 / 10–25 / > 25 m): ${r.ramos.filter(o => o.atq && o.atq.some(x => x[0] >= 0.5)).map(o => `${o.r} ${o.atq.map(([p, v]) => `${f1(p, 1)}·${f1(v, 0)}`).join(' / ')}`).join(' · ')}`);
+  L.push(`  na PERDA por ramo e distância (% do tempo de jogador · m/min em ≤ 10 / 10–25 / > 25 m): ${r.ramos.filter(o => o.prd && o.prd.some(x => x[0] >= 0.3)).map(o => `${o.r} ${o.prd.map(([p, v]) => `${f1(p, 1)}·${f1(v, 0)}`).join(' / ')}`).join(' · ')}`);
   return L.join('\n');
 }
 
 // ------------------------------------------------------------------------------------------- o filme do GOLAÇO
+
+/**
+ * Cópia da lógica da pasta `js` (numa pasta nova em os.tmpdir(), ou em `dest`) com UMA linha a mais no para() do ia.js:
+ * `j.__d = d` (e `j.__dx`, `j.__dz`) — a distância do jogador ao ponto pedido (depois do filtro do modo) e o rumo até ele. Só lida pelo filmarPartida (o "longe e
+ * devagar" de quem marca); nada mais muda (o campo novo não entra no hash nem em decisão nenhuma). Devolve a pasta; quem
+ * chama apaga com fs.rmSync(pasta, {recursive: true}). Erro se o para() mudou e a linha não achou o lugar.
+ */
+export function copiaInstrumentada(js, dest = null) {
+  const pasta = dest ?? fs.mkdtempSync(path.join(os.tmpdir(), 'golaco-instr-'));
+  fs.cpSync(js, pasta, { recursive: true });
+  const f = path.join(pasta, 'ia.js'), src = fs.readFileSync(f, 'utf8');
+  const alvo = '  const d = MD.hypot(dx, dz);\n  if (d < IA.chegou';
+  if (src.split(alvo).length !== 2) throw new Error('copiaInstrumentada: o para() do ia.js mudou (a linha da distância não foi achada)');
+  fs.writeFileSync(f, src.replace(alvo, '  const d = MD.hypot(dx, dz);\n  j.__d = d; j.__dx = dx; j.__dz = dz;\n  if (d < IA.chegou'));
+  return pasta;
+}
 
 /**
  * Uma partida de 2 × `min` min (física em tempo real) na lógica da pasta `js`: contra o humano ROTEIRIZADO
@@ -513,7 +577,7 @@ export async function filmarPartida({ js, semente, modo = 'humano', perfil = 'ag
   // fim no roteiro passivo)
   const NMAX = Math.round(2 * min * 3600 + 6000);
   const X = new Float32Array(NMAX * MAXS), Z = new Float32Array(NMAX * MAXS), VX = new Float32Array(NMAX * MAXS), VZ = new Float32Array(NMAX * MAXS);
-  const PRES = new Uint8Array(NMAX * MAXS), RAMO = new Uint8Array(NMAX * MAXS);
+  const PRES = new Uint8Array(NMAX * MAXS), RAMO = new Uint8Array(NMAX * MAXS), DA = new Float32Array(NMAX * MAXS).fill(NaN), DAA = new Float32Array(NMAX * MAXS).fill(NaN);
   const BX = new Float32Array(NMAX), BZ = new Float32Array(NMAX), DONO = new Int16Array(NMAX), CTRL = new Int16Array(NMAX);
   const MAO = new Uint8Array(NMAX), ROL = new Uint8Array(NMAX), AT0 = new Int8Array(NMAX);
   const slotDe = new Map(), meta = [], ramos = ['—'], ramoCod = new Map([['—', 0]]);
@@ -575,12 +639,19 @@ export async function filmarPartida({ js, semente, modo = 'humano', perfil = 'ag
       const r = (j.id === idD && m.naMao == null && ia?.op && !(HUM && j.id === m.controlado[0]) ? 'comBola:' + ia.op + (ia.op === 'conduz' ? (ia.correr ? '+correr' : ia.curta ? '+curta' : '') : '') : j.ia?.ramo ? j.ia.ramo + sub : null) ?? '—';
       let c = ramoCod.get(r); if (c === undefined) { c = ramos.length; ramos.push(r); ramoCod.set(r, c); }
       RAMO[k] = c;
+      // (a distância ao ponto do para() neste passo — só com a cópia instrumentada; zerada para o próximo)
+      // (e o ângulo entre a velocidade e o rumo até o ponto, rad — NaN parado)
+      if (j.__d != null) {
+        DA[k] = j.__d; const v = Math.hypot(j.vx, j.vz), l = Math.hypot(j.__dx, j.__dz);
+        if (v > 0.3 && l > 1e-6) DAA[k] = Math.acos(Math.max(-1, Math.min(1, (j.vx * j.__dx + j.vz * j.__dz) / (v * l))));
+        j.__d = null;
+      }
       if (j.id === idD) DONO[N] = s;
       if (HUM && j.id === m.controlado[0]) CTRL[N] = s;
     }
     N++;
   }
   if (m.partida.estado !== 'fim') throw new Error(`filmarPartida: a partida (semente ${semente}, ${perfil}) não chegou ao fim em ${NMAX} passos (estado ${m.partida.estado}, tick ${m.tick})`);
-  const r = analisar({ N, fps: 60, X, Z, VX, VZ, PRES, RAMO, BX, BZ, DONO, CTRL, MAO, ROL, AT0, meta, ramos, HUM });
+  const r = analisar({ N, fps: 60, X, Z, VX, VZ, PRES, RAMO, DA, DAA, BX, BZ, DONO, CTRL, MAO, ROL, AT0, meta, ramos, HUM });
   return { ...r, HUM, perfil, semente, chutes, gols, penaltis, roubadas, peMin: peTk.map(x => x / 3600) };
 }

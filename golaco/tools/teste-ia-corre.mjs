@@ -24,7 +24,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { filmarPartida, juntar, resumo, imprimir, f1 } from './lib/corrida-medidas.mjs';
+import { filmarPartida, juntar, resumo, imprimir, f1, copiaInstrumentada } from './lib/corrida-medidas.mjs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -101,12 +101,16 @@ async function checarPortao() {
 
 if (args[0] === '--filho') {
   process.on('message', async tf => {
-    const r = await filmarPartida({ js: JS, semente: tf.sem, modo: 'humano', perfil: tf.perfil, min: 4, sets: SETS });
+    // (tf.js: a cópia instrumentada da lógica — o alvo do para() para o "longe e devagar" da seção M)
+    const r = await filmarPartida({ js: tf.js ?? JS, semente: tf.sem, modo: 'humano', perfil: tf.perfil, min: 4, sets: SETS });
     process.send(r, () => process.exit(0));
   });
 } else {
+  // a lógica com a linha do alvo no para() (tools/lib/corrida-medidas.mjs copiaInstrumentada), numa pasta temporária
+  const INSTR = copiaInstrumentada(JS);
+  process.on('exit', () => { try { fs.rmSync(INSTR, { recursive: true, force: true }); } catch { /* já foi */ } });
   const tarefas = [];
-  for (const p of ROTEIROS) for (let s = 1; s <= NSEM; s++) tarefas.push({ sem: s, perfil: p });
+  for (const p of ROTEIROS) for (let s = 1; s <= NSEM; s++) tarefas.push({ sem: s, perfil: p, js: INSTR });
   const res = [];
   const t0 = Date.now();
   let prox = 0;
@@ -155,9 +159,13 @@ if (args[0] === '--filho') {
     ['A', 'A11', 'item 21: conversão da IA (gols ÷ chutes, %)', c => pct(c.soma(r => r.gols[1]), c.soma(r => r.chutes[1].n)), null, 21.8, null],
     ['A', 'A12', 'chutes da IA por partida', c => c.soma(r => r.chutes[1].n) / c.nP, null, 4.21, null],
     ['M', 'M1', '1º homem da IA sobre o condutor humano (mediana, m)', c => c.adv.h1.dMediana, null, 2.00, 5.2],
-    ['M', 'M2', 'aproximação do 1º homem da IA a 4–7 m (km/h)', c => c.adv.h1.aBin[2] * 3.6, null, 2.18, 7.4],
-    ['M', 'M3', 'aproximação do 1º homem da IA a 7–12 m (km/h)', c => c.adv.h1.aBin[3] * 3.6, null, 1.11, 7.5],
+    ['M', 'M2', 'aproximação do 1º homem da IA a 4–7 m (km/h)', c => c.adv.h1.aBin[2] * 3.6, ['>=', 5], 2.18, 7.4],
+    ['M', 'M3', 'aproximação do 1º homem da IA a 7–12 m (km/h)', c => c.adv.h1.aBin[3] * 3.6, ['>=', 5], 1.11, 7.5],
     ['M', 'M4', 'IA sem a bola (marcando): m/min', c => c.adv.defendendo.mpm, null, 222.8, null],
+    ['M', 'M5', 'marcando: o alvo do para() a > 5 m e o corpo < 4 m/s (% do tempo)', c => c.adv.alvo.ld, ['<=', 18], null, null],
+    ['M', 'M6', '...na recomposição (% do tempo dela)', c => c.adv.alvo.rec, ['<=', 15], null, null],
+    ['M', 'M7', '2º homem da IA sobre o condutor humano (mediana, m)', c => c.adv.h1.d2Mediana, ['<=', 5], null, null],
+    ['M', 'M8', '3º homem da IA sobre o condutor humano (mediana, m)', c => c.adv.h1.d3Mediana, ['<=', 8.5], null, null],
     ['C', 'C1', '1º companheiro da pessoa sobre o condutor da IA (mediana, m)', c => c.comp.h1.dMediana, null, 7.64, 5.2],
     ['C', 'C2', 'companheiros da pessoa a ≤ 5 m do condutor da IA (% do tempo)', c => 100 * c.comp.h1.le5, null, 29.2, 48],
     ['V', 'V1', 'IA atacando (com a bola): m/min', c => c.adv.atacando.mpm, ['<=', 190], 168.2, null],
@@ -167,6 +175,7 @@ if (args[0] === '--filho') {
     // (revisão do D2: conduzindo mais, a IA entregava a bola no bote — 2,42 → 3,02 por min no pé, +25%; o teto é a base + 15%)
     ['V', 'V5', 'roubadas sofridas pela IA por min de bola no pé (≤ base + 15%)', c => c.soma(r => r.roubadas[1]) / Math.max(1e-9, c.soma(r => r.peMin[1])), ['<=', 2.78], 2.42, null],
     ['V', 'V6', 'chutes do roteiro por partida', c => c.soma(r => r.chutes[0].n) / c.nP, null, 0.83, null],
+    ['V', 'V7', 'IA nos 5 s depois de PERDER a bola: m/min', c => c.adv.fase.perda.mpm, ['<=', 230], null, null],
   ];
   const tB = Date.now();
   const ctx = ctxDe(res);

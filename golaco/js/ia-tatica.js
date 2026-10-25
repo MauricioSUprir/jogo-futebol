@@ -50,6 +50,12 @@ const seg = s => Math.round(s / DT);
 // suaveApoioLonge), juntado uma vez na carga
 const SUAVE_APOIO_P = { ...TATICA.suaveApoio, ...IA_PESSOA.suaveApoio };
 const SUAVE_APOIO_LONGE_P = { ...SUAVE_APOIO_P, ...IA_PESSOA.suaveApoioLonge.suave };
+// D3 (a IA marca correndo contra a pessoa; config.js IA_PESSOA): o ponto calmo de quem marca perto da bola (zona e cobertura
+// pelo TATICA.suave, a linha pelo TATICA.suaveLinha), a recomposição e o bloco do corredor, juntados uma vez na carga
+const SUAVE_MARCA_P = { ...TATICA.suave, ...IA_PESSOA.marcaPerto.suave };
+const SUAVE_LINHA_MARCA_P = { ...TATICA.suaveLinha, ...IA_PESSOA.marcaPerto.suave };
+const RECOMP_P = { ...TATICA.recomp, ...IA_PESSOA.recomp };
+const CORRIDA_P = { ...IA_DEFESA.corrida, ...IA_PESSOA.corrida };
 
 /**
  * Estado do para() (j.ia) pronto para este tick — a mesma inicialização do entradaIA (use antes de
@@ -351,7 +357,8 @@ export function blocoDoTime(m, t) {
   } else { B.cond = -1; B.cvx = 0; B.cvz = 0; }
   // condutor RÁPIDO vindo para o meu gol (IA_DEFESA.corrida; com histerese): o 1º e o 2º homem acompanham pela velocidade,
   // o batido passa o 1º homem adiante e o bloco do corredor acompanha
-  const CR = IA_DEFESA.corrida;
+  // (contra a pessoa, CORRIDA_P: IA_PESSOA.corrida por cima — D3, item 19)
+  const CR = contraPessoa(m, t) ? CORRIDA_P : IA_DEFESA.corrida;
   {
     // (liga pela velocidade do corpo dele, agora — a filtrada atrasa ~0,5 s e a arrancada já estava em cima do 1º homem
     // —, e desliga pela filtrada)
@@ -484,7 +491,8 @@ export function blocoDoTime(m, t) {
 
   // 1º homem: aperta ou contém (o goleiro adversário com a bola na mão não é pressionado: Regra 12.3)
   const dGol = MD.hypot(B.foco.x - meuGol, B.foco.z);
-  const engajado = dGol <= IA_DEFESA.engaja[p];
+  // (contra a pessoa, a linha de engajamento do D3: IA_PESSOA.engaja — item 20, a Média sai do bloco mais alto)
+  const engajado = dGol <= (contraPessoa(m, t) ? IA_PESSOA.engaja : IA_DEFESA.engaja)[p];
   B.engajado = engajado;
   // gatilho de ESTADO "condutor lento" (pedido do dono, 11/10): o condutor de linha com a velocidade filtrada abaixo de
   // lento.v m/s por lento.s[pressão] s (+ lento.longe s fora da linha de engajamento) → o 1º homem sai do bloco e aperta
@@ -730,8 +738,11 @@ function irPara(m, j, x, z, mag, correr, extra, modo) {
 export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
   // (o apoio pela referência do time da IA contra a pessoa: SUAVE_APOIO_P perto da bola e SUAVE_APOIO_LONGE_P longe dela —
   // IA_PESSOA.suaveApoio e suaveApoioLonge, categoria D; suaveApoioPessoa)
-  const r = j.ia.ramo, it = estadoT(j), S = r === 'linha' ? TATICA.suaveLinha : (r === 'apoioRef' && suaveApoioPessoa(m, j, it))
-    || (r === 'apoio' || r === 'apoioRef' ? TATICA.suaveApoio : TATICA.suave);
+  // (D3: quem marca perto da bola no time da IA contra a pessoa — zona, fechaLinha, linha e cobre —, SUAVE_MARCA_P ou
+  // SUAVE_LINHA_MARCA_P: suaveMarcaPessoa)
+  const r = j.ia.ramo, it = estadoT(j), S = (r === 'linha' || r === 'zona' || r === 'fechaLinha' || r === 'cobre' ? suaveMarcaPessoa(m, j, it, r) : null)
+    || (r === 'linha' ? TATICA.suaveLinha : (r === 'apoioRef' && suaveApoioPessoa(m, j, it))
+    || (r === 'apoio' || r === 'apoioRef' ? TATICA.suaveApoio : TATICA.suave));
   if (it.sTick !== m.tick - 1 || it.sRamo !== j.ia.ramo) {
     it.fx = x; it.fz = z; it.vx = 0; it.vz = 0; it.vf = 0;
     it.quieto = false; it.lento = false; it.tParado = 0;
@@ -769,9 +780,11 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
     if (S.passinho && d > S.passinho[1]) { out.x = px; out.z = it.fz; out.mag = S.passinho[0]; out.modo = 'pressa'; out.correr = false; it.dTick = -9; return out; }
     out.x = j.x; out.z = j.z; it.dTick = -9; return out;
   }
+  // (S.arranque === false: sem o arranque calmo — D3, quem marca perto da bola contra a pessoa)
+  const arranque = TATICA.arranque && S.arranque !== false && m.tick < it.calmoAte && d < TATICA.arranque.dMax;
   if (ajuste) {
     out.modo = 'pressa'; out.mag = Math.min(1, Math.max(g[2], d / S.dist)); out.correr = d > S.corre;
-    if (TATICA.arranque && m.tick < it.calmoAte && d < TATICA.arranque.dMax) { out.mag = Math.min(out.mag, S.trote[2]); out.correr = false; }
+    if (arranque) { out.mag = Math.min(out.mag, S.trote[2]); out.correr = false; }
   }
   else if (it.lento) out.mag = g[2];
   else {
@@ -779,11 +792,12 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
     // da faixa em que o tronco treme) e no máximo trote[0] até trote[1] m — pelo modo pressa, que
     // não tem piso próprio (o rumo já vem filtrado e com o giro limitado, abaixo)
     out.modo = 'pressa';
-    out.mag = Math.max(S.trote[2], Math.min(d < S.trote[1] ? S.trote[0] : 1, d / 14));
+    // (S.div: o divisor da intensidade — d / 14, a do modo calma, se não houver; D3, quem marca perto da bola: d / 7)
+    out.mag = Math.max(S.trote[2], Math.min(d < S.trote[1] ? S.trote[0] : 1, d / (S.div ?? 14)));
     // arranque calmo: logo depois de parar (TATICA.arranque.s s), um ajuste de até dMax m sai trotando
     // devagar (trote[2]) — parado no lugar e arrancando de novo a cada passe era o anda-para-anda
     // (teste-movimento; Metrica: 0,37/min, quase ninguém para de vez); a recomposição (abaixo) passa
-    if (TATICA.arranque && m.tick < it.calmoAte && d < TATICA.arranque.dMax) { out.mag = Math.min(out.mag, S.trote[2]); out.correr = false; }
+    if (arranque) { out.mag = Math.min(out.mag, S.trote[2]); out.correr = false; }
     // recomposição: com o alvo recuando para o meu gol mais rápido que recomp[0] m/s, vai no ritmo
     // dele (+ recomp[1] m/s, no máximo recomp[2]) — trotando a ~2,6 m/s a linha ficava 5–10 m acima da
     // bola que entrava conduzida no meu terço (teste-forma: 3,5 de 10 atrás da bola no t1)
@@ -821,6 +835,19 @@ function suaveApoioPessoa(m, j, it) {
   const L = IA_PESSOA.suaveApoioLonge.bola, d = MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z);
   it.longe = it.longe ? d > L[1] : d > L[0];
   return it.longe ? SUAVE_APOIO_LONGE_P : SUAVE_APOIO_P;
+}
+
+/**
+ * O ponto calmo de quem MARCA perto da bola no time da IA contra a pessoa (D3; tatica.js contraPessoa; null = o de sempre):
+ * com a bola a até IA_PESSOA.marcaPerto.bola[0] m (sai a mais de bola[1]; histerese em it.marcaPerto), SUAVE_LINHA_MARCA_P
+ * na linha de defesa e SUAVE_MARCA_P na zona e na cobertura — sem o teto do trote, a intensidade d / div, o sprint mais cedo
+ * e sem o arranque calmo.
+ */
+function suaveMarcaPessoa(m, j, it, r) {
+  if (!contraPessoa(m, j.time)) { it.marcaPerto = false; return null; }
+  const L = IA_PESSOA.marcaPerto.bola, d = MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z);
+  it.marcaPerto = it.marcaPerto ? d < L[1] : d < L[0];
+  return it.marcaPerto ? (r === 'linha' ? SUAVE_LINHA_MARCA_P : SUAVE_MARCA_P) : null;
 }
 
 /** Intensidade do analógico que pede a velocidade v (a inversa de jogador.js velocidadeDesejada, sem CORRER). */
@@ -967,7 +994,7 @@ function pontoMarcacao(m, B, a, meuGol, p, out) {
 /** j está no caminho do condutor rápido: do lado do gol, a menos de corrida.recua[0] m e a até corrida.caminho m da linha
  * condutor → meu gol? */
 function noCaminho(m, j, B, meuGol) {
-  const CR = IA_DEFESA.corrida;
+  const CR = contraPessoa(m, j.time) ? CORRIDA_P : IA_DEFESA.corrida;
   let c = null;
   for (const o of m.jogadores) if (o.id === B.cond) { c = o; break; }
   if (!c) return false;
@@ -982,7 +1009,8 @@ function noCaminho(m, j, B, meuGol) {
  * velocidade dele (modo pressa; CORRER com mais de corrida.correLonge m de atraso). Muda out (o ponto calmo).
  */
 function acompanhaCorredor(m, j, B, lado, out) {
-  const CR = IA_DEFESA.corrida;
+  // (D3, contra a pessoa: CORRIDA_P — o bloco do corredor sprinta com menos atraso, IA_PESSOA.corrida)
+  const CR = contraPessoa(m, j.time) ? CORRIDA_P : IA_DEFESA.corrida;
   let c = null;
   for (const o of m.jogadores) if (o.id === B.cond) { c = o; break; }
   if (!c || (j.x - c.x) * lado >= 0) return;
@@ -1007,7 +1035,7 @@ function acompanhaCorredor(m, j, B, lado, out) {
  * entrada, ou null.
  */
 function acompanhar(m, j, s, B, meuGol, extra, ramo) {
-  const CR = IA_DEFESA.corrida;
+  const CR = contraPessoa(m, j.time) ? CORRIDA_P : IA_DEFESA.corrida;
   let c = null;
   for (const o of m.jogadores) if (o.id === B.cond) { c = o; break; }
   if (!c) return null;
@@ -1095,7 +1123,9 @@ function desviaCondutor(m, j, B, out) {
  * Devolve a entrada, ou null (segue o ponto calmo da referência).
  */
 function recompor(m, j, s, B, vaga, lado, extra) {
-  const R = TATICA.recomp;
+  // (D3, contra a pessoa: RECOMP_P — o sprint mais cedo, a frente também nos primeiros frenteS s da perda e a virada em arco)
+  const pessoa = contraPessoa(m, j.time);
+  const R = pessoa ? RECOMP_P : TATICA.recomp;
   const it = estadoT(j);
   // o estado só vale se a recomposição rodou no tick anterior: com a bola de volta (o semBola não roda) ou
   // num papel de pressão no meio, `recomp` ficava velho e, na perda seguinte (> max s depois), o 1º tick
@@ -1124,8 +1154,10 @@ function recompor(m, j, s, B, vaga, lado, extra) {
   if (it.recomp) {
     if (atraso < R.desliga) { it.recomp = false; it.recompFim = m.tick; }
     else if (m.tick - it.recompDesde > seg(R.max)) { it.recomp = false; it.recompBloq = m.tick + seg(R.pausa); }
-  } else if (m.tick >= it.recompBloq && (atraso > (naTransicao ? R.liga : B.rapido ? IA_DEFESA.corrida.liga : R.ligaOrganizado)
-    || (naTransicao && !frente && u > ub + R.ligaBola && uRef < ub && m.tick - it.recompFim > seg(R.respiro)))) {
+  } else if (m.tick >= it.recompBloq && (atraso > (naTransicao ? R.liga : B.rapido ? (pessoa ? CORRIDA_P : IA_DEFESA.corrida).liga : R.ligaOrganizado)
+    || (naTransicao && !frente && u > ub + R.ligaBola && uRef < ub && m.tick - it.recompFim > seg(R.respiro))
+    // (item 19, contra a pessoa: quem o condutor rápido já passou recompõe na hora)
+    || (pessoa && atraso > R.desliga && batidoVolta(m, j, B)))) {
     it.recomp = true; it.recompDesde = m.tick;
   }
   if (!it.recomp) return null;
@@ -1155,8 +1187,52 @@ function recompor(m, j, s, B, vaga, lado, extra) {
   // `vUrgente` m/s (o contra-ataque); a bola parada lá na frente, com a construção deles devagar, ele volta
   // correndo sem o sprint (Di Salvo 2009: o esforço máximo é raro e tem motivo)
   const vb = -(m.bola.v.x * lado);
-  const correr = !frente && atraso > R.corre && (ub < R.urgente || vb > R.vUrgente);
-  return rumoPressa(m, j, { ...irPara(m, j, _t.x, _t.z, 1, correr, extra, 'pressa'), botoes: extra | (correr ? BOTAO.CORRER : 0) });
+  // (contra a pessoa, a frente também sprinta nos primeiros R.frenteS s depois da perda: a transição defensiva)
+  const frenteCorre = !frente || (R.frenteS != null && fase.fase === 'sem' && m.tick - fase.desde < seg(R.frenteS));
+  // (contra a pessoa, longe da bola — a mais de R.longe[0] m, fora da tela do celular — volta correndo a R.longe[1] de
+  // intensidade e sem o sprint: a corrida vai para perto da jogada, o volume da transição não sobe)
+  const longe = R.longe != null && MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z) > R.longe[0];
+  // (item 19, contra a pessoa: com o condutor rápido, quem ele já passou — atrás dele, a até CORRIDA_P.batidoVolta m — volta
+  // em disparada, sem esperar o atraso do sprint)
+  const correr = (frenteCorre && !longe && atraso > R.corre && (ub < R.urgente || vb > R.vUrgente)) || (pessoa && batidoVolta(m, j, B));
+  const e = rumoPressa(m, j, { ...irPara(m, j, _t.x, _t.z, longe ? R.longe[1] : 1, correr, extra, 'pressa'), botoes: extra | (correr ? BOTAO.CORRER : 0) });
+  return R.arco ? viradaEmArco(m, j, e, R.arco, extra) : e;
+}
+
+/** Item 19 (D3, contra a pessoa): j foi passado pelo condutor rápido — está atrás dele (do lado do gol deles) a até
+ * CORRIDA_P.batidoVolta m? */
+function batidoVolta(m, j, B) {
+  const R = CORRIDA_P.batidoVolta;
+  if (!R || !B.rapido || B.cond < 0) return false;
+  let c = null;
+  for (const o of m.jogadores) if (o.id === B.cond) { c = o; break; }
+  return !!c && (j.x - c.x) * m.ataca[j.time] > 0 && MD.hypot(j.x - c.x, j.z - c.z) <= R;
+}
+
+/**
+ * Virada em ARCO de quem recompõe (D3, contra a pessoa; IA_PESSOA.recomp.arco): com o pedido a mais de arco[0] rad do
+ * movimento e o corpo a mais de arco[1] m/s, pede o rumo a arco[2] rad do movimento, pelo lado do pedido (pedido quase atrás
+ * — a menos de 0,2 rad de 180° —: pelo lado do meu gol), com o CORRER: o jogador.js passoCorpo vira na curva pela aceleração
+ * lateral, sem a inversão (acima de JOGADOR.angInversao ele freia na linha até parar e só então vira). O rumo filtrado do
+ * rumoPressa segue do arco (sem o salto de volta). Muda e devolve e.
+ */
+function viradaEmArco(m, j, e, A, extra) {
+  const v = MD.hypot(j.vx, j.vz), l = MD.hypot(e.x, e.z);
+  if (v <= A[1] || l < 1e-6) return e;
+  const hv = MD.atan2(j.vz, j.vx), ap = MD.atan2(e.z, e.x), dA = difAng(hv, ap);
+  if (Math.abs(dA) <= A[0]) return e;
+  let lado = Math.sign(dA);
+  if (Math.abs(dA) > Math.PI - 0.2) {
+    // quase atrás: pelo lado do meu gol (o do meio do campo, com o gol à frente da curva)
+    const gx = -m.ataca[j.time] * CAMPO.meioX - j.x, gz = -j.z;
+    lado = (MD.cos(hv) * gz - MD.sin(hv) * gx) >= 0 ? 1 : -1;
+  }
+  const a = hv + lado * A[2];
+  e.x = MD.cos(a) * l; e.z = MD.sin(a) * l;
+  e.botoes = extra | BOTAO.CORRER;
+  const it = estadoT(j);
+  it.qdir = a; it.qTick = m.tick;
+  return e;
 }
 
 /**
@@ -1320,7 +1396,9 @@ function cobrir(m, j, s, B, meuGol, extra) {
   let nx = -uz, nz = ux;
   const sz = fz > 0 ? -1 : 1;
   if (nz * sz < 0) { nx = -nx; nz = -nz; }
-  const d = IA_DEFESA.cobertura, l = IA_DEFESA.coberturaLado;
+  // (D3, contra a pessoa: a cobertura a IA_PESSOA.cobre.dist m e, longe do ponto, correndo — abaixo)
+  const P = contraPessoa(m, j.time) ? IA_PESSOA.cobre : null;
+  const d = P ? P.dist : IA_DEFESA.cobertura, l = IA_DEFESA.coberturaLado;
   let cx = fx + ux * d + nx * l;
   // quem cobre da linha de defesa cobre de lado, na altura da linha (no máximo coberturaFundo m atrás da
   // referência dele): 8,5 m para trás do 1º homem, ele quebrava a linha de 4 no meu terço (teste-forma:
@@ -1330,7 +1408,21 @@ function cobrir(m, j, s, B, meuGol, extra) {
     const piso = B.ref[2 * j.vagaIdx] * lado - IA_DEFESA.coberturaFundo;
     if (cx * lado < piso) cx = piso * lado;
   }
-  alvoCalmo(m, j, cx, fz + uz * d + nz * l, _t, lado);
+  const cz = fz + uz * d + nz * l;
+  // D3, contra a pessoa: com o ponto a mais de cobre.pressa[0] m (sai a menos de pressa[1]; histerese em it.cobrePressa), vai
+  // pelo modo pressa — o filtro curto e o giro de quem pressiona — e com o CORRER a mais de cobre.corre m: pelo ponto calmo o
+  // 2º homem trotava atrás do lance (6,5 m do condutor da pessoa, mediana)
+  if (P) {
+    const it = estadoT(j), dd = MD.hypot(cx - j.x, cz - j.z);
+    it.cobrePressa = it.cobreTick === m.tick - 1 && it.cobrePressa ? dd > P.pressa[1] : dd > P.pressa[0];
+    it.cobreTick = m.tick;
+    if (it.cobrePressa) {
+      _t.x = cx; _t.z = cz;
+      alvoPressa(m, j, _t);
+      return rumoPressa(m, j, irPara(m, j, _t.x, _t.z, 1, dd > P.corre, extra, 'pressa'));
+    }
+  }
+  alvoCalmo(m, j, cx, cz, _t, lado);
   return irPara(m, j, _t.x, _t.z, _t.mag, _t.correr, extra, _t.modo);
 }
 
