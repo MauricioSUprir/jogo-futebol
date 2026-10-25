@@ -875,7 +875,7 @@ function ajustarResolucao(dtBruto) {
   let pr = RES.pr;
   if (RES.media > 1 / 34 && pr > RES.min) pr = Math.max(RES.min, pr - 0.15);
   else if (RES.media < 1 / 56 && pr < RES.max) pr = Math.min(RES.max, pr + 0.1);
-  if (pr !== RES.pr) { RES.pr = pr; renderer.setPixelRatio(pr); TELA.w = 0; redimensionar(); }
+  if (pr !== RES.pr) { RES.pr = pr; renderer.setPixelRatio(pr); redimensionar(); }
 }
 function quadro() {
   requestAnimationFrame(quadro);
@@ -924,14 +924,16 @@ function quadro() {
 // O tamanho do desenho segue o tamanho REAL do canvas na tela, conferido a cada quadro. Só o evento 'resize' não bastava:
 // ao girar o celular (e na tela cheia, e no app da tela de início do iPhone) ele chega com o innerWidth/innerHeight de
 // antes do giro — o desenho ficava com a proporção do celular em pé, esticado na tela deitada ("achatado").
-const TELA = { w: 0, h: 0 };
+const TAM = new THREE.Vector2();
 function medirTela() { return { w: el.cena.clientWidth || innerWidth, h: el.cena.clientHeight || innerHeight }; }
 function redimensionar() {
   const { w, h } = medirTela(); if (!w || !h) return;
-  TELA.w = w; TELA.h = h;
   renderer.setSize(w, h, false); posfx.tamanho(w, h, RES.pr); camera.aspect = w / h; camera.updateProjectionMatrix();
 }
-function conferirTela() { const { w, h } = medirTela(); if (w !== TELA.w || h !== TELA.h) redimensionar(); }
+function conferirTela() {   // compara a tela com o que está valendo no desenho e na câmera (não com uma medida guardada)
+  const { w, h } = medirTela(); renderer.getSize(TAM);
+  if (w !== TAM.x || h !== TAM.y || Math.abs(camera.aspect - w / h) > 1e-3) redimensionar();
+}
 addEventListener('resize', redimensionar);
 addEventListener('orientationchange', () => setTimeout(redimensionar, 300));
 visualViewport?.addEventListener('resize', redimensionar);
