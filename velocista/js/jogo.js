@@ -33,7 +33,7 @@ const suave = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t 
 const $ = (id) => document.getElementById(id);
 const el = {
   corpo: document.body, cena: $('cena'), esferas: $('esferas'), total: $('total'), vel: $('vel'), hora: $('hora'), nivel: $('nivel'),
-  aviso: $('aviso'), coleta: $('coleta'), resumo: $('resumo'), dano: $('dano'), missao: $('missao'), capitulos: $('capitulos'), seta: $('seta'), dist: $('distEsfera'), mapa: $('mapa'), mapaBox: $('mapaBox'),
+  aviso: $('aviso'), avisoT: $('avisoTitulo'), avisoR: $('avisoRotulo'), coleta: $('coleta'), resumo: $('resumo'), dano: $('dano'), missao: $('missao'), capitulos: $('capitulos'), seta: $('seta'), dist: $('distEsfera'), mapa: $('mapa'), mapaBox: $('mapaBox'),
   missaoNum: $('missaoNum'), missaoTitulo: $('missaoTitulo'), missaoTexto: $('missaoTexto'), crimeLinha: $('crimeLinha'),
   inicio: $('telaInicio'), pausa: $('telaPausa'), fim: $('telaFim'), fimTexto: $('fimTexto'), btnJogar: $('btnJogar'), carga: $('barraCargaI'), carregando: $('carregando'),
 };
@@ -398,7 +398,12 @@ function reiniciar() {
   if (!TOQUE) pedirCaptura();
 }
 function esconderTelas() { el.inicio.hidden = el.pausa.hidden = el.fim.hidden = true; }
-function avisar(txt) { el.aviso.textContent = txt; el.aviso.style.opacity = '1'; J.aviso = 1.4; }
+// faixa de aviso: rótulo pequeno na cor do tipo + título; entra deslizando e some sozinha
+// tipos: missao (dourado), crime (vermelho), ok (verde), alerta (laranja), info (azul), zoom, reverso
+function avisar(titulo, rotulo = '', tipo = 'info') {
+  el.avisoT.textContent = titulo; el.avisoR.textContent = rotulo; el.avisoR.hidden = !rotulo;
+  el.aviso.className = `t-${tipo}`; void el.aviso.offsetWidth; el.aviso.classList.add('vis'); J.aviso = 2.6;
+}
 
 // ---------- entrada ----------
 function pedirCaptura() { try { el.cena.requestPointerLock?.(); } catch { /* sem captura */ } }
@@ -504,7 +509,7 @@ function passoHeroi(dt) {
   const querVibrar = teclas.has('v') || toque.vibrar;
   const dentroSolido = P.vibrando && estaDentroDeSolido();
   if (P.vibrando) { if ((!querVibrar && !dentroSolido) || P.energia <= 0.001) { P.vibrando = false; } }
-  else if (querVibrar && P.energia > 0.08 && vh0 >= MOV.vibrarMin && !P.parede) { P.vibrando = true; avisar('VIBRANDO — atravesse tudo'); }
+  else if (querVibrar && P.energia > 0.08 && vh0 >= MOV.vibrarMin && !P.parede) { P.vibrando = true; avisar('Atravesse tudo', 'Vibrando', 'info'); }
   if (viloes.energiaLivre) P.energia = Math.min(1, P.energia + 0.06 * dt);      // perseguição a um vilão: energia livre, e enchendo
   else if (P.vibrando) P.energia = Math.max(0, P.energia - ENERGIA.vibrar * dt);
   else if (P.correndo) P.energia = Math.max(0, P.energia - (P.parede ? ENERGIA.parede : ENERGIA.gasto) * dt);
@@ -772,7 +777,7 @@ const missoes = criarMissoes(armazem);
 const combate = criarCombate(cena, { mobile: MOBILE, colide: (x, z, y) => empurrar(rectsPerto, x, z, 0.35, y, 1.7), chao: (x, z, y) => chaoEm(rectsPerto, x, z, y) });
 const crimes = criarCrimes(cena, { combate });
 const guia = criarGuia(cena, { mobile: MOBILE });
-const viloes = criarViloes(cena, { mobile: MOBILE, aniso: ANISO, combate, armazem, avisar: (t) => avisar(t),
+const viloes = criarViloes(cena, { mobile: MOBILE, aniso: ANISO, combate, armazem, avisar: (t, r, k) => avisar(t, r, k),
   colide: (x, z, y) => empurrar(rectsPerto, x, z, 0.4, y, 1.8), chao: (x, z, y) => chaoEm(rectsPerto, x, z, y),
   labPos: { x: LAB_B.plano.entrada.x, z: LAB_B.plano.entrada.z - 9 } });
 const portais = criarPortais(cena);
@@ -790,16 +795,16 @@ function passoMissoes(dt) {
   const m = missoes.atual;
   if (m?.tipo === 'portais') portais.ativar(); else portais.desativar();
   const rp = portais.atualizar(dt, P);
-  if (rp?.falhou) avisar('TEMPO ESGOTADO — volte ao 1º portal');
+  if (rp?.falhou) avisar('Volte ao 1º portal', 'Tempo esgotado', 'alerta');
   const ev = viloes.ativo ? null : crimes.atualizar(dt, P, { forcar: m?.crime });      // capítulo dos vilões: os crimes esperam
-  if (ev?.inicio) avisar(`CRIME: ${ev.nome.toUpperCase()}`);
+  if (ev?.inicio) avisar(ev.nome, 'Crime na cidade', 'crime');
   else if (ev) {
-    if (ev.ok) { missoes.contar('crimes'); missoes.contar(ev.tipo); missoes.contar('pontos', 250); avisar(`${ev.nome.toUpperCase()} IMPEDIDO! +250`); }
-    else avisar(ev.tipo === 'queda' ? 'NÃO CHEGOU A TEMPO' : 'O CRIMINOSO ESCAPOU');
+    if (ev.ok) { missoes.contar('crimes'); missoes.contar(ev.tipo); missoes.contar('pontos', 250); avisar(`${ev.nome} impedido`, '+250 pontos', 'ok'); }
+    else avisar(ev.tipo === 'queda' ? 'Não chegou a tempo' : 'O criminoso escapou', ev.nome, 'alerta');
   }
   const sala = LAB_B.plano.dentro(P.x, P.z, P.y);
   const feita = missoes.avaliar({ sala, v: Math.hypot(P.vx, P.vz), y: P.y, noChao: P.noChao, portaisFeitos: rp?.feito });
-  if (feita) { avisar('MISSÃO CONCLUÍDA'); historia.missao(feita.id, 'fecha'); if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); }
+  if (feita) { avisar(feita.titulo, 'Missão concluída', 'missao'); historia.missao(feita.id, 'fecha'); if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); }
   // painel
   const ma = missoes.atual, pr = missoes.progresso();
   el.missaoNum.textContent = ma ? `Missão ${missoes.indice + 1}/${missoes.total} · ${missoes.stats.pontos} pts` : `Patrulha livre · ${missoes.stats.pontos} pts`;
@@ -826,7 +831,7 @@ function processarGolpes() {
     if (combate.ocupado) { if (!J.espT) J.espT = P.t; if (P.t - J.espT > 0.6) { pedidoEspecial = null; J.espT = 0; } return; }
     const t = pedidoEspecial; pedidoEspecial = null; J.espT = 0;
     if (P.parede) return;
-    if (P.energia < ESPECIAIS[t].custo) { avisar(`ENERGIA INSUFICIENTE PARA ${ESPECIAIS[t].nome.toUpperCase()}`); return; }
+    if (P.energia < ESPECIAIS[t].custo) { avisar(`${ESPECIAIS[t].nome} precisa de ${Math.round(ESPECIAIS[t].custo * 100)}%`, 'Energia insuficiente', 'alerta'); return; }
     P.vibrando = false; const [dx, dz] = direcaoPedida(); combate.especial(t, P, dx, dz);
   }
 }
@@ -896,7 +901,7 @@ function quadro() {
     pedestres.atualizar(dt, P, mundo.noite); trafego.atualizar(dt, P, mundo.noite, pedestres.pessoas);
     if (labAtivo) labAtivo.atualizar(dt, P.t, mundo.noite, camera, P);
     atualizarQuarteiroes(P.x, P.z, carregados.size < 30 ? 8 : 2);
-    if (J.aviso > 0) { J.aviso -= dt; if (J.aviso <= 0) el.aviso.style.opacity = '0'; }
+    if (J.aviso > 0) { J.aviso -= dt; if (J.aviso <= 0) { el.aviso.classList.remove('vis'); el.aviso.classList.add('sai'); } }
     el.vel.textContent = Math.round((P.parede ? P.parede.v : Math.hypot(P.vx, P.vz)) * 3.6);
     el.vel.parentElement.style.color = Math.hypot(P.vx, P.vz) >= MOV.escalar || P.parede ? '#ffd23f' : '';
     el.nivel.style.width = `${(P.energia * 100).toFixed(1)}%`;
@@ -941,4 +946,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
