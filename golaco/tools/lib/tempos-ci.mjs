@@ -66,8 +66,11 @@ export const TEMPOS_NODE = {
   // (24/10, D1: + os ramos de 3 s de M9–M11 e o M12; localmente 371 → 496 s com 3 processos numa máquina de 4 vCPU)
   'teste-pressao-humano.mjs': 420,
   // (24/10, D2: 12 partidas de 2 × 4 min + o portão + o bootstrap; localmente 65 s com 4 processos numa máquina de 4 vCPU
-  // sozinha, 8 s dele no bootstrap)
-  'teste-ia-corre.mjs': 150,
+  // sozinha, 8 s dele no bootstrap. 25/10, D3: 24 partidas, a lógica instrumentada e a seção M; localmente ~200 s com 4
+  // processos)
+  'teste-ia-corre.mjs --sementes 8': 330,
+  // (25/10, D3: 48 partidas de 4 min contra o espelho em 3 processos; localmente ~100 s)
+  'teste-pressao.mjs --humano': 150,
   'teste-goleiro-regras.mjs': 146,
   'teste-bolas-paradas.mjs': 237,
   'teste-botoes.mjs': 95,

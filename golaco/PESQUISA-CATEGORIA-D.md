@@ -3,7 +3,7 @@
 Pedido do dono (24/10, ao escolher a categoria D): "adiciona nessa D a IA correr, tanto pra marcar, tanto pra atacar, pq
 ela não corre". Itens da `FILA.md`: 17–25 e 67. Plano em 8 PRs (D1–D8); este documento junta a pesquisa, a medição
 contra o jogo real e o que cada PR aproveitou. O D1 (o botão PRESSÃO) está no `CONTRATOS.md`; o D2 (a IA ataca
-correndo, itens 67 e 21) está na seção 5.
+correndo, itens 67 e 21) está na seção 5 e o D3 (a IA marca correndo, itens 67, 19 e 20) na seção 6.
 
 ## 1. Resumo
 
@@ -277,3 +277,129 @@ roteiros × 4 sementes) passam todas as metas ligadas (A4 0,87 ± 0,02, A6b 27,5
   medida do "correr no condutor e dar a DIVIDIDA", ficaram abaixo da base (V5).
 - **O condutor anda 23% do tempo** (real 34%): só anda no domínio e na condução curta; está dentro da meta, mas abaixo do real.
 - **Corridas à frente da bola** seguem 6× o real por minuto de posse (10,1 contra 1,6): o resto é a subida com o ataque.
+
+## 6. D3 — a IA marca correndo (itens 67-defesa, 19 e 20)
+
+Dono, 17/10: "A IA NÃO CORRE, NEM PRA DEFENDER, NEM PRA ATACAR, tem que ser mais difícil"; 11/10: "tem que marcar com
+responsabilidade e consciência". A medição (seção 3 e o mapa das travas) dizia: o 1º homem já fica a ~2 m do condutor da
+pessoa (o real é 5,2 m — ele NÃO aperta mais); quem não corre são os de trás dele, pelo teto de trote do ponto calmo, e o
+volume da transição já está no teto (229,7 m/min nos 5 s depois da perda; Jerome 2024: 156 ± 9 na transição defensiva e
+208 ± 17 na defesa rápida, p90 ~230). O D3 REDISTRIBUI: a corrida vai para quem marca perto da bola e é paga longe dela.
+
+### 6.1 O que entrou (só contra a pessoa; `config.js IA_PESSOA`, contrato "D3" no `CONTRATOS.md`)
+
+| Peça | O que muda | Fonte / por quê |
+|---|---|---|
+| Quem marca perto da bola (`alvoCalmo`: zona, fechaLinha, linha, cobre) | a até 33 m da bola: sem o teto do trote, intensidade d / 7 (era d / 14: a 5 m do ponto ~4,2 m/s), sprint além de 9 m (era 12), sem o arranque calmo, a espera da volta [12 m, 1,3 s] (era [8, 1,0]) | o "longe e devagar" era 31% do tempo marcando (zona e linha, dois terços); a faixa da tela do celular deitado (39,6 m de largura no foco); a espera maior segurou o vai e volta (sem ela 5,07, com ela 4,75–4,85 por jogador-min) |
+| Encurtar | quem guarda a zona do meio/frente a ≤ 12 m do condutor, com ele abaixo de 4 m/s e na janela de um gatilho de pressão (recepção, de costas, toque pesado, lateral, passe para trás, perda), vai 0,3 do caminho até 4 m dele, do lado do meu gol; a linha de defesa fica | o plano D3: "quando a pessoa recebe, o 2º e o 3º fecham correndo"; FC 27 Closed Beta (EA): os zagueiros "step towards their marked players" mas apertam menos; FM e FIFA 21: pressão no toque ruim e na recepção. Sempre ligado, os da zona subiam no condutor que arrancava (faltas da IA no humano 1,96 → 2,67) |
+| Linha de engajamento | a Média sai do bloco com a bola a ≤ 67 m do meu gol (era 66) | PPDA contra o espelho na faixa dos que mais apertam (Liverpool 2021/22 8,6, Wyscout; Bournemouth 2024/25 9,9, Opta; média das 5 ligas 11,0): com 66, 11,4 e 8,9 nos dois conjuntos de sementes (o 1º acima do teto 10,5); 67, 9,4 e 8,5; 68, 9,7 e 8,0 (o 2º abaixo do piso 8); com 70, 7,6; com 78 (o plano), agressão 86% (o teto real nesta definição é 78%: Metrica 68 ± 10) |
+| Recomposição: virada em ARCO | com o pedido a > 100° da velocidade e o corpo a > 3 m/s, o rumo a 0,95 rad da velocidade pelo lado do pedido (quase atrás: pelo lado do meu gol), com o CORRER | acima de 112° (`JOGADOR.angInversao`) o corpo freia na linha até PARAR e só então vira; na curva ele vira pela aceleração lateral do corte (`latCorte`) — a física é a mesma, `JOGADOR.*` intacto |
+| Recomposição longe da bola | a mais de 16 m da bola, intensidade 0,75 (~4,5 m/s) e sem o sprint — menos o MEIO que ficou à frente da bola, que volta sempre a todo vapor | o que paga o volume de perto da bola (a perda, no teto); o meio poupado: com o "longe" valendo para ele o recuo do meio no `teste-transicao --humano` caía de 6,1 para 4,0–5,5 m/s (meta ≥ 5,5 — o lance de que o dono reclama) |
+| O passe da IA contra a pessoa | no passe e na enfiada, o risco da linha também com cada adversário onde ele estará em 0,5 s (o maior dos dois) | o passe sai depois da carga do botão (0,3–0,7 s); a roubada desfeita era o passe decidido no tick da roubada e solto na corrida de volta da pessoa (abaixo, 6.2). Spearman 2018 (o controle do campo; o código do Friends of Tracking, Shaw 2020): cada jogador segue na velocidade dele durante o tempo de reação (0,7 s) antes de ir à bola |
+| Item 19: o corredor | com o condutor rápido, o bloco do corredor sprinta com 4 m de atraso (era 8) | antes ele trotava até 8 m atrás do ponto. Medido e fora: quem o condutor rápido já passou recompor na hora em disparada (abaixo) |
+| A régua | `copiaInstrumentada` (a distância e o rumo até o ponto do `para()`), o "longe e devagar" por ramo, distância e ação, o 2º e o 3º homem, a aproximação de 4–12 m, a perda por ramo; `teste-pressao --humano` (a pessoa "espelho") | as medidas do mapa das travas levadas para o repositório |
+
+### 6.2 A triagem (o que foi medido e não entrou; 8 sementes × 3 roteiros, as triagens de 4)
+
+- **O sprint mais cedo da recomposição** (`corre` 11 → 8, `urgente` 10 → 20, `vUrgente` 4 → 3) e **a frente sprintando nos 2 s
+  da perda**: a recomposição "longe e devagar" não mudou (28,8 × 28,2%) e a perda subiu ~4 m/min. O diagnóstico
+  (`diag-recomp` no rascunho): 95% do "longe e devagar" da recomposição está nos primeiros 0,75 s de cada uma — a
+  ACELERAÇÃO, do 2,4 m/s mediano do começo (41% começam abaixo de 2 m/s) —; a inversão é ~1 ponto. Falta de sprint não é.
+- **A cobertura do 2º homem a 6 m pelo modo pressa** (o plano): o 2º homem não mudou (o `cobre` quase nunca é o 2º mais perto:
+  contrapressão 25%, aperta 22%, zona 21%) e a roubada desfeita do `teste-defesa-corrida` ia de 4% a 7–9% (sem ela, 4%). Saiu.
+- **`engaja` 78** (o plano): aproximação 9,6 km/h, mas agressão 86% contra o espelho e PPDA 8,4. Ficou 67 (abaixo).
+- **O raio de 20 m** (o plano): o "longe e devagar" ficava em 22,8% (os de 20 a 30 m da bola eram 6 pontos); 30 m: 18,4%;
+  33 m: 16,6%.
+- **`IA_DEFESA.corrida.v` 6,3 só contra a pessoa** (item 19): o defensor do corredor 3,1 → 4,1 m/s e 38 duelos (77 → 38: menos
+  gente passada), mas o vai e volta 4,90 e as roubadas sofridas 2,82/min reprovavam o `teste-ia-corre`. O plano listava 6,3
+  como "não mexer" pela IA × IA (o contra-ataque da IA morria no painel); contra a pessoa o efeito é outro, mas as guardas
+  não deixam.
+- **O 1º homem recuando com o condutor a > 4,5 m/s** (o "recua1"): 3,9 m/s, sem ganho. **A contenção mais longe** (`dist`
+  [3, 0,5, 3, 7]): 4,2 m/s, mas 41% das arrancadas do bloco armado chegavam à área (meta ≤ 25%).
+- **Sem o gatilho da recepção contra a pessoa:** a agressão não caiu (84%): ela vinha do `engaja`.
+- **O volume:** cada ganho perto da bola subia a perda (base 229,7 ± 2,1, no teto): o arco com o CORRER +4–6, o raio de 30 m
+  +4–7; pagaram a recomposição longe da bola (0,75 de intensidade: −6) e a espera da volta (−4). Com 0,7 a recomposição longe
+  ficava a ~4,1 m/s, em cima dos 4 m/s da medida.
+- **A roubada desfeita** (`teste-defesa-corrida`, ≤ 5% pela binomial; main 16/368, 4%): com a marcação do D3 ela ia a 7–9%
+  em quase toda calibração. O rastro (`dc-desf` no rascunho: a posse tick a tick nos 60 depois de cada roubada da IA no
+  roteiro sprint) mostrou o mecanismo: o ladrão domina no tick 1, decide o passe e o SOLTA ~0,5 s depois (a carga do botão),
+  justo quando acaba o `semDominio` de quem perdeu — e a pessoa, voltando para o lado do gol dela, está a ~0,8 m à frente da
+  bola, a 0,3 m da linha do passe (os passes que saíram bem: a pessoa atrás da bola). Esses passes viravam desfeita em 6,6%
+  na main e em 14% com o D3 (mais passes curtos no meio-campo: o time marca mais perto). O risco lido também 0,15–0,25 s à
+  frente não mudou nada (a pessoa ainda não estava na linha); o MAIOR entre o agora e 0,5 s à frente levou esses passes a
+  ~10% e a desfeita a 6–7% (passa na binomial).
+- **Quem o condutor rápido já passou, recompondo na hora em disparada** (atrás dele, a ≤ 15 m; o plano do item 19): a
+  mediana do defensor do corredor CAÍA (3,1 × 4,3 m/s numa calibração, 2,6 × 3,8 noutra; ~57 duelos): quem volta correndo
+  fica de novo na frente da arrancada e é passado virando. A chegada à área não mudou além do ± (16 × 19%). Saiu.
+- **O meio poupado e o volume:** com o "longe" (20 m) valendo também para o meio que ficou à frente da bola, o recuo dele no
+  `teste-transicao --humano` caía de 6,1 para 4,0 m/s (com 30 m só para quem ficou à frente, 5,1–5,5; meta ≥ 5,5); poupando
+  o meio, a perda ia a 234–237 m/min (20 m) — com 16 m, 232; com a intensidade longe 0,65, a marcação devagar (M5) ia a 23%
+  (a recomposição longe a ~3,9 m/s conta como devagar).
+- **As medidas da marcação mudam entre calibrações vizinhas mais que o ±:** a aproximação de 4–7 m foi de 3,6 a 8,7 km/h, o
+  PPDA de 8,4 a 10,8 (o encurtar 0,30 × 0,35), o gol por chute nas arrancadas de 0 a 26% (12–23 chutes). Por isso as metas do
+  D3 reprovam só quando a medida PROVA estar do lado errado (2 ±; a binomial no `teste-defesa-corrida`), a aproximação é a
+  de 4–12 m numa faixa só, o `teste-ia-corre` roda com 8 sementes no CI e o `--humano` com 48.
+
+### 6.3 Antes → depois (`teste-ia-corre`, 24 partidas: 3 roteiros × 8 sementes; `teste-pressao --humano`, 48 partidas; `teste-defesa-corrida`, 24 + 6)
+
+| Medida | Antes (main 2c9e7066, o D2) | Depois | Meta | Real |
+|---|---|---|---|---|
+| M2 aproximação do 1º homem a 4–12 m (km/h) | 2,43 ± 0,64 | 6,58 ± 0,69 | ≥ 5 | 7,4–7,5 |
+| M2a / M2b a 4–7 / 7–12 m (km/h) | 2,54 / 2,41 | 7,84 / 6,01 | (informativas) | 7,4 / 7,5 |
+| M5 marcando: o ponto a > 5 m e o corpo < 4 m/s (%) | 31,08 ± 0,60 | 15,61 ± 0,27 | ≤ 18 | — |
+| M6 ...na recomposição (%) | 27,28 ± 0,69 | 21,81 ± 0,65 | (≤ 15: informativa, a aceleração) | — |
+| M7 / M8 2º e 3º homem (mediana, m) | 6,53 / 11,88 | 7,39 / 12,30 | (≤ 5 / ≤ 8,5: informativas) | 9,6 (2º marcador) |
+| M1 1º homem (mediana, m) | 1,99 | 2,03 | (não aperta mais) | 5,2 |
+| M4 IA marcando: m/min | 209,8 | 217,1 | — | — |
+| V7 IA nos 5 s depois de perder: m/min | 229,7 ± 2,1 | 232,0 ± 2,2 | ≤ 230 (reprova além de 2 ±) | 156 ± 9 (Jerome, transição) |
+| V1 / V2 IA atacando / no total: m/min | 156,0 / 171,4 | 149,0 / 165,3 | ≤ 190 / ≤ 195 | — / 140 |
+| V3 vai e volta por jogador-min | 4,74 ± 0,05 | 4,32 ± 0,08 | ≤ 4,74 (2 ±) | 0,30 |
+| disparadas por minuto | 1,29 | 1,24 | (redistribuir) | 0,14 |
+| V5 roubadas sofridas pela IA por min de bola no pé | 2,33 ± 0,20 | 1,88 ± 0,14 | ≤ 2,78 | — |
+| V4 gols da IA contra o roteiro por partida | 1,33 ± 0,22 | 1,58 ± 0,30 | ≥ 0,92 | — |
+| A11 conversão da IA (%) | 19,8 ± 2,9 | 26,4 ± 4,5 | (informativa) | 8–15 |
+| A1–A10 (o ataque do D2) | — | todas dentro (condutor 12,0 km/h, posse 0,97 s, à área 34,0%) | as do D2 | — |
+| PPDA da IA contra o espelho (sementes 1–48) | 11,90 | 9,38 | 8–10,5 (alvo 9–10,5) | 8,6–9,9 (os que mais apertam) |
+| agressão (recepção com a IA a ≤ 4,6 m em ≤ 2 s) | 71,7% | 74,4% | 58–78% | 68 ± 10% (Metrica) |
+| retomada em ≤ 5 s | 35,9% | 39,8% | 34–54% | 44,1 ± 10% |
+| `teste-defesa-corrida`: roubada desfeita pelo mesmo condutor | 15/368 (4%) | 18/343 (5%) | ≤ 5% (binomial) | — |
+| ...defensor do corredor (mediana, m/s) | 3,90 (61 duelos) | 3,38 (50) | ≥ 5 (pendente) | — |
+| ...arrancadas do bloco armado que chegam à área | 34/251 (14%) | 49/237 (21%) | ≤ 25% | — |
+| ...gols do roteiro sprint · faltas da IA no humano por partida | 0,54 · 1,96 | 0,54 · 1,63 | ≤ 1,5 · ≤ 5 | — |
+| `teste-transicao --humano`: recuo do meio da IA que ficou à frente (m/s) | 6,1 | (2ª tabela) | ≥ 5,5 | — |
+
+O PPDA "11,0 contra o roteiro" do plano era o da IA × IA (o `teste-pressao` da Média). Contra os roteiros da pessoa e contra o
+construtor (o ataque substituto dos testes no time 0) o PPDA da IA dá ~1,5–3: eles quase não passam diante da pressão — é
+medida da pessoa roteirizada. O "espelho" (a pessoa joga com a decisão da IA, sem a marca `ia`) constrói como a IA: 11,9 na
+base, o mesmo da Média IA × IA de antes.
+
+### 6.4 Os testes protegidos
+
+O resultado de cada teste da lista está no PR (os estatísticos com 2 rodadas). O `teste-defesa-corrida` ganhou `--set` e o gol
+por chute nas arrancadas pela binomial (com 12–23 chutes o "≤ 20%" ia de 0 a 26% entre calibrações vizinhas). Demo e treino
+bit a bit iguais (`hash-partida --base` a main: a demo IGUAL; `hash-igual --base` a main: as 4 cenas IGUAIS); a partida contra
+a pessoa muda de propósito.
+
+### 6.5 Limites e o que fica
+
+- **Item 19 (o defensor do corredor ≥ 5 m/s): não alcançado** (3,90 → 3,38 m/s, 50 duelos; 3,35 com 64 na 2ª rodada). O recuo do 1º homem começa com o
+  condutor rápido ligado, a ~6 m do defensor e 0,8 s antes de ele passar (mediana de 57 duelos); do ~0,5 m/s de então, a(v) =
+  A0·(1 − v/S0) com A0 8,5 m/s² (Alonso-Callejo 2022) dá no máximo ~4,8 m/s em 0,8 s. Para chegar a 5, o recuo tem de começar
+  ~1 s antes — o condutor ainda acelerando — e o que foi medido nessa direção (o limiar a 6,3 m/s; o recuo com 4,5 m/s; a
+  contenção mais longe; quem já foi passado voltando em disparada, que DERRUBAVA a mediana a 2,6) ou não deu ou quebrou as
+  guardas; entre calibrações vizinhas a mediana foi de 2,0 a 4,7 m/s. Proposta ao dono: uma meta de chegada (a arrancada do
+  bloco armado na área ≤ 25%, que passa: 21% e 10% nas duas rodadas, base 14%) no lugar da velocidade, ou o recuo mais cedo valendo também contra a
+  pessoa no D5 (o vai e volta), quando a guarda dele for outra.
+- **A recomposição "longe e devagar" ≤ 15%: não alcançada** (27,3 → 21,8%): é a aceleração do começo de cada recomposição; só
+  diminui com menos recomposições começando paradas (os de trás já se mexendo) — o D5/D6.
+- **O 2º e o 3º homem ≤ 5 / ≤ 8,5 m: não alcançados** (6,5 → 7,4 e 11,9 → 12,3 m: o 1º homem sai mais cedo — o `engaja` —, e
+  o 2º fica na cobertura dele). O 2º marcador real fica a 9,6 m do portador (Metrica; p25 6,6 m; `PESQUISA-ETAPA3.md` §4.2): a
+  IA já fica mais perto que o real, e o "≤ 5 m" poria dois colados no condutor o tempo todo. Ficam informativas.
+- **O volume da perda** ficou 229,7 → 232,0 m/min (dentro do ±; 229,7 na 2ª rodada de 48 partidas; o teto da guarda é 230): é o
+  preço do meio que volta a todo vapor (6,1 m/s). O volume TOTAL da IA caiu (171,4 → 165,3 m/min) e o vai e volta também (4,74 →
+  4,32).
+- **A roubada desfeita** subiu 4 → 5% (6% na 2ª rodada; passa na binomial): o passe que o ladrão solta na corrida de volta da pessoa ainda sai
+  em ~10% desses passes (6,6% na main). Fica para o D4 (os companheiros da pessoa) ou para a carga do passe da IA
+  (cancelar o passe com a linha fechada no meio da carga), que vale também na IA × IA.
+- **A conversão da IA contra o roteiro** foi 19,8 → 26,4% (25,7% na 2ª rodada; o real é 8–15%): a IA ganha a bola mais alto. Os companheiros da
+  pessoa (D4) e o goleiro (categoria C).

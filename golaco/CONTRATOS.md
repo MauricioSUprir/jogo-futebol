@@ -2688,7 +2688,8 @@ fecho (`tools/fecho-hash.mjs --diff origin/main` = 0): o `lances.js` só importa
     volta a começar em chave − `tv.antes`.
   - Câmera 'fechada' (`render/replay.js`): a POSIÇÃO da instância de TV do replay (a mola dela) com o campo de visão ×
     `lento.fov`, e o OLHAR direto no ponto entre o lance (x, z) e a bola (`lento.mistura`) — o foco da TV fica preso
-    dentro do campo e o lance perto da linha de fundo saía do quadro.
+    dentro do campo e o lance perto da linha de fundo saía do quadro. O desvio do olhar fica a no máximo `lento.quadro` da
+    meia-largura do quadro na distância do lance (25/10: com a bola indo para o escanteio, o lance ia a |x| 0,77 da tela).
 - **Página** (`main.js`):
   - `rodarPasso` → `passoLances(eventos)`: o lance aceito ARMA o replay (`replayParada`), só fora da API dos testes
     (`!emRodarPassos`). Desarma em gol, intervalo, fim, recomeço e saída, e quando a parada do lance acaba sem montagem.
@@ -3044,6 +3045,52 @@ A escolha é por time, a cada tick. Modo novo do `para()`: `IA.modos.apoia` (os 
   teste conta os casos longos com o companheiro mais perto a ≤ 8,5 m no começo (ao alcance em 1,5 s); o de todos os casos
   longos fica informativo.
 
+### D3 — a IA marca correndo (itens 67-defesa, 19 e 20; `ia-tatica.js`)
+
+Tudo pelo portão `contraPessoa(m, t)` (o time `t` da IA defendendo contra a pessoa); as constantes em `IA_PESSOA` (D3),
+juntadas na carga do `ia-tatica.js`: `SUAVE_MARCA_P = {...TATICA.suave, ...IA_PESSOA.marcaPerto.suave}`,
+`SUAVE_LINHA_MARCA_P = {...TATICA.suaveLinha, ...}`, `RECOMP_P = {...TATICA.recomp, ...IA_PESSOA.recomp}` e
+`CORRIDA_P = {...IA_DEFESA.corrida, ...IA_PESSOA.corrida}`.
+
+- **Quem marca perto da bola** (`alvoCalmo` → `suaveMarcaPessoa`, ramos `zona`, `fechaLinha`, `linha` e `cobre`): com a bola
+  a até `marcaPerto.bola[0]` m (sai a mais de `bola[1]`; histerese em `estadoT(j).marcaPerto`), `SUAVE_LINHA_MARCA_P` na linha
+  e `SUAVE_MARCA_P` no resto. Chaves novas do ponto calmo (lidas com o padrão de sempre quando ausentes): `div` (a intensidade
+  longe do ponto é `d / div`; sem a chave, `d / 14`) e `arranque: false` (sem o `TATICA.arranque`). Os valores: `trote` [1, 0,
+  0,33] (sem o teto), `div` 7, `corre` 9, `volta` [12, 1,3].
+- **Encurtar** (`semBola`, o ponto da zona, antes do `alvoCalmo`): quem é do meio ou da frente (não a linha de defesa), com o
+  condutor da pessoa a até `encurta[0]` m, sem o condutor rápido e com a velocidade filtrada dele (`B.cvx`, `B.cvz`) abaixo de
+  `encurta[3]` m/s: o ponto vai `encurta[2]` do caminho até o ponto a `encurta[1]` m do condutor, na linha condutor → meu gol.
+- **Linha de engajamento** (`blocoDoTime`): `IA_PESSOA.engaja[pressão]` no lugar do `IA_DEFESA.engaja`.
+- **Recomposição** (`recompor`, `R = RECOMP_P`): a mais de `recomp.longe[0]` m da bola (quem ficou à frente dela — `u ≥ ub` —, a
+  mais de `longe[2]`), intensidade `longe[1]` e sem o sprint; com `longe[3]`, o MEIO que ficou à frente da bola (nem `def` nem a
+  frente da vaga, `sem.x < 0`) nunca entra no "longe" (o recuo do meio do `teste-transicao --humano`, meta ≥ 5,5 m/s); depois do
+  `rumoPressa`, a **virada em arco** (`viradaEmArco`): com o pedido a mais de `arco[0]` rad da velocidade e o corpo a
+  mais de `arco[1]` m/s, o pedido vira o rumo a `arco[2]` rad da velocidade, pelo lado do pedido (a menos de 0,2 rad de 180°:
+  pelo lado do meu gol, o do sinal do produto vetorial velocidade × (meu gol − corpo)), com o CORRER; o `estadoT(j).qdir` do
+  `rumoPressa` fica no arco.
+- **Condutor rápido** (item 19) (`blocoDoTime`, `noCaminho`, `acompanhar`, `acompanhaCorredor` e o `liga` do `recompor`): `CORRIDA_P`
+  (`correLonge` 4; `v` não muda).
+- **O passe da IA contra a pessoa** (`ia-ataque.js decidir` → `riscoCaminho(..., ta)`, `UTIL_P.passeAntecipa`): no PASSE e na
+  ENFIADA o risco é o maior entre cada adversário onde está e onde estará em `ta` s (a velocidade dele × `ta`); sem a chave
+  (`IA_ATAQUE.utilidade`, a IA × IA), `ta` = 0 e a conta é a de sempre. O passe sai depois da carga do botão (`acaoIA`); a
+  roubada desfeita do `teste-defesa-corrida` era o passe decidido no tick da roubada e solto na corrida de volta da pessoa.
+- **Medido e fora** (PESQUISA-CATEGORIA-D.md §6): o sprint mais cedo da recomposição e a frente sprintando nos 2 s da perda,
+  a cobertura do 2º homem a 6 m pelo modo pressa, `engaja` 78, `corrida.v` 6,3, o recuo antecipado do 1º homem, a contenção
+  mais longe, o "longe" valendo para o meio, a intensidade 0,65 longe da bola e o passe antecipado só no agora + 0,15–0,25 s
+  (sem o máximo com o agora).
+- **Pendente**: o defensor do corredor ≥ 5 m/s (`teste-defesa-corrida`, informativo), a recomposição "longe e devagar" ≤ 15%
+  e o 2º e o 3º homem a ≤ 5 / ≤ 8,5 m (`teste-ia-corre` M6–M8, informativos) — os porquês nas linhas do teste.
+
+### A pressão contra a pessoa (`tools/teste-pressao.mjs --humano`; D3, item 20)
+
+- `lib/partida-tatica.mjs`: `criarJogo(L, semente, {humano})` — o time 0 é uma pessoa (sem a marca `ia`): um perfil do
+  `humano-roteiro.mjs`, `'construtor'` (o ataque substituto só no time 0) ou `'espelho'` (a `entradaDemoPartida` sem o `ia`; a
+  `iaCobra` das cobranças fica). `medirJogos` devolve também `porTime[t]` (o time que DEFENDE: recepções do adversário e as
+  com defensor a ≤ 4,6 m em ≤ 2 s, perdas e retomadas em ≤ 5 s, os passes do adversário e as ações do PPDA).
+- `teste-pressao --humano` (padrão, 3 processos): o espelho × 48 sementes × 4 min (3 fatias); a IA (time 1, Média): PPDA
+  8–10,5, agressão 58–78%, retomada 34–54%. Contra os roteiros e o construtor o PPDA dá ~1,5–3 (eles quase não passam diante
+  da pressão) — medida da pessoa roteirizada, não da IA. `--roteiros`, `--sementes`, `--js`, `--set`.
+
 ### A régua (`tools/lib/corrida-medidas.mjs`) e o teste (`tools/teste-ia-corre.mjs`)
 
 - `filmarPartida({js, semente, modo: 'humano'|'demo', perfil, min, sets})` → a partida de 2 × `min` min contra o humano
@@ -3055,13 +3102,22 @@ A escolha é por time, a cada tick. Modo novo do `para()`: `IA.modos.apoia` (os 
   os gols e as roubadas sofridas por time (evento `roubada` de um adversário com a bola no pé do time; `roubadas`, `peMin`
   = minutos de bola rolando no pé). Até `2·min·3600 + 6000` passos, e erro se a partida não chegar ao `fim` (o filme cortado
   mediria a partida pela metade sem aviso). `juntar(lista)` → `resumo(J)` → `imprimir(nome, r)`.
-- `teste-ia-corre` (grupo padrão, 3 processos; no CI 3 roteiros × 4 sementes, para decidir `--sementes 8`): seções **P** (o
-  portão, acima; vale sempre), **A** (ataque, metas do D2), **M** (marcação, informativa até o D3), **C** (companheiros da
-  pessoa, informativa até o D4) e **V** (guardas que valem sempre: m/min da IA atacando ≤ 190 e no total ≤ 195, vai e volta
-  ≤ 5,8 por jogador-min, gols da IA contra o roteiro ≥ 0,92 por partida, a base, e as roubadas sofridas pela IA por minuto
-  de bola no pé ≤ a base + 15%, 2,78). O A6/A7 é o apoio SEM o condutor (a conta com ele, a do real, fica informativa:
+- `copiaInstrumentada(js, dest?)` (D3) → uma cópia da lógica com UMA linha a mais no `para()` do `ia.js` (`j.__d`, `j.__dx`,
+  `j.__dz`: a distância e o rumo até o ponto pedido, depois do filtro do modo); erro se o `para()` mudou. O `filmarPartida`
+  grava `DA`/`DAA` (NaN sem o `para()` no passo) e o `analisar` conta, marcando o condutor do outro time (a bola no pé dele),
+  o "longe e devagar" (ponto a > 5 m e corpo < 4 m/s; `alvo.ld`, na recomposição `alvo.rec`, por ramo/distância/ação), o 2º e
+  o 3º mais perto (`h1.d2Mediana`, `d3Mediana`, ramos) e a aproximação de 4–12 m numa faixa só (`h1.a4a12`); e, na perda, o
+  volume por ramo e distância (`ramos[].prd`).
+- `teste-ia-corre` (grupo padrão, 3 processos; no CI 3 roteiros × 8 sementes — a amostra da decisão, desde o D3): seções **P**
+  (o portão, acima; vale sempre), **A** (ataque, metas do D2), **M** (marcação, metas do D3: a aproximação do 1º homem a 4–12 m
+  ≥ 5 km/h e o "longe e devagar" ≤ 18%; M6–M8 informativas), **C** (companheiros da pessoa, informativa até o D4) e **V**
+  (guardas que valem sempre: m/min da IA atacando ≤ 190 e no total ≤ 195, vai e volta ≤ 4,74 por jogador-min — a base do D2
+  —, gols da IA contra o roteiro ≥ 0,92 por partida, a base, as roubadas sofridas pela IA por minuto de bola no pé ≤ a base
+  + 15%, 2,78, e — D3 — o m/min da IA nos 5 s depois de perder ≤ 230). As metas com `*` (`'>=*'`/`'<=*'`: as do D3, M2, M5,
+  V3 e V7) reprovam só quando a medida PROVA estar do lado errado — além da meta por mais de 2 ±. O A6/A7 é o apoio SEM o condutor (a conta com ele, a do real, fica informativa:
   A6c/A7c); o A6b — com o condutor conduzindo — é o que reprova o D2 sem o apoio curto. O A10 (item 21) pede ≥ 70% dos
   chutes de dentro da área: o "≥ 55%" do plano a main já cumpria (53–64% conforme as sementes). O ± é o desvio-padrão de um
   bootstrap estratificado por roteiro sobre a própria medida agregada (`--boot`, 200; o sorteio é fixo). Opções `--js`,
-  `--sementes`, `--roteiros`, `--par`, `--set`, `--json`, `--detalhe`, `--boot`. A coluna "antes" é a main ebf0abc6 (= o
-  D1 na lógica; 24 partidas).
+  `--sementes`, `--roteiros`, `--par`, `--set`, `--json`, `--detalhe`, `--boot`. A coluna "antes" é a base do PR que ligou a
+  meta (A e V1–V6: a main ebf0abc6, antes do D2; M e V7: a main 2c9e7066, antes do D3; 24 partidas). O `teste-defesa-corrida`
+  ganhou `--set` (a mesma triagem).

@@ -7,24 +7,32 @@
 //      cobranças dela, `iaCobra`), com o travado do Total Match expulso e com dois humanos; ligado contra o roteiro;
 //   A  ataque da IA (D2, itens 67 e 21): o condutor arranca com campo à frente, fica com a bola, o apoio perto da bola se
 //      mexe, as corridas à frente da bola chegam à área, a IA chuta de dentro da área;
-//   M  marcação da IA (D3, informativa aqui);
+//   M  marcação da IA (D3, itens 67-defesa, 19 e 20): o 1º homem sai para cima a 4–12 m, quem marca perto da bola não
+//      fica parado com o ponto longe ("longe e devagar": o alvo do para() a mais de 5 m e o corpo abaixo de 4 m/s — a lógica
+//      INSTRUMENTADA, corrida-medidas.mjs copiaInstrumentada); a recomposição e o 2º e o 3º homem ficam informativos (o
+//      porquê na linha de cada um);
 //   C  os companheiros da pessoa (D4, informativa aqui);
 //   V  guardas (valem sempre): volume da IA (m/min atacando e no total), vai e volta, gols da IA contra o roteiro, as
 //      roubadas sofridas pela IA (conduzir mais não pode virar entregar a bola no bote).
+// Metas com * (as do D3: M e as guardas V3 e V7) reprovam só quando a medida PROVA estar do lado errado — além da meta por
+// mais de 2 ± —, como a binomial do teste-defesa-corrida: as medidas da marcação variam entre calibrações vizinhas mais que o
+// ± (a aproximação de 4–7 m foi de 3,6 a 8,7 km/h com a mesma régua) e com 12 partidas no CI o ± é ~1,4× o das 24 da decisão;
+// a DECISÃO local (8 sementes) olha o valor central.
 // O ± é o desvio-padrão de um bootstrap ESTRATIFICADO por roteiro sobre a própria medida agregada (as partidas sorteadas
 // com reposição dentro de cada roteiro e a medida recalculada; --boot N, padrão 200; o sorteio é fixo): o dp das medidas
 // por partida ÷ √n media outra coisa (a mediana de cada partida, não a de todas as posses juntas) e misturava os roteiros.
 // Sai com código 1 se uma meta ligada reprovar.
 //   node tools/teste-ia-corre.mjs [--sementes 4] [--roteiros agressivo,calmo,passivo] [--par 4] [--js <pasta>]
 //                                 [--set CONST.caminho=valor] [--json saida.json] [--detalhe] [--boot 200]
-// No CI: 3 roteiros × 4 sementes (as metas têm folga para essa amostra); para decidir uma calibração, 8 sementes por
-// roteiro (a lição das 4 sementes que enganam, CLAUDE.md).
+// No CI (desde o D3): 3 roteiros × 8 sementes, a amostra da decisão de calibração (rodar-testes.mjs `--sementes 8`; com 4, a
+// roubada sofrida pela IA, V5, ia de 2,21 a 2,79 nas sementes 1–4 com o D3 e de 2,33 a 2,34 nas 8 — a lição das 4 sementes
+// que enganam, CLAUDE.md). O padrão da linha de comando continua 4 (a triagem rápida).
 import { fork } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { filmarPartida, juntar, resumo, imprimir, f1 } from './lib/corrida-medidas.mjs';
+import { filmarPartida, juntar, resumo, imprimir, f1, copiaInstrumentada } from './lib/corrida-medidas.mjs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -101,12 +109,16 @@ async function checarPortao() {
 
 if (args[0] === '--filho') {
   process.on('message', async tf => {
-    const r = await filmarPartida({ js: JS, semente: tf.sem, modo: 'humano', perfil: tf.perfil, min: 4, sets: SETS });
+    // (tf.js: a cópia instrumentada da lógica — o alvo do para() para o "longe e devagar" da seção M)
+    const r = await filmarPartida({ js: tf.js ?? JS, semente: tf.sem, modo: 'humano', perfil: tf.perfil, min: 4, sets: SETS });
     process.send(r, () => process.exit(0));
   });
 } else {
+  // a lógica com a linha do alvo no para() (tools/lib/corrida-medidas.mjs copiaInstrumentada), numa pasta temporária
+  const INSTR = copiaInstrumentada(JS);
+  process.on('exit', () => { try { fs.rmSync(INSTR, { recursive: true, force: true }); } catch { /* já foi */ } });
   const tarefas = [];
-  for (const p of ROTEIROS) for (let s = 1; s <= NSEM; s++) tarefas.push({ sem: s, perfil: p });
+  for (const p of ROTEIROS) for (let s = 1; s <= NSEM; s++) tarefas.push({ sem: s, perfil: p, js: INSTR });
   const res = [];
   const t0 = Date.now();
   let prox = 0;
@@ -131,8 +143,9 @@ if (args[0] === '--filho') {
     soma: f => rs.reduce((a, r) => a + f(r), 0),
   });
   const pct = (a, b) => 100 * a / Math.max(1, b);
-  // [seção, id, nome, medida(ctx), meta (null = informativa), antes (a base do D2 — main ebf0abc6 = o D1 —, 24 partidas: os
-  // 3 roteiros × 8 sementes), real (Metrica, a mesma conta; PESQUISA-CATEGORIA-D.md)]
+  // [seção, id, nome, medida(ctx), meta (null = informativa), antes (a base do PR que ligou a meta, 24 partidas — os 3 roteiros
+  // × 8 sementes: A e V1–V6, a main ebf0abc6 = o D1, antes do D2; M e V7, a main 2c9e7066 = o D2, antes do D3), real
+  // (Metrica, a mesma conta; PESQUISA-CATEGORIA-D.md)]
   const M = [
     ['A', 'A1', 'condutor da IA: velocidade mediana (km/h)', c => c.adv.cond.vMed * 3.6, ['>=', 9.5], 7.63, 10.0],
     ['A', 'A2', 'condutor da IA: tempo andando (< 7 km/h, %)', c => c.adv.cond.faixas[0], ['<=', 38], 46.7, 34],
@@ -154,19 +167,35 @@ if (args[0] === '--filho') {
     ['A', 'A10', 'item 21: chutes da IA de dentro da área (%, sem pênalti)', c => pct(c.soma(r => r.chutes[1].dentro), c.soma(r => r.chutes[1].n)), ['>=', 70], 60.4, null],
     ['A', 'A11', 'item 21: conversão da IA (gols ÷ chutes, %)', c => pct(c.soma(r => r.gols[1]), c.soma(r => r.chutes[1].n)), null, 21.8, null],
     ['A', 'A12', 'chutes da IA por partida', c => c.soma(r => r.chutes[1].n) / c.nP, null, 4.21, null],
-    ['M', 'M1', '1º homem da IA sobre o condutor humano (mediana, m)', c => c.adv.h1.dMediana, null, 2.00, 5.2],
-    ['M', 'M2', 'aproximação do 1º homem da IA a 4–7 m (km/h)', c => c.adv.h1.aBin[2] * 3.6, null, 2.18, 7.4],
-    ['M', 'M3', 'aproximação do 1º homem da IA a 7–12 m (km/h)', c => c.adv.h1.aBin[3] * 3.6, null, 1.11, 7.5],
-    ['M', 'M4', 'IA sem a bola (marcando): m/min', c => c.adv.defendendo.mpm, null, 222.8, null],
+    // (o 1º homem NÃO aperta mais: a 2 m ele já é mais justo que o real)
+    ['M', 'M1', '1º homem da IA sobre o condutor humano (mediana, m)', c => c.adv.h1.dMediana, null, 1.99, 5.2],
+    // (a meta é a das duas faixas juntas, 4–12 m: cada uma sozinha tem ~1/10 dos quadros e variava ±1,5 km/h entre calibrações)
+    ['M', 'M2', 'aproximação do 1º homem da IA a 4–12 m (km/h)', c => c.adv.h1.a4a12 * 3.6, ['>=*', 5], null, null],
+    ['M', 'M2a', '...a 4–7 m (km/h)', c => c.adv.h1.aBin[2] * 3.6, null, 2.54, 7.4],
+    ['M', 'M2b', '...a 7–12 m (km/h)', c => c.adv.h1.aBin[3] * 3.6, null, 2.41, 7.5],
+    ['M', 'M4', 'IA sem a bola (marcando): m/min', c => c.adv.defendendo.mpm, null, 209.8, null],
+    ['M', 'M5', 'marcando: o alvo do para() a > 5 m e o corpo < 4 m/s (% do tempo)', c => c.adv.alvo.ld, ['<=*', 18], 31.08, null],
+    // (informativa: 95% do "longe e devagar" da recomposição está nos primeiros 0,75 s de cada uma — a ACELERAÇÃO, do 2,4 m/s
+    // mediano do começo: a(v) = A0·(1 − v/S0), A0 8,5 m/s², Alonso-Callejo 2022 — e a física é a do jogador da pessoa; a
+    // virada em arco tirou a parte da inversão)
+    ['M', 'M6', '...na recomposição (% do tempo dela)', c => c.adv.alvo.rec, null, 27.28, null],
+    // (informativas: o 2º marcador real fica a 9,6 m do portador — Metrica, p25 6,6 m; PESQUISA-ETAPA3.md §4.2 —, a IA já fica a
+    // ~6,5 m; o "≤ 5 / ≤ 8,5 m" do plano poria dois colados no condutor o tempo todo)
+    ['M', 'M7', '2º homem da IA sobre o condutor humano (mediana, m)', c => c.adv.h1.d2Mediana, null, 6.53, 9.6],
+    ['M', 'M8', '3º homem da IA sobre o condutor humano (mediana, m)', c => c.adv.h1.d3Mediana, null, 11.88, null],
     ['C', 'C1', '1º companheiro da pessoa sobre o condutor da IA (mediana, m)', c => c.comp.h1.dMediana, null, 7.64, 5.2],
     ['C', 'C2', 'companheiros da pessoa a ≤ 5 m do condutor da IA (% do tempo)', c => 100 * c.comp.h1.le5, null, 29.2, 48],
     ['V', 'V1', 'IA atacando (com a bola): m/min', c => c.adv.atacando.mpm, ['<=', 190], 168.2, null],
     ['V', 'V2', 'IA no total: m/min', c => c.adv.total.mpm, ['<=', 195], 181.9, 140],
-    ['V', 'V3', 'vai e volta da IA (> 135° em 0,25–1 s) por jogador-min', c => c.adv.invPorMin, ['<=', 5.8], 5.95, 0.30],
+    // (D3: "não sobe" — a base é a do D2, 4,74; a do D2 era ≤ 5,8, a main antes dele 5,95)
+    ['V', 'V3', 'vai e volta da IA (> 135° em 0,25–1 s) por jogador-min', c => c.adv.invPorMin, ['<=*', 4.74], 5.95, 0.30],
     ['V', 'V4', 'gols da IA contra o roteiro por partida (não caem)', c => c.soma(r => r.gols[1]) / c.nP, ['>=', 0.92], 0.92, null],
     // (revisão do D2: conduzindo mais, a IA entregava a bola no bote — 2,42 → 3,02 por min no pé, +25%; o teto é a base + 15%)
     ['V', 'V5', 'roubadas sofridas pela IA por min de bola no pé (≤ base + 15%)', c => c.soma(r => r.roubadas[1]) / Math.max(1e-9, c.soma(r => r.peMin[1])), ['<=', 2.78], 2.42, null],
     ['V', 'V6', 'chutes do roteiro por partida', c => c.soma(r => r.chutes[0].n) / c.nP, null, 0.83, null],
+    // (D3: o teto é o p90 de Jerome 2024 na defesa rápida, 208 ± 17 m/min; a transição defensiva real é 156 ± 9 — o que a
+    // marcação perto da bola soma aqui é pago longe dela)
+    ['V', 'V7', 'IA nos 5 s depois de PERDER a bola: m/min', c => c.adv.fase.perda.mpm, ['<=*', 230], 229.7, null],
   ];
   const tB = Date.now();
   const ctx = ctxDe(res);
@@ -187,7 +216,11 @@ if (args[0] === '--filho') {
   const soma = ctx.soma;
   const chutesIA = soma(r => r.chutes[1].n), dentroIA = soma(r => r.chutes[1].dentro), golsIA = soma(r => r.gols[1]);
   const golsHum = soma(r => r.gols[0]), chutesHum = soma(r => r.chutes[0].n);
-  const passa = ([op, x], v) => (op === '>=' ? v >= x : op === '<=' ? v <= x : true);
+  // ('>=*' / '<=*': reprova só se a medida PROVA estar do lado errado — além da meta por mais de 2 ±)
+  const passa = ([op, x], v, e = 0) => {
+    const k = op.endsWith('*') ? 2 * (Number.isFinite(e) ? e : 0) : 0;
+    return op.startsWith('>=') ? v + k >= x : op.startsWith('<=') ? v - k <= x : true;
+  };
   const out = [];
   out.push(`teste-ia-corre — lógica: ${JS}`);
   out.push(`${nP} partidas de 2 × 4 min contra o roteiro (${ROTEIROS.join(', ')} × ${NSEM} sementes)${SETS.length ? ` · --set ${SETS.join(' ')}` : ''} · ${((Date.now() - t0) / 1000).toFixed(0)} s (bootstrap ${BOOT}× em ${((Date.now() - tB) / 1000).toFixed(1)} s)`);
@@ -199,14 +232,14 @@ if (args[0] === '--filho') {
     out.push(`  ${ok ? 'passou  ' : 'REPROVOU'} ${id.padEnd(4)} ${nome}: ${v}${det ? ` (${det})` : ''}`);
   }
   let secAnt = '';
-  const NOME_SEC = { A: 'A — ataque da IA (D2)', M: 'M — marcação da IA (informativa: D3)', C: 'C — companheiros da pessoa (informativa: D4)', V: 'V — guardas (valem sempre)' };
+  const NOME_SEC = { A: 'A — ataque da IA (D2)', M: 'M — marcação da IA (D3)', C: 'C — companheiros da pessoa (informativa: D4)', V: 'V — guardas (valem sempre)' };
   M.forEach(([sec, id, nome, , meta, base, real], i) => {
     const v = vals[i], e = eps[i];
     if (sec !== secAnt) { out.push(`\n${NOME_SEC[sec]}`); secAnt = sec; }
-    const ok = !meta || passa(meta, v);
+    const ok = !meta || passa(meta, v, e);
     if (!ok) falhas++;
     const st = !meta ? 'info    ' : ok ? 'passou  ' : 'REPROVOU';
-    out.push(`  ${st} ${id.padEnd(4)} ${nome}: ${f1(v, 2)}${Number.isFinite(e) ? ` ± ${f1(e, 2)}` : ''}${meta ? ` (meta ${meta[0] === '>=' ? '≥' : '≤'} ${f1(meta[1], 2)})` : ''}${base != null ? ` · antes ${f1(base, 2)}` : ''}${real != null ? ` · real ${f1(real, 2)}` : ''}`);
+    out.push(`  ${st} ${id.padEnd(4)} ${nome}: ${f1(v, 2)}${Number.isFinite(e) ? ` ± ${f1(e, 2)}` : ''}${meta ? ` (meta ${meta[0].startsWith('>=') ? '≥' : '≤'} ${f1(meta[1], 2)}${meta[0].endsWith('*') ? ', reprova além de 2 ±' : ''})` : ''}${base != null ? ` · antes ${f1(base, 2)}` : ''}${real != null ? ` · real ${f1(real, 2)}` : ''}`);
   });
   if (args.includes('--detalhe')) { out.push(imprimir('a IA adversária (time 1)', ctx.adv)); out.push(imprimir('os companheiros da pessoa (time 0, sem o controlado)', ctx.comp)); }
   out.push(`\n${falhas ? `REPROVOU: ${falhas} meta(s)` : 'PASSOU: todas as metas ligadas'}`);
