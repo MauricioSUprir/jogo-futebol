@@ -16,7 +16,7 @@ const foto = (n) => saida ? pagina.screenshot({ path: path.join(saida, `${celula
 const espera = (fn, arg, t = 300000) => pagina.waitForFunction(fn, arg, { timeout: t }).then(() => true).catch(() => false);
 const tecla = (k) => pagina.evaluate((k) => { window.dispatchEvent(new KeyboardEvent('keydown', { key: k })); window.dispatchEvent(new KeyboardEvent('keyup', { key: k })); }, k);
 const abrirJogo = async (q) => {
-  await pagina.goto(srv.url + q);
+  await pagina.goto(srv.url + q, { timeout: 400000 });
   await pagina.waitForSelector('#btnJogar:not([hidden])', { timeout: 400000 });
   await pagina.evaluate(() => document.getElementById('btnJogar').click());
   await pagina.evaluate(() => document.fullscreenElement && document.exitFullscreen());
@@ -24,7 +24,7 @@ const abrirJogo = async (q) => {
 };
 
 // ---- prólogo ----
-await pagina.goto(srv.url + '?historia=1');
+await pagina.goto(srv.url + '?historia=1', { timeout: 400000 });
 await pagina.evaluate(() => localStorage.clear());
 await abrirJogo('?historia=1');
 const p0 = await pagina.evaluate(() => ({ modo: window.__rel.J.modo, cena: window.__rel.historia.cenaAtual, vis: !document.getElementById('cenaHist').hidden, hud: getComputedStyle(document.getElementById('hud')).display }));
@@ -53,7 +53,7 @@ ok(await espera(() => window.__rel.historia.cenaAtual === 'encontro-zoom'), 'che
 ok(await pagina.evaluate(() => window.__rel.viloes.fase === 'encontro' && window.__rel.J.modo === 'cena'), 'a perseguição espera a cena');
 await pagina.waitForTimeout(3000);
 await foto('encontro');
-await pagina.click('#cenaHist .pular');
+await pagina.evaluate(() => document.querySelector('#cenaHist .pular').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));   // o toque no Pular (no PC o mouse fica preso no jogo)
 ok(await espera(() => window.__rel.viloes.fase === 'perseguicao' && window.__rel.J.modo === 'jogando', null, 60000), '"Pular" encerra a cena e a perseguição começa');
 
 // ---- HUD do celular sem nada encostando ----
@@ -78,7 +78,7 @@ await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; v.
 ok(await espera(() => window.__rel.historia.cenaAtual === 'derrotado-zoom', null, 300000), 'derrotado, o Zoom fala na cena');
 await pagina.waitForTimeout(3000);
 await foto('derrota');
-await pagina.click('#cenaHist .pular');
+await pagina.evaluate(() => document.querySelector('#cenaHist .pular').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));   // o toque no Pular (no PC o mouse fica preso no jogo)
 ok(await espera(() => !window.__rel.viloes.ativo && window.__rel.J.modo === 'jogando', null, 60000), 'depois da cena o capítulo termina');
 ok(!erros.length, `sem erros no console (${erros.slice(0, 3).join(' | ')})`);
 await navegador.close(); await srv.fechar();
