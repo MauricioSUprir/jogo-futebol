@@ -518,7 +518,7 @@ function passoHeroi(dt) {
   else if (P.vibrando) P.energia = Math.max(0, P.energia - ENERGIA.vibrar * dt);
   else if (P.correndo) P.energia = Math.max(0, P.energia - (P.parede ? ENERGIA.parede : ENERGIA.gasto) * dt);
   else if (!combate.pertoDeBandido(P, 12) && !viloes.emLuta) P.energia = Math.min(1, P.energia + ENERGIA.recarga * dt * (m < 0.1 ? 3 : 1));   // no meio da briga não recarrega
-  const vmax = ((P.correndo || P.vibrando) ? MOV.correr : MOV.andar) * m;
+  const vmax = ((P.correndo || P.vibrando) ? MOV.correr : MOV.andar) * m * viloes.lentidao;   // o gelo do Capitão Frio deixa lento
   const taxa = P.noChao ? (P.correndo ? 5 : 11) : 2.2;
   const k = 1 - Math.exp(-taxa * dt);
   if (!P.parede) { P.vx += (dx * vmax - P.vx) * k; P.vz += (dz * vmax - P.vz) * k; }

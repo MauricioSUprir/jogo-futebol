@@ -1,4 +1,4 @@
-# Personagens da história (Caitlin, Cisco) — como refazer `velocista/assets/personagens/`
+# Personagens da história (Caitlin, Cisco, Capitão Frio, Onda Térmica, Mago do Tempo) — como refazer `velocista/assets/personagens/`
 
 Os programas são cópias adaptadas de `golaco/tools/humano/` (lá está a explicação do encaixe): aqui o corpo, a cabeça e as
 mechas de cabelo saem separados e só há o LOD1 (celular). As mechas soltas do Rocketbox não ficam no jogo (a textura
@@ -24,4 +24,6 @@ delas não encaixa); o cabelo é o da malha da cabeça. Nada daqui vai para o si
    $B -I $S/exportar_bin.py $o/sem.npz $o/enc-repouso.json velocista/assets/personagens/<nome> "Microsoft Rocketbox <avatar> (MIT)…"
    ```
 4. Texturas: `<pre>_body_color.tga` → `corpo.webp` e `<pre>_head_color.tga` → `cabeca.webp`, 1024 px (Pillow, WebP 82/86).
+   Nos vilões a roupa é tingida antes de gravar: tira parte da cor (frio 65%, onda 35%, mago 55%) e multiplica por
+   (0,72; 0,9; 1,25), (1,25; 0,62; 0,32) e (0,55; 1,0; 0,62).
 5. Conferir: `node velocista/tools/vista-equipe.mjs <pasta>` (retratos e o Cortex) e `node velocista/tools/teste-historia.mjs --celular`.
