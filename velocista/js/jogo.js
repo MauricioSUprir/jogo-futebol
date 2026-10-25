@@ -427,7 +427,7 @@ function pausar() {
   J.modo = 'pausa'; el.pausa.hidden = false; document.exitPointerLock?.();
   // o que saiu da tela de jogo fica aqui: missão, pontos, esferas e hora
   const ma = missoes.atual;
-  el.resumo.innerHTML = `${ma ? `Missão ${missoes.indice + 1}/${missoes.total}: <b>${ma.titulo}</b>` : 'Todas as missões concluídas'}<br>${missoes.stats.pontos} pontos · esferas ${J.coletadas}/${J.total} · ${el.hora.textContent}`;
+  el.resumo.innerHTML = `${historia.capitulo ? `<span class="hist">${historia.capitulo}</span><br>` : ''}${ma ? `Missão ${missoes.indice + 1}/${missoes.total}: <b>${ma.titulo}</b>` : 'Todas as missões concluídas'}<br>${missoes.stats.pontos} pontos · esferas ${J.coletadas}/${J.total} · ${el.hora.textContent}`;
   el.capitulos.innerHTML = '';
   for (const c of viloes.lista(missoes.indice)) {
     const b = document.createElement('button'); b.type = 'button'; b.className = `cap ${c.estado}`;
@@ -804,7 +804,14 @@ function passoMissoes(dt) {
   }
   const sala = LAB_B.plano.dentro(P.x, P.z, P.y);
   const feita = missoes.avaliar({ sala, v: Math.hypot(P.vx, P.vz), y: P.y, noChao: P.noChao, portaisFeitos: rp?.feito });
-  if (feita) { avisar(feita.titulo, 'Missão concluída', 'missao'); historia.missao(feita.id, 'fecha'); if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); }
+  if (feita) {
+    avisar(feita.titulo, 'Missão concluída', 'missao'); historia.missao(feita.id, 'fecha');
+    const abrir = () => { if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); };
+    // cena da história depois da missão: entra quando o rádio termina de falar
+    if (historia.tem(`depois-${feita.id}`) && !historia.viu(`cena:depois-${feita.id}`)) J.cenaPendente = { id: `depois-${feita.id}`, depois: abrir };
+    else abrir();
+  }
+  if (J.cenaPendente && historia.radioLivre && !viloes.emLuta) { const c = J.cenaPendente; J.cenaPendente = null; rodarCena(c.id, focoHeroi, c.depois); }
   // painel
   const ma = missoes.atual, pr = missoes.progresso();
   el.missaoNum.textContent = ma ? `Missão ${missoes.indice + 1}/${missoes.total} · ${missoes.stats.pontos} pts` : `Patrulha livre · ${missoes.stats.pontos} pts`;
@@ -849,17 +856,29 @@ function rodarCena(id, foco, depois, opc) {
   J.modo = 'cena';
   historia.cena(id, foco, () => { J.modo = 'jogando'; depois?.(); }, opc);
 }
+/** os focos da câmera numa cena com os vilões: o herói e cada vilão do capítulo */
+const focosVilao = () => ({ heroi: focoHeroi, ...Object.fromEntries(viloes.ids.map((v) => [v, () => viloes.foco(v)])) });
+/** no encontro, o herói fica a poucos metros do vilão, de frente para ele (a conversa cabe no quadro) */
+function aproximarHeroi(d = 7.5) {
+  const f = viloes.foco(); if (!f) return;
+  const dx = P.x - f.x, dz = P.z - f.z, n = Math.hypot(dx, dz) || 1;
+  if (n > d) {
+    const r = empurrar(rectsPerto, f.x + (dx / n) * d, f.z + (dz / n) * d, 0.4, 0, 1.8);
+    P.x = r.x; P.z = r.z; P.y = chaoEm(rectsPerto, P.x, P.z, 1); P.vy = 0; P.noChao = true; P.parede = null;
+  }
+  P.h = Math.atan2(f.x - P.x, f.z - P.z); P.vibrando = false;
+}
 function eventoVilao(ev) {
   const id = ev.id;
   if (ev.tipo === 'dano') J.danoVilao = 1;
-  else if (ev.tipo === 'capitulo') historia.radio(`capitulo-${id}`, { sempre: true });
-  else if (ev.tipo === 'encontro') rodarCena(`encontro-${id}`, () => viloes.foco(), () => { viloes.continuar(); historia.radio(`perseguicao-${id}`); });
+  else if (ev.tipo === 'capitulo') rodarCena(`cap-${id}`, focoHeroi, () => historia.radio(`capitulo-${id}`, { sempre: true }));
+  else if (ev.tipo === 'encontro') { aproximarHeroi(); rodarCena(`encontro-${id}`, focosVilao(), () => { viloes.continuar(); historia.radio(`perseguicao-${id}`); }); }
   else if (ev.tipo === 'captura') historia.provocar(id, ev.n);
   else if (ev.tipo === 'luta') historia.radio(`luta-${id}`);
   else if (ev.tipo === 'fase2') historia.radio(`fase2-${id}`, { sempre: true });
   else if (ev.tipo === 'derrota') historia.radio(`derrota-${id}`, { sempre: true });
   else if (ev.tipo === 'escapou') historia.radio(`escapou-${id}`, { sempre: true });
-  else if (ev.tipo === 'derrotado') rodarCena(`derrotado-${id}`, id === 'final' ? focoHeroi : () => viloes.foco(), () => viloes.continuar());
+  else if (ev.tipo === 'derrotado') rodarCena(`derrotado-${id}`, focosVilao(), () => viloes.continuar());
   else if (ev.tipo === 'vitoria') missoes.contar('pontos', id === 'final' ? 5000 : 2000);
 }
 
@@ -893,7 +912,7 @@ function quadro() {
       if (ev.tipo === 'nocaute') { missoes.contar('nocautes'); missoes.contar('pontos', 50); if (ev.especial) missoes.contar('especiais'); }
       else if (ev.tipo === 'dano') { el.dano.style.opacity = '1'; }
     }
-    for (const ev of viloes.atualizar(dt, P, { missaoIdx: missoes.indice, podeComecar: !crimes.ativo })) eventoVilao(ev);
+    for (const ev of viloes.atualizar(dt, P, { missaoIdx: missoes.indice, podeComecar: !crimes.ativo && !J.cenaPendente && historia.radioLivre })) eventoVilao(ev);
     J.danoVilao = Math.max(0, (J.danoVilao || 0) - dt * 2);
     el.missao.hidden = viloes.ativo; el.corpo.classList.toggle('capitulo', viloes.ativo);
     el.dano.style.opacity = String(Math.min(1, Math.max(combate.dano, J.danoVilao)));

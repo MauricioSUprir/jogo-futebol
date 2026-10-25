@@ -5,8 +5,9 @@
 // Cada capítulo: o vilão aparece num ponto da cidade (o guia mostra) → PERSEGUIÇÃO pelas ruas: alcance-o e aperte BATER
 // (o avanço relâmpago chega até 16 m) as vezes pedidas; durante a perseguição a energia não gasta e vai enchendo →
 // LUTA: o vilão rodeia, carrega e dá a investida (desvia quem corre de lado, pula ou vibra); depois dela fica cansado
-// (é a hora de bater); fora disso desvia da maioria dos golpes. O Flash Reverso desvia de quase tudo, joga raios e
-// acelera na metade da vida. Perdeu a luta: ela recomeça. Vida do herói só nas lutas (P.vida).
+// (é a hora de bater); fora disso desvia da maioria dos golpes. O Flash Reverso desvia mais, joga raios e acelera na
+// metade da vida (mais difícil que o Zoom, mas justo). Perdeu a luta: ela recomeça, e cada derrota (até 3) deixa o
+// vilão mais fácil (desvia menos, fere menos, fica mais tempo cansado). Vida do herói só nas lutas (P.vida).
 import * as THREE from 'three';
 import { CELL, N, MEIO } from './cidade.js';
 import { criarHeroi } from './humano.js';
@@ -20,13 +21,13 @@ export const PERFIS = {
   },
   reverso: {
     nome: 'FLASH REVERSO', titulo: 'Flash Reverso', traje: 'reverso', raio: 'vermelho', cor: '#ff3b30', corRaio: [2.4, 0.15, 0.08],
-    vida: 170, capturas: 4, vFuga: 60, vCansado: 38, folego: 4.5, cansaco: 1.9,
-    rodeia: [0.9, 1.8], telegrafo: 0.45, recupera: 0.85, dano: 0.18, esquiva: 0.94, raios: true, fase2: true, regen: 0.008,
+    vida: 130, capturas: 3, vFuga: 56, vCansado: 35, folego: 4.5, cansaco: 2.4,
+    rodeia: [1.2, 2.2], telegrafo: 0.58, recupera: 1.2, dano: 0.13, esquiva: 0.82, raios: true, fase2: true, regen: 0.012,
   },
 };
 export const CAPITULOS = [
   { id: 'zoom', titulo: 'Capítulo 1 — Zoom', viloes: ['zoom'], perseguicao: true, texto: 'Um velocista de preto está aterrorizando a cidade. Encontre o Zoom e persiga-o.' },
-  { id: 'reverso', titulo: 'Capítulo 2 — Flash Reverso', viloes: ['reverso'], perseguicao: true, texto: 'O Zoom era só o começo. Quem arquitetou tudo foi o Flash Reverso. Alcance-o.' },
+  { id: 'reverso', titulo: 'Capítulo 2 — Flash Reverso', viloes: ['reverso'], perseguicao: true, missoes: 14, texto: 'O Zoom era só o começo. Quem arquitetou tudo foi o Flash Reverso. Alcance-o.' },
   { id: 'final', titulo: 'Batalha final', viloes: ['zoom', 'reverso'], perseguicao: false, texto: 'Os dois voltaram juntos e esperam por você em frente ao S.T.A.R. Labs.' },
 ];
 const DANO = { soco: 5, gancho: 9, raio: 14, ciclone: 18, sonico: 28 };
@@ -61,6 +62,7 @@ function andarGrade(c, dist, heroi) {
 export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide = null, chao = null, avisar = () => {}, armazem = null, labPos = { x: 0, z: 0 } } = {}) {
   let salvo = null; try { salvo = JSON.parse(armazem?.getItem(CHAVE) || 'null'); } catch { salvo = null; }
   const S = { vencidos: new Set(salvo?.vencidos || []) };
+  const FACIL = 0.12;                                       // cada derrota na luta (até 3) deixa o vilão 12% mais fácil
   const gravar = () => { try { armazem?.setItem(CHAVE, JSON.stringify({ vencidos: [...S.vencidos] })); } catch { /* sem armazenamento */ } };
 
   // capítulo em andamento: {cap, fase: 'espera'|'aparece'|'perseguicao'|'choque'|'luta'|'derrota'|'vitoria', t, viloes: [...]}
@@ -104,14 +106,15 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
 
   // ---------- capítulos ----------
   const liberado = (i, missaoIdx) => (i === 0 ? missaoIdx > 6 || S.vencidos.has('zoom') : S.vencidos.has(CAPITULOS[i - 1].id));
+  // sozinho, o capítulo só começa depois das missões que a história pede (na pausa dá para jogar o liberado antes)
   function proximo(missaoIdx) {
-    for (let i = 0; i < CAPITULOS.length; i++) if (!S.vencidos.has(CAPITULOS[i].id) && liberado(i, missaoIdx)) return i;
+    for (let i = 0; i < CAPITULOS.length; i++) if (!S.vencidos.has(CAPITULOS[i].id) && liberado(i, missaoIdx) && missaoIdx >= (CAPITULOS[i].missoes || 0)) return i;
     return -1;
   }
   function comecar(i, P) {
     if (C) encerrar();
     const cap = CAPITULOS[i];
-    C = { i, cap, fase: 'aparece', t: 0, viloes: cap.viloes.map(criarVilao), fora: 0 };
+    C = { i, cap, fase: 'aparece', t: 0, viloes: cap.viloes.map(criarVilao), fora: 0, derrotas: 0 };
     let base;
     if (cap.perseguicao) {
       // longe do herói (250–450 m), num cruzamento
@@ -137,7 +140,9 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
   }
   function iniciarLuta(P) {
     C.fase = 'luta'; C.t = 0; P.vida = 1;
+    const k = 1 - FACIL * Math.min(3, C.derrotas);
     for (const v of C.viloes) {
+      v.facil = k;
       v.estado = 'luta'; v.acao = 'rodeia'; v.at = rnd(...v.perf.rodeia) * (C.viloes.length > 1 ? 1.4 : 1); v.vida = v.perf.vida; v.fase2 = false; v.vx = v.vz = 0;
     }
     avisar(C.viloes.length > 1 ? 'Derrote os dois' : C.viloes[0].perf.titulo, 'Luta', C.viloes.length > 1 ? 'reverso' : C.viloes[0].id);
@@ -150,7 +155,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     if (v.estado !== 'luta' || v.vida <= 0) return false;
     const vulneravel = v.acao === 'recupera' || v.acao === 'atordoado';
     if (!vulneravel) {
-      const esp = v.perf.esquiva * (tipo === 'ciclone' || tipo === 'sonico' ? 0.6 : tipo === 'raio' ? 0.8 : 1) * (v.fase2 ? 1.04 : 1);
+      const esp = v.perf.esquiva * (tipo === 'ciclone' || tipo === 'sonico' ? 0.6 : tipo === 'raio' ? 0.8 : 1) * (v.fase2 ? 1.04 : 1) * (v.facil ?? 1);
       if (Math.random() < esp) { esquivar(v, P); return false; }
     }
     const dano = (DANO[tipo] || 5) * (vulneravel ? 1 : 0.7);
@@ -192,7 +197,8 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     avisar(`${v.perf.titulo} derrotado`, 'Vitória', 'ok');
   }
   function ferirHeroi(P, dano, dx, dz) {
-    P.vida = Math.max(0, P.vida - dano); C.semGolpe = 0;
+    const k = Math.min(...C.viloes.map((v) => v.facil ?? 1));
+    P.vida = Math.max(0, P.vida - dano * k); C.semGolpe = 0;
     const d = Math.hypot(dx, dz) || 1; P.vx += (dx / d) * 9; P.vz += (dz / d) * 9;
     eventos.push({ tipo: 'dano' });
   }
@@ -209,7 +215,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
   // ---------- IA da luta ----------
   function passoLuta(v, dt, P, outros) {
     const dx = P.x - v.x, dz = P.z - v.z, d = Math.hypot(dx, dz) || 1;
-    const f2 = v.fase2 ? 0.7 : 1, chaoY = chao ? chao(P.x, P.z, P.y + 1) : 0;
+    const f2 = v.fase2 ? 0.8 : 1, chaoY = chao ? chao(P.x, P.z, P.y + 1) : 0;
     v.at -= dt; v.t += dt;
     const ocupado = outros.some((o) => o !== v && (o.acao === 'prepara' || o.acao === 'investida' || o.acao === 'carrega'));
     switch (v.acao) {
@@ -243,7 +249,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
           v.acertou = true;
           if (!desvia(P, chaoY, v.vx, v.vz)) { ferirHeroi(P, v.perf.dano, v.dir[0], v.dir[1]); fx.clarao(P.x, P.y + 1.2, P.z, 2.5, 0.2); combate.hitstop = 0.08; }
         }
-        if (v.at <= 0) { v.acao = 'recupera'; v.at = v.perf.recupera * (v.fase2 ? 0.8 : 1); v.vx *= 0.2; v.vz *= 0.2; }
+        if (v.at <= 0) { v.acao = 'recupera'; v.at = v.perf.recupera * (v.fase2 ? 0.85 : 1) / (v.facil ?? 1); v.vx *= 0.2; v.vz *= 0.2; }
         break;
       }
       case 'carrega': {
@@ -327,9 +333,9 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       const vivos = vs.filter((v) => v.vida > 0);
       for (const v of vs) passoLuta(v, dt, P, vivos);
       C.semGolpe = (C.semGolpe || 0) + dt;
-      const regen = vs.length > 1 ? 0 : vs[0].perf.regen;
+      const regen = vs.length > 1 ? 0.008 : vs[0].perf.regen;
       if (C.semGolpe > 3) P.vida = Math.min(1, P.vida + regen * dt);
-      if (P.vida <= 0) { C.fase = 'derrota'; C.t = 0; avisar('A luta vai recomeçar', 'Você foi derrotado', 'alerta'); eventos.push({ tipo: 'derrota', id: C.cap.id }); }
+      if (P.vida <= 0) { C.fase = 'derrota'; C.t = 0; C.derrotas++; avisar('A luta vai recomeçar', 'Você foi derrotado', 'alerta'); eventos.push({ tipo: 'derrota', id: C.cap.id, n: C.derrotas }); }
       else if (!vivos.length) { C.fase = 'vitoria'; C.t = 0; }
     } else if (C.fase === 'derrota') {
       for (const v of vs) { v.vx *= 0.8; v.vz *= 0.8; }
@@ -402,7 +408,15 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     /** durante as cenas (jogo parado): só anima os vilões */
     posar(dt) { desenhar(dt); },
     /** onde a câmera da cena olha: o vilão (ou o meio dos dois) */
-    foco() { if (!C) return null; const vs = C.viloes, n = vs.length; return { x: vs.reduce((a, v) => a + v.x, 0) / n, y: vs[0].y, z: vs.reduce((a, v) => a + v.z, 0) / n }; },
+    foco(id) {
+      if (!C) return null;
+      const vs = id ? C.viloes.filter((v) => v.id === id) : C.viloes, n = vs.length; if (!n) return null;
+      return { x: vs.reduce((a, v) => a + v.x, 0) / n, y: vs[0].y, z: vs.reduce((a, v) => a + v.z, 0) / n };
+    },
+    /** ids dos vilões do capítulo em andamento */
+    get ids() { return C ? C.viloes.map((v) => v.id) : []; },
+    /** quantas vezes o herói perdeu esta luta (cada uma deixa o vilão mais fácil, até 3) */
+    get derrotas() { return C?.derrotas || 0; },
     get ativo() { return !!C; },
     get fase() { return C?.fase || null; },
     get emLuta() { return !!C && (C.fase === 'luta' || C.fase === 'derrota'); },
