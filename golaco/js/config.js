@@ -1388,7 +1388,9 @@ export const IA_PESSOA = {
   // teto real nesta definição é 78%: Metrica 68 ± 10). Na calibração final (48 partidas × 2 conjuntos de sementes, 1–48 e
   // 1001–1048): 66 → 11,4 e 8,9 (o 1º acima do teto 10,5); 67 → 9,4 e 8,5; 68 → 9,7 e 8,0 (o 2º abaixo do piso 8) — o PPDA
   // muda entre conjuntos de sementes mais que entre os valores vizinhos
-  engaja: [42, 67, 105],
+  // (D4: com os companheiros da pessoa apertando, o PPDA da IA contra o espelho foi a 11,0 com 67 — o espelho passa a atacar
+  // de outro jeito —; 69 → 9,4, agressão 73,7%, retomada 37,6%; 70 → 10,6: entre valores vizinhos ele varia ±1, a amostra)
+  engaja: [42, 69, 105],
   // Encurtar (semBola, o ponto da zona; o plano D3: "quando a pessoa recebe, além do marcador colado, o 2º e o 3º fecham
   // correndo; quem está entre 4 e 12 m sai do lugar para encurtar"): quem guarda a zona do MEIO ou da FRENTE a até encurta[0]
   // m do condutor da pessoa — a linha de defesa fica na linha (FC 27, Closed Beta: os zagueiros "step towards their marked
