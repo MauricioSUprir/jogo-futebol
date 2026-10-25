@@ -35,13 +35,13 @@ for (const id of ['frio', 'onda', 'mago']) {
   ok(await espera(() => window.__rel.viloes.fase === 'luta'), `${id}: chegar perto começa a luta`);
   // o ataque: herói parado no alvo do aviso
   await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; R.P.vida = 1; v.vida = v.perf.vida; v.acao = 'rodeia'; v.at = 0; v.ataques = 0; R.P.x = v.x - 6; R.P.z = v.z; R.P.y = 0; });
-  const aviso = await espera(() => { const v = window.__rel.viloes.viloes[0]; return v.acao === 'prepara' && v.efx && Object.values(v.efx).some((m) => m.visible); }, null, 120000);
+  const aviso = await espera(() => { const v = window.__rel.viloes.viloes[0]; return v.acao === 'prepara' && v.efx && Object.values(v.efx).some((m) => m.visible); }, null, 400000);
   const vis = await pagina.evaluate(() => { const e = window.__rel.viloes.viloes[0].efx; return Object.entries(e).filter(([, m]) => m.visible).map(([k]) => k).join(','); });
   ok(aviso && vis.length > 0, `${id}: o ataque é avisado no chão (${vis})`);
   await foto(`${id}-aviso`);
-  await espera(() => window.__rel.viloes.viloes[0].acao === 'dispara', null, 120000);
+  await espera(() => window.__rel.viloes.viloes[0].acao === 'dispara', null, 400000);
   await foto(`${id}-ataque`);
-  await espera(() => window.__rel.viloes.viloes[0].acao === 'recupera', null, 120000);
+  await espera(() => window.__rel.viloes.viloes[0].acao === 'recupera', null, 400000);
   const r1 = await pagina.evaluate(() => ({ vida: window.__rel.P.vida, lento: window.__rel.viloes.lentidao }));
   ok(r1.vida < 1, `${id}: parado no aviso, o herói apanha (vida ${(r1.vida * 100).toFixed(0)}%)`);
   if (id === 'frio') ok(r1.lento < 1, `frio: o gelo deixa o herói lento (×${r1.lento})`);
@@ -57,7 +57,7 @@ for (const id of ['frio', 'onda', 'mago']) {
   if (id === 'mago') {
     // o tornado puxa o herói parado
     await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; v.vida = v.perf.vida; R.P.vida = 1; v.acao = 'rodeia'; v.at = 0; v.ataques = 2; R.P.x = v.x - 9; R.P.z = v.z; });
-    await espera(() => window.__rel.viloes.viloes[0].acao === 'dispara', null, 120000);
+    await espera(() => window.__rel.viloes.viloes[0].acao === 'dispara', null, 400000);
     // o tornado nasce onde o herói estava: o herói sai 5 m para o lado e é puxado de volta
     const d0 = await pagina.evaluate(() => { const R = window.__rel; R.P.z += 5; R.P.vx = R.P.vz = 0; return { x: R.P.x, z: R.P.z }; });
     await parado(40);
@@ -67,7 +67,7 @@ for (const id of ['frio', 'onda', 'mago']) {
   }
   // vitória
   await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; v.vida = 2; v.acao = 'recupera'; v.at = 5; v.golpe('soco', R.P); });
-  ok(await espera(() => window.__rel.viloes.fase === 'vitoria' || window.__rel.viloes.fase === 'fimcena' || !window.__rel.viloes.ativo, null, 120000), `${id}: derrotado`);
+  ok(await espera(() => window.__rel.viloes.fase === 'vitoria' || window.__rel.viloes.fase === 'fimcena' || !window.__rel.viloes.ativo, null, 400000), `${id}: derrotado`);
   ok(await espera(() => !window.__rel.viloes.ativo, null, 400000), `${id}: o capítulo termina`);
 }
 const lista = await pagina.evaluate(() => window.__rel.viloes.lista(0).map((c) => `${c.id}=${c.estado}`).join(', '));

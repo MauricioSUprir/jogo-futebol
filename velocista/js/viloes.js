@@ -657,6 +657,8 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     get fase() { return C?.fase || null; },
     get emLuta() { return !!C && (C.fase === 'luta' || C.fase === 'derrota'); },
     /** durante a perseguição a energia não gasta e vai enchendo */
+    /** o que está no chão agora (gelo, fogo, tornado) — para os testes */
+    get perigos() { return perigos.map((p) => ({ tipo: p.tipo, x: p.x, z: p.z, t: p.t, vida: p.vida })); },
     /** o gelo do Capitão Frio deixa o herói lento (multiplica a velocidade máxima) */
     get lentidao() { return C && C.lento > 0 ? 0.42 : 1; },
     get energiaLivre() { return !!C && (C.fase === 'perseguicao' || C.fase === 'choque' || C.fase === 'aparece' || C.fase === 'encontro'); },
