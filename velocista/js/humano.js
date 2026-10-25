@@ -6,7 +6,7 @@ import { lerCorpo } from './corpo-dados.js';
 import { aplicarTraje } from './traje.js';
 
 const BASE = new URL('../assets/humano/', import.meta.url);
-// pessoas da história (Caitlin, Cisco): outro corpo do Rocketbox, com a roupa, o rosto e o cabelo das texturas dele
+// pessoas da história (Caitlin, Cisco): outro corpo do Rocketbox, com a roupa e o rosto das texturas dele
 // (velocista/tools/personagens), o mesmo esqueleto e a mesma animação do herói
 const PESSOAS = { caitlin: { escala: 0.94 }, cisco: { escala: 1 } };
 // emblema do peito de cada traje (desenhos próprios): disco, cor do anel e do símbolo, símbolo
@@ -78,14 +78,14 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
   raiz.updateMatrixWorld(true);
   const esqueleto = new THREE.Skeleton(ossos);
 
-  let matCorpo, matCabeca, matCabelo = null, texCabeca, texs = [];
+  let matCorpo, matCabeca, texCabeca, texs = [];
   if (pessoa) {
-    // roupa, rosto e cabelo pelas texturas do próprio modelo (o cabelo com recorte pela transparência)
-    const [tc, th, tl] = await Promise.all(['corpo', 'cabeca', 'cabelo'].map((n) => texturaWebp(new URL(`${n}.webp`, base).href, true, aniso)));
-    texCabeca = th; texs = [tc, tl];
+    // roupa e rosto pelas texturas do próprio modelo. O cabelo é o da malha da cabeça: as mechas soltas do Rocketbox
+    // (a parte 'cabelo' do corpo.json) não encaixam na textura daqui e ficam de fora.
+    const [tc, th] = await Promise.all(['corpo', 'cabeca'].map((n) => texturaWebp(new URL(`${n}.webp`, base).href, true, aniso)));
+    texCabeca = th; texs = [tc];
     matCorpo = new THREE.MeshStandardMaterial({ map: tc, roughness: 0.82, metalness: 0 });
     matCabeca = new THREE.MeshStandardMaterial({ map: th, roughness: 0.6, metalness: 0 });
-    matCabelo = new THREE.MeshStandardMaterial({ map: tl, roughness: 0.7, metalness: 0, alphaTest: 0.42, side: THREE.DoubleSide });
   } else {
     texCabeca = await texturaWebp(new URL('cabeca-rb.webp', BASE).href, true, aniso);
     // o traje (cores, painéis, frisos, cinto, luvas, botas e a máscara) é desenhado no shader: js/traje.js.
@@ -96,8 +96,7 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
     matCabeca = aplicarTraje(new THREE.MeshStandardMaterial({ map: texCabeca, roughness: 0.65, metalness: 0 }), 'cabeca', traje);
   }
   const corpo = malha(L.partes.corpo, esqueleto, matCorpo), cabeca = malha(L.partes.cabeca, esqueleto, matCabeca);
-  const cabelo = matCabelo && L.partes.cabelo ? malha(L.partes.cabelo, esqueleto, matCabelo) : null;
-  for (const m of [corpo, cabeca, cabelo]) if (m) { raiz.add(m); m.bind(esqueleto, new THREE.Matrix4()); }
+  for (const m of [corpo, cabeca]) { raiz.add(m); m.bind(esqueleto, new THREE.Matrix4()); }
 
   // emblema próprio do herói (no centro do peitoral): disco grafite, anel dourado e uma faísca de quatro pontas
   const J = ind.repouso.juntas;
@@ -238,10 +237,10 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
   // o modelo olha para +x; o jogo olha para +z (rotação y = -90°)
   frente.rotation.y = -Math.PI / 2; frente.add(raiz);
   if (pessoa) frente.scale.setScalar(PESSOAS[pessoa]?.escala ?? 1);
-  const materiais = [matCorpo, matCabeca, matDisco, matEmb, texCabeca, matCabelo, ...texs].filter(Boolean);
+  const materiais = [matCorpo, matCabeca, matDisco, matEmb, texCabeca, ...texs];
   return {
     grupo: frente, aplicar, materiais, ossos, raiz,
     setVisivelProfundo(prof) { for (const m of [matCorpo, matCabeca, matDisco, matEmb]) { m.depthTest = !prof; } },
-    dispose() { corpo.geometry.dispose(); cabeca.geometry.dispose(); cabelo?.geometry.dispose(); materiais.forEach((m) => m.dispose?.()); },
+    dispose() { corpo.geometry.dispose(); cabeca.geometry.dispose(); materiais.forEach((m) => m.dispose?.()); },
   };
 }

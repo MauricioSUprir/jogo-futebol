@@ -27,7 +27,7 @@ export function criarEquipe(cena, { mobile = false, aniso = 2, renderer = null, 
       const g = modelo.grupo, pai = g.parent, pos = g.position.clone();
       cenaRet.add(g); g.position.set(0, 0, 0); g.updateMatrixWorld(true);
       const cab = modelo.ossos.find((o) => o.name === 'cabeca'); cab.getWorldPosition(vTmp);
-      camRet.position.set(vTmp.x + 0.06, vTmp.y + 0.1, vTmp.z + 0.62); camRet.lookAt(vTmp.x, vTmp.y + 0.08, vTmp.z);
+      camRet.position.set(vTmp.x + 0.08, vTmp.y - 0.0, vTmp.z + 0.72); camRet.lookAt(vTmp.x, vTmp.y - 0.035, vTmp.z);
       const rt = new THREE.WebGLRenderTarget(128, 128, { samples: 4 }); rt.texture.colorSpace = THREE.SRGBColorSpace;
       const cor = renderer.getClearColor(new THREE.Color()), alfa = renderer.getClearAlpha(), tm = renderer.toneMapping;
       renderer.setClearColor(0x000000, 0); renderer.toneMapping = THREE.NoToneMapping;
@@ -49,8 +49,8 @@ export function criarEquipe(cena, { mobile = false, aniso = 2, renderer = null, 
       const modelo = await criarHeroi({ aniso, lod: mobile ? 1 : 0, mobile, pessoa: id });
       const L = LUGARES[id], p = { id, modelo, x: P0.x + L.u, z: P0.z + L.v, h: Math.PI, fala: false };
       modelo.grupo.traverse((o) => { if (o.isMesh) o.castShadow = !mobile; });
-      modelo.grupo.position.set(p.x, PISO, p.z); modelo.grupo.rotation.y = 0;
-      p.raiz = new THREE.Group(); p.raiz.add(modelo.grupo); p.raiz.position.set(p.x, PISO, p.z); modelo.grupo.position.set(0, 0, 0);
+      // o modelo (grupo `frente`) já olha para +z; o rumo vai no grupo de fora, como no herói
+      p.raiz = new THREE.Group(); p.raiz.add(modelo.grupo); p.raiz.position.set(p.x, PISO, p.z);
       p.raiz.rotation.y = p.h; p.raiz.visible = false; cena.add(p.raiz);
       pessoas[id] = p;
       retratar(id, modelo);
