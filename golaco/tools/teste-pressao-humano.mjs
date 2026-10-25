@@ -8,7 +8,11 @@
 //  M0 os dois ramos começam bit a bit iguais (100%);
 //  M1 o mais perto: mediana da distância do companheiro mais perto ao condutor em 1,5 s, com ≤ sem − 1,0 m;
 //  M2 (guarda) com o botão, um companheiro chega a ≤ 2 m do condutor em ≤ 1,5 s em ≥ 60% (o diagnóstico pedia 70%: do
-//     parado o corpo anda ~6,4 m em 1,5 s, e o companheiro mais perto começa a ~7,5 m na mediana);
+//     parado o corpo anda ~6,4 m em 1,5 s, e o companheiro mais perto começa a ~7,5 m na mediana) — desde o D2 (24/10), nos
+//     casos longos com o companheiro mais perto a ≤ 8,5 m no começo (ao alcance em 1,5 s): a IA conduzindo contra a pessoa
+//     fica com a bola também com ele a 9–12 m, e a amostra de todos os longos passou a medir a distância, não a PRESSÃO
+//     (32 partidas, 7001–7032: a base D1 65% em todos e 73,3% ± 4,1 ao alcance; o D2 58% em todos e 70,3% ± 3,1 ao
+//     alcance, 79,1% ± 2,4 em 7101–7132 — por faixa de distância, a mesma taxa);
 //  M3 um a MAIS na pressão: mediana da distância do 2º companheiro mais perto ao condutor em 2 s, com ≤ sem − 1,5 m;
 //  M4 sem abuso: faltas do time 0 com o botão ≤ 1,5 × as de sem o botão + 2 (todos os casos);
 //  M5 corre de verdade: o escolhido a mais de 4 m do condutor, ≥ 1 s depois de escolhido (o tempo de acelerar: do
@@ -160,9 +164,17 @@ const L = casos.filter(longo);
 const NMIN = 20;
 const d15A = med(L.map(c => c.A.d15)), d15B = med(L.map(c => c.B.d15));
 reg('M1 o mais perto: mediana da distância ao condutor em 1,5 s, sem → com o botão', `${fmt(d15A)} → ${fmt(d15B)} m (Δ ${fmt(d15A - d15B)}; n = ${L.length})`, 'Δ ≥ 1,0 m', L.length >= NMIN && d15A - d15B >= 1.0);
-const c2 = L.filter(c => c.B.t2 != null && c.B.t2 <= 1.5).length, c2A = L.filter(c => c.A.t2 != null && c.A.t2 <= 1.5).length;
-const ep2 = L.length ? Math.sqrt(c2 / L.length * (1 - c2 / L.length) / L.length) : NaN;
-reg('M2 (guarda) com o botão: um companheiro a ≤ 2 m do condutor em ≤ 1,5 s', `${pc(c2, L.length)} (${fmt(100 * c2 / L.length, 1)}% ± ${fmt(100 * ep2, 1)}; sem: ${pc(c2A, L.length)})`, '≥ 60%', L.length >= NMIN && c2 >= 0.6 * L.length);
+// (D2, 24/10: o M2 conta os casos longos AO ALCANCE — o companheiro mais perto a ≤ M2_ALCANCE m no começo: do parado o
+// corpo anda ~6,4 m em 1,5 s, + os 2 m. Com a IA conduzindo contra a pessoa, ela passou a ficar com a bola quando o
+// companheiro mais perto da pessoa está longe — de 9 a 12 m, 27 → 145 casos em 16 partidas —, onde chegar em 1,5 s é quase
+// impossível; por faixa de distância a taxa não mudou. O M2 de todos os casos longos segue impresso, informativo)
+const M2_ALCANCE = 8.5;
+const ok2 = c => c.B.t2 != null && c.B.t2 <= 1.5, ok2A = c => c.A.t2 != null && c.A.t2 <= 1.5;
+const LA = L.filter(c => c.d0 <= M2_ALCANCE);
+const c2 = LA.filter(ok2).length, c2A = LA.filter(ok2A).length;
+const ep2 = LA.length ? Math.sqrt(c2 / LA.length * (1 - c2 / LA.length) / LA.length) : NaN;
+reg(`M2 (guarda) com o botão: um companheiro a ≤ 2 m do condutor em ≤ 1,5 s (o mais perto a ≤ ${fmt(M2_ALCANCE, 1)} m no começo)`, `${pc(c2, LA.length)} (${fmt(100 * c2 / LA.length, 1)}% ± ${fmt(100 * ep2, 1)}; sem: ${pc(c2A, LA.length)})`, '≥ 60%', LA.length >= NMIN && c2 >= 0.6 * LA.length);
+reg('(informativo) o M2 em todos os casos longos (o mais perto a ≤ 12 m)', `${pc(L.filter(ok2).length, L.length)} (sem: ${pc(L.filter(ok2A).length, L.length)})`, '—', true, true);
 const L2 = L.filter(c => c.A.s2 != null && c.B.s2 != null);
 const s2A = med(L2.map(c => c.A.s2)), s2B = med(L2.map(c => c.B.s2));
 reg('M3 um a mais na pressão: 2º companheiro mais perto do condutor em 2 s, sem → com', `${fmt(s2A)} → ${fmt(s2B)} m (Δ ${fmt(s2A - s2B)}; n = ${L2.length})`, 'Δ ≥ 1,5 m', L2.length >= NMIN / 2 && s2A - s2B >= 1.5);
@@ -227,7 +239,7 @@ if (porPartida.length >= 16) {
   for (let b = 0; b + 8 <= porPartida.length; b += 8) {
     const cs = porPartida.slice(b, b + 8).flatMap(p => p.casos), Lb = cs.filter(longo);
     const m1 = med(Lb.map(c => c.A.d15)) - med(Lb.map(c => c.B.d15));
-    const m2 = Lb.filter(c => c.B.t2 != null && c.B.t2 <= 1.5).length / Lb.length;
+    const Lb2 = Lb.filter(c => c.d0 <= M2_ALCANCE), m2 = Lb2.filter(ok2).length / Lb2.length;
     const a4 = soma(cs, c => c.A.faltas), b4 = soma(cs, c => c.B.faltas);
     const m5 = soma(cs, c => c.B.corre1) / soma(cs, c => c.B.correTot1);
     blocos.push(`${porPartida[b].s}: ${fmt(m1)} · ${Math.round(100 * m2)}% · ${a4}→${b4} · ${fmt(100 * m5, 1)}%`);

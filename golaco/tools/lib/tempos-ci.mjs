@@ -41,7 +41,7 @@ export const TEMPOS_NODE = {
   'teste-editor.mjs': 16,
   'teste-taticas.mjs': 57,
   'teste-defesa-humano.mjs': 59,
-  'teste-aereo-troca.mjs --so canhao': 69,
+  'teste-aereo-troca.mjs --so canhao': 125,
   'teste-aereo-troca.mjs --so natural': 913,
   'teste-transicao.mjs': 685,
   'teste-defesa-corrida.mjs': 449,
@@ -65,6 +65,9 @@ export const TEMPOS_NODE = {
   'teste-parado.mjs': 7,
   // (24/10, D1: + os ramos de 3 s de M9–M11 e o M12; localmente 371 → 496 s com 3 processos numa máquina de 4 vCPU)
   'teste-pressao-humano.mjs': 420,
+  // (24/10, D2: 12 partidas de 2 × 4 min + o portão + o bootstrap; localmente 65 s com 4 processos numa máquina de 4 vCPU
+  // sozinha, 8 s dele no bootstrap)
+  'teste-ia-corre.mjs': 150,
   'teste-goleiro-regras.mjs': 146,
   'teste-bolas-paradas.mjs': 237,
   'teste-botoes.mjs': 95,

@@ -148,3 +148,34 @@ export function faseDoTime(m, time) {
   s.tick = m.tick;
   return s;
 }
+
+/**
+ * O time t é da IA e joga CONTRA uma pessoa de verdade? (Categoria D; dono, 24/10: "a IA correr, tanto pra marcar, tanto
+ * pra atacar, pq ela não corre"; CONTRATOS.md, "A IA contra a pessoa".) Verdadeiro com uma pessoa jogando de verdade no
+ * OUTRO time (pessoaJoga) e nenhuma pessoa no time t. Com dois humanos (online) é falso dos dois lados; na IA × IA também —
+ * a demo do Node e o painel (entradaDemoPartida: `ia`, e `iaCobra` nas cobranças do controlado), o Simular o resto e a
+ * página com ?demo=1 (main.js entradaDoTime e os achadores `comoPagina` passam `iaCobra` em toda a entrada da demo): o que
+ * liga por aqui nunca muda essas partidas (hash-partida: demo IGUAL). É o portão de tudo que vale "só contra a pessoa"
+ * (IA_PESSOA no config.js); a subida com o ataque (IA_ATAQUE.sobeCorrendo, #500) foi o primeiro.
+ */
+export function contraPessoa(m, t) {
+  return pessoaJoga(m, 1 - t) && !m.humanos.includes(t);
+}
+
+/** O time t é jogado por uma pessoa de verdade (pessoaJoga)? */
+export function timeDaPessoa(m, t) {
+  return pessoaJoga(m, t);
+}
+
+/**
+ * Uma pessoa joga de verdade pelo time t: t está em m.humanos, a entrada dele no último passo não trouxe marca da IA
+ * (m.iaNaEntrada do sim.js: `ia` ou `iaCobra` — a cobrança da IA pelo controlado; o m.iaJoga, só com `ia`, segue para o
+ * resto da simulação) e o travado do "só o meu jogador" (m.trava, Total Match) não foi expulso — expulso, o controle não
+ * sai dele (acoes.js assumirControle) e o time joga com a IA sem ninguém do outro lado (o Simular o resto e a página
+ * entregam a entrada vazia, sem marca).
+ */
+function pessoaJoga(m, t) {
+  if (!m.humanos?.includes(t) || m.iaNaEntrada?.[t]) return false;
+  const tv = m.trava?.[t];
+  return !(tv != null && m.partida?.expulsos?.includes(tv));
+}

@@ -2973,3 +2973,95 @@ cada lance do anel, comprimido, para vagas fixas — só lê o anel: o hash não
   sólidos, cumprimentos, a troca, o melhor = o argmax independente e a nota = a do TM, o close dele, o aperto dos
   treinadores, as tarjas, o toque = o próximo bloco, a festa do fim; E pureza; G custo), `teste-ponte-tm` P7/P8 (o `melhor`
   e o resto igual ao da base) e `teste-cenas-tela` seção F (navegador).
+
+## A IA contra a pessoa — categoria D (24/10; contrato)
+
+Dono, 24/10: "a IA correr, tanto pra marcar, tanto pra atacar, pq ela não corre". Plano em 8 PRs (D1–D8; pesquisa e
+medição em `PESQUISA-CATEGORIA-D.md`). Em volume a IA já corre mais que um time real: o plano é REDISTRIBUIR (a corrida
+para quem tem a bola, para perto dela e para a área), nunca somar, e sem mexer na física (`JOGADOR.*`) nem na condução que
+o dono aprovou (`conducao.js`).
+
+### O portão (`tatica.js`, puro)
+
+- `contraPessoa(m, t)` → o time `t` é da IA e joga CONTRA uma pessoa de verdade: `pessoaJoga(m, 1 − t)` e nenhuma pessoa no
+  time `t`. `pessoaJoga(m, t)` (interna): `t` está em `m.humanos`, a entrada dele no último passo não trouxe marca da IA
+  (`m.iaNaEntrada[t]`, gravado pelo `sim.js` junto com o `m.iaJoga`, fora do hash: `ia` OU `iaCobra` — uma pessoa nunca manda
+  nenhuma das duas; o `m.iaJoga`, só com `ia`, segue para o resto da simulação) e o travado do "só o meu jogador"
+  (`m.trava[t]`, Total Match) não foi expulso — expulso, o controle fica nele (`acoes.js assumirControle`) e o time joga com a
+  IA sem ninguém do outro lado (a página entrega a entrada vazia; o Simular o resto, a da demo sem marca).
+- Falso: dois humanos (online, `teste-dois-humanos`, `teste-online`), dos dois lados; IA × IA — a demo do Node e o painel
+  (`entradaDemoPartida`: `ia`, e só `iaCobra` nas cobranças do controlado — a saída, as laterais, os tiros de meta), o
+  Simular o resto, a página com `?demo=1` e os achadores `comoPagina` (`main.js entradaDoTime` passa `iaCobra` em toda a
+  entrada da demo); o travado expulso. A página com `?demo=1` é IA × IA também para a subida do #500 (antes da revisão do D2
+  ela ligava ali, por só ler o `m.iaJoga`).
+- `timeDaPessoa(m, t)` → `pessoaJoga(m, t)`. Para o D4.
+- O nome do campo é `m.iaNaEntrada`: `m.iaMarca` é o cache da marcação do `ia.js` (escrever nele mudava a marcação do time
+  da pessoa).
+- **Invariante:** o que liga por `contraPessoa` nunca muda a demo nem o treino — `hash-partida` (demo IGUAL; a cena
+  "humano" muda) e `hash-igual` IGUAL em todo PR "só contra a pessoa". Seção P do `teste-ia-corre`: 0 passos ligados na demo
+  do Node (com as cobranças), com o travado expulso (a entrada vazia e o Simular o resto) e com dois humanos; ligado em todo
+  passo contra o roteiro.
+
+### As constantes (`config.js IA_PESSOA`)
+
+Só o que muda contra a pessoa; cada objeto é juntado POR CIMA do da partida na carga do módulo que o lê (o `--set` das
+ferramentas troca o `config.js` antes de a lógica carregar): `ia-ataque.js` `UTIL_P = {...IA_ATAQUE.utilidade,
+...IA_PESSOA.utilidade}` e `CORR_P = {...IA_ATAQUE.corridas, ...IA_PESSOA.corridas}`; `ia-tatica.js` `SUAVE_APOIO_P =
+{...TATICA.suaveApoio, ...IA_PESSOA.suaveApoio}` e `SUAVE_APOIO_LONGE_P = {...SUAVE_APOIO_P, ...IA_PESSOA.suaveApoioLonge.suave}`.
+A escolha é por time, a cada tick. Modo novo do `para()`: `IA.modos.apoia` (os modos `pressa`/`calma`, o `para()` e o
+`IA.pressaoArranca` ficam intocados: são do treino congelado).
+
+### D2 — a IA ataca correndo (itens 67-ataque e 21; `ia-ataque.js`, `ia-tatica.js`)
+
+- **Condutor** (`decidir`, com `U = UTIL_P`): cada uma das 7 direções da condução é avaliada no ponto aonde ele CHEGA —
+  com `livreAFrente` ≥ `conduzLivre` m, a `clamp(livre − 2, conduzDist, conduzLonge)` m (dentro do campo; senão os 5 m de
+  sempre) —, com `conduz` 1,0 e `conduzSolta` [2,5, 5, 0,35]; `condutorTatico` conduz a `UTIL_P.magConduz` 0,6 e o CORRER
+  sai com ≥ `correrLivre` 14 m livres (transição ou antes de `correrAte` 35 m). Já conduzindo (`atual === 'conduz'`) a mais
+  de `viraV` 2 m/s, só entram as direções a até `viraMax` 0,6 rad do movimento (o condutor vira aos poucos); `curtaPerto` 0
+  (sem a condução curta com o MOD; a proteção `protege` com o marcador colado continua). A chance de manter a bola
+  (`manter(m, j, px, pz, U)`) lê cada adversário onde ele estará em `UTIL_P.manterAntecipa` 0,12 s (`o.x + o.vx·t`; sem a
+  chave — a IA × IA —, o de agora, bit a bit): só no agora o condutor conduzia para dentro de quem fechava correndo
+  (roubadas no pé +25%). Com 0,1 s os pênaltis da IA no condutor da pessoa ('dribla' do `teste-faltas-sentido`, 36
+  partidas) iam a 0,64 por partida (B3: ≤ 0,6; main 0,39); com 0,12 s, 0,50 (com 0,15 s 0,39, mas com 0,15 e 0,2 s o
+  `teste-nao-passa` das sementes do CI reprovava por 2 casos do time da PESSOA — o sorteio caótico das sementes fixas, nenhum
+  do condutor da IA). `viradaComEmbalo`, o compromisso e a histerese não mudam.
+- **Apoio curto** (`apoioTatico`, papel 'apoio', sem pressa): com o ponto a mais de `IA_PESSOA.apoio.liga` m e o condutor a
+  ≥ `vCond` m/s, `para(..., 'apoia')`; sai a menos de `desliga` m ou com o condutor abaixo de `vCondSai` (estado em
+  `j.iaA.apoia`/`apoiaTick`, vale só com o tick anterior).
+- **Apoio pela referência** (`alvoCalmo`, ramo 'apoioRef'): `SUAVE_APOIO_P` (a `volta` de 12 m) e, a mais de
+  `suaveApoioLonge.bola[0]` m da bola (volta a menos de `bola[1]`; histerese em `estadoT(j).longe`), `SUAVE_APOIO_LONGE_P`
+  (parado até o alvo passar de 7 m, marcha lenta até 10 m).
+- **Subida com o ataque** (#500): só para quem está a até `sobeMax` m da bola (a continuação da subida não confere).
+- **Corridas nas costas** (`tentarCorrida`, `cfg = CORR_P`): só quem joga na FRENTE (a vaga da formação com `sem.x` ≥ 0:
+  os centroavantes), só com a linha deles nos últimos `corridas.ultimos` m, e o destino dentro da área: u em
+  [MX − u[0], MX − u[1]] (clamp do destino de sempre), do lado oposto à bola, |w| de w[0] a w[1] (+0,3 × o quanto ele vem do
+  lado de lá). No `estadoAtaque`, a corrida que não recebe acaba em `CORR_P.espera` s (desde o começo) e, passada a linha, em
+  `CORR_P.alemMax` s — pelo time DELE (`contraPessoa(m, o.time)`). `recarga`, `max`, `folga`, `campoMin`, `vCondutor` e a
+  leitura do passe não mudam.
+- **Ataque à área:** pressa com o ponto a mais de `IA_PESSOA.areaCorre` m.
+- **O chamado da PRESSÃO** (`defesa.js desvio`, só com o botão): `DEFESA_HUMANO.pressao.desvio.folga` 0,25 → 0,45 m — com a
+  IA conduzindo, ele chegava mais vezes onde um companheiro já contém o condutor (`teste-pressao-humano` M8). O M2 do
+  teste conta os casos longos com o companheiro mais perto a ≤ 8,5 m no começo (ao alcance em 1,5 s); o de todos os casos
+  longos fica informativo.
+
+### A régua (`tools/lib/corrida-medidas.mjs`) e o teste (`tools/teste-ia-corre.mjs`)
+
+- `filmarPartida({js, semente, modo: 'humano'|'demo', perfil, min, sets})` → a partida de 2 × `min` min contra o humano
+  roteirizado (`tools/lib/humano-roteiro.mjs`, time 0) ou a demo, gravada a cada passo (posição, velocidade, ramo da IA com
+  os submodos `:sobe`/`:apoia` e a opção do condutor), analisada por `analisar(R)` (as MESMAS contas para o rastreamento
+  real: faixas, fases, distância à bola, "na tela", disparadas, reação na perda e no ganho, corridas à frente da bola e à
+  área por ramo, 1º homem, condutor com a posse e as trocas, o apoio a ≤ 10 m da bola SEM o dono — `apoioPerto` — e, dele,
+  com o dono conduzindo a ≥ 3 m/s — `apoioConduz` —, vai e volta por ramo) + os chutes (dentro/fora da área, sem pênalti),
+  os gols e as roubadas sofridas por time (evento `roubada` de um adversário com a bola no pé do time; `roubadas`, `peMin`
+  = minutos de bola rolando no pé). Até `2·min·3600 + 6000` passos, e erro se a partida não chegar ao `fim` (o filme cortado
+  mediria a partida pela metade sem aviso). `juntar(lista)` → `resumo(J)` → `imprimir(nome, r)`.
+- `teste-ia-corre` (grupo padrão, 3 processos; no CI 3 roteiros × 4 sementes, para decidir `--sementes 8`): seções **P** (o
+  portão, acima; vale sempre), **A** (ataque, metas do D2), **M** (marcação, informativa até o D3), **C** (companheiros da
+  pessoa, informativa até o D4) e **V** (guardas que valem sempre: m/min da IA atacando ≤ 190 e no total ≤ 195, vai e volta
+  ≤ 5,8 por jogador-min, gols da IA contra o roteiro ≥ 0,92 por partida, a base, e as roubadas sofridas pela IA por minuto
+  de bola no pé ≤ a base + 15%, 2,78). O A6/A7 é o apoio SEM o condutor (a conta com ele, a do real, fica informativa:
+  A6c/A7c); o A6b — com o condutor conduzindo — é o que reprova o D2 sem o apoio curto. O A10 (item 21) pede ≥ 70% dos
+  chutes de dentro da área: o "≥ 55%" do plano a main já cumpria (53–64% conforme as sementes). O ± é o desvio-padrão de um
+  bootstrap estratificado por roteiro sobre a própria medida agregada (`--boot`, 200; o sorteio é fixo). Opções `--js`,
+  `--sementes`, `--roteiros`, `--par`, `--set`, `--json`, `--detalhe`, `--boot`. A coluna "antes" é a main ebf0abc6 (= o
+  D1 na lógica; 24 partidas).
