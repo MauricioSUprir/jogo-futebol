@@ -87,6 +87,8 @@ await foto('luta');
 await pagina.evaluate(() => { window.__rel.P.vida = 0; });
 ok(await espera(() => window.__rel.viloes.fase === 'derrota', null, 60000), 'vida zerada: derrota');
 ok(await espera(() => window.__rel.viloes.fase === 'luta' && window.__rel.P.vida === 1, null, 300000), 'a luta recomeça com a vida cheia');
+const facil = await pagina.evaluate(() => ({ n: window.__rel.viloes.derrotas, k: window.__rel.viloes.viloes[0].facil }));
+ok(facil.n === 1 && facil.k < 1, `cada derrota deixa o vilão mais fácil (${facil.n} derrota, fator ${facil.k?.toFixed(2)})`);
 
 // ---- vitória ----
 await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; v.vida = 3; v.acao = 'recupera'; v.at = 5; v.golpe('soco', R.P); });
@@ -106,8 +108,8 @@ const rev = await pagina.evaluate(() => {
   v.vida = v.perf.vida * 0.55; v.acao = 'recupera'; v.golpe('raio', P);
   return { desviou, fase2: v.fase2, capturas: v.perf.capturas, vida: v.perf.vida, raios: v.perf.raios };
 });
-ok(rev.desviou >= 50, `o Flash Reverso desvia de quase tudo (${rev.desviou}/60)`);
-ok(rev.fase2 && rev.raios && rev.capturas > 3 && rev.vida > 100, `mais difícil: fase 2 na metade da vida, raios, ${rev.capturas} capturas, vida ${rev.vida}`);
+ok(rev.desviou >= 38 && rev.desviou <= 58, `o Flash Reverso desvia mais que o Zoom, sem ser impossível (${rev.desviou}/60)`);
+ok(rev.fase2 && rev.raios && rev.capturas === 3 && rev.vida <= 140, `mais difícil que o Zoom, mas justo: fase 2, raios, ${rev.capturas} capturas, vida ${rev.vida}`);
 
 // ---- batalha final ----
 await pagina.evaluate(() => window.__rel.viloes.iniciar('final'));
