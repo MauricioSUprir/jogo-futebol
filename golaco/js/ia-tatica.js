@@ -1171,9 +1171,7 @@ function recompor(m, j, s, B, vaga, lado, extra) {
     if (atraso < R.desliga) { it.recomp = false; it.recompFim = m.tick; }
     else if (m.tick - it.recompDesde > seg(R.max)) { it.recomp = false; it.recompBloq = m.tick + seg(R.pausa); }
   } else if (m.tick >= it.recompBloq && (atraso > (naTransicao ? R.liga : B.rapido ? (pessoa ? CORRIDA_P : IA_DEFESA.corrida).liga : R.ligaOrganizado)
-    || (naTransicao && !frente && u > ub + R.ligaBola && uRef < ub && m.tick - it.recompFim > seg(R.respiro))
-    // (item 19, contra a pessoa: quem o condutor rápido já passou recompõe na hora)
-    || (pessoa && atraso > R.desliga && batidoVolta(m, j, B)))) {
+    || (naTransicao && !frente && u > ub + R.ligaBola && uRef < ub && m.tick - it.recompFim > seg(R.respiro)))) {
     it.recomp = true; it.recompDesde = m.tick;
   }
   if (!it.recomp) return null;
@@ -1210,21 +1208,9 @@ function recompor(m, j, s, B, vaga, lado, extra) {
   // meio que volta trotando depois da roubada; a velocidade de recuo do meio no teste-transicao --humano)
   const longe = R.longe != null && !(R.longe[3] && u >= ub && !frente && vaga.grupo !== 'def')
     && MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z) > (u < ub ? R.longe[0] : R.longe[2] ?? R.longe[0]);
-  // (item 19, contra a pessoa: com o condutor rápido, quem ele já passou — atrás dele, a até CORRIDA_P.batidoVolta m — volta
-  // em disparada, sem esperar o atraso do sprint)
-  const correr = (!frente && !longe && atraso > R.corre && (ub < R.urgente || vb > R.vUrgente)) || (pessoa && batidoVolta(m, j, B));
+  const correr = !frente && !longe && atraso > R.corre && (ub < R.urgente || vb > R.vUrgente);
   const e = rumoPressa(m, j, { ...irPara(m, j, _t.x, _t.z, longe ? R.longe[1] : 1, correr, extra, 'pressa'), botoes: extra | (correr ? BOTAO.CORRER : 0) });
   return R.arco ? viradaEmArco(m, j, e, R.arco, extra) : e;
-}
-
-/** Item 19 (D3, contra a pessoa): j foi passado pelo condutor rápido — está atrás dele (do lado do gol deles) a até
- * CORRIDA_P.batidoVolta m? */
-function batidoVolta(m, j, B) {
-  const R = CORRIDA_P.batidoVolta;
-  if (!R || !B.rapido || B.cond < 0) return false;
-  let c = null;
-  for (const o of m.jogadores) if (o.id === B.cond) { c = o; break; }
-  return !!c && (j.x - c.x) * m.ataca[j.time] > 0 && MD.hypot(j.x - c.x, j.z - c.z) <= R;
 }
 
 /**

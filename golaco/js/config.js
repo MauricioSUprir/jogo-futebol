@@ -1413,13 +1413,14 @@ export const IA_PESSOA = {
   // somavam volume: o "longe e devagar" da recomposição é a ACELERAÇÃO do começo de cada uma (95% dele nos primeiros 0,75 s;
   // mediana de 2,4 m/s no começo), não a falta de sprint
   recomp: { arco: [1.75, 3, 0.95], longe: [16, 0.75, 16, true] },
-  // Condutor rápido no meu corredor (item 19; acompanhaCorredor e recompor): o bloco do corredor sprinta com mais de
-  // `correLonge` m de atraso (era IA_DEFESA.corrida.correLonge 8) e quem o condutor rápido já passou — atrás dele, a até
-  // batidoVolta m — recompõe na hora, em disparada (antes esperava o atraso de 8 m da recomposição e trotava). O limiar do
-  // condutor rápido (IA_DEFESA.corrida.v 7,0) NÃO muda: com 6,3 só contra a pessoa o defensor do corredor ia a 4,1 m/s
-  // (teste-defesa-corrida; meta 5, pendente), mas o vai e volta da IA subia a 4,90 e as roubadas sofridas a 2,82/min
-  // (teste-ia-corre V3 e V5 reprovavam)
-  corrida: { correLonge: 4, batidoVolta: 15 },
+  // Condutor rápido no meu corredor (item 19; acompanhaCorredor e o liga do recompor): o bloco do corredor sprinta com mais
+  // de `correLonge` m de atraso (era IA_DEFESA.corrida.correLonge 8). Medido e fora: quem o condutor rápido já passou
+  // recompor na hora, em disparada (atrás dele, a até 15 m) — o defensor do corredor ia de 3,8 a 2,6 m/s nas duas
+  // calibrações em que foi medido (teste-defesa-corrida: quem volta correndo fica de novo na frente da arrancada e é passado
+  // virando), sem mudar a chegada à área além do ±. O limiar do condutor rápido (IA_DEFESA.corrida.v 7,0) NÃO muda: com 6,3
+  // só contra a pessoa o defensor do corredor ia a 4,1 m/s (meta 5, pendente), mas o vai e volta da IA subia a 4,90 e as
+  // roubadas sofridas a 2,82/min (teste-ia-corre V3 e V5 reprovavam)
+  corrida: { correLonge: 4 },
 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca

@@ -247,9 +247,9 @@ reg('gol por chute nas arrancadas do próprio campo', `${golsCh}/${chutes.length
 // a ~6 m do defensor e 0,8 s antes de ele passar (mediana de 57 duelos); do ~0,5 m/s de então, a(v) = A0·(1 − v/S0) (A0 8,5
 // m/s², Alonso-Callejo 2022) dá no máximo ~4,8 m/s em 0,8 s. Medido e fora: o limiar a 6,3 m/s contra a pessoa (4,1 m/s com
 // 38 duelos, mas o vai e volta e as roubadas sofridas pela IA reprovavam no teste-ia-corre), o 1º homem recuando com o
-// condutor a mais de 4,5 m/s (3,9) e a contenção mais longe (4,2, mas 41% das arrancadas do bloco armado chegavam à área). O
-// D3 deixou 2,5–3,1 m/s (a marcação mais alta põe mais gente na frente da arrancada no meio-campo: 61 → 66–77 duelos); quem
-// já foi passado volta em disparada (IA_PESSOA.corrida.batidoVolta)
+// condutor a mais de 4,5 m/s (3,9), a contenção mais longe (4,2, mas 41% das arrancadas do bloco armado chegavam à área) e
+// quem já foi passado voltando em disparada (2,6 × 3,8 sem ela: volta para a frente da arrancada e é passado virando). Entre
+// calibrações vizinhas do D3 esta mediana foi de 2,0 a 4,7 m/s (50–85 duelos); o D3 entregue: 3,8 (base 3,9)
 reg('defensor do corredor ultrapassado: velocidade para o gol com o condutor a 3 m (mediana)', `${f(v3[v3.length >> 1], 2)} m/s (${v3.length} duelos)`, '≥ 5 m/s (pendente)', v3.length >= 20 && v3[v3.length >> 1] >= 5 ? true : null);
 reg('arrancadas do próprio campo, bloco armado: chegam à área', `${armado.filter(e => e.area).length}/${armado.length} (${f(pc(armado.filter(e => e.area).length, armado.length), 0)}%)`, '≤ 25%', armado.length >= 40 && pc(armado.filter(e => e.area).length, armado.length) <= 25);
 reg('faltas da IA no humano por partida', f(soma(sp, r => r.faltasIA) / NS, 2), '≤ 5', soma(sp, r => r.faltasIA) / NS <= 5);
