@@ -1435,11 +1435,14 @@ export const IA_PESSOA = {
   // era quase sempre o CONTROLADO (o mais perto), que só faz o que a pessoa manda — ninguém mais continha —, e a trava de
   // atropelar (DEFESA_HUMANO.semAtropelar, freio 3 m/s²) freava o time inteiro desde longe (a 3 m do condutor no máximo
   // ~4,4 m/s). Aqui: o controlado sai da escolha do 1º e do 2º homem (blocoDoTime) — o companheiro mais perto contém e
-  // o seguinte cobre a `cobertura` m (era IA_DEFESA.cobertura 8,5), com a linha de engajamento da IA contra a pessoa
-  // (IA_PESSOA.engaja) — e os companheiros (não o controlado: a carga por trás do teste-faltas-sentido B2) chegam na curva
+  // o seguinte cobre a `cobertura` m (era IA_DEFESA.cobertura 8,5), com a linha de engajamento `engaja` (a Média era
+  // IA_DEFESA.engaja 66) — e os companheiros (não o controlado: a carga por trás do teste-faltas-sentido B2) chegam na curva
   // de freada de `freio` m/s² (JOGADOR.freio é 6,2). O BOTE continua só nos gatilhos de sempre (toque pesado, de costas,
   // condutor lento, recepção; apertaProprio)
-  companheiros: { cobertura: 5, freio: 5, engaja: [42, 80, 105] },
+  // (a linha de engajamento dos companheiros: com 67, o 1º a 6,5 m e 39% a ≤ 5 m; com 72, 5,9 m e 43%; com 76 e 80, igual
+  // nisso, mas a retomada da IA contra o espelho caía a 33% — teste-pressao --humano, faixa 34–54%: a pessoa que rouba a bola
+  // com os companheiros perto não a perde mais — e o apoio da IA andando passava do teto do D2, A6/A6b)
+  companheiros: { cobertura: 5, freio: 5, engaja: [42, 72, 105] },
 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca

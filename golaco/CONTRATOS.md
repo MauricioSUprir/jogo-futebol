@@ -3088,7 +3088,7 @@ Portão `contraPessoa(m, 1 − t)`: o time `t` é o da pessoa e o outro é a IA 
 
 - **1º e 2º homem** (`blocoDoTime`): o controlado sai das duas escolhas (`semCtrl`; `B.compPessoa` marca o time) — o 1º homem
   era quase sempre ele, o mais perto, e o controlado só faz o que a pessoa manda: ninguém mais continha.
-- **Linha de engajamento**: `IA_PESSOA.companheiros.engaja[pressão]` (Média 80) no lugar do `IA_DEFESA.engaja`.
+- **Linha de engajamento**: `IA_PESSOA.companheiros.engaja[pressão]` (Média 72) no lugar do `IA_DEFESA.engaja`.
 - **Cobertura** (`cobrir`): o 2º a `companheiros.cobertura` m (5) do 1º, no lugar de `IA_DEFESA.cobertura` (8,5).
 - **Chegada** (`defesa.js semAtropelar`): os companheiros (não o controlado) na curva de freada de `companheiros.freio`
   m/s² (5) no lugar de `DEFESA_HUMANO.semAtropelar.freio` (3); o controlado segue com 3 (a carga por trás do
