@@ -205,7 +205,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       // vilão com arma: o escudo do elemento segura o golpe e empurra o herói para trás
       const c = v.perf.corRaio, dx = P.x - v.x, dz = P.z - v.z, d = Math.hypot(dx, dz) || 1;
       fx.clarao(v.x, v.y + 1.2, v.z, 2.6, 0.2, c); fx.onda(v.x, v.y, v.z, 4, 0.35);
-      P.vx += (dx / d) * 10; P.vz += (dz / d) * 10;
+      P.vx += (dx / d) * 6; P.vz += (dz / d) * 6;
       return;
     }
     // some num borrão e reaparece de lado
@@ -392,7 +392,8 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
           v.ataques = (v.ataques || 0) + 1;
           v.golpeArma = pf.arma === 'tempo' && v.ataques % 3 === 0 ? 'tornado' : pf.arma;
           v.acao = 'prepara'; v.at = pf.telegrafo * (v.golpeArma === 'tornado' ? 1.2 : 1);
-          v.alvo = { x: P.x + P.vx * 0.25, z: P.z + P.vz * 0.25 };            // o raio e o tornado miram onde o herói vai estar
+          const vh = Math.hypot(P.vx, P.vz), ad = Math.min(8, vh * 0.25) / (vh || 1);   // o raio e o tornado miram onde o herói vai estar (até 8 m à frente)
+          v.alvo = { x: P.x + P.vx * ad, z: P.z + P.vz * ad };
         }
         break;
       }

@@ -25,7 +25,7 @@ await pagina.evaluate(() => { window.__rel.mundo.T = 0.45; });
 // espera N quadros com o herói sem entrada nenhuma (o puxão do tornado mexe nele)
 const parado = (n) => pagina.evaluate((n) => new Promise((fim) => { let k = 0; const f = () => { if (++k < n) requestAnimationFrame(f); else fim(); }; requestAnimationFrame(f); }), n);
 
-for (const id of ['frio', 'onda', 'mago']) {
+for (const id of (process.env.SO || 'frio,onda,mago').split(',')) {
   await pagina.evaluate((id) => window.__rel.viloes.iniciar(id), id);
   ok(await espera((id) => window.__rel.viloes.fase === 'aparece' && window.__rel.viloes.viloes[0]?.id === id, id), `${id}: o capítulo começa`);
   const longe = await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; return Math.hypot(R.P.x - v.x, R.P.z - v.z); });
@@ -50,20 +50,22 @@ for (const id of ['frio', 'onda', 'mago']) {
     const R = window.__rel, v = R.viloes.viloes[0], P = R.P; let bloq = 0;
     for (let i = 0; i < 60; i++) { v.acao = 'rodeia'; v.at = 5; if (!v.golpe('soco', P)) bloq++; }
     v.vida = v.perf.vida; let ac = 0; for (let i = 0; i < 5; i++) { v.acao = 'recupera'; v.at = 5; if (v.golpe('soco', P)) ac++; }
+    P.vx = P.vz = 0;                                         // cada golpe bloqueado empurra o herói: 60 seguidos acumulam embalo
     return { bloq, ac };
   });
   ok(g.bloq >= 18 && g.bloq <= 45, `${id}: o escudo segura parte dos golpes (${g.bloq}/60)`);
   ok(g.ac === 5, `${id}: recarregando, ele apanha (5/5)`);
   if (id === 'mago') {
     // o tornado puxa o herói parado
-    await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; v.vida = v.perf.vida; R.P.vida = 1; v.acao = 'rodeia'; v.at = 0; v.ataques = 2; R.P.x = v.x - 9; R.P.z = v.z; });
+    await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; v.vida = v.perf.vida; R.P.vida = 1; v.acao = 'rodeia'; v.at = 0; v.ataques = 2; R.P.x = v.x - 9; R.P.z = v.z; R.P.vx = R.P.vz = 0; });   // sem o embalo dos 60 empurrões do escudo acima
     await espera(() => window.__rel.viloes.viloes[0].acao === 'dispara', null, 400000);
     // o tornado nasce onde o herói estava: o herói recua 5 m pela rua (para o lado havia carros parados) e é puxado de volta
     const d0 = await pagina.evaluate(() => { const R = window.__rel; R.P.x -= 5; R.P.vx = R.P.vz = 0; return { x: R.P.x, z: R.P.z }; });
     await parado(40);
     await foto('mago-tornado');
     const puxou = await pagina.evaluate((d0) => { const R = window.__rel; return Math.hypot(R.P.x - d0.x, R.P.z - d0.z); }, d0);
-    ok(puxou > 0.3, `mago: o tornado puxa o herói (${puxou.toFixed(1)} m)`);
+    const est = await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; return `${v.acao}/${v.golpeArma} modo ${R.J.modo} perigos ${R.viloes.perigos.filter((p) => p.vida < 1e8).map((p) => `${p.tipo} a ${Math.hypot(p.x - R.P.x, p.z - R.P.z).toFixed(1)} m`).join(';')}`; });
+    ok(puxou > 0.3, `mago: o tornado puxa o herói (${puxou.toFixed(1)} m; ${est})`);
   }
   // vitória
   await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; v.vida = 2; v.acao = 'recupera'; v.at = 5; v.golpe('soco', R.P); });
@@ -71,7 +73,7 @@ for (const id of ['frio', 'onda', 'mago']) {
   ok(await espera(() => !window.__rel.viloes.ativo, null, 400000), `${id}: o capítulo termina`);
 }
 const lista = await pagina.evaluate(() => window.__rel.viloes.lista(0).map((c) => `${c.id}=${c.estado}`).join(', '));
-ok(/frio=vencido.*onda=vencido.*mago=vencido/.test(lista), `progresso salvo: ${lista}`);
+ok(process.env.SO || /frio=vencido.*onda=vencido.*mago=vencido/.test(lista), `progresso salvo: ${lista}`);
 ok(!erros.length, `sem erros no console (${erros.slice(0, 3).join(' | ')})`);
 await navegador.close(); await srv.fechar();
 process.exit(falhas ? 1 : 0);
