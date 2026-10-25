@@ -28,7 +28,27 @@
 //    3 → 4 s, Bauer & Anzer 2021): a meta passa a ser a da MESMA definição no jogo real, 44,1 ± 10 pontos
 //    (34–54%), como a agressão (68 ± 10). Era 25–40%.
 //   node tools/teste-pressao.mjs [--antes] [--js <pasta>] [--sementes N] [--base K]
+//
+// VARIANTE --humano (categoria D, D3: item 20, "pressão mais agressiva — PPDA da Média 11,0 × 8,4"; só contra a pessoa): a
+// IA (time 1, Média) contra uma PESSOA no time 0 (sem a marca `ia` na entrada: tatica.js contraPessoa liga) — o 'construtor'
+// (lib/partida-tatica.mjs: o ataque substituto só no time 0 — trota, segura 2,5–5 s e passa para o mais livre, ~11 passes por
+// minuto como no jogo real; os roteiros do tools/lib/humano-roteiro.mjs quase não passam: contra eles o PPDA da IA dá ~1,5 e a
+// retomada ~74%, medidas do roteiro e não da IA) —, N sementes (padrão 48: com 24 o PPDA variava ±1 entre calibrações
+// vizinhas) × 4 min em 3 processos. Mede só a IA defendendo,
+// com as MESMAS definições de cima:
+//  - PPDA (Wyscout) da IA: 8–10,5 — o alvo do plano D3 é 9–10,5 e o piso 8 (os times que mais apertam: Liverpool 2021/22
+//    8,62, Wyscout via Coaches' Voice; Bournemouth 2024/25 9,9, Opta; a média das 5 grandes ligas, 11,01);
+//  - agressão (recepção da pessoa com alguém da IA a ≤ 4,6 m em ≤ 2 s) 58–78%: a Metrica nesta definição (68 ± 10; a guarda do
+//    item 20 da FILA).
+//    O "≤ 33%" do plano D3 é o máximo REAL da StatsBomb (Leeds de Bielsa 29–30%), que conta EVENTOS de pressão — outra
+//    definição (a nota da agressão acima);
+//  - retomada da IA em ≤ 5 s depois da perda: 34–54% (Metrica 44,1 ± 10, a mesma definição).
+//   node tools/teste-pressao.mjs --humano [--sementes 48] [--roteiros espelho] [--js <pasta>] [--set CONST.caminho=valor]
 import * as T from './lib/partida-tatica.mjs';
+import { fork } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+if (process.argv.includes('--humano')) await varianteHumano();
 
 // 24 sementes (eram 8: ~50–60 perdas por nível; entre conjuntos de sementes a contrapressão variava
 // 34–70%, o PPDA 6,9–10,1 e a retomada por nível ±10 pontos — o "Alta ≥ Média + 5" era sorteio)
@@ -81,3 +101,51 @@ const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).le
 console.log(linhas.map(l => l.map((x, c) => String(x).padEnd(larg[c])).join(' | ')).join('\n'));
 console.log(falhas ? `\nteste-pressao: REPROVOU (${falhas})` : '\nteste-pressao: PASSOU');
 process.exit(falhas ? 1 : 0);
+
+// --------------------------------------------------------------------------- variante --humano (D3)
+async function varianteHumano() {
+  const argv = process.argv.slice(2), val = (n, d) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
+  const a = T.argumentos(48);
+  if (argv.includes('--filho')) {
+    // --set CONST.caminho=valorJSON (repetível; triagem): o config.js trocado antes de a lógica carregar
+    const sets = argv.flatMap((x, i) => (x === '--set' ? [argv[i + 1]] : []));
+    if (sets.length) {
+      const { pathToFileURL } = await import('node:url'), path = await import('node:path');
+      const C = await import(pathToFileURL(path.join(a.js, 'config.js')).href);
+      for (const q of sets) {
+        const chave = q.slice(0, q.indexOf('=')), partes = chave.split('.');
+        let o = C[partes[0]];
+        for (const k of partes.slice(1, -1)) o = o?.[k];
+        if (!o || !(partes[partes.length - 1] in o)) throw new Error(`--set: ${chave} não existe`);
+        o[partes[partes.length - 1]] = JSON.parse(q.slice(q.indexOf('=') + 1));
+      }
+    }
+    const L = await T.carregar(a.js);
+    const R = T.medirJogos(L, a.sementes.filter((_, k) => k % 3 === +val('--fatia', 0)), { humano: val('--roteiro', 'espelho'), min: 4 });
+    process.send({ porTime: R.porTime, minutos: R.minutos, chutes: R.chutes, gols: R.gols }, () => process.exit(0));
+    return await new Promise(() => {});
+  }
+  const ROT = val('--roteiros', 'espelho').split(',').filter(Boolean);
+  const t0 = Date.now();
+  const tarefas = ROT.flatMap(r => [0, 1, 2].map(f => [r, f]));
+  const res = await Promise.all(tarefas.map(([r, f]) => new Promise((ok, erro) => {
+    const c = fork(fileURLToPath(import.meta.url), [...argv.filter(x => x !== '--roteiros'), '--filho', '--roteiro', r, '--fatia', String(f)]);
+    c.on('message', ok); c.on('error', erro);
+    c.on('exit', cod => { if (cod) erro(new Error(`roteiro ${r}: saiu com ${cod}`)); });
+  })));
+  const soma = k => res.reduce((s, r) => s + r.porTime[1][k], 0);
+  const ppda = soma('passesAdv') / Math.max(1, soma('acoes'));
+  const agr = 100 * soma('agressao') / Math.max(1, soma('recepcoes')), ret = 100 * soma('retomada5') / Math.max(1, soma('perdas'));
+  const ppdaR = ROT.map(r => { const q = res.filter((_, k) => tarefas[k][0] === r); return T.fmt(q.reduce((s, x) => s + x.porTime[1].passesAdv, 0) / Math.max(1, q.reduce((s, x) => s + x.porTime[1].acoes, 0)), 1); }).join(' / ');
+  const linhas = [['teste (a IA contra a pessoa)', 'medido', 'meta', 'resultado']];
+  let falhas = 0;
+  const reg = (nome, medido, meta, ok) => { linhas.push([nome, medido, meta, ok ? 'PASSOU' : 'REPROVOU']); if (!ok) falhas++; };
+  reg('PPDA da IA (Wyscout)', `${T.fmt(ppda, 2)} (${ROT.join(' / ')}: ${ppdaR}; ${soma('acoes')} ações)`, '8–10,5 (alvo 9–10,5)', ppda >= 8 && ppda <= 10.5);
+  reg('agressão: recepção da pessoa com a IA a ≤ 4,6 m em ≤ 2 s', `${T.fmt(agr)}% de ${soma('recepcoes')}`, '58–78% (Metrica 68 ± 10)', agr >= 58 && agr <= 78);
+  reg('retomada da IA em ≤ 5 s depois da perda', `${T.fmt(ret)}% de ${soma('perdas')}`, '34–54% (Metrica 44,1 ± 10)', ret >= 34 && ret <= 54);
+  console.log(`teste-pressao --humano — lógica: ${a.js} · ${ROT.join(', ')} × ${a.sementes.length} sementes × 4 min, ${((Date.now() - t0) / 1000).toFixed(0)} s · passes da pessoa (os que contam no PPDA) por min ${T.fmt(soma('passesAdv') / Math.max(1, res.reduce((s, r) => s + r.minutos, 0)), 1)}`);
+  const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));
+  console.log(linhas.map(l => l.map((x, c) => String(x).padEnd(larg[c])).join(' | ')).join('\n'));
+  console.log(falhas ? `\nteste-pressao --humano: REPROVOU (${falhas})` : '\nteste-pressao --humano: PASSOU');
+  process.exit(falhas ? 1 : 0);
+}

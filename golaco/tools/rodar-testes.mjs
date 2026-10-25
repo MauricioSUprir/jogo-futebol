@@ -105,9 +105,13 @@ const LISTA = [
   ['jogador parado com a bola: a IA fecha e dá o bote (condutor lento)', 'teste-parado.mjs'],
   ['PRESSÃO perceptível: com × sem o botão (pareado), marca, um a mais na pressão', 'teste-pressao-humano.mjs'],
   // Categoria D (dono, 24/10: "a IA correr, tanto pra marcar, tanto pra atacar, pq ela não corre"): a régua da corrida da IA
-  // contra a pessoa (3 roteiros × 4 sementes; seções P o portão, A ataque e V guardas valendo — M e C informativas até o D3 e
-  // o D4)
-  ['a IA corre contra a pessoa: o portão, condutor, apoio perto da bola, corridas até a área, chutes da área; volume, vai e volta e roubadas (guardas)', 'teste-ia-corre.mjs', [], 'padrao', 3],
+  // contra a pessoa (3 roteiros × 8 sementes — a amostra da decisão: com 4, a roubada sofrida pela IA, V5, ia de 2,21 a 2,79
+  // entre a base e o D3 nas sementes 1–4 e 2,33 → 2,34 nas 8; seções P o portão, A ataque, M marcação (D3) e V guardas
+  // valendo — C informativa até o D4)
+  ['a IA corre contra a pessoa: o portão, condutor, apoio perto da bola, corridas até a área, chutes da área; a marcação perto da bola e o 1º homem saindo; volume, vai e volta e roubadas (guardas)', 'teste-ia-corre.mjs', ['--sementes', '8'], 'padrao', 3],
+  // (D3, item 20: a pressão da IA contra a pessoa — a pessoa "espelho", que joga com a decisão da IA sem a marca `ia`: PPDA
+  // 8–10,5, agressão ≤ 78%, retomada 34–54%; 3 processos)
+  ['pressão da IA contra a pessoa (D3): PPDA, agressão e retomada contra o espelho', 'teste-pressao.mjs', ['--humano'], 'padrao', 3],
   ['goleiro pelas Leis do Jogo (mão só na área, recuo, 8 s) e na mão do humano (anda, TROCAR, PEGAR)', 'teste-goleiro-regras.mjs'],
   ['bolas paradas: lateral com as mãos e 3 opções (Regra 15), tiro de meta (16), escanteio por zonas, barreira (13)', 'teste-bolas-paradas.mjs'],
   ['cobrança mirada (escanteio, falta, tiro de meta da pessoa): a linha = a física, curva, controles, canhão roteirizado, a IA não usa', 'teste-mira.mjs'],

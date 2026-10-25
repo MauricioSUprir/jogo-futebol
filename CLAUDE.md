@@ -144,7 +144,27 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   travado do TM expulso — com o `iaNaEntrada` a página é IA × IA (também para a subida do #500); medida "perto da bola" sem
   tirar o dono mede o condutor (a do apoio passava com o apoio curto desligado: o A6b, com o condutor conduzindo, separa);
   premissa de semente de teste de navegador vira condição do próprio lance (V11 do `teste-replay-paradas-tela`: o lance onde
-  a bola estava; F7 do `teste-cenas-tela`: o botão pela lista do guardador); (9)
+  a bola estava; F7 do `teste-cenas-tela`: o botão pela lista do guardador). **Categoria D, D3 (25/10; a IA MARCA correndo,
+  itens 67-defesa, 19 e 20; `PESQUISA-CATEGORIA-D.md` §6, contrato "D3"):** só contra a pessoa (`IA_PESSOA` D3; `SUAVE_MARCA_P`,
+  `RECOMP_P`, `CORRIDA_P` no `ia-tatica.js`), REDISTRIBUINDO — o volume dos 5 s depois da perda já estava no teto (229,7
+  m/min; Jerome 2024, p90 ~230): quem marca a até 33 m da bola sem o teto do trote (d / 7, sprint além de 9 m, sem o arranque
+  calmo, a espera da volta [12 m, 1,3 s]); o da zona do meio/frente a ≤ 12 m do condutor ENCURTA (0,3 do caminho até 4 m
+  dele) só na janela de um gatilho de pressão e com ele abaixo de 4 m/s (sempre ligado, subia no condutor que arrancava:
+  faltas da IA 1,96 → 2,67); a Média engaja a 68 m (78 dava agressão 86%; 70, PPDA 7,6); a recomposição vira em ARCO
+  (pedido > 100° a > 3 m/s: o rumo a 0,95 rad com o CORRER — acima de 112° o passoCorpo para antes de virar) e, a mais de 20
+  m da bola, volta a 0,75 sem sprint (paga o volume); o batido pelo condutor rápido recompõe na hora. `teste-ia-corre` seção
+  M (a lógica INSTRUMENTADA: `copiaInstrumentada` grava a distância ao ponto do `para()`; CI com 8 sementes; as metas do D3
+  com * reprovam só além de 2 ±): aproximação do 1º homem a 4–12 m 2,4 → 7,5 km/h (real 7,4–7,5), "longe e devagar" 31 →
+  17%, perda 230 → 225 m/min, disparadas 1,29 → 1,15/min; `teste-pressao --humano` (padrão; a pessoa "espelho" = a decisão
+  da IA sem a marca `ia`, 48 partidas): PPDA 11,9 → 8,8, agressão 72 → 76% (≤ 78), retomada 36 → 42%. NÃO entrou (medido):
+  o sprint mais cedo da recomposição e a frente sprintando (o "longe e devagar" dela é a ACELERAÇÃO do começo: 95% nos
+  primeiros 0,75 s), a cobertura do 2º homem a 6 m pelo modo pressa (a roubada desfeita ia a 7–9%), o condutor rápido a
+  6,3 m/s contra a pessoa (vai e volta e roubadas sofridas reprovavam). PENDENTE: o defensor do corredor (3,9 → 3,1 m/s,
+  meta 5 — o recuo começa ~0,8 s antes, a física dá ~4,8), a recomposição "longe e devagar" ≤ 15% (24%) e o 2º/3º homem
+  (6,2/11,1 m; o 2º marcador real fica a 9,6 m). Lições: as medidas da marcação mudam entre calibrações vizinhas mais que o ±
+  (PPDA 8,4 × 10,8 com o encurtar 0,30 × 0,35; o gol por chute nas arrancadas de 0 a 26%) — 24–48 partidas, metas que
+  reprovam quando PROVAM (2 ± ou binomial); contra os roteiros o PPDA da IA não se mede (eles quase não passam): o espelho;
+  com a base no teto de uma guarda de volume, todo ganho perto da bola tem de ser pago longe dela; (9)
   editar o TEMPO de jogo e a DIFICULDADE (na pausa/antes do jogo e vindo do TM pelo pedido); (10) botão de CARRINHO
   (dividida deslizando; falta/cartão pela Regra 12 em `faltas.js`; cabe no orçamento de HUD do celular); (11) clássico mais
   PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores (bote mais forte, mais contato), não pelo árbitro (o pedido do TM

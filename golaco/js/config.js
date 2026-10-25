@@ -1361,34 +1361,54 @@ export const IA_PESSOA = {
   areaCorre: 3,               // m — quem vai à área corre com o ponto a mais que isto (era IA_ATAQUE.areaCorre 6)
   // ---- D3: a IA MARCA correndo (itens 67-defesa, 19 e 20; dono, 17/10: "A IA NÃO CORRE, NEM PRA DEFENDER, NEM PRA ATACAR,
   // tem que ser mais difícil"). Medido contra o roteiro (teste-ia-corre seção M; o mapa das travas da categoria D): o 1º
-  // homem já fica a ~2 m do condutor da pessoa (o real é 5,2 m: ele NÃO aperta mais); o que não corria eram o 2º ao 5º —
-  // o teto de trote do ponto calmo (TATICA.suave.trote, ~2,6 m/s até 12 m do ponto) —, a recomposição que freava até parar
-  // antes de virar e o corpo abaixo de 4 m/s com o ponto a mais de 5 m em ~29% do tempo marcando.
+  // homem já fica a ~2 m do condutor da pessoa (o real é 5,2 m: ele NÃO aperta mais); quem não corria eram os de trás dele —
+  // o teto de trote do ponto calmo (TATICA.suave.trote: ~2,6 m/s até 12 m do ponto) —: o ponto a mais de 5 m e o corpo abaixo
+  // de 4 m/s em 31% do tempo marcando. Em VOLUME a IA já corre mais que o real nos 5 s depois da perda (230 m/min; Jerome
+  // 2024: 156 ± 9 na transição defensiva, 208 ± 17 na defesa rápida): o que entra aqui é pago longe da bola (redistribuir).
   // Quem marca PERTO da bola (ia-tatica.js alvoCalmo, ramos zona, fechaLinha, linha e cobre, com a bola a até
-  // marcaPerto.bola[0] m; sai a mais de bola[1]): sem o teto do trote, a intensidade d / div (era d / 14, a do modo calma),
-  // o sprint além de `corre` m (era 12) e sem o arranque calmo (TATICA.arranque: 2 s trotando depois de parar). Longe da
-  // bola fica o de sempre (redistribuir: a corrida vai para a tela do celular, ~39,6 m de largura no foco)
-  marcaPerto: { bola: [20, 24], suave: { trote: [1, 0, 0.33], div: 7, corre: 9, arranque: false } },
-  // Cobertura (o 2º homem, ia-tatica.js cobrir): a `dist` m atrás do 1º (era IA_DEFESA.cobertura 8,5), pelo modo pressa com
-  // o ponto a mais de pressa[0] m (sai a menos de pressa[1]) e o CORRER a mais de `corre` m — pelo ponto calmo ele trotava
-  // atrás do lance
-  cobre: { dist: 6, pressa: [4, 2.5], corre: 6 },
+  // marcaPerto.bola[0] m; sai a mais de bola[1] — a faixa da tela do celular deitado: 39,6 m de largura no foco): sem o teto
+  // do trote, a intensidade d / div (era d / 14, a do modo calma: a 5 m do ponto ~4,2 m/s), o sprint além de `corre` m (era
+  // 12), sem o arranque calmo (TATICA.arranque: 2 s trotando depois de parar) e, com o ponto a menos de volta[0] m do lado de
+  // trás do movimento, freia e espera volta[1] s antes de voltar (era [8, 1,0]: reagindo mais, a linha e a zona somavam
+  // inversões — o vai e volta da IA subia de 4,74 a 5,07 por jogador-min; com [12, 1,3], 4,75–4,8). O raio: com 20 m o
+  // "longe e devagar" ficava em ~23% (os de 20 a 30 m da bola eram 6 pontos), com 30 m em 18,4% e com 33 m em 16,6%
+  marcaPerto: { bola: [28, 32], suave: { trote: [1, 0, 0.33], div: 7, corre: 9, arranque: false, volta: [14, 1.5] } },
   // Linha de engajamento (item 20; blocoDoTime): o 1º homem sai do bloco com a bola a até engaja[pressão] m do meu gol (a
-  // Média era 66: o PPDA da IA contra o roteiro ficava acima do dos times que mais apertam — Liverpool 2021/22 8,6, Wyscout;
-  // Bournemouth 2024/25 9,9, Opta)
-  engaja: [42, 78, 105],
-  // Recomposição (ia-tatica.js recompor, RECOMP_P): o sprint com mais de `corre` m de atraso (era 11) e com a bola a até
-  // `urgente` m além do meio (era 10) ou vindo a mais de `vUrgente` m/s (era 4); a frente também sprinta nos frenteS s
-  // depois da perda (PLoS One 2024, LaLiga 2: a recomposição é 24,7% das disparadas — 42,5% das dos zagueiros, 29,7% das dos
-  // meias —; Jerome 2024: a transição defensiva, ≤ 6 s depois da perda, é a fase de mais disparada fora dos lances rápidos);
-  // e a virada em ARCO: com o pedido a mais de arco[0] rad do movimento e o corpo a mais de arco[1] m/s, pede o rumo a
-  // arco[2] rad do movimento pelo lado do alvo (alvo quase atrás — a menos de 0,2 rad de 180° —: pelo lado do meu gol), com
-  // o CORRER. Acima de JOGADOR.angInversao (112°) o passoCorpo freia na linha até PARAR e só então vira (~0,6 s parado
-  // vindo a 5 m/s); na curva ele vira pela aceleração lateral do corte (JOGADOR.latCorte) sem parar — a física é a mesma
-  recomp: { corre: 11, urgente: 10, vUrgente: 4, frenteS: null, arco: [1.75, 3, 0.95], longe: null },
-  // Condutor rápido no meu corredor (item 19; acompanhaCorredor): o bloco do corredor sprinta com mais de `correLonge` m de
-  // atraso (era IA_DEFESA.corrida.correLonge 8)
-  corrida: { v: 7.0, correLonge: 4, batidoVolta: 15 },
+  // Média era 66). Medido contra a pessoa "espelho" (teste-pressao --humano: a pessoa joga com a decisão da IA, sem a marca
+  // `ia`), 24 partidas: com 66 e o resto do D3, PPDA 9,2 e a aproximação do 1º homem a 7–12 m em 4,3 km/h (meta ≥ 5); com
+  // 68, PPDA 8,3, agressão 75%, aproximação 5,2; com 70, PPDA 7,6 (abaixo do piso 8: aperta mais que o time que mais aperta
+  // na Europa — Liverpool 2021/22 8,6, Wyscout; Bournemouth 2024/25 9,9, Opta) e agressão 77%; com 78 (o plano), 86% (o
+  // teto real nesta definição é 78%: Metrica 68 ± 10)
+  engaja: [42, 68, 105],
+  // Encurtar (semBola, o ponto da zona; o plano D3: "quando a pessoa recebe, além do marcador colado, o 2º e o 3º fecham
+  // correndo; quem está entre 4 e 12 m sai do lugar para encurtar"): quem guarda a zona do MEIO ou da FRENTE a até encurta[0]
+  // m do condutor da pessoa — a linha de defesa fica na linha (FC 27, Closed Beta: os zagueiros "step towards their marked
+  // players" mas apertam menos que meias e atacantes) — vai encurta[2] do caminho até o ponto a encurta[1] m do condutor, do
+  // lado do meu gol; só com o condutor abaixo de encurta[3] m/s (a velocidade dele agora) e, com encurta[4], só na janela de
+  // um GATILHO de pressão (a recepção, de costas, o toque pesado, a lateral, o passe para trás, a perda: IA_DEFESA.gatilhos —
+  // FM e FIFA 21: pressão no toque ruim e na recepção). A 4–12 m o 1º homem ia na direção do condutor a 2,4 km/h (o real é
+  // 7,4–7,5: Metrica, a mesma conta) — era um da zona parado na forma; com o encurtar, 7,5. Sempre ligado (sem o gatilho),
+  // subindo no condutor que arrancava, o da zona era passado indo na direção dele (teste-defesa-corrida: as faltas da IA no
+  // humano 1,96 → 2,67 por partida e a roubada desfeita 8%); com 0,35, a agressão contra o espelho ia a 77,9% (o teto real
+  // nesta definição é 78%)
+  encurta: [12, 4, 0.3, 4, true],
+  // Recomposição (ia-tatica.js recompor, RECOMP_P): a virada em ARCO — com o pedido a mais de arco[0] rad do movimento e o
+  // corpo a mais de arco[1] m/s, pede o rumo a arco[2] rad do movimento pelo lado do alvo (alvo quase atrás — a menos de 0,2
+  // rad de 180° —: pelo lado do meu gol), com o CORRER. Acima de JOGADOR.angInversao (112°) o passoCorpo freia na linha até
+  // PARAR e só então vira (~0,6 s parado vindo a 5 m/s); na curva ele vira pela aceleração lateral do corte
+  // (JOGADOR.latCorte) sem parar — a física é a mesma. E, longe da bola (a mais de longe[0] m), volta a longe[1] de
+  // intensidade (~4,5 m/s) e sem o sprint: é o que paga o volume de perto da bola (V7). O sprint mais cedo do plano (corre 11
+  // → 8, urgente 10 → 20, vUrgente 4 → 3) e a frente sprintando nos 2 s da perda só somavam volume: o "longe e devagar" da
+  // recomposição é a ACELERAÇÃO do começo de cada uma (95% dele nos primeiros 0,75 s; mediana de 2,4 m/s no começo), não a
+  // falta de sprint
+  recomp: { arco: [1.75, 3, 0.95], longe: [20, 0.75, 30] },
+  // Condutor rápido no meu corredor (item 19; acompanhaCorredor e recompor): o bloco do corredor sprinta com mais de
+  // `correLonge` m de atraso (era IA_DEFESA.corrida.correLonge 8) e quem o condutor rápido já passou — atrás dele, a até
+  // batidoVolta m — recompõe na hora, em disparada (antes esperava o atraso de 8 m da recomposição e trotava). O limiar do
+  // condutor rápido (IA_DEFESA.corrida.v 7,0) NÃO muda: com 6,3 só contra a pessoa o defensor do corredor ia a 4,1 m/s
+  // (teste-defesa-corrida; meta 5, pendente), mas o vai e volta da IA subia a 4,90 e as roubadas sofridas a 2,82/min
+  // (teste-ia-corre V3 e V5 reprovavam)
+  corrida: { correLonge: 4, batidoVolta: 15 },
 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca

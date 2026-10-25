@@ -462,7 +462,10 @@ export function resumo(J) {
   out.corr = { ramo: Object.entries(Cr.ramo).sort((a, b) => b[1][0] - a[1][0]).slice(0, 8), porMinPosse: Cr.n / Math.max(1e-9, posseMin), area: Cr.area / Math.max(1, Cr.n), costas: Cr.costas / Math.max(1, Cr.n), scPorMinPosse: Cr.sc / Math.max(1e-9, posseMin), scArea: Cr.scArea / Math.max(1, Cr.sc), durMed: med(Cr.dur), n: Cr.n, posseMin };
   const H = J.h1;
   const topo = o => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([r, n]) => [r, n / Math.max(1, Object.values(o).reduce((a, b) => a + b, 0))]);
-  out.h1 = { dMed: H.d / Math.max(1, H.n), dMediana: med(H.d1), d2Mediana: med(H.d2), d3Mediana: med(H.d3), r2: topo(H.r2), r3: topo(H.r3), le2: H.le2 / Math.max(1, H.n), le5: H.le5 / Math.max(1, H.n), vBin: H.vBin.map(med), aBin: H.aBin.map(med), cBin: H.cBin.map(med), nBin: H.vBin.map(v => v.length),
+  // (aproximação a 4–12 m numa faixa só: as de 4–7 e 7–12 m, cada uma com ~1/10 dos quadros, variavam ±1,5 km/h entre
+  // calibrações vizinhas — D3)
+  out.h1 = { dMed: H.d / Math.max(1, H.n), dMediana: med(H.d1), d2Mediana: med(H.d2), d3Mediana: med(H.d3), r2: topo(H.r2), r3: topo(H.r3),
+    a4a12: med([...H.aBin[2], ...H.aBin[3]]), le2: H.le2 / Math.max(1, H.n), le5: H.le5 / Math.max(1, H.n), vBin: H.vBin.map(med), aBin: H.aBin.map(med), cBin: H.cBin.map(med), nBin: H.vBin.map(v => v.length),
     rBin: H.rBin.map(topo), fech: med(H.fech), fechQq: med(H.fechQq), vMed2s: med(H.vMed), v1ini: med(H.v1ini), d0: med(H.d0), chega: med(H.chega), chegaFrac: H.chegaN / Math.max(1, H.possesN), posses: H.possesN };
   const ct = J.cond.tk.reduce((a, b) => a + b, 0), cg = J.cond.tkG.reduce((a, b) => a + b, 0);
   out.cond = { faixas: J.cond.tk.map(x => 100 * x / Math.max(1, ct)), faixasGanho: J.cond.tkG.map(x => 100 * x / Math.max(1, cg)), vMed: med(J.cond.v),
@@ -487,7 +490,7 @@ export function resumo(J) {
   out.alvo = { n: AL.n, ld: AL.comD ? 100 * AL.ld / AL.n : NaN, rec: AL.comD ? 100 * AL.rld / Math.max(1, AL.rn) : NaN, recTempo: 100 * AL.rn / Math.max(1, AL.n),
     ldRamo: Object.entries(AL.ldRamo).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([r, n]) => [r, 100 * n / Math.max(1, AL.n)]) };
   // o vai e volta por ramo (no instante da inversão): a parte de cada ramo no total, por jogador-min
-  out.invRamo = Object.entries(J.invRamo).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([r, n]) => [r, n / minJ]);
+  out.invRamo = Object.entries(J.invRamo).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([r, n]) => [r, n / minJ]);
   out.minJogador = minJ;
   return out;
 }

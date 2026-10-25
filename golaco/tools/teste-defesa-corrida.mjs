@@ -18,8 +18,10 @@
 //  - roubada desfeita ≤ 5% (26%; reprova quando a contagem prova mais — binomial, p < 5%);
 //  - gols do roteiro sprint ≤ 1,5 por partida (2,5–3,1);
 //  - gols de arrancada de 40 m ou mais ≤ 0,5 por partida (1,9);
-//  - gol por chute nas arrancadas do próprio campo ≤ 20% (36%; com menos de 10 chutes, ≤ 0,25 gol dessas arrancadas por partida);
-//  - defensor do corredor, com o condutor a 3 m: mediana ≥ 5 m/s para o próprio gol (3,0) — PENDENTE, não reprova (3,3–3,6);
+//  - gol por chute nas arrancadas do próprio campo ≤ 20% (36%; reprova quando a contagem prova mais — binomial, p < 5%; com
+//    menos de 10 chutes, ≤ 0,25 gol dessas arrancadas por partida);
+//  - defensor do corredor, com o condutor a 3 m: mediana ≥ 5 m/s para o próprio gol (3,0) — PENDENTE, não reprova (3,3–3,9;
+//    com o D3, 2,5–3,1: a física e o porquê na linha do reg);
 //  - chegada à área nas arrancadas do próprio campo com o bloco armado ≤ 25% (30%; abaixo de 12% só mexendo na vantagem
 //    de velocidade da condução — decisão do dono);
 //  - faltas da IA no humano ≤ 5 por partida;
@@ -226,6 +228,9 @@ function caudaBinomial(k, n, p) {
 // (as metas de 5% com ~75–180 casos: reprova só quando a contagem PROVA mais de 5% — binomial, p < 5%, como os vermelhos do
 // teste-faltas e o gol de escanteio do teste-bolas-paradas; 10 de 182 ou 4 de 75 são o sorteio de 5%)
 const prova5 = (k, n) => caudaBinomial(k, n, 0.05) < 0.05;
+// (D3: o gol por chute nas arrancadas, com 12–23 chutes em 24 partidas, ia de 0 a 26% entre calibrações vizinhas da
+// marcação contra a pessoa — 3 a 6 gols —: reprova quando a contagem PROVA mais de 20%, a mesma binomial)
+const prova20 = (k, n) => caudaBinomial(k, n, 0.20) < 0.05;
 const desf = soma(sp, r => r.desfeitas), roub = soma(sp, r => r.roubadas);
 reg('roubada da IA desfeita pelo mesmo condutor em 1 s', `${desf}/${roub} (${f(pc(desf, roub), 0)}%)`, '≤ 5% (binomial, p < 5%)', roub >= 20 && !prova5(desf, roub));
 reg('gols do roteiro sprint por partida', f(soma(sp, r => r.gols) / NS, 2), '≤ 1,5', soma(sp, r => r.gols) / NS <= 1.5);
@@ -233,11 +238,18 @@ reg('gols de arrancada de 40 m ou mais por partida', f(longas.length / NS, 2), '
 // (com menos de 10 chutes a conversão não se mede: vale então o número de gols dessas arrancadas, ≤ 0,25 por partida — a
 // defesa que não deixa chutar não reprova por falta de amostra)
 const golsCh = chutes.filter(e => e.gol).length;
-reg('gol por chute nas arrancadas do próprio campo', `${golsCh}/${chutes.length} (${f(pc(golsCh, chutes.length), 0)}%)`, '≤ 20% (< 10 chutes: ≤ 0,25 gol/partida)',
-  chutes.length >= 10 ? pc(golsCh, chutes.length) <= 20 : golsCh / NS <= 0.25);
+reg('gol por chute nas arrancadas do próprio campo', `${golsCh}/${chutes.length} (${f(pc(golsCh, chutes.length), 0)}%)`, '≤ 20% (binomial, p < 5%; < 10 chutes: ≤ 0,25 gol/partida)',
+  chutes.length >= 10 ? !prova20(golsCh, chutes.length) : golsCh / NS <= 0.25);
 // PENDENTE (não reprova; entrega de 12/10): a meta da contraprova (≥ 5 m/s) não foi alcançada — 3,3–3,6 m/s (base 3,0–3,15).
 // Quem é ultrapassado é quase sempre quem foi dar o bote ('aperta'/'ataca', de propósito indo na bola) ou o contém a ~4,4
-// m/s; recuar todos mais rápido derrubava os gols do painel (a defesa da arrancada já custa ~0,5 gol por partida)
+// m/s; recuar todos mais rápido derrubava os gols do painel (a defesa da arrancada já custa ~0,5 gol por partida).
+// D3 (25/10, item 19; só contra a pessoa): o recuo do 1º homem começa com o condutor rápido ligado (IA_DEFESA.corrida.v 7,0),
+// a ~6 m do defensor e 0,8 s antes de ele passar (mediana de 57 duelos); do ~0,5 m/s de então, a(v) = A0·(1 − v/S0) (A0 8,5
+// m/s², Alonso-Callejo 2022) dá no máximo ~4,8 m/s em 0,8 s. Medido e fora: o limiar a 6,3 m/s contra a pessoa (4,1 m/s com
+// 38 duelos, mas o vai e volta e as roubadas sofridas pela IA reprovavam no teste-ia-corre), o 1º homem recuando com o
+// condutor a mais de 4,5 m/s (3,9) e a contenção mais longe (4,2, mas 41% das arrancadas do bloco armado chegavam à área). O
+// D3 deixou 2,5–3,1 m/s (a marcação mais alta põe mais gente na frente da arrancada no meio-campo: 61 → 66–77 duelos); quem
+// já foi passado volta em disparada (IA_PESSOA.corrida.batidoVolta)
 reg('defensor do corredor ultrapassado: velocidade para o gol com o condutor a 3 m (mediana)', `${f(v3[v3.length >> 1], 2)} m/s (${v3.length} duelos)`, '≥ 5 m/s (pendente)', v3.length >= 20 && v3[v3.length >> 1] >= 5 ? true : null);
 reg('arrancadas do próprio campo, bloco armado: chegam à área', `${armado.filter(e => e.area).length}/${armado.length} (${f(pc(armado.filter(e => e.area).length, armado.length), 0)}%)`, '≤ 25%', armado.length >= 40 && pc(armado.filter(e => e.area).length, armado.length) <= 25);
 reg('faltas da IA no humano por partida', f(soma(sp, r => r.faltasIA) / NS, 2), '≤ 5', soma(sp, r => r.faltasIA) / NS <= 5);
