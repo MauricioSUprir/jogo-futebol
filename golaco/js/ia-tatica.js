@@ -423,8 +423,10 @@ export function blocoDoTime(m, t) {
   // papel dele no bloco passa ao próximo)
   const pedAnt = B.pedidoTick === m.tick - 1 && pressaoPedida(m, t) ? B.pedido : -1;
   // (D4, o time da pessoa contra a IA: o controlado — que só faz o que a pessoa manda — não é o 1º nem o 2º homem: o
-  // companheiro mais perto contém e o seguinte cobre; IA_PESSOA.companheiros)
-  const semCtrl = humano != null && contraPessoa(m, 1 - t) ? humano : -1;
+  // companheiro mais perto contém e o seguinte cobre; IA_PESSOA.companheiros. Com a bola ALTA no ar a escolha é a de sempre:
+  // o 1º homem ia ao ponto da queda e disputava a bola alta no lugar do controlado — a troca aérea do teste-aereo-troca caía a
+  // 89%; só com a bola no pé, o 1º companheiro ia de 5,9 a 6,3 m do condutor da IA)
+  const semCtrl = humano != null && !(v && v.alto && m.posse == null) && contraPessoa(m, 1 - t) ? humano : -1;
   B.compPessoa = semCtrl >= 0;
   let p1 = null, d1 = Infinity, at1 = null, dAt1 = Infinity;
   for (const o of js) {
