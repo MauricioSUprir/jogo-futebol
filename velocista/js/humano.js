@@ -6,6 +6,12 @@ import { lerCorpo } from './corpo-dados.js';
 import { aplicarTraje } from './traje.js';
 
 const BASE = new URL('../assets/humano/', import.meta.url);
+// emblema do peito de cada traje (desenhos próprios): disco, cor do anel e do símbolo, símbolo
+const EMBLEMAS = {
+  heroi: { disco: 0x1a1416, cor: 0xf6c82a, emissivo: 0x8a6008, forma: 'faisca', brilhoTecido: 0x8a1010 },
+  zoom: { disco: 0x05070a, cor: 0x3a8cff, emissivo: 0x1a50ff, forma: 'divisa', brilhoTecido: 0x203050 },
+  reverso: { disco: 0x9a0a0a, cor: 0x141010, emissivo: 0x000000, forma: 'faisca', brilhoTecido: 0x806010 },
+};
 const NOMES = ['pelve', 'lombar', 'peito', 'pescoco', 'cabeca', 'claviculaE', 'bracoE', 'antebracoE', 'maoE', 'claviculaD', 'bracoD', 'antebracoD', 'maoD',
   'coxaE', 'canelaE', 'peE', 'coxaD', 'canelaD', 'peD', 'ajJoelhoE', 'ajJoelhoD', 'ajCotoveloE', 'ajCotoveloD', 'ajQuadrilE', 'ajQuadrilD'];
 const PAI = [-1, 0, 1, 2, 3, 2, 5, 6, 7, 2, 9, 10, 11, 0, 13, 14, 0, 16, 17, 14, 17, 7, 11, 0, 0];
@@ -57,7 +63,7 @@ function malha(parte, esqueleto, material) {
 }
 
 /** Cria o herói. Devolve {grupo, aplicar(est, dt), materiais, dispose()}. */
-export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
+export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = 'heroi' } = {}) {
   const [ind, bin] = await Promise.all([fetch(new URL('corpo.json', BASE)).then((r) => r.json()), fetch(new URL('corpo.bin', BASE)).then((r) => r.arrayBuffer())]);
   const dados = lerCorpo(ind, bin), L = dados.lods[lod];
   const origens = origensDeRepouso(ind.repouso.juntas, ind.repouso);
@@ -73,19 +79,23 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
   // No PC, verniz (clearcoat) e brilho de tecido (sheen); no celular, o mesmo desenho sem essas camadas.
   const matCorpo = aplicarTraje(mobile
     ? new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, emissive: 0x120002 })
-    : new THREE.MeshPhysicalMaterial({ roughness: 1, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.4, sheen: 0.18, sheenColor: new THREE.Color(0x8a1010), emissive: 0x120002 }), 'corpo');
-  const matCabeca = aplicarTraje(new THREE.MeshStandardMaterial({ map: texCabeca, roughness: 0.65, metalness: 0 }), 'cabeca');
+    : new THREE.MeshPhysicalMaterial({ roughness: 1, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.4, sheen: 0.18, sheenColor: new THREE.Color(EMBLEMAS[traje]?.brilhoTecido ?? 0x8a1010), emissive: 0x120002 }), 'corpo', traje);
+  const matCabeca = aplicarTraje(new THREE.MeshStandardMaterial({ map: texCabeca, roughness: 0.65, metalness: 0 }), 'cabeca', traje);
   const corpo = malha(L.partes.corpo, esqueleto, matCorpo), cabeca = malha(L.partes.cabeca, esqueleto, matCabeca);
   for (const m of [corpo, cabeca]) { raiz.add(m); m.bind(esqueleto, new THREE.Matrix4()); }
 
   // emblema próprio do herói (no centro do peitoral): disco grafite, anel dourado e uma faísca de quatro pontas
   const J = ind.repouso.juntas;
-  const matDisco = new THREE.MeshStandardMaterial({ color: 0x1a1416, roughness: 0.35, metalness: 0.4 });
-  const matEmb = new THREE.MeshStandardMaterial({ color: 0xf6c82a, roughness: 0.25, metalness: 0.85, emissive: 0x8a6008, emissiveIntensity: 0.7, side: THREE.DoubleSide });
+  const EM = EMBLEMAS[traje] || EMBLEMAS.heroi;
+  const matDisco = new THREE.MeshStandardMaterial({ color: EM.disco, roughness: 0.35, metalness: 0.4 });
+  const matEmb = new THREE.MeshStandardMaterial({ color: EM.cor, roughness: 0.25, metalness: 0.85, emissive: EM.emissivo, emissiveIntensity: 0.7, side: THREE.DoubleSide });
   const emb = new THREE.Group();
   const disco = new THREE.Mesh(new THREE.CircleGeometry(0.06, 32), matDisco); disco.position.z = -0.001; emb.add(disco);
   emb.add(new THREE.Mesh(new THREE.RingGeometry(0.06, 0.075, 40), matEmb));
-  const faisca = new THREE.Shape(); faisca.moveTo(0, 0.052); faisca.lineTo(0.014, 0.014); faisca.lineTo(0.052, 0); faisca.lineTo(0.014, -0.014); faisca.lineTo(0, -0.052); faisca.lineTo(-0.014, -0.014); faisca.lineTo(-0.052, 0); faisca.lineTo(-0.014, 0.014); faisca.closePath();
+  const faisca = new THREE.Shape();
+  if (EM.forma === 'divisa') {                          // duas divisas (setas) apontando para a frente
+    for (const o of [-0.022, 0.018]) { faisca.moveTo(o - 0.018, 0.04); faisca.lineTo(o + 0.022, 0); faisca.lineTo(o - 0.018, -0.04); faisca.lineTo(o - 0.032, -0.04); faisca.lineTo(o + 0.008, 0); faisca.lineTo(o - 0.032, 0.04); faisca.closePath(); }
+  } else { faisca.moveTo(0, 0.052); faisca.lineTo(0.014, 0.014); faisca.lineTo(0.052, 0); faisca.lineTo(0.014, -0.014); faisca.lineTo(0, -0.052); faisca.lineTo(-0.014, -0.014); faisca.lineTo(-0.052, 0); faisca.lineTo(-0.014, 0.014); faisca.closePath(); }
   emb.add(new THREE.Mesh(new THREE.ShapeGeometry(faisca), matEmb));
   // a frente do peito em repouso fica em x = 0,145: o emblema logo à frente dela, no meio do peitoral
   emb.scale.setScalar(1.15); emb.position.set(0.152, 1.325 - J.peito[1], 0); emb.rotation.y = Math.PI / 2; ossos[I.peito].add(emb);
