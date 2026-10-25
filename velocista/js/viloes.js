@@ -492,7 +492,11 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
         p.x += (dx / n) * 3.2 * dt; p.z += (dz / n) * 3.2 * dt;                 // anda atrás do herói
         p.mesh.position.x = p.x; p.mesh.position.z = p.z; p.mesh.rotation.y += dt * 6;
         p.mesh.material.opacity = p.op * fim * (0.85 + Math.random() * 0.3);
-        if (d < 11 && !P.vibrando) { const f = 26 * (1 - d / 11) * dt; P.vx -= (dx / n) * f; P.vz -= (dz / n) * f; }
+        // puxa: arrasta a posição (a freada do herói parado anulava um puxão só na velocidade); as paredes seguram
+        if (d < 11 && d > 0.3 && !P.vibrando) {
+          const f = 7.5 * (1 - d / 11) * dt, nx = P.x - (dx / n) * f, nz = P.z - (dz / n) * f;
+          const r = colide ? colide(nx, nz, P.y) : { x: nx, z: nz }; P.x = r.x; P.z = r.z;
+        }
         if (d < 1.8 && !P.vibrando) { ferirSemEmpurrar(P, 0.12 * dt); P.vy = Math.max(P.vy || 0, 3); }
         if (Math.random() < dt * 6) fx.raio(p.x + rnd(-2, 2), rnd(2, 12), p.z + rnd(-2, 2), p.x + rnd(-3, 3), rnd(2, 12), p.z + rnd(-3, 3), { vida: 0.15, desvio: 0.5, r: 0.6, g: 2.2, b: 1 });
       } else {
