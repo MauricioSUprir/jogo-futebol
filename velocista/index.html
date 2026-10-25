@@ -6,9 +6,14 @@
 <title>THE FLASH — mundo aberto</title>
 <meta name="theme-color" content="#07080f">
 <style>
+  @font-face { font-family:'Rajdhani'; font-weight:600; font-display:swap; src:url(assets/fontes/rajdhani-600.woff2) format('woff2'); }
+  @font-face { font-family:'Rajdhani'; font-weight:700; font-display:swap; src:url(assets/fontes/rajdhani-700.woff2) format('woff2'); }
+  @font-face { font-family:'Inter'; font-weight:400; font-display:swap; src:url(assets/fontes/inter-400.woff2) format('woff2'); }
+  @font-face { font-family:'Inter'; font-weight:600; font-display:swap; src:url(assets/fontes/inter-600.woff2) format('woff2'); }
+  @font-face { font-family:'Inter'; font-weight:800; font-display:swap; src:url(assets/fontes/inter-800.woff2) format('woff2'); }
   :root { --fundo:#07080f; --vermelho:#ff2b3d; --ouro:#ffd23f; --azul:#3fd0ff; --texto:#f4f6ff; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
-  html,body { margin:0; height:100%; background:var(--fundo); color:var(--texto); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overflow:hidden; touch-action:none; }
+  html,body { margin:0; height:100%; background:var(--fundo); color:var(--texto); font-family:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overflow:hidden; touch-action:none; }
   #cena { position:fixed; inset:0; width:100%; height:100%; display:block; }
   #hud { position:fixed; inset:0; pointer-events:none; display:none; }
   .jogando #hud { display:block; }
@@ -44,7 +49,25 @@
   #coleta { position:absolute; left:50%; bottom:max(74px,calc(env(safe-area-inset-bottom) + 64px)); transform:translateX(-50%); font-size:12px; font-weight:800; letter-spacing:.08em; color:var(--azul); background:rgba(7,8,15,.6); border:1px solid rgba(63,208,255,.4); border-radius:99px; padding:3px 12px; opacity:0; transition:opacity .25s; }
   #coleta.vis { opacity:1; }
   #resumo { font-size:14px; opacity:.85; text-align:center; line-height:1.6; }
-  #aviso { position:absolute; top:40%; max-width:72vw; left:50%; transform:translateX(-50%); font-weight:900; font-size:clamp(14px,2.4vw,21px); letter-spacing:.06em; color:var(--ouro); text-shadow:0 0 18px rgba(255,210,63,.7); opacity:0; transition:opacity .3s; text-align:center; }
+  /* fonte de títulos da interface (Rajdhani, OFL — assets/fontes) */
+  h1, h2, .rotulo, .valor, #missaoTitulo, .chefe-titulo, .bt, .esp, .chip, button.principal, .cap b, #radio b, #cenaHist .fala b, .pular, #coleta, .linhaEnergia, #velBox b, #marcadorGuia span { font-family:'Rajdhani','Inter',system-ui,sans-serif; }
+  /* faixa de aviso: no terço de cima, rótulo na cor do tipo e título branco, linhas finas que se abrem */
+  #aviso { --cor:var(--azul); z-index:3; position:absolute; top:27%; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:1px; padding:7px 44px 8px; min-width:min(56vw,380px); max-width:80vw; text-align:center; pointer-events:none; opacity:0;
+    background:linear-gradient(90deg, transparent, rgba(7,8,15,.8) 20%, rgba(7,8,15,.8) 80%, transparent); }
+  #aviso::before, #aviso::after { content:''; position:absolute; left:8%; right:8%; height:1px; background:linear-gradient(90deg, transparent, var(--cor), transparent); transform:scaleX(0); }
+  #aviso::before { top:0; } #aviso::after { bottom:0; }
+  #aviso small { font:700 11px/1.2 'Rajdhani',sans-serif; letter-spacing:.34em; text-transform:uppercase; color:var(--cor); }
+  #aviso b { font:700 clamp(17px,2.4vw,25px)/1.15 'Rajdhani',sans-serif; letter-spacing:.05em; text-transform:uppercase; color:#fff; text-shadow:0 2px 14px rgba(0,0,0,.7); }
+  #aviso.vis { animation:avisoEntra .35s ease-out forwards; }
+  #aviso.vis::before, #aviso.vis::after { animation:avisoLinha .5s .05s ease-out forwards; }
+  #aviso.sai { animation:avisoSai .4s ease-in forwards; }
+  #aviso.sai::before, #aviso.sai::after { transform:scaleX(1); }
+  @keyframes avisoEntra { from { opacity:0; transform:translate(-50%,-10px); } to { opacity:1; transform:translate(-50%,0); } }
+  @keyframes avisoLinha { to { transform:scaleX(1); } }
+  @keyframes avisoSai { from { opacity:1; } to { opacity:0; transform:translate(-50%,-6px); } }
+  #aviso.t-missao { --cor:var(--ouro); } #aviso.t-crime { --cor:#ff4d5e; } #aviso.t-ok { --cor:#7be08a; } #aviso.t-alerta { --cor:#ffa94d; }
+  #aviso.t-info { --cor:var(--azul); } #aviso.t-zoom { --cor:#3fa0ff; } #aviso.t-reverso { --cor:#ff3b30; }
+  @media (max-height: 520px) { #aviso { top:28%; padding:5px 34px 6px; } #aviso small { font-size:10px; } }
   #mira { position:absolute; left:50%; top:50%; width:6px; height:6px; margin:-3px; border-radius:50%; background:rgba(255,255,255,.5); display:none; }
   /* controles de toque */
   #toque { position:fixed; inset:0; pointer-events:none; display:none; }
@@ -158,7 +181,7 @@
     <div id="bussola" class="bloco"><svg id="seta" viewBox="-12 -12 24 24"><path d="M0 -10 L7 8 L0 4 L-7 8 Z" fill="#3fd0ff"/></svg><span id="distEsfera">—</span></div>
   </div>
   <div id="missao" class="bloco"><div class="rotulo" id="missaoNum"></div><div id="missaoTitulo"></div><div id="missaoTexto"></div><div id="crimeLinha" hidden></div></div>
-  <div id="aviso"></div>
+  <div id="aviso"><small id="avisoRotulo"></small><b id="avisoTitulo"></b></div>
   <div id="coleta"></div>
   <div id="mira"></div>
   <div id="energia"><div id="chips"><span class="chip" id="chip-raio">1 · RAIO 25%</span><span class="chip" id="chip-ciclone">2 · CICLONE 35%</span><span class="chip" id="chip-sonico">3 · SÔNICO 50%</span></div><div class="linhaEnergia"><span>Energia</span><span id="velBox"><b id="vel">0</b> km/h</span></div><div class="barra"><div class="nivel" id="nivel"></div><i class="marca" style="left:25%"></i><i class="marca" style="left:35%"></i><i class="marca" style="left:50%"></i></div></div>

@@ -14,12 +14,12 @@ import { criarRaios } from './raios.js';
 
 export const PERFIS = {
   zoom: {
-    nome: 'ZOOM', traje: 'zoom', raio: 'azul', cor: '#3fa0ff', corRaio: [0.25, 0.65, 2.2],
+    nome: 'ZOOM', titulo: 'Zoom', traje: 'zoom', raio: 'azul', cor: '#3fa0ff', corRaio: [0.25, 0.65, 2.2],
     vida: 100, capturas: 3, vFuga: 52, vCansado: 33, folego: 5, cansaco: 2.4,
     rodeia: [1.4, 2.6], telegrafo: 0.6, recupera: 1.35, dano: 0.12, esquiva: 0.75, raios: false, fase2: false, regen: 0.015,
   },
   reverso: {
-    nome: 'FLASH REVERSO', traje: 'reverso', raio: 'vermelho', cor: '#ff3b30', corRaio: [2.4, 0.15, 0.08],
+    nome: 'FLASH REVERSO', titulo: 'Flash Reverso', traje: 'reverso', raio: 'vermelho', cor: '#ff3b30', corRaio: [2.4, 0.15, 0.08],
     vida: 170, capturas: 4, vFuga: 60, vCansado: 38, folego: 4.5, cansaco: 1.9,
     rodeia: [0.9, 1.8], telegrafo: 0.45, recupera: 0.85, dano: 0.18, esquiva: 0.94, raios: true, fase2: true, regen: 0.008,
   },
@@ -126,7 +126,8 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       v.cam = base.kx !== undefined ? { kx: base.kx, kz: base.kz, dir: Math.floor(Math.random() * 4), t: 0 } : null;
       combate.registrarAlvo(v);
     });
-    avisar(cap.viloes.length > 1 ? 'BATALHA FINAL: ZOOM E FLASH REVERSO' : `${PERFIS[cap.viloes[0]].nome} APARECEU NA CIDADE`);
+    if (cap.viloes.length > 1) avisar('Zoom e Flash Reverso', 'Batalha final', 'reverso');
+    else avisar(`${PERFIS[cap.viloes[0]].titulo} apareceu`, 'Alerta na cidade', cap.viloes[0]);
     return C;
   }
   function encerrar() {
@@ -139,7 +140,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     for (const v of C.viloes) {
       v.estado = 'luta'; v.acao = 'rodeia'; v.at = rnd(...v.perf.rodeia) * (C.viloes.length > 1 ? 1.4 : 1); v.vida = v.perf.vida; v.fase2 = false; v.vx = v.vz = 0;
     }
-    avisar(C.viloes.length > 1 ? 'DERROTE OS DOIS' : `LUTE CONTRA O ${C.viloes[0].perf.nome}`);
+    avisar(C.viloes.length > 1 ? 'Derrote os dois' : C.viloes[0].perf.titulo, 'Luta', C.viloes.length > 1 ? 'reverso' : C.viloes[0].id);
     eventos.push({ tipo: 'luta', id: C.cap.id });
   }
 
@@ -157,7 +158,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     P.energia = Math.min(1, P.energia + 0.04);                 // acertar o vilão devolve energia para os especiais
     fx.clarao(v.x, v.y + 1.3, v.z, 2.2, 0.18);
     if (tipo !== 'soco' || !vulneravel) { v.acao = 'atordoado'; v.at = tipo === 'soco' ? 0.35 : 0.7; }
-    if (v.perf.fase2 && !v.fase2 && v.vida < v.perf.vida * 0.5) { v.fase2 = true; avisar(`O ${v.perf.nome} ACELEROU`); eventos.push({ tipo: 'fase2', id: v.id }); }
+    if (v.perf.fase2 && !v.fase2 && v.vida < v.perf.vida * 0.5) { v.fase2 = true; avisar(`${v.perf.titulo} acelerou`, 'Cuidado', v.id); eventos.push({ tipo: 'fase2', id: v.id }); }
     if (v.vida <= 0) derrotar(v);
     return true;
   }
@@ -182,13 +183,13 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     const c = v.perf.corRaio;
     for (let i = 0; i < 8; i++) { const a = rnd(0, 6.28); fx.raio(v.x, v.y + 1.2, v.z, v.x + Math.cos(a) * rnd(2, 5), v.y + rnd(0, 3), v.z + Math.sin(a) * rnd(2, 5), { vida: 0.35, desvio: 0.6, r: c[0], g: c[1], b: c[2] }); }
     P.vx = P.vz = 0;
-    avisar(v.capturas >= v.perf.capturas ? `${v.perf.nome} ENCURRALADO` : `ALCANÇOU! ${v.capturas}/${v.perf.capturas}`);
+    avisar(v.capturas >= v.perf.capturas ? `${v.perf.titulo} encurralado` : `Alcançou ${v.capturas}/${v.perf.capturas}`, 'Perseguição', v.id);
   }
   function derrotar(v) {
     v.acao = 'caido'; v.at = 0; v.aviso.visible = false;
     combate.hitstop = 0.25;
     fx.onda(v.x, v.y, v.z, 12, 0.7);
-    avisar(`${v.perf.nome} DERROTADO!`);
+    avisar(`${v.perf.titulo} derrotado`, 'Vitória', 'ok');
   }
   function ferirHeroi(P, dano, dx, dz) {
     P.vida = Math.max(0, P.vida - dano); C.semGolpe = 0;
@@ -309,7 +310,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       v.y = 0;
       // trombada: encostou correndo também alcança
       if (d < 2.4 && Math.hypot(P.vx, P.vz) > 25 && Math.abs(P.y - v.y) < 2) capturar(v, P);
-      if (d > 300) { C.fora += dt; if (C.fora > 7) { avisar(`O ${v.perf.nome} ESCAPOU`); const i = C.i; encerrar(); espera = 15; forcado = null; eventos.push({ tipo: 'escapou', i, id: CAPITULOS[i].id }); return eventos.splice(0); } }
+      if (d > 300) { C.fora += dt; if (C.fora > 7) { avisar(`${v.perf.titulo} escapou`, 'Perseguição', 'alerta'); const i = C.i; encerrar(); espera = 15; forcado = null; eventos.push({ tipo: 'escapou', i, id: CAPITULOS[i].id }); return eventos.splice(0); } }
       else C.fora = 0;
     } else if (C.fase === 'choque') {
       const v = C.choque; v.vx = v.vz = 0; P.vx *= 0.5; P.vz *= 0.5;
@@ -328,7 +329,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       C.semGolpe = (C.semGolpe || 0) + dt;
       const regen = vs.length > 1 ? 0 : vs[0].perf.regen;
       if (C.semGolpe > 3) P.vida = Math.min(1, P.vida + regen * dt);
-      if (P.vida <= 0) { C.fase = 'derrota'; C.t = 0; avisar('VOCÊ FOI DERROTADO — A LUTA VAI RECOMEÇAR'); eventos.push({ tipo: 'derrota', id: C.cap.id }); }
+      if (P.vida <= 0) { C.fase = 'derrota'; C.t = 0; avisar('A luta vai recomeçar', 'Você foi derrotado', 'alerta'); eventos.push({ tipo: 'derrota', id: C.cap.id }); }
       else if (!vivos.length) { C.fase = 'vitoria'; C.t = 0; }
     } else if (C.fase === 'derrota') {
       for (const v of vs) { v.vx *= 0.8; v.vz *= 0.8; }
@@ -348,14 +349,14 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     if (!C) return;
     const P = C.P, vs = C.viloes;
     if (C.fase === 'encontro') {
-      if (C.cap.perseguicao) { C.fase = 'perseguicao'; C.t = 0; for (const v of vs) { v.estado = 'perseguicao'; v.vel = 20; } avisar(`PERSIGA O ${vs[0].perf.nome}!`); }
+      if (C.cap.perseguicao) { C.fase = 'perseguicao'; C.t = 0; for (const v of vs) { v.estado = 'perseguicao'; v.vel = 20; } avisar(`Persiga o ${vs[0].perf.titulo}`, 'Perseguição', vs[0].id); }
       else iniciarLuta(P);
     } else if (C.fase === 'fimcena' || C.fase === 'vitoria') {
       // o vilão some num raio da cor dele
       for (const v of vs) { const c = v.perf.corRaio; for (let i = 0; i < 8; i++) fx.raio(v.x, v.y + rnd(0.2, 1.6), v.z, v.x + rnd(-6, 6), v.y + rnd(0, 4), v.z + rnd(-6, 6), { vida: 0.4, desvio: 0.8, r: c[0], g: c[1], b: c[2] }); fx.clarao(v.x, v.y + 1, v.z, 4, 0.3); }
       S.vencidos.add(C.cap.id); gravar();
       const cap = C.cap; encerrar(); espera = 90;
-      avisar(cap.id === 'final' ? 'A CIDADE ESTÁ SALVA!' : `${cap.titulo.toUpperCase()} CONCLUÍDO`);
+      if (cap.id === 'final') avisar('A cidade está salva', 'Fim', 'ok'); else avisar(cap.titulo.replace(/^.* — /, ''), 'Capítulo concluído', 'ok');
       eventos.push({ tipo: 'vitoria', id: cap.id });
     }
   }
