@@ -1386,7 +1386,7 @@ export const IA_PESSOA = {
   // 68, PPDA 8,3, agressão 75%, aproximação 5,2; com 70, PPDA 7,6 (abaixo do piso 8: aperta mais que o time que mais aperta
   // na Europa — Liverpool 2021/22 8,6, Wyscout; Bournemouth 2024/25 9,9, Opta) e agressão 77%; com 78 (o plano), 86% (o
   // teto real nesta definição é 78%: Metrica 68 ± 10)
-  engaja: [42, 68, 105],
+  engaja: [42, 67, 105],
   // Encurtar (semBola, o ponto da zona; o plano D3: "quando a pessoa recebe, além do marcador colado, o 2º e o 3º fecham
   // correndo; quem está entre 4 e 12 m sai do lugar para encurtar"): quem guarda a zona do MEIO ou da FRENTE a até encurta[0]
   // m do condutor da pessoa — a linha de defesa fica na linha (FC 27, Closed Beta: os zagueiros "step towards their marked
