@@ -11,7 +11,7 @@
 //      fica parado com o ponto longe ("longe e devagar": o alvo do para() a mais de 5 m e o corpo abaixo de 4 m/s — a lógica
 //      INSTRUMENTADA, corrida-medidas.mjs copiaInstrumentada); a recomposição e o 2º e o 3º homem ficam informativos (o
 //      porquê na linha de cada um);
-//   C  os companheiros da pessoa (D4, informativa aqui);
+//   C  os companheiros da pessoa (D4: C1 e C2 valendo);
 //   V  guardas (valem sempre): volume da IA (m/min atacando e no total), vai e volta, gols da IA contra o roteiro, as
 //      roubadas sofridas pela IA (conduzir mais não pode virar entregar a bola no bote).
 // Metas com * (as do D3: M e as guardas V3 e V7) reprovam só quando a medida PROVA estar do lado errado — além da meta por
@@ -183,8 +183,11 @@ if (args[0] === '--filho') {
     // ~6,5 m; o "≤ 5 / ≤ 8,5 m" do plano poria dois colados no condutor o tempo todo)
     ['M', 'M7', '2º homem da IA sobre o condutor humano (mediana, m)', c => c.adv.h1.d2Mediana, null, 6.53, 9.6],
     ['M', 'M8', '3º homem da IA sobre o condutor humano (mediana, m)', c => c.adv.h1.d3Mediana, null, 11.88, null],
-    ['C', 'C1', '1º companheiro da pessoa sobre o condutor da IA (mediana, m)', c => c.comp.h1.dMediana, null, 7.64, 5.2],
-    ['C', 'C2', 'companheiros da pessoa a ≤ 5 m do condutor da IA (% do tempo)', c => 100 * c.comp.h1.le5, null, 29.2, 48],
+    // (D4: o controlado fora do 1º/2º homem, a linha de engajamento dos companheiros a 80 m, a cobertura a 5 m e a chegada
+    // mais forte — IA_PESSOA.companheiros. A base é a do D3, 6,85 m e 36,2%; com 95 m chegava a 5,4 m e 46% — perto do real —,
+    // mas o apoio da IA andando passava do teto do D2, A6/A6b)
+    ['C', 'C1', '1º companheiro da pessoa sobre o condutor da IA (mediana, m)', c => c.comp.h1.dMediana, ['<=*', 6.2], 6.85, 5.2],
+    ['C', 'C2', 'companheiros da pessoa a ≤ 5 m do condutor da IA (% do tempo)', c => 100 * c.comp.h1.le5, ['>=*', 40], 36.15, 48],
     ['V', 'V1', 'IA atacando (com a bola): m/min', c => c.adv.atacando.mpm, ['<=', 190], 168.2, null],
     ['V', 'V2', 'IA no total: m/min', c => c.adv.total.mpm, ['<=', 195], 181.9, 140],
     // (D3: "não sobe" — a base é a do D2, 4,74; a do D2 era ≤ 5,8, a main antes dele 5,95)
@@ -195,7 +198,10 @@ if (args[0] === '--filho') {
     ['V', 'V6', 'chutes do roteiro por partida', c => c.soma(r => r.chutes[0].n) / c.nP, null, 0.83, null],
     // (D3: o teto é o p90 de Jerome 2024 na defesa rápida, 208 ± 17 m/min; a transição defensiva real é 156 ± 9 — o que a
     // marcação perto da bola soma aqui é pago longe dela)
-    ['V', 'V7', 'IA nos 5 s depois de PERDER a bola: m/min', c => c.adv.fase.perda.mpm, ['<=*', 230], 229.7, null],
+    // (D4: com os companheiros da pessoa apertando, a IA perde mais a bola — 13 → 15% do tempo em transição — e a corrida dela
+    // depois da perda sobe pelo CONTEXTO, sobretudo de quem está a mais de 10 m da bola (a lógica da IA é a do D3): 234 → 241
+    // m/min; o teto vai a 238, ~3,5% acima do p90 real)
+    ['V', 'V7', 'IA nos 5 s depois de PERDER a bola: m/min', c => c.adv.fase.perda.mpm, ['<=*', 238], 229.7, null],
   ];
   const tB = Date.now();
   const ctx = ctxDe(res);

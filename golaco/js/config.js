@@ -1428,6 +1428,18 @@ export const IA_PESSOA = {
   // vbMax m/s, a velocidade pedida é a da bola + folga + k × (a distância − perto), sem o sprint. Com a marcação do D3 a IA
   // chega à bola solta vinda da pressão a 6–8 m/s; sem isso passava da bola a 2,5 m/s (teste-nao-passa meta 3)
   livreChega: { perto: 1, longe: 5, folga: 1.5, k: 2, vbMax: 5, alturaMax: 0.5 },
+  // ---- D4: os COMPANHEIROS da pessoa apertam o condutor da IA (item 17; dono, 17/10: "A IA NÃO CORRE ... tem que ser mais
+  // difícil" e, ao escolher a categoria D, "bote só na hora certa"). Só no time da pessoa jogando CONTRA a IA
+  // (tatica.js contraPessoa(m, 1 − t); o online com duas pessoas não muda). Medido (teste-ia-corre C, depois do D3): o 1º
+  // companheiro fica a 6,9 m do condutor da IA (o real é 5,2) e a ≤ 5 m dele 36% do tempo (o real 48%): o 1º homem do bloco
+  // era quase sempre o CONTROLADO (o mais perto), que só faz o que a pessoa manda — ninguém mais continha —, e a trava de
+  // atropelar (DEFESA_HUMANO.semAtropelar, freio 3 m/s²) freava o time inteiro desde longe (a 3 m do condutor no máximo
+  // ~4,4 m/s). Aqui: o controlado sai da escolha do 1º e do 2º homem (blocoDoTime) — o companheiro mais perto contém e
+  // o seguinte cobre a `cobertura` m (era IA_DEFESA.cobertura 8,5), com a linha de engajamento da IA contra a pessoa
+  // (IA_PESSOA.engaja) — e os companheiros (não o controlado: a carga por trás do teste-faltas-sentido B2) chegam na curva
+  // de freada de `freio` m/s² (JOGADOR.freio é 6,2). O BOTE continua só nos gatilhos de sempre (toque pesado, de costas,
+  // condutor lento, recepção; apertaProprio)
+  companheiros: { cobertura: 5, freio: 5, engaja: [42, 80, 105] },
 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca
