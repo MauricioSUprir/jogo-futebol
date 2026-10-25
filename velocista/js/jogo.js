@@ -13,6 +13,7 @@ import { criarCombate, ESPECIAIS } from './combate.js';
 import { criarGuia } from './guia.js';
 import { criarViloes } from './viloes.js';
 import { criarHistoria } from './historia.js';
+import { criarEquipe } from './equipe.js';
 import { construirLab } from './lab3d.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
 
@@ -339,7 +340,7 @@ cena.add(heroi);
 const raios = criarRaios(cena, { mobile: MOBILE });
 const posfx = criarPosFx(renderer, cena, camera, { mobile: MOBILE });
 let modelo = null;
-criarHeroi({ aniso: ANISO, lod: 0, mobile: TOQUE }).then((m) => { modelo = m; partes.corpo.visible = false; heroi.add(m.grupo); m.grupo.traverse((o) => { if (o.isMesh) o.castShadow = true; }); }).catch((e) => console.warn('corpo realista indisponível', e));
+criarHeroi({ aniso: ANISO, lod: 0, mobile: TOQUE }).then((m) => { modelo = m; partes.corpo.visible = false; heroi.add(m.grupo); m.grupo.traverse((o) => { if (o.isMesh) o.castShadow = true; }); equipe.retratar('heroi', m); }).catch((e) => console.warn('corpo realista indisponível', e));
 const sombra = new THREE.Mesh(new THREE.CircleGeometry(0.5, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }));
 sombra.rotation.x = -Math.PI / 2; cena.add(sombra);
 
@@ -393,7 +394,10 @@ function reiniciar() {
   viloes.abandonar();
   const capUrl = new URLSearchParams(location.search).get('capitulo');      // atalho de teste: ?capitulo=zoom|reverso|final
   if (capUrl) viloes.iniciar(capUrl);
-  rodarCena('prologo', focoHeroi, () => { if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); });
+  equipe.carregar();
+  // o prólogo é no Cortex, com a Caitlin e o Cisco
+  if (historia.vaiTocar('prologo')) { const l = equipe.lugarDoHeroi(); Object.assign(P, { x: l.x, y: l.y, z: l.z, h: l.h }); C.yaw = l.h; atualizarQuarteiroes(P.x, P.z, 999); }
+  rodarCena('prologo', focosCena(), () => { if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); });
   el.esferas.textContent = '0';
   if (!TOQUE) pedirCaptura();
 }
@@ -623,7 +627,7 @@ function animarHeroi(dt) {
   if (modelo) {
     const vv = P.parede ? P.parede.v : v;
     const luta = combate.poseHeroi();
-    modelo.aplicar({ v: luta.corrida ?? vv, noChao: P.noChao, planando: teclas.has(' ') && !P.noChao && P.vy < 0, parede: !!P.parede, vibrando: P.vibrando, golpe: luta.golpe, luta: Math.max(luta.luta, viloes.emLuta ? 1 : 0) }, dt);
+    modelo.aplicar({ v: luta.corrida ?? vv, noChao: P.noChao, planando: teclas.has(' ') && !P.noChao && P.vy < 0, parede: !!P.parede, vibrando: P.vibrando, golpe: luta.golpe, luta: Math.max(luta.luta, viloes.emLuta ? 1 : 0), fala: J.modo === 'cena' && historia.quemFala === 'heroi' }, dt);
     modelo.setVisivelProfundo(P.vibrando && estaDentroDeSolido());
   }
   P.fase += dt * (4 + v * 0.55);
@@ -779,6 +783,7 @@ const crimes = criarCrimes(cena, { combate });
 const guia = criarGuia(cena, { mobile: MOBILE });
 const viloes = criarViloes(cena, { mobile: MOBILE, aniso: ANISO, combate, armazem, avisar: (t, r, k) => avisar(t, r, k),
   colide: (x, z, y) => empurrar(rectsPerto, x, z, 0.4, y, 1.8), chao: (x, z, y) => chaoEm(rectsPerto, x, z, y),
+  aoModelo: (id, m) => equipe.retratar(id, m),
   labPos: { x: LAB_B.plano.entrada.x, z: LAB_B.plano.entrada.z - 9 } });
 const portais = criarPortais(cena);
 const trafego = criarTrafego(THREE, cena, { mobile: MOBILE });
@@ -811,7 +816,7 @@ function passoMissoes(dt) {
     if (historia.tem(`depois-${feita.id}`) && !historia.viu(`cena:depois-${feita.id}`)) J.cenaPendente = { id: `depois-${feita.id}`, depois: abrir };
     else abrir();
   }
-  if (J.cenaPendente && historia.radioLivre && !viloes.emLuta) { const c = J.cenaPendente; J.cenaPendente = null; rodarCena(c.id, focoHeroi, c.depois); }
+  if (J.cenaPendente && historia.radioLivre && !viloes.emLuta) { const c = J.cenaPendente; J.cenaPendente = null; rodarCena(c.id, focosCena(), c.depois); }
   // painel
   const ma = missoes.atual, pr = missoes.progresso();
   el.missaoNum.textContent = ma ? `Missão ${missoes.indice + 1}/${missoes.total} · ${missoes.stats.pontos} pts` : `Patrulha livre · ${missoes.stats.pontos} pts`;
@@ -850,6 +855,15 @@ function atualizarBotoesEspeciais() {
 // ---------- história: cenas e rádio (historia.js) ----------
 const historia = criarHistoria({ armazem });
 const focoHeroi = () => ({ x: P.x, y: P.y, z: P.z });
+// a equipe do S.T.A.R. Labs (Caitlin e Cisco) no Cortex; os retratos da caixa de fala saem dos modelos 3D
+const equipe = criarEquipe(cena, { mobile: MOBILE, aniso: ANISO, renderer, lab: LAB_B, aoRetrato: (id, url) => historia.definirRetrato(id, url) });
+const noCortex = () => LAB_B.plano.dentro(P.x, P.z, P.y) === 'cortex';
+/** os focos de uma cena: o herói e, com ele no Cortex, a Caitlin e o Cisco (quem não está lá fala pelo rádio) */
+const focosCena = () => {
+  const fs = { heroi: focoHeroi };
+  for (const id of ['caitlin', 'cisco']) fs[id] = () => (equipe.pronta && noCortex() ? equipe.focos()[id]() : null);
+  return fs;
+};
 /** cena com o jogo parado; quando acaba (ou se já foi vista), `depois` */
 function rodarCena(id, foco, depois, opc) {
   P.vx = P.vz = 0; teclas.clear(); stick.x = stick.y = 0; toque.correr = toque.vibrar = false;
@@ -857,7 +871,7 @@ function rodarCena(id, foco, depois, opc) {
   historia.cena(id, foco, () => { J.modo = 'jogando'; depois?.(); }, opc);
 }
 /** os focos da câmera numa cena com os vilões: o herói e cada vilão do capítulo */
-const focosVilao = () => ({ heroi: focoHeroi, ...Object.fromEntries(viloes.ids.map((v) => [v, () => viloes.foco(v)])) });
+const focosVilao = () => ({ ...focosCena(), ...Object.fromEntries(viloes.ids.map((v) => [v, () => viloes.foco(v)])) });
 /** no encontro, o herói fica a poucos metros do vilão, de frente para ele (a conversa cabe no quadro) */
 function aproximarHeroi(d = 4.8) {
   const f = viloes.foco(); if (!f) return;
@@ -872,7 +886,7 @@ function aproximarHeroi(d = 4.8) {
 function eventoVilao(ev) {
   const id = ev.id;
   if (ev.tipo === 'dano') J.danoVilao = 1;
-  else if (ev.tipo === 'capitulo') rodarCena(`cap-${id}`, focoHeroi, () => historia.radio(`capitulo-${id}`, { sempre: true }));
+  else if (ev.tipo === 'capitulo') rodarCena(`cap-${id}`, focosCena(), () => historia.radio(`capitulo-${id}`, { sempre: true }));
   else if (ev.tipo === 'encontro') { aproximarHeroi(); rodarCena(`encontro-${id}`, focosVilao(), () => { viloes.continuar(); historia.radio(`perseguicao-${id}`); }); }
   else if (ev.tipo === 'captura') historia.provocar(id, ev.n);
   else if (ev.tipo === 'luta') historia.radio(`luta-${id}`);
@@ -932,7 +946,8 @@ function quadro() {
     ultBussola += dt; if (ultBussola > 0.2) { ultBussola = 0; atualizarBussola(); }
   }
   historia.atualizar(Math.min(dtBruto, 0.1));
-  if (J.modo === 'cena') { viloes.posar(dt); animarHeroi(dt); if (!historia.camera(camera, dt)) atualizarCamera(dt); }
+  equipe.atualizar(dt, P, { noCortex: noCortex(), quemFala: J.modo === 'cena' ? historia.quemFala : null });
+  if (J.modo === 'cena') { viloes.posar(dt, historia.quemFala); animarHeroi(dt); if (!historia.camera(camera, dt)) atualizarCamera(dt); }
   else if (J.modo !== 'menu' || carregados.size) { animarHeroi(J.modo === 'jogando' ? dt : 0); atualizarCamera(dt); }
   if (J.modo === 'jogando') guia.atualizar(dt, alvoMissao(), P, camera);
   else if (J.modo === 'cena') guia.atualizar(dt, null, P, camera);          // na cena, sem feixe nem setas por cima de quem fala
@@ -982,4 +997,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { equipe,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };

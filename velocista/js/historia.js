@@ -16,8 +16,6 @@ export const PERSONAGENS = {
   zoom: { nome: 'Zoom', sigla: 'Z', cor: '#3fa0ff', vilao: true },
   reverso: { nome: 'Flash Reverso', sigla: 'FR', cor: '#ff3b30', vilao: true },
 };
-/** quem fala de longe (no rádio do laboratório): nas cenas a câmera mostra quem está ouvindo */
-const NO_RADIO = new Set(['caitlin', 'cisco']);
 
 const F = (quem, texto) => ({ quem, texto });
 const CARTAO = (rotulo, titulo) => ({ cartao: true, rotulo, titulo });
@@ -171,11 +169,13 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
   const rRetrato = radio.querySelector('.retrato'), rNome = radio.querySelector('b'), rTexto = radio.querySelector('span');
   const fila = []; let falando = null, tFala = 0;
   function falar(falas) { for (const f of falas) fila.push(f); }
+  const retratos = {};                                       // id → imagem do rosto (equipe.js tira de cada modelo 3D)
   function mostrar(el, ret, nome, f) {
-    const p = PERSONAGENS[f.quem] || PERSONAGENS.caitlin;
-    ret.textContent = p.sigla; ret.style.background = p.cor; nome.textContent = p.nome; nome.style.color = p.cor;
+    const p = PERSONAGENS[f.quem] || PERSONAGENS.caitlin, img = retratos[f.quem];
+    ret.textContent = img ? '' : p.sigla; ret.style.background = img ? `url(${img}) center/cover, ${p.cor}` : p.cor;
+    ret.classList.toggle('foto', !!img); ret.style.setProperty('--cor', p.cor);
+    nome.textContent = p.nome; nome.style.color = p.cor;
     el.classList.toggle('vilao', !!p.vilao);
-    el.classList.toggle('no-radio', NO_RADIO.has(f.quem));
   }
 
   // ---------- cena ----------
@@ -243,13 +243,14 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
   /** quem está presente na cena (os focos com posição), tirando `menos` */
   const presentes = (menos) => Object.keys(C.focos).filter((k) => k !== 'padrao' && k !== menos && ponto(k));
   function escolherPlano(f) {
-    const temFala = f.quem !== 'heroi' && !NO_RADIO.has(f.quem) && ponto(f.quem);
-    const alvo = f.quem === 'heroi' ? (ponto('heroi') ? 'heroi' : 'padrao') : temFala ? f.quem : (ponto('heroi') ? 'heroi' : 'padrao');
+    // quem fala está em cena (tem foco)? Senão fala pelo rádio, e a câmera mostra quem escuta
+    const emCena = f.quem !== 'heroi' && !!ponto(f.quem);
+    const alvo = f.quem === 'heroi' ? (ponto('heroi') ? 'heroi' : 'padrao') : emCena ? f.quem : (ponto('heroi') ? 'heroi' : 'padrao');
     const ouvintes = presentes(alvo), outro = ouvintes.includes('heroi') ? 'heroi' : ouvintes[0] || null;
     const mesmo = C.ultimo === f.quem;
-    // quem fala pelo rádio: plano aberto de quem escuta, girando; quem está em cena: por cima do ombro ou close
+    // pelo rádio: plano aberto de quem escuta, girando; quem está em cena: por cima do ombro ou close
     let tipo;
-    if (NO_RADIO.has(f.quem)) tipo = outro && Math.random() < 0.5 ? 'dois' : 'aberto';
+    if (f.quem !== 'heroi' && !emCena) tipo = outro && Math.random() < 0.5 ? 'dois' : 'aberto';
     else if (outro && !mesmo) tipo = 'ombro';
     else tipo = 'close';
     return { tipo, alvo, outro, lado: Math.random() < 0.5 ? -1 : 1, ang: rnd(-0.7, 0.7), t: 0 };
@@ -289,6 +290,12 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
   return {
     atualizar, camera, avancar, pular: terminar,
     get emCena() { return !!C; }, get cenaAtual() { return C?.id || null; },
+    /** quem está falando agora (na cena ou no rádio): o modelo dele gesticula */
+    get quemFala() { if (C) { const f = C.falas[C.i]; return f.cartao ? null : f.quem; } return falando?.quem || null; },
+    /** o rosto de um personagem para a caixa de fala */
+    definirRetrato(id, url) { retratos[id] = url; },
+    /** a cena ainda vai tocar (não foi vista e não é um teste automático sem ?historia=1) */
+    vaiTocar(id) { return !!CENAS[id] && !vistas.has(`cena:${id}`) && !(navigator.webdriver && !/[?&]historia=1/.test(location.search)); },
     /** o rádio terminou de falar (nada na fila) */
     get radioLivre() { return !falando && !fila.length; },
     get capitulo() { return capitulo; },

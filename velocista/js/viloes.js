@@ -59,7 +59,7 @@ function andarGrade(c, dist, heroi) {
   return { x: eixo(c.kx) + dx * c.t * CELL - dz * 1.5, z: eixo(c.kz) + dz * c.t * CELL + dx * 1.5, h: Math.atan2(dx, dz) };
 }
 
-export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide = null, chao = null, avisar = () => {}, armazem = null, labPos = { x: 0, z: 0 } } = {}) {
+export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide = null, chao = null, avisar = () => {}, armazem = null, labPos = { x: 0, z: 0 }, aoModelo = () => {} } = {}) {
   let salvo = null; try { salvo = JSON.parse(armazem?.getItem(CHAVE) || 'null'); } catch { salvo = null; }
   const S = { vencidos: new Set(salvo?.vencidos || []) };
   const FACIL = 0.12;                                       // cada derrota na luta (até 3) deixa o vilão 12% mais fácil
@@ -90,7 +90,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     };
     v.grupo.visible = false; cena.add(v.grupo);
     if (v.modelo) v.grupo.add(v.modelo.grupo);
-    else criarHeroi({ aniso, lod: mobile ? 1 : 0, mobile, traje: perf.traje }).then((m) => { modelos[id] = m; v.modelo = m; v.grupo.add(m.grupo); m.grupo.traverse((o) => { if (o.isMesh) o.castShadow = !mobile; }); }).catch((e) => console.warn('vilão sem corpo', e));
+    else criarHeroi({ aniso, lod: mobile ? 1 : 0, mobile, traje: perf.traje }).then((m) => { modelos[id] = m; v.modelo = m; v.grupo.add(m.grupo); m.grupo.traverse((o) => { if (o.isMesh) o.castShadow = !mobile; }); aoModelo(id, m); }).catch((e) => console.warn('vilão sem corpo', e));
     // aviso da investida: uma faixa no chão do vilão até depois do herói
     v.aviso = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, 0.5), new THREE.MeshBasicMaterial({ color: new THREE.Color(...perf.corRaio), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
     v.aviso.visible = false; cena.add(v.aviso);
@@ -367,7 +367,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     }
   }
   /** só o desenho (pose, raios), também durante as cenas com o jogo parado */
-  function desenhar(dt) {
+  function desenhar(dt, quemFala = null) {
     if (!C) return;
     const vs = C.viloes;
     for (const v of vs) {
@@ -378,7 +378,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
         let golpe = null;
         if (v.acao === 'combo') golpe = { tipo: 'soco', lado: v.golpes % 2 ? 1 : -1, k: clamp(1 - v.at / 0.28, 0, 1) };
         else if (v.acao === 'carrega') golpe = { tipo: 'raio', lado: 1, k: clamp(1 - v.at / 0.65, 0, 1) };
-        v.modelo.aplicar({ v: vel, noChao: true, golpe, luta: C.fase === 'luta' && v.acao !== 'investida' ? 1 : 0, vibrando: v.acao === 'prepara' || v.acao === 'carrega' }, dt);
+        v.modelo.aplicar({ v: vel, noChao: true, golpe, luta: C.fase === 'luta' && v.acao !== 'investida' ? 1 : 0, vibrando: v.acao === 'prepara' || v.acao === 'carrega', fala: quemFala === v.id }, dt);
         // derrotado: cai de joelhos e tomba
         if (v.acao === 'caido') { v.at += dt; v.grupo.rotation.x = -Math.min(1.35, v.at * 2.2); v.grupo.position.y = v.y + 0.1; }
       }
@@ -406,7 +406,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
   return {
     atualizar, continuar,
     /** durante as cenas (jogo parado): só anima os vilões */
-    posar(dt) { desenhar(dt); },
+    posar(dt, quemFala) { desenhar(dt, quemFala); },
     /** onde a câmera da cena olha: o vilão (ou o meio dos dois) */
     foco(id) {
       if (!C) return null;

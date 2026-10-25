@@ -6,6 +6,9 @@ import { lerCorpo } from './corpo-dados.js';
 import { aplicarTraje } from './traje.js';
 
 const BASE = new URL('../assets/humano/', import.meta.url);
+// pessoas da história (Caitlin, Cisco): outro corpo do Rocketbox, com a roupa e o rosto das texturas dele
+// (velocista/tools/personagens), o mesmo esqueleto e a mesma animação do herói
+const PESSOAS = { caitlin: { escala: 0.94 }, cisco: { escala: 1 } };
 // emblema do peito de cada traje (desenhos próprios): disco, cor do anel e do símbolo, símbolo
 const EMBLEMAS = {
   heroi: { disco: 0x1a1416, cor: 0xf6c82a, emissivo: 0x8a6008, forma: 'faisca', brilhoTecido: 0x8a1010 },
@@ -62,9 +65,10 @@ function malha(parte, esqueleto, material) {
   return m;
 }
 
-/** Cria o herói. Devolve {grupo, aplicar(est, dt), materiais, dispose()}. */
-export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = 'heroi' } = {}) {
-  const [ind, bin] = await Promise.all([fetch(new URL('corpo.json', BASE)).then((r) => r.json()), fetch(new URL('corpo.bin', BASE)).then((r) => r.arrayBuffer())]);
+/** Cria o herói (ou, com `pessoa`, alguém da história). Devolve {grupo, aplicar(est, dt), materiais, dispose()}. */
+export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = 'heroi', pessoa = null } = {}) {
+  const base = pessoa ? new URL(`../assets/personagens/${pessoa}/`, import.meta.url) : BASE;
+  const [ind, bin] = await Promise.all([fetch(new URL('corpo.json', base)).then((r) => r.json()), fetch(new URL('corpo.bin', base)).then((r) => r.arrayBuffer())]);
   const dados = lerCorpo(ind, bin), L = dados.lods[lod];
   const origens = origensDeRepouso(ind.repouso.juntas, ind.repouso);
 
@@ -74,13 +78,23 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
   raiz.updateMatrixWorld(true);
   const esqueleto = new THREE.Skeleton(ossos);
 
-  const texCabeca = await texturaWebp(new URL('cabeca-rb.webp', BASE).href, true, aniso);
-  // o traje (cores, painéis, frisos, cinto, luvas, botas e a máscara) é desenhado no shader: js/traje.js.
-  // No PC, verniz (clearcoat) e brilho de tecido (sheen); no celular, o mesmo desenho sem essas camadas.
-  const matCorpo = aplicarTraje(mobile
-    ? new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, emissive: 0x120002 })
-    : new THREE.MeshPhysicalMaterial({ roughness: 1, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.4, sheen: 0.18, sheenColor: new THREE.Color(EMBLEMAS[traje]?.brilhoTecido ?? 0x8a1010), emissive: 0x120002 }), 'corpo', traje);
-  const matCabeca = aplicarTraje(new THREE.MeshStandardMaterial({ map: texCabeca, roughness: 0.65, metalness: 0 }), 'cabeca', traje);
+  let matCorpo, matCabeca, texCabeca, texs = [];
+  if (pessoa) {
+    // roupa e rosto pelas texturas do próprio modelo. O cabelo é o da malha da cabeça: as mechas soltas do Rocketbox
+    // (a parte 'cabelo' do corpo.json) não encaixam na textura daqui e ficam de fora.
+    const [tc, th] = await Promise.all(['corpo', 'cabeca'].map((n) => texturaWebp(new URL(`${n}.webp`, base).href, true, aniso)));
+    texCabeca = th; texs = [tc];
+    matCorpo = new THREE.MeshStandardMaterial({ map: tc, roughness: 0.82, metalness: 0 });
+    matCabeca = new THREE.MeshStandardMaterial({ map: th, roughness: 0.6, metalness: 0 });
+  } else {
+    texCabeca = await texturaWebp(new URL('cabeca-rb.webp', BASE).href, true, aniso);
+    // o traje (cores, painéis, frisos, cinto, luvas, botas e a máscara) é desenhado no shader: js/traje.js.
+    // No PC, verniz (clearcoat) e brilho de tecido (sheen); no celular, o mesmo desenho sem essas camadas.
+    matCorpo = aplicarTraje(mobile
+      ? new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, emissive: 0x120002 })
+      : new THREE.MeshPhysicalMaterial({ roughness: 1, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.4, sheen: 0.18, sheenColor: new THREE.Color(EMBLEMAS[traje]?.brilhoTecido ?? 0x8a1010), emissive: 0x120002 }), 'corpo', traje);
+    matCabeca = aplicarTraje(new THREE.MeshStandardMaterial({ map: texCabeca, roughness: 0.65, metalness: 0 }), 'cabeca', traje);
+  }
   const corpo = malha(L.partes.corpo, esqueleto, matCorpo), cabeca = malha(L.partes.cabeca, esqueleto, matCabeca);
   for (const m of [corpo, cabeca]) { raiz.add(m); m.bind(esqueleto, new THREE.Matrix4()); }
 
@@ -98,7 +112,8 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
   } else { faisca.moveTo(0, 0.052); faisca.lineTo(0.014, 0.014); faisca.lineTo(0.052, 0); faisca.lineTo(0.014, -0.014); faisca.lineTo(0, -0.052); faisca.lineTo(-0.014, -0.014); faisca.lineTo(-0.052, 0); faisca.lineTo(-0.014, 0.014); faisca.closePath(); }
   emb.add(new THREE.Mesh(new THREE.ShapeGeometry(faisca), matEmb));
   // a frente do peito em repouso fica em x = 0,145: o emblema logo à frente dela, no meio do peitoral
-  emb.scale.setScalar(1.15); emb.position.set(0.152, 1.325 - J.peito[1], 0); emb.rotation.y = Math.PI / 2; ossos[I.peito].add(emb);
+  emb.scale.setScalar(1.15); emb.position.set(0.152, 1.325 - J.peito[1], 0); emb.rotation.y = Math.PI / 2;
+  if (!pessoa) ossos[I.peito].add(emb);
   emb.material = matEmb;
 
   const frente = new THREE.Group();
@@ -150,7 +165,10 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
     local(1, 0, -twist * 0.5 + giroG * 0.5, -0.45 * lean + 0.02 * resp - lutaInc * 0.5 + inclG);
     local(2, 0, -twist * 0.6 + giroG * 0.6, -0.45 * lean - lutaInc * 0.5 + inclG * 0.5);
     local(3, 0, 0, 0.1 * lean);
-    local(4, 0, twist * 0.2, 0.5 * lean * (1 - 0.0) - 0.04);
+    // falando (cenas da história): a cabeça acompanha a fala e os braços gesticulam
+    est.fala = lerp(est.fala || 0, e.fala ? 1 : 0, 1 - Math.exp(-5 * dt));
+    const fl = est.fala * (1 - vivo);
+    local(4, 0, twist * 0.2 + fl * 0.12 * Math.sin(tt * 1.7), 0.5 * lean * (1 - 0.0) - 0.04 + fl * 0.05 * Math.sin(tt * 3.1));
     for (const c of [I.claviculaE, I.claviculaD]) local(c, 0, 0, 0);
 
     // pernas e braços: cada segmento em rotação de MUNDO em torno do eixo lateral (dobras limpas)
@@ -186,6 +204,7 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
         else if (meu && g.tipo === 'gancho') { swing = lerp(swing, 1.2, g.k); cot = lerp(cot, 1.05, g.k); abdB = lerp(abdB, lado * 0.95, g.k); }
         else { swing = lerp(swing, 0.35, g.k); cot = lerp(cot, 1.6, g.k); abdB = lerp(abdB, lado * 0.86, g.k); }   // o outro braço fica na guarda
       }
+      if (fl > 0.01) { const gst = 0.5 + 0.5 * Math.sin(tt * (E ? 2.3 : 1.9) + (E ? 0 : 1.7)); swing = lerp(swing, 0.32 + 0.22 * gst, fl * (E ? 0.6 : 1)); cot = lerp(cot, 1.15 + 0.35 * gst, fl * (E ? 0.6 : 1)); abdB = lerp(abdB, lado * 0.62, fl); }
       mundo(br, qz(swing, abdB)); mundo(an, qz(swing + cot, abdB));
       mundo(mao, wq[an].clone());
     }
@@ -207,7 +226,7 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
       raiz.position.y = (0.115 - minY) * (1 - noAr * 2);
     }
     // material: vibração = translúcido com brilho
-    matCorpo.emissive.setRGB(0.02 + 0.8 * vj * (0.5 + 0.5 * Math.sin(tt * 90)), 0.003 + 0.3 * vj, 0.004);
+    if (!pessoa) matCorpo.emissive.setRGB(0.02 + 0.8 * vj * (0.5 + 0.5 * Math.sin(tt * 90)), 0.003 + 0.3 * vj, 0.004);
     matCorpo.opacity = 1 - 0.38 * vj; matCorpo.transparent = vj > 0.02;
     matCabeca.opacity = matCorpo.opacity; matCabeca.transparent = matCorpo.transparent;
     return raiz.position.y;
@@ -217,7 +236,8 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
   aplicar({ v: 0, noChao: true }, 0.016);
   // o modelo olha para +x; o jogo olha para +z (rotação y = -90°)
   frente.rotation.y = -Math.PI / 2; frente.add(raiz);
-  const materiais = [matCorpo, matCabeca, matDisco, matEmb, texCabeca];
+  if (pessoa) frente.scale.setScalar(PESSOAS[pessoa]?.escala ?? 1);
+  const materiais = [matCorpo, matCabeca, matDisco, matEmb, texCabeca, ...texs];
   return {
     grupo: frente, aplicar, materiais, ossos, raiz,
     setVisivelProfundo(prof) { for (const m of [matCorpo, matCabeca, matDisco, matEmb]) { m.depthTest = !prof; } },
