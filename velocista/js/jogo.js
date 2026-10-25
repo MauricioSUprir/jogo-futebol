@@ -799,7 +799,7 @@ function passoMissoes(dt) {
   }
   const sala = LAB_B.plano.dentro(P.x, P.z, P.y);
   const feita = missoes.avaliar({ sala, v: Math.hypot(P.vx, P.vz), y: P.y, noChao: P.noChao, portaisFeitos: rp?.feito });
-  if (feita) { avisar(`MISSÃO CONCLUÍDA: ${feita.titulo.toUpperCase()}`); historia.missao(feita.id, 'fecha'); if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); }
+  if (feita) { avisar('MISSÃO CONCLUÍDA'); historia.missao(feita.id, 'fecha'); if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); }
   // painel
   const ma = missoes.atual, pr = missoes.progresso();
   el.missaoNum.textContent = ma ? `Missão ${missoes.indice + 1}/${missoes.total} · ${missoes.stats.pontos} pts` : `Patrulha livre · ${missoes.stats.pontos} pts`;
