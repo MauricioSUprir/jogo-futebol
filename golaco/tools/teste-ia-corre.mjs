@@ -155,7 +155,9 @@ if (args[0] === '--filho') {
     // o apoio perto da bola SEM o dono (revisão do D2: com o condutor junto, a medida passava com o apoio curto desligado —
     // a queda do "≤ 10 m andando" era sobretudo do condutor). O A6b — com o condutor CONDUZINDO (≥ 10,8 km/h, o caso em que
     // o apoio curto do D2 corre) — é o que reprova o D2 sem o apoio curto (37,1%, 8 sementes; com ele, 26,0%; o A6 sem ele passa: 45,4%)
-    ['A', 'A6', 'apoio da IA a ≤ 10 m da bola (sem o condutor): tempo andando (%)', c => c.adv.apoioPerto.tempoPct[0], ['<=', 46], 53.71, 43.3],
+    // (D4: reprova só quando PROVA, além de 2 ± — a lição do D3: com os companheiros da pessoa apertando o condutor da IA o apoio
+    // dela fica em ~46,1 ± 0,5% nas 24 partidas do CI, o próprio teto dentro do sorteio; a base de antes do D2 era 53,7)
+    ['A', 'A6', 'apoio da IA a ≤ 10 m da bola (sem o condutor): tempo andando (%)', c => c.adv.apoioPerto.tempoPct[0], ['<=*', 46], 53.71, 43.3],
     ['A', 'A6b', '...com o condutor conduzindo (≥ 10,8 km/h): tempo andando (%)', c => c.adv.apoioConduz.tempoPct[0], ['<=', 33], 42.82, 33.2],
     ['A', 'A7', 'apoio da IA a ≤ 10 m da bola (sem o condutor): alta + disparada (m/min)', c => c.adv.apoioPerto.hsrMpm, ['>=', 30], 22.49, 29.7],
     ['A', 'A7b', '...com o condutor conduzindo: alta + disparada (m/min)', c => c.adv.apoioConduz.hsrMpm, null, 80.62, 61.7],
