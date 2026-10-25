@@ -150,7 +150,7 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   da perda já estava no teto (229,7 m/min; Jerome 2024, p90 ~230): quem marca a até 33 m da bola sem o teto do trote (d / 7,
   sprint além de 9 m, sem o arranque calmo, a espera da volta [12 m, 1,3 s]); o da zona do meio/frente a ≤ 12 m do condutor
   ENCURTA (0,3 do caminho até 4 m dele) só na janela de um gatilho de pressão e com ele abaixo de 4 m/s (sempre ligado, subia
-  no condutor que arrancava: faltas da IA 1,96 → 2,67); a Média engaja a 68 m (78 dava agressão 86%; 70, PPDA 7,6); a
+  no condutor que arrancava: faltas da IA 1,96 → 2,67); a Média engaja a 67 m (78 dava agressão 86%; 68, PPDA 8,0 num conjunto de sementes); a
   recomposição vira em ARCO (pedido > 100° a > 3 m/s: o rumo a 0,95 rad com o CORRER — acima de 112° o passoCorpo para antes
   de virar) e, a mais de 16 m da bola, volta a 0,75 sem sprint (paga o volume) — menos o MEIO que ficou à frente da bola (com o
   "longe" valendo para ele, o recuo do meio do `teste-transicao --humano` caía de 6,1 a 4,0 m/s); o bloco do corredor sprinta

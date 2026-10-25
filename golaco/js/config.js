@@ -1385,7 +1385,9 @@ export const IA_PESSOA = {
   // `ia`), 24 partidas: com 66 e o resto do D3, PPDA 9,2 e a aproximação do 1º homem a 7–12 m em 4,3 km/h (meta ≥ 5); com
   // 68, PPDA 8,3, agressão 75%, aproximação 5,2; com 70, PPDA 7,6 (abaixo do piso 8: aperta mais que o time que mais aperta
   // na Europa — Liverpool 2021/22 8,6, Wyscout; Bournemouth 2024/25 9,9, Opta) e agressão 77%; com 78 (o plano), 86% (o
-  // teto real nesta definição é 78%: Metrica 68 ± 10)
+  // teto real nesta definição é 78%: Metrica 68 ± 10). Na calibração final (48 partidas × 2 conjuntos de sementes, 1–48 e
+  // 1001–1048): 66 → 11,4 e 8,9 (o 1º acima do teto 10,5); 67 → 9,4 e 8,5; 68 → 9,7 e 8,0 (o 2º abaixo do piso 8) — o PPDA
+  // muda entre conjuntos de sementes mais que entre os valores vizinhos
   engaja: [42, 67, 105],
   // Encurtar (semBola, o ponto da zona; o plano D3: "quando a pessoa recebe, além do marcador colado, o 2º e o 3º fecham
   // correndo; quem está entre 4 e 12 m sai do lugar para encurtar"): quem guarda a zona do MEIO ou da FRENTE a até encurta[0]
