@@ -649,7 +649,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     /** alvo do guia: o vilão a encontrar ou perseguir */
     alvo() {
       if (!C || !(C.fase === 'aparece' || C.fase === 'perseguicao' || C.fase === 'choque')) return null;
-      const v = C.viloes[0]; return { x: v.x, z: v.z, cor: v.perf.cor, rotulo: C.viloes.length > 1 ? 'Zoom e Flash Reverso' : v.perf.nome[0] + v.perf.nome.slice(1).toLowerCase() };
+      const v = C.viloes[0]; return { x: v.x, z: v.z, cor: v.perf.cor, rotulo: C.viloes.length > 1 ? 'Zoom e Flash Reverso' : v.perf.titulo };
     },
     /** lista para a pausa: [{id, titulo, estado: 'bloqueado'|'liberado'|'vencido'}] */
     lista(missaoIdx) { return CAPITULOS.map((c, i) => ({ id: c.id, titulo: c.titulo, estado: S.vencidos.has(c.id) ? 'vencido' : liberado(i, missaoIdx) ? 'liberado' : 'bloqueado' })); },

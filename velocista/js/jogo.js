@@ -340,7 +340,7 @@ cena.add(heroi);
 const raios = criarRaios(cena, { mobile: MOBILE });
 const posfx = criarPosFx(renderer, cena, camera, { mobile: MOBILE });
 let modelo = null;
-criarHeroi({ aniso: ANISO, lod: 0, mobile: TOQUE }).then((m) => { modelo = m; partes.corpo.visible = false; heroi.add(m.grupo); m.grupo.traverse((o) => { if (o.isMesh) o.castShadow = true; }); equipe.retratar('heroi', m); }).catch((e) => console.warn('corpo realista indisponível', e));
+criarHeroi({ aniso: ANISO, lod: 0, mobile: TOQUE }).then((m) => { modelo = m; partes.corpo.visible = false; heroi.add(m.grupo); m.grupo.traverse((o) => { if (o.isMesh) o.castShadow = true; }); }).catch((e) => console.warn('corpo realista indisponível', e));
 const sombra = new THREE.Mesh(new THREE.CircleGeometry(0.5, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }));
 sombra.rotation.x = -Math.PI / 2; cena.add(sombra);
 
@@ -783,7 +783,6 @@ const crimes = criarCrimes(cena, { combate });
 const guia = criarGuia(cena, { mobile: MOBILE });
 const viloes = criarViloes(cena, { mobile: MOBILE, aniso: ANISO, combate, armazem, avisar: (t, r, k) => avisar(t, r, k),
   colide: (x, z, y) => empurrar(rectsPerto, x, z, 0.4, y, 1.8), chao: (x, z, y) => chaoEm(rectsPerto, x, z, y),
-  aoModelo: (id, m) => equipe.retratar(id, m),
   labPos: { x: LAB_B.plano.entrada.x, z: LAB_B.plano.entrada.z - 9 } });
 const portais = criarPortais(cena);
 const trafego = criarTrafego(THREE, cena, { mobile: MOBILE });
@@ -855,8 +854,8 @@ function atualizarBotoesEspeciais() {
 // ---------- história: cenas e rádio (historia.js) ----------
 const historia = criarHistoria({ armazem });
 const focoHeroi = () => ({ x: P.x, y: P.y, z: P.z });
-// a equipe do S.T.A.R. Labs (Caitlin e Cisco) no Cortex; os retratos da caixa de fala saem dos modelos 3D
-const equipe = criarEquipe(cena, { mobile: MOBILE, aniso: ANISO, renderer, lab: LAB_B, aoRetrato: (id, url) => historia.definirRetrato(id, url) });
+// a equipe do S.T.A.R. Labs (Caitlin e Cisco) no Cortex
+const equipe = criarEquipe(cena, { mobile: MOBILE, aniso: ANISO, renderer, lab: LAB_B, aoRetrato: (id, url) => historia.definirRetrato(id, url) });   // os retratos vão prontos (tools/gerar-retratos.mjs)
 const noCortex = () => LAB_B.plano.dentro(P.x, P.z, P.y) === 'cortex';
 /** os focos de uma cena: o herói e, com ele no Cortex, a Caitlin e o Cisco (quem não está lá fala pelo rádio) */
 const focosCena = () => {

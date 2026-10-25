@@ -15,8 +15,12 @@ export function colocarAderecos(id, modelo) {
   if (id === 'frio') {
     // óculos de proteção de lente laranja e a arma de gelo (corpo grafite, anéis e boca azul brilhante)
     const faixa = mat(0x1a1d22, 0, 0.2, 0.6), lente = mat(0xff9a2a, 0x7a3a00, 0.1, 0.15);
-    peca(new THREE.TorusGeometry(0.105, 0.012, 6, 24), faixa, cabeca, 0.0, 0.035, 0, Math.PI / 2, 0, 0).scale.set(1, 1.15, 1);
-    for (const lado of [-1, 1]) peca(new THREE.CylinderGeometry(0.026, 0.026, 0.03, 16), lente, cabeca, 0.092, 0.04, lado * 0.036, 0, 0, Math.PI / 2);
+    // erguidos na testa: a faixa em volta da cabeça (mais funda que larga) e as lentes com aro na frente dela
+    peca(new THREE.TorusGeometry(0.088, 0.009, 6, 28), faixa, cabeca, 0.0, 0.05, 0, Math.PI / 2, 0, 0).scale.set(1.08, 0.84, 1);
+    for (const lado of [-1, 1]) {
+      peca(new THREE.CylinderGeometry(0.03, 0.033, 0.03, 18), faixa, cabeca, 0.1, 0.05, lado * 0.038, 0, 0, Math.PI / 2);
+      peca(new THREE.CylinderGeometry(0.024, 0.024, 0.006, 18), lente, cabeca, 0.117, 0.05, lado * 0.038, 0, 0, Math.PI / 2);
+    }
     const corpo = mat(0x2a2f38, 0, 0.8, 0.3), gelo = mat(0x9fe6ff, 0x3fb8ff, 0.1, 0.1);
     peca(new THREE.CylinderGeometry(0.035, 0.045, 0.34, 12), corpo, mao, 0.02, -0.03, 0.2, Math.PI / 2);
     peca(new THREE.BoxGeometry(0.05, 0.1, 0.06), corpo, mao, 0.02, -0.08, 0.1);

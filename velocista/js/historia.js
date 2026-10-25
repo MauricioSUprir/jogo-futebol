@@ -240,7 +240,10 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
   const rRetrato = radio.querySelector('.retrato'), rNome = radio.querySelector('b'), rTexto = radio.querySelector('span');
   const fila = []; let falando = null, tFala = 0;
   function falar(falas) { for (const f of falas) fila.push(f); }
-  const retratos = {};                                       // id → imagem do rosto (equipe.js tira de cada modelo 3D)
+  // o rosto de cada personagem (tools/gerar-retratos.mjs renderiza a partir do modelo 3D); quem não tem fica com a sigla
+  const RETRATOS = ['heroi', 'zoom', 'reverso', 'caitlin', 'cisco', 'frio', 'onda', 'mago'];
+  const retratos = Object.fromEntries(RETRATOS.map((id) => [id, new URL(`../assets/personagens/retratos/${id}.webp`, import.meta.url).href]));
+  for (const url of Object.values(retratos)) new Image().src = url;                    // já baixados quando a 1ª fala aparecer
   function mostrar(el, ret, nome, f) {
     const p = PERSONAGENS[f.quem] || PERSONAGENS.caitlin, img = retratos[f.quem];
     ret.textContent = img ? '' : p.sigla; ret.style.background = img ? `url(${img}) center/cover, ${p.cor}` : p.cor;
