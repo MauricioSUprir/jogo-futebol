@@ -699,6 +699,10 @@ if (faz('B13')) {
       // um companheiro (não o goleiro) tocou na bola: daí em diante a troca é a do passe do meu time (legítima)
       const u = m.ultimoToque;
       if (u && u.time === 0 && u.id !== g.id) break;
+      // (o domínio também é toque: a posse não grava o m.ultimoToque — com a IA de ataque contra a pessoa, categoria D, o
+      // zagueiro ganha a disputa pelo alto e domina no fim do voo em 7 dos 16 casos, e a troca vai a ele no mesmo passo)
+      const dono = m.posse != null ? porId(m, m.posse) : null;
+      if (dono && dono.time === 0 && dono.id !== g.id) break;
       if (m.controlado[0] !== g.id) { p = true; por = evs.map(e => e.tipo).join(','); }
       if (m.posse != null || m.naMao != null || m.parada) break;
     }
