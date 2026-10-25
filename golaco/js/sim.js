@@ -380,6 +380,10 @@ export function passo(m, entradas) {
     m.botoesTimeAgora[t] = (entradas?.[t]?.botoes ?? 0) | 0;
     // a IA jogando pelo humano (demo, e.ia): o goleiro dele repõe sozinho, como antes (sim.js goleiroComBola)
     if (m.partida) (m.iaJoga ??= {})[t] = !!entradas?.[t]?.ia;
+    // ...e qualquer marca da IA (`ia` ou `iaCobra`, a cobrança da IA pelo controlado): o portão do "só contra a pessoa"
+    // (tatica.js pessoaJoga) — uma pessoa nunca manda nenhuma das duas. Fora do hash, como o m.iaJoga (o nome m.iaMarca é
+    // o cache da marcação do ia.js: escrever nele mudava a marcação do time da pessoa)
+    if (m.partida) (m.iaNaEntrada ??= {})[t] = !!(entradas?.[t]?.ia || entradas?.[t]?.iaCobra);
   }
   // 1) entradas: humano (o controlado de cada time humano) e IA (entrada virtual)
   for (const j of js) {

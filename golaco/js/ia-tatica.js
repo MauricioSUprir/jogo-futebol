@@ -30,7 +30,7 @@
 // Com a bola (Parte 3: ia-ataque.js): o condutor e os apoios; null = condutor da IA clássica e,
 // para os apoios, a referência tática com a bola (posicaoTatica 'com').
 
-import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, IA_ATAQUE, TATICA, ACOES, ENTRADA, GOLEIRO } from './config.js';
+import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, IA_ATAQUE, IA_PESSOA, TATICA, ACOES, ENTRADA, GOLEIRO } from './config.js';
 import { MD } from './matdet.js';
 import { difAng, clamp, lerp } from './mat.js';
 import { entradaIA, para, pontoInterceptacao, acaoIA } from './ia.js';
@@ -38,7 +38,7 @@ import { preverBola } from './conducao.js';
 import { riscoLinha } from './acoes.js';
 import { goleiroNoPe } from './regras-goleiro.js';
 import { apoioTatico, condutorTatico, primeiraIA } from './ia-ataque.js';
-import { faseDoTime, posicaoTatica } from './tatica.js';
+import { faseDoTime, posicaoTatica, contraPessoa } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
 import { restricaoParada, ganchosLivre } from './partida.js';
 import { alvoBolaParada } from './bolas-paradas.js';
@@ -46,6 +46,10 @@ import { entradaPressao, pressaoPedida, pressionadorDe, entradaVelocidade, passe
 
 const DT = PASSO;
 const seg = s => Math.round(s / DT);
+// o apoio pela referência do time da IA contra a pessoa (tatica.js contraPessoa; config.js IA_PESSOA.suaveApoio e
+// suaveApoioLonge), juntado uma vez na carga
+const SUAVE_APOIO_P = { ...TATICA.suaveApoio, ...IA_PESSOA.suaveApoio };
+const SUAVE_APOIO_LONGE_P = { ...SUAVE_APOIO_P, ...IA_PESSOA.suaveApoioLonge.suave };
 
 /**
  * Estado do para() (j.ia) pronto para este tick — a mesma inicialização do entradaIA (use antes de
@@ -724,7 +728,10 @@ function irPara(m, j, x, z, mag, correr, extra, modo) {
  * Reinicia quando o papel muda. Devolve out = {x, z, mag, modo, correr}.
  */
 export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
-  const r = j.ia.ramo, it = estadoT(j), S = r === 'linha' ? TATICA.suaveLinha : r === 'apoio' || r === 'apoioRef' ? TATICA.suaveApoio : TATICA.suave;
+  // (o apoio pela referência do time da IA contra a pessoa: SUAVE_APOIO_P perto da bola e SUAVE_APOIO_LONGE_P longe dela —
+  // IA_PESSOA.suaveApoio e suaveApoioLonge, categoria D; suaveApoioPessoa)
+  const r = j.ia.ramo, it = estadoT(j), S = r === 'linha' ? TATICA.suaveLinha : (r === 'apoioRef' && suaveApoioPessoa(m, j, it))
+    || (r === 'apoio' || r === 'apoioRef' ? TATICA.suaveApoio : TATICA.suave);
   if (it.sTick !== m.tick - 1 || it.sRamo !== j.ia.ramo) {
     it.fx = x; it.fz = z; it.vx = 0; it.vz = 0; it.vf = 0;
     it.quieto = false; it.lento = false; it.tParado = 0;
@@ -802,6 +809,18 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
   }
   it.dTick = m.tick;
   return out;
+}
+
+/**
+ * O ponto calmo do apoio pela referência no time da IA contra a pessoa (tatica.js contraPessoa; null = o de sempre):
+ * SUAVE_APOIO_P perto da jogada e SUAVE_APOIO_LONGE_P a mais de IA_PESSOA.suaveApoioLonge.bola[0] m da bola (volta a
+ * menos de bola[1]; histerese em it.longe).
+ */
+function suaveApoioPessoa(m, j, it) {
+  if (!contraPessoa(m, j.time)) { it.longe = false; return null; }
+  const L = IA_PESSOA.suaveApoioLonge.bola, d = MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z);
+  it.longe = it.longe ? d > L[1] : d > L[0];
+  return it.longe ? SUAVE_APOIO_LONGE_P : SUAVE_APOIO_P;
 }
 
 /** Intensidade do analógico que pede a velocidade v (a inversa de jogador.js velocidadeDesejada, sem CORRER). */

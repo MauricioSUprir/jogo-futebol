@@ -115,7 +115,36 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   e mais corridas nas costas (recarga/max/vCondutor) — pouco ganho e vai-e-volta 8,3 → 9,8–10,4/min. PENDENTE: os
   COMPANHEIROS do humano quase não apertam (1º a ~7,5–8 m do condutor, 0,1–0,2 bote/min com o humano parado) — o
   controlado é o 1º homem quando está perto, `semAtropelar` vale para o time todo do humano e a IA com a bola toca em
-  < 0,5 s; excluir o controlado do 1º/2º homem não mudou (medido); (9)
+  < 0,5 s; excluir o controlado do 1º/2º homem não mudou (medido). **Categoria D, D2 (24/10; a IA ATACA correndo, itens 67
+  e 21; `PESQUISA-CATEGORIA-D.md`, contrato "A IA contra a pessoa"):** o portão virou função (`tatica.js contraPessoa`/
+  `timeDaPessoa`, pela `pessoaJoga`: sem marca da IA na entrada do lado da pessoa — `m.iaNaEntrada` do `sim.js`, `ia` OU
+  `iaCobra` — e o travado do TM não expulso) e as constantes só contra a pessoa moram em `config.js IA_PESSOA` (juntadas por
+  cima na carga: `UTIL_P`, `CORR_P`, `SUAVE_APOIO_P`). Em volume a IA já corria mais que o real (188 × 140 m/min, Metrica):
+  REDISTRIBUIR, nunca somar. O condutor avalia a condução onde chega, conduz trotando (CORRER só com 14 m livres) e lê o
+  adversário 0,12 s à frente no risco (`manterAntecipa`: só no agora ele conduzia para dentro do bote, roubadas no pé +25%;
+  com 0,1 s os pênaltis da IA no 'dribla' do teste-faltas-sentido iam a 0,64 por partida, meta ≤ 0,6; com 0,15 e 0,2 s o
+  teste-nao-passa do CI reprovava por casos do time da pessoa — mudança contra a pessoa embaralha todas as partidas com o
+  roteiro: decidir com amostra grande e conferir depois as sementes fixas do CI),
+  o apoio curto vai em corrida firme (`IA.modos.apoia`), longe da bola o apoio anda e a subida é só a ≤ 20 m dela, as
+  corridas nas costas são dos centroavantes e terminam DENTRO da área. Régua `tools/lib/corrida-medidas.mjs` +
+  `teste-ia-corre` (padrão; P — o portão —, A e V valendo, M e C informativas até o D3/D4; ± por bootstrap estratificado
+  por roteiro): condutor 7,6 → 11,8 km/h, posse 0,50 → 0,83 s, o apoio perto com o condutor conduzindo andando 43 → 26%
+  (real 33), corridas à área 3,7 → 24%, chutes da área 60 → 78% (o "≥ 55%" do plano a main já cumpria: meta ≥ 70),
+  roubadas no pé 2,42 → 2,33/min (teto base + 15%), volume 182 → 171 m/min, vai e volta 5,95 → 4,74. Contra a pessoa o
+  condutor já conduzindo vira no máximo 0,6 rad por decisão e não usa a condução curta (o MOD girava o corpo em volta da bola
+  a ~3 m/s: teste-nao-passa 0,60 → 0,33); o chamado da PRESSÃO desvia com 0,45 m de folga (M8 4,8 → 2,8: trombava nos
+  próprios companheiros que continham o condutor) e o M2 conta os casos ao alcance em 1,5 s (≤ 8,5 m; com a IA ficando com
+  a bola, os longos viraram de 9–12 m — a amostra passou a medir a distância, não a PRESSÃO). Lições: a resposta do peso da
+  condução é em DEGRAU (0,95 → posse 0,60 s; 1,0 → 1,1 s) e o ritmo vem do `magConduz`; com meias e pontas correndo até a
+  área o meio voltava mais devagar na perda (teste-transicao `--humano` 6,1 → 5,4 m/s; o `urgente` não resolve, é física:
+  quem está em disparada para lá freia antes); uma chave nova num objeto juntado por cima (`dist`) sobrescreveu a do ponto
+  calmo e deu NaN — nome de chave novo nunca repete o de quem ele cobre, e o mesmo vale para campo novo no MUNDO (`m.iaMarca`
+  já era o cache da marcação do `ia.js`: escrever nele mudou a partida contra a pessoa — procurar o nome antes); o portão
+  que só lia o `m.iaJoga` (só a marca `ia`) ligava nas cobranças da demo do Node (`iaCobra`), na página `?demo=1` e com o
+  travado do TM expulso — com o `iaNaEntrada` a página é IA × IA (também para a subida do #500); medida "perto da bola" sem
+  tirar o dono mede o condutor (a do apoio passava com o apoio curto desligado: o A6b, com o condutor conduzindo, separa);
+  premissa de semente de teste de navegador vira condição do próprio lance (V11 do `teste-replay-paradas-tela`: o lance onde
+  a bola estava; F7 do `teste-cenas-tela`: o botão pela lista do guardador); (9)
   editar o TEMPO de jogo e a DIFICULDADE (na pausa/antes do jogo e vindo do TM pelo pedido); (10) botão de CARRINHO
   (dividida deslizando; falta/cartão pela Regra 12 em `faltas.js`; cabe no orçamento de HUD do celular); (11) clássico mais
   PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores (bote mais forte, mais contato), não pelo árbitro (o pedido do TM

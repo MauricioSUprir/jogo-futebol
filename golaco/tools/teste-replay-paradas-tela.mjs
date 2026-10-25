@@ -189,20 +189,37 @@ async function jogarLance(pg, o) {
  * A próxima bola morta (rodarPassos 'demo' em lotes de 20: a montagem só sai 60 passos depois dela, e o lance armado até
  * 40 passos depois ainda toca no passo antes da montagem; ≥ 400 passos no anel) e um lance de teste armado nela (forcar).
  */
-async function forcarLance(pg, tipo, ponto = null) {
-  return pg.evaluate(([tipo, ponto]) => {
+async function forcarLance(pg, tipo, ponto = null, naChave = 0) {
+  return pg.evaluate(([tipo, ponto, naChave]) => {
     const g = window.__golaco, m = g.mundo, P = g.replay.paradas;
     if (!P) return { semApi: true };
     const desde = m.tick;
+    // naChave (V11): o lance no lugar em que a bola ESTAVA na chave, como uma falta de verdade (lances.js grava o ponto do
+    // lance), e só a bola morta com a bola a |x| ≥ naChave num tick de 0,5 a 3,5 s antes dela (a chave = o último desses).
+    // Antes o ponto era fixo (±49, −24) e a bola morta, qualquer uma: com a bola longe do ponto o olhar entre o lance e a
+    // bola o tirava do quadro por construção, e o resultado dependia da semente da página (24/10, D2: a bola a 39 m em x do
+    // ponto, |x| 1,36 da tela; a base, 23 m, 0,33). Com a chave fixa em inicio − 90 a busca dependia da semente de outro
+    // jeito (revisão do D2: com a demo da página IA × IA, nenhuma bola morta assim em 30000 passos da semente 2)
+    const H = 256, hx = new Float64Array(H), hz = new Float64Array(H);
+    const anota = () => { hx[m.tick % H] = m.bola.p.x; hz[m.tick % H] = m.bola.p.z; };
     const nova = () => m.partida?.estado === 'parada' && m.parada && m.parada.cobrador == null && m.parada.inicio > Math.max(400, desde) && m.tick - m.parada.inicio <= 40;
+    const chaveDe = () => {
+      if (!naChave) return m.parada.inicio - 90;
+      for (let k = m.parada.inicio - 30; k >= Math.max(desde + 1, m.parada.inicio - 210, m.tick - H + 2); k--) if (Math.abs(hx[k % H]) >= naChave) return k;
+      return null;
+    };
+    const serve = () => !naChave || chaveDe() != null;
     let n = 0;
-    while (n < 30000 && !nova()) { g.rodarPassos(20, 'demo'); n += 20; }
-    if (!nova()) return { semParada: true, n };
-    const b = m.bola.p, chave = m.parada.inicio - 90, chance = tipo === 'espalmada' || tipo === 'trave' || tipo === 'passouPerto';
-    const x = ponto ? (b.x >= 0 ? 1 : -1) * Math.abs(ponto.x) : b.x, z = ponto ? ponto.z : b.z;
+    anota();
+    if (naChave) { while (n < 30000 && !(nova() && serve())) { g.rodarPassos(1, 'demo'); anota(); n++; } }
+    else while (n < 30000 && !nova()) { g.rodarPassos(20, 'demo'); n += 20; }
+    if (!nova() || !serve()) return { semParada: true, n };
+    const b = m.bola.p, chave = chaveDe(), chance = tipo === 'espalmada' || tipo === 'trave' || tipo === 'passouPerto';
+    const cx = hx[chave % H], cz = hz[chave % H];
+    const x = naChave ? cx : ponto ? (b.x >= 0 ? 1 : -1) * Math.abs(ponto.x) : b.x, z = naChave ? cz : ponto ? ponto.z : b.z;
     const ok = P.forcar({ classe: 'A', tipo, chave, fim: chance ? chave + 30 : chave, x, z, lado: x >= 0 ? 1 : -1 });
-    return { ok, inicio: m.parada.inicio, parada: m.parada.tipo, tick: m.tick, x, z };
-  }, [tipo, ponto]);
+    return { ok, inicio: m.parada.inicio, chave, parada: m.parada.tipo, tick: m.tick, x, z, bx: b.x, bz: b.z };
+  }, [tipo, ponto, naChave]);
 }
 /**
  * O laço ao vivo até o replay DE PARADA começar (≤ max quadros de 1/60 s). Outro replay no caminho (o do impedimento cujo
@@ -336,7 +353,8 @@ if (roda('D')) try {
     // V11 (revisão de 22/10): a câmera 'fechada' com o lance na linha de fundo (|x| 49, perto da bandeirinha): o foco da TV
     // fica preso dentro do campo (camera.js limX) e, com o campo de visão × 0,5, o lance saía do quadro — agora o olhar vai
     // ao ponto entre o lance e a bola: o ponto do lance fica a |x| ≤ 0,6 e |y| ≤ 0,8 da tela em todo quadro do P2
-    const f11 = await forcarLance(pg, 'faltaPerto', { x: 49, z: -24 });
+    // (o lance onde a bola estava na chave, a |x| ≥ 45: além do limX ±38,5 do foco da TV, que é o que o V11 confere)
+    const f11 = await forcarLance(pg, 'faltaPerto', null, 45);
     const a11 = await ateReplay(pg);
     const v11 = a11.ativo ? await pg.evaluate(([x, z]) => {
       const g = window.__golaco;
@@ -354,7 +372,7 @@ if (roda('D')) try {
       return { q, n, pior, piorY, atras };
     }, [f11.x, f11.z]) : null;
     meta('V11 câmera \'fechada\' com o lance na linha de fundo: o ponto do lance no quadro em todo o P2',
-      !a11.ativo ? `nenhum replay em ${a11.q} quadros (lance forçado em ${f11.x}, ${f11.z})` : `lance em (${f11.x}, ${f11.z}); ${v11.n} quadros da 'fechada'; |x| máx ${v11.pior.toFixed(2).replace('.', ',')}, |y| máx ${v11.piorY.toFixed(2).replace('.', ',')}, ${v11.atras} atrás da câmera`,
+      f11.semParada ? `nenhuma bola morta com a bola a |x| ≥ 45 de 0,5 a 3,5 s antes em ${f11.n} passos` : !a11.ativo ? `nenhum replay em ${a11.q} quadros (lance forçado em ${f11.x}, ${f11.z})` : `lance em (${f2(f11.x)}, ${f2(f11.z)}), chave ${f11.chave}, na bola morta ${f11.inicio} (${f11.parada}, bola em ${f2(f11.bx)}, ${f2(f11.bz)}); ${v11.n} quadros da 'fechada'; |x| máx ${v11.pior.toFixed(2).replace('.', ',')}, |y| máx ${v11.piorY.toFixed(2).replace('.', ',')}, ${v11.atras} atrás da câmera`,
       '≥ 30 quadros; |x| ≤ 0,6; |y| ≤ 0,8; 0', !!v11 && v11.n >= 30 && v11.pior <= 0.6 && v11.piorY <= 0.8 && v11.atras === 0);
     // V6b: a opção da pausa desligada no meio do jogo: o lance armado não toca
     await pg.evaluate(() => window.__golaco.abrirMenu());

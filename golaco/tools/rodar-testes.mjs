@@ -104,6 +104,10 @@ const LISTA = [
   // Pedidos do dono de 11/10 (regras e controles)
   ['jogador parado com a bola: a IA fecha e dá o bote (condutor lento)', 'teste-parado.mjs'],
   ['PRESSÃO perceptível: com × sem o botão (pareado), marca, um a mais na pressão', 'teste-pressao-humano.mjs'],
+  // Categoria D (dono, 24/10: "a IA correr, tanto pra marcar, tanto pra atacar, pq ela não corre"): a régua da corrida da IA
+  // contra a pessoa (3 roteiros × 4 sementes; seções P o portão, A ataque e V guardas valendo — M e C informativas até o D3 e
+  // o D4)
+  ['a IA corre contra a pessoa: o portão, condutor, apoio perto da bola, corridas até a área, chutes da área; volume, vai e volta e roubadas (guardas)', 'teste-ia-corre.mjs', [], 'padrao', 3],
   ['goleiro pelas Leis do Jogo (mão só na área, recuo, 8 s) e na mão do humano (anda, TROCAR, PEGAR)', 'teste-goleiro-regras.mjs'],
   ['bolas paradas: lateral com as mãos e 3 opções (Regra 15), tiro de meta (16), escanteio por zonas, barreira (13)', 'teste-bolas-paradas.mjs'],
   ['cobrança mirada (escanteio, falta, tiro de meta da pessoa): a linha = a física, curva, controles, canhão roteirizado, a IA não usa', 'teste-mira.mjs'],

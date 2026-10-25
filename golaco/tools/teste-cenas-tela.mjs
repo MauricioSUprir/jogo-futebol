@@ -2124,7 +2124,9 @@ const ateCenaTM = (fr, id, placar) => fr.evaluate(({ id, placar }) => {
   const lev = cf.levar({ antes: 40, placar });
   const a = cf.ateCena();
   const r = localStorage.getItem('tm3d:resultado:' + id);
-  return { ...a, lev, res: r ? JSON.parse(r) : null };
+  // os lances do guardador na hora da cena: a faixa só mostra "Melhores momentos" com algum (main.js faixaFinal)
+  const guardados = (window.__golaco.cenas?.lances ?? []).map(l => `${l.tipo}@${l.chave}`);
+  return { ...a, lev, res: r ? JSON.parse(r) : null, guardados };
 }, { id, placar });
 marcar('FT');
 if (roda('FT')) try {
@@ -2149,9 +2151,13 @@ if (roda('FT')) try {
         A.cena ? `resultado ${res ? `${res.homeGoals}–${res.awayGoals}, melhor ${rm ? `lado ${rm.lado} ${rm.nome} ${rm.nota}` : 'sem'}` : 'NÃO gravado'}; o melhor da cena ${M?.ini?.melhor ? `${M.ini.melhor.time}/${M.ini.melhor.id} ${M.ini.melhor.nota}` : '-'}; a tarja ${tm ? `"${tm.nome} ${tm.nota}"` : '-'}` : 'nenhuma cena',
         '2–1; o mesmo melhor e a mesma nota', A.cena && res?.homeGoals === 2 && res?.awayGoals === 1 && !!rm && rm.lado === M?.ini?.melhor?.time && rm.nota === M.ini.melhor.nota && tm?.nota === rm.nota.toFixed(1).replace('.', ','));
       conferirF1('TM, vitória 2–1 (sem as estatísticas)', A, M ?? {}, fimEsperado('vitoria', { est: false }), 'vitoria');
-      meta('F7 TM: nenhum painel de estatísticas; a faixa final com "Voltar ao Total Match" (sem "Melhores momentos": nenhum lance guardado); o "tm3d:fim" só no clique, com o "melhor"',
-        M ? `painel ${M.tarjas.estatisticas.n} quadros; faixa ${M.faixa.botoes.map(x => (x ? `"${x.texto}" ${x.vis ? 'visível' : 'escondido'}` : '-')).join(', ')}; mensagens antes do clique ${JSON.stringify(msgs0)}; depois ${JSON.stringify(msgs1)}` : 'nenhuma cena',
-        '0; Voltar; nenhuma; 1 com o melhor', !!M && M.tarjas.estatisticas.n === 0 && /voltar ao total match/i.test(M.faixa.botoes[0]?.texto ?? '') && M.faixa.botoes[0]?.vis && !M.faixa.botoes[1]?.vis && !(msgs0 ?? []).includes('tm3d:fim') && msgs1?.length === 1 && msgs1[0].casa === 2 && msgs1[0].fora === 1 && msgs1[0].melhor?.nota === rm?.nota);
+      // "Melhores momentos" só com lance guardado (contrato "Cenas das paradas"): a partida curta da demo da página guarda
+      // ou não um gol/uma parada A/B conforme a semente e a versão da IA (no D2 de 24/10 passou a guardar 2) — o botão
+      // segue a lista do guardador, não uma premissa sobre a semente
+      const gu = A.guardados ?? [];
+      meta('F7 TM: nenhum painel de estatísticas; a faixa final com "Voltar ao Total Match" ("Melhores momentos" só com lance guardado); o "tm3d:fim" só no clique, com o "melhor"',
+        M ? `painel ${M.tarjas.estatisticas.n} quadros; faixa ${M.faixa.botoes.map(x => (x ? `"${x.texto}" ${x.vis ? 'visível' : 'escondido'}` : '-')).join(', ')}; ${gu.length} lance(s) guardado(s)${gu.length ? ` (${gu.join(', ')})` : ''}; mensagens antes do clique ${JSON.stringify(msgs0)}; depois ${JSON.stringify(msgs1)}` : 'nenhuma cena',
+        '0; Voltar; o 2º botão = há lance guardado; nenhuma; 1 com o melhor', !!M && M.tarjas.estatisticas.n === 0 && /voltar ao total match/i.test(M.faixa.botoes[0]?.texto ?? '') && M.faixa.botoes[0]?.vis && !!M.faixa.botoes[1]?.vis === gu.length > 0 && (!gu.length || /melhores momentos/i.test(M.faixa.botoes[1]?.texto ?? '')) && !(msgs0 ?? []).includes('tm3d:fim') && msgs1?.length === 1 && msgs1[0].casa === 2 && msgs1[0].fora === 1 && msgs1[0].melhor?.nota === rm?.nota);
     } finally { await s.navegador.close(); }
   }
   // FT2: o empate (1–1) sem o campo empateContinua = a versão curta
