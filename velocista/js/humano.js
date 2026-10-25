@@ -1,10 +1,17 @@
 // Corpo humano do herói: o Rocketbox Sports_Male_02 (MIT, ver assets/humano/CREDITOS.md) como SkinnedMesh de 25 ossos,
-// com o uniforme pintado por região, capuz e emblema (herói original: traje vermelho e dourado, emblema e crista próprios), e a animação (corrida, sprint, ar, planeio, escalada, vibração)
+// com o traje desenhado no shader (js/traje.js: máscara, painéis, frisos, cinto, luvas e botas; herói original, vermelho e dourado, emblema próprio), e a animação (corrida, sprint, ar, planeio, escalada, vibração, luta)
 // calculada por ossos em coordenadas do modelo (x = frente, y = cima, z = direita do personagem).
 import * as THREE from 'three';
 import { lerCorpo } from './corpo-dados.js';
+import { aplicarTraje } from './traje.js';
 
 const BASE = new URL('../assets/humano/', import.meta.url);
+// emblema do peito de cada traje (desenhos próprios): disco, cor do anel e do símbolo, símbolo
+const EMBLEMAS = {
+  heroi: { disco: 0x1a1416, cor: 0xf6c82a, emissivo: 0x8a6008, forma: 'faisca', brilhoTecido: 0x8a1010 },
+  zoom: { disco: 0x05070a, cor: 0x3a8cff, emissivo: 0x1a50ff, forma: 'divisa', brilhoTecido: 0x203050 },
+  reverso: { disco: 0x9a0a0a, cor: 0x141010, emissivo: 0x000000, forma: 'faisca', brilhoTecido: 0x806010 },
+};
 const NOMES = ['pelve', 'lombar', 'peito', 'pescoco', 'cabeca', 'claviculaE', 'bracoE', 'antebracoE', 'maoE', 'claviculaD', 'bracoD', 'antebracoD', 'maoD',
   'coxaE', 'canelaE', 'peE', 'coxaD', 'canelaD', 'peD', 'ajJoelhoE', 'ajJoelhoD', 'ajCotoveloE', 'ajCotoveloD', 'ajQuadrilE', 'ajQuadrilD'];
 const PAI = [-1, 0, 1, 2, 3, 2, 5, 6, 7, 2, 9, 10, 11, 0, 13, 14, 0, 16, 17, 14, 17, 7, 11, 0, 0];
@@ -13,9 +20,6 @@ const AJ = [[19, 13, 14], [20, 16, 17], [21, 6, 7], [22, 10, 11], [23, 0, 13], [
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
-
-// cores do uniforme por região da máscara (0 pele, 1 camisa, 2 manga, 3 gola, 4 punho, 5 calção, 6 barra, 7 meião, 8 chuteira, 9 sola, 10 acabamento)
-const CORES = [[176, 18, 34], [190, 20, 36], [160, 14, 30], [236, 186, 40], [230, 180, 40], [164, 15, 31], [236, 186, 40], [170, 16, 32], [222, 168, 32], [24, 18, 18], [248, 210, 78]];
 
 function origensDeRepouso(J, rep) {
   const o = new Array(25);
@@ -40,43 +44,7 @@ function origensDeRepouso(J, rep) {
   return o;
 }
 
-function carregarImagem(url) { return new Promise((ok, falha) => { const i = new Image(); i.onload = () => ok(i); i.onerror = falha; i.src = url; }); }
 
-// O uniforme em 1024²: cor por região da máscara, costuras escuras e friso dourado nas divisas, gomos acolchoados em
-// losango no tecido vermelho, grão de couro; e um mapa de rugosidade/relevo do mesmo desenho (couro brilhante, costura fosca).
-const OURO = new Set([3, 4, 6, 8, 10]);
-async function texturaCorpo(aniso) {
-  const img = await carregarImagem(new URL('regioes.png', BASE).href);
-  const M = 512, S = 1024, k = S / M;
-  const cm = document.createElement('canvas'); cm.width = cm.height = M; const gm = cm.getContext('2d'); gm.drawImage(img, 0, 0, M, M);
-  const reg = gm.getImageData(0, 0, M, M).data, R = (x, y) => Math.min(10, reg[(Math.max(0, Math.min(M - 1, y)) * M + Math.max(0, Math.min(M - 1, x))) * 4]);
-  const c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
-  const cr = document.createElement('canvas'); cr.width = cr.height = S; const gr = cr.getContext('2d');   // rugosidade (G) e relevo
-  const d = g.createImageData(S, S), px = d.data, dr = gr.createImageData(S, S), pr = dr.data;
-  let semente = 7; const rnd = () => { semente = (semente * 16807) % 2147483647; return semente / 2147483647; };
-  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
-    const mx = (x / k) | 0, my = (y / k) | 0, r = R(mx, my), cor = CORES[r], ouro = OURO.has(r);
-    // divisa com outra região a até 2 texels da máscara = costura (e friso dourado do lado do vermelho)
-    let borda = 0; for (const [ox, oy] of [[2, 0], [-2, 0], [0, 2], [0, -2], [1, 1], [-1, -1]]) if (R(mx + ox, my + oy) !== r) { borda = OURO.has(R(mx + ox, my + oy)) && !ouro ? 2 : 1; break; }
-    // gomos em losango no tecido (não no dourado), com o vinco escuro
-    const u = x / 22, v = y / 22, f1 = Math.abs(((u + v) % 2 + 2) % 2 - 1), f2 = Math.abs(((u - v) % 2 + 2) % 2 - 1);
-    const vinco = !ouro && r !== 9 ? Math.max(0, 1 - Math.min(f1, f2) * 14) : 0;
-    const almofada = !ouro && r !== 9 ? 0.92 + 0.08 * Math.min(f1, f2) : 1;
-    const grao = 0.94 + rnd() * 0.08;
-    let cr0 = cor[0] * almofada * grao * (1 - 0.35 * vinco), cg0 = cor[1] * almofada * grao * (1 - 0.35 * vinco), cb0 = cor[2] * almofada * grao * (1 - 0.35 * vinco);
-    let rug = ouro ? 0.28 : 0.38 + vinco * 0.35 + rnd() * 0.06, rel = almofada * 255 - vinco * 90;
-    if (borda === 1) { cr0 *= 0.45; cg0 *= 0.45; cb0 *= 0.45; rug = 0.85; rel = 60; }
-    if (borda === 2) { cr0 = 240; cg0 = 196; cb0 = 60; rug = 0.25; rel = 230; }
-    const i = (y * S + x) * 4;
-    px[i] = cr0; px[i + 1] = cg0; px[i + 2] = cb0; px[i + 3] = 255;
-    pr[i] = rel; pr[i + 1] = rug * 255; pr[i + 2] = rel; pr[i + 3] = 255;
-  }
-  g.putImageData(d, 0, 0); gr.putImageData(dr, 0, 0);
-  g.filter = 'blur(0.8px)'; g.drawImage(c, 0, 0); g.filter = 'none';
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = aniso;
-  const tr = new THREE.CanvasTexture(cr); tr.anisotropy = aniso;
-  return { cor: t, rugosidade: tr };
-}
 function texturaWebp(url, cor, aniso) {
   return new Promise((ok, falha) => new THREE.TextureLoader().load(url, (t) => { if (cor) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = aniso; ok(t); }, undefined, falha));
 }
@@ -95,7 +63,7 @@ function malha(parte, esqueleto, material) {
 }
 
 /** Cria o herói. Devolve {grupo, aplicar(est, dt), materiais, dispose()}. */
-export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
+export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = 'heroi' } = {}) {
   const [ind, bin] = await Promise.all([fetch(new URL('corpo.json', BASE)).then((r) => r.json()), fetch(new URL('corpo.bin', BASE)).then((r) => r.arrayBuffer())]);
   const dados = lerCorpo(ind, bin), L = dados.lods[lod];
   const origens = origensDeRepouso(ind.repouso.juntas, ind.repouso);
@@ -106,33 +74,31 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
   raiz.updateMatrixWorld(true);
   const esqueleto = new THREE.Skeleton(ossos);
 
-  const [texs, texCabeca, texNormal] = await Promise.all([texturaCorpo(aniso), texturaWebp(new URL('cabeca-rb.webp', BASE).href, true, aniso), texturaWebp(new URL('pano-normal.webp', BASE).href, false, aniso)]);
-  texNormal.wrapS = texNormal.wrapT = THREE.RepeatWrapping;
-  const texCorpo = texs.cor;
-  // couro do traje: brilho de verniz (clearcoat) e relevo dos gomos no PC; no celular só a cor e a rugosidade
-  const matCorpo = mobile
-    ? new THREE.MeshStandardMaterial({ map: texCorpo, roughnessMap: texs.rugosidade, roughness: 1, metalness: 0.15, bumpMap: texs.rugosidade, bumpScale: 1.6, normalMap: texNormal, normalScale: new THREE.Vector2(0.3, 0.3), emissive: 0x240004 })
-    : new THREE.MeshPhysicalMaterial({ map: texCorpo, roughnessMap: texs.rugosidade, roughness: 1, metalness: 0.12, bumpMap: texs.rugosidade, bumpScale: 2.2, normalMap: texNormal, normalScale: new THREE.Vector2(0.35, 0.35), clearcoat: 0.55, clearcoatRoughness: 0.32, sheen: 0.4, sheenColor: new THREE.Color(0xff6040), emissive: 0x240004 });
-  const matCabeca = new THREE.MeshStandardMaterial({ map: texCabeca, roughness: 0.65, metalness: 0 });
+  const texCabeca = await texturaWebp(new URL('cabeca-rb.webp', BASE).href, true, aniso);
+  // o traje (cores, painéis, frisos, cinto, luvas, botas e a máscara) é desenhado no shader: js/traje.js.
+  // No PC, verniz (clearcoat) e brilho de tecido (sheen); no celular, o mesmo desenho sem essas camadas.
+  const matCorpo = aplicarTraje(mobile
+    ? new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, emissive: 0x120002 })
+    : new THREE.MeshPhysicalMaterial({ roughness: 1, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.4, sheen: 0.18, sheenColor: new THREE.Color(EMBLEMAS[traje]?.brilhoTecido ?? 0x8a1010), emissive: 0x120002 }), 'corpo', traje);
+  const matCabeca = aplicarTraje(new THREE.MeshStandardMaterial({ map: texCabeca, roughness: 0.65, metalness: 0 }), 'cabeca', traje);
   const corpo = malha(L.partes.corpo, esqueleto, matCorpo), cabeca = malha(L.partes.cabeca, esqueleto, matCabeca);
   for (const m of [corpo, cabeca]) { raiz.add(m); m.bind(esqueleto, new THREE.Matrix4()); }
 
-  // capuz, crista e emblema no peito
-  const vermelho = mobile ? new THREE.MeshStandardMaterial({ color: 0xb8122a, roughness: 0.4, metalness: 0.25, emissive: 0x240004 }) : new THREE.MeshPhysicalMaterial({ color: 0xb8122a, roughness: 0.38, metalness: 0.15, clearcoat: 0.6, clearcoatRoughness: 0.3, emissive: 0x240004 });
-  const ouro = new THREE.MeshStandardMaterial({ color: 0xf0be28, roughness: 0.28, metalness: 0.6, emissive: 0x5a3c00 });
-  const J = ind.repouso.juntas, hc = [0.03, 1.668, 0], jc = J.cabeca;
-  const capuz = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 18, Math.PI + 0.95, Math.PI * 2 - 1.9, 0, Math.PI * 0.64), vermelho);
-  capuz.scale.set(0.128, 0.122, 0.1); capuz.position.set(hc[0] - jc[0], hc[1] - jc[1], hc[2] - jc[2]); ossos[I.cabeca].add(capuz);
-  // crista dourada no alto do capuz (de frente para trás)
-  const crista = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.014, 0.024), ouro);
-  crista.position.set(hc[0] - jc[0] - 0.005, hc[1] - jc[1] + 0.122, 0); crista.rotation.z = -0.04; ossos[I.cabeca].add(crista);
-  // emblema próprio do herói: anel dourado com uma faísca de quatro pontas
-  const matEmb = new THREE.MeshStandardMaterial({ color: 0xf6c82a, emissive: 0xb88a10, emissiveIntensity: 0.9, side: THREE.DoubleSide });
+  // emblema próprio do herói (no centro do peitoral): disco grafite, anel dourado e uma faísca de quatro pontas
+  const J = ind.repouso.juntas;
+  const EM = EMBLEMAS[traje] || EMBLEMAS.heroi;
+  const matDisco = new THREE.MeshStandardMaterial({ color: EM.disco, roughness: 0.35, metalness: 0.4 });
+  const matEmb = new THREE.MeshStandardMaterial({ color: EM.cor, roughness: 0.25, metalness: 0.85, emissive: EM.emissivo, emissiveIntensity: 0.7, side: THREE.DoubleSide });
   const emb = new THREE.Group();
-  emb.add(new THREE.Mesh(new THREE.RingGeometry(0.058, 0.075, 28), matEmb));
-  const faisca = new THREE.Shape(); faisca.moveTo(0, 0.052); faisca.lineTo(0.014, 0.014); faisca.lineTo(0.052, 0); faisca.lineTo(0.014, -0.014); faisca.lineTo(0, -0.052); faisca.lineTo(-0.014, -0.014); faisca.lineTo(-0.052, 0); faisca.lineTo(-0.014, 0.014); faisca.closePath();
+  const disco = new THREE.Mesh(new THREE.CircleGeometry(0.06, 32), matDisco); disco.position.z = -0.001; emb.add(disco);
+  emb.add(new THREE.Mesh(new THREE.RingGeometry(0.06, 0.075, 40), matEmb));
+  const faisca = new THREE.Shape();
+  if (EM.forma === 'divisa') {                          // duas divisas (setas) apontando para a frente
+    for (const o of [-0.022, 0.018]) { faisca.moveTo(o - 0.018, 0.04); faisca.lineTo(o + 0.022, 0); faisca.lineTo(o - 0.018, -0.04); faisca.lineTo(o - 0.032, -0.04); faisca.lineTo(o + 0.008, 0); faisca.lineTo(o - 0.032, 0.04); faisca.closePath(); }
+  } else { faisca.moveTo(0, 0.052); faisca.lineTo(0.014, 0.014); faisca.lineTo(0.052, 0); faisca.lineTo(0.014, -0.014); faisca.lineTo(0, -0.052); faisca.lineTo(-0.014, -0.014); faisca.lineTo(-0.052, 0); faisca.lineTo(-0.014, 0.014); faisca.closePath(); }
   emb.add(new THREE.Mesh(new THREE.ShapeGeometry(faisca), matEmb));
-  emb.scale.setScalar(1.25); emb.position.set(0.118, 1.305 - J.peito[1], 0); emb.rotation.y = Math.PI / 2; ossos[I.peito].add(emb);
+  // a frente do peito em repouso fica em x = 0,145: o emblema logo à frente dela, no meio do peitoral
+  emb.scale.setScalar(1.15); emb.position.set(0.152, 1.325 - J.peito[1], 0); emb.rotation.y = Math.PI / 2; ossos[I.peito].add(emb);
   emb.material = matEmb;
 
   const frente = new THREE.Group();
@@ -155,7 +121,7 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
   const tmp = new THREE.Quaternion();
   const par = (a, abd = 0) => tmp.copy(qz(a, abd));
 
-  const est = { fase: 0, ar: 0, planeio: 0, parede: 0, vib: 0, pele: 0, tt: 0 };
+  const est = { fase: 0, ar: 0, planeio: 0, parede: 0, vib: 0, pele: 0, tt: 0, luta: 0 };
   const posAn = new THREE.Vector3(), origem = new THREE.Vector3(), semente = { s: 1 };
   const rnd = () => { semente.s = (semente.s * 16807) % 2147483647; return semente.s / 2147483647 - 0.5; };
 
@@ -177,8 +143,12 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
     // coluna
     const twist = 0.2 * (0.4 + 0.6 * r + 0.3 * s2) * Math.sin(ph) * vivo;
     local(0, 0, twist * 0.5, 0);
-    local(1, 0, -twist * 0.5, -0.45 * lean + 0.02 * resp);
-    local(2, 0, -twist * 0.6, -0.45 * lean);
+    // luta: guarda (punhos na frente do rosto) e o tronco gira com o golpe (soco, gancho, raio)
+    est.luta = lerp(est.luta, e.luta || 0, 1 - Math.exp(-8 * dt));
+    const g = e.golpe, giroG = g ? -g.lado * (g.tipo === 'gancho' ? 0.45 : 0.38) * g.k : 0, inclG = g?.tipo === 'gancho' ? 0.12 * g.k : g ? -0.1 * g.k : 0;
+    const lutaInc = 0.12 * est.luta * (1 - est.ar);
+    local(1, 0, -twist * 0.5 + giroG * 0.5, -0.45 * lean + 0.02 * resp - lutaInc * 0.5 + inclG);
+    local(2, 0, -twist * 0.6 + giroG * 0.6, -0.45 * lean - lutaInc * 0.5 + inclG * 0.5);
     local(3, 0, 0, 0.1 * lean);
     local(4, 0, twist * 0.2, 0.5 * lean * (1 - 0.0) - 0.04);
     for (const c of [I.claviculaE, I.claviculaD]) local(c, 0, 0, 0);
@@ -193,7 +163,9 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
       const hipAr = E ? 0.95 : -0.35, kneeAr = E ? 1.25 : 0.55;
       hip = lerp(hip, hipAr * (0.6 + 0.4 * s2), noAr); knee = lerp(knee, kneeAr, noAr);
       hip = lerp(hip, -0.12 + lado * 0.05, est.planeio * noAr); knee = lerp(knee, 0.25, est.planeio * noAr);
-      const abd = lado * 0.035 * (1 - noAr);
+      const Lp = est.luta * (1 - noAr) * (1 - r);               // base de luta: joelhos dobrados, pés afastados, um à frente
+      knee += 0.32 * Lp; hip += 0.16 * Lp + (E ? 0.14 : -0.1) * Lp;
+      const abd = lado * (0.035 + 0.07 * Lp) * (1 - noAr);
       mundo(co, par(hip, abd)); mundo(ca, par(hip - knee, abd * 0.5));
       const dedo = -(hip - knee) * 0.5 - 0.5 * Math.max(0, -Math.sin(p)) * (1 - noAr) - 0.25 * noAr;
       mundo(pe, par(dedo));
@@ -205,7 +177,15 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
       swing = lerp(swing, E ? 1.0 : -0.5, noAr * (1 - est.planeio));
       cot = lerp(cot, 1.2, noAr);
       swing = lerp(swing, 0, est.planeio); cot = lerp(cot, 0.1, est.planeio);
-      const abdB = lerp(lado * 0.8, -lado * 0.84, est.planeio);
+      let abdB = lerp(lado * 0.8, -lado * 0.84, est.planeio);
+      const L = est.luta * (1 - noAr) * (1 - r * 0.8);
+      if (L > 0.01) { swing = lerp(swing, 0.35, L); cot = lerp(cot, 1.55, L); abdB = lerp(abdB, lado * 0.86, L); }
+      if (g && g.k > 0) {
+        const meu = lado === g.lado;
+        if (meu && (g.tipo === 'soco' || g.tipo === 'raio')) { swing = lerp(swing, 1.5, g.k); cot = lerp(cot, 0.04, g.k); abdB = lerp(abdB, lado * 1.0, g.k); }
+        else if (meu && g.tipo === 'gancho') { swing = lerp(swing, 1.2, g.k); cot = lerp(cot, 1.05, g.k); abdB = lerp(abdB, lado * 0.95, g.k); }
+        else { swing = lerp(swing, 0.35, g.k); cot = lerp(cot, 1.6, g.k); abdB = lerp(abdB, lado * 0.86, g.k); }   // o outro braço fica na guarda
+      }
       mundo(br, qz(swing, abdB)); mundo(an, qz(swing + cot, abdB));
       mundo(mao, wq[an].clone());
     }
@@ -227,7 +207,7 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
       raiz.position.y = (0.115 - minY) * (1 - noAr * 2);
     }
     // material: vibração = translúcido com brilho
-    matCorpo.emissive.setRGB(0.14 + 0.8 * vj * (0.5 + 0.5 * Math.sin(tt * 90)), 0.02 + 0.3 * vj, 0.02);
+    matCorpo.emissive.setRGB(0.02 + 0.8 * vj * (0.5 + 0.5 * Math.sin(tt * 90)), 0.003 + 0.3 * vj, 0.004);
     matCorpo.opacity = 1 - 0.38 * vj; matCorpo.transparent = vj > 0.02;
     matCabeca.opacity = matCorpo.opacity; matCabeca.transparent = matCorpo.transparent;
     return raiz.position.y;
@@ -237,10 +217,10 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false } = {}) {
   aplicar({ v: 0, noChao: true }, 0.016);
   // o modelo olha para +x; o jogo olha para +z (rotação y = -90°)
   frente.rotation.y = -Math.PI / 2; frente.add(raiz);
-  const materiais = [matCorpo, matCabeca, vermelho, ouro, texCorpo, texs.rugosidade, texCabeca, texNormal];
+  const materiais = [matCorpo, matCabeca, matDisco, matEmb, texCabeca];
   return {
     grupo: frente, aplicar, materiais, ossos, raiz,
-    setVisivelProfundo(prof) { for (const m of [matCorpo, matCabeca, vermelho, ouro, matEmb]) { m.depthTest = !prof; } },
+    setVisivelProfundo(prof) { for (const m of [matCorpo, matCabeca, matDisco, matEmb]) { m.depthTest = !prof; } },
     dispose() { corpo.geometry.dispose(); cabeca.geometry.dispose(); materiais.forEach((m) => m.dispose?.()); },
   };
 }

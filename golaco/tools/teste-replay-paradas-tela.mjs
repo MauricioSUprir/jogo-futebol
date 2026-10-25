@@ -628,13 +628,16 @@ if (roda('O')) {
     {
       const { x2: a, y2: b } = r, c = compararHashes(a, b), ja = janelas(a.log)[1];
       const ha = a.hist?.[1], fa = a.forcados[1];
-      // B não segura: durante o replay de A ela para no passo em que A parou + D (a entrada de A que ela tem) + folga
+      // B não segura: durante o replay de A ela para no passo em que A parou + D (a entrada de A que ela tem) + folga. O D
+      // de cada aba só sobe e pode ser diferente nas duas (a máquina carregada sobe o de A): B anda até onde a entrada de A
+      // chegou, o passo de A + o D de A — vale o maior dos dois (antes o de B: reprovava por 3 passos com o CI cheio)
+      const Dmax = Math.max(a.D ?? 0, b.D ?? 0);
       const nA0 = ja ? passoEm(a.log, ja.t0) : null, nB0 = ja ? passoEm(b.log, ja.t0) : null, nB1 = ja ? passoEm(b.log, ja.t1 - 300) : null;
       const espera = !!ja && b.log.some(l => l[0] >= ja.t0 && l[0] <= ja.t1 && /Aguardando/.test(l[4]));
       meta('V8b online com os replays desligados numa aba ("Replays: Desligado" = ?replay=0): só a outra segura, esta espera (para no passo de A + D + 2 no máximo) e não há dessincronia',
-        a.semApi ? 'sem a API de replays de parada' : `forçado na bola morta ${fa?.inicio ?? '-'} (Node: ${SO.b}); B desligou os replays no tick ${b.desligou ?? '-'}; A: replay ${ha ? `tick ${ha.tick} (${ja?.quadros ?? 0} quadros, ${ja ? f2((ja.t1 - ja.t0) / 1000) : '-'} s)` : 'não'}; B (ligado ${b.ligado}): ${(b.hist ?? []).length} replays no total, passo ${nB0} → ${nB1} durante o de A (A parou no ${nA0}, D ${b.D})${espera ? ', "Aguardando…" na tela' : ''}; dessincronia ${a.dessinc ? 'SIM' : 'não'}/${b.dessinc ? 'SIM' : 'não'}; hashes ${c.difs} diferentes de ${c.comuns} (até o passo ${c.ultimo})`,
+        a.semApi ? 'sem a API de replays de parada' : `forçado na bola morta ${fa?.inicio ?? '-'} (Node: ${SO.b}); B desligou os replays no tick ${b.desligou ?? '-'}; A: replay ${ha ? `tick ${ha.tick} (${ja?.quadros ?? 0} quadros, ${ja ? f2((ja.t1 - ja.t0) / 1000) : '-'} s)` : 'não'}; B (ligado ${b.ligado}): ${(b.hist ?? []).length} replays no total, passo ${nB0} → ${nB1} durante o de A (A parou no ${nA0}, D ${a.D}/${b.D})${espera ? ', "Aguardando…" na tela' : ''}; dessincronia ${a.dessinc ? 'SIM' : 'não'}/${b.dessinc ? 'SIM' : 'não'}; hashes ${c.difs} diferentes de ${c.comuns} (até o passo ${c.ultimo})`,
         'A segura; B 1 replay (só o da fase 1) e para em ≤ o passo de A + D + 2; não; 0',
-        r.f2 && !!ha && ha.tick === fa.inicio + 59 && b.ligado === false && (b.hist ?? []).length === 1 && nA0 != null && nB1 != null && nB1 <= nA0 + b.D + 2 && !a.dessinc && !b.dessinc && c.difs === 0 && c.comuns >= 5 && c.ultimo > ha.tick);
+        r.f2 && !!ha && ha.tick === fa.inicio + 59 && b.ligado === false && (b.hist ?? []).length === 1 && nA0 != null && nB1 != null && nB1 <= nA0 + Dmax + 2 && !a.dessinc && !b.dessinc && c.difs === 0 && c.comuns >= 5 && c.ultimo > ha.tick);
     }
   } catch (e) { meta('V8 execução (online)', erroCurto(e), 'sem exceção', false); }
 }
