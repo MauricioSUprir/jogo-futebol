@@ -3060,17 +3060,24 @@ juntadas na carga do `ia-tatica.js`: `SUAVE_MARCA_P = {...TATICA.suave, ...IA_PE
   condutor da pessoa a até `encurta[0]` m, sem o condutor rápido e com a velocidade filtrada dele (`B.cvx`, `B.cvz`) abaixo de
   `encurta[3]` m/s: o ponto vai `encurta[2]` do caminho até o ponto a `encurta[1]` m do condutor, na linha condutor → meu gol.
 - **Linha de engajamento** (`blocoDoTime`): `IA_PESSOA.engaja[pressão]` no lugar do `IA_DEFESA.engaja`.
-- **Recomposição** (`recompor`, `R = RECOMP_P`): a mais de `recomp.longe[0]` m da bola, intensidade `longe[1]` e sem o sprint;
-  depois do `rumoPressa`, a **virada em arco** (`viradaEmArco`): com o pedido a mais de `arco[0]` rad da velocidade e o corpo a
+- **Recomposição** (`recompor`, `R = RECOMP_P`): a mais de `recomp.longe[0]` m da bola (quem ficou à frente dela — `u ≥ ub` —, a
+  mais de `longe[2]`), intensidade `longe[1]` e sem o sprint; com `longe[3]`, o MEIO que ficou à frente da bola (nem `def` nem a
+  frente da vaga, `sem.x < 0`) nunca entra no "longe" (o recuo do meio do `teste-transicao --humano`, meta ≥ 5,5 m/s); depois do
+  `rumoPressa`, a **virada em arco** (`viradaEmArco`): com o pedido a mais de `arco[0]` rad da velocidade e o corpo a
   mais de `arco[1]` m/s, o pedido vira o rumo a `arco[2]` rad da velocidade, pelo lado do pedido (a menos de 0,2 rad de 180°:
   pelo lado do meu gol, o do sinal do produto vetorial velocidade × (meu gol − corpo)), com o CORRER; o `estadoT(j).qdir` do
   `rumoPressa` fica no arco. **Item 19:** com o condutor rápido (`B.rapido`), quem ele já passou — atrás dele, a até
   `corrida.batidoVolta` m (`batidoVolta`) — liga a recomposição (com o atraso acima do `desliga`) e vai com o CORRER.
 - **Condutor rápido** (`blocoDoTime`, `noCaminho`, `acompanhar`, `acompanhaCorredor` e o `liga` do `recompor`): `CORRIDA_P`
   (`correLonge` 4; `v` não muda).
+- **O passe da IA contra a pessoa** (`ia-ataque.js decidir` → `riscoCaminho(..., ta)`, `UTIL_P.passeAntecipa`): no PASSE e na
+  ENFIADA o risco é o maior entre cada adversário onde está e onde estará em `ta` s (a velocidade dele × `ta`); sem a chave
+  (`IA_ATAQUE.utilidade`, a IA × IA), `ta` = 0 e a conta é a de sempre. O passe sai depois da carga do botão (`acaoIA`); a
+  roubada desfeita do `teste-defesa-corrida` era o passe decidido no tick da roubada e solto na corrida de volta da pessoa.
 - **Medido e fora** (PESQUISA-CATEGORIA-D.md §6): o sprint mais cedo da recomposição e a frente sprintando nos 2 s da perda,
-  a cobertura do 2º homem a 6 m pelo modo pressa, `engaja` 78, `corrida.v` 6,3, o recuo antecipado do 1º homem e a contenção
-  mais longe.
+  a cobertura do 2º homem a 6 m pelo modo pressa, `engaja` 78, `corrida.v` 6,3, o recuo antecipado do 1º homem, a contenção
+  mais longe, o "longe" valendo para o meio, a intensidade 0,65 longe da bola e o passe antecipado só no agora + 0,15–0,25 s
+  (sem o máximo com o agora).
 - **Pendente**: o defensor do corredor ≥ 5 m/s (`teste-defesa-corrida`, informativo), a recomposição "longe e devagar" ≤ 15%
   e o 2º e o 3º homem a ≤ 5 / ≤ 8,5 m (`teste-ia-corre` M6–M8, informativos) — os porquês nas linhas do teste.
 

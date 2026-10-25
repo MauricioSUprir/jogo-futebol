@@ -99,27 +99,30 @@ export function chanceDeGol(u, w) {
  * acoes.js riscoLinha (reação 0,25 s, corrida a 6,5 m/s), mas medindo a distância até o PONTO do
  * segmento (não até a reta infinita) e dando ao recebedor os pontos a que ele chega antes (quem está
  * colado atrás do recebedor não corta o passe). vRec = velocidade com que o recebedor vem na bola
- * (0 = bola no espaço). Sem o goleiro com semGoleiro (chute).
+ * (0 = bola no espaço). Sem o goleiro com semGoleiro (chute). Com ta > 0 (D3, contra a pessoa: o passe da IA sai
+ * depois da carga do botão, ~0,3–0,7 s), vale o maior risco entre cada adversário onde está e onde estará em ta s.
  */
-function riscoCaminho(m, time, ax, az, bx, bz, v, vRec, semGoleiro) {
+function riscoCaminho(m, time, ax, az, bx, bz, v, vRec, semGoleiro, ta = 0) {
   const dx = bx - ax, dz = bz - az;
   const L = MD.hypot(dx, dz) || 1;
   const ux = dx / L, uz = dz / L;
   let r = 0;
   for (const o of m.jogadores) {
     if (o.time === time || (semGoleiro && o.posicao === 'GOL') || o.papel === 'parado' || o.papel === 'marcador') continue;
-    const ox = o.x - ax, oz = o.z - az;
-    const s = clamp(ox * ux + oz * uz, 0, L);
-    const lat = MD.hypot(ox - s * ux, oz - s * uz);
-    const tAdv = 0.25 + Math.max(0, lat - 0.9) / 6.5;
-    let lim = s / Math.max(v, 3) + 0.15;
-    if (vRec > 0) lim = Math.min(lim, (L - s) / vRec + 0.1);
-    if (tAdv < lim) { const q = (lim - tAdv) / 0.6; if (q > r) r = q >= 1 ? 1 : q; }
-    // a bola passando ao alcance do corpo dele (domínio sem tempo de reação: sim.js bolaLivre) é corte
-    // — antes um marcador colado no passador não contava (a bola passava "antes da reação")
-    if (s > 0.3 && s < L - 1 && lat < RISCO_CORPO[1]) {
-      const q = clamp((RISCO_CORPO[1] - lat) / (RISCO_CORPO[1] - RISCO_CORPO[0]), 0, 1);
-      if (q > r) r = q;
+    for (let k = 0; k < (ta > 0 ? 2 : 1); k++) {
+      const ox = o.x + (k ? o.vx * ta : 0) - ax, oz = o.z + (k ? o.vz * ta : 0) - az;
+      const s = clamp(ox * ux + oz * uz, 0, L);
+      const lat = MD.hypot(ox - s * ux, oz - s * uz);
+      const tAdv = 0.25 + Math.max(0, lat - 0.9) / 6.5;
+      let lim = s / Math.max(v, 3) + 0.15;
+      if (vRec > 0) lim = Math.min(lim, (L - s) / vRec + 0.1);
+      if (tAdv < lim) { const q = (lim - tAdv) / 0.6; if (q > r) r = q >= 1 ? 1 : q; }
+      // a bola passando ao alcance do corpo dele (domínio sem tempo de reação: sim.js bolaLivre) é corte
+      // — antes um marcador colado no passador não contava (a bola passava "antes da reação")
+      if (s > 0.3 && s < L - 1 && lat < RISCO_CORPO[1]) {
+        const q = clamp((RISCO_CORPO[1] - lat) / (RISCO_CORPO[1] - RISCO_CORPO[0]), 0, 1);
+        if (q > r) r = q;
+      }
     }
   }
   return r;
@@ -878,7 +881,7 @@ function decidir(m, j, A, ia, cobranca) {
     const press = clamp((U.pressaoRecebe - advMaisPerto(m, j.time, o.x, o.z)) / (U.pressaoRecebe - 1), 0, 1);
     if (L >= ACOES.passe.dMin && L <= U.passeMax) {
       // P: ninguém corta a linha × precisão (passe longo erra mais) × o recebedor não perde na hora
-      const r = riscoCaminho(m, j.time, j.x, j.z, o.x, o.z, U.vPasse, 6, false);
+      const r = riscoCaminho(m, j.time, j.x, j.z, o.x, o.z, U.vPasse, 6, false, U.passeAntecipa);
       const P = (1 - r) * (1 - U.erroDist * Math.max(0, L - 20) / 20) * (1 - U.passePress * press);
       const V = ameacaEsperada(ou, ow) * (1 - U.pressaoValor * press) * (imp ? U.impedido : 1) * frente(ou - u0) + K;
       considerar('passe', P * V - (1 - P) * perda((ou + u0) / 2, (ow + w0) / 2), o.id, 0, 0, clamp(0.3 + L / 60, 0.3, 0.7));
@@ -908,7 +911,7 @@ function decidir(m, j, A, ia, cobranca) {
         let tAdv = Infinity;
         for (const q of m.jogadores) if (q.time !== j.time && q.papel !== 'parado' && q.papel !== 'marcador') tAdv = Math.min(tAdv, (q.posicao === 'GOL' ? 0.4 : 0.25) + Math.max(0, MD.hypot(q.x - ex, q.z - ez) - 1) / 6.5);
         const tRun = lead / vr;
-        const r = riscoCaminho(m, j.time, j.x, j.z, ex, ez, U.vEnfiada, 0, false);
+        const r = riscoCaminho(m, j.time, j.x, j.z, ex, ez, U.vEnfiada, 0, false, U.passeAntecipa);
         const pChao = (1 - r) * clamp((tAdv - Math.max(tRun, dB / U.vEnfiada + 0.3) + 0.3) / 0.6, 0, 1);
         const pAlta = U.enfiadaAltaP * clamp((tAdv - Math.max(tRun, dB / U.vEnfiadaAlta + 0.3) + 0.3) / 0.6, 0, 1);
         const alta = pAlta > pChao, P = alta ? pAlta : pChao;
