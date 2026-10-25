@@ -1407,7 +1407,8 @@ export const IA_PESSOA = {
   // PARAR e só então vira (~0,6 s parado vindo a 5 m/s); na curva ele vira pela aceleração lateral do corte
   // (JOGADOR.latCorte) sem parar — a física é a mesma. E, longe da bola (a mais de longe[0] m; quem ficou à frente dela, a
   // mais de longe[2] m), volta a longe[1] de intensidade (~4,5 m/s) e sem o sprint: é o que paga o volume de perto da bola
-  // (V7) — salvo, com longe[3], o MEIO que ficou à frente da bola (nem a linha de defesa nem a frente), que volta sempre a
+  // (V7; só na transição — TATICA.recomp.janela s depois da perda —: no jogo organizado volta com o sprint de antes) — salvo,
+  // com longe[3], o MEIO que ficou à frente da bola (nem a linha de defesa nem a frente), que volta sempre a
   // todo vapor: com o longe valendo para ele, o recuo do meio no teste-transicao --humano caía de 6,1 para 4,0–5,5 m/s (meta
   // ≥ 5,5: é o lance de que o dono reclama, o meio que volta trotando depois da roubada). Com 20 m e o meio poupado, a perda
   // ia a 234–237 m/min; com 16 m, 232 (dentro do ± da base 229,7); com 0,65 de intensidade, a marcação devagar (M5) ia a 23%.

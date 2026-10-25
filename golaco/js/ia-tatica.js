@@ -1227,7 +1227,9 @@ function recompor(m, j, s, B, vaga, lado, extra) {
   // (quem ficou à frente da bola — do lado do gol deles — só a mais de R.longe[2] m: ele volta a todo vapor até lá; com
   // R.longe[3], o MEIO que ficou à frente — nem a linha de defesa nem a frente — nunca: é o lance de que o dono reclama, o
   // meio que volta trotando depois da roubada; a velocidade de recuo do meio no teste-transicao --humano)
-  const longe = R.longe != null && !(R.longe[3] && u >= ub && !frente && vaga.grupo !== 'def')
+  // (só na TRANSIÇÃO — os `janela` s depois da perda, o volume que o V7 mede: no jogo organizado quem está longe do lugar
+  // volta como antes, com o sprint da urgência — o ala da linha de defesa a 27 m da vaga trotava 6 s até ela; teste-taticas)
+  const longe = R.longe != null && naTransicao && !(R.longe[3] && u >= ub && !frente && vaga.grupo !== 'def')
     && MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z) > (u < ub ? R.longe[0] : R.longe[2] ?? R.longe[0]);
   const correr = !frente && !longe && atraso > R.corre && (ub < R.urgente || vb > R.vUrgente);
   const e = rumoPressa(m, j, { ...irPara(m, j, _t.x, _t.z, longe ? R.longe[1] : 1, correr, extra, 'pressa'), botoes: extra | (correr ? BOTAO.CORRER : 0) });
