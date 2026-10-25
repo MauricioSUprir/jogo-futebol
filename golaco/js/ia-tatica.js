@@ -273,7 +273,28 @@ function bolaLivre(m, j) {
   // do tempo de sprint da partida e não é o jogo — Metrica: sprint 0,6% do tempo).
   // (IA_DEFESA.livre.disputa null: arranca em toda bola solta — jogo mais intenso, pedido do dono)
   const correr = IA_DEFESA.livre.disputa == null || disputada(m, j, _t.x, _t.z);
-  return rumoPressa(m, j, { ...irPara(m, j, _t.x, _t.z, 1, correr, extra, 'pressa'), botoes: extra | (correr ? BOTAO.CORRER : 0) });
+  const e = rumoPressa(m, j, { ...irPara(m, j, _t.x, _t.z, 1, correr, extra, 'pressa'), botoes: extra | (correr ? BOTAO.CORRER : 0) });
+  return contraPessoa(m, j.time) ? chegarNaBola(m, j, e) : e;
+}
+
+/**
+ * D3 (o time da IA contra a pessoa; IA_PESSOA.livreChega): perto de uma bola solta LENTA, CHEGA nela — a velocidade
+ * pedida casa com a da bola mais uma folga que cai com a distância (o "arrive" de Reynolds 1999), sem o sprint. Vindo da
+ * pressão a ~6,5 m/s numa bola a 2,5 m/s, o domínio em corrida planejado no fim não a alcançava de lado e ele passava
+ * dela (teste-nao-passa meta 3: frente 3254 t 16649 #105, 0,77 m atrás e a pessoa ficou com ela).
+ */
+function chegarNaBola(m, j, e) {
+  const L = IA_PESSOA.livreChega, b = m.bola;
+  if (b.p.y > L.alturaMax) return e;
+  const vb = MD.hypot(b.v.x, b.v.z);
+  if (vb > L.vbMax) return e;
+  const d = MD.hypot(b.p.x - j.x, b.p.z - j.z);
+  if (d > L.longe) return e;
+  const vAlvo = vb + L.folga + L.k * Math.max(0, d - L.perto);
+  if (vAlvo >= j.par.vCorrida) return e;
+  const l = MD.hypot(e.x, e.z), mag = magDaVel(j, vAlvo);
+  const f = l > mag ? mag / l : 1;
+  return { ...e, x: e.x * f, z: e.z * f, botoes: e.botoes & ~BOTAO.CORRER };
 }
 
 /**

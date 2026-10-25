@@ -1423,6 +1423,10 @@ export const IA_PESSOA = {
   // só contra a pessoa o defensor do corredor ia a 4,1 m/s (meta 5, pendente), mas o vai e volta da IA subia a 4,90 e as
   // roubadas sofridas a 2,82/min (teste-ia-corre V3 e V5 reprovavam)
   corrida: { correLonge: 4 },
+  // Chegar na bola solta LENTA (ia-tatica.js chegarNaBola): a menos de `longe` m de uma bola no chão (≤ alturaMax m) a até
+  // vbMax m/s, a velocidade pedida é a da bola + folga + k × (a distância − perto), sem o sprint. Com a marcação do D3 a IA
+  // chega à bola solta vinda da pressão a 6–8 m/s; sem isso passava da bola a 2,5 m/s (teste-nao-passa meta 3)
+  livreChega: { perto: 1, longe: 5, folga: 1.5, k: 2, vbMax: 5, alturaMax: 0.5 },
 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca
