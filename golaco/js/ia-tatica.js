@@ -1205,9 +1205,11 @@ function recompor(m, j, s, B, vaga, lado, extra) {
   const vb = -(m.bola.v.x * lado);
   // (contra a pessoa, longe da bola — a mais de R.longe[0] m, fora da tela do celular — volta correndo a R.longe[1] de
   // intensidade e sem o sprint: a corrida vai para perto da jogada, o volume da transição não sobe)
-  // (quem ficou à frente da bola — do lado do gol deles — só a mais de R.longe[2] m: ele volta a todo vapor até lá, a
-  // velocidade de recuo do teste-transicao --humano)
-  const longe = R.longe != null && MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z) > (u < ub ? R.longe[0] : R.longe[2] ?? R.longe[0]);
+  // (quem ficou à frente da bola — do lado do gol deles — só a mais de R.longe[2] m: ele volta a todo vapor até lá; com
+  // R.longe[3], o MEIO que ficou à frente — nem a linha de defesa nem a frente — nunca: é o lance de que o dono reclama, o
+  // meio que volta trotando depois da roubada; a velocidade de recuo do meio no teste-transicao --humano)
+  const longe = R.longe != null && !(R.longe[3] && u >= ub && !frente && vaga.grupo !== 'def')
+    && MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z) > (u < ub ? R.longe[0] : R.longe[2] ?? R.longe[0]);
   // (item 19, contra a pessoa: com o condutor rápido, quem ele já passou — atrás dele, a até CORRIDA_P.batidoVolta m — volta
   // em disparada, sem esperar o atraso do sprint)
   const correr = (!frente && !longe && atraso > R.corre && (ub < R.urgente || vb > R.vUrgente)) || (pessoa && batidoVolta(m, j, B));
