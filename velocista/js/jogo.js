@@ -875,13 +875,14 @@ function ajustarResolucao(dtBruto) {
   let pr = RES.pr;
   if (RES.media > 1 / 34 && pr > RES.min) pr = Math.max(RES.min, pr - 0.15);
   else if (RES.media < 1 / 56 && pr < RES.max) pr = Math.min(RES.max, pr + 0.1);
-  if (pr !== RES.pr) { RES.pr = pr; renderer.setPixelRatio(pr); renderer.setSize(innerWidth, innerHeight, false); posfx.tamanho(innerWidth, innerHeight, pr); }
+  if (pr !== RES.pr) { RES.pr = pr; renderer.setPixelRatio(pr); redimensionar(); }
 }
 function quadro() {
   requestAnimationFrame(quadro);
   const dtBruto = relogio.getDelta();
   let dt = Math.min(dtBruto, 0.05);
   if (combate.hitstop > 0) { combate.hitstop -= dt; dt *= 0.12; }      // impacto: o tempo quase para por um instante
+  conferirTela();
   ajustarResolucao(dtBruto);
   if (emPe()) { teclas.clear(); stick.x = stick.y = 0; toque.correr = toque.vibrar = false; return; }
   if (J.modo === 'jogando') {
@@ -920,8 +921,23 @@ function quadro() {
   posfx.render();
 }
 
-function redimensionar() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); posfx.tamanho(w, h, RES.pr); camera.aspect = w / h; camera.updateProjectionMatrix(); }
-addEventListener('resize', redimensionar); redimensionar();
+// O tamanho do desenho segue o tamanho REAL do canvas na tela, conferido a cada quadro. Só o evento 'resize' não bastava:
+// ao girar o celular (e na tela cheia, e no app da tela de início do iPhone) ele chega com o innerWidth/innerHeight de
+// antes do giro — o desenho ficava com a proporção do celular em pé, esticado na tela deitada ("achatado").
+const TAM = new THREE.Vector2();
+function medirTela() { return { w: el.cena.clientWidth || innerWidth, h: el.cena.clientHeight || innerHeight }; }
+function redimensionar() {
+  const { w, h } = medirTela(); if (!w || !h) return;
+  renderer.setSize(w, h, false); posfx.tamanho(w, h, RES.pr); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+function conferirTela() {   // compara a tela com o que está valendo no desenho e na câmera (não com uma medida guardada)
+  const { w, h } = medirTela(); renderer.getSize(TAM);
+  if (w !== TAM.x || h !== TAM.y || Math.abs(camera.aspect - w / h) > 1e-3) redimensionar();
+}
+addEventListener('resize', redimensionar);
+addEventListener('orientationchange', () => setTimeout(redimensionar, 300));
+visualViewport?.addEventListener('resize', redimensionar);
+redimensionar();
 
 // ---------- carga inicial ----------
 esferas = todasEsferas(); J.total = esferas.length; el.total.textContent = J.total;
