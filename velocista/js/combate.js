@@ -166,8 +166,11 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
     }
     return id;
   }
+  // alvos extras (os vilões, ver viloes.js): {extra: true, x, y, z, alvejavel(), golpe(tipo, P, {dano, especial}) → acertou?}
+  const extras = [];
+  const todos = () => (extras.length ? bandidos.concat(extras) : bandidos);
   const deGangue = (id) => bandidos.filter((e) => e.gangue === id);
-  const emPe = (e) => e.estado !== 'caido' && e.estado !== 'voando' && e.estado !== 'preso' && e.estado !== 'fugiu';
+  const emPe = (e) => e.extra ? e.alvejavel() : e.estado !== 'caido' && e.estado !== 'voando' && e.estado !== 'preso' && e.estado !== 'fugiu';
   /** quantos ainda de pé numa gangue */
   const vivos = (id) => deGangue(id).filter(emPe).length;
   function centro(id) {
@@ -181,7 +184,8 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
 
   // ---------- dano ----------
   function acertar(e, tipo, P, { dano = 1, empurra = 3, alto = 0, especial = false } = {}) {
-    if (!emPe(e) && e.estado !== 'preso') return;
+    if (e.extra) return e.golpe(tipo, P, { dano, especial });
+    if (!emPe(e) && e.estado !== 'preso') return false;
     e.vida -= dano;
     const dx = e.x - P.x, dz = e.z - P.z, d = Math.hypot(dx, dz) || 1;
     if (e.vida <= 0) {
@@ -189,11 +193,12 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
       eventos.push({ tipo: 'nocaute', especial, gangue: e.gangue });
     } else { e.estado = 'atordoado'; e.t = 0; e.vx = (dx / d) * 2.2; e.vz = (dz / d) * 2.2; }
     e.b.moletom.emissive.setRGB(0.9, 0.55, 0.1); e.brilho = 0.15;
+    return true;
   }
 
   function alvoMaisPerto(P, dirX, dirZ, alcance, excluir = null) {
     let melhor = null, nota = Infinity;
-    for (const e of bandidos) {
+    for (const e of todos()) {
       if (!emPe(e) || e === excluir) continue;
       const dx = e.x - P.x, dz = e.z - P.z, d = Math.hypot(dx, dz);
       if (d > alcance || Math.abs(e.y - P.y) > 4) continue;
@@ -210,6 +215,7 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
     if (H.acao && H.acao.tipo !== 'soco') return false;
     if (H.acao) { H.fila = true; return true; }                  // aperto durante o golpe: emenda o próximo (combo)
     const alvo = alvoMaisPerto(P, dirX, dirZ, AVANCO_MAX);
+    if (alvo?.extra && alvo.estado === 'perseguicao') { alvo.golpe('soco', P); return true; }   // vilão fugindo: o avanço o alcança na hora
     H.combo = H.tempo - H.ultimoGolpe < 0.9 ? (H.combo + 1) % 3 : 0;
     const gancho = H.combo === 2;
     let dash = 0, de = { x: P.x, z: P.z, y: P.y }, para = de;
@@ -260,11 +266,11 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
           A.feito = true; H.ultimoGolpe = H.tempo;
           const hx = Math.sin(P.h), hz = Math.cos(P.h), mx = P.x + hx * 0.9, mz = P.z + hz * 0.9;
           // acerta o alvo (se perto) e quem estiver na frente do punho
-          for (const e of bandidos) {
+          for (const e of todos()) {
             if (!emPe(e)) continue;
             const d = Math.hypot(e.x - mx, e.z - mz);
             if (d < 1.25 || (e === A.alvo && Math.hypot(e.x - P.x, e.z - P.z) < 2.2)) {
-              acertar(e, 'soco', P, A.gancho ? { dano: 2, empurra: 9, alto: 7 } : { dano: 1 });
+              if (!acertar(e, A.gancho ? 'gancho' : 'soco', P, A.gancho ? { dano: 2, empurra: 9, alto: 7 } : { dano: 1 })) continue;   // o vilão desviou
               fx.clarao(e.x, P.y + (A.gancho ? 1.5 : 1.35), e.z, A.gancho ? 2.6 : 1.6, 0.16);
               for (let i = 0; i < 3; i++) fx.raio(e.x, P.y + 1.4, e.z, e.x + rnd(-1.2, 1.2), P.y + rnd(0.6, 2.2), e.z + rnd(-1.2, 1.2), { vida: 0.15, desvio: 0.3 });
               H.hitstop = A.gancho ? 0.09 : 0.05; H.tremor = Math.max(H.tremor, A.gancho ? 0.35 : 0.18);
@@ -308,6 +314,7 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
         H.tremor = Math.max(H.tremor, 0.12);
         if (A.t >= A.dur) {
           for (const e of A.presos) { e.estado = 'atordoado'; e.vida = 1; acertar(e, 'ciclone', { x: A.cx, z: A.cz, y: P.y }, { dano: 9, empurra: 13, alto: 7, especial: true }); }
+          for (const e of extras) if (emPe(e) && Math.hypot(e.x - A.cx, e.z - A.cz) < 13) acertar(e, 'ciclone', { x: A.cx, z: A.cz, y: P.y }, { especial: true });
           fx.onda(A.cx, P.y, A.cz, 14, 0.6); H.acao = null; P.vx = P.vz = 0;
         }
       } else if (A.tipo === 'sonico') {
@@ -323,7 +330,7 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
         } else { P.vx = P.vz = 0; }
         if (!A.feito && A.t >= 0.95) {
           A.feito = true;
-          for (const e of bandidos) {
+          for (const e of todos()) {
             if (!emPe(e)) continue;
             const d = Math.hypot(e.x - A.ix, e.z - A.iz);
             if (e === A.alvo || d < 10) acertar(e, 'sonico', P, { dano: 9, empurra: e === A.alvo ? 26 : 16 - d, alto: e === A.alvo ? 9 : 6, especial: true });
@@ -421,6 +428,11 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
 
   return {
     gerarGangue, vivos, centro, remover, bater, especial, passo, poseHeroi,
+    registrarAlvo: (a) => { if (!extras.includes(a)) extras.push(a); },
+    removerAlvo: (a) => { const i = extras.indexOf(a); if (i >= 0) extras.splice(i, 1); },
+    /** o herói no meio de um avanço ou de um golpe especial: rápido demais para levar golpe */
+    get intocavel() { const A = H.acao; return !!A && (A.tipo !== 'soco' || A.t < A.dash); },
+    efeitos: fx,
     get ocupado() { return !!H.acao; }, get acao() { return H.acao; }, get bandidos() { return bandidos; },
     // a câmera olha para o centro do vórtice e para o ponto do impacto do sônico (o herói some e volta no quadro)
     get foco() { const A = H.acao; return A?.tipo === 'ciclone' ? { x: A.cx, z: A.cz } : A?.tipo === 'sonico' ? { x: A.ix - A.hx * 3, z: A.iz - A.hz * 3 } : null; },

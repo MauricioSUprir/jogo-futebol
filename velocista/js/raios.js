@@ -6,7 +6,14 @@ const NB = 48;                 // raios vivos no máximo
 const SEG = 9;                 // segmentos por raio
 const rnd = (a, b) => a + Math.random() * (b - a);
 
-export function criarRaios(cena, { mobile = false } = {}) {
+// cores do rastro: dourado (herói), azul (Zoom), vermelho (Flash Reverso); [r, g, b] do raio e o degradê do brilho
+export const CORES_RAIO = {
+  ouro: { raio: [1.1, 0.62, 0.12], brilho: ['255,240,190', '255,170,40', '255,120,0'] },
+  azul: { raio: [0.22, 0.6, 1.6], brilho: ['200,230,255', '60,140,255', '20,60,255'] },
+  vermelho: { raio: [1.6, 0.1, 0.06], brilho: ['255,200,190', '255,50,30', '200,0,0'] },
+};
+export function criarRaios(cena, { mobile = false, cor: corNome = 'ouro' } = {}) {
+  const C = CORES_RAIO[corNome] || CORES_RAIO.ouro;
   const maxRaios = mobile ? 26 : NB;
   const pos = new Float32Array(maxRaios * SEG * 2 * 3 * 2), cor = new Float32Array(maxRaios * SEG * 2 * 3 * 2);   // cada raio em 2 traços (mais grosso)
   const geo = new THREE.BufferGeometry();
@@ -17,7 +24,7 @@ export function criarRaios(cena, { mobile = false } = {}) {
   // brilho do corpo (sprite) — cresce com a velocidade
   const c = document.createElement('canvas'); c.width = c.height = 64;
   const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  gr.addColorStop(0, 'rgba(255,240,190,0.9)'); gr.addColorStop(0.3, 'rgba(255,170,40,0.45)'); gr.addColorStop(1, 'rgba(255,120,0,0)');
+  gr.addColorStop(0, `rgba(${C.brilho[0]},0.9)`); gr.addColorStop(0.3, `rgba(${C.brilho[1]},0.45)`); gr.addColorStop(1, `rgba(${C.brilho[2]},0)`);
   g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
   const brilho = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
   brilho.scale.setScalar(2.4); cena.add(brilho);
@@ -59,13 +66,13 @@ export function criarRaios(cena, { mobile = false } = {}) {
     for (const r of raios) {
       if (r.vida <= 0) continue;
       r.vida -= dt;
-      const f = Math.max(0, r.vida / r.total), cr = Math.min(1.6, 1.1 * f * (0.7 + r.forca)), cg = Math.min(0.9, 0.62 * f * (0.7 + r.forca)), cb = 0.12 * f;
+      const f = Math.max(0, r.vida / r.total), k = f * (0.7 + r.forca), cr = Math.min(1.6, C.raio[0] * k), cg = Math.min(1.6, C.raio[1] * k), cb = Math.min(1.6, C.raio[2] * k);
       for (let dupla = 0; dupla < 2; dupla++) for (let k = 0; k < SEG; k++) {
         const i = n * 6, oy = dupla * 0.025, ox = dupla * 0.02;
         pos[i] = r.pts[k * 3] + ox; pos[i + 1] = r.pts[k * 3 + 1] + oy; pos[i + 2] = r.pts[k * 3 + 2];
         pos[i + 3] = r.pts[k * 3 + 3] + ox; pos[i + 4] = r.pts[k * 3 + 4] + oy; pos[i + 5] = r.pts[k * 3 + 5];
         const nucleo = dupla ? 1 : 0.75;                       // o 2º traço mais claro: núcleo do raio
-        cor[i] = cor[i + 3] = cr * nucleo; cor[i + 1] = cor[i + 4] = cg * (dupla ? 1.25 : 1); cor[i + 2] = cor[i + 5] = cb * (dupla ? 2 : 1);
+        cor[i] = cor[i + 3] = cr * nucleo; cor[i + 1] = cor[i + 4] = cg * (dupla ? 1.25 : 1); cor[i + 2] = cor[i + 5] = cb * (dupla ? 1.4 : 1);
         n++;
       }
     }

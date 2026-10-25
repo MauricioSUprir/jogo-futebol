@@ -29,11 +29,23 @@ void tPerturba(inout vec3 n, float h) {
 }
 `;
 
-const CORES = /* glsl */ `
-const vec3 T_VERM = vec3(0.24, 0.010, 0.016);
-const vec3 T_VESC = vec3(0.085, 0.005, 0.008);
-const vec3 T_OURO = vec3(0.92, 0.56, 0.10);
-const vec3 T_GRAF = vec3(0.028, 0.026, 0.028);
+// paletas: a mesma forma do traje com outras cores (herói, e os dois vilões, com desenho próprio)
+// T_VERM = tecido, T_VESC = luvas/botas, T_OURO = frisos, T_GRAF = cinto/sola, T_BRILHO = quanto os frisos acendem
+const PALETAS = {
+  heroi: { verm: [0.24, 0.010, 0.016], vesc: [0.085, 0.005, 0.008], ouro: [0.92, 0.56, 0.10], graf: [0.028, 0.026, 0.028], brilho: 0, olho: [0, 0, 0], mascaraFechada: false },
+  zoom: { verm: [0.010, 0.010, 0.013], vesc: [0.004, 0.004, 0.006], ouro: [0.08, 0.32, 1.0], graf: [0.02, 0.03, 0.05], brilho: 0.9, olho: [0.2, 0.55, 2.2], mascaraFechada: true },
+  reverso: { verm: [0.62, 0.40, 0.015], vesc: [0.22, 0.12, 0.006], ouro: [0.75, 0.02, 0.02], graf: [0.03, 0.02, 0.015], brilho: 0.35, olho: [2.0, 0.08, 0.05], mascaraFechada: false },
+};
+const v3 = (c) => `vec3(${c.map((x) => x.toFixed(4)).join(', ')})`;
+const cores = (P) => /* glsl */ `
+const vec3 T_VERM = ${v3(P.verm)};
+const vec3 T_VESC = ${v3(P.vesc)};
+const vec3 T_OURO = ${v3(P.ouro)};
+const vec3 T_GRAF = ${v3(P.graf)};
+const float T_BRILHO = ${P.brilho.toFixed(3)};
+const vec3 T_OLHO = ${v3(P.olho)};
+${P.mascaraFechada ? '#define MASCARA_FECHADA' : ''}
+vec3 TR_EMIS = vec3(0.0);
 `;
 
 const CORPO = /* glsl */ `
@@ -124,6 +136,7 @@ void traje(vec3 p) {
   cor = mix(cor, cor * 0.35, cost); rug = mix(rug, 0.85, cost); alt -= cost * 1.0;
   cor = mix(cor, T_OURO, ouro); rug = mix(rug, 0.24, ouro); met = mix(met, 0.9, ouro); alt = mix(alt, 0.8, ouro);
   TR_COR = cor; TR_RUG = rug; TR_MET = met; TR_ALT = alt;
+  TR_EMIS = T_OURO * ouro * T_BRILHO;
 }
 `;
 
@@ -137,6 +150,9 @@ void traje(vec3 p) {
   sdRosto = max(sdRosto, 0.062 + max(0.0, 1.556 - q.y) * 2.0 - q.x);
   vec2 o = vec2((q.z - 0.032) / 0.021, (q.y - 1.661) / 0.0115);
   float sdOlho = (length(o) - 1.0) * 0.0115;
+#ifdef MASCARA_FECHADA
+  sdRosto = 1.0;                                                   // máscara fechada: só os olhos, que acendem
+#endif
   float sd = min(sdRosto, q.x > 0.08 ? sdOlho : 1.0);
   float f = fwidth(sd) * 1.2 + 1e-5;
   MASCARA = smoothstep(-f, f, sd);
@@ -151,18 +167,25 @@ void traje(vec3 p) {
   TR_RUG = mix(mix(0.42, 0.85, cost), 0.24, ouro);
   TR_MET = mix(0.06, 0.9, ouro);
   TR_ALT = mix(-0.1 * hx - cost, 0.8, ouro) * MASCARA;
+  TR_EMIS = T_OURO * ouro * T_BRILHO * MASCARA;
+  // olhos: nos vilões, um brilho na abertura (fechada no Zoom; em volta do olho no outro)
+  float olho = (1.0 - smoothstep(-0.002, 0.003, sdOlho)) * step(0.08, q.x);
+  TR_EMIS += T_OLHO * olho * 0.6;
+#ifdef MASCARA_FECHADA
+  if (olho > 0.0) { MASCARA = 1.0; TR_COR = mix(TR_COR, vec3(0.0), olho); }
+#endif
 }
 `;
 
 /** Liga o traje num material MeshStandard/MeshPhysical do corpo ('corpo') ou da cabeça ('cabeca', mantém a pele do mapa). */
-export function aplicarTraje(material, parte) {
-  const ehCabeca = parte === 'cabeca';
+export function aplicarTraje(material, parte, variante = 'heroi') {
+  const ehCabeca = parte === 'cabeca', P = PALETAS[variante] || PALETAS.heroi;
   material.onBeforeCompile = (sh) => {
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vRep;\nvarying vec2 vUv0;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRep = position; vUv0 = uv;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\n' + COMUM + CORES + (ehCabeca ? CABECA : CORPO))
+      .replace('#include <common>', '#include <common>\n' + COMUM + cores(P) + (ehCabeca ? CABECA : CORPO))
       .replace('#include <map_fragment>', ehCabeca
         ? '#include <map_fragment>\ntraje(vRep);\ndiffuseColor.rgb = mix(diffuseColor.rgb, TR_COR, MASCARA);'
         : 'traje(vRep);\ndiffuseColor.rgb *= TR_COR;')
@@ -172,9 +195,10 @@ export function aplicarTraje(material, parte) {
       .replace('#include <metalnessmap_fragment>', ehCabeca
         ? '#include <metalnessmap_fragment>\nmetalnessFactor = mix(metalnessFactor, TR_MET, MASCARA);'
         : 'float metalnessFactor = TR_MET;')
-      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\ntPerturba(normal, TR_ALT * 0.0016);');
+      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\ntPerturba(normal, TR_ALT * 0.0016);')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += TR_EMIS;');
   };
-  material.customProgramCacheKey = () => `traje-${parte}`;
+  material.customProgramCacheKey = () => `traje-${parte}-${variante}`;
   material.needsUpdate = true;
   return material;
 }

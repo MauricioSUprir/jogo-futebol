@@ -77,7 +77,7 @@ export function criarGuia(cena, { mobile = false } = {}) {
     local.visible = true; local.position.set(alvo.x, alvo.y ?? 0.06, alvo.z);
     const pulso = (tempo * 0.8) % 1; anel.scale.setScalar(0.6 + pulso * 1.2); matAnel.opacity = 1 - pulso;
     const dist = Math.hypot(alvo.x - P.x, alvo.z - P.z);
-    local.visible = dist > 6;
+    local.visible = dist > 22;                                  // de perto o feixe esconderia o alvo (vilão, bandidos)
 
     // rota: refeita a cada 0,25 s ou quando o alvo muda
     rotaT -= dt;
