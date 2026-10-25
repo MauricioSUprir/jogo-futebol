@@ -135,6 +135,9 @@
   #cenaHist .cima { top:0; height:11vh; }
   #cenaHist .baixo { bottom:0; min-height:21vh; display:flex; gap:14px; align-items:center; padding:10px max(24px,env(safe-area-inset-left)) max(10px,env(safe-area-inset-bottom)); }
   #cenaHist .retrato { width:46px; height:46px; font-size:15px; }
+  #radio .retrato.foto, #cenaHist .retrato.foto { box-shadow:0 0 0 2px var(--cor), 0 0 14px color-mix(in srgb, var(--cor) 55%, transparent); }
+  #cenaHist .retrato.foto { width:62px; height:62px; }
+  @media (max-height: 520px) { #cenaHist .retrato.foto { width:52px; height:52px; } }
   #cenaHist .fala b { display:block; font-size:14px; letter-spacing:.05em; }
   #cenaHist .fala p { margin:3px 0 2px; font-size:clamp(14px,2.4vw,19px); line-height:1.4; min-height:2.8em; max-width:900px; }
   #cenaHist .fala small { font-size:11px; opacity:.5; }

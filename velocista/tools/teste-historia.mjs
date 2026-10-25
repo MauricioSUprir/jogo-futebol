@@ -36,6 +36,21 @@ await foto('cartao');
 await espera(() => !window.__rel.historia.cartaoAtual, null, 300000);
 const quem = await pagina.evaluate(() => document.querySelector('#cenaHist .fala b').textContent);
 ok(quem === 'Caitlin', `a Caitlin conta a história (${quem})`);
+ok(await espera(() => window.__rel.equipe.pronta, null, 300000), 'Caitlin e Cisco em 3D no laboratório');
+ok(await pagina.evaluate(() => window.__rel.LAB_B.plano.dentro(window.__rel.P.x, window.__rel.P.z, window.__rel.P.y) === 'cortex'), 'o prólogo é no Cortex');
+// a próxima fala da Caitlin: a câmera mostra ela (em cena, não pelo rádio) e a caixa tem o rosto dela
+await espera(() => document.querySelector('#cenaHist .fala b').textContent === 'Caitlin' && window.__rel.historia.quemFala === 'caitlin', null, 120000);
+await tecla('enter'); await tecla('enter');
+await espera(() => document.querySelector('#cenaHist .fala b').textContent === 'Caitlin', null, 120000);
+await pagina.waitForTimeout(2500);
+const vista = await pagina.evaluate(() => {
+  const R = window.__rel, c = R.camera, p = R.equipe.focos().caitlin(), d = new R.camera.position.constructor(p.x - c.position.x, p.y + 1.5 - c.position.y, p.z - c.position.z).normalize();
+  const f = new R.camera.position.constructor(0, 0, -1).applyQuaternion(c.quaternion);
+  return { cos: f.dot(d), foto: document.querySelector('#cenaHist .retrato').classList.contains('foto') };
+});
+ok(vista.cos > 0.95, `a câmera mostra a Caitlin falando (cos ${vista.cos.toFixed(2)})`);
+ok(vista.foto, 'a caixa de fala tem o rosto dela');
+await foto('caitlin');
 await pagina.waitForTimeout(2500);
 await foto('prologo');
 for (let i = 0; i < 60 && await pagina.evaluate(() => window.__rel.J.modo === 'cena'); i++) { await tecla('enter'); await pagina.waitForTimeout(400); }
