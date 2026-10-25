@@ -41,7 +41,7 @@ export const TEMPOS_NODE = {
   'teste-editor.mjs': 16,
   'teste-taticas.mjs': 57,
   'teste-defesa-humano.mjs': 59,
-  'teste-aereo-troca.mjs --so canhao': 69,
+  'teste-aereo-troca.mjs --so canhao': 125,
   'teste-aereo-troca.mjs --so natural': 913,
   'teste-transicao.mjs': 685,
   'teste-defesa-corrida.mjs': 449,
