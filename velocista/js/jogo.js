@@ -33,7 +33,7 @@ const suave = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t 
 const $ = (id) => document.getElementById(id);
 const el = {
   corpo: document.body, cena: $('cena'), esferas: $('esferas'), total: $('total'), vel: $('vel'), hora: $('hora'), nivel: $('nivel'),
-  aviso: $('aviso'), coleta: $('coleta'), resumo: $('resumo'), dano: $('dano'), missao: $('missao'), capitulos: $('capitulos'), seta: $('seta'), dist: $('distEsfera'), mapa: $('mapa'), mapaBox: $('mapaBox'),
+  aviso: $('aviso'), avisoT: $('avisoTitulo'), avisoR: $('avisoRotulo'), coleta: $('coleta'), resumo: $('resumo'), dano: $('dano'), missao: $('missao'), capitulos: $('capitulos'), seta: $('seta'), dist: $('distEsfera'), mapa: $('mapa'), mapaBox: $('mapaBox'),
   missaoNum: $('missaoNum'), missaoTitulo: $('missaoTitulo'), missaoTexto: $('missaoTexto'), crimeLinha: $('crimeLinha'),
   inicio: $('telaInicio'), pausa: $('telaPausa'), fim: $('telaFim'), fimTexto: $('fimTexto'), btnJogar: $('btnJogar'), carga: $('barraCargaI'), carregando: $('carregando'),
 };
@@ -398,7 +398,12 @@ function reiniciar() {
   if (!TOQUE) pedirCaptura();
 }
 function esconderTelas() { el.inicio.hidden = el.pausa.hidden = el.fim.hidden = true; }
-function avisar(txt) { el.aviso.textContent = txt; el.aviso.style.opacity = '1'; J.aviso = 1.4; }
+// faixa de aviso: rótulo pequeno na cor do tipo + título; entra deslizando e some sozinha
+// tipos: missao (dourado), crime (vermelho), ok (verde), alerta (laranja), info (azul), zoom, reverso
+function avisar(titulo, rotulo = '', tipo = 'info') {
+  el.avisoT.textContent = titulo; el.avisoR.textContent = rotulo; el.avisoR.hidden = !rotulo;
+  el.aviso.className = `t-${tipo}`; void el.aviso.offsetWidth; el.aviso.classList.add('vis'); J.aviso = 2.6;
+}
 
 // ---------- entrada ----------
 function pedirCaptura() { try { el.cena.requestPointerLock?.(); } catch { /* sem captura */ } }
@@ -422,7 +427,7 @@ function pausar() {
   J.modo = 'pausa'; el.pausa.hidden = false; document.exitPointerLock?.();
   // o que saiu da tela de jogo fica aqui: missão, pontos, esferas e hora
   const ma = missoes.atual;
-  el.resumo.innerHTML = `${ma ? `Missão ${missoes.indice + 1}/${missoes.total}: <b>${ma.titulo}</b>` : 'Todas as missões concluídas'}<br>${missoes.stats.pontos} pontos · esferas ${J.coletadas}/${J.total} · ${el.hora.textContent}`;
+  el.resumo.innerHTML = `${historia.capitulo ? `<span class="hist">${historia.capitulo}</span><br>` : ''}${ma ? `Missão ${missoes.indice + 1}/${missoes.total}: <b>${ma.titulo}</b>` : 'Todas as missões concluídas'}<br>${missoes.stats.pontos} pontos · esferas ${J.coletadas}/${J.total} · ${el.hora.textContent}`;
   el.capitulos.innerHTML = '';
   for (const c of viloes.lista(missoes.indice)) {
     const b = document.createElement('button'); b.type = 'button'; b.className = `cap ${c.estado}`;
@@ -504,7 +509,7 @@ function passoHeroi(dt) {
   const querVibrar = teclas.has('v') || toque.vibrar;
   const dentroSolido = P.vibrando && estaDentroDeSolido();
   if (P.vibrando) { if ((!querVibrar && !dentroSolido) || P.energia <= 0.001) { P.vibrando = false; } }
-  else if (querVibrar && P.energia > 0.08 && vh0 >= MOV.vibrarMin && !P.parede) { P.vibrando = true; avisar('VIBRANDO — atravesse tudo'); }
+  else if (querVibrar && P.energia > 0.08 && vh0 >= MOV.vibrarMin && !P.parede) { P.vibrando = true; avisar('Atravesse tudo', 'Vibrando', 'info'); }
   if (viloes.energiaLivre) P.energia = Math.min(1, P.energia + 0.06 * dt);      // perseguição a um vilão: energia livre, e enchendo
   else if (P.vibrando) P.energia = Math.max(0, P.energia - ENERGIA.vibrar * dt);
   else if (P.correndo) P.energia = Math.max(0, P.energia - (P.parede ? ENERGIA.parede : ENERGIA.gasto) * dt);
@@ -772,7 +777,7 @@ const missoes = criarMissoes(armazem);
 const combate = criarCombate(cena, { mobile: MOBILE, colide: (x, z, y) => empurrar(rectsPerto, x, z, 0.35, y, 1.7), chao: (x, z, y) => chaoEm(rectsPerto, x, z, y) });
 const crimes = criarCrimes(cena, { combate });
 const guia = criarGuia(cena, { mobile: MOBILE });
-const viloes = criarViloes(cena, { mobile: MOBILE, aniso: ANISO, combate, armazem, avisar: (t) => avisar(t),
+const viloes = criarViloes(cena, { mobile: MOBILE, aniso: ANISO, combate, armazem, avisar: (t, r, k) => avisar(t, r, k),
   colide: (x, z, y) => empurrar(rectsPerto, x, z, 0.4, y, 1.8), chao: (x, z, y) => chaoEm(rectsPerto, x, z, y),
   labPos: { x: LAB_B.plano.entrada.x, z: LAB_B.plano.entrada.z - 9 } });
 const portais = criarPortais(cena);
@@ -790,16 +795,23 @@ function passoMissoes(dt) {
   const m = missoes.atual;
   if (m?.tipo === 'portais') portais.ativar(); else portais.desativar();
   const rp = portais.atualizar(dt, P);
-  if (rp?.falhou) avisar('TEMPO ESGOTADO — volte ao 1º portal');
+  if (rp?.falhou) avisar('Volte ao 1º portal', 'Tempo esgotado', 'alerta');
   const ev = viloes.ativo ? null : crimes.atualizar(dt, P, { forcar: m?.crime });      // capítulo dos vilões: os crimes esperam
-  if (ev?.inicio) avisar(`CRIME: ${ev.nome.toUpperCase()}`);
+  if (ev?.inicio) avisar(ev.nome, 'Crime na cidade', 'crime');
   else if (ev) {
-    if (ev.ok) { missoes.contar('crimes'); missoes.contar(ev.tipo); missoes.contar('pontos', 250); avisar(`${ev.nome.toUpperCase()} IMPEDIDO! +250`); }
-    else avisar(ev.tipo === 'queda' ? 'NÃO CHEGOU A TEMPO' : 'O CRIMINOSO ESCAPOU');
+    if (ev.ok) { missoes.contar('crimes'); missoes.contar(ev.tipo); missoes.contar('pontos', 250); avisar(`${ev.nome} impedido`, '+250 pontos', 'ok'); }
+    else avisar(ev.tipo === 'queda' ? 'Não chegou a tempo' : 'O criminoso escapou', ev.nome, 'alerta');
   }
   const sala = LAB_B.plano.dentro(P.x, P.z, P.y);
   const feita = missoes.avaliar({ sala, v: Math.hypot(P.vx, P.vz), y: P.y, noChao: P.noChao, portaisFeitos: rp?.feito });
-  if (feita) { avisar('MISSÃO CONCLUÍDA'); historia.missao(feita.id, 'fecha'); if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); }
+  if (feita) {
+    avisar(feita.titulo, 'Missão concluída', 'missao'); historia.missao(feita.id, 'fecha');
+    const abrir = () => { if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); };
+    // cena da história depois da missão: entra quando o rádio termina de falar
+    if (historia.tem(`depois-${feita.id}`) && !historia.viu(`cena:depois-${feita.id}`)) J.cenaPendente = { id: `depois-${feita.id}`, depois: abrir };
+    else abrir();
+  }
+  if (J.cenaPendente && historia.radioLivre && !viloes.emLuta) { const c = J.cenaPendente; J.cenaPendente = null; rodarCena(c.id, focoHeroi, c.depois); }
   // painel
   const ma = missoes.atual, pr = missoes.progresso();
   el.missaoNum.textContent = ma ? `Missão ${missoes.indice + 1}/${missoes.total} · ${missoes.stats.pontos} pts` : `Patrulha livre · ${missoes.stats.pontos} pts`;
@@ -826,7 +838,7 @@ function processarGolpes() {
     if (combate.ocupado) { if (!J.espT) J.espT = P.t; if (P.t - J.espT > 0.6) { pedidoEspecial = null; J.espT = 0; } return; }
     const t = pedidoEspecial; pedidoEspecial = null; J.espT = 0;
     if (P.parede) return;
-    if (P.energia < ESPECIAIS[t].custo) { avisar(`ENERGIA INSUFICIENTE PARA ${ESPECIAIS[t].nome.toUpperCase()}`); return; }
+    if (P.energia < ESPECIAIS[t].custo) { avisar(`${ESPECIAIS[t].nome} precisa de ${Math.round(ESPECIAIS[t].custo * 100)}%`, 'Energia insuficiente', 'alerta'); return; }
     P.vibrando = false; const [dx, dz] = direcaoPedida(); combate.especial(t, P, dx, dz);
   }
 }
@@ -844,17 +856,30 @@ function rodarCena(id, foco, depois, opc) {
   J.modo = 'cena';
   historia.cena(id, foco, () => { J.modo = 'jogando'; depois?.(); }, opc);
 }
+/** os focos da câmera numa cena com os vilões: o herói e cada vilão do capítulo */
+const focosVilao = () => ({ heroi: focoHeroi, ...Object.fromEntries(viloes.ids.map((v) => [v, () => viloes.foco(v)])) });
+/** no encontro, o herói fica a poucos metros do vilão, de frente para ele (a conversa cabe no quadro) */
+function aproximarHeroi(d = 4.8) {
+  const f = viloes.foco(); if (!f) return;
+  const dx = P.x - f.x, dz = P.z - f.z, n = Math.hypot(dx, dz) || 1;
+  if (n > d) {
+    const r = empurrar(rectsPerto, f.x + (dx / n) * d, f.z + (dz / n) * d, 0.4, 0, 1.8);
+    P.x = r.x; P.z = r.z; P.y = chaoEm(rectsPerto, P.x, P.z, 1); P.vy = 0; P.noChao = true; P.parede = null;
+  }
+  P.h = Math.atan2(f.x - P.x, f.z - P.z); P.vibrando = false;
+  viloes.encarar(P);
+}
 function eventoVilao(ev) {
   const id = ev.id;
   if (ev.tipo === 'dano') J.danoVilao = 1;
-  else if (ev.tipo === 'capitulo') historia.radio(`capitulo-${id}`, { sempre: true });
-  else if (ev.tipo === 'encontro') rodarCena(`encontro-${id}`, () => viloes.foco(), () => { viloes.continuar(); historia.radio(`perseguicao-${id}`); });
+  else if (ev.tipo === 'capitulo') rodarCena(`cap-${id}`, focoHeroi, () => historia.radio(`capitulo-${id}`, { sempre: true }));
+  else if (ev.tipo === 'encontro') { aproximarHeroi(); rodarCena(`encontro-${id}`, focosVilao(), () => { viloes.continuar(); historia.radio(`perseguicao-${id}`); }); }
   else if (ev.tipo === 'captura') historia.provocar(id, ev.n);
   else if (ev.tipo === 'luta') historia.radio(`luta-${id}`);
   else if (ev.tipo === 'fase2') historia.radio(`fase2-${id}`, { sempre: true });
   else if (ev.tipo === 'derrota') historia.radio(`derrota-${id}`, { sempre: true });
   else if (ev.tipo === 'escapou') historia.radio(`escapou-${id}`, { sempre: true });
-  else if (ev.tipo === 'derrotado') rodarCena(`derrotado-${id}`, id === 'final' ? focoHeroi : () => viloes.foco(), () => viloes.continuar());
+  else if (ev.tipo === 'derrotado') rodarCena(`derrotado-${id}`, focosVilao(), () => viloes.continuar());
   else if (ev.tipo === 'vitoria') missoes.contar('pontos', id === 'final' ? 5000 : 2000);
 }
 
@@ -870,13 +895,14 @@ function ajustarResolucao(dtBruto) {
   let pr = RES.pr;
   if (RES.media > 1 / 34 && pr > RES.min) pr = Math.max(RES.min, pr - 0.15);
   else if (RES.media < 1 / 56 && pr < RES.max) pr = Math.min(RES.max, pr + 0.1);
-  if (pr !== RES.pr) { RES.pr = pr; renderer.setPixelRatio(pr); renderer.setSize(innerWidth, innerHeight, false); posfx.tamanho(innerWidth, innerHeight, pr); }
+  if (pr !== RES.pr) { RES.pr = pr; renderer.setPixelRatio(pr); redimensionar(); }
 }
 function quadro() {
   requestAnimationFrame(quadro);
   const dtBruto = relogio.getDelta();
   let dt = Math.min(dtBruto, 0.05);
   if (combate.hitstop > 0) { combate.hitstop -= dt; dt *= 0.12; }      // impacto: o tempo quase para por um instante
+  conferirTela();
   ajustarResolucao(dtBruto);
   if (emPe()) { teclas.clear(); stick.x = stick.y = 0; toque.correr = toque.vibrar = false; return; }
   if (J.modo === 'jogando') {
@@ -887,7 +913,7 @@ function quadro() {
       if (ev.tipo === 'nocaute') { missoes.contar('nocautes'); missoes.contar('pontos', 50); if (ev.especial) missoes.contar('especiais'); }
       else if (ev.tipo === 'dano') { el.dano.style.opacity = '1'; }
     }
-    for (const ev of viloes.atualizar(dt, P, { missaoIdx: missoes.indice, podeComecar: !crimes.ativo })) eventoVilao(ev);
+    for (const ev of viloes.atualizar(dt, P, { missaoIdx: missoes.indice, podeComecar: !crimes.ativo && !J.cenaPendente && historia.radioLivre })) eventoVilao(ev);
     J.danoVilao = Math.max(0, (J.danoVilao || 0) - dt * 2);
     el.missao.hidden = viloes.ativo; el.corpo.classList.toggle('capitulo', viloes.ativo);
     el.dano.style.opacity = String(Math.min(1, Math.max(combate.dano, J.danoVilao)));
@@ -896,7 +922,7 @@ function quadro() {
     pedestres.atualizar(dt, P, mundo.noite); trafego.atualizar(dt, P, mundo.noite, pedestres.pessoas);
     if (labAtivo) labAtivo.atualizar(dt, P.t, mundo.noite, camera, P);
     atualizarQuarteiroes(P.x, P.z, carregados.size < 30 ? 8 : 2);
-    if (J.aviso > 0) { J.aviso -= dt; if (J.aviso <= 0) el.aviso.style.opacity = '0'; }
+    if (J.aviso > 0) { J.aviso -= dt; if (J.aviso <= 0) { el.aviso.classList.remove('vis'); el.aviso.classList.add('sai'); } }
     el.vel.textContent = Math.round((P.parede ? P.parede.v : Math.hypot(P.vx, P.vz)) * 3.6);
     el.vel.parentElement.style.color = Math.hypot(P.vx, P.vz) >= MOV.escalar || P.parede ? '#ffd23f' : '';
     el.nivel.style.width = `${(P.energia * 100).toFixed(1)}%`;
@@ -915,8 +941,23 @@ function quadro() {
   posfx.render();
 }
 
-function redimensionar() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); posfx.tamanho(w, h, RES.pr); camera.aspect = w / h; camera.updateProjectionMatrix(); }
-addEventListener('resize', redimensionar); redimensionar();
+// O tamanho do desenho segue o tamanho REAL do canvas na tela, conferido a cada quadro. Só o evento 'resize' não bastava:
+// ao girar o celular (e na tela cheia, e no app da tela de início do iPhone) ele chega com o innerWidth/innerHeight de
+// antes do giro — o desenho ficava com a proporção do celular em pé, esticado na tela deitada ("achatado").
+const TAM = new THREE.Vector2();
+function medirTela() { return { w: el.cena.clientWidth || innerWidth, h: el.cena.clientHeight || innerHeight }; }
+function redimensionar() {
+  const { w, h } = medirTela(); if (!w || !h) return;
+  renderer.setSize(w, h, false); posfx.tamanho(w, h, RES.pr); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+function conferirTela() {   // compara a tela com o que está valendo no desenho e na câmera (não com uma medida guardada)
+  const { w, h } = medirTela(); renderer.getSize(TAM);
+  if (w !== TAM.x || h !== TAM.y || Math.abs(camera.aspect - w / h) > 1e-3) redimensionar();
+}
+addEventListener('resize', redimensionar);
+addEventListener('orientationchange', () => setTimeout(redimensionar, 300));
+visualViewport?.addEventListener('resize', redimensionar);
+redimensionar();
 
 // ---------- carga inicial ----------
 esferas = todasEsferas(); J.total = esferas.length; el.total.textContent = J.total;
@@ -941,4 +982,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
