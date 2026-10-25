@@ -33,7 +33,7 @@ const suave = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t 
 const $ = (id) => document.getElementById(id);
 const el = {
   corpo: document.body, cena: $('cena'), esferas: $('esferas'), total: $('total'), vel: $('vel'), hora: $('hora'), nivel: $('nivel'),
-  aviso: $('aviso'), dano: $('dano'), missao: $('missao'), capitulos: $('capitulos'), seta: $('seta'), dist: $('distEsfera'), mapa: $('mapa'), mapaBox: $('mapaBox'),
+  aviso: $('aviso'), coleta: $('coleta'), resumo: $('resumo'), dano: $('dano'), missao: $('missao'), capitulos: $('capitulos'), seta: $('seta'), dist: $('distEsfera'), mapa: $('mapa'), mapaBox: $('mapaBox'),
   missaoNum: $('missaoNum'), missaoTitulo: $('missaoTitulo'), missaoTexto: $('missaoTexto'), crimeLinha: $('crimeLinha'),
   inicio: $('telaInicio'), pausa: $('telaPausa'), fim: $('telaFim'), fimTexto: $('fimTexto'), btnJogar: $('btnJogar'), carga: $('barraCargaI'), carregando: $('carregando'),
 };
@@ -420,6 +420,9 @@ function continuar() { J.modo = 'jogando'; el.pausa.hidden = true; if (!TOQUE) p
 function pausar() {
   if (J.modo !== 'jogando') return;
   J.modo = 'pausa'; el.pausa.hidden = false; document.exitPointerLock?.();
+  // o que saiu da tela de jogo fica aqui: missão, pontos, esferas e hora
+  const ma = missoes.atual;
+  el.resumo.innerHTML = `${ma ? `Missão ${missoes.indice + 1}/${missoes.total}: <b>${ma.titulo}</b>` : 'Todas as missões concluídas'}<br>${missoes.stats.pontos} pontos · esferas ${J.coletadas}/${J.total} · ${el.hora.textContent}`;
   el.capitulos.innerHTML = '';
   for (const c of viloes.lista(missoes.indice)) {
     const b = document.createElement('button'); b.type = 'button'; b.className = `cap ${c.estado}`;
@@ -596,6 +599,7 @@ function esferasProximas(dt) {
       for (const d of carregados.values()) { const k = d.orbes.indexOf(r); if (k >= 0) d.orbes.splice(k, 1); }
       orbesAtivos.splice(i, 1);
       el.esferas.textContent = J.coletadas; missoes.contar('esferas');
+      el.coleta.textContent = `ESFERA ${J.coletadas}/${J.total}`; el.coleta.classList.add('vis'); clearTimeout(J.tColeta); J.tColeta = setTimeout(() => el.coleta.classList.remove('vis'), 1600);
       if (J.coletadas >= J.total) fimDeJogo();
     }
   }
@@ -885,7 +889,7 @@ function quadro() {
     }
     for (const ev of viloes.atualizar(dt, P, { missaoIdx: missoes.indice, podeComecar: !crimes.ativo })) eventoVilao(ev);
     J.danoVilao = Math.max(0, (J.danoVilao || 0) - dt * 2);
-    el.missao.hidden = viloes.ativo;
+    el.missao.hidden = viloes.ativo; el.corpo.classList.toggle('capitulo', viloes.ativo);
     el.dano.style.opacity = String(Math.min(1, Math.max(combate.dano, J.danoVilao)));
     atualizarBotoesEspeciais();
     passoMissoes(dt);
