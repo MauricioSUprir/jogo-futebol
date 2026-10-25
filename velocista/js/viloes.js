@@ -413,6 +413,8 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       const vs = id ? C.viloes.filter((v) => v.id === id) : C.viloes, n = vs.length; if (!n) return null;
       return { x: vs.reduce((a, v) => a + v.x, 0) / n, y: vs[0].y, z: vs.reduce((a, v) => a + v.z, 0) / n };
     },
+    /** todos os vilões viram de frente para o herói (começo de uma cena) */
+    encarar(P) { for (const v of C?.viloes || []) v.h = Math.atan2(P.x - v.x, P.z - v.z); },
     /** ids dos vilões do capítulo em andamento */
     get ids() { return C ? C.viloes.map((v) => v.id) : []; },
     /** quantas vezes o herói perdeu esta luta (cada uma deixa o vilão mais fácil, até 3) */

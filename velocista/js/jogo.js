@@ -867,6 +867,7 @@ function aproximarHeroi(d = 4.8) {
     P.x = r.x; P.z = r.z; P.y = chaoEm(rectsPerto, P.x, P.z, 1); P.vy = 0; P.noChao = true; P.parede = null;
   }
   P.h = Math.atan2(f.x - P.x, f.z - P.z); P.vibrando = false;
+  viloes.encarar(P);
 }
 function eventoVilao(ev) {
   const id = ev.id;
