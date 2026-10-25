@@ -112,8 +112,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   subindo os companheiros do humano, a arrancada trotando dele chegava à área em 11% (teste-defesa-corrida); subindo os de
   perto do condutor, o chamado da PRESSÃO chegava menos (teste-pressao-humano M2 66 → 59%). Lição: mudança de IA que
   vale na IA × IA mexe em todas as partidas dos testes; quando o pedido é sobre o jogo contra a pessoa, ligar só nele. Testado e NÃO entrou (medido): condução mais rápida (correrLivre/correrAte/magConduz)
-  e mais corridas nas costas (recarga/max/vCondutor) — pouco ganho e vai-e-volta 8,3 → 9,8–10,4/min. PENDENTE: os
-  COMPANHEIROS do humano quase não apertam (1º a ~7,5–8 m do condutor, 0,1–0,2 bote/min com o humano parado) — o
+  e mais corridas nas costas (recarga/max/vCondutor) — pouco ganho e vai-e-volta 8,3 → 9,8–10,4/min. Era PENDENTE: os
+  COMPANHEIROS do humano quase não apertavam (FEITO no D4, PR #___: o controlado fora do 1º/2º homem, a linha de engajamento
+  dos companheiros a 80 m, a cobertura a 5 m e a chegada a 5 m/s²; `teste-ia-corre` C1 6,85 → 5,94 m, C2 36 → 42%; antes: 1º a ~7,5–8 m do condutor, 0,1–0,2 bote/min com o humano parado) — o
   controlado é o 1º homem quando está perto, `semAtropelar` vale para o time todo do humano e a IA com a bola toca em
   < 0,5 s; excluir o controlado do 1º/2º homem não mudou (medido). **Categoria D, D2 (24/10; a IA ATACA correndo, itens 67
   e 21; `PESQUISA-CATEGORIA-D.md`, contrato "A IA contra a pessoa"):** o portão virou função (`tatica.js contraPessoa`/
