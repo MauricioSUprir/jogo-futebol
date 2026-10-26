@@ -14,7 +14,7 @@
 //   V4 o hash no tick espera + 600: com o replay de parada = sem ele (?replayParada=0) = com ?replay=0 = com ?corpo=humano;
 //   V5 o pulo por tecla (K, PC) e por toque (celular): o replay some em 1 quadro, os botões de toque voltam, a pausa não
 //      abre e o aperto não vira jogada (com o K ainda segurado, 0 botão da pessoa chega ao passo em 40 passos — sim.js
-//      j.botoesTime — e o controle: solto e apertado de novo, chega);
+//      m.botoesTimeAgora — e o controle: solto e apertado de novo, chega);
 //   V6 com "Replays: Desligado" nenhum replay de parada: ?replay=0 até o lance (a simulação passa da espera sem segurar) e
 //      a opção da pausa desligada no meio do jogo (o lance armado não toca);
 //   V7 celular 844×390 Média (a régua do teste-replay G4/G6): chamadas de desenho por plano (tv e fechada ≤ o máximo ao vivo
@@ -332,8 +332,9 @@ if (roda('D')) try {
       await pg.keyboard.down('KeyK');
       k1 = await pg.evaluate(() => {
         const g = window.__golaco, m = g.mundo;
-        // os botões da pessoa que chegam ao passo (sim.js j.botoesTime: a entrada do time do humano, antes do CONTER)
-        const botoesDaPessoa = () => m.jogadores.find(j => j.time === 0)?.botoesTime | 0;
+        // os botões da pessoa que chegam ao passo (sim.js m.botoesTimeAgora: a entrada do time do humano, antes do CONTER —
+        // o j.botoesTime do 1º jogador do time era o do goleiro, que fica sem ela como 'parado' no tiro de meta dele)
+        const botoesDaPessoa = () => m.botoesTimeAgora?.[0] | 0;
         g.relogio.avancar(1000 / 60, { desenhar: false });
         const r = { ativo: g.replay.estado.ativo, menu: g.estado().menuAberto, tick0: m.tick, botoes: 0, cargas: 0 };
         for (let i = 0; i < 40; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); if (botoesDaPessoa()) r.botoes++; if (g.estado().jogador?.carga) r.cargas++; }
@@ -344,7 +345,7 @@ if (roda('D')) try {
       await avancar(pg, 3);
       // o controle: solto e apertado de novo, o K chega ao jogador (a medida acima não é vazia)
       await pg.keyboard.down('KeyK');
-      k2 = await pg.evaluate(() => { const g = window.__golaco; let b = 0; for (let i = 0; i < 6; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); if (g.mundo.jogadores.find(j => j.time === 0)?.botoesTime | 0) b++; } return b; });
+      k2 = await pg.evaluate(() => { const g = window.__golaco; let b = 0; for (let i = 0; i < 6; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); if (g.mundo.botoesTimeAgora?.[0] | 0) b++; } return b; });
       await pg.keyboard.up('KeyK');
     }
     meta('V5a o pulo pela tecla (K, PC): o replay some em 1 quadro, a pausa não abre e o K segurado não vira jogada',
