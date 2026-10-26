@@ -470,6 +470,7 @@ function continuar() { J.modo = 'jogando'; el.pausa.hidden = true; if (!TOQUE) p
 function pausar() {
   if (J.modo !== 'jogando') return;
   J.modo = 'pausa'; el.pausa.hidden = false; document.exitPointerLock?.();
+  armarRecomecar(false);
   // o que saiu da tela de jogo fica aqui: missão, pontos, esferas e hora
   const ma = missoes.atual;
   el.resumo.innerHTML = `${historia.capitulo ? `<span class="hist">${historia.capitulo}</span><br>` : ''}${ma ? `História ${missoes.indice + 1}/${missoes.total}: <b>${ma.titulo}</b>` : 'História concluída: a cidade é sua'}<br>${missoes.stats.pontos} pontos · esferas ${J.coletadas}/${J.total} · ${el.hora.textContent}`;
@@ -485,6 +486,19 @@ function pausar() {
   }
 }
 $('btPausa')?.addEventListener('click', pausar);
+// recomeçar a história do zero (na pausa): o 1º toque pede confirmação por 4 s, o 2º zera o passo da história, as falas
+// vistas e os vilões vencidos e recarrega a página — volta à tela de início e o COMEÇAR abre o prólogo
+const RECOMECAR = 'Recomeçar a história do zero';
+let confirmaAte = 0;
+function armarRecomecar(ligado) {
+  const b = $('btnRecomecar'); confirmaAte = ligado ? performance.now() + 4000 : 0;
+  b.classList.toggle('confirma', ligado); b.textContent = ligado ? 'Toque de novo para apagar o progresso da história' : RECOMECAR;
+}
+$('btnRecomecar').addEventListener('click', () => {
+  if (performance.now() > confirmaAte) { armarRecomecar(true); setTimeout(() => { if (performance.now() >= confirmaAte) armarRecomecar(false); }, 4100); return; }
+  missoes.zerar(); historia.zerar(); viloes.zerar();
+  location.reload();
+});
 $('btnJogar').addEventListener('click', () => { deitar(); reiniciar(); });
 // no Android, tela cheia + trava deitada; no iPhone a tela "Gire o celular" cuida disso
 function deitar() { if (!TOQUE) return; try { const p = document.documentElement.requestFullscreen?.(); p?.then?.(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {}); } catch { /* sem tela cheia */ } }

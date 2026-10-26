@@ -126,6 +126,8 @@
   #vidaHeroi .nivel { background:linear-gradient(90deg,#ff2b3d,#ff7b5a); transition:width .15s; }
   #capitulos { display:flex; flex-direction:column; gap:8px; width:min(80vw,380px); }
   #capitulos .cap-aviso { margin:0; font-size:13px; line-height:1.45; opacity:.75; text-align:center; }
+  .recomecar { pointer-events:auto; cursor:pointer; padding:8px 18px; border-radius:99px; border:1px solid rgba(255,255,255,.28); background:none; color:var(--texto); font:inherit; font-size:13px; opacity:.85; }
+  .recomecar.confirma { border-color:#ff6b5a; color:#ff8f80; opacity:1; box-shadow:0 0 14px rgba(255,107,90,.3); }
   .cap { pointer-events:auto; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.2); background:rgba(7,8,15,.65); color:var(--texto); font:inherit; text-align:left; }
   .cap b { font-size:14px; } .cap small { font-size:12px; opacity:.8; white-space:nowrap; }
   .cap.liberado { border-color:var(--ouro); box-shadow:0 0 14px rgba(255,210,63,.3); } .cap.liberado small { color:var(--ouro); opacity:1; }
@@ -266,6 +268,7 @@
   <p id="resumo"></p>
   <button class="principal" id="btnContinuar" type="button">CONTINUAR</button>
   <div id="capitulos"></div>
+  <button class="recomecar" id="btnRecomecar" type="button">Recomeçar a história do zero</button>
 </div>
 <div id="telaFim" class="tela" hidden>
   <h2>CIDADE LIMPA!</h2>
