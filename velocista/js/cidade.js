@@ -153,6 +153,14 @@ export function retangulosPerto(x, z, raio = 1) {
   return v;
 }
 
+/** Altura do chão "de rua" em (x, z), sem os prédios: a laje dos quarteirões (e a praça do campus) ou o asfalto. */
+export function alturaDoChao(x, z) {
+  const i = celulaDe(x), j = celulaDe(z);
+  if (!dentro(i, j)) return 0;
+  if (ehCampus(i, j)) return Math.abs(x - CENTRO_CAMPUS.x) <= CAMPUS.meio && Math.abs(z - CENTRO_CAMPUS.z) <= CAMPUS.meio ? CALCADA : 0;
+  return Math.abs(x - centroDe(i)) <= BLOCO / 2 && Math.abs(z - centroDe(j)) <= BLOCO / 2 ? CALCADA : 0;
+}
+
 /** Altura do chão sob (x,z) para quem está em y (sobe degrau de até `degrau`). */
 export function chaoEm(rects, x, z, y, degrau = 0.7) {
   let h = 0;

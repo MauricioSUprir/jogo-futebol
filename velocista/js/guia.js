@@ -3,7 +3,7 @@
 // das ruas, também desenhado no minimapa. A rota anda pela grade de ruas: vai até a rua mais perto, segue por ela até o
 // cruzamento com a rua do alvo e entra nela até a altura do alvo.
 import * as THREE from 'three';
-import { CELL, MEIO, ruaForaDoCampus } from './cidade.js';
+import { CELL, MEIO, ruaForaDoCampus, alturaDoChao } from './cidade.js';
 
 const eixo = (k) => k * CELL - MEIO;
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -100,7 +100,7 @@ export function criarGuia(cena, { mobile = false } = {}) {
         while (s < L && n < MAXS && percorrido + s < ALCANCE_SETAS) {
           const x = ax + ux * s, z = az + uz * s;
           if (Math.hypot(alvo.x - x, alvo.z - z) < 5) break;
-          M.compose(V.set(x, 0.09, z), Q.setFromAxisAngle(Y, h), S.setScalar(mobile ? 0.8 : 0.68));
+          M.compose(V.set(x, alturaDoChao(x, z) + 0.09, z), Q.setFromAxisAngle(Y, h), S.setScalar(mobile ? 0.8 : 0.68));
           setas.setMatrixAt(n, M);
           // some ao longe e perto do herói
           const d = percorrido + s, a = Math.min(1, Math.max(0, (d - 4) / 10)) * (1 - Math.max(0, (d - ALCANCE_SETAS * 0.6) / (ALCANCE_SETAS * 0.4)));
