@@ -12,6 +12,9 @@ mesmas definições.
 - `apoio_metrica.py` — D7 (item 24; `PESQUISA-CATEGORIA-D.md` §9): o "à frente / de lado / atrás" do
   teste-apoio por faixa de 10 m do portador, quem conduz em cada faixa e a posição de cada função em
   relação a quem conduz; a saída JSON é a tabela `METRICA` de `tools/apoio-faixa.mjs` (o mesmo no jogo).
+- `intensidade_metrica.py` — D8 (item 25; `PESQUISA-CATEGORIA-D.md` §10): os m/min por jogador de
+  linha no jogo organizado e nos lances rápidos com a definição do `teste-intensidade`, por jogo e por
+  janela de 15 min (o p90 é o teto da meta).
 
 Uso (Python 3 com numpy e pandas; os CSV da Metrica numa pasta):
 
@@ -19,6 +22,7 @@ Uso (Python 3 com numpy e pandas; os CSV da Metrica numa pasta):
 python3 -I tools/pesquisa/analise_metrica.py <pasta-com-os-csv>
 python3 -I tools/pesquisa/tatica_metrica.py <pasta-com-os-csv> <saida.json>
 python3 -I tools/pesquisa/apoio_metrica.py <pasta-com-os-csv> [saida.json]
+python3 -I tools/pesquisa/intensidade_metrica.py <pasta-com-os-csv>
 ```
 
 A pasta `tools/` não vai para o site.

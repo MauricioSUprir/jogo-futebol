@@ -105,7 +105,10 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   laterais 28% a +12,5 m; jogo 4%) e anda com o volume de ataque (item 26); 14 variantes, só a devolução valorizada chegou a
   27–28%, com a posse estéril (0,88 gol, 4 chutes); `tools/apoio-faixa.mjs` × `tools/pesquisa/apoio_metrica.py`,
   `PESQUISA-CATEGORIA-D.md` §9. Lição: mudança de forma ou de apoio que não muda QUEM conduz não move o "à frente"; medir o
-  painel junto (o "à frente" sobe fácil com a posse estéril). Lições: a triagem do movimento com `--set` em 32–40 sementes (~80 s com 4 processos) bate com
+  painel junto (o "à frente" sobe fácil com a posse estéril). **D8 (item 25, a intensidade)**: MEDIDO, sem mudança na lógica —
+  a conta do teste na Metrica (`tools/pesquisa/intensidade_metrica.py`) dá 207 m/min nos lances rápidos (p90 das janelas de
+  15 min 233: a meta passa a 180–235); o jogo faz 282 (IA × IA) e ~250–300 contra a pessoa; baixar é decisão do dono (FILA
+  "Depende do dono" 9a). Lições: a triagem do movimento com `--set` em 32–40 sementes (~80 s com 4 processos) bate com
   o teste; decidir com ela e conferir nas 5 rodadas de 8. Mudança IA × IA: ler o painel do CI e repetir com OUTRAS sementes
   (`--sem0 3001`) antes de concluir — gols e gols de fora caíram numa amostra e empataram na outra (sorteio), o impedimento
   caiu nas duas (real; achado desligando uma peça por vez com `--set`). As amostras pequenas dos testes que reprovam depois da
