@@ -14,6 +14,9 @@ export function retanguloRotulo(nome) {
   return [c / COLS + 0.004, (c + 1) / COLS - 0.004, 1 - (l + 1) / LINS + 0.004, 1 - l / LINS - 0.004];
 }
 
+/** a ESTEIRA de velocidade (dono, 26/10: "a esteira não funciona"): o jogo escreve aqui a velocidade de quem corre nela
+ *  (km/h; null = ninguém) e o recorde; os telões da sala e o relógio mostram */
+export const ESTEIRA = { kmh: null, recorde: 1482 };
 export function criarTexturas(THREE, aniso = 4) {
   const lista = [];
   let sem = 91;
@@ -169,16 +172,18 @@ export function criarTexturas(THREE, aniso = 4) {
   });
   nova('relogio', (g, t) => {
     fundo(g, '#050b12', '#0c1a28'); const s = Math.floor(t * 4) % 86400, hh = String(Math.floor(s / 3600) % 24).padStart(2, '0'), mm = String(Math.floor(s / 60) % 60).padStart(2, '0'), ss = String(s % 60).padStart(2, '0');
-    txt(g, `${hh}:${mm}:${ss}`, 256, 110, 96, '#ffffff', 'center'); txt(g, 'RECORDE DA ESTEIRA  1.482 km/h', 256, 190, 28, '#3fe0ff', 'center'); txt(g, 'S.T.A.R. LABS · PESQUISA EM VELOCIDADE', 256, 230, 16, '#9fe9ff', 'center');
+    txt(g, `${hh}:${mm}:${ss}`, 256, 110, 96, '#ffffff', 'center'); txt(g, `RECORDE DA ESTEIRA  ${Math.round(ESTEIRA.recorde).toLocaleString('pt-BR')} km/h`, 256, 190, 28, '#3fe0ff', 'center'); txt(g, 'S.T.A.R. LABS · PESQUISA EM VELOCIDADE', 256, 230, 16, '#9fe9ff', 'center');
   });
   nova('onda', (g, t) => {
     fundo(g); txt(g, 'ANÁLISE DE PARTÍCULAS', 16, 20, 20, '#3fe0ff');
     for (const [cor, f, a, off] of [['#3fe0ff', 0.05, 40, 0], ['#ffd23f', 0.11, 22, 1.7], ['#ff4d5e', 0.03, 30, 3.1]]) { g.strokeStyle = cor; g.lineWidth = 3; g.beginPath(); for (let x = 0; x <= 488; x += 6) { const y = 140 + a * Math.sin(x * f + t * 2 + off) * Math.sin(x * 0.012 + t * 0.5); x ? g.lineTo(12 + x, y) : g.moveTo(12, y); } g.stroke(); }
   });
   nova('vel', (g, t) => {
-    fundo(g, '#07090f', '#10202e'); const v = Math.round(700 + 140 * Math.sin(t * 0.9));
-    txt(g, 'TESTE DE VELOCIDADE', 256, 28, 22, '#3fe0ff', 'center'); txt(g, String(v), 230, 130, 120, '#ffffff', 'center'); txt(g, 'km/h', 440, 150, 38, '#ffd23f', 'center');
-    g.fillStyle = '#1b2b3a'; g.fillRect(24, 210, 464, 20); g.fillStyle = '#3fe0ff'; g.fillRect(24, 210, 464 * (v - 500) / 400, 20);
+    // com alguém correndo na esteira, a velocidade de verdade (a barra vai até o recorde); sem ninguém, a simulação de antes
+    fundo(g, '#07090f', '#10202e'); const real = ESTEIRA.kmh != null, v = real ? Math.round(ESTEIRA.kmh) : Math.round(700 + 140 * Math.sin(t * 0.9));
+    txt(g, real ? 'NA ESTEIRA AGORA' : 'TESTE DE VELOCIDADE', 256, 28, 22, real ? '#ffd23f' : '#3fe0ff', 'center'); txt(g, String(v), 230, 130, 120, '#ffffff', 'center'); txt(g, 'km/h', 440, 150, 38, '#ffd23f', 'center');
+    const f = real ? Math.min(1, v / Math.max(ESTEIRA.recorde, 1)) : (v - 500) / 400;
+    g.fillStyle = '#1b2b3a'; g.fillRect(24, 210, 464, 20); g.fillStyle = real && v >= ESTEIRA.recorde ? '#ffd23f' : '#3fe0ff'; g.fillRect(24, 210, 464 * f, 20);
   });
   const redesenhar = (tempo, so) => { for (const [nome, o] of Object.entries(telas)) { if (so && !so.includes(nome)) continue; o.pinta(o.g, tempo); o.t.needsUpdate = true; } };
   return { T, telas, redesenhar, texturas: lista };

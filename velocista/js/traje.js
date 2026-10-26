@@ -19,6 +19,16 @@ float tHex(vec2 u) {
   return smoothstep(0.32, 0.48, max(abs(g.x) * 0.866 + abs(g.y) * 0.5, abs(g.y)));
 }
 vec3 TR_COR; float TR_RUG; float TR_MET; float TR_ALT;
+float tSeg2(vec2 p, vec2 a, vec2 b) { vec2 ab = b - a; float t = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0); return length(p - a - ab * t); }
+// o RAIO no meio da máscara (dono, 26/10: "esse capacete não tá legal, no meio, tem que ter um raio"): do alto da testa até
+// entre os olhos, em zigue-zague, mais grosso em cima e afinando na ponta; continua no friso que passa por cima da cabeça
+float tRaioTesta(vec3 p) {
+  if (p.x < 0.03 || p.y < 1.668 || p.y > 1.8) return 0.0;
+  vec2 s = vec2(p.z, p.y);
+  float d = min(min(tSeg2(s, vec2(0.017, 1.795), vec2(-0.012, 1.731)), tSeg2(s, vec2(-0.012, 1.731), vec2(0.012, 1.724))), tSeg2(s, vec2(0.012, 1.724), vec2(-0.005, 1.671)));
+  float w = 0.0045 + (p.y - 1.671) * 0.045, f = fwidth(d) * 1.2 + 1e-5;
+  return 1.0 - smoothstep(w - f, w + f, d);
+}
 void tPerturba(inout vec3 n, float h) {
   vec3 dpx = dFdx(-vViewPosition), dpy = dFdy(-vViewPosition);
   float hx = dFdx(h), hy = dFdy(h);
@@ -32,7 +42,7 @@ void tPerturba(inout vec3 n, float h) {
 // paletas: a mesma forma do traje com outras cores (herói, e os dois vilões, com desenho próprio)
 // T_VERM = tecido, T_VESC = luvas/botas, T_OURO = frisos, T_GRAF = cinto/sola, T_BRILHO = quanto os frisos acendem
 const PALETAS = {
-  heroi: { verm: [0.24, 0.010, 0.016], vesc: [0.085, 0.005, 0.008], ouro: [0.92, 0.56, 0.10], graf: [0.028, 0.026, 0.028], brilho: 0, olho: [0, 0, 0], mascaraFechada: false },
+  heroi: { verm: [0.24, 0.010, 0.016], vesc: [0.085, 0.005, 0.008], ouro: [0.92, 0.56, 0.10], graf: [0.028, 0.026, 0.028], brilho: 0, olho: [0, 0, 0], mascaraFechada: false, raioTesta: true },
   zoom: { verm: [0.010, 0.010, 0.013], vesc: [0.004, 0.004, 0.006], ouro: [0.08, 0.32, 1.0], graf: [0.02, 0.03, 0.05], brilho: 0.9, olho: [0.2, 0.55, 2.2], mascaraFechada: true },
   reverso: { verm: [0.62, 0.40, 0.015], vesc: [0.22, 0.12, 0.006], ouro: [0.75, 0.02, 0.02], graf: [0.03, 0.02, 0.015], brilho: 0.35, olho: [2.0, 0.08, 0.05], mascaraFechada: false },
   // Savitar: armadura de aço escovado com as costuras acesas em azul-branco e o capacete fechado (met/rug = metal e aspereza do tecido)
@@ -44,7 +54,7 @@ const PALETAS = {
   // vermelho fraco nos olhos (quem ele é só aparece no capítulo 5)
   vulto: { verm: [0.014, 0.012, 0.013], vesc: [0.006, 0.005, 0.006], ouro: [0.035, 0.03, 0.03], graf: [0.01, 0.009, 0.01], brilho: 0, olho: [0.9, 0.03, 0.02], mascaraFechada: true, rug: 0.75 },
   civil: { verm: [0, 0, 0], vesc: [0, 0, 0], ouro: [0, 0, 0], graf: [0, 0, 0], brilho: 0, olho: [0, 0, 0], desenho: 'civil' },
-  novo: { verm: [0.30, 0.011, 0.018], vesc: [0.075, 0.004, 0.008], ouro: [0.95, 0.60, 0.11], graf: [0.022, 0.02, 0.024], brilho: 0.08, veia: 0.55, olho: [1.2, 0.55, 0.08], mascaraFechada: false, desenho: 'novo' },
+  novo: { verm: [0.30, 0.011, 0.018], vesc: [0.075, 0.004, 0.008], ouro: [0.95, 0.60, 0.11], graf: [0.022, 0.02, 0.024], brilho: 0.08, veia: 0.55, olho: [1.2, 0.55, 0.08], mascaraFechada: false, desenho: 'novo', raioTesta: true },
 };
 const v3 = (c) => `vec3(${c.map((x) => x.toFixed(4)).join(', ')})`;
 const cores = (P) => /* glsl */ `
@@ -58,6 +68,7 @@ const float T_RUG0 = ${(P.rug ?? 0.46).toFixed(3)};
 const vec3 T_OLHO = ${v3(P.olho)};
 const float T_VEIA = ${(P.veia ?? 0).toFixed(3)};
 ${P.mascaraFechada ? '#define MASCARA_FECHADA' : ''}
+${P.raioTesta ? '#define RAIO_TESTA' : ''}
 vec3 TR_EMIS = vec3(0.0);
 `;
 
@@ -170,7 +181,12 @@ void traje(vec3 p) {
   float f = fwidth(sd) * 1.2 + 1e-5;
   MASCARA = smoothstep(-f, f, sd);
   float ouro = tLinha(sdRosto - 0.0035, 0.0045) * step(0.06, q.x);
+#ifdef RAIO_TESTA
+  ouro = max(ouro, tLinha(q.z, 0.006) * step(1.69, q.y) * step(q.x, 0.035));    // friso no alto da cabeça, do raio da testa à nuca
+  ouro = max(ouro, tRaioTesta(p));
+#else
   ouro = max(ouro, tLinha(q.z, 0.006) * step(1.69, q.y) * step(q.x, 0.14));     // friso no alto da cabeça, da testa à nuca
+#endif
   float cost = tLinha(sdOlho - 0.004, 0.003) * step(0.08, q.x);
   vec2 uh = vUv0 * vec2(240.0, 240.0);
   float hx = tHex(uh) * (1.0 - smoothstep(0.25, 0.6, length(fwidth(uh))));
@@ -315,6 +331,7 @@ void traje(vec3 p) {
   float wy = q.y - (1.676 + (0.10 - q.x) * 0.42);
   float asa = max(tLinha(wy, 0.0065) * step(0.058, q.z) * step(-0.06, q.x) * step(q.x, 0.105), tLinha(wy + 0.024, 0.0045) * step(0.066, q.z) * step(-0.045, q.x) * step(q.x, 0.095));
   ouro = max(ouro, asa);
+  float raioT = tRaioTesta(p); ouro = max(ouro, raioT);
   // o aro dos olhos (lente escura que acende fraco) e a costura do alto do capuz
   float lente = tLinha(sdOlho - 0.0045, 0.0045) * step(0.08, q.x);
   float cost = tLinha(q.z, 0.004) * step(1.7, q.y) * step(q.x, 0.05);
@@ -326,7 +343,7 @@ void traje(vec3 p) {
   TR_RUG = mix(mix(mix(0.4, 0.35, lente), 0.85, cost), 0.2, ouro);
   TR_MET = mix(mix(0.06, 0.1, lente), 0.95, ouro);
   TR_ALT = mix(-0.1 * hx - cost + 0.4 * lente, 0.8, ouro) * MASCARA;
-  TR_EMIS = (T_OURO * (ouro * T_BRILHO + asa * T_VEIA * 0.6) + T_OLHO * lente * 0.25) * MASCARA;
+  TR_EMIS = (T_OURO * (ouro * T_BRILHO + (asa + raioT) * T_VEIA * 0.6) + T_OLHO * lente * 0.25) * MASCARA;
 }
 `;
 

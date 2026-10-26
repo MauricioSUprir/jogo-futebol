@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CELL, BLOCO, N, MEIO, CALCADA, LAB_CELULA, bloco, celulaDe, centroDe, dentro, ehCampus, todasEsferas, retangulosPerto, chaoEm, empurrar } from './cidade.js';
 import { criarHeroi } from './humano.js';
-import { criarRaios } from './raios.js';
+import { criarRaios, definirCameraRaios } from './raios.js';
 import { criarPosFx } from './posfx.js';
 import { iniciarAtualizacao } from './atualizar.js';
 import { criarMissoes } from './missoes.js';
@@ -16,9 +16,11 @@ import { criarHistoria } from './historia.js';
 import { criarEquipe } from './equipe.js';
 import { criarTempo } from './tempo.js';
 import { construirLab, construirSilhueta } from './lab3d.js';
-import { CAMPUS, TORRE, ALAS, LAB } from './lab.js';
+import { CAMPUS, TORRE, ALAS, LAB, PLATAFORMA_ESTEIRA } from './lab.js';
+import { ESTEIRA } from './lab-tex.js';
 import { MARCOS, limitar, PONTE, ILHA, PRESIDIO, pontoMundo, SUBESTACOES } from './marcos.js';
 import { criarAliados } from './aliados.js';
+import { criarContencao } from './contencao.js';
 import { desenharMarco, blocoIlha, desenharFora } from './marcos3d.js';
 import { INTERIORES, Y0 as Y_INT, noGatilhoFora, noGatilhoDentro } from './interiores.js';
 import { construirInterior } from './interiores3d.js';
@@ -383,7 +385,7 @@ const heroi = new THREE.Group(); const partes = {};
   partes.bracoE = membro(-0.42, 1.5, 0.45, 0.1, vermelho, false); partes.bracoD = membro(0.42, 1.5, 0.45, 0.1, vermelho, false);
 }
 cena.add(heroi);
-const raios = criarRaios(cena, { mobile: MOBILE });
+const raios = criarRaios(cena, { mobile: MOBILE }); definirCameraRaios(camera);
 const posfx = criarPosFx(renderer, cena, camera, { mobile: MOBILE });
 // o corpo do herói: o Flash de traje e o Barry Allen à paisana (as missões da vida dele: interiores.js, missoes.js `roupa`);
 // os dois com o mesmo esqueleto e a mesma animação, um visível de cada vez (vestir)
@@ -673,6 +675,24 @@ function passoHeroi(dt) {
   P.t += dt;
 }
 
+// a ESTEIRA do laboratório (dono, 26/10: "a esteira não funciona"): em cima dela, correndo ao longo da correia, o herói
+// corre no lugar (a correia devolve o que ele andou) e ganha velocidade como numa reta; a correia e os telões da sala
+// seguem a velocidade dele (lab-tex.js ESTEIRA) e o recorde fica gravado
+function passoEsteira(dt) {
+  const E = PLATAFORMA_ESTEIRA, u = P.x - LAB_B.cx, v = P.z - LAB_B.cz;
+  const em = u > E.u0 && u < E.u1 && v > E.v0 && v < E.v1 && P.y < E.y1 + 0.6 && P.noChao && !P.parede && J.modo === 'jogando';
+  if (!em) {
+    if (J.esteira?.novo) { try { armazem?.setItem('theflash.esteira.v1', String(Math.round(ESTEIRA.recorde))); } catch { /* sem armazenamento */ } avisar('Recorde da esteira', `${Math.round(ESTEIRA.recorde).toLocaleString('pt-BR')} km/h`, 'ok'); }
+    if (J.esteira) { J.esteira = null; ESTEIRA.kmh = null; }
+    return;
+  }
+  if (!J.esteira) J.esteira = { z: P.z, novo: false };
+  if (Math.abs(P.vz) > Math.abs(P.vx) && Math.abs(P.vz) > 2) { P.z = J.esteira.z; P.x = clamp(P.x, LAB_B.cx + E.u0 + 0.5, LAB_B.cx + E.u1 - 0.5); }
+  else J.esteira.z = P.z;                                                      // parado ou saindo de lado: anda normal
+  const kmh = Math.hypot(P.vx, P.vz) * 3.6; ESTEIRA.kmh = kmh;
+  if (kmh > ESTEIRA.recorde) { ESTEIRA.recorde = kmh; J.esteira.novo = true; }
+}
+
 function ehBaixo(q) { return q.y0 >= -0.01 && q.y1 - Math.max(P.y, q.y0) <= 1.8 && q.y1 - q.y0 < 3; }
 function estaDentroDeSolido() {
   for (const q of rectsPerto) { if (q.y0 < 0) continue; if (P.x > q.x0 && P.x < q.x1 && P.z > q.z0 && P.z < q.z1 && P.y + 0.9 > q.y0 && P.y + 0.9 < q.y1) return true; }
@@ -937,6 +957,7 @@ function atualizarBussola() {
 
 // ---------- missões, crimes e portais ----------
 let armazem = null; try { armazem = localStorage; } catch { armazem = null; }
+try { ESTEIRA.recorde = Math.max(ESTEIRA.recorde, Number(armazem?.getItem('theflash.esteira.v1')) || 0); } catch { /* sem armazenamento */ }
 // "Recomeçar a história do zero" (pausa): a página anterior marcou o pedido e recarregou; o progresso some AQUI, antes de
 // qualquer módulo ler o que está gravado (assim nada que a página velha ainda grave antes de sair volta a valer)
 const PROGRESSO = ['theflash.missoes.v2', 'theflash.missoes.v1', 'theflash.historia.v1', 'theflash.viloes.v1'];   // missoes.js, historia.js, viloes.js
@@ -977,7 +998,10 @@ function passoMissoes(dt) {
   if (rp?.falhou) avisar('Volte ao 1º portal', 'Tempo esgotado', 'alerta');
   // crimes: durante a história só os que o passo pede (e quaisquer no "Guardião da cidade"); com a história terminada, a cidade é livre
   const querCrime = m?.crime || m?.id === 'patrulha' || missoes.livre || crimes.ativo;   // um crime já em andamento sempre termina
-  const ev = viloes.ativo || tempo.epoca === 'passado' || J.interior || !querCrime ? null : crimes.atualizar(dt, P, { forcar: m?.crime });
+  // um objetivo de cada vez (dono, 26/10: "não pode vir outra missão nem crime enquanto eu estiver dentro de uma missão ou
+  // objetivo"): crime novo só com a cena e o rádio do passo terminados, sem cronômetro, corrida de portais ou vilão em cena
+  const ocupado = !!(J.cenaPendente || J.cron || (m?.tipo === 'portais' && portais.estado().correndo) || !historia.radioLivre || J.esteira);
+  const ev = viloes.ativo || tempo.epoca === 'passado' || J.interior || !querCrime || (!crimes.ativo && ocupado) ? null : crimes.atualizar(dt, P, { forcar: m?.crime });
   if (ev?.inicio) avisar(ev.nome, 'Crime na cidade', 'crime');
   else if (ev) {
     if (ev.ok) { missoes.contar('crimes'); missoes.contar(ev.tipo); missoes.contar('pontos', 250); avisar(`${ev.nome} impedido`, '+250 pontos', 'ok'); }
@@ -1112,6 +1136,7 @@ const tempo = criarTempo(cena, { mobile: MOBILE, aniso: ANISO, fx: combate.efeit
 const equipe = criarEquipe(cena, { mobile: MOBILE, aniso: ANISO, renderer, lab: LAB_B, aoRetrato: (id, url) => historia.definirRetrato(id, url) });   // os retratos vão prontos (tools/gerar-retratos.mjs)
 const noCortex = () => LAB_B.plano.dentro(P.x, P.z, P.y) === 'cortex';
 // o Joe e a Iris, nos lugares da história (o passo atual diz onde; a cena do passo segura eles até acabar)
+const contencao = criarContencao(cena, { mobile: MOBILE, aniso: ANISO, lab: LAB_B });     // os vilões vencidos presos nas celas
 const aliados = criarAliados(cena, { mobile: MOBILE, aniso: ANISO, chao: (x, z) => chaoEm(retangulosPerto(x, z, 0), x, z, 2) });
 // a vida do Barry: a pista da perícia, o gelo do Frio, a tempestade do Mago e os raios da noite do raio (vida.js)
 const vida = criarVida(cena, { fx: combate.efeitos, mobile: MOBILE });
@@ -1277,12 +1302,12 @@ function quadro() {
   if (J.modo === 'jogando') {
     if (tempo.epoca === 'presente') mundo.T = (mundo.T + dt / DIA_SEGUNDOS) % 1;   // no passado: a noite do acidente, parada
     processarGolpes();
-    passoHeroi(dt); esferasProximas(dt);
+    passoHeroi(dt); passoEsteira(dt); esferasProximas(dt);
     for (const ev of combate.passo(dt, P)) {
       if (ev.tipo === 'nocaute') { missoes.contar('nocautes'); missoes.contar('pontos', 50); if (ev.especial) missoes.contar('especiais'); }
       else if (ev.tipo === 'dano') { el.dano.style.opacity = '1'; }
     }
-    for (const ev of viloes.atualizar(dt, P, { capitulo: missoes.atual?.capitulo, podeComecar: !crimes.ativo && !J.cenaPendente && !J.interior && historia.radioLivre && tempo.epoca === 'presente' })) eventoVilao(ev);
+    for (const ev of viloes.atualizar(dt, P, { capitulo: missoes.atual?.capitulo, podeComecar: !crimes.ativo && !J.cenaPendente && !J.cron && !J.interior && historia.radioLivre && tempo.epoca === 'presente' })) eventoVilao(ev);
     J.danoVilao = Math.max(0, (J.danoVilao || 0) - dt * 2);
     el.missao.hidden = viloes.ativo; el.corpo.classList.toggle('capitulo', viloes.ativo);
     el.dano.style.opacity = String(Math.min(1, Math.max(combate.dano, J.danoVilao)));
@@ -1305,6 +1330,7 @@ function quadro() {
   equipe.atualizar(dt, P, { noCortex: noCortex(), quemFala: J.modo === 'cena' ? historia.quemFala : null });
   aliados.posicionar((J.cenaAliados || missoes.atual)?.aliados || null);
   aliados.atualizar(dt, P, { quemFala: J.modo === 'cena' ? historia.quemFala : null });
+  contencao.atualizar(dt, P, viloes);
   tempo.atualizar(dt, camera, P, { quemFala: J.modo === 'cena' ? historia.quemFala : null });
   if (J.modo === 'cena') {
     viloes.posar(dt, historia.quemFala); animarHeroi(dt); if (!historia.camera(camera, dt)) atualizarCamera(dt);
@@ -1361,4 +1387,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { equipe, aliados, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { equipe, aliados, contencao, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
