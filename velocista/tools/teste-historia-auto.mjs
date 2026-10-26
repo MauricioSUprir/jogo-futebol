@@ -33,7 +33,8 @@ ok(await espera(() => window.__rel.missoes.atual?.id === 'especiais'), 'com o Zo
 
 // ---- sem crime aleatório durante a história ----
 await abrirJogo('?missao=velocidade');
-await pagina.evaluate(() => { const R = window.__rel; R.crimes.atualizar(0, R.P, {}); });
+// o relógio do próximo crime já venceu: se o jogo deixasse, um crime começaria no próximo quadro
+await pagina.evaluate(() => window.__rel.crimes.adiantar(1000));
 await pagina.waitForTimeout(20000);
 ok(await pagina.evaluate(() => !window.__rel.crimes.ativo), 'durante a história nenhum crime aparece sozinho');
 const pausa = await pagina.evaluate(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' })); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'p' })); return true; });
@@ -50,7 +51,8 @@ ok(mig.id === 'cap-reverso' && mig.pts === 1234, `o progresso antigo vai para o 
 const todos = ['zoom', 'frio', 'onda', 'mago', 'reverso', 'final', 'savitar', 'devoe'];
 await abrirJogo('', { 'theflash.missoes.v2': { id: null }, 'theflash.viloes.v1': { vencidos: todos }, 'theflash.historia.v1': { vistas: ['cena:prologo'] } });
 ok(await pagina.evaluate(() => window.__rel.missoes.livre && /Cidade livre/.test(document.getElementById('missaoNum').textContent)), 'história concluída: cidade livre');
-ok(await espera(() => !!window.__rel.crimes.ativo, null, 400000), 'na cidade livre os crimes aparecem sozinhos');
+await pagina.evaluate(() => window.__rel.crimes.adiantar(1000));      // o mesmo relógio vencido: agora o jogo deixa
+ok(await espera(() => !!window.__rel.crimes.ativo, null, 120000), 'na cidade livre os crimes aparecem sozinhos');
 await pagina.evaluate(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' })); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'p' })); });
 await espera(() => !document.getElementById('telaPausa').hidden, null, 30000);
 const n = await pagina.evaluate(() => document.querySelectorAll('#capitulos button.vencido').length);

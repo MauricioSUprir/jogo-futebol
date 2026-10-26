@@ -65,6 +65,7 @@ ok(await pagina.evaluate(() => !document.body.classList.contains('passado') && w
 await abrirJogo('?historia=1&missao=passado', ['cena:prologo']);
 ok(await espera(() => window.__rel.tempo.epoca === 'passado' && window.__rel.tempo.focoReverso()), 'recarregar no meio da missão volta para a noite do acidente');
 // o herói começa na porta do laboratório: a cena abre sozinha assim que o Reverso aparece (só leva o herói para perto se ainda não abriu)
+await espera(() => window.__rel.historia.cenaAtual === 'acidente', null, 15000);
 await pagina.evaluate(() => { const R = window.__rel, e = R.LAB_B.plano.entrada; if (R.historia.cenaAtual !== 'acidente') { R.P.x = e.x - 8; R.P.z = e.z - 8; R.P.y = 0; } });
 ok(await espera(() => window.__rel.historia.cenaAtual === 'acidente'), 'cena do acidente, de frente para o Reverso do passado');
 const d = await pagina.evaluate(() => { const R = window.__rel, r = R.tempo.focoReverso(); return Math.hypot(R.P.x - r.x, R.P.z - r.z); });
