@@ -1,4 +1,7 @@
-// Texturas procedurais (canvas) da cidade de THE FLASH: fachadas (cor + janelas acesas), asfalto, calçada, grama, telhado.
+// Texturas procedurais (canvas) da cidade de THE FLASH: fachadas (cor + janelas acesas + a máscara do vidro, para as salas
+// de janelas.js), asfalto, calçada, grama, telhado. Cada estilo de fachada desenha em `g` (cor), `e` (janelas acesas à
+// noite) e `m` (branco = vidro); as fachadas têm peitoris com sombra, molduras com relevo e o escorrido de sujeira que a
+// chuva deixa embaixo de cada janela.
 import * as THREE from 'three';
 import { CELL, RUA } from './cidade.js';
 
@@ -28,83 +31,103 @@ function textura(canvas, { cor = true, repete = true, aniso = 8 } = {}) {
   return t;
 }
 const QUENTE = ['#ffe2a0', '#ffd27a', '#fff0c8', '#ffc66b', '#bfe3ff'];
+// peitoril de pedra embaixo da janela (com a sombra) e o escorrido de sujeira que desce dos cantos dele
+function peitoril(g, x, y, w, cor = '#d9d2c2') {
+  g.fillStyle = cor; g.fillRect(x - 5, y, w + 10, 5);
+  g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x - 5, y + 5, w + 10, 3);
+  for (const ex of [x - 3, x + w + 1]) { const gr = g.createLinearGradient(0, y + 8, 0, y + 8 + r(18, 46)); gr.addColorStop(0, 'rgba(30,25,20,0.28)'); gr.addColorStop(1, 'rgba(30,25,20,0)'); g.fillStyle = gr; g.fillRect(ex, y + 8, r(3, 7), 46); }
+}
+// moldura com relevo: luz em cima e à esquerda, sombra embaixo e à direita (o sol da cidade vem de cima)
+function moldura(g, x, y, w, h, l = 4) {
+  g.fillStyle = 'rgba(255,255,255,0.28)'; g.fillRect(x - l, y - l, w + 2 * l, l); g.fillRect(x - l, y - l, l, h + 2 * l);
+  g.fillStyle = 'rgba(0,0,0,0.38)'; g.fillRect(x - l, y + h, w + 2 * l, l); g.fillRect(x + w, y - l, l, h + 2 * l);
+}
 
 // ----- fachadas: [cor, emissiva] em 512×512 -----
 const ESTILOS = [
-  function vidro(g, e, S) {
+  function vidro(g, e, S, m) {
     const gr = g.createLinearGradient(0, 0, S, S); gr.addColorStop(0, '#4d7396'); gr.addColorStop(1, '#1f3550'); g.fillStyle = gr; g.fillRect(0, 0, S, S);
     const cols = 8, lin = 4, cw = S / cols, ch = S / lin;
     for (let a = 0; a < cols; a++) for (let b = 0; b < lin; b++) {
       const x = a * cw, y = b * ch, ref = g.createLinearGradient(x, y, x + cw, y + ch);
       ref.addColorStop(0, `rgba(190,225,255,${r(0.12, 0.4)})`); ref.addColorStop(1, 'rgba(10,20,40,0.35)');
-      g.fillStyle = ref; g.fillRect(x + 2, y + 2, cw - 4, ch - 4);
-      if (rnd() < 0.42) { e.fillStyle = pick(QUENTE); e.globalAlpha = r(0.5, 0.95); e.fillRect(x + 4, y + 4, cw - 8, ch - 8); e.globalAlpha = 1; }
+      g.fillStyle = ref; g.fillRect(x + 2, y + 2, cw - 4, ch - 4); m.fillRect(x + 2, y + 2, cw - 4, ch - 4);
+      if (rnd() < 0.42) { e.fillStyle = pick(QUENTE); e.globalAlpha = r(0.5, 0.95); e.fillRect(x + 2, y + 2, cw - 4, ch - 4); e.globalAlpha = 1; }
     }
     g.strokeStyle = '#121c2b'; g.lineWidth = 3;
     for (let a = 0; a <= cols; a++) { g.beginPath(); g.moveTo(a * cw, 0); g.lineTo(a * cw, S); g.stroke(); }
     for (let b = 0; b <= lin; b++) { g.beginPath(); g.moveTo(0, b * ch); g.lineTo(S, b * ch); g.stroke(); }
   },
-  function tijolo(g, e, S) {
-    g.fillStyle = '#7a3f31'; g.fillRect(0, 0, S, S);
+  function tijolo(g, e, S, m) {
+    g.fillStyle = '#6e3a2e'; g.fillRect(0, 0, S, S);
     for (let y = 0, k = 0; y < S; y += 14, k++) for (let x = -(k % 2) * 16; x < S; x += 32) {
-      const t = r(-14, 14); g.fillStyle = `rgb(${138 + t},${68 + t * 0.6},${52 + t * 0.5})`; g.fillRect(x + 1, y + 1, 30, 12);
+      const t = r(-14, 14), q = rnd() < 0.08 ? -22 : 0; g.fillStyle = `rgb(${138 + t + q},${68 + t * 0.6 + q * 0.5},${52 + t * 0.5 + q * 0.4})`; g.fillRect(x + 1, y + 1, 30, 12);
+      g.fillStyle = 'rgba(255,230,210,0.08)'; g.fillRect(x + 1, y + 1, 30, 2);                 // a quina de cima do tijolo pega luz
     }
     const cols = 5, lin = 4, cw = S / cols, ch = S / lin;
     for (let a = 0; a < cols; a++) for (let b = 0; b < lin; b++) {
       const x = a * cw + cw * 0.2, y = b * ch + ch * 0.18, w = cw * 0.6, h = ch * 0.62;
       g.fillStyle = '#d8c9a6'; g.fillRect(x - 5, y - 5, w + 10, h + 12);          // moldura de pedra
-      g.fillStyle = '#1b2433'; g.fillRect(x, y, w, h);
+      moldura(g, x - 1, y - 1, w + 2, h + 2, 4);
+      g.fillStyle = '#1b2433'; g.fillRect(x, y, w, h); m.fillRect(x, y, w, h);
       g.fillStyle = 'rgba(160,190,220,0.25)'; g.fillRect(x, y, w, h * 0.4);
-      g.fillStyle = '#2a2f3a'; g.fillRect(x + w / 2 - 1.5, y, 3, h); g.fillRect(x, y + h / 2 - 1.5, w, 3);
+      g.fillStyle = '#e8e2d4'; g.fillRect(x + w / 2 - 1.5, y, 3, h); g.fillRect(x, y + h / 2 - 1.5, w, 3);   // caixilho branco
+      m.fillStyle = '#000'; m.fillRect(x + w / 2 - 1.5, y, 3, h); m.fillRect(x, y + h / 2 - 1.5, w, 3); m.fillStyle = '#fff';
+      peitoril(g, x, y + h + 7, w, '#e2d8c0');
       if (rnd() < 0.45) { e.fillStyle = pick(QUENTE); e.globalAlpha = r(0.55, 0.95); e.fillRect(x + 2, y + 2, w - 4, h - 4); e.globalAlpha = 1; }
     }
   },
-  function concreto(g, e, S) {
+  function concreto(g, e, S, m) {
     g.fillStyle = '#9b9da1'; g.fillRect(0, 0, S, S);
+    for (let x = 0; x < S; x += 128) for (let y = 0; y < S; y += 64) { g.fillStyle = `rgba(${rnd() < 0.5 ? 0 : 255},${rnd() < 0.5 ? 0 : 255},${rnd() < 0.5 ? 0 : 255},0.025)`; g.fillRect(x, y, 128, 64); g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(x, y, 128, 1.5); g.fillRect(x, y, 1.5, 64); }   // placas pré-moldadas
     const lin = 4, ch = S / lin;
     for (let b = 0; b < lin; b++) {
       const y = b * ch + ch * 0.28, h = ch * 0.44;
-      g.fillStyle = '#18222f'; g.fillRect(0, y, S, h);
+      g.fillStyle = '#18222f'; g.fillRect(0, y, S, h); m.fillRect(0, y, S, h);
       g.fillStyle = 'rgba(140,180,215,0.28)'; g.fillRect(0, y, S, h * 0.45);
+      g.fillStyle = 'rgba(0,0,0,0.4)'; g.fillRect(0, y - 4, S, 4); g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(0, y + h, S, 3);
       for (let x = 0; x < S; x += 64) {
-        g.fillStyle = '#7d8084'; g.fillRect(x, y, 4, h);
+        g.fillStyle = '#7d8084'; g.fillRect(x, y, 4, h); m.fillStyle = '#000'; m.fillRect(x, y, 4, h); m.fillStyle = '#fff';
+        const gr = g.createLinearGradient(0, y + h + 3, 0, y + h + 40); gr.addColorStop(0, 'rgba(40,35,30,0.22)'); gr.addColorStop(1, 'rgba(40,35,30,0)'); g.fillStyle = gr; g.fillRect(x + r(8, 50), y + h + 3, r(3, 8), 40);
         if (rnd() < 0.4) { e.fillStyle = pick(QUENTE); e.globalAlpha = r(0.5, 0.9); e.fillRect(x + 6, y + 3, 52, h - 6); e.globalAlpha = 1; }
       }
       g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(0, b * ch + ch - 6, S, 6);                // laje
     }
   },
-  function escritorio(g, e, S) {
+  function escritorio(g, e, S, m) {
     g.fillStyle = pick(['#cbb89a', '#c2b59f', '#d0c4aa']); g.fillRect(0, 0, S, S);
     const cols = 8, lin = 4, cw = S / cols, ch = S / lin;
     for (let a = 0; a < cols; a++) for (let b = 0; b < lin; b++) {
       const x = a * cw + cw * 0.17, y = b * ch + ch * 0.17, w = cw * 0.66, h = ch * 0.62;
-      g.fillStyle = '#6a5e4c'; g.fillRect(x - 3, y - 3, w + 6, h + 6);
-      const gr = g.createLinearGradient(x, y, x, y + h); gr.addColorStop(0, '#6f93b3'); gr.addColorStop(1, '#2a3b4f'); g.fillStyle = gr; g.fillRect(x, y, w, h);
-      g.fillStyle = '#6a5e4c'; g.fillRect(x + w / 2 - 1, y, 2, h);
+      g.fillStyle = '#6a5e4c'; g.fillRect(x - 3, y - 3, w + 6, h + 6); moldura(g, x - 3, y - 3, w + 6, h + 6, 3);
+      const gr = g.createLinearGradient(x, y, x, y + h); gr.addColorStop(0, '#6f93b3'); gr.addColorStop(1, '#2a3b4f'); g.fillStyle = gr; g.fillRect(x, y, w, h); m.fillRect(x, y, w, h);
+      g.fillStyle = '#6a5e4c'; g.fillRect(x + w / 2 - 1, y, 2, h); m.fillStyle = '#000'; m.fillRect(x + w / 2 - 1, y, 2, h); m.fillStyle = '#fff';
+      peitoril(g, x, y + h + 3, w, '#bdb29c');
       if (rnd() < 0.45) { e.fillStyle = pick(QUENTE); e.globalAlpha = r(0.55, 0.95); e.fillRect(x, y, w, h); e.globalAlpha = 1; }
     }
   },
-  function residencial(g, e, S) {
+  function residencial(g, e, S, m) {
     g.fillStyle = pick(['#d9b8a0', '#cfd6b0', '#b9c8d6', '#e0c9b0']); g.fillRect(0, 0, S, S);
     const cols = 4, lin = 4, cw = S / cols, ch = S / lin;
     for (let a = 0; a < cols; a++) for (let b = 0; b < lin; b++) {
       const x = a * cw + cw * 0.22, y = b * ch + ch * 0.12, w = cw * 0.56, h = ch * 0.56;
-      g.fillStyle = '#f2ece0'; g.fillRect(x - 4, y - 4, w + 8, h + 8);
-      g.fillStyle = '#25303f'; g.fillRect(x, y, w, h);
+      g.fillStyle = '#f2ece0'; g.fillRect(x - 4, y - 4, w + 8, h + 8); moldura(g, x - 4, y - 4, w + 8, h + 8, 3);
+      g.fillStyle = '#25303f'; g.fillRect(x, y, w, h); m.fillRect(x + 1, y, w - 1, h);
       g.fillStyle = 'rgba(150,185,215,0.3)'; g.fillRect(x, y, w, h * 0.45);
       g.fillStyle = '#5b6470'; g.fillRect(x - 10, y + h + 6, w + 20, 12);                  // sacada
       g.fillStyle = '#3d4550'; for (let k = 0; k < 8; k++) g.fillRect(x - 8 + k * ((w + 16) / 7), y + h + 6, 2, 12);
       g.fillStyle = pick(['#3d6b4a', '#7a3b3b', '#3b5a7a']); g.fillRect(x - 6, y, 7, h);   // persiana
+      if (rnd() < 0.3) { g.fillStyle = '#c9cdd2'; g.fillRect(x + w - 26, y + h - 20, 24, 16); g.fillStyle = '#7d838b'; for (let k = 0; k < 5; k++) g.fillRect(x + w - 24, y + h - 18 + k * 3, 20, 1.5); m.fillStyle = '#000'; m.fillRect(x + w - 26, y + h - 20, 24, 16); m.fillStyle = '#fff'; }   // ar-condicionado
       if (rnd() < 0.5) { e.fillStyle = pick(QUENTE); e.globalAlpha = r(0.5, 0.9); e.fillRect(x + 4, y, w - 4, h); e.globalAlpha = 1; }
     }
   },
-  function decor(g, e, S) {
+  function decor(g, e, S, m) {
     g.fillStyle = '#5b5648'; g.fillRect(0, 0, S, S);
     for (let x = 0; x < S; x += 64) {
       g.fillStyle = '#7a7261'; g.fillRect(x, 0, 14, S); g.fillStyle = '#403c32'; g.fillRect(x + 14, 0, 3, S);
       const w = 26, jx = x + 22;
       for (let y = 10; y < S; y += 32) {
-        g.fillStyle = '#12161d'; g.fillRect(jx, y, w, 20);
+        g.fillStyle = '#12161d'; g.fillRect(jx, y, w, 20); m.fillRect(jx, y, w, 20);
         g.fillStyle = 'rgba(140,175,205,0.25)'; g.fillRect(jx, y, w, 8);
         if (rnd() < 0.42) { e.fillStyle = pick(QUENTE); e.globalAlpha = r(0.5, 0.9); e.fillRect(jx + 1, y + 1, w - 2, 18); e.globalAlpha = 1; }
       }
@@ -113,16 +136,21 @@ const ESTILOS = [
   },
 ];
 
-export function criarFachadas(aniso = 8) {
+// a grade das salas de cada estilo (colunas × andares numa repetição de 16 m) e quanto o vidro espelha (janelas.js)
+const SALAS = [{ grade: [8, 4], espelho: 0.55 }, { grade: [5, 4], espelho: 0 }, { grade: [8, 4], espelho: 0.15 }, { grade: [8, 4], espelho: 0.1 }, { grade: [4, 4], espelho: 0 }, { grade: [8, 4], espelho: 0 }];
+/** As fachadas: [{mapa, emissiva, mascara, grade, espelho}]. `alta`: desenhadas em 1024 px (no PC; o desenho é o mesmo). */
+export function criarFachadas(aniso = 8, { alta = false } = {}) {
   const out = [];
-  const S = 512;
+  const S = 512, R = alta ? 1024 : 512, k0 = R / S;
   for (let k = 0; k < ESTILOS.length; k++) {
     semente = 1000 + k * 77;
-    const [c, g] = tela(S, S), [ce, e] = tela(S, S);
-    e.fillStyle = '#000'; e.fillRect(0, 0, S, S);
-    ESTILOS[k](g, e, S);
-    granulado(g, S, S, 5000, 0.09); sujeira(g, S, S);
-    out.push({ mapa: textura(c, { aniso }), emissiva: textura(ce, { aniso }) });
+    const [c, g] = tela(R, R), [ce, e] = tela(R, R), [cm, m] = tela(256, 256);
+    for (const x of [g, e]) x.setTransform(k0, 0, 0, k0, 0, 0);
+    m.setTransform(0.5, 0, 0, 0.5, 0, 0);
+    e.fillStyle = '#000'; e.fillRect(0, 0, S, S); m.fillStyle = '#000'; m.fillRect(0, 0, S, S); m.fillStyle = '#fff';
+    ESTILOS[k](g, e, S, m);
+    granulado(g, S, S, 5000 * k0, 0.09); sujeira(g, S, S);
+    out.push({ mapa: textura(c, { aniso }), emissiva: textura(ce, { aniso }), mascara: textura(cm, { cor: false, aniso }), ...SALAS[k] });
   }
   return out;
 }

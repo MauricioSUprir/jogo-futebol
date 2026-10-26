@@ -1,62 +1,21 @@
 // Trânsito da cidade: carros andando pela mão direita nas ruas (eixos em x/z = k·CELL − MEIO, k = 0..N), virando nas
 // esquinas por curvas de Bézier, guardando distância do carro da frente e cedendo a pedestres na frente. Só existem num
-// raio do jogador; quem sai do raio renasce longe, de preferência atrás dele. Desenho: 3 InstancedMesh (carroceria com
-// cores de vértice + cor por instância, faróis/lanternas e o facho dos faróis no chão à noite).
+// raio do jogador; quem sai do raio renasce longe, de preferência atrás dele. Desenho: um InstancedMesh por modelo de
+// carros3d.js (sedã, hatch, SUV, van, táxi e viatura; a cor por instância, faróis, lanternas e o giroflex acesos no
+// próprio material) e o facho dos faróis no chão à noite.
 // THREE é passado por parâmetro (o mesmo módulo do jogo); a lógica não usa DOM.
 import { CELL, N, MEIO, arestaNoCampus } from './cidade.js';
+import { geometriaCarro, luzesNoMaterial, TIPOS } from './carros3d.js';
 
 const FAIXA = 2.2;              // distância do eixo da rua ao centro da faixa (mão direita)
 const T_ESQ = 8;                // a curva começa/termina a 8 m do centro do cruzamento (meia rua)
 const VMIN = 8, VMAX = 16;
 const GAP = 7.5;                // distância (centro a centro) mínima atrás do carro da frente
-const COMP = 4.3, LARG = 1.85;
+const COMP = 4.3;
 
 const eixo = (k) => k * CELL - MEIO;                       // posição do eixo da rua k
 const noDe = (v) => Math.round((v + MEIO) / CELL);         // eixo mais próximo
 
-// ---------- geometrias com cor de vértice ----------
-function caixa(THREE, w, h, d, x, y, z, cor) {
-  const g = new THREE.BoxGeometry(w, h, d); g.translate(x, y, z);
-  return comCor(THREE, g, cor);
-}
-function cil(THREE, r, h, x, y, z, cor) {
-  const g = new THREE.CylinderGeometry(r, r, h, 10); g.rotateX(Math.PI / 2); g.translate(x, y, z);
-  return comCor(THREE, g, cor);
-}
-function comCor(THREE, g, cor) {
-  const n = g.attributes.position.count, c = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) { c[i * 3] = cor[0]; c[i * 3 + 1] = cor[1]; c[i * 3 + 2] = cor[2]; }
-  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
-  return g.index ? g.toNonIndexed() : g;
-}
-function juntar(THREE, gs) {
-  let n = 0; for (const g of gs) n += g.attributes.position.count;
-  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3);
-  let o = 0;
-  for (const g of gs) { pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); col.set(g.attributes.color.array, o * 3); o += g.attributes.position.count; g.dispose(); }
-  const r = new THREE.BufferGeometry();
-  r.setAttribute('position', new THREE.BufferAttribute(pos, 3)); r.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); r.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  r.computeBoundingSphere(); return r;
-}
-// carro com a frente em +x (como os estacionados de jogo.js)
-function geoCarro(THREE) {
-  const B = [1, 1, 1], VIDRO = [0.07, 0.09, 0.13], PRETO = [0.05, 0.05, 0.06], CINZA = [0.32, 0.33, 0.36];
-  return juntar(THREE, [
-    caixa(THREE, COMP, 0.62, LARG, 0, 0.6, 0, B),                // carroceria (tingida por instância)
-    caixa(THREE, COMP + 0.06, 0.2, LARG + 0.04, 0, 0.36, 0, CINZA),   // saia/para-choques
-    caixa(THREE, 2.25, 0.6, 1.62, -0.25, 1.2, 0, VIDRO),          // cabine de vidro
-    caixa(THREE, 2.05, 0.08, 1.52, -0.25, 1.53, 0, B),            // teto
-    caixa(THREE, 0.5, 0.08, 1.7, 1.5, 0.93, 0, B),                // capô (leve degrau)
-    ...[[1.38, 0.88], [1.38, -0.88], [-1.38, 0.88], [-1.38, -0.88]].map(([x, z]) => cil(THREE, 0.34, 0.26, x, 0.34, z, PRETO)),
-  ]);
-}
-function geoLuzes(THREE) {
-  const F = [1, 0.95, 0.78], R = [1, 0.08, 0.06];
-  return juntar(THREE, [
-    caixa(THREE, 0.08, 0.16, 0.36, COMP / 2 + 0.01, 0.74, 0.6, F), caixa(THREE, 0.08, 0.16, 0.36, COMP / 2 + 0.01, 0.74, -0.6, F),
-    caixa(THREE, 0.08, 0.14, 0.34, -COMP / 2 - 0.01, 0.78, 0.62, R), caixa(THREE, 0.08, 0.14, 0.34, -COMP / 2 - 0.01, 0.78, -0.62, R),
-  ]);
-}
 function geoFacho(THREE) {           // dois fachos no chão à frente (plano em y = 0,04)
   const g = new THREE.PlaneGeometry(9, 3.2); g.rotateX(-Math.PI / 2); g.translate(COMP / 2 + 4.6, 0.04, 0);
   return g;
@@ -69,6 +28,11 @@ function texFacho(THREE) {
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128); g.restore();
   return new THREE.CanvasTexture(c);
 }
+// quantos de cada modelo (em 20): sedã, hatch, SUV, van, táxi, viatura; a cor fixa do táxi e da viatura
+const PESO = { sedan: 6, hatch: 5, suv: 4, van: 2, taxi: 2, policia: 1 }, COR_FIXA = { taxi: [0.95, 0.74, 0.1], policia: [0.94, 0.94, 0.95] };
+// (no celular, três modelos: menos chamadas de desenho — o SUV e a viatura viram sedã, a van vira hatch)
+const NO_CELULAR = { suv: 'sedan', policia: 'sedan', van: 'hatch' };
+const tipoDe = (i, mobile) => { let k = (i * 7 + 3) % 20; for (const t of TIPOS) { k -= PESO[t]; if (k < 0) return (mobile && NO_CELULAR[t]) || t; } return 'sedan'; };
 const CORES = [[0.62, 0.08, 0.1], [0.1, 0.22, 0.52], [0.86, 0.86, 0.88], [0.09, 0.09, 0.1], [0.45, 0.47, 0.5], [0.14, 0.36, 0.25], [0.82, 0.62, 0.16], [0.36, 0.12, 0.4], [0.95, 0.95, 0.95], [0.7, 0.72, 0.75]];
 
 // ---------- caminho de um carro: trechos retos entre cruzamentos e curvas de Bézier neles ----------
@@ -84,15 +48,16 @@ export function criarTrafego(THREE, cena, { mobile = false, semente = 7 } = {}) 
   let sd = semente >>> 0 || 1;
   const rnd = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
 
-  // desenho
-  const matCarro = new THREE.MeshLambertMaterial({ vertexColors: true });
-  const malha = new THREE.InstancedMesh(geoCarro(THREE), matCarro, NC);
-  const matLuz = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
-  const luzes = new THREE.InstancedMesh(geoLuzes(THREE), matLuz, NC);
+  // desenho: um InstancedMesh por modelo (no PC a pintura reflete o céu; no celular, Lambert)
+  const matCarro = mobile ? new THREE.MeshLambertMaterial({ vertexColors: true }) : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.38, metalness: 0.3, envMapIntensity: 0.9 });
+  const luz = luzesNoMaterial(matCarro);
+  const qtd = {}; for (let i = 0; i < NC; i++) qtd[tipoDe(i, mobile)] = (qtd[tipoDe(i, mobile)] || 0) + 1;
+  const modelos = Object.fromEntries(Object.entries(qtd).map(([t, n]) => [t, new THREE.InstancedMesh(geometriaCarro(THREE, t), matCarro, n)]));
   const tf = texFacho(THREE);
   const matFacho = new THREE.MeshBasicMaterial({ color: 0xfff1c8, map: tf, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
   const fachos = new THREE.InstancedMesh(geoFacho(THREE), matFacho, NC);
-  for (const m of [malha, luzes, fachos]) { m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); cena.add(m); }
+  const malhas = [...Object.values(modelos), fachos];
+  for (const m of malhas) { m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); cena.add(m); }
   const cor = new THREE.Color();
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), S = new THREE.Vector3(1, 1, 1), E = new THREE.Euler();
 
@@ -185,12 +150,13 @@ export function criarTrafego(THREE, cena, { mobile = false, semente = 7 } = {}) 
     return false;
   }
 
+  const vagas = {};
   for (let i = 0; i < NC; i++) {
-    const c = { x: 0, z: 0, h: 0, v: 0, vAlvo: 10, vivo: false, susto: 0, tremor: 0, renasceu: false, cor: CORES[i % CORES.length] };
+    const tipo = tipoDe(i, mobile), c = { x: 0, z: 0, h: 0, v: 0, vAlvo: 10, vivo: false, susto: 0, tremor: 0, renasceu: false, tipo, vaga: vagas[tipo] = (vagas[tipo] ?? -1) + 1, cor: COR_FIXA[tipo] || CORES[i % CORES.length] };
     carros.push(c);
-    cor.setRGB(c.cor[0], c.cor[1], c.cor[2]); malha.setColorAt(i, cor);
+    cor.setRGB(c.cor[0], c.cor[1], c.cor[2]); modelos[tipo].setColorAt(c.vaga, cor);
   }
-  malha.instanceColor.needsUpdate = true;
+  for (const m of Object.values(modelos)) m.instanceColor.needsUpdate = true;
   let iniciado = false;
 
   function atualizar(dt, jogador = jogadorVirt, noite = 0, pessoas = null) {
@@ -234,22 +200,21 @@ export function criarTrafego(THREE, cena, { mobile = false, semente = 7 } = {}) 
       avancar(c, c.v * dt);
     }
     // desenho
-    const lit = 0.45 + 0.55 * noite;
-    matLuz.color.setRGB(lit, lit, lit);
-    matFacho.opacity = 0.28 * noite;
     const t = performance.now() / 1000;
+    luz.uFarol.value = 0.45 + 0.55 * noite; luz.uTempo.value = t;
+    matFacho.opacity = 0.28 * noite;
     carros.forEach((c, i) => {
       const tr = c.tremor;
       E.set(tr * 0.06 * Math.sin(t * 40 + i), -c.h, tr * 0.05 * Math.sin(t * 31 + i) - (c.susto > 0 ? 0.04 : 0), 'YXZ');
       Q.setFromEuler(E); P.set(c.x, 0, c.z); M.compose(P, Q, S);
-      malha.setMatrixAt(i, M); luzes.setMatrixAt(i, M); fachos.setMatrixAt(i, M);
+      modelos[c.tipo].setMatrixAt(c.vaga, M); fachos.setMatrixAt(i, M);
     });
-    malha.instanceMatrix.needsUpdate = luzes.instanceMatrix.needsUpdate = fachos.instanceMatrix.needsUpdate = true;
+    for (const m of malhas) m.instanceMatrix.needsUpdate = true;
   }
 
   function dispose() {
-    for (const m of [malha, luzes, fachos]) { cena.remove(m); m.geometry.dispose(); m.dispose(); }
-    matCarro.dispose(); matLuz.dispose(); matFacho.dispose(); tf?.dispose();
+    for (const m of malhas) { cena.remove(m); m.geometry.dispose(); m.dispose(); }
+    matCarro.dispose(); matFacho.dispose(); tf?.dispose();
   }
-  return { atualizar, carros, dispose, malhas: [malha, luzes, fachos], RAIO };
+  return { atualizar, carros, dispose, malhas, RAIO };
 }

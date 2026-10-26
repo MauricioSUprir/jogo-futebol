@@ -166,7 +166,9 @@ if (!args.includes('--so-node')) {
       T.traf.malhas.forEach((m) => { m.visible = true; }); T.ped.malha.visible = true;
       return { carros: total - semCarros, pedestres: semCarros - semNada };
     });
-    if (caso.nome === 'pc-dia') ok(info.carros <= 3 && info.pedestres <= 4, `desenho: trânsito ${info.carros} chamadas (≤ 3), pedestres ${info.pedestres} (≤ 4)`);
+    // (um InstancedMesh por modelo de carro: seis no PC, três no celular, mais o facho dos faróis)
+    if (caso.nome === 'pc-dia') ok(info.carros <= 7 && info.pedestres <= 4, `desenho: trânsito ${info.carros} chamadas (≤ 7: seis modelos + o facho), pedestres ${info.pedestres} (≤ 4)`);
+    if (caso.nome === 'cel-dia') ok(info.carros <= 4, `desenho no celular: trânsito ${info.carros} chamadas (≤ 4: três modelos + o facho)`);
     if (pastaPrints) {
       fs.mkdirSync(pastaPrints, { recursive: true });
       await pagina.screenshot({ path: path.join(pastaPrints, `${caso.nome}.png`), timeout: 120000 });
