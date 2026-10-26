@@ -62,6 +62,7 @@ ok(lugar < 8, `em frente ao S.T.A.R. Labs (${lugar.toFixed(1)} m da entrada)`);
 ok(await espera(() => window.__rel.viloes.viloes[0]?.modelo?.adereco), 'DeVoe com a touca de pensar e o disco flutuante');
 await pertoDo(20);
 ok(await espera(() => window.__rel.viloes.fase === 'luta'), 'a luta começa');
+await espera(() => { const R = window.__rel, v = R.viloes.viloes[0]; return v.y - R.P.y > 0.9; }, null, 60000);
 const fl = await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; return { voa: v.y - (window.__rel.P.y || 0), torres: v.torres.filter((t) => t.vida > 0).length }; });
 ok(fl.voa > 0.9, `ele flutua (${fl.voa.toFixed(2)} m)`);
 ok(fl.torres === 3, 'três torres de pé');

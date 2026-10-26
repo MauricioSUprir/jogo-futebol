@@ -422,7 +422,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
         if (v.perto > 0.7) { v.acao = 'empurra'; v.at = 0.4; v.perto = 0; break; }
         if (v.at <= 0) {
           v.ataques = (v.ataques || 0) + 1;
-          v.golpeArma = pf.arma === 'tempo' && v.ataques % 3 === 0 ? 'tornado' : pf.arma === 'mente' ? ['carro', 'pulso', 'carro', 'ilusao'][v.ataques % 4] : pf.arma;
+          v.golpeArma = pf.arma === 'tempo' && v.ataques % 3 === 0 ? 'tornado' : pf.arma === 'mente' ? ['carro', 'pulso', 'carro', 'ilusao'][(v.ataques - 1) % 4] : pf.arma;   // 1º carro, 2º pulso, 3º carro, 4º as cópias
           v.acao = 'prepara'; v.at = pf.telegrafo * (v.golpeArma === 'tornado' ? 1.2 : 1);
           const vh = Math.hypot(P.vx, P.vz), ad = Math.min(8, vh * 0.25) / (vh || 1);   // o raio e o tornado miram onde o herói vai estar (até 8 m à frente)
           v.alvo = { x: P.x + P.vx * ad, z: P.z + P.vz * ad };
