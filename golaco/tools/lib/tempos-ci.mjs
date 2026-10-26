@@ -32,7 +32,7 @@ export const TEMPOS_NODE = {
   'teste-goleiro.mjs': 6,
   'teste-mergulho.mjs': 35,
   'teste-aereo.mjs': 2,
-  'teste-cabeceio.mjs': 54,
+  'teste-cabeceio.mjs': 70,
   'teste-treino.mjs': 14,
   'teste-goleiro-trava.mjs': 105,
   'teste-movimento.mjs': 41,

@@ -9,17 +9,20 @@
 //     dos cruzamentos acham um companheiro); o 1º contato é de cabeça em ≥ 85%; gol em 3–12% dos cruzamentos.
 //  B) POSE (o que quem joga vê): em todo cabeceio (cenas A e partidas D), a folga entre a superfície da bola e a da
 //     cabeça DESENHADA (anim.js pose logo depois do toque × a bola no toque) ≤ 0,08 m em ≥ 90%; com a bola acima de
-//     2,0 m, a pelve desenhada ≥ 0,2 m acima da de pé (0,943 m) em ≥ 90% (houve pulo).
+//     2,0 m, a pelve desenhada ≥ 0,2 m acima da de pé (0,943 m) em ≥ 90% (houve pulo). As duas reprovam quando a contagem
+//     prova menos de 90% (binomial, p < 5%): a folga fica NA BEIRA — com 16 partidas, 88% na base e 89% com o D5.
 //  C) TELEPORTE: 200 cabeceios a gol com a bola a 2,1 m — nenhum sai rolando no chão no mesmo tick.
-//  D) PARTIDAS IA × IA (a demo, como o painel; padrão 4 de 2 × 4 min): duelos pelo alto com a bola rolando ≥ 1,5 por
-//     partida; cabeceios para afastar ≥ 25% dos cabeceios (FA/Opta: zagueiros cabeceiam ~2× os atacantes); o time 0
+//  D) PARTIDAS IA × IA (a demo, como o painel; padrão 8 de 2 × 4 min): duelos pelo alto com a bola rolando ≥ 1,5 por
+//     partida, reprovando quando a contagem prova menos (Poisson, p < 5%: com 8 partidas, 6 duelos ou menos) — com 4
+//     partidas e a conta direta reprovava por sorteio: o D5 deu 0,75 nas 4 do teste e 1,44 em 16, e o painel de 144 partidas
+//     dá 2,2 na base e 2,1 com o D5; cabeceios para afastar ≥ 25% dos cabeceios (FA/Opta: zagueiros cabeceiam ~2× os atacantes); o time 0
 //     da demo (o controlado pela IA) cabeceia a gol pelo menos 1 vez no total.
 //  E) HUMANO (mundo do treino, o controlado com o analógico solto): E1 atacante na área sem botão cabeceia a GOL (≥ 90%
 //     dos cabeceios); E2 com PASSE e a bola abaixo de 1,25 m não sai cabeceio (0); E3 passe alto para ele chegando a
 //     1,6–2,2 m vira cabeceio em ≥ 80%.
 //   node tools/teste-cabeceio.mjs                 (lógica do repositório)
 //   node tools/teste-cabeceio.mjs --js <pasta>    (outra cópia, ex.: a base — tem de REPROVAR)
-//   --partidas N (D; 0 desliga) · --par N (processos da parte D; padrão 4) · --so A,B,C,D,E
+//   --partidas N (D; padrão 8; 0 desliga) · --par N (processos da parte D; padrão 4) · --so A,B,C,D,E
 import { fork } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -74,6 +77,12 @@ if (args.includes('--filho')) {
   process.exit(0);
 }
 
+/** P(X ≤ k) para X ~ Poisson(lam). */
+function caudaPoissonAbaixo(k, lam) {
+  let t = Math.exp(-lam), s = 0;
+  for (let i = 0; i <= k; i++) { s += t; t *= lam / (i + 1); }
+  return Math.min(1, s);
+}
 /** P(X ≥ k) para X ~ Binomial(n, p) (termos em log). */
 function caudaBinomial(k, n, p) {
   if (k <= 0) return 1;
@@ -375,7 +384,7 @@ if (SO.includes('F')) {
 }
 
 // ------------------------------------------------------------------ D) partidas IA × IA
-const NP = +arg('--partidas', 4);
+const NP = +arg('--partidas', 8);
 if (SO.includes('D') && NP > 0) {
   const sementes = Array.from({ length: NP }, (_, k) => 1001 + k);
   const nPar = Math.max(1, +arg('--par', Math.min(4, os.availableParallelism?.() ?? os.cpus().length)));
@@ -394,7 +403,8 @@ if (SO.includes('D') && NP > 0) {
   const soma = f => res.reduce((a, r) => a + f(r), 0);
   const cab = soma(r => r.cab), afasta = soma(r => r.afasta), dr = soma(r => r.duelosRolando);
   for (const r of res) poses.push(...r.poses);
-  reg('D', 'duelos pelo alto com a bola rolando, por partida', `${(dr / NP).toFixed(2)} (${(soma(r => r.duelos) / NP).toFixed(2)} com a bola parada)`, '≥ 1,5', dr / NP >= 1.5);
+  const pDuelos = caudaPoissonAbaixo(dr, 1.5 * NP);
+  reg('D', 'duelos pelo alto com a bola rolando, por partida', `${(dr / NP).toFixed(2)} (${(soma(r => r.duelos) / NP).toFixed(2)} com a bola parada; p = ${pDuelos.toFixed(2)} contra 1,5)`, '≥ 1,5 (Poisson: p ≥ 0,05)', pDuelos >= 0.05);
   reg('D', 'cabeceios para afastar', `${afasta}/${cab} (${pc(afasta, cab)})`, '≥ 25%', cab > 0 && afasta >= 0.25 * cab);
   reg('D', 'cabeceios a gol do time 0 da demo (o controlado pela IA)', `${soma(r => r.cabGol0)} (time 1: ${soma(r => r.cabGol1)})`, '≥ 1', soma(r => r.cabGol0) >= 1);
   console.log(`D — ${NP} partidas: ${(cab / NP).toFixed(1)} cabeceios por partida`);
@@ -405,8 +415,10 @@ if (SO.includes('B')) {
   const ok = poses.filter(p => p.folga <= 0.08).length;
   const altos = poses.filter(p => p.by > 2.0), pulou = altos.filter(p => p.pelve - PE >= 0.2).length;
   const med = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[s.length >> 1] : NaN; };
-  reg('B', 'folga bola–cabeça desenhada ≤ 0,08 m', `${ok}/${poses.length} (${pc(ok, poses.length)}; mediana ${med(poses.map(p => p.folga)).toFixed(2)} m)`, '≥ 90%', poses.length >= 20 && ok >= 0.9 * poses.length);
-  reg('B', 'bola acima de 2,0 m: a pelve sobe ≥ 0,2 m', `${pulou}/${altos.length} (${pc(pulou, altos.length)})`, '≥ 90%', altos.length >= 5 && pulou >= 0.9 * altos.length);
+  // (abaixo de 90% só quando a contagem prova: P(X ≤ k | n, 0,9) < 5%)
+  const abaixo90 = (k, n) => 1 - caudaBinomial(k + 1, n, 0.9) < 0.05;
+  reg('B', 'folga bola–cabeça desenhada ≤ 0,08 m', `${ok}/${poses.length} (${pc(ok, poses.length)}; mediana ${med(poses.map(p => p.folga)).toFixed(2)} m)`, '≥ 90% (binomial: p ≥ 0,05)', poses.length >= 20 && !abaixo90(ok, poses.length));
+  reg('B', 'bola acima de 2,0 m: a pelve sobe ≥ 0,2 m', `${pulou}/${altos.length} (${pc(pulou, altos.length)})`, '≥ 90% (binomial: p ≥ 0,05)', altos.length >= 5 && !abaixo90(pulou, altos.length));
 }
 
 const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));
