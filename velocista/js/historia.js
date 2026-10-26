@@ -10,6 +10,11 @@
 // ajudou; a cidade dá o nome de Flash. Capítulo 5: as gravações mostram que o Núcleo foi sabotado — era o Flash Reverso,
 // que criou você para roubar a sua velocidade e deu poder a todos eles. Ele solta o Zoom e os dois atacam o laboratório.
 // Epílogo: o Núcleo liga sozinho.
+// A VIDA DO BARRY ALLEN (dono, 26/10): a noite do raio (o Barry trabalhando até tarde na perícia da Delegacia, o vulto no
+// canto escuro do laboratório e o raio do Núcleo atravessando tudo), a volta ao trabalho depois do coma, a perícia do museu
+// (gelo, um fio amarelo e marcas de raio no asfalto), a ligação do vulto, a troca de roupa escondido, o café da Delegacia, a
+// entrevista com a Iris, e as ameaças à família: o Frio congelando a Iris, o Mago cercando a casa dos West e o homem de
+// amarelo esperando na cozinha.
 // A cidade (entre os capítulos): o detetive Joe, que criou você, na Delegacia Central, em Iron Heights e em casa; a Iris,
 // repórter do Picture News, no jornal e no Café Jitters; o apagão que o Zoom deixa; a cidade agradecendo na Prefeitura.
 
@@ -26,6 +31,8 @@ export const PERSONAGENS = {
   mago: { nome: 'Mago do Tempo', sigla: 'MT', cor: '#7dffa8', vilao: true },
   savitar: { nome: 'Savitar', sigla: 'SV', cor: '#9fdcff', vilao: true },
   devoe: { nome: 'DeVoe', sigla: 'DV', cor: '#c79bff', vilao: true },
+  vulto: { nome: '???', sigla: '?', cor: '#c23a32', vilao: true },
+  tv: { nome: 'Canal 4', sigla: 'TV', cor: '#9fb0c8', papel: 'ao vivo' },
 };
 
 const F = (quem, texto) => ({ quem, texto });
@@ -48,7 +55,19 @@ export const MISSOES_FALAS = {
   patrulha: { abre: [F('caitlin', 'A cidade precisa de você. Impeça cinco crimes.')], fecha: [F('cisco', 'Os jornais só falam do borrão vermelho que salva gente.')] },
   relatorio: { abre: [F('caitlin', 'Volte ao Cortex. Precisamos conversar sobre o que vem por aí.')] },
   // a cidade: o Joe, a Iris e os lugares da história
-  delegacia: { abre: [F('caitlin', 'O detetive Joe ligou para o laboratório. Ele quer ver você na Delegacia Central.'), F('cisco', 'O guia está marcando. E não, ele não parecia bravo. Só um pouquinho.')] },
+  delegacia: { abre: [F('caitlin', 'Seis semanas em coma e você já quer voltar ao trabalho? O Joe ligou: a perícia da Delegacia está esperando o Barry.'), F('cisco', 'Vai à paisana. Um perito de roupa vermelha colante chama atenção. Já troquei você.')] },
+  // a vida do Barry: a perícia, o café da Delegacia, a entrevista e as ameaças à família (com cronômetro)
+  atrasado: { abre: [F('joe', 'O capitão está subindo a escada, Barry. Quarenta e cinco segundos para você estar no laboratório.')] },
+  pericia: { abre: [F('joe', 'Estou na cena do museu, na praça da Prefeitura. Os marcadores amarelos são seus: pare em cada um e examine.')] },
+  analise: { abre: [F('heroi', 'Gelo, um fio amarelo e um raio queimado no asfalto. Vou passar tudo no microscópio.')] },
+  troca: { abre: [F('cisco', 'Você está de camisa e gravata no meio da Delegacia. Do lado do prédio não tem câmera nenhuma. Vai!')], fecha: [F('cisco', 'Trocou de roupa em três décimos de segundo. Recorde mundial de vestiário.')] },
+  'cafe-pedido': { abre: [F('joe', 'Barry, a Delegacia inteira está sem café, e o capitão está de mau humor. Doze no Jitters, por minha conta.'), F('cisco', 'Supervelocidade para buscar café. Eu aprovo cem por cento.')],
+    fecha: [F('cisco', 'Doze cafés numa bandeja a quinhentos por hora. Se derramar, a culpa é da física.')] },
+  'cafe-entrega': { abre: [F('heroi', 'Quarenta segundos até esfriar. Nenhuma gota no chão.')] },
+  entrevista: { abre: [F('iris', 'Barry, me encontra na redação do Picture News? Preciso de um perito para a minha coluna.')] },
+  'ameaca-iris': { abre: [F('frio', 'Velocista. A sua amiga repórter está tomando um café no Jitters. Bem gelado.'), F('caitlin', 'O gelo está subindo em volta da Iris! Você tem um minuto!')] },
+  'ameaca-joe': { abre: [F('mago', 'Bela casa a dos West, Flash. Comece a contar os raios.'), F('cisco', 'A tempestade está toda em cima da casa do Joe! Corre!')] },
+  visita: { abre: [F('caitlin', 'Vai para casa descansar, Barry. Hoje a cidade se vira sem você.'), F('cisco', 'Eu fico de olho nos sensores. E no meu sanduíche.')] },
   jornal: { abre: [F('cisco', 'A Iris pediu uma foto para o Picture News. Passe na frente do prédio acima de 300 km/h: a câmera dela vai estar lá.')] },
   energia: { abre: [F('cisco', 'O Zoom drenou três subestações. Metade da cidade está no escuro.'), F('caitlin', 'Encoste em cada uma: a sua energia dá a partida nos geradores. O guia mostra a próxima.')],
     fecha: [F('cisco', 'Luz de volta! A cidade inteira acendeu de uma vez. Eu vi do telhado.'), F('caitlin', 'Os hospitais voltaram também. Obrigada.')] },
@@ -64,14 +83,106 @@ export const MISSOES_FALAS = {
 
 /** cenas (jogo parado). Um item pode ser um CARTÃO de capítulo em tela cheia. */
 export const CENAS = {
+  // a noite do raio: o começo de tudo (antes do prólogo; o Barry à paisana na perícia da Delegacia, à noite)
+  'noite-do-raio': [
+    CARTAO('Seis semanas atrás', 'A noite do raio'),
+    F('joe', 'Barry, são onze da noite. A perícia fechou às seis.'),
+    F('heroi', 'Só mais esta amostra, Joe. Alguém entrou três vezes no S.T.A.R. Labs e não deixou uma digital sequer.'),
+    F('joe', 'Amanhã você olha. Hoje eles ligam aquele tal de Núcleo, e a cidade inteira vai estar olhando para o céu.'),
+    F('tv', 'Ao vivo do S.T.A.R. Labs: em poucos minutos, o Núcleo Aurora será ligado pela primeira vez.'),
+    { ...F('joe', 'Tranca tudo quando sair. E come alguma coisa, você está pálido.'), acao: 'joeSai' },
+    F('heroi', 'Pode deixar.'),
+    { ...F('vulto', 'Barry Allen. Pontual como sempre.'), acao: 'vulto' },
+    F('heroi', 'Quem está aí? A Delegacia está fechada.'),
+    F('vulto', 'Esperei muito tempo por esta noite. Fique exatamente onde está.'),
+    F('heroi', 'Foi você. As digitais que sumiram, as peças roubadas do laboratório...'),
+    { ...F('tv', 'Atenção: o Núcleo Aurora apresenta instabilidade... a energia está saindo do controle!'), acao: 'tempestade' },
+    F('vulto', 'Onze segundos, Barry. É o tempo que o seu coração vai ficar parado.'),
+    F('heroi', 'O que você fez?!'),
+    F('vulto', 'Eu? Eu só abri a janela.'),
+    { ...F('tv', 'Um raio saiu do S.T.A.R. Labs e atravessou o centro da cidade!'), acao: 'raio' },
+    CARTAO('Onze segundos', 'O coração parou'),
+  ],
   // a cidade: cenas nos lugares da história, com o Joe e a Iris (o herói fica de frente para eles)
   'depois-delegacia': [
-    F('joe', 'Aí está você. Seis semanas sem dar notícia, e agora a cidade inteira fala de um borrão vermelho.'),
+    F('joe', 'Olha quem resolveu voltar ao trabalho. Seis semanas em coma e você já quer analisar pegada?'),
+    F('heroi', 'Eu estou bem, Joe. Melhor do que bem, na verdade.'),
+    F('joe', 'Estou vendo. A cidade inteira fala de um borrão vermelho desde que você acordou. Coincidência engraçada.'),
     F('heroi', 'Joe... eu posso explicar.'),
     F('joe', 'Não precisa. Eu criei você. Conheço esse seu jeito de andar, mesmo a quinhentos por hora.'),
-    F('joe', 'Só me promete uma coisa: nada de heroísmo sem avisar. A Delegacia Central fica do seu lado.'),
-    F('heroi', 'Prometo. E quando o rádio da polícia chamar, eu chego antes da viatura.'),
-    F('joe', 'Disso eu não tenho dúvida. Agora vai. E liga para a Iris, ela anda preocupada.'),
+    F('joe', 'Aqui dentro você é o Barry da perícia, ouviu? Ninguém pode saber. Nem a Iris.'),
+    F('heroi', 'Nem a Iris.'),
+    F('joe', 'E o capitão quer o laudo do museu hoje. Corre para o laboratório, e chega antes dele.'),
+  ],
+  'depois-atrasado': [
+    F('joe', 'Quarenta segundos. Em dois anos de perícia, é a primeira vez que você chega na hora.'),
+    F('heroi', 'Acordei disposto.'),
+    F('joe', 'Você dormiu seis semanas, Barry. Disposição não te falta.'),
+    F('joe', 'O museu foi assaltado ontem à noite: o cofre aberto e nenhum alarme. A cena ainda está isolada, na praça da Prefeitura.'),
+    F('heroi', 'Estou indo.'),
+    F('joe', 'De carro, de preferência. Como uma pessoa normal.'),
+  ],
+  'depois-pericia': [
+    F('joe', 'E aí, perito? O museu inteiro e nenhuma digital.'),
+    F('heroi', 'Gelo, num dia de trinta graus. Um fio de tecido amarelo. E marcas de queimado no asfalto, em forma de raio.'),
+    F('joe', 'Amarelo... As testemunhas da noite da explosão falaram de um borrão amarelo.'),
+    F('heroi', 'E as marcas no chão são iguais às que eu deixo quando corro.'),
+    F('joe', 'Então tem outro igual a você. E ele não está do nosso lado.'),
+    F('joe', 'Leva tudo para o laboratório. E fala baixo: a imprensa está do outro lado da fita.'),
+  ],
+  'depois-analise': [
+    F('heroi', 'O tecido não é de roupa nenhuma desta cidade. Ele aguenta o atrito de milhares de quilômetros por hora.'),
+    F('vulto', 'Impressionante, senhor Allen. Você sempre foi o melhor perito desta cidade.'),
+    F('heroi', 'Quem está falando? Como conseguiu este número?'),
+    F('vulto', 'Já nos conhecemos. Na noite do raio, no seu laboratório. Você estava com tanta pressa de jantar.'),
+    F('heroi', 'Era você. O que você quer comigo?'),
+    F('vulto', 'Que você fique mais rápido. Muito mais rápido. E, para isso, você vai precisar de motivos.'),
+    F('vulto', 'O alarme do centro vai tocar em três... dois...'),
+    F('cisco', 'Alarme no centro! Assalto em andamento! Barry, você está me ouvindo?'),
+    F('heroi', 'Estou. E alguém quer que eu corra.'),
+  ],
+  'depois-cafe-entrega': [
+    F('joe', 'Doze cafés, ainda pelando. O Jitters fica a dois quilômetros daqui, Barry.'),
+    F('heroi', 'Peguei um atalho.'),
+    F('joe', 'Um atalho. Sei.'),
+    F('joe', 'O capitão perguntou como o perito chega antes da viatura em toda cena de crime. Eu disse que você mora perto.'),
+    F('heroi', 'Eu moro com você, Joe.'),
+    F('joe', 'Exatamente. Agora some daqui antes que ele pergunte de novo.'),
+  ],
+  'depois-entrevista': [
+    F('iris', 'Obrigada por vir. A minha coluna sobre o borrão vermelho precisa de um especialista de verdade.'),
+    F('heroi', 'Especialista? Eu só analiso pegadas.'),
+    F('iris', 'Então analisa estas: marcas de queimado no asfalto. A que velocidade alguém precisa correr para deixar isso?'),
+    F('heroi', 'Uns... trezentos por hora? Chute meu.'),
+    F('iris', 'Trezentos e dois. Foi o que o radar da avenida marcou. Engraçado você chutar tão perto.'),
+    F('heroi', 'Sorte de principiante. Preciso ir, a perícia me espera.'),
+    F('iris', 'Barry? Você está com cheiro de pneu queimado.'),
+  ],
+  'depois-ameaca-iris': [
+    F('iris', 'Flash! O gelo... não para de subir!'),
+    { ...F('heroi', 'Fica parada. Vou vibrar o gelo até ele quebrar.'), acao: 'quebraGelo' },
+    F('iris', 'Ele entrou, apontou aquela pistola para mim e disse que você viria. Que era tudo um recado.'),
+    F('frio', 'Recado entregue, Flash. Da próxima vez, ela não descongela.'),
+    F('heroi', 'Se você chegar perto dela de novo, Frio, eu te encontro antes de você puxar o gatilho.'),
+    F('iris', 'Espera... essa voz. Eu conheço essa voz.'),
+    F('heroi', 'Fica longe das janelas, Iris. Eu cuido dele.'),
+  ],
+  'depois-ameaca-joe': [
+    F('joe', 'Os raios caíram em volta da casa inteira, e nenhum acertou. Ele está brincando com a gente.'),
+    F('mago', 'Que família bonita, Flash. Seria uma pena um raio cair duas vezes no mesmo lugar.'),
+    F('heroi', 'Joe, sai daqui. Vai para a Delegacia, lá você fica protegido.'),
+    F('joe', 'Vinte anos de polícia, Barry. Ninguém me tira da minha casa.'),
+    F('joe', 'Vai atrás dele. E volta inteiro, ouviu? Eu já perdi gente demais.'),
+    F('heroi', 'Eu volto. Prometo.'),
+  ],
+  'depois-visita': [
+    F('heroi', 'Joe? Iris? ...Tem alguém aí?'),
+    F('reverso', 'Bela cozinha, Barry. O Joe ainda faz aquele macarrão às quintas-feiras?'),
+    F('heroi', 'Essa voz... o telefone, a noite do raio. Era você.'),
+    F('reverso', 'Eu estive em todas as noites importantes da sua vida. E vou estar na última.'),
+    F('reverso', 'Diga ao Joe que a porta dos fundos estava aberta. Da próxima vez, eu não venho conversar.'),
+    { ...F('heroi', 'Fica longe da minha família!'), acao: 'someReverso' },
+    F('heroi', 'Sumiu. Só ficou o cheiro de queimado... e um raio vermelho marcado no chão da cozinha.'),
   ],
   'depois-jornal': [
     F('iris', 'Você passou na frente do Picture News a trezentos por hora e ainda voltou para dar oi?'),
@@ -113,13 +224,16 @@ export const CENAS = {
     F('heroi', 'Bom sinal. Mas o Cisco disse que o Núcleo continua instável.'),
   ],
   prologo: [
-    CARTAO('Prólogo', 'O raio'),
+    CARTAO('Seis semanas depois', 'O despertar'),
     F('caitlin', 'Seis semanas atrás, o Núcleo Aurora do S.T.A.R. Labs sobrecarregou. A onda de energia cobriu a cidade inteira.'),
-    F('caitlin', 'Um raio saiu do Núcleo e atravessou você. O seu coração parou por onze segundos.'),
+    F('caitlin', 'Um raio saiu do Núcleo e atravessou você, no laboratório da Delegacia. O seu coração parou por onze segundos.'),
+    F('heroi', 'Tinha alguém comigo naquela noite. Ele sabia o meu nome. Sabia do raio antes de ele cair.'),
+    F('caitlin', 'As câmeras da Delegacia não mostram ninguém. Só você e o raio.'),
     F('cisco', 'E aí você acordou e quebrou todos os nossos medidores de velocidade. Todos. Eu tinha um favorito.'),
     F('caitlin', 'Suas células se regeneram rápido demais. O seu corpo continua em movimento mesmo quando você está parado.'),
     F('heroi', 'Então não foi um sonho. Eu sou... rápido.'),
     F('cisco', 'Rápido? Você é o homem mais rápido do mundo. A gente só precisa descobrir quanto.'),
+    F('cisco', 'E eu fiz uma roupa que aguenta o atrito. Vermelha, com um raio no peito. Não discute.'),
     F('caitlin', 'Venha até o Cortex. E, por favor, tente não atravessar a parede.'),
     CARTAO('Ato 1', 'Aprendendo a correr'),
   ],
@@ -317,7 +431,8 @@ export const CENAS = {
   ],
   'cap-reverso': [
     CARTAO('Capítulo 5', 'O homem de amarelo'),
-    F('cisco', 'Revi as gravações da noite do acidente. Quadro a quadro.'),
+    F('heroi', 'Ele esteve na minha casa, Cisco. Ele sabe quem eu sou.'),
+    F('cisco', 'Então a gente descobre quem ELE é. Revi as gravações da noite do acidente. Quadro a quadro.'),
     F('cisco', 'Dois segundos antes da explosão aparece um borrão amarelo e vermelho dentro do Núcleo.'),
     F('caitlin', 'Alguém sabotou o Núcleo Aurora de propósito.'),
     F('heroi', 'E esse alguém está na cidade agora.'),
@@ -325,6 +440,7 @@ export const CENAS = {
   'encontro-reverso': [
     F('reverso', 'Finalmente, Flash. Esperei muito tempo por esta conversa.'),
     F('heroi', 'Foi você. O Núcleo, o Zoom... tudo.'),
+    F('reverso', 'E o seu laboratório, naquela noite. Alguém precisava garantir que você estaria no lugar certo.'),
     F('reverso', 'O Núcleo precisava de um raio, e o raio precisava de alguém para atravessar. Eu escolhi você.'),
     F('reverso', 'Você é a minha obra. E toda obra pode ser desfeita.'),
     F('cisco', 'A energia dele é vermelha e está fora da escala. Ele é mais rápido que o Zoom!'),
@@ -395,6 +511,11 @@ export const RADIO = {
   'derrota-devoe': [F('devoe', 'Previsível.'), F('caitlin', 'Derrube as torres com os especiais e acerte o verdadeiro: as cópias somem com um golpe.')],
   'escapou-zoom': [F('caitlin', 'Perdemos o sinal dele. Ele vai aparecer de novo.')],
   'escapou-reverso': [F('caitlin', 'Ele sumiu do radar. Vai voltar, tenho certeza.')],
+  // o cronômetro de um passo da vida do Barry acabou (missoes.js `tempo`): a história recomeça a contagem (ou volta um passo)
+  'falhou-atrasado': [F('joe', 'O capitão chegou e você não estava. Eu disse que você foi ao banheiro. Mais quarenta e cinco segundos!')],
+  'falhou-cafe-entrega': [F('joe', 'Café frio, Barry? O capitão já devolveu o dele. Volta lá e pega outro.')],
+  'falhou-ameaca-iris': [F('caitlin', 'O gelo chegou ao pescoço dela! O Cisco ligou o aquecedor do Jitters no máximo: mais um minuto. Vai!')],
+  'falhou-ameaca-joe': [F('cisco', 'Um raio caiu no telhado! O Joe está bem, mas o próximo não erra. Mais rápido!')],
 };
 const PROVOCA = { savitar: ['Lento.', 'Eu já estive aqui antes.', 'Você vai virar o que eu sou.'], zoom: ['Sorte.', 'Ainda não.', 'Você está ficando lento.'], reverso: ['Isso não é nada.', 'Perto. Mas não o bastante.', 'Eu deixei.', 'Você está me divertindo.'] };
 
@@ -503,12 +624,14 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
     if (f.quem !== 'heroi' && !emCena) tipo = outro && Math.random() < 0.5 ? 'dois' : 'aberto';
     else if (outro && !mesmo) tipo = 'ombro';
     else tipo = 'close';
-    return { tipo, alvo, outro, lado: Math.random() < 0.5 ? -1 : 1, ang: rnd(-0.7, 0.7), t: 0 };
+    return { tipo, alvo, outro, lado: Math.random() < 0.5 ? -1 : 1, ang: rnd(-0.7, 0.7), t: 0, emCena };
   }
   function camera(cam, dt) {
     if (!C) return false;
     const f = C.falas[C.i];
     if (f.cartao) return !!C.plano;                                  // o cartão cobre a tela: a câmera fica onde estava
+    // quem fala entrou em cena depois de o plano ser escolhido (o vulto aparece na própria fala): refaz o plano para ele
+    if (C.plano && !C.plano.emCena && f.quem !== 'heroi' && ponto(f.quem)) C.plano = escolherPlano(f);
     const pl = C.plano; if (!pl) return false;
     const a = ponto(pl.alvo); if (!a) return false;
     const o = pl.outro ? ponto(pl.outro) : null;

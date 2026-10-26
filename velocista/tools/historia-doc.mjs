@@ -3,6 +3,8 @@
 // regera o roteiro a partir do código depois de cada mudança. Uso: node velocista/tools/historia-doc.mjs > roteiro.md
 import { MISSOES } from '../js/missoes.js';
 import { PERSONAGENS, MISSOES_FALAS, CENAS, RADIO } from '../js/historia.js';
+import { PONTOS } from '../js/marcos.js';
+import { INTERIORES } from '../js/interiores.js';
 
 const nome = (q) => (q === 'heroi' ? 'VOCÊ (Flash)' : (PERSONAGENS[q]?.nome || q).toUpperCase());
 const LUGAR = { delegacia: 'Delegacia Central', jornal: 'Picture News (jornal)', cafe: 'Café Jitters', prefeitura: 'Praça da Prefeitura',
@@ -31,11 +33,14 @@ linhas.push('# THE FLASH — História', '',
   '**Coisa nova** (personagem, vilão, lugar, poder, tipo de missão): é só descrever aqui que eu crio.', '',
   '## A história de hoje (como está no jogo)', '');
 
-falas(CENAS.prologo, 'Cena de abertura (quando o jogo começa)');
+falas(CENAS['noite-do-raio'], 'Cena de abertura: a noite do raio (quando o jogo começa)');
+falas(CENAS.prologo, 'Prólogo: seis semanas depois, no Cortex');
 MISSOES.forEach((m, i) => {
   if (ATOS[m.id]) linhas.push(`## ${ATOS[m.id]}`, '');
   linhas.push(`### ${i + 1}. ${m.titulo}`, '', `**O que o jogador faz:** ${m.texto}.`, '');
   if (m.ponto && LUGAR[m.ponto]) linhas.push(`**Onde:** ${LUGAR[m.ponto]}.`, '');
+  else if (m.ponto && PONTOS[m.ponto]?.interior) linhas.push(`**Onde:** dentro de ${INTERIORES[PONTOS[m.ponto].interior].nome}${m.roupa === 'civil' ? ' (o Barry à paisana)' : ''}.`, '');
+  if (m.tempo) linhas.push(`**Tempo:** ${m.tempo} s.`, '');
   falas(MISSOES_FALAS[m.id]?.abre, 'Rádio ao começar');
   const c = m.capitulo;
   if (c) {

@@ -4,33 +4,47 @@
 // crime?, capitulo? (o capítulo de vilão deste passo: começa sozinho e o passo acaba quando ele é vencido),
 // ponto? (o lugar da cidade onde o passo acontece — marcos.js PONTOS; ctx.perto diz se o herói chegou), aliados? (quem
 // espera lá: {joe: ponto, iris: ponto}), raio? (a distância que conta como "chegou")}.
+// roupa? ('civil' = Barry Allen à paisana; sem nada, o traje), tempo? (cronômetro em s: acabou, recomeça com um aviso),
+// falha? (o passo para onde a história volta quando o tempo acaba), pistas? (lugares da perícia: [x, z, nome, detalhe], x/z
+// relativos ao ponto, uma de cada vez; contador 'pistas').
 // Depois do último passo a cidade fica livre (crimes, esferas e os capítulos para jogar de novo na pausa).
 export const MISSOES = [
   { id: 'lab', titulo: 'Bem-vindo ao S.T.A.R. Labs', texto: 'Entre no laboratório e vá até o Cortex', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
   { id: 'velocidade', titulo: 'Teste de velocidade', texto: 'Chegue a 200 km/h (segure CORRER)', checar: (c) => c.v * 3.6 >= 200 },
   { id: 'esferas', titulo: 'Recarga', texto: 'Recolha 5 esferas de energia', meta: 5, contador: 'esferas', alvo: 'esfera' },
-  { id: 'delegacia', titulo: 'Delegacia Central', texto: 'O detetive Joe quer falar com você na Delegacia Central', ponto: 'delegacia', aliados: { joe: 'delegacia' }, checar: (c) => c.perto },
   { id: 'escalar', titulo: 'Ponto de vista', texto: 'Escale um prédio de 50 m ou mais', alvo: 'predioAlto', checar: (c) => c.noChao && c.y >= 50 },
   { id: 'vibrar', titulo: 'Através das paredes', texto: 'Atravesse 3 prédios vibrando', meta: 3, contador: 'atravessados' },
+  // a vida do Barry Allen (dono, 26/10): o Joe, o trabalho na perícia, a ligação do misterioso e a troca de roupa
+  { id: 'delegacia', titulo: 'Delegacia Central', texto: 'O detetive Joe quer falar com você na Delegacia Central', ponto: 'delegacia', aliados: { joe: 'delegacia' }, roupa: 'civil', checar: (c) => c.perto },
+  { id: 'atrasado', titulo: 'Atrasado de novo', texto: 'O capitão quer o laudo: chegue ao seu laboratório na Delegacia antes dele', ponto: 'csi', aliados: { joe: 'portaCsi' }, roupa: 'civil', tempo: 45, raio: 3, checar: (c) => c.perto },
+  { id: 'pericia', titulo: 'Cena do crime', texto: 'Examine as 3 pistas do assalto ao museu, na praça da Prefeitura (pare em cima de cada marcador)', ponto: 'prefeitura', aliados: { joe: 'prefeitura' }, pistas: [[-16, -16, 'Cristais de gelo', 'num dia de 30 graus'], [15, -20, 'Um fio de tecido amarelo', 'preso na grade do museu'], [1, -31, 'Marcas de queimado', 'em forma de raio no asfalto']], meta: 3, contador: 'pistas', roupa: 'civil' },
+  { id: 'analise', titulo: 'No laboratório', texto: 'Leve as pistas ao laboratório da perícia', ponto: 'csi', roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'troca', titulo: 'Troca relâmpago', texto: 'Alarme no centro! Ache um lugar sem testemunhas, atrás da Delegacia, e vista o traje', ponto: 'beco', roupa: 'civil', raio: 4, checar: (c) => c.perto },
   { id: 'assalto', titulo: 'Primeira patrulha', texto: 'Pare um assalto', meta: 1, contador: 'assalto', crime: 'assalto' },
   { id: 'gangue', titulo: 'Punhos relâmpago', texto: 'Derrote uma gangue (BATER)', meta: 1, contador: 'gangue', crime: 'gangue' },
+  { id: 'cafe-pedido', titulo: 'Hora do café', texto: 'A Delegacia inteira quer café: pegue o pedido no balcão do Jitters', ponto: 'balcaoJitters', roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'cafe-entrega', titulo: 'Ainda quente', texto: 'Leve os doze cafés até a mesa do Joe antes que esfriem', ponto: 'mesaJoe', aliados: { joe: 'mesaJoe' }, roupa: 'civil', tempo: 40, falha: 'cafe-pedido', raio: 3, checar: (c) => c.perto },
   { id: 'jornal', titulo: 'A primeira foto', texto: 'Passe em frente ao Picture News acima de 300 km/h: a Iris está com a câmera', ponto: 'jornal', raio: 26, aliados: { iris: 'jornal' }, checar: (c) => c.perto && c.v * 3.6 >= 300 },
+  { id: 'entrevista', titulo: 'O especialista', texto: 'A Iris quer entrevistar o perito da polícia sobre o borrão vermelho: vá à redação do Picture News', ponto: 'mesaIrisJornal', aliados: { iris: 'mesaIrisJornal' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
   { id: 'cap-zoom', titulo: 'O velocista de preto', texto: 'Encontre o Zoom e derrote-o', capitulo: 'zoom' },
   { id: 'energia', titulo: 'Apagão', texto: 'O Zoom drenou a cidade: religue as 3 subestações', meta: 3, contador: 'subestacoes', alvo: 'subestacao' },
   { id: 'especiais', titulo: 'Golpes especiais', texto: 'Derrube 3 bandidos com golpes especiais', meta: 3, contador: 'especiais', crime: 'gangue' },
   { id: 'portais', titulo: 'Corrida contra o relógio', texto: 'Passe pelos 8 portais em até 70 s', tipo: 'portais' },
+  { id: 'ameaca-iris', titulo: 'A repórter congelada', texto: 'O Capitão Frio prendeu a Iris no Jitters: chegue antes que ela congele', ponto: 'mesaIris', aliados: { iris: 'mesaIris' }, tempo: 60, raio: 3, checar: (c) => c.perto },
   { id: 'cap-frio', titulo: 'Frio de rachar', texto: 'Encontre o Capitão Frio e derrote-o', capitulo: 'frio' },
   { id: 'presidio', titulo: 'Iron Heights', texto: 'Atravesse a Ponte da Baía: o Joe espera você no Presídio Iron Heights', ponto: 'presidio', aliados: { joe: 'presidio' }, checar: (c) => c.perto },
   { id: 'fuga', titulo: 'Perseguição', texto: 'Pare um carro em fuga', meta: 1, contador: 'fuga', crime: 'fuga' },
   { id: 'incendio', titulo: 'Vórtice', texto: 'Apague um incêndio correndo em volta do prédio', meta: 1, contador: 'incendio', crime: 'incendio' },
   { id: 'cap-onda', titulo: 'Fogo cruzado', texto: 'Encontre o Onda Térmica e derrote-o', capitulo: 'onda' },
-  { id: 'cafe', titulo: 'Um café no Jitters', texto: 'A Iris marcou um café no Jitters', ponto: 'cafe', aliados: { iris: 'cafe' }, checar: (c) => c.perto },
+  { id: 'cafe', titulo: 'Um café no Jitters', texto: 'A Iris marcou um café no Jitters', ponto: 'mesaCafe', aliados: { iris: 'mesaCafe' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
   { id: 'queda', titulo: 'Salvamento', texto: 'Salve uma pessoa caindo de um prédio', meta: 1, contador: 'queda', crime: 'queda' },
   { id: 'patrulha', titulo: 'Guardião da cidade', texto: 'Impeça 5 crimes quaisquer', meta: 5, contador: 'crimes' },
+  { id: 'ameaca-joe', titulo: 'Tempestade em casa', texto: 'O Mago do Tempo cercou a casa dos West: chegue antes do próximo raio', ponto: 'sofaWest', aliados: { joe: 'sofaWest' }, tempo: 50, raio: 3, checar: (c) => c.perto },
   { id: 'cap-mago', titulo: 'A tempestade', texto: 'Encontre o Mago do Tempo e derrote-o', capitulo: 'mago' },
-  { id: 'relatorio', titulo: 'Relatório', texto: 'Volte ao Cortex do S.T.A.R. Labs', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
+  { id: 'relatorio', titulo: 'Relatório', texto: 'Volte ao Cortex do S.T.A.R. Labs', alvo: 'cortex', roupa: 'civil', checar: (c) => c.sala === 'cortex' },
+  { id: 'visita', titulo: 'Visita noturna', texto: 'Volte para casa: o dia foi longo', ponto: 'sofaWest', roupa: 'civil', raio: 3, aliados: { reverso: 'cozinha' }, checar: (c) => c.perto },
   { id: 'cap-reverso', titulo: 'O homem de amarelo', texto: 'Encontre o Flash Reverso e derrote-o', capitulo: 'reverso' },
-  { id: 'casa', titulo: 'Em casa', texto: 'O Joe chamou você para jantar na casa da família West', ponto: 'casa', aliados: { joe: 'casa' }, checar: (c) => c.perto },
+  { id: 'casa', titulo: 'Em casa', texto: 'O Joe chamou você para jantar na casa da família West', ponto: 'jantar', aliados: { joe: 'jantar' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
   { id: 'cap-final', titulo: 'Dois contra um', texto: 'Zoom e Flash Reverso no S.T.A.R. Labs: vença os dois', capitulo: 'final' },
   { id: 'prefeitura', titulo: 'A cidade agradece', texto: 'Vá à praça da Prefeitura: a cidade quer agradecer ao Flash', ponto: 'prefeitura', aliados: { joe: 'prefeitura', iris: 'prefeitura2' }, checar: (c) => c.perto },
   // Ato 3 — o tempo
@@ -48,7 +62,7 @@ const CHAVE_V1 = 'theflash.missoes.v1';
 // a lista da v1, para levar quem já tinha progresso ao mesmo passo
 const ORDEM_V1 = ['lab', 'velocidade', 'esferas', 'escalar', 'vibrar', 'assalto', 'gangue', 'especiais', 'portais', 'fuga', 'incendio', 'queda',
   'patrulha', 'relatorio', 'cap-reverso', 'fendas', 'tunel', 'passado', 'cap-savitar', 'cap-devoe', 'nucleo'];
-const STATS0 = { fendas: 0, subestacoes: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
+const STATS0 = { pistas: 0, fendas: 0, subestacoes: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
 
 export function criarMissoes(armazem) {
   let salvo = null, v1 = null;

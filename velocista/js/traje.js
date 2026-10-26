@@ -39,6 +39,11 @@ const PALETAS = {
   savitar: { verm: [0.40, 0.42, 0.46], vesc: [0.07, 0.075, 0.09], ouro: [0.5, 1.3, 2.6], graf: [0.035, 0.035, 0.045], brilho: 1.0, olho: [1.4, 2.0, 2.8], mascaraFechada: true, met: 0.85, rug: 0.3 },
   // o TRAJE NOVO do herói (dono, 26/10: "melhora o traje, o melhor possível"; desenho próprio, em aprovação: traje.html):
   // vermelho mais profundo, painéis escuros nervurados, veias de raio douradas que acendem, divisas no peito
+  // Barry à paisana (as missões da vida dele): a roupa toda no desenho 'civil' (as cores daqui não valem)
+  // o VULTO da noite do raio (a armação de alguém misterioso): preto fosco, frisos quase apagados, máscara fechada e um brilho
+  // vermelho fraco nos olhos (quem ele é só aparece no capítulo 5)
+  vulto: { verm: [0.014, 0.012, 0.013], vesc: [0.006, 0.005, 0.006], ouro: [0.035, 0.03, 0.03], graf: [0.01, 0.009, 0.01], brilho: 0, olho: [0.9, 0.03, 0.02], mascaraFechada: true, rug: 0.75 },
+  civil: { verm: [0, 0, 0], vesc: [0, 0, 0], ouro: [0, 0, 0], graf: [0, 0, 0], brilho: 0, olho: [0, 0, 0], desenho: 'civil' },
   novo: { verm: [0.30, 0.011, 0.018], vesc: [0.075, 0.004, 0.008], ouro: [0.95, 0.60, 0.11], graf: [0.022, 0.02, 0.024], brilho: 0.08, veia: 0.55, olho: [1.2, 0.55, 0.08], mascaraFechada: false, desenho: 'novo' },
 };
 const v3 = (c) => `vec3(${c.map((x) => x.toFixed(4)).join(', ')})`;
@@ -325,6 +330,50 @@ void traje(vec3 p) {
 }
 `;
 
+// ---------- BARRY À PAISANA (desenho 'civil'): jaqueta azul-marinho aberta, camisa clara, jeans, sapato marrom, mãos e rosto à mostra ----------
+const CORPO_CIVIL = /* glsl */ `
+void traje(vec3 p) {
+  vec3 q = vec3(p.x, p.y, abs(p.z));
+  vec3 JAQ = vec3(0.035, 0.05, 0.11), CAM = vec3(0.62, 0.66, 0.72), JEANS = vec3(0.07, 0.12, 0.24), SAPATO = vec3(0.11, 0.055, 0.025), PELE = vec3(0.62, 0.42, 0.32), CINTO = vec3(0.12, 0.07, 0.035);
+  vec3 cor = JAQ; float rug = 0.75, met = 0.0, alt = 0.0, cost = 0.0;
+  vec3 S = vec3(0.0, 1.4658, 0.19), E = vec3(0.0453, 1.2564, 0.3802), W = vec3(0.1014, 1.0467, 0.5714);
+  float tA, tB; vec3 cA = tSeg(q, S, E, tA), cB = tSeg(q, E, W, tB);
+  float dA = length(q - cA), dB = length(q - cB);
+  bool braco = q.y > 0.9 && (dB < 0.075 || (dA < 0.085 && tA > 0.22));
+  vec3 H = vec3(0.0, 0.9758, 0.09), K = vec3(0.0183, 0.5277, 0.1138), A = vec3(-0.0166, 0.08, 0.1222);
+  bool perna = !braco && q.y < 0.96;
+  if (braco) {
+    bool ante = dB < dA;
+    if (ante && tB > 0.84) { cor = PELE; rug = 0.55; }                         // a mão
+    else { cost = max(cost, tLinha(tB - 0.8, 0.01) * (ante ? 1.0 : 0.0)); }   // o punho da jaqueta
+  } else if (perna) {
+    cor = JEANS; rug = 0.85;
+    float tw = sin((vUv0.x * 1.2 - vUv0.y) * 900.0);                          // a sarja do jeans
+    cor *= 0.92 + 0.08 * tw * (1.0 - smoothstep(0.6, 1.6, fwidth((vUv0.x * 1.2 - vUv0.y) * 900.0)));
+    vec3 c = q.y < K.y ? K : H; vec2 rn = normalize(vec2(q.x - c.x, q.z - c.z));
+    cost = max(cost, tLinha(rn.y - 0.98, 0.03) * step(0.12, q.y));            // a costura de fora
+    if (q.y < 0.115) { cor = SAPATO; rug = 0.35; met = 0.1; }                  // o sapato
+    cost = max(cost, tLinha(q.y - 0.115, 0.004) + tLinha(q.y - 0.02, 0.004));
+  } else {
+    // camisa clara no V da jaqueta aberta, gola, botões; a jaqueta nos lados e nas costas; o cinto
+    float abre = 0.035 + max(0.0, q.y - 1.0) * 0.16;
+    bool frente = q.x > 0.03;
+    if (frente && q.z < abre && q.y > 1.0) { cor = CAM; rug = 0.7; cost = max(cost, tLinha(fract(q.y * 12.0) - 0.5, 0.06) * tLinha(q.z, 0.008)); }
+    cost = max(cost, frente ? tLinha(q.z - abre, 0.006) * step(1.0, q.y) : 0.0);
+    if (q.y > 1.46 && q.y < 1.5 && frente) cor = mix(cor, CAM, step(q.z, 0.09));    // a gola
+    if (q.y > 0.975 && q.y < 1.02) { cor = CINTO; rug = 0.4; if (frente && q.z < 0.025) { cor = vec3(0.6, 0.5, 0.3); met = 0.8; rug = 0.3; } }
+    if (q.y > 1.5) { cor = PELE; rug = 0.55; }                                    // o pescoço
+    cost = max(cost, frente ? tLinha(q.y - 1.12, 0.004) * step(abre + 0.02, q.z) * step(q.z, abre + 0.09) : 0.0);   // os bolsos
+  }
+  cor = mix(cor, cor * 0.45, cost);
+  TR_COR = cor; TR_RUG = rug; TR_MET = met; TR_ALT = -cost * 0.6; TR_EMIS = vec3(0.0);
+}
+`;
+const CABECA_CIVIL = /* glsl */ `
+float MASCARA;
+void traje(vec3 p) { MASCARA = 0.0; TR_COR = vec3(1.0); TR_RUG = 0.6; TR_MET = 0.0; TR_ALT = 0.0; TR_EMIS = vec3(0.0); }
+`;
+
 /** Liga o traje num material MeshStandard/MeshPhysical do corpo ('corpo') ou da cabeça ('cabeca', mantém a pele do mapa). */
 export function aplicarTraje(material, parte, variante = 'heroi') {
   const ehCabeca = parte === 'cabeca', P = PALETAS[variante] || PALETAS.heroi;
@@ -333,7 +382,7 @@ export function aplicarTraje(material, parte, variante = 'heroi') {
       .replace('#include <common>', '#include <common>\nvarying vec3 vRep;\nvarying vec2 vUv0;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRep = position; vUv0 = uv;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\n' + COMUM + cores(P) + (P.desenho === 'novo' ? (ehCabeca ? CABECA_NOVO : CORPO_NOVO) : (ehCabeca ? CABECA : CORPO)))
+      .replace('#include <common>', '#include <common>\n' + COMUM + cores(P) + (P.desenho === 'novo' ? (ehCabeca ? CABECA_NOVO : CORPO_NOVO) : P.desenho === 'civil' ? (ehCabeca ? CABECA_CIVIL : CORPO_CIVIL) : (ehCabeca ? CABECA : CORPO)))
       .replace('#include <map_fragment>', ehCabeca
         ? '#include <map_fragment>\ntraje(vRep);\ndiffuseColor.rgb = mix(diffuseColor.rgb, TR_COR, MASCARA);'
         : 'traje(vRep);\ndiffuseColor.rgb *= TR_COR;')
