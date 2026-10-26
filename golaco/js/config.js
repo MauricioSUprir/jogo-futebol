@@ -207,6 +207,9 @@ export const GESTO = {
 
 // Condução (o toque planejado). Ver CONTRATOS.md.
 export const CONDUCAO = {
+  // a IA com um toque marcado e a bola de lado (conducao.js bolaDeLadoIA; D5): além de `lado` m da linha do corpo, vai para
+  // a linha da bola (o ponto dela `antecipa` s à frente), no máximo à velocidade dela + `folga` m/s (null = desliga)
+  ladoIA: { lado: 0.45, antecipa: 0.3, folga: 0.5 },
   // Ponto de toque à frente do corpo (centro do quadril projetado), por modo.
   // (arrancada 0,42 → 0,38 com a condução curta de 12/10: a folga p90 da disparada passava do alcance do pé, 0,78)
   ofsFrente: { curta: 0.34, trote: 0.36, corrida: 0.33, arrancada: 0.38 },
@@ -676,7 +679,7 @@ export const IA = {
   freiaLinha: [2.5, -0.17],   // acima de 2,5 m/s, pedido a mais de ~100° do movimento: freia na linha antes de virar
   // a virada parada (ia.js para; D5, item 22): nos modos que freiam, pedido a mais de acos(cos) do movimento com o corpo a
   // mais de v m/s: solta o analógico e, abaixo de v, espera s s antes de ir (s 0 = desliga)
-  viraParado: { v: 0.8, cos: -0.5, s: 0.5 },
+  viraParado: { v: 0.8, cos: -0.5, s: 0.5, marca: true },
 };
 
 // =====================================================================================================
@@ -1066,7 +1069,7 @@ export const TATICA = {
   arranque: { rapido: 2.2, parado: 0.5, s: 2.0, dMax: 12 },
   // a espera da volta do ponto calmo (suave*.volta; D5, item 22): começada, vale até volta[0] + folga m e, com quieto,
   // também com o jogador quieto perto do alvo (folga 0 e quieto false = a de antes)
-  volta: { folga: 3, quieto: true },
+  volta: { folga: 3, quieto: true, bolaPerto: 3 },
   pertoBola: 12,              // m — D5: quem marca a menos disto da bola segue com a espera e a virada de antes
   arco: 2.5,                  // m/s — abaixo disto (e acima de 0,5) a virada grande do ponto calmo vai pelo giro, em arco (0 = de uma vez)
   // olhar da IA sem a bola na partida (ia-tatica.js olhaBolaPartida): velocidade filtrada em tauVel s

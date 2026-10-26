@@ -815,7 +815,8 @@ if (cenasC.length && roda('C')) {
   if (detalhe) for (const x of cenasC) if (!okCamera(x.r)) console.log('cameraC', x.caso, x.sem, JSON.stringify({ lente: x.r.piorLente, solido: x.r.piorSolido }));
   reg('C ninguém dentro de sólido do estádio (o corpo a 0,9 m; no túnel com o vão das placas aberto)', `${cenasC.reduce((s, x) => s + x.solido, 0)} ticks${cenasC.find(x => x.solido) ? ` (ex.: ${JSON.stringify(cenasC.find(x => x.solido).piorSolido)})` : ''}`, '0', cenasC.every(x => x.solido === 0));
   const v2 = Math.max(...cenasC.map(x => x.v2));
-  reg('C 2,0 s depois do apito ninguém acima de 1,6 m/s', `máx ${f2(v2)} m/s`, '≤ 1,6', v2 <= 1.6);
+  const pV2 = cenasC.find(x => x.v2 === v2);
+  reg('C 2,0 s depois do apito ninguém acima de 1,6 m/s', `máx ${f2(v2)} m/s${v2 > 1.6 && pV2 ? ` (${pV2.caso} ${pV2.sem}: ${JSON.stringify(pV2.piorV2)})` : ''}`, '≤ 1,6', v2 <= 1.6);
   const fracC = x => [...x.cintura.values()].filter(q => q.max >= 30).length / Math.max(1, [...x.cintura.keys()].length);
   reg('C mãos na cintura (≤ 0,12 m do quadril, ≥ 0,5 s) no campo', `pior ${f2(100 * Math.min(...cenasC.map(fracC)))}% dos jogadores`, '≥ 60%', cenasC.every(x => fracC(x) >= 0.6));
   // (o intervalo só planeja os pares ao alcance — CENA_FIM.aperto.maxDistIntervalo: o aperto de 1 s acaba antes do túnel;

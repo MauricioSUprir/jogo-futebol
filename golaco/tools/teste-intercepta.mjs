@@ -22,7 +22,7 @@
 //    alcançáveis, intercepta ≤ 15% (nada de corte mágico).
 //   node tools/teste-intercepta.mjs                   (lógica do repositório)
 //   node tools/teste-intercepta.mjs --js <pasta>      (outra cópia, ex.: a base — tem de REPROVAR)
-//   --so A,B · --partidas N (padrão 12) · --sem0 K (padrão 301) · --cenas N (padrão 240) · --par N
+//   --so A,B · --partidas N (padrão 12) · --sem0 K (padrão 301) · --cenas N (padrão 480) · --par N
 import { fork } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -176,7 +176,10 @@ if (args.includes('--filho')) {
   process.exit(0);
 }
 
-const NP = +arg('--partidas', 12), S0 = +arg('--sem0', 301), NC = +arg('--cenas', 240);
+// (cenas 240 → 480, D5: com 240 ficavam ~26–43 passes alcançáveis e a taxa de corte variava ±8 pontos só pelos estados do
+// meio da partida — 47% com o D5 em 43, 55% em 104 de 720; a main 69% em 26, 66% em 74 de 720; com 480, ~70 alcançáveis
+// e +20 s)
+const NP = +arg('--partidas', 12), S0 = +arg('--sem0', 301), NC = +arg('--cenas', 480);
 const nPar = Math.max(1, +arg('--par', Math.min(4, os.availableParallelism?.() ?? os.cpus().length)));
 const tarefas = [];
 if (SO.includes('A')) for (let s = 0; s < NP; s++) tarefas.push(['--tarefa', 'partida', '--s', String(S0 + s)]);

@@ -586,7 +586,8 @@ export function apoioTatico(m, j) {
   // anda-para-anda. A volta do IMPEDIMENTO e a bola na mão do meu goleiro seguem pelo pressa: pelo firme, o time ficava em
   // posição de impedimento 32% do tempo com a bola (teste-apoio 8–25%) e quem recuava seguia para a própria linha do gol
   // (teste-movimento 10 → 15%))
-  if (pressa && ia.papel === 'ref' && IA_ATAQUE.firmeRef && ia.motivoP !== 'imped' && !maoDoMeuGoleiro(m, j.time)) {
+  if (pressa && ia.papel === 'ref' && IA_ATAQUE.firmeRef && ia.motivoP !== 'imped' && !maoDoMeuGoleiro(m, j.time)
+    && MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z) >= TATICA.volta.bolaPerto) {
     j.ia.viraTick = m.tick;
     const arr = TATICA.arranque && m.tick < (j.iaT?.calmoAte ?? -1);
     return para(j, _r.x, _r.z, arr ? TATICA.suave.trote[2] : 1, !arr, 0, 'firme');

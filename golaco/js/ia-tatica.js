@@ -804,9 +804,12 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
   // com a espera mais longa e a virada em arco/parada, o marcador a ≤ 3 m do condutor caía ~2–3 pontos)
   // (e com a bola na mão do meu goleiro também: quem recuava vira na hora — a espera e a virada parada o deixavam correndo
   // para a própria linha do gol, teste-movimento 13 → 18%)
-  const mao = maoDoMeuGoleiro(m, j.time);
-  const perto = mao || (MARCA_PERTO.has(r) && MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z) < TATICA.pertoBola);
-  j.ia.viraTick = perto ? -9 : m.tick;
+  // (e com a bola a menos de TATICA.volta.bolaPerto m: a espera e a virada parada deixavam alguém parado com o passe lento
+  // colado no pé, teste-nao-passa)
+  const mao = maoDoMeuGoleiro(m, j.time), dBola = MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z);
+  const marca = MARCA_PERTO.has(r), perto = mao || dBola < TATICA.volta.bolaPerto || (marca && dBola < TATICA.pertoBola);
+  // (a virada parada de quem marca, só com IA.viraParado.marca)
+  j.ia.viraTick = perto || (marca && !IA.viraParado.marca) ? -9 : m.tick;
   const segurando = m.tick < it.seguraAte, VT = perto ? VOLTA_ANTES : TATICA.volta;
   if (S.volta && (VT.quieto || !it.quieto) && d < S.volta[0] + (segurando ? VT.folga : 0)) {
     const v = MD.hypot(j.vx, j.vz);
