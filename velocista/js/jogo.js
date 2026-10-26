@@ -21,6 +21,7 @@ import { ESTEIRA } from './lab-tex.js';
 import { MARCOS, limitar, PONTE, ILHA, PRESIDIO, pontoMundo, SUBESTACOES } from './marcos.js';
 import { criarAliados } from './aliados.js';
 import { criarContencao } from './contencao.js';
+import { criarRivais } from './rivais.js';
 import { desenharMarco, blocoIlha, desenharFora } from './marcos3d.js';
 import { INTERIORES, Y0 as Y_INT, noGatilhoFora, noGatilhoDentro } from './interiores.js';
 import { construirInterior } from './interiores3d.js';
@@ -458,7 +459,7 @@ let pedidoPulo = false, pedidoBater = false, pedidoEspecial = null;
 let esferas = [];
 
 function reiniciar() {
-  esferasColetadas.clear(); objetos.zerar();
+  esferasColetadas.clear(); objetos.zerar(); rivais.sumir();
   for (const k of [...carregados.keys()]) descarregar(k);
   celAtual = [-999, -999];
   Object.assign(P, { x: INICIO.x, y: 0, z: INICIO.z, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, parede: null, vibrando: false, embalo: 0 });
@@ -619,7 +620,7 @@ function passoHeroi(dt) {
   // supervelocidade (velocidade.js): na reta, segurando CORRER, o embalo sobe o teto até ~830 km/h
   const angPedido = vh0 > 5 && m > 0.1 ? Math.acos(clamp((P.vx * dx + P.vz * dz) / (vh0 * (Math.hypot(dx, dz) || 1)), -1, 1)) : 0;
   P.embalo = passoEmbalo(P.embalo || 0, { correndo: P.correndo && !P.vibrando && !P.parede, noChao: P.noChao, m, angulo: angPedido, bloqueado: viloes.ativo || combate.ocupado }, dt);
-  const vmax = ((P.correndo || P.vibrando) ? (P.vibrando ? MOV.correr : tetoCorrida(P.embalo, MOV.correr)) : MOV.andar) * m * viloes.lentidao;   // o gelo do Capitão Frio deixa lento
+  const vmax = ((P.correndo || P.vibrando) ? (P.vibrando ? MOV.correr : tetoCorrida(P.embalo, MOV.correr)) : MOV.andar) * m * viloes.lentidao * rivais.lentidao;   // o gelo do Capitão Frio deixa lento
   const taxa = P.noChao ? (P.correndo ? 5 : 11) : 2.2;
   const k = 1 - Math.exp(-taxa * dt);
   // o Flash não voa (dono, 26/10: "o flash consegue voar pô"): no ar ele só mantém o embalo com que saiu do chão (vira e
@@ -844,6 +845,7 @@ function desenharMapa() {
   if (!grande) { gm.fillStyle = '#ff9a2e'; for (const o of objetos.perto(P.x, P.z, raioM)) if (o.tipo === 'lanche') gm.fillRect(o.x - 4, o.z - 4, 8, 8); }
   guia.desenharNoMapa(gm, grande ? 9 : 5);
   for (const e of combate.bandidos) if (e.estado !== 'caido' && e.estado !== 'fugiu') { gm.fillStyle = '#ff4d5e'; gm.beginPath(); gm.arc(e.x, e.z, grande ? 8 : 4, 0, 6.3); gm.fill(); }
+  { const r = rivais.ativo; if (r) { gm.fillStyle = '#c86bff'; gm.beginPath(); gm.arc(r.x, r.z, grande ? 22 : 9, 0, 6.3); gm.fill(); gm.strokeStyle = '#fff'; gm.lineWidth = grande ? 4 : 2; gm.stroke(); } }   // o vilão do dia (roxo)
   { const a = alvoAtual(); if (a && a.cor !== '#3fd0ff') { gm.fillStyle = a.cor; gm.beginPath(); gm.arc(a.x, a.z, grande ? 30 : 11, 0, 6.3); gm.fill(); gm.strokeStyle = '#fff'; gm.lineWidth = grande ? 6 : 2.5; gm.stroke(); } }
   gm.setTransform(1, 0, 0, 1, 0, 0);
   { // nomes no mapa (texto sempre de pé): o laboratório e, no mapa grande, os lugares da história
@@ -970,6 +972,8 @@ const viloes = criarViloes(cena, { mobile: MOBILE, aniso: ANISO, combate, armaze
   colide: (x, z, y) => empurrar(rectsPerto, x, z, 0.4, y, 1.8), chao: (x, z, y) => chaoEm(rectsPerto, x, z, y),
   labPos: { x: LAB_B.plano.entrada.x, z: LAB_B.plano.entrada.z - 9 } });
 const portais = criarPortais(cena);
+// os vilões do dia a dia (rivais.js): opcionais, só com nada em andamento
+const rivais = criarRivais(cena, { mobile: MOBILE, aniso: ANISO, combate, fx: combate.efeitos, avisar: (t, r, k) => avisar(t, r, k) });
 const trafego = criarTrafego(THREE, cena, { mobile: MOBILE });
 const pedestres = criarPedestres(THREE, cena, { mobile: MOBILE });
 // os objetos da rua: hidrantes, lixeiras, caixas de jornal, carrinhos de cachorro-quente e pombos (objetos.js)
@@ -1000,7 +1004,7 @@ function passoMissoes(dt) {
   const querCrime = m?.crime || m?.id === 'patrulha' || missoes.livre || crimes.ativo;   // um crime já em andamento sempre termina
   // um objetivo de cada vez (dono, 26/10: "não pode vir outra missão nem crime enquanto eu estiver dentro de uma missão ou
   // objetivo"): crime novo só com a cena e o rádio do passo terminados, sem cronômetro, corrida de portais ou vilão em cena
-  const ocupado = !!(J.cenaPendente || J.cron || (m?.tipo === 'portais' && portais.estado().correndo) || !historia.radioLivre || J.esteira);
+  const ocupado = !!(J.cenaPendente || J.cron || (m?.tipo === 'portais' && portais.estado().correndo) || !historia.radioLivre || J.esteira || rivais.ativo?.estado === 'luta');
   const ev = viloes.ativo || tempo.epoca === 'passado' || J.interior || !querCrime || (!crimes.ativo && ocupado) ? null : crimes.atualizar(dt, P, { forcar: m?.crime });
   if (ev?.inicio) avisar(ev.nome, 'Crime na cidade', 'crime');
   else if (ev) {
@@ -1307,12 +1311,20 @@ function quadro() {
       if (ev.tipo === 'nocaute') { missoes.contar('nocautes'); missoes.contar('pontos', 50); if (ev.especial) missoes.contar('especiais'); }
       else if (ev.tipo === 'dano') { el.dano.style.opacity = '1'; }
     }
-    for (const ev of viloes.atualizar(dt, P, { capitulo: missoes.atual?.capitulo, podeComecar: !crimes.ativo && !J.cenaPendente && !J.cron && !J.interior && historia.radioLivre && tempo.epoca === 'presente' })) eventoVilao(ev);
+    for (const ev of viloes.atualizar(dt, P, { capitulo: missoes.atual?.capitulo, podeComecar: !crimes.ativo && !J.cenaPendente && !J.cron && !J.interior && historia.radioLivre && tempo.epoca === 'presente' && rivais.ativo?.estado !== 'luta' })) eventoVilao(ev);
     J.danoVilao = Math.max(0, (J.danoVilao || 0) - dt * 2);
     el.missao.hidden = viloes.ativo; el.corpo.classList.toggle('capitulo', viloes.ativo);
     el.dano.style.opacity = String(Math.min(1, Math.max(combate.dano, J.danoVilao)));
     atualizarBotoesEspeciais();
     passoMissoes(dt); passoInteriores(dt);
+    { // os vilões do dia a dia: aparecem só com o herói solto (depois do Zoom), nada em andamento
+      const m = missoes.atual, livre = !J.cenaPendente && !J.cron && historia.radioLivre && !crimes.ativo && !viloes.ativo && !J.interior && !J.esteira && tempo.epoca === 'presente'
+        && !(m?.tipo === 'portais' && portais.estado().correndo) && !m?.capitulo && (viloes.vencido('zoom') || missoes.livre);
+      for (const ev of rivais.atualizar(dt, P, { pode: livre })) {
+        if (ev.tipo === 'dano') J.danoVilao = 1;
+        if (ev.tipo === 'vencido') { missoes.contar('pontos', 300); missoes.contar('rivais'); }
+      }
+    }
     pedestres.atualizar(dt, P, mundo.noite); trafego.atualizar(dt, P, mundo.noite, pedestres.pessoas); passoObjetos(dt);
     if (labAtivo) labAtivo.atualizar(dt, P.t, mundo.noite, camera, P);
     for (const e of marcosAtivos) e.atualizar(dt, P.t, mundo);
@@ -1387,4 +1399,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { equipe, aliados, contencao, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };

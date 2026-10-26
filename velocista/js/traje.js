@@ -53,6 +53,14 @@ const PALETAS = {
   // o VULTO da noite do raio (a armação de alguém misterioso): preto fosco, frisos quase apagados, máscara fechada e um brilho
   // vermelho fraco nos olhos (quem ele é só aparece no capítulo 5)
   vulto: { verm: [0.014, 0.012, 0.013], vesc: [0.006, 0.005, 0.006], ouro: [0.035, 0.03, 0.03], graf: [0.01, 0.009, 0.01], brilho: 0, olho: [0.9, 0.03, 0.02], mascaraFechada: true, rug: 0.75 },
+  // os VILÕES DO DIA A DIA (rivais.js), desenhos próprios: o Capitão Bumerangue (casaco azul e branco), o Trapaceiro
+  // (arlequim vermelho e amarelo), o Mestre dos Espelhos (verde com prata e visor), o Pião (verde e laranja) e a Peek-a-Boo
+  // (branco e preto)
+  bumerangue: { verm: [0.03, 0.06, 0.2], vesc: [0.5, 0.5, 0.52], ouro: [0.85, 0.85, 0.9], graf: [0.05, 0.04, 0.03], brilho: 0, olho: [0, 0, 0], mascaraFechada: false, rug: 0.7 },
+  trapaceiro: { verm: [0.42, 0.03, 0.03], vesc: [0.75, 0.55, 0.04], ouro: [0.95, 0.75, 0.08], graf: [0.05, 0.02, 0.02], brilho: 0.1, olho: [0, 0, 0], mascaraFechada: false },
+  espelhos: { verm: [0.03, 0.2, 0.08], vesc: [0.02, 0.06, 0.03], ouro: [0.75, 0.78, 0.82], graf: [0.03, 0.04, 0.05], brilho: 0.25, olho: [0.4, 1.6, 1.4], mascaraFechada: true, met: 0.5 },
+  piao: { verm: [0.05, 0.25, 0.1], vesc: [0.6, 0.22, 0.02], ouro: [0.95, 0.45, 0.05], graf: [0.03, 0.03, 0.03], brilho: 0.15, olho: [0, 0, 0], mascaraFechada: false },
+  peekaboo: { verm: [0.7, 0.7, 0.72], vesc: [0.02, 0.02, 0.025], ouro: [0.05, 0.05, 0.06], graf: [0.02, 0.02, 0.02], brilho: 0, olho: [1.4, 0.3, 1.6], mascaraFechada: true },
   civil: { verm: [0, 0, 0], vesc: [0, 0, 0], ouro: [0, 0, 0], graf: [0, 0, 0], brilho: 0, olho: [0, 0, 0], desenho: 'civil' },
   novo: { verm: [0.30, 0.011, 0.018], vesc: [0.075, 0.004, 0.008], ouro: [0.95, 0.60, 0.11], graf: [0.022, 0.02, 0.024], brilho: 0.08, veia: 0.55, olho: [1.2, 0.55, 0.08], mascaraFechada: false, desenho: 'novo', raioTesta: true },
 };
