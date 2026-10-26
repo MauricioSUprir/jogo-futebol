@@ -16,8 +16,11 @@ const EMBLEMAS = {
   reverso: { disco: 0x9a0a0a, cor: 0x141010, emissivo: 0x000000, forma: 'faisca', brilhoTecido: 0x806010 },
   savitar: { disco: 0x15181d, cor: 0x9fdcff, emissivo: 0x3fa8ff, forma: 'divisa', brilhoTecido: 0x607890 },
   // o traje novo (em aprovação): losango dourado em relevo com o fundo vinho e um raio próprio cruzando
+  civil: { disco: 0, cor: 0, emissivo: 0, forma: 'faisca', brilhoTecido: 0x1a2440 },   // à paisana: sem emblema, brilho de tecido azul
+  vulto: { disco: 0, cor: 0, emissivo: 0, forma: 'faisca', brilhoTecido: 0x101012 },   // o vulto: sem emblema, tecido fosco
   novo: { disco: 0x3a0309, cor: 0xffc93a, emissivo: 0x9a6a08, forma: 'losango', brilhoTecido: 0xa0141a },
 };
+const SEM_EMBLEMA = new Set(['civil', 'vulto']);
 // trajes maiores que o herói (a armadura do Savitar)
 const ESCALA_TRAJE = { savitar: 1.14 };
 const NOMES = ['pelve', 'lombar', 'peito', 'pescoco', 'cabeca', 'claviculaE', 'bracoE', 'antebracoE', 'maoE', 'claviculaD', 'bracoD', 'antebracoD', 'maoD',
@@ -96,8 +99,8 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
     // o traje (cores, painéis, frisos, cinto, luvas, botas e a máscara) é desenhado no shader: js/traje.js.
     // No PC, verniz (clearcoat) e brilho de tecido (sheen); no celular, o mesmo desenho sem essas camadas.
     matCorpo = aplicarTraje(mobile
-      ? new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, emissive: 0x120002 })
-      : new THREE.MeshPhysicalMaterial({ roughness: 1, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.4, sheen: 0.18, sheenColor: new THREE.Color(EMBLEMAS[traje]?.brilhoTecido ?? 0x8a1010), emissive: 0x120002 }), 'corpo', traje);
+      ? new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, emissive: traje === 'civil' ? 0x000000 : 0x120002 })
+      : new THREE.MeshPhysicalMaterial({ roughness: 1, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.4, sheen: 0.18, sheenColor: new THREE.Color(EMBLEMAS[traje]?.brilhoTecido ?? 0x8a1010), emissive: traje === 'civil' ? 0x000000 : 0x120002 }), 'corpo', traje);
     matCabeca = aplicarTraje(new THREE.MeshStandardMaterial({ map: texCabeca, roughness: 0.65, metalness: 0 }), 'cabeca', traje);
   }
   const corpo = malha(L.partes.corpo, esqueleto, matCorpo), cabeca = malha(L.partes.cabeca, esqueleto, matCabeca);
@@ -132,7 +135,7 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
   // a frente do peito em repouso fica em x = 0,145: o emblema logo à frente dela, no meio do peitoral
   emb.scale.setScalar(1.15); emb.position.set(0.152, 1.325 - J.peito[1], 0); emb.rotation.y = Math.PI / 2;
   if (EM.forma === 'losango') { emb.position.x = 0.146; emb.scale.z = 0.5; }       // o relevo colado no peito (de lado não fica uma placa solta)
-  if (!pessoa) ossos[I.peito].add(emb);
+  if (!pessoa && !SEM_EMBLEMA.has(traje)) ossos[I.peito].add(emb);        // à paisana (e o vulto), sem emblema
   emb.material = matEmb;
 
   const frente = new THREE.Group();

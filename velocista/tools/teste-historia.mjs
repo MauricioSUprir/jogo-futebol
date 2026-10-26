@@ -27,11 +27,11 @@ const abrirJogo = async (q) => {
 
 // ---- prólogo ----
 await pagina.goto(srv.url + '?historia=1', { timeout: 400000 });
-await pagina.evaluate(() => localStorage.clear());
+await pagina.evaluate(() => { localStorage.clear(); localStorage.setItem('theflash.historia.v1', JSON.stringify({ vistas: ['cena:noite-do-raio'] })); });   // (a noite do raio, antes dele, tem o teste-barry)
 await abrirJogo('?historia=1');
 const p0 = await pagina.evaluate(() => ({ modo: window.__rel.J.modo, cena: window.__rel.historia.cenaAtual, vis: !document.getElementById('cenaHist').hidden, hud: getComputedStyle(document.getElementById('hud')).display, cartao: window.__rel.historia.cartaoAtual }));
 ok(p0.modo === 'cena' && p0.cena === 'prologo' && p0.vis && p0.hud === 'none', `prólogo: cena com o jogo parado e sem HUD (${p0.modo}, ${p0.cena})`);
-ok(p0.cartao === 'Prólogo — O raio', `o prólogo abre com o cartão do capítulo (${p0.cartao})`);
+ok(p0.cartao === 'Seis semanas depois — O despertar', `o prólogo abre com o cartão do capítulo (${p0.cartao})`);
 await foto('cartao');
 await espera(() => !window.__rel.historia.cartaoAtual, null, 300000);
 const quem = await pagina.evaluate(() => document.querySelector('#cenaHist .fala b').textContent);

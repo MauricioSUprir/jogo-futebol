@@ -14,7 +14,8 @@ let falhas = 0;
 const ok = (c, msg) => { console.log(`${c ? 'OK ' : 'ERRO'} ${msg}`); if (!c) falhas++; };
 
 // por onde passar até os pontos atrás de portas e entre mesas (coordenadas locais da sala)
-const VIA = { editor: [[9.4, 1.6], [9.4, 4.6], [13.2, 5.0], [13.2, 8.5]], redacao: [[0, 0]], mesaJoe: [[-11.5, 2.6], [-11.5, 5]], csi: [[2, 0], [6, 0], [9.5, 2.6]] };
+const VIA = { editor: [[9.4, 1.6], [9.4, 4.6], [13.2, 5.0], [13.2, 8.5]], redacao: [[0, 0]], mesaJoe: [[-11.5, 2.6], [-11.5, 5], [-13.7, 6], [-13.7, 9.2]], csi: [[2, 0], [6, 0], [9.5, 2.6]],
+  portaCsi: [[2, 0]], cantoCsi: [[2, 0], [6, 0], [9.5, 2.6]] };
 function anda(R, x, z, y, ax, az, passo = 0.15) {
   let i = 0;
   while (Math.hypot(ax - x, az - z) > 0.3 && i++ < 3000) {

@@ -39,6 +39,16 @@ if (process.argv.includes('--navegador')) {
   const passou = await pagina.waitForFunction(() => Number(document.getElementById('vel')?.textContent || 0) > 300, null, { timeout: 900000 }).then(() => true).catch(() => false);
   const v = await pagina.evaluate(() => Number(document.getElementById('vel')?.textContent || 0));
   ok(passou, `no jogo, numa rua reta segurando CORRER, o velocímetro passa de 300 km/h (${v})`);
+  // o Flash não voa (dono, 26/10): PULAR segurado no ar não plana, e no ar ele não ganha velocidade
+  const noAr = (ini) => pagina.evaluate(([x, z, ini]) => new Promise((fim) => {
+    const R = window.__rel; R.teclas.clear(); for (const k of ini.teclas) R.teclas.add(k);
+    Object.assign(R.P, { x, z, y: ini.y, vx: 0, vz: 0, vy: ini.vy, noChao: false, pulos: 1, embalo: 0, parede: null, vSolo: 0 });
+    const t0 = R.P.t, y0 = R.P.y, f = () => (R.P.t - t0 >= ini.t || R.P.noChao ? fim({ caiu: y0 - R.P.y, t: R.P.t - t0, v: Math.hypot(R.P.vx, R.P.vz), chao: R.P.noChao }) : requestAnimationFrame(f)); requestAnimationFrame(f);
+  }), [x, z, ini]);
+  const q = await noAr({ y: 60, vy: 0, t: 1.5, teclas: [' '] });
+  ok(q.caiu > 25 || q.chao, `segurando PULAR no ar ele cai (${q.caiu.toFixed(1)} m em ${q.t.toFixed(2)} s; planando seriam ~10 m)`);
+  const a = await noAr({ y: 0.4, vy: 16, t: 0.6, teclas: ['w', 'shift'] });
+  ok(a.v <= 16, `pulando parado e segurando CORRER, no ar ele não acelera (${a.v.toFixed(1)} m/s)`);
   ok(!erros.length, `sem erros no console (${erros.slice(0, 3).join(' | ')})`);
   await navegador.close(); await srv.fechar();
 }

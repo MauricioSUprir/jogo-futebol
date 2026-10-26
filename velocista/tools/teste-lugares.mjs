@@ -46,18 +46,20 @@ ok(cid.bloco(20, 20).lotes.some((l) => l.y1 >= 78), 'a torre do Picture News pas
 }
 
 // ---- 3. pontos de encontro e subestações em lugar livre
+const DE_ALIADO = new Set([...mis.MISSOES.flatMap((m) => Object.values(m.aliados || {})), 'portaCsi', 'cantoCsi']);
 for (const id of Object.keys(M.PONTOS)) {
-  const w = M.pontoMundo(id), R = cid.retangulosPerto(w.x, w.z, 1);
-  ok(!cid.empurrar(R, w.x, w.z, 0.4, cid.CALCADA, 1.8).bateu, `ponto "${id}" livre para a pessoa ficar`);
+  // (os pontos de dentro dos lugares ficam no piso da sala, no alto: interiores.js; lá dentro, o herói só para à frente de quem espera por ele)
+  const w = M.pontoMundo(id), R = cid.retangulosPerto(w.x, w.z, 1), y = w.y ?? cid.CALCADA;
+  ok(!cid.empurrar(R, w.x, w.z, 0.4, y, 1.8).bateu, `ponto "${id}" livre para a pessoa ficar`);
   const hx = w.x + Math.sin(w.h) * 3.6, hz = w.z + Math.cos(w.h) * 3.6;
-  ok(Math.hypot(...Object.values(M.limitar(hx, hz)).map((v, k) => v - [hx, hz][k])) < 1e-6, `ponto "${id}": o herói cabe à frente (${hx.toFixed(0)}, ${hz.toFixed(0)})`);
+  ok(Math.hypot(...Object.values(M.limitar(hx, hz)).map((v, k) => v - [hx, hz][k])) < 1e-6 && (!w.interior || !DE_ALIADO.has(id) || !cid.empurrar(R, hx, hz, 0.4, y, 1.8).bateu), `ponto "${id}": o herói cabe à frente (${hx.toFixed(0)}, ${hz.toFixed(0)})`);
 }
 for (const s of M.SUBESTACOES) ok(!cid.empurrar(cid.retangulosPerto(s.x, s.z, 1), s.x, s.z, 0.7, cid.CALCADA, 1.8).bateu, `subestação (${s.x}, ${s.z}) na calçada, sem prédio em cima`);
 
 // ---- 4. os passos novos na ordem da história
 const ids = mis.MISSOES.map((m) => m.id), antes = (a, b) => ids.indexOf(a) >= 0 && ids.indexOf(a) < ids.indexOf(b);
-ok(antes('esferas', 'delegacia') && antes('delegacia', 'escalar') && antes('gangue', 'jornal') && antes('cap-zoom', 'energia') && antes('cap-frio', 'presidio')
-  && antes('cap-onda', 'cafe') && antes('cap-reverso', 'casa') && antes('cap-final', 'prefeitura') && antes('prefeitura', 'fendas'), `7 passos da cidade entre os capítulos (${ids.length} passos)`);
+ok(antes('vibrar', 'delegacia') && antes('delegacia', 'atrasado') && antes('troca', 'assalto') && antes('gangue', 'jornal') && antes('cap-zoom', 'energia') && antes('cap-frio', 'presidio')
+  && antes('cap-onda', 'cafe') && antes('cap-reverso', 'casa') && antes('cap-final', 'prefeitura') && antes('prefeitura', 'fendas'), `os passos da cidade entre os capítulos (${ids.length} passos)`);
 ok(mis.MISSOES.filter((m) => m.ponto).every((m) => M.PONTOS[m.ponto] && Object.values(m.aliados || {}).every((p) => M.PONTOS[p])), 'todo passo com lugar tem ponto e aliados conhecidos');
 
 if (naveg) {
@@ -95,7 +97,7 @@ if (naveg) {
   ok(em && em < 5, `de frente para o Joe na cena (${em?.toFixed(1)} m)`);
   await pagina.waitForTimeout(2500); await foto('delegacia-cena');
   await pular();
-  ok(await espera(() => window.__rel.missoes.atual?.id === 'escalar' && window.__rel.J.modo === 'jogando'), 'depois da cena, a história segue (Ponto de vista)');
+  ok(await espera(() => window.__rel.missoes.atual?.id === 'atrasado' && window.__rel.J.modo === 'jogando'), 'depois da cena, a história segue (Atrasado de novo)');
 
   // o Apagão: as 3 subestações, uma por vez, e a cidade acende de novo
   await abrirJogo('?missao=energia');

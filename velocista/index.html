@@ -211,6 +211,11 @@
   /* a cortina das portas dos lugares (entrar e sair) */
   #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .28s ease; z-index: 40; }
   #fade.on { opacity: 1; }
+  #fade.branco { background: #fff; transition: opacity .12s ease; }
+  #fade.branco.on { opacity: var(--clarao, .8); }
+  /* o cronômetro de um passo da vida do Barry nos últimos 10 s */
+  #missao.urgente #missaoTexto { color: #ff7468; animation: urgente .5s ease-in-out infinite alternate; }
+  @keyframes urgente { to { opacity: .55; } }
 </style>
 </head>
 <body>
@@ -252,7 +257,7 @@
     <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>correr</span>
     <span>Mouse</span><span>olhar (clique para capturar)</span>
     <span><kbd>Shift</kbd></span><span>supervelocidade (gasta energia)</span>
-    <span><kbd>Espaço</kbd></span><span>pular (duas vezes = pulo duplo; segure para planar)</span>
+    <span><kbd>Espaço</kbd></span><span>pular (duas vezes = pulo duplo)</span>
     <span><kbd>V</kbd> (segurar, em velocidade)</span><span>vibrar: atravessa prédios e objetos</span>
     <span>Corra de frente para um prédio acima de 130 km/h</span><span>escala a parede até o topo (Shift)</span>
     <span><kbd>F</kbd> ou clique</span><span>bater (avança até o bandido; 3 seguidos = gancho)</span>

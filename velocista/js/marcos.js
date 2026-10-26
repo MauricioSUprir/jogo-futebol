@@ -133,6 +133,7 @@ export const PONTOS = {
   prefeitura: { marco: 'prefeitura', u: -2.2, v: -6.6, h: Math.PI },
   prefeitura2: { marco: 'prefeitura', u: 2.2, v: -6.6, h: Math.PI },
   presidio: { x: ENTRADA_PRESIDIO.x + 8, z: ENTRADA_PRESIDIO.z, h: -Math.PI / 2 },
+  beco: { marco: 'delegacia', u: 27, v: 18, h: Math.PI / 2 },      // o corredor do lado da Delegacia, entre o prédio e a calçada (sem ninguém): a troca de roupa
 };
 // os pontos DE DENTRO dos lugares (interiores.js): no alto, sobre o quarteirão (y = Y_INTERIOR)
 for (const [id, I] of Object.entries(INTERIORES)) for (const [nome, [u, v, h]] of Object.entries(I.pontos)) {
