@@ -1,13 +1,13 @@
-/* ===== produto.js — as configurações COMERCIAIS do StudyLab =====
+/* ===== produto.js — as configurações COMERCIAIS do MindTrack =====
    É o único arquivo que você precisa mexer para ligar login e cobrança.
    Enquanto estiver vazio, o app funciona normalmente: entra sem conta e o
-   Study AI aparece bloqueado, convidando a assinar.                          */
+   MindTrack AI aparece bloqueado, convidando a assinar.                          */
 
 /** Client ID do Google (console.cloud.google.com → Credenciais → OAuth 2.0).
  *  Lembre de autorizar a origem: https://mauriciosuprir.github.io */
 export const GOOGLE_CLIENT_ID = '';
 
-/** Endereço do servidor do StudyLab — o código dele está em `studylab-server/`.
+/** Endereço do servidor do MindTrack — o código dele está em `studylab-server/`.
  *  Depois de publicar no Railway, cole aqui a URL que ele te der.
  *  Ex.: 'https://studylab-server-production.up.railway.app'
  *  Vazio = o app funciona sozinho, com conta local e Pro só por código. */
@@ -45,7 +45,7 @@ export const PLANOS = [
   },
 ];
 
-/** O que cada nível permite no Study AI — espelho dos limites do servidor,
+/** O que cada nível permite no MindTrack AI — espelho dos limites do servidor,
  *  usado só para mostrar na tela (quem manda de verdade é o servidor). */
 export const LIMITES_PLANO = {
   pro: { dia: 30, mes: 400, fotosDia: 5, fotosPergunta: 2 },
@@ -53,10 +53,10 @@ export const LIMITES_PLANO = {
 };
 
 /** Aparece nos Termos e na Política de Privacidade. TROQUE pelo seu e-mail. */
-export const EMAIL_CONTATO = 'contato@studylab.app';
+export const EMAIL_CONTATO = 'contato@mindtrack.app';
 
 /** Quem responde legalmente pelo app (nome ou razão social). TROQUE. */
-export const RESPONSAVEL = 'StudyLab';
+export const RESPONSAVEL = 'MindTrack';
 
 export const precoBR = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -65,7 +65,7 @@ export const precoBR = (v) => v.toLocaleString('pt-BR', { style: 'currency', cur
  *  Aviso honesto: isso é conferido no aparelho, então serve para uso controlado
  *  — quando o servidor existir, a validação passa a ser feita lá. */
 export const CODIGOS = {
-  STUDYLAB30: { dias: 30, nivel: 'pro' },
+  MINDTRACK30: { dias: 30, nivel: 'pro' },
   PROFESSOR: { dias: 365, nivel: 'plus' },
   TESTE7: { dias: 7, nivel: 'pro' },
 };

@@ -1,10 +1,10 @@
-/* ===== index.js — servidor do StudyLab =====
+/* ===== index.js — servidor do MindTrack =====
    Rotas:
      GET  /saude          está no ar?
      POST /entrar         { idToken } -> sessão de 30 dias + assinatura
      GET  /eu             quem sou eu, meu plano e meu uso de hoje
      POST /codigo         { codigo } -> ativa o Pro
-     POST /ia             o Study AI (só para assinante)
+     POST /ia             o MindTrack AI (só para assinante)
      POST /cancelar       cancela a assinatura
      GET  /admin/numeros  ?token=ADMIN_TOKEN
      POST /admin/codigo   cria um código                                       */
@@ -90,7 +90,7 @@ const rotas = {
   'GET /saude': async () => {
     const falta = [];
     if (!temChaveIA()) {
-      falta.push('ANTHROPIC_API_KEY ou GEMINI_API_KEY — sem uma delas o Study AI não responde '
+      falta.push('ANTHROPIC_API_KEY ou GEMINI_API_KEY — sem uma delas o MindTrack AI não responde '
         + '(a do Gemini é grátis em aistudio.google.com)');
     }
     if (pagamentoLigado() && !chavePublica()) falta.push('MP_PUBLIC_KEY — sem ela o cartão abre fora do app');
@@ -182,7 +182,7 @@ const rotas = {
   'POST /ia': async (req) => {
     const aluno = await exigirAluno(req);
     const assinatura = await assinaturaAtiva(aluno.id);
-    if (!assinatura) throw Object.assign(new Error('O Study AI faz parte dos planos Pro e Plus.'), { status: 402 });
+    if (!assinatura) throw Object.assign(new Error('O MindTrack AI faz parte dos planos Pro e Plus.'), { status: 402 });
     const nivel = nivelDoPlano(assinatura.plano);
     const L = limitesDe(assinatura);
 
@@ -240,7 +240,7 @@ const rotas = {
     return { link: r.link, plano: planoId, valor: r.valor, forma: r.forma };
   },
 
-  /* Pix na própria tela do StudyLab: QR + código copia-e-cola. */
+  /* Pix na própria tela do MindTrack: QR + código copia-e-cola. */
   'POST /pagar/pix': async (req) => {
     const aluno = await exigirAluno(req);
     if (!pagamentoLigado()) throw Object.assign(new Error('O pagamento ainda não está disponível. Use um código de acesso.'), { status: 503 });
@@ -395,7 +395,7 @@ const servidor = http.createServer(async (req, res) => {
 
 migrar()
   .then(() => servidor.listen(PORTA, () => {
-    console.log(`StudyLab no ar em :${PORTA}`);
+    console.log(`MindTrack no ar em :${PORTA}`);
     console.log(`  banco: ${emMemoria ? 'MEMÓRIA (só para testes)' : 'postgres'}`);
     console.log(`  IA: ${provedor() || 'NENHUMA CHAVE'} · modelo ${modeloEmUso()}${provedor() === 'claude' ? ` (Plus: ${modeloPara('plus')})` : ''}`);
     console.log(`  limites Pro: ${LIMITES.pro.dia}/dia, ${LIMITES.pro.mes}/mês, ${LIMITES.pro.fotosDia} fotos/dia`);

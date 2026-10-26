@@ -44,8 +44,8 @@ export const MENU = [
   { r: 'desempenho', i: '📊', t: 'Desempenho', v: vDesempenho },
   { r: 'conquistas', i: '🏆', t: 'Conquistas', v: vConquistas },
   { r: 'biblioteca', i: '📂', t: 'Biblioteca', v: vBiblioteca },
-  { r: 'planos', i: '✨', t: 'StudyLab Pro', v: vPlanos },
-  { r: 'ai', i: '🤖', t: 'Study AI', v: vAI, tab: true },
+  { r: 'planos', i: '✨', t: 'MindTrack Pro', v: vPlanos },
+  { r: 'ai', i: '🤖', t: 'MindTrack AI', v: vAI, tab: true },
   { r: 'config', i: '⚙️', t: 'Configurações', v: vConfig },
   { r: 'termos', i: '📄', t: 'Termos e privacidade', v: vTermos, oculto: true },
   // rota escondida: não entra no menu (ver views/criador.js)
@@ -133,7 +133,7 @@ function render() {
   $('#side').classList.remove('open');
   $('.side__scrim').hidden = true;
   window.scrollTo({ top: 0 });
-  document.title = `${item.t} · StudyLab`;
+  document.title = `${item.t} · MindTrack AI`;
 }
 
 /* ---------- rotina diária ---------- */
@@ -150,7 +150,7 @@ function iniciar() {
   // Link de recomeço: abrir o app com ?zerar apaga TUDO deste aparelho e
   // começa do zero (com confirmação, para ninguém perder dados sem querer).
   if (new URLSearchParams(location.search).has('zerar')) {
-    const confirmou = confirm('Zerar o StudyLab neste aparelho? Todos os dados salvos aqui serão apagados.');
+    const confirmou = confirm('Zerar o MindTrack neste aparelho? Todos os dados salvos aqui serão apagados.');
     if (confirmou) {
       try { localStorage.removeItem('studylab.v1'); } catch { /* segue */ }
       try { indexedDB.deleteDatabase('studylab-fotos'); } catch { /* segue */ }

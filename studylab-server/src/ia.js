@@ -2,7 +2,7 @@
    Dois provedores:
    - Claude (ANTHROPIC_API_KEY) — pago por uso; é o recomendado quando há assinantes.
    - Gemini (GEMINI_API_KEY) — tem faixa GRÁTIS em aistudio.google.com; perfeito
-     para testar o Study AI sem gastar nada. O limite do plano grátis é do app
+     para testar o MindTrack AI sem gastar nada. O limite do plano grátis é do app
      inteiro (não por aluno), então para escala use o Claude.
    Com as duas chaves, o Claude vence; PROVEDOR=gemini força o Gemini.          */
 // URL_ANTHROPIC / URL_GEMINI existem para os testes apontarem para APIs dubladas.
@@ -126,7 +126,7 @@ async function perguntarClaude({ system, conteudo, schema = null, maxTokens = 40
     console.error('Erro da Claude API:', r.status, detalhe);
     if (r.status === 429) throw Object.assign(new Error('Muitas perguntas ao mesmo tempo. Tente em alguns segundos.'), { status: 429 });
     // 401/400 de chave ou crédito é problema NOSSO — o aluno não tem o que fazer
-    throw Object.assign(new Error('O Study AI está temporariamente indisponível.'), { status: 503 });
+    throw Object.assign(new Error('O MindTrack AI está temporariamente indisponível.'), { status: 503 });
   }
   if (dados.stop_reason === 'refusal') {
     throw Object.assign(new Error('O modelo preferiu não responder a esse pedido.'), { status: 422 });
@@ -201,7 +201,7 @@ async function perguntarGemini({ system, conteudo, schema = null, maxTokens = 40
       // o limite do plano grátis é do app inteiro, não do aluno
       throw Object.assign(new Error('A fila do plano grátis da IA está cheia agora. Espere um pouco e tente de novo.'), { status: 429 });
     }
-    throw Object.assign(new Error('O Study AI está temporariamente indisponível.'), { status: 503 });
+    throw Object.assign(new Error('O MindTrack AI está temporariamente indisponível.'), { status: 503 });
   }
   if (dados.promptFeedback?.blockReason) {
     throw Object.assign(new Error('O modelo preferiu não responder a esse pedido.'), { status: 422 });

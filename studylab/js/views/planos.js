@@ -1,4 +1,4 @@
-/* ===== views/planos.js — assinatura do StudyLab (Pro e Plus) ===== */
+/* ===== views/planos.js — assinatura do MindTrack (Pro e Plus) ===== */
 import { h, iso, fmtData, daysBetween, parseISO, today } from '../util.js';
 import { st, ehPro, ehPlus, nivelPlano, ativarPro, cancelarPro } from '../store.js';
 import {
@@ -19,15 +19,15 @@ export function render(el) {
 function montar(el, pintar) {
   const s = st();
 
-  el.append(titulo('✨ StudyLab Pro e Plus',
-    ehPro() ? 'Sua assinatura está ativa.' : 'Libere o Study AI — o tutor que conhece os seus estudos.'));
+  el.append(titulo('✨ MindTrack Pro e Plus',
+    ehPro() ? 'Sua assinatura está ativa.' : 'Libere o MindTrack AI — o tutor que conhece os seus estudos.'));
 
   if (ehPro()) { assinaturaAtiva(el, pintar); return; }
 
   /* ---------- o que os planos entregam ---------- */
   el.append(h('div', { class: 'hero mb' },
     h('div', { class: 'flexb mb' }, h('span', { style: { fontSize: '26px' } }, '🤖'),
-      h('h1', { style: { fontSize: '20px' } }, 'O Study AI é dos planos pagos'), selo()),
+      h('h1', { style: { fontSize: '20px' } }, 'O MindTrack AI é dos planos pagos'), selo()),
     h('p', { style: { margin: 0 } },
       'Ele não é um chat qualquer: conhece suas matérias, suas provas, seus erros, seu calendário e o que você '
       + 'escreveu na Minha Escola. Pergunte "o que eu estudo agora?" e ele responde com base no seu desempenho de verdade.')));
@@ -47,7 +47,7 @@ function montar(el, pintar) {
       h('div', {},
         h('div', { class: 'flexb' }, h('b', { class: 'small' }, 'Pro'), selo('pro')),
         lista([
-          `${LIMITES_PLANO.pro.dia} perguntas por dia ao Study AI`,
+          `${LIMITES_PLANO.pro.dia} perguntas por dia ao MindTrack AI`,
           `${LIMITES_PLANO.pro.fotosDia} fotos por dia (${LIMITES_PLANO.pro.fotosPergunta} por pergunta)`,
           ...RECURSOS_PRO.map((r) => r.nome),
         ])),
@@ -61,7 +61,7 @@ function montar(el, pintar) {
         ]))))));
 
   el.append(h('p', { class: 'tiny muted center mt' },
-    'Cancele quando quiser. Sem multa, sem fidelidade. O plano grátis continua completo — só sem o Study AI. ',
+    'Cancele quando quiser. Sem multa, sem fidelidade. O plano grátis continua completo — só sem o MindTrack AI. ',
     h('a', { href: '#/termos' }, 'Termos'), ' · ',
     h('a', { href: '#/termos?aba=privacidade' }, 'Privacidade')));
 
@@ -71,7 +71,7 @@ function montar(el, pintar) {
     el.append(h('div', { class: 'mt2' }, cartao(
       h('b', { class: 'small' }, '⚠️ Aviso para o dono do app'),
       h('p', { class: 'small', style: { marginBottom: 0 } },
-        'Este aparelho ainda não está ligado ao servidor do StudyLab, então o pagamento online não aparece e '
+        'Este aparelho ainda não está ligado ao servidor do MindTrack, então o pagamento online não aparece e '
         + 'o plano só é liberado por código — conferido aqui mesmo, o que serve para testes, não para escala. '
         + 'Publique o studylab-server e informe o endereço em Configurações → Área do criador.'))));
   }
@@ -120,7 +120,7 @@ function cartaoNivel(nivel, pintar) {
       '✍️ Correção de redação com nota',
       '🗓️ Plano de estudos da semana pela IA',
       '📊 Análise dos seus simulados']
-    : ['Study AI completo, com os seus dados',
+    : ['MindTrack AI completo, com os seus dados',
       `${L.dia} perguntas por dia (${L.mes}/mês)`,
       `${L.fotosDia} fotos por dia — ${L.fotosPergunta} por pergunta`,
       '📗 Me explica · professor socrático',
@@ -131,7 +131,7 @@ function cartaoNivel(nivel, pintar) {
   const c = cartao(
     h('div', { class: 'center' },
       h('div', { class: 'flexb', style: { justifyContent: 'center' } },
-        h('b', { style: { fontSize: '16px' } }, ehPlusCard ? 'StudyLab Plus' : 'StudyLab Pro'), selo(nivel)),
+        h('b', { style: { fontSize: '16px' } }, ehPlusCard ? 'MindTrack Plus' : 'MindTrack Pro'), selo(nivel)),
       h('div', { class: 'tiny muted' }, ehPlusCard ? 'Para quem usa a IA todo dia' : 'O mais escolhido'),
       preco, economia),
     pills,
@@ -139,11 +139,11 @@ function cartaoNivel(nivel, pintar) {
     detalhe,
     h('button', {
       class: `btn btn--blk mt ${ehPlusCard ? '' : 'btn--p'}`,
-      style: ehPlusCard ? { background: 'linear-gradient(135deg,#7c5cff,#22d3ee)', color: '#fff', border: 'none' } : {},
+      style: ehPlusCard ? { background: 'linear-gradient(135deg,#3ec9f5,#f1d794)', color: '#fff', border: 'none' } : {},
       onclick: () => assinar(escolhido, pintar),
     }, `Assinar o ${ehPlusCard ? 'Plus' : 'Pro'}`));
   c.style.position = 'relative';
-  if (!ehPlusCard) c.style.borderColor = '#7c5cff88';
+  if (!ehPlusCard) c.style.borderColor = '#3ec9f588';
   return c;
 }
 
@@ -213,7 +213,7 @@ function assinaturaAtiva(el, pintar) {
     h('div', { class: 'flexb' },
       h('span', { style: { fontSize: '30px' } }, '✨'),
       h('div', { class: 'grow' },
-        h('h1', { style: { fontSize: '20px' } }, `StudyLab ${nivel === 'plus' ? 'Plus' : 'Pro'} ${plano ? '· ' + plano.nome : ''}`),
+        h('h1', { style: { fontSize: '20px' } }, `MindTrack ${nivel === 'plus' ? 'Plus' : 'Pro'} ${plano ? '· ' + plano.nome : ''}`),
         h('p', { style: { margin: '4px 0 0' } },
           dias === null ? 'Sem data de término.'
             : dias >= 0 ? `Ativo até ${fmtData(s.conta.proAte)} — faltam ${dias} dia(s).`
@@ -223,11 +223,11 @@ function assinaturaAtiva(el, pintar) {
   el.append(cartao(
     h('b', {}, '🤖 O que você desbloqueou'),
     h('div', { class: 'list mt' },
-      linhaOk(`${L.dia} perguntas por dia ao Study AI (${L.mes}/mês)`),
+      linhaOk(`${L.dia} perguntas por dia ao MindTrack AI (${L.mes}/mês)`),
       linhaOk(`${L.fotosDia} fotos por dia — ${L.fotosPergunta} por pergunta`),
       ...RECURSOS_PRO.map((r) => linhaOk(r.nome)),
       ...(nivel === 'plus' ? RECURSOS_PLUS.map((r) => linhaOk(r.nome)) : [])),
-    h('a', { class: 'btn btn--p btn--blk mt', href: '#/ai' }, '🤖 Abrir o Study AI')));
+    h('a', { class: 'btn btn--p btn--blk mt', href: '#/ai' }, '🤖 Abrir o MindTrack AI')));
 
   /* quem é Pro vê o convite para subir ao Plus */
   if (nivel === 'pro') {
@@ -241,7 +241,7 @@ function assinaturaAtiva(el, pintar) {
       ]),
       h('button', {
         class: 'btn btn--blk mt',
-        style: { background: 'linear-gradient(135deg,#7c5cff,#22d3ee)', color: '#fff', border: 'none' },
+        style: { background: 'linear-gradient(135deg,#3ec9f5,#f1d794)', color: '#fff', border: 'none' },
         onclick: () => assinar(plus, pintar),
       }, `Assinar o Plus — ${precoBR(plus.preco)}/mês`))));
   }
@@ -252,7 +252,7 @@ function assinaturaAtiva(el, pintar) {
     h('b', { class: 'small' }, 'Gerenciar assinatura'),
     h('p', { class: 'tiny muted' }, s.conta.codigo ? `Liberado pelo código ${s.conta.codigo}.` : plano ? `Plano ${plano.nome}.` : 'Ativado em modo teste.'),
     h('button', {
-      class: 'btn btn--d', onclick: () => confirmar('Cancelar a assinatura?', 'Você volta para o plano grátis e perde o Study AI.', async () => {
+      class: 'btn btn--d', onclick: () => confirmar('Cancelar a assinatura?', 'Você volta para o plano grátis e perde o MindTrack AI.', async () => {
         if (temServidor()) { try { await cancelarNoServidor(); } catch (e) { return toast(e.message, 'bad'); } }
         else cancelarPro();
         toast('Assinatura cancelada'); pintar();

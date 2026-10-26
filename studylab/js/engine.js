@@ -1,4 +1,4 @@
-/* ===== engine.js — o "cérebro" do StudyLab =====
+/* ===== engine.js — o "cérebro" do MindTrack =====
    Prioridades, revisão espaçada, índice de domínio, planos de prova,
    divisão de tarefas, XP/níveis, conquistas, streak e notificações.
    Tudo aqui é determinístico e roda offline (não depende de IA).           */
@@ -439,11 +439,11 @@ export function notificacoes() {
   if (c.plano === 'pro' && c.proAte) {
     const faltam = daysBetween(today(), parseISO(c.proAte));
     if (faltam < 0) {
-      push(`pro_venceu_${c.proAte}`, '⏳', 'Sua assinatura do StudyLab Pro venceu. O Study AI ficou indisponível.', '#/planos', 4);
+      push(`pro_venceu_${c.proAte}`, '⏳', 'Sua assinatura do MindTrack Pro venceu. O MindTrack AI ficou indisponível.', '#/planos', 4);
     } else if (faltam <= 5) {
       push(`pro_vence_${c.proAte}`, '⏳',
-        faltam === 0 ? 'Seu StudyLab Pro termina hoje. Renove para não perder o Study AI.'
-          : `Seu StudyLab Pro termina em ${faltam} dia(s).`, '#/planos', 3);
+        faltam === 0 ? 'Seu MindTrack Pro termina hoje. Renove para não perder o MindTrack AI.'
+          : `Seu MindTrack Pro termina em ${faltam} dia(s).`, '#/planos', 3);
     }
   }
 

@@ -1,7 +1,7 @@
 /* ===== views/criador.js — Área do criador (rota escondida: #/criador) =====
    NÃO aparece no menu e o aluno nunca chega aqui: só abre tocando 5 vezes na
    linha da versão, no rodapé das Configurações. É onde o dono do app liga o
-   servidor — o único lugar do StudyLab onde se fala em chave.                */
+   servidor — o único lugar do MindTrack onde se fala em chave.                */
 import { h } from '../util.js';
 import { st, set, ehPro } from '../store.js';
 import { titulo, cartao, toast, campo, inp, sel, confirmar } from '../ui.js';
@@ -20,7 +20,7 @@ function montar(el, pintar) {
   el.append(h('a', { class: 'chip mb', href: '#/config', style: { display: 'inline-flex' } }, '‹ voltar para Configurações'));
   el.append(titulo('🛠️ Área do criador', 'Esta tela não aparece no menu e o aluno não chega nela.'));
 
-  /* ---------- como o Study AI funciona ---------- */
+  /* ---------- como o MindTrack AI funciona ---------- */
   el.append(cartao(
     h('b', {}, '🔐 Onde mora a chave da IA'),
     h('p', { class: 'small' },
@@ -35,7 +35,7 @@ function montar(el, pintar) {
       h('div', { class: 'tiny muted' }, '↓'),
       h('div', { class: 'small' }, '🖥️ seu servidor libera o Pro'),
       h('div', { class: 'tiny muted' }, '↓'),
-      h('div', { class: 'small' }, '🤖 Study AI pronto para usar — sem chave, sem configurar nada'))));
+      h('div', { class: 'small' }, '🤖 MindTrack AI pronto para usar — sem chave, sem configurar nada'))));
 
   /* ---------- servidor ---------- */
   const endServidor = inp({ value: s.ia.servidor || '', placeholder: 'https://...up.railway.app' });
@@ -43,9 +43,9 @@ function montar(el, pintar) {
   const segredoEl = h('code', { class: 'tiny muted', style: { wordBreak: 'break-all' } }, 'clique para gerar');
 
   el.append(h('div', { class: 'mt2' }, cartao(
-    h('b', {}, '🖥️ Servidor do StudyLab'),
+    h('b', {}, '🖥️ Servidor do MindTrack'),
     h('p', { class: 'tiny muted' },
-      'Publique a pasta studylab-server (Railway) e cole aqui o endereço. É isso que liga o Study AI e o pagamento para todo mundo.'),
+      'Publique a pasta studylab-server (Railway) e cole aqui o endereço. É isso que liga o MindTrack AI e o pagamento para todo mundo.'),
     campo('Endereço', endServidor),
     h('div', { class: 'flexb' },
       h('button', {
@@ -64,7 +64,7 @@ function montar(el, pintar) {
             status.replaceChildren(
               h('div', {}, `✅ no ar · banco ${d.banco} · IA ${d.provedor || 'sem chave'} (${d.modelo})`),
               h('div', { style: { marginTop: '4px' } },
-                `${d.studyAiPronto ? '✅' : '❌'} Study AI · `,
+                `${d.studyAiPronto ? '✅' : '❌'} MindTrack AI · `,
                 `${d.pagamentoPronto ? '✅' : '❌'} pagamento · `,
                 `${d.googleConfigurado ? '✅' : '○'} Google (opcional)`),
               ...(d.falta?.length
@@ -108,7 +108,7 @@ function montar(el, pintar) {
   el.append(h('div', { class: 'mt2' }, cartao(
     h('b', {}, '🧪 Testar a IA antes de publicar o servidor'),
     h('p', { class: 'small' },
-      'Só para você ver o Study AI funcionando hoje, ', h('b', {}, 'neste aparelho'), '. A chave fica guardada só aqui e '
+      'Só para você ver o MindTrack AI funcionando hoje, ', h('b', {}, 'neste aparelho'), '. A chave fica guardada só aqui e '
       + 'nenhum aluno vê este campo. Assim que o servidor estiver no ar, ele passa a mandar e esta chave é ignorada.'),
     h('div', { class: 'f-row' }, campo('Chave da Claude API', chaveTeste), campo('Modelo', modelo)),
     h('div', { class: 'flexb' },
@@ -123,7 +123,7 @@ function montar(el, pintar) {
           set((x) => { x.ia.chaveCriador = chaveTeste.value.trim(); x.ia.modelo = modelo.value; });
           if (!ehPro()) return toast('Ative o Pro primeiro (código TESTE7 em Planos)', 'bad');
           e.target.disabled = true; e.target.textContent = 'Testando…';
-          try { await chamar({ system: 'Responda apenas: ok', conteudo: 'teste', maxTokens: 20, esforco: 'low' }); toast('Study AI funcionando! 🎉', 'good'); }
+          try { await chamar({ system: 'Responda apenas: ok', conteudo: 'teste', maxTokens: 20, esforco: 'low' }); toast('MindTrack AI funcionando! 🎉', 'good'); }
           catch (err) { toast(err.message, 'bad'); }
           e.target.disabled = false; e.target.textContent = '🔌 Testar';
         },

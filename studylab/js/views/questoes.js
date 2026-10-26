@@ -61,7 +61,7 @@ function montar(el, params, pintar) {
     h('div', { class: 'flexb mb' }, h('b', {}, '🗂️ Banco de questões'), h('span', { class: 'sp' }, selMat)));
   const qs = qsFiltradas();
   if (!qs.length) {
-    banco.append(vazio('Banco vazio', 'Gere questões com o Study AI ou cadastre manualmente.',
+    banco.append(vazio('Banco vazio', 'Gere questões com o MindTrack AI ou cadastre manualmente.',
       h('button', { class: 'btn btn--p', onclick: () => abrirGerador(pintar, { materiaId: filtroMateria }) }, '✨ Gerar questões')));
   } else {
     banco.append(h('div', { class: 'list' }, ...qs.slice(0, 40).map((q) => linhaQuestao(q, pintar))));
@@ -83,7 +83,7 @@ function linhaQuestao(q, pintar) {
   const tent = st().tentativas.filter((t) => t.questaoId === q.id);
   const acertos = tent.filter((t) => t.acertou).length;
   return h('div', { class: 'row' },
-    h('span', { class: 'lead', style: { background: tent.length ? (acertos / tent.length >= .6 ? '#34d399' : '#f87171') : '#242a3d' } }),
+    h('span', { class: 'lead', style: { background: tent.length ? (acertos / tent.length >= .6 ? '#34d399' : '#f87171') : '#272a35' } }),
     h('div', { class: 'grow', style: { cursor: 'pointer' }, onclick: () => verQuestao(q, pintar) },
       h('div', { class: 'ttl' }, q.enunciado.length > 110 ? q.enunciado.slice(0, 107) + '…' : q.enunciado),
       h('div', { class: 'sub' }, tagMateria(q.materiaId),
@@ -134,14 +134,14 @@ export function abrirGerador(aoSalvar, { materiaId = '', conteudoId = '' } = {})
         if (!locais.length) {
           saida.replaceChildren(paywall('Gerar questões novas é do Pro',
             'No plano grátis eu monto questões a partir dos seus flashcards — e você ainda tem poucos desta matéria. '
-            + 'Com o Pro, o Study AI escreve questões novas sobre qualquer conteúdo.'));
+            + 'Com o Pro, o MindTrack AI escreve questões novas sobre qualquer conteúdo.'));
           return;
         }
         mostrarPrevia(locais, { mid, cid, nivel }, saida, aoSalvar);
         return;
       }
       btn.disabled = true; btn.textContent = 'Gerando…';
-      saida.replaceChildren(h('p', { class: 'muted small' }, '✨ O Study AI está escrevendo as questões. Isso leva alguns segundos.'));
+      saida.replaceChildren(h('p', { class: 'muted small' }, '✨ O MindTrack AI está escrevendo as questões. Isso leva alguns segundos.'));
       try {
         const qs = await gerarQuestoes({
           materiaNome: materiaNome || 'Geral', conteudoNome: conteudoNome || 'conteúdo geral',
@@ -162,7 +162,7 @@ export function abrirGerador(aoSalvar, { materiaId = '', conteudoId = '' } = {})
     h('label', { class: 'f' }, h('span', {}, 'Dificuldade'), segmento(NIVEIS_QUESTAO.map((t) => ({ v: t.id, t: t.rot })), nivel, (v) => { nivel = v; })),
     campo('Material base (opcional)', f.material),
     temIA() ? null : h('div', { class: 'mb' }, paywall('Questões geradas por IA são do Pro',
-      'No plano grátis eu monto questões a partir dos seus flashcards. Com o Pro, o Study AI cria questões novas de qualquer conteúdo, no nível que você pedir.')),
+      'No plano grátis eu monto questões a partir dos seus flashcards. Com o Pro, o MindTrack AI cria questões novas de qualquer conteúdo, no nível que você pedir.')),
     btn, saida), { largo: true });
 }
 
@@ -428,7 +428,7 @@ function resultado({ detalhes, acertos, total, nota, minutosGastos, modo, g, nov
           const porta = liberado('ia_analise');
           if (!porta.ok) {
             caixaIA.replaceChildren(paywall('Análise de simulado é do Plus',
-              'O Study AI lê o seu resultado, aponta os pontos fracos e monta um plano dos próximos dias. Faz parte do plano Plus.', 'plus'));
+              'O MindTrack AI lê o seu resultado, aponta os pontos fracos e monta um plano dos próximos dias. Faz parte do plano Plus.', 'plus'));
             return;
           }
           e.target.disabled = true; e.target.textContent = 'Analisando…';
@@ -437,12 +437,12 @@ function resultado({ detalhes, acertos, total, nota, minutosGastos, modo, g, nov
               modo, nota, acertos, total,
               porConteudo: linhas.map((l) => ({ conteudo: l.rot, acerto: l.v })),
             });
-            caixaIA.replaceChildren(h('div', { class: 'card' }, h('b', { class: 'small' }, '🤖 Análise do Study AI'),
+            caixaIA.replaceChildren(h('div', { class: 'card' }, h('b', { class: 'small' }, '🤖 Análise do MindTrack AI'),
               h('p', { class: 'small', style: { whiteSpace: 'pre-wrap', marginBottom: 0 } }, txt)));
           } catch (err) { toast(err.message, 'bad'); }
-          e.target.disabled = false; e.target.textContent = '🤖 Analisar com o Study AI';
+          e.target.disabled = false; e.target.textContent = '🤖 Analisar com o MindTrack AI';
         },
-      }, '🤖 Analisar com o Study AI') : null,
+      }, '🤖 Analisar com o MindTrack AI') : null,
     caixaIA,
     h('div', { class: 'card mb' },
       h('b', { class: 'small' }, '📝 Gabarito'),

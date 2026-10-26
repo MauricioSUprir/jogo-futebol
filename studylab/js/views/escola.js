@@ -1,7 +1,7 @@
 /* ===== views/escola.js — Minha Escola =====
    O aluno conta, com as palavras dele, o que está aprendendo em cada matéria —
    e junta fotos do caderno, do quadro e da apostila. Tudo fica no aparelho.
-   O Study AI lê esses textos para responder melhor (as fotos só vão para a IA
+   O MindTrack AI lê esses textos para responder melhor (as fotos só vão para a IA
    quando o aluno anexa numa pergunta).                                        */
 import { h, iso } from '../util.js';
 import { st, set } from '../store.js';
@@ -27,7 +27,7 @@ function montar(el, pintar) {
   }
 
   el.append(h('p', { class: 'small muted' },
-    '💡 O Study AI lê o que você escrever aqui para responder do jeito da SUA escola. As fotos ficam só no seu aparelho, '
+    '💡 O MindTrack AI lê o que você escrever aqui para responder do jeito da SUA escola. As fotos ficam só no seu aparelho, '
     + 'organizadas por matéria — e dá para anexar qualquer uma delas numa pergunta.'));
 
   for (const m of s.materias) el.append(cartaoMateria(m));

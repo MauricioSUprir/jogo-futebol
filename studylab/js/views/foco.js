@@ -111,7 +111,7 @@ function montar(el, params, pintar) {
         }),
       }, '▶ COMEÇAR')),
     cartao(
-      h('b', {}, '🚫 Sugestão do StudyLab'),
+      h('b', {}, '🚫 Sugestão do MindTrack'),
       sugestao
         ? h('div', {},
           h('p', { class: 'muted small' }, 'Se estiver na dúvida do que fazer, comece por aqui:'),
@@ -221,8 +221,8 @@ export function iniciarFoco({ minutos, tarefaId = null, som = 'nenhum', pomodoro
     subEl.textContent = fase === 'foco'
       ? `${tit}${t ? ' · ' + nomeMateria(t.materiaId) : ''}`
       : (fase === 'pausaLonga' ? 'Pausa longa — descanse de verdade' : 'Pausa curta');
-    anelWrap.replaceChildren(gAnel(1 - restante / Math.max(1, total), { tam: 132, larguraTraco: 8, cor: fase === 'foco' ? '#7c5cff' : '#34d399' }));
-    document.title = `${tempoEl.textContent} · StudyLab`;
+    anelWrap.replaceChildren(gAnel(1 - restante / Math.max(1, total), { tam: 132, larguraTraco: 8, cor: fase === 'foco' ? '#3ec9f5' : '#34d399' }));
+    document.title = `${tempoEl.textContent} · MindTrack`;
   }
 
   const btnPausa = h('button', { class: 'btn', onclick: () => { rodando = !rodando; btnPausa.textContent = rodando ? '⏸ Pausar' : '▶ Retomar'; } }, '⏸ Pausar');

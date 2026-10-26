@@ -1,17 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="28" fill="#0a0b10"/>
+  <g transform="translate(64 64) scale(0.84) translate(-64 -64)">
   <defs>
-    <linearGradient id="slg" x1="0" y1="0" x2="1" y2="0.35">
-      <stop offset="0" stop-color="#8b5cf6"/><stop offset="0.5" stop-color="#3b82f6"/><stop offset="1" stop-color="#22d3ee"/>
+    <linearGradient id="mtg" x1="0" y1="0" x2="1" y2="0.4">
+      <stop offset="0" stop-color="#5ad7ff"/>
+      <stop offset="1" stop-color="#2fa8e8"/>
     </linearGradient>
   </defs>
-  <rect width="128" height="128" rx="28" fill="#08090f"/>
-  <g transform="translate(64 66) scale(0.82) translate(-64 -64)">
-    <g fill="none" stroke="#fff" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="49" y="18" width="30" height="9" rx="4.5"/>
-      <path d="M55 27v16.5L28.5 94.5A8.5 8.5 0 0 0 36 107h56a8.5 8.5 0 0 0 7.5-12.5L73 43.5V27"/>
-    </g>
-    <g fill="none" stroke="url(#slg)" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M64 80 41 68v18l23 12z"/><path d="M64 80 87 68v18L64 98z"/>
-    </g>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- brilho (glow) -->
+    <path d="M64 22c-8-6-20-5-26 2-8-2-15 3-17 11-7 3-10 12-6 19-5 6-4 15 2 20-2 8 3 15 11 17 2 8 10 13 18 11 5 6 13 7 18 2 5 5 13 4 18-2 8 2 16-3 18-11 8-2 13-9 11-17 6-5 7-14 2-20 4-7 1-16-6-19-2-8-9-13-17-11-6-7-18-8-26-2z"
+      stroke="#3ec9f5" stroke-width="13" opacity="0.18"/>
+    <!-- contorno do cérebro -->
+    <path d="M64 22c-8-6-20-5-26 2-8-2-15 3-17 11-7 3-10 12-6 19-5 6-4 15 2 20-2 8 3 15 11 17 2 8 10 13 18 11 5 6 13 7 18 2 5 5 13 4 18-2 8 2 16-3 18-11 8-2 13-9 11-17 6-5 7-14 2-20 4-7 1-16-6-19-2-8-9-13-17-11-6-7-18-8-26-2z"
+      stroke="url(#mtg)" stroke-width="5.4"/>
+    <!-- fissura central, bem sutil -->
+    <path d="M64 24c-4 8-4 14 0 20" stroke="#3ec9f5" stroke-width="4" opacity="0.5"/>
+    <!-- a linha que acompanha o progresso -->
+    <path d="M34 76 50 60l12 10 16-20 16 12" stroke="url(#mtg)" stroke-width="5.4"/>
+  </g>
+  <!-- nós da linha -->
+  <g fill="#bfeaff" stroke="#2fa8e8" stroke-width="2.5">
+    <circle cx="34" cy="76" r="4.6"/>
+    <circle cx="50" cy="60" r="4.6"/>
+    <circle cx="62" cy="70" r="4.6"/>
+    <circle cx="78" cy="50" r="4.6"/>
+    <circle cx="94" cy="62" r="4.6"/>
+  </g>
+
   </g>
 </svg>

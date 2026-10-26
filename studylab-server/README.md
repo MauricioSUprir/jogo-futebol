@@ -1,6 +1,6 @@
 # 🔐 studylab-server
 
-O servidor do **StudyLab**. Ele existe por um motivo só: **a chave da Claude API não pode
+O servidor do **MindTrack**. Ele existe por um motivo só: **a chave da Claude API não pode
 ficar no celular do aluno**. Se ficasse, qualquer um copiaria e gastaria o seu dinheiro.
 
 O que ele faz:
@@ -31,7 +31,7 @@ Sem dependência pesada: `node:http` puro + `jose` (valida o token do Google) + 
 | `GET /pagamento/:id` | o app pergunta "já caiu?" — se caiu, libera o Pro na hora |
 | `POST /webhook/mercadopago` | o Mercado Pago avisa aqui quando alguém paga → libera o Pro |
 | `GET /meus-pagamentos` | histórico do aluno |
-| `POST /ia` | o Study AI (**só para assinante**) |
+| `POST /ia` | o MindTrack AI (**só para assinante**) |
 | `POST /cancelar` | cancela a assinatura |
 | `GET /admin/numeros?token=` | usuários, assinantes e chamadas de hoje |
 | `POST /admin/codigo?token=` | `{ codigo, dias, usosMax }` cria um código |
@@ -49,7 +49,7 @@ que tem uma faixa gratuita **sem cartão**:
 1. Entre em [aistudio.google.com](https://aistudio.google.com) com uma conta Google
    → **Get API key** → crie a chave.
 2. No Railway, em vez de `ANTHROPIC_API_KEY`, configure `GEMINI_API_KEY`.
-3. Pronto: o Study AI funciona de verdade, custo zero.
+3. Pronto: o MindTrack AI funciona de verdade, custo zero.
 
 Regras de convivência das chaves:
 
@@ -84,7 +84,7 @@ igual nos dois provedores).
    `chaveConfigurada: true`.
 6. Cole esse domínio em `studylab/js/produto.js` → `SERVIDOR` e publique o app.
 
-Pronto: o Study AI passa a funcionar para quem tem o Pro, e a sua chave fica só no servidor.
+Pronto: o MindTrack AI passa a funcionar para quem tem o Pro, e a sua chave fica só no servidor.
 
 > `GET /saude` responde com um **checklist do que ainda falta** (`falta: [...]`,
 > `studyAiPronto`, `pagamentoPronto`). O app mostra isso na Área do criador, então dá para
@@ -93,7 +93,7 @@ Pronto: o Study AI passa a funcionar para quem tem o Pro, e a sua chave fica só
 ### Contas de aparelho (sem Google)
 
 Se `GOOGLE_CLIENT_ID` não estiver configurado, o app sorteia um id e uma senha na primeira
-abertura e guarda no próprio celular — dá para usar o Study AI e assinar normalmente. Quem
+abertura e guarda no próprio celular — dá para usar o MindTrack AI e assinar normalmente. Quem
 sabe só o id não entra: precisa da senha, que nunca sai do aparelho. A troca é que, sem
 Google, o aluno não recupera a assinatura em outro celular.
 
@@ -114,8 +114,8 @@ Google, o aluno não recupera a assinatura em outro celular.
 
 | Forma | Como funciona | Observação |
 | --- | --- | --- |
-| **Pix dentro do app** (`POST /pagar/pix`) | O StudyLab mostra o **QR Code e o código copia-e-cola** na própria tela e fica consultando até o pagamento cair | O aluno não sai do app. Pix não tem cobrança automática: compra os dias e, quando acabar, compra de novo |
-| **Cartão dentro do app** (`POST /pagar/cartao`) | O formulário é o do Mercado Pago (SDK deles) renderizado na tela do StudyLab; ele devolve só um **token**, e o número do cartão nunca chega ao nosso servidor | Precisa da `MP_PUBLIC_KEY`. Sem ela, cai automaticamente no Checkout Pro |
+| **Pix dentro do app** (`POST /pagar/pix`) | O MindTrack mostra o **QR Code e o código copia-e-cola** na própria tela e fica consultando até o pagamento cair | O aluno não sai do app. Pix não tem cobrança automática: compra os dias e, quando acabar, compra de novo |
+| **Cartão dentro do app** (`POST /pagar/cartao`) | O formulário é o do Mercado Pago (SDK deles) renderizado na tela do MindTrack; ele devolve só um **token**, e o número do cartão nunca chega ao nosso servidor | Precisa da `MP_PUBLIC_KEY`. Sem ela, cai automaticamente no Checkout Pro |
 | **Cartão pelo Checkout Pro** (`forma: 'unico'`) | Abre o Mercado Pago em outra tela | Plano B, sempre disponível |
 | **Cartão que renova** (`forma: 'recorrente'`) | Assinatura: cobra sozinho a cada período até cancelar | Só cartão |
 
@@ -145,7 +145,7 @@ paga é liberado na hora — e ninguém ganha dias em dobro.
 
 ### Como o dinheiro chega até você
 
-1. O aluno paga no site do Mercado Pago — **o cartão e a chave Pix nunca passam pelo StudyLab**.
+1. O aluno paga no site do Mercado Pago — **o cartão e a chave Pix nunca passam pelo MindTrack**.
 2. O valor cai na **conta Mercado Pago dona do `MP_ACCESS_TOKEN`**, já descontada a taxa deles
    (Pix costuma ser a mais barata; cartão varia com o prazo de recebimento).
 3. No app ou site do Mercado Pago, em **Seu dinheiro → Transferir**, você manda para a sua
@@ -170,7 +170,7 @@ Os planos têm **dois níveis** — os preços de verdade ficam em `src/pagament
 | Plus mensal | R$ 44,90 | 80/dia · 1000/mês | 25/dia (4 por pergunta) |
 | Plus anual | R$ 379,90 | 80/dia · 1000/mês | 25/dia |
 
-Uma pergunta típica do Study AI manda ~2.500 tokens (as matérias, provas e erros do aluno) e
+Uma pergunta típica do MindTrack AI manda ~2.500 tokens (as matérias, provas e erros do aluno) e
 recebe ~500 de volta. Por pergunta: Haiku 4.5 ~US$ 0,005 (~R$ 0,03) · Sonnet 5 ~US$ 0,014 ·
 Opus 5 ~US$ 0,025 (~R$ 0,13).
 
@@ -213,7 +213,7 @@ npm run teste
 ```
 
 Sobe o servidor em memória, com login simulado e a Claude API + Mercado Pago dublados, e
-confere 36 pontos: login, sessão inválida, paywall, código de acesso, resposta do Study AI,
+confere 36 pontos: login, sessão inválida, paywall, código de acesso, resposta do MindTrack AI,
 contagem de uso, limite diário, isolamento entre alunos, cancelamento, criação da assinatura,
 webhook liberando o Pro, aviso repetido sendo ignorado, renovação somando dias e o painel do
 admin (incluindo receita).

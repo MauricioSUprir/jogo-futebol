@@ -56,9 +56,9 @@ function abaGeral(el, pintar) {
   const serie = serieDiaria(Math.min(periodo, 14));
   el.append(h('div', { class: 'grid g2 mb' },
     cartao(h('b', {}, '⏱️ Minutos por dia'),
-      h('div', { class: 'mt' }, gBarras(serie.map((d) => ({ rot: DIAS_S[parseISO(d.dia).getDay()], v: d.minutos })), { cor: '#7c5cff' }))),
+      h('div', { class: 'mt' }, gBarras(serie.map((d) => ({ rot: DIAS_S[parseISO(d.dia).getDay()], v: d.minutos })), { cor: '#3ec9f5' }))),
     cartao(h('b', {}, '📝 Questões por dia'),
-      h('div', { class: 'mt' }, gLinha(serie.map((d) => ({ rot: DIAS_S[parseISO(d.dia).getDay()], v: d.questoes })), { cor: '#22d3ee' })))));
+      h('div', { class: 'mt' }, gLinha(serie.map((d) => ({ rot: DIAS_S[parseISO(d.dia).getDay()], v: d.questoes })), { cor: '#f1d794' })))));
 
   const porMateria = desempenhoPorMateria();
   el.append(cartao(
@@ -82,7 +82,7 @@ function abaGeral(el, pintar) {
       fortes.length ? h('div', { class: 'list mt' }, ...fortes.map((c) => h('div', { class: 'row row--flat' },
         h('span', {}, semaforo(c.dominio).emoji),
         h('span', { class: 'grow small' }, c.nome, h('div', { class: 'tiny muted' }, nomeMateria(c.materiaId))),
-        h('b', {}, `${c.dominio}%`)))) : h('p', { class: 'muted small' }, 'Responda algumas questões para o StudyLab descobrir.')),
+        h('b', {}, `${c.dominio}%`)))) : h('p', { class: 'muted small' }, 'Responda algumas questões para o MindTrack descobrir.')),
     cartao(h('b', {}, '🎯 Onde focar'),
       fracos.length ? h('div', { class: 'list mt' }, ...fracos.map((c) => h('div', { class: 'row row--flat' },
         h('span', {}, semaforo(c.dominio).emoji),
@@ -98,7 +98,7 @@ function abaGraficos(el, pintar) {
 
   el.append(h('div', { class: 'grid g2 mb' },
     cartao(h('b', {}, '📈 Horas estudadas (21 dias)'),
-      h('div', { class: 'mt' }, gLinha(serie.map((d, i) => ({ rot: i % 3 === 0 ? d.dia.slice(8) : '', v: round(d.minutos / 60, 1) })), { cor: '#7c5cff' })),
+      h('div', { class: 'mt' }, gLinha(serie.map((d, i) => ({ rot: i % 3 === 0 ? d.dia.slice(8) : '', v: round(d.minutos / 60, 1) })), { cor: '#3ec9f5' })),
       h('p', { class: 'tiny muted' }, `total: ${fmtMin(sum(serie.map((d) => d.minutos)))}`)),
     cartao(h('b', {}, '🎯 Taxa de acerto por dia'),
       h('div', { class: 'mt' }, gLinha(serie.map((d, i) => ({ rot: i % 3 === 0 ? d.dia.slice(8) : '', v: d.questoes ? round((d.acertos / d.questoes) * 100) : 0 })), { cor: '#34d399' })))));
@@ -120,7 +120,7 @@ function abaGraficos(el, pintar) {
         ? h('div', { class: 'mt' }, gLinha(notas.map((n) => ({ rot: nomeMateria(n.materiaId).slice(0, 3), v: round((n.valor / (n.maximo || 10)) * 10, 1) })), { cor: '#fbbf24' }))
         : h('p', { class: 'muted small' }, 'Cadastre suas notas na aba Notas.')),
     cartao(h('b', {}, '🔥 Sequência e volume'),
-      h('div', { class: 'mt' }, gBarras(serie.slice(-14).map((d) => ({ rot: d.dia.slice(8), v: d.questoes, cor: d.minutos > 0 ? '#22d3ee' : '#242a3d' })), { cor: '#22d3ee' })),
+      h('div', { class: 'mt' }, gBarras(serie.slice(-14).map((d) => ({ rot: d.dia.slice(8), v: d.questoes, cor: d.minutos > 0 ? '#f1d794' : '#272a35' })), { cor: '#f1d794' })),
       h('p', { class: 'tiny muted' }, `recorde de sequência: ${s.jogo.recordeStreak || 0} dias · atual: ${s.jogo.streak}`))));
 }
 

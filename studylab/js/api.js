@@ -1,4 +1,4 @@
-/* ===== api.js — conversa com o servidor do StudyLab =====
+/* ===== api.js — conversa com o servidor do MindTrack =====
    Só entra em ação quando produto.js → SERVIDOR está preenchido. Sem servidor,
    o app continua funcionando sozinho (conta local e Pro por código no aparelho). */
 import { SERVIDOR } from './produto.js';
@@ -10,9 +10,9 @@ export const temServidor = () => !!enderecoServidor();
 const url = (rota) => `${enderecoServidor()}${rota}`;
 
 async function chamar(rota, { metodo = 'GET', corpo = null, comToken = true, timeout = 150000 } = {}) {
-  if (!temServidor()) throw new Error('Servidor do StudyLab não configurado.');
+  if (!temServidor()) throw new Error('Servidor do MindTrack não configurado.');
   const token = st().conta.token;
-  if (comToken && !token) throw new Error('Entre com o Google para usar o Study AI.');
+  if (comToken && !token) throw new Error('Entre com o Google para usar o MindTrack AI.');
 
   const ctrl = new AbortController();
   const relogio = setTimeout(() => ctrl.abort(), timeout);
@@ -27,7 +27,7 @@ async function chamar(rota, { metodo = 'GET', corpo = null, comToken = true, tim
   } catch (e) {
     clearTimeout(relogio);
     if (e.name === 'AbortError') throw new Error('A resposta demorou demais. Tente de novo.');
-    throw new Error('Não consegui falar com o servidor do StudyLab. Verifique sua internet — e, se abriu o app '
+    throw new Error('Não consegui falar com o servidor do MindTrack. Verifique sua internet — e, se abriu o app '
       + 'dentro de um preview (Artifact, sandbox, iframe), a política de segurança bloqueia chamadas externas.');
   }
   clearTimeout(relogio);
@@ -74,7 +74,7 @@ function credenciaisDoAparelho() {
   return novo;
 }
 
-/** Entra sem Google: o suficiente para usar o Study AI e assinar. */
+/** Entra sem Google: o suficiente para usar o MindTrack AI e assinar. */
 export function entrarPorAparelho(nome = 'Estudante') {
   const d = credenciaisDoAparelho();
   return chamar('/entrar', { metodo: 'POST', corpo: { dispositivo: { ...d, nome } }, comToken: false }).then(aplicarConta);

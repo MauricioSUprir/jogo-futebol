@@ -34,16 +34,16 @@ function montar(el, pintar) {
    ========================================================== */
 function termos() {
   return cartao(
-    P('Estes termos valem entre você e ', h('b', {}, RESPONSAVEL), ', responsável pelo StudyLab. '
+    P('Estes termos valem entre você e ', h('b', {}, RESPONSAVEL), ', responsável pelo MindTrack. '
       + 'Ao usar o app, você concorda com o que está aqui. Se não concordar, é só não usar.'),
 
-    T('1. O que o StudyLab é'),
+    T('1. O que o MindTrack é'),
     P('Um app de organização e apoio aos estudos: agenda, tarefas, provas, revisão espaçada, questões, '
       + 'flashcards, foco e acompanhamento de desempenho. Ele ', h('b', {}, 'não substitui a escola, o professor '
       + 'nem o material didático'), ' — é uma ferramenta para você se organizar e estudar melhor.'),
 
     T('2. Idade e responsáveis'),
-    P('O StudyLab é feito para estudantes, inclusive menores de idade. Se você tem ', h('b', {}, 'menos de 18 anos'),
+    P('O MindTrack é feito para estudantes, inclusive menores de idade. Se você tem ', h('b', {}, 'menos de 18 anos'),
       ', precisa da autorização de um pai, mãe ou responsável para usar o app — e ', h('b', {}, 'qualquer pagamento '
       + 'deve ser feito por essa pessoa'), ', porque contratos assinados por menores dependem de quem responde por eles.'),
     P('Se você é responsável por um menor: ao permitir o uso e ao pagar, você concorda com estes termos em nome dele.'),
@@ -56,7 +56,7 @@ function termos() {
         + 'não temos como recuperar os dados — eles estavam só ali.')),
 
     T('4. Plano grátis e planos pagos (Pro e Plus)'),
-    P('Quase tudo é gratuito e sem limite. O ', h('b', {}, 'Study AI'), ' — o tutor que responde com base nas suas '
+    P('Quase tudo é gratuito e sem limite. O ', h('b', {}, 'MindTrack AI'), ' — o tutor que responde com base nas suas '
       + 'matérias e no seu desempenho — faz parte dos planos pagos: o Pro (o essencial, com limites diários de perguntas e fotos) e o Plus (mais perguntas, mais fotos, correção de redação, plano da semana e análise de simulados). Os preços de hoje:'),
     UL(...PLANOS.map((p) => LI(h('b', {}, p.nome), `: ${precoBR(p.preco)} — ${p.dias} dias.`))),
     P(h('b', {}, 'Limites de uso justos: '),
@@ -77,7 +77,7 @@ function termos() {
         + 'alguns minutos.')),
 
     T('6. Cancelamento e arrependimento'),
-    P(h('b', {}, 'Cancelar: '), 'a qualquer momento, pelo próprio app, em ✨ StudyLab Pro. No cartão, a cobrança para '
+    P(h('b', {}, 'Cancelar: '), 'a qualquer momento, pelo próprio app, em ✨ MindTrack Pro. No cartão, a cobrança para '
       + 'na hora e você continua com acesso até o fim do período já pago. Não cobramos multa.'),
     P(h('b', {}, 'Arrependimento: '), 'pelo artigo 49 do Código de Defesa do Consumidor, você pode desistir da compra '
       + 'em até ', h('b', {}, '7 dias'), ' e receber o dinheiro de volta. É só escrever para ',
@@ -85,7 +85,7 @@ function termos() {
       + 'Devolvemos o valor integral pelo mesmo meio.'),
 
     T('7. Sobre as respostas da inteligência artificial'),
-    P('O Study AI usa modelos de linguagem para explicar conteúdos, criar questões e resumir material. ',
+    P('O MindTrack AI usa modelos de linguagem para explicar conteúdos, criar questões e resumir material. ',
       h('b', {}, 'Ele pode errar'),
       ': datas, contas e detalhes devem ser conferidos no seu material e com o seu professor. '
       + 'As respostas são apoio ao estudo, não verdade absoluta nem substituto de orientação profissional. '
@@ -116,7 +116,7 @@ function termos() {
    ========================================================== */
 function privacidade() {
   return cartao(
-    P('Resumo honesto: ', h('b', {}, 'quase tudo o que você escreve no StudyLab fica no seu próprio aparelho'),
+    P('Resumo honesto: ', h('b', {}, 'quase tudo o que você escreve no MindTrack fica no seu próprio aparelho'),
       '. O que sai dali é pouco, e está listado abaixo.'),
 
     T('1. O que fica só no seu aparelho'),
@@ -128,28 +128,28 @@ function privacidade() {
     UL(
       LI('Um identificador da sua conta, seu nome e e-mail (se entrar com o Google).'),
       LI('A situação da sua assinatura: plano, data de início e de término.'),
-      LI('Quantas perguntas você fez ao Study AI por dia — só a contagem, para respeitar os limites e evitar abuso.'),
+      LI('Quantas perguntas você fez ao MindTrack AI por dia — só a contagem, para respeitar os limites e evitar abuso.'),
       LI('Registro dos pagamentos: valor, data e identificador do Mercado Pago.')),
-    P(h('b', {}, 'Não guardamos'), ' o conteúdo das suas conversas com o Study AI, nem suas tarefas, notas ou materiais.'),
+    P(h('b', {}, 'Não guardamos'), ' o conteúdo das suas conversas com o MindTrack AI, nem suas tarefas, notas ou materiais.'),
 
-    T('3. O que acontece quando você usa o Study AI'),
+    T('3. O que acontece quando você usa o MindTrack AI'),
     P('Para responder, o app envia à ', h('b', {}, 'Anthropic'), ' (empresa do modelo Claude) a sua pergunta e um resumo '
       + 'do seu contexto de estudo: nomes das matérias, conteúdos e o seu percentual de domínio, provas marcadas e '
       + 'tarefas em aberto. Você pode ver exatamente esse texto no botão ', h('b', {}, '"👁️ o que ele sabe"'),
-      ' dentro do Study AI.'),
+      ' dentro do MindTrack AI.'),
     P('Esse envio é feito pelo nosso servidor, pela API comercial da Anthropic, que ', h('b', {}, 'não usa esse conteúdo '
       + 'para treinar modelos'), '. Não mandamos seu nome completo, e-mail nem dados de pagamento.'),
 
     T('4. Pagamento'),
     P('Quem processa é o ', h('b', {}, 'Mercado Pago'), '. Os dados do cartão e da sua conta bancária são digitados lá e '
-      + 'nunca passam pelo StudyLab. Recebemos de volta apenas: se o pagamento foi aprovado, o valor e um identificador.'),
+      + 'nunca passam pelo MindTrack. Recebemos de volta apenas: se o pagamento foi aprovado, o valor e um identificador.'),
 
     T('5. Login com o Google'),
     P('Se você escolher entrar com o Google, recebemos seu nome, e-mail, foto e um identificador — só para reconhecer '
       + 'sua conta e sua assinatura. Não postamos nada, não lemos seus e-mails e não acessamos mais nada da sua conta Google.'),
 
     T('6. Crianças e adolescentes'),
-    P('Sabemos que boa parte de quem usa o StudyLab é menor de idade. Por isso pedimos o mínimo de dados possível e '
+    P('Sabemos que boa parte de quem usa o MindTrack é menor de idade. Por isso pedimos o mínimo de dados possível e '
       + 'deixamos o app funcionar sem conta. Para menores de 16 anos, o tratamento de dados depende do ',
       h('b', {}, 'consentimento de um responsável'), ' (LGPD, art. 14). Responsáveis podem pedir a exclusão de tudo a '
       + 'qualquer momento pelo e-mail abaixo.'),

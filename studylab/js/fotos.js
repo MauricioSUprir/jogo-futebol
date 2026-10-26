@@ -1,7 +1,7 @@
 /* ===== fotos.js — as fotos da Minha Escola, guardadas no aparelho =====
    Fotos são grandes demais para o localStorage, então ficam no IndexedDB do
    navegador. Nada disso sai do celular: só vai para a internet a foto que o
-   aluno anexar numa pergunta ao Study AI.                                     */
+   aluno anexar numa pergunta ao MindTrack AI.                                     */
 
 const NOME = 'studylab-fotos';
 const LOJA = 'fotos';

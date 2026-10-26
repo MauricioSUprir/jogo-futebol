@@ -51,7 +51,7 @@ function abaExplicar(el, params) {
     class: 'btn btn--p btn--blk', onclick: async () => {
       const tema = f.tema.value.trim();
       if (!tema) return toast('Escreva o que você quer entender', 'bad');
-      if (!temIA()) return toast('Isso é do StudyLab Pro — veja em ✨ Planos', 'bad');
+      if (!temIA()) return toast('Isso é do MindTrack Pro — veja em ✨ Planos', 'bad');
       btn.disabled = true; btn.textContent = 'Explicando…';
       saida.replaceChildren(h('p', { class: 'muted small' }, '🤖 Preparando a explicação…'));
       try {
@@ -68,7 +68,7 @@ function abaExplicar(el, params) {
 
   el.append(cartao(
     h('b', {}, '💬 Modo "me explica"'),
-    h('p', { class: 'tiny muted' }, 'O Study AI conhece suas matérias e seu desempenho — a explicação sai no seu nível.'),
+    h('p', { class: 'tiny muted' }, 'O MindTrack AI conhece suas matérias e seu desempenho — a explicação sai no seu nível.'),
     h('div', { class: 'f-row mt' }, campo('O que você quer entender', f.tema), campo('Matéria', f.materia)),
     h('label', { class: 'f' }, h('span', {}, 'Como você quer a explicação'),
       segmento(MODOS_EXPLICACAO.map((m) => ({ v: m.id, t: m.rot })), modo, (v) => { modo = v; })),
@@ -112,7 +112,7 @@ function abaSocratico(el) {
     h('div', { class: 'f-row mt' }, campo('Tema', f.tema), campo('Matéria', f.materia)),
     h('button', {
       class: 'btn btn--p', onclick: () => {
-        if (!temIA()) return toast('Isso é do StudyLab Pro — veja em ✨ Planos', 'bad');
+        if (!temIA()) return toast('Isso é do MindTrack Pro — veja em ✨ Planos', 'bad');
         if (!f.tema.value.trim()) return toast('Escreva o tema', 'bad');
         historico = []; pintarChat(); enviar('');
       },
@@ -241,7 +241,7 @@ function abaArquivo(el) {
 
   const acao = async (pergunta, rotulo) => {
     if (!base64) return toast('Escolha um arquivo primeiro', 'bad');
-    if (!temIA()) return toast('Leitura de arquivos precisa do Study AI configurado', 'bad');
+    if (!temIA()) return toast('Leitura de arquivos precisa do MindTrack AI configurado', 'bad');
     saida.replaceChildren(h('p', { class: 'muted small' }, `🤖 ${rotulo}…`));
     try {
       const txt = await lerArquivo({ base64, mime, pergunta, nomeArquivo: nome });
@@ -251,7 +251,7 @@ function abaArquivo(el) {
 
   el.append(cartao(
     h('b', {}, '📄 Escanear atividade / ler PDF'),
-    h('p', { class: 'tiny muted' }, 'Fotografe a atividade ou envie o PDF do material. O Study AI lê e transforma em explicação, resumo, questões ou flashcards.'),
+    h('p', { class: 'tiny muted' }, 'Fotografe a atividade ou envie o PDF do material. O MindTrack AI lê e transforma em explicação, resumo, questões ou flashcards.'),
     h('div', { class: 'f-row mt' }, campo('Arquivo (imagem ou PDF)', arquivo), campo('Matéria', f.materia)),
     previa,
     h('div', { class: 'grid g2 keep2 mt' },

@@ -1,13 +1,13 @@
 {
-  "name": "StudyLab — organização e desempenho escolar",
-  "short_name": "StudyLab",
+  "name": "MindTrack AI — organização e desempenho escolar",
+  "short_name": "MindTrack",
   "description": "Agenda escolar, prioridades inteligentes, revisão espaçada, questões, flashcards, foco e desempenho.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0b0d16",
-  "theme_color": "#0b0d16",
+  "background_color": "#0a0b10",
+  "theme_color": "#0a0b10",
   "lang": "pt-BR",
   "icons": [
     { "src": "./assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },

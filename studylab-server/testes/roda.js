@@ -175,14 +175,14 @@ console.log('\n== conta de aparelho (sem Google) ==');
   const cod = await pedir('POST', '/codigo', { token: a.dados.token, corpo: { codigo: 'TESTE7' } });
   conferir(cod.dados.plano === 'pro', 'conta de aparelho consegue virar Pro');
   const ia = await pedir('POST', '/ia', { token: a.dados.token, corpo: { system: 'a', conteudo: 'b' } });
-  conferir(ia.status === 200, 'e usa o Study AI normalmente');
+  conferir(ia.status === 200, 'e usa o MindTrack AI normalmente');
 }
 
 console.log('\n== o que falta configurar ==');
 {
   const { dados } = await pedir('GET', '/saude');
   conferir(Array.isArray(dados.falta), 'servidor diz o que ainda falta configurar');
-  conferir(dados.studyAiPronto === true, 'checklist: Study AI pronto');
+  conferir(dados.studyAiPronto === true, 'checklist: MindTrack AI pronto');
   conferir(dados.falta.some((f) => f.includes('DATABASE_URL')), 'checklist aponta o banco faltando no teste');
 }
 
@@ -190,7 +190,7 @@ console.log('\n== paywall ==');
 {
   const antes = chamadasClaude;
   const { status, dados } = await pedir('POST', '/ia', { token, corpo: { system: 'oi', conteudo: 'teste' } });
-  conferir(status === 402, 'sem assinatura, o Study AI é bloqueado', `${status} ${dados.erro}`);
+  conferir(status === 402, 'sem assinatura, o MindTrack AI é bloqueado', `${status} ${dados.erro}`);
   conferir(chamadasClaude === antes, 'nada é gasto na Claude API antes de pagar');
 }
 
@@ -204,10 +204,10 @@ console.log('\n== código de acesso ==');
   conferir(dados.proAte === hoje.toISOString().slice(0, 10), `assinatura vence em 7 dias (${dados.proAte})`);
 }
 
-console.log('\n== Study AI ==');
+console.log('\n== MindTrack AI ==');
 {
   const antes = chamadasClaude;
-  const { status, dados } = await pedir('POST', '/ia', { token, corpo: { system: 'Você é o Study AI', conteudo: 'o que estudo agora?' } });
+  const { status, dados } = await pedir('POST', '/ia', { token, corpo: { system: 'Você é o MindTrack AI', conteudo: 'o que estudo agora?' } });
   conferir(status === 200, 'assinante consegue perguntar', `${status} ${dados.erro || ''}`);
   conferir(dados.texto?.includes('o que estudo agora?'), 'resposta chega no app');
   conferir(chamadasClaude === antes + 1, 'a chamada foi para a Claude API uma única vez');
@@ -287,7 +287,7 @@ console.log('\n== pagamento ==');
   conferir(ignorado.status === 200, 'aviso desconhecido não quebra o servidor');
 
   const ia = await pedir('POST', '/ia', { token: tokenPagante, corpo: { system: 'a', conteudo: 'b' } });
-  conferir(ia.status === 200, 'quem pagou consegue usar o Study AI');
+  conferir(ia.status === 200, 'quem pagou consegue usar o MindTrack AI');
 }
 
 console.log('\n== pagamento por Pix ==');
@@ -340,7 +340,7 @@ console.log('\n== Pix com QR dentro do app ==');
   conferir(espiada.status === 403, 'ninguém consulta o pagamento de outra pessoa');
 
   const ia = await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: 'b' } });
-  conferir(ia.status === 200, 'quem pagou por Pix usa o Study AI na hora');
+  conferir(ia.status === 200, 'quem pagou por Pix usa o MindTrack AI na hora');
 }
 
 console.log('\n== cartão dentro do app ==');
@@ -388,12 +388,12 @@ let tokenPlus;
   conferir(quinta.status === 200, 'Plus continua depois do limite do Pro (5ª pergunta ok)', quinta.dados.erro);
 }
 
-console.log('\n== fotos no Study AI ==');
+console.log('\n== fotos no MindTrack AI ==');
 {
   const foto = { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'aGVsbG8=' } };
   const e = await pedir('POST', '/entrar', { corpo: { teste: { id: 'aluno-foto', email: 'foto@casa.com', nome: 'Foto' } } });
   const t = e.dados.token;
-  await pedir('POST', '/codigo', { token: t, corpo: { codigo: 'STUDYLAB30' } });
+  await pedir('POST', '/codigo', { token: t, corpo: { codigo: 'MINDTRACK30' } });
 
   const demais = await pedir('POST', '/ia', {
     token: t, corpo: { system: 'a', conteudo: [foto, foto, foto, { type: 'text', text: 'resolve' }] },
@@ -452,7 +452,7 @@ console.log('\n== Gemini (a IA grátis) ==');
 
   const saude = await pedir('GET', '/saude');
   conferir(saude.dados.provedor === 'gemini' && saude.dados.studyAiPronto === true,
-    'sem chave da Claude, o servidor usa o Gemini e o Study AI segue pronto', JSON.stringify(saude.dados.falta));
+    'sem chave da Claude, o servidor usa o Gemini e o MindTrack AI segue pronto', JSON.stringify(saude.dados.falta));
   conferir(String(saude.dados.modelo).includes('gemini'), 'o modelo do Gemini aparece na saúde', saude.dados.modelo);
 
   const r = await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: 'oi pelo gemini' } });

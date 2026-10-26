@@ -3,26 +3,27 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>StudyLab — estude, pratique, evolua</title>
+<title>MindTrack AI — estude, pratique, evolua</title>
 <meta name="description" content="O app que diz o que estudar agora: prioridades inteligentes, revisão espaçada, questões, foco e um tutor que conhece as suas matérias." />
-<meta name="theme-color" content="#0b0d16" />
+<meta name="theme-color" content="#0a0b10" />
 <link rel="icon" href="../assets/icon.svg" type="image/svg+xml" />
-<meta property="og:title" content="StudyLab — estude, pratique, evolua" />
+<meta property="og:title" content="MindTrack AI — estude, pratique, evolua" />
 <meta property="og:description" content="Prioridades inteligentes, revisão espaçada, questões, foco e um tutor que conhece as suas matérias." />
 <style>
   :root{
-    --bg:#0b0d16; --panel:#141826; --panel2:#1a1f30; --line:#242a3d;
-    --txt:#e9ecf6; --dim:#a3aac2; --dim2:#6e7590;
-    --acc:#7c5cff; --acc2:#22d3ee; --ok:#34d399;
+    --bg:#0a0b10; --panel:#14161d; --panel2:#1a1c25; --line:#272a35;
+    --txt:#f0ead9; --dim:#b2ac9c; --dim2:#7d7a70;
+    --acc:#3ec9f5; --acc2:#f1d794; --ok:#8fd3a8; --creme:#f5dfa6;
     --ff:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --ff-titulo:'Iowan Old Style','Bookman Old Style','Book Antiqua',Georgia,'Times New Roman',serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--txt);font-family:var(--ff);line-height:1.55;-webkit-font-smoothing:antialiased}
   a{color:inherit;text-decoration:none}
   .wrap{width:min(1060px,100%);margin:0 auto;padding:0 20px}
   section{padding:64px 0}
-  h1,h2,h3{line-height:1.15;text-wrap:balance}
-  .grad{background:linear-gradient(100deg,#8b5cf6,#3b82f6 55%,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+  h1,h2,h3{line-height:1.15;text-wrap:balance;font-family:var(--ff-titulo)}
+  .grad{background:linear-gradient(100deg,#5ad7ff,#2fa8e8);-webkit-background-clip:text;background-clip:text;color:transparent}
 
   /* topo */
   header{position:sticky;top:0;z-index:9;background:color-mix(in srgb,var(--bg) 88%,transparent);
@@ -32,13 +33,13 @@
   .marca svg{width:28px;color:var(--txt)}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;
     border-radius:12px;font-weight:700;font-size:15px;border:1px solid var(--line);background:var(--panel2);cursor:pointer}
-  .btn--p{background:linear-gradient(135deg,var(--acc),#5b8cff);border-color:transparent;color:#fff}
+  .btn--p{background:linear-gradient(135deg,#5ad7ff,#2fa8e8);border-color:transparent;color:#07202c}
   .btn--sm{height:38px;padding:0 14px;font-size:14px}
   header .btn{margin-left:auto}
 
   /* herói */
   .heroi{padding:74px 0 54px;text-align:center;
-    background:radial-gradient(120% 120% at 50% -10%,rgba(124,92,255,.28),transparent 60%)}
+    background:radial-gradient(120% 120% at 50% -10%,rgba(62,201,245,.22),transparent 60%)}
   .heroi h1{font-size:clamp(34px,6vw,58px);font-weight:800;letter-spacing:-1.5px}
   .heroi p{color:var(--dim);font-size:clamp(16px,2.2vw,20px);max-width:36ch;margin:16px auto 0}
   .acoes{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
@@ -63,7 +64,7 @@
   /* planos */
   .planos{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:30px;align-items:start}
   .plano{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px;text-align:center;position:relative}
-  .plano.destaque{border-color:#7c5cff88;box-shadow:0 0 0 1px #7c5cff33,0 16px 40px rgba(124,92,255,.15)}
+  .plano.destaque{border-color:#3ec9f588;box-shadow:0 0 0 1px #3ec9f533,0 16px 40px rgba(124,92,255,.15)}
   .fita{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--acc),#5b8cff);
     color:#fff;font-size:11.5px;font-weight:800;padding:4px 12px;border-radius:999px;white-space:nowrap}
   .preco{font-size:38px;font-weight:800;letter-spacing:-1.5px;margin:12px 0 2px;font-variant-numeric:tabular-nums}
@@ -93,7 +94,7 @@
     <span class="marca">
       <svg viewBox="0 0 128 128" aria-hidden="true">
         <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="0.35">
-          <stop offset="0" stop-color="#8b5cf6"/><stop offset="0.5" stop-color="#3b82f6"/><stop offset="1" stop-color="#22d3ee"/>
+          <stop offset="0" stop-color="#5ad7ff"/><stop offset="0.5" stop-color="#3b82f6"/><stop offset="1" stop-color="#f1d794"/>
         </linearGradient></defs>
         <g fill="none" stroke="currentColor" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="49" y="18" width="30" height="9" rx="4.5"/>
@@ -112,7 +113,7 @@
 <section class="heroi">
   <div class="wrap">
     <h1>Você abre o app e já sabe <span class="grad">o que estudar agora</span>.</h1>
-    <p>Sem lista infinita, sem culpa. O StudyLab olha seus prazos, suas provas e o que você domina — e diz por onde começar.</p>
+    <p>Sem lista infinita, sem culpa. O MindTrack olha seus prazos, suas provas e o que você domina — e diz por onde começar.</p>
     <div class="acoes">
       <a class="btn btn--p" href="../">Começar de graça</a>
       <a class="btn" href="#planos">Ver planos</a>
@@ -156,7 +157,7 @@
 
 <section style="background:var(--panel2);border-block:1px solid var(--line)">
   <div class="wrap">
-    <h2>🤖 E tem o <span class="grad">Study AI</span></h2>
+    <h2>🤖 E tem o <span class="grad">MindTrack AI</span></h2>
     <p class="sub">Um tutor que não é um chat genérico: ele conhece as suas matérias, as suas provas, os seus erros e o seu calendário.</p>
     <div class="cards">
       <div class="card"><h3>“O que eu estudo agora?”</h3>
@@ -172,7 +173,7 @@
 <section id="planos">
   <div class="wrap">
     <h2>Planos</h2>
-    <p class="sub">O StudyLab é gratuito e completo. Os planos Pro e Plus liberam o Study AI — o Plus com mais perguntas, fotos e as ferramentas avançadas.</p>
+    <p class="sub">O MindTrack é gratuito e completo. Os planos Pro e Plus liberam o MindTrack AI — o Plus com mais perguntas, fotos e as ferramentas avançadas.</p>
     <div class="planos">
       <div class="plano">
         <div class="obs" style="min-height:auto;color:var(--dim2);font-size:12px">Para experimentar</div>
@@ -185,7 +186,7 @@
         <span class="fita">O mais escolhido</span>
         <h3 style="margin-top:8px">Pro Mensal</h3>
         <div class="preco">R$ 24,90</div>
-        <div class="obs">30 perguntas/dia ao Study AI, 5 fotos/dia. Pix, cartão ou cobrança automática.</div>
+        <div class="obs">30 perguntas/dia ao MindTrack AI, 5 fotos/dia. Pix, cartão ou cobrança automática.</div>
         <a class="btn btn--p" href="../#/planos" style="width:100%">Assinar</a>
       </div>
       <div class="plano">
@@ -213,7 +214,7 @@
         <tr><td>Revisão espaçada e banco de erros</td><td class="c">✅</td><td class="c">✅</td><td class="c">✅</td></tr>
         <tr><td>Questões, simulados, flashcards e foco</td><td class="c">✅</td><td class="c">✅</td><td class="c">✅</td></tr>
         <tr><td>Minha Escola: anotações e fotos por matéria</td><td class="c">✅</td><td class="c">✅</td><td class="c">✅</td></tr>
-        <tr><td>Study AI — o tutor que conhece seus estudos</td><td class="c">—</td><td class="c">30/dia</td><td class="c">80/dia</td></tr>
+        <tr><td>MindTrack AI — o tutor que conhece seus estudos</td><td class="c">—</td><td class="c">30/dia</td><td class="c">80/dia</td></tr>
         <tr><td>Mandar foto da questão ou do caderno</td><td class="c">—</td><td class="c">5/dia</td><td class="c">25/dia</td></tr>
         <tr><td>Gerar questões e flashcards de qualquer material</td><td class="c">—</td><td class="c">✅</td><td class="c">✅</td></tr>
         <tr><td>Resumos, mapas mentais e professor socrático</td><td class="c">—</td><td class="c">✅</td><td class="c">✅</td></tr>
@@ -229,26 +230,27 @@
 <section style="background:var(--panel2);border-block:1px solid var(--line)">
   <div class="wrap">
     <h2>Perguntas</h2>
-    <details><summary>Preciso pagar para usar?</summary><p>Não. Tudo o que organiza a sua vida escolar é gratuito, sem limite e sem anúncio. Os planos Pro e Plus existem só para o Study AI, porque cada resposta tem um custo real de inteligência artificial.</p></details>
+    <details><summary>Preciso pagar para usar?</summary><p>Não. Tudo o que organiza a sua vida escolar é gratuito, sem limite e sem anúncio. Os planos Pro e Plus existem só para o MindTrack AI, porque cada resposta tem um custo real de inteligência artificial.</p></details>
     <details><summary>Meus dados vão para onde?</summary><p>Ficam no seu próprio aparelho. Matérias, notas, tarefas e anotações não passam pelos nossos servidores. O que guardamos é sua conta e sua assinatura — e nada do conteúdo dos seus estudos.</p></details>
-    <details><summary>Funciona sem internet?</summary><p>Sim. Depois de abrir uma vez, o app funciona offline e dá para instalar na tela de início como se fosse um aplicativo. Só o Study AI precisa de conexão.</p></details>
+    <details><summary>Funciona sem internet?</summary><p>Sim. Depois de abrir uma vez, o app funciona offline e dá para instalar na tela de início como se fosse um aplicativo. Só o MindTrack AI precisa de conexão.</p></details>
     <details><summary>Sou menor de idade. Posso usar?</summary><p>Pode, com a autorização de um responsável — e o pagamento precisa ser feito por essa pessoa. É o que a lei pede.</p></details>
     <details><summary>Como cancelo?</summary><p>Dentro do app, em um clique, sem multa nem fidelidade. No Pix você já compra uma quantidade de dias, então não existe cobrança surpresa. E você tem 7 dias para desistir e receber o dinheiro de volta.</p></details>
-    <details><summary>O Study AI erra?</summary><p>Pode errar, como qualquer inteligência artificial — por isso o app avisa para conferir datas, contas e fórmulas no seu material. Ele é apoio ao estudo, não substituto do professor.</p></details>
+    <details><summary>O MindTrack AI erra?</summary><p>Pode errar, como qualquer inteligência artificial — por isso o app avisa para conferir datas, contas e fórmulas no seu material. Ele é apoio ao estudo, não substituto do professor.</p></details>
   </div>
 </section>
 
 <section class="fim">
   <div class="wrap">
     <h2>Comece hoje, de graça</h2>
-    <p class="sub" style="margin:12px auto 0">Leva três minutos: você diz em que ano está, quais matérias tem, e o StudyLab já monta o seu dia.</p>
-    <div class="acoes"><a class="btn btn--p" href="../">Abrir o StudyLab</a></div>
+    <p class="sub" style="margin:12px auto 0">Leva três minutos: você diz em que ano está, quais matérias tem, e o MindTrack já monta o seu dia.</p>
+    <div class="acoes"><a class="btn btn--p" href="../">Abrir o MindTrack AI</a></div>
   </div>
 </section>
 
 <footer>
   <div class="wrap" style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
-    <span>StudyLab · Estude. Pratique. Evolua.</span>
+    <span>MindTrack AI · Estude. Pratique. Evolua.<br>
+      <span style="font-size:12px">Feito por Caio, Cauã, Eduardo, Khoan, Lucas, Thiago e Tarso — projeto de LIV e Empreendedorismo.</span></span>
     <span style="margin-left:auto">
       <a href="../#/termos">Termos de uso</a> ·
       <a href="../#/termos?aba=privacidade">Privacidade</a>

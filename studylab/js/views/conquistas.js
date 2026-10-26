@@ -1,4 +1,4 @@
-/* ===== views/conquistas.js — XP, níveis, conquistas, streak e loja de StudyCoins ===== */
+/* ===== views/conquistas.js — XP, níveis, conquistas, streak e loja de MindCoins ===== */
 import { h, iso, addDays, today, daysBetween, parseISO, fmtMin, round, DIAS_S } from '../util.js';
 import { st, set, aplicarTema } from '../store.js';
 import { CONQUISTAS, NIVEIS, nivelDe, xpDoNivel, atividadeDoDia, serieDiaria, resumoPeriodo } from '../engine.js';
@@ -10,7 +10,7 @@ const LOJA = [
   { id: 'av_coruja', tipo: 'avatar', nome: 'Coruja', valor: '🦉', preco: 90 },
   { id: 'av_dragao', tipo: 'avatar', nome: 'Dragão', valor: '🐉', preco: 150 },
   { id: 'av_coroa', tipo: 'avatar', nome: 'Coroa', valor: '👑', preco: 250 },
-  { id: 'cor_ciano', tipo: 'cor', nome: 'Ciano', valor: '#22d3ee', preco: 80 },
+  { id: 'cor_ciano', tipo: 'cor', nome: 'Ciano', valor: '#f1d794', preco: 80 },
   { id: 'cor_verde', tipo: 'cor', nome: 'Verde-menta', valor: '#34d399', preco: 80 },
   { id: 'cor_rosa', tipo: 'cor', nome: 'Rosa', valor: '#f472b6', preco: 120 },
   { id: 'cor_ambar', tipo: 'cor', nome: 'Âmbar', valor: '#fbbf24', preco: 120 },
@@ -28,7 +28,7 @@ function montar(el, pintar) {
   const s = st();
   const nv = nivelDe(s.jogo.xp);
 
-  el.append(titulo('🏆 Conquistas', 'Seu progresso vira nível, XP e StudyCoins.'));
+  el.append(titulo('🏆 Conquistas', 'Seu progresso vira nível, XP e MindCoins.'));
 
   el.append(h('div', { class: 'hero mb' }, h('div', { class: 'flexb' },
     h('div', { style: { color: 'var(--acc)' } }, gAnel(nv.progresso, { tam: 96, larguraTraco: 9, texto: String(nv.nivel) })),
@@ -37,7 +37,7 @@ function montar(el, pintar) {
       h('p', { style: { margin: '2px 0 8px' } }, `${nv.xpAtual} / ${nv.xpNivel} XP para o próximo nível`),
       h('div', { class: 'chips' },
         h('span', { class: 'chip chip--on' }, `⭐ ${s.jogo.xp} XP total`),
-        h('span', { class: 'chip chip--on' }, `🪙 ${s.jogo.moedas} StudyCoins`),
+        h('span', { class: 'chip chip--on' }, `🪙 ${s.jogo.moedas} MindCoins`),
         h('span', { class: 'chip chip--on' }, `🔥 ${s.jogo.streak} dias`),
         h('span', { class: 'chip' }, `🏅 ${s.jogo.conquistas.length}/${CONQUISTAS.length}`))))));
 
@@ -142,7 +142,7 @@ function abaLoja(el, pintar) {
   const s = st();
   const meus = new Set(s.jogo.itens || []);
   el.append(cartao(
-    h('div', { class: 'flexb mb' }, h('b', {}, '🪙 Loja de StudyCoins'),
+    h('div', { class: 'flexb mb' }, h('b', {}, '🪙 Loja de MindCoins'),
       h('span', { class: 'chip sp' }, `você tem ${s.jogo.moedas} 🪙`)),
     h('p', { class: 'tiny muted' }, 'Moedas vêm de estudar — nunca de dinheiro de verdade.'),
     h('div', { class: 'grid g3 mt' }, ...LOJA.map((item) => {
@@ -158,7 +158,7 @@ function abaLoja(el, pintar) {
           class: `btn btn--sm ${emUso ? '' : 'btn--p'}`, disabled: emUso || null,
           onclick: () => {
             if (!tem) {
-              if (s.jogo.moedas < item.preco) return toast('StudyCoins insuficientes — estude mais! 😄', 'bad');
+              if (s.jogo.moedas < item.preco) return toast('MindCoins insuficientes — estude mais! 😄', 'bad');
               set((x) => { x.jogo.moedas -= item.preco; x.jogo.itens.push(item.id); });
               toast(`${item.nome} desbloqueado!`, 'good');
             }

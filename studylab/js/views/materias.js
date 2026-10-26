@@ -9,7 +9,7 @@ import { titulo, cartao, kpi, barra, vazio, modal, fecharModal, toast, campo, in
 import { tagMateria, formFlashcard } from './comum.js';
 
 const EMOJIS = ['📖', '📐', '🏛️', '🌎', '🌐', '🔬', '⚗️', '🧬', '🎨', '🎵', '⚽', '💻', '📊', '🧮', '🗿', '📜', '🧠', '🌱'];
-const CORES = ['#7c5cff', '#60a5fa', '#22d3ee', '#34d399', '#fbbf24', '#fb923c', '#f87171', '#f472b6', '#a78bfa'];
+const CORES = ['#3ec9f5', '#60a5fa', '#f1d794', '#34d399', '#fbbf24', '#fb923c', '#f87171', '#f472b6', '#a78bfa'];
 
 export function render(el, { id }) {
   const pintar = () => { el.replaceChildren(); id ? detalhe(el, id, pintar) : lista(el, pintar); };
@@ -211,7 +211,7 @@ export function abrirDiagnostico(m) {
   modal(`🧪 Diagnóstico de ${m.nome}`, h('div', {},
     h('p', { class: 'muted small', style: { marginTop: 0 } },
       'O diagnóstico faz de 10 a 20 questões variadas e mostra onde você está forte e onde está fraco. '
-      + 'Depois disso o StudyLab ajusta o domínio de cada conteúdo e sugere o plano.'),
+      + 'Depois disso o MindTrack ajusta o domínio de cada conteúdo e sugere o plano.'),
     h('div', { class: 'list mb' },
       h('div', { class: 'row row--flat' }, h('span', { class: 'grow small' }, 'Conteúdos cadastrados'), h('b', {}, cs.length)),
       h('div', { class: 'row row--flat' }, h('span', { class: 'grow small' }, 'Questões disponíveis'), h('b', {}, qs.length))),
@@ -219,6 +219,6 @@ export function abrirDiagnostico(m) {
       ? h('a', { class: 'btn btn--p btn--blk', href: `#/questoes?materia=${m.id}&modo=diagnostico`, onclick: fecharModal }, '▶ Começar diagnóstico')
       : h('div', {},
         h('p', { class: 'small', style: { color: 'var(--warn)' } },
-          'Você tem poucas questões dessa matéria. Gere questões primeiro (com o Study AI ou manualmente).'),
+          'Você tem poucas questões dessa matéria. Gere questões primeiro (com o MindTrack AI ou manualmente).'),
         h('a', { class: 'btn btn--p btn--blk', href: `#/questoes?materia=${m.id}&gerar=1`, onclick: fecharModal }, '📝 Gerar questões'))));
 }

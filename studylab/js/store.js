@@ -27,10 +27,10 @@ export function estadoVazio() {
       notificar: true,
     },
     jogo: { xp: 0, moedas: 0, streak: 0, ultimoDia: null, recordeStreak: 0, conquistas: [], itens: [] },
-    // A chave da Claude API NÃO fica mais com o aluno: o Study AI é do plano Pro
+    // A chave da Claude API NÃO fica mais com o aluno: o MindTrack AI é do plano Pro
     // e passa pelo servidor. chaveCriador só existe para você testar (Área do criador).
     // servidor: preenchido nas Configurações depois de publicar o studylab-server.
-    // Assim dá para ligar o Study AI sem mexer no código.
+    // Assim dá para ligar o MindTrack AI sem mexer no código.
     ia: { modelo: 'claude-opus-5', memoria: [], usoHoje: 0, usoDia: null, chaveCriador: '', servidor: '' },
     materias: [], conteudos: [], tarefas: [], provas: [], eventos: [], horario: {},
     flashcards: [], questoes: [], tentativas: [], sessoes: [], notas: [], metas: [],
@@ -102,7 +102,7 @@ export function aplicarTema() {
 export function exportar() { return JSON.stringify(S, null, 2); }
 export function importar(txt) {
   const d = JSON.parse(txt);
-  if (!d || typeof d !== 'object' || !d.perfil) throw new Error('Arquivo não parece ser um backup do StudyLab.');
+  if (!d || typeof d !== 'object' || !d.perfil) throw new Error('Arquivo não parece ser um backup do MindTrack.');
   S = migrar({ ...estadoVazio(), ...d });
   salvar(); aplicarTema(); emit();
 }
@@ -164,12 +164,12 @@ export const conteudosDe = (materiaId) => S.conteudos.filter((c) => c.materiaId 
 export const tarefasAbertas = () => S.tarefas.filter((t) => t.status !== 'concluido');
 export const nomeMateria = (id) => materia(id)?.nome || 'Geral';
 export const emojiMateria = (id) => materia(id)?.emoji || '📘';
-export const corMateria = (id) => materia(id)?.cor || '#7c5cff';
+export const corMateria = (id) => materia(id)?.cor || '#3ec9f5';
 
 /* ---------- criação (com padrões) ---------- */
 export function novaMateria(d = {}) {
   const m = {
-    id: uid('mat'), nome: 'Nova matéria', emoji: '📘', cor: '#7c5cff', professor: '',
+    id: uid('mat'), nome: 'Nova matéria', emoji: '📘', cor: '#3ec9f5', professor: '',
     meta: 9, arquivada: false, criadaEm: iso(), ...d,
   };
   set((s) => s.materias.push(m)); return m;

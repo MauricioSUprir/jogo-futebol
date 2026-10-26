@@ -10,14 +10,14 @@ const token = () => process.env.MP_ACCESS_TOKEN || '';
 export const pagamentoLigado = () => !!token();
 
 /** Os planos vendidos. Estes valores são a fonte da verdade — o app só mostra.
- *  Dois níveis: Pro (o essencial do Study AI) e Plus (mais perguntas, mais
+ *  Dois níveis: Pro (o essencial do MindTrack AI) e Plus (mais perguntas, mais
  *  fotos e os recursos avançados). Os limites de uso ficam em index.js. */
 export const PLANOS = {
-  pro_semanal: { nome: 'StudyLab Pro — Semanal', nivel: 'pro', valor: 7.90, frequencia: 7, unidade: 'days', dias: 7 },
-  pro_mensal: { nome: 'StudyLab Pro — Mensal', nivel: 'pro', valor: 24.90, frequencia: 1, unidade: 'months', dias: 30 },
-  pro_anual: { nome: 'StudyLab Pro — Anual', nivel: 'pro', valor: 199.90, frequencia: 12, unidade: 'months', dias: 365 },
-  plus_mensal: { nome: 'StudyLab Plus — Mensal', nivel: 'plus', valor: 44.90, frequencia: 1, unidade: 'months', dias: 30 },
-  plus_anual: { nome: 'StudyLab Plus — Anual', nivel: 'plus', valor: 379.90, frequencia: 12, unidade: 'months', dias: 365 },
+  pro_semanal: { nome: 'MindTrack Pro — Semanal', nivel: 'pro', valor: 7.90, frequencia: 7, unidade: 'days', dias: 7 },
+  pro_mensal: { nome: 'MindTrack Pro — Mensal', nivel: 'pro', valor: 24.90, frequencia: 1, unidade: 'months', dias: 30 },
+  pro_anual: { nome: 'MindTrack Pro — Anual', nivel: 'pro', valor: 199.90, frequencia: 12, unidade: 'months', dias: 365 },
+  plus_mensal: { nome: 'MindTrack Plus — Mensal', nivel: 'plus', valor: 44.90, frequencia: 1, unidade: 'months', dias: 30 },
+  plus_anual: { nome: 'MindTrack Plus — Anual', nivel: 'plus', valor: 379.90, frequencia: 12, unidade: 'months', dias: 365 },
 };
 
 /** Ids antigos (apps que ainda não atualizaram) apontam para o plano Pro novo. */
@@ -97,7 +97,7 @@ export async function criarPagamentoUnico({ planoId, usuario }) {
       items: [{
         id: planoId,
         title: plano.nome,
-        description: `${plano.dias} dias de StudyLab Pro`,
+        description: `${plano.dias} dias de MindTrack Pro`,
         quantity: 1,
         currency_id: 'BRL',
         unit_price: plano.valor,
@@ -107,7 +107,7 @@ export async function criarPagamentoUnico({ planoId, usuario }) {
       back_urls: { success: voltar, pending: voltar, failure: voltar },
       auto_return: 'approved',
       notification_url: urlDoWebhook(),
-      statement_descriptor: 'STUDYLAB',
+      statement_descriptor: 'MINDTRACK',
       payment_methods: {
         // Pix + cartão. Boleto fica de fora porque demora dias para compensar.
         excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }],
@@ -120,7 +120,7 @@ export async function criarPagamentoUnico({ planoId, usuario }) {
 
 /**
  * Pix direto: cria a cobrança e devolve o QR Code e o código copia-e-cola,
- * para o aluno pagar SEM sair do StudyLab.
+ * para o aluno pagar SEM sair do MindTrack.
  */
 export async function criarPix({ planoId, usuario, email }) {
   planoId = normalizarPlanoId(planoId);

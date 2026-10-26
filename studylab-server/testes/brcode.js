@@ -18,8 +18,8 @@ export function montarBRCode(valor) {
     + bloco('26', bloco('00', 'BR.GOV.BCB.PIX') + bloco('01', 'chave@studylab.app'))
     + bloco('52', '0000') + bloco('53', '986')
     + bloco('54', Number(valor).toFixed(2))
-    + bloco('58', 'BR') + bloco('59', 'STUDYLAB') + bloco('60', 'SAO PAULO')
-    + bloco('62', bloco('05', 'STUDYLAB1'));
+    + bloco('58', 'BR') + bloco('59', 'MINDTRACK') + bloco('60', 'SAO PAULO')
+    + bloco('62', bloco('05', 'MINDTRACK1'));
   const semCrc = corpo + '6304';
   return semCrc + crc16(semCrc);
 }
@@ -57,7 +57,7 @@ console.log('\n== código Pix (BR Code) ==');
   const semValor = bloco('00', '01') + bloco('01', '12')
     + bloco('26', bloco('00', 'BR.GOV.BCB.PIX') + bloco('01', 'chave@studylab.app'))
     + bloco('52', '0000') + bloco('53', '986') + bloco('58', 'BR')
-    + bloco('59', 'STUDYLAB') + bloco('60', 'SAO PAULO');
+    + bloco('59', 'MINDTRACK') + bloco('60', 'SAO PAULO');
   const semCrc = semValor + '6304';
   const r = conferirBRCode(semCrc + crc16(semCrc), 29.99);
   conferir(!r.ok && r.motivo.includes('sem valor'), 'código SEM valor é barrado (aluno teria que digitar)', r.motivo);
