@@ -85,9 +85,18 @@ function acharPunido(m, id) {
   return null;
 }
 
-/** Onde o punido para (a freada dele: v²/2a) dentro do campo. */
-function paradaPrevista(j, out) {
-  const v = Math.hypot(j.vx, j.vz), d = v > 0.05 ? (v * v) / (2 * 5.5) : 0;
+/**
+ * Onde o punido para (a freada dele: v²/2a) dentro do campo; com bp (a bola parada no chão), sem passar dela
+ * (separarDaBola segura o centro dele a CENAS.bola dela).
+ */
+function paradaPrevista(j, out, bp = null) {
+  const v = Math.hypot(j.vx, j.vz);
+  let d = v > 0.05 ? (v * v) / (2 * 5.5) : 0;
+  if (d > 0 && bp && bp.y < 0.6) {
+    const ux = j.vx / v, uz = j.vz / v, ex = bp.x - j.x, ez = bp.z - j.z;
+    const r = Math.min(CENAS.bola, Math.max(0, Math.hypot(ex, ez) - 0.01)), u = ex * ux + ez * uz, w2 = ex * ex + ez * ez - u * u;
+    if (u > 0 && w2 < r * r) d = Math.min(d, Math.max(0, u - Math.sqrt(r * r - w2)));
+  }
   out.x = clamp(j.x + (v > 0.05 ? (j.vx / v) * d : 0), -MX + 1.5, MX - 1.5);
   out.z = clamp(j.z + (v > 0.05 ? (j.vz / v) * d : 0), -MZ + 1.5, MZ - 1.5);
   return out;
@@ -323,6 +332,19 @@ function pontoApoio(c, f, l, out) {
   const d = Math.hypot(ux, uz) || 1; ux /= d; uz /= d;
   const sg = c.ladoApoio ?? 1;
   out.x = p.x + ux * f - uz * l * sg; out.z = p.z + uz * f + ux * l * sg;
+  // (a bola parada no ponto: ele fica encostado nela, à mesma distância do punido — o ponto gira em volta do punido até sair
+  // dela, para o lado do árbitro, e fica desse lado; sem isso separarDaBola o segurava a 1,28 m do punido, com a bola a 0,75 m
+  // dele do lado do árbitro)
+  const bp = c.mF.bola.p, bx = bp.x - p.x, bz = bp.z - p.z, b = Math.hypot(bx, bz), r = Math.hypot(f, l);
+  const R = (c.apoio?.bolaMin ?? CENAS.bola) + 0.1, cos0 = (r * r + b * b - R * R) / (2 * r * b || 1);
+  if (bp.y < 0.6 && b > 0.05 && cos0 > -1 && cos0 < 1) {
+    const qx = out.x - p.x, qz = out.z - p.z, th0 = Math.acos(cos0);
+    if ((qx * bx + qz * bz) / (r * b) > cos0) {
+      const ab = Math.atan2(bz, bx);
+      c.giroBola ??= Math.cos(ab + th0) * ux + Math.sin(ab + th0) * uz >= Math.cos(ab - th0) * ux + Math.sin(ab - th0) * uz ? 1 : -1;
+      out.x = p.x + Math.cos(ab + c.giroBola * th0) * r; out.z = p.z + Math.sin(ab + c.giroBola * th0) * r;
+    }
+  }
   return out;
 }
 
@@ -375,6 +397,21 @@ function desejo(c, a, t) {
     // longe da reta árbitro–punido (não passa por cima do lance)
     const lx = pun.x - arb.x, lz = pun.z - arb.z, ll = Math.hypot(lx, lz) || 1;
     if ((ux * lx + uz * lz) / ll > 0.6) { const sg = ux * -lz + uz * lx >= 0 ? 1 : -1; ux = ux * 0.4 - (lz / ll) * sg; uz = uz * 0.4 + (lx / ll) * sg; const l = Math.hypot(ux, uz) || 1; ux /= l; uz /= l; }
+    // fora do caminho do capitão que vem andando (à frente dele, a < 0,9 m da reta): sai de lado, para o lado longe do
+    // árbitro (de frente, o desvio trocava de lado a cada tick e ele, que cede menos, empurrava o outro de volta para o árbitro)
+    const ap = c.apoio?.j;
+    if (ap) {
+      const va = Math.hypot(ap.vx, ap.vz);
+      if (va > 0.6) {
+        const vx = ap.vx / va, vz = ap.vz / va, wx = a.j.x - ap.x, wz = a.j.z - ap.z;
+        const fr = wx * vx + wz * vz, la = -wx * vz + wz * vx;
+        if (fr > -0.2 && fr < 2.5 && Math.abs(la) < 0.9) {
+          const sg = -vz * ex + vx * ez >= 0 ? 1 : -1;
+          ux += -vz * sg * 1.5; uz += vx * sg * 1.5;
+          const l = Math.hypot(ux, uz) || 1; ux /= l; uz /= l;
+        }
+      }
+    }
     a.alvoX = arb.x + ux * (lim + 0.7); a.alvoZ = arb.z + uz * (lim + 0.7);
     return desviar(c, a, irPara(c, a, a.alvoX, a.alvoZ, K.velAfasta, Math.atan2(-ez, -ex), 0.1, 3));
   }
@@ -733,7 +770,7 @@ function elipseTunel(c) {
   // o resto (que aparece ao fundo) não muda; o companheiro fica no campo (desejoApoio)
 }
 
-const _a = [];
+const _a = [], _pl = { x: 0, z: 0 }, _pb = { x: 0, z: 0 };
 /** Câmera de um plano: {x, y, z, ...} escolhida no começo dele (fixa no plano; o olhar acompanha o assunto). */
 function escolherCamera(c, ip) {
   const P = c.plano, pl = P.planos[ip], arb = c.arbitro, pun = c.punido;
@@ -743,12 +780,18 @@ function escolherCamera(c, ip) {
     case 'arbitro': {
       const A = P.arb, ax = A.x1, az = A.z1;
       const base = Math.atan2(P.parada.z - az, P.parada.x - ax);
+      // (a bola parada segura o punido que corre para ela antes da parada prevista — a 5 m/s ele parava 1,3 m antes e a
+      // reta da lente até o cartão passava pela cabeça dele — e o árbitro para a dPara m dele, onde ele estiver: o cartão
+      // não pode ficar atrás dele em nenhuma das duas paradas)
+      paradaPrevista(pun.j, _pl); paradaPrevista(pun.j, _pb, c.mF.bola.p);
+      const bx = _pb.x - _pl.x, bz = _pb.z - _pl.z;
       for (const da of [C.arbitro.ang, -C.arbitro.ang, C.arbitro.ang * 0.7, -C.arbitro.ang * 0.7, C.arbitro.ang * 0.4, -C.arbitro.ang * 0.4]) {
         for (const dist of [C.arbitro.dist, C.arbitro.dist - 0.8, C.arbitro.dist + 0.8]) {
           const x = ax + Math.cos(base + da) * dist, z = az + Math.sin(base + da) * dist;
           // do lado da TV (z maior que o punido) é a preferência; o ângulo maior custa um pouco; o cartão no alto não pode
           // ficar atrás da cabeça nem do ombro do punido (a reta da lente até ele passa longe deles)
-          const tap = tampaCartao(x, C.arbitro.altura, z, ax, az, P.parada.x, P.parada.z);
+          let tap = tampaCartao(x, C.arbitro.altura, z, ax, az, P.parada.x, P.parada.z);
+          if (bx || bz) tap = Math.max(tap, tampaCartao(x, C.arbitro.altura, z, ax + bx, az + bz, P.parada.x + bx, P.parada.z + bz));
           cands.push({ x, y: C.arbitro.altura, z, pref: (z < P.parada.z ? 1.5 : 0) + Math.abs(da) * 0.4 + Math.abs(dist - C.arbitro.dist) * 0.2 + tap });
         }
       }
