@@ -21,6 +21,7 @@
 //      outro gol o tira); toda parada A/B classificada chega ao ponto de guardar (o passo antes da montagem ou o fim do tempo);
 //      a guardada tem a janela inteira até o desfecho + 0,5 s (ou o ateMax do expulso; no fim do tempo, até o fim do anel
 //      daquele instante), a chave dentro e nenhum corte dentro dela.
+//      Sem janela só a parada com a chave mais velha que o anel (o cartão da falta com vantagem longa, Regra 12.3).
 // Na versão sem o guardador reprova (render/lances-guarda.js não existe).
 //   node tools/teste-lances-guarda.mjs [--js <pasta da lógica>] [--n 24] [--sem0 1] [--par 4]
 import fs from 'node:fs';
@@ -90,7 +91,7 @@ if (args.includes('--filho')) {
   const S = GN.novaPartida(s, { ligado });
   const out = { s, ligado, gols: [], paradas: [], classificados: 0, chegaram: 0, g2: { junta: 0, bola: 0 },
     g3: { exato: 0, nMeio: 0, interpJunta: 0, bolaMeio: 0, tempo: 0, perdaMax: 0, hist: null, ruins: [], bat: [] },
-    pior: 0, piorOnde: null, golsFora: [], ticks: 0, saturou: 0 };
+    pior: 0, piorOnde: null, golsFora: [], ticks: 0, saturou: 0, chaveFora: 0 };
   const la = [], lb = [], ba = { x: 0, y: 0, z: 0 }, bb = { x: 0, y: 0, z: 0 }, qa = { x: 0, y: 0, z: 0, w: 1 }, qb = { x: 0, y: 0, z: 0, w: 1 };
   const l0 = [], l1 = [], lm = [], b0 = { x: 0, y: 0, z: 0 }, b1 = { x: 0, y: 0, z: 0 }, bm = { x: 0, y: 0, z: 0 };
   const q0 = { x: 0, y: 0, z: 0, w: 1 }, q1 = { x: 0, y: 0, z: 0, w: 1 }, qm = { x: 0, y: 0, z: 0, w: 1 };
@@ -115,7 +116,11 @@ if (args.includes('--filho')) {
       const l = g.lance, jan = g.jan, falhas = [];
       const fimL = Math.max(l.chave, l.fim ?? l.chave);
       if (g.quando === 'parada') out.chegaram++;
-      if (!jan) falhas.push('sem janela');
+      // a falta com vantagem longa: o cartão sai na parada seguinte (Regra 12.3) com a chave mais velha que o anel —
+      // sem janela e sem guardar é o certo; sem janela com a chave DENTRO do anel é defeito
+      const chaveFora = g.quando === 'parada' && l.chave < g.anel.primeiro;
+      if (!jan) { if (chaveFora) out.chaveFora++; else falhas.push('sem janela'); }
+      else if (chaveFora) falhas.push(`janela com a chave ${l.chave} antes do anel ${g.anel.primeiro}`);
       else {
         // G6: a janela inteira, a chave dentro, nenhum corte dentro
         const alvo = Math.min(fimL + 30, l.ateMax ?? Infinity);
@@ -346,12 +351,13 @@ console.log(`lógica: ${JS}\n${N} partidas IA × IA (sementes ${S0}–${S0 + N -
     `${gols.length - golsFora.length}/${gols.length} gols (${golsDesl} com os replays desligados); ${sumidos} sumidos; ${golsRuins.length} janelas ruins${golsRuins.length ? ' (s' + golsRuins[0].s + ': ' + golsRuins[0].falhas[0] + ')' : ''}`,
     'todos; 0; 0', gols.length > 0 && golsFora.length === 0 && sumidos === 0 && golsRuins.length === 0);
   const cl = res.reduce((a, r) => a + r.classificados, 0), ch = res.reduce((a, r) => a + r.chegaram, 0);
+  const chF = res.reduce((a, r) => a + r.chaveFora, 0);
   const par = res.flatMap(r => r.paradas.map(p => ({ ...p, s: r.s })));
   const guard = par.filter(p => p.k >= 0), parRuins = par.filter(p => p.falhas.length), fdt = par.filter(p => p.pred === 'fimDoTempo').length;
   const porTipo = {};
   for (const p of guard) porTipo[p.tipo] = (porTipo[p.tipo] ?? 0) + 1;
   reg('G6 toda parada A/B chega ao ponto de guardar; a guardada com a janela inteira até o desfecho + 0,5 s, a chave dentro, sem corte',
-    `${ch}/${cl} chegaram (${fdt} no fim do tempo); ${guard.length} guardadas (${Object.entries(porTipo).map(([k, v]) => k + ' ' + v).join(', ')}), ${par.length - guard.length} de fora (cheio, peso menor); ${parRuins.length} ruins${parRuins.length ? ' (s' + parRuins[0].s + ' t' + parRuins[0].tick + ': ' + parRuins[0].falhas[0] + ')' : ''}`,
+    `${ch}/${cl} chegaram (${fdt} no fim do tempo); ${guard.length} guardadas (${Object.entries(porTipo).map(([k, v]) => k + ' ' + v).join(', ')}), ${par.length - guard.length - chF} de fora (cheio, peso menor), ${chF} com a falta antes do anel (vantagem longa); ${parRuins.length} ruins${parRuins.length ? ' (s' + parRuins[0].s + ' t' + parRuins[0].tick + ': ' + parRuins[0].falhas[0] + ')' : ''}`,
     'todas; 0 ruins', cl > 0 && ch === cl && guard.length > 0 && parRuins.length === 0);
 }
 

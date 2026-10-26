@@ -96,7 +96,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   mão" a 18%); o `teste-movimento --modo partida` entrou no CI (vai e volta 8,3 → 7,2). O impedimento caiu 1,16 → 0,99 por
   partida (a virada parada e o arco atrasam a linha que sobe): a correção, a linha que SOBE vira na hora (`TATICA.linhaSobe`,
   1,19 e gols 1,82 → 1,88 no painel de 144), entra no D6 — no CI ela trocou de novo os estados dos testes (7 metas de amostra e
-  de cena), e o D6 os troca de novo: corrigir uma vez só. Lições: a triagem do movimento com `--set` em 32–40 sementes (~80 s com 4 processos) bate com
+  de cena), e o D6 os troca de novo: corrigir uma vez só. **D6 (item 23, a forma)**: a linha que sobe na hora, a linha que
+  segura (`defesaPaga` 8 e `defesaPaga2` 6: o meio aperta e cobre), a cobertura do volante (`TATICA.volanteCobre`) e a
+  recomposição com 8 m (sprint com 6) — 24 sementes: atrás da bola no 1º terço 3,8 → 4,2 (meta nova por terço contra os 4 times
+  da Metrica), altura por faixa 2,7 → 2,1 m, linha de 4 no 1º terço 6,9 → 5,1 m (≤ 5: falta 0,1; o teste segue no etapa3).
+  Lição: o `teste-forma` com 8 sementes oscila ±0,5 no 1º terço entre conjuntos de sementes — decidir com 24. Lições: a triagem do movimento com `--set` em 32–40 sementes (~80 s com 4 processos) bate com
   o teste; decidir com ela e conferir nas 5 rodadas de 8. Mudança IA × IA: ler o painel do CI e repetir com OUTRAS sementes
   (`--sem0 3001`) antes de concluir — gols e gols de fora caíram numa amostra e empataram na outra (sorteio), o impedimento
   caiu nas duas (real; achado desligando uma peça por vez com `--set`). As amostras pequenas dos testes que reprovam depois da

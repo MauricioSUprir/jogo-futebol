@@ -417,9 +417,10 @@ function desejo(c, a, t) {
   const assunto = a.par || ((a.festa != null || a.corre) && nomeAgora === 'vencedor') || (a.lamento != null && nomeAgora === 'perdedor')
     || (a === c.melhorA && nomeAgora === 'melhor');
   if (!assunto) {
-    // (os closes do fim têm a lente fechada: a 4,6 m quem passa já enche o quadro)
+    // (os closes do fim têm a lente fechada: a 4,6 m quem passa já enche o quadro; até 2,05 s depois do apito, andando —
+    // todos desaceleram: quem tinha acabado de frear ia a 2,8 m/s para trás, fugindo da lente do próximo plano)
     const fl = fugirDaLente(c, a, K.lenteLivre);
-    if (fl) return desviar(c, a, fl);
+    if (fl) { if (t < 2.05) fl.vel = Math.min(fl.vel, K.velAnda); return desviar(c, a, fl); }
   } else if (P.tipo === 'fimDeJogo') {
     // (o fim: nem o assunto chega na lente — quem corria para a roda da festa ou andava para o par não freava a tempo)
     const fl = fugirDaLente(c, a, K.lenteDura);

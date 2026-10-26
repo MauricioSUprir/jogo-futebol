@@ -56,6 +56,7 @@ export const CENA_CARTAO = {
   companheiro: 15,            // m — A1, A2, V1 e V2 precisam de um companheiro até aqui
   apoioPerto: 6,              // m — o companheiro mais longe que isto já vem correndo (pré-rolagem invisível)
   ifab: 4,                    // m — só o capitão e o punido mais perto do árbitro ("só o capitão": UEFA EURO 2024, PL 2025-26)
+  esperaIfab: 0.8,            // s — no máximo, a pré-rolagem invisível de quem sai de perto do ponto do árbitro (A1, V2)
   afasta: 5.4,                // m — os outros vão para esta distância do árbitro (A1, V2: o árbitro isola o jogador com o braço
                               // estendido — NISOA, askasoccerreferee); 3,6 nas outras
   afastaLeve: 3.6,

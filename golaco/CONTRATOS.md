@@ -3148,6 +3148,41 @@ pela referência e ~1/3 da pressa dele (a retomada e a volta do impedido). O que
   são as da partida: a média de chutes por semente de 3 min ≥ 1,5 (main 2,75; o volume é do painel e da categoria E) e o
   marcador a ≤ 3 m ≥ 34% (main 36,6%; real 27,1%, Metrica; os 40% com as duas na Média ficam no `teste-pressao`).
 
+### D6 — a forma sem a bola (item 23; `ia-tatica.js`, `config.js` TATICA e IA_DEFESA)
+
+Vale na partida (`m.times`), IA × IA e contra a pessoa; o treino fica bit a bit igual. Medido pelo `teste-forma` (24 sementes) e,
+faixa por faixa da bola, contra a Metrica (`PESQUISA-CATEGORIA-D.md` §8). O que muda:
+
+- **A linha que sobe vira na hora** (`TATICA.linhaSobe`): o ramo 'linha' com o alvo à frente (no sentido do ataque) fica sem a
+  virada parada e o arco do D5 (a armadilha do impedimento).
+- **A linha segura; o meio aperta e cobre** (`IA_DEFESA.defesaPaga` 4 → 8 e `defesaPaga2` 6): quem é da linha de defesa paga mais
+  para ser o 1º homem e, agora, também o 2º (a cobertura), com a bola mais de 3 m à frente da referência dele.
+- **A cobertura do volante** (`TATICA.volanteCobre` {fora 4, alcance 20, hist 2, frente 1}): sem a bola e com ela no meu campo,
+  com um defensor fora da linha (o 1º/2º homem ou a mais de 4 m da altura dela), o meio-campista mais perto da vaga (com a
+  referência atrás da bola; o de antes com 2 m de vantagem) vai para ela, 1 m à frente da linha, no ramo 'linha'
+  (`blocoDoTime` → `B.volante`).
+- **A recomposição** (`TATICA.recomp`): no jogo organizado liga com 8 m à frente do alvo (era 15) e o sprint com 6 m de atraso
+  (era 11) — quem ficava à frente da bola no meu terço era, quase sempre, quem já voltava sem chegar.
+- O `teste-forma` mede com 24 sementes (com 8, o 1º terço oscilava ±0,5 entre conjuntos) e o "atrás da bola" passa a ser por
+  terço contra os 4 times da Metrica (≥ 4,0 / 6,8 / 8,2; antes, a média ≥ 8, sem fonte e acima do real: 7,36).
+- **Os estados novos da partida** (a IA × IA mudou, e com ela todo estado que os testes tiram dela) mostraram casos que o
+  D5 não pegava. Nas cenas (fora do fecho; hash igual): na cena do cartão do IFAB, quem está perto do ponto onde o árbitro
+  para (nem o punido nem o capitão) sai numa pré-rolagem invisível de até `CENA_CARTAO.esperaIfab` 0,8 s, como a do capitão
+  e a do árbitro, e na cena foge do mais perto entre o árbitro e esse ponto (o colado no punido ficava a 1,6–3,4 m 1 s
+  depois do cartão no alto); o desvio do caminho do capitão olha até 4 m à frente dele (era 2,5); no V2 o capitão colado
+  acompanha o recuo do punido pela velocidade dele, sem o desvio de quem está na frente (era o próprio punido), e o punido
+  recua a 0,9 m/s (era 0,8: 0,797 m); a câmera da saída tem mais distância de lado (+4,5 m) e uma mais atrás (+2,5 m); no
+  intervalo e no fim, quem foge da lente anda (≤ `velAnda`) nos 2,05 s depois do apito; a postura do desenho tira 60% da
+  inclinação do tronco (era 55%: com mais arrancadas a mediana correndo ia a 17,2°, teto 17). Nos testes: o canhão de
+  cartões busca o lance perto da área até 200 s (era 100: 3 dos 8 estados ficavam sem pênalti e sem goleiro expulso); a
+  falta com vantagem longa (o cartão na parada seguinte, Regra 12.3) não tem janela no guardador quando a chave fica mais
+  velha que o anel (`teste-lances-guarda` G6); o ar em replay vale com os gols do real, 2,3–3,5 por partida
+  (`teste-replay-paradas` P3: as sementes 1–24 iam de 37 a 24 gols só de sorteio); o controlado que o time assumiu no passo
+  compara só o id e os botões (`teste-dois-humanos` B: o analógico dele no passo é o da IA, que lê o mundo); o M12 do
+  `teste-pressao-humano` e o F do `teste-mira` seguem as sementes até ter casos; o E2 do `teste-mira`, o B do
+  `teste-intercepta` e o C do `teste-conducao-curta` reprovam quando a conta prova (z > 1,645; o C pelo erro-padrão da
+  mediana entre as partidas).
+
 ### A pressão contra a pessoa (`tools/teste-pressao.mjs --humano`; D3, item 20)
 
 - `lib/partida-tatica.mjs`: `criarJogo(L, semente, {humano})` — o time 0 é uma pessoa (sem a marca `ia`): um perfil do
