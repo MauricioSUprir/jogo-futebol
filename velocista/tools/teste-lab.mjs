@@ -37,7 +37,7 @@ ok(cmp.x0 === cid.centroDe(I) - cid.BLOCO / 2 && cmp.x1 === cid.centroDe(I + 1) 
 
 // ---- 2. portas ≥ 4 m e livres para um corpo de 1,8 m
 const livre = (x, z, y = cid.CALCADA) => !cid.empurrar(R, x, z, 0.45, y, 1.8).bateu;
-for (const p of lab.PAREDES) for (const [s0, s1] of p.vaos) {
+for (const p of [...lab.PAREDES, ...lab.ANEXO_PAREDES]) for (const [s0, s1] of p.vaos) {
   const larg = s1 - s0, c = p.c, meio = (s0 + s1) / 2;
   ok(larg >= 4, `porta ${p.id} [${s0}, ${s1}]: ${larg} m de largura`);
   let passa = true;
@@ -71,7 +71,12 @@ function rota(nome, pontos) {
 const ida = [[0, -31], [0, -28], [0, -22], [0, -15], [0, -9], [3.2, -4], [3.2, 0], [16, 0], [20, 0], [20, 9], [20, 12], [20, 16], [8, 15.6], [-8, 15.6], [-20, 15.6], [-20, 11], [-20, 0], [-20, 6.5], [-15.5, 6.5], [-15.5, 0], [-9, 0], [-3.2, 0], [-3.2, 7], [0, 11.5], [0, 15.6]];
 rota('entrada → Cortex → Contenção → Acelerador → Esteira → Cortex → Acelerador', ida);
 rota('Acelerador → Cortex → átrio → rua', [[0, 15.6], [0, 11], [3.2, 7], [3.2, 0], [3.2, -4], [0, -9], [0, -15], [0, -24], [0, -31], [0, -66]]);
-rota('volta no prédio pela praça (por baixo das passarelas)', [[0, -40], [-31, -40], [-31, 33], [31, 33], [31, -40], [0, -40]]);
+// os corredores do térreo fecham os vãos entre os prédios: a volta pela praça passa por fora das alas e atrás da torre
+rota('volta no campus pela praça (por fora das alas e atrás da torre)', [[0, -40], [-65, -40], [-65, 65], [65, 65], [65, -40], [0, -40]]);
+// os anexos (dono, 26/10: "não tem mais salas"): do Acelerador ao Núcleo pelo corredor norte, e a volta inteira no reator
+rota('Acelerador → corredor norte → Câmara do Núcleo → volta no reator', [[0, 15.6], [1.5, 15.6], [1.5, 24], [0, 26], [0, 32], [0, 40.5], [-12.5, 44], [-12.5, 56], [0, 59.5], [12.5, 56], [12.5, 44], [0, 40.5], [0, 32], [0, 24]]);
+rota('Esteira → corredor oeste → saguão → Ala Médica → Oficina', [[-20, 8], [-24, 7], [-24, 0], [-31, 0], [-40, 0], [-49, -3], [-49, -8], [-49, -22], [-49, -3], [-49, 3], [-49, 9], [-49, 27], [-49, 36]]);
+rota('Contenção → corredor leste → saguão → Sala dos Trajes → Sala da Fenda', [[20, 0], [24, 0], [31, 0], [40, 0], [49, -3], [49, -8], [49, -22], [49, -3], [49, 3], [49, 9], [42, 11], [42, 24], [42, 34]]);
 rota('átrio → Contenção (porta do átrio) → Cortex', [[0, -17.5], [20, -17.5], [20, -15], [20, -9], [20, -3], [16, -1], [3.2, 0]]);
 rota('átrio → Esteira (porta do átrio) → Acelerador', [[0, -17.5], [-20, -17.5], [-20, -15], [-20, -9], [-20, 9], [-20, 12], [-20, 15.6]]);
 // de baixo do tubo do acelerador (y0 = 2,2) passa um corpo de 1,8 m
@@ -96,6 +101,9 @@ function TUBO_V() { return lab.TUBO.v; }
 // ---- 5. dentro() coerente
 {
   const esperado = { atrio: 'atrio', cortex: 'cortex', contencao: 'contencao', esteira: 'esteira', acelerador: 'acelerador', entrada: null, telhado: null };
+  for (const n of ['nucleo', 'medica', 'alaOeste', 'oficina', 'trajes', 'alaLeste', 'fenda', 'corredorNorte', 'corredorOeste', 'corredorLeste']) esperado[n] = n;
+  ok(Object.keys(lab.SALAS).length >= 15, `${Object.keys(lab.SALAS).length} salas (eram 5)`);
+  ok(plano.dentro(cx, cz + 50, 30) === 'nucleo' && plano.dentro(cx, cz + 50, 34) === null, 'a Câmara do Núcleo tem 34 m de pé-direito');
   for (const p of plano.pontosDeInteresse) ok(plano.dentro(p.x, p.z, p.y) === esperado[p.nome], `dentro() em "${p.nome}" = ${plano.dentro(p.x, p.z, p.y)}`);
   ok(plano.dentro(cx, cz, 17) === null, 'dentro() acima do teto do Cortex = null');
   ok(plano.entrada.z < cxe.z0 - 3 && Math.abs(plano.entrada.x - cx) < 1 && plano.entrada.z > cmp.z0 + 20, 'entrada diante da porta, na praça do campus');
@@ -108,10 +116,10 @@ if (pastaPrints) {
   const srv = await servidor(0, RAIZ);
   const { navegador, pagina, erros } = await abrir({ largura: 1280, altura: 720 });
   const so = args.includes('--cams') ? args[args.indexOf('--cams') + 1].split(',') : null;
-  const cams = so || ['fora', 'fora2', 'fundo', 'entrada', 'atrio', 'atrio2', 'cortex', 'cortex2', 'cortexalto', 'contencao', 'contencao2', 'esteira', 'esteira2', 'acelerador', 'acelerador2', 'topo', 'telhado', 'campus', 'campus2', 'torre', 'anel', 'longe'];
+  const cams = so || ['fora', 'fora2', 'fundo', 'entrada', 'atrio', 'atrio2', 'cortex', 'cortex2', 'cortexalto', 'contencao', 'contencao2', 'esteira', 'esteira2', 'acelerador', 'acelerador2', 'nucleo', 'nucleo2', 'nucleoalto', 'corredor', 'medica', 'oficina', 'trajes', 'fenda', 'saguao', 'topo', 'telhado', 'campus', 'campus2', 'torre', 'anel', 'longe'];
   let maxCalls = 0, maxTris = 0;
   for (const noite of [0, 1]) for (const cam of cams) {
-    if (noite && !so && !['fora', 'entrada', 'cortex', 'acelerador', 'topo', 'contencao', 'campus'].includes(cam)) continue;
+    if (noite && !so && !['fora', 'entrada', 'cortex', 'acelerador', 'nucleo', 'medica', 'fenda', 'topo', 'contencao', 'campus'].includes(cam)) continue;
     await pagina.goto(`${srv.url}lab.html?cam=${cam}${noite ? '&noite=1' : ''}`);
     await pagina.waitForFunction(() => window.__lab && window.__lab.quadros > 4, null, { timeout: 120000 });
     const info = await pagina.evaluate(() => { const i = window.__lab.renderer.info.render; return { calls: i.calls, tris: i.triangles }; });
