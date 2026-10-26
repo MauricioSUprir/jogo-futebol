@@ -172,6 +172,10 @@
   #dano { position:fixed; inset:0; pointer-events:none; opacity:0; box-shadow:inset 0 0 90px 30px rgba(255,20,40,.55); }
   .tela { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; background:radial-gradient(ellipse at 50% 40%, rgba(255,43,61,.2), rgba(7,8,15,.9) 70%); gap:14px; z-index:5; overflow:auto; }
   .tela[hidden] { display:none; }
+  /* a logo (assets/logo, gerada por tools/logo/gerar-logo.py): grande, sem passar da largura nem roubar a altura da tela */
+  h1.logo { line-height:0; text-shadow:none; }
+  h1.logo img { display:block; width:min(92vw, 860px, 32vh * 2.99); height:auto; margin:-1vh auto 0; }
+  #creditos .logo-fim { display:block; width:min(86vw, 760px); height:auto; margin:0 auto 6vh; }
   h1 { margin:0; font-size:clamp(40px,10vw,84px); font-weight:900; letter-spacing:.06em; font-style:italic; color:var(--ouro); text-shadow:0 0 28px rgba(255,43,61,.8), 3px 3px 0 var(--vermelho); }
   h2 { margin:0; font-size:clamp(28px,7vw,52px); font-weight:900; color:var(--ouro); }
   p { margin:0; max-width:540px; line-height:1.5; opacity:.9; }
@@ -192,7 +196,7 @@
   @keyframes girar { 0%,20% { transform:rotate(0); } 50%,80% { transform:rotate(-90deg); } 100% { transform:rotate(0); } }
   @media (orientation: portrait) { .toque #girar { display:flex; } }
   /* telas iniciais cabem no celular deitado (altura pequena) */
-  @media (max-height: 520px) { .tela { gap:8px; padding:12px 24px; justify-content:safe center; } h1 { font-size:clamp(30px,9vh,56px); } h2 { font-size:clamp(24px,7vh,40px); } .tela p { font-size:13px; line-height:1.4; } button.principal { padding:10px 34px; font-size:16px; } }
+  @media (max-height: 520px) { .tela { gap:8px; padding:12px 24px; justify-content:safe center; } h1 { font-size:clamp(30px,9vh,56px); } h1.logo img { width:min(80vw, 33vh * 2.99); margin:-4px auto -2px; } h2 { font-size:clamp(24px,7vh,40px); } .tela p { font-size:13px; line-height:1.4; } button.principal { padding:10px 34px; font-size:16px; } }
 </style>
 </head>
 <body>
@@ -227,7 +231,7 @@
 </div>
 
 <div id="telaInicio" class="tela">
-  <h1>THE FLASH</h1>
+  <h1 class="logo"><img src="assets/logo/logo.webp" alt="THE FLASH" width="1800" height="602" decoding="async"></h1>
   <p>Uma cidade de 3,3 km de ponta a ponta. Comece no S.T.A.R. Labs, cumpra as missões, impeça os crimes que acontecem pela cidade, escale os prédios e recolha as esferas de energia.</p>
   <div class="teclas">
     <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>correr</span>
