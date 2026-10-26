@@ -37,7 +37,7 @@ await pagina.evaluate(() => { const R = window.__rel; R.crimes.atualizar(0, R.P,
 await pagina.waitForTimeout(20000);
 ok(await pagina.evaluate(() => !window.__rel.crimes.ativo), 'durante a história nenhum crime aparece sozinho');
 const pausa = await pagina.evaluate(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' })); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'p' })); return true; });
-await espera(() => !document.getElementById('pausa').hidden, null, 30000);
+await espera(() => !document.getElementById('telaPausa').hidden, null, 30000);
 const cap = await pagina.evaluate(() => ({ botoes: document.querySelectorAll('#capitulos button').length, texto: document.getElementById('capitulos').textContent }));
 ok(pausa && cap.botoes === 0 && /sozinha/.test(cap.texto), `a pausa não oferece capítulos durante a história ("${cap.texto.slice(0, 50)}…")`);
 
@@ -52,7 +52,7 @@ await abrirJogo('', { 'theflash.missoes.v2': { id: null }, 'theflash.viloes.v1':
 ok(await pagina.evaluate(() => window.__rel.missoes.livre && /Cidade livre/.test(document.getElementById('missaoNum').textContent)), 'história concluída: cidade livre');
 ok(await espera(() => !!window.__rel.crimes.ativo, null, 400000), 'na cidade livre os crimes aparecem sozinhos');
 await pagina.evaluate(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' })); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'p' })); });
-await espera(() => !document.getElementById('pausa').hidden, null, 30000);
+await espera(() => !document.getElementById('telaPausa').hidden, null, 30000);
 const n = await pagina.evaluate(() => document.querySelectorAll('#capitulos button.vencido').length);
 ok(n === 8, `na pausa, os 8 capítulos para jogar de novo (${n})`);
 ok(!erros.length, `sem erros no console (${erros.slice(0, 3).join(' | ')})`);
