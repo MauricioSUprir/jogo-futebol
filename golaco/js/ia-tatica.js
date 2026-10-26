@@ -444,12 +444,47 @@ export function blocoDoTime(m, t) {
     // atrás da referência e o meio–ataque caía para ~8 m: teste-forma)
     let d = MD.hypot(o.x - B.foco.x, o.z - B.foco.z);
     if (B.refTick >= 0 && B.ref[2 * o.vagaIdx] * lado > ub + 1) d += fp;
+    // (D6, item 23: quem é da linha de defesa paga IA_DEFESA.defesaPaga2 m também para cobrir, com a bola à frente da referência
+    // dele: com a cobertura de um defensor em 77% do tempo no meu campo, a linha de 4 abria — 9 m entre os 4 defensores,
+    // Metrica 3,5 — e o meio é quem cobre o 1º homem; 0 = como antes)
+    else if (B.refTick >= 0 && IA_DEFESA.defesaPaga2 && vagas[o.vagaIdx].grupo === 'def' && ub > B.ref[2 * o.vagaIdx] * lado + 3) d += IA_DEFESA.defesaPaga2;
     if (d < d2) { d2 = d; p2 = o; }
     if (o.id === B.p2) { at2 = o; dAt2 = d; }
   }
   if (at2 && at2 !== p2 && dAt2 < d2 + IA.trocaPressao) p2 = at2;
   B.p1 = p1 ? p1.id : -1;
   B.p2 = p2 ? p2.id : -1;
+  // a cobertura do volante (D6, item 23; TATICA.volanteCobre): sem a bola e com ela no meu campo, um defensor fora da linha —
+  // o 1º ou o 2º homem, ou a mais de fora m da altura dela — deixa a vaga; o meio-campista mais perto dela (com a referência
+  // atrás da bola, fora do 1º e do 2º homem) vai para ela, na altura da linha (sem isso, em 35% do tempo com a bola no meu campo
+  // o 4º mais fundo não era defensor — e estava longe: a linha de 4 abria 7–9 m, Metrica 3,5)
+  B.volante = -1;
+  const VC = TATICA.volanteCobre;
+  if (VC && f.fase === 'sem' && !naParada && B.refTick >= 0 && ub < 0) {
+    let uL = 0, nL = 0, buraco = -1, pior = VC.fora;
+    for (let q = 0; q < vagas.length; q++) if (vagas[q].grupo === 'def') { uL += B.ref[2 * q] * lado; nL++; }
+    if (nL >= 3) {
+      uL /= nL;
+      for (const o of js) {
+        if (o.time !== t || !ehLinha(o) || o.vagaIdx == null || vagas[o.vagaIdx].grupo !== 'def') continue;
+        const fora = o.id === B.p1 || o.id === B.p2 ? VC.fora + 1 : Math.abs(o.x * lado - uL);
+        if (fora > pior) { pior = fora; buraco = o.vagaIdx; }
+      }
+      if (buraco >= 0) {
+        const bz = B.ref[2 * buraco + 1];
+        let mel = null, dm = Infinity;
+        for (const o of js) {
+          if (o.time !== t || !ehLinha(o) || o.id === B.p1 || o.id === B.p2 || o.vagaIdx == null || vagas[o.vagaIdx].grupo !== 'mei') continue;
+          if (B.ref[2 * o.vagaIdx] * lado > ub) continue;   // (só quem tem a referência atrás da bola)
+          // (o de antes leva VC.hist m de vantagem: sem troca a cada tick)
+          const d = MD.hypot(o.x - uL * lado, o.z - bz) - (o.id === B.volAnt ? VC.hist : 0);
+          if (d < dm && d < VC.alcance) { dm = d; mel = o; }
+        }
+        if (mel) { B.volante = mel.id; B.volX = (uL + VC.frente) * lado; B.volZ = bz; }
+      }
+    }
+  }
+  B.volAnt = B.volante;
 
   // troca de fase: perdeu a bola → contrapressão dos que estavam perto (pesquisa §4.3: só com a perda
   // no campo adversário ou perto da lateral, e com gente perto — tantos ou mais que eles a ≤ raio m;
@@ -808,8 +843,12 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
   // colado no pé, teste-nao-passa)
   const mao = maoDoMeuGoleiro(m, j.time), dBola = MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z);
   const marca = MARCA_PERTO.has(r), perto = mao || dBola < TATICA.volta.bolaPerto || (marca && dBola < TATICA.pertoBola);
+  // (a linha que SOBE — o alvo à frente dela, no sentido do ataque — vira na hora, sem a virada parada nem o arco: recuando
+  // e mandada subir quando a bola volta, ela parava 0,5 s ou subia em arco e a armadilha do impedimento armava menos — no
+  // painel de 144, 1,16 → 0,99 e 1,23 → 1,06 impedimentos por partida com o D5; TATICA.linhaSobe, D6)
+  const sobe = TATICA.linhaSobe && r === 'linha' && lado !== 0 && (px - j.x) * lado > 0.5;
   // (a virada parada de quem marca, só com IA.viraParado.marca)
-  j.ia.viraTick = perto || (marca && !IA.viraParado.marca) ? -9 : m.tick;
+  j.ia.viraTick = perto || sobe || (marca && !IA.viraParado.marca) ? -9 : m.tick;
   const segurando = m.tick < it.seguraAte, VT = perto ? VOLTA_ANTES : TATICA.volta;
   if (S.volta && (VT.quieto || !it.quieto) && d < S.volta[0] + (segurando ? VT.folga : 0)) {
     const v = MD.hypot(j.vx, j.vz);
@@ -861,7 +900,7 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
     // recuava quando ele pegou a bola seguia ~1–2 s para a própria linha do gol)
     // (D5, item 22: abaixo de TATICA.arco m/s a virada grande também vai pelo giro — em arco, sem parar: virar de uma vez a
     // 1–2 m/s passava pelo zero e era o vai e volta e o anda-para-anda do teste-movimento; acima, o para() freia na linha)
-    const vArco = perto ? 0 : TATICA.arco, emArco = vArco > 0 && MD.hypot(j.vx, j.vz) < vArco && MD.hypot(j.vx, j.vz) > 0.5;
+    const vArco = perto || sobe ? 0 : TATICA.arco, emArco = vArco > 0 && MD.hypot(j.vx, j.vz) < vArco && MD.hypot(j.vx, j.vz) > 0.5;
     it.dir = (Math.abs(dA) > S.giro[4] && !emArco) || mao ? aD : it.dir + Math.max(-w, Math.min(w, dA));
     out.x = j.x + MD.cos(it.dir) * d; out.z = j.z + MD.sin(it.dir) * d;
   }
@@ -972,7 +1011,9 @@ function semBola(m, j, f) {
   // 7) referência (linha alinhada ou zona); o resto do recuo é o do alvoCalmo (abaixo)
   let tx = B.ref[2 * k], tz = B.ref[2 * k + 1];
   s.ramo = vaga.grupo === 'def' ? 'linha' : 'zona';
-  const za = B.zonaAdv[k];
+  // (a cobertura do volante: vai para a vaga do defensor que saiu, na altura da linha, como da linha)
+  if (j.id === B.volante) { tx = B.volX; tz = B.volZ; s.ramo = 'linha'; }
+  const za = j.id === B.volante ? -1 : B.zonaAdv[k];
   if (za >= 0) {
     for (const o of m.jogadores) {
       if (o.id !== za) continue;

@@ -1072,6 +1072,11 @@ export const TATICA = {
   volta: { folga: 3, quieto: true, bolaPerto: 3 },
   pertoBola: 12,              // m — D5: quem marca a menos disto da bola segue com a espera e a virada de antes
   arco: 2.5,                  // m/s — abaixo disto (e acima de 0,5) a virada grande do ponto calmo vai pelo giro, em arco (0 = de uma vez)
+  linhaSobe: true,           // a linha que sobe (alvo à frente) vira na hora, sem a virada parada nem o arco (D6, item 23; false = com elas)
+  // a cobertura do volante (D6, item 23): com a bola no meu campo e um defensor fora da linha (o 1º/2º homem ou a mais de `fora`
+  // m dela), o meio-campista mais perto da vaga (a até `alcance` m; o de antes com `hist` m de vantagem) vai para ela, `frente` m
+  // à frente da linha (null = desliga)
+  volanteCobre: { fora: 4, alcance: 20, hist: 2, frente: 1 },
   // olhar da IA sem a bola na partida (ia-tatica.js olhaBolaPartida): velocidade filtrada em tauVel s
   // (o limite do desvio do tronco) e o desvio girando no máximo giro rad/s (o tremor é > 1,5 rad/s)
   // (D5: giro 1,2 → 1,4 — de costas para a bola andando devagar 14,9 → 13,9% em 40 sementes, o tremor igual)
@@ -1094,8 +1099,10 @@ export const TATICA = {
   // (`respiro` s depois de uma recomposição acabada, a volta pela linha da bola espera)
   // (sprint só com urgência: bola a menos de `urgente` m do meio para o lado do meu gol, ou vindo para ele a mais
   // de `vUrgente` m/s)
+  // (D6, item 23: ligaOrganizado 15 → 8 e corre 11 → 6 — com a bola no meu terço só 3,2 de 10 ficavam atrás dela, Metrica
+  // 4,3–5,4 nos 4 times; quem estava à frente era, quase sempre, quem já voltava sem chegar)
   // (voltando, o ponto vai `marca` para o lado do gol do adversário que a zona dele reivindicou: acha o homem)
-  recomp: { liga: 8, ligaOrganizado: 15, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 11, urgente: 10, vUrgente: 4, lateral: 0.5, max: 10, pausa: 2, marca: 0.6 },
+  recomp: { liga: 8, ligaOrganizado: 8, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 6, urgente: 10, vUrgente: 4, lateral: 0.5, max: 10, pausa: 2, marca: 0.6 },
 };
 
 // IA sem a bola (plano 2.4; pesquisa §4). Por nível de pressão: [Baixa, Média, Alta].
@@ -1141,7 +1148,10 @@ export const IA_DEFESA = {
   linhaDePasse: { pressao: [false, false, true], alcance: 25, ponto: 0.65, frente: 6, sombra: [0.35, 0.55, 0.7], sombraDist: 1.2, sombraMin: 4 },
   individualArea: 20,         // m do meu gol: dentro disso, marcação individual dos atacantes na área
   frentePaga: 7,              // m a mais na distância ao condutor para ser o 1º homem vindo da frente da bola
-  defesaPaga: 4,              // m a mais para quem é da linha de defesa, com a bola à frente da referência dele
+  defesaPaga: 8,              // m a mais para quem é da linha de defesa, com a bola à frente da referência dele (D6: 4 → 8)
+  defesaPaga2: 6,             // m a mais, o mesmo, para ser o 2º homem (a cobertura; D6, item 23; 0 = como antes)
+  // (D6: com a bola no meu campo o 1º homem era um defensor em 46% do tempo e a cobertura em 77% — a linha de 4 abria; o meio
+  // aperta e cobre, a linha segura: 1º 46 → 27%, 2º 77 → 67%)
   gatilhos: { janela: 1.5, passeTras: 3, toquePesado: 1.5, costas: 1.92, lateral: 27, alcance: 8, recepcao: true }, // s, m, m, rad (110°), |z|, m do 1º homem ao condutor; recepcao = a recepção de passe é gatilho
   transOf: 3,                 // s de transição ofensiva depois da retomada
   // gatilho de ESTADO "condutor lento" (pedido do dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola"):

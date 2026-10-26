@@ -495,3 +495,69 @@ em ~425 chutes de 3 conjuntos de sementes, base × D5), os duelos e a folga da c
 própria base com 16 partidas), o B3 do `teste-faltas-sentido` (48 partidas do 'dribla': pênaltis 0,35 × 0,35 e vermelhos
 0,19 × 0,23 por partida) e o passe certo do `teste-intercepta`. Três cenas de cartão de estados novos (o IFAB, o capitão do A1
 e o cartão atrás do punido) eram defeitos do planejamento da cena, corrigidos (CONTRATOS, "D5").
+
+## 8. D6 — a forma sem a bola (item 23)
+
+A medida é o `teste-forma` (IA × IA, Golaço 4-3-3 × Ventania 4-2-3-1, 3 min por semente). As metas que reprovavam: a linha de 4
+no 1º terço (6,9 m; ≤ 5), a altura da linha por faixa de 5 m da bola contra a Metrica (|Δ| ≤ 2,5 m) e "≥ 8 de 10 atrás da bola,
+na média".
+
+### 8.1 O que os dados reais dizem (Metrica, Sample Game 1 e 2; `tools/pesquisa/analise_metrica.py`)
+
+| Medida | jogo 1, time 0 | jogo 1, time 1 | jogo 2, time 0 | jogo 2, time 1 |
+|---|---|---|---|---|
+| atrás da bola, 1º / 2º / 3º terço | 4,97 / 7,92 / 8,86 | 4,27 / 7,03 / 8,91 | 5,39 / 8,09 / 8,91 | 5,35 / 7,81 / 8,41 |
+| linha de 4 (mediana), 1º / 2º / 3º | 3,3 / 3,0 / 6,5 | 3,9 / 4,8 / 8,0 | 4,0 / 4,7 / 9,7 | 3,2 / 3,6 / 9,9 m |
+
+- A "média ≥ 8" não tinha fonte e ficava acima do real (a média dos 2 jogos é 7,36), e dependia de quanto tempo a bola passa
+  em cada terço. A meta nova é por terço, com ~0,25 de folga sobre o pior dos 4 times pela amostra: ≥ 4,0 / 6,8 / 8,2.
+- Faixa por faixa da bola no meu campo (a 22–42 m do gol), o jogo tinha 1,5–2,7 de 10 a menos atrás da bola que a Metrica.
+  A linha de 4 abria 6,5–9 m, contra 3,5–4,3 m no real.
+
+### 8.2 O diagnóstico (16 sementes, bola de −30 a −10 m do meio)
+
+- A linha planejada era reta (1,3 m entre os alvos crus dos 4 defensores), mas as posições ficavam a 9 m.
+- Com a bola no meu campo fora da área, o 1º homem era um defensor em 46% do tempo e a cobertura em 77%. O defensor que sai
+  deixa a vaga, e em 35% do tempo o 4º mais fundo já não era defensor.
+- Quem ficava à frente da bola no meu terço era, quase sempre, quem já voltava ('recompoe') sem chegar: a recomposição do jogo
+  organizado só ligava com 15 m à frente do alvo, e o sprint só com 11 m de atraso.
+- Com a bola no campo de lá (15–25 m do meio), a referência da linha estava certa (44,0 m do gol), mas o zagueiro mais fundo
+  ficava 2,1 m abaixo dela: quieto até 2,6 m do alvo e andando devagar até 4,5 m.
+
+### 8.3 A triagem (16–32 sementes; 24 no teste)
+
+| Variação | atrás 1º terço | linha de 4 1º terço | O que ficou |
+|---|---|---|---|
+| D5 | 3,2 | 6,9 m | — |
+| a zona sem desfazer a forma / a volta do meio sem o teto do trote / a linha unida / o acerto da linha | ≤ +0,3 | sem mudança ou pior | SAÍRAM |
+| a linha segura (defesaPaga 8, defesaPaga2 6) | igual | 9,0 → 8,4 m (só os defensores) | ENTROU |
+| a cobertura do volante | +0,6–0,8 por faixa | 9,0 → 7,5 m na faixa −20 | ENTROU |
+| a recomposição (8 m; sprint com 6 m) | +0,5–1,0 por faixa | igual | ENTROU |
+| a linha que sobe junta (correr para alcançar a linha) / frente recuando inteira / folgas menores da linha | ruído | ruído | SAÍRAM |
+
+### 8.4 Antes → depois (`teste-forma`, 24 sementes)
+
+| Medida | D5 | D6 | Meta |
+|---|---|---|---|
+| atrás da bola por terço | 3,8 / 8,0 / 9,0 | 4,2 / 8,1 / 8,9 | ≥ 4,0 / 6,8 / 8,2 |
+| linha de 4, 1º terço | 6,9 m | 5,1 m | ≤ 5 m |
+| altura da linha por faixa (maior Δ) | 2,7 m | 2,1 m | ≤ 2,5 m |
+
+Painel de 144 (D5 → D6), sementes 1001–1144 e 3001–3144:
+
+| Medida | 1001 | 3001 | Meta |
+|---|---|---|---|
+| gols por partida | 1,64 → 1,63 | 1,73 → 1,69 | 2,3–3,5 |
+| chutes de fora da área | 36,2 → 37,1% | 34,7 → 42,0% | 35–40% |
+| gols de fora da área | 11,7 → 17,4% | 16,2 → 21,5% | 12–18% |
+| impedimentos por partida | 0,99 → 1,01 | 1,06 → 0,94 | ≥ 1 |
+| goleiro, 6 a 16,5 m | 57,0 → 63,0% | 60,0 → 59,1% | 55–60% |
+
+A defesa mais compacta empurra o ataque para fora da área (chutes de fora ~39,5%, gols de fora ~19,5% nas duas amostras); os
+gols por partida não mudam. O impedimento fica em ~1,0: a linha que sobe na hora devolvia 1,19, mas a linha que segura come uma
+parte. O volume e a mistura dos chutes são da categoria E.
+
+### 8.5 Limites e o que fica
+
+- A linha de 4 no 1º terço passa de 6,9 para 5,1 m e o `teste-forma` segue no etapa3: falta 0,1 m na mediana de 24 sementes.
+- O "atrás da bola" no 1º terço (4,2) fica abaixo do pior time real (4,27): o que falta é com a bola a menos de 20 m do gol.

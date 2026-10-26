@@ -10,7 +10,9 @@
 //  - linha de 4: espalhamento (máx − mín) ≤ 5 / ≤ 5 / ≤ 10 m (Metrica 3,5 / 4,0 / 8,4);
 //  - defesa–meio 9–13 m e meio–ataque 11–15 m com a bola no meio (Forcher 2024: 10,2 e 13,2), com as
 //    linhas da forma SEM a bola (o 4-3-3 defende em 4-1-4-1: a frente é só o centroavante);
-//  - ≥ 8 de 10 atrás da bola, defendendo (média);
+//  - atrás da bola, defendendo, por terço ≥ 4,0 / 6,8 / 8,2 de 10 (D6, item 23: a Metrica por time — os 4 times dos 2 jogos —
+//    dá 4,27–5,39 / 7,03–8,09 / 8,41–8,91, com ~0,25 de folga pela amostra de 8 sementes; a "média ≥ 8" de antes não tinha fonte
+//    e ficava acima do real — a média da Metrica é 7,36 — e dependia de quanto tempo a bola passa em cada terço);
 //  - marcação individual (ramo 'marca') ≤ 25% do tempo de quem defende, com a bola fora da área;
 //  - com a bola: comprimento 30–39 m e largura 44–54 m (Metrica 33,9 × 48,3), área com ÷ sem 1,3–2,0
 //    (Metrica 1,48). A forma com a bola é a do apoio (Parte 3): sem ela, só informa.
@@ -25,7 +27,7 @@
 //   node tools/teste-forma.mjs [--antes] [--js <pasta>] [--sementes N] [--base K]
 import * as T from './lib/partida-tatica.mjs';
 
-const a = T.argumentos(8);
+const a = T.argumentos(24);
 const L = await T.carregar(a.js);
 const P3 = T.parte3Presente(L);
 const ATAQUE = P3 ? 'jogo' : 'substituto'; // sem a Parte 3, o ataque substituto dos testes (lib/partida-tatica.mjs)
@@ -77,8 +79,8 @@ for (const [c, h] of METRICA_ALTURA) {
 reg('altura da linha por faixa de 5 m da bola × Metrica', `${nFaixas} faixas; maior Δ ${fmt(piorFaixa)} m em ${faixaTxt}`, '|Δ| ≤ 2,5 m (faixas com ≥ 100 amostras)', Math.abs(piorFaixa) <= 2.5 && nFaixas >= 8);
 const dm = med('sem', 2, 'defMeio'), ma = med('sem', 2, 'meioAtaque');
 reg('defesa–meio / meio–ataque sem a bola (bola no meio)', `${fmt(dm)} / ${fmt(ma)} m`, '9–13 / 11–15 m', dentro(dm, [9, 13]) && dentro(ma, [11, 15]));
-const atras = media(R.atras);
-reg('de 10 atrás da bola, defendendo (média)', `${fmt(atras)}  (por terço ${[1, 2, 3].map(t => fmt(media(R.atrasT[t]))).join(' / ')})`, '≥ 8', atras >= 8);
+const atras = media(R.atras), atrasT = [1, 2, 3].map(t => media(R.atrasT[t])), ATRAS_MIN = [4.0, 6.8, 8.2];
+reg('de 10 atrás da bola, defendendo, por terço', `${atrasT.map(x => fmt(x)).join(' / ')}  (média ${fmt(atras)})`, '≥ 4,0 / 6,8 / 8,2 (Metrica, 4 times: 4,3–5,4 / 7,0–8,1 / 8,4–8,9)', atrasT.every((x, i) => x >= ATRAS_MIN[i]));
 const marca = 100 * R.marca / R.defN;
 reg('marcação individual de quem defende (bola fora da área)', `${fmt(marca)}%`, '≤ 25%', marca <= 25);
 // com a bola (Parte 3)
