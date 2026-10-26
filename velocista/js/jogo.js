@@ -463,6 +463,7 @@ addEventListener('keydown', (e) => {
   else if (k === 'h') mundo.T = (mundo.T + 0.08) % 1;
   else if (k === 'enter' && J.modo === 'menu' && !el.btnJogar.hidden) reiniciar();
   if (J.modo === 'cena') { if (k === 'enter' || k === ' ' || k === 'f') historia.avancar(); else if (k === 'escape') historia.pular(); }
+  else if (J.modo === 'creditos' && (k === 'enter' || k === 'escape' || k === ' ')) fecharCreditos();
 });
 addEventListener('keyup', (e) => teclas.delete(e.key.toLowerCase()));
 addEventListener('blur', () => teclas.clear());
@@ -838,7 +839,8 @@ function passoMissoes(dt) {
     }
   }
   const feita = missoes.avaliar({ sala, v: Math.hypot(P.vx, P.vz), y: P.y, noChao: P.noChao, portaisFeitos: rp?.feito,
-    finalVencido: viloes.vencido('final'), tunel: (J.tunelT || 0) / 5, voltouDoPassado: !!J.voltouDoPassado });
+    finalVencido: viloes.vencido('final'), tunel: (J.tunelT || 0) / 5, voltouDoPassado: !!J.voltouDoPassado,
+    savitarVencido: viloes.vencido('savitar'), devoeVencido: viloes.vencido('devoe') });
   if (feita) {
     avisar(feita.titulo, 'Missão concluída', 'missao'); historia.missao(feita.id, 'fecha');
     const abrir = () => { if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); };
@@ -900,15 +902,44 @@ const focosCena = () => {
 const GANCHOS_CENA = {
   'depois-tunel': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, depois: () => { tempo.tunel = false; J.corridaCena = false; irAoPassado(); } },
   'volta-tunel': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, depois: () => { tempo.tunel = false; J.corridaCena = false; } },
+  // o fim: o herói entra no Núcleo (túnel em volta dele), volta, e vêm o epílogo e os créditos
+  'depois-nucleo': {
+    aoAcao: (a) => { if (a === 'nucleo') { tempo.tunel = true; J.corridaCena = true; } if (a === 'volta') { tempo.tunel = false; J.corridaCena = false; tempo.explodir(); } },
+    depois: () => { tempo.tunel = false; J.corridaCena = false; if (historia.viu('cena:depois-nucleo')) mostrarCreditos(); },
+  },
 };
 /** cena com o jogo parado; quando acaba (ou se já foi vista), `depois` */
 function rodarCena(id, foco, depois, opc) {
   P.vx = P.vz = 0; teclas.clear(); stick.x = stick.y = 0; toque.correr = toque.vibrar = false;
   J.modo = 'cena';
   const g = GANCHOS_CENA[id]; g?.antes?.();
-  historia.cena(id, foco, () => { J.modo = 'jogando'; g?.depois?.(); depois?.(); }, opc);
+  historia.cena(id, foco, () => { J.modo = 'jogando'; g?.depois?.(); depois?.(); }, { ...(opc || {}), aoAcao: opc?.aoAcao || g?.aoAcao });
 }
 /** a noite do acidente: o relógio para à meia-noite, a coluna do Núcleo acende e o Reverso do passado espera no laboratório */
+// ---------- créditos (depois do epílogo) ----------
+const CREDITOS = [
+  ['THE FLASH', ''], ['Uma história em quatro atos', ''],
+  ['Personagens', 'Caitlin · Cisco · Zoom · Flash Reverso · Capitão Frio · Onda Térmica · Mago do Tempo · Savitar · DeVoe'],
+  ['', 'Nomes inspirados nos personagens da DC. Trajes, rostos, cenários e enredo deste jogo são desenhos próprios. Jogo de fã, sem fins lucrativos.'],
+  ['Corpos e rostos', 'Microsoft Rocketbox Avatar Library (licença MIT)'],
+  ['Motor 3D', 'three.js (licença MIT)'], ['Fontes', 'Rajdhani e Inter (SIL Open Font License)'],
+  ['Feito com', 'Claude'], ['', ''], ['Obrigado por jogar', 'A cidade continua precisando de você: todos os capítulos podem ser jogados de novo pela pausa.'],
+];
+function mostrarCreditos() {
+  let c = document.getElementById('creditos');
+  if (!c) {
+    c = document.createElement('div'); c.id = 'creditos';
+    c.innerHTML = `<div class="rolo">${CREDITOS.map(([t, d]) => `<section>${t ? `<h3>${t}</h3>` : ''}${d ? `<p>${d}</p>` : ''}</section>`).join('')}</div><button type="button" class="pular">Fechar</button>`;
+    document.body.appendChild(c);
+    c.addEventListener('pointerdown', (e) => { e.stopPropagation(); fecharCreditos(); });
+  }
+  c.hidden = false; c.classList.remove('rola'); void c.offsetWidth; c.classList.add('rola');
+  J.modo = 'creditos'; J.creditosT = 0;
+}
+function fecharCreditos() {
+  const c = document.getElementById('creditos'); if (!c || c.hidden) return;
+  c.hidden = true; J.modo = 'jogando'; avisar('A cidade é sua', 'Patrulha livre', 'ok');
+}
 function irAoPassado(silencioso = false) {
   if (tempo.epoca === 'passado') return;
   J.tAntes = mundo.T; mundo.T = 0.02; tempo.prepararReverso(); tempo.definirEpoca('passado');
@@ -939,6 +970,8 @@ function eventoVilao(ev) {
   else if (ev.tipo === 'captura') historia.provocar(id, ev.n);
   else if (ev.tipo === 'luta') historia.radio(`luta-${id}`);
   else if (ev.tipo === 'fase2') historia.radio(`fase2-${id}`, { sempre: true });
+  else if (ev.tipo === 'armadura') historia.radio(`armadura-${id}`, { sempre: true });
+  else if (ev.tipo === 'escudo-caiu') historia.radio(`escudo-${id}`, { sempre: true });
   else if (ev.tipo === 'derrota') historia.radio(`derrota-${id}`, { sempre: true });
   else if (ev.tipo === 'escapou') historia.radio(`escapou-${id}`, { sempre: true });
   else if (ev.tipo === 'derrotado') rodarCena(`derrotado-${id}`, focosVilao(), () => viloes.continuar());

@@ -44,6 +44,20 @@ Object.assign(PERFIS, {
     vida: 110, esquiva: 0.55, dano: 0.14, telegrafo: 0.95, recupera: 1.5, rodeia: [1.2, 2.1], distancia: 14, regen: 0.012, fase2: false,
   },
 });
+// Ato 3 e 4: Savitar (velocista de armadura — a armadura tem de quebrar antes da vida) e DeVoe, o Pensador (não corre:
+// flutua num disco, arremessa carros com a mente, solta um pulso que só quem pula escapa, cria cópias de si mesmo e se
+// esconde atrás de um escudo alimentado por três torres — derrube as torres; na metade da vida ele as reergue)
+Object.assign(PERFIS, {
+  savitar: {
+    nome: 'SAVITAR', titulo: 'Savitar', traje: 'savitar', aderecos: true, raio: 'azul', cor: '#9fdcff', corRaio: [0.7, 1.7, 2.8],
+    vida: 140, capturas: 3, vFuga: 58, vCansado: 36, folego: 4.5, cansaco: 2.4, armadura: 70,
+    rodeia: [1.1, 2.0], telegrafo: 0.55, recupera: 1.15, dano: 0.14, esquiva: 0.8, raios: true, fase2: true, regen: 0.012,
+  },
+  devoe: {
+    nome: 'DEVOE', titulo: 'DeVoe', pessoa: 'devoe', arma: 'mente', cor: '#c79bff', corRaio: [1.7, 0.9, 2.7],
+    vida: 160, esquiva: 0.35, dano: 0.13, telegrafo: 0.9, recupera: 1.6, rodeia: [1.3, 2.2], distancia: 15, regen: 0.01, fase2: true, flutua: 1.3,
+  },
+});
 export const CAPITULOS = [
   { id: 'zoom', titulo: 'Capítulo 1 — Zoom', viloes: ['zoom'], perseguicao: true, texto: 'Um velocista de preto está aterrorizando a cidade. Encontre o Zoom e persiga-o.' },
   { id: 'frio', titulo: 'Capítulo 2 — Capitão Frio', viloes: ['frio'], perseguicao: false, lugar: 'cidade', missoes: 9, texto: 'Um quarteirão do centro congelou. Encontre o Capitão Frio.' },
@@ -51,6 +65,8 @@ export const CAPITULOS = [
   { id: 'mago', titulo: 'Capítulo 4 — Mago do Tempo', viloes: ['mago'], perseguicao: false, lugar: 'cidade', missoes: 13, texto: 'Uma tempestade verde se formou sobre a cidade. Encontre o Mago do Tempo.' },
   { id: 'reverso', titulo: 'Capítulo 5 — Flash Reverso', viloes: ['reverso'], perseguicao: true, missoes: 14, texto: 'O Zoom era só o começo. Quem arquitetou tudo foi o Flash Reverso. Alcance-o.' },
   { id: 'final', titulo: 'Batalha final', viloes: ['zoom', 'reverso'], perseguicao: false, texto: 'Os dois voltaram juntos e esperam por você em frente ao S.T.A.R. Labs.' },
+  { id: 'savitar', titulo: 'Capítulo 6 — Savitar', viloes: ['savitar'], perseguicao: true, missoes: 18, texto: 'Algo saiu do túnel do tempo junto com você. Encontre o Savitar.' },
+  { id: 'devoe', titulo: 'Capítulo 7 — DeVoe', viloes: ['devoe'], perseguicao: false, missoes: 19, texto: 'O Pensador espera em frente ao S.T.A.R. Labs. Ele quer o Núcleo.' },
 ];
 const DANO = { soco: 5, gancho: 9, raio: 14, ciclone: 18, sonico: 28 };
 const CHAVE = 'theflash.viloes.v1';
@@ -113,20 +129,21 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     v.grupo.visible = false; cena.add(v.grupo);
     if (v.modelo) v.grupo.add(v.modelo.grupo);
     else criarHeroi({ aniso, lod: mobile ? 1 : 0, mobile, traje: perf.traje, pessoa: perf.pessoa }).then((m) => {
-      if (perf.arma) m.adereco = colocarAderecos(id, m);
+      if (perf.arma || perf.aderecos) m.adereco = colocarAderecos(id, m);
       modelos[id] = m; v.modelo = m; v.grupo.add(m.grupo); m.grupo.traverse((o) => { if (o.isMesh) o.castShadow = !mobile; }); aoModelo(id, m);
     }).catch((e) => console.warn('vilão sem corpo', e));
     // aviso da investida: uma faixa no chão do vilão até depois do herói
     v.aviso = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, 0.5), new THREE.MeshBasicMaterial({ color: new THREE.Color(...perf.corRaio), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
     v.aviso.visible = false; cena.add(v.aviso);
     v.alvejavel = () => v.estado === 'perseguicao' || (v.estado === 'luta' && v.vida > 0);
+    if (perf.arma === 'mente') prepararCopias();
     v.golpe = (tipo, P, info) => receberGolpe(v, tipo, P, info);
     return v;
   }
   function soltarVilao(v) {
     combate.removerAlvo(v); v.grupo.visible = false; v.aviso.visible = false;
     if (v.modelo) v.grupo.remove(v.modelo.grupo);
-    cena.remove(v.grupo, v.aviso); v.raios?.dispose();
+    cena.remove(v.grupo, v.aviso); v.raios?.dispose(); limparDevoe(v);
     if (v.efx) for (const m of Object.values(v.efx)) { cena.remove(m); m.material.dispose(); }
   }
 
@@ -176,6 +193,8 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     const k = 1 - FACIL * Math.min(3, C.derrotas);
     for (const v of C.viloes) {
       v.facil = k; v.ataques = 0; if (v.efx) esconderEfeitos(v);
+      v.armadura = v.perf.armadura || 0;
+      if (v.perf.arma === 'mente') { limparDevoe(v); criarTorres(v); }
       v.estado = 'luta'; v.acao = 'rodeia'; v.at = rnd(...v.perf.rodeia) * (C.viloes.length > 1 ? 1.4 : 1); v.vida = v.perf.vida; v.fase2 = false; v.vx = v.vz = 0;
     }
     avisar(C.viloes.length > 1 ? 'Derrote os dois' : C.viloes[0].perf.titulo, 'Luta', C.viloes.length > 1 ? 'reverso' : C.viloes[0].id);
@@ -183,7 +202,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
   }
 
   // ---------- golpes do herói nos vilões (chamado pelo combate) ----------
-  function receberGolpe(v, tipo, P) {
+  function receberGolpe(v, tipo, P, info) {
     if (v.estado === 'perseguicao') { capturar(v, P); return true; }
     if (v.estado !== 'luta' || v.vida <= 0) return false;
     const vulneravel = v.acao === 'recupera' || v.acao === 'atordoado';
@@ -191,12 +210,25 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       const esp = v.perf.esquiva * (tipo === 'ciclone' || tipo === 'sonico' ? 0.6 : tipo === 'raio' ? 0.8 : 1) * (v.fase2 ? 1.04 : 1) * (v.facil ?? 1);
       if (Math.random() < esp) { esquivar(v, P); return false; }
     }
+    if (v.perf.arma === 'mente' && v.torres?.some((t) => t.vida > 0)) { esquivar(v, P); eventos.push({ tipo: 'escudo', id: v.id }); return false; }   // DeVoe: o escudo das torres segura tudo
     const dano = (DANO[tipo] || 5) * (vulneravel ? 1 : 0.7);
+    if (v.armadura > 0) {
+      // Savitar: a armadura apanha primeiro (os especiais racham mais); quebrada, a vida fica aberta
+      v.armadura = Math.max(0, v.armadura - dano * (info?.especial || (tipo !== 'soco' && tipo !== 'gancho') ? 1.5 : 1));
+      fx.clarao(v.x, v.y + 1.3, v.z, 1.8, 0.14);
+      for (let i = 0; i < 3; i++) fx.raio(v.x, v.y + rnd(0.8, 1.7), v.z, v.x + rnd(-1.5, 1.5), v.y + rnd(0.5, 2.2), v.z + rnd(-1.5, 1.5), { vida: 0.15, desvio: 0.3, r: 2.4, g: 2.4, b: 2.6 });
+      if (v.armadura <= 0) { fx.onda(v.x, v.y, v.z, 8, 0.5); combate.hitstop = 0.15; avisar('A armadura quebrou', v.perf.titulo, 'ok'); eventos.push({ tipo: 'armadura', id: v.id }); }
+      if (tipo !== 'soco' || !vulneravel) { v.acao = 'atordoado'; v.at = 0.3; }
+      return true;
+    }
     v.vida = Math.max(0, v.vida - dano);
     P.energia = Math.min(1, P.energia + 0.04);                 // acertar o vilão devolve energia para os especiais
     fx.clarao(v.x, v.y + 1.3, v.z, 2.2, 0.18);
     if (tipo !== 'soco' || !vulneravel) { v.acao = 'atordoado'; v.at = tipo === 'soco' ? 0.35 : 0.7; }
-    if (v.perf.fase2 && !v.fase2 && v.vida < v.perf.vida * 0.5) { v.fase2 = true; avisar(`${v.perf.titulo} acelerou`, 'Cuidado', v.id); eventos.push({ tipo: 'fase2', id: v.id }); }
+    if (v.perf.fase2 && !v.fase2 && v.vida < v.perf.vida * 0.5) {
+      v.fase2 = true; eventos.push({ tipo: 'fase2', id: v.id });
+      if (v.perf.arma === 'mente') { criarTorres(v); avisar('Ele reergueu as torres', 'DeVoe', 'devoe'); } else avisar(`${v.perf.titulo} acelerou`, 'Cuidado', v.id);
+    }
     if (v.vida <= 0) derrotar(v);
     return true;
   }
@@ -390,7 +422,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
         if (v.perto > 0.7) { v.acao = 'empurra'; v.at = 0.4; v.perto = 0; break; }
         if (v.at <= 0) {
           v.ataques = (v.ataques || 0) + 1;
-          v.golpeArma = pf.arma === 'tempo' && v.ataques % 3 === 0 ? 'tornado' : pf.arma;
+          v.golpeArma = pf.arma === 'tempo' && v.ataques % 3 === 0 ? 'tornado' : pf.arma === 'mente' ? ['carro', 'pulso', 'carro', 'ilusao'][v.ataques % 4] : pf.arma;
           v.acao = 'prepara'; v.at = pf.telegrafo * (v.golpeArma === 'tornado' ? 1.2 : 1);
           const vh = Math.hypot(P.vx, P.vz), ad = Math.min(8, vh * 0.25) / (vh || 1);   // o raio e o tornado miram onde o herói vai estar (até 8 m à frente)
           v.alvo = { x: P.x + P.vx * ad, z: P.z + P.vz * ad };
@@ -404,8 +436,12 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
         const g = v.golpeArma;
         if (g === 'gelo') { e.faixa.visible = true; e.faixa.position.set(v.x, (chaoY || 0) + 0.08, v.z); e.faixa.rotation.y = v.mira; e.faixa.scale.set(1.6, 1, 28); e.faixa.material.opacity = op; }
         else if (g === 'fogo') { e.cone.visible = true; e.cone.position.set(v.x, (chaoY || 0) + 0.08, v.z); e.cone.rotation.y = v.mira; e.cone.scale.setScalar(11); e.cone.material.opacity = op * 0.8; }
-        else {
-          const r = g === 'tornado' ? 3.2 : 2.6;
+        else if (g === 'pulso' || g === 'ilusao') {
+          e.anel.visible = true; e.anel.position.set(v.x, (chao ? chao(v.x, v.z, v.y) : 0) + 0.08, v.z); e.anel.scale.setScalar(1 + 5 * k); e.anel.material.opacity = op;
+          if (Math.random() < dt * 10) fx.raio(v.x, v.y + 1.7, v.z, v.x + rnd(-2, 2), v.y + rnd(1, 3), v.z + rnd(-2, 2), { vida: 0.12, desvio: 0.4, r: pf.corRaio[0], g: pf.corRaio[1], b: pf.corRaio[2] });
+        } else {
+          const r = g === 'tornado' ? 3.2 : g === 'carro' ? 3.4 : 2.6;
+          if (g === 'carro') carroNoAr(v, k);
           if (g !== 'tornado') v.alvo = { x: lerp(v.alvo.x, P.x, Math.min(1, dt * 2)), z: lerp(v.alvo.z, P.z, Math.min(1, dt * 2)) };
           const y = (chao ? chao(v.alvo.x, v.alvo.z, P.y + 2) : 0) + 0.08;
           e.anel.visible = e.miolo.visible = true; e.anel.position.set(v.alvo.x, y, v.alvo.z); e.miolo.position.copy(e.anel.position);
@@ -451,7 +487,8 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     }
     v.x += v.vx * dt; v.z += v.vz * dt;
     if (colide) { const r = colide(v.x, v.z, v.y); v.x = r.x; v.z = r.z; }
-    v.y = chao ? chao(v.x, v.z, v.y + 1) : 0;
+    v.y = (chao ? chao(v.x, v.z, v.y + 1) : 0) + (pf.flutua ? pf.flutua + 0.15 * Math.sin(v.t * 1.7) : 0);
+    if (pf.arma === 'mente') passoDevoe(v, dt, P);
     const alvoH = v.acao === 'prepara' || v.acao === 'dispara' ? v.mira ?? Math.atan2(dx, dz) : Math.atan2(dx, dz);
     if (v.acao !== 'caido') v.h += ang(alvoH - v.h) * Math.min(1, dt * 10);
   }
@@ -480,7 +517,9 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     } else if (g === 'tornado') {
       const t = novoPerigo('tornado', v.alvo.x, v.alvo.z, 1, 5, [0.55, 1.4, 0.8], 0.28, GEO.tornado);
       t.mesh.position.y -= 0.06;
-    }
+    } else if (g === 'carro') lancarCarro(v);
+    else if (g === 'pulso') { const p = novoPerigo('pulso', v.x, v.z, 1, 1.7, v.perf.corRaio, 0.75, GEO.anel); p.y0 = v.y; p.acertou = false; }
+    else if (g === 'ilusao') criarCopias(v, P);
   }
   /** o que ficou no chão: gelo (deixa lento), fogo (queima), tornado (puxa e machuca no centro) */
   function passoPerigos(dt, P) {
@@ -488,7 +527,14 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     for (let i = perigos.length - 1; i >= 0; i--) {
       const p = perigos[i]; p.t += dt;
       const fim = Math.min(1, (p.vida - p.t) / 0.6), d = Math.hypot(P.x - p.x, P.z - p.z);
-      if (p.tipo === 'tornado') {
+      if (p.tipo === 'pulso') {
+        // o anel do pulso mental se abre a 18 m/s: quem está no chão quando ele passa apanha e fica tonto
+        p.r = 1 + 18 * p.t; p.mesh.scale.setScalar(p.r); p.mesh.material.opacity = p.op * fim;
+        const dp = Math.hypot(P.x - p.x, P.z - p.z);
+        if (!p.acertou && Math.abs(dp - p.r) < 1.3 && noChao && !P.vibrando && !combate.intocavel) { p.acertou = true; ferirSemEmpurrar(P, 0.11); P.vx *= 0.15; P.vz *= 0.15; fx.clarao(P.x, P.y + 1.2, P.z, 2.4, 0.2); }
+      } else if (p.tipo === 'carro') {
+        voarCarro(p, dt, P, noChao);
+      } else if (p.tipo === 'tornado') {
         const dx = P.x - p.x, dz = P.z - p.z, n = d || 1;
         p.x += (dx / n) * 3.2 * dt; p.z += (dz / n) * 3.2 * dt;                 // anda atrás do herói
         p.mesh.position.x = p.x; p.mesh.position.z = p.z; p.mesh.rotation.y += dt * 6;
@@ -511,6 +557,147 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       if (p.t >= p.vida) { cena.remove(p.mesh); p.mesh.material.dispose(); perigos.splice(i, 1); }
     }
     if (C.lento > 0) C.lento -= dt;
+  }
+
+  // ---------- DeVoe: torres do escudo, carros arremessados e cópias ----------
+  const GEO_TORRE = new THREE.CylinderGeometry(0.45, 0.7, 5, 12).translate(0, 2.5, 0), GEO_TOPO = new THREE.IcosahedronGeometry(0.55, 1);
+  const GEO_FEIXE = new THREE.CylinderGeometry(0.06, 0.06, 1, 6, 1, true).rotateX(Math.PI / 2).translate(0, 0, 0.5);
+  const GEO_CARRO = new THREE.BoxGeometry(1.9, 1.3, 4.2);
+  const vA = new THREE.Vector3(), vB = new THREE.Vector3();
+  function criarTorres(v) {
+    for (const t of v.torres || []) apagarTorre(t, true);
+    v.torres = [];
+    const c = v.perf.corRaio;
+    for (let k = 0; k < 3; k++) {
+      const a = (k / 3) * Math.PI * 2 + 0.4, x = v.x + Math.cos(a) * 14, z = v.z + Math.sin(a) * 14, y = chao ? chao(x, z, 3) : 0;
+      const g = new THREE.Group(); g.position.set(x, y, z);
+      const mC = new THREE.MeshStandardMaterial({ color: 0x2a2f38, metalness: 0.85, roughness: 0.3 });
+      const mL = new THREE.MeshBasicMaterial({ color: new THREE.Color(...c), toneMapped: false });
+      const corpo = new THREE.Mesh(GEO_TORRE, mC); corpo.castShadow = !mobile; g.add(corpo);
+      const topo = new THREE.Mesh(GEO_TOPO, mL); topo.position.y = 5.4; g.add(topo);
+      const feixe = new THREE.Mesh(GEO_FEIXE, new THREE.MeshBasicMaterial({ color: new THREE.Color(...c), transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+      cena.add(g, feixe);
+      const t = { x, z, y, vida: 4, g, feixe, topo, mats: [mC, mL, feixe.material] };
+      t.alvo = { extra: true, x, y: y + 1, z, alvejavel: () => t.vida > 0, golpe: (tipo, P, info) => golpeTorre(v, t, tipo, info) };
+      combate.registrarAlvo(t.alvo); v.torres.push(t);
+    }
+    if (!v.escudo) { v.escudo = new THREE.Mesh(new THREE.SphereGeometry(1.5, 24, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color(...c), transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })); cena.add(v.escudo); }
+  }
+  function golpeTorre(v, t, tipo, info) {
+    if (t.vida <= 0) return false;
+    t.vida -= info?.especial || (tipo !== 'soco' && tipo !== 'gancho') ? 4 : 1.4;
+    fx.clarao(t.x, t.y + 3, t.z, 2.5, 0.18);
+    if (t.vida <= 0) {
+      apagarTorre(t);
+      fx.onda(t.x, t.y, t.z, 8, 0.5); combate.hitstop = 0.1;
+      const c = v.perf.corRaio; for (let i = 0; i < 6; i++) fx.raio(t.x, t.y + 4, t.z, t.x + rnd(-4, 4), t.y + rnd(0, 6), t.z + rnd(-4, 4), { vida: 0.3, desvio: 0.6, r: c[0], g: c[1], b: c[2] });
+      const resta = v.torres.filter((x) => x.vida > 0).length;
+      avisar(resta ? `Torre derrubada (${3 - resta}/3)` : 'O escudo caiu', 'DeVoe', resta ? 'info' : 'ok');
+      eventos.push({ tipo: resta ? 'torre' : 'escudo-caiu', id: v.id });
+    }
+    return true;
+  }
+  function apagarTorre(t, tudo = false) {
+    combate.removerAlvo(t.alvo); t.vida = 0;
+    cena.remove(t.feixe); t.feixe.material.dispose();
+    if (tudo) { cena.remove(t.g); t.mats.forEach((m) => m.dispose()); }
+    else { t.topo.visible = false; t.g.rotation.z = 0.5; t.g.position.y -= 0.8; }          // derrubada: fica caída no chão até o fim da luta
+  }
+  function limparDevoe(v) {
+    for (const t of v.torres || []) apagarTorre(t, true);
+    v.torres = [];
+    for (const c of v.copias || []) sumirCopia(c, true);
+    v.copias = [];
+    if (v.escudo) { cena.remove(v.escudo); v.escudo.material.dispose(); v.escudo.geometry.dispose(); v.escudo = null; }
+    if (v.carroNoAr) { cena.remove(v.carroNoAr); v.carroNoAr.material.dispose(); v.carroNoAr = null; }
+  }
+  function passoDevoe(v, dt, P) {
+    const c = v.perf.corRaio, protegido = v.torres?.some((t) => t.vida > 0);
+    for (const t of v.torres || []) {
+      if (t.vida <= 0) continue;
+      vA.set(t.x, t.y + 5.4, t.z); vB.set(v.x, v.y + 1.2, v.z);
+      t.feixe.position.copy(vA); t.feixe.lookAt(vB); t.feixe.scale.set(1, 1, vA.distanceTo(vB));
+      t.feixe.material.opacity = 0.45 + 0.3 * Math.random(); t.topo.rotation.y += dt * 2;
+    }
+    if (v.escudo) { v.escudo.visible = !!protegido && v.acao !== 'caido'; v.escudo.position.set(v.x, v.y + 1.1, v.z); v.escudo.material.opacity = 0.14 + 0.06 * Math.sin(v.t * 6); }
+    // as cópias: flutuam, olham para o herói e soltam um raio fraco de vez em quando
+    for (const cp of v.copias || []) {
+      if (!cp.vivo) continue;
+      cp.t += dt; cp.y = (chao ? chao(cp.x, cp.z, 3) : 0) + 1.3 + 0.15 * Math.sin(cp.t * 1.7 + 1);
+      cp.raiz.position.set(cp.x, cp.y, cp.z); cp.raiz.rotation.y = Math.atan2(P.x - cp.x, P.z - cp.z);
+      cp.modelo.aplicar({ v: 0, noChao: true, golpe: { tipo: 'raio', lado: 1, k: 0.4 } }, dt);
+      cp.alvo.x = cp.x; cp.alvo.y = cp.y; cp.alvo.z = cp.z;
+      cp.tiro -= dt;
+      if (cp.tiro <= 0) {
+        cp.tiro = rnd(1.6, 2.6);
+        fx.raio(cp.x, cp.y + 1.6, cp.z, P.x, P.y + 1.1, P.z, { vida: 0.25, desvio: 0.8, r: c[0], g: c[1], b: c[2] });
+        if (!escapa(P, chao ? chao(P.x, P.z, P.y + 1) : 0)) ferirSemEmpurrar(P, 0.035);
+      }
+      if (cp.t > 8) sumirCopia(cp);
+    }
+  }
+  // o carro sobe ao lado dele no aviso (girando, com o brilho do poder) e é arremessado no círculo
+  const CORES_CARRO = [0x8a1f2a, 0x1f3f8a, 0xd8d8d0, 0x202428, 0x2f6b3a];
+  function carroNoAr(v, k) {
+    if (!v.carroNoAr) {
+      v.carroNoAr = new THREE.Mesh(GEO_CARRO, new THREE.MeshStandardMaterial({ color: CORES_CARRO[Math.floor(Math.random() * CORES_CARRO.length)], metalness: 0.6, roughness: 0.35, emissive: new THREE.Color(...v.perf.corRaio).multiplyScalar(0.12) }));
+      v.carroNoAr.castShadow = !mobile; cena.add(v.carroNoAr);
+    }
+    v.carroNoAr.position.set(v.x + Math.sin(v.h + 1.3) * 3, v.y + 2.5 + 2.5 * k, v.z + Math.cos(v.h + 1.3) * 3);
+    v.carroNoAr.rotation.set(Math.sin(v.t * 3) * 0.4, v.t * 1.5, Math.cos(v.t * 2) * 0.3);
+  }
+  function lancarCarro(v) {
+    const m = v.carroNoAr; if (!m) return; v.carroNoAr = null;
+    const p = { tipo: 'carro', x: v.alvo.x, z: v.alvo.z, r: 3.4, t: 0, vida: 7, mesh: m, op: 1, de: m.position.clone(), dur: 0.6, caiu: false };
+    perigos.push(p);
+  }
+  function voarCarro(p, dt, P, noChao) {
+    const m = p.mesh;
+    if (p.t < p.dur) {
+      const k = p.t / p.dur, y0 = chao ? chao(p.x, p.z, 3) : 0;
+      m.position.set(lerp(p.de.x, p.x, k), lerp(p.de.y, y0 + 0.65, k) + Math.sin(k * Math.PI) * 6, lerp(p.de.z, p.z, k));
+      m.rotation.x += dt * 6;
+    } else if (!p.caiu) {
+      p.caiu = true; const y0 = chao ? chao(p.x, p.z, 3) : 0;
+      m.position.set(p.x, y0 + 0.65, p.z); m.rotation.set(0, m.rotation.y, Math.PI * (Math.random() < 0.5 ? 0 : 1));
+      fx.clarao(p.x, y0 + 1, p.z, 5, 0.3); fx.onda(p.x, y0, p.z, 9, 0.5); combate.hitstop = 0.06;
+      if (Math.hypot(P.x - p.x, P.z - p.z) < 3.4 && !escapa(P, chao ? chao(P.x, P.z, P.y + 1) : 0)) ferirHeroi(P, 0.14, P.x - p.x || 0.01, P.z - p.z);
+    } else if (p.vida - p.t < 0.6) m.scale.setScalar(Math.max(0.01, (p.vida - p.t) / 0.6));
+  }
+  // as cópias: o DeVoe some e aparece em um de três lugares em volta do herói; as outras duas são ilusões
+  const modelosCopia = [];
+  function prepararCopias() {
+    while (modelosCopia.length < 2) {
+      const slot = { modelo: null };
+      modelosCopia.push(slot);
+      criarHeroi({ aniso, lod: 1, mobile, pessoa: 'devoe' }).then((m) => { colocarAderecos('devoe', m); slot.modelo = m; }).catch(() => {});
+    }
+  }
+  function criarCopias(v, P) {
+    const a0 = rnd(0, 6.28), lugares = [0, 1, 2].map((k) => ({ x: P.x + Math.cos(a0 + k * 2.09) * 10, z: P.z + Math.sin(a0 + k * 2.09) * 10 }));
+    const real = Math.floor(Math.random() * 3), c = v.perf.corRaio;
+    fx.clarao(v.x, v.y + 1.2, v.z, 3, 0.25);
+    const r = colide ? colide(lugares[real].x, lugares[real].z, 0) : lugares[real]; v.x = r.x; v.z = r.z;
+    for (const cp of v.copias || []) sumirCopia(cp, true);
+    v.copias = [];
+    lugares.forEach((l, k) => {
+      if (k === real) return;
+      const slot = modelosCopia.find((s) => s.modelo && !s.usado); if (!slot) return;
+      slot.usado = true;
+      const raiz = new THREE.Group(); raiz.add(slot.modelo.grupo); cena.add(raiz);
+      const q = colide ? colide(l.x, l.z, 0) : l;
+      const cp = { slot, modelo: slot.modelo, raiz, x: q.x, z: q.z, y: 0, t: 0, tiro: rnd(0.8, 2), vivo: true };
+      cp.alvo = { extra: true, x: cp.x, y: 1, z: cp.z, alvejavel: () => cp.vivo, golpe: () => { sumirCopia(cp); avisar('Era uma ilusão', 'DeVoe', 'info'); return true; } };
+      combate.registrarAlvo(cp.alvo); v.copias.push(cp);
+      fx.clarao(cp.x, 2.5, cp.z, 3, 0.25);
+    });
+    for (const l of lugares) for (let i = 0; i < 2; i++) fx.raio(l.x, 6, l.z, l.x + rnd(-1, 1), 0.5, l.z + rnd(-1, 1), { vida: 0.25, desvio: 0.8, r: c[0], g: c[1], b: c[2] });
+  }
+  function sumirCopia(cp, tudo = false) {
+    if (!cp.vivo && !tudo) return;
+    cp.vivo = false; combate.removerAlvo(cp.alvo);
+    if (!tudo) { const c = PERFIS.devoe.corRaio; fx.clarao(cp.x, cp.y + 1.2, cp.z, 3, 0.3); for (let i = 0; i < 4; i++) fx.raio(cp.x, cp.y + 1.2, cp.z, cp.x + rnd(-3, 3), cp.y + rnd(0, 3), cp.z + rnd(-3, 3), { vida: 0.2, desvio: 0.5, r: c[0], g: c[1], b: c[2] }); }
+    cp.raiz.remove(cp.modelo.grupo); cena.remove(cp.raiz); cp.slot.usado = false;
   }
 
   // ---------- passo ----------
@@ -624,15 +811,20 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     pTitulo.textContent = vs.map((v) => v.perf.nome).join(' · ');
     pTitulo.style.color = vs.length > 1 ? '#fff' : vs[0].perf.cor;
     if (pBarras.childElementCount !== vs.length) pBarras.innerHTML = vs.map(() => '<div class="chefe-barra"><i></i></div>').join('');
-    vs.forEach((v, k) => { const b = pBarras.children[k].firstChild; b.style.width = `${(v.vida / v.perf.vida) * 100}%`; b.style.background = v.perf.cor; });
+    // com armadura, a barra mostra a armadura (prata); quebrada, a vida
+    vs.forEach((v, k) => { const b = pBarras.children[k].firstChild, arm = v.armadura > 0; b.style.width = `${(arm ? v.armadura / v.perf.armadura : v.vida / v.perf.vida) * 100}%`; b.style.background = arm ? '#c9d6e3' : v.perf.cor; });
     pBarras.style.display = emLuta ? '' : 'none';
     if (C.fase === 'aparece') pInfo.textContent = C.cap.texto;
     else if (C.fase === 'perseguicao' || C.fase === 'choque') { const v = vs[0]; pInfo.textContent = `Alcance e aperte BATER · ${v.capturas}/${v.perf.capturas} · ${Math.round(Math.hypot(P.x - v.x, P.z - v.z))} m · energia livre`; }
     else if (C.fase === 'luta') {
       const arma = vs[0].perf.arma, aberto = vs.some((v) => v.acao === 'recupera' || v.acao === 'atordoado');
-      pInfo.textContent = aberto ? (arma ? 'Agora! Ele está recarregando' : 'Agora! Ele está cansado')
+      const v0 = vs[0], torres = v0.torres?.filter((t) => t.vida > 0).length || 0;
+      pInfo.textContent = arma === 'mente' && torres ? `Derrube as torres do escudo (${torres} de pé) · pule o pulso mental`
+        : v0.armadura > 0 ? `Quebre a armadura (${Math.round((v0.armadura / v0.perf.armadura) * 100)}%) · os especiais racham mais`
+        : aberto ? (arma ? 'Agora! Ele está aberto' : 'Agora! Ele está cansado')
         : arma === 'gelo' ? 'Saia da linha do raio de gelo e bata quando ele recarregar' : arma === 'fogo' ? 'Fique fora do jato de fogo e bata quando ele parar'
-        : arma === 'tempo' ? 'Saia do círculo antes do raio e fuja do tornado' : 'Desvie da investida (corra de lado, pule ou vibre) e bata quando ele cansar';
+        : arma === 'tempo' ? 'Saia do círculo antes do raio e fuja do tornado'
+        : arma === 'mente' ? 'Saia do círculo do carro, pule o pulso e ache o verdadeiro entre as cópias' : 'Desvie da investida (corra de lado, pule ou vibre) e bata quando ele cansar';
     }
     else pInfo.textContent = '';
     vNivel.style.width = `${(P.vida ?? 1) * 100}%`;

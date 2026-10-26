@@ -20,6 +20,10 @@ export const MISSOES = [
   { id: 'fendas', titulo: 'Fendas no tempo', texto: 'Feche 4 fendas temporais (vibre dentro delas)', meta: 4, contador: 'fendas', alvo: 'fenda' },
   { id: 'tunel', titulo: 'O túnel do tempo', texto: 'Fique 5 s acima de 180 km/h (a energia não gasta)', tipo: 'tunel', checar: (c) => c.tunel >= 1 },
   { id: 'passado', titulo: 'A noite do acidente', texto: 'Chegue ao S.T.A.R. Labs, seis semanas atrás', alvo: 'labPassado', checar: (c) => c.voltouDoPassado },
+  // Ato 4 — o Pensador e o fim
+  { id: 'eco', titulo: 'O eco do túnel', texto: 'Encontre e derrote o Savitar', checar: (c) => c.savitarVencido },
+  { id: 'pensador', titulo: 'O Grande Reinício', texto: 'Derrote o DeVoe em frente ao S.T.A.R. Labs', checar: (c) => c.devoeVencido },
+  { id: 'nucleo', titulo: 'O coração do raio', texto: 'Corra para o Cortex: o Núcleo vai explodir', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
 ];
 
 const CHAVE = 'theflash.missoes.v1';

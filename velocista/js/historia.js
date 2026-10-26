@@ -20,6 +20,8 @@ export const PERSONAGENS = {
   frio: { nome: 'Capitão Frio', sigla: 'CF', cor: '#9fe6ff', vilao: true },
   onda: { nome: 'Onda Térmica', sigla: 'OT', cor: '#ff8a3d', vilao: true },
   mago: { nome: 'Mago do Tempo', sigla: 'MT', cor: '#7dffa8', vilao: true },
+  savitar: { nome: 'Savitar', sigla: 'SV', cor: '#9fdcff', vilao: true },
+  devoe: { nome: 'DeVoe', sigla: 'DV', cor: '#c79bff', vilao: true },
 };
 
 const F = (quem, texto) => ({ quem, texto });
@@ -186,7 +188,71 @@ export const CENAS = {
     F('cisco', 'Te pegamos! O sinal voltou! Segura firme, estamos te puxando de volta.'),
     F('caitlin', 'Seus batimentos estão em dobro. Como se houvesse dois de você dentro do túnel.'),
     F('cisco', 'Peraí. Tem mais alguém no túnel com você. E está vindo atrás.'),
-    CARTAO('Continua...', 'Capítulo 6 — Savitar'),
+  ],
+  'cap-savitar': [
+    CARTAO('Capítulo 6', 'O eco do túnel'),
+    F('cisco', 'Uma assinatura saiu do túnel junto com você. É um velocista. E é rápido demais.'),
+    F('caitlin', 'Ele está de armadura. Golpe normal mal vai arranhar.'),
+  ],
+  'encontro-savitar': [
+    F('savitar', 'Então você é o menino que corre no tempo como quem atravessa a rua.'),
+    F('heroi', 'Quem é você?'),
+    F('savitar', 'Savitar. O deus da velocidade.'),
+    F('savitar', 'Ou o que sobrou de um velocista que ficou preso no túnel, correndo para sempre entre os dias.'),
+    F('savitar', 'Cada vez que você corre no tempo, a porta abre mais. Quando ela abrir de vez, eu saio. Inteiro.'),
+    F('caitlin', 'Quebre a armadura primeiro! Os especiais racham mais rápido!'),
+    F('heroi', 'Então eu fecho a porta com você do lado de fora.'),
+  ],
+  'derrotado-savitar': [
+    F('savitar', 'A armadura... era tudo o que eu tinha.'),
+    F('savitar', 'Você acha que fui eu que abri a porta? Eu só passei por ela.'),
+    F('heroi', 'Então quem abriu?'),
+    F('savitar', 'O homem que pensa mais rápido do que você corre.'),
+    F('caitlin', 'Alguém está usando o Núcleo. E não é um velocista.'),
+    CARTAO('Ato 4', 'O Pensador'),
+  ],
+  'cap-devoe': [
+    CARTAO('Capítulo 7', 'O Grande Reinício'),
+    F('caitlin', 'Achei. DeVoe, professor de história. Na noite do acidente ele estava a dois quarteirões do laboratório.'),
+    F('cisco', 'O raio pegou ele também. Mas em vez de velocidade, ele ganhou a mente mais rápida do mundo.'),
+    F('caitlin', 'As fendas, o Savitar, o Núcleo acordando... foi tudo calculado. Por ele.'),
+    F('heroi', 'E agora ele quer o Núcleo.'),
+  ],
+  'encontro-devoe': [
+    F('devoe', 'Finalmente. O homem mais rápido do mundo diante do homem mais inteligente.'),
+    F('heroi', 'Você abriu as fendas. Você trouxe o Savitar.'),
+    F('devoe', 'Eu apenas abri portas. O mundo é lento demais, Flash. Guerras, erros, esquecimento.'),
+    F('devoe', 'Com o Núcleo eu mando um pulso pela cidade e cada mente passa a pensar como a minha. Sem medo, sem caos. O Grande Reinício.'),
+    F('cisco', 'As três torres em volta dele alimentam um escudo! Derruba as torres primeiro!'),
+    F('devoe', 'Corra, Flash. Eu já sei para onde.'),
+  ],
+  'derrotado-devoe': [
+    F('devoe', 'Eu calculei tudo... menos você.'),
+    F('devoe', 'Não importa. O Núcleo já está em contagem. Em minutos ele engole a cidade inteira.'),
+    F('caitlin', 'Ele tem razão! A energia do Núcleo está fora de controle! Volta para o Cortex, agora!'),
+  ],
+  'depois-nucleo': [
+    F('caitlin', 'Se o Núcleo explodir de novo, a onda vai muito além da cidade.'),
+    F('cisco', 'Não dá para desligar. Mas dá para fechar a porta por dentro. Alguém tem que correr dentro dele até ele se apagar.'),
+    F('heroi', 'Então sou eu.'),
+    F('caitlin', 'Você pode não voltar.'),
+    F('heroi', 'Seis semanas atrás, um raio me escolheu. Agora quem escolhe sou eu.'),
+    { ...F('heroi', 'Estou entrando.'), acao: 'nucleo' },
+    CARTAO('O coração do raio', 'Dentro do Núcleo Aurora'),
+    F('heroi', 'Eu vejo tudo... a noite do acidente, a primeira corrida, cada pessoa que a gente salvou.'),
+    F('reverso', 'Você conseguiu, Flash. A porta está fechando. E eu nunca mais volto para o meu tempo.'),
+    F('heroi', 'Você ficou preso no passado que você mesmo criou. Eu escolho o futuro.'),
+    F('caitlin', 'Volta para a gente. Segue a minha voz.'),
+    { ...F('cisco', 'O Núcleo apagou! Apagou de vez! Cadê ele?!'), acao: 'volta' },
+    F('heroi', 'Aqui. Eu disse que voltava.'),
+    CARTAO('Epílogo', 'Uma semana depois'),
+    F('cisco', 'O Núcleo Aurora está desligado. De verdade, desta vez. Eu chequei sete vezes.'),
+    F('caitlin', 'Zoom, Reverso, Frio, Onda Térmica, Mago do Tempo, Savitar e DeVoe: todos na contenção. A cidade está em paz.'),
+    F('cisco', 'E tem uma estátua sua na praça. Mais ou menos parecida.'),
+    F('caitlin', 'Você salvou todo mundo. De novo.'),
+    F('heroi', 'A gente salvou. Sempre foi a gente.'),
+    F('cisco', 'Tá, isso foi emocionante. Agora: alguém viu o meu sanduíche?'),
+    CARTAO('THE FLASH', 'Fim'),
   ],
   'cap-reverso': [
     CARTAO('Capítulo 5', 'O homem de amarelo'),
@@ -254,10 +320,22 @@ export const RADIO = {
   'capitulo-mago': [F('cisco', 'O olho da tempestade está marcado no guia.')],
   'luta-mago': [F('caitlin', 'Os raios caem onde você está. Não fique parado!')],
   'derrota-mago': [F('mago', 'A tempestade sempre vence.'), F('cisco', 'Corre em volta dele: os raios erram quem não para.')],
+  'capitulo-savitar': [F('cisco', 'O guia mostra onde ele está. Cuidado: ele é mais rápido que o Reverso descansado.')],
+  'perseguicao-savitar': [F('caitlin', 'Espere ele cansar e encoste. Ele fica mais lento depois de cada arrancada.')],
+  'luta-savitar': [F('caitlin', 'Primeiro a armadura! Use os especiais quando ele cansar.')],
+  'armadura-savitar': [F('cisco', 'A armadura quebrou! Agora ele sente cada golpe!'), F('savitar', 'Você não sabe o que fez.')],
+  'fase2-savitar': [F('caitlin', 'Ele está mais rápido sem a armadura! Não para de se mexer!')],
+  'derrota-savitar': [F('savitar', 'Eu sou o deus da velocidade.'), F('caitlin', 'Os especiais racham a armadura mais rápido. Junte energia e use quando ele cansar.')],
+  'escapou-savitar': [F('cisco', 'Sumiu no túnel. Ele volta.')],
+  'capitulo-devoe': [F('caitlin', 'Ele está em frente ao S.T.A.R. Labs. O guia mostra.')],
+  'luta-devoe': [F('cisco', 'O círculo no chão é onde o carro cai! E quando o anel crescer em volta dele, PULA!')],
+  'escudo-devoe': [F('cisco', 'O escudo caiu! Agora é com você!')],
+  'fase2-devoe': [F('caitlin', 'Ele reergueu as torres! Derruba de novo!')],
+  'derrota-devoe': [F('devoe', 'Previsível.'), F('caitlin', 'Derrube as torres com os especiais e acerte o verdadeiro: as cópias somem com um golpe.')],
   'escapou-zoom': [F('caitlin', 'Perdemos o sinal dele. Ele vai aparecer de novo.')],
   'escapou-reverso': [F('caitlin', 'Ele sumiu do radar. Vai voltar, tenho certeza.')],
 };
-const PROVOCA = { zoom: ['Sorte.', 'Ainda não.', 'Você está ficando lento.'], reverso: ['Isso não é nada.', 'Perto. Mas não o bastante.', 'Eu deixei.', 'Você está me divertindo.'] };
+const PROVOCA = { savitar: ['Lento.', 'Eu já estive aqui antes.', 'Você vai virar o que eu sou.'], zoom: ['Sorte.', 'Ainda não.', 'Você está ficando lento.'], reverso: ['Isso não é nada.', 'Perto. Mas não o bastante.', 'Eu deixei.', 'Você está me divertindo.'] };
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 
@@ -276,7 +354,7 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
   const fila = []; let falando = null, tFala = 0;
   function falar(falas) { for (const f of falas) fila.push(f); }
   // o rosto de cada personagem (tools/gerar-retratos.mjs renderiza a partir do modelo 3D); quem não tem fica com a sigla
-  const RETRATOS = ['heroi', 'zoom', 'reverso', 'caitlin', 'cisco', 'frio', 'onda', 'mago'];
+  const RETRATOS = ['heroi', 'zoom', 'reverso', 'caitlin', 'cisco', 'frio', 'onda', 'mago', 'savitar', 'devoe'];
   const retratos = Object.fromEntries(RETRATOS.map((id) => [id, new URL(`../assets/personagens/retratos/${id}.webp`, import.meta.url).href]));
   for (const url of Object.values(retratos)) new Image().src = url;                    // já baixados quando a 1ª fala aparecer
   function mostrar(el, ret, nome, f) {

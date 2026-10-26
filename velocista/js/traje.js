@@ -35,6 +35,8 @@ const PALETAS = {
   heroi: { verm: [0.24, 0.010, 0.016], vesc: [0.085, 0.005, 0.008], ouro: [0.92, 0.56, 0.10], graf: [0.028, 0.026, 0.028], brilho: 0, olho: [0, 0, 0], mascaraFechada: false },
   zoom: { verm: [0.010, 0.010, 0.013], vesc: [0.004, 0.004, 0.006], ouro: [0.08, 0.32, 1.0], graf: [0.02, 0.03, 0.05], brilho: 0.9, olho: [0.2, 0.55, 2.2], mascaraFechada: true },
   reverso: { verm: [0.62, 0.40, 0.015], vesc: [0.22, 0.12, 0.006], ouro: [0.75, 0.02, 0.02], graf: [0.03, 0.02, 0.015], brilho: 0.35, olho: [2.0, 0.08, 0.05], mascaraFechada: false },
+  // Savitar: armadura de aço escovado com as costuras acesas em azul-branco e o capacete fechado (met/rug = metal e aspereza do tecido)
+  savitar: { verm: [0.40, 0.42, 0.46], vesc: [0.07, 0.075, 0.09], ouro: [0.5, 1.3, 2.6], graf: [0.035, 0.035, 0.045], brilho: 1.0, olho: [1.4, 2.0, 2.8], mascaraFechada: true, met: 0.85, rug: 0.3 },
 };
 const v3 = (c) => `vec3(${c.map((x) => x.toFixed(4)).join(', ')})`;
 const cores = (P) => /* glsl */ `
@@ -43,6 +45,8 @@ const vec3 T_VESC = ${v3(P.vesc)};
 const vec3 T_OURO = ${v3(P.ouro)};
 const vec3 T_GRAF = ${v3(P.graf)};
 const float T_BRILHO = ${P.brilho.toFixed(3)};
+const float T_MET0 = ${(P.met ?? 0.06).toFixed(3)};
+const float T_RUG0 = ${(P.rug ?? 0.46).toFixed(3)};
 const vec3 T_OLHO = ${v3(P.olho)};
 ${P.mascaraFechada ? '#define MASCARA_FECHADA' : ''}
 vec3 TR_EMIS = vec3(0.0);
@@ -51,7 +55,7 @@ vec3 TR_EMIS = vec3(0.0);
 const CORPO = /* glsl */ `
 void traje(vec3 p) {
   vec3 q = vec3(p.x, p.y, abs(p.z));                              // simetria esquerda/direita
-  vec3 cor = T_VERM; float rug = 0.46, met = 0.06, alt = 0.0;
+  vec3 cor = T_VERM; float rug = T_RUG0, met = T_MET0, alt = 0.0;
   float ouro = 0.0, escuro = 0.0, graf = 0.0, cost = 0.0, painel = 0.0;
 
   // ---- braços (ombro → cotovelo → mão, em repouso) ----
