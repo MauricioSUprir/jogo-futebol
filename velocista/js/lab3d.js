@@ -513,7 +513,7 @@ export function construirLab(THREE, cx, cz, opc = {}) {
 function ROTULOS_CELA(n) { return `CONTENÇÃO 0${n}`; }
 
 /**
- * SILHUETA de longe do S.T.A.R. Labs: a torre, a coroa, o anel e o mastro em poucos triângulos, para a torre aparecer de
+ * SILHUETA de longe do S.T.A.R. Labs: só o que é alto (a torre, a coroa, o anel e o mastro) em poucos triângulos, para a torre aparecer de
  * qualquer lugar da cidade (o laboratório de verdade só existe perto: os quarteirões carregam num raio do herói, e o fim da
  * câmera corta o que está além). Fica no lugar de verdade quando cabe na câmera; mais longe, é desenhada mais perto e menor
  * na MESMA direção (o tamanho na tela não muda). A cor mistura com a névoa pela mesma conta da torre de verdade (nevoaDe).
@@ -535,8 +535,6 @@ export function construirSilhueta(THREE, cx, cz) {
   peca(new THREE.TorusGeometry(36, 0.5, 4, 48), mLuz, tu, 121.4, tv, Math.PI / 2);
   peca(new THREE.BoxGeometry(T.u1 - T.u0 + 0.8, 0.6, T.v1 - T.v0 + 0.8), mLuz, tu, T.y1 - 0.8, tv);
   const farol = peca(new THREE.SphereGeometry(1.2, 8, 6), mFarol, tu, C.y1 + 26.4, tv);
-  for (const a of ALAS) peca(new THREE.BoxGeometry(a.u1 - a.u0, a.y1, a.v1 - a.v0), mCorpo, (a.u0 + a.u1) / 2, a.y1 / 2, (a.v0 + a.v1) / 2);
-  peca(new THREE.BoxGeometry(54, TOPO, 54), mCorpo, 0, TOPO / 2, 0);
   grupo.visible = false;
   const corBase = new THREE.Color(0x1a2846), corLuz = new THREE.Color(), cTmp = new THREE.Color(), V = new THREE.Vector3();
   const centro = new THREE.Vector3(cx + tu, 0, cz + tv);

@@ -388,7 +388,7 @@ const silhueta = construirSilhueta(THREE, LAB_B.cx, LAB_B.cz); cena.add(silhueta
 const TORRE_XZ = { x: LAB_B.cx + (TORRE.u0 + TORRE.u1) / 2, z: LAB_B.cz + (TORRE.v0 + TORRE.v1) / 2 };
 function atualizarSilhueta() {
   const d = Math.hypot(camera.position.x - TORRE_XZ.x, camera.position.z - TORRE_XZ.z), longe = !labAtivo || d > camera.far * 0.82 - 60;
-  if (labAtivo) labAtivo.grupo.visible = !longe;           // tão longe, o resto do campus já está todo na névoa
+  if (labAtivo) labAtivo.alto.visible = !longe;            // só a torre troca de lugar com a silhueta (o resto do campus segue o seu)
   silhueta.atualizar(camera, cena.fog, mundo.noite, longe, P.t);
 }
 const INICIO = { x: LAB_B.plano.entrada.x, z: LAB_B.plano.entrada.z - 9 };     // na rua, de frente para a porta do S.T.A.R. Labs
