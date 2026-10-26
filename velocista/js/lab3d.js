@@ -42,19 +42,13 @@ export function construirLab(THREE, cx, cz, opc = {}) {
   nevoaLonge(std('torreAco', { color: 0x2a3446, roughness: 0.6, metalness: 0.5 }));
   nevoaLonge(bas('torreFaixa', { color: 0x6f90bd }));
   nevoaLonge(bas('torreLetreiro', { map: T.letreiro }));
-  nevoaLonge(bas('torreLogo', { map: T.logoL, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
   bas('faixa', { color: 0x6f90bd });
-  std('vidroFora', { color: 0x1d3150, transparent: true, opacity: 0.62, roughness: 0.15, metalness: 0.35, side: THREE.DoubleSide, depthWrite: false });
   std('int', { ...ei(T.parede), roughness: 0.85 }, true);
   std('aco', { color: 0xaab4bd, roughness: 0.32, metalness: 0.85 });
   std('acoEsc', { color: 0x30373f, roughness: 0.45, metalness: 0.7 });
-  std('concreto', { color: 0xb9bec4, roughness: 0.9 });
   std('mov', { color: 0xe8edf1, roughness: 0.5, emissive: 0xe8edf1, emissiveIntensity: 0 }, true);
-  std('movEsc', { color: 0x222a33, roughness: 0.5, metalness: 0.3, emissive: 0x222a33, emissiveIntensity: 0 }, true);
   std('verde', { color: 0x2f7d46, roughness: 0.85 });
-  std('verdeEsc', { color: 0x225c34, roughness: 0.9 });
   std('tronco', { color: 0x5a4330, roughness: 0.95 });
-  std('terra', { color: 0x3a2e24, roughness: 1 });
   std('telhado', { map: T.telhado, roughness: 0.95 });
   std('pav', { map: T.pav, roughness: 0.9 });
   std('pisoAtrio', { ...ei(T.pisoAtrio), roughness: 0.28, metalness: 0.15 }, true);
@@ -65,19 +59,16 @@ export function construirLab(THREE, cx, cz, opc = {}) {
   std('perigo', { ...ei(T.perigo), roughness: 0.7 }, true);
   std('correia', { map: T.correia, roughness: 0.8 });
   bas('teto', { map: T.teto, color: 0xd2d9df });
-  std('vidro', { color: 0x9fe6ff, transparent: true, opacity: 0.3, roughness: 0.05, metalness: 0.3, side: THREE.DoubleSide, depthWrite: false });
+  std('vidro', { color: 0x3a5f88, transparent: true, opacity: 0.5, roughness: 0.1, metalness: 0.35, side: THREE.DoubleSide, depthWrite: false });   // um vidro só, azul-marinho translúcido
   std('vidroCela', { color: 0x66e0ff, transparent: true, opacity: 0.2, roughness: 0.05, metalness: 0.2, side: THREE.DoubleSide, depthWrite: false });
   std('cupulaVidro', { color: 0x8cc8ff, transparent: true, opacity: 0.2, roughness: 0.05, metalness: 0.25, side: THREE.DoubleSide, depthWrite: false });
-  std('cupulaAco', { color: 0xaab4bd, roughness: 0.32, metalness: 0.85 });
   bas('luz', { color: 0xeaf6ff });
   bas('ciano', { color: 0x3fe0ff });
   bas('cianoPulso', { color: 0x3fe0ff });
   bas('cupulaLuz', { color: 0x3fe0ff });
-  bas('amarelo', { color: 0xffc400 });
   bas('portaCela', { color: 0x3fe0ff, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false });
   bas('letreiro', { map: T.letreiro });
   bas('logoL', { map: T.logoL, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-  bas('logo', { map: T.logo, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   bas('atlas', { map: T.atlas });
   for (const k of Object.keys(TX.telas)) bas(`tela_${k}`, { map: TX.telas[k].t });
 
@@ -168,7 +159,7 @@ export function construirLab(THREE, cx, cz, opc = {}) {
         bw(cursor, a, PISO, H); rodape(cursor, a);
         bw(a, b, PISO, p.jy[0]); bw(a, b, p.jy[1], H);
         // vidro + montantes de aço
-        const vm = (c0 + c1) / 2, vd = ext ? 'vidroFora' : 'vidro', mo = ext ? 'acoEsc' : 'aco';
+        const vm = (c0 + c1) / 2, vd = 'vidro', mo = ext ? 'acoEsc' : 'aco';
         if (p.eixo === 'x') quad(vd, [a, p.jy[0], vm], [1, 0, 0], [0, 1, 0], b - a, p.jy[1] - p.jy[0], 4); else quad(vd, [vm, p.jy[0], a], [0, 0, 1], [0, 1, 0], b - a, p.jy[1] - p.jy[0], 4);
         const n = Math.max(1, Math.round((b - a) / 3.5));
         for (let k = 0; k <= n; k++) { const s = a + ((b - a) * k) / n; if (p.eixo === 'x') box(mo, s - 0.1, s + 0.1, p.jy[0], p.jy[1], c0 - 0.06, c1 + 0.06); else box(mo, c0 - 0.06, c1 + 0.06, p.jy[0], p.jy[1], s - 0.1, s + 0.1); }
@@ -236,40 +227,40 @@ export function construirLab(THREE, cx, cz, opc = {}) {
   box('faixa', M.u[0], M.u[1], M.y + 0.5, M.y + 0.6, M.v1, M.v1 + 0.1);
   placa('SAÍDA', 0, M.y - 1.15, M.v1 + 0.31, 1, 2.4, 1.2, 'z');
   { const g = FRENTE.guarita, y0 = PISO;
-    box('movEsc', g.u0, g.u1, y0, g.y1, g.v0, g.v1); box('vidroFora', g.u0 + 0.05, g.u1 - 0.05, y0 + 1.0, g.y1 - 0.2, g.v0 - 0.02, g.v1 + 0.02);
+    box('acoEsc', g.u0, g.u1, y0, g.y1, g.v0, g.v1); box('vidro', g.u0 + 0.05, g.u1 - 0.05, y0 + 1.0, g.y1 - 0.2, g.v0 - 0.02, g.v1 + 0.02);
     box('acoEsc', g.u0 - 0.1, g.u1 + 0.1, g.y1, g.y1 + 0.15, g.v0 - 0.1, g.v1 + 0.1); }
   // canteiros, arbustos e árvores baixas junto do prédio
   for (const lado of [-1, 1]) for (let k = -24; k <= 24; k += 6) {
-    const u = lado * 28.3, v = k; box('concreto', u - 0.7, u + 0.7, PISO, 0.8, v - 1.6, v + 1.6); box('terra', u - 0.62, u + 0.62, 0.8, 0.84, v - 1.52, v + 1.52);
-    for (let s = -1; s <= 1; s++) esf(rnd() < 0.5 ? 'verde' : 'verdeEsc', u + (rnd() - 0.5) * 0.4, 1.1, v + s * 0.9, 0.55 + rnd() * 0.2, 1, 0.8, 1, 1);
+    const u = lado * 28.3, v = k; box('pav', u - 0.7, u + 0.7, PISO, 0.8, v - 1.6, v + 1.6); box('tronco', u - 0.62, u + 0.62, 0.8, 0.84, v - 1.52, v + 1.52);
+    for (let s = -1; s <= 1; s++) esf(rnd() < 0.5 ? 'verde' : 'verde', u + (rnd() - 0.5) * 0.4, 1.1, v + s * 0.9, 0.55 + rnd() * 0.2, 1, 0.8, 1, 1);
   }
-  for (const k of [-24, -16, -8, 8, 16, 24]) { box('concreto', k - 1.4, k + 1.4, PISO, 0.8, 28.2 - 0.7, 28.2 + 0.7); for (let s = -1; s <= 1; s++) esf('verde', k + s * 1.0, 1.1, 28.2, 0.55 + rnd() * 0.15, 1, 0.8, 1, 1); }
-  for (const [u, v] of [[-28.3, -28.3], [28.3, -28.3], [-28.3, 28.3], [28.3, 28.3]]) { cil('tronco', u, 1.6, v, 0.18, 2.6, 0, 0, 0, 8, 0.24); esf('verde', u, 3.6, v, 1.5, 1, 0.9, 1, 1); esf('verdeEsc', u + 0.6, 4.4, v - 0.3, 1.0, 1, 0.9, 1, 1); }
-  for (const u of [-18, -12, 12, 18]) { box('concreto', u - 1.1, u + 1.1, PISO, 0.8, -28.6 - 0.45, -28.6 + 0.45); esf('verde', u, 1.15, -28.6, 0.6, 1.4, 0.8, 0.9, 1); }
+  for (const k of [-24, -16, -8, 8, 16, 24]) { box('pav', k - 1.4, k + 1.4, PISO, 0.8, 28.2 - 0.7, 28.2 + 0.7); for (let s = -1; s <= 1; s++) esf('verde', k + s * 1.0, 1.1, 28.2, 0.55 + rnd() * 0.15, 1, 0.8, 1, 1); }
+  for (const [u, v] of [[-28.3, -28.3], [28.3, -28.3], [-28.3, 28.3], [28.3, 28.3]]) { cil('tronco', u, 1.6, v, 0.18, 2.6, 0, 0, 0, 8, 0.24); esf('verde', u, 3.6, v, 1.5, 1, 0.9, 1, 1); esf('verde', u + 0.6, 4.4, v - 0.3, 1.0, 1, 0.9, 1, 1); }
+  for (const u of [-18, -12, 12, 18]) { box('pav', u - 1.1, u + 1.1, PISO, 0.8, -28.6 - 0.45, -28.6 + 0.45); esf('verde', u, 1.15, -28.6, 0.6, 1.4, 0.8, 0.9, 1); }
 
   // ------------------------------------------------------------------ O CAMPUS: praça, anel do acelerador, alas, passarelas, torre
   const CM = CAMPUS.meio;
   // praça (cobre as ruas que sumiram) e o meio-fio da borda; o caminho de entrada mais claro
   piso('pav', -CM, CM, -CM, -S, 0.33, 6); piso('pav', -CM, CM, S, CM, 0.33, 6); piso('pav', -CM, -S, -S, S, 0.33, 6); piso('pav', S, CM, -S, S, 0.33, 6);
-  faceZ('concreto', -CM, CM, 0, 0.33, -CM, -1, 2); faceZ('concreto', -CM, CM, 0, 0.33, CM, 1, 2); faceX('concreto', -CM, CM, 0, 0.33, -CM, -1, 2); faceX('concreto', -CM, CM, 0, 0.33, CM, 1, 2);
-  box('concreto', -CM, CM, 0.33, 0.36, -CM, -CM + 0.5); box('concreto', -CM, CM, 0.33, 0.36, CM - 0.5, CM); box('concreto', -CM, -CM + 0.5, 0.33, 0.36, -CM, CM); box('concreto', CM - 0.5, CM, 0.33, 0.36, -CM, CM);
-  piso('concreto', -4.5, 4.5, -CM, -S, 0.345, 3);
+  faceZ('pav', -CM, CM, 0, 0.33, -CM, -1, 2); faceZ('pav', -CM, CM, 0, 0.33, CM, 1, 2); faceX('pav', -CM, CM, 0, 0.33, -CM, -1, 2); faceX('pav', -CM, CM, 0, 0.33, CM, 1, 2);
+  box('pav', -CM, CM, 0.33, 0.36, -CM, -CM + 0.5); box('pav', -CM, CM, 0.33, 0.36, CM - 0.5, CM); box('pav', -CM, -CM + 0.5, 0.33, 0.36, -CM, CM); box('pav', CM - 0.5, CM, 0.33, 0.36, -CM, CM);
+  piso('pav', -4.5, 4.5, -CM, -S, 0.345, 3);
   for (const u of [-4.5, 4.5]) piso('faixa', u - 0.08, u + 0.08, -CM, -S - 1, 0.35, 1);
   for (let v = -CM + 6; v < -S - 2; v += 9) for (const u of [-6.5, 6.5]) { cil('acoEsc', u, 2.2, v, 0.09, 4.2, 0, 0, 0, 8); box('acoEsc', u - 0.3, u + 0.3, 4.3, 4.45, v - 0.3, v + 0.3); box('luz', u - 0.22, u + 0.22, 4.25, 4.3, v - 0.22, v + 0.22); }
   // o acelerador de partículas enterrado: um sulco escuro com uma linha de luz fina, e as tampas de acesso
   { const A = ANEL_PRACA;
     prim('acoEsc', new G.RingGeometry(A.R - A.larg / 2, A.R + A.larg / 2, 160, 1), 0, 0.36, 0, -PI / 2);
     prim('faixa', new G.RingGeometry(A.R - 0.14, A.R + 0.14, 160, 1), 0, 0.375, 0, -PI / 2);
-    for (let k = 0; k < 16; k++) { const a = (k / 16) * PI * 2 + PI / 16; prim('concreto', new G.BoxGeometry(3.4, 0.1, 2.2), A.R * Math.cos(a), 0.38, A.R * Math.sin(a), 0, -a, 0); } }
+    for (let k = 0; k < 16; k++) { const a = (k / 16) * PI * 2 + PI / 16; prim('pav', new G.BoxGeometry(3.4, 0.1, 2.2), A.R * Math.cos(a), 0.38, A.R * Math.sin(a), 0, -a, 0); } }
   // árvores pela borda do campus (o caminho de entrada fica livre)
   for (let k = -CM + 5; k <= CM - 5; k += 9) for (const [u, v] of [[k, -CM + 3.5], [k, CM - 3.5], [-CM + 3.5, k], [CM - 3.5, k]]) {
     if (Math.abs(u) < 9 && v < 0) continue;
     if (ALAS.some((a) => u > a.u0 - 2 && u < a.u1 + 2 && v > a.v0 - 2 && v < a.v1 + 2) || (u > TORRE.u0 - 2 && u < TORRE.u1 + 2 && v > TORRE.v0 - 2 && v < TORRE.v1 + 2)) continue;
     const e = 0.85 + rnd() * 0.35;
-    cil('tronco', u, 0.3 + 1.3 * e, v, 0.16 * e, 2.6 * e, 0, 0, 0, 7, 0.22 * e); esf(rnd() < 0.5 ? 'verde' : 'verdeEsc', u, 0.3 + 3.6 * e, v, 1.7 * e, 1, 0.9, 1, 1); esf('verdeEsc', u + 0.5, 0.3 + 4.5 * e, v - 0.3, 1.05 * e, 1, 0.9, 1, 1);
+    cil('tronco', u, 0.3 + 1.3 * e, v, 0.16 * e, 2.6 * e, 0, 0, 0, 7, 0.22 * e); esf(rnd() < 0.5 ? 'verde' : 'verde', u, 0.3 + 3.6 * e, v, 1.7 * e, 1, 0.9, 1, 1); esf('verde', u + 0.5, 0.3 + 4.5 * e, v - 0.3, 1.05 * e, 1, 0.9, 1, 1);
   }
   // o letreiro de pedra na entrada do campus
-  { const m = MONUMENTO; box('concreto', m.u0, m.u1, PISO, m.y1, m.v0, m.v1); box('acoEsc', m.u0 - 0.1, m.u1 + 0.1, m.y1, m.y1 + 0.15, m.v0 - 0.1, m.v1 + 0.1);
+  { const m = MONUMENTO; box('pav', m.u0, m.u1, PISO, m.y1, m.v0, m.v1); box('acoEsc', m.u0 - 0.1, m.u1 + 0.1, m.y1, m.y1 + 0.15, m.v0 - 0.1, m.v1 + 0.1);
     const w = m.u1 - m.u0 - 1.2, h = w / 8; faceZ('letreiro', m.u0 + 0.6, m.u1 - 0.6, (PISO + m.y1) / 2 - h / 2, (PISO + m.y1) / 2 + h / 2, m.v0 - 0.02, -1, 1, [0, 1, 0, 1]); }
   // ALAS: dois prédios compridos dos lados, com janelas em fita, platibanda e o emblema na ponta da frente
   for (const a of ALAS) {
@@ -303,7 +294,7 @@ export function construirLab(THREE, cx, cz, opc = {}) {
   box(['torreExt', 'torreExt', 'telhado', 'torreExt', 'torreExt', 'torreExt'], TC.u0, TC.u1, TR.y1 + 1.5, TC.y1, TC.v0, TC.v1, 8);
   for (let k = 0; k < 6; k++) { const u = TC.u0 + 2.5 + k * ((TC.u1 - TC.u0 - 5) / 5); box('torreFaixa', u - 0.12, u + 0.12, TR.y1 + 3, TC.y1 - 1.5, TC.v0 - 0.05, TC.v0); box('torreFaixa', u - 0.12, u + 0.12, TR.y1 + 3, TC.y1 - 1.5, TC.v1, TC.v1 + 0.05); }
   for (const [v, dir] of [[TR.v0 - 0.32, -1], [TR.v1 + 0.32, 1]]) { box('torreExt', -20.4, 20.4, 110.6, 116.4, Math.min(v, v - dir * 0.3), Math.max(v, v - dir * 0.3)); faceZ('torreLetreiro', -20, 20, 111, 116, v + dir * 0.02, dir, 1, [0, 1, 0, 1]); }
-  for (const [u, dir] of [[TR.u0 - 0.05, -1], [TR.u1 + 0.05, 1]]) faceX('torreLogo', tcv - 8.3, tcv + 8.3, 104, 114, u, dir, 1, [0, 1, 0, 1]);
+  for (const [u, dir] of [[TR.u0 - 0.05, -1], [TR.u1 + 0.05, 1]]) faceX('torreLetreiro', tcv - 11, tcv + 11, 111.6, 114.35, u, dir, 1, [0, 1, 0, 1]);
   { const R = 36, y = 120;
     toro('torreAco', tcu, y, tcv, R, 1.5, PI / 2, 0, 0, 12, 128);
     toro('torreFaixa', tcu, y + 1.4, tcv, R, 0.22, PI / 2, 0, 0, 6, 128);
@@ -318,7 +309,7 @@ export function construirLab(THREE, cx, cz, opc = {}) {
   for (let k = 0; k < 3; k++) box('torreAco', tcu - 2.2 + k * 0.4, tcu + 2.2 - k * 0.4, TC.y1 + 6 + k * 6, TC.y1 + 6.2 + k * 6, tcv - 0.06, tcv + 0.06);
   // entrada da torre: marquise baixa e portas de vidro escuro
   box('acoEsc', -10, 10, 5.2, 5.6, TR.v0 - 5, TR.v0); box('luz', -9.6, 9.6, 5.16, 5.2, TR.v0 - 4.6, TR.v0 - 0.3);
-  quad('vidroFora', [-8, PISO, TR.v0 - 0.06], [1, 0, 0], [0, 1, 0], 16, 4.6, 4);
+  quad('vidro', [-8, PISO, TR.v0 - 0.06], [1, 0, 0], [0, 1, 0], 16, 4.6, 4);
 
   // ------------------------------------------------------------------ TELHADO do prédio principal (em TOPO)
   for (const [a, b, c, d] of LAJES) piso('telhado', a, b, c, d, TOPO + 0.02, 8);
@@ -347,28 +338,28 @@ export function construirLab(THREE, cx, cz, opc = {}) {
   { const D = DOME, cy = D.cy;
     const sph = new G.SphereGeometry(D.R, 56, 24, 0, PI * 2, 0, D.theta);
     prim('cupulaVidro', sph, 0, cy, 0);
-    for (let k = 0; k < 12; k++) toro('cupulaAco', 0, cy, 0, D.R, 0.11, 0, (k * PI) / 6, PI / 2 - D.theta, 8, 40, D.theta);
-    for (const t of [0.3, 0.6, 0.9, 1.15, D.theta]) toro('cupulaAco', 0, cy + D.R * Math.cos(t), 0, D.R * Math.sin(t), 0.13, PI / 2, 0, 0, 8, 64);
+    for (let k = 0; k < 12; k++) toro('aco', 0, cy, 0, D.R, 0.11, 0, (k * PI) / 6, PI / 2 - D.theta, 8, 40, D.theta);
+    for (const t of [0.3, 0.6, 0.9, 1.15, D.theta]) toro('aco', 0, cy + D.R * Math.cos(t), 0, D.R * Math.sin(t), 0.13, PI / 2, 0, 0, 8, 64);
     toro('cupulaLuz', 0, cy + D.R * Math.cos(0.75), 0, D.R * Math.sin(0.75), 0.1, PI / 2, 0, 0, 8, 64);
     toro('cupulaLuz', 0, cy + D.R * Math.cos(0.42), 0, D.R * Math.sin(0.42), 0.08, PI / 2, 0, 0, 8, 64);
-    cil('cupulaAco', 0, cy + D.R + 0.2, 0, 0.5, 0.8, 0, 0, 0, 12, 0.7); }
+    cil('aco', 0, cy + D.R + 0.2, 0, 0.5, 0.8, 0, 0, 0, 12, 0.7); }
 
   // ------------------------------------------------------------------ ÁTRIO
   { const b = BALCAO;
-    box(['movEsc', 'movEsc', 'mov', 'movEsc', 'movEsc', 'movEsc'], b.u0 - 0.2, b.u1 + 0.2, b.y1 - 0.12, b.y1, b.v0 - 0.2, b.v1 + 0.2);
+    box(['acoEsc', 'acoEsc', 'mov', 'acoEsc', 'acoEsc', 'acoEsc'], b.u0 - 0.2, b.u1 + 0.2, b.y1 - 0.12, b.y1, b.v0 - 0.2, b.v1 + 0.2);
     box('mov', b.u0, b.u1, PISO, b.y1 - 0.12, b.v0, b.v1); box('ciano', b.u0 + 0.2, b.u1 - 0.2, 0.6, 0.66, b.v0 - 0.02, b.v0 + 0.02); box('ciano', b.u0 + 0.2, b.u1 - 0.2, 0.28 + 0.34, 0.3 + 0.38, b.v1 - 0.02, b.v1 + 0.02);
-    faceZ('logo', (b.u0 + b.u1) / 2 - 1.1, (b.u0 + b.u1) / 2 + 1.1, 0.4, 2.6, b.v0 - 0.04, -1, 1, [0, 1, 0, 1]);
-    for (const u of [-19.5, -16.5, -13.5]) { box('movEsc', u - 0.4, u + 0.4, b.y1, b.y1 + 0.75, b.v1 - 0.5, b.v1 - 0.45); quad('tela_onda', [u + 0.38, b.y1 + 0.06, b.v1 - 0.43], [-1, 0, 0], [0, 1, 0], 0.76, 0.62, 1, 1, [0, 1, 0, 1]); }
+    faceZ('logoL', (b.u0 + b.u1) / 2 - 1.1, (b.u0 + b.u1) / 2 + 1.1, 0.4, 2.6, b.v0 - 0.04, -1, 1, [0.2, 0.8, 0, 1]);
+    for (const u of [-19.5, -16.5, -13.5]) { box('acoEsc', u - 0.4, u + 0.4, b.y1, b.y1 + 0.75, b.v1 - 0.5, b.v1 - 0.45); quad('tela_onda', [u + 0.38, b.y1 + 0.06, b.v1 - 0.43], [-1, 0, 0], [0, 1, 0], 0.76, 0.62, 1, 1, [0, 1, 0, 1]); }
   }
-  piso('logo', -7, 7, -26.5, -12.5, F0 + 0.02, 1, [0, 1, 0, 1]);
-  faceZ('logo', -1.9, 1.9, 7.9, 11.7, -13.55, -1, 1, [0, 1, 0, 1]);
+  piso('logoL', -7, 7, -26.5, -12.5, F0 + 0.02, 1, [0.2, 0.8, 0, 1]);
+  faceZ('logoL', -1.9, 1.9, 7.9, 11.7, -13.55, -1, 1, [0.2, 0.8, 0, 1]);
   for (const [u, v] of COLUNAS) { box('int', u - 0.5, u + 0.5, PISO, A.teto, v - 0.5, v + 0.5, 4); box('aco', u - 0.6, u + 0.6, PISO, PISO + 0.35, v - 0.6, v + 0.6); box('ciano', u - 0.52, u + 0.52, 1.0, 1.08, v - 0.52, v + 0.52); box('ciano', u - 0.52, u + 0.52, A.teto - 1.2, A.teto - 1.12, v - 0.52, v + 0.52); }
   // sofás e plantas
-  for (const [u, v, w] of [[18, -23.5, 5], [18, -16, 5], [-18.5, -15, 4.5]]) { box('movEsc', u - w / 2, u + w / 2, PISO, 0.55, v - 0.5, v + 0.5); box('mov', u - w / 2 + 0.1, u + w / 2 - 0.1, 0.55, 0.75, v - 0.45, v + 0.45); box('movEsc', u - w / 2, u + w / 2, 0.55, 1.1, v - 0.5, v - 0.3); }
-  for (const [u, v] of [[-24.5, -24.5], [24.5, -24.5], [-24.5, -14.5], [24.5, -14.5], [-5.5, -25], [5.5, -25]]) { cil('concreto', u, 0.75, v, 0.55, 0.9, 0, 0, 0, 12); for (let k = 0; k < 5; k++) esf(k % 2 ? 'verde' : 'verdeEsc', u + (rnd() - 0.5) * 0.7, 1.6 + k * 0.28, v + (rnd() - 0.5) * 0.7, 0.55 - k * 0.05, 1, 1, 1, 1); }
+  for (const [u, v, w] of [[18, -23.5, 5], [18, -16, 5], [-18.5, -15, 4.5]]) { box('acoEsc', u - w / 2, u + w / 2, PISO, 0.55, v - 0.5, v + 0.5); box('mov', u - w / 2 + 0.1, u + w / 2 - 0.1, 0.55, 0.75, v - 0.45, v + 0.45); box('acoEsc', u - w / 2, u + w / 2, 0.55, 1.1, v - 0.5, v - 0.3); }
+  for (const [u, v] of [[-24.5, -24.5], [24.5, -24.5], [-24.5, -14.5], [24.5, -14.5], [-5.5, -25], [5.5, -25]]) { cil('pav', u, 0.75, v, 0.55, 0.9, 0, 0, 0, 12); for (let k = 0; k < 5; k++) esf(k % 2 ? 'verde' : 'verde', u + (rnd() - 0.5) * 0.7, 1.6 + k * 0.28, v + (rnd() - 0.5) * 0.7, 0.55 - k * 0.05, 1, 1, 1, 1); }
   // painel informativo na parede leste e vitrines na oeste
   box('acoEsc', 25.6, 25.9, 2.0, 7.0, -23.2, -15.8); quad('tela_mapa', [25.58, 2.2, -16.0], [0, 0, -1], [0, 1, 0], 7, 4.6, 1, 1, [0, 1, 0, 1]);
-  for (const v of [-24, -19.5, -15]) { box('movEsc', -25.9, -24.6, PISO, 1.0, v - 1.2, v + 1.2); box('vidro', -25.8, -24.7, 1.0, 2.9, v - 1.15, v + 1.15); box('luz', -25.88, -25.8, 2.8, 2.9, v - 1.1, v + 1.1); esf('ciano', -25.2, 1.7, v, 0.28, 1, 1, 1, 1); }
+  for (const v of [-24, -19.5, -15]) { box('acoEsc', -25.9, -24.6, PISO, 1.0, v - 1.2, v + 1.2); box('vidro', -25.8, -24.7, 1.0, 2.9, v - 1.15, v + 1.15); box('luz', -25.88, -25.8, 2.8, 2.9, v - 1.1, v + 1.1); esf('ciano', -25.2, 1.7, v, 0.28, 1, 1, 1, 1); }
   // luminárias lineares pendentes
   for (const v of [-24, -19.5, -15]) { box('luz', -22, 22, A.teto - 0.5, A.teto - 0.42, v - 0.12, v + 0.12); for (const u of [-18, 0, 18]) cil('acoEsc', u, A.teto - 0.25, v, 0.02, 0.5, 0, 0, 0, 4); }
 
@@ -387,11 +378,11 @@ export function construirLab(THREE, cx, cz, opc = {}) {
     box('acoEsc', -12.5, 12.5, 15.2, 16, -13, -12.5); box('acoEsc', -12.5, 12.5, 15.2, 16, 12.5, 13);
   }
   for (const c of CONSOLES) {
-    box('movEsc', c.u0, c.u1, PISO, 0.82, c.v0, c.v1); box(['mov', 'mov', 'mov', 'mov', 'mov', 'mov'], c.u0 - 0.1, c.u1 + 0.1, 0.82, 1.05, c.v0 - 0.2, c.v1 + 0.1);
+    box('acoEsc', c.u0, c.u1, PISO, 0.82, c.v0, c.v1); box(['mov', 'mov', 'mov', 'mov', 'mov', 'mov'], c.u0 - 0.1, c.u1 + 0.1, 0.82, 1.05, c.v0 - 0.2, c.v1 + 0.1);
     box('ciano', c.u0 + 0.1, c.u1 - 0.1, 0.84 + 0.0, 0.88, c.v0 - 0.205, c.v0 - 0.19);
     const n = 3, w = (c.u1 - c.u0) / n;
-    for (let k = 0; k < n; k++) { const u = c.u0 + (k + 0.5) * w; box('movEsc', u - 0.7, u + 0.7, 1.05, 2.0, c.v1 - 0.12, c.v1 - 0.02); quad('tela_onda', [u + 0.66, 1.1, c.v1 - 0.125], [-1, 0, 0], [0, 1, 0], 1.32, 0.86, 1, 1, [0, 1, 0, 1]); cil('acoEsc', u, 1.1, c.v1 - 0.2, 0.05, 0.2, 0, 0, 0, 6);
-      const cu = u, cv = c.v0 - 1.1; cil('movEsc', cu, 0.5, cv, 0.05, 0.4, 0, 0, 0, 6); cil('movEsc', cu, 0.7, cv, 0.35, 0.12, 0, 0, 0, 12); box('movEsc', cu - 0.3, cu + 0.3, 0.75, 1.35, cv - 0.38, cv - 0.28); }
+    for (let k = 0; k < n; k++) { const u = c.u0 + (k + 0.5) * w; box('acoEsc', u - 0.7, u + 0.7, 1.05, 2.0, c.v1 - 0.12, c.v1 - 0.02); quad('tela_onda', [u + 0.66, 1.1, c.v1 - 0.125], [-1, 0, 0], [0, 1, 0], 1.32, 0.86, 1, 1, [0, 1, 0, 1]); cil('acoEsc', u, 1.1, c.v1 - 0.2, 0.05, 0.2, 0, 0, 0, 6);
+      const cu = u, cv = c.v0 - 1.1; cil('acoEsc', cu, 0.5, cv, 0.05, 0.4, 0, 0, 0, 6); cil('acoEsc', cu, 0.7, cv, 0.35, 0.12, 0, 0, 0, 12); box('acoEsc', cu - 0.3, cu + 0.3, 0.75, 1.35, cv - 0.38, cv - 0.28); }
   }
   { const m = MESA_HOLO;
     cil('acoEsc', 0, PISO + 0.4, 0, 2.2, 0.8, 0, 0, 0, 40, 1.9); cil('aco', 0, 1.0, 0, 2.2, 0.12, 0, 0, 0, 40); toro('ciano', 0, 1.07, 0, 1.95, 0.05, PI / 2, 0, 0, 8, 64);
@@ -419,7 +410,7 @@ export function construirLab(THREE, cx, cz, opc = {}) {
     box('ciano', Math.min(uf, du), Math.max(uf, du), 1.7, 1.78, vc - 0.9, vc + 0.9);
     placa(ROTULOS_CELA(c.n), vc, y1 - 1.05, dir > 0 ? uf + 0.1 : uf - 0.1, dir, 2.4, 1.2, 'x');
     // mobília da cela
-    box('mov', ub + (dir > 0 ? 0.15 : -1.05), ub + (dir > 0 ? 1.05 : -0.15), PISO, 0.6, c.v0 + 0.3, c.v1 - 0.3); box('movEsc', ub + (dir > 0 ? 0.15 : -1.05), ub + (dir > 0 ? 1.05 : -0.15), 0.6, 0.72, c.v0 + 0.3, c.v1 - 0.3);
+    box('mov', ub + (dir > 0 ? 0.15 : -1.05), ub + (dir > 0 ? 1.05 : -0.15), PISO, 0.6, c.v0 + 0.3, c.v1 - 0.3); box('acoEsc', ub + (dir > 0 ? 0.15 : -1.05), ub + (dir > 0 ? 1.05 : -0.15), 0.6, 0.72, c.v0 + 0.3, c.v1 - 0.3);
     box('luz', Math.min(ub, uf) + 0.5, Math.max(ub, uf) - 0.5, y1 - 0.15, y1 - 0.1, vc - 0.15, vc + 0.15);
   }
   placa('ALTA ENERGIA', 0, 3.6, 25.9, -1, 2.4, 1.2, 'x'); placa('ÁREA RESTRITA', 0, 3.6, 25.9, -1, 2.4, 1.2, 'x');
@@ -429,12 +420,12 @@ export function construirLab(THREE, cx, cz, opc = {}) {
     box('acoEsc', P.u0 - 0.1, P.u1 + 0.1, PISO, P.y1 - 0.02, P.v0 - 0.4, P.v1 + 0.4);
     quad('correia', [P.u0, P.y1, P.v1], [1, 0, 0], [0, 0, -1], P.u1 - P.u0, P.v1 - P.v0, 2.5, 2.5);
     for (const u of [P.u0 - 0.1, P.u1 + 0.1]) { box('aco', u - 0.08, u + 0.08, PISO, 1.2, P.v0, P.v1); box('ciano', u - 0.09, u + 0.09, 1.2, 1.26, P.v0, P.v1); for (const v of [P.v0, P.v1]) box('aco', u - 0.1, u + 0.1, PISO, 1.3, v - 0.08, v + 0.08); }
-    box('movEsc', P.u0 + 1.2, P.u0 + 3.2, PISO, 1.0, P.v1 + 0.5, P.v1 + 1.3); box('luz', P.u0 + 1.25, P.u0 + 3.15, 1.0, 1.04, P.v1 + 0.55, P.v1 + 1.25); }
+    box('acoEsc', P.u0 + 1.2, P.u0 + 3.2, PISO, 1.0, P.v1 + 0.5, P.v1 + 1.3); box('luz', P.u0 + 1.25, P.u0 + 3.15, 1.0, 1.04, P.v1 + 0.55, P.v1 + 1.25); }
   for (const v of [-7.5, 0, 7.5]) { box('aco', E.u[0], E.u[1], 6.6, 6.9, v - 0.15, v + 0.15); box('luz', E.u[0] + 0.3, E.u[1] - 0.3, 6.55, 6.6, v - 0.08, v + 0.08); for (const u of [E.u[0] + 0.5, E.u[1] - 0.5]) cil('aco', u, 3.3, v, 0.1, 6.6, 0, 0, 0, 8); }
   for (const v of [-10, -5, 0, 5, 10]) for (const u of [E.u[0] + 0.4, E.u[1] - 0.4]) { box('acoEsc', u - 0.12, u + 0.12, PISO, 2.2, v - 0.12, v + 0.12); esf('cianoPulso', u, 2.3, v, 0.14, 1, 1, 1, 1); }
   for (const [v0, v1] of [[-11.5, -4.5], [4.5, 11.5]]) { box('acoEsc', -13.7, -13.54, 2.85, 7.15, v0 - 0.15, v1 + 0.15); quad('tela_vel', [-13.52, 3.0, v1], [0, 0, -1], [0, 1, 0], v1 - v0, 4.0, 1, 1, [0, 1, 0, 1]); }
   [0, 5, 10, 15, 20, 25].forEach((m, i) => { const v = -12.5 + m; const nome = `${m} m`; if (v <= 12.4) { box('luz', -25.95, -25.9, 0.8, 2.4, v - 0.04, v + 0.04); placa(nome, v + 1.0, 1.2, -25.9, 1, 1.2, 0.6, 'x'); } });
-  piso('amarelo', E.u[0] + 0.5, E.u[1] - 0.5, 12.2, 12.32, F0 + 0.01, 1);
+  piso('perigo', E.u[0] + 0.5, E.u[1] - 0.5, 12.2, 12.32, F0 + 0.01, 1);
 
   // ------------------------------------------------------------------ ACELERADOR
   prim('aco', new G.CylinderGeometry(TUBO.r, TUBO.r, TUBO.u1 - TUBO.u0, 28), 0, TUBO.y, TUBO.v, 0, 0, PI / 2);
@@ -493,11 +484,11 @@ export function construirLab(THREE, cx, cz, opc = {}) {
   const atualizar = (dt, tempo, noite = 0, camera = null, jogador = null) => {
     const n = Math.max(0, Math.min(1, noite));
     for (const m of interiores) m.emissiveIntensity = 0.08 + 0.5 * n;
-    mat.letreiro.color.setScalar(0.82 + 0.18 * n); mat.logo.color.setScalar(0.85 + 0.15 * n); mat.logoL.color.setScalar(0.85 + 0.15 * n);
+    mat.letreiro.color.setScalar(0.82 + 0.18 * n); mat.logoL.color.setScalar(0.85 + 0.15 * n);
     const pulso = 0.55 + 0.45 * Math.sin(tempo * 2.4);
     mat.cianoPulso.color.setRGB(0.1 + 0.15 * pulso, 0.55 + 0.4 * pulso, 0.75 + 0.25 * pulso);
     mat.cupulaLuz.color.setRGB(0.15, 0.6 + 0.3 * Math.sin(tempo * 1.7), 0.9);
-    mat.vidro.opacity = 0.3 - 0.12 * n; mat.cupulaVidro.opacity = 0.2 - 0.06 * n;
+    mat.vidro.opacity = 0.5 - 0.15 * n; mat.cupulaVidro.opacity = 0.2 - 0.06 * n;
     mat.extJan.emissiveIntensity = mat.torreJan.emissiveIntensity = 1.15 * n;            // à noite parte das janelas acende (luz quente)
     for (const k of ['faixa', 'torreFaixa']) mat[k].color.setRGB(0.36 + 0.2 * n, 0.5 + 0.24 * n, 0.68 + 0.26 * n);   // linhas discretas, um pouco mais vivas à noite
     mBeacon.color.setRGB(Math.sin(tempo * 3) > 0.2 ? 1 : 0.15, 0.1, 0.12);
