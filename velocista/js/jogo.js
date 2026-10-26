@@ -1009,7 +1009,7 @@ function rodarCena(id, foco, depois, opc) {
 /** a noite do acidente: o relógio para à meia-noite, a coluna do Núcleo acende e o Reverso do passado espera no laboratório */
 // ---------- créditos (depois do epílogo) ----------
 const CREDITOS = [
-  ['THE FLASH', ''], ['Uma história em quatro atos', ''],
+  ['Uma história em quatro atos', ''],
   ['Personagens', 'Caitlin · Cisco · Joe · Iris · Zoom · Flash Reverso · Capitão Frio · Onda Térmica · Mago do Tempo · Savitar · DeVoe'],
   ['', 'Nomes inspirados nos personagens da DC. Trajes, rostos, cenários e enredo deste jogo são desenhos próprios. Jogo de fã, sem fins lucrativos.'],
   ['Corpos e rostos', 'Microsoft Rocketbox Avatar Library (licença MIT)'],
@@ -1020,7 +1020,7 @@ function mostrarCreditos() {
   let c = document.getElementById('creditos');
   if (!c) {
     c = document.createElement('div'); c.id = 'creditos';
-    c.innerHTML = `<div class="rolo">${CREDITOS.map(([t, d]) => `<section>${t ? `<h3>${t}</h3>` : ''}${d ? `<p>${d}</p>` : ''}</section>`).join('')}</div><button type="button" class="pular">Fechar</button>`;
+    c.innerHTML = `<div class="rolo"><img class="logo-fim" src="assets/logo/logo.webp" alt="THE FLASH">${CREDITOS.map(([t, d]) => `<section>${t ? `<h3>${t}</h3>` : ''}${d ? `<p>${d}</p>` : ''}</section>`).join('')}</div><button type="button" class="pular">Fechar</button>`;
     document.body.appendChild(c);
     c.addEventListener('pointerdown', (e) => { e.stopPropagation(); fecharCreditos(); });
   }
