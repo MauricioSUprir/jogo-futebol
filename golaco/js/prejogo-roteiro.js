@@ -154,6 +154,41 @@ const P = {
     som: { filtro: null, ganho: 1, agito: 0.75 }, torcida: { tensao: [0.7, 0.6], palmas: [0.4, 0.3] }, cortejo: 'fila',
   },
 };
+/**
+ * Os planos do pré-jogo (os dados). As cenas das paradas (js/cena-cartao.js: o plano da torcida depois do vermelho)
+ * reaproveitam os trilhos de torcida (organizada, visitantes, ladoDeLa), já conferidos fora dos sólidos do estádio por
+ * tools/teste-prejogo-roteiro.mjs — sem copiar números.
+ */
+export const PLANOS_PREJOGO = P;
+const _curvas = new Map(), _curvasAjuste = new WeakMap(), _cpA = [0, 0, 0], _cpB = [0, 0, 0];
+/**
+ * Câmera do plano `id` (um de trilho) na fração s do trilho (0–1, pela suavização do plano, como cameraEm): out = {px, py,
+ * pz, lx, ly, lz, fov}. ajuste (o do criarRoteiro: a planta do estádio de forma própria, ajustarPlano) troca a câmera do
+ * plano como no pré-jogo daquele estádio. As curvas de cada plano (e de cada ajuste) são montadas uma vez (nada alocado por
+ * quadro depois).
+ */
+export function cameraDoPlano(id, s, out = {}, ajuste = null) {
+  let mapa = _curvas;
+  if (typeof ajuste === 'function') {
+    mapa = _curvasAjuste.get(ajuste);
+    if (!mapa) { mapa = new Map(); _curvasAjuste.set(ajuste, mapa); }
+  } else ajuste = null;
+  let cv = mapa.get(id);
+  if (!cv) {
+    const p = { ...P[id] };
+    if (ajuste) ajuste(p);
+    cv = { cam: p.cam, de: criarCurva(p.cam.de), para: criarCurva(p.cam.para) };
+    mapa.set(id, cv);
+  }
+  const c = cv.cam;
+  const u = s < 0 ? 0 : s > 1 ? 1 : s, k = c.suave ?? 0.5;
+  const q = u + (u * u * (3 - 2 * u) - u) * k;
+  const a = pontoCurva(cv.de, q, _cpA), b = pontoCurva(cv.para, q, _cpB);
+  out.px = a[0]; out.py = a[1]; out.pz = a[2]; out.lx = b[0]; out.ly = b[1]; out.lz = b[2];
+  out.fov = c.fov[0] + (c.fov[1] - c.fov[0]) * q;
+  return out;
+}
+
 // a escalação: o MESMO fundo (uma órbita lenta, contínua de uma para a outra), escurecido pela tela
 const ORBITA_ESCALACAO = { centro: [0, 0], olhar: [0, 1, 3.2], raio: [58, 58], altura: [24, 24], ang: [74, 99.3], fov: 40 };
 const escalacao = (t, i) => ({
@@ -170,8 +205,11 @@ const LISTAS = {
 // no curto as filas ficam com 5 s (a câmera anda o mesmo trilho, mais rápido)
 const DUR_CURTO = { dentro: 5, filaMandante: 5, filaVisitante: 5 };
 
-/** Roteiro de um modo: {modo, planos: [{...plano, t0, t1, i}], total, blocos: [{nome, t0, t1}], fimCenas}. */
-export function criarRoteiro(modo = 'completo') {
+/**
+ * Roteiro de um modo: {modo, planos: [{...plano, t0, t1, i}], total, blocos: [{nome, t0, t1}], fimCenas}. ajuste(p): o
+ * estádio com forma própria (estadio-planta.js ajustarPlano) troca a câmera dos planos que dependem dele, antes das curvas.
+ */
+export function criarRoteiro(modo = 'completo', ajuste = null) {
   if (!LISTAS[modo]) modo = 'completo';
   const ids = LISTAS[modo];
   const planos = [];
@@ -191,8 +229,9 @@ export function criarRoteiro(modo = 'completo') {
   }
   planos.forEach((p, i) => {
     p.i = i;
-    if (p.cam) { p.curvaDe = criarCurva(p.cam.de); p.curvaPara = criarCurva(p.cam.para); }
     if (p.orbitaComum) p.orbita = ORBITA_ESCALACAO;
+    if (ajuste) ajuste(p);
+    if (p.cam) { p.curvaDe = criarCurva(p.cam.de); p.curvaPara = criarCurva(p.cam.para); }
   });
   const blocos = [];
   for (const p of planos) {

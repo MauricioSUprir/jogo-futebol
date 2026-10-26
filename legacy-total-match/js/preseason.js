@@ -222,7 +222,7 @@
     var simOpts = { realism: TM.storage.settings().realism, neutral: true, tacticSide: userSide, tactic: c.tactic, userSide: userSide, difficulty: TM.storage.settings().difficulty };
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
-      teamA: teamA, teamB: teamB, result: result, title: "🏖️ " + c.preseason.name + " · jogo " + (c.preseason.round + 1) + "/3", pauseSide: userSide, simOpts: simOpts, formation: c.lineup && c.lineup.formation,
+      teamA: teamA, teamB: teamB, result: result, title: "🏖️ " + c.preseason.name + " · jogo " + (c.preseason.round + 1) + "/3", pauseSide: userSide, simOpts: simOpts, formation: c.lineup && c.lineup.formation, empateContinua: false,
       onBack: function () { TM.ui.go("coach-hub"); },
       onDone: function () {
         var cc = TM.storage.coachCareer();

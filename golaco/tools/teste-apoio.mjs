@@ -13,7 +13,8 @@
 //  - alguém em posição de impedimento (% do tempo com a bola no pé)       8–25%     (Metrica 16%)
 //  - no cruzamento de jogo corrido: de linha do time na área adversária   mediana 2–4, p90 ≤ 6 (Metrica 3, p90 5)
 // Amostras a cada 0,1 s de bola rolando (sem parada por cobrar, sem bola fora, sem gol).
-//   node tools/teste-apoio.mjs              (lógica do repositório; 8 partidas de 2 × 4 min)
+//   node tools/teste-apoio.mjs              (lógica do repositório; 16 partidas de 2 × 4 min — D7: com 8, a mediana do
+//                                            cruzamento ficava na borda, 1 ou 2 conforme a amostra; 59 cruzamentos com 16)
 //   node tools/teste-apoio.mjs --antes      (a mesma partida com a IA de hoje: criarPartida({iaClassica: true}))
 //   node tools/teste-apoio.mjs --js <pasta> (outra cópia da lógica; sem partida.js → REPROVA)
 //   SEMENTES=20 node tools/teste-apoio.mjs  · --sem0 101 (primeira semente; rodadas com outro conjunto)
@@ -112,7 +113,7 @@ if (!fs.existsSync(path.join(JS, 'partida.js'))) {
   reg('a partida 11×11 existe (criarPartida)', 'partida.js não existe nesta lógica', 'criarPartida', false);
   fim();
 }
-const NS = +(process.env.SEMENTES ?? 8), S0 = +arg('--sem0', 1);
+const NS = +(process.env.SEMENTES ?? 16), S0 = +arg('--sem0', 1);
 const SEMENTES = Array.from({ length: NS }, (_, k) => S0 + k);
 const t0 = Date.now();
 const res = [];

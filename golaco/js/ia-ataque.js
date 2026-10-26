@@ -35,14 +35,14 @@
 //    virtuais (acaoIA) e fixa a mira no pedido (pedido.dir → miraAuto, o mesmo caminho da reposição do
 //    goleiro). Transição ofensiva: +20% nas opções à frente; corridas sem exigir o condutor de frente.
 
-import { IA_ATAQUE, TATICA, CAMPO, PASSO, BOTAO, IA, PARTIDA, ACOES, LIVRE } from './config.js';
+import { IA_ATAQUE, IA_PESSOA, TATICA, CAMPO, PASSO, BOTAO, IA, PARTIDA, ACOES, LIVRE } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { para, acaoIA } from './ia.js';
 import { zonasCruzamento } from './acoes.js';
-import { faseDoTime } from './tatica.js';
+import { faseDoTime, contraPessoa } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
-import { estadoIA, blocoDoTime, alvoCalmo } from './ia-tatica.js';
+import { estadoIA, blocoDoTime, alvoCalmo, maoDoMeuGoleiro } from './ia-tatica.js';
 import { restricaoParada } from './partida.js';
 import { anguloEmbalado, velocidadeParaAngulo, magParaVelocidade } from './conducao.js';
 
@@ -58,6 +58,10 @@ const PONTA = { PD: 1, PE: 1, MD: 1, ME: 1 };
 const CENTROAVANTE = { ATA: 1, SA: 1 };
 
 const _r = { x: 0, z: 0 }, _ref = { u: 0, w: 0 }, _c = { x: 0, z: 0, mag: 1, modo: 'calma', correr: false };
+// contra a pessoa (tatica.js contraPessoa; config.js IA_PESSOA): as constantes da partida com as da categoria D por cima,
+// juntadas uma vez na carga (o --set das ferramentas troca o config.js antes de este módulo carregar)
+const UTIL_P = { ...IA_ATAQUE.utilidade, ...IA_PESSOA.utilidade };
+const CORR_P = { ...IA_ATAQUE.corridas, ...IA_PESSOA.corridas };
 
 // ------------------------------------------------------------------------------- ameaça esperada
 
@@ -95,27 +99,30 @@ export function chanceDeGol(u, w) {
  * acoes.js riscoLinha (reação 0,25 s, corrida a 6,5 m/s), mas medindo a distância até o PONTO do
  * segmento (não até a reta infinita) e dando ao recebedor os pontos a que ele chega antes (quem está
  * colado atrás do recebedor não corta o passe). vRec = velocidade com que o recebedor vem na bola
- * (0 = bola no espaço). Sem o goleiro com semGoleiro (chute).
+ * (0 = bola no espaço). Sem o goleiro com semGoleiro (chute). Com ta > 0 (D3, contra a pessoa: o passe da IA sai
+ * depois da carga do botão, ~0,3–0,7 s), vale o maior risco entre cada adversário onde está e onde estará em ta s.
  */
-function riscoCaminho(m, time, ax, az, bx, bz, v, vRec, semGoleiro) {
+function riscoCaminho(m, time, ax, az, bx, bz, v, vRec, semGoleiro, ta = 0) {
   const dx = bx - ax, dz = bz - az;
   const L = MD.hypot(dx, dz) || 1;
   const ux = dx / L, uz = dz / L;
   let r = 0;
   for (const o of m.jogadores) {
     if (o.time === time || (semGoleiro && o.posicao === 'GOL') || o.papel === 'parado' || o.papel === 'marcador') continue;
-    const ox = o.x - ax, oz = o.z - az;
-    const s = clamp(ox * ux + oz * uz, 0, L);
-    const lat = MD.hypot(ox - s * ux, oz - s * uz);
-    const tAdv = 0.25 + Math.max(0, lat - 0.9) / 6.5;
-    let lim = s / Math.max(v, 3) + 0.15;
-    if (vRec > 0) lim = Math.min(lim, (L - s) / vRec + 0.1);
-    if (tAdv < lim) { const q = (lim - tAdv) / 0.6; if (q > r) r = q >= 1 ? 1 : q; }
-    // a bola passando ao alcance do corpo dele (domínio sem tempo de reação: sim.js bolaLivre) é corte
-    // — antes um marcador colado no passador não contava (a bola passava "antes da reação")
-    if (s > 0.3 && s < L - 1 && lat < RISCO_CORPO[1]) {
-      const q = clamp((RISCO_CORPO[1] - lat) / (RISCO_CORPO[1] - RISCO_CORPO[0]), 0, 1);
-      if (q > r) r = q;
+    for (let k = 0; k < (ta > 0 ? 2 : 1); k++) {
+      const ox = o.x + (k ? o.vx * ta : 0) - ax, oz = o.z + (k ? o.vz * ta : 0) - az;
+      const s = clamp(ox * ux + oz * uz, 0, L);
+      const lat = MD.hypot(ox - s * ux, oz - s * uz);
+      const tAdv = 0.25 + Math.max(0, lat - 0.9) / 6.5;
+      let lim = s / Math.max(v, 3) + 0.15;
+      if (vRec > 0) lim = Math.min(lim, (L - s) / vRec + 0.1);
+      if (tAdv < lim) { const q = (lim - tAdv) / 0.6; if (q > r) r = q >= 1 ? 1 : q; }
+      // a bola passando ao alcance do corpo dele (domínio sem tempo de reação: sim.js bolaLivre) é corte
+      // — antes um marcador colado no passador não contava (a bola passava "antes da reação")
+      if (s > 0.3 && s < L - 1 && lat < RISCO_CORPO[1]) {
+        const q = clamp((RISCO_CORPO[1] - lat) / (RISCO_CORPO[1] - RISCO_CORPO[0]), 0, 1);
+        if (q > r) r = q;
+      }
     }
   }
   return r;
@@ -179,6 +186,8 @@ function novoEstadoJogador() {
     tAval: -1, papel: 'ref',                                          // papel: 'ref' | 'apoio' | 'area'
     ofu: 0, ofw: 0, ofDesde: -1, ofCond: -1, ofTem: false,            // ponto de apoio (rel. ao condutor)
     ultCorrida: -99999, corrida: false, corridaCond: -1, alemDesde: -1, // corrida nas costas (alemDesde: tick em que passou da linha)
+    subindo: false, subTick: -1,                                      // sobe com o ataque (IA_ATAQUE.sobeCorrendo; histerese)
+    apoia: false, apoiaTick: -1,                                      // apoio curto em corrida firme (contra a pessoa: IA_PESSOA.apoio)
     zona: -1,                                                         // ataque à área
     contorna: 0, contornaDesde: -99999, pressaAte: -1,                // desmarque (lado); pressa até o tick
     ultCond: -2, desde: 0, op: '', opDesde: -1, du: 1, dw: 0, correr: false, curta: false, // condutor
@@ -243,7 +252,8 @@ function estadoAtaque(m, t) {
       let c = null;
       if (m.posse != null) for (const q of m.jogadores) if (q.id === m.posse) { c = q; break; }
       const armando = c && c.time === o.time && c.iaA && (c.iaA.op === 'enfiada' || c.iaA.op === 'lancamento') && c.iaA.alvo === o.id;
-      acaba = !armando && m.tick - s.ultCorrida > seg(IA_ATAQUE.corridas.espera);
+      // (contra a pessoa, IA_PESSOA.corridas.espera)
+      acaba = !armando && m.tick - s.ultCorrida > seg((contraPessoa(m, o.time) ? CORR_P : IA_ATAQUE.corridas).espera);
     }
     if (acaba) { o.corrida = null; s.corrida = false; continue; }
     if (o.time === t) A.corridas++;
@@ -269,7 +279,8 @@ function estadoAtaque(m, t) {
   // tempo com a bola (teste-apoio: real 8–25%, Metrica 16%; PR "IA intensa")
   // (com o ataque à área valendo — a bola de lado no terço final —, quem passou da linha fica: é o cruzamento)
   // (Modo Livre: sem impedimento, quem passou da linha fica — a corrida acaba só pela `espera`, acima)
-  const AM = IA_ATAQUE.corridas.alemMax;
+  // (contra a pessoa, IA_PESSOA.corridas.alemMax: a corrida que passou da linha segue até a área)
+  const AM = contraPessoa(m, t) ? CORR_P.alemMax : IA_ATAQUE.corridas.alemMax;
   if (AM != null && !A.area.ativo && !m.livre) {
     for (const o of m.jogadores) {
       const s = o.iaA;
@@ -458,6 +469,9 @@ export function apoioTatico(m, j) {
   estadoIA(m, j);
   const A = estadoAtaque(m, j.time);
   const ia = j.iaA ??= novoEstadoJogador();
+  // o time da IA contra uma pessoa jogando de verdade (tatica.js contraPessoa: a marca `ia`/`iaCobra` na entrada dela — a
+  // demo do Node e a da página, o Simular o resto — conta como IA × IA; com dois humanos ou o travado expulso, falso)
+  const pessoa = contraPessoa(m, j.time);
   const aval = TATICA.avaliaTicks;
   if (ia.tAval < 0 || m.tick - ia.tAval >= aval || A.posseDesde > ia.tAval || (m.tick + (j.vagaIdx ?? 0)) % aval === 0) {
     avaliarApoio(m, j, A, ia);
@@ -497,7 +511,8 @@ export function apoioTatico(m, j) {
     if (m.posse == null && m.voo && m.voo.tipo === 'cruzamento') pressa = true;
     else tu = Math.min(tu, tetoLinha(m, A, j));
     // longe do ponto, ataca a área correndo (quem chega atrasado não cabeceia)
-    if (MD.hypot(tu * lado - j.x, tw * lado - j.z) > IA_ATAQUE.areaCorre) pressa = true;
+    // (contra a pessoa, IA_PESSOA.areaCorre: quem vai à área chega correndo também de perto)
+    if (MD.hypot(tu * lado - j.x, tw * lado - j.z) > (pessoa ? IA_PESSOA.areaCorre : IA_ATAQUE.areaCorre)) pressa = true;
   } else {
     const r = A.ref.get(j.id);
     tu = r ? r.u : j.x * lado; tw = r ? r.w : j.z * lado;
@@ -519,10 +534,26 @@ export function apoioTatico(m, j) {
   tw = clamp(tw, -MZ + 1.5, MZ - 1.5);
   restricaoParada(m, j, tu * lado, tw * lado, _r);
   // impedido (depois de uma corrida, ou a linha subiu): volta rápido para a linha (FC 26); no Modo Livre não há impedimento
-  if (!m.livre && ia.papel !== 'area' && j.x * lado > A.linha && j.x * lado > 0) pressa = true;
-  // o ataque avançou e ele ficou para trás: sobe correndo (a referência anda com a bola a ~k·v da
-  // bola; trotando, o time inteiro ficava atrás da jogada)
-  if ((_r.x - j.x) * lado > IA_ATAQUE.sobeCorrendo) pressa = true;
+  // (o motivo da pressa fica para a pressaMin s seguinte: a da retomada vai pelo modo firme, a do impedimento não; D5)
+  if (pressa) ia.motivoP = 'trans';
+  if (!m.livre && ia.papel !== 'area' && j.x * lado > A.linha && j.x * lado > 0) { if (!pressa) ia.motivoP = 'imped'; pressa = true; }
+  // o ataque avançou e ele ficou para trás: sobe em corrida firme (a referência anda com a bola a ~k·v da bola;
+  // trotando, o time inteiro ficava atrás da jogada), com histerese: entra a sobeCorrendo m, sai a sobeSai m
+  // (só com o ataque progredindo: a bola ou o condutor indo para o gol a ≥ sobeProgride m/s — com a referência que oscila
+  // ou volta, subir em corrida virava vai-e-volta)
+  // (só no time da IA CONTRA uma pessoa: o adversário dela fica mais intenso — "tem que ser mais difícil" —, o time da
+  // pessoa não muda (com os companheiros dela subindo, a arrancada trotando chegava à área em 11% contra ≤ 5%,
+  // teste-defesa-corrida) e a partida IA × IA (o painel, o Simular o resto) e o online com dois humanos ficam iguais)
+  const atras = (_r.x - j.x) * lado;
+  const vAvanco = Math.max(m.bola.v.x * lado, A.cond ? A.cond.vx * lado : 0);
+  // (e só quem está longe do condutor, a > sobeLonge m: os de perto subindo em corrida amontoavam o condutor e o chamado
+  // da PRESSÃO do humano chegava menos — teste-pressao-humano M2 66% → 59%)
+  const longe = (!A.cond || MD.hypot(A.cond.x - j.x, A.cond.z - j.z) > IA_ATAQUE.sobeLonge)
+    // (e, contra a pessoa, só quem está a até IA_PESSOA.sobeMax m da bola: a corrida vai para perto da jogada)
+    && MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z) <= IA_PESSOA.sobeMax;
+  ia.subindo = pessoa && ((atras > IA_ATAQUE.sobeCorrendo && vAvanco >= IA_ATAQUE.sobeProgride && longe)
+    || (ia.subindo && ia.subTick === m.tick - 1 && atras > IA_ATAQUE.sobeSai));
+  ia.subTick = m.tick;
   // a pressa fica por pressaMin s (ligar e desligar a cada tick trocava o modo e o alvo do para())
   if (pressa) ia.pressaAte = m.tick + seg(IA_ATAQUE.pressaMin);
   else if (m.tick < ia.pressaAte && MD.hypot(_r.x - j.x, _r.z - j.z) > IA.chegou * 3) pressa = true;
@@ -538,7 +569,29 @@ export function apoioTatico(m, j) {
   }
   contornar(m, j, ia, _r, ia.papel === 'area' && pressa ? Infinity : tetoLinha(m, A, j), lado);
   j.ia.ramo = ia.papel === 'ref' ? 'apoioRef' : ia.papel === 'apoio' ? 'apoioCurto' : 'area';
+  if (ia.subindo && !pressa) return para(j, _r.x, _r.z, 1, false, 0, 'sobe');
   if (calmo && !pressa) return para(j, _r.x, _r.z, calmo.mag, calmo.correr, 0, calmo.modo);
+  // o apoio curto se mexe para receber (contra a pessoa, IA_PESSOA.apoio): com o ponto a mais de liga m e o condutor
+  // andando, vai em corrida firme (IA.modos.apoia: intensidade d/6, CORRER além de 10 m) — pela calma (d/14) ele andava
+  // atrás do condutor; com histerese (sai a menos de desliga m ou com o condutor abaixo de vCondSai m/s)
+  if (pessoa && ia.papel === 'apoio' && !pressa && A.cond) {
+    const AP = IA_PESSOA.apoio, d = MD.hypot(_r.x - j.x, _r.z - j.z), vc = MD.hypot(A.cond.vx, A.cond.vz);
+    ia.apoia = ia.apoia && ia.apoiaTick === m.tick - 1 ? d > AP.desliga && vc >= AP.vCondSai : d > AP.liga && vc >= AP.vCond;
+    ia.apoiaTick = m.tick;
+    if (ia.apoia) return para(j, _r.x, _r.z, 1, true, 0, 'apoia');
+  }
+  // (D5, item 22: a pressa da RETOMADA de quem segue a referência — o time longe dela — vai pelo modo firme: a mesma
+  // intensidade, com o ponto filtrado, a freada antes de virar e a virada parada, e, logo depois de parar (o arranque calmo,
+  // TATICA.arranque), a volta trotando; pelo pressa, o ponto cru da referência que muda na transição virava vai e volta e
+  // anda-para-anda. A volta do IMPEDIMENTO e a bola na mão do meu goleiro seguem pelo pressa: pelo firme, o time ficava em
+  // posição de impedimento 32% do tempo com a bola (teste-apoio 8–25%) e quem recuava seguia para a própria linha do gol
+  // (teste-movimento 10 → 15%))
+  if (pressa && ia.papel === 'ref' && IA_ATAQUE.firmeRef && ia.motivoP !== 'imped' && !maoDoMeuGoleiro(m, j.time)
+    && MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z) >= TATICA.volta.bolaPerto) {
+    j.ia.viraTick = m.tick;
+    const arr = TATICA.arranque && m.tick < (j.iaT?.calmoAte ?? -1);
+    return para(j, _r.x, _r.z, arr ? TATICA.suave.trote[2] : 1, !arr, 0, 'firme');
+  }
   return para(j, _r.x, _r.z, 1, true, 0, pressa ? 'pressa' : 'calma');
 }
 
@@ -646,9 +699,16 @@ function pontoDeApoio(m, j, A, ia) {
 
 /** Corrida nas costas da defesa (plano 2.5): quem pode, quando e para onde. */
 function tentarCorrida(m, j, A, ia) {
-  const cfg = IA_ATAQUE.corridas, c = A.cond, lado = A.lado;
+  const pessoa = contraPessoa(m, j.time);
+  const cfg = pessoa ? CORR_P : IA_ATAQUE.corridas, c = A.cond, lado = A.lado;
   if (!c || c.posicao === 'GOL' || (m.parada && !m.parada.rolou)) return;
   if (!(CORREDOR[j.posDetalhe] || (LATERAL[j.posDetalhe] && A.ment >= 1))) return;
+  // (contra a pessoa, só quem joga na FRENTE — a vaga sem a bola à frente do meio-campo, sem.x ≥ 0: os centroavantes. PLoS
+  // One 2024, LaLiga 2: a corrida nas costas e a entrada na área são 24,5% e 17,9% das disparadas dos atacantes, e a
+  // recomposição é a dos meias, 29,7%. Com os meias e pontas indo até a área, quem estava em disparada para lá quando a bola
+  // se perdia freava antes de voltar: o MEIO voltava a 5,4 m/s nos 3 s depois da perda contra o humano, meta ≥ 5,5 —
+  // teste-transicao --humano; base 6,1. Os pontas e meias seguem atacando a área no cruzamento, ataqueArea)
+  if (pessoa && !((FORMACOES[m.times[j.time].formacao]?.porId[j.vagaId]?.sem.x ?? 0) >= 0)) return;
   if (m.tick - ia.ultCorrida < seg(cfg.recarga)) return;
   if (A.corridas >= cfg.max[A.ment >= 1 ? 1 : 0]) return;
   // condutor de frente para o gol adversário, andando com a bola (a corrida acompanha a progressão de
@@ -662,10 +722,21 @@ function tentarCorrida(m, j, A, ia) {
   const u = j.x * lado, w = j.z * lado;
   if (u < A.linha - cfg.folga || u > A.linha + 0.3) return; // até folga m atrás da linha, sem estar impedido
   if (MX - A.linha < cfg.campoMin) return;                 // campo às costas da defesa
+  // (contra a pessoa, só com a linha deles nos últimos `ultimos` m: a corrida termina DENTRO da área, abaixo — no meio-campo
+  // ela acabava longe dela e só somava distância)
+  if (pessoa && MX - A.linha > cfg.ultimos) return;
   if (u < c.x * lado - 5) return;                           // atrás do condutor não é corrida nas costas
   const alem = lerp(cfg.alem[0], cfg.alem[1], ((j.vagaIdx ?? 0) % 5) / 4);
-  const du = Math.min(A.linha + alem, MX - 4);
-  const dw = clamp(w * 0.8, -MZ + 4, MZ - 4);
+  let du = Math.min(A.linha + alem, MX - 4);
+  let dw = clamp(w * 0.8, -MZ + 4, MZ - 4);
+  // contra a pessoa (IA_PESSOA.corridas; a linha deles já está nos últimos `ultimos` m): a corrida termina DENTRO da área,
+  // entre a marca do pênalti e a pequena área, do lado oposto à bola (quem vem do lado de lá vai mais aberto, até w[1] m) —
+  // no corredor dele ela acabava fora da área (à área 3%, Metrica 31%)
+  if (pessoa) {
+    du = clamp(du, MX - cfg.u[0], MX - cfg.u[1]);
+    const sb = m.bola.p.z * lado >= 0 ? 1 : -1;
+    dw = -sb * clamp(cfg.w[0] + Math.max(0, -sb * w) * 0.3, cfg.w[0], cfg.w[1]);
+  }
   const x = du * lado, z = dw * lado;
   // o corredor lê o passador: só arranca com a linha do passe até o destino aberta
   if (riscoCaminho(m, j.time, c.x, c.z, x, z, IA_ATAQUE.utilidade.vEnfiada, 0, false) > cfg.linhaMax) return;
@@ -704,7 +775,7 @@ export function condutorTatico(m, j) {
   }
   if (!ocupado && (nova || ia.op === '' || (m.tick + (j.vagaIdx ?? 0)) % IA_ATAQUE.condutor.avaliaTicks === 0)) decidir(m, j, A, ia, false);
   if (ia.op === 'protege') return { x: 0, z: 0, botoes: extra | BOTAO.MOD };
-  let mag = IA_ATAQUE.utilidade.magConduz, botoes = extra;
+  let mag = (contraPessoa(m, j.time) ? UTIL_P : IA_ATAQUE.utilidade).magConduz, botoes = extra;
   if (ia.correr) botoes |= BOTAO.CORRER;
   if (ia.curta) { mag = 0.6; botoes |= BOTAO.MOD; }
   return viradaComEmbalo(m, j, ia, ia.du * lado * mag, ia.dw * lado * mag, botoes);
@@ -793,7 +864,8 @@ function atualizarMira(m, j, ia) {
  * lançamento ou cruzamento). Grava a opção em ia.op e, nas ações com bola, aperta o botão virtual.
  */
 function decidir(m, j, A, ia, cobranca) {
-  const cfg = IA_ATAQUE.condutor, U = IA_ATAQUE.utilidade, lado = A.lado;
+  // (contra a pessoa, UTIL_P: a condução avaliada onde ele chega, mais peso e CORRER com menos campo — IA_PESSOA.utilidade)
+  const cfg = IA_ATAQUE.condutor, U = contraPessoa(m, j.time) ? UTIL_P : IA_ATAQUE.utilidade, lado = A.lado;
   const u0 = j.x * lado, w0 = j.z * lado;
   const risco = IA_ATAQUE.riscoMentalidade[A.ment + 2];
   // valor de ter a bola (some quando ela é perdida): posse + posseMeuCampo no meu campo (cheio até
@@ -823,7 +895,7 @@ function decidir(m, j, A, ia, cobranca) {
     const press = clamp((U.pressaoRecebe - advMaisPerto(m, j.time, o.x, o.z)) / (U.pressaoRecebe - 1), 0, 1);
     if (L >= ACOES.passe.dMin && L <= U.passeMax) {
       // P: ninguém corta a linha × precisão (passe longo erra mais) × o recebedor não perde na hora
-      const r = riscoCaminho(m, j.time, j.x, j.z, o.x, o.z, U.vPasse, 6, false);
+      const r = riscoCaminho(m, j.time, j.x, j.z, o.x, o.z, U.vPasse, 6, false, U.passeAntecipa);
       const P = (1 - r) * (1 - U.erroDist * Math.max(0, L - 20) / 20) * (1 - U.passePress * press);
       const V = ameacaEsperada(ou, ow) * (1 - U.pressaoValor * press) * (imp ? U.impedido : 1) * frente(ou - u0) + K;
       considerar('passe', P * V - (1 - P) * perda((ou + u0) / 2, (ow + w0) / 2), o.id, 0, 0, clamp(0.3 + L / 60, 0.3, 0.7));
@@ -853,7 +925,7 @@ function decidir(m, j, A, ia, cobranca) {
         let tAdv = Infinity;
         for (const q of m.jogadores) if (q.time !== j.time && q.papel !== 'parado' && q.papel !== 'marcador') tAdv = Math.min(tAdv, (q.posicao === 'GOL' ? 0.4 : 0.25) + Math.max(0, MD.hypot(q.x - ex, q.z - ez) - 1) / 6.5);
         const tRun = lead / vr;
-        const r = riscoCaminho(m, j.time, j.x, j.z, ex, ez, U.vEnfiada, 0, false);
+        const r = riscoCaminho(m, j.time, j.x, j.z, ex, ez, U.vEnfiada, 0, false, U.passeAntecipa);
         const pChao = (1 - r) * clamp((tAdv - Math.max(tRun, dB / U.vEnfiada + 0.3) + 0.3) / 0.6, 0, 1);
         const pAlta = U.enfiadaAltaP * clamp((tAdv - Math.max(tRun, dB / U.vEnfiadaAlta + 0.3) + 0.3) / 0.6, 0, 1);
         const alta = pAlta > pChao, P = alta ? pAlta : pChao;
@@ -901,16 +973,32 @@ function decidir(m, j, A, ia, cobranca) {
     const tPosse = (m.tick - ia.desde) * DT, cs = U.conduzSolta;
     const solta = clamp(1 - (1 - cs[2]) * (tPosse - cs[0]) / (cs[1] - cs[0]), cs[2], 1);
     const aGol = MD.atan2(-w0, MX - u0);
+    // (contra a pessoa, já conduzindo a mais de viraV m/s: a direção nova fica a até viraMax rad do movimento — virando 50–60°
+    // de uma vez a 3–4 m/s, a bola tocada na linha velha ficava para trás do corpo: teste-nao-passa)
+    const vj = MD.hypot(j.vx, j.vz), aV = U.viraMax != null && atual === 'conduz' && vj > U.viraV ? MD.atan2(j.vz * lado, j.vx * lado) : null;
     for (let k = -3; k <= 3; k++) {
       const a = aGol + k * U.passoAngConduz;
+      if (aV != null && Math.abs(difAng(aV, a)) > U.viraMax) continue;
       const du = MD.cos(a), dw = MD.sin(a);
-      const pu = u0 + du * U.conduzDist, pw = w0 + dw * U.conduzDist;
+      // contra a pessoa (U.conduzLonge): a condução vale onde ele CHEGA — com livre ≥ conduzLivre m à frente nessa direção, o
+      // ponto vai a clamp(livre − 2, conduzDist, conduzLonge) m (com o ponto fixo a 5 m o passe para quem está mais à frente
+      // tinha mais xT e ganhava quase sempre; dentro do campo, senão os 5 m de sempre)
+      let cd = U.conduzDist;
+      if (U.conduzLonge) {
+        const lv = livreAFrente(m, j, du * lado, dw * lado);
+        if (lv >= U.conduzLivre) {
+          cd = clamp(lv - 2, U.conduzDist, U.conduzLonge);
+          const qu = u0 + du * cd, qw = w0 + dw * cd;
+          if (Math.abs(qw) > MZ - 1.5 || qu > MX - 1 || qu < -MX + 1) cd = U.conduzDist;
+        }
+      }
+      const pu = u0 + du * cd, pw = w0 + dw * cd;
       if (Math.abs(pw) > MZ - 1.5 || pu > MX - 1 || pu < -MX + 1) continue;
       // dentro da área a defesa fecha (Metrica: 6 defensores na área no cruzamento, 4–8): conduzir
       // para lá vale menos que o caminho livre de agora sugere, e mais ainda perto do gol
       const naArea = pu > AREA_U && Math.abs(pw) < AREA_W;
-      const P = manter(m, j, pu * lado, pw * lado) * (naArea ? (MX - pu < U.manterPerto ? U.manterArea[1] : U.manterArea[0]) : 1);
-      const Uc = (P * (ameacaEsperada(pu, pw) * frente(du * U.conduzDist) + K) * solta - (1 - P) * perda(pu, pw)) * U.conduz;
+      const P = manter(m, j, pu * lado, pw * lado, U) * (naArea ? (MX - pu < U.manterPerto ? U.manterArea[1] : U.manterArea[0]) : 1);
+      const Uc = (P * (ameacaEsperada(pu, pw) * frente(du * cd) + K) * solta - (1 - P) * perda(pu, pw)) * U.conduz;
       const ehAtual = atual === 'conduz' && Math.abs(difAng(MD.atan2(ia.dw, ia.du), a)) < U.passoAngConduz / 2;
       const v = Uc * (ehAtual ? cfg.histerese : 1);
       if (v > mU) { mU = v; melhor = 'conduz'; mAlvo = -1; mDu = du; mDw = dw; }
@@ -1009,8 +1097,10 @@ function miraCruzamento(j, A) {
  * zagueiro de frente não deixa passar conduzindo; duelo 1 × 1 ganho ~50%), menos se está de lado
  * ou atrás; o drible do condutor tira parte da ameaça. Produto das chances de cada um.
  */
-function manter(m, j, px, pz) {
-  const U = IA_ATAQUE.utilidade;
+function manter(m, j, px, pz, U = IA_ATAQUE.utilidade) {
+  // (contra a pessoa, U.manterAntecipa s: o adversário onde ele estará — quem fecha correndo ameaça antes de chegar; com a
+  // condução valendo mais, o condutor que só olhava o agora conduzia para dentro do bote: as roubadas no pé da IA subiam)
+  const ta = U.manterAntecipa;
   const dx = px - j.x, dz = pz - j.z, L = MD.hypot(dx, dz) || 1, ux = dx / L, uz = dz / L;
   // (no último terço o condutor encara: U.manterTerco — rodada "volume de ataque", 13/10)
   const T = U.manterTerco, terco = !!T && j.x * m.ataca[j.time] > T.u;
@@ -1019,7 +1109,7 @@ function manter(m, j, px, pz) {
   let P = 1;
   for (const o of m.jogadores) {
     if (o.time === j.time || o.papel === 'parado' || o.papel === 'marcador') continue;
-    const ox = o.x - j.x, oz = o.z - j.z;
+    const ox = (ta ? o.x + o.vx * ta : o.x) - j.x, oz = (ta ? o.z + o.vz * ta : o.z) - j.z;
     const pr = ox * ux + oz * uz;
     if (pr < -2) continue;
     const s = clamp(pr, 0, L);

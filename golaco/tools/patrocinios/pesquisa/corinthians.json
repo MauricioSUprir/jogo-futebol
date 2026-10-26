@@ -1,0 +1,241 @@
+{
+ "clube": "Corinthians",
+ "chave": "br/Corinthians",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Nike",
+  "logo": "corinthians__nike.svg",
+  "logo_fonte": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg",
+  "cor_na_camisa": {
+   "casa": "#1d1d22",
+   "fora": "#e9e8e2",
+   "terceira": "#151515",
+   "goleiro": "#ffffff"
+  }
+ },
+ "patrocinios": [
+  {
+   "nome": "Shopee",
+   "posicao": "peito",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "corinthians__shopee.svg",
+   "logo_fonte": "https://upload.wikimedia.org/wikipedia/commons/f/fe/Shopee.svg",
+   "cor_na_camisa": {
+    "casa": "#1d1d22",
+    "fora": "#e9e8e2",
+    "terceira": "#151515",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.55
+  },
+  {
+   "nome": "BYD",
+   "posicao": "ombro",
+   "lado": "direito",
+   "posicao_detalhe": "omoplata da frente, lado direito de quem veste (acima da Nike)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "corinthians__byd.png",
+   "logo_fonte": "https://repositorio-bahia.s3.amazonaws.com/wp-content/uploads/2026/03/22130334/byd.png",
+   "cor_na_camisa": {
+    "casa": "#1d1d22",
+    "fora": "#e9e8e2",
+    "terceira": "#151515",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.17
+  },
+  {
+   "nome": "Frimesa",
+   "posicao": "ombro",
+   "lado": "esquerdo",
+   "posicao_detalhe": "omoplata da frente, lado esquerdo de quem veste (acima do escudo)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "corinthians__frimesa.svg",
+   "logo_fonte": "https://frimesa.com.br/wp-content/themes/frimesa/assets/images/logo_frimesa.svg (sem o oval branco de fundo)",
+   "cor_na_camisa": {
+    "casa": "#1d1d22",
+    "fora": "#e9e8e2",
+    "terceira": "#151515",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.17
+  },
+  {
+   "nome": "Zé Delivery",
+   "posicao": "ombro",
+   "lado": "centro",
+   "posicao_detalhe": "escudete/esterno: no meio do alto do peito, logo abaixo da gola",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "corinthians__ze-delivery.png",
+   "logo_fonte": "https://s3.amazonaws.com/assets-fluminense/sponsors/91/ze_delivery_original.png",
+   "cor_na_camisa": {
+    "casa": "#1d1d22",
+    "fora": "#e9e8e2",
+    "terceira": "#151515",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.07
+  },
+  {
+   "nome": "Broto Legal",
+   "posicao": "ombro",
+   "lado": "centro",
+   "posicao_detalhe": "esterno: no meio do peito, embaixo do Zé Delivery, entre a Nike e o escudo",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "corinthians__broto-legal.png",
+   "logo_fonte": "recortado da foto oficial da camisa com a Shopee (Footy Headlines, 13/10/2026): o logo preto no balão, fundo tirado",
+   "cor_na_camisa": {
+    "casa": "#1d1d22",
+    "fora": "#e9e8e2",
+    "terceira": "#151515",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.08,
+   "logo_aproximado": true
+  },
+  {
+   "nome": "Banco BMG",
+   "posicao": "manga",
+   "lado": "ambos",
+   "orientacao": "vertical",
+   "posicao_detalhe": "'banco bmg' escrito ao longo das duas mangas",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "corinthians__banco-bmg.png",
+   "logo_fonte": "https://repositorio-bahia.s3.amazonaws.com/wp-content/uploads/2026/01/05103608/Logo-Bmg-Branco.png",
+   "cor_na_camisa": {
+    "casa": "#1d1d22",
+    "fora": "#e9e8e2",
+    "terceira": "#151515",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.12
+  },
+  {
+   "nome": "Jota.ai",
+   "posicao": "barra_frontal",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "corinthians__jota-ai.svg",
+   "logo_fonte": "https://jota.ai/img/novo/fiel/logo.svg",
+   "cor_na_camisa": {
+    "casa": "#1d1d22",
+    "fora": "#e9e8e2",
+    "terceira": "#151515",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.4
+  },
+  {
+   "nome": "Ezze Seguros",
+   "posicao": "acima_numero",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "corinthians__ezze-seguros.svg",
+   "logo_fonte": "https://ezzeseguros.com.br/wp-content/themes/ezze/assets/img/logo-ezze-colors-white.svg",
+   "cor_na_camisa": {
+    "casa": "#1d1d22",
+    "fora": "#e9e8e2",
+    "terceira": "#151515",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.4,
+   "posicao_detalhe": "alto das costas, em cima do nome; a arte muda por campanha (mar/2026 'EZZE SEGURO AUTO', ago/2026 'EZZE SEGURO DEZ – R$ 10 POR MÊS'); o arquivo é o logo da marca"
+  },
+  {
+   "nome": "PX",
+   "posicao": "calcao",
+   "posicao_detalhe": "parte de trás do calção",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "corinthians__px.png",
+   "logo_fonte": "aproximação desenhada a partir da foto do calção (TMC, 03/2026): quadrado arredondado claro com 'px' em minúsculas; o site da PX não abre daqui",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.15,
+   "logo_aproximado": true
+  },
+  {
+   "nome": "The Black Tools",
+   "posicao": "calcao",
+   "posicao_detalhe": "parte de trás do calção",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "corinthians__the-black-tools.png",
+   "logo_fonte": "https://acdn-us.mitiendanube.com/stores/007/351/825/themes/common/logo-4434095283100225705-1774389479-a93a5e0101b483917643025603b2b7d31774389479.png",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.15
+  }
+ ],
+ "fontes": [
+  "https://maquinadoesporte.com.br/futebol/corinthians-fecha-patrocinio-master-com-shopee-ate-o-fim-do-brasileirao/ (11/10/2026)",
+  "https://www.gazetaesportiva.com/times/corinthians/shopee-patrocinadora-master-corinthians/ (11/10/2026)",
+  "https://tribunadejundiai.com.br/mais/esportes/corinthians-oficializa-contrato-com-a-shopee/ (foto oficial da camisa com Shopee e Jota.ai na barra)",
+  "https://www.meioemensagem.com.br/marketing/como-ficam-os-patrocinios-sem-as-bets-na-volta-do-brasileirao (07/10/2026)",
+  "https://www.90min.com/pt-br/corinthians-aumenta-mais-r-100-milhoes-receitas-uniforme-2026-veja-detalhes",
+  "https://www.mktesportivo.com/2026/08/corinthians-amplia-parceria-com-ezze-seguros-e-mantem-marca-no-uniforme-ate-o-fim-de-2026/",
+  "https://maquinadoesporte.com.br/futebol/corinthians-fecha-patrocinio-com-the-black-tools-para-o-calcao/",
+  "https://www.lance.com.br/corinthians/corinthians-anuncia-acordo-novo-patrocinador-para-o-uniforme-veja-detalhes.html (PX)",
+  "https://www.poder360.com.br/poder-sportsmkt/justica-suspende-patrocinio-da-fatal-fans-ao-corinthians/",
+  "https://www.footyheadlines.com/1656636375/betting-sponsors-ban-corinthians-announce-shopee-as-new-main-sponsor.html (13/10/2026: fotos oficiais da camisa 1 com a Shopee preta)",
+  "https://www.mktesportivo.com/wp-content/uploads/2026/08/ezze-corinthians-1024x779.jpg (costas em ago/2026: EZZE SEGURO DEZ em cima do nome, nada embaixo do número)",
+  "https://tmc.com.br/?p=48197 (foto do calção com a PX)",
+  "https://maquinadoesporte.com.br/futebol/corinthians-fecha-patrocinio-com-the-black-tools-para-o-calcao/ (The Black Tools atrás do calção até o fim de 2026)"
+ ],
+ "confianca": "media",
+ "notas": "Máster: SHOPEE desde 11/10/2026 (clássico contra o Palmeiras) até o fim do Brasileirão (9 jogos), no lugar da Esportes da Sorte (tirada pela MP 1.394/2026); em 07/10 o máster foi a Jota.ai, que passou para a barra frontal. Frente conferida na foto oficial da camisa 1 (Divulgação/Corinthians, 11/10): BYD e Frimesa nas omoplatas, Zé Delivery e Brôto Legal no esterno (a Brôto Legal estava no calção no começo do ano e subiu para o esterno), banco bmg nas duas mangas, Shopee no peito, Jota.ai na barra. Costas e calção pela imprensa, SEM foto de outubro: Ezze Seguros na parte de cima das costas (renovada até dez/2026); PX e The Black Tools atrás do calção. A Fatal Fans (calção) foi suspensa pela Justiça e sai do uniforme. Não achei patrocínio embaixo do número. Incertezas: cores nas camisas 3 e de goleiro (estimadas: preto na azul, branco na roxa); logos de Brôto Legal e PX não baixados (os sites não abrem daqui e não achei arquivo em outro lugar) — ficam null; o logo da Jota.ai usado é a versão preta do site (com o ícone). VERIFICAÇÃO (22/10/2026): Shopee no máster desde 11/10 até o fim do Brasileirão confirmada (Máquina do Esporte, Gazeta Esportiva, Footy Headlines 13/10, Poder360/BNLData 18/10); na camisa a Shopee sai PRETA com a sacola. Frente conferida nas fotos oficiais de 13/10: BYD (direito) e Frimesa (esquerdo) no alto do peito, Zé Delivery e Broto Legal no esterno, banco bmg nas duas mangas, Jota.ai na barra. CORRIGIDO: (1) os logos que faltavam: Broto Legal recortado da foto oficial (628 px, aproximado) e PX desenhado a partir da foto do calção (aproximado); (2) o nome é 'Broto Legal' (sem acento, como no logo); (3) Ezze nas costas: a arte da camisa muda por campanha ('SEGURO AUTO' em março, 'SEGURO DEZ – R$ 10 POR MÊS' em agosto); o logo do arquivo é o da marca. Embaixo do número não há nada (foto de agosto). Fatal Fans: liminar de 01/10 deu 15 dias para tirar — fora do arquivo, certo."
+}

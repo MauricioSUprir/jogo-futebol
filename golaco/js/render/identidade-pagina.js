@@ -43,6 +43,17 @@ function carregarBase(p) {
   return fetch(urlTm('estadios.json'), { signal: ctl.signal }).then(r => (r.ok ? r.json() : null)).catch(() => null).finally(() => clearTimeout(tempo));
 }
 
+/** As camisas reais da temporada (só na pro, com ou sem jogo neutro); null se falhar ou passar do tempo. */
+function carregarUniformes(p) {
+  if (!p || p.edicao !== 'pro') return null;
+  const ctl = new AbortController(), tempo = setTimeout(() => ctl.abort(), ESPERA_BASE_MS);
+  const json = f => fetch(urlTm(f), { signal: ctl.signal }).then(r => (r.ok ? r.json() : null)).catch(() => null);
+  // os patrocínios (só a versão de TESTE da pro; dono, 22/10: "vamos tirar dps") vão junto com as camisas reais
+  return Promise.all([json('uniformes.json'), json('patrocinios.json')])
+    .then(([u, pat]) => (u ? { ...u, patrocinios: pat?.clubes ? { ...pat, base: urlTm('patrocinios/') } : null } : null))
+    .finally(() => clearTimeout(tempo));
+}
+
 /**
  * A identidade da partida desta página: null sem ?tm (os desenhos de hoje) ou a do pedido do TM com os escudos já
  * decodificados (`times[t].escudo.img`; `escudo.url` passa a ser a do escudo de reserva se o do TM não carregou), e
@@ -52,15 +63,30 @@ export async function identidadeDaPagina(pedido = PEDIDO_TM) {
   if (!pedido) return null;
   let ident;
   try {
-    const [mod, base] = await Promise.all([import('../identidade.js'), carregarBase(pedido)]);
+    const [mod, base, uniformes] = await Promise.all([import('../identidade.js'), carregarBase(pedido), carregarUniformes(pedido)]);
     modulo = mod;
-    ident = modulo.identidadeDoPedido(pedido, base);
+    ident = modulo.identidadeDoPedido(pedido, base, uniformes);
   } catch (e) { console.warn('identidade do Total Match:', e); return null; }
   const t0 = performance.now();
   // estádio real: o desenho dele (falhou = o Estádio Golaço nas cores dele); senão o símbolo do TM na placa
   const est = ident.estadio.real
     ? import('./fachada-estilos.js').then(m => { ident.estilos = m; ident.arquibancada.corCadeira = m.corCadeiraReal; }, e => console.warn('estádio:', e))
     : carregar(urlTm('simbolo.png'), ESPERA_ESCUDO_MS).then(img => { ident.estadio.simboloImg = img; });
+  // a forma própria do estádio (só aqui): o Maracanã pela planta dele (estadio-planta.js + render/estadio-real.js); os
+  // outros pela planta genérica das famílias (estadio-generico.js + render/estadio-generico.js)
+  const fb = ident.estadio.real ? ident.estadio.dados?.forma : null;
+  const generica = !!fb && fb.entorno !== 'maracana';
+  const forma = fb
+    ? (generica
+      ? Promise.all([import('../estadio-generico.js'), import('./estadio-generico.js')]).then(([P, real]) => {
+        const planta = P.criarPlantaGenerica(fb, ident.torcida);
+        if (planta) { ident.forma3d = { planta, real }; real.ligarForma(planta); }
+      }, e => console.warn('forma do estádio:', e))
+      : Promise.all([import('../estadio-planta.js'), import('./estadio-real.js')]).then(([P, real]) => {
+        const planta = P.criarPlanta(P.validarForma(fb), ident.torcida);
+        if (planta) { ident.forma3d = { planta, real }; real.ligarForma(planta); }
+      }, e => console.warn('forma do estádio:', e)))
+    : null;
   await Promise.all(ident.times.map(async T => {
     let img = await carregar(T.escudo.url, ESPERA_ESCUDO_MS);
     if (!img && T.escudo.url !== T.escudo.gerado) {
@@ -71,6 +97,7 @@ export async function identidadeDaPagina(pedido = PEDIDO_TM) {
     T.escudo.img = img;
   }));
   await est;
+  await forma;
   ident.msEscudos = Math.round(performance.now() - t0);
   return ident;
 }

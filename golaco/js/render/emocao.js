@@ -182,6 +182,43 @@ export function emocaoEvento(est, ev, ctx) {
     disparar(est, 'rede', -1, clamp(ev.vel / 25, 0.15, 1));
     return;
   }
+  // a cena do CARTÃO (js/cena-cartao.js; pedido do dono de 22/10: "as cenas de cartões"): a torcida reage ao que a cena
+  // mostra, no relógio do desenho — o cartão no alto (amarelo: vaia baixa de quem levou e palmas do outro lado; vermelho:
+  // vaia mais forte e o outro lado aplaude), a saída do expulso (vaia forte) e as palmas do expulso para a própria
+  // torcida (ela responde)
+  if (tipo === 'cartaoCena') {
+    const k = ev.time === 1 ? 1 : 0;
+    const forte = ev.fase === 'saida';
+    if (ev.fase === 'alto' && ev.cor === 'amarelo') { disparar(est, 'vaia', k, 0.4); disparar(est, 'palmas', 1 - k, 0.3); return; }
+    if (ev.fase === 'alto' || forte) {
+      disparar(est, 'vaia', k, forte ? 0.8 : 0.6);
+      const o = est.torcida[1 - k];
+      o.excita = Math.max(o.excita, 0.6); o.palmas = Math.max(o.palmas, 0.6);
+      disparar(est, 'palmas', 1 - k, 0.6);
+    }
+    return;
+  }
+  if (tipo === 'aplausoExpulso') {
+    const k = ev.time === 1 ? 1 : 0;
+    est.torcida[k].palmas = Math.max(est.torcida[k].palmas, 0.6);
+    disparar(est, 'palmas', k, 0.6);
+    return;
+  }
+  // a cena do FIM DE TEMPO (js/cena-fim.js; pedido do dono de 22/10: "a cena de intervalo", "a cena de pós jogo"): no plano
+  // da torcida o placar decide — no intervalo, palmas de quem ganha ou empata e vaia de quem perde; no fim, a festa de quem
+  // ganhou, palmas no empate e o lamento (com vaia) de quem perdeu
+  if (tipo === 'cenaFim') {
+    const p = ev.placar ?? { 0: 0, 1: 0 };
+    for (const k of [0, 1]) {
+      const meu = p[k] ?? 0, deles = p[1 - k] ?? 0, g = est.torcida[k];
+      if (ev.fim === 'intervalo') {
+        if (meu >= deles) { g.palmas = Math.max(g.palmas, 0.6); disparar(est, 'palmas', k, 0.6); } else disparar(est, 'vaia', k, 0.6);
+      } else if (meu > deles) { g.excita = Math.max(g.excita, 0.9); g.palmas = Math.max(g.palmas, 0.9); disparar(est, 'palmas', k, 1); }
+      else if (meu === deles) { g.palmas = Math.max(g.palmas, 0.5); disparar(est, 'palmas', k, 0.5); }
+      else { g.lamento = 1; disparar(est, 'vaia', k, 0.7); }
+    }
+    return;
+  }
   // substituição: na CENA (js/substituicao.js), quem sai cruzou a linha e aplaude — a torcida do time dele aplaude de volta
   // (o evento da simulação, no tick da troca, não traz `cruzou`: as palmas saem no relógio da cena, não antes)
   if (tipo === 'substituicao' && ev.cruzou) {
@@ -229,6 +266,20 @@ export function emocaoPasso(est, ctx, dt) {
     g.palmas *= Math.exp(-dt / E.palmasTau);
   }
   if (est.festa) festaPasso(est.festa, est, ctx, dt, est.disparar);
+}
+
+/**
+ * Relógio do ESTÁDIO (cenas das paradas, 22/10): t = tSim + tSegurado. tSim é o tempo da simulação (passos × 1/60 s, que a
+ * página põe a cada passo); tSegurado soma o dt do DESENHO enquanto a cena do cartão segura o laço — assim o ânimo, a
+ * agenda da festa, as bandeiras, o bandeirão, o fogo e a fumaça dos sinalizadores, a ola e a rede andam durante a cena
+ * (sem ele ficavam congelados no último passo). Sem espera (tSegurado = 0) é o relógio de antes, idêntico. Puro.
+ */
+export function criarRelogioEstadio() { return { tSim: 0, tSegurado: 0, t: 0 }; }
+/** Um quadro: soma dtDesenho (s) se o laço está segurado; devolve o t do estádio (s). */
+export function relogioEstadio(est, dtDesenho, segurado) {
+  if (segurado && dtDesenho > 0) est.tSegurado += dtDesenho;
+  est.t = est.tSim + est.tSegurado;
+  return est.t;
 }
 
 /** Esvazia a fila de disparos (o som toca cada um uma vez). Devolve a lista (reaproveitada). */

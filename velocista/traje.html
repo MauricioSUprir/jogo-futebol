@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>THE FLASH — traje novo</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icone/favicon-32.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&display=swap">
+<style>
+  /* Vitrine do TRAJE NOVO para o dono aprovar (26/10: "me manda o traje primeiro, em 3d, e se eu autorizar, tu coloca no
+     flash"): o mesmo corpo e o mesmo shader do jogo (js/humano.js + js/traje.js, variante 'novo'), girando num estúdio,
+     com o traje atual ao lado para comparar. Não é aberta pelo jogo. */
+  :root { --fundo: #06070d; --texto: #f2f4f8; --ouro: #ffd23f; }
+  html, body { margin: 0; height: 100%; background: var(--fundo); color: var(--texto); font-family: Rajdhani, system-ui, sans-serif; overflow: hidden; }
+  canvas { display: block; position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; }
+  #topo { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 16px; right: 16px; pointer-events: none; }
+  h1 { margin: 0; font-size: clamp(20px, 4.4vw, 30px); letter-spacing: .12em; font-weight: 700; }
+  h1 b { color: var(--ouro); }
+  #topo p { margin: 2px 0 0; font-size: 14px; opacity: .72; letter-spacing: .03em; }
+  #barra { position: fixed; left: 16px; right: 16px; bottom: max(14px, env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  #barra .grupo { display: flex; gap: 4px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); border-radius: 99px; padding: 4px; }
+  #barra button { cursor: pointer; border: 0; border-radius: 99px; padding: 9px 15px; font: 700 15px/1 Rajdhani, system-ui, sans-serif; letter-spacing: .06em; color: var(--texto); background: none; }
+  #barra button.on { color: #1a0a00; background: linear-gradient(180deg, #ffe58a, var(--ouro)); }
+  #carregando { position: fixed; inset: 0; display: grid; place-items: center; font-size: 18px; letter-spacing: .1em; opacity: .8; }
+  #carregando[hidden] { display: none; }
+  @media (max-height: 460px) { #topo p { display: none; } #barra button { padding: 7px 12px; font-size: 14px; } }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="topo"><h1>TRAJE <b>NOVO</b></h1><p>Arraste para girar · pinça ou rodinha para aproximar</p></div>
+<div id="barra">
+  <div class="grupo"><button data-traje="novo" class="on">Novo</button><button data-traje="heroi">Atual</button></div>
+  <div class="grupo"><button data-pose="parado" class="on">Parado</button><button data-pose="correndo">Correndo</button><button data-pose="luta">Luta</button></div>
+  <div class="grupo"><button id="girar" class="on">Girar</button></div>
+</div>
+<div id="carregando">Carregando o traje…</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { criarHeroi } from './js/humano.js';
+
+const q = new URLSearchParams(location.search);
+const cv = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+const cena = new THREE.Scene();
+cena.background = new THREE.Color(0x06070d);
+const pmrem = new THREE.PMREMGenerator(renderer);
+cena.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; cena.environmentIntensity = 0.55;
+const camera = new THREE.PerspectiveCamera(32, 1, 0.05, 60);
+camera.position.set(0.2, 1.35, 4.2);
+const ctl = new OrbitControls(camera, cv);
+ctl.target.set(0, 1.0, 0); ctl.enableDamping = true; ctl.minDistance = 0.7; ctl.maxDistance = 7; ctl.maxPolarAngle = Math.PI * 0.62; ctl.enablePan = false;
+// estúdio: luz principal quente, recortes frio e vermelho por trás, chão escuro com anel dourado e sombra de contato
+const key = new THREE.DirectionalLight(0xfff1dc, 2.4); key.position.set(-2.2, 3.4, 3.0); cena.add(key);
+const recorteFrio = new THREE.DirectionalLight(0x7fd8ff, 2.0); recorteFrio.position.set(2.6, 2.4, -2.6); cena.add(recorteFrio);
+const recorteQuente = new THREE.DirectionalLight(0xff5040, 1.4); recorteQuente.position.set(-2.8, 1.6, -2.4); cena.add(recorteQuente);
+cena.add(new THREE.HemisphereLight(0x8090b0, 0x140808, 0.35));
+const chao = new THREE.Mesh(new THREE.CircleGeometry(2.4, 72), new THREE.MeshStandardMaterial({ color: 0x0c0e16, roughness: 0.35, metalness: 0.5 }));
+chao.rotation.x = -Math.PI / 2; cena.add(chao);
+const anel = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.19, 96), new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.55 }));
+anel.rotation.x = -Math.PI / 2; anel.position.y = 0.002; cena.add(anel);
+{ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(0,0,0,0.75)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  const s = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false })); s.rotation.x = -Math.PI / 2; s.position.y = 0.004; cena.add(s); }
+
+const giro = new THREE.Group(); cena.add(giro);
+const modelos = {};
+async function carregar(traje) {
+  const m = await criarHeroi({ aniso: 8, lod: 0, mobile: false, traje });
+  m.grupo.rotation.y = -Math.PI / 2;                     // o modelo olha para +x; aqui, para a câmera
+  m.grupo.visible = false; giro.add(m.grupo); modelos[traje] = m; return m;
+}
+let traje = q.get('traje') === 'heroi' ? 'heroi' : 'novo', pose = q.get('pose') || 'parado', girando = q.get('girar') !== '0';
+await carregar(traje);
+document.getElementById('carregando').hidden = true;
+carregar(traje === 'novo' ? 'heroi' : 'novo');          // o outro, para comparar, carrega depois
+
+const botoes = [...document.querySelectorAll('#barra button')];
+const marcar = () => { botoes.forEach((b) => b.classList.toggle('on', b.dataset.traje === traje || b.dataset.pose === pose || (b.id === 'girar' && girando))); document.querySelector('h1 b').textContent = traje === 'novo' ? 'NOVO' : 'ATUAL'; };
+botoes.forEach((b) => b.addEventListener('click', () => {
+  if (b.dataset.traje) traje = b.dataset.traje; else if (b.dataset.pose) pose = b.dataset.pose; else girando = !girando;
+  marcar();
+}));
+marcar();
+
+function redimensionar() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w / h < 1 ? 42 : 32; camera.updateProjectionMatrix(); }
+addEventListener('resize', redimensionar); redimensionar();
+const relogio = new THREE.Clock();
+window.__traje = { renderer, quadros: 0, get pronto() { return !!modelos[traje]; }, camera, ctl };
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(relogio.getDelta(), 0.05);
+  for (const [k, m] of Object.entries(modelos)) {
+    m.grupo.visible = k === traje;
+    if (k === traje) m.aplicar(pose === 'correndo' ? { v: 11, noChao: true } : pose === 'luta' ? { v: 0, noChao: true, luta: 1 } : { v: 0, noChao: true }, dt);
+  }
+  if (girando) giro.rotation.y += dt * 0.45;
+  ctl.update(); renderer.render(cena, camera); window.__traje.quadros++;
+});
+</script>
+</body>
+</html>

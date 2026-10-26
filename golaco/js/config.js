@@ -207,6 +207,9 @@ export const GESTO = {
 
 // Condução (o toque planejado). Ver CONTRATOS.md.
 export const CONDUCAO = {
+  // a IA com um toque marcado e a bola de lado (conducao.js bolaDeLadoIA; D5): além de `lado` m da linha do corpo, vai para
+  // a linha da bola (o ponto dela `antecipa` s à frente), no máximo à velocidade dela + `folga` m/s (null = desliga)
+  ladoIA: { lado: 0.45, antecipa: 0.3, folga: 0.5 },
   // Ponto de toque à frente do corpo (centro do quadril projetado), por modo.
   // (arrancada 0,42 → 0,38 com a condução curta de 12/10: a folga p90 da disparada passava do alcance do pé, 0,78)
   ofsFrente: { curta: 0.34, trote: 0.36, corrida: 0.33, arrancada: 0.38 },
@@ -740,6 +743,17 @@ export const IA = {
     // não aumentava a pressão — medido)
     pressa: { vAlvo: null, retoma: 0.6, dist: 4, magMin: 0.25, corre: [3, 1.5], freia: false },
     calma: { vAlvo: 9, retoma: 1.2, dist: 14, magMin: 0.2, corre: [14, 10], freia: true },
+    // sobe com o ataque (IA_ATAQUE.sobeCorrendo; dono, 17/10: "a IA não corre pra atacar"): o ponto filtrado da calma, a
+    // corrida firme logo (dist curta) e sem o sprint (o CORRER desligado); freia na linha antes de inverter
+    sobe: { vAlvo: 9, retoma: 1.2, dist: 3, magMin: 0.2, corre: [Infinity, Infinity], freia: true },
+    // o apoio curto se mexe para receber (IA_PESSOA.apoio; categoria D, dono 24/10: "a IA correr ... pra atacar"; só no time
+    // da IA contra a pessoa): o ponto filtrado da calma, a corrida firme a partir de ~6 m do ponto (dist 6; a calma só ia
+    // inteira a 14 m e o apoio a ≤ 10 m da bola andava 51% do tempo, Metrica 41%) e o CORRER com o ponto a mais de 10 m
+    // (desliga a 7); freia na linha antes de inverter
+    apoia: { vAlvo: 9, retoma: 1.2, dist: 6, magMin: 0.2, corre: [10, 7], freia: true },
+    // a pressa de quem segue a referência (ia-ataque.js apoioTatico; D5, item 22): a do pressa, com o ponto filtrado e a
+    // freada antes de virar (a virada parada)
+    firme: { vAlvo: 12, retoma: 0.6, dist: 4, magMin: 0.25, corre: [3, 1.5], freia: true },
   },
   giroParado: 8,              // rad/s: giro máximo do tronco parado da IA sem a bola (o humano: JOGADOR.giroCorpoParado)
   trocaMarcacao: 3,           // m: a marcação só troca de homem se a nova for isto melhor (antes trocava ~18×/min)
@@ -755,6 +769,9 @@ export const IA = {
   pressaoArranca: 6,          // m: quem pressiona só aperta CORRER com o ponto além disto
   trocaPressao: 2,            // m: outro só assume a pressão se estiver isto mais perto da bola que quem pressiona
   freiaLinha: [2.5, -0.17],   // acima de 2,5 m/s, pedido a mais de ~100° do movimento: freia na linha antes de virar
+  // a virada parada (ia.js para; D5, item 22): nos modos que freiam, pedido a mais de acos(cos) do movimento com o corpo a
+  // mais de v m/s: solta o analógico e, abaixo de v, espera s s antes de ir (s 0 = desliga)
+  viraParado: { v: 0.8, cos: -0.5, s: 0.5, marca: true },
 };
 
 // =====================================================================================================
@@ -1155,9 +1172,20 @@ export const TATICA = {
   // arranque calmo (ia-tatica.js alvoCalmo): quem passou de rapido m/s e parou (< parado m/s) retoma um
   // ajuste de até dMax m trotando devagar (suave.trote[2]) por s s — anda-para-anda (teste-movimento)
   arranque: { rapido: 2.2, parado: 0.5, s: 2.0, dMax: 12 },
+  // a espera da volta do ponto calmo (suave*.volta; D5, item 22): começada, vale até volta[0] + folga m e, com quieto,
+  // também com o jogador quieto perto do alvo (folga 0 e quieto false = a de antes)
+  volta: { folga: 3, quieto: true, bolaPerto: 3 },
+  pertoBola: 12,              // m — D5: quem marca a menos disto da bola segue com a espera e a virada de antes
+  arco: 2.5,                  // m/s — abaixo disto (e acima de 0,5) a virada grande do ponto calmo vai pelo giro, em arco (0 = de uma vez)
+  linhaSobe: true,           // a linha que sobe (alvo à frente) vira na hora, sem a virada parada nem o arco (D6, item 23; false = com elas)
+  // a cobertura do volante (D6, item 23): com a bola no meu campo e um defensor fora da linha (o 1º/2º homem ou a mais de `fora`
+  // m dela), o meio-campista mais perto da vaga (a até `alcance` m; o de antes com `hist` m de vantagem) vai para ela, `frente` m
+  // à frente da linha (null = desliga)
+  volanteCobre: { fora: 4, alcance: 20, hist: 2, frente: 1 },
   // olhar da IA sem a bola na partida (ia-tatica.js olhaBolaPartida): velocidade filtrada em tauVel s
   // (o limite do desvio do tronco) e o desvio girando no máximo giro rad/s (o tremor é > 1,5 rad/s)
-  olhar: { tauVel: 0.5, giro: 1.2 },
+  // (D5: giro 1,2 → 1,4 — de costas para a bola andando devagar 14,9 → 13,9% em 40 sementes, o tremor igual)
+  olhar: { tauVel: 0.5, giro: 1.4 },
   // ---- intensidade e recomposição (PR "IA intensa", dono 10/10: "a IA não corre para trás";
   // PESQUISA-ETAPA3.md, "Intensidade e recomposição")
   // o meio atrás da bola no meu campo (tatica.js): referência do meio ≤ bola − [0] m, mas não a menos de
@@ -1176,8 +1204,10 @@ export const TATICA = {
   // (`respiro` s depois de uma recomposição acabada, a volta pela linha da bola espera)
   // (sprint só com urgência: bola a menos de `urgente` m do meio para o lado do meu gol, ou vindo para ele a mais
   // de `vUrgente` m/s)
+  // (D6, item 23: ligaOrganizado 15 → 8 e corre 11 → 6 — com a bola no meu terço só 3,2 de 10 ficavam atrás dela, Metrica
+  // 4,3–5,4 nos 4 times; quem estava à frente era, quase sempre, quem já voltava sem chegar)
   // (voltando, o ponto vai `marca` para o lado do gol do adversário que a zona dele reivindicou: acha o homem)
-  recomp: { liga: 8, ligaOrganizado: 15, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 11, urgente: 10, vUrgente: 4, lateral: 0.5, max: 10, pausa: 2, marca: 0.6 },
+  recomp: { liga: 8, ligaOrganizado: 8, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 6, urgente: 10, vUrgente: 4, lateral: 0.5, max: 10, pausa: 2, marca: 0.6 },
 };
 
 // IA sem a bola (plano 2.4; pesquisa §4). Por nível de pressão: [Baixa, Média, Alta].
@@ -1223,7 +1253,10 @@ export const IA_DEFESA = {
   linhaDePasse: { pressao: [false, false, true], alcance: 25, ponto: 0.65, frente: 6, sombra: [0.35, 0.55, 0.7], sombraDist: 1.2, sombraMin: 4 },
   individualArea: 20,         // m do meu gol: dentro disso, marcação individual dos atacantes na área
   frentePaga: 7,              // m a mais na distância ao condutor para ser o 1º homem vindo da frente da bola
-  defesaPaga: 4,              // m a mais para quem é da linha de defesa, com a bola à frente da referência dele
+  defesaPaga: 8,              // m a mais para quem é da linha de defesa, com a bola à frente da referência dele (D6: 4 → 8)
+  defesaPaga2: 6,             // m a mais, o mesmo, para ser o 2º homem (a cobertura; D6, item 23; 0 = como antes)
+  // (D6: com a bola no meu campo o 1º homem era um defensor em 46% do tempo e a cobertura em 77% — a linha de 4 abria; o meio
+  // aperta e cobre, a linha segura: 1º 46 → 27%, 2º 77 → 67%)
   gatilhos: { janela: 1.5, passeTras: 3, toquePesado: 1.5, costas: 1.92, lateral: 27, alcance: 8, recepcao: true }, // s, m, m, rad (110°), |z|, m do 1º homem ao condutor; recepcao = a recepção de passe é gatilho
   transOf: 3,                 // s de transição ofensiva depois da retomada
   // gatilho de ESTADO "condutor lento" (pedido do dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola"):
@@ -1339,8 +1372,8 @@ export const IA_ATAQUE = {
   //    área; valendo no campo todo, com 0,85/0,7 os chutes caíam de 7,6 para 4,9 por partida e com 0,55/0,25 subiam para
   //    8,4, mas no meio-campo o condutor ia para cima da PRESSÃO do humano. Só no último terço: no painel de 144 do CI
   //    sem ele os chutes caem de 7,3 para 6,9 por partida (14/10; em 48 partidas pareciam iguais, 7,4 × 7,5), mas com ele
-  //    o chamado da PRESSÃO corre menos — teste-pressao-humano M5 72%, meta 80%, PENDENTE: o condutor que encara para
-  //    perto do marcador e as aproximações do chamado ficam curtas, quase só a aceleração); quem segura a bola
+  //    o chamado da PRESSÃO corria menos — teste-pressao-humano M5 72% em 14/10; com a chegada pelo perfil de aceleração
+  //    e o desvio dos corpos, 82,1% ± 0,8 em 23/10, meta 80%); quem segura a bola
   //    perde valor (conduzSolta: de [0] s a [1] s, até [2]×); analógico magConduz; CORRER com
   //    correrLivre m livres à frente (transição ou antes de correrAte m), condução curta com < curtaPerto m;
   //  - proteger: adversário a < protegeDist m, chance protegeP, no máximo protegeMax s por posse.
@@ -1360,7 +1393,13 @@ export const IA_ATAQUE = {
   // |z| > zAtiva (quem vai precisa de tempo para chegar)
   cruzamento: { zLateral: 20.16, xTerco: 30, zAtiva: 15, xAtiva: 17.5 },
   areaCorre: 6,               // m — quem vai à área e está mais longe que isto do ponto vai correndo (pressa)
-  sobeCorrendo: 1000,         // m — alvo mais que isto à frente: sobe correndo (pressa; desligado: o tronco tremia)
+  // m — com o alvo mais que sobeCorrendo à frente, sobe em corrida firme (IA.modos.sobe) até ficar a menos de sobeSai
+  // (histerese; era 1000 = desligado desde a Etapa 3: com a pressa ligando e desligando o tronco tremia e o jogador
+  // andava-corria em ciclos). Dono, 17/10: "A IA NÃO CORRE ... NEM PRA ATACAR" (medir-corrida.mjs)
+  sobeCorrendo: 6,
+  sobeSai: 1.5,
+  sobeProgride: 2,            // m/s — só sobe com a bola ou o condutor indo para o gol a isto ou mais
+  sobeLonge: 12,              // m — e só quem está a mais que isto do condutor (os de perto não amontoam nele)
   antecipa: 0.9,              // s — as referências usam a bola daqui a isto (o time anda com o passe)...
   antecipaFiltro: 0.5,        // s — ...filtrada (constante de tempo; sem saltos a cada toque)
   pressaMin: 0.6,             // s — quem entra na pressa fica nela por isto (sem trocar de modo a cada tick)
@@ -1369,6 +1408,7 @@ export const IA_ATAQUE = {
   // sobreposição: condutor de lado (|z| > w) no campo adversário → o lateral do lado passa por fora,
   // frente m à frente dele, a linha m da lateral
   sobreposicao: { w: 15, frente: 8, linha: 3 },
+  firmeRef: true,             // D5: a pressa da retomada de quem segue a referência vai pelo modo firme (IA.modos.firme)
   oscila: { amp: 0, periodo: 6 }, // m, s — vem e vai do apoio (0 = desliga: com o ponto calmo da Parte 2 ele só fazia o apoio ir e voltar)
   rebote: { raio: 25, frente: 7 }, // chute meu no ar: quem está a < raio m do gol corre para frente m da linha do gol
   empurraRaio: 4,             // m — se quem faz a linha é o marcador (até isto), o atacante a empurra...
@@ -1391,6 +1431,151 @@ export const IA_ATAQUE = {
     [0.0075, 0.0088, 0.0094, 0.0106, 0.0121, 0.0138, 0.0161, 0.0187, 0.0240, 0.0295, 0.0407, 0.0465],
     [0.0064, 0.0078, 0.0084, 0.0098, 0.0113, 0.0125, 0.0147, 0.0175, 0.0212, 0.0276, 0.0349, 0.0379],
   ],
+};
+
+// ------------------------------------------------------- categoria D: a IA contra a pessoa (D2: ataque)
+// Só o que muda no time da IA quando o outro lado é uma pessoa jogando de verdade (tatica.js contraPessoa: a demo, o painel,
+// o Simular o resto e o online com dois humanos ficam IGUAIS — hash-partida: demo IGUAL). Dono, 24/10: "a IA correr, tanto
+// pra marcar, tanto pra atacar, pq ela não corre". Em VOLUME a IA já corre mais que um time real (188 contra 140 m/min;
+// alta intensidade 85 contra 12,6 m/min — Metrica, a mesma conta; Jerome 2024: 128–208 m/min por fase com a bola rolando):
+// o plano é REDISTRIBUIR — a corrida para quem tem a bola, para perto dela e para a área; quem está longe da jogada (fora
+// da tela do celular) corre menos —, nunca somar (tetos: tools/teste-ia-corre.mjs seção V). Cada objeto daqui é juntado
+// por cima do da partida na carga do módulo que o lê (UTIL_P e CORR_P no ia-ataque.js, SUAVE_APOIO_P no ia-tatica.js); a
+// escolha é por time, a cada tick. Calibrado com o teste-ia-corre (8 sementes × 3 roteiros; a triagem com --set, PR D2).
+// PESQUISA-CATEGORIA-D.md; contrato "A IA contra a pessoa" no CONTRATOS.md.
+export const IA_PESSOA = {
+  // Condutor (ia-ataque.js decidir e condutorTatico; D2): a condução vale onde ele CHEGA — com ≥ conduzLivre m livres à
+  // frente na direção, o ponto avaliado vai a clamp(livre − 2, conduzDist, conduzLonge) m (era sempre 5 m: o passe para quem
+  // está mais à frente tinha mais xT e ganhava 79% do tempo com a bola no pé — posse mediana 0,48 s, 7,6 km/h, Metrica 10,0)
+  // e pesa `conduz` (0,85 → 1,0: com 0,9 a posse mediana ficava em 0,50 s; a resposta é em degrau entre 0,95 e 1,0); a
+  // condução vale menos depois de conduzSolta[0] s (até [2]× em [1] s); conduz a magConduz (~3,3 m/s, trotando com a bola:
+  // com 0,9 — ~5 m/s — o condutor ia a 16,5 km/h de mediana, o dobro do real) e com CORRER só com ≥ correrLivre m livres
+  // (transição ou antes de correrAte m; com 7 m ele passava 33% do tempo acima de 19,8 km/h, real 8,7%). Squad Battles do
+  // FC 26 (EA, Title Update 1.4): a CPU estava "overly passive", com "long periods of low-pressure possession", e ficou
+  // "more proactive and attacking"
+  // Já conduzindo a mais de viraV m/s, a direção nova fica a até viraMax rad do movimento (um passo de direção do decidir,
+  // 0,5 rad, + folga): virando 50–60° de uma vez a 3–4 m/s — o anguloEmbalado deixa até ~110° —, a bola tocada na linha velha
+  // ficava atrás do corpo; e sem a condução curta (curtaPerto 0: com o adversário a < 2,5 m à frente o MOD fazia a proteção
+  // girar o corpo em volta da bola ainda a ~3 m/s) — teste-nao-passa: os casos dos condutores da IA 11 → 2 em 28 partidas.
+  // A chance de manter a bola (ia-ataque.js manter) olha cada adversário onde ele estará em manterAntecipa s (revisão do
+  // D2: com a condução valendo mais e o manter só no agora, o condutor conduzia para dentro de quem fechava correndo — as
+  // roubadas no pé da IA 2,42 → 3,02 por min; com 0,12 s, 2,33; com 0,4, 1,50, mas o condutor passava antes: posse 0,72 s).
+  // 0,12 e não 0,1: no 'dribla' do teste-faltas-sentido (36 partidas) os pênaltis da IA no condutor da pessoa iam a 0,64 por
+  // partida com 0,1 (meta ≤ 0,6; main 0,39; 0,12 → 0,50, 0,15 → 0,39, 0,25 → 0,53; sem a antecipação 0,22); com 0,15 e 0,2
+  // o teste-nao-passa reprovava por 2 casos do time da PESSOA (o sorteio das sementes fixas: nenhum do condutor da IA)
+  // O risco do PASSE e da ENFIADA (ia-ataque.js riscoCaminho) vale também com cada adversário onde ele estará em
+  // passeAntecipa s (o maior dos dois; D3): o passe da IA sai depois da carga do botão (acaoIA: 0,3–0,7 s da força), e a
+  // roubada da IA desfeita pelo mesmo condutor (teste-defesa-corrida) era quase toda o passe que o ladrão decidia no tick da
+  // roubada e soltava ~0,5 s depois — no fim do semDominio da pessoa — na corrida de volta dela (a pessoa a ~0,8 m à frente
+  // da bola, a 0,3 m da linha): 6,6% desses passes na main, 14% com a marcação do D3; com 0,5 s, ~10%. O modelo de controle
+  // do campo de Spearman (2018; o código do Friends of Tracking, Shaw 2020) faz o mesmo: cada um segue na velocidade dele
+  // durante o tempo de reação (0,7 s) antes de ir à bola
+  utilidade: { conduz: 1.0, conduzSolta: [2.5, 5, 0.35], conduzLonge: 10, conduzLivre: 7, magConduz: 0.6, correrLivre: 14, correrAte: 35,
+    viraMax: 0.6, viraV: 2, curtaPerto: 0, manterAntecipa: 0.12, passeAntecipa: 0.5 },
+  // Apoio curto (ia-ataque.js apoioTatico; D2): com o ponto a mais de `liga` m (sai a menos de `desliga`) e o condutor
+  // conduzindo — a ≥ vCond m/s (sai abaixo de vCondSai) —, vai pelo modo IA.modos.apoia (corrida firme) em vez da calma
+  // (com 3 m e 2 m/s o apoio corria até com o condutor parado de lado: +0,25 no vai e volta e +5 m/min, medido)
+  apoio: { liga: 4, desliga: 2.5, vCond: 3, vCondSai: 2.5 },
+  // O apoio pela referência (ia-tatica.js alvoCalmo, ramo apoioRef; D2): com o alvo a menos de volta[0] m do lado de trás
+  // do movimento, freia e espera volta[1] s antes de voltar (o de sempre: 8 m) — o apoioRef era metade do vai e volta da
+  // IA (2,95 de 5,99 por jogador-min; Metrica 0,30) e o ataque mais rápido somava inversões (−0,5 com 12 m, medido). O
+  // "parado só a 1 m e sem a marcha" do plano saiu: não mexeu no apoio perto da bola (A6/A7 iguais) e somou inversões
+  suaveApoio: { volta: [12, 1.0] },
+  // ...e LONGE da jogada (a mais de bola[0] m da bola; volta a menos de bola[1]): parado até o alvo passar de quieto[1] m e
+  // na marcha lenta (~1 m/s) até marcha[0] m — trotando atrás da referência que anda com a bola ele fazia 153 m/min a mais
+  // de 25 m dela (Metrica: 118 m/min, 60% do tempo andando); é o que paga a corrida de perto da bola (V1/V2)
+  suaveApoioLonge: { bola: [25, 20], suave: { quieto: [4, 7], marcha: [10, 12, 0.18, 3] } },
+  sobeMax: 20,                // m — a subida com o ataque (IA_ATAQUE.sobeCorrendo) só para quem está a até isto da bola (a
+                              //     faixa da tela do celular: 39,6 m de largura no foco); mais longe ela era 22 m/min do volume
+  // Corridas nas costas (ia-ataque.js tentarCorrida; D2): só de quem joga na FRENTE (a vaga sem a bola à frente do meio:
+  // os centroavantes; os pontas e meias atacam a área no cruzamento), só com a linha deles nos últimos `ultimos` m, e o destino DENTRO
+  // da área — entre a marca do pênalti e a pequena área (u em [MX − u[0], MX − u[1]]), do lado oposto à bola (|w| de w[0] a
+  // w[1]) — (as corridas à frente da bola chegavam à área em 3%, Metrica 31%; Ju 2023: o centroavante faz 9–10 corridas nas
+  // costas por jogo; PLoS One 2024: corrida nas costas 10,9% e entrada na área 7,6% das disparadas, atacantes 24,5% e
+  // 17,9%); a corrida espera o passe até `espera` s (era 2: com 2,5 s só 8% chegavam à área) e, passada a linha, até
+  // alemMax s (era 1,5). Com `ultimos` 35 (o plano) eram 13–14%; com 45, 20–24%. recarga e max NÃO mudam (mais corridas
+  // levaram o vai e volta de 8,3 a 9,8–10,4/min — CLAUDE.md, item 8); só os da frente: 17,4 → ~10 por minuto de posse
+  corridas: { alemMax: 2.5, espera: 3.5, ultimos: 45, u: [11, 5.5], w: [2, 8] },
+  areaCorre: 3,               // m — quem vai à área corre com o ponto a mais que isto (era IA_ATAQUE.areaCorre 6)
+  // ---- D3: a IA MARCA correndo (itens 67-defesa, 19 e 20; dono, 17/10: "A IA NÃO CORRE, NEM PRA DEFENDER, NEM PRA ATACAR,
+  // tem que ser mais difícil"). Medido contra o roteiro (teste-ia-corre seção M; o mapa das travas da categoria D): o 1º
+  // homem já fica a ~2 m do condutor da pessoa (o real é 5,2 m: ele NÃO aperta mais); quem não corria eram os de trás dele —
+  // o teto de trote do ponto calmo (TATICA.suave.trote: ~2,6 m/s até 12 m do ponto) —: o ponto a mais de 5 m e o corpo abaixo
+  // de 4 m/s em 31% do tempo marcando. Em VOLUME a IA já corre mais que o real nos 5 s depois da perda (230 m/min; Jerome
+  // 2024: 156 ± 9 na transição defensiva, 208 ± 17 na defesa rápida): o que entra aqui é pago longe da bola (redistribuir).
+  // Quem marca PERTO da bola (ia-tatica.js alvoCalmo, ramos zona, fechaLinha, linha e cobre, com a bola a até
+  // marcaPerto.bola[0] m; sai a mais de bola[1] — a faixa da tela do celular deitado: 39,6 m de largura no foco): sem o teto
+  // do trote, a intensidade d / div (era d / 14, a do modo calma: a 5 m do ponto ~4,2 m/s), o sprint além de `corre` m (era
+  // 12), sem o arranque calmo (TATICA.arranque: 2 s trotando depois de parar) e, com o ponto a menos de volta[0] m do lado de
+  // trás do movimento, freia e espera volta[1] s antes de voltar (era [8, 1,0]: reagindo mais, a linha e a zona somavam
+  // inversões — o vai e volta da IA subia de 4,74 a 5,07 por jogador-min; com [12, 1,3], 4,75–4,8). O raio: com 20 m o
+  // "longe e devagar" ficava em ~23% (os de 20 a 30 m da bola eram 6 pontos), com 30 m em 18,4% e com 33 m em 16,6%
+  marcaPerto: { bola: [33, 37], suave: { trote: [1, 0, 0.33], div: 7, corre: 9, arranque: false, volta: [12, 1.3] } },
+  // Linha de engajamento (item 20; blocoDoTime): o 1º homem sai do bloco com a bola a até engaja[pressão] m do meu gol (a
+  // Média era 66). Medido contra a pessoa "espelho" (teste-pressao --humano: a pessoa joga com a decisão da IA, sem a marca
+  // `ia`), 24 partidas: com 66 e o resto do D3, PPDA 9,2 e a aproximação do 1º homem a 7–12 m em 4,3 km/h (meta ≥ 5); com
+  // 68, PPDA 8,3, agressão 75%, aproximação 5,2; com 70, PPDA 7,6 (abaixo do piso 8: aperta mais que o time que mais aperta
+  // na Europa — Liverpool 2021/22 8,6, Wyscout; Bournemouth 2024/25 9,9, Opta) e agressão 77%; com 78 (o plano), 86% (o
+  // teto real nesta definição é 78%: Metrica 68 ± 10). Na calibração final (48 partidas × 2 conjuntos de sementes, 1–48 e
+  // 1001–1048): 66 → 11,4 e 8,9 (o 1º acima do teto 10,5); 67 → 9,4 e 8,5; 68 → 9,7 e 8,0 (o 2º abaixo do piso 8) — o PPDA
+  // muda entre conjuntos de sementes mais que entre os valores vizinhos
+  // (D4: com os companheiros da pessoa apertando, o PPDA da IA contra o espelho foi a 11,0 com 67 — o espelho passa a atacar
+  // de outro jeito —; 69 → 9,4, agressão 73,7%, retomada 37,6%; 70 → 10,6: entre valores vizinhos ele varia ±1, a amostra)
+  engaja: [42, 69, 105],
+  // Encurtar (semBola, o ponto da zona; o plano D3: "quando a pessoa recebe, além do marcador colado, o 2º e o 3º fecham
+  // correndo; quem está entre 4 e 12 m sai do lugar para encurtar"): quem guarda a zona do MEIO ou da FRENTE a até encurta[0]
+  // m do condutor da pessoa — a linha de defesa fica na linha (FC 27, Closed Beta: os zagueiros "step towards their marked
+  // players" mas apertam menos que meias e atacantes) — vai encurta[2] do caminho até o ponto a encurta[1] m do condutor, do
+  // lado do meu gol; só com o condutor abaixo de encurta[3] m/s (a velocidade dele agora) e, com encurta[4], só na janela de
+  // um GATILHO de pressão (a recepção, de costas, o toque pesado, a lateral, o passe para trás, a perda: IA_DEFESA.gatilhos —
+  // FM e FIFA 21: pressão no toque ruim e na recepção). A 4–12 m o 1º homem ia na direção do condutor a 2,4 km/h (o real é
+  // 7,4–7,5: Metrica, a mesma conta) — era um da zona parado na forma; com o encurtar, 7,5. Sempre ligado (sem o gatilho),
+  // subindo no condutor que arrancava, o da zona era passado indo na direção dele (teste-defesa-corrida: as faltas da IA no
+  // humano 1,96 → 2,67 por partida e a roubada desfeita 8%); com 0,35, a agressão contra o espelho ia a 77,9% (o teto real
+  // nesta definição é 78%)
+  encurta: [12, 4, 0.3, 4, true],
+  // Recomposição (ia-tatica.js recompor, RECOMP_P): a virada em ARCO — com o pedido a mais de arco[0] rad do movimento e o
+  // corpo a mais de arco[1] m/s, pede o rumo a arco[2] rad do movimento pelo lado do alvo (alvo quase atrás — a menos de 0,2
+  // rad de 180° —: pelo lado do meu gol), com o CORRER. Acima de JOGADOR.angInversao (112°) o passoCorpo freia na linha até
+  // PARAR e só então vira (~0,6 s parado vindo a 5 m/s); na curva ele vira pela aceleração lateral do corte
+  // (JOGADOR.latCorte) sem parar — a física é a mesma. E, longe da bola (a mais de longe[0] m; quem ficou à frente dela, a
+  // mais de longe[2] m), volta a longe[1] de intensidade (~4,5 m/s) e sem o sprint: é o que paga o volume de perto da bola
+  // (V7; só na transição — TATICA.recomp.janela s depois da perda —: no jogo organizado volta com o sprint de antes) — salvo,
+  // com longe[3], o MEIO que ficou à frente da bola (nem a linha de defesa nem a frente), que volta sempre a
+  // todo vapor: com o longe valendo para ele, o recuo do meio no teste-transicao --humano caía de 6,1 para 4,0–5,5 m/s (meta
+  // ≥ 5,5: é o lance de que o dono reclama, o meio que volta trotando depois da roubada). Com 20 m e o meio poupado, a perda
+  // ia a 234–237 m/min; com 16 m, 232 (dentro do ± da base 229,7); com 0,65 de intensidade, a marcação devagar (M5) ia a 23%.
+  // O sprint mais cedo do plano (corre 11 → 8, urgente 10 → 20, vUrgente 4 → 3) e a frente sprintando nos 2 s da perda só
+  // somavam volume: o "longe e devagar" da recomposição é a ACELERAÇÃO do começo de cada uma (95% dele nos primeiros 0,75 s;
+  // mediana de 2,4 m/s no começo), não a falta de sprint
+  recomp: { arco: [1.75, 3, 0.95], longe: [16, 0.75, 16, true] },
+  // Condutor rápido no meu corredor (item 19; acompanhaCorredor e o liga do recompor): o bloco do corredor sprinta com mais
+  // de `correLonge` m de atraso (era IA_DEFESA.corrida.correLonge 8). Medido e fora: quem o condutor rápido já passou
+  // recompor na hora, em disparada (atrás dele, a até 15 m) — o defensor do corredor ia de 3,8 a 2,6 m/s nas duas
+  // calibrações em que foi medido (teste-defesa-corrida: quem volta correndo fica de novo na frente da arrancada e é passado
+  // virando), sem mudar a chegada à área além do ±. O limiar do condutor rápido (IA_DEFESA.corrida.v 7,0) NÃO muda: com 6,3
+  // só contra a pessoa o defensor do corredor ia a 4,1 m/s (meta 5, pendente), mas o vai e volta da IA subia a 4,90 e as
+  // roubadas sofridas a 2,82/min (teste-ia-corre V3 e V5 reprovavam)
+  corrida: { correLonge: 4 },
+  // Chegar na bola solta LENTA (ia-tatica.js chegarNaBola): a menos de `longe` m de uma bola no chão (≤ alturaMax m) a até
+  // vbMax m/s, a velocidade pedida é a da bola + folga + k × (a distância − perto), sem o sprint. Com a marcação do D3 a IA
+  // chega à bola solta vinda da pressão a 6–8 m/s; sem isso passava da bola a 2,5 m/s (teste-nao-passa meta 3)
+  livreChega: { perto: 1, longe: 5, folga: 1.5, k: 2, vbMax: 5, alturaMax: 0.5 },
+  // ---- D4: os COMPANHEIROS da pessoa apertam o condutor da IA (item 17; dono, 17/10: "A IA NÃO CORRE ... tem que ser mais
+  // difícil" e, ao escolher a categoria D, "bote só na hora certa"). Só no time da pessoa jogando CONTRA a IA
+  // (tatica.js contraPessoa(m, 1 − t); o online com duas pessoas não muda). Medido (teste-ia-corre C, depois do D3): o 1º
+  // companheiro fica a 6,9 m do condutor da IA (o real é 5,2) e a ≤ 5 m dele 36% do tempo (o real 48%): o 1º homem do bloco
+  // era quase sempre o CONTROLADO (o mais perto), que só faz o que a pessoa manda — ninguém mais continha —, e a trava de
+  // atropelar (DEFESA_HUMANO.semAtropelar, freio 3 m/s²) freava o time inteiro desde longe (a 3 m do condutor no máximo
+  // ~4,4 m/s). Aqui: o controlado sai da escolha do 1º e do 2º homem (blocoDoTime) — o companheiro mais perto contém e
+  // o seguinte cobre a `cobertura` m (era IA_DEFESA.cobertura 8,5), com a linha de engajamento `engaja` (a Média era
+  // IA_DEFESA.engaja 66) — e os companheiros (não o controlado: a carga por trás do teste-faltas-sentido B2) chegam na curva
+  // de freada de `freio` m/s² (JOGADOR.freio é 6,2). O BOTE continua só nos gatilhos de sempre (toque pesado, de costas,
+  // condutor lento, recepção; apertaProprio)
+  // (a linha de engajamento dos companheiros: com 67, o 1º a 6,5 m e 39% a ≤ 5 m; com 72, 5,9 m e 43%; com 76 e 80, igual
+  // nisso, mas a retomada da IA contra o espelho caía a 33% — teste-pressao --humano, faixa 34–54%: a pessoa que rouba a bola
+  // com os companheiros perto não a perde mais — e o apoio da IA andando passava do teto do D2, A6/A6b)
+  companheiros: { cobertura: 5, freio: 5, engaja: [42, 72, 105] },
 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca
@@ -1427,18 +1612,30 @@ export const DEFESA_HUMANO = {
     vSai: 3.2,                // m/s — a bola tirada sai para longe do condutor (como o boteIA)
     semDominio: 0.5,          // s — quem perdeu a bola não a domina de novo logo em seguida
   },
-  // PRESSÃO (segurar): grava m.pedidoPressao[time] = tick (contrato da Parte 0). Pedido do dono, 11/10 ("o botão de
-  // pressão não funciona"), como o "teammate pressure" do EA FC: vai quem CHEGA PRIMEIRO (defesa.js pressionadorDe) ao
+  // PRESSÃO (segurar): grava m.pedidoPressao[time] = tick (contrato da Parte 0); o pedido vale até `validade` s depois do
+  // último passo com o botão, só com o time defendendo (a retomada o encerra: defesa.js pressaoPedida/encerrarPressao).
+  // Pedido do dono, 11/10 ("o botão de pressão não funciona"; 23/10: "preciso do botão de pressão funcionando"), como o
+  // "teammate pressure" do EA FC: vai quem CHEGA PRIMEIRO (defesa.js pressionadorDe) ao
   // ponto a `colado` m do condutor, do lado do gol, adiantado até `leadMax` s (`histerese` s de vantagem para quem já vai);
   // disparada até `chega` m (por trás contorna a `contorno` m; `desvio` dos corpos) e disputa na bola (`naBola`,
   // `leadDisputa`, `bolaSolta`; `ganho`, `aproxMax`, `trasPerto`/`trasAprox`, `filtro`); chegada pela curva de freada
   // (`freioChegada`, `contato`; chegaFreando); `depois`: s de bote com responsabilidade de quem deixou de ser o chamado.
   // semAtropelar: o time da pessoa encosta no condutor a ~`chega` m/s. As contas: CONTRATOS.md.
+  // (23/10, D1 da FILA, item 18) `validade` 1 PASSO → 1 s (um toque curto vale ~1 s); `histerese` 0,3 → 0,5 s com o
+  // condutor e `histeresePasse` 1,0 s no passe do adversário (o chamado só troca quando outro chega isso antes: a marca
+  // pulava 1,30 vez em 3 s segurado, ~85% num passe da IA — teste-pressao-humano M11; com 0,5 nos dois, 1,02; com 0,3/1,0,
+  // 0,84; com 1,0 nos dois, 0,72, mas o M2 caía a 63%); `controlado` (a C1: PRESSÃO com o analógico a ≤ `soltoMax` faz o
+  // PRÓPRIO controlado apertar também, defesa.js entradaPressaoPropria) LIGADO — dono, 24/10: "meu jogador aperta também"
+  // (como o Pressão do FC Mobile; no console o RB não mexe no seu jogador): o ganho da bola em 3 s com 1 s de botão
+  // +9,4 → +13,1 pontos.
   semAtropelar: { freio: 3.0, chega: 1.0, reacao: 0.25, perto: 3.0 },
   pressao: {
-    validade: 1, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.0, contorno: 1.2,
+    validade: 1, histerese: 0.5, histeresePasse: 1.0, colado: 0.5, leadMax: 1.2, chega: 2.0, contorno: 1.2,
     naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.435, filtro: 0.2, ganho: 3, aproxMax: 5, trasPerto: 1.5, trasAprox: 0.5,
-    freioChegada: 0.9, contato: 0.8, desvio: { T: 0.6, folga: 0.25, alcance: 6 }, depois: 0.5,
+    // (desvio.folga 0,25 → 0,45 no D2, 24/10: com a IA conduzindo contra a pessoa, o chamado chegava mais vezes onde um
+    // companheiro já contém o condutor e trombava nele — teste-pressao-humano M8 1,9 → 4,8 por 100 casos; com 0,45, 2,8)
+    freioChegada: 0.9, contato: 0.8, desvio: { T: 0.6, folga: 0.45, alcance: 6 }, depois: 0.5,
+    controlado: true, soltoMax: 0.05,
   },
 };
 

@@ -13,14 +13,28 @@
 // depois de escolhido, a ≥ vCorrida / no total), marcaOk/marcaTot (ticks com o pedido valendo e um condutor adversário
 // em que o escolhido aparece para o desenho), p1Dobra/p1Tot (ticks com o 1º homem da IA ≠ controlado já apertando por
 // conta própria em que o escolhido é OUTRO jogador).
+// Com `tres: true` (D1, 23/10: "preciso do botão de pressão funcionando" — medido como o dono joga, sobre TODAS as
+// posses, não só as longas), cada caso roda também três ramos de 3 s com o humano PARADO (analógico solto): A3 sem o
+// botão, P1 com o PRESSÃO 1 s (um toque segurado e solto) e P3 com ele segurado os 3 s. Em cada um: `g` (o time 0 ganha
+// a bola — no pé ou nas mãos — antes de qualquer parada ou falta dele), `f` (faltas do time 0); com o botão, `rb`
+// (roubadas do chamado); no P3, `tr` (trocas do chamado: o escolhido que aparece no desenho passa a ser outro), e os passos
+// com a bola ao alcance do bote do chamado (≤ ACOES.boteIA.alcance m dele, condutor adversário) fora das duas travas que
+// ficam — nas costas do condutor (faltas.js chegada) e o corpo entrando (forcaContato > FALTAS.forca.min) — e fora do
+// descanso de outro bote: `alc` (todos), `lib` (o bote do chamado liberado: defesa.js boteContidoDoChamado; na lógica
+// antiga, a regra antiga — pela velocidade absoluta); e `ct` (o CONTROLADO chega a ≤ 1 m do condutor adversário: a C1,
+// DEFESA_HUMANO.pressao.controlado).
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export async function medirPressaoPareada(JS, { sementes = [1, 2], min = 4, T = 2, alcance = 15, modelos = ['persegue'] } = {}) {
+export async function medirPressaoPareada(JS, { sementes = [1, 2], min = 4, T = 2, alcance = 15, modelos = ['persegue'], tres = false } = {}) {
   const imp = f => import(pathToFileURL(path.join(JS, f)).href);
   const P = await imp('partida.js'), S = await imp('sim.js'), CFG = await imp('config.js'), D = await imp('defesa.js');
+  const FA = await imp('faltas.js');
   const { BOTAO, PASSO } = CFG;
-  const NT = Math.round(T / PASSO);
+  const NT = Math.round(T / PASSO), N3 = Math.round(3 / PASSO), N1 = Math.round(1 / PASSO);
+  // a trava do bote do chamado (sim.js boteIA); na lógica de antes do D1, a regra de então (velocidade absoluta)
+  const contido = D.boteContidoDoChamado ?? ((m, j, dono) => (Math.hypot(j.vx, j.vz) > CFG.FALTAS.bote.vLivre ? 'embalado'
+    : FA.chegada(j, dono) === 'tras' ? 'tras' : FA.forcaContato(m, j, dono) > CFG.FALTAS.forca.min ? 'corpo' : null));
   // o escolhido do PRESSÃO que o desenho mostra (defesa.js pressionadorVisivel; na lógica antiga, o cache do tick)
   const visivel = D.pressionadorVisivel ?? ((m, t) => { const c = m.pressaoHumano?.[t]; return c && c.tick === m.tick - 1 ? c.id : -1; });
 
@@ -101,6 +115,40 @@ export async function medirPressaoPareada(JS, { sementes = [1, 2], min = 4, T = 
     return r;
   }
 
+  // um ramo de 3 s com o humano parado e o PRESSÃO segurado nos `segura` primeiros passos
+  function ramo3(m, segura) {
+    const r = { g: 0, f: 0, rb: 0, tr: 0, alc: 0, lib: 0, ct: 0 };
+    let res = false, escAnt = -1, cham = -1;
+    for (let i = 1; i <= N3; i++) {
+      const ev = P.passoPartida(m, { x: 0, z: 0, botoes: i <= segura ? BOTAO.PRESSAO : 0 });
+      for (const x of ev) {
+        const q = x.id != null ? S.jogadorPorId(m, x.id) : null;
+        if (x.tipo === 'falta' && x.def != null && S.jogadorPorId(m, x.def)?.time === 0) { r.f++; res = true; }
+        if (x.tipo === 'roubada' && q && q.time === 0 && x.id === cham) r.rb++;
+      }
+      if (!res) {
+        const dono = m.naMao ?? m.posse, o = dono != null ? S.jogadorPorId(m, dono) : null;
+        if (o && o.time === 0) { r.g = 1; res = true; } else if (m.parada && !m.parada.rolou && m.parada.inicio === m.tick) res = true;
+      }
+      if (!r.ct) {
+        const d = condutorAdv(m), c = S.jogadorPorId(m, m.controlado[0]);
+        if (d && c && Math.hypot(c.x - d.x, c.z - d.z) <= 1) r.ct = 1;
+      }
+      if (segura === 0) continue;
+      const id = visivel(m, 0);
+      if (id >= 0) cham = id;
+      if (segura < N3) continue;
+      if (i >= 2 && id >= 0) { if (escAnt >= 0 && id !== escAnt) r.tr++; escAnt = id; }
+      const d = condutorAdv(m), q = id >= 0 ? S.jogadorPorId(m, id) : null;
+      if (!d || !q || (q.descansoBote ?? 0) > 0) continue;
+      if (Math.hypot(m.bola.p.x - q.x, m.bola.p.z - q.z) > CFG.ACOES.boteIA.alcance) continue;
+      if (FA.chegada(q, d) === 'tras' || FA.forcaContato(m, q, d) > CFG.FALTAS.forca.min) continue;
+      r.alc++;
+      if (!contido(m, q, d)) r.lib++;
+    }
+    return r;
+  }
+
   const casos = [];
   for (const sem of sementes) {
     const modelo = modelos[(sem - sementes[0]) % modelos.length];
@@ -114,7 +162,9 @@ export async function medirPressaoPareada(JS, { sementes = [1, 2], min = 4, T = 
         if (d0 <= alcance) {
           const A = S.copiarMundo(m), B = S.copiarMundo(m);
           const h0 = S.hashMundo(A) === S.hashMundo(B);
-          casos.push({ sem, tick: m.tick, modelo, d0, h0, A: ramo(A, false, modelo, d.id), B: ramo(B, true, modelo, d.id) });
+          const caso = { sem, tick: m.tick, modelo, d0, h0, A: ramo(A, false, modelo, d.id), B: ramo(B, true, modelo, d.id) };
+          if (tres) caso.t3 = { A3: ramo3(S.copiarMundo(m), 0), P1: ramo3(S.copiarMundo(m), N1), P3: ramo3(S.copiarMundo(m), N3) };
+          casos.push(caso);
           bloqueadoAte = m.tick + NT;
         }
       }

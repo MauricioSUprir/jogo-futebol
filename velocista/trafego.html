@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>THE FLASH — trânsito e pedestres (visualização)</title>
+<style>html,body{margin:0;height:100%;background:#0b0f18;overflow:hidden;font-family:system-ui,sans-serif;color:#dfe8f5}#c{position:fixed;inset:0;width:100%;height:100%}#info{position:fixed;left:10px;top:8px;font-size:12px;background:rgba(0,0,0,.45);padding:6px 9px;border-radius:8px}</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="info">WASD move o "jogador" (Shift = 40 m/s), arraste para girar a câmera, roda = distância. ?noite=1 &nbsp; ?mobile=1</div>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }</script>
+<script type="module">
+import * as THREE from 'three';
+import { CELL, N, MEIO, BLOCO, CALCADA, bloco } from './js/cidade.js';
+import { criarTrafego } from './js/trafego.js';
+import { criarPedestres } from './js/pedestres.js';
+const q = new URLSearchParams(location.search), NOITE = q.get('noite') === '1', MOBILE = q.get('mobile') === '1';
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const cena = new THREE.Scene();
+const fundo = NOITE ? 0x0c1430 : 0xbcd8f5; cena.background = new THREE.Color(fundo); cena.fog = new THREE.Fog(fundo, 140, 360);
+cena.add(new THREE.HemisphereLight(NOITE ? 0x4a5f9e : 0xcfe2ff, NOITE ? 0x252a3c : 0x6a6258, NOITE ? 1.2 : 1.1));
+const sol = new THREE.DirectionalLight(NOITE ? 0x8aa0e0 : 0xfff4de, NOITE ? 0.5 : 1.6); sol.position.set(-60, 120, 40); cena.add(sol);
+const camera = new THREE.PerspectiveCamera(60, 1, 0.2, 900);
+// cidade mínima: asfalto, lajes e prédios em caixas (instanciados) em volta da origem, e o eixo amarelo das ruas
+const asf = new THREE.Mesh(new THREE.PlaneGeometry(N * CELL, N * CELL), new THREE.MeshLambertMaterial({ color: 0x2b2d33 })); asf.rotation.x = -Math.PI / 2; cena.add(asf);
+const lajes = [], lotes = [];
+for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { const b = bloco(i, j); if (Math.hypot(b.cx, b.cz) > 380) continue; lajes.push(b); for (const l of b.lotes) lotes.push(l); }
+const iL = new THREE.InstancedMesh(new THREE.BoxGeometry(BLOCO, CALCADA, BLOCO), new THREE.MeshLambertMaterial({ color: 0xa7a9ad }), lajes.length);
+const iP = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: NOITE ? 0x39415a : 0x9aa3b8 }), Math.max(1, lotes.length));
+const m = new THREE.Matrix4();
+lajes.forEach((b, k) => iL.setMatrixAt(k, m.makeTranslation(b.cx, CALCADA / 2, b.cz)));
+lotes.forEach((l, k) => iP.setMatrixAt(k, m.makeScale(l.x1 - l.x0, l.y1 - l.y0, l.z1 - l.z0).setPosition((l.x0 + l.x1) / 2, (l.y0 + l.y1) / 2, (l.z0 + l.z1) / 2)));
+cena.add(iL, iP);
+const linhas = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.02, 1), new THREE.MeshBasicMaterial({ color: 0xe6c53a }), 2 * (N + 1));
+for (let k = 0; k <= N; k++) { const e = k * CELL - MEIO; linhas.setMatrixAt(k * 2, m.makeScale(N * CELL, 1, 0.15).setPosition(0, 0.02, e)); linhas.setMatrixAt(k * 2 + 1, m.makeScale(0.15, 1, N * CELL).setPosition(e, 0.02, 0)); }
+cena.add(linhas);
+const jog = { x: 0, z: 0, vx: 0, vz: 0, auto: null };
+const marca = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.8, 12), new THREE.MeshLambertMaterial({ color: 0x1a3a8a, emissive: 0x0a1840 })); cena.add(marca);
+const traf = criarTrafego(THREE, cena, { mobile: MOBILE }), ped = criarPedestres(THREE, cena, { mobile: MOBILE });
+const cam = { yaw: 0.6, pitch: 0.55, dist: 40, alvo: null };
+const teclas = new Set(); addEventListener('keydown', (e) => teclas.add(e.key.toLowerCase())); addEventListener('keyup', (e) => teclas.delete(e.key.toLowerCase()));
+let arr = null; addEventListener('pointerdown', (e) => { arr = [e.clientX, e.clientY]; }); addEventListener('pointerup', () => { arr = null; });
+addEventListener('pointermove', (e) => { if (!arr) return; cam.yaw -= (e.clientX - arr[0]) * 0.005; cam.pitch = Math.max(0.05, Math.min(1.4, cam.pitch + (e.clientY - arr[1]) * 0.004)); arr = [e.clientX, e.clientY]; });
+addEventListener('wheel', (e) => { cam.dist = Math.max(4, Math.min(300, cam.dist * (e.deltaY > 0 ? 1.1 : 0.9))); });
+const relogio = new THREE.Clock(); let tCpu = 0, nCpu = 0;
+function quadro() {
+  requestAnimationFrame(quadro);
+  const dt = Math.min(relogio.getDelta(), 0.05);
+  if (jog.auto) { jog.vx = jog.auto[0]; jog.vz = jog.auto[1]; }
+  else { const fx = Math.sin(cam.yaw), fz = Math.cos(cam.yaw), v = teclas.has('shift') ? 40 : 6; const ix = (teclas.has('d') ? 1 : 0) - (teclas.has('a') ? 1 : 0), iz = (teclas.has('w') ? 1 : 0) - (teclas.has('s') ? 1 : 0); jog.vx = (fx * iz - fz * ix) * v; jog.vz = (fz * iz + fx * ix) * v; }
+  jog.x += jog.vx * dt; jog.z += jog.vz * dt; marca.position.set(jog.x, 0.9, jog.z);
+  const t0 = performance.now();
+  ped.atualizar(dt, jog, NOITE ? 1 : 0); traf.atualizar(dt, jog, NOITE ? 1 : 0, ped.pessoas);
+  tCpu += performance.now() - t0; nCpu++;
+  const a = cam.alvo || [jog.x, 1.2, jog.z];
+  camera.position.set(a[0] - Math.sin(cam.yaw) * Math.cos(cam.pitch) * cam.dist, a[1] + Math.sin(cam.pitch) * cam.dist, a[2] - Math.cos(cam.yaw) * Math.cos(cam.pitch) * cam.dist);
+  camera.lookAt(a[0], a[1], a[2]);
+  renderer.render(cena, camera);
+}
+function tamanho() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener('resize', tamanho); tamanho(); quadro();
+window.__traf = { THREE, renderer, cena, camera, cam, jog, traf, ped, cpu: () => ({ ms: tCpu / Math.max(1, nCpu), n: nCpu }), zerarCpu: () => { tCpu = 0; nCpu = 0; } };
+</script>
+</body>
+</html>

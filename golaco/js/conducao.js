@@ -1018,7 +1018,12 @@ export function movimentoComBola(m, j) {
   }
   // com um toque marcado, o corpo faz o que o analógico pede (o toque já foi planejado para
   // esse corpo); sem toque marcado, não larga a bola que vai embora
-  if (!c.busca) return c.toque ? base : acompanharBola(m, j, base);
+  if (!c.busca) {
+    // (a IA com um toque marcado e a bola de lado, fora da faixa do pé: vai para a linha dela; D5)
+    // (só na partida, m.times: o treino fica bit a bit igual)
+    if (c.toque && !j.porHumano && m.times && CONDUCAO.ladoIA) { const r = bolaDeLadoIA(m, j, base); if (r) return r; }
+    return c.toque ? base : acompanharBola(m, j, base);
+  }
   // a bola saiu do alcance: vai buscá-la. Se ela ainda está no corredor do rumo pedido
   // (±angBusca), o corpo segue o analógico e só corrige o mínimo para passar com a bola no pé.
   const b = m.bola;
@@ -1053,6 +1058,23 @@ export function movimentoComBola(m, j) {
     }
   }
   return { dx: dx / dl, dz: dz / dl, vel: velF, rumoAlvo: aBola };
+}
+
+/**
+ * A IA com um toque marcado e a bola à frente mas DE LADO, além de CONDUCAO.ladoIA.lado m da linha do corpo (D5; a pendência
+ * "a bola ao lado do pé" do teste-nao-passa): seguindo o analógico reto, o toque marcado não alcançava, o corpo passava da
+ * bola e o adversário ficava com ela (3 de ~140 partidas IA × IA). O corpo vai para a linha da bola, sem passar da
+ * velocidade dela + ladoIA.folga m/s, até o toque. Só a IA: a condução da pessoa não muda. null = o de sempre.
+ */
+function bolaDeLadoIA(m, j, base) {
+  const L = CONDUCAO.ladoIA, b = m.bola, s = MD.hypot(j.vx, j.vz);
+  if (s < 1) return null;
+  const hx = j.vx / s, hz = j.vz / s, ex = b.p.x - j.x, ez = b.p.z - j.z;
+  const fr = ex * hx + ez * hz, la = -ex * hz + ez * hx;
+  if (fr < 0.2 || Math.abs(la) < L.lado) return null;
+  const sb = MD.hypot(b.v.x, b.v.z), px = b.p.x + b.v.x * L.antecipa, pz = b.p.z + b.v.z * L.antecipa;
+  const dx = px - j.x, dz = pz - j.z, d = MD.hypot(dx, dz) || 1;
+  return { dx: dx / d, dz: dz / d, vel: Math.min(base.vel, sb + L.folga), rumoAlvo: MD.atan2(dz, dx) };
 }
 
 /**

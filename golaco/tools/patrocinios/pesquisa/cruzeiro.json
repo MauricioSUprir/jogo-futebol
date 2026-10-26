@@ -1,0 +1,161 @@
+{
+ "clube": "Cruzeiro",
+ "chave": "br/Cruzeiro",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Adidas",
+  "logo": "cruzeiro__adidas.svg",
+  "logo_fonte": "https://commons.wikimedia.org/wiki/File:Adidas_2022_logo.svg (original https://upload.wikimedia.org/wikipedia/commons/1/1b/Adidas_2022_logo.svg)",
+  "cor_na_camisa": {
+   "casa": "#ffffff",
+   "fora": "#2f53c2",
+   "terceira": "#1e5fb3",
+   "goleiro": "#151a2d"
+  }
+ },
+ "patrocinios": [
+  {
+   "nome": "Super Cimed",
+   "posicao": "ombro",
+   "lado": "ambos",
+   "posicao_detalhe": "dois logos, um de cada lado do alto do peito, junto da gola: 'Super' cursivo grande com 'CIMED' pequeno embaixo, à direita",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "cruzeiro__super-cimed.png",
+   "logo_fonte": "COMPOSTO pelo verificador (22/10): 'Super' em letra cursiva (Pacifico, Google Fonts, OFL) em cima do 'CIMED' do Commons (https://commons.wikimedia.org/wiki/File:Logotipo_da_Cimed.svg), montado pela foto do vestiário de 07/10 (https://moonbh.com.br/wp-content/uploads/2026/10/Camisa-Cruzeiro-sem-patrocinio.jpg). O arquivo oficial do Super Cimed não está em lugar público (o site da Cimed não abriu daqui)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#2f53c2",
+    "terceira": "#1e5fb3",
+    "goleiro": "#151a2d"
+   },
+   "largura_rel": 0.16,
+   "logo_aproximado": true
+  },
+  {
+   "nome": "OMO",
+   "posicao": "manga",
+   "lado": "ambos",
+   "posicao_detalhe": "nas duas mangas, em pé; na camisa vem 'OMO' com um slogan miúdo ao lado ('CICLO RÁPIDO'), que não está no arquivo",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "cruzeiro__omo.png",
+   "logo_fonte": "https://omo.com/br/static/ef99eb91cebed18eb32585d874ebc875/8b9c2/omo-logo.png (site da marca)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#2f53c2",
+    "terceira": "#1e5fb3",
+    "goleiro": "#151a2d"
+   },
+   "largura_rel": 0.13,
+   "rotacao": 90
+  },
+  {
+   "nome": "Perdigão Na Brasa",
+   "posicao": "barra_frontal",
+   "posicao_detalhe": "frente, embaixo, perto da barra",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "cruzeiro__perdigao-na-brasa.svg",
+   "logo_fonte": "https://cdn.worldvectorlogo.com/logos/perdigao-na-brasa-logo.svg (worldvectorlogo — o site da Perdigão bloqueou o download)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#2f53c2",
+    "terceira": "#1e5fb3",
+    "goleiro": "#151a2d"
+   },
+   "largura_rel": 0.34
+  },
+  {
+   "nome": "Vilma",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "costas, em cima do nome (o selo arredondado com 'Vilma')",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "cruzeiro__vilma.png",
+   "logo_fonte": "https://www.vilma.com.br/wp-content/themes/temavilma/img/vilma-alimentos.svg (SVG do site com um PNG 827 px embutido; extraí o PNG e cortei o 'ALIMENTOS' de baixo, que não vai na camisa) — verificador (22/10): letra e borda brancas VAZADAS (pintado de uma cor só, o selo vira a forma e o 'Vilma' fica na cor da camisa, como na camisa azul: selo branco com a letra azul); antes o selo inteiro virava um bloco sem letra",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#2f53c2",
+    "terceira": "#1e5fb3",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.36
+  },
+  {
+   "nome": "Supermercados BH",
+   "posicao": "abaixo_numero",
+   "posicao_detalhe": "costas, embaixo do número; na camisa azul vai como um selo oval branco com 'BH' azul, na branca em azul",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "cruzeiro__supermercados-bh.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Logo_supermercado_bh.png (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Logo_supermercado_bh.png/1280px-Logo_supermercado_bh.png) — verificador (22/10): o 'BH' amarelo e a sombra vermelha VAZADOS e o contorno branco tirado (pintado de uma cor só, fica o oval com o BH na cor da camisa, como na camisa azul); antes virava um oval liso sem letra",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#2f53c2",
+    "terceira": "#1e5fb3",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.3
+  }
+ ],
+ "suspensos_mp_1394": [
+  {
+   "nome": "Betnacional",
+   "posicao": "peito",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "cruzeiro__betnacional.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Betnacional-logo.png (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ef/Betnacional-logo.png/1280px-Betnacional-logo.png; o arquivo tem fundo azul-escuro) — verificador: fundo azul-escuro tirado (pintado de uma cor só virava um retângulo)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#2f53c2",
+    "terceira": "#1e5fb3",
+    "goleiro": "#151a2d"
+   },
+   "largura_rel": 0.58,
+   "ate": "2026-10-05",
+   "nota": "máster de jan/2026 até a MP 1.394/2026 (contrato até o fim de 2026)"
+  }
+ ],
+ "fontes": [
+  "https://eleconomista.com.ar/deportes/flamengo-desafio-lula-camiseta-prohibicion-apuestas-brasil-n98757/amp (MP 1.394/2026, prazo 05/10)",
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/ (18/10/2026)",
+  "https://www.meioemensagem.com.br/marketing/como-ficam-os-patrocinios-sem-as-bets-na-volta-do-brasileirao (07/10/2026)",
+  "https://www.poder360.com.br/poder-sportsmkt/times-da-serie-a-usam-patrocinios-pontuais-no-lugar-de-bets/",
+  "https://www.meioemensagem.com.br/marketing/betnacional-e-a-nova-patrocinadora-master-do-cruzeiro",
+  "https://www.agenciaminas.mg.gov.br/noticia/empresas-do-governo-de-minas-cemig-e-codemig-firmam-acordo-com-clubes-de-futebol-de-bh-para-patrocinio-de-r-32-milhoes (Cemig/Codemig: protocolo de intenções, espaço na camisa ainda não definido)",
+  "https://www.flickr.com/photos/cruzeirooficial/albums/72177720336206372 (Grêmio x Cruzeiro, 18/10/2026: camisa branca sem máster)",
+  "https://www.flickr.com/photos/cruzeirooficial/albums/72177720336113460 (RB Bragantino x Cruzeiro, 12/10/2026)",
+  "https://www.flickr.com/photos/cruzeirooficial/albums/72177720336050774 (Cruzeiro x São Paulo, 07/10/2026: camisa azul e goleiro rosa)",
+  "https://www.itatiaia.com.br/esportes/futebol/futebol-nacional/futebol-mineiro/cruzeiro/cruzeiro-tem-nova-versao-de-camisa-apos-fim-das-bets-veja-como-ficou/ (07/10/2026: espaço máster vago)",
+  "https://www.otempo.com.br/sports/cruzeiro/2026/10/7/cruzeiro-jogara-com-espaco-mais-nobre-da-camisa-vazio-apos-perder-patrocinio-master",
+  "https://moonbh.com.br/esportes/cruzeiro/2026/10/08/camisa-cruzeiro-primeiro-jogo-sem-bets/ (fotos do vestiário de 07/10)"
+ ],
+ "confianca": "alta",
+ "notas": "Desde 07/10/2026 (MP 1.394/2026) o Cruzeiro joga SEM máster: a Betnacional saiu e nada entrou no lugar (o pacote Cemig/Codemig do Governo de Minas é para 2027 e o espaço não foi definido). Disposição conferida nas fotos oficiais de 07, 12 e 18/10: Super Cimed nos dois lados do alto do peito, adidas à direita, estrelas à esquerda, Perdigão Na Brasa embaixo, OMO nas duas mangas; costas Vilma em cima do nome, Supermercados BH embaixo do número e 'Orizonti' miúdo dentro dos algarismos (este não entrou: logo não achado). INCERTO: o logo 'Super Cimed' oficial não foi achado — o arquivo é só o 'CIMED' (falta o 'Super' cursivo); calção: não vi patrocínio; cores da camisa 3 (off-white) e do goleiro cinza estimadas (azul #1e5fb3 / marinho); no goleiro rosa de 07/10 os logos das costas eram brancos. VERIFICAÇÃO (22/10): peito vazio confirmado (Itatiaia 07/10, O Tempo 07/10, Poder360 18/10); as novas máster de out/2026 (Mili, Maturatta) são do time FEMININO, não do masculino. Disposição conferida nas fotos do vestiário de 07/10 (Super Cimed dos dois lados, adidas, OMO na manga, Perdigão Na Brasa na barra, Vilma em cima do nome, Supermercados BH embaixo do número). CORRIGIDO: logo do Super Cimed refeito com o 'Super' cursivo (aproximado); Vilma e Supermercados BH recortados para a pintura de uma cor (letras vazadas); Betnacional sem a caixa de fundo. A tabela da Wikipédia (Betfair, Surf, Kodilar, MM Aluguel) está desatualizada e foi ignorada."
+}

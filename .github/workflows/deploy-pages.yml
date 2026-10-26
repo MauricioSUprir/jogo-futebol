@@ -5,74 +5,100 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 concurrency:
   group: "pages"
   cancel-in-progress: true
 jobs:
-  # GOLAÇO (golaco/): a bateria de testes roda antes de publicar; se algum reprovar, o deploy não
-  # acontece. É o mesmo arquivo do CI do PR (golaco-testes.yml), em partes paralelas (Node em 4
+  # A bateria do GOLAÇO só precisa rodar quando o que ela testa mudou. Compara o golaco/, o legacy-total-match/
+  # (o teste-rostos-reais lê as fotos do TM) e o golaco-testes.yml com os do último deploy aprovado (o último run
+  # com sucesso deste arquivo: ou passou nos testes, ou pulou por estar igual ao aprovado antes dele). Iguais =
+  # pula os testes e publica em ~3 min (mudança só no THE FLASH, no TM fora da pasta etc.). Na dúvida (sem run
+  # aprovado, erro do git, execução manual), roda.
+  mudancas:
+    runs-on: ubuntu-latest
+    outputs:
+      golaco: ${{ steps.compara.outputs.golaco }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: compara
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          testar=true
+          if [ "${{ github.event_name }}" = "push" ]; then
+            BOM=$(gh run list --workflow deploy-pages.yml --branch main --status success --limit 1 --json headSha --jq '.[0].headSha' || true)
+            arvores() { for p in golaco legacy-total-match .github/workflows/golaco-testes.yml; do git rev-parse "$1:$p" 2>/dev/null || echo "falta"; done; }
+            if [ -n "$BOM" ] && git cat-file -e "$BOM^{commit}" 2>/dev/null && [ "$(arvores HEAD)" = "$(arvores "$BOM")" ]; then
+              testar=false
+              echo "O que os testes do GOLAÇO cobrem está igual ao do deploy aprovado $BOM: pula a bateria."
+            fi
+          fi
+          echo "golaco=$testar" >> "$GITHUB_OUTPUT"
+  # GOLAÇO (golaco/): a bateria de testes roda antes de publicar; se algum reprovar, o golaco NOVO não vai
+  # para o site — continua no ar o golaco do último deploy aprovado — e os outros projetos publicam normalmente. É o mesmo arquivo do CI do PR (golaco-testes.yml), em partes paralelas (Node em 4
   # máquinas, navegador em 3); deploy: true = no navegador só os testes marcados para o deploy.
   testes-golaco:
+    needs: mudancas
+    # se a comparação falhar, roda (a saída vazia não é 'false')
+    if: ${{ !cancelled() && needs.mudancas.outputs.golaco != 'false' }}
     uses: ./.github/workflows/golaco-testes.yml
     with:
       deploy: true
+  # Publicação RÁPIDA (26/10: o dono esperava ~25 min a cada mudança no THE FLASH porque a outra frente tinha mudado o
+  # golaco): quando a bateria do GOLAÇO vai rodar, publica JÁ o site deste commit com o golaco que já está no ar (o do
+  # último deploy aprovado). O deploy de baixo publica de novo quando a bateria termina — com o golaco novo se passou.
+  rapido:
+    needs: mudancas
+    if: ${{ !cancelled() && needs.mudancas.outputs.golaco != 'false' }}
+    environment:
+      name: github-pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Montar site do Pages (golaco do último deploy aprovado)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/montar-site.sh aprovado
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          name: github-pages-rapido
+          path: '_site'
+      - uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-rapido
   deploy:
-    needs: testes-golaco
+    needs: [mudancas, testes-golaco, rapido]
+    # roda mesmo com os testes do golaco reprovados ou pulados (o golaco é que fica na última versão aprovada)
+    if: ${{ !cancelled() }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/configure-pages@v5
         with:
           enablement: true
       - name: Montar site do Pages
-        run: |
-          # Total Match continua na raiz do site.
-          rm -rf _site
-          mkdir -p _site
-          cp -r legacy-total-match/. _site/
-          # ferramentas do Total Match (geradores, capas originais) não vão para o site
-          rm -rf _site/ferramentas
-          # App de Finanças de Casa fica em /financas-casa/
-          mkdir -p _site/financas-casa
-          cp -r financas-casa/. _site/financas-casa/
-          # LookLab (estilista digital) fica em /looklab/
-          mkdir -p _site/looklab
-          cp -r looklab/. _site/looklab/
-          # StudyLab fica em /studylab/
-          mkdir -p _site/studylab
-          cp -r studylab/. _site/studylab/
-          # KATSEYE Central fica em /katseye-central/
-          mkdir -p _site/katseye-central
-          cp -r katseye-central/. _site/katseye-central/
-          # Jezero (sobrevivência em Marte) fica em /marte/
-          mkdir -p _site/marte
-          cp -r marte/. _site/marte/
-          rm -rf _site/marte/tools
-          # GOLAÇO (futebol 3D) fica em /futebol3d/
-          mkdir -p _site/futebol3d
-          cp -r futebol3d/. _site/futebol3d/
-          rm -rf _site/futebol3d/tools
-          # GOLAÇO novo (futebol 3D, projeto do zero) fica em /golaco/
-          mkdir -p _site/golaco
-          cp -r golaco/. _site/golaco/
-          rm -rf _site/golaco/tools
-          # Céu do Rio (simulador de voo) fica em /aviao/
-          mkdir -p _site/aviao
-          cp -r aviao/. _site/aviao/
-          rm -rf _site/aviao/tools
-          # LANCE A LANCE (simulador de partidas) fica em /simulador/
-          mkdir -p _site/simulador
-          cp -r simulador/. _site/simulador/
-          rm -rf _site/simulador/tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/montar-site.sh "${{ needs.testes-golaco.result == 'success' && 'novo' || 'aprovado' }}"
       - uses: actions/upload-pages-artifact@v3
         with:
           # Raiz = jogo Total Match.
-          # Subpastas: /financas-casa/, /looklab/, /studylab/, /katseye-central/, /marte/, /aviao/, /futebol3d/, /golaco/ e /simulador/.
+          # Subpastas: /financas-casa/, /looklab/, /studylab/, /katseye-central/, /marte/, /aviao/, /futebol3d/, /golaco/, /velocista/ e /simulador/.
           # O CreateFlow (raiz do repo) é hospedado à parte (Railway), não pelo Pages.
           path: '_site'
       - id: deployment

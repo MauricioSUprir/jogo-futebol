@@ -1,0 +1,221 @@
+{
+ "clube": "Vasco da Gama",
+ "chave": "br/Vasco da Gama",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Nike",
+  "logo": "vasco-da-gama__nike.svg",
+  "logo_fonte": "https://commons.wikimedia.org/wiki/File:Logo_NIKE.svg (original https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg)",
+  "cor_na_camisa": {
+   "casa": "#ffffff",
+   "fora": "#1c1c1c",
+   "terceira": "#1c1c1c",
+   "goleiro": "#ffffff"
+  }
+ },
+ "patrocinios": [
+  {
+   "nome": "Sócio Gigante (Seja Sócio Gigante)",
+   "posicao": "peito",
+   "pontual": true,
+   "logo_colorido": true,
+   "orientacao": "diagonal",
+   "posicao_detalhe": "ação do programa de sócios no lugar da Sportingbet (desde 04-05/10, MP 1.394/2026): 'SEJA SÓCIO' (preto, miúdo e espaçado) em cima do selo 'GIGANTE' (letras brancas na caixa preta), em diagonal na parte BRANCA ao lado da faixa, na camisa 2 branca; na camisa 1 preta o peito ficou VAZIO nos jogos de 17/10 (São Paulo) e 20/10 (Boca Juniors)",
+   "uniformes": [
+    "fora"
+   ],
+   "logo": "vasco-da-gama__socio-gigante-camisa.png",
+   "logo_fonte": "montado na verificação a partir de https://cdn.sociogigante.com/prod/assets/images/website/logo-gigante-horizontal.svg (o selo 'GIGANTE' com a caixa preta, SEM o escudinho, que não vai na camisa) + 'SEJA SÓCIO' em Inter 700 espaçada, como na camisa 2 (foto NetVasco 07/10/2026)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1c1c1c",
+    "terceira": "#1c1c1c",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.5,
+   "logo_aproximado": true
+  },
+  {
+   "nome": "Viva Sorte",
+   "posicao": "ombro",
+   "lado": "direito",
+   "posicao_detalhe": "alto do peito do lado direito de quem veste, logo acima da Nike (sem a palavra 'capitalização')",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "vasco-da-gama__viva-sorte.png",
+   "logo_fonte": "https://repositorio-bahia.s3.amazonaws.com/wp-content/uploads/2025/06/13151720/viva-sorte.png (mesmo arquivo do lote do Bahia)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1c1c1c",
+    "terceira": "#1c1c1c",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.15
+  },
+  {
+   "nome": "Viva Sorte",
+   "posicao": "calcao",
+   "posicao_detalhe": "frente do calção, perna esquerda, acima da Nike",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "vasco-da-gama__viva-sorte.png",
+   "logo_fonte": "https://repositorio-bahia.s3.amazonaws.com/wp-content/uploads/2025/06/13151720/viva-sorte.png (mesmo arquivo do lote do Bahia)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1c1c1c",
+    "terceira": "#1c1c1c",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.12
+  },
+  {
+   "nome": "Zé Delivery",
+   "posicao": "manga",
+   "lado": "ambos",
+   "posicao_detalhe": "mangas: 'Zé DELIVERY' numa e o rosto do Zé (parte do mesmo logo) na outra, ao lado do patch da competição",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "vasco-da-gama__ze-delivery.png",
+   "logo_fonte": "https://s3.amazonaws.com/assets-fluminense/sponsors/91/ze_delivery_original.png (o mesmo arquivo do lote do Corinthians)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1c1c1c",
+    "terceira": "#1c1c1c",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.12
+  },
+  {
+   "nome": "allu",
+   "posicao": "barra_frontal",
+   "posicao_detalhe": "barra da frente, do lado ESQUERDO de quem veste (perto do fim da faixa diagonal): 'SEJA FRANQUEADO' miúdo em cima de 'allu.' (anunciada em 16/10, estreia em 17/10 contra o São Paulo, até 31/12/2026)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "vasco-da-gama__allu.png",
+   "logo_fonte": "https://images.seeklogo.com/logo-png/68/1/allugator-logo-png_seeklogo-684085.png (fundo branco retirado)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1c1c1c",
+    "terceira": "#1c1c1c",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.24,
+   "lado": "esquerdo"
+  },
+  {
+   "nome": "Banco BMG",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "costas, 'banco bmg' em cima do nome",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "vasco-da-gama__banco-bmg.png",
+   "logo_fonte": "https://repositorio-bahia.s3.amazonaws.com/wp-content/uploads/2026/01/05103608/Logo-Bmg-Branco.png (mesmo arquivo do lote do Bahia)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1c1c1c",
+    "terceira": "#1c1c1c",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.42
+  },
+  {
+   "nome": "R10 Score",
+   "posicao": "acima_numero",
+   "orientacao": "vertical",
+   "posicao_detalhe": "dentro do número das costas, 'R10 SCORE' na vertical em cada algarismo",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "vasco-da-gama__r10-score.png",
+   "logo_fonte": "https://images.seeklogo.com/logo-png/56/1/r10-score-logo-png_seeklogo-566192.png (fundo escuro retirado)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#ffffff",
+    "terceira": "#ffffff",
+    "goleiro": "#1c1c1c"
+   },
+   "largura_rel": 0.05
+  },
+  {
+   "nome": "Moto Chefe",
+   "posicao": "abaixo_numero",
+   "posicao_detalhe": "costas, embaixo do número (símbolo MC + 'MOTO CHEFE')",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "vasco-da-gama__moto-chefe.svg",
+   "logo_fonte": "https://motochefebrasil.com.br/wp-content/uploads/2025/10/Ativo_wht_1.svg (cabeçalho do site; só a palavra, sem o símbolo MC)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1c1c1c",
+    "terceira": "#1c1c1c",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.24
+  },
+  {
+   "nome": "Facility Proteção Veicular",
+   "posicao": "calcao",
+   "posicao_detalhe": "parte de trás do calção, embaixo (contrato de 15/05/2026 até o fim de 2026)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "vasco-da-gama__facility.png",
+   "logo_fonte": "recortado e retificado na verificação da foto oficial do calção (https://www.netvasco.com.br/news/noticias16/arquivos/20260515-130804-1-.jpeg, a mesma da Máquina do Esporte); o site da marca não abre daqui",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#1c1c1c",
+    "terceira": "#1c1c1c",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.15,
+   "logo_aproximado": true
+  }
+ ],
+ "fontes": [
+  "https://www.netvasco.com.br/n/394673/veja-fotos-do-vestiario-do-vasco-no-morumbi (fotos oficiais de 17/10/2026, Dikran Sahagian/Vasco: camisa 1 sem máster, costas)",
+  "https://www.netvasco.com.br/n/394665/vasco-jogara-com-a-camisa-preta-contra-o-sao-paulo-fotos-mostram-detalhes-dos-patrocinios (17/10/2026)",
+  "https://www.netvasco.com.br/n/394854/veja-fotos-do-vestiario-do-vasco-no-maracana (20/10/2026, Sul-Americana: camisa 1 e goleiro verde)",
+  "https://www.netvasco.com.br/n/394839/vasco-posta-foto-da-camisa-que-sera-usada-nesta-3-feira-contra-o-boca-juniors-veja (20/10/2026)",
+  "https://www.netvasco.com.br/n/393886/vasco-estampa-socio-gigante-na-camisa-no-lugar-da-sportingbet-veja-foto (07/10/2026, camisa 2 com Seja Sócio Gigante)",
+  "https://www.netvasco.com.br/n/394602/allu-e-a-nova-patrocinadora-do-vasco-e-estampara-sua-marca-na-barra-frontal-do-uniforme-do-futebol-profissional (16/10/2026)",
+  "https://www.flickr.com/photos/saopaulofutebolclube/albums/72177720336213333 (São Paulo x Vasco, 17/10/2026: jogo, Viva Sorte no calção)",
+  "https://www.lance.com.br/vasco/vasco-substitui-patrocinador-no-uniforme-em-adequacao-a-mp-das-bets.html (05/10/2026)",
+  "https://www.lance.com.br/vasco/vasco-oficializa-novo-patrocinador-para-o-uniforme-veja-detalhes-do-acordo.html (15/05/2026, Facility no calção)",
+  "https://www.supervasco.com/noticias/situacoes-dos-patrocinadores-da-camisa-do-vasco-435200.html (Viva Sorte, Zé Delivery, Moto Chefe, R10 Score, BMG)",
+  "https://maquinadoesporte.com.br/futebol/vasco-fecha-patrocinio-com-allu-para-barra-frontal-da-camisa/ (16/10/2026)",
+  "https://maquinadoesporte.com.br/futebol/facility-protecao-veicular-fecha-patrocinio-com-o-vasco-ate-final-do-ano/ (calção, até 31/12/2026)",
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/ (18/10/2026: Vasco 'promoveu o Sócio Gigante')"
+ ],
+ "confianca": "media",
+ "notas": "Máster: a Sportingbet (desde julho) saiu com a MP 1.394/2026 e o clube pôs 'Seja Sócio Gigante' de forma provisória — vi na camisa 2 branca (07/10 e na foto de 17/10), mas a camisa 1 preta jogou SEM nada no peito em 17/10 e 20/10; por isso o Sócio Gigante está só no 'fora' e com 'pontual': true (a BYD voltou a negociar, nada assinado). Lados: Viva Sorte do lado direito de quem veste; Zé Delivery nas duas mangas (o 'Zé DELIVERY' numa e o rosto do mascote na outra — nas fotos de frente e de costas os lados não bateram, então pus 'ambos'). O selo 'De olho nos olhinhos' (campanha do retinoblastoma, 17/10) e o laço do Outubro Rosa são temporários e ficaram de fora. Logo da Facility não achado (site fora do ar daqui): 'logo': null. O logo do Sócio Gigante baixado tem o escudinho; na camisa vai só o texto. O da Moto Chefe é só a palavra (na camisa vem com o símbolo MC em cima). Cores da camisa 3 (amarelo-claro) e do goleiro (verde: BMG, R10 Score no número e Moto Chefe brancos) parcialmente estimadas. VERIFICAÇÃO (22/10): peito conferido nas fotos de 07, 17 e 20/10 (20/10, Boca, é o último jogo) e no Poder360; allu e Facility pela Máquina do Esporte + NetVasco. CORRIGIDO: (1) logo da Facility, que faltava — recortado da foto oficial do calção ('logo_aproximado'); (2) o logo do Sócio Gigante trocado por um sem o escudinho e com o 'SEJA SÓCIO' (o arquivo antigo, vasco-da-gama__socio-gigante.svg, fica só como referência); (3) a allu fica do lado esquerdo de quem veste, não no centro. A Moto Chefe segue sem o símbolo da moto com 'MC' (o site da marca só tem a palavra)."
+}

@@ -1,0 +1,167 @@
+{
+  "clube": "Mirassol",
+  "chave": "br/Mirassol",
+  "temporada": "2026",
+  "fornecedor": "Athleta",
+  "casa": {
+    "nome": "Camisa 1 2026",
+    "lancamento": "2026-02-11",
+    "camisa": "#f2d313",
+    "padrao": "listras_verticais",
+    "padrao_cores": [
+      "#f8e57a"
+    ],
+    "padrao_n": 3,
+    "padrao_largura": 0.23,
+    "padrao_desc": "amarela; três listras tonais formadas por várias riscas finas verticais em amarelo mais claro (uma no centro do peito e uma de cada lado, junto às mangas); as riscas vão sumindo para a barra",
+    "mangas": "#f2d313",
+    "mangas_padrao": "liso",
+    "punhos": "#183530",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#183530"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#183530",
+    "calcao": "#f2d313",
+    "calcao_detalhe": "#183530",
+    "meiao": "#f2d313",
+    "meiao_detalhe": "#183530",
+    "meiao_desc": "amarelo com detalhes verdes",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/02/camisas-mirassol-fc-2026-athleta/",
+      "https://athletabrasil.com/products/camiseta-oficial-mirassol-2026-amarela",
+      "https://www.footballkitarchive.com/mirassol-fc-2026-home-kit-454284/"
+    ]
+  },
+  "fora": {
+    "nome": "Camisa 2 2026",
+    "lancamento": "2026-02-11",
+    "camisa": "#f3f3f3",
+    "padrao": "listras_verticais",
+    "padrao_cores": [
+      "#c9cdd0"
+    ],
+    "padrao_n": 3,
+    "padrao_largura": 0.23,
+    "padrao_desc": "branca; o mesmo desenho da 1: três listras formadas por riscas finas verticais em cinza (centro do peito e laterais), sumindo para a barra",
+    "mangas": "#f3f3f3",
+    "mangas_padrao": "liso",
+    "punhos": "#183530",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#183530"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#183530",
+    "calcao": "#f3f3f3",
+    "calcao_detalhe": null,
+    "meiao": "#f3f3f3",
+    "meiao_detalhe": null,
+    "meiao_desc": "branco",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/02/camisas-mirassol-fc-2026-athleta/",
+      "https://athletabrasil.com/products/camiseta-oficial-mirassol-2026-branca",
+      "https://www.footballkitarchive.com/mirassol-fc-2026-away-kit-454298/"
+    ]
+  },
+  "terceira": {
+    "nome": "Camisa especial Libertadores 2026 (Athleta x Pelé)",
+    "lancamento": "2026-05-06",
+    "camisa": "#1f3526",
+    "padrao": "listras_verticais",
+    "padrao_cores": [
+      "#2a4632"
+    ],
+    "padrao_n": 3,
+    "padrao_largura": 0.23,
+    "padrao_desc": "verde-escuro com o mesmo molde da 1 (riscas tonais verticais mais claras formando três listras) e grafismos tonais; gola polo e punhos dourados com frisos pretos",
+    "mangas": "#1f3526",
+    "mangas_padrao": "liso",
+    "punhos": "#c99a4a",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#c99a4a"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#c99a4a",
+    "calcao": "#1f3526",
+    "calcao_detalhe": "#c99a4a",
+    "meiao": "#1f3526",
+    "meiao_detalhe": "#c99a4a",
+    "meiao_desc": "verde-escuro com dourado (estimado)",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/05/marca-pele-athleta-camisa-especial-mirassol-libertadores-2026/",
+      "https://athletabrasil.com/products/camiseta-mirassol-e-pele",
+      "https://ge.globo.com/sp/tem-esporte/futebol/times/mirassol/noticia/2026/05/06/entenda-como-pele-e-neymar-se-encontram-na-nova-camisa-do-mirassol-veja-fotos.ghtml",
+      "https://www.footballkitarchive.com/mirassol-fc-2026-third-kit-480689/"
+    ]
+  },
+  "goleiro": {
+    "nome": "Goleiro 2026 Cinza (chumbo)",
+    "lancamento": "2026-02-11",
+    "camisa": "#303a48",
+    "padrao": "listras_verticais",
+    "padrao_cores": [
+      "#4a5564"
+    ],
+    "padrao_n": 3,
+    "padrao_largura": 0.23,
+    "padrao_desc": "cinza-chumbo azulado com o mesmo desenho de riscas finas (tonais, mais claras) formando três listras; gola polo da mesma cor com frisos claros; punhos cinza-esverdeados claros",
+    "mangas": "#303a48",
+    "mangas_padrao": "liso",
+    "punhos": "#adc4c5",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#36404e"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#dfe9ea",
+    "calcao": "#303a48",
+    "calcao_detalhe": null,
+    "meiao": "#303a48",
+    "meiao_detalhe": null,
+    "meiao_desc": "cinza-chumbo (estimado)",
+    "fontes": [
+      "https://athletabrasil.com/products/camiseta-oficial-mirassol-2026-cinza",
+      "https://www.footballkitarchive.com/mirassol-fc-2026-gk-2-kit-454299/"
+    ]
+  },
+  "goleiro2": {
+    "nome": "Goleiro 2026 Verde claro",
+    "lancamento": "2026-02-11",
+    "camisa": "#c4d2d4",
+    "padrao": "listras_verticais",
+    "padrao_cores": [
+      "#a9bcbf"
+    ],
+    "padrao_n": 3,
+    "padrao_largura": 0.23,
+    "padrao_desc": "verde-acinzentado bem claro com riscas finas mais escuras formando três listras; gola polo e punhos cinza-chumbo com friso claro",
+    "mangas": "#c4d2d4",
+    "mangas_padrao": "liso",
+    "punhos": "#26303e",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#26303e"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#26303e",
+    "calcao": "#c4d2d4",
+    "calcao_detalhe": null,
+    "meiao": "#c4d2d4",
+    "meiao_detalhe": null,
+    "meiao_desc": "verde claro (estimado)",
+    "fontes": [
+      "https://athletabrasil.com/products/camiseta-oficial-mirassol-2026-verde-claro",
+      "https://www.footballkitarchive.com/mirassol-fc-2026-gk-1-kit-454301/"
+    ]
+  },
+  "confianca": "alta",
+  "notas": "Camisas 1 e 2 conferidas na loja oficial da fornecedora (criadas em 11/02/2026), no Mantos do Futebol (11/02) e no Football Kit Archive (que dá 09/02). Em out/2026 o time segue com a mesma camisa 1, agora com patrocínio novo nos ombros (versão 'Home V2'). As 'Home 2'/'Away 2' amarela com laterais verdes e branca com dourado listadas para 2026 são as do centenário de 2025, usadas só no começo do ano. A 'terceira' é a edição especial da Libertadores (lançada 06/05, estreia contra a LDU); o Football Kit Archive a trata como 3ª; o calção e o meião dela não foram confirmados. Goleiro: a loja chama a cinza de 'Goleiro-1' e a verde clara de 'Goleiro-2' (o FKA lista na ordem contrária); há ainda uma azul-royal de maio (GK 3) e uma rosa do Outubro Rosa. Calção/meião dos goleiros estimados na cor da camisa. As estrelas nos ombros são marca da fornecedora e NÃO entram no desenho. Hex estimados pelas fotos oficiais da loja (renders); verde da gola medido #183530."
+}

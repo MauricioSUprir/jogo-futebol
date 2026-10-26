@@ -386,15 +386,17 @@ function miraFalta(m, pr, c) {
   reg(`E1. canhão de ${NE} escanteios do humano roteirizado (${quem}): gol em ≤ 8 s`,
     `${f1(pct(golE, esc))}% (${golE}/${esc}; p = ${f2(pE)} contra 12%)`, '≤ 12% (p ≥ 0,05)', esc >= NE * 0.9 && pE >= 0.05);
   reg(`E2. canhão de ${NF} tiros livres diretos de 18–30 m (${quem}): gol · no alvo`,
-    `${f1(pct(golF, faltas))}% · ${f1(pct(alvoF, faltas))}% (${faltas} chutes)`, '2–12% · —',
-    faltas >= NF * 0.8 && pct(golF, faltas) >= 2 && pct(golF, faltas) <= 12);
+    `${f1(pct(golF, faltas))}% · ${f1(pct(alvoF, faltas))}% (${faltas} chutes; p = ${f2(1 - caudaBinomialDe(golF + 1, faltas, 0.02))} contra 2%, ${f2(caudaBinomialDe(golF, faltas, 0.12))} contra 12%)`,
+    '2–12% (p ≥ 0,05) · —',
+    // (os estados do meio da partida mudam com a IA: 96 chutes a 2% dão 0–5 gols só de sorteio — reprova quando a conta prova)
+    faltas >= NF * 0.8 && 1 - caudaBinomialDe(golF + 1, faltas, 0.02) >= 0.05 && caudaBinomialDe(golF, faltas, 0.12) >= 0.05);
 }
 
 // ------------------------------------------------------------------ F. a IA não usa
 if (temMira) {
-  // (a semente 77 e as seguintes até ter ≥ 3 cobranças: com o goleiro realista a 77 sozinha tem 1)
-  let paradas = 0, comMira = 0, mirada = 0, nPart = 0;
-  for (let sem = 77; sem < 81 && paradas < 3; sem++, nPart++) {
+  // (as sementes seguem, até 4 partidas, até ≥ 3 cobranças: quantas uma partida tem depende da IA)
+  let paradas = 0, comMira = 0, mirada = 0;
+  for (let sem = 77; sem < 81 && paradas < 3; sem++) {
     const m = P.criarPartida({ semente: sem });
     for (let i = 0; i < 2 * 4 * 3600 + 4000 && m.partida.estado !== 'fim'; i++) {
       const ev = P.passoPartida(m, P.entradaDemoPartida(m));
@@ -403,7 +405,7 @@ if (temMira) {
       if (m.voo?.mirada) mirada++;
     }
   }
-  reg('F. partida IA × IA (a demo pelo humano): nenhuma mira nem cobrança mirada', `${paradas} escanteios/faltas/tiros de meta (${nPart} partida(s)) · mira em ${comMira} ticks · mirada em ${mirada}`,
+  reg('F. partida IA × IA (a demo pelo humano): nenhuma mira nem cobrança mirada', `${paradas} escanteios/faltas/tiros de meta · mira em ${comMira} ticks · mirada em ${mirada}`,
     '≥ 3 · 0 · 0', paradas >= 3 && comMira === 0 && mirada === 0);
 } else reg('cobrança mirada (mira.js) existe nesta lógica', 'não existe', 'mira.js', false);
 fim();

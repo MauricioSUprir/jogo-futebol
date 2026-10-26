@@ -398,7 +398,12 @@ const txtPausa = p => `rola ${p.rola} px, ${p.linhas} linhas [${p.textos.join(' 
 
   // C2: o rumo do analógico — para cima = para o gol que eu ataco (Atrás, Jogador); na TV, para o lado de lá
   const anda = async c => {
-    await pg.evaluate(c => { const g = window.__golaco; g.definirCamera(c); g.livre.recomecar('pe'); }, c);
+    // (um lance limpo: a saída põe cada um no seu lugar, os adversários a ≥ 9,15 m, e a bola no pé rolando — o "onde estou"
+    // de antes dependia de onde o jogo tinha deixado a marcação: com a IA contra a pessoa marcando colada, categoria D, o
+    // controlado começava de costas com dois adversários a 1 m, perdia a bola no giro e andava 1,5 m preso entre eles)
+    await pg.evaluate(c => { const g = window.__golaco; g.definirCamera(c); g.livre.recomecar('meio'); }, c);
+    await quadros(pg, 2);
+    await pg.evaluate(() => window.__golaco.livre.recomecar('pe'));
     await quadros(pg, 30);
     const a = await pg.evaluate(() => ({ ...window.__golaco.estado().jogador, dir: window.__golaco.mundo.ataca[0], yaw: window.__golaco.livre.camera.yaw }));
     await pg.keyboard.down('ArrowUp');

@@ -54,15 +54,17 @@ function estilo(seg) {
   const tem = (x, y) => (a === x && b === y) || (a === y && b === x);
   // raios r: [A, B] substituem os de SEGMENTOS só no desenho (quadril e pelve mais enxutos: a
   // calota da pelve e a do quadril não fazem mais um "volume" de fralda abaixo do calção)
-  if (tem('pelve', 'lombar')) return { achata: 0.74, pad: P.liso, c: ['calcao', 'pele', 'acento'], sup: false, r: [0.118, 0.13] };
+  // (a 3ª cor do calção e do meião — a listra da coxa e a faixa abaixo do joelho — é `acentoCalcao`, que cai no `acento` do
+  // uniforme quando falta: os de sempre não mudam; o kit misto da troca de camisa a leva do dono do calção, não da camisa)
+  if (tem('pelve', 'lombar')) return { achata: 0.74, pad: P.liso, c: ['calcao', 'pele', 'acentoCalcao'], sup: false, r: [0.118, 0.13] };
   if (tem('lombar', 'peito')) return { achata: 0.68, pad: P.tronco, c: ['camisa', 'pele', 'acento'], sup: true };
   if (tem('peito', 'pescoco')) return { achata: 0.78, pad: P.gola, c: ['camisa', 'pele', 'acento'], sup: true };
   if (tem('ombroE', 'ombroD')) return { achata: 0.85, pad: P.liso, c: ['camisa', 'pele', 'acento'], sup: true };
   // manga: a cor da manga do uniforme (`manga`; os uniformes sem ela caem na camisa em escreverCores)
   if (/^ombro/.test(a) && /^cotovelo/.test(b)) return { achata: 1, pad: P.manga, c: ['manga', 'pele', 'acento'], sup: true };
-  if (tem('quadrilE', 'quadrilD')) return { achata: 0.84, pad: P.liso, c: ['calcao', 'pele', 'acento'], sup: false, r: [0.088, 0.088] };
-  if (/^quadril/.test(a) && /^joelho/.test(b)) return { achata: 1, pad: P.coxa, c: ['calcao', 'pele', 'acento'], sup: false };
-  if (/^joelho/.test(a) && /^tornozelo/.test(b)) return { achata: 1, pad: P.meiao, c: ['meiao', 'pele', 'acento'], sup: false };
+  if (tem('quadrilE', 'quadrilD')) return { achata: 0.84, pad: P.liso, c: ['calcao', 'pele', 'acentoCalcao'], sup: false, r: [0.088, 0.088] };
+  if (/^quadril/.test(a) && /^joelho/.test(b)) return { achata: 1, pad: P.coxa, c: ['calcao', 'pele', 'acentoCalcao'], sup: false };
+  if (/^joelho/.test(a) && /^tornozelo/.test(b)) return { achata: 1, pad: P.meiao, c: ['meiao', 'pele', 'acentoCalcao'], sup: false };
   if (/^tornozelo/.test(a) && /^ponta/.test(b)) return { achata: 0.8, pad: P.chuteira, c: ['chuteira', 'pele', 'sola'], sup: false };
   const sup = !/quadril|joelho|tornozelo|ponta|pelve/.test(a + b);
   return { achata: 1, pad: P.liso, c: [parte, 'pele', 'acento'], sup };
@@ -263,7 +265,12 @@ const _q = new THREE.Quaternion();
 const _v = new THREE.Vector3();
 const _s = new THREE.Vector3();
 
-export function criarJogadores3D(cena, qualidade) {
+// Corpo humano (Etapa 5, ?corpo=humano): render/humano3d.js sob demanda; até chegar (e se falhar), o manequim desenha.
+// Linha do uniforme na textura do humano: 20 texels RGBA por boneco (ver humano3d.js COR_F).
+const TIPO_PADRAO = { plain: 0, liso: 0, stripes: 1, listras_verticais: 1, hoops: 2, listras_horizontais: 2, sash: 3, faixa_diagonal: 3, band: 4, faixa_horizontal_peito: 4, halves: 5, metades: 5 };
+const TETO_TRI = { baixa: 3e4, media: 6e4, alta: 1.2e5 };
+
+export function criarJogadores3D(cena, qualidade, opc = {}) {
   const alta = qualidade === 'alta';
   const geo = geoCapsula(alta ? 14 : 9, alta ? 4 : 2);
   const geoCab = new THREE.SphereGeometry(1, alta ? 24 : 14, alta ? 16 : 10);
@@ -387,6 +394,87 @@ export function criarJogadores3D(cena, qualidade) {
   anelProx.name = 'indicador-proximo';
   cena.add(anelProx);
 
+  // ---- corpo humano (sob demanda)
+  let humano = null, humanoErro = null, rostosPedidos = null, versaoRostos = 0;
+  let ultimaLista = null;   // a lista do último quadro (poseDesenhada)
+  const kitsBrutos = { ...KITS };
+  if (opc.corpo === 'humano') {
+    (async () => {
+      const H = await import('./humano3d.js');
+      const dados = await H.carregarHumano();
+      const cab = await new Promise((ok, falha) => new THREE.TextureLoader().load(new URL('../../assets/jogador/cabeca-rb.webp', import.meta.url).href, ok, undefined, falha));
+      cab.colorSpace = THREE.SRGBColorSpace;
+      humano = H.criarHumano3D(cena, dados, { qualidade, cabeca: cab });
+      humano.definirSombras(sombras);
+      if (rostosPedidos) humano.definirRostos(rostosPedidos.indice, rostosPedidos.base);
+      linhasKit.clear();
+    })().catch(e => { humanoErro = String(e?.message ?? e); console.error('corpo humano:', e); });
+  }
+  const linhasKit = new Map(); // chave da vaga → Float32Array(80)
+  const _c = new THREE.Color();
+  let perfilDe = null; // id → {chave (do rosto real), num} (definirPerfis; o Total Match)
+  function linhaKit(jg) {
+    const nome = NOMES_KIT[kitIdx(jg)];
+    const kb = kitsBrutos[nome] ?? KITS.linha0;
+    const perfil = perfilDe ? perfilDe(jg.id) : null;
+    const camada = humano && perfil?.chave ? humano.camadaDe(perfil.chave) : 0;
+    const peleReal = humano && perfil?.chave ? humano.peleDe(perfil.chave) : null;
+    const pele = peleReal ? new THREE.Color(peleReal) : pelesLin[Math.floor(sorteio(jg.id, 1) * pelesLin.length)];
+    // (o kit misto da troca de camisa traz o número do dono da camisa: kb.num)
+    const num = kb.num ?? jg.num ?? perfil?.num ?? (jg.id > 0 && jg.id % 100 > 0 && jg.id % 100 < 100 ? jg.id % 100 : 0);
+    const ch = `${nome}|${jg.id}|${jg.goleiro ? 1 : 0}|${jg.tecnico ? 1 : 0}|${camada}`;
+    let L = linhasKit.get(ch);
+    if (L) return L;
+    L = new Float32Array(128);
+    const put = (i, hex, alt) => { _c.set(hex ?? alt ?? '#888888'); L[i * 4] = _c.r; L[i * 4 + 1] = _c.g; L[i * 4 + 2] = _c.b; L[i * 4 + 3] = 1; };
+    put(0, kb.camisa); put(1, kb.segunda ?? kb.camisa2, kb.acento); put(2, kb.manga, kb.camisa); put(3, kb.gola, kb.acento);
+    put(4, kb.punho, kb.acento); put(5, kb.calcao); put(6, kb.barra, kb.calcao); put(7, kb.meiao); put(8, kb.chuteira);
+    put(9, kb.acabamento, kb.acento); put(10, kb.luva, kb.acento);
+    L[44] = pele.r; L[45] = pele.g; L[46] = pele.b; L[47] = 1;
+    const tipo = TIPO_PADRAO[kb.padrao] ?? 0;
+    const n = kb.padraoN ?? (tipo === 1 ? 4 : tipo === 2 ? 5 : 0);
+    L[48] = tipo; L[49] = n; L[50] = kb.padraoLargura ?? (n ? 0.5 / n : 0.5); L[51] = kb.mangaPadrao ? 1 : 0;
+    L[52] = jg.goleiro ? 1 : 0; L[53] = jg.tecnico ? 1 : 0; L[54] = jg.tecnico ? 0 : num; L[55] = camada;
+    _c.set(kb.camisa ?? '#888888');
+    const lum = 0.2126 * _c.r + 0.7152 * _c.g + 0.0722 * _c.b;
+    put(14, kb.numero, lum > 0.25 ? '#15191b' : '#f2f4f5');
+    put(15, kb.sola, '#0b0d0e');
+    // a faixa do meião (camisas reais): a cor e a = 1 quando existe
+    if (kb.meiaoDetalhe) put(16, kb.meiaoDetalhe); else L[67] = 0;
+    // patrocínios (só a versão de teste da pro: kb.decais, de assets/tm/patrocinios.json): até 6, nas linhas 17–28
+    if (humano && kb.decais && !jg.tecnico) escreverDecais(L, kb.decais, kb);
+    linhasKit.set(ch, L);
+    return L;
+  }
+  // os decalques de um uniforme na linha do kit: A = [camada, posição, largura (m), largura ÷ altura], B = [cor, lado]. A
+  // largura relativa da pesquisa é da frente do tronco (~0,34 m); a altura tem um teto por posição (o logo baixo e comprido
+  // não fica alto demais); a ordem de importância decide quem entra quando passam de 6
+  const POS_DECAL = { peito: 1, ombro: 2, manga: 3, barra_frontal: 4, acima_numero: 5, abaixo_numero: 6, calcao: 7, fornecedor: 8 };
+  const LARG_DECAL = { 1: 0.55, 2: 0.14, 3: 0.16, 4: 0.35, 5: 0.40, 6: 0.35, 7: 0.16, 8: 0.13 };
+  const ALTMAX_DECAL = { 1: 0.11, 2: 0.045, 3: 0.06, 4: 0.055, 5: 0.06, 6: 0.055, 7: 0.055, 8: 0.05 };
+  const ORDEM_DECAL = [1, 8, 5, 3, 2, 7, 4, 6];
+  const LADO_DECAL = { esquerdo: 1, esquerda: 1, direito: 2, direita: 2, ambos: 3 };
+  // a cor do logo some no tecido da mesma cor (o patrocínio branco do calção branco: a pesquisa dá a cor na camisa): com
+  // pouca diferença de brilho do fundo, o logo vai para o contraste
+  const lumHex = h => { _c.set(h || '#888888'); return 0.2126 * _c.r + 0.7152 * _c.g + 0.0722 * _c.b; };
+  const FUNDO_DECAL = { 1: 'camisa', 2: 'camisa', 3: 'manga', 4: 'camisa', 5: 'camisa', 6: 'camisa', 7: 'calcao', 8: 'camisa' };
+  function escreverDecais(L, lista, kb) {
+    const ok = lista.filter(d => POS_DECAL[d.pos]).sort((a, b) => ORDEM_DECAL.indexOf(POS_DECAL[a.pos]) - ORDEM_DECAL.indexOf(POS_DECAL[b.pos])).slice(0, 6);
+    ok.forEach((d, i) => {
+      const pos = POS_DECAL[d.pos], asp = Math.max(0.2, d.asp || 2);
+      let w = (d.larg > 0 ? Math.min(d.larg, 0.8) : LARG_DECAL[pos]) * 0.34;
+      if (w / asp > ALTMAX_DECAL[pos]) w = ALTMAX_DECAL[pos] * asp;
+      const o = (17 + 2 * i) * 4;
+      L[o] = humano.logoDe(d.url); L[o + 1] = pos; L[o + 2] = w; L[o + 3] = asp;
+      let cor = d.cor || '#ffffff';
+      const fundo = kb[FUNDO_DECAL[pos]] ?? kb.camisa, lf = lumHex(fundo);
+      if (Math.abs(lumHex(cor) - lf) < 0.12) cor = lf > 0.25 ? '#15191b' : '#f2f4f5';
+      _c.set(cor);
+      L[o + 4] = _c.r; L[o + 5] = _c.g; L[o + 6] = _c.b; L[o + 7] = LADO_DECAL[d.lado] ?? (pos === 2 ? 3 : 0);
+    });
+  }
+  const itensH = [];
+
   // cores lineares de cada uniforme (só os campos '#rrggbb'); `padrao` (o do Total Match: listras, metades, faixa,
   // aros) vira a fração do iPad do tronco e da gola (PADRAO_FRAC; liso = 0, os uniformes de hoje)
   const linKit = kit => {
@@ -400,7 +488,33 @@ export function criarJogadores3D(cena, qualidade) {
   const NOMES_KIT = Object.keys(KITS);
   const IDX_KIT = Object.fromEntries(NOMES_KIT.map((k, i) => [k, i]));
   const PADRAO_KIT = [[IDX_KIT.linha0, IDX_KIT.goleiro0], [IDX_KIT.linha1, IDX_KIT.goleiro1]];
-  const kitIdx = jg => IDX_KIT[jg.kit] ?? PADRAO_KIT[jg.time === 1 ? 1 : 0][jg.goleiro ? 1 : 0];
+  // o kit MISTO da troca de camisa (a cena do pós-jogo; PLANO-CENAS.md §5.2, R19): `troca:<camisa>:<resto>:<num>` = a camisa
+  // (as cores, o padrão, o número e os patrocínios dela — a versão de teste da edição pro) do kit <camisa> com o calção, o
+  // meião, a chuteira (e o patrocínio do calção) do <resto> e o número <num> (o do dono da camisa). Registrado na 1ª vez que
+  // aparece (um por jogador do par: 2 por partida); SEM chamada a mais — no manequim as cores são atributos por instância,
+  // no corpo novo uma linha da textura dos uniformes (humano3d.js tKits).
+  const CAMPOS_CAMISA = ['camisa', 'segunda', 'camisa2', 'manga', 'gola', 'punho', 'acabamento', 'numero', 'acento', 'padrao', 'padraoN', 'padraoLargura', 'mangaPadrao'];
+  const mistos = new Map(); // nome → [camisa, resto, num]
+  function brutoMisto(camisa, resto, num) {
+    const A = kitsBrutos[camisa] ?? KITS.linha0, B = kitsBrutos[resto] ?? KITS.linha1;
+    const k = { ...B };
+    for (const c of CAMPOS_CAMISA) { if (A[c] !== undefined) k[c] = A[c]; else delete k[c]; }
+    const dA = (A.decais ?? []).filter(d => d.pos !== 'calcao'), dB = (B.decais ?? []).filter(d => d.pos === 'calcao');
+    if (dA.length || dB.length) k.decais = [...dA, ...dB]; else delete k.decais;
+    if (Number.isFinite(num) && num > 0) k.num = num; else delete k.num;
+    // (a listra do calção e a faixa do meião com o acento do dono do calção: estilo() `acentoCalcao`)
+    const acB = B.acentoCalcao ?? B.acento;
+    if (acB !== undefined) k.acentoCalcao = acB; else delete k.acentoCalcao;
+    return k;
+  }
+  function registrarMisto(nome) {
+    const p = nome.split(':');
+    const k = brutoMisto(p[1], p[2], +p[3]);
+    if (IDX_KIT[nome] == null) { IDX_KIT[nome] = NOMES_KIT.length; NOMES_KIT.push(nome); }
+    kitsBrutos[nome] = k; kitsLin[nome] = linKit(k); mistos.set(nome, [p[1], p[2], +p[3]]);
+    return IDX_KIT[nome];
+  }
+  const kitIdx = jg => IDX_KIT[jg.kit] ?? (typeof jg.kit === 'string' && jg.kit.startsWith('troca:') ? registrarMisto(jg.kit) : PADRAO_KIT[jg.time === 1 ? 1 : 0][jg.goleiro ? 1 : 0]);
   const pelesLin = PELES.map(h => new THREE.Color(h));
   const cabelosLin = CABELOS.map(h => new THREE.Color(h));
   const vagaDe = new Map(); // vaga → chave (id, time, goleiro) das cores escritas
@@ -463,6 +577,7 @@ export function criarJogadores3D(cena, qualidade) {
     get capacidade() { return cap; },
     /** Triângulos de UM boneco (as cápsulas dos segmentos, a cabeça, o cabelo e a mancha de contato). */
     get triangulosPorBoneco() {
+      if (humano && itensH.length) return humano.triangulos / itensH.length + 2;
       const t = g => (g.index ? g.index.count : g.attributes.position.count) / 3;
       return t(segs.geometry) * NSEG + t(cabecas.geometry) + t(cabelos.geometry) + t(manchas.geometry);
     },
@@ -479,13 +594,62 @@ export function criarJogadores3D(cena, qualidade) {
      */
     reservar(n) { if (n > cap) montar(n); },
     /**
+     * A pose DESENHADA do jogador `id` no último quadro (cenas das paradas: o cartão 3D vai na mão desenhada do árbitro):
+     * a pose da lista e, com o corpo humano (?corpo=humano), a postura do desenho por cima (esqueleto.js postura: o
+     * quadril sobe, o tronco e a cabeça endireitam e o braço vai junto) — a mesma conta da pele. out: Float32Array(NJ·3).
+     * Devolve out ou null (o id não foi desenhado).
+     */
+    poseDesenhada(id, out) {
+      const L = ultimaLista;
+      if (!L) return null;
+      for (let p = 0; p < L.length; p++) {
+        const jg = L[p];
+        if (jg.id !== id || !jg.pose) continue;
+        if (humano) return humano.postura(jg.pose, Number.isFinite(jg.v) ? jg.v : 1.5, jg.goleiro ? 0.4 : 1, out);
+        out.set(jg.pose);
+        return out;
+      }
+      return null;
+    },
+    /**
      * Uniformes da partida (identidade.js, só com ?tm): reescreve as chaves que já existem (linha0, goleiro0, linha1,
      * goleiro1, arbitro) com as cores resolvidas sem confusão — o elenco do Total Match aponta para elas (a chave do
      * cache por vaga não muda de tamanho) — e reescreve as cores de todas as vagas no próximo quadro.
      */
     definirKits(mapa) {
-      for (const [k, kit] of Object.entries(mapa || {})) if (kit && IDX_KIT[k] != null) kitsLin[k] = linKit(kit);
+      for (const [k, kit] of Object.entries(mapa || {})) if (kit && IDX_KIT[k] != null && !k.startsWith('troca:')) { kitsLin[k] = linKit(kit); kitsBrutos[k] = kit; }
+      // (os mistos da troca de camisa saem das bases novas)
+      for (const [nome, [a, b, n]] of mistos) { const k = brutoMisto(a, b, n); kitsBrutos[nome] = k; kitsLin[nome] = linKit(k); }
       vagaDe.clear();
+      linhasKit.clear();
+    },
+    /**
+     * As cores escritas no manequim de quem foi desenhado no último quadro (os testes: o kit misto da troca de camisa) —
+     * {tronco, calcao, listra (a 3ª cor da coxa), meiao, faixa (a 3ª do meião)} em RGB linear, ou null.
+     */
+    coresDe(id) {
+      const L = ultimaLista;
+      if (!L || !aC1) return null;
+      const p = L.findIndex(jg => jg.id === id);
+      if (p < 0) return null;
+      const seg = pad => ESTILOS.findIndex(e => e.pad === pad);
+      const rgb = (attr, s) => { const i = p * NSEG + s; return [attr.getX(i), attr.getY(i), attr.getZ(i)]; };
+      const sT = seg(P.tronco), sC = seg(P.coxa), sM = seg(P.meiao);
+      return { tronco: rgb(aC1, sT), calcao: rgb(aC1, sC), listra: rgb(aC3, sC), meiao: rgb(aC1, sM), faixa: rgb(aC3, sM) };
+    },
+    /** O corpo humano (?corpo=humano): pronto, erro, triângulos do último quadro, níveis em uso. */
+    /**
+     * Perfis dos jogadores (Total Match): fn(id) → {chave do rosto real, num} ou null. rostos: {indice, base} — o índice
+     * dos rostos reais e a URL da pasta das texturas (edição pro).
+     */
+    definirPerfis(fn, rostos = null) {
+      perfilDe = fn; linhasKit.clear(); rostosPedidos = rostos;
+      if (humano && rostos) humano.definirRostos(rostos.indice, rostos.base);
+    },
+    get humano() {
+      return { pedido: opc.corpo === 'humano', pronto: !!humano, erro: humanoErro, triangulos: humano ? humano.triangulos : 0,
+        niveis: humano ? humano.niveis.map(n => n.geo.instanceCount) : null, bonecos: humano ? itensH.length : 0,
+        rostos: humano ? humano.rostos : null, logos: humano ? humano.logos : null };
     },
     /**
      * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, pressiona, x, z, rumo,
@@ -497,6 +661,7 @@ export function criarJogadores3D(cena, qualidade) {
      * camera: para o tamanho constante da seta acima da cabeça.
      */
     atualizar(lista, camera) {
+      ultimaLista = lista;
       if (lista.length > cap) montar(Math.ceil(lista.length * 1.25));
       const nj = lista.length;
       const mat = segs.instanceMatrix.array;
@@ -505,7 +670,9 @@ export function criarJogadores3D(cena, qualidade) {
       for (let p = 0; p < nj; p++) {
         const jg = lista[p];
         // cores fixas por vaga (só reescreve quando a vaga muda de dono/time/função/uniforme)
-        const chave = ((jg.id * 8 + kitIdx(jg)) * 2 + (jg.time === 1 ? 1 : 0)) * 2 + (jg.goleiro ? 1 : 0);
+        // (o índice do uniforme por fora do id: os mistos da troca de camisa só crescem — a cada "Jogar de novo" um par novo —
+        // e com 64 por id o 65º colidia com o id seguinte, a cor não era reescrita)
+        const chave = kitIdx(jg) * 1e7 + jg.id * 4 + (jg.time === 1 ? 2 : 0) + (jg.goleiro ? 1 : 0);
         if (vagaDe.get(p) !== chave) { vagaDe.set(p, chave); escreverCores(p, jg); }
         const est = estilosDe(jg);
         const pose = jg.pose;
@@ -569,6 +736,21 @@ export function criarJogadores3D(cena, qualidade) {
       }
       segs.count = nj * NSEG;
       cabecas.count = cabelos.count = manchas.count = nj;
+      if (humano && humano.versaoRostos + humano.versaoLogos !== versaoRostos) { versaoRostos = humano.versaoRostos + humano.versaoLogos; linhasKit.clear(); }
+      if (humano) {
+        // o corpo humano no lugar do manequim (a mancha de contato e as marcas continuam daqui)
+        segs.count = 0; cabecas.count = cabelos.count = 0;
+        itensH.length = nj;
+        for (let p = 0; p < nj; p++) {
+          const jg = lista[p];
+          const it = itensH[p] ?? (itensH[p] = { pose: null, kit: null, ocultar: 0, chave: 0, v: 1.5, postura: 1 });
+          it.pose = jg.pose; it.kit = linhaKit(jg); it.ocultar = jg.ocultar | 0; it.chave = jg.id;
+          // a postura do desenho (esqueleto.js): pela velocidade do boneco (sem ela, andando); o goleiro com a base de espera
+          it.v = Number.isFinite(jg.v) ? jg.v : 1.5; it.postura = jg.goleiro ? 0.4 : 1;
+        }
+        const altura = (globalThis.innerHeight || 720) * (globalThis.devicePixelRatio || 1);
+        humano.atualizar(itensH, camera, altura, TETO_TRI[qualidade] ?? 6e4);
+      }
       segs.instanceMatrix.needsUpdate = true;
       aDim.needsUpdate = true;
       cabecas.instanceMatrix.needsUpdate = true;
@@ -618,6 +800,7 @@ export function criarJogadores3D(cena, qualidade) {
     },
     definirSombras(ligadas) {
       sombras = ligadas;
+      humano?.definirSombras(ligadas);
       segs.castShadow = cabecas.castShadow = cabelos.castShadow = ligadas;
       matMancha.opacity = ligadas ? 0.32 : 0.5;
     },

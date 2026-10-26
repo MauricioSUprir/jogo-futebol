@@ -1,0 +1,116 @@
+{
+ "clube": "Athletico Paranaense",
+ "chave": "br/Athletico Paranaense",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Umbro",
+  "logo": "athletico-paranaense__umbro.svg",
+  "logo_fonte": "https://commons.wikimedia.org/wiki/File:Umbro_logo_(current).svg (original https://upload.wikimedia.org/wikipedia/commons/2/22/Umbro_logo_%28current%29.svg)",
+  "cor_na_camisa": {
+   "casa": "#ffffff",
+   "fora": "#181619",
+   "terceira": "#ffffff",
+   "goleiro": "#ffffff"
+  }
+ },
+ "patrocinios": [
+  {
+   "nome": "Sócio Furacão",
+   "posicao": "peito",
+   "pontual": true,
+   "posicao_detalhe": "ação do programa de sócio-torcedor no espaço do máster ('SÓCIO' pequeno em cima de 'FURACÃO', na fonte do clube), vista em 08/10 (x Atlético-MG) e de novo em 17/10 (x Palmeiras, o último jogo); o clube não tem máster desde fev/2026 (saída da Viva Sorte Bet)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "athletico-paranaense__socio-furacao.png",
+   "logo_fonte": "recortado na verificação da foto oficial de Athletico x Palmeiras, 17/10/2026 (https://atleticopr-www-static.s3.sa-east-1.amazonaws.com/wp-content/uploads/2026/10/ArthurDiasCAPxPAL-1200-scaled.jpg), endireitado 11,5°",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#181619",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.5,
+   "logo_aproximado": true
+  },
+  {
+   "nome": "Copacol",
+   "posicao": "ombro",
+   "lado": "ambos",
+   "posicao_detalhe": "omoplata da frente, dos dois lados da gola (acima da Umbro e acima do escudo)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "athletico-paranaense__copacol.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Logo_da_Copacol.svg (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e3/Logo_da_Copacol.svg/1280px-Logo_da_Copacol.svg.png)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#181619",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.2
+  },
+  {
+   "nome": "Havan",
+   "posicao": "manga",
+   "lado": "ambos",
+   "orientacao": "vertical",
+   "posicao_detalhe": "'HAVAN' na vertical ao longo das duas mangas (na manga comprida aparece duas vezes)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "athletico-paranaense__havan.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Havan_wordmark.svg (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Havan_wordmark.svg/1280px-Havan_wordmark.svg.png)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#181619",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.14
+  },
+  {
+   "nome": "Ademicon",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "parte de cima das costas (contrato com Athletico e Coritiba de abr/2025 até dez/2026)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "athletico-paranaense__ademicon.svg",
+   "logo_fonte": "https://www.ademicon.com.br/api/media/file/ademicon.svg (o mesmo arquivo do lote do Coritiba; sem o slogan 'consórcio e investimento', como na camisa e no rodapé do clube)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#181619",
+    "terceira": "#ffffff",
+    "goleiro": "#ffffff"
+   },
+   "largura_rel": 0.4
+  }
+ ],
+ "fontes": [
+  "https://atletico.com.br/galo-busca-empate-com-o-athletico-pr-na-arena-da-baixada/ (foto oficial do Atlético em 08/10/2026: Sócio Furacão no peito e Copacol nas omoplatas do Athletico)",
+  "https://www.umdoisesportes.com.br/athletico/athletico-sem-patrocinador-master-viva-sorte-bet/ (19/02/2026: camisa 1 com Copacol, Umbro, Viva Sorte pequena e Havan nas mangas; Ademicon e Havan citadas)",
+  "https://www.flickr.com/photos/coritibaoficial/albums/72177720335571665 (Coritiba x Athletico, setembro/2026: Havan nas mangas)",
+  "https://www.terra.com.br/esportes/atletico-pr/athletico-pr-esta-fora-da-crise-das-bets-entenda,95663a614e1ec4f26a6f999809f4896a0pqicyzy.html (30/09/2026)",
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/ (18/10/2026: Athletico divulgou o programa de sócio-torcedor)",
+  "https://propmark.com.br/anunciantes/ademicon-patrocinara-athletico-paranaense-e-coritiba-ate-2026/ (Ademicon na parte de cima das costas)",
+  "https://www.athletico.com.br/ (rodapé de patrocinadores: Umbro, Ademicon, Copacol, Havan, Brahma)",
+  "https://athletico.com.br/noticias/ (21/10/2026: foto de Athletico x Palmeiras, 17/10, com Sócio Furacão no peito, Copacol nos dois lados da gola, Umbro e escudo; rodapé de patrocinadores: Umbro, Ademicon, Copacol, Havan, Brahma)",
+  "https://www.yogonet.com/brasil/noticias/2026/02/24/8159-athletico-paranaense-encerra-contrato-com-viva-sorte-bet-e-busca-novo-patrocinio-master (24/02/2026)"
+ ],
+ "confianca": "media",
+ "notas": "Pouca foto de outubro: só achei fotos de jogo do Athletico em 08/10 (pelo site do Atlético-MG), com 'SÓCIO FURACÃO' no peito e Copacol nas omoplatas; o resto vem da camisa de lançamento (fev/2026) e de fotos de setembro (Havan nas mangas). Logo do Sócio Furacão NÃO achado como arquivo (é texto na fonte do clube): 'logo': null. A Ademicon nas costas vem das notícias do contrato (não vi foto de costas); não sei o que vai embaixo do número nem no calção. A Viva Sorte (capitalização, não é bet) aparecia pequena no esterno em fevereiro; não confirmei que segue em outubro. Cores nas camisas 2 (branca), 3 (preta) e de goleiro estimadas. VERIFICAÇÃO (22/10): o último jogo é 17/10 (x Palmeiras, na Arena da Baixada); na foto oficial dele o peito tem SÓCIO FURACÃO de novo e o alto do peito tem só a Copacol (dos dois lados), a Umbro e o escudo — NÃO há Viva Sorte entre a Umbro e o escudo, e o rodapé do site do clube também não lista a Viva Sorte. CORRIGIDO: Viva Sorte retirada; logo do Sócio Furacão recortado da foto de 17/10; logo da Ademicon trocado pelo SVG sem o slogan; confiança 'baixa' → 'media' (a frente está conferida em 2 jogos de outubro). Segue sem foto das costas: Ademicon no alto das costas vem das notícias do contrato (Propmark, Máquina do Esporte, até dez/2026). O Yogonet (fev/2026) cita 'Banco Inter' entre as marcas do uniforme, mas ele não aparece nas fotos nem no rodapé do clube — não entrou."
+}

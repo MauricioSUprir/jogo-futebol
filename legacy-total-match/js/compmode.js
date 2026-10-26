@@ -520,6 +520,8 @@
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: s.name,
       pauseSide: userSide, simOpts: simOpts, formation: s.lineup ? s.lineup.formation : "4-4-2",
+      // (o empate vai a prorrogação e pênaltis? a mesma conta do onDone)
+      empateContinua: function (hs, as) { return !!userPenContextComp(s, hs, as); },
       onBack: function () { TM.ui.go("compmode-hub"); },
       onDone: function () {
         var hs = result.score[0], as = result.score[1];

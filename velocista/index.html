@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>THE FLASH — mundo aberto</title>
+<meta name="theme-color" content="#07080f">
+<!-- ícone do app (o F da logo; tools/logo/gerar-logo.py --icone) e o manifesto para "Adicionar à Tela de Início" -->
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icone/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/icone/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="THE FLASH">
+<meta name="application-name" content="THE FLASH">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  @font-face { font-family:'Rajdhani'; font-weight:600; font-display:swap; src:url(assets/fontes/rajdhani-600.woff2) format('woff2'); }
+  @font-face { font-family:'Rajdhani'; font-weight:700; font-display:swap; src:url(assets/fontes/rajdhani-700.woff2) format('woff2'); }
+  @font-face { font-family:'Inter'; font-weight:400; font-display:swap; src:url(assets/fontes/inter-400.woff2) format('woff2'); }
+  @font-face { font-family:'Inter'; font-weight:600; font-display:swap; src:url(assets/fontes/inter-600.woff2) format('woff2'); }
+  @font-face { font-family:'Inter'; font-weight:800; font-display:swap; src:url(assets/fontes/inter-800.woff2) format('woff2'); }
+  :root { --fundo:#07080f; --vermelho:#ff2b3d; --ouro:#ffd23f; --azul:#3fd0ff; --texto:#f4f6ff; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
+  html,body { margin:0; height:100%; background:var(--fundo); color:var(--texto); font-family:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overflow:hidden; touch-action:none; }
+  #cena { position:fixed; inset:0; width:100%; height:100%; display:block; }
+  #hud { position:fixed; inset:0; pointer-events:none; display:none; }
+  .jogando #hud { display:block; }
+  .bloco { background:rgba(7,8,15,.55); border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:6px 12px; backdrop-filter:blur(4px); }
+  .rotulo { font-size:10px; letter-spacing:.14em; text-transform:uppercase; opacity:.65; }
+  .valor { font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; }
+  #mapaBox { position:absolute; left:max(12px,env(safe-area-inset-left)); top:max(12px,env(safe-area-inset-top)); width:132px; height:132px; border-radius:50%; overflow:hidden; border:2px solid rgba(255,255,255,.35); box-shadow:0 4px 18px rgba(0,0,0,.5); background:#1b2330; }
+  #mapa { width:100%; height:100%; display:block; }
+  #mapaBox.grande { width:min(78vmin,640px); height:min(78vmin,640px); left:50%; top:50%; transform:translate(-50%,-50%); border-radius:16px; z-index:3; }
+  /* tela limpa: esferas, hora e pontos ficam na pausa; a bússola sai (o marcador do guia já aponta) */
+  #canto { display:none !important; position:absolute; right:max(12px,env(safe-area-inset-right)); top:max(12px,env(safe-area-inset-top)); text-align:right; display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+  #bussola { display:flex; align-items:center; gap:8px; font-size:13px; }
+  #seta { width:26px; height:26px; transition:transform .1s linear; }
+  #energia { position:absolute; left:50%; bottom:max(16px,env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(44vw,320px); }
+  #energia .barra { height:12px; border-radius:99px; background:rgba(255,255,255,.14); overflow:hidden; border:1px solid rgba(255,255,255,.2); }
+  #energia .nivel { height:100%; width:100%; background:linear-gradient(90deg,var(--azul),var(--ouro)); }
+  #energia .linhaEnergia { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px; font-size:10px; letter-spacing:.12em; text-transform:uppercase; opacity:.8; }
+  #velBox b { font-size:13px; letter-spacing:0; font-variant-numeric:tabular-nums; }
+  #energia .barra { height:8px !important; }
+  #missao { position:absolute; left:50%; top:max(10px,env(safe-area-inset-top)); transform:translateX(-50%); max-width:min(48vw,520px); text-align:center; padding:5px 14px; border-radius:99px; }
+  #missaoNum { display:none; }
+  #missaoTitulo, #missaoTexto { display:inline; white-space:nowrap; }
+  #missao > div:not(#crimeLinha) { overflow:hidden; text-overflow:ellipsis; }
+  #missaoTitulo { font-weight:800; font-size:13px; color:var(--ouro); }
+  #missaoTitulo::after { content:' · '; color:rgba(255,255,255,.5); font-weight:400; }
+  #missaoTexto { font-size:13px; opacity:.92; }
+  #crimeLinha { margin-top:4px; font-size:12px; font-weight:700; color:#ff7b86; }
+  #missaoTexto { font-size:12.5px; }
+  #missao { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #crimeLinha { white-space:normal; }
+  @media (max-height: 520px) { #missaoTitulo { font-size:12px; } #missaoTexto { font-size:11px; } #crimeLinha { font-size:10.5px; } #mapaBox { width:108px; height:108px; } }
+  /* aviso curto de esfera recolhida */
+  #coleta { position:absolute; left:50%; bottom:max(74px,calc(env(safe-area-inset-bottom) + 64px)); transform:translateX(-50%); font-size:12px; font-weight:800; letter-spacing:.08em; color:var(--azul); background:rgba(7,8,15,.6); border:1px solid rgba(63,208,255,.4); border-radius:99px; padding:3px 12px; opacity:0; transition:opacity .25s; }
+  #coleta.vis { opacity:1; }
+  #resumo { font-size:14px; opacity:.85; text-align:center; line-height:1.6; }
+  /* fonte de títulos da interface (Rajdhani, OFL — assets/fontes) */
+  h1, h2, .rotulo, .valor, #missaoTitulo, .chefe-titulo, .bt, .esp, .chip, button.principal, .cap b, #radio b, #cenaHist .fala b, .pular, #coleta, .linhaEnergia, #velBox b, #marcadorGuia span { font-family:'Rajdhani','Inter',system-ui,sans-serif; }
+  /* faixa de aviso: no terço de cima, rótulo na cor do tipo e título branco, linhas finas que se abrem */
+  #aviso { --cor:var(--azul); z-index:3; position:absolute; top:27%; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:1px; padding:7px 44px 8px; min-width:min(56vw,380px); max-width:80vw; text-align:center; pointer-events:none; opacity:0;
+    background:linear-gradient(90deg, transparent, rgba(7,8,15,.8) 20%, rgba(7,8,15,.8) 80%, transparent); }
+  #aviso::before, #aviso::after { content:''; position:absolute; left:8%; right:8%; height:1px; background:linear-gradient(90deg, transparent, var(--cor), transparent); transform:scaleX(0); }
+  #aviso::before { top:0; } #aviso::after { bottom:0; }
+  #aviso small { font:700 11px/1.2 'Rajdhani',sans-serif; letter-spacing:.34em; text-transform:uppercase; color:var(--cor); }
+  #aviso b { font:700 clamp(17px,2.4vw,25px)/1.15 'Rajdhani',sans-serif; letter-spacing:.05em; text-transform:uppercase; color:#fff; text-shadow:0 2px 14px rgba(0,0,0,.7); }
+  #aviso.vis { animation:avisoEntra .35s ease-out forwards; }
+  #aviso.vis::before, #aviso.vis::after { animation:avisoLinha .5s .05s ease-out forwards; }
+  #aviso.sai { animation:avisoSai .4s ease-in forwards; }
+  #aviso.sai::before, #aviso.sai::after { transform:scaleX(1); }
+  @keyframes avisoEntra { from { opacity:0; transform:translate(-50%,-10px); } to { opacity:1; transform:translate(-50%,0); } }
+  @keyframes avisoLinha { to { transform:scaleX(1); } }
+  @keyframes avisoSai { from { opacity:1; } to { opacity:0; transform:translate(-50%,-6px); } }
+  #aviso.t-missao { --cor:var(--ouro); } #aviso.t-crime { --cor:#ff4d5e; } #aviso.t-ok { --cor:#7be08a; } #aviso.t-alerta { --cor:#ffa94d; }
+  #aviso.t-info { --cor:var(--azul); } #aviso.t-zoom { --cor:#3fa0ff; } #aviso.t-reverso { --cor:#ff3b30; }
+  @media (max-height: 520px) { #aviso { top:28%; padding:5px 34px 6px; } #aviso small { font-size:10px; } }
+  #mira { position:absolute; left:50%; top:50%; width:6px; height:6px; margin:-3px; border-radius:50%; background:rgba(255,255,255,.5); display:none; }
+  /* controles de toque */
+  #toque { position:fixed; inset:0; pointer-events:none; display:none; }
+  .toque.jogando #toque { display:block; }
+  #stick { position:absolute; left:max(26px,env(safe-area-inset-left)); bottom:max(26px,env(safe-area-inset-bottom)); width:132px; height:132px; border-radius:50%; background:rgba(255,255,255,.08); border:2px solid rgba(255,255,255,.25); pointer-events:auto; touch-action:none; }
+  #stick i { position:absolute; left:50%; top:50%; width:56px; height:56px; margin:-28px; border-radius:50%; background:rgba(255,255,255,.35); }
+  .bt { position:absolute; width:78px; height:78px; border-radius:50%; border:2px solid var(--ouro); background:rgba(8,10,18,.55); color:var(--ouro); font-weight:800; font-size:12px; letter-spacing:.06em; text-shadow:0 1px 3px #000, 0 0 6px #000; pointer-events:auto; touch-action:none; backdrop-filter:blur(3px); }
+  .bt.ativo { background:rgba(255,210,63,.45); }
+  #btPular { right:max(22px,env(safe-area-inset-right)); bottom:max(26px,env(safe-area-inset-bottom)); }
+  #btVibrar { right:max(22px,env(safe-area-inset-right)); bottom:max(116px,calc(env(safe-area-inset-bottom) + 90px)); border-color:#ff7b7b; color:#ffa0a0; background:rgba(40,8,10,.6); }
+  #btVibrar.ativo { background:rgba(255,80,80,.45); }
+  #btCorrer { right:max(108px,calc(env(safe-area-inset-right) + 86px)); bottom:max(26px,env(safe-area-inset-bottom)); border-color:var(--azul); color:#9fe6ff; background:rgba(6,24,36,.6); }
+  #btCorrer.ativo { background:rgba(63,208,255,.45); }
+  #btBater { right:max(108px,calc(env(safe-area-inset-right) + 86px)); bottom:max(116px,calc(env(safe-area-inset-bottom) + 90px)); border-color:#ff9a3c; color:#ffc58a; background:rgba(40,18,6,.6); font-size:13px; }
+  #btBater.ativo { background:rgba(255,140,40,.5); }
+  /* golpes especiais: acendem quando há energia para pagar */
+  .esp { position:absolute; right:max(194px,calc(env(safe-area-inset-right) + 172px)); width:50px; height:50px; border-radius:50%; border:2px solid rgba(255,255,255,.22); background:rgba(8,10,18,.5); color:rgba(255,255,255,.4); font-weight:800; font-size:8.5px; letter-spacing:.03em; line-height:1.15; pointer-events:auto; touch-action:none; padding:0; text-shadow:0 1px 3px #000; }
+  .esp small { display:block; font-size:8px; font-weight:700; opacity:.85; }
+  .esp.pronto { border-color:var(--ouro); color:var(--ouro); background:rgba(60,40,0,.55); box-shadow:0 0 12px rgba(255,210,63,.45); }
+  .esp.ativo { background:rgba(255,210,63,.5); }
+  #bt-raio { bottom:max(56px,calc(env(safe-area-inset-bottom) + 34px)); }
+  #bt-ciclone { bottom:max(112px,calc(env(safe-area-inset-bottom) + 90px)); }
+  #bt-sonico { bottom:max(168px,calc(env(safe-area-inset-bottom) + 146px)); }
+  /* no PC: os especiais como fichas acima da barra de energia */
+  #chips { display:flex; gap:6px; justify-content:center; margin-bottom:5px; }
+  .toque #chips { display:none; }
+  .chip { font-size:10px; font-weight:700; padding:2px 8px; border-radius:99px; border:1px solid rgba(255,255,255,.18); color:rgba(255,255,255,.45); background:rgba(7,8,15,.5); white-space:nowrap; }
+  .chip.pronto { border-color:var(--ouro); color:var(--ouro); box-shadow:0 0 10px rgba(255,210,63,.35); }
+  #energia .barra { position:relative; }
+  #energia .marca { position:absolute; top:0; bottom:0; width:2px; background:rgba(7,8,15,.75); }
+  /* guia: marcador do objetivo na tela */
+  #marcadorGuia { position:absolute; left:0; top:0; display:none; flex-direction:column; align-items:center; gap:1px; margin:-20px 0 0 -20px; width:40px; pointer-events:none; will-change:transform; }
+  #marcadorGuia svg { width:40px; height:40px; overflow:visible; }
+  #marcadorGuia .losango, #marcadorGuia .seta { fill:currentColor; stroke:#fff; stroke-width:1.5; }
+  #marcadorGuia .ponto { fill:#fff; }
+  #marcadorGuia span { font-size:11px; opacity:.9; font-weight:800; color:#fff; white-space:nowrap; text-shadow:0 1px 3px #000, 0 0 8px #000; }
+  #marcadorGuia.perto { opacity:.55; }
+  /* vilões: barra do chefe (no lugar do painel da missão), vida do herói na luta, capítulos na pausa */
+  #chefe { position:absolute; left:50%; top:max(10px,env(safe-area-inset-top)); transform:translateX(-50%); width:min(46vw,460px); text-align:center; background:rgba(7,8,15,.62); border:1px solid rgba(255,255,255,.16); border-radius:12px; padding:6px 12px 7px; }
+  .chefe-titulo { font-weight:900; letter-spacing:.14em; font-size:14px; text-shadow:0 0 12px currentColor; }
+  .chefe-barras { display:flex; gap:6px; margin-top:5px; }
+  .chefe-barra { flex:1; height:10px; border-radius:99px; background:rgba(255,255,255,.12); overflow:hidden; border:1px solid rgba(255,255,255,.2); }
+  .chefe-barra i { display:block; height:100%; width:100%; transition:width .15s; box-shadow:0 0 10px currentColor; }
+  .chefe-info { font-size:12px; margin-top:4px; opacity:.92; }
+  @media (max-height: 520px) { .chefe-titulo { font-size:12px; } .chefe-info { font-size:10.5px; } }
+  #vidaHeroi { margin-bottom:6px; }
+  #vidaHeroi .nivel { background:linear-gradient(90deg,#ff2b3d,#ff7b5a); transition:width .15s; }
+  #capitulos { display:flex; flex-direction:column; gap:8px; width:min(80vw,380px); }
+  #capitulos .cap-aviso { margin:0; font-size:13px; line-height:1.45; opacity:.75; text-align:center; }
+  .recomecar { pointer-events:auto; cursor:pointer; padding:8px 18px; border-radius:99px; border:1px solid rgba(255,255,255,.28); background:none; color:var(--texto); font:inherit; font-size:13px; opacity:.85; }
+  .recomecar.confirma { border-color:#ff6b5a; color:#ff8f80; opacity:1; box-shadow:0 0 14px rgba(255,107,90,.3); }
+  .cap { pointer-events:auto; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.2); background:rgba(7,8,15,.65); color:var(--texto); font:inherit; text-align:left; }
+  .cap b { font-size:14px; } .cap small { font-size:12px; opacity:.8; white-space:nowrap; }
+  .cap.liberado { border-color:var(--ouro); box-shadow:0 0 14px rgba(255,210,63,.3); } .cap.liberado small { color:var(--ouro); opacity:1; }
+  .cap.vencido small { color:#7be08a; } .cap:disabled { opacity:.45; cursor:default; }
+  #btPausa { position:absolute; left:max(12px,env(safe-area-inset-left)); top:max(128px,calc(env(safe-area-inset-top) + 116px)); width:34px; height:34px; font-size:12px !important; border-radius:10px; border:1px solid rgba(255,255,255,.3); background:rgba(7,8,15,.55); color:#fff; font-weight:900; font-size:14px; letter-spacing:2px; pointer-events:auto; touch-action:none; }
+  /* história: rádio (sem parar o jogo) e cena de cinema (jogo parado) */
+  #radio { position:absolute; left:50%; top:max(48px,calc(env(safe-area-inset-top) + 38px)); transform:translate(-50%,-8px); width:min(44vw,480px); display:flex; gap:10px; align-items:center; padding:7px 12px; border-radius:12px; background:rgba(7,8,15,.72); border:1px solid rgba(255,255,255,.16); opacity:0; transition:opacity .25s, transform .25s; pointer-events:none; }
+  #radio.vis { opacity:1; transform:translate(-50%,0); }
+  .capitulo #radio { top:max(92px,calc(env(safe-area-inset-top) + 82px)); }      /* com o painel do vilão no alto */
+  #radio.vilao { border-color:rgba(255,80,80,.45); }
+  #radio .retrato, #cenaHist .retrato { flex:none; width:34px; height:34px; border-radius:50%; display:grid; place-items:center; font-style:normal; font-weight:900; font-size:12px; color:#07080f; box-shadow:0 0 12px rgba(255,255,255,.25); }
+  #radio b { display:block; font-size:12px; letter-spacing:.04em; }
+  #radio span { display:block; font-size:13px; line-height:1.35; }
+  @media (max-height: 520px) { #radio span { font-size:11px; } #radio b { font-size:10.5px; } #radio { padding:5px 10px; } #radio .retrato { width:28px; height:28px; font-size:10px; } }
+  #cenaHist { position:fixed; inset:0; z-index:6; pointer-events:auto; touch-action:none; }
+  #cenaHist .faixa { position:absolute; left:0; right:0; background:#000; }
+  #cenaHist .cima { top:0; height:11vh; }
+  #cenaHist .baixo { bottom:0; min-height:21vh; display:flex; gap:14px; align-items:center; padding:10px max(24px,env(safe-area-inset-left)) max(10px,env(safe-area-inset-bottom)); }
+  #cenaHist .retrato { width:46px; height:46px; font-size:15px; }
+  #radio .retrato.foto, #cenaHist .retrato.foto { box-shadow:0 0 0 2px var(--cor), 0 0 14px color-mix(in srgb, var(--cor) 55%, transparent); }
+  #cenaHist .retrato.foto { width:62px; height:62px; }
+  @media (max-height: 520px) { #cenaHist .retrato.foto { width:52px; height:52px; } }
+  #cenaHist .fala b { display:block; font-size:14px; letter-spacing:.05em; }
+  #cenaHist .fala p { margin:3px 0 2px; font-size:clamp(14px,2.4vw,19px); line-height:1.4; min-height:2.8em; max-width:900px; }
+  #cenaHist .fala small { font-size:11px; opacity:.5; }
+  #cenaHist .cartao { position:absolute; inset:0; z-index:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:radial-gradient(ellipse at 50% 55%, #1a0608 0%, #050307 70%); opacity:0; pointer-events:none; transition:opacity .45s; }
+  #cenaHist.so-cartao .cartao { pointer-events:auto; }
+  #cenaHist .cartao.vis { opacity:1; }
+  #cenaHist .cartao small { font-family:'Rajdhani','Inter',system-ui,sans-serif; font-weight:700; font-size:clamp(12px,1.8vw,16px); letter-spacing:.32em; text-transform:uppercase; color:#ffd23f; opacity:0; transform:translateY(8px); transition:opacity .5s .15s, transform .5s .15s; }
+  #cenaHist .cartao h2 { margin:0; font-family:'Rajdhani','Inter',system-ui,sans-serif; font-weight:700; font-size:clamp(30px,6.4vw,64px); letter-spacing:.04em; text-transform:uppercase; color:#fff; text-shadow:0 0 28px rgba(255,40,40,.45); opacity:0; transform:scale(.96); transition:opacity .6s .3s, transform 1.6s .3s; text-align:center; padding:0 24px; }
+  #cenaHist .cartao i { display:block; width:0; height:3px; border-radius:2px; background:linear-gradient(90deg,transparent,#ff2a2a,#ffd23f,#ff2a2a,transparent); transition:width .9s .5s; }
+  #cenaHist .cartao.vis small { opacity:.95; transform:none; } #cenaHist .cartao.vis h2 { opacity:1; transform:none; } #cenaHist .cartao.vis i { width:min(52vw,420px); }
+  #cenaHist.so-cartao .faixa { opacity:0; }
+  #resumo .hist { display:inline-block; margin-bottom:4px; font-family:'Rajdhani','Inter',system-ui,sans-serif; font-weight:700; letter-spacing:.12em; text-transform:uppercase; font-size:12px; color:#ffd23f; }
+  /* Ato 3: a noite do acidente (a imagem com tom de memória) e o clarão branco da explosão do Núcleo */
+  body.passado #cena { filter: sepia(.32) saturate(.8) hue-rotate(-8deg) contrast(1.06); }
+  body::after { content:''; position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:7; }
+  body.clarao::after { animation: clarao 1.6s ease-out; }
+  @keyframes clarao { 0% { opacity:0; } 8% { opacity:.95; } 100% { opacity:0; } }
+  /* créditos do fim: texto subindo devagar sobre o preto */
+  #creditos { position:fixed; inset:0; z-index:8; background:#040306; overflow:hidden; color:#e8e6f0; text-align:center; }
+  #creditos .rolo { position:absolute; left:0; right:0; top:100%; padding:0 24px; }
+  #creditos.rola .rolo { animation: rolar 42s linear forwards; }
+  @keyframes rolar { to { transform: translateY(calc(-100% - 100vh)); } }
+  #creditos section { margin:0 auto 9vh; max-width:640px; }
+  #creditos h3 { margin:0 0 8px; font-family:'Rajdhani','Inter',system-ui,sans-serif; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#ffd23f; font-size:clamp(18px,3vw,26px); }
+  #creditos p { margin:0; font-size:clamp(13px,2vw,17px); line-height:1.5; opacity:.85; }
+  #creditos section:first-child h3 { font-size:clamp(34px,7vw,64px); color:#fff; text-shadow:0 0 28px rgba(255,40,40,.5); }
+  #creditos .pular { position:absolute; right:max(16px,env(safe-area-inset-right)); top:16px; padding:6px 14px; border-radius:99px; border:1px solid rgba(255,255,255,.35); background:rgba(0,0,0,.45); color:#fff; font:inherit; font-size:12px; font-weight:700; }
+  #cenaHist .pular { position:absolute; z-index:2; right:max(16px,env(safe-area-inset-right)); top:calc(11vh + 10px); padding:6px 14px; border-radius:99px; border:1px solid rgba(255,255,255,.35); background:rgba(0,0,0,.45); color:#fff; font:inherit; font-size:12px; font-weight:700; }
+  .em-cena #hud, .em-cena #toque { display:none !important; }
+  /* golpe recebido: borda vermelha */
+  #dano { position:fixed; inset:0; pointer-events:none; opacity:0; box-shadow:inset 0 0 90px 30px rgba(255,20,40,.55); }
+  .tela { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; background:radial-gradient(ellipse at 50% 40%, rgba(255,43,61,.2), rgba(7,8,15,.9) 70%); gap:14px; z-index:5; overflow:auto; }
+  .tela[hidden] { display:none; }
+  /* a logo (assets/logo, gerada por tools/logo/gerar-logo.py): grande, sem passar da largura nem roubar a altura da tela */
+  h1.logo { line-height:0; text-shadow:none; }
+  h1.logo img { display:block; width:min(92vw, 860px, 32vh * 2.99); height:auto; margin:-1vh auto 0; }
+  #creditos .logo-fim { display:block; width:min(86vw, 760px); height:auto; margin:0 auto 6vh; }
+  h1 { margin:0; font-size:clamp(40px,10vw,84px); font-weight:900; letter-spacing:.06em; font-style:italic; color:var(--ouro); text-shadow:0 0 28px rgba(255,43,61,.8), 3px 3px 0 var(--vermelho); }
+  h2 { margin:0; font-size:clamp(28px,7vw,52px); font-weight:900; color:var(--ouro); }
+  p { margin:0; max-width:540px; line-height:1.5; opacity:.9; }
+  .teclas { display:grid; grid-template-columns:auto auto; gap:6px 18px; font-size:14px; opacity:.85; text-align:left; }
+  kbd { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.25); border-radius:6px; padding:1px 7px; font-family:inherit; font-size:12px; }
+  button.principal { pointer-events:auto; cursor:pointer; border:0; border-radius:99px; padding:14px 42px; font-size:18px; font-weight:800; letter-spacing:.06em; color:#1a0a00; background:linear-gradient(180deg,#ffe58a,var(--ouro)); box-shadow:0 6px 24px rgba(255,210,63,.35); }
+  a.sec { color:var(--azul); font-size:14px; }
+  .toque .teclas { display:none; }
+  .so-toque { display:none; }
+  .toque .so-toque { display:block; }
+  #carregando { font-size:14px; opacity:.8; }
+  #barraCarga { width:min(60vw,320px); height:8px; border-radius:99px; background:rgba(255,255,255,.15); overflow:hidden; }
+  #barraCarga i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--azul),var(--ouro)); }
+  /* celular: obrigatório jogar deitado */
+  #girar { position:fixed; inset:0; z-index:50; display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center; padding:24px; background:#07080f; color:var(--texto); }
+  #girar svg { width:96px; height:96px; animation:girar 2s ease-in-out infinite; }
+  #girar b { font-size:22px; } #girar span { opacity:.75; max-width:300px; line-height:1.5; }
+  @keyframes girar { 0%,20% { transform:rotate(0); } 50%,80% { transform:rotate(-90deg); } 100% { transform:rotate(0); } }
+  @media (orientation: portrait) { .toque #girar { display:flex; } }
+  /* telas iniciais cabem no celular deitado (altura pequena) */
+  @media (max-height: 520px) { .tela { gap:8px; padding:12px 24px; justify-content:safe center; } h1 { font-size:clamp(30px,9vh,56px); } h1.logo img { width:min(80vw, 33vh * 2.99); margin:-4px auto -2px; } h2 { font-size:clamp(24px,7vh,40px); } .tela p { font-size:13px; line-height:1.4; } button.principal { padding:10px 34px; font-size:16px; } }
+  /* a cortina das portas dos lugares (entrar e sair) */
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .28s ease; z-index: 40; }
+  #fade.on { opacity: 1; }
+  #fade.branco { background: #fff; transition: opacity .12s ease; }
+  #fade.branco.on { opacity: var(--clarao, .8); }
+  /* o cronômetro de um passo da vida do Barry nos últimos 10 s */
+  #missao.urgente #missaoTexto { color: #ff7468; animation: urgente .5s ease-in-out infinite alternate; }
+  @keyframes urgente { to { opacity: .55; } }
+</style>
+</head>
+<body>
+<canvas id="cena"></canvas>
+<div id="girar" role="alert"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd23f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg><b>Gire o celular</b><span>THE FLASH só se joga com o celular deitado.</span></div>
+
+
+<div id="dano"></div>
+<div id="hud">
+  <div id="mapaBox"><canvas id="mapa" width="312" height="312"></canvas></div>
+  <div id="canto">
+    <div class="bloco"><div class="rotulo">Esferas</div><div class="valor"><span id="esferas">0</span> / <span id="total">0</span></div></div>
+    <div class="bloco"><div class="valor" id="hora">12:00</div></div>
+    <div id="bussola" class="bloco"><svg id="seta" viewBox="-12 -12 24 24"><path d="M0 -10 L7 8 L0 4 L-7 8 Z" fill="#3fd0ff"/></svg><span id="distEsfera">—</span></div>
+  </div>
+  <div id="missao" class="bloco"><div class="rotulo" id="missaoNum"></div><div id="missaoTitulo"></div><div id="missaoTexto"></div><div id="crimeLinha" hidden></div></div>
+  <div id="aviso"><small id="avisoRotulo"></small><b id="avisoTitulo"></b></div>
+  <div id="fade"></div>
+  <div id="coleta"></div>
+  <div id="mira"></div>
+  <div id="energia"><div id="chips"><span class="chip" id="chip-raio">1 · RAIO 25%</span><span class="chip" id="chip-ciclone">2 · CICLONE 35%</span><span class="chip" id="chip-sonico">3 · SÔNICO 50%</span></div><div class="linhaEnergia"><span>Energia</span><span id="velBox"><b id="vel">0</b> km/h</span></div><div class="barra"><div class="nivel" id="nivel"></div><i class="marca" style="left:25%"></i><i class="marca" style="left:35%"></i><i class="marca" style="left:50%"></i></div></div>
+</div>
+<div id="toque">
+  <div id="stick"><i id="stickBola"></i></div>
+  <button class="bt" id="btVibrar" type="button">VIBRAR</button>
+  <button class="bt" id="btCorrer" type="button">CORRER</button>
+  <button class="bt" id="btPular" type="button">PULAR</button>
+  <button class="bt" id="btBater" type="button">BATER</button>
+  <button id="btPausa" type="button" aria-label="Pausa">II</button>
+  <button class="esp" id="bt-raio" type="button">RAIO<small>25%</small></button>
+  <button class="esp" id="bt-ciclone" type="button">CICLONE<small>35%</small></button>
+  <button class="esp" id="bt-sonico" type="button">SÔNICO<small>50%</small></button>
+</div>
+
+<div id="telaInicio" class="tela">
+  <h1 class="logo"><img src="assets/logo/logo.webp" alt="THE FLASH" width="1800" height="602" decoding="async"></h1>
+  <p>Uma cidade de 3,3 km de ponta a ponta. Comece no S.T.A.R. Labs, cumpra as missões, impeça os crimes que acontecem pela cidade, escale os prédios e recolha as esferas de energia.</p>
+  <div class="teclas">
+    <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>correr</span>
+    <span>Mouse</span><span>olhar (clique para capturar)</span>
+    <span><kbd>Shift</kbd></span><span>supervelocidade (gasta energia)</span>
+    <span><kbd>Espaço</kbd></span><span>pular (duas vezes = pulo duplo)</span>
+    <span><kbd>V</kbd> (segurar, em velocidade)</span><span>vibrar: atravessa prédios e objetos</span>
+    <span>Corra de frente para um prédio acima de 130 km/h</span><span>escala a parede até o topo (Shift)</span>
+    <span><kbd>F</kbd> ou clique</span><span>bater (avança até o bandido; 3 seguidos = gancho)</span>
+    <span><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></span><span>golpes especiais: raio, ciclone, sônico (gastam energia)</span>
+    <span><kbd>P</kbd></span><span>pausa (capítulos dos vilões)</span>
+    <span><kbd>M</kbd></span><span>mapa grande</span>
+    <span><kbd>H</kbd></span><span>avançar o relógio</span>
+  </div>
+  <p class="so-toque">Joystick à esquerda para correr, arraste a tela para olhar. Segure CORRER para a supervelocidade (acima de 130 km/h, corra contra um prédio para escalar), VIBRAR para atravessar prédios, PULAR (duas vezes = pulo duplo) e BATER nos bandidos. RAIO, CICLONE e SÔNICO são golpes especiais: acendem quando há energia. Siga as setas no chão até o objetivo.</p>
+  <div id="carregando">Gerando a cidade…</div>
+  <div id="barraCarga"><i id="barraCargaI"></i></div>
+  <button class="principal" id="btnJogar" type="button" hidden>COMEÇAR</button>
+</div>
+
+<div id="telaPausa" class="tela" hidden>
+  <h2>PAUSADO</h2>
+  <p id="resumo"></p>
+  <button class="principal" id="btnContinuar" type="button">CONTINUAR</button>
+  <div id="capitulos"></div>
+  <button class="recomecar" id="btnRecomecar" type="button">Recomeçar a história do zero</button>
+</div>
+<div id="telaFim" class="tela" hidden>
+  <h2>CIDADE LIMPA!</h2>
+  <p id="fimTexto"></p>
+  <button class="principal" id="btnDeNovo" type="button">CORRER DE NOVO</button>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
+</script>
+<script type="module" src="js/jogo.js"></script>
+</body>
+</html>

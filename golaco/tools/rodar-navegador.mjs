@@ -24,13 +24,16 @@ const LISTA = [
   ['rede véu de noiva na tela (forma, branca de dia e de noite, mexe na batida; PC e celular)', 'teste-rede-tela.mjs'],
   ['tela limpa (HUD mínimo no celular e no PC, linha de impedimento só no apito)', 'teste-hud-minimo.mjs', { deploy: true }],
   ['replay (gol, impedimento com a linha, pausa; simulação parada e hash igual)', 'teste-replay.mjs'],
+  ['replays nas paradas (o lance de verdade no passo antes da montagem, simulação parada e hash igual, pular, desligado, celular, online, corpo novo)', 'teste-replay-paradas-tela.mjs'],
   ['comemoração do gol (cena, câmera de cinema, pular, celular; simulação segura e hash igual)', 'teste-comemoracao-tela.mjs', { deploy: true }],
   ['área técnica e treinadores na tela (celular — visíveis com o banco no quadro, chamadas iguais, CPU)', 'teste-tecnicos-tela.mjs'],
   ['cena de substituição e faixa ENTRA/SAI (fila depois do replay, pular, pausa, celular, nada encosta; hash igual)', 'teste-substituicao-tela.mjs', { deploy: true }],
+  ['cenas das paradas: cartão (o cartão na mão, a tarja só na cena, pular, sem o ícone, hash igual, celular e corpo novo, cartão → replay de parada, vantagem que virou gol, TM expulso), intervalo e pós-jogo (o mundo parado até a faixa final, tarjas = súmula, melhor em campo, troca de camisa, melhores momentos, celular, corpo novo, TM, online)', 'teste-cenas-tela.mjs', { deploy: true }],
   ['Pênaltis 3D (disputa até o fim, bolinhas, faixa, teclado com a câmera atrás do cobrador, celular, ?tm)', 'teste-penaltis-tela.mjs', { deploy: true }],
   ['bolas paradas no estilo FIFA (câmera atrás do cobrador nos 4 tipos, nada na lente, linha da cobrança mirada, curva; PC e celular)', 'teste-bola-parada-tela.mjs'],
   ['Modo Livre (pausa sem rolar, as 6 câmeras pela pausa, C/R3, rumo do ataque, Altura/Distância salvas, celular, ?tm)', 'teste-livre-tela.mjs', { deploy: true }],
   ['Online 1×1 na tela (duas abas pelo BroadcastChannel: o mesmo jogo, pausa combinada, menu sem parar, a partida inteira, a pausa no celular)', 'teste-online-tela.mjs', { deploy: true }],
+  ['corpo humano no jogo (?corpo=humano: todos desenhados, chamadas, teto de triângulos, nada baixado sem ele)', 'teste-corpo-tela.mjs'],
   // informativo até passar 5 vezes seguidas (a CPU da simulação no celular simulado ainda passa do teto do plano 4.1)
   ['desempenho no celular simulado (CPU 4×, informativo)', 'teste-desempenho-celular.mjs', { informativo: true }],
 ];

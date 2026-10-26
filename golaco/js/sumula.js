@@ -17,10 +17,18 @@
 //  - chute: o 'chute' do acoes.js ou o cabeceio PARA O GOL (passe de modo 'cabeceio' com m.voo.cabeceio = 'chute');
 //    no alvo = gol do mesmo time ou 'defesa' de um jogador do outro time em até 4 s (o bloqueio na linha não conta; o gol
 //    que entrou sem o chute aberto — bloqueado, cruzamento direto — conta como chute no alvo: gols ≤ no alvo ≤ chutes);
-//    a defesa só é creditada ao goleiro quando o chute acaba sem gol (espalmada que entra = gol, não defesa);
+//    a defesa só é creditada ao goleiro quando o chute acaba sem gol (espalmada que entra = gol, não defesa); o apito do
+//    1º tempo fecha o chute aberto (ele fica no 1º tempo);
 //  - posse: a cada passo com a bola rolando, o time do dono da bola (no pé ou na mão), senão o do passe/chute no ar;
 //  - cartões: um por evento 'cartao' (o 2º amarelo sai como amarelo + vermelho, como o TM espera);
-//  - minuto: minutoDeJogo (o do placar: 0–45 e 45–90; os acréscimos ficam em 45 e 90), no mínimo 1 no 1º tempo e 46 no 2º.
+//  - minuto: minutoDeJogo (o do placar: 0–45 e 45–90; os acréscimos ficam em 45 e 90), no mínimo 1 no 1º tempo e 46 no 2º;
+//  - escanteios (cenas das paradas, PLANO-CENAS.md R17): contados na BOLA MORTA — o passo que deixa m.parada nova com tipo
+//    'escanteio' (o time de quem cobra) —, não no evento 'escanteio', que só sai na montagem: o escanteio cuja montagem
+//    não chega (o tempo acabou na espera) também conta;
+//  - faltas: as COMETIDAS por time (o evento 'falta': `def` é quem fez, `time` quem sofreu), com e sem vantagem;
+//  - porTempo: a cópia dos números no apito do 1º tempo (o evento 'intervalo'), para a cena do intervalo e a do fim.
+// As estatísticas das cenas (estatisticas, autoresPorTime) saem daqui; o resultadoTM (o que vai ao TM) não muda com elas.
+// Desde o PR 3 das cenas a súmula é criada SEMPRE na partida (main.js, import estático: no download inicial), não só com ?tm.
 
 import { criarAutorGol, autorEventos, TOQUES } from './render/autor-gol.js';
 import { minutoDeJogo } from './partida.js';
@@ -35,6 +43,9 @@ export function criarSumula() {
     gols: [],          // {time (beneficiado), id (autor), contra, penalti, desvio, assist (id | null), tick, minuto}
     cartoes: [],       // {time, id, cor ('amarelo' | 'vermelho'), segundo, tick, minuto}
     chutes: [0, 0], noAlvo: [0, 0], posse: [0, 0],
+    escanteios: [0, 0], faltas: [0, 0],   // (as cenas: na bola morta / as cometidas)
+    porTempo: null,    // {1: estatísticas no apito do 1º tempo} (o evento 'intervalo')
+    escVisto: -1,      // o início (m.parada.inicio) do último escanteio contado
     aberto: null,      // o chute em aberto {time, id, tick, assist, defendido (id do goleiro que tocou | null)}
     pen: null,         // o pênalti em aberto {time, id (cobrador), chutou} até outro toque que não seja do goleiro
     passe: null,       // o passe ainda sem dono {de, time}
@@ -162,7 +173,9 @@ export function sumulaPasso(s, m, eventos) {
         break;
       }
       case 'fora': case 'saida': case 'intervalo': case 'apito': case 'impedimento':
-        if (tipo === 'fora') fecharChute(s, false);
+        // (o apito do 1º tempo também fecha o chute aberto: ele conta no 1º tempo — a cópia do porTempo vem depois daqui —
+        // e nada do 2º tempo, um gol ou uma defesa dentro da JANELA_CHUTE, vira o chute de antes do apito em "no alvo")
+        if (tipo === 'fora' || tipo === 'intervalo') fecharChute(s, false);
         s.passe = null; s.passeCerto = null; s.pen = null;
         break;
       case 'cartao': {
@@ -180,7 +193,13 @@ export function sumulaPasso(s, m, eventos) {
         break;
       }
       case 'perda': if (e.id != null) numeros(s, e.id).perdas++; break;
-      case 'falta': if (e.def != null) numeros(s, e.def).faltas++; break;
+      case 'falta': {
+        if (e.def != null) numeros(s, e.def).faltas++;
+        // as faltas COMETIDAS por time: o de quem fez (`def`), senão o outro de quem sofreu (`time`)
+        const t = timeDe(e.def) ?? (e.time === 0 || e.time === 1 ? 1 - e.time : null);
+        if (t === 0 || t === 1) s.faltas[t]++;
+        break;
+      }
       default: break;
     }
     // chute (depois do toque: a corrente da assistência do chute é a de agora)
@@ -200,6 +219,14 @@ export function sumulaPasso(s, m, eventos) {
     }
   }
   if (s.aberto && m.tick - s.aberto.tick > JANELA_CHUTE) fecharChute(s, false);
+  // escanteio na bola morta (R17): a parada nova de tipo 'escanteio' conta uma vez, para quem cobra
+  const pr = m.parada;
+  if (pr && pr.tipo === 'escanteio' && pr.inicio !== s.escVisto) {
+    s.escVisto = pr.inicio;
+    if (pr.time === 0 || pr.time === 1) s.escanteios[pr.time]++;
+  }
+  // o apito do 1º tempo: a cópia dos números do tempo (a cena do intervalo mostra o 1º tempo; a do fim, os dois)
+  if (eventos.some(e => e.tipo === 'intervalo')) s.porTempo = { 1: numerosDoTempo(s) };
   s.dono = m.posse ?? null;
   // posse: só com a bola rolando (como o painel)
   const p = m.partida;
@@ -211,10 +238,58 @@ export function sumulaPasso(s, m, eventos) {
 
 /** Posse em % [time 0, time 1] (somam 100; sem nenhum passo com a bola rolando: 50/50). */
 export function posseEmPct(s) {
-  const tot = s.posse[0] + s.posse[1];
+  return pct(s.posse);
+}
+function pct(posse) {
+  const tot = posse[0] + posse[1];
   if (!tot) return [50, 50];
-  const a = Math.round(100 * s.posse[0] / tot);
+  const a = Math.round(100 * posse[0] / tot);
   return [a, 100 - a];
+}
+
+/** Os números de um tempo (cópia): {posse (ticks), chutes, noAlvo, escanteios, faltas, amarelos, vermelhos, gols} por time. */
+function numerosDoTempo(s) {
+  const am = [0, 0], ve = [0, 0], go = [0, 0];
+  for (const c of s.cartoes) { if (c.time !== 0 && c.time !== 1) continue; if (c.cor === 'vermelho') ve[c.time]++; else am[c.time]++; }
+  for (const g of s.gols) if (g.time === 0 || g.time === 1) go[g.time]++;
+  return {
+    posse: [s.posse[0], s.posse[1]], chutes: [s.chutes[0], s.chutes[1]], noAlvo: [s.noAlvo[0], s.noAlvo[1]],
+    escanteios: [s.escanteios[0], s.escanteios[1]], faltas: [s.faltas[0], s.faltas[1]], amarelos: am, vermelhos: ve, gols: go,
+  };
+}
+
+/**
+ * As estatísticas para as cenas (o painel do intervalo e do fim; js/cenas-tela.js): tempo = 1 (o 1º tempo: a cópia do
+ * apito, ou o de agora antes dele), 2 (o 2º: o total menos o 1º) ou null (a partida). {posse [%, %], chutes, noAlvo,
+ * escanteios, faltas, amarelos, vermelhos, gols} — cada um [time 0, time 1]. Só lê.
+ */
+export function estatisticas(s, tempo = null) {
+  const tot = numerosDoTempo(s), t1 = s.porTempo?.[1] ?? null;
+  let n = tot;
+  if (tempo === 1 && t1) n = t1;
+  else if (tempo === 2) {
+    n = {};
+    for (const k of Object.keys(tot)) n[k] = [tot[k][0] - (t1 ? t1[k][0] : 0), tot[k][1] - (t1 ? t1[k][1] : 0)];
+  }
+  return { ...n, posse: pct(n.posse) };
+}
+
+/**
+ * Os autores dos gols por time beneficiado (a tarja do placar das cenas): {0: [{id, contra, gols: [{minuto, penalti,
+ * contra}]}], 1: [...]}, cada autor uma vez (na ordem do 1º gol dele; o gol contra separado do normal do mesmo jogador),
+ * os minutos na ordem do jogo. Até `tempo` (1: só os do 1º tempo). Só lê.
+ */
+export function autoresPorTime(s, tempo = null) {
+  const out = { 0: [], 1: [] };
+  for (const g of s.gols) {
+    if (g.time !== 0 && g.time !== 1) continue;
+    if (tempo === 1 && s.porTempo?.[1] && g.minuto > 45) continue;
+    const lista = out[g.time];
+    let a = lista.find(q => q.id === g.id && q.contra === !!g.contra);
+    if (!a) { a = { id: g.id, contra: !!g.contra, gols: [] }; lista.push(a); }
+    a.gols.push({ minuto: g.minuto, penalti: !!g.penalti, contra: !!g.contra });
+  }
+  return out;
 }
 
 /**
@@ -235,9 +310,46 @@ export function notaDoJogador(n, opc = {}) {
   return Math.round(Math.max(4.5, Math.min(10, v)) * 10) / 10;
 }
 
+/** Os números de um jogador sem criar a entrada (só lê: quem nunca tocou na bola tem tudo zero). */
+const ZERO = Object.freeze({ toques: 0, passes: 0, passesCertos: 0, chutes: 0, noAlvo: 0, gols: 0, assist: 0, roubadas: 0, desarmes: 0, perdas: 0, defesas: 0, faltas: 0, amarelos: 0, vermelhos: 0, contra: 0 });
+const numerosDe = (s, id) => s.jog[id] ?? ZERO;
+
+/**
+ * A nota do jogador `id` no placar de agora: a MESMA conta e as mesmas opções do `jogador` do resultadoTM (a posição do
+ * jogador em campo ou expulso, os gols sofridos pelo time dele e o saldo; PLANO-CENAS.md R18). time: o time dele (o
+ * substituído já não está em m.jogadores). Só lê.
+ */
+export function notaDe(s, m, id, time = null) {
+  const placar = [m.placar?.[0] ?? 0, m.placar?.[1] ?? 0];
+  const j = jogadorDoId(m, id) ?? (m.expulsos ?? []).find(o => o.id === id) ?? null;
+  const t = time ?? j?.time ?? timeDoId(m, id) ?? 0;
+  return notaDoJogador(numerosDe(s, id), { posicao: j?.posicao ?? null, sofridos: placar[1 - t], saldo: placar[t] - placar[1 - t] });
+}
+
+/**
+ * O MELHOR EM CAMPO (a cena do pós-jogo, PLANO-CENAS.md §5.1; o `melhor` do resultadoTM): a maior nota (notaDe) entre quem
+ * jogou — os de agora em m.jogadores e os substituídos (m.times[t].saiu) —, menos os expulsos; desempate: mais gols, mais
+ * assistências, o menor id. Devolve {id, time, nota, gols, assist} ou null (sem ninguém). Só lê.
+ */
+export function melhorEmCampo(s, m) {
+  const expulsos = new Set((m.expulsos ?? []).map(j => j.id));
+  const cand = [];
+  for (const j of m.jogadores) if ((j.time === 0 || j.time === 1) && !expulsos.has(j.id)) cand.push([j.id, j.time]);
+  for (const t of [0, 1]) for (const id of m.times?.[t]?.saiu ?? []) if (!expulsos.has(id) && !cand.some(c => c[0] === id)) cand.push([id, t]);
+  let melhor = null;
+  for (const [id, time] of cand) {
+    const n = numerosDe(s, id), nota = notaDe(s, m, id, time);
+    const x = { id, time, nota, gols: n.gols, assist: n.assist };
+    if (!melhor || x.nota > melhor.nota || (x.nota === melhor.nota && (x.gols > melhor.gols || (x.gols === melhor.gols && (x.assist > melhor.assist || (x.assist === melhor.assist && x.id < melhor.id)))))) melhor = x;
+  }
+  return melhor;
+}
+
 /**
  * O resultado do contrato (§2) — `lado` = o índice do time no GOLAÇO (0 = mandante). mapa: {id: {tmId, nome, lado}}
- * (tm-times.js). O jogador travado (m.trava) entra em `jogador` com a nota.
+ * (tm-times.js). O jogador travado (m.trava) entra em `jogador` com a nota. O campo OPCIONAL `melhor` ({lado, tmId, nome,
+ * nota}: o melhor em campo, melhorEmCampo — a nota pela mesma conta da do `jogador`) vai junto quando há quem jogou; o TM
+ * ignora o que não conhece (PLANO-CENAS.md §5.2).
  */
 export function resultadoTM(s, m, mapa = {}) {
   const quem = id => (id != null && mapa[id] ? { tmId: mapa[id].tmId ?? null, nome: mapa[id].nome ?? '' } : { tmId: null, nome: '' });
@@ -262,5 +374,7 @@ export function resultadoTM(s, m, mapa = {}) {
       gols: n.gols, assist: n.assist, toques: n.toques, passes: n.passesCertos,
     };
   }
+  const mc = melhorEmCampo(s, m);
+  if (mc) { const a = quem(mc.id); r.melhor = { lado: mc.time, tmId: a.tmId, nome: a.nome, nota: mc.nota }; }
   return r;
 }

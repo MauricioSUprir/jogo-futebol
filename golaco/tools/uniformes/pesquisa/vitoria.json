@@ -1,0 +1,132 @@
+{
+  "clube": "Vitória",
+  "chave": "br/Vitória",
+  "temporada": "2026",
+  "fornecedor": "Volt Sport",
+  "casa": {
+    "nome": "Camisa 1 2026",
+    "lancamento": "2026-04-16",
+    "camisa": "#121212",
+    "padrao": "listras_verticais",
+    "padrao_cores": [
+      "#d71f22"
+    ],
+    "padrao_n": 2,
+    "padrao_largura": 0.23,
+    "padrao_desc": "base preta com só DUAS listras vermelhas largas na frente, separadas por uma faixa preta central da mesma largura (o centro do peito é preto); laterais pretas; as listras têm variação de tom (efeito de profundidade); mangas raglan pretas com um friso branco fino na costura do raglan",
+    "mangas": "#121212",
+    "mangas_padrao": "liso",
+    "punhos": "#d71f22",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#121212"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#121212",
+    "calcao_detalhe": "#d71f22",
+    "meiao": "#121212",
+    "meiao_detalhe": null,
+    "meiao_desc": "preto",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/04/camisa-titular-vitoria-2026-volt/",
+      "https://atarde.com.br/esportes/vitoria-lanca-nova-camisa-rubro-negra-para-temporada-2026-1386098",
+      "https://www.mktesportivo.com/2026/04/vitoria-apresenta-nova-camisa-principal-em-parceria-com-a-volt-sport/",
+      "https://www.footballkitarchive.com/vitoria-2026-home-kit-475215/"
+    ]
+  },
+  "fora": {
+    "nome": "Camisa 2 2026",
+    "lancamento": "2026-08-09",
+    "camisa": "#e6e1cd",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "off-white/creme com jacquard tonal de ondas (quase invisível de longe); painéis laterais em degradê do bordô ao preto com friso dourado fino; gola padre com botão contornada em bordô e dourado",
+    "mangas": "#e6e1cd",
+    "mangas_padrao": "liso",
+    "punhos": "#6e1f2b",
+    "gola": {
+      "tipo": "careca_alta",
+      "cor": "#6e1f2b"
+    },
+    "ombros": null,
+    "laterais": "#5a1a24",
+    "numero_cor": "#6e1f2b",
+    "calcao": "#f2f0e6",
+    "calcao_detalhe": "#6e1f2b",
+    "meiao": "#f2f0e6",
+    "meiao_detalhe": "#6e1f2b",
+    "meiao_desc": "branco com detalhes bordô e dourados (previsto; na estreia usaram o calção preto da 1)",
+    "fontes": [
+      "https://mantosdofutebol.com.br/2026/08/camisa-reserva-ec-vitoria-2026-volt-sport/",
+      "https://www.footyheadlines.com/1413601017/ec-vitoria-2026-away-kit-leaked.html",
+      "https://www.footballkitarchive.com/vitoria-2026-away-kit-507009/"
+    ]
+  },
+  "terceira": null,
+  "goleiro": {
+    "nome": "Goleiro 1 2026 (verde-água e ciano)",
+    "lancamento": "2026-04-16",
+    "camisa": "#284a45",
+    "padrao": "listras_verticais",
+    "padrao_cores": [
+      "#35857a"
+    ],
+    "padrao_n": 2,
+    "padrao_largura": 0.22,
+    "padrao_desc": "verde-escuro com duas listras largas em verde-água/ciano na frente, separadas por faixa central escura (mesmo molde da camisa 1)",
+    "mangas": "#294342",
+    "mangas_padrao": "liso",
+    "punhos": "#294342",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#294342"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#316f5b",
+    "calcao_detalhe": null,
+    "meiao": "#294342",
+    "meiao_detalhe": null,
+    "meiao_desc": "verde-escuro (estimado pela foto)",
+    "fontes": [
+      "https://atarde.com.br/esportes/vitoria-lanca-nova-camisa-rubro-negra-para-temporada-2026-1386098",
+      "https://www.footballkitarchive.com/vitoria-2026-gk-1-kit-475216/"
+    ]
+  },
+  "goleiro2": {
+    "nome": "Goleiro 2 2026 (amarela)",
+    "lancamento": "2026-08-29",
+    "camisa": "#f7d900",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "amarela lisa com gola V preta e acabamentos pretos nos ombros e punhos",
+    "mangas": "#f7d900",
+    "mangas_padrao": "liso",
+    "punhos": "#1d2111",
+    "gola": {
+      "tipo": "v",
+      "cor": "#1d2111"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#1d2111",
+    "calcao": "#f7d900",
+    "calcao_detalhe": null,
+    "meiao": "#f7d900",
+    "meiao_detalhe": null,
+    "meiao_desc": "amarelo (estimado)",
+    "fontes": [
+      "https://www.footballkitarchive.com/vitoria-2026-gk-2-kit-514214/",
+      "https://www.footyheadlines.com/1413601017/ec-vitoria-2026-away-kit-leaked.html"
+    ]
+  },
+  "confianca": "media",
+  "notas": "Camisa 1 confirmada (lançada 16/04/2026, estreia 18/04 contra o Corinthians; calção e meião pretos) e ainda em uso em out/2026 (versão 'Home V2' de out/2026 com patrocínios novos e calção preto com faixa vermelha). A camisa 2 estreou em 09/08/2026 contra o Flamengo ANTES de qualquer apresentação oficial (Mantos e Footy Headlines; números bordô com contorno dourado); calção/meião brancos previstos, não vistos em jogo. Não achei 3ª camisa de jogo em 2026 (as camisas da Copa, verde-amarela e branca, são só para torcedor; a de Réveillon é de dez/2025). As listadas como 'Home 2'/'Away 2' 2026 no Football Kit Archive são as de 2025 usadas no começo do ano. Goleiro 2 (amarela) só no Football Kit Archive com foto de jogo: data aproximada (primeira foto, 29/08/2026) e calção/meião estimados. Hex estimados pelas fotos (vermelho medido entre #b3181a na foto de estúdio escura e #e81e20 na de 2025). As fontes do goleiro 2 são fracas: só o Football Kit Archive mostra a camisa; o segundo link é da coleção de agosto, sem citar o goleiro."
+}

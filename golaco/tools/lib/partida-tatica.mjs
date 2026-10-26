@@ -36,7 +36,8 @@ export async function carregar(js) {
   const [P, S, C, F, Bo, A, Ac] = await Promise.all([imp('partida.js'), imp('sim.js'), imp('config.js'), imp('formacoes.js'), imp('bola.js'), imp('ia-ataque.js'), imp('acoes.js')]);
   let T = null;
   try { T = await imp('tatica.js'); } catch { T = null; }
-  return { P, S, C, T, F, Bo, A, Ac, js };
+  const H = await import(pathToFileURL(path.join(AQUI, 'humano-roteiro.mjs')).href);
+  return { P, S, C, T, F, Bo, A, Ac, H, js };
 }
 
 const NADA = { x: 0, z: 0, botoes: 0 };
@@ -62,17 +63,36 @@ export function parte3Presente(L) {
 }
 /**
  * Partida IA × IA. opc: {antes, times: {0: {formacao, tatica}, 1: {...}}, minutos (por tempo; padrão
- * 60 = sem intervalo no trecho medido), ataque: 'jogo' | 'substituto'}.
+ * 60 = sem intervalo no trecho medido), ataque: 'jogo' | 'substituto'}. Com opc.humano, o time 0 é uma PESSOA (sem a marca
+ * `ia` na entrada: tatica.js contraPessoa liga no time 1) — a variante `--humano` do teste-pressao (categoria D, D3): um perfil do
+ * tools/lib/humano-roteiro.mjs (agressivo, calmo, passivo...), 'construtor' — o ataque substituto de baixo só no time 0 (com a
+ * bola, trota, segura 2,5–5 s e passa para o mais livre; sem ela, parado) — ou 'espelho': a pessoa joga com a MESMA decisão da IA
+ * (partida.js entradaDemoPartida sem a marca `ia`; a `iaCobra` das cobranças fica), constrói como ela e defende como ela. Os
+ * roteiros e o construtor quase não passam diante da pressão (PPDA ~1,5–3 contra eles): o PPDA da IA contra a pessoa se mede
+ * contra o espelho.
  */
 export function criarJogo(L, semente, opc = {}) {
   const m = L.P.criarPartida({ semente, iaClassica: !!opc.antes, minutosPorTempo: opc.minutos ?? 60, times: opc.times });
+  if (opc.humano) {
+    m._hum = { perfil: opc.humano, st: { s: (semente * 2654435761) >>> 0 || 1, carga: null, id: -1, desde: 0, espera: 0 } };
+    if (opc.humano === 'construtor') m._sub = { s: (semente * 2654435761) >>> 0 || 1, id: -1, desde: 0, espera: 0, carga: null };
+    return m;
+  }
   m.humanos = [];
   if (opc.ataque === 'substituto') m._sub = { s: (semente * 2654435761) >>> 0 || 1, id: -1, desde: 0, espera: 0, carga: null };
   return m;
 }
 
-/** Um passo da partida IA × IA (com o ataque substituto, se a partida foi criada com ele). */
+/** Um passo da partida IA × IA (com o ataque substituto, se a partida foi criada com ele; contra o roteiro, com opc.humano). */
 export function passoJogo(L, m) {
+  if (m._hum && m._sub) {
+    // o construtor: o ataque substituto só com a bola no time 0; a pessoa é sempre o time 0 (m.humanos = [0])
+    const e = entradaSubstituta(L, m);
+    m.humanos = [0];
+    return L.P.passoPartida(m, e.time === 0 ? e : NADA);
+  }
+  if (m._hum && m._hum.perfil === 'espelho') { const { ia, ...e } = L.P.entradaDemoPartida(m); return L.P.passoPartida(m, e); }
+  if (m._hum) return L.P.passoPartida(m, L.H.entradaRoteiro(m, M, L.C.BOTAO, m._hum.st, m._hum.perfil));
   if (!m._sub) return L.P.passoPartida(m, NADA);
   const e = entradaSubstituta(L, m);
   const est = m.partida.estado;
@@ -173,6 +193,9 @@ export function medirJogos(L, sementes, opc = {}) {
     m1: [], m2: [], m1t: { 1: [], 2: [], 3: [] }, a10: [], perto3: 0, porta: 0, assentada: 0, assentadaN: 0,
     recepcoes: 0, agressao: 0, perdas: 0, retomada5: 0, chega2: 0, depoisJanela: [], ppda: [], passes: 0, acoes: 0,
     chutes: 0, gols: 0, minutos: 0, ramos: {}, porBola: [],
+    // por time que DEFENDE (contra o roteiro, o time 1 é a IA): recepções do adversário e as com defensor perto, perdas e
+    // retomadas, os passes do adversário e as ações defensivas do PPDA
+    porTime: [0, 1].map(() => ({ recepcoes: 0, agressao: 0, perdas: 0, retomada5: 0, chega2: 0, passesAdv: 0, acoes: 0 })),
   };
   const cada = opc.cada ?? 6;
   R.ataque = opc.ataque ?? 'jogo';
@@ -275,6 +298,13 @@ export function medirJogos(L, sementes, opc = {}) {
     R.perdas += perdas.length; R.retomada5 += perdas.filter(p => p.retomou).length; R.chega2 += perdas.filter(p => p.chegou).length;
     R.passes += pp.passes[0] + pp.passes[1]; R.acoes += pp.acoes[0] + pp.acoes[1];
     R.ppda.push(pp.ppda(0), pp.ppda(1));
+    for (const t of [0, 1]) {
+      const T = R.porTime[t];
+      T.recepcoes += recepcoes.filter(r => r.time !== t).length; T.agressao += recepcoes.filter(r => r.time !== t && r.ok).length;
+      T.perdas += perdas.filter(p => p.perdeu === t).length; T.retomada5 += perdas.filter(p => p.perdeu === t && p.retomou).length;
+      T.chega2 += perdas.filter(p => p.perdeu === t && p.chegou).length;
+      T.passesAdv += pp.passes[1 - t]; T.acoes += pp.acoes[t];
+    }
   }
   R.ppdaTotal = R.passes / Math.max(1, R.acoes);
   return R;

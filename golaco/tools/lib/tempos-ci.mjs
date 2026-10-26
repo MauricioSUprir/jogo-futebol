@@ -32,16 +32,17 @@ export const TEMPOS_NODE = {
   'teste-goleiro.mjs': 6,
   'teste-mergulho.mjs': 35,
   'teste-aereo.mjs': 2,
-  'teste-cabeceio.mjs': 54,
+  'teste-cabeceio.mjs': 70,
   'teste-treino.mjs': 14,
   'teste-goleiro-trava.mjs': 105,
   'teste-movimento.mjs': 41,
+  'teste-movimento.mjs --modo partida': 140, // D5: entrou no CI (110 s aqui com a máquina dividida)
   'teste-custo.mjs': 15,
   'teste-partida.mjs': 84,
   'teste-editor.mjs': 16,
   'teste-taticas.mjs': 57,
   'teste-defesa-humano.mjs': 59,
-  'teste-aereo-troca.mjs --so canhao': 69,
+  'teste-aereo-troca.mjs --so canhao': 125,
   'teste-aereo-troca.mjs --so natural': 913,
   'teste-transicao.mjs': 685,
   'teste-defesa-corrida.mjs': 449,
@@ -50,22 +51,42 @@ export const TEMPOS_NODE = {
   'teste-rede-veu.mjs': 3,
   'teste-torcida.mjs': 10,
   'teste-replay-anel.mjs': 688,
+  'teste-replay-paradas.mjs': 340,
   'teste-saot.mjs': 215,
   'teste-comemoracao.mjs': 294,
   'teste-substituicao.mjs': 69,
+  // (23/10, PR 4: + a seção FIM, 56 fins de 2 × 0,3 min; localmente ~1 min a mais numa máquina sozinha)
+  'teste-cenas.mjs': 150,
+  // (22/10, estimado: 24 partidas em 4 processos, ~70 s numa máquina de 4 vCPU sozinha; no CI dividido, ~2–3×)
+  'teste-lances-guarda.mjs': 200,
   'teste-tecnicos.mjs': 482,
   'teste-tecnicos.mjs --so-sinteticos --estresse': 103,
   'teste-impedimento.mjs': 156,
   'teste-faltas.mjs': 302,
+  'teste-faltas-sentido.mjs': 330,
   'teste-parado.mjs': 7,
-  'teste-pressao-humano.mjs': 306,
+  // (24/10, D1: + os ramos de 3 s de M9–M11 e o M12; localmente 371 → 496 s com 3 processos numa máquina de 4 vCPU)
+  'teste-pressao-humano.mjs': 420,
+  // (24/10, D2: 12 partidas de 2 × 4 min + o portão + o bootstrap; localmente 65 s com 4 processos numa máquina de 4 vCPU
+  // sozinha, 8 s dele no bootstrap. 25/10, D3: 24 partidas, a lógica instrumentada e a seção M; localmente ~200 s com 4
+  // processos)
+  'teste-ia-corre.mjs --sementes 8': 330,
+  // (25/10, D3: 48 partidas de 4 min contra o espelho em 3 processos; localmente ~100 s)
+  'teste-pressao.mjs --humano': 150,
   'teste-goleiro-regras.mjs': 146,
   'teste-goleiro-realista.mjs': 150, // (estimado: 8 sementes do canhão do goleiro em 4 processos, ~100 s na máquina de dev)
   'teste-bolas-paradas.mjs': 237,
   'teste-botoes.mjs': 95,
   'teste-cortejo.mjs': 4,
   'teste-prejogo-roteiro.mjs': 0.3,
+  'teste-prejogo-roteiro.mjs --forma maracana': 0.3,
   'teste-identidade.mjs': 1,
+  'teste-estadio-forma.mjs': 1,
+  'teste-estadio-generico.mjs': 60,
+  'teste-ossos.mjs': 25,
+  'teste-lod-humano.mjs': 1,
+  'teste-rostos-reais.mjs': 1,
+  'teste-patrocinios.mjs': 1,
   'teste-ponte-tm.mjs': 21,
   'teste-disputa.mjs': 16,
   'teste-livre.mjs': 60,
@@ -86,12 +107,19 @@ export const TEMPOS_NAVEGADOR = {
   'teste-som-jogo.mjs': 105,
   'teste-rede-tela.mjs': 53,
   'teste-hud-minimo.mjs': 68,
-  'teste-replay.mjs': 196,
+  // (24/10, D1: + o C7, uma página até o impedimento do time 0, ~5300 passos; localmente 214 s com outra página junto)
+  'teste-replay.mjs': 225,
+  // medido aqui (máquina dividida, carga ~4 em 4 núcleos: 396 s, o online em tempo real ~285 s); acertar pelo log do CI
+  'teste-replay-paradas-tela.mjs': 400,
   'teste-comemoracao-tela.mjs': 80,
   'teste-tecnicos-tela.mjs': 155,
   'teste-substituicao-tela.mjs': 164,
+  // medido aqui (23/10, PR 4, máquina livre: 839 s — cartão 201 s, intervalo 68, pós-jogo 569) + o C12d, o I8b, o I13 e o I14
+  // do #510 (mais 2 páginas, ~180 s); acertar pelo log do CI
+  'teste-cenas-tela.mjs': 1020,
   'teste-penaltis-tela.mjs': 60,
   'teste-livre-tela.mjs': 120,
   'teste-online-tela.mjs': 160,
+  'teste-corpo-tela.mjs': 150,
   'teste-desempenho-celular.mjs': 35,
 };

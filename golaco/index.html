@@ -99,7 +99,12 @@
     <div id="faixa" class="faixa" role="status" hidden>
       <span class="faixa-titulo" id="faixa-titulo">Intervalo</span>
       <span class="faixa-placar" id="faixa-placar"></span>
-      <button class="btn btn-primario faixa-botao" id="faixa-botao" type="button" data-cmd="reiniciar-partida" hidden>Jogar de novo</button>
+      <!-- os botões da faixa: "Jogar de novo" (com ?tm, "Voltar ao Total Match") e, no fim da cena do pós-jogo, "Melhores
+           momentos" (os lances do guardador: js/cena-fim.js, PLANO-CENAS.md §5.1) -->
+      <div class="faixa-botoes" id="faixa-botoes" hidden>
+        <button class="btn btn-primario faixa-botao" id="faixa-botao" type="button" data-cmd="reiniciar-partida" hidden>Jogar de novo</button>
+        <button class="btn faixa-botao faixa-botao2" id="faixa-botao2" type="button" data-cmd="melhores-momentos" hidden>Melhores momentos</button>
+      </div>
     </div>
     <!-- faixa ENTRA/SAI da substituição (lower third de TV; pedido do dono de 12/10 — a exceção dele à regra sem narração:
          só sigla, ▲/▼, ENTRA/SAI, número e nome). Na cena: embaixo à esquerda; no jogo do celular: uma linha no lugar do aviso -->
@@ -187,6 +192,15 @@
   <div id="substituicao" class="replay substituicao" hidden>
     <button id="substituicao-pular" class="btn-replay-pular" data-caixa="substituicao-pular" type="button" aria-label="Pular a cena da substituição">Pular<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg></button>
   </div>
+  <!-- Cena do cartão (js/cena-cartao.js; cenas das paradas, 22/10): a mesma camada — depois de 0,5 s qualquer toque, clique,
+       tecla (menos a pausa) ou botão do controle pula a cena. "Pular" só aparece com toque. A tarja de identificação
+       (js/cenas-tela.js) é outra peça, sob demanda. -->
+  <div id="cena" class="replay cena" hidden>
+    <button id="cena-pular" class="btn-replay-pular" data-caixa="cena-pular" type="button" aria-label="Pular a cena do cartão">Pular<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg></button>
+    <!-- na cena do intervalo (js/cena-fim.js): o toque na camada é o próximo bloco, o "Pular" vai à saída do 2º tempo e este
+         botão abre a pausa (o "Editar time" do intervalo); só com toque (no PC, Esc) -->
+    <button id="cena-menu" class="btn-cena-menu" data-caixa="cena-menu" type="button" aria-label="Pausa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg></button>
+  </div>
   <!-- Terço de baixo (js/hud.js terco): o selo da decisão no quadro final da análise semiautomática do replay
        ("IMPEDIMENTO" / "POSIÇÃO LEGAL" — a única exceção à "sem narração"; nada de nome nem minuto). A faixa
        ENTRA/SAI da substituição é outra peça (#faixa-subst). Não pega toque (o toque na camada do replay continua pulando). -->
@@ -252,10 +266,12 @@
                completo, curto, só escalação, desligado; salvo (js/main.js modoPrejogo). Aqui e não nas opções: com uma
                linha a mais a pausa rolava no celular deitado (ela tem de caber inteira) -->
           <!-- as cenas da partida lado a lado (numa linha só: o submenu continua cabendo sem rolar no celular deitado) — o
-               pré-jogo e a cena de substituição (ligada ↔ só a faixa ENTRA/SAI: a faixa fica sempre, é o pedido do dono) -->
-          <div class="linha-cenas" role="group" aria-label="Cenas da partida">
+               pré-jogo, a cena de substituição (ligada ↔ só a faixa ENTRA/SAI: a faixa fica sempre, é o pedido do dono) e as
+               cenas das paradas (o cartão e o intervalo; desligadas = o ícone e a faixa de hoje) -->
+          <div class="linha-cenas tres" role="group" aria-label="Cenas da partida">
             <button class="btn" type="button" data-cmd="prejogo-ciclo" id="btn-prejogo" aria-label="Pré-jogo da partida" aria-describedby="estado-prejogo">Pré-jogo <small id="estado-prejogo">completo</small></button>
             <button class="btn" type="button" data-cmd="subst-ciclo" id="btn-subst" aria-label="Cena de substituição" aria-describedby="estado-subst">Substituição <small id="estado-subst">ligada</small></button>
+            <button class="btn" type="button" data-cmd="cenas-ciclo" id="btn-cenas" aria-label="Cenas das paradas (cartão e intervalo)" aria-describedby="estado-cenas">Cenas <small id="estado-cenas">ligadas</small></button>
           </div>
         </div>
         <div class="menu-opcoes">
@@ -287,7 +303,7 @@
           </div>
           <!-- replays automáticos: depois do gol e no apito do impedimento (o "Replay" da pausa funciona sempre) -->
           <div class="opcao">
-            <span class="opcao-rotulo" title="Replays automáticos (gol e impedimento)">Replays</span>
+            <span class="opcao-rotulo" title="Replays automáticos (gol, impedimento e paradas)">Replays</span>
             <div class="segmentado" data-grupo="replayAuto" aria-label="Replays automáticos">
               <button type="button" data-valor="ligado">Ligado</button>
               <button type="button" data-valor="desligado">Desligado</button>

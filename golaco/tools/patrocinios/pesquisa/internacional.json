@@ -1,0 +1,156 @@
+{
+ "clube": "Internacional",
+ "chave": "br/Internacional",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Adidas",
+  "logo": "internacional__adidas.svg",
+  "logo_fonte": "https://upload.wikimedia.org/wikipedia/commons/1/1b/Adidas_2022_logo.svg",
+  "cor_na_camisa": {
+   "casa": "#ffffff",
+   "fora": "#e3162b",
+   "terceira": "#d4a74a",
+   "goleiro": "#151515"
+  }
+ },
+ "patrocinios": [
+  {
+   "nome": "Shopee",
+   "posicao": "peito",
+   "pontual": true,
+   "posicao_detalhe": "máster pontual: nos jogos de 07/10 (campanha '10.10' em cima da marca) e 11/10 ('VIP' com coroa, ShopeeVIP); sem máster em Mirassol (31ª rodada)",
+   "uniformes": [
+    "casa",
+    "goleiro"
+   ],
+   "logo": "internacional__shopee-texto.svg",
+   "logo_fonte": "https://upload.wikimedia.org/wikipedia/commons/f/fe/Shopee.svg (recortado: só a palavra, sem a sacola, como saiu na camisa)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#e3162b",
+    "terceira": "#d4a74a",
+    "goleiro": "#151515"
+   },
+   "largura_rel": 0.52,
+   "tipo": "campanha",
+   "periodo": "só em 07/10 (campanha '10.10' em cima da palavra) e 11/10 ('VIP' com coroa em cima); em 16/10 (Mirassol, camisa 2) o peito ficou VAZIO"
+  },
+  {
+   "nome": "Banrisul",
+   "posicao": "acima_numero",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "internacional__banrisul.png",
+   "logo_fonte": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Banrisul_logotipo_2022.svg (miniatura PNG 1280 px)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#e3162b",
+    "terceira": "#d4a74a",
+    "goleiro": "#151515"
+   },
+   "largura_rel": 0.45
+  },
+  {
+   "nome": "Unimed Porto Alegre",
+   "posicao": "abaixo_numero",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "internacional__unimed-porto-alegre.png",
+   "logo_fonte": "https://static.internacional.com.br/cms/assets/unimed_d820a2c6fd.png",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#e3162b",
+    "terceira": "#d4a74a",
+    "goleiro": "#151515"
+   },
+   "largura_rel": 0.4
+  },
+  {
+   "nome": "KNN Idiomas",
+   "posicao": "abaixo_numero",
+   "posicao_detalhe": "nos DOIS cantos de baixo das costas (barra traseira, junto da costura lateral), um de cada lado, logo abaixo da Cigame",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "internacional__knn-idiomas.svg",
+   "logo_fonte": "https://www.knnidiomas.com.br/ (SVG do cabeçalho)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#e3162b",
+    "terceira": "#d4a74a",
+    "goleiro": "#151515"
+   },
+   "largura_rel": 0.15,
+   "lado": "ambos"
+  },
+  {
+   "nome": "Cigame Elétricos e Hidráulicos",
+   "posicao": "manga",
+   "lado": "ambos",
+   "orientacao": "vertical",
+   "posicao_detalhe": "na LATERAL do tronco, na vertical, logo abaixo da axila, dos dois lados (não na manga)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "internacional__cigame.png",
+   "logo_fonte": "https://api-site.cigame.com.br/images/logo-branco-completo-1749843499000.png",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#e3162b",
+    "terceira": "#d4a74a",
+    "goleiro": "#151515"
+   },
+   "largura_rel": 0.2
+  },
+  {
+   "nome": "Unifique",
+   "posicao": "calcao",
+   "posicao_detalhe": "parte de trás do calção",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "internacional__unifique.png",
+   "logo_fonte": "https://static.internacional.com.br/cms/assets/unifique_8d323631ee.png",
+   "cor_na_camisa": {
+    "casa": "#e3162b",
+    "fora": "#ffffff",
+    "terceira": "#d4a74a",
+    "goleiro": "#151515"
+   },
+   "largura_rel": 0.3
+  }
+ ],
+ "fontes": [
+  "https://internacional.com.br/noticias/parceria-entre-inter-e-shopee-retorna-para-as-proximas-duas-rodadas-do-brasileirao (07/10/2026)",
+  "https://internacional.com.br/noticias/inter-vence-o-corinthians-no-beira-rio (fotos de 07/10/2026)",
+  "https://internacional.com.br/noticias/inter-empata-o-gre-nal-455-por-1-a-1 (fotos de 11/10/2026)",
+  "https://internacional.com.br/noticias/inter-e-superado-em-mirassol (fotos da 31ª rodada, camisa 2 sem máster)",
+  "https://internacional.com.br/ (rodapé de patrocinadores)",
+  "https://maquinadoesporte.com.br/futebol/ainda-sem-patrocinador-master-definitivo-internacional-tera-shopee-na-camisa-contra-corinthians-e-palmeiras/",
+  "https://www.poder360.com.br/poder-sportsmkt/inter-fecha-patrocinio-pontual-com-empresa-de-pneus/",
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/",
+  "https://www.flickr.com/photos/scinternacional/albums/72177720336213099 (Mirassol x Inter, 16/10/2026: camisa 2 sem máster)",
+  "https://www.flickr.com/photos/scinternacional/albums/72177720336096341 (Grêmio x Inter, 11/10/2026: VIP Shopee; costas com Banrisul, Unimed e KNN nos dois cantos)",
+  "https://www.flickr.com/photos/scinternacional/albums/72177720336020562 (Inter x Corinthians, 07/10/2026: 10.10 Shopee; Unifique atrás do calção)",
+  "https://www.gazetaesportiva.com/times/internacional/apos-proibicao-das-bets-inter-define-nova-patrocinadora-master-para-jogos-contra-corinthians-e-gremio/"
+ ],
+ "confianca": "media",
+ "notas": "Sem máster fixo desde a rescisão com a Alfa (11/01/2026): o peito é vendido jogo a jogo (Shopee em agosto/setembro, Speedmax Pneus em agosto/setembro, Shopee de novo em 07 e 11/10 com as campanhas '10.10' e 'ShopeeVIP'); em Mirassol (31ª rodada, camisa 2) jogou SEM máster. Pus a Shopee como máster de outubro com 'pontual': true e o logo simples da marca (as variações '10.10' e 'VIP' das fotos não estão no arquivo). Disposição conferida nas fotos do clube: Banrisul em cima do número, Unimed Porto Alegre embaixo, KNN Idiomas na barra traseira, Cigame na vertical nas laterais do tronco (o formato não tem 'lateral': ficou 'manga' com o detalhe) e Unifique atrás do calção. Incertezas: cores na camisa 3 (dourado estimado) e no goleiro (preto, visto no amarelo; em Mirassol o goleiro usou preto); o lado exato do KNN; logo da Cigame só em 540 px e da Unimed/Unifique em PNG branco do site do clube. VERIFICAÇÃO (22/10/2026): Shopee pontual em 07 e 11/10 confirmada (Máquina do Esporte, Gazeta Esportiva, Poder360/BNLData 18/10) e nas fotos oficiais; em 16/10 em Mirassol o peito estava vazio (foto oficial). Nenhum máster novo achado até 22/10. Na camisa a Shopee saiu SEM a sacola, em branco (preto no goleiro amarelo), com '10.10' ou 'VIP' com coroa em cima: o logo passou a ser só a palavra (recorte do mesmo SVG); os cabeçalhos de campanha não estão no arquivo. CORRIGIDO: o KNN fica nos DOIS cantos de baixo das costas (foto do Gre-Nal), não só no direito. Conferido: Banrisul em cima do nome, Unimed embaixo do número, Cigame na lateral (também no goleiro), Unifique atrás do calção (foto de 07/10). O rodapé do site lista também Zé Delivery e Allu como patrocinadores, mas nenhum dos dois aparece na camisa de jogo nas fotos de outubro (a Allu é da base e de jogos pontuais) — ficam fora."
+}

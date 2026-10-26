@@ -271,7 +271,7 @@ function medirCena(caso) {
       for (let p = 0; p < 2; p++) { const it = TORNS[p]; s0.t[p][0] = o[it * 3]; s0.t[p][1] = o[it * 3 + 1]; s0.t[p][2] = o[it * 3 + 2]; s0.pes[p] = { apoio: j.pes[p].apoio, x: j.pes[p].x, z: j.pes[p].z }; }
       // placas, gol
       if (Math.abs(j.z) > 39.6 || Math.abs(j.x) > 58.1) r.placas++;
-      if (Math.abs(j.x) > MX && Math.abs(j.x) < MX + CAMPO.gol.profundidade + 0.3 && Math.abs(j.z) < CAMPO.gol.largura / 2 + 0.35) r.gol++;
+      if (Math.abs(j.x) > MX && Math.abs(j.x) < MX + CAMPO.gol.profundidade + 0.3 && Math.abs(j.z) < CAMPO.gol.largura / 2 + 0.35) { r.gol++; r.piorGol ??= { s: caso.semente, caso: caso.tipo, id: a.id, tipo: SU.TIPOS[a.tipo], t: +(c.k / 60).toFixed(2), x: +j.x.toFixed(2), z: +j.z.toFixed(2) }; }
       if (a.tipo === 1 && Math.abs(j.x) > 52 && Math.abs(j.z) < 4.6) { r.golSai++; r.piorGolSai ??= { s: caso.semente, tipo: caso.tipo, id: a.id, t: +(c.k / 60).toFixed(2), x: +j.x.toFixed(2), z: +j.z.toFixed(2) }; }
     }
     for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) {
@@ -380,7 +380,7 @@ if (detalhe) for (const { caso, r } of res) console.log(`s${caso.semente} ${caso
 {
   const pc = todos.reduce((a, r) => (r.corpo < a.corpo ? r : a));
   reg('S4 nenhum par de corpos a < 0,5 m', `mín ${f3(pc.corpo)} m ${JSON.stringify(pc.piorCorpo)}`, '≥ 0,5 m', pc.corpo >= 0.5 - 1e-6);
-  reg('S4 placas e gol: ninguém nas placas nem dentro do gol', `placas ${todos.reduce((s, r) => s + r.placas, 0)} ticks; gol ${todos.reduce((s, r) => s + r.gol, 0)} ticks`, '0 e 0', todos.every(r => r.placas === 0 && r.gol === 0));
+  reg('S4 placas e gol: ninguém nas placas nem dentro do gol', `placas ${todos.reduce((s, r) => s + r.placas, 0)} ticks; gol ${todos.reduce((s, r) => s + r.gol, 0)} ticks${todos.find(r => r.piorGol) ? ` (${JSON.stringify(todos.find(r => r.piorGol).piorGol)})` : ''}`, '0 e 0', todos.every(r => r.placas === 0 && r.gol === 0));
 }
 // S5 pureza
 {

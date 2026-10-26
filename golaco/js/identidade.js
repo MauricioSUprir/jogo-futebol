@@ -166,11 +166,13 @@ function congelar(o) {
 // padrões do TM → fração do iPad do tronco (render/jogador3d.js: 3.0 liso, 3.1 listras, 3.2 metades, 3.3 faixa, 3.4 aros)
 export const PADROES = { plain: 0, stripes: 0.1, halves: 0.2, sash: 0.3, hoops: 0.4 };
 // peso da 2ª cor no que se vê de longe (a camisa inteira, de longe, na câmera de TV)
-const PESO_SEGUNDA = { plain: 0, stripes: 0.5, halves: 0.5, sash: 0.18, hoops: 0.5 };
+const PESO_SEGUNDA = { plain: 0, stripes: 0.5, halves: 0.5, sash: 0.18, hoops: 0.5, band: 0.15 };
 
 /** Uniforme do TM ({shirt, sleeves, shorts, socks, pattern, second, trim, ...}) → kit do jogador3d.js. */
 export function kitDoTM(k, reserva = '#808890') {
   k = k || {};
+  // camisa REAL da temporada (edição pro: assets/tm/uniformes.json, tools/uniformes/gerar.mjs): já no formato do desenho
+  if (k.real && corValida(k.camisa)) return { ...k, padrao: Object.prototype.hasOwnProperty.call(PADROES, k.padrao) || k.padrao === 'band' ? k.padrao : 'plain' };
   const camisa = corValida(k.shirt) ?? reserva;
   const padrao = Object.prototype.hasOwnProperty.call(PADROES, k.pattern) ? k.pattern : 'plain';
   const segunda = corValida(k.second) ?? corValida(k.trim) ?? textoSobre(camisa);
@@ -258,7 +260,10 @@ export function resolverUniformes(casa, fora) {
   // goleiros: o do TM (gk, depois gkAway) e as cores de reserva, o primeiro longe dos 2 de linha (e do outro goleiro)
   const opGol = t => {
     const k = (t && t.kits) || {};
-    const l = [k.gk, k.gkAway].filter(Boolean).map(x => { const c = corValida(x.shirt); return c ? { ...kitGoleiroCor(c), ...kitDoTMGoleiro(x) } : null; }).filter(Boolean);
+    const l = [k.gk, k.gkAway].filter(Boolean).map(x => {
+      if (x.real && corValida(x.camisa)) return { ...x, padrao: 'plain' }; // goleiro real: manga comprida e luva pelo desenho
+      const c = corValida(x.shirt); return c ? { ...kitGoleiroCor(c), ...kitDoTMGoleiro(x) } : null;
+    }).filter(Boolean);
     for (const c of GOLEIROS_RESERVA) l.push(kitGoleiroCor(c));
     return l.map((kit, i) => ({ kit, i }));
   };
@@ -359,7 +364,7 @@ function fixaLetra(fundo, letra) { return contraste(fundo, letra) >= 3 ? letra :
  * nome do time; as cores na mesma ordem do padrão (forte, escura, clara, forte escurecida), com a letra corrigida
  * quando o contraste com o fundo fica abaixo de 3:1.
  */
-export function textosFaixas(casa, fora, cc, cf) {
+export function textosFaixas(casa, fora, cc, cf, dividida = false) {
   const N = nomeCurto(casa, 18), S = sigla3(casa?.short, casa?.name);
   const Nf = nomeCurto(fora, 18);
   const P = cc.forte, D = cc.escura, W = CLARO, P2 = cc.forte2;
@@ -378,6 +383,12 @@ export function textosFaixas(casa, fora, cc, cf) {
     ['GUERREIROS DA ARQUIBANCADA', P2, D, 'nenhum'],
     [`FORÇA ${Nf}`, Df, Pf === Df ? W : Pf, 'verde', Pf],
   ];
+  // dividida: as 4 da metade −x do lado de lá (posições 0, 1, 4 e 7 de bandeiras-dados.js) são do visitante
+  if (dividida) {
+    const Sf = sigla3(fora?.short, fora?.name);
+    l[0] = [`FÚRIA ${Sf}`, Df, Pf, 'borda']; l[1] = [`GALERA ${Nf}`, Pf, Df, 'nenhum'];
+    l[4] = [`NAÇÃO ${Nf}`, W, cf.forte2, 'listras']; l[7] = [`VAI, ${Sf}!`, Df, W, 'verde', Pf];
+  }
   return l.map(([t, fu, le, de, dc]) => {
     const r = [t, fu, fixaLetra(fu, le), de];
     if (dc) r.push(deltaE(dc, fu) < 12 ? textoSobre(fu) : dc);
@@ -504,6 +515,8 @@ export function dadosEstadio(e, nomeReserva = '') {
     padrao: ESCOLHA(e.cadeiras_padrao, PADROES_CADEIRAS, 'liso'),
     aneis: Number.isFinite(an) ? Math.max(1, Math.min(3, an)) : 2,
     marca: String(e.marca || ''), confianca: ESCOLHA(e.confianca, ['alta', 'media', 'baixa'], 'baixa'),
+    // a forma própria do estádio (estadio-planta.js valida; sem ela, a forma de sempre)
+    forma: e.forma && typeof e.forma === 'object' && !Array.isArray(e.forma) ? e.forma : null,
   };
 }
 
@@ -580,6 +593,36 @@ function arquibancadaReal(d, vivo) {
   };
 }
 
+// ------------------------------------------------------------------ camisas reais (edição pro, 22/10)
+
+const semAcento = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+/**
+ * O time do pedido com as camisas REAIS da temporada (base assets/tm/uniformes.json: {clubes: {nome: {liga, home, away,
+ * third, gk, gkAway}}}) quando o clube está nela — pelo nome (sem acento) e, com homônimos, pela liga; senão o time como
+ * veio. A camisa real já vem no formato do desenho ({real: true, camisa, segunda, padrao, gola, punho, ...}).
+ */
+export function comCamisasReais(t, uniformes) {
+  const tab = uniformes?.clubes;
+  if (!tab || !t?.name) return t;
+  const nome = semAcento(t.name);
+  const achados = Object.entries(tab).filter(([n]) => semAcento(n) === nome);
+  if (!achados.length) return t;
+  const pais = semAcento(t?.identidade?.pais);
+  const [, c] = achados.length > 1 ? (achados.find(([, v]) => (v.liga === 'br') === (pais === 'brasil')) ?? achados[0]) : achados[0];
+  if (!c?.home) return t;
+  // patrocínios e a marca do fornecedor (só a versão de TESTE: uniformes.patrocinios, de assets/tm/patrocinios.json):
+  // a lista de decalques de cada camisa (casa, fora, terceira, goleiro) vai DENTRO do kit, com a URL de cada logo
+  const pat = uniformes?.patrocinios?.clubes?.[achados.find(([, v]) => v === c)?.[0]];
+  const base = uniformes?.patrocinios?.base ?? '';
+  const comDecais = (k, lista) => (k && Array.isArray(lista) && lista.length
+    ? { ...k, decais: lista.map(d => ({ ...d, url: base + d.logo })) } : k ?? undefined);
+  return {
+    ...t,
+    kits: { home: comDecais(c.home, pat?.casa), away: comDecais(c.away, pat?.fora), third: comDecais(c.third, pat?.terceira), gk: comDecais(c.gk, pat?.goleiro), gkAway: comDecais(c.gkAway, pat?.goleiro) },
+    camisasReais: c.chave ?? true,
+  };
+}
+
 // ------------------------------------------------------------------ identidade do pedido do TM
 
 const urlEscudo = u => (typeof u === 'string' && /^(data:image\/|https?:\/\/|\/|\.\.?\/)/i.test(u.trim()) ? u.trim() : null);
@@ -589,12 +632,18 @@ const urlEscudo = u => (typeof u === 'string' && /^(data:image\/|https?:\/\/|\/|
  * edicao: 'pro'|'public'}). Time 0 = mandante (home), time 1 = visitante. `base` (a de estadios.json, só na edição pro com
  * jogo não neutro): o estádio real do mandante; sem ele, o Estádio Total Match. Nunca falha: o que faltar vem da reserva.
  */
-export function identidadeDoPedido(pedido, base = null) {
-  const casa = pedido?.home || {}, fora = pedido?.away || {};
+export function identidadeDoPedido(pedido, base = null, uniformes = null) {
   const neutro = !!pedido?.partida?.neutro;
   const edicao = pedido?.edicao === 'pro' ? 'pro' : 'public';
+  // camisas reais (só na pro): as do clube na base, no lugar das que o TM gera pelas cores
+  const casa = comCamisasReais(pedido?.home || {}, edicao === 'pro' ? uniformes : null);
+  const fora = comCamisasReais(pedido?.away || {}, edicao === 'pro' ? uniformes : null);
   const achado = edicao === 'pro' && !neutro ? acharEstadio(base, [casa?.identidade?.estadio?.nome, casa?.stadium], String(casa?.name || '')) : null;
   const real = achado ? achado.dados : null;
+  // clássico num estádio com forma própria (estadio-planta.js): a torcida dividida ao meio (cada uma atrás de um gol e no
+  // seu lado; a do mandante em +x, com a organizada), as faixas da metade do visitante com o nome dele e as placas sem o
+  // nome de um time só (rodada 2 da prévia do Maracanã: "num Fla-Flu o estádio é DIVIDIDO ao meio")
+  const dividida = !!(real?.forma && pedido?.partida?.classico);
   const pub = Number(pedido?.partida?.publico);
   const publico = Number.isFinite(pub) ? Math.max(0.1, Math.min(1, pub)) : 1;
   const cc = coresDoTime(casa), cf = coresDoTime(fora);
@@ -651,19 +700,23 @@ export function identidadeDoPedido(pedido, base = null) {
     times,
     kits: un.kits, uniformes: { escolha: un.escolha, medidas: un.medidas },
     torcida: {
-      casa: paletaTorcida(cc), fora: paletaTorcida(cf), mosaico: mos, acentos: [corCachecol(cc), corCachecol(cf)],
+      // clássico dividido com as primárias parecidas (rodada 3 da prévia do Maracanã: "no Fla-Flu a metade tricolor
+      // parecia manchas verdes soltas na massa vermelha"): a torcida visitante veste a 2ª cor (ΔE₀₀ < 30)
+      casa: paletaTorcida(cc), fora: dividida && deltaE(cc.primaria, cf.primaria) < 30 && deltaE(cc.primaria, cf.secundaria) >= 30 ? paletaTorcida({ ...cf, primaria: cf.secundaria, secundaria: cf.primaria, forte: cf.secundaria }) : paletaTorcida(cf),
+      mosaico: mos, acentos: [corCachecol(cc), corCachecol(cf)],
       // fora do setor visitante: 3% de visitantes espalhados pelos lados (jogo neutro: quase metade)
       foraLados: neutro ? 0.45 : 0.03,
+      dividida,
     },
     mosaico: { texto: textoMosaico },
-    faixas: textosFaixas(casa, fora, cc, cf),
+    faixas: textosFaixas(casa, fora, cc, cf, dividida),
     festa: {
       cores: { VERDE: cc.forte, PRETO: festaPreto, BRANCO: CLARO, VERDE2: cc.forte2 },
       // a letra/nome sobre o fundo escuro do bandeirão (legível: ≥ 2,5:1)
       corLetra: contraste(festaPreto, cc.forte) >= 2.5 ? cc.forte : textoSobre(festaPreto),
       texto: nomeCurto(casa, 12), letra: sigla3(casa?.short, casa?.name).slice(0, 1), sigla: sigla3(casa?.short, casa?.name), escudo: 0,
     },
-    paineis: paineisTM(casa, cc, neutro, pedido?.partida?.competicao),
+    paineis: paineisTM(casa, cc, neutro || dividida, pedido?.partida?.competicao),
     arquibancada,
     escanteio: { fundo: forte, faixa: escanteioFaixa },
     fachada,

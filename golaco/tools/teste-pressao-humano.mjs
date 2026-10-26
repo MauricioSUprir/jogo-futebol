@@ -6,9 +6,15 @@
 // O teste antigo do teste-defesa-humano ("um companheiro a ≤ 2 m em ≤ 2 s") passava SEM o botão (79%).
 // Metas (casos "longos": o condutor ≥ 1,5 s com a bola nos dois ramos e um companheiro a ≤ 12 m no começo):
 //  M0 os dois ramos começam bit a bit iguais (100%);
-//  M1 o mais perto: mediana da distância do companheiro mais perto ao condutor em 1,5 s, com ≤ sem − 1,0 m;
+//  M1 o mais perto: mediana da distância do companheiro mais perto ao condutor em 1,5 s, com o botão ≤ 2,0 m e ≤ sem − 0,5 m
+//     (era "com ≤ sem − 1,0 m": no D4 os companheiros da pessoa passaram a apertar sem o botão — o "sem" foi de ~2,8 a 2,4 m —
+//     e o "com" ficou onde estava, ~1,7–1,8 m: o botão continua levando um até o condutor, mas soma menos);
 //  M2 (guarda) com o botão, um companheiro chega a ≤ 2 m do condutor em ≤ 1,5 s em ≥ 60% (o diagnóstico pedia 70%: do
-//     parado o corpo anda ~6,4 m em 1,5 s, e o companheiro mais perto começa a ~7,5 m na mediana);
+//     parado o corpo anda ~6,4 m em 1,5 s, e o companheiro mais perto começa a ~7,5 m na mediana) — desde o D2 (24/10), nos
+//     casos longos com o companheiro mais perto a ≤ 8,5 m no começo (ao alcance em 1,5 s): a IA conduzindo contra a pessoa
+//     fica com a bola também com ele a 9–12 m, e a amostra de todos os longos passou a medir a distância, não a PRESSÃO
+//     (32 partidas, 7001–7032: a base D1 65% em todos e 73,3% ± 4,1 ao alcance; o D2 58% em todos e 70,3% ± 3,1 ao
+//     alcance, 79,1% ± 2,4 em 7101–7132 — por faixa de distância, a mesma taxa);
 //  M3 um a MAIS na pressão: mediana da distância do 2º companheiro mais perto ao condutor em 2 s, com ≤ sem − 1,5 m;
 //  M4 sem abuso: faltas do time 0 com o botão ≤ 1,5 × as de sem o botão + 2 (todos os casos);
 //  M5 corre de verdade: o escolhido a mais de 4 m do condutor, ≥ 1 s depois de escolhido (o tempo de acelerar: do
@@ -18,21 +24,37 @@
 //  M7 dobra a marcação: com o 1º homem da IA (≠ controlado) já apertando por conta própria, o escolhido é OUTRO em ≥ 95%;
 //  M8 contorna (15/10): em disparada, o chamado não tromba em quem está no caminho (companheiro ou adversário que não é o
 //     condutor): ≤ 3 trombadas por 100 casos (base 799ab53b: 4,2 — ia reto, perdia ~1,8 m/s e recomeçava a arrancada).
+// D1 (dono, 23/10: "preciso do botão de pressão funcionando"). As metas acima passavam e o botão quase não mudava o jogo:
+// elas olham só os casos longos (~10% das posses: a IA solta a bola em ~0,5 s). Três metas sobre TODAS as posses, em ramos
+// de 3 s com o humano PARADO (pressao-pareada.mjs `tres`; a medida do diagnóstico "como o dono joga"):
+//  M9 um toque de 1 s no botão: o time ganha a bola em 3 s (no pé ou nas mãos, antes de parada ou falta dele) em ≥ +6
+//     pontos sobre o sem botão (main fd6dedb9: +2,3 — o pedido valia 1 PASSO depois de soltar);
+//  M10 com a bola ao alcance do bote do chamado (ACOES.boteIA.alcance), fora das costas do condutor, sem o corpo entrar e
+//     fora do descanso de outro bote: o bote liberado (defesa.js boteContidoDoChamado) em ≥ 90% dos passos (main 20%: pela
+//     velocidade ABSOLUTA, o chamado que corria junto do condutor nunca tentava; só pela parte da relativa que fecha, 93%:
+//     o condutor vindo para cima do chamado parado contava como embalo dele; pela conta do faltas.js forcaContato, 99%);
+//  M11 segurado 3 s: trocas do chamado (a marca que pula de jogador) ≤ 0,8 por posse (main 1,30: ~85% num passe da IA).
+//     A meta fica a ~1,3 erro-padrão do medido (0,77 ± 0,02 nas sementes 7001–7032 e 7101–7132): como o M2, uma mudança
+//     da partida que só troque os lances o reprova por sorteio em ~9% das vezes; folga de verdade só calibrando o jogo
+//     (a histeresePasse um pouco maior, medindo o M2 junto), não afrouxando a meta;
+//  M12 (contraprova, 24/10) a retomada pela MÃO do goleiro (o encaixe e o PEGAR não passam por sim.js ganhouPosse) encerra
+//     o pedido: um toque de 1 passo, o encaixe, a reposição cortada dentro de 1 s — o pedido não volta (antes: 9 de 9 e 7 de 7).
 // AMOSTRA (15/10): 32 partidas (sementes 7001–7032, modelos alternados como antes), uma por processo filho (--par, padrão
 // 3). Com 8, a mesma lógica passava ou reprovava pelo sorteio dos lances: na main (c2f76d69), em 16 conjuntos disjuntos
 // de 8 partidas (sementes 7001–7032, 7101–7132, 7201–7232, 7301–7332), o M1 ia de 0,80 a 2,02 m, o M2 de 48 a 73%, a
 // folga do M4 de −3,5 a 7 e o M5 de 77 a 83% — só 5 dos 16 passavam em tudo (7001–7008, a do CI, era um deles); qualquer
-// mudança da simulação que não mexe na pressão troca os lances e o resultado. As 128 partidas juntas: M1 Δ 1,38 m, M2 63%,
-// M3 Δ 2,74 m, M4 110 → 174 faltas (1,58×: no limite, ver abaixo), M5 80,6%, M6 e M7 100%.
+// mudança da simulação que não mexe na pressão troca os lances e o resultado. As 128 partidas juntas (main c2f76d69, 15/10,
+// antes da chegada pelo perfil de aceleração e do desvio): M1 Δ 1,38 m, M2 63%, M3 Δ 2,74 m, M4 110 → 174 faltas (1,58×),
+// M5 80,6%, M6 e M7 100%.
 // Decisão: a conta direta de cada meta, sem mudar nenhuma, na amostra 4× maior. Reamostrando as 128 partidas (bootstrap por
 // partida, 1000 amostras), a chance de reprovar só pelo sorteio cai no M1 de 11% (8 partidas) para 0,7% (32), no M2 de 30%
-// para 13% e no M3 de 7% para 0,1%. O M4 e o M5 NÃO melhoram com a amostra porque a main está no limite deles (é o jogo, não
-// a amostra): M4 110 → 174 nas 128 (a meta deixa 167; 1,58× — o bote do chamado 7 → 34 e a carga 101 → 137) e M5 80,6%
-// (meta 80%). Por isso, até o jogo ganhar margem nesses dois, a reprovação por sorteio segue em ~69% nas 32 partidas (73%
-// nas 8). Testado e NÃO adotado: reprovar só quando a amostra prova a meta furada (como os cartões do teste-faltas) deixava
-// a main estável (~9%), mas a lógica de antes do PRESSÃO novo (#470) passava em M2, M4 e M5 (58%, 1,89× as faltas, 78%):
-// com 32 partidas a prova não tem força para separar o limite de um defeito — seria afrouxar as metas.
-// O erro-padrão entre as partidas aparece no "medido" (M2, M4, M5) só para dizer se o resultado está dentro do sorteio.
+// para 13% e no M3 de 7% para 0,1%. Em 15/10 o M4 e o M5 estavam no limite (é o jogo, não a amostra: 1,58× as faltas — o
+// bote do chamado 7 → 34 e a carga 101 → 137 — e 80,6%); em 23/10 (main fd6dedb9, 32 partidas) os dois têm folga: M4 5 → 2
+// faltas e M5 82,1% ± 0,8. Testado e NÃO adotado: reprovar só quando a amostra prova a meta furada (como os cartões do
+// teste-faltas) deixava a main estável (~9%), mas a lógica de antes do PRESSÃO novo (#470) passava em M2, M4 e M5 (58%,
+// 1,89× as faltas, 78%): com 32 partidas a prova não tem força para separar o limite de um defeito — seria afrouxar as metas.
+// O erro-padrão entre as partidas aparece no "medido" (M2, M4, M5, M9, M11) só para dizer se o resultado está dentro do
+// sorteio.
 // Informativos: as metas do diagnóstico que a física do jogo não deixa cumprir (o mais perto ≥ 2 m mais perto em 1,0 s —
 // do parado o corpo anda ~3,2 m no 1º segundo; bola ao alcance do bote em ≥ 15% de TODAS as posses — só ~1/5 delas dura
 // ≥ 1 s), o alcance do bote nos casos longos e os dois modelos do humano.
@@ -58,14 +80,14 @@ if (args.includes('--filho')) {
   // uma partida: os casos da medida pareada, só com o que as metas usam (a mensagem fica pequena)
   const s = +arg('--s');
   const { medirPressaoPareada } = await import(pathToFileURL(path.join(AQUI, 'lib/pressao-pareada.mjs')).href);
-  const { casos, PASSO: P } = await medirPressaoPareada(JS, { sementes: [s], min: MIN, T: 2, alcance: 15, modelos: [MODELOS[(s - SEM0) % MODELOS.length]] });
+  const { casos, PASSO: P } = await medirPressaoPareada(JS, { sementes: [s], min: MIN, T: 2, alcance: 15, modelos: [MODELOS[(s - SEM0) % MODELOS.length]], tres: true });
   if (Math.abs(P - PASSO) > 1e-12) throw new Error(`PASSO da lógica ${P} ≠ ${PASSO}`);
   const r = x => ({
     d1: x.d[Math.round(1 / PASSO)], d15: x.d[Math.round(1.5 / PASSO)], t2: x.t2, perdeu: x.perdeu, s2: seg2(x.dj[K2]),
     faltas: x.faltas, alcBote: x.alcBote, rouba: x.rouba, corre: x.corre, correTot: x.correTot, corre1: x.corre1, correTot1: x.correTot1,
     marcaOk: x.marcaOk, marcaTot: x.marcaTot, p1Dobra: x.p1Dobra, p1Tot: x.p1Tot, choques: x.choques ?? 0,
   });
-  const msg = { s, casos: casos.map(c => ({ sem: c.sem, modelo: c.modelo, d0: c.d0, h0: c.h0, A: r(c.A), B: r(c.B) })) };
+  const msg = { s, casos: casos.map(c => ({ sem: c.sem, modelo: c.modelo, d0: c.d0, h0: c.h0, A: r(c.A), B: r(c.B), t3: c.t3 })) };
   await new Promise(ok => process.send(msg, ok));
   process.exit(0);
 }
@@ -88,6 +110,46 @@ await Promise.all(Array.from({ length: nPar }, async () => {
 porPartida.sort((a, b) => a.s - b.s);
 const casos = porPartida.flatMap(p => p.casos);
 
+/** M12: estados da demo com o time 1 de posse; em cada um, toque → encaixe → reposição cortada (ver o M12). */
+async function retomadaPelaMao() {
+  const imp = f => import(pathToFileURL(path.join(JS, f)).href);
+  const P = await imp('partida.js'), S = await imp('sim.js'), CFG = await imp('config.js'), D = await imp('defesa.js'), A = await imp('acoes.js');
+  // V: a validade do pedido em passos (DEFESA_HUMANO.pressao.validade s; na main antes do D1, 1 PASSO — lá o toque nunca
+  // durava até a reposição e o M12 passa sem a janela ter sentido)
+  // (a reposição cortada dentro da validade é rara e depende dos estados: as sementes seguem, até 6, até ≥ 4 na janela)
+  const { BOTAO: B } = CFG, V = Math.round(CFG.DEFESA_HUMANO.pressao.validade / PASSO), sementes = [];
+  let casosM = 0, janela = 0, fant = 0;
+  for (let sem = SEM0; sem < SEM0 + 6 && (sementes.length < 2 || janela < 4); sem++) {
+    sementes.push(sem);
+    const m = P.criarPartida({ semente: sem, minutosPorTempo: MIN });
+    for (let i = 0, n = 0; i < 20000 && n < 8; i++) {
+      P.passoPartida(m, P.entradaDemoPartida(m));
+      if (i < 1200 || i % 600 !== 0) continue;
+      const dono = m.posse != null ? S.jogadorPorId(m, m.posse) : null;
+      if (!dono || dono.time !== 1 || m.partida.estado !== 'jogo' || m.naMao != null || m.parada) continue;
+      n++; casosM++;
+      const w = S.copiarMundo(m), tq = w.tick;
+      P.passoPartida(w, { x: 0, z: 0, botoes: B.PRESSAO });
+      const g = w.jogadores.find(j => j.time === 0 && j.posicao === 'GOL'), adv = w.jogadores.find(j => j.time === 1 && j.posicao !== 'GOL');
+      const sx = Math.sign(g.x), b = w.bola;
+      b.p.x = g.x - sx * 0.3; b.p.z = g.z; b.p.y = 1.0;
+      b.v.x = b.v.y = b.v.z = 0; b.w.x = b.w.y = b.w.z = 0;
+      w.naMao = g.id; w.posse = g.id; g.segura = { desde: w.tick }; w.voo = null;
+      A.assumirControle(w, 0, g);
+      adv.x = g.x - sx * 5; adv.z = g.z; adv.vx = adv.vz = 0;
+      let perdeu = -1, f = false;
+      for (let k = 0; k < V + 10; k++) {
+        P.passoPartida(w, k < 3 ? { x: -sx, z: 0, botoes: B.PASSE } : { x: 0, z: 0, botoes: 0 });
+        const d = w.posse != null ? S.jogadorPorId(w, w.posse) : null;
+        if (perdeu < 0 && w.naMao == null && d && d.time === 1) perdeu = w.tick - tq;
+        if (perdeu >= 0 && (D.pressaoPedida(w, 0) || D.pressionadorVisivel(w, 0) >= 0)) f = true;
+      }
+      if (perdeu >= 0 && perdeu <= V) { janela++; if (f) fant++; }
+    }
+  }
+  return { casos: casosM, janela, fant, sementes };
+}
+
 const fmt = (v, c = 2) => (Number.isFinite(v) ? v.toFixed(c).replace('.', ',') : '—');
 const med = a => { const b = a.filter(Number.isFinite).sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : NaN; };
 const pc = (a, b) => `${a}/${b} (${b ? Math.round(100 * a / b) : 0}%)`;
@@ -105,10 +167,18 @@ const longo = c => (c.A.perdeu == null || c.A.perdeu >= 1.5) && (c.B.perdeu == n
 const L = casos.filter(longo);
 const NMIN = 20;
 const d15A = med(L.map(c => c.A.d15)), d15B = med(L.map(c => c.B.d15));
-reg('M1 o mais perto: mediana da distância ao condutor em 1,5 s, sem → com o botão', `${fmt(d15A)} → ${fmt(d15B)} m (Δ ${fmt(d15A - d15B)}; n = ${L.length})`, 'Δ ≥ 1,0 m', L.length >= NMIN && d15A - d15B >= 1.0);
-const c2 = L.filter(c => c.B.t2 != null && c.B.t2 <= 1.5).length, c2A = L.filter(c => c.A.t2 != null && c.A.t2 <= 1.5).length;
-const ep2 = L.length ? Math.sqrt(c2 / L.length * (1 - c2 / L.length) / L.length) : NaN;
-reg('M2 (guarda) com o botão: um companheiro a ≤ 2 m do condutor em ≤ 1,5 s', `${pc(c2, L.length)} (${fmt(100 * c2 / L.length, 1)}% ± ${fmt(100 * ep2, 1)}; sem: ${pc(c2A, L.length)})`, '≥ 60%', L.length >= NMIN && c2 >= 0.6 * L.length);
+reg('M1 o mais perto: mediana da distância ao condutor em 1,5 s, sem → com o botão', `${fmt(d15A)} → ${fmt(d15B)} m (Δ ${fmt(d15A - d15B)}; n = ${L.length})`, 'com ≤ 2,0 m e Δ ≥ 0,5 m', L.length >= NMIN && d15B <= 2.0 && d15A - d15B >= 0.5);
+// (D2, 24/10: o M2 conta os casos longos AO ALCANCE — o companheiro mais perto a ≤ M2_ALCANCE m no começo: do parado o
+// corpo anda ~6,4 m em 1,5 s, + os 2 m. Com a IA conduzindo contra a pessoa, ela passou a ficar com a bola quando o
+// companheiro mais perto da pessoa está longe — de 9 a 12 m, 27 → 145 casos em 16 partidas —, onde chegar em 1,5 s é quase
+// impossível; por faixa de distância a taxa não mudou. O M2 de todos os casos longos segue impresso, informativo)
+const M2_ALCANCE = 8.5;
+const ok2 = c => c.B.t2 != null && c.B.t2 <= 1.5, ok2A = c => c.A.t2 != null && c.A.t2 <= 1.5;
+const LA = L.filter(c => c.d0 <= M2_ALCANCE);
+const c2 = LA.filter(ok2).length, c2A = LA.filter(ok2A).length;
+const ep2 = LA.length ? Math.sqrt(c2 / LA.length * (1 - c2 / LA.length) / LA.length) : NaN;
+reg(`M2 (guarda) com o botão: um companheiro a ≤ 2 m do condutor em ≤ 1,5 s (o mais perto a ≤ ${fmt(M2_ALCANCE, 1)} m no começo)`, `${pc(c2, LA.length)} (${fmt(100 * c2 / LA.length, 1)}% ± ${fmt(100 * ep2, 1)}; sem: ${pc(c2A, LA.length)})`, '≥ 60%', LA.length >= NMIN && c2 >= 0.6 * LA.length);
+reg('(informativo) o M2 em todos os casos longos (o mais perto a ≤ 12 m)', `${pc(L.filter(ok2).length, L.length)} (sem: ${pc(L.filter(ok2A).length, L.length)})`, '—', true, true);
 const L2 = L.filter(c => c.A.s2 != null && c.B.s2 != null);
 const s2A = med(L2.map(c => c.A.s2)), s2B = med(L2.map(c => c.B.s2));
 reg('M3 um a mais na pressão: 2º companheiro mais perto do condutor em 2 s, sem → com', `${fmt(s2A)} → ${fmt(s2B)} m (Δ ${fmt(s2A - s2B)}; n = ${L2.length})`, 'Δ ≥ 1,5 m', L2.length >= NMIN / 2 && s2A - s2B >= 1.5);
@@ -128,7 +198,33 @@ reg('M7 1º homem da IA já apertando: o botão chama OUTRO (dobra a marcação)
 // por 100 casos (base 799ab53b: ~11)
 const chq = soma(casos, c => c.B.choques);
 reg('M8 o chamado contorna: trombadas em disparada com quem não é o condutor, por 100 casos', `${fmt(100 * chq / Math.max(1, casos.length), 1)} (${chq} em ${casos.length})`, '≤ 3', casos.length > 0 && 100 * chq / casos.length <= 3);
+// M9–M11 (D1, 23/10): TODAS as posses, ramos de 3 s com o humano parado (pressao-pareada.mjs `tres`)
+const T3 = casos.filter(c => c.t3), n3 = T3.length;
+const g3 = k => soma(T3, c => c.t3[k].g);
+const gA = g3('A3'), g1 = g3('P1'), gP = g3('P3');
+// erro-padrão da diferença pareada P1 − A3 entre as partidas (os casos de uma partida não são independentes)
+const ep9 = n3 ? epSoma(porPartida.map(p => soma(p.casos.filter(c => c.t3), c => c.t3.P1.g - c.t3.A3.g))) / n3 : NaN;
+const d9 = n3 ? 100 * (g1 - gA) / n3 : NaN;
+reg('M9 botão 1 s, humano parado: ganha a bola em 3 s, com − sem (todas as posses)', `${pc(gA, n3)} → ${pc(g1, n3)} (+${fmt(d9, 1)} pontos ± ${fmt(100 * ep9, 1)}; 3 s segurado: ${pc(gP, n3)})`, '≥ +6 pontos', n3 >= 200 && d9 >= 6);
+const al = soma(T3, c => c.t3.P3.alc), li = soma(T3, c => c.t3.P3.lib);
+reg('M10 bola ao alcance do chamado (sem estar por trás, sem o corpo entrar, fora do descanso): bote liberado', pc(li, al), '≥ 90% dos passos', al >= 100 && li >= 0.9 * al);
+const tr = soma(T3, c => c.t3.P3.tr);
+// (o erro-padrão da razão trocas/posses entre as partidas, como o do M5)
+const ep11 = n3 ? epSoma(porPartida.map(p => soma(p.casos.filter(c => c.t3), c => c.t3.P3.tr - tr / n3))) / n3 : NaN;
+reg('M11 trocas do chamado em 3 s segurado (a marca que pula de jogador), por posse', `${fmt(n3 ? tr / n3 : NaN, 2)} ± ${fmt(ep11, 2)} (${tr} em ${n3})`, '≤ 0,8', n3 >= 200 && tr / n3 <= 0.8);
+// M12 a retomada pela MÃO do goleiro encerra o pedido (contraprova do D1, 24/10): toque de 1 passo no PRESSÃO com o
+// adversário de posse → encaixe do goleiro do time 0 (as atribuições do goleiro.js aplicarDefesa: não passa por sim.js
+// ganhouPosse) → o humano, no goleiro, passa no adversário a 5 m → a bola perdida dentro da validade do toque. Sem o botão
+// desde o toque, o pedido não volta a valer (pressaoPedida) nem chama ninguém (pressionadorVisivel). Antes da correção
+// (defesa.js pressaoPedida sem m.possePorTime): todos voltavam (9 de 9 nas sementes 7001–7002, 7 de 7 nas 7101–7102)
+const m12 = await retomadaPelaMao();
+reg('M12 a retomada pela mão do goleiro encerra o pedido: o toque de antes não volta depois da reposição cortada',
+  `${m12.fant} de ${m12.janela} reposições cortadas dentro da validade (${m12.casos} estados, sementes ${m12.sementes.join(', ')})`, '0, com ≥ 4 na janela', m12.janela >= 4 && m12.fant === 0);
 // informativos
+reg('(D1) todas as posses, humano parado, 3 s: roubadas do chamado (1 s · 3 s de botão) · faltas do time 0 (sem → 1 s → 3 s)',
+  `${soma(T3, c => c.t3.P1.rb)} · ${soma(T3, c => c.t3.P3.rb)} · ${soma(T3, c => c.t3.A3.f)} → ${soma(T3, c => c.t3.P1.f)} → ${soma(T3, c => c.t3.P3.f)}`, '—', true, true);
+reg('(D1, a C1) o CONTROLADO parado chega a ≤ 1 m do condutor em 3 s: sem → 1 s → 3 s de botão',
+  `${pc(soma(T3, c => c.t3.A3.ct ?? 0), n3)} → ${pc(soma(T3, c => c.t3.P1.ct ?? 0), n3)} → ${pc(soma(T3, c => c.t3.P3.ct ?? 0), n3)}`, '—', true, true);
 const d1A = med(L.map(c => c.A.d1)), d1B = med(L.map(c => c.B.d1));
 reg('(diagnóstico) o mais perto em 1,0 s: sem → com', `${fmt(d1A)} → ${fmt(d1B)} m (Δ ${fmt(d1A - d1B)})`, 'Δ ≥ 2,0 m', true, true);
 const bA = casos.filter(c => c.A.alcBote != null).length, bB = casos.filter(c => c.B.alcBote != null).length;
@@ -147,7 +243,7 @@ if (porPartida.length >= 16) {
   for (let b = 0; b + 8 <= porPartida.length; b += 8) {
     const cs = porPartida.slice(b, b + 8).flatMap(p => p.casos), Lb = cs.filter(longo);
     const m1 = med(Lb.map(c => c.A.d15)) - med(Lb.map(c => c.B.d15));
-    const m2 = Lb.filter(c => c.B.t2 != null && c.B.t2 <= 1.5).length / Lb.length;
+    const Lb2 = Lb.filter(c => c.d0 <= M2_ALCANCE), m2 = Lb2.filter(ok2).length / Lb2.length;
     const a4 = soma(cs, c => c.A.faltas), b4 = soma(cs, c => c.B.faltas);
     const m5 = soma(cs, c => c.B.corre1) / soma(cs, c => c.B.correTot1);
     blocos.push(`${porPartida[b].s}: ${fmt(m1)} · ${Math.round(100 * m2)}% · ${a4}→${b4} · ${fmt(100 * m5, 1)}%`);

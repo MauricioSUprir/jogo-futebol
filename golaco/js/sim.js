@@ -25,11 +25,11 @@ import { ACOES } from './config.js';
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
 import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe, cortandoPasse } from './ia-tatica.js';
 import { trocaAerea, alvoAereo, escolhaManual } from './troca.js';
-import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida, semAtropelar, chamadoRecente } from './defesa.js';
+import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida, semAtropelar, chamadoRecente, boteContidoDoChamado, encerrarPressao, entradaPressaoPropria } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada, ladoPenaltiHumano } from './partida.js';
 import { planejarRecepcao } from './recepcao.js';
-import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta, chegada, guardarChoque, forcaContato, BOTE_EVITADO, BOTE_SEM_GANHAR } from './faltas.js';
+import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta, chegada, guardarChoque, BOTE_EVITADO, BOTE_SEM_GANHAR } from './faltas.js';
 // Regras da mão do goleiro e o goleiro jogando com o pé (pedido do dono, 11/10; só na partida)
 import { maoPermitida, motivoSemMao, registrarToque, estadoMao, paredeAreaMao, naPropriaArea, goleiroNoPe } from './regras-goleiro.js';
 import { lateralSegurando, segurarLateral } from './lateral.js';
@@ -379,9 +379,11 @@ function boteIA(m, j) {
   if (b.p.y > 0.5) return;
   const dB = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   if (dB > cfg.alcance) return;
-  // o chamado pelo PRESSÃO do humano aperta com responsabilidade: sem bote embalado (> FALTAS.bote.vLivre), por trás ou
-  // com o corpo entrando no condutor (> FALTAS.forca.min) — chega, freia e tira a bola ("delay, don't dive in")
-  if (chamado && (MD.hypot(j.vx, j.vz) > FALTAS.bote.vLivre || chegada(j, dono) === 'tras' || forcaContato(m, j, dono) > FALTAS.forca.min)) return;
+  // o chamado pelo PRESSÃO do humano aperta com responsabilidade: sem bote embalado (fechando no condutor a mais de
+  // FALTAS.bote.vLivre, pela conta do faltas.js forcaContato — correndo junto dele ou parado diante de quem vem, tenta), por
+  // trás ou com o corpo entrando no condutor (> FALTAS.forca.min) — chega, freia e tira a bola ("delay, don't dive in";
+  // defesa.js boteContidoDoChamado)
+  if (chamado && boteContidoDoChamado(m, j, dono)) return;
   const dD = MD.hypot(b.p.x - dono.x, b.p.z - dono.z);
   // (só na partida) condutor parado/lento (< vParado m/s) sem tocar há semToque s: a bola à frente do pé não está
   // "colada" — quem chega ao alcance dela tenta tirar (dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega")
@@ -450,6 +452,10 @@ export function passo(m, entradas) {
     m.botoesTimeAgora[t] = (entradas?.[t]?.botoes ?? 0) | 0;
     // a IA jogando pelo humano (demo, e.ia): o goleiro dele repõe sozinho, como antes (sim.js goleiroComBola)
     if (m.partida) (m.iaJoga ??= {})[t] = !!entradas?.[t]?.ia;
+    // ...e qualquer marca da IA (`ia` ou `iaCobra`, a cobrança da IA pelo controlado): o portão do "só contra a pessoa"
+    // (tatica.js pessoaJoga) — uma pessoa nunca manda nenhuma das duas. Fora do hash, como o m.iaJoga (o nome m.iaMarca é
+    // o cache da marcação do ia.js: escrever nele mudava a marcação do time da pessoa)
+    if (m.partida) (m.iaNaEntrada ??= {})[t] = !!(entradas?.[t]?.ia || entradas?.[t]?.iaCobra);
   }
   // 1) entradas: humano (o controlado de cada time humano) e IA (entrada virtual)
   for (const j of js) {
@@ -465,18 +471,23 @@ export function passo(m, entradas) {
       const antiga = j.recebe && m.posse !== j.id && !(e && MD.hypot(e.x ?? 0, e.z ?? 0) > 0.25);
       // Etapa 3: CONTER (defesa.js) e a assistência na bola alta (troca.js, só na partida)
       const ed = !antiga && (j.defH || (e && (e.botoes & BOTOES_DEFESA))) ? entradaConter(m, j, e) : null;
-      const ea = !antiga && !ed && m.times ? alvoAereo(m, j, e) : null;
+      // PRESSÃO segurado com o analógico solto: o próprio controlado também aperta (DEFESA_HUMANO.pressao.controlado,
+      // LIGADO — dono, 24/10: "meu jogador aperta também"; defesa.js entradaPressaoPropria)
+      const ep = DEFESA_HUMANO.pressao.controlado && !ed && !antiga && m.partida && e && !e.ia && (e.botoes & BOTAO.PRESSAO)
+        && !(e.botoes & (BOTAO.CONTER | BOTAO.DIVIDIDA)) && MD.hypot(e.x ?? 0, e.z ?? 0) <= DEFESA_HUMANO.pressao.soltoMax
+        && j.posicao !== 'GOL' ? entradaPressaoPropria(m, j) : null;
+      const ea = !antiga && !ed && !ep && m.times ? alvoAereo(m, j, e) : null;
       // recepção assistida (recepcao.js; pedido do dono, 10/10): a bola vindo para ele, o CORPO vai ao
       // encontro dela (passo 2, movimentoRecepcao) e o analógico fica para o 1º toque — nada de sair da
       // bola. O plano usa o analógico do passo anterior (j.ix, j.iz, j.botoes): um passo de atraso no
       // modo/pressa da recepção, nunca no corpo
       // (a entrada da demo — a IA jogando pelo humano, e.ia — recebe como a IA, sem a assistência)
-      const rp = !ed && !ea && !(e && e.ia) ? planejarRecepcao(m, j) : semRecepcao(j);
+      const rp = !ed && !ep && !ea && !(e && e.ia) ? planejarRecepcao(m, j) : semRecepcao(j);
       if (!rp && antiga) {
         const ia = m.times ? entradaIATatica(m, j) : entradaIA(m, j);
         aplicarEntrada(j, { ...ia, botoes: (e?.botoes ?? 0) | (ia.botoes & BOTAO.CORRER) }, m.tick);
       } else {
-        aplicarEntrada(j, ed ?? ea ?? e, m.tick);
+        aplicarEntrada(j, ed ?? (ep ? { ...ep, botoes: ep.botoes | (e.botoes & ~BOTAO.CORRER) } : null) ?? ea ?? e, m.tick);
       }
       if (e && (e.botoes & BOTAO.PRESSAO)) pedidoPressao(m, j);
     } else if (j.posicao === 'GOL') {
@@ -1157,6 +1168,9 @@ function ganhaDisputa(m, j, o, bp) {
 /** O jogador ganhou a posse: o controle humano vai para ele (time humano). */
 function ganhouPosse(m, j) {
   registrarToque(m, j, 'posse');
+  // a retomada encerra o pedido de PRESSÃO do time (defesa.js: o toque de antes não volta a valer na próxima perda; o
+  // encaixe e o PEGAR do goleiro, que não passam aqui, a pressaoPedida pega por m.possePorTime)
+  encerrarPressao(m, j.time);
   if (m.humanos.includes(j.time) && m.controlado[j.time] !== j.id && assumirControle(m, j.time, j)) {
     m.eventos.push({ tipo: 'troca', id: j.id, auto: true });
   }

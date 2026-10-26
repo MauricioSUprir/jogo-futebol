@@ -1,0 +1,219 @@
+{
+ "clube": "Chapecoense",
+ "chave": "br/Chapecoense",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Kappa",
+  "logo": "chapecoense__kappa.png",
+  "logo_fonte": "https://en.wikipedia.org/wiki/File:Kappa_logo_(full).svg (upload.wikimedia.org/wikipedia/en/8/83/Kappa_logo_%28full%29.svg; só o símbolo Omini, só o preenchimento branco, sem a palavra Kappa nem o contorno preto)",
+  "posicao": "peito, lado direito de quem veste (o escudo fica no esquerdo): só o símbolo Omini, dourado na camisa 1 verde; a fita Omini nos ombros",
+  "cor_na_camisa": {
+   "casa": "#c9a35e",
+   "fora": "#a08550",
+   "terceira": "#f6b12a",
+   "goleiro": "#c9a35e",
+   "goleiro2": "#12452f"
+  },
+  "largura_rel": 0.12
+ },
+ "patrocinios": [
+  {
+   "nome": "Aurora (Aurora Coop)",
+   "posicao": "barra_frontal",
+   "posicao_extra": "frente_meio_baixo",
+   "posicao_detalhe": "meio da frente, logo abaixo do espaço do master (arcos + 'Aurora'); desde a saída da ZeroUm (06/10) é a marca principal da frente, o espaço do master ficou vazio",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "chapecoense__aurora.svg",
+   "logo_fonte": "https://www.auroraalimentos.com.br/wp-content/uploads/2022/04/logo-aurora.svg",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#a08550",
+    "terceira": "#f6b12a",
+    "goleiro": "#c9a35e",
+    "goleiro2": "#12452f"
+   },
+   "largura_rel": 0.42
+  },
+  {
+   "nome": "GWM Tozzo",
+   "posicao": "ombro",
+   "lado": "centro",
+   "posicao_extra": "peito_alto_centro",
+   "posicao_detalhe": "alto do peito, no centro, entre a Kappa e o escudo, logo abaixo da gola; na camisa é o símbolo GWM com 'Tozzo' embaixo (concessionária) — o arquivo é só o logo GWM",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "chapecoense__gwm-tozzo.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:GWM_2025_logo.svg (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d2/GWM_2025_logo.svg/1280px-GWM_2025_logo.svg.png)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#a08550",
+    "terceira": "#f6b12a",
+    "goleiro": "#c9a35e",
+    "goleiro2": "#12452f"
+   },
+   "largura_rel": 0.11
+  },
+  {
+   "nome": "Sicoob",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "costas, acima do nome",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "chapecoense__sicoob.svg",
+   "logo_fonte": "https://upload.wikimedia.org/wikipedia/commons/5/59/Logotipo_do_Sicoob.svg (página https://commons.wikimedia.org/wiki/File:Logotipo_do_Sicoob.svg)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#a08550",
+    "terceira": "#f6b12a",
+    "goleiro": "#c9a35e",
+    "goleiro2": "#12452f"
+   },
+   "largura_rel": 0.38
+  },
+  {
+   "nome": "Grupo Bugio",
+   "posicao": "abaixo_numero",
+   "posicao_detalhe": "costas, logo abaixo do número (bugio + 'GRUPO BUGIO')",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "chapecoense__grupo-bugio.png",
+   "logo_fonte": "https://grupobugio.com.br/wp-content/uploads/2020/11/VERSAO-SECUNDARIA-NEGATIVO_WEB-1.png",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#a08550",
+    "terceira": "#f6b12a",
+    "goleiro": "#c9a35e",
+    "goleiro2": "#12452f"
+   },
+   "largura_rel": 0.32
+  },
+  {
+   "nome": "Unimed (Unimed Chapecó)",
+   "posicao": "abaixo_numero",
+   "posicao_extra": "costas_baixo",
+   "posicao_detalhe": "costas, perto da barra, abaixo do Grupo Bugio",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "chapecoense__unimed.png",
+   "logo_fonte": "https://static.internacional.com.br/cms/assets/unimed_d820a2c6fd.png (recortado só 'Unimed' + símbolo, sem o nome da cidade)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#a08550",
+    "terceira": "#f6b12a",
+    "goleiro": "#c9a35e",
+    "goleiro2": "#12452f"
+   },
+   "largura_rel": 0.38
+  },
+  {
+   "nome": "Dalla Cervejas Especiais (Puro Malte)",
+   "posicao": "calcao",
+   "lado": "esquerdo",
+   "posicao_detalhe": "calção, frente da perna esquerda de quem veste",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "chapecoense__dalla.png",
+   "logo_fonte": "https://dallacervejaria.com.br/wp-content/uploads/2026/02/logo.png (ampliado de 156 px; na camisa vai 'PURO MALTE' embaixo)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#a08550",
+    "terceira": "#f6b12a",
+    "goleiro": "#c9a35e",
+    "goleiro2": "#12452f"
+   },
+   "largura_rel": 0.14
+  },
+  {
+   "nome": "Alfa (Cooperalfa)",
+   "posicao": "calcao",
+   "lado": "direito",
+   "posicao_extra": "calcao_tras",
+   "posicao_detalhe": "calção, parte de trás (visto no calção do goleiro e dos jogadores)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro",
+    "goleiro2"
+   ],
+   "logo": "chapecoense__alfa.png",
+   "logo_fonte": "https://www.cooperalfa.com.br/img/logo.png (ampliado de 313 px; fundo amarelo/laranja do círculo tirado: na camisa as árvores e a cuia aparecem soltas, como no calção do goleiro em 17/10)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#a08550",
+    "terceira": "#f6b12a",
+    "goleiro": "#c9a35e",
+    "goleiro2": "#12452f"
+   },
+   "largura_rel": 0.14
+  },
+  {
+   "nome": "Premium Lindóia (patrocínio pontual)",
+   "posicao": "peito",
+   "posicao_detalhe": "espaço do master (meio do peito, acima da Aurora), só no jogo de 17/10; nos jogos de 07/10 e 12/10 o espaço estava vazio",
+   "uniformes": [
+    "fora"
+   ],
+   "logo": "chapecoense__premium-lindoia.png",
+   "logo_fonte": "https://images.squarespace-cdn.com/content/v1/68823dbe319aff02de553799/70f40bde-d14f-4389-88ae-bd05076dbb75/Asset+4.png?format=1500w (site https://www.premiumlindoia.com.br/)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#a08550",
+    "terceira": "#f6b12a",
+    "goleiro": "#c9a35e",
+    "goleiro2": "#12452f"
+   },
+   "largura_rel": 0.5,
+   "pontual": true,
+   "jogos": [
+    "Botafogo x Chapecoense, 17/10/2026 (camisa 2)"
+   ]
+  }
+ ],
+ "fontes": [
+  "https://www.flickr.com/photos/botafogooficial/albums/72177720336209883 (Botafogo x Chapecoense, 17/10/2026: fotos 55595624561 frente da camisa 2, 55595927333 costas e calção do goleiro 2)",
+  "https://chapecoense.com/2026/10/07/chapecoense-e-superada-pelo-vitoria-no-barradao/ (foto IMG_8803: frente e costas da camisa 2 sem master)",
+  "https://chapecoense.com/2026/10/12/chapecoense-e-superada-pelo-athletico/ (foto IMG_9140: camisa 1 com GWM Tozzo e calção Dalla)",
+  "https://www.flickr.com/photos/ecvitoria/albums/72177720336030967 (Vitória x Chapecoense, 07/10/2026)",
+  "https://www.flickr.com/photos/gremiooficial/albums/72177720335370835 (Grêmio x Chapecoense, 30/08/2026: o desenho com a ZeroUm, antes da proibição)",
+  "https://chapecoense.com/2026/09/11/chapecoense-tera-o-patrocinio-pontual-da-bellei-salvador-para-a-partida-diante-do-inter/ (camisas com ZeroUm + Aurora; patrocínios pontuais nas omoplatas)",
+  "https://chapecoense.com/ (rodapé: Aurora, Grupo Bugio, Sicoob, Unimed Chapecó, Kappa, Dalla)",
+  "https://www.poder360.com.br/poder-sportsmkt/times-da-serie-a-usam-patrocinios-pontuais-no-lugar-de-bets/ (08/10: Chape sem master contra o Vitória, Aurora mantida)",
+  "https://mantosdofutebol.com.br/2026/10/sem-bets-nas-camisas-veja-as-solucoes-adotadas-pelos-clubes-do-brasileirao/",
+  "https://focusgn.com/brasil/de-volta-a-serie-a-do-brasileirao-chapecoense-renova-patrocinio-com-plataforma-de-apostas (ZeroUm master no começo de 2026)",
+  "https://www.footyheadlines.com/pt/7117/clubes-brasileiros-obrigados-a-retirar-patrocinadores-de-apostas-das-camisas-eis-como-estao-a-reagir.html (14/10: a Chape pôs a Aurora em destaque no lugar da bet)"
+ ],
+ "confianca": "media",
+ "notas": "Em out/2026 a camisa está SEM master: a ZeroUm (bet, master no peito e nas mangas até setembro) saiu pela MP 1.394/2026 (prazo 06/10). Configuração vista em 07/10, 12/10 e 17/10: Aurora no meio da frente, GWM Tozzo pequeno no alto do peito, Sicoob em cima do nome, Grupo Bugio embaixo do número, Unimed perto da barra das costas, Dalla na frente do calção e Alfa atrás. No jogo de 17/10 (Botafogo) entrou a Premium Lindóia no lugar do master como patrocínio pontual (o clube usa pontuais, ex.: Bellei Salvador nas omoplatas em 12/09); não achei anúncio dela — por isso marcada 'pontual'. Mangas sem patrocínio depois da saída da ZeroUm (não vi a manga de perto em outubro). Cores: branco na camisa 1, dourado na 2 (medido ~#99814b–#b1a189 na foto), verde-escuro no goleiro 2 amarelo; 3ª e goleiro 1 estimadas pelo dourado dos detalhes (não vi foto de jogo com elas em outubro). Logos ampliados (menos de 400 px na fonte): Dalla (156 px) e Alfa (313 px). GWM Tozzo: só o logo GWM, sem a palavra 'Tozzo'. CONFERÊNCIA (verificador, 22/10): master vazio + Aurora confirmados por Poder360 (08/10), Mantos do Futebol (out/2026: \"a Aurora tornou-se a principal marca visível após a retirada da Zero Um\") e footyheadlines (14/10); posições conferidas nas fotos de 07/10, 12/10 e 17/10 (Premium Lindóia vista na frente da camisa 2 em 17/10; nenhum anúncio dela achado, segue pontual). CORRIGIDO: (1) a Kappa na camisa é só o símbolo Omini, não a palavra — logo trocado; (2) na camisa 1 verde a Kappa do peito e do calção é DOURADA (foto IMG_9140 de 12/10), não branca: cor da casa #ffffff → #c9a35e; (3) Alfa: o fundo amarelo/laranja do círculo virava mancha na máscara (as árvores sumiam) — agora vazado."
+}

@@ -1,0 +1,78 @@
+{
+ "clube": "Botafogo",
+ "chave": "br/Botafogo",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Mizuno",
+  "logo": "botafogo__mizuno.png",
+  "logo_fonte": "https://commons.wikimedia.org/wiki/File:MIZUNO_logo.svg (original https://upload.wikimedia.org/wikipedia/commons/5/53/MIZUNO_logo.svg) — só o pássaro 'Runbird' (recortado; a palavra MIZUNO não vai no peito)",
+  "cor_na_camisa": {
+   "casa": "#ffffff",
+   "fora": "#ffffff",
+   "terceira": "#111111",
+   "goleiro": "#111111"
+  }
+ },
+ "patrocinios": [
+  {
+   "nome": "Camisa 7 (sócio-torcedor do Botafogo)",
+   "posicao": "peito",
+   "posicao_detalhe": "no meio do peito; na camisa listrada vai dentro de um retângulo PRETO com 'SEJA SÓCIO' miúdo em cima (o retângulo e o 'SEJA SÓCIO' não estão no arquivo); na preta vai direto no tecido, letras brancas e estrela cinza",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "botafogo__camisa-7.svg",
+   "logo_fonte": "https://cdn.camisa7.botafogo.com.br/prod/images/2023/camisa7logo-23.svg (logo oficial do programa, do app camisa7.botafogo.com.br; há também a versão preta camisa7logo-23-preto.svg)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#ffffff",
+    "terceira": "#111111",
+    "goleiro": "#111111"
+   },
+   "largura_rel": 0.55,
+   "tipo": "programa_do_clube",
+   "periodo": "desde 07/10/2026 (Botafogo x Vasco) segundo A Tarde e Agenda do Poder (08/10); o pesquisador tinha anotado o peito VAZIO nesse jogo, sem foto conferida — as duas fontes dizem Camisa 7 já no clássico. Confirmado nas fotos oficiais de 12/10 (preta) e 17/10 (listrada)"
+  }
+ ],
+ "suspensos_mp_1394": [
+  {
+   "nome": "Vbet",
+   "posicao": "peito",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "botafogo__vbet.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Vbet-logo.png (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/Vbet-logo.png/1280px-Vbet-logo.png; o arquivo tem fundo azul-marinho e o selo rosa) — verificador: só a palavra VBET (sem a caixa rosa, a mão e o fundo; pintado de uma cor só virava dois retângulos). Na camisa ia 'vbet' minúsculo",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#ffffff",
+    "terceira": "#111111",
+    "goleiro": "#111111"
+   },
+   "largura_rel": 0.5,
+   "ate": "2026-10-05",
+   "nota": "máster até a MP 1.394/2026 (contrato até dez/2027); na camisa ia só a palavra 'vbet' minúscula, branca nas escuras e preta na branca/goleiro"
+  }
+ ],
+ "fontes": [
+  "https://eleconomista.com.ar/deportes/flamengo-desafio-lula-camiseta-prohibicion-apuestas-brasil-n98757/amp (MP 1.394/2026, prazo 05/10)",
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/ (18/10/2026)",
+  "https://www.meioemensagem.com.br/marketing/como-ficam-os-patrocinios-sem-as-bets-na-volta-do-brasileirao (07/10/2026)",
+  "https://www.poder360.com.br/poder-sportsmkt/times-da-serie-a-usam-patrocinios-pontuais-no-lugar-de-bets/",
+  "https://mantosdofutebol.com.br/2026/05/botafogo-mizuno-novas-camisas-temporada-2026-2027/ (camisas Mizuno: só vbet no peito)",
+  "https://mantosdofutebol.com.br/2026/07/botafogo-mizuno-nova-camisa-preta-2026-2027/",
+  "https://www.flickr.com/photos/botafogooficial/albums/72177720336138274 (Coritiba x Botafogo, 12/10/2026: camisa preta com CAMISA7)",
+  "https://www.flickr.com/photos/botafogooficial/albums/72177720336209883 (Botafogo x Chapecoense, 17/10/2026: listrada com 'SEJA SÓCIO CAMISA7', costas e mangas sem patrocínio)",
+  "https://www.lance.com.br/botafogo/botafogo-anuncia-vbet-como-nova-patrocinadora-master.html",
+  "https://atarde.com.br/esportes/futebol/fim-das-bets-veja-como-ficaram-as-camisas-do-futebol-brasileiro-1405198 (Camisa 7 contra o Vasco, quarta 7)",
+  "https://agendadopoder.com.br/brasileirao-volta-sem-bets-nos-uniformes-e-clubes-adotam-novas-marcas-e-espacos-vazios/ (08/10/2026)"
+ ],
+ "confianca": "alta",
+ "notas": "A camisa Mizuno do Botafogo só tinha um patrocinador (Vbet, máster). Com a MP 1.394/2026 a Vbet saiu: em 07/10 (x Vasco) o peito ficou vazio e desde 12/10 o clube estampa o próprio programa de sócio-torcedor 'CAMISA7' (com estrela). Costas, mangas e calção sem patrocínio nas fotos oficiais de 12 e 17/10; dentro dos algarismos do número aparece uma marquinha 'Oxy' (não identifiquei se é patrocinador ou a fonte dos números — ficou de fora). INCERTO: se o CAMISA7 já vai na camisa branca (terceira) e no goleiro (não vi foto de outubro) — pus preto nelas por suposição; no 17/10 o goleiro usou o azul (goleiro2 da pesquisa). Houve ainda uma camisa rosa do Outubro Rosa (20/10), especial. VERIFICAÇÃO (22/10): CAMISA7 no máster confirmado (Poder360 18/10, A Tarde, Agenda do Poder, fotos de 12 e 17/10). CORRIGIDO: o início — a imprensa diz que o Camisa 7 já foi usado em 07/10 contra o Vasco (não peito vazio). A Wikipédia lista Centrum na manga e LifeFit nas meias: não aparecem nas fotos de outubro (manga só com o selo do Brasileirão) — ficaram de fora. Logo da Vbet recortado."
+}

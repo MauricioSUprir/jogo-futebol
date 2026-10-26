@@ -292,6 +292,7 @@
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, settings: settings, title: cfg.titulo,
       pauseSide: 0, simOpts: simOpts, formation: cfg.formacao || s.squad.f, formationB: cfg.adv.f,
+      empateContinua: !!cfg.mataMata,   // (o mata-mata empatado vai a pênaltis: fimDeJogo)
       onBack: function () {
         if (acabou) { U.goUT(cfg.voltar || "ut"); return; }
         // sair no meio conta como derrota por W.O., igual no Ultimate

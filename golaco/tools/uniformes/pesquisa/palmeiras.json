@@ -1,0 +1,166 @@
+{
+  "clube": "Palmeiras",
+  "chave": "br/Palmeiras",
+  "temporada": "2026",
+  "fornecedor": "Puma",
+  "casa": {
+    "nome": "Camisa 1 2026",
+    "lancamento": "2026-01-09",
+    "camisa": "#1d5c3c",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "verde liso (trama tom sobre tom); painéis laterais vermelhos do quadril até perto da cava, que se desfazem em filetes/degradê para o verde no alto; gola em U com a frente branca e filetes finos verde e vermelho (atrás verde)",
+    "mangas": "#1d5c3c",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#1d5c3c",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#f5f6f3"
+    },
+    "ombros": null,
+    "laterais": "#a80c2c",
+    "numero_cor": "#ffffff",
+    "calcao": "#f5f5f5",
+    "calcao_detalhe": null,
+    "meiao": "#1d5c3c",
+    "meiao_detalhe": null,
+    "meiao_desc": "verde liso",
+    "fontes": [
+      "https://www.footyheadlines.com/2026/01/palmeiras-2026-kits.html",
+      "https://www.bnewssaopaulo.com.br/noticias/esportes/palmeiras-lanca-camisas-para-a-temporada-2026-veja-fotos.html",
+      "https://en.wikipedia.org/wiki/2026_SE_Palmeiras_season",
+      "https://www.footballkitarchive.com/palmeiras-2026-home-kit-443374/"
+    ]
+  },
+  "fora": {
+    "nome": "Camisa 2 2026",
+    "lancamento": "2026-01-09",
+    "camisa": "#f4f4f4",
+    "padrao": "listras_verticais",
+    "padrao_cores": [
+      "#1d5c3c",
+      "#a80c2c"
+    ],
+    "padrao_n": 2,
+    "padrao_largura": 0.01,
+    "padrao_desc": "branca; dois filetes verticais finos (~1% da largura) que descem da costura raglan do ombro até a barra, a ~20% do centro de cada lado: verde do lado direito de quem veste, vermelho do lado esquerdo; gola polo reta verde com o vão em vermelho e branco (tricolor italiano)",
+    "mangas": "#f4f4f4",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#f4f4f4",
+    "gola": {
+      "tipo": "polo",
+      "cor": "#1d5c3c"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#1d5c3c",
+    "calcao": "#1d5c3c",
+    "calcao_detalhe": null,
+    "meiao": "#f4f4f4",
+    "meiao_detalhe": null,
+    "meiao_desc": "branco liso (combinação oficial; o time também jogou de branco inteiro e de branco com meião verde)",
+    "fontes": [
+      "https://www.footyheadlines.com/2026/01/palmeiras-2026-kits.html",
+      "https://www.bnewssaopaulo.com.br/noticias/esportes/palmeiras-lanca-camisas-para-a-temporada-2026-veja-fotos.html",
+      "https://en.wikipedia.org/wiki/2026_SE_Palmeiras_season",
+      "https://www.footballkitarchive.com/palmeiras-2026-away-kit-443375/"
+    ]
+  },
+  "terceira": {
+    "nome": "Camisa 3 2026 (Azzurra)",
+    "lancamento": "2026-08-21",
+    "camisa": "#064b88",
+    "padrao": "liso",
+    "padrao_cores": [],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "azul 'Azzurra' liso (inspirado na Itália 2006), recortes curvos tom sobre tom nas laterais; gola V azul; escudo da Cruz de Savoia; detalhes dourados",
+    "mangas": "#064b88",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#043d72",
+    "gola": {
+      "tipo": "v",
+      "cor": "#064b88"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#c9a24a",
+    "calcao": "#064b88",
+    "calcao_detalhe": null,
+    "meiao": "#064b88",
+    "meiao_detalhe": null,
+    "meiao_desc": "azul liso",
+    "fontes": [
+      "https://www.footyheadlines.com/pt/6633/homenagem-ao-mundial-de-2006-na-italia-lancada-a-terceira-camisa-do-palmeiras-para-a-epoca-26-27.html",
+      "https://www.mktesportivo.com/2026/08/palmeiras-prepara-lancamento-da-camisa-azul-com-cruz-de-savoia/",
+      "https://www.footballkitarchive.com/palmeiras-2026-third-kit-511288/",
+      "https://en.wikipedia.org/wiki/2026_SE_Palmeiras_season"
+    ]
+  },
+  "goleiro": {
+    "nome": "Camisa de goleiro 2026 (vermelha)",
+    "lancamento": "2026-01-09",
+    "camisa": "#b0060f",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#94000a"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "vermelho com grafismo tom sobre tom de pinceladas/ondas mais escuras no corpo todo (modelo de goleiro Puma 25-26)",
+    "mangas": "#b0060f",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#b0060f",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#b0060f"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#ffffff",
+    "calcao": "#b0060f",
+    "calcao_detalhe": null,
+    "meiao": "#b0060f",
+    "meiao_detalhe": null,
+    "meiao_desc": "vermelho liso",
+    "fontes": [
+      "https://www.footballkitarchive.com/palmeiras-2026-gk-1-kit-445430/",
+      "https://en.wikipedia.org/wiki/2026_SE_Palmeiras_season"
+    ]
+  },
+  "goleiro2": {
+    "nome": "Camisa de goleiro 2026 (limão)",
+    "lancamento": "2026-01-09",
+    "camisa": "#c2dc05",
+    "padrao": "grafismo",
+    "padrao_cores": [
+      "#a8bf02"
+    ],
+    "padrao_n": 0,
+    "padrao_largura": 0.0,
+    "padrao_desc": "verde-limão com o mesmo grafismo tom sobre tom",
+    "mangas": "#c2dc05",
+    "mangas_padrao": "igual_tronco",
+    "punhos": "#c2dc05",
+    "gola": {
+      "tipo": "redonda",
+      "cor": "#c2dc05"
+    },
+    "ombros": null,
+    "laterais": null,
+    "numero_cor": "#1d5c3c",
+    "calcao": "#c2dc05",
+    "calcao_detalhe": null,
+    "meiao": "#c2dc05",
+    "meiao_detalhe": null,
+    "meiao_desc": "verde-limão liso",
+    "fontes": [
+      "https://www.footballkitarchive.com/palmeiras-2026-gk-2-kit-445429/",
+      "https://en.wikipedia.org/wiki/2026_SE_Palmeiras_season"
+    ]
+  },
+  "confianca": "alta",
+  "notas": "Camisas 1 e 2 apresentadas em 09/01/2026 (estreia 10/01 contra a Portuguesa); camisa 3 azul revelada em 21/08/2026 (estreia contra o Vasco). Hex estimados pela foto de produto (Footy Headlines/loja): verde medido ~#205a3f (o Wikipedia usa #035F30), vermelho ~#a80c2c. Largura do painel lateral vermelho na vista de frente ~3% do tronco (ele dá a volta pela lateral). Em out/2026 circulam versões \"V2\" só com troca de patrocínio (mesmo desenho). Calção da camisa 1 branco e meião verde pelo Wikipedia (uso em jogos de jan-mar); detalhe do calção não confirmado. Goleiro: o vermelho foi o mais usado no Brasileirão até mar/2026 (Wikipedia); há ainda o off-white e a camisa especial azul com grafismo branco/cinza (anos 90, lançada em 23/04/2026) e um limão com a Cruz de Savoia (ago/2026) — qual é o principal em outubro não foi confirmado. Data do goleiro = a dos uniformes de linha (aproximada)."
+}

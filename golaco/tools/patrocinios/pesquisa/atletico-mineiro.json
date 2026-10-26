@@ -1,0 +1,198 @@
+{
+ "clube": "Atlético Mineiro",
+ "chave": "br/Atlético Mineiro",
+ "temporada": "2026",
+ "fornecedor": {
+  "nome": "Nike",
+  "logo": "atletico-mineiro__nike.svg",
+  "logo_fonte": "https://commons.wikimedia.org/wiki/File:Logo_NIKE.svg (original https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg)",
+  "cor_na_camisa": {
+   "casa": "#b08d57",
+   "fora": "#b08d57",
+   "terceira": "#141414",
+   "goleiro": "#141414"
+  }
+ },
+ "patrocinios": [
+  {
+   "nome": "GaloBank, by Inter",
+   "posicao": "peito",
+   "pontual": true,
+   "posicao_detalhe": "máster rotativo depois da saída da H2bet (03/10, MP 1.394/2026): vazio em 08/10 e 11/10, 'Galo Na Veia' (programa de sócios) em 14/10, 'Instituto Galo' em 17/10 e 'GaloBank by inter' (banco digital do clube com o Banco Inter, lançado em 21/10) em 21/10, o jogo mais recente; letras brancas com contorno preto na camisa listrada",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "atletico-mineiro__galobank-by-inter.png",
+   "logo_fonte": "https://lp.inter.co/galobank (selo da página oficial: https://image.comunicacao.bancointer.com.br/lib/fe2a117170640475761c77/m/1/20261020_LPGaloBank_Asset_Selo_1920_1x.png)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#141414",
+    "terceira": "#141414",
+    "goleiro": "#141414"
+   },
+   "largura_rel": 0.5
+  },
+  {
+   "nome": "Multimarcas Consórcios",
+   "posicao": "ombro",
+   "lado": "ambos",
+   "posicao_detalhe": "omoplata da frente, um de cada lado da gola (acima da Nike e acima do escudo)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "atletico-mineiro__multimarcas-consorcios.svg",
+   "logo_fonte": "https://multimarcas-site-static.storage.googleapis.com/img/multimarcas-consorcios-logo.svg (cabeçalho de multimarcasconsorcios.com.br)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#141414",
+    "terceira": "#141414",
+    "goleiro": "#141414"
+   },
+   "largura_rel": 0.17
+  },
+  {
+   "nome": "Postos ALE",
+   "posicao": "ombro",
+   "lado": "centro",
+   "posicao_detalhe": "esterno: pequeno, no alto do peito entre a Nike e o escudo (versão empilhada 'POSTOS / A / ALE')",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "atletico-mineiro__postos-ale.png",
+   "logo_fonte": "https://atletico.com.br/wp-content/uploads/2025/07/ALE@4x-preto.png (rodapé do site do clube; original 180 px, ampliado 4x)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#141414",
+    "terceira": "#141414",
+    "goleiro": "#141414"
+   },
+   "largura_rel": 0.08
+  },
+  {
+   "nome": "Gerdau",
+   "posicao": "manga",
+   "lado": "esquerdo",
+   "posicao_detalhe": "manga esquerda (o patch da competição fica na direita); símbolo GG em caixa + GERDAU",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "atletico-mineiro__gerdau.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Gerdau_logo_(2011).svg (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/8/89/Gerdau_logo_%282011%29.svg/1280px-Gerdau_logo_%282011%29.svg.png)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#141414",
+    "terceira": "#141414",
+    "goleiro": "#141414"
+   },
+   "largura_rel": 0.13
+  },
+  {
+   "nome": "GaloTV",
+   "posicao": "barra_frontal",
+   "posicao_detalhe": "barra da frente nos jogos do Brasileirão (17/10); nos jogos da Sul-Americana a barra ficou vazia (14 e 21/10)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "atletico-mineiro__galotv.png",
+   "logo_fonte": "https://atletico.com.br/wp-content/uploads/2026/09/logo_galotv_fundopreto.png",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#141414",
+    "terceira": "#141414",
+    "goleiro": "#141414"
+   },
+   "largura_rel": 0.38
+  },
+  {
+   "nome": "Banco BMG",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "costas, 'banco bmg' em cima do nome",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "atletico-mineiro__banco-bmg.png",
+   "logo_fonte": "https://repositorio-bahia.s3.amazonaws.com/wp-content/uploads/2026/01/05103608/Logo-Bmg-Branco.png (mesmo arquivo do lote do Bahia)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#141414",
+    "terceira": "#141414",
+    "goleiro": "#141414"
+   },
+   "largura_rel": 0.45
+  },
+  {
+   "nome": "Mundiale",
+   "posicao": "acima_numero",
+   "posicao_detalhe": "dentro do número das costas, escrito na vertical na lateral de cada algarismo (pequeno)",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "atletico-mineiro__mundiale.svg",
+   "logo_fonte": "https://www.mundiale.ai/media/marca-mundiale-25-anos.svg (cabeçalho do site; recortei o selo '25 anos')",
+   "cor_na_camisa": {
+    "casa": "#141414",
+    "fora": "#f4f4f4",
+    "terceira": "#f26a21",
+    "goleiro": "#e3c916"
+   },
+   "largura_rel": 0.06
+  },
+  {
+   "nome": "Supermercados BH",
+   "posicao": "abaixo_numero",
+   "posicao_detalhe": "costas, embaixo do número (oval 'SUPERMERCADOS BH')",
+   "uniformes": [
+    "casa",
+    "fora",
+    "terceira",
+    "goleiro"
+   ],
+   "logo": "atletico-mineiro__supermercados-bh.png",
+   "logo_fonte": "https://commons.wikimedia.org/wiki/File:Logo_supermercado_bh.png (miniatura https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Logo_supermercado_bh.png/1280px-Logo_supermercado_bh.png)",
+   "cor_na_camisa": {
+    "casa": "#ffffff",
+    "fora": "#141414",
+    "terceira": "#141414",
+    "goleiro": "#141414"
+   },
+   "largura_rel": 0.22
+  }
+ ],
+ "fontes": [
+  "https://atletico.com.br/galo-e-finalista-da-conmebol-sul-americana/ (foto oficial de 21/10/2026 com GaloBank no peito)",
+  "https://www.flickr.com/photos/clubeatleticomineiro/albums/72177720336263927 (Montevideo City Torque x Atlético, 21/10/2026: vestiário e entrada em campo)",
+  "https://atletico.com.br/atletico-vence-coritiba-e-chega-aos-50-pontos-no-brasileiro/ (fotos de 17/10/2026: Instituto Galo no peito, GaloTV na barra, BMG/Mundiale/Supermercados BH nas costas)",
+  "https://atletico.com.br/galo-busca-empate-com-o-athletico-pr-na-arena-da-baixada/ (camisa 2 em 08/10/2026, sem máster)",
+  "https://atletico.com.br/vem-ai-o-galobank-by-inter-banco-digital-com-beneficios-para-a-massa/ (21/10/2026)",
+  "https://www.otempo.com.br/sports/atletico/2026/10/14/atletico-divulga-programa-de-socios-na-camisa-no-lugar-destinado-a-patrocinio-master",
+  "https://maquinadoesporte.com.br/futebol/protegido-por-aporte-do-governo-atletico-encerra-patrocinio-com-h2bet/",
+  "https://www.poder360.com.br/poder-sportsmkt/fim-das-bets-deixa-7-clubes-sem-patrocinador-master/ (18/10/2026)",
+  "https://atletico.com.br/ (rodapé de patrocinadores: Nike, Gerdau, BMG, ALE, Brahma, Multimarcas, Supermercados BH, MM, TNT, Mundiale, Arklok, Pratique, Viva)",
+  "https://www.otempo.com.br/sports/atletico/2026/10/21/atletico-anuncia-criacao-de-banco-digital-para-os-torcedores (21/10/2026: 'A marca do projeto está estampada na camisa do Galo para a partida contra o Montevideo City Torque')",
+  "https://bh24horas.com.br/esportes/atletico/atletico-lanca-banco-digital-em-parceria-com-o-inter-para-fortalecer-relacionamento-com-torcedores/ (21/10/2026)",
+  "https://www.poder360.com.br/poder-sportsmkt/atletico-mg-rescinde-com-h2-bet-apos-proibicao-de-bets/"
+ ],
+ "confianca": "media",
+ "notas": "O máster mudou a cada jogo depois do fim da H2bet (MP 1.394/2026 proibiu as bets; último jogo com H2bet em 03/10): vazio (08 e 11/10), Galo Na Veia (14/10), Instituto Galo (17/10) e GaloBank by Inter (21/10, o mais recente) — pus o GaloBank com 'pontual': true; o governo de Minas anunciou cota com Cemig e Codemge nas camisas, mas nenhuma das duas apareceu nas fotos até 21/10. Disposição conferida nas fotos oficiais (casa listrada e fora branca). Incertezas: lado da Gerdau (vi na manga esquerda em fotos de frente; numa foto de costas parecia a direita); a GaloTV na barra só apareceu no jogo do Brasileirão; cores na camisa 3 laranja e na de goleiro (amarela) estimadas em preto; o GaloBank no peito é branco com contorno preto (o selo baixado é só branco); a Mundiale é texto pequeno dentro dos números; logo da ALE ampliado de 180 px. VERIFICAÇÃO (22/10): conferido sem correção — GaloBank no peito em 21/10 (fotos do Flickr do clube + O Tempo + BH24horas, que tratam a marca como ação do lançamento: 'pontual' certo), Galo Na Veia em 14/10 (O Tempo), Instituto Galo e GaloTV em 17/10 (fotos), H2bet fora desde 03/10 (Poder360, DGABC). Gerdau na manga ESQUERDA confirmada nas fotos de 17 e 21/10; Multimarcas dos dois lados da gola, ALE no esterno, BMG em cima do nome, Mundiale dentro do número e o oval 'BH' embaixo do número também batem."
+}

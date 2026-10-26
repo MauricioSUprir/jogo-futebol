@@ -251,7 +251,8 @@
     var result = TM.engine.simulate(params.a, params.b, simOpts);
     TM.matchview.play(screen, {
       teamA: params.a, teamB: params.b, result: result, settings: settings,
-      pauseSide: 0, simOpts: simOpts,
+      // (o empate é o resultado: a disputa de pênaltis do resultado é opcional, por um botão)
+      pauseSide: 0, simOpts: simOpts, empateContinua: false,
       onBack: function () { TM.ui.go("quick"); },
       onDone: function () { TM.ui.go("quick-result", { a: params.a, b: params.b, result: result }); }
     });

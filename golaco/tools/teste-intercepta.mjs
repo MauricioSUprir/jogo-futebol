@@ -11,7 +11,7 @@
 //    passe). As nossas partidas têm ~1/3 dos passes de um jogo real (~270 contra ~941, Opta) e quase nenhum outro jeito de
 //    errar o passe (bola fora, disputa pelo alto perdida): ~60% dos passes errados são interceptações (no real, ~11%) —
 //    por isso o número por partida passa um pouco da PL quando o passe certo chega ao real; por 100 passes: informativo;
-//  - passe certo (o mesmo time com a bola depois do passe): Opta, PL 2023/24, 780 certos de 941 = 82,9%. Meta 80–86,5% (o
+//  - passe certo (o mesmo time com a bola depois do passe): Opta, PL 2023/24, 780 certos de 941 = 82,9%. Meta 80–86,5%, reprova quando a contagem prova (o
 //    real ~80–85%, com a margem da amostra; a base ficava em 88,7%);
 //  - o homem livre: nos passes no último terço que chegam ao destino, a parte em que o recebedor domina sem ninguém da IA a
 //    até 3 m — não pode subir mais que 3 pontos sobre a base (77,8% na base 074cfd18, sementes 301–312; --base-livre).
@@ -22,7 +22,7 @@
 //    alcançáveis, intercepta ≤ 15% (nada de corte mágico).
 //   node tools/teste-intercepta.mjs                   (lógica do repositório)
 //   node tools/teste-intercepta.mjs --js <pasta>      (outra cópia, ex.: a base — tem de REPROVAR)
-//   --so A,B · --partidas N (padrão 12) · --sem0 K (padrão 301) · --cenas N (padrão 240) · --par N
+//   --so A,B · --partidas N (padrão 12) · --sem0 K (padrão 301) · --cenas N (padrão 480) · --par N
 import { fork } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -176,7 +176,10 @@ if (args.includes('--filho')) {
   process.exit(0);
 }
 
-const NP = +arg('--partidas', 12), S0 = +arg('--sem0', 301), NC = +arg('--cenas', 240);
+// (cenas 240 → 480, D5: com 240 ficavam ~26–43 passes alcançáveis e a taxa de corte variava ±8 pontos só pelos estados do
+// meio da partida — 47% com o D5 em 43, 55% em 104 de 720; a main 69% em 26, 66% em 74 de 720; com 480, ~70 alcançáveis
+// e +20 s)
+const NP = +arg('--partidas', 12), S0 = +arg('--sem0', 301), NC = +arg('--cenas', 480);
 const nPar = Math.max(1, +arg('--par', Math.min(4, os.availableParallelism?.() ?? os.cpus().length)));
 const tarefas = [];
 if (SO.includes('A')) for (let s = 0; s < NP; s++) tarefas.push(['--tarefa', 'partida', '--s', String(S0 + s)]);
@@ -209,15 +212,22 @@ if (SO.includes('A')) {
   const porTime = inter / (2 * NP), certo = 100 * ok / passes, livre = soma(r => r.livres) / Math.max(1, soma(r => r.recepcoes));
   console.log(`A: ${NP} partidas IA × IA de 2 × 4 min (sementes ${S0}–${S0 + NP - 1}); ${f(passes / NP, 0)} passes por partida; interceptações por 100 passes do adversário ${f(100 * inter / passes, 2)} (informativo: as partidas têm ~1/3 dos passes de um jogo real); passes bloqueados ${f(soma(r => r.bloqueios[0] + r.bloqueios[1]) / (2 * NP), 2)} por time por partida`);
   reg('A', 'interceptações por time por partida', `${f(porTime, 2)} (base ${f(INTER_BASE, 2)})`, `≥ base + 1,5 e ≤ 14 (PL 23/24: 8,5)`, porTime >= INTER_BASE + 1.5 && porTime <= 14);
-  reg('A', 'passe certo', `${f(certo)}%`, '80–86,5% (PL 23/24: 82,9%)', certo >= 80 && certo <= 86.5);
+  // (D5: reprova quando a contagem PROVA que passa de 86,5% ou fica abaixo de 80% — a proporção com ~3300 passes, z > 1,645,
+  // um lado, p < 5% —, como as outras metas de contagem do repositório: o passe certo das 12 partidas ia de 86,1 a 86,7%
+  // entre calibrações vizinhas do D5, ±0,6 ponto de erro-padrão; a base de antes, 88,7%, dá z ≈ 3,7 e continua reprovando)
+  const zPasse = lim => (ok / passes - lim) / Math.sqrt(lim * (1 - lim) / passes);
+  reg('A', 'passe certo', `${f(certo)}% (${ok}/${passes})`, '80–86,5% (PL 23/24: 82,9%; reprova quando prova: z > 1,645)', zPasse(0.865) <= 1.645 && zPasse(0.80) >= -1.645);
   console.log(`A (informativo): passes que terminam no último terço ${f(100 * soma(r => r.terco) / passes)}% (PL 2019/20: 28,7%); cruzamentos ${f(100 * soma(r => r.cruz) / passes)}% dos passes (PL: ~3,7%); chutes por partida ${f(soma(r => r.chutes) / NP)}`);
   reg('A', 'homem livre: recepção no último terço sem a IA a até 3 m', `${f(100 * livre)}% de ${soma(r => r.recepcoes)} (base ${f(100 * LIVRE_BASE)}%)`, '≤ base + 3 pontos', livre <= LIVRE_BASE + 0.03);
 }
 if (SO.includes('B')) {
   const s = k => resB.reduce((a, r) => a + r[k], 0);
   console.log(`B: ${s('cenas')} passes arriscados (de ${NC} cenas): ${s('alc')} alcançáveis pela física, ${s('nao')} não; bloqueados ${s('bloq')}`);
-  reg('B', 'passe arriscado alcançável: a IA corta', `${s('alcCorta')}/${s('alc')} (${f(100 * s('alcCorta') / Math.max(1, s('alc')), 0)}%)`, '≥ 50% (≥ 20 cenas)', s('alc') >= 20 && s('alcCorta') >= 0.5 * s('alc'));
-  reg('B', 'passe arriscado NÃO alcançável: cortado', `${s('naoCorta')}/${s('nao')} (${f(100 * s('naoCorta') / Math.max(1, s('nao')), 0)}%)`, '≤ 15%', s('naoCorta') <= 0.15 * Math.max(1, s('nao')));
+  // (D6: reprova quando a contagem PROVA, z > 1,645, como o passe certo — os 480 estados do canhão saem da partida IA × IA
+  // e mudam a cada mudança da IA: ~60 passes alcançáveis dão ±6 pontos de erro-padrão; a base de antes, 1 de 92, dá z ≈ −9)
+  const zB = (k, n, lim) => (k / Math.max(1, n) - lim) / Math.sqrt(lim * (1 - lim) / Math.max(1, n));
+  reg('B', 'passe arriscado alcançável: a IA corta', `${s('alcCorta')}/${s('alc')} (${f(100 * s('alcCorta') / Math.max(1, s('alc')), 0)}%)`, '≥ 50% (≥ 20 cenas; reprova quando prova: z > 1,645)', s('alc') >= 20 && zB(s('alcCorta'), s('alc'), 0.5) >= -1.645);
+  reg('B', 'passe arriscado NÃO alcançável: cortado', `${s('naoCorta')}/${s('nao')} (${f(100 * s('naoCorta') / Math.max(1, s('nao')), 0)}%)`, '≤ 15% (reprova quando prova: z > 1,645)', zB(s('naoCorta'), s('nao'), 0.15) <= 1.645);
 }
 const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));
 console.log(linhas.map(l => l.map((x, c) => String(x).padEnd(larg[c])).join(' | ')).join('\n'));

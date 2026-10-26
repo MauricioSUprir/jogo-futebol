@@ -290,6 +290,16 @@ export function festaEvento(f, ev, ctx, disparar) {
       }
       return;
     }
+    // a cena do pós-jogo (js/cena-fim.js, o plano da torcida; PLANO-CENAS.md §5.1): a festa de quem ganhou — a casa abre o
+    // bandeirão (os sinalizadores dela já acenderam no apito: 'fimDeJogo'); o setor visitante acende os dele — e, de quem
+    // perdeu, o silêncio (o lamento e a vaia são do emocao.js)
+    case 'cenaFim': {
+      if (ev.fim !== 'fimDeJogo') return;
+      const p = ev.placar ?? { 0: 0, 1: 0 };
+      if (p[casa] > p[1 - casa]) abrirBandeirao(f, 0.2, B.gol);
+      else if (p[1 - casa] > p[casa]) acender(f, VISIT, S.golVisitante, 1, 0.2);
+      return;
+    }
     default: return;
   }
 }

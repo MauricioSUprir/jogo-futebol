@@ -1,4 +1,4 @@
-// Diretor do REPLAY (render): guarda os gatilhos (gol, impedimento, pausa), monta o roteiro (replay-roteiro.js),
+// Diretor do REPLAY (render): guarda os gatilhos (gol, impedimento, pausa, paradas), monta o roteiro (replay-roteiro.js),
 // anda o relógio do replay e posiciona a câmera de cada plano olhando o que o anel gravou (replay-anel.js). Só LÊ o
 // anel: o mundo e o hash não mudam (a simulação fica parada no main.js enquanto o replay toca, como na pausa; o
 // replay pode ser interrompido em qualquer quadro sem mexer em nada — "kill cam" do Overwatch, GDC 2017).
@@ -17,16 +17,26 @@
 //    na bola e no gol), campo de visão HORIZONTAL de 90° fixo, plano de recorte próximo de 0,10 m; `desenho()` diz ao main.js
 //    que o autor fica sem cabeça e tronco (ocultar) e quando a bola some (perto da lente);
 //  - 'treinador' (12/10): a VISÃO DO TREINADOR do time que marcou — parte 1, o que ele vê (teleobjetiva fixa; ele sai da
-//    lista de desenho) e, no `corte`, a parte 2: ele reagindo, da câmera parada no gramado (replay-olhos.js).
+//    lista de desenho) e, no `corte`, a parte 2: ele reagindo, da câmera parada no gramado (replay-olhos.js);
+//  - 'fechada' (22/10, replays nas paradas): a MESMA instância de TV do replay com o campo de visão fechado
+//    (REPLAY_PARADA.lento.fov) e o alvo puxado para o ponto do lance (a falta), misturado com a bola — o "replay mais
+//    fechado e mais lento" da TV (patente US7657836). O roteiro da parada (roteiroParada) vem do lance da bola morta
+//    (js/lances.js), pedido pelo main.js no passo antes da montagem (parada).
 // Pós-gol: o gol fica PENDENTE (aoGol) e o replay só entra quando o pós-gol chega na vez dele (depoisDoGol). Hoje
 // quem chama é a saída de bola; a cena de comemoração (outra frente) entra ANTES e chama depoisDoGol quando acabar.
+// FONTE (22/10, PLANO-CENAS.md R8): um roteiro toca do anel do replay (o padrão) ou de outra fonte no mesmo formato — o
+// mini-anel em que um lance guardado foi descomprimido (render/lances-guarda.js tocar; os lances do intervalo e os
+// "Melhores momentos"): iniciar(ro, fonte). Todos os leitores do quadro (posicionar 'tv'/'fechada'/'atras'/'lateral',
+// os treinadores e o z da lateral, o enquadramento da linha e da análise) leem a fonte; o main.js desenha pela `fonte`
+// (lerQuadro, o relógio do estádio e a rede dela). No fim ou no pulo a fonte volta a ser o anel.
 import * as THREE from 'three';
 import { CAMPO, REPLAY } from '../config.js';
+import { REPLAY_PARADA } from '../lances.js';
 import { criarCamera } from './camera.js';
 import { jogadorNoTick, defensorDaLinha, bolaNoTick } from './replay-anel.js';
 import { cameraPrimeira, cameraTreinador, fovVerticalDe, cameraLateral, tecnicosNoTick, zLateralDoPlano } from './replay-olhos.js';
 import {
-  roteiroGol, roteiroImpedimento, roteiroMenu, duracao, criarRelogio, iniciarRelogio, pararRelogio, avancarRelogio,
+  roteiroGol, roteiroImpedimento, roteiroMenu, roteiroParada, roteiroLance, duracao, criarRelogio, iniciarRelogio, pararRelogio, avancarRelogio,
   planoAtual, velocidadeAgora, linhaDoReplay, tempoSaot, roteiroLegalTeste,
 } from './replay-roteiro.js';
 import { enquadrarSaot, cameraSaot, faseSaot, checagemLegal } from './replay-saot.js';
@@ -40,6 +50,8 @@ export function criarDiretor({ anel, aspecto }) {
   camera.name = 'camera-replay';
   const tv = criarCamera(aspecto);          // a mesma câmera de TV do jogo, numa instância só do replay
   const rel = criarRelogio();
+  // a fonte do roteiro tocando: o anel (padrão) ou o mini-anel de um lance guardado
+  let src = anel;
   let gol = null;                           // gol pendente {golTick, chuteTick, lado}
   let ultimoGol = null;                     // o último gol (API e prints: rever o replay dele)
   let aspectoAtual = aspecto, pequena = false;
@@ -84,9 +96,9 @@ export function criarDiretor({ anel, aspecto }) {
     const L = REPLAY.linha, zc = CAMPO.meioZ + L.fora, h = L.altura;
     enq.x = ro.linhaX; enq.z = zc;
     let z0 = Infinity, z1 = -Infinity;
-    const imp = jogadorNoTick(anel, ro.fotoTick, ro.idImpedido, _j);
+    const imp = jogadorNoTick(src, ro.fotoTick, ro.idImpedido, _j);
     if (imp) { z0 = Math.min(z0, imp.z); z1 = Math.max(z1, imp.z); }
-    const def = ro.defensor != null && ro.defensor >= 0 ? jogadorNoTick(anel, ro.fotoTick, ro.defensor, _d) : ro.defensor === undefined ? defensorDaLinha(anel, ro.fotoTick, 1 - ro.time, ro.linhaX, 1.5, _d) : null;
+    const def = ro.defensor != null && ro.defensor >= 0 ? jogadorNoTick(src, ro.fotoTick, ro.defensor, _d) : ro.defensor === undefined ? defensorDaLinha(src, ro.fotoTick, 1 - ro.time, ro.linhaX, 1.5, _d) : null;
     if (def) { z0 = Math.min(z0, def.z); z1 = Math.max(z1, def.z); }
     if (!(z1 >= z0)) { z0 = -6; z1 = 6; }
     z0 = clamp(z0 - L.folga, -CAMPO.meioZ - 1, CAMPO.meioZ); z1 = clamp(z1 + L.folga, -CAMPO.meioZ, CAMPO.meioZ + 1);
@@ -108,7 +120,7 @@ export function criarDiretor({ anel, aspecto }) {
       // o replay SABE para onde a bola vai: a câmera de TV antecipa pela velocidade da bola gravada à frente (o jogo ao
       // vivo antecipa pela do controlado), limitada, sem atravessar o fim do plano
       const T = REPLAY.tv, t0 = Math.floor(rel.t), t1 = Math.min(p.ate, t0 + Math.round(T.olhaFrente * 60));
-      const b0 = bolaNoTick(anel, t0, _b0), b1 = t1 > t0 ? bolaNoTick(anel, t1, _b1) : null;
+      const b0 = bolaNoTick(src, t0, _b0), b1 = t1 > t0 ? bolaNoTick(src, t1, _b1) : null;
       let vx = 0, vz = 0;
       if (b0 && b1) {
         vx = (b1.x - b0.x) * 60 / (t1 - t0); vz = (b1.z - b0.z) * 60 / (t1 - t0);
@@ -120,6 +132,29 @@ export function criarDiretor({ anel, aspecto }) {
       camera.position.copy(tv.camera.position); camera.quaternion.copy(tv.camera.quaternion);
       ajustarFov(tv.camera.fov);
       const f = tv.foco(); _foco.x = f.x; _foco.z = f.z;
+      return _foco;
+    }
+    if (p.cam === 'fechada') {
+      // a mesma TV do replay, fechada no lance: a posição é a da TV (a mola dela, com o ponto do lance como "jogador" e a
+      // bola na mistura), mas o OLHAR vai direto ao ponto entre o lance e a bola — o foco da TV fica preso dentro do campo
+      // (camera.js limX ±38,5) e, com o campo de visão × lento.fov, a falta perto da linha de fundo saía do quadro
+      const lx = Number.isFinite(ro.x) ? ro.x : bp.x, lz = Number.isFinite(ro.z) ? ro.z : bp.z;
+      _alvo.jx = lx; _alvo.jz = lz; _alvo.jvx = 0; _alvo.jvz = 0; _alvo.bx = bp.x; _alvo.bz = bp.z;
+      tv.atualizar(dtR, _alvo, corte);
+      const Ln = REPLAY_PARADA.lento;
+      let ax = lx + (bp.x - lx) * Ln.mistura, az = lz + (bp.z - lz) * Ln.mistura;
+      camera.position.copy(tv.camera.position);
+      ajustarFov(tv.camera.fov * Ln.fov);
+      // (o lance nunca sai do quadro: com a bola longe dele — saindo pela linha de fundo para o escanteio —, o olhar no meio do
+      // caminho levava o lance à borda da tela, |x| 0,77 — teste-replay-paradas-tela V11, 25/10; o desvio do olhar fica a no
+      // máximo Ln.quadro da meia-largura do quadro na distância do lance)
+      if (Ln.quadro) {
+        const c = camera.position, ox = ax - lx, oz = az - lz, o = Math.hypot(ox, oz);
+        const lim = Ln.quadro * Math.hypot(lx - c.x, c.y, lz - c.z) * Math.tan(camera.fov * Math.PI / 360) * camera.aspect;
+        if (o > lim) { ax = lx + ox * lim / o; az = lz + oz * lim / o; }
+      }
+      camera.lookAt(ax, 0, az);
+      _foco.x = ax; _foco.z = az;
       return _foco;
     }
     if (p.cam === 'atras') {
@@ -136,8 +171,8 @@ export function criarDiretor({ anel, aspecto }) {
       seg.cx += (seg.lx - s * Lt.recuo - seg.cx) * k;
       // nunca dentro de um treinador gravado: com um deles perto do caminho dela no plano, ela fica na frente da área técnica
       // o plano INTEIRO (o z é decidido uma vez por plano: antes pulava 2,5 m no meio dele); e sempre a ≥ 0,6 m deles
-      if (seg.planoLat !== p) { seg.planoLat = p; seg.zLat = zLateralDoPlano(anel, p.de, p.ate, s); }
-      cameraLateral(seg.cx, tecnicosNoTick(anel, Math.round(rel.t), _tecs), _lat, seg.zLat);
+      if (seg.planoLat !== p) { seg.planoLat = p; seg.zLat = zLateralDoPlano(src, p.de, p.ate, s); }
+      cameraLateral(seg.cx, tecnicosNoTick(src, Math.round(rel.t), _tecs), _lat, seg.zLat);
       camera.position.set(_lat.x, _lat.y, _lat.z);
       camera.lookAt(seg.lx, 0.9, seg.lz);
       ajustarFov(fovFixo(Lt.fov));
@@ -182,6 +217,8 @@ export function criarDiretor({ anel, aspecto }) {
   const api = {
     camera,
     get ativo() { return rel.ativo; },
+    /** A fonte do roteiro tocando (o anel, ou o mini-anel de um lance guardado): o que o main.js desenha. */
+    get fonte() { return src; },
     get roteiro() { return rel.roteiro; },
     /** Estado para testes e prints. */
     get estado() {
@@ -203,6 +240,8 @@ export function criarDiretor({ anel, aspecto }) {
         quadros: rel.quadros, duracao: duracao(ro), golaco: !!ro?.golaco, fotoTick: ro?.fotoTick ?? null, linhaX: ro?.linhaX ?? null,
         chuteTick: ro?.chuteTick ?? null, golTick: ro?.golTick ?? null, de: p?.de ?? null, ate: p?.ate ?? null,
         checagem: !!ro?.checagem, cams: ro ? ro.planos.map(q => q.cam) : [], saot,
+        // replay de parada (22/10): a classe ('A' | 'B'), o lance (lances.js TIPOS_LANCE), a chave e o desfecho
+        classe: ro?.classe ?? null, lance: ro?.lance ?? null, chave: ro?.chave ?? null, fim: ro?.fim ?? null,
         // 1ª pessoa e treinador: o autor, o treinador, o corte e a parte agora, o campo de visão
         autor: p?.cam === 'primeira' ? p.autor : null, tecnico: p?.cam === 'treinador' ? p.tecnico : null, corte: p?.corte ?? null,
         parte: p?.cam === 'treinador' ? (p.corte != null && rel.t >= p.corte ? 2 : 1) : null,
@@ -213,7 +252,7 @@ export function criarDiretor({ anel, aspecto }) {
     redimensionar(a, peq) {
       aspectoAtual = a; pequena = !!peq; tv.redimensionar(a, peq); camera.aspect = a; camera.updateProjectionMatrix();
       // o quadro final da análise depende do aspecto da tela
-      if (planoS && rel.ativo) enquadrarSaot(anel, planoS.saot, aspectoAtual, enqS);
+      if (planoS && rel.ativo) enquadrarSaot(src, planoS.saot, aspectoAtual, enqS);
     },
     // ---------------------------------------------------------------- gatilhos
     /**
@@ -234,6 +273,13 @@ export function criarDiretor({ anel, aspecto }) {
     impedimento(i) { ultimoImped = { ...i }; return roteiroImpedimento(anel, i); },
     /** Roteiro do "Replay" da pausa (últimos 10 s; com a checagem de posição legal no fim, se houver). */
     menu() { return roteiroMenu(anel); },
+    /** Roteiro do replay de uma parada (o lance da bola morta: lances.js; roteiroParada), ou null. */
+    parada(lance) { return roteiroParada(anel, lance); },
+    /**
+     * Roteiro de um lance guardado (lances-guarda.js) já descomprimido em `fonte` (o mini-anel: tocar): um plano 'tv' 1×
+     * (roteiroLance). Tocar com iniciar(ro, fonte).
+     */
+    lance(fonte, lance) { return roteiroLance(fonte, lance); },
     /**
      * Testes e prints: 'impedimento' = o último impedimento de novo (se o passe ainda está no anel); 'legal' = a checagem
      * de posição legal mais apertada do anel, sem exigir chute nem gol. Null se não há.
@@ -242,20 +288,21 @@ export function criarDiretor({ anel, aspecto }) {
     /** A margem (m) da posição legal mais apertada no anel agora (sem exigir chute nem gol; até `limite` m), ou null. */
     legalMaisApertada(limite = 60) { const c = checagemLegal(anel, { teste: true, limite }); return c ? c.margem : null; },
     // ---------------------------------------------------------------- relógio
-    /** Começa um roteiro (false se vazio). */
-    iniciar(ro) {
+    /** Começa um roteiro (false se vazio), tocando da `fonte` (padrão: o anel; o mini-anel de um lance guardado). */
+    iniciar(ro, fonte = anel) {
       if (!iniciarRelogio(rel, ro)) return false;
+      src = fonte ?? anel;
       seg.corte = true;
       if (ro.tipo === 'impedimento') enquadrarLinha(ro);
       // análise semiautomática: o quadro final uma vez por roteiro
       planoS = ro.planos.find(q => q.cam === 'saot') ?? null;
-      if (planoS) enquadrarSaot(anel, planoS.saot, aspectoAtual, enqS);
+      if (planoS) enquadrarSaot(src, planoS.saot, aspectoAtual, enqS);
       reduzir = reduzirForcado ?? (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
       return true;
     },
-    pular() { pararRelogio(rel); planoS = null; },
+    pular() { pararRelogio(rel); planoS = null; src = anel; },
     /** Mundo novo: esquece o gol pendente e para o replay. */
-    limpar() { pararRelogio(rel); gol = null; ultimoGol = null; ultimoImped = null; planoS = null; },
+    limpar() { pararRelogio(rel); gol = null; ultimoGol = null; ultimoImped = null; planoS = null; src = anel; },
     /** Avança dt s reais (false: acabou). */
     avancar(dt) {
       const vivo = avancarRelogio(rel, dt);

@@ -12,6 +12,8 @@
 //      só do quadro do passe em diante, no x do lance, com a câmera alinhada a ela, congela ≥ 1,2 s e, depois do
 //      replay, não fica parada no jogo; gols naturais no caminho: replay de 6–12 s (golaço: + a lateral) sem linha;
 //      [informativo: quadros com a linha viva no jogo ao vivo — a frente "tela limpa" tira a linha viva];
+//      C7 (D1, 24/10) o O segurado como PEGAR no apito do impedimento do MEU time vira PRESSÃO (entrada.js RELE_NA_DEFESA)
+//      com o replay já começado: não é aperto novo, o replay segue;
 //   D) "Replay" na pausa: toca os últimos ≤ 10 s com a simulação parada e volta ao jogo; Esc pula sem abrir a pausa;
 //      uma tecla do jogo (K) pula e não vira chute; no celular (toque), "Pular" aparece e um toque em qualquer lugar
 //      pula; "Replays automáticos: desligado" na pausa é salvo e o gol seguinte não tem replay; sem nada gravado, o
@@ -467,6 +469,45 @@ else try {
     meta('E3 memória do anel (10 s, 24 vagas)', `${f2(anelB / 1048576)} MB`, '≤ 4 MB', anelB > 0 && anelB <= 4 * 1048576);
   } finally { await P.fechar(); }
 } catch (e) { meta('C–E execução (impedimento, pausa, custos)', erroCurto(e), 'sem exceção', false); }
+
+// ------------------------------------------------------------------------------------------------ C7 (D1, 24/10)
+// O segurado como PEGAR (o passe do meu time no ar) no apito do impedimento do MEU time: a fase vira defesa no quadro
+// seguinte ao começo do replay e o O passa a PRESSÃO (entrada.js RELE_NA_DEFESA) — o mesmo botão segurado não é aperto
+// novo: o replay não pode sumir sozinho (sem main.js iniciarReplay tratar o PEGAR segurado como PRESSÃO segurado, ficava
+// ativo em 1 de 91 quadros)
+try {
+  const IMP0 = IMP && IMP.time === 0 ? IMP : await acharImpedimento({ pastaJs: path.join(raiz, 'js'), depoisDe: 900, comoPagina: true, time: 0 });
+  if (!IMP0) meta('C7 impedimento do time 0 (o humano) nas sementes 1–40 (Node)', 'nenhum', '≥ 1', false);
+  else {
+    const P = await pagina(raiz, `?q=baixa&hora=dia&demo=1&semente=${IMP0.semente}&comemoracao=0`);
+    try {
+      const pg = P.pagina;
+      // até 20 passos antes do apito, fora de replay; ali o O é apertado e segurado
+      const r0 = await pg.evaluate(({ alvo }) => {
+        const g = window.__golaco, m = g.mundo;
+        let n = 0;
+        while (n < 40000 && !(m.tick >= alvo && !g.replay?.estado?.ativo)) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; }
+        return { tick: m.tick, fase: g.estado().fase };
+      }, { alvo: IMP0.tick - 20 });
+      await pg.keyboard.down('KeyO');
+      const r = await pg.evaluate(() => {
+        const g = window.__golaco, m = g.mundo;
+        let n = 0, comecou = -1, ativo = 0, q = 0, tick = -1;
+        while (n < 400) {
+          g.relogio.avancar(1000 / 60, { desenhar: false }); n++;
+          const rp = g.replay?.estado;
+          if (comecou < 0 && rp?.ativo && rp.tipo === 'impedimento') { comecou = n; tick = m.tick; }
+          if (comecou >= 0) { q++; if (rp?.ativo) ativo++; if (q >= 91) break; }
+        }
+        return { comecou, ativo, q, tick, fase: g.estado().fase };
+      });
+      await pg.keyboard.up('KeyO');
+      meta('C7 O segurado como PEGAR no apito do impedimento do meu time: o replay segue (o rele a PRESSÃO não é aperto novo)',
+        `semente ${IMP0.semente}, apito no tick ${r.tick} (Node ${IMP0.tick}); fase ao apertar ${r0.fase}, no replay ${r.fase}; replay ativo em ${r.ativo} de ${r.q} quadros`,
+        'fase ao apertar ataque; ativo em 91 de 91', r.comecou >= 0 && r0.fase === 'ataque' && r.q === 91 && r.ativo === 91);
+    } finally { await P.fechar(); }
+  }
+} catch (e) { meta('C7 execução (O segurado no impedimento do meu time)', erroCurto(e), 'sem exceção', false); }
 
 // ------------------------------------------------------------------------------------------------ D (celular, toque)
 try {

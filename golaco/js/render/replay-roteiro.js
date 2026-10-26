@@ -15,7 +15,11 @@
 // ('primeira', 0,6×) e a VISÃO DO TREINADOR do time que marcou ('treinador', 1×, com o `corte` da parte 1 — o que ele vê —
 // para a parte 2 — ele reagindo), com orçamento próprio (REPLAY.gol.extras); a checagem de posição legal continua por
 // último. Os planos de antes ficam campo a campo iguais (planosExtrasGol só acrescenta).
+// Replays nas PARADAS (pedido do dono de 22/10; PLANO-CENAS.md §2; js/lances.js): a falta e a chance perdida na bola
+// parada, em 2 planos — a jogada na TV 1× e o lance mais fechado e mais lento ('fechada' na falta, 'atras' na chance) —,
+// ≤ REPLAY_PARADA.maximo s (roteiroParada).
 import { REPLAY, CAMPO } from '../config.js';
+import { REPLAY_PARADA, ehChance } from '../lances.js';
 import { bolaNoTick, jogadorNoTick } from './replay-anel.js';
 import { cenaImpedimento, checagemLegal, faseSaot, duracaoSaot } from './replay-saot.js';
 import { enquadrarPrimeira, enquadrarTreinador, corpoNaLente, lenteRuimPrimeira } from './replay-olhos.js';
@@ -239,6 +243,86 @@ export function roteiroImpedimento(anel, i) {
     tipo: 'impedimento', planos,
     linhaX: i.linhaX, fotoTick, apitoTick, idImpedido: i.idImpedido, time: i.time, lado: i.lado >= 0 ? 1 : -1,
     defensor: i.defensor ?? null, por: i.por ?? null,
+  };
+}
+
+/**
+ * Roteiro do replay de uma PARADA (lances.js: o lance da bola morta, armado no main.js e tocado no passo antes da
+ * montagem). lance = {classe, tipo, chave (tick do contato ou do chute), fim (tick do desfecho: a trave, a defesa, a bola
+ * cruzando a linha), x, z (o ponto do lance), lado (±1: o gol do lance), ateMax? (o último tick que pode aparecer: o
+ * expulso sai do mundo no passo da bola morta)}.
+ *  - falta (penalti, vermelho, amarelo, faltaPerto): P1 'tv' 1× de chave − tv.antes até chave + tv.depois; P2 'fechada'
+ *    (a TV do replay com o campo de visão fechado no lance) a lento.vel de chave − lento.antes até chave + lento.depois;
+ *  - chance (trave, espalmada, passouPerto): P1 'tv' 1× de chave − tv.antes até o desfecho + tv.depoisChance; P2 'atras'
+ *    (atrás do gol) a lento.vel de chave − lento.antesChance até o desfecho + lento.depoisChance.
+ * Total ≤ REPLAY_PARADA.maximo s: encolhe o começo do P1 (até chave − tv.antesMin) e depois o P2 (o começo até chave −
+ * 0,3 s, o fim até o desfecho + 0,3 s; ainda passando, ele sai). Nenhum plano atravessa um corte (começa no último antes
+ * da chave, acaba antes do primeiro depois dela) nem passa de ateMax. Null com a chave fora do anel (ou nada para mostrar).
+ */
+export function roteiroParada(anel, lance) {
+  if (!lance || lance.chave == null || lance.chave < 0 || anel.slot(lance.chave) < 0) return null;
+  const R = REPLAY_PARADA, k = lance.chave, chance = ehChance(lance.tipo);
+  const desfecho = Math.max(k, lance.fim ?? k);
+  // até onde dá: o fim do anel, o ateMax e o passo antes do 1º corte depois da chave
+  let lim = Math.min(anel.ultimo, lance.ateMax ?? Infinity);
+  const cD = lim > k ? anel.primeiroCorte(k + 1, lim) : null;
+  if (cD != null) lim = cD - 1;
+  // começo: chave − antes, ou o último corte até a chave (a jogada desenhada antes dele era outra)
+  let base = Math.max(anel.primeiro, k - s60(R.tv.antes));
+  const c = anel.ultimoCorte(base, k);
+  if (c != null) base = c;
+  let ini = base;
+  let fimTV = Math.min(lim, chance ? desfecho + s60(R.tv.depoisChance) : k + s60(R.tv.depois));
+  let iniL = Math.max(base, k - s60(chance ? R.lento.antesChance : R.lento.antes));
+  let fimL = Math.min(lim, chance ? desfecho + s60(R.lento.depoisChance) : k + s60(R.lento.depois));
+  // a falta sem o "depois" (o expulso sai do mundo no passo da bola morta: o replay acaba no contato): o lento fica com a
+  // aproximação inteira, antes + depois, antes do contato
+  if (!chance && lim < k + s60(R.lento.depois)) iniL = Math.max(base, lim - s60(R.lento.antes + R.lento.depois));
+  if (fimTV <= ini) return null;
+  let comLento = fimL > iniL;
+  const total = () => (fimTV - ini) / 60 / R.tv.vel + (comLento ? (fimL - iniL) / 60 / R.lento.vel : 0);
+  // orçamento: o começo do P1 primeiro (até antesMin antes da chave), depois o P2 (começo, fim), depois ele sai
+  let exc = total() - R.maximo;
+  if (exc > 0) ini = Math.min(Math.max(ini, k - s60(R.tv.antesMin)), ini + Math.ceil(exc * 60 * R.tv.vel));
+  exc = total() - R.maximo;
+  if (exc > 0 && comLento) iniL = Math.min(Math.max(iniL, k - 18), iniL + Math.ceil(exc * 60 * R.lento.vel));
+  exc = total() - R.maximo;
+  if (exc > 0 && comLento) fimL = Math.max(Math.min(fimL, desfecho + 18), fimL - Math.ceil(exc * 60 * R.lento.vel));
+  if (comLento && (fimL <= iniL || total() > R.maximo + 1e-9)) {
+    // o P2 saiu: o P1 volta a começar em `base` (sozinho ele cabe), encolhendo de novo só se ainda passar
+    comLento = false; ini = base;
+    exc = total() - R.maximo;
+    if (exc > 0) ini = Math.min(Math.max(ini, k - s60(R.tv.antesMin)), ini + Math.ceil(exc * 60 * R.tv.vel));
+  }
+  // (só o P1 e ainda passando — desfecho longe da chave: o fim dele encolhe)
+  exc = total() - R.maximo;
+  if (exc > 0) fimTV = Math.max(ini + 1, fimTV - Math.ceil(exc * 60 * R.tv.vel));
+  const planos = [{ de: ini, ate: fimTV, vel: R.tv.vel, cam: 'tv' }];
+  if (comLento) planos.push({ de: iniL, ate: fimL, vel: R.lento.vel, cam: chance ? 'atras' : 'fechada' });
+  return {
+    tipo: 'parada', planos, lado: lance.lado >= 0 ? 1 : -1, chave: k, fim: desfecho, classe: lance.classe, lance: lance.tipo,
+    x: lance.x, z: lance.z,
+  };
+}
+
+/**
+ * Roteiro de um LANCE GUARDADO (render/lances-guarda.js; os lances do intervalo e os "Melhores momentos" do fim: PLANO-CENAS.md
+ * §4.2): um plano 'tv' 1× com o trecho inteiro da `fonte` — o mini-anel em que o lance foi descomprimido (tocar) —, sem
+ * atravessar corte (começa no último). lance = a meta do guardador ({tipo, classe, chave, fim, de, ate, lado, x, z}; sem
+ * de/ate, a fonte inteira). Null com a fonte vazia ou menos de 0,5 s.
+ */
+export function roteiroLance(fonte, lance = null) {
+  if (!fonte || fonte.ultimo < 0) return null;
+  let de = Math.max(fonte.primeiro, lance?.de ?? fonte.primeiro);
+  const ate = Math.min(fonte.ultimo, lance?.ate ?? fonte.ultimo);
+  if (ate <= de) return null;
+  const c = fonte.ultimoCorte(de + 1, ate);
+  if (c != null) de = c;
+  if (ate - de < 30) return null;
+  return {
+    tipo: 'lance', planos: [{ de, ate, vel: 1, cam: 'tv' }], lado: (lance?.lado ?? 1) >= 0 ? 1 : -1,
+    chave: lance?.chave ?? null, fim: lance?.fim ?? null, classe: lance?.classe ?? null, lance: lance?.tipo ?? null,
+    x: lance?.x, z: lance?.z,
   };
 }
 

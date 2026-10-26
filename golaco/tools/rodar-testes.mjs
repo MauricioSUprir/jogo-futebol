@@ -68,7 +68,8 @@ const LISTA = [
   ['forma do time sem e com a bola (Parte 2)', 'teste-forma.mjs', [], 'etapa3'],
   ['táticas do Editar time movem a forma (Parte 2)', 'teste-taticas.mjs'],
   ['pressão, PPDA e contrapressão (Parte 2)', 'teste-pressao.mjs', [], 'etapa3'],
-  ['movimento da IA no 11×11 (Parte 2)', 'teste-movimento.mjs', ['--modo', 'partida'], 'etapa3'],
+  // (D5, item 22: sai do etapa3 — 5 rodadas de 8 sementes passando, vai e volta 6,8–7,4/min contra 8,3 na main)
+  ['movimento da IA no 11×11 (Parte 2): vai e volta, anda-para-anda, de costas, sem recuo', 'teste-movimento.mjs', ['--modo', 'partida']],
   ['apoio, corredores, corridas e área (Parte 3)', 'teste-apoio.mjs', [], 'etapa3'],
   ['intensidade e sanidade da partida (Parte 3)', 'teste-intensidade.mjs', [], 'etapa3'],
   ['CONTER, DIVIDIDA e PRESSÃO do humano (Parte 4)', 'teste-defesa-humano.mjs'],
@@ -84,9 +85,13 @@ const LISTA = [
   ['rede véu de noiva: forma pela física, morre no fundo, nada atravessa, gol pelo véu, desenho', 'teste-rede-veu.mjs'],
   ['torcida: lugares, setores, atlas das poses e ânimo (murmúrio, gol, "uuuh", apitos)', 'teste-torcida.mjs'],
   ['replay: anel dos últimos 10 s, roteiros do gol/impedimento/pausa e o replay de lances de verdade', 'teste-replay-anel.mjs'],
+  ['replays nas paradas: o classificador de lances (árbitro independente), o roteiro, o orçamento, a pureza e o predicado da montagem', 'teste-replay-paradas.mjs'],
   ['replay: a cena semiautomática do impedimento e a checagem de posição legal (durações, critério, câmera, selo, coerência)', 'teste-saot.mjs'],
   ['comemoração do gol: cena pura (locomoção, golpes, gestos, abraço, quem sofreu, câmera; o mundo não muda)', 'teste-comemoracao.mjs'],
   ['cena de substituição: quem sai pela linha mais perto (Regra 3.3), quem entra pelo meio, placa, câmera; o mundo não muda', 'teste-substituicao.mjs'],
+  // Cenas das paradas (dono, 22/10: "as cenas de cartões")
+  ['cenas das paradas: canhão de 144 cartões (árbitro, cartão no alto, IFAB, as 3 + 3 variações, o expulso no túnel, corpo, câmera), 56 intervalos e 56 pós-jogos (planos, cumprimentos, troca de camisa, melhor em campo, treinadores), variedade, pureza, relógio do estádio e custo', 'teste-cenas.mjs'],
+  ['guardador de lances do intervalo e do fim: memória fixa, quantização, tocar no mini-anel, prioridade, custo e as janelas dos gols e das paradas em 24 partidas', 'teste-lances-guarda.mjs'],
   // Área técnica e treinadores (dono, 12/10: "quero a área técnica e o treinador")
   ['área técnica (Regra 1) e os 2 treinadores: dentro da área, pé plantado, gestos, olham a bola, reagem ao gol, nunca tapam a TV, hash igual', 'teste-tecnicos.mjs'],
   // (15/10, frente "replay robusto") os casos sem partida no --estresse: a reação ao gol de qualquer gesto e quem corre
@@ -100,6 +105,14 @@ const LISTA = [
   // Pedidos do dono de 11/10 (regras e controles)
   ['jogador parado com a bola: a IA fecha e dá o bote (condutor lento)', 'teste-parado.mjs'],
   ['PRESSÃO perceptível: com × sem o botão (pareado), marca, um a mais na pressão', 'teste-pressao-humano.mjs'],
+  // Categoria D (dono, 24/10: "a IA correr, tanto pra marcar, tanto pra atacar, pq ela não corre"): a régua da corrida da IA
+  // contra a pessoa (3 roteiros × 8 sementes — a amostra da decisão: com 4, a roubada sofrida pela IA, V5, ia de 2,21 a 2,79
+  // entre a base e o D3 nas sementes 1–4 e 2,33 → 2,34 nas 8; seções P o portão, A ataque, M marcação (D3) e V guardas
+  // valendo — C informativa até o D4)
+  ['a IA corre contra a pessoa: o portão, condutor, apoio perto da bola, corridas até a área, chutes da área; a marcação perto da bola e o 1º homem saindo; volume, vai e volta e roubadas (guardas)', 'teste-ia-corre.mjs', ['--sementes', '8'], 'padrao', 3],
+  // (D3, item 20: a pressão da IA contra a pessoa — a pessoa "espelho", que joga com a decisão da IA sem a marca `ia`: PPDA
+  // 8–10,5, agressão ≤ 78%, retomada 34–54%; 3 processos)
+  ['pressão da IA contra a pessoa (D3): PPDA, agressão e retomada contra o espelho', 'teste-pressao.mjs', ['--humano'], 'padrao', 3],
   ['goleiro pelas Leis do Jogo (mão só na área, recuo, 8 s) e na mão do humano (anda, TROCAR, PEGAR)', 'teste-goleiro-regras.mjs'],
   // Pedido do dono de 15/10 ("defende mais bolas difíceis do que fáceis", espalmar e segurar realistas, movimento) e a
   // pendência #114 (sai no 1×1 e no cruzamento): canhão de estados do meio da partida em 4 processos
@@ -111,8 +124,17 @@ const LISTA = [
   // Pré-jogo (pedido de 11/10): o cortejo do túnel até a fila e o roteiro com os trilhos de câmera (contas puras)
   ['pré-jogo: cortejo do túnel até a fila (pés, colisão, vaga, rumo, custo, hash da partida)', 'teste-cortejo.mjs'],
   ['pré-jogo: roteiro, escalações de 10 s, pular e trilhos de câmera fora dos sólidos', 'teste-prejogo-roteiro.mjs'],
+  ['pré-jogo no Maracanã (forma própria): os trilhos ajustados fora dos sólidos dele', 'teste-prejogo-roteiro.mjs', ['--forma', 'maracana']],
   // Total Match (dono, 15/10: "a logo dos times, torcida, e estádio adaptáveis a cada time"): identidade visual
   ['identidade dos times: padrão = hoje, uniformes sem confusão (ΔE₀₀), torcida, faixas, placas, HUD do TM e o estádio (real na pro, Estádio Total Match na pública)', 'teste-identidade.mjs'],
+  // Estádio com forma própria (dono, 16/10: "não tem nada a ver com o maracanã"): a tigela do Maracanã (estadio-planta.js)
+  ['estádio com forma própria (Maracanã): medidas da pesquisa, torcida no degrau, festa no lugar, câmera de TV, sem forma nada muda', 'teste-estadio-forma.mjs'],
+  ['estádios de forma genérica (tigela, inglesa, arena, pista, pequeno): a base inteira — torcida, festa, câmera de TV, trilhos do pré-jogo', 'teste-estadio-generico.mjs'],
+  // Etapa 5 (corpo humano realista; só desenho): o esqueleto do desenho a partir das juntas e o nível de detalhe
+  ['corpo humano: esqueleto do desenho pelas juntas (juntas exatas, sem saltos, sola no chão, dobra com volume) e os assets', 'teste-ossos.mjs'],
+  ['corpo humano: nível de detalhe pela altura na tela (histerese, ≤ 2 na LOD0, ≤ 3 níveis, teto de triângulos)', 'teste-lod-humano.mjs'],
+  ['rostos reais (edição pro): índice, texturas 512², licença livre e créditos, a foto do TM, tom de pele, foto neutra', 'teste-rostos-reais.mjs'],
+  ['patrocínios nas camisas reais (versão de teste da pro): índice, logos 512 × 256, nada sobrando, decalques nos kits só com a base', 'teste-patrocinios.mjs'],
   // Ponte com o Total Match (15/10): o pedido do TM vira os times, o humano no lado do usuário, a trava e a súmula
   ['ponte com o Total Match: pedido → times, humano no visitante, trava "só o meu jogador", súmula e resultado', 'teste-ponte-tm.mjs'],
   // Modo Pênaltis 3D (dono, 15/10: "crie uma versão só de jogador de pênaltis"): a disputa pela Regra 10 da IFAB

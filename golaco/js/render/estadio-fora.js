@@ -360,8 +360,7 @@ function criarBairro(aniso) {
 }
 
 /** Prédios: caixas instanciadas; as janelas saem no shader (andar de 3,2 m), acesas à noite por sorteio da janela. */
-function criarPredios(uNoite) {
-  const L = predios();
+function criarPredios(uNoite, L = predios()) {
   const g = new THREE.BoxGeometry(1, 1, 1);
   g.translate(0, 0.5, 0);
   const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
@@ -408,8 +407,7 @@ function criarPredios(uNoite) {
   return m;
 }
 
-function criarArvores() {
-  const L = arvores();
+function criarArvores(L = arvores()) {
   const tronco = new THREE.CylinderGeometry(0.035, 0.05, 0.45, 5); tronco.translate(0, 0.225, 0);
   const copa = new THREE.IcosahedronGeometry(0.32, 0); copa.translate(0, 0.68, 0);
   const g = juntarGeometrias([tronco, copa], [new THREE.Color(0x5a4330), new THREE.Color(0x3f7a35)]);
@@ -429,8 +427,7 @@ function criarArvores() {
   return m;
 }
 
-function criarCarros() {
-  const L = carros();
+function criarCarros(L = carros()) {
   const corpo = new THREE.BoxGeometry(4.3, 0.85, 1.8); corpo.translate(0, 0.62, 0);
   const cabine = new THREE.BoxGeometry(2.3, 0.6, 1.6); cabine.translate(-0.25, 1.33, 0);
   const g = juntarGeometrias([corpo, cabine], [new THREE.Color(1, 1, 1), new THREE.Color(0.18, 0.2, 0.22)]);
@@ -450,8 +447,7 @@ function criarCarros() {
 }
 
 /** Torcedores chegando: o MESMO material (atlas e shader) da torcida, em pé (como a organizada), no chão da esplanada. */
-function criarTorcedores(material, tf = null) {
-  const L = torcedoresFora();
+function criarTorcedores(material, tf = null, L = torcedoresFora()) {
   if (!material || !L.length) return null;
   const n = L.length;
   const pos = new Float32Array(4 * n), cam = new Uint8Array(4 * n), pel = new Uint8Array(4 * n), cab = new Uint8Array(4 * n), inf = new Uint8Array(4 * n);
@@ -464,7 +460,7 @@ function criarTorcedores(material, tf = null) {
   const sorteia = l => l[Math.floor(r() * l.length) % l.length];
   L.forEach((t, i) => {
     const k = 4 * i;
-    pos[k] = t.x; pos[k + 1] = FORA.esplanada.y; pos[k + 2] = t.z; pos[k + 3] = 0.92 + 0.16 * r();
+    pos[k] = t.x; pos[k + 1] = t.y ?? FORA.esplanada.y; pos[k + 2] = t.z; pos[k + 3] = 0.92 + 0.16 * r();
     const c = t.time ? sorteia(fora) : (r() < 0.55 ? casa[0] : sorteia(casa));
     cam[k] = c[0]; cam[k + 1] = c[1]; cam[k + 2] = c[2]; cam[k + 3] = 255;
     const p = sorteia(peles); pel[k] = p[0]; pel[k + 1] = p[1]; pel[k + 2] = p[2]; pel[k + 3] = Math.floor(r() * 255.99);
@@ -493,6 +489,9 @@ function criarTorcedores(material, tf = null) {
  * dispose(), info}.
  */
 export function criarEstadioFora(cena, opc = {}) {
+  // estádio com forma própria (render/estadio-real.js, sob demanda): a estrutura e o entorno dele, com as peças daqui
+  const f3 = opc.identidade?.tm && opc.identidade.forma3d;
+  if (f3) return f3.real.criarForaForma(cena, opc, f3.planta, { criarTunel, criarBairro, criarPredios, criarCarros, criarTorcedores, texPlaca, criarArvores });
   const q = opc.qualidade ?? 'media', aniso = opc.aniso ?? 4;
   // com ?tm (identidade.js): o nome do estádio e o escudo do mandante na placa, as cores dele na fachada, na cobertura,
   // no túnel e nos cantos, e as camisas de quem chega (só desenho; nenhuma medida muda)

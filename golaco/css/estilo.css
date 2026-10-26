@@ -242,7 +242,9 @@ html.com-toque .gol-faixa { height: clamp(64px, 26vmin, 150px); }
 .faixa-titulo { font-size: 22px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; }
 .faixa-placar { font-size: 15px; font-weight: 800; letter-spacing: 0.08em; color: var(--texto-2); font-variant-numeric: tabular-nums; }
 .faixa-placar:empty { display: none; }
-.faixa-botao { pointer-events: auto; min-width: 200px; margin-top: 4px; }
+.faixa-botoes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
+.faixa-botoes[hidden] { display: none; }
+.faixa-botao { pointer-events: auto; min-width: 200px; justify-content: center; }
 .faixa-botao[hidden] { display: none; }
 
 /* minimapa: campo preto com linhas verdes e pontos dos dois times e da bola. Opção da pausa ("Minimapa", como o
@@ -469,6 +471,12 @@ html:not(.com-toque) .chip-nomes { display: none; }
 /* o estado embaixo do nome numa linha só (a linha da Partida e dos Pênaltis: o texto que quebrava fazia a pausa rolar 2 px) */
 .linha-cenas .btn small { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .linha-cenas .btn { flex: 1 1 0; min-width: 0; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; padding: 4px 12px; line-height: 1.2; }
+/* a linha das cenas da partida com três (Pré-jogo, Substituição e Cenas, 22/10): cada botão cresce pelo próprio texto (o
+   "Substituição" é o mais largo), sem quebrar, e o rótulo fica em 13 px (o resto da pausa, 14) — com os três do mesmo
+   tamanho e 14 px ele não cabia nos 300 px da coluna em 844×390; numa linha a mais a pausa rolava 50 px */
+.linha-cenas.tres { gap: 5px; }
+.linha-cenas.tres .btn { flex: 1 1 auto; padding: 4px 8px; white-space: nowrap; font-size: 13px; }
+.linha-cenas.tres .btn small { font-size: 10px; }
 .btn-replay svg { width: 18px; height: 18px; flex: none; }
 /* no PC as três opções ficam uma embaixo da outra, como as outras */
 .opcoes-linha { display: contents; }
@@ -643,11 +651,20 @@ html.em-replay .qps { display: none; }
 html.em-comemoracao .minimapa, html.em-comemoracao .btn-menu, html.em-comemoracao .aviso, html.em-comemoracao .carga,
 html.em-comemoracao .cartao-icone, html.em-comemoracao .dica, html.em-comemoracao .painel-jogo, html.em-comemoracao .faixa,
 html.em-comemoracao .toque, html.em-comemoracao .qps { display: none; }
+/* a faixa do fim de jogo (hud.faixa final): sem os controles de toque — depois do apito final eles não comandam nada, e no
+   celular o arco encostava nos botões da faixa e a zona do analógico ficava com o toque da metade esquerda deles */
+html.fim-faixa .toque { display: none; }
 /* cena de substituição (js/substituicao.js): a mesma camada (qualquer toque pula depois de 0,5 s); do HUD ficam o placar e
    a faixa ENTRA/SAI */
 html.em-substituicao .minimapa, html.em-substituicao .btn-menu, html.em-substituicao .aviso, html.em-substituicao .carga,
 html.em-substituicao .cartao-icone, html.em-substituicao .dica, html.em-substituicao .painel-jogo, html.em-substituicao .faixa,
 html.em-substituicao .toque, html.em-substituicao .qps, html.em-substituicao .gol-tela { display: none; }
+/* cena do cartão (js/cena-cartao.js; cenas das paradas, 22/10): a mesma camada (qualquer toque pula depois de 0,5 s); do
+   HUD fica só o placar (a tarja de identificação é da tela das cenas, css/cenas.css). O ícone do cartão não aparece: o
+   cartão está na mão do árbitro (3D). A faixa "Você foi expulso" espera a cena (e o replay) acabar. */
+html.em-cena .minimapa, html.em-cena .btn-menu, html.em-cena .aviso, html.em-cena .carga, html.em-cena .cartao-icone,
+html.em-cena .dica, html.em-cena .painel-jogo, html.em-cena .gol-tela, html.em-cena .faixa, html.em-cena .toque,
+html.em-cena .qps, html.em-cena .faixa-subst { display: none; }
 
 /* faixa ENTRA/SAI (lower third de TV; pedido do dono de 12/10). Só sigla, ▲/▼, ENTRA/SAI, número e nome: a palavra e o
    triângulo sempre escritos (a cor não é a única pista). Na cena: embaixo à esquerda, a linha de quem está no quadro em
@@ -759,7 +776,7 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
 /* ?prints=1: cena limpa para prints (sem dicas, avisos nem menus) */
 html.modo-prints .dica, html.modo-prints .aviso, html.modo-prints .gol-tela, html.modo-prints .carregando, html.modo-prints .replay-faixa { display: none; }
 html.modo-prints .faixa:not(.forcada) { display: none; }
-html.sem-hud .hud, html.sem-hud .toque, html.sem-hud .replay, html.sem-hud .comemoracao, html.sem-hud .terco { display: none; }
+html.sem-hud .hud, html.sem-hud .toque, html.sem-hud .replay, html.sem-hud .comemoracao, html.sem-hud .terco, html.sem-hud .tarja-cena { display: none; }
 
 /* o nome em cima do jogador com a bola (dono, 17/10; main.js marcarCondutor) */
 /* nome do condutor numa caixa (dono, 17/10: "bota dentro de um quadrado"): número em verde + nome da camisa */

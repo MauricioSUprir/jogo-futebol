@@ -158,7 +158,7 @@
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, settings: settings, title: s.title,
-      pauseSide: 0, simOpts: simOpts, formation: "4-3-3",
+      pauseSide: 0, simOpts: simOpts, formation: "4-3-3", empateContinua: false,
       onBack: function () { TM.ui.go("build-hub"); },
       onDone: function () {
         var hs = result.score[0], as = result.score[1];

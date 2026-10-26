@@ -68,6 +68,52 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   entra pelo TM (Mais modos), não no menu do golaco. **Online 1×1** (pedido de 16/10; seção "Online 1×1" abaixo): duas
   pessoas, cada uma no seu aparelho, salas privadas por código, sem chat; conexão SEM CONTA e grátis (WebRTC P2P, a
   sinalização pelo Firebase que o TM já tem, sem TURN); só no TM.
+- **Dono, 22/10 (depois do #503):** "você assume o golaço agora, não é mais golaço, é Total Match ... ele já está
+  implementado no Total Match, virou Total Match" — o `golaco/` É o Total Match 3D (eu cuido dele inteiro). Na versão de
+  TESTE com os jogadores reais (edição pro, "Season Update", trancada por chave): "pode botar os patrocinadores sim, é só
+  aquele teste, vamos tirar depois" — patrocínio e marca do fornecedor nas camisas reais são permitidos SÓ nela. "Os
+  jogadores parecem meio curvados, estranhos" → corrigir a postura do corpo novo (só no desenho). FILA logo depois das
+  faces: (1) cena de pós-jogo; (2) cena de intervalo; (3) cenas de cartão; (4) replays de faltas e de jogadas passando na
+  tela enquanto o jogo está parado. Corpo novo funcionando = PR para ele testar (o #503 já foi; a postura no #504).
+  Depois: "verifique as diversas tarefas antigas no jogo e assim que terminar, faça" — auditoria das filas antigas no
+  código (o que está feito × pendente) e a fila resultante executada item a item (um PR cada) depois das cenas acima.
+  **A FILA ESTÁ EM `golaco/FILA.md`** (auditoria de 22/10: 56 itens com status, evidência, plano, horas e se mexe no
+  hash; listas "feito", "depende do dono" e "obsoleto"). Ordem: rostos → patrocínios → cenas (A: pós-jogo, intervalo,
+  cartão, replays de falta/chance, melhores momentos; a base é a branch `origin/golaco/cenas-jogo`, 35 conflitos) →
+  correções curtas (B) → goleiro e chute (C; o PR #493 rascunho `golaco/goleiro-realista` tem CI vermelho) → IA (D) →
+  equilíbrio (E) → pedidos de 17/10 (F) → 3D no lugar da simulação (G) → online (H) → visual/mocap/estádios (I).
+  Ao terminar cada item, marcar na FILA.md (status + PR).
+  **Dono, 23/10: a fila por CATEGORIAS** (A–I da FILA.md; a D FEITA em 26/10, #524–#550): ele diz qual categoria fazer e nada começa sem o aval dele
+  ("tem algumas coisas a mais que vou te sinalizar, que vc só cmc dps do meu aval"). Os pedidos de 23/10 são os itens 57–66:
+  impedimento pelas partes do corpo (B), pausa igual à do FIFA, minimapa embaixo, nome do condutor nos cantos, a tela antes do jogo no nível do EA FC com a cara do TM (64), a mira das bolas paradas minimalista com uma curva boa (65), a câmera que acompanha a bola e mostra a área (66) (F),
+  passada natural, costura da nuca e bordas dos decalques (I).
+  **Dono, 25/10 (depois do D4): "escolhe tudo filho"** — a categoria D segue até o fim (D5–D8: itens 22–25) e as escolhas
+  dentro dela são minhas; no item 19 a meta passou a ser a de CHEGADA (arrancada do bloco armado na área ≤ 25%, no
+  `teste-defesa-corrida`), com a velocidade do defensor do corredor só informativa. **D5 (item 22, o vai e volta)**: na partida,
+  IA × IA e contra a pessoa (o treino bit a bit igual): a espera da volta com folga e quieta, a virada em arco abaixo de 2,5 m/s,
+  a virada parada (`IA.viraParado`) e o modo firme na retomada do apoio — quem marca a ≤ 12 m da bola, a volta do impedido e a
+  bola na mão do goleiro como antes (com tudo valendo para eles, a pressão caía 2–3 pontos, o impedimento ia a 32% e a "bola na
+  mão" a 18%); o `teste-movimento --modo partida` entrou no CI (vai e volta 8,3 → 7,2). O impedimento caiu 1,16 → 0,99 por
+  partida (a virada parada e o arco atrasam a linha que sobe): a correção, a linha que SOBE vira na hora (`TATICA.linhaSobe`,
+  1,19 e gols 1,82 → 1,88 no painel de 144), entra no D6 — no CI ela trocou de novo os estados dos testes (7 metas de amostra e
+  de cena), e o D6 os troca de novo: corrigir uma vez só. **D6 (item 23, a forma)**: a linha que sobe na hora, a linha que
+  segura (`defesaPaga` 8 e `defesaPaga2` 6: o meio aperta e cobre), a cobertura do volante (`TATICA.volanteCobre`) e a
+  recomposição com 8 m (sprint com 6) — 24 sementes: atrás da bola no 1º terço 3,8 → 4,2 (meta nova por terço contra os 4 times
+  da Metrica), altura por faixa 2,7 → 2,1 m, linha de 4 no 1º terço 6,9 → 5,1 m (≤ 5: falta 0,1; o teste segue no etapa3).
+  Lição: o `teste-forma` com 8 sementes oscila ±0,5 no 1º terço entre conjuntos de sementes — decidir com 24. **D7 (item 24, o
+  apoio)**: MEDIDO, sem mudança na lógica — o "à frente" (20,1%, meta 30–45) depende de QUEM conduz no campo de lá (real: zaga e
+  laterais 28% a +12,5 m; jogo 4%) e anda com o volume de ataque (item 26); 14 variantes, só a devolução valorizada chegou a
+  27–28%, com a posse estéril (0,88 gol, 4 chutes); `tools/apoio-faixa.mjs` × `tools/pesquisa/apoio_metrica.py`,
+  `PESQUISA-CATEGORIA-D.md` §9. Lição: mudança de forma ou de apoio que não muda QUEM conduz não move o "à frente"; medir o
+  painel junto (o "à frente" sobe fácil com a posse estéril). **D8 (item 25, a intensidade)**: MEDIDO, sem mudança na lógica —
+  a conta do teste na Metrica (`tools/pesquisa/intensidade_metrica.py`) dá 207 m/min nos lances rápidos (p90 das janelas de
+  15 min 233: a meta passa a 180–235); o jogo faz 282 (IA × IA) e ~250–300 contra a pessoa; baixar é decisão do dono (FILA
+  "Depende do dono" 9a). Lições: a triagem do movimento com `--set` em 32–40 sementes (~80 s com 4 processos) bate com
+  o teste; decidir com ela e conferir nas 5 rodadas de 8. Mudança IA × IA: ler o painel do CI e repetir com OUTRAS sementes
+  (`--sem0 3001`) antes de concluir — gols e gols de fora caíram numa amostra e empataram na outra (sorteio), o impedimento
+  caiu nas duas (real; achado desligando uma peça por vez com `--set`). As amostras pequenas dos testes que reprovam depois da
+  mudança: medir base × PR com 4× a amostra; se empatam, a meta passa a reprovar quando a contagem prova (binomial/Poisson,
+  p < 5%) e a amostra cresce o que o CI aguenta; as cenas de estados novos (cartão, substituição) são defeitos de verdade.
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME em cima do jogador com a bola (`main.js marcarCondutor`,
   `#nome-condutor` fora do #hud — exceção pedida à "sem narração") e (2) os overalls da tela iguais aos do TM (`elenco.js
   notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos). **FILA (dono: "o 3 e 4
@@ -80,9 +126,80 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   a FOTO do autor com o número e o nome (`comemoracao.js` + a tela; a foto vem do pedido do TM); (7) o placar com mais a
   cara do Total Match, um pouco MAIOR e o relógio com os SEGUNDOS além dos minutos (`hud.js`, `teste-hud-minimo` H10 —
   continua cabendo no orçamento de HUD do celular).
-  **Ainda para a fila (dono, 17/10: "isso tudo pra depois"):** (8) **URGENTE, o 1º quando voltar:** "A IA NÃO CORRE, NEM
-  PRA DEFENDER, NEM PRA ATACAR, tem que ser mais difícil" — sem a bola, com a bola e na recomposição (medir antes com
-  `teste-intensidade`/`teste-transicao`/o painel: distância e disparadas por jogador, PPDA; comparar com a main); (9)
+  **Ainda para a fila (dono, 17/10: "isso tudo pra depois"):** (8) "A IA NÃO CORRE, NEM PRA DEFENDER, NEM PRA ATACAR, tem
+  que ser mais difícil" — 1ª parte (21/10): medido com `tools/medir-corrida.mjs` (fases, contra o
+  humano roteirizado de `tools/lib/humano-roteiro.mjs`: agressivo/conduz/calmo/passivo). A IA adversária DEFENDE forte
+  (1º defensor a ~1,5–2 m do humano, ~1,6–2,7 botes/min, o humano fica ~1–2 s com a bola) e recompõe a ~6 m/s; o que não
+  corria era o ATAQUE: a subida com a jogada estava desligada (`IA_ATAQUE.sobeCorrendo` 1000) — religada com histerese e
+  só com o ataque progredindo, só no time da IA CONTRA uma pessoa jogando de verdade (`m.humanos` do outro lado sem
+  `m.iaJoga`) e só quem está a > `sobeLonge` 12 m do condutor (`IA.modos.sobe`, corrida firme sem sprint): a IA atacando
+  contra o humano 159 → ~177 m/min, corridas à frente da bola 0,44 → 0,59 por instante. A partida IA × IA (a demo, o
+  painel, o Simular o resto) fica BIT A BIT igual (`hash-partida --ref`: demo IGUAL) — valendo também nela, cada rodada
+  do CI reprovava outros testes de eventos raros (substituição, comemoração, treinadores, cabeceio, não passa da bola);
+  subindo os companheiros do humano, a arrancada trotando dele chegava à área em 11% (teste-defesa-corrida); subindo os de
+  perto do condutor, o chamado da PRESSÃO chegava menos (teste-pressao-humano M2 66 → 59%). Lição: mudança de IA que
+  vale na IA × IA mexe em todas as partidas dos testes; quando o pedido é sobre o jogo contra a pessoa, ligar só nele. Testado e NÃO entrou (medido): condução mais rápida (correrLivre/correrAte/magConduz)
+  e mais corridas nas costas (recarga/max/vCondutor) — pouco ganho e vai-e-volta 8,3 → 9,8–10,4/min. Era PENDENTE: os
+  COMPANHEIROS do humano quase não apertavam (FEITO no D4, PR #536: o controlado fora do 1º/2º homem, a linha de engajamento
+  dos companheiros a 72 m, a cobertura a 5 m e a chegada a 5 m/s²; `teste-ia-corre` C1 6,85 → 6,00 m, C2 36 → 42%; a linha da IA contra a pessoa 67 → 69 m pelo PPDA; antes: 1º a ~7,5–8 m do condutor, 0,1–0,2 bote/min com o humano parado) — o
+  controlado é o 1º homem quando está perto, `semAtropelar` vale para o time todo do humano e a IA com a bola toca em
+  < 0,5 s; excluir o controlado do 1º/2º homem não mudou (medido). **Categoria D, D2 (24/10; a IA ATACA correndo, itens 67
+  e 21; `PESQUISA-CATEGORIA-D.md`, contrato "A IA contra a pessoa"):** o portão virou função (`tatica.js contraPessoa`/
+  `timeDaPessoa`, pela `pessoaJoga`: sem marca da IA na entrada do lado da pessoa — `m.iaNaEntrada` do `sim.js`, `ia` OU
+  `iaCobra` — e o travado do TM não expulso) e as constantes só contra a pessoa moram em `config.js IA_PESSOA` (juntadas por
+  cima na carga: `UTIL_P`, `CORR_P`, `SUAVE_APOIO_P`). Em volume a IA já corria mais que o real (188 × 140 m/min, Metrica):
+  REDISTRIBUIR, nunca somar. O condutor avalia a condução onde chega, conduz trotando (CORRER só com 14 m livres) e lê o
+  adversário 0,12 s à frente no risco (`manterAntecipa`: só no agora ele conduzia para dentro do bote, roubadas no pé +25%;
+  com 0,1 s os pênaltis da IA no 'dribla' do teste-faltas-sentido iam a 0,64 por partida, meta ≤ 0,6; com 0,15 e 0,2 s o
+  teste-nao-passa do CI reprovava por casos do time da pessoa — mudança contra a pessoa embaralha todas as partidas com o
+  roteiro: decidir com amostra grande e conferir depois as sementes fixas do CI),
+  o apoio curto vai em corrida firme (`IA.modos.apoia`), longe da bola o apoio anda e a subida é só a ≤ 20 m dela, as
+  corridas nas costas são dos centroavantes e terminam DENTRO da área. Régua `tools/lib/corrida-medidas.mjs` +
+  `teste-ia-corre` (padrão; P — o portão —, A e V valendo, M e C informativas até o D3/D4; ± por bootstrap estratificado
+  por roteiro): condutor 7,6 → 11,8 km/h, posse 0,50 → 0,83 s, o apoio perto com o condutor conduzindo andando 43 → 26%
+  (real 33), corridas à área 3,7 → 24%, chutes da área 60 → 78% (o "≥ 55%" do plano a main já cumpria: meta ≥ 70),
+  roubadas no pé 2,42 → 2,33/min (teto base + 15%), volume 182 → 171 m/min, vai e volta 5,95 → 4,74. Contra a pessoa o
+  condutor já conduzindo vira no máximo 0,6 rad por decisão e não usa a condução curta (o MOD girava o corpo em volta da bola
+  a ~3 m/s: teste-nao-passa 0,60 → 0,33); o chamado da PRESSÃO desvia com 0,45 m de folga (M8 4,8 → 2,8: trombava nos
+  próprios companheiros que continham o condutor) e o M2 conta os casos ao alcance em 1,5 s (≤ 8,5 m; com a IA ficando com
+  a bola, os longos viraram de 9–12 m — a amostra passou a medir a distância, não a PRESSÃO). Lições: a resposta do peso da
+  condução é em DEGRAU (0,95 → posse 0,60 s; 1,0 → 1,1 s) e o ritmo vem do `magConduz`; com meias e pontas correndo até a
+  área o meio voltava mais devagar na perda (teste-transicao `--humano` 6,1 → 5,4 m/s; o `urgente` não resolve, é física:
+  quem está em disparada para lá freia antes); uma chave nova num objeto juntado por cima (`dist`) sobrescreveu a do ponto
+  calmo e deu NaN — nome de chave novo nunca repete o de quem ele cobre, e o mesmo vale para campo novo no MUNDO (`m.iaMarca`
+  já era o cache da marcação do `ia.js`: escrever nele mudou a partida contra a pessoa — procurar o nome antes); o portão
+  que só lia o `m.iaJoga` (só a marca `ia`) ligava nas cobranças da demo do Node (`iaCobra`), na página `?demo=1` e com o
+  travado do TM expulso — com o `iaNaEntrada` a página é IA × IA (também para a subida do #500); medida "perto da bola" sem
+  tirar o dono mede o condutor (a do apoio passava com o apoio curto desligado: o A6b, com o condutor conduzindo, separa);
+  premissa de semente de teste de navegador vira condição do próprio lance (V11 do `teste-replay-paradas-tela`: o lance onde
+  a bola estava; F7 do `teste-cenas-tela`: o botão pela lista do guardador). **Categoria D, D3 (25/10; a IA MARCA correndo,
+  itens 67-defesa, 19 e 20; `PESQUISA-CATEGORIA-D.md` §6, contrato "D3"):** só contra a pessoa (`IA_PESSOA` D3; `SUAVE_MARCA_P`,
+  `RECOMP_P`, `CORRIDA_P` no `ia-tatica.js`; `UTIL_P.passeAntecipa` no `ia-ataque.js`), REDISTRIBUINDO — o volume dos 5 s depois
+  da perda já estava no teto (229,7 m/min; Jerome 2024, p90 ~230): quem marca a até 33 m da bola sem o teto do trote (d / 7,
+  sprint além de 9 m, sem o arranque calmo, a espera da volta [12 m, 1,3 s]); o da zona do meio/frente a ≤ 12 m do condutor
+  ENCURTA (0,3 do caminho até 4 m dele) só na janela de um gatilho de pressão e com ele abaixo de 4 m/s (sempre ligado, subia
+  no condutor que arrancava: faltas da IA 1,96 → 2,67); a Média engaja a 67 m (78 dava agressão 86%; 68, PPDA 8,0 num conjunto de sementes); a
+  recomposição vira em ARCO (pedido > 100° a > 3 m/s: o rumo a 0,95 rad com o CORRER — acima de 112° o passoCorpo para antes
+  de virar) e, a mais de 16 m da bola, volta a 0,75 sem sprint (paga o volume) — menos o MEIO que ficou à frente da bola (com o
+  "longe" valendo para ele, o recuo do meio do `teste-transicao --humano` caía de 6,1 a 4,0 m/s); o bloco do corredor sprinta
+  com 4 m de atraso; o PASSE e a ENFIADA da IA contra a pessoa leem cada adversário também onde ele estará em 0,5 s (o passe
+  sai depois da carga do botão: a roubada desfeita do `teste-defesa-corrida` era o passe decidido no tick da roubada e solto
+  ~0,5 s depois na corrida de volta da pessoa — 6,6% desses passes na main, 14% com a marcação nova, ~10% com a leitura;
+  Spearman 2018). `teste-ia-corre` seção M (a lógica INSTRUMENTADA: `copiaInstrumentada` grava a distância ao ponto do
+  `para()`; CI com 8 sementes; as metas do D3 com * reprovam só além de 2 ±): aproximação do 1º homem a 4–12 m 2,4 → 6,6 km/h
+  (real 7,4–7,5), "longe e devagar" 31 → 16%, perda 229,7 → 232,0 m/min (dentro do ±; 229,7 na 2ª rodada), total 171 → 165,
+  vai e volta 4,74 → 4,32; `teste-pressao --humano` (padrão; a pessoa "espelho" = a decisão da IA sem a marca `ia`, 48 partidas): PPDA 11,9 →
+  9,4 (12,5 → 8,5 nas sementes 1001–1048), agressão 72 → 74% (≤ 78), retomada 36 → 40%. NÃO entrou (medido): o sprint mais cedo da recomposição e a frente
+  sprintando (o "longe e devagar" dela é a ACELERAÇÃO do começo: 95% nos primeiros 0,75 s), a cobertura do 2º homem a 6 m
+  pelo modo pressa, o condutor rápido a 6,3 m/s contra a pessoa (vai e volta e roubadas sofridas reprovavam), quem o condutor
+  rápido já passou recompondo em disparada (derrubava o defensor do corredor de 3,8 a 2,6 m/s). PENDENTE: o defensor do
+  corredor (3,90 → 3,38 m/s, meta 5 — o recuo começa ~0,8 s antes, a física dá ~4,8), a recomposição "longe e devagar" ≤ 15%
+  (22%) e o 2º/3º homem (7,4/12,3 m; o 2º marcador real fica a 9,6 m). Lições: as medidas da marcação mudam entre calibrações
+  vizinhas mais que o ± (PPDA 8,4 × 10,8 com o encurtar 0,30 × 0,35; o gol por chute nas arrancadas de 0 a 26%; a roubada
+  desfeita 4–9%; o defensor do corredor 2,0–4,7 m/s) — 24–48 partidas, metas que reprovam quando PROVAM (2 ± ou binomial); um
+  guarda que sobe em toda calibração tem MECANISMO: rastrear o lance tick a tick antes de calibrar (a desfeita era o passe na
+  corrida de volta); contra os roteiros o PPDA da IA não se mede (eles quase não passam): o espelho; com a base no teto de
+  uma guarda de volume, todo ganho perto da bola tem de ser pago longe dela; (9)
   editar o TEMPO de jogo e a DIFICULDADE (na pausa/antes do jogo e vindo do TM pelo pedido); (10) botão de CARRINHO
   (dividida deslizando; falta/cartão pela Regra 12 em `faltas.js`; cabe no orçamento de HUD do celular); (11) clássico mais
   PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores (bote mais forte, mais contato), não pelo árbitro (o pedido do TM
@@ -147,7 +264,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
 - Toda mudança de jogabilidade tem teste que **reprova antes e passa depois**, com tabela antes → depois no PR.
   O GitHub Actions roda os testes (`golaco/tools/rodar-testes.mjs` + `teste-carga.mjs`) em todo PR
   (`.github/workflows/golaco-testes.yml`) e antes do deploy (`deploy-pages.yml`, job `testes-golaco`): reprovou,
-  não publica. **CI em partes** (15/10): o deploy chama o mesmo `golaco-testes.yml`, que roda os testes em Node em 4
+  não publica. O deploy PULA a bateria quando `golaco/`, `legacy-total-match/` e o `golaco-testes.yml` estão iguais aos do
+  último deploy aprovado (job `mudancas`; 26/10: mudança só no THE FLASH publicava em ~25 min, agora ~3). Quando a bateria roda, o job `rapido` publica o commit JÁ com o golaco que está no ar (o do último deploy aprovado) e o `deploy` publica de novo no fim (com o golaco novo se passou); a montagem do site mora em `.github/scripts/montar-site.sh`. **CI em partes** (15/10): o deploy chama o mesmo `golaco-testes.yml`, que roda os testes em Node em 4
   máquinas ao mesmo tempo (`rodar-testes.mjs --parte i --de 4`) e os de navegador em 3 (`rodar-navegador.mjs`; teste
   de navegador novo entra na lista DESSE arquivo, não no YAML), divididos pelo tempo de `tools/lib/tempos-ci.mjs`;
   o check do PR continua `testes` (só passa com todas as partes).
@@ -167,7 +285,7 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   humano realista + mocap + rostos por IA (UV) → 6 estádio, torcida, câmera, replay, comemoração → 7 celular, menus,
   modos e desempenho.
 - Técnica: three.js **0.170.0** por importmap (jsdelivr), ES modules, sem build. Lógica (`js/*.js` exceto `entrada.js`,
-  `main.js`, `hud.js`, as telas `editor-time.js`/`escalacao-tela.js`/`prejogo-tela.js` e `js/render/`) **sem three.js nem DOM**. Passo fixo 1/60 s + desenho interpolado (`laco.js`).
+  `main.js`, `hud.js`, as telas `editor-time.js`/`escalacao-tela.js`/`prejogo-tela.js`/`cenas-tela.js` e `js/render/`) **sem three.js nem DOM**. Passo fixo 1/60 s + desenho interpolado (`laco.js`).
   Aleatoriedade só por `rng.js` (sfc32 com semente no mundo); mesma semente = mesmo hash (`hashMundo`). Pose =
   função pura do estado (`anim.js`). Contratos em `golaco/CONTRATOS.md`, constantes em `golaco/js/config.js`.
   Coordenadas: x = comprimento (±52,5), z = largura (±34), y para cima, rumo h → (cos h, 0, sin h).
@@ -392,7 +510,7 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   passe errado é interceptação). Gols (painel de 48, mesmas sementes): main 1,79 → branch 1,50 — a defesa da arrancada
   (`corrida.v` 6,8; com 6,3 caía a 0,90) e menos gol de roubada alta (47% dos gols na main); falta volume de ataque
   (chutes 8,5 → 6,6), calibração final com a condução curta. Testes novos: `teste-cabeceio`, `teste-defesa-corrida`,
-  `teste-intercepta` (os três reprovam na base; o defensor do corredor, 3,3–3,6 m/s contra a meta de 5, ficou PENDENTE); o painel ganhou `--retomar`/`--parcial` (máquina dividida), `--base-json` e `--set`. O
+  `teste-intercepta` (os três reprovam na base; o defensor do corredor, 3,3–3,6 m/s contra a meta de 5, ficou PENDENTE; em 25/10 virou informativo e a meta do item 19 é a de chegada); o painel ganhou `--retomar`/`--parcial` (máquina dividida), `--base-json` e `--set`. O
   `workflow_dispatch` do painel no GitHub dá 403 para a integração das sessões (roda sozinho no PR). NÃO mexer na condução nesta frente
   (a condução curta é de outra branch; a calibração final do painel é junto com ela).
 - **Tela limpa** (pedidos de 11/10: "quero menos informação na tela", "não quero a linha de impedimento durante o jogo";
@@ -433,6 +551,70 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   Contraprova (13/10): o enquadramento confere os sólidos só no candidato que serve (S9: 415 mil → 11 mil chamadas de
   `solidoEm`, mesmo quadro) e só o cabeceio PARA O GOL marca "chute" no anel (`marcasDoPasso`: o de passe não abre a
   análise no "Replay" da pausa).
+- **Replays nas paradas** (dono, 22/10: "os replays de faltas e jogadas passando na tela enquanto o jogo tá parado"; PR 1 do
+  `PLANO-CENAS.md`, contrato "Cenas das paradas" no `CONTRATOS.md`): `js/lances.js` (puro, fora do fecho, no download
+  inicial; `REPLAY_PARADA` mora nele) classifica a bola morta pelos eventos — pênalti, vermelho, trave (classe A, sempre),
+  amarelo, falta a ≤ 25 m do gol, espalmada, chute de dentro da área a ≤ 1,5 m da trave (classe B: ≤ 3 por tempo e ≥ 30 s
+  de bola rolando desde o último replay automático) —; o lance aceito fica ARMADO e toca no passo ANTES da montagem
+  (`montaNoProximoPasso`, a cópia da conta do `regrasPartida`): 1 s ao vivo → TV 1× + 'fechada' (falta) ou 'atras'
+  (chance) 0,5×, ≤ 8 s → a montagem. `seguraParaReplayParada()` fica no TOPO da volta do laço (antes da entrada da demo e,
+  no online, de `podePassar`/`entradas`). ~2,3 por partida (24 partidas), o ar em replay (gol + impedimento + paradas) ~9,7%. `?replayParada=0|1`; desligado com
+  webdriver/prints/demo; vale com "Replays: Ligado". Testes: `teste-replay-paradas` (Node, padrão: árbitro independente,
+  roteiro, orçamento, pureza, predicado) e `teste-replay-paradas-tela` (navegador, CI); ferramentas `lib/paradas-node.mjs`
+  (a página em Node) e `lib/acha-parada.mjs`. Mudou algo no `partida.js regrasPartida`? O P5 reprova: atualizar a cópia.
+- **Cena do cartão** (dono, 22/10: "as cenas de cartões"; PR 2 do `PLANO-CENAS.md`, contrato "Cenas das paradas"): porte da
+  branch `golaco/cenas-jogo` para FORA do fecho — `js/cenas-config.js` (as `CENA_*`, importado só pelos módulos sob demanda),
+  `js/cena-atores.js`/`js/cena-cartao.js` (puros; cópias de `moverJuntas`/`inclinarTronco`/`flexionar` da comemoração),
+  `render/cartao3d.js`, `js/cenas-tela.js` + `css/cenas.css` (tela DOM, como `editor-time.js`), tudo pelo `SOB.cenas` do
+  `main.js`. No fim do passo (`decidirCartao`) o cartão mais grave vira a cena: o árbitro vem e ergue o cartão (3D, na mão
+  DESENHADA: `jog3d.poseDesenhada`), 3 reações de amarelo e 3 de vermelho, o expulso sai pelo túnel (`render/vao-placas.js`,
+  saiu do `prejogo.js`). Simulação PARADA no tick do cartão (hash igual); os treinadores vivos não andam nem são desenhados
+  (cópias na cena: sem corte no anel, o replay da falta vem inteiro); o estádio anda no relógio do desenho (`relEst`). Ordem:
+  falta → cartão → 1 s ao vivo → replay de parada; vantagem que virou gol → comemoração → cartão no gol + 149 (a cortina para
+  ali; todos freiam fora do quadro: `CENA_CARTAO.assentar`) → saída → replay do gol. A TARJA de identificação (cartão, sigla,
+  escudo, número, nome; sem motivo nem minuto) é uma exceção escrita à "sem narração", como a faixa ENTRA/SAI e o selo
+  IMPEDIMENTO/POSIÇÃO LEGAL: só dentro da cena, nunca com a bola rolando. A faixa "Você foi expulso" (TM travado) espera a
+  cena e o replay (também a comemoração e o replay do gol; no intervalo, o 2º tempo; no fim de jogo fica a faixa do fim). A
+  comemoração que a cena encerra no gol + 149 deixa o passo da saída NEUTRO (`golNeutro`: a mesma entrada por tick com e sem
+  a cena). Pulada antes de o cartão subir, volta o ícone de sempre. Ninguém da cena passa por cima da bola parada
+  (`CENAS.bola`; a página desenha a do mundo); o plano da torcida anda no trilho do pré-jogo do estádio de forma própria
+  (`ajustePlano`). "Cenas <small>ligadas</small>" na linha das cenas do "Modo de jogo" (3 botões que crescem pelo texto: numa
+  linha a mais a pausa rolava em 844×390); `?cenas=0|1`; desligada com webdriver/prints/demo; online = o ícone de hoje; sem o
+  módulo baixado = o ícone. API `__golaco.cenas`. Testes: `teste-cenas` (Node, padrão: A canhão de 144 com os treinadores
+  onde os vivos ficam, A-L 48 vermelhos na lateral de cá, B, E, F, G, P os trilhos das plantas) e `teste-cenas-tela`
+  (navegador). Download inicial: folga 1434 → 1399 KB.
+- **Cena do intervalo** (dono, 22/10: "a cena de intervalo"; PR 3 do `PLANO-CENAS.md`, contrato "Cenas das paradas"):
+  `js/cena-fim.js` (puro, sob demanda; já com a interface do fim de jogo do PR 4) + o GUARDADOR de lances
+  (`render/lances-guarda.js`, puro: até 6 lances de ≤ 6 s, jogadores a 30 Hz em Int16 1/4000 m, bola/relógio/corte a 60 Hz,
+  ~5,7 MiB fixos alocados na 1ª partida; o gol guardado no `posGol` e a parada A/B no passo antes da montagem, com ou sem
+  replay) tocado num MINI-ANEL pelo diretor com fonte (`iniciarReplay(ro, {fonte, aoFim})`: o fim volta à cena). O laço fica
+  parado no tick do `intervalo` até o plano `geral`; ali solta e a `saida` do 2º tempo acaba a cena no MESMO tick/hash de
+  `?cenas=0`. Tarja do placar com os autores e painel de estatísticas do 1º tempo (exceções escritas à "sem narração", só
+  dentro da cena). A súmula passou a import ESTÁTICO (sempre na partida; escanteios na bola morta, faltas por time,
+  porTempo; o `resultadoTM` não muda) — o "sem `?tm` o download não cresce" deixou de valer para ela (folga 1399 → 1347 KB).
+  Comandos: Toque/Enter/A = próximo bloco (no geral, a saída), "Pular" (toque) = a saída, Esc/P/Start = a pausa (Editar time).
+  Lição: cena POR BLOCOS precisa da BORDA do aperto (`F.botoes = ent.botoes`; com `&=` o botão segurado contava como novo a
+  cada quadro e atravessava os blocos). Testes: `teste-cenas` C, `teste-lances-guarda`, `teste-ponte-tm` P7/P7b,
+  `teste-cenas-tela` I (e C12d).
+- **Cena do pós-jogo** (dono, 22/10: "a cena de pós jogo"; PR 4 do `PLANO-CENAS.md`, contrato "Cenas das paradas"): a mesma
+  `js/cena-fim.js` com `planejarFim(m, 'fimDeJogo')` — apito → vencedor/perdedor (empate: neutro) → cumprimentos → TROCA DE
+  CAMISA (1 par de adversários de linha pelo hash do jogo, abraçados, cada um com a camisa do outro: o kit misto
+  `troca:<camisa>:<resto>:<num>` do `render/jogador3d.js`, com o patrocínio da camisa na versão de teste — 0 chamada a mais
+  medida no celular, manequim e corpo novo) → os treinadores se cumprimentam → aplauso → torcida (festa do bandeirão/
+  sinalizadores de quem ganhou, vaia de quem perdeu) → MELHOR EM CAMPO (`sumula.js melhorEmCampo`; a nota pela mesma conta
+  do `jogador` do `resultadoTM`, que ganha só o campo OPCIONAL `melhor: {lado, tmId, nome, nota}`) → placar final com os
+  autores → estatísticas da partida (não no TM) → a faixa final com "Melhores momentos" (até 6 lances do guardador, os gols
+  primeiro, ≤ 30 s; o Pular volta à faixa). ~34,5 s (36 com a troca; empate 32/33,5; o empate que continua no TM é a versão
+  curta, 14,5 s — `partida.empateContinua`, que o TM v375 manda por modo: `tm3d.js empateContinuaDe`, liga = false,
+  mata-mata = a mesma conta do onDone; sem o campo, curta). Fora do online o laço fica
+  PARADO no tick do `fimDeJogo` até "Jogar de novo" (em `fim` só o tick andaria); NO ONLINE a cena roda sem segurar (o
+  lockstep segue). O resultado do TM continua gravado no apito (a cena não atrasa nada). Tarjas do melhor em campo, do
+  placar final e o painel: exceções escritas à "sem narração", só dentro da cena. API `__golaco.cenas` (tipo 'fim':
+  `fimDeTeste({placar})`, `melhoresMomentos()`, `historicoPosJogo`, `faixaFinal`); `?troca=0` tira a troca. Testes:
+  `teste-cenas` FIM (56 fins nos 3 desfechos; `--sem-fim`/`--min-fim` trocam a amostra), `teste-ponte-tm` P8 (`--base` compara
+  o resto do resultado com a súmula da base), `teste-cenas-tela` F (navegador). Lição: a cena do fim é a 1ª com os 22 em campo
+  o tempo todo — quem foge da lente, a 2ª fileira de câmeras, quem está dentro do gol/atrás das placas no apito e o trilho da
+  torcida só apareceram com 7 amostras de 56 fins (uma amostra só passava).
 - **Pré-jogo** (pedido de 11/10; `PESQUISA-PREJOGO.md`, contrato em `CONTRATOS.md`): antes do 1º passo (tick 0; o apito
   da saída só no fim; hash igual) — abertura "Toque para começar" (libera o som), aéreo de fora, fachada com a torcida
   chegando, o estádio por dentro, túnel, entrada com os árbitros, plano alto da fila se formando, a câmera passando pela
@@ -456,7 +638,16 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   pé (ganha pela chance da DIVIDIDA; `boteErrado`) e o gatilho de ESTADO `IA_DEFESA.lento` põe o 1º homem a 0,2 m da bola
   e o 2º na cobertura (`FALTAS.bote.lento` 0,4); PRESSÃO = quem CHEGA PRIMEIRO persegue em disparada e disputa a bola
   pela velocidade, do lado do gol, com o 1º homem da IA já apertando chama outro, e setas âmbar acima dele
-  (`pressionadorVisivel`); goleiro (`regras-goleiro.js`, IFAB 12.2/12.3/16): mão só na própria área, sem recuo (o
+  (`pressionadorVisivel`) — D1 (dono, 23/10: "preciso do botão de pressão funcionando"; item 18 da FILA): um toque vale
+  ~1 s (`pressao.validade` em s, só com o time defendendo; qualquer retomada encerra o pedido, também a do goleiro com a
+  mão: `m.possePorTime` e `encerrarPressao`), o chamado tenta o bote correndo junto do condutor (trava "embalado" pela
+  conta do `forcaContato`, a menor entre a própria e a relativa que fecha nele, `boteContidoDoChamado`; as de "por trás" e
+  do corpo entrando ficam), a marca só troca de jogador com `histerese` 0,5 s (condutor) / `histeresePasse`
+  1,0 s (passe da IA) e o O/RB preso como PEGAR vira PRESSÃO quando a fase vira defesa (`entrada.js RELE_NA_DEFESA`; o
+  replay que começa com ele segurado não o vê como aperto novo: `main.js iniciarReplay`, `teste-replay` C7);
+  todas as posses, humano parado, 1 s de botão: ganhar a bola em 3 s +2,3 → +9,4 pontos (`teste-pressao-humano` M9–M12).
+  A C1 (PRESSÃO com o analógico solto faz o PRÓPRIO controlado apertar, `entradaPressaoPropria`) está LIGADA
+  (`DEFESA_HUMANO.pressao.controlado` = true — dono, 24/10: "meu jogador aperta também"; +9,4 → +13,1 pontos); goleiro (`regras-goleiro.js`, IFAB 12.2/12.3/16): mão só na própria área, sem recuo (o
   goleiro domina com o pé; a IA dele passa curto ou dá chutão; a IA de linha só recua seguro), PEGAR (O/RB/botão que só
   aparece com ele com a bola no pé) com recuo ou com a bola que soltou = tiro livre indireto, 8 s com a bola nas mãos =
   escanteio (anel âmbar sem texto nos últimos 5 s; a reposição automática do humano saiu — a demo e a IA repõem),
@@ -532,7 +723,22 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `render/fachada-estilos.js`, só baixado nesse caso), cores e LED, cobertura total/lados/parcial/nenhuma, cadeiras
   (liso/misto/faixas/mosaico, também no jogo) e o nome real na placa. Edição PÚBLICA, jogo neutro ou estádio fora da
   base: o Estádio Golaço de hoje com o nome "Estádio Total Match" e o mosaico "TOTAL MATCH". A geometria não muda (trilhos
-  de câmera e a bola). Testes: `teste-identidade` (E1–E8), `teste-prejogo` item 14. Mexeu em main.js,
+  de câmera e a bola). **Forma própria** (dono, 16/10: "não tem nada a ver com o maracanã"; 21/10, depois de ver a prévia:
+  "quero isso com todos os estádios do jogo, ele pesquisou o estádio, olhou direitinho e fez detalhes certinho"):
+  `js/estadio-planta.js` (puro, a fonte única das contas: forma, lugares da torcida, sólidos da câmera, trilhos) com a 1ª
+  família, a TIGELA OVAL COM ANEL DE COBERTURA (o Maracanã de hoje, medidas reais; `estadios.json` → `forma`), e
+  `render/estadio-real.js` (o desenho, sob demanda, com o entorno próprio do Maracanã: Maracanãzinho, trilhos, Mangueira,
+  Cristo); 4 rodadas com fotos de referência. Teste `teste-estadio-forma` (padrão). **Plano dos lotes (dono, 21/10:
+  "em lotes")**: (1) publicar o Maracanã; (2) as outras famílias — 4 arquibancadas à inglesa (cantos abertos/fechados),
+  arena moderna fechada, com pista de atletismo, pequeno —; (3) lote 1 de estádios: os 56 do Brasil + os 58 com ≥ 50 mil
+  lugares (pesquisa de cada um: forma, medidas, anéis, cobertura, fachada, marcas próprias e entorno; detalhes próprios
+  nos famosos); depois os outros 409 em lotes, um PR por lote. **Planta genérica** (lote 1, 21/10; contrato "Estádios de
+  forma genérica" no `CONTRATOS.md`): `js/estadio-generico.js` (puro; a mesma interface da do Maracanã) + `render/estadio-generico.js`
+  (sob demanda) para as 5 famílias; a forma de cada estádio sai da pesquisa por `tools/estadios/gerar-formas.mjs` e da revisão
+  contra as fotos (`tools/estadios/ajustes-forma.json`); conferir com `tools/prints-estadios.mjs` (folha por estádio) e o
+  `teste-estadio-generico` (a base inteira). Os defeitos que se repetem na revisão viram CAMPO da forma (talude, `cob.comp`,
+  torres de luz por lado, cadeiras em setores/raios, bola, cubo; lista no contrato), não ajuste estádio por estádio. Pesquisa grande: o Workflow roda só 2 agentes por vez nesta máquina — para
+  ~100 estádios, agentes em segundo plano (Agent) gravando cada fatia num arquivo andam ~4× mais rápido. Mexeu em main.js,
   hud.js, partida.js, acoes.js ou nos desenhos de estádio/torcida? Rodar também `teste-tm-tela` e o `testar-3d`.
 - **Modo Pênaltis 3D** (dono, 15/10: "crie uma versão só de jogador de pênaltis" → "modo de pênaltis 3d igual ao golaço, só
   que versão de pênaltis"; contrato "Disputa de pênaltis" no `CONTRATOS.md`): `?modo=penaltis`, "Pênaltis" no "Modo de jogo" e,
@@ -580,8 +786,40 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   escanteio, falta, pênalti e tiro de meta do humano (e no pênalti contra), o analógico pela câmera dela; na cobrança da
   PESSOA o analógico gira a mira, a carga é a força e Z/X (analógico direito, botões CURVA) põem curva; a linha é a física
   da bola passo a passo (a bola real passa a 0 cm dela sem o erro do cobrador; na falta só até 4 m além da barreira). A IA
-  não usa (hash-partida da demo IGUAL). Testes: `teste-mira` (Node) e `teste-bola-parada-tela` (navegador). **O download
-  inicial está no teto** (`teste-carga` 4 MB: sobram ~0,6 KB): código novo que não precisa do começo vai sob demanda.
+  não usa (hash-partida da demo IGUAL). Testes: `teste-mira` (Node) e `teste-bola-parada-tela` (navegador). **Download
+  inicial** (`teste-carga` 4 MB): desde 21/10 os sons da torcida (~1,4 MB de MP3) baixam no 1º GESTO (`render/som.js`;
+  antes dele nada toca) — 3,88 → 2,57 MB, folga ~1,4 MB; código novo que não precisa do começo continua sob demanda.
+- **Etapa 5 — corpo humano realista** (dono, 22/10: "vamos trabalhar intensivamente no corpo e face dos jogadores"; plano e
+  pesquisa em `golaco/PESQUISA-ETAPA5.md`, contrato "Corpo humano realista — Etapa 5.1" no `CONTRATOS.md`): o Rocketbox
+  `Sports_Male_02` (MIT) encaixado nas medidas do jogo (`tools/humano/`, README), 25 ossos do desenho pelas juntas
+  (`render/esqueleto.js`, puro), 4 LODs (`render/lod-humano.js`), a pele na GPU e o uniforme pintado por região
+  (`render/humano3d.js`, sob demanda) — atrás de `?corpo=humano` até o rosto chegar. SÓ DESENHO: `tools/fecho-hash.mjs
+  --diff origin/main` tem de dar 0 em todo PR da Etapa 5 (a `config.js` e a `comemoracao.js` são do fecho: constante do
+  corpo vai no `repouso` do `corpo.json` ou no render). Testes: `teste-ossos`, `teste-lod-humano` (Node), `teste-corpo-tela`
+  (navegador). Lições: o tornozelo APOIADO do jogo fica a 8 cm (a pose do treino parado dá 10,2: medir na partida); a torção
+  do membro pelas juntas DESENHADAS virava (usar as do jogo na perna); o ombro do desenho tem de subir com o braço (com a
+  queda fixa, o braço erguido esticava e a torção pulava 123°); a POSTURA "curvada" (joelho 42° parado) se corrige no
+  desenho (`esqueleto.js postura`: sobe o quadril com os pés no lugar, endireita tronco e cabeça; as mãos juntas na bola
+  ficam) — mão presa no lugar com o ombro subindo fazia o braço pular (O2 66 → 166): o braço vai junto, rígido. Rostos reais (versão de teste com senha, edição pro): fotos
+  mais recentes do Commons pelas PÁGINAS (a API dá 429 para o IP desta máquina; miniaturas por thumb.wikimedia.org) e
+  as camisas 2026 dos 20 clubes do Brasileirão pesquisadas (cores estimadas por foto; goleiros são o mais incerto).
+  **Rostos reais 5.2** (`tools/rostos-reais/README.md`, contrato "Rostos reais — Etapa 5.2"): 112 do Brasileirão (de 273;
+  quem não tem foto livre, neutra e conferida fica com a cabeça genérica). Lições:
+  - **A foto manda mais que o processo:** sorriso, boné, língua e cabeça inclinada ficam gravados na pele. Por isso o
+    filtro de expressão pelos blendshapes e mais candidatas pela busca de imagens do Commons (a página
+    Special:MediaSearch).
+  - **A busca traz outras pessoas** (até uma atriz, um "Nicanor" de 1990, a foto com dois jogadores): identidade pelo
+    SFace contra a foto do TM (≥ 0,40), foto com outro jogador citado só com ≥ 0,6.
+  - **A esclera clareia o rosto até o branco** quando o olho é escuro: conferir a exposição pela pele (L* 24–72) e o
+    tom pela faixa de pele.
+  - **A luz da foto** sai pela média local da pele.
+  - **A linha no alto da cabeça** era a costura da UV (os dois lados com tons diferentes) + a borda escura das ilhas
+    da textura base + normais não soldadas na malha: as três corrigidas.
+  **Patrocínios na versão de teste** (22/10; contrato "Patrocínios nas camisas reais" no `CONTRATOS.md`): só na edição
+  pro, com as camisas reais — 20 clubes, 161 logos (máscaras 512 × 256 em `assets/tm/patrocinios/`, índice
+  `assets/tm/patrocinios.json`, gerados por `tools/patrocinios/gerar.mjs` a partir da pesquisa com as fontes), decalques
+  planos no espaço de repouso no shader (`render/humano3d.js`; peito, ombro, manga, barra, número, calção, fornecedor).
+  Para TIRAR: apagar o índice e a pasta. Testes: `teste-patrocinios` (Node) e `teste-corpo-tela` C6/C7.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =
