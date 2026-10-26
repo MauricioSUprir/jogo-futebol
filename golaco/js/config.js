@@ -1072,7 +1072,6 @@ export const TATICA = {
   volta: { folga: 3, quieto: true, bolaPerto: 3 },
   pertoBola: 12,              // m — D5: quem marca a menos disto da bola segue com a espera e a virada de antes
   arco: 2.5,                  // m/s — abaixo disto (e acima de 0,5) a virada grande do ponto calmo vai pelo giro, em arco (0 = de uma vez)
-  linhaSobe: true,           // a linha que sobe (alvo à frente) vira na hora, sem a virada parada nem o arco (D5; false = com elas)
   // olhar da IA sem a bola na partida (ia-tatica.js olhaBolaPartida): velocidade filtrada em tauVel s
   // (o limite do desvio do tronco) e o desvio girando no máximo giro rad/s (o tremor é > 1,5 rad/s)
   // (D5: giro 1,2 → 1,4 — de costas para a bola andando devagar 14,9 → 13,9% em 40 sementes, o tremor igual)
