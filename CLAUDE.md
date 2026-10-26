@@ -100,7 +100,12 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   segura (`defesaPaga` 8 e `defesaPaga2` 6: o meio aperta e cobre), a cobertura do volante (`TATICA.volanteCobre`) e a
   recomposição com 8 m (sprint com 6) — 24 sementes: atrás da bola no 1º terço 3,8 → 4,2 (meta nova por terço contra os 4 times
   da Metrica), altura por faixa 2,7 → 2,1 m, linha de 4 no 1º terço 6,9 → 5,1 m (≤ 5: falta 0,1; o teste segue no etapa3).
-  Lição: o `teste-forma` com 8 sementes oscila ±0,5 no 1º terço entre conjuntos de sementes — decidir com 24. Lições: a triagem do movimento com `--set` em 32–40 sementes (~80 s com 4 processos) bate com
+  Lição: o `teste-forma` com 8 sementes oscila ±0,5 no 1º terço entre conjuntos de sementes — decidir com 24. **D7 (item 24, o
+  apoio)**: MEDIDO, sem mudança na lógica — o "à frente" (20,1%, meta 30–45) depende de QUEM conduz no campo de lá (real: zaga e
+  laterais 28% a +12,5 m; jogo 4%) e anda com o volume de ataque (item 26); 14 variantes, só a devolução valorizada chegou a
+  27–28%, com a posse estéril (0,88 gol, 4 chutes); `tools/apoio-faixa.mjs` × `tools/pesquisa/apoio_metrica.py`,
+  `PESQUISA-CATEGORIA-D.md` §9. Lição: mudança de forma ou de apoio que não muda QUEM conduz não move o "à frente"; medir o
+  painel junto (o "à frente" sobe fácil com a posse estéril). Lições: a triagem do movimento com `--set` em 32–40 sementes (~80 s com 4 processos) bate com
   o teste; decidir com ela e conferir nas 5 rodadas de 8. Mudança IA × IA: ler o painel do CI e repetir com OUTRAS sementes
   (`--sem0 3001`) antes de concluir — gols e gols de fora caíram numa amostra e empataram na outra (sorteio), o impedimento
   caiu nas duas (real; achado desligando uma peça por vez com `--set`). As amostras pequenas dos testes que reprovam depois da

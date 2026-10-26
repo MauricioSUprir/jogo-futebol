@@ -561,3 +561,75 @@ parte. O volume e a mistura dos chutes são da categoria E.
 
 - A linha de 4 no 1º terço passa de 6,9 para 5,1 m e o `teste-forma` segue no etapa3: falta 0,1 m na mediana de 24 sementes.
 - O "atrás da bola" no 1º terço (4,2) fica abaixo do pior time real (4,27): o que falta é com a bola a menos de 20 m do gol.
+
+## 9. D7 — o apoio ao portador (item 24)
+
+A medida é o `teste-apoio` (IA × IA). Na main de 26/10 (16 sementes) passa tudo menos o "à frente": companheiros a ≤ 30 m à
+frente (< 60°) / de lado / atrás do portador 20,1 / 36,6 / 43,3%, meta 30–45 / 30–45 / 20–35%. O cruzamento (de linha na área,
+mediana 2, 59 cruzamentos) fica na borda com 8 sementes (mediana 1 ou 2 conforme a amostra): o teste passa a 16 sementes.
+
+### 9.1 O que os dados reais dizem (Metrica; `tools/pesquisa/apoio_metrica.py`, a conta do teste)
+
+A mesma conta na Metrica dá 33,4 / 37,5 / 29,2% (a meta usa os 37/36/27 da análise da Etapa 3). Por faixa do portador
+(`tools/apoio-faixa.mjs`, 8 sementes, contra a Metrica):
+
+| faixa do portador | à frente, jogo | Metrica | à frente por instante, jogo | Metrica | quem conduz, jogo | Metrica |
+|---|---|---|---|---|---|---|
+| −17,5 | 33,3% | 40,7% | 2,36 | 2,44 | ZAG 32 VOL 27 MEI 19 LAT 13 PON 8 | ZAG 35 MEI 29 LAT 25 ATA 7 |
+| −7,5 | 27,2% | 40,7% | 1,94 | 2,58 | VOL 36 LAT 25 MEI 24 PON 8 ZAG 4 | MEI 34 ZAG 30 LAT 21 ATA 12 |
+| +2,5 | 14,9% | 38,2% | 1,09 | 2,40 | MEI 40 PON 21 ATA 20 LAT 10 VOL 9 ZAG 0 | MEI 36 LAT 23 ZAG 18 ATA 14 |
+| +12,5 | 8,8% | 30,1% | 0,55 | 1,87 | PON 40 ATA 29 MEI 25 LAT 4 VOL 2 ZAG 0 | MEI 38 ATA 28 LAT 19 ZAG 9 |
+| +22,5 | 5,4% | 22,7% | 0,30 | 1,30 | ATA 46 PON 34 MEI 17 | ATA 38 MEI 34 LAT 15 ZAG 3 |
+
+(Na Metrica as funções saem da posição média: os 3 mais adiantados são "ATA", pontas e centroavante juntos.)
+
+- **Com a bola no campo de lá, quem tem a bola muda.** No real, a zaga e os laterais estão com ela 28% do tempo a +12,5 m e 41%
+  a +2,5 m; no jogo, 4% e 10%. Pontas e centroavante têm a bola 69% do tempo a +12,5 m (real 28%), e quem conduz na frente não
+  tem ninguém à frente.
+- **O time real sobe com a bola.** A +12,5 m, 4,24 companheiros estão à frente da bola (qualquer distância); no jogo, 1,8. O
+  bloco fica a −2,2 m da bola no real e a −9,4 m no jogo; a zaga, a −24 m dela.
+- **Por quem conduz também falta, mas menos.** Companheiros à frente por instante, com a bola de −2,5 a +17,5 m: no real, 2,3
+  com um lateral conduzindo, 2,3 com um meia e 0,85 com um atacante; no jogo, 1,5–2,1, 1,3–1,5, e 0,4 (ponta) ou ~0
+  (centroavante). Com um meia conduzindo, os atacantes reais ficam a +12,1 m e |dw| 18,4 (55% "à frente"); os pontas do jogo
+  a +8 m e |dw| 22 (23–25%). O que mais pesa é a bola passar pelos de trás no campo de ataque.
+
+### 9.2 O diagnóstico
+
+- A decisão do condutor (`decidir`, utilidade pelo xT) leva a bola ao mais adiantado que alcança: no campo de lá o valor de ter a
+  bola (`K`) é 0 a partir de +10 m e perder custa pouco. O passe para trás vale o xT de onde está o recebedor, e quase nunca
+  ganha. O centroavante marcado segura 1,8 s e perde em 22% das posses.
+- As referências da forma com a bola já estão perto do real (média −3,6 m da bola, Metrica −2,2), mas os de trás andam pelo
+  ponto calmo atrás de um condutor a ~5 m/s: o lateral fica 8,3 m atrás da referência, o volante 4,3.
+
+### 9.3 A triagem (8 sementes no `teste-apoio` e no `apoio-faixa`; painel de 24 partidas, sementes 1001–1024)
+
+Base, a main: à frente 19,8%, impedimento 22,8%, corridas 32, 28 cruzamentos; painel 2,00 gols, 7,8 chutes, passe certo 85,8%,
+impedimento 1,08, chutes de fora 35%. O painel de 24 varia ±0,5 gol.
+
+| Variação | à frente | Efeito colateral | Ficou? |
+|---|---|---|---|
+| o time sobe com a bola (antecipação do ponto calmo + a subida firme também na IA × IA) | 20,5% | impedimento 28,1% (teto 25), corridas 39,5 | não |
+| pontas 5 m mais por dentro com a bola (4-3-3, 4-4-2, 4-2-3-1, 4-1-4-1) | 20,9% | chutes de fora 45%, impedimento 0,58 | não |
+| o 2º apoio curto é o de TRÁS no campo de ataque (lateral, volante ou meia central) | 19,2% | quem conduz não muda | não |
+| a pressão no condutor desconta proteger e conduzir (no campo de ataque; só no centroavante) | 20,3% (20,5%) | cruzamentos 28 → 9; chutes 6,0 | não |
+| as três de cima juntas | 23,0% | impedimento 26,6%, 8 cruzamentos | não |
+| o meia do apoio curto escalonado 7 m à frente de quem conduz do meio ou de trás | 19,8–20,8% | — | não |
+| a devolução valorizada (passe para trás com P ≥ 0,8 no campo de lá, +0,008 / 0,02 / 0,04) | 26,9 / 28,2 / 28,3% | posse estéril: 0,88 gol, 4,0 chutes, passe certo 91,3%, impedimento 34%, corridas 43, 2 cruzamentos | não |
+| a devolução só do atacante marcado (+0,01 / 0,03) ou de qualquer marcado (+0,01) | 21,1 / 21,6 / 20,5% | chutes 6,2–6,9, gols 1,1–1,8 | não |
+| o recebedor marcado vale menos (pressaoRecebe 5, pressaoValor 0,7) | 22,1% | impedimento 26,3%, passe certo 88,6%, chutes 6,6 | não |
+| o passe vale também pelo lance seguinte (o melhor passe do recebedor × 0,8 / 0,6; Fernández, Bornn & Cervone 2019, EPV; Decroos 2019, VAEP) | 20,8 / 19,0% | quem conduz não muda | não |
+
+- Só a devolução sobe o "à frente" de verdade, e ela leva a bola de volta para trás sem que o time crie: a bola fica no meio, a
+  faixa de +22,5 m cai de 1 695 para 778 amostras, os atacantes ficam parados na linha.
+- O "à frente" anda junto com o jeito de atacar: o real roda a bola pela zaga no campo de lá COM chance de gol; o jogo ataca
+  direto e cria pouco (gols 2,0, meta 2,3–3,5). Subir o "à frente" sem recuo pede o volume de ataque da categoria E (item 26).
+
+### 9.4 Limites e o que fica
+
+- Nada da lógica do jogo muda no D7 (`hash-partida` e `hash-igual` IGUAIS). O `teste-apoio` segue no etapa3, reprovando só
+  no "à frente" (20,1%). Ele passa a rodar 16 sementes.
+- Ficam no repositório a ferramenta do jogo (`tools/apoio-faixa.mjs`, a tabela acima com quem conduz por faixa) e a da Metrica
+  (`tools/pesquisa/apoio_metrica.py`).
+- O item 24 vai junto com o item 26 (o volume de ataque, categoria E). O caminho medido: a zaga e os laterais no campo de lá
+  com a bola (o bloco a −2 m dela, não a −9) e a circulação por eles. A devolução só entra se o ataque continuar criando: gols,
+  chutes, passe certo ≤ 86,5% no `teste-intercepta`, impedimento ≤ 25%, cruzamentos.
