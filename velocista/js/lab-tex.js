@@ -4,6 +4,7 @@ export const ROTULOS = [
   'CONTENÇÃO 01', 'CONTENÇÃO 02', 'CONTENÇÃO 03', 'CONTENÇÃO 04', 'CONTENÇÃO 05', 'CONTENÇÃO 06', 'CONTENÇÃO 07', 'CONTENÇÃO 08',
   'CORTEX', 'ESTEIRA DE VELOCIDADE', 'ACELERADOR', 'RECEPÇÃO', 'SAÍDA', 'ALTA ENERGIA', 'ÁREA RESTRITA', 'CONTENÇÃO',
   '0 m', '5 m', '10 m', '15 m', '20 m', '25 m', 'ÁTRIO', 'PESQUISA',
+  'NÚCLEO AURORA', 'ALA MÉDICA', 'OFICINA', 'SALA DOS TRAJES', 'SALA DA FENDA', 'ALA OESTE', 'ALA LESTE', 'PERIGO',
 ];
 const COLS = 4, LINS = 8;
 /** Retângulo [u0, u1, v0, v1] do rótulo no atlas (v para cima). */
@@ -49,39 +50,41 @@ export function criarTexturas(THREE, aniso = 4) {
       g.fillStyle = 'rgba(160,190,230,0.10)'; g.fillRect(0, jan + 6, 512, 18);   // reflexo fraco do céu no alto do vidro
     }
     ruido(g, 512, 512, 3000, 0.05); T.janelas = tex(c); T.janelasLuz = tex(ce); }
-  // ----- parede interna -----
-  { const [c, g] = tela(512, 512); g.fillStyle = '#e8edf1'; g.fillRect(0, 0, 512, 512);
-    g.strokeStyle = 'rgba(120,135,150,0.5)'; g.lineWidth = 2; for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 128, 0); g.lineTo(i * 128, 512); g.stroke(); g.beginPath(); g.moveTo(0, i * 128); g.lineTo(512, i * 128); g.stroke(); }
+  // ----- parede interna: painéis azul-marinho (como a fachada, um tom acima), juntas claras e um friso de luz fria -----
+  { const [c, g] = tela(512, 512); g.fillStyle = '#1f3054'; g.fillRect(0, 0, 512, 512);
+    for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { const s = Math.floor(rnd() * 6); g.fillStyle = `rgb(${30 + s},${47 + s},${82 + s})`; g.fillRect(x * 128 + 2, y * 128 + 2, 124, 124); }
+    g.strokeStyle = 'rgba(120,150,205,0.55)'; g.lineWidth = 2; for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 128, 0); g.lineTo(i * 128, 512); g.stroke(); g.beginPath(); g.moveTo(0, i * 128); g.lineTo(512, i * 128); g.stroke(); }
+    g.fillStyle = 'rgba(111,144,189,0.35)'; for (let y = 0; y < 4; y++) g.fillRect(0, y * 128 + 8, 512, 2);
     ruido(g, 512, 512, 2500, 0.05); T.parede = tex(c); }
   // ----- pisos -----
-  { const [c, g] = tela(512, 512); g.fillStyle = '#9aa4ad'; g.fillRect(0, 0, 512, 512);
-    for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { const s = 196 + Math.floor(rnd() * 16); g.fillStyle = `rgb(${s},${s + 5},${s + 10})`; g.fillRect(x * 128 + 2, y * 128 + 2, 124, 124); }
-    const gr = g.createLinearGradient(0, 0, 512, 512); gr.addColorStop(0, 'rgba(255,255,255,0.25)'); gr.addColorStop(0.5, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(255,255,255,0.18)'); g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
+  { const [c, g] = tela(512, 512); g.fillStyle = '#121c33'; g.fillRect(0, 0, 512, 512);
+    for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { const s = Math.floor(rnd() * 10); g.fillStyle = `rgb(${34 + s},${50 + s},${84 + s})`; g.fillRect(x * 128 + 2, y * 128 + 2, 124, 124); }
+    const gr = g.createLinearGradient(0, 0, 512, 512); gr.addColorStop(0, 'rgba(255,255,255,0.12)'); gr.addColorStop(0.5, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(255,255,255,0.09)'); g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
     ruido(g, 512, 512, 3000, 0.06); T.pisoAtrio = tex(c); }
-  { const [c, g] = tela(1024, 1024); g.fillStyle = '#080e15'; g.fillRect(0, 0, 1024, 1024);
-    const gr = g.createRadialGradient(512, 512, 40, 512, 512, 720); gr.addColorStop(0, '#16324a'); gr.addColorStop(1, '#070c12'); g.fillStyle = gr; g.fillRect(0, 0, 1024, 1024);
+  { const [c, g] = tela(1024, 1024); g.fillStyle = '#0a1428'; g.fillRect(0, 0, 1024, 1024);
+    const gr = g.createRadialGradient(512, 512, 40, 512, 512, 720); gr.addColorStop(0, '#1b3a66'); gr.addColorStop(1, '#081226'); g.fillStyle = gr; g.fillRect(0, 0, 1024, 1024);
     g.strokeStyle = 'rgba(63,224,255,0.9)'; for (const [r, w] of [[96, 5], [168, 3], [250, 5], [340, 2], [430, 4], [500, 2]]) { g.lineWidth = w; g.beginPath(); g.arc(512, 512, r, 0, 6.2832); g.stroke(); }
     g.strokeStyle = 'rgba(63,224,255,0.35)'; g.lineWidth = 2; for (let k = 0; k < 24; k++) { const a = k * Math.PI / 12; g.beginPath(); g.moveTo(512 + Math.cos(a) * 100, 512 + Math.sin(a) * 100); g.lineTo(512 + Math.cos(a) * 500, 512 + Math.sin(a) * 500); g.stroke(); }
     g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = 3; g.strokeRect(14, 14, 996, 996);
     ruido(g, 1024, 1024, 5000, 0.05); T.pisoCortex = tex(c, { repete: false }); }
-  { const [c, g] = tela(512, 512); g.fillStyle = '#a9b3bb'; g.fillRect(0, 0, 512, 512);
-    for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) { const s = 170 + Math.floor(rnd() * 14); g.fillStyle = `rgb(${s},${s + 6},${s + 12})`; g.fillRect(x * 256 + 3, y * 256 + 3, 250, 250); }
+  { const [c, g] = tela(512, 512); g.fillStyle = '#141e36'; g.fillRect(0, 0, 512, 512);
+    for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) { const s = Math.floor(rnd() * 10); g.fillStyle = `rgb(${38 + s},${54 + s},${86 + s})`; g.fillRect(x * 256 + 3, y * 256 + 3, 250, 250); }
     ruido(g, 512, 512, 5000, 0.1); T.pisoCont = tex(c); }
-  { const [c, g] = tela(512, 1024); g.fillStyle = '#1b2736'; g.fillRect(0, 0, 512, 1024);
+  { const [c, g] = tela(512, 1024); g.fillStyle = '#17233f'; g.fillRect(0, 0, 512, 1024);
     const pista = (r, cor, w) => { g.strokeStyle = cor; g.lineWidth = w; g.beginPath(); g.moveTo(256 - r, 300); g.arc(256, 300, r, Math.PI, 0); g.lineTo(256 + r, 724); g.arc(256, 724, r, 0, Math.PI); g.closePath(); g.stroke(); };
     for (let k = 0; k < 5; k++) pista(70 + k * 36, k === 0 || k === 4 ? 'rgba(255,255,255,0.9)' : 'rgba(63,224,255,0.7)', k === 0 || k === 4 ? 6 : 3);
     g.fillStyle = 'rgba(255,255,255,0.9)'; for (let i = 0; i < 8; i++) for (let j = 0; j < 2; j++) { g.fillStyle = (i + j) % 2 ? '#fff' : '#111'; g.fillRect(70 + 36 * 0 + i * 17.5 + 12, 300 + j * 12 - 6, 17.5, 12); }
     ruido(g, 512, 1024, 6000, 0.08); T.pisoEsteira = tex(c, { repete: false }); }
-  { const [c, g] = tela(256, 256); g.fillStyle = '#15191e'; g.fillRect(0, 0, 256, 256);
-    g.strokeStyle = '#3b444d'; g.lineWidth = 3; for (let i = 0; i <= 16; i++) { g.beginPath(); g.moveTo(i * 16, 0); g.lineTo(i * 16, 256); g.stroke(); g.beginPath(); g.moveTo(0, i * 16); g.lineTo(256, i * 16); g.stroke(); }
-    g.fillStyle = '#0a0c0f'; for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) g.fillRect(x * 16 + 4, y * 16 + 4, 8, 8);
+  { const [c, g] = tela(256, 256); g.fillStyle = '#141c2e'; g.fillRect(0, 0, 256, 256);
+    g.strokeStyle = '#34425f'; g.lineWidth = 3; for (let i = 0; i <= 16; i++) { g.beginPath(); g.moveTo(i * 16, 0); g.lineTo(i * 16, 256); g.stroke(); g.beginPath(); g.moveTo(0, i * 16); g.lineTo(256, i * 16); g.stroke(); }
+    g.fillStyle = '#090e1a'; for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) g.fillRect(x * 16 + 4, y * 16 + 4, 8, 8);
     T.pisoAcel = tex(c); }
   { const [c, g] = tela(256, 64); g.fillStyle = '#ffc400'; g.fillRect(0, 0, 256, 64); g.fillStyle = '#16181b'; for (let i = -2; i < 10; i++) { g.beginPath(); g.moveTo(i * 40, 64); g.lineTo(i * 40 + 20, 64); g.lineTo(i * 40 + 52, 0); g.lineTo(i * 40 + 32, 0); g.fill(); } T.perigo = tex(c); }
   { const [c, g] = tela(256, 256); g.fillStyle = '#1a1d22'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#2b3036'; for (let i = 0; i < 16; i++) g.fillRect(0, i * 16 + 2, 256, 6); ruido(g, 256, 256, 1500, 0.1); T.correia = tex(c); }
   // ----- teto: placas e luminárias (+ emissiva só nas luzes) -----
   { const [c, g] = tela(512, 512), [ce, ge] = tela(512, 512);
-    g.fillStyle = '#d9dee3'; g.fillRect(0, 0, 512, 512); ge.fillStyle = '#000'; ge.fillRect(0, 0, 512, 512);
-    g.strokeStyle = 'rgba(100,110,120,0.6)'; g.lineWidth = 2; for (let i = 0; i <= 8; i++) { g.beginPath(); g.moveTo(i * 64, 0); g.lineTo(i * 64, 512); g.stroke(); g.beginPath(); g.moveTo(0, i * 64); g.lineTo(512, i * 64); g.stroke(); }
+    g.fillStyle = '#1c2a4a'; g.fillRect(0, 0, 512, 512); ge.fillStyle = '#000'; ge.fillRect(0, 0, 512, 512);
+    g.strokeStyle = 'rgba(95,125,175,0.6)'; g.lineWidth = 2; for (let i = 0; i <= 8; i++) { g.beginPath(); g.moveTo(i * 64, 0); g.lineTo(i * 64, 512); g.stroke(); g.beginPath(); g.moveTo(0, i * 64); g.lineTo(512, i * 64); g.stroke(); }
     for (const [x, y] of [[64, 64], [320, 64], [64, 320], [320, 320]]) { g.fillStyle = '#f6fbff'; g.fillRect(x, y, 128, 128); ge.fillStyle = '#e6f6ff'; ge.fillRect(x + 6, y + 6, 116, 116); }
     T.teto = tex(c); T.tetoLuz = tex(ce); }
   // ----- pavimento externo e telhado -----

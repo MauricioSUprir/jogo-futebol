@@ -12,7 +12,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="info">?cam=fora|entrada|atrio|cortex|contencao|esteira|acelerador|topo · ?noite=1 · ?dome=0 · WASD + arrastar · Shift = rápido</div>
+<div id="info">?cam=fora|entrada|atrio|cortex|contencao|esteira|acelerador|nucleo|medica|oficina|trajes|fenda|topo · ?noite=1 · ?dome=0 · WASD + arrastar · Shift = rápido</div>
 <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }</script>
 <script type="module">
 import * as THREE from 'three';
@@ -61,6 +61,15 @@ const CAMS = {
   esteira2: [L(-24.5, 2.4, 10.5), L(-17, 1.4, -4)],
   acelerador: [L(-19, 1.8, 15.4), L(10, 2.6, 20.5)],
   acelerador2: [L(19, 2.0, 24.4), L(-10, 2.8, 19.5)],
+  nucleo: [L(0, 2.0, 39.6), L(0, 12, 50)],
+  nucleo2: [L(-18, 3.0, 58), L(4, 10, 46)],
+  nucleoalto: [L(16, 26, 41), L(-2, 10, 54)],
+  corredor: [L(0, 1.8, 27.5), L(0, 2.2, 38)],
+  medica: [L(-39, 2.2, -8), L(-56, 1.4, -22)],
+  oficina: [L(-38.5, 2.4, 8), L(-55, 1.6, 30)],
+  trajes: [L(48, 2.0, -8), L(56, 2.2, -22)],
+  fenda: [L(40, 2.2, 10), L(49, 4, 28)],
+  saguao: [L(-30, 1.8, 0), L(-50, 3, 0)],
   topo: [L(40, 66, -64), L(0, 26, 0)],
   telhado: [L(-14, 33, -24), L(8, 32, 6)],
   campus: [L(-120, 60, -170), L(0, 40, 10)],
