@@ -1005,10 +1005,11 @@ function passoMissoes(dt) {
   // um objetivo de cada vez (dono, 26/10: "não pode vir outra missão nem crime enquanto eu estiver dentro de uma missão ou
   // objetivo"): crime novo só com a cena e o rádio do passo terminados, sem cronômetro, corrida de portais ou vilão em cena
   const ocupado = !!(J.cenaPendente || J.cron || (m?.tipo === 'portais' && portais.estado().correndo) || !historia.radioLivre || J.esteira || rivais.ativo?.estado === 'luta');
+  const crAntes = crimes.ativo && { x: crimes.ativo.x, z: crimes.ativo.z };
   const ev = viloes.ativo || tempo.epoca === 'passado' || J.interior || !querCrime || (!crimes.ativo && ocupado) ? null : crimes.atualizar(dt, P, { forcar: m?.crime });
   if (ev?.inicio) avisar(ev.nome, 'Crime na cidade', 'crime');
   else if (ev) {
-    if (ev.ok) { missoes.contar('crimes'); missoes.contar(ev.tipo); missoes.contar('pontos', 250); avisar(`${ev.nome} impedido`, '+250 pontos', 'ok'); }
+    if (ev.ok) { missoes.contar('crimes'); missoes.contar(ev.tipo); missoes.contar('pontos', 250); avisar(`${ev.nome} impedido`, '+250 pontos', 'ok'); J.festaPed = crAntes || { x: P.x, z: P.z }; }
     else avisar(ev.tipo === 'queda' ? 'Não chegou a tempo' : 'O criminoso escapou', ev.nome, 'alerta');
   }
   const sala = LAB_B.plano.dentro(P.x, P.z, P.y);
@@ -1278,7 +1279,7 @@ function eventoVilao(ev) {
   else if (ev.tipo === 'derrota') historia.radio(`derrota-${id}`, { sempre: true });
   else if (ev.tipo === 'escapou') historia.radio(`escapou-${id}`, { sempre: true });
   else if (ev.tipo === 'derrotado') rodarCena(`derrotado-${id}`, focosVilao(), () => viloes.continuar());
-  else if (ev.tipo === 'vitoria') missoes.contar('pontos', id === 'final' ? 5000 : 2000);
+  else if (ev.tipo === 'vitoria') { missoes.contar('pontos', id === 'final' ? 5000 : 2000); J.festaPed = { x: P.x, z: P.z }; }
 }
 
 // ---------- laço ----------
@@ -1325,7 +1326,16 @@ function quadro() {
         if (ev.tipo === 'vencido') { missoes.contar('pontos', 300); missoes.contar('rivais'); }
       }
     }
-    pedestres.atualizar(dt, P, mundo.noite); trafego.atualizar(dt, P, mundo.noite, pedestres.pessoas); passoObjetos(dt);
+    { // as pessoas fogem do perigo (o vilão do dia, o crime, os vilões da história) e comemoram a vitória do herói
+      const perigos = [], r = rivais.ativo, cr = crimes.ativo;
+      if (r) { perigos.push(r); J.rivPos = { x: r.x, z: r.z }; }
+      if (cr && cr.x != null && (cr.tipo === 'assalto' || cr.tipo === 'gangue' || cr.tipo === 'incendio')) perigos.push(cr);
+      if (viloes.ativo && tempo.epoca === 'presente') for (const v of viloes.viloes) if (v.x != null) perigos.push(v);
+      J.rivVenc ??= rivais.vencidos;
+      if (rivais.vencidos > J.rivVenc) { J.rivVenc = rivais.vencidos; J.festaPed = J.rivPos || { x: P.x, z: P.z }; }
+      pedestres.atualizar(dt, P, mundo.noite, { perigos: J.interior ? [] : perigos, festa: J.festaPed }); J.festaPed = null;
+    }
+    trafego.atualizar(dt, P, mundo.noite, pedestres.pessoas); passoObjetos(dt);
     if (labAtivo) labAtivo.atualizar(dt, P.t, mundo.noite, camera, P);
     for (const e of marcosAtivos) e.atualizar(dt, P.t, mundo);
     atualizarQuarteiroes(P.x, P.z, carregados.size < 30 ? 8 : 2);
