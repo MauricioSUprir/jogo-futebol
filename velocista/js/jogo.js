@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CELL, BLOCO, N, MEIO, CALCADA, LAB_CELULA, bloco, celulaDe, centroDe, dentro, todasEsferas, retangulosPerto, chaoEm, empurrar } from './cidade.js';
+import { CELL, BLOCO, N, MEIO, CALCADA, LAB_CELULA, bloco, celulaDe, centroDe, dentro, ehCampus, todasEsferas, retangulosPerto, chaoEm, empurrar } from './cidade.js';
 import { criarHeroi } from './humano.js';
 import { criarRaios } from './raios.js';
 import { criarPosFx } from './posfx.js';
@@ -15,7 +15,8 @@ import { criarViloes } from './viloes.js';
 import { criarHistoria } from './historia.js';
 import { criarEquipe } from './equipe.js';
 import { criarTempo } from './tempo.js';
-import { construirLab } from './lab3d.js';
+import { construirLab, construirSilhueta } from './lab3d.js';
+import { CAMPUS, TORRE, ALAS, LAB } from './lab.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
 
 // ---------- constantes ----------
@@ -225,12 +226,13 @@ const PRETO = [0.08, 0.08, 0.09], CINZA = [0.5, 0.52, 0.55], CINZA_ESC = [0.25, 
 
 function construirBloco(b) {
   const grupo = new THREE.Group(), geos = [], dados = { grupo, geos, orbes: [], instancias: [] };
-  const topoLaje = new THREE.Mesh(geoLajeTopo, b.tipo === 'parque' ? matGrama : matCalcada); topoLaje.position.set(b.cx, 0, b.cz); topoLaje.receiveShadow = !MOBILE; grupo.add(topoLaje);
+  // o campus do laboratório desenha a própria praça (as 4 células são uma só, e só a "mestre" monta o desenho)
+  if (b.tipo !== 'lab') { const topoLaje = new THREE.Mesh(geoLajeTopo, b.tipo === 'parque' ? matGrama : matCalcada); topoLaje.position.set(b.cx, 0, b.cz); topoLaje.receiveShadow = !MOBILE; grupo.add(topoLaje); }
   const baldes = new Map(), pega = (k, cor) => { if (!baldes.has(k)) baldes.set(k, new Balde(cor)); return baldes.get(k); };
   const props = pega('props', true), roof = pega('roof'), copas = pega('copas'), lamp = pega('lamp'), poca = pega('poca');
   // meio-fio entra no balde dos adereços (um desenho a menos): quatro faixas finas
-  for (const [x, z, sx, sz] of [[0, -BLOCO / 2 + 0.2, BLOCO, 0.4], [0, BLOCO / 2 - 0.2, BLOCO, 0.4], [-BLOCO / 2 + 0.2, 0, 0.4, BLOCO], [BLOCO / 2 - 0.2, 0, 0.4, BLOCO]]) props.geo(geoCaixa, compor(b.cx + x, CALCADA / 2, b.cz + z, sx, CALCADA, sz), [0.5, 0.51, 0.53]);
-  if (b.tipo === 'lab') { const lab = construirLab(THREE_LAB, b.cx, b.cz, { aniso: ANISO, intervaloTela: MOBILE ? 1 : 0.2 }); grupo.add(lab.grupo); if (!MOBILE) lab.grupo.traverse((o) => { if (o.isMesh && !o.material?.transparent) { o.castShadow = true; o.receiveShadow = true; } }); geos.push(...lab.geos); dados.lab = lab; labAtivo = lab; }
+  if (b.tipo !== 'lab') for (const [x, z, sx, sz] of [[0, -BLOCO / 2 + 0.2, BLOCO, 0.4], [0, BLOCO / 2 - 0.2, BLOCO, 0.4], [-BLOCO / 2 + 0.2, 0, 0.4, BLOCO], [BLOCO / 2 - 0.2, 0, 0.4, BLOCO]]) props.geo(geoCaixa, compor(b.cx + x, CALCADA / 2, b.cz + z, sx, CALCADA, sz), [0.5, 0.51, 0.53]);
+  if (b.tipo === 'lab' && b.mestre) { const lab = construirLab(THREE_LAB, b.cx, b.cz, { aniso: ANISO, intervaloTela: MOBILE ? 1 : 0.2 }); grupo.add(lab.grupo); if (!MOBILE) lab.grupo.traverse((o) => { if (o.isMesh && !o.material?.transparent) { o.castShadow = true; o.receiveShadow = true; } }); geos.push(...lab.geos); dados.lab = lab; labAtivo = lab; }
   for (const l of b.lotes) {
     const lat = pega(`l${l.estilo}-${l.tom}`);
     const loja = l.y0 <= CALCADA + 0.01 && l.x1 - l.x0 > 8 ? pega(`loja${(Math.abs(b.i * 7 + b.j * 3 + Math.round(l.x0)) % 3)}`) : null;
@@ -287,9 +289,18 @@ function descarregar(chave) {
   for (const r of d.orbes) { const k = orbesAtivos.indexOf(r); if (k >= 0) orbesAtivos.splice(k, 1); }
   carregados.delete(chave);
 }
+// distância (Chebyshev, em células) de (ci, cj) até a célula (i, j); para a célula mestre do campus, até a mais perto das 4
+function distCel(i, j, ci, cj) {
+  if (i === LAB_CELULA[0] && j === LAB_CELULA[1]) return Math.max(Math.max(0, i - ci, ci - (i + 1)), Math.max(0, j - cj, cj - (j + 1)));
+  return Math.max(Math.abs(i - ci), Math.abs(j - cj));
+}
 function desejados(ci, cj, raio) {
   const v = [];
-  for (let i = ci - raio; i <= ci + raio; i++) for (let j = cj - raio; j <= cj + raio; j++) if (dentro(i, j)) v.push([i, j, Math.max(Math.abs(i - ci), Math.abs(j - cj)) + Math.hypot(i - ci, j - cj) * 0.01]);
+  // as células do campus viram a mestre: o laboratório inteiro carrega quando qualquer parte dele entra no raio
+  for (let i = ci - raio; i <= ci + raio; i++) for (let j = cj - raio; j <= cj + raio; j++) if (dentro(i, j)) {
+    if (ehCampus(i, j)) { if (!v.some((e) => e[0] === LAB_CELULA[0] && e[1] === LAB_CELULA[1])) v.push([LAB_CELULA[0], LAB_CELULA[1], distCel(LAB_CELULA[0], LAB_CELULA[1], ci, cj) - 0.5]); continue; }
+    v.push([i, j, Math.max(Math.abs(i - ci), Math.abs(j - cj)) + Math.hypot(i - ci, j - cj) * 0.01]);
+  }
   return v.sort((a, b) => a[2] - b[2]);
 }
 let celAtual = [-999, -999];
@@ -297,7 +308,7 @@ function atualizarQuarteiroes(x, z, orcamento) {
   const ci = celulaDe(x), cj = celulaDe(z);
   if (ci !== celAtual[0] || cj !== celAtual[1]) {
     celAtual = [ci, cj];
-    for (const [k, d] of carregados) { const [i, j] = k.split(',').map(Number); if (Math.max(Math.abs(i - ci), Math.abs(j - cj)) > RAIO_CARGA + 1) descarregar(k); }
+    for (const [k, d] of carregados) { const [i, j] = k.split(',').map(Number); if (distCel(i, j, ci, cj) > RAIO_CARGA + 1) descarregar(k); }
     rectsPerto = retangulosPerto(x, z, 1);
   }
   let feitos = 0;
@@ -372,6 +383,14 @@ function passoRastro(dt) {
 
 // ---------- estado ----------
 const LAB_B = bloco(LAB_CELULA[0], LAB_CELULA[1]);
+// a torre do S.T.A.R. Labs se vê de qualquer lugar: longe (ou com o campus descarregado) entra a silhueta no lugar dela
+const silhueta = construirSilhueta(THREE, LAB_B.cx, LAB_B.cz); cena.add(silhueta.grupo);
+const TORRE_XZ = { x: LAB_B.cx + (TORRE.u0 + TORRE.u1) / 2, z: LAB_B.cz + (TORRE.v0 + TORRE.v1) / 2 };
+function atualizarSilhueta() {
+  const d = Math.hypot(camera.position.x - TORRE_XZ.x, camera.position.z - TORRE_XZ.z), longe = !labAtivo || d > camera.far * 0.82 - 60;
+  if (labAtivo) labAtivo.alto.visible = !longe;            // só a torre troca de lugar com a silhueta (o resto do campus segue o seu)
+  silhueta.atualizar(camera, cena.fog, mundo.noite, longe, P.t);
+}
 const INICIO = { x: LAB_B.plano.entrada.x, z: LAB_B.plano.entrada.z - 9 };     // na rua, de frente para a porta do S.T.A.R. Labs
 const P = { x: INICIO.x, y: 0, z: INICIO.z, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, correndo: false, fase: 0, t: 0, parede: null, vibrando: false };
 const C = { yaw: 0, pitch: CAM.pitch, dist: CAM.dist };
@@ -709,12 +728,18 @@ function desenharMapa() {
     gm.fillStyle = b.tipo === 'parque' ? '#3d7a3d' : '#59647a'; gm.fillRect(q.x0, q.z0, q.x1 - q.x0, q.z1 - q.z0);
     for (const l of b.lotes) { const c = Math.min(230, 120 + l.y1 * 0.9) | 0; gm.fillStyle = `rgb(${c},${c},${Math.min(255, c + 12)})`; gm.fillRect(l.x0, l.z0, l.x1 - l.x0, l.z1 - l.z0); }
   }
+  { // o campus do S.T.A.R. Labs (antes do guia e dos marcadores, que vão por cima): a praça, os prédios e a borda
+    const cx = LAB_B.cx, cz = LAB_B.cz, M = CAMPUS.meio, L = LAB.meio;
+    gm.fillStyle = '#34405a'; gm.fillRect(cx - M, cz - M, 2 * M, 2 * M);
+    gm.fillStyle = '#5d79a8'; gm.fillRect(cx - L, cz - L, 2 * L, 2 * L); gm.fillRect(cx + TORRE.u0, cz + TORRE.v0, TORRE.u1 - TORRE.u0, TORRE.v1 - TORRE.v0);
+    for (const a of ALAS) gm.fillRect(cx + a.u0, cz + a.v0, a.u1 - a.u0, a.v1 - a.v0);
+    gm.strokeStyle = '#3fe0ff'; gm.lineWidth = grande ? 10 : 4; gm.strokeRect(cx - M, cz - M, 2 * M, 2 * M);
+  }
   gm.fillStyle = '#3fd0ff'; const rr = grande ? 14 : 6;
   for (const o of esferas) if (!esferasColetadas.has(o.id) && Math.abs(o.x - P.x) < raioM * 1.1 && Math.abs(o.z - P.z) < raioM * 1.1) { gm.beginPath(); gm.arc(o.x, o.z, rr, 0, 6.3); gm.fill(); }
   guia.desenharNoMapa(gm, grande ? 9 : 5);
   for (const e of combate.bandidos) if (e.estado !== 'caido' && e.estado !== 'fugiu') { gm.fillStyle = '#ff4d5e'; gm.beginPath(); gm.arc(e.x, e.z, grande ? 8 : 4, 0, 6.3); gm.fill(); }
   { const a = alvoAtual(); if (a && a.cor !== '#3fd0ff') { gm.fillStyle = a.cor; gm.beginPath(); gm.arc(a.x, a.z, grande ? 30 : 11, 0, 6.3); gm.fill(); gm.strokeStyle = '#fff'; gm.lineWidth = grande ? 6 : 2.5; gm.stroke(); } }
-  gm.strokeStyle = '#3fe0ff'; gm.lineWidth = grande ? 10 : 4; gm.strokeRect(LAB_B.cx - 30, LAB_B.cz - 30, 60, 60);
   gm.setTransform(1, 0, 0, 1, 0, 0);
   { // nome do laboratório no mapa (texto sempre de pé)
     const lx = (LAB_B.cx - P.x) * rx + (LAB_B.cz - P.z) * rz, ly = -((LAB_B.cx - P.x) * fx + (LAB_B.cz - P.z) * fz);
@@ -1038,6 +1063,7 @@ function quadro() {
   else if (J.modo === 'cena') guia.atualizar(dt, null, P, camera);          // na cena, sem feixe nem setas por cima de quem fala
   atualizarAmbiente(camera.position);
   posfx.ajustar(J.modo === 'jogando' ? Math.min(1, Math.max(0, (Math.hypot(P.vx, P.vz) - 20) / 35)) : 0, mundo.noite);
+  atualizarSilhueta();
   posfx.render();
 }
 

@@ -3,7 +3,7 @@
 // das ruas, também desenhado no minimapa. A rota anda pela grade de ruas: vai até a rua mais perto, segue por ela até o
 // cruzamento com a rua do alvo e entra nela até a altura do alvo.
 import * as THREE from 'three';
-import { CELL, MEIO } from './cidade.js';
+import { CELL, MEIO, ruaForaDoCampus, alturaDoChao } from './cidade.js';
 
 const eixo = (k) => k * CELL - MEIO;
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -16,12 +16,15 @@ export function rotaPelasRuas(x, z, tx, tz) {
   const kx = ruaMaisPerto(x), kz = ruaMaisPerto(z), dxRua = Math.abs(x - eixo(kx)), dzRua = Math.abs(z - eixo(kz));
   const pts = [[x, z]];
   if (Math.hypot(tx - x, tz - z) < 30) { pts.push([tx, tz]); return pts; }
+  // as ruas de dentro do campus do S.T.A.R. Labs viraram praça: a rota usa a rua da borda dele
   if (dxRua <= dzRua) {
     // estou numa rua que corre ao longo de z (x constante): sigo por ela até a rua horizontal do alvo
-    const X = eixo(kx), Zt = eixo(ruaMaisPerto(tz));
+    let kzt = ruaMaisPerto(tz); const X = eixo(ruaForaDoCampus(kx, z, eixo(kzt), x, true));
+    kzt = ruaForaDoCampus(kzt, X, tx, tz, false); const Zt = eixo(kzt);
     pts.push([X, z], [X, Zt], [tx, Zt]);
   } else {
-    const Z = eixo(kz), Xt = eixo(ruaMaisPerto(tx));
+    let kxt = ruaMaisPerto(tx); const Z = eixo(ruaForaDoCampus(kz, x, eixo(kxt), z, false));
+    kxt = ruaForaDoCampus(kxt, Z, tz, tx, true); const Xt = eixo(kxt);
     pts.push([x, Z], [Xt, Z], [Xt, tz]);
   }
   pts.push([tx, tz]);
@@ -97,7 +100,7 @@ export function criarGuia(cena, { mobile = false } = {}) {
         while (s < L && n < MAXS && percorrido + s < ALCANCE_SETAS) {
           const x = ax + ux * s, z = az + uz * s;
           if (Math.hypot(alvo.x - x, alvo.z - z) < 5) break;
-          M.compose(V.set(x, 0.09, z), Q.setFromAxisAngle(Y, h), S.setScalar(mobile ? 0.8 : 0.68));
+          M.compose(V.set(x, alturaDoChao(x, z) + 0.09, z), Q.setFromAxisAngle(Y, h), S.setScalar(mobile ? 0.8 : 0.68));
           setas.setMatrixAt(n, M);
           // some ao longe e perto do herói
           const d = percorrido + s, a = Math.min(1, Math.max(0, (d - 4) / 10)) * (1 - Math.max(0, (d - ALCANCE_SETAS * 0.6) / (ALCANCE_SETAS * 0.4)));

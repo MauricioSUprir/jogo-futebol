@@ -3,7 +3,7 @@
 // raio do jogador; quem sai do raio renasce longe, de preferência atrás dele. Desenho: 3 InstancedMesh (carroceria com
 // cores de vértice + cor por instância, faróis/lanternas e o facho dos faróis no chão à noite).
 // THREE é passado por parâmetro (o mesmo módulo do jogo); a lógica não usa DOM.
-import { CELL, N, MEIO } from './cidade.js';
+import { CELL, N, MEIO, arestaNoCampus } from './cidade.js';
 
 const FAIXA = 2.2;              // distância do eixo da rua ao centro da faixa (mão direita)
 const T_ESQ = 8;                // a curva começa/termina a 8 m do centro do cruzamento (meia rua)
@@ -108,7 +108,7 @@ export function criarTrafego(THREE, cena, { mobile = false, semente = 7 } = {}) 
   function direcoesValidas(ki, kj, dx, dz) {           // no nó (ki,kj) chegando em d: para onde pode seguir
     const v = [];
     for (const [ex, ez] of [[dx, dz], [-dz, dx], [dz, -dx]]) {   // reto, esquerda, direita
-      const ni = ki + ex, nj = kj + ez; if (ni < 0 || nj < 0 || ni > N || nj > N) continue; v.push([ex, ez]);
+      const ni = ki + ex, nj = kj + ez; if (ni < 0 || nj < 0 || ni > N || nj > N || arestaNoCampus(ki, kj, ni, nj)) continue; v.push([ex, ez]);
     }
     if (!v.length) v.push([-dx, -dz]);                               // beco (canto do mapa): retorno
     return v;
@@ -173,7 +173,7 @@ export function criarTrafego(THREE, cena, { mobile = false, semente = 7 } = {}) 
       if (horiz) { kj = noDe(z); ki = Math.floor((x + MEIO) / CELL); dx = rnd() < 0.5 ? 1 : -1; dz = 0; if (dx < 0) ki += 1; }
       else { ki = noDe(x); kj = Math.floor((z + MEIO) / CELL); dz = rnd() < 0.5 ? 1 : -1; dx = 0; if (dz < 0) kj += 1; }
       const ni = ki + dx, nj = kj + dz;
-      if (ki < 0 || kj < 0 || ki > N || kj > N || ni < 0 || nj < 0 || ni > N || nj > N) continue;
+      if (ki < 0 || kj < 0 || ki > N || kj > N || ni < 0 || nj < 0 || ni > N || nj > N || arestaNoCampus(ki, kj, ni, nj)) continue;
       const frac = 0.1 + rnd() * 0.8;
       const [px, pz] = pontoFaixa(ki, kj, dx, dz, frac);
       if (Math.hypot(px - j.x, pz - j.z) < rMin) continue;

@@ -22,13 +22,41 @@ function mulberry(a) {
   return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 
-import { LAB_CELULA, planoLab } from './lab.js';
+import { LAB_CELULA, CAMPUS, planoLab } from './lab.js';
 export { LAB_CELULA };
 export const celulaDe = (v) => Math.floor((v + MEIO) / CELL);
 export const centroDe = (i) => (i + 0.5) * CELL - MEIO;
 export const dentro = (i, j) => i >= 0 && j >= 0 && i < N && j < N;
 
+// ---------- o campus do S.T.A.R. Labs: 2 × 2 células; as ruas de dentro viram praça (sem carro, pedestre nem crime) ----------
+const [CI0, CJ0] = LAB_CELULA;
+/** A célula (i, j) faz parte do campus? */
+export const ehCampus = (i, j) => i >= CI0 && i < CI0 + CAMPUS.n && j >= CJ0 && j < CJ0 + CAMPUS.n;
+/** Centro do campus (o prédio principal fica nele): o cruzamento das ruas que sumiram. */
+export const CENTRO_CAMPUS = { x: (CI0 + CAMPUS.n / 2) * CELL - MEIO, z: (CJ0 + CAMPUS.n / 2) * CELL - MEIO };
+/** O trecho de rua entre os nós (ki, kj) e (ni, nj) passa por dentro do campus? (os nós são cruzamentos: eixo k·CELL − MEIO) */
+export const arestaNoCampus = (ki, kj, ni, nj) => {
+  const mi = (ki + ni) / 2, mj = (kj + nj) / 2;
+  return mi > CI0 && mi < CI0 + CAMPUS.n && mj > CJ0 && mj < CJ0 + CAMPUS.n;
+};
+/** O cruzamento (ki, kj) ficou dentro do campus? */
+export const noNoCampus = (ki, kj) => ki > CI0 && ki < CI0 + CAMPUS.n && kj > CJ0 && kj < CJ0 + CAMPUS.n;
+/**
+ * Se a rua de índice k atravessa o campus no trecho de a até b, devolve a rua da borda do campus mais perto de `perto`.
+ * `constX` = a rua tem x constante (x = eixo(k), corre ao longo de z); senão tem z constante.
+ */
+export function ruaForaDoCampus(k, a, b, perto, constX = true) {
+  const k0 = constX ? CI0 : CJ0, o0 = constX ? CJ0 : CI0;
+  if (k <= k0 || k >= k0 + CAMPUS.n) return k;
+  const lo = (o0 * CELL - MEIO) + RUA / 2, hi = ((o0 + CAMPUS.n) * CELL - MEIO) - RUA / 2;
+  if (Math.max(a, b) <= lo || Math.min(a, b) >= hi) return k;
+  return Math.abs(perto - (k0 * CELL - MEIO)) <= Math.abs(perto - ((k0 + CAMPUS.n) * CELL - MEIO)) ? k0 : k0 + CAMPUS.n;
+}
+let planoCampus = null;
+const campusPlano = () => planoCampus || (planoCampus = planoLab(CENTRO_CAMPUS.x, CENTRO_CAMPUS.z));
+
 const cache = new Map();
+let LAJE_CAMPUS = null;
 
 /** Dados (puros) do quarteirão (i,j). */
 export function bloco(i, j) {
@@ -39,8 +67,19 @@ export function bloco(i, j) {
   const d = Math.hypot(i - (N - 1) / 2, j - (N - 1) / 2);
   const centro = Math.exp(-d / 7);                       // 1 no centro, cai para a periferia
   const sorteio = r();
-  const ehLab = i === LAB_CELULA[0] && j === LAB_CELULA[1];
+  const ehLab = ehCampus(i, j);
   const tipo = ehLab ? 'lab' : sorteio < 0.12 ? 'parque' : sorteio < 0.2 + centro * 0.12 ? 'torre' : 'predios';
+  if (ehLab) {
+    // as 4 células do campus: o centro (cx, cz) é o do campus; cada uma guarda os sólidos que a tocam (a colisão pega as
+    // células em volta do herói); só a célula de canto (a "mestre") desenha o laboratório e guarda as esferas de dentro
+    const pl = campusPlano(), C = CENTRO_CAMPUS, x0 = centroDe(i) - CELL / 2, x1 = x0 + CELL, z0 = centroDe(j) - CELL / 2, z1 = z0 + CELL;
+    const b = { i, j, cx: C.x, cz: C.z, celx: cx, celz: cz, tipo, mestre: i === CI0 && j === CJ0, plano: pl, lotes: [], arvores: [], orbes: [], rects: [], topo: [], carros: [], postes: [] };
+    b.rects.push(LAJE_CAMPUS || (LAJE_CAMPUS = { x0: pl.campus.x0, x1: pl.campus.x1, z0: pl.campus.z0, z1: pl.campus.z1, y0: -5, y1: CALCADA }));
+    for (const q of pl.rects) if (q.x1 > x0 && q.x0 < x1 && q.z1 > z0 && q.z0 < z1) b.rects.push(q);
+    if (b.mestre) b.orbes.push({ id: `${i},${j},cortex`, x: C.x + 8, y: 1.5, z: C.z }, { id: `${i},${j},cont`, x: C.x + 19.5, y: 1.5, z: C.z - 6 }, { id: `${i},${j},esteira`, x: C.x - 19.5, y: 1.5, z: C.z + 7 }, { id: `${i},${j},acel`, x: C.x, y: 1.5, z: C.z + 17 });
+    cache.set(chave, b);
+    return b;
+  }
   const b = { i, j, cx, cz, tipo, lotes: [], arvores: [], orbes: [], rects: [], topo: [], carros: [], postes: [] };
   b.rects.push({ x0: cx - BLOCO / 2, x1: cx + BLOCO / 2, z0: cz - BLOCO / 2, z1: cz + BLOCO / 2, y0: -5, y1: CALCADA });
 
@@ -48,12 +87,7 @@ export function bloco(i, j) {
   const x0 = cx - interno / 2, z0 = cz - interno / 2;
   const add = (lote) => { b.lotes.push(lote); b.rects.push({ x0: lote.x0, x1: lote.x1, z0: lote.z0, z1: lote.z1, y0: lote.y0, y1: lote.y1 }); };
 
-  if (tipo === 'lab') {
-    const plano = planoLab(cx, cz);
-    for (const q of plano.rects) b.rects.push(q);
-    b.plano = plano;
-    b.orbes.push({ id: `${i},${j},cortex`, x: cx + 8, y: 1.5, z: cz }, { id: `${i},${j},cont`, x: cx + 19.5, y: 1.5, z: cz - 6 }, { id: `${i},${j},esteira`, x: cx - 19.5, y: 1.5, z: cz + 7 }, { id: `${i},${j},acel`, x: cx, y: 1.5, z: cz + 17 });
-  } else if (tipo === 'parque') {
+  if (tipo === 'parque') {
     const n = 22 + Math.floor(r() * 18);
     for (let k = 0; k < n; k++) b.arvores.push({ x: cx + (r() - 0.5) * (BLOCO - 6), z: cz + (r() - 0.5) * (BLOCO - 6), s: 0.8 + r() * 0.9 });
   } else if (tipo === 'torre') {
@@ -109,9 +143,22 @@ export function todasEsferas() {
 
 /** Retângulos sólidos (quarteirão e prédios) das células ao redor de (x,z). */
 export function retangulosPerto(x, z, raio = 1) {
-  const ci = celulaDe(x), cj = celulaDe(z), v = [];
-  for (let i = ci - raio; i <= ci + raio; i++) for (let j = cj - raio; j <= cj + raio; j++) if (dentro(i, j)) v.push(...bloco(i, j).rects);
+  const ci = celulaDe(x), cj = celulaDe(z), v = [], vistos = new Set();
+  for (let i = ci - raio; i <= ci + raio; i++) for (let j = cj - raio; j <= cj + raio; j++) {
+    if (!dentro(i, j)) continue;
+    const b = bloco(i, j);
+    if (b.tipo !== 'lab') { v.push(...b.rects); continue; }
+    for (const q of b.rects) if (!vistos.has(q)) { vistos.add(q); v.push(q); }   // o campus divide sólidos entre células
+  }
   return v;
+}
+
+/** Altura do chão "de rua" em (x, z), sem os prédios: a laje dos quarteirões (e a praça do campus) ou o asfalto. */
+export function alturaDoChao(x, z) {
+  const i = celulaDe(x), j = celulaDe(z);
+  if (!dentro(i, j)) return 0;
+  if (ehCampus(i, j)) return Math.abs(x - CENTRO_CAMPUS.x) <= CAMPUS.meio && Math.abs(z - CENTRO_CAMPUS.z) <= CAMPUS.meio ? CALCADA : 0;
+  return Math.abs(x - centroDe(i)) <= BLOCO / 2 && Math.abs(z - centroDe(j)) <= BLOCO / 2 ? CALCADA : 0;
 }
 
 /** Altura do chão sob (x,z) para quem está em y (sobe degrau de até `degrau`). */
@@ -164,7 +211,7 @@ function detalhes(b, i, j) {
   const faixa = BLOCO / 2 + 2.3;
   for (let lado = 0; lado < 2; lado++) {
     for (let u = -25; u <= 25; u += 7.2) {
-      if (r() < 0.45 || (b.tipo === 'lab' && Math.abs(u) < 10)) continue;   // a porta do laboratório fica livre
+      if (r() < 0.45) continue;
       const jit = (r() - 0.5) * 1.6, cor = CORES_CARRO[Math.floor(r() * CORES_CARRO.length)];
       const px = lado === 0 ? b.cx + u + jit : b.cx - faixa, pz = lado === 0 ? b.cz - faixa : b.cz + u + jit;
       const rot = lado === 0 ? 0 : Math.PI / 2, hx = lado === 0 ? 2.15 : 0.95, hz = lado === 0 ? 0.95 : 2.15;
