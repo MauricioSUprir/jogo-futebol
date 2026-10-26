@@ -466,3 +466,31 @@ e a altura da linha por faixa empata (com 16 sementes: main 3,1, D5 3,1 m; meta 
   (aperta, contém, recebe, recompõe — no modo pressa de propósito) e da marcação de perto, que ficou como antes.
 - O anda-para-anda passa com pouca folga (3,6–3,9 contra 4): a linha e a recomposição (com o `recomp`, que passa por cima do
   arranque calmo) são a maior parte.
+
+### 7.6 O painel de 144 e a linha que sobe
+
+O painel (IA × IA, 144 partidas, base × D5, mesmas sementes) mostrou o impedimento caindo nas DUAS amostras — 1,16 → 0,99
+(sementes 1001–1144, a do CI) e 1,23 → 1,06 (3001–3144) — com a meta ≥ 1. A causa, desligando uma peça por vez (72
+partidas, 1001–1072; base 1,17, D5 1,08): sem a virada parada 1,25, sem o arco 1,18, sem a espera nova da volta 1,04. A
+linha de defesa que recuava e era mandada subir com a bola voltando (o momento em que o impedimento arma — a linha sobe junto,
+a "armadilha") parava 0,5 s ou subia em arco. Agora o ramo 'linha' com o alvo à frente (no sentido do ataque) vira na hora
+(`TATICA.linhaSobe`):
+
+| Medida (painel de 144) | base 1001–1144 | D5 antes | D5 | base 3001–3144 | D5 antes | D5 | Meta |
+|---|---|---|---|---|---|---|---|
+| impedimentos por partida | 1,16 | 0,99 | 1,19 | 1,23 | 1,06 | 1,19 | ≥ 1 |
+| gols por partida | 1,82 | 1,64 | 1,88 | 1,73 | 1,73 | 1,85 | 2,3–3,5 |
+| gols de fora da área | 13,9% | 11,7% | 17,5% | 16,4% | 16,2% | 19,5% | 12–18% |
+| goleiro, 6 a 16,5 m | 60,0% | 57,0% | 56,3% | 58,2% | 60,0% | 59,6% | 55–60% |
+| duelos pelo alto com a bola rolando | 2,2 | 2,1 | 2,2 | 2,3 | 2,3 | 2,2 | — |
+
+Os gols de fora da área nas duas amostras juntas: 15,1% na base e ~18,5% com o D5 (~1,5 erro padrão; ~530 gols de cada lado)
+— na beira de cima da faixa numa delas; o volume e a mistura dos chutes são da categoria E. O vai e volta com a linha que
+sobe: 7,4/min (8 sementes; antes 7,2; meta ≤ 8).
+
+As amostras pequenas dos testes que a IA nova reembaralhou (cada mudança IA × IA troca todos os estados das partidas dos
+testes) passaram a reprovar só quando a contagem prova (p < 5%): o tiro livre do `teste-bolas-paradas` (no alvo 24,6 × 23,9%
+em ~425 chutes de 3 conjuntos de sementes, base × D5), os duelos e a folga da cabeça do `teste-cabeceio` (a folga dá 88% na
+própria base com 16 partidas), o B3 do `teste-faltas-sentido` (48 partidas do 'dribla': pênaltis 0,35 × 0,35 e vermelhos
+0,19 × 0,23 por partida) e o passe certo do `teste-intercepta`. Três cenas de cartão de estados novos (o IFAB, o capitão do A1
+e o cartão atrás do punido) eram defeitos do planejamento da cena, corrigidos (CONTRATOS, "D5").
