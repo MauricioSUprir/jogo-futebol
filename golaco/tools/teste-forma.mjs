@@ -1,5 +1,5 @@
 // teste-forma (Etapa 3, Parte 2): a forma do time sem e com a bola no 11×11, IA × IA (Golaço 4-3-3 ×
-// Ventania 4-2-3-1, tática padrão), 8 sementes × 3 min, amostras a cada 0,1 s com a bola no pé de um
+// Ventania 4-2-3-1, tática padrão), 24 sementes × 3 min (D6: com 8 o 1º terço oscilava ±0,5), amostras a cada 0,1 s com a bola no pé de um
 // jogador de linha. Definições de tools/lib/partida-medidas.mjs (as da análise da Metrica; FIFA EFI):
 // terço pela bola no referencial de quem é medido, comprimento e largura sem o goleiro, altura da
 // linha = defensor de linha mais recuado até o próprio gol, linha de 4 = os 4 mais recuados.
