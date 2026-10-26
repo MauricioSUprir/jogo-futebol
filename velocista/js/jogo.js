@@ -21,6 +21,7 @@ import { MARCOS, limitar, PONTE, ILHA, PRESIDIO, pontoMundo, SUBESTACOES } from 
 import { criarAliados } from './aliados.js';
 import { desenharMarco, blocoIlha, desenharFora } from './marcos3d.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
+import { passoEmbalo, tetoCorrida, gastoCorrida } from './velocidade.js';
 
 // ---------- constantes ----------
 const TOQUE = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -424,7 +425,7 @@ function reiniciar() {
   esferasColetadas.clear();
   for (const k of [...carregados.keys()]) descarregar(k);
   celAtual = [-999, -999];
-  Object.assign(P, { x: INICIO.x, y: 0, z: INICIO.z, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, parede: null, vibrando: false });
+  Object.assign(P, { x: INICIO.x, y: 0, z: INICIO.z, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, parede: null, vibrando: false, embalo: 0 });
   C.yaw = 0; C.pitch = CAM.pitch;
   J.coletadas = 0; J.modo = 'jogando'; J.inicioT = performance.now();
   mundo.T = 0.4;
@@ -575,9 +576,12 @@ function passoHeroi(dt) {
   else if (querVibrar && P.energia > 0.08 && (vh0 >= MOV.vibrarMin || tempo.pertoDeFenda(P)) && !P.parede) { P.vibrando = true; avisar('Atravesse tudo', 'Vibrando', 'info'); }
   if (viloes.energiaLivre || missoes.atual?.id === 'tunel') P.energia = Math.min(1, P.energia + 0.06 * dt);      // perseguição a um vilão / túnel do tempo: energia livre, e enchendo
   else if (P.vibrando) P.energia = Math.max(0, P.energia - ENERGIA.vibrar * dt);
-  else if (P.correndo) P.energia = Math.max(0, P.energia - (P.parede ? ENERGIA.parede : ENERGIA.gasto) * dt);
+  else if (P.correndo) P.energia = Math.max(0, P.energia - (P.parede ? ENERGIA.parede : ENERGIA.gasto * gastoCorrida(P.embalo || 0)) * dt);
   else if (!combate.pertoDeBandido(P, 12) && !viloes.emLuta) P.energia = Math.min(1, P.energia + ENERGIA.recarga * dt * (m < 0.1 ? 3 : 1));   // no meio da briga não recarrega
-  const vmax = ((P.correndo || P.vibrando) ? MOV.correr : MOV.andar) * m * viloes.lentidao;   // o gelo do Capitão Frio deixa lento
+  // supervelocidade (velocidade.js): na reta, segurando CORRER, o embalo sobe o teto até ~830 km/h
+  const angPedido = vh0 > 5 && m > 0.1 ? Math.acos(clamp((P.vx * dx + P.vz * dz) / (vh0 * (Math.hypot(dx, dz) || 1)), -1, 1)) : 0;
+  P.embalo = passoEmbalo(P.embalo || 0, { correndo: P.correndo && !P.vibrando && !P.parede, noChao: P.noChao, m, angulo: angPedido, bloqueado: viloes.ativo || combate.ocupado }, dt);
+  const vmax = ((P.correndo || P.vibrando) ? (P.vibrando ? MOV.correr : tetoCorrida(P.embalo, MOV.correr)) : MOV.andar) * m * viloes.lentidao;   // o gelo do Capitão Frio deixa lento
   const taxa = P.noChao ? (P.correndo ? 5 : 11) : 2.2;
   const k = 1 - Math.exp(-taxa * dt);
   if (!P.parede) { P.vx += (dx * vmax - P.vx) * k; P.vz += (dz * vmax - P.vz) * k; }
@@ -739,7 +743,7 @@ function atualizarCamera(dt) {
   camera.position.set(alvo.x - fx * cp * C.dist, Math.max(0.6, alvo.y + sp * C.dist), alvo.z - fz * cp * C.dist);
   camera.lookAt(alvo);
   const tr = combate.tremor; if (tr > 0) { camera.position.x += (Math.random() - 0.5) * tr * 0.5; camera.position.y += (Math.random() - 0.5) * tr * 0.4; camera.position.z += (Math.random() - 0.5) * tr * 0.5; }
-  const fovAlvo = CAM.fov + clamp(v - 15, 0, 45) * 0.38;
+  const fovAlvo = CAM.fov + clamp(v - 15, 0, 45) * 0.38 + clamp(v - 60, 0, 170) * 0.045;   // na supervelocidade abre mais um pouco
   camera.fov = lerp(camera.fov, fovAlvo, 1 - Math.exp(-4 * dt)); camera.updateProjectionMatrix();
 }
 
