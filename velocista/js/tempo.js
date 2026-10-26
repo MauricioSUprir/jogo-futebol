@@ -24,8 +24,8 @@ void main() {
   vec2 p = vUv * 2.0 - 1.0; float r = length(p), a = atan(p.y, p.x);
   float espiral = sin(a * 5.0 + r * 14.0 - t * 6.0) * 0.5 + 0.5;
   float anel = smoothstep(1.0, 0.75, r) * smoothstep(0.0, 0.5, r);
-  vec3 cor = mix(vec3(0.25, 0.65, 2.2), vec3(2.4, 1.6, 0.4), espiral);
-  float alfa = anel * (0.35 + 0.65 * espiral) * forca;
+  vec3 cor = mix(vec3(0.18, 0.45, 1.4), vec3(1.4, 0.95, 0.25), espiral);
+  float alfa = anel * (0.25 + 0.5 * espiral) * forca;
   gl_FragColor = vec4(cor * alfa, alfa);
 }`;
 // túnel: faixas de luz correndo ao longo do tubo (v = comprimento), azul e dourado, com relâmpagos
@@ -53,7 +53,7 @@ export function criarTempo(cena, { mobile = false, aniso = 2, fx, lab, chao = nu
     const g = new THREE.Group(); g.position.set(p.x, 3.2, p.z); g.visible = false; cena.add(g);
     const mat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG_FENDA, uniforms: { t: U.t, forca: { value: 1 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
     g.add(new THREE.Mesh(geoMiolo, mat));
-    g.add(new THREE.Mesh(geoAnel, new THREE.MeshBasicMaterial({ color: new THREE.Color(1.8, 1.3, 0.4), toneMapped: false })));
+    g.add(new THREE.Mesh(geoAnel, new THREE.MeshBasicMaterial({ color: new THREE.Color(1.05, 0.78, 0.26), toneMapped: false })));   // forte o bastante para o brilho, sem estourar de perto
     const prog = new THREE.Mesh(PROG[0], new THREE.MeshBasicMaterial({ color: new THREE.Color(0.4, 1.6, 2.4), transparent: true, opacity: 0.9, toneMapped: false, side: THREE.DoubleSide }));
     g.add(prog);
     g.rotation.y = k * 0.9;
@@ -64,9 +64,9 @@ export function criarTempo(cena, { mobile = false, aniso = 2, fx, lab, chao = nu
     fendasLigadas = on;
     for (const f of fendas) { if (on && !f.fechada) { f.aberta = true; f.g.visible = true; } if (!on) f.g.visible = false; }
   }
-  /** devolve o id da fenda fechada neste quadro (ou -1) */
+  /** devolve quantas fendas fecharam neste quadro */
   function passoFendas(dt, P) {
-    let fechou = -1;
+    let fechou = 0;
     for (let k = 0; k < fendas.length; k++) {
       const f = fendas[k];
       if (f.sumindo > 0) { f.sumindo -= dt; const s = Math.max(0.001, f.sumindo / 0.8); f.g.scale.setScalar(s); if (f.sumindo <= 0) f.g.visible = false; continue; }
@@ -80,7 +80,7 @@ export function criarTempo(cena, { mobile = false, aniso = 2, fx, lab, chao = nu
         const a = rnd(0, 6.28); fx.raio(f.x, f.g.position.y, f.z, f.x + Math.cos(a) * rnd(3, 7), f.g.position.y + rnd(-3, 3), f.z + Math.sin(a) * rnd(3, 7), { vida: 0.18, desvio: 0.6, r: 0.4, g: 1.2, b: 2.4 });
       }
       if (f.progresso >= 1) {
-        f.aberta = false; f.fechada = true; f.sumindo = 0.8; fechou = k;
+        f.aberta = false; f.fechada = true; f.sumindo = 0.8; fechou++;
         fx.clarao(f.x, f.g.position.y, f.z, 7, 0.4); fx.onda(f.x, 0, f.z, 14, 0.6);
       }
     }

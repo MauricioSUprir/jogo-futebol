@@ -816,7 +816,8 @@ function passoMissoes(dt) {
   // Ato 3: fendas, túnel do tempo e a noite do acidente
   if (m?.id === 'fendas') {
     if (!tempo.fendasLigadas) tempo.ligarFendas(true);
-    if (tempo.passoFendas(dt, P) >= 0) { missoes.contar('fendas'); const pr = missoes.progresso(); avisar('Fenda fechada', pr ? pr.txt : '', 'ok'); }
+    const n = tempo.passoFendas(dt, P);
+    if (n) { missoes.contar('fendas', n); const pr = missoes.progresso(); avisar('Fenda fechada', pr ? pr.txt : '', 'ok'); }
   } else if (tempo.fendasLigadas) tempo.ligarFendas(false);
   if (m?.id === 'tunel') {
     tempo.prepararReverso();                                          // o Reverso do passado já vai sendo carregado
