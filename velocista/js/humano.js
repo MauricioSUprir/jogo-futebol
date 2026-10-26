@@ -15,6 +15,8 @@ const EMBLEMAS = {
   zoom: { disco: 0x05070a, cor: 0x3a8cff, emissivo: 0x1a50ff, forma: 'divisa', brilhoTecido: 0x203050 },
   reverso: { disco: 0x9a0a0a, cor: 0x141010, emissivo: 0x000000, forma: 'faisca', brilhoTecido: 0x806010 },
   savitar: { disco: 0x15181d, cor: 0x9fdcff, emissivo: 0x3fa8ff, forma: 'divisa', brilhoTecido: 0x607890 },
+  // o traje novo (em aprovação): losango dourado em relevo com o fundo vinho e um raio próprio cruzando
+  novo: { disco: 0x3a0309, cor: 0xffc93a, emissivo: 0x9a6a08, forma: 'losango', brilhoTecido: 0xa0141a },
 };
 // trajes maiores que o herói (a armadura do Savitar)
 const ESCALA_TRAJE = { savitar: 1.14 };
@@ -107,15 +109,29 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
   const matDisco = new THREE.MeshStandardMaterial({ color: EM.disco, roughness: 0.35, metalness: 0.4 });
   const matEmb = new THREE.MeshStandardMaterial({ color: EM.cor, roughness: 0.25, metalness: 0.85, emissive: EM.emissivo, emissiveIntensity: 0.7, side: THREE.DoubleSide });
   const emb = new THREE.Group();
+  const faisca = new THREE.Shape();
+  if (EM.forma === 'losango') {
+    // losango em relevo (moldura dourada chanfrada), o fundo vinho e o raio dourado cruzando por cima, também em relevo
+    const losango = (w, h) => { const f = new THREE.Shape(); f.moveTo(0, h); f.lineTo(w, 0); f.lineTo(0, -h); f.lineTo(-w, 0); f.closePath(); return f; };
+    const moldura = losango(0.074, 0.088); moldura.holes.push(losango(0.056, 0.067));
+    const ext = (forma, prof) => new THREE.ExtrudeGeometry(forma, { depth: prof, bevelEnabled: true, bevelThickness: 0.0025, bevelSize: 0.0022, bevelSegments: 2, curveSegments: 1 });
+    emb.add(new THREE.Mesh(ext(moldura, 0.005), matEmb));
+    emb.add(new THREE.Mesh(new THREE.ShapeGeometry(losango(0.058, 0.07)), matDisco));
+    const raio = new THREE.Shape();
+    [[0.03, 0.068], [-0.012, 0.006], [0.01, 0.006], [-0.03, -0.068], [0.014, -0.004], [-0.008, -0.004]].forEach(([x, y], i) => (i ? raio.lineTo(x, y) : raio.moveTo(x, y)));
+    raio.closePath();
+    const mr = new THREE.Mesh(ext(raio, 0.007), matEmb); mr.position.z = 0.001; emb.add(mr);
+  } else {
   const disco = new THREE.Mesh(new THREE.CircleGeometry(0.06, 32), matDisco); disco.position.z = -0.001; emb.add(disco);
   emb.add(new THREE.Mesh(new THREE.RingGeometry(0.06, 0.075, 40), matEmb));
-  const faisca = new THREE.Shape();
   if (EM.forma === 'divisa') {                          // duas divisas (setas) apontando para a frente
     for (const o of [-0.022, 0.018]) { faisca.moveTo(o - 0.018, 0.04); faisca.lineTo(o + 0.022, 0); faisca.lineTo(o - 0.018, -0.04); faisca.lineTo(o - 0.032, -0.04); faisca.lineTo(o + 0.008, 0); faisca.lineTo(o - 0.032, 0.04); faisca.closePath(); }
   } else { faisca.moveTo(0, 0.052); faisca.lineTo(0.014, 0.014); faisca.lineTo(0.052, 0); faisca.lineTo(0.014, -0.014); faisca.lineTo(0, -0.052); faisca.lineTo(-0.014, -0.014); faisca.lineTo(-0.052, 0); faisca.lineTo(-0.014, 0.014); faisca.closePath(); }
   emb.add(new THREE.Mesh(new THREE.ShapeGeometry(faisca), matEmb));
+  }
   // a frente do peito em repouso fica em x = 0,145: o emblema logo à frente dela, no meio do peitoral
   emb.scale.setScalar(1.15); emb.position.set(0.152, 1.325 - J.peito[1], 0); emb.rotation.y = Math.PI / 2;
+  if (EM.forma === 'losango') { emb.position.x = 0.146; emb.scale.z = 0.5; }       // o relevo colado no peito (de lado não fica uma placa solta)
   if (!pessoa) ossos[I.peito].add(emb);
   emb.material = matEmb;
 
