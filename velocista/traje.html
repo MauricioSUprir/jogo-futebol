@@ -82,7 +82,7 @@ document.getElementById('carregando').hidden = true;
 carregar(traje === 'novo' ? 'heroi' : 'novo');          // o outro, para comparar, carrega depois
 
 const botoes = [...document.querySelectorAll('#barra button')];
-const marcar = () => botoes.forEach((b) => b.classList.toggle('on', b.dataset.traje === traje || b.dataset.pose === pose || (b.id === 'girar' && girando)));
+const marcar = () => { botoes.forEach((b) => b.classList.toggle('on', b.dataset.traje === traje || b.dataset.pose === pose || (b.id === 'girar' && girando))); document.querySelector('h1 b').textContent = traje === 'novo' ? 'NOVO' : 'ATUAL'; };
 botoes.forEach((b) => b.addEventListener('click', () => {
   if (b.dataset.traje) traje = b.dataset.traje; else if (b.dataset.pose) pose = b.dataset.pose; else girando = !girando;
   marcar();
