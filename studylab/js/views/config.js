@@ -1,4 +1,4 @@
-/* ===== views/config.js — configurações, Study AI, plano e seus dados ===== */
+/* ===== views/config.js — configurações, MindTrack AI, plano e seus dados ===== */
 import { h, iso, fmtData, daysBetween, parseISO, today } from '../util.js';
 import {
   st, set, aplicarTema, exportar, importar, zerar, carregarExemplo,
@@ -19,7 +19,7 @@ export function render(el) {
 
 function montar(el, pintar) {
   const s = st();
-  el.append(titulo('⚙️ Configurações', 'Perfil, ritmo de estudo, Study AI e seus dados.'));
+  el.append(titulo('⚙️ Configurações', 'Perfil, ritmo de estudo, MindTrack AI e seus dados.'));
 
   /* ---------- perfil ---------- */
   const nome = inp({ value: s.perfil.nome });
@@ -94,9 +94,9 @@ function montar(el, pintar) {
         }, 'Sair'))
       : h('div', {},
         h('p', { class: 'small' }, googleConfigurado()
-          ? 'Você está usando o StudyLab sem conta. Entre com o Google para identificar sua assinatura.'
-          : 'Você está usando o StudyLab sem conta — tudo fica salvo só neste aparelho. Com o servidor ligado, '
-            + 'isso já basta para assinar e usar o Study AI.'),
+          ? 'Você está usando o MindTrack sem conta. Entre com o Google para identificar sua assinatura.'
+          : 'Você está usando o MindTrack sem conta — tudo fica salvo só neste aparelho. Com o servidor ligado, '
+            + 'isso já basta para assinar e usar o MindTrack AI.'),
         caixaGoogle,
         googleConfigurado() ? null : h('button', { class: 'btn btn--sm mt', onclick: comoLigarGoogle }, '🔑 Como ligar o login do Google')))));
   if (c.provedor !== 'google' && googleConfigurado()) {
@@ -116,19 +116,19 @@ function montar(el, pintar) {
         h('a', { class: 'btn', href: '#/planos' }, 'Gerenciar assinatura'))
       : h('div', {},
         h('p', { class: 'small' },
-          'O StudyLab é gratuito e completo: prioridades, revisão espaçada, questões, flashcards, foco, desempenho e conquistas. '
-          + 'O ', h('b', {}, 'Study AI'), ' — o tutor que conhece suas matérias, provas e erros — faz parte do plano Pro.'),
+          'O MindTrack é gratuito e completo: prioridades, revisão espaçada, questões, flashcards, foco, desempenho e conquistas. '
+          + 'O ', h('b', {}, 'MindTrack AI'), ' — o tutor que conhece suas matérias, provas e erros — faz parte do plano Pro.'),
         h('div', { class: 'chips mb' }, ...RECURSOS_PRO.slice(0, 4).map((r) => h('span', { class: 'chip' }, r.nome))),
         h('a', { class: 'btn btn--p', href: '#/planos' }, '✨ Ver planos')))));
 
-  /* ---------- status do Study AI (só leitura, sem chave nenhuma) ---------- */
+  /* ---------- status do MindTrack AI (só leitura, sem chave nenhuma) ---------- */
   const ligado = !!(s.ia.servidor || SERVIDOR);
   el.append(h('div', { class: 'mt2' }, cartao(
-    h('div', { class: 'flexb mb' }, h('b', {}, '🤖 Study AI'),
+    h('div', { class: 'flexb mb' }, h('b', {}, '🤖 MindTrack AI'),
       h('span', { class: `chip sp ${ligado ? 'ok' : ''}` }, ligado ? 'ligado' : 'ainda não ligado')),
     h('p', { class: 'small', style: { marginBottom: 0 } }, ligado
-      ? 'Quem tem o Pro conversa com o Study AI normalmente — nada para configurar aqui.'
-      : 'O Study AI ainda não foi ligado pelo dono do app. Nada que você precise fazer: quando ligar, '
+      ? 'Quem tem o Pro conversa com o MindTrack AI normalmente — nada para configurar aqui.'
+      : 'O MindTrack AI ainda não foi ligado pelo dono do app. Nada que você precise fazer: quando ligar, '
         + 'quem tiver o Pro passa a usar automaticamente.'))));
 
   /* ---------- dados ---------- */
@@ -136,7 +136,7 @@ function montar(el, pintar) {
     h('b', {}, '💾 Seus dados'),
     h('p', { class: 'small' },
       'Tudo fica salvo apenas neste navegador. Nada é enviado para nenhum servidor (a única exceção são as chamadas de IA, '
-      + 'que vão direto para a Anthropic quando você usa o Study AI). Faça backup de vez em quando.'),
+      + 'que vão direto para a Anthropic quando você usa o MindTrack AI). Faça backup de vez em quando.'),
     h('div', { class: 'grid g2 keep2 mt' },
       h('button', {
         class: 'btn btn--blk', onclick: () => {
@@ -180,7 +180,7 @@ function montar(el, pintar) {
       if (toques >= 5) { toques = 0; location.hash = '#/criador'; }
       else if (toques === 3) toast('Mais 2 toques…');
     },
-  }, 'StudyLab · versão 1.2 · feito para funcionar offline'));
+  }, 'MindTrack AI · versão 2.0 · por Caio, Cauã, Eduardo, Khoan, Lucas, Thiago e Tarso'));
   el.append(h('p', { class: 'tiny center', style: { marginTop: '6px' } },
     h('a', { href: '#/termos' }, 'Termos de uso'), ' · ',
     h('a', { href: '#/termos?aba=privacidade' }, 'Política de privacidade')));

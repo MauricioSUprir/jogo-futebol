@@ -1,6 +1,6 @@
 /* ===== views/entrar.js — criar conta e primeira configuração =====
    Aparece uma única vez, antes do app. Nada de dados de exemplo: o aluno diz
-   quem é e quais matérias tem, e o StudyLab começa com a escola dele.         */
+   quem é e quais matérias tem, e o MindTrack começa com a escola dele.         */
 import { h, iso } from '../util.js';
 import { st, set, entrarComo, novaMateria, concluirOnboarding, carregarExemplo } from '../store.js';
 import { toast, inp, sel, campo, segmento, modal, fecharModal } from '../ui.js';
@@ -9,19 +9,19 @@ import { botaoGoogle, googleConfigurado } from '../auth.js';
 /* ---------- catálogo de matérias por nível ---------- */
 const M = (nome, emoji, cor) => ({ nome, emoji, cor });
 const FUND1 = [
-  M('Português', '📖', '#f472b6'), M('Matemática', '📐', '#60a5fa'), M('Ciências', '🔬', '#22d3ee'),
+  M('Português', '📖', '#f472b6'), M('Matemática', '📐', '#60a5fa'), M('Ciências', '🔬', '#f1d794'),
   M('História', '🏛️', '#fbbf24'), M('Geografia', '🌎', '#34d399'), M('Inglês', '🌐', '#a78bfa'),
   M('Arte', '🎨', '#fb923c'), M('Educação Física', '⚽', '#4ade80'), M('Ensino Religioso', '🕊️', '#94a3b8'),
 ];
 const FUNDAMENTAL = [
   M('Português', '📖', '#f472b6'), M('Matemática', '📐', '#60a5fa'), M('História', '🏛️', '#fbbf24'),
-  M('Geografia', '🌎', '#34d399'), M('Ciências', '🔬', '#22d3ee'), M('Inglês', '🌐', '#a78bfa'),
+  M('Geografia', '🌎', '#34d399'), M('Ciências', '🔬', '#f1d794'), M('Inglês', '🌐', '#a78bfa'),
   M('Arte', '🎨', '#fb923c'), M('Educação Física', '⚽', '#4ade80'), M('Espanhol', '🇪🇸', '#f87171'),
   M('Redação', '✍️', '#c084fc'), M('Ensino Religioso', '🕊️', '#94a3b8'),
 ];
 const MEDIO = [
   M('Português', '📖', '#f472b6'), M('Redação', '✍️', '#c084fc'), M('Literatura', '📚', '#e879f9'),
-  M('Matemática', '📐', '#60a5fa'), M('Física', '🧲', '#38bdf8'), M('Química', '⚗️', '#22d3ee'),
+  M('Matemática', '📐', '#60a5fa'), M('Física', '🧲', '#38bdf8'), M('Química', '⚗️', '#f1d794'),
   M('Biologia', '🧬', '#4ade80'), M('História', '🏛️', '#fbbf24'), M('Geografia', '🌎', '#34d399'),
   M('Filosofia', '🤔', '#a78bfa'), M('Sociologia', '👥', '#fb923c'), M('Inglês', '🌐', '#818cf8'),
   M('Espanhol', '🇪🇸', '#f87171'), M('Educação Física', '⚽', '#84cc16'), M('Arte', '🎨', '#f0abfc'),
@@ -76,7 +76,7 @@ export function comoLigarGoogle() {
       'O botão do Google já está pronto no app — falta só criar o Client ID e colar em '
       + 'studylab/js/produto.js. Leva uns 5 minutos e é de graça.'),
     h('ol', { class: 'small', style: { paddingLeft: '20px', lineHeight: 1.8 } },
-      h('li', {}, 'Abra ', h('a', { href: 'https://console.cloud.google.com', target: '_blank', rel: 'noopener' }, 'console.cloud.google.com'), ' e crie um projeto chamado StudyLab.'),
+      h('li', {}, 'Abra ', h('a', { href: 'https://console.cloud.google.com', target: '_blank', rel: 'noopener' }, 'console.cloud.google.com'), ' e crie um projeto chamado MindTrack.'),
       h('li', {}, 'Vá em ', h('b', {}, 'APIs e serviços → Tela de permissão OAuth'), ', escolha ', h('b', {}, 'Externo'), ' e preencha nome do app e e-mail de contato.'),
       h('li', {}, 'Em ', h('b', {}, 'Credenciais → Criar credenciais → ID do cliente OAuth'), ', escolha ', h('b', {}, 'Aplicativo da Web'), '.'),
       h('li', {}, 'Em ', h('b', {}, 'Origens JavaScript autorizadas'), ', adicione ', h('code', {}, 'https://mauriciosuprir.github.io'), '.'),
@@ -123,7 +123,7 @@ export function abrirEntrada(aoConcluir) {
     const conteudo = h('div', { style: { width: 'min(420px,100%)', margin: '0 auto' } },
       MARCA(88),
       h('div', { class: 'center', style: { marginTop: '14px' } },
-        h('div', { class: 'wordmark', style: { fontSize: '30px' } }, 'Study', h('span', {}, 'Lab')),
+        h('div', { class: 'wordmark', style: { fontSize: '30px' } }, 'MindTrack', h('span', {}, ' AI')),
         h('div', { class: 'tagline', style: { marginTop: '6px' } }, 'Estude', h('i', {}, '.'), ' Pratique', h('i', {}, '.'), ' Evolua', h('i', {}, '.'))),
       h('p', { class: 'muted center', style: { margin: '16px auto 20px', maxWidth: '38ch' } },
         'Sua vida escolar organizada: o que fazer agora, o que está atrasado, quando revisar e quanto falta para a prova.'),
@@ -198,7 +198,7 @@ export function abrirEntrada(aoConcluir) {
     const adicionar = () => {
       const n = nova.value.trim(); if (!n) return;
       if (![...lista, ...extras].some((m) => m.nome.toLowerCase() === n.toLowerCase())) {
-        extras.push(M(n, '📘', '#7c5cff'));
+        extras.push(M(n, '📘', '#3ec9f5'));
       }
       dados.materias.add(n); nova.value = ''; pintarChips();
     };
@@ -209,7 +209,7 @@ export function abrirEntrada(aoConcluir) {
       cabecalho('Quais matérias você tem?',
         ['Faculdade', 'Concurso', 'Técnico'].includes(dados.serie)
           ? 'Como cada curso tem a sua grade, comece digitando as suas matérias aqui embaixo. Dá para mudar depois.'
-          : 'O StudyLab não adivinha sua grade — você escolhe aqui e pode mudar quando quiser. Toque para marcar.'),
+          : 'O MindTrack não adivinha sua grade — você escolhe aqui e pode mudar quando quiser. Toque para marcar.'),
       caixa(
         grade,
         h('div', { class: 'flexb mt' }, nova, h('button', { class: 'btn', onclick: adicionar }, '+ Adicionar')),
@@ -245,7 +245,7 @@ export function abrirEntrada(aoConcluir) {
       passos(3),
       MARCA(),
       cabecalho(`Tudo pronto, ${dados.nome}! 🎉`,
-        'Seu StudyLab começa vazio de propósito — só com o que é seu. O próximo passo é cadastrar a primeira tarefa ou prova.'),
+        'Seu MindTrack começa vazio de propósito — só com o que é seu. O próximo passo é cadastrar a primeira tarefa ou prova.'),
       caixa(
         h('div', { class: 'list' },
           h('div', { class: 'row row--flat' }, h('span', {}, '📚'),
@@ -258,7 +258,7 @@ export function abrirEntrada(aoConcluir) {
           class: 'btn btn--p btn--blk btn--xl mt2', onclick: () => {
             const catalogo = [...FUND1, ...FUNDAMENTAL, ...MEDIO];
             for (const nome of dados.materias) {
-              const base = catalogo.find((m) => m.nome === nome) || M(nome, '📘', '#7c5cff');
+              const base = catalogo.find((m) => m.nome === nome) || M(nome, '📘', '#3ec9f5');
               novaMateria({ nome: base.nome, emoji: base.emoji, cor: base.cor, meta: 9 });
             }
             set((s) => {
@@ -267,10 +267,10 @@ export function abrirEntrada(aoConcluir) {
               s.prefs.minutosDia = dados.minutos;
             });
             concluirOnboarding();
-            toast(`Bem-vindo ao StudyLab, ${dados.nome}!`, 'good');
+            toast(`Bem-vindo ao MindTrack, ${dados.nome}!`, 'good');
             fechar();
           },
-        }, '▶ Entrar no StudyLab'))));
+        }, '▶ Entrar no MindTrack'))));
   }
 
   function pintar() {

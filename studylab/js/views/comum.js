@@ -146,7 +146,7 @@ export function formTarefa(tarefa = null, aoSalvar = null, padrao = {}) {
         btnDividir.disabled = false; btnDividir.textContent = '✨ Dividir em passos';
       } else {
         subs = dividirTarefa(titulo, min);
-        toast('Dividido com o modelo padrão (ative o Study AI para uma divisão sob medida)');
+        toast('Dividido com o modelo padrão (ative o MindTrack AI para uma divisão sob medida)');
       }
       pintarSubs();
     },

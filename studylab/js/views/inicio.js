@@ -55,8 +55,8 @@ function montar(el, pintar) {
           h('div', { class: 'grow' },
             h('b', { class: 'small' }, faltam < 0 ? 'Sua assinatura venceu' : faltam === 0 ? 'Seu Pro termina hoje' : `Seu Pro termina em ${faltam} dia(s)`),
             h('div', { class: 'tiny muted' }, faltam < 0
-              ? 'O Study AI ficou indisponível. Renove para voltar a usar.'
-              : `Renove para não perder o Study AI. Vence em ${fmtData(s.conta.proAte)}.`)),
+              ? 'O MindTrack AI ficou indisponível. Renove para voltar a usar.'
+              : `Renove para não perder o MindTrack AI. Vence em ${fmtData(s.conta.proAte)}.`)),
           h('a', { class: 'btn btn--p', href: '#/planos' }, 'Renovar'))));
     }
   }
@@ -69,7 +69,7 @@ function montar(el, pintar) {
       ok ? null : acao);
     el.append(cartao(
       h('b', {}, '🚀 Primeiros passos'),
-      h('p', { class: 'tiny muted' }, 'Seu StudyLab começa vazio de propósito. Três minutos e ele já trabalha por você.'),
+      h('p', { class: 'tiny muted' }, 'Seu MindTrack começa vazio de propósito. Três minutos e ele já trabalha por você.'),
       h('div', { class: 'list mt' },
         feito(s.materias.length > 0, `Cadastrar suas matérias (${s.materias.length})`,
           h('a', { class: 'btn btn--sm', href: '#/materias' }, 'Matérias')),
@@ -100,7 +100,7 @@ function montar(el, pintar) {
           h('b', {}, s.tarefas.length ? 'Nada na fila 🎉' : 'Sem tarefas ainda'),
           h('span', {}, s.tarefas.length
             ? 'Todas as tarefas estão concluídas.'
-            : 'Assim que você anotar a primeira tarefa, o StudyLab diz por onde começar.'),
+            : 'Assim que você anotar a primeira tarefa, o MindTrack diz por onde começar.'),
           s.tarefas.length ? null : h('div', { class: 'mt' },
             h('button', { class: 'btn btn--p', onclick: () => formTarefa(null, pintar) }, '➕ Primeira tarefa')))),
     cartao(

@@ -22,7 +22,7 @@ function lista(el, pintar) {
     h('button', { class: 'btn btn--p', onclick: () => formProva(null, pintar) }, '➕ Nova prova')));
 
   if (!futuras.length && !passadas.length) {
-    el.append(vazio('Nenhuma prova cadastrada', 'Cadastre uma prova e o StudyLab monta o plano de estudo sozinho.',
+    el.append(vazio('Nenhuma prova cadastrada', 'Cadastre uma prova e o MindTrack monta o plano de estudo sozinho.',
       h('button', { class: 'btn btn--p', onclick: () => formProva(null, pintar) }, '➕ Cadastrar prova')));
     return;
   }
@@ -100,7 +100,7 @@ function detalhe(el, id, pintar) {
 
   if (!(p.plano || []).length) {
     planoBox.append(h('p', { class: 'muted small' },
-      'Sem plano ainda. Clique em "Gerar plano" — o StudyLab distribui os conteúdos pelos dias, dando mais tempo ao que você domina menos, e reserva simulado + revisão final.'));
+      'Sem plano ainda. Clique em "Gerar plano" — o MindTrack distribui os conteúdos pelos dias, dando mais tempo ao que você domina menos, e reserva simulado + revisão final.'));
   } else {
     const porDia = {};
     for (const b of p.plano) (porDia[b.data] ||= []).push(b);
@@ -141,7 +141,7 @@ function detalhe(el, id, pintar) {
   const notaInp = inp({ type: 'number', step: .1, min: 0, value: p.nota ?? '' , placeholder: 'ex.: 8.5' });
   el.append(h('div', { class: 'mt2' }, cartao(
     h('b', {}, '📊 Depois da prova'),
-    h('p', { class: 'tiny muted' }, 'Registre a nota para o StudyLab acompanhar sua evolução e recalcular médias.'),
+    h('p', { class: 'tiny muted' }, 'Registre a nota para o MindTrack acompanhar sua evolução e recalcular médias.'),
     h('div', { class: 'flexb' }, notaInp,
       h('button', {
         class: 'btn btn--p', onclick: () => {

@@ -93,7 +93,7 @@ function svg(tag, attrs = {}) {
 }
 
 /** Barras verticais. dados = [{rot, v, cor?}] */
-export function gBarras(dados, { alt = 150, cor = '#7c5cff', formato = (v) => v, mostrarRot = true } = {}) {
+export function gBarras(dados, { alt = 150, cor = '#3ec9f5', formato = (v) => v, mostrarRot = true } = {}) {
   const larg = 320, pad = { t: 12, b: mostrarRot ? 20 : 6, l: 4, r: 4 };
   const max = Math.max(1, ...dados.map((d) => d.v));
   const s = svg('svg', { class: 'chart', viewBox: `0 0 ${larg} ${alt}`, preserveAspectRatio: 'none' });
@@ -115,7 +115,7 @@ export function gBarras(dados, { alt = 150, cor = '#7c5cff', formato = (v) => v,
 }
 
 /** Linha com área. dados = [{rot, v}] */
-export function gLinha(dados, { alt = 150, cor = '#22d3ee', formato = (v) => v } = {}) {
+export function gLinha(dados, { alt = 150, cor = '#f1d794', formato = (v) => v } = {}) {
   const larg = 320, pad = { t: 12, b: 20, l: 6, r: 6 };
   const max = Math.max(1, ...dados.map((d) => d.v));
   const s = svg('svg', { class: 'chart', viewBox: `0 0 ${larg} ${alt}` });
@@ -151,7 +151,7 @@ export function gBarrasH(dados, { formato = (v) => v } = {}) {
 }
 
 /** Rosca / anel de progresso (0..1). */
-export function gAnel(p, { tam = 92, larguraTraco = 9, cor = '#7c5cff', texto = null, corFundo = '#242a3d' } = {}) {
+export function gAnel(p, { tam = 92, larguraTraco = 9, cor = '#3ec9f5', texto = null, corFundo = '#272a35' } = {}) {
   const r = (tam - larguraTraco) / 2, c = 2 * Math.PI * r;
   const s = svg('svg', { viewBox: `0 0 ${tam} ${tam}`, width: tam, height: tam });
   s.append(svg('circle', { cx: tam / 2, cy: tam / 2, r, fill: 'none', stroke: corFundo, 'stroke-width': larguraTraco }));
@@ -196,8 +196,8 @@ export function progresso(rot, v, { cls = '', sufixo = '%' } = {}) {
 }
 
 /* ==========================================================
-   PLANO PAGO — Study AI é exclusivo do Pro.
-   Todo o resto do StudyLab continua gratuito e sem limite.
+   PLANO PAGO — MindTrack AI é exclusivo do Pro.
+   Todo o resto do MindTrack continua gratuito e sem limite.
    ========================================================== */
 export const COBRANCA_ATIVA = true;
 
@@ -206,12 +206,12 @@ export const RECURSOS = [
   { id: 'motor', nome: 'Prioridades, revisão espaçada, domínio e planos de prova', nivel: null },
   { id: 'estudo', nome: 'Tarefas, provas, matérias, foco, flashcards e questões', nivel: null },
   { id: 'desempenho', nome: 'Desempenho, notas, simulador de notas e metas', nivel: null },
-  { id: 'jogo', nome: 'XP, níveis, conquistas, sequência e StudyCoins', nivel: null },
+  { id: 'jogo', nome: 'XP, níveis, conquistas, sequência e MindCoins', nivel: null },
   { id: 'local', nome: 'Resumo automático e questões a partir dos seus flashcards', nivel: null },
   { id: 'escola', nome: 'Minha Escola: o que você está aprendendo, com fotos do caderno', nivel: null },
 
-  { id: 'ia_chat', nome: 'Study AI — o tutor que conhece suas matérias e notas', nivel: 'pro' },
-  { id: 'ia_fotos', nome: 'Mandar foto da questão ou do caderno para o Study AI', nivel: 'pro' },
+  { id: 'ia_chat', nome: 'MindTrack AI — o tutor que conhece suas matérias e notas', nivel: 'pro' },
+  { id: 'ia_fotos', nome: 'Mandar foto da questão ou do caderno para o MindTrack AI', nivel: 'pro' },
   { id: 'ia_explica', nome: 'Me explica e professor socrático', nivel: 'pro' },
   { id: 'ia_questoes', nome: 'Gerar questões e simulados sobre qualquer conteúdo', nivel: 'pro' },
   { id: 'ia_flashcards', nome: 'Criar flashcards a partir de qualquer material', nivel: 'pro' },
@@ -243,7 +243,7 @@ export function liberado(recursoId) {
 export const selo = (nivel = 'pro') => h('span', { class: 'pro-tag' }, nivel === 'plus' ? 'PLUS' : 'PRO');
 
 /** Cartão padrão de "isso é pago", usado em todas as telas com IA. */
-export function paywall(titulo = 'Isso é do StudyLab Pro', texto = '', nivel = 'pro') {
+export function paywall(titulo = 'Isso é do MindTrack Pro', texto = '', nivel = 'pro') {
   const nomePlano = nivel === 'plus' ? 'Plus' : 'Pro';
   return h('div', { class: 'card', style: { borderColor: '#f59e0b55', textAlign: 'center' } },
     h('div', { style: { fontSize: '30px' } }, '🔒'),
@@ -252,6 +252,6 @@ export function paywall(titulo = 'Isso é do StudyLab Pro', texto = '', nivel = 
     h('p', { class: 'small muted', style: { maxWidth: '48ch', margin: '0 auto 12px' } },
       texto || (nivel === 'plus'
         ? `Este recurso faz parte do plano ${nomePlano} — o nível com mais perguntas, mais fotos e as ferramentas avançadas.`
-        : 'O Study AI é o tutor que conhece suas matérias, suas provas e seus erros. Ele faz parte dos planos Pro e Plus.')),
+        : 'O MindTrack AI é o tutor que conhece suas matérias, suas provas e seus erros. Ele faz parte dos planos Pro e Plus.')),
     h('a', { class: 'btn btn--p', href: '#/planos' }, '✨ Ver planos'));
 }

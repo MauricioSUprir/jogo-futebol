@@ -1,4 +1,4 @@
-/* ===== db.js — banco do StudyLab =====
+/* ===== db.js — banco do MindTrack =====
    Com DATABASE_URL usa Postgres (é o que roda no Railway).
    Sem DATABASE_URL cai para memória, só para você testar na sua máquina —
    nesse modo os dados somem quando o servidor reinicia.                      */
@@ -18,7 +18,7 @@ const mem = { usuarios: new Map(), assinaturas: new Map(), uso: new Map(), codig
 export async function migrar() {
   if (emMemoria) {
     for (const [codigo, d] of Object.entries({
-      STUDYLAB30: { dias: 30, nivel: 'pro' },
+      MINDTRACK30: { dias: 30, nivel: 'pro' },
       PROFESSOR: { dias: 365, nivel: 'plus' },
       TESTE7: { dias: 7, nivel: 'pro' },
     })) {
@@ -91,7 +91,7 @@ export async function migrar() {
   const [{ count }] = await sql`SELECT count(*)::int AS count FROM codigos`;
   if (count === 0) {
     await sql`INSERT INTO codigos ${sql([
-      { codigo: 'STUDYLAB30', dias: 30, nivel: 'pro', usos_max: 50 },
+      { codigo: 'MINDTRACK30', dias: 30, nivel: 'pro', usos_max: 50 },
       { codigo: 'PROFESSOR', dias: 365, nivel: 'plus', usos_max: 20 },
       { codigo: 'TESTE7', dias: 7, nivel: 'pro', usos_max: 200 },
     ])}`;
@@ -118,7 +118,7 @@ export async function salvarUsuario({ id, email, nome, foto, provedor = 'google'
 
 /**
  * Conta de aparelho: o app sorteia um id e uma senha na primeira vez e guarda
- * no próprio celular. Serve para o aluno usar o StudyLab (e assinar) sem
+ * no próprio celular. Serve para o aluno usar o MindTrack (e assinar) sem
  * precisar de conta Google. Quem sabe só o id não entra: precisa da senha.
  */
 export async function entrarPorDispositivo({ id, segredo, nome }) {

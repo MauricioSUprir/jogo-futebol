@@ -12,7 +12,7 @@ import {
 } from '../api.js';
 
 /* O formulário de cartão é o do próprio Mercado Pago (SDK deles). O número do
-   cartão nunca passa pelo StudyLab: o formulário devolve só um "token". */
+   cartão nunca passa pelo MindTrack: o formulário devolve só um "token". */
 let sdkMP = null;
 function carregarSdkMP() {
   if (window.MercadoPago) return Promise.resolve();
@@ -52,7 +52,7 @@ export function abrirPagamento(plano, aoLiberar) {
     tela.replaceChildren(caixa(
       h('div', { class: 'card' },
         h('b', {}, 'Como você quer pagar?'),
-        h('p', { class: 'tiny muted' }, `${plano.dias} dias de StudyLab ${plano.nivel === 'plus' ? 'Plus' : 'Pro'}.`),
+        h('p', { class: 'tiny muted' }, `${plano.dias} dias de MindTrack ${plano.nivel === 'plus' ? 'Plus' : 'Pro'}.`),
 
         h('button', {
           class: 'card card--flat mt', style: { display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer' },
@@ -73,7 +73,7 @@ export function abrirPagamento(plano, aoLiberar) {
             h('span', {}, '›'))),
 
         h('p', { class: 'tiny muted mt' },
-          'O StudyLab não guarda nem vê os dados do seu cartão nem a sua chave Pix. Quem processa é o Mercado Pago.'),
+          'O MindTrack não guarda nem vê os dados do seu cartão nem a sua chave Pix. Quem processa é o Mercado Pago.'),
         h('p', { class: 'tiny muted' },
           'Ao pagar você aceita os ', h('a', { href: '#/termos', onclick: fechar }, 'Termos'),
           '. Dá para cancelar quando quiser e desistir em até 7 dias. ',
@@ -154,7 +154,7 @@ export function abrirPagamento(plano, aoLiberar) {
       h('div', { class: 'hr' }),
       situacao,
       h('p', { class: 'tiny muted center mt' },
-        'Assim que o pagamento cair, esta tela muda sozinha e o Study AI é liberado. Pode deixar aberta.'),
+        'Assim que o pagamento cair, esta tela muda sozinha e o MindTrack AI é liberado. Pode deixar aberta.'),
       h('button', { class: 'btn btn--sm mt', onclick: () => confirmar('Cancelar o pagamento?', 'A cobrança expira sozinha se você não pagar.', fechar) }, 'Cancelar'))));
 
     /* olha o pagamento a cada 4 segundos, por até 15 minutos */
@@ -180,7 +180,7 @@ export function abrirPagamento(plano, aoLiberar) {
       h('div', { style: { fontSize: '52px' } }, '🎉'),
       h('h2', { style: { fontSize: '20px' } }, 'Pagamento confirmado!'),
       h('p', { class: 'muted' }, r.proAte ? `Sua assinatura está ativa até ${fmtData(r.proAte)}.` : 'Sua assinatura está ativa.'),
-      h('a', { class: 'btn btn--p btn--blk btn--xl mt2', href: '#/ai', onclick: fechar }, '🤖 Abrir o Study AI'),
+      h('a', { class: 'btn btn--p btn--blk btn--xl mt2', href: '#/ai', onclick: fechar }, '🤖 Abrir o MindTrack AI'),
       h('button', { class: 'btn btn--blk mt', onclick: fechar }, 'Voltar ao app'))));
   }
 
@@ -204,7 +204,7 @@ export function abrirPagamento(plano, aoLiberar) {
       h('b', {}, '💳 Pagar com cartão'),
       h('p', { class: 'tiny muted' }, `${plano.dias} dias de ${plano.nivel === 'plus' ? 'Plus' : 'Pro'} · ${precoBR(plano.preco)}`),
       caixaForm, erroEl,
-      h('p', { class: 'tiny muted' }, 'O formulário é do Mercado Pago. O número do cartão não passa pelo StudyLab.'),
+      h('p', { class: 'tiny muted' }, 'O formulário é do Mercado Pago. O número do cartão não passa pelo MindTrack.'),
       h('button', { class: 'btn btn--sm mt', onclick: escolherForma }, '‹ Escolher outra forma'))));
 
     try {

@@ -23,18 +23,18 @@ export function render(el) {
 
 function montar(el, pintar) {
   const s = st();
-  el.append(titulo('🤖 Study AI', 'Ele conhece suas matérias, provas, erros e calendário.',
+  el.append(titulo('🤖 MindTrack AI', 'Ele conhece suas matérias, provas, erros e calendário.',
     h('button', { class: 'btn', onclick: () => verContexto() }, '👁️ O que ele sabe'),
     h('button', { class: 'btn', onclick: () => abrirMemoria(pintar) }, '🧠 Memória')));
 
   if (!temIA()) {
     const porQue = motivoIA();
     el.append(h('div', { class: 'mb' }, porQue === 'PRO'
-      ? paywall('O Study AI é dos planos Pro e Plus',
+      ? paywall('O MindTrack AI é dos planos Pro e Plus',
         'Ele conhece suas matérias, suas provas, seus erros e seu calendário — e responde com base nos seus dados de verdade, '
         + 'não em achismo. Pergunte "o que eu estudo agora?" e veja a diferença.')
-      : paywall('Study AI ainda não foi ligado',
-        'Sua assinatura está ativa, mas o servidor do StudyLab ainda não está no ar — é ele que guarda a chave e '
+      : paywall('MindTrack AI ainda não foi ligado',
+        'Sua assinatura está ativa, mas o servidor do MindTrack ainda não está no ar — é ele que guarda a chave e '
         + 'conversa com a inteligência artificial. Se este app é seu: publique o studylab-server e informe o '
         + 'endereço em ⚙️ Configurações → Área do criador.')));
 
@@ -43,7 +43,7 @@ function montar(el, pintar) {
     }
     el.append(cartao(
       h('b', {}, '🤔 O que ele responderia com os seus dados'),
-      h('p', { class: 'tiny muted' }, 'Exemplos reais do que o Study AI usa quando é liberado:'),
+      h('p', { class: 'tiny muted' }, 'Exemplos reais do que o MindTrack AI usa quando é liberado:'),
       h('div', { class: 'chips' }, ...SUGESTOES.map((sg) => h('span', { class: 'chip' }, sg))),
       porQue === 'PRO' ? h('a', { class: 'btn btn--p mt', href: '#/planos' }, '✨ Ver planos') : null));
 
@@ -119,7 +119,7 @@ function montar(el, pintar) {
 
   function abrirFotos() {
     const porta = liberado('ia_fotos');
-    if (!porta.ok) return modal('📸 Fotos no Study AI', paywall('Mandar fotos é dos planos pagos', '', porta.precisa));
+    if (!porta.ok) return modal('📸 Fotos no MindTrack AI', paywall('Mandar fotos é dos planos pagos', '', porta.precisa));
     modal('📸 Anexar foto', h('div', {},
       h('p', { class: 'small muted', style: { marginTop: 0 } },
         `Mande a foto da questão, do caderno ou do quadro. Seu plano: até ${limites.fotosPergunta} por pergunta, ${limites.fotosDia} por dia.`),
@@ -175,7 +175,7 @@ function montar(el, pintar) {
   el.append(h('div', { class: 'chips mt' }, ...SUGESTOES.map((sg) =>
     h('button', { class: 'chip', style: { cursor: 'pointer' }, onclick: () => enviar(sg) }, sg))));
   el.append(h('p', { class: 'tiny muted center mt' },
-    '⚠️ O Study AI pode errar. Confira datas, contas e fórmulas no seu material.'));
+    '⚠️ O MindTrack AI pode errar. Confira datas, contas e fórmulas no seu material.'));
   el.append(h('div', { class: 'flexb mt' },
     h('button', {
       class: 'btn btn--sm', onclick: () => confirmar('Limpar conversa?', 'O histórico desta conversa será apagado.', () => {
@@ -235,7 +235,7 @@ function abrirRedacao() {
         try {
           const r = await corrigirRedacao({ texto: texto.value, fotos, tema: tema.value.trim(), estilo: estilo.value });
           resultado.replaceChildren(h('div', { class: 'card card--flat mt' },
-            h('b', { class: 'small' }, '🤖 Correção do Study AI'),
+            h('b', { class: 'small' }, '🤖 Correção do MindTrack AI'),
             h('p', { class: 'small', style: { whiteSpace: 'pre-wrap', marginBottom: 0 } }, r)));
         } catch (err) { toast(err.message, 'bad'); }
         e.target.disabled = false; e.target.textContent = 'Corrigir redação';
@@ -256,7 +256,7 @@ function abrirPlanoSemana() {
   if (!porta.ok) return modal('🗓️ Plano da semana', paywall('O plano da semana pela IA é do Plus', '', 'plus'));
   const corpo = h('div', {},
     h('p', { class: 'small muted', style: { marginTop: 0 } },
-      'O Study AI vai usar suas provas, tarefas, revisões vencidas e pontos fracos — dados de verdade, não achismo.'),
+      'O MindTrack AI vai usar suas provas, tarefas, revisões vencidas e pontos fracos — dados de verdade, não achismo.'),
     h('div', { class: 'center' }, h('div', { class: 'msg ai typing' }, h('i'), h('i'), h('i'))));
   modal('🗓️ Meu plano da semana', corpo, { largo: true });
   planoSemanaIA().then((r) => {
@@ -271,7 +271,7 @@ function cartaoObservacoes() {
   const obs = observacoesLocais();
   const s = st();
   return cartao(
-    h('b', {}, '🧠 O que o StudyLab já percebeu'),
+    h('b', {}, '🧠 O que o MindTrack já percebeu'),
     h('p', { class: 'tiny muted' }, 'Padrões calculados a partir do seu próprio histórico — sem IA, sem achismo.'),
     obs.length ? h('div', { class: 'list mt' }, ...obs.map((o) => h('div', { class: 'row row--flat' },
       h('span', {}, '💡'), h('span', { class: 'grow small' }, o))))
@@ -295,7 +295,7 @@ function abrirMemoria(aoSalvar) {
   pintar();
   modal('🧠 Memória do assistente', h('div', {},
     h('p', { class: 'small muted', style: { marginTop: 0 } },
-      'Coisas que o Study AI deve lembrar sobre como você aprende. Elas entram em toda conversa.'),
+      'Coisas que o MindTrack AI deve lembrar sobre como você aprende. Elas entram em toda conversa.'),
     h('div', { class: 'flexb mb' }, nova,
       h('button', {
         class: 'btn btn--p', onclick: () => {
@@ -307,7 +307,7 @@ function abrirMemoria(aoSalvar) {
 }
 
 function verContexto() {
-  modal('👁️ O que o Study AI recebe', h('div', {},
+  modal('👁️ O que o MindTrack AI recebe', h('div', {},
     h('p', { class: 'small muted', style: { marginTop: 0 } },
       'Isto é exatamente o texto enviado junto de cada pergunta. Nada além disso sai do seu aparelho.'),
     h('pre', {

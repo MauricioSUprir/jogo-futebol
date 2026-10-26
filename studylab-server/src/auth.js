@@ -1,7 +1,7 @@
 /* ===== auth.js — quem é o aluno =====
    1) O app manda o token do Google (login).
    2) Conferimos a assinatura desse token com as chaves públicas do Google.
-   3) Devolvemos uma SESSÃO do StudyLab (30 dias), que é o que o app usa depois.
+   3) Devolvemos uma SESSÃO do MindTrack (30 dias), que é o que o app usa depois.
    Assim o aluno não precisa relogar a cada hora.                              */
 import { createRemoteJWKSet, jwtVerify, SignJWT } from 'jose';
 

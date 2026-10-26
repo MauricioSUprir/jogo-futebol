@@ -15,7 +15,7 @@ export function seedInicial(s) {
     hist: mk('História', '🏛️', '#fbbf24', 'Nathalia', 9),
     geo: mk('Geografia', '🌎', '#34d399', 'Paulo', 8.5),
     ing: mk('Inglês', '🌐', '#a78bfa', 'Sophia', 9),
-    cie: mk('Ciências', '🔬', '#22d3ee', 'Marcos', 9),
+    cie: mk('Ciências', '🔬', '#f1d794', 'Marcos', 9),
   };
   s.materias = Object.values(M);
 

@@ -1,4 +1,4 @@
-# 📚 StudyLab
+# 📚 MindTrack
 
 **Plataforma de organização, aprendizado e desempenho escolar.**
 O aluno abre o app e sabe na hora: *o que eu faço agora, o que está atrasado, qual matéria
@@ -6,7 +6,7 @@ precisa de mim, quando revisar, quanto falta para a prova e se eu estou melhoran
 
 App **100% estático** (HTML + CSS + JavaScript puro, sem build). Tudo é salvo no próprio
 navegador e funciona **offline** (PWA, dá para instalar na tela inicial). Entra com o Google
-ou sem conta, e o **Study AI** é o recurso do plano pago.
+ou sem conta, e o **MindTrack AI** é o recurso do plano pago.
 
 > Abra o `index.html` no navegador ou acesse pelo link do GitHub Pages: **/studylab/**
 
@@ -41,9 +41,9 @@ ou sem conta, e o **Study AI** é o recurso do plano pago.
 - **🔁 Revisão** — o que vence hoje, **banco de erros** (com motivo provável e "já superou?"), agenda das próximas revisões e uma aba explicando como o método funciona.
 - **⏱️ Foco** — cronômetro em tela cheia, **pomodoro** completo (foco / pausa curta / pausa longa) e **ambiente sonoro** gerado no próprio navegador (chuva, cafeteria, floresta, lareira, oceano, ruído branco).
 - **📊 Desempenho** — tempo, questões, taxa de acerto, evolução, gráficos (barras, linha, pizza, ranking), tabela por matéria, **central de notas**, **simulador de notas** ("quanto preciso tirar para fechar com 8?" e "e se eu tirar 9?") e **metas**.
-- **🏆 Conquistas** — XP, 50 níveis com títulos, 14 conquistas, mapa de calor da sequência e **loja de StudyCoins** (avatares e cores — moeda ganha estudando, nunca com dinheiro).
+- **🏆 Conquistas** — XP, 50 níveis com títulos, 14 conquistas, mapa de calor da sequência e **loja de MindCoins** (avatares e cores — moeda ganha estudando, nunca com dinheiro).
 - **📂 Biblioteca** — materiais por matéria e por tipo, favoritos, **anotações de aula** (com "organizar com IA") e **arquivo escolar por ano**.
-- **🤖 Study AI** — conversa com um assistente que recebe seus dados reais. O botão **"👁️ o que ele sabe"** mostra exatamente o texto enviado.
+- **🤖 MindTrack AI** — conversa com um assistente que recebe seus dados reais. O botão **"👁️ o que ele sabe"** mostra exatamente o texto enviado.
 - **🔍 Barra superior** — pesquisa global (matérias, conteúdos, tarefas, provas, questões, flashcards, materiais e erros), **quick add**, sequência, notificações inteligentes e perfil.
 
 ---
@@ -54,7 +54,7 @@ O app **começa vazio**. No primeiro acesso o aluno passa por um cadastro de 4 p
 
 1. **Entrar com o Google** ou continuar sem conta.
 2. Nome e em que ano está.
-3. **Quais matérias ele tem** — o StudyLab não adivinha a grade da escola: mostra as matérias
+3. **Quais matérias ele tem** — o MindTrack não adivinha a grade da escola: mostra as matérias
    típicas do nível para marcar em um toque, e aceita outras digitadas. A lista de anos vai do
    **1º ano do fundamental até faculdade**, passando por curso técnico, EJA e cursinho, e as
    matérias sugeridas mudam conforme o ano (fundamental I, fundamental II ou médio).
@@ -69,14 +69,14 @@ origem do Pages. Enquanto isso o botão explica o passo a passo e o aluno entra 
 
 **Sem Google também dá:** com o servidor ligado, quem escolhe "continuar sem conta" ganha uma
 **conta de aparelho** — id e senha sorteados na primeira abertura e guardados só no celular.
-Serve para usar o Study AI e assinar. O que se perde é a recuperação em outro aparelho.
+Serve para usar o MindTrack AI e assinar. O que se perde é a recuperação em outro aparelho.
 
 ---
 
-## Study AI — exclusivo do plano Pro
+## MindTrack AI — exclusivo do plano Pro
 
 O aluno **nunca vê chave de API**. Quem assina fala com o modelo através do servidor do
-StudyLab (`js/produto.js` → `SERVIDOR`), que guarda a chave e confere a assinatura.
+MindTrack (`js/produto.js` → `SERVIDOR`), que guarda a chave e confere a assinatura.
 Sem assinatura, cada tela mostra o convite para assinar.
 
 O que continua **grátis para todo mundo**, porque não depende de IA:
@@ -97,7 +97,7 @@ confere o login do Google, valida a assinatura, cobra pelo Mercado Pago, chama a
 conta o uso de cada aluno.
 
 **O aluno nunca coloca chave nenhuma.** O caminho é: ele paga o Pix → o Mercado Pago confirma
-→ o servidor libera o Pro → o Study AI já está pronto. Quando ele pergunta algo, o app fala
+→ o servidor libera o Pro → o MindTrack AI já está pronto. Quando ele pergunta algo, o app fala
 com o servidor, e é o servidor que chama a Claude com a **sua** chave.
 
 Depois de publicar (o README de lá tem o passo a passo do Railway), **não precisa mexer no
@@ -105,7 +105,7 @@ código**: abra a **Área do criador** — uma rota escondida (`#/criador`), for
 tocando 5 vezes na linha da versão no rodapé das Configurações — cole o endereço do servidor e
 aperte *Testar servidor*.
 
-Essa é a **única** tela do StudyLab que fala em chave, e o aluno não chega nela. Lá também dá
+Essa é a **única** tela do MindTrack que fala em chave, e o aluno não chega nela. Lá também dá
 para testar a IA com uma chave sua antes do servidor existir — só naquele aparelho.
 
 ## Planos
@@ -120,7 +120,7 @@ Preços e textos ficam em `js/produto.js` → `PLANOS`. O que é grátis e o que
 `js/ui.js` → `RECURSOS`, e **um porteiro só** decide tudo:
 
 ```js
-liberado('ia_chat')   // { ok: false, motivo: 'Study AI — o tutor que…' }
+liberado('ia_chat')   // { ok: false, motivo: 'MindTrack AI — o tutor que…' }
 ehPro()               // assinatura ativa? (respeita a data de vencimento)
 ```
 
@@ -188,7 +188,7 @@ node studylab/tools/bundle.mjs saida.html --artifact   # só o conteúdo (Artifa
 ```
 
 > Dentro de um Artifact/preview a política de segurança da página bloqueia chamadas
-> externas — ou seja, o **Study AI não funciona lá**. Todo o resto funciona igual.
+> externas — ou seja, o **MindTrack AI não funciona lá**. Todo o resto funciona igual.
 > Para usar a IA, abra o app pelo link normal (GitHub Pages ou o arquivo local).
 
 ---

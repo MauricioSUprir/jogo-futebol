@@ -8,7 +8,7 @@ import { agendaDoDia, aulasDoDia, filaTarefas, preparoProva, filaRevisao, ordemR
 import { titulo, cartao, kpi, vazio, modal, fecharModal, toast, campo, inp, sel, segmento, confirmar } from '../ui.js';
 import { opcoesMaterias, selMateria, formTarefa, formProva, linhaTarefa } from './comum.js';
 
-const CORES_EV = { aula: '#60a5fa', prova: '#f87171', trabalho: '#a78bfa', atividade: '#34d399', revisao: '#fbbf24', simulado: '#22d3ee', tarefa: '#34d399', plano: '#7c5cff' };
+const CORES_EV = { aula: '#60a5fa', prova: '#f87171', trabalho: '#a78bfa', atividade: '#34d399', revisao: '#fbbf24', simulado: '#f1d794', tarefa: '#34d399', plano: '#3ec9f5' };
 const ICONES_EV = { aula: '📙', prova: '📕', trabalho: '📘', atividade: '📗', revisao: '📓', simulado: '🧪', tarefa: '📗', plano: '🗓️' };
 
 let modo = 'mes';
@@ -67,7 +67,7 @@ function vistaMes(pintar) {
     }, h('b', {}, dia.getDate()));
     for (const e of evs.slice(0, 3)) {
       cel.append(h('div', {
-        class: 'ev', style: { background: (CORES_EV[e.tipo] || '#7c5cff') + '28', color: CORES_EV[e.tipo] || '#aaa', opacity: e.feito ? .45 : 1 },
+        class: 'ev', style: { background: (CORES_EV[e.tipo] || '#3ec9f5') + '28', color: CORES_EV[e.tipo] || '#aaa', opacity: e.feito ? .45 : 1 },
       }, `${ICONES_EV[e.tipo] || '•'} ${e.titulo}`));
     }
     if (evs.length > 3) cel.append(h('div', { class: 'tiny muted' }, `+${evs.length - 3}`));
@@ -111,7 +111,7 @@ function vistaDia(dataISO, pintar) {
       h('b', {}, `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`),
       h('span', { class: 'chip sp' }, fmtData(dataISO))),
     evs.length ? h('div', { class: 'list' }, ...evs.map((e) => h('div', { class: `row ${e.feito ? 'dim' : ''}` },
-      h('span', { class: 'lead', style: { background: CORES_EV[e.tipo] || '#7c5cff' } }),
+      h('span', { class: 'lead', style: { background: CORES_EV[e.tipo] || '#3ec9f5' } }),
       h('span', {}, ICONES_EV[e.tipo] || '•'),
       h('span', { class: 'grow' },
         h('div', { class: 'ttl' }, e.titulo),

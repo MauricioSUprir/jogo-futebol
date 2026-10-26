@@ -165,7 +165,7 @@ function abaAgenda(el) {
   const linhas = Object.entries(dias).sort().slice(0, 21).map(([d, v]) => ({
     rot: `${fmtData(d, { curto: true })} ${daysBetween(new Date(), parseISO(d)) <= 0 ? '(vencido)' : ''}`,
     v: v.cards + v.conteudos,
-    cor: daysBetween(new Date(), parseISO(d)) <= 0 ? '#f87171' : '#7c5cff',
+    cor: daysBetween(new Date(), parseISO(d)) <= 0 ? '#f87171' : '#3ec9f5',
   }));
   el.append(cartao(
     h('b', {}, '🗓️ Próximas revisões'),
@@ -178,7 +178,7 @@ function abaAgenda(el) {
 function abaComo(el) {
   el.append(cartao(
     h('b', {}, '🧠 Como a revisão espaçada funciona aqui'),
-    h('p', { class: 'small' }, 'Você não precisa revisar tudo todo dia. O StudyLab reapresenta cada assunto pouco antes de você esquecer:'),
+    h('p', { class: 'small' }, 'Você não precisa revisar tudo todo dia. O MindTrack reapresenta cada assunto pouco antes de você esquecer:'),
     h('div', { class: 'chips mb' }, ...PASSOS.map((p, i) => h('span', { class: 'chip chip--on' }, `${i + 1}ª revisão: +${p} dia${p > 1 ? 's' : ''}`))),
     h('ul', { class: 'small' },
       h('li', {}, 'Se você acerta com facilidade, o intervalo aumenta (e você revisa menos).'),

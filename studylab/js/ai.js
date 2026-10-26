@@ -1,6 +1,6 @@
-/* ===== ai.js — Study AI (exclusivo do plano Pro) =====
+/* ===== ai.js — MindTrack AI (exclusivo do plano Pro) =====
    O aluno NUNCA vê chave de API. Quem é assinante fala com o modelo através do
-   servidor do StudyLab (produto.js → SERVIDOR), que guarda a chave e confere a
+   servidor do MindTrack (produto.js → SERVIDOR), que guarda a chave e confere a
    assinatura. Sem assinatura, as telas mostram o convite para assinar; os
    recursos locais (resumo extrativo, questões a partir dos flashcards, divisão
    de tarefas) continuam livres para todo mundo.                               */
@@ -21,7 +21,7 @@ export const MODELOS = [
   { id: 'claude-haiku-4-5', nome: 'Haiku 4.5 — o mais leve' },
 ];
 
-/** O Study AI está disponível agora? (assinante + um caminho para chamar o modelo) */
+/** O MindTrack AI está disponível agora? (assinante + um caminho para chamar o modelo) */
 export function temIA() {
   if (!ehPro()) return false;
   return temServidor() || !!(st().ia.chaveCriador || '').trim();
@@ -38,12 +38,12 @@ export async function chamar({
   system, conteudo, schema = null, maxTokens = 8000, esforco = 'medium', timeout = 150000,
 }) {
   const s = st();
-  if (!ehPro()) throw new Error('O Study AI faz parte do plano Pro. Abra "Planos" para assinar.');
+  if (!ehPro()) throw new Error('O MindTrack AI faz parte do plano Pro. Abra "Planos" para assinar.');
 
   const modelo = s.ia.modelo || 'claude-opus-5';
   const chaveCriador = (s.ia.chaveCriador || '').trim();
   if (!temServidor() && !chaveCriador) {
-    throw new Error('O Study AI ainda não está no ar: falta configurar o servidor do StudyLab.');
+    throw new Error('O MindTrack AI ainda não está no ar: falta configurar o servidor do MindTrack.');
   }
 
   // Assinante com servidor: o servidor guarda a chave e confere a assinatura.
@@ -82,7 +82,7 @@ export async function chamar({
   } catch (e) {
     clearTimeout(timer);
     if (e.name === 'AbortError') throw new Error('A resposta demorou demais. Tente de novo.');
-    throw new Error('Não consegui falar com o Study AI. Verifique sua internet — e, se você abriu o StudyLab dentro de '
+    throw new Error('Não consegui falar com o MindTrack AI. Verifique sua internet — e, se você abriu o MindTrack dentro de '
       + 'um preview (Artifact, sandbox, iframe), a política de segurança dessa página bloqueia chamadas externas.');
   }
   clearTimeout(timer);
@@ -92,7 +92,7 @@ export async function chamar({
     try { det = (await r.json())?.error?.message || ''; } catch { /* ignora */ }
     if (r.status === 401 || r.status === 403) throw new Error('A chave da Área do criador foi recusada.');
     if (r.status === 429) throw new Error('Muitas perguntas seguidas. Espere alguns segundos e tente de novo.');
-    throw new Error(`Erro ${r.status} no Study AI${det ? ': ' + det : ''}`);
+    throw new Error(`Erro ${r.status} no MindTrack AI${det ? ': ' + det : ''}`);
   }
 
   const data = await r.json();
@@ -151,7 +151,7 @@ export function contextoDoAluno({ curto = false } = {}) {
   return L.join('\n');
 }
 
-const REGRAS = `Você é o Study AI, tutor do aplicativo StudyLab, falando com um estudante brasileiro do ensino fundamental/médio.
+const REGRAS = `Você é o MindTrack AI, tutor do aplicativo MindTrack, falando com um estudante brasileiro do ensino fundamental/médio.
 Regras invioláveis:
 - Responda SEMPRE em português do Brasil, com linguagem clara e direta, sem enrolação.
 - Use os dados reais do aluno que forem fornecidos. NUNCA invente notas, porcentagens, datas ou desempenho que não estejam no contexto.

@@ -80,7 +80,7 @@ function montar(el, pintar) {
 
   /* plano do dia */
   el.append(h('div', { class: 'mt2' }, cartao(
-    h('div', { class: 'flexb mb' }, h('b', {}, '🧠 Como o StudyLab organizaria seu dia'),
+    h('div', { class: 'flexb mb' }, h('b', {}, '🧠 Como o MindTrack organizaria seu dia'),
       h('span', { class: 'chip sp' }, `${st().prefs.minutosDia} min disponíveis`)),
     (() => {
       const { blocos } = ordemRecomendada();

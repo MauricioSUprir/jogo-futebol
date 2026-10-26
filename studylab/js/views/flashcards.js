@@ -156,7 +156,7 @@ export function abrirGerador(aoSalvar) {
         btn.disabled = false; btn.textContent = '✨ Criar flashcards';
       } else {
         cards = flashcardsLocais(texto, qtd);
-        if (!cards.length) { saida.replaceChildren(h('p', { class: 'small', style: { color: 'var(--warn)' } }, 'No plano grátis eu só consigo extrair cards de textos no formato "termo: definição" ou de frases com termos-chave. Com o Pro, o Study AI lê qualquer material e escreve os cards.')); return; }
+        if (!cards.length) { saida.replaceChildren(h('p', { class: 'small', style: { color: 'var(--warn)' } }, 'No plano grátis eu só consigo extrair cards de textos no formato "termo: definição" ou de frases com termos-chave. Com o Pro, o MindTrack AI lê qualquer material e escreve os cards.')); return; }
         toast('Cards extraídos localmente (sem IA)');
       }
       const marcados = new Set(cards.map((_, i) => i));

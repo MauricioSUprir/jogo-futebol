@@ -1,5 +1,5 @@
-/* ===== sw.js — cache offline do StudyLab ===== */
-const CACHE = 'studylab-v7';
+/* ===== sw.js — cache offline do MindTrack ===== */
+const CACHE = 'mindtrack-v8';
 const ARQUIVOS = [
   './', './index.html', './manifest.webmanifest',
   './css/app.css', './assets/logo.svg', './assets/icon.svg', './assets/icon-maskable.svg',
