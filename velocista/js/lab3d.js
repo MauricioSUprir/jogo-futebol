@@ -1,7 +1,7 @@
 // LABORATÓRIOS ESTRELA — o desenho (three.js passado por parâmetro). Interior e exterior a partir do plano de lab.js.
 // Tudo é geometria própria juntada por material (poucas chamadas de desenho) + um punhado de peças animadas.
 import { PAREDES, SALAS, CELAS, BALCAO, COLUNAS, CONSOLES, MESA_HOLO, TUBO, ANEIS_ACEL, TORRES_ENERGIA, PLATAFORMA_ESTEIRA, ANEL_TELHADO, DOME, TELHADO_COISAS, FRENTE, LAJES, H, TOPO, PISO, PORTA_Y, CAMPUS, TORRE, ALAS, PASSARELAS, ANEL_PRACA, MONUMENTO, ANEXO_PAREDES, CORREDORES, CORREDOR, NUCLEO, ALA_TETO } from './lab.js';
-import { criarTexturas, retanguloRotulo } from './lab-tex.js';
+import { criarTexturas, retanguloRotulo, ESTEIRA } from './lab-tex.js';
 
 const PI = Math.PI;
 
@@ -669,7 +669,7 @@ export function construirLab(THREE, cx, cz, opc = {}) {
   { const b = new THREE.Mesh(beaconG, mBeacon); b.scale.setScalar(2.2); b.position.set((TORRE.u0 + TORRE.u1) / 2, TORRE.coroa.y1 + 26.4, (TORRE.v0 + TORRE.v1) / 2); alto.add(b); }
 
   // ------------------------------------------------------------------ atualização por quadro
-  let acumTela = 0;
+  let acumTela = 0, correia = 0;
   const MAXU = (nome) => nome;
   const atualizar = (dt, tempo, noite = 0, camera = null, jogador = null) => {
     const n = Math.max(0, Math.min(1, noite));
@@ -681,14 +681,15 @@ export function construirLab(THREE, cx, cz, opc = {}) {
     mat.extJan.emissiveIntensity = mat.torreJan.emissiveIntensity = 1.15 * n;            // à noite parte das janelas acende (luz quente)
     for (const k of ['torreFaixa']) mat[k].color.setRGB(0.36 + 0.2 * n, 0.5 + 0.24 * n, 0.68 + 0.26 * n);   // linhas discretas, um pouco mais vivas à noite
     mBeacon.color.setRGB(Math.sin(tempo * 3) > 0.2 ? 1 : 0.15, 0.1, 0.12);
-    T.correia.offset.y = (tempo * 0.6) % 1;
+    // a correia corre na velocidade de quem está nela (uma repetição da textura = 4 m); sem ninguém, devagar
+    correia = (correia + dt * (ESTEIRA.kmh != null ? ESTEIRA.kmh / 3.6 / 4 : 0.6)) % 1; T.correia.offset.y = correia;
     holo.rotation.y = tempo * 0.6; an1.rotation.x = tempo * 0.9; an2.rotation.z = -tempo * 1.2; holo.position.y = 2.6 + Math.sin(tempo * 1.4) * 0.06;
     dishG.rotation.y = tempo * 0.35;
     giro.rotation.y = tempo * 0.7; giro.rotation.x = Math.sin(tempo * 0.45) * 0.14;
     redemoinho.rotation.z = -tempo * 1.8;
     acumTela += dt;
     const perto = !jogador || (Math.abs(jogador.x - cx) < 70 && Math.abs(jogador.z - cz) < 70);
-    if (perto && acumTela > (opc.intervaloTela ?? 0.2)) { acumTela = 0; TX.redesenhar(tempo); }
+    if (perto && acumTela > (ESTEIRA.kmh != null ? 0.1 : opc.intervaloTela ?? 0.2)) { acumTela = 0; TX.redesenhar(tempo); }
   };
   return { grupo, cupula, alto, geos, materiais, atualizar, luzes: [], texturas: TX.texturas };
 }
