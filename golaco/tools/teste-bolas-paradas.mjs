@@ -20,7 +20,7 @@
 //     montagem, a 9,15 m entre a bola e o gol, cobrindo o 1º pau; atacantes a ≥ 1 m dela; o humano que defende vai para
 //     o goleiro; (3) no chute ela pula (≥ 0,25 m) e a pose sobe junto; (4) canhão de tiros livres perigosos (18–31 m):
 //     barreira 15–40%, gol 2–12%, no alvo 18–36% (Opta: 2,4–4,4% de gol nas grandes ligas, com a mediana a 27,6 m; o
-//     canhão só tem as faltas perigosas).
+//     canhão só tem as faltas perigosas) — cada faixa reprova quando a contagem prova (binomial, p < 5%).
 //  E. 8 partidas IA × IA: lateral, escanteio, tiro de meta e tiro livre acontecem; nenhuma parada passa de 8 s; o
 //     time fica com a bola em ≥ 55% dos laterais; nada de NaN.
 //
@@ -394,10 +394,18 @@ function tiroLivre(s, t, u, w) {
     }
     if (res === 'barreira') barreira++; else if (res === 'gol') gol++; else if (res === 'defesa') defesa++;
   }
+  // Cada faixa reprova só se a contagem PROVA que a taxa está fora dela (binomial, p < 5% de cada lado), como o gol do
+  // escanteio (C3): as 160 cenas saem de 32 estados do meio de partidas IA × IA, e toda mudança da IA troca os estados. Com a
+  // IA sem o vai e volta (D5), o no alvo foi 26,1 → 17,6% nas sementes do teste (1001–1008), com a faixa em 18%, mas em
+  // outros dois conjuntos (2001–2008 e 3001–3008) deu 25,0 → 30,0% e 22,7 → 24,1%: nos três juntos (~425 chutes de cada)
+  // 24,6% na base e 23,9% no D5 (gol 6,4 e 8,0%, barreira 28,8 e 23,9%). Uma taxa de 12% no alvo (6 pontos abaixo da faixa)
+  // ainda reprova em ~metade das rodadas.
+  const fora = (k, lo, hi) => (1 - caudaBinomialDe(k + 1, chutes, lo / 100)) < 0.05 || caudaBinomialDe(k, chutes, hi / 100) < 0.05;
+  const pB = [barreira, 15, 40], pG = [gol, 2, 12], pA = [gol + defesa, 18, 36];
   reg('D4. canhão de 160 tiros livres (18–31 m): barreira · gol · no alvo',
     `${f1(pct(barreira, chutes))}% · ${f1(pct(gol, chutes))}% · ${f1(pct(gol + defesa, chutes))}% (${chutes} chutes)`,
-    '15–40% · 2–12% · 18–36%',
-    chutes >= 130 && pct(barreira, chutes) >= 15 && pct(barreira, chutes) <= 40 && pct(gol, chutes) >= 2 && pct(gol, chutes) <= 12 && pct(gol + defesa, chutes) >= 18 && pct(gol + defesa, chutes) <= 36);
+    '15–40% · 2–12% · 18–36% (binomial: fora só com p < 0,05)',
+    chutes >= 130 && ![pB, pG, pA].some(([k, lo, hi]) => fora(k, lo, hi)));
 }
 
 // ------------------------------------------------------------------ E. partidas inteiras

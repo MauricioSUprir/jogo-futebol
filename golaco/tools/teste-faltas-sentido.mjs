@@ -35,7 +35,9 @@
 //      (main: ~2 por partida);
 //   B3 (de verdade) a IA ainda faz falta em quem conduz entrando forte: faltas da IA no time 0 com contato ≥ 2 m/s ≥ 0,5
 //      por partida no 'dribla'; vermelhos e pênaltis do 'dribla' ≤ 0,6 por partida cada (main: 1,0 e 1,0; real ~0,15 e
-//      ~0,23 em 90 min);
+//      ~0,23 em 90 min) — o 'dribla' com o dobro das partidas e as três reprovando quando a contagem prova (Poisson, p < 5%):
+//      com 4 partidas e a conta direta, 3 pênaltis (0,75) reprovavam por sorteio (com o D5, 16 partidas: 0,50 e 0,25; a base,
+//      0,31 e 0,00);
 //   B4 'dividida' (a pessoa aperta DIVIDIDA com a bola a ≤ 1,5 m): faltas da DIVIDIDA com o contato a < 1 m/s ≤ 0,1 por
 //      partida (main: ~1,9 — 60% das faltas da DIVIDIDA).
 // Informativos: a tabela por categoria (quem fez, origem, chegada, força) e as faltas por minuto (real: Premier League
@@ -43,7 +45,7 @@
 //
 //   node tools/teste-faltas-sentido.mjs              (lógica do repositório)
 //   node tools/teste-faltas-sentido.mjs --js <pasta> (outra cópia da lógica; a main de 15/10 → REPROVA)
-//   node tools/teste-faltas-sentido.mjs --partidas 4 (partidas por modelo; padrão 4)
+//   node tools/teste-faltas-sentido.mjs --partidas 4 (partidas por modelo; padrão 4; o 'dribla' com o dobro)
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -57,6 +59,8 @@ const linhas = [['teste', 'medido', 'meta', 'resultado']];
 let falhas = 0;
 const reg = (nome, medido, meta, ok, info = false) => { linhas.push([nome, medido, meta, info ? 'informativo' : ok ? 'PASSOU' : 'REPROVOU']); if (!ok && !info) falhas++; };
 const f2 = v => (Number.isFinite(v) ? v.toFixed(2).replace('.', ',') : '—');
+/** P(X ≤ k) para X ~ Poisson(lam). */
+const poissonAbaixo = (k, lam) => { let t = Math.exp(-lam), s = 0; for (let i = 0; i <= k; i++) { s += t; t *= lam / (i + 1); } return Math.min(1, s); };
 const pc = (a, n) => `${n ? Math.round(100 * a / n) : 0}% (${a}/${n})`;
 
 const P = await imp('partida.js');
@@ -179,8 +183,10 @@ function sorteiaCarga(o, N = 400) {
 // ------------------------------------------------------------------ B. partidas com o humano
 const MOD = ['persegue', 'pressao', 'dribla'];
 const res = {};
-for (const [k, mod] of MOD.entries()) res[mod] = await registrarFaltas(JS, { sementes: Array.from({ length: NP }, (_, i) => 8101 + 100 * k + i), modelos: [mod] });
-const todas = MOD.flatMap(md => res[md].faltas), NT = NP * MOD.length;
+// (o 'dribla' com o dobro das partidas: os vermelhos e pênaltis do B3 são raros)
+const nDe = mod => (mod === 'dribla' ? 2 * NP : NP);
+for (const [k, mod] of MOD.entries()) res[mod] = await registrarFaltas(JS, { sementes: Array.from({ length: nDe(mod) }, (_, i) => 8101 + 100 * k + i), modelos: [mod] });
+const todas = MOD.flatMap(md => res[md].faltas), NT = MOD.reduce((s, md) => s + nDe(md), 0);
 const semForca = todas.filter(f => f.origem === 'bote' && f.timeDef === 1 && f.forcaContato < 1);
 reg('B1 falta de bote da IA com o contato a < 1 m/s (por partida)', `${f2(semForca.length / NT)} (${semForca.length} em ${NT} partidas)`, '≤ 0,1', semForca.length / NT <= 0.1);
 const cargaH = todas.filter(f => f.origem === 'carga' && f.timeDef === 0 && (f.controlado || f.chamado));
@@ -189,8 +195,11 @@ reg('B2 carga por trás de quem só corria atrás (controlado da pessoa ou chama
   const dr = res.dribla, nd = dr.partidas.length;
   const fortes = dr.faltas.filter(f => f.timeDef === 1 && (f.origem === 'bote' || f.origem === 'carga') && f.forcaContato >= 2).length;
   const verm = dr.partidas.reduce((s, p) => s + p.vermelhos, 0), pen = dr.partidas.reduce((s, p) => s + p.penaltis, 0);
-  reg("B3 (de verdade) 'dribla': falta da IA entrando forte (≥ 2 m/s) · vermelhos · pênaltis, por partida", `${f2(fortes / nd)} · ${f2(verm / nd)} · ${f2(pen / nd)}`, '≥ 0,5 · ≤ 0,6 · ≤ 0,6',
-    fortes / nd >= 0.5 && verm / nd <= 0.6 && pen / nd <= 0.6);
+  // (cada uma reprova só se a contagem PROVA que a taxa passou da meta: Poisson, p < 5%. Com 8 partidas: fortes com 0;
+  // vermelhos ou pênaltis com 10 ou mais — a taxa antiga da main, 1,0 por partida, reprova em ~28% das rodadas e 1,5 em ~70%)
+  const acima = (k, taxa) => 1 - poissonAbaixo(k - 1, taxa * nd) < 0.05, abaixo = (k, taxa) => poissonAbaixo(k, taxa * nd) < 0.05;
+  reg("B3 (de verdade) 'dribla': falta da IA entrando forte (≥ 2 m/s) · vermelhos · pênaltis, por partida", `${f2(fortes / nd)} · ${f2(verm / nd)} · ${f2(pen / nd)} (${nd} partidas)`, '≥ 0,5 · ≤ 0,6 · ≤ 0,6 (Poisson: fora só com p < 0,05)',
+    !abaixo(fortes, 0.5) && !acima(verm, 0.6) && !acima(pen, 0.6));
 }
 {
   // B4: a pessoa que aperta DIVIDIDA (faltas-registro 'dividida': com a bola a ≤ 1,5 m, no máximo a cada 0,4 s) não leva

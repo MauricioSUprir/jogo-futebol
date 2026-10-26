@@ -42,7 +42,7 @@ import { para, acaoIA } from './ia.js';
 import { zonasCruzamento } from './acoes.js';
 import { faseDoTime, contraPessoa } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
-import { estadoIA, blocoDoTime, alvoCalmo } from './ia-tatica.js';
+import { estadoIA, blocoDoTime, alvoCalmo, maoDoMeuGoleiro } from './ia-tatica.js';
 import { restricaoParada } from './partida.js';
 import { anguloEmbalado, velocidadeParaAngulo, magParaVelocidade } from './conducao.js';
 
@@ -534,7 +534,9 @@ export function apoioTatico(m, j) {
   tw = clamp(tw, -MZ + 1.5, MZ - 1.5);
   restricaoParada(m, j, tu * lado, tw * lado, _r);
   // impedido (depois de uma corrida, ou a linha subiu): volta rápido para a linha (FC 26); no Modo Livre não há impedimento
-  if (!m.livre && ia.papel !== 'area' && j.x * lado > A.linha && j.x * lado > 0) pressa = true;
+  // (o motivo da pressa fica para a pressaMin s seguinte: a da retomada vai pelo modo firme, a do impedimento não; D5)
+  if (pressa) ia.motivoP = 'trans';
+  if (!m.livre && ia.papel !== 'area' && j.x * lado > A.linha && j.x * lado > 0) { if (!pressa) ia.motivoP = 'imped'; pressa = true; }
   // o ataque avançou e ele ficou para trás: sobe em corrida firme (a referência anda com a bola a ~k·v da bola;
   // trotando, o time inteiro ficava atrás da jogada), com histerese: entra a sobeCorrendo m, sai a sobeSai m
   // (só com o ataque progredindo: a bola ou o condutor indo para o gol a ≥ sobeProgride m/s — com a referência que oscila
@@ -577,6 +579,18 @@ export function apoioTatico(m, j) {
     ia.apoia = ia.apoia && ia.apoiaTick === m.tick - 1 ? d > AP.desliga && vc >= AP.vCondSai : d > AP.liga && vc >= AP.vCond;
     ia.apoiaTick = m.tick;
     if (ia.apoia) return para(j, _r.x, _r.z, 1, true, 0, 'apoia');
+  }
+  // (D5, item 22: a pressa da RETOMADA de quem segue a referência — o time longe dela — vai pelo modo firme: a mesma
+  // intensidade, com o ponto filtrado, a freada antes de virar e a virada parada, e, logo depois de parar (o arranque calmo,
+  // TATICA.arranque), a volta trotando; pelo pressa, o ponto cru da referência que muda na transição virava vai e volta e
+  // anda-para-anda. A volta do IMPEDIMENTO e a bola na mão do meu goleiro seguem pelo pressa: pelo firme, o time ficava em
+  // posição de impedimento 32% do tempo com a bola (teste-apoio 8–25%) e quem recuava seguia para a própria linha do gol
+  // (teste-movimento 10 → 15%))
+  if (pressa && ia.papel === 'ref' && IA_ATAQUE.firmeRef && ia.motivoP !== 'imped' && !maoDoMeuGoleiro(m, j.time)
+    && MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z) >= TATICA.volta.bolaPerto) {
+    j.ia.viraTick = m.tick;
+    const arr = TATICA.arranque && m.tick < (j.iaT?.calmoAte ?? -1);
+    return para(j, _r.x, _r.z, arr ? TATICA.suave.trote[2] : 1, !arr, 0, 'firme');
   }
   return para(j, _r.x, _r.z, 1, true, 0, pressa ? 'pressa' : 'calma');
 }

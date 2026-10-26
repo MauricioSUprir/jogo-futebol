@@ -797,7 +797,21 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
   // não volta na hora: com o alvo (perto, a menos de volta[0] m) do lado de trás do movimento (mais
   // de 120°), freia e espera volta[1] s antes de ir para o outro lado — seguir cada ida e volta da
   // referência (que anda com a bola a cada passe) era o vai e volta (teste-movimento)
-  if (S.volta && !it.quieto && d < S.volta[0]) {
+  // (D5, item 22: a espera vale até volta[0] + TATICA.volta.folga m depois de começar — freando, o corpo ainda se afasta
+  // 0,5–2 m e, passando de volta[0], a espera caía e ele voltava na hora — e também QUIETO: entrando no quieto ainda
+  // andando, o passinho ia na hora para o alvo que tinha ficado para trás)
+  // (quem MARCA perto da bola — zona, linha, fechaLinha, cobre e marca a menos de TATICA.pertoBola m dela — fica como antes:
+  // com a espera mais longa e a virada em arco/parada, o marcador a ≤ 3 m do condutor caía ~2–3 pontos)
+  // (e com a bola na mão do meu goleiro também: quem recuava vira na hora — a espera e a virada parada o deixavam correndo
+  // para a própria linha do gol, teste-movimento 13 → 18%)
+  // (e com a bola a menos de TATICA.volta.bolaPerto m: a espera e a virada parada deixavam alguém parado com o passe lento
+  // colado no pé, teste-nao-passa)
+  const mao = maoDoMeuGoleiro(m, j.time), dBola = MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z);
+  const marca = MARCA_PERTO.has(r), perto = mao || dBola < TATICA.volta.bolaPerto || (marca && dBola < TATICA.pertoBola);
+  // (a virada parada de quem marca, só com IA.viraParado.marca)
+  j.ia.viraTick = perto || (marca && !IA.viraParado.marca) ? -9 : m.tick;
+  const segurando = m.tick < it.seguraAte, VT = perto ? VOLTA_ANTES : TATICA.volta;
+  if (S.volta && (VT.quieto || !it.quieto) && d < S.volta[0] + (segurando ? VT.folga : 0)) {
     const v = MD.hypot(j.vx, j.vz);
     if (v > 0.5 && (j.vx * (px - j.x) + j.vz * (it.fz - j.z)) < -0.5 * v * d) it.seguraAte = m.tick + seg(S.volta[1]);
     if (m.tick < it.seguraAte) { out.x = j.x; out.z = j.z; it.dTick = -9; return out; }
@@ -832,7 +846,6 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
     if (lado && S.recomp && it.vx * lado < -S.recomp[0]) out.mag = Math.max(out.mag, magDaVel(j, Math.min(S.recomp[2], it.vf + S.recomp[1])));
     out.correr = d > S.corre;
   }
-  const mao = maoDoMeuGoleiro(m, j.time);
   // o rumo pedido gira no máximo giro[1] rad/s (trotando o tronco vai com o caminho); andando
   // (marcha) com a bola atrás do caminho (mais de giro[2] rad), no máximo giro[0]: ali o sim.js segura
   // o lado do olhar e o tronco gira o DOBRO do caminho — um ponto perto que pulava 25° virava um
@@ -846,7 +859,10 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
     // (virada grande — mais de giro[4] rad — vai de uma vez: o para() freia na linha antes de virar;
     // com a bola na mão do meu goleiro, qualquer virada vai de uma vez: girando aos poucos, quem
     // recuava quando ele pegou a bola seguia ~1–2 s para a própria linha do gol)
-    it.dir = Math.abs(dA) > S.giro[4] || mao ? aD : it.dir + Math.max(-w, Math.min(w, dA));
+    // (D5, item 22: abaixo de TATICA.arco m/s a virada grande também vai pelo giro — em arco, sem parar: virar de uma vez a
+    // 1–2 m/s passava pelo zero e era o vai e volta e o anda-para-anda do teste-movimento; acima, o para() freia na linha)
+    const vArco = perto ? 0 : TATICA.arco, emArco = vArco > 0 && MD.hypot(j.vx, j.vz) < vArco && MD.hypot(j.vx, j.vz) > 0.5;
+    it.dir = (Math.abs(dA) > S.giro[4] && !emArco) || mao ? aD : it.dir + Math.max(-w, Math.min(w, dA));
     out.x = j.x + MD.cos(it.dir) * d; out.z = j.z + MD.sin(it.dir) * d;
   }
   it.dTick = m.tick;
@@ -886,7 +902,7 @@ function magDaVel(j, v) {
 }
 
 /** A bola está na mão do goleiro do time t? */
-function maoDoMeuGoleiro(m, t) {
+export function maoDoMeuGoleiro(m, t) {
   if (m.naMao == null) return false;
   for (const o of m.jogadores) if (o.id === m.naMao) return o.time === t;
   return false;
@@ -1356,6 +1372,10 @@ export function olhaBolaPartida(m, j, mv, desvio) {
 }
 
 /** Estado da IA tática do jogador (criado uma vez e reaproveitado). */
+// D5: os ramos de quem marca (o ponto calmo de perto da bola fica o de antes) e a espera da volta de antes
+const MARCA_PERTO = new Set(['linha', 'zona', 'fechaLinha', 'cobre', 'marca']);
+const VOLTA_ANTES = { folga: 0, quieto: false };
+
 function estadoT(j) {
   return j.iaT ??= { vagaAnt: j.vagaId, reposAte: -1, seguraAte: -1, rap: false, calmoAte: -1, oTick: -9, ov: 0, oAng: 0, sTick: -9, sRamo: '', fx: 0, fz: 0, vx: 0, vz: 0, vf: 0, quieto: false, lento: false, tParado: 0, dir: 0, dTick: -9, qdir: 0, qTick: -9, pTick: -9, pRamo: '', px: 0, pz: 0, pvx: 0, pvz: 0, recomp: false, recompDesde: -99999, recompBloq: -1, recompFim: -99999, recompTick: -9, acomp: null, corte: null };
 }

@@ -20,10 +20,11 @@
 //  - gols de arrancada de 40 m ou mais ≤ 0,5 por partida (1,9);
 //  - gol por chute nas arrancadas do próprio campo ≤ 20% (36%; reprova quando a contagem prova mais — binomial, p < 5%; com
 //    menos de 10 chutes, ≤ 0,25 gol dessas arrancadas por partida);
-//  - defensor do corredor, com o condutor a 3 m: mediana ≥ 5 m/s para o próprio gol (3,0) — PENDENTE, não reprova (3,3–3,9;
-//    com o D3, 2,5–3,1: a física e o porquê na linha do reg);
 //  - chegada à área nas arrancadas do próprio campo com o bloco armado ≤ 25% (30%; abaixo de 12% só mexendo na vantagem
-//    de velocidade da condução — decisão do dono);
+//    de velocidade da condução — decisão do dono). É a meta do item 19 da FILA (dono, 25/10: "escolhe tudo"): o que vale é a
+//    defesa chegar a tempo de cortar a arrancada, e não a velocidade de quem já foi passado;
+//  - (informativo) defensor do corredor ultrapassado, com o condutor a 3 m: mediana da velocidade para o próprio gol (era a
+//    meta ≥ 5 m/s, PENDENTE desde 12/10: 3,3–3,9; com o D3, 2,0–4,7 entre calibrações vizinhas — a física e o porquê na linha);
 //  - faltas da IA no humano ≤ 5 por partida;
 //  - roteiro trote: chegada à área nas arrancadas do próprio campo ≤ 5% (binomial, p < 5%).
 //   node tools/teste-defesa-corrida.mjs                 (lógica do repositório)
@@ -249,8 +250,11 @@ reg('gol por chute nas arrancadas do próprio campo', `${golsCh}/${chutes.length
 // 38 duelos, mas o vai e volta e as roubadas sofridas pela IA reprovavam no teste-ia-corre), o 1º homem recuando com o
 // condutor a mais de 4,5 m/s (3,9), a contenção mais longe (4,2, mas 41% das arrancadas do bloco armado chegavam à área) e
 // quem já foi passado voltando em disparada (2,6 × 3,8 sem ela: volta para a frente da arrancada e é passado virando). Entre
-// calibrações vizinhas do D3 esta mediana foi de 2,0 a 4,7 m/s (50–85 duelos); o D3 entregue: 3,8 (base 3,9)
-reg('defensor do corredor ultrapassado: velocidade para o gol com o condutor a 3 m (mediana)', `${f(v3[v3.length >> 1], 2)} m/s (${v3.length} duelos)`, '≥ 5 m/s (pendente)', v3.length >= 20 && v3[v3.length >> 1] >= 5 ? true : null);
+// calibrações vizinhas do D3 esta mediana foi de 2,0 a 4,7 m/s (50–85 duelos); o D3 entregue: 3,8 (base 3,9).
+// Item 19 (dono, 25/10: "escolhe tudo"): a velocidade de quem já foi passado vira INFORMATIVA — ela muda mais entre
+// calibrações vizinhas que entre versões, e o que o jogo precisa é a arrancada não chegar à área (a meta logo abaixo).
+const v3med = v3.length ? v3[v3.length >> 1] : NaN;
+console.log(`informativo: defensor do corredor ultrapassado, velocidade para o gol com o condutor a 3 m (mediana): ${f(v3med, 2)} m/s (${v3.length} duelos; a meta antiga era ≥ 5)`);
 reg('arrancadas do próprio campo, bloco armado: chegam à área', `${armado.filter(e => e.area).length}/${armado.length} (${f(pc(armado.filter(e => e.area).length, armado.length), 0)}%)`, '≤ 25%', armado.length >= 40 && pc(armado.filter(e => e.area).length, armado.length) <= 25);
 reg('faltas da IA no humano por partida', f(soma(sp, r => r.faltasIA) / NS, 2), '≤ 5', soma(sp, r => r.faltasIA) / NS <= 5);
 if (NT > 0) reg('roteiro trote: arrancadas do próprio campo que chegam à área', `${trMeu.filter(e => e.area).length}/${trMeu.length} (${f(pc(trMeu.filter(e => e.area).length, trMeu.length), 0)}%)`, '≤ 5% (binomial, p < 5%)', trMeu.length >= 20 && !prova5(trMeu.filter(e => e.area).length, trMeu.length));

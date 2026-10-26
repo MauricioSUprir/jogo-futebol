@@ -87,6 +87,21 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   ("tem algumas coisas a mais que vou te sinalizar, que vc só cmc dps do meu aval"). Os pedidos de 23/10 são os itens 57–66:
   impedimento pelas partes do corpo (B), pausa igual à do FIFA, minimapa embaixo, nome do condutor nos cantos, a tela antes do jogo no nível do EA FC com a cara do TM (64), a mira das bolas paradas minimalista com uma curva boa (65), a câmera que acompanha a bola e mostra a área (66) (F),
   passada natural, costura da nuca e bordas dos decalques (I).
+  **Dono, 25/10 (depois do D4): "escolhe tudo filho"** — a categoria D segue até o fim (D5–D8: itens 22–25) e as escolhas
+  dentro dela são minhas; no item 19 a meta passou a ser a de CHEGADA (arrancada do bloco armado na área ≤ 25%, no
+  `teste-defesa-corrida`), com a velocidade do defensor do corredor só informativa. **D5 (item 22, o vai e volta)**: na partida,
+  IA × IA e contra a pessoa (o treino bit a bit igual): a espera da volta com folga e quieta, a virada em arco abaixo de 2,5 m/s,
+  a virada parada (`IA.viraParado`) e o modo firme na retomada do apoio — quem marca a ≤ 12 m da bola, a volta do impedido e a
+  bola na mão do goleiro como antes (com tudo valendo para eles, a pressão caía 2–3 pontos, o impedimento ia a 32% e a "bola na
+  mão" a 18%); o `teste-movimento --modo partida` entrou no CI (vai e volta 8,3 → 7,2). O impedimento caiu 1,16 → 0,99 por
+  partida (a virada parada e o arco atrasam a linha que sobe): a correção, a linha que SOBE vira na hora (`TATICA.linhaSobe`,
+  1,19 e gols 1,82 → 1,88 no painel de 144), entra no D6 — no CI ela trocou de novo os estados dos testes (7 metas de amostra e
+  de cena), e o D6 os troca de novo: corrigir uma vez só. Lições: a triagem do movimento com `--set` em 32–40 sementes (~80 s com 4 processos) bate com
+  o teste; decidir com ela e conferir nas 5 rodadas de 8. Mudança IA × IA: ler o painel do CI e repetir com OUTRAS sementes
+  (`--sem0 3001`) antes de concluir — gols e gols de fora caíram numa amostra e empataram na outra (sorteio), o impedimento
+  caiu nas duas (real; achado desligando uma peça por vez com `--set`). As amostras pequenas dos testes que reprovam depois da
+  mudança: medir base × PR com 4× a amostra; se empatam, a meta passa a reprovar quando a contagem prova (binomial/Poisson,
+  p < 5%) e a amostra cresce o que o CI aguenta; as cenas de estados novos (cartão, substituição) são defeitos de verdade.
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME em cima do jogador com a bola (`main.js marcarCondutor`,
   `#nome-condutor` fora do #hud — exceção pedida à "sem narração") e (2) os overalls da tela iguais aos do TM (`elenco.js
   notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos). **FILA (dono: "o 3 e 4
@@ -482,7 +497,7 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   passe errado é interceptação). Gols (painel de 48, mesmas sementes): main 1,79 → branch 1,50 — a defesa da arrancada
   (`corrida.v` 6,8; com 6,3 caía a 0,90) e menos gol de roubada alta (47% dos gols na main); falta volume de ataque
   (chutes 8,5 → 6,6), calibração final com a condução curta. Testes novos: `teste-cabeceio`, `teste-defesa-corrida`,
-  `teste-intercepta` (os três reprovam na base; o defensor do corredor, 3,3–3,6 m/s contra a meta de 5, ficou PENDENTE); o painel ganhou `--retomar`/`--parcial` (máquina dividida), `--base-json` e `--set`. O
+  `teste-intercepta` (os três reprovam na base; o defensor do corredor, 3,3–3,6 m/s contra a meta de 5, ficou PENDENTE; em 25/10 virou informativo e a meta do item 19 é a de chegada); o painel ganhou `--retomar`/`--parcial` (máquina dividida), `--base-json` e `--set`. O
   `workflow_dispatch` do painel no GitHub dá 403 para a integração das sessões (roda sozinho no PR). NÃO mexer na condução nesta frente
   (a condução curta é de outra branch; a calibração final do painel é junto com ela).
 - **Tela limpa** (pedidos de 11/10: "quero menos informação na tela", "não quero a linha de impedimento durante o jogo";

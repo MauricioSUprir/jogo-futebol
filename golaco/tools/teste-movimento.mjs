@@ -60,7 +60,7 @@ const argN = (nome, pad) => { const i = process.argv.indexOf(nome); return i > 0
 const NSEM = argN('--sementes', process.env.SEMENTES ? +process.env.SEMENTES : 8), BASE = argN('--base', 0);
 const SEMENTES = Array.from({ length: NSEM }, (_, k) => BASE + k + 1), MIN = 3, N = Math.round(MIN * 60 / PASSO);
 const A = { cruz: 0, cruzN: 0, cruzLado: 0, cruzLadoN: 0, seg: 0, segEst: 0, inv: 0, invEst: 0, tremor: 0, tremorEst: 0, paraArranca: 0, lento: 0, costas: 0, viz: 0, viz2: 0, contatos: 0, trocas: 0 };
-let naMaoN = 0, naMaoLinha = 0, chutesMin = Infinity, pressao = 0, pressaoN = 0, assentada = 0, assentadaN = 0, dois = 0;
+let naMaoN = 0, naMaoLinha = 0, chutesMin = Infinity, chutesTot = 0, pressao = 0, pressaoN = 0, assentada = 0, assentadaN = 0, dois = 0;
 
 for (const sem of SEMENTES) {
   const m = novoMundo(sem);
@@ -163,7 +163,7 @@ for (const sem of SEMENTES) {
       }
     }
   }
-  chutesMin = Math.min(chutesMin, chutes);
+  chutesMin = Math.min(chutesMin, chutes); chutesTot += chutes;
 }
 
 const porMin = (x, seg = A.seg) => x / (seg / 60);
@@ -182,8 +182,18 @@ reg('pernas cruzadas andando de lado (45–135° do tronco)', `${fmt(pct(A.cruzL
 if (PARTIDA && !naMaoN) linhas.push(['bola na mão do goleiro: companheiro correndo para a própria linha do gol', 'sem amostra (nenhum goleiro com a bola na mão)', '≤ 15%', 'sem amostra']);
 else reg('bola na mão do goleiro: companheiro correndo para a própria linha do gol', `${fmt(pct(naMaoLinha, naMaoN))}% do tempo`, '≤ 15% (publicada: 32,6%)', pct(naMaoLinha, naMaoN) <= 15);
 if (PARTIDA && !P3) linhas.push(['sem recuo — chega ao chute (é do ataque: Parte 3)', `pior semente: ${chutesMin} chutes em ${MIN} min`, '≥ 5', chutesMin >= 5 ? 'passa (informativo)' : 'AGUARDANDO PARTE 3']);
-else reg(`sem recuo — ${PARTIDA ? 'a partida' : 'treino'} chega ao chute`, `pior semente: ${chutesMin} chutes em ${MIN} min`, '≥ 5', chutesMin >= 5);
-reg('sem recuo — defesa pressiona o condutor (marcador a ≤ 3 m)', `${fmt(pct(pressao, pressaoN))}% do tempo com a bola (2+ marcadores: ${fmt(pct(dois, pressaoN))}%)`, '≥ 40%', pct(pressao, pressaoN) >= 40);
+// (na partida, D5: o "≥ 5 na pior semente" é do treino de ataque, 10 atacando sem parar; na partida 11×11 são ~2,8 chutes em
+// 3 min — 8,4 por partida, contra ~25 do jogo real: o volume é do painel de equilíbrio e da categoria E. Aqui fica a sanidade
+// sem recuo pela MÉDIA, que não reprova por sorteio: a main dá 2,75 por semente; com Poisson de média 22 nas 8 sementes, a
+// chance de cair abaixo de 12 é ~1%)
+else if (PARTIDA) reg('sem recuo — a partida chega ao chute', `${fmt(chutesTot / SEMENTES.length, 2)} chutes por semente de ${MIN} min (pior ${chutesMin})`, '≥ 1,5 por semente (main 2,75)', chutesTot / SEMENTES.length >= 1.5);
+else reg('sem recuo — treino chega ao chute', `pior semente: ${chutesMin} chutes em ${MIN} min`, '≥ 5', chutesMin >= 5);
+// (na partida, D5: o ≥ 40% é do treino de ataque, com a defesa toda perto da bola; no 11×11 com as táticas padrão a main dá
+// 36,6% nas sementes 1–8 e 37,7% em 32 — o jogo real é 27,1%, Metrica, 18 945 amostras: tools/pesquisa/analise_metrica.py,
+// dist_marcador ≤ 3 m. Aqui fica o sem recuo contra a main, ≥ 34% (as rodadas de 8 sementes vão de 35 a 41%); os 40% com as
+// duas pressões na Média ficam no teste-pressao)
+const PRESS_MIN = PARTIDA ? 34 : 40;
+reg('sem recuo — defesa pressiona o condutor (marcador a ≤ 3 m)', `${fmt(pct(pressao, pressaoN))}% do tempo com a bola (2+ marcadores: ${fmt(pct(dois, pressaoN))}%)`, `≥ ${PRESS_MIN}%${PARTIDA ? ' (main 36,6%; real 27,1%)' : ''}`, pct(pressao, pressaoN) >= PRESS_MIN);
 reg('sem recuo — pressão na posse assentada (mesmo condutor > 1,5 s)', `${fmt(pct(assentada, assentadaN))}%`, '≥ 50% (publicada: 53,7%)', pct(assentada, assentadaN) >= 50);
 
 const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));

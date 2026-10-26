@@ -566,10 +566,12 @@ if (cenasA.length) {
   const ifab = cenasA.filter(x => x.plano.variante === 'abertos' || x.plano.variante === 'segurado');
   const pifab = Math.min(...ifab.map(x => x.ifab));
   reg('A IFAB (A1, V2): só o capitão e o punido a < 4 m do árbitro (cartão no alto + 1 s até o fim da reação)', `${ifab.length} cenas; o mais perto ${f2(pifab)} m${detalhe ? ' ' + JSON.stringify(ifab.reduce((a, x) => (x.ifab < a.ifab ? x : a)).piorIfab) : ''}`, '≥ 4 m', ifab.length > 0 && pifab >= 4);
+  if (detalhe) for (const x of ifab) if (x.ifab < 4) console.log('ifab', x.sit, x.sem, x.tk, x.variante, JSON.stringify(x.piorIfab));
   // assinaturas
   const de = v => cenasA.filter(x => x.plano.variante === v);
   const A1 = de('abertos'), A2 = de('cabeca'), A3 = de('aceita'), V1 = de('cabisbaixo'), V2 = de('segurado'), V3 = de('rosto');
   reg('A1 braços abertos ≥ 1,0 s e o capitão a ≤ 1,2 m do punido ≥ 0,5 s', `${A1.length} cenas; abertos mín ${f2(Math.min(...A1.map(x => x.abertos)) / 60)} s; capitão perto mín ${f2(Math.min(...A1.map(x => x.capPerto)) / 60)} s`, '≥ 1,0 s; ≥ 0,5 s', A1.length > 0 && A1.every(x => x.abertos >= 60 && x.capPerto >= 30));
+  if (detalhe) for (const x of A1) if (x.abertos < 60 || x.capPerto < 30) console.log('A1', x.sit, x.sem, x.tk, x.abertos, x.capPerto);
   reg('A2 mãos na cabeça ≥ 0,8 s, giro ≥ 120°, tapinha nas costas ≥ 0,3 s', `${A2.length} cenas; mãos ${f2(Math.min(...A2.map(x => x.cabecaMaos)) / 60)} s; giro ${f2(Math.min(...A2.map(x => x.giro)) * 180 / Math.PI)}°; tapinha ${f2(Math.min(...A2.map(x => x.tapinha)) / 60)} s`, '≥ 0,8 s; ≥ 120°; ≥ 0,3 s', A2.length > 0 && A2.every(x => x.cabecaMaos >= 48 && x.giro >= 2.094 && x.tapinha >= 18));
   reg('A3 volta trotando: ≥ 3 m/s afastando-se do árbitro', `${A3.length} cenas; mín ${f2(Math.min(...A3.map(x => x.troteMax)) / 60)} s contínuos`, '≥ 1,0 s', A3.length > 0 && A3.every(x => x.troteMax >= 60));
   reg('V1 cabisbaixo: velocidade ≤ 1,4 m/s, cabeça ≥ 20° baixa ≥ 70% da reação à saída; tapinha', `${V1.length} cenas; vel máx ${f2(Math.max(...V1.map(x => x.v1Vel)))} m/s; cabeça baixa mín ${f2(100 * Math.min(...V1.map(x => x.v1Cab / Math.max(1, x.v1N))))}%; tapinha mín ${f2(Math.min(...V1.map(x => x.tapinha)) / 60)} s`, '≤ 1,4; ≥ 70%; ≥ 0,3 s', V1.length > 0 && V1.every(x => x.v1Vel <= 1.4 && x.v1Cab / Math.max(1, x.v1N) >= 0.7 && x.tapinha >= 18));
@@ -815,7 +817,8 @@ if (cenasC.length && roda('C')) {
   if (detalhe) for (const x of cenasC) if (!okCamera(x.r)) console.log('cameraC', x.caso, x.sem, JSON.stringify({ lente: x.r.piorLente, solido: x.r.piorSolido }));
   reg('C ninguém dentro de sólido do estádio (o corpo a 0,9 m; no túnel com o vão das placas aberto)', `${cenasC.reduce((s, x) => s + x.solido, 0)} ticks${cenasC.find(x => x.solido) ? ` (ex.: ${JSON.stringify(cenasC.find(x => x.solido).piorSolido)})` : ''}`, '0', cenasC.every(x => x.solido === 0));
   const v2 = Math.max(...cenasC.map(x => x.v2));
-  reg('C 2,0 s depois do apito ninguém acima de 1,6 m/s', `máx ${f2(v2)} m/s`, '≤ 1,6', v2 <= 1.6);
+  const pV2 = cenasC.find(x => x.v2 === v2);
+  reg('C 2,0 s depois do apito ninguém acima de 1,6 m/s', `máx ${f2(v2)} m/s${v2 > 1.6 && pV2 ? ` (${pV2.caso} ${pV2.sem}: ${JSON.stringify(pV2.piorV2)})` : ''}`, '≤ 1,6', v2 <= 1.6);
   const fracC = x => [...x.cintura.values()].filter(q => q.max >= 30).length / Math.max(1, [...x.cintura.keys()].length);
   reg('C mãos na cintura (≤ 0,12 m do quadril, ≥ 0,5 s) no campo', `pior ${f2(100 * Math.min(...cenasC.map(fracC)))}% dos jogadores`, '≥ 60%', cenasC.every(x => fracC(x) >= 0.6));
   // (o intervalo só planeja os pares ao alcance — CENA_FIM.aperto.maxDistIntervalo: o aperto de 1 s acaba antes do túnel;

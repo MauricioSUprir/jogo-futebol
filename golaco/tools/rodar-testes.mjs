@@ -68,7 +68,8 @@ const LISTA = [
   ['forma do time sem e com a bola (Parte 2)', 'teste-forma.mjs', [], 'etapa3'],
   ['táticas do Editar time movem a forma (Parte 2)', 'teste-taticas.mjs'],
   ['pressão, PPDA e contrapressão (Parte 2)', 'teste-pressao.mjs', [], 'etapa3'],
-  ['movimento da IA no 11×11 (Parte 2)', 'teste-movimento.mjs', ['--modo', 'partida'], 'etapa3'],
+  // (D5, item 22: sai do etapa3 — 5 rodadas de 8 sementes passando, vai e volta 6,8–7,4/min contra 8,3 na main)
+  ['movimento da IA no 11×11 (Parte 2): vai e volta, anda-para-anda, de costas, sem recuo', 'teste-movimento.mjs', ['--modo', 'partida']],
   ['apoio, corredores, corridas e área (Parte 3)', 'teste-apoio.mjs', [], 'etapa3'],
   ['intensidade e sanidade da partida (Parte 3)', 'teste-intensidade.mjs', [], 'etapa3'],
   ['CONTER, DIVIDIDA e PRESSÃO do humano (Parte 4)', 'teste-defesa-humano.mjs'],

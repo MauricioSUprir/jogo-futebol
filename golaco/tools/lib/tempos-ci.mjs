@@ -32,10 +32,11 @@ export const TEMPOS_NODE = {
   'teste-goleiro.mjs': 6,
   'teste-mergulho.mjs': 35,
   'teste-aereo.mjs': 2,
-  'teste-cabeceio.mjs': 54,
+  'teste-cabeceio.mjs': 70,
   'teste-treino.mjs': 14,
   'teste-goleiro-trava.mjs': 105,
   'teste-movimento.mjs': 41,
+  'teste-movimento.mjs --modo partida': 140, // D5: entrou no CI (110 s aqui com a máquina dividida)
   'teste-custo.mjs': 15,
   'teste-partida.mjs': 84,
   'teste-editor.mjs': 16,
@@ -62,6 +63,7 @@ export const TEMPOS_NODE = {
   'teste-tecnicos.mjs --so-sinteticos --estresse': 103,
   'teste-impedimento.mjs': 156,
   'teste-faltas.mjs': 302,
+  'teste-faltas-sentido.mjs': 330,
   'teste-parado.mjs': 7,
   // (24/10, D1: + os ramos de 3 s de M9–M11 e o M12; localmente 371 → 496 s com 3 processos numa máquina de 4 vCPU)
   'teste-pressao-humano.mjs': 420,

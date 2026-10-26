@@ -237,6 +237,14 @@ export function criarCenaSubst(plano, m) {
     if (k == null) {
       const a = novoAtor(j, i, CAMPO_T);
       a.j.mergulho = null;
+      // (dentro do gol na parada — quem correu atrás da bola que saiu pela linha de fundo: a cena começa num corte de
+      // câmera, então ele já aparece 1 m para dentro do campo, parado; senão ficava dentro do gol a cena inteira — a cena do
+      // fim faz o mesmo: cena-fim.js longeDosSolidos)
+      const aj = a.j;
+      if (Math.abs(aj.x) > MX && Math.abs(aj.x) < MX + CAMPO.gol.profundidade + 0.6 && Math.abs(aj.z) < CAMPO.gol.largura / 2 + 0.6) {
+        levar(aj, Math.sign(aj.x) * (MX - 1) - aj.x, 0);
+        aj.vx = 0; aj.vz = 0;
+      }
       atores.push(a);
       continue;
     }

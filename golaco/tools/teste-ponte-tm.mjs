@@ -369,7 +369,9 @@ if (typeof SU.estatisticas === 'function') {
 // contava no 2º tempo. Procura a 1ª semente (a partir de --sem-p7b, 123) com um chute aberto no passo do apito.
 if (typeof SU.estatisticas === 'function') {
   let achou = null;
-  for (let k = 0; k < 24 && !achou; k++) {
+  // (até 120 sementes, D5: o chute no ar no passo do apito é raro — na partida do D5 nenhuma das 24 primeiras tinha; a busca
+  // para na 1ª que tiver)
+  for (let k = 0; k < 120 && !achou; k++) {
     const sem = +arg('--sem-p7b', 123) + k;
     const m = P.criarPartida({ semente: sem, minutosPorTempo: 4 });
     const s = SU.criarSumula();

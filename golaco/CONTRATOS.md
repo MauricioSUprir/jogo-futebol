@@ -3078,7 +3078,8 @@ juntadas na carga do `ia-tatica.js`: `SUAVE_MARCA_P = {...TATICA.suave, ...IA_PE
   a cobertura do 2º homem a 6 m pelo modo pressa, `engaja` 78, `corrida.v` 6,3, o recuo antecipado do 1º homem, a contenção
   mais longe, o "longe" valendo para o meio, a intensidade 0,65 longe da bola e o passe antecipado só no agora + 0,15–0,25 s
   (sem o máximo com o agora).
-- **Pendente**: o defensor do corredor ≥ 5 m/s (`teste-defesa-corrida`, informativo), a recomposição "longe e devagar" ≤ 15%
+- **Pendente**: (o defensor do corredor ≥ 5 m/s saiu: o dono deixou a escolha comigo em 25/10 e a meta do item 19 é a de
+  chegada, arrancada do bloco armado na área ≤ 25%; a velocidade só informa) a recomposição "longe e devagar" ≤ 15%
   e o 2º e o 3º homem a ≤ 5 / ≤ 8,5 m (`teste-ia-corre` M6–M8, informativos) — os porquês nas linhas do teste.
 
 ### D4 — os companheiros da pessoa apertam o condutor da IA (item 17; `ia-tatica.js`, `defesa.js`)
@@ -3098,6 +3099,54 @@ Portão `contraPessoa(m, 1 − t)`: o time `t` é o da pessoa e o outro é a IA 
 - **O bote** não muda: só nos gatilhos de sempre (`apertaProprio`: gatilho, perigo, a Alta, o condutor lento).
 - Medido no `teste-ia-corre` C (C1 ≤ 6,2 m e C2 ≥ 40%, valendo; reprovam na main). Recalibrados com o motivo no teste: o V7
   (teto 238: a IA perde mais a bola e corre mais pelo contexto) e o M1 do `teste-pressao-humano` (com ≤ 2,0 m e Δ ≥ 0,5).
+
+### D5 — o vai e volta da IA sem a bola (item 22; `ia-tatica.js`, `ia.js`, `ia-ataque.js`)
+
+Vale na partida (`m.times`), IA × IA e contra a pessoa; o treino fica bit a bit igual (`hash-igual` IGUAL). Medido pelo
+`teste-movimento --modo partida`: 94% das inversões eram abaixo de 1,5 m/s (o andar devagar que muda de lado), ~30% do apoio
+pela referência e ~1/3 da pressa dele (a retomada e a volta do impedido). O que muda:
+
+- **A espera da volta** do ponto calmo (`alvoCalmo`, `suave*.volta`): começada, vale até `volta[0] + TATICA.volta.folga` m
+  (3; freando, o corpo ainda se afastava 0,5–2 m, passava de `volta[0]` e a espera caía) e também com o jogador QUIETO
+  (`TATICA.volta.quieto`: entrando no quieto ainda andando, o passinho ia na hora para o alvo que ficou para trás).
+- **A virada em arco** (`TATICA.arco` 2,5 m/s): entre 0,5 e 2,5 m/s a virada de mais de `giro[4]` do ponto calmo vai pelo
+  giro, sem parar (acima de 2,5 o `para()` freia na linha, como antes; com a bola na mão do meu goleiro, de uma vez).
+- **A virada parada** (`ia.js para`, `IA.viraParado` {v 0,8, cos −0,5, s 0,5}): nos modos que freiam, o pedido a mais de 120°
+  do movimento de quem anda a mais de 0,8 m/s solta o analógico e, parado, espera 0,5 s. Só para quem PEDIU no tick
+  (`j.ia.viraTick === s.tick`): o ponto calmo fora da marcação de perto e o modo firme.
+- **O modo firme** (`IA.modos.firme`; `IA_ATAQUE.firmeRef`): a pressa da RETOMADA de quem segue a referência (o time longe
+  dela, `ia.motivoP` 'trans') vai com o ponto filtrado (12 m/s), a freada e a virada parada e, logo depois de parar (o arranque
+  calmo, `TATICA.arranque`), trotando. A volta do impedimento e a bola na mão do meu goleiro seguem pelo `pressa`.
+- **Quem marca perto da bola fica como antes** (`TATICA.pertoBola` 12 m; ramos linha, zona, fechaLinha, cobre e marca —
+  `MARCA_PERTO`): com tudo valendo também para eles, o marcador a ≤ 3 m do condutor caía 2–3 pontos (`teste-pressao`).
+  Com a bola na mão do meu goleiro, também (a virada de uma vez: a "bola na mão" do teste-movimento ia de 10 a 15%).
+- **Com a bola a menos de `TATICA.volta.bolaPerto` m (3), qualquer ramo fica como antes** (sem a espera nova, o arco nem a
+  virada parada): alguém ficava parado com o passe lento colado no pé (`teste-nao-passa`), a defesa perto da bola
+  interceptava menos (`teste-intercepta` A) e a PRESSÃO do `teste-dois-humanos` C3 chegava menos.
+- **A bola de lado do condutor da IA** (`conducao.js bolaDeLadoIA`, `CONDUCAO.ladoIA` {lado 0,45, antecipa 0,3, folga 0,5};
+  só a IA e só na partida): com um toque marcado e a bola à frente mas a mais de 0,45 m da linha do corpo, o corpo vai para a
+  linha dela (o ponto 0,3 s à frente), sem passar da velocidade dela + 0,5 m/s — seguindo o analógico reto, o toque não
+  alcançava, o corpo passava da bola e o adversário ficava com ela (4 em ~140 partidas IA × IA com o D5, 0 na main).
+- **As cenas que os estados novos expuseram** (só desenho, hash igual): na substituição, quem está dentro do gol na parada
+  aparece 1 m para dentro do campo no corte inicial (`substituicao.js`, como a cena do fim); no cartão (`cena-cartao.js`),
+  quem sai da roda do árbitro e está no caminho do capitão que chega sai de lado, longe do árbitro (IFAB: 1,38 → 4,15 m), o
+  ponto do capitão que cai dentro do círculo da bola parada gira em volta do punido até a borda dela — só depois que ele
+  encosta na bola do lado do giro, e a mão vai ao ombro do punido do lado dela (A1: 0 → 0,92 s a ≤ 1,2 m) e a câmera do plano do árbitro confere também a parada do punido segurada pela bola (`paradaPrevista(j, out, bola)`;
+  o cartão atrás dele: 14,75 → 0%).
+- **As amostras dos testes que a IA nova reembaralhou** — reprovam quando a contagem PROVA (p < 5%): o passe certo do
+  `teste-intercepta` (z contra 86,5% e 80%), o canhão de tiros livres do `teste-bolas-paradas` D4 (binomial; no alvo 26,1 →
+  17,6% nas sementes do teste, 24,6 × 23,9% em ~425 chutes de 3 conjuntos), os duelos pelo alto do `teste-cabeceio` (8
+  partidas e Poisson; o painel de 144 dá 2,2 × 2,1 com a bola rolando) e a folga da cabeça (binomial; 88% na própria base
+  com 16 partidas), o B3 do `teste-faltas-sentido` (o 'dribla' com 8 partidas e Poisson; em 48 partidas, pênaltis 0,35 ×
+  0,35 e vermelhos 0,19 × 0,23 por partida, base × D5).
+- **O impedimento caiu** (painel de 144: 1,16 → 0,99 e 1,23 → 1,06 por partida): a virada parada e o arco atrasam a linha que
+  recuava e é mandada subir (a armadilha). A correção — a linha que sobe vira na hora (`TATICA.linhaSobe`: 1,19 nas duas
+  amostras) — entra no D6 (item 23), junto com a forma da linha, porque toda mudança IA × IA troca os estados das partidas dos
+  testes (`PESQUISA-CATEGORIA-D.md` §7.6).
+- **O olhar** (`TATICA.olhar.giro` 1,2 → 1,4 rad/s, abaixo do 1,5 do tremor): de costas para a bola andando devagar 14,9 → 13,9%.
+- O `teste-movimento --modo partida` saiu do etapa3 (5 rodadas de 8 sementes passando). Na partida, as guardas "sem recuo"
+  são as da partida: a média de chutes por semente de 3 min ≥ 1,5 (main 2,75; o volume é do painel e da categoria E) e o
+  marcador a ≤ 3 m ≥ 34% (main 36,6%; real 27,1%, Metrica; os 40% com as duas na Média ficam no `teste-pressao`).
 
 ### A pressão contra a pessoa (`tools/teste-pressao.mjs --humano`; D3, item 20)
 
