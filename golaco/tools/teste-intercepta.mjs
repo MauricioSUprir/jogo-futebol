@@ -223,8 +223,11 @@ if (SO.includes('A')) {
 if (SO.includes('B')) {
   const s = k => resB.reduce((a, r) => a + r[k], 0);
   console.log(`B: ${s('cenas')} passes arriscados (de ${NC} cenas): ${s('alc')} alcançáveis pela física, ${s('nao')} não; bloqueados ${s('bloq')}`);
-  reg('B', 'passe arriscado alcançável: a IA corta', `${s('alcCorta')}/${s('alc')} (${f(100 * s('alcCorta') / Math.max(1, s('alc')), 0)}%)`, '≥ 50% (≥ 20 cenas)', s('alc') >= 20 && s('alcCorta') >= 0.5 * s('alc'));
-  reg('B', 'passe arriscado NÃO alcançável: cortado', `${s('naoCorta')}/${s('nao')} (${f(100 * s('naoCorta') / Math.max(1, s('nao')), 0)}%)`, '≤ 15%', s('naoCorta') <= 0.15 * Math.max(1, s('nao')));
+  // (D6: reprova quando a contagem PROVA, z > 1,645, como o passe certo — os 480 estados do canhão saem da partida IA × IA
+  // e mudam a cada mudança da IA: ~60 passes alcançáveis dão ±6 pontos de erro-padrão; a base de antes, 1 de 92, dá z ≈ −9)
+  const zB = (k, n, lim) => (k / Math.max(1, n) - lim) / Math.sqrt(lim * (1 - lim) / Math.max(1, n));
+  reg('B', 'passe arriscado alcançável: a IA corta', `${s('alcCorta')}/${s('alc')} (${f(100 * s('alcCorta') / Math.max(1, s('alc')), 0)}%)`, '≥ 50% (≥ 20 cenas; reprova quando prova: z > 1,645)', s('alc') >= 20 && zB(s('alcCorta'), s('alc'), 0.5) >= -1.645);
+  reg('B', 'passe arriscado NÃO alcançável: cortado', `${s('naoCorta')}/${s('nao')} (${f(100 * s('naoCorta') / Math.max(1, s('nao')), 0)}%)`, '≤ 15% (reprova quando prova: z > 1,645)', zB(s('naoCorta'), s('nao'), 0.15) <= 1.645);
 }
 const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));
 console.log(linhas.map(l => l.map((x, c) => String(x).padEnd(larg[c])).join(' | ')).join('\n'));

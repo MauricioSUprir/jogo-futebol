@@ -258,6 +258,10 @@ export function criarCenaCartao(plano, m) {
     }
     c.mF.tick = m.tick;
   }
+  // IFAB ("só o capitão"): quem está perto do ponto onde o árbitro para (nem o punido nem o capitão) já vem saindo —
+  // pré-rolagem invisível como a do capitão e a do árbitro, até CENA_CARTAO.esperaIfab s: colado no punido do lado de
+  // onde o árbitro chega, ele levava ~2,5 s para sair e ainda estava a ~3,4 m 1 s depois do cartão no alto
+  if (IFAB[plano.variante]) isolar(c, A, s60(K.esperaIfab));
   // a bola parada: ninguém passa por cima dela (quem começou mais perto que CENAS.bola fica no máximo onde está)
   marcarBola(c);
   // quem fica perto do árbitro sai do caminho (as cenas do IFAB: ≥ 4 m; nas outras um pouco): o ponto de cada um é
@@ -282,6 +286,28 @@ export function criarCenaCartao(plano, m) {
   c.mao = { x: 0, y: 0, z: 0 };
   c.apoioToca = 0; c.empurra = 0; c.avancou = 0; c.recuou = 0; c.palmas = false;
   return c;
+}
+
+/**
+ * A pré-rolagem do IFAB: até n ticks, cada um a menos de CENA_CARTAO.ifab + 0,4 m do ponto onde o árbitro para sai
+ * dele (radial; de lado quando o punido está no caminho), na velocidade de quem afasta. Acaba antes se ninguém sobrou.
+ */
+function isolar(c, A, n) {
+  const pun = c.punido.j, lim = K.ifab + 0.4;
+  for (let i = 0; i < n; i++) {
+    let algum = false;
+    for (const a of c.atores) {
+      if (!a.ativo || a === c.arbitro || a === c.punido || a === c.apoio || a.tipo === 'tecnico') continue;
+      const j = a.j, ex = j.x - A.x1, ez = j.z - A.z1, d = Math.hypot(ex, ez);
+      if (d >= lim) continue;
+      algum = true;
+      let ux = d > 0.05 ? ex / d : 1, uz = d > 0.05 ? ez / d : 0;
+      const lx = pun.x - A.x1, lz = pun.z - A.z1, ll = Math.hypot(lx, lz) || 1;
+      if ((ux * lx + uz * lz) / ll > 0.6) { const sg = ux * -lz + uz * lx >= 0 ? 1 : -1; ux = ux * 0.4 - (lz / ll) * sg; uz = uz * 0.4 + (lx / ll) * sg; const l = Math.hypot(ux, uz) || 1; ux /= l; uz /= l; }
+      passoSozinho(j, c.mF, ux, uz, K.velAfasta, Math.atan2(-ez, -ex));
+    }
+    if (!algum) break;
+  }
 }
 
 const _semGestos = () => {};
@@ -392,15 +418,23 @@ function desejo(c, a, t) {
   _ev.x = arb.x; _ev.z = arb.z; _ev.r = c.limAfasta + 0.7;
   const fl = fugirDaLente(c, a, undefined, _ev);
   if (fl) return desviar(c, a, fl);
-  // os outros: quem está perto do árbitro sai (radial, para lim + 0,6 m dele); todos freiam e olham o lance
-  const ex = a.j.x - arb.x, ez = a.j.z - arb.z, d = Math.hypot(ex, ez), lim = c.limAfasta;
+  // os outros: quem está perto do árbitro sai (radial, para lim + 0,6 m dele); todos freiam e olham o lance. Nas cenas
+  // do IFAB, do mais perto entre o árbitro de agora e o ponto onde ele vai parar (quem estava colado no punido só começava
+  // a sair quando o árbitro chegava, e 1 s depois do cartão no alto ainda estava a ~3,4 m)
+  let rx = arb.x, rz = arb.z;
+  if (IFAB[c.plano.variante]) {
+    const A1 = c.plano.arb, dAgora = Math.hypot(a.j.x - arb.x, a.j.z - arb.z), dFim = Math.hypot(a.j.x - A1.x1, a.j.z - A1.z1);
+    if (dFim < dAgora) { rx = A1.x1; rz = A1.z1; }
+  }
+  const ex = a.j.x - rx, ez = a.j.z - rz, d = Math.hypot(ex, ez), lim = c.limAfasta;
   if (d < lim + 0.25 || (a.afasta && d < lim + 0.55)) {
     a.afasta = true; soltar(a);
     let ux = d > 0.05 ? ex / d : 1, uz = d > 0.05 ? ez / d : 0;
     // longe da reta árbitro–punido (não passa por cima do lance)
     const lx = pun.x - arb.x, lz = pun.z - arb.z, ll = Math.hypot(lx, lz) || 1;
     if ((ux * lx + uz * lz) / ll > 0.6) { const sg = ux * -lz + uz * lx >= 0 ? 1 : -1; ux = ux * 0.4 - (lz / ll) * sg; uz = uz * 0.4 + (lx / ll) * sg; const l = Math.hypot(ux, uz) || 1; ux /= l; uz /= l; }
-    // fora do caminho do capitão que vem andando (à frente dele, a < 0,9 m da reta): sai de lado, para o lado longe do
+    // fora do caminho do capitão que vem andando (até 4 m à frente dele, a < 1,1 m da reta: com 2,5 m quem estava 3 m à
+    // frente andava para ele e era empurrado de volta para o árbitro): sai de lado, para o lado longe do
     // árbitro (de frente, o desvio trocava de lado a cada tick e ele, que cede menos, empurrava o outro de volta para o árbitro)
     const ap = c.apoio?.j;
     if (ap) {
@@ -408,14 +442,14 @@ function desejo(c, a, t) {
       if (va > 0.6) {
         const vx = ap.vx / va, vz = ap.vz / va, wx = a.j.x - ap.x, wz = a.j.z - ap.z;
         const fr = wx * vx + wz * vz, la = -wx * vz + wz * vx;
-        if (fr > -0.2 && fr < 2.5 && Math.abs(la) < 0.9) {
+        if (fr > -0.2 && fr < 4.0 && Math.abs(la) < 1.1) {
           const sg = -vz * ex + vx * ez >= 0 ? 1 : -1;
           ux += -vz * sg * 1.5; uz += vx * sg * 1.5;
           const l = Math.hypot(ux, uz) || 1; ux /= l; uz /= l;
         }
       }
     }
-    a.alvoX = arb.x + ux * (lim + 0.7); a.alvoZ = arb.z + uz * (lim + 0.7);
+    a.alvoX = rx + ux * (lim + 0.7); a.alvoZ = rz + uz * (lim + 0.7);
     return desviar(c, a, irPara(c, a, a.alvoX, a.alvoZ, K.velAfasta, Math.atan2(-ez, -ex), 0.1, 3));
   }
   a.afasta = false;
@@ -498,10 +532,11 @@ function desejoPunido(c, a, t) {
         return irPara(c, a, D.x + D.ux * passo, D.z + D.uz * passo, K.v2.vel, rArb, 0.06, 2.5);
       }
       if (u < 2.25) {
-        // empurrado: recua de frente para o árbitro, no passo de quem segura
+        // empurrado: recua de frente para o árbitro, no passo de quem segura (0,9 m/s: com 0,8 a arrancada de costas
+        // deixava o recuo em 0,797 m quando ele começava parado)
         if (c.pV2b == null) c.pV2b = { x: j.x, z: j.z };
         const rx = c.pV2b.x - D.ux * (K.v2.recua + 0.2), rz = c.pV2b.z - D.uz * (K.v2.recua + 0.2);
-        return irPara(c, a, rx, rz, 0.8, rArb, 0.05, 2.5);
+        return irPara(c, a, rx, rz, 0.9, rArb, 0.05, 2.5);
       }
       destinoSaida(c, _q);
       return desviar(c, a, irPara(c, a, _q.x, _q.z, K.v2.vSai, null, 0.2, 1.5));
@@ -536,6 +571,17 @@ function desejoApoio(c, a, t) {
     case 'segurado': {
       // entre os dois, colado no punido (0,55 m), de frente para ele
       pontoApoio(c, 0.56, 0.05, _q);
+      // colado nele na reação: acompanha o recuo dele (a velocidade do punido) e corrige o resto, sem o desvio de quem
+      // está na frente (o da frente é o punido: o desvio o tirava de lado e ele ficava a 0,8 m, com as mãos fora do peito
+      // — V2: 0,72 s segurando); a separação dos corpos continua
+      const ex = _q.x - j.x, ez = _q.z - j.z;
+      if (t >= T.reacao && Math.hypot(ex, ez) < 1.0) {
+        const vx = pun.vx + ex * 2.0, vz = pun.vz + ez * 2.0, vv = Math.hypot(vx, vz);
+        if (vv < 0.05) return para(c, 0, rPun);
+        const d = c._d;
+        d.dx = vx / vv; d.dz = vz / vv; d.vel = Math.min(vv, 3); d.rumo = rPun;
+        return d;
+      }
       return desviar(c, a, irPara(c, a, _q.x, _q.z, longe > 4 ? 6.4 : 3.6, rPun, 0.04, 4));
     }
     case 'cabeca': case 'cabisbaixo': {
@@ -820,20 +866,22 @@ function escolherCamera(c, ip) {
       const dx = _q.x - pun.j.x, dz = _q.z - pun.j.z, l = Math.hypot(dx, dz) || 1, ux = dx / l, uz = dz / l;
       const vel = P.variante === 'segurado' ? K.v2.vSai : P.variante === 'rosto' ? K.v3.vel : K.v1.vel;
       let melhor = null, menor = Infinity;
-      for (const lat of [C.saida.lado, C.saida.lado + 1.5, C.saida.lado + 3]) for (const sg of [1, -1]) {
-        let custo = (sg * ux) > 0 ? 0.2 : 0; // (preferência: do lado da TV quando ele anda para z +)
+      // (mais longe de lado e mais atrás quando as de sempre esbarram em alguém: o companheiro parado entre o expulso e a
+      // lente ficava a 2,1 m dela no fim do plano — as 6 de antes tinham todas alguém no caminho)
+      for (const atras of [C.saida.atras, C.saida.atras + 2.5]) for (const lat of [C.saida.lado, C.saida.lado + 1.5, C.saida.lado + 3, C.saida.lado + 4.5]) for (const sg of [1, -1]) {
+        let custo = ((sg * ux) > 0 ? 0.2 : 0) + (atras - C.saida.atras) * 0.3; // (preferência: do lado da TV quando ele anda para z +)
         for (const u of [0, 0.5, 1.0, 1.5]) {
           const px = pun.j.x + ux * vel * u, pz = pun.j.z + uz * vel * u;
-          const x = px - ux * C.saida.atras - uz * sg * lat, z = pz - uz * C.saida.atras + ux * sg * lat;
+          const x = px - ux * atras - uz * sg * lat, z = pz - uz * atras + ux * sg * lat;
           if (!camValida(x, C.saida.altura, z)) { custo += 100; continue; }
           _a.length = 0; _a.push(pun);
           const cc = melhorCamera(c, [{ x, y: C.saida.altura, z }], _a).custo;
           custo += Number.isFinite(cc) ? cc : 100;
         }
         custo += (lat - C.saida.lado) * 0.3;
-        if (custo < menor) { menor = custo; melhor = { lat, sg }; }
+        if (custo < menor) { menor = custo; melhor = { lat, sg, atras }; }
       }
-      return { x: 0, y: C.saida.altura, z: 0, ux, uz, lado: melhor.sg, lat: melhor.lat, movel: true };
+      return { x: 0, y: C.saida.altura, z: 0, ux, uz, lado: melhor.sg, lat: melhor.lat, atras: melhor.atras, movel: true };
     }
     case 'tunel': {
       const lado = c.tunelLado ?? 1, Tc = K.tunel.cam;
@@ -966,7 +1014,8 @@ function planoIndice(c, ip, t, opc, out) {
     }
     case 'anota': return definirPlano(out, 'anota', cam.x, cam.y, cam.z, ax, 1.15, az, C.anota.fov, opc);
     case 'saida': {
-      const x = px - cam.ux * C.saida.atras - cam.uz * cam.lado * cam.lat, z = pz - cam.uz * C.saida.atras + cam.ux * cam.lado * cam.lat;
+      const at = cam.atras ?? C.saida.atras;
+      const x = px - cam.ux * at - cam.uz * cam.lado * cam.lat, z = pz - cam.uz * at + cam.ux * cam.lado * cam.lat;
       return definirPlano(out, 'saida', x, C.saida.altura, z, px + cam.ux * 1.0, 1.0, pz + cam.uz * 1.0, C.saida.fov, opc);
     }
     case 'tunel': {

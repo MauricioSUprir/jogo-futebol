@@ -350,14 +350,15 @@ export function criarEsqueleto(repouso) {
   // tronco vai a ~22° correndo e a cabeça cai ~30°. Só no DESENHO, antes das juntas do desenho:
   //  - joelho: o quadril e tudo acima sobem até POSTURA.sobe, com os PÉS NO LUGAR (a IK refaz o joelho; nenhum joelho
   //    passa de flexMin), inteiro até vJoelho[0] e nada a partir de vJoelho[1] (a corrida fica como a do jogo);
-  //  - tronco: a inclinação acima de inclMin cai a metade (gira em volta da pelve);
+  //  - tronco: a inclinação acima de inclMin cai 60% (gira em volta da pelve; 55% até o D6, que tem mais arrancadas
+  //    na recomposição: a mediana correndo ia a 17,2°);
   //  - cabeça: o que ela cai à frente do tronco acima de cabecaMax cai a metade (gira em volta do pescoço);
   //  - nada no ar (pulo do cabeceio, mergulho: o tornozelo mais baixo acima de ar[0]..ar[1]), deitado (tronco acima de
   //    inclMax) nem ajoelhado (joelho a < 0,3 m do chão ou dobrado > 65–85°); com as duas mãos juntas (a bola nas mãos
   //    do goleiro e do lateral) elas ficam onde o jogo as põe; o goleiro com peso menor (a base de espera dele é dobrada
   //    de verdade).
   // Contínua em tudo (mínimo e misturas de funções contínuas): nenhum salto novo (teste-ossos O2 e O7).
-  const POSTURA = { sobe: 0.065, flexMin: 10, vJoelho: [2.4, 5.6], inclMin: 9, inclK: 0.55, inclMax: [32, 48], cabecaMax: 17, cabecaK: 0.6, ar: [0.13, 0.22] };
+  const POSTURA = { sobe: 0.065, flexMin: 10, vJoelho: [2.4, 5.6], inclMin: 9, inclK: 0.6, inclMax: [32, 48], cabecaMax: 17, cabecaK: 0.6, ar: [0.13, 0.22] };
   // as mãos à parte (a IK do braço do desenho vai até a mão do jogo): com as duas juntas — a bola nas mãos do goleiro e
   // do lateral — elas não saem do lugar
   const ACIMA = ['pelve', 'lombar', 'peito', 'pescoco', 'cabeca', 'ombroE', 'cotoveloE', 'ombroD', 'cotoveloD', 'quadrilE', 'quadrilD'].map(n => JE[n]);

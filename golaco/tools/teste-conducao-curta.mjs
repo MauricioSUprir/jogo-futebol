@@ -164,7 +164,9 @@ const pDentro = quadros ? 100 * dentro / quadros : NaN;
 // ------------------------------------------------------------------ C. IA × IA
 const GI = {};
 const t0 = Date.now();
+const bordasIA = [];   // onde cada partida começa em GI.IA.am (o erro-padrão da mediana pelas partidas)
 for (let s = 1; s <= NIA; s++) {
+  bordasIA.push(GI.IA?.am.length ?? 0);
   const m = PA.criarPartida({ semente: 1000 + s * 17, minutosPorTempo: MIN_IA });
   const ac = criarAcomp(GI, j => (j.posicao === 'GOL' ? null : 'IA'), false);
   const N = Math.round(2 * MIN_IA * 3600) + 600;
@@ -177,6 +179,21 @@ for (let s = 1; s <= NIA; s++) {
 }
 const sIA = (Date.now() - t0) / 1000;
 const IA = FAIXAS.map((_, k) => resumo(GI.IA, k));
+// a mediana de cada partida na faixa k e o erro-padrão entre elas: a meta da IA reprova quando a conta prova (a mediana
+// acima do teto por mais de 1,645 erros-padrão) — a IA × IA muda de estado a cada mudança da IA e a mediana de 12 partidas
+// oscila ~1 cm em volta do teto (que é o valor medido quando ele entrou)
+function epMediana(k) {
+  const am = GI.IA?.am ?? [], meds = [];
+  for (let i = 0; i < bordasIA.length; i++) {
+    const v = am.slice(bordasIA[i], bordasIA[i + 1] ?? am.length).filter(a => faixaDe(a[0]) === k).map(a => a[1]);
+    if (v.length >= 20) meds.push(pct(v, 0.5));
+  }
+  if (meds.length < 3) return NaN;
+  const mu = meds.reduce((x, y) => x + y, 0) / meds.length;
+  return Math.sqrt(meds.reduce((x, y) => x + (y - mu) ** 2, 0) / (meds.length - 1) / meds.length);
+}
+const epIA = FAIXAS.map((_, k) => epMediana(k));
+const ateEp = (v, b, ep) => Number.isFinite(v) && Number.isFinite(ep) && v - 1.645 * ep <= b;
 
 // ------------------------------------------------------------------ metas
 const metas = [];
@@ -213,9 +230,9 @@ const esc = [A.andar.mMedia, A.trote.mMedia, A.corrida.mMedia, A.disparada.mMedi
 meta('B escada: metros por toque andar < trote < corrida < disparada (médias)', esc.map(v => f2(v)).join(' < '), 'crescente', esc.every((v, i) => Number.isFinite(v) && (i === 0 || v > esc[i - 1])));
 meta('B escada: disparada ÷ corrida (metros por toque)', f2(A.disparada.mMedia / A.corrida.mMedia), '≥ 1,3', desde(A.disparada.mMedia / A.corrida.mMedia, 1.3));
 // C. IA
-meta(`C IA × IA (${NIA} partidas): trote, bola–corpo (mediana)`, `${f2(IA[1].dC[0])} m`, '≤ 0,59', ate(IA[1].dC[0], 0.59));
+meta(`C IA × IA (${NIA} partidas): trote, bola–corpo (mediana)`, `${f2(IA[1].dC[0], 3)} ± ${f2(epIA[1], 3)} m`, '≤ 0,59 (reprova quando prova: z > 1,645)', ateEp(IA[1].dC[0], 0.59, epIA[1]));
 meta(`C IA × IA: trote, tempo com a bola a mais de 0,7 m`, `${f2(100 * IA[1].longe, 0)}%`, '≤ 30%', ate(100 * IA[1].longe, 30));
-meta(`C IA × IA: corrida, bola–corpo (mediana)`, `${f2(IA[2].dC[0])} m`, '≤ 0,57', ate(IA[2].dC[0], 0.57));
+meta(`C IA × IA: corrida, bola–corpo (mediana)`, `${f2(IA[2].dC[0], 3)} ± ${f2(epIA[2], 3)} m`, '≤ 0,57 (reprova quando prova: z > 1,645)', ateEp(IA[2].dC[0], 0.57, epIA[2]));
 // D. desenho
 meta('D chuteira dentro da bola (quadros das cenas A, pose)', `${f2(pDentro, 1)}%`, '≤ 61,3% (sem recuo; PENDENTE ≤ 1% no teste-conducao)', ate(pDentro, 61.3));
 

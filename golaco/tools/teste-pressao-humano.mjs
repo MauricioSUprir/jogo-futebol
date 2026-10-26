@@ -116,9 +116,11 @@ async function retomadaPelaMao() {
   const P = await imp('partida.js'), S = await imp('sim.js'), CFG = await imp('config.js'), D = await imp('defesa.js'), A = await imp('acoes.js');
   // V: a validade do pedido em passos (DEFESA_HUMANO.pressao.validade s; na main antes do D1, 1 PASSO — lá o toque nunca
   // durava até a reposição e o M12 passa sem a janela ter sentido)
-  const { BOTAO: B } = CFG, V = Math.round(CFG.DEFESA_HUMANO.pressao.validade / PASSO), sementes = [SEM0, SEM0 + 1];
+  // (a reposição cortada dentro da validade é rara e depende dos estados: as sementes seguem, até 6, até ≥ 4 na janela)
+  const { BOTAO: B } = CFG, V = Math.round(CFG.DEFESA_HUMANO.pressao.validade / PASSO), sementes = [];
   let casosM = 0, janela = 0, fant = 0;
-  for (const sem of sementes) {
+  for (let sem = SEM0; sem < SEM0 + 6 && (sementes.length < 2 || janela < 4); sem++) {
+    sementes.push(sem);
     const m = P.criarPartida({ semente: sem, minutosPorTempo: MIN });
     for (let i = 0, n = 0; i < 20000 && n < 8; i++) {
       P.passoPartida(m, P.entradaDemoPartida(m));

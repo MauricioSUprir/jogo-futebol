@@ -46,10 +46,10 @@ export function forcarCartao(L, m, situacao, opc = {}) {
   const MX = C.CAMPO.meioX;
   // o pênalti e o goleiro expulso: o lance de verdade perto da área (um time com a bola a ≤ 30 m do gol que ataca; o
   // primeiro que acontecer, de qualquer um dos dois) — a falta dentro da área num estado com a bola no meio-campo deixava
-  // a defesa longe (sem companheiro perto)
+  // a defesa longe (sem companheiro perto); até 200 s de jogo (com 100 s, 3 dos 8 estados do D6 ficavam sem lance)
   if ((situacao === 'penalti' || situacao === 'goleiro') && !opc.semBusca) {
     let achou = false;
-    for (let i = 0; i < 6000 && !achou; i++) {
+    for (let i = 0; i < 12000 && !achou; i++) {
       const j = m.posse != null ? porId(m, m.posse) : null;
       if (m.partida.estado === 'jogo' && m.naMao == null && j && j.posicao !== 'GOL' && Math.hypot(j.x - m.ataca[j.time] * MX, j.z) <= 30) { achou = true; break; }
       P.passoPartida(m, P.entradaDemoPartida(m), null);

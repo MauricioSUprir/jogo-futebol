@@ -276,7 +276,10 @@ for (let sem = 1; sem <= NSEM; sem++) {
         const auto = x => x.eventos.some(ev => ev.tipo === 'troca' && ev.auto && S.jogadorPorId(x, ev.id)?.time === T);
         if (a.controlado[T] !== b.controlado[T] && (auto(a) || auto(b))) continue;
         resB.casos++;
-        const sb = c1Ativa(a, T) || c1Ativa(b, T);
+        // o controlado que T assumiu NESTE passo (o TROCAR sai depois da entrada aplicada: sim.js) tem o analógico do passo
+        // escrito pela IA, que lê o mundo (a cobrança do outro: a bola vindo, a recepção) — dele valem o id e os botões
+        const trocou = a.controlado[T] !== m.controlado[T] || b.controlado[T] !== m.controlado[T];
+        const sb = c1Ativa(a, T) || c1Ativa(b, T) || trocou;
         if (!iguais(camposTime(a, T, sb), camposTime(b, T, sb)) && resB.falhas.length < 1e6) resB.falhas.push({ sem, tick: m.tick, T });
       }
     }
