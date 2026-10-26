@@ -3129,9 +3129,9 @@ pela referência e ~1/3 da pressa dele (a retomada e a volta do impedido). O que
   alcançava, o corpo passava da bola e o adversário ficava com ela (4 em ~140 partidas IA × IA com o D5, 0 na main).
 - **As cenas que os estados novos expuseram** (só desenho, hash igual): na substituição, quem está dentro do gol na parada
   aparece 1 m para dentro do campo no corte inicial (`substituicao.js`, como a cena do fim); no cartão (`cena-cartao.js`),
-  quem sai da roda do árbitro e está no caminho do capitão que chega sai de lado, longe do árbitro (IFAB: 1,38 → 4,30 m), o
-  ponto do capitão que cai dentro do círculo da bola parada gira em volta do punido até a borda dela (A1: 0 → 1,42 s a
-  ≤ 1,2 m) e a câmera do plano do árbitro confere também a parada do punido segurada pela bola (`paradaPrevista(j, out, bola)`;
+  quem sai da roda do árbitro e está no caminho do capitão que chega sai de lado, longe do árbitro (IFAB: 1,38 → 4,15 m), o
+  ponto do capitão que cai dentro do círculo da bola parada gira em volta do punido até a borda dela — só depois que ele
+  encosta na bola do lado do giro, e a mão vai ao ombro do punido do lado dela (A1: 0 → 0,92 s a ≤ 1,2 m) e a câmera do plano do árbitro confere também a parada do punido segurada pela bola (`paradaPrevista(j, out, bola)`;
   o cartão atrás dele: 14,75 → 0%).
 - **As amostras dos testes que a IA nova reembaralhou** — reprovam quando a contagem PROVA (p < 5%): o passe certo do
   `teste-intercepta` (z contra 86,5% e 80%), o canhão de tiros livres do `teste-bolas-paradas` D4 (binomial; no alvo 26,1 →
