@@ -1,12 +1,17 @@
 // Pedestres da cidade: pessoas andando nas calçadas (em volta dos quarteirões, nos dois sentidos), virando nas esquinas e
 // às vezes atravessando a rua na faixa de pedestre. Só existem num raio do jogador; quem sai renasce longe, de preferência
 // atrás dele. Reagem ao herói: com ele passando rápido perto, giram com o vento ou caem sentadas e levantam; com ele
-// parado perto, param e olham. Desenho: UMA InstancedMesh; a caminhada (pernas e braços), a queda e as roupas de cada um
+// parado perto, param, olham e logo uns tiram FOTO com o celular (o flash pisca) e outros COMEMORAM com os braços para
+// cima (dono, 26/10: "também interatividade maior"). Com um perigo perto (o vilão do dia, um crime, um vilão da
+// história) quem está a até 45 m FOGE correndo pela calçada para longe dele; com o vilão derrotado ou o crime impedido,
+// quem está em volta comemora. Desenho: UMA InstancedMesh; a caminhada (pernas e braços), a queda e as roupas de cada um
 // vêm do shader (atributos por instância), então o custo de CPU por pessoa é só a posição e 3 números.
 // THREE é passado por parâmetro; a lógica não usa DOM.
 import { CELL, N, BLOCO, CALCADA, centroDe, celulaDe, dentro, ehCampus } from './cidade.js';
 
 const MEIA = BLOCO / 2;
+export const FUGA = { raio: 45, vel: 4.6, depois: 4 };   // m, m/s, s fugindo depois que o perigo some
+export const FESTA = { raio: 50, tempo: 4.5 };            // m, s
 const SX = [-1, 1, 1, -1], SZ = [-1, -1, 1, 1];     // cantos do quarteirão em sentido anti-horário (vistos de cima)
 const ESPELHO_X = [1, 0, 3, 2], ESPELHO_Z = [3, 2, 1, 0];
 
@@ -16,7 +21,7 @@ const CALCAS = [[0.12, 0.17, 0.3], [0.08, 0.08, 0.09], [0.35, 0.3, 0.24], [0.5, 
 const CABELOS = [[0.06, 0.05, 0.04], [0.2, 0.12, 0.06], [0.42, 0.28, 0.14], [0.7, 0.55, 0.3], [0.55, 0.55, 0.55], [0.12, 0.08, 0.06]];
 
 // ---------- geometria de uma pessoa (frente em +x, lado em z): parte 0 corpo, 1/2 pernas E/D, 3/4 braços E/D;
-// região 0 pele, 1 camisa, 2 calça, 3 sapato, 4 cabelo ----------
+// região 0 pele, 1 camisa, 2 calça, 3 sapato, 4 cabelo, 5 celular ----------
 function geoPessoa(THREE) {
   const pecas = [];
   const box = (w, h, d, x, y, z, parte, reg) => { const g = new THREE.BoxGeometry(w, h, d); g.translate(x, y, z); pecas.push([g, parte, reg]); };
@@ -34,6 +39,7 @@ function geoPessoa(THREE) {
     box(0.11, 0.3, 0.11, 0, 1.3, lado * 0.26, parte, 1);          // braço (manga)
     box(0.09, 0.34, 0.09, 0.01, 0.98, lado * 0.26, parte, 0);     // antebraço e mão
   }
+  box(0.075, 0.012, 0.13, 0.03, 0.79, 0.26, 4, 5);                // celular na mão direita (deitado: a foto sai na horizontal)
   let n = 0; const ngs = pecas.map(([g, p, r]) => { const ng = g.index ? g.toNonIndexed() : g; n += ng.attributes.position.count; return [ng, p, r]; });
   const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), parte = new Float32Array(n), reg = new Float32Array(n);
   let o = 0;
@@ -47,14 +53,19 @@ function geoPessoa(THREE) {
 
 const VERT_DECL = `
 attribute float aParte; attribute float aReg;
-attribute vec3 iPel; attribute vec3 iCam; attribute vec3 iCal; attribute vec3 iCab; attribute vec3 iAnim;
-varying vec3 vCorP;
+attribute vec3 iPel; attribute vec3 iCam; attribute vec3 iCal; attribute vec3 iCab; attribute vec3 iAnim; attribute vec3 iGesto;
+varying vec3 vCorP; varying float vFlash;
+// iGesto: x = comemora (braços para cima, acenando), y = foto (os dois braços à frente com o celular), z = o flash
 float anguloParte() {
   float s = sin(iAnim.x), amp = iAnim.y, q = iAnim.z;
   if (aParte > 0.5 && aParte < 1.5) return mix(amp * s, 1.45, q);
   if (aParte > 1.5 && aParte < 2.5) return mix(-amp * s, 1.45, q);
-  if (aParte > 2.5 && aParte < 3.5) return mix(-0.9 * amp * s, -0.55, q);
-  if (aParte > 3.5) return mix(0.9 * amp * s, -0.55, q);
+  if (aParte > 2.5) {
+    float lado = aParte > 3.5 ? 1.0 : -1.0;
+    float base = mix(lado * 0.9 * amp * s, -0.55, q);
+    float festa = 2.7 + 0.32 * sin(iAnim.x * 1.0 + lado * 1.3);
+    return mix(mix(base, festa, iGesto.x), 1.5, iGesto.y);
+  }
   return 0.0;
 }
 float pivoParte() { return aParte > 2.5 ? 1.44 : 0.88; }
@@ -69,8 +80,8 @@ export function criarPedestres(THREE, cena, { mobile = false, semente = 11 } = {
 
   const geo = geoPessoa(THREE);
   const atr = (nome) => { const a = new THREE.InstancedBufferAttribute(new Float32Array(NP * 3), 3); geo.setAttribute(nome, a); return a; };
-  const aPel = atr('iPel'), aCam = atr('iCam'), aCal = atr('iCal'), aCab = atr('iCab'), aAnim = atr('iAnim');
-  aAnim.setUsage(THREE.DynamicDrawUsage);
+  const aPel = atr('iPel'), aCam = atr('iCam'), aCal = atr('iCal'), aCab = atr('iCab'), aAnim = atr('iAnim'), aGesto = atr('iGesto');
+  aAnim.setUsage(THREE.DynamicDrawUsage); aGesto.setUsage(THREE.DynamicDrawUsage);
   const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
   mat.onBeforeCompile = (sh) => {
     sh.vertexShader = sh.vertexShader
@@ -78,14 +89,17 @@ export function criarPedestres(THREE, cena, { mobile = false, semente = 11 } = {
       .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
         { float a = anguloParte(); objectNormal.xy = girar(objectNormal.xy, a); if (aParte < 0.5 || aParte > 2.5) objectNormal.xy = girar(objectNormal.xy, -0.3 * iAnim.z); }`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
+        if (aReg > 4.5 && iGesto.y < 0.3) transformed = vec3(0.0, 1.2, 0.0);   // sem foto, o celular fica no bolso
         { float a = anguloParte(), py = pivoParte();
           vec2 v = transformed.xy - vec2(0.0, py); transformed.xy = girar(v, a) + vec2(0.0, py);
           if (aParte < 0.5 || aParte > 2.5) { vec2 w = transformed.xy - vec2(0.0, 0.88); transformed.xy = girar(w, -0.3 * iAnim.z) + vec2(0.0, 0.88); }
           transformed.y -= 0.4 * iAnim.z;
-          vCorP = aReg < 0.5 ? iPel : aReg < 1.5 ? iCam : aReg < 2.5 ? iCal : aReg < 3.5 ? vec3(0.07, 0.06, 0.06) : iCab; }`);
+          vCorP = aReg < 0.5 ? iPel : aReg < 1.5 ? iCam : aReg < 2.5 ? iCal : aReg < 3.5 ? vec3(0.07, 0.06, 0.06) : aReg < 4.5 ? iCab : vec3(0.05, 0.05, 0.06);
+          vFlash = aReg > 4.5 ? iGesto.z : 0.0; }`);
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vCorP;')
-      .replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( diffuse * vCorP, opacity );');
+      .replace('#include <common>', '#include <common>\nvarying vec3 vCorP; varying float vFlash;')
+      .replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( diffuse * vCorP, opacity );')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += vec3(6.0 * vFlash);');
   };
   const malha = new THREE.InstancedMesh(geo, mat, NP);
   malha.frustumCulled = false; malha.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -109,12 +123,15 @@ export function criarPedestres(THREE, cena, { mobile = false, semente = 11 } = {
       p.x = ax + (bx - ax) * f; p.z = az + (bz - az) * f;
       if (Math.hypot(p.x - j.x, p.z - j.z) < rMin * 0.8) continue;
       p.estado = 'anda'; p.v = 1.1 + rnd() * 0.5; p.vivo = true; p.queda = 0; p.tq = 0; p.giro = 0; p.vg = 0; p.incl = 0; p.alvo = null;
+      const r = rnd(); p.jeito = r < 0.45 ? 'foto' : r < 0.8 ? 'festa' : null; p.demora = 0.5 + rnd() * 1.4;
+      p.tOlha = 0; p.gFesta = 0; p.gFoto = 0; p.flash = 0; p.tFlash = 0.3; p.medo = 0; p.tVira = 0; p.comemora = 0;
       return true;
     }
     return false;
   }
   for (let k = 0; k < NP; k++) {
-    const p = { x: 0, z: 0, h: 0, estado: 'anda', vivo: false, fase: rnd() * 6.28, i: 0, j: 0, o: 1.2, s: 1, c: 0, v: 1.3, queda: 0, tq: 0, giro: 0, vg: 0, incl: 0, alvo: null };
+    const p = { x: 0, z: 0, h: 0, estado: 'anda', vivo: false, fase: rnd() * 6.28, i: 0, j: 0, o: 1.2, s: 1, c: 0, v: 1.3, queda: 0, tq: 0, giro: 0, vg: 0, incl: 0, alvo: null,
+      jeito: null, demora: 1, tOlha: 0, gFesta: 0, gFoto: 0, flash: 0, tFlash: 0.3, medo: 0, tVira: 0, comemora: 0 };
     pessoas.push(p);
     aPel.setXYZ(k, ...pick(PELES)); aCam.setXYZ(k, ...pick(CAMISAS)); aCal.setXYZ(k, ...pick(CALCAS)); aCab.setXYZ(k, ...pick(CABELOS));
   }
@@ -135,18 +152,29 @@ export function criarPedestres(THREE, cena, { mobile = false, semente = 11 } = {
     p.c = (p.c + p.s + 4) % 4;
   }
 
-  function atualizar(dt, jogador = jogVirt, noite = 0) {
+  /**
+   * Um passo. `extra.perigos` = [{x, z}] (o vilão do dia, o crime, os vilões da história): quem está a até FUGA.raio foge;
+   * `extra.festa` = {x, z} num quadro só (vilão derrotado, crime impedido): quem está a até FESTA.raio comemora.
+   */
+  function atualizar(dt, jogador = jogVirt, noite = 0, extra = {}) {
     dt = Math.min(dt, 0.1);
     if (!iniciado) { iniciado = true; for (const p of pessoas) nascer(p, jogador, 6, RAIO, false); }
-    const vj = Math.hypot(jogador.vx, jogador.vz);
+    const vj = Math.hypot(jogador.vx, jogador.vz), perigos = extra.perigos || [], festa = extra.festa;
     pessoas.forEach((p, k) => {
       if (!p.vivo || Math.hypot(p.x - jogador.x, p.z - jogador.z) > RAIO + 15) { nascer(p, jogador, RAIO * 0.6, RAIO, true); }
       const dxj = jogador.x - p.x, dzj = jogador.z - p.z, dj = Math.hypot(dxj, dzj);
+      // o perigo mais perto: foge (e segue fugindo um pouco depois que ele some)
+      let pg = null, dpg = FUGA.raio;
+      for (const q of perigos) { const d = Math.hypot(q.x - p.x, q.z - p.z); if (d < dpg) { dpg = d; pg = q; } }
+      if (pg && p.estado !== 'caido') { p.medo = FUGA.depois; p.de = pg; }
+      if (festa && Math.hypot(festa.x - p.x, festa.z - p.z) < FESTA.raio) { p.comemora = FESTA.tempo * (0.7 + rnd() * 0.6); p.medo = 0; }
       // reações ao herói
       if (dj < 4 && vj > 20 && p.estado !== 'caido' && p.estado !== 'vento') {
         if (rnd() < 0.35) { p.estado = 'caido'; p.tq = 0; } else { p.estado = 'vento'; p.tq = 1.3; p.vg = (rnd() < 0.5 ? -1 : 1) * (5 + rnd() * 4); p.incl = (rnd() < 0.5 ? -1 : 1) * 0.3; }
       }
-      let anda = 1;
+      let anda = 1, querFesta = 0, querFoto = 0;
+      if (p.medo > 0) p.medo -= dt;
+      if (p.comemora > 0) p.comemora -= dt;
       if (p.estado === 'caido') {
         p.tq += dt; anda = 0;
         p.queda = p.tq < 0.3 ? p.tq / 0.3 : p.tq < 2.3 ? 1 : Math.max(0, 1 - (p.tq - 2.3) / 0.6);
@@ -154,10 +182,25 @@ export function criarPedestres(THREE, cena, { mobile = false, semente = 11 } = {
       } else if (p.estado === 'vento') {
         p.tq -= dt; anda = 0.4; p.giro += p.vg * dt; p.vg *= Math.exp(-2.2 * dt); p.incl *= Math.exp(-2.5 * dt);
         if (p.tq <= 0) { p.estado = p.cruzando ? 'cruza' : 'anda'; p.incl = 0; }
-      } else if (vj < 1 && dj < 6 && p.estado !== 'cruza') {
-        p.olhando = true; anda = 0;
+      } else if (p.medo > 0) {
+        // foge pela calçada: se o canto para onde vai está mais perto do perigo que ela, dá meia-volta
+        p.olhando = false; p.tOlha = 0; anda = FUGA.vel / p.v; p.tVira -= dt;
+        if (p.estado === 'anda' && p.tVira <= 0) {
+          const [cx, cz] = canto(p, p.c), dAqui = Math.hypot(p.x - p.de.x, p.z - p.de.z), dLa = Math.hypot(cx - p.de.x, cz - p.de.z);
+          if (dLa < dAqui - 1) { const ant = (p.c - p.s + 4) % 4; p.s = -p.s; p.c = ant; p.tVira = 1.2; }
+        }
+      } else if (p.estado !== 'cruza' && (p.comemora > 0 || (vj < 1 && dj < 9))) {
+        // parada olhando o herói; depois de um instante, a foto ou a comemoração
+        p.olhando = true; anda = 0; p.tOlha += dt;
         const alvoH = Math.atan2(dzj, dxj); let d = alvoH - p.h; d = Math.atan2(Math.sin(d), Math.cos(d)); p.h += d * (1 - Math.exp(-4 * dt));
-      } else p.olhando = false;
+        if (p.comemora > 0) querFesta = 1;
+        else if (p.tOlha > p.demora) { if (p.jeito === 'foto') querFoto = 1; else if (p.jeito === 'festa') querFesta = 1; }
+      } else { p.olhando = false; p.tOlha = 0; }
+      // os gestos entram e saem suaves; com a foto armada o flash pisca de tempo em tempo
+      p.gFesta += (querFesta - p.gFesta) * (1 - Math.exp(-6 * dt)); p.gFoto += (querFoto - p.gFoto) * (1 - Math.exp(-6 * dt));
+      p.flash *= Math.exp(-28 * dt);
+      if (p.gFoto > 0.9) { p.tFlash -= dt; if (p.tFlash <= 0) { p.flash = 1; p.tFlash = 0.9 + rnd() * 1.8; } }
+      if (p.gFesta > 0.05) p.fase += dt * 9;                    // o aceno (as pernas ficam paradas: amp 0)
       p.giro *= p.estado === 'vento' ? 1 : Math.exp(-3 * dt);
       p.cruzando = p.estado === 'cruza' || (p.estado !== 'anda' && p.cruzando);
       // caminhada até o alvo
@@ -166,16 +209,16 @@ export function criarPedestres(THREE, cena, { mobile = false, semente = 11 } = {
         const ax = alvo[0] - p.x, az = alvo[1] - p.z, d = Math.hypot(ax, az), passo = p.v * anda * dt;
         if (d <= passo + 1e-4) { p.x = alvo[0]; p.z = alvo[1]; if (p.estado === 'anda' || p.estado === 'cruza') proximoAlvo(p); }
         else { p.x += (ax / d) * passo; p.z += (az / d) * passo; const alvoH = Math.atan2(az, ax); let dh = alvoH - p.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); p.h += dh * (1 - Math.exp(-10 * dt)); }
-        p.fase += dt * p.v * anda * 4.2;
+        p.fase += dt * p.v * anda * (p.medo > 0 ? 2.2 : 4.2);
       }
-      const amp = p.olhando || p.estado === 'caido' ? 0 : 0.42 * anda;
-      aAnim.setXYZ(k, p.fase, amp, p.queda);
+      const amp = p.olhando || p.estado === 'caido' ? 0 : p.medo > 0 ? 0.85 : 0.42 * anda;
+      aAnim.setXYZ(k, p.fase, amp, p.queda); aGesto.setXYZ(k, p.gFesta, p.gFoto, p.flash);
       // altura: em cima da laje (calçada) ou no asfalto (atravessando)
       const ci = celulaDe(p.x), cj = celulaDe(p.z), naLaje = Math.abs(p.x - centroDe(ci)) <= MEIA && Math.abs(p.z - centroDe(cj)) <= MEIA;
       E.set(p.incl * Math.sin(p.giro * 2), -(p.h + p.giro), p.incl, 'YXZ'); Q.setFromEuler(E);
       P.set(p.x, naLaje ? CALCADA : 0, p.z); M.compose(P, Q, S); malha.setMatrixAt(k, M);
     });
-    aAnim.needsUpdate = true; malha.instanceMatrix.needsUpdate = true;
+    aAnim.needsUpdate = true; aGesto.needsUpdate = true; malha.instanceMatrix.needsUpdate = true;
   }
   aPel.needsUpdate = aCam.needsUpdate = aCal.needsUpdate = aCab.needsUpdate = true;
 
