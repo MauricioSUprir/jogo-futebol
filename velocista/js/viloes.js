@@ -650,6 +650,8 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     },
     /** todos os vilões viram de frente para o herói (começo de uma cena) */
     encarar(P) { for (const v of C?.viloes || []) v.h = Math.atan2(P.x - v.x, P.z - v.z); },
+    /** o capítulo já foi vencido */
+    vencido(id) { return S.vencidos.has(id); },
     /** ids dos vilões do capítulo em andamento */
     get ids() { return C ? C.viloes.map((v) => v.id) : []; },
     /** quantas vezes o herói perdeu esta luta (cada uma deixa o vilão mais fácil, até 3) */

@@ -41,6 +41,10 @@ export const MISSOES_FALAS = {
   queda: { abre: [F('caitlin', 'Alguém está caindo de um prédio! Vai, vai, vai!')], fecha: [F('caitlin', 'Você chegou a tempo. Ela está bem.'), F('caitlin', 'Ela perguntou o seu nome. Eu não soube o que responder.')] },
   patrulha: { abre: [F('caitlin', 'A cidade precisa de você. Impeça cinco crimes.')], fecha: [F('cisco', 'Os jornais só falam do borrão vermelho que salva gente.')] },
   relatorio: { abre: [F('caitlin', 'Volte ao Cortex. Precisamos conversar sobre o que vem por aí.')] },
+  capitulos: { abre: [F('caitlin', 'O homem de amarelo ainda está lá fora. O guia mostra quando ele aparecer.')] },
+  fendas: { abre: [F('cisco', 'O Núcleo está rasgando o ar pela cidade! Quatro fendas. E tem coisa saindo de lá.'), F('caitlin', 'Vibre dentro de cada uma, na mesma frequência. Ela deve fechar.')], fecha: [F('cisco', 'Quatro abertas, quatro fechadas. Agora vem pro Cortex: descobri uma coisa.')] },
+  tunel: { abre: [F('cisco', 'A avenida principal é reta o bastante. Passe dos 180 e segure. O Núcleo vai te alimentar.')] },
+  passado: { abre: [F('caitlin', '...Flash? ...consegue me ouvir? ...o sinal está...'), F('heroi', 'A cidade inteira está como naquela noite. O laboratório brilhando... Eu vou até lá.')] },
 };
 
 /** cenas (jogo parado). Um item pode ser um CARTÃO de capítulo em tela cheia. */
@@ -153,6 +157,37 @@ export const CENAS = {
     F('heroi', 'Flash. Gostei.'),
     F('cisco', 'Tá bom, é melhor que "Furacão Escarlate". Um pouquinho melhor.'),
   ],
+  'depois-fendas': [
+    F('cisco', 'Analisei a energia das fendas. Elas não são buracos no espaço. São buracos no TEMPO.'),
+    F('cisco', 'E batem com a assinatura do Flash Reverso. Ele não chegou ao Núcleo por acaso: ele veio do futuro. O Núcleo é a porta.'),
+    F('caitlin', 'Se ele veio do futuro, sabia de tudo porque já tinha visto acontecer.'),
+    F('heroi', 'Então eu também vou ver. Vou voltar à noite do acidente.'),
+    F('caitlin', 'Correr no tempo? Você pode não conseguir voltar.'),
+    F('cisco', 'Ou pode. Passe dos 180 e segure: o Núcleo abre o caminho. Eu fico no rádio o tempo todo.'),
+  ],
+  'depois-tunel': [
+    F('cisco', 'Cento e oitenta, noventa, duzentos... não para! O Núcleo está abrindo o caminho!'),
+    F('heroi', 'Estou vendo a cidade inteira... todos os dias ao mesmo tempo.'),
+    F('caitlin', 'Pense na noite do acidente. Segure essa lembrança e não solte.'),
+    F('cisco', 'Estou perdendo o sinal... se cuida, Flash... sss...'),
+    CARTAO('Seis semanas atrás', 'A noite do acidente'),
+  ],
+  'acidente': [
+    F('reverso', 'Você veio. Eu sabia que viria. Já vi este momento mil vezes.'),
+    F('heroi', 'Pare! Ninguém precisa se machucar esta noite.'),
+    F('reverso', 'Precisa, sim. Sem esta noite não existe Flash. E sem o Flash eu nunca volto para o meu tempo.'),
+    F('reverso', 'Mude o passado e você apaga o próprio futuro: a Caitlin, o Cisco, cada pessoa que você salvou.'),
+    F('heroi', 'Então eu não vou mudar nada. Mas um dia eu fecho essa porta. Para sempre.'),
+    { ...F('reverso', 'Está na hora.'), acao: 'explosao' },
+    CARTAO('Onze segundos', 'O raio encontra você'),
+  ],
+  'volta-tunel': [
+    F('heroi', 'Eu vi tudo. Ele esteve lá o tempo inteiro.'),
+    F('cisco', 'Te pegamos! O sinal voltou! Segura firme, estamos te puxando de volta.'),
+    F('caitlin', 'Seus batimentos estão em dobro. Como se houvesse dois de você dentro do túnel.'),
+    F('cisco', 'Peraí. Tem mais alguém no túnel com você. E está vindo atrás.'),
+    CARTAO('Continua...', 'Capítulo 6 — Savitar'),
+  ],
   'cap-reverso': [
     CARTAO('Capítulo 5', 'O homem de amarelo'),
     F('cisco', 'Revi as gravações da noite do acidente. Quadro a quadro.'),
@@ -188,11 +223,11 @@ export const CENAS = {
     F('cisco', 'Zoom e Flash Reverso na câmara de contenção. Desta vez com seis trancas.'),
     F('heroi', 'Eles vão tentar fugir.'),
     F('caitlin', 'E você vai estar lá. Sempre um passo à frente.'),
-    CARTAO('Epílogo', 'O Núcleo acordou'),
+    CARTAO('Fim do Ato 2', 'O Núcleo acordou'),
     F('cisco', 'Gente... o Núcleo Aurora acabou de ligar sozinho.'),
     F('caitlin', 'Impossível. Ele está desligado desde a explosão.'),
     F('cisco', 'Tem alguma coisa do outro lado dele. E está olhando pra gente.'),
-    CARTAO('Continua...', 'Obrigado por jogar'),
+    CARTAO('Ato 3', 'Fendas no tempo'),
   ],
 };
 
@@ -260,9 +295,10 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
   const cRetrato = cena.querySelector('.retrato'), cNome = cena.querySelector('b'), cTexto = cena.querySelector('p');
   const cartao = cena.querySelector('.cartao'), kRotulo = cartao.querySelector('small'), kTitulo = cartao.querySelector('h2');
   let C = null;                                              // {falas, i, t, letras, aoFim, focos, plano}
+  let opcAtual = null;                                       // opções da cena que está começando ({aoAcao})
   function iniciarCena(id, focos, aoFim) {
     const falas = CENAS[id]; if (!falas) { aoFim?.(); return false; }
-    C = { id, falas, i: 0, t: 0, letras: 0, aoFim, focos, ang: Math.random() * 6.28, plano: null, ultimo: null };
+    C = { id, falas, i: 0, t: 0, letras: 0, aoFim, focos, ang: Math.random() * 6.28, plano: null, ultimo: null, aoAcao: opcAtual?.aoAcao };
     marcar(`cena:${id}`); cena.hidden = false; document.body.classList.add('em-cena'); radio.classList.remove('vis'); falando = null;
     mostrarFala(); return true;
   }
@@ -277,6 +313,7 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
     }
     cartao.classList.remove('vis');
     mostrar(cena, cRetrato, cNome, f); cTexto.textContent = '';
+    if (f.acao) C.aoAcao?.(f.acao);                                   // a fala dispara algo no mundo (a explosão do Núcleo)
     C.plano = escolherPlano(f); C.ultimo = f.quem;
   }
   function avancar() {
@@ -382,6 +419,7 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
       if (!CENAS[id] || (!sempre && vistas.has(`cena:${id}`)) || (navigator.webdriver && !/[?&]historia=1/.test(location.search))) { aoFim?.(); return false; }
       const fs = typeof focos === 'function' ? { padrao: focos } : { ...(focos || {}) };
       if (!fs.padrao) fs.padrao = fs.heroi || Object.values(fs)[0] || (() => null);
+      opcAtual = arguments[3] || null;
       return iniciarCena(id, fs, aoFim);
     },
     /** falas de rádio de um momento (uma vez só, a não ser que `sempre`) */

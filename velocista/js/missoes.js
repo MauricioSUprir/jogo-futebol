@@ -15,10 +15,15 @@ export const MISSOES = [
   { id: 'queda', titulo: 'Salvamento', texto: 'Salve uma pessoa caindo de um prédio', meta: 1, contador: 'queda', crime: 'queda' },
   { id: 'patrulha', titulo: 'Guardião da cidade', texto: 'Impeça 5 crimes quaisquer', meta: 5, contador: 'crimes' },
   { id: 'relatorio', titulo: 'Relatório', texto: 'Volte ao Cortex do S.T.A.R. Labs', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
+  // Ato 3 — o tempo (depois do Flash Reverso e da batalha final)
+  { id: 'capitulos', titulo: 'O homem de amarelo', texto: 'Derrote o Flash Reverso e vença a batalha final', checar: (c) => c.finalVencido },
+  { id: 'fendas', titulo: 'Fendas no tempo', texto: 'Feche 4 fendas temporais (vibre dentro delas)', meta: 4, contador: 'fendas', alvo: 'fenda' },
+  { id: 'tunel', titulo: 'O túnel do tempo', texto: 'Fique 5 s acima de 180 km/h (a energia não gasta)', tipo: 'tunel', checar: (c) => c.tunel >= 1 },
+  { id: 'passado', titulo: 'A noite do acidente', texto: 'Chegue ao S.T.A.R. Labs, seis semanas atrás', alvo: 'labPassado', checar: (c) => c.voltouDoPassado },
 ];
 
 const CHAVE = 'theflash.missoes.v1';
-const STATS0 = { esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
+const STATS0 = { fendas: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
 
 export function criarMissoes(armazem) {
   let salvo = null;
@@ -50,6 +55,8 @@ export function criarMissoes(armazem) {
   return {
     get atual() { return atual(); }, get indice() { return E.indice; }, get total() { return MISSOES.length; }, get stats() { return E.stats; },
     progresso, contar, avaliar,
+    /** pula para uma missão (atalho dos testes: ?missao=<id>) */
+    irPara(id) { const i = MISSOES.findIndex((m) => m.id === id); if (i >= 0) { E.indice = i; comecar(); } },
     zerar() { E.indice = 0; E.stats = { ...STATS0 }; E.base = {}; comecar(); },
   };
 }
