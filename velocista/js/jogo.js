@@ -17,6 +17,9 @@ import { criarEquipe } from './equipe.js';
 import { criarTempo } from './tempo.js';
 import { construirLab, construirSilhueta } from './lab3d.js';
 import { CAMPUS, TORRE, ALAS, LAB } from './lab.js';
+import { MARCOS, limitar, PONTE, ILHA, PRESIDIO, pontoMundo, SUBESTACOES } from './marcos.js';
+import { criarAliados } from './aliados.js';
+import { desenharMarco, blocoIlha, desenharFora } from './marcos3d.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
 
 // ---------- constantes ----------
@@ -119,7 +122,7 @@ function atualizarAmbiente(posCam) {
   mundo.noite = 1 - suave(-0.15, 0.12, elev);
   estrelas.material.opacity = clamp(mundo.noite * 1.2, 0, 1);
   const lit = mundo.noite * 1.0; renderer.toneMappingExposure = 1.05 + 0.3 * mundo.noite; matPoca.opacity = 0.34 * mundo.noite;
-  for (const m of materiaisFachada) m.emissiveIntensity = lit;
+  for (const m of materiaisFachada) m.emissiveIntensity = lit * (1 - 0.85 * (J.apagao || 0));   // no "Apagão" a cidade fica escura
   matLampada.color.setRGB(0.55 + 0.45 * lit, 0.5 + 0.43 * lit, 0.38 + 0.3 * lit); cena.environmentIntensity = 0.15 + 0.85 * (1 - mundo.noite);
   renderer.setClearColor(cena.fog.color);
 }
@@ -227,15 +230,15 @@ const PRETO = [0.08, 0.08, 0.09], CINZA = [0.5, 0.52, 0.55], CINZA_ESC = [0.25, 
 function construirBloco(b) {
   const grupo = new THREE.Group(), geos = [], dados = { grupo, geos, orbes: [], instancias: [] };
   // o campus do laboratório desenha a própria praça (as 4 células são uma só, e só a "mestre" monta o desenho)
-  if (b.tipo !== 'lab') { const topoLaje = new THREE.Mesh(geoLajeTopo, b.tipo === 'parque' ? matGrama : matCalcada); topoLaje.position.set(b.cx, 0, b.cz); topoLaje.receiveShadow = !MOBILE; grupo.add(topoLaje); }
+  if (b.tipo !== 'lab' && !b.semLaje) { const topoLaje = new THREE.Mesh(geoLajeTopo, b.tipo === 'parque' ? matGrama : matCalcada); topoLaje.position.set(b.cx, 0, b.cz); topoLaje.receiveShadow = !MOBILE; grupo.add(topoLaje); }
   const baldes = new Map(), pega = (k, cor) => { if (!baldes.has(k)) baldes.set(k, new Balde(cor)); return baldes.get(k); };
   const props = pega('props', true), roof = pega('roof'), copas = pega('copas'), lamp = pega('lamp'), poca = pega('poca');
   // meio-fio entra no balde dos adereços (um desenho a menos): quatro faixas finas
-  if (b.tipo !== 'lab') for (const [x, z, sx, sz] of [[0, -BLOCO / 2 + 0.2, BLOCO, 0.4], [0, BLOCO / 2 - 0.2, BLOCO, 0.4], [-BLOCO / 2 + 0.2, 0, 0.4, BLOCO], [BLOCO / 2 - 0.2, 0, 0.4, BLOCO]]) props.geo(geoCaixa, compor(b.cx + x, CALCADA / 2, b.cz + z, sx, CALCADA, sz), [0.5, 0.51, 0.53]);
+  if (b.tipo !== 'lab' && !b.semLaje) for (const [x, z, sx, sz] of [[0, -BLOCO / 2 + 0.2, BLOCO, 0.4], [0, BLOCO / 2 - 0.2, BLOCO, 0.4], [-BLOCO / 2 + 0.2, 0, 0.4, BLOCO], [BLOCO / 2 - 0.2, 0, 0.4, BLOCO]]) props.geo(geoCaixa, compor(b.cx + x, CALCADA / 2, b.cz + z, sx, CALCADA, sz), [0.5, 0.51, 0.53]);
   if (b.tipo === 'lab' && b.mestre) { const lab = construirLab(THREE_LAB, b.cx, b.cz, { aniso: ANISO, intervaloTela: MOBILE ? 1 : 0.2 }); grupo.add(lab.grupo); if (!MOBILE) lab.grupo.traverse((o) => { if (o.isMesh && !o.material?.transparent) { o.castShadow = true; o.receiveShadow = true; } }); geos.push(...lab.geos); dados.lab = lab; labAtivo = lab; }
   for (const l of b.lotes) {
     const lat = pega(`l${l.estilo}-${l.tom}`);
-    const loja = l.y0 <= CALCADA + 0.01 && l.x1 - l.x0 > 8 ? pega(`loja${(Math.abs(b.i * 7 + b.j * 3 + Math.round(l.x0)) % 3)}`) : null;
+    const loja = !l.semLoja && l.y0 <= CALCADA + 0.01 && l.x1 - l.x0 > 8 ? pega(`loja${(Math.abs(b.i * 7 + b.j * 3 + Math.round(l.x0)) % 3)}`) : null;
     lote(lat, roof, loja, l);
   }
   for (const t of b.topo) {
@@ -262,6 +265,18 @@ function construirBloco(b) {
     lamp.geo(geoCaixa, compor(p.x + dx, CALCADA + 7.1, p.z + dz, p.lado === 0 ? 0.5 : 0.7, 0.12, p.lado === 0 ? 0.7 : 0.5), null);
     poca.geo(geoPoca, compor(p.x + dx * 3, 0.05, p.z + dz * 3, 7, 1, 7), null);
   }
+  if (b.marco) {                                                // os lugares da história: colunas, letreiros, relógio, a ponte...
+    const api = {
+      THREE, grupo, geos, compor,
+      caixa: (x, y, z, sx, sy, sz, cor, rot = 0) => props.geo(geoCaixa, compor(x, y, z, sx, sy, sz, rot), cor),
+      cil: (x, y, z, r, h, cor) => props.geo(geoCil, compor(x, y, z, r, h, r), cor),
+      cone: (x, y, z, r, h, cor) => props.geo(geoCone, compor(x, y, z, r, h, r), cor),
+      geo: (g, m, cor) => props.geo(g, m, cor),
+      luz: (x, y, z, sx, sy, sz) => lamp.geo(geoCaixa, compor(x, y, z, sx, sy, sz), null),
+    };
+    dados.extra = b.marco.id === 'fora' ? desenharFora(THREE, api) : desenharMarco(THREE, b, api);
+    marcosAtivos.add(dados.extra);
+  }
   for (const [k, bd] of baldes) {
     const g = bd.gerar(); if (!g) continue; geos.push(g);
     let mat;
@@ -282,8 +297,10 @@ function construirBloco(b) {
   return dados;
 }
 let labAtivo = null;
+const marcosAtivos = new Set();                   // extras animados dos lugares carregados (relógio, giroflex, letreiro...)
 function descarregar(chave) {
   const d = carregados.get(chave); if (!d) return;
+  if (d.extra) marcosAtivos.delete(d.extra);
   if (d.lab) { d.lab.materiais?.forEach((m) => m.dispose?.()); if (labAtivo === d.lab) labAtivo = null; }
   cena.remove(d.grupo); d.geos.forEach((g) => g.dispose()); d.instancias.forEach((i) => i.dispose());
   for (const r of d.orbes) { const k = orbesAtivos.indexOf(r); if (k >= 0) orbesAtivos.splice(k, 1); }
@@ -383,6 +400,8 @@ function passoRastro(dt) {
 
 // ---------- estado ----------
 const LAB_B = bloco(LAB_CELULA[0], LAB_CELULA[1]);
+// a ponte e a ilha do presídio ficam fora da grade de quarteirões: desenhadas uma vez só, e nunca descarregadas
+const ILHA_B = construirBloco(blocoIlha());
 // a torre do S.T.A.R. Labs se vê de qualquer lugar: longe (ou com o campus descarregado) entra a silhueta no lugar dela
 const silhueta = construirSilhueta(THREE, LAB_B.cx, LAB_B.cz); cena.add(silhueta.grupo);
 const TORRE_XZ = { x: LAB_B.cx + (TORRE.u0 + TORRE.u1) / 2, z: LAB_B.cz + (TORRE.v0 + TORRE.v1) / 2 };
@@ -567,7 +586,7 @@ function passoHeroi(dt) {
     P.vy -= (planando ? 8 : MOV.gravidade) * sub; if (planando) P.vy = Math.max(P.vy, -MOV.planeio);
     const ox = P.x, oz = P.z;
     P.x += P.vx * sub; P.z += P.vz * sub; P.y += P.vy * sub;
-    const lim = MEIO - 4; P.x = clamp(P.x, -lim, lim); P.z = clamp(P.z, -lim, lim);
+    { const L = limitar(P.x, P.z); P.x = L.x; P.z = L.z; }       // a cidade, a ponte e a ilha do presídio
     if (!P.vibrando) {
       // em velocidade, obstáculos baixos (carros, bancos) são pulados: o herói salta por cima em vez de parar
       const r = empurrar(rectsPerto, P.x, P.z, CORPO.raio, P.y, CORPO.alt, P.saltoAuto > 0 ? ehBaixo : null);
@@ -728,6 +747,12 @@ function desenharMapa() {
     gm.fillStyle = b.tipo === 'parque' ? '#3d7a3d' : '#59647a'; gm.fillRect(q.x0, q.z0, q.x1 - q.x0, q.z1 - q.z0);
     for (const l of b.lotes) { const c = Math.min(230, 120 + l.y1 * 0.9) | 0; gm.fillStyle = `rgb(${c},${c},${Math.min(255, c + 12)})`; gm.fillRect(l.x0, l.z0, l.x1 - l.x0, l.z1 - l.z0); }
   }
+  { // a ponte e a ilha do presídio
+    gm.fillStyle = '#4a5560'; gm.fillRect(PONTE.x0 - 8, PONTE.z - PONTE.larg / 2, PONTE.x1 - PONTE.x0 + 16, PONTE.larg);
+    gm.fillStyle = '#3f5a3a'; gm.fillRect(ILHA.x0, ILHA.z0, ILHA.x1 - ILHA.x0, ILHA.z1 - ILHA.z0);
+    const Q = PRESIDIO; gm.fillStyle = '#7d7f84'; gm.fillRect(Q.cx - Q.meio, Q.cz - Q.meio, Q.meio * 2, Q.meio * 2);
+    gm.fillStyle = '#9a9ca2'; for (const b of Q.blocos) gm.fillRect(b.x0, b.z0, b.x1 - b.x0, b.z1 - b.z0);
+  }
   { // o campus do S.T.A.R. Labs (antes do guia e dos marcadores, que vão por cima): a praça, os prédios e a borda
     const cx = LAB_B.cx, cz = LAB_B.cz, M = CAMPUS.meio, L = LAB.meio;
     gm.fillStyle = '#34405a'; gm.fillRect(cx - M, cz - M, 2 * M, 2 * M);
@@ -741,9 +766,16 @@ function desenharMapa() {
   for (const e of combate.bandidos) if (e.estado !== 'caido' && e.estado !== 'fugiu') { gm.fillStyle = '#ff4d5e'; gm.beginPath(); gm.arc(e.x, e.z, grande ? 8 : 4, 0, 6.3); gm.fill(); }
   { const a = alvoAtual(); if (a && a.cor !== '#3fd0ff') { gm.fillStyle = a.cor; gm.beginPath(); gm.arc(a.x, a.z, grande ? 30 : 11, 0, 6.3); gm.fill(); gm.strokeStyle = '#fff'; gm.lineWidth = grande ? 6 : 2.5; gm.stroke(); } }
   gm.setTransform(1, 0, 0, 1, 0, 0);
-  { // nome do laboratório no mapa (texto sempre de pé)
-    const lx = (LAB_B.cx - P.x) * rx + (LAB_B.cz - P.z) * rz, ly = -((LAB_B.cx - P.x) * fx + (LAB_B.cz - P.z) * fz);
-    if (Math.hypot(lx, ly) < raioM) { gm.fillStyle = '#3fe0ff'; gm.font = `bold ${grande ? 22 : 20}px sans-serif`; gm.textAlign = 'center'; gm.fillText('S.T.A.R. LABS', W / 2 + lx * ppm, H / 2 + ly * ppm - (grande ? 14 : 24)); }
+  { // nomes no mapa (texto sempre de pé): o laboratório e, no mapa grande, os lugares da história
+    const nome = (x, z, texto, cor, px) => {
+      const lx = (x - P.x) * rx + (z - P.z) * rz, ly = -((x - P.x) * fx + (z - P.z) * fz);
+      if (Math.hypot(lx, ly) < raioM) { gm.fillStyle = cor; gm.font = `bold ${px}px sans-serif`; gm.textAlign = 'center'; gm.fillText(texto, W / 2 + lx * ppm, H / 2 + ly * ppm - (grande ? 14 : 24)); }
+    };
+    nome(LAB_B.cx, LAB_B.cz, 'S.T.A.R. LABS', '#3fe0ff', grande ? 22 : 20);
+    if (grande) {
+      for (const m of MARCOS) { const b = bloco(m.cel[0], m.cel[1]); nome(b.cx, b.cz, m.nome, '#ffd23f', 17); }
+      nome(PRESIDIO.cx, PRESIDIO.cz, 'Iron Heights', '#ffd23f', 17); nome((PONTE.x0 + PONTE.x1) / 2, PONTE.z, 'Ponte da Baía', '#ffd23f', 15);
+    }
   }
   const sx = Math.sin(P.h) * rx + Math.cos(P.h) * rz, sy = -(Math.sin(P.h) * fx + Math.cos(P.h) * fz);
   gm.translate(W / 2, H / 2); gm.rotate(Math.atan2(sx, -sy));
@@ -788,6 +820,8 @@ function alvoMissao() {
     return dentroLab ? { x: LAB_B.cx, z: LAB_B.cz, cor: '#ffd23f', rotulo: 'Cortex' } : { x: e.x, z: e.z - 4, cor: '#ffd23f', rotulo: 'S.T.A.R. Labs' };
   }
   if (m?.alvo === 'fenda') { const f = tempo.alvoFenda(P); if (f) return f; }
+  if (m?.ponto) { const w = pontoMundo(m.ponto); return { x: w.x + Math.sin(w.h) * 3, z: w.z + Math.cos(w.h) * 3, cor: '#ffd23f', rotulo: m.titulo }; }
+  if (m?.alvo === 'subestacao') { const s = SUBESTACOES[Math.min(SUBESTACOES.length - 1, missoes.progresso()?.n ?? 0)]; return { x: s.x, z: s.z, cor: '#ffd23f', rotulo: 'Subestação' }; }
   if (m?.alvo === 'labPassado') { const e = LAB_B.plano.entrada; return { x: e.x, z: e.z - 4, cor: '#ffb347', rotulo: 'S.T.A.R. Labs — seis semanas atrás' }; }
   if (m?.alvo === 'predioAlto') { const p = predioAltoPerto(); if (p) return { ...p, cor: '#ffd23f', rotulo: 'Prédio de 50 m' }; }
   if (m?.alvo === 'esfera') { const o = esferaMaisPerto(); if (o) return { x: o.x, z: o.z, cor: '#3fd0ff', rotulo: 'Esfera' }; }
@@ -867,16 +901,36 @@ function passoMissoes(dt) {
       rodarCena('acidente', { heroi: focoHeroi, reverso: () => tempo.focoReverso() }, () => rodarCena('volta-tunel', focosCena(), voltarDoPassado), { aoAcao: (a) => { if (a === 'explosao') tempo.explodir(); } });
     }
   }
-  const feita = missoes.avaliar({ sala, v: Math.hypot(P.vx, P.vz), y: P.y, noChao: P.noChao, portaisFeitos: rp?.feito,
+  // "Apagão": religar as subestações na ordem (o guia leva à próxima); a cidade fica escura até a última
+  const emEnergia = m?.alvo === 'subestacao', nSub = emEnergia ? Math.min(subest.length, missoes.progresso()?.n ?? 0) : 0;
+  subest.forEach((s, k) => { s.g.visible = emEnergia; s.luz.material.color.setHex(k < nSub ? 0x30ff60 : 0xff2a20); });
+  if (emEnergia && nSub < subest.length && Math.hypot(P.x - subest[nSub].x, P.z - subest[nSub].z) < 6) {
+    const s = subest[nSub]; missoes.contar('subestacoes'); missoes.contar('pontos', 100);
+    for (let i = 0; i < 10; i++) { const a = Math.random() * 6.28; combate.efeitos.raio(s.x, 2, s.z, s.x + Math.cos(a) * 5, 0.5 + Math.random() * 4, s.z + Math.sin(a) * 5, { vida: 0.35, desvio: 1, r: 2.2, g: 1.7, b: 0.6 }); }
+    const pr = missoes.progresso(); avisar('Subestação religada', pr ? pr.txt : '', 'ok');
+  }
+  J.apagao = emEnergia ? 1 - nSub / subest.length : 0;
+  // passo num lugar da cidade: chegou perto do ponto (raio do passo)
+  const pw = m?.ponto ? pontoMundo(m.ponto) : null, perto = !!pw && Math.hypot(P.x - pw.x, P.z - pw.z) < (m.raio ?? 9);
+  const feita = missoes.avaliar({ sala, v: Math.hypot(P.vx, P.vz), y: P.y, noChao: P.noChao, portaisFeitos: rp?.feito, perto,
     vencido: (id) => viloes.vencido(id), tunel: (J.tunelT || 0) / 5, voltouDoPassado: !!J.voltouDoPassado });
   if (feita) {
     avisar(feita.titulo, 'Missão concluída', 'missao'); historia.missao(feita.id, 'fecha');
     const abrir = () => { if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); };
-    // cena da história depois da missão: entra quando o rádio termina de falar
-    if (historia.tem(`depois-${feita.id}`) && !historia.viu(`cena:depois-${feita.id}`)) J.cenaPendente = { id: `depois-${feita.id}`, depois: abrir };
-    else abrir();
+    // cena da história depois da missão: entra quando o rádio termina de falar (com o Joe/Iris, eles ficam até ela acabar)
+    if (historia.tem(`depois-${feita.id}`) && !historia.viu(`cena:depois-${feita.id}`)) {
+      J.cenaPendente = { id: `depois-${feita.id}`, depois: abrir, passo: feita.aliados ? feita : null };
+      if (feita.aliados) J.cenaAliados = feita;
+    } else abrir();
   }
-  if (J.cenaPendente && historia.radioLivre && !viloes.emLuta) { const c = J.cenaPendente; J.cenaPendente = null; rodarCena(c.id, focosCena(), c.depois); }
+  if (J.cenaPendente && historia.radioLivre && !viloes.emLuta) {
+    const c = J.cenaPendente; J.cenaPendente = null;
+    if (c.passo) {                                   // o herói para de frente para quem vai falar
+      aliados.posicionar(c.passo.aliados); const d = aliados.diante();
+      if (d) { const R = retangulosPerto(d.x, d.z, 1), q = empurrar(R, d.x, d.z, 0.4, 0, 1.8); Object.assign(P, { x: q.x, z: q.z, y: chaoEm(R, q.x, q.z, 1), vx: 0, vz: 0, vy: 0, h: d.h, noChao: true, parede: null, vibrando: false }); C.yaw = d.h; }
+    }
+    rodarCena(c.id, focosCena(), () => { J.cenaAliados = null; c.depois(); });
+  }
   // painel
   const ma = missoes.atual, pr = missoes.progresso();
   el.missaoNum.textContent = ma ? `História ${missoes.indice + 1}/${missoes.total} · ${missoes.stats.pontos} pts` : `Cidade livre · ${missoes.stats.pontos} pts`;
@@ -920,9 +974,18 @@ const focoHeroi = () => ({ x: P.x, y: P.y, z: P.z });
 const tempo = criarTempo(cena, { mobile: MOBILE, aniso: ANISO, fx: combate.efeitos, lab: { cx: LAB_B.cx, cz: LAB_B.cz, entrada: LAB_B.plano.entrada }, chao: (x, z, y) => chaoEm(rectsPerto, x, z, y) });
 const equipe = criarEquipe(cena, { mobile: MOBILE, aniso: ANISO, renderer, lab: LAB_B, aoRetrato: (id, url) => historia.definirRetrato(id, url) });   // os retratos vão prontos (tools/gerar-retratos.mjs)
 const noCortex = () => LAB_B.plano.dentro(P.x, P.z, P.y) === 'cortex';
+// o Joe e a Iris, nos lugares da história (o passo atual diz onde; a cena do passo segura eles até acabar)
+const aliados = criarAliados(cena, { mobile: MOBILE, aniso: ANISO, chao: (x, z) => chaoEm(retangulosPerto(x, z, 0), x, z, 2) });
+// as subestações do "Apagão": armário com a luz vermelha (desligada) ou verde (religada)
+const subest = SUBESTACOES.map((s) => {
+  const g = new THREE.Group(); g.position.set(s.x, CALCADA, s.z);
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.9, 0.9).translate(0, 0.95, 0), new THREE.MeshStandardMaterial({ color: 0x55605a, roughness: 0.7, metalness: 0.3 })));
+  const luz = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2a20 })); luz.position.set(0, 2.05, 0); g.add(luz);
+  g.visible = false; cena.add(g); return { ...s, g, luz };
+});
 /** os focos de uma cena: o herói e, com ele no Cortex, a Caitlin e o Cisco (quem não está lá fala pelo rádio) */
 const focosCena = () => {
-  const fs = { heroi: focoHeroi };
+  const fs = { heroi: focoHeroi, joe: () => aliados.foco('joe'), iris: () => aliados.foco('iris') };
   for (const id of ['caitlin', 'cisco']) fs[id] = () => (equipe.pronta && noCortex() ? equipe.focos()[id]() : null);
   return fs;
 };
@@ -947,7 +1010,7 @@ function rodarCena(id, foco, depois, opc) {
 // ---------- créditos (depois do epílogo) ----------
 const CREDITOS = [
   ['THE FLASH', ''], ['Uma história em quatro atos', ''],
-  ['Personagens', 'Caitlin · Cisco · Zoom · Flash Reverso · Capitão Frio · Onda Térmica · Mago do Tempo · Savitar · DeVoe'],
+  ['Personagens', 'Caitlin · Cisco · Joe · Iris · Zoom · Flash Reverso · Capitão Frio · Onda Térmica · Mago do Tempo · Savitar · DeVoe'],
   ['', 'Nomes inspirados nos personagens da DC. Trajes, rostos, cenários e enredo deste jogo são desenhos próprios. Jogo de fã, sem fins lucrativos.'],
   ['Corpos e rostos', 'Microsoft Rocketbox Avatar Library (licença MIT)'],
   ['Motor 3D', 'three.js (licença MIT)'], ['Fontes', 'Rajdhani e Inter (SIL Open Font License)'],
@@ -1044,6 +1107,7 @@ function quadro() {
     passoMissoes(dt);
     pedestres.atualizar(dt, P, mundo.noite); trafego.atualizar(dt, P, mundo.noite, pedestres.pessoas);
     if (labAtivo) labAtivo.atualizar(dt, P.t, mundo.noite, camera, P);
+    for (const e of marcosAtivos) e.atualizar(dt, P.t, mundo);
     atualizarQuarteiroes(P.x, P.z, carregados.size < 30 ? 8 : 2);
     if (J.aviso > 0) { J.aviso -= dt; if (J.aviso <= 0) { el.aviso.classList.remove('vis'); el.aviso.classList.add('sai'); } }
     el.vel.textContent = Math.round((P.parede ? P.parede.v : Math.hypot(P.vx, P.vz)) * 3.6);
@@ -1056,6 +1120,8 @@ function quadro() {
   }
   historia.atualizar(Math.min(dtBruto, 0.1));
   equipe.atualizar(dt, P, { noCortex: noCortex(), quemFala: J.modo === 'cena' ? historia.quemFala : null });
+  aliados.posicionar((J.cenaAliados || missoes.atual)?.aliados || null);
+  aliados.atualizar(dt, P, { quemFala: J.modo === 'cena' ? historia.quemFala : null });
   tempo.atualizar(dt, camera, P, { quemFala: J.modo === 'cena' ? historia.quemFala : null });
   if (J.modo === 'cena') { viloes.posar(dt, historia.quemFala); animarHeroi(dt); if (!historia.camera(camera, dt)) atualizarCamera(dt); }
   else if (J.modo !== 'menu' || carregados.size) { animarHeroi(J.modo === 'jogando' ? dt : 0); atualizarCamera(dt); }
@@ -1108,4 +1174,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { equipe, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { equipe, aliados, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };

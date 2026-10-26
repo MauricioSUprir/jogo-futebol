@@ -23,6 +23,7 @@ function mulberry(a) {
 }
 
 import { LAB_CELULA, CAMPUS, planoLab } from './lab.js';
+import { marcoDaCelula, solidosForaPerto } from './marcos.js';
 export { LAB_CELULA };
 export const celulaDe = (v) => Math.floor((v + MEIO) / CELL);
 export const centroDe = (i) => (i + 0.5) * CELL - MEIO;
@@ -80,8 +81,22 @@ export function bloco(i, j) {
     cache.set(chave, b);
     return b;
   }
-  const b = { i, j, cx, cz, tipo, lotes: [], arvores: [], orbes: [], rects: [], topo: [], carros: [], postes: [] };
+  const marco = marcoDaCelula(i, j);
+  const b = { i, j, cx, cz, tipo: marco ? 'marco' : tipo, lotes: [], arvores: [], orbes: [], rects: [], topo: [], carros: [], postes: [] };
   b.rects.push({ x0: cx - BLOCO / 2, x1: cx + BLOCO / 2, z0: cz - BLOCO / 2, z1: cz + BLOCO / 2, y0: -5, y1: CALCADA });
+  if (marco) {
+    // um lugar da história: os prédios dele (no lugar do sorteio), os sólidos extras e a entrada
+    b.marco = marco; b.entrada = { x: cx + marco.entrada[0], z: cz + marco.entrada[1] };
+    for (const l of marco.lotes) {
+      const y0 = l.y0 ?? CALCADA, lote = { x0: cx + l.u[0], x1: cx + l.u[1], z0: cz + l.v[0], z1: cz + l.v[1], y0, y1: y0 + l.h, estilo: l.estilo, tom: l.tom, semLoja: !l.loja, semTopo: !!(l.telhado || l.y0) };
+      b.lotes.push(lote); b.rects.push({ x0: lote.x0, x1: lote.x1, z0: lote.z0, z1: lote.z1, y0: lote.y0, y1: lote.y1 });
+    }
+    for (const [u0, u1, v0, v1, y0, y1] of marco.solidos) b.rects.push({ x0: cx + u0, x1: cx + u1, z0: cz + v0, z1: cz + v1, y0: Math.max(y0, CALCADA), y1 });
+    for (const [u, v, s] of marco.arvores || []) b.arvores.push({ x: cx + u, z: cz + v, s });
+    detalhes(b, i, j);
+    cache.set(chave, b);
+    return b;
+  }
 
   const interno = BLOCO - 4;
   const x0 = cx - interno / 2, z0 = cz - interno / 2;
@@ -150,13 +165,14 @@ export function retangulosPerto(x, z, raio = 1) {
     if (b.tipo !== 'lab') { v.push(...b.rects); continue; }
     for (const q of b.rects) if (!vistos.has(q)) { vistos.add(q); v.push(q); }   // o campus divide sólidos entre células
   }
+  v.push(...solidosForaPerto(x, z));                               // a ponte e a ilha do presídio (a leste, fora da grade)
   return v;
 }
 
 /** Altura do chão "de rua" em (x, z), sem os prédios: a laje dos quarteirões (e a praça do campus) ou o asfalto. */
 export function alturaDoChao(x, z) {
   const i = celulaDe(x), j = celulaDe(z);
-  if (!dentro(i, j)) return 0;
+  if (!dentro(i, j)) return x > MEIO ? CALCADA : 0;                // a leste: a ponte e a ilha do presídio
   if (ehCampus(i, j)) return Math.abs(x - CENTRO_CAMPUS.x) <= CAMPUS.meio && Math.abs(z - CENTRO_CAMPUS.z) <= CAMPUS.meio ? CALCADA : 0;
   return Math.abs(x - centroDe(i)) <= BLOCO / 2 && Math.abs(z - centroDe(j)) <= BLOCO / 2 ? CALCADA : 0;
 }
@@ -196,6 +212,7 @@ function detalhes(b, i, j) {
   const r = mulberry(hash(i, j, 2));
   // telhados: caixas de ar-condicionado, casa de máquinas, caixas d'água e antenas
   for (const l of b.lotes) {
+    if (l.semTopo) continue;                                   // telhado de duas águas, torre do relógio...: nada em cima
     const coberto = (x, z, m) => b.lotes.some((o) => o !== l && Math.abs(o.y0 - l.y1) < 0.01 && x > o.x0 - m && x < o.x1 + m && z > o.z0 - m && z < o.z1 + m);
     const w = l.x1 - l.x0, d = l.z1 - l.z0, n = Math.min(7, 2 + Math.floor((w * d) / 220));
     for (let k = 0; k < n; k++) {
