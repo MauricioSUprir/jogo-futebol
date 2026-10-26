@@ -17,9 +17,13 @@ const { navegador, pagina, erros } = await abrir(celular ? { largura: 844, altur
 const foto = (n) => saida ? pagina.screenshot({ path: path.join(saida, `${celular ? 'cel' : 'pc'}-ato4-${n}.png`), timeout: 400000 }) : null;
 const espera = (fn, arg, t = 400000) => pagina.waitForFunction(fn, arg, { timeout: t }).then(() => true).catch(() => false);
 const tecla = (k) => pagina.evaluate((k) => { window.dispatchEvent(new KeyboardEvent('keydown', { key: k })); window.dispatchEvent(new KeyboardEvent('keyup', { key: k })); }, k);
-const abrirJogo = async (q, vistas = null) => {
+const abrirJogo = async (q, vistas = null, vencidos = null) => {
   await pagina.goto(srv.url + q, { timeout: 400000 });
-  await pagina.evaluate((vistas) => { localStorage.clear(); if (vistas) localStorage.setItem('theflash.historia.v1', JSON.stringify({ vistas })); }, vistas);
+  await pagina.evaluate(([vistas, vencidos]) => {
+    localStorage.clear();
+    if (vistas) localStorage.setItem('theflash.historia.v1', JSON.stringify({ vistas }));
+    if (vencidos) localStorage.setItem('theflash.viloes.v1', JSON.stringify({ vencidos }));
+  }, [vistas, vencidos]);
   await pagina.goto(srv.url + q, { timeout: 400000 });
   await pagina.waitForSelector('#btnJogar:not([hidden])', { timeout: 400000 });
   await pagina.evaluate(() => { Element.prototype.requestFullscreen = undefined; document.getElementById('btnJogar').click(); });
@@ -27,6 +31,8 @@ const abrirJogo = async (q, vistas = null) => {
 };
 const pertoDo = (d) => pagina.evaluate((d) => { const R = window.__rel, v = R.viloes.viloes[0]; R.P.x = v.x - d; R.P.z = v.z; R.P.y = 0; R.P.vx = R.P.vz = 0; }, d);
 
+const SO_FIM = process.env.SO === 'fim';   // SO=fim: só o final
+if (!SO_FIM) {
 // ---- Savitar ----
 await abrirJogo('?capitulo=savitar');
 ok(await espera(() => window.__rel.viloes.fase === 'aparece' && window.__rel.viloes.viloes[0]?.id === 'savitar'), 'capítulo 6: Savitar');
@@ -99,9 +105,11 @@ await pagina.evaluate(() => { const R = window.__rel, v = R.viloes.viloes[0]; fo
 ok(await espera(() => !window.__rel.viloes.ativo), 'DeVoe derrotado, capítulo encerrado');
 const lista = await pagina.evaluate(() => window.__rel.viloes.lista(0).map((c) => `${c.id}=${c.estado}`).join(', '));
 ok(/savitar=vencido.*devoe=vencido/.test(lista), `progresso salvo: ${lista}`);
+}
 
 // ---- o fim ----
-await abrirJogo('?historia=1&missao=nucleo', ['cena:prologo']);
+// no fim do jogo todos os capítulos já foram vencidos (senão o do Zoom começaria sozinho)
+await abrirJogo('?historia=1&missao=nucleo', ['cena:prologo'], ['zoom', 'frio', 'onda', 'mago', 'reverso', 'final', 'savitar', 'devoe']);
 ok(await espera(() => window.__rel.missoes.atual?.id === 'nucleo'), 'missão final: correr para o Cortex');
 await pagina.evaluate(() => { const R = window.__rel, l = R.equipe.lugarDoHeroi(); Object.assign(R.P, { x: l.x, y: l.y, z: l.z, h: l.h }); });
 ok(await espera(() => window.__rel.historia.cenaAtual === 'depois-nucleo'), 'no Cortex, a cena do fim');
