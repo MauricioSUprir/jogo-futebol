@@ -58,7 +58,7 @@ await pagina.evaluate(() => { const R = window.__rel, e = R.LAB_B.plano.entrada;
 await pagina.waitForTimeout(2500);
 await foto('passado');
 await pagina.evaluate(() => { const R = window.__rel, e = R.LAB_B.plano.entrada; R.P.x = e.x - 8; R.P.z = e.z - 8; });
-ok(await espera(() => window.__rel.tempo.epoca === 'presente' && window.__rel.missoes.atual === null), 'perto do laboratório: a cena, a volta pelo túnel e a missão concluída');
+ok(await espera(() => window.__rel.tempo.epoca === 'presente' && window.__rel.missoes.atual?.id === 'cap-savitar'), 'perto do laboratório: a cena, a volta pelo túnel e a missão concluída (vem o Savitar)');
 ok(await pagina.evaluate(() => !document.body.classList.contains('passado') && window.__rel.mundo.T > 0.1), 'de volta ao presente (sem o tom de memória, relógio de antes)');
 
 // ---- a cena do acidente com a história ligada ----

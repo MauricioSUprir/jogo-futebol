@@ -434,9 +434,11 @@ function pausar() {
   J.modo = 'pausa'; el.pausa.hidden = false; document.exitPointerLock?.();
   // o que saiu da tela de jogo fica aqui: missão, pontos, esferas e hora
   const ma = missoes.atual;
-  el.resumo.innerHTML = `${historia.capitulo ? `<span class="hist">${historia.capitulo}</span><br>` : ''}${ma ? `Missão ${missoes.indice + 1}/${missoes.total}: <b>${ma.titulo}</b>` : 'Todas as missões concluídas'}<br>${missoes.stats.pontos} pontos · esferas ${J.coletadas}/${J.total} · ${el.hora.textContent}`;
+  el.resumo.innerHTML = `${historia.capitulo ? `<span class="hist">${historia.capitulo}</span><br>` : ''}${ma ? `História ${missoes.indice + 1}/${missoes.total}: <b>${ma.titulo}</b>` : 'História concluída: a cidade é sua'}<br>${missoes.stats.pontos} pontos · esferas ${J.coletadas}/${J.total} · ${el.hora.textContent}`;
   el.capitulos.innerHTML = '';
-  for (const c of viloes.lista(missoes.indice)) {
+  // os capítulos para jogar de novo só aparecem com a história terminada (durante a história tudo começa sozinho)
+  if (!missoes.livre) el.capitulos.innerHTML = '<p class="cap-aviso">A história segue sozinha: cada capítulo começa quando chegar a hora. Ao terminar, todos ficam aqui para jogar de novo.</p>';
+  else for (const c of viloes.lista(missoes.indice)) {
     const b = document.createElement('button'); b.type = 'button'; b.className = `cap ${c.estado}`;
     b.innerHTML = `<b>${c.titulo}</b><small>${c.estado === 'vencido' ? 'Vencido · jogar de novo' : c.estado === 'liberado' ? 'Jogar agora' : 'Bloqueado'}</small>`;
     b.disabled = c.estado === 'bloqueado';
@@ -807,7 +809,9 @@ function passoMissoes(dt) {
   if (m?.tipo === 'portais') portais.ativar(); else portais.desativar();
   const rp = portais.atualizar(dt, P);
   if (rp?.falhou) avisar('Volte ao 1º portal', 'Tempo esgotado', 'alerta');
-  const ev = viloes.ativo || tempo.epoca === 'passado' ? null : crimes.atualizar(dt, P, { forcar: m?.crime });      // capítulo dos vilões ou no passado: os crimes esperam
+  // crimes: durante a história só os que o passo pede (e quaisquer no "Guardião da cidade"); com a história terminada, a cidade é livre
+  const querCrime = m?.crime || m?.id === 'patrulha' || missoes.livre || crimes.ativo;   // um crime já em andamento sempre termina
+  const ev = viloes.ativo || tempo.epoca === 'passado' || !querCrime ? null : crimes.atualizar(dt, P, { forcar: m?.crime });
   if (ev?.inicio) avisar(ev.nome, 'Crime na cidade', 'crime');
   else if (ev) {
     if (ev.ok) { missoes.contar('crimes'); missoes.contar(ev.tipo); missoes.contar('pontos', 250); avisar(`${ev.nome} impedido`, '+250 pontos', 'ok'); }
@@ -839,8 +843,7 @@ function passoMissoes(dt) {
     }
   }
   const feita = missoes.avaliar({ sala, v: Math.hypot(P.vx, P.vz), y: P.y, noChao: P.noChao, portaisFeitos: rp?.feito,
-    finalVencido: viloes.vencido('final'), tunel: (J.tunelT || 0) / 5, voltouDoPassado: !!J.voltouDoPassado,
-    savitarVencido: viloes.vencido('savitar'), devoeVencido: viloes.vencido('devoe') });
+    vencido: (id) => viloes.vencido(id), tunel: (J.tunelT || 0) / 5, voltouDoPassado: !!J.voltouDoPassado });
   if (feita) {
     avisar(feita.titulo, 'Missão concluída', 'missao'); historia.missao(feita.id, 'fecha');
     const abrir = () => { if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); };
@@ -851,8 +854,8 @@ function passoMissoes(dt) {
   if (J.cenaPendente && historia.radioLivre && !viloes.emLuta) { const c = J.cenaPendente; J.cenaPendente = null; rodarCena(c.id, focosCena(), c.depois); }
   // painel
   const ma = missoes.atual, pr = missoes.progresso();
-  el.missaoNum.textContent = ma ? `Missão ${missoes.indice + 1}/${missoes.total} · ${missoes.stats.pontos} pts` : `Patrulha livre · ${missoes.stats.pontos} pts`;
-  el.missaoTitulo.textContent = ma ? ma.titulo : 'Todas as missões concluídas';
+  el.missaoNum.textContent = ma ? `História ${missoes.indice + 1}/${missoes.total} · ${missoes.stats.pontos} pts` : `Cidade livre · ${missoes.stats.pontos} pts`;
+  el.missaoTitulo.textContent = ma ? ma.titulo : 'História concluída';
   let txt = ma ? ma.texto + (pr ? ` (${pr.txt})` : '') : 'Impeça os crimes da cidade';
   if (ma?.tipo === 'portais') { const e = portais.estado(); txt = e.correndo ? `Portal ${e.indice + 1}/${e.total} · ${Math.ceil(e.restante)} s` : ma.texto; }
   if (ma?.tipo === 'tunel') txt = `Túnel do tempo ${Math.round(Math.min(1, (J.tunelT || 0) / 5) * 100)}% · fique acima de 180 km/h`;
@@ -1008,7 +1011,7 @@ function quadro() {
       if (ev.tipo === 'nocaute') { missoes.contar('nocautes'); missoes.contar('pontos', 50); if (ev.especial) missoes.contar('especiais'); }
       else if (ev.tipo === 'dano') { el.dano.style.opacity = '1'; }
     }
-    for (const ev of viloes.atualizar(dt, P, { missaoIdx: missoes.indice, podeComecar: !crimes.ativo && !J.cenaPendente && historia.radioLivre && tempo.epoca === 'presente' })) eventoVilao(ev);
+    for (const ev of viloes.atualizar(dt, P, { capitulo: missoes.atual?.capitulo, podeComecar: !crimes.ativo && !J.cenaPendente && historia.radioLivre && tempo.epoca === 'presente' })) eventoVilao(ev);
     J.danoVilao = Math.max(0, (J.danoVilao || 0) - dt * 2);
     el.missao.hidden = viloes.ativo; el.corpo.classList.toggle('capitulo', viloes.ativo);
     el.dano.style.opacity = String(Math.min(1, Math.max(combate.dano, J.danoVilao)));
