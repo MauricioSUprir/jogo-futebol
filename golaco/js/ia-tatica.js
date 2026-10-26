@@ -808,8 +808,12 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
   // colado no pé, teste-nao-passa)
   const mao = maoDoMeuGoleiro(m, j.time), dBola = MD.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z);
   const marca = MARCA_PERTO.has(r), perto = mao || dBola < TATICA.volta.bolaPerto || (marca && dBola < TATICA.pertoBola);
+  // (a linha que SOBE — o alvo à frente dela, no sentido do ataque — vira na hora, sem a virada parada nem o arco: recuando
+  // e mandada subir quando a bola volta, ela parava 0,5 s ou subia em arco e a armadilha do impedimento armava menos —
+  // impedimentos 1,19 → 1,04 por partida em 360 partidas; TATICA.linhaSobe)
+  const sobe = TATICA.linhaSobe && r === 'linha' && lado !== 0 && (px - j.x) * lado > 0.5;
   // (a virada parada de quem marca, só com IA.viraParado.marca)
-  j.ia.viraTick = perto || (marca && !IA.viraParado.marca) ? -9 : m.tick;
+  j.ia.viraTick = perto || sobe || (marca && !IA.viraParado.marca) ? -9 : m.tick;
   const segurando = m.tick < it.seguraAte, VT = perto ? VOLTA_ANTES : TATICA.volta;
   if (S.volta && (VT.quieto || !it.quieto) && d < S.volta[0] + (segurando ? VT.folga : 0)) {
     const v = MD.hypot(j.vx, j.vz);
@@ -861,7 +865,7 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
     // recuava quando ele pegou a bola seguia ~1–2 s para a própria linha do gol)
     // (D5, item 22: abaixo de TATICA.arco m/s a virada grande também vai pelo giro — em arco, sem parar: virar de uma vez a
     // 1–2 m/s passava pelo zero e era o vai e volta e o anda-para-anda do teste-movimento; acima, o para() freia na linha)
-    const vArco = perto ? 0 : TATICA.arco, emArco = vArco > 0 && MD.hypot(j.vx, j.vz) < vArco && MD.hypot(j.vx, j.vz) > 0.5;
+    const vArco = perto || sobe ? 0 : TATICA.arco, emArco = vArco > 0 && MD.hypot(j.vx, j.vz) < vArco && MD.hypot(j.vx, j.vz) > 0.5;
     it.dir = (Math.abs(dA) > S.giro[4] && !emArco) || mao ? aD : it.dir + Math.max(-w, Math.min(w, dA));
     out.x = j.x + MD.cos(it.dir) * d; out.z = j.z + MD.sin(it.dir) * d;
   }
