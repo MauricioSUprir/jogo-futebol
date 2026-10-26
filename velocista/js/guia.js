@@ -3,7 +3,7 @@
 // das ruas, também desenhado no minimapa. A rota anda pela grade de ruas: vai até a rua mais perto, segue por ela até o
 // cruzamento com a rua do alvo e entra nela até a altura do alvo.
 import * as THREE from 'three';
-import { CELL, MEIO } from './cidade.js';
+import { CELL, MEIO, ruaForaDoCampus } from './cidade.js';
 
 const eixo = (k) => k * CELL - MEIO;
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -16,12 +16,15 @@ export function rotaPelasRuas(x, z, tx, tz) {
   const kx = ruaMaisPerto(x), kz = ruaMaisPerto(z), dxRua = Math.abs(x - eixo(kx)), dzRua = Math.abs(z - eixo(kz));
   const pts = [[x, z]];
   if (Math.hypot(tx - x, tz - z) < 30) { pts.push([tx, tz]); return pts; }
+  // as ruas de dentro do campus do S.T.A.R. Labs viraram praça: a rota usa a rua da borda dele
   if (dxRua <= dzRua) {
     // estou numa rua que corre ao longo de z (x constante): sigo por ela até a rua horizontal do alvo
-    const X = eixo(kx), Zt = eixo(ruaMaisPerto(tz));
+    let kzt = ruaMaisPerto(tz); const X = eixo(ruaForaDoCampus(kx, z, eixo(kzt), x, true));
+    kzt = ruaForaDoCampus(kzt, X, tx, tz, false); const Zt = eixo(kzt);
     pts.push([X, z], [X, Zt], [tx, Zt]);
   } else {
-    const Z = eixo(kz), Xt = eixo(ruaMaisPerto(tx));
+    let kxt = ruaMaisPerto(tx); const Z = eixo(ruaForaDoCampus(kz, x, eixo(kxt), z, false));
+    kxt = ruaForaDoCampus(kxt, Z, tz, tx, true); const Xt = eixo(kxt);
     pts.push([x, Z], [Xt, Z], [Xt, tz]);
   }
   pts.push([tx, tz]);

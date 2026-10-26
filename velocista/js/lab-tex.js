@@ -27,12 +27,28 @@ export function criarTexturas(THREE, aniso = 4) {
   const ruido = (g, w, h, n, a = 0.06) => { for (let i = 0; i < n; i++) { const v = rnd() < 0.5 ? 0 : 255; g.fillStyle = `rgba(${v},${v},${v},${a * rnd()})`; g.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 2, 1 + rnd() * 2); } };
   const T = {};
 
-  // ----- fachada: painéis brancos de 2 m (tile 8 m) -----
-  { const [c, g] = tela(512, 512); g.fillStyle = '#eceff2'; g.fillRect(0, 0, 512, 512);
-    for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { const s = 232 + Math.floor(rnd() * 10); g.fillStyle = `rgb(${s},${s + 2},${s + 5})`; g.fillRect(x * 128 + 2, y * 128 + 2, 124, 124); }
-    g.strokeStyle = 'rgba(80,95,110,0.55)'; g.lineWidth = 3; for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 128, 0); g.lineTo(i * 128, 512); g.stroke(); g.beginPath(); g.moveTo(0, i * 128); g.lineTo(512, i * 128); g.stroke(); }
-    g.fillStyle = 'rgba(70,85,100,0.9)'; for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) for (const [dx, dy] of [[8, 8], [116, 8], [8, 116], [116, 116]]) g.fillRect(x * 128 + dx, y * 128 + dy, 4, 4);
-    ruido(g, 512, 512, 4000, 0.08); T.fachada = tex(c); }
+  // ----- fachada: painéis azul-marinho foscos de 2 m (tile 8 m), juntas finas e parafusos discretos -----
+  { const [c, g] = tela(512, 512); g.fillStyle = '#16233d'; g.fillRect(0, 0, 512, 512);
+    for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { const s = Math.floor(rnd() * 7); g.fillStyle = `rgb(${24 + s},${38 + s},${66 + s})`; g.fillRect(x * 128 + 2, y * 128 + 2, 124, 124); }
+    g.strokeStyle = 'rgba(8,14,26,0.85)'; g.lineWidth = 3; for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 128, 0); g.lineTo(i * 128, 512); g.stroke(); g.beginPath(); g.moveTo(0, i * 128); g.lineTo(512, i * 128); g.stroke(); }
+    g.fillStyle = 'rgba(90,110,140,0.35)'; for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) for (const [dx, dy] of [[8, 8], [116, 8], [8, 116], [116, 116]]) g.fillRect(x * 128 + dx, y * 128 + dy, 3, 3);
+    ruido(g, 512, 512, 4000, 0.05); T.fachada = tex(c); }
+  // ----- andares com janelas em fita (tile 8 m = 2 andares de 4 m): peitoril azul-marinho + vidro escuro; à noite parte acende -----
+  { const [c, g] = tela(512, 512), [ce, ge] = tela(512, 512);
+    g.fillStyle = '#16233d'; g.fillRect(0, 0, 512, 512); ge.fillStyle = '#000'; ge.fillRect(0, 0, 512, 512);
+    for (let f = 0; f < 2; f++) {
+      const y0 = f * 256, jan = y0 + 92, alt = 150;            // peitoril de ~1,4 m, janela de ~2,3 m
+      g.fillStyle = '#1b2a48'; g.fillRect(0, y0 + 2, 512, 86);
+      const gr = g.createLinearGradient(0, jan, 0, jan + alt); gr.addColorStop(0, '#2c4466'); gr.addColorStop(0.55, '#14243c'); gr.addColorStop(1, '#0d1829'); g.fillStyle = gr; g.fillRect(0, jan, 512, alt);
+      for (let k = 0; k < 5; k++) {                            // 5 vãos de 1,6 m por ladrilho; uns acesos à noite
+        const x0 = k * 102.4;
+        if (rnd() < 0.42) { const q = 0.55 + rnd() * 0.45; ge.fillStyle = `rgb(${Math.round(255 * q)},${Math.round(214 * q)},${Math.round(160 * q)})`; ge.fillRect(x0 + 5, jan + 4, 92, alt - 8); }
+        g.fillStyle = '#0a111e'; g.fillRect(x0, jan, 5, alt);  // montante
+      }
+      g.fillStyle = '#0a111e'; g.fillRect(0, jan - 3, 512, 4); g.fillRect(0, jan + alt, 512, 4);
+      g.fillStyle = 'rgba(160,190,230,0.10)'; g.fillRect(0, jan + 6, 512, 18);   // reflexo fraco do céu no alto do vidro
+    }
+    ruido(g, 512, 512, 3000, 0.05); T.janelas = tex(c); T.janelasLuz = tex(ce); }
   // ----- parede interna -----
   { const [c, g] = tela(512, 512); g.fillStyle = '#e8edf1'; g.fillRect(0, 0, 512, 512);
     g.strokeStyle = 'rgba(120,135,150,0.5)'; g.lineWidth = 2; for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 128, 0); g.lineTo(i * 128, 512); g.stroke(); g.beginPath(); g.moveTo(0, i * 128); g.lineTo(512, i * 128); g.stroke(); }
@@ -78,10 +94,10 @@ export function criarTexturas(THREE, aniso = 4) {
   // ----- logo: estrela de 5 pontas dentro de um anel (ciano e branco) -----
   function pintaLogo(g, cx, cy, R, fundo) {
     if (fundo) { g.fillStyle = fundo; g.beginPath(); g.arc(cx, cy, R, 0, 6.2832); g.fill(); }
-    g.strokeStyle = '#3fe0ff'; g.lineWidth = R * 0.09; g.beginPath(); g.arc(cx, cy, R * 0.93, 0, 6.2832); g.stroke();
+    g.strokeStyle = '#8fb8e6'; g.lineWidth = R * 0.09; g.beginPath(); g.arc(cx, cy, R * 0.93, 0, 6.2832); g.stroke();
     g.strokeStyle = '#ffffff'; g.lineWidth = R * 0.025; g.beginPath(); g.arc(cx, cy, R * 0.78, 0, 6.2832); g.stroke();
     g.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, r = k % 2 ? R * 0.30 : R * 0.68; g[k ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * r, cy + Math.sin(a) * r); } g.closePath();
-    g.fillStyle = '#ffffff'; g.fill(); g.lineWidth = R * 0.03; g.strokeStyle = '#3fe0ff'; g.stroke();
+    g.fillStyle = '#ffffff'; g.fill(); g.lineWidth = R * 0.03; g.strokeStyle = '#8fb8e6'; g.stroke();
   }
   let cLogo, gLogo;
   { const [c, g] = tela(512, 512); cLogo = c; gLogo = g; pintaLogo(g, 256, 256, 250, 'rgba(6,20,34,0.82)'); T.logo = tex(c, { repete: false }); }
@@ -100,15 +116,15 @@ export function criarTexturas(THREE, aniso = 4) {
     }
   };
   { const [c, g] = tela(1024, 128);
-    const gr = g.createLinearGradient(0, 0, 1024, 0); gr.addColorStop(0, '#06121f'); gr.addColorStop(1, '#0b2236'); g.fillStyle = gr; g.fillRect(0, 0, 1024, 128);
-    g.strokeStyle = '#3fe0ff'; g.lineWidth = 4; g.strokeRect(4, 4, 1016, 120);
+    const gr = g.createLinearGradient(0, 0, 1024, 0); gr.addColorStop(0, '#0c1830'); gr.addColorStop(1, '#13223e'); g.fillStyle = gr; g.fillRect(0, 0, 1024, 128);
+    g.strokeStyle = '#8fb8e6'; g.lineWidth = 3; g.strokeRect(4, 4, 1016, 120);
     pintaLogo(g, 72, 64, 52, null);
     g.fillStyle = '#ffffff'; g.textBaseline = 'middle'; g.textAlign = 'left';
     if ('letterSpacing' in g) g.letterSpacing = '3px';
     let px = 62; g.font = `bold ${px}px Arial, Helvetica, sans-serif`;
     while (g.measureText('S.T.A.R. LABS').width > 840 && px > 20) { px -= 2; g.font = `bold ${px}px Arial, Helvetica, sans-serif`; }
     g.fillText('S.T.A.R. LABS', 150, 50);
-    g.fillStyle = '#3fe0ff'; g.font = '600 22px Arial, Helvetica, sans-serif'; if ('letterSpacing' in g) g.letterSpacing = '8px';
+    g.fillStyle = '#9cc0e8'; g.font = '600 22px Arial, Helvetica, sans-serif'; if ('letterSpacing' in g) g.letterSpacing = '8px';
     g.fillText('PESQUISA  ·  ENERGIA  ·  VELOCIDADE', 154, 102);
     T.letreiroG = g; T.letreiro = tex(c, { repete: false }); }
   // assets/star/config.json diz qual arquivo usar ({"logo": "logo.png"}); com "logo": null fica o emblema próprio (sem pedido de rede perdido)

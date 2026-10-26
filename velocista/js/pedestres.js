@@ -4,7 +4,7 @@
 // parado perto, param e olham. Desenho: UMA InstancedMesh; a caminhada (pernas e braços), a queda e as roupas de cada um
 // vêm do shader (atributos por instância), então o custo de CPU por pessoa é só a posição e 3 números.
 // THREE é passado por parâmetro; a lógica não usa DOM.
-import { CELL, N, BLOCO, CALCADA, centroDe, celulaDe, dentro, LAB_CELULA } from './cidade.js';
+import { CELL, N, BLOCO, CALCADA, centroDe, celulaDe, dentro, ehCampus } from './cidade.js';
 
 const MEIA = BLOCO / 2;
 const SX = [-1, 1, 1, -1], SZ = [-1, -1, 1, 1];     // cantos do quarteirão em sentido anti-horário (vistos de cima)
@@ -94,7 +94,7 @@ export function criarPedestres(THREE, cena, { mobile = false, semente = 11 } = {
 
   const pessoas = [];
   const jogVirt = { x: 0, z: 0, vx: 0, vz: 0 };
-  const quarteiraoOk = (i, j) => dentro(i, j) && !(i === LAB_CELULA[0] && j === LAB_CELULA[1]);
+  const quarteiraoOk = (i, j) => dentro(i, j) && !ehCampus(i, j);
   const canto = (p, k) => [centroDe(p.i) + SX[k] * (MEIA - p.o), centroDe(p.j) + SZ[k] * (MEIA - p.o)];
 
   function nascer(p, j, rMin, rMax, atras) {

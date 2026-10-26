@@ -2,7 +2,7 @@
 // pessoa caindo de um prédio (chegar embaixo a tempo) e gangue (bandidos na rua: derrotar todos no BATER e nos golpes
 // especiais, ver combate.js). Um crime por vez; o próximo nasce a 150–380 m do herói.
 import * as THREE from 'three';
-import { CELL, N, MEIO, CALCADA, bloco, celulaDe, dentro } from './cidade.js';
+import { CELL, N, MEIO, CALCADA, bloco, celulaDe, dentro, arestaNoCampus, noNoCampus } from './cidade.js';
 
 const TIPOS = {
   assalto: { nome: 'Assalto', texto: 'Alcance o ladrão em fuga', tempo: 75 },
@@ -72,7 +72,7 @@ function escolherDir(c, fugirDe) {
   for (let d = 0; d < 4; d++) {
     if (d === (c.dir + 2) % 4) continue;                     // não dá meia-volta
     const nx = c.kx + DIRS[d][0], nz = c.kz + DIRS[d][1];
-    if (nx < 2 || nz < 2 || nx > N - 2 || nz > N - 2) continue;
+    if (nx < 2 || nz < 2 || nx > N - 2 || nz > N - 2 || arestaNoCampus(c.kx, c.kz, nx, nz)) continue;
     const dist = fugirDe ? Math.hypot(eixo(nx) - fugirDe.x, eixo(nz) - fugirDe.z) : 0;
     ops.push([d, dist + Math.random() * 60]);
   }
@@ -99,7 +99,7 @@ export function criarCrimes(cena, { combate = null } = {}) {
     for (let k = 0; k < 40; k++) {
       const a = Math.random() * Math.PI * 2, r = rnd(min, max);
       const kx = Math.round((P.x + Math.cos(a) * r + MEIO) / CELL), kz = Math.round((P.z + Math.sin(a) * r + MEIO) / CELL);
-      if (kx >= 3 && kz >= 3 && kx <= N - 3 && kz <= N - 3) return { kx, kz, x: eixo(kx), z: eixo(kz) };
+      if (kx >= 3 && kz >= 3 && kx <= N - 3 && kz <= N - 3 && !noNoCampus(kx, kz)) return { kx, kz, x: eixo(kx), z: eixo(kz) };
     }
     return { kx: N / 2 + 3, kz: N / 2 + 3, x: eixo(N / 2 + 3), z: eixo(N / 2 + 3) };
   }
