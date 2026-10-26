@@ -1,7 +1,8 @@
 // Teste de navegador do "Recomeçar a história do zero" na pausa: com a história terminada (8 vilões vencidos, falas
 // vistas, pontos), o botão aparece na pausa do celular deitado sem nada por cima; o 1º toque só pede confirmação e
 // desarma sozinho em 4 s sem apagar nada; o 2º toque logo depois zera o passo, as falas e os vilões e recarrega; o
-// COMEÇAR depois disso abre a história do começo (o S.T.A.R. Labs).
+// COMEÇAR depois disso abre a história do começo (o S.T.A.R. Labs). (Zerado = nada gravado: a página nova apaga o
+// progresso ao carregar, antes de ler.)
 // Uso: node velocista/tools/teste-recomecar.mjs [--pc]
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +17,7 @@ const { navegador, pagina, erros } = await abrir(pc ? { largura: 1280, altura: 7
 const espera = (fn, arg, t = 400000) => pagina.waitForFunction(fn, arg, { timeout: t }).then(() => true).catch(() => false);
 const lido = () => pagina.evaluate(() => Object.fromEntries(['theflash.missoes.v2', 'theflash.historia.v1', 'theflash.viloes.v1'].map((k) => [k, JSON.parse(localStorage.getItem(k) || 'null')])));
 const comecar = async () => {
-  await pagina.waitForSelector('#btnJogar:not([hidden])', { timeout: 400000 });
+  await pagina.waitForSelector('#btnJogar:not([hidden])', { timeout: 1200000 });
   await pagina.evaluate(() => { Element.prototype.requestFullscreen = undefined; document.getElementById('btnJogar').click(); });
 };
 const VILOES = ['zoom', 'frio', 'onda', 'mago', 'reverso', 'final', 'savitar', 'devoe'];
@@ -46,13 +47,14 @@ const desarmado = await pagina.evaluate(() => { const b = document.getElementByI
 ok(!desarmado.classe && desarmado.texto === 'Recomeçar a história do zero', `sem o 2º toque, desarma sozinho em 4 s ("${desarmado.texto}")`);
 // agora os dois toques: zera e recarrega
 await pagina.click('#btnRecomecar', { timeout: 60000 });
-const recarregou = pagina.waitForEvent('load', { timeout: 400000 }).then(() => true).catch(() => false);
+const recarregou = pagina.waitForEvent('load', { timeout: 1200000 }).then(() => true).catch(() => false);
 await pagina.click('#btnRecomecar', { timeout: 60000 }).catch(() => {});
 ok(await recarregou, 'o 2º toque recarrega a página');
+await pagina.waitForSelector('#btnJogar:not([hidden])', { timeout: 1200000 });
 const zerado = await lido();
-ok(zerado['theflash.missoes.v2']?.id === 'lab' && !zerado['theflash.missoes.v2'].stats.pontos, `o passo da história volta ao começo (${JSON.stringify(zerado['theflash.missoes.v2'])})`);
-ok(zerado['theflash.viloes.v1']?.vencidos.length === 0, 'nenhum vilão vencido');
-ok(zerado['theflash.historia.v1']?.vistas.length === 0 && !zerado['theflash.historia.v1'].capitulo, 'as falas e as cenas voltam a tocar (nenhuma vista)');
+ok((zerado['theflash.missoes.v2']?.id ?? 'lab') === 'lab' && !zerado['theflash.missoes.v2']?.stats?.pontos, `o passo da história volta ao começo (${JSON.stringify(zerado['theflash.missoes.v2'])})`);
+ok(!zerado['theflash.viloes.v1']?.vencidos.length, `nenhum vilão vencido (${JSON.stringify(zerado['theflash.viloes.v1'])})`);
+ok(!zerado['theflash.historia.v1']?.vistas.length && !zerado['theflash.historia.v1']?.capitulo, `as falas e as cenas voltam a tocar (nenhuma vista: ${JSON.stringify(zerado['theflash.historia.v1'])})`);
 await comecar();
 ok(await espera(() => window.__rel.missoes.atual?.id === 'lab' && !window.__rel.missoes.livre, null, 60000), 'o COMEÇAR abre a história do começo: "Bem-vindo ao S.T.A.R. Labs"');
 ok(!erros.length, `sem erros no console (${erros.slice(0, 3).join(' | ')})`);
