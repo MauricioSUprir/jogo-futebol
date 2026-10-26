@@ -23,6 +23,10 @@ import { desenharMarco, blocoIlha, desenharFora } from './marcos3d.js';
 import { INTERIORES, Y0 as Y_INT, noGatilhoFora, noGatilhoDentro } from './interiores.js';
 import { construirInterior } from './interiores3d.js';
 import { criarVida } from './vida.js';
+import { salasAtrasDasJanelas } from './janelas.js';
+import { geometriaCarro } from './carros3d.js';
+import { criarObjetos } from './objetos.js';
+import { criarObjetos3d } from './objetos3d.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
 import { passoEmbalo, tetoCorrida, gastoCorrida } from './velocidade.js';
 
@@ -133,7 +137,7 @@ function atualizarAmbiente(posCam) {
 }
 
 // ---------- materiais e texturas ----------
-const fachadas = criarFachadas(ANISO), lojas = criarLojas(ANISO);
+const fachadas = criarFachadas(ANISO, { alta: !MOBILE }), lojas = criarLojas(ANISO);
 const TONS = [0xffffff, 0xe9dfcc, 0xcfd9ea];
 const matFachada = [];
 for (let k = 0; k < fachadas.length; k++) {
@@ -141,6 +145,8 @@ for (let k = 0; k < fachadas.length; k++) {
     const vidro = k === 0;
     const m = new MatPadrao({ map: fachadas[k].mapa, color: c, emissive: 0xffffff, emissiveMap: fachadas[k].emissiva, emissiveIntensity: 0,
       bumpMap: fachadas[k].mapa, bumpScale: vidro ? 0.4 : 1.6, roughness: vidro ? 0.18 : 0.82, metalness: vidro ? 0.55 : 0.05, envMapIntensity: vidro ? 1.3 : 0.25 });
+    // no PC, cada janela vira uma sala de verdade (janelas.js); o vidro reflete o céu
+    if (!MOBILE) salasAtrasDasJanelas(m, { mascara: fachadas[k].mascara, grade: fachadas[k].grade, espelho: fachadas[k].espelho, reflexo: vidro ? 1 : 3.2 });
     materiaisFachada.push(m); return m;
   }));
 }
@@ -181,8 +187,12 @@ class Balde {
     this.idx.push(this.n, this.n + 1, this.n + 2, this.n, this.n + 2, this.n + 3); this.n += 4;
   }
   geo(g, m, c) {                                   // anexa uma BufferGeometry transformada (m: Matrix4 só com rotação/escala uniforme em xz)
-    const p = g.attributes.position, nn = g.attributes.normal, uv = g.attributes.uv, ix = g.index, v = new THREE.Vector3(), n = new THREE.Vector3(), nm = new THREE.Matrix3().getNormalMatrix(m);
-    for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m); this.pos.push(v.x, v.y, v.z); n.fromBufferAttribute(nn, i).applyMatrix3(nm).normalize(); this.nor.push(n.x, n.y, n.z); this.uv.push(uv ? uv.getX(i) : 0, uv ? uv.getY(i) : 0); if (this.col) this.col.push(c[0], c[1], c[2]); }
+    // (com cor por vértice na geometria — os carros —, a cor `c` tinge a dela)
+    const p = g.attributes.position, nn = g.attributes.normal, uv = g.attributes.uv, gc = g.attributes.color, gt = g.attributes.tinta, ix = g.index, v = new THREE.Vector3(), n = new THREE.Vector3(), nm = new THREE.Matrix3().getNormalMatrix(m);
+    for (let i = 0; i < p.count; i++) {
+      v.fromBufferAttribute(p, i).applyMatrix4(m); this.pos.push(v.x, v.y, v.z); n.fromBufferAttribute(nn, i).applyMatrix3(nm).normalize(); this.nor.push(n.x, n.y, n.z); this.uv.push(uv ? uv.getX(i) : 0, uv ? uv.getY(i) : 0);
+      if (this.col) { if (gc) { const k = gt ? gt.getX(i) : 1; this.col.push(gc.getX(i) * (1 + (c[0] - 1) * k), gc.getY(i) * (1 + (c[1] - 1) * k), gc.getZ(i) * (1 + (c[2] - 1) * k)); } else this.col.push(c[0], c[1], c[2]); }
+    }
     if (ix) for (let i = 0; i < ix.count; i++) this.idx.push(this.n + ix.getX(i)); else for (let i = 0; i < p.count; i++) this.idx.push(this.n + i);
     this.n += p.count;
   }
@@ -199,6 +209,8 @@ const geoCaixa = new THREE.BoxGeometry(1, 1, 1), geoCil = new THREE.CylinderGeom
 const M4 = new THREE.Matrix4(), Q4 = new THREE.Quaternion(), V4 = new THREE.Vector3(), S4 = new THREE.Vector3(), UPV = new THREE.Vector3(0, 1, 0);
 const compor = (x, y, z, sx, sy, sz, rot = 0) => M4.compose(V4.set(x, y, z), Q4.setFromAxisAngle(UPV, rot), S4.set(sx, sy, sz));
 const rgb = (c) => [c[0] / 255, c[1] / 255, c[2] / 255];
+const geosEstacionados = {};
+const geoEstacionado = (tipo) => geosEstacionados[tipo] || (geosEstacionados[tipo] = geometriaCarro(THREE, tipo, { leve: true }));
 
 // faces de um prédio (y0..y1): quatro laterais com a textura da fachada em ladrilhos inteiros; o topo no balde do telhado
 function lote(lat, topo, loja, l) {
@@ -230,7 +242,7 @@ const geoFeixe = new THREE.CylinderGeometry(0.12, 0.12, 60, 6); geoFeixe.transla
 
 const geoLajeTopo = new THREE.PlaneGeometry(BLOCO, BLOCO); geoLajeTopo.rotateX(-Math.PI / 2); geoLajeTopo.translate(0, CALCADA, 0);
 const geoMeioFio = (() => { const g = new THREE.BoxGeometry(BLOCO, CALCADA, BLOCO); g.translate(0, CALCADA / 2, 0); const ix = g.index.array, keep = []; for (let i = 0; i < ix.length; i += 3) { if (Math.floor(ix[i] / 4) !== 2 && Math.floor(ix[i] / 4) !== 3) keep.push(ix[i], ix[i + 1], ix[i + 2]); } g.setIndex(keep); g.clearGroups(); return g; })();
-const PRETO = [0.08, 0.08, 0.09], CINZA = [0.5, 0.52, 0.55], CINZA_ESC = [0.25, 0.26, 0.28], TRONCO = [0.34, 0.24, 0.17], VIDRO = [0.07, 0.1, 0.15];
+const CINZA = [0.5, 0.52, 0.55], CINZA_ESC = [0.25, 0.26, 0.28], TRONCO = [0.34, 0.24, 0.17];
 
 function construirBloco(b) {
   const grupo = new THREE.Group(), geos = [], dados = { grupo, geos, orbes: [], instancias: [] };
@@ -255,13 +267,9 @@ function construirBloco(b) {
     props.geo(geoCil, compor(a.x, CALCADA + 1.3 * a.s, a.z, 0.2 * a.s, 2.6 * a.s, 0.2 * a.s), TRONCO);
     copas.geo(geoCopaBase, compor(a.x, CALCADA + 3.9 * a.s, a.z, 1.7 * a.s, 1.55 * a.s, 1.7 * a.s, (a.x * 7.3) % 6.28), null);
   }
-  for (const c of b.carros) {                                   // carros: carroceria, cabine, vidros e rodas
-    const cr = rgb(c.cor), co = c.rot, ca = Math.cos(co), sa = Math.sin(co), at = (u, w) => [c.x + u * ca + w * sa, c.z - u * sa + w * ca];
-    props.geo(geoCaixa, compor(c.x, 0.62, c.z, 4.3, 0.72, 1.85, co), cr);
-    const [cx, cz] = at(-0.2, 0); props.geo(geoCaixa, compor(cx, 1.2, cz, 2.2, 0.62, 1.6, co), VIDRO);
-    props.geo(geoCaixa, compor(cx, 1.5, cz, 2.0, 0.08, 1.5, co), cr);
-    for (const [u, w] of [[1.4, 0.92], [1.4, -0.92], [-1.4, 0.92], [-1.4, -0.92]]) { const [wx, wz] = at(u, w); props.geo(geoCil, compor(wx, 0.34, wz, 0.34, 0.26, 0.34, co + Math.PI / 2), PRETO); }
-    const [fx, fz] = at(2.17, 0.62), [gx, gz] = at(2.17, -0.62); lamp.geo(geoCaixa, compor(fx, 0.75, fz, 0.1, 0.16, 0.34, co), null); lamp.geo(geoCaixa, compor(gx, 0.75, gz, 0.1, 0.16, 0.34, co), null);
+  for (const c of b.carros) {                                   // carros estacionados: os modelos de carros3d.js (a versão leve), desligados
+    const k = Math.abs(Math.round(c.x * 7.1 + c.z * 3.3)) % 20, tipo = k < 8 ? 'sedan' : k < 13 ? 'hatch' : k < 17 ? 'suv' : k < 19 ? 'van' : 'taxi';
+    props.geo(geoEstacionado(tipo), compor(c.x, 0, c.z, 1, 1, 1, c.rot), tipo === 'taxi' ? [0.95, 0.75, 0.12] : rgb(c.cor));
   }
   for (const p of b.postes) {                                   // poste de luz com braço sobre a rua
     props.geo(geoCil, compor(p.x, CALCADA + 3.6, p.z, 0.11, 7.2, 0.11), CINZA_ESC);
@@ -448,7 +456,7 @@ let pedidoPulo = false, pedidoBater = false, pedidoEspecial = null;
 let esferas = [];
 
 function reiniciar() {
-  esferasColetadas.clear();
+  esferasColetadas.clear(); objetos.zerar();
   for (const k of [...carregados.keys()]) descarregar(k);
   celAtual = [-999, -999];
   Object.assign(P, { x: INICIO.x, y: 0, z: INICIO.z, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, parede: null, vibrando: false, embalo: 0 });
@@ -812,6 +820,8 @@ function desenharMapa() {
   }
   gm.fillStyle = '#3fd0ff'; const rr = grande ? 14 : 6;
   for (const o of esferas) if (!esferasColetadas.has(o.id) && Math.abs(o.x - P.x) < raioM * 1.1 && Math.abs(o.z - P.z) < raioM * 1.1) { gm.beginPath(); gm.arc(o.x, o.z, rr, 0, 6.3); gm.fill(); }
+  // os carrinhos de cachorro-quente (energia): um quadradinho laranja no mapa de perto
+  if (!grande) { gm.fillStyle = '#ff9a2e'; for (const o of objetos.perto(P.x, P.z, raioM)) if (o.tipo === 'lanche') gm.fillRect(o.x - 4, o.z - 4, 8, 8); }
   guia.desenharNoMapa(gm, grande ? 9 : 5);
   for (const e of combate.bandidos) if (e.estado !== 'caido' && e.estado !== 'fugiu') { gm.fillStyle = '#ff4d5e'; gm.beginPath(); gm.arc(e.x, e.z, grande ? 8 : 4, 0, 6.3); gm.fill(); }
   { const a = alvoAtual(); if (a && a.cor !== '#3fd0ff') { gm.fillStyle = a.cor; gm.beginPath(); gm.arc(a.x, a.z, grande ? 30 : 11, 0, 6.3); gm.fill(); gm.strokeStyle = '#fff'; gm.lineWidth = grande ? 6 : 2.5; gm.stroke(); } }
@@ -941,6 +951,17 @@ const viloes = criarViloes(cena, { mobile: MOBILE, aniso: ANISO, combate, armaze
 const portais = criarPortais(cena);
 const trafego = criarTrafego(THREE, cena, { mobile: MOBILE });
 const pedestres = criarPedestres(THREE, cena, { mobile: MOBILE });
+// os objetos da rua: hidrantes, lixeiras, caixas de jornal, carrinhos de cachorro-quente e pombos (objetos.js)
+const objetos = criarObjetos(), objetos3d = criarObjetos3d(THREE, cena, { mobile: MOBILE });
+const LANCHES = ['O vendedor nem viu a nota sair da mão', 'Três cachorros-quentes em meio segundo', 'O metabolismo do velocista agradece', 'Com mostarda, sem parar de correr'];
+function passoObjetos(dt) {
+  const lista = objetos.perto(P.x, P.z);
+  for (const ev of objetos.atualizar(dt, P, lista)) {
+    if (ev.tipo === 'lanche') { P.energia = Math.min(1, P.energia + ev.energia); avisar('Cachorro-quente', `+${Math.round(ev.energia * 100)}% de energia · ${LANCHES[(J.lanches = (J.lanches || 0) + 1) % LANCHES.length]}`, 'ok'); }
+    else if (ev.tipo === 'hidrante') combate.efeitos.clarao(ev.o.x, 1, ev.o.z, 1.6, 0.25);
+  }
+  objetos3d.atualizar(lista, objetos.estado, objetos.t);
+}
 function solidoEm() {
   for (const q of rectsPerto) if (q.y0 >= 0 && q.y1 - q.y0 > 4 && P.x > q.x0 && P.x < q.x1 && P.z > q.z0 && P.z < q.z1 && P.y + 0.9 > q.y0 && P.y + 0.9 < q.y1) return q;
   return null;
@@ -1267,7 +1288,7 @@ function quadro() {
     el.dano.style.opacity = String(Math.min(1, Math.max(combate.dano, J.danoVilao)));
     atualizarBotoesEspeciais();
     passoMissoes(dt); passoInteriores(dt);
-    pedestres.atualizar(dt, P, mundo.noite); trafego.atualizar(dt, P, mundo.noite, pedestres.pessoas);
+    pedestres.atualizar(dt, P, mundo.noite); trafego.atualizar(dt, P, mundo.noite, pedestres.pessoas); passoObjetos(dt);
     if (labAtivo) labAtivo.atualizar(dt, P.t, mundo.noite, camera, P);
     for (const e of marcosAtivos) e.atualizar(dt, P.t, mundo);
     atualizarQuarteiroes(P.x, P.z, carregados.size < 30 ? 8 : 2);
