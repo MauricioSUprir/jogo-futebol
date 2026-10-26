@@ -265,7 +265,7 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   O GitHub Actions roda os testes (`golaco/tools/rodar-testes.mjs` + `teste-carga.mjs`) em todo PR
   (`.github/workflows/golaco-testes.yml`) e antes do deploy (`deploy-pages.yml`, job `testes-golaco`): reprovou,
   não publica. O deploy PULA a bateria quando `golaco/`, `legacy-total-match/` e o `golaco-testes.yml` estão iguais aos do
-  último deploy aprovado (job `mudancas`; 26/10: mudança só no THE FLASH publicava em ~25 min, agora ~3). **CI em partes** (15/10): o deploy chama o mesmo `golaco-testes.yml`, que roda os testes em Node em 4
+  último deploy aprovado (job `mudancas`; 26/10: mudança só no THE FLASH publicava em ~25 min, agora ~3). Quando a bateria roda, o job `rapido` publica o commit JÁ com o golaco que está no ar (o do último deploy aprovado) e o `deploy` publica de novo no fim (com o golaco novo se passou); a montagem do site mora em `.github/scripts/montar-site.sh`. **CI em partes** (15/10): o deploy chama o mesmo `golaco-testes.yml`, que roda os testes em Node em 4
   máquinas ao mesmo tempo (`rodar-testes.mjs --parte i --de 4`) e os de navegador em 3 (`rodar-navegador.mjs`; teste
   de navegador novo entra na lista DESSE arquivo, não no YAML), divididos pelo tempo de `tools/lib/tempos-ci.mjs`;
   o check do PR continua `testes` (só passa com todas as partes).
