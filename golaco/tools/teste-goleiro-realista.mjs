@@ -80,10 +80,17 @@ if (args.includes('--filho')) {
   const sems = Array.from({ length: NSEM }, (_, i) => SEM0 + i);
   const res = await emParalelo(fileURLToPath(import.meta.url), sems, PAR, args, false);
   res.sort((a, b) => a.sem - b.sem);
-  process.exit(avaliar(res) ? 0 : 1);
+  // (C4: quantas vezes a bola entra ou sai da mão do goleiro fora do mergulho depende dos lances de cada partida — com os
+  // estados novos da partida, 8 em 8 sementes: as sementes seguem, até 4 a mais, até ≥ 10 casos; só a pose delas conta)
+  const extra = [];
+  for (let s = SEM0 + NSEM; s < SEM0 + NSEM + 4 && [...res, ...extra].reduce((a, r) => a + r.pose.trocas, 0) < 10; s += PAR) {
+    const lote = Array.from({ length: Math.min(PAR, SEM0 + NSEM + 4 - s) }, (_, i) => s + i);
+    extra.push(...await emParalelo(fileURLToPath(import.meta.url), lote, PAR, args, false));
+  }
+  process.exit(avaliar(res, extra) ? 0 : 1);
 }
 
-function avaliar(res) {
+function avaliar(res, extraPose = []) {
   const pct = (a, b) => (b ? (100 * a) / b : NaN);
   const p1 = v => (Number.isFinite(v) ? `${fmt(v, 1)}%` : '—');
   const linhas = [['teste', 'medido', 'meta', 'resultado']];
@@ -154,8 +161,8 @@ function avaliar(res) {
     soma('armado') >= 300 && pct(soma('armadoSet'), soma('armado')) >= 55);
   reg('C2. saltos de posição (> 0,13 m num tick) e de rumo (> 20°)', `${soma('saltoPos')} · ${soma('saltoRumo')} (${fmt(soma('ticks') / 3600, 0)} min)`, '0 · 0', soma('ticks') > 3600 * 30 && soma('saltoPos') === 0 && soma('saltoRumo') === 0);
   reg('C3. pés cruzados no passo lateral', `${p1(pct(soma('cruz'), soma('lateral')))} (${soma('lateral')} ticks de lado)`, '≤ 10%', soma('lateral') > 3000 && pct(soma('cruz'), soma('lateral')) <= 10);
-  const po = res.reduce((x, r) => ({ trocas: x.trocas + r.pose.trocas, saltos: x.saltos + r.pose.saltos, max: Math.max(x.max, r.pose.max) }), { trocas: 0, saltos: 0, max: 0 });
-  reg('C4. pose: o quadril pula > 3 cm no passo em que a bola entra ou sai da mão dele', `${po.saltos} de ${po.trocas} (máx. ${fmt(100 * po.max, 1)} cm)`, '0', po.trocas >= 10 && po.saltos === 0);
+  const po = [...res, ...extraPose].reduce((x, r) => ({ trocas: x.trocas + r.pose.trocas, saltos: x.saltos + r.pose.saltos, max: Math.max(x.max, r.pose.max) }), { trocas: 0, saltos: 0, max: 0 });
+  reg('C4. pose: o quadril pula > 3 cm no passo em que a bola entra ou sai da mão dele', `${po.saltos} de ${po.trocas} (máx. ${fmt(100 * po.max, 1)} cm${extraPose.length ? `; +${extraPose.length} sementes` : ''})`, '0', po.trocas >= 10 && po.saltos === 0);
   // ---------------------------------------------------------------- D
   const nP = res.length;
   const s1 = res.reduce((x, r) => x + (r.saidas['1x1'] ?? 0), 0), sB = res.reduce((x, r) => x + (r.saidas.bolaSolta ?? 0), 0);
