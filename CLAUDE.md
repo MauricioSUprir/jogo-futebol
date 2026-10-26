@@ -93,9 +93,10 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   IA × IA e contra a pessoa (o treino bit a bit igual): a espera da volta com folga e quieta, a virada em arco abaixo de 2,5 m/s,
   a virada parada (`IA.viraParado`) e o modo firme na retomada do apoio — quem marca a ≤ 12 m da bola, a volta do impedido e a
   bola na mão do goleiro como antes (com tudo valendo para eles, a pressão caía 2–3 pontos, o impedimento ia a 32% e a "bola na
-  mão" a 18%); o `teste-movimento --modo partida` entrou no CI (vai e volta 8,3 → 7,4); a linha que SOBE vira na hora
-  (`TATICA.linhaSobe`: com a virada parada e o arco a armadilha do impedimento sumia, 1,16 → 0,99 por partida; agora 1,19, gols
-  1,82 → 1,88 no painel de 144). Lições: a triagem do movimento com `--set` em 32–40 sementes (~80 s com 4 processos) bate com
+  mão" a 18%); o `teste-movimento --modo partida` entrou no CI (vai e volta 8,3 → 7,2). O impedimento caiu 1,16 → 0,99 por
+  partida (a virada parada e o arco atrasam a linha que sobe): a correção, a linha que SOBE vira na hora (`TATICA.linhaSobe`,
+  1,19 e gols 1,82 → 1,88 no painel de 144), entra no D6 — no CI ela trocou de novo os estados dos testes (7 metas de amostra e
+  de cena), e o D6 os troca de novo: corrigir uma vez só. Lições: a triagem do movimento com `--set` em 32–40 sementes (~80 s com 4 processos) bate com
   o teste; decidir com ela e conferir nas 5 rodadas de 8. Mudança IA × IA: ler o painel do CI e repetir com OUTRAS sementes
   (`--sem0 3001`) antes de concluir — gols e gols de fora caíram numa amostra e empataram na outra (sorteio), o impedimento
   caiu nas duas (real; achado desligando uma peça por vez com `--set`). As amostras pequenas dos testes que reprovam depois da

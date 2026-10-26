@@ -3139,9 +3139,10 @@ pela referência e ~1/3 da pressa dele (a retomada e a volta do impedido). O que
   partidas e Poisson; o painel de 144 dá 2,2 × 2,1 com a bola rolando) e a folga da cabeça (binomial; 88% na própria base
   com 16 partidas), o B3 do `teste-faltas-sentido` (o 'dribla' com 8 partidas e Poisson; em 48 partidas, pênaltis 0,35 ×
   0,35 e vermelhos 0,19 × 0,23 por partida, base × D5).
-- **A linha que sobe vira na hora** (`TATICA.linhaSobe`): o ramo 'linha' com o alvo à frente (no sentido do ataque) fica sem a
-  virada parada e sem o arco — com elas, a linha que recuava e era mandada subir parava 0,5 s ou subia em arco e o impedimento
-  armava menos (painel de 144: 1,16 → 0,99 por partida; com a linha que sobe, 1,19; `PESQUISA-CATEGORIA-D.md` §7.6).
+- **O impedimento caiu** (painel de 144: 1,16 → 0,99 e 1,23 → 1,06 por partida): a virada parada e o arco atrasam a linha que
+  recuava e é mandada subir (a armadilha). A correção — a linha que sobe vira na hora (`TATICA.linhaSobe`: 1,19 nas duas
+  amostras) — entra no D6 (item 23), junto com a forma da linha, porque toda mudança IA × IA troca os estados das partidas dos
+  testes (`PESQUISA-CATEGORIA-D.md` §7.6).
 - **O olhar** (`TATICA.olhar.giro` 1,2 → 1,4 rad/s, abaixo do 1,5 do tremor): de costas para a bola andando devagar 14,9 → 13,9%.
 - O `teste-movimento --modo partida` saiu do etapa3 (5 rodadas de 8 sementes passando). Na partida, as guardas "sem recuo"
   são as da partida: a média de chutes por semente de 3 min ≥ 1,5 (main 2,75; o volume é do painel e da categoria E) e o

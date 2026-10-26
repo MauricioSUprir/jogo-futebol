@@ -473,10 +473,11 @@ O painel (IA × IA, 144 partidas, base × D5, mesmas sementes) mostrou o impedim
 (sementes 1001–1144, a do CI) e 1,23 → 1,06 (3001–3144) — com a meta ≥ 1. A causa, desligando uma peça por vez (72
 partidas, 1001–1072; base 1,17, D5 1,08): sem a virada parada 1,25, sem o arco 1,18, sem a espera nova da volta 1,04. A
 linha de defesa que recuava e era mandada subir com a bola voltando (o momento em que o impedimento arma — a linha sobe junto,
-a "armadilha") parava 0,5 s ou subia em arco. Agora o ramo 'linha' com o alvo à frente (no sentido do ataque) vira na hora
-(`TATICA.linhaSobe`):
+a "armadilha") parava 0,5 s ou subia em arco. Com o ramo 'linha' de alvo à frente (no sentido do ataque) virando na hora
+(`TATICA.linhaSobe`, medido aqui e ENTREGUE NO D6 — no CI ela trocou de novo os estados das partidas dos testes e reprovou 7
+metas de amostra e de cena, que o D6 também vai trocar; corrigir uma vez só, lá):
 
-| Medida (painel de 144) | base 1001–1144 | D5 antes | D5 | base 3001–3144 | D5 antes | D5 | Meta |
+| Medida (painel de 144) | base 1001–1144 | D5 | + linha que sobe | base 3001–3144 | D5 | + linha que sobe | Meta |
 |---|---|---|---|---|---|---|---|
 | impedimentos por partida | 1,16 | 0,99 | 1,19 | 1,23 | 1,06 | 1,19 | ≥ 1 |
 | gols por partida | 1,82 | 1,64 | 1,88 | 1,73 | 1,73 | 1,85 | 2,3–3,5 |
@@ -484,9 +485,9 @@ a "armadilha") parava 0,5 s ou subia em arco. Agora o ramo 'linha' com o alvo à
 | goleiro, 6 a 16,5 m | 60,0% | 57,0% | 56,3% | 58,2% | 60,0% | 59,6% | 55–60% |
 | duelos pelo alto com a bola rolando | 2,2 | 2,1 | 2,2 | 2,3 | 2,3 | 2,2 | — |
 
-Os gols de fora da área nas duas amostras juntas: 15,1% na base e ~18,5% com o D5 (~1,5 erro padrão; ~530 gols de cada lado)
-— na beira de cima da faixa numa delas; o volume e a mistura dos chutes são da categoria E. O vai e volta com a linha que
-sobe: 7,4/min (8 sementes; antes 7,2; meta ≤ 8).
+Com a linha que sobe, os gols de fora da área nas duas amostras juntas: 15,1% na base e ~18,5% (~1,5 erro padrão; ~530 gols
+de cada lado) — na beira de cima da faixa numa delas; o volume e a mistura dos chutes são da categoria E. O vai e volta com a
+linha que sobe: 7,4/min (8 sementes; o D5 dá 7,2; meta ≤ 8). O D5 entra com o impedimento a 0,99–1,06 por partida.
 
 As amostras pequenas dos testes que a IA nova reembaralhou (cada mudança IA × IA troca todos os estados das partidas dos
 testes) passaram a reprovar só quando a contagem prova (p < 5%): o tiro livre do `teste-bolas-paradas` (no alvo 24,6 × 23,9%
