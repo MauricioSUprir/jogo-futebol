@@ -332,17 +332,20 @@ function pontoApoio(c, f, l, out) {
   const d = Math.hypot(ux, uz) || 1; ux /= d; uz /= d;
   const sg = c.ladoApoio ?? 1;
   out.x = p.x + ux * f - uz * l * sg; out.z = p.z + uz * f + ux * l * sg;
-  // (a bola parada no ponto: ele fica encostado nela, à mesma distância do punido — o ponto gira em volta do punido até sair
-  // dela, para o lado do árbitro, e fica desse lado; sem isso separarDaBola o segurava a 1,28 m do punido, com a bola a 0,75 m
-  // dele do lado do árbitro)
-  const bp = c.mF.bola.p, bx = bp.x - p.x, bz = bp.z - p.z, b = Math.hypot(bx, bz), r = Math.hypot(f, l);
-  const R = (c.apoio?.bolaMin ?? CENAS.bola) + 0.1, cos0 = (r * r + b * b - R * R) / (2 * r * b || 1);
-  if (bp.y < 0.6 && b > 0.05 && cos0 > -1 && cos0 < 1) {
-    const qx = out.x - p.x, qz = out.z - p.z, th0 = Math.acos(cos0);
-    if ((qx * bx + qz * bz) / (r * b) > cos0) {
-      const ab = Math.atan2(bz, bx);
-      c.giroBola ??= Math.cos(ab + th0) * ux + Math.sin(ab + th0) * uz >= Math.cos(ab - th0) * ux + Math.sin(ab - th0) * uz ? 1 : -1;
-      out.x = p.x + Math.cos(ab + c.giroBola * th0) * r; out.z = p.z + Math.sin(ab + c.giroBola * th0) * r;
+  // (a bola parada no ponto: separarDaBola o segurava encostado nela, a 1,28 m do punido — o ponto gira em volta do punido,
+  // à mesma distância, até a borda dela, para o lado do árbitro; só depois que ele encosta na bola DESSE lado (do outro, o
+  // caminho até o ponto girado passava pelo vão fechado entre a bola e o punido e ele ficava colado nas costas do punido) e,
+  // daí em diante, sempre para esse lado)
+  const bp = c.mF.bola.p, ap = c.apoio, bx = bp.x - p.x, bz = bp.z - p.z, b = Math.hypot(bx, bz), r = Math.hypot(f, l);
+  if (ap && bp.y < 0.6 && b > 0.05) {
+    const cos0 = (r * r + b * b - (ap.bolaMin + 0.1) ** 2) / (2 * r * b);
+    if (cos0 > -1 && cos0 < 1 && ((out.x - p.x) * bx + (out.z - p.z) * bz) / (r * b) > cos0) {
+      const ab = Math.atan2(bz, bx), th0 = Math.acos(cos0), q = ap.j;
+      const g = c.giroBola ?? (Math.cos(ab + th0) * ux + Math.sin(ab + th0) * uz >= Math.cos(ab - th0) * ux + Math.sin(ab - th0) * uz ? 1 : -1);
+      if (c.giroBola != null || (Math.hypot(q.x - bp.x, q.z - bp.z) < ap.bolaMin + 0.05 && (bx * (q.z - p.z) - bz * (q.x - p.x)) * g > 0)) {
+        c.giroBola = g;
+        out.x = p.x + Math.cos(ab + g * th0) * r; out.z = p.z + Math.sin(ab + g * th0) * r;
+      }
     }
   }
   return out;
@@ -611,9 +614,12 @@ function gestos(c, a, t) {
         const d = Math.hypot(a.j.x - pun.j.x, a.j.z - pun.j.z);
         const w = suave((1.6 - d) / 0.5) * janela(t, T.reacao - 0.2, 1e9, 0.2, 0.2);
         if (w > 0) {
-          const po = pun.atu, ombro = (po[J.ombroE * 3] - a.j.x) ** 2 + (po[J.ombroE * 3 + 2] - a.j.z) ** 2 < (po[J.ombroD * 3] - a.j.x) ** 2 + (po[J.ombroD * 3 + 2] - a.j.z) ** 2 ? J.ombroE : J.ombroD;
-          const lado = c.ladoApoio > 0 ? -1 : 1;
+          // (o ombro do punido que está do lado da mão: com a bola parada no ponto ele pode parar do outro lado da reta
+          // punido–árbitro, e o ombro mais perto ficava do lado de lá — a mão cruzava o corpo)
+          const po = pun.atu, lado = c.ladoApoio > 0 ? -1 : 1;
           const fx = Math.cos(h), fz = Math.sin(h);
+          const doLado = io => ((po[io * 3] - a.j.x) * -fz + (po[io * 3 + 2] - a.j.z) * fx) * lado;
+          const ombro = doLado(J.ombroE) > doLado(J.ombroD) ? J.ombroE : J.ombroD;
           gTapinhaOmbro(o, h, lado, po, ombro, fx, fz, w);
         }
         break;
