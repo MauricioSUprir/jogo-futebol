@@ -633,3 +633,54 @@ impedimento 1,08, chutes de fora 35%. O painel de 24 varia ±0,5 gol.
 - O item 24 vai junto com o item 26 (o volume de ataque, categoria E). O caminho medido: a zaga e os laterais no campo de lá
   com a bola (o bloco a −2 m dela, não a −9) e a circulação por eles. A devolução só entra se o ataque continuar criando: gols,
   chutes, passe certo ≤ 86,5% no `teste-intercepta`, impedimento ≤ 25%, cruzamentos.
+
+## 10. D8 — a intensidade da partida (item 25)
+
+A medida é o `teste-intensidade` (IA × IA). O teto dos lances rápidos (180–220 m/min) vinha das médias de Jerome 2024 e não
+tinha a distribuição real; a contraprova I4 o deixou reprovando sem afrouxar.
+
+### 10.1 A mesma conta na Metrica (`tools/pesquisa/intensidade_metrica.py`)
+
+Lance rápido: o time recupera a bola em jogo corrido e ela avança ≥ 15 m para o gol adversário em até 6 s. A conta é em linha,
+como o teste conta: do instante em que a bola completa os 15 m até 1 s depois de ela parar de avançar. Os 20 de linha contam.
+
+| m/min por jogador de linha | jogo 1 | jogo 2 | total | janelas de 15 min (p10 / mediana / p90 / máx) |
+|---|---|---|---|---|
+| jogo organizado | 139,0 | 135,8 | 137,4 | 132 / 137 / 149 / 154 |
+| lances rápidos | 203,2 (4,0% do tempo) | 213,5 (2,4%) | 207,1 | 170 / 197 / 233 / 294 |
+
+- A conta bate com Jerome 2024 (ataque rápido 196, defesa rápida 208). A meta passa a 180–235: o p90 das janelas fica como teto.
+- Contando desde o quadro da recuperação (a definição que o cabeçalho do teste trazia), o lance rápido real cai a 170 m/min.
+  Entram os 2–3 s em que a bola ainda não avançou. O teste segue em linha, igual à Metrica.
+- O teste deixava o lance rápido de uma posse passar para a seguinte (o `rapAte` não zerava na recuperação nova). Corrigido:
+  no jogo, o tempo em lance rápido vai de 8,4% para 7,3%, e o m/min de 278 para 282.
+
+### 10.2 O jogo (16 sementes)
+
+| Medida | jogo | real | meta |
+|---|---|---|---|
+| organizado, m/min | 155,5 | 137 | 120–160 |
+| lances rápidos, m/min | 282,4 (7,3% do tempo) | 207 (2,4–4%) | 180–235 |
+| tempo parado / andando / trotando / correndo / alta / sprint | 7,2 / 40,5 / 28,8 / 8,8 / 9,0 / 5,8% | 0,9 / 48,5 / 37,8 / 9,6 / 2,7 / 0,6 | ± 8 pontos |
+
+O time da IA contra o humano roteirizado corre ainda mais nos lances rápidos: ~250 m/min contra o roteiro calmo e ~300 contra o
+agressivo. Isso confirma a seção 1: em volume, a IA já corre mais que um time real.
+
+Onde está o excesso:
+- quem defende fora do ponto calmo (recomposição, 1º e 2º homem, contrapressão) é 15% do tempo, com 45% em alta ou sprint, e
+  faz 370 m/min nos lances rápidos;
+- os pontas e o ataque à área disparam com a bola também a mais de 30 m dela.
+
+O "parado" (7%, real 0,9%) vem metade da espera da volta do D5: o jogador freia e fica 1 s plantado antes de voltar.
+- Trocar o plantado por um passo lento para o alvo (intensidade 0,1, abaixo do limiar de 0,8 m/s do vai e volta) leva o parado
+  a 5,3%. O `teste-movimento --modo partida` passa: vai e volta 7,0 → 7,2/min, tremor 4,8 → 5,8.
+- Não entrou: o ganho é pequeno e a troca mexe em todas as partidas IA × IA (os estados dos testes de novo).
+
+### 10.3 Limites e o que fica
+
+- Nada da lógica do jogo muda no D8. O `teste-intensidade` segue no etapa3, com 4 reprovações: os lances rápidos (282 × 235),
+  as faixas de velocidade (o trote 9 pontos abaixo), os chutes (7,1 × 10) e os gols (0,81 nas sementes 1–16; 1,6–1,7 no painel
+  de 144). Os chutes e os gols são do volume de ataque (item 26, categoria E).
+- **Depende do dono:** baixar a corrida dos lances rápidos ao real. Seria a recomposição sem disparada longe da bola, como o D3
+  já faz contra a pessoa, e os pontas sem sprint longe dela. Isso vai contra o pedido de 10/10 ("a IA não corre para trás") e
+  contra a percepção dele de que a IA não corre. O que ele vê é QUEM corre e QUANDO (seção 1), não o volume.

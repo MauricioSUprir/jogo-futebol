@@ -1,14 +1,14 @@
 // teste-intensidade (Etapa 3, Parte 3): intensidade e sanidade da partida 11×11, IA × IA (a IA joga
 // também pelo controlado do time 0: entradaDemoPartida), partidas inteiras (2 tempos de 4 min reais).
-//  - metros por minuto por jogador de linha com a bola rolando (Jerome 2024, 1083 partidas):
-//      jogo organizado 120–160 · lances rápidos 180–220 (ataque rápido 196, defesa rápida 208). PENDENTE: a
-//    publicada já fica em ~240 (a partida condensada: ~5 posses por minuto, contra ~1 no jogo real) e a
-//    recomposição do PR "IA intensa" soma ~10–20 m/min (quem volta corre a ~390 m/min nos lances rápidos). O teto
-//    NÃO foi afrouxado (contraprova I4: não há fonte para os lances rápidos do "time mais intenso"); falta o dado
-//    real do p90 por time (Jerome 2024 só dá a média) — PESQUISA-ETAPA3.md §16.4.
-//    Lance rápido = depois de o time recuperar a bola em jogo corrido, a bola avança ≥ 15 m para o
-//    gol adversário em até 6 s: conta dos 0 s da recuperação até 1 s depois de a bola parar de avançar
-//    (no máximo 10 s), para os 20 de linha (o ataque rápido de um é a defesa rápida do outro).
+//  - metros por minuto por jogador de linha com a bola rolando: jogo organizado 120–160 (Jerome 2024, 1083 partidas) ·
+//    lances rápidos 180–235 (D8, item 25: a MESMA conta na Metrica — tools/pesquisa/intensidade_metrica.py — dá 207, e
+//    170–233 do p10 ao p90 das janelas de 15 min; Jerome 2024: ataque rápido 196, defesa rápida 208; o organizado na
+//    Metrica, 137). O jogo fica acima (a partida condensada: ~5 posses por minuto, contra ~1 no real; a recomposição em
+//    disparada do PR "IA intensa", pedido do dono de 10/10): reduzir é decisão do dono — PESQUISA-CATEGORIA-D.md §10.
+//    Lance rápido = depois de o time recuperar a bola em jogo corrido, a bola avança ≥ 15 m para o gol adversário em
+//    até 6 s. Conta em linha, quadro a quadro: do instante em que a bola completa os 15 m até 1 s depois de ela parar
+//    de avançar (no máximo 10 s depois da recuperação), para os 20 de linha (o ataque rápido de um é a defesa rápida do
+//    outro); a recuperação seguinte começa do zero.
 //    A contrapressão é medida pela Parte 2 (teste-pressao).
 //  - tempo por faixa de velocidade com a bola rolando, ± 8 pontos da real (Metrica): parado 0,9 ·
 //    andando 48,5 · trotando 37,8 · correndo 9,6 · alta 2,7 · sprint 0,6 (limites 0,2/2/4/5,5/7 m/s).
@@ -77,7 +77,7 @@ async function coletar(sem) {
     // lance rápido: recuperação em jogo corrido (não na cobrança) e a bola avança ≥ 15 m em ≤ 6 s
     if (tc != null && tc !== tAnt) {
       rec = tAnt != null && !parada ? { tick: i, time: tc, u0: M.uDe(m, tc, m.bola.p.x), uMax: -Infinity, tMax: i } : null;
-      tAnt = tc;
+      tAnt = tc; rapAte = -1; // (D8: o lance rápido da posse anterior não passa para a seguinte)
     }
     if (rec && tc === rec.time) {
       const u = M.uDe(m, tc, m.bola.p.x);
@@ -136,7 +136,7 @@ const pct = (a, b) => (b ? 100 * a / b : NaN);
 console.log(`lógica: ${JS}${ANTES ? ' (--antes: IA clássica na partida)' : ''}\n${NS} partidas (sementes ${S0}–${S0 + NS - 1}) de 2 × ${MIN_TEMPO} min, ${nPar} processos, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 const mOrg = soma('dOrg') / (soma('tOrg') / 3600), mRap = soma('dRap') / (soma('tRap') / 3600);
 reg('m/min por jogador de linha, jogo organizado (Jerome 2024)', `${fmt(mOrg)}`, '120–160', mOrg >= 120 && mOrg <= 160);
-reg('m/min por jogador de linha, lances rápidos', `${fmt(mRap)} (${fmt(pct(soma('tRap'), soma('tRap') + soma('tOrg')))}% do tempo)`, '180–220', mRap >= 180 && mRap <= 220);
+reg('m/min por jogador de linha, lances rápidos (Metrica, a mesma conta)', `${fmt(mRap)} (${fmt(pct(soma('tRap'), soma('tRap') + soma('tOrg')))}% do tempo)`, '180–235 (real 207; 2,4–4% do tempo)', mRap >= 180 && mRap <= 235);
 const tJ = soma('tJog'), fx = NOMES.map((_, k) => pct(res.reduce((a, r) => a + r.faixas[k], 0), tJ));
 const fxOk = fx.every((v, k) => Math.abs(v - REAL[k]) <= 8);
 reg('tempo por faixa de velocidade (parado/andando/trotando/correndo/alta/sprint)', fx.map(v => fmt(v)).join(' / ') + '%', '± 8 pontos de 0,9/48,5/37,8/9,6/2,7/0,6', fxOk);
