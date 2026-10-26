@@ -88,6 +88,7 @@ if (naveg) {
   await ir(pj.x - 12, pj.z - 14, 0.7);
   ok(await espera(() => window.__rel.aliados.pessoas.joe?.raiz.visible), 'o Joe está na porta da Delegacia');
   await pagina.waitForTimeout(2500); await foto('delegacia');
+  await pagina.evaluate(() => window.__rel.historia.calarRadio());     // a cena espera o rádio terminar de falar
   await ir(pj.x, pj.z - 5, 0);
   ok(await espera(() => window.__rel.historia.cenaAtual === 'depois-delegacia'), 'chegar perto abre a cena com o Joe');
   const em = await pagina.evaluate(() => { const R = window.__rel, j = R.aliados.foco('joe'); return j && Math.hypot(R.P.x - j.x, R.P.z - j.z); });
@@ -118,14 +119,19 @@ if (naveg) {
   ok(naPonte.x > M.PONTE.x0 + 30 && Math.abs(naPonte.z - M.PONTE.z) < M.PONTE.larg / 2 && naPonte.y > 0.2, `corre pela ponte sem cair (${naPonte.x.toFixed(0)}, ${naPonte.y.toFixed(2)})`);
   const pp = M.pontoMundo('presidio');
   await ir(pp.x - 30, pp.z, Math.PI / 2); await pagina.waitForTimeout(2500); await foto('presidio');
+  await pagina.evaluate(() => window.__rel.historia.calarRadio());
   await ir(pp.x - 5, pp.z, Math.PI / 2);
   ok(await espera(() => window.__rel.historia.cenaAtual === 'depois-presidio'), 'no portão de Iron Heights, a cena com o Joe');
   await pagina.waitForTimeout(2000); await foto('presidio-cena'); await pular();
 
   // os outros lugares (prints) e o relógio da Prefeitura na hora do jogo
-  for (const [nome, id] of [['jornal', 'jornal'], ['cafe', 'cafe'], ['prefeitura', 'prefeitura'], ['casa', 'casa']]) {
-    const w = M.pontoMundo(id); await ir(w.x + 14, w.z - 26, -0.5); await pagina.waitForTimeout(3000); await foto(`lugar-${nome}`);
+  // de frente para cada fachada, um pouco acima (a câmera do jogo atrás do herói, mais longe)
+  for (const [nome, id, d, pitch] of [['delegacia', 'delegacia', 14, 0.2], ['jornal', 'jornal', 13, 0.5], ['cafe', 'cafe', 9, 0.15], ['prefeitura', 'prefeitura', 28, 0.4], ['casa', 'casa', 24, 0.25]]) {
+    const w = M.pontoMundo(id); await ir(w.x, w.z - d, 0);
+    await pagina.evaluate(([p]) => { const R = window.__rel; R.C.pitch = p; R.CAM.dist = 16; R.mundo.T = 0.45; }, [pitch]);
+    await pagina.waitForTimeout(3500); await foto(`lugar-${nome}`);
   }
+  await pagina.evaluate(() => { const R = window.__rel; R.CAM.dist = 6.6; });
   ok(!erros.length, `sem erros no console (${erros.slice(0, 3).join(' | ')})`);
   await navegador.close(); await srv.fechar();
 }

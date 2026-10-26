@@ -35,7 +35,7 @@ function letreiro(THREE, chave, texto, { fundo = '#13233f', cor = '#ffffff', bor
 // placa plana voltada para `dir` (0: −z, 1: +x, 2: +z, 3: −x), centro (x, y, z), largura × altura
 function placa(THREE, api, mat, x, y, z, w, h, dir = 0) {
   const g = new THREE.PlaneGeometry(w, h); api.geos.push(g);
-  const m = new THREE.Mesh(g, mat); m.position.set(x, y, z); m.rotation.y = [PI, -PI / 2, 0, PI / 2][dir]; api.grupo.add(m); return m;
+  const m = new THREE.Mesh(g, mat); m.position.set(x, y, z); m.rotation.y = [PI, PI / 2, 0, -PI / 2][dir]; api.grupo.add(m); return m;
 }
 // prisma (telhado de duas águas / frontão): base retangular w × d em y0, cumeeira na altura h, ao longo de x
 function geoPrisma(THREE, w, d, h) {

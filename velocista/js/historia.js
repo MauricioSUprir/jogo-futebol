@@ -548,6 +548,8 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
     vaiTocar(id) { return !!CENAS[id] && !vistas.has(`cena:${id}`) && !(navigator.webdriver && !/[?&]historia=1/.test(location.search)); },
     /** o rádio terminou de falar (nada na fila) */
     get radioLivre() { return !falando && !fila.length; },
+    /** cala o rádio agora (testes: sem GPU o jogo roda a menos de 1 quadro por segundo e cada fala dura minutos) */
+    calarRadio() { fila.length = 0; falando = null; radio.classList.remove('vis'); },
     get capitulo() { return capitulo; },
     get cartaoAtual() { const f = C?.falas[C.i]; return f?.cartao ? `${f.rotulo} — ${f.titulo}` : null; },
     viu: (id) => vistas.has(id),
