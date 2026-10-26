@@ -82,7 +82,10 @@ await pagina.waitForTimeout(3000);
 await foto('encontro');
 // a câmera corta: outra fala, outro plano
 const cam = () => pagina.evaluate(() => { const c = window.__rel.camera.position; return [c.x, c.y, c.z]; });
-const c1 = await cam(); await tecla('enter'); await tecla('enter'); await pagina.waitForTimeout(2500); const c2 = await cam();
+const c1 = await cam(); await tecla('enter'); await tecla('enter');
+// a câmera nova só aparece no próximo quadro desenhado (sem GPU, o jogo roda a menos de 1 quadro por segundo)
+await espera((c1) => { const c = window.__rel.camera.position; return Math.hypot(c.x - c1[0], c.z - c1[2]) > 0.8; }, c1, 60000);
+const c2 = await cam();
 ok(Math.hypot(c1[0] - c2[0], c1[2] - c2[2]) > 0.8, `a câmera corta entre quem fala (${Math.hypot(c1[0] - c2[0], c1[2] - c2[2]).toFixed(1)} m)`);
 await foto('encontro2');
 await pular();
