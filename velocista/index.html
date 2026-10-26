@@ -155,6 +155,16 @@
   body::after { content:''; position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:7; }
   body.clarao::after { animation: clarao 1.6s ease-out; }
   @keyframes clarao { 0% { opacity:0; } 8% { opacity:.95; } 100% { opacity:0; } }
+  /* créditos do fim: texto subindo devagar sobre o preto */
+  #creditos { position:fixed; inset:0; z-index:8; background:#040306; overflow:hidden; color:#e8e6f0; text-align:center; }
+  #creditos .rolo { position:absolute; left:0; right:0; top:100%; padding:0 24px; }
+  #creditos.rola .rolo { animation: rolar 42s linear forwards; }
+  @keyframes rolar { to { transform: translateY(calc(-100% - 100vh)); } }
+  #creditos section { margin:0 auto 9vh; max-width:640px; }
+  #creditos h3 { margin:0 0 8px; font-family:'Rajdhani','Inter',system-ui,sans-serif; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#ffd23f; font-size:clamp(18px,3vw,26px); }
+  #creditos p { margin:0; font-size:clamp(13px,2vw,17px); line-height:1.5; opacity:.85; }
+  #creditos section:first-child h3 { font-size:clamp(34px,7vw,64px); color:#fff; text-shadow:0 0 28px rgba(255,40,40,.5); }
+  #creditos .pular { position:absolute; right:max(16px,env(safe-area-inset-right)); top:16px; padding:6px 14px; border-radius:99px; border:1px solid rgba(255,255,255,.35); background:rgba(0,0,0,.45); color:#fff; font:inherit; font-size:12px; font-weight:700; }
   #cenaHist .pular { position:absolute; z-index:2; right:max(16px,env(safe-area-inset-right)); top:calc(11vh + 10px); padding:6px 14px; border-radius:99px; border:1px solid rgba(255,255,255,.35); background:rgba(0,0,0,.45); color:#fff; font:inherit; font-size:12px; font-weight:700; }
   .em-cena #hud, .em-cena #toque { display:none !important; }
   /* golpe recebido: borda vermelha */

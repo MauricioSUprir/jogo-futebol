@@ -42,6 +42,27 @@ export function colocarAderecos(id, modelo) {
     peca(new THREE.CylinderGeometry(0.018, 0.022, 0.9, 10), pau, mao, 0.02, -0.03, 0.18, Math.PI / 2);
     peca(new THREE.OctahedronGeometry(0.06, 0), pedra, mao, 0.02, -0.03, 0.66);
     ponta.position.set(0.02, -0.03, 0.7); mao.add(ponta);
+  } else if (id === 'savitar') {
+    // ombreiras de aço e uma crista acesa no capacete
+    const aco = mat(0x8a929c, 0, 0.9, 0.28), luz = mat(0x9fdcff, 0x3fa8ff, 0.2, 0.2);
+    for (const n of ['bracoE', 'bracoD']) {
+      const b = osso(n), lado = n.endsWith('E') ? -1 : 1;
+      peca(new THREE.BoxGeometry(0.2, 0.07, 0.2), aco, b, 0.0, 0.07, lado * 0.02, 0, 0, lado * 0.25);
+      peca(new THREE.BoxGeometry(0.21, 0.012, 0.012), luz, b, 0.0, 0.106, lado * 0.02, 0, 0, lado * 0.25);
+    }
+    peca(new THREE.BoxGeometry(0.2, 0.05, 0.022), aco, cabeca, -0.01, 0.12, 0, -0.15, 0, 0);
+    peca(new THREE.BoxGeometry(0.18, 0.012, 0.026), luz, cabeca, -0.01, 0.148, 0, -0.15, 0, 0);
+    ponta.position.set(0.05, -0.03, 0.12); mao.add(ponta);
+  } else if (id === 'devoe') {
+    // a "touca de pensar": um aro de metal com luzes em volta da cabeça; e o disco flutuante sob os pés
+    const aro = mat(0x9aa3b4, 0, 0.95, 0.2), luz = mat(0xd9b3ff, 0xa060ff, 0.2, 0.2), base = mat(0x2a2f38, 0, 0.9, 0.25);
+    peca(new THREE.TorusGeometry(0.09, 0.0075, 8, 40), aro, cabeca, 0.0, 0.075, 0, Math.PI / 2, 0, 0).scale.set(1.1, 0.9, 1);
+    for (let k = 1; k < 8; k++) { const a = (k / 8) * Math.PI * 2; peca(new THREE.SphereGeometry(0.009, 8, 6), luz, cabeca, Math.cos(a) * 0.099, 0.075, Math.sin(a) * 0.081); }
+    peca(new THREE.OctahedronGeometry(0.02, 0), luz, cabeca, 0.103, 0.075, 0);                 // a pedra da frente
+    const disco = new THREE.Group(); disco.position.y = -0.06; modelo.grupo.add(disco);
+    peca(new THREE.CylinderGeometry(0.62, 0.5, 0.08, 32), base, disco, 0, 0, 0);
+    peca(new THREE.TorusGeometry(0.6, 0.025, 8, 48), luz, disco, 0, -0.04, 0, Math.PI / 2, 0, 0);
+    ponta.position.set(0.1, 0.1, 0); cabeca.add(ponta);
   }
   return { ponta, dispose() { mats.forEach((m) => m.dispose()); } };
 }

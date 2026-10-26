@@ -8,13 +8,16 @@ import { aplicarTraje } from './traje.js';
 const BASE = new URL('../assets/humano/', import.meta.url);
 // pessoas da história (Caitlin, Cisco): outro corpo do Rocketbox, com a roupa e o rosto das texturas dele
 // (velocista/tools/personagens), o mesmo esqueleto e a mesma animação do herói
-const PESSOAS = { caitlin: { escala: 0.94 }, cisco: { escala: 1 }, frio: { escala: 1.02 }, onda: { escala: 1.04 }, mago: { escala: 1 } };
+const PESSOAS = { caitlin: { escala: 0.94 }, cisco: { escala: 1 }, frio: { escala: 1.02 }, onda: { escala: 1.04 }, mago: { escala: 1 }, devoe: { escala: 1 } };
 // emblema do peito de cada traje (desenhos próprios): disco, cor do anel e do símbolo, símbolo
 const EMBLEMAS = {
   heroi: { disco: 0x1a1416, cor: 0xf6c82a, emissivo: 0x8a6008, forma: 'faisca', brilhoTecido: 0x8a1010 },
   zoom: { disco: 0x05070a, cor: 0x3a8cff, emissivo: 0x1a50ff, forma: 'divisa', brilhoTecido: 0x203050 },
   reverso: { disco: 0x9a0a0a, cor: 0x141010, emissivo: 0x000000, forma: 'faisca', brilhoTecido: 0x806010 },
+  savitar: { disco: 0x15181d, cor: 0x9fdcff, emissivo: 0x3fa8ff, forma: 'divisa', brilhoTecido: 0x607890 },
 };
+// trajes maiores que o herói (a armadura do Savitar)
+const ESCALA_TRAJE = { savitar: 1.14 };
 const NOMES = ['pelve', 'lombar', 'peito', 'pescoco', 'cabeca', 'claviculaE', 'bracoE', 'antebracoE', 'maoE', 'claviculaD', 'bracoD', 'antebracoD', 'maoD',
   'coxaE', 'canelaE', 'peE', 'coxaD', 'canelaD', 'peD', 'ajJoelhoE', 'ajJoelhoD', 'ajCotoveloE', 'ajCotoveloD', 'ajQuadrilE', 'ajQuadrilD'];
 const PAI = [-1, 0, 1, 2, 3, 2, 5, 6, 7, 2, 9, 10, 11, 0, 13, 14, 0, 16, 17, 14, 17, 7, 11, 0, 0];
@@ -237,6 +240,7 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
   // o modelo olha para +x; o jogo olha para +z (rotação y = -90°)
   frente.rotation.y = -Math.PI / 2; frente.add(raiz);
   if (pessoa) frente.scale.setScalar(PESSOAS[pessoa]?.escala ?? 1);
+  else if (ESCALA_TRAJE[traje]) frente.scale.setScalar(ESCALA_TRAJE[traje]);
   const materiais = [matCorpo, matCabeca, matDisco, matEmb, texCabeca, ...texs];
   return {
     grupo: frente, aplicar, materiais, ossos, raiz,
