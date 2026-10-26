@@ -4,6 +4,7 @@
 // da cidade, com o estilo de fachada escolhido) + sólidos extras (colunas, marquises, cerca...) + a entrada (onde as
 // missões levam). A ponte e o presídio ficam FORA da grade, a leste, sobre o mar: têm os próprios sólidos e o próprio
 // limite por onde o herói pode andar (limitarFora).
+import { INTERIORES, Y0 as Y_INTERIOR } from './interiores.js';
 // Coordenadas LOCAIS dos lugares da cidade: u = x − centro da célula, v = z − centro; a frente olha para −v (rua de cima).
 export const MARCOS = [
   {
@@ -133,12 +134,17 @@ export const PONTOS = {
   prefeitura2: { marco: 'prefeitura', u: 2.2, v: -6.6, h: Math.PI },
   presidio: { x: ENTRADA_PRESIDIO.x + 8, z: ENTRADA_PRESIDIO.z, h: -Math.PI / 2 },
 };
-/** O ponto em coordenadas do mundo: {x, z, h}. */
+// os pontos DE DENTRO dos lugares (interiores.js): no alto, sobre o quarteirão (y = Y_INTERIOR)
+for (const [id, I] of Object.entries(INTERIORES)) for (const [nome, [u, v, h]] of Object.entries(I.pontos)) {
+  if (PONTOS[nome]) throw new Error(`ponto repetido: ${nome}`);           // (um nome de dentro nunca cobre um de fora)
+  PONTOS[nome] = { marco: id, u, v, h, interior: id };
+}
+/** O ponto em coordenadas do mundo: {x, z, h} (e y + interior para os de dentro dos lugares). */
 export function pontoMundo(id) {
   const p = PONTOS[id]; if (!p) return null;
   if (!p.marco) return { x: p.x, z: p.z, h: p.h };
   const m = MARCOS.find((k) => k.id === p.marco), cx = (m.cel[0] + 0.5) * CELL - MEIO, cz = (m.cel[1] + 0.5) * CELL - MEIO;
-  return { x: cx + p.u, z: cz + p.v, h: p.h };
+  return p.interior ? { x: cx + p.u, z: cz + p.v, h: p.h, y: Y_INTERIOR, interior: p.interior } : { x: cx + p.u, z: cz + p.v, h: p.h };
 }
 /** Subestações de energia que o Zoom desligou (missão "Apagão"): numa esquina de calçada, perto de três cruzamentos. */
 export const SUBESTACOES = [[17, 26], [27, 17], [28, 28]].map(([i, j]) => ({ x: eixo(i) + 9, z: eixo(j) + 9 }));

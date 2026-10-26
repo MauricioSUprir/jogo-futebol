@@ -208,6 +208,9 @@
   @media (orientation: portrait) { .toque #girar { display:flex; } }
   /* telas iniciais cabem no celular deitado (altura pequena) */
   @media (max-height: 520px) { .tela { gap:8px; padding:12px 24px; justify-content:safe center; } h1 { font-size:clamp(30px,9vh,56px); } h1.logo img { width:min(80vw, 33vh * 2.99); margin:-4px auto -2px; } h2 { font-size:clamp(24px,7vh,40px); } .tela p { font-size:13px; line-height:1.4; } button.principal { padding:10px 34px; font-size:16px; } }
+  /* a cortina das portas dos lugares (entrar e sair) */
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .28s ease; z-index: 40; }
+  #fade.on { opacity: 1; }
 </style>
 </head>
 <body>
@@ -225,6 +228,7 @@
   </div>
   <div id="missao" class="bloco"><div class="rotulo" id="missaoNum"></div><div id="missaoTitulo"></div><div id="missaoTexto"></div><div id="crimeLinha" hidden></div></div>
   <div id="aviso"><small id="avisoRotulo"></small><b id="avisoTitulo"></b></div>
+  <div id="fade"></div>
   <div id="coleta"></div>
   <div id="mira"></div>
   <div id="energia"><div id="chips"><span class="chip" id="chip-raio">1 · RAIO 25%</span><span class="chip" id="chip-ciclone">2 · CICLONE 35%</span><span class="chip" id="chip-sonico">3 · SÔNICO 50%</span></div><div class="linhaEnergia"><span>Energia</span><span id="velBox"><b id="vel">0</b> km/h</span></div><div class="barra"><div class="nivel" id="nivel"></div><i class="marca" style="left:25%"></i><i class="marca" style="left:35%"></i><i class="marca" style="left:50%"></i></div></div>

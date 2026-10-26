@@ -20,6 +20,8 @@ import { CAMPUS, TORRE, ALAS, LAB } from './lab.js';
 import { MARCOS, limitar, PONTE, ILHA, PRESIDIO, pontoMundo, SUBESTACOES } from './marcos.js';
 import { criarAliados } from './aliados.js';
 import { desenharMarco, blocoIlha, desenharFora } from './marcos3d.js';
+import { INTERIORES, Y0 as Y_INT, noGatilhoFora, noGatilhoDentro } from './interiores.js';
+import { construirInterior } from './interiores3d.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
 import { passoEmbalo, tetoCorrida, gastoCorrida } from './velocidade.js';
 
@@ -39,6 +41,7 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const suave = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const $ = (id) => document.getElementById(id);
 const el = {
+  fade: document.getElementById('fade'),
   corpo: document.body, cena: $('cena'), esferas: $('esferas'), total: $('total'), vel: $('vel'), hora: $('hora'), nivel: $('nivel'),
   aviso: $('aviso'), avisoT: $('avisoTitulo'), avisoR: $('avisoRotulo'), coleta: $('coleta'), resumo: $('resumo'), dano: $('dano'), missao: $('missao'), capitulos: $('capitulos'), seta: $('seta'), dist: $('distEsfera'), mapa: $('mapa'), mapaBox: $('mapaBox'),
   missaoNum: $('missaoNum'), missaoTitulo: $('missaoTitulo'), missaoTexto: $('missaoTexto'), crimeLinha: $('crimeLinha'),
@@ -277,6 +280,8 @@ function construirBloco(b) {
     };
     dados.extra = b.marco.id === 'fora' ? desenharFora(THREE, api) : desenharMarco(THREE, b, api);
     marcosAtivos.add(dados.extra);
+    // a sala de dentro do lugar (no alto; só aparece com o herói lá dentro)
+    if (INTERIORES[b.marco.id]) { const it = construirInterior(THREE, b.marco.id, b.cx, b.cz); Object.assign(it, { id: b.marco.id, cx: b.cx, cz: b.cz }); cena.add(it.grupo); interioresAtivos.add(it); dados.interior = it; }
   }
   for (const [k, bd] of baldes) {
     const g = bd.gerar(); if (!g) continue; geos.push(g);
@@ -299,9 +304,11 @@ function construirBloco(b) {
 }
 let labAtivo = null;
 const marcosAtivos = new Set();                   // extras animados dos lugares carregados (relógio, giroflex, letreiro...)
+const interioresAtivos = new Set();               // as salas de dentro dos lugares carregados (interiores3d.js)
 function descarregar(chave) {
   const d = carregados.get(chave); if (!d) return;
   if (d.extra) marcosAtivos.delete(d.extra);
+  if (d.interior) { interioresAtivos.delete(d.interior); cena.remove(d.interior.grupo); d.interior.dispose(); }
   if (d.lab) { d.lab.materiais?.forEach((m) => m.dispose?.()); if (labAtivo === d.lab) labAtivo = null; }
   cena.remove(d.grupo); d.geos.forEach((g) => g.dispose()); d.instancias.forEach((i) => i.dispose());
   for (const r of d.orbes) { const k = orbesAtivos.indexOf(r); if (k >= 0) orbesAtivos.splice(k, 1); }
@@ -428,6 +435,7 @@ function reiniciar() {
   Object.assign(P, { x: INICIO.x, y: 0, z: INICIO.z, vx: 0, vz: 0, vy: 0, h: 0, noChao: true, pulos: 0, energia: 0.6, parede: null, vibrando: false, embalo: 0 });
   C.yaw = 0; C.pitch = CAM.pitch;
   J.coletadas = 0; J.modo = 'jogando'; J.inicioT = performance.now();
+  J.interior = null; J.porta = null; el.fade?.classList.remove('on');
   mundo.T = 0.4;
   atualizarQuarteiroes(P.x, P.z, 999);
   esconderTelas(); el.corpo.classList.add('jogando');
@@ -614,7 +622,7 @@ function passoHeroi(dt) {
         P.x = r.x; P.z = r.z; P.vx = (P.x - ox) / sub * 0.98; P.vz = (P.z - oz) / sub * 0.98;
         const depois = Math.hypot(P.vx, P.vz); if (depois > antes) { P.vx *= antes / depois; P.vz *= antes / depois; }
         // de frente para a parede de um prédio, em velocidade: começa a escalar
-        if (r.q && r.q.y0 > 0 && r.q.y1 - r.q.y0 > 4 && r.q.x1 - r.q.x0 > 3 && r.q.z1 - r.q.z0 > 3 && P.correndo && antes >= MOV.escalar && (r.nx * vx0 + r.nz * vz0) / (antes || 1) <= -0.55 && P.y < r.q.y1 - 1.2 && P.energia > 0.05) {
+        if (r.q && !r.q.interior && r.q.y0 > 0 && r.q.y1 - r.q.y0 > 4 && r.q.x1 - r.q.x0 > 3 && r.q.z1 - r.q.z0 > 3 && P.correndo && antes >= MOV.escalar && (r.nx * vx0 + r.nz * vz0) / (antes || 1) <= -0.55 && P.y < r.q.y1 - 1.2 && P.energia > 0.05) {
           P.parede = { nx: r.nx, nz: r.nz, q: r.q, v: clamp(antes * 0.85, MOV.escalaMin, MOV.escalaMax) };
           P.vx = P.vz = 0; P.vy = 0; P.noChao = false; P.pulos = 1; J.alinhar = 0.8;
           break;
@@ -826,11 +834,42 @@ function predioAltoPerto() {
   return (predioCache = { x: px + nx * 3, z: pz + nz * 3 });
 }
 // objetivo do guia (feixe, marcador e caminho): crime > objetivo da missão; null quando a missão não tem lugar
+// ---------- entrar e sair dos lugares (interiores.js): a porta da fachada leva à sala de dentro (no alto) e a de dentro devolve à calçada
+function passoInteriores(dt) {
+  for (const I of interioresAtivos) { I.grupo.visible = J.interior === I.id; if (I.grupo.visible) I.atualizar(mundo.noite); }
+  if (J.porta) { J.porta.t += dt; if (J.porta.t >= 0.3 && !J.porta.feito) { J.porta.feito = true; J.porta.fazer(); } if (J.porta.t >= 0.62) { J.porta = null; el.fade.classList.remove('on'); } return; }
+  if (J.modo !== 'jogando' || viloes.ativo) return;
+  if (!J.interior) {
+    if (P.y > 6) return;
+    for (const I of interioresAtivos) if (noGatilhoFora(I.id, P.x - I.cx, P.z - I.cz)) { atravessarPorta(I, true); return; }
+    return;
+  }
+  const I = [...interioresAtivos].find((k) => k.id === J.interior); if (!I) { J.interior = null; return; }
+  const D = INTERIORES[I.id], [u0, u1, v0, v1] = D.sala;
+  if (P.y < Y_INT - 3) { atravessarPorta(I, false); return; }                       // (nunca cai do alto)
+  // dentro, a sala segura o herói: vibrando ele não atravessa para fora
+  P.x = I.cx + clamp(P.x - I.cx, u0 + 0.3, u1 - 0.3); P.z = I.cz + clamp(P.z - I.cz, v0 - 0.2, v1 - 0.3);
+  if (noGatilhoDentro(I.id, P.x - I.cx, P.z - I.cz) && P.vz <= 0.5) atravessarPorta(I, false);
+}
+function atravessarPorta(I, entrando) {
+  el.fade.classList.add('on');
+  J.porta = { t: 0, feito: false, fazer: () => {
+    const D = INTERIORES[I.id];
+    if (entrando) { const [u, v, h] = D.entrada; Object.assign(P, { x: I.cx + u, z: I.cz + v, y: Y_INT, h }); J.interior = I.id; avisar(D.nome, 'Entrou', 'info'); }
+    else { const [u, v, h] = D.fora.volta, x = I.cx + u, z = I.cz + v; Object.assign(P, { x, z, y: chaoEm(retangulosPerto(x, z, 1), x, z, 2), h }); J.interior = null; }
+    Object.assign(P, { vx: 0, vz: 0, vy: 0, noChao: true, parede: null, vibrando: false, embalo: 0 }); C.yaw = P.h; C.dist = 1.5;
+    rectsPerto = retangulosPerto(P.x, P.z, 1);
+  } };
+}
 function alvoMissao() {
   if (viloes.ativo) return viloes.alvo();                  // capítulo dos vilões: o guia leva até eles (na luta, nada)
   const c = crimes.ativo;
   if (c) return { x: c.x, z: c.z, cor: '#ff4d5e', rotulo: c.nome };
   const m = missoes.atual;
+  // dentro de um lugar, o objetivo de fora (ou de outro lugar) fica atrás da porta de saída
+  const pm = m?.ponto ? pontoMundo(m.ponto) : null;
+  if (J.interior && pm?.interior !== J.interior) { const I = [...interioresAtivos].find((k) => k.id === J.interior); if (I) return { x: I.cx, z: I.cz + INTERIORES[I.id].sala[2], cor: '#ffd23f', rotulo: 'Saída' }; }
+  if (pm?.interior && !J.interior) { const f = pontoMundo(pm.interior); return { x: f.x, z: f.z, cor: '#ffd23f', rotulo: INTERIORES[pm.interior].nome }; }
   if (m?.tipo === 'portais') { const p = portais.alvo(); if (p) return { x: p.x, z: p.z, cor: '#ffd23f', rotulo: 'Portal' }; }
   if (m?.alvo === 'cortex') {
     const dentroLab = LAB_B.plano.dentro(P.x, P.z, P.y);
@@ -892,7 +931,7 @@ function passoMissoes(dt) {
   if (rp?.falhou) avisar('Volte ao 1º portal', 'Tempo esgotado', 'alerta');
   // crimes: durante a história só os que o passo pede (e quaisquer no "Guardião da cidade"); com a história terminada, a cidade é livre
   const querCrime = m?.crime || m?.id === 'patrulha' || missoes.livre || crimes.ativo;   // um crime já em andamento sempre termina
-  const ev = viloes.ativo || tempo.epoca === 'passado' || !querCrime ? null : crimes.atualizar(dt, P, { forcar: m?.crime });
+  const ev = viloes.ativo || tempo.epoca === 'passado' || J.interior || !querCrime ? null : crimes.atualizar(dt, P, { forcar: m?.crime });
   if (ev?.inicio) avisar(ev.nome, 'Crime na cidade', 'crime');
   else if (ev) {
     if (ev.ok) { missoes.contar('crimes'); missoes.contar(ev.tipo); missoes.contar('pontos', 250); avisar(`${ev.nome} impedido`, '+250 pontos', 'ok'); }
@@ -933,7 +972,7 @@ function passoMissoes(dt) {
   }
   J.apagao = emEnergia ? 1 - nSub / subest.length : 0;
   // passo num lugar da cidade: chegou perto do ponto (raio do passo)
-  const pw = m?.ponto ? pontoMundo(m.ponto) : null, perto = !!pw && Math.hypot(P.x - pw.x, P.z - pw.z) < (m.raio ?? 9);
+  const pw = m?.ponto ? pontoMundo(m.ponto) : null, perto = !!pw && Math.hypot(P.x - pw.x, P.z - pw.z) < (m.raio ?? 9) && Math.abs(P.y - (pw.y ?? P.y)) < 6;
   const feita = missoes.avaliar({ sala, v: Math.hypot(P.vx, P.vz), y: P.y, noChao: P.noChao, portaisFeitos: rp?.feito, perto,
     vencido: (id) => viloes.vencido(id), tunel: (J.tunelT || 0) / 5, voltouDoPassado: !!J.voltouDoPassado });
   if (feita) {
@@ -949,7 +988,7 @@ function passoMissoes(dt) {
     const c = J.cenaPendente; J.cenaPendente = null;
     if (c.passo) {                                   // o herói para de frente para quem vai falar
       aliados.posicionar(c.passo.aliados); const d = aliados.diante();
-      if (d) { const R = retangulosPerto(d.x, d.z, 1), q = empurrar(R, d.x, d.z, 0.4, 0, 1.8); Object.assign(P, { x: q.x, z: q.z, y: chaoEm(R, q.x, q.z, 1), vx: 0, vz: 0, vy: 0, h: d.h, noChao: true, parede: null, vibrando: false }); C.yaw = d.h; }
+      if (d) { const R = retangulosPerto(d.x, d.z, 1), q = empurrar(R, d.x, d.z, 0.4, d.y ?? 0, 1.8); Object.assign(P, { x: q.x, z: q.z, y: chaoEm(R, q.x, q.z, (d.y ?? 0) + 1), vx: 0, vz: 0, vy: 0, h: d.h, noChao: true, parede: null, vibrando: false }); C.yaw = d.h; }
     }
     rodarCena(c.id, focosCena(), () => { J.cenaAliados = null; c.depois(); });
   }
@@ -1121,12 +1160,12 @@ function quadro() {
       if (ev.tipo === 'nocaute') { missoes.contar('nocautes'); missoes.contar('pontos', 50); if (ev.especial) missoes.contar('especiais'); }
       else if (ev.tipo === 'dano') { el.dano.style.opacity = '1'; }
     }
-    for (const ev of viloes.atualizar(dt, P, { capitulo: missoes.atual?.capitulo, podeComecar: !crimes.ativo && !J.cenaPendente && historia.radioLivre && tempo.epoca === 'presente' })) eventoVilao(ev);
+    for (const ev of viloes.atualizar(dt, P, { capitulo: missoes.atual?.capitulo, podeComecar: !crimes.ativo && !J.cenaPendente && !J.interior && historia.radioLivre && tempo.epoca === 'presente' })) eventoVilao(ev);
     J.danoVilao = Math.max(0, (J.danoVilao || 0) - dt * 2);
     el.missao.hidden = viloes.ativo; el.corpo.classList.toggle('capitulo', viloes.ativo);
     el.dano.style.opacity = String(Math.min(1, Math.max(combate.dano, J.danoVilao)));
     atualizarBotoesEspeciais();
-    passoMissoes(dt);
+    passoMissoes(dt); passoInteriores(dt);
     pedestres.atualizar(dt, P, mundo.noite); trafego.atualizar(dt, P, mundo.noite, pedestres.pessoas);
     if (labAtivo) labAtivo.atualizar(dt, P.t, mundo.noite, camera, P);
     for (const e of marcosAtivos) e.atualizar(dt, P.t, mundo);

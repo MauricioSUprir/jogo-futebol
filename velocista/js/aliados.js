@@ -28,8 +28,8 @@ export function criarAliados(cena, { mobile = false, aniso = 2, chao = () => 0.3
       if (!nome) { if (pessoas[id]) pessoas[id].raiz.visible = false; continue; }
       carregar(id);
       const p = pessoas[id]; if (!p || p.ponto === nome) continue;
-      const w = pontoMundo(nome); p.ponto = nome; p.x = w.x; p.z = w.z; p.h = w.h; p.h0 = w.h;
-      p.raiz.position.set(p.x, chao(p.x, p.z), p.z); p.raiz.rotation.y = p.h;
+      const w = pontoMundo(nome); p.ponto = nome; p.x = w.x; p.z = w.z; p.h = w.h; p.h0 = w.h; p.y = w.y ?? chao(p.x, p.z);
+      p.raiz.position.set(p.x, p.y, p.z); p.raiz.rotation.y = p.h;
     }
   }
   const ang = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -38,7 +38,7 @@ export function criarAliados(cena, { mobile = false, aniso = 2, chao = () => 0.3
       const p = pessoas[id]; if (!p) continue;
       const ativo = !!quadro[id];
       if (ativo && p.ponto !== quadro[id]) posicionar(quadro);    // o corpo acabou de carregar
-      const perto = ativo && Math.hypot(P.x - p.x, P.z - p.z) < 160;
+      const perto = ativo && Math.hypot(P.x - p.x, P.z - p.z) < 160 && Math.abs(P.y - (p.y ?? P.y)) < 40;   // (dentro de um lugar: só com o herói lá)
       p.raiz.visible = perto;
       if (!perto) continue;
       const alvo = Math.hypot(P.x - p.x, P.z - p.z) < 14 ? Math.atan2(P.x - p.x, P.z - p.z) : p.h0;
@@ -55,7 +55,7 @@ export function criarAliados(cena, { mobile = false, aniso = 2, chao = () => 0.3
       const ids = IDS.filter((id) => quadro[id]); if (!ids.length) return null;
       const ws = ids.map((id) => pontoMundo(quadro[id])), mx = ws.reduce((a, w) => a + w.x, 0) / ws.length, mz = ws.reduce((a, w) => a + w.z, 0) / ws.length, h = ws[0].h;
       const x = mx + Math.sin(h) * d, z = mz + Math.cos(h) * d;
-      return { x, z, h: Math.atan2(mx - x, mz - z) };
+      return { x, z, h: Math.atan2(mx - x, mz - z), y: ws[0].y };
     },
     get pessoas() { return pessoas; },
   };

@@ -24,6 +24,7 @@ function mulberry(a) {
 
 import { LAB_CELULA, CAMPUS, planoLab } from './lab.js';
 import { marcoDaCelula, solidosForaPerto } from './marcos.js';
+import { INTERIORES, retangulosInterior } from './interiores.js';
 export { LAB_CELULA };
 export const celulaDe = (v) => Math.floor((v + MEIO) / CELL);
 export const centroDe = (i) => (i + 0.5) * CELL - MEIO;
@@ -93,6 +94,7 @@ export function bloco(i, j) {
     }
     for (const [u0, u1, v0, v1, y0, y1] of marco.solidos) b.rects.push({ x0: cx + u0, x1: cx + u1, z0: cz + v0, z1: cz + v1, y0: Math.max(y0, CALCADA), y1 });
     for (const [u, v, s] of marco.arvores || []) b.arvores.push({ x: cx + u, z: cz + v, s });
+    if (INTERIORES[marco.id]) b.rects.push(...retangulosInterior(marco.id, cx, cz));   // a sala de dentro, no alto
     detalhes(b, i, j);
     cache.set(chave, b);
     return b;
