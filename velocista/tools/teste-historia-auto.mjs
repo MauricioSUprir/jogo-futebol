@@ -29,7 +29,7 @@ ok(await pagina.evaluate(() => window.__rel.missoes.atual?.capitulo === 'zoom'),
 ok(await espera(() => window.__rel.viloes.fase === 'aparece' && window.__rel.viloes.viloes[0]?.id === 'zoom', null, 200000), 'o capítulo do Zoom começa sozinho, sem a pausa');
 // com o Zoom vencido, o passo conclui sozinho e a história segue
 await abrirJogo('?missao=cap-zoom', { 'theflash.viloes.v1': { vencidos: ['zoom'] } });
-ok(await espera(() => window.__rel.missoes.atual?.id === 'especiais'), 'com o Zoom vencido, o passo conclui e vem o próximo');
+ok(await espera(() => window.__rel.missoes.atual?.id === 'energia'), 'com o Zoom vencido, o passo conclui e vem o próximo (o Apagão)');
 
 // ---- sem crime aleatório durante a história ----
 await abrirJogo('?missao=velocidade');

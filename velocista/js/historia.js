@@ -10,11 +10,15 @@
 // ajudou; a cidade dá o nome de Flash. Capítulo 5: as gravações mostram que o Núcleo foi sabotado — era o Flash Reverso,
 // que criou você para roubar a sua velocidade e deu poder a todos eles. Ele solta o Zoom e os dois atacam o laboratório.
 // Epílogo: o Núcleo liga sozinho.
+// A cidade (entre os capítulos): o detetive Joe, que criou você, na Delegacia Central, em Iron Heights e em casa; a Iris,
+// repórter do Picture News, no jornal e no Café Jitters; o apagão que o Zoom deixa; a cidade agradecendo na Prefeitura.
 
 export const PERSONAGENS = {
   caitlin: { nome: 'Caitlin', sigla: 'CA', cor: '#8fd8ff', papel: 'S.T.A.R. Labs · medicina' },
   cisco: { nome: 'Cisco', sigla: 'CI', cor: '#ffb347', papel: 'S.T.A.R. Labs · engenharia' },
   heroi: { nome: 'Você', sigla: 'EU', cor: '#ffd23f' },
+  joe: { nome: 'Joe', sigla: 'JW', cor: '#d9c08a', papel: 'Delegacia Central · detetive' },
+  iris: { nome: 'Iris', sigla: 'IW', cor: '#ff9ec0', papel: 'Picture News · repórter' },
   zoom: { nome: 'Zoom', sigla: 'Z', cor: '#3fa0ff', vilao: true },
   reverso: { nome: 'Flash Reverso', sigla: 'FR', cor: '#ff3b30', vilao: true },
   frio: { nome: 'Capitão Frio', sigla: 'CF', cor: '#9fe6ff', vilao: true },
@@ -43,6 +47,15 @@ export const MISSOES_FALAS = {
   queda: { abre: [F('caitlin', 'Alguém está caindo de um prédio! Vai, vai, vai!')], fecha: [F('caitlin', 'Você chegou a tempo. Ela está bem.'), F('caitlin', 'Ela perguntou o seu nome. Eu não soube o que responder.')] },
   patrulha: { abre: [F('caitlin', 'A cidade precisa de você. Impeça cinco crimes.')], fecha: [F('cisco', 'Os jornais só falam do borrão vermelho que salva gente.')] },
   relatorio: { abre: [F('caitlin', 'Volte ao Cortex. Precisamos conversar sobre o que vem por aí.')] },
+  // a cidade: o Joe, a Iris e os lugares da história
+  delegacia: { abre: [F('caitlin', 'O detetive Joe ligou para o laboratório. Ele quer ver você na Delegacia Central.'), F('cisco', 'O guia está marcando. E não, ele não parecia bravo. Só um pouquinho.')] },
+  jornal: { abre: [F('cisco', 'A Iris pediu uma foto para o Picture News. Passe na frente do prédio acima de 300 km/h: a câmera dela vai estar lá.')] },
+  energia: { abre: [F('cisco', 'O Zoom drenou três subestações. Metade da cidade está no escuro.'), F('caitlin', 'Encoste em cada uma: a sua energia dá a partida nos geradores. O guia mostra a próxima.')],
+    fecha: [F('cisco', 'Luz de volta! A cidade inteira acendeu de uma vez. Eu vi do telhado.'), F('caitlin', 'Os hospitais voltaram também. Obrigada.')] },
+  presidio: { abre: [F('caitlin', 'A polícia levou o Capitão Frio para Iron Heights, na ilha. O Joe espera você lá.'), F('cisco', 'É só atravessar a Ponte da Baía. Ponte longa, reta... você vai adorar.')] },
+  cafe: { abre: [F('caitlin', 'A Iris mandou mensagem: café no Jitters, agora. Ela disse que não aceita "estou ocupado".')] },
+  casa: { abre: [F('cisco', 'O Joe chamou você para jantar em casa. A gente segura a cidade por uma hora.')] },
+  prefeitura: { abre: [F('caitlin', 'A cidade inteira está na praça da Prefeitura. Querem agradecer ao Flash.'), F('cisco', 'Vai lá. E, por favor, não pare para dar autógrafo.')] },
   capitulos: { abre: [F('caitlin', 'O homem de amarelo ainda está lá fora. O guia mostra quando ele aparecer.')] },
   fendas: { abre: [F('cisco', 'O Núcleo está rasgando o ar pela cidade! Quatro fendas. E tem coisa saindo de lá.'), F('caitlin', 'Vibre dentro de cada uma, na mesma frequência. Ela deve fechar.')], fecha: [F('cisco', 'Quatro abertas, quatro fechadas. Agora vem pro Cortex: descobri uma coisa.')] },
   tunel: { abre: [F('cisco', 'A avenida principal é reta o bastante. Passe dos 180 e segure. O Núcleo vai te alimentar.')] },
@@ -51,6 +64,54 @@ export const MISSOES_FALAS = {
 
 /** cenas (jogo parado). Um item pode ser um CARTÃO de capítulo em tela cheia. */
 export const CENAS = {
+  // a cidade: cenas nos lugares da história, com o Joe e a Iris (o herói fica de frente para eles)
+  'depois-delegacia': [
+    F('joe', 'Aí está você. Seis semanas sem dar notícia, e agora a cidade inteira fala de um borrão vermelho.'),
+    F('heroi', 'Joe... eu posso explicar.'),
+    F('joe', 'Não precisa. Eu criei você. Conheço esse seu jeito de andar, mesmo a quinhentos por hora.'),
+    F('joe', 'Só me promete uma coisa: nada de heroísmo sem avisar. A Delegacia Central fica do seu lado.'),
+    F('heroi', 'Prometo. E quando o rádio da polícia chamar, eu chego antes da viatura.'),
+    F('joe', 'Disso eu não tenho dúvida. Agora vai. E liga para a Iris, ela anda preocupada.'),
+  ],
+  'depois-jornal': [
+    F('iris', 'Você passou na frente do Picture News a trezentos por hora e ainda voltou para dar oi?'),
+    F('heroi', 'Iris! Era para você fotografar o borrão, não eu.'),
+    F('iris', 'Eu fotografei. Saiu isto: uma mancha vermelha e um raio. O editor amou.'),
+    F('iris', 'Vou chamar a coluna de "O homem mais rápido da cidade". Alguém precisa contar essa história direito.'),
+    F('heroi', 'Só não conta o meu nome.'),
+    F('iris', 'Que nome? Eu nem consegui ver o seu rosto.'),
+  ],
+  'depois-presidio': [
+    F('joe', 'O Frio está na ala nova. O Cisco desenhou as celas: nem o gelo dele atravessa.'),
+    F('heroi', 'Iron Heights... nunca pensei que viria aqui do lado de cá das grades.'),
+    F('joe', 'Cada vilão que você pegar vem parar aqui. Vai encher rapidinho.'),
+    F('joe', 'E tem mais: todos eles falam de um homem de amarelo. Quem quer que seja, está montando um exército.'),
+    F('heroi', 'Então eu vou ser mais rápido que ele.'),
+  ],
+  'depois-cafe': [
+    F('iris', 'Duas xícaras: uma normal e uma com seis doses. Achei que você ia precisar.'),
+    F('heroi', 'Você me conhece bem.'),
+    F('iris', 'Conheço. Por isso eu sei que tem alguma coisa que você não está me contando.'),
+    F('heroi', 'Iris...'),
+    F('iris', 'Tudo bem. Quando você estiver pronto, eu estou aqui. Sempre estive.'),
+    F('iris', 'Agora vai. Tem alguém lá fora precisando mais de você do que eu.'),
+  ],
+  'depois-casa': [
+    F('joe', 'Senta. Fiz o macarrão que você gostava quando tinha dez anos.'),
+    F('heroi', 'O Flash Reverso disse que me criou. Que tudo isso foi plano dele.'),
+    F('joe', 'Ele pode ter causado o raio. Mas quem criou você fui eu. E quem escolhe correr para ajudar é você.'),
+    F('joe', 'Velocidade não faz um herói. Fazer a coisa certa quando ninguém está olhando, isso sim.'),
+    F('heroi', 'Obrigado, Joe.'),
+    F('joe', 'Come. Depois vai lá e termina isso.'),
+  ],
+  'depois-prefeitura': [
+    F('iris', 'A praça inteira veio. Olha só: tem até cartaz com um raio desenhado.'),
+    F('joe', 'O prefeito quer entregar a chave da cidade para o Flash. Pena que ninguém sabe onde ele mora.'),
+    F('heroi', 'Talvez ele esteja mais perto do que vocês imaginam.'),
+    F('iris', 'Já escrevi a manchete de amanhã: "O Flash salvou a cidade". Eu sabia que você ia gostar do nome.'),
+    F('joe', 'E o relógio da Prefeitura voltou a marcar a hora certa. Desde o acidente ele andava sozinho.'),
+    F('heroi', 'Bom sinal. Mas o Cisco disse que o Núcleo continua instável.'),
+  ],
   prologo: [
     CARTAO('Prólogo', 'O raio'),
     F('caitlin', 'Seis semanas atrás, o Núcleo Aurora do S.T.A.R. Labs sobrecarregou. A onda de energia cobriu a cidade inteira.'),
@@ -354,7 +415,7 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
   const fila = []; let falando = null, tFala = 0;
   function falar(falas) { for (const f of falas) fila.push(f); }
   // o rosto de cada personagem (tools/gerar-retratos.mjs renderiza a partir do modelo 3D); quem não tem fica com a sigla
-  const RETRATOS = ['heroi', 'zoom', 'reverso', 'caitlin', 'cisco', 'frio', 'onda', 'mago', 'savitar', 'devoe'];
+  const RETRATOS = ['heroi', 'zoom', 'reverso', 'caitlin', 'cisco', 'joe', 'iris', 'frio', 'onda', 'mago', 'savitar', 'devoe'];
   const retratos = Object.fromEntries(RETRATOS.map((id) => [id, new URL(`../assets/personagens/retratos/${id}.webp`, import.meta.url).href]));
   for (const url of Object.values(retratos)) new Image().src = url;                    // já baixados quando a 1ª fala aparecer
   function mostrar(el, ret, nome, f) {

@@ -8,6 +8,8 @@ Corpos, roupas e rostos: Microsoft Rocketbox Avatar Library (licença MIT, `LICE
 - `frio/` — avatar `Adults/Male_Adult_07` (roupa tingida de azul-gelo);
 - `onda/` — avatar `Professions/Fire_Male_06` (roupa tingida de laranja queimado, sem o capacete);
 - `mago/` — avatar `Adults/Male_Adult_20` (roupa tingida de verde).
+- `joe/` — avatar `Professions/Business_Male_04` (colete e camisa; o detetive Joe);
+- `iris/` — avatar `Professions/Business_Female_01` (terninho escuro; a repórter Iris).
 
 Os adereços dos vilões (óculos, pistola de gelo, lança-chamas e tanque, bastão) são geometria própria (`js/aderecos.js`).
 
