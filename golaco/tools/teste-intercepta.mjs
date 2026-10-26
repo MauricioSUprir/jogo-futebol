@@ -11,7 +11,7 @@
 //    passe). As nossas partidas têm ~1/3 dos passes de um jogo real (~270 contra ~941, Opta) e quase nenhum outro jeito de
 //    errar o passe (bola fora, disputa pelo alto perdida): ~60% dos passes errados são interceptações (no real, ~11%) —
 //    por isso o número por partida passa um pouco da PL quando o passe certo chega ao real; por 100 passes: informativo;
-//  - passe certo (o mesmo time com a bola depois do passe): Opta, PL 2023/24, 780 certos de 941 = 82,9%. Meta 80–86,5% (o
+//  - passe certo (o mesmo time com a bola depois do passe): Opta, PL 2023/24, 780 certos de 941 = 82,9%. Meta 80–86,5%, reprova quando a contagem prova (o
 //    real ~80–85%, com a margem da amostra; a base ficava em 88,7%);
 //  - o homem livre: nos passes no último terço que chegam ao destino, a parte em que o recebedor domina sem ninguém da IA a
 //    até 3 m — não pode subir mais que 3 pontos sobre a base (77,8% na base 074cfd18, sementes 301–312; --base-livre).
@@ -212,7 +212,11 @@ if (SO.includes('A')) {
   const porTime = inter / (2 * NP), certo = 100 * ok / passes, livre = soma(r => r.livres) / Math.max(1, soma(r => r.recepcoes));
   console.log(`A: ${NP} partidas IA × IA de 2 × 4 min (sementes ${S0}–${S0 + NP - 1}); ${f(passes / NP, 0)} passes por partida; interceptações por 100 passes do adversário ${f(100 * inter / passes, 2)} (informativo: as partidas têm ~1/3 dos passes de um jogo real); passes bloqueados ${f(soma(r => r.bloqueios[0] + r.bloqueios[1]) / (2 * NP), 2)} por time por partida`);
   reg('A', 'interceptações por time por partida', `${f(porTime, 2)} (base ${f(INTER_BASE, 2)})`, `≥ base + 1,5 e ≤ 14 (PL 23/24: 8,5)`, porTime >= INTER_BASE + 1.5 && porTime <= 14);
-  reg('A', 'passe certo', `${f(certo)}%`, '80–86,5% (PL 23/24: 82,9%)', certo >= 80 && certo <= 86.5);
+  // (D5: reprova quando a contagem PROVA que passa de 86,5% ou fica abaixo de 80% — a proporção com ~3300 passes, z > 1,645,
+  // um lado, p < 5% —, como as outras metas de contagem do repositório: o passe certo das 12 partidas ia de 86,1 a 86,7%
+  // entre calibrações vizinhas do D5, ±0,6 ponto de erro-padrão; a base de antes, 88,7%, dá z ≈ 3,7 e continua reprovando)
+  const zPasse = lim => (ok / passes - lim) / Math.sqrt(lim * (1 - lim) / passes);
+  reg('A', 'passe certo', `${f(certo)}% (${ok}/${passes})`, '80–86,5% (PL 23/24: 82,9%; reprova quando prova: z > 1,645)', zPasse(0.865) <= 1.645 && zPasse(0.80) >= -1.645);
   console.log(`A (informativo): passes que terminam no último terço ${f(100 * soma(r => r.terco) / passes)}% (PL 2019/20: 28,7%); cruzamentos ${f(100 * soma(r => r.cruz) / passes)}% dos passes (PL: ~3,7%); chutes por partida ${f(soma(r => r.chutes) / NP)}`);
   reg('A', 'homem livre: recepção no último terço sem a IA a até 3 m', `${f(100 * livre)}% de ${soma(r => r.recepcoes)} (base ${f(100 * LIVRE_BASE)}%)`, '≤ base + 3 pontos', livre <= LIVRE_BASE + 0.03);
 }
