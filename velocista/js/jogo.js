@@ -830,8 +830,9 @@ function passoMissoes(dt) {
     const e = LAB_B.plano.entrada;
     if (Math.hypot(P.x - e.x, P.z - (e.z - 6)) < 28 && tempo.focoReverso()) {
       J.cenaAcidente = true;
-      const r = tempo.lugarDoReverso, dx = P.x - r.x, dz = P.z - r.z, n = Math.hypot(dx, dz) || 1;
-      if (n > 5) { const q = empurrar(rectsPerto, r.x + (dx / n) * 5, r.z + (dz / n) * 5, 0.4, 0, 1.8); P.x = q.x; P.z = q.z; P.y = chaoEm(rectsPerto, P.x, P.z, 1); }
+      // o herói fica 5 m à frente dele, do lado da rua (o laboratório e a cerca estão atrás do Reverso)
+      const r = tempo.lugarDoReverso, q = empurrar(rectsPerto, r.x, r.z - 5, 0.4, 0, 1.8);
+      P.x = q.x; P.z = q.z; P.y = chaoEm(rectsPerto, P.x, P.z, 1); P.vx = P.vz = 0;
       P.h = Math.atan2(r.x - P.x, r.z - P.z);
       rodarCena('acidente', { heroi: focoHeroi, reverso: () => tempo.focoReverso() }, () => rodarCena('volta-tunel', focosCena(), voltarDoPassado), { aoAcao: (a) => { if (a === 'explosao') tempo.explodir(); } });
     }
