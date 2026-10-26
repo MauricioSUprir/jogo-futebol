@@ -728,18 +728,18 @@ function desenharMapa() {
     gm.fillStyle = b.tipo === 'parque' ? '#3d7a3d' : '#59647a'; gm.fillRect(q.x0, q.z0, q.x1 - q.x0, q.z1 - q.z0);
     for (const l of b.lotes) { const c = Math.min(230, 120 + l.y1 * 0.9) | 0; gm.fillStyle = `rgb(${c},${c},${Math.min(255, c + 12)})`; gm.fillRect(l.x0, l.z0, l.x1 - l.x0, l.z1 - l.z0); }
   }
-  gm.fillStyle = '#3fd0ff'; const rr = grande ? 14 : 6;
-  for (const o of esferas) if (!esferasColetadas.has(o.id) && Math.abs(o.x - P.x) < raioM * 1.1 && Math.abs(o.z - P.z) < raioM * 1.1) { gm.beginPath(); gm.arc(o.x, o.z, rr, 0, 6.3); gm.fill(); }
-  guia.desenharNoMapa(gm, grande ? 9 : 5);
-  for (const e of combate.bandidos) if (e.estado !== 'caido' && e.estado !== 'fugiu') { gm.fillStyle = '#ff4d5e'; gm.beginPath(); gm.arc(e.x, e.z, grande ? 8 : 4, 0, 6.3); gm.fill(); }
-  { const a = alvoAtual(); if (a && a.cor !== '#3fd0ff') { gm.fillStyle = a.cor; gm.beginPath(); gm.arc(a.x, a.z, grande ? 30 : 11, 0, 6.3); gm.fill(); gm.strokeStyle = '#fff'; gm.lineWidth = grande ? 6 : 2.5; gm.stroke(); } }
-  { // o campus do S.T.A.R. Labs: a praça, os prédios (principal, torre e alas) e a borda
+  { // o campus do S.T.A.R. Labs (antes do guia e dos marcadores, que vão por cima): a praça, os prédios e a borda
     const cx = LAB_B.cx, cz = LAB_B.cz, M = CAMPUS.meio, L = LAB.meio;
     gm.fillStyle = '#34405a'; gm.fillRect(cx - M, cz - M, 2 * M, 2 * M);
     gm.fillStyle = '#5d79a8'; gm.fillRect(cx - L, cz - L, 2 * L, 2 * L); gm.fillRect(cx + TORRE.u0, cz + TORRE.v0, TORRE.u1 - TORRE.u0, TORRE.v1 - TORRE.v0);
     for (const a of ALAS) gm.fillRect(cx + a.u0, cz + a.v0, a.u1 - a.u0, a.v1 - a.v0);
     gm.strokeStyle = '#3fe0ff'; gm.lineWidth = grande ? 10 : 4; gm.strokeRect(cx - M, cz - M, 2 * M, 2 * M);
   }
+  gm.fillStyle = '#3fd0ff'; const rr = grande ? 14 : 6;
+  for (const o of esferas) if (!esferasColetadas.has(o.id) && Math.abs(o.x - P.x) < raioM * 1.1 && Math.abs(o.z - P.z) < raioM * 1.1) { gm.beginPath(); gm.arc(o.x, o.z, rr, 0, 6.3); gm.fill(); }
+  guia.desenharNoMapa(gm, grande ? 9 : 5);
+  for (const e of combate.bandidos) if (e.estado !== 'caido' && e.estado !== 'fugiu') { gm.fillStyle = '#ff4d5e'; gm.beginPath(); gm.arc(e.x, e.z, grande ? 8 : 4, 0, 6.3); gm.fill(); }
+  { const a = alvoAtual(); if (a && a.cor !== '#3fd0ff') { gm.fillStyle = a.cor; gm.beginPath(); gm.arc(a.x, a.z, grande ? 30 : 11, 0, 6.3); gm.fill(); gm.strokeStyle = '#fff'; gm.lineWidth = grande ? 6 : 2.5; gm.stroke(); } }
   gm.setTransform(1, 0, 0, 1, 0, 0);
   { // nome do laboratório no mapa (texto sempre de pé)
     const lx = (LAB_B.cx - P.x) * rx + (LAB_B.cz - P.z) * rz, ly = -((LAB_B.cx - P.x) * fx + (LAB_B.cz - P.z) * fz);
