@@ -60,13 +60,13 @@ Object.assign(PERFIS, {
 });
 export const CAPITULOS = [
   { id: 'zoom', titulo: 'Capítulo 1 — Zoom', viloes: ['zoom'], perseguicao: true, texto: 'Um velocista de preto está aterrorizando a cidade. Encontre o Zoom e persiga-o.' },
-  { id: 'frio', titulo: 'Capítulo 2 — Capitão Frio', viloes: ['frio'], perseguicao: false, lugar: 'cidade', missoes: 9, texto: 'Um quarteirão do centro congelou. Encontre o Capitão Frio.' },
-  { id: 'onda', titulo: 'Capítulo 3 — Onda Térmica', viloes: ['onda'], perseguicao: false, lugar: 'cidade', missoes: 11, texto: 'Incêndios pelo centro. O Onda Térmica está no meio do fogo.' },
-  { id: 'mago', titulo: 'Capítulo 4 — Mago do Tempo', viloes: ['mago'], perseguicao: false, lugar: 'cidade', missoes: 13, texto: 'Uma tempestade verde se formou sobre a cidade. Encontre o Mago do Tempo.' },
-  { id: 'reverso', titulo: 'Capítulo 5 — Flash Reverso', viloes: ['reverso'], perseguicao: true, missoes: 14, texto: 'O Zoom era só o começo. Quem arquitetou tudo foi o Flash Reverso. Alcance-o.' },
+  { id: 'frio', titulo: 'Capítulo 2 — Capitão Frio', viloes: ['frio'], perseguicao: false, lugar: 'cidade', texto: 'Um quarteirão do centro congelou. Encontre o Capitão Frio.' },
+  { id: 'onda', titulo: 'Capítulo 3 — Onda Térmica', viloes: ['onda'], perseguicao: false, lugar: 'cidade', texto: 'Incêndios pelo centro. O Onda Térmica está no meio do fogo.' },
+  { id: 'mago', titulo: 'Capítulo 4 — Mago do Tempo', viloes: ['mago'], perseguicao: false, lugar: 'cidade', texto: 'Uma tempestade verde se formou sobre a cidade. Encontre o Mago do Tempo.' },
+  { id: 'reverso', titulo: 'Capítulo 5 — Flash Reverso', viloes: ['reverso'], perseguicao: true, texto: 'O Zoom era só o começo. Quem arquitetou tudo foi o Flash Reverso. Alcance-o.' },
   { id: 'final', titulo: 'Batalha final', viloes: ['zoom', 'reverso'], perseguicao: false, texto: 'Os dois voltaram juntos e esperam por você em frente ao S.T.A.R. Labs.' },
-  { id: 'savitar', titulo: 'Capítulo 6 — Savitar', viloes: ['savitar'], perseguicao: true, missoes: 18, texto: 'Algo saiu do túnel do tempo junto com você. Encontre o Savitar.' },
-  { id: 'devoe', titulo: 'Capítulo 7 — DeVoe', viloes: ['devoe'], perseguicao: false, missoes: 19, texto: 'O Pensador espera em frente ao S.T.A.R. Labs. Ele quer o Núcleo.' },
+  { id: 'savitar', titulo: 'Capítulo 6 — Savitar', viloes: ['savitar'], perseguicao: true, texto: 'Algo saiu do túnel do tempo junto com você. Encontre o Savitar.' },
+  { id: 'devoe', titulo: 'Capítulo 7 — DeVoe', viloes: ['devoe'], perseguicao: false, texto: 'O Pensador espera em frente ao S.T.A.R. Labs. Ele quer o Núcleo.' },
 ];
 const DANO = { soco: 5, gancho: 9, raio: 14, ciclone: 18, sonico: 28 };
 const CHAVE = 'theflash.viloes.v1';
@@ -149,11 +149,8 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
 
   // ---------- capítulos ----------
   const liberado = (i, missaoIdx) => (i === 0 ? missaoIdx > 6 || S.vencidos.has('zoom') : S.vencidos.has(CAPITULOS[i - 1].id));
-  // sozinho, o capítulo só começa depois das missões que a história pede (na pausa dá para jogar o liberado antes)
-  function proximo(missaoIdx) {
-    for (let i = 0; i < CAPITULOS.length; i++) if (!S.vencidos.has(CAPITULOS[i].id) && liberado(i, missaoIdx) && missaoIdx >= (CAPITULOS[i].missoes || 0)) return i;
-    return -1;
-  }
+  // sozinho, o capítulo começa quando a história chega ao passo dele (missoes.js: `capitulo`); depois do fim, só pela pausa
+  const proximo = (capitulo) => (capitulo && !S.vencidos.has(capitulo) ? CAPITULOS.findIndex((c) => c.id === capitulo) : -1);
   function comecar(i, P) {
     if (C) encerrar();
     const cap = CAPITULOS[i];
@@ -701,12 +698,12 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
   }
 
   // ---------- passo ----------
-  /** ctx: {missaoIdx, podeComecar} → eventos [{tipo: 'dano'|'vitoria'|'capitulo'|'derrota'}] */
+  /** ctx: {capitulo (o do passo atual da história), podeComecar} → eventos [{tipo: 'dano'|'vitoria'|'capitulo'|'derrota'}] */
   function atualizar(dt, P, ctx) {
     if (!C) {
-      const i = forcado ?? proximo(ctx.missaoIdx);
+      const i = forcado ?? proximo(ctx.capitulo);
       if (i >= 0 && (forcado !== null || ctx.podeComecar)) { espera -= dt; if (espera <= 0 || forcado !== null) { forcado = null; comecar(i, P); eventos.push({ tipo: 'capitulo', id: CAPITULOS[i].id }); } }
-      else espera = Math.max(espera, 20);
+      else espera = Math.max(espera, 2.5);                    // o passo do capítulo chegou: começa logo (2,5 s para o rádio respirar)
       return eventos.splice(0);
     }
     C.t += dt; C.P = P;
@@ -731,7 +728,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       v.y = 0;
       // trombada: encostou correndo também alcança
       if (d < 2.4 && Math.hypot(P.vx, P.vz) > 25 && Math.abs(P.y - v.y) < 2) capturar(v, P);
-      if (d > 300) { C.fora += dt; if (C.fora > 7) { avisar(`${v.perf.titulo} escapou`, 'Perseguição', 'alerta'); const i = C.i; encerrar(); espera = 15; forcado = null; eventos.push({ tipo: 'escapou', i, id: CAPITULOS[i].id }); return eventos.splice(0); } }
+      if (d > 300) { C.fora += dt; if (C.fora > 7) { avisar(`${v.perf.titulo} escapou`, 'Perseguição', 'alerta'); const i = C.i; encerrar(); espera = 6; forcado = null; eventos.push({ tipo: 'escapou', i, id: CAPITULOS[i].id }); return eventos.splice(0); } }
       else C.fora = 0;
     } else if (C.fase === 'choque') {
       const v = C.choque; v.vx = v.vz = 0; P.vx *= 0.5; P.vz *= 0.5;
@@ -777,7 +774,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       // o vilão some num raio da cor dele
       for (const v of vs) { const c = v.perf.corRaio; for (let i = 0; i < 8; i++) fx.raio(v.x, v.y + rnd(0.2, 1.6), v.z, v.x + rnd(-6, 6), v.y + rnd(0, 4), v.z + rnd(-6, 6), { vida: 0.4, desvio: 0.8, r: c[0], g: c[1], b: c[2] }); fx.clarao(v.x, v.y + 1, v.z, 4, 0.3); }
       S.vencidos.add(C.cap.id); gravar();
-      const cap = C.cap; encerrar(); espera = 90;
+      const cap = C.cap; encerrar(); espera = 3;
       if (cap.id === 'final') avisar('A cidade está salva', 'Fim', 'ok'); else avisar(cap.titulo.replace(/^.* — /, ''), 'Capítulo concluído', 'ok');
       eventos.push({ tipo: 'vitoria', id: cap.id });
     }

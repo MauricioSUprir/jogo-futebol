@@ -210,6 +210,8 @@ export function criarCrimes(cena, { combate = null } = {}) {
     atualizar,
     get ativo() { return ativo; },
     marcador: () => (ativo ? { x: ativo.x, z: ativo.z } : null),
+    /** adianta o relógio até o próximo crime (testes: o navegador sem GPU roda o jogo a menos de 1 quadro por segundo) */
+    adiantar(s) { espera -= s; },
     dispose() { if (ativo) cena.remove(ativo.grupo); cena.remove(coluna); },
   };
 }

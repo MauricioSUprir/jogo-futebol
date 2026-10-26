@@ -58,13 +58,15 @@ await pagina.evaluate(() => { const R = window.__rel, e = R.LAB_B.plano.entrada;
 await pagina.waitForTimeout(2500);
 await foto('passado');
 await pagina.evaluate(() => { const R = window.__rel, e = R.LAB_B.plano.entrada; R.P.x = e.x - 8; R.P.z = e.z - 8; });
-ok(await espera(() => window.__rel.tempo.epoca === 'presente' && window.__rel.missoes.atual === null), 'perto do laboratório: a cena, a volta pelo túnel e a missão concluída');
+ok(await espera(() => window.__rel.tempo.epoca === 'presente' && window.__rel.missoes.atual?.id === 'cap-savitar'), 'perto do laboratório: a cena, a volta pelo túnel e a missão concluída (vem o Savitar)');
 ok(await pagina.evaluate(() => !document.body.classList.contains('passado') && window.__rel.mundo.T > 0.1), 'de volta ao presente (sem o tom de memória, relógio de antes)');
 
 // ---- a cena do acidente com a história ligada ----
 await abrirJogo('?historia=1&missao=passado', ['cena:prologo']);
 ok(await espera(() => window.__rel.tempo.epoca === 'passado' && window.__rel.tempo.focoReverso()), 'recarregar no meio da missão volta para a noite do acidente');
-await pagina.evaluate(() => { const R = window.__rel, e = R.LAB_B.plano.entrada; R.P.x = e.x - 8; R.P.z = e.z - 8; R.P.y = 0; });
+// o herói começa na porta do laboratório: a cena abre sozinha assim que o Reverso aparece (só leva o herói para perto se ainda não abriu)
+await espera(() => window.__rel.historia.cenaAtual === 'acidente', null, 15000);
+await pagina.evaluate(() => { const R = window.__rel, e = R.LAB_B.plano.entrada; if (R.historia.cenaAtual !== 'acidente') { R.P.x = e.x - 8; R.P.z = e.z - 8; R.P.y = 0; } });
 ok(await espera(() => window.__rel.historia.cenaAtual === 'acidente'), 'cena do acidente, de frente para o Reverso do passado');
 const d = await pagina.evaluate(() => { const R = window.__rel, r = R.tempo.focoReverso(); return Math.hypot(R.P.x - r.x, R.P.z - r.z); });
 ok(d <= 5.5, `o herói fica a ${d.toFixed(1)} m dele`);
