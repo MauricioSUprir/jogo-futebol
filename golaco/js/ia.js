@@ -40,6 +40,16 @@ export function para(j, x, z, mag, correr = false, extra = 0, modo = 'calma') {
     return { x: 0, z: 0, botoes: extra };
   }
   s.parado = false;
+  // a virada parada (D5, item 22; IA.viraParado): nos modos que freiam, o pedido que inverte (mais de ~120°) quem ainda anda
+  // a mais de v m/s solta o analógico e, parado, espera s s antes de ir — virar na hora a 1–2 m/s era o vai e volta
+  // (teste-movimento --modo partida: 94% das inversões abaixo de 1,5 m/s)
+  const VP = IA.viraParado;
+  // (só quem pediu NESTE tick: o ponto calmo longe da marcação de perto da bola e o modo firme — s.viraTick)
+  if (M.freia && VP.s > 0 && s.viraTick === s.tick) {
+    const v = MD.hypot(j.vx, j.vz);
+    if (v > VP.v && dx * j.vx + dz * j.vz < VP.cos * d * v) s.viraAte = s.tick + Math.round(VP.s / PASSO);
+    if (s.tick < s.viraAte) { s.corre = false; return { x: 0, z: 0, botoes: extra }; }
+  }
   // chega devagar no ponto (sem passar e voltar)
   const m = Math.min(mag, Math.max(M.magMin, d / M.dist));
   const [liga, desliga] = M.corre;

@@ -656,6 +656,9 @@ export const IA = {
     // inteira a 14 m e o apoio a ≤ 10 m da bola andava 51% do tempo, Metrica 41%) e o CORRER com o ponto a mais de 10 m
     // (desliga a 7); freia na linha antes de inverter
     apoia: { vAlvo: 9, retoma: 1.2, dist: 6, magMin: 0.2, corre: [10, 7], freia: true },
+    // a pressa de quem segue a referência (ia-ataque.js apoioTatico; D5, item 22): a do pressa, com o ponto filtrado e a
+    // freada antes de virar (a virada parada)
+    firme: { vAlvo: 12, retoma: 0.6, dist: 4, magMin: 0.25, corre: [3, 1.5], freia: true },
   },
   giroParado: 8,              // rad/s: giro máximo do tronco parado da IA sem a bola (o humano: JOGADOR.giroCorpoParado)
   trocaMarcacao: 3,           // m: a marcação só troca de homem se a nova for isto melhor (antes trocava ~18×/min)
@@ -671,6 +674,9 @@ export const IA = {
   pressaoArranca: 6,          // m: quem pressiona só aperta CORRER com o ponto além disto
   trocaPressao: 2,            // m: outro só assume a pressão se estiver isto mais perto da bola que quem pressiona
   freiaLinha: [2.5, -0.17],   // acima de 2,5 m/s, pedido a mais de ~100° do movimento: freia na linha antes de virar
+  // a virada parada (ia.js para; D5, item 22): nos modos que freiam, pedido a mais de acos(cos) do movimento com o corpo a
+  // mais de v m/s: solta o analógico e, abaixo de v, espera s s antes de ir (s 0 = desliga)
+  viraParado: { v: 0.8, cos: -0.5, s: 0.5 },
 };
 
 // =====================================================================================================
@@ -1058,9 +1064,15 @@ export const TATICA = {
   // arranque calmo (ia-tatica.js alvoCalmo): quem passou de rapido m/s e parou (< parado m/s) retoma um
   // ajuste de até dMax m trotando devagar (suave.trote[2]) por s s — anda-para-anda (teste-movimento)
   arranque: { rapido: 2.2, parado: 0.5, s: 2.0, dMax: 12 },
+  // a espera da volta do ponto calmo (suave*.volta; D5, item 22): começada, vale até volta[0] + folga m e, com quieto,
+  // também com o jogador quieto perto do alvo (folga 0 e quieto false = a de antes)
+  volta: { folga: 3, quieto: true },
+  pertoBola: 12,              // m — D5: quem marca a menos disto da bola segue com a espera e a virada de antes
+  arco: 2.5,                  // m/s — abaixo disto (e acima de 0,5) a virada grande do ponto calmo vai pelo giro, em arco (0 = de uma vez)
   // olhar da IA sem a bola na partida (ia-tatica.js olhaBolaPartida): velocidade filtrada em tauVel s
   // (o limite do desvio do tronco) e o desvio girando no máximo giro rad/s (o tremor é > 1,5 rad/s)
-  olhar: { tauVel: 0.5, giro: 1.2 },
+  // (D5: giro 1,2 → 1,4 — de costas para a bola andando devagar 14,9 → 13,9% em 40 sementes, o tremor igual)
+  olhar: { tauVel: 0.5, giro: 1.4 },
   // ---- intensidade e recomposição (PR "IA intensa", dono 10/10: "a IA não corre para trás";
   // PESQUISA-ETAPA3.md, "Intensidade e recomposição")
   // o meio atrás da bola no meu campo (tatica.js): referência do meio ≤ bola − [0] m, mas não a menos de
@@ -1278,6 +1290,7 @@ export const IA_ATAQUE = {
   // sobreposição: condutor de lado (|z| > w) no campo adversário → o lateral do lado passa por fora,
   // frente m à frente dele, a linha m da lateral
   sobreposicao: { w: 15, frente: 8, linha: 3 },
+  firmeRef: true,             // D5: a pressa da retomada de quem segue a referência vai pelo modo firme (IA.modos.firme)
   oscila: { amp: 0, periodo: 6 }, // m, s — vem e vai do apoio (0 = desliga: com o ponto calmo da Parte 2 ele só fazia o apoio ir e voltar)
   rebote: { raio: 25, frente: 7 }, // chute meu no ar: quem está a < raio m do gol corre para frente m da linha do gol
   empurraRaio: 4,             // m — se quem faz a linha é o marcador (até isto), o atacante a empurra...

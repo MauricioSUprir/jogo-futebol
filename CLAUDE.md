@@ -89,7 +89,12 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   passada natural, costura da nuca e bordas dos decalques (I).
   **Dono, 25/10 (depois do D4): "escolhe tudo filho"** — a categoria D segue até o fim (D5–D8: itens 22–25) e as escolhas
   dentro dela são minhas; no item 19 a meta passou a ser a de CHEGADA (arrancada do bloco armado na área ≤ 25%, no
-  `teste-defesa-corrida`), com a velocidade do defensor do corredor só informativa.
+  `teste-defesa-corrida`), com a velocidade do defensor do corredor só informativa. **D5 (item 22, o vai e volta)**: na partida,
+  IA × IA e contra a pessoa (o treino bit a bit igual): a espera da volta com folga e quieta, a virada em arco abaixo de 2,5 m/s,
+  a virada parada (`IA.viraParado`) e o modo firme na retomada do apoio — quem marca a ≤ 12 m da bola, a volta do impedido e a
+  bola na mão do goleiro como antes (com tudo valendo para eles, a pressão caía 2–3 pontos, o impedimento ia a 32% e a "bola na
+  mão" a 18%); o `teste-movimento --modo partida` entrou no CI (vai e volta 8,3 → 7,2). Lição: a triagem do movimento com
+  `--set` em 32–40 sementes (~80 s com 4 processos) bate com o teste; decidir com ela e conferir nas 5 rodadas de 8.
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME em cima do jogador com a bola (`main.js marcarCondutor`,
   `#nome-condutor` fora do #hud — exceção pedida à "sem narração") e (2) os overalls da tela iguais aos do TM (`elenco.js
   notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos). **FILA (dono: "o 3 e 4

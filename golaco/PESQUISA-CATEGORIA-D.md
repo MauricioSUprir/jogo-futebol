@@ -403,3 +403,66 @@ a pessoa muda de propósito.
   (cancelar o passe com a linha fechada no meio da carga), que vale também na IA × IA.
 - **A conversão da IA contra o roteiro** foi 19,8 → 26,4% (25,7% na 2ª rodada; o real é 8–15%): a IA ganha a bola mais alto. Os companheiros da
   pessoa (D4) e o goleiro (categoria C).
+
+## 7. D5 — o vai e volta da IA sem a bola (item 22)
+
+Pedido (15/10, item 4 da fila): "movimentação melhor e jogo mais tenso". A medida é o `teste-movimento --modo partida`
+(IA × IA, 8 sementes × 3 min): a direção do movimento que inverte (> 135°) em 0,25–1 s com > 0,8 m/s nos dois instantes.
+A main dava 8,3/min por jogador (meta ≤ 8), o anda-para-anda 4,1/min (≤ 4) e de costas para a bola 15,6% (≤ 15%).
+
+### 7.1 O que a pesquisa diz
+
+| Fonte | O que diz | O que entrou |
+|---|---|---|
+| Dos'Santos, Thomas, Comfort & Jones, *Sports Med* 2018 — o trade-off ângulo × velocidade da mudança de direção ([resumo](https://salford-repository.worktribe.com/output/1378901/the-effect-of-angle-and-velocity-on-change-of-direction-biomechanics-an-angle-velocity-trade-off)) | quanto mais rápida a chegada, mais freada a virada fechada exige; as viradas fechadas (> ~60–90°) dependem de frear, as abertas da velocidade | a virada fechada abaixo de 2,5 m/s vai em ARCO (sem passar pelo zero); acima, a freada na linha de sempre; a virada parada só para quem ainda anda |
+| Bloomfield, Polman & O'Donoghue, *JSSM* 2007 — 55 jogadores da Premier League ([texto](https://jssm.org/jssm-06-63.xml-Fulltext)) | 726 ± 203 giros por jogador por partida, 609 ± 193 deles de 0–90° (~117 maiores que 90°: ~1,3 por minuto) | a ordem de grandeza: a IA fazia 8,7 inversões de > 135° por minuto (32 sementes) |
+| Metrica, Sample Game 1 e 2 (`tools/pesquisa/analise_metrica.py`, 18 945 amostras com o portador definido) | o portador tem um adversário a ≤ 3 m em 27,1% do tempo (≤ 2 m 15,5%, ≤ 5 m 48,0%, mediana 5,22 m) | a guarda de pressão do `teste-movimento` no 11×11 (≥ 34%, sem recuo contra a main; o 40% da Média fica no `teste-pressao`) |
+| Reynolds, GDC 1999, *Steering Behaviors* (o *arrival*; já em `PESQUISA.md`) | chegar ao alvo freando pela distância; o alvo que anda pede seguir, não parar | o porquê de o "quieto" ter de esperar o alvo que voltou (a espera da volta também quieto) |
+
+### 7.2 O diagnóstico (16 sementes, `scratchpad` triagem-mov: as mesmas contas do teste)
+
+- 94% das inversões tinham menos de 1,5 m/s num dos dois instantes: o andar devagar que muda de lado, não a corrida.
+- Por ramo: o apoio pela referência 29% (6,5/min no ramo), a zona 15%, a linha 14%, a recomposição 9%; fora do ponto calmo,
+  o apoio pela referência COM PRESSA (a retomada e a volta do impedido) fazia 22–47 inversões por minuto naquele estado.
+- Três mecanismos no rastro: (1) a espera da volta caía quando o corpo, freando, passava de `volta[0]` m do alvo; (2) quem
+  entrava no quieto ainda andando ia na hora para o alvo que tinha ficado para trás; (3) a pressa do apoio ia para o ponto
+  cru da referência (sem filtro, sem freada) e virava de uma vez.
+
+### 7.3 A triagem (32 sementes, 1–32; base = main)
+
+| Variação | vai e volta | anda-para-anda | de costas | impedimento | bola na mão | pressão ≤ 3 m |
+|---|---|---|---|---|---|---|
+| main | 8,75 | 4,21 | 15,5% | 21,2% | 10,2% | 37,7% |
+| volta de 12 m no apoio (o do D2; 16 sementes) | −0,17 | +0,07 | igual | — | — | — |
+| espera com folga + quieto | 7,51 (16) | 4,18 | 14,4% | — | — | 39,3% |
+| + virada parada 0,5 s | 7,14 (16) | 4,15 | 13,9% | — | — | 35,0% |
+| + acompanhar o alvo que anda (SAIU: tudo pior) | 8,1 (16) | 4,7 | 17,0% | — | — | 37,9% |
+| + firme (com o arranque calmo) + arco | 6,43 (16) | 3,23 | 14,0% | — | — | 34,7% |
+| tudo valendo também para quem marca perto (SAIU) | 6,9 | 3,3 | 14,8% | 32% (teste-apoio) | 17,7% | 36,1% |
+| quem marca a ≤ 12 m da bola e a bola na mão como antes; o impedido pela pressa | 7,01 | 3,60 | 14,9% | 20,3% | 10,7% | 38,3% |
+| + o olhar 1,4 rad/s (40 sementes; ENTREGUE) | 7,13 | 3,71 | 13,9% | 20,4% | 8,3% | 37,9% |
+
+### 7.4 Antes → depois (o teste, 8 sementes; e as 5 rodadas de 8)
+
+| Medida | main | D5 (1–8) | D5, 5 rodadas | Meta |
+|---|---|---|---|---|
+| vai e volta, jogo estável | 8,3/min | 7,2 | 6,8–7,4 | ≤ 8 |
+| vai e volta, total | 9,4 | 7,9 | — | ≤ 11 |
+| anda-para-anda | 4,1 | 3,7 | 3,6–3,9 | ≤ 4 |
+| de costas andando devagar | 15,6% | 13,5% | 13,5–14,5% | ≤ 15% |
+| tremor do tronco, estável | 4,9 | 5,0 | — (32–40 sementes: 5,2 → 4,6) | ≤ 7 |
+| bola na mão: correndo para a própria linha | 13,0% | 11,2% | — | ≤ 15% |
+| chutes por semente de 3 min | 2,75 | 2,38 | 2,38–3,00 | ≥ 1,5 (sem recuo) |
+| marcador a ≤ 3 m do condutor | 36,6% | 35,3% | 35,3–39,8% | ≥ 34% (sem recuo; real 27,1%) |
+
+No grupo etapa3 (as mesmas sementes): o `teste-pressao` passou a PASSAR inteiro (a retomada da Média 33,3 → 37,8%, meta
+34–54%; o marcador a ≤ 3 m na Média 42,1% na main, ≥ 40% no D5); no `teste-forma`, a defesa–meio 13,1 → 12,3 m (passa, 9–13)
+e a altura da linha por faixa empata (com 16 sementes: main 3,1, D5 3,1 m; meta 2,5 — o D6); o `teste-apoio` (impedimento
+21,0 → 22,8%) e o `teste-intensidade` sem mudança de faixa.
+
+### 7.5 Limites e o que fica
+
+- O vai e volta continua ~5 vezes o real (~1,3 giros > 90° por minuto, Bloomfield 2007): o resto é de quem disputa a bola
+  (aperta, contém, recebe, recompõe — no modo pressa de propósito) e da marcação de perto, que ficou como antes.
+- O anda-para-anda passa com pouca folga (3,6–3,9 contra 4): a linha e a recomposição (com o `recomp`, que passa por cima do
+  arranque calmo) são a maior parte.

@@ -3100,6 +3100,31 @@ Portão `contraPessoa(m, 1 − t)`: o time `t` é o da pessoa e o outro é a IA 
 - Medido no `teste-ia-corre` C (C1 ≤ 6,2 m e C2 ≥ 40%, valendo; reprovam na main). Recalibrados com o motivo no teste: o V7
   (teto 238: a IA perde mais a bola e corre mais pelo contexto) e o M1 do `teste-pressao-humano` (com ≤ 2,0 m e Δ ≥ 0,5).
 
+### D5 — o vai e volta da IA sem a bola (item 22; `ia-tatica.js`, `ia.js`, `ia-ataque.js`)
+
+Vale na partida (`m.times`), IA × IA e contra a pessoa; o treino fica bit a bit igual (`hash-igual` IGUAL). Medido pelo
+`teste-movimento --modo partida`: 94% das inversões eram abaixo de 1,5 m/s (o andar devagar que muda de lado), ~30% do apoio
+pela referência e ~1/3 da pressa dele (a retomada e a volta do impedido). O que muda:
+
+- **A espera da volta** do ponto calmo (`alvoCalmo`, `suave*.volta`): começada, vale até `volta[0] + TATICA.volta.folga` m
+  (3; freando, o corpo ainda se afastava 0,5–2 m, passava de `volta[0]` e a espera caía) e também com o jogador QUIETO
+  (`TATICA.volta.quieto`: entrando no quieto ainda andando, o passinho ia na hora para o alvo que ficou para trás).
+- **A virada em arco** (`TATICA.arco` 2,5 m/s): entre 0,5 e 2,5 m/s a virada de mais de `giro[4]` do ponto calmo vai pelo
+  giro, sem parar (acima de 2,5 o `para()` freia na linha, como antes; com a bola na mão do meu goleiro, de uma vez).
+- **A virada parada** (`ia.js para`, `IA.viraParado` {v 0,8, cos −0,5, s 0,5}): nos modos que freiam, o pedido a mais de 120°
+  do movimento de quem anda a mais de 0,8 m/s solta o analógico e, parado, espera 0,5 s. Só para quem PEDIU no tick
+  (`j.ia.viraTick === s.tick`): o ponto calmo fora da marcação de perto e o modo firme.
+- **O modo firme** (`IA.modos.firme`; `IA_ATAQUE.firmeRef`): a pressa da RETOMADA de quem segue a referência (o time longe
+  dela, `ia.motivoP` 'trans') vai com o ponto filtrado (12 m/s), a freada e a virada parada e, logo depois de parar (o arranque
+  calmo, `TATICA.arranque`), trotando. A volta do impedimento e a bola na mão do meu goleiro seguem pelo `pressa`.
+- **Quem marca perto da bola fica como antes** (`TATICA.pertoBola` 12 m; ramos linha, zona, fechaLinha, cobre e marca —
+  `MARCA_PERTO`): com tudo valendo também para eles, o marcador a ≤ 3 m do condutor caía 2–3 pontos (`teste-pressao`).
+  Com a bola na mão do meu goleiro, também (a virada de uma vez: a "bola na mão" do teste-movimento ia de 10 a 15%).
+- **O olhar** (`TATICA.olhar.giro` 1,2 → 1,4 rad/s, abaixo do 1,5 do tremor): de costas para a bola andando devagar 14,9 → 13,9%.
+- O `teste-movimento --modo partida` saiu do etapa3 (5 rodadas de 8 sementes passando). Na partida, as guardas "sem recuo"
+  são as da partida: a média de chutes por semente de 3 min ≥ 1,5 (main 2,75; o volume é do painel e da categoria E) e o
+  marcador a ≤ 3 m ≥ 34% (main 36,6%; real 27,1%, Metrica; os 40% com as duas na Média ficam no `teste-pressao`).
+
 ### A pressão contra a pessoa (`tools/teste-pressao.mjs --humano`; D3, item 20)
 
 - `lib/partida-tatica.mjs`: `criarJogo(L, semente, {humano})` — o time 0 é uma pessoa (sem a marca `ia`): um perfil do
