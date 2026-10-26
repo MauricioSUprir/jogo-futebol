@@ -45,7 +45,8 @@ export function criarMissoes(armazem) {
   let salvo = null, v1 = null;
   try { salvo = JSON.parse(armazem?.getItem(CHAVE) || 'null'); } catch { salvo = null; }
   if (!salvo) { try { v1 = JSON.parse(armazem?.getItem(CHAVE_V1) || 'null'); } catch { v1 = null; } }
-  const idSalvo = salvo?.id ?? (v1 ? (v1.indice >= ORDEM_V1.length ? null : ORDEM_V1[v1.indice]) : 'lab');
+  // id null = a história terminou (cidade livre); sem nada gravado, começa do começo
+  const idSalvo = salvo && Object.hasOwn(salvo, 'id') ? salvo.id : (v1 ? (v1.indice >= ORDEM_V1.length ? null : ORDEM_V1[v1.indice]) : 'lab');
   const pos = (id) => (id === null ? MISSOES.length : Math.max(0, MISSOES.findIndex((m) => m.id === id)));
   const E = { indice: pos(idSalvo), stats: { ...STATS0, ...((salvo || v1)?.stats || {}) }, base: (salvo || v1)?.base || {} };
   const gravar = () => { try { armazem?.setItem(CHAVE, JSON.stringify({ id: MISSOES[E.indice]?.id ?? null, stats: E.stats, base: E.base })); } catch { /* sem armazenamento */ } };
