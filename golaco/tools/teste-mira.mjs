@@ -5,7 +5,8 @@
 // Metas:
 //  A. A linha É a física: com o erro do cobrador zerado (MIRA.erro = 0), a bola de verdade (a partida inteira rodando:
 //     cobrar → passo) passa a ≤ 3 cm da linha prevista (mira-linha.js preverMira, mira.js simularLinha) em todos os ticks do voo —
-//     escanteio ALTA sem e com curva, TENSA com curva, tiro livre direto (CHUTE) com barreira e curva.
+//     escanteio ALTA sem e com curva, TENSA com curva, tiro livre direto (CHUTE) com barreira e curva e sem barreira com
+//     a barra cheia (a mira alta do C2, mira.js alturaMiraChute).
 //  B. A curva vai para o lado certo: com o efeito +1 a bola cai/cruza a linha do gol ≥ 1,5 m à DIREITA de quem bate (da
 //     linha sem efeito), com −1 à esquerda; no escanteio e no tiro livre.
 //  C. Controles: o analógico para a direita (na câmera atrás do cobrador) gira a mira para a direita a MIRA.gira rad/s e
@@ -116,6 +117,8 @@ if (temMira) {
     { nome: 'escanteio ALTA curva +1', tipo: 'escanteio', b: BOTAO.LANCAMENTO, k: 36, da: 0.12, curva: 1, t: 'alta' },
     { nome: 'escanteio TENSA curva −0,5', tipo: 'escanteio', b: BOTAO.CHUTE, k: 26, da: -0.08, curva: -0.5, t: 'tensa' },
     { nome: 'falta CHUTE (barreira) curva +0,75', tipo: 'tiroLivre', b: BOTAO.CHUTE, k: 34, da: -0.1, curva: 0.75, t: 'chute' },
+    // a barra cheia sem barreira (C2: a mira sobe pela mira.js alturaMiraChute, a mesma conta do chute do jogo)
+    { nome: 'falta CHUTE sem barreira, barra cheia', tipo: 'tiroLivre', b: BOTAO.CHUTE, k: 50, da: 0.06, curva: 0, t: 'chute', semBarreira: true },
   ];
   const res = [];
   for (const cs of casos) {
@@ -124,22 +127,25 @@ if (temMira) {
     const pr = cs.tipo === 'escanteio' ? escanteio(m) : (tiroLivre(m, 0, 22, 3), ateMontarPronta(m, 'tiroLivre'));
     if (!pr) { res.push({ nome: cs.nome, d: Infinity, n: 0 }); continue; }
     longe(m, pr);
+    if (cs.semBarreira && pr.barreira) pr.barreira.n = 0; // a barreira desfeita: a elevação pela altura da mira
     pr.mira.ang = pr.mira.ang0 + cs.da; pr.mira.curva = cs.curva;
     const { forca, c } = carregarESoltar(m, cs.b, cs.k);
     const r = M.chuteMirado(m, c, pr, cs.t, forca, pr.mira.ang, pr.mira.curva, {});
     const n = M.simularLinha(m, r.v, r.w, pts);
+    let yLinha = null; // onde a linha cruza a linha do gol (a barra cheia: ~2,1–2,2 m)
+    for (let i = 1; i < n && yLinha == null; i++) if (Math.abs(pts[i * 3]) >= MX) yLinha = pts[i * 3 - 2] + (pts[i * 3 + 1] - pts[i * 3 - 2]) * (MX - Math.abs(pts[i * 3 - 3])) / (Math.abs(pts[i * 3]) - Math.abs(pts[i * 3 - 3]));
     P.passoPartida(m, NADA); // solta: a cobrança sai (cobrar) e a bola anda um passo
     let d = 0, k = 1, mirada = !!m.voo?.mirada;
     for (; k < n; k++) {
       d = Math.max(d, Math.hypot(m.bola.p.x - pts[k * 3], m.bola.p.y - pts[k * 3 + 1], m.bola.p.z - pts[k * 3 + 2]));
       P.passoPartida(m, NADA);
     }
-    res.push({ nome: cs.nome, d, n, mirada });
+    res.push({ nome: cs.nome, d, n, mirada, semB: !!cs.semBarreira, yLinha: cs.semBarreira ? yLinha : null });
   }
   MIRA.erro = erro0;
   reg('A. a bola de verdade segue a linha prevista (erro do cobrador zerado): a maior distância em todo o voo',
-    res.map(r => `${r.nome}: ${f1(r.d * 100)} cm em ${r.n} ticks`).join(' · '),
-    '≤ 3 cm em todos (≥ 40 ticks de voo)', res.every(r => r.d <= 0.03 && r.n >= 40 && r.mirada));
+    res.map(r => `${r.nome}: ${f1(r.d * 100)} cm em ${r.n} ticks${r.semB ? ` (na linha do gol a ${r.yLinha != null ? f2(r.yLinha) : '—'} m)` : ''}`).join(' · '),
+    '≤ 3 cm em todos (≥ 40 ticks de voo); a barra cheia a 2,0–2,3 m na linha do gol', res.every(r => r.d <= 0.03 && r.n >= 40 && r.mirada) && res.every(r => !r.semB || (r.yLinha != null && r.yLinha >= 2.0 && r.yLinha <= 2.3)));
 
   // ------------------------------------------------------------------ B. a curva vai para o lado certo
   {
