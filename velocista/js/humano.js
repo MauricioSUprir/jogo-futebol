@@ -20,7 +20,7 @@ const EMBLEMAS = {
   vulto: { disco: 0, cor: 0, emissivo: 0, forma: 'faisca', brilhoTecido: 0x101012 },   // o vulto: sem emblema, tecido fosco
   novo: { disco: 0x3a0309, cor: 0xffc93a, emissivo: 0x9a6a08, forma: 'losango', brilhoTecido: 0xa0141a },
 };
-const SEM_EMBLEMA = new Set(['civil', 'vulto', 'bumerangue', 'trapaceiro', 'espelhos', 'piao', 'peekaboo']);
+const SEM_EMBLEMA = new Set(['civil', 'vulto', 'negro', 'bumerangue', 'trapaceiro', 'espelhos', 'piao', 'peekaboo']);
 // trajes maiores que o herói (a armadura do Savitar)
 const ESCALA_TRAJE = { savitar: 1.14 };
 const NOMES = ['pelve', 'lombar', 'peito', 'pescoco', 'cabeca', 'claviculaE', 'bracoE', 'antebracoE', 'maoE', 'claviculaD', 'bracoD', 'antebracoD', 'maoD',

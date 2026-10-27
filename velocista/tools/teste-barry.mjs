@@ -28,7 +28,7 @@ const civis = mis.MISSOES.filter((m) => m.roupa === 'civil');
 ok(civis.length >= 10 && civis.every((m) => (m.ponto || m.alvo) && !m.capitulo && !m.crime), `${civis.length} passos à paisana, todos num lugar (nenhum de luta)`);
 ok(['delegacia', 'atrasado', 'pericia', 'analise', 'troca', 'cafe-pedido', 'cafe-entrega', 'entrevista', 'cafe', 'relatorio', 'visita', 'casa'].every((id) => passo(id)?.roupa === 'civil'), 'a vida dele (trabalho, café, casa) à paisana');
 ok(['assalto', 'gangue', 'jornal', 'ameaca-iris', 'ameaca-joe'].every((id) => !passo(id).roupa), 'o herói (patrulha, foto, resgates) de traje');
-const comTempo = mis.MISSOES.filter((m) => m.tempo);
+const comTempo = mis.MISSOES.slice(0, pos('p2-exames')).filter((m) => m.tempo);     // (os da Parte 2: teste-parte2.mjs)
 ok(comTempo.length === 4 && comTempo.every((m) => m.ponto && m.tempo >= 30 && m.tempo <= 90 && (!m.falha || pos(m.falha) === pos(m.id) - 1)), `${comTempo.length} passos com cronômetro (${comTempo.map((m) => `${m.id} ${m.tempo} s`).join(', ')})`);
 
 // ---- 2. lugares: o beco, as pistas e os pontos de dentro

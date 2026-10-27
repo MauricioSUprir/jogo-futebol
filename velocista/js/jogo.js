@@ -4,7 +4,7 @@ import { criarHeroi } from './humano.js';
 import { criarRaios, definirCameraRaios } from './raios.js';
 import { criarPosFx } from './posfx.js';
 import { iniciarAtualizacao } from './atualizar.js';
-import { criarMissoes } from './missoes.js';
+import { criarMissoes, MISSOES } from './missoes.js';
 import { criarCrimes } from './crimes.js';
 import { criarPortais } from './portais.js';
 import { criarTrafego } from './trafego.js';
@@ -613,14 +613,14 @@ function passoHeroi(dt) {
   if (P.vibrando) { if ((!querVibrar && !dentroSolido) || P.energia <= 0.001) { P.vibrando = false; } }
   // perto de uma fenda aberta a vibração começa parada
   else if (querVibrar && P.energia > 0.08 && (vh0 >= MOV.vibrarMin || tempo.pertoDeFenda(P)) && !P.parede) { P.vibrando = true; avisar('Atravesse tudo', 'Vibrando', 'info'); }
-  if (viloes.energiaLivre || missoes.atual?.id === 'tunel') P.energia = Math.min(1, P.energia + 0.06 * dt);      // perseguição a um vilão / túnel do tempo: energia livre, e enchendo
+  if (viloes.energiaLivre || missoes.atual?.tipo === 'tunel') P.energia = Math.min(1, P.energia + 0.06 * dt);      // perseguição a um vilão / túnel do tempo: energia livre, e enchendo
   else if (P.vibrando) P.energia = Math.max(0, P.energia - ENERGIA.vibrar * dt);
   else if (P.correndo) P.energia = Math.max(0, P.energia - (P.parede ? ENERGIA.parede : ENERGIA.gasto * gastoCorrida(P.embalo || 0)) * dt);
   else if (!combate.pertoDeBandido(P, 12) && !viloes.emLuta) P.energia = Math.min(1, P.energia + ENERGIA.recarga * dt * (m < 0.1 ? 3 : 1));   // no meio da briga não recarrega
   // supervelocidade (velocidade.js): na reta, segurando CORRER, o embalo sobe o teto até ~830 km/h
   const angPedido = vh0 > 5 && m > 0.1 ? Math.acos(clamp((P.vx * dx + P.vz * dz) / (vh0 * (Math.hypot(dx, dz) || 1)), -1, 1)) : 0;
   P.embalo = passoEmbalo(P.embalo || 0, { correndo: P.correndo && !P.vibrando && !P.parede, noChao: P.noChao, m, angulo: angPedido, bloqueado: viloes.ativo || combate.ocupado }, dt);
-  const vmax = ((P.correndo || P.vibrando) ? (P.vibrando ? MOV.correr : tetoCorrida(P.embalo, MOV.correr)) : MOV.andar) * m * viloes.lentidao * rivais.lentidao;   // o gelo do Capitão Frio deixa lento
+  const vmax = ((P.correndo || P.vibrando) ? (P.vibrando ? MOV.correr : tetoCorrida(P.embalo, MOV.correr)) : MOV.andar) * m * viloes.lentidao * rivais.lentidao * (missoes.atual?.fraco || 1);   // (Parte 2: o raio se apagando)   // o gelo do Capitão Frio deixa lento
   const taxa = P.noChao ? (P.correndo ? 5 : 11) : 2.2;
   const k = 1 - Math.exp(-taxa * dt);
   // o Flash não voa (dono, 26/10: "o flash consegue voar pô"): no ar ele só mantém o embalo com que saiu do chão (vira e
@@ -917,6 +917,8 @@ function atravessarPorta(I, entrando) {
     rectsPerto = retangulosPerto(P.x, P.z, 1);
   } };
 }
+const POS_CINZAS = MISSOES.findIndex((m) => m.id === 'p2-celas'), FORA_CINZAS = new Set(['zoom']);   // a cela do Zoom vazia, só cinza
+const NOME_SALA = { contencao: 'Câmara de contenção', cortex: 'Cortex', nucleo: 'Câmara do Núcleo' };
 function alvoMissao() {
   if (viloes.ativo) return viloes.alvo();                  // capítulo dos vilões: o guia leva até eles (na luta, nada)
   const c = crimes.ativo;
@@ -931,6 +933,10 @@ function alvoMissao() {
     const dentroLab = LAB_B.plano.dentro(P.x, P.z, P.y);
     const e = LAB_B.plano.entrada;
     return dentroLab ? { x: LAB_B.cx, z: LAB_B.cz, cor: '#ffd23f', rotulo: 'Cortex' } : { x: e.x, z: e.z - 4, cor: '#ffd23f', rotulo: 'S.T.A.R. Labs' };
+  }
+  if (m?.alvoSala) {
+    const s = LAB_B.plano.pontosDeInteresse.find((q) => q.nome === m.alvoSala), e = LAB_B.plano.entrada;
+    return LAB_B.plano.dentro(P.x, P.z, P.y) && s ? { x: s.x, z: s.z, cor: '#ffd23f', rotulo: NOME_SALA[m.alvoSala] || m.titulo } : { x: e.x, z: e.z - 4, cor: '#ffd23f', rotulo: 'S.T.A.R. Labs' };
   }
   if (m?.alvo === 'fenda') { const f = tempo.alvoFenda(P); if (f) return f; }
   if (m?.pistas) { const k = Math.min(m.pistas.length - 1, missoes.progresso()?.n ?? 0), w = pontoMundo(m.ponto); return { x: w.x + m.pistas[k][0], z: w.z + m.pistas[k][1], cor: '#ffd23f', rotulo: `Pista ${k + 1}/${m.pistas.length}` }; }
@@ -1019,8 +1025,8 @@ function passoMissoes(dt) {
     const n = tempo.passoFendas(dt, P);
     if (n) { missoes.contar('fendas', n); const pr = missoes.progresso(); avisar('Fenda fechada', pr ? pr.txt : '', 'ok'); }
   } else if (tempo.fendasLigadas) tempo.ligarFendas(false);
-  if (m?.id === 'tunel') {
-    tempo.prepararReverso();                                          // o Reverso do passado já vai sendo carregado
+  if (m?.tipo === 'tunel') {
+    if (m.id === 'tunel') tempo.prepararReverso();                    // o Reverso do passado já vai sendo carregado
     const v = Math.hypot(P.vx, P.vz) * 3.6;
     J.tunelT = v >= 180 && !P.parede ? (J.tunelT || 0) + dt : Math.max(0, (J.tunelT || 0) - dt * 0.6);
     if (J.tunelT > 0.5 && Math.random() < dt * J.tunelT * 4) { const a = Math.random() * 6.28; combate.efeitos.raio(P.x, P.y + 1, P.z, P.x + Math.cos(a) * 4, P.y + 1 + Math.random() * 3, P.z + Math.sin(a) * 4, { vida: 0.15, desvio: 0.6, r: 2.2, g: 1.6, b: 0.5 }); }
@@ -1035,6 +1041,18 @@ function passoMissoes(dt) {
       P.x = q.x; P.z = q.z; P.y = chaoEm(rectsPerto, P.x, P.z, 1); P.vx = P.vz = 0;
       P.h = Math.atan2(r.x - P.x, r.z - P.z);
       rodarCena('acidente', { heroi: focoHeroi, reverso: () => tempo.focoReverso() }, () => rodarCena('volta-tunel', focosCena(), voltarDoPassado), { aoAcao: (a) => { if (a === 'explosao') tempo.explodir(); } });
+    }
+  }
+  // Parte 2: a linha do tempo alterada (missoes.js `epoca`): o mundo entra nela quando o passo começa, depois da cena do
+  // passo anterior (a viagem no túnel), e sai do mesmo jeito
+  if (tempo.epoca !== 'passado' && !J.cenaPendente && !J.cenaPasso && J.modo === 'jogando') { const ep = m?.epoca || 'presente'; if (tempo.epoca !== ep) mudarEpoca(ep); }
+  // o Corredor Negro atrás do herói: raios pálidos caindo logo atrás dele enquanto o cronômetro corre
+  if (m?.id === 'p2-fuga' && J.cron && !J.interior && !J.cenaPendente) {
+    J.raioNegro = (J.raioNegro ?? 1) - dt;
+    if (J.raioNegro <= 0) {
+      J.raioNegro = 0.8 + Math.random() * 0.8;
+      const a = P.h + Math.PI + (Math.random() - 0.5) * 1.3, r = 7 + Math.random() * 10, x = P.x + Math.sin(a) * r, z = P.z + Math.cos(a) * r, y = chaoEm(rectsPerto, x, z, P.y + 2);
+      combate.efeitos.raio(x, y + 30, z, x, y + 0.2, z, { vida: 0.35, desvio: 2.2, r: 1.45, g: 1.5, b: 1.7 }); combate.efeitos.clarao(x, y + 1, z, 3, 0.35);
     }
   }
   // "Apagão": religar as subestações na ordem (o guia leva à próxima); a cidade fica escura até a última
@@ -1086,6 +1104,9 @@ function passoMissoes(dt) {
       J.cenaPasso = feita;                             // (a roupa do passo vale até a cena dele acabar)
     } else abrir();
   }
+  // a cena que abre um passo (missoes.js `cenaAbre`: o começo da Parte 2), uma vez
+  const mAgora = missoes.atual;
+  if (mAgora?.cenaAbre && !J.cenaPendente && !J.cenaPasso && !historia.viu(`cena:${mAgora.cenaAbre}`)) J.cenaPendente = { id: mAgora.cenaAbre, depois: () => {}, passo: null };
   if (J.cenaPendente && historia.radioLivre && !viloes.emLuta) {
     const c = J.cenaPendente; J.cenaPendente = null;
     if (c.passo) {                                   // o herói para de frente para quem vai falar
@@ -1154,8 +1175,8 @@ const subest = SUBESTACOES.map((s) => {
 });
 /** os focos de uma cena: o herói e, com ele no Cortex, a Caitlin e o Cisco (quem não está lá fala pelo rádio) */
 const focosCena = () => {
-  const fs = { heroi: focoHeroi, joe: () => aliados.foco('joe'), iris: () => aliados.foco('iris'), vulto: () => aliados.foco('vulto'), reverso: () => aliados.foco('reverso') };
-  for (const id of ['caitlin', 'cisco']) fs[id] = () => (equipe.pronta && noCortex() ? equipe.focos()[id]() : null);
+  const fs = { heroi: focoHeroi, joe: () => aliados.foco('joe'), iris: () => aliados.foco('iris'), vulto: () => aliados.foco('vulto'), reverso: () => aliados.foco('reverso'), negro: () => aliados.foco('negro') };
+  for (const id of ['caitlin', 'cisco']) fs[id] = () => (equipe.pronta && noCortex() && tempo.epoca !== 'ignicao' ? equipe.focos()[id]() : aliados.foco(id));
   return fs;
 };
 /** cenas que mexem no mundo: o túnel do tempo aparece em volta do herói correndo */
@@ -1173,6 +1194,15 @@ const GANCHOS_CENA = {
     if (a !== 'someReverso') return;
     const f = aliados.foco('reverso');
     if (f) for (let i = 0; i < 10; i++) { const g = Math.random() * 6.28; combate.efeitos.raio(f.x, f.y + 0.3 + Math.random() * 1.5, f.z, f.x + Math.cos(g) * 3, f.y + Math.random() * 2, f.z + Math.sin(g) * 3, { vida: 0.4, desvio: 0.7, r: 2.8, g: 0.35, b: 0.2 }); }
+    J.cenaAliados = { aliados: {} };
+  } },
+  // Parte 2: a viagem à noite do fogo (o túnel em volta do herói; o clarão do raio na casa) e o Corredor Negro sumindo
+  'depois-p2-tunel': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, aoAcao: (a) => { if (a === 'raioCasa') clarear(0.7); }, depois: () => { tempo.tunel = false; J.corridaCena = false; } },
+  'depois-p2-desfazer': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, aoAcao: (a) => { if (a === 'raioCasa') clarear(0.9); }, depois: () => { tempo.tunel = false; J.corridaCena = false; } },
+  'depois-p2-silhueta': { aoAcao: (a) => {
+    if (a !== 'someNegro') return;
+    const f = aliados.foco('negro');
+    if (f) { for (let i = 0; i < 12; i++) { const g = Math.random() * 6.28; combate.efeitos.raio(f.x, f.y + 0.3 + Math.random() * 1.6, f.z, f.x + Math.cos(g) * 3.5, f.y + Math.random() * 2, f.z + Math.sin(g) * 3.5, { vida: 0.45, desvio: 0.8, r: 1.45, g: 1.5, b: 1.7 }); } combate.efeitos.onda(f.x, f.y, f.z, 8, 0.6); }
     J.cenaAliados = { aliados: {} };
   } },
   'depois-tunel': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, depois: () => { tempo.tunel = false; J.corridaCena = false; irAoPassado(); } },
@@ -1222,12 +1252,12 @@ function rodarCena(id, foco, depois, opc) {
 /** a noite do acidente: o relógio para à meia-noite, a coluna do Núcleo acende e o Reverso do passado espera no laboratório */
 // ---------- créditos (depois do epílogo) ----------
 const CREDITOS = [
-  ['Uma história em quatro atos', ''],
+  ['A Parte 1: uma história em quatro atos', ''],
   ['Personagens', 'Caitlin · Cisco · Joe · Iris · Zoom · Flash Reverso · Capitão Frio · Onda Térmica · Mago do Tempo · Savitar · DeVoe'],
   ['', 'Nomes inspirados nos personagens da DC. Trajes, rostos, cenários e enredo deste jogo são desenhos próprios. Jogo de fã, sem fins lucrativos.'],
   ['Corpos e rostos', 'Microsoft Rocketbox Avatar Library (licença MIT)'],
   ['Motor 3D', 'three.js (licença MIT)'], ['Fontes', 'Rajdhani e Inter (SIL Open Font License)'],
-  ['Feito com', 'Claude'], ['', ''], ['Obrigado por jogar', 'A cidade continua precisando de você: todos os capítulos podem ser jogados de novo pela pausa.'],
+  ['Feito com', 'Claude'], ['', ''], ['Obrigado por jogar', 'Feche os créditos: a Parte 2 começa três meses depois.'],
 ];
 function mostrarCreditos() {
   let c = document.getElementById('creditos');
@@ -1243,6 +1273,11 @@ function mostrarCreditos() {
 function fecharCreditos() {
   const c = document.getElementById('creditos'); if (!c || c.hidden) return;
   c.hidden = true; J.modo = 'jogando'; avisar('A cidade é sua', 'Patrulha livre', 'ok');
+}
+/** Parte 2: entra ou sai da linha do tempo alterada (o Ponto de Ignição): crepúsculo parado, outras cores, ninguém no Cortex */
+function mudarEpoca(ep) {
+  if (ep === 'ignicao') { J.tAntesIg = mundo.T; mundo.T = 0.77; tempo.definirEpoca('ignicao'); avisar('Ponto de Ignição', 'Uma linha do tempo que não deveria existir', 'info'); }
+  else { tempo.definirEpoca('presente'); mundo.T = J.tAntesIg ?? 0.45; avisar('A linha do tempo de volta', 'Presente', 'info'); }
 }
 function irAoPassado(silencioso = false) {
   if (tempo.epoca === 'passado') return;
@@ -1312,7 +1347,7 @@ function quadro() {
       if (ev.tipo === 'nocaute') { missoes.contar('nocautes'); missoes.contar('pontos', 50); if (ev.especial) missoes.contar('especiais'); }
       else if (ev.tipo === 'dano') { el.dano.style.opacity = '1'; }
     }
-    for (const ev of viloes.atualizar(dt, P, { capitulo: missoes.atual?.capitulo, podeComecar: !crimes.ativo && !J.cenaPendente && !J.cron && !J.interior && historia.radioLivre && tempo.epoca === 'presente' && rivais.ativo?.estado !== 'luta' })) eventoVilao(ev);
+    for (const ev of viloes.atualizar(dt, P, { capitulo: missoes.atual?.capitulo, podeComecar: !crimes.ativo && !J.cenaPendente && !J.cron && !J.interior && historia.radioLivre && tempo.epoca !== 'passado' && rivais.ativo?.estado !== 'luta' })) eventoVilao(ev);
     J.danoVilao = Math.max(0, (J.danoVilao || 0) - dt * 2);
     el.missao.hidden = viloes.ativo; el.corpo.classList.toggle('capitulo', viloes.ativo);
     el.dano.style.opacity = String(Math.min(1, Math.max(combate.dano, J.danoVilao)));
@@ -1330,7 +1365,7 @@ function quadro() {
       const perigos = [], r = rivais.ativo, cr = crimes.ativo;
       if (r) { perigos.push(r); J.rivPos = { x: r.x, z: r.z }; }
       if (cr && cr.x != null && (cr.tipo === 'assalto' || cr.tipo === 'gangue' || cr.tipo === 'incendio')) perigos.push(cr);
-      if (viloes.ativo && tempo.epoca === 'presente') for (const v of viloes.viloes) if (v.x != null) perigos.push(v);
+      if (viloes.ativo && tempo.epoca !== 'passado') for (const v of viloes.viloes) if (v.x != null) perigos.push(v);
       J.rivVenc ??= rivais.vencidos;
       if (rivais.vencidos > J.rivVenc) { J.rivVenc = rivais.vencidos; J.festaPed = J.rivPos || { x: P.x, z: P.z }; }
       pedestres.atualizar(dt, P, mundo.noite, { perigos: J.interior ? [] : perigos, festa: J.festaPed }); J.festaPed = null;
@@ -1349,10 +1384,10 @@ function quadro() {
     ultBussola += dt; if (ultBussola > 0.2) { ultBussola = 0; atualizarBussola(); }
   }
   historia.atualizar(Math.min(dtBruto, 0.1));
-  equipe.atualizar(dt, P, { noCortex: noCortex(), quemFala: J.modo === 'cena' ? historia.quemFala : null });
+  equipe.atualizar(dt, P, { noCortex: noCortex(), quemFala: J.modo === 'cena' ? historia.quemFala : null, oculto: tempo.epoca === 'ignicao' });
   aliados.posicionar((J.cenaAliados || missoes.atual)?.aliados || null);
   aliados.atualizar(dt, P, { quemFala: J.modo === 'cena' ? historia.quemFala : null });
-  contencao.atualizar(dt, P, viloes);
+  contencao.atualizar(dt, P, viloes, { vazia: tempo.epoca === 'ignicao', fora: missoes.livre || missoes.indice >= POS_CINZAS ? FORA_CINZAS : null });
   tempo.atualizar(dt, camera, P, { quemFala: J.modo === 'cena' ? historia.quemFala : null });
   if (J.modo === 'cena') {
     viloes.posar(dt, historia.quemFala); animarHeroi(dt); if (!historia.camera(camera, dt)) atualizarCamera(dt);

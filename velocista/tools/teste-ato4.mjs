@@ -121,7 +121,7 @@ await pagina.evaluate(() => document.querySelector('#cenaHist .pular').dispatchE
 ok(await espera(() => { const c = document.getElementById('creditos'); return c && !c.hidden && window.__rel.J.modo === 'creditos'; }), 'depois do epílogo, os créditos');
 await pagina.waitForTimeout(4000); await foto('creditos');
 await tecla('enter');
-ok(await espera(() => window.__rel.J.modo === 'jogando' && document.getElementById('creditos').hidden), 'fechar os créditos volta ao jogo (patrulha livre)');
+ok(await espera(() => (window.__rel.J.modo === 'jogando' || window.__rel.historia.cenaAtual === 'p2-abertura') && document.getElementById('creditos').hidden), 'fechar os créditos volta ao jogo (e a Parte 2 começa)');
 ok(!erros.length, `sem erros no console (${erros.slice(0, 3).join(' | ')})`);
 await navegador.close(); await srv.fechar();
 process.exit(falhas ? 1 : 0);

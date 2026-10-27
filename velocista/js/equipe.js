@@ -64,8 +64,8 @@ export function criarEquipe(cena, { mobile = false, aniso = 2, renderer = null, 
 
   const ang = (a) => Math.atan2(Math.sin(a), Math.cos(a));
   /** a cada quadro: aparecem com o herói perto do laboratório; viram para ele dentro do Cortex; `quemFala` gesticula */
-  function atualizar(dt, P, { noCortex = false, quemFala = null } = {}) {
-    const perto = Math.hypot(P.x - P0.x, P.z - P0.z) < 70;
+  function atualizar(dt, P, { noCortex = false, quemFala = null, oculto = false } = {}) {
+    const perto = Math.hypot(P.x - P0.x, P.z - P0.z) < 70 && !oculto;     // (oculto: a linha do tempo alterada, ninguém no Cortex)
     for (const p of Object.values(pessoas)) {
       p.raiz.visible = perto;
       if (!perto) continue;

@@ -58,6 +58,20 @@ Object.assign(PERFIS, {
     vida: 160, esquiva: 0.35, dano: 0.13, telegrafo: 0.9, recupera: 1.6, rodeia: [1.3, 2.2], distancia: 15, regen: 0.01, fase2: true, flutua: 1.3,
   },
 });
+// Parte 2: a NEVASCA (a Caitlin da linha do tempo alterada: o raio de gelo do Capitão Frio, saindo das mãos; o corpo da
+// Caitlin com a pele e a roupa geladas e uma coroa de gelo — aderecos.js) e o CORREDOR NEGRO (velocista; cada investida que
+// acerta também drena a energia do herói: `drena`)
+Object.assign(PERFIS, {
+  nevasca: {
+    nome: 'NEVASCA', titulo: 'Nevasca', pessoa: 'caitlin', arma: 'gelo', cor: '#dff4ff', corRaio: [0.75, 1.6, 2.8],
+    vida: 95, esquiva: 0.5, dano: 0.11, telegrafo: 0.9, recupera: 1.7, rodeia: [1.4, 2.4], distancia: 13, regen: 0.015, fase2: false,
+  },
+  negro: {
+    nome: 'CORREDOR NEGRO', titulo: 'Corredor Negro', traje: 'negro', raio: 'branco', cor: '#c8ccd6', corRaio: [1.6, 1.65, 1.9],
+    vida: 140, capturas: 3, vFuga: 57, vCansado: 35, folego: 4.5, cansaco: 2.4,
+    rodeia: [1.2, 2.2], telegrafo: 0.58, recupera: 1.2, dano: 0.13, esquiva: 0.8, raios: true, fase2: true, regen: 0.012, drena: 0.18,
+  },
+});
 export const CAPITULOS = [
   { id: 'zoom', titulo: 'Capítulo 1 — Zoom', viloes: ['zoom'], perseguicao: true, texto: 'Um velocista de preto está aterrorizando a cidade. Encontre o Zoom e persiga-o.' },
   { id: 'frio', titulo: 'Capítulo 2 — Capitão Frio', viloes: ['frio'], perseguicao: false, lugar: 'cidade', texto: 'Um quarteirão do centro congelou. Encontre o Capitão Frio.' },
@@ -67,6 +81,8 @@ export const CAPITULOS = [
   { id: 'final', titulo: 'Batalha final', viloes: ['zoom', 'reverso'], perseguicao: false, texto: 'Os dois voltaram juntos e esperam por você em frente ao S.T.A.R. Labs.' },
   { id: 'savitar', titulo: 'Capítulo 6 — Savitar', viloes: ['savitar'], perseguicao: true, texto: 'Algo saiu do túnel do tempo junto com você. Encontre o Savitar.' },
   { id: 'devoe', titulo: 'Capítulo 7 — DeVoe', viloes: ['devoe'], perseguicao: false, texto: 'O Pensador espera em frente ao S.T.A.R. Labs. Ele quer o Núcleo.' },
+  { id: 'nevasca', titulo: 'Capítulo 8 — Nevasca', viloes: ['nevasca'], perseguicao: false, lugar: 'cidade', texto: 'Um quarteirão inteiro congelou em dez segundos. A Nevasca está no meio do gelo.' },
+  { id: 'negro', titulo: 'Capítulo 9 — Corredor Negro', viloes: ['negro'], perseguicao: true, texto: 'Ele não tem rosto, não tem coração e não vai embora. Enfrente o Corredor Negro.' },
 ];
 const DANO = { soco: 5, gancho: 9, raio: 14, ciclone: 18, sonico: 28 };
 const CHAVE = 'theflash.viloes.v1';
@@ -268,6 +284,8 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
   function ferirHeroi(P, dano, dx, dz) {
     const k = Math.min(...C.viloes.map((v) => v.facil ?? 1));
     P.vida = Math.max(0, P.vida - dano * k); C.semGolpe = 0;
+    const dr = Math.max(...C.viloes.map((v) => v.perf.drena || 0));               // o Corredor Negro também leva a energia
+    if (dr) P.energia = Math.max(0, (P.energia ?? 1) - dr * k);
     const d = Math.hypot(dx, dz) || 1; P.vx += (dx / d) * 9; P.vz += (dz / d) * 9;
     eventos.push({ tipo: 'dano' });
   }

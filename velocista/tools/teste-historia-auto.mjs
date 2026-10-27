@@ -49,7 +49,8 @@ ok(mig.id === 'cap-reverso' && mig.pts === 1234, `o progresso antigo vai para o 
 
 // ---- cidade livre depois do fim ----
 const todos = ['zoom', 'frio', 'onda', 'mago', 'reverso', 'final', 'savitar', 'devoe'];
-await abrirJogo('', { 'theflash.missoes.v2': { id: null }, 'theflash.viloes.v1': { vencidos: todos }, 'theflash.historia.v1': { vistas: ['cena:prologo'] } });
+const { MISSOES } = await import('../js/missoes.js');                       // (terminou tudo: o último passo que existe, a Parte 2 inclusive)
+await abrirJogo('', { 'theflash.missoes.v2': { id: null, ultimo: MISSOES.at(-1).id }, 'theflash.viloes.v1': { vencidos: todos }, 'theflash.historia.v1': { vistas: ['cena:prologo'] } });
 ok(await espera(() => window.__rel.missoes.livre && /Cidade livre/.test(document.getElementById('missaoNum').textContent), null, 120000), 'história concluída: cidade livre');   // o painel muda no próximo quadro desenhado
 await pagina.evaluate(() => window.__rel.crimes.adiantar(1000));      // o mesmo relógio vencido: agora o jogo deixa
 ok(await espera(() => !!window.__rel.crimes.ativo, null, 120000), 'na cidade livre os crimes aparecem sozinhos');

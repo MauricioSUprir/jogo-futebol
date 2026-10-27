@@ -128,12 +128,13 @@ export function criarTempo(cena, { mobile = false, aniso = 2, fx, lab, chao = nu
     // ---- época ----
     get epoca() { return epoca; },
     prepararReverso,
-    /** muda a época do mundo: 'passado' liga a noite do acidente; 'presente' volta ao normal */
+    /** muda a época do mundo: 'passado' liga a noite do acidente; 'ignicao' a linha do tempo alterada; 'presente' volta ao normal */
     definirEpoca(e) {
       epoca = e;
       coluna.visible = e === 'passado';
       if (reverso) reverso.visible = e === 'passado';
       document.body.classList.toggle('passado', e === 'passado');
+      document.body.classList.toggle('ignicao', e === 'ignicao');     // Parte 2: a linha do tempo alterada (index.html)
     },
     /** onde está o Reverso do passado (foco da cena), com ele já carregado */
     focoReverso() { return reverso && reverso.visible ? { x: reverso.position.x, y: reverso.position.y, z: reverso.position.z } : null; },
