@@ -2298,8 +2298,8 @@ de meta; a linha da trajetória com mira, força e curva no escanteio e na falta
 - **A conta** (`chuteMirado(m, j, pr, tipo, forca, ang, curva)` → `{v, w}`): ALTA/TENSA = elevação fixa
   (`MIRA.alta/tensa.elev`), velocidade na faixa pela força, o giro do cruzamento do jogo + o efeito (`wy = −curva × giro ×
   atributo`); CHUTE = a velocidade do chute do jogo (`ACOES.chute.v` × finalização), com o efeito por cima da falta
-  (`giroFalta`) e a elevação que passa por cima da barreira (`BARREIRA.alturaPassar` na distância dela) ou que chega em
-  `yAlvo` pela força. **A mesma conta** no chute de verdade (`acoes.js cobrancaMirada`) e na linha (`mira-linha.js
+  (`giroFalta`) e a elevação que passa por cima da barreira (`BARREIRA.alturaPassar` na distância dela) ou que chega na
+  altura da mira pela força (`alturaMiraChute`, a do chute do jogo; seção C2 abaixo). **A mesma conta** no chute de verdade (`acoes.js cobrancaMirada`) e na linha (`mira-linha.js
   preverMira` → `mira.js simularLinha`: `bola.js passoBola` passo a passo até a bola tocar o chão, bater em algo ou cruzar
   a linha de fundo; no CHUTE só até `linhaChute` m além da barreira). Por cima, o erro do cobrador (o do chute do jogo: finalização, distância,
   força no máximo, `faltaErro` com barreira; no cruzamento o do lançamento: passe longo, ±m a 40 m, em ângulo e em força)
@@ -2475,6 +2475,35 @@ instante do chute: real 88,9%), D2 (bola solta da área: real 0,061 por chute) e
 ficam PENDENTE e só reprovam com `--estrito`; as guardas (C1g, D3, E1g) reprovam sempre. `--js
 <pasta>` mede outra lógica (a main de 21/10 reprova 10 itens; a 1ª versão, 96f66255, 7 — F1, G1, G2, D1, D3, B2, C4). `medir-goleiro.mjs` (informativo) dá o relatório inteiro
 (seções 1–4). O gol de escanteio ainda acima do real (2,6%) vem do duelo pelo alto, não do goleiro: pendência da Etapa 4.5.
+
+## Chute com a barra cheia (C2, item 13; 27/10; contrato)
+Pedido do dono (15/10): "chute com a barra cheia mais alto, com chance de acertar o ângulo" (a bola ia a meia altura: a mira
+subia só até `yAlvo[1]` 1,7 m e o canto do analógico parava a meia-boca − 0,5 m).
+- **A conta** (`mira.js`, puras): `alturaMiraChute(forca, cheia = true)` = a altura (m) em que a mira passa 0,4 m antes da
+  linha; até `ACOES.chute.cheia.de` (0,9) é a curva de antes (`lerp(yAlvo, forca²)`, bit a bit); acima, sobe em reta até
+  `cheia.y` (2,15 m; o travessão fica a 2,44). `zMaxMiraChute(forca)` = o maior |z| da mira do analógico: meia-boca −
+  `zFolgaJogo` (0,5, como antes) até 0,9, indo a meia-boca − `zFolga` (0,35 m) na barra cheia. Usadas pelo chute do jogo
+  (`acoes.js chute`: `yMira` e `zPeloAnalogico`) e pela linha da cobrança mirada (`chuteMirado`, tiro livre direto sem
+  barreira): a linha continua a física da bola (teste-mira A, 0 cm, também com a barra cheia).
+- **Quem muda**: só quem segura o CHUTE até a barra passar de 0,9 (≥ 0,72 s; cheia a 0,8 s) — o chute forte e o colocado. A
+  IA chuta com ≤ 0,75 (`IA_ATAQUE.utilidade.chuteForca`), o pênalti dela com ≤ 0,9 e a falta dela com ≤ 0,9: a partida IA ×
+  IA e o treino ficam bit a bit iguais (`hash-partida` demo IGUAL, `hash-igual` IGUAL). O **pênalti do humano** fica na
+  curva de antes (`cheia = false`): a mira dele vai só a ±`penaltiCanto` (longe do ângulo) e a mira alta só somava bola por
+  cima — com a barra cheia, 17% → 42% para fora (B11 do teste-botoes segurando 50 ticks, 180 cobranças). A cavadinha não
+  muda.
+- **O erro não muda**: o do chute do jogo (finalização, distância, perna, `forcaMaxErro` ×1,15, colocado ×0,6) por cima da
+  mira. Com ele o ângulo de 20 m é uma chance: o craque com a perna boa acerta ~31% (metade forte, metade colocado), o chute
+  forte sozinho ~17%, o bom finalizador ~21%; ~9–17% passa por cima e ~11–13% bate no travessão.
+- **Pesquisa**: o canto alto é a colocação que mais converte (StatsBomb, "The Enigma of Shot Placement": canto 50–60% × meio
+  12–13%; Datawrapper sobre 101 mil chutes do StatsBomb Open Data: a bola no ângulo é "quase indefensável", e o jogador
+  costuma bater baixo, o mais seguro); o chute alto espalha mais que o baixo (Hunter et al. 2018, J Biomech, 8.466 chutes) —
+  por isso o erro do jogo (o da pesquisa da Etapa 2: σ ≈ 1,2–2° por eixo no craque) fica como era.
+- **Teste**: `teste-chutes` (seção "barra cheia"; `--so-cheia` roda só ela): de 18–22 m, até 20° da frente, o analógico no
+  canto, sem goleiro, onde a bola cruza a linha (na trave/travessão, onde cruzaria). A MIRA com o erro zerado (separada do
+  sorteio): y médio 2,1–2,2 m, todos 2,0–2,3, |z| médio ≥ meia-boca − 0,4, 100% no ângulo e 0 por cima (antes: 1,67 m, 0% no
+  ângulo). Com o sorteio, o craque (90–99) com a perna boa, metade forte e metade colocado (241 chutes): ≥ 1,9 m em ≥ 70%
+  (18% → 83%), no ângulo — y ≥ 1,9 m e |z| ≥ meia-boca − 0,9 m, dentro do gol — em ≥ 25% (12% → 31%) e por cima do travessão
+  em ≤ 25% (0% → 9%); só o forte, o bom finalizador (80–89) e a perna ruim saem informativos.
 
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores

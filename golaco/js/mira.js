@@ -49,6 +49,24 @@ export function tipoMirado(m, pr, botao, mod) {
 }
 export const comTrajetoria = t => t === 'alta' || t === 'tensa' || t === 'chute';
 
+// A mira do chute pela força (C2, item 13): a MESMA conta no chute do jogo (acoes.js chute) e na linha da cobrança mirada
+// (chuteMirado), para a linha continuar a física da bola. Até ACOES.chute.cheia.de, a curva de antes (a IA chuta com ≤ 0,9:
+// a partida IA × IA fica igual); acima, a barra cheia sobe até cheia.y m na linha (medida 0,4 m antes dela) e o canto do
+// analógico chega a meia-boca − cheia.zFolga m: o ângulo. Com o erro do chute (forcaMaxErro), uma parte passa por cima.
+// cheia = false: a curva de antes em toda força (o pênalti do humano: a mira dele vai só a ±penaltiCanto, longe do ângulo,
+// e a mira alta só somava bola por cima — com a barra cheia, 17% → 42% para fora)
+export function alturaMiraChute(forca, cheia = true) {
+  const c = ACOES.chute, y = lerp(c.yAlvo[0], c.yAlvo[1], forca * forca), k = c.cheia;
+  if (!cheia || !(forca > k.de)) return y;
+  const y0 = lerp(c.yAlvo[0], c.yAlvo[1], k.de * k.de);
+  return lerp(y0, k.y, clamp((forca - k.de) / (1 - k.de), 0, 1));
+}
+// o maior |z| (m do meio do gol) da mira do analógico no chute do jogo
+export function zMaxMiraChute(forca) {
+  const k = ACOES.chute.cheia, meio = CAMPO.gol.largura / 2;
+  return meio - (forca > k.de ? lerp(k.zFolgaJogo, k.zFolga, clamp((forca - k.de) / (1 - k.de), 0, 1)) : k.zFolgaJogo);
+}
+
 // {v, w} PRETENDIDOS (a mesma conta no chute e na linha); curva + = para a direita de quem bate (ωy < 0)
 export function chuteMirado(m, j, pr, tipo, forca, ang, curva, out = {}) {
   const b = m.bola, pp = { x: b.p.x, y: b.p.y, z: b.p.z }, ux = MD.cos(ang), uz = MD.sin(ang), a = j.par.attr, ch = tipo === 'chute';
@@ -60,7 +78,7 @@ export function chuteMirado(m, j, pr, tipo, forca, ang, curva, out = {}) {
     s *= lerp(0.86, 1.08, a.finalizacao / 100);
     const lado = ladoDe(m, j.time), D = ux * lado > 0.05 ? Math.max(1, (lado * CAMPO.meioX - pp.x) / ux - 0.4) : 25, br = pr.barreira;
     el = br && br.n > 0 && D > br.dist + 1 ? elevacaoParaAltura(pp, ux, uz, br.dist, s, BARREIRA.alturaPassar, w)
-      : elevacaoParaAltura(pp, ux, uz, D, s, lerp(cfg.yAlvo[0], cfg.yAlvo[1], forca * forca), w);
+      : elevacaoParaAltura(pp, ux, uz, D, s, alturaMiraChute(forca), w);
   }
   const ce = MD.cos(el);
   out.v = { x: ux * s * ce, y: s * MD.sin(el), z: uz * s * ce }; out.w = w;

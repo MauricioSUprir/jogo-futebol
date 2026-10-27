@@ -17,7 +17,7 @@ import {
 import { procurarOportunidade, preverBola } from './conducao.js';
 import { passoCorpo, copiaCinematica, infoPassada } from './jogador.js';
 import { registrarChute } from './regras-goleiro.js';
-import { chuteMirado, simularLinha } from './mira.js';
+import { chuteMirado, simularLinha, alturaMiraChute, zMaxMiraChute } from './mira.js';
 
 const DT = PASSO;
 const BOTOES_ACAO = [
@@ -745,12 +745,13 @@ function velParaAlturaEm(pp, ux, uz, D, el, w, y) {
 
 /**
  * Ponto da mira na linha do gol (z) pelo analógico mr: o ângulo entre o analógico e a reta bola–gol escolhe o canto
- * ("lat" positivo = para a direita de quem chuta; no gol de +x a direita é +z), dentro da boca do gol.
+ * ("lat" positivo = para a direita de quem chuta; no gol de +x a direita é +z), dentro da boca do gol (até ±zMax; o
+ * chute com a barra cheia vai mais perto da trave: mira.js zMaxMiraChute).
  */
-function zPeloAnalogico(b, gx, lado, meio, mr) {
+function zPeloAnalogico(b, gx, lado, meio, mr, zMax = meio - 0.5) {
   const dirGol = MD.atan2(-b.p.z, gx - b.p.x);
   const lat = MD.sin(difAng(dirGol, MD.atan2(mr.z, mr.x)));
-  return clamp(lat * lado * meio * 1.4, -meio + 0.5, meio - 0.5);
+  return clamp(lat * lado * meio * 1.4, -zMax, zMax);
 }
 
 /** Goleiro adversário (o mais perto do gol atacado). */
@@ -779,7 +780,7 @@ function chute(m, j, pe, p, erroMult) {
   let zMira;
   const mr = mira(j);
   if (mr && mr.mag > 0.3) {
-    zMira = zPeloAnalogico(b, gx, lado, meio, mr);
+    zMira = zPeloAnalogico(b, gx, lado, meio, mr, zMaxMiraChute(p.forca));
   } else {
     const gz = gk ? gk.z : 0;
     zMira = gz > 0 ? -meio + 0.6 : meio - 0.6;
@@ -788,7 +789,8 @@ function chute(m, j, pe, p, erroMult) {
   // mandava 1/3 dos pênaltis para fora com qualquer analógico; a ±2,75 (o canto da IA, que bate 36% mais no meio), 16%;
   // a ±2,5, ~8% (teste-botoes B11; a meta do dono é ~6%). Só o humano: a IA mira o canto dela (PARTIDA.penaltiIA)
   if (p.penalti && ehHumano(m, j)) zMira = clamp(zMira, -cfg.penaltiCanto, cfg.penaltiCanto);
-  const yMira = lerp(cfg.yAlvo[0], cfg.yAlvo[1], p.forca * p.forca);
+  // a barra cheia sobe a mira (C2): a mesma conta da linha da cobrança mirada; no pênalti, a curva de antes (mira.js)
+  const yMira = alturaMiraChute(p.forca, !p.penalti);
   const colocado = p.mod;
   let s = lerp(cfg.v[0], cfg.v[1], p.forca) * lerp(0.86, 1.08, j.par.attr.finalizacao / 100) * velPeFraco(j, pe);
   if (colocado) s *= cfg.colocadoV;

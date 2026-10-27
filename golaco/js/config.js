@@ -434,7 +434,14 @@ export const ACOES = {
   // a ~0,85 do forte e com 30–40 rad/s de efeito (Whiteside 2010); força máxima ×1,15 no erro
   // (Carlsson 2018); pressão só de perto e pouca; de primeira ×1,15 (StatsBomb)
   // penaltiErro: o erro do chute no pênalti (a pressão da cobrança; ~6% para fora — a meta do dono, seção 11)
-  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, penaltiCanto: 2.5, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18 },
+  // cheia (C2, item 13 da FILA; dono, 15/10: "chute com a barra cheia mais alto, com chance de acertar o ângulo"): acima
+  // da força `de` a mira sobe de yAlvo até `y` m na linha (o travessão fica a 2,44 m) e o canto do analógico vai até a
+  // meia-boca − `zFolga` m (até `de`: meia-boca − zFolgaJogo, como antes); a IA chuta com ≤ 0,9 e não muda (mira.js
+  // alturaMiraChute/zMaxMiraChute). Pesquisa: o canto alto é a colocação que mais converte (StatsBomb, "The Enigma of Shot
+  // Placement": canto 50–60% × meio 12–13%; Datawrapper, 101 mil chutes do StatsBomb Open Data: "quase indefensável"), e o
+  // chute alto é menos preciso que o baixo (Hunter 2018, J Biomech, 8.466 chutes) — o erro (forcaMaxErro) fica como era
+  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, penaltiCanto: 2.5, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18,
+    cheia: { de: 0.9, y: 2.15, zFolgaJogo: 0.5, zFolga: 0.35 } },
   // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado). A da IA sai sozinha com o
   // goleiro adiantado (goleiroFora/distMax); a do humano, com DOIS TOQUES no CHUTE (pedido do dono, 12/10), de qualquer
   // lugar: o 2º aperto antes de o chute do 1º tocar na bola. toqueRapido: 1º toque mais curto que isso pode ser o 1º de
