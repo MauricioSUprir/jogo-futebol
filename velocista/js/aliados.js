@@ -8,7 +8,8 @@ import * as THREE from 'three';
 import { criarHeroi } from './humano.js';
 import { pontoMundo } from './marcos.js';
 
-const PERFIS = { joe: { pessoa: 'joe' }, iris: { pessoa: 'iris' }, vulto: { traje: 'vulto', vibra: true }, reverso: { traje: 'reverso', vibra: true } };
+// Parte 2: o Cisco bilionário da linha do tempo alterada (na praça da Prefeitura) e o Corredor Negro parado na praça
+const PERFIS = { joe: { pessoa: 'joe' }, iris: { pessoa: 'iris' }, cisco: { pessoa: 'cisco' }, vulto: { traje: 'vulto', vibra: true }, reverso: { traje: 'reverso', vibra: true }, negro: { traje: 'negro', vibra: true } };
 const IDS = Object.keys(PERFIS);
 
 export function criarAliados(cena, { mobile = false, aniso = 2, chao = () => 0.3 } = {}) {

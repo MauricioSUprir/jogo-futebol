@@ -28,12 +28,14 @@ export function criarContencao(cena, { mobile = false, aniso = 2, lab } = {}) {
   }
   let t = 0;
   /** a cada quadro: quem está preso (vencido e não solto agora) aparece na cela dele, com o herói perto */
-  function atualizar(dt, P, viloes) {
+  // (Parte 2: `vazia` = a linha do tempo alterada, onde ninguém foi preso; `fora` = quem sumiu da cela — o Zoom, levado pelo
+  // Corredor Negro)
+  function atualizar(dt, P, viloes, { vazia = false, fora = null } = {}) {
     t += dt;
     const perto = Math.abs(P.x - lab.cx) < 90 && Math.abs(P.z - lab.cz) < 90 && P.y < 60;
     const soltos = viloes.ativo ? new Set(viloes.ids) : new Set();
     ORDEM.forEach((id, k) => {
-      const preso = (viloes.vencido(id) || ((id === 'zoom' || id === 'reverso') && viloes.vencido('final'))) && !soltos.has(id);
+      const preso = (viloes.vencido(id) || ((id === 'zoom' || id === 'reverso') && viloes.vencido('final'))) && !soltos.has(id) && !vazia && !fora?.has(id);
       if (preso && perto) carregar(id, k);
       const p = presos[id]; if (!p) return;
       p.raiz.visible = preso && perto; if (!p.raiz.visible) return;

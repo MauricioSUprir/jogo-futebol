@@ -53,6 +53,14 @@ export function colocarAderecos(id, modelo) {
     peca(new THREE.BoxGeometry(0.2, 0.05, 0.022), aco, cabeca, -0.01, 0.12, 0, -0.15, 0, 0);
     peca(new THREE.BoxGeometry(0.18, 0.012, 0.026), luz, cabeca, -0.01, 0.148, 0, -0.15, 0, 0);
     ponta.position.set(0.05, -0.03, 0.12); mao.add(ponta);
+  } else if (id === 'nevasca') {
+    // a Caitlin daquele mundo: a pele e a roupa geladas (o material é só deste corpo), uma coroa de cristais de gelo e as mãos
+    // cobertas de gelo azul que brilha; o raio sai da mão direita
+    for (const m of modelo.materiais.slice(0, 2)) { m.color?.setRGB(0.74, 0.88, 1.12); m.emissive?.setRGB(0.02, 0.05, 0.09); }
+    const gelo = mat(0xdff4ff, 0x4fb8ff, 0.1, 0.08);
+    for (let k = 0; k < 7; k++) { const a = (k / 7) * Math.PI * 2, h = k % 2 ? 0.06 : 0.09; peca(new THREE.ConeGeometry(0.014, h, 5), gelo, cabeca, Math.cos(a) * 0.085, 0.12 + h / 2, Math.sin(a) * 0.075, Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4); }
+    for (const n of ['maoE', 'maoD']) { const o = osso(n); if (o) peca(new THREE.IcosahedronGeometry(0.05, 0), gelo, o, 0.0, -0.02, (n === 'maoD' ? 1 : -1) * 0.07); }
+    ponta.position.set(0.02, -0.02, 0.12); mao.add(ponta);
   } else if (id === 'devoe') {
     // a "touca de pensar": um aro de metal com luzes em volta da cabeça; e o disco flutuante sob os pés
     const aro = mat(0x9aa3b4, 0, 0.95, 0.2), luz = mat(0xd9b3ff, 0xa060ff, 0.2, 0.2), base = mat(0x2a2f38, 0, 0.9, 0.25);

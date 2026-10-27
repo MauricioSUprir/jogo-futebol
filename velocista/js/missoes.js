@@ -7,7 +7,11 @@
 // roupa? ('civil' = Barry Allen à paisana; sem nada, o traje), tempo? (cronômetro em s: acabou, recomeça com um aviso),
 // falha? (o passo para onde a história volta quando o tempo acaba), pistas? (lugares da perícia: [x, z, nome, detalhe], x/z
 // relativos ao ponto, uma de cada vez; contador 'pistas').
-// Depois do último passo a cidade fica livre (crimes, esferas e os capítulos para jogar de novo na pausa).
+// cenaAbre? (uma cena que roda no começo do passo, uma vez), epoca? ('ignicao' = a linha do tempo alterada da Parte 2: a
+// cidade no crepúsculo, em outras cores), fraco? (multiplica a velocidade máxima: o raio se apagando), alvoSala? (uma sala do
+// S.T.A.R. Labs: o guia leva até ela; ctx.sala diz onde o herói está), tipo 'tunel' (ficar 5 s acima de 180 km/h).
+// Depois do último passo a cidade fica livre (crimes, esferas e os capítulos para jogar de novo na pausa). Quem terminou
+// uma versão da história com menos passos volta no primeiro passo novo (o save guarda o último passo que existia).
 export const MISSOES = [
   { id: 'lab', titulo: 'Bem-vindo ao S.T.A.R. Labs', texto: 'Entre no laboratório e vá até o Cortex', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
   { id: 'velocidade', titulo: 'Teste de velocidade', texto: 'Chegue a 200 km/h (segure CORRER)', checar: (c) => c.v * 3.6 >= 200 },
@@ -55,7 +59,33 @@ export const MISSOES = [
   { id: 'cap-savitar', titulo: 'O eco do túnel', texto: 'Encontre o Savitar e derrote-o', capitulo: 'savitar' },
   { id: 'cap-devoe', titulo: 'O Grande Reinício', texto: 'Derrote o DeVoe em frente ao S.T.A.R. Labs', capitulo: 'devoe' },
   { id: 'nucleo', titulo: 'O coração do raio', texto: 'Corra para o Cortex: o Núcleo vai explodir', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
+  // ===== PARTE 2 — O preço da velocidade (dono, 27/10: "quero uma parte dois da história, bem maior") =====
+  // Ato 5 — Ponto de Ignição
+  { id: 'p2-exames', titulo: 'Uma noite sem sono', texto: 'Três da manhã. A Caitlin quer ver seus exames no Cortex', alvo: 'cortex', cenaAbre: 'p2-abertura', checar: (c) => c.sala === 'cortex' },
+  { id: 'p2-caixinha', titulo: 'A caixinha de música', texto: 'O Joe chamou você para jantar na casa da família West', ponto: 'jantar', aliados: { joe: 'jantar' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
+  { id: 'p2-limite', titulo: 'Só um teste', texto: 'Passe dos 400 km/h (segure CORRER numa reta longa)', checar: (c) => c.v * 3.6 >= 400 },
+  { id: 'p2-tunel', titulo: 'Vinte anos atrás', texto: 'Fique 5 s acima de 180 km/h: o túnel do tempo vai abrir', tipo: 'tunel', checar: (c) => c.tunel >= 1 },
+  { id: 'p2-mundo', titulo: 'O dia que nunca aconteceu', texto: 'Volte ao S.T.A.R. Labs', epoca: 'ignicao', fraco: 0.55, alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
+  { id: 'p2-joe', titulo: 'Um estranho', texto: 'Vá à Delegacia Central: o Joe vai saber o que aconteceu', epoca: 'ignicao', fraco: 0.55, ponto: 'delegacia', aliados: { joe: 'delegacia' }, roupa: 'civil', checar: (c) => c.perto },
+  { id: 'p2-iris', titulo: 'Prazer, Iris West', texto: 'A Iris toma café no Jitters todo fim de tarde', epoca: 'ignicao', fraco: 0.55, ponto: 'mesaCafe', aliados: { iris: 'mesaCafe' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p2-assalto', titulo: 'Ainda sou o Flash', texto: 'Mesmo mais lento, pare um assalto', epoca: 'ignicao', fraco: 0.55, meta: 1, contador: 'assalto', crime: 'assalto' },
+  { id: 'p2-cisco', titulo: 'Cisco Ramon, bilionário', texto: 'A Torre Ramon fica na praça da Prefeitura: convença o Cisco', epoca: 'ignicao', fraco: 0.55, ponto: 'prefeitura', aliados: { cisco: 'prefeitura' }, checar: (c) => c.perto },
+  { id: 'p2-esferas', titulo: 'O raio está se apagando', texto: 'Recolha 5 esferas de energia antes que a velocidade suma', epoca: 'ignicao', fraco: 0.55, meta: 5, contador: 'esferas', alvo: 'esfera' },
+  { id: 'cap-nevasca', titulo: 'Projeto Nevasca', texto: 'Encontre a Nevasca e derrote-a', epoca: 'ignicao', fraco: 0.55, capitulo: 'nevasca' },
+  { id: 'p2-mae', titulo: 'Jantar em família', texto: 'Seus pais esperam você para jantar. Na mesma casa', epoca: 'ignicao', fraco: 0.55, ponto: 'jantar', roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
+  { id: 'p2-desfazer', titulo: 'Desfazer', texto: 'Fique 5 s acima de 180 km/h e volte àquela noite', epoca: 'ignicao', fraco: 0.55, tipo: 'tunel', checar: (c) => c.tunel >= 1 },
+  { id: 'p2-volta', titulo: 'Os ecos', texto: 'Volte ao Cortex', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
+  // Ato 6 — O Corredor Negro
+  { id: 'p2-boatos', titulo: 'O homem sem rosto', texto: 'A Iris quer mostrar uma coisa na redação do Picture News', ponto: 'mesaIrisJornal', aliados: { iris: 'mesaIrisJornal' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p2-silhueta', titulo: 'Na praça', texto: 'Uma silhueta preta na praça da Prefeitura. Chegue perto', ponto: 'prefeitura', aliados: { negro: 'prefeitura' }, raio: 12, checar: (c) => c.perto },
+  { id: 'p2-celas', titulo: 'Cinzas', texto: 'Alarme na câmara de contenção do S.T.A.R. Labs', alvoSala: 'contencao', checar: (c) => c.sala === 'contencao' },
+  { id: 'p2-incendio', titulo: 'Fogo na cidade', texto: 'Apague um incêndio correndo em volta do prédio', meta: 1, contador: 'incendio', crime: 'incendio' },
+  { id: 'p2-fuga', titulo: 'Ele está atrás de você', texto: 'O Corredor Negro está vindo: chegue ao Cortex', alvo: 'cortex', tempo: 50, checar: (c) => c.sala === 'cortex' },
+  { id: 'cap-negro', titulo: 'O Corredor Negro', texto: 'Enfrente o Corredor Negro', capitulo: 'negro' },
+  { id: 'p2-lista', titulo: 'A lista', texto: 'A Iris recebeu uma carta estranha: encontre-a no Jitters', ponto: 'mesaIris', aliados: { iris: 'mesaIris' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
 ];
+/** os passos de uma época (os da linha do tempo alterada): o jogo põe o mundo nela enquanto o passo dura */
+export const EPOCA_DO_PASSO = (m) => m?.epoca || null;
 
 const CHAVE = 'theflash.missoes.v2';                       // grava o id do passo (v1 gravava a posição na lista antiga)
 const CHAVE_V1 = 'theflash.missoes.v1';
@@ -71,8 +101,11 @@ export function criarMissoes(armazem) {
   // id null = a história terminou (cidade livre); sem nada gravado, começa do começo
   const idSalvo = salvo && Object.hasOwn(salvo, 'id') ? salvo.id : (v1 ? (v1.indice >= ORDEM_V1.length ? null : ORDEM_V1[v1.indice]) : 'lab');
   const pos = (id) => (id === null ? MISSOES.length : Math.max(0, MISSOES.findIndex((m) => m.id === id)));
-  const E = { indice: pos(idSalvo), stats: { ...STATS0, ...((salvo || v1)?.stats || {}) }, base: (salvo || v1)?.base || {} };
-  const gravar = () => { try { armazem?.setItem(CHAVE, JSON.stringify({ id: MISSOES[E.indice]?.id ?? null, stats: E.stats, base: E.base })); } catch { /* sem armazenamento */ } };
+  let indice = pos(idSalvo);
+  // terminou uma versão mais curta da história (a Parte 1 acabava no 'nucleo'): continua no primeiro passo que ela não tinha
+  if (idSalvo === null && (salvo || v1)) { const k = MISSOES.findIndex((m) => m.id === (salvo?.ultimo || 'nucleo')); if (k >= 0) indice = k + 1; }
+  const E = { indice, stats: { ...STATS0, ...((salvo || v1)?.stats || {}) }, base: (salvo || v1)?.base || {} };
+  const gravar = () => { try { armazem?.setItem(CHAVE, JSON.stringify({ id: MISSOES[E.indice]?.id ?? null, ultimo: MISSOES[MISSOES.length - 1].id, stats: E.stats, base: E.base })); } catch { /* sem armazenamento */ } };
   const atual = () => MISSOES[E.indice] || null;
   function comecar() { const m = atual(); if (m?.contador) E.base[m.id] = E.stats[m.contador]; gravar(); }
   if (atual()?.contador && E.base[atual().id] === undefined) comecar();
