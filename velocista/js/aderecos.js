@@ -61,6 +61,26 @@ export function colocarAderecos(id, modelo) {
     for (let k = 0; k < 7; k++) { const a = (k / 7) * Math.PI * 2, h = k % 2 ? 0.06 : 0.09; peca(new THREE.ConeGeometry(0.014, h, 5), gelo, cabeca, Math.cos(a) * 0.085, 0.12 + h / 2, Math.sin(a) * 0.075, Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4); }
     for (const n of ['maoE', 'maoD']) { const o = osso(n); if (o) peca(new THREE.IcosahedronGeometry(0.05, 0), gelo, o, 0.0, -0.02, (n === 'maoD' ? 1 : -1) * 0.07); }
     ponta.position.set(0.02, -0.02, 0.12); mao.add(ponta);
+  } else if (id === 'cigarra') {
+    // o casaco escuro (o material é só deste corpo), a máscara de metal com os olhos verdes e a adaga em forma de raio
+    for (const m of modelo.materiais.slice(0, 2)) m.color?.setRGB(0.32, 0.33, 0.34);
+    const ferro = mat(0x22262a, 0, 0.85, 0.35), olho = mat(0x9dff6a, 0x4cff20, 0.1, 0.2), lamina = mat(0xb9ff8f, 0x5cff2a, 0.4, 0.15);
+    peca(new THREE.SphereGeometry(0.118, 18, 12), ferro, cabeca, 0.012, 0.03, 0).scale.set(1.05, 1.12, 0.95);
+    for (const lado of [-1, 1]) peca(new THREE.BoxGeometry(0.012, 0.016, 0.042), olho, cabeca, 0.122, 0.04, lado * 0.04, 0, 0, lado * 0.25);
+    peca(new THREE.BoxGeometry(0.03, 0.03, 0.12), ferro, mao, 0.02, -0.03, 0.08);
+    const raio = new THREE.Shape(); [[0, 0], [0.05, 0.016], [0.03, 0.03], [0.2, 0.02], [0.07, -0.005], [0.09, -0.018]].forEach(([x, y], i) => (i ? raio.lineTo(x, y) : raio.moveTo(x, y))); raio.closePath();
+    peca(new THREE.ExtrudeGeometry(raio, { depth: 0.008, bevelEnabled: false }), lamina, mao, 0.02, -0.03, 0.14, 0, -Math.PI / 2, 0);
+    ponta.position.set(0.02, -0.03, 0.34); mao.add(ponta);
+  } else if (id === 'godspeed') {
+    // as ombreiras e a crista dourada do capacete (como as do Savitar, em ouro)
+    const ouro = mat(0xd9b25a, 0, 0.95, 0.25), luz = mat(0xfff0c0, 0xffc040, 0.2, 0.2);
+    for (const n of ['bracoE', 'bracoD']) {
+      const b = osso(n), lado = n.endsWith('E') ? -1 : 1;
+      peca(new THREE.BoxGeometry(0.18, 0.06, 0.18), ouro, b, 0.0, 0.07, lado * 0.02, 0, 0, lado * 0.25);
+      peca(new THREE.BoxGeometry(0.19, 0.01, 0.01), luz, b, 0.0, 0.102, lado * 0.02, 0, 0, lado * 0.25);
+    }
+    for (const lado of [-1, 1]) peca(new THREE.BoxGeometry(0.11, 0.012, 0.02), luz, cabeca, 0.02, 0.07, lado * 0.105, 0, 0, lado * 0.5);
+    ponta.position.set(0.05, -0.03, 0.12); mao.add(ponta);
   } else if (id === 'devoe') {
     // a "touca de pensar": um aro de metal com luzes em volta da cabeça; e o disco flutuante sob os pés
     const aro = mat(0x9aa3b4, 0, 0.95, 0.2), luz = mat(0xd9b3ff, 0xa060ff, 0.2, 0.2), base = mat(0x2a2f38, 0, 0.9, 0.25);

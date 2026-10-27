@@ -10,7 +10,7 @@ import { CELAS, PISO } from './lab.js';
 import { PERFIS } from './viloes.js';
 
 // quem fica em qual cela (o "final" prende o Zoom e o Reverso de novo)
-const ORDEM = ['zoom', 'reverso', 'frio', 'onda', 'mago', 'savitar', 'devoe'];
+const ORDEM = ['zoom', 'reverso', 'frio', 'onda', 'mago', 'savitar', 'devoe', 'cigarra'];   // (a Cigarra: o Capitão Dwyer, preso na Parte 2)
 const VELOCISTA = new Set(['zoom', 'reverso', 'savitar']);
 
 export function criarContencao(cena, { mobile = false, aniso = 2, lab } = {}) {

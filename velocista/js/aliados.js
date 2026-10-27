@@ -7,9 +7,11 @@
 import * as THREE from 'three';
 import { criarHeroi } from './humano.js';
 import { pontoMundo } from './marcos.js';
+import { colocarAderecos } from './aderecos.js';
 
-// Parte 2: o Cisco bilionário da linha do tempo alterada (na praça da Prefeitura) e o Corredor Negro parado na praça
-const PERFIS = { joe: { pessoa: 'joe' }, iris: { pessoa: 'iris' }, cisco: { pessoa: 'cisco' }, vulto: { traje: 'vulto', vibra: true }, reverso: { traje: 'reverso', vibra: true }, negro: { traje: 'negro', vibra: true } };
+// Parte 2: o Cisco bilionário da linha do tempo alterada (na praça da Prefeitura), o Corredor Negro parado na praça e a
+// Cigarra mascarada (o corpo do Rocketbox com a máscara e a adaga de aderecos.js)
+const PERFIS = { joe: { pessoa: 'joe' }, iris: { pessoa: 'iris' }, cisco: { pessoa: 'cisco' }, cigarra: { pessoa: 'frio', aderecos: 'cigarra' }, vulto: { traje: 'vulto', vibra: true }, reverso: { traje: 'reverso', vibra: true }, negro: { traje: 'negro', vibra: true } };
 const IDS = Object.keys(PERFIS);
 
 export function criarAliados(cena, { mobile = false, aniso = 2, chao = () => 0.3 } = {}) {
@@ -17,6 +19,7 @@ export function criarAliados(cena, { mobile = false, aniso = 2, chao = () => 0.3
   const carregando = {};
   async function carregar(id) {
     if (!carregando[id]) carregando[id] = criarHeroi({ aniso, lod: mobile ? 1 : 0, mobile, ...PERFIS[id] }).then((modelo) => {
+      if (PERFIS[id].aderecos) colocarAderecos(PERFIS[id].aderecos, modelo);
       const raiz = new THREE.Group(); raiz.add(modelo.grupo); raiz.visible = false; cena.add(raiz);
       modelo.grupo.traverse((o) => { if (o.isMesh) o.castShadow = !mobile; });
       pessoas[id] = { id, modelo, raiz, x: 0, z: 0, h: 0, ponto: null };

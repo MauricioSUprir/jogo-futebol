@@ -15,6 +15,7 @@ export const CORES_RAIO = {
   azul: { raio: [0.25, 0.62, 1.7], brilho: ['200,230,255', '60,140,255', '20,60,255'] },
   vermelho: { raio: [1.7, 0.12, 0.07], brilho: ['255,200,190', '255,50,30', '200,0,0'] },
   branco: { raio: [1.45, 1.5, 1.7], brilho: ['255,255,255', '190,198,215', '90,96,112'] },        // o Corredor Negro: um raio pálido, sem cor
+  prata: { raio: [1.7, 1.6, 1.2], brilho: ['255,252,235', '235,215,160', '170,140,70'] },         // o Godspeed: prata com reflexo de ouro
 };
 let cameraRaios = null;
 /** a câmera para virar as fitas dos raios para ela (o jogo chama uma vez) */

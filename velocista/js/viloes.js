@@ -72,6 +72,20 @@ Object.assign(PERFIS, {
     rodeia: [1.2, 2.2], telegrafo: 0.58, recupera: 1.2, dano: 0.13, esquiva: 0.8, raios: true, fase2: true, regen: 0.012, drena: 0.18,
   },
 });
+// Parte 2, Atos 7 e 8: a CIGARRA (gente comum com a ADAGA, um estilhaço do Núcleo que brilha verde: a mesma linha no chão do
+// raio de gelo, mas a adaga voa e volta para a mão; quem ela acerta perde energia e fica lento por um instante) e o GODSPEED
+// (velocista de armadura prata e dourada, como o Savitar, com o raio prateado)
+Object.assign(PERFIS, {
+  cigarra: {
+    nome: 'CIGARRA', titulo: 'Cigarra', pessoa: 'frio', arma: 'adaga', cor: '#9dff6a', corRaio: [0.9, 2.4, 0.5],
+    vida: 110, esquiva: 0.55, dano: 0.12, telegrafo: 0.8, recupera: 1.5, rodeia: [1.2, 2.2], distancia: 12, regen: 0.012, fase2: false, drena: 0.22,
+  },
+  godspeed: {
+    nome: 'GODSPEED', titulo: 'Godspeed', traje: 'godspeed', aderecos: true, raio: 'prata', cor: '#f2e6c4', corRaio: [1.9, 1.75, 1.2],
+    vida: 160, capturas: 3, vFuga: 60, vCansado: 37, folego: 4.2, cansaco: 2.4, armadura: 80,
+    rodeia: [1.0, 1.9], telegrafo: 0.52, recupera: 1.1, dano: 0.15, esquiva: 0.82, raios: true, fase2: true, regen: 0.012,
+  },
+});
 export const CAPITULOS = [
   { id: 'zoom', titulo: 'Capítulo 1 — Zoom', viloes: ['zoom'], perseguicao: true, texto: 'Um velocista de preto está aterrorizando a cidade. Encontre o Zoom e persiga-o.' },
   { id: 'frio', titulo: 'Capítulo 2 — Capitão Frio', viloes: ['frio'], perseguicao: false, lugar: 'cidade', texto: 'Um quarteirão do centro congelou. Encontre o Capitão Frio.' },
@@ -83,6 +97,8 @@ export const CAPITULOS = [
   { id: 'devoe', titulo: 'Capítulo 7 — DeVoe', viloes: ['devoe'], perseguicao: false, texto: 'O Pensador espera em frente ao S.T.A.R. Labs. Ele quer o Núcleo.' },
   { id: 'nevasca', titulo: 'Capítulo 8 — Nevasca', viloes: ['nevasca'], perseguicao: false, lugar: 'cidade', texto: 'Um quarteirão inteiro congelou em dez segundos. A Nevasca está no meio do gelo.' },
   { id: 'negro', titulo: 'Capítulo 9 — Corredor Negro', viloes: ['negro'], perseguicao: true, texto: 'Ele não tem rosto, não tem coração e não vai embora. Enfrente o Corredor Negro.' },
+  { id: 'cigarra', titulo: 'Capítulo 10 — Cigarra', viloes: ['cigarra'], perseguicao: false, lugar: 'cidade', texto: 'A Cigarra está na cidade com a adaga. Encontre-a antes que ela risque mais um nome.' },
+  { id: 'godspeed', titulo: 'Capítulo 11 — Godspeed', viloes: ['godspeed'], perseguicao: true, texto: 'O deus da velocidade quer o seu raio. Alcance o Godspeed.' },
 ];
 const DANO = { soco: 5, gancho: 9, raio: 14, ciclone: 18, sonico: 28 };
 const CHAVE = 'theflash.viloes.v1';
@@ -449,7 +465,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
         const k = 1 - Math.max(0, v.at) / pf.telegrafo, op = 0.18 + 0.5 * k;
         if (v.at > 0.25) v.mira = Math.atan2(dx, dz);                       // segue o herói até o último quarto de segundo
         const g = v.golpeArma;
-        if (g === 'gelo') { e.faixa.visible = true; e.faixa.position.set(v.x, (chaoY || 0) + 0.08, v.z); e.faixa.rotation.y = v.mira; e.faixa.scale.set(1.6, 1, 28); e.faixa.material.opacity = op; }
+        if (g === 'gelo' || g === 'adaga') { e.faixa.visible = true; e.faixa.position.set(v.x, (chaoY || 0) + 0.08, v.z); e.faixa.rotation.y = v.mira; e.faixa.scale.set(g === 'adaga' ? 1.2 : 1.6, 1, g === 'adaga' ? 24 : 28); e.faixa.material.opacity = op; }
         else if (g === 'fogo') { e.cone.visible = true; e.cone.position.set(v.x, (chaoY || 0) + 0.08, v.z); e.cone.rotation.y = v.mira; e.cone.scale.setScalar(11); e.cone.material.opacity = op * 0.8; }
         else if (g === 'pulso' || g === 'ilusao') {
           e.anel.visible = true; e.anel.position.set(v.x, (chao ? chao(v.x, v.z, v.y) : 0) + 0.08, v.z); e.anel.scale.setScalar(1 + 5 * k); e.anel.material.opacity = op;
@@ -520,6 +536,11 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       for (let s = 4; s <= 26; s += 5.5) novoPerigo('gelo', v.x + ux * s, v.z + uz * s, rnd(1.8, 2.6), 9, [0.35, 0.75, 1.0], 0.32);   // o chão congela na linha
       if (ao > 0 && ao < 28 && lado < 1.4 && !escapa(P, chaoY)) { ferirHeroi(P, pf.dano, ux, uz); C.lento = 2.6; fx.clarao(P.x, P.y + 1.2, P.z, 3, 0.25); eventos.push({ tipo: 'congelado' }); }
       for (let i = 0; i < 3; i++) fx.raio(b.x, b.y, b.z, b.x + ux * 28, b.y - 0.8, b.z + uz * 28, { vida: 0.3, desvio: 0.25, r: c[0], g: c[1], b: c[2] });
+    } else if (g === 'adaga') {
+      // a adaga vai até 24 m na linha e volta (dois riscos verdes); quem está na linha perde energia (perf.drena) e fica lento
+      const ux = Math.sin(v.mira), uz = Math.cos(v.mira), ao = dx * ux + dz * uz, lado = Math.abs(dx * uz - dz * ux);
+      if (ao > 0 && ao < 24 && lado < 1.2 && !escapa(P, chaoY)) { ferirHeroi(P, pf.dano, ux, uz); C.lento = 1.2; fx.clarao(P.x, P.y + 1.2, P.z, 2.6, 0.25); }
+      for (let i = 0; i < 2; i++) fx.raio(b.x, b.y, b.z, b.x + ux * 24, b.y - 0.6, b.z + uz * 24, { vida: 0.45, desvio: 0.15, r: c[0], g: c[1], b: c[2] });
     } else if (g === 'fogo') {
       const ux = Math.sin(v.mira), uz = Math.cos(v.mira);
       novoPerigo('fogo', v.x + ux * 7.5, v.z + uz * 7.5, 2.6, 4.5, [2.2, 0.7, 0.12], 0.5);
@@ -837,7 +858,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       pInfo.textContent = arma === 'mente' && torres ? `Derrube as torres do escudo (${torres} de pé) · pule o pulso mental`
         : v0.armadura > 0 ? `Quebre a armadura (${Math.round((v0.armadura / v0.perf.armadura) * 100)}%) · os especiais racham mais`
         : aberto ? (arma ? 'Agora! Ele está aberto' : 'Agora! Ele está cansado')
-        : arma === 'gelo' ? 'Saia da linha do raio de gelo e bata quando ele recarregar' : arma === 'fogo' ? 'Fique fora do jato de fogo e bata quando ele parar'
+        : arma === 'gelo' ? 'Saia da linha do raio de gelo e bata quando ele recarregar' : arma === 'adaga' ? 'Saia da linha da adaga e bata quando ela voltar para a mão' : arma === 'fogo' ? 'Fique fora do jato de fogo e bata quando ele parar'
         : arma === 'tempo' ? 'Saia do círculo antes do raio e fuja do tornado'
         : arma === 'mente' ? 'Saia do círculo do carro, pule o pulso e ache o verdadeiro entre as cópias' : 'Desvie da investida (corra de lado, pule ou vibre) e bata quando ele cansar';
     }
