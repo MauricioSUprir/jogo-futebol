@@ -656,8 +656,10 @@ export const GOLEIRO = {
     // chega a `reflexo` em tReflexo s e o corpo esticado a `esticado` em tEsticar s (somam o deslocamento do mergulho)
     alcance: { emPe: 0.8, reflexo: 0.9, tReflexo: 0.4, esticado: 2.3, tEsticar: 0.6 },
     // o cabeceio a gol: a bola lenta cuja direção ele lê no corpo de quem cabeceia — `folgaCabeceio` m a mais de alcance
-    // (Opta/StatsBomb: ~70% dos cabeceios no alvo são defendidos; sem isso, 38% e 26% dos gols eram de cabeça)
-    folgaCabeceio: 0.5,
+    // (Opta/StatsBomb: ~70% dos cabeceios no alvo são defendidos; sem isso, 38% e 26% dos gols eram de cabeça). 0,5 → 0,8
+    // (27/10): no canhão de escanteios (teste-goleiro-realista E, sementes 1001–1008 e 2001–2008, 476 escanteios, o último
+    // cabeceio a gol no alvo) o goleiro defendia 60,5% (76) — a main 64,0% (86) —; com 0,8, 68,0% (75)
+    folgaCabeceio: 0.8,
     // batido (o sorteio não deu defesa): o mergulho desenhado leva o ombro só até `corpo` m antes da bola e a mão fica `mao`
     // m curta — o corpo não entra no caminho dela (antes: 0,4 e 0,35 m, e a bola passava por dentro do goleiro desenhado)
     batido: { corpo: 1.0, mao: 0.6 },
@@ -702,8 +704,13 @@ export const GOLEIRO = {
       // freando set a menos de vSetPes m/s, ele não tira mais um pé do chão (o passo no ar termina depressa, ritmoFim)
       vSetPes: 1.0 },
     // 1×1 (IA): o dono adversário a até `dist` m do gol, sem companheiro de linha a `cobre` m da linha dono → gol nem a
-    // `colado` m dele; corre só na bola do toque longo a que chega `chega` s antes do dono (PESQUISA-ETAPA4.md §13.1)
-    umXum: { dist: 20, cobre: 2.2, colado: 1.3, chega: 0.1 },
+    // `colado` m dele; corre só na bola do toque longo a que chega `chega` s antes do dono (PESQUISA-ETAPA4.md §13.1).
+    // `leitura`: na finalização de um 1×1 (a mesma geometria: goleiro.js chuteDeUmXum) com o goleiro set, ele lê o corpo de
+    // quem chuta sozinho e a reação da CONTA começa `leitura` s antes (o desenho já começa GOLEIRO.leitura = 0,1 s antes;
+    // Gryszczenko 2024: o goleiro decola junto com o apoio do pé do chutador). A conta geral (c0/cFolga, calibrada no
+    // agregado) dava ~0,27 à bola fora do corpo no 1×1 do canhão G (set a ~1,8 m da linha, chute de ~12,7 m a ~23 m/s,
+    // ~0,5 s até ele, ~1 m de lado): defesa 52–59% (StatsBomb, 1×1 no alvo: 63%; 70,5% com o goleiro a < 2 m da linha)
+    umXum: { dist: 20, cobre: 2.2, colado: 1.3, chega: 0.1, leitura: 0.08 },
     // ABAFAR (cair nos pés / pegar a bola do toque longo): a bola baixa (até `y` m) e devagar (até `vMax` m/s) a até `alcance`
     // m dele (+ `saindo` saindo no 1×1), na área com a mão valendo, mais perto dele que do pé do dono (o toque longo); um
     // sorteio por tentativa (`p` pelo reflexo), e depois `descanso` s sem tentar
@@ -712,7 +719,8 @@ export const GOLEIRO = {
     // 512 em 8.417 chutes): rasteira/baixa, o goleiro vai nela
     // quando chega antes de todo adversário com `folga` s, no máximo a `dist` m da linha, com a mão valendo no ponto (o
     // caminho previsto por `horizonte` passos); indo nela, pega (sim.js bolaLivre) até `vPega` m/s (9 nos outros casos)
-    varre: { folga: 0.3, dist: 15, y: 1.2, horizonte: 150, vPega: 12 },
+    // (vMax, 27/10: a ida à bola solta corre a no máximo 7,6 m/s — 0,127 m por passo; a arrancada vai até 9,4)
+    varre: { folga: 0.3, dist: 15, y: 1.2, horizonte: 150, vPega: 12, vMax: 7.6 },
     // SAÍDA NO CRUZAMENTO (StatsBomb, 348 partidas: o goleiro toca em 10,7% dos escanteios longos — soco 62% — e intervém em
     // 8,2% dos cruzamentos na área — encaixe 60%; 92% de sucesso): a bola do adversário no ar; o 1º ponto da trajetória a
     // y[0]–y[1] m de altura, na área com a mão valendo e a até `dist` m da linha (|z| ≤ `largura`), a que ele chega
@@ -722,8 +730,12 @@ export const GOLEIRO = {
     // `chegaAntes` s antes do pulo; de frente para a bola só a menos de `vira` m), o corpo `atras` m do lado do gol do ponto;
     // a trajetória prevista por `ticks` passos, relida a cada `cada`; desiste se não chega mais (`tolera` s); a mão
     // desenhada tem de estar a até `mao` m da bola
-    cruz: { y: [1.2, 2.2], dist: 8.5, largura: 10, reacao: 0.22, salto: 0.45, folga: 0, contesta: 0.3, vSoco: 21, p: 0.93, vCorre: 0.92, ticks: 110, mao: 0.35, cada: 6, atras: 0.3,
-      fCorre: 1.08, chegaAntes: 0.1, vira: 1.2, tolera: 0.08 },
+    // (27/10: y[1] 2,2 → 2,5 — a mão do goleiro no pulo alcança a bola acima da cabeça de quem cabeceia, ~2,3–2,4 m:
+    // cabeceio.js alcanceCabeceio; o pulo desenhado chega a 2,5 com a corrida — goleiro.js iniciarMergulho, `corre` —; e
+    // chegaAntes 0,1 → 0: ele pula da corrida, sem chegar parado antes. No canhão de escanteios do teste-goleiro-realista,
+    // pareado — os mesmos 476 escanteios, sementes 1001–1008 e 2001–2008 —, a saída que dá certo foi de 4,6% para 7,8%: E1)
+    cruz: { y: [1.2, 2.5], dist: 8.5, largura: 10, reacao: 0.22, salto: 0.45, folga: 0, contesta: 0.3, vSoco: 21, p: 0.93, vCorre: 0.92, ticks: 110, mao: 0.35, cada: 6, atras: 0.3,
+      fCorre: 1.08, chegaAntes: 0, vira: 1.2, tolera: 0.08 },
     // SOCO: a bola sai a v m/s, subindo el rad, para longe do gol e para o lado dela (até lado rad da frente do gol)
     soco: { v: [13, 17], el: [0.45, 0.75], lado: [0.35, 1.0] },
   },
@@ -1020,7 +1032,10 @@ export const CABECEIO = {
   vAfasta: 16, elAfasta: 0.62, ladoAfasta: 0.55,
   // (partida) o afastamento pela física da testa (acoes.js afastarReal): vira até `giro` rad do corpo, devolve `en` da
   // velocidade normal + `vTesta` m/s; sem ângulo, para cima (`elFuga`). StatsBomb: PESQUISA-ETAPA4.md §13.1
-  afastaReal: { giro: 1.0, en: 0.5, vTesta: 7, elFuga: 1.05 },
+  // (27/10: vTesta 7 → 10 — de frente para a bola do escanteio, ~14,5 m/s, o corte sai a 0,5 × 14,5 + 10 ≈ 17 m/s, perto do
+  // `vAfasta` de antes (16); com 7 o corte médio do canhão de escanteios saía a 10,8 m/s, caía a ~11 m, na entrada da área,
+  // e a 2ª bola virava gol: 7 escanteios com corte de cabeça viraram gol em 476, contra 1 sem o afastaReal)
+  afastaReal: { giro: 1.0, en: 0.5, vTesta: 10, elFuga: 1.05 },
   // a gol: mira a bola baixa na linha do gol (onde o goleiro alcança menos), entre yGol[0] e yGol[1] m, a zGol m do meio,
   // do lado longe do goleiro (sem o analógico)
   yGol: [0.3, 1.1], zGol: 0.8,

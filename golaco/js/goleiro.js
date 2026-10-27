@@ -138,10 +138,13 @@ export function chanceReal(lateral, altura, alcance, attr) {
  */
 export function atrasoDoEstado(j, lat) {
   const R = GOLEIRO.realista;
-  const v = MD.hypot(j.vx, j.vz);
-  const base = !!(j.pes[0].apoio && j.pes[1].apoio) && v < R.vParado;
   const vL = lat > 0 ? j.vz : lat < 0 ? -j.vz : 0;
-  return (base ? 0 : R.semBase) + (vL < 0 ? -vL / GOLEIRO.aMergulho : 0);
+  return (naBase(j) ? 0 : R.semBase) + (vL < 0 ? -vL / GOLEIRO.aMergulho : 0);
+}
+
+/** Na base ("set"): os dois pés no chão e mais devagar que GOLEIRO.realista.vParado m/s. */
+function naBase(j) {
+  return !!(j.pes[0].apoio && j.pes[1].apoio) && MD.hypot(j.vx, j.vz) < GOLEIRO.realista.vParado;
 }
 
 /**
@@ -212,11 +215,15 @@ export function lerChute(m, j) {
   // bola no corpo é sempre parada. Treino e pênalti: a logística dos dados, como antes
   const real = !!m.partida && !ehPenalti;
   const RL = GOLEIRO.realista;
-  let folgaR = 0, corpo = false;
+  let folgaR = 0, corpo = false, umXum = false;
   let pDefesa;
   if (real) {
     // (o cabeceio a gol é lento e o goleiro lê a direção pelo corpo de quem cabeceia: `folgaCabeceio` m a mais)
-    const alcR = alcanceReal(tau - atrasoDoEstado(j, lat), lerp(0.9, 1.08, a.mergulho / 100)) + (m.voo && m.voo.tipo === 'cabeceio' ? RL.folgaCabeceio : 0);
+    // (1×1: set diante de quem finaliza sozinho, ele lê o corpo do chutador — a reação da conta começa `umXum.leitura` s
+    // antes; GOLEIRO.realista.umXum. Só na finalização com o pé — o passe ou o cruzamento que vai no gol não é lido assim — e
+    // nunca depois de um desvio: a bola desviada não sai do corpo de quem chutou)
+    umXum = naBase(j) && vooFinalizacao(m.voo) && m.voo.tipo !== 'cabeceio' && !(m.desvio >= m.voo.tick0) && chuteDeUmXum(m, j);
+    const alcR = alcanceReal(tau + (umXum ? RL.umXum.leitura : 0) - atrasoDoEstado(j, lat), lerp(0.9, 1.08, a.mergulho / 100)) + (m.voo && m.voo.tipo === 'cabeceio' ? RL.folgaCabeceio : 0);
     corpo = alturaOk && dist <= RL.corpo && plano.y <= RL.corpoAlto;
     folgaR = alcR - dist;
     // (de longe a bola "mexe" no ar — a leitura do ponto de passagem erra mais: a chance perde `erroLonge` m de folga por m
@@ -303,7 +310,7 @@ export function lerChute(m, j) {
   };
   // (partida) a bola no corpo e o rebote: o desenho vale sem a mão chegar (o corpo bloqueia) e a bola escapa perto
   if (real && !recuo) { j.defesa.real = true; if (corpo) j.defesa.corpo = true; if (rebote) j.defesa.rebote = true; }
-  m.eventos.push(real ? { tipo: 'leituraGoleiro', id: j.id, chega: dist <= alcance, p: pDefesa, folga: folgaR, corpo, lat: dist, y: plano.y, t: plano.ticks * DT, v: plano.v, mergulha }
+  m.eventos.push(real ? { tipo: 'leituraGoleiro', id: j.id, chega: dist <= alcance, p: pDefesa, folga: folgaR, corpo, lat: dist, y: plano.y, t: plano.ticks * DT, v: plano.v, mergulha, umXum }
     : { tipo: 'leituraGoleiro', id: j.id, chega: dist <= alcance, p: pDefesa });
 }
 
@@ -718,6 +725,13 @@ function umXumPartida(m, j) {
   const lx = gx - dono.x, lz = -dono.z, L = MD.hypot(lx, lz) || 1;
   const vGol = (dono.vx * lx + dono.vz * lz) / L;
   if (vGol < 0.5 && dBolaGol > 11) return false;
+  return semCobertura(m, j, dono, gx) ? '1x1' : false;
+}
+
+/** Nenhum companheiro de linha de j entre `dono` e o gol (a até `umXum.cobre` m da linha dono → gol) nem a `colado` m dele. */
+function semCobertura(m, j, dono, gx) {
+  const U = GOLEIRO.realista.umXum;
+  const lx = gx - dono.x, lz = -dono.z, L = MD.hypot(lx, lz) || 1;
   for (const o of m.jogadores) {
     if (o.time !== j.time || o.id === j.id || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
     const ox = o.x - dono.x, oz = o.z - dono.z;
@@ -725,7 +739,23 @@ function umXumPartida(m, j) {
     const t = (ox * lx + oz * lz) / (L * L); // 0 = no dono, 1 = no gol
     if (t > 0 && t < 1 && Math.abs(ox * lz - oz * lx) / L < U.cobre) return false;
   }
-  return '1x1';
+  return true;
+}
+
+/**
+ * A finalização no ar saiu de um 1×1 (partida)? Quem chutou estava a até `umXum.dist` m do gol, por dentro da largura da
+ * área, sem companheiro de linha de j cobrindo a linha dele ao gol nem colado nele — a geometria de umXumPartida, sem olhar
+ * a velocidade (o chute já saiu).
+ */
+function chuteDeUmXum(m, j) {
+  const v = m.voo, U = GOLEIRO.realista.umXum;
+  if (!v || v.time === j.time || v.de == null || (m.parada && !m.parada.rolou)) return false;
+  let a = null;
+  for (const o of m.jogadores) if (o.id === v.de) { a = o; break; }
+  if (!a) return false;
+  const gx = linhaDoGol(m, j);
+  if (MD.hypot(a.x - gx, a.z) > U.dist || Math.abs(a.z) > CAMPO.area.largura / 2) return false;
+  return semCobertura(m, j, a, gx);
 }
 
 /** O dono da bola, se for adversário de j (ou null). */
@@ -809,7 +839,10 @@ export function movimentoGoleiro(m, j, humano) {
   if (vr) {
     const dx = vr.x - j.x, dz = vr.z - j.z, dd = MD.hypot(dx, dz);
     if (!j.saindo) { j.saindo = true; m.eventos.push({ tipo: 'saidaGoleiro', id: j.id, modo: 'bolaSolta' }); }
-    return { dx: dd > 1e-6 ? dx / dd : 0, dz: dd > 1e-6 ? dz / dd : 0, vel: Math.min(j.par.vArrancada, dd * 4), rumoAlvo: olhar };
+    // (corre a no máximo GOLEIRO.realista.varre.vMax m/s: a ida à bola solta é uma corrida curta, e a arrancada inteira de um
+    // goleiro rápido passava de 0,13 m por passo — o "salto de posição" do teste-goleiro-realista C2; a decisão de ir
+    // continua pela arrancada inteira)
+    return { dx: dd > 1e-6 ? dx / dd : 0, dz: dd > 1e-6 ? dz / dd : 0, vel: Math.min(j.par.vArrancada, GOLEIRO.realista.varre.vMax, dd * 4), rumoAlvo: olhar };
   }
   const sair = deveSair(m, j, humano);
   const s1 = sair === '1x1' && m.partida ? saida1x1Partida(m, j, olhar) : null;
@@ -1284,7 +1317,13 @@ export function iniciarMergulho(m, j, d) {
     const curto = sucesso ? 0 : m.partida ? GOLEIRO.realista.batido.corpo : 0.4;
     const alvoL = sucesso ? bL : Math.max(0, bL - curto);
     const ext = sucesso ? 1 : 0.8;
-    const fS = faixaDesloc(v0L, T, MG.vPico, _fS), fF = faixaDesloc(v0F, T, MG.vFrente, _fF);
+    // (partida: a saída no cruzamento pula DA CORRIDA — ele chega ao ponto a até ~5 m/s. Com o limite do mergulho parado,
+    // vFrente 2,5 m/s, o perfil não tinha solução e a faixa caía no meio dela: o corpo ia ~1,9 m para TRÁS no pulo, a mão
+    // longe da bola, e a saída sorteada certa virava "falhou" — o goleiro que sai e não chega. Aqui o limite é a velocidade
+    // que ele já leva)
+    const corre = !!d.saidaAlta;
+    const fS = faixaDesloc(v0L, T, corre ? Math.max(MG.vPico, Math.abs(v0L)) : MG.vPico, _fS);
+    const fF = faixaDesloc(v0F, T, corre ? Math.max(MG.vFrente, Math.abs(v0F)) : MG.vFrente, _fF);
     const sLo = fS.lo, sHi = fS.hi;
     let fLo = Math.max(fF.lo, MG.margemLinha - distLinha);
     const fHi = fF.hi;

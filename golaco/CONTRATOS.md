@@ -2385,6 +2385,9 @@ GOLEIRO.realista`; pesquisa e números em `PESQUISA-ETAPA4.md` §13.
 - `umXumPartida(m, j)` (o `deveSair` da IA na partida; a regra "ninguém do meu time a menos de 0,8× minha distância"
   saiu): o dono adversário com a bola a ≤ `umXum.dist` m do gol, dentro da largura da área, vindo para o gol (ou a ≤ 11 m),
   sem companheiro de linha a < `cobre` m da linha dono → gol nem a < `colado` m dele. Evento `saidaGoleiro {modo: '1x1'}`.
+- Leitura do 1×1 (27/10, `chuteDeUmXum`): set (`naBase`) diante da finalização com o pé (`vooFinalizacao`, nunca o
+  cabeceio, nem depois de um desvio — `m.desvio` ≥ o `tick0` do voo) de quem estava sozinho no 1×1, o goleiro lê o corpo
+  do chutador: o tempo da conta do alcance ganha `umXum.leitura` s. O evento `leituraGoleiro` leva `umXum`.
 - `saida1x1Partida`: só a bola baixa do toque longo (a > `colado` m do pé do dono, a mão valendo, ele chega `chega` s antes
   do dono) — ele corre nela (evento `saidaGoleiro {modo: '1x1'}`) e cai nela (`abafar`); com a bola no pé do dono devolve
   null e o goleiro fica no posicionamento de sempre, set com o chute armado (sair na bissetriz até 5,5 m baixava a defesa
@@ -2395,7 +2398,8 @@ GOLEIRO.realista`; pesquisa e números em `PESQUISA-ETAPA4.md` §13.
   (`g.abafaAte`).
 - `varrer(m, j, gx)`: a bola sem dono na área, baixa (≤ `varre.y` m), a ≤ `dist` m da linha, que ele alcança antes de todo
   adversário (folga `folga` s, também no caminho dela) e sem companheiro chegando bem antes: corre nela (evento
-  `saidaGoleiro {modo: 'bolaSolta'}`); indo nela, o "pegou" do `sim.js bolaLivre` aceita até `varre.vPega` m/s (9 antes).
+  `saidaGoleiro {modo: 'bolaSolta'}`), a no máximo `realista.varre.vMax` m/s (a arrancada inteira passava de 0,13 m por
+  passo); indo nela, o "pegou" do `sim.js bolaLivre` aceita até `varre.vPega` m/s (9 antes).
   O passe do próprio time para outro companheiro não é bola solta; a finalização do adversário no ar
   (`vooFinalizacao`: chute, colocado, cavadinha, cabeceio a gol) e a bola com a defesa dele já lida também não (é da
   leitura do chute, com o tempo de reação). Recalculado a cada 4 passos (`j.varre`); o "pegou" rápido só vale com a ida
@@ -2412,7 +2416,8 @@ GOLEIRO.realista`; pesquisa e números em `PESQUISA-ETAPA4.md` §13.
 - "Deixa!": os companheiros que iam cabecear essa bola e ainda não saíram do chão desistem (salvo o controlado do humano);
   `sim.js bolaAltaNoCorpo` não planeja outro cabeceio por cima dele (`goleiroSaiNoAlto`).
 - O corpo corre de frente para o ponto (de frente para a bola a menos de `vira` m) e pula pelo desenho (`iniciarMergulho`
-  tipo `'salto'`; a bola abaixo de 1,45 m, `'peito'`). `aplicarDefesa` só encaixa ou soca com a mão desenhada a ≤
+  tipo `'salto'`; a bola abaixo de 1,45 m, `'peito'`) DA CORRIDA: na saída no alto o limite do deslocamento do pulo é a
+  velocidade que ele já leva (o do mergulho parado, `vPico`/`vFrente`, não tinha solução e levava o corpo para trás). `aplicarDefesa` só encaixa ou soca com a mão desenhada a ≤
   `cruz.mao` m da bola; senão a bola passa (`saidaFalhou {longe: true}`). `socar`: `soco.v` m/s, elevação `soco.el` rad,
   aberto `soco.lado` rad para o lado da bola, para longe do gol.
 - Eventos: `saidaGoleiro {modo: 'cruzamento', soco}`, `defesa {modo: 'encaixe' | 'soco', saidaAlta: true}`,
@@ -2431,8 +2436,8 @@ GOLEIRO.realista`; pesquisa e números em `PESQUISA-ETAPA4.md` §13.
   (`>`; antes `>=`): a bola que bate num corpo no mesmo passo do chute fica com quem ela acertou (escanteio, não tiro de
   meta).
 - `acoes.js afastarReal` (`CABECEIO.afastaReal`, o cabeceio de afastar na partida): a testa vira até `giro` rad do rumo do
-  corpo e a bola sai na direção dela com `en` da velocidade normal que trazia mais `vTesta` m/s; sem ângulo para longe do
-  próprio gol, para cima (`elFuga`).
+  corpo e a bola sai na direção dela com `en` da velocidade normal que trazia mais `vTesta` m/s (10: o corte da bola do
+  escanteio sai a ~17 m/s, perto do `vAfasta` de antes); sem ângulo para longe do próprio gol, para cima (`elFuga`).
 
 ### Testes e medidas
 `teste-goleiro-realista` (padrão; `tools/lib/goleiro-canhao.mjs`, o mesmo canhão do `medir-goleiro.mjs`): 8 partidas IA ×

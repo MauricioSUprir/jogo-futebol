@@ -501,3 +501,19 @@ Os escanteios continuam abaixo da main: 90% dos escanteios da main vinham da esp
 real 20%). Com a espalmada pela StatsBomb, o bloqueio, o cruzamento bloqueado e o corte de cabeça devolveram 1,4 → 1,7; o
 resto do escanteio real (cortes com o pé sob pressão, ~20 cruzamentos por partida contra ~6 daqui) é do volume de ataque
 (Etapa 4.5). Pendências: C1, D2 e E1 (as metas da pesquisa ficam no `teste-goleiro-realista` como PENDENTE, `--estrito`).
+
+### 13.2 Junção com a main (26–27/10, Categoria C, item 12)
+
+O #493 ficou parado desde 21/10; a main ganhou a Categoria D (IA intensa) e o merge embaralhou as partidas. Dois itens do
+`teste-goleiro-realista` passaram a reprovar e foram atacados na causa, não na meta:
+- **G1 (contra-ataque 1×1, defesa ≥ a da main):** 52,3% contra 53%. Com a Categoria D a IA chega ao 1×1 mais rápido e
+  o goleiro set não tinha a leitura do corpo do chutador que o goleiro real tem (StatsBomb, 364 1×1: 70,5% defendidos com
+  ele a < 2 m da linha, quase tudo em pé/bloqueio; The FA: no 1×1 "ficar grande" e ler o chutador). `umXum.leitura`
+  0,08 s só na finalização com o pé de quem estava sozinho, com o goleiro na base e sem desvio.
+- **E1/E2 (escanteio):** a saída no alto que dava certo em 4,6% (real 10,7%) e o gol de escanteio a 10,6% no canhão
+  (guarda ≤ 10%). Três causas medidas no canhão pareado (os mesmos 476 escanteios): o pulo da saída limitado pela
+  velocidade do mergulho parado levava o corpo para TRÁS (a mão longe da bola) — o pulo agora é da corrida; o ponto da
+  saída só até 2,2 m de altura (a mão no pulo vai a ~2,5 m, acima da cabeça de quem cabeceia, `cabeceio.js`) e o
+  `chegaAntes` de 0,1 s (ele não precisa chegar parado); e o corte de cabeça com `vTesta` 7 (a bola caía na entrada da
+  área e a 2ª bola virava gol: 7 em 476). Mais `folgaCabeceio` 0,5 → 0,8 (o cabeceio a gol no alvo defendido 60,5% → 68%;
+  Opta/StatsBomb ~70%). Saída que dá certo 4,6% → 7,8%; gol de escanteio 8,4–10,6% → 6,9–7,0%.
