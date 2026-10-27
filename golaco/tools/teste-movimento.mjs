@@ -18,9 +18,18 @@
 //     no 11×11, IA × IA — Golaço 4-3-3 × Ventania 4-2-3-1, os 22 da IA; sem a IA com a bola da Parte 3,
 //     quem está com a bola no pé é o ataque substituto dos testes (tools/lib/partida-tatica.mjs), e a
 //     meta "chega ao chute" é do ataque: só informa até a Parte 3. --antes = a IA clássica no 11×11)
-//   [--sementes N] [--base K]: N sementes a partir de K + 1 (padrão 8 a partir de 1)
+//   [--sementes N] [--base K]: N sementes a partir de K + 1 (padrão a partir de 1: 8 no treino, 32 na partida)
+//   [--par k]: as sementes em k processos, cada um com 1 de cada k sementes (o mesmo resultado; o rodar-testes passa --par 4
+//     na partida)
+// Amostra da partida (C1, 27/10): na partida IA × IA o anda-para-anda da main é 3,90/min em 72 sementes (dp 0,39 entre
+// sementes de 3 min) e o do goleiro realista 3,91 (dp 0,35) — a mesma taxa, a 0,1 da meta ≤ 4. Com 8 sementes (ep ~0,13) a
+// própria main reprovava 1 bloco de 8 em 9 (sementes 17–24: 4,03) e toda mudança que embaralha a partida reprovava por
+// sorteio ~1 vez em 5 (reamostragem das 72; o goleiro realista: 4,06 nas sementes 1–8). Com 32 (ep ~0,07): ~6–8%, e a main
+// e o goleiro realista passam nas sementes 1–32 (3,94 e 3,93) e 33–64 (3,84 e 3,96). A meta não muda, só a amostra.
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import os from 'node:os';
+import { fork } from 'node:child_process';
 
 const im = process.argv.indexOf('--modo');
 const PARTIDA = im > 0 && process.argv[im + 1] === 'partida';
@@ -55,14 +64,14 @@ function reg(nome, medido, meta, ok) { linhas.push([nome, medido, meta, ok ? 'PA
 const fmt = (v, c = 1) => (Number.isFinite(v) ? v.toFixed(c).replace('.', ',') : String(v));
 const dif = (a, b) => { let d = (b - a) % (2 * Math.PI); if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; return d; };
 
-// sementes: 1–8 (ou SEMENTES=N / --sementes N); --base K soma K a todas (outro conjunto de sementes)
+// sementes: 1–8 no treino e 1–32 na partida (ou SEMENTES=N / --sementes N); --base K soma K a todas (outro conjunto de sementes)
 const argN = (nome, pad) => { const i = process.argv.indexOf(nome); return i > 0 ? +process.argv[i + 1] : pad; };
-const NSEM = argN('--sementes', process.env.SEMENTES ? +process.env.SEMENTES : 8), BASE = argN('--base', 0);
+const NSEM = argN('--sementes', process.env.SEMENTES ? +process.env.SEMENTES : PARTIDA ? 32 : 8), BASE = argN('--base', 0);
 const SEMENTES = Array.from({ length: NSEM }, (_, k) => BASE + k + 1), MIN = 3, N = Math.round(MIN * 60 / PASSO);
 const A = { cruz: 0, cruzN: 0, cruzLado: 0, cruzLadoN: 0, seg: 0, segEst: 0, inv: 0, invEst: 0, tremor: 0, tremorEst: 0, paraArranca: 0, lento: 0, costas: 0, viz: 0, viz2: 0, contatos: 0, trocas: 0 };
 let naMaoN = 0, naMaoLinha = 0, chutesMin = Infinity, chutesTot = 0, pressao = 0, pressaoN = 0, assentada = 0, assentadaN = 0, dois = 0;
 
-for (const sem of SEMENTES) {
+function medirSemente(sem) {
   const m = novoMundo(sem);
   const H = new Map(); // id → últimos 60 ticks {vx, vz, giro}
   const st = new Map(); // id → estado (inversão, tremor, para-arranca)
@@ -165,15 +174,40 @@ for (const sem of SEMENTES) {
   }
   chutesMin = Math.min(chutesMin, chutes); chutesTot += chutes;
 }
+// as sementes num processo só (--par 1, o padrão) ou em k processos filhos (--par k; o filho i mede as sementes i, i + k,
+// i + 2k...): os filhos devolvem as somas e o principal soma na ordem dos filhos — o mesmo resultado
+const parcial = () => ({ A, naMaoN, naMaoLinha, chutesMin, chutesTot, pressao, pressaoN, assentada, assentadaN, dois });
+function somar(p) {
+  for (const k in A) A[k] += p.A[k];
+  naMaoN += p.naMaoN; naMaoLinha += p.naMaoLinha; chutesMin = Math.min(chutesMin, p.chutesMin); chutesTot += p.chutesTot;
+  pressao += p.pressao; pressaoN += p.pressaoN; assentada += p.assentada; assentadaN += p.assentadaN; dois += p.dois;
+}
+const PAR = Math.max(1, Math.min(SEMENTES.length, argN('--par', 1), os.availableParallelism?.() ?? os.cpus().length));
+if (process.argv.includes('--filho')) {
+  const f = argN('--fatia', 0);
+  for (let k = f; k < SEMENTES.length; k += PAR) medirSemente(SEMENTES[k]);
+  await new Promise(ok => process.send(parcial(), ok));
+  process.exit(0);
+}
+if (PAR <= 1) for (const sem of SEMENTES) medirSemente(sem);
+else {
+  const res = await Promise.all(Array.from({ length: PAR }, (_, f) => new Promise((ok, erro) => {
+    const c = fork(fileURLToPath(import.meta.url), [...process.argv.slice(2), '--filho', '--fatia', String(f)]);
+    let r = null;
+    c.on('message', x => { r = x; }); c.on('error', erro);
+    c.on('exit', cod => (cod || !r ? erro(new Error(`processo ${f}: saiu com ${cod}`)) : ok(r)));
+  })));
+  for (const p of res) somar(p);
+}
 
 const porMin = (x, seg = A.seg) => x / (seg / 60);
 const pct = (a, b) => (b ? 100 * a / b : NaN);
-console.log(`lógica: ${JS}${PARTIDA ? `  · partida 11×11 IA × IA${ANTES ? ' (--antes: IA clássica)' : ''}; Parte 3 ${P3 ? 'presente' : 'ausente (ataque substituto dos testes)'}` : ''}\n${SEMENTES.length} sementes × ${MIN} min, ${fmt(A.seg / 60, 0)} min·jogador da IA sem a bola (${fmt(pct(A.segEst, A.seg), 0)}% em jogo estável), ${fmt(A.trocas / (SEMENTES.length * MIN), 1)} trocas de time com a bola/min`);
+console.log(`lógica: ${JS}${PARTIDA ? `  · partida 11×11 IA × IA${ANTES ? ' (--antes: IA clássica)' : ''}; Parte 3 ${P3 ? 'presente' : 'ausente (ataque substituto dos testes)'}` : ''}\n${SEMENTES.length} sementes × ${MIN} min${PAR > 1 ? ` (${PAR} processos)` : ''}, ${fmt(A.seg / 60, 0)} min·jogador da IA sem a bola (${fmt(pct(A.segEst, A.seg), 0)}% em jogo estável), ${fmt(A.trocas / (SEMENTES.length * MIN), 1)} trocas de time com a bola/min`);
 reg('vai e volta (direção inverte em ≤ 1 s), jogo estável', `${fmt(porMin(A.invEst, A.segEst))}/min por jogador`, '≤ 8/min', porMin(A.invEst, A.segEst) <= 8);
 reg('vai e volta, total (com as transições)', `${fmt(porMin(A.inv))}/min`, '≤ 11/min', porMin(A.inv) <= 11);
 reg('tremor do tronco (giro troca de lado em ≤ 0,4 s), jogo estável', `${fmt(porMin(A.tremorEst, A.segEst))}/min`, '≤ 7/min', porMin(A.tremorEst, A.segEst) <= 7);
 reg('tremor do tronco, total', `${fmt(porMin(A.tremor))}/min`, '≤ 10/min', porMin(A.tremor) <= 10);
-reg('anda-para-anda (≤ 2 s)', `${fmt(porMin(A.paraArranca))}/min`, '≤ 4/min', porMin(A.paraArranca) <= 4);
+reg('anda-para-anda (≤ 2 s)', `${fmt(porMin(A.paraArranca), 2)}/min`, '≤ 4/min', porMin(A.paraArranca) <= 4);
 reg('de costas para a bola andando devagar', `${fmt(pct(A.costas, A.lento))}%`, '≤ 15%', pct(A.costas, A.lento) <= 15);
 reg('companheiro a menos de 2 m (amontoado)', `${fmt(pct(A.viz2, A.viz))}% do tempo`, '≤ 10%', pct(A.viz2, A.viz) <= 10);
 reg('trombadas entre companheiros', `${fmt(porMin(A.contatos), 2)}/min`, '≤ 3/min (publicada: 27)', porMin(A.contatos) <= 3);
@@ -193,7 +227,7 @@ else reg('sem recuo — treino chega ao chute', `pior semente: ${chutesMin} chut
 // dist_marcador ≤ 3 m. Aqui fica o sem recuo contra a main, ≥ 34% (as rodadas de 8 sementes vão de 35 a 41%); os 40% com as
 // duas pressões na Média ficam no teste-pressao)
 const PRESS_MIN = PARTIDA ? 34 : 40;
-reg('sem recuo — defesa pressiona o condutor (marcador a ≤ 3 m)', `${fmt(pct(pressao, pressaoN))}% do tempo com a bola (2+ marcadores: ${fmt(pct(dois, pressaoN))}%)`, `≥ ${PRESS_MIN}%${PARTIDA ? ' (main 36,6%; real 27,1%)' : ''}`, pct(pressao, pressaoN) >= PRESS_MIN);
+reg('sem recuo — defesa pressiona o condutor (marcador a ≤ 3 m)', `${fmt(pct(pressao, pressaoN))}% do tempo com a bola (2+ marcadores: ${fmt(pct(dois, pressaoN))}%)`, `≥ ${PRESS_MIN}%${PARTIDA ? ' (main 38,9% nas sementes 1–32; real 27,1%)' : ''}`, pct(pressao, pressaoN) >= PRESS_MIN);
 reg('sem recuo — pressão na posse assentada (mesmo condutor > 1,5 s)', `${fmt(pct(assentada, assentadaN))}%`, '≥ 50% (publicada: 53,7%)', pct(assentada, assentadaN) >= 50);
 
 const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));

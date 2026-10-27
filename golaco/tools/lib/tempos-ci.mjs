@@ -36,7 +36,7 @@ export const TEMPOS_NODE = {
   'teste-treino.mjs': 14,
   'teste-goleiro-trava.mjs': 105,
   'teste-movimento.mjs': 41,
-  'teste-movimento.mjs --modo partida': 140, // D5: entrou no CI (110 s aqui com a máquina dividida)
+  'teste-movimento.mjs --modo partida': 150, // D5: entrou no CI (110 s aqui com a máquina dividida); C1: 32 sementes em 4 processos (estimado)
   'teste-custo.mjs': 15,
   'teste-partida.mjs': 84,
   'teste-editor.mjs': 16,
