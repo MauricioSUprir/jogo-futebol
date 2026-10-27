@@ -605,6 +605,7 @@ function passoHeroi(dt) {
   const fx = Math.sin(C.yaw), fz = Math.cos(C.yaw), rx = -fz, rz = fx;
   const dx = fx * iz + rx * ix, dz = fz * iz + rz * ix;
   const querCorrer = (teclas.has('shift') || toque.correr) && (m > 0.1 || P.parede);
+  if (missoes.atual?.semEnergia) P.energia = 0;                      // (Parte 2: a adaga trancou o raio: nem vibrar nem especial)
   P.correndo = querCorrer && P.energia > 0.02;
   const vh0 = Math.hypot(P.vx, P.vz);
   // vibração: atravessa prédios e objetos (precisa de velocidade para começar e de energia para continuar)
@@ -617,10 +618,12 @@ function passoHeroi(dt) {
   else if (P.vibrando) P.energia = Math.max(0, P.energia - ENERGIA.vibrar * dt);
   else if (P.correndo) P.energia = Math.max(0, P.energia - (P.parede ? ENERGIA.parede : ENERGIA.gasto * gastoCorrida(P.embalo || 0)) * dt);
   else if (!combate.pertoDeBandido(P, 12) && !viloes.emLuta) P.energia = Math.min(1, P.energia + ENERGIA.recarga * dt * (m < 0.1 ? 3 : 1));   // no meio da briga não recarrega
+  if (missoes.atual?.semEnergia) P.energia = 0;                      // (a recarga também fica trancada)
   // supervelocidade (velocidade.js): na reta, segurando CORRER, o embalo sobe o teto até ~830 km/h
   const angPedido = vh0 > 5 && m > 0.1 ? Math.acos(clamp((P.vx * dx + P.vz * dz) / (vh0 * (Math.hypot(dx, dz) || 1)), -1, 1)) : 0;
   P.embalo = passoEmbalo(P.embalo || 0, { correndo: P.correndo && !P.vibrando && !P.parede, noChao: P.noChao, m, angulo: angPedido, bloqueado: viloes.ativo || combate.ocupado }, dt);
-  const vmax = ((P.correndo || P.vibrando) ? (P.vibrando ? MOV.correr : tetoCorrida(P.embalo, MOV.correr)) : MOV.andar) * m * viloes.lentidao * rivais.lentidao * (missoes.atual?.fraco || 1);   // (Parte 2: o raio se apagando)   // o gelo do Capitão Frio deixa lento
+  // o gelo do Capitão Frio deixa lento; na Parte 2, o raio fraco da linha do tempo alterada (`fraco`) e, sem poderes, um teto (`teto`)
+  const vmax = Math.min(missoes.atual?.teto ?? Infinity, ((P.correndo || P.vibrando) ? (P.vibrando ? MOV.correr : tetoCorrida(P.embalo, MOV.correr)) : MOV.andar) * m * viloes.lentidao * rivais.lentidao * (missoes.atual?.fraco || 1));
   const taxa = P.noChao ? (P.correndo ? 5 : 11) : 2.2;
   const k = 1 - Math.exp(-taxa * dt);
   // o Flash não voa (dono, 26/10: "o flash consegue voar pô"): no ar ele só mantém o embalo com que saiu do chão (vira e
@@ -1175,7 +1178,7 @@ const subest = SUBESTACOES.map((s) => {
 });
 /** os focos de uma cena: o herói e, com ele no Cortex, a Caitlin e o Cisco (quem não está lá fala pelo rádio) */
 const focosCena = () => {
-  const fs = { heroi: focoHeroi, joe: () => aliados.foco('joe'), iris: () => aliados.foco('iris'), vulto: () => aliados.foco('vulto'), reverso: () => aliados.foco('reverso'), negro: () => aliados.foco('negro') };
+  const fs = { heroi: focoHeroi, joe: () => aliados.foco('joe'), iris: () => aliados.foco('iris'), vulto: () => aliados.foco('vulto'), reverso: () => aliados.foco('reverso'), negro: () => aliados.foco('negro'), cigarra: () => aliados.foco('cigarra') };
   for (const id of ['caitlin', 'cisco']) fs[id] = () => (equipe.pronta && noCortex() && tempo.epoca !== 'ignicao' ? equipe.focos()[id]() : aliados.foco(id));
   return fs;
 };
@@ -1205,6 +1208,28 @@ const GANCHOS_CENA = {
     if (f) { for (let i = 0; i < 12; i++) { const g = Math.random() * 6.28; combate.efeitos.raio(f.x, f.y + 0.3 + Math.random() * 1.6, f.z, f.x + Math.cos(g) * 3.5, f.y + Math.random() * 2, f.z + Math.sin(g) * 3.5, { vida: 0.45, desvio: 0.8, r: 1.45, g: 1.5, b: 1.7 }); } combate.efeitos.onda(f.x, f.y, f.z, 8, 0.6); }
     J.cenaAliados = { aliados: {} };
   } },
+  // Atos 7 e 8: a adaga da Cigarra acerta o herói, o choque que acorda o raio (e a Grace), o céu rasgando no casamento, o
+  // Godspeed abrindo o túnel e o Corredor Negro levando ele
+  'depois-p2-adaga': { aoAcao: (a) => {
+    if (a !== 'adaga') return;
+    const f = aliados.foco('cigarra');
+    if (f) for (let i = 0; i < 3; i++) combate.efeitos.raio(f.x, f.y + 1.3, f.z, P.x, P.y + 1.1, P.z, { vida: 0.5, desvio: 0.2, r: 0.9, g: 2.4, b: 0.5 });
+    combate.efeitos.clarao(P.x, P.y + 1.1, P.z, 3, 0.4); clarear(0.35); P.energia = 0;
+  } },
+  'depois-p2-sempoderes': { aoAcao: (a) => { if (a === 'choque') choqueNoHeroi(); } },
+  'depois-p2-grace-acorda': { aoAcao: (a) => { if (a === 'choque') choqueNoHeroi(); } },
+  'depois-p2-casamento': { aoAcao: (a) => {
+    if (a !== 'ceuRasga') return;
+    for (let i = 0; i < 14; i++) { const g = Math.random() * 6.28, r = 20 + Math.random() * 40; combate.efeitos.raio(P.x + Math.cos(g) * 6, 70, P.z + Math.sin(g) * 6, P.x + Math.cos(g) * r, 30 + Math.random() * 30, P.z + Math.sin(g) * r, { vida: 0.8, desvio: 3, r: 1.7, g: 1.6, b: 1.2 }); }
+    clarear(0.5);
+  } },
+  'derrotado-godspeed': { aoAcao: (a) => {
+    const f = viloes.foco('godspeed') || focoHeroi();
+    if (a === 'tunelGodspeed') for (let i = 0; i < 16; i++) { const g = (i / 16) * 6.28; combate.efeitos.raio(f.x + Math.cos(g) * 2.5, f.y + 0.4 + (i % 4) * 0.6, f.z + Math.sin(g) * 2.5, f.x + Math.cos(g + 1.4) * 2.5, f.y + 0.4 + ((i + 1) % 4) * 0.6, f.z + Math.sin(g + 1.4) * 2.5, { vida: 0.7, desvio: 0.5, r: 1.7, g: 1.6, b: 1.2 }); }
+    if (a === 'negroLeva') { for (let i = 0; i < 18; i++) { const g = Math.random() * 6.28; combate.efeitos.raio(f.x, f.y + 0.3 + Math.random() * 1.8, f.z, f.x + Math.cos(g) * 4, f.y + Math.random() * 2.5, f.z + Math.sin(g) * 4, { vida: 0.6, desvio: 0.9, r: 1.45, g: 1.5, b: 1.7 }); } combate.efeitos.onda(f.x, f.y, f.z, 10, 0.8); clarear(0.6); }
+  } },
+  // o fim da Parte 2: depois do epílogo, os créditos dela
+  'depois-p2-fim': { depois: () => { if (historia.viu('cena:depois-p2-fim')) mostrarCreditos(2); } },
   'depois-tunel': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, depois: () => { tempo.tunel = false; J.corridaCena = false; irAoPassado(); } },
   'volta-tunel': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, depois: () => { tempo.tunel = false; J.corridaCena = false; } },
   // o fim: o herói entra no Núcleo (túnel em volta dele), volta, e vêm o epílogo e os créditos
@@ -1213,6 +1238,11 @@ const GANCHOS_CENA = {
     depois: () => { tempo.tunel = false; J.corridaCena = false; if (historia.viu('cena:depois-nucleo')) mostrarCreditos(); },
   },
 };
+/** o choque do Núcleo (a sala médica): raios dourados em volta do herói e um clarão */
+function choqueNoHeroi() {
+  for (let i = 0; i < 12; i++) { const g = Math.random() * 6.28; combate.efeitos.raio(P.x, P.y + 1 + Math.random(), P.z, P.x + Math.cos(g) * 2.5, P.y + Math.random() * 2.2, P.z + Math.sin(g) * 2.5, { vida: 0.4, desvio: 0.6, r: 2.2, g: 1.6, b: 0.5 }); }
+  clarear(0.55);
+}
 /** um clarão branco na tela (o raio da noite do raio) */
 function clarear(forca = 0.6) {
   el.fade.style.setProperty('--clarao', String(forca)); el.fade.classList.add('branco', 'on');
@@ -1259,13 +1289,22 @@ const CREDITOS = [
   ['Motor 3D', 'three.js (licença MIT)'], ['Fontes', 'Rajdhani e Inter (SIL Open Font License)'],
   ['Feito com', 'Claude'], ['', ''], ['Obrigado por jogar', 'Feche os créditos: a Parte 2 começa três meses depois.'],
 ];
-function mostrarCreditos() {
+const CREDITOS_P2 = [
+  ['A Parte 2: O preço da velocidade', 'Ponto de Ignição · O Corredor Negro · A adaga · O deus da velocidade'],
+  ['Personagens', 'Caitlin · Cisco · Joe · Iris · Nora e Henry Allen · Nevasca · Corredor Negro · August · Capitão Dwyer · Grace · Cigarra · Godspeed'],
+  ...CREDITOS.slice(2, -1),
+  ['Obrigado por jogar', 'A cidade continua precisando de você: todos os capítulos podem ser jogados de novo pela pausa.'],
+];
+function mostrarCreditos(parte = 1) {
   let c = document.getElementById('creditos');
   if (!c) {
     c = document.createElement('div'); c.id = 'creditos';
-    c.innerHTML = `<div class="rolo"><img class="logo-fim" src="assets/logo/logo.webp" alt="THE FLASH">${CREDITOS.map(([t, d]) => `<section>${t ? `<h3>${t}</h3>` : ''}${d ? `<p>${d}</p>` : ''}</section>`).join('')}</div><button type="button" class="pular">Fechar</button>`;
     document.body.appendChild(c);
     c.addEventListener('pointerdown', (e) => { e.stopPropagation(); fecharCreditos(); });
+  }
+  if (c.dataset.parte !== String(parte)) {
+    c.dataset.parte = String(parte);
+    c.innerHTML = `<div class="rolo"><img class="logo-fim" src="assets/logo/logo.webp" alt="THE FLASH">${(parte === 2 ? CREDITOS_P2 : CREDITOS).map(([t, d]) => `<section>${t ? `<h3>${t}</h3>` : ''}${d ? `<p>${d}</p>` : ''}</section>`).join('')}</div><button type="button" class="pular">Fechar</button>`;
   }
   c.hidden = false; c.classList.remove('rola'); void c.offsetWidth; c.classList.add('rola');
   J.modo = 'creditos'; J.creditosT = 0;

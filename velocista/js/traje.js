@@ -63,6 +63,8 @@ const PALETAS = {
   peekaboo: { verm: [0.7, 0.7, 0.72], vesc: [0.02, 0.02, 0.025], ouro: [0.05, 0.05, 0.06], graf: [0.02, 0.02, 0.02], brilho: 0, olho: [1.4, 0.3, 1.6], mascaraFechada: true },
   // o Corredor Negro: preto fosco da cabeça aos pés, frisos cor de cinza e os olhos brancos (Parte 2)
   negro: { verm: [0.007, 0.007, 0.008], vesc: [0.002, 0.002, 0.0025], ouro: [0.11, 0.11, 0.12], graf: [0.004, 0.004, 0.005], brilho: 0.15, olho: [2.2, 2.25, 2.5], mascaraFechada: true, rug: 0.92 },
+  // o Godspeed: branco-prata com os frisos dourados e os olhos de ouro, armadura metálica (Parte 2, Ato 8)
+  godspeed: { verm: [0.62, 0.62, 0.64], vesc: [0.16, 0.16, 0.17], ouro: [0.95, 0.72, 0.22], graf: [0.05, 0.05, 0.055], brilho: 0.6, olho: [2.4, 1.9, 0.7], mascaraFechada: true, met: 0.75, rug: 0.32 },
   civil: { verm: [0, 0, 0], vesc: [0, 0, 0], ouro: [0, 0, 0], graf: [0, 0, 0], brilho: 0, olho: [0, 0, 0], desenho: 'civil' },
   novo: { verm: [0.30, 0.011, 0.018], vesc: [0.075, 0.004, 0.008], ouro: [0.95, 0.60, 0.11], graf: [0.022, 0.02, 0.024], brilho: 0.08, veia: 0.55, olho: [1.2, 0.55, 0.08], mascaraFechada: false, desenho: 'novo', raioTesta: true },
 };

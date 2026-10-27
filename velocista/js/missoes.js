@@ -9,7 +9,8 @@
 // relativos ao ponto, uma de cada vez; contador 'pistas').
 // cenaAbre? (uma cena que roda no começo do passo, uma vez), epoca? ('ignicao' = a linha do tempo alterada da Parte 2: a
 // cidade no crepúsculo, em outras cores), fraco? (multiplica a velocidade máxima: o raio se apagando), alvoSala? (uma sala do
-// S.T.A.R. Labs: o guia leva até ela; ctx.sala diz onde o herói está), tipo 'tunel' (ficar 5 s acima de 180 km/h).
+// S.T.A.R. Labs: o guia leva até ela; ctx.sala diz onde o herói está), tipo 'tunel' (ficar 5 s acima de 180 km/h),
+// teto? (velocidade máxima em m/s: sem poderes) e semEnergia? (a energia fica em zero: nem vibrar nem golpe especial).
 // Depois do último passo a cidade fica livre (crimes, esferas e os capítulos para jogar de novo na pausa). Quem terminou
 // uma versão da história com menos passos volta no primeiro passo novo (o save guarda o último passo que existia).
 export const MISSOES = [
@@ -83,6 +84,25 @@ export const MISSOES = [
   { id: 'p2-fuga', titulo: 'Ele está atrás de você', texto: 'O Corredor Negro está vindo: chegue ao Cortex', alvo: 'cortex', tempo: 50, checar: (c) => c.sala === 'cortex' },
   { id: 'cap-negro', titulo: 'O Corredor Negro', texto: 'Enfrente o Corredor Negro', capitulo: 'negro' },
   { id: 'p2-lista', titulo: 'A lista', texto: 'A Iris recebeu uma carta estranha: encontre-a no Jitters', ponto: 'mesaIris', aliados: { iris: 'mesaIris' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  // Ato 7 — A adaga
+  { id: 'p2-iron', titulo: 'Celas vazias', texto: 'Atravesse a Ponte da Baía: o Joe espera você em Iron Heights', ponto: 'presidio', aliados: { joe: 'presidio' }, checar: (c) => c.perto },
+  { id: 'p2-august', titulo: 'O perito novo', texto: 'A perícia da Delegacia ganhou um perito novo: vá ao seu laboratório', ponto: 'csi', aliados: { joe: 'portaCsi' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p2-anel', titulo: 'O anel', texto: 'O Joe quer falar com você, a sós, na casa dos West', ponto: 'sofaWest', aliados: { joe: 'sofaWest' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p2-pedido', titulo: 'A pergunta', texto: 'A Iris espera você no Jitters. O anel está no seu bolso', ponto: 'mesaCafe', aliados: { iris: 'mesaCafe' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p2-gangue', titulo: 'A marca da cigarra', texto: 'Uma gangue com a marca da cigarra tomou uma rua: derrote-a', meta: 1, contador: 'gangue', crime: 'gangue' },
+  { id: 'p2-adaga', titulo: 'A adaga', texto: 'Alarme na praça da Prefeitura: alguém com uma adaga que brilha', ponto: 'prefeitura', aliados: { cigarra: 'prefeitura' }, raio: 14, checar: (c) => c.perto },
+  { id: 'p2-sempoderes', titulo: 'Sem poderes', texto: 'A adaga apagou a sua velocidade: chegue a pé ao Jitters, onde o Cisco espera de carro', ponto: 'cafe', teto: 7, semEnergia: true, tempo: 75, raio: 6, checar: (c) => c.perto },
+  { id: 'p2-esferas2', titulo: 'Faísca', texto: 'A velocidade voltou pela metade: recolha 5 esferas de energia', fraco: 0.6, meta: 5, contador: 'esferas', alvo: 'esfera' },
+  { id: 'p2-grace', titulo: 'Grace', texto: 'A Iris descobriu quem é a Cigarra: encontre-a na sala do editor do Picture News', ponto: 'editor', aliados: { iris: 'editor' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'cap-cigarra', titulo: 'A Cigarra', texto: 'Encontre a Cigarra e derrote-a', capitulo: 'cigarra' },
+  { id: 'p2-casamento', titulo: 'O casamento', texto: 'Na praça da Prefeitura, todos esperam o noivo. Atrasado, claro', ponto: 'prefeitura', aliados: { joe: 'prefeitura', iris: 'prefeitura2' }, roupa: 'civil', checar: (c) => c.perto },
+  // Ato 8 — O deus da velocidade
+  { id: 'p2-subestacoes', titulo: 'O ladrão de raios', texto: 'Um velocista de prata está drenando a cidade: religue as 3 subestações', meta: 3, contador: 'subestacoes', alvo: 'subestacao' },
+  { id: 'p2-mural', titulo: 'O mural', texto: 'O August não aparece há dois dias: vá ao laboratório da perícia', ponto: 'csi', aliados: { joe: 'portaCsi' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p2-treino', titulo: 'Mais rápido que um deus', texto: 'O Cisco montou o circuito mais difícil: passe pelos 8 portais em até 70 s', tipo: 'portais' },
+  { id: 'cap-godspeed', titulo: 'O deus da velocidade', texto: 'Encontre o Godspeed e derrote-o', capitulo: 'godspeed' },
+  { id: 'p2-grace-acorda', titulo: 'Acordar', texto: 'A Caitlin precisa de você na sala médica do S.T.A.R. Labs', alvoSala: 'medica', checar: (c) => c.sala === 'medica' },
+  { id: 'p2-fim', titulo: 'Em família', texto: 'Jantar na casa dos West. Todo mundo vai', ponto: 'jantar', aliados: { joe: 'jantar', iris: 'cozinha' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
 ];
 /** os passos de uma época (os da linha do tempo alterada): o jogo põe o mundo nela enquanto o passo dura */
 export const EPOCA_DO_PASSO = (m) => m?.epoca || null;
