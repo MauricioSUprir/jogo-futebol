@@ -81,10 +81,10 @@ if (args.includes('--filho')) {
   const res = await emParalelo(fileURLToPath(import.meta.url), sems, PAR, args, false);
   res.sort((a, b) => a.sem - b.sem);
   // (C4: quantas vezes a bola entra ou sai da mão do goleiro fora do mergulho depende dos lances de cada partida — com os
-  // estados novos da partida, 8 em 8 sementes: as sementes seguem, até 4 a mais, até ≥ 10 casos; só a pose delas conta)
-  const extra = [];
-  for (let s = SEM0 + NSEM; s < SEM0 + NSEM + 4 && [...res, ...extra].reduce((a, r) => a + r.pose.trocas, 0) < 10; s += PAR) {
-    const lote = Array.from({ length: Math.min(PAR, SEM0 + NSEM + 4 - s) }, (_, i) => s + i);
+  // estados novos da partida, 7 em 12 sementes: as sementes seguem, até 8 a mais, até ≥ 10 casos; só a pose delas conta)
+  const extra = [], MAIS = 8;
+  for (let s = SEM0 + NSEM; s < SEM0 + NSEM + MAIS && [...res, ...extra].reduce((a, r) => a + r.pose.trocas, 0) < 10; s += PAR) {
+    const lote = Array.from({ length: Math.min(PAR, SEM0 + NSEM + MAIS - s) }, (_, i) => s + i);
     extra.push(...await emParalelo(fileURLToPath(import.meta.url), lote, PAR, args, false));
   }
   process.exit(avaliar(res, extra) ? 0 : 1);
