@@ -3,14 +3,23 @@
 // perna ruim (+40% de erro), força máxima (+15%), % no alvo caindo com a distância e cavadinha
 // da IA só com o goleiro adiantado (a do humano, por dois toques no CHUTE: teste-cavadinha.mjs). Referências: pesquisa da Etapa 2 (PESQUISA-ETAPA2.md).
 // Barra cheia (C2, item 13 da FILA; dono, 15/10: "chute com a barra cheia mais alto, com chance de acertar o ângulo"): de
-// 18–22 m com o analógico no canto, a MIRA (o erro do chute zerado, separada do sorteio) passa na linha a ~2,1–2,2 m e no
-// ângulo; com o sorteio (o erro do jogo, forcaMaxErro valendo), o craque com a perna boa (metade chute forte, metade
-// colocado) cruza a linha a ≥ 1,9 m em ≥ 70%, no ângulo (y ≥ 1,9 m e |z| ≥ meia-boca − 0,9 m, dentro do gol) em ≥ 25% e por
-// cima do travessão em ≤ 25%; o resto (o bom finalizador, a perna ruim, só o forte) sai na tabela, informativo.
-//   node tools/teste-chutes.mjs [--so-cheia] [--sem-cheia <semente base da barra cheia com o sorteio, 7100>]
-import { criarMundo, passo, jogadorPorId } from '../js/sim.js';
-import { BOTAO, CAMPO, ACOES, BOLA } from '../js/config.js';
+// 18–22 m com o analógico no canto, a MIRA (o erro do chute zerado, separada do sorteio) passa NA linha a cheia.y (~2,1 m)
+// e no ângulo; com o erro zerado, de perto (4–9 m) é 100% gol sem tocar no travessão e na varredura de 9–35 m (até 45°,
+// analógico solto e no canto, forte e colocado, força 0,92 e 1) ≤ 1% sem gol (a busca da saída com o voo que bate no
+// travessão saltava: main 3,7%); com o sorteio (o erro do jogo, forcaMaxErro valendo), o craque com a perna boa (metade
+// chute forte, metade colocado) cruza a linha a ≥ 1,9 m em ≥ 70%, no ângulo (y ≥ 1,9 m e |z| ≥ meia-boca − 0,9 m, dentro
+// do gol) em ≥ 25% e por cima do travessão em ≤ 25%; o resto (com o goleiro, o bom finalizador, a perna ruim, só o forte)
+// sai na tabela, informativo, com o número da main ao lado.
+//   node tools/teste-chutes.mjs [--so-cheia] [--sem-cheia <semente base da barra cheia com o sorteio, 7100>] [--js <pasta js>]
+//   (--js: mede outra cópia da lógica, ex.: a main — o "antes")
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { tabelaTexto, fmt, media, percentil, DEG } from './lib/medidas.mjs';
+const iJs = process.argv.indexOf('--js');
+const JS = iJs > 0 ? path.resolve(process.argv[iJs + 1]) : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../js');
+const imp = f => import(pathToFileURL(path.join(JS, f)).href);
+const { criarMundo, passo, jogadorPorId } = await imp('sim.js');
+const { BOTAO, CAMPO, ACOES, BOLA } = await imp('config.js');
 
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
 let falhas = 0;
@@ -165,7 +174,7 @@ if (!SO_CHEIA) {
 
 // ------------------------------------------------ barra cheia: mais alto, com chance de acertar o ângulo (C2, item 13)
 // De 18–22 m (até 20° da frente do gol), a força cheia (CHUTE segurado ≥ 0,8 s) e o analógico no canto (0,75 rad da
-// reta bola–gol), sem goleiro: onde a bola cruza a linha do gol (`cruza`: na trave, onde cruzaria).
+// reta bola–gol): onde a bola cruza a linha do gol (`cruza`: batendo na trave ou no travessão antes, onde cruzaria).
 // Pesquisa: o canto alto é a colocação que mais converte (StatsBomb, "The Enigma of Shot Placement": canto 50–60% × meio
 // 12–13%; Datawrapper sobre 101 mil chutes do StatsBomb Open Data: "quase indefensável") e o chute alto espalha mais que o
 // baixo (Hunter 2018, J Biomech, 8.466 chutes): com o erro do jogo (o da pesquisa da Etapa 2: σ ≈ 1,2–2° por eixo no
@@ -175,18 +184,26 @@ const ANG_Z = MEIO - 0.9, ANG_Y = 1.9;
 const dentroGol = c => Math.abs(c.z) < MEIO - R && c.y < ALT - R;
 const noAngulo = c => dentroGol(c) && c.y >= ANG_Y && Math.abs(c.z) >= ANG_Z;
 const porCima = c => c.y > ALT + R;
-/** N chutes com a barra cheia; f(s) → {attr, mod}. Devolve as contagens (só a perna `perna`: 'boa', 'ruim' ou 'todas'). */
-function barraCheia(semBase, N, f, perna = 'todas') {
-  const r = { n: 0, alto: 0, ang: 0, cima: 0, trave: 0, alvo: 0, ys: [], zs: [] };
+const GOLEIRO_LINHA = { x: GX - 1.2, z: 0 };
+/**
+ * N chutes com a barra cheia; f(s) → {attr, mod}. Devolve as contagens (só a perna `perna`: 'boa', 'ruim' ou 'todas').
+ * goleiro: com o goleiro da IA na linha (os desfechos gol/defesa/fora; o chute defendido não cruza a linha).
+ */
+function barraCheia(semBase, N, f, perna = 'todas', goleiro = false) {
+  const r = { n: 0, alto: 0, ang: 0, cima: 0, trave: 0, toque: 0, alvo: 0, gol: 0, def: 0, fora: 0, ys: [], zs: [] };
   for (let s = 1; s <= N; s++) {
     const d = 18 + (s % 5), a = (((s * 29) % 41) - 20) / DEG;
     const o = f(s);
-    const q = chute(semBase + s, GX - Math.cos(a) * d, Math.sin(a) * d, { attr: o.attr, forca: 1.0, canto: (s % 2 ? 1 : -1) * 0.75, mod: o.mod, varia: true });
-    if (!q || !q.cruza) continue;
+    const q = chute(semBase + s, GX - Math.cos(a) * d, Math.sin(a) * d, { attr: o.attr, forca: 1.0, canto: (s % 2 ? 1 : -1) * 0.75, mod: o.mod, varia: true, goleiro: goleiro ? GOLEIRO_LINHA : null });
+    if (!q || (!goleiro && !q.cruza)) continue;
     const boa = q.l.pe === (o.attr.pePreferido ?? 1);
     if ((perna === 'boa' && !boa) || (perna === 'ruim' && boa)) continue;
+    r.n++;
+    if (q.res === 'gol') r.gol++; else if (q.res === 'defesa') r.def++; else r.fora++;
+    if (q.cruza?.trave) r.toque++; // trave ou travessão antes de cruzar a linha
     const c = q.cruza;
-    r.n++; r.ys.push(c.y); r.zs.push(Math.abs(c.z));
+    if (!c) continue;
+    r.ys.push(c.y); r.zs.push(Math.abs(c.z));
     if (c.y >= ANG_Y) r.alto++;
     if (noAngulo(c)) r.ang++;
     if (porCima(c)) r.cima++;
@@ -196,33 +213,81 @@ function barraCheia(semBase, N, f, perna = 'todas') {
   return r;
 }
 const pc = (k, r) => fmt(r[k] / Math.max(1, r.n) * 100, 0);
-const txtCheia = r => `n ${r.n}: ≥ 1,9 m ${pc('alto', r)}% · no ângulo ${pc('ang', r)}% · por cima ${pc('cima', r)}% · travessão ${pc('trave', r)}% · no gol ${pc('alvo', r)}% · y p10/p50/p90 ${fmt(percentil(r.ys, 0.1))}/${fmt(percentil(r.ys, 0.5))}/${fmt(percentil(r.ys, 0.9))} m`;
-{
-  // a MIRA (C2: "a meta mede a mira com erro 0, separada do sorteio"): o erro do chute zerado; bom e mau finalizador, as
-  // duas pernas, chute forte e colocado
+const txtCheia = r => `n ${r.n}: ≥ 1,9 m ${pc('alto', r)}% · no ângulo ${pc('ang', r)}% · por cima ${pc('cima', r)}% · travessão ${pc('trave', r)}% · trave ou travessão ${pc('toque', r)}% · no gol ${pc('alvo', r)}% · y p10/p50/p90 ${fmt(percentil(r.ys, 0.1))}/${fmt(percentil(r.ys, 0.5))}/${fmt(percentil(r.ys, 0.9))} m`;
+const txtGoleiro = r => `n ${r.n}: gols ${pc('gol', r)}% · defesas ${pc('def', r)}% · fora ${pc('fora', r)}% · trave ou travessão ${pc('toque', r)}%`;
+// a população: metade chute forte, metade colocado, os dois cantos, destros e canhotos — independentes (antes o
+// pePreferido e o colocado andavam juntos e a "perna boa" era só o colocado)
+const populacao = fin0 => s => ({ attr: { finalizacao: fin0 + (s % 10), pePreferido: Math.floor(s / 4) % 2, peFraco: 50 }, mod: Math.floor(s / 2) % 2 === 1 });
+/** Com o erro do chute zerado (a mira, separada do sorteio). */
+function semErro(fn) {
   const e0 = [ACOES.chute.erroBom, ACOES.chute.erroRuim];
   ACOES.chute.erroBom = 0; ACOES.chute.erroRuim = 0;
-  const r = barraCheia(7000, 40, s => ({ attr: { finalizacao: [60, 80, 99][s % 3], pePreferido: Math.floor(s / 2) % 2, peFraco: 50 }, mod: s % 4 >= 2 }));
-  [ACOES.chute.erroBom, ACOES.chute.erroRuim] = e0;
-  const yMed = media(r.ys), yMin = Math.min(...r.ys), yMax = Math.max(...r.ys), zMed = media(r.zs);
-  reg('barra cheia — a mira (erro 0), 18–22 m, analógico no canto', `y na linha méd ${fmt(yMed)} m (${fmt(yMin)}–${fmt(yMax)}), |z| méd ${fmt(zMed)} m · no ângulo ${pc('ang', r)}% · por cima ${pc('cima', r)}% (n ${r.n})`,
-    `y méd 2,1–2,2 m, todos 2,0–2,3; |z| méd ≥ meia-boca − 0,4 (${fmt(MEIO - 0.4)}); 100% no ângulo, 0 por cima`, r.n >= 36 && yMed >= 2.1 && yMed <= 2.2 && yMin >= 2.0 && yMax <= 2.3 && zMed >= MEIO - 0.4 && r.ang === r.n && r.cima === 0);
+  try { return fn(); } finally { [ACOES.chute.erroBom, ACOES.chute.erroRuim] = e0; }
+}
+{
+  // a MIRA (C2: "a meta mede a mira com erro 0, separada do sorteio"): bom e mau finalizador, as duas pernas, chute forte
+  // e colocado; a mira passa NA linha a cheia.y (a conta no voo sem o gol: mira.js saidaNaLinha)
+  const r = semErro(() => barraCheia(7000, 40, s => ({ attr: { finalizacao: [60, 80, 99][s % 3], pePreferido: Math.floor(s / 2) % 2, peFraco: 50 }, mod: s % 4 >= 2 })));
+  const yMed = media(r.ys), yMin = Math.min(...r.ys), yMax = Math.max(...r.ys), zMin = Math.min(...r.zs), zMed = media(r.zs);
+  reg('barra cheia — a mira (erro 0), 18–22 m, analógico no canto', `y na linha méd ${fmt(yMed)} m (${fmt(yMin)}–${fmt(yMax)}), |z| méd ${fmt(zMed)} m (mín ${fmt(zMin)}) · no ângulo ${pc('ang', r)}% · por cima ${pc('cima', r)}% · trave ou travessão ${r.toque} (n ${r.n})`,
+    `y 2,0–2,2 m em todos; |z| ≥ meia-boca − 0,9 (${fmt(ANG_Z)}); 100% no ângulo, 0 por cima e 0 na trave`, r.n >= 36 && yMin >= 2.0 && yMax <= 2.2 && zMin >= ANG_Z && r.ang === r.n && r.cima === 0 && r.toque === 0);
+}
+{
+  // de perto (revisão do C2): a mira medida 0,4 m antes da linha subia mais até ela (a 4–5 m a elevação é de 38–44°) e a
+  // barra cheia passava na linha a 2,24–2,49 m — no travessão, com o erro zerado (main: 100% de gols e 0 no travessão)
+  let n = 0, gols = 0, toque = 0, s = 0;
+  semErro(() => {
+    for (let d = 4; d <= 9; d++) for (let ang = -30; ang <= 30; ang += 10) for (const canto of [-0.75, 0, 0.75]) {
+      s++;
+      const a = ang / DEG;
+      const q = chute(7300 + s, GX - Math.cos(a) * d, Math.sin(a) * d, { attr: { finalizacao: [60, 80, 99][s % 3], pePreferido: 1, peFraco: 50 }, forca: 1.0, canto });
+      if (!q) continue;
+      n++; if (q.res === 'gol') gols++; if (q.cruza?.trave) toque++;
+    }
+  });
+  reg('barra cheia — de perto (4–9 m, até 30°), chute forte, erro 0', `${fmt(gols / Math.max(1, n) * 100, 1)}% de gols, ${toque} na trave ou no travessão (n ${n})`, '100% de gols, 0 na trave (main: 100%, 0)', n >= 120 && gols === n && toque === 0);
+}
+{
+  // a varredura (revisão do C2): a busca do giro do colocado e a da elevação usavam o voo com o gol; com a mira alta o voo
+  // de teste batia no travessão, na haste ou no véu no passo em que chegava à distância da mira, voltava 'caiu' e a busca
+  // saltava (o colocado a 19 m passava a 8 m do gol; a 35 m, na trave). Erro zerado: forte e colocado, analógico solto e no
+  // canto, 9–35 m, até 45°, força 0,92 e 1
+  let n = 0, sem = 0, s = 0;
+  const pior = [];
+  semErro(() => {
+    for (const forca of [0.92, 1.0]) for (const mod of [false, true]) for (let d = 9; d <= 35; d += 2) for (let ang = -45; ang <= 45; ang += 15) for (const canto of [-0.75, 0, 0.75]) {
+      s++;
+      const a = ang / DEG;
+      const q = chute(7400 + s, GX - Math.cos(a) * d, Math.sin(a) * d, { attr: { finalizacao: [60, 80, 99][s % 3], pePreferido: s % 2, peFraco: 50 }, forca, canto, mod });
+      if (!q) continue;
+      n++;
+      if (q.res !== 'gol') { sem++; if (pior.length < 3) pior.push(`${d} m ${ang}° ${mod ? 'col' : 'forte'} ${fmt(forca)}`); }
+    }
+  });
+  reg('barra cheia — varredura com o erro zerado (9–35 m, até 45°, solto e no canto, forte e colocado)', `${fmt(sem / Math.max(1, n) * 100, 1)}% sem gol (${sem}/${n}${pior.length ? ': ' + pior.join(', ') : ''})`, '≤ 1% (main: 3,7%)', n >= 1000 && sem / n <= 0.01);
 }
 {
   // com o sorteio: o craque com a perna boa, metade chute forte, metade colocado (a chance de acertar o ângulo)
-  const craque = s => ({ attr: { finalizacao: 90 + (s % 10), pePreferido: Math.floor(s / 2) % 2, peFraco: 50 }, mod: s % 4 >= 2 });
+  const craque = populacao(90);
   const iSem = process.argv.indexOf('--sem-cheia'), SEM = iSem > 0 ? +process.argv[iSem + 1] : 7100;
   const r = barraCheia(SEM, 480, craque, 'boa');
-  reg('barra cheia — craque (90–99), perna boa: cruza a linha a ≥ 1,9 m', txtCheia(r), '≥ 70%', r.n >= 200 && r.alto / r.n >= 0.7);
-  reg('barra cheia — craque (90–99), perna boa: no ângulo', `${pc('ang', r)}% (y ≥ 1,9 m, |z| ≥ ${fmt(ANG_Z)} m, dentro do gol)`, '≥ 25%', r.n >= 200 && r.ang / r.n >= 0.25);
-  reg('barra cheia — craque (90–99), perna boa: por cima do travessão', `${pc('cima', r)}%`, '≤ 25%', r.n >= 200 && r.cima / r.n <= 0.25);
-  // informativo (o que o pedido não fixa): só o chute forte, o bom finalizador, a perna ruim
-  const forte = barraCheia(7100, 480, s => ({ ...craque(s), mod: false }), 'boa');
-  linhas.push(['barra cheia — craque, perna boa, só o chute forte (informativo)', txtCheia(forte), '—', 'INFO']);
-  const bom = barraCheia(7700, 480, s => ({ attr: { finalizacao: 80 + (s % 10), pePreferido: Math.floor(s / 2) % 2, peFraco: 50 }, mod: s % 4 >= 2 }), 'boa');
-  linhas.push(['barra cheia — bom finalizador (80–89), perna boa (informativo)', txtCheia(bom), '—', 'INFO']);
-  const ruim = barraCheia(7100, 480, craque, 'ruim');
-  linhas.push(['barra cheia — craque, perna ruim (informativo)', txtCheia(ruim), '—', 'INFO']);
+  reg('barra cheia — craque (90–99), perna boa: cruza a linha a ≥ 1,9 m', txtCheia(r), '≥ 70% (main: 22%)', r.n >= 200 && r.alto / r.n >= 0.7);
+  reg('barra cheia — craque (90–99), perna boa: no ângulo', `${pc('ang', r)}% (y ≥ 1,9 m, |z| ≥ ${fmt(ANG_Z)} m, dentro do gol)`, '≥ 25% (main: 9%)', r.n >= 200 && r.ang / r.n >= 0.25);
+  reg('barra cheia — craque (90–99), perna boa: por cima do travessão', `${pc('cima', r)}%`, '≤ 25% (main: 1%)', r.n >= 200 && r.cima / r.n <= 0.25);
+  // informativo (o que o pedido não fixa), com a main ao lado (a mesma conta: `--js` na pasta da main)
+  const forte = barraCheia(SEM, 480, s => ({ ...craque(s), mod: false }), 'boa');
+  linhas.push(['barra cheia — craque, perna boa, só o chute forte (informativo)', txtCheia(forte), 'main: ≥ 1,9 m 29% · ângulo 9% · por cima 2% · trave ou travessão 18%', 'INFO']);
+  const bom = barraCheia(7700, 480, populacao(80), 'boa');
+  linhas.push(['barra cheia — bom finalizador (80–89), perna boa (informativo)', txtCheia(bom), 'main: ≥ 1,9 m 29% · ângulo 10% · por cima 3% · trave ou travessão 15%', 'INFO']);
+  const ruim = barraCheia(SEM, 480, craque, 'ruim');
+  linhas.push(['barra cheia — craque, perna ruim (informativo)', txtCheia(ruim), 'main: ≥ 1,9 m 26% · ângulo 10% · por cima 3% · trave ou travessão 15%', 'INFO']);
+  // com o goleiro (revisão do C2): o goleiro de hoje quase não premia o ângulo (GOLEIRO.logit cAlt −0,219/m, cLat
+  // −1,15/m) e a bola alta e aberta sai mais — a barra cheia não pode fazer bem menos gols que antes sem o dono decidir
+  // (CONTRATOS.md, C2: as opções com os números)
+  const gk = barraCheia(SEM, 480, craque, 'boa', true);
+  linhas.push(['barra cheia — craque, perna boa, COM o goleiro da IA na linha (informativo)', txtGoleiro(gk), 'main: gols 55% · defesas 18% · fora 27% · trave ou travessão 16%', 'INFO']);
+  const gkBom = barraCheia(7700, 480, populacao(80), 'boa', true);
+  linhas.push(['barra cheia — bom finalizador, perna boa, COM o goleiro (informativo)', txtGoleiro(gkBom), 'main: gols 42% · defesas 23% · fora 35% · trave ou travessão 15%', 'INFO']);
 }
 
 console.log(tabelaTexto(linhas));

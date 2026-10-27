@@ -17,7 +17,7 @@ import {
 import { procurarOportunidade, preverBola } from './conducao.js';
 import { passoCorpo, copiaCinematica, infoPassada } from './jogador.js';
 import { registrarChute } from './regras-goleiro.js';
-import { chuteMirado, simularLinha, alturaMiraChute, zMaxMiraChute } from './mira.js';
+import { chuteMirado, simularLinha, alturaMiraChute, zMaxMiraChute, miraCheia, saidaNaLinha } from './mira.js';
 
 const DT = PASSO;
 const BOTOES_ACAO = [
@@ -746,7 +746,7 @@ function velParaAlturaEm(pp, ux, uz, D, el, w, y) {
 /**
  * Ponto da mira na linha do gol (z) pelo analógico mr: o ângulo entre o analógico e a reta bola–gol escolhe o canto
  * ("lat" positivo = para a direita de quem chuta; no gol de +x a direita é +z), dentro da boca do gol (até ±zMax; o
- * chute com a barra cheia vai mais perto da trave: mira.js zMaxMiraChute).
+ * chute com a barra cheia tem a folga dele até a trave: mira.js zMaxMiraChute).
  */
 function zPeloAnalogico(b, gx, lado, meio, mr, zMax = meio - 0.5) {
   const dirGol = MD.atan2(-b.p.z, gx - b.p.x);
@@ -776,11 +776,13 @@ function chute(m, j, pe, p, erroMult) {
     const entre = (gk.x - b.p.x) * lado > 1 && MD.hypot(gk.x - b.p.x, gk.z - b.p.z) < 14;
     if (fora > ACOES.cavadinha.goleiroFora && entre) return cavadinha(m, j, pe, p, erroMult, gx);
   }
+  // a barra cheia (C2): só na bola rolando — o pênalti e o tiro livre com barreira ficam na mira de antes
+  const cheia = miraCheia(p.forca) && !p.penalti && !p.barreira && (gx - b.p.x) * lado > 0.5;
   // mira: o analógico escolhe o canto; sem analógico, o lado mais longe do goleiro
   let zMira;
   const mr = mira(j);
   if (mr && mr.mag > 0.3) {
-    zMira = zPeloAnalogico(b, gx, lado, meio, mr, zMaxMiraChute(p.forca));
+    zMira = zPeloAnalogico(b, gx, lado, meio, mr, cheia ? zMaxMiraChute(p.forca) : undefined);
   } else {
     const gz = gk ? gk.z : 0;
     zMira = gz > 0 ? -meio + 0.6 : meio - 0.6;
@@ -789,8 +791,8 @@ function chute(m, j, pe, p, erroMult) {
   // mandava 1/3 dos pênaltis para fora com qualquer analógico; a ±2,75 (o canto da IA, que bate 36% mais no meio), 16%;
   // a ±2,5, ~8% (teste-botoes B11; a meta do dono é ~6%). Só o humano: a IA mira o canto dela (PARTIDA.penaltiIA)
   if (p.penalti && ehHumano(m, j)) zMira = clamp(zMira, -cfg.penaltiCanto, cfg.penaltiCanto);
-  // a barra cheia sobe a mira (C2): a mesma conta da linha da cobrança mirada; no pênalti, a curva de antes (mira.js)
-  const yMira = alturaMiraChute(p.forca, !p.penalti);
+  // a barra cheia sobe a mira (C2): a mesma conta da linha da cobrança mirada (mira.js); fora dela, a curva de antes
+  const yMira = alturaMiraChute(p.forca, cheia);
   const colocado = p.mod;
   let s = lerp(cfg.v[0], cfg.v[1], p.forca) * lerp(0.86, 1.08, j.par.attr.finalizacao / 100) * velPeFraco(j, pe);
   if (colocado) s *= cfg.colocadoV;
@@ -803,7 +805,14 @@ function chute(m, j, pe, p, erroMult) {
   const pp = { x: b.p.x, y: b.p.y, z: b.p.z };
   // colocado: efeito para dentro (curva para o meio do gol)
   let w = { x: 0, y: 0, z: 0 };
-  if (colocado) {
+  let elCheia = null;
+  if (cheia) {
+    // a barra cheia: a bola, sem o erro, cruza a linha do gol em (yMira, zMira) — o giro do colocado e a elevação pelo voo
+    // sem o gol (mira.js saidaNaLinha; a busca de baixo, com o voo que bate no travessão, saltava com a mira alta)
+    if (colocado) w = { x: 0, y: (zMira >= 0 ? 1 : -1) * lado * cfg.giroColocado, z: 0 };
+    const sa = saidaNaLinha(pp, gx, zMira, s, yMira, w);
+    ux = sa.x; uz = sa.z; elCheia = sa.el;
+  } else if (colocado) {
     // efeito de dentro do pé: a bola sai por fora e curva para dentro do gol (Magnus ∝ ω × v,
     // com ω no eixo y: a força lateral em z vale −ωy·vx)
     const sinal = (zMira >= 0 ? 1 : -1) * lado;
@@ -833,7 +842,7 @@ function chute(m, j, pe, p, erroMult) {
       s *= 0.95;
     }
   }
-  const el = elFalta ?? elevacaoParaAltura(pp, ux, uz, D, s, yMira, w);
+  const el = elFalta ?? elCheia ?? elevacaoParaAltura(pp, ux, uz, D, s, yMira, w);
   // erro: distância, pressão, pé fraco, força no máximo, de primeira
   const base = lerp(cfg.erroRuim, cfg.erroBom, j.par.attr.finalizacao / 100);
   // (no tiro livre com barreira o erro é o da falta, com ou sem efeito: ACOES.chute.faltaErro já está em erroMult)
