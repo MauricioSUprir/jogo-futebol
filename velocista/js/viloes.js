@@ -100,6 +100,8 @@ export const CAPITULOS = [
   { id: 'cigarra', titulo: 'Capítulo 10 — Cigarra', viloes: ['cigarra'], perseguicao: false, lugar: 'cidade', texto: 'A Cigarra está na cidade com a adaga. Encontre-a antes que ela risque mais um nome.' },
   { id: 'godspeed', titulo: 'Capítulo 11 — Godspeed', viloes: ['godspeed'], perseguicao: true, texto: 'O deus da velocidade quer o seu raio. Alcance o Godspeed.' },
   { id: 'nevasca2', titulo: 'Capítulo 12 — Nevasca', viloes: ['nevasca'], perseguicao: false, lugar: 'cidade', texto: 'A Nevasca acordou dentro da Caitlin. Encontre-a e traga a Caitlin de volta.' },
+  { id: 'reverso2', titulo: 'Capítulo 13 — O acordo', viloes: ['reverso'], perseguicao: true, texto: 'O homem de amarelo não foi para o Núcleo. Alcance o Flash Reverso.' },
+  { id: 'negro2', titulo: 'Capítulo 14 — O fim de toda corrida', viloes: ['negro'], perseguicao: false, texto: 'O Corredor Negro espera em frente ao S.T.A.R. Labs. Tudo o que você tem: agora.' },
 ];
 const DANO = { soco: 5, gancho: 9, raio: 14, ciclone: 18, sonico: 28 };
 const CHAVE = 'theflash.viloes.v1';

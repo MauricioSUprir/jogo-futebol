@@ -1030,7 +1030,7 @@ function passoMissoes(dt) {
   const rp = portais.atualizar(dt, P);
   if (rp?.falhou) avisar('Volte ao 1º portal', 'Tempo esgotado', 'alerta');
   // crimes: durante a história só os que o passo pede (e quaisquer no "Guardião da cidade"); com a história terminada, a cidade é livre
-  const querCrime = m?.crime || m?.id === 'patrulha' || missoes.livre || crimes.ativo;   // um crime já em andamento sempre termina
+  const querCrime = m?.crime || m?.id === 'patrulha' || m?.patrulha || missoes.livre || crimes.ativo;   // um crime já em andamento sempre termina
   // um objetivo de cada vez (dono, 26/10: "não pode vir outra missão nem crime enquanto eu estiver dentro de uma missão ou
   // objetivo"): crime novo só com a cena e o rádio do passo terminados, sem cronômetro, corrida de portais ou vilão em cena
   const ocupado = !!(J.cenaPendente || J.cron || (m?.tipo === 'portais' && portais.estado().correndo) || !historia.radioLivre || J.esteira || rivais.ativo?.estado === 'luta');
@@ -1043,7 +1043,7 @@ function passoMissoes(dt) {
   }
   const sala = LAB_B.plano.dentro(P.x, P.z, P.y);
   // Ato 3: fendas, túnel do tempo e a noite do acidente
-  if (m?.id === 'fendas') {
+  if (m?.alvo === 'fenda') {
     if (!tempo.fendasLigadas) tempo.ligarFendas(true);
     const n = tempo.passoFendas(dt, P);
     if (n) { missoes.contar('fendas', n); const pr = missoes.progresso(); avisar('Fenda fechada', pr ? pr.txt : '', 'ok'); }
@@ -1072,7 +1072,7 @@ function passoMissoes(dt) {
   // passo anterior (a viagem no túnel), e sai do mesmo jeito
   if (tempo.epoca !== 'passado' && !J.cenaPendente && !J.cenaPasso && J.modo === 'jogando') { const ep = m?.epoca || 'presente'; if (tempo.epoca !== ep) mudarEpoca(ep); }
   // o Corredor Negro atrás do herói: raios pálidos caindo logo atrás dele enquanto o cronômetro corre
-  if (m?.id === 'p2-fuga' && J.cron && !J.interior && !J.cenaPendente) {
+  if ((m?.perseguido || m?.id === 'p2-fuga') && J.cron && !J.interior && !J.cenaPendente) {
     J.raioNegro = (J.raioNegro ?? 1) - dt;
     if (J.raioNegro <= 0) {
       J.raioNegro = 0.8 + Math.random() * 0.8;
@@ -1309,6 +1309,18 @@ const GANCHOS_CENA = {
     clarear(0.35); J.cenaAliados = { aliados: {} };
   } },
   'depois-p3-rastro': { aoAcao: (a) => { if (a === 'visao') clarear(0.5); } },
+  // Atos 11 e 12: o homem de amarelo sumindo num raio vermelho, o Núcleo abrindo e o Corredor Negro levando o Henry
+  'depois-p3-saida': { aoAcao: (a) => { if (a === 'someReverso') someNumRaio('reverso', [2.8, 0.35, 0.2]); } },
+  'depois-p3-iris-perigo': { aoAcao: (a) => { if (a === 'someReverso') someNumRaio('reverso', [2.8, 0.35, 0.2]); } },
+  'depois-p3-plano': { depois: () => { J.cenaAliados = null; } },
+  'derrotado-reverso2': { aoAcao: (a) => { if (a === 'batida') batidaNoNucleo(); } },
+  'derrotado-negro2': { aoAcao: (a) => {
+    if (a !== 'negroLevaHenry') return;
+    const f = viloes.foco('negro') || focoHeroi();
+    for (let i = 0; i < 22; i++) { const g = Math.random() * 6.28, cor = i % 3 ? [1.45, 1.5, 1.7] : [2.6, 0.25, 0.12]; combate.efeitos.raio(f.x, f.y + 0.3 + Math.random() * 1.8, f.z, f.x + Math.cos(g) * 5, f.y + Math.random() * 3, f.z + Math.sin(g) * 5, { vida: 0.7, desvio: 1, r: cor[0], g: cor[1], b: cor[2] }); }
+    combate.efeitos.onda(f.x, f.y, f.z, 14, 1); batidaNoNucleo(); clarear(0.75);
+  } },
+  'depois-p3-fim': { depois: () => { if (historia.viu('cena:depois-p3-fim')) mostrarCreditos(3); } },
   // o fim da Parte 2: depois do epílogo, os créditos dela
   'depois-p2-fim': { depois: () => { if (historia.viu('cena:depois-p2-fim')) mostrarCreditos(2); } },
   'depois-tunel': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, depois: () => { tempo.tunel = false; J.corridaCena = false; irAoPassado(); } },
@@ -1319,6 +1331,12 @@ const GANCHOS_CENA = {
     depois: () => { tempo.tunel = false; J.corridaCena = false; if (historia.viu('cena:depois-nucleo')) mostrarCreditos(); },
   },
 };
+/** alguém da cena some num raio (o homem de amarelo indo embora): raios em volta dele e ele sai da cena */
+function someNumRaio(id, [r, g, b]) {
+  const f = aliados.foco(id);
+  if (f) for (let i = 0; i < 12; i++) { const a = Math.random() * 6.28; combate.efeitos.raio(f.x, f.y + 0.3 + Math.random() * 1.5, f.z, f.x + Math.cos(a) * 3, f.y + Math.random() * 2, f.z + Math.sin(a) * 3, { vida: 0.4, desvio: 0.7, r, g, b }); }
+  const resto = { ...((J.cenaAliados || missoes.atual)?.aliados || {}) }; delete resto[id]; J.cenaAliados = { aliados: resto };
+}
 /** uma batida de dentro do Núcleo (Parte 3): um raio vermelho sobe do reator, a tela treme num clarão */
 function batidaNoNucleo() {
   const x = LAB_B.cx, z = LAB_B.cz + 50;
@@ -1382,6 +1400,13 @@ const CREDITOS_P2 = [
   ...CREDITOS.slice(2, -1),
   ['Obrigado por jogar', 'Feche os créditos: a Parte 3 começa seis meses depois.'],
 ];
+const CREDITOS_P3 = [
+  ['A Parte 3: A força do raio', 'O traje novo · Nevasca · O prisioneiro do Núcleo · A força do raio'],
+  ['Personagens', 'Caitlin · Cisco · Joe · Iris · Nora West-Allen · Henry Allen · Flash Reverso · Nevasca · Corredor Negro · DeVoe'],
+  ['O traje novo', 'Desenhado e costurado pela Caitlin e pelo Cisco (bateria, armadura e tempo lento)'],
+  ...CREDITOS.slice(2, -1),
+  ['Obrigado por jogar', 'A cidade continua precisando de você: todos os capítulos podem ser jogados de novo pela pausa.'],
+];
 function mostrarCreditos(parte = 1) {
   let c = document.getElementById('creditos');
   if (!c) {
@@ -1391,7 +1416,7 @@ function mostrarCreditos(parte = 1) {
   }
   if (c.dataset.parte !== String(parte)) {
     c.dataset.parte = String(parte);
-    c.innerHTML = `<div class="rolo"><img class="logo-fim" src="assets/logo/logo.webp" alt="THE FLASH">${(parte === 2 ? CREDITOS_P2 : CREDITOS).map(([t, d]) => `<section>${t ? `<h3>${t}</h3>` : ''}${d ? `<p>${d}</p>` : ''}</section>`).join('')}</div><button type="button" class="pular">Fechar</button>`;
+    c.innerHTML = `<div class="rolo"><img class="logo-fim" src="assets/logo/logo.webp" alt="THE FLASH">${(parte === 3 ? CREDITOS_P3 : parte === 2 ? CREDITOS_P2 : CREDITOS).map(([t, d]) => `<section>${t ? `<h3>${t}</h3>` : ''}${d ? `<p>${d}</p>` : ''}</section>`).join('')}</div><button type="button" class="pular">Fechar</button>`;
   }
   c.hidden = false; c.classList.remove('rola'); void c.offsetWidth; c.classList.add('rola');
   J.modo = 'creditos'; J.creditosT = 0;
