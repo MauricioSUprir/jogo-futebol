@@ -12,6 +12,7 @@ const ok = (c, msg) => { console.log(`${c ? 'OK  ' : 'ERRO'} ${msg}`); if (!c) f
 const M = await import(pathToFileURL(path.join(RAIZ, 'js/marcos.js')).href);
 const cid = await import(pathToFileURL(path.join(RAIZ, 'js/cidade.js')).href);
 const mis = await import(pathToFileURL(path.join(RAIZ, 'js/missoes.js')).href);
+{ const B = cid.bloco(cid.LAB_CELULA[0], cid.LAB_CELULA[1]); M.registrarPontosLab(B.cx, B.cz); }   // (Parte 3: os pontos dentro do laboratório, como o jogo faz)
 
 // ---- 1. cada lugar no seu quarteirão, longe do campus do laboratório e um do outro
 const celulas = new Set();

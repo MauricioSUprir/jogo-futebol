@@ -147,5 +147,10 @@ export function pontoMundo(id) {
   const m = MARCOS.find((k) => k.id === p.marco), cx = (m.cel[0] + 0.5) * CELL - MEIO, cz = (m.cel[1] + 0.5) * CELL - MEIO;
   return p.interior ? { x: cx + p.u, z: cz + p.v, h: p.h, y: Y_INTERIOR, interior: p.interior } : { x: cx + p.u, z: cz + p.v, h: p.h };
 }
+/** Parte 3: lugares dentro do S.T.A.R. Labs, em [u, v, h] a partir do centro do campus (a planta de lab.js): a vitrine do
+ *  traje novo na sala dos trajes (no fundo, entre as vitrines antigas), a Caitlin e o Cisco na frente dela, e a Caitlin na
+ *  sala médica. O jogo registra com o centro do laboratório (registrarPontosLab), que marcos.js não conhece. */
+export const PONTOS_LAB = { vitrine: [49, -26.6, 0], trajesCaitlin: [46, -24.2, 0], trajesCisco: [52, -24.2, 0], medicaCaitlin: [-49, -18, 0] };
+export function registrarPontosLab(cx, cz) { for (const [n, [u, v, h]] of Object.entries(PONTOS_LAB)) PONTOS[n] = { x: cx + u, z: cz + v, h }; }
 /** Subestações de energia que o Zoom desligou (missão "Apagão"): numa esquina de calçada, perto de três cruzamentos. */
 export const SUBESTACOES = [[17, 26], [27, 17], [28, 28]].map(([i, j]) => ({ x: eixo(i) + 9, z: eixo(j) + 9 }));
