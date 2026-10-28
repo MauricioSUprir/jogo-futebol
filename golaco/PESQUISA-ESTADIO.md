@@ -292,6 +292,18 @@ os últimos 10 s do que foi DESENHADO e um diretor de replay; a simulação espe
 | Transmissões de TV (Wikipedia "Instant replay"; Creative COW, transições de replay das emissoras; Fiveable, "instant replays") | A emissora "anuncia" o replay com uma vinheta que cruza a tela (o logo voa e puxa o replay), e o replay mistura ângulos e câmera lenta | A faixa verde (a da identidade, como a do "GOL!") cruza a tela em 0,4 s na entrada e na saída do replay — o espectador sabe que é replay sem texto; com "reduzir movimento", não passa |
 | O próprio jogo (relógio do estádio gravado) | A rede balança pelo relógio do estádio (`rede-onda.js`, impactos com `t0`) | O anel grava o relógio do estádio por passo: no replay a rede re-balança com o tempo gravado, sem mudar `rede-onda.js` |
 
+**O lance lento (28/10; `replay-roteiro.js montarGol`/`planosExtrasGol`, contrato "Replay").** Com o goleiro realista, a bola
+que sobe da perna no bloqueio fica livre e às vezes quica, bate na trave e entra 2–3 s depois do chute. Os pisos do roteiro
+(a TV até 1,5 s antes do chute; o de trás do gol até 0,3 s antes dele, a 0,5×) davam a base ≥ 4,9 + 3Δ s (Δ = gol − chute; +
+3,14 s da lateral no golaço) e o replay passava do teto (semente 102: 16,94 s contra 14). A ordem de corte segue as fontes
+que já guiavam o replay: a SoccerNet-v2 (`PESQUISA-CENAS-TV.md` §0.2: 1 a 3 ângulos por lance, 6,8 s por plano) e a LaLiga
+(§4: "se dá para resolver em dois ângulos, melhor que em três") — a TV a 1× fica com o chute e o desvio inteiros (o lance
+que se lê); o de trás do gol é o plano "mais fechado e mais lento" (patente US7657836, §3/§4) e mostra o GOL, então é ele que
+começa mais perto do gol (até 1 s antes dele: 4 s de plano no mínimo); se ainda passar, sai o 3º ângulo (a lateral do
+golaço); por último, só fora do golaço e com Δ ≳ 5,7 s, o de trás do gol. Nos extras, a 1ª pessoa sai quando não cabe (já
+era a regra) e o treinador volta ao plano dele; com Δ ≳ 4,9 s, a parte 1 dele começa até 0,8 s antes do gol. Medido: 14 gols
+lentos sintéticos (`teste-replay-anel` G3b) e as partidas das sementes do CI, 101–128 e 201–240 (G3 agora com a base).
+
 ### 9.1 Análise semiautomática do impedimento e posição legal (pedido do dono de 12/10)
 
 "No impedimento, quero que seja marcado o impedimento, tenha cena de impedimento, tipo aquelas cenas de replay do

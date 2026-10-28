@@ -16,6 +16,15 @@ mesmas definições.
   linha no jogo organizado e nos lances rápidos com a definição do `teste-intensidade`, por jogo e por
   janela de 15 min (o p90 é o teto da meta).
 
+- `soccernet_situacao.py` — replays nas paradas (28/10; `PESQUISA-CENAS-TV.md` §4 "Por situação"): nos rótulos
+  públicos do SoccerNet-v2 (SoccerNet/SN-Labels: `Labels-v2.json` + `Labels-cameras.json` de cada jogo), a fração das
+  paradas com replay por recomeço × cartão × chute nos 15 s antes — a tabela `TV_SIT` do `teste-replay-paradas` (P3).
+  Só a biblioteca padrão: `python3 -I tools/pesquisa/soccernet_situacao.py <pasta com os jogos>`.
+
+- `soccernet_duracao.py` — quanto dura o replay da TV nas paradas (28/10; `PLANO-CENAS.md` §2.7, o orçamento do ar):
+  nos mesmos rótulos, a soma dos planos de replay de cada parada com replay, por recomeço × situação. Só a biblioteca
+  padrão: `python3 -I tools/pesquisa/soccernet_duracao.py <pasta com os jogos>`.
+
 Uso (Python 3 com numpy e pandas; os CSV da Metrica numa pasta):
 
 ```bash

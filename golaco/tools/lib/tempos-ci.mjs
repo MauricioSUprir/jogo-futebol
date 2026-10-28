@@ -51,7 +51,7 @@ export const TEMPOS_NODE = {
   'teste-rede-veu.mjs': 3,
   'teste-torcida.mjs': 10,
   'teste-replay-anel.mjs': 688,
-  'teste-replay-paradas.mjs': 340,
+  'teste-replay-paradas.mjs': 680, // 28/10: 24 → 48 partidas (localmente 623–640 s com 2 processos; as 24, 285–315 s)
   'teste-saot.mjs': 215,
   'teste-comemoracao.mjs': 294,
   'teste-substituicao.mjs': 69,

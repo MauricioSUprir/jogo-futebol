@@ -18,8 +18,12 @@
 //   G1  a ordem pelos nomes: tv, atras, [lateral], primeira, treinador, [saot]; sem 1ª pessoa no gol contra, sem autor no
 //       anel e com "reduzir movimento";
 //   G2  com os extras, os planos de antes são campo a campo os de {extras: false}; e {extras: false} = o roteiro de --ref
-//       (outra versão: git archive) — com --ref;
-//   G3  extras ≤ 7,0 s; total ≤ 19 s (golaço ≤ 21; com a checagem ≤ 20/22);
+//       (outra versão: git archive) — com --ref (28/10: menos o gol em que a base da ref passava do teto, contado à parte);
+//   G3  base (tv, atras [, lateral] [, checagem]) ≤ 12 s (golaço ≤ 14; com a checagem + 1) — 28/10 —; extras ≤ 7,0 s;
+//       total ≤ 19 s (golaço ≤ 21; com a checagem ≤ 20/22);
+//   G3b (28/10) o gol LENTO SINTÉTICO (o chute bloqueado que sobe, quica, bate na trave e entra Δ s depois; 24 e 14 m, Δ de 1
+//       a 6,5 s): os tetos do G3 em cada gol e a leitura do lance (a TV com o chute e o desvio inteiros; até Δ 5 s o de trás
+//       do gol com o gol; o golaço até Δ 4 s com a lateral; com Δ 1 s, o roteiro de sempre) — ver o item;
 //   G4  os planos dentro do anel, sem atravessar corte (o gol no fim do tempo: o treinador encurta ou sai);
 //   G5  pênalti: a 1ª pessoa começa depois da montagem e o goleiro está no quadro em chute − 0,3 s;
 //   G6  1ª pessoa: olho ≤ 0,15 m da cabeça gravada e ≤ 0,06 m do olho bruto na HORIZONTAL (14/10: a cabeça do manequim
@@ -28,7 +32,10 @@
 //       0,5 s, com o olho dos dois lados do quadro) ≤ 1 cm correndo (o olho bruto: ~8 cm);
 //   G7  1ª pessoa: giro p95 ≤ 90°/s e máximo ≤ 150°/s (tempo de replay); bola no quadro ≥ 95% de chute a gol (fora da janela
 //       em que ela some); olhar ≤ 25° da bola (mediana); a boca do gol no quadro em chute − 0,5 s e de chute + 0,3 s ao gol;
-//   G8  1ª pessoa: nenhum outro corpo a < 0,3 m da lente no quadro; presente em ≥ 80% dos gols com autor;
+//   G8  1ª pessoa: nenhum outro corpo a < 0,3 m da lente no quadro; presente em ≥ 80% dos gols com autor em que ela CABE
+//       pelas regras fixas do roteiro (28/10: lib/replay-g.mjs semLugarPrimeira — sem 'corte' a < extras.primeiraMin s antes
+//       do chute e sem passar do 'orçamento' dos extras com a 1ª pessoa e o treinador mínimos: a bola que demora a entrar;
+//       conta só do relógio do lance, nunca do enquadramento) e nenhuma 1ª pessoa num gol em que ela não cabe;
 //   G9  treinador (parte 1): olho ≤ 0,15 m da cabeça gravada; fov constante; bola no quadro ≥ 95%; a boca do gol no quadro
 //       no gol; giro p95 ≤ 15°/s e máximo ≤ 30°/s;
 //   G10 treinador (parte 2): ele inteiro no quadro em 100%; centro em x ∈ [0,2; 0,45]; cabeça e peito livres ≥ 90%; câmera
@@ -51,9 +58,29 @@
 //   G17 (16/10) a passada CORRENDO com o sobe-e-desce grande e um passo mais fundo, SINTÉTICO: o balanço residual ≤ 1 cm e o
 //       olho a ≤ 0,15 m da cabeça em cada gol (ver o item).
 // Na versão sem replay os módulos não existem: o teste reprova.
-// 15/10 (frente "replay robusto"): --estresse = 3× as sementes (84); a amostra do G8 (≥ 48 gols com autor) cresce com as
-// sementes seguintes, em ordem, até + 20 (nunca escolhe sementes).
-//   node tools/teste-replay-anel.mjs [--js <pasta js>] [--ref <commit> | --base <pasta js>] [--sementes N] [--par N] [--min M] [--so-g5] [--estresse]
+// 15/10 (frente "replay robusto"): --estresse = 3× as sementes (84); a amostra do G8 (≥ 48 gols com autor; 28/10: ≥ 48 em
+// que a 1ª pessoa cabe) cresce com as sementes seguintes, em ordem, até + 20 (nunca escolhe sementes).
+// 28/10 (goleiro realista, C1): o G8 reprovou no CI com 37/48 (77%), sem nenhum gol sem a corrida antes do chute (0 em 312
+// gols com autor, main e branch). Nas sementes do CI (1–29) faltaram: 7 cabeceios com a lente bloqueada (o zagueiro ombro a
+// ombro; o próprio quadril com o olho na esfera de baixo da cabeça no salto), 2 chutes de primeira com o adversário colado no
+// rosto e 2 gols em que a 1ª pessoa não CABE no orçamento dos extras (≤ 7 s): a falta de 27 m que leva 1,5 s até o gol e o
+// chute de 24,5 m que leva 2,4 s. A main, nas dela (1–40): 45/52 (86,5%), 1 sem lugar. Em 60 partidas novas (41–100):
+// branch 81/92 (88,0%), main 99/118 (83,9%); juntando as duas amostras, a 1ª pessoa onde ela cabe fica em 85,7% nas duas
+// versões: o 77% era sorteio da amostra fixa (erro-padrão de ~5 pontos com 48 gols). A 1ª pessoa sair do gol sem lugar no
+// orçamento é a regra do contrato (ela não existe ali, como no gol contra e no gol sem chute, que já ficavam fora): o G8 mede
+// a presença onde ela cabe — a lente e o enquadramento que a tiram de onde ela cabia seguem contados inteiros, a amostra
+// passa a ser de 48 gols em que ela cabe e uma 1ª pessoa num gol em que ela não cabe reprova.
+// 28/10 (goleiro realista, C1, revisão do G8): nas sementes 101–128 o G3 reprovou (total 22,01 s > 21) no gol da semente
+// 102 — golaço com o chute BLOQUEADO no mesmo passo (a bola que sobe da perna fica livre: a classe nova do 0537a78f), quique,
+// trave e gol 2,97 s depois; a base, 16,94 s, contra os 14 do contrato. Nas do CI a semente 14 (Δ 2,38 s) já furava a base
+// (15,19 s) e o G3 não via: só olhava o total. A causa estava no roteiro (igual na main): os pisos davam a base ≥ 4,9 + 3Δ
+// s (+ 3,14 da lateral) sem nada que cortasse. Agora o G3 confere a base em todo gol, o G3b cobre o lance lento sem depender
+// de semente e o roteiro (replay-roteiro.js montarGol/planosExtrasGol) encolhe o de trás do gol até o gol, tira a lateral e,
+// por último, o de trás do gol; os extras, a parte 1 do treinador até o gol. Medido (o G2 com --base na versão de antes):
+// nas sementes do CI, 101–128 e 201–240 (branch: 169 gols; main com a correção: 178) só os dois gols lentos (s14 e s102 da
+// branch) mudaram a base — 15,19 → 13,99 s e 16,94 → 13,98 s —; todo o resto igual campo a campo.
+//   node tools/teste-replay-anel.mjs [--js <pasta js>] [--ref <commit> | --base <pasta js>] [--sementes N] [--de S] [--par N] [--min M] [--so-g5] [--so-g3b] [--estresse]
+// (28/10: --de S = as sementes do G a partir de S, padrão 1; --so-g3b = só o gol lento sintético)
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
@@ -73,6 +100,9 @@ if (args.includes('--filho-g')) {
 }
 
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
+// 28/10: o teto da BASE do replay do gol (tv, atras [, lateral] [, checagem]) — contrato "Replay": 12 s, golaço 14, com a
+// checagem de posição legal + REPLAY.saot.extraGol
+const limBase = (REPLAY, g) => (g.golaco ? REPLAY.gol.maximoGolaco : REPLAY.gol.maximo) + (g.checagem ? (REPLAY.saot?.extraGol ?? 1) : 0);
 let falhas = 0;
 function reg(nome, medido, meta, ok) { linhas.push([nome, medido, meta, ok ? 'PASSOU' : 'REPROVOU']); if (!ok) falhas++; }
 
@@ -346,7 +376,8 @@ async function itensG() {
   if (!RO || !RR.planosExtrasGol) { reg('G 3ª e 4ª câmeras do gol (render/replay-olhos.js, planosExtrasGol)', 'não existem', 'existem', false); return; }
   // --so-g5: só o pênalti (diagnóstico)
   if (args.includes('--so-g5')) { await itemG5(RO); return; }
-  if (args.includes('--so-g14')) { await itemG14(); await itemG15(); await itemG16(); await itemG17(); return; }
+  if (args.includes('--so-g14')) { await itemG3b(); await itemG14(); await itemG15(); await itemG16(); await itemG17(); return; }
+  if (args.includes('--so-g3b')) { await itemG3b(); return; }
   const C = await imp('config.js');
   const { REPLAY, CAMPO } = C;
   const { J, NJ } = await imp('anim.js');
@@ -365,11 +396,13 @@ async function itensG() {
   const ESTRESSE = args.includes('--estresse');
   let NS = +arg('--sementes', ESTRESSE ? 84 : 28);
   const MIN = +arg('--min', 4), NS0 = NS;
+  // --de S (28/10): as sementes S, S + 1, ... (padrão 1: as do CI) — para medir em outras partidas sem ferramenta à parte
+  const DE = Math.max(1, Math.floor(+arg('--de', 1)) || 1);
   const nPar = Math.max(1, Math.min(NS, os.availableParallelism?.() ?? os.cpus().length, +arg('--par', 3)));
   const res = [];
-  let prox = 1;
+  let prox = DE;
   const rodarAte = () => Promise.all(Array.from({ length: nPar }, async () => {
-    while (prox <= NS) {
+    while (prox <= DE + NS - 1) {
       const s = prox++;
       res.push(await new Promise((ok, erro) => {
         const c = fork(fileURLToPath(import.meta.url), ['--filho-g', '--s', String(s), '--js', pastaJs, '--min', String(MIN), ...(refJs ? ['--ref-js', refJs] : [])]);
@@ -378,11 +411,12 @@ async function itensG() {
       }));
     }
   }));
-  const comAutorDe = r => r.flatMap(x => x.gols.filter(g => g.ok && g.autor != null && !g.contra && g.chute != null));
+  // (28/10: a amostra conta os gols com autor em que a 1ª pessoa cabe — G8)
+  const elegiveisDe = r => r.flatMap(x => x.gols.filter(g => g.ok && g.autor != null && !g.contra && g.chute != null && !g.inelegivel));
   await rodarAte();
-  while (comAutorDe(res).length < 48 && NS < NS0 + 20) { NS = Math.min(NS0 + 20, NS + Math.max(1, Math.ceil((48 - comAutorDe(res).length) / 1.6))); await rodarAte(); }
+  while (elegiveisDe(res).length < 48 && NS < NS0 + 20) { NS = Math.min(NS0 + 20, NS + Math.max(1, Math.ceil((48 - elegiveisDe(res).length) / 1.6))); await rodarAte(); }
   res.sort((a, b) => a.sem - b.sem);
-  const gols = res.flatMap(r => r.gols.filter(g => g.ok));
+  const gols = res.flatMap(r => r.gols.filter(g => g.ok).map(g => ({ ...g, sem: r.sem })));
   const comAutor = gols.filter(g => g.autor != null && !g.contra && g.chute != null);
   // G1
   {
@@ -392,18 +426,23 @@ async function itensG() {
   }
   // G2
   {
-    const dif = gols.filter(g => !g.igualSemExtras), difRef = gols.filter(g => g.igualRef === false), comRef = gols.filter(g => g.igualRef != null);
-    reg('G2 os planos de antes campo a campo iguais com e sem extras; sem extras = --ref', `${gols.length - dif.length}/${gols.length} iguais com e sem extras; ref: ${refJs ? `${comRef.length - difRef.length}/${comRef.length} iguais (${path.relative(process.cwd(), refJs) || refJs})` : 'não pedido (--ref)'}`,
-      `todos; ${refJs ? 'todos (≥ 40)' : '-'}`, dif.length === 0 && (!refJs || (comRef.length >= 40 && difRef.length === 0)));
+    // (28/10: com uma ref de antes do gol lento, o gol em que a base DELA passava do teto do contrato — 12/14 s, + 1 com a
+    // checagem — sai diferente de propósito: contado à parte; todo o resto tem de ser igual)
+    const dif = gols.filter(g => !g.igualSemExtras), comRef = gols.filter(g => g.igualRef != null);
+    const difRef = gols.filter(g => g.igualRef === false && !g.refEstoura), lentosRef = gols.filter(g => g.igualRef === false && g.refEstoura);
+    reg('G2 os planos de antes campo a campo iguais com e sem extras; sem extras = --ref', `${gols.length - dif.length}/${gols.length} iguais com e sem extras; ref: ${refJs ? `${comRef.length - difRef.length - lentosRef.length}/${comRef.length} iguais (${path.relative(process.cwd(), refJs) || refJs}); ${lentosRef.length} diferentes onde a base da ref passava do teto (o gol lento)${lentosRef.length ? `: ${lentosRef.map(g => `s${g.sem} gol ${g.golTick}`).join(', ')}` : ''}` : 'não pedido (--ref)'}`,
+      `todos; ${refJs ? 'todos (≥ 40) fora os que a ref estourava' : '-'}`, dif.length === 0 && (!refJs || (comRef.length >= 40 && difRef.length === 0)));
   }
-  // G3
+  // G3 (28/10: também a BASE — tv, atras [, lateral] [, checagem] — em todo gol: o gol lento passava dela sem o G3 ver)
   {
     const lim = g => (g.golaco ? 21 : 19) + (g.checagem ? 1 : 0);
-    const ruins = gols.filter(g => g.extras > REPLAY.gol.extras.maximo + 1e-9 || g.total > lim(g) + 1e-9);
-    const ext = gols.map(g => g.extras), tot = gols.map(g => g.total);
-    reg('G3 extras ≤ 7,0 s; total ≤ 19 s (golaço 21; checagem +1)', `extras até ${fmt(Math.max(...ext), 2)} s (mediana ${fmt(mediana(ext), 2)}); total até ${fmt(Math.max(...tot), 2)} s (mediana ${fmt(mediana(tot), 2)}; antes ${fmt(mediana(gols.map(g => g.antiga)), 2)}); ${ruins.length} acima`,
-      '≤ 7,0; ≤ 19/21 (+1)', ruins.length === 0);
+    const ruins = gols.filter(g => g.extras > REPLAY.gol.extras.maximo + 1e-9 || g.total > lim(g) + 1e-9 || g.antiga > limBase(REPLAY, g) + 1e-9);
+    const ext = gols.map(g => g.extras), tot = gols.map(g => g.total), bas = gols.map(g => g.antiga);
+    const ex = ruins.slice(0, 3).map(g => `s${g.sem} gol ${g.golTick}${g.golaco ? ' golaço' : ''}: base ${fmt(g.antiga, 2)}, extras ${fmt(g.extras, 2)}, total ${fmt(g.total, 2)}${g.chute != null ? ` (Δ ${fmt((g.golTick - g.chute) / 60, 2)} s)` : ''}`).join('; ');
+    reg('G3 base ≤ 12 s (golaço 14; checagem +1); extras ≤ 7,0 s; total ≤ 19 s (golaço 21; checagem +1)', `base até ${fmt(Math.max(...bas), 2)} s (mediana ${fmt(mediana(bas), 2)}); extras até ${fmt(Math.max(...ext), 2)} s (mediana ${fmt(mediana(ext), 2)}); total até ${fmt(Math.max(...tot), 2)} s (mediana ${fmt(mediana(tot), 2)}); ${ruins.length} acima${ex ? ` (${ex})` : ''}`,
+      '≤ 12/14 (+1); ≤ 7,0; ≤ 19/21 (+1)', ruins.length === 0);
   }
+  await itemG3b();
   // G4
   {
     const ruins = gols.filter(g => !g.dentro);
@@ -428,12 +467,17 @@ async function itensG() {
     reg('G7 1ª pessoa: giro, bola no quadro, olhar na bola, boca do gol no quadro', `giro p95 ${fmt(p95, 0)}°/s, máx ${fmt(mx, 0)}°/s; bola ${fmt(100 * bIn / Math.max(1, bN), 1)}%; olhar ${fmt(olhar, 1)}° (mediana); gol em chute − 0,5 s ${g0.filter(p => p.gol0).length}/${g0.length}, de chute + 0,3 s ao gol ${g1.filter(p => p.gol1).length}/${g1.length}`,
       '≤ 90; ≤ 150; ≥ 95%; ≤ 25°; todos', ps.length > 0 && p95 <= 90 && mx <= 150 && bIn / Math.max(1, bN) >= 0.95 && olhar <= 25 && g0.every(p => p.gol0) && g1.every(p => p.gol1));
   }
-  // G8
+  // G8 (28/10: a presença nos gols em que a 1ª pessoa cabe pelas regras fixas do roteiro — lib/replay-g.mjs semLugarPrimeira)
   {
-    const ps = comAutor.filter(g => g.p).map(g => g.p), lente = ps.filter(p => p.lente >= 0);
-    const pres = ps.length / Math.max(1, comAutor.length);
-    reg('G8 1ª pessoa: nenhum corpo a < 0,3 m da lente; presente em ≥ 80% dos gols com autor', `${lente.length} planos com corpo na lente; presente em ${ps.length}/${comAutor.length} (${fmt(100 * pres, 0)}%; ${ps.filter(p => p.cortado).length} encurtados pela lente)`, `0; ≥ 80% (≥ 48 gols)`,
-      lente.length === 0 && pres >= 0.8 && comAutor.length >= 48);
+    const lente = comAutor.filter(g => g.p).map(g => g.p).filter(p => p.lente >= 0);
+    const eleg = comAutor.filter(g => !g.inelegivel), fora = comAutor.filter(g => g.inelegivel);
+    const ps = eleg.filter(g => g.p).map(g => g.p), semLugarCom = fora.filter(g => g.temPrimeira);
+    const pres = ps.length / Math.max(1, eleg.length), presTodos = comAutor.filter(g => g.p).length / Math.max(1, comAutor.length);
+    const nFora = k => fora.filter(g => g.inelegivel === k).length;
+    reg('G8 1ª pessoa: nenhum corpo a < 0,3 m da lente; presente em ≥ 80% dos gols com autor em que ela cabe (corte e orçamento dos extras); nenhuma onde não cabe',
+      `${lente.length} planos com corpo na lente; presente em ${ps.length}/${eleg.length} (${fmt(100 * pres, 1)}%; ${ps.filter(p => p.cortado).length} encurtados pela lente); sem lugar: ${nFora('corte')} pelo corte, ${nFora('orçamento')} pelo orçamento, ${semLugarCom.length} com 1ª pessoa; de todos os ${comAutor.length} com autor: ${fmt(100 * presTodos, 1)}%`,
+      `0; ≥ 80% (≥ 48 gols); 0`,
+      lente.length === 0 && pres >= 0.8 && eleg.length >= 48 && semLugarCom.length === 0);
   }
   // G9
   {
@@ -498,7 +542,88 @@ async function itensG() {
     const g = comAutor.find(x => x.temPrimeira);
     reg('G1b "reduzir movimento": sem 1ª pessoa (o resto igual)', g ? 'conferido no G5 (mesmo gol, com e sem)' : 'sem gol com autor', '-', true);
   }
-  console.log(`G: ${res.length} partidas (sementes 1–${NS}${NS > NS0 ? `: ${NS0} + ${NS - NS0} até 48 gols com autor` : ''}) de 2 × ${MIN} min, ${gols.length} gols, ${nPar} processos${ESTRESSE ? ' (--estresse)' : ''}`);
+  console.log(`G: ${res.length} partidas (sementes ${DE}–${DE + NS - 1}${NS > NS0 ? `: ${NS0} + ${NS - NS0} até 48 gols com autor em que a 1ª pessoa cabe` : ''}) de 2 × ${MIN} min, ${gols.length} gols, ${nPar} processos${ESTRESSE ? ' (--estresse)' : ''}`);
+}
+
+/**
+ * G3b (28/10) o gol LENTO, SINTÉTICO (sem partida, determinístico): o chute BLOQUEADO no passo seguinte — a bola sobe da
+ * perna do zagueiro, quica, bate na trave e entra Δ s depois (a classe nova do goleiro realista: na revisão do C1, semente
+ * 102, golaço com Δ 2,97 s e a base em 16,94 s; nas do CI, semente 14, Δ 2,38 s e 15,19 s — o G3 só olhava o total) —, de
+ * 24 m (golaço) e de 14 m, Δ ∈ {1,0; 2,0; 2,4; 3,0; 4,0; 5,0; 6,5} s, com o autor e os dois treinadores no anel e o replay
+ * montado na saída (gol + 150, como a página): em cada gol a base ≤ 12/14 s, os extras ≤ 7 s e o total ≤ 19/21 s (o G3) e
+ * a LEITURA do lance: a TV (1×) do chute − 1,5 s (ou do começo do anel) até depois do gol — o chute e o desvio inteiros —;
+ * até Δ 5 s, o de trás do gol mostra o GOL (começa ≥ 1 s antes dele e acaba depois dele); o golaço até Δ 4 s com a
+ * lateral (o 3º ângulo só sai quando o de trás do gol já está no piso); com Δ 1 s, o de trás do gol começa 1 s antes do
+ * chute (o roteiro de sempre). Na versão de antes, a base passa do teto a partir de Δ 2,0 s (golaço) e 2,4 s.
+ */
+async function itemG3b() {
+  const RA = await imp('render/replay-anel.js'), RR = await imp('render/replay-roteiro.js'), C = await imp('config.js');
+  const EF = await imp('estadio-forma.js');
+  const { criarJogador } = await imp('jogador.js');
+  const { pose, NJ } = await imp('anim.js');
+  const { REPLAY, CAMPO, PASSO } = C;
+  const j0 = criarJogador(9, 0, 0, 0, {}, 0);
+  const mini = { tick: 0, posse: null, naMao: null, parada: null, voo: null, bola: { p: { x: 0, y: -10, z: 0 }, v: { x: 0, y: 0, z: 0 }, q: { x: 0, y: 0, z: 0, w: 1 } }, jogadores: [j0] };
+  const P0 = pose(j0, mini, new Float32Array(NJ * 3)), Pt = new Float32Array(NJ * 3);
+  const gx = CAMPO.meioX, lin = (a, b, u) => a + (b - a) * Math.max(0, Math.min(1, u));
+  const ponha = (a, v, id, time, gk, x, z, rumo, tec = false) => {
+    for (let k = 0; k < NJ; k++) { Pt[k * 3] = P0[k * 3] + x; Pt[k * 3 + 1] = P0[k * 3 + 1]; Pt[k * 3 + 2] = P0[k * 3 + 2] + z; }
+    a.jogador(v, id, time, gk, x, z, rumo, Pt, tec);
+  };
+  const at = [EF.areaTecnica(0), EF.areaTecnica(1)].map(r => ({ x: (r.x0 + r.x1) / 2, z: (r.z0 + r.z1) / 2 }));
+  const durP = p => (p.ate - p.de) / 60 / p.vel;
+  const ruins = [], linhasG = [];
+  let casos = 0;
+  for (const dist of [24, 14]) for (const D of [1.0, 2.0, 2.4, 3.0, 4.0, 5.0, 6.5]) {
+    casos++;
+    const ch = 700, gol = ch + Math.round(D * 60), xCh = gx - dist, xBl = xCh + 1.1, fim = gol + 150;
+    const a = RA.criarAnel({ ticks: Math.round(REPLAY.segundos / PASSO), vagas: REPLAY.vagas, nj: NJ });
+    for (let t = 0; t <= fim; t++) {
+      a.inicio(t, t * PASSO, false);
+      // o autor (9) chega a 6 m/s e, depois do chute, segue um pouco e para; o zagueiro (14) bloqueia na frente dele; o
+      // goleiro (12) na meta; os treinadores (210, 211) no meio das áreas técnicas
+      const xA = t <= ch ? xCh - 0.4 - 6 * (ch - t) * PASSO : xCh - 0.4 + 1.2 * (1 - Math.exp(-(t - ch) / 30));
+      ponha(a, 0, 9, 0, false, xA, 0.8, 0);
+      ponha(a, 1, 14, 1, false, xBl + 0.3, 0.9, Math.PI);
+      ponha(a, 2, 12, 1, true, gx - 1.2, 0, Math.PI);
+      ponha(a, 3, 210, 0, false, at[0].x, at[0].z, -Math.PI / 2, true);
+      ponha(a, 4, 211, 1, false, at[1].x, at[1].z, -Math.PI / 2, true);
+      // a bola: no pé até o chute; bate no zagueiro e SOBE (até 3,5 m), quica perdendo altura até a trave (gol − 12) e entra
+      let b;
+      if (t <= ch) b = { x: xA + 0.4, y: 0.11, z: 0.8 };
+      else if (t <= ch + 3) b = { x: lin(xCh, xBl, (t - ch) / 3), y: 0.3, z: 0.85 };
+      else if (t <= gol - 12) {
+        const u = (t - ch - 3) / (gol - 15 - ch);
+        b = { x: lin(xBl, gx - 0.3, u), y: 0.11 + 3.4 * (1 - u) * Math.abs(Math.sin(Math.PI * Math.min(1, u * 1.6) * 2)), z: lin(0.85, 3.5, u) };
+      } else if (t <= gol) b = { x: lin(gx - 0.3, gx + 0.15, (t - gol + 12) / 12), y: 0.11, z: lin(3.5, 3.1, (t - gol + 12) / 12) };
+      else b = { x: lin(gx + 0.15, gx + 1.3, (t - gol) / 40), y: 0.11, z: 3.0 };
+      if (a.marcar) a.marcar(t === ch ? 1 : t === gol ? 2 : 0);
+      a.fim(b, { x: 0, y: 0, z: 0, w: 1 });
+    }
+    const g = { golTick: gol, chuteTick: ch, lado: 1, time: 0, autor: 9, contra: false, desvio: true, tipoChute: 'chute' };
+    const r = RR.roteiroGol(a, g), r0 = RR.roteiroGol(a, { ...g, extras: false });
+    const nome = `${dist} m, Δ ${fmt(D, 1)} s`;
+    if (!r || !r0) { ruins.push(`${nome}: sem roteiro`); continue; }
+    const base = RR.duracao(r0), total = RR.duracao(r);
+    const extras = r.planos.filter(p => p.cam === 'primeira' || p.cam === 'treinador').reduce((s, p) => s + durP(p), 0);
+    const tv = r.planos.find(p => p.cam === 'tv'), atras = r.planos.find(p => p.cam === 'atras'), lat = r.planos.find(p => p.cam === 'lateral');
+    const golaco = !!r.golaco;
+    const lB = limBase(REPLAY, r), lT = (golaco ? 21 : 19) + (r.checagem ? 1 : 0);
+    const prob = [];
+    if (golaco !== dist >= REPLAY.gol.golaco) prob.push(`golaço ${golaco}`);
+    if (base > lB + 1e-9) prob.push(`base ${fmt(base, 2)} > ${lB}`);
+    if (extras > REPLAY.gol.extras.maximo + 1e-9) prob.push(`extras ${fmt(extras, 2)}`);
+    if (total > lT + 1e-9) prob.push(`total ${fmt(total, 2)} > ${lT}`);
+    if (!tv || tv.de > Math.max(a.primeiro, ch - Math.round(REPLAY.gol.antesMin * 60)) || tv.ate < gol) prob.push(`TV ${tv ? `${tv.de - ch}..${tv.ate - ch}` : 'sem'}`);
+    if (D <= 5 && (!atras || atras.de > gol - Math.round(REPLAY.gol.lentoAntes * 60) || atras.ate <= gol)) prob.push(`atrás ${atras ? `${atras.de - ch}..${atras.ate - ch}` : 'sem'}`);
+    if (golaco && D <= 4 && !lat) prob.push('sem a lateral');
+    if (D <= 1 && atras && atras.de !== ch - Math.round(REPLAY.gol.lentoAntes * 60)) prob.push(`atrás de ${atras.de - ch} (não o de sempre)`);
+    linhasG.push(`${nome}: ${r.planos.map(p => `${p.cam} ${fmt(durP(p), 1)}`).join('·')} (base ${fmt(base, 2)}, total ${fmt(total, 2)})`);
+    if (prob.length) ruins.push(`${nome}${golaco ? ' golaço' : ''}: ${prob.join(', ')}`);
+  }
+  reg('G3b gol LENTO sintético (o chute bloqueado que sobe, quica, bate na trave e entra Δ s depois; 24 e 14 m, Δ 1–6,5 s): base ≤ 12/14 s, extras ≤ 7 s, total ≤ 19/21 s; a TV do chute − 1,5 s até o gol; até Δ 5 s o de trás do gol com o gol (≥ 1 s antes dele); o golaço até Δ 4 s com a lateral',
+    `${casos} gols: ${ruins.length} ruins${ruins.length ? ` (${ruins.slice(0, 4).join('; ')})` : ''}; ex.: ${linhasG.filter((_, i) => i === 3 || i === 5 || i === 13).join(' | ')}`,
+    'todos', ruins.length === 0 && casos === 14);
 }
 
 async function itemG14() {

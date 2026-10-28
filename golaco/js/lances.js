@@ -2,15 +2,16 @@
 // parado"): o CLASSIFICADOR de lances. Puro (sem three.js nem DOM) e FORA do fecho do hash (tools/fecho-hash.mjs: nenhum
 // módulo da simulação importa este arquivo; ele só importa constantes e a matemática do fecho). A cada passo da partida
 // só LÊ o mundo e os eventos do passo (main.js rodarPasso; tools/teste-replay-paradas.mjs) e, na bola morta, diz qual
-// lance vale um replay (L.lance): o pênalti, o vermelho, a bola na trave, o amarelo, a falta perto do gol, a defesa
-// espalmada e o chute de dentro da área que passou perto. Também diz se o PRÓXIMO passo monta a bola parada
-// (montaNoProximoPasso: a mesma conta do partida.js regrasPartida) — o main.js segura a simulação ali e o replay toca: ao
-// vivo (1 s de bola saindo, os jogadores chegando) → vinheta → replay → vinheta → o corte da montagem (a ordem da TV,
-// patente US7657836). Plano em PLANO-CENAS.md §2; pesquisa em PESQUISA-CENAS-TV.md §4; contrato "Cenas das paradas" no
-// CONTRATOS.md.
+// lance vale um replay (L.lance): o pênalti, o vermelho, a bola na trave, o amarelo, a falta onde o jogo monta a
+// barreira, a defesa espalmada, o chute bloqueado por um adversário que vira escanteio, o chute de dentro da área que
+// passou perto e o chute de dentro da área que saiu pela linha de fundo (tiro de meta). Também diz se o PRÓXIMO passo
+// monta a bola parada (montaNoProximoPasso: a mesma conta do partida.js regrasPartida) — o main.js segura a simulação ali e
+// o replay toca: ao vivo (1 s de bola saindo, os jogadores chegando) → vinheta → replay → vinheta → o corte da montagem (a
+// ordem da TV, patente US7657836). Plano em PLANO-CENAS.md §2; pesquisa em PESQUISA-CENAS-TV.md §4; contrato "Cenas das
+// paradas" no CONTRATOS.md.
 // Nada é alocado por passo (o lance e os registros são reaproveitados) e não há sorteio; as distâncias passam pelo MD
 // (matdet.js): no online os dois aparelhos classificam igual (PLANO-CENAS.md R15).
-import { CAMPO, PARTIDA, PASSO } from './config.js';
+import { BARREIRA, CAMPO, PARTIDA, PASSO } from './config.js';
 import { MD } from './matdet.js';
 
 // Constantes (PLANO-CENAS.md §6; FORA do fecho: o config.js é do fecho e não muda — rev. R4: ficam aqui, que já está no
@@ -30,18 +31,29 @@ export const REPLAY_PARADA = {
   // mistura: o olhar da 'fechada' fica entre o ponto do lance (0) e a bola (1), a no máximo `quadro` da meia-largura do quadro
   // do ponto do lance (render/replay.js; com a bola longe, o lance ia à borda da tela)
   lento: { antes: 0.8, depois: 0.6, antesChance: 0.5, depoisChance: 0.4, vel: 0.5, fov: 0.5, mistura: 0.45, quadro: 0.4 },
-  // gatilhos (classe B): chute de dentro da área a ≥ vMin m/s espalmado, ou que saiu a ≤ perto m da trave/travessão;
-  // a bola morta até mortaAte s depois do chute; falta a ≤ faltaPerto m do centro do gol (PARTIDA.tiroLivreDireto.chuteMax 30)
+  // gatilhos (classe B): chute de dentro da área (ou a ≥ vMin m/s) espalmado ou BLOQUEADO por um adversário com a bola
+  // morta em escanteio; chute de dentro da área que saiu a ≤ perto m da trave/travessão ou que saiu pela linha de fundo
+  // (tiro de meta; o de fora da área não: o orçamento do ar, em classificar); a bola morta até mortaAte s depois do chute.
+  // (28/10) O que a TV repete — SoccerNet-v2, rótulos públicos (SoccerNet/SN-Labels: Labels-v2 + Labels-cameras, 498 jogos;
+  // o replay ligado à ação; PESQUISA-CENAS-TV.md §4): o chute no alvo que vira escanteio 82% (687/836: a espalmada), o
+  // chute fora do alvo que vira escanteio 66% (298/454: o desvio, o bloqueio de um defensor) e o fora do alvo que vira
+  // tiro de meta 72% (2551/3560); o chute com a bola morta em ≤ 2 s 73%, em 2–4 s 65%. O bloqueio só no ESCANTEIO (a
+  // fonte não cobre o desvio que vira lateral ou falta); a barreira conta (o chute de tiro livre direto que vira
+  // escanteio: 68%, 27/40).
   chance: { vMin: 22, perto: 1.5, mortaAte: 4 },
-  faltaPerto: 25,
+  // (28/10) falta perto = a cobrança a ≤ faltaPerto m do centro do gol atacado, do ponto da bola: onde o jogo monta a
+  // BARREIRA (config.js BARREIRA.longe; bolas-paradas.js barreiraDoTiroLivre). No SoccerNet-v2 o "Direct free-kick" é o
+  // tiro livre "with the intention to score or if the other team forms a wall" (material suplementar, §7.1): a TV o
+  // repete na parada em 74,3% (1609/2166; sem cartão 67,4%, 1087/1613). Antes 25 m do ponto da falta, sem fonte.
+  faltaPerto: BARREIRA.longe,
 };
 
 /** Os tipos de lance, do mais forte ao mais fraco (o peso: os melhores momentos dos PRs 3 e 4 escolhem por ele). */
-export const TIPOS_LANCE = ['penalti', 'vermelho', 'trave', 'amarelo', 'faltaPerto', 'espalmada', 'passouPerto'];
-const PESO = { penalti: 7, vermelho: 6, trave: 5, amarelo: 4, faltaPerto: 3, espalmada: 2, passouPerto: 1 };
+export const TIPOS_LANCE = ['penalti', 'vermelho', 'trave', 'amarelo', 'faltaPerto', 'espalmada', 'bloqueio', 'passouPerto', 'chuteFora'];
+const PESO = { penalti: 7, vermelho: 6, trave: 5, amarelo: 4, faltaPerto: 3, espalmada: 2, bloqueio: 1.5, passouPerto: 1, chuteFora: 0.5 };
 const CLASSE_A = new Set(['penalti', 'vermelho', 'trave']);
-/** O lance é de chance (o desfecho é um chute: trave, espalmada, passou perto) — o P2 é atrás do gol. */
-export const ehChance = tipo => tipo === 'trave' || tipo === 'espalmada' || tipo === 'passouPerto';
+/** O lance é de chance (o desfecho é um chute: trave, espalmada, bloqueio, passou perto, chute fora) — o P2 é atrás do gol. */
+export const ehChance = tipo => tipo === 'trave' || tipo === 'espalmada' || tipo === 'bloqueio' || tipo === 'passouPerto' || tipo === 'chuteFora';
 
 const s60 = s => Math.round(s / PASSO);
 const NFALTAS = 4;
@@ -65,7 +77,8 @@ export function criarLances() {
     porTempo: [0, 0],        // replays de parada por tempo
     ultimoTick: -1, ultimoTipo: null,
     // o que aconteceu desde a última bola morta
-    chute: { ativo: false, tick: -1, id: -1, time: 0, v: 0, x: 0, z: 0, lado: 1, area: false, bloqueado: false, segura: false, espalmada: -1, gk: -1, cruzou: -1, dist: Infinity },
+    chute: { ativo: false, tick: -1, id: -1, time: 0, v: 0, x: 0, z: 0, lado: 1, area: false, bloqueado: false, segura: false, espalmada: -1, gk: -1, cruzou: -1, dist: Infinity,
+      prim: -1, primId: -1, primAdv: false },
     trave: { tick: -1, x: 0, z: 0 },
     faltas, nFaltas: 0,
     bAnt: { x: 0, y: 0, z: 0, ok: false },
@@ -88,6 +101,7 @@ function novoChute(L, m, id, v) {
   c.ativo = true; c.tick = m.tick; c.id = id; c.time = j.time; c.v = v; c.x = j.x; c.z = j.z; c.lado = lado;
   c.area = j.x * lado >= AREA_U && Math.abs(j.z) <= AREA_Z;
   c.bloqueado = false; c.segura = false; c.espalmada = -1; c.gk = -1; c.cruzou = -1; c.dist = Infinity;
+  c.prim = -1; c.primId = -1; c.primAdv = false;
 }
 
 function guardarFalta(L, m, e) {
@@ -127,12 +141,15 @@ export function lancesPasso(L, m, eventos) {
   if (p.tempo !== L.tempo) L.tempo = p.tempo;
   if (p.estado === 'jogo') L.rolando++;
   let cartaoV = null, cartaoA = null, penalti = false, gol = false, imped = false;
+  // chuteAqui: o chute deste passo já passou na lista (o corpo que a bola acerta no MESMO passo do chute — o bloqueio da
+  // perna, sim.js bloqueioPerna — vem depois dele; o que veio antes é de outra bola)
+  let chuteAqui = false;
   for (const e of eventos) {
     switch (e.tipo) {
       case 'gol': gol = true; break;
-      case 'chute': novoChute(L, m, e.id, e.v ?? 0); break;
+      case 'chute': novoChute(L, m, e.id, e.v ?? 0); chuteAqui = true; break;
       // o cabeceio PARA O GOL é finalização (o mesmo critério do anel: replay-anel.js marcasDoPasso)
-      case 'cabeceio': if (m.voo && m.voo.cabeceio === 'chute' && m.voo.de === e.id) novoChute(L, m, e.id, MD.hypot(m.bola.v.x, m.bola.v.y, m.bola.v.z)); break;
+      case 'cabeceio': if (m.voo && m.voo.cabeceio === 'chute' && m.voo.de === e.id) { novoChute(L, m, e.id, MD.hypot(m.bola.v.x, m.bola.v.y, m.bola.v.z)); chuteAqui = true; } break;
       // só com a bola viva (ou morta NESTE passo: a física roda antes das regras): a bola que bate na trave depois do apito
       // (o impedimento que segue) não pode virar o lance da próxima bola morta
       case 'trave':
@@ -141,8 +158,18 @@ export function lancesPasso(L, m, eventos) {
       case 'defesa':
         if (c.ativo) { if (e.modo === 'espalmada') { if (c.espalmada < 0) { c.espalmada = m.tick; c.gk = e.id; } } else c.segura = true; }
         break;
-      // o chute que bate no corpo de outro (bloqueio, barreira): não é chance (só a trave vale)
-      case 'bateuCorpo': if (c.ativo && e.id !== c.id && m.tick > c.tick && c.espalmada < 0) c.bloqueado = true; break;
+      // o chute que bate no corpo de outro antes da defesa (também no MESMO passo do chute, depois dele na lista) não é
+      // espalmada nem chute fora (só a trave vale); o 1º corpo, se é de um adversário de linha, é o lance 'bloqueio'
+      // (28/10; antes `m.tick > c.tick` nem via o bloqueio da perna, que é no passo do chute)
+      case 'bateuCorpo':
+        if (c.ativo && e.id !== c.id && (m.tick > c.tick || chuteAqui) && c.espalmada < 0) {
+          c.bloqueado = true;
+          if (c.prim < 0) {
+            const q = quemTime(m, e.id);
+            c.prim = m.tick; c.primId = e.id; c.primAdv = !!q && q.time !== c.time && q.posicao !== 'GOL';
+          }
+        }
+        break;
       case 'falta': guardarFalta(L, m, e); break;
       case 'cartao': if (e.cor === 'vermelho') { if (!cartaoV) cartaoV = e; } else if (!e.segundo && !cartaoA) cartaoA = e; break;
       case 'penaltiMarcado': penalti = true; break;
@@ -184,7 +211,10 @@ function preencher(L, m, pr, tipo, chave, fim, time, x, z, lado, id0, id1, ateMa
   return l;
 }
 
-/** O lance mais forte da bola morta (pênalti > vermelho > trave > amarelo > falta perto > espalmada > passou perto). */
+/**
+ * O lance mais forte da bola morta (pênalti > vermelho > trave > amarelo > falta perto > espalmada > bloqueio > passou
+ * perto > chute fora).
+ */
 function classificar(L, m, pr, cartaoV, cartaoA, penalti) {
   const R = REPLAY_PARADA, c = L.chute, agora = m.tick, morta = s60(R.chance.mortaAte);
   // o expulso sai do mundo neste passo (partida.js expulsar): o replay acaba no passo antes
@@ -211,16 +241,32 @@ function classificar(L, m, pr, cartaoV, cartaoA, penalti) {
   if (pr.tipo === 'tiroLivre' && pr.direto) {
     const f = faltaRecente(L, null, pr.time);
     if (f) {
-      const lado = m.ataca[f.time] >= 0 ? 1 : -1;
-      if (MD.hypot(f.x - lado * CAMPO.meioX, f.z) <= R.faltaPerto) return preencher(L, m, pr, 'faltaPerto', f.tick, f.tick, f.time, f.x, f.z, lado, f.def, f.id, ateMax);
+      // do ponto da cobrança (onde o jogo monta a barreira: bolas-paradas.js barreiraDoTiroLivre, a mesma conta)
+      const lado = m.ataca[pr.time] >= 0 ? 1 : -1;
+      if (MD.hypot(lado * CAMPO.meioX - pr.x, pr.z) <= R.faltaPerto) return preencher(L, m, pr, 'faltaPerto', f.tick, f.tick, f.time, f.x, f.z, lado, f.def, f.id, ateMax);
     }
   }
-  const chance = c.ativo && !c.bloqueado && !c.segura && agora - c.tick <= morta;
-  if (chance && c.espalmada >= 0 && (c.area || c.v >= R.chance.vMin)) {
+  const recente = c.ativo && !c.segura && agora - c.tick <= morta, criterio = c.area || c.v >= R.chance.vMin;
+  const chance = recente && !c.bloqueado;
+  if (chance && c.espalmada >= 0 && criterio) {
     return preencher(L, m, pr, 'espalmada', c.tick, c.espalmada, c.time, c.x, c.z, c.lado, c.id, c.gk, ateMax);
+  }
+  // bloqueado: o 1º corpo depois do chute é de um adversário de linha (a defesa que vem depois não muda o lance) e a bola
+  // morreu em escanteio
+  if (recente && c.primAdv && criterio && pr.tipo === 'escanteio') {
+    return preencher(L, m, pr, 'bloqueio', c.tick, c.prim, c.time, c.x, c.z, c.lado, c.id, c.primId, ateMax);
   }
   if (chance && c.espalmada < 0 && c.area && c.cruzou >= 0 && c.dist <= R.chance.perto) {
     return preencher(L, m, pr, 'passouPerto', c.tick, c.cruzou, c.time, c.x, c.z, c.lado, c.id, -1, ateMax);
+  }
+  // o chute de dentro da área que saiu pela linha de fundo sem ninguém mais tocar (o último toque é o de quem chutou —
+  // partida.js atualizarUltimoToque: nem o cabeceio de um companheiro no caminho): tiro de meta. (28/10) Só o de DENTRO da
+  // área, não o critério da espalmada e do bloqueio (área OU ≥ chance.vMin m/s): a TV repete 72% de todo chute fora que
+  // vira tiro de meta (SoccerNet-v2, 2551/3560), de qualquer distância, mas o orçamento do ar do dono (≤ 16% com 3,5 gols
+  // por partida) não comporta o forte de fora — com ele o teto do ar ia a 15,8 / 15,9 / 16,3% nas sementes 1–48, 201–248
+  // e 301–348 (só da área: 15,5 / 15,5 / 16,1%; o jogo repete 35–52% desses tiros de meta, a TV 69,0%; PLANO-CENAS.md §2.7)
+  if (chance && c.espalmada < 0 && c.area && c.cruzou >= 0 && pr.tipo === 'tiroDeMeta' && m.partida.ultimoId === c.id) {
+    return preencher(L, m, pr, 'chuteFora', c.tick, c.cruzou, c.time, c.x, c.z, c.lado, c.id, -1, ateMax);
   }
   return null;
 }

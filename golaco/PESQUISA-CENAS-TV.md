@@ -237,6 +237,71 @@ com o mundo parado no tick da sanção (a Lei 12 já manda o jogo esperar — ha
 - **Jogos:** FC 24 previa estatísticas sobrepostas durante as paradas (fifplay); FC 25/26 usam a 1ª pessoa do árbitro/jogador
   nos replays de parada, com opção de desligar.
 
+### O que a TV repete — medido nos rótulos do SoccerNet-v2 (27–28/10)
+O artigo (0.2) não traz a chance de replay por tipo de lance; os rótulos públicos trazem. Base: o repositório
+`SoccerNet/SN-Labels` no Hugging Face (https://huggingface.co/datasets/SoccerNet/SN-Labels; 500 jogos de 2014–2017 das 5
+grandes ligas e da Champions). Arquivos: `Labels-v2.json` (as 17 ações) e `Labels-cameras.json` (cada plano, com `replay`
+e, no replay, o `link` para a ação mostrada). São 498 jogos com os dois arquivos. As classes estão definidas no material
+suplementar do artigo (§7.1). "Shots on/off target" = chute com intenção de gol, na direção da meta ou fora dela. "Direct
+free-kick" = tiro livre "with the intention to score or if the other team forms a wall". "Clearance" = tiro de meta.
+- **Chance de replay por situação** (o replay ligado ao chute de −2 a +12 s; à falta de −2 a +3 s):
+
+  | situação | n | com replay |
+  |---|---|---|
+  | chute no alvo que vira escanteio (espalmada, desvio) | 836 | 82% (687) |
+  | chute fora do alvo que vira escanteio (desvio, bloqueio) | 454 | 66% (298) |
+  | chute fora do alvo que vira tiro de meta | 3.560 | 72% (2551) |
+  | chute no alvo e o jogo segue (o goleiro segura) | 2.743 | 55% |
+  | chute de falta (após um "Direct free-kick") que vira escanteio | 40 | 68% (27) |
+  | falta com cartão | 1.889 | 88% |
+  | falta sem cartão, pênalti nem tiro livre direto | 9.056 | 47% |
+  | escanteio sem chute nos 15 s antes | 4.717 | 13% |
+  | lateral | 18.863 | 3% |
+
+- **Pelo atraso:** do chute até a bola morrer em ≤ 2 s, 73% de replay (n 4.841). Em 2–4 s, 65% (695). Em 4–8 s, 51% (456).
+  Em 8–15 s, 47% (453).
+- **Replay DURANTE a parada** (um plano de replay entre o lance que parou a bola e o recomeço; sem gol nem impedimento):
+  30,6% das 42.259 paradas. Por recomeço: lateral 6,7%, tiro livre indireto 43,9%, escanteio 43,2%, tiro de meta 52,6%,
+  tiro livre direto 74,3% (1609/2166; sem cartão 67,4%, 1087/1613; com cartão 96,5%), pênalti 97,5%. Escanteio com
+  chute nos 15 s antes: 72,5% (sem: 30,7%). Tiro de meta com chute antes: 69,1% (sem: 36,9%). Lateral com chute antes:
+  28,2%.
+- **Por situação** (28/10; a régua do P3 do `teste-replay-paradas`, `TV_SIT`): o replay DURANTE a parada pelo recomeço e
+  pelo que veio antes dele. CARTÃO = um cartão entre o apito e o recomeço; senão CHUTE = um "Shots on/off target" nos 15 s
+  antes do apito; senão nada. Intervalo de Wilson 95% entre colchetes. O tiro livre de todas as causas (falta ou bola fora;
+  o "após Foul" sozinho dá 96,5% / 67,4% no direto e 87,6% / 37,4% no indireto, com e sem cartão).
+
+  | recomeço | cartão | chute nos 15 s (sem cartão) | nada |
+  |---|---|---|---|
+  | lateral | 29,8% (17/57) [19,5–42,7] | 28,1% (152/541) [24,5–32,0] | 6,0% (1093/18209) [5,7–6,4] |
+  | escanteio | 47,8% (11/23) [29,2–67,0] | 72,5% (1040/1434) [70,2–74,8] | 30,6% (1020/3335) [29,0–32,2] |
+  | tiro de meta | 69,1% (47/68) [57,4–78,8] | 69,0% (2583/3742) [67,5–70,5] | 36,5% (1428/3908) [35,0–38,1] |
+  | tiro livre direto | 96,4% (504/523) [94,4–97,7] | 79,3% (23/29) [61,6–90,2] | 67,0% (1082/1614) [64,7–69,3] |
+  | tiro livre indireto | 87,5% (951/1087) [85,4–89,3] | 60,4% (113/187) [53,3–67,2] | 37,1% (2722/7342) [36,0–38,2] |
+  | pênalti | 97,5% (156/160) [93,7–99,0], todos | | |
+
+  Por que por situação: no jogo quase todo escanteio e a maioria dos tiros de meta vêm de um chute (main, sementes 1–48:
+  95 de 101 escanteios e 59 de 83 tiros de meta), e a taxa média por recomeço (43,2% e 52,6%) é a mistura das linhas. A
+  conta por recomeço deixava a fidelidade 15–25 pontos otimista. Script: `tools/pesquisa/soccernet_situacao.py` (só a
+  biblioteca padrão; a pasta com os rótulos do SoccerNet/SN-Labels).
+- **Espaço entre replays:** a TV não espera. Contando do recomeço da última parada com replay, nas paradas que vêm
+  depois de um cartão ou de um chute ela repete 65,6% a 0–15 s, 72,0% a 15–30 s e 72,5% a 30–60 s. Com todas as paradas:
+  29,7%, 28,5% e 31,0%. Os 30 s do `REPLAY_PARADA.espaco` são uma escolha nossa (não repetir em seguida), não da TV.
+- **Guia da UEFA** (European Qualifiers, Broadcast Partner Production Manual 2016-18, §3.6.2 "Replay guidelines", p. 30;
+  28/10: antes citado como §3.6.1, que é "General principles and match director guidelines"): "Replays should
+  only be inserted when relevant to current live action"; "Quality takes precedence over quantity"; "No replay should be
+  inserted when the ball is in play" (https://www.crz.gov.sk//data/att/3082683_dokument1.pdf).
+- **No golaco** (`js/lances.js`, 28/10; números em `PLANO-CENAS.md` §2.7 e no PR): entram as classes que a fonte sustenta
+  (≥ 50%) e que o jogo tem. São o chute bloqueado que vira escanteio, o chute de dentro da área que sai em tiro de meta e
+  a falta até a distância da barreira (o "Direct free-kick"). Ficam de fora o desvio que vira lateral (28% na parada), o
+  escanteio e o tiro de meta sem chute (30,7% e 36,9% na parada) e o goleiro que segura (o replay da TV sai na parada
+  seguinte, que aqui vem muito depois). A janela de 4 s fica: 4–8 s dá 51%, e a de 8 s acrescentou 1 replay em cada
+  amostra de 24 partidas. (28/10) O chute fora fica só o de dentro da área: a fonte cobre todo chute fora do alvo, de
+  qualquer distância, mas com o forte de fora (≥ 22 m/s, o critério da espalmada) o ar em replay passava de 16% (o
+  orçamento do dono; teto 16,3% nas sementes 301–348). Decisão do dono: o piso de 2 replays por partida saiu; a régua é a
+  fidelidade à TV POR SITUAÇÃO (a tabela acima) ≥ a da versão publicada na mesma amostra. Main de 28/10 57,6%, 61,3% e
+  58,7% (sementes 1–48, 201–248 e 301–348); o goleiro realista com as classes novas 66,0%, 70,1% e 70,6%
+  (`PLANO-CENAS.md` §2.7).
+
 ### Tradução para o golaco (proposta)
 - **Diferença importante:** aqui a parada dura 2–4 s (`PARTIDA.foraEspera` 1,0 + `montagemPor` 0,3–1,5 + a IA cobra em
   0,6–1,4 s) e o tempo é ×11,25 (4 min reais por 45'). Não dá para "caber na parada": o replay de parada tem de SEGURAR o

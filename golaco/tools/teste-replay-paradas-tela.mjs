@@ -214,7 +214,7 @@ async function forcarLance(pg, tipo, ponto = null, naChave = 0) {
     if (naChave) { while (n < 30000 && !(nova() && serve())) { g.rodarPassos(1, 'demo'); anota(); n++; } }
     else while (n < 30000 && !nova()) { g.rodarPassos(20, 'demo'); n += 20; }
     if (!nova() || !serve()) return { semParada: true, n };
-    const b = m.bola.p, chave = chaveDe(), chance = tipo === 'espalmada' || tipo === 'trave' || tipo === 'passouPerto';
+    const b = m.bola.p, chave = chaveDe(), chance = ['espalmada', 'bloqueio', 'trave', 'passouPerto', 'chuteFora'].includes(tipo);
     const cx = hx[chave % H], cz = hz[chave % H];
     const x = naChave ? cx : ponto ? (b.x >= 0 ? 1 : -1) * Math.abs(ponto.x) : b.x, z = naChave ? cz : ponto ? ponto.z : b.z;
     const ok = P.forcar({ classe: 'A', tipo, chave, fim: chance ? chave + 30 : chave, x, z, lado: x >= 0 ? 1 : -1 });
@@ -288,7 +288,7 @@ if (A) {
   const crescente = seq.every((s, k) => k === 0 || s.plano > seq[k - 1].plano);
   const porPlano = (i?.cams ?? []).map((c, k) => ({ cam: c, real: qs.filter(x => x[1] === k).length / 60, rot: i.duracoes[k] }));
   const durOk = porPlano.length > 0 && porPlano.every(p => Math.abs(p.real - p.rot) <= 0.1 + 1e-9);
-  const esperado = LANCE ? ['tv', ['trave', 'espalmada', 'passouPerto'].includes(LANCE.tipo) ? 'atras' : 'fechada'] : [];
+  const esperado = LANCE ? ['tv', ['trave', 'espalmada', 'bloqueio', 'passouPerto', 'chuteFora'].includes(LANCE.tipo) ? 'atras' : 'fechada'] : [];
   const tl = A.telas ?? [], foraTxt = [...new Set(tl.flatMap(t => t.fora))];
   const telaOk = tl.length >= Math.min(2, seq.length) && tl.length > 0 && tl.every(t => t.marca && t.placar && t.fora.length === 0 && !t.pular);
   meta('V3 planos do roteiro (tv 1× → fechada | atrás 0,5×), cada um com a duração do roteiro (±0,1 s), total ≤ 8,1 s; só a marca REPLAY e o placar (0 caractere fora dele)',
