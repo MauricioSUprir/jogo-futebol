@@ -13,7 +13,8 @@
 // teto? (velocidade máxima em m/s: sem poderes) e semEnergia? (a energia fica em zero: nem vibrar nem golpe especial).
 // Parte 3: tipo 'bateria' (ficar 8 s acima de 400 km/h: ctx.bateria), poderes? (o tempo lento já funciona neste passo; em todo
 // passo depois do 'p3-veste' o herói usa o traje novo e tem os poderes dele — jogo.js trajeNovo/tempoLento), semEquipe? (quem da
-// equipe não está no Cortex neste passo: ['caitlin', 'cisco']).
+// equipe não está no Cortex neste passo: ['caitlin', 'cisco']), perseguido? (raios pálidos caem logo atrás do herói enquanto o
+// cronômetro corre: o Corredor Negro atrás dele), patrulha? (crimes quaisquer aparecem, como no "Guardião da cidade").
 // Depois do último passo a cidade fica livre (crimes, esferas e os capítulos para jogar de novo na pausa). Quem terminou
 // uma versão da história com menos passos volta no primeiro passo novo (o save guarda o último passo que existia).
 export const MISSOES = [
@@ -125,6 +126,34 @@ export const MISSOES = [
     pistas: [[-16, -16, 'Gelo no asfalto', 'em pleno verão'], [15, -20, 'Um carro congelado', 'o motorista está bem'], [1, -31, 'Uma frase no gelo', '"Me deixa ir, Barry"']], meta: 3, contador: 'pistas', semEquipe: ['caitlin'] },
   { id: 'cap-nevasca2', titulo: 'Gelo e fogo', texto: 'Encontre a Nevasca e traga a Caitlin de volta', capitulo: 'nevasca2', semEquipe: ['caitlin'] },
   { id: 'p3-acordo', titulo: 'Dividir o corpo', texto: 'Volte ao Cortex com a Caitlin', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
+  // Ato 11 — O prisioneiro do Núcleo: o Henry sai pela rachadura, com o Corredor Negro do outro lado
+  { id: 'p3-fendas', titulo: 'Rachaduras', texto: 'O Núcleo está rachando a cidade: feche 4 fendas (vibre dentro delas)', meta: 4, contador: 'fendas', alvo: 'fenda' },
+  { id: 'p3-saida', titulo: 'A porta abre', texto: 'O Núcleo abriu. Corra para a Câmara do Núcleo', alvoSala: 'nucleo', aliados: { reverso: 'nucleoReverso' }, checar: (c) => c.sala === 'nucleo' },
+  { id: 'p3-incendio', titulo: 'Rastro vermelho', texto: 'Os raios vermelhos dele incendiaram um prédio: apague o fogo', meta: 1, contador: 'incendio', crime: 'incendio' },
+  { id: 'p3-iris-perigo', titulo: 'Visita na redação', texto: 'O homem de amarelo está no Picture News, ao lado da Iris. Corra!', ponto: 'mesaIrisJornal', aliados: { iris: 'mesaIrisJornal', reverso: 'redacao' }, tempo: 45, raio: 3.5, checar: (c) => c.perto },
+  { id: 'p3-joe2', titulo: 'Nunca confie nele', texto: 'O Joe quer falar com você em casa', ponto: 'sofaWest', aliados: { joe: 'sofaWest' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p3-berco', titulo: 'Manual de instruções', texto: 'A Iris pediu para você montar o berço na casa dos West. Devagar', ponto: 'jantar', aliados: { iris: 'cozinha' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
+  { id: 'p3-arquivo', titulo: 'O arquivo', texto: 'A Iris achou uma coisa no arquivo do Picture News: vá à sala do editor', ponto: 'editor', aliados: { iris: 'editor' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p3-assalto', titulo: 'Um segundo eterno', texto: 'Pare um assalto (o tempo lento ajuda)', meta: 1, contador: 'assalto', crime: 'assalto' },
+  { id: 'p3-cafe', titulo: 'O que o Cisco viu', texto: 'O Cisco quer conversar no Jitters. A sós', ponto: 'balcaoJitters', aliados: { cisco: 'mesaCafe' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
+  { id: 'p3-plano', titulo: 'A proposta', texto: 'O homem de amarelo quer falar com você na praça da Prefeitura. Sozinho', ponto: 'prefeitura', aliados: { reverso: 'prefeitura' }, raio: 10, checar: (c) => c.perto },
+  { id: 'p3-treino', titulo: 'Mais rápido que a morte', texto: 'O Cisco montou um circuito novo: os 8 portais em até 70 s', tipo: 'portais' },
+  { id: 'p3-esferas', titulo: 'Carga total', texto: 'Carregue o traje: recolha 5 esferas de energia', meta: 5, contador: 'esferas', alvo: 'esfera' },
+  { id: 'p3-fuga', titulo: 'Fuga de Iron Heights', texto: 'Presos fugiram na confusão: pare um carro em fuga', meta: 1, contador: 'fuga', crime: 'fuga' },
+  { id: 'cap-reverso2', titulo: 'O acordo', texto: 'Encontre o Flash Reverso', capitulo: 'reverso2' },
+  // Ato 12 — A força do raio: o Corredor Negro vem buscar o que é dele
+  { id: 'p3-perseguido', titulo: 'Ele chegou', texto: 'O Corredor Negro saiu do Núcleo e está atrás de você: chegue ao Cortex', alvo: 'cortex', tempo: 60, perseguido: true, checar: (c) => c.sala === 'cortex' },
+  { id: 'p3-presidio', titulo: 'Iron Heights', texto: 'O Joe pediu ajuda em Iron Heights: o presídio está sem luz', ponto: 'presidio', aliados: { joe: 'presidio' }, checar: (c) => c.perto },
+  { id: 'p3-gangue2', titulo: 'Os soltos', texto: 'Os presos soltos formaram uma gangue: derrote-os', meta: 1, contador: 'gangue', crime: 'gangue' },
+  { id: 'p3-vigia', titulo: 'A cidade em pedaços', texto: 'O caos se espalhou: impeça 3 crimes quaisquer', meta: 3, contador: 'crimes', patrulha: true },
+  { id: 'p3-queda2', titulo: 'Queda livre', texto: 'Alguém está caindo de um prédio! Use o tempo lento', meta: 1, contador: 'queda', crime: 'queda' },
+  { id: 'p3-armadilha', titulo: 'A armadilha', texto: 'A Caitlin e o Cisco preparam a armadilha na Câmara do Núcleo', alvoSala: 'nucleo', aliados: { caitlin: 'nucleoCaitlin', cisco: 'nucleoCisco' }, semEquipe: ['caitlin', 'cisco'], checar: (c) => c.sala === 'nucleo' },
+  { id: 'p3-despedida', titulo: 'Volta para mim', texto: 'Antes da última corrida, a Iris quer ver você em casa', ponto: 'jantar', aliados: { iris: 'jantar' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
+  { id: 'cap-negro2', titulo: 'O fim de toda corrida', texto: 'Enfrente o Corredor Negro em frente ao S.T.A.R. Labs', capitulo: 'negro2' },
+  { id: 'p3-silencio', titulo: 'Os degraus', texto: 'O Joe espera você na escada da Delegacia', ponto: 'delegacia', aliados: { joe: 'delegacia' }, roupa: 'civil', checar: (c) => c.perto },
+  { id: 'p3-nora', titulo: 'Nora', texto: 'A Iris vai ter o bebê! Corra para a casa dos West', ponto: 'jantar', aliados: { joe: 'sofaWest', iris: 'jantar' }, roupa: 'civil', tempo: 60, raio: 3.5, checar: (c) => c.perto },
+  { id: 'p3-padrinhos', titulo: 'Os padrinhos', texto: 'A Caitlin e o Cisco têm um presente: vá à sala dos trajes', alvoSala: 'trajes', aliados: { caitlin: 'trajesCaitlin', cisco: 'trajesCisco' }, semEquipe: ['caitlin', 'cisco'], checar: (c) => c.sala === 'trajes' },
+  { id: 'p3-fim', titulo: 'A cidade agradece', texto: 'A cidade inteira está na praça da Prefeitura', ponto: 'prefeitura', aliados: { joe: 'prefeitura', iris: 'prefeitura2' }, checar: (c) => c.perto },
 ];
 /** os passos de uma época (os da linha do tempo alterada): o jogo põe o mundo nela enquanto o passo dura */
 export const EPOCA_DO_PASSO = (m) => m?.epoca || null;

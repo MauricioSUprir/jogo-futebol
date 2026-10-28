@@ -21,9 +21,14 @@ ok(pos('p3-convite') === pos('p2-fim') + 1, 'a Parte 3 começa logo depois do fi
 const ordem = ['p3-convite', 'p3-veste', 'p3-tempo', 'p3-queda', 'p3-bateria', 'p3-gangue', 'p3-noticia', 'p3-vovo', 'p3-devoe', 'p3-batidas', 'p3-maos', 'p3-rastro', 'cap-nevasca2', 'p3-acordo'];
 ok(ordem.every((id, k) => pos(id) >= 0 && (!k || pos(ordem[k - 1]) === pos(id) - 1)), 'Atos 9 e 10 na ordem: ' + ordem.join(' → '));
 ok(H.CENAS[mis.MISSOES[pos('p3-convite')].cenaAbre]?.[0]?.titulo === 'A força do raio', 'a Parte 3 abre com o cartão dela');
+const ordem2 = ['p3-acordo', 'p3-fendas', 'p3-saida', 'p3-incendio', 'p3-iris-perigo', 'p3-joe2', 'p3-berco', 'p3-arquivo', 'p3-assalto', 'p3-cafe', 'p3-plano', 'p3-treino', 'p3-esferas', 'p3-fuga', 'cap-reverso2',
+  'p3-perseguido', 'p3-presidio', 'p3-gangue2', 'p3-vigia', 'p3-queda2', 'p3-armadilha', 'p3-despedida', 'cap-negro2', 'p3-silencio', 'p3-nora', 'p3-padrinhos', 'p3-fim'];
+ok(ordem2.every((id, k) => pos(id) >= 0 && (!k || pos(ordem2[k - 1]) === pos(id) - 1)) && ids.at(-1) === 'p3-fim', 'Atos 11 e 12 na ordem, e a história termina na praça: ' + ordem2.join(' → '));
+const P2n = pos('p2-fim') - pos('p2-exames') + 1;
+ok(P3.length > P2n, `a Parte 3 (${P3.length} passos) é maior que a Parte 2 (${P2n})`);
 // ---- 2. o traje: a Caitlin e o Cisco mostram na sala dos trajes, com a vitrine; ele veste no pedestal
 const B = cid.bloco(cid.LAB_CELULA[0], cid.LAB_CELULA[1]); M.registrarPontosLab(B.cx, B.cz);
-for (const n of ['vitrine', 'trajesCaitlin', 'trajesCisco', 'medicaCaitlin']) {
+for (const n of ['vitrine', 'trajesCaitlin', 'trajesCisco', 'medicaCaitlin', 'nucleoReverso', 'nucleoCaitlin', 'nucleoCisco']) {
   const w = M.pontoMundo(n), R = cid.retangulosPerto(w.x, w.z, 1);
   ok(!cid.empurrar(R, w.x, w.z, 0.45, 0.3, 1.8).bateu, `ponto "${n}" livre dentro do laboratório`);
 }
@@ -45,11 +50,15 @@ ok(tp.contador === 'lentos' && tp.meta === 2 && bt.tipo === 'bateria', 'os passo
 const html = fs.readFileSync(path.join(AQUI, '../index.html'), 'utf8');
 ok(/id="bt-tempo"/.test(html) && /id="chip-tempo"/.test(html) && /body\.lento #cena/.test(html), 'o botão TEMPO (celular), a ficha T (PC) e a cor do tempo lento');
 // ---- 4. as cenas, o rádio e o capítulo
-const fechaPeloRadio = (m) => m.alvo === 'esfera' || m.crime || m.contador === 'lentos' || m.tipo === 'bateria' || mis.MISSOES[pos(m.id) + 1]?.capitulo;
+const fechaPeloRadio = (m) => m.alvo === 'esfera' || m.alvo === 'fenda' || m.crime || m.patrulha || m.tipo === 'portais' || m.contador === 'lentos' || m.tipo === 'bateria' || mis.MISSOES[pos(m.id) + 1]?.capitulo;
 const semCena = P3.filter((m) => !m.capitulo && !fechaPeloRadio(m) && !H.CENAS[`depois-${m.id}`]);
 ok(!semCena.length, `cada passo de história termina numa cena (${semCena.map((m) => m.id).join(', ') || 'todos'})`);
 ok(P3.filter((m) => !m.capitulo && m.id !== 'p3-convite').every((m) => H.MISSOES_FALAS[m.id]?.abre?.length), 'cada passo (menos o primeiro, que abre com a cena) começa com rádio');
-ok(['cap', 'encontro', 'derrotado'].every((k) => H.CENAS[`${k}-nevasca2`]?.length >= 3) && ['capitulo', 'luta', 'derrota'].every((k) => H.RADIO[`${k}-nevasca2`]?.length), 'capítulo nevasca2: cenas e rádio');
+for (const id of ['nevasca2', 'reverso2', 'negro2']) ok(['cap', 'encontro', 'derrotado'].every((k) => H.CENAS[`${k}-${id}`]?.length >= 3) && ['capitulo', 'luta', 'derrota'].every((k) => H.RADIO[`${k}-${id}`]?.length), `capítulo ${id}: cenas e rádio`);
+ok(/id: 'reverso2'[^}]*viloes: \['reverso'\][^}]*perseguicao: true/.test(fs.readFileSync(path.join(AQUI, '../js/viloes.js'), 'utf8')) && /id: 'negro2'[^}]*viloes: \['negro'\][^}]*perseguicao: false/.test(fs.readFileSync(path.join(AQUI, '../js/viloes.js'), 'utf8')), 'os capítulos 13 (perseguição ao Reverso) e 14 (o Corredor em frente ao laboratório)');
+ok(H.CENAS['derrotado-negro2'].some((f) => f.acao === 'negroLevaHenry') && H.CENAS['depois-p3-nora'].some((f) => /Nora West-Allen/.test(f.texto || '')), 'o fim do Corredor Negro e o nascimento da Nora');
+ok(H.CENAS['depois-p3-fim'].at(-1).titulo === 'Fim da Parte 3' && !P3.flatMap((m) => H.CENAS[`depois-${m.id}`] || []).some((f) => f.cartao && f.rotulo === 'Continua') && /mostrarCreditos\(3\)/.test(jogo), 'a Parte 3 termina com "Fim da Parte 3" e os créditos dela (sem "Continua")');
+ok(P3.filter((m) => m.tempo).every((m) => H.RADIO[`falhou-${m.id}`]?.length) && mis.MISSOES[pos('p3-perseguido')].perseguido, 'cada cronômetro tem a fala de quando acaba; a fuga do Corredor tem os raios atrás');
 ok(/id: 'nevasca2'[^}]*viloes: \['nevasca'\]/.test(fs.readFileSync(path.join(AQUI, '../js/viloes.js'), 'utf8')), 'o capítulo 12 traz a Nevasca de novo');
 const todas = [...Object.values(H.CENAS).flat(), ...Object.values(H.RADIO).flat(), ...Object.values(H.MISSOES_FALAS).flatMap((v) => [...(v.abre || []), ...(v.fecha || [])])];
 ok(todas.every((f) => f.cartao || (H.PERSONAGENS[f.quem] && f.texto.length < 160)), `${todas.length} falas, todas com personagem e curtas`);
@@ -58,6 +67,7 @@ ok(H.CENAS['depois-p2-fim'].at(-1).titulo === 'Fim da Parte 2' && /a Parte 3 com
 const mem = (o) => ({ getItem: (k) => o[k] ?? null, setItem: (k, v) => { o[k] = v; } });
 ok(mis.criarMissoes(mem({ 'theflash.missoes.v2': JSON.stringify({ id: null, ultimo: 'p2-fim', stats: {} }) })).atual?.id === 'p3-convite', 'terminou a Parte 2: continua no começo da Parte 3');
 ok(mis.criarMissoes(mem({ 'theflash.missoes.v2': JSON.stringify({ id: null, ultimo: ids.at(-1), stats: {} }) })).livre, 'terminou tudo: a cidade fica livre (com o traje novo)');
+ok(mis.criarMissoes(mem({ 'theflash.missoes.v2': JSON.stringify({ id: null, ultimo: 'p3-acordo', stats: {} }) })).atual?.id === 'p3-fendas', 'terminou a 1ª entrega da Parte 3: continua no Ato 11');
 
 // ---- 6. no navegador
 if (process.argv.includes('--navegador')) {
@@ -86,6 +96,8 @@ if (process.argv.includes('--navegador')) {
   await pagina.waitForSelector('#btnJogar:not([hidden])', { timeout: 1200000 });
   await pagina.evaluate(() => { localStorage.clear(); document.getElementById('btnJogar').click(); });
   ok(await espera(() => window.__rel.viloes.fase === 'aparece' && !!window.__rel.viloes.viloes[0]?.modelo), 'o capítulo 12 começa com a Nevasca');
+  await pagina.evaluate(() => window.__rel.missoes.irPara('p3-saida'));
+  ok(await espera(() => !!window.__rel.aliados.pessoas.reverso), 'o homem de amarelo espera na Câmara do Núcleo (com corpo)');
   ok(!erros.length, `sem erros no console (${erros.slice(0, 3).join(' | ')})`);
   await navegador.close(); await srv.fechar();
 }
