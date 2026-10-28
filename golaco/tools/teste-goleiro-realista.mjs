@@ -43,6 +43,14 @@
 //        por rodada) — só a bola sem dono de verdade (D3, reprova sempre: nenhuma "bola solta" com a
 //        finalização do adversário no ar ou com a defesa dessa bola já lida; a versão de 16/10 contava 19 assim em 8
 //        partidas, e era por elas que o antigo D2, ≥ 1 por partida, passava).
+//    D4. (28/10) bloqueio com a perna (sim.js bloqueioPerna) nas partidas: ninguém domina — no pé, no peito ou na disputa
+//        pelo alto — a bola que ainda SOBE da canela para cima de 0,45 m, no 1º voo (antes de começar a descer ou de outro
+//        tocar nela; o quique depois é outra bola, a regra de sempre). Antes o bloqueador — ou o chutador, a meio metro — a
+//        matava no passo seguinte com ela subindo a ~11 m/s, ou um vizinho no peito subindo a 10–19 m/s: das que seguiam
+//        em jogo a defesa ficava com 80% (64 partidas). Quem toca primeiro nas que
+//        seguem em jogo fica informativo (StatsBomb, 1.493 chutes bloqueados em 215 partidas, medido aqui: o ataque toca
+//        primeiro em 50,5% ± 1,6; ~8 lances por rodada não medem a taxa). Conta também os chutes do canhão bloqueados
+//        pela perna com a bola subindo (~60 por rodada; nas partidas são ~8).
 //  E. Cruzamento (canhão de escanteios): o goleiro sai no alto e encaixa ou soca em ≥ 7% dos escanteios (StatsBomb: toca
 //     em 10,7% dos escanteios longos, encaixe em 38% das saídas; ~250 escanteios por rodada: 10,7 − 2 erros-padrão ≈ 7;
 //     META DA PESQUISA, PENDENTE: só reprova com --estrito); guarda (reprova sempre): ≥ 2% (a main: 0); e o gol de
@@ -175,6 +183,13 @@ function avaliar(res, extraPose = []) {
   const porChute = nat.length ? sB / nat.length : 0;
   pend('D2. o goleiro vai na bola solta da área (partidas)', `${fmt(porChute, 3)} por chute (${sB} em ${nat.length} chutes)`, '≥ 0,03 (real 0,061)', nat.length >= 40 && porChute >= 0.03);
   reg('D3. "bola solta" com a finalização do adversário no ar (corria para o caminho do chute antes de reagir)', `${sBc} em ${nP} partidas`, '0', sBc === 0);
+  const bq = res.flatMap(r => r.bloqs ?? []), bqSobe = bq.filter(b => b.sobe), bqViol = bq.filter(b => b.subindo);
+  const bqJogo = bq.filter(b => b.quem === 'ataque' || b.quem === 'defesa');
+  // (e os chutes do canhão bloqueados pela perna com a bola subindo da canela: ~60 por rodada)
+  const bqC = canhao.filter(c => c.perna && c.sobe0), bqCViol = bqC.filter(c => c.dominada);
+  reg('D4. bloqueio com a perna: a bola que sobe da canela dominada (pé, peito, disputa; o ataque toca primeiro nas que seguem em jogo: informativo)',
+    `${bqViol.length + bqCViol.length} de ${bqSobe.length + bqC.length} subindo (partidas ${bqViol.length} de ${bqSobe.length}, canhão ${bqCViol.length} de ${bqC.length}) · ataque ${p1(pct(bqJogo.filter(b => b.quem === 'ataque').length, bqJogo.length))} de ${bqJogo.length} em jogo nas partidas`,
+    '0 (real: ataque 50,5%)', bqSobe.length + bqC.length >= 20 && bqViol.length + bqCViol.length === 0);
   // ---------------------------------------------------------------- E
   const ce = res.flatMap(r => r.canhao.filter(c => c.fonte === 'escanteio' && c.res === 'ok'));
   const sai = ce.filter(c => c.gkAlto);

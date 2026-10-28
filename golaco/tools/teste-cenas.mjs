@@ -8,7 +8,8 @@
 //      árbitro (mão do cartão ≥ 0,25 m acima do topo da cabeça ≥ 1,2 s contínuos, 1,5–3,2 m do punido, o cartão a ≤ 35° da
 //      câmera e sem ninguém na frente no plano 'arbitro'), IFAB (A1, V2: só o capitão e o punido a < 4 m do árbitro), as
 //      assinaturas das 6 variações, o expulso (termina com z > 34, chegando ao túnel em todo o plano do túnel), corpo (NaN,
-//      ossos ±0,5 cm, pé plantado ≤ 0,05 m/s, pé no ar pela régua do teste-patinacao, pelves ≥ 0,4 m, todo salto > 0,5
+//      ossos ±0,5 cm, pé plantado ≤ 0,05 m/s, pé no ar pela régua do teste-patinacao, pelves ≥ 0,4 m (e a separação: quem
+//      não cede chegando num fixo que cede — o fixo volta a andar e sai), todo salto > 0,5
 //      m/tick junto com um corte), câmera (nunca dentro de sólido nem do gol, ≤ 5,5 m além das linhas, lente ≥ 2,5 m, o
 //      punido no quadro ≥ 95% em 16:9 e 844/390 com ≥ 25% da altura no plano 'reacao'), os treinadores sem sair do lugar
 //      (as cópias onde os vivos ficam: 6 s de passoTecnicos com o mundo parado), a bola parada (quem começou a > 0,6 m dela
@@ -40,8 +41,18 @@
 //      abraçados, cada um com a camisa do outro), o melhor em campo = o argmax de um código independente e a nota = a do
 //      resultado do TM, o close dele no quadro, o aperto dos treinadores, as tarjas no plano delas, o toque = o próximo bloco
 //      e a festa/vaia do fim (festa.js/emocao.js 'cenaFim'); E (pureza) e G (custo) também cobrem o pós-jogo.
+// Em toda cena dos canhões A, A-L, C e F-fim, também o FIXO NO LUGAR (27/10): quem está fixo (parado respirando, desenhado
+// pela pose de base) tem a pelve desenhada a ≤ 0,10 m do corpo (j) em todo tick — o j de um fixo nunca anda sem soltar.
 // Na base (sem os módulos) cada seção REPROVA com o motivo.
-//   node tools/teste-cenas.mjs [--js <pasta js>] [--so A,B,C,E,F,FIM,G,P] [--detalhe] [--sem-fim 700] [--min-fim 0.3]
+//   node tools/teste-cenas.mjs [--js <pasta js>] [--so A,B,C,E,F,FIM,G,P] [--detalhe] [--estados 3:900,5:2600,...]
+//                              [--sem-c 300] [--sem-fim 700] [--min-fim 0.3]
+// A amostra (27/10): o padrão é o do CI; --estados troca os estados do meio (semente:tick) do A, do A-L, do E e do G, --sem-c
+// a semente de partida do canhão C e --sem-fim a do F-fim. A amostra alternativa da revisão de 27/10 (a que achou o apoio
+// desenhado a 3,34 m do corpo, o pé do apoio do V1 na bola parada, o vaivém do V2 a 3,13 m do árbitro e a bola nas mãos do
+// goleiro contada como "no ar"): --estados 29:1500,31:3100,37:1100,41:3800,43:2000,47:4000,53:2500,59:3300 --sem-c 1500
+// --sem-fim 2000. A 3ª amostra (revisão de 28/10, na branch do goleiro realista com o bloqueio pelo caminho da bola; a que
+// achou a lente do plano do árbitro a 0,43 m do capitão do V3 do goleiro expulso, 73:3600): --estados
+// 61:1300,67:2800,71:700,73:3600,79:2400,83:4100,89:1600,97:3200 --sem-c 2600 --sem-fim 3300.
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -164,7 +175,7 @@ function noQuadro(proj, o, margem = 0.05) {
  * (sólido, limites, gol, lente) e o assunto no quadro nos planos `planosAssunto`. por(c, t, fase) mede o específico.
  */
 function andarCena(c, fns, opc) {
-  const r = { nan: 0, osso: 0, plantado: 0, razao: 0, pelve: Infinity, saltoSemCorte: 0, piorSalto: null, piorPe: null, piorPelve: null, solido: 0, foraLimite: 0, noGol: 0, lente: Infinity, piorLente: null, quadro: {}, altura: [], ticks: 0, fases: [], ms: [] };
+  const r = { nan: 0, osso: 0, plantado: 0, razao: 0, pelve: Infinity, saltoSemCorte: 0, piorSalto: null, piorPe: null, piorPelve: null, solido: 0, foraLimite: 0, noGol: 0, lente: Infinity, piorLente: null, quadro: {}, altura: [], ticks: 0, fases: [], ms: [], fixoLonge: 0, piorFixo: null, livreLonge: 0 };
   const n0 = c.atores.length;
   const ant = new Map();
   const pcs = ASPECTOS.map(() => fns.criarPlano());
@@ -226,6 +237,13 @@ function andarCena(c, fns, opc) {
       const v0 = Math.hypot(j.vx, j.vz);
       const merg = a.goleiro && j.mergulho && G.mergulhoAtivo(j, c.mF.tick);
       const pel = [o[J.pelve * 3], o[J.pelve * 3 + 1], o[J.pelve * 3 + 2]];
+      // o fixo no lugar (27/10): a pelve desenhada de quem está FIXO perto do j dele (a régua: okFixo); a de quem anda, só
+      // para comparar (fora da defesa desenhada do goleiro, cuja pose segue o quadro do mergulho)
+      {
+        const dj = Math.hypot(pel[0] - j.x, pel[2] - j.z);
+        if (a.fixo) { if (dj > r.fixoLonge) { r.fixoLonge = dj; r.piorFixo = { id: a.id, tipo: a.tipo, t: +t.toFixed(2), d: +dj.toFixed(3) }; } }
+        else if (!merg && dj > r.livreLonge) r.livreLonge = dj;
+      }
       if (s0 && !recriado) {
         const salto = Math.hypot(pel[0] - s0.pel[0], pel[2] - s0.pel[2]);
         if (salto > 0.5 && !cortou) { r.saltoSemCorte++; r.piorSalto = { id: a.id, t: +t.toFixed(2), salto: +salto.toFixed(2) }; }
@@ -276,6 +294,18 @@ function andarCena(c, fns, opc) {
 }
 const okCorpo = r => r.nan === 0 && r.osso <= 0.005 && r.plantado <= 0.05 && r.razao <= 1 && r.pelve >= 0.4 && r.saltoSemCorte === 0;
 const okCamera = r => r.solido === 0 && r.foraLimite === 0 && r.noGol === 0 && r.lente >= 2.5;
+// O FIXO NO LUGAR (27/10; cena-atores.js passoAtores): quem está fixo é desenhado pela pose de base — a da locomoção no tick
+// em que fixou, com a respiração e os gestos por cima, nenhum deles mexe a pelve na horizontal — e o j dele não pode andar
+// sem soltar. A pose põe a pelve a ≤ 2,5 cm do j (anim.js pesEQuadril: o balanço de lado sobre o pé de apoio), então
+// 0,10 m é 4× isso e muito abaixo do defeito que a régua pega: o j andando com o ator fixo (a pré-rolagem do apoio depois
+// do assentar levava o j 3,34 m e o desenho ficava para trás a cena inteira; quando ele soltava, o desenho saltava).
+const FIXO_PELVE = 0.10;
+const okFixo = r => r.fixoLonge <= FIXO_PELVE;
+const resumoFixo = rs => {
+  const p = rs.reduce((a, r) => (r.fixoLonge > a.fixoLonge ? r : a));
+  return `${rs.filter(r => !okFixo(r)).length} cenas com um fixo longe do corpo; o pior ${f3(p.fixoLonge)} m${p.piorFixo ? ` (${p.piorFixo.tipo} ${p.piorFixo.id}, t = ${f2(p.piorFixo.t)} s)` : ''}; quem anda: ${f3(Math.max(...rs.map(r => r.livreLonge)))} m`;
+};
+const META_FIXO = `0 cenas (≤ ${f2(FIXO_PELVE).replace('.', ',')} m)`;
 const okBola = r => r.naBola === 0;
 const resumoBola = rs => `${rs.filter(r => !okBola(r)).length} cenas com alguém na bola; o pé mais perto ${f3(Math.min(...rs.map(r => r.bolaPe)))} m do centro, o corpo ${f3(Math.min(...rs.map(r => r.bolaCorpo)))} m`;
 const resumoCorpo = rs => `NaN ${rs.reduce((s, r) => s + r.nan, 0)}, osso ${f2(Math.max(...rs.map(r => r.osso)) * 1000)} mm, plantado ${f3(Math.max(...rs.map(r => r.plantado)))} m/s, ar ${f2(Math.max(...rs.map(r => r.razao)))}, pelve ${f3(Math.min(...rs.map(r => r.pelve)))} m, saltos sem corte ${rs.reduce((s, r) => s + r.saltoSemCorte, 0)}`;
@@ -319,7 +349,17 @@ function treinadoresDe(m, chave = null) {
 }
 const LC = await import(pathToFileURL(path.join(AQUI, 'lib/cenas-node.mjs')).href);
 const SITUACOES = ['amarelo', 'vermelho', 'segundo', 'penalti', 'vantagemGol', 'goleiro'];
-const ESTADOS = [[3, 900], [5, 2600], [7, 900], [11, 3400], [13, 1900], [17, 4300], [19, 2200], [23, 3000]];
+// os estados do meio (semente, tick) do A, do A-L, do E e do G: o padrão é o do CI; --estados "s:t,s:t,..." troca a amostra
+// (27/10: a revisão achou com outra amostra o apoio desenhado a 3,34 m do corpo, que a do CI não pegava)
+const ESTADOS_CI = [[3, 900], [5, 2600], [7, 900], [11, 3400], [13, 1900], [17, 4300], [19, 2200], [23, 3000]];
+const ESTADOS = args.includes('--estados')
+  ? args[args.indexOf('--estados') + 1].split(',').map(p => {
+    const q = p.split(':').map(Number);
+    if (q.length !== 2 || !q.every(Number.isInteger)) throw new Error(`--estados: "${p}" não é semente:tick`);
+    return q;
+  })
+  : ESTADOS_CI;
+const NE = ESTADOS.length;
 const cenasA = [];
 const cenasL = [];
 const custosA = [];
@@ -516,10 +556,59 @@ function medirCartao(c) {
 
 if (cenasA.length) {
   const rs = cenasA.map(x => x.r);
-  const desc = `${cenasA.length} cenas (${cenasA.total} montadas; ${cenasA.faltou} situações sem cartão nos 8 estados)`;
-  reg('A canhão: cenas de cartão a partir de estados do meio da partida', desc, '8 estados × 6 situações × 3 variações = 144', cenasA.length === 144);
+  const desc = `${cenasA.length} cenas (${cenasA.total} montadas; ${cenasA.faltou} situações sem cartão nos ${NE} estados)`;
+  reg('A canhão: cenas de cartão a partir de estados do meio da partida', desc, `${NE} estados × 6 situações × 3 variações = ${NE * 18}`, cenasA.length === NE * 18);
   reg('A corpo: NaN, ossos ±0,5 cm, pé plantado ≤ 0,05 m/s, pé no ar ≤ 1,0, pelves ≥ 0,4 m, saltos só no corte', resumoCorpo(rs), '0, ≤ 5 mm, ≤ 0,05, ≤ 1,0, ≥ 0,40, 0', rs.every(okCorpo));
   if (detalhe) for (const x of cenasA) if (!okCorpo(x.r)) console.log('corpo', x.sit, x.sem, x.variante, JSON.stringify({ osso: x.r.osso, pl: x.r.piorPlantado, pe: x.r.piorPe, pelve: x.r.piorPelve, salto: x.r.piorSalto }));
+  // a separação com quem NÃO cede (o punido, cede 0) chegando num FIXO que cede quando anda (o resto parado respirando):
+  // o fixo volta a andar e sai, quem não cede fica (antes nenhum dos dois saía — o canhão: o punido do A2 andou até um
+  // companheiro parado, pelves a 0,28 m); dois que não cedem (o punido e o treinador) continuam como estão
+  {
+    const CENAS_SEP = (await tentar('cenas-config.js'))?.CENAS?.separacao ?? 0.5;
+    const mS = { tick: 0, ataca: { 0: 1, 1: -1 }, bola: { p: { x: 0, y: C.BOLA.raio, z: 0 } } };
+    const cS = CA.criarBase(mS);
+    const fixo = CA.adicionarArbitro(cS, 1, 10, 0, 0, 'resto'), pun = CA.adicionarArbitro(cS, 2, 10.3, 0.05, Math.PI, 'punido');
+    const tec = CA.adicionarArbitro(cS, 3, -10, 0, 0, 'tecnico'), pun2 = CA.adicionarArbitro(cS, 4, -10.3, 0, Math.PI, 'punido');
+    fixo.fixo = true; fixo.base = new Float32Array(fixo.atu.length); pun.cede = 0; tec.cede = 0; tec.fixo = true; pun2.cede = 0;
+    CA.marcarBola(cS);
+    const px = pun.j.x, pz = pun.j.z;
+    CA.separarCena(cS);
+    const d = Math.hypot(fixo.j.x - pun.j.x, fixo.j.z - pun.j.z), dNao = Math.hypot(tec.j.x - pun2.j.x, tec.j.z - pun2.j.z);
+    const parado = pun.j.x === px && pun.j.z === pz;
+    reg('A separação: quem não cede (o punido) chega num fixo que cede — o fixo volta a andar e sai; quem não cede fica',
+      `centros ${f3(d)} m, o fixo ${fixo.fixo ? 'continua fixo' : 'soltou'}, o punido ${parado ? 'no lugar' : 'empurrado'}; dois que não cedem: ${f3(dNao)} m`,
+      `≥ ${f2(CENAS_SEP).replace('.', ',')} m, soltou, no lugar; 0,300 m`, d >= CENAS_SEP - 1e-9 && !fixo.fixo && parado && Math.abs(dNao - 0.3) < 1e-9);
+  }
+  // o contorno da bola parada (27/10; cena-atores.js desviar → contornarBola): quem anda (desviar + irPara, a 1,4/2,6/4 m/s)
+  // até um ponto do outro lado da bola passa pela tangente de um círculo além do da separação (CENAS.bola) e chega lá. Antes
+  // o corpo raspava o círculo de 0,75 m dando a volta nela e o pé da passada passava a 0,19 m do centro dela (no canhão da
+  // amostra da revisão, o pé do apoio do V1 a 0,09 m: em cima dela)
+  {
+    const CN = (await tentar('cenas-config.js'))?.CENAS ?? { bola: 0.75 };
+    const casos = [[-4, 0.15, 4, -0.1], [-3, 0.6, 2.5, 0.4], [0.9, -3, -0.9, 3], [-2.5, -0.3, 1.2, 0.9], [2, 2, -2, -1.5]];
+    let corpo = Infinity, pe = Infinity, chegaram = 0, n = 0;
+    for (const [x0, z0, tx, tz] of casos) for (const vel of [1.4, 2.6, 4.0]) {
+      const mB = { tick: 0, ataca: { 0: 1, 1: -1 }, bola: { p: { x: 0, y: C.BOLA.raio, z: 0 } } };
+      const cB = CA.criarBase(mB);
+      const a = CA.adicionarArbitro(cB, 5, x0, z0, Math.atan2(tz - z0, tx - x0), 'resto');
+      CA.marcarBola(cB); CA.poseInicial(cB, a);
+      const bp = cB.mF.bola.p, des = (cc, aa) => CA.desviar(cc, aa, CA.irPara(cc, aa, tx, tz, vel, null, 0.1, 3));
+      let chegou = false;
+      for (let k = 0; k < 600; k++) {
+        CA.passoAtores(cB, des, () => {});
+        corpo = Math.min(corpo, Math.hypot(a.j.x - bp.x, a.j.z - bp.z));
+        for (const q of [J.tornozeloE, J.pontaE, J.tornozeloD, J.pontaD]) pe = Math.min(pe, Math.hypot(a.atu[q * 3] - bp.x, a.atu[q * 3 + 1] - bp.y, a.atu[q * 3 + 2] - bp.z));
+        if (Math.hypot(a.j.x - tx, a.j.z - tz) < 0.3) chegou = true;
+      }
+      n++; if (chegou) chegaram++;
+    }
+    const minCorpo = CN.bola + (CN.bolaContorno ?? 0.15) / 2;
+    reg('A contorno da bola parada: quem anda até o outro lado dela passa pela tangente, longe do círculo da separação, e chega',
+      `corpo a ${f3(corpo)} m do centro dela; o pé a ${f3(pe)} m; chegaram ${chegaram}/${n}`, `≥ ${f3(minCorpo).replace('.', ',')} m; ≥ 0,300 m; todos`,
+      corpo >= minCorpo && pe >= 0.3 && chegaram === n);
+  }
+  reg('A fixo no lugar: quem está fixo (parado respirando) tem a pelve desenhada perto do corpo (j) em todo tick', resumoFixo(rs), META_FIXO, rs.every(okFixo));
+  if (detalhe) for (const x of cenasA) if (!okFixo(x.r)) console.log('fixo', x.sit, x.sem, x.tk, x.variante, JSON.stringify(x.r.piorFixo));
   reg('A câmera: fora de sólidos, ≤ 5,5 m além das linhas, fora do gol, lente ≥ 2,5 m', resumoCamera(rs), '0, 0, 0, ≥ 2,5 m', rs.every(okCamera));
   if (detalhe) for (const x of cenasA) if (!okCamera(x.r)) console.log('camera', x.sit, x.sem, x.variante, JSON.stringify({ lente: x.r.piorLente, solido: x.r.piorSolido }));
   reg('A bola parada: quem começou a > 0,6 m dela não pisa nela (tornozelo e ponta ≥ 11 cm do centro) nem passa por cima (corpo ≥ 0,25 m)', resumoBola(rs), '0 cenas', rs.every(okBola));
@@ -589,7 +678,7 @@ if (cenasA.length) {
   const dur = x => x.r.duracao, am = cenasA.filter(x => x.plano.cor === 'amarelo'), vs = verm.filter(x => !x.plano.segundo), sg = verm.filter(x => x.plano.segundo);
   reg('A durações (amarelo / vermelho / 2º amarelo)', `${f2(Math.min(...am.map(dur)))}–${f2(Math.max(...am.map(dur)))} / ${f2(Math.min(...vs.map(dur)))}–${f2(Math.max(...vs.map(dur)))} / ${f2(Math.min(...sg.map(dur)))}–${f2(Math.max(...sg.map(dur)))} s`, '4,8–5,6 / 8,5–9,0 / 9,5–10,0 s',
     am.every(x => dur(x) >= 4.8 && dur(x) <= 5.6) && vs.every(x => dur(x) >= 8.5 && dur(x) <= 9.0) && sg.length > 0 && sg.every(x => dur(x) >= 9.5 && dur(x) <= 10.0));
-  reg('A situações: amarelo, vermelho, 2º amarelo, pênalti com cartão, vantagem → gol, goleiro expulso', SITUACOES.map(s => `${s} ${cenasA.filter(x => x.sit === s).length}`).join(', '), '24 de cada', SITUACOES.every(s => cenasA.filter(x => x.sit === s).length === 24));
+  reg('A situações: amarelo, vermelho, 2º amarelo, pênalti com cartão, vantagem → gol, goleiro expulso', SITUACOES.map(s => `${s} ${cenasA.filter(x => x.sit === s).length}`).join(', '), `${NE * 3} de cada`, SITUACOES.every(s => cenasA.filter(x => x.sit === s).length === NE * 3));
   // os treinadores: as duas cópias em toda cena (PLANO-CENAS.md R1: os vivos ficam parados e fora do desenho na página) e
   // nenhuma sai do lugar (≤ 5 cm: o giro parado ajeita os pés)
   const tecAnda = Math.max(...cenasA.map(x => x.tecAnda));
@@ -597,10 +686,12 @@ if (cenasA.length) {
 }
 if (cenasL.length) {
   const rs = cenasL.map(x => x.r);
-  reg('A-L vermelho na lateral de cá (z = 30; no x do lance e em x = 5), os treinadores onde os vivos estão', `${cenasL.length} cenas (${['cabisbaixo', 'segurado', 'rosto'].map(v => `${v} ${cenasL.filter(x => x.variante === v).length}`).join(', ')})`, '48', cenasL.length === 48, true);
+  reg('A-L vermelho na lateral de cá (z = 30; no x do lance e em x = 5), os treinadores onde os vivos estão', `${cenasL.length} cenas (${['cabisbaixo', 'segurado', 'rosto'].map(v => `${v} ${cenasL.filter(x => x.variante === v).length}`).join(', ')})`, `${NE * 6}`, cenasL.length === NE * 6, true);
   reg('A-L câmera: fora de sólidos, ≤ 5,5 m além das linhas, fora do gol, lente ≥ 2,5 m (também a dos treinadores)', resumoCamera(rs), '0, 0, 0, ≥ 2,5 m', rs.every(okCamera));
   if (detalhe) for (const x of cenasL) if (!okCamera(x.r)) console.log('camera L', x.sem, x.tk, x.xL, x.variante, JSON.stringify({ lente: x.r.piorLente, solido: x.r.piorSolido }));
   reg('A-L corpo (as metas do canhão)', resumoCorpo(rs), '0, ≤ 5 mm, ≤ 0,05, ≤ 1,0, ≥ 0,40, 0', rs.every(okCorpo));
+  reg('A-L fixo no lugar (a meta do canhão)', resumoFixo(rs), META_FIXO, rs.every(okFixo));
+  if (detalhe) for (const x of cenasL) if (!okFixo(x.r)) console.log('fixo L', x.sem, x.tk, x.xL, x.variante, JSON.stringify(x.r.piorFixo));
   if (detalhe) for (const x of cenasL) if (!okCorpo(x.r)) console.log('corpo L', x.sem, x.tk, x.xL, x.variante, JSON.stringify({ osso: x.r.osso, pl: x.r.piorPlantado, pe: x.r.piorPe, pelve: x.r.piorPelve, salto: x.r.piorSalto }));
   reg('A-L bola parada (as metas do canhão)', resumoBola(rs), '0 cenas', rs.every(okBola));
   if (detalhe) for (const x of cenasL) if (!okBola(x.r)) console.log('bola L', x.sem, x.tk, x.xL, x.variante, x.r.naBola, JSON.stringify(x.r.piorBola));
@@ -655,7 +746,8 @@ if (roda('C') || roda('E') || roda('G')) {
   if (!CF) reg('C cena do intervalo (js/cena-fim.js)', 'não existe: no apito do 1º tempo só a faixa de 3 s com o mundo parado', 'existe', false);
   else {
     const L = await LC.carregarCenas(pastaJs);
-    let sem = 300, falhou = [];
+    // (--sem-c N: outra amostra de sementes — a 1ª é N + 1; o padrão 300 é o do CI)
+    let sem = args.includes('--sem-c') ? +args[args.indexOf('--sem-c') + 1] : 300, falhou = [];
     for (const [caso, n] of CASOS_C) {
       for (let i = 0; i < n; i++) {
         let r = null, tent = 0;
@@ -705,7 +797,11 @@ function medirIntervalo(c) {
   const x = {
     plano: P, v2: 0, piorV2: null, cintura: new Map(), apertos: new Map(), apito: 0, apitoMax: 0, tunel: new Map(), dentroTunel: 0,
     ativosDepois: 0, bolaDepois: 0, solido: 0, piorSolido: null, esperaK: null, esperaMexeu: false, esperas: 0, depoisEspera: null,
-    tarjaErr: 0, tarjaN: 0, tecFora: 0, bolaNoAr: c.mF.bola.p.y > 0.5, bolaTunel: null, fases: [],
+    tarjaErr: 0, tarjaN: 0, tecFora: 0,
+    // (a bola VIVA no ar — 27/10: a bola nas mãos do goleiro no apito, a 1,07 m, fica fora do desenho e sem física —
+    // cena-fim.js: bolaViva false, "ele a leva" — e contava como "no ar que não caiu": a amostra da revisão, --sem-c 1500)
+    bolaNoAr: c.bolaViva && c.mF.bola.p.y > 0.5, bolaTunel: null, fases: [],
+    bola0: { p: { ...c.mF.bola.p }, v: { ...c.mF.bola.v } },
   };
   const pCampo = P.planos.find(q => q.nome === 'campo');
   let fAnt = null, espera = 0, kEspera = -1, poseEspera = null;
@@ -812,6 +908,8 @@ if (cenasC.length && roda('C')) {
   reg('C a tarja do placar: visível em [4, 12) s do relógio da cena, nunca na espera dos lances', `${cenasC.reduce((s, x) => s + x.tarjaErr, 0)} ticks errados de ${cenasC.reduce((s, x) => s + x.tarjaN, 0)}`, '0', cenasC.every(x => x.tarjaErr === 0));
   reg('C o árbitro apita (a mão direita na boca ≥ 0,4 s no plano do apito)', `mín ${f2(Math.min(...cenasC.map(x => x.apitoMax)) / 60)} s`, '≥ 0,4 s', cenasC.every(x => x.apitoMax >= 24));
   reg('C corpo: NaN, ossos, pé plantado, pé no ar, pelves, saltos só no corte', resumoCorpo(rs), '0, ≤ 5 mm, ≤ 0,05, ≤ 1,0, ≥ 0,40, 0', rs.every(okCorpo));
+  reg('C fixo no lugar (a meta do canhão A)', resumoFixo(rs), META_FIXO, rs.every(okFixo));
+  if (detalhe) for (const x of cenasC) if (!okFixo(x.r)) console.log('fixoC', x.caso, x.sem, JSON.stringify(x.r.piorFixo));
   if (detalhe) for (const x of cenasC) if (!okCorpo(x.r)) console.log('corpoC', x.caso, x.sem, JSON.stringify({ osso: x.r.osso, pl: x.r.piorPlantado, pe: x.r.piorPe, pelve: x.r.piorPelve, salto: x.r.piorSalto }));
   reg('C câmera: fora de sólidos, ≤ 5,5 m além das linhas, fora do gol, lente ≥ 2,5 m', resumoCamera(rs), '0, 0, 0, ≥ 2,5 m', rs.every(okCamera));
   if (detalhe) for (const x of cenasC) if (!okCamera(x.r)) console.log('cameraC', x.caso, x.sem, JSON.stringify({ lente: x.r.piorLente, solido: x.r.piorSolido }));
@@ -836,6 +934,7 @@ if (cenasC.length && roda('C')) {
   reg('C túnel: no fim dele cada um dos 22 entrou na boca (z ≥ 44,0) ou anda para ela (≥ 90% dos ticks); ninguém passa visível da boca', `${tunOk}/${cenasC.length}; entraram ${Math.min(...ent)}–${Math.max(...ent)} por cena; visíveis além da boca ${cenasC.reduce((s, x) => s + x.dentroTunel, 0)} ticks`, `todas; ≥ 1; 0`, tunOk === cenasC.length && cenasC.every(x => x.dentroTunel === 0));
   reg('C depois do túnel o campo vazio: ninguém e a bola fora do desenho (cortados pela elipse da torcida)', `${cenasC.reduce((s, x) => s + x.ativosDepois, 0)} atores-tick, bola ${cenasC.reduce((s, x) => s + x.bolaDepois, 0)} ticks`, '0, 0', cenasC.every(x => x.ativosDepois === 0 && x.bolaDepois === 0));
   const noAr = cenasC.filter(x => x.bolaNoAr);
+  if (detalhe) for (const x of noAr) console.log('bolaC', x.caso, x.sem, f3(x.bolaTunel), JSON.stringify(x.bola0));
   reg('C a bola do apito no ar cai (a física da cópia): no começo do túnel no chão (≤ 0,2 m)', noAr.length ? `${noAr.filter(x => x.bolaTunel <= 0.2).length}/${noAr.length} (a mais alta ${f2(Math.max(...noAr.map(x => x.bolaTunel)))} m)` : 'nenhum apito com a bola no ar nesta amostra', 'todas', noAr.every(x => x.bolaTunel <= 0.2), !noAr.length);
   reg('C os treinadores (cópias) na área técnica até entrarem', `${cenasC.reduce((s, x) => s + x.tecFora, 0)} ticks fora`, '0', cenasC.every(x => x.tecFora === 0));
   const gol = cenasC.filter(x => x.caso === 'gol'), ver = cenasC.filter(x => x.caso === 'vermelho' || x.caso === 'goleiro'), gk = cenasC.filter(x => x.caso === 'goleiro');
@@ -1119,6 +1218,8 @@ if (cenasFim.length && roda('FIM')) {
   reg('F-fim as fases na ordem (o estado desenhado: faseFim)', `${fasesOk}/${cenasFim.length}${fasesOk < cenasFim.length ? ` (ex.: ${cenasFim.find(x => x.fases.join() !== esperado(x).map(([n]) => n).join())?.fases.join('>')})` : ''}`, 'todas', fasesOk === cenasFim.length);
   reg('F-fim o árbitro apita (a mão direita na boca ≥ 0,4 s no plano do apito)', `mín ${f2(Math.min(...cenasFim.map(x => x.apitoMax)) / 60)} s`, '≥ 0,4 s', cenasFim.every(x => x.apitoMax >= 24));
   reg('F-fim corpo: NaN, ossos, pé plantado, pé no ar, pelves, saltos só no corte', resumoCorpo(rs), '0, ≤ 5 mm, ≤ 0,05, ≤ 1,0, ≥ 0,40, 0', rs.every(okCorpo));
+  reg('F-fim fixo no lugar (a meta do canhão A)', resumoFixo(rs), META_FIXO, rs.every(okFixo));
+  if (detalhe) for (const x of cenasFim) if (!okFixo(x.r)) console.log('fixoFim', x.caso, x.sem, JSON.stringify(x.r.piorFixo));
   if (detalhe) for (const x of cenasFim) if (!okCorpo(x.r)) console.log('corpoFim', x.caso, x.sem, JSON.stringify({ osso: x.r.osso, pl: x.r.piorPlantado, pe: x.r.piorPe, pelve: x.r.piorPelve, salto: x.r.piorSalto }));
   reg('F-fim câmera: fora de sólidos, ≤ 5,5 m além das linhas, fora do gol, lente ≥ 2,5 m', resumoCamera(rs), '0, 0, 0, ≥ 2,5 m', rs.every(okCamera));
   if (detalhe) for (const x of cenasFim) if (!okCamera(x.r)) console.log('cameraFim', x.caso, x.sem, JSON.stringify({ lente: x.r.piorLente, solido: x.r.piorSolido }), 'placar', JSON.stringify(x.placar), 'th', x.plano.timeHumano);

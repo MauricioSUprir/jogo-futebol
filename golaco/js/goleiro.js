@@ -483,7 +483,7 @@ export function aplicarDefesa(m, j) {
   // (partida) batido, mas a bola passa pelo corpo desenhado dele — em qualquer tick do lance (ele vinha embalado para o
   // lado dela, ou andou para a frente depois da leitura): ela bate nele e escapa perto (nada atravessa o goleiro)
   const bloqueia = !!d.real && !d.sucesso && m.tick >= d.lido && m.tick <= d.tick + 2 && !(m.parada && !m.parada.rolou)
-    && (m.tick === d.tick - 1 ? corpoNoCaminho(m, j) : corpoNaBola(j, m.tick, m.bola.p));
+    && (m.tick === d.tick - 1 ? corpoNoCaminho(m, j) : corpoNaBola(j, m.tick, m.bola.p, bolaDepois(m.bola, 1)));
   if (!bloqueia && m.tick !== d.tick - 1) return;
   // bola morta (partida: impedimento ou falta apitados com o chute no ar, a parada ainda sem cobrar — Regra 9.2): não há
   // defesa, ninguém fica com a bola; o goleiro só segue o mergulho desenhado (teste-partida C: na semente 1 o chute do
@@ -549,28 +549,47 @@ function distSeg(p, ax, ay, az, bx, by, bz) {
   const dx = wx - vx * t, dy = wy - vy * t, dz = wz - vz * t;
   return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
-const _qb = {}, _eb = { ux: 0, uy: 0, uz: 0, rx: 0, ry: 0, rz: 0 };
+const _qb = {}, _eb = { ux: 0, uy: 0, uz: 0, rx: 0, ry: 0, rz: 0 }, _pb = { x: 0, y: 0, z: 0 };
 
 /**
  * O corpo do goleiro (o desenhado: tronco do quadril à cabeça e as pernas até os tornozelos; de pé, o corpo em pé) toca a
- * bola em p no tick? (GOLEIRO.realista.bloqueio: os raios.)
+ * bola em p no tick — ou, com p1, no caminho dela de p a p1 (o passo)? (GOLEIRO.realista.bloqueio: os raios.)
+ * (27/10: o caminho do passo em pedaços de até `bloqueio.amostra` m. Só o ponto do começo do passo deixava o chute forte —
+ * ~0,45 m por passo — atravessar o tronco entre dois passos: no teste-goleiro-realista A5, semente 1003, a bola passou a
+ * 0,24 m do centro dele a 1,03 m de altura, a 0,006 e 0,028 m fora do corpo nos dois passos e 4 cm dentro entre eles)
  */
-function corpoNaBola(j, tick, p) {
+function corpoNaBola(j, tick, p, p1 = null) {
   const R = GOLEIRO.realista.bloqueio, rb = BOLA.raio;
-  if (mergulhoAtivo(j, tick)) {
-    const q = quadroMergulho(j.mergulho, tick, _qb);
-    const e = eixos(q, q.phi, q.th, _eb);
-    const tx = q.x + e.ux * R.tronco[1], ty = q.h + e.uy * R.tronco[1], tz = q.z + e.uz * R.tronco[1];
-    if (distSeg(p, q.x, q.h, q.z, tx, ty, tz) < R.tronco[0] + rb) return true;
-    return distSeg(p, q.x, q.h, q.z, q.a0.x, q.a0.y, q.a0.z) < R.perna + rb || distSeg(p, q.x, q.h, q.z, q.a1.x, q.a1.y, q.a1.z) < R.perna + rb;
+  const n = p1 ? Math.max(1, Math.ceil(MD.hypot(p1.x - p.x, p1.y - p.y, p1.z - p.z) / R.amostra)) : 0;
+  const ativo = mergulhoAtivo(j, tick);
+  let q = null, e = null, tx = 0, ty = 0, tz = 0;
+  if (ativo) {
+    q = quadroMergulho(j.mergulho, tick, _qb);
+    e = eixos(q, q.phi, q.th, _eb);
+    tx = q.x + e.ux * R.tronco[1]; ty = q.h + e.uy * R.tronco[1]; tz = q.z + e.uz * R.tronco[1];
   }
-  return MD.hypot(p.x - j.x, p.z - j.z) < R.tronco[0] + rb && p.y < R.alto;
+  for (let i = 0; i <= n; i++) {
+    const u = n ? i / n : 0;
+    const s = i === 0 ? p : _pb;
+    if (i > 0) { _pb.x = p.x + (p1.x - p.x) * u; _pb.y = p.y + (p1.y - p.y) * u; _pb.z = p.z + (p1.z - p.z) * u; }
+    if (ativo) {
+      if (distSeg(s, q.x, q.h, q.z, tx, ty, tz) < R.tronco[0] + rb) return true;
+      if (distSeg(s, q.x, q.h, q.z, q.a0.x, q.a0.y, q.a0.z) < R.perna + rb || distSeg(s, q.x, q.h, q.z, q.a1.x, q.a1.y, q.a1.z) < R.perna + rb) return true;
+    } else if (MD.hypot(s.x - j.x, s.z - j.z) < R.tronco[0] + rb && s.y < R.alto) return true;
+  }
+  return false;
 }
 
-/** A bola, agora ou nos próximos ticks do contato, passa pelo corpo desenhado do goleiro? */
+const _bc = criarBola(0, 0), _pc0 = { x: 0, y: 0, z: 0 };
+/** A bola, agora ou nos próximos ticks do contato, passa pelo corpo desenhado do goleiro? (o caminho de cada passo) */
 function corpoNoCaminho(m, j) {
-  const n = GOLEIRO.realista.bloqueio.ticks;
-  for (let i = 0; i <= n; i++) if (corpoNaBola(j, m.tick + i, i === 0 ? m.bola.p : bolaDepois(m.bola, i))) return true;
+  const n = GOLEIRO.realista.bloqueio.ticks, b = m.bola;
+  Object.assign(_bc.p, b.p); Object.assign(_bc.v, b.v); Object.assign(_bc.w, b.w); _bc.rolando = b.rolando;
+  for (let i = 0; i <= n; i++) {
+    _pc0.x = _bc.p.x; _pc0.y = _bc.p.y; _pc0.z = _bc.p.z;
+    passoBola(_bc, null);
+    if (corpoNaBola(j, m.tick + i, _pc0, _bc.p)) return true;
+  }
   return false;
 }
 

@@ -3,7 +3,7 @@
 // mesma partida bit a bit (ver hashMundo).
 
 import { profundidadeVeu } from './rede-forma.js';
-import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, BOLA, GOLEIRO, IA, AEREO, CABECEIO, TROCA_AEREA, DEFESA_HUMANO, FALTAS, RECEPCAO, BLOQUEIO } from './config.js';
+import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, BOLA, GOLEIRO, IA, AEREO, CABECEIO, TROCA_AEREA, DEFESA_HUMANO, FALTAS, RECEPCAO, BLOQUEIO, G } from './config.js';
 import { criarRng, entre, uniforme, normal } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
@@ -264,6 +264,8 @@ function bloqueioPerna(m, x0, z0) {
     b.w.x *= 0.3; b.w.y *= 0.3; b.w.z *= 0.3;
     if (b.v.y > 0.01) { b.rolando = false; if (b.p.y < BOLA.raio) b.p.y = BOLA.raio; }
     else if (b.rolando) { b.v.y = 0; b.w.x = b.v.z / BOLA.raio; b.w.z = -b.v.x / BOLA.raio; }
+    // (28/10) subindo da canela: ninguém a domina (pé, peito, cabeça) enquanto ela sobe no 1º voo (bolaLivre)
+    st.sobe = b.v.y > 0.01 ? m.tick : null;
     m.eventos.push({ tipo: 'bateuCorpo', id: j.id, bloqueio: true });
     registrarToque(m, j, 'corpo');
     m.desvio = m.tick;
@@ -747,9 +749,23 @@ function candidatosBolaLivre(m, alvo) {
   return n;
 }
 
+// m: acima disto (e fora do chão) a bola livre é bola alta — peito, cabeça (bolaAltaNoCorpo) —, não domínio no pé
+const ALTO_BOLA_LIVRE = 0.45;
+
 /** Bola livre: quem vai recebê-la? Recebedor marcado primeiro; depois, os mais perto. */
 function bolaLivre(m) {
   const b = m.bola;
+  // (28/10) partida: a bola que a perna do bloqueio mandou para cima (bloqueioPerna, `m.bloq.sobe`) não é dominada — nem
+  // no pé, nem no peito/cabeça (bolaAltaNoCorpo) — enquanto sobe e ainda vai passar de ALTO_BOLA_LIVRE (o topo do voo, y +
+  // vy²/2g); desce, outro toque (o voo some ou muda) ou posse = acabou. Antes o bloqueador — ou o chutador, a meio metro —
+  // a matava no passo seguinte com ela subindo a ~11 m/s (bola de 20 m/s na canela), ou um vizinho a matava no peito
+  // subindo a 10–19 m/s, e das que seguiam em jogo a defesa ficava com 80% (o ataque tocava primeiro em 19,6% ± 5,3, 64
+  // partidas; agora 48,4% ± 6,3, 96 partidas). StatsBomb open data, 1.493 chutes bloqueados em 215 partidas (Copa 2022,
+  // Euro 2024, Premier League 2015/16), medido aqui: o ataque toca primeiro em 50,5% ± 1,6 das que seguem em jogo
+  // (PESQUISA-ETAPA4.md §13.3)
+  const bq = m.partida ? m.bloq : null;
+  if (bq && bq.sobe != null && (b.v.y <= 0 || !m.voo || m.voo.tickChave !== bq.chave)) bq.sobe = null;
+  const sobeDoBloqueio = !!(bq && bq.sobe != null) && b.p.y + b.v.y * b.v.y / (2 * G) > ALTO_BOLA_LIVRE;
   const alvo = m.voo && m.voo.para != null ? m.voo.para : null;
   const nc = candidatosBolaLivre(m, alvo);
   const passou = m.voo && m.voo.de != null && m.tick - (m.voo.tick0 ?? 0) < 6 ? m.voo.de : null;
@@ -766,13 +782,15 @@ function bolaLivre(m) {
     // toque aéreo vencido (a hora passou): não segura a bola livre para quem não vai mais nela
     const ta = j.cond?.toque;
     if (ta && ta.tipo === 'aereo' && aereoVencido(m, j, ta)) j.cond.toque = null;
-    if (!b.rolando && b.p.y > 0.45) {
+    if (!b.rolando && b.p.y > ALTO_BOLA_LIVRE) {
+      if (sobeDoBloqueio) continue; // (28/10) subindo da perna do bloqueio: nem peito nem cabeça ainda (acima)
       // (só quem TOCOU na bola encerra a vez; quem marcou o toque ou ainda espera por ele, não — antes o 1º da fila
       // esperando um toque marcado tirava a vez de quem cabeceava ANTES dele e a do goleiro, que pega a bola logo abaixo)
       if (bolaAltaNoCorpo(m, j) === true) return;
       continue;
     }
     if (noArAgora(m, j)) continue; // no ar (pulo do cabeceio): não domina a bola baixa
+    if (sobeDoBloqueio) continue; // (28/10) subindo da perna do bloqueio: nem o pé (acima)
     const antes = m.posse, chave = vooCorte ? vooCorte.tickChave : -1;
     if (tentarDominio(m, j, primeira)) {
       if (m.posse === j.id && antes !== j.id) ganhouPosse(m, j);

@@ -101,6 +101,11 @@ export async function medirSemente(sem, o = {}) {
   const esc = { n: 0, gols: 0, gkToca: 0, chutes: 0 }, cruz = { n: 0, gols: 0, gkToca: 0, chutes: 0 };
   let escAb = null, cruzAb = null;
   const saidas = { '1x1': 0, botao: 0, cruzamento: 0, bolaSolta: 0, bolaSoltaChute: 0 };
+  // (28/10) bloqueio com a perna de um chute (sim.js bloqueioPerna): quem toca primeiro depois dele e se alguém dominou (no
+  // pé, no peito ou na disputa pelo alto) a bola que ainda subia da canela — no 1º voo, antes de ela começar a descer ou de
+  // outro tocar nela (a bola do passo anterior subindo e o topo do voo acima de 0,45 m; o quique depois é outra bola)
+  const TOQUE = new Set(['passe', 'cabeceio', 'disputaAerea', 'bateuCorpo', 'defesa']);
+  const bloqs = []; let bloqAb = null, ultChute = null; const bAnt = { y: 0, vy: 0 };
   // (finalização do adversário: chute, colocado, cavadinha ou cabeceio a gol — o critério do evento 'chute' de acoes.js)
   const finalizacao = v => !!v && (v.tipo === 'chute' || v.tipo === 'colocado' || v.tipo === 'cavadinha' || (v.tipo === 'cabeceio' && v.cabeceio === 'chute'));
   // pose do goleiro (anim.js, função pura): o quadril no passo em que a bola entra na mão dele ou sai dela
@@ -156,6 +161,14 @@ export async function medirSemente(sem, o = {}) {
     // ---- eventos
     for (const e of ev) {
       const j = e.id != null ? jog(m, e.id) : null;
+      // (28/10) o bloqueio do chute e quem toca primeiro depois dele (passe, cabeceio ou chute de primeira)
+      if (bloqAb && j && (e.tipo === 'passe' || M.ehChute(m, e))) { bloqAb.quem = j.time === bloqAb.def ? 'defesa' : 'ataque'; bloqs.push(bloqAb); bloqAb = null; }
+      if (!bloqAb && j && e.tipo === 'bateuCorpo' && e.bloqueio && ultChute && ultChute.time !== j.time && m.tick - ultChute.tick <= 60) {
+        bloqAb = { tick: m.tick, def: j.time, sobe: m.bola.v.y > 0.01 && m.bola.p.y + m.bola.v.y ** 2 / (2 * 9.81) > 0.45, quem: null, subindo: false, desceu: false };
+      }
+      if (j && M.ehChute(m, e)) ultChute = { time: j.time, tick: m.tick };
+      if (bloqAb && (e.tipo === 'gol' || e.tipo === 'fora')) { bloqAb.quem = 'parada'; bloqs.push(bloqAb); bloqAb = null; }
+      if (bloqAb && m.tick > bloqAb.tick && TOQUE.has(e.tipo)) bloqAb.outroToque ??= m.tick;
       if (e.tipo === 'saidaGoleiro') saidas[e.modo && saidas[e.modo] != null ? e.modo : 'botao']++;
       // a "bola solta" com a finalização do adversário no ar (ou com a defesa dessa bola já lida) não é bola solta
       if (e.tipo === 'saidaGoleiro' && e.modo === 'bolaSolta' && j) {
@@ -183,6 +196,15 @@ export async function medirSemente(sem, o = {}) {
       }
     }
     if (aberto) acompanhar(m, aberto, ev);
+    // (28/10) o bloqueio aberto: a posse (domínio) ou a bola parada fecham; dominada com a bola do passo anterior subindo
+    // para cima de 0,45 m, no 1º voo = o domínio (pé, peito, disputa) da bola que sobe da canela
+    if (bloqAb && m.tick > bloqAb.tick) {
+      const dono = M.donoDaBola(m);
+      if (dono) { bloqAb.quem = dono.time === bloqAb.def ? 'defesa' : 'ataque'; bloqAb.subindo = !bloqAb.desceu && !(bloqAb.outroToque < m.tick) && bAnt.vy > 0.01 && bAnt.y + bAnt.vy ** 2 / (2 * 9.81) > 0.45 && dono.posicao !== 'GOL'; bloqs.push(bloqAb); bloqAb = null; }
+      else if (!vivo || m.tick - bloqAb.tick > 900) { bloqAb.quem = vivo ? 'nada' : 'parada'; bloqs.push(bloqAb); bloqAb = null; }
+    }
+    if (bloqAb && m.tick > bloqAb.tick && m.bola.v.y <= 0) bloqAb.desceu = true;
+    bAnt.y = m.bola.p.y; bAnt.vy = m.bola.v.y;
     if (aberto && aberto.res && aberto.fim) { naturais.push(aberto); aberto = null; }
     if (escAb && m.tick - escAb.tick > 8 * 60) escAb = null;
     if (cruzAb && m.tick - cruzAb.tick > 5 * 60) cruzAb = null;
@@ -245,6 +267,20 @@ export async function medirSemente(sem, o = {}) {
         if (reg.res && reg.fim) break;
       }
       reg.res ??= 'fora';
+      // (28/10) D4: o chute bloqueado pela perna com a bola subindo da canela — alguém a domina (pé, peito, disputa) antes de
+      // ela começar a descer ou de outro tocar nela (o 1º voo)?
+      if (reg.res === 'bloqueado' && reg.perna && reg.sobe0) {
+        reg.dominada = false;
+        let yA = q.bola.p.y, vyA = q.bola.v.y;
+        for (let i = 0; i < 120; i++) {
+          const evx = P.passoPartida(q, P.entradaDemoPartida(q));
+          const dono = M.donoDaBola(q);
+          if (dono) { reg.dominada = vyA > 0.01 && yA + vyA ** 2 / (2 * 9.81) > 0.45 && dono.posicao !== 'GOL'; break; }
+          // desceu, saiu, ou outro tocou nela (cabeceio, raspão na disputa, outro corpo): acabou o 1º voo
+          if (!rolando(q) || q.bola.v.y <= 0 || evx.some(e => TOQUE.has(e.tipo) || M.ehChute(q, e))) break;
+          yA = q.bola.p.y; vyA = q.bola.v.y;
+        }
+      }
       canhao.push(reg);
     }
     // escanteios do mesmo estado (o goleiro e a área no cruzamento)
@@ -393,7 +429,7 @@ export async function medirSemente(sem, o = {}) {
     const p = f => v.length ? v[Math.min(v.length - 1, Math.floor(f * v.length))] : 0;
     return { ticks: R.ticks, p50: p(0.5), p90: p(0.9), p99: p(0.99), acimaDe3: R.acimaDe3, acimaDe4: R.acimaDe4, inv: R.inv, lateral: R.lateral, cruz: R.cruz, saltoPos: R.saltoPos, saltoRumo: R.saltoRumo, erroAlvo: R.erroAlvo, armado: R.armado, armadoSet: R.armadoSet };
   });
-  return { sem, naturais, canhao, finais, contra, pose, mov: movR, esc, cruz, saidas, gols: [m.placar[0], m.placar[1]] };
+  return { sem, naturais, canhao, finais, contra, pose, mov: movR, esc, cruz, saidas, bloqs, gols: [m.placar[0], m.placar[1]] };
 
   // ------------------------------------------------------------------ auxiliares do filho
   function sorteador(s0) { let s = (s0 >>> 0) || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
@@ -479,7 +515,11 @@ export async function medirSemente(sem, o = {}) {
           // a bola passou pelo corpo do goleiro? (no plano dele, a < 0,35 m do centro e abaixo de 1,7 m)
           r.peloCorpo = r.cruzouGk ? r.cruzouGk.d < 0.35 && r.cruzouGk.y < 1.7 : null;
         } else if (e.tipo === 'defesa' && j && j.id === r.gk) { r.res = 'defesa'; r.modo = e.modo; r.tDef = dt; }
-        else if (e.tipo === 'bateuCorpo' && j && j.id !== r.gk && j.id !== q.voo?.de && dt > 0) { r.res = 'bloqueado'; r.fim = true; }
+        else if (e.tipo === 'bateuCorpo' && j && j.id !== r.gk && j.id !== q.voo?.de && dt > 0) {
+          r.res = 'bloqueado'; r.fim = true;
+          // (28/10) com a perna (sim.js bloqueioPerna) e a bola saindo da canela para cima de 0,45 m: o D4 segue o 1º voo
+          if (e.bloqueio) { r.perna = true; r.sobe0 = q.bola.v.y > 0.01 && q.bola.p.y + q.bola.v.y ** 2 / (2 * 9.81) > 0.45; }
+        }
         else if (e.tipo === 'trave') r.trave = true;
         else if (e.tipo === 'fora') { r.res = 'fora'; r.fim = true; }
       } else if (r.res === 'defesa' && !r.fim) {

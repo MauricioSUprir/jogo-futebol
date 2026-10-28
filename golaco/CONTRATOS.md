@@ -2347,9 +2347,12 @@ GOLEIRO.realista`; pesquisa e números em `PESQUISA-ETAPA4.md` §13.
 - Batido, o desenho fica fora do caminho da bola: o corpo a `batido.corpo` m e a mão a `batido.mao` m dela (`g.curta`;
   no treino 0,4 e 0,35, como antes). A bola no corpo que a mão desenhada não alcança vira espalmada (rebote pelo sorteio
   abaixo).
-- `corpoNaBola(j, tick, p)`: a bola toca o corpo desenhado (tronco do quadril à cabeça e as duas pernas do quadro do
-  mergulho, raios `bloqueio.tronco`/`perna`; de pé, um cilindro até `bloqueio.alto` m). `corpoNoCaminho(m, j)`: agora ou nos
-  próximos `bloqueio.ticks` passos. Goleiro batido com a bola passando pelo corpo, em qualquer tick do lance: vira defesa
+- `corpoNaBola(j, tick, p, p1?)`: a bola toca o corpo desenhado (tronco do quadril à cabeça e as duas pernas do quadro do
+  mergulho, raios `bloqueio.tronco`/`perna`; de pé, um cilindro até `bloqueio.alto` m) — em p ou, com p1, no CAMINHO do
+  passo de p a p1, em pedaços de até `bloqueio.amostra` m contra o corpo do tick (27/10: só o ponto do começo do passo
+  deixava o chute forte, ~0,45 m por passo, atravessar o tronco; `teste-goleiro-realista` A5). No passo comum o caminho é
+  o da bola até o passo seguinte. `corpoNoCaminho(m, j)`: o caminho de cada um dos próximos `bloqueio.ticks` + 1 passos
+  contra o corpo do tick em que ele começa. Goleiro batido com a bola passando pelo corpo, em qualquer tick do lance: vira defesa
   (`d.bloqueio`, espalmada) — `uniforme ≥ bloqueio.fora` → rebote perto, senão desvio para fora.
 - `estadoEspalmada(b, gx, sentido)` → 0 fora do perigo, 1 jogável na zona perigosa, 2 entra no gol (`espalmadaSegura` =
   0). `espalmar` na partida: sem direção segura, fica a 1ª que não entra no gol (antes a última tentativa valia mesmo
@@ -2432,6 +2435,12 @@ GOLEIRO.realista`; pesquisa e números em `PESQUISA-ETAPA4.md` §13.
   desarme), sorteada uma vez por bola e defensor (`m.bloq`). Saída pela reflexão numa canela atravessada (normal que sobe
   `phi` e vira `psi` rad, restituição `e`). Evento `bateuCorpo {bloqueio: true}`, `registrarToque(m, j, 'corpo')`,
   `m.desvio` (o goleiro relê). Não muda `m.ultimoToque` (o gol desviado é de quem chutou: `render/autor-gol.js`).
+  (28/10) Saindo da canela para cima, `m.bloq.sobe` = o tick: em `bolaLivre` ninguém a domina — no pé (`tentarDominio`) nem
+  no peito/cabeça (`bolaAltaNoCorpo`, também a disputa pelo alto) — enquanto ela sobe (`v.y > 0`) e o topo do voo (`y +
+  v.y²/2g`) passa de `ALTO_BOLA_LIVRE` (0,45 m, a altura da bola alta); desce, outro toque (o voo some ou muda) ou posse =
+  acabou; o goleiro na área ainda pega com a mão. Antes o bloqueador a matava no passo seguinte subindo a ~11 m/s, ou um
+  vizinho no peito subindo a 10–19 m/s (StatsBomb: o ataque toca primeiro em 50,5% dos bloqueados que seguem em jogo;
+  `PESQUISA-ETAPA4.md` §13.3; `teste-goleiro-realista` D4).
 - `partida.js atualizarUltimoToque`: o toque de `m.ultimoToque` só volta a marcar com o tick MAIOR que o último marcado
   (`>`; antes `>=`): a bola que bate num corpo no mesmo passo do chute fica com quem ela acertou (escanteio, não tiro de
   meta).
@@ -2862,13 +2871,29 @@ Porte da branch `golaco/cenas-jogo` (1df2ca34) para fora do fecho: `js/cenas-con
   - O árbitro e os assistentes (`criarJogador` 200–202, posição 'ARB', kit 'arbitro'); `adicionarNovo` (os treinadores).
   - `passoAtores` na ordem do `passoCena` da comemoração (desejo → `passoCorpo` → separação → `passoPassada` →
     `passoPeDesenhado` → quadril → pose + gestos); quem para e fica plantado `CENAS.parado` ticks fica FIXO, respirando.
+    Separação (`separarCena`, centros a ≥ `CENAS.separacao`): cada um cede `a.cede` (0 = o fixo, o punido, o treinador);
+    quem não cede e chega num FIXO que cede quando anda: o fixo volta a andar (`soltar`) e sai — nunca os dois parados um
+    dentro do outro.
+  - O FIXO NÃO ANDA (27/10): ele é desenhado pela pose de base (a da locomoção no tick em que fixou + respiração e gestos,
+    que não mexem a pelve na horizontal), então o `j` dele só muda depois de `soltar` — quem a cena leva sozinho (a
+    pré-rolagem do capitão depois do `assentar` da vantagem que virou gol, o `isolar` do IFAB) é solto antes. O
+    `teste-cenas` confere em toda cena de A, A-L, C e F-fim a pelve desenhada de cada fixo a ≤ 0,10 m do `j` em todo tick
+    (a pose a põe a ≤ 2,5 cm; antes o capitão ficava desenhado a até 8,7 m do corpo a cena inteira e saltava ao soltar).
+  - `desviar(c, a, d, contorna = true)`: além de quem está à frente, a bola parada do cartão (só `a.bolaMin > 0`; o fim de
+    jogo zera) é contornada pela TANGENTE de um círculo `CENAS.bolaContorno` m além do de `marcarBola` (`contornarBola`;
+    olha até `CENAS.bolaOlha` m além dele; o círculo não passa do destino — `d.dist`, posto por `irPara`/`para` e pelos
+    desejos que escrevem o `c._d` à mão —; dentro dele a tangente abre até `CENAS.bolaAbre` rad para fora). Raspando o
+    círculo do `separarDaBola` a ~2,4 m/s, o pé que ficou plantado do lado da bola cruzava por cima dela no passo seguinte
+    (o pé a 0,09 m do centro). `contorna` = false para o capitão do A1/V2 (`pontoApoio` já dá a volta nela).
   - `recriarAtor` (ELIPSE: só no tick de um corte); `escolherVariante(tick, id, ultima, disponiveis, penultima)` (hash;
     nunca a anterior).
   - Os gestos (`gTiraAmarelo`, `gTiraVermelho`, `gCartao` — braço reto, a mão ≥ 0,25 m acima do topo da cabeça —,
     `gAponta`, `gAnota`, `gAfasta`, `gApito`, `gAbertos`, `gCabeca`, `gDesculpa`, `gSegura`, `gTapinha`, `gAbana`, `gRosto`,
     `gPalmasAlto`, `gCintura`, `gJoelhos`, `gAperto`) e as posturas (`posturaCabisbaixo`, `cabecaCeu`, `balancaCabeca`).
   - A câmera: `camValida`, `custoCamera` (a lente longe de onde cada um está, de onde vai parar e do caminho até lá),
-    `melhorCamera`, `fugirDaLente`, `caberNoQuadro`, `definirPlano`/`definirPlanoGrupo`.
+    `melhorCamera` (sem candidata livre, a de maior folga até o CAMINHO de cada um — de onde está até onde vai parar —, como
+    no `custoCamera`; 28/10: só pela posição de agora, quem vinha correndo passava na lente), `fugirDaLente`,
+    `caberNoQuadro`, `definirPlano`/`definirPlanoGrupo`.
   - `moverJuntas`, `inclinarTronco` e `flexionar` (com `pernaIK` e `ponta`) são CÓPIAS dos da `comemoracao.js` (lá não são
     exportados e o arquivo é do fecho).
 - **`js/cena-cartao.js`** (puro):
@@ -2886,10 +2911,16 @@ Porte da branch `golaco/cenas-jogo` (1df2ca34) para fora do fecho: `js/cenas-con
   - Planos e tempos em `CENA_CARTAO.planos`: amarelo `arbitro → reacao → anota` (5,45 s); vermelho `arbitro → reacao →
     saida → tunel → torcida` (8,9 s); 2º amarelo 9,9 s. O cartão no alto fica ≥ 1,0 s DENTRO do plano do árbitro (o do
     vermelho direto vai até 2,0 s; o do 2º amarelo até 4,0 s, com a reação, a saída e o túnel mais curtos). Só o capitão e o
-    punido a < `ifab` m do árbitro (A1, V2).
+    punido a < `ifab` m do árbitro (A1, V2). A lente do plano do árbitro: 18 candidatas a `camera.arbitro.dist` m (± 0,8) do
+    ponto onde ele para, a ± `ang` rad da direção da parada; sem nenhuma livre, a 2ª fileira — as mesmas direções
+    `camera.arbitro.fileira`× mais longe, com o fov fechado na mesma razão (28/10, a receita do `cena-fim.js
+    melhorComFileira`: o capitão do V3 do goleiro expulso que vinha a 8,7 m/s freava a 0,43 m da lente). Quem sai da reta
+    árbitro–punido guarda o lado (`a.sgAfasta`) até terminar de
+    sair (27/10: o árbitro para onde o punido parou, a até ~1,4 m do ponto do plano, e quem estava a meia distância dos
+    dois trocava de referência e de lado a cada passo, indo e voltando a ~3,1 m do árbitro).
   - A bola parada do mundo (a página a desenha no lugar do apito): ninguém da cena passa por cima dela — o centro de cada
     ator fica a ≥ `CENAS.bola` m dela (quem começou mais perto, no máximo onde estava: `marcarBola`/`separarDaBola`), o
-    desvio a contorna e o árbitro não para em cima dela.
+    desvio a contorna pela tangente (`contornarBola`) e o árbitro não para em cima dela.
   - Depois da ELIPSE do túnel o companheiro fica no campo (para olhando o expulso sair). A lente do túnel tem candidatas a
     mais (o V1 de 4,8 a 7,5 m atrás e até 3,2 m de lado; o V2/V3 com |x| de 4 a 10 m e z de 36,5 a 39 m); sem nenhuma livre,
     a de maior folga até o ator mais perto (`melhorCamera`).
@@ -2949,7 +2980,10 @@ Porte da branch `golaco/cenas-jogo` (1df2ca34) para fora do fecho: `js/cenas-con
   dos treinadores onde os vivos ficam — 6 s de `passoTecnicos` com o mundo parado —, a bola parada, o cartão no alto no
   plano do árbitro e o companheiro depois da elipse; A-L 48 vermelhos na lateral de cá, z = 30; B variedade, E pureza, F
   relógio do estádio, G custo, P o plano da torcida nos trilhos das plantas: Maracanã e 6 genéricos) e `teste-cenas-tela`
-  parte `cartao` (navegador, CI e deploy; C6b, C11b, C12b, C12c e o C4 em 560×400 desta revisão).
+  parte `cartao` (navegador, CI e deploy; C6b, C11b, C12b, C12c e o C4 em 560×400 desta revisão). A amostra troca sem mexer
+  no padrão do CI (27/10): `--estados s:t,...` (os estados do meio do A, A-L, E e G), `--sem-c N` (o canhão C) e
+  `--sem-fim N` (o F-fim); a da revisão de 27/10 está no cabeçalho do teste. O "fixo no lugar" vale nos quatro canhões, e o
+  "a bola do apito no ar cai" do C conta só a bola VIVA (a das mãos do goleiro fica fora do desenho e sem física).
 
 ### Guardador de lances (PR 3, intervalo: a 1ª parte; PLANO-CENAS.md §4.2, R8, R9, R20)
 O intervalo ("lances do 1º tempo") e o fim ("Melhores momentos") tocam lances da partida inteira; o anel do replay só tem

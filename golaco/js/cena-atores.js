@@ -225,7 +225,7 @@ export function soltar(a) { if (a.fixo) { a.fixo = false; a.parado = 0; a.base =
 // ------------------------------------------------------------------------------------------------ desejos
 export function para(c, vel, rumo) {
   const d = c._d;
-  d.dx = Math.cos(rumo); d.dz = Math.sin(rumo); d.vel = vel; d.rumo = rumo;
+  d.dx = Math.cos(rumo); d.dz = Math.sin(rumo); d.vel = vel; d.rumo = rumo; d.dist = Infinity;
   return d;
 }
 /** Vai até (x, z) a `vel` (freando para chegar: √(2·freio·d)); perto (< tol), para com o `rumoFim`. */
@@ -234,7 +234,7 @@ export function irPara(c, a, x, z, vel, rumoFim = null, tol = 0.12, freio = 2.2)
   const r = rumoFim ?? j.rumo;
   if (d < tol) return para(c, 0, r);
   const dd = c._d;
-  dd.dx = ex / d; dd.dz = ez / d; dd.vel = Math.min(vel, Math.sqrt(2 * freio * Math.max(0, d - tol * 0.5)));
+  dd.dx = ex / d; dd.dz = ez / d; dd.vel = Math.min(vel, Math.sqrt(2 * freio * Math.max(0, d - tol * 0.5))); dd.dist = d;
   dd.rumo = d < 1 && rumoFim != null ? rumoFim : Math.atan2(ez, ex);
   return dd;
 }
@@ -246,9 +246,11 @@ export function parar(c, a, ox = null, oz = null) {
 
 /**
  * Desvio de quem anda (Reynolds, "Steering Behaviors", GDC 1999 — o mesmo da cena de substituição): alguém à frente (até
- * 1,8 m) e perto da reta (< 0,8 m de lado) empurra o rumo pedido para o lado contrário. Escreve em d.
+ * 1,8 m) e perto da reta (< 0,8 m de lado) empurra o rumo pedido para o lado contrário. Escreve em d. A bola parada do
+ * cartão (a.bolaMin > 0) também é contornada pela tangente (contornarBola), menos com `contorna` = false (quem vai para um
+ * ponto que já dá a volta nela: o capitão do A1/V2, cena-cartao.js pontoApoio).
  */
-export function desviar(c, a, d) {
+export function desviar(c, a, d, contorna = true) {
   if (d.vel < 0.3) return d;
   const j = a.j;
   let lat = 0;
@@ -267,16 +269,51 @@ export function desviar(c, a, d) {
     const ex = bp.x - j.x, ez = bp.z - j.z, u = ex * d.dx + ez * d.dz, w = -ex * d.dz + ez * d.dx, R = CENAS.bola + 0.25;
     if (u > 0 && u <= 2.2 && Math.abs(w) < R) lat += (w >= 0 ? -1 : 1) * ((R - Math.abs(w)) / R) * (1 - u / 2.2) * 1.5;
   }
-  if (lat === 0) return d;
-  lat = clamp(lat, -1, 1) * 0.9;
-  const nx = d.dx - d.dz * lat, nz = d.dz + d.dx * lat, l = Math.hypot(nx, nz) || 1;
-  d.dx = nx / l; d.dz = nz / l;
+  if (lat !== 0) {
+    lat = clamp(lat, -1, 1) * 0.9;
+    const nx = d.dx - d.dz * lat, nz = d.dz + d.dx * lat, l = Math.hypot(nx, nz) || 1;
+    d.dx = nx / l; d.dz = nz / l;
+  }
+  if (contorna && bp.y < 0.6 && a.bolaMin > 0) contornarBola(a, d, bp);
   return d;
 }
 
 /**
+ * A bola parada do cartão (27/10; só quem tem a.bolaMin > 0 — marcarBola; o fim de jogo zera e não passa por aqui): quem
+ * anda passa por FORA do círculo de raio a.bolaMin + CENAS.bolaContorno em volta dela, pela tangente (Reynolds, "Steering
+ * Behaviors", GDC 1999: obstacle avoidance). Só o empurrão de lado acima deixava o corpo raspando o círculo do separarDaBola
+ * (a.bolaMin) e dando a volta na bola nele a ~2,4 m/s: o pé que ficou plantado do lado da bola cruzava por cima dela no
+ * passo seguinte (o canhão do teste-cenas, amostra da revisão: o apoio do V1 com o pé a 0,09 m do centro dela; com o
+ * círculo de 0,9 m, o pé fica a ≥ 0,42 m dela no "A contorno da bola parada" do teste-cenas, contra 0,19 m antes). Não
+ * desvia quando o destino (d.dist, de irPara) vem antes da bola nem com ela atrás; o círculo não passa do destino (quem vai
+ * para perto dela encosta nela, sem dar a volta por fora); já dentro do círculo, a tangente abre CENAS.bolaAbre rad para
+ * fora (sai dele aos poucos, sem orbitar raspando).
+ */
+function contornarBola(a, d, bp) {
+  const j = a.j, ex = bp.x - j.x, ez = bp.z - j.z, D = Math.hypot(ex, ez);
+  const dist = d.dist ?? Infinity;
+  const alvoBola = dist < Infinity ? Math.hypot(j.x + d.dx * dist - bp.x, j.z + d.dz * dist - bp.z) : Infinity;
+  const R = Math.min(a.bolaMin + CENAS.bolaContorno, Math.max(a.bolaMin, alvoBola));
+  if (D < 1e-6 || D > R + CENAS.bolaOlha) return;
+  const u = ex * d.dx + ez * d.dz;
+  if (u <= 0 || u >= dist) return;
+  const w = -ex * d.dz + ez * d.dx, phi = Math.atan2(w, u);
+  const alfa = D > R ? Math.asin(R / D) : Math.PI / 2 + CENAS.bolaAbre * (R - D) / Math.max(0.05, R - a.bolaMin);
+  if (Math.abs(phi) >= alfa) return;
+  // o rumo novo deixa a bola a `alfa` do lado em que ela já está
+  const th = phi >= 0 ? -alfa : alfa, ct = Math.cos(th), st = Math.sin(th), bx = ex / D, bz = ez / D;
+  d.dx = bx * ct - bz * st; d.dz = bx * st + bz * ct;
+}
+
+/** O fixo que cede quando parado (a.cede > 0): volta a andar para sair do caminho de quem não cede (separarCena). */
+const cedeSeSoltar = a => a.fixo && !a.mergulha && a.cede > 0;
+
+/**
  * Ninguém dentro de ninguém (antes da passada, como o colisaoCorpos do jogo): centros a ≥ min m. Cada ator cede `a.cede`
- * (0 = não sai do lugar: quem está num gesto com alguém, o fixo); a velocidade de aproximação sai.
+ * (0 = não sai do lugar: quem está num gesto com alguém, o fixo); a velocidade de aproximação sai. Quem não cede (o
+ * punido, o treinador) e chega num FIXO que cede quando anda: o fixo volta a andar (soltar) e sai — sem isso nenhum dos
+ * dois saía e os corpos entravam um no outro (canhão A do teste-cenas: o punido do A2 andando de costas para o árbitro
+ * até um companheiro parado no caminho, pelves a 0,28 m).
  */
 export function separarCena(c, min = CENAS.separacao) {
   const at = c.atores, n = at.length, min2 = min * min;
@@ -286,14 +323,20 @@ export function separarCena(c, min = CENAS.separacao) {
     for (let p = 0; p < n; p++) {
       const A = at[p];
       if (!A.ativo) continue;
-      const ja = A.j, fa = A.fixo || A.mergulha ? 0 : A.cede;
+      const ja = A.j;
+      let fa = A.fixo || A.mergulha ? 0 : A.cede;
       for (let q = p + 1; q < n; q++) {
         const B = at[q];
         if (!B.ativo) continue;
         const jb = B.j;
         const dx = jb.x - ja.x, dz = jb.z - ja.z, d2 = dx * dx + dz * dz;
         if (d2 >= min2) continue;
-        const fb = B.fixo || B.mergulha ? 0 : B.cede, tot = fa + fb;
+        let fb = B.fixo || B.mergulha ? 0 : B.cede, tot = fa + fb;
+        if (!tot) {
+          if (cedeSeSoltar(A)) { soltar(A); fa = A.cede; }
+          if (cedeSeSoltar(B)) { soltar(B); fb = B.cede; }
+          tot = fa + fb;
+        }
         if (!tot) continue;
         const d = Math.sqrt(d2);
         let nx = 1, nz = 0;
@@ -680,6 +723,13 @@ export function camValida(x, y, z) {
   return !solidoEm(x, y, z, 0.3, false);
 }
 
+/** Distância da lente (cx, cz) ao caminho do ator: de onde ele está até onde vai parar (a.alvoX/a.alvoZ), no chão. */
+function distCaminho(a, cx, cz) {
+  const x0 = a.j.x, z0 = a.j.z, sx = (a.alvoX ?? x0) - x0, sz = (a.alvoZ ?? z0) - z0, s2 = sx * sx + sz * sz;
+  const w = s2 > 1e-6 ? clamp(((cx - x0) * sx + (cz - z0) * sz) / s2, 0, 1) : 0;
+  return Math.hypot(x0 + sx * w - cx, z0 + sz * w - cz);
+}
+
 /**
  * Custo de uma câmera em (cx, cz) para os assuntos (atores): Infinity com alguém a menos de CENAS.lente (+ folga) da lente
  * agora, onde vai parar (o alvo dele, a.alvoX/a.alvoZ) ou no caminho até lá — o assunto também —, senão a oclusão (alguém entre a lente e um assunto, perto da
@@ -692,11 +742,7 @@ export function custoCamera(c, cx, cz, assuntos, folga = 0.4) {
     if (!a.ativo) continue;
     const pts = [a.j.x, a.j.z, a.alvoX ?? a.j.x, a.alvoZ ?? a.j.z];
     // a lente longe de onde ele está, de onde vai parar e do caminho entre os dois
-    {
-      const sx = pts[2] - pts[0], sz = pts[3] - pts[1], s2 = sx * sx + sz * sz;
-      const w = s2 > 1e-6 ? clamp(((cx - pts[0]) * sx + (cz - pts[1]) * sz) / s2, 0, 1) : 0;
-      if (Math.hypot(pts[0] + sx * w - cx, pts[1] + sz * w - cz) < lim) return Infinity;
-    }
+    if (distCaminho(a, cx, cz) < lim) return Infinity;
     if (assuntos.includes(a)) continue;
     for (const s of assuntos) {
       const ex = s.j.x - cx, ez = s.j.z - cz, el2 = ex * ex + ez * ez || 1;
@@ -732,12 +778,15 @@ export function melhorCamera(c, cands, assuntos) {
     if (cc < menor - 1e-9) { menor = cc; melhor = k; }
   }
   if (!melhor) {
-    // nenhuma livre: a válida com a MAIOR folga até o ator mais perto da lente (antes a 1ª válida, com alguém a 0,6 m)
+    // nenhuma livre: a válida com a MAIOR folga até o ator mais perto da lente (antes a 1ª válida, com alguém a 0,6 m) —
+    // a folga até o CAMINHO dele, como no custoCamera (28/10: só pela posição de agora, quem vinha correndo passava na
+    // lente: o capitão do V3 do goleiro expulso freando de 8,7 m/s a 0,43 m dela no plano do árbitro, teste-cenas com a 3ª
+    // amostra da revisão de 28/10; a mesma lição da 2ª fileira do cena-fim.js melhorComFileira)
     let folga = -Infinity;
     for (const k of cands) {
       if (!camValida(k.x, k.y, k.z)) continue;
       let dm = Infinity;
-      for (const a of c.atores) if (a.ativo) dm = Math.min(dm, Math.hypot(a.j.x - k.x, a.j.z - k.z));
+      for (const a of c.atores) if (a.ativo) dm = Math.min(dm, distCaminho(a, k.x, k.z));
       if (dm > folga + 1e-9) { folga = dm; melhor = k; }
     }
   }

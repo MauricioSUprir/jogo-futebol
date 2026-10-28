@@ -517,3 +517,52 @@ O #493 ficou parado desde 21/10; a main ganhou a Categoria D (IA intensa) e o me
   `chegaAntes` de 0,1 s (ele não precisa chegar parado); e o corte de cabeça com `vTesta` 7 (a bola caía na entrada da
   área e a 2ª bola virava gol: 7 em 476). Mais `folgaCabeceio` 0,5 → 0,8 (o cabeceio a gol no alvo defendido 60,5% → 68%;
   Opta/StatsBomb ~70%). Saída que dá certo 4,6% → 7,8%; gol de escanteio 8,4–10,6% → 6,9–7,0%.
+
+### 13.3 O passe certo da branch e a bola que sobra (28/10, Categoria C, item 12)
+
+O `teste-intercepta` A (passe certo 80–86,5%; Premier League 23/24: 82,9%) pegou a branch acima da main: 178 partidas
+(sementes 601–760 e 1001–1018, o medidor do diagnóstico com a definição do teste) dão main 85,91% (± 0,18) e branch 86,62%
+(± 0,17), Δ +0,71 ± 0,23 pt. A decomposição por origem da posse e pelo lance que deixou a bola solta (até 5 s antes)
+mostra que o passe "de jogo corrido" não mudou (posse depois de corte de passe sem lance antes: 87,2% → 87,2%, ± 0,4) e que
+a diferença vem de lances que o goleiro realista mudou de propósito: menos escanteios (2,34 → 1,86 por partida: o
+escanteio tem o passe que mais erra) e o cruzamento do escanteio que chega a um companheiro (0% → 8,2%; real 42,7%), +0,25
+pt; a bola espalmada que fica em jogo e a defesa recupera (0,35 → 5,9 passes por partida, 92% certos), +0,12 pt; o
+bloqueio com a perna (+0,05 pt). Medido aqui na StatsBomb open data (215 partidas: Copa 2022, Euro 2024 e as 100 primeiras
+da Premier League 2015/16; eventos baixados um a um; o 1º toque com controle depois do lance, até 15 s):
+
+| | real (StatsBomb) | main | branch |
+|---|---|---|---|
+| defesas seguras ("Success" · "Saved Twice") | 36,0% · 10,4% (1.177 defesas) | 42,4% · 0 | 36,0% · 0 (211) |
+| defesas que ficam em jogo sem segurar | 30,9% | 1,6% | 30,8% |
+| rebote em jogo: o ataque toca primeiro | 42,7% ± 2,6 (349) | — | 44,4% ± 6,3 (63) |
+| chute bloqueado em jogo: o ataque toca primeiro | 50,5% ± 1,6 (991) | — | 19,6% ± 5,3 (56) |
+| a posse de quem defende depois da defesa: passes por posse, certos | 3,6 · 87,9% ± 0,9 | 6,1 · 86,0% | 6,9 · 88,1% |
+| depois do rebote em jogo ("In Play Danger/Safe") | 4,4–5,9 · 86,7–90,3% | — | 9,7 · 91,9% |
+| depois do chute bloqueado | 4,7 · 86,9% ± 0,9 | — | 7,9 · 89,7% |
+| referência: jogo corrido sem lance antes | 87,2% | 87,2% | 87,2% |
+
+O volume (31% das defesas em jogo) e quem pega o rebote batem com o real; a posse que nasce perto do próprio gol depois
+do ataque do adversário é que é limpa demais no jogo TODO (na main, depois do cruzamento cortado: 11,5 passes, 93,2%; depois
+do chute do adversário: 92,1%; o real dessas: 87,2% e 86,5%) — é a contrapressão de quem perdeu a bola na área (Categoria D)
+e o erro do passe (E), não o goleiro. O que era defeito da branch: o chute bloqueado em jogo ficava com a defesa em 80% porque
+o bloqueador DOMINAVA no passo seguinte a bola que saía da canela subindo a ~11 m/s (`sim.js bolaLivre`: a bola abaixo de
+0,45 m era domínio no pé mesmo subindo) — ou um vizinho a matava no peito subindo a 10–19 m/s (`bolaAltaNoCorpo`). Com
+`m.bloq.sobe` ninguém a domina enquanto ela sobe no 1º voo para cima de 0,45 m (96 partidas pareadas, 601–696):
+
+| | real | branch | com a correção |
+|---|---|---|---|
+| chute bloqueado em jogo: o ataque toca primeiro | 50,5% ± 1,6 | 19,6% ± 5,3 (64 partidas) | 48,4% ± 6,3 (62) |
+| depois dele, a posse de quem defende: passes, certos | 4,7 · 86,9% | 7,9 · 89,7% | 6,3 · 86,9% |
+| `teste-goleiro-realista` D4 (dominada subindo; partidas + canhão) | — | 10 de 69 | 0 de 64 |
+| passe certo (definição do `teste-intercepta` A) | PL 23/24: 82,9% | 86,85% | 86,56% (Δ −0,30 ± 0,16 pt) |
+
+Painel de 48 partidas (1001–1048) contra a branch: gols 1,25 → 1,31, chutes 7,8 → 8,0, escanteios 1,8 → 1,9, passe 86,8 →
+86,5%, metas fora da faixa 10 → 8 (gols de cabeça 22,2 → 16,4% e chutes de fora da área 41,7 → 38,1% entram); o
+`teste-goleiro-realista` passa inteiro; `hash-igual` IGUAL (o treino não tem `bloqueioPerna`).
+O que sobra sobre a main não está provado: na revisão independente, numa terceira amostra (2201–2264, 64 partidas
+pareadas), main 86,43%, branch 86,57% e a correção 86,29%; juntando com as 96 de 601–696, a correção fica +0,27 ± 0,26 pt
+sobre a main (160 partidas) — compatível com a main. A mistura nova se repete nela (+0,42 pt: rebote e escanteio realistas)
+e a taxa vai para o outro lado (−0,28 pt); o que resta é a calibração da posse que nasce perto do próprio gol (D e E), não
+o goleiro. Com a correção, o `teste-intercepta` A (96 partidas, 301–396) PASSA: passe certo 86,2%, interceptações 10,96,
+homem livre 72,3%. O "Saved Twice" (o goleiro pega o próprio rebote; `GOLEIRO.reagarra` não
+deixa) fica anotado: pela conta, mexe < 0,02 pt no passe certo.

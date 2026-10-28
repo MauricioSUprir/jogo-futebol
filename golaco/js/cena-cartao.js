@@ -234,6 +234,10 @@ export function criarCenaCartao(plano, m) {
   c.apoio = plano.apoio != null ? c.porId.get(plano.apoio) ?? null : null;
   if (c.apoio) {
     c.apoio.tipo = 'apoio'; c.apoio.podeFixar = false; c.apoio.cede = 0.4;
+    // (27/10) solto ANTES da pré-rolagem: na vantagem que virou gol o assentar acima pode tê-lo deixado FIXO — e o fixo é
+    // desenhado pela pose de base, sem locomoção —; a pré-rolagem levava o j dele até o punido e o desenho ficava para trás
+    // (o canhão do teste-cenas: o apoio desenhado a 3,34 m do corpo a cena inteira, e um salto de 3,34 m quando ele soltava)
+    soltar(c.apoio);
     // o capitão/companheiro longe (até 15 m) já vem correndo: pré-rolagem invisível até faltar CENA_CARTAO.apoioPerto m
     // (no 1º quadro ele já está chegando; o V2 segura o punido ≥ 0,8 s)
     const q = c.apoio.j, pj = pun.j;
@@ -301,6 +305,9 @@ function isolar(c, A, n) {
       const j = a.j, ex = j.x - A.x1, ez = j.z - A.z1, d = Math.hypot(ex, ez);
       if (d >= lim) continue;
       algum = true;
+      // (27/10: quem ficou FIXO no assentar da vantagem que virou gol anda aqui — solto antes, como o apoio da pré-rolagem:
+      // o fixo é desenhado pela pose de base e o j andava sem ele)
+      soltar(a);
       let ux = d > 0.05 ? ex / d : 1, uz = d > 0.05 ? ez / d : 0;
       const lx = pun.x - A.x1, lz = pun.z - A.z1, ll = Math.hypot(lx, lz) || 1;
       if ((ux * lx + uz * lz) / ll > 0.6) { const sg = ux * -lz + uz * lx >= 0 ? 1 : -1; ux = ux * 0.4 - (lz / ll) * sg; uz = uz * 0.4 + (lx / ll) * sg; const l = Math.hypot(ux, uz) || 1; ux /= l; uz /= l; }
@@ -430,9 +437,12 @@ function desejo(c, a, t) {
   if (d < lim + 0.25 || (a.afasta && d < lim + 0.55)) {
     a.afasta = true; soltar(a);
     let ux = d > 0.05 ? ex / d : 1, uz = d > 0.05 ? ez / d : 0;
-    // longe da reta árbitro–punido (não passa por cima do lance)
+    // longe da reta árbitro–punido (não passa por cima do lance); o lado escolhido fica até ele terminar de sair (27/10: o
+    // árbitro para onde o punido parou, a até ~1,4 m do ponto do plano, e quem estava a meia distância dos dois trocava de
+    // referência acima a cada passo — e de lado aqui —, indo e voltando a ~3,1 m do árbitro com o cartão no alto: o canhão
+    // da main, amostra da revisão, V2 do 2º amarelo; com o lado guardado ele sai a 7,4 m)
     const lx = pun.x - arb.x, lz = pun.z - arb.z, ll = Math.hypot(lx, lz) || 1;
-    if ((ux * lx + uz * lz) / ll > 0.6) { const sg = ux * -lz + uz * lx >= 0 ? 1 : -1; ux = ux * 0.4 - (lz / ll) * sg; uz = uz * 0.4 + (lx / ll) * sg; const l = Math.hypot(ux, uz) || 1; ux /= l; uz /= l; }
+    if ((ux * lx + uz * lz) / ll > 0.6) { const sg = a.sgAfasta ??= (ux * -lz + uz * lx >= 0 ? 1 : -1); ux = ux * 0.4 - (lz / ll) * sg; uz = uz * 0.4 + (lx / ll) * sg; const l = Math.hypot(ux, uz) || 1; ux /= l; uz /= l; }
     // fora do caminho do capitão que vem andando (até 4 m à frente dele, a < 1,1 m da reta: com 2,5 m quem estava 3 m à
     // frente andava para ele e era empurrado de volta para o árbitro): sai de lado, para o lado longe do
     // árbitro (de frente, o desvio trocava de lado a cada tick e ele, que cede menos, empurrava o outro de volta para o árbitro)
@@ -452,7 +462,7 @@ function desejo(c, a, t) {
     a.alvoX = rx + ux * (lim + 0.7); a.alvoZ = rz + uz * (lim + 0.7);
     return desviar(c, a, irPara(c, a, a.alvoX, a.alvoZ, K.velAfasta, Math.atan2(-ez, -ex), 0.1, 3));
   }
-  a.afasta = false;
+  a.afasta = false; a.sgAfasta = null;
   const fl1 = foraDaLinha(c, a);
   if (fl1) return desviar(c, a, fl1);
   return parar(c, a, arb.x, arb.z);
@@ -564,9 +574,10 @@ function desejoApoio(c, a, t) {
   const longe = Math.hypot(pun.x - j.x, pun.z - j.z);
   switch (v) {
     case 'abertos': {
-      // entra entre os dois (do lado do árbitro), a ~0,9 m do punido, de frente para ele; vem correndo se está longe
+      // entra entre os dois (do lado do árbitro), a ~0,9 m do punido, de frente para ele; vem correndo se está longe (o
+      // ponto já dá a volta na bola parada: sem o contorno de quem anda — 27/10: com ele o capitão chegava ~0,1 s depois)
       pontoApoio(c, K.a1.capitao * 0.8, K.a1.capitao * 0.55, _q);
-      return desviar(c, a, irPara(c, a, _q.x, _q.z, longe > 4 ? 6.2 : K.a1.vCap, rPun, 0.08, 3.5));
+      return desviar(c, a, irPara(c, a, _q.x, _q.z, longe > 4 ? 6.2 : K.a1.vCap, rPun, 0.08, 3.5), false);
     }
     case 'segurado': {
       // entre os dois, colado no punido (0,55 m), de frente para ele
@@ -579,10 +590,10 @@ function desejoApoio(c, a, t) {
         const vx = pun.vx + ex * 2.0, vz = pun.vz + ez * 2.0, vv = Math.hypot(vx, vz);
         if (vv < 0.05) return para(c, 0, rPun);
         const d = c._d;
-        d.dx = vx / vv; d.dz = vz / vv; d.vel = Math.min(vv, 3); d.rumo = rPun;
+        d.dx = vx / vv; d.dz = vz / vv; d.vel = Math.min(vv, 3); d.rumo = rPun; d.dist = Math.hypot(ex, ez);
         return d;
       }
-      return desviar(c, a, irPara(c, a, _q.x, _q.z, longe > 4 ? 6.4 : 3.6, rPun, 0.04, 4));
+      return desviar(c, a, irPara(c, a, _q.x, _q.z, longe > 4 ? 6.4 : 3.6, rPun, 0.04, 4), false);
     }
     case 'cabeca': case 'cabisbaixo': {
       // vai para o lado e um pouco atrás do punido (onde ele vai estar) e o acompanha
@@ -595,7 +606,7 @@ function desejoApoio(c, a, t) {
         const vx = pun.vx + ex * 1.6, vz = pun.vz + ez * 1.6, vv = Math.hypot(vx, vz);
         const d = c._d;
         if (vv < 0.05) return para(c, 0, h);
-        d.dx = vx / vv; d.dz = vz / vv; d.vel = Math.min(vv, 3); d.rumo = h;
+        d.dx = vx / vv; d.dz = vz / vv; d.vel = Math.min(vv, 3); d.rumo = h; d.dist = dq;
         // (a bola parada entre os dois: contorna — sem isso ele escorregava em volta dela e chegava depois do tapinha)
         return desviar(c, a, d);
       }
@@ -837,18 +848,32 @@ function escolherCamera(c, ip) {
       // não pode ficar atrás dele em nenhuma das duas paradas)
       paradaPrevista(pun.j, _pl); paradaPrevista(pun.j, _pb, c.mF.bola.p);
       const bx = _pb.x - _pl.x, bz = _pb.z - _pl.z;
-      for (const da of [C.arbitro.ang, -C.arbitro.ang, C.arbitro.ang * 0.7, -C.arbitro.ang * 0.7, C.arbitro.ang * 0.4, -C.arbitro.ang * 0.4]) {
-        for (const dist of [C.arbitro.dist, C.arbitro.dist - 0.8, C.arbitro.dist + 0.8]) {
-          const x = ax + Math.cos(base + da) * dist, z = az + Math.sin(base + da) * dist;
-          // do lado da TV (z maior que o punido) é a preferência; o ângulo maior custa um pouco; o cartão no alto não pode
-          // ficar atrás da cabeça nem do ombro do punido (a reta da lente até ele passa longe deles)
-          let tap = tampaCartao(x, C.arbitro.altura, z, ax, az, P.parada.x, P.parada.z);
-          if (bx || bz) tap = Math.max(tap, tampaCartao(x, C.arbitro.altura, z, ax + bx, az + bz, P.parada.x + bx, P.parada.z + bz));
-          cands.push({ x, y: C.arbitro.altura, z, pref: (z < P.parada.z ? 1.5 : 0) + Math.abs(da) * 0.4 + Math.abs(dist - C.arbitro.dist) * 0.2 + tap });
+      // (fator > 1: a 2ª fileira, as mesmas direções mais longe — abaixo)
+      const fileira = fator => {
+        cands.length = 0;
+        for (const da of [C.arbitro.ang, -C.arbitro.ang, C.arbitro.ang * 0.7, -C.arbitro.ang * 0.7, C.arbitro.ang * 0.4, -C.arbitro.ang * 0.4]) {
+          for (const dd of [0, -0.8, 0.8]) {
+            const dist = C.arbitro.dist * fator + dd, x = ax + Math.cos(base + da) * dist, z = az + Math.sin(base + da) * dist;
+            // do lado da TV (z maior que o punido) é a preferência; o ângulo maior custa um pouco; o cartão no alto não pode
+            // ficar atrás da cabeça nem do ombro do punido (a reta da lente até ele passa longe deles)
+            let tap = tampaCartao(x, C.arbitro.altura, z, ax, az, P.parada.x, P.parada.z);
+            if (bx || bz) tap = Math.max(tap, tampaCartao(x, C.arbitro.altura, z, ax + bx, az + bz, P.parada.x + bx, P.parada.z + bz));
+            cands.push({ x, y: C.arbitro.altura, z, pref: (z < P.parada.z ? 1.5 : 0) + Math.abs(da) * 0.4 + Math.abs(dd) * 0.2 + tap });
+          }
         }
-      }
+      };
+      fileira(1);
       _a.length = 0; _a.push(arb, pun);
-      return melhorCamera(c, cands, _a);
+      const r = melhorCamera(c, cands, _a);
+      if (r.custo < Infinity) return r;
+      // (28/10) sem candidata livre (alguém na lente ou no caminho até ela em todas): a 2ª fileira, as mesmas direções
+      // `fileira`× mais longe com o fov fechado na mesma razão (o grupo do mesmo tamanho) — a receita do cena-fim.js
+      // melhorComFileira. Só a folga de agora deixava o capitão do V3 do goleiro expulso, que vinha a 8,7 m/s, frear a
+      // 0,43 m da lente (teste-cenas, 3ª amostra da revisão de 28/10)
+      fileira(C.arbitro.fileira);
+      const r2 = melhorCamera(c, cands, _a);
+      if (r2.custo < Infinity) return { ...r2, fov: (Math.atan(Math.tan((C.arbitro.fov * Math.PI) / 360) / C.arbitro.fileira) * 360) / Math.PI };
+      return r;
     }
     case 'reacao': return cameraReacao(c);
     case 'anota': {
@@ -995,7 +1020,7 @@ function planoIndice(c, ip, t, opc, out) {
   switch (pl.nome) {
     case 'arbitro': {
       _g.length = 0; _g.push(px, pz, ax, az);
-      definirPlanoGrupo(out, 'arbitro', cam.x, cam.y, cam.z, _g, C.arbitro.olharY, C.arbitro.fov, opc);
+      definirPlanoGrupo(out, 'arbitro', cam.x, cam.y, cam.z, _g, C.arbitro.olharY, cam.fov ?? C.arbitro.fov, opc);
       _cab.length = 0; _cab.push(pun.atu, arb.atu);
       return caberNoQuadro(out, opc, _cab);
     }

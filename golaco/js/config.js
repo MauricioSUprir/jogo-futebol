@@ -667,7 +667,9 @@ export const GOLEIRO = {
     // embalado para o lado dela): ela bate nele — o tronco do quadril até `tronco[1]` m pelo eixo, raio `tronco[0]`; as
     // pernas até os tornozelos, raio `perna`; de pé, o corpo até `alto` m — e escapa perto (o rebote) ou, em `fora` das vezes,
     // desvia para fora (a espalmada de sempre: por cima ou pela linha de fundo)
-    bloqueio: { tronco: [0.22, 0.8], perna: 0.13, alto: 1.75, ticks: 8, fora: 0.5 },
+    // (27/10: `amostra` m — o caminho da bola em cada passo é testado em pedaços deste tamanho, não só o ponto do começo
+    // do passo: o chute forte anda ~0,45 m por passo e atravessava o tronco entre dois deles; goleiro.js corpoNaBola)
+    bloqueio: { tronco: [0.22, 0.8], perna: 0.13, alto: 1.75, ticks: 8, fora: 0.5, amostra: 0.05 },
     // bola NO CORPO (a até `corpo` m de lado e abaixo de `corpoAlto`): o corpo está no caminho — é sempre parada (encaixe
     // ou bloqueio que escapa); nada atravessa o goleiro (antes o sorteio que falhava deixava a bola passar pelo corpo
     // desenhado: 58 gols "pelo corpo" no canhão de 2.535 chutes)
