@@ -8,9 +8,11 @@
 // analógico solto e no canto, forte e colocado, força 0,92 e 1) ≤ 1% sem gol (a busca da saída com o voo que bate no
 // travessão saltava: main 3,7%); com o sorteio (o erro do jogo, forcaMaxErro valendo), o craque com a perna boa (metade
 // chute forte, metade colocado) cruza a linha a ≥ 1,9 m em ≥ 70%, no ângulo (y ≥ 1,9 m e |z| ≥ meia-boca − 0,9 m, dentro
-// do gol) em ≥ 25% e por cima do travessão em ≤ 25%; o resto (com o goleiro, o bom finalizador, a perna ruim, só o forte)
-// sai na tabela, informativo, com o número da main ao lado.
-//   node tools/teste-chutes.mjs [--so-cheia] [--sem-cheia <semente base da barra cheia com o sorteio, 7100>] [--js <pasta js>]
+// do gol) em ≥ 25% e por cima do travessão em ≤ 25% — em 9 sementes juntas (~2.160 chutes, ep ≤ 1 ponto; 28/10); com o
+// analógico SOLTO a barra cheia fica na altura de antes, bit a bit (decisão do dono, 28/10: "só o chute mirado sobe"); o
+// resto (com o goleiro, o bom finalizador, a perna ruim, só o forte) sai na tabela, informativo, com o número da main ao lado.
+//   node tools/teste-chutes.mjs [--so-cheia] [--sem-cheia <sementes da barra cheia com o sorteio, separadas por vírgula;
+//   padrão as 9: 7100,31100,47100,13100,23100,59100,67100,83100,97100>] [--js <pasta js>]
 //   (--js: mede outra cópia da lógica, ex.: a main — o "antes")
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -24,6 +26,7 @@ const P = await imp('partida.js');
 const { assumirControle } = await imp('acoes.js');
 const { parametros } = await imp('jogador.js');
 const { criarRng } = await imp('rng.js');
+const { lerp } = await imp('mat.js');
 
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
 let falhas = 0;
@@ -53,6 +56,8 @@ function chute(semente, x, z, opc = {}) {
   for (let i = 0; i < 60 && !l; i++) { passo(m, { 0: { x: 0, z: 0, botoes: opc.mod ? BOTAO.MOD : 0, ia } }); l = m.log.find(e => e.acao); }
   if (!l) return null;
   const mira = m.voo?.mira ?? null;
+  // a bola logo depois do toque (a assinatura do chute: o caso "analógico solto" compara bit a bit com a curva de antes)
+  const v0 = [m.bola.p.x, m.bola.p.y, m.bola.p.z, m.bola.v.x, m.bola.v.y, m.bola.v.z, m.bola.w.x, m.bola.w.y, m.bola.w.z];
   const traj = [{ x: m.bola.p.x, z: m.bola.p.z }];
   let linha = null, cruza = null, res = null;
   for (let i = 0; i < 240 && !res; i++) {
@@ -75,7 +80,7 @@ function chute(semente, x, z, opc = {}) {
     if (!res && (b.x > GX + 1 || Math.hypot(m.bola.v.x, m.bola.v.z) < 0.5)) res = 'fora';
   }
   const noAlvo = linha && Math.abs(linha.z) < MEIO - 0.11 && linha.y < CAMPO.gol.altura - 0.11;
-  return { l, mira, linha, cruza, traj, res, noAlvo, m };
+  return { l, mira, v0, linha, cruza, traj, res, noAlvo, m };
 }
 
 const SO_CHEIA = process.argv.includes('--so-cheia');
@@ -283,7 +288,14 @@ function barraCheia(semBase, N, f, perna = 'todas', goleiro = false) {
   }
   return r;
 }
+/** Soma as contagens de várias rodadas de barraCheia (as metas em 9 sementes juntas). */
+function juntar(rs) {
+  const o = { n: 0, alto: 0, ang: 0, cima: 0, trave: 0, toque: 0, alvo: 0, gol: 0, def: 0, fora: 0, ys: [], zs: [] };
+  for (const r of rs) for (const k in o) { if (Array.isArray(o[k])) o[k].push(...r[k]); else o[k] += r[k]; }
+  return o;
+}
 const pc = (k, r) => fmt(r[k] / Math.max(1, r.n) * 100, 0);
+const pc1 = (k, r) => fmt(r[k] / Math.max(1, r.n) * 100, 1);
 const txtCheia = r => `n ${r.n}: ≥ 1,9 m ${pc('alto', r)}% · no ângulo ${pc('ang', r)}% · por cima ${pc('cima', r)}% · travessão ${pc('trave', r)}% · trave ou travessão ${pc('toque', r)}% · no gol ${pc('alvo', r)}% · y p10/p50/p90 ${fmt(percentil(r.ys, 0.1))}/${fmt(percentil(r.ys, 0.5))}/${fmt(percentil(r.ys, 0.9))} m`;
 const txtGoleiro = r => `n ${r.n}: gols ${pc('gol', r)}% · defesas ${pc('def', r)}% · fora ${pc('fora', r)}% · trave ou travessão ${pc('toque', r)}%`;
 // a população: metade chute forte, metade colocado, os dois cantos, destros e canhotos — independentes (antes o
@@ -322,7 +334,8 @@ function semErro(fn) {
   // a varredura (revisão do C2): a busca do giro do colocado e a da elevação usavam o voo com o gol; com a mira alta o voo
   // de teste batia no travessão, na haste ou no véu no passo em que chegava à distância da mira, voltava 'caiu' e a busca
   // saltava (o colocado a 19 m passava a 8 m do gol; a 35 m, na trave). Erro zerado: forte e colocado, analógico solto e no
-  // canto, 9–35 m, até 45°, força 0,92 e 1
+  // canto, 9–35 m, até 45°, força 0,92 e 1. Com o analógico solto na conta de antes (28/10, decisão do dono) 0,8%: 7 dos 9
+  // sem gol são o colocado solto de 23–35 m, o mesmo da main (a conta de antes, bit a bit); os 2 no canto, 35 m a 45°
   let n = 0, sem = 0, s = 0;
   const pior = [];
   semErro(() => {
@@ -335,16 +348,58 @@ function semErro(fn) {
       if (q.res !== 'gol') { sem++; if (pior.length < 3) pior.push(`${d} m ${ang}° ${mod ? 'col' : 'forte'} ${fmt(forca)}`); }
     }
   });
-  reg('barra cheia — varredura com o erro zerado (9–35 m, até 45°, solto e no canto, forte e colocado)', `${fmt(sem / Math.max(1, n) * 100, 1)}% sem gol (${sem}/${n}${pior.length ? ': ' + pior.join(', ') : ''})`, '≤ 1% (main: 3,7%)', n >= 1000 && sem / n <= 0.01);
+  reg('barra cheia — varredura com o erro zerado (9–35 m, até 45°, solto e no canto, forte e colocado)', `${fmt(sem / Math.max(1, n) * 100, 1)}% sem gol (${sem}/${n}${pior.length ? ': ' + pior.join(', ') : ''})`, '≤ 1% (main: 3,7%; a versão anterior do C2, ad44206f, com o solto subindo, 0,2%)', n >= 1000 && sem / n <= 0.01);
 }
 {
-  // com o sorteio: o craque com a perna boa, metade chute forte, metade colocado (a chance de acertar o ângulo)
+  // o analógico SOLTO (decisão do dono, 28/10: "só o chute mirado sobe"): sem mirar (o jogo escolhe o lado longe do goleiro),
+  // a barra cheia fica na altura de antes, BIT A BIT — a mira (y, z), a bola logo depois do toque (posição, velocidade,
+  // giro) e onde ela cruza a linha iguais aos da mesma conta com a barra cheia desligada (ACOES.chute.cheia.de = 1: o
+  // caminho da main 46dd59ab, conferido com --js na main), e a altura da mira na curva de antes, lerp(yAlvo, força²) com a
+  // força acima de 0,9: de 1,44 a 1,70 m (a barra cheia mirada vai a 2,1 m na linha).
+  // Com o erro zerado (a mira) e com o sorteio (o chute inteiro); 9–30 m, até 40°, forte e colocado, força 0,92 e 1, as
+  // duas pernas. Antes (ad44206f) a mira solta subia a 2,1 m na linha (contra o goleiro realista: −6,9 pontos de gol)
+  const casos = [];
+  for (const erro0 of [true, false]) for (const forca of [0.92, 1.0]) for (const mod of [false, true]) for (let d = 9; d <= 30; d += 3) for (let ang = -40; ang <= 40; ang += 20) casos.push({ s: casos.length + 1, erro0, forca, mod, d, ang });
+  const roda = () => casos.map(c => {
+    const a = c.ang / DEG;
+    const run = () => chute(7600 + c.s, GX - Math.cos(a) * c.d, Math.sin(a) * c.d, { attr: { finalizacao: [60, 80, 99][c.s % 3], pePreferido: c.s % 2, peFraco: 50 }, forca: c.forca, canto: 0, mod: c.mod });
+    const q = c.erro0 ? semErro(run) : run();
+    return q ? [...q.v0, q.mira?.y ?? null, q.mira?.z ?? null, q.linha?.y ?? null, q.linha?.z ?? null, q.res] : null;
+  });
+  const agora = roda(), kc = ACOES.chute.cheia;
+  let antes = agora; // (--js na main: sem a barra cheia, ela mesma é o "antes")
+  if (kc) { const de0 = kc.de; kc.de = 1; try { antes = roda(); } finally { kc.de = de0; } }
+  let n = 0, dif = 0, curva = 0;
+  const ys = [], yc = f => lerp(ACOES.chute.yAlvo[0], ACOES.chute.yAlvo[1], f * f), yLo = yc(0.9) - 1e-9, yHi = yc(1) + 1e-9;
+  casos.forEach((c, i) => {
+    const x = agora[i], y = antes[i];
+    if (!x || !y) { if (x !== y) dif++; return; }
+    n++;
+    if (x.some((v, k) => !Object.is(v, y[k]))) dif++;
+    if (!(x[9] >= yLo && x[9] <= yHi)) curva++;
+    if (c.erro0 && x[11] != null) ys.push(x[11]);
+  });
+  reg('barra cheia — analógico SOLTO: a altura de antes, bit a bit (erro 0 e com o sorteio; 9–30 m, forte e colocado, força 0,92 e 1)',
+    `${dif} de ${n} chutes diferentes da curva de antes · mira fora da curva de antes (${fmt(yLo)}–${fmt(yHi)} m): ${curva} · y na linha (erro 0) méd ${fmt(media(ys))} m`,
+    '0 diferente (a mira, a saída e a linha iguais à main), n ≥ 300', n >= 300 && dif === 0 && curva === 0);
+}
+{
+  // com o sorteio: o craque com a perna boa, metade chute forte, metade colocado (a chance de acertar o ângulo). As metas
+  // em 9 sementes JUNTAS (revisão de 28/10): numa semente só (n ~240, ep ~3 pontos) as três passavam na 7100 do CI e
+  // reprovavam alguma em 3 de 9 (juntas: ≥ 1,9 m 72,3%, ângulo 27,0%, por cima 8,7%); juntas, n ~2.160 e ep ≤ 1 ponto. A
+  // meta é a mesma, sobre o número medido (sem "reprova só quando prova": com a margem do ângulo a ~2 ep, aceitar o
+  // intervalo seria afrouxar a meta)
   const craque = populacao(90);
-  const iSem = process.argv.indexOf('--sem-cheia'), SEM = iSem > 0 ? +process.argv[iSem + 1] : 7100;
-  const r = barraCheia(SEM, 480, craque, 'boa');
-  reg('barra cheia — craque (90–99), perna boa: cruza a linha a ≥ 1,9 m', txtCheia(r), '≥ 70% (main: 22%)', r.n >= 200 && r.alto / r.n >= 0.7);
-  reg('barra cheia — craque (90–99), perna boa: no ângulo', `${pc('ang', r)}% (y ≥ 1,9 m, |z| ≥ ${fmt(ANG_Z)} m, dentro do gol)`, '≥ 25% (main: 9%)', r.n >= 200 && r.ang / r.n >= 0.25);
-  reg('barra cheia — craque (90–99), perna boa: por cima do travessão', `${pc('cima', r)}%`, '≤ 25% (main: 1%)', r.n >= 200 && r.cima / r.n <= 0.25);
+  const iSem = process.argv.indexOf('--sem-cheia');
+  const SEMS = iSem > 0 ? process.argv[iSem + 1].split(',').map(Number) : [7100, 31100, 47100, 13100, 23100, 59100, 67100, 83100, 97100];
+  const SEM = SEMS[0];
+  const porSem = SEMS.map(s0 => barraCheia(s0, 480, craque, 'boa'));
+  const r = juntar(porSem), nMin = 200 * SEMS.length;
+  const ep = k => fmt(Math.sqrt((r[k] / r.n) * (1 - r[k] / r.n) / r.n) * 100, 1);
+  linhas.push([`barra cheia — craque, perna boa, por semente (${SEMS.length}; informativo)`, porSem.map((q, i) => `${SEMS[i]}: ${pc('alto', q)}/${pc('ang', q)}/${pc('cima', q)}%`).join(' · '), '≥ 1,9 m / ângulo / por cima (cada uma ep ~3 pontos)', 'INFO']);
+  reg(`barra cheia — craque (90–99), perna boa: cruza a linha a ≥ 1,9 m (${SEMS.length} sementes)`, `${pc1('alto', r)}% · ep ${ep('alto')} ponto · ${txtCheia(r)}`, '≥ 70% (main: 22%)', r.n >= nMin && r.alto / r.n >= 0.7);
+  reg(`barra cheia — craque (90–99), perna boa: no ângulo (${SEMS.length} sementes)`, `${pc1('ang', r)}% (y ≥ 1,9 m, |z| ≥ ${fmt(ANG_Z)} m, dentro do gol) · ep ${ep('ang')} ponto`, '≥ 25% (main: 9%)', r.n >= nMin && r.ang / r.n >= 0.25);
+  reg(`barra cheia — craque (90–99), perna boa: por cima do travessão (${SEMS.length} sementes)`, `${pc1('cima', r)}% · ep ${ep('cima')} ponto`, '≤ 25% (main: 1%)', r.n >= nMin && r.cima / r.n <= 0.25);
   // informativo (o que o pedido não fixa), com a main ao lado (a mesma conta: `--js` na pasta da main)
   const forte = barraCheia(SEM, 480, s => ({ ...craque(s), mod: false }), 'boa');
   linhas.push(['barra cheia — craque, perna boa, só o chute forte (informativo)', txtCheia(forte), 'main: ≥ 1,9 m 29% · ângulo 9% · por cima 2% · trave ou travessão 18%', 'INFO']);
@@ -361,7 +416,9 @@ function semErro(fn) {
   const gkBom = barraCheia(7700, 480, populacao(80), 'boa', 'treino');
   linhas.push(['barra cheia — bom finalizador, perna boa, COM o goleiro do treino (informativo)', txtGoleiro(gkBom), 'main: gols 42% · defesas 23% · fora 35% · trave ou travessão 15%', 'INFO']);
   const gkReal = barraCheia(SEM, 480, craque, 'boa', 'partida');
-  linhas.push(['barra cheia — craque, perna boa, COM o goleiro REALISTA da partida (informativo)', txtGoleiro(gkReal), 'main: gols 72% · defesas 10% · fora 18% · trave ou travessão 15%', 'INFO']);
+  // (main × C2 na grade de 3.240 chutes contra o realista posicionado, sonda-rev do C2, 28/10: 69,5 → 67,7% de gols, o
+  // analógico solto igual, 66,1%, e no canto 71,3 → 68,5%; a versão anterior, ad44206f, com o solto subindo, 65,4%)
+  linhas.push(['barra cheia — craque, perna boa, COM o goleiro REALISTA da partida (informativo)', txtGoleiro(gkReal), 'main: gols 72% · defesas 10% · fora 18% · trave ou travessão 15% (grade de 3.240: main 69,5% → C2 67,7%; solto igual, no canto 71,3 → 68,5%)', 'INFO']);
 }
 
 console.log(tabelaTexto(linhas));

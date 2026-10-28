@@ -776,12 +776,17 @@ function chute(m, j, pe, p, erroMult) {
     const entre = (gk.x - b.p.x) * lado > 1 && MD.hypot(gk.x - b.p.x, gk.z - b.p.z) < 14;
     if (fora > ACOES.cavadinha.goleiroFora && entre) return cavadinha(m, j, pe, p, erroMult, gx);
   }
-  // a barra cheia (C2): só na bola rolando — o pênalti e o tiro livre com barreira ficam na mira de antes
-  const cheia = miraCheia(p.forca) && !p.penalti && !p.barreira && (gx - b.p.x) * lado > 0.5;
   // mira: o analógico escolhe o canto; sem analógico, o lado mais longe do goleiro
   let zMira;
   const mr = mira(j);
-  if (mr && mr.mag > 0.3) {
+  const mirado = !!(mr && mr.mag > 0.3);
+  // a barra cheia (C2): só na bola rolando — o pênalti e o tiro livre com barreira ficam na mira de antes — e só no chute
+  // MIRADO (o analógico apontado, o mesmo critério que escolhe o canto acima). Decisão do dono (28/10: "só o chute mirado
+  // sobe"): sem mirar, o jogo escolhe o lado longe do goleiro e a barra cheia fica na altura de antes, bit a bit (y, z e a
+  // saída); contra o goleiro realista a mira alta com o analógico solto fazia 6,9 pontos a menos de gol (grade de 3.240
+  // chutes: a bola sai mais por cima e no travessão), e no canto 2,7 — o dono quer o ângulo só quando a pessoa pede
+  const cheia = mirado && miraCheia(p.forca) && !p.penalti && !p.barreira && (gx - b.p.x) * lado > 0.5;
+  if (mirado) {
     zMira = zPeloAnalogico(b, gx, lado, meio, mr, cheia ? zMaxMiraChute(p.forca) : undefined);
   } else {
     const gz = gk ? gk.z : 0;
@@ -791,7 +796,7 @@ function chute(m, j, pe, p, erroMult) {
   // mandava 1/3 dos pênaltis para fora com qualquer analógico; a ±2,75 (o canto da IA, que bate 36% mais no meio), 16%;
   // a ±2,5, ~8% (teste-botoes B11; a meta do dono é ~6%). Só o humano: a IA mira o canto dela (PARTIDA.penaltiIA)
   if (p.penalti && ehHumano(m, j)) zMira = clamp(zMira, -cfg.penaltiCanto, cfg.penaltiCanto);
-  // a barra cheia sobe a mira (C2): a mesma conta da linha da cobrança mirada (mira.js); fora dela, a curva de antes
+  // a barra cheia sobe a mira (C2): a mesma conta da linha da cobrança mirada (mira.js); fora dela (e sem mirar), a curva de antes
   const yMira = alturaMiraChute(p.forca, cheia);
   const colocado = p.mod;
   let s = lerp(cfg.v[0], cfg.v[1], p.forca) * lerp(0.86, 1.08, j.par.attr.finalizacao / 100) * velPeFraco(j, pe);

@@ -27,7 +27,7 @@ export const TEMPOS_NODE = {
   'teste-conducao-curta.mjs': 160, // C1: parte C 12 → 48 partidas em 4 processos (12 em sequência levavam ~160 s no CI); estimado
   'teste-recomeco.mjs': 7,
   'teste-passes.mjs': 5,
-  'teste-chutes.mjs': 50, // C2: + a barra cheia contra o goleiro realista da partida (~40 s aqui)
+  'teste-chutes.mjs': 90, // C2: + a barra cheia contra o goleiro realista da partida e (28/10) as metas em 9 sementes + o analógico solto bit a bit (~73 s aqui; era ~40)
   'teste-cavadinha.mjs': 107,
   'teste-goleiro.mjs': 6,
   'teste-mergulho.mjs': 35,

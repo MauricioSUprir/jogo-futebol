@@ -438,14 +438,18 @@ export const ACOES = {
   // da força `de` a mira sobe de yAlvo até `y` m NA linha do gol (o travessão fica a 2,44 m; a conta é no voo sem o gol,
   // mira.js saidaNaLinha: de perto a subida é íngreme e a altura medida 0,4 m antes da linha passava nela no travessão) e o
   // canto do analógico vai de meia-boca − zFolgaJogo (até `de`, como antes) a meia-boca − `zFolga` m; a IA chuta com ≤ 0,9
-  // e não muda (mira.js alturaMiraChute/zMaxMiraChute). Pesquisa: o canto alto é a colocação que mais converte (StatsBomb,
+  // e não muda (mira.js alturaMiraChute/zMaxMiraChute; margem estreita: a maior força da IA medida em 10 partidas IA × IA é
+  // 0,8958, a cobrança dela com 43 ticks de carga — `de` abaixo de 0,896 liga a barra cheia na IA × IA). Pesquisa: o canto alto é a colocação que mais converte (StatsBomb,
   // "The Enigma of Shot Placement": canto 50–60% × meio 12–13%; Datawrapper, 101 mil chutes do StatsBomb Open Data: "quase
   // indefensável"), e o chute alto é menos preciso que o baixo (Hunter 2018, J Biomech, 8.466 chutes) — o erro
   // (forcaMaxErro) fica como era. Calibrado contra o goleiro do treino, que quase não premia o ângulo (logit cAlt/cLat): com
   // y 2,15 e o canto a 0,35 m da trave o craque fazia 55% → 42% de gols de 18–22 m (a bola alta e aberta sai mais); com
   // y 2,1 e 0,7 m, 55% → 54% (teste-chutes, seção "barra cheia"). Contra o goleiro realista da partida (C1, #558) a perda
-  // continua (grade de 3.240 chutes 69,6 → 65,4%; craque 18–22 m 72 → 69%): é a bola que sai por cima e no travessão, não a
-  // defesa — a troca é decisão do dono (CONTRATOS.md, C2, com as opções medidas)
+  // continuava (grade de 3.240 chutes 69,5 → 65,4%): é a bola que sai por cima e no travessão, não a defesa, e a maior parte
+  // vinha do chute com o analógico SOLTO (−6,9; no canto −2,7). Decisão do dono (28/10: "só o chute mirado sobe"): a barra
+  // cheia só sobe com o analógico apontado (acoes.js chute); solto, a curva de antes, bit a bit — a grade fica em 67,7%
+  // (solto igual à main, no canto 71,3 → 68,5%). y 2,1 / zFolga 0,7 ficam: as metas do pedido precisam da margem
+  // (CONTRATOS.md, C2)
   chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, penaltiCanto: 2.5, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18,
     cheia: { de: 0.9, y: 2.1, zFolgaJogo: 0.5, zFolga: 0.7 } },
   // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado). A da IA sai sozinha com o
