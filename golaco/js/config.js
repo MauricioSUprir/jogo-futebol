@@ -441,9 +441,11 @@ export const ACOES = {
   // e não muda (mira.js alturaMiraChute/zMaxMiraChute). Pesquisa: o canto alto é a colocação que mais converte (StatsBomb,
   // "The Enigma of Shot Placement": canto 50–60% × meio 12–13%; Datawrapper, 101 mil chutes do StatsBomb Open Data: "quase
   // indefensável"), e o chute alto é menos preciso que o baixo (Hunter 2018, J Biomech, 8.466 chutes) — o erro
-  // (forcaMaxErro) fica como era. Calibrado contra o goleiro de hoje, que quase não premia o ângulo (logit cAlt/cLat): com
+  // (forcaMaxErro) fica como era. Calibrado contra o goleiro do treino, que quase não premia o ângulo (logit cAlt/cLat): com
   // y 2,15 e o canto a 0,35 m da trave o craque fazia 55% → 42% de gols de 18–22 m (a bola alta e aberta sai mais); com
-  // y 2,1 e 0,7 m, 55% → 54% (teste-chutes, seção "barra cheia"; a troca é decisão do dono — CONTRATOS.md, C2)
+  // y 2,1 e 0,7 m, 55% → 54% (teste-chutes, seção "barra cheia"). Contra o goleiro realista da partida (C1, #558) a perda
+  // continua (grade de 3.240 chutes 69,6 → 65,4%; craque 18–22 m 72 → 69%): é a bola que sai por cima e no travessão, não a
+  // defesa — a troca é decisão do dono (CONTRATOS.md, C2, com as opções medidas)
   chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, penaltiCanto: 2.5, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18,
     cheia: { de: 0.9, y: 2.1, zFolgaJogo: 0.5, zFolga: 0.7 } },
   // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado). A da IA sai sozinha com o

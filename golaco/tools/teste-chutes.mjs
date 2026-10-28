@@ -20,6 +20,10 @@ const JS = iJs > 0 ? path.resolve(process.argv[iJs + 1]) : path.resolve(path.dir
 const imp = f => import(pathToFileURL(path.join(JS, f)).href);
 const { criarMundo, passo, jogadorPorId } = await imp('sim.js');
 const { BOTAO, CAMPO, ACOES, BOLA } = await imp('config.js');
+const P = await imp('partida.js');
+const { assumirControle } = await imp('acoes.js');
+const { parametros } = await imp('jogador.js');
+const { criarRng } = await imp('rng.js');
 
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
 let falhas = 0;
@@ -185,22 +189,89 @@ const dentroGol = c => Math.abs(c.z) < MEIO - R && c.y < ALT - R;
 const noAngulo = c => dentroGol(c) && c.y >= ANG_Y && Math.abs(c.z) >= ANG_Z;
 const porCima = c => c.y > ALT + R;
 const GOLEIRO_LINHA = { x: GX - 1.2, z: 0 };
+const GK_ATTR = { reflexo: 75, posicionamento: 74, mergulho: 75 };
+// O goleiro REALISTA (C1, #558: goleiro.js chanceReal, a defesa pela folga física; só na partida — o mundo de treino do
+// chute() acima defende pela logística de antes, GOLEIRO.logit): uma partida de verdade com a bola rolando (o 1º tempo de
+// uma IA × IA, semente 5), os outros 20 longe da jogada, o atacante e o goleiro com os atributos do chute() (jogador.js
+// parametros). O goleiro começa na linha e tem 1 s com o atacante parado com a bola para ir à posição dele (a bissetriz, ~1,8
+// m da linha, "set"); o atacante volta ao lugar com os pés recomeçando (o pé do chute não muda) e carrega o CHUTE como no
+// chute(). Devolve {l, res, trave} (trave: bateu na trave ou no travessão antes do desfecho).
+let partidaBase = null;
+function chuteNaPartida(semente, x, z, opc) {
+  if (!partidaBase) {
+    const m0 = P.criarPartida({ semente: 5, minutosPorTempo: 60, log: true });
+    for (let i = 0; i < 900 && !(m0.partida.estado === 'jogo' && !m0.parada && i > 300); i++) P.passoPartida(m0, P.entradaDemoPartida(m0));
+    if (m0.partida.estado !== 'jogo' || m0.parada || m0.ataca[0] !== 1) throw new Error('teste-chutes: a partida base não ficou com a bola rolando');
+    partidaBase = m0;
+  }
+  const m = structuredClone(partidaBase);
+  m.rng = criarRng(semente); m.log.length = 0;
+  m.voo = null; m.naMao = null; m.posse = null; m.ultimoToque = null; m.desvio = -1;
+  if (m.regraMao) { m.regraMao.semMao = -1; m.regraMao.soltou = -1; }
+  for (const j of m.jogadores) { j.defesa = null; j.mergulho = null; j.pedido = null; j.carga = null; j.recebe = null; j.segura = null; j.saindo = false; }
+  const a = m.jogadores.find(j => j.time === 0 && j.posicao === 'ATA'), g = m.jogadores.find(j => j.time === 1 && j.posicao === 'GOL');
+  a.par = parametros(opc.attr); g.par = parametros(GK_ATTR);
+  let k = 0;
+  for (const o of m.jogadores) {
+    if (o === a || o === g) continue;
+    if (o.posicao === 'GOL') P.teleportar(o, -GX + 1.2, 0, 0);
+    else { P.teleportar(o, -20 - (k % 4) * 6, -24 + (k % 9) * 6, o.time === 0 ? 0 : Math.PI); k++; }
+  }
+  const rumo = Math.atan2(-z, GX - x);
+  const poe = () => {
+    P.teleportar(a, x, z, rumo);
+    const b = m.bola;
+    b.p.x = x + Math.cos(rumo) * 0.4; b.p.z = z + Math.sin(rumo) * 0.4; b.p.y = BOLA.raio;
+    b.v.x = b.v.y = b.v.z = 0; b.w.x = b.w.y = b.w.z = 0; b.rolando = true;
+    m.posse = a.id;
+    assumirControle(m, 0, a);
+  };
+  poe();
+  P.teleportar(g, GX - 1.2, 0, Math.PI);
+  for (let i = 0; i < 60; i++) P.passoPartida(m, { x: 0, z: 0, botoes: 0 });
+  m.log.length = 0; poe();
+  const c = opc.canto ?? 0;
+  const ax = c ? Math.cos(rumo + c) : 0, az = c ? Math.sin(rumo + c) : 0;
+  const n = Math.max(2, Math.round((opc.forca ?? 0.6) * 48) + (opc.varia ? semente % 5 : 0));
+  const bot = BOTAO.CHUTE | (opc.mod ? BOTAO.MOD : 0);
+  for (let i = 0; i < n; i++) P.passoPartida(m, { x: ax, z: az, botoes: bot });
+  let l = null;
+  for (let i = 0; i < 60 && !l; i++) { P.passoPartida(m, { x: 0, z: 0, botoes: opc.mod ? BOTAO.MOD : 0 }); l = m.log.find(e => e.acao && e.id === a.id); }
+  if (!l) return null;
+  let res = null, trave = false;
+  for (let i = 0; i < 240 && !res; i++) {
+    const ev = P.passoPartida(m, { x: 0, z: 0, botoes: 0 });
+    for (const e of ev) {
+      if (e.tipo === 'gol') res = e.time === 0 || e.time == null ? 'gol' : 'contra';
+      else if (e.tipo === 'defesa' && e.id === g.id) res = 'defesa';
+      else if (e.tipo === 'bateuCorpo' && e.id !== g.id && e.id !== a.id) res = 'bloq';
+      else if (e.tipo === 'trave' && !res) trave = true;
+    }
+    const b = m.bola.p;
+    if (!res && (b.x > GX + 1 || Math.hypot(m.bola.v.x, m.bola.v.z) < 0.5)) res = 'fora';
+    if (!res && m.naMao === g.id) res = 'defesa';
+  }
+  return { l, res: res ?? 'fora', trave };
+}
 /**
  * N chutes com a barra cheia; f(s) → {attr, mod}. Devolve as contagens (só a perna `perna`: 'boa', 'ruim' ou 'todas').
- * goleiro: com o goleiro da IA na linha (os desfechos gol/defesa/fora; o chute defendido não cruza a linha).
+ * goleiro: 'treino' = o goleiro da IA no mundo de treino, começando na linha (GOLEIRO.logit); 'partida' = o goleiro
+ * realista da partida posicionado pela IA dele (chuteNaPartida) — os desfechos gol/defesa/fora; o chute defendido não
+ * cruza a linha.
  */
 function barraCheia(semBase, N, f, perna = 'todas', goleiro = false) {
   const r = { n: 0, alto: 0, ang: 0, cima: 0, trave: 0, toque: 0, alvo: 0, gol: 0, def: 0, fora: 0, ys: [], zs: [] };
   for (let s = 1; s <= N; s++) {
     const d = 18 + (s % 5), a = (((s * 29) % 41) - 20) / DEG;
     const o = f(s);
-    const q = chute(semBase + s, GX - Math.cos(a) * d, Math.sin(a) * d, { attr: o.attr, forca: 1.0, canto: (s % 2 ? 1 : -1) * 0.75, mod: o.mod, varia: true, goleiro: goleiro ? GOLEIRO_LINHA : null });
+    const opc = { attr: o.attr, forca: 1.0, canto: (s % 2 ? 1 : -1) * 0.75, mod: o.mod, varia: true, goleiro: goleiro === 'treino' ? GOLEIRO_LINHA : null };
+    const q = goleiro === 'partida' ? chuteNaPartida(semBase + s, GX - Math.cos(a) * d, Math.sin(a) * d, opc) : chute(semBase + s, GX - Math.cos(a) * d, Math.sin(a) * d, opc);
     if (!q || (!goleiro && !q.cruza)) continue;
     const boa = q.l.pe === (o.attr.pePreferido ?? 1);
     if ((perna === 'boa' && !boa) || (perna === 'ruim' && boa)) continue;
     r.n++;
     if (q.res === 'gol') r.gol++; else if (q.res === 'defesa') r.def++; else r.fora++;
-    if (q.cruza?.trave) r.toque++; // trave ou travessão antes de cruzar a linha
+    if (q.cruza?.trave || q.trave) r.toque++; // trave ou travessão antes de cruzar a linha
     const c = q.cruza;
     if (!c) continue;
     r.ys.push(c.y); r.zs.push(Math.abs(c.z));
@@ -281,13 +352,16 @@ function semErro(fn) {
   linhas.push(['barra cheia — bom finalizador (80–89), perna boa (informativo)', txtCheia(bom), 'main: ≥ 1,9 m 29% · ângulo 10% · por cima 3% · trave ou travessão 15%', 'INFO']);
   const ruim = barraCheia(SEM, 480, craque, 'ruim');
   linhas.push(['barra cheia — craque, perna ruim (informativo)', txtCheia(ruim), 'main: ≥ 1,9 m 26% · ângulo 10% · por cima 3% · trave ou travessão 15%', 'INFO']);
-  // com o goleiro (revisão do C2): o goleiro de hoje quase não premia o ângulo (GOLEIRO.logit cAlt −0,219/m, cLat
-  // −1,15/m) e a bola alta e aberta sai mais — a barra cheia não pode fazer bem menos gols que antes sem o dono decidir
-  // (CONTRATOS.md, C2: as opções com os números)
-  const gk = barraCheia(SEM, 480, craque, 'boa', true);
-  linhas.push(['barra cheia — craque, perna boa, COM o goleiro da IA na linha (informativo)', txtGoleiro(gk), 'main: gols 55% · defesas 18% · fora 27% · trave ou travessão 16%', 'INFO']);
-  const gkBom = barraCheia(7700, 480, populacao(80), 'boa', true);
-  linhas.push(['barra cheia — bom finalizador, perna boa, COM o goleiro (informativo)', txtGoleiro(gkBom), 'main: gols 42% · defesas 23% · fora 35% · trave ou travessão 15%', 'INFO']);
+  // com o goleiro (revisão do C2): a barra cheia não pode fazer bem menos gols que antes sem o dono decidir (CONTRATOS.md, C2:
+  // as opções com os números). Dois goleiros: o do mundo de treino (a logística de antes, GOLEIRO.logit: quase não premia o
+  // ângulo) e o REALISTA da partida (C1, #558; posicionado pela IA dele). Com os dois a diferença é a bola que sai (por cima
+  // e no travessão), não a defesa: o realista deixa entrar ~95% das bolas no canto a meia altura e ~97% no ângulo
+  const gk = barraCheia(SEM, 480, craque, 'boa', 'treino');
+  linhas.push(['barra cheia — craque, perna boa, COM o goleiro do treino na linha (informativo)', txtGoleiro(gk), 'main: gols 55% · defesas 18% · fora 27% · trave ou travessão 16%', 'INFO']);
+  const gkBom = barraCheia(7700, 480, populacao(80), 'boa', 'treino');
+  linhas.push(['barra cheia — bom finalizador, perna boa, COM o goleiro do treino (informativo)', txtGoleiro(gkBom), 'main: gols 42% · defesas 23% · fora 35% · trave ou travessão 15%', 'INFO']);
+  const gkReal = barraCheia(SEM, 480, craque, 'boa', 'partida');
+  linhas.push(['barra cheia — craque, perna boa, COM o goleiro REALISTA da partida (informativo)', txtGoleiro(gkReal), 'main: gols 72% · defesas 10% · fora 18% · trave ou travessão 15%', 'INFO']);
 }
 
 console.log(tabelaTexto(linhas));

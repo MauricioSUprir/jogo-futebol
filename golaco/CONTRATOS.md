@@ -2503,9 +2503,9 @@ subia só até `yAlvo[1]` 1,7 m, medida 0,4 m antes da linha, e o canto do anal�
   cima (17% → 42% para fora; B11 do teste-botoes segurando 50 ticks, 180 cobranças). A cavadinha não muda.
 - **O erro não muda**: o do chute do jogo (finalização, distância, perna, `forcaMaxErro` ×1,15, colocado ×0,6) por cima da
   mira.
-- **A troca com o goleiro (DECISÃO DO DONO PENDENTE)**: o goleiro de hoje quase não premia o ângulo (`GOLEIRO.logit` cAlt
-  −0,219/m, cLat −1,15/m: a bola no ângulo é defendida ~como a de meia altura) e a bola alta e aberta sai mais. Toda mira
-  mais alta faz um pouco menos gols contra ele. Medido (craque 90–99, perna boa, metade forte e metade colocado, 18–22 m,
+- **A troca com o goleiro (DECISÃO DO DONO PENDENTE)**: o goleiro do treino (a logística de antes, `GOLEIRO.logit` cAlt
+  −0,219/m, cLat −1,15/m; até o C1 era também o da partida) quase não premia o ângulo (a bola no ângulo é defendida ~como a de
+  meia altura) e a bola alta e aberta sai mais. Toda mira mais alta faz um pouco menos gols contra ele. Medido (craque 90–99, perna boa, metade forte e metade colocado, 18–22 m,
   analógico no canto, goleiro da IA na linha; 480 sementes 7100 + 480 sementes 13100) e na grade larga (finalização
   65/80/95, 6–26 m, até 40°, analógico solto e no canto, forte e colocado, 3.240 chutes):
 
@@ -2519,8 +2519,48 @@ subia só até `yAlvo[1]` 1,7 m, medida 0,4 m antes da linha, e o canto do anal�
 
   O padrão passa as três metas do pedido com a menor perda medida (−1 ponto na amostra do teste, o bom finalizador 42% →
   41%; −4 na grade larga, quase toda de 15–20 m); 2,0/0,6 perde menos na grade larga (−2), mas só 61% passam a ≥ 1,9 m.
-  Não perder gol nenhum só sem subir (a main) ou com o goleiro premiando o ângulo (StatsBomb: o canto alto é a colocação
-  que mais converte) — isso é do C1 (goleiro realista), e o C2 se recalibra em cima dele.
+  A hipótese era que o goleiro realista do C1 (premiando o ângulo) desfaria a perda.
+- **Remedido sobre o goleiro realista (28/10; main 46dd59ab, com o C1 #558)**: o goleiro realista (`goleiro.js chanceReal`,
+  só na partida) NÃO desfaz a perda. A sonda (a mesma grade de 3.240 chutes e as populações do teste, 18–22 m, perna boa;
+  pares main × C2 com as mesmas sementes) contra três goleiros: o do treino (começa na linha; no chute está a 1,8 m dela,
+  andando a ~1,1 m/s), o realista FIXO na linha (uma partida de verdade com a bola rolando, os outros 20 longe) e o realista
+  POSICIONADO pela IA dele (1 s para ir à bissetriz, ~1,8 m da linha, "set" com o chute armado — como no jogo):
+
+  | goleiro | grade main → C2 | craque 7100 | craque 13100 | bom 7700 |
+  |---|---|---|---|---|
+  | treino (logística) | 64,4 → 60,6% (−3,8) | 55,2 → 53,9 | 54,6 → 53,3 | 41,7 → 40,8 |
+  | realista fixo na linha | 64,9 → 60,8% (−4,1) | 61,4 → 61,4 | 62,9 → 60,4 | 50,8 → 50,0 |
+  | realista posicionado | 69,6 → 65,4% (−4,2) | 71,7 → 69,2 | 72,5 → 65,0 | 58,8 → 51,7 |
+
+  Onde (realista posicionado, grade): 6–10 m −1,7; 10–15 m −2,6; 15–20 m −7,0; 20–26 m −4,7; forte −5,8 × colocado −2,5;
+  analógico solto −6,9 × no canto −2,8. **Por quê**: não é a defesa, é a bola que sai. Onde a bola cruza a linha (prevista no
+  chute, sem o goleiro): dentro da moldura 75,5 → 67,9%, por cima 3,1 → 10,6%, trave/travessão 5,2 → 9,7% (só ~1/3 entra),
+  fora de lado 13,9 → 9,0%. E não há o que ganhar subindo: o realista posicionado deixa entrar 95,6% das bolas no canto a
+  meia altura (main) e 97,3% das do ângulo (C2) — o chute com a barra cheia (~28–33 m/s) no canto já é quase indefensável a
+  meia altura; a altura só pesa no meio do gol (alta × meia no meio: 88 × 78% de gols no C2). Com o goleiro defendendo pouco,
+  vale mais a bola no alvo — onde a main é melhor.
+
+  As opções (as 3 metas exatas: craque, perna boa, 241 chutes, sem goleiro; os gols contra o realista posicionado):
+
+  | mira da barra cheia | ≥ 1,9 m | ângulo | por cima | grade | craque 7100 / 13100 | bom |
+  |---|---|---|---|---|---|---|
+  | main | 22,0% | 9,1% | 1,2% | 69,6% | 71,7 / 72,5 | 58,8 |
+  | **y 2,1, zFolga 0,7 (o padrão)** | **73,4%** | **26,1%** | **8,3%** | **65,4% (−4,2)** | 69,2 / 65,0 | 51,7 |
+  | y 2,1, zFolga 0,75 | 73,4% | 25,7% | 8,3% | 65,7% (−3,9) | 70,8 / 65,4 | 51,7 |
+  | y 2,08, zFolga 0,7 | 70,5% | 25,3% | 7,5% | 66,1% (−3,5) | 70,8 / 65,4 | 51,7 |
+  | y 2,07, zFolga 0,7 | 70,1% | 26,1% | 7,5% | 66,6% (−3,0) | 71,3 / 65,4 | 52,1 |
+  | padrão + analógico solto na curva de antes | 73,4% | 26,1% | 8,3% | 67,7% (−1,9) | 69,2 / 65,0 | 51,7 |
+  | y 2,08 + analógico solto na curva de antes | 70,5% | 25,3% | 7,5% | 68,2% (−1,4) | 70,8 / 65,4 | 51,7 |
+  | y 2,07 + analógico solto na curva de antes | 70,1% | 26,1% | 7,5% | 68,5% (−1,1) | — | — |
+
+  Reprovam uma meta: (2,08, 0,75) ângulo 24,1%; (2,09, 0,75) 24,9%; (2,1, 0,8) 24,9%; (2,1, 0,85) 22,8%; (2,06, 0,75) ≥ 1,9 m
+  69%. **Nenhuma opção que passa as 3 metas fica sem recuo**: "≥ 1,9 m em ≥ 70%" pede a mira a ≥ ~2,07 m na linha e, com o erro
+  do chute (σ ≈ 1,2–2° por eixo no craque, Hunter 2018: o chute alto espalha mais), ~1/5 das bolas vai ao travessão ou acima
+  dele. A menor perda mexendo só em y/zFolga é 2,07–2,08 (−3,0 a −3,5), com a meta "≥ 1,9 m" a 1–2 chutes de reprovar; a
+  maior alavanca é o chute com o analógico SOLTO (sem mirar: o jogo escolhe o lado longe do goleiro) ficar na curva de antes —
+  −1,1 a −1,9 na grade, as metas (com o analógico no canto) iguais —, mas aí a barra cheia sem mirar não sobe, o que é decisão
+  de produto. A decisão (aceitar a perda de ~4 pontos com o padrão, a variante com menos perda, ou outra) é do dono; o padrão
+  fica até lá. Sonda: `sonda-gk.mjs` (scratchpad do C2); no teste a linha do goleiro realista posicionado é informativa.
 - **Pesquisa**: o canto alto é a colocação que mais converte (StatsBomb, "The Enigma of Shot Placement": canto 50–60% × meio
   12–13%; Datawrapper sobre 101 mil chutes do StatsBomb Open Data: a bola no ângulo é "quase indefensável", e o jogador
   costuma bater baixo, o mais seguro); o chute alto espalha mais que o baixo (Hunter et al. 2018, J Biomech, 8.466 chutes) —
@@ -2533,7 +2573,9 @@ subia só até `yAlvo[1]` 1,7 m, medida 0,4 m antes da linha, e o canto do anal�
   3,7%, 1ª versão 6,7%, agora 0,2%). Com o sorteio, o craque com a perna boa, metade forte e metade colocado (241 chutes;
   antes a "perna boa" era só o colocado — o pePreferido andava junto com o colocado): ≥ 1,9 m em ≥ 70%, no ângulo — y ≥ 1,9
   m e |z| ≥ meia-boca − 0,9 m, dentro do gol — em ≥ 25% e por cima do travessão em ≤ 25%; informativos, com a main ao lado:
-  só o forte, o bom finalizador, a perna ruim e os gols, defesas, fora e trave/travessão COM o goleiro.
+  só o forte, o bom finalizador, a perna ruim e os gols, defesas, fora e trave/travessão COM o goleiro — o do treino na
+  linha (craque e bom) e o REALISTA da partida posicionado pela IA dele (craque; uma partida de verdade com a bola rolando e
+  os outros 20 longe, `chuteNaPartida`).
 
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores
