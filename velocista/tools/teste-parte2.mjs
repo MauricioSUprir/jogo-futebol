@@ -16,7 +16,7 @@ let falhas = 0;
 const ok = (c, msg) => { console.log(`${c ? 'OK ' : 'ERRO'} ${msg}`); if (!c) falhas++; };
 
 // ---- 1. a ordem
-const ids = mis.MISSOES.map((m) => m.id), pos = (id) => ids.indexOf(id), P2 = mis.MISSOES.slice(pos('p2-exames'));
+const ids = mis.MISSOES.map((m) => m.id), pos = (id) => ids.indexOf(id), P2 = mis.MISSOES.slice(pos('p2-exames'), pos('p2-fim') + 1);
 ok(pos('p2-exames') === pos('nucleo') + 1, 'a Parte 2 começa logo depois do fim da Parte 1 (o Núcleo)');
 ok(P2.length >= 20, `${P2.length} passos na Parte 2`);
 const ordem = ['p2-exames', 'p2-caixinha', 'p2-limite', 'p2-tunel', 'p2-mundo', 'p2-joe', 'p2-iris', 'p2-assalto', 'p2-cisco', 'p2-esferas', 'cap-nevasca', 'p2-mae', 'p2-desfazer', 'p2-volta',
@@ -24,7 +24,7 @@ const ordem = ['p2-exames', 'p2-caixinha', 'p2-limite', 'p2-tunel', 'p2-mundo', 
 ok(ordem.every((id, k) => pos(id) >= 0 && (!k || pos(ordem[k - 1]) === pos(id) - 1)), 'Atos 5 e 6 na ordem: ' + ordem.join(' → '));
 const ordem2 = ['p2-lista', 'p2-iron', 'p2-august', 'p2-anel', 'p2-pedido', 'p2-gangue', 'p2-adaga', 'p2-sempoderes', 'p2-esferas2', 'p2-grace', 'cap-cigarra', 'p2-casamento',
   'p2-subestacoes', 'p2-mural', 'p2-treino', 'cap-godspeed', 'p2-grace-acorda', 'p2-fim'];
-ok(ordem2.every((id, k) => pos(id) >= 0 && (!k || pos(ordem2[k - 1]) === pos(id) - 1)) && ids.at(-1) === 'p2-fim', 'Atos 7 e 8 na ordem, e a história termina no jantar: ' + ordem2.join(' → '));
+ok(ordem2.every((id, k) => pos(id) >= 0 && (!k || pos(ordem2[k - 1]) === pos(id) - 1)) && (ids[pos('p2-fim') + 1] ?? 'p3-convite').startsWith('p3-'), 'Atos 7 e 8 na ordem, e a Parte 2 termina no jantar (depois, a Parte 3): ' + ordem2.join(' → '));
 // ---- sem poderes: a adaga trancou o raio (um teto de velocidade de gente comum e sem energia) e a volta pela metade
 const sp = mis.MISSOES[pos('p2-sempoderes')];
 ok(sp.teto > 4 && sp.teto <= 8 && sp.semEnergia && sp.tempo && M.pontoMundo(sp.ponto), `sem poderes: no máximo ${sp.teto} m/s, sem energia, com cronômetro`);
@@ -59,7 +59,7 @@ ok(P2.filter((m) => m.tempo).every((m) => H.RADIO[`falhou-${m.id}`]?.length), 'c
 const todas = [...Object.values(H.CENAS).flat(), ...Object.values(H.RADIO).flat(), ...Object.values(H.MISSOES_FALAS).flatMap((v) => [...(v.abre || []), ...(v.fecha || [])])];
 ok(todas.every((f) => f.cartao || (H.PERSONAGENS[f.quem] && f.texto.length < 160)), `${todas.length} falas, todas com personagem e curtas`);
 ok(H.CENAS['depois-nucleo'].at(-1).titulo === 'Fim da Parte 1', 'a Parte 1 termina com "Fim da Parte 1"');
-ok(H.CENAS['depois-p2-fim'].at(-1).titulo === 'Fim da Parte 2' && !Object.values(H.CENAS).flat().some((f) => f.cartao && f.rotulo === 'Continua'), 'a Parte 2 termina com "Fim da Parte 2" (sem "Continua")');
+ok(H.CENAS['depois-p2-fim'].at(-1).titulo === 'Fim da Parte 2' && !P2.flatMap((m) => H.CENAS[`depois-${m.id}`] || []).some((f) => f.cartao && f.rotulo === 'Continua'), 'a Parte 2 termina com "Fim da Parte 2" (sem "Continua")');
 ok(H.RADIO['armadura-godspeed']?.length && ['derrotado-godspeed'].every((k) => H.CENAS[k].some((f) => f.acao === 'negroLeva')), 'o Godspeed tem armadura, e no fim o Corredor Negro volta');
 // ---- 5. os vilões novos
 const V = fs.readFileSync(path.join(AQUI, '../js/viloes.js'), 'utf8');

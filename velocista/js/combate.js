@@ -247,7 +247,7 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
   }
 
   // ---------- passo ----------
-  function passo(dt, P) {
+  function passo(dt, P, { dtMundo = dt } = {}) {
     H.tempo += dt;
     H.tremor = Math.max(0, H.tremor - dt * 3); H.dano = Math.max(0, H.dano - dt * 2.5);
     let perto = false;
@@ -343,15 +343,16 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
       }
     }
 
-    // bandidos
+    // bandidos (no tempo lento do traje novo eles andam devagar: dtMundo; o herói segue no tempo dele)
+    const dtB = dtMundo;
     let atacando = bandidos.filter((e) => e.estado === 'prepara' || e.estado === 'golpe').length;
     for (let i = bandidos.length - 1; i >= 0; i--) {
       const e = bandidos[i];
-      e.t += dt;
-      if (e.brilho > 0) { e.brilho -= dt; if (e.brilho <= 0) e.b.moletom.emissive.setRGB(0, 0, 0); }
+      e.t += dtB;
+      if (e.brilho > 0) { e.brilho -= dtB; if (e.brilho <= 0) e.b.moletom.emissive.setRGB(0, 0, 0); }
       const dx = P.x - e.x, dz = P.z - e.z, d = Math.hypot(dx, dz); e.dist = d;
       if (d < 30 && emPe(e)) perto = true;
-      if (e.sair !== undefined) { e.sair -= dt; if (e.sair <= 0) { cena.remove(e.b.g); e.b.moletom.dispose(); bandidos.splice(i, 1); continue; } }
+      if (e.sair !== undefined) { e.sair -= dtB; if (e.sair <= 0) { cena.remove(e.b.g); e.b.moletom.dispose(); bandidos.splice(i, 1); continue; } }
       const alturaOk = Math.abs(P.y - e.y) < 2.5;
       switch (e.estado) {
         case 'ronda': e.vx = e.vz = 0; if (d < 28 && alturaOk) { e.estado = 'vem'; e.t = 0; } break;
@@ -362,8 +363,8 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
           const vmax = d > 8 ? 5.5 : 3.2;
           let vx = gd > 0.3 ? (gx / gd) * Math.min(vmax, gd * 3) : 0, vz = gd > 0.3 ? (gz / gd) * Math.min(vmax, gd * 3) : 0;
           // preso atrás de um carro ou de um poste: contorna por um lado por um instante
-          if (e.desvio) { const c = Math.cos(1.3 * e.desvio), s = Math.sin(1.3 * e.desvio); [vx, vz] = [vx * c - vz * s, vx * s + vz * c]; e.desvioT -= dt; if (e.desvioT <= 0) e.desvio = 0; }
-          e.vx = lerp(e.vx, vx, Math.min(1, dt * 6)); e.vz = lerp(e.vz, vz, Math.min(1, dt * 6));
+          if (e.desvio) { const c = Math.cos(1.3 * e.desvio), s = Math.sin(1.3 * e.desvio); [vx, vz] = [vx * c - vz * s, vx * s + vz * c]; e.desvioT -= dtB; if (e.desvioT <= 0) e.desvio = 0; }
+          e.vx = lerp(e.vx, vx, Math.min(1, dtB * 6)); e.vz = lerp(e.vz, vz, Math.min(1, dtB * 6));
           if (d < 1.9 && alturaOk) { e.estado = 'guarda'; e.t = 0; e.espera = rnd(0.35, 1.3); }
           if (d > 45 || !alturaOk && d > 10) { e.estado = 'ronda'; }
           break;
@@ -378,13 +379,13 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
           if (e.t > 0.06 && !e.bateu) {
             e.bateu = true;
             const atacado = H.acao && (H.acao.tipo !== 'soco' || H.acao.t < H.acao.dash);     // durante especiais e avanços o herói é rápido demais
-            if (d < 2.1 && alturaOk && !atacado) { P.energia = Math.max(0, P.energia - DANO_HEROI); H.dano = 1; H.tremor = Math.max(H.tremor, 0.3); P.vx += (dx / (d || 1)) * 4; P.vz += (dz / (d || 1)) * 4; H.sofridos++; eventos.push({ tipo: 'dano' }); }
+            if (d < 2.1 && alturaOk && !atacado) { P.energia = Math.max(0, P.energia - DANO_HEROI * (P.protecao ?? 1)); H.dano = 1; H.tremor = Math.max(H.tremor, 0.3); P.vx += (dx / (d || 1)) * 4; P.vz += (dz / (d || 1)) * 4; H.sofridos++; eventos.push({ tipo: 'dano' }); }
           }
           if (e.t > 0.3) { e.estado = 'guarda'; e.t = 0; e.espera = rnd(0.9, 2.2); e.bateu = false; e.b.moletom.emissive.setRGB(0, 0, 0); }
           break;
-        case 'atordoado': e.vx *= Math.exp(-5 * dt); e.vz *= Math.exp(-5 * dt); if (e.t > 0.45) { e.estado = 'guarda'; e.t = 0; e.espera = rnd(0.5, 1.2); } break;
+        case 'atordoado': e.vx *= Math.exp(-5 * dtB); e.vz *= Math.exp(-5 * dtB); if (e.t > 0.45) { e.estado = 'guarda'; e.t = 0; e.espera = rnd(0.5, 1.2); } break;
         case 'voando':
-          e.vy -= 22 * dt; e.y += e.vy * dt;
+          e.vy -= 22 * dtB; e.y += e.vy * dtB;
           if (e.y <= 0 && e.vy < 0) { e.y = 0; if (Math.abs(e.vy) > 6) { e.vy = -e.vy * 0.25; e.vx *= 0.6; e.vz *= 0.6; } else { e.estado = 'caido'; e.t = 0; e.vx = e.vz = 0; } }
           break;
         case 'caido': e.vx = e.vz = 0; break;
@@ -392,11 +393,11 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
         default: break;
       }
       const x0 = e.x, z0 = e.z;
-      if (e.estado !== 'preso') { e.x += e.vx * dt; e.z += e.vz * dt; }
+      if (e.estado !== 'preso') { e.x += e.vx * dtB; e.z += e.vz * dtB; }
       if (colide && e.estado !== 'preso') { const r = colide(e.x, e.z, e.y); e.x = r.x; e.z = r.z; }
       if (e.estado === 'vem' && !e.desvio) {
-        const quer = Math.hypot(e.vx, e.vz) * dt, andou = Math.hypot(e.x - x0, e.z - z0);
-        e.travado = quer > 0.01 && andou < quer * 0.3 ? (e.travado || 0) + dt : 0;
+        const quer = Math.hypot(e.vx, e.vz) * dtB, andou = Math.hypot(e.x - x0, e.z - z0);
+        e.travado = quer > 0.01 && andou < quer * 0.3 ? (e.travado || 0) + dtB : 0;
         if (e.travado > 0.25) { e.desvio = Math.random() < 0.5 ? -1 : 1; e.desvioT = 0.9; e.travado = 0; }
       }
       if (chao && e.estado === 'caido') e.y = chao(e.x, e.z, e.y + 1);
@@ -405,9 +406,9 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
       let alvoH = e.h;
       if (e.estado === 'vem' || e.estado === 'guarda' || e.estado === 'prepara' || e.estado === 'golpe' || e.estado === 'ronda' && d < 40) alvoH = Math.atan2(dx, dz);
       else if (v > 0.5 && e.estado !== 'voando') alvoH = Math.atan2(e.vx, e.vz);
-      if (e.estado !== 'voando' && e.estado !== 'caido' && e.estado !== 'preso') e.h += ang(alvoH - e.h) * Math.min(1, dt * 10);
+      if (e.estado !== 'voando' && e.estado !== 'caido' && e.estado !== 'preso') e.h += ang(alvoH - e.h) * Math.min(1, dtB * 10);
       e.b.g.position.set(e.x, e.y, e.z); e.b.g.rotation.y = e.h;
-      poseBandido(e.b, e, dt);
+      poseBandido(e.b, e, dtB);
     }
     H.luta = lerp(H.luta, perto || H.acao ? 1 : 0, Math.min(1, dt * 5));
     fx.atualizar(dt);

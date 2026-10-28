@@ -11,6 +11,9 @@
 // cidade no crepúsculo, em outras cores), fraco? (multiplica a velocidade máxima: o raio se apagando), alvoSala? (uma sala do
 // S.T.A.R. Labs: o guia leva até ela; ctx.sala diz onde o herói está), tipo 'tunel' (ficar 5 s acima de 180 km/h),
 // teto? (velocidade máxima em m/s: sem poderes) e semEnergia? (a energia fica em zero: nem vibrar nem golpe especial).
+// Parte 3: tipo 'bateria' (ficar 8 s acima de 400 km/h: ctx.bateria), poderes? (o tempo lento já funciona neste passo; em todo
+// passo depois do 'p3-veste' o herói usa o traje novo e tem os poderes dele — jogo.js trajeNovo/tempoLento), semEquipe? (quem da
+// equipe não está no Cortex neste passo: ['caitlin', 'cisco']).
 // Depois do último passo a cidade fica livre (crimes, esferas e os capítulos para jogar de novo na pausa). Quem terminou
 // uma versão da história com menos passos volta no primeiro passo novo (o save guarda o último passo que existia).
 export const MISSOES = [
@@ -103,6 +106,25 @@ export const MISSOES = [
   { id: 'cap-godspeed', titulo: 'O deus da velocidade', texto: 'Encontre o Godspeed e derrote-o', capitulo: 'godspeed' },
   { id: 'p2-grace-acorda', titulo: 'Acordar', texto: 'A Caitlin precisa de você na sala médica do S.T.A.R. Labs', alvoSala: 'medica', checar: (c) => c.sala === 'medica' },
   { id: 'p2-fim', titulo: 'Em família', texto: 'Jantar na casa dos West. Todo mundo vai', ponto: 'jantar', aliados: { joe: 'jantar', iris: 'cozinha' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
+  // ===== PARTE 3 — A força do raio (dono, 28/10: "faça mais partes da história, introduzindo aquele traje ... quero a
+  // Caitlin e o Cisco introduzindo e mostrando o traje pra ele, e uma história maior") =====
+  // Ato 9 — O traje novo: a Caitlin e o Cisco mostram o traje na sala dos trajes; ele veste e ganha os poderes novos
+  { id: 'p3-convite', titulo: 'Uma surpresa', texto: 'A Caitlin e o Cisco esperam você na sala dos trajes do S.T.A.R. Labs', cenaAbre: 'p3-abertura', alvoSala: 'trajes', aliados: { caitlin: 'trajesCaitlin', cisco: 'trajesCisco' }, semEquipe: ['caitlin', 'cisco'], checar: (c) => c.sala === 'trajes' },
+  { id: 'p3-veste', titulo: 'O traje novo', texto: 'Suba no pedestal da vitrine e vista o traje novo', ponto: 'vitrine', aliados: { caitlin: 'trajesCaitlin', cisco: 'trajesCisco' }, semEquipe: ['caitlin', 'cisco'], raio: 2.2, checar: (c) => c.perto },
+  { id: 'p3-tempo', titulo: 'O mundo em câmera lenta', texto: 'Use o tempo lento 2 vezes (tecla T ou o botão TEMPO)', meta: 2, contador: 'lentos', poderes: true },
+  { id: 'p3-queda', titulo: 'Dois segundos de folga', texto: 'Salve uma pessoa caindo de um prédio (o tempo lento ajuda)', meta: 1, contador: 'queda', crime: 'queda' },
+  { id: 'p3-bateria', titulo: 'A bateria do raio', texto: 'Fique 8 s acima de 400 km/h: o traje recarrega a sua energia', tipo: 'bateria', checar: (c) => c.bateria >= 1 },
+  { id: 'p3-gangue', titulo: 'A armadura', texto: 'Teste a armadura do traje: derrote uma gangue', meta: 1, contador: 'gangue', crime: 'gangue' },
+  { id: 'p3-noticia', titulo: 'A notícia', texto: 'A Iris pediu para você passar na redação do Picture News. Disse que é importante', ponto: 'mesaIrisJornal', aliados: { iris: 'mesaIrisJornal' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p3-vovo', titulo: 'Vovô Joe', texto: 'Conte a novidade ao Joe, na casa dos West', ponto: 'sofaWest', aliados: { joe: 'sofaWest' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p3-devoe', titulo: 'O recado do Pensador', texto: 'O DeVoe pediu para falar com você: vá à câmara de contenção', alvoSala: 'contencao', checar: (c) => c.sala === 'contencao' },
+  { id: 'p3-batidas', titulo: 'Três batidas', texto: 'Vá à Câmara do Núcleo e escute', alvoSala: 'nucleo', checar: (c) => c.sala === 'nucleo' },
+  // Ato 10 — Nevasca: o gelo que ficou na Caitlin desde o Ponto de Ignição acorda
+  { id: 'p3-maos', titulo: 'Mãos geladas', texto: 'A Caitlin não atende. Ela está na sala médica', alvoSala: 'medica', aliados: { caitlin: 'medicaCaitlin' }, semEquipe: ['caitlin'], checar: (c) => c.sala === 'medica' },
+  { id: 'p3-rastro', titulo: 'Rastro de gelo', texto: 'Siga o rastro de gelo na praça da Prefeitura (pare em cima de cada marcador)', ponto: 'prefeitura',
+    pistas: [[-16, -16, 'Gelo no asfalto', 'em pleno verão'], [15, -20, 'Um carro congelado', 'o motorista está bem'], [1, -31, 'Uma frase no gelo', '"Me deixa ir, Barry"']], meta: 3, contador: 'pistas', semEquipe: ['caitlin'] },
+  { id: 'cap-nevasca2', titulo: 'Gelo e fogo', texto: 'Encontre a Nevasca e traga a Caitlin de volta', capitulo: 'nevasca2', semEquipe: ['caitlin'] },
+  { id: 'p3-acordo', titulo: 'Dividir o corpo', texto: 'Volte ao Cortex com a Caitlin', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
 ];
 /** os passos de uma época (os da linha do tempo alterada): o jogo põe o mundo nela enquanto o passo dura */
 export const EPOCA_DO_PASSO = (m) => m?.epoca || null;
@@ -112,7 +134,7 @@ const CHAVE_V1 = 'theflash.missoes.v1';
 // a lista da v1, para levar quem já tinha progresso ao mesmo passo
 const ORDEM_V1 = ['lab', 'velocidade', 'esferas', 'escalar', 'vibrar', 'assalto', 'gangue', 'especiais', 'portais', 'fuga', 'incendio', 'queda',
   'patrulha', 'relatorio', 'cap-reverso', 'fendas', 'tunel', 'passado', 'cap-savitar', 'cap-devoe', 'nucleo'];
-const STATS0 = { pistas: 0, fendas: 0, subestacoes: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
+const STATS0 = { lentos: 0, pistas: 0, fendas: 0, subestacoes: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
 
 export function criarMissoes(armazem) {
   let salvo = null, v1 = null;

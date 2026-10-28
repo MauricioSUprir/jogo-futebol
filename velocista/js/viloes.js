@@ -99,6 +99,7 @@ export const CAPITULOS = [
   { id: 'negro', titulo: 'Capítulo 9 — Corredor Negro', viloes: ['negro'], perseguicao: true, texto: 'Ele não tem rosto, não tem coração e não vai embora. Enfrente o Corredor Negro.' },
   { id: 'cigarra', titulo: 'Capítulo 10 — Cigarra', viloes: ['cigarra'], perseguicao: false, lugar: 'cidade', texto: 'A Cigarra está na cidade com a adaga. Encontre-a antes que ela risque mais um nome.' },
   { id: 'godspeed', titulo: 'Capítulo 11 — Godspeed', viloes: ['godspeed'], perseguicao: true, texto: 'O deus da velocidade quer o seu raio. Alcance o Godspeed.' },
+  { id: 'nevasca2', titulo: 'Capítulo 12 — Nevasca', viloes: ['nevasca'], perseguicao: false, lugar: 'cidade', texto: 'A Nevasca acordou dentro da Caitlin. Encontre-a e traga a Caitlin de volta.' },
 ];
 const DANO = { soco: 5, gancho: 9, raio: 14, ciclone: 18, sonico: 28 };
 const CHAVE = 'theflash.viloes.v1';
@@ -299,7 +300,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
   }
   function ferirHeroi(P, dano, dx, dz) {
     const k = Math.min(...C.viloes.map((v) => v.facil ?? 1));
-    P.vida = Math.max(0, P.vida - dano * k); C.semGolpe = 0;
+    P.vida = Math.max(0, P.vida - dano * k * (P.protecao ?? 1)); C.semGolpe = 0;      // (P.protecao: a armadura do traje novo)
     const dr = Math.max(...C.viloes.map((v) => v.perf.drena || 0));               // o Corredor Negro também leva a energia
     if (dr) P.energia = Math.max(0, (P.energia ?? 1) - dr * k);
     const d = Math.hypot(dx, dz) || 1; P.vx += (dx / d) * 9; P.vz += (dz / d) * 9;
@@ -434,7 +435,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     const a = v.modelo?.adereco; if (a) { a.ponta.getWorldPosition(vP); return { x: vP.x, y: vP.y, z: vP.z }; }
     return { x: v.x + Math.sin(v.h) * 0.6, y: v.y + 1.3, z: v.z + Math.cos(v.h) * 0.6 };
   }
-  function ferirSemEmpurrar(P, dano) { P.vida = Math.max(0, P.vida - dano * Math.min(...C.viloes.map((v) => v.facil ?? 1))); C.semGolpe = 0; eventos.push({ tipo: 'dano' }); }
+  function ferirSemEmpurrar(P, dano) { P.vida = Math.max(0, P.vida - dano * (P.protecao ?? 1) * Math.min(...C.viloes.map((v) => v.facil ?? 1))); C.semGolpe = 0; eventos.push({ tipo: 'dano' }); }
   /** o herói escapa: vibrando, no ar (alto) ou no golpe rápido */
   const escapa = (P, chaoY, alto = 0.9) => combate.intocavel || P.vibrando || P.y - chaoY > alto;
 

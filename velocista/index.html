@@ -100,6 +100,12 @@
   #bt-raio { bottom:max(56px,calc(env(safe-area-inset-bottom) + 34px)); }
   #bt-ciclone { bottom:max(112px,calc(env(safe-area-inset-bottom) + 90px)); }
   #bt-sonico { bottom:max(168px,calc(env(safe-area-inset-bottom) + 146px)); }
+  /* Parte 3: o tempo lento do traje novo (aparece quando a Caitlin e o Cisco ensinam) */
+  #bt-tempo { bottom:max(224px,calc(env(safe-area-inset-bottom) + 202px)); }
+  #bt-tempo.pronto { border-color:#7fd8ff; color:#bfefff; background:rgba(0,40,60,.55); box-shadow:0 0 12px rgba(127,216,255,.5); }
+  #chip-tempo.pronto { border-color:#7fd8ff; color:#bfefff; box-shadow:0 0 10px rgba(127,216,255,.35); }
+  .bloq { display:none !important; }
+  body.lento #cena { filter: saturate(.45) contrast(1.12) brightness(1.04) hue-rotate(-14deg); }
   /* no PC: os especiais como fichas acima da barra de energia */
   #chips { display:flex; gap:6px; justify-content:center; margin-bottom:5px; }
   .toque #chips { display:none; }
@@ -239,7 +245,7 @@
   <div id="fade"></div>
   <div id="coleta"></div>
   <div id="mira"></div>
-  <div id="energia"><div id="chips"><span class="chip" id="chip-raio">1 · RAIO 25%</span><span class="chip" id="chip-ciclone">2 · CICLONE 35%</span><span class="chip" id="chip-sonico">3 · SÔNICO 50%</span></div><div class="linhaEnergia"><span>Energia</span><span id="velBox"><b id="vel">0</b> km/h</span></div><div class="barra"><div class="nivel" id="nivel"></div><i class="marca" style="left:25%"></i><i class="marca" style="left:35%"></i><i class="marca" style="left:50%"></i></div></div>
+  <div id="energia"><div id="chips"><span class="chip" id="chip-raio">1 · RAIO 25%</span><span class="chip" id="chip-ciclone">2 · CICLONE 35%</span><span class="chip" id="chip-sonico">3 · SÔNICO 50%</span><span class="chip bloq" id="chip-tempo">T · TEMPO 35%</span></div><div class="linhaEnergia"><span>Energia</span><span id="velBox"><b id="vel">0</b> km/h</span></div><div class="barra"><div class="nivel" id="nivel"></div><i class="marca" style="left:25%"></i><i class="marca" style="left:35%"></i><i class="marca" style="left:50%"></i></div></div>
 </div>
 <div id="toque">
   <div id="stick"><i id="stickBola"></i></div>
@@ -251,6 +257,7 @@
   <button class="esp" id="bt-raio" type="button">RAIO<small>25%</small></button>
   <button class="esp" id="bt-ciclone" type="button">CICLONE<small>35%</small></button>
   <button class="esp" id="bt-sonico" type="button">SÔNICO<small>50%</small></button>
+  <button class="esp bloq" id="bt-tempo" type="button">TEMPO<small>35%</small></button>
 </div>
 
 <div id="telaInicio" class="tela">

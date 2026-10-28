@@ -39,7 +39,7 @@ for (const [u, v, nome, det] of pe.pistas) {
   const x = pf.x + u, z = pf.z + v, R = cid.retangulosPerto(x, z, 1);
   ok(!cid.empurrar(R, x, z, 0.45, 0.3, 1.8).bateu && cid.chaoEm(R, x, z, 1) <= cid.CALCADA + 0.01 && Math.hypot(u, v) < 40 && nome && det, `pista "${nome}" em chão livre a ${Math.hypot(u, v).toFixed(0)} m da praça`);
 }
-for (const m of mis.MISSOES.filter((k) => k.ponto && M.pontoMundo(k.ponto).interior)) {
+for (const m of mis.MISSOES.filter((k) => k.ponto && M.pontoMundo(k.ponto)?.interior)) {   // (os pontos do laboratório da Parte 3 só existem com o jogo: registrarPontosLab)
   const w = M.pontoMundo(m.ponto);
   ok(w.y === I.Y0 && Object.values(m.aliados || {}).every((p) => M.pontoMundo(p).interior === w.interior), `"${m.id}" dentro de ${I.INTERIORES[w.interior].nome}, com quem espera lá dentro também`);
 }

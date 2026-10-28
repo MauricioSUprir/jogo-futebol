@@ -64,10 +64,10 @@ export function criarEquipe(cena, { mobile = false, aniso = 2, renderer = null, 
 
   const ang = (a) => Math.atan2(Math.sin(a), Math.cos(a));
   /** a cada quadro: aparecem com o herói perto do laboratório; viram para ele dentro do Cortex; `quemFala` gesticula */
-  function atualizar(dt, P, { noCortex = false, quemFala = null, oculto = false } = {}) {
+  function atualizar(dt, P, { noCortex = false, quemFala = null, oculto = false, fora = null } = {}) {
     const perto = Math.hypot(P.x - P0.x, P.z - P0.z) < 70 && !oculto;     // (oculto: a linha do tempo alterada, ninguém no Cortex)
     for (const p of Object.values(pessoas)) {
-      p.raiz.visible = perto;
+      p.raiz.visible = perto && !fora?.includes(p.id);                       // (fora: quem está em outro lugar no passo — missoes.js semEquipe)
       if (!perto) continue;
       const alvo = noCortex ? Math.atan2(P.x - p.x, P.z - p.z) : Math.PI;
       p.h += ang(alvo - p.h) * Math.min(1, dt * 3);
