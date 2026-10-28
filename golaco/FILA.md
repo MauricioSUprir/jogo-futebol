@@ -158,7 +158,7 @@ IA × IA e o 25 (a corrida dos lances rápidos) com o dono ("Depende do dono" 9a
   - Código: `sim.js:875/983` e `cabeceio.js`, do #471.
   - Teste: teste-cabeceio D, com ≥ 1,5 duelos por partida, no CI.
   - Painel de 144: os duelos foram de 0,0 para 2,3 por partida, com 15% dos gols de cabeça.
-- **Condução da IA: bola–corpo no trote ≤ 0,59 com 12 partidas.** `teste-conducao-curta.mjs:216`, com 12 partidas por padrão desde o #481 e o CI verde. Só a nota do CLAUDE.md está velha (item 10).
+- **Condução da IA: bola–corpo no trote ≤ 0,59.** `teste-conducao-curta.mjs` parte C com 48 partidas desde 28/10 (C1, PR #558: com 12, o trote reprovava por sorteio — a main e o goleiro realista dão o mesmo em 96 partidas). A meta da CORRIDA (≤ 0,57) está em "Depende do dono" 9b.
 - **Panenka no pênalti calibrada** (acabou o "2 gols em 12, 9 fora"). Commit `af2c6c12`, no #475; `config.js:447/509`; teste-cavadinha H4 no CI. O ajuste fino que sobrou está em "Depende do dono".
 - **Regras do goleiro da 3b**: mão só dentro da área, recuo (Regra 12.2), 8 s com a bola → escanteio, PEGAR e TROCAR para o goleiro. PR #470; `regras-goleiro.js`, `partida.js:1395-1414/1510-1514`; teste-goleiro-regras G1–G9 no CI. O tiro de meta com o pé veio no #462.
 - **"A IA não corre", 1ª parte** (o ataque da IA contra a pessoa). PR #500; `config.js:1264-1267`, `ia-ataque.js:536-539`.
@@ -181,6 +181,11 @@ IA × IA e o 25 (a corrida dos lances rápidos) com o dono ("Depende do dono" 9a
    - Depois das respostas: 5.2a–c, ~26 h.
 9. **A régua de chutes do painel**: 20–30 numa partida de 2 × 4 min, que tem ~1/3 dos lances de um jogo real. Confirmar no PR do item 26.
 9a. **A corrida dos lances rápidos** (item 25, D8; `PESQUISA-CATEGORIA-D.md` §10): a IA faz 282 m/min (IA × IA) e ~250–300 contra a pessoa, contra 207 no real (a mesma conta na Metrica; p90 das janelas de 15 min, 233). Baixar ao real (a recomposição sem disparada longe da bola, como o D3 faz contra a pessoa, e os pontas sem sprint longe dela) vai contra o pedido de 10/10 ("a IA não corre para trás"). Se ele quiser: ~4 h, mexe na IA × IA.
+9b. **A meta da corrida da condução da IA** (`teste-conducao-curta` C, bola–corpo ≤ 0,57 m; medido no C1, 28/10): a main
+    está em cima dela desde o #481 (faltas com sentido + "ninguém passa da bola quase dominada", que mexeu na
+    `conducao.js`): 0,5570 → 0,5711 nas sementes 1–48 (z ≈ 3,2); hoje 0,5722 ± 0,0017 em 144 sementes (z 1,28). Com 48
+    partidas, cada mudança que embaralhe a IA × IA tem ~11–16% de chance de reprovar. Escolher: re-ancorar a meta no valor
+    depois do #481 (que o dono aprovou) ou mexer na condução para voltar a 0,557 (a condução não se mexe sem ele).
 10. **Perguntas curtas dentro dos próprios PRs:**
     - os números da partida no plano geral do pós-jogo (item 1) — feito no PR 4 (o painel "Partida", fora do TM); o dono
       decide se fica;

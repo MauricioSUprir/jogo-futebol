@@ -46,7 +46,8 @@ const LISTA = [
   ['proteção de corpo', 'teste-protecao.mjs'],
   ['condução curta e pedalada', 'teste-dribles.mjs'],
   // Pedido do dono de 12/10: "condução mais curtinha, com a bola mais no pé"
-  ['condução curta: bola no pé e toque por faixa de velocidade (humano e IA × IA)', 'teste-conducao-curta.mjs'],
+  // (C1, 28/10: a parte C com 48 partidas em 4 processos — com 12 o trote reprovava por sorteio; AMOSTRA no cabeçalho)
+  ['condução curta: bola no pé e toque por faixa de velocidade (humano e IA × IA)', 'teste-conducao-curta.mjs', [], 'padrao', 4],
   ['recomeço do treino (bola no pé, bola fora)', 'teste-recomeco.mjs'],
   // Etapa 2
   ['passes: rasteiro, enfiada, lançamento, cruzamento, primeira, tabela', 'teste-passes.mjs'],

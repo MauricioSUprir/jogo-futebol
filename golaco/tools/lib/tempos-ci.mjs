@@ -24,7 +24,7 @@ export const TEMPOS_NODE = {
   'teste-recepcao.mjs': 25,
   'teste-protecao.mjs': 11,
   'teste-dribles.mjs': 1,
-  'teste-conducao-curta.mjs': 44,
+  'teste-conducao-curta.mjs': 160, // C1: parte C 12 → 48 partidas em 4 processos (12 em sequência levavam ~160 s no CI); estimado
   'teste-recomeco.mjs': 7,
   'teste-passes.mjs': 5,
   'teste-chutes.mjs': 15,

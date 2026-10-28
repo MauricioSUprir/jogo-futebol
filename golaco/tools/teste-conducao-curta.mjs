@@ -10,24 +10,40 @@
 //     7 m/s contados como no teste-conducao.
 //  B. Escada: os metros por toque crescem com a velocidade (andar < trote < corrida < disparada) e a disparada
 //     fica ≥ 1,3× a corrida (com CORRER, um toque por passada, mais longo — como no jogo real).
-//  C. IA × IA: N partidas de 2 × 2 min (sementes 1017, 1034, …; 12 — a amostra de antes do merge — também no CI desde
-//     15/10: com 6, a mediana da corrida variava ±0,01 m só pelo sorteio dos lances e uma mudança da IA que não mexe na
-//     distância dos próprios toques passava ou reprovava por 0,005 m): bola–corpo do condutor de linha (bola no chão,
-//     jogo rolando) e a % do tempo com a bola a mais de 0,7 m, por faixa.
+//  C. IA × IA: N partidas de 2 × 2 min (semente 1000 + 17·s, s = 1…N; 48 no CI desde 28/10, em até 4 processos — 12 de
+//     15/10 a 28/10; com 6, a mediana da corrida variava ±0,01 m só pelo sorteio dos lances): bola–corpo do condutor de
+//     linha (bola no chão, jogo rolando) e a % do tempo com a bola a mais de 0,7 m, por faixa. AMOSTRA (C1, 28/10): a
+//     mediana de uma partida varia ~2,2–2,4 cm de uma para outra — o erro-padrão de 12 partidas é ~0,65 cm, e o calculado
+//     nas mesmas 12 oscila (0,38 cm nas sementes 1–12 do goleiro realista). Em 96 partidas a main 500c4b1a e o goleiro
+//     realista 0537a78f dão o mesmo trote (0,5836 × 0,5840 m; pareado por semente −0,0004 ± 0,0027) e a mesma corrida
+//     (0,5731 × 0,5715; −0,0015 ± 0,0025); com 12 o goleiro realista caiu em 0,5964 ± 0,0038 no trote (s 1–12 é o mais
+//     alto dos 8 blocos de 12) e reprovou. Por reamostragem das 96, o trote reprova por sorteio em ~1% das mudanças de
+//     estado da IA × IA com 12 partidas e em ~0% com 48. A CORRIDA fica em cima da meta: a main dá 0,5722 ± 0,0017 em
+//     144 sementes (0,5726 nas 1–48, 0,568 nas 97–144; z 1,28 contra 0,57: provável, não provado) e, por reamostragem
+//     das 144, reprova ~11% das mudanças de estado com 12 partidas e ~16% com 48 (o goleiro realista ~5%) — com mais
+//     partidas a amostra vê melhor que ela está acima, a meta não fica mais frouxa. Nas mesmas 48 sementes 1–48: 0,5574 ± 0,0034 na #476 dc829fa5 (quando a
+//     meta entrou) e 0,5570 ± 0,0030 logo antes da #481; a #481 278ff4b5 (faltas com sentido + "ninguém passa da bola
+//     quase dominada", que mexeu na conducao.js) levou a 0,5711 ± 0,0032 (z ≈ 3,2; o trote 0,574 → 0,585) e a amostra de
+//     12 não viu (0,566 ± 0,007 nas sementes 1–12); de lá à main 500c4b1a, 0,5711 → 0,5726. PENDENTE: decisão do dono
+//     sobre a meta da corrida depois da #481 (a condução não se mexe sem ele).
 //  D. Desenho: chuteira (cápsula tornozelo–ponta, na pose) dentro da bola, nos quadros das cenas A — trava contra
 //     recuo (61,3% na base, medido no teste-conducao; a meta PENDENTE de ≤ 1% continua lá).
 //
-//   node tools/teste-conducao-curta.mjs [--js <pasta js>] [--ia N] [--detalhe] [--json saida.json]
+//   node tools/teste-conducao-curta.mjs [--js <pasta js>] [--ia N (48)] [--sem0 s (1)] [--par P (até 4)] [--detalhe]
+//                                       [--json saida.json]
 // Reprova (código 1) se alguma meta não passar. Com --js na lógica de antes do pedido (a base), REPROVA.
 import path from 'node:path';
 import fs from 'node:fs';
+import os from 'node:os';
+import { fork } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const JS = path.resolve(arg('--js', path.join(AQUI, '../js')));
-const NIA = +arg('--ia', 12);
+const NIA = +arg('--ia', 48), SEM0 = +arg('--sem0', 1);
+const nPar = Math.max(1, +arg('--par', Math.min(4, os.availableParallelism?.() ?? os.cpus().length)));
 const MIN_IA = 2;
 const detalhe = args.includes('--detalhe');
 const imp = f => import(pathToFileURL(path.join(JS, f)).href);
@@ -107,9 +123,10 @@ const ANDARES = {
   corrida: { mag: 1, botoes: 0, faixa: 2 },
   disparada: { mag: 1, botoes: BOTAO.CORRER, faixa: 3 },
 };
-const GS = {};
-let quadros = 0, dentro = 0, toques7 = 0, passadas7 = 0;
-{
+/** A parte A inteira: os grupos por andar e as contagens da disparada e da chuteira. */
+function parteA() {
+  const GS = {};
+  let quadros = 0, dentro = 0, toques7 = 0, passadas7 = 0;
   let k = 0;
   for (const [nome, a] of Object.entries(ANDARES)) for (const caminho of ['reta', 'curva']) for (const partida of ['parado', 'embalado']) for (const sentido of [1, -1]) {
     const devagar = nome === 'andar' || nome === 'trote';
@@ -140,6 +157,7 @@ let quadros = 0, dentro = 0, toques7 = 0, passadas7 = 0;
       }
     }
   }
+  return { GS, quadros, dentro, toques7, passadas7 };
 }
 
 /** Resumo de um grupo na faixa k. */
@@ -157,16 +175,11 @@ function resumo(grp, k) {
     folga: [pct(iv.map(x => x[3]), 0.5), pct(iv.map(x => x[3]), 0.9)],
   };
 }
-const A = Object.fromEntries(Object.entries(ANDARES).map(([n, a]) => [n, resumo(GS[n], a.faixa)]));
-const tPorPassada7 = passadas7 > 0 ? toques7 / passadas7 : NaN;
-const pDentro = quadros ? 100 * dentro / quadros : NaN;
 
 // ------------------------------------------------------------------ C. IA × IA
-const GI = {};
-const t0 = Date.now();
-const bordasIA = [];   // onde cada partida começa em GI.IA.am (o erro-padrão da mediana pelas partidas)
-for (let s = 1; s <= NIA; s++) {
-  bordasIA.push(GI.IA?.am.length ?? 0);
+/** Uma partida IA × IA da parte C (semente 1000 + 17·s): as amostras e os intervalos dos condutores de linha. */
+function partidaIA(s) {
+  const GI = {};
   const m = PA.criarPartida({ semente: 1000 + s * 17, minutosPorTempo: MIN_IA });
   const ac = criarAcomp(GI, j => (j.posicao === 'GOL' ? null : 'IA'), false);
   const N = Math.round(2 * MIN_IA * 3600) + 600;
@@ -176,12 +189,60 @@ for (let s = 1; s <= NIA; s++) {
     ac(m, ev, valido);
     if (m.partida.estado === 'fim') break;
   }
+  return GI.IA ?? null;
 }
-const sIA = (Date.now() - t0) / 1000;
+
+// processo filho (--par > 1): recebe a semente s de cada partida da parte C e devolve o resultado; null = acabou (o mesmo
+// processo roda várias partidas: um processo por partida gastava ~2 s a mais em cada uma, carregando e aquecendo o código)
+if (args.includes('--filho')) {
+  process.on('message', s => { if (s == null) process.exit(0); else process.send(partidaIA(s)); });
+  await new Promise(() => {}); // (o resto do arquivo é do pai)
+}
+
+// as NIA partidas em nPar processos (como o teste-intercepta e o teste-movimento; o rodar-testes passa --par k) e a parte
+// A (~2 s) no pai enquanto isso; o resultado é o mesmo de rodar tudo num processo só (--par 1): cada partida começa do
+// zero e as amostras são juntadas na ordem das sementes
+const t0 = Date.now();
+const resIA = new Array(NIA);
+let filaIA = Promise.resolve();
+if (nPar <= 1) for (let i = 0; i < NIA; i++) resIA[i] = partidaIA(SEM0 + i);
+else {
+  let prox = 0;
+  const filhos = new Set();
+  const sair = cod => { for (const c of filhos) c.kill(); process.exit(cod); };
+  process.on('SIGINT', () => sair(130)); process.on('SIGTERM', () => sair(143));
+  filaIA = Promise.all(Array.from({ length: Math.min(nPar, NIA) }, () => new Promise((ok, erro) => {
+    // ('advanced': a bola–pé da IA, NaN, chega NaN — em JSON viraria null)
+    const c = fork(fileURLToPath(import.meta.url), ['--filho', '--js', JS], { serialization: 'advanced' });
+    filhos.add(c);
+    let i = -1;
+    const proxima = () => { if (prox >= NIA) { i = -1; c.send(null); } else { i = prox++; c.send(SEM0 + i); } };
+    c.on('message', r => { resIA[i] = r; proxima(); });
+    c.on('error', erro);
+    c.on('exit', (cod, sinal) => { filhos.delete(c); if (cod || sinal || i >= 0) erro(new Error(`parte C: um processo saiu com ${cod ?? sinal}`)); else ok(); });
+    proxima();
+  })));
+}
+const { GS, quadros, dentro, toques7, passadas7 } = parteA();
+const A = Object.fromEntries(Object.entries(ANDARES).map(([n, a]) => [n, resumo(GS[n], a.faixa)]));
+const tPorPassada7 = passadas7 > 0 ? toques7 / passadas7 : NaN;
+const pDentro = quadros ? 100 * dentro / quadros : NaN;
+await filaIA;
+const sTudo = (Date.now() - t0) / 1000;
+
+const GI = {};
+const bordasIA = [];   // onde cada partida começa em GI.IA.am (o erro-padrão da mediana pelas partidas)
+for (const r of resIA) {
+  bordasIA.push(GI.IA?.am.length ?? 0);
+  if (!r) continue;
+  GI.IA ??= { am: [], iv: [] };
+  for (const x of r.am) GI.IA.am.push(x);
+  for (const x of r.iv) GI.IA.iv.push(x);
+}
 const IA = FAIXAS.map((_, k) => resumo(GI.IA, k));
 // a mediana de cada partida na faixa k e o erro-padrão entre elas: a meta da IA reprova quando a conta prova (a mediana
-// acima do teto por mais de 1,645 erros-padrão) — a IA × IA muda de estado a cada mudança da IA e a mediana de 12 partidas
-// oscila ~1 cm em volta do teto (que é o valor medido quando ele entrou)
+// acima do teto por mais de 1,645 erros-padrão) — a IA × IA muda de estado a cada mudança da IA e a mediana de N partidas
+// oscila ~2,3/√N cm em volta do valor da versão (~0,65 cm com 12, ~0,33 com 48); o teto é o valor medido quando ele entrou
 function epMediana(k) {
   const am = GI.IA?.am ?? [], meds = [];
   for (let i = 0; i < bordasIA.length; i++) {
@@ -243,7 +304,7 @@ const l1 = [['humano sozinho', 'toques/s', 'm entre toques (med · média)', 'to
 for (const [n, r] of Object.entries(A)) l1.push([`${n} (${FAIXAS[ANDARES[n].faixa][2]})`, f2(r.toquesS), `${f2(r.mMed)} · ${f2(r.mMedia)}`, f2(r.toquesPassada), `${f2(r.dC[0])} / ${f2(r.dC[1])}`, `${f2(r.folga[0])} / ${f2(r.folga[1])}`, `${f2(r.dPe[0])} / ${f2(r.dPe[1])}`, r.nI]);
 console.log(tab(l1));
 console.log('');
-const l2 = [[`IA × IA (${NIA} × 2 × ${MIN_IA} min, ${f2(sIA, 0)} s)`, 'tempo', 'bola–corpo med/p90', 'bola > 0,7 m', 'm entre toques (med)', 'toques/s']];
+const l2 = [[`IA × IA (${NIA} × 2 × ${MIN_IA} min, s ${SEM0}–${SEM0 + NIA - 1}; ${f2(sTudo, 0)} s em ${Math.max(1, Math.min(nPar, NIA))} proc.)`, 'tempo', 'bola–corpo med/p90', 'bola > 0,7 m', 'm entre toques (med)', 'toques/s']];
 const nIA = IA.reduce((s, r) => s + r.n, 0);
 IA.forEach((r, k) => l2.push([FAIXAS[k][2], `${f2(100 * r.n / Math.max(1, nIA), 0)}%`, `${f2(r.dC[0])} / ${f2(r.dC[1])}`, `${f2(100 * r.longe, 0)}%`, f2(r.mMed), f2(r.toquesS)]));
 console.log(tab(l2));

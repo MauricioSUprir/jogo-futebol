@@ -303,7 +303,7 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   disparada; 1 e 2 alternados sem rng; guardas: domínio, inversão, freada, analógico > `angRitmo`, passe/chute
   carregando); gesto do analógico no tick do toque espera 1 tick ou sai toque de FREIO (`saltoTick`); o toque não
   manda a bola na placa; a chuteira para na superfície da bola (só o desenho: `pe.ox/oz`, hash igual). Trote 1,49 →
-  2,88 toques/s e 1,98 → 0,99 m; corrida 3,0 → 2,2 m por toque; bola–corpo trote 0,48 → 0,42 m (IA 0,67 → 0,588 em 6 partidas, 0,595 em 12: meta ≤ 0,59 com 12 pendente);
+  2,88 toques/s e 1,98 → 0,99 m; corrida 3,0 → 2,2 m por toque; bola–corpo trote 0,48 → 0,42 m (IA 0,67 → 0,588 em 6 partidas, 0,584 em 96: meta ≤ 0,59 com 48 partidas desde 28/10; a corrida ≤ 0,57 depende do dono, FILA "Depende do dono" 9b);
   chuteira dentro da bola 61 → 46%; metas PENDENTE do `teste-conducao --estrito` que passaram a valer: bola–pé no trote
   p5–p95 0,02–0,67 → 0,40–0,58 m e tornozelo p95 0,33 → 0,30 m (só a chuteira segue pendente).
   Teste `teste-conducao-curta` (CI; `--js`, `--ia 12`), casos novos no `teste-cortes` e `teste-perda --cauda 120`
