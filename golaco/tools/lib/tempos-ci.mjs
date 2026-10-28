@@ -46,7 +46,7 @@ export const TEMPOS_NODE = {
   'teste-aereo-troca.mjs --so natural': 913,
   'teste-transicao.mjs': 685,
   'teste-defesa-corrida.mjs': 449,
-  'teste-intercepta.mjs': 276,
+  'teste-intercepta.mjs': 560, // C1: parte A 12 → 96 partidas (10–18 s de CPU cada, 4 processos) + a parte B (~125 s de CPU); estimado
   'teste-rede.mjs': 1,
   'teste-rede-veu.mjs': 3,
   'teste-torcida.mjs': 10,

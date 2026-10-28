@@ -80,7 +80,7 @@ const LISTA = [
   ['transição defensiva: recomposição em disparada (IA × IA)', 'teste-transicao.mjs'],
   ['transição defensiva contra o humano roteirizado', 'teste-transicao.mjs', ['--humano'], 'etapa3'],
   ['defesa contra a arrancada do humano: recua no corredor, roubada não desfeita, bloco armado', 'teste-defesa-corrida.mjs'],
-  ['interceptação: a IA lê a linha do passe e corta o alcançável, sem deixar o homem livre', 'teste-intercepta.mjs'],
+  ['interceptação: a IA lê a linha do passe e corta o alcançável, sem deixar o homem livre', 'teste-intercepta.mjs', [], 'padrao', 4],
   // Estádio: rede que balança, torcida e som (contas puras do desenho)
   ['rede que balança: bolsa, onda, batidas com a física da bola, bola desenhada no bojo', 'teste-rede.mjs'],
   ['rede véu de noiva: forma pela física, morre no fundo, nada atravessa, gol pelo véu, desenho', 'teste-rede-veu.mjs'],

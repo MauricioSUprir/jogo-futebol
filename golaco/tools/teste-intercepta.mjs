@@ -7,14 +7,23 @@
 //    bloqueio e a bola parada recolhida não contam — Opta: "a player intercepts a pass by moving into the line of the
 //    intended pass"). Referência: FBref (dados Opta), Premier League 2023/24 — 8,49 interceptações por time por jogo (6,13
 //    o Manchester City a 9,95 o Brentford). Meta: a defesa intercepta MAIS que a base (8,75 na base 074cfd18, sementes
-//    301–312; --base-inter) — pelo menos 1,5 a mais (~2,5 erros-padrão da amostra) — e no máximo 14 (nada de corte em todo
-//    passe). As nossas partidas têm ~1/3 dos passes de um jogo real (~270 contra ~941, Opta) e quase nenhum outro jeito de
-//    errar o passe (bola fora, disputa pelo alto perdida): ~60% dos passes errados são interceptações (no real, ~11%) —
-//    por isso o número por partida passa um pouco da PL quando o passe certo chega ao real; por 100 passes: informativo;
-//  - passe certo (o mesmo time com a bola depois do passe): Opta, PL 2023/24, 780 certos de 941 = 82,9%. Meta 80–86,5%, reprova quando a contagem prova (o
-//    real ~80–85%, com a margem da amostra; a base ficava em 88,7%);
+//    301–312, 8,66 nas 48 de 301–348: a constante fica a mais alta das duas; --base-inter) — pelo menos 1,5 a mais — e no
+//    máximo 14 (nada de corte em todo passe). As nossas partidas têm ~1/3 dos passes de um jogo real (~270 contra ~941,
+//    Opta) e quase nenhum outro jeito de errar o passe (bola fora, disputa pelo alto perdida): ~60% dos passes errados são
+//    interceptações (no real, ~11%) — por isso o número por partida passa um pouco da PL quando o passe certo chega ao
+//    real; por 100 passes: informativo. AMOSTRA (C1, 27/10): o número por partida varia ~2,4 de uma partida para outra
+//    (contagem quase de Poisson: ~22 interceptações por partida, √22/2 ≈ 2,3) e a main e o goleiro realista ficam só
+//    ~0,5 acima de base + 1,5 (10,8 e 10,7 nas 144 do painel do CI somadas a 192 daqui) — em blocos de 12 sementes
+//    (301–492) a parte A reprovou a main em 3 de 16 e o goleiro realista em 5 de 16, sem nada ter mudado; com 24, 1 de 8
+//    cada; com 96, nenhum dos 2 blocos (a chance de reprovar fica em ~1,5% na main e ~6% no goleiro realista, cujo passe
+//    certo está no limite de 86,5%);
+//  - passe certo (o mesmo time com a bola depois do passe): Opta, PL 2023/24, 780 certos de 941 = 82,9%. Meta 80–86,5%,
+//    reprova quando a contagem prova (o real ~80–85%, com a margem da amostra; a base ficava em 88,7%), com o erro-padrão
+//    ENTRE PARTIDAS (os passes de uma partida não são independentes; nunca abaixo do binomial);
 //  - o homem livre: nos passes no último terço que chegam ao destino, a parte em que o recebedor domina sem ninguém da IA a
-//    até 3 m — não pode subir mais que 3 pontos sobre a base (77,8% na base 074cfd18, sementes 301–312; --base-livre).
+//    até 3 m — não pode subir mais que 3 pontos sobre a base (73,2% na base 074cfd18, nas 48 sementes 301–348; --base-livre.
+//    C1, 28/10: era 77,8%, medido só nas 12 de 301–312, um sorteio alto — com a amostra de 96, a meta "base + 3" ficava na
+//    prática base + 7,6; a main dá 70,1–72,1% e o goleiro realista 69,7–72,5%).
 // B) Canhão do passe arriscado (o passe que o HUMANO tenta — a IA que passa já evita a linha cortada): estados do meio da
 //    partida, o meia do time 0 passa para um companheiro a 12–28 m com um adversário a até 3,5 m da linha do passe. Pela
 //    física (a trajetória de conducao.js preverBola; o corpo acelera a 7 m/s² da velocidade que leva até a arrancada):
@@ -22,7 +31,7 @@
 //    alcançáveis, intercepta ≤ 15% (nada de corte mágico).
 //   node tools/teste-intercepta.mjs                   (lógica do repositório)
 //   node tools/teste-intercepta.mjs --js <pasta>      (outra cópia, ex.: a base — tem de REPROVAR)
-//   --so A,B · --partidas N (padrão 12) · --sem0 K (padrão 301) · --cenas N (padrão 480) · --par N
+//   --so A,B · --partidas N (padrão 96) · --sem0 K (padrão 301) · --cenas N (padrão 480) · --par N
 import { fork } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -32,7 +41,7 @@ const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const JS = path.resolve(arg('--js', path.join(AQUI, '../js')));
-const LIVRE_BASE = +arg('--base-livre', 0.778), INTER_BASE = +arg('--base-inter', 8.75);
+const LIVRE_BASE = +arg('--base-livre', 0.732), INTER_BASE = +arg('--base-inter', 8.75);
 const SO = arg('--so', 'A,B').split(',');
 
 async function partida(sem) {
@@ -179,7 +188,10 @@ if (args.includes('--filho')) {
 // (cenas 240 → 480, D5: com 240 ficavam ~26–43 passes alcançáveis e a taxa de corte variava ±8 pontos só pelos estados do
 // meio da partida — 47% com o D5 em 43, 55% em 104 de 720; a main 69% em 26, 66% em 74 de 720; com 480, ~70 alcançáveis
 // e +20 s)
-const NP = +arg('--partidas', 12), S0 = +arg('--sem0', 301), NC = +arg('--cenas', 480);
+// (partidas 12 → 96, C1, 27/10: com 12 a parte A reprovava a main e o goleiro realista em ~1 rodada de 4 só pela amostra
+// — ver AMOSTRA no cabeçalho; 10–18 s de CPU por partida e 0,26 s por cena da parte B: o teste leva ~5–8 min com 4
+// processos, e roda sozinho com as 4 vagas no rodar-testes)
+const NP = +arg('--partidas', 96), S0 = +arg('--sem0', 301), NC = +arg('--cenas', 480);
 const nPar = Math.max(1, +arg('--par', Math.min(4, os.availableParallelism?.() ?? os.cpus().length)));
 const tarefas = [];
 if (SO.includes('A')) for (let s = 0; s < NP; s++) tarefas.push(['--tarefa', 'partida', '--s', String(S0 + s)]);
@@ -215,8 +227,16 @@ if (SO.includes('A')) {
   // (D5: reprova quando a contagem PROVA que passa de 86,5% ou fica abaixo de 80% — a proporção com ~3300 passes, z > 1,645,
   // um lado, p < 5% —, como as outras metas de contagem do repositório: o passe certo das 12 partidas ia de 86,1 a 86,7%
   // entre calibrações vizinhas do D5, ±0,6 ponto de erro-padrão; a base de antes, 88,7%, dá z ≈ 3,7 e continua reprovando)
-  const zPasse = lim => (ok / passes - lim) / Math.sqrt(lim * (1 - lim) / passes);
-  reg('A', 'passe certo', `${f(certo)}% (${ok}/${passes})`, '80–86,5% (PL 23/24: 82,9%; reprova quando prova: z > 1,645)', zPasse(0.865) <= 1.645 && zPasse(0.80) >= -1.645);
+  // (C1: o erro-padrão binomial trata os passes como independentes, mas os de uma mesma partida não são — o efeito de
+  // desenho (Kish: a variância medida ÷ a binomial) foi 1,73 na main e 1,46 no goleiro realista em 192 partidas e 0,86 na
+  // base em 48 — e a regra reprovava uma versão em 86,5% em ~9–11% das rodadas, não nos 5% que ela diz. O
+  // erro-padrão certo é o entre partidas (cada partida é um conglomerado de passes; a linearização de Taylor do estimador
+  // de razão — Cochran, Sampling Techniques, 1977, cap. 6; SAS SURVEYFREQ, "Taylor series variance"):
+  // √(Σ (certos_i − p·passes_i)² / (k(k−1))) / (passes ÷ k), nunca abaixo do binomial. A meta e o z não mudam; a base de
+  // antes (88,8% em 48 partidas) dá z ≈ 7,7 e continua reprovando)
+  const pCerto = ok / passes, epPartidas = NP > 1 ? Math.sqrt(soma(r => (r.ok[0] + r.ok[1] - pCerto * (r.passes[0] + r.passes[1])) ** 2) / (NP * (NP - 1))) / (passes / NP) : 0;
+  const zPasse = lim => (pCerto - lim) / Math.max(epPartidas, Math.sqrt(lim * (1 - lim) / passes));
+  reg('A', 'passe certo', `${f(certo)}% (${ok}/${passes})`, `80–86,5% (PL 23/24: 82,9%; reprova quando prova: z > 1,645, ep entre partidas ${f(100 * epPartidas, 2)} pt)`, zPasse(0.865) <= 1.645 && zPasse(0.80) >= -1.645);
   console.log(`A (informativo): passes que terminam no último terço ${f(100 * soma(r => r.terco) / passes)}% (PL 2019/20: 28,7%); cruzamentos ${f(100 * soma(r => r.cruz) / passes)}% dos passes (PL: ~3,7%); chutes por partida ${f(soma(r => r.chutes) / NP)}`);
   reg('A', 'homem livre: recepção no último terço sem a IA a até 3 m', `${f(100 * livre)}% de ${soma(r => r.recepcoes)} (base ${f(100 * LIVRE_BASE)}%)`, '≤ base + 3 pontos', livre <= LIVRE_BASE + 0.03);
 }
