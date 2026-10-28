@@ -83,6 +83,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   correções curtas (B) → goleiro e chute (C; o PR #493 rascunho `golaco/goleiro-realista` tem CI vermelho) → IA (D) →
   equilíbrio (E) → pedidos de 17/10 (F) → 3D no lugar da simulação (G) → online (H) → visual/mocap/estádios (I).
   Ao terminar cada item, marcar na FILA.md (status + PR).
+  **Categoria C (dono, 27/10: "C"; "sai c1 e c2 hj"): item 12, goleiro realista, ENTREGUE no PR #558** (28/10). A junção com a
+  D embaralhou a IA × IA e vários testes de borda reprovaram por sorteio: as amostras cresceram (teste-movimento 32,
+  teste-intercepta 96, conducao-curta C 48, replay-paradas 48), sempre com a main medida nas mesmas sementes e sem mexer na
+  meta. Replays nas paradas pela FIDELIDADE À TV ≥ a da versão publicada (decisão do dono, 28/10; SoccerNet-v2 por
+  situação). O item 13 (C2, chute no ângulo) espera o 12 (branch `golaco/c2-chute`, a medir de novo contra o goleiro novo).
   **Dono, 23/10: a fila por CATEGORIAS** (A–I da FILA.md; a D FEITA em 26/10, #524–#550): ele diz qual categoria fazer e nada começa sem o aval dele
   ("tem algumas coisas a mais que vou te sinalizar, que vc só cmc dps do meu aval"). Os pedidos de 23/10 são os itens 57–66:
   impedimento pelas partes do corpo (B), pausa igual à do FIFA, minimapa embaixo, nome do condutor nos cantos, a tela antes do jogo no nível do EA FC com a cara do TM (64), a mira das bolas paradas minimalista com uma curva boa (65), a câmera que acompanha a bola e mostra a área (66) (F),
