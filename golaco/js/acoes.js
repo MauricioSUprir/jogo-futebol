@@ -745,13 +745,17 @@ function velParaAlturaEm(pp, ux, uz, D, el, w, y) {
 
 /**
  * Ponto da mira na linha do gol (z) pelo analógico mr: o ângulo entre o analógico e a reta bola–gol escolhe o canto
- * ("lat" positivo = para a direita de quem chuta; no gol de +x a direita é +z), dentro da boca do gol (até ±zMax; o
- * chute com a barra cheia tem a folga dele até a trave: mira.js zMaxMiraChute).
+ * ("lat" positivo = para a direita de quem chuta; no gol de +x a direita é +z), dentro da boca do gol. zBrutoAnalogico: a
+ * mesma conta antes do limite da boca (28/10: o analógico no CANTO da barra cheia é |z| ≥ meia-boca −
+ * ACOES.chute.cheia.zCanto; o chute com a barra cheia tem a folga dele até a trave, mira.js zMaxMiraChute).
  */
-function zPeloAnalogico(b, gx, lado, meio, mr, zMax = meio - 0.5) {
+function zBrutoAnalogico(b, gx, lado, meio, mr) {
   const dirGol = MD.atan2(-b.p.z, gx - b.p.x);
   const lat = MD.sin(difAng(dirGol, MD.atan2(mr.z, mr.x)));
-  return clamp(lat * lado * meio * 1.4, -zMax, zMax);
+  return lat * lado * meio * 1.4;
+}
+function zPeloAnalogico(b, gx, lado, meio, mr) {
+  return clamp(zBrutoAnalogico(b, gx, lado, meio, mr), -meio + 0.5, meio - 0.5);
 }
 
 /** Goleiro adversário (o mais perto do gol atacado). */
@@ -780,14 +784,21 @@ function chute(m, j, pe, p, erroMult) {
   let zMira;
   const mr = mira(j);
   const mirado = !!(mr && mr.mag > 0.3);
-  // a barra cheia (C2): só na bola rolando — o pênalti e o tiro livre com barreira ficam na mira de antes — e só no chute
-  // MIRADO (o analógico apontado, o mesmo critério que escolhe o canto acima). Decisão do dono (28/10: "só o chute mirado
-  // sobe"): sem mirar, o jogo escolhe o lado longe do goleiro e a barra cheia fica na altura de antes, bit a bit (y, z e a
-  // saída); contra o goleiro realista a mira alta com o analógico solto fazia 6,9 pontos a menos de gol (grade de 3.240
-  // chutes: a bola sai mais por cima e no travessão), e no canto 2,7 — o dono quer o ângulo só quando a pessoa pede
-  const cheia = mirado && miraCheia(p.forca) && !p.penalti && !p.barreira && (gx - b.p.x) * lado > 0.5;
-  if (mirado) {
-    zMira = zPeloAnalogico(b, gx, lado, meio, mr, cheia ? zMaxMiraChute(p.forca) : undefined);
+  const zBruto = mirado ? zBrutoAnalogico(b, gx, lado, meio, mr) : 0;
+  // a barra cheia (C2): só na bola rolando — o pênalti e o tiro livre com barreira ficam na mira de antes — e só com o
+  // analógico apontado para um CANTO: a mira dele no ângulo, |z| ≥ meia-boca − cheia.zCanto (2,76 m: a régua do "no
+  // ângulo"; ~33° fora da reta bola–gol). Decisão do dono (28/10: "só o chute mirado sobe — com o analógico apontado para
+  // um canto, a barra cheia vai no ângulo; sem mirar, o chute fica na altura de hoje"): solto (o jogo escolhe o lado longe
+  // do goleiro), para o gol e nas diagonais leves, a curva de antes, bit a bit (y, z e a saída). Com o "mirado" (mag > 0,3)
+  // a barra cheia subia também no MEIO do gol (2,1 m na linha, sem a chance do ângulo; contra o goleiro realista, para o gol
+  // a bola alta no meio 18,5 → 57,3% dos chutes, e a ±17° −5,5 e −2,8 pontos de gol). Subir aos poucos pelo |z| perdia mais
+  // que o limiar: no meio −0,6 ± 0,6 (a ±17°, −2,1) contra 0; no canto os dois iguais (CONTRATOS.md, C2: a grade por direção)
+  const cheia = Math.abs(zBruto) >= meio - cfg.cheia.zCanto && miraCheia(p.forca) && !p.penalti && !p.barreira && (gx - b.p.x) * lado > 0.5;
+  if (cheia) {
+    const zMax = zMaxMiraChute(p.forca);
+    zMira = clamp(zBruto, -zMax, zMax);
+  } else if (mirado) {
+    zMira = clamp(zBruto, -meio + 0.5, meio - 0.5);
   } else {
     const gz = gk ? gk.z : 0;
     zMira = gz > 0 ? -meio + 0.6 : meio - 0.6;

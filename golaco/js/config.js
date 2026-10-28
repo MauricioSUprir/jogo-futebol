@@ -446,12 +446,14 @@ export const ACOES = {
   // y 2,15 e o canto a 0,35 m da trave o craque fazia 55% → 42% de gols de 18–22 m (a bola alta e aberta sai mais); com
   // y 2,1 e 0,7 m, 55% → 54% (teste-chutes, seção "barra cheia"). Contra o goleiro realista da partida (C1, #558) a perda
   // continuava (grade de 3.240 chutes 69,5 → 65,4%): é a bola que sai por cima e no travessão, não a defesa, e a maior parte
-  // vinha do chute com o analógico SOLTO (−6,9; no canto −2,7). Decisão do dono (28/10: "só o chute mirado sobe"): a barra
-  // cheia só sobe com o analógico apontado (acoes.js chute); solto, a curva de antes, bit a bit — a grade fica em 67,7%
-  // (solto igual à main, no canto 71,3 → 68,5%). y 2,1 / zFolga 0,7 ficam: as metas do pedido precisam da margem
+  // vinha do chute com o analógico SOLTO (−6,9; no canto −2,7). Decisão do dono (28/10: "só o chute mirado sobe — com o
+  // analógico apontado para um canto, a barra cheia vai no ângulo"): a barra cheia só sobe com a mira do analógico no CANTO,
+  // |z| ≥ meia-boca − zCanto (2,76 m, a régua do "no ângulo"; acoes.js chute); solto, para o gol e nas diagonais leves, a
+  // curva de antes, bit a bit. Gols contra o realista na grade por direção (15 direções × 1.080 chutes): 65,8 → 63,6%
+  // (−2,2 ± 0,5; o meio igual, o canto −3,0 ± 0,6). y 2,1 / zFolga 0,7 ficam: as metas do pedido precisam da margem
   // (CONTRATOS.md, C2)
   chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, penaltiCanto: 2.5, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18,
-    cheia: { de: 0.9, y: 2.1, zFolgaJogo: 0.5, zFolga: 0.7 } },
+    cheia: { de: 0.9, y: 2.1, zFolgaJogo: 0.5, zFolga: 0.7, zCanto: 0.9 } },
   // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado). A da IA sai sozinha com o
   // goleiro adiantado (goleiroFora/distMax); a do humano, com DOIS TOQUES no CHUTE (pedido do dono, 12/10), de qualquer
   // lugar: o 2º aperto antes de o chute do 1º tocar na bola. toqueRapido: 1º toque mais curto que isso pode ser o 1º de

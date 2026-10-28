@@ -9,11 +9,14 @@
 // travessão saltava: main 3,7%); com o sorteio (o erro do jogo, forcaMaxErro valendo), o craque com a perna boa (metade
 // chute forte, metade colocado) cruza a linha a ≥ 1,9 m em ≥ 70%, no ângulo (y ≥ 1,9 m e |z| ≥ meia-boca − 0,9 m, dentro
 // do gol) em ≥ 25% e por cima do travessão em ≤ 25% — em 9 sementes juntas (~2.160 chutes, ep ≤ 1 ponto; 28/10); com o
-// analógico SOLTO a barra cheia fica na altura de antes, bit a bit (decisão do dono, 28/10: "só o chute mirado sobe"); o
-// resto (com o goleiro, o bom finalizador, a perna ruim, só o forte) sai na tabela, informativo, com o número da main ao lado.
-//   node tools/teste-chutes.mjs [--so-cheia] [--sem-cheia <sementes da barra cheia com o sorteio, separadas por vírgula;
-//   padrão as 9: 7100,31100,47100,13100,23100,59100,67100,83100,97100>] [--js <pasta js>]
-//   (--js: mede outra cópia da lógica, ex.: a main — o "antes")
+// analógico SOLTO, PARA O GOL e a ±17° a barra cheia fica na curva de antes, conferida por um árbitro independente (a mira
+// pelas constantes do config e o voo do chute forte; decisão do dono, 28/10: "só o chute mirado sobe — com o analógico
+// apontado para um canto"); o resto (com o goleiro, o bom finalizador, a perna ruim, só o forte) sai na tabela,
+// informativo, com o número da main ao lado. Os gols por direção do analógico contra o goleiro realista (main × C2) ficam
+// só no CONTRATOS.md (C2): ~27 chutes/s na partida, e com menos de ~1.000 chutes por direção o Δ fica no ruído.
+//   node tools/teste-chutes.mjs [--so-cheia | --so-arbitro] [--sem-cheia <sementes da barra cheia com o sorteio, separadas
+//   por vírgula; padrão as 9: 7100,31100,47100,13100,23100,59100,67100,83100,97100>] [--js <pasta js>]
+//   (--js: mede outra cópia da lógica, ex.: a main — o "antes"; --so-arbitro: só o caso da curva de antes, ~7 s)
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { tabelaTexto, fmt, media, percentil, DEG } from './lib/medidas.mjs';
@@ -21,12 +24,11 @@ const iJs = process.argv.indexOf('--js');
 const JS = iJs > 0 ? path.resolve(process.argv[iJs + 1]) : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../js');
 const imp = f => import(pathToFileURL(path.join(JS, f)).href);
 const { criarMundo, passo, jogadorPorId } = await imp('sim.js');
-const { BOTAO, CAMPO, ACOES, BOLA } = await imp('config.js');
+const { BOTAO, CAMPO, ACOES, BOLA, PASSO, ENTRADA } = await imp('config.js');
 const P = await imp('partida.js');
 const { assumirControle } = await imp('acoes.js');
 const { parametros } = await imp('jogador.js');
 const { criarRng } = await imp('rng.js');
-const { lerp } = await imp('mat.js');
 
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
 let falhas = 0;
@@ -44,8 +46,9 @@ function chute(semente, x, z, opc = {}) {
   if (opc.goleiro) jog.push({ id: 20, x: opc.goleiro.x, z: opc.goleiro.z ?? 0, rumo: Math.PI, time: 1, papel: opc.goleiro.papel ?? 'ia', posicao: 'GOL', attr: { reflexo: 75, posicionamento: 74, mergulho: 75 } });
   if (opc.pressao) jog.push({ id: 21, x: x - 1.4, z, rumo: 0, time: 1, papel: 'parado', posicao: 'ZAG' });
   const m = criarMundo({ semente, jogadores: jog, bola: { x: x + Math.cos(rumo) * 0.4, z: z + Math.sin(rumo) * 0.4 }, posse: 0, log: true });
+  // o analógico: canto = rad em relação à reta jogador–gol (0 = solto), paraGol = apontado para o meio do gol (módulo 1)
   const c = opc.canto ?? 0;
-  const ax = c ? Math.cos(rumo + c) : 0, az = c ? Math.sin(rumo + c) : 0;
+  const ax = opc.paraGol ? Math.cos(rumo) : c ? Math.cos(rumo + c) : 0, az = opc.paraGol ? Math.sin(rumo) : c ? Math.sin(rumo + c) : 0;
   const n = Math.max(2, Math.round((opc.forca ?? 0.6) * 48) + (opc.varia ? semente % 5 : 0));
   const bot = BOTAO.CHUTE | (opc.mod ? BOTAO.MOD : 0);
   // ia: a entrada vem da IA jogando pelo humano (a demo): a cavadinha automática com o goleiro adiantado é da IA; a
@@ -56,15 +59,13 @@ function chute(semente, x, z, opc = {}) {
   for (let i = 0; i < 60 && !l; i++) { passo(m, { 0: { x: 0, z: 0, botoes: opc.mod ? BOTAO.MOD : 0, ia } }); l = m.log.find(e => e.acao); }
   if (!l) return null;
   const mira = m.voo?.mira ?? null;
-  // a bola logo depois do toque (a assinatura do chute: o caso "analógico solto" compara bit a bit com a curva de antes)
-  const v0 = [m.bola.p.x, m.bola.p.y, m.bola.p.z, m.bola.v.x, m.bola.v.y, m.bola.v.z, m.bola.w.x, m.bola.w.y, m.bola.w.z];
-  const traj = [{ x: m.bola.p.x, z: m.bola.p.z }];
+  const traj = [{ x: m.bola.p.x, y: m.bola.p.y, z: m.bola.p.z }];
   let linha = null, cruza = null, res = null;
   for (let i = 0; i < 240 && !res; i++) {
     const a = { x: m.bola.p.x, y: m.bola.p.y, z: m.bola.p.z, vx: m.bola.v.x, vy: m.bola.v.y, vz: m.bola.v.z };
     passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
     const b = m.bola.p;
-    traj.push({ x: b.x, z: b.z });
+    traj.push({ x: b.x, y: b.y, z: b.z });
     if (!linha && b.x >= GX && a.x < GX) {
       const f = (GX - a.x) / (b.x - a.x);
       linha = { y: a.y + (b.y - a.y) * f, z: a.z + (b.z - a.z) * f };
@@ -80,10 +81,11 @@ function chute(semente, x, z, opc = {}) {
     if (!res && (b.x > GX + 1 || Math.hypot(m.bola.v.x, m.bola.v.z) < 0.5)) res = 'fora';
   }
   const noAlvo = linha && Math.abs(linha.z) < MEIO - 0.11 && linha.y < CAMPO.gol.altura - 0.11;
-  return { l, mira, v0, linha, cruza, traj, res, noAlvo, m };
+  return { l, mira, linha, cruza, traj, res, noAlvo, m, carga: n, an: { x: ax, z: az } };
 }
 
-const SO_CHEIA = process.argv.includes('--so-cheia');
+const SO_ARB = process.argv.includes('--so-arbitro');
+const SO_CHEIA = SO_ARB || process.argv.includes('--so-cheia');
 
 // ------------------------------------------------ velocidade
 if (!SO_CHEIA) {
@@ -307,7 +309,7 @@ function semErro(fn) {
   ACOES.chute.erroBom = 0; ACOES.chute.erroRuim = 0;
   try { return fn(); } finally { [ACOES.chute.erroBom, ACOES.chute.erroRuim] = e0; }
 }
-{
+if (!SO_ARB) {
   // a MIRA (C2: "a meta mede a mira com erro 0, separada do sorteio"): bom e mau finalizador, as duas pernas, chute forte
   // e colocado; a mira passa NA linha a cheia.y (a conta no voo sem o gol: mira.js saidaNaLinha)
   const r = semErro(() => barraCheia(7000, 40, s => ({ attr: { finalizacao: [60, 80, 99][s % 3], pePreferido: Math.floor(s / 2) % 2, peFraco: 50 }, mod: s % 4 >= 2 })));
@@ -315,7 +317,7 @@ function semErro(fn) {
   reg('barra cheia — a mira (erro 0), 18–22 m, analógico no canto', `y na linha méd ${fmt(yMed)} m (${fmt(yMin)}–${fmt(yMax)}), |z| méd ${fmt(zMed)} m (mín ${fmt(zMin)}) · no ângulo ${pc('ang', r)}% · por cima ${pc('cima', r)}% · trave ou travessão ${r.toque} (n ${r.n})`,
     `y 2,0–2,2 m em todos; |z| ≥ meia-boca − 0,9 (${fmt(ANG_Z)}); 100% no ângulo, 0 por cima e 0 na trave`, r.n >= 36 && yMin >= 2.0 && yMax <= 2.2 && zMin >= ANG_Z && r.ang === r.n && r.cima === 0 && r.toque === 0);
 }
-{
+if (!SO_ARB) {
   // de perto (revisão do C2): a mira medida 0,4 m antes da linha subia mais até ela (a 4–5 m a elevação é de 38–44°) e a
   // barra cheia passava na linha a 2,24–2,49 m — no travessão, com o erro zerado (main: 100% de gols e 0 no travessão)
   let n = 0, gols = 0, toque = 0, s = 0;
@@ -330,7 +332,7 @@ function semErro(fn) {
   });
   reg('barra cheia — de perto (4–9 m, até 30°), chute forte, erro 0', `${fmt(gols / Math.max(1, n) * 100, 1)}% de gols, ${toque} na trave ou no travessão (n ${n})`, '100% de gols, 0 na trave (main: 100%, 0)', n >= 120 && gols === n && toque === 0);
 }
-{
+if (!SO_ARB) {
   // a varredura (revisão do C2): a busca do giro do colocado e a da elevação usavam o voo com o gol; com a mira alta o voo
   // de teste batia no travessão, na haste ou no véu no passo em que chegava à distância da mira, voltava 'caiu' e a busca
   // saltava (o colocado a 19 m passava a 8 m do gol; a 35 m, na trave). Erro zerado: forte e colocado, analógico solto e no
@@ -351,39 +353,75 @@ function semErro(fn) {
   reg('barra cheia — varredura com o erro zerado (9–35 m, até 45°, solto e no canto, forte e colocado)', `${fmt(sem / Math.max(1, n) * 100, 1)}% sem gol (${sem}/${n}${pior.length ? ': ' + pior.join(', ') : ''})`, '≤ 1% (main: 3,7%; a versão anterior do C2, ad44206f, com o solto subindo, 0,2%)', n >= 1000 && sem / n <= 0.01);
 }
 {
-  // o analógico SOLTO (decisão do dono, 28/10: "só o chute mirado sobe"): sem mirar (o jogo escolhe o lado longe do goleiro),
-  // a barra cheia fica na altura de antes, BIT A BIT — a mira (y, z), a bola logo depois do toque (posição, velocidade,
-  // giro) e onde ela cruza a linha iguais aos da mesma conta com a barra cheia desligada (ACOES.chute.cheia.de = 1: o
-  // caminho da main 46dd59ab, conferido com --js na main), e a altura da mira na curva de antes, lerp(yAlvo, força²) com a
-  // força acima de 0,9: de 1,44 a 1,70 m (a barra cheia mirada vai a 2,1 m na linha).
-  // Com o erro zerado (a mira) e com o sorteio (o chute inteiro); 9–30 m, até 40°, forte e colocado, força 0,92 e 1, as
-  // duas pernas. Antes (ad44206f) a mira solta subia a 2,1 m na linha (contra o goleiro realista: −6,9 pontos de gol)
+  // o analógico SOLTO, PARA O GOL e nas diagonais leves (±17°): a barra cheia fica na curva de antes (decisão do dono, 28/10:
+  // "só o chute mirado sobe — com o analógico apontado para um CANTO, a barra cheia vai no ângulo; sem mirar, o chute fica
+  // na altura de hoje"). ÁRBITRO INDEPENDENTE (nada de acoes.js nem de mira.js; a revisão de 28/10: comparar a versão com
+  // ela mesma, cheia.de = 1, não prova nada com --js na main):
+  //  (1) a mira (m.voo.mira) recalculada pelas constantes do config: y = yAlvo[0] + (yAlvo[1] − yAlvo[0])·f², com a força f
+  //      pela carga (n ticks × PASSO / cargaCheia, entre 0,08 e 1); z solto = meia-boca − 0,6 do lado longe do goleiro (sem
+  //      goleiro, +z); z mirado = sen(ângulo entre o analógico e a reta bola–gol no toque) × meia-boca × 1,4, dentro de
+  //      ±(meia-boca − 0,5) — e longe do canto (|z| < meia-boca − cheia.zCanto; no canto a barra cheia sobe);
+  //  (2) no chute forte com o erro zerado, a bola DE VERDADE (a mesma física do jogo, o voo passo a passo no mundo) passa a
+  //      0,4 m da linha (onde a conta de antes mede a altura: na linha estão as traves) na altura da mira e cruza a linha no
+  //      z da mira, a ≤ 1 cm (main: 0,000 m). O colocado fica só pela mira: a conta de antes dele (3 voltas de secante com o
+  //      voo que bate no gol) não leva a bola à mira de longe — main: até 0,15 m na altura, e o colocado fraco de lado cai
+  //      antes da linha (a varredura de cima).
+  // Reprova na ad44206f (o solto subia a 2,1 m na linha) e na 2ed0d56f (o "mirado" pelo módulo > 0,3: para o gol e a ±17° a
+  // barra cheia subia no meio do gol). 9–30 m, até 40°, forte e colocado, força 0,92 e 1, as duas pernas, com o erro zerado
+  // e com o sorteio
+  const K = ACOES.chute, fCarga = n => Math.min(1, Math.max(0.08, n * PASSO / ACOES.cargaCheia));
+  const yAntes = f => K.yAlvo[0] + (K.yAlvo[1] - K.yAlvo[0]) * f * f;
+  const zCanto = MEIO - (K.cheia?.zCanto ?? 0.9);
+  const normA = a => Math.atan2(Math.sin(a), Math.cos(a));
+  const ANALOG = { solto: { canto: 0 }, gol: { paraGol: true }, '+17°': { canto: 0.3 }, '−17°': { canto: -0.3 } };
   const casos = [];
-  for (const erro0 of [true, false]) for (const forca of [0.92, 1.0]) for (const mod of [false, true]) for (let d = 9; d <= 30; d += 3) for (let ang = -40; ang <= 40; ang += 20) casos.push({ s: casos.length + 1, erro0, forca, mod, d, ang });
-  const roda = () => casos.map(c => {
+  for (const an of Object.keys(ANALOG)) for (const erro0 of [true, false]) for (const forca of [0.92, 1.0]) for (const mod of [false, true]) for (let d = 9; d <= 30; d += 3) for (let ang = -40; ang <= 40; ang += 20) casos.push({ s: casos.length + 1, an, erro0, forca, mod, d, ang });
+  const TOL_Y = 0.01, TOL_Z = 0.01;
+  const g = {};
+  let tolY = 0, tolZ = 0;
+  for (const c of casos) {
     const a = c.ang / DEG;
-    const run = () => chute(7600 + c.s, GX - Math.cos(a) * c.d, Math.sin(a) * c.d, { attr: { finalizacao: [60, 80, 99][c.s % 3], pePreferido: c.s % 2, peFraco: 50 }, forca: c.forca, canto: 0, mod: c.mod });
+    const run = () => chute(7600 + c.s, GX - Math.cos(a) * c.d, Math.sin(a) * c.d, { attr: { finalizacao: [60, 80, 99][c.s % 3], pePreferido: c.s % 2, peFraco: 50 }, forca: c.forca, mod: c.mod, ...ANALOG[c.an] });
     const q = c.erro0 ? semErro(run) : run();
-    return q ? [...q.v0, q.mira?.y ?? null, q.mira?.z ?? null, q.linha?.y ?? null, q.linha?.z ?? null, q.res] : null;
-  });
-  const agora = roda(), kc = ACOES.chute.cheia;
-  let antes = agora; // (--js na main: sem a barra cheia, ela mesma é o "antes")
-  if (kc) { const de0 = kc.de; kc.de = 1; try { antes = roda(); } finally { kc.de = de0; } }
-  let n = 0, dif = 0, curva = 0;
-  const ys = [], yc = f => lerp(ACOES.chute.yAlvo[0], ACOES.chute.yAlvo[1], f * f), yLo = yc(0.9) - 1e-9, yHi = yc(1) + 1e-9;
-  casos.forEach((c, i) => {
-    const x = agora[i], y = antes[i];
-    if (!x || !y) { if (x !== y) dif++; return; }
-    n++;
-    if (x.some((v, k) => !Object.is(v, y[k]))) dif++;
-    if (!(x[9] >= yLo && x[9] <= yHi)) curva++;
-    if (c.erro0 && x[11] != null) ys.push(x[11]);
-  });
-  reg('barra cheia — analógico SOLTO: a altura de antes, bit a bit (erro 0 e com o sorteio; 9–30 m, forte e colocado, força 0,92 e 1)',
-    `${dif} de ${n} chutes diferentes da curva de antes · mira fora da curva de antes (${fmt(yLo)}–${fmt(yHi)} m): ${curva} · y na linha (erro 0) méd ${fmt(media(ys))} m`,
-    '0 diferente (a mira, a saída e a linha iguais à main), n ≥ 300', n >= 300 && dif === 0 && curva === 0);
+    const e = (g[c.an] ??= { n: 0, fora: 0, canto: 0, voo: 0, ex: null, ys: [] });
+    if (!q || !q.mira) { e.n++; e.fora++; e.ex ??= `${c.d} m ${c.ang}°: sem chute`; continue; }
+    e.n++;
+    const bx = q.l.bx, bz = q.l.bz, f = fCarga(q.carga), y = yAntes(f);
+    let z;
+    if (c.an === 'solto') z = MEIO - 0.6;
+    else {
+      // (o analógico chega quantizado ao jogo: ENTRADA.quant)
+      const Q = ENTRADA.quant, qx = Math.round(q.an.x * Q) / Q, qz = Math.round(q.an.z * Q) / Q;
+      const lat = Math.sin(normA(Math.atan2(qz, qx) - Math.atan2(-bz, GX - bx)));
+      const zb = lat * MEIO * 1.4;
+      if (Math.abs(zb) >= zCanto) { e.canto++; e.ex ??= `${c.d} m ${c.ang}°: no canto (z ${fmt(zb)})`; continue; }
+      z = Math.max(-(MEIO - 0.5), Math.min(MEIO - 0.5, zb));
+    }
+    let ok = Math.abs(q.mira.y - y) <= 1e-9 && Math.abs(q.mira.z - z) <= 1e-6;
+    if (!ok) e.ex ??= `${c.d} m ${c.ang}° ${c.mod ? 'col' : 'forte'} ${fmt(f)}: mira y ${fmt(q.mira.y)} z ${fmt(q.mira.z)} (antes ${fmt(y)}, ${fmt(z)})`;
+    if (c.erro0 && !c.mod) {
+      // (2) a 0,4 m da linha, na reta do toque até a mira (a distância da conta de antes); e na linha
+      let ux = GX - bx, uz = z - bz; const D0 = Math.hypot(ux, uz); ux /= D0; uz /= D0;
+      let y4 = null;
+      for (let k = 1; k < q.traj.length && y4 == null; k++) {
+        const p0 = q.traj[k - 1], p1 = q.traj[k], d0 = (p0.x - bx) * ux + (p0.z - bz) * uz, d1 = (p1.x - bx) * ux + (p1.z - bz) * uz;
+        if (d1 >= D0 - 0.4 && d0 < D0 - 0.4) y4 = p0.y + (p1.y - p0.y) * (D0 - 0.4 - d0) / (d1 - d0);
+      }
+      const dy = y4 == null ? Infinity : Math.abs(y4 - y), dz = q.linha ? Math.abs(q.linha.z - z) : Infinity;
+      if (q.linha) e.ys.push(q.linha.y);
+      const okV = dy <= TOL_Y && dz <= TOL_Z;
+      tolY = Math.max(tolY, dy); tolZ = Math.max(tolZ, dz);
+      if (!okV) { e.voo++; e.ex ??= `${c.d} m ${c.ang}° forte ${fmt(f)}: a 0,4 m da linha y ${fmt(y4)} (mira ${fmt(y)}), na linha z ${fmt(q.linha?.z)} (mira ${fmt(z)})`; }
+      ok = ok && okV;
+    }
+    if (!ok) e.fora++;
+  }
+  const tot = Object.values(g).reduce((o, e) => ({ n: o.n + e.n, fora: o.fora + e.fora, canto: o.canto + e.canto }), { n: 0, fora: 0, canto: 0 });
+  reg('barra cheia — analógico SOLTO, PARA O GOL e a ±17°: a curva de antes, pelo árbitro independente (a mira pelas constantes; o forte com o erro zerado, a bola a 0,4 m da linha e na linha; 9–30 m, forte e colocado, força 0,92 e 1, com e sem o erro)',
+    Object.entries(g).map(([k, e]) => `${k}: ${e.fora} de ${e.n} fora da curva de antes${e.canto ? ` (${e.canto} no canto)` : ''}${e.voo ? ` (${e.voo} no voo)` : ''} · linha (erro 0) y méd ${fmt(media(e.ys))} m${e.ex ? ` · ex.: ${e.ex}` : ''}`).join(' | ') + ` · maior desvio do voo (forte, erro 0): y ${fmt(tolY, 3)} m, z ${fmt(tolZ, 3)} m`,
+    `0 fora (a mira igual à curva de antes; o voo do forte a ≤ ${fmt(TOL_Y, 2)} m na altura e no z), 0 no canto, n ≥ 600`, tot.n >= 600 && tot.fora === 0 && tot.canto === 0);
 }
-{
+if (!SO_ARB) {
   // com o sorteio: o craque com a perna boa, metade chute forte, metade colocado (a chance de acertar o ângulo). As metas
   // em 9 sementes JUNTAS (revisão de 28/10): numa semente só (n ~240, ep ~3 pontos) as três passavam na 7100 do CI e
   // reprovavam alguma em 3 de 9 (juntas: ≥ 1,9 m 72,3%, ângulo 27,0%, por cima 8,7%); juntas, n ~2.160 e ep ≤ 1 ponto. A
@@ -416,9 +454,9 @@ function semErro(fn) {
   const gkBom = barraCheia(7700, 480, populacao(80), 'boa', 'treino');
   linhas.push(['barra cheia — bom finalizador, perna boa, COM o goleiro do treino (informativo)', txtGoleiro(gkBom), 'main: gols 42% · defesas 23% · fora 35% · trave ou travessão 15%', 'INFO']);
   const gkReal = barraCheia(SEM, 480, craque, 'boa', 'partida');
-  // (main × C2 na grade de 3.240 chutes contra o realista posicionado, sonda-rev do C2, 28/10: 69,5 → 67,7% de gols, o
-  // analógico solto igual, 66,1%, e no canto 71,3 → 68,5%; a versão anterior, ad44206f, com o solto subindo, 65,4%)
-  linhas.push(['barra cheia — craque, perna boa, COM o goleiro REALISTA da partida (informativo)', txtGoleiro(gkReal), 'main: gols 72% · defesas 10% · fora 18% · trave ou travessão 15% (grade de 3.240: main 69,5% → C2 67,7%; solto igual, no canto 71,3 → 68,5%)', 'INFO']);
+  // (main × C2 na grade por direção do analógico contra o realista posicionado, 15 direções × 1.080 chutes, 28/10: 65,8 →
+  // 63,6% de gols, −2,2 ± 0,5; solto, para o gol e ±17° iguais chute a chute, no canto −3,0 ± 0,6; CONTRATOS.md, C2)
+  linhas.push(['barra cheia — craque, perna boa, COM o goleiro REALISTA da partida (informativo)', txtGoleiro(gkReal), 'main: gols 72% · defesas 10% · fora 18% · trave ou travessão 15% (grade por direção, 16.200 chutes: main 65,8% → C2 63,6%; solto, para o gol e ±17° iguais, no canto −3,0)', 'INFO']);
 }
 
 console.log(tabelaTexto(linhas));

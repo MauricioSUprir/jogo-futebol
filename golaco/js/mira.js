@@ -56,8 +56,9 @@ export const comTrajetoria = t => t === 'alta' || t === 'tensa' || t === 'chute'
 // travessão) e o canto do analógico chega a meia-boca − cheia.zFolga m: o ângulo. Com o erro do chute (forcaMaxErro), uma
 // parte passa por cima. cheia = false: a curva de antes em toda força (o pênalti do humano: a mira dele vai só a
 // ±penaltiCanto, longe do ângulo, e a mira alta só somava bola por cima — com a barra cheia, 17% → 42% para fora; e o chute
-// do jogo SEM mirar, com o analógico solto — decisão do dono, 28/10: "só o chute mirado sobe", acoes.js chute). A linha da
-// cobrança mirada (chuteMirado) sobe sempre: lá a pessoa mira sempre
+// do jogo sem o analógico no CANTO: solto, para o gol ou nas diagonais leves — decisão do dono, 28/10: "só o chute mirado
+// sobe — com o analógico apontado para um canto", acoes.js chute). A linha da cobrança mirada (chuteMirado) sobe sempre:
+// lá a pessoa mira sempre
 export const miraCheia = forca => forca > ACOES.chute.cheia.de;
 export function alturaMiraChute(forca, cheia = true) {
   const c = ACOES.chute, y = lerp(c.yAlvo[0], c.yAlvo[1], forca * forca), k = c.cheia;
