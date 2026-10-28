@@ -82,7 +82,14 @@ export async function criarMedidor(pastaJs, opc = {}) {
     out.golaco = !!r.golaco; out.checagem = !!r.checagem;
     // G2: os planos de antes iguais com e sem extras; e com a versão --ref (o roteiro sem extras = o de antes)
     out.igualSemExtras = antigos(r) === antigos(r0);
-    if (REF) { const rr = REF.roteiroGol(a, { golTick: g.golTick, chuteTick: g.chuteTick, lado: g.lado, time: g.time }); out.igualRef = !!rr && JSON.stringify(rr) === JSON.stringify(r0); }
+    if (REF) {
+      // (28/10: `extras: false` — uma ref que já tem as câmeras 3 e 4 também devolve só a base; a de antes delas ignora o campo)
+      const rr = REF.roteiroGol(a, { golTick: g.golTick, chuteTick: g.chuteTick, lado: g.lado, time: g.time, extras: false });
+      out.igualRef = !!rr && JSON.stringify(rr) === JSON.stringify(r0);
+      // 28/10: a base da ref passava do teto do contrato (o gol lento: 12/14 s, + 1 com a checagem)? (G2 conta à parte)
+      const baseRef = rr ? RR.duracao({ planos: rr.planos.filter(p => p.cam !== 'primeira' && p.cam !== 'treinador') }) : 0;
+      out.refEstoura = !!rr && baseRef > (rr.golaco ? REPLAY.gol.maximoGolaco : REPLAY.gol.maximo) + (rr.checagem ? (REPLAY.saot?.extraGol ?? 1) : 0) + 1e-9;
+    }
     // G3: durações
     const dur = p => (p.ate - p.de) / 60 / p.vel;
     const ext = r.planos.filter(p => p.cam === 'primeira' || p.cam === 'treinador');
@@ -94,9 +101,47 @@ export async function criarMedidor(pastaJs, opc = {}) {
     out.ordem = out.cams.every((c, i) => i === 0 || ordem.indexOf(c) > ordem.indexOf(out.cams[i - 1]));
     const prim = r.planos.find(p => p.cam === 'primeira'), tr = r.planos.find(p => p.cam === 'treinador');
     out.temPrimeira = !!prim; out.temTreinador = !!tr; out.parte2 = !!tr?.enq?.parte2;
+    // G8 (28/10): a 1ª pessoa cabe pelas regras FIXAS do roteiro? (null = cabe; senão o motivo)
+    if (g.autor != null && !g.contra && g.chuteTick != null) out.inelegivel = semLugarPrimeira(a, g);
     if (prim) out.p = medirPrimeira(a, prim, g);
     if (tr) out.t = medirTreinador(a, tr, g);
     return out;
+  }
+
+  /**
+   * G8 (28/10): a 1ª pessoa NÃO CABE neste gol pelas regras fixas do roteiro (contrato "Área técnica, treinadores e as
+   * câmeras 3 e 4"), contadas só com o relógio do lance — os cortes, o chute e o gol no anel —, nunca com o enquadramento:
+   *  - 'corte': sem ≥ extras.primeiraMin s do autor no anel antes do chute depois do último corte até o gol (a jogada
+   *    desenhada antes do corte era outra) — ou o autor/chute fora do anel;
+   *  - 'orçamento': a 1ª pessoa MÍNIMA (de chute − primeiraMin a gol + depois, 0,6×) mais o treinador MÍNIMO (a parte 1 de
+   *    chute − parte1Min até o corte, a parte 2 com parte2Min s) passam de extras.maximo s: a bola que demora a entrar
+   *    (o chute de longe, o desvio, a espalmada que entra) — a ordem do contrato encolhe tudo isso e depois tira a 1ª pessoa.
+   * Conta própria a partir do contrato e das constantes (não chama o roteiro): se o roteiro tirar a 1ª pessoa de um gol em
+   * que ela cabe, o G8 conta a falta; se ela aparecer num gol em que não cabe, o G8 reprova (a conta daqui está errada).
+   * null = cabe.
+   */
+  function semLugarPrimeira(a, g) {
+    const F = REPLAY.primeira, Tr = REPLAY.treinador, X = REPLAY.gol.extras, s60 = s => Math.round(s * 60);
+    const { golTick } = g, ch = g.chuteTick;
+    if (a.slot(ch) < 0 || a.slot(golTick) < 0 || !RA.jogadorNoTick(a, ch, g.autor)) return 'corte';
+    const inicio = t => { const de = Math.max(a.primeiro, t), c = a.ultimoCorte(de, golTick); return c != null ? c : de; };
+    const de = inicio(ch - s60(F.antes)), deMin = Math.max(de, ch - s60(X.primeiraMin));
+    if (de > ch - s60(X.primeiraMin)) return 'corte';
+    const cD = a.primeiroCorte(golTick + 1, Math.min(a.ultimo, golTick + s60(Math.max(Tr.fim, F.depois) + 0.5)));
+    const fimMax = cD != null ? cD - 1 : a.ultimo;
+    const ateP = Math.min(fimMax, golTick + s60(F.depois));
+    if (ateP <= de) return 'corte';
+    let min = (ateP - deMin) / 60 / F.vel;
+    const tec = 210 + (g.time === 1 ? 1 : 0);
+    if (RA.jogadorNoTick(a, golTick, tec)) {
+      const c0 = golTick + s60(Tr.corte);
+      let corte = c0 <= fimMax ? c0 : null, ate = Math.min(fimMax, golTick + s60(Tr.fim));
+      if (corte == null || (ate - corte) / 60 < Tr.parte2Min) { ate = Math.min(ate, corte ?? ate); corte = null; }
+      const deT = inicio(ch - s60(Tr.antes)), deTMin = Math.max(deT, ch - s60(X.parte1Min));
+      const ateTMin = corte != null ? Math.min(ate, corte + s60(X.parte2Min)) : ate;
+      min += Math.max(0, ateTMin - deTMin) / 60 / Tr.vel;
+    }
+    return min > X.maximo + 1e-9 ? 'orçamento' : null;
   }
 
   // ---------------------------------------------------------------------------------------------- 1ª pessoa (G6–G8)

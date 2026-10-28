@@ -889,6 +889,41 @@ function cavadinha(m, j, pe, p, erroMult, gx) {
   return true;
 }
 
+/**
+ * O afastamento de cabeça pela física do contato (partida; CABECEIO.afastaReal): a testa vira no máximo `giro` rad do rumo
+ * do corpo (o pescoço e o tronco no salto) para a direção pedida, com a elevação `elAfasta`, e a bola sai na direção da
+ * testa (o impulso da cabeçada é normal à testa) com a parte normal da velocidade que trazia devolvida (`en`) mais o
+ * impulso da testa (`vTesta`). Sem ângulo para longe do gol — a bola iria para o próprio gol —, ele cabeceia para cima
+ * (`elFuga`: por cima do travessão). Antes a bola saía sempre a 16 m/s na direção pedida, mesmo com o defensor de lado ou
+ * de costas para ela (no canhão de 24 partidas, 5 de 7 afastamentos na pequena área a mais de 1 rad do rumo do corpo):
+ * nenhum afastamento de cabeça virava escanteio (StatsBomb, 348 partidas, medido aqui: 22% dos cortes de cabeça na
+ * pequena área e 7% dos de 5,5 a 11 m viram escanteio). {ux, uz, s, el}.
+ */
+function afastarReal(m, j, b, ux, uz, lado) {
+  const R = CABECEIO.afastaReal;
+  const rx = MD.cos(j.rumo), rz = MD.sin(j.rumo);
+  let a = MD.atan2(rx * uz - rz * ux, rx * ux + rz * uz);
+  if (Math.abs(a) > R.giro) a = Math.sign(a) * R.giro;
+  const hx = rx * MD.cos(a) - rz * MD.sin(a), hz = rx * MD.sin(a) + rz * MD.cos(a);
+  const calc = el0 => {
+    const ce = MD.cos(el0), se = MD.sin(el0);
+    const nx = hx * ce, ny = se, nz = hz * ce; // a direção da testa (3D)
+    const vn = b.v.x * nx + b.v.y * ny + b.v.z * nz; // < 0: a bola vindo contra a testa
+    const k = R.en * Math.max(0, -vn) + R.vTesta;
+    return { x: nx * k, y: ny * k, z: nz * k };
+  };
+  let v = calc(CABECEIO.elAfasta);
+  // (a reta da bola cruzando a linha do meu gol dentro da boca, sem a gravidade: ele não cabeceia para o próprio gol)
+  const gx = -lado * CAMPO.meioX, vx = v.x * -lado;
+  if (vx > 0.5) {
+    const t = (Math.abs(gx - b.p.x)) / vx;
+    const zl = b.p.z + v.z * t, yl = b.p.y + v.y * t - 4.9 * t * t;
+    if (Math.abs(zl) < CAMPO.gol.largura / 2 + 0.5 && yl < CAMPO.gol.altura + 0.5) v = calc(R.elFuga);
+  }
+  const sh = MD.hypot(v.x, v.z) || 1, sv = MD.hypot(v.x, v.y, v.z);
+  return { ux: v.x / sh, uz: v.z / sh, s: clamp(sv, 4, CABECEIO.vAfasta * 1.4), el: MD.atan2(v.y, sh) };
+}
+
 /** Cabeceio (bola alta): PASSE = para um companheiro; CHUTE = no gol; LANÇAMENTO = afastar. */
 export function executarCabeceio(m, j, p) {
   const b = m.bola;
@@ -934,6 +969,12 @@ export function executarCabeceio(m, j, p) {
     ux = lado; uz = sz * CABECEIO.ladoAfasta;
     const l = MD.hypot(ux, uz) || 1; ux /= l; uz /= l;
     s = CABECEIO.vAfasta; el = CABECEIO.elAfasta;
+    // (partida) a bola sai pela física do contato com a testa, não pela intenção: a testa só vira até `afastaReal.giro` rad
+    // do rumo do corpo, e a bola sai com parte da velocidade que trazia (CABECEIO.afastaReal)
+    if (m.partida) {
+      const r = afastarReal(m, j, b, ux, uz, lado);
+      ux = r.ux; uz = r.uz; s = r.s; el = r.el;
+    }
   } else {
     const d = dirPedida(j);
     ux = d.x * 0.4 + lado * 0.6; uz = d.z * 0.4;

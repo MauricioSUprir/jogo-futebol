@@ -5,9 +5,14 @@
 // render/autor-gol.js) e do impedimento (no apito) contam no espaço, como na página. Nada aqui escreve no mundo: o passo
 // da simulação é o mesmo com e sem o classificador (teste-replay-paradas P4).
 //   const P = await criarSimParadas(pastaJs);  const S = P.novaPartida(semente, {comoPagina});  const r = P.passo(S)
-//   r = {ev, pred (montaNoProximoPasso antes do passo), espera ({tick, lance, roteiro, dur} | null: o replay de parada que
-//   começou ANTES deste passo), lance (o classificado neste passo ou null), aceito, gol ({roteiro, dur} | null),
-//   imped ({roteiro, dur} | null)}
+//   r = {ev, pred (montaNoProximoPasso antes do passo), espera ({tick, lance, roteiro, dur, anel} | null: o replay de parada
+//   que começou ANTES deste passo; anel = {primeiro, ultimo} do anel de onde o roteiro saiu e que a página toca), lance (o
+//   classificado neste passo ou null), aceito, gol ({roteiro, dur} | null), imped ({roteiro, dur} | null)}
+// (28/10) O passo depois do replay grava mais um passo no anel (o 1º sai): quem confere o roteiro usa `espera.anel`, o do
+// momento do roteiro — na página a simulação fica parada enquanto o replay toca e o anel não anda (main.js
+// seguraParaReplayParada no topo da volta; o anel só grava em rodarPasso). Conferido com o anel de DEPOIS do passo, o
+// plano que começa no 1º passo do anel (a chave a < tv.antes s dele: o amarelo dado depois da vantagem) parecia fora dele
+// (teste-replay-paradas P2, main, s207: plano [25062, 25179], anel do roteiro [25062, 25661], o de depois [25063, 25662]).
 // Sem js/lances.js (a versão de antes): criarSimParadas devolve null.
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -44,7 +49,7 @@ export async function criarSimParadas(pastaJs, opc = {}) {
         const ro = RR.roteiroParada(S.a, lc);
         if (ro && ro.planos.length && ro.planos[0].ate > ro.planos[0].de) {
           LA.registrarReplay(S.LC, m.tick, 'parada');
-          r.espera = { tick: m.tick, lance: lc, roteiro: ro, dur: RR.duracao(ro) };
+          r.espera = { tick: m.tick, lance: lc, roteiro: ro, dur: RR.duracao(ro), anel: { primeiro: S.a.primeiro, ultimo: S.a.ultimo } };
         }
       }
     }

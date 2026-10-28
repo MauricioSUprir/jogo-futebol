@@ -46,7 +46,8 @@ const LISTA = [
   ['proteção de corpo', 'teste-protecao.mjs'],
   ['condução curta e pedalada', 'teste-dribles.mjs'],
   // Pedido do dono de 12/10: "condução mais curtinha, com a bola mais no pé"
-  ['condução curta: bola no pé e toque por faixa de velocidade (humano e IA × IA)', 'teste-conducao-curta.mjs'],
+  // (C1, 28/10: a parte C com 48 partidas em 4 processos — com 12 o trote reprovava por sorteio; AMOSTRA no cabeçalho)
+  ['condução curta: bola no pé e toque por faixa de velocidade (humano e IA × IA)', 'teste-conducao-curta.mjs', [], 'padrao', 4],
   ['recomeço do treino (bola no pé, bola fora)', 'teste-recomeco.mjs'],
   // Etapa 2
   ['passes: rasteiro, enfiada, lançamento, cruzamento, primeira, tabela', 'teste-passes.mjs'],
@@ -69,7 +70,8 @@ const LISTA = [
   ['táticas do Editar time movem a forma (Parte 2)', 'teste-taticas.mjs'],
   ['pressão, PPDA e contrapressão (Parte 2)', 'teste-pressao.mjs', [], 'etapa3'],
   // (D5, item 22: sai do etapa3 — 5 rodadas de 8 sementes passando, vai e volta 6,8–7,4/min contra 8,3 na main)
-  ['movimento da IA no 11×11 (Parte 2): vai e volta, anda-para-anda, de costas, sem recuo', 'teste-movimento.mjs', ['--modo', 'partida']],
+  // (C1, 27/10: 32 sementes em 4 processos — o anda-para-anda da main fica a 0,1 da meta e 8 sementes reprovavam por sorteio)
+  ['movimento da IA no 11×11 (Parte 2): vai e volta, anda-para-anda, de costas, sem recuo', 'teste-movimento.mjs', ['--modo', 'partida'], 'padrao', 4],
   ['apoio, corredores, corridas e área (Parte 3)', 'teste-apoio.mjs', [], 'etapa3'],
   ['intensidade e sanidade da partida (Parte 3)', 'teste-intensidade.mjs', [], 'etapa3'],
   ['CONTER, DIVIDIDA e PRESSÃO do humano (Parte 4)', 'teste-defesa-humano.mjs'],
@@ -79,7 +81,7 @@ const LISTA = [
   ['transição defensiva: recomposição em disparada (IA × IA)', 'teste-transicao.mjs'],
   ['transição defensiva contra o humano roteirizado', 'teste-transicao.mjs', ['--humano'], 'etapa3'],
   ['defesa contra a arrancada do humano: recua no corredor, roubada não desfeita, bloco armado', 'teste-defesa-corrida.mjs'],
-  ['interceptação: a IA lê a linha do passe e corta o alcançável, sem deixar o homem livre', 'teste-intercepta.mjs'],
+  ['interceptação: a IA lê a linha do passe e corta o alcançável, sem deixar o homem livre', 'teste-intercepta.mjs', [], 'padrao', 4],
   // Estádio: rede que balança, torcida e som (contas puras do desenho)
   ['rede que balança: bolsa, onda, batidas com a física da bola, bola desenhada no bojo', 'teste-rede.mjs'],
   ['rede véu de noiva: forma pela física, morre no fundo, nada atravessa, gol pelo véu, desenho', 'teste-rede-veu.mjs'],
@@ -114,6 +116,9 @@ const LISTA = [
   // 8–10,5, agressão ≤ 78%, retomada 34–54%; 3 processos)
   ['pressão da IA contra a pessoa (D3): PPDA, agressão e retomada contra o espelho', 'teste-pressao.mjs', ['--humano'], 'padrao', 3],
   ['goleiro pelas Leis do Jogo (mão só na área, recuo, 8 s) e na mão do humano (anda, TROCAR, PEGAR)', 'teste-goleiro-regras.mjs'],
+  // Pedido do dono de 15/10 ("defende mais bolas difíceis do que fáceis", espalmar e segurar realistas, movimento) e a
+  // pendência #114 (sai no 1×1 e no cruzamento): canhão de estados do meio da partida em 4 processos
+  ['goleiro realista: defende a fácil e não a difícil, segura × espalma, set no chute, 1×1, bola solta e saída no cruzamento', 'teste-goleiro-realista.mjs', [], 'padrao', 4],
   ['bolas paradas: lateral com as mãos e 3 opções (Regra 15), tiro de meta (16), escanteio por zonas, barreira (13)', 'teste-bolas-paradas.mjs'],
   ['cobrança mirada (escanteio, falta, tiro de meta da pessoa): a linha = a física, curva, controles, canhão roteirizado, a IA não usa', 'teste-mira.mjs'],
   // Auditoria dos botões (dono, 12/10: "ainda tem botões que não funcionam"): o efeito de cada botão no mundo

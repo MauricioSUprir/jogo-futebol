@@ -68,8 +68,9 @@
 //
 // Replays nas paradas (render; pedido do dono de 22/10: "os replays de faltas e jogadas passando na tela enquanto o jogo tá
 // parado"; PLANO-CENAS.md §2, contrato "Cenas das paradas"): a cada passo o classificador (js/lances.js, puro, só lê)
-// olha os eventos; na bola morta o lance que vale (pênalti, vermelho, trave, amarelo, falta perto do gol, espalmada, chute
-// que passou perto) ARMA o replay (replayParada), que toca no passo ANTES da montagem (lances.js montaNoProximoPasso):
+// olha os eventos; na bola morta o lance que vale (pênalti, vermelho, trave, amarelo, falta onde o jogo monta a barreira,
+// espalmada, chute bloqueado que vira escanteio, chute que passou perto, chute de dentro da área que vira tiro de meta;
+// lances.js TIPOS_LANCE) ARMA o replay (replayParada), que toca no passo ANTES da montagem (lances.js montaNoProximoPasso):
 // 1 s ao vivo → vinheta → TV 1× + o lance fechado/atrás do gol 0,5× (≤ 8 s) → a montagem. A simulação fica PARADA (o laço
 // não roda o passo; a checagem fica no TOPO da volta do laço, antes da entrada da demo e, no online, antes de
 // MOD_ON.podePassar/entradas) e volta no mesmo tick: o hash é o mesmo com e sem o replay. Até 3 por tempo e 30 s de bola

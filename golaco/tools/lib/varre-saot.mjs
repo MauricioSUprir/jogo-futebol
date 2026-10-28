@@ -34,7 +34,12 @@ export async function varrerSaot({ pastaJs, sementes, maxTicks = 6000, threads =
 }
 
 // ------------------------------------------------------------------------------------------------ worker
-/** Roteiro do gol de ANTES da cena semiautomática (copiado da main, sem checagem): a referência de "idêntico ao de hoje". */
+/**
+ * Roteiro do gol de ANTES da cena semiautomática (copiado da main, sem checagem): a referência de "idêntico ao de hoje".
+ * 28/10 (o gol lento, contrato "Replay"): a cópia segue a regra nova do roteiro sem checagem — com o excesso que sobrava
+ * depois dos pisos de sempre, o de trás do gol começa até lentoAntes s antes do GOL, depois sai a lateral do golaço e por
+ * último o de trás do gol (nos gols que cabiam, nada muda). Mudou o montarGol de replay-roteiro.js? Atualizar aqui (S6).
+ */
 export function roteiroGolHoje(anel, g, REPLAY, CAMPO, bolaNoTick) {
   const s60 = s => Math.round(s * 60);
   const G = REPLAY.gol;
@@ -50,18 +55,26 @@ export function roteiroGolHoje(anel, g, REPLAY, CAMPO, bolaNoTick) {
   const fimA = Math.min(fimMax, golTick + s60(G.lentoDepois));
   const ehGolaco = () => { if (g.chuteTick == null) return false; const b = bolaNoTick(anel, g.chuteTick); if (!b) return false; return Math.hypot(b.x - lado * CAMPO.meioX, b.z) >= REPLAY.gol.golaco; };
   const golaco = g.golaco ?? ehGolaco();
-  const lat = golaco ? { de: Math.max(ini, chute - s60(G.lateralAntes)), ate: Math.min(fimMax, chute + s60(G.lateralDepois)), vel: G.vel[2], cam: 'lateral' } : null;
-  const orcamento = golaco ? G.maximoGolaco - Math.max(0, lat.ate - lat.de) / 60 / G.vel[2] : G.maximo;
-  let iniA = Math.max(ini, chute - s60(G.lentoAntes));
-  const total = () => (fimTV - ini) / 60 / G.vel[0] + (fimA - iniA) / 60 / G.vel[1];
-  let excesso = total() - orcamento;
-  if (excesso > 0) ini = Math.max(ini, Math.min(ini + s60(excesso * G.vel[0]), chute - s60(G.antesMin)));
-  excesso = total() - orcamento;
-  if (excesso > 0) iniA = Math.max(iniA, Math.min(iniA + Math.ceil(excesso * 60 * G.vel[1]), chute - 18));
-  const planos = [
-    { de: ini, ate: fimTV, vel: G.vel[0], cam: 'tv' },
-    { de: iniA, ate: fimA, vel: G.vel[1], cam: 'atras' },
-  ];
+  let lat = golaco ? { de: Math.max(ini, chute - s60(G.lateralAntes)), ate: Math.min(fimMax, chute + s60(G.lateralDepois)), vel: G.vel[2], cam: 'lateral' } : null;
+  const ini0 = ini;
+  let iniA, comA = true, orcamento;
+  const total = () => (fimTV - ini) / 60 / G.vel[0] + (comA ? (fimA - iniA) / 60 / G.vel[1] : 0);
+  const tentar = () => {
+    orcamento = golaco ? G.maximoGolaco - (lat ? Math.max(0, lat.ate - lat.de) / 60 / G.vel[2] : 0) : G.maximo;
+    ini = ini0; iniA = Math.max(ini, chute - s60(G.lentoAntes));
+    let excesso = total() - orcamento;
+    if (excesso > 0) ini = Math.max(ini, Math.min(ini + s60(excesso * G.vel[0]), chute - s60(G.antesMin)));
+    excesso = total() - orcamento;
+    if (excesso > 0 && comA) iniA = Math.max(iniA, Math.min(iniA + Math.ceil(excesso * 60 * G.vel[1]), chute - 18));
+    excesso = total() - orcamento;
+    if (excesso > 1e-9 && comA) iniA = Math.max(iniA, Math.min(iniA + Math.ceil(excesso * 60 * G.vel[1]), golTick - s60(G.lentoAntes)));
+    return total() <= orcamento + 1e-9;
+  };
+  let cabe = tentar();
+  if (!cabe && lat) { lat = null; cabe = tentar(); }
+  if (!cabe) { comA = false; tentar(); }
+  const planos = [{ de: ini, ate: fimTV, vel: G.vel[0], cam: 'tv' }];
+  if (comA) planos.push({ de: iniA, ate: fimA, vel: G.vel[1], cam: 'atras' });
   if (lat) { lat.de = Math.max(lat.de, ini); planos.push(lat); }
   const validos = planos.filter(p => p.ate > p.de);
   if (!validos.length) return null;

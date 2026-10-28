@@ -19,6 +19,10 @@ export const CENAS = {
   lente: 2.5,                 // m — ninguém mais perto que isto da câmera
   bola: 0.75,                 // m — ninguém chega mais perto que isto do centro da bola parada (a do mundo, que a página
                               // desenha no lugar do apito): quem começou mais perto fica no máximo onde estava (nunca por cima)
+  // (27/10) quem anda contorna a bola parada pela tangente de um círculo `bolaContorno` m além do dele (cena-atores.js
+  // contornarBola: raspando o de `bola`, o pé da passada cruzava por cima dela), olhando até `bolaOlha` m além do círculo;
+  // dentro dele, a tangente abre até `bolaAbre` rad para fora
+  bolaContorno: 0.15, bolaOlha: 2.0, bolaAbre: 0.3,
   camLimite: 5.5,             // m além das linhas (a mesma regra da comemoração)
   // árbitro e assistentes (cortejo.js: 200, 201, 202; o quarto árbitro, 203, só na substituição)
   idArbitro: 200, idAssistentes: [201, 202],
@@ -73,7 +77,8 @@ export const CENA_CARTAO = {
   // ≤ 3 m da linha
   tunel: { dist: [10.5, 13], cam: { x: 6.5, y: 1.6, z: 38.3 } },
   camera: {
-    arbitro: { dist: 8, altura: 1.5, fov: 31, ang: 0.36, olharY: 1.12, pesoArbitro: 0.6 },
+    // (fileira, 28/10: sem candidata livre a `dist` m, as mesmas direções `fileira`× mais longe, o fov fechado na mesma razão)
+    arbitro: { dist: 8, altura: 1.5, fov: 31, ang: 0.36, olharY: 1.12, pesoArbitro: 0.6, fileira: 1.5 },
     reacao3: { dist: 7, altura: 1.55, fov: 36 },     // plano de três (A1, V2)
     frente: { dist: 4.8, altura: 1.25, olharY: 0.92, fov: 30 },     // de frente para o rosto (A2, V1, V3): o corpo inteiro
     steadicam: { frente: 6, lado: 2.4, altura: 1.6, olharY: 1.0, fov: 32 }, // A3 (como a da comemoração)

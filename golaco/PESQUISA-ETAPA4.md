@@ -415,3 +415,154 @@ na main com o humano de antes: o analógico para a zona / o canto e o botão):
 O roteirizado do "depois" é o teto: acha a melhor mira simulando a trajetória INTEIRA (a pessoa só vê os primeiros metros
 na falta) e acerta a força no tick. Os dois ficam nas faixas dos canhões da IA (escanteio ≤ 12%, falta 2–12%). O gol de
 escanteio acima do real é o do jogo inteiro (o goleiro ainda não sai no cruzamento: pendência da Etapa 4, parte 3b).
+
+## 13. Goleiro realista: defesa pela dificuldade, encaixe × espalmada, set, 1×1 e saída no cruzamento (pedido do dono, 15/10)
+
+Pedido: "os goleiros se movimentando melhor e as espalmas e as seguradas de bola mais realistas, ele defende mais bolas
+difíceis do que fáceis" — e a pendência #114 (sair no 1×1 e no cruzamento). O diagnóstico (canhão da main, 16 partidas,
+2.535 chutes no alvo) achou: a chance de defesa só pesava a distância do chute (a bola no corpo de perto virava gol em
+34%; a de 3 m de lado de 25–30 m era defendida 70–85%), o sorteio que falhava deixava a bola atravessar o corpo (58 gols
+"pelo corpo"), o encaixe não dependia da força nem da altura (a bola no meio de chute de < 12 m espalmada 74%), toda
+espalmada ia para fora (rebote < 2%; 1,6% entravam no próprio gol), o goleiro nunca saía no 1×1 nem no cruzamento e
+estava "set" (os dois pés no chão) em só 29–34% dos chutes. Contrato: `CONTRATOS.md`, "Goleiro realista (16/10)".
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| StatsBomb open data (github.com/statsbomb/open-data), medido aqui: 348 partidas (Copas 2018/2022, Euros 2020/2024, Copa América 2024, AFCON 2023, Bundesliga 23/24), 2.662 chutes no alvo com o goleiro no freeze-frame | Defesa 71,1%; pela distância lateral goleiro → bola: < 0,5 m 93% · 1–1,5 m 80% · 2–2,5 m 67% · 3–4 m 34% · ≥ 4 m 17% (alta a ≥ 4 m: 8%); o terço fácil (P ≥ 0,8) defendido ~97%, o quinto difícil 18%; a fórmula da Etapa 2 subestima o meio da curva | A chance pela FOLGA física (alcance no tempo que sobra − lateral), não pela distância do chute (`chanceReal`); a bola no corpo sempre parada; a bola alta longe do corpo com o termo `cAlto`; as metas A do `teste-goleiro-realista` (o corpo ≥ 90%, a curva cai faixa a faixa) |
+| Idem, 1.893 defesas ligadas ao chute | Segura 47% (em pé 52%, mergulho 28%; em pé baixa 55%, alta 42%; mergulho alto 4% e 72% para fora); duas mãos 66%, uma mão 5–6%; de < 11 m segura 38%, de ≥ 25 m 63%; rebote perigoso 21% (mergulho baixo 30%) | `segura.emPe` / `mergulho` por altura (0,66/0,6/0,45 e 0,4/0,26/0,05), a bola forte escapa mais (`kV`), a da ponta dos dedos é espalmada (`folgaPlena`); o rebote perto, de lado (`rebater`), na bola forte em pé e no mergulho rasteiro de perto; metas B1–B5 (rebote do ataque 8–30% das espalmadas) |
+| Idem, `goalkeeper.position` no chute (2.656 no alvo) | "Set" em 88,9% dos chutes → defesa 75,7%; "Moving" 8,6% → 39,3%; "Prone" 21,2% | O estado entra na conta (`atrasoDoEstado`: `semBase` s sem os dois pés no chão e parado, mais o tempo de frear) e o movimento busca o set: zona com histerese, set com o chute armado, passos curtos perto do ponto (`velPosicao`); meta C1 |
+| Idem, `one_on_one` (364) e "Keeper Sweeper" (685 em 696 goleiro-partidas) | 1×1: 23,4% de gol, 63% das no alvo defendidas, quase tudo em pé/bloqueio; saída na bola ~1,0 por goleiro por partida, 74% encaixe, quase todas na área | O 1×1 sem a regra dos 0,8× (`umXumPartida`), fechar na bissetriz até `umXum.max` m e cair na bola do toque longo (`abafar`); a bola solta da área (`varrer`); metas D1 (≥ 0,5 saída de 1×1 por partida) e D2 (≥ 1 bola solta) |
+| Idem, cruzamentos (20,8 por partida na área) e escanteios (9,2) | O goleiro intervém em 8,2% dos cruzamentos (encaixe 60%, soco 34%) e em 10,7% dos escanteios longos (soco 62%); quase sempre na pequena área (≤ 5,5 m: 19,9%); com o toque dele o gol do lance cai de 3,4% para 0,7%; escanteio vira gol em 2,5% | A saída no alto só no ponto que ele alcança antes do cabeceio, perto da linha (`cruz.dist` 8,5 m) e na altura das mãos; soco quando contestado ou com a bola rápida, senão encaixe (`saidaNoAlto`); meta E1 (≥ 2% dos escanteios) |
+| StatsBomb, "The Enigma of Shot Placement" (blogarchive.statsbomb.com/articles/soccer/the-enigma-of-shot-placement/); American Soccer Analysis, "A Deep Dive Into Shot Location and Placement" (MLS 2011–16) | No meio baixo/médio só 12–13% viram gol; nos cantos 50–60%; a bola que obriga a atravessar o gol ≈ 3× a do corpo; o 2º pau converte 2–3× o 1º | A curva monotônica (meta A3: corpo > exige < 2 m/s > 2–5 m/s > ≥ 5 m/s) e a dificuldade medida pela física no teste (lateral e tempo de voo), não pela conta do jogo |
+| Ibrahim et al. 2019, Frontiers in Sports and Active Living (10 goleiros de elite) | Base de 75% da perna e joelho a ~55° dão o mergulho mais rápido; ~1 s do sinal até a mão na bola do canto | A base de goleiro (`mov.base`, `agacha`, `inclina`: pés mais abertos, quadril baixo, tronco para a frente; o mergulho parte dela) e o braço que demora a esticar (`alcance.tReflexo`/`tEsticar`) |
+| Gryszczenko et al. 2024, Retos 57 (Copa 2018, 669 finalizações); J-STAGE (430 mergulhos, split-step) | Postura preparatória em 91%; antecipar (sair antes de ler) em 61% e associado a MAIS gols; o goleiro decola junto com o apoio do pé do chutador | Ficar set com o chute armado e só reagir na leitura (o tempo de reação de antes); antecipar só a posição — a bola do condutor `antecipa` s à frente —, nunca o mergulho |
+| Fatayri, Serykh & Gumin, "What drives a goalkeeper's decision?" (StatsBomb Conference 2022) | Modelo de mergulho: reação 0,2 s, impulsão 0,5 s, até 1,2 s; os goleiros reais vão mais para a bola e para os lados do que o ótimo | A forma do `alcanceReal` (reação, depois o deslocamento e o braço); a profundidade perto da linha com a bola junto da linha de fundo (`linhaPerto`) |
+| The FA, "Different saving actions for goalkeepers" (learn.englandfootball.com) | Espalmar só quando não dá para segurar, para o lado e longe do perigo, nunca de volta para a área; no 1×1 a ≤ ~2,7 m bloquear ou cair na bola ganhável (smother), a 2,7–7,3 m ficar grande | A espalmada nunca para o gol nem para o meio (`estadoEspalmada`, `rebater` para o lado); o abafar na bola do toque longo; o corpo que bloqueia de verdade (`corpoNaBola`: nada atravessa o goleiro) |
+| American Soccer Analysis, "Valuing goalkeepers with goals added" (2021); Hockey-Graphs 2015 (rebound control) | O valor da defesa = xRebound − xParry (o lugar do rebote pesa); a saída falha no cruzamento custa ~0,45 gol | O rebote existe e é perigoso (meta B5), mas sai de lado e perto, nunca para o meio; a saída no alto só quando chega (desiste se não chega: `cruz.tolera`) |
+| FIFA Training Centre, "Goalkeepers dominating in the air" (Sub-17 2023) e "Dealing with crosses" (Sub-17 feminino 2024); Driblab, "Measuring aerials goalkeeper game" (40 mil cruzamentos) | ~1 saída no alto por partida, 84–92% de sucesso; ler a trajetória cedo, impulsão de um pé; escanteios que caem fora da pequena área raramente são pegos | `cruz.p` 0,93; a leitura pela trajetória prevista a cada `cada` passos, o pulo desenhado (tipo `'salto'`) com a mão na bola; a saída só perto da linha |
+| Science for Sport, "Goalkeeper training: 5 key movement skills"; IDA Valencia, "How to handle 1v1 situations" | Shuffle (passos laterais curtos, sem cruzar) para ajustes; passo cruzado só para distâncias longas; no 1×1 sair no toque longo, parar e ficar set antes do chute | Os passos curtos perto do ponto (`vAjuste`), o fim de passo mais rápido na base (`ritmoFim`: para com os dois pés no chão); meta C3 (pés cruzados ≤ 10%) |
+| EA, Pitch Notes FC 26 (Gameplay Deep Dive e Holiday Update); FIFA 22 TU#1; Destructoid (FC 25 "Deflector") | O posicionamento por aprendizado "não está ativo durante a defesa"; "deflection control": as deflexões fogem do perigo; no cruzamento soco × encaixe e "o tempo importa"; o mergulho no ângulo de perto ficou de propósito menos eficaz | O posicionamento só posiciona (a defesa é a desenhada); a espalmada para longe dos atacantes; o soco no cruzamento contestado; a bola alta de perto no canto quase indefensável (`cAlto` com a folga pequena) |
+
+Medido (canhão do `medir-goleiro.mjs`, 16 partidas IA × IA, sementes 1001–1016, a mesma ferramenta e amostra do
+diagnóstico; "exige" = (lateral − 0,5 m) ÷ (voo − 0,2 s), m/s):
+
+| | antes (main) | depois | real |
+|---|---|---|---|
+| defesa: no corpo · exige < 2 · 2–5 · ≥ 5 m/s | 82,0 · 70,0 · 45,4 · 11,7% | 93,3 · 76,7 · 45,4 · 2,2% | lateral < 0,5 m 93% |
+| no corpo de perto (chute < 12 m): encaixe | 25,2% | 66,2% | segura 47% (em pé 52%) |
+| no corpo e lenta: segura | 58,6% | 77,2% | em pé baixa 55% |
+| espalmadas para a linha de fundo · o ataque pega o rebote · gol de rebote | 96,6 · 1,6 · 1,6% | 72,0 · 15,3 · 7,5% | rebote perigoso 21% |
+| no chute das partidas: parado · os dois pés no chão | 58,5 · 34,1% | 64,8 · 59,1% | "Set" 88,9% |
+| saídas em 16 partidas: 1×1 · cruzamento · bola solta | 0 · 0 · 0 | 15 · 3 · 44 | ~1 por goleiro por partida |
+| escanteio: gol · o goleiro toca | 7,7 · 7,7% | 5,6 · 14,3% | 2,5 · 10,7% |
+
+Painel de 48 partidas (sementes 1001–1048) da 1ª versão: gols 1,65 → 1,85 e "as três metas do goleiro dentro pela
+primeira vez" — **corrigido na revisão (21/10)**: era sorte das sementes 1001–1048. Com as 144 do painel (as do CI) a main
+já estava nas três metas (68,5 / 60,0 / 85,2%) e a 1ª versão (96f66255) tinha gols 1,82 → 1,64, bola parada 25 → 13%,
+escanteios 2,3 → 1,4 e, no canhão de contra-ataque, o 1×1 defendido 53,7 → 45,3% (a IA cavava em 47%).
+
+### 13.1 Revisão adversarial (16–21/10): o que mudou e de onde veio cada número
+
+Achados confirmados: o chute colocado (MOD + CHUTE) e a cavadinha tratados como cruzamento pela saída no alto (a saída
+trocava a defesa já lida); a "bola solta" contando o chute do adversário no ar; o 1×1 que corria até 5,5 m da linha; o
+encaixe no corpo (0,92) e o rebote sem fonte; as metas B1/B2/E1/A4/C1/D2 calibradas para passar. Medido aqui, nas mesmas
+348 partidas da StatsBomb (eventos locais; scripts na pasta de trabalho da sessão):
+
+| Fonte (StatsBomb open data, medido aqui) | O que diz | O que foi aproveitado |
+|---|---|---|
+| 729 defesas com a bola a < 0,5 m de lado | Segura 32% de < 12 m, 40% de 12–16,5 m, 59% de 16,5–25 m, 79% de ≥ 25 m | `segura.corpoDist` (antes 0,92 fixo: 72% de encaixe de perto); metas B1 (≥ 16,5 m: 50–80%, real 64,9%) e B2 (< 12 m: 20–45%, real 32,0%) |
+| 1.006 defesas não seguras ("Touched Out" ÷ não seguras) | Para fora: em pé 26/30/72% (baixa/média/alta), mergulho 36/52/76% | `rebote.foraEmPe` / `foraMergulho` (antes o rebote só pela força) |
+| 2.662 chutes no alvo, defesa pela distância lateral e do goleiro | ≥ 16,5 m: 85,4% (1.126); a ≥ 2,5 m de lado com o chute a ≥ 22 m: 64,8% (105); no corpo de perto (< 8 m): 85,5% | `erroLonge`/`latErro` (a leitura do chute de longe erra mais, fora do canto); meta A4 (50–80% e ≥ 15 pontos abaixo do corpo de perto) |
+| Idem, jogadores entre o chute e o goleiro (a < 1 m do segmento) | Sem efeito mensurável (< 16,5 m: 59,5/59,1/65,3% com 0/1/2+; ≥ 16,5 m: 85,4/88,8/83,6%) | A "visão tapada" NÃO entrou |
+| 8.417 chutes (sem pênalti) | 27,4% bloqueados (15,6% de < 11 m, 36,1% de 16,5–25 m); 25,8% dos bloqueados viram escanteio; o bloqueio é a maior origem de escanteio | `BLOQUEIO` (sim.js `bloqueioPerna`: a perna esticada de quem está perto e de frente; antes só o corpo, 0,31 m: 5,8% dos chutes bloqueados → 21,5%) |
+| 7.077 cruzamentos de bola rolando (20,3 por partida) | 1,09 escanteio por partida sai de cruzamento (5,4%) | `BLOQUEIO.altoPasse`/`pertoPasse` (o cruzamento bloqueado perto do pé de quem cruza: 0,17 escanteio por partida de 5,6 cruzamentos, 3,1%) |
+| Cortes de cabeça de cruzamento | Escanteio em 22% na pequena área, 7% a 5,5–11 m, 0,7% a 11–16,5 m; lateral 7–10% | `CABECEIO.afastaReal` (a bola sai pela física da testa, não pela intenção; antes nenhum afastamento de cabeça virava escanteio) |
+| 364 chutes em 1×1 (no alvo) | Defesa 70,5% com o goleiro a < 2 m da linha, 68,4% a 2–4 m, 41,9% a 4–6 m | O goleiro só corre na bola do toque longo a que chega antes; com a bola no pé do dono, fica na posição (fechar até 2,5–3,5 m baixou o canhão para 49–51%); metas D1 (< 4 m no chute ≥ 90%) e G1 (≥ a main) |
+| 685 "Keeper Sweeper" | 0,081 por chute (0,061 na área) | Meta D2 por chute (≥ 0,03; PENDENTE: hoje ~0,01–0,04) |
+| "goalkeeper.position" (2.656 no alvo) | "Set" (parado) em 88,9% | Pés plantados parado na base (`setGk`, `alcanceSet`, `vSetPes`); meta C1 no instante do chute ≥ 80% (PENDENTE: hoje ~70%) |
+| Escanteios longos | O goleiro toca em 10,7% (encaixe em 38% das saídas) | Meta E1 ≥ 7% (PENDENTE: hoje 2–3%, só socos); a saída no alto deixou de ser barrada pela leitura de chute da mesma bola (1,6 → 2,1–3%) |
+
+Painel de 144 partidas (sementes 1001–1144, as do CI; base = main 278ff4b5 gravada; o merge da main de 21/10 só mudou o
+Modo Livre e o Math → MD do anim.js/ia-ataque.js):
+
+| medida | meta | main | 96f66255 | agora |
+|---|---|---|---|---|
+| gols por partida | 2,3–3,5 | 1,82 | 1,64 | 1,92 (pareado +0,10 ± 0,28) |
+| chutes por partida | — | 8,4 | 7,7 | 8,8 |
+| goleiro: no alvo · 6–16,5 m · ≥ 16,5 m | 66–72 · 55–60 · 80–90% | 68,5 · 60,0 · 85,2 | 70,3 · 58,5 · 88,7 | 66,5 · 58,8 · 84,5 |
+| gols de fora da área | 12–18% | 13,9% | 12,7% | 14,2% |
+| gols de cabeça | 8–18% | 15,1% | 12,7% | 11,7% |
+| origem bola parada | 20–30% | 25% | 13% | 21% (gols de bola parada −0,05 ± 0,14 por partida) |
+| escanteios por partida | — | 2,3 | 1,4 | 1,7 (pareado −0,60 ± 0,31) |
+| chutes bloqueados | (real 27,4%) | 5,8% | — | 21,5% |
+| pênaltis gol/defesa/fora | ~76/18/6% | 71/14/14% (7) | — | 90/0/10% (10) |
+
+Os escanteios continuam abaixo da main: 90% dos escanteios da main vinham da espalmada (52% das defesas iam para fora;
+real 20%). Com a espalmada pela StatsBomb, o bloqueio, o cruzamento bloqueado e o corte de cabeça devolveram 1,4 → 1,7; o
+resto do escanteio real (cortes com o pé sob pressão, ~20 cruzamentos por partida contra ~6 daqui) é do volume de ataque
+(Etapa 4.5). Pendências: C1, D2 e E1 (as metas da pesquisa ficam no `teste-goleiro-realista` como PENDENTE, `--estrito`).
+
+### 13.2 Junção com a main (26–27/10, Categoria C, item 12)
+
+O #493 ficou parado desde 21/10; a main ganhou a Categoria D (IA intensa) e o merge embaralhou as partidas. Dois itens do
+`teste-goleiro-realista` passaram a reprovar e foram atacados na causa, não na meta:
+- **G1 (contra-ataque 1×1, defesa ≥ a da main):** 52,3% contra 53%. Com a Categoria D a IA chega ao 1×1 mais rápido e
+  o goleiro set não tinha a leitura do corpo do chutador que o goleiro real tem (StatsBomb, 364 1×1: 70,5% defendidos com
+  ele a < 2 m da linha, quase tudo em pé/bloqueio; The FA: no 1×1 "ficar grande" e ler o chutador). `umXum.leitura`
+  0,08 s só na finalização com o pé de quem estava sozinho, com o goleiro na base e sem desvio.
+- **E1/E2 (escanteio):** a saída no alto que dava certo em 4,6% (real 10,7%) e o gol de escanteio a 10,6% no canhão
+  (guarda ≤ 10%). Três causas medidas no canhão pareado (os mesmos 476 escanteios): o pulo da saída limitado pela
+  velocidade do mergulho parado levava o corpo para TRÁS (a mão longe da bola) — o pulo agora é da corrida; o ponto da
+  saída só até 2,2 m de altura (a mão no pulo vai a ~2,5 m, acima da cabeça de quem cabeceia, `cabeceio.js`) e o
+  `chegaAntes` de 0,1 s (ele não precisa chegar parado); e o corte de cabeça com `vTesta` 7 (a bola caía na entrada da
+  área e a 2ª bola virava gol: 7 em 476). Mais `folgaCabeceio` 0,5 → 0,8 (o cabeceio a gol no alvo defendido 60,5% → 68%;
+  Opta/StatsBomb ~70%). Saída que dá certo 4,6% → 7,8%; gol de escanteio 8,4–10,6% → 6,9–7,0%.
+
+### 13.3 O passe certo da branch e a bola que sobra (28/10, Categoria C, item 12)
+
+O `teste-intercepta` A (passe certo 80–86,5%; Premier League 23/24: 82,9%) pegou a branch acima da main: 178 partidas
+(sementes 601–760 e 1001–1018, o medidor do diagnóstico com a definição do teste) dão main 85,91% (± 0,18) e branch 86,62%
+(± 0,17), Δ +0,71 ± 0,23 pt. A decomposição por origem da posse e pelo lance que deixou a bola solta (até 5 s antes)
+mostra que o passe "de jogo corrido" não mudou (posse depois de corte de passe sem lance antes: 87,2% → 87,2%, ± 0,4) e que
+a diferença vem de lances que o goleiro realista mudou de propósito: menos escanteios (2,34 → 1,86 por partida: o
+escanteio tem o passe que mais erra) e o cruzamento do escanteio que chega a um companheiro (0% → 8,2%; real 42,7%), +0,25
+pt; a bola espalmada que fica em jogo e a defesa recupera (0,35 → 5,9 passes por partida, 92% certos), +0,12 pt; o
+bloqueio com a perna (+0,05 pt). Medido aqui na StatsBomb open data (215 partidas: Copa 2022, Euro 2024 e as 100 primeiras
+da Premier League 2015/16; eventos baixados um a um; o 1º toque com controle depois do lance, até 15 s):
+
+| | real (StatsBomb) | main | branch |
+|---|---|---|---|
+| defesas seguras ("Success" · "Saved Twice") | 36,0% · 10,4% (1.177 defesas) | 42,4% · 0 | 36,0% · 0 (211) |
+| defesas que ficam em jogo sem segurar | 30,9% | 1,6% | 30,8% |
+| rebote em jogo: o ataque toca primeiro | 42,7% ± 2,6 (349) | — | 44,4% ± 6,3 (63) |
+| chute bloqueado em jogo: o ataque toca primeiro | 50,5% ± 1,6 (991) | — | 19,6% ± 5,3 (56) |
+| a posse de quem defende depois da defesa: passes por posse, certos | 3,6 · 87,9% ± 0,9 | 6,1 · 86,0% | 6,9 · 88,1% |
+| depois do rebote em jogo ("In Play Danger/Safe") | 4,4–5,9 · 86,7–90,3% | — | 9,7 · 91,9% |
+| depois do chute bloqueado | 4,7 · 86,9% ± 0,9 | — | 7,9 · 89,7% |
+| referência: jogo corrido sem lance antes | 87,2% | 87,2% | 87,2% |
+
+O volume (31% das defesas em jogo) e quem pega o rebote batem com o real; a posse que nasce perto do próprio gol depois
+do ataque do adversário é que é limpa demais no jogo TODO (na main, depois do cruzamento cortado: 11,5 passes, 93,2%; depois
+do chute do adversário: 92,1%; o real dessas: 87,2% e 86,5%) — é a contrapressão de quem perdeu a bola na área (Categoria D)
+e o erro do passe (E), não o goleiro. O que era defeito da branch: o chute bloqueado em jogo ficava com a defesa em 80% porque
+o bloqueador DOMINAVA no passo seguinte a bola que saía da canela subindo a ~11 m/s (`sim.js bolaLivre`: a bola abaixo de
+0,45 m era domínio no pé mesmo subindo) — ou um vizinho a matava no peito subindo a 10–19 m/s (`bolaAltaNoCorpo`). Com
+`m.bloq.sobe` ninguém a domina enquanto ela sobe no 1º voo para cima de 0,45 m (96 partidas pareadas, 601–696):
+
+| | real | branch | com a correção |
+|---|---|---|---|
+| chute bloqueado em jogo: o ataque toca primeiro | 50,5% ± 1,6 | 19,6% ± 5,3 (64 partidas) | 48,4% ± 6,3 (62) |
+| depois dele, a posse de quem defende: passes, certos | 4,7 · 86,9% | 7,9 · 89,7% | 6,3 · 86,9% |
+| `teste-goleiro-realista` D4 (dominada subindo; partidas + canhão) | — | 10 de 69 | 0 de 64 |
+| passe certo (definição do `teste-intercepta` A) | PL 23/24: 82,9% | 86,85% | 86,56% (Δ −0,30 ± 0,16 pt) |
+
+Painel de 48 partidas (1001–1048) contra a branch: gols 1,25 → 1,31, chutes 7,8 → 8,0, escanteios 1,8 → 1,9, passe 86,8 →
+86,5%, metas fora da faixa 10 → 8 (gols de cabeça 22,2 → 16,4% e chutes de fora da área 41,7 → 38,1% entram); o
+`teste-goleiro-realista` passa inteiro; `hash-igual` IGUAL (o treino não tem `bloqueioPerna`).
+O que sobra sobre a main não está provado: na revisão independente, numa terceira amostra (2201–2264, 64 partidas
+pareadas), main 86,43%, branch 86,57% e a correção 86,29%; juntando com as 96 de 601–696, a correção fica +0,27 ± 0,26 pt
+sobre a main (160 partidas) — compatível com a main. A mistura nova se repete nela (+0,42 pt: rebote e escanteio realistas)
+e a taxa vai para o outro lado (−0,28 pt); o que resta é a calibração da posse que nasce perto do próprio gol (D e E), não
+o goleiro. Com a correção, o `teste-intercepta` A (96 partidas, 301–396) PASSA: passe certo 86,2%, interceptações 10,96,
+homem livre 72,3%. O "Saved Twice" (o goleiro pega o próprio rebote; `GOLEIRO.reagarra` não
+deixa) fica anotado: pela conta, mexe < 0,02 pt no passe certo.

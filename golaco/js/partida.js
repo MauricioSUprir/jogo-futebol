@@ -1187,7 +1187,10 @@ function atualizarUltimoToque(m) {
   };
   if (idB != null) { marca(idB, m.tick - 1); return; }
   const u = m.ultimoToque;
-  if (u && u.tick >= p.ultimoTick) marca(u.id, u.tick);
+  // (> e não >=: a bola que bate num corpo no MESMO passo do chute — o bloqueio, sim.js bloqueioPerna — fica marcada em
+  // m.tick − 1, o tick do chute; com >= o chute de quem bateu voltava a ser o último toque no passo seguinte e a bola
+  // desviada pela linha de fundo virava tiro de meta em vez de escanteio)
+  if (u && u.tick > p.ultimoTick) marca(u.id, u.tick);
   for (const e of m.eventos) if (e.tipo === 'bateuCorpo') marca(e.id, m.tick - 1);
 }
 

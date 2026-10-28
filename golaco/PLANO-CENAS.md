@@ -315,16 +315,29 @@ Regras da fila:
 - **Classe B** (dentro do teto e do espaço):
   - falta com amarelo;
   - falta a ≤ 25 m do centro do gol atacado (o tiro livre direto que a IA chuta; `PARTIDA.tiroLivreDireto.chuteMax` 30);
+    (28/10) passou a ser a cobrança a ≤ 33 m do gol, do ponto da bola: onde o jogo monta a barreira (`BARREIRA.longe`).
+    É o "Direct free-kick" do SoccerNet-v2 (com intenção de gol ou com barreira), que a TV repete em 74,3% (1609/2166);
   - defesa espalmada (`defesa` modo `espalmada`) de chute de dentro da área ou a ≥ 22 m/s (`chute.v` do `acoes.js`);
-  - chute de dentro da área (|x| ≥ 36, |z| ≤ 20,16) que saiu a ≤ 1,5 m da trave ou do travessão.
+  - (28/10) o mesmo chute BLOQUEADO: o 1º corpo depois dele (também no passo do chute, a perna esticada) é de um
+    adversário de linha (a barreira conta) e a bola morre em escanteio. A TV repete 66% do fora do alvo que vira
+    escanteio (298/454) e 68% do chute de falta que vira escanteio (27/40). O desvio que vira lateral ou falta, não;
+  - chute de dentro da área (|x| ≥ 36, |z| ≤ 20,16) que saiu a ≤ 1,5 m da trave ou do travessão;
+  - (28/10) chute de dentro da área que saiu pela linha de fundo sem ninguém tocar e virou tiro de meta ('chuteFora', o
+    mais fraco). A TV repete 72% do fora do alvo que vira tiro de meta (2551/3560), de qualquer distância, e 69,0% do
+    tiro de meta com um chute nos 15 s antes (2583/3742). O forte de fora da área (≥ 22 m/s, o critério da espalmada) ficou
+    de fora pelo orçamento do ar (§2.7).
 - **Nunca:**
   - lateral ou tiro de meta sem lance A/B;
-  - o chute bloqueado (`bateuCorpo`) sem trave;
+  - o chute bloqueado (`bateuCorpo`) sem trave (28/10: salvo o 'bloqueio' acima);
   - a defesa em que o goleiro fica com a bola. Ele repõe ao vivo; segurar ali tiraria o contra-ataque da pessoa
     ("respeitar o ao vivo", LaLiga). Fica anotado em §9.
 - **Impedimento:** o replay de hoje não muda, mas conta como "último replay" para o espaço de 30 s.
 - **Mais de uma classe na mesma parada:** ganha a mais forte, nesta ordem: pênalti > vermelho > trave > amarelo >
-  falta perto > espalmada > passou perto.
+  falta perto > espalmada > bloqueio > passou perto > chute fora.
+- **(28/10) Fonte e medida:** as taxas acima vêm dos rótulos públicos do SoccerNet-v2 (498 jogos; `PESQUISA-CENAS-TV.md`
+  §4). Com o goleiro realista (C1), a partida tem menos bolas mortas (5,3 por partida sem gol nem impedimento nas
+  sementes 1–24, contra 7,4 na main) e mais bloqueios. As classes novas trazem de volta a FIDELIDADE à TV: replays ÷ os
+  que a TV faria nas mesmas bolas mortas. Os números de cada amostra ficam na §2.7.
 
 ### 2.3 Módulos
 - **`js/lances.js`** (NOVO, puro; fora do fecho; no download inicial):
@@ -387,18 +400,147 @@ Regras da fila:
 Ver §7.1.
 
 ### 2.7 Testes
-- **`tools/teste-replay-paradas.mjs`** (Node, padrão; `--js <pasta>` mede a base): 24 partidas IA × IA gravando o anel
-  com `tools/lib/anel-node.mjs`, que grava exatamente como o `main.js`.
+- **`tools/teste-replay-paradas.mjs`** (Node, padrão; `--js <pasta>` mede a base): 48 partidas IA × IA (28/10; antes
+  24) gravando o anel com `tools/lib/anel-node.mjs`, que grava exatamente como o `main.js`.
 
   | Item | O que confere |
   |---|---|
-  | P1 gatilhos | Um árbitro INDEPENDENTE escrito no teste (como o do `teste-impedimento`) classifica cada bola morta pelos eventos. `lancesPasso` tem de bater 100% nas classes A e ≥ 98% nas B; nenhum replay em lateral/tiro de meta sem lance. |
-  | P2 roteiro | ≤ 2 planos, ≤ 8,0 s (`duracao`), a chave dentro do P1, o P2 a 0,5×, nenhum corte atravessado, null com a chave fora do anel. |
-  | P3 orçamento | ≤ 3 por tempo; ≥ 30 s de bola rolando entre dois replays automáticos (a classe A pode furar o teto, não o "um por parada"). Média de 2–5 replays de parada por partida. Fatia do ar em replay (gol + impedimento + paradas) entre 8% e 16% do tempo de jogo (SoccerNet: 13,3%). |
+  | P1 gatilhos | Um árbitro INDEPENDENTE escrito no teste (como o do `teste-impedimento`) classifica cada bola morta pelos eventos. `lancesPasso` tem de bater 100% nas classes A e ≥ 98% nas B; nenhum replay em lateral/tiro de meta sem lance. (28/10) O bloqueio sai pela CINEMÁTICA: a bola que foge do voo livre, e quem tocou é o mais perto dela, não o `bateuCorpo`. A falta perto sai pelo evento 'barreira' da montagem. |
+  | P2 roteiro | ≤ 2 planos, ≤ 8,0 s (`duracao`), a chave dentro do P1, o P2 a 0,5×, nenhum corte atravessado, null com a chave fora do anel. (28/10) Os planos dentro do anel DE ONDE O ROTEIRO SAIU (`lib/paradas-node.mjs` `espera.anel`): o passo depois do replay já gravou mais um, e na página a simulação fica parada enquanto o replay toca. |
+  | P3 orçamento | ≤ 3 por tempo; ≥ 30 s de bola rolando entre dois replays automáticos (a classe A pode furar o teto, não o "um por parada"). (28/10, decisão do dono) ≤ 5 replays de parada por partida: o piso de 2 saiu. Fatia do ar em replay (gol + impedimento + paradas) entre 8% e 16% do tempo de jogo (SoccerNet: 13,3%), com 2,3–3,5 gols por partida; (28/10, rodada 6) reprovando quando a amostra prova (o teto acima de 16% ou o piso abaixo de 8% por mais de 1,645 erros-padrão entre partidas, nunca abaixo do piso das durações). A FIDELIDADE À TV POR SITUAÇÃO (replays de parada ÷ os da TV nas mesmas bolas mortas, cada uma pela taxa do SoccerNet-v2 do recomeço com cartão / com chute nos 15 s antes / sem nada) ≥ a da VERSÃO PUBLICADA na mesma amostra (`FID_MAIN`, atualizada a cada entrega que mude a partida), reprovando quando a contagem prova (z < −1,645, erro-padrão entre partidas). |
   | P4 pureza | `hashMundo` igual com e sem o `lancesPasso` em cada passo; nada escrito no mundo. |
   | P5 predicado (rev. R13) | Em 24 partidas, `montaNoProximoPasso(m)` antes de cada passo bate 100% com o passo real: a parada montou (`m.parada.cobrador` saiu de null) ou o tempo acabou (`fimDoTempo`). Isso guarda a cópia da regra contra mudanças futuras no `partida.js`. |
 
   - Na base reprova P1–P3 e P5: `js/lances.js` e `roteiroParada` não existem. P4 não tem o que medir na base.
+  - (28/10, classes novas com o goleiro realista C1 + a correção do gol pelo corpo) Medido com o teste novo, `--par 2`, em
+    duas amostras. A fidelidade conta o tiro livre direto como "Direct free-kick" só onde o jogo monta a barreira; o resto
+    conta como indireto. A TV de verdade, em 24 jogos sorteados do SoccerNet, fica entre 91% e 109%.
+
+    | versão | sementes | replays/partida | ar com 2,3–3,5 gols | fidelidade à TV | P1 B |
+    |---|---|---|---|---|---|
+    | main hoje | 1–24 | 2,50 | 11,9–15,8% | 80,4% (60 de 74,6) | 72/84 (reprova) |
+    | main hoje | 101–124 | 2,54 | 12,3–16,3% (reprova) | 86,1% (61 de 70,8) | — |
+    | C1 antes | 1–24 | 0,92 (reprova) | 10,2–14,1% | 47,1% (22 de 46,7) | 30/52 (reprova) |
+    | C1 antes | 101–124 | 1,54 (reprova; avaliador) | 11,2–15,2% | 61,8% (37 de 59,9) | — |
+    | C1 + classes novas | 1–24 | 1,46 (reprova) | 10,8–14,7% | 74,9% (35 de 46,7) | 52/52 |
+    | C1 + classes novas | 101–124 | 2,00 | 11,6–15,7% | 80,2% (48 de 59,9) | 63/63 |
+
+    O piso de 2 por partida não tinha fonte; veio dos números da main. Com o goleiro realista ele não fecha nas sementes
+    1–24 com nenhuma classe que a fonte sustenta: o máximo, com todas e sem filtro, é 1,63. Nas 48 sementes juntas são
+    1,73. Nem a TV sem orçamento chegaria lá: ela faria 1,95 por partida nessas bolas mortas. Quem decide a meta é o dono.
+  - (28/10, decisão do dono: "a fidelidade à TV tem de ser ≥ a da main de hoje na mesma amostra") O piso de 2 por partida
+    SAIU; ficam o teto de 5, o ar 8–16%, o espaço de 30 s (sem fonte, mas o dono mandou manter), o teto de 3 por tempo,
+    ≤ 8 s e um por parada. A fidelidade passou a ser POR SITUAÇÃO (`PESQUISA-CENAS-TV.md` §4 "Por situação"): a conta por
+    recomeço deixava a TV 15–25 pontos otimista, porque quase todo escanteio e a maioria dos tiros de meta do jogo vêm de
+    um chute. A meta: a da branch ≥ a da VERSÃO PUBLICADA nas mesmas sementes, reprovando quando prova (z < −1,645, o
+    erro-padrão entre partidas, nunca abaixo do binomial). A amostra padrão passou a 48 partidas (CI ~680 s).
+
+    | versão | sementes | replays/partida | ar com 2,3–3,5 gols | fidelidade por situação | z contra a main | P1 B |
+    |---|---|---|---|---|---|---|
+    | main hoje | 1–48 | 2,02 | 11,6–15,6% | 57,6% (97 de 168,5) | (a referência) | 120/146 (reprova) |
+    | main hoje | 201–248 | 2,17 | 11,8–15,9% | 61,3% (104 de 169,6) | (a referência) | — |
+    | main hoje | 301–348 | 2,17 | 11,7–15,7% | 58,7% (104 de 177,1) | (a referência) | — |
+    | main hoje | 401–448 | 1,94 | 11,8–15,7% | 54,3% (93 de 171,1) | (a referência) | 126/151 (reprova) |
+    | C1 sem as classes novas | 1–48 | 1,06 | 10,6–14,6% | 40,2% (51 de 126,9) | −3,26 (reprova) | 55/105 (reprova) |
+    | C1 sem as classes novas | 201–248 | 1,60 | 10,8–14,8% | 53,2% (77 de 144,8) | −1,62 | 68/116 (reprova) |
+    | C1 + classes (chuteFora só da área) | 1–48 | 1,81 | 11,4–15,4% | 68,5% (87 de 126,9) | +2,06 | 105/105 |
+    | C1 + classes (chuteFora só da área) | 201–248 | 2,23 | 11,4–15,4% | 73,9% (107 de 144,8) | +2,50 | 116/116 |
+    | C1 + classes + chuteFora da área ou forte | 1–48 | 2,00 | 11,7–15,7% | 75,6% (96 de 126,9) | +3,39 | 117/117 |
+    | C1 + classes + chuteFora da área ou forte | 201–248 | 2,35 | 11,6–15,6% | 78,0% (113 de 144,8) | +3,33 | 128/128 |
+    | rodada 4 (0537a78f: + a bola que sobe do bloqueio fica livre; chuteFora da área ou forte) | 1–48 | 2,08 | 11,8–15,8% | 72,6% (100 de 137,8) | +2,93 | 119/119 |
+    | rodada 4 (0537a78f: + a bola que sobe do bloqueio fica livre; chuteFora da área ou forte) | 201–248 | 2,35 | 11,9–15,9% | 78,5% (113 de 144,0) | +3,38 | 134/135 |
+    | rodada 4 (0537a78f: + a bola que sobe do bloqueio fica livre; chuteFora da área ou forte) | 301–348 | 2,54 | 12,2–16,3% (reprova) | 74,9% (122 de 163,0) | +3,44 | 156/158 |
+    | C1 de 0537a78f sem as classes novas | 1–48 | 1,17 | 10,7–14,7% | 40,6% (56 de 137,8) | −3,30 (reprova) | 57/106 (reprova) |
+    | C1 de 0537a78f sem as classes novas | 201–248 | 1,29 | 10,7–14,7% | 43,1% (62 de 144,0) | −3,59 (reprova) | 62/117 (reprova) |
+    | o estado final (0537a78f + classes; chuteFora só da área) | 1–48 | 1,90 | 11,5–15,5% | 66,0% (91 de 137,8) | +1,65 | 106/106 |
+    | o estado final (0537a78f + classes; chuteFora só da área) | 201–248 | 2,10 | 11,5–15,5% | 70,1% (101 de 144,0) | +1,74 | 116/117 |
+    | o estado final (0537a78f + classes; chuteFora só da área) | 301–348 | 2,40 | 12,0–16,1% (reprova) | 70,6% (115 de 163,0) | +2,52 | 145/147 |
+    | o estado final (0537a78f + classes; chuteFora só da área) | 401–448 | 1,92 | 12,1–16,1% (reprova) | 62,0% (92 de 148,3) | +1,57 | 121/121 |
+
+    - As linhas "C1 ..." são do goleiro realista de b3c9b97c + a5 + cenas3; as da rodada 4, as "de 0537a78f" e as do
+      estado final, do 0537a78f (que mudou o `sim.js`: a bola que sobe da perna do bloqueio fica livre) + rp3 + as
+      mudanças de cada rodada. O P1 B é o do árbitro final (o chute fora só da área, como o classificador), menos nas
+      linhas com o chute fora forte (o árbitro de então: o chute fora da área ou forte; nele a main dava 120/156). No
+      estado final as diferenças do P1 B são de antes: um bloqueio na s239 (201–248) que o árbitro acha pela cinemática
+      2,8 s depois do chute e o classificador não; na s306 (301–348) um chute que cruzou a linha a ~1,5 m da armação (o
+      árbitro mede por amostragem: "passou perto"; o classificador, "chute fora"); e na s348 o bloqueio com a bola a
+      2,4 m de altura (o árbitro só conta até 1,0 m). 99,1% e 98,6% ≥ 98%. A fidelidade é a mesma conta nos dois lados; z
+      contra a main da mesma amostra.
+    - Por que 48: com 24 o veredito dependia da amostra. A fidelidade da main ia de 51,1% a 67,6% nas 4 amostras de 24
+      (1–24, 25–48, 201–224, 225–248). O goleiro realista reprovava o ar em 25–48 (16,1%; 16,6% com o chute fora forte)
+      e passava nas outras. A versão sem as classes novas reprovava a fidelidade em 1–24 (z −3,17) e 201–224 (−1,84) e
+      passava em 25–48 (−1,19) e 225–248 (−0,61). Com 48 a branch dá o mesmo veredito nas duas amostras.
+    - (Rodada 5) Por que o chute fora VOLTOU a ser só o de dentro da área: a fonte cobre todo chute fora do alvo (72%),
+      de qualquer distância, e o tiro de meta com um chute nos 15 s antes a TV repete 69,0%, mas o orçamento do ar do dono
+      (≤ 16% com 3,5 gols por partida) não comporta o forte de fora. Com ele (rodada 4), o teto do ar nas três amostras de
+      48 era 15,80 / 15,90 / 16,29% (1–48, 201–248, 301–348; erro-padrão entre partidas, jackknife, 0,35 / 0,33 / 0,33)
+      e reprovava em 301–348 (a main: 15,61 / 15,91 / 15,69%). Só com os de dentro da área: 15,52 / 15,52 / 16,07%
+      (0,35 / 0,32 / 0,32). O jogo repete 35%, 38% e 52% desses tiros de meta (com o forte, 58%, 62% e 66%). A
+      fidelidade fica acima da main nas três (z +1,65, +1,74, +2,52).
+    - (Rodada 5) A RÉGUA depois do C1: `FID_MAIN` passa a ser a da versão nova, 66,01% (91 de 137,85 nas sementes 1–48),
+      e a regra "sem recuo" vale contra ela — como o hash de referência, é atualizada a cada entrega que mude a partida.
+      Congelada na main de 28/10 (57,6%), um PR futuro poderia cair ~17 pontos sem reprovar (dos 66,0% até ~49%: 57,6%
+      menos 1,645 erro-padrão, o binomial de ~5,1 pontos nas sementes 1–48); com `FID_MAIN` 0,6601 a queda tolerada é
+      ~8,6 pontos (1,645 × o binomial de ~5,2). Nas outras amostras o `--fid-main` da versão nova é 70,13 (201–248),
+      70,55 (301–348) e 62,02 (401–448). No CI deste PR o z dá ~0, porque a régua já é a própria versão nova; a prova
+      contra a main de 28/10 são as medições desta seção (as 4 amostras com o `--fid-main` da main de cada uma).
+    - (Rodada 5, a pendência que a rodada 6 resolveu) No estado final o teto do ar passava de 16% em 301–348 (16,07%,
+      ~0,2 erro-padrão acima). A régua do ar está na borda também na main (15,69% em 301–348, 15,91% em 201–248): o
+      replay do gol, 17,2–17,6 s por gol, leva 11,6–11,9 dos 16 pontos com 3,5 gols por partida. Nenhuma alavanca da TV
+      tira ar sem tirar fidelidade: a TV repete MAIS longo que o jogo — nos rótulos do SoccerNet-v2 a parada com replay
+      tem mediana de 9,5 s de replay em 1,5 plano (p25 5,3 s; a com chute nos 15 s antes, 9,5 s em 1,6;
+      `tools/pesquisa/soccernet_duracao.py`), contra 6,3–6,7 s em média aqui. A menor mudança, dentro do "≤ 8 s" do
+      dono: `REPLAY_PARADA.maximo` 8,0 → 7,0 s, o de um plano de replay da TV (6,8 s em média, Deliège et al. 2021; fica
+      entre o p25 e a mediana da parada com replay). Medida nas três amostras: o teto do ar 15,44 / 15,41 / 15,87% (ep
+      0,34 / 0,31 / 0,30) com os MESMOS replays e a mesma fidelidade (o replay não muda a partida nem a escolha: a
+      simulação fica parada e os 30 s contam só a bola rolando); o P2 (o lento) sai em mais 0 / 2 / 5 replays de chance
+      (fica só a TV); P1 e P2 iguais.
+    - (Rodada 6, 28/10, decisão do dono: a fidelidade ≥ a da versão publicada, sem recuo; FICAM o teto de 5 por partida, o
+      ar ≤ 16%, os 30 s, o teto de 3 por tempo, ≤ 8 s por replay de parada e um por parada) O AR REPROVA QUANDO PROVA,
+      a convenção do repositório para as metas medidas em amostra (a fidelidade deste teste, o passe certo do
+      `teste-intercepta`, o C do `teste-conducao-curta`): o teto do intervalo (3,5 gols por partida) só reprova acima de
+      16% por mais de 1,645 erros-padrão entre partidas (z > 1,645, um lado); o piso (2,3 gols), simétrico, só abaixo de
+      8% por mais de 1,645; o medido (com os gols da amostra), como o teto. A meta não muda.
+      - Por quê: a comparação pontual reprovava por sorteio. Nas 4 amostras de 48 o teto do goleiro realista é 15,52 /
+        15,52 / 16,07 / 16,07% (1–48, 201–248, 301–348, 401–448; erro-padrão 0,35 / 0,31 / 0,32 / 0,38) e o da main de
+        28/10 15,61 / 15,91 / 15,69 / 15,70% (~0,30): as duas na borda. A branch reprovava a pontual em 2 das 4; a main,
+        com a média das 4 (15,73%) e 0,30 de erro-padrão, passa de 16% em ~1 de 5 amostras de 48 (e já reprovou com 24
+        partidas, 16,3% em 101–124). Em 401–448 o excesso da branch nem vem das paradas (2,45% do tempo de jogo × 2,62%
+        na main): vem do impedimento (1,94 × 1,61%) e do replay do gol (17,28 × 17,00 s por gol), efeito do goleiro
+        realista mudar a partida. O corte 8 → 7 s (acima) passaria raspando (15,4–15,9%), mas encurta o que a TV mostra
+        (mediana 9,5 s por parada com replay no SoccerNet-v2): não entrou.
+      - O erro-padrão: a linearização de Taylor do estimador de razão, cada partida um conglomerado (como a fidelidade;
+        Cochran 1977, cap. 6) — com aᵢ os segundos de replay de impedimento + parada da partida i, gᵢ e nᵢ os do gol e os
+        gols, tᵢ o tempo e s = Σg ÷ Σn: uᵢ = (aᵢ + c·s + c·k·(gᵢ − s·nᵢ)/Σn − H·tᵢ) ÷ Σt e ep = √(k/(k−1)·Σuᵢ²). Bate com o
+        jackknife entre partidas a ±0,005 ponto nas 4 amostras.
+      - O piso do erro-padrão (o "binomial" daqui): o erro que sobra com o MESMO número de replays em toda partida, só
+        as durações variando — pela variância total, Var(Σ_{j≤N} dⱼ) = E[N]·Var(d) + Var(N)·E[d]² ≥ E[N]·Var(d) —:
+        √(Σ_imp (d − d̄)² + Σ_par (d − d̄)² + (c·k/Σn)²·Σ_gol (d − s)²) ÷ Σt. Dá 0,15 / 0,14 / 0,16 / 0,18 ponto no teto
+        das 4 amostras: só morde em amostra pequena (com 2 partidas, 0,75 contra 0,72). O Poisson composto (Σd², cada
+        replay independente) NÃO serve de piso: o espaço de 30 s e o teto de 3 por tempo deixam a contagem de replays de
+        parada por partida menos dispersa que a de Poisson (variância ÷ média 0,99 / 0,77 / 0,62 / 0,84), e ele sai
+        acima do entre partidas medido nas 4 (0,352 / 0,344 / 0,374 / 0,388 × 0,347 / 0,314 / 0,317 / 0,384): a regra
+        ficaria mais frouxa do que a amostra sustenta.
+      - O chute fora FORTE continua de fora (rodada 5): a meta continua 16% — a prova só tira o sorteio do veredito, não
+        aumenta o orçamento. Com ele, o teto das 3 amostras medidas ficava em 15,80 / 15,90 / 16,29%, em média 16,0%: em
+        cima do orçamento; só os de dentro da área, 15,8% em média nas 4.
+      - Os "(reprova)" do ar nas tabelas acima são da comparação pontual de antes. O teste final (`--par 2`, ~10 min por
+        amostra):
+
+        | versão | sementes (`--fid-main`) | ar com 2,3–3,5 gols | z do piso / do teto | ep entre partidas (piso das durações), teto | fidelidade, z | teste |
+        |---|---|---|---|---|---|---|
+        | goleiro realista (estado final) | 1–48 (57,56) | 11,53–15,52% | +10,65 / −1,39 | 0,35 (0,15) | 66,0%, +1,65 | passa |
+        | goleiro realista (estado final) | 201–248 (61,31) | 11,49–15,52% | +12,03 / −1,53 | 0,31 (0,14) | 70,1%, +1,74 | passa (P1 B 116/117) |
+        | goleiro realista (estado final) | 301–348 (58,72) | 12,00–16,07% | +13,53 / +0,22 | 0,32 (0,16) | 70,6%, +2,52 | passa (P1 B 145/147) |
+        | goleiro realista (estado final) | 401–448 (54,33) | 12,07–16,07% | +11,42 / +0,18 | 0,38 (0,18) | 62,0%, +1,57 | passa |
+        | goleiro realista (estado final) | 1–48 (o padrão, `FID_MAIN` 0,6601) | 11,53–15,52% | +10,65 / −1,39 | 0,35 (0,15) | 66,0%, 0,00 (a régua é ela mesma) | passa |
+        | main de 28/10 | 1–48 (o padrão, `FID_MAIN` 0,6601) | 11,58–15,61% | +11,77 / −1,28 | 0,30 (0,16) | 57,6%, −1,78 (reprova) | reprova (P1 B 120/146 e a fidelidade) |
+
+        A main reprova a fidelidade contra a régua nova, como deve: voltar à main seria cair 8,4 pontos (57,6 × 66,0%).
+    - O P2 da main em 201–224 (s207: o plano [25062, 25179] "fora" do anel [25063, 25662]) era do TESTE: o roteiro saiu do
+      anel [25062, 25661], o que a página toca com a simulação parada; o teste conferia com o anel de depois do passo
+      seguinte. O `lib/paradas-node.mjs` passou a dar o anel do roteiro (`espera.anel`); o P2b ganhou a chave perto do
+      começo do anel. Na main 201–248 o P2 passa (104 roteiros, 0 ruins).
 - **`tools/teste-replay-paradas-tela.mjs`** (navegador, CI; no `rodar-navegador.mjs`): semente achada em Node por
   `tools/lib/acha-parada.mjs` com `comoPagina: true` (a lição do `acha-gol`), página
   `?demo=1&replayParada=1&comemoracao=0&substituicao=0&cenas=0`. É preciso abrir com `?demo=1` (o webdriver desliga).

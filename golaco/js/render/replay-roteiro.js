@@ -56,6 +56,9 @@ export function ehGolaco(anel, chuteTick, lado) {
  * fim (REPLAY.saot.legal.dura s) e o orçamento cresce REPLAY.saot.extraGol s (12 → 13 s; golaço 14 → 15): primeiro
  * encolhe o plano de TV (nunca começando depois de 0,5 s antes do passe checado), depois o de trás do gol; se ainda não
  * couber, sai sem checagem. Sem checagem o roteiro é exatamente o de antes.
+ * O lance LENTO (28/10; a bola que demora a entrar: o chute bloqueado que sobe, quica e entra): o de trás do gol pode
+ * começar até `lentoAntes` s antes do GOL; depois sai a lateral do golaço; por último o de trás do gol — a base fica
+ * SEMPRE ≤ 12 s (golaço 14; checagem + 1) e, com os extras ≤ 7 s, o total ≤ 19/21 (+ 1). Ver montarGol.
  * Extras (12/10; g.extras === false desliga): g.autor (id do autor de verdade), g.contra, g.desvio, g.tipoChute ('chute' |
  * 'cabeceio'), g.reduzirMovimento — a 1ª pessoa e a visão do treinador entram antes da checagem (planosExtrasGol).
  */
@@ -93,24 +96,45 @@ function montarGol(anel, g, chk) {
   const fimA = Math.min(fimMax, golTick + s60(G.lentoDepois));
   // golaço: o 3º plano (lateral baixa) em volta do chute
   const golaco = g.golaco ?? ehGolaco(anel, g.chuteTick, lado);
-  const lat = golaco ? { de: Math.max(ini, chute - s60(G.lateralAntes)), ate: Math.min(fimMax, chute + s60(G.lateralDepois)), vel: G.vel[2], cam: 'lateral' } : null;
+  let lat = golaco ? { de: Math.max(ini, chute - s60(G.lateralAntes)), ate: Math.min(fimMax, chute + s60(G.lateralDepois)), vel: G.vel[2], cam: 'lateral' } : null;
   // com a checagem: + extraGol no orçamento, − a análise (que entra no fim)
   const extra = chk ? REPLAY.saot.extraGol : 0, analise = chk ? duracaoSaot('legal') : 0;
-  const orcamento = (golaco ? G.maximoGolaco + extra - Math.max(0, lat.ate - lat.de) / 60 / G.vel[2] : G.maximo + extra) - analise;
-  // TV + atrás ≤ orçamento: o começo do plano de TV encolhe (até antesMin antes do chute — com a checagem, até 0,5 s antes
-  // do passe checado, se for antes); se ainda passar, o começo do plano de trás do gol (até 0,3 s antes do chute)
-  let iniA = Math.max(ini, chute - s60(G.lentoAntes));
-  const total = () => (fimTV - ini) / 60 / G.vel[0] + (fimA - iniA) / 60 / G.vel[1];
   const pisoTV = chk ? Math.min(chute - s60(G.antesMin), chk.fotoTick - 30) : chute - s60(G.antesMin);
-  let excesso = total() - orcamento;
-  if (excesso > 0) ini = Math.max(ini, Math.min(ini + s60(excesso * G.vel[0]), pisoTV));
-  excesso = total() - orcamento;
-  if (excesso > 0) iniA = Math.max(iniA, Math.min(iniA + Math.ceil(excesso * 60 * G.vel[1]), chute - 18));
-  if (chk && (total() > orcamento + 1e-9 || ini > chk.fotoTick - 30)) return null;
-  const planos = [
-    { de: ini, ate: fimTV, vel: G.vel[0], cam: 'tv' },
-    { de: iniA, ate: fimA, vel: G.vel[1], cam: 'atras' },
-  ];
+  // TV + atrás ≤ orçamento: o começo do plano de TV encolhe (até antesMin antes do chute — com a checagem, até 0,5 s antes
+  // do passe checado, se for antes); se ainda passar, o começo do plano de trás do gol (até 0,3 s antes do chute).
+  // 28/10 (o LANCE LENTO: o chute bloqueado que sobe da perna, quica, bate na trave e entra 2–3 s depois; a classe nova do
+  // goleiro realista): com Δ = gol − chute, os pisos de cima davam a base ≥ 4,9 + 3Δ s (+ 3,14 da lateral no golaço) e
+  // nada mais encolhia — Δ ≳ 2 s passava dos 12/14 s do contrato (semente 102: 16,94 s; 14 do CI: 15,19). A leitura do lance
+  // fica: a TV (1×) mostra o chute e o desvio inteiros (os pisos dela não mudam); o de trás do gol (0,5×) é o plano "mais
+  // fechado e mais lento" da transmissão (patente US7657836) e mostra o GOL: se ainda passar, o começo dele vai para perto
+  // do gol, até `lentoAntes` s antes DELE (o mesmo 1 s, contado do gol em vez do chute: 4 s de plano no mínimo, a ordem do
+  // plano de replay da SoccerNet — 6,8 s em média); se ainda passar, sai o 3º ângulo, a lateral do golaço ("se dá para
+  // resolver em dois ângulos, melhor que em três" — LaLiga; a SoccerNet: 1 a 3 ângulos por lance), e o orçamento volta a
+  // ser só de TV + atrás; por último (só fora do golaço, com Δ ≳ 5,7 s — nenhum nas partidas medidas; no golaço a TV, ≤ 8,3 s
+  // na saída de bola pelo anel de 10 s, sempre cabe com o de trás do gol no piso), sai o de trás do gol e fica a TV (≤ 10 s:
+  // o anel). Com a checagem, o passo novo NÃO roda (\`!chk\`): não cabendo com os pisos de sempre, sai a checagem como
+  // antes e a base sem ela recebe o tratamento do lance lento (com o passo também na checagem, gols comuns com o passe
+  // apertado e Δ ~1–2 s ficavam com a checagem e o de trás do gol começava DEPOIS do chute: 53 de 136 na revisão).
+  // Sem a checagem, nos gols que já cabiam nada muda (o passo novo só age no excesso que sobrava).
+  let iniA, comA = true;
+  const total = () => (fimTV - ini) / 60 / G.vel[0] + (comA ? (fimA - iniA) / 60 / G.vel[1] : 0);
+  const encaixar = () => {
+    const orcamento = (golaco ? G.maximoGolaco + extra - (lat ? Math.max(0, lat.ate - lat.de) / 60 / G.vel[2] : 0) : G.maximo + extra) - analise;
+    ini = iniTV; iniA = Math.max(ini, chute - s60(G.lentoAntes));
+    let excesso = total() - orcamento;
+    if (excesso > 0) ini = Math.max(ini, Math.min(ini + s60(excesso * G.vel[0]), pisoTV));
+    excesso = total() - orcamento;
+    if (excesso > 0 && comA) iniA = Math.max(iniA, Math.min(iniA + Math.ceil(excesso * 60 * G.vel[1]), chute - 18));
+    excesso = total() - orcamento;
+    if (excesso > 1e-9 && comA && !chk) iniA = Math.max(iniA, Math.min(iniA + Math.ceil(excesso * 60 * G.vel[1]), golTick - s60(G.lentoAntes)));
+    return total() <= orcamento + 1e-9;
+  };
+  let cabe = encaixar();
+  if (chk && (!cabe || ini > chk.fotoTick - 30)) return null;
+  if (!cabe && lat) { lat = null; cabe = encaixar(); }
+  if (!cabe) { comA = false; encaixar(); }
+  const planos = [{ de: ini, ate: fimTV, vel: G.vel[0], cam: 'tv' }];
+  if (comA) planos.push({ de: iniA, ate: fimA, vel: G.vel[1], cam: 'atras' });
   if (lat) { lat.de = Math.max(lat.de, ini); planos.push(lat); }
   const validos = planos.filter(p => p.ate > p.de);
   if (!validos.length) return null;
@@ -132,7 +156,9 @@ const durPlano = p => (p.ate - p.de) / 60 / p.vel;
  *  - treinador (id 210 + time): parte 1 de chute − antes até gol + corte, parte 2 até gol + fim (sem lugar para a câmera ou
  *    com < parte2Min s, sai só a parte 2); o plano com < planoMin s sai;
  *  - extras ≤ REPLAY.gol.extras.maximo s: encolhe o começo da 1ª pessoa (até chute − primeiraMin), o fim da parte 2 (até
- *    gol + parte2Min) e o começo da parte 1 (até chute − parte1Min), nessa ordem.
+ *    gol + parte2Min) e o começo da parte 1 (até chute − parte1Min), nessa ordem; se ainda passar, a 1ª pessoa sai e o
+ *    treinador volta ao plano dele (encolhendo só o que passar); no lance lento (28/10) a parte 1 começa mais perto do gol,
+ *    até gol − Tr.antes — os extras ficam sempre ≤ extras.maximo.
  * Cada plano leva o enquadramento (replay-olhos.js) fora da enumeração (o roteiro impresso fica pequeno).
  */
 export function planosExtrasGol(anel, g, base) {
@@ -164,11 +190,25 @@ export function planosExtrasGol(anel, g, base) {
   }
   // orçamento dos extras
   const total = () => (prim ? durPlano(prim) : 0) + (tr ? durPlano(tr) : 0);
-  let exc = total() - X.maximo;
-  if (exc > 0 && prim) { const lim = Math.max(prim.de, chute - s60(X.primeiraMin)); prim.de = Math.min(lim, prim.de + Math.ceil(exc * 60 * prim.vel)); exc = total() - X.maximo; }
-  if (exc > 0 && tr && tr.corte != null) { const lim = tr.corte + s60(X.parte2Min); tr.ate = Math.max(Math.min(tr.ate, lim), tr.ate - Math.ceil(exc * 60 * tr.vel)); exc = total() - X.maximo; }
-  if (exc > 0 && tr) { const lim = Math.max(tr.de, ref - s60(X.parte1Min)); tr.de = Math.min(lim, tr.de + Math.ceil(exc * 60 * tr.vel)); exc = total() - X.maximo; }
-  if (exc > 1e-9 && prim) { prim = null; }
+  const tr0 = tr && { de: tr.de, corte: tr.corte, ate: tr.ate };
+  const encolher = () => {
+    let exc = total() - X.maximo;
+    if (exc > 0 && prim) { const lim = Math.max(prim.de, chute - s60(X.primeiraMin)); prim.de = Math.min(lim, prim.de + Math.ceil(exc * 60 * prim.vel)); exc = total() - X.maximo; }
+    if (exc > 0 && tr && tr.corte != null) { const lim = tr.corte + s60(X.parte2Min); tr.ate = Math.max(Math.min(tr.ate, lim), tr.ate - Math.ceil(exc * 60 * tr.vel)); exc = total() - X.maximo; }
+    if (exc > 0 && tr) { const lim = Math.max(tr.de, ref - s60(X.parte1Min)); tr.de = Math.min(lim, tr.de + Math.ceil(exc * 60 * tr.vel)); exc = total() - X.maximo; }
+    return exc;
+  };
+  let exc = encolher();
+  // a 1ª pessoa não cabe: sai — e o treinador, que só encolheu para dar lugar a ela, volta ao plano dele e encolhe só o que
+  // ele mesmo passar (28/10: antes ficava encolhido, com a parte 2 de 1,5 s, no gol lento)
+  if (exc > 1e-9 && prim) { prim = null; if (tr) Object.assign(tr, tr0); exc = encolher(); }
+  // 28/10 (o lance LENTO, Δ = gol − chute ≳ 4,9 s; nenhum nas partidas medidas): sem a 1ª pessoa, o treinador sozinho ainda
+  // passava de extras.maximo (de chute − parte1Min ao corte e a parte 2 mínima já são Δ + 2,1 s) e o total do replay
+  // estourava: a parte 1 começa mais perto do gol, até Tr.antes s antes DELE (o mesmo 0,8 s, contado do gol; o chute e o
+  // desvio já passaram na TV, no de trás do gol e na lateral) — a reação dele (a parte 2) fica. Assim os extras ficam
+  // SEMPRE ≤ extras.maximo (no pior caso 0,8 + 0,3 + parte2Min s) e o total ≤ a base + extras.maximo.
+  if (exc > 1e-9 && tr) { const lim = Math.max(tr.de, golTick - s60(Tr.antes)); tr.de = Math.min(lim, tr.de + Math.ceil(exc * 60 * tr.vel)); exc = total() - X.maximo; }
+  if (exc > 1e-9) tr = null; // (rede de segurança: não acontece com as constantes de hoje)
   // enquadramentos e os cortes da 1ª pessoa: os passos RUINS do plano — outro corpo a < `corpo` m da lente no quadro, a
   // lente dentro de algo sólido (o gol, as placas...; folga `solidoFolga`) ou perto do chão, o próprio corpo a < `proprio`
   // m dela — depois do chute acabam o plano antes (fica se sobrar ≥ sobraMin s reais); antes do chute, ele começa depois do
@@ -253,7 +293,8 @@ export function roteiroImpedimento(anel, i) {
  * expulso sai do mundo no passo da bola morta)}.
  *  - falta (penalti, vermelho, amarelo, faltaPerto): P1 'tv' 1× de chave − tv.antes até chave + tv.depois; P2 'fechada'
  *    (a TV do replay com o campo de visão fechado no lance) a lento.vel de chave − lento.antes até chave + lento.depois;
- *  - chance (trave, espalmada, passouPerto): P1 'tv' 1× de chave − tv.antes até o desfecho + tv.depoisChance; P2 'atras'
+ *  - chance (lances.js ehChance: trave, espalmada, bloqueio, passouPerto, chuteFora): P1 'tv' 1× de chave − tv.antes até o
+ *    desfecho + tv.depoisChance; P2 'atras'
  *    (atrás do gol) a lento.vel de chave − lento.antesChance até o desfecho + lento.depoisChance.
  * Total ≤ REPLAY_PARADA.maximo s: encolhe o começo do P1 (até chave − tv.antesMin) e depois o P2 (o começo até chave −
  * 0,3 s, o fim até o desfecho + 0,3 s; ainda passando, ele sai). Nenhum plano atravessa um corte (começa no último antes

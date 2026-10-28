@@ -220,7 +220,11 @@ function sondar(m, T) {
       // no mesmo passo o time T pode ter dominado a bola com outro jogador: a troca automática dá o controle a quem domina
       // (sim.js ganhouPosse) depois do TROCAR — vale o TROCAR (o evento manual dele) e a regra da posse
       const retomou = ev.some(e => e.tipo === 'troca' && e.auto && e.id === a.posse && S.jogadorPorId(a, e.id)?.time === T);
-      const okA = !!jt && jt.time === T && (a.controlado[T] === jt.id || retomou) && (a.controlado[O] === antesO || oTrocouSo);
+      // o novo controlado pode jogar a bola no mesmo passo (o cabeceio de passe sem botão, cabeceio.js) e a troca
+      // automática no passe leva o controle ao recebedor: a ordem troca → passe DELE → troca automática no time T
+      const iM = ev.indexOf(mi), iP = jt ? ev.findIndex((e, k) => k > iM && e.tipo === 'passe' && e.id === jt.id) : -1;
+      const tAuto = iP < 0 ? null : ev.find((e, k) => k > iP && e.tipo === 'troca' && e.auto && S.jogadorPorId(a, e.id)?.time === T);
+      const okA = !!jt && jt.time === T && (a.controlado[T] === jt.id || retomou || (tAuto && a.controlado[T] === tAuto.id)) && (a.controlado[O] === antesO || oTrocouSo);
       const b = structuredClone(m);
       passoN(b, { 0: NEUTRA, 1: NEUTRA });
       const evB = passoN(b, ents2(T, NEUTRA, { x: 0, z: 0, botoes: BOTAO.TROCAR }));

@@ -24,7 +24,7 @@ export const TEMPOS_NODE = {
   'teste-recepcao.mjs': 25,
   'teste-protecao.mjs': 11,
   'teste-dribles.mjs': 1,
-  'teste-conducao-curta.mjs': 44,
+  'teste-conducao-curta.mjs': 160, // C1: parte C 12 → 48 partidas em 4 processos (12 em sequência levavam ~160 s no CI); estimado
   'teste-recomeco.mjs': 7,
   'teste-passes.mjs': 5,
   'teste-chutes.mjs': 15,
@@ -36,7 +36,7 @@ export const TEMPOS_NODE = {
   'teste-treino.mjs': 14,
   'teste-goleiro-trava.mjs': 105,
   'teste-movimento.mjs': 41,
-  'teste-movimento.mjs --modo partida': 140, // D5: entrou no CI (110 s aqui com a máquina dividida)
+  'teste-movimento.mjs --modo partida': 150, // D5: entrou no CI (110 s aqui com a máquina dividida); C1: 32 sementes em 4 processos (estimado)
   'teste-custo.mjs': 15,
   'teste-partida.mjs': 84,
   'teste-editor.mjs': 16,
@@ -46,12 +46,12 @@ export const TEMPOS_NODE = {
   'teste-aereo-troca.mjs --so natural': 913,
   'teste-transicao.mjs': 685,
   'teste-defesa-corrida.mjs': 449,
-  'teste-intercepta.mjs': 276,
+  'teste-intercepta.mjs': 560, // C1: parte A 12 → 96 partidas (10–18 s de CPU cada, 4 processos) + a parte B (~125 s de CPU); estimado
   'teste-rede.mjs': 1,
   'teste-rede-veu.mjs': 3,
   'teste-torcida.mjs': 10,
   'teste-replay-anel.mjs': 688,
-  'teste-replay-paradas.mjs': 340,
+  'teste-replay-paradas.mjs': 680, // 28/10: 24 → 48 partidas (localmente 623–640 s com 2 processos; as 24, 285–315 s)
   'teste-saot.mjs': 215,
   'teste-comemoracao.mjs': 294,
   'teste-substituicao.mjs': 69,
@@ -74,6 +74,7 @@ export const TEMPOS_NODE = {
   // (25/10, D3: 48 partidas de 4 min contra o espelho em 3 processos; localmente ~100 s)
   'teste-pressao.mjs --humano': 150,
   'teste-goleiro-regras.mjs': 146,
+  'teste-goleiro-realista.mjs': 150, // (estimado: 8 sementes do canhão do goleiro em 4 processos, ~100 s na máquina de dev)
   'teste-bolas-paradas.mjs': 237,
   'teste-botoes.mjs': 95,
   'teste-cortejo.mjs': 4,

@@ -447,7 +447,12 @@ IGUAIS; `teste-replay` B1/B2). Constantes em `config.js REPLAY`.
   'tv'|'atras'|'lateral'|'linha', congela?: {tick, s, velDepois}}], lado, ...}`; nunca atravessa um corte do anel.
   `roteiroGol(anel, {golTick, chuteTick, lado, golaco?})` (TV 1× do chute − 4 s, ou do último corte, até o gol + 0,8 s;
   atrás do gol 0,5× do chute − 1 s até o gol + 1 s; golaço = chute de ≥ 20 m: + lateral 0,35×; ≤ 12 s, golaço ≤ 14 s —
-  o começo da TV encolhe; nenhum plano passa de um corte depois do gol), `roteiroImpedimento(anel, {fotoTick, apitoTick,
+  o começo da TV encolhe, até chute − 1,5 s, e depois o do de trás do gol, até chute − 0,3 s; nenhum plano passa de um corte
+  depois do gol; 28/10, o LANCE LENTO — a bola que demora a entrar, Δ = gol − chute ≳ 2 s: o chute bloqueado que sobe,
+  quica, bate na trave e entra —: se ainda passar, o de trás do gol começa até 1 s (`lentoAntes`) antes do GOL, depois sai
+  a lateral do golaço — o orçamento volta a ser só de TV + atrás, 14 s no golaço — e, por último, o de trás do gol (só fora
+  do golaço, Δ ≳ 5,7 s); a TV fica com o chute e o desvio inteiros e a base NUNCA passa de 12/14 s; nos gols que cabiam,
+  nada muda), `roteiroImpedimento(anel, {fotoTick, apitoTick,
   linhaX, idImpedido, time, lado, defensor, por})` (P1 câmera 'linha', 0,6× até o passe — sem congelar desde 12/10 — e
   até o apito — o toque do impedido — em ≤ 2,2 s reais: `congela.velDepois` = 1× ou mais depressa com o apito longe do
   passe, até 2×; além disso para antes do toque; P2 a análise semiautomática: seção seguinte), `roteiroMenu(anel)` (os últimos 10 s, TV 1×; a menos de 3 s
@@ -486,7 +491,8 @@ IGUAIS; `teste-replay` B1/B2). Constantes em `config.js REPLAY`.
   quadroReplayMs, quadros}`, `zerarCusto()`, `medirGravacao(n, lotes)` (ms por gravação, mediana dos lotes),
   `automatico(v?)` (sem salvar), `golPendente`, `pular()`, `menu()`, `gol(golaco?)` (o último gol de novo).
 - **Testes**: `tools/teste-replay-anel.mjs` (Node, padrão: anel, roteiros e relógio, e o replay de um gol e de um
-  impedimento de verdade em Node) e `tools/teste-replay.mjs` (navegador, CI): gol roteirizado (começa na saída, mostra o
+  impedimento de verdade em Node; 28/10: o G3 confere a base de todo gol e o G3b, o gol lento sintético — `--so-g3b` —; `--de
+  S` mede as partidas a partir da semente S) e `tools/teste-replay.mjs` (navegador, CI): gol roteirizado (começa na saída, mostra o
   chute e a bola entrando, simulação parada, 2 planos, só a marca na tela, apito depois), hash com × sem replay (`--base`
   compara outra versão), gol natural, impedimento (linha só do passe em diante, no x do lance, câmera alinhada, congela ≥
   1,2 s, não fica parada depois), pausa, Esc, tecla do jogo, toque no celular, "desligado" salvo, custos. Os testes de
@@ -531,7 +537,10 @@ em `config.js REPLAY.impedimento` e `REPLAY.saot`.
   'saot', congela: {tick: foto, s: 3,6, velDepois: 1}, saot: cena}`; total ≤ 7,47 s. Gol: `roteiroGol(anel, {..., time})`
   acrescenta a análise LEGAL de 3,4 s no fim quando há checagem (orçamento 12 → 13 s, golaço 14 → 15: encolhe o plano de
   TV — nunca começando depois de 0,5 s antes do passe checado —, depois o de trás do gol; não cabe = sem checagem); SEM
-  checagem o roteiro é o de antes, campo a campo (`teste-saot` S6, também nos gols de verdade). `roteiroMenu` também
+  checagem o roteiro é o de antes, campo a campo (`teste-saot` S6, também nos gols de verdade; 28/10: o passo novo do lance lento
+  — o de trás do gol começando até 1 s antes do GOL — só roda SEM a checagem; com ela, não cabendo, sai a checagem como
+  antes e a base sem ela recebe o tratamento do lance lento — a cópia `lib/varre-saot.mjs roteiroGolHoje` segue a regra
+  nova do gol lento sem checagem). `roteiroMenu` também
   acrescenta a análise (a cadeia acaba em chute ou gol). `roteiroLegalTeste(anel, limite?)`, `tempoSaot(rel)` (no último
   quadro o relógio zera `congelado`: devolve `s`, o selo não pisca), `linhaDoReplay` decide pelo plano (`{visivel, x,
   opacidade, cor}`: amarela no P1 do passe em diante; branco-gelo na análise, verde na decisão legal). Relógio: um plano
@@ -642,8 +651,10 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
   para a câmera da parte 2: só a parte 1; plano < 1 s sai); nenhum plano atravessa um corte (o começo procura o último corte
   ATÉ O GOL — também um entre o chute e o gol; sem ≥ `extras.primeiraMin` s de corrida antes do chute depois dele, sem 1ª
   pessoa: contraprova 15/10, `teste-replay-anel` B19); extras ≤ 7 s (encolhe o começo
-  da 1ª pessoa, o fim da parte 2 e o começo da parte 1, nessa ordem); total ≤ 19 s (golaço 21; checagem + 1). O
-  enquadramento vai em `plano.enq` (não enumerável).
+  da 1ª pessoa, o fim da parte 2 e o começo da parte 1, nessa ordem; se ainda passar, a 1ª pessoa sai e o treinador volta
+  ao plano dele, encolhendo só o que ele mesmo passar — 28/10 —; no lance lento, Δ ≳ 4,9 s, a parte 1 começa até 0,8 s,
+  `REPLAY.treinador.antes`, antes do GOL: os extras ficam SEMPRE ≤ 7 s); total ≤ 19 s (golaço 21; checagem + 1), garantido
+  pela base ≤ 12/14 s (+ 1) e os extras ≤ 7 s. O enquadramento vai em `plano.enq` (não enumerável).
 - **Olhos (`render/replay-olhos.js`, puro, Node)**: `enquadrarPrimeira(anel, p)` → `{olho, dir, bruto, cabeca, bolaSome,
   fovH 90, perto 0,10, w0, n}` (olho estabilizado: horizontal ≤ 2 cm do olho bruto antes da esfera e ≤ 6 cm depois — o
   recuo na esfera para a 3,5 cm do centro —, altura sem o balanço da passada, dentro da esfera de 0,148 m da cabeça; olhar em
@@ -678,10 +689,14 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
 - **Testes**: `teste-tecnicos` (Node, padrão: T1–T19; T17 a reação ao gol de qualquer gesto, T18 quem corre perto da
   área técnica e T19 a esquiva saindo da quina da área com os pés dentro dela, sem partida; as partidas seguem 4 s depois do apito final; `--estresse` 72 partidas, 3× as sementes do T17 e
   2× as direções do T18 e do T19; `--so-sinteticos` só o T17, o T18 e o T19), `teste-replay-anel` (G1–G14: ordem, os planos de antes iguais,
-  orçamentos, anel e cortes, pênalti, olho/olhar/giro/bola/gol da 1ª pessoa, corpo na lente, as duas partes do treinador,
+  orçamentos — 28/10: a base também, em todo gol, e G3b o gol lento sintético, 24 e 14 m com Δ de 1 a 6,5 s —, anel e cortes, pênalti, olho/olhar/giro/bola/gol da 1ª pessoa, corpo na lente, as duas partes do treinador,
   a lente fora dos sólidos, a reação dele, pose gravada = ao vivo, G14 o gol de cabeça sintético com o autor seguindo para
   dentro do gol — `--so-g14` —; `--estresse` 84 partidas; o G8 cresce a amostra com as
-  sementes seguintes até 48 gols com autor), `teste-replay` (navegador: G1–G3 ordem, durações e quem
+  sementes seguintes até 48 gols com autor — 28/10: com autor e em que a 1ª pessoa CABE pelas regras fixas acima, sem corte
+  a < `extras.primeiraMin` s antes do chute e com a 1ª pessoa e o treinador mínimos dentro de `extras.maximo`
+  (`lib/replay-g.mjs semLugarPrimeira`, conta só do relógio do lance: a bola que demora a entrar não tem 1ª pessoa, como o gol
+  contra e o gol sem chute); a presença ≥ 80% é medida nesses e uma 1ª pessoa num gol em que ela não cabe reprova),
+  `teste-replay` (navegador: G1–G3 ordem, durações e quem
   some; G4 celular 844×390 Média — chamadas por plano ≤ o máximo ao vivo + 1 e CPU p95 do quadro do replay ≤ a do jogo + 1
   ms —; G5 um toque no meio da 1ª pessoa pula tudo; G6 nada some; G7 a câmera dos planos novos sem salto entre quadros), `teste-tecnicos-tela` (navegador, CI: visíveis na TV do
   celular com o banco no quadro, chamadas iguais com e sem eles, CPU do quadro × `?tecnicos=0`, as linhas no gramado e,
@@ -789,7 +804,10 @@ embaixo, no modelo, a informação de quem entra e quem sai". Pesquisa: `PESQUIS
 SUBST`. **Só desenho**: a troca acontece na simulação como sempre (`escalacao.js aplicarPendentes`, evento `substituicao
 {time, sai, entra}`); a cena anda num mundo à parte (cópias) e a página só SEGURA o laço depois do passo das trocas
 enquanto ela roda (como o replay). `hash-igual` e `hash-partida` IGUAIS; o hash no tick T + 700 é o mesmo com a cena
-ligada, desligada e em Node (`teste-substituicao-tela` T1).
+ligada, desligada e em Node (`teste-substituicao-tela` T1). **Sob demanda** (21/10, para caber o goleiro realista na
+folga do download inicial): `js/substituicao.js` e `render/placa-subst.js` chegam pelo `main.js` SOB.subst (pré-carga
+ociosa; com `?substituicao=1` já no começo; ao ligar a opção); a troca que acontece antes de o módulo chegar sai só com a
+faixa ENTRA/SAI (a simulação não muda).
 - **`js/substituicao.js` (puro, Node; sem m.rng nem Math.random)**: `pontoDeSaida(x, z)` (o ponto do contorno mais perto
   — Regra 3.3; na linha de fundo nunca na boca do gol: |z| ≥ `golRaio + golFolga`); `planejarSubstituicao(m, pares,
   {timeHumano, posAntes(id)})` → `{tick, pares (o do humano primeiro; por par: time, sai, entra, goleiro, saida {x, z, nx,
@@ -1340,6 +1358,8 @@ Pesquisa: `PESQUISA-RECEPCAO-GOLEIRO.md` (seção 4: as correções da contrapro
 ## Etapa 4 — regras (IFAB), goleiro, bolas paradas e equilíbrio (contrato)
 
 Sai em PRs menores; cada um acrescenta a sua parte aqui. Pesquisa e números em `PESQUISA-ETAPA4.md`.
+O goleiro da partida (chance de defesa pela folga física, encaixe × espalmada, set, 1×1, bola solta e saída no
+cruzamento) tem o contrato próprio: "Goleiro realista (16/10)", no fim deste arquivo.
 
 ### Impedimento (Regra 11) e acréscimos (Regra 7.3)
 - `impedimento.js` (puro): `penultimoAdversario(m, t)`, `linhaImpedimento(m, t, out)` → `{u, x, defensor}` (o maior entre
@@ -2305,6 +2325,157 @@ de meta; a linha da trajetória com mira, força e curva no escanteio e na falta
   cobrador nos 4 tipos e no pênalti contra, cobrador e alvo no quadro, nada na lente, a linha ≥ 150 px e ≤ +1 chamada,
   some no chute, a volta para a TV sem salto, teclado e botões CURVA).
 
+## Goleiro realista (16/10; contrato) — defesa pela dificuldade, encaixe × espalmada, set, 1×1 e saída no cruzamento
+
+Pedido do dono (15/10: "os goleiros se movimentando melhor e as espalmas e as seguradas de bola mais realistas, ele defende
+mais bolas difíceis do que fáceis") e a pendência #114 (parte 3b da Etapa 4: sair no 1×1 e no cruzamento). **Tudo só na
+partida** (`m.partida`) e fora do pênalti: o treino e o pênalti seguem a logística de antes (`hash-igual` IGUAL; o
+`hash-partida` muda desde o 1º passo, porque o goleiro já se posiciona diferente). Constantes em `config.js
+GOLEIRO.realista`; pesquisa e números em `PESQUISA-ETAPA4.md` §13.
+
+### Chance de defesa (`goleiro.js lerChute`)
+- `alcanceReal(tau, fator)`: o alcance lateral da mão em `tau` s — o deslocamento do mergulho de antes (`aMergulho`,
+  `vMergulho`, `deslocMax`) mais o braço, que cresce de `alcance.emPe` para `reflexo` em `tReflexo` s e para `esticado` em
+  `tEsticar` s (o corpo parado não leva a mão a 1,6 m em 0,15 s).
+- `atrasoDoEstado(j, lat)` (s): `semBase` sem os dois pés no chão ou andando a ≥ `vParado` m/s, mais o tempo de frear
+  quando ele anda para o lado contrário da bola. O estado do goleiro no chute passa a contar.
+- Folga = `alcanceReal(tau − atraso)` − lateral (m), com `folgaCabeceio` m a mais no cabeceio a gol (lento, lido pelo corpo
+  de quem cabeceia). `chanceReal(lateral, altura, alcance, attr)`: logit = `c0 + cFolga·folga + GOLEIRO.logit.attr·nível`,
+  menos `cAlto·(y − yAlto)·cFolga` na bola alta longe do corpo (lateral > `altoLado`), vezes o limite físico de antes
+  (`folgaAlcance`). A distância do chute só entra pelo tempo de voo: a bola de longe e lenta é fácil; a forte no canto, não.
+  De longe a leitura erra mais: a chance (não o alcance físico, nem o encaixe, nem a bola no corpo) usa o alcance menos
+  `erroLonge`·(distância bola–goleiro − `dLonge`) m, inteiro com a bola até `latErro[0]` m de lado e sumindo até
+  `latErro[1]` m (a do canto, que já pede o mergulho inteiro, não perde nada) — `GOLEIRO.realista.erroLonge`/`dLonge`/
+  `latErro`.
+- Bola no corpo (lateral ≤ `corpo` m e altura ≤ `corpoAlto` m): defesa certa (`j.defesa.corpo = true`).
+- Encaixe (`segura`): no corpo pela distância do chute ao gol (`corpoDist`, pares [m, fração] interpolados por
+  `mat.js tabela`: a tabela da StatsBomb); senão `emPe[k]` ou `mergulho[k]` pela altura (k: < 1 m, 1–1,8 m, ≥ 1,8 m), vezes
+  `1 + kV·(vRef − v)` (limitado a `vMin`–`vMax`; a bola forte escapa mais), no mergulho vezes `folga ÷ folgaPlena` (mínimo
+  `minFolga`: a da ponta dos dedos é espalmada); tudo vezes `1 + 0,3·(reflexo − 72)/100` (as tabelas são do goleiro médio).
+- Defendida sem encaixe: sai para FORA (espalmada pela linha de fundo ou por cima do travessão) com a fração da StatsBomb
+  pela técnica e pela altura (`rebote.foraEmPe[k]` / `foraMergulho[k]`); o resto é `j.defesa.rebote` (a bola escapa e cai
+  perto, de lado).
+- `j.defesa` ganha `real`, `corpo`, `rebote` e `bloqueio`; o evento `leituraGoleiro` da partida traz também
+  `{folga, corpo, lat, y, t, v, mergulha}`.
+
+### Nada atravessa o goleiro (`aplicarDefesa`, `iniciarMergulho`)
+- Batido, o desenho fica fora do caminho da bola: o corpo a `batido.corpo` m e a mão a `batido.mao` m dela (`g.curta`;
+  no treino 0,4 e 0,35, como antes). A bola no corpo que a mão desenhada não alcança vira espalmada (rebote pelo sorteio
+  abaixo).
+- `corpoNaBola(j, tick, p, p1?)`: a bola toca o corpo desenhado (tronco do quadril à cabeça e as duas pernas do quadro do
+  mergulho, raios `bloqueio.tronco`/`perna`; de pé, um cilindro até `bloqueio.alto` m) — em p ou, com p1, no CAMINHO do
+  passo de p a p1, em pedaços de até `bloqueio.amostra` m contra o corpo do tick (27/10: só o ponto do começo do passo
+  deixava o chute forte, ~0,45 m por passo, atravessar o tronco; `teste-goleiro-realista` A5). No passo comum o caminho é
+  o da bola até o passo seguinte. `corpoNoCaminho(m, j)`: o caminho de cada um dos próximos `bloqueio.ticks` + 1 passos
+  contra o corpo do tick em que ele começa. Goleiro batido com a bola passando pelo corpo, em qualquer tick do lance: vira defesa
+  (`d.bloqueio`, espalmada) — `uniforme ≥ bloqueio.fora` → rebote perto, senão desvio para fora.
+- `estadoEspalmada(b, gx, sentido)` → 0 fora do perigo, 1 jogável na zona perigosa, 2 entra no gol (`espalmadaSegura` =
+  0). `espalmar` na partida: sem direção segura, fica a 1ª que não entra no gol (antes a última tentativa valia mesmo
+  entrando: 1,6% das espalmadas do canhão iam para o próprio gol); se todas entram, bem aberta para o lado dela, um pouco
+  para a frente e para cima.
+- `rebater(m, j, d, sentido)`: a bola sai a `fv`·v (na faixa `rebote.v` m/s), para a frente, aberta `rebote.ang` rad para
+  o lado em que estava (nunca para o meio nem para o gol), subindo `rebote.vy` m/s.
+
+### Movimento (`movimentoGoleiro`, `velPosicao`; `jogador.js`, `anim.js`)
+- `velPosicao(m, j, dd, vel, cabeceioVindo)`: parado dentro de `mov.zona` m do ponto, com histerese (sai além de `zonaSai`
+  m; com ameaça — o dono adversário com a bola a < `ameaca` m do gol — `zonaSaiAmeaca`). Com o chute armado do dono
+  (`chuteArmado`: carga ou pedido de CHUTE) ou o cruzamento chegando à cabeça em < `setCruz` s: fica set (só corrige além
+  de `setRaio` m, a ≤ `vSet` m/s). Perto do ponto anda em passos curtos (`vAjuste`; com ameaça `vAjusteAmeaca`). Parado,
+  até `giraSet` rad da bola ele só acompanha com os olhos.
+- Com o dono adversário conduzindo a < `ameaca` m do gol, a bissetriz mira a bola `antecipa` s à frente (chega antes do
+  chute e fica set). Com a bola perto da linha de fundo (escanteio, cruzamento da ponta) a profundidade vai para
+  `linhaPerto` m, interpolando pela distância da bola à linha do gol ao longo do campo (até `linhaU` m).
+- Base: `j.baseGk` (= `mov.base` m andando a < `vBase` m/s): `jogador.js pontoPouso` pousa os pés mais abertos (só abaixo
+  de 2 m/s) e `passoPassada` termina o passo com `mov.ritmoFim` (para e fica com os dois pés no chão).
+  `baseGoleiro(m, j, s)` (0–1, contínuo pela velocidade; 0 fora da partida e com a bola nas mãos): `anim.js` baixa o
+  quadril `mov.agacha` m e inclina o tronco `mov.inclina` rad; `iniciarMergulho` parte da mesma inclinação (sem salto).
+- Set de verdade: `velPosicao` marca `j.setGk` com a velocidade pedida zero (na zona ou set no chute armado); com ele
+  `jogador.js passoPassada` só dá o passo de ajuste com o corpo a mais de `mov.alcanceSet` m de um pé (0,3 nos outros) e,
+  freando a < `vSetPes` m/s, não tira mais um pé do chão. A base de goleiro (`baseGk`/`setGk`) só vale no movimento de
+  goleiro: indo como jogador de linha (`goleiroComoLinha`) ela é apagada.
+- A pose da base (`j.baseF`, 0–1): `atualizarBaseGoleiro` (sim.js, 1×/passo por goleiro da partida) anda para o alvo — 0 com
+  a bola nas mãos ou no pé, senão 1 − v/`vBase` — a no máximo 1 ÷ `mov.tBase` por segundo; `baseGoleiro` lê `j.baseF`
+  (sem o salto de 7–8 cm do quadril no passo em que a bola entrava ou saía da mão).
+- Campos novos do jogador, declarados em `criarJogador` (a mesma classe oculta do V8 — sem eles a partida ficava ~35%
+  mais lenta): `baseGk`, `gkParado`, `varre`, `altoLido`, `abafaAte`, `baseF`, `setGk`.
+
+### 1×1 e bola solta (`umXumPartida`, `saida1x1Partida`, `abafar`, `varrer`)
+- `umXumPartida(m, j)` (o `deveSair` da IA na partida; a regra "ninguém do meu time a menos de 0,8× minha distância"
+  saiu): o dono adversário com a bola a ≤ `umXum.dist` m do gol, dentro da largura da área, vindo para o gol (ou a ≤ 11 m),
+  sem companheiro de linha a < `cobre` m da linha dono → gol nem a < `colado` m dele. Evento `saidaGoleiro {modo: '1x1'}`.
+- Leitura do 1×1 (27/10, `chuteDeUmXum`): set (`naBase`) diante da finalização com o pé (`vooFinalizacao`, nunca o
+  cabeceio, nem depois de um desvio — `m.desvio` ≥ o `tick0` do voo) de quem estava sozinho no 1×1, o goleiro lê o corpo
+  do chutador: o tempo da conta do alcance ganha `umXum.leitura` s. O evento `leituraGoleiro` leva `umXum`.
+- `saida1x1Partida`: só a bola baixa do toque longo (a > `colado` m do pé do dono, a mão valendo, ele chega `chega` s antes
+  do dono) — ele corre nela (evento `saidaGoleiro {modo: '1x1'}`) e cai nela (`abafar`); com a bola no pé do dono devolve
+  null e o goleiro fica no posicionamento de sempre, set com o chute armado (sair na bissetriz até 5,5 m baixava a defesa
+  do 1×1; StatsBomb: 70,5% a < 2 m da linha, 68,4% a 2–4 m, 41,9% a 4–6 m).
+- `abafar(m, g)` (sim.js, depois dos botes, com a bola dominada): a bola baixa (< `abafa.y` m) e lenta (< `vMax` m/s) a ≤
+  `alcance` m dele (+ `saindo` m saindo), mais perto dele que do pé do dono, na área com a mão: sorteio pelo reflexo
+  (`abafa.p`). Pegou → a bola nas mãos (`ganhouPosse`, evento `defesa {modo: 'abafou'}`); errou → descansa `descanso` s
+  (`g.abafaAte`).
+- `varrer(m, j, gx)`: a bola sem dono na área, baixa (≤ `varre.y` m), a ≤ `dist` m da linha, que ele alcança antes de todo
+  adversário (folga `folga` s, também no caminho dela) e sem companheiro chegando bem antes: corre nela (evento
+  `saidaGoleiro {modo: 'bolaSolta'}`), a no máximo `realista.varre.vMax` m/s (a arrancada inteira passava de 0,13 m por
+  passo); indo nela, o "pegou" do `sim.js bolaLivre` aceita até `varre.vPega` m/s (9 antes).
+  O passe do próprio time para outro companheiro não é bola solta; a finalização do adversário no ar
+  (`vooFinalizacao`: chute, colocado, cavadinha, cabeceio a gol) e a bola com a defesa dele já lida também não (é da
+  leitura do chute, com o tempo de reação). Recalculado a cada 4 passos (`j.varre`); o "pegou" rápido só vale com a ida
+  calculada no MESMO passo (`j.varre.vivo === m.tick`).
+
+### Saída no cruzamento (`saidaNoAlto`, `goleiroSaiNoAlto`)
+- Chamada no começo de `lerChute`. A bola do adversário no ar (cruzamento, lançamento, escanteio, falta levantada; nunca
+  uma finalização — `vooFinalizacao`: chute, colocado, cavadinha, cabeceio —, nem o cabeceio), com a bola em jogo; a saída
+  abandonada (`d.saidaAlta && d.fora`) não impede `lerChute` de ler a bola como chute: o 1º ponto da trajetória (`conducao.js preverBola`) com altura em `cruz.y` m,
+  a ≤ `dist` m da linha, |z| ≤ `largura` m e a mão valendo, a que ele chega (`reacao` + corrida × `fCorre` + pulo `salto` +
+  `chegaAntes`, em s) antes de todo adversário cabecear (folga `folga` s; o pulo pela conta do `cabeceio.js`). Contestado
+  (adversário a < `contesta` s do ponto) ou a bola a > `vSoco` m/s no ponto: soco; senão encaixe; sorteio `cruz.p`.
+  Reavaliada a cada `cada` passos; já correndo, desiste antes do pulo se não chega mais (`tolera` s) e volta.
+- "Deixa!": os companheiros que iam cabecear essa bola e ainda não saíram do chão desistem (salvo o controlado do humano);
+  `sim.js bolaAltaNoCorpo` não planeja outro cabeceio por cima dele (`goleiroSaiNoAlto`).
+- O corpo corre de frente para o ponto (de frente para a bola a menos de `vira` m) e pula pelo desenho (`iniciarMergulho`
+  tipo `'salto'`; a bola abaixo de 1,45 m, `'peito'`) DA CORRIDA: na saída no alto o limite do deslocamento do pulo é a
+  velocidade que ele já leva (o do mergulho parado, `vPico`/`vFrente`, não tinha solução e levava o corpo para trás). `aplicarDefesa` só encaixa ou soca com a mão desenhada a ≤
+  `cruz.mao` m da bola; senão a bola passa (`saidaFalhou {longe: true}`). `socar`: `soco.v` m/s, elevação `soco.el` rad,
+  aberto `soco.lado` rad para o lado da bola, para longe do gol.
+- Eventos: `saidaGoleiro {modo: 'cruzamento', soco}`, `defesa {modo: 'encaixe' | 'soco', saidaAlta: true}`,
+  `saidaFalhou {id, longe?, desvio?}`; depois do contato quem ia cabecear perde o plano.
+
+### Bloqueio com a perna, afastamento de cabeça e o último toque (só na partida)
+- `sim.js bloqueioPerna(m, x0, z0)` (depois de `passoBola`, antes de `colisaoBolaCorpo`): nos primeiros `BLOQUEIO.ticks`
+  passos do chute/colocado — ou do passe/cruzamento/enfiada saindo a ≤ `fundo` m da linha de fundo que o defensor defende
+  —, o defensor de linha a ≤ `dist` m de quem bateu e de frente para ele (≤ `frente` rad) estica a perna: a bola baixa (≤
+  `alto` m; o passe ainda a < `pertoPasse` m do pé de quem cruzou, ≤ `altoPasse` m) que passa no passo a < `perna` m do
+  centro dele (fora do corpo, que é do `colisaoBolaCorpo`) bate nela com a chance `p` (pelo alcance, × `kAttr` pelo
+  desarme), sorteada uma vez por bola e defensor (`m.bloq`). Saída pela reflexão numa canela atravessada (normal que sobe
+  `phi` e vira `psi` rad, restituição `e`). Evento `bateuCorpo {bloqueio: true}`, `registrarToque(m, j, 'corpo')`,
+  `m.desvio` (o goleiro relê). Não muda `m.ultimoToque` (o gol desviado é de quem chutou: `render/autor-gol.js`).
+  (28/10) Saindo da canela para cima, `m.bloq.sobe` = o tick: em `bolaLivre` ninguém a domina — no pé (`tentarDominio`) nem
+  no peito/cabeça (`bolaAltaNoCorpo`, também a disputa pelo alto) — enquanto ela sobe (`v.y > 0`) e o topo do voo (`y +
+  v.y²/2g`) passa de `ALTO_BOLA_LIVRE` (0,45 m, a altura da bola alta); desce, outro toque (o voo some ou muda) ou posse =
+  acabou; o goleiro na área ainda pega com a mão. Antes o bloqueador a matava no passo seguinte subindo a ~11 m/s, ou um
+  vizinho no peito subindo a 10–19 m/s (StatsBomb: o ataque toca primeiro em 50,5% dos bloqueados que seguem em jogo;
+  `PESQUISA-ETAPA4.md` §13.3; `teste-goleiro-realista` D4).
+- `partida.js atualizarUltimoToque`: o toque de `m.ultimoToque` só volta a marcar com o tick MAIOR que o último marcado
+  (`>`; antes `>=`): a bola que bate num corpo no mesmo passo do chute fica com quem ela acertou (escanteio, não tiro de
+  meta).
+- `acoes.js afastarReal` (`CABECEIO.afastaReal`, o cabeceio de afastar na partida): a testa vira até `giro` rad do rumo do
+  corpo e a bola sai na direção dela com `en` da velocidade normal que trazia mais `vTesta` m/s (10: o corte da bola do
+  escanteio sai a ~17 m/s, perto do `vAfasta` de antes); sem ângulo para longe do próprio gol, para cima (`elFuga`).
+
+### Testes e medidas
+`teste-goleiro-realista` (padrão; `tools/lib/goleiro-canhao.mjs`, o mesmo canhão do `medir-goleiro.mjs`): 8 partidas IA ×
+IA, 12 cópias do mundo no meio de cada uma (a bola no pé de um atacante a 8–32 m do gol); de cada cópia, chutes no gol a
+14–30 m/s com a mira uniforme (na hora e a 6–16,5 m) e escanteios. Metas A (defesa pela dificuldade física: lateral e
+tempo de voo, sem a conta do jogo), B (segura × espalma, espalmada nunca no gol, rebote), C (set com o chute armado, sem
+saltos, pés cruzados, pose), D (1×1 no canhão de contra-ataque e bola solta por chute), E (saída no escanteio; guarda do
+gol de escanteio), F (colocado e cavadinha não são cruzamento) e G (contra-ataque 1×1: defesa ≥ a da main, sem cavadinha
+em série). Metas pela StatsBomb (o valor real está na linha de cada item); as que o jogo ainda não alcança — C1 (set no
+instante do chute: real 88,9%), D2 (bola solta da área: real 0,061 por chute) e E1 (saída no escanteio: real 10,7%) —
+ficam PENDENTE e só reprovam com `--estrito`; as guardas (C1g, D3, E1g) reprovam sempre. `--js
+<pasta>` mede outra lógica (a main de 21/10 reprova 10 itens; a 1ª versão, 96f66255, 7 — F1, G1, G2, D1, D3, B2, C4). `medir-goleiro.mjs` (informativo) dá o relatório inteiro
+(seções 1–4). O gol de escanteio ainda acima do real (2,6%) vem do duelo pelo alto, não do goleiro: pendência da Etapa 4.5.
+
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores
 que eu escolher, contra a quantidade de jogadores que eu escolher, pode ser adaptável durante a partida" (a Arena de Treino do
@@ -2662,12 +2833,34 @@ fecho (`tools/fecho-hash.mjs --diff origin/main` = 0): o `lances.js` só importa
   - Na bola morta (estado 'parada', parada nova, sem cobrador; nunca o gol, o impedimento nem o fim do tempo):
     `L.lance = {classe 'A' | 'B', tipo, chave (tick do contato ou do chute), fim (tick do desfecho), morta, ateMax, time,
     ids, x, z, lado, peso, parada}` ou null. Tipos, do mais forte ao mais fraco (`TIPOS_LANCE`): 'penalti', 'vermelho',
-    'trave', 'amarelo', 'faltaPerto', 'espalmada', 'passouPerto'.
+    'trave', 'amarelo', 'faltaPerto', 'espalmada', 'bloqueio', 'passouPerto', 'chuteFora' (peso 7, 6, 5, 4, 3, 2, 1,5, 1,
+    0,5). Chance (`ehChance`: o P2 atrás do gol): 'trave', 'espalmada', 'bloqueio', 'passouPerto', 'chuteFora'.
   - Classe A (pênalti; vermelho, também o 2º amarelo; bola na trave com a bola morta em ≤ `chance.mortaAte` s) fura o
-    teto e o espaço. Classe B (amarelo; tiro livre direto a ≤ `faltaPerto` m do centro do gol; espalmada de chute de
-    dentro da área ou a ≥ `chance.vMin` m/s; chute de dentro da área que cruzou a linha a ≤ `chance.perto` m da armação)
-    fica dentro de `porTempo` por tempo e de `espaco` s de bola rolando desde o último replay automático.
-  - Nunca: lateral ou tiro de meta sem lance; chute bloqueado (`bateuCorpo` de outro antes da defesa) sem trave; defesa
+    teto e o espaço. Classe B fica dentro de `porTempo` por tempo e de `espaco` s de bola rolando desde o último replay
+    automático:
+    - amarelo;
+    - 'faltaPerto' (28/10): tiro livre direto com a cobrança a ≤ `faltaPerto` m (= `BARREIRA.longe`, 33) do centro do gol
+      atacado, do ponto da bola — onde o jogo monta a barreira (`bolas-paradas.js barreiraDoTiroLivre`, a mesma conta);
+      o "Direct free-kick" do SoccerNet-v2 (com intenção de gol ou com barreira): a TV o repete na parada em 74,3%
+      (1609/2166). Antes: ≤ 25 m do ponto da falta, sem fonte;
+    - 'espalmada': chute de dentro da área ou a ≥ `chance.vMin` m/s espalmado, sem ninguém tocar antes (no alvo que vira
+      escanteio: 82%, 687/836);
+    - 'bloqueio' (28/10): o mesmo chute com o 1º corpo depois dele (`bateuCorpo`, também no MESMO passo do chute, depois
+      dele na lista: o bloqueio da perna do `sim.js bloqueioPerna`; antes de qualquer defesa) de um adversário de linha —
+      a barreira conta — e a bola morta em ESCANTEIO (fora do alvo que vira escanteio: 66%, 298/454; o chute de tiro
+      livre direto que vira escanteio: 68%, 27/40). O desvio que vira lateral ou falta não (a fonte não cobre);
+    - 'passouPerto': chute de dentro da área que cruzou a linha a ≤ `chance.perto` m da armação, sem ninguém tocar;
+    - 'chuteFora' (28/10): chute de DENTRO DA ÁREA que saiu pela linha de fundo sem ninguém tocar (o último toque da
+      partida, `partida.ultimoId`, é o de quem chutou) e virou TIRO DE META (fora do alvo que vira tiro de meta: 72%,
+      2551/3560; o tiro de meta com um chute nos 15 s antes: 69,0%, 2583/3742). A fonte cobre todo chute fora, de
+      qualquer distância, mas o orçamento do ar do dono (≤ 16% com 3,5 gols por partida) não comporta o forte de fora:
+      com o critério da espalmada (área OU ≥ `chance.vMin` m/s) o teto do ar ia a 15,8 / 15,9 / 16,3% nas sementes 1–48,
+      201–248 e 301–348 (só da área: 15,5 / 15,5 / 16,1%; `PLANO-CENAS.md` §2.7). O jogo repete 35–52% desses tiros de
+      meta (a TV, 69,0%).
+    Todas as chances com a bola morta em ≤ `chance.mortaAte` s do chute e sem o goleiro segurar. Fonte das taxas:
+    SoccerNet-v2, rótulos públicos (Labels-v2 + Labels-cameras, 498 jogos), `PESQUISA-CENAS-TV.md` §4.
+  - Nunca: lateral ou tiro de meta sem lance; chute que bateu no corpo de outro antes da defesa como espalmada, "passou
+    perto" ou chute fora (só a trave vale; o do adversário de linha vira 'bloqueio' se a bola morre em escanteio); defesa
     com o goleiro segurando (ele repõe ao vivo); a trave com a bola já morta (depois do apito: só conta com a bola viva
     ou morta no próprio passo).
   - O vermelho com a falta no passo da bola morta (vermelho direto, 2º amarelo sem vantagem, pênalti com vermelho): o
@@ -2704,7 +2897,29 @@ fecho (`tools/fecho-hash.mjs --diff origin/main` = 0): o `lances.js` só importa
   - Online: segura só o meu lado (como o replay do gol). Livre, disputa e treinos: o classificador nem é criado.
   - API `__golaco.replay.paradas`: `{ligado, armado, contagem, ultimoTick, ultimoTipo, historico, forcar(lance), ndc(x, y, z)}`.
 - **Testes:** `teste-replay-paradas` (Node, padrão; P1–P5 e as bordas do roteiro P2b) e `teste-replay-paradas-tela`
-  (navegador, CI; V1–V11).
+  (navegador, CI; V1–V11). (28/10) No P1 o árbitro acha o 1º contato depois do chute pela CINEMÁTICA da bola (no passo
+  do chute, a bola fora do rumo do pé `cond.ult` ou mais lenta que o chute; depois, a bola que foge do voo livre do
+  `passoBola` numa cópia; quem tocou é o mais perto) — não pelo `bateuCorpo` que o classificador lê — e a falta perto
+  pelo evento 'barreira' da montagem (a conta tem de bater com ele em todas). (28/10, decisão do dono) O P3: ≤ 3 de classe
+  B por tempo, ≥ 30 s de bola rolando antes de cada um e um por parada (ficam); ≤ 5 por partida (o piso de 2 SAIU: não
+  tinha fonte); o ar em replay 8–16% com 2,3–3,5 gols por partida, reprovando quando a amostra prova (28/10: o teto
+  acima de 16% ou o piso abaixo de 8% por mais de 1,645 erros-padrão ENTRE PARTIDAS — a linearização de Taylor, como a
+  fidelidade —, nunca abaixo do piso das durações, o erro que sobra com o mesmo número de replays em toda partida; a
+  meta não muda. Nas 4 amostras de 48 — 1–48, 201–248, 301–348, 401–448 — o teto dá 15,52 / 15,52 / 16,07 / 16,07% no
+  goleiro realista e 15,61 / 15,91 / 15,69 / 15,70% na main de 28/10, erro-padrão 0,30–0,38: as duas na borda, e a
+  comparação pontual reprovava por sorteio — a branch em 2 das 4, a main em ~1 de 5 amostras de 48); e a FIDELIDADE À TV
+  POR SITUAÇÃO — os replays de parada ÷ os que a TV faria nas
+  mesmas bolas mortas, cada uma pela taxa do SoccerNet-v2 da situação dela (o recomeço com cartão / com chute nos 15 s
+  antes / sem nada: `TV_SIT`, `PESQUISA-CENAS-TV.md` §4 "Por situação", `tools/pesquisa/soccernet_situacao.py`) — ≥ a da
+  VERSÃO PUBLICADA na mesma amostra (a regra "sem recuo"), reprovando quando a contagem prova (z < −1,645 com o
+  erro-padrão entre partidas, nunca abaixo do binomial). `FID_MAIN` = a da versão publicada na amostra padrão (48
+  partidas, sementes 1–48): 66,0%, a do goleiro realista (C1), que entrou com 66,0% contra 57,6% da main de 28/10 (z
+  +1,65); é atualizada a cada entrega que mude a partida, como o hash de referência. No CI do PR que a atualiza o z dá
+  ~0 (a régua já é a própria versão nova); a prova contra a versão de antes fica nas medições registradas
+  (`PLANO-CENAS.md` §2.7: as 4 amostras com o `--fid-main` da main de cada uma). Outra amostra: `--fid-main` (a versão
+  publicada: 70,1% em 201–248, 70,6% em 301–348 e 62,0% em 401–448). O P2 confere os planos com o anel do momento do
+  roteiro (`lib/paradas-node.mjs` `espera.anel`: o passo depois do replay já gravou mais um; na página a simulação fica
+  parada e o anel não anda).
 
 ### Cena do cartão (PR 2; dono, 22/10: "as cenas de cartões")
 Porte da branch `golaco/cenas-jogo` (1df2ca34) para fora do fecho: `js/cenas-config.js` (`CENAS`, `CENA_CARTAO`,
@@ -2715,13 +2930,29 @@ Porte da branch `golaco/cenas-jogo` (1df2ca34) para fora do fecho: `js/cenas-con
   - O árbitro e os assistentes (`criarJogador` 200–202, posição 'ARB', kit 'arbitro'); `adicionarNovo` (os treinadores).
   - `passoAtores` na ordem do `passoCena` da comemoração (desejo → `passoCorpo` → separação → `passoPassada` →
     `passoPeDesenhado` → quadril → pose + gestos); quem para e fica plantado `CENAS.parado` ticks fica FIXO, respirando.
+    Separação (`separarCena`, centros a ≥ `CENAS.separacao`): cada um cede `a.cede` (0 = o fixo, o punido, o treinador);
+    quem não cede e chega num FIXO que cede quando anda: o fixo volta a andar (`soltar`) e sai — nunca os dois parados um
+    dentro do outro.
+  - O FIXO NÃO ANDA (27/10): ele é desenhado pela pose de base (a da locomoção no tick em que fixou + respiração e gestos,
+    que não mexem a pelve na horizontal), então o `j` dele só muda depois de `soltar` — quem a cena leva sozinho (a
+    pré-rolagem do capitão depois do `assentar` da vantagem que virou gol, o `isolar` do IFAB) é solto antes. O
+    `teste-cenas` confere em toda cena de A, A-L, C e F-fim a pelve desenhada de cada fixo a ≤ 0,10 m do `j` em todo tick
+    (a pose a põe a ≤ 2,5 cm; antes o capitão ficava desenhado a até 8,7 m do corpo a cena inteira e saltava ao soltar).
+  - `desviar(c, a, d, contorna = true)`: além de quem está à frente, a bola parada do cartão (só `a.bolaMin > 0`; o fim de
+    jogo zera) é contornada pela TANGENTE de um círculo `CENAS.bolaContorno` m além do de `marcarBola` (`contornarBola`;
+    olha até `CENAS.bolaOlha` m além dele; o círculo não passa do destino — `d.dist`, posto por `irPara`/`para` e pelos
+    desejos que escrevem o `c._d` à mão —; dentro dele a tangente abre até `CENAS.bolaAbre` rad para fora). Raspando o
+    círculo do `separarDaBola` a ~2,4 m/s, o pé que ficou plantado do lado da bola cruzava por cima dela no passo seguinte
+    (o pé a 0,09 m do centro). `contorna` = false para o capitão do A1/V2 (`pontoApoio` já dá a volta nela).
   - `recriarAtor` (ELIPSE: só no tick de um corte); `escolherVariante(tick, id, ultima, disponiveis, penultima)` (hash;
     nunca a anterior).
   - Os gestos (`gTiraAmarelo`, `gTiraVermelho`, `gCartao` — braço reto, a mão ≥ 0,25 m acima do topo da cabeça —,
     `gAponta`, `gAnota`, `gAfasta`, `gApito`, `gAbertos`, `gCabeca`, `gDesculpa`, `gSegura`, `gTapinha`, `gAbana`, `gRosto`,
     `gPalmasAlto`, `gCintura`, `gJoelhos`, `gAperto`) e as posturas (`posturaCabisbaixo`, `cabecaCeu`, `balancaCabeca`).
   - A câmera: `camValida`, `custoCamera` (a lente longe de onde cada um está, de onde vai parar e do caminho até lá),
-    `melhorCamera`, `fugirDaLente`, `caberNoQuadro`, `definirPlano`/`definirPlanoGrupo`.
+    `melhorCamera` (sem candidata livre, a de maior folga até o CAMINHO de cada um — de onde está até onde vai parar —, como
+    no `custoCamera`; 28/10: só pela posição de agora, quem vinha correndo passava na lente), `fugirDaLente`,
+    `caberNoQuadro`, `definirPlano`/`definirPlanoGrupo`.
   - `moverJuntas`, `inclinarTronco` e `flexionar` (com `pernaIK` e `ponta`) são CÓPIAS dos da `comemoracao.js` (lá não são
     exportados e o arquivo é do fecho).
 - **`js/cena-cartao.js`** (puro):
@@ -2739,10 +2970,16 @@ Porte da branch `golaco/cenas-jogo` (1df2ca34) para fora do fecho: `js/cenas-con
   - Planos e tempos em `CENA_CARTAO.planos`: amarelo `arbitro → reacao → anota` (5,45 s); vermelho `arbitro → reacao →
     saida → tunel → torcida` (8,9 s); 2º amarelo 9,9 s. O cartão no alto fica ≥ 1,0 s DENTRO do plano do árbitro (o do
     vermelho direto vai até 2,0 s; o do 2º amarelo até 4,0 s, com a reação, a saída e o túnel mais curtos). Só o capitão e o
-    punido a < `ifab` m do árbitro (A1, V2).
+    punido a < `ifab` m do árbitro (A1, V2). A lente do plano do árbitro: 18 candidatas a `camera.arbitro.dist` m (± 0,8) do
+    ponto onde ele para, a ± `ang` rad da direção da parada; sem nenhuma livre, a 2ª fileira — as mesmas direções
+    `camera.arbitro.fileira`× mais longe, com o fov fechado na mesma razão (28/10, a receita do `cena-fim.js
+    melhorComFileira`: o capitão do V3 do goleiro expulso que vinha a 8,7 m/s freava a 0,43 m da lente). Quem sai da reta
+    árbitro–punido guarda o lado (`a.sgAfasta`) até terminar de
+    sair (27/10: o árbitro para onde o punido parou, a até ~1,4 m do ponto do plano, e quem estava a meia distância dos
+    dois trocava de referência e de lado a cada passo, indo e voltando a ~3,1 m do árbitro).
   - A bola parada do mundo (a página a desenha no lugar do apito): ninguém da cena passa por cima dela — o centro de cada
     ator fica a ≥ `CENAS.bola` m dela (quem começou mais perto, no máximo onde estava: `marcarBola`/`separarDaBola`), o
-    desvio a contorna e o árbitro não para em cima dela.
+    desvio a contorna pela tangente (`contornarBola`) e o árbitro não para em cima dela.
   - Depois da ELIPSE do túnel o companheiro fica no campo (para olhando o expulso sair). A lente do túnel tem candidatas a
     mais (o V1 de 4,8 a 7,5 m atrás e até 3,2 m de lado; o V2/V3 com |x| de 4 a 10 m e z de 36,5 a 39 m); sem nenhuma livre,
     a de maior folga até o ator mais perto (`melhorCamera`).
@@ -2802,7 +3039,10 @@ Porte da branch `golaco/cenas-jogo` (1df2ca34) para fora do fecho: `js/cenas-con
   dos treinadores onde os vivos ficam — 6 s de `passoTecnicos` com o mundo parado —, a bola parada, o cartão no alto no
   plano do árbitro e o companheiro depois da elipse; A-L 48 vermelhos na lateral de cá, z = 30; B variedade, E pureza, F
   relógio do estádio, G custo, P o plano da torcida nos trilhos das plantas: Maracanã e 6 genéricos) e `teste-cenas-tela`
-  parte `cartao` (navegador, CI e deploy; C6b, C11b, C12b, C12c e o C4 em 560×400 desta revisão).
+  parte `cartao` (navegador, CI e deploy; C6b, C11b, C12b, C12c e o C4 em 560×400 desta revisão). A amostra troca sem mexer
+  no padrão do CI (27/10): `--estados s:t,...` (os estados do meio do A, A-L, E e G), `--sem-c N` (o canhão C) e
+  `--sem-fim N` (o F-fim); a da revisão de 27/10 está no cabeçalho do teste. O "fixo no lugar" vale nos quatro canhões, e o
+  "a bola do apito no ar cai" do C conta só a bola VIVA (a das mãos do goleiro fica fora do desenho e sem física).
 
 ### Guardador de lances (PR 3, intervalo: a 1ª parte; PLANO-CENAS.md §4.2, R8, R9, R20)
 O intervalo ("lances do 1º tempo") e o fim ("Melhores momentos") tocam lances da partida inteira; o anel do replay só tem
