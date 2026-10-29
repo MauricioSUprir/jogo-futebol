@@ -596,14 +596,27 @@ Medido (`teste-mergulho` H e I, partida copiada da semente 5; antes = main 02f4e
 | H1b a mesma bola por cima do goleiro adiantado: seguras | 36,7% (11/30) | 13,3% (4/30) | 14,9% |
 | H2 espalmada com UMA mão (a de cima) na bola, acima da cabeça | 2,7% (3/113) | 83,3% (105/126) | 61,4% (mergulho) |
 | H4 espalmadas para fora em 3 s (com o rebote) | 81,4% | 82,5% | 79,1% |
-| I1 a bola atravessa o tronco do goleiro fora da área | 120/120 | 0/120 | — |
-| I2 a bola atravessa o corpo do pulo na saída que falha | 18/29 | 0/50 | — |
+| H5 a espalmada sorteada vira "pegou" antes do contato | 21 de 370 | 0 de 370 | — |
+| I1a fora da área, a bola bate no ar (> 5 cm da casca do corpo desenhado) | 1 de 1 | 0 de 41 | — |
+| I1b fora da área, sem bater, a bola entra > 2 cm no miolo do corpo desenhado | 17/600 | 0/600 | — |
+| I2 a saída que falha: a bola dentro do corpo do pulo / batida no ar | 2/29 / — | 0/50 / 0 de 25 | — |
 | I3 o goleiro atrás da bola "defende" a 18–45 m dela | 4/120 | 0/120 | — |
 
-Painel de 144 (sementes 1001–1144; base = main 02f4ec4a): 119 partidas idênticas, 25 mudam a partir de um lance do goleiro.
-Pareado por semente: gols 1,65 → 1,69 por partida (Δ +0,035 ± 0,062), chutes no alvo 4,37 → 4,44, goleiro 67,2 → 67,6% (6–16,5 m
-57,4 → 58,1%, de fora 86,7 → 87,0%: as três metas), gols de cabeça 16,7 → 15,2% (Δ −0,021 ± 0,023 por partida), impedimentos
-1,03 → 0,99 (Δ −0,049 ± 0,068: a main na borda da meta ≥ 1; o impedimento não foi mexido).
+Revisão de 29/10 (o 1º C3 reprovou): o "corpo" da colisão era um cilindro fixo no centro lógico do goleiro, de 0,9 a 1,75 m
+— a bola batia no AR acima da cabeça do goleiro agachado na base (a cabeça desenhada a 1,28–1,53 m; até 32 cm do corpo) e
+entrava no peito, que fica 0,11–0,20 m à frente do centro com o tronco inclinado (até 15 cm, sem contato); e o I1 de antes
+media contra o próprio cilindro (circular). Agora a colisão é com o corpo DESENHADO (as cápsulas do manequim — afuniladas e
+achatadas frente–trás, como o render/jogador3d.js as desenha — e a cabeça) na pose do passo, e o teste mede pelo desenho entre
+dois limites independentes da conta (o miolo e a casca). No 1º C3 (a mesma ferramenta): I1a 8 de 130 batidas no ar (até 19,8
+cm), I1b 28/600, I2 34 de 38 batidas no ar (o bloqueio pela previsão de 8 passos com os raios grossos do C1). Não há fonte
+externa para isto: é a regra "o que se vê é o que acontece" (a mesma do cabeceio pela cabeça desenhada, `sim.js
+cabecaNaBola`).
+
+Painel de 144 em duas amostras (base = main 02f4ec4a, pareado por semente). 1001–1144: 121 partidas idênticas, 23 mudam; gols
+1,65 → 1,68 por partida (Δ +0,028 ± 0,058), goleiro 67,2 → 67,6% (6–16,5 m 57,4 → 56,6%, de fora 86,7 → 87,4%: as três metas),
+gols de cabeça 16,7 → 15,2%, impedimentos 1,03 → 1,01. 7001–7144 (a da revisão): 125 idênticas, 19 mudam; goleiro no alvo 66,5 →
+66,3% (o 1º C3: 65,8%, fora da meta), impedimentos 0,89 → 0,87. Juntas (288): impedimentos Δ −0,024 ± 0,049 (z −0,98), goleiro
+66,3 → 66,3% (IC95 do bootstrap pareado [−0,88; +0,79] ponto).
 O chute com a barra cheia no ângulo (C2) contra o goleiro realista posicionado, a grade da sonda do C2 só com o analógico nos
 cantos (2.160 chutes, os mesmos nas duas versões): gols 68,2% → 68,3% (Δ +0,1 ± 0,1) — a espalmada alta nova não é defesa
 "milagrosa": a chance não mudou, só o desenho.

@@ -47,8 +47,8 @@
 //    H3. as espalmadas (sem o rebote) saem do campo em 3 s (por cima do travessão, pela linha de fundo): ≥ 90%;
 //    H4. com o rebote (a bola que escapa e cai perto, GOLEIRO.realista.rebote): para fora em 65–95% (real 79,1%, IC 65–89%);
 //    H5. a bola com a defesa já sorteada para espalmar (ou batido), fora do corpo, não vira "pegou" — a mão desenhada que
-//        passa perto dela antes do contato (sim.js bolaLivre) — em nenhum chute da seção (a main: 7; a espalmada da
-//        StatsBomb não vira encaixe).
+//        passa perto dela antes do contato (sim.js bolaLivre) — em nenhum chute da seção (a main: 21 de 370; a espalmada
+//        da StatsBomb não vira encaixe).
 //  I. nada atravessa o goleiro e o goleiro atrás da bola, na PARTIDA (pendências do C1 e do C2), pelo corpo DESENHADO (o
 //     manequim da pose, entre o miolo e a casca; ver a seção I abaixo):
 //    I1. a bola a 0,95–1,9 m no corpo do goleiro FORA da área (sem a mão, solto no lance): a. não bate no ar (a > 5 cm do corpo
