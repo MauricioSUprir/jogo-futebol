@@ -30,7 +30,7 @@ export const TEMPOS_NODE = {
   'teste-chutes.mjs': 90, // C2: + a barra cheia contra o goleiro realista da partida e (28/10) as metas em 9 sementes + o árbitro da curva de antes (solto, para o gol, ±17°: 1.280 chutes) + (29/10) a referência gravada da main (1.592 chutes) e o canto (232), ~2 s; medido 58–66 s aqui sozinho (era ~40)
   'teste-cavadinha.mjs': 107,
   'teste-goleiro.mjs': 6,
-  'teste-mergulho.mjs': 35,
+  'teste-mergulho.mjs': 155, // C3: + H (480 chutes de bola alta numa partida copiada) e I (1.170 lances: o corpo do goleiro fora da área, a saída no alto que falha — com a mão forçada a não chegar —, o goleiro atrás da bola): ~130 s aqui com outro processo (H ~40 s, I ~70 s)
   'teste-aereo.mjs': 2,
   'teste-cabeceio.mjs': 70,
   'teste-treino.mjs': 14,
@@ -50,7 +50,7 @@ export const TEMPOS_NODE = {
   'teste-rede.mjs': 1,
   'teste-rede-veu.mjs': 3,
   'teste-torcida.mjs': 10,
-  'teste-replay-anel.mjs': 688,
+  'teste-replay-anel.mjs': 715, // (C3: + G18, o canhão de 60 cruzamentos gravado no anel: ~25 s)
   'teste-replay-paradas.mjs': 680, // 28/10: 24 → 48 partidas (localmente 623–640 s com 2 processos; as 24, 285–315 s)
   'teste-saot.mjs': 215,
   'teste-comemoracao.mjs': 294,

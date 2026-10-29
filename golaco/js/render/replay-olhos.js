@@ -208,6 +208,21 @@ export function enquadrarPrimeira(anel, p) {
   gaussiana(bruto, n, 3, F.sigmaXZ * 60, olho);
   mediaMovel(bruto, n, 3, 1, Math.round(F.mediaY * 60), olho);
   if (F.sigmaY > 0) { const ys = new Float64Array(n), yo = new Float64Array(n); for (let i = 0; i < n; i++) ys[i] = olho[i * 3 + 1]; gaussiana(ys, n, 1, F.sigmaY * 60, yo); for (let i = 0; i < n; i++) olho[i * 3 + 1] = yo[i]; }
+  // no CABECEIO (C3, item 14 da FILA): no pulo a cabeça sobe ~0,3–0,6 m em ~0,3 s e a altura suavizada de 0,33 s + σ 0,26 s
+  // ficava para trás — o olho ia ao fundo da faixa em volta da cabeça (−0,14 m), a lente a < `proprio` do próprio corpo, e a
+  // 1ª pessoa saía de quase todo gol de cabeça. Em volta do cabeceio (chute − antes s a chute + depois s, com rampas de
+  // `rampa` s) a altura vem de uma gaussiana CURTA (σ `sigma` s) do olho bruto: o olho acompanha o pulo (o balanço da
+  // passada, que a suavização longa tira, não existe no ar)
+  if (cab && F.cabeceioY) {
+    const CY = F.cabeceioY, ys = new Float64Array(n), yc = new Float64Array(n);
+    for (let i = 0; i < n; i++) ys[i] = bruto[i * 3 + 1];
+    gaussiana(ys, n, 1, CY.sigma * 60, yc);
+    const a0 = p.chuteTick - s60(CY.antes), a1 = p.chuteTick + s60(CY.depois), r = Math.max(1, s60(CY.rampa));
+    for (let i = 0; i < n; i++) {
+      const t = w0 + i, w = suave01((t - (a0 - r)) / r) * suave01(((a1 + r) - t) / r);
+      if (w > 0) olho[i * 3 + 1] += (yc[i] - olho[i * 3 + 1]) * w;
+    }
+  }
   // a altura presa pela cabeça SEM tranco (16/10, frente "cenas robustas"): o quanto cada passo passa da faixa que a esfera
   // de raioCabeca deixa na vertical (com o olho já recuado até olhoHMin na horizontal) e de [yMin, yMax] vira uma correção
   // DILATADA por gaussiana (σ sigmaPrende): ela começa antes e acaba depois, sem degrau, e a presa abaixo quase nunca age.

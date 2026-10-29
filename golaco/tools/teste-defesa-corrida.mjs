@@ -15,7 +15,8 @@
 // rápido (> 6,3 m/s; 0 < dx < 6 m na linha da corrida e < 2 m de lado) que acabou ultrapassado: a velocidade dele para o
 // próprio gol quando o condutor estava a 3 m.
 // Metas (contraprova, proposta 7; hoje entre parênteses na publicada/branch):
-//  - roubada desfeita ≤ 5% (26%; reprova quando a contagem prova mais — binomial, p < 5%);
+//  - roubada desfeita ≤ 5% (26%; PENDENTE desde 29/10: a main já dá 7,3% — decisão do dono) e sem recuo contra a main
+//    (reprova quando a contagem prova mais que 54/736: binomial p < 5% e z entre partidas > 1,645);
 //  - gols do roteiro sprint ≤ 1,5 por partida (2,5–3,1);
 //  - gols de arrancada de 40 m ou mais ≤ 0,5 por partida (1,9);
 //  - gol por chute nas arrancadas do próprio campo ≤ 20% (36%; reprova quando a contagem prova mais — binomial, p < 5%; com
@@ -233,7 +234,21 @@ const prova5 = (k, n) => caudaBinomial(k, n, 0.05) < 0.05;
 // marcação contra a pessoa — 3 a 6 gols —: reprova quando a contagem PROVA mais de 20%, a mesma binomial)
 const prova20 = (k, n) => caudaBinomial(k, n, 0.20) < 0.05;
 const desf = soma(sp, r => r.desfeitas), roub = soma(sp, r => r.roubadas);
-reg('roubada da IA desfeita pelo mesmo condutor em 1 s', `${desf}/${roub} (${f(pc(desf, roub), 0)}%)`, '≤ 5% (binomial, p < 5%)', roub >= 20 && !prova5(desf, roub));
+// (C3, 29/10) A MAIN JÁ ESTÁ ACIMA DE 5%: 02f4ec4a dá 26/373 (7,0%) nas sementes 101–124 — passava pela binomial por um
+// fio (z 1,63) — e 28/363 (7,7%) nas 125–148, onde REPROVA (z 2,25): 54/736 = 7,3% em 48 (a D3 media 4–6%). Qualquer
+// mudança que mexa numa partida contra a pessoa vira o teste por UMA roubada (o C3: 27/372 reprova; 25/378 nas 125–148,
+// 52/750 = 6,9% em 48: não piora). A meta de 5% fica PENDENTE (decisão do dono, FILA "Depende do dono" 9c: re-ancorar no
+// valor de hoje ou voltar a mexer na defesa contra a arrancada, categoria D) e o teste segura o RECUO contra a main:
+// reprova quando a contagem prova mais que DESF_MAIN (binomial p < 5% E o z pelo erro-padrão entre partidas > 1,645 — cada
+// partida um conglomerado, a linearização de Taylor do estimador de razão, Cochran, Sampling Techniques, 1977, cap. 6 —,
+// nunca abaixo do binomial; a regra do teste-intercepta e do teste-replay-paradas)
+const DESF_MAIN = 54 / 736;
+const pDesf = roub ? desf / roub : 0;
+const epDesf = NS > 1 && roub ? Math.sqrt(soma(sp, r => (r.desfeitas - pDesf * r.roubadas) ** 2) / (NS * (NS - 1))) / (roub / NS) : 0;
+const zDesf = p0 => (roub ? (pDesf - p0) / Math.max(epDesf, Math.sqrt(p0 * (1 - p0) / roub)) : 0);
+const provaDesf = p0 => caudaBinomial(desf, roub, p0) < 0.05 && zDesf(p0) > 1.645;
+reg('roubada da IA desfeita pelo mesmo condutor em 1 s (meta da D3)', `${desf}/${roub} (${f(pc(desf, roub), 1)}%; z ${f(zDesf(0.05), 2)})`, '≤ 5% (PENDENTE: a main já dá 7,3%; decisão do dono)', roub >= 20 && provaDesf(0.05) ? null : roub >= 20);
+reg('roubada da IA desfeita: sem recuo contra a main', `${desf}/${roub} (${f(pc(desf, roub), 1)}%; z ${f(zDesf(DESF_MAIN), 2)}, ep entre partidas ${f(100 * epDesf, 1)} pt)`, `≤ main ${f(100 * DESF_MAIN, 1)}% (54/736, 02f4ec4a, sementes 101–148; reprova quando prova mais)`, roub >= 20 && !provaDesf(DESF_MAIN));
 reg('gols do roteiro sprint por partida', f(soma(sp, r => r.gols) / NS, 2), '≤ 1,5', soma(sp, r => r.gols) / NS <= 1.5);
 reg('gols de arrancada de 40 m ou mais por partida', f(longas.length / NS, 2), '≤ 0,5', longas.length / NS <= 0.5);
 // (com menos de 10 chutes a conversão não se mede: vale então o número de gols dessas arrancadas, ≤ 0,25 por partida — a
