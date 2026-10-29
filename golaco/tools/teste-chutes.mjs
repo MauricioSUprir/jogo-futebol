@@ -227,6 +227,9 @@ if (!SO_CHEIA) {
 // craque) o ângulo de 20 m é uma chance, não uma certeza
 const R = BOLA.raio, ALT = CAMPO.gol.altura;
 const ANG_Z = MEIO - 0.9, ANG_Y = 1.9;
+// o canto da mira do analógico na força 1: a 0,7 m da trave (ACOES.chute.cheia.zFolga, calibrada para as metas do pedido;
+// com a mira a 0,5 m da trave — a folga de antes, 3,16 m — elas ainda passam, por isso o teto fica preso aqui)
+const ANG_ZMAX = MEIO - 0.7;
 const dentroGol = c => Math.abs(c.z) < MEIO - R && c.y < ALT - R;
 const noAngulo = c => dentroGol(c) && c.y >= ANG_Y && Math.abs(c.z) >= ANG_Z;
 const porCima = c => c.y > ALT + R;
@@ -488,8 +491,8 @@ if (!SO_REF) {
       + ` (das ${nCob} cobranças, ${cobr.filter(o => o.cl.cls === 'faixa').length} com a bola subida na faixa e ${cobr.filter(o => o.cl.cls === 'borda').length} na borda: no bloco do canto) (origem: ${ref.origem})`,
     '0 diferentes', okConj && dif === 0);
   // o CANTO (acima do limiar): a barra cheia vai ao ângulo — o erro zerado (o do chute e o da cobrança). Bola rolando (rc): na
-  // linha do gol no ângulo e NA MIRA julgada (m.voo.mira: a saída compensa o efeito do colocado, mira.js saidaNaLinha), nos
-  // dois sentidos de ataque, forte e colocado. Cobrança (cc, a reta no canto sem efeito; e as da lista gravada com a bola
+  // linha do gol no ângulo, com a mira até ANG_ZMAX e NA MIRA julgada (m.voo.mira: a saída compensa o efeito do colocado,
+  // mira.js saidaNaLinha), nos dois sentidos de ataque, forte e colocado. Cobrança (cc, a reta no canto sem efeito; e as da lista gravada com a bola
   // subida na faixa, também com curva): a bola cruza a linha onde o árbitro diz — na altura da barra cheia, dentro da faixa
   // do canto — com a velocidade e o giro dele; na borda, ou a main bit a bit ou a subida (nada de um terceiro jeito)
   const cc = { rc: { n: 0, ok: 0, ys: [], dz: 0, ex: null }, cc: { n: 0, ok: 0, ys: [], ex: null }, cf: { n: 0, ok: 0, ys: [], ex: null }, cb: { n: 0, ok: 0, main: 0, ex: null } };
@@ -514,7 +517,7 @@ if (!SO_REF) {
         e.n++;
         const dz = l && r.mira ? Math.max(Math.abs(l.z - r.mira.z), Math.abs(l.y - r.mira.y)) : Infinity;
         e.dz = Math.max(e.dz, dz);
-        const ok = !!l && l.y >= 2.0 && l.y <= 2.2 && Math.abs(l.z) >= ANG_Z && Math.abs(l.z) < MEIO - R && !!r.mira && Math.abs(r.mira.z) >= ANG_Z && dz <= 0.01;
+        const ok = !!l && l.y >= 2.0 && l.y <= 2.2 && Math.abs(l.z) >= ANG_Z && Math.abs(l.z) < MEIO - R && !!r.mira && Math.abs(r.mira.z) >= ANG_Z && Math.abs(r.mira.z) <= ANG_ZMAX + 0.005 && dz <= 0.01;
         if (l) e.ys.push(l.y);
         if (ok) e.ok++; else e.ex ??= `${txtL(cs, r)}${r.mira ? ` mira y ${fmt(r.mira.y)} z ${fmt(r.mira.z)}` : ''}`;
       } else {
@@ -547,7 +550,7 @@ if (!SO_REF) {
       + ` | cobrança, a reta no canto sem efeito: ${cc.cc.ok} de ${cc.cc.n} · y ${faixaY(cc.cc)}${cc.cc.ex ? ` · ex.: ${cc.cc.ex}` : ''}`
       + ` | cobrança da lista com a bola subida na faixa (com curva): ${cc.cf.ok} de ${cc.cf.n} · y ${faixaY(cc.cf)}${cc.cf.ex ? ` · ex.: ${cc.cf.ex}` : ''}`
       + ` | na borda: ${cc.cb.ok} de ${cc.cb.n} (${cc.cb.main} a main, ${cc.cb.ok - cc.cb.main} a subida)${cc.cb.ex ? ` · ex.: ${cc.cb.ex}` : ''}`,
-    `todos: bola rolando y 2,0–2,2 m, |z| ≥ ${fmt(ANG_Z)} m, dentro do gol, a ≤ 1 cm da mira; cobrança onde o árbitro diz (y a ≤ 3 cm da barra cheia, z a ≤ 2 cm, na faixa), com a saída dele (velocidade, direção, giro, elevação a ≤ 0,001 rad); na borda, a main bit a bit ou a saída da subida (main: não sobe — reprova)`,
+    `todos: bola rolando y 2,0–2,2 m, |z| ≥ ${fmt(ANG_Z)} m, dentro do gol, a ≤ 1 cm da mira, a mira até ${fmt(ANG_ZMAX)} m (0,7 m da trave); cobrança onde o árbitro diz (y a ≤ 3 cm da barra cheia, z a ≤ 2 cm, na faixa), com a saída dele (velocidade, direção, giro, elevação a ≤ 0,001 rad); na borda, a main bit a bit ou a saída da subida (main: não sobe — reprova)`,
     Object.entries(cc).every(([k, e]) => (e.n > 0 || k === 'cb') && e.ok === e.n));
 }
 if (!SO_ARB) {

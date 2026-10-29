@@ -89,8 +89,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   meta. Replays nas paradas pela FIDELIDADE À TV ≥ a da versão publicada (decisão do dono, 28/10; SoccerNet-v2 por
   situação). O item 13 (C2, chute no ângulo) entrou com o CHUTE MIRADO NO CANTO (decisão do dono, 28/10: "só o chute mirado
   sobe — com o analógico apontado para um canto"): a barra cheia com a mira do analógico a ≥ 2,76 m do meio do gol vai a 2,1 m
-  na linha e ao ângulo; solto, para o gol e nas diagonais leves, a altura de antes bit a bit (`golaco/c2-chute`). Contra o
-  goleiro realista, por direção do analógico: −2,2 ± 0,5 pontos de gol somando 15 direções (o meio 0, o canto −3,0).
+  na linha e ao ângulo; solto, para o gol e nas diagonais leves, a altura de antes bit a bit. Na cobrança mirada, a mesma
+  régua pela bola SUBIDA com a curva (sobe só se ela cruza a linha na faixa do canto). Contra o goleiro realista, por
+  direção do analógico: −2,0 a −2,2 ± 0,5 pontos de gol somando 15 direções (o meio 0, o canto −3,0). O `teste-chutes`
+  compara cada chute fora do canto com a referência GRAVADA da main (`tools/dados/chutes-ref.json`): mudança DE PROPÓSITO
+  no chute fora do canto = regravar com `--gravar-referencia <pasta js>` e dizer no PR.
   **Dono, 23/10: a fila por CATEGORIAS** (A–I da FILA.md; a D FEITA em 26/10, #524–#550): ele diz qual categoria fazer e nada começa sem o aval dele
   ("tem algumas coisas a mais que vou te sinalizar, que vc só cmc dps do meu aval"). Os pedidos de 23/10 são os itens 57–66:
   impedimento pelas partes do corpo (B), pausa igual à do FIFA, minimapa embaixo, nome do condutor nos cantos, a tela antes do jogo no nível do EA FC com a cara do TM (64), a mira das bolas paradas minimalista com uma curva boa (65), a câmera que acompanha a bola e mostra a área (66) (F),

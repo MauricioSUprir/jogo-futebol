@@ -2524,7 +2524,7 @@ subia só até `yAlvo[1]` 1,7 m, medida 0,4 m antes da linha, e o canto do anal�
   −2,3) e o único em que "sem mirar e para o meio fica como hoje" vale bit a bit. O salto de altura fica na borda da zona do
   ângulo (a ~33° a mira passa de 1,7 m, medida 0,4 m antes da linha, a 2,1 m na linha; o z da mira continua o mesmo).
 
-  Contra o goleiro realista posicionado (sonda do C2, `scratchpad/c2c`: uma partida de verdade com a bola rolando, os outros
+  Contra o goleiro realista posicionado (sonda do C2 fora do repositório: uma partida de verdade com a bola rolando, os outros
   20 longe, 1 s para o goleiro ir à posição dele; por direção, 1.080 chutes — 6–26 m, até 40°, finalização 65/80/95, forte e
   colocado, força cheia —; os mesmos chutes nas 5 versões; Δ pareado ± 1,96 ep; main 46dd59ab, com o C1 #558):
 
@@ -2643,7 +2643,7 @@ subia só até `yAlvo[1]` 1,7 m, medida 0,4 m antes da linha, e o canto do anal�
   de produto. **Decidido (28/10): esta** — o padrão (2,1 / 0,7) com o analógico solto na curva de antes; na 1ª versão o
   "mirado" era o módulo do analógico > 0,3 (2ed0d56f: 69,5 → 67,7% nesta grade), e a revisão pôs o critério no CANTO (a
   decisão e a grade por direção no topo da seção). Sondas: `sonda-gk.mjs`, `sonda-rev.mjs` e a por direção
-  (`scratchpad/c2c/sonda.mjs --cantos`, agregada por `agr.mjs`); no teste a linha do goleiro realista posicionado é
+  (fora do repositório, como as outras sondas do C2); no teste a linha do goleiro realista posicionado é
   informativa.
 - **Pesquisa**: o canto alto é a colocação que mais converte (StatsBomb, "The Enigma of Shot Placement": canto 50–60% × meio
   12–13%; Datawrapper sobre 101 mil chutes do StatsBomb Open Data: a bola no ângulo é "quase indefensável", e o jogador
@@ -2708,7 +2708,7 @@ subia só até `yAlvo[1]` 1,7 m, medida 0,4 m antes da linha, e o canto do anal�
   dele a ≤ 2 cm, na faixa — com a saída dele (velocidade, direção, giro e elevação a ≤ 0,001 rad). A main passa a
   referência e reprova o canto; a 4a3fef80 reprova a referência (518 das 879 cobranças fora da faixa: a que "subia
   sempre") e a b6a457dd também (212: a curva levando ao meio, a mira fora do gol) e o canto (44 das 59 da faixa com curva:
-  a curva levando ao ângulo sem subir). **Mutações** (todas reprovam; `scratchpad/c2f2/scripts/mutar2.mjs`, reaplicadas
+  a curva levando ao ângulo sem subir). **Mutações** (todas reprovam; reaplicadas por patch
   sobre este código; entre parênteses, onde): A (o solto +0,1 m), B (para o gol +0,1), C (|z| 1–2 m +0,1), G (a elevação do forte solto +0,002 rad)
   e E/E2 (`zCanto` 1,8/1,6: o limiar descendo a ~21°/~24°) no árbitro e na referência; E3 (1,4: ~26°), F (o efeito do
   colocado solto ×1,03), H (o erro do solto ×1,3), I (para o gol com o módulo < 0,7 +0,1), J (o time que ataca para −x
@@ -2737,11 +2737,11 @@ subia só até `yAlvo[1]` 1,7 m, medida 0,4 m antes da linha, e o canto do anal�
   | lateral | não passa pelo chute (o arremesso, `lateral.js`) | | | — |
   | chute do jogo, 20 m de frente, força 1 (forte e colocado, +x e −x) | solto/para o gol (módulo 1 e 0,35)/±17°/+30°: 1,66–1,68 m em todas | | ±0,75 rad: 1,66–1,68 → 2,10 m | fora do canto, todas |
 
-- **As cobranças com CURVA (revisão de 29/10)**, main / b6a457dd / agora, o erro zerado. (1) A grade (`scratchpad/c2f2/
-  scripts/tabela-curva.mjs`): 10 posições de 17–34,5 m, sem barreira e com a de 0, a reta a |z| 0–9 m (25 valores), a curva
+- **As cobranças com CURVA (revisão de 29/10)**, main / b6a457dd / agora, o erro zerado. (1) A grade (sonda da revisão, fora do
+  repositório): 10 posições de 17–34,5 m, sem barreira e com a de 0, a reta a |z| 0–9 m (25 valores), a curva
   −1…+1 (7), a força 1 e 0,95 — 7.000 cobranças; o árbitro dela diz onde a bola subida cruza (na faixa 852, fora 5.574,
-  na borda 574). (2) As 2.640 cobranças da sonda da revisão pelo caminho da partida (falta → mira → carga → soltar,
-  `scratchpad/c2erev/scripts/sonda-cob.mjs`; a classe pela saída sem o erro, `scratchpad/c2f2/scripts/cmp-cob2.mjs`):
+  na borda 574). (2) As 2.640 cobranças da sonda da revisão pelo caminho da partida (falta → mira → carga → soltar;
+  a classe pela saída sem o erro):
 
   | | main | b6a457dd | agora |
   |---|---|---|---|
@@ -2757,7 +2757,7 @@ subia só até `yAlvo[1]` 1,7 m, medida 0,4 m antes da linha, e o canto do anal�
   | sonda: o resto (com barreira, carga ≤ 43, pênalti, escanteio, tiro de meta), iguais à main | 1.866 de 1.866 | 1.864 | **1.866** |
   | sonda: a barra cheia pela metade (carga 45/47, força ~0,94–0,98; 291): iguais à main / subiu na faixa | 291 / 0 | 142 / 12 | **255 / 36** |
 
-  O custo por chamada do `chuteMirado` (`scratchpad/c2f2/scripts/custo-cm2.mjs`, Node aqui, a mediana de 3 rodadas; a
+  O custo por chamada do `chuteMirado` (Node, nesta máquina, a mediana de 3 rodadas; a
   linha refaz a conta a cada quadro): a 22 m sem barreira com a barra cheia 0,22 (main) → 0,22 ms sem curva e 0,22 → 0,25
   ms com curva; a 33 m 0,34 → 0,34 e 0,36 → 0,41 ms; com barreira e na força padrão da linha, igual; todas juntas 0,262 →
   0,271 ms (a b6a457dd 0,248). Sem o atalho sem curva e o corte da busca, com curva e a barra cheia fora da faixa saía o
