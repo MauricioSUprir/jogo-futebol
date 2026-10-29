@@ -2,9 +2,9 @@
 
 > Resumo da `golaco/FILA.md` (lá estão o status, a evidência e o plano de cada item).
 > **Como funciona:** o dono escolhe a categoria; nada começa sem o aval dele. Cada item vira um PR.
-> Atualizado em 23/10.
+> Atualizado em 29/10.
 
-**Legenda:** 🆕 pedido novo (23/10) · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo)
+**Legenda:** 🆕 pedido novo (23/10 ou 29/10) · ⏳ espera o seu aval para começar · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo) · ✅ entregue
 
 ---
 
@@ -28,32 +28,34 @@
 
 ---
 
-## 🧤 C. Goleiro e chute — ~28 h ⚙️
+## 🧤 C. Goleiro e chute — ~45 h a fazer ⚙️ *(escolhida em 27/10)*
 
 | nº | o que é | horas |
 |---|---|---|
-| 12 | Goleiro realista: movimento, espalmadas, encaixes, saída no 1×1 e no cruzamento | 8 |
-| 13 | Chute com a barra cheia mais alto, podendo acertar o ângulo | 5 |
+| 12 | ✅ Goleiro realista: movimento, espalmadas, encaixes, saída no 1×1 e no cruzamento (#558) | 8 |
+| 13 | ✅ Chute com a barra cheia mais alto, podendo acertar o ângulo, com o analógico no canto (#567) | 5 |
 | 14 | Goleiro espalmando bola alta | 4 |
 | 15 | Lançamento mais reto e rápido | 6 |
 | 16 | Reposição do goleiro com a mão (rolar, arremessar) | 5 |
+| 68 | 🆕 ⏳ **Mira pelo que se vê na tela do celular** (chute, passe e lançamento; hoje a câmera baixa engana a mira) | 6 |
+| 70 | 🆕 ⏳ **Cobranças com corrida** (pênalti, escanteio, tiro de meta) e **jeitos de bater o pênalti** (pulinho, paradinha, forte, colocado, cavadinha), com o goleiro reagindo | 24 |
 
 ---
 
-## 🧠 D. IA mais intensa — ~68 h ⚙️ *(em andamento desde 24/10)*
+## 🧠 D. IA mais intensa — ✅ FEITA (26/10) ⚙️
 
 | nº | o que é | horas |
 |---|---|---|
-| 67 | 🆕 ⭐ **A IA correr de verdade, para marcar e para atacar** | 10 |
-| 18 | ⭐ **Botão PRESSÃO funcionando de verdade** | 5 |
-| 17 | Seus companheiros apertarem o condutor da IA | 8 |
-| 19 | Defensor ultrapassado recuar rápido (meta: 5 m/s) | 5 |
-| 20 | Pressão mais agressiva | 4 |
-| 21 | A IA atacar mais contra você (volume de chutes) | 8 |
-| 22 | Movimentação melhor e jogo mais tenso (sem o vai e volta) | 10 |
-| 23 | Forma do time (linha de 4, atrás da bola) | 6 |
-| 24 | Apoio (companheiros à frente) | 6 |
-| 25 | Intensidade (lances rápidos) | 6 |
+| 67 | ✅ 🆕 ⭐ **A IA correr de verdade, para marcar e para atacar** | 10 |
+| 18 | ✅ ⭐ **Botão PRESSÃO funcionando de verdade** | 5 |
+| 17 | ✅ Seus companheiros apertarem o condutor da IA | 8 |
+| 19 | ✅ Defensor ultrapassado recuar rápido (meta: 5 m/s) | 5 |
+| 20 | ✅ Pressão mais agressiva | 4 |
+| 21 | ✅ A IA atacar mais contra você (volume de chutes) | 8 |
+| 22 | ✅ Movimentação melhor e jogo mais tenso (sem o vai e volta) | 10 |
+| 23 | ✅ Forma do time (linha de 4, atrás da bola) | 6 |
+| 24 | ✅ Apoio (companheiros à frente) | 6 |
+| 25 | ✅ Intensidade (lances rápidos) | 6 |
 
 ---
 
@@ -111,10 +113,11 @@
 
 ---
 
-## 🎨 I. Visual, corpo e estádios — ~78 h + lotes
+## 🎨 I. Visual, corpo e estádios — ~130 h + lotes
 
 | nº | o que é | horas |
 |---|---|---|
+| 69 | 🆕 ⏳ **Cadeiras e torcida em 3D**, parecidas com as reais, em todos os estádios (4 PRs; os 2 primeiros, ~30 h, já mostram o 3D de perto) | 52 |
 | 61 | 🆕 **Passada natural** (no túnel e na fila parecem marchar) | 5 |
 | 62 | 🆕 Linha escura na nuca (costura da textura da cabeça) | 2 |
 | 63 | 🆕 Bordas tracejadas em volta dos números e patrocínios das camisas | 2 |
@@ -141,10 +144,16 @@
 7. 🔄 IA que passa melhor × defesa que intercepta mais.
 8. 🙂 Rostos da edição pública (fonte e licença).
 9. 📊 O painel de estatísticas fica no pós-jogo?
+10. 🏟️ Item 69: a qualidade Baixa sem bonecos 3D? Gente em toda cadeira perto da câmera nos estádios grandes? Entrega em 2 ou em 4 PRs?
+11. 🎯 Item 70: a falta também com corrida? Os botões da paradinha e do pulinho no celular? A paradinha errada impossível ou punida (Regra 14)? Quanto a paradinha rende?
 
 ---
 
 ## ✅ Entregue nesta rodada
+
+- 🎯 Chute no ângulo com a barra cheia e o analógico no canto (#567)
+- 🧤 Goleiro realista (#558)
+- 🧠 Categoria D inteira: a IA corre para marcar e para atacar, botão PRESSÃO, companheiros apertando, forma e apoio (#524, #530, #534, #536, #538, #542, #549, #550)
 
 - 🎞️ Replays nas paradas: faltas, trave, espalmada e chance perdida (#507)
 - 🟨 Cena do cartão: amarelo, vermelho e expulsão (#508)

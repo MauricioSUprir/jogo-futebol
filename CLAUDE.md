@@ -87,11 +87,22 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   D embaralhou a IA × IA e vários testes de borda reprovaram por sorteio: as amostras cresceram (teste-movimento 32,
   teste-intercepta 96, conducao-curta C 48, replay-paradas 48), sempre com a main medida nas mesmas sementes e sem mexer na
   meta. Replays nas paradas pela FIDELIDADE À TV ≥ a da versão publicada (decisão do dono, 28/10; SoccerNet-v2 por
-  situação). O item 13 (C2, chute no ângulo) espera o 12 (branch `golaco/c2-chute`, a medir de novo contra o goleiro novo).
+  situação). O item 13 (C2, chute no ângulo) entrou com o CHUTE MIRADO NO CANTO (decisão do dono, 28/10: "só o chute mirado
+  sobe — com o analógico apontado para um canto"): a barra cheia com a mira do analógico a ≥ 2,76 m do meio do gol vai a 2,1 m
+  na linha e ao ângulo; solto, para o gol e nas diagonais leves, a altura de antes bit a bit. Na cobrança mirada, a mesma
+  régua pela bola SUBIDA com a curva (sobe só se ela cruza a linha na faixa do canto). Contra o goleiro realista, por
+  direção do analógico: −2,0 a −2,2 ± 0,5 pontos de gol somando 15 direções (o meio 0, o canto −3,0). O `teste-chutes`
+  compara cada chute fora do canto com a referência GRAVADA da main (`tools/dados/chutes-ref.json`): mudança DE PROPÓSITO
+  no chute fora do canto = regravar com `--gravar-referencia <pasta js>` e dizer no PR.
   **Dono, 23/10: a fila por CATEGORIAS** (A–I da FILA.md; a D FEITA em 26/10, #524–#550): ele diz qual categoria fazer e nada começa sem o aval dele
   ("tem algumas coisas a mais que vou te sinalizar, que vc só cmc dps do meu aval"). Os pedidos de 23/10 são os itens 57–66:
   impedimento pelas partes do corpo (B), pausa igual à do FIFA, minimapa embaixo, nome do condutor nos cantos, a tela antes do jogo no nível do EA FC com a cara do TM (64), a mira das bolas paradas minimalista com uma curva boa (65), a câmera que acompanha a bola e mostra a área (66) (F),
   passada natural, costura da nuca e bordas dos decalques (I).
+  **Pedidos de 29/10 (dono: "add nas categorias"; esperam o aval dele):** item 68, a mira pelo que se vê na tela do celular
+  (achado na revisão do C2; dono: "publicar o C2 e pôr a mira na fila") e item 70, cobranças com corrida (pênalti, escanteio,
+  tiro de meta) e os jeitos de bater o pênalti (pulinho, paradinha e outros), os dois na C; item 69, cadeiras e torcida em 3D
+  em todos os estádios, na I. Status, plano, fontes e as decisões dele em `golaco/FILA.md` ("Depende do dono" 11 e 12);
+  resumo em `golaco/CATEGORIAS.md`.
   **Dono, 25/10 (depois do D4): "escolhe tudo filho"** — a categoria D segue até o fim (D5–D8: itens 22–25) e as escolhas
   dentro dela são minhas; no item 19 a meta passou a ser a de CHEGADA (arrancada do bloco armado na área ≤ 25%, no
   `teste-defesa-corrida`), com a velocidade do defensor do corredor só informativa. **D5 (item 22, o vai e volta)**: na partida,

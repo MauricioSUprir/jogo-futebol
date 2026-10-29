@@ -17,7 +17,7 @@ import {
 import { procurarOportunidade, preverBola } from './conducao.js';
 import { passoCorpo, copiaCinematica, infoPassada } from './jogador.js';
 import { registrarChute } from './regras-goleiro.js';
-import { chuteMirado, simularLinha } from './mira.js';
+import { chuteMirado, simularLinha, alturaMiraChute, zMaxMiraChute, miraCheia, noCanto, saidaNaLinha } from './mira.js';
 
 const DT = PASSO;
 const BOTOES_ACAO = [
@@ -745,12 +745,17 @@ function velParaAlturaEm(pp, ux, uz, D, el, w, y) {
 
 /**
  * Ponto da mira na linha do gol (z) pelo analógico mr: o ângulo entre o analógico e a reta bola–gol escolhe o canto
- * ("lat" positivo = para a direita de quem chuta; no gol de +x a direita é +z), dentro da boca do gol.
+ * ("lat" positivo = para a direita de quem chuta; no gol de +x a direita é +z), dentro da boca do gol. zBrutoAnalogico: a
+ * mesma conta antes do limite da boca (28/10: o analógico no CANTO da barra cheia é |z| ≥ meia-boca −
+ * ACOES.chute.cheia.zCanto; o chute com a barra cheia tem a folga dele até a trave, mira.js zMaxMiraChute).
  */
-function zPeloAnalogico(b, gx, lado, meio, mr) {
+function zBrutoAnalogico(b, gx, lado, meio, mr) {
   const dirGol = MD.atan2(-b.p.z, gx - b.p.x);
   const lat = MD.sin(difAng(dirGol, MD.atan2(mr.z, mr.x)));
-  return clamp(lat * lado * meio * 1.4, -meio + 0.5, meio - 0.5);
+  return lat * lado * meio * 1.4;
+}
+function zPeloAnalogico(b, gx, lado, meio, mr) {
+  return clamp(zBrutoAnalogico(b, gx, lado, meio, mr), -meio + 0.5, meio - 0.5);
 }
 
 /** Goleiro adversário (o mais perto do gol atacado). */
@@ -778,8 +783,23 @@ function chute(m, j, pe, p, erroMult) {
   // mira: o analógico escolhe o canto; sem analógico, o lado mais longe do goleiro
   let zMira;
   const mr = mira(j);
-  if (mr && mr.mag > 0.3) {
-    zMira = zPeloAnalogico(b, gx, lado, meio, mr);
+  const mirado = !!(mr && mr.mag > 0.3);
+  const zBruto = mirado ? zBrutoAnalogico(b, gx, lado, meio, mr) : 0;
+  // a barra cheia (C2): só na bola rolando — o pênalti e o tiro livre com barreira ficam na mira de antes — e só com o
+  // analógico apontado para um CANTO: a mira dele no ângulo, |z| ≥ meia-boca − cheia.zCanto (2,76 m: a régua do "no
+  // ângulo"; ~33° fora da reta bola–gol; mira.js noCanto, a mesma régua da cobrança mirada). Decisão do dono (28/10: "só o
+  // chute mirado sobe — com o analógico apontado para um canto, a barra cheia vai no ângulo; sem mirar, o chute fica na
+  // altura de hoje"): solto (o jogo escolhe o lado longe do goleiro), para o gol e nas diagonais leves, a curva de antes,
+  // bit a bit (y, z e a saída). Com o "mirado" (mag > 0,3)
+  // a barra cheia subia também no MEIO do gol (2,1 m na linha, sem a chance do ângulo; contra o goleiro realista, para o gol
+  // a bola alta no meio 18,5 → 57,3% dos chutes, e a ±17° −5,5 e −2,8 pontos de gol). Subir aos poucos pelo |z| perdia mais
+  // que o limiar: no meio −0,6 ± 0,6 (a ±17°, −2,1) contra 0; no canto os dois iguais (CONTRATOS.md, C2: a grade por direção)
+  const cheia = noCanto(zBruto) && miraCheia(p.forca) && !p.penalti && !p.barreira && (gx - b.p.x) * lado > 0.5;
+  if (cheia) {
+    const zMax = zMaxMiraChute(p.forca);
+    zMira = clamp(zBruto, -zMax, zMax);
+  } else if (mirado) {
+    zMira = clamp(zBruto, -meio + 0.5, meio - 0.5);
   } else {
     const gz = gk ? gk.z : 0;
     zMira = gz > 0 ? -meio + 0.6 : meio - 0.6;
@@ -788,7 +808,8 @@ function chute(m, j, pe, p, erroMult) {
   // mandava 1/3 dos pênaltis para fora com qualquer analógico; a ±2,75 (o canto da IA, que bate 36% mais no meio), 16%;
   // a ±2,5, ~8% (teste-botoes B11; a meta do dono é ~6%). Só o humano: a IA mira o canto dela (PARTIDA.penaltiIA)
   if (p.penalti && ehHumano(m, j)) zMira = clamp(zMira, -cfg.penaltiCanto, cfg.penaltiCanto);
-  const yMira = lerp(cfg.yAlvo[0], cfg.yAlvo[1], p.forca * p.forca);
+  // a barra cheia sobe a mira (C2): a mesma conta da linha da cobrança mirada (mira.js); fora dela (e sem mirar), a curva de antes
+  const yMira = alturaMiraChute(p.forca, cheia);
   const colocado = p.mod;
   let s = lerp(cfg.v[0], cfg.v[1], p.forca) * lerp(0.86, 1.08, j.par.attr.finalizacao / 100) * velPeFraco(j, pe);
   if (colocado) s *= cfg.colocadoV;
@@ -801,7 +822,14 @@ function chute(m, j, pe, p, erroMult) {
   const pp = { x: b.p.x, y: b.p.y, z: b.p.z };
   // colocado: efeito para dentro (curva para o meio do gol)
   let w = { x: 0, y: 0, z: 0 };
-  if (colocado) {
+  let elCheia = null;
+  if (cheia) {
+    // a barra cheia: a bola, sem o erro, cruza a linha do gol em (yMira, zMira) — o giro do colocado e a elevação pelo voo
+    // sem o gol (mira.js saidaNaLinha; a busca de baixo, com o voo que bate no travessão, saltava com a mira alta)
+    if (colocado) w = { x: 0, y: (zMira >= 0 ? 1 : -1) * lado * cfg.giroColocado, z: 0 };
+    const sa = saidaNaLinha(pp, gx, zMira, s, yMira, w);
+    ux = sa.x; uz = sa.z; elCheia = sa.el;
+  } else if (colocado) {
     // efeito de dentro do pé: a bola sai por fora e curva para dentro do gol (Magnus ∝ ω × v,
     // com ω no eixo y: a força lateral em z vale −ωy·vx)
     const sinal = (zMira >= 0 ? 1 : -1) * lado;
@@ -831,7 +859,7 @@ function chute(m, j, pe, p, erroMult) {
       s *= 0.95;
     }
   }
-  const el = elFalta ?? elevacaoParaAltura(pp, ux, uz, D, s, yMira, w);
+  const el = elFalta ?? elCheia ?? elevacaoParaAltura(pp, ux, uz, D, s, yMira, w);
   // erro: distância, pressão, pé fraco, força no máximo, de primeira
   const base = lerp(cfg.erroRuim, cfg.erroBom, j.par.attr.finalizacao / 100);
   // (no tiro livre com barreira o erro é o da falta, com ou sem efeito: ACOES.chute.faltaErro já está em erroMult)

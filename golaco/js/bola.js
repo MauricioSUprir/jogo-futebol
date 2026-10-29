@@ -509,6 +509,39 @@ export function alturaNaDistancia(p, ux, uz, D, s, el, w = { x: 0, y: 0, z: 0 },
   return { y: -D, ticks: maxTicks, lateral: 0, caiu: true };
 }
 
+/** passoBola sem o gol (traves, travessão, rede) e sem as placas: o voo de mira até a linha do gol (nada no caminho antes dela). */
+function passoBolaLivre(b, ev) {
+  for (let k = 0; k < SUBPASSOS_BOLA; k++) {
+    if (b.rolando) passoRolando(b, DT_BOLA, ev);
+    else passoNoAr(b, DT_BOLA, ev);
+    integrarOrientacao(b, DT_BOLA);
+  }
+}
+
+/**
+ * Onde a bola, saindo de p com {v, w}, cruza o plano x = xPlano (a linha do gol) num voo SEM o gol e sem as placas: a mira do
+ * chute com a barra cheia (mira.js saidaNaLinha). Até a linha é a mesma física do jogo (nada antes dela para bater); o voo
+ * com o gol (alturaNaDistancia) batia no travessão, na haste ou no véu no passo em que chegava à distância da mira e
+ * voltava 'caiu' — a busca saltava. {y, z, ticks}; caindo antes (quique ou rolando), y = −(o que faltou), como
+ * alturaNaDistancia (a altura cresce com a elevação até a bola alta demais cair antes da linha: mira.js elevacaoNaLinha).
+ */
+export function passagemLivre(p, v, w, xPlano, maxTicks = 300) {
+  const b = bolaDeTeste(p, v, w);
+  const ev = [], sentido = xPlano >= p.x ? 1 : -1;
+  let xAnt = b.p.x, yAnt = b.p.y, zAnt = b.p.z;
+  for (let i = 1; i <= maxTicks; i++) {
+    passoBolaLivre(b, ev);
+    if ((b.p.x - xPlano) * sentido >= 0) {
+      const f = (xPlano - xAnt) / ((b.p.x - xAnt) || 1e-9);
+      return { y: yAnt + (b.p.y - yAnt) * f, z: zAnt + (b.p.z - zAnt) * f, ticks: i };
+    }
+    if (ev.some(e => e.tipo === 'quique') || (b.rolando && i > 2)) return { y: -(xPlano - b.p.x) * sentido, z: b.p.z, ticks: i, caiu: true };
+    ev.length = 0;
+    xAnt = b.p.x; yAnt = b.p.y; zAnt = b.p.z;
+  }
+  return { y: -(xPlano - b.p.x) * sentido, z: b.p.z, ticks: maxTicks, caiu: true };
+}
+
 /**
  * Passe alto: velocidade (m/s) para a bola, saindo de p na direção (ux,uz) com elevação el,
  * cair a D metros. Busca binária sobre a simulação.

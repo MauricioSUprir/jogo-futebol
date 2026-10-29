@@ -5,7 +5,14 @@
 // Metas:
 //  A. A linha É a física: com o erro do cobrador zerado (MIRA.erro = 0), a bola de verdade (a partida inteira rodando:
 //     cobrar → passo) passa a ≤ 3 cm da linha prevista (mira-linha.js preverMira, mira.js simularLinha) em todos os ticks do voo —
-//     escanteio ALTA sem e com curva, TENSA com curva, tiro livre direto (CHUTE) com barreira e curva.
+//     escanteio ALTA sem e com curva, TENSA com curva, tiro livre direto (CHUTE) com barreira e curva e sem barreira com
+//     a barra cheia: com a mira no CANTO (a reta dela cruza a linha do gol a 3,1 m do meio) sobe ao ângulo (2,0–2,3 m na
+//     linha; a mira alta do C2, mira.js alturaMiraChute) e com a mira no MEIO fica na curva de antes (1,4–1,8 m; a main
+//     46dd59ab: 1,66 m; decisão do dono, 28/10: "só o chute mirado sobe — com o analógico apontado para um canto"; a
+//     referência da main fora do canto, bit a bit, fica no teste-chutes). Com CURVA (revisão de 29/10) vale onde a bola
+//     cruza a linha, não a reta da mira: a reta no canto com a curva levando a bola ao meio do gol ou para fora da boca fica
+//     na curva de antes; a reta fora do canto (ou fora do gol) com a curva levando a bola ao ângulo sobe — e a bola que
+//     sobe cruza a linha sempre na faixa do canto (meia-boca − 0,9 ≤ |z| ≤ meia-boca), nunca no meio.
 //  B. A curva vai para o lado certo: com o efeito +1 a bola cai/cruza a linha do gol ≥ 1,5 m à DIREITA de quem bate (da
 //     linha sem efeito), com −1 à esquerda; no escanteio e no tiro livre.
 //  C. Controles: o analógico para a direita (na câmera atrás do cobrador) gira a mira para a direita a MIRA.gira rad/s e
@@ -116,6 +123,18 @@ if (temMira) {
     { nome: 'escanteio ALTA curva +1', tipo: 'escanteio', b: BOTAO.LANCAMENTO, k: 36, da: 0.12, curva: 1, t: 'alta' },
     { nome: 'escanteio TENSA curva −0,5', tipo: 'escanteio', b: BOTAO.CHUTE, k: 26, da: -0.08, curva: -0.5, t: 'tensa' },
     { nome: 'falta CHUTE (barreira) curva +0,75', tipo: 'tiroLivre', b: BOTAO.CHUTE, k: 34, da: -0.1, curva: 0.75, t: 'chute' },
+    // a barra cheia sem barreira (C2): com a mira no CANTO (zLinha: onde a reta da mira cruza a linha do gol) sobe pela
+    // mira.js alturaMiraChute, a mesma conta do chute do jogo; no MEIO (a mira padrão) fica na curva de antes
+    { nome: 'falta CHUTE sem barreira, barra cheia no canto', tipo: 'tiroLivre', b: BOTAO.CHUTE, k: 50, zLinha: 3.1, curva: 0, t: 'chute', semBarreira: 'canto' },
+    { nome: 'falta CHUTE sem barreira, barra cheia no meio', tipo: 'tiroLivre', b: BOTAO.CHUTE, k: 50, da: 0, curva: 0, t: 'chute', semBarreira: 'meio' },
+    // com curva (revisão de 29/10): onde a bola cruza a linha do gol decide (a 22 m, z 3: a reta e a curva escolhidas pela
+    // sonda — a reta no canto 3,1 com −1 cruza a z ~1,8; 2,4 com +0,5 a ~3,0; −1,5 com −1 a ~−2,9; 4,5 com −1 a ~3,2; 3,5
+    // com +1 a ~4,8)
+    { nome: 'falta CHUTE sem barreira, barra cheia, reta no canto e a curva leva ao meio', tipo: 'tiroLivre', b: BOTAO.CHUTE, k: 50, zLinha: 3.1, curva: -1, t: 'chute', semBarreira: 'meio' },
+    { nome: 'falta CHUTE sem barreira, barra cheia, reta no canto e a curva leva para fora da boca', tipo: 'tiroLivre', b: BOTAO.CHUTE, k: 50, zLinha: 3.5, curva: 1, t: 'chute', semBarreira: 'fora' },
+    { nome: 'falta CHUTE sem barreira, barra cheia, reta fora do canto e a curva leva ao ângulo', tipo: 'tiroLivre', b: BOTAO.CHUTE, k: 50, zLinha: 2.4, curva: 0.5, t: 'chute', semBarreira: 'canto' },
+    { nome: 'falta CHUTE sem barreira, barra cheia, reta fora do canto e a curva leva ao ângulo (lado de lá)', tipo: 'tiroLivre', b: BOTAO.CHUTE, k: 50, zLinha: -1.5, curva: -1, t: 'chute', semBarreira: 'canto' },
+    { nome: 'falta CHUTE sem barreira, barra cheia, reta fora do gol e a curva traz ao ângulo', tipo: 'tiroLivre', b: BOTAO.CHUTE, k: 50, zLinha: 4.5, curva: -1, t: 'chute', semBarreira: 'canto' },
   ];
   const res = [];
   for (const cs of casos) {
@@ -124,22 +143,36 @@ if (temMira) {
     const pr = cs.tipo === 'escanteio' ? escanteio(m) : (tiroLivre(m, 0, 22, 3), ateMontarPronta(m, 'tiroLivre'));
     if (!pr) { res.push({ nome: cs.nome, d: Infinity, n: 0 }); continue; }
     longe(m, pr);
-    pr.mira.ang = pr.mira.ang0 + cs.da; pr.mira.curva = cs.curva;
+    if (cs.semBarreira && pr.barreira) pr.barreira.n = 0; // a barreira desfeita: a elevação pela altura da mira
+    pr.mira.ang = cs.zLinha != null ? Math.atan2(cs.zLinha - pr.z, m.ataca[pr.time] * MX - pr.x) : pr.mira.ang0 + cs.da; pr.mira.curva = cs.curva;
     const { forca, c } = carregarESoltar(m, cs.b, cs.k);
     const r = M.chuteMirado(m, c, pr, cs.t, forca, pr.mira.ang, pr.mira.curva, {});
     const n = M.simularLinha(m, r.v, r.w, pts);
+    let yLinha = null, zLinha = null; // onde a linha cruza a linha do gol (a barra cheia no canto: ~2,1 m; no meio: ~1,6 m)
+    for (let i = 1; i < n && yLinha == null; i++) if (Math.abs(pts[i * 3]) >= MX) {
+      const fr = (MX - Math.abs(pts[i * 3 - 3])) / (Math.abs(pts[i * 3]) - Math.abs(pts[i * 3 - 3]));
+      yLinha = pts[i * 3 - 2] + (pts[i * 3 + 1] - pts[i * 3 - 2]) * fr; zLinha = pts[i * 3 - 1] + (pts[i * 3 + 2] - pts[i * 3 - 1]) * fr;
+    }
     P.passoPartida(m, NADA); // solta: a cobrança sai (cobrar) e a bola anda um passo
+    // (na barra cheia sem barreira, até a linha do gol: dali em diante entram o goleiro e a rede. Na main, com todos
+    // levados para o meio-campo, o goleiro a 56 m "espalmava" a bola que cruzava a linha no z dele — goleiro.js: sem o plano
+    // dele à frente da bola, a leitura cai no cruzamento da linha do gol e só mede o lado; pendente, fora do C2)
     let d = 0, k = 1, mirada = !!m.voo?.mirada;
-    for (; k < n; k++) {
+    for (; k < n && !(cs.semBarreira && Math.abs(pts[k * 3]) >= MX); k++) {
       d = Math.max(d, Math.hypot(m.bola.p.x - pts[k * 3], m.bola.p.y - pts[k * 3 + 1], m.bola.p.z - pts[k * 3 + 2]));
       P.passoPartida(m, NADA);
     }
-    res.push({ nome: cs.nome, d, n, mirada });
+    res.push({ nome: cs.nome, d, n, mirada, semB: cs.semBarreira ?? null, yLinha: cs.semBarreira ? yLinha : null, zLinha: cs.semBarreira ? zLinha : null });
   }
   MIRA.erro = erro0;
+  // a faixa do canto na linha do gol (a régua do C2): meia-boca − 0,9 ≤ |z| ≤ meia-boca
+  const MB = CAMPO.gol.largura / 2, faixa = z => Math.abs(z) >= MB - 0.9 && Math.abs(z) <= MB;
+  const okSemB = r => r.yLinha != null && (r.semB === 'canto' ? r.yLinha >= 2.0 && r.yLinha <= 2.3 && faixa(r.zLinha)
+    : r.yLinha >= 1.4 && r.yLinha <= 1.8 && (r.semB === 'meio' ? Math.abs(r.zLinha) < MB - 0.9 : Math.abs(r.zLinha) > MB));
   reg('A. a bola de verdade segue a linha prevista (erro do cobrador zerado): a maior distância em todo o voo',
-    res.map(r => `${r.nome}: ${f1(r.d * 100)} cm em ${r.n} ticks`).join(' · '),
-    '≤ 3 cm em todos (≥ 40 ticks de voo)', res.every(r => r.d <= 0.03 && r.n >= 40 && r.mirada));
+    res.map(r => `${r.nome}: ${f1(r.d * 100)} cm em ${r.n} ticks${r.semB ? ` (na linha do gol a ${r.yLinha != null ? `${f2(r.yLinha)} m, z ${f2(r.zLinha)}` : '—'})` : ''}`).join(' · '),
+    '≤ 3 cm em todos (≥ 40 ticks de voo; a barra cheia até a linha do gol); a barra cheia na linha do gol: no canto a 2,0–2,3 m dentro da faixa do canto, no meio (|z| < meia-boca − 0,9) e fora da boca a 1,4–1,8 m (a curva de antes); a bola que sobe (≥ 1,95 m) cruza sempre na faixa do canto',
+    res.every(r => r.d <= 0.03 && r.n >= 40 && r.mirada) && res.every(r => !r.semB || okSemB(r)) && res.every(r => !r.semB || r.yLinha == null || r.yLinha < 1.95 || faixa(r.zLinha)));
 
   // ------------------------------------------------------------------ B. a curva vai para o lado certo
   {
