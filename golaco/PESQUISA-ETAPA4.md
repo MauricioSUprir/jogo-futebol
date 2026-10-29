@@ -566,3 +566,44 @@ e a taxa vai para o outro lado (−0,28 pt); o que resta é a calibração da po
 o goleiro. Com a correção, o `teste-intercepta` A (96 partidas, 301–396) PASSA: passe certo 86,2%, interceptações 10,96,
 homem livre 72,3%. O "Saved Twice" (o goleiro pega o próprio rebote; `GOLEIRO.reagarra` não
 deixa) fica anotado: pela conta, mexe < 0,02 pt no passe certo.
+
+## 14. Goleiro espalma bola alta e nada atravessa o goleiro (C3, item 14 da FILA; pedido do dono de 17/10)
+
+Pedido: "o goleiro ESPALMA bola alta, hoje só rasteira e meia altura". A FILA dizia "encaixe da bola alta em 34–39%
+(StatsBomb: 4%)". Conferido aqui antes de mexer: o 34–39% é do TREINO (o mundo do `teste-mergulho`, a logística de antes:
+35,3% dos 85 mergulhos/saltos defendidos com a bola a ≥ 1,9 m e ≥ 1,2 m de lado); o 4% é só o MERGULHO no real. Na PARTIDA
+(o goleiro realista do C1) o mergulho nessa bola já espalmava (91%); o que ainda segurava demais era a bola por cima do
+goleiro adiantado (a conta do treino, 0,6) e o "pegou" da mão desenhada passando perto da bola antes do contato sorteado.
+Contrato: `CONTRATOS.md`, "Goleiro espalma bola alta e nada atravessa o goleiro (C3)".
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| StatsBomb open data (github.com/statsbomb/open-data), medido aqui: 728 partidas (Copas 2018/2022, Euros 2020/2024, Copa América 2024, AFCON 2023, Bundesliga 23/24, Premier League 15/16), 4.106 defesas de chute sem pênalti com o goleiro no freeze-frame e a altura da bola na linha (`end_location` z) | Bola a ≥ 1,9 m e ≥ 1,2 m de lado do goleiro (107 defesas): encaixe 29,9%, para fora 50,5%, uma mão 42,1%; só o MERGULHO (44): encaixe 2,3%, para fora 77,3% (79,1% das não seguras, IC 95% 65–89%), em jogo 20,5%, uma mão 61,4%, duas 34,1%; em pé (63): encaixe 49,2% (o goleiro que chega embaixo dela com tempo) | As metas do `teste-mergulho` H: no mergulho, espalmada ≥ 85% (a meta da FILA cabe no real do mergulho, não no da população inteira — 70% não seguras); H4 "para fora" com o rebote na faixa do real (65–95%; a FILA pedia ≥ 90%, acima do real: fica ≥ 90% só na espalmada de propósito, H3, que sai por cima do travessão); uma mão como o desenho da espalmada alta (o real tem 61% de uma mão: as duas mãos ficam no mergulho curto e no salto) |
+| Idem, a bola a < 1,2 m de lado (246) | Encaixe 20,7%, para fora 58,1%, uma mão 43,5%, duas 55,3% | Perto do corpo ficam as duas palmas (`umaMao.lado`; o salto com as duas mãos acima da cabeça, B10) |
+| Idem, o goleiro adiantado (a distância à linha no freeze-frame) com a bola a ≥ 1,9 m na linha | A < 1 m 34,0% de encaixe (106); 1–2 m 21,6% (153); 2–3 m 18,6% (59); ≥ 3 m 8,6% (35) — a ≥ 2 m, 14,9% (14 de 94) | `GOLEIRO.realista.segura.recuoAlto` [1,8 m, 0,15]: a bola alta por cima do goleiro que volta segura 15% (antes ~64% das que ele alcançava; no teste, H1b 36,7% → 13,3%) |
+| Everybody Soccer, "The Pros and Cons of a Top Hand and Bottom Hand Save" (everybodysoccer.squarespace.com, 2018) | A mão de cima é a do ombro mais perto do travessão no mergulho (para a bola à direita do goleiro, a esquerda); a escolha só conta no terço de cima do gol; a de cima alcança mais longe e é a preferida para espalmar por cima ou pela trave e no "de volta para o travessão"; a de baixo é mais rápida, para a reação de perto | `maoDaEspalmada`: a mão de cima (o ombro mais alto no contato) no mergulho alto e no salto do goleiro que volta; `umaMao.y` 1,63 m (o terço de cima de 2,44); a de baixo só quando a de cima não chega |
+| Carlisle United, "Academy: keeper training part four" (carlisleunited.co.uk, 2014); Sport Session Planner, "Tipping over the Crossbar" e "Lobs & Top Hand Saves" | Espalmar com uma mão, a palma (mais força) empurrando a bola por cima do travessão; voltar com o passo cruzado e ficar de lado para a bola | A palma no lado da bola que dá para o ombro (atrás e embaixo dela, `umaMao.palma` = o raio da bola) e a outra mão só acompanhando (`umaMao.outra`); a espalmada alta continua saindo por cima do travessão (`espalmar`, acima de 1,85 m: H3 100%) |
+
+Citado nos resumos de busca e não lido (não entrou): um estudo de biomecânica que compara a mão de cima e a de baixo no mergulho
+alto (a de baixo para distâncias grandes de lado, a de cima com a saída cedo) — o PDF (shobix.co.jp/jssf, P-085) não abriu
+aqui.
+
+Medido (`teste-mergulho` H e I, partida copiada da semente 5; antes = main 02f4ec4a):
+
+| | antes | depois | real |
+|---|---|---|---|
+| H1 mergulho na bola alta (≥ 1,9 m, ≥ 1,2 m de lado): espalmada | 90,9% (80/88) | 90,9% (80/88) | 97,7% |
+| H1b a mesma bola por cima do goleiro adiantado: seguras | 36,7% (11/30) | 13,3% (4/30) | 14,9% |
+| H2 espalmada com UMA mão (a de cima) na bola, acima da cabeça | 2,7% (3/113) | 83,3% (105/126) | 61,4% (mergulho) |
+| H4 espalmadas para fora em 3 s (com o rebote) | 81,4% | 82,5% | 79,1% |
+| I1 a bola atravessa o tronco do goleiro fora da área | 120/120 | 0/120 | — |
+| I2 a bola atravessa o corpo do pulo na saída que falha | 18/29 | 0/50 | — |
+| I3 o goleiro atrás da bola "defende" a 18–45 m dela | 4/120 | 0/120 | — |
+
+Painel de 144 (sementes 1001–1144; base = main 02f4ec4a): 119 partidas idênticas, 25 mudam a partir de um lance do goleiro.
+Pareado por semente: gols 1,65 → 1,69 por partida (Δ +0,035 ± 0,062), chutes no alvo 4,37 → 4,44, goleiro 67,2 → 67,6% (6–16,5 m
+57,4 → 58,1%, de fora 86,7 → 87,0%: as três metas), gols de cabeça 16,7 → 15,2% (Δ −0,021 ± 0,023 por partida), impedimentos
+1,03 → 0,99 (Δ −0,049 ± 0,068: a main na borda da meta ≥ 1; o impedimento não foi mexido).
+O chute com a barra cheia no ângulo (C2) contra o goleiro realista posicionado, a grade da sonda do C2 só com o analógico nos
+cantos (2.160 chutes, os mesmos nas duas versões): gols 68,2% → 68,3% (Δ +0,1 ± 0,1) — a espalmada alta nova não é defesa
+"milagrosa": a chance não mudou, só o desenho.

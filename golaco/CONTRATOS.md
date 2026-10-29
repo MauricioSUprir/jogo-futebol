@@ -2373,7 +2373,9 @@ GOLEIRO.realista`; pesquisa e números em `PESQUISA-ETAPA4.md` §13.
   deixava o chute forte, ~0,45 m por passo, atravessar o tronco; `teste-goleiro-realista` A5). No passo comum o caminho é
   o da bola até o passo seguinte. `corpoNoCaminho(m, j)`: o caminho de cada um dos próximos `bloqueio.ticks` + 1 passos
   contra o corpo do tick em que ele começa. Goleiro batido com a bola passando pelo corpo, em qualquer tick do lance: vira defesa
-  (`d.bloqueio`, espalmada) — `uniforme ≥ bloqueio.fora` → rebote perto, senão desvio para fora.
+  (`d.bloqueio`, espalmada) — `uniforme ≥ bloqueio.fora` → rebote perto, senão desvio para fora. (C3, 29/10: vale também na
+  saída no cruzamento que falha; e o goleiro em pé fora da defesa desenhada — fora da área, sem a mão — tem o tronco na
+  `sim.js colisaoTroncoGoleiro`: seção "Goleiro espalma bola alta e nada atravessa o goleiro (C3)".)
 - `estadoEspalmada(b, gx, sentido)` → 0 fora do perigo, 1 jogável na zona perigosa, 2 entra no gol (`espalmadaSegura` =
   0). `espalmar` na partida: sem direção segura, fica a 1ª que não entra no gol (antes a última tentativa valia mesmo
   entrando: 1,6% das espalmadas do canhão iam para o próprio gol); se todas entram, bem aberta para o lado dela, um pouco
@@ -2441,7 +2443,8 @@ GOLEIRO.realista`; pesquisa e números em `PESQUISA-ETAPA4.md` §13.
 - O corpo corre de frente para o ponto (de frente para a bola a menos de `vira` m) e pula pelo desenho (`iniciarMergulho`
   tipo `'salto'`; a bola abaixo de 1,45 m, `'peito'`) DA CORRIDA: na saída no alto o limite do deslocamento do pulo é a
   velocidade que ele já leva (o do mergulho parado, `vPico`/`vFrente`, não tinha solução e levava o corpo para trás). `aplicarDefesa` só encaixa ou soca com a mão desenhada a ≤
-  `cruz.mao` m da bola; senão a bola passa (`saidaFalhou {longe: true}`). `socar`: `soco.v` m/s, elevação `soco.el` rad,
+  `cruz.mao` m da bola; senão a bola passa (`saidaFalhou {longe: true}`) — ou, com o corpo do pulo no caminho dela, bate nele
+  (C3, 29/10: o bloqueio do mergulho batido; também na saída que o sorteio erra). `socar`: `soco.v` m/s, elevação `soco.el` rad,
   aberto `soco.lado` rad para o lado da bola, para longe do gol.
 - Eventos: `saidaGoleiro {modo: 'cruzamento', soco}`, `defesa {modo: 'encaixe' | 'soco', saidaAlta: true}`,
   `saidaFalhou {id, longe?, desvio?}`; depois do contato quem ia cabecear perde o plano.
@@ -2762,6 +2765,67 @@ subia só até `yAlvo[1]` 1,7 m, medida 0,4 m antes da linha, e o canto do anal�
   ms com curva; a 33 m 0,34 → 0,34 e 0,36 → 0,41 ms; com barreira e na força padrão da linha, igual; todas juntas 0,262 →
   0,271 ms (a b6a457dd 0,248). Sem o atalho sem curva e o corte da busca, com curva e a barra cheia fora da faixa saía o
   dobro (0,42 e 0,68 ms: a busca subida inteira e depois a conta de antes).
+
+## Goleiro espalma bola alta e nada atravessa o goleiro (C3, item 14; 29/10; contrato)
+
+Pedido do dono (17/10): "o goleiro ESPALMA bola alta" (as duas palmas iam sempre à bola, como num encaixe) e as pendências
+do C1 (#558) e do C2 (#567) anotadas no item 14 da FILA. Pesquisa e números em `PESQUISA-ETAPA4.md` §14 (StatsBomb open
+data, 728 partidas, medido aqui). **A lógica nova vale só na partida** (`m.partida`): o treino segue bit a bit (`hash-igual`
+IGUAL); a mão de cima é só desenho.
+- **A mão de cima (só desenho; `anim.js poseMergulho` → `goleiro.js maoDaEspalmada(g)` e `maosMergulho(g, q, out, segura,
+  umaMao)`; a simulação chama `maosMergulho` sem `umaMao`, e `maoAlcanca`/`maoNaBola`/`bolaNasMaosMergulho` continuam pelas
+  duas palmas)**: no mergulho que não encaixa a bola a ≥ `GOLEIRO.mergulho.umaMao.y` m (1,63: o terço de cima do gol — "a
+  escolha da mão só conta no terço de cima") com ela a ≥ `umaMao.lado` m de lado do corpo no começo da defesa, e no salto da
+  bola por cima do goleiro adiantado que dá certo (`g.recuo`, fora da saída no cruzamento — "de volta para o travessão"), UMA
+  mão vai à bola: a de CIMA (a do ombro mais alto no contato; para a bola à direita do goleiro, a esquerda — a dos treinadores
+  para espalmar por cima ou pela trave), salvo quando ela não chega e a de baixo chega (a palma a ≤ `maoOk` do centro da bola);
+  batido no mergulho, a de cima vai e fica curta. A palma encosta no lado da bola que dá para o ombro dela (`umaMao.palma` m do
+  centro: atrás e embaixo, empurrando-a para fora) e a outra vai só `umaMao.outra` do caminho. Perto do corpo (o mergulho
+  curto) e no salto batido ficam as duas palmas (o salto com as duas mãos acima da cabeça: teste-mergulho B10). `maoDaEspalmada`
+  é pura (refaz o quadro do contato), sem gravar nada no estado; `g.recuo` (o campo novo da defesa desenhada) não entra no
+  hash nem é lido pela simulação.
+- **O encaixe da bola alta por cima do goleiro adiantado** (`goleiro.js lerChute`, o recuo na partida): com a bola a ≥
+  `GOLEIRO.realista.segura.recuoAlto[0]` m (1,8) no ponto em que ele a alcança voltando, segura com `recuoAlto[1]` (0,15 ×
+  o reflexo em volta de 72) — StatsBomb: o goleiro a ≥ 2 m da linha e a bola a ≥ 1,9 m na linha, encaixe 14,9% (14 de 94).
+  Antes ia a conta do treino (`GOLEIRO.segurar.emPe` 0,6).
+- **A espalmada sorteada não vira "pegou"** (`sim.js bolaLivre`, partida): com a defesa desta bola já sorteada como
+  espalmada ou batido (`j.defesa` não fora, `tipo !== 'encaixe'`, a chave do voo de agora) e ainda por vir, a mão desenhada a
+  `GOLEIRO.pegaMergulho` da bola antes do contato não a agarra (antes 7 de 58 defesas da bola alta a ≥ 1,2 m de lado viravam
+  "pegou" assim, por cima do sorteio pela StatsBomb).
+- **O goleiro ATRÁS da bola** (`lerChute`, partida): a bola entre ele e o gol nunca cruza o plano dele (`preverPassagem` dá
+  null) — antes a leitura caía no cruzamento da LINHA do gol medindo só o lado (`?? linha`): o goleiro driblado no meio-campo
+  "espalmava" uma cobrança a 56 m dele. Agora só a bola que ele alcança voltando (`recuoBolaAlta`: o 1º ponto antes da linha a
+  que ele chega a `GOLEIRO.vRecuo` depois da reação) tem defesa; sem isso, `j.defesa = {fora: true, atras: true}`. No treino
+  fica como era (`?? linha`).
+- **Nada atravessa o goleiro**: (1) `sim.js colisaoTroncoGoleiro(m, x0, y0, z0)` (partida, depois de `colisaoBolaCorpo`): o
+  goleiro em pé fora de uma defesa desenhada — fora da área sem a mão (`semMao`) ou com a leitura dizendo "fora" — com a bola
+  entre 0,9 m (as pernas são da `colisaoBolaCorpo`) e `GOLEIRO.realista.bloqueio.alto` passando pelo tronco (raio
+  `bloqueio.tronco[0]` + o da bola) no caminho do passo, em pedaços de `bloqueio.amostra` m: a bola bate nele (a reflexão da
+  `colisaoBolaCorpo`, evento `bateuCorpo`, `m.desvio`); pula quem tem a bola, quem acabou de tocar nela (10 passos), a parada
+  e a defesa desenhada (a dela decide). (2) A saída no cruzamento que falha (`aplicarDefesa`): o bloqueio do mergulho batido
+  vale também para `d.saidaAlta` (o sorteio que erra), e a mão que não chega com o corpo do pulo no caminho da bola
+  (`corpoNoCaminho`) vira o mesmo bloqueio — escapa perto (`rebater`) ou desvia para fora (`espalmar`) por
+  `bloqueio.fora`, nunca o soco; o evento é o da espalmada (sem `saidaAlta`), depois do `saidaFalhou {longe: true}`. A saída
+  que dá certo segue como antes, também quando a bola encosta no corpo do pulo um passo antes do contato e ele a pega com a
+  mão (o "pegou": a saída que deu certo). Testado e não entrou: resolver a saída no passo em que a bola entra no corpo
+  (pegava a mesma defesa um passo mais cedo e embaralhava a partida inteira dali em diante — no painel de 144, 55 partidas
+  diferentes da main em vez de 25, os impedimentos 1,03 → 0,90) e marcar esse passo para o bloqueio no contato (não disparou
+  em nenhuma amostra medida).
+- **Teste**: `teste-mergulho` seções H e I (padrão, CI; ver o cabeçalho dele): H1 mergulho espalma ≥ 85% (main 90,9%:
+  guarda), H1b por cima do goleiro adiantado seguras ≤ 30% (main 36,7% → 13,3%), H2 uma mão — a de cima — na bola acima da
+  cabeça e a outra longe ≥ 80% (main 2,7% → 83,3%), H3 a espalmada sai do campo ≥ 90% (100%), H4 com o rebote para fora em
+  65–95% (main 81,4% → 82,5%; real 79,1%), I1 o tronco fora da área nunca atravessado (main 120/120 → 0), I2 a saída que falha
+  nunca atravessada (main 18/29 → 0/50; o "pegou" da mão do pulo conta como a saída que deu certo), I3 o goleiro atrás da bola nunca defende longe dela (main 4/120 → 0).
+- **Hash e painel** (contra a main 02f4ec4a): `hash-igual` IGUAL (o treino); `hash-partida` muda só 1 das 8 partidas (humano,
+  semente 3, a partir do passo 4800) — mudança de propósito: a base nova do `hash-partida` é o merge deste item (`--ref`). No
+  painel de 144 (sementes 1001–1144), 119 partidas saem idênticas e 25 mudam (a partir de um lance do goleiro, depois
+  embaralham); pareado por semente nenhuma medida se mexe além de 1,96 ep: gols 1,65 → 1,69 (Δ +0,035 ± 0,062), goleiro
+  67,2 / 57,4 / 86,7% → 67,6 / 58,1 / 87,0% (as três metas), gols de cabeça 16,7 → 15,2%. "Impedimentos por partida ≥ 1"
+  passa de 1,03 para 0,99 (Δ −0,049 ± 0,068; nas 25 partidas que mudam, 27 → 20, ~1 ep) sem nada do impedimento mexido: a
+  main está na borda da meta. **O chute no ângulo do C2 não ficou mais defensável**: a grade da sonda do C2 (fora do
+  repositório; o goleiro realista posicionado, 6–26 m, até 40°, finalização 65/80/95, forte e colocado, o analógico nos
+  cantos ±0,75 rad: 2.160 chutes, os mesmos nas duas versões) dá 68,2% → 68,3% de gols (Δ +0,1 ± 0,1: 1 chute) — a chance de
+  defesa não mudou; muda o desenho da defesa (a mão de cima).
 
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores
