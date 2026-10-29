@@ -15,7 +15,7 @@
 // rápido (> 6,3 m/s; 0 < dx < 6 m na linha da corrida e < 2 m de lado) que acabou ultrapassado: a velocidade dele para o
 // próprio gol quando o condutor estava a 3 m.
 // Metas (contraprova, proposta 7; hoje entre parênteses na publicada/branch):
-//  - roubada desfeita ≤ 5% (26%; reprova quando a contagem prova mais — binomial, p < 5%);
+//  - roubada desfeita ≤ 5% (26%; reprova quando a contagem prova mais — binomial, p < 5%, e z entre partidas > 1,645);
 //  - gols do roteiro sprint ≤ 1,5 por partida (2,5–3,1);
 //  - gols de arrancada de 40 m ou mais ≤ 0,5 por partida (1,9);
 //  - gol por chute nas arrancadas do próprio campo ≤ 20% (36%; reprova quando a contagem prova mais — binomial, p < 5%; com
@@ -233,7 +233,16 @@ const prova5 = (k, n) => caudaBinomial(k, n, 0.05) < 0.05;
 // marcação contra a pessoa — 3 a 6 gols —: reprova quando a contagem PROVA mais de 20%, a mesma binomial)
 const prova20 = (k, n) => caudaBinomial(k, n, 0.20) < 0.05;
 const desf = soma(sp, r => r.desfeitas), roub = soma(sp, r => r.roubadas);
-reg('roubada da IA desfeita pelo mesmo condutor em 1 s', `${desf}/${roub} (${f(pc(desf, roub), 0)}%)`, '≤ 5% (binomial, p < 5%)', roub >= 20 && !prova5(desf, roub));
+// (C3: as roubadas de uma mesma partida não são independentes — o mesmo roteiro, o mesmo condutor, o mesmo bloco —, e a
+// binomial reprovava pelo sorteio de UMA roubada: a main dá 26/373 e passa, o C3 (que só mexe no goleiro) 27/372 e reprova,
+// nas mesmas sementes. A regra do repositório para contagem por partida (teste-intercepta, teste-replay-paradas): o
+// erro-padrão entre partidas — cada partida um conglomerado; a linearização de Taylor do estimador de razão, Cochran,
+// Sampling Techniques, 1977, cap. 6 —, nunca abaixo do binomial. Reprova quando a binomial E o z entre partidas (> 1,645)
+// provam mais de 5%; a meta não muda)
+const pDesf = roub ? desf / roub : 0;
+const epDesf = NS > 1 && roub ? Math.sqrt(soma(sp, r => (r.desfeitas - pDesf * r.roubadas) ** 2) / (NS * (NS - 1))) / (roub / NS) : 0;
+const zDesf = roub ? (pDesf - 0.05) / Math.max(epDesf, Math.sqrt(0.05 * 0.95 / roub)) : 0;
+reg('roubada da IA desfeita pelo mesmo condutor em 1 s', `${desf}/${roub} (${f(pc(desf, roub), 0)}%; z ${f(zDesf, 2)}, ep entre partidas ${f(100 * epDesf, 1)} pt)`, '≤ 5% (reprova quando prova: binomial p < 5% e z entre partidas > 1,645)', roub >= 20 && !(prova5(desf, roub) && zDesf > 1.645));
 reg('gols do roteiro sprint por partida', f(soma(sp, r => r.gols) / NS, 2), '≤ 1,5', soma(sp, r => r.gols) / NS <= 1.5);
 reg('gols de arrancada de 40 m ou mais por partida', f(longas.length / NS, 2), '≤ 0,5', longas.length / NS <= 0.5);
 // (com menos de 10 chutes a conversão não se mede: vale então o número de gols dessas arrancadas, ≤ 0,25 por partida — a
