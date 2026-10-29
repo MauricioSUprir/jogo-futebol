@@ -179,7 +179,13 @@ export function lerChute(m, j) {
   const noGol = Math.abs(linha.z) < MEIO + 0.25 && linha.y < CAMPO.gol.altura + 0.25;
   if (!noGol) { j.defesa = { chave: m.voo?.tickChave, fora: true, tick: m.tick + linha.ticks, lido: m.tick }; return; }
   const xPlano = Math.abs(j.x - gx) > 0.3 ? j.x : gx - sentido * 0.3;
-  const plano = preverPassagem(b, xPlano, 150) ?? linha;
+  const plano0 = preverPassagem(b, xPlano, 150);
+  // (partida, C3) o goleiro ATRÁS da bola — ela entre ele e o gol, indo para o gol: ela nunca cruza o plano dele e a leitura
+  // caía no cruzamento da LINHA do gol medindo só o lado (o goleiro driblado no meio-campo "espalmava" uma cobrança a 56 m
+  // dele: o gol vazio defendido). Agora ele só a alcança voltando atrás dela (recuoBolaAlta: o 1º ponto, antes da linha, a
+  // que ele chega correndo a vRecuo depois da reação); sem isso não há defesa
+  const atras = !plano0 && !!m.partida;
+  const plano = plano0 ?? linha;
   const a = j.par.attr;
   const reac = Math.round(lerp(GOLEIRO.reacao[0], GOLEIRO.reacao[1], a.reflexo / 100) / DT);
   // pênalti (Regra 14): o goleiro já escolheu o lado antes do chute (j.palpite, z do mergulho; partida.js). Lado certo:
@@ -240,7 +246,8 @@ export function lerChute(m, j) {
   // por cima dele ainda alta ele busca voltando para a linha (recuoBolaAlta)
   const panenkaNoMeio = panenka && !palpiteErrado && j.palpite === 0;
   // bola por cima do goleiro adiantado (cavadinha): ele volta e tenta tirar antes da linha
-  const recuo = !alturaOk && (Math.abs(j.x - gx) > 2 || panenkaNoMeio) ? recuoBolaAlta(m, j, b, gx, reac) : null;
+  const recuo = atras || (!alturaOk && (Math.abs(j.x - gx) > 2 || panenkaNoMeio)) ? recuoBolaAlta(m, j, b, gx, reac) : null;
+  if (atras && !recuo) { j.defesa = { chave: m.voo?.tickChave, fora: true, atras: true, tick: m.tick + linha.ticks, lido: m.tick }; return; }
   if (recuo && m.partida && !maoPermitida(m, j, recuo.bx, recuo.bz)) { j.defesa = { chave: m.voo?.tickChave, fora: true, semMao: true, tick: m.tick + recuo.i, lido: m.tick }; return; }
   if (recuo) pDefesa = lerp(GOLEIRO.recuoDefesa[0], GOLEIRO.recuoDefesa[1], clamp(recuo.folga / 0.3, 0, 1));
   // passe do próprio time (recuo) não é chute: o goleiro recebe sempre que alcança, sem o sorteio
@@ -266,6 +273,11 @@ export function lerChute(m, j) {
     if (!corpo && mergulha) ps *= clamp(folgaR / SR.folgaPlena, SR.minFolga, 1);
     // (as tabelas são do goleiro médio da StatsBomb: o reflexo mexe em volta do nível médio, 72 — GOLEIRO.logit.attr)
     pSegura = Math.min(1, ps * (1 + 0.3 * (a.reflexo - 72) / 100));
+  } else if (real && recuo && !proprio && !panenkaNoMeio && recuo.y >= RL.segura.recuoAlto[0]) {
+    // partida: a bola alta por cima do goleiro adiantado, que ele alcança voltando ("de volta para o travessão"): espalma
+    // por cima quase sempre (StatsBomb, medido aqui: o goleiro a ≥ 2 m da linha e a bola a ≥ 1,9 m na linha — encaixe 14,9%,
+    // 14 de 94; antes a conta do treino, GOLEIRO.segurar.emPe, encaixava ~64% das que ele alcançava)
+    pSegura = Math.min(1, RL.segura.recuoAlto[1] * (1 + 0.3 * (a.reflexo - 72) / 100));
   }
   const encaixe = ok && uniforme(m.rng) < pSegura;
   // partida: a bola que não fica nas mãos — em pé (no corpo, perto dele) escapa e cai perto, de lado; no mergulho
@@ -482,7 +494,9 @@ export function aplicarDefesa(m, j) {
   if (!d || d.fora) return;
   // (partida) batido, mas a bola passa pelo corpo desenhado dele — em qualquer tick do lance (ele vinha embalado para o
   // lado dela, ou andou para a frente depois da leitura): ela bate nele e escapa perto (nada atravessa o goleiro)
-  const bloqueia = !!d.real && !d.sucesso && m.tick >= d.lido && m.tick <= d.tick + 2 && !(m.parada && !m.parada.rolou)
+  // (C3: também a saída no cruzamento que falha — o sorteio ou a mão que não chega: a bola passava pelo corpo do pulo, 2–16
+  // cm dentro dele em 11 de 16 falhas)
+  const bloqueia = (!!d.real || !!d.saidaAlta) && !d.sucesso && m.tick >= d.lido && m.tick <= d.tick + 2 && !(m.parada && !m.parada.rolou)
     && (m.tick === d.tick - 1 ? corpoNoCaminho(m, j) : corpoNaBola(j, m.tick, m.bola.p, bolaDepois(m.bola, 1)));
   if (!bloqueia && m.tick !== d.tick - 1) return;
   // bola morta (partida: impedimento ou falta apitados com o chute no ar, a parada ainda sem cobrar — Regra 9.2): não há
@@ -502,14 +516,17 @@ export function aplicarDefesa(m, j) {
     return;
   }
   // saída no cruzamento (partida): a mão dele no alto tem de estar na bola (o desenho do pulo) — senão ela passa
-  if (d.saidaAlta && !(mergulhoAtivo(j, m.tick + 1) && maoNaBola(j, m.tick + 1, b.p, GOLEIRO.realista.cruz.mao))) {
-    d.fora = true;
+  let blq = bloqueia;
+  if (d.saidaAlta && !blq && !(mergulhoAtivo(j, m.tick + 1) && maoNaBola(j, m.tick + 1, b.p, GOLEIRO.realista.cruz.mao))) {
     m.eventos.push({ tipo: 'saidaFalhou', id: j.id, longe: true });
-    return;
+    if (!corpoNoCaminho(m, j)) { d.fora = true; return; }
+    // (C3) a mão não chega, mas a bola passa pelo corpo do pulo: bate nele — escapa perto ou desvia para fora, como o
+    // bloqueio do mergulho batido (antes ela atravessava o goleiro)
+    d.tipo = 'espalmada'; d.rebote = uniforme(m.rng) >= GOLEIRO.realista.bloqueio.fora; d.bloqueio = true; blq = true;
   }
   // relida (desvio) sem tempo de começar a defesa desenhada nova: o goleiro ainda está na anterior — só defende
   // se a mão desenhada dela estiver na bola
-  if (!bloqueia && mergulhoAtivo(j, m.tick + 1) && j.mergulho.idDefesa !== idDefesa(d) && !maoNaBola(j, m.tick + 1, b.p)) {
+  if (!blq && mergulhoAtivo(j, m.tick + 1) && j.mergulho.idDefesa !== idDefesa(d) && !maoNaBola(j, m.tick + 1, b.p)) {
     d.fora = true;
     m.eventos.push({ tipo: 'goleiroBatido', id: j.id, desvio: true });
     return;
@@ -526,17 +543,18 @@ export function aplicarDefesa(m, j) {
     // espalmada: a mão na bola desvia para FORA do perigo — por cima do travessão (alta), pela linha de fundo
     // por fora da trave (escanteio) ou bem aberta para o lado; nunca de volta para o meio da área. Partida: o soco da
     // saída no cruzamento (para longe do gol) e o rebote da bola que escapa em pé (cai perto, de lado)
-    if (d.saidaAlta) socar(m, j, d, sentido);
+    // (C3: a bola que bate no corpo da saída que falhou não é soco — escapa perto ou desvia para fora, como o bloqueio)
+    if (d.saidaAlta && !d.bloqueio) socar(m, j, d, sentido);
     else if (d.rebote) rebater(m, j, d, sentido);
     else espalmar(m, j, d, sentido);
     m.voo = null;
     m.ultimoToque = { id: j.id, time: j.time, tick: m.tick };
-    m.eventos.push(d.saidaAlta ? { tipo: 'defesa', id: j.id, modo: 'soco', saidaAlta: true }
+    m.eventos.push(d.saidaAlta && !d.bloqueio ? { tipo: 'defesa', id: j.id, modo: 'soco', saidaAlta: true }
       : d.rebote ? { tipo: 'defesa', id: j.id, modo: 'espalmada', rebote: true } : { tipo: 'defesa', id: j.id, modo: 'espalmada' });
   }
   // (partida) quem ia cabecear essa bola no alto perde o plano: ela não passa mais onde ele esperava
   if (d.saidaAlta) for (const o of m.jogadores) if (o.cond && o.cond.toque && o.cond.toque.tipo === 'aereo') o.cond.toque = null;
-  if (bloqueia) d.fora = true;
+  if (blq) d.fora = true;
   if (m.stats) m.stats.defesas = (m.stats.defesas ?? 0) + 1;
   registrarToque(m, j, 'defesa');
 }
@@ -1417,6 +1435,9 @@ export function iniciarMergulho(m, j, d) {
       pe0, perto, passo, pmL, pmF: fFim, pf, passa, durPasso, iniPasso, rebote: !!ant, mao0, rebaixada: false,
       curta: sucesso ? 0 : m.partida ? GOLEIRO.realista.batido.mao : 0.35,
       lado: d.lado, alt: d.y, ate: fim, idDefesa: undefined,
+      // (só desenho: a bola por cima do goleiro adiantado — "de volta para o travessão", fora da saída no cruzamento —
+      // espalma com a mão de cima também no salto: maoDaEspalmada)
+      recuo: !!d.recuo && !d.saidaAlta,
     };
   };
 
@@ -1694,7 +1715,7 @@ export const MAO_PRONTA_FRENTE = 0.3, MAO_PRONTA_BAIXO = 0.25;
  * pelo peso `braco` do quadro, nunca além do alcance do braço. A MESMA conta na simulação (bola nas mãos) e
  * na animação.
  */
-export function maosMergulho(g, q, out, segura = false) {
+export function maosMergulho(g, q, out, segura = false, umaMao = -1) {
   const e = eixos(q, q.phi, q.th, _e);
   const ox = q.x + e.ux * TRONCO_OMBRO, oy = q.h + e.uy * TRONCO_OMBRO, oz = q.z + e.uz * TRONCO_OMBRO;
   // segurando (encaixe): depois do contato as mãos trazem a bola para junto do peito ("abraça a bola")
@@ -1727,8 +1748,17 @@ export function maosMergulho(g, q, out, segura = false) {
     const ey = sy - e.uy * MAO_PRONTA_BAIXO;
     const ez = sz + q.fz * MAO_PRONTA_FRENTE - e.uz * MAO_PRONTA_BAIXO;
     // a bola, com as palmas dos dois lados (ao longo da direita do corpo)
-    const bxp = alvoX + e.rx * lado * 0.12, byp = alvoY + e.ry * lado * 0.12, bzp = alvoZ + e.rz * lado * 0.12;
-    let tx = ex + (bxp - ex) * braco, ty = ey + (byp - ey) * braco, tz = ez + (bzp - ez) * braco;
+    let bxp = alvoX + e.rx * lado * 0.12, byp = alvoY + e.ry * lado * 0.12, bzp = alvoZ + e.rz * lado * 0.12;
+    // (só desenho: a espalmada de UMA mão da bola alta — maoDaEspalmada; a simulação chama sem `umaMao`) a mão escolhida
+    // encosta a palma no lado da bola que dá para o ombro dela; a outra vai só `umaMao.outra` do caminho
+    let ida = braco;
+    if (umaMao >= 0) {
+      if (umaMao === p) {
+        const nx = alvoX - sx, ny = alvoY - sy, nz = alvoZ - sz, nl = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+        bxp = alvoX - (nx / nl) * MG.umaMao.palma; byp = alvoY - (ny / nl) * MG.umaMao.palma; bzp = alvoZ - (nz / nl) * MG.umaMao.palma;
+      } else ida = braco * MG.umaMao.outra;
+    }
+    let tx = ex + (bxp - ex) * ida, ty = ey + (byp - ey) * ida, tz = ez + (bzp - ez) * ida;
     if (g.mao0 && q.t < MG.tMaoRebote) {
       // rebote: a mão sai de onde estava na defesa anterior (em relação ao ombro), sem salto de braço
       const a = g.mao0[p], w = sm(q.t / MG.tMaoRebote);
@@ -1741,6 +1771,34 @@ export function maosMergulho(g, q, out, segura = false) {
     mm.x = tx; mm.y = Math.max(0.05, ty); mm.z = tz;
   }
   return out;
+}
+
+const _qU = {}, _mU = {};
+
+/**
+ * SÓ DESENHO (anim.js poseMergulho; a simulação nunca chama): a mão da espalmada de UMA mão na defesa desenhada g, ou −1
+ * (as duas palmas, como antes). No mergulho que não encaixa a bola alta (a ≥ GOLEIRO.mergulho.umaMao.y m, o terço de cima
+ * do gol), com ela a ≥ `umaMao.lado` m de lado do corpo — e no salto da bola por cima do goleiro adiantado, "de volta para o
+ * travessão" —: a mão de CIMA — a do ombro mais alto no contato, a dos treinadores para espalmar por cima do travessão ou pela
+ * trave —, salvo quando ela não chega à bola (a palma a mais de `maoOk` do centro) e a de baixo chega. Pura (a mesma conta
+ * do quadro do contato), sem guardar nada em g.
+ */
+export function maoDaEspalmada(g) {
+  if (!g || g.tc == null || !(g.tipo === 'mergulho' || (g.tipo === 'salto' && g.recuo)) || g.encaixe || !(g.by >= MG.umaMao.y)) return -1;
+  // (o mergulho curto, com a bola perto do corpo, e o salto em que ele é batido: as duas palmas — o salto com as duas mãos
+  // acima da cabeça)
+  if (g.tipo === 'mergulho' && (g.bx - g.x0) * g.lx + (g.bz - g.z0) * g.lz < MG.umaMao.lado) return -1;
+  if (g.tipo === 'salto' && !g.sucesso) return -1;
+  const q = quadroMergulho(g, g.tc, _qU);
+  const mm = maosMergulho(g, q, _mU, false);
+  const cima = mm.o0.y >= mm.o1.y ? 0 : 1;
+  if (!g.sucesso) return cima; // batido: a mão de cima vai e fica curta
+  for (const p of [cima, 1 - cima]) {
+    const mp = maosMergulho(g, q, _mU, false, p)[p === 0 ? 'm0' : 'm1'];
+    const dx = mp.x - g.bx, dy = mp.y - g.by, dz = mp.z - g.bz;
+    if (Math.sqrt(dx * dx + dy * dy + dz * dz) <= MG.maoOk) return p;
+  }
+  return -1;
 }
 
 const _qm = {}, _mm = {};

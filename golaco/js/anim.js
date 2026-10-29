@@ -21,7 +21,7 @@ import { JOGADOR, PASSO, G, CONDUCAO, GOLEIRO, LATERAL, CABECEIO } from './confi
 import { clamp, lerp, difAng } from './mat.js';
 import { MD } from './matdet.js';
 import { progressoBalanco } from './jogador.js';
-import { mergulhoAtivo, quadroMergulho, maosMergulho, eixosMergulho, MAO_PRONTA_FRENTE, MAO_PRONTA_BAIXO, baseGoleiro } from './goleiro.js';
+import { mergulhoAtivo, quadroMergulho, maosMergulho, maoDaEspalmada, eixosMergulho, MAO_PRONTA_FRENTE, MAO_PRONTA_BAIXO, baseGoleiro } from './goleiro.js';
 import { alturaSalto } from './bolas-paradas.js';
 import { puloAtivo, quadroPulo, inclinacaoAte } from './cabeceio.js';
 
@@ -399,8 +399,10 @@ export function poseMergulho(j, m, out, info) {
   por(out, J.pescoco, nx, ny, nz);
   // cabeça: no eixo do tronco, olhando para a bola (um pouco para a frente)
   por(out, J.cabeca, nx + ux * 0.13 + q.fx * 0.03, ny + uy * 0.13, nz + uz * 0.13 + q.fz * 0.03);
-  // braços: ombros e mãos do quadro (depois do contato voltam à mão pronta, a mesma da pose de pé)
-  const mm = maosMergulho(g, q, _mp, segura);
+  // braços: ombros e mãos do quadro (depois do contato voltam à mão pronta, a mesma da pose de pé); na espalmada da bola
+  // alta no mergulho, UMA mão vai à bola — a de cima (goleiro.js maoDaEspalmada; só desenho: a simulação confere a mão pelas
+  // duas palmas, maoAlcanca, e a de uma mão chega quando ela chega)
+  const mm = maosMergulho(g, q, _mp, segura, segura ? -1 : maoDaEspalmada(g));
   for (let p = 0; p < 2; p++) {
     const lado = p === 0 ? -1 : 1;
     const o = p === 0 ? mm.o0 : mm.o1, mao = p === 0 ? mm.m0 : mm.m1;

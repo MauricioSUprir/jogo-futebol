@@ -310,6 +310,44 @@ function colisaoBolaCorpo(m) {
 }
 
 /**
+ * (partida, C3) O TRONCO do goleiro em pé fora de uma defesa desenhada — fora da área, sem a mão (goleiro.js lerChute:
+ * `semMao`), ou com a leitura dizendo que a bola vai fora: a bola acima das pernas (0,9 m: colisaoBolaCorpo) e abaixo de
+ * GOLEIRO.realista.bloqueio.alto que passa por ele no passo (o caminho de (x0, y0, z0) até a bola de agora, em pedaços de
+ * até `bloqueio.amostra` m, como o corpoNaBola da defesa) bate no corpo — a mesma reflexão da colisaoBolaCorpo. Antes ela
+ * o atravessava: na revisão do C1, um gol com a bola 22,7 cm dentro do tronco do goleiro fora da área.
+ */
+function colisaoTroncoGoleiro(m, x0, y0, z0) {
+  const b = m.bola, R = GOLEIRO.realista.bloqueio, raio = R.tronco[0] + BOLA.raio;
+  if ((y0 <= 0.9 && b.p.y <= 0.9) || (y0 > R.alto && b.p.y > R.alto)) return;
+  const sx = b.p.x - x0, sy = b.p.y - y0, sz = b.p.z - z0;
+  const n = Math.max(1, Math.ceil(MD.hypot(sx, sy, sz) / R.amostra));
+  for (const j of m.jogadores) {
+    if (j.posicao !== 'GOL' || j.id === m.posse || m.naMao === j.id) continue;
+    if (naParada(m) && j.id !== m.parada.cobrador) continue;
+    if (m.ultimoToque && m.ultimoToque.id === j.id && m.tick - m.ultimoToque.tick < 10) continue;
+    // a defesa desenhada (e o bloqueio dela: goleiro.js aplicarDefesa) decide a bola lida no gol
+    if ((j.defesa && !j.defesa.fora && m.tick <= j.defesa.tick + 2) || mergulhoAtivo(j, m.tick)) continue;
+    if (MD.hypot(x0 + sx / 2 - j.x, z0 + sz / 2 - j.z) > raio + MD.hypot(sx, sz) / 2) continue;
+    for (let i = 0; i <= n; i++) {
+      const u = i / n, px = x0 + sx * u, py = y0 + sy * u, pz = z0 + sz * u;
+      if (py <= 0.9 || py > R.alto) continue;
+      const dx = px - j.x, dz = pz - j.z, d = MD.hypot(dx, dz);
+      if (d >= raio || d < 1e-9) continue;
+      const nx = dx / d, nz = dz / d;
+      b.p.x = j.x + nx * raio; b.p.y = py; b.p.z = j.z + nz * raio;
+      const vn = (b.v.x - j.vx) * nx + (b.v.z - j.vz) * nz;
+      if (vn < 0) { b.v.x -= 1.35 * vn * nx; b.v.z -= 1.35 * vn * nz; }
+      b.rolando = false;
+      m.eventos.push({ tipo: 'bateuCorpo', id: j.id });
+      registrarToque(m, j, 'corpo');
+      m.desvio = m.tick;
+      for (const o of m.jogadores) if (o.cond && o.cond.toque && o.cond.toque.tipo === 'aereo') o.cond.toque = null;
+      return;
+    }
+  }
+}
+
+/**
  * Pedalada: o pé de fora é o pé livre do arco por cima da bola e o outro segura o corpo
  * (travaApoio: não sai do chão até o fim do arco). Sem salto de fase nem pé teletransportado:
  * com os dois pés no chão, a passada tira o pé de fora do chão pelo ritmo (como no toque); se o
@@ -650,10 +688,11 @@ export function passo(m, entradas) {
   } else if (m.parada && segurarLateral(m)) {
     // lateral (Etapa 4): a bola nas duas mãos (atrás da cabeça ou no arco do arremesso), sem física
   } else {
-    const bx0 = m.bola.p.x, bz0 = m.bola.p.z;
+    const bx0 = m.bola.p.x, by0 = m.bola.p.y, bz0 = m.bola.p.z;
     passoBola(m.bola, m.eventos);
     if (m.partida) bloqueioPerna(m, bx0, bz0);
     colisaoBolaCorpo(m);
+    if (m.partida) colisaoTroncoGoleiro(m, bx0, by0, bz0);
     if (m.partida && m.partida.barreira) colisaoBarreira(m); // tiro livre: a bola na barreira que pula (Etapa 4)
   }
   verificarGol(m);
@@ -815,7 +854,13 @@ function bolaLivre(m) {
     // (só com a ida à bola solta calculada NESTE passo — goleiro.js varrer, j.varre.vivo: o plano velho, de antes de um
     // chute ou de um mergulho, não vale)
     const vPega = m.partida && g.varre && g.varre.ok && g.varre.vivo === m.tick ? GOLEIRO.realista.varre.vPega : 9;
-    if (naArea && !espalmou && MD.hypot(b.p.x - g.x, b.p.z - g.z) < 1.0 && b.p.y < 2.2 && MD.hypot(b.v.x, b.v.z) < vPega
+    // (partida, C3) a defesa desta bola já sorteada — espalmada ou batido (goleiro.js lerChute, pela StatsBomb) — e ainda por
+    // vir, FORA do corpo: a mão desenhada que passa a pegaMergulho dela antes do contato não a agarra (antes 7 de 58 defesas da
+    // bola alta a ≥ 1,2 m de lado viravam "pegou" assim, por cima da espalmada sorteada). A bola NO corpo (defesa.corpo) ele
+    // ainda junta (o "Saved Twice" da StatsBomb, 9,6% das defesas; o teste-goleiro-realista B1 foi calibrado com ela)
+    const dP = g.defesa;
+    const sorteada = !!m.partida && !!dP && !dP.fora && !dP.corpo && dP.tipo !== 'encaixe' && !!m.voo && dP.chave === m.voo.tickChave && m.tick < dP.tick;
+    if (naArea && !espalmou && !sorteada && MD.hypot(b.p.x - g.x, b.p.z - g.z) < 1.0 && b.p.y < 2.2 && MD.hypot(b.v.x, b.v.z) < vPega
       && (!mergulhoAtivo(g, m.tick + 1) || maoNaBola(g, m.tick + 1, b.p))) {
       m.naMao = g.id; m.posse = g.id; g.segura = { desde: m.tick };
       b.v.x = 0; b.v.y = 0; b.v.z = 0; m.voo = null;

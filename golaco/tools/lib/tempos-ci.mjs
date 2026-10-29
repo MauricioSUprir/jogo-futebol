@@ -30,7 +30,7 @@ export const TEMPOS_NODE = {
   'teste-chutes.mjs': 90, // C2: + a barra cheia contra o goleiro realista da partida e (28/10) as metas em 9 sementes + o árbitro da curva de antes (solto, para o gol, ±17°: 1.280 chutes) + (29/10) a referência gravada da main (1.592 chutes) e o canto (232), ~2 s; medido 58–66 s aqui sozinho (era ~40)
   'teste-cavadinha.mjs': 107,
   'teste-goleiro.mjs': 6,
-  'teste-mergulho.mjs': 35,
+  'teste-mergulho.mjs': 110, // C3: + H (480 chutes de bola alta numa partida copiada) e I (540 lances: tronco fora da área, a saída no alto que falha, o goleiro atrás da bola); ~25 s a mais aqui sozinho (estimado ×3 no CI)
   'teste-aereo.mjs': 2,
   'teste-cabeceio.mjs': 70,
   'teste-treino.mjs': 14,

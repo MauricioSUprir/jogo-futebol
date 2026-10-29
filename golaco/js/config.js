@@ -653,6 +653,17 @@ export const GOLEIRO = {
     tEmPe: 0.45,      // s da defesa em pé (baixa / peito) depois do contato
     tAbraca: 0.25,    // s para trazer a bola encaixada para junto do peito
     tMaoRebote: 0.15, // s para as mãos irem de onde estavam (defesa anterior) às da defesa nova no rebote
+    // SÓ DESENHO (anim.js poseMergulho → goleiro.js maoDaEspalmada / maosMergulho com a mão escolhida; a simulação nunca lê;
+    // pedido do dono de 17/10: "o goleiro ESPALMA bola alta"): no mergulho que não encaixa a bola a ≥ `y` m (o terço de cima
+    // do gol, 2,44 × 2/3 — "a escolha da mão só conta no terço de cima do gol"), UMA mão vai à bola — a de CIMA (a do ombro
+    // mais perto do travessão: para a bola à direita do goleiro, a esquerda), a dos treinadores para espalmar por cima ou
+    // pela trave; a de baixo só quando a de cima não chega —, a palma no lado da bola que dá para o ombro (atrás e embaixo
+    // dela, empurrando-a para fora: `palma` m do centro, o raio da bola) e a outra só acompanha (`outra` do caminho até a
+    // bola). Só com a bola a ≥ `lado` m de lado do corpo no começo da defesa: perto do corpo ficam as duas palmas (o salto
+    // com as duas mãos acima da cabeça, teste-mergulho B10). StatsBomb open data (728 partidas, medido aqui;
+    // PESQUISA-ETAPA4.md §14): nas defesas de mergulho da bola a ≥ 1,9 m e ≥ 1,2 m de lado, uma mão em 61,4% e as duas em
+    // 34,1% (44); a < 1,2 m de lado, uma mão 43,5% e as duas 55,3% (246); antes as duas palmas iam sempre à bola
+    umaMao: { y: 1.63, lado: 0.8, palma: 0.11, outra: 0.45 },
   },
   // Goleiro realista (pedido do dono, 15/10: "os goleiros se movimentando melhor e as espalmas e as seguradas de bola mais
   // realistas, ele defende mais bolas difíceis do que fáceis"; e a pendência #114: sair no 1×1 e no cruzamento). SÓ NA
@@ -703,7 +714,12 @@ export const GOLEIRO = {
     // espalma. A bola NO CORPO segura pela distância do chute ao gol (`corpoDist`, [m, fração], interpolada: StatsBomb, 729
     // defesas a < 0,5 m de lado — < 12 m 32%, 12–16,5 m 40%, 16,5–25 m 59%, ≥ 25 m 79%, no meio de cada faixa; antes 0,92
     // fixo, sem fonte: o chute de perto no corpo era encaixado em 72%)
-    segura: { emPe: [0.66, 0.6, 0.45], mergulho: [0.4, 0.26, 0.05], corpoDist: [[9, 0.32], [14.25, 0.4], [20.75, 0.59], [28, 0.79]], vRef: 18, kV: 0.035, vMin: 0.55, vMax: 1.3, folgaPlena: 0.9, minFolga: 0.35 },
+    // `recuoAlto` [y, fração] (C3, 29/10): a bola a ≥ y m que passa por cima do goleiro adiantado e que ele alcança voltando
+    // (goleiro.js recuoBolaAlta) segura com a fração — StatsBomb, 728 partidas, medido aqui: o goleiro a ≥ 2 m da linha no
+    // chute e a bola a ≥ 1,9 m na linha, encaixe 14,9% (14 de 94; 18,6% a 2–3 m, 8,6% a ≥ 3 m); antes ia a conta do treino
+    // (segurar.emPe 0,6: ~64% das que ele alcançava)
+    segura: { emPe: [0.66, 0.6, 0.45], mergulho: [0.4, 0.26, 0.05], corpoDist: [[9, 0.32], [14.25, 0.4], [20.75, 0.59], [28, 0.79]], vRef: 18, kV: 0.035, vMin: 0.55, vMax: 1.3, folgaPlena: 0.9, minFolga: 0.35,
+      recuoAlto: [1.8, 0.15] },
     // REBOTE (a bola que não fica nas mãos): vai para FORA (linha de fundo ou travessão) com a fração da StatsBomb pela
     // técnica e altura [< 1, 1–1,8, ≥ 1,8 m] (`foraEmPe`/`foraMergulho`); o resto cai perto, de lado: `fv` da velocidade
     // (entre v[0] e v[1] m/s), a ang[0]–ang[1] rad da frente do gol, subindo vy m/s — nunca para dentro do gol
