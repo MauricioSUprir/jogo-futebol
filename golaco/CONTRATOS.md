@@ -2652,12 +2652,52 @@ subia só até `yAlvo[1]` 1,7 m, medida 0,4 m antes da linha, e o canto do anal�
   0,9 m, dentro do gol — em ≥ 25% (27,0%) e por cima do travessão em ≤ 25% (8,7%). Numa semente só (ep ~3 pontos) as três
   passavam na 7100 do CI e alguma reprovava em 3 das 9 (por semente: 67–76 / 23–32 / 7–12%, uma linha informativa): a meta é
   a mesma, sobre o número medido — sem "reprova só quando prova" (com o ângulo a ~2 ep da meta, aceitar o intervalo seria
-  afrouxá-la); `--sem-cheia a,b,c` troca as sementes. O teste inteiro leva 60–66 s aqui, sozinho (era ~40; `tempos-ci.mjs` 90). Informativos
+  afrouxá-la); `--sem-cheia a,b,c` troca as sementes. O teste inteiro leva 58–66 s aqui, sozinho (era ~40; `tempos-ci.mjs` 90; a referência e o canto, ~2 s). Informativos
   (na 1ª semente), com a main ao lado:
   só o forte, o bom finalizador, a perna ruim e os gols, defesas, fora e trave/travessão COM o goleiro — o do treino na
   linha (craque e bom) e o REALISTA da partida posicionado pela IA dele (craque; uma partida de verdade com a bola rolando e
   os outros 20 longe, `chuteNaPartida`). Os gols por direção do analógico contra o realista (a tabela do topo) ficam só aqui:
   na partida o teste anda a ~27 chutes/s, e com menos de ~1.000 chutes por direção o Δ fica no ruído (±2–3 pontos).
+- **Referência gravada da main (revisão de 29/10)**: o árbitro independente deixava passar o que não muda a mira (o efeito
+  do colocado solto ×1,03, o erro do solto ×1,3 com a barra cheia, a elevação +0,002 rad) e o que ele não varria (o módulo
+  0,6/0,35 para o gol, o time que ataca para −x, o limiar do canto descendo a ~26°, a cobrança mirada). Agora o
+  `teste-chutes` confere também uma **referência gravada da main 46dd59ab** (`tools/lib/chutes-ref.mjs` = os casos e a
+  conta; `tools/dados/chutes-ref.json` = 1.592 resultados, 47 KB; `tools/` não vai para o site): cada chute num mundo de
+  treino NOVO com a semente dele (o rng recriado logo antes do toque) e o toque chamado direto (`acoes.js executarAcao`, sem
+  a locomoção) — a bola rolando (896: +x e −x, forte e colocado, as duas pernas, finalização 60–99, forças 0,3–1 com a
+  maioria 0,85–1, 7–31 m, até 42° da frente, com e sem goleiro; o analógico solto, para o gol com o módulo 1, 0,6 e 0,35,
+  ±17° e a varredura de ±0,5° a ±32° de 0,5 em 0,5° — abaixo do canto pela geometria do próprio teste, sen(a) × meia-boca ×
+  1,4 < meia-boca − 0,9 até ~32,6°), o pênalti do humano (192, todas as direções), o tiro livre com barreira pelo chute do
+  jogo (112, todas as direções) e a cobrança mirada do tiro livre direto (392: sem barreira — e com a de 0 — a mira cruzando
+  a linha a |z| ≤ 2,7 m e as que não vão para o gol; com barreira, todas as direções; efeito −1 a +1, 17–34,8 m). De cada
+  um, os bits (SHA-1, 12 hex) da bola depois do toque (posição, v e w, COM o erro do rng), da mira (`m.voo.mira`) e de onde
+  a bola cruza a linha do gol no voo só da bola (`bola.js passoBola`), mais o y e o z da linha arredondados para o
+  diagnóstico. E o **canto** (232 chutes, não gravados): com o erro zerado, a bola rolando (o analógico a ±33,5°…±90°) e a
+  cobrança mirada (a mira a |z| 2,9–3,5 m), os dois sentidos e força 1, a bola cruza a linha a 2,0–2,2 m, a |z| ≥
+  meia-boca − 0,9 e dentro do gol (como o C2: 2,10 m). A main passa a referência e reprova o canto; a 4a3fef80 reprova a
+  referência (199 das 392 cobranças miradas: a que "subia sempre") e passa o canto. Mutações (todas reprovam, a maioria só
+  na referência): A (o solto +0,1 m), B (para o gol +0,1), C (|z| 1–2 m +0,1), E/E2/E3 (`zCanto` 1,8/1,6/1,4: o limiar
+  descendo a ~21°/~24°/~26°), F (o efeito do colocado solto ×1,03), G (a elevação do forte solto +0,002 rad), H (o erro do
+  solto ×1,3), I (para o gol com o módulo < 0,7 +0,1), J (o time que ataca para −x +0,1), K (a cobrança mirada fora do canto
+  +0,1 m), L (o limiar da cobrança a 2,26 m) — e, no sentido oposto, `zCanto` 0,5 (o limiar subindo a 3,16 m) reprova no
+  canto. `--so-referencia` roda só ela (~2 s). **Regravar** (`node tools/teste-chutes.mjs --gravar-referencia <pasta js>
+  [--origem "texto"]`, contra a versão que passa a valer — ex.: `git archive <commit> golaco | tar -x -C /tmp/x` e
+  `/tmp/x/golaco/js` —, dizendo no PR o porquê) só com mudança DE PROPÓSITO no chute fora do canto: na mira, na saída, no
+  erro do chute, no toque ou na física da bola (o C4, se mexer no voo, regrava); mudar a lista dos casos na lib também pede
+  regravar (o "conjunto" gravado é o hash dela). Mudança que não é do chute (a IA, a locomoção, o treino) não mexe nela.
+- **Tabela das cobranças da pessoa (revisão de 29/10)** — na partida de verdade (o meio do jogo da semente 1001, os outros
+  21 longe), a barra cheia (50 ticks), a mira no padrão (meio), girada ±17° e no canto (a reta cruzando a linha a ±3,1 m);
+  onde a bola cruza a linha do gol com o erro zerado e se os bits da bola depois do toque (com o erro) são os da main:
+
+  | cobrança | meio (main → HEAD 4a3fef80 → agora) | ±17° | canto (±3,1 m) | agora = main |
+  |---|---|---|---|---|
+  | tiro livre direto 34 m, sem barreira | 1,58 → 2,10 → **1,58 m** | 1,57 → 2,10 → 2,10 m (cruza a ±10,4 m: canto pela régua) | 1,58 → 2,10 → 2,10 m | no meio; no canto e a ±17°, o HEAD |
+  | tiro livre direto 22 m, barreira de 0 | 1,66 → 2,10 → **1,66 m** | 1,65 → 2,10 → 2,10 m (cruza a ~±7 m) | 1,66 → 2,10 → 2,10 m | no meio; no canto, o HEAD |
+  | tiro livre direto 22 m, barreira de 4 | 3,16 m nos três | 3,01–3,16 m nos três | 3,12–3,17 m nos três | todas |
+  | pênalti (o analógico: solto, para o gol, ±17°, canto ±0,75 rad) | 1,73–1,74 m nos três | igual | igual | todas |
+  | escanteio ALTA e TENSA, tiro de meta LONGA e CURTA | a queda igual nos três | igual | igual | todas |
+  | lateral | não passa pelo chute (o arremesso, `lateral.js`) | | | — |
+  | chute do jogo, 20 m de frente, força 1 (forte e colocado, +x e −x) | solto/para o gol (módulo 1 e 0,35)/±17°/+30°: 1,66–1,68 m nos três | | ±0,75 rad: 1,66–1,68 → 2,10 → 2,10 m | fora do canto, todas |
 
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores

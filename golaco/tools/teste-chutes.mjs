@@ -14,14 +14,44 @@
 // apontado para um canto"); o resto (com o goleiro, o bom finalizador, a perna ruim, só o forte) sai na tabela,
 // informativo, com o número da main ao lado. Os gols por direção do analógico contra o goleiro realista (main × C2) ficam
 // só no CONTRATOS.md (C2): ~27 chutes/s na partida, e com menos de ~1.000 chutes por direção o Δ fica no ruído.
-//   node tools/teste-chutes.mjs [--so-cheia | --so-arbitro] [--sem-cheia <sementes da barra cheia com o sorteio, separadas
-//   por vírgula; padrão as 9: 7100,31100,47100,13100,23100,59100,67100,83100,97100>] [--js <pasta js>]
-//   (--js: mede outra cópia da lógica, ex.: a main — o "antes"; --so-arbitro: só o caso da curva de antes, ~7 s)
+// REFERÊNCIA GRAVADA da main (revisão de 29/10; tools/lib/chutes-ref.mjs, tools/dados/chutes-ref.json): fora do canto o
+// chute é o da main 46dd59ab BIT A BIT — 1.592 chutes fixos, cada um num mundo de treino novo com a semente dele e o toque
+// direto (os dois sentidos de ataque, forte e colocado, as duas pernas, forças 0,3–1, 7–31 m, o analógico solto, para o gol
+// com o módulo 1, 0,6 e 0,35, ±17° e a varredura fina até ±32°; o pênalti e o tiro livre com barreira em todas as
+// direções; a cobrança mirada do tiro livre direto fora do canto, com e sem efeito): a bola depois do toque (v, w, COM o
+// erro do rng), a mira e onde ela cruza a linha do gol, por hash dos bits. No CANTO (232 chutes, não gravados) a barra
+// cheia vai ao ângulo (o erro zerado: y na linha 2,0–2,2 m, |z| ≥ meia-boca − 0,9, dentro do gol). REGRAVAR só com
+// mudança DE PROPÓSITO no chute fora do canto (na física da bola, no toque ou no erro do chute), contra a versão que passa a
+// valer: `--gravar-referencia <pasta js> [--origem "texto"]` (o topo de tools/lib/chutes-ref.mjs e o CONTRATOS.md, C2).
+//   node tools/teste-chutes.mjs [--so-cheia | --so-arbitro | --so-referencia] [--sem-cheia <sementes da barra cheia com o
+//   sorteio, separadas por vírgula; padrão as 9: 7100,31100,47100,13100,23100,59100,67100,83100,97100>] [--js <pasta js>]
+//   (--js: mede outra cópia da lógica, ex.: a main — o "antes", que reprova só o canto; --so-arbitro: só a curva de antes,
+//   o árbitro e a referência, ~7 s; --so-referencia: só a referência e o canto, ~2 s)
+//   node tools/teste-chutes.mjs --gravar-referencia <pasta js> [--origem "texto"]   (regrava tools/dados/chutes-ref.json)
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { tabelaTexto, fmt, media, percentil, DEG } from './lib/medidas.mjs';
+import * as REF from './lib/chutes-ref.mjs';
+const AQUI = path.dirname(fileURLToPath(import.meta.url));
+const ARQ_REF = path.join(AQUI, 'dados', 'chutes-ref.json');
+const iGrava = process.argv.indexOf('--gravar-referencia');
+if (iGrava > 0) {
+  // regrava a referência com a lógica da pasta dada (mudança DE PROPÓSITO no chute fora do canto: o topo da lib)
+  const pasta = path.resolve(process.argv[iGrava + 1]);
+  const iOr = process.argv.indexOf('--origem');
+  const M = await REF.carregar(pasta), casos = REF.casosReferencia();
+  const res = casos.map(cs => REF.resumo(REF.rodarCaso(M, cs)));
+  const txt = `{"sobre": "teste-chutes.mjs: a referência gravada do chute fora do canto (tools/lib/chutes-ref.mjs: os casos, a conta e quando regravar)",\n`
+    + `"origem": ${JSON.stringify(iOr > 0 ? process.argv[iOr + 1] : pasta)},\n"conjunto": "${REF.hashConjunto(casos)}",\n"n": ${casos.length},\n`
+    + `"casos": [\n${res.map(r => JSON.stringify(r)).join(',\n')}\n]}\n`;
+  fs.mkdirSync(path.dirname(ARQ_REF), { recursive: true });
+  fs.writeFileSync(ARQ_REF, txt);
+  console.log(`teste-chutes: referência gravada em ${ARQ_REF} (${casos.length} chutes, ${(txt.length / 1024).toFixed(1)} KB, conjunto ${REF.hashConjunto(casos)})`);
+  process.exit(0);
+}
 const iJs = process.argv.indexOf('--js');
-const JS = iJs > 0 ? path.resolve(process.argv[iJs + 1]) : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../js');
+const JS = iJs > 0 ? path.resolve(process.argv[iJs + 1]) : path.resolve(AQUI, '../js');
 const imp = f => import(pathToFileURL(path.join(JS, f)).href);
 const { criarMundo, passo, jogadorPorId } = await imp('sim.js');
 const { BOTAO, CAMPO, ACOES, BOLA, PASSO, ENTRADA } = await imp('config.js');
@@ -84,7 +114,8 @@ function chute(semente, x, z, opc = {}) {
   return { l, mira, linha, cruza, traj, res, noAlvo, m, carga: n, an: { x: ax, z: az } };
 }
 
-const SO_ARB = process.argv.includes('--so-arbitro');
+const SO_REF = process.argv.includes('--so-referencia');
+const SO_ARB = SO_REF || process.argv.includes('--so-arbitro');
 const SO_CHEIA = SO_ARB || process.argv.includes('--so-cheia');
 
 // ------------------------------------------------ velocidade
@@ -352,7 +383,7 @@ if (!SO_ARB) {
   });
   reg('barra cheia — varredura com o erro zerado (9–35 m, até 45°, solto e no canto, forte e colocado)', `${fmt(sem / Math.max(1, n) * 100, 1)}% sem gol (${sem}/${n}${pior.length ? ': ' + pior.join(', ') : ''})`, '≤ 1% (main: 3,7%; a versão anterior do C2, ad44206f, com o solto subindo, 0,2%)', n >= 1000 && sem / n <= 0.01);
 }
-{
+if (!SO_REF) {
   // o analógico SOLTO, PARA O GOL e nas diagonais leves (±17°): a barra cheia fica na curva de antes (decisão do dono, 28/10:
   // "só o chute mirado sobe — com o analógico apontado para um CANTO, a barra cheia vai no ângulo; sem mirar, o chute fica
   // na altura de hoje"). ÁRBITRO INDEPENDENTE (nada de acoes.js nem de mira.js; a revisão de 28/10: comparar a versão com
@@ -420,6 +451,46 @@ if (!SO_ARB) {
   reg('barra cheia — analógico SOLTO, PARA O GOL e a ±17°: a curva de antes, pelo árbitro independente (a mira pelas constantes; o forte com o erro zerado, a bola a 0,4 m da linha e na linha; 9–30 m, forte e colocado, força 0,92 e 1, com e sem o erro)',
     Object.entries(g).map(([k, e]) => `${k}: ${e.fora} de ${e.n} fora da curva de antes${e.canto ? ` (${e.canto} no canto)` : ''}${e.voo ? ` (${e.voo} no voo)` : ''} · linha (erro 0) y méd ${fmt(media(e.ys))} m${e.ex ? ` · ex.: ${e.ex}` : ''}`).join(' | ') + ` · maior desvio do voo (forte, erro 0): y ${fmt(tolY, 3)} m, z ${fmt(tolZ, 3)} m`,
     `0 fora (a mira igual à curva de antes; o voo do forte a ≤ ${fmt(TOL_Y, 2)} m na altura e no z), 0 no canto, n ≥ 600`, tot.n >= 600 && tot.fora === 0 && tot.canto === 0);
+}
+{
+  // REFERÊNCIA GRAVADA da main 46dd59ab (revisão de 29/10): o árbitro de cima não vê o que não muda a mira (o efeito do
+  // colocado, o erro do sorteio, a elevação) nem o que ele não varre (o módulo do analógico, o time que ataca para −x, as
+  // direções entre ±17° e o canto, a cobrança mirada). Os chutes fixos de tools/lib/chutes-ref.mjs (o toque direto num mundo
+  // novo com a semente de cada um) contra tools/dados/chutes-ref.json, por hash dos bits (a bola depois do toque, a mira e
+  // onde ela cruza a linha do gol). Reprova também com o arquivo faltando ou com a lista dos casos mudada (regravar: o topo)
+  const M = await REF.carregar(JS), casos = REF.casosReferencia();
+  let ref = null, erroRef = null;
+  try { ref = JSON.parse(fs.readFileSync(ARQ_REF, 'utf8')); } catch (e) { erroRef = e.message; }
+  const conj = REF.hashConjunto(casos);
+  const porK = {}, NOME = { r: 'bola rolando', p: 'pênalti', b: 'tiro livre com barreira', c: 'cobrança mirada' };
+  let dif = 0;
+  const okConj = !!ref && ref.conjunto === conj && ref.n === casos.length && ref.casos?.length === casos.length;
+  if (okConj) casos.forEach((cs, i) => {
+    const r = REF.resumo(REF.rodarCaso(M, cs)), g = ref.casos[i];
+    const e = (porK[cs.k] ??= { n: 0, dif: 0, ex: [] });
+    e.n++;
+    if (r[0] !== g[0]) { e.dif++; dif++; if (e.ex.length < 2) e.ex.push(`${REF.textoCaso(cs)}: linha y/z ${g[1]}/${g[2]} → ${r[1]}/${r[2]} m`); }
+  });
+  reg(`barra cheia — fora do canto: a referência GRAVADA da main, bit a bit (${casos.length} chutes; a bola depois do toque com o erro, a mira e a linha)`,
+    !ref ? `sem a referência (${erroRef})` : !okConj ? `a lista dos casos mudou (conjunto ${conj} × gravado ${ref.conjunto}, n ${casos.length} × ${ref.n}): regravar com --gravar-referencia` :
+      Object.entries(porK).map(([k, e]) => `${NOME[k]}: ${e.dif} de ${e.n} diferentes${e.ex.length ? ` · ex.: ${e.ex.join(' · ')}` : ''}`).join(' | ') + ` (origem: ${ref.origem})`,
+    '0 diferentes', okConj && dif === 0);
+  // o CANTO (acima do limiar): a barra cheia vai ao ângulo, como hoje — o erro zerado (o do chute e o da cobrança)
+  const C = M.config, e0 = [C.ACOES.chute.erroBom, C.ACOES.chute.erroRuim, C.MIRA.erro];
+  C.ACOES.chute.erroBom = 0; C.ACOES.chute.erroRuim = 0; C.MIRA.erro = 0;
+  const cc = { rc: { n: 0, ok: 0, ys: [], ex: null }, cc: { n: 0, ok: 0, ys: [], ex: null } };
+  try {
+    for (const cs of REF.casosCanto()) {
+      const r = REF.rodarCaso(M, cs), l = r.linha, e = cc[cs.k];
+      e.n++;
+      const ok = !!l && l.y >= 2.0 && l.y <= 2.2 && Math.abs(l.z) >= ANG_Z && Math.abs(l.z) < MEIO - R;
+      if (l) e.ys.push(l.y);
+      if (ok) e.ok++; else e.ex ??= `${REF.textoCaso(cs)}: linha ${l ? `y ${fmt(l.y)} z ${fmt(l.z)}` : 'não cruza'}`;
+    }
+  } finally { [C.ACOES.chute.erroBom, C.ACOES.chute.erroRuim, C.MIRA.erro] = e0; }
+  reg('barra cheia — no CANTO (acima do limiar), o erro zerado: na linha do gol no ângulo (bola rolando, analógico a ±33,5° … ±90°; cobrança mirada a |z| 2,9–3,5 m; os dois sentidos, força 1)',
+    Object.entries(cc).map(([k, e]) => `${k === 'rc' ? 'bola rolando' : 'cobrança mirada'}: ${e.ok} de ${e.n} · y ${fmt(Math.min(...e.ys))}–${fmt(Math.max(...e.ys))} m${e.ex ? ` · ex.: ${e.ex}` : ''}`).join(' | '),
+    `todos: y 2,0–2,2 m, |z| ≥ ${fmt(ANG_Z)} m, dentro do gol (main: não sobe — reprova)`, Object.values(cc).every(e => e.n > 0 && e.ok === e.n));
 }
 if (!SO_ARB) {
   // com o sorteio: o craque com a perna boa, metade chute forte, metade colocado (a chance de acertar o ângulo). As metas
