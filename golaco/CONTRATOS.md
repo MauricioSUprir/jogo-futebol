@@ -2816,8 +2816,8 @@ IGUAL); a mão de cima é só desenho.
   "fora", o passe ou o cruzamento que passa por ele sem leitura, o mergulho/salto depois de `defesa.tick + 2` — e, na janela
   da defesa, a saída no cruzamento que o sorteio errou (`d.saidaAlta && !d.sucesso`), com a bola ACIMA de 0,9 m (abaixo, as
   pernas de todo jogador: `colisaoBolaCorpo`, o cilindro de sempre): o caminho do passo, em pedaços de `bloqueio.amostra` m,
-  contra os sólidos da pose (a do FIM do passo no mergulho/salto — o quadro é puro no tick; de pé, a do meio do passo, com o
-  corpo já andado); o 1º pedaço dentro → o ponto de entrada por bisseção (~1 mm), a bola fica nele e reflete pela normal do
+  contra os sólidos da pose (a do FIM do passo no mergulho/salto — o quadro é puro no tick; de pé, a pose de agora, com o
+  corpo já andado neste passo); o 1º pedaço dentro → o ponto de entrada por bisseção (~1 mm), a bola fica nele e reflete pela normal do
   sólido (relativa ao corpo, a restituição da `colisaoBolaCorpo`; evento `bateuCorpo`, `m.desvio`); já dentro no começo do
   passo (o corpo andou para ela): sai pela normal até a superfície. Pula quem tem a bola, quem tocou nela há < 10 passos, a
   parada, a defesa viva, o cabeceio marcado (a cabeça desenhada decide: `cabecaNaBola`) e, longe, quem está a mais de
@@ -2835,7 +2835,9 @@ IGUAL); a mão de cima é só desenho.
   a 5–12 cm do corpo desenhado, e em 7 defesas que dão certo a bola entra até 13 cm no corpo um passo antes do contato das
   mãos; as pernas de todo jogador (`colisaoBolaCorpo`, o cilindro de 0,31 m no centro, só o ponto do fim do passo): batidas a
   até 8 cm do desenho e a bola até 12 cm dentro da canela. Levar o corpo desenhado à janela da defesa muda a calibração do
-  C1 (as taxas de defesa e de rebote): fica para um item dele.
+  C1 (as taxas de defesa e de rebote): fica para um item dele. Na saída no cruzamento que DÁ CERTO, a mão/o braço desenhado
+  encosta na bola 2 passos antes do contato em 4 de 99 saídas naturais (até 10,9 cm no miolo; a main igual, as mesmas 4) —
+  o encontro das mãos com a bola, não uma bola que passa pelo corpo.
 - **Teste**: `teste-mergulho` seções H e I (padrão, CI; ver o cabeçalho dele): H1 mergulho espalma ≥ 85% (main 90,9%:
   guarda), H1b por cima do goleiro adiantado seguras ≤ 30% (main 36,7% → 13,3%), H2 uma mão — a de cima — na bola acima da
   cabeça e a outra longe ≥ 80% (main 2,7% → 83,3%), H3 a espalmada sai do campo ≥ 90% (100%), H4 com o rebote para fora em
@@ -2844,17 +2846,43 @@ IGUAL); a mão de cima é só desenho.
   raio — sempre fora; a forma copiada do desenho no teste): I1a nas batidas do goleiro fora da área (600 chutes a 0,95–1,9 m
   no corpo, ele solto no lance), o caminho do passo chega a ≤ 5 cm da casca (main 1/1, o 1º C3 8/130 → 0/41), I1b sem bater, a
   bola nunca entra > 2 cm no miolo (main 17/600, o 1º C3 28/600 → 0; os 3 passos antes de ele dominar/pegar a bola ficam de
-  fora, informativo), I2 a saída no cruzamento que falha: nem dentro do miolo nem batida no ar (main 2/29 dentro, o 1º C3
-  34/38 no ar → 0 e 0), I3 o goleiro atrás da bola nunca defende longe dela (main 4/120 → 0).
+  fora, informativo), I2 a saída no cruzamento que falha — 450 lances: o sorteio forçado a errar, a natural e a mão
+  forçada a não chegar (`cruz.mao` 2 cm; dela, só as saídas em que a mão não chegou, a entrada no miolo contada depois desse
+  passo, ≥ 20 saídas e ≥ 10 batidas no corpo do pulo) —: nem dentro do miolo nem batida no ar (main 3/30 dentro, a mão 1 de 1;
+  o 1º C3 34/38 no ar → 0 de 76, a mão 0 de 26 com 26 batidas, e 0 no ar), I3 o goleiro atrás da bola nunca defende longe dela (main 4/120 → 0).
+  Mutações (cada uma reprova o `teste-mergulho`): a colisão pula a saída sorteada para falhar (M5 da revisão) → I2 3 de 56; a
+  saída cuja mão não chega sem `d.fora` → I2 (a mão: 1 de 1 — vira "pegou"); o `!sorteada` tirado (M7) → H5 21 de 370; a
+  colisão desligada → I1a, I1b, I2; todo toque no alto marcado pulando a colisão (não só o cabeceio: o domínio no peito também) → I1b; sem o goleiro atrás da bola → I3; sem o
+  encaixe do recuo alto → H1b; sem a mão de cima → H2; a pose de pé no lugar da do mergulho → I2.
 - **Hash e painel** (contra a main 02f4ec4a): `hash-igual` IGUAL (o treino, 4 cenas × 20 sementes × 3 min); `hash-partida`
-  muda só 1 das 8 partidas (humano, semente 3, a partir do passo 4800) — mudança de propósito: a base nova do `hash-partida` é
-  o merge deste item (`--ref`). A 1ª pessoa do cabeceio e a forma do manequim lida do `anim.js` são só desenho. Painel de 144
+  muda só 1 das 8 partidas (humano, semente 3, no passo 4693: na main a mão desenhada do goleiro "pega" a bola 3 passos
+  antes do contato da espalmada já sorteada; aqui o `!sorteada` não deixa e ela é espalmada) — mudança de propósito: a base nova do `hash-partida` é
+  o merge deste item (`--ref`). A 1ª pessoa do cabeceio e a forma do manequim lida do `anim.js` são só desenho (conferido: os 16 segmentos, com o goleiro, com
+  os mesmos raios e achatamentos de antes no `render/jogador3d.js`). Painel de 144
   em duas amostras pareadas por semente: 1001–1144 (121 partidas idênticas, 23 mudam): gols 1,65 → 1,68 (Δ +0,028 ± 0,058),
   goleiro 67,2 / 57,4 / 86,7% → 67,6 / 56,6 / 87,4% (as três metas), impedimentos 1,03 → 1,01, gols de cabeça 16,7 → 15,2%;
   7001–7144 (a da revisão; 125 idênticas, 19 mudam): goleiro no alvo 66,5 → 66,3% (na meta; o 1º C3 dava 65,8%), 6–16,5 m
   54,5 → 54,0% (fora da meta nas duas), impedimentos 0,89 → 0,87 (fora nas duas). Juntas (288): impedimentos Δ −0,024 ± 0,049
-  por partida (z −0,98; nas 42 que mudam, 46 → 39, z −0,98), goleiro 66,3 → 66,3% (IC95 do bootstrap pareado [−0,88; +0,79]
-  ponto): nenhuma medida na meta sai dela.
+  por partida (z −0,98; nas 42 que mudam, 46 → 39), goleiro 66,3 → 66,3% (IC95 do bootstrap pareado [−0,88; +0,79] ponto).
+  Como o impedimento caía nas duas, a amostra NOVA de 288 (4001–4288, a mesma cópia congelada da branch; 246 idênticas, 42
+  mudam) decide: impedimentos 1,03 → 1,07 (Δ +0,031 ± 0,040, o sinal ao contrário), goleiro 68,0 / 59,1 / 83,7% → 68,3 / 59,6 /
+  83,1% (as três metas), gols 1,74 → 1,69 (Δ −0,049 ± 0,062). As 576 juntas (`painel-equilibrio --partes`): impedimentos
+  1,00 → 1,00 (Δ +0,003 ± 0,032, z 0,22) — era sorteio: só ~15% das partidas mudam (a 1ª defesa do goleiro que vira outra
+  coisa) e o resto do jogo depois dela é outro —, goleiro 67,5 / 57,6 / 84,7% → 67,6 / 57,5 / 84,6% (IC95 do bootstrap
+  pareado do total [−0,52; +0,78] ponto), gols 1,72 → 1,71 (Δ −0,007 ± 0,040), gols de fora da área 16,0 → 16,7%, pênaltis 72
+  / 19 / 9% → 73 / 18 / 9%, gols de cabeça 14,1 → 13,4% (Δ −0,010 ± 0,013 por partida, z −1,6: não dá para separar do sorteio).
+  Nenhuma medida na meta sai dela nas 576. (Na amostra nova sozinha, os "gols de fora da área" passam de 17,6% para 18,8%, a
+  faixa vai até 18%: 76 → 80 gols de fora em ~430 gols de chute — e os pênaltis 71/24/6% → 67/28/6% com 17 → 18 cobranças.)
+- **Goleiro realista** (`teste-goleiro-realista`, 24 sementes 1001–1024, main × agora; o canhão sai de cópias de cada partida,
+  então as cenas só são as mesmas até a partida divergir — pareadas pela cena: 4.793 registros): D2 (o goleiro vai na bola solta
+  da área, partidas) 4 em 198 chutes → 3 em 200 (0,020 → 0,015 por chute; as duas abaixo da meta 0,03, PENDENTE: 1 lance de
+  diferença), E1 (escanteio, sai no alto e soca) 63/737 = 8,5% → 59/711 = 8,3% (na meta 7%; a revisão via 6,0 → 4,6% em 8
+  sementes), E2 (gol de escanteio, guarda ≤ 10%) 7,2% → 8,2% (53 → 58; z ≈ 0,7). B1 (no corpo, chute de ≥ 16,5 m: segura,
+  50–80%, real 64,9%) 63,5% → 54,2%: das 256 cenas pareadas do B1, 227 iguais, 27 encaixe → espalmada com a bola por cima do
+  goleiro adiantado (a 2,4–3,1 m da linha, a bola a 2,7–3,7 m no plano dele: o `recuoAlto` da StatsBomb, 14,9%, o H1b do
+  `teste-mergulho`) e 2 outras encaixe → espalmada; sem a bola por cima dele, o B1 fica 62,0% → 64,0% (165/266 → 169/264). O canhão sorteia a altura na linha uniforme até 2,3 m com o goleiro
+  a ~3 m: 68 das 334 cenas do B1 (20%) são essa bola — na StatsBomb, o goleiro a ≥ 2 m com a bola a ≥ 1,9 m é 2,3% das defesas
+  (94 de 4.106). A meta do B1 continua passando (52,7% em 1009–1024, 57,9% em 1001–1008), com pouca folga.
 
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores

@@ -599,7 +599,7 @@ Medido (`teste-mergulho` H e I, partida copiada da semente 5; antes = main 02f4e
 | H5 a espalmada sorteada vira "pegou" antes do contato | 21 de 370 | 0 de 370 | — |
 | I1a fora da área, a bola bate no ar (> 5 cm da casca do corpo desenhado) | 1 de 1 | 0 de 41 | — |
 | I1b fora da área, sem bater, a bola entra > 2 cm no miolo do corpo desenhado | 17/600 | 0/600 | — |
-| I2 a saída que falha: a bola dentro do corpo do pulo / batida no ar | 2/29 / — | 0/50 / 0 de 25 | — |
+| I2 a saída que falha (com a mão forçada a não chegar): a bola dentro do corpo do pulo / batida no ar | 3/30 (a mão 1 de 1) / — | 0/76 (a mão 0/26, 26 batidas) / 0 de 51 | — |
 | I3 o goleiro atrás da bola "defende" a 18–45 m dela | 4/120 | 0/120 | — |
 
 Revisão de 29/10 (o 1º C3 reprovou): o "corpo" da colisão era um cilindro fixo no centro lógico do goleiro, de 0,9 a 1,75 m
@@ -612,11 +612,25 @@ cm), I1b 28/600, I2 34 de 38 batidas no ar (o bloqueio pela previsão de 8 passo
 externa para isto: é a regra "o que se vê é o que acontece" (a mesma do cabeceio pela cabeça desenhada, `sim.js
 cabecaNaBola`).
 
+| Fonte (revisão de 29/10) | O que diz | O que foi aproveitado |
+|---|---|---|
+| Erin Catto, "Continuous Collision", GDC 2013 (box2d.org/files/ErinCatto_ContinuousCollision_GDC2013.pdf) | Testar só a posição do fim do passo deixa o objeto rápido atravessar ("tunneling"); a saída é o tempo do impacto (TOI); achar a raiz por bisseção é "simples mas incrivelmente robusto" quando há um intervalo que a cerca; parar a bola no TOI "perde um pouco de tempo" do passo | `sim.js colisaoCorpoGoleiro`: o caminho do passo em pedaços de 5 cm acha o 1º pedaço dentro do corpo (o intervalo), 7 bisseções (~1 mm) dão o ponto de entrada, e a bola fica no último ponto fora, refletida pela normal — o resto do passo fica perdido (no máximo ~0,45 m de um chute forte, um passo) |
+| Yue Jia e Mark Harman, "An Analysis and Survey of the Development of Mutation Testing", IEEE TSE 37(5), 2011 | Um teste só é adequado se "mata" os mutantes — cópias com uma falha de propósito; o mutante que sobrevive mostra o caso que o teste não cobre | As mutações da revisão (a colisão sem a saída que falha, o "pegou" por cima da espalmada) e as daqui (9 no total) rodadas no `teste-mergulho`; a M5 sobrevivia — a mão que não chega quase nunca acontecia com a bola indo ao corpo — e o I2 ganhou o grupo da mão forçada a não chegar |
+
 Painel de 144 em duas amostras (base = main 02f4ec4a, pareado por semente). 1001–1144: 121 partidas idênticas, 23 mudam; gols
 1,65 → 1,68 por partida (Δ +0,028 ± 0,058), goleiro 67,2 → 67,6% (6–16,5 m 57,4 → 56,6%, de fora 86,7 → 87,4%: as três metas),
 gols de cabeça 16,7 → 15,2%, impedimentos 1,03 → 1,01. 7001–7144 (a da revisão): 125 idênticas, 19 mudam; goleiro no alvo 66,5 →
 66,3% (o 1º C3: 65,8%, fora da meta), impedimentos 0,89 → 0,87. Juntas (288): impedimentos Δ −0,024 ± 0,049 (z −0,98), goleiro
-66,3 → 66,3% (IC95 do bootstrap pareado [−0,88; +0,79] ponto).
+66,3 → 66,3% (IC95 do bootstrap pareado [−0,88; +0,79] ponto). O impedimento caía nas duas: uma amostra NOVA de 288
+(4001–4288; 246 idênticas, 42 mudam) decide — impedimentos 1,03 → 1,07 (Δ +0,031 ± 0,040, o sinal ao contrário), goleiro 68,0 →
+68,3% (6–16,5 m 59,1 → 59,6%, de fora 83,7 → 83,1%). As 576 juntas: impedimentos 1,00 → 1,00 (Δ +0,003 ± 0,032), goleiro 67,5 →
+67,6% (57,6 → 57,5%, 84,7 → 84,6%; IC95 do bootstrap pareado [−0,52; +0,78] ponto), gols 1,72 → 1,71, gols de cabeça 14,1 → 13,4%
+(Δ −0,010 ± 0,013 por partida, z −1,6): era sorteio — só ~15% das partidas mudam e, depois da 1ª defesa diferente, o jogo é outro.
+`teste-goleiro-realista` em 24 sementes (1001–1024), main → agora: D2 (bola solta da área) 0,020 → 0,015 por chute (4 → 3
+lances; as duas abaixo de 0,03), E1 (escanteio, sai e soca) 8,5 → 8,3%, E2 (gol de escanteio) 7,2 → 8,2% (z ≈ 0,7), B1 (no corpo,
+≥ 16,5 m, segura) 63,5 → 54,2% — pareado pela cena, a queda é toda da bola por cima do goleiro adiantado (27 de 256 cenas; o
+`recuoAlto` acima, StatsBomb 14,9%); sem ela, 62,0 → 64,0%. No canhão essa bola é 20% das cenas do B1 (a altura na linha sorteada
+uniforme até 2,3 m com o goleiro a ~3 m); na StatsBomb, o goleiro a ≥ 2 m com a bola a ≥ 1,9 m é 2,3% das defesas (94 de 4.106).
 O chute com a barra cheia no ângulo (C2) contra o goleiro realista posicionado, a grade da sonda do C2 só com o analógico nos
 cantos (2.160 chutes, os mesmos nas duas versões): gols 68,2% → 68,3% (Δ +0,1 ± 0,1) — a espalmada alta nova não é defesa
 "milagrosa": a chance não mudou, só o desenho.
