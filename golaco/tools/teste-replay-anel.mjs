@@ -57,6 +57,8 @@
 //       cada gol, com a bola longe do centro dela (ver o item).
 //   G17 (16/10) a passada CORRENDO com o sobe-e-desce grande e um passo mais fundo, SINTÉTICO: o balanço residual ≤ 1 cm e o
 //       olho a ≤ 0,15 m da cabeça em cada gol (ver o item).
+//   G18 (29/10, C3) o PULO do cabeceio a gol de verdade (o canhão de cruzamentos do teste-cabeceio gravado no anel): a lente
+//       da 1ª pessoa nunca ruim em volta do contato e o olho a ≥ −6 cm do centro da cabeça no pulo (ver o item).
 // Na versão sem replay os módulos não existem: o teste reprova.
 // 15/10 (frente "replay robusto"): --estresse = 3× as sementes (84); a amostra do G8 (≥ 48 gols com autor; 28/10: ≥ 48 em
 // que a 1ª pessoa cabe) cresce com as sementes seguintes, em ordem, até + 20 (nunca escolhe sementes).
@@ -79,7 +81,7 @@
 // por último, o de trás do gol; os extras, a parte 1 do treinador até o gol. Medido (o G2 com --base na versão de antes):
 // nas sementes do CI, 101–128 e 201–240 (branch: 169 gols; main com a correção: 178) só os dois gols lentos (s14 e s102 da
 // branch) mudaram a base — 15,19 → 13,99 s e 16,94 → 13,98 s —; todo o resto igual campo a campo.
-//   node tools/teste-replay-anel.mjs [--js <pasta js>] [--ref <commit> | --base <pasta js>] [--sementes N] [--de S] [--par N] [--min M] [--so-g5] [--so-g3b] [--estresse]
+//   node tools/teste-replay-anel.mjs [--js <pasta js>] [--ref <commit> | --base <pasta js>] [--sementes N] [--de S] [--par N] [--min M] [--so-g5] [--so-g3b] [--so-g14] [--so-g18] [--estresse]
 // (28/10: --de S = as sementes do G a partir de S, padrão 1; --so-g3b = só o gol lento sintético)
 import path from 'node:path';
 import os from 'node:os';
@@ -376,7 +378,8 @@ async function itensG() {
   if (!RO || !RR.planosExtrasGol) { reg('G 3ª e 4ª câmeras do gol (render/replay-olhos.js, planosExtrasGol)', 'não existem', 'existem', false); return; }
   // --so-g5: só o pênalti (diagnóstico)
   if (args.includes('--so-g5')) { await itemG5(RO); return; }
-  if (args.includes('--so-g14')) { await itemG3b(); await itemG14(); await itemG15(); await itemG16(); await itemG17(); return; }
+  if (args.includes('--so-g14')) { await itemG3b(); await itemG14(); await itemG15(); await itemG16(); await itemG17(); await itemG18(); return; }
+  if (args.includes('--so-g18')) { await itemG18(); return; }
   if (args.includes('--so-g3b')) { await itemG3b(); return; }
   const C = await imp('config.js');
   const { REPLAY, CAMPO } = C;
@@ -538,11 +541,90 @@ async function itensG() {
   await itemG15();
   await itemG16();
   await itemG17();
+  await itemG18();
   {
     const g = comAutor.find(x => x.temPrimeira);
     reg('G1b "reduzir movimento": sem 1ª pessoa (o resto igual)', g ? 'conferido no G5 (mesmo gol, com e sem)' : 'sem gol com autor', '-', true);
   }
   console.log(`G: ${res.length} partidas (sementes ${DE}–${DE + NS - 1}${NS > NS0 ? `: ${NS0} + ${NS - NS0} até 48 gols com autor em que a 1ª pessoa cabe` : ''}) de 2 × ${MIN} min, ${gols.length} gols, ${nPar} processos${ESTRESSE ? ' (--estresse)' : ''}`);
+}
+
+/**
+ * G18 (29/10, C3 — item 14 da FILA: "o olho da 1ª pessoa no cabeceio fica na esfera de baixo da cabeça no salto") o PULO de
+ * verdade: o canhão de cruzamentos do teste-cabeceio (60 cenas, sementes 3000–3059: o cruzamento da ponta para 2 atacantes
+ * marcados, o resto longe) gravado no anel como a página (lib/anel-node.mjs), e em cada cabeceio A GOL o enquadramento da 1ª
+ * pessoa do autor de chute − 0,9 s (ou da montagem da cena) a chute + 0,9 s: a. a lente nunca fica ruim (a < solidoFolga
+ * de um sólido ou a < `proprio` do próprio quadril e das pernas: replay-olhos.js lenteRuimPrimeira, a regra que corta o
+ * plano) de chute − 0,5 s a chute + 0,4 s; b. o olho nunca desce mais de 6 cm abaixo do centro da cabeça de chute − 0,4 s a
+ * chute + 0,3 s (o olho bruto fica 3 cm ACIMA dele). Na versão de antes: a lente ruim ~0,15 s antes do contato e o olho a
+ * −0,14 m (o fundo da faixa) em TODOS os cabeceios — a altura suavizada por 0,33 s + σ 0,26 s não acompanhava a cabeça
+ * subindo ~0,3–0,6 m no pulo, e a 1ª pessoa saía de quase todo gol de cabeça (~4–5% dos gols).
+ */
+async function itemG18() {
+  const C = await imp('config.js'), RO = await imp('render/replay-olhos.js'), A = await imp('acoes.js'), PA = await imp('partida.js');
+  const { J } = await imp('anim.js');
+  const { uniforme } = await imp('rng.js');
+  const { criarGravador } = await import(pathToFileURL(path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib/anel-node.mjs')).href);
+  const GR = await criarGravador(pastaJs);
+  const MX = C.CAMPO.meioX, F = C.REPLAY.primeira, s60 = x => Math.round(x * 60);
+  let n = 0, ruins = 0, baixos = 0, olhoMin = Infinity, comPrim = 0, ex = '';
+  for (let k = 0; k < 60; k++) {
+    const S = GR.novaPartida(3000 + k, { minutosPorTempo: 4, tecnicos: false });
+    const m = S.m;
+    for (let i = 0; i < 400 && !(m.partida.estado === 'jogo' && (!m.parada || m.parada.rolou)); i++) GR.passo(S, true);
+    for (let i = 0; i < 30; i++) GR.passo(S, true);
+    // (a cena do canhão A do teste-cabeceio)
+    const T = 1, lado = m.ataca[T], sz = k % 2 ? 1 : -1;
+    const meu = m.jogadores.filter(j => j.time === T && j.posicao !== 'GOL'), deles = m.jogadores.filter(j => j.time !== T && j.posicao !== 'GOL');
+    const ata = meu.filter(j => j.posicao === 'ATA'), zag = deles.filter(j => j.posicao === 'ZAG' || j.posDetalhe === 'ZAG');
+    const cruzador = meu.find(j => !ata.includes(j));
+    const a1 = ata[0] ?? meu[1], a2 = ata[1] ?? meu.find(j => j !== cruzador && j !== a1), d1 = zag[0] ?? deles[0], d2 = zag[1] ?? deles[1];
+    const jit = () => (uniforme(m.rng) - 0.5), gx = lado * MX;
+    PA.teleportar(cruzador, gx - lado * (14 + 2 * jit()), sz * (27 + 2 * jit()), Math.atan2(-sz, lado));
+    PA.teleportar(a1, gx - lado * (11 + 2 * jit()), sz * 1.5 * jit(), lado > 0 ? 0 : Math.PI);
+    PA.teleportar(a2, gx - lado * (7 + jit()), -sz * (3 + jit()), lado > 0 ? 0 : Math.PI);
+    PA.teleportar(d1, a1.x + lado * (0.9 + 0.3 * jit()), a1.z + 0.4 * jit(), lado > 0 ? Math.PI : 0);
+    PA.teleportar(d2, a2.x + lado * (0.9 + 0.3 * jit()), a2.z + 0.4 * jit(), lado > 0 ? Math.PI : 0);
+    let q = 0;
+    for (const j of m.jogadores) { if ([cruzador, a1, a2, d1, d2].includes(j) || j.posicao === 'GOL') continue; PA.teleportar(j, -lado * (5 + 3 * (q % 4)), -30 + 6 * (q % 11), j.rumo); q++; }
+    PA.teleportar(m.jogadores.find(j => j.time !== T && j.posicao === 'GOL'), gx - lado * 1.5, 0, lado > 0 ? Math.PI : 0);
+    const b = m.bola;
+    b.p.x = cruzador.x + Math.cos(cruzador.rumo) * 0.35; b.p.z = cruzador.z + Math.sin(cruzador.rumo) * 0.35; b.p.y = 0.11;
+    b.v.x = 0; b.v.y = 0; b.v.z = 0; b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = true;
+    m.posse = cruzador.id; m.naMao = null; m.voo = null; m.parada = null; m.partida.estado = 'jogo'; m.golTick = null; m.foraDesde = null;
+    m.ultimoToque = { id: cruzador.id, time: T, tick: m.tick };
+    cruzador.pedido = { tipo: 'lancamento', forca: 0.7, tick: m.tick };
+    A.executarAcao(m, cruzador, cruzador.par.attr.pePreferido ?? 1, false);
+    if (!m.voo || m.voo.tipo !== 'cruzamento') continue;
+    let ch = null, autor = null;
+    for (let i = 0; i < 240; i++) {
+      const ev = GR.passo(S, true);
+      for (const e of ev) if (ch == null && e.tipo === 'passe' && e.modo === 'cabeceio' && m.voo && m.voo.cabeceio === 'chute') { ch = m.tick; autor = e.id; }
+      if (ch != null && m.tick >= ch + 75) break;
+    }
+    if (ch == null) continue;
+    n++;
+    const golTick = ch + 30;
+    const r = RR.roteiroGol(S.a, { golTick, chuteTick: ch, lado, time: T, autor, contra: false, desvio: false, tipoChute: 'cabeceio' });
+    if (r?.planos.some(pl => pl.cam === 'primeira')) comPrim++;
+    // o enquadramento inteiro (sem o corte pela lente do roteiro), da montagem da cena (ou chute − antes) a chute + 0,9 s
+    let de = Math.max(S.a.primeiro, ch - s60(F.antes));
+    const c0 = S.a.ultimoCorte(de, ch); if (c0 != null) de = c0;
+    const e = RO.enquadrarPrimeira(S.a, { de, ate: Math.min(S.a.ultimo, golTick + s60(F.depois)), autor, chuteTick: ch, golTick, lado, tipoChute: 'cabeceio', vel: F.vel });
+    if (!e) { ruins++; if (!ex) ex = `semente ${3000 + k}: sem enquadramento`; continue; }
+    const todos = [];
+    RO.lenteRuimPrimeira(S.a, e, F.solidoFolga, F.proprio, todos);
+    const ruim = todos.find(t => t >= ch - 30 && t <= ch + 24);
+    if (ruim != null) { ruins++; if (!ex) ex = `semente ${3000 + k}: lente ruim no passo chute ${ruim - ch >= 0 ? '+' : ''}${ruim - ch}`; }
+    const cam = {}, cab = { x: 0, y: 0, z: 0 };
+    let mn = Infinity;
+    for (let t = Math.max(e.de, ch - 24); t <= Math.min(e.ate, ch + 18); t++) { RO.cameraPrimeira(e, t, cam); if (RA.juntaNoTick(S.a, t, autor, J.cabeca, cab)) mn = Math.min(mn, cam.y - cab.y); }
+    olhoMin = Math.min(olhoMin, mn);
+    if (mn < -0.06) { baixos++; if (!ex) ex = `semente ${3000 + k}: o olho a ${fmt(100 * mn, 1)} cm do centro da cabeça`; }
+  }
+  reg('G18 o PULO do cabeceio a gol de verdade (canhão de cruzamentos, 60 cenas): a lente da 1ª pessoa nunca ruim de chute − 0,5 s a + 0,4 s e o olho a ≥ −6 cm do centro da cabeça de chute − 0,4 s a + 0,3 s, em cada cabeceio',
+    `${n} cabeceios: lente ruim ${ruins}, olho baixo ${baixos} (o mais baixo ${fmt(100 * olhoMin, 1)} cm)${ex ? ` (${ex})` : ''}; com a 1ª pessoa no roteiro ${comPrim} (o resto: a montagem da cena perto do chute)`,
+    '≥ 20; 0 e 0', n >= 20 && ruins === 0 && baixos === 0);
 }
 
 /**

@@ -1844,6 +1844,10 @@ export const REPLAY = {
     golDe: 0.25, golMargem: 0.9, sigmaGol: 0.15,
     // σ do olhar em volta do chute: [σ s, até ± s do chute, entrando até ± s]
     sigmaChute: [0.03, 0.08, 0.25],
+    // no CABECEIO, a altura do olho de chute − `antes` s a chute + `depois` s (rampas de `rampa` s) por uma gaussiana curta (σ
+    // `sigma` s) do olho bruto: o olho acompanha o pulo (C3, item 14; antes ficava no fundo da cabeça e a lente perto do
+    // próprio corpo tirava a 1ª pessoa de quase todo gol de cabeça)
+    cabeceioY: { sigma: 0.05, antes: 0.5, depois: 0.5, rampa: 0.2 },
   },
   // VISÃO DO TREINADOR do time que marcou (render/replay-olhos.js): parte 1 = o que ele vê (olho na cabeça gravada,
   // gaussiana σ `sigmaOlho` presa a ≤ `prende` m do olho bruto; olhar a meio caminho da bola suavizada e do centro da
