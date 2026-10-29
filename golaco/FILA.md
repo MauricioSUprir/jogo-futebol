@@ -189,6 +189,11 @@ IA × IA e o 25 (a corrida dos lances rápidos) com o dono ("Depende do dono" 9a
     `conducao.js`): 0,5570 → 0,5711 nas sementes 1–48 (z ≈ 3,2); hoje 0,5722 ± 0,0017 em 144 sementes (z 1,28). Com 48
     partidas, cada mudança que embaralhe a IA × IA tem ~11–16% de chance de reprovar. Escolher: re-ancorar a meta no valor
     depois do #481 (que o dono aprovou) ou mexer na condução para voltar a 0,557 (a condução não se mexe sem ele).
+9c. **A roubada da IA desfeita contra a pessoa** (`teste-defesa-corrida`, meta ≤ 5% da D3, que media 4–6%; medido no C3,
+    29/10): a main 02f4ec4a já está acima — 26/373 (7,0%) nas sementes 101–124, onde passava pela binomial por um fio
+    (z 1,63), e 28/363 (7,7%) nas 125–148, onde reprova; 54/736 = 7,3% em 48. O C3 dá 52/750 (6,9%): não piora, mas virava
+    o teste por UMA roubada. A meta ficou PENDENTE e o teste segura o recuo contra a main (54/736). Escolher: re-ancorar a
+    meta no valor de hoje ou voltar a mexer na defesa contra a arrancada (categoria D).
 10. **Perguntas curtas dentro dos próprios PRs:**
     - os números da partida no plano geral do pós-jogo (item 1) — feito no PR 4 (o painel "Partida", fora do TM); o dono
       decide se fica;
