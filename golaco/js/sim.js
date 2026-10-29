@@ -7,7 +7,7 @@ import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, BOLA, GOLEIRO,
 import { criarRng, entre, uniforme, normal } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
-import { alturaQuadril, pose, NJ, J as JUNTA, RAIO_CABECA } from './anim.js';
+import { alturaQuadril, pose, poseMergulho, NJ, J as JUNTA, RAIO_CABECA, solidosCorpo, corpoNoPonto } from './anim.js';
 // cabeceio na bola rolando (entrega de 12/10): o pulo desenhado e a intenção (cabeceio.js)
 import { alcanceCabeceio, planejarPulo, sairDoChao, passoCorpoNoAr, pesNoAr, intencaoCabeceio, subidaPara, preparoPulo, puloAtivo } from './cabeceio.js';
 import { clamp, difAng, quantizar, lerp } from './mat.js';
@@ -310,33 +310,72 @@ function colisaoBolaCorpo(m) {
 }
 
 /**
- * (partida, C3) O TRONCO do goleiro em pé fora de uma defesa desenhada — fora da área, sem a mão (goleiro.js lerChute:
- * `semMao`), ou com a leitura dizendo que a bola vai fora: a bola acima das pernas (0,9 m: colisaoBolaCorpo) e abaixo de
- * GOLEIRO.realista.bloqueio.alto que passa por ele no passo (o caminho de (x0, y0, z0) até a bola de agora, em pedaços de
- * até `bloqueio.amostra` m, como o corpoNaBola da defesa) bate no corpo — a mesma reflexão da colisaoBolaCorpo. Antes ela
- * o atravessava: na revisão do C1, um gol com a bola 22,7 cm dentro do tronco do goleiro fora da área.
+ * (partida, C3) O CORPO DESENHADO do goleiro fora de uma defesa desenhada viva (anim.js solidosCorpo: as cápsulas do
+ * manequim, afuniladas e achatadas frente–trás como no render/jogador3d.js, a cabeça e o cabelo, na pose deste passo — em
+ * pé, no mergulho ou no salto): vale para QUALQUER goleiro da partida sem a leitura viva — fora da área sem a mão
+ * (goleiro.js lerChute `semMao`), com a leitura dizendo que a bola vai fora, o passe ou o cruzamento que passa por ele sem
+ * leitura, o mergulho/salto depois do contato da defesa (`tick + 2`) — e na saída no cruzamento que falha (o sorteio, já no
+ * pulo, ou a mão que não chega), com a bola ACIMA das pernas (0,9 m; abaixo é a colisaoBolaCorpo de todo jogador). O
+ * caminho do passo (de (x0, y0, z0) até a bola de agora, em pedaços de até GOLEIRO.realista.bloqueio.amostra m e o ponto de
+ * entrada refinado ao milímetro) que entra no corpo bate nele: a bola sai do ponto de entrada (na superfície) com a reflexão pela normal do sólido (relativa ao corpo,
+ * a mesma restituição da colisaoBolaCorpo). Antes (revisão do C3): um cilindro fixo de 0,9 a 1,75 m no (j.x, j.z) — a
+ * bola batia no ar acima da cabeça do goleiro agachado na base (até 32 cm do corpo) e entrava no peito inclinado sem
+ * contato (até 15 cm); antes dele, nada: a bola atravessava o tronco (C1: um gol com ela 22,7 cm dentro do corpo).
+ * O cabeceio marcado fica com a cabeça desenhada (cabecaNaBola); o domínio no peito/coxa marcado acontece quando a bola
+ * encosta no corpo (o tick dele passa para o passo seguinte, a bola parada no ponto de entrada).
  */
-function colisaoTroncoGoleiro(m, x0, y0, z0) {
-  const b = m.bola, R = GOLEIRO.realista.bloqueio, raio = R.tronco[0] + BOLA.raio;
-  if ((y0 <= 0.9 && b.p.y <= 0.9) || (y0 > R.alto && b.p.y > R.alto)) return;
+const _poseGol = new Float32Array(NJ * 3), _cg = { nx: 0, ny: 0, nz: 0, prof: 0, q: 0 }, _mTick = { tick: 0, naMao: null };
+let _solGol;
+function colisaoCorpoGoleiro(m, x0, y0, z0) {
+  const b = m.bola, R = GOLEIRO.realista.bloqueio, rb = BOLA.raio;
+  if (y0 <= 0.9 && b.p.y <= 0.9) return;
   const sx = b.p.x - x0, sy = b.p.y - y0, sz = b.p.z - z0;
   const n = Math.max(1, Math.ceil(MD.hypot(sx, sy, sz) / R.amostra));
   for (const j of m.jogadores) {
     if (j.posicao !== 'GOL' || j.id === m.posse || m.naMao === j.id) continue;
     if (naParada(m) && j.id !== m.parada.cobrador) continue;
     if (m.ultimoToque && m.ultimoToque.id === j.id && m.tick - m.ultimoToque.tick < 10) continue;
-    // a defesa desenhada (e o bloqueio dela: goleiro.js aplicarDefesa) decide a bola lida no gol
-    if ((j.defesa && !j.defesa.fora && m.tick <= j.defesa.tick + 2) || mergulhoAtivo(j, m.tick)) continue;
-    if (MD.hypot(x0 + sx / 2 - j.x, z0 + sz / 2 - j.z) > raio + MD.hypot(sx, sz) / 2) continue;
+    // a defesa desenhada (e o bloqueio dela: goleiro.js aplicarDefesa) decide a bola lida no gol — menos a saída no
+    // cruzamento já sorteada para falhar (o corpo do pulo é este); depois dela, o corpo do mergulho/salto é o desenhado
+    const d = j.defesa;
+    if (d && !d.fora && m.tick <= d.tick + 2 && !(d.saidaAlta && !d.sucesso)) continue;
+    // o toque no alto já marcado (bolaAltaNoCorpo): o cabeceio fica com a cabeça desenhada (cabecaNaBola); o domínio no
+    // peito/coxa, abaixo
+    const tq = j.cond && j.cond.toque && j.cond.toque.tipo === 'aereo' && m.tick < j.cond.toque.tick ? j.cond.toque : null;
+    if (tq && j.cab && j.cab.tc > m.tick) continue;
+    // (o corpo desenhado cabe no cilindro de raio `alcance` em volta dele: os braços com a bola)
+    if (MD.hypot(x0 + sx / 2 - j.x, z0 + sz / 2 - j.z) > R.alcance + MD.hypot(sx, sz) / 2) continue;
+    // (a pose do FIM deste passo no mergulho/salto — o quadro é puro no tick; em pé, a de agora, com o corpo já andado)
+    if (mergulhoAtivo(j, m.tick + 1)) { _mTick.tick = m.tick + 1; _mTick.naMao = m.naMao; poseMergulho(j, _mTick, _poseGol); }
+    else pose(j, m, _poseGol);
+    let topo = 0;
+    for (let k = 1; k < NJ * 3; k += 3) if (_poseGol[k] > topo) topo = _poseGol[k];
+    topo += 0.2 + rb;
+    if (y0 > topo && b.p.y > topo) continue;
+    _solGol = solidosCorpo(_poseGol, true, _solGol);
+    const dentro = u => { const py = y0 + sy * u; return py > 0.9 && py <= topo && corpoNoPonto(_solGol, x0 + sx * u, py, z0 + sz * u, rb, null) < 1; };
     for (let i = 0; i <= n; i++) {
-      const u = i / n, px = x0 + sx * u, py = y0 + sy * u, pz = z0 + sz * u;
-      if (py <= 0.9 || py > R.alto) continue;
-      const dx = px - j.x, dz = pz - j.z, d = MD.hypot(dx, dz);
-      if (d >= raio || d < 1e-9) continue;
-      const nx = dx / d, nz = dz / d;
-      b.p.x = j.x + nx * raio; b.p.y = py; b.p.z = j.z + nz * raio;
-      const vn = (b.v.x - j.vx) * nx + (b.v.z - j.vz) * nz;
-      if (vn < 0) { b.v.x -= 1.35 * vn * nx; b.v.z -= 1.35 * vn * nz; }
+      if (!dentro(i / n)) continue;
+      if (i === 0) {
+        // já dentro no começo do passo (o corpo andou para a bola): sai pela normal até a superfície
+        corpoNoPonto(_solGol, x0, y0, z0, rb, _cg);
+        b.p.x = x0 + _cg.nx * (_cg.prof + 1e-3); b.p.y = y0 + _cg.ny * (_cg.prof + 1e-3); b.p.z = z0 + _cg.nz * (_cg.prof + 1e-3);
+      } else {
+        // o ponto de entrada entre o último pedaço fora e este (bisseção: ~1 mm)
+        let lo = (i - 1) / n, hi = i / n;
+        for (let it = 0; it < 7; it++) { const mid = (lo + hi) / 2; if (dentro(mid)) hi = mid; else lo = mid; }
+        corpoNoPonto(_solGol, x0 + sx * hi, y0 + sy * hi, z0 + sz * hi, rb, _cg);
+        b.p.x = x0 + sx * lo; b.p.y = y0 + sy * lo; b.p.z = z0 + sz * lo;
+      }
+      if (tq) {
+        // o domínio no peito/coxa já marcado: a bola encosta no corpo e ele a domina no passo seguinte (antes ela entrava até
+        // ~20 cm no peito desenhado esperando o tick marcado e, se o domínio falhava, atravessava o goleiro)
+        tq.tick = m.tick + 1;
+        return;
+      }
+      const nx = _cg.nx, ny = _cg.ny, nz = _cg.nz;
+      const vn = (b.v.x - j.vx) * nx + b.v.y * ny + (b.v.z - j.vz) * nz;
+      if (vn < 0) { b.v.x -= 1.35 * vn * nx; b.v.y -= 1.35 * vn * ny; b.v.z -= 1.35 * vn * nz; }
       b.rolando = false;
       m.eventos.push({ tipo: 'bateuCorpo', id: j.id });
       registrarToque(m, j, 'corpo');
@@ -692,7 +731,7 @@ export function passo(m, entradas) {
     passoBola(m.bola, m.eventos);
     if (m.partida) bloqueioPerna(m, bx0, bz0);
     colisaoBolaCorpo(m);
-    if (m.partida) colisaoTroncoGoleiro(m, bx0, by0, bz0);
+    if (m.partida) colisaoCorpoGoleiro(m, bx0, by0, bz0);
     if (m.partida && m.partida.barreira) colisaoBarreira(m); // tiro livre: a bola na barreira que pula (Etapa 4)
   }
   verificarGol(m);

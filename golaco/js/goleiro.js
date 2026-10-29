@@ -494,9 +494,9 @@ export function aplicarDefesa(m, j) {
   if (!d || d.fora) return;
   // (partida) batido, mas a bola passa pelo corpo desenhado dele — em qualquer tick do lance (ele vinha embalado para o
   // lado dela, ou andou para a frente depois da leitura): ela bate nele e escapa perto (nada atravessa o goleiro)
-  // (C3: também a saída no cruzamento que falha — o sorteio ou a mão que não chega: a bola passava pelo corpo do pulo, 2–16
-  // cm dentro dele em 11 de 16 falhas)
-  const bloqueia = (!!d.real || !!d.saidaAlta) && !d.sucesso && m.tick >= d.lido && m.tick <= d.tick + 2 && !(m.parada && !m.parada.rolou)
+  // (a saída no cruzamento que falha — o sorteio ou a mão que não chega — fica com o corpo DESENHADO do pulo, no ponto em
+  // que a bola chega nele: sim.js colisaoCorpoGoleiro; C3, revisão de 29/10)
+  const bloqueia = !!d.real && !d.sucesso && m.tick >= d.lido && m.tick <= d.tick + 2 && !(m.parada && !m.parada.rolou)
     && (m.tick === d.tick - 1 ? corpoNoCaminho(m, j) : corpoNaBola(j, m.tick, m.bola.p, bolaDepois(m.bola, 1)));
   if (!bloqueia && m.tick !== d.tick - 1) return;
   // bola morta (partida: impedimento ou falta apitados com o chute no ar, a parada ainda sem cobrar — Regra 9.2): não há
@@ -515,18 +515,16 @@ export function aplicarDefesa(m, j) {
     m.eventos.push(d.saidaAlta ? { tipo: 'saidaFalhou', id: j.id, desvio: true } : { tipo: 'goleiroBatido', id: j.id, desvio: true });
     return;
   }
-  // saída no cruzamento (partida): a mão dele no alto tem de estar na bola (o desenho do pulo) — senão ela passa
-  let blq = bloqueia;
-  if (d.saidaAlta && !blq && !(mergulhoAtivo(j, m.tick + 1) && maoNaBola(j, m.tick + 1, b.p, GOLEIRO.realista.cruz.mao))) {
+  // saída no cruzamento (partida): a mão dele no alto tem de estar na bola (o desenho do pulo) — senão ela passa (e bate no
+  // corpo desenhado do pulo se for por ele: sim.js colisaoCorpoGoleiro)
+  if (d.saidaAlta && !(mergulhoAtivo(j, m.tick + 1) && maoNaBola(j, m.tick + 1, b.p, GOLEIRO.realista.cruz.mao))) {
+    d.fora = true;
     m.eventos.push({ tipo: 'saidaFalhou', id: j.id, longe: true });
-    if (!corpoNoCaminho(m, j)) { d.fora = true; return; }
-    // (C3) a mão não chega, mas a bola passa pelo corpo do pulo: bate nele — escapa perto ou desvia para fora, como o
-    // bloqueio do mergulho batido (antes ela atravessava o goleiro)
-    d.tipo = 'espalmada'; d.rebote = uniforme(m.rng) >= GOLEIRO.realista.bloqueio.fora; d.bloqueio = true; blq = true;
+    return;
   }
   // relida (desvio) sem tempo de começar a defesa desenhada nova: o goleiro ainda está na anterior — só defende
   // se a mão desenhada dela estiver na bola
-  if (!blq && mergulhoAtivo(j, m.tick + 1) && j.mergulho.idDefesa !== idDefesa(d) && !maoNaBola(j, m.tick + 1, b.p)) {
+  if (!bloqueia && mergulhoAtivo(j, m.tick + 1) && j.mergulho.idDefesa !== idDefesa(d) && !maoNaBola(j, m.tick + 1, b.p)) {
     d.fora = true;
     m.eventos.push({ tipo: 'goleiroBatido', id: j.id, desvio: true });
     return;
@@ -543,18 +541,17 @@ export function aplicarDefesa(m, j) {
     // espalmada: a mão na bola desvia para FORA do perigo — por cima do travessão (alta), pela linha de fundo
     // por fora da trave (escanteio) ou bem aberta para o lado; nunca de volta para o meio da área. Partida: o soco da
     // saída no cruzamento (para longe do gol) e o rebote da bola que escapa em pé (cai perto, de lado)
-    // (C3: a bola que bate no corpo da saída que falhou não é soco — escapa perto ou desvia para fora, como o bloqueio)
-    if (d.saidaAlta && !d.bloqueio) socar(m, j, d, sentido);
+    if (d.saidaAlta) socar(m, j, d, sentido);
     else if (d.rebote) rebater(m, j, d, sentido);
     else espalmar(m, j, d, sentido);
     m.voo = null;
     m.ultimoToque = { id: j.id, time: j.time, tick: m.tick };
-    m.eventos.push(d.saidaAlta && !d.bloqueio ? { tipo: 'defesa', id: j.id, modo: 'soco', saidaAlta: true }
+    m.eventos.push(d.saidaAlta ? { tipo: 'defesa', id: j.id, modo: 'soco', saidaAlta: true }
       : d.rebote ? { tipo: 'defesa', id: j.id, modo: 'espalmada', rebote: true } : { tipo: 'defesa', id: j.id, modo: 'espalmada' });
   }
   // (partida) quem ia cabecear essa bola no alto perde o plano: ela não passa mais onde ele esperava
   if (d.saidaAlta) for (const o of m.jogadores) if (o.cond && o.cond.toque && o.cond.toque.tipo === 'aereo') o.cond.toque = null;
-  if (blq) d.fora = true;
+  if (bloqueia) d.fora = true;
   if (m.stats) m.stats.defesas = (m.stats.defesas ?? 0) + 1;
   registrarToque(m, j, 'defesa');
 }

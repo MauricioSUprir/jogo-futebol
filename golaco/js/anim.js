@@ -55,6 +55,150 @@ export const SEGMENTOS = [
 ];
 export const RAIO_CABECA = 0.115;
 
+// ---- O corpo DESENHADO como sólido (C3, revisão de 29/10: "nada atravessa o goleiro" pelo que se VÊ). A forma de cada
+// segmento no manequim (render/jogador3d.js lê daqui): os raios [A, B] quando o desenho troca os de SEGMENTOS (pelve e quadril
+// mais enxutos) e o ACHATAMENTO frente–trás (1 = redondo; o tronco tem 0,68 da largura na profundidade). `sup`: o "frente" da
+// seção vem dos ombros (true) ou dos quadris (false) — a mesma regra do desenho. O goleiro tem a luva no antebraço.
+const FORMA_DESENHO = {
+  'pelve-lombar': { achata: 0.74, r: [0.118, 0.13] },
+  'lombar-peito': { achata: 0.68 },
+  'peito-pescoco': { achata: 0.78 },
+  'ombroE-ombroD': { achata: 0.85 },
+  'quadrilE-quadrilD': { achata: 0.84, r: [0.088, 0.088] },
+  'tornozeloE-pontaE': { achata: 0.8 },
+  'tornozeloD-pontaD': { achata: 0.8 },
+};
+export const FORMA_SEG = SEGMENTOS.map(([a, b, ra, rb]) => {
+  const na = JUNTAS[a], nb = JUNTAS[b], f = FORMA_DESENHO[`${na}-${nb}`] ?? {};
+  return { rA: f.r ? f.r[0] : ra, rB: f.r ? f.r[1] : rb, achata: f.achata ?? 1, sup: !/quadril|joelho|tornozelo|ponta|pelve/.test(na + nb) };
+});
+export const FORMA_SEG_GOL = FORMA_SEG.map((f, i) => (/^cotovelo/.test(JUNTAS[SEGMENTOS[i][0]]) && /^mao/.test(JUNTAS[SEGMENTOS[i][1]]) ? { ...f, rA: 0.046, rB: 0.05 } : f));
+// a cabeça (elipsoide RAIO_CABECA × [largura, altura, profundidade]) e o cabelo (a calota de cima de outro elipsoide, até
+// CABELO_CALOTA da altura abaixo do centro, deslocado para cima e para trás) — os do desenho
+export const CABECA_ESCALA = [0.92, 1.1, 1.0], CABELO_ESCALA = [0.98, 1.08, 1.08], CABELO_DESLOCA = [0.12, -0.1], CABELO_CALOTA = 0.063;
+const NSOL = SEGMENTOS.length + 2, TAM_SOL = 17;
+
+/** O "frente" do desenho pela linha iE → iD (ombros ou quadris) e o eixo pelve → pescoço: a cópia do render/jogador3d.js frente. */
+function frenteDesenho(P, iE, iD, out) {
+  const rx = P[iD * 3] - P[iE * 3], ry = P[iD * 3 + 1] - P[iE * 3 + 1], rz = P[iD * 3 + 2] - P[iE * 3 + 2];
+  const l0 = Math.sqrt(rx * rx + rz * rz) || 1;
+  const ip = J.pelve * 3, iq = J.pescoco * 3;
+  const ux = P[iq] - P[ip], uy = P[iq + 1] - P[ip + 1], uz = P[iq + 2] - P[ip + 2];
+  const k = clamp((0.87 - uy / (Math.sqrt(ux * ux + uy * uy + uz * uz) || 1)) / 0.16, 0, 1);
+  if (k === 0) { out[0] = rz / l0; out[1] = 0; out[2] = -rx / l0; return out; }
+  let fx = uy * rz - uz * ry, fy = uz * rx - ux * rz, fz = ux * ry - uy * rx;
+  let l = Math.sqrt(fx * fx + fy * fy + fz * fz);
+  if (l < 1e-6) { fx = rz; fy = 0; fz = -rx; l = l0; }
+  fx = (rz / l0) * (1 - k) + (fx / l) * k; fy = (fy / l) * k; fz = (-rx / l0) * (1 - k) + (fz / l) * k;
+  l = Math.sqrt(fx * fx + fy * fy + fz * fz) || 1;
+  out[0] = fx / l; out[1] = fy / l; out[2] = fz / l;
+  return out;
+}
+const _fSup = [0, 0, 0], _fInf = [0, 0, 0];
+
+/**
+ * Os sólidos do corpo desenhado da pose P (juntas no mundo) em C: por segmento a origem A, o eixo Y (unitário) e o
+ * comprimento, os eixos X e Z da seção (Z = o "frente" do desenho, achatado) e os raios rA, rB e o achatamento — os
+ * mesmos referenciais do render/jogador3d.js; depois a cabeça e o cabelo (centro, eixos e semieixos). Pura.
+ */
+export function solidosCorpo(P, goleiro = false, C = new Float64Array(NSOL * TAM_SOL)) {
+  frenteDesenho(P, J.ombroE, J.ombroD, _fSup);
+  frenteDesenho(P, J.quadrilE, J.quadrilD, _fInf);
+  const F = goleiro ? FORMA_SEG_GOL : FORMA_SEG;
+  for (let s = 0; s < SEGMENTOS.length; s++) {
+    const ia = SEGMENTOS[s][0] * 3, ib = SEGMENTOS[s][1] * 3, o = s * TAM_SOL;
+    let yx = P[ib] - P[ia], yy = P[ib + 1] - P[ia + 1], yz = P[ib + 2] - P[ia + 2];
+    let len = Math.sqrt(yx * yx + yy * yy + yz * yz);
+    if (len < 1e-5) { yx = 0; yy = 1; yz = 0; len = 1e-5; } else { yx /= len; yy /= len; yz /= len; }
+    const ref = F[s].sup ? _fSup : _fInf;
+    const dp = Math.abs(ref[0] * yx + ref[1] * yy + ref[2] * yz);
+    const k = clamp((dp - 0.6) / 0.3, 0, 1);
+    let zx = ref[0] * (1 - k), zy = ref[1] * (1 - k) + k, zz = ref[2] * (1 - k);
+    const zy0 = zx * yx + zy * yy + zz * yz;
+    zx -= zy0 * yx; zy -= zy0 * yy; zz -= zy0 * yz;
+    if (zx * zx + zy * zy + zz * zz < 1e-8) { zx = 1 - yx * yx; zy = -yx * yy; zz = -yx * yz; }
+    const zl = Math.sqrt(zx * zx + zy * zy + zz * zz) || 1;
+    zx /= zl; zy /= zl; zz /= zl;
+    C[o] = P[ia]; C[o + 1] = P[ia + 1]; C[o + 2] = P[ia + 2];
+    C[o + 3] = yx; C[o + 4] = yy; C[o + 5] = yz; C[o + 6] = len;
+    C[o + 7] = yy * zz - yz * zy; C[o + 8] = yz * zx - yx * zz; C[o + 9] = yx * zy - yy * zx;
+    C[o + 10] = zx; C[o + 11] = zy; C[o + 12] = zz;
+    C[o + 13] = F[s].rA; C[o + 14] = F[s].rB; C[o + 15] = F[s].achata; C[o + 16] = 0;
+  }
+  // cabeça: "cima" pelo pescoço, "frente" pela média de ombros e quadris (o desenho)
+  const ic = J.cabeca * 3, iq = J.pescoco * 3;
+  let yx = P[ic] - P[iq], yy = P[ic + 1] - P[iq + 1], yz = P[ic + 2] - P[iq + 2];
+  const yl = Math.sqrt(yx * yx + yy * yy + yz * yz) || 1;
+  yx /= yl; yy /= yl; yz /= yl;
+  let zx = _fSup[0] + _fInf[0], zy = _fSup[1] + _fInf[1], zz = _fSup[2] + _fInf[2];
+  const zy0 = zx * yx + zy * yy + zz * yz;
+  zx -= zy0 * yx; zy -= zy0 * yy; zz -= zy0 * yz;
+  const zl = Math.sqrt(zx * zx + zy * zy + zz * zz) || 1;
+  zx /= zl; zy /= zl; zz /= zl;
+  const xx = yy * zz - yz * zy, xy = yz * zx - yx * zz, xz = yx * zy - yy * zx;
+  const R = RAIO_CABECA;
+  for (let h = 0; h < 2; h++) {
+    const o = (SEGMENTOS.length + h) * TAM_SOL, E = h ? CABELO_ESCALA : CABECA_ESCALA;
+    const dy = h ? R * CABELO_DESLOCA[0] : 0, dz = h ? R * CABELO_DESLOCA[1] : 0;
+    C[o] = P[ic] + yx * dy + zx * dz; C[o + 1] = P[ic + 1] + yy * dy + zy * dz; C[o + 2] = P[ic + 2] + yz * dy + zz * dz;
+    C[o + 3] = yx; C[o + 4] = yy; C[o + 5] = yz; C[o + 6] = -1; // (−1: elipsoide)
+    C[o + 7] = xx; C[o + 8] = xy; C[o + 9] = xz; C[o + 10] = zx; C[o + 11] = zy; C[o + 12] = zz;
+    C[o + 13] = R * E[0]; C[o + 14] = R * E[1]; C[o + 15] = R * E[2]; C[o + 16] = h ? -CABELO_CALOTA : -2;
+  }
+  return C;
+}
+
+/**
+ * A esfera de raio rb com centro em (x, y, z) entra em algum sólido de C (solidosCorpo)? Por sólido, a distância
+ * normalizada q (< 1 = dentro: os semieixos da seção somados a rb); devolve o menor q e, em out, a normal para fora dele
+ * (`nx`, `ny`, `nz`) e quanto falta para a superfície por ela (`prof`, m). Pura.
+ */
+export function corpoNoPonto(C, x, y, z, rb, out) {
+  let qMin = Infinity;
+  for (let s = 0; s < NSOL; s++) {
+    const o = s * TAM_SOL;
+    const wx = x - C[o], wy = y - C[o + 1], wz = z - C[o + 2];
+    let ox, oy, oz, ax, ay, az;
+    if (C[o + 6] >= 0) {
+      // cápsula afunilada e achatada: o ponto do eixo mais perto, o raio ali e as calotas nas pontas
+      const len = C[o + 6];
+      const t = clamp((wx * C[o + 3] + wy * C[o + 4] + wz * C[o + 5]) / len, 0, 1);
+      const r = C[o + 13] + (C[o + 14] - C[o + 13]) * t;
+      const px = wx - C[o + 3] * len * t, py = wy - C[o + 4] * len * t, pz = wz - C[o + 5] * len * t;
+      ox = px * C[o + 7] + py * C[o + 8] + pz * C[o + 9];
+      oy = px * C[o + 3] + py * C[o + 4] + pz * C[o + 5];
+      oz = px * C[o + 10] + py * C[o + 11] + pz * C[o + 12];
+      ax = r + rb; ay = r + rb; az = r * C[o + 15] + rb;
+    } else {
+      // elipsoide (cabeça; o cabelo só na calota de cima)
+      ox = wx * C[o + 7] + wy * C[o + 8] + wz * C[o + 9];
+      oy = wx * C[o + 3] + wy * C[o + 4] + wz * C[o + 5];
+      oz = wx * C[o + 10] + wy * C[o + 11] + wz * C[o + 12];
+      ax = C[o + 13] + rb; ay = C[o + 14] + rb; az = C[o + 15] + rb;
+      if (oy < C[o + 16] * C[o + 14]) continue;
+    }
+    const u = ox / ax, v = oy / ay, w = oz / az;
+    const q = Math.sqrt(u * u + v * v + w * w);
+    if (q >= qMin) continue;
+    qMin = q;
+    if (out) {
+      // a normal: o gradiente da forma normalizada, de volta para o mundo
+      const gx = u / ax, gy = v / ay, gz = w / az;
+      let nx = gx * C[o + 7] + gy * C[o + 3] + gz * C[o + 10];
+      let ny = gx * C[o + 8] + gy * C[o + 4] + gz * C[o + 11];
+      let nz = gx * C[o + 9] + gy * C[o + 5] + gz * C[o + 12];
+      const nl = Math.sqrt(nx * nx + ny * ny + nz * nz);
+      if (nl < 1e-9) { nx = 0; ny = 1; nz = 0; } else { nx /= nl; ny /= nl; nz /= nl; }
+      out.nx = nx; out.ny = ny; out.nz = nz;
+      // (a distância até a superfície pela normal: o semieixo médio na direção dela × o que falta)
+      const sx = ox / (q || 1), sy = oy / (q || 1), sz = oz / (q || 1);
+      out.prof = (1 - q) * Math.sqrt(sx * sx + sy * sy + sz * sz);
+      out.q = q;
+    }
+  }
+  return qMin;
+}
+
 const L1 = JOGADOR.coxa, L2 = JOGADOR.canela;
 const LMAX = (L1 + L2) * 0.998;
 const TORN = JOGADOR.alturaTornozelo;

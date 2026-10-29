@@ -699,7 +699,11 @@ export const GOLEIRO = {
     // desvia para fora (a espalmada de sempre: por cima ou pela linha de fundo)
     // (27/10: `amostra` m — o caminho da bola em cada passo é testado em pedaços deste tamanho, não só o ponto do começo
     // do passo: o chute forte anda ~0,45 m por passo e atravessava o tronco entre dois deles; goleiro.js corpoNaBola)
-    bloqueio: { tronco: [0.22, 0.8], perna: 0.13, alto: 1.75, ticks: 8, fora: 0.5, amostra: 0.05 },
+    // (C3, revisão de 29/10: o goleiro SEM a defesa desenhada viva — fora da área sem a mão, leitura dizendo fora, passe ou
+    // cruzamento sem leitura, o mergulho depois do contato — e na saída no cruzamento que falha bate a bola acima das pernas
+    // no corpo DESENHADO: sim.js colisaoCorpoGoleiro, anim.js solidosCorpo; `alcance` m em volta dele cabe o corpo desenhado
+    // com a bola: os braços, ~0,74 m do centro, e o raio dela)
+    bloqueio: { tronco: [0.22, 0.8], perna: 0.13, alto: 1.75, ticks: 8, fora: 0.5, amostra: 0.05, alcance: 1.0 },
     // bola NO CORPO (a até `corpo` m de lado e abaixo de `corpoAlto`): o corpo está no caminho — é sempre parada (encaixe
     // ou bloqueio que escapa); nada atravessa o goleiro (antes o sorteio que falhava deixava a bola passar pelo corpo
     // desenhado: 58 gols "pelo corpo" no canhão de 2.535 chutes)

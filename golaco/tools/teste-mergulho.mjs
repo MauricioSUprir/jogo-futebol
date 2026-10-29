@@ -45,11 +45,16 @@
 //    H2. nas espalmadas, UMA mão — a de cima, a do ombro mais alto — na bola (≤ 0,25 m), acima da cabeça, e a outra a > 0,35 m
 //        dela: ≥ 80% (a main: 2,7% — as duas palmas sempre na bola);
 //    H3. as espalmadas (sem o rebote) saem do campo em 3 s (por cima do travessão, pela linha de fundo): ≥ 90%;
-//    H4. com o rebote (a bola que escapa e cai perto, GOLEIRO.realista.rebote): para fora em 65–95% (real 79,1%, IC 65–89%).
-//  I. nada atravessa o goleiro e o goleiro atrás da bola, na PARTIDA (pendências do C1 e do C2):
-//    I1. a bola a 1,0–1,6 m no tronco do goleiro FORA da área (sem a mão, parado no lance): nunca o atravessa (a main: 120/120);
+//    H4. com o rebote (a bola que escapa e cai perto, GOLEIRO.realista.rebote): para fora em 65–95% (real 79,1%, IC 65–89%);
+//    H5. a bola com a defesa já sorteada para espalmar (ou batido), fora do corpo, não vira "pegou" — a mão desenhada que
+//        passa perto dela antes do contato (sim.js bolaLivre) — em nenhum chute da seção (a main: 7; a espalmada da
+//        StatsBomb não vira encaixe).
+//  I. nada atravessa o goleiro e o goleiro atrás da bola, na PARTIDA (pendências do C1 e do C2), pelo corpo DESENHADO (o
+//     manequim da pose, entre o miolo e a casca; ver a seção I abaixo):
+//    I1. a bola a 0,95–1,9 m no corpo do goleiro FORA da área (sem a mão, solto no lance): a. não bate no ar (a > 5 cm do corpo
+//        desenhado); b. sem bater, não entra > 2 cm nele;
 //    I2. a saída no cruzamento que falha (o sorteio forçado a errar em metade dos lances, e a mão que não chega): a bola nunca
-//        atravessa o corpo desenhado do pulo (a main: 18/29; a saída que encaixa, soca ou "pega" com a mão do pulo deu certo);
+//        entra no corpo desenhado do pulo nem bate nele no ar (a saída que encaixa, soca ou "pega" com a mão do pulo deu certo);
 //    I3. o goleiro atrás da bola (a 18–45 m dela, ela indo para o gol vazio): nunca "defende" longe dela (a main: 4/120).
 //   node tools/teste-mergulho.mjs [--js <pasta js>] [--detalhe]
 import path from 'node:path';
@@ -63,7 +68,7 @@ const JS = path.resolve(arg('--js', path.join(AQUI, '../js')));
 const imp = f => import(pathToFileURL(path.join(JS, f)).href);
 const { criarMundo, passo, jogadorPorId } = await imp('sim.js');
 const { CAMPO, PASSO } = await imp('config.js');
-const { pose, J, NJ } = await imp('anim.js');
+const { pose, J, NJ, SEGMENTOS, RAIO_CABECA: RAIO_CAB } = await imp('anim.js');
 const { copiarBola, passoBola, criarBola, chutar } = await imp('bola.js');
 const P = await imp('partida.js');
 const GK = await imp('goleiro.js');
@@ -501,7 +506,11 @@ function casoAlta(k) {
   for (let i = 0; i < 300; i++) {
     bp.x = m.bola.p.x; bp.y = m.bola.p.y; bp.z = m.bola.p.z;
     P2.set(P1);
+    // (a defesa já sorteada — espalmada ou batido — para esta bola e ainda por vir, fora do corpo: H5)
+    const d0 = g.defesa, t0 = m.tick;
+    const sorteada = !!d0 && !d0.fora && !d0.corpo && d0.tipo !== 'encaixe' && !!m.voo && d0.chave === m.voo.tickChave && t0 < d0.tick;
     const ev = L.passo();
+    if (sorteada && ev.some(e => e.tipo === 'defesa' && e.id === g.id && e.modo === 'pegou')) res.pegouSorteada = true;
     pose(g, m, P1);
     const dd = g.defesa;
     if (!res.lido && dd && dd.lido === m.tick - 1) res.lido = dd.fora ? { fora: true } : { y: dd.y, lat: Math.abs(dd.z - g.z), recuo: !!dd.recuo };
@@ -528,47 +537,119 @@ function casoAlta(k) {
   }
   return res;
 }
-const resH = Array.from({ length: 480 }, (_, k) => casoAlta(k)).filter(x => x && x.lido && !x.lido.fora && x.lido.y >= 1.9 && x.lido.lat >= 1.2);
+const resAltaTodos = Array.from({ length: 480 }, (_, k) => casoAlta(k)).filter(Boolean);
+const resH = resAltaTodos.filter(x => x.lido && !x.lido.fora && x.lido.y >= 1.9 && x.lido.lat >= 1.2);
+// (H5: em todos os chutes da seção, lidos no gol — não só os da bola alta)
+const pegH = resAltaTodos.filter(x => x.pegouSorteada);
 const defH = resH.filter(x => x.res === 'defesa');
 const espH = defH.filter(x => x.modo === 'espalmada'), espHp = espH.filter(x => !x.rebote);
 const umaH = espH.filter(x => x.mao && x.mao.perto <= 0.25 && x.mao.acima && x.mao.k === x.cima && x.mao.outra > 0.35);
 const recH = defH.filter(x => x.lido.recuo), defHm = defH.filter(x => !x.lido.recuo && x.tipo === 'mergulho');
 
 // I. nada atravessa o goleiro e o goleiro atrás da bola (pendências do C1 e do C2):
-//  I1. o goleiro FORA da área (sem a mão: lerChute `semMao`), parado no lance: a bola a 1,0–1,6 m no tronco dele (a ≤ 0,15 m
-//      do centro) — o caminho da bola não passa por dentro do tronco (raio 0,22 + o da bola, menos 2 cm) sem bater nele;
-//  I2. a saída no cruzamento que FALHA (o sorteio forçado a errar — cruz.p = 0 — e a mão que não chega): a bola não passa por
-//      dentro do corpo desenhado do pulo (tronco e pernas, os raios do bloqueio, menos 2 cm) sem bater nele;
+//  I1. o goleiro FORA da área (sem a mão: lerChute `semMao`), solto no lance (a IA o move), a 17,5–35,5 m da linha: a bola a
+//      0,95–1,9 m no corpo dele (tronco, ombros, cabeça; a ±0,3 m do centro), de 5–20 m — pelo corpo DESENHADO (o manequim:
+//      as juntas da pose e as cápsulas do render/jogador3d.js, com dois limites que não dependem da conta da simulação: o
+//      MIOLO, a seção com o menor semieixo e a cabeça com 0,92 do raio, sempre dentro do desenho; a CASCA, o maior semieixo e a
+//      cabeça com o cabelo, 1,24 do raio, sempre fora dele), com a bola acima de 0,9 m (abaixo: as pernas de todo jogador,
+//      sim.js colisaoBolaCorpo, informativo): a. no passo em que bate nele, o caminho da bola chega a ≤ 5 cm da CASCA (nada
+//      bate no ar; a revisão de 29/10 achou 38 de 250 batidas a > 5 cm, até 32 cm, com o cilindro de antes); b. sem bater,
+//      ela nunca entra mais de 2 cm no MIOLO (o caminho do passo em pedaços de 2 cm, na pose do começo e na do fim) — fora os
+//      3 passos antes de ele dominar ou pegar a bola (a recepção no peito de todo jogador, sim.js bolaAltaNoCorpo, leva a
+//      bola do peito ao pé: contada à parte, informativo);
+//  I2. a saída no cruzamento que FALHA (o sorteio forçado a errar — cruz.p = 0 — e a mão que não chega): pelo mesmo corpo
+//      desenhado (a pose do pulo), a bola não entra no miolo sem bater nele e não bate no ar;
 //  I3. o goleiro ATRÁS da bola (driblado, a 18–45 m dela, ela indo para o gol vazio): nenhuma "defesa" dele longe da bola
 //      (a mais de 1,5 m do corpo no toque) — na main ele "espalmava" pela linha do gol medindo só o lado.
-const RB = GOLEIRO.realista.bloqueio, RBOLA = 0.11, TOL = 0.02;
-function segDentro(x0, y0, z0, x1, y1, z1, dentro) {
+const RBOLA = 0.11, TOL = 0.02, NO_AR = 0.05;
+// a forma do desenho (render/jogador3d.js estilo/estiloGoleiro e a cabeça; a mesma em todas as versões medidas): [achatamento,
+// raios] por segmento quando diferem de SEGMENTOS; o goleiro com a luva no antebraço
+const FORMA_D = { 'pelve-lombar': [0.74, [0.118, 0.13]], 'lombar-peito': [0.68], 'peito-pescoco': [0.78], 'ombroE-ombroD': [0.85], 'quadrilE-quadrilD': [0.84, [0.088, 0.088]], 'tornozeloE-pontaE': [0.8], 'tornozeloD-pontaD': [0.8], 'cotoveloE-maoE': [1, [0.046, 0.05]], 'cotoveloD-maoD': [1, [0.046, 0.05]] };
+const NOME_J = Object.keys(J).sort((x, y) => J[x] - J[y]);
+const SEGS_D = SEGMENTOS.map(([a, b, ra, rb]) => { const f = FORMA_D[`${NOME_J[a]}-${NOME_J[b]}`] ?? [1]; const r = f[1] ?? [ra, rb]; return [a, b, r[0], r[1], f[0]]; });
+/** Folga da superfície da bola (centro em x, y, z) à do limite do corpo da pose PP (negativa = dentro): o miolo ou a casca. */
+function folgaCorpo(PP, x, y, z, miolo) {
+  let d = Infinity;
+  for (const [a, b, rA, rB, ach] of SEGS_D) {
+    const ax = PP[a * 3], ay = PP[a * 3 + 1], az = PP[a * 3 + 2], vx = PP[b * 3] - ax, vy = PP[b * 3 + 1] - ay, vz = PP[b * 3 + 2] - az;
+    const L2 = vx * vx + vy * vy + vz * vz, t = L2 > 0 ? Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy + (z - az) * vz) / L2)) : 0;
+    const r = (rA + (rB - rA) * t) * (miolo ? ach : 1);
+    d = Math.min(d, Math.hypot(x - ax - vx * t, y - ay - vy * t, z - az - vz * t) - r - RBOLA);
+  }
+  const k = J.cabeca * 3;
+  return Math.min(d, Math.hypot(x - PP[k], y - PP[k + 1], z - PP[k + 2]) - RAIO_CAB * (miolo ? 0.92 : 1.24) - RBOLA);
+}
+/** O menor valor de f no caminho (x0, y0, z0) → (x1, y1, z1), em pedaços de 2 cm, só acima de yMin (longe do corpo: ∞). */
+let PERTO = null;
+function minCaminho(x0, y0, z0, x1, y1, z1, f, yMin = 0.9) {
+  if (PERTO) {
+    // (a 2,5 m do quadril, nas duas poses, nenhum ponto do corpo desenhado chega: pula a conta)
+    const sx = x1 - x0, sz = z1 - z0, s2 = sx * sx + sz * sz;
+    let longe = true;
+    for (const PP of PERTO) {
+      const px = PP[J.pelve * 3], pz = PP[J.pelve * 3 + 2], t = s2 > 0 ? Math.max(0, Math.min(1, ((px - x0) * sx + (pz - z0) * sz) / s2)) : 0;
+      if (Math.hypot(x0 + sx * t - px, z0 + sz * t - pz) < 2.5) longe = false;
+    }
+    if (longe) return Infinity;
+  }
   const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0, z1 - z0) / 0.02));
-  for (let i = 0; i <= n; i++) { const u = i / n; if (dentro(x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, z0 + (z1 - z0) * u)) return true; }
-  return false;
+  let mn = Infinity;
+  for (let i = 0; i <= n; i++) { const u = i / n, y = y0 + (y1 - y0) * u; if (y > yMin) mn = Math.min(mn, f(x0 + (x1 - x0) * u, y, z0 + (z1 - z0) * u)); }
+  return mn;
+}
+/**
+ * Acompanha o lance de g por até `n` passos: em cada passo, a pose do começo (P0) e a do fim (P1). O passo em que g toca na
+ * bola (bateuCorpo ou defesa): a folga mínima do caminho que ela faria nele (a velocidade do começo; a colisão a para no
+ * ponto de entrada, o bloqueio a rebate de onde ela está) até a CASCA, nas duas poses — e o ponto onde ela ficou. Sem
+ * tocar: a entrada no MIOLO pelo caminho de verdade. `ate(ev)` encerra.
+ */
+function seguirCorpo(L, g, n, ate) {
+  const { m } = L, P0 = new Float32Array(NJ * 3), P1 = new Float32Array(NJ * 3);
+  PERTO = [P0, P1];
+  pose(g, m, P1);
+  const R = { bateu: false, yBate: null, folgaBate: null, pen: 0, yPen: null, penBaixo: 0, gol: false, recepcao: 0 };
+  const pens = [];
+  for (let i = 0; i < n; i++) {
+    const b = m.bola, x0 = b.p.x, y0 = b.p.y, z0 = b.p.z, vx = b.v.x, vy = b.v.y, vz = b.v.z;
+    P0.set(P1);
+    const ev = L.passo();
+    pose(g, m, P1);
+    if (ev.some(e => e.tipo === 'gol')) R.gol = true;
+    const toque = ev.find(e => (e.tipo === 'bateuCorpo' || e.tipo === 'defesa') && e.id === g.id);
+    if (toque) {
+      const f = (x, y, z) => Math.min(folgaCorpo(P0, x, y, z, false), folgaCorpo(P1, x, y, z, false));
+      R.bateu = true; R.yBate = y0; R.modo = toque.tipo === 'defesa' ? toque.modo : 'corpo';
+      R.folgaBate = Math.min(minCaminho(x0, y0, z0, x0 + vx * PASSO, y0 + vy * PASSO, z0 + vz * PASSO, f, -1), f(b.p.x, b.p.y, b.p.z));
+      break;
+    }
+    // (a bola que ele domina — no peito, na coxa: sim.js bolaAltaNoCorpo, a recepção de todo jogador — ou pega: os 3 passos
+    // antes dela não contam; a recepção leva a bola do peito ao pé. Contados à parte em `recepcao`)
+    if (m.naMao === g.id || m.posse === g.id) { R.recepcao = pens.filter(x => x.tick >= m.tick - 3 && x.pA > TOL).length; pens.splice(0, pens.length, ...pens.filter(x => x.tick < m.tick - 3)); break; }
+    const fm = (x, y, z) => Math.min(folgaCorpo(P1, x, y, z, true), folgaCorpo(P0, x, y, z, true));
+    const pA = -minCaminho(x0, y0, z0, b.p.x, b.p.y, b.p.z, fm), pB = -minCaminho(x0, y0, z0, b.p.x, b.p.y, b.p.z, fm, -1);
+    pens.push({ tick: m.tick, pA, pB, y0 });
+    if (ate(ev)) break;
+  }
+  for (const x of pens) {
+    if (x.pA > R.pen) { R.pen = x.pA; R.yPen = x.y0; R.tick = x.tick; }
+    if (x.pB > R.penBaixo) R.penBaixo = x.pB;
+  }
+  return R;
 }
 function casoForaArea(k) {
   const r = gerador(33000 + k);
   const L = lancePartida(33000 + k, GKP[k % 3]);
   const { m, g } = L;
-  const gxk = GX - 20 - 6 * r(), gzk = (r() * 2 - 1) * 8, d = 8 + 7 * r(), ang = (r() * 2 - 1) * 0.5;
-  P.teleportar(g, gxk, gzk, Math.PI);
-  if (!bolaNoPe(L, gxk - d * Math.cos(ang), gzk + d * Math.sin(ang), 2)) return null;
-  P.teleportar(g, gxk, gzk, Math.PI);
-  chutePara(L, gxk, gzk + (r() * 2 - 1) * 0.15, 1.0 + 0.6 * r(), 16 + 12 * r());
-  let bateu = false, atravessou = false;
-  for (let i = 0; i < 90; i++) {
-    P.teleportar(g, gxk, gzk, Math.PI); // parado no lance
-    const b0 = { x: m.bola.p.x, y: m.bola.p.y, z: m.bola.p.z };
-    const ev = L.passo();
-    if (ev.some(e => (e.tipo === 'bateuCorpo' || e.tipo === 'defesa') && e.id === g.id)) bateu = true;
-    if (bateu) break;
-    if (segDentro(b0.x, b0.y, b0.z, m.bola.p.x, m.bola.p.y, m.bola.p.z, (x, y, z) => y > 0.9 && y <= RB.alto && Math.hypot(x - gxk, z - gzk) < RB.tronco[0] + RBOLA - TOL)) { atravessou = true; break; }
-    if (m.bola.p.x > gxk + 2) break;
-  }
-  return { semMao: !!(g.defesa && g.defesa.semMao), bateu, atravessou };
+  const gxk = GX - 17.5 - 18 * r(), gzk = (r() * 2 - 1) * 14, d = 5 + 15 * r(), ang = (r() * 2 - 1) * 0.8;
+  const bx = gxk - d * Math.cos(ang), bz = gzk + d * Math.sin(ang);
+  P.teleportar(g, gxk, gzk, Math.atan2(bz - gzk, bx - gxk));
+  if (!bolaNoPe(L, bx, bz, 2)) return null;
+  P.teleportar(g, gxk, gzk, Math.atan2(bz - gzk, bx - gxk));
+  chutePara(L, gxk, gzk + (r() * 2 - 1) * 0.3, 0.95 + 0.95 * r(), 10 + 18 * r());
+  const R = seguirCorpo(L, g, 120, () => m.bola.p.x > g.x + 3 || m.posse != null || m.naMao != null || (m.parada && !m.parada.rolou));
+  return { ...R, semMao: !!(g.defesa && g.defesa.semMao), k };
 }
-const resI1 = Array.from({ length: 120 }, (_, k) => casoForaArea(k)).filter(Boolean);
+const resI1 = Array.from({ length: 600 }, (_, k) => casoForaArea(k)).filter(Boolean);
 function casoSaidaFalha(k, pZero) {
   const r = gerador(34000 + k);
   const L = lancePartida(34000 + k, GKP[k % 3]);
@@ -579,38 +660,49 @@ function casoSaidaFalha(k, pZero) {
   if (pZero) C.p = 0;
   const xP = GX - 2.5 - 4 * r(), zP = -lado * (r() * 3 - 0.5);
   chutePara(L, xP, zP, 1.6 + 0.8 * r(), 15 + 7 * r(), 'cruzamento');
-  let saiu = false, bateu = false, atravessou = false, pulou = false, defendeu = false, quando = null;
+  let saiu = false, bateu = false, pulou = false, defendeu = false, quando = null, pen = 0, folgaBate = null;
+  const P0 = new Float32Array(NJ * 3), P1 = new Float32Array(NJ * 3);
+  PERTO = [P0, P1];
+  pose(g, m, P1);
   try {
     for (let i = 0; i < 150; i++) {
-      const b0 = { x: m.bola.p.x, y: m.bola.p.y, z: m.bola.p.z };
+      const b = m.bola, x0 = b.p.x, y0 = b.p.y, z0 = b.p.z, vx = b.v.x, vy = b.v.y, vz = b.v.z;
+      P0.set(P1);
       const ev = L.passo();
+      pose(g, m, P1);
+      let toque = null;
       for (const e of ev) {
         if (e.id !== g.id) continue;
         if (e.tipo === 'saidaGoleiro' && e.modo === 'cruzamento') saiu = true;
         // (a saída que deu certo: o encaixe ou o soco dela, ou a bola que ele pega com a mão do pulo — "pegou")
         if (e.tipo === 'defesa' && (e.saidaAlta || e.modo === 'pegou' || e.modo === 'encaixe')) defendeu = true;
-        else if (e.tipo === 'bateuCorpo' || e.tipo === 'defesa') bateu = true;
+        else if (e.tipo === 'bateuCorpo' || e.tipo === 'defesa') toque = e;
       }
-      if (bateu || defendeu || m.posse != null || m.naMao != null) break;
-      const gm = g.mergulho;
-      if (saiu && gm && GK.mergulhoAtivo(g, m.tick)) {
-        pulou = true;
-        const q = GK.quadroMergulho(gm, m.tick, {}), e = GK.eixosMergulho(gm, q, {});
-        const tx = q.x + e.ux * RB.tronco[1], ty = q.h + e.uy * RB.tronco[1], tz = q.z + e.uz * RB.tronco[1];
-        const dSeg = (x, y, z, ax, ay, az, bx, by, bz) => { const vx = bx - ax, vy = by - ay, vz = bz - az, L2 = vx * vx + vy * vy + vz * vz; const t = L2 > 0 ? Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy + (z - az) * vz) / L2)) : 0; return Math.hypot(x - ax - vx * t, y - ay - vy * t, z - az - vz * t); };
-        if (segDentro(b0.x, b0.y, b0.z, m.bola.p.x, m.bola.p.y, m.bola.p.z, (x, y, z) => dSeg(x, y, z, q.x, q.h, q.z, tx, ty, tz) < RB.tronco[0] + RBOLA - TOL
-          || dSeg(x, y, z, q.x, q.h, q.z, q.a0.x, q.a0.y, q.a0.z) < RB.perna + RBOLA - TOL || dSeg(x, y, z, q.x, q.h, q.z, q.a1.x, q.a1.y, q.a1.z) < RB.perna + RBOLA - TOL)) {
-          // (segue até o fim do lance: a saída que encaixa ou soca no passo seguinte não conta — a bola chega às mãos, junto da
-          // cabeça)
-          if (!atravessou) { const d0 = g.defesa; quando = `k ${k}${pZero ? ' (sorteio forçado a errar)' : ''}: tick ${m.tick}, contato ${d0 && d0.tick}, lida ${d0 && d0.lido}, fora ${!!(d0 && d0.fora)}, sucesso ${d0 && d0.sucesso}, tipo ${d0 && d0.tipo}, bola a ${m.bola.p.y.toFixed(2)} m`; }
-          atravessou = true;
+      if (saiu && GK.mergulhoAtivo(g, m.tick)) pulou = true;
+      if (defendeu) break;
+      if (toque) {
+        // bateu: o caminho que ela faria neste passo chega a ≤ NO_AR da casca do corpo desenhado (as duas poses)?
+        const f = (x, y, z) => Math.min(folgaCorpo(P0, x, y, z, false), folgaCorpo(P1, x, y, z, false));
+        bateu = true;
+        folgaBate = Math.min(minCaminho(x0, y0, z0, x0 + vx * PASSO, y0 + vy * PASSO, z0 + vz * PASSO, f, -1), f(b.p.x, b.p.y, b.p.z));
+        break;
+      }
+      if (m.posse != null || m.naMao != null) break;
+      if (saiu) {
+        const fm = (x, y, z) => Math.min(folgaCorpo(P1, x, y, z, true), folgaCorpo(P0, x, y, z, true));
+        const p1 = -minCaminho(x0, y0, z0, b.p.x, b.p.y, b.p.z, fm, -1);
+        if (p1 > pen) {
+          // (segue até o fim do lance: a saída que encaixa ou soca no passo seguinte não conta — a bola chega às mãos)
+          const d0 = g.defesa;
+          pen = p1;
+          quando = `k ${k}${pZero ? ' (sorteio forçado a errar)' : ''}: tick ${m.tick}, ${fmt(100 * p1, 1)} cm no miolo, contato ${d0 && d0.tick}, lida ${d0 && d0.lido}, fora ${!!(d0 && d0.fora)}, sucesso ${d0 && d0.sucesso}, tipo ${d0 && d0.tipo}, bola a ${m.bola.p.y.toFixed(2)} m`;
         }
       }
       if (m.bola.p.x > GX + 0.5 || (m.parada && !m.parada.rolou)) break;
     }
   } finally { C.p = p0; }
   // (a saída que falhou: ele pulou e não encaixou nem socou)
-  return pulou && !defendeu ? { bateu, atravessou, quando } : null;
+  return pulou && !defendeu ? { bateu, folgaBate, atravessou: pen > TOL, pen, quando } : null;
 }
 const resI2 = [...Array.from({ length: 150 }, (_, k) => casoSaidaFalha(k, true)), ...Array.from({ length: 150 }, (_, k) => casoSaidaFalha(200 + k, false))].filter(Boolean);
 function casoAtras(k) {
@@ -677,7 +769,9 @@ for (const y of [0.25, 0.8, 1.4, 2.0]) {
   porAltura.push([`${fmt(y, 2)} m`, l.length, `${l.filter(x => x.r.mergulho).length}`, dd.length, `${dd.filter(x => x.r.maoContato <= 0.25).length}`]);
 }
 console.log(`  H. bola alta na partida: ${resH.length} lidas a ≥ 1,9 m e ≥ 1,2 m de lado (${defH.length} defesas: ${defH.filter(x => x.modo === 'encaixe').length} encaixes, ${defH.filter(x => x.modo === 'pegou').length} "pegou", ${espH.length} espalmadas — ${espH.length - espHp.length} rebotes; ${defHm.length} no mergulho; ${recH.length} por cima do goleiro adiantado, ${recH.filter(x => x.modo !== 'espalmada').length} seguras)`);
-console.log(`  I. partida: ${resI1.length} chutes no tronco do goleiro fora da área (${resI1.filter(x => x.semMao).length} sem a mão), ${resI2.length} saídas no alto que falharam, ${resI3.length} chutes com o goleiro atrás da bola (${resI3.filter(x => x.gol).length} gols)`);
+const bI1 = resI1.filter(x => x.bateu && x.yBate > 0.9), arI1 = bI1.filter(x => x.folgaBate > NO_AR), atI1 = resI1.filter(x => x.pen > TOL);
+const arI2 = resI2.filter(x => x.bateu && x.folgaBate > NO_AR);
+console.log(`  I. partida: ${resI1.length} chutes no corpo do goleiro fora da área (${resI1.filter(x => x.semMao).length} sem a mão; ${bI1.length} batidas acima de 0,9 m, ${resI1.filter(x => x.bateu && x.yBate <= 0.9).length} nas pernas; ${resI1.filter(x => x.gol).length} gols; ${resI1.filter(x => x.recepcao > 0).length} recepções dele com a bola > 2 cm dentro do peito nos 3 passos antes; abaixo de 0,9 m, as pernas de todo jogador, a bola entrou > 2 cm no miolo em ${resI1.filter(x => x.penBaixo > TOL).length}), ${resI2.length} saídas no alto que falharam, ${resI3.length} chutes com o goleiro atrás da bola (${resI3.filter(x => x.gol).length} gols)`);
 console.log(tabelaTexto(porAltura));
 if (detalhe) {
   for (const x of longe.filter(x => !x.r.mergulho).slice(0, 20)) console.log(`  sem mergulho: d ${x.c.d} ang ${x.c.ang} lat ${x.c.lat} y ${x.c.y} v ${x.c.v}: ${x.r.res}, a ${fmt(x.r.latCorpo, 2)} m, voou ${x.r.voou}, inclinou ${fmt(x.r.inclinou, 0)}°`);
@@ -685,6 +779,9 @@ if (detalhe) {
   for (const x of jogB.slice(0, 12)) console.log(`  espalmada jogável: d ${fmt(x.c.d, 1)} ang ${fmt(x.c.ang, 0)} zA ${fmt(x.c.zA, 2)} yA ${fmt(x.c.yA, 2)}: (${fmt(x.r.jogavel.x, 1)}, ${fmt(x.r.jogavel.z, 1)}) aos ${fmt(x.r.jogavel.t, 2)} s`);
   for (const x of resE.filter(x => x.maoContato != null && x.maoContato > 0.25)) console.log(`  desvio, mão longe: ${x.res} (${x.tipo}), mão a ${fmt(x.maoContato, 2)} m, bola a ${fmt(x.dBola, 2)} m do centro`);
   for (const x of resI2.filter(x => x.atravessou).slice(0, 12)) console.log(`  I2, a bola atravessou o pulo: ${x.quando}`);
+  for (const x of arI2.slice(0, 12)) console.log(`  I2, bateu no ar: ${fmt(100 * x.folgaBate, 1)} cm do corpo desenhado`);
+  for (const x of arI1.slice(0, 12)) console.log(`  I1, bateu no ar: k ${x.k}, bola a ${fmt(x.yBate, 2)} m, ${fmt(100 * x.folgaBate, 1)} cm do corpo desenhado (${x.modo})`);
+  for (const x of atI1.slice(0, 12)) console.log(`  I1, a bola entrou no corpo: k ${x.k}, ${fmt(100 * x.pen, 1)} cm, bola a ${fmt(x.yPen, 2)} m`);
   for (const x of resB.filter(x => x.r.vCentro > 5.5 || x.r.vPelve > 7.5 || x.r.giroTronco > 20).slice(0, 12)) console.log(`  corpo rápido: d ${fmt(x.c.d, 1)} ang ${fmt(x.c.ang, 0)}${x.c.rebote ? ' (rebote)' : ''}: centro ${fmt(x.r.vCentro, 1)} m/s, pelve ${fmt(x.r.vPelve, 1)} m/s, tronco ${fmt(x.r.giroTronco, 0)}°/quadro`);
 }
 const pc = (a, b) => `${fmt((100 * a) / Math.max(1, b), 1)}% (${a}/${b})`;
@@ -714,8 +811,10 @@ const metas = [
   ['H2. nas espalmadas, UMA mão — a de cima — na bola (≤ 0,25 m), acima da cabeça, e a outra a > 0,35 m', espH.length >= 30 && umaH.length / espH.length >= 0.8, pc(umaH.length, espH.length), '≥ 80%'],
   ['H3. as espalmadas (sem o rebote) saem do campo — por cima do travessão ou pela linha de fundo — em 3 s', espHp.length >= 25 && espHp.filter(x => x.fora).length / espHp.length >= 0.9, pc(espHp.filter(x => x.fora).length, espHp.length), '≥ 90%'],
   ['H4. com o rebote (a bola que escapa e cai perto): para fora (StatsBomb 79,1%, IC 65–89%)', espH.length >= 30 && espH.filter(x => x.fora).length / espH.length >= 0.65 && espH.filter(x => x.fora).length / espH.length <= 0.95, pc(espH.filter(x => x.fora).length, espH.length), '65–95%'],
-  ['I1. partida: a bola no tronco do goleiro fora da área (sem a mão) nunca o atravessa', resI1.length >= 60 && resI1.filter(x => x.atravessou).length === 0, `${resI1.filter(x => x.atravessou).length} de ${resI1.length} (bateu ${resI1.filter(x => x.bateu).length})`, '0'],
-  ['I2. partida: a saída no cruzamento que falha — a bola nunca atravessa o corpo do pulo', resI2.length >= 40 && resI2.filter(x => x.atravessou).length === 0, `${resI2.filter(x => x.atravessou).length} de ${resI2.length} (bateu ${resI2.filter(x => x.bateu).length})`, '0'],
+  ['H5. a bola com a espalmada (ou o batido) já sorteada não vira "pegou" da mão desenhada antes do contato', resH.length >= 60 && pegH.length === 0, `${pegH.length} de ${resAltaTodos.filter(x => x.lido && !x.lido.fora).length} lidas`, '0'],
+  ['I1a. partida: a bola no corpo do goleiro fora da área (acima de 0,9 m) — nas batidas, a bola a > 5 cm do corpo desenhado (bate no ar)', bI1.length >= 30 && arI1.length === 0, `${arI1.length} de ${bI1.length} (máx ${fmt(100 * Math.max(0, ...bI1.map(x => x.folgaBate)), 1)} cm)`, '0'],
+  ['I1b. partida: a mesma bola, sem bater, entra > 2 cm no corpo desenhado (o miolo)', resI1.length >= 400 && atI1.length === 0, `${atI1.length} de ${resI1.length} (máx ${fmt(100 * Math.max(0, ...resI1.map(x => x.pen)), 1)} cm)`, '0'],
+  ['I2. partida: a saída no cruzamento que falha — a bola nunca entra > 2 cm no corpo desenhado do pulo nem bate nele no ar', resI2.length >= 40 && resI2.filter(x => x.atravessou).length === 0 && arI2.length === 0, `${resI2.filter(x => x.atravessou).length} de ${resI2.length}; no ar ${arI2.length} de ${resI2.filter(x => x.bateu).length} batidas`, '0 e 0'],
   ['I3. partida: o goleiro atrás da bola (a 18–45 m dela) nunca "defende" longe dela (> 1,5 m)', resI3.length >= 60 && resI3.filter(x => x.defesa && x.longe).length === 0, `${resI3.filter(x => x.defesa && x.longe).length} de ${resI3.length}`, '0'],
 ];
 console.log('');

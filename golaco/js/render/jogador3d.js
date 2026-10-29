@@ -9,7 +9,7 @@
 // times (a capacidade cresce sozinha). Goleiro (posicao 'GOL') com uniforme próprio, manga
 // comprida e luvas.
 import * as THREE from 'three';
-import { SEGMENTOS, RAIO_CABECA, J } from '../anim.js';
+import { SEGMENTOS, RAIO_CABECA, J, FORMA_SEG, FORMA_SEG_GOL, CABECA_ESCALA, CABELO_ESCALA, CABELO_DESLOCA } from '../anim.js';
 import { texMancha, texIndicador, texIndicadorPressao } from './texturas.js';
 
 const NSEG = SEGMENTOS.length;
@@ -52,32 +52,33 @@ function nomeJ(i) { return Object.keys(J).find(k => J[k] === i) ?? ''; }
 function estilo(seg) {
   const a = nomeJ(seg[0]), b = nomeJ(seg[1]), parte = seg[4];
   const tem = (x, y) => (a === x && b === y) || (a === y && b === x);
-  // raios r: [A, B] substituem os de SEGMENTOS só no desenho (quadril e pelve mais enxutos: a
-  // calota da pelve e a do quadril não fazem mais um "volume" de fralda abaixo do calção)
+  // (os raios e o achatamento frente–trás de cada segmento moram no anim.js FORMA_SEG: a simulação confere a bola no corpo
+  // desenhado do goleiro pela mesma forma — quadril e pelve mais enxutos que os de SEGMENTOS, sem o "volume" de fralda)
   // (a 3ª cor do calção e do meião — a listra da coxa e a faixa abaixo do joelho — é `acentoCalcao`, que cai no `acento` do
   // uniforme quando falta: os de sempre não mudam; o kit misto da troca de camisa a leva do dono do calção, não da camisa)
-  if (tem('pelve', 'lombar')) return { achata: 0.74, pad: P.liso, c: ['calcao', 'pele', 'acentoCalcao'], sup: false, r: [0.118, 0.13] };
-  if (tem('lombar', 'peito')) return { achata: 0.68, pad: P.tronco, c: ['camisa', 'pele', 'acento'], sup: true };
-  if (tem('peito', 'pescoco')) return { achata: 0.78, pad: P.gola, c: ['camisa', 'pele', 'acento'], sup: true };
-  if (tem('ombroE', 'ombroD')) return { achata: 0.85, pad: P.liso, c: ['camisa', 'pele', 'acento'], sup: true };
+  if (tem('pelve', 'lombar')) return { pad: P.liso, c: ['calcao', 'pele', 'acentoCalcao'], sup: false };
+  if (tem('lombar', 'peito')) return { pad: P.tronco, c: ['camisa', 'pele', 'acento'], sup: true };
+  if (tem('peito', 'pescoco')) return { pad: P.gola, c: ['camisa', 'pele', 'acento'], sup: true };
+  if (tem('ombroE', 'ombroD')) return { pad: P.liso, c: ['camisa', 'pele', 'acento'], sup: true };
   // manga: a cor da manga do uniforme (`manga`; os uniformes sem ela caem na camisa em escreverCores)
-  if (/^ombro/.test(a) && /^cotovelo/.test(b)) return { achata: 1, pad: P.manga, c: ['manga', 'pele', 'acento'], sup: true };
-  if (tem('quadrilE', 'quadrilD')) return { achata: 0.84, pad: P.liso, c: ['calcao', 'pele', 'acentoCalcao'], sup: false, r: [0.088, 0.088] };
-  if (/^quadril/.test(a) && /^joelho/.test(b)) return { achata: 1, pad: P.coxa, c: ['calcao', 'pele', 'acentoCalcao'], sup: false };
-  if (/^joelho/.test(a) && /^tornozelo/.test(b)) return { achata: 1, pad: P.meiao, c: ['meiao', 'pele', 'acentoCalcao'], sup: false };
-  if (/^tornozelo/.test(a) && /^ponta/.test(b)) return { achata: 0.8, pad: P.chuteira, c: ['chuteira', 'pele', 'sola'], sup: false };
+  if (/^ombro/.test(a) && /^cotovelo/.test(b)) return { pad: P.manga, c: ['manga', 'pele', 'acento'], sup: true };
+  if (tem('quadrilE', 'quadrilD')) return { pad: P.liso, c: ['calcao', 'pele', 'acentoCalcao'], sup: false };
+  if (/^quadril/.test(a) && /^joelho/.test(b)) return { pad: P.coxa, c: ['calcao', 'pele', 'acentoCalcao'], sup: false };
+  if (/^joelho/.test(a) && /^tornozelo/.test(b)) return { pad: P.meiao, c: ['meiao', 'pele', 'acentoCalcao'], sup: false };
+  if (/^tornozelo/.test(a) && /^ponta/.test(b)) return { pad: P.chuteira, c: ['chuteira', 'pele', 'sola'], sup: false };
   const sup = !/quadril|joelho|tornozelo|ponta|pelve/.test(a + b);
-  return { achata: 1, pad: P.liso, c: [parte, 'pele', 'acento'], sup };
+  return { pad: P.liso, c: [parte, 'pele', 'acento'], sup };
 }
-const ESTILOS = SEGMENTOS.map(estilo);
+const comForma = (e, f) => ({ ...e, achata: f.achata, r: [f.rA, f.rB] });
+const ESTILOS = SEGMENTOS.map((sg, i) => comForma(estilo(sg), FORMA_SEG[i]));
 /** Goleiro: manga comprida (braço inteiro na cor da camisa) e luva na mão. */
 function estiloGoleiro(seg, base) {
   const a = nomeJ(seg[0]), b = nomeJ(seg[1]);
   if (/^ombro/.test(a) && /^cotovelo/.test(b)) return { ...base, pad: P.liso, c: ['camisa', 'pele', 'acento'] };
-  if (/^cotovelo/.test(a) && /^mao/.test(b)) return { ...base, pad: P.luva, c: ['camisa', 'luva', 'acento'], r: [0.046, 0.05] };
+  if (/^cotovelo/.test(a) && /^mao/.test(b)) return { ...base, pad: P.luva, c: ['camisa', 'luva', 'acento'] };
   return base;
 }
-const ESTILOS_GOL = SEGMENTOS.map((sg, i) => estiloGoleiro(sg, ESTILOS[i]));
+const ESTILOS_GOL = SEGMENTOS.map((sg, i) => comForma(estiloGoleiro(sg, ESTILOS[i]), FORMA_SEG_GOL[i]));
 /**
  * Treinador (com os padrões que já existem, sem shader novo): o tronco liso (sem as listras do uniforme) com a gola na cor
  * de acento (a gola branca da camisa sob o paletó; a do agasalho), o braço inteiro na cor do paletó/agasalho e o antebraço
@@ -716,11 +717,11 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
         _m.makeBasis(X, Y, Z);
         _q.setFromRotationMatrix(_m);
         const kc = ocu & 2 ? 0 : 1;
-        _s.set(R * 0.92 * kc, R * 1.1 * kc, R * 1.0 * kc);
+        _s.set(R * CABECA_ESCALA[0] * kc, R * CABECA_ESCALA[1] * kc, R * CABECA_ESCALA[2] * kc);
         _m.compose(A, _q, _s);
         cabecas.setMatrixAt(p, _m);
-        _v.copy(A).addScaledVector(Y, R * 0.12).addScaledVector(Z, -R * 0.1);
-        _s.set(R * 0.98 * kc, R * 1.08 * kc, R * 1.08 * kc);
+        _v.copy(A).addScaledVector(Y, R * CABELO_DESLOCA[0]).addScaledVector(Z, R * CABELO_DESLOCA[1]);
+        _s.set(R * CABELO_ESCALA[0] * kc, R * CABELO_ESCALA[1] * kc, R * CABELO_ESCALA[2] * kc);
         _m.compose(_v, _q, _s);
         cabelos.setMatrixAt(p, _m);
         // mancha de contato (no meio dos pés; o goleiro deitado leva a mancha junto)
