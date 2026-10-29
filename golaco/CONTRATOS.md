@@ -2299,7 +2299,10 @@ de meta; a linha da trajetória com mira, força e curva no escanteio e na falta
   (`MIRA.alta/tensa.elev`), velocidade na faixa pela força, o giro do cruzamento do jogo + o efeito (`wy = −curva × giro ×
   atributo`); CHUTE = a velocidade do chute do jogo (`ACOES.chute.v` × finalização), com o efeito por cima da falta
   (`giroFalta`) e a elevação que passa por cima da barreira (`BARREIRA.alturaPassar` na distância dela) ou que chega na
-  altura da mira pela força (`alturaMiraChute`, a do chute do jogo; seção C2 abaixo). **A mesma conta** no chute de verdade (`acoes.js cobrancaMirada`) e na linha (`mira-linha.js
+  altura da mira pela força (`alturaMiraChute`, a do chute do jogo; seção C2 abaixo): a barra cheia só sobe com a mira no
+  CANTO — a reta dela (sem o efeito) cruzando a linha do gol a |z| ≥ meia-boca − `cheia.zCanto` (`mira.js noCanto`, a
+  mesma régua do chute do jogo); a mira parada no padrão (o meio do gol), as diagonais leves e a mira que não vai para o
+  gol ficam na curva de antes, bit a bit (revisão de 29/10). **A mesma conta** no chute de verdade (`acoes.js cobrancaMirada`) e na linha (`mira-linha.js
   preverMira` → `mira.js simularLinha`: `bola.js passoBola` passo a passo até a bola tocar o chão, bater em algo ou cruzar
   a linha de fundo; no CHUTE só até `linhaChute` m além da barreira). Por cima, o erro do cobrador (o do chute do jogo: finalização, distância,
   força no máximo, `faltaErro` com barreira; no cruzamento o do lançamento: passe longo, ±m a 40 m, em ângulo e em força)
@@ -2486,8 +2489,14 @@ subia só até `yAlvo[1]` 1,7 m, medida 0,4 m antes da linha, e o canto do anal�
   `cheia.zCanto` (0,9 → 2,76 m, a régua do "no ângulo" do teste; ~33° fora da reta bola–gol). Solto (o jogo escolhe o lado
   longe do goleiro, ±(meia-boca − 0,6)), para o gol e nas diagonais leves, a curva de antes BIT A BIT: a mira (y e z), a
   saída e o voo da main (teste-chutes, o árbitro independente abaixo). `y` 2,1 e `zFolga` 0,7 ficam: as metas precisam da
-  margem (com 2,08 a "≥ 1,9 m" fica a 1–2 chutes de reprovar). A linha da cobrança mirada (`chuteMirado`, tiro livre direto
-  sem barreira) sobe sempre: lá a pessoa mira sempre.
+  margem (com 2,08 a "≥ 1,9 m" fica a 1–2 chutes de reprovar). Na **cobrança mirada** (`chuteMirado`, o tiro livre direto
+  sem barreira) a MESMA régua (revisão de 29/10): a barra cheia só sobe com a mira no canto — o z onde a reta da mira (sem o
+  efeito) cruza a linha do gol a |z| ≥ meia-boca − `zCanto` (`mira.js noCanto`, usada pelos dois). Antes ela "subia
+  sempre": no tiro livre de 33–35 m sem barreira, a mira parada no padrão (o meio do gol) e a barra cheia cruzavam a linha a
+  2,10 m contra 1,58 m na main (e a mira que não vai para o gol, de lado ou para trás, mirava 2,1 m a 25 m). Fora do canto,
+  a curva de antes bit a bit; no canto, o que o C2 já fazia. Uma consequência da régua (a mesma do chute do jogo, sem teto):
+  a mira bem fora do gol também conta como canto (a ±17° do padrão, a 34 m ela cruza a linha a ±10,4 m; a 22 m, a ~±7 m) e
+  sobe — a bola sai de qualquer jeito.
 - **Por que o canto, e não o "mirado" (`mag > 0,3`) da 2ed0d56f** (revisão de 28/10): o módulo vale também para o analógico
   apontado para o GOL e para as diagonais leves, e aí a barra cheia subia no MEIO do gol a 2,1 m, sem a chance do ângulo
   (para o gol, a bola alta no meio 18,5 → 57,3% dos chutes, por cima 3,6 → 10,0%, trave 1,8 → 8,1%; a ±17°, −5,5 e −2,8
@@ -2534,9 +2543,11 @@ subia só até `yAlvo[1]` 1,7 m, medida 0,4 m antes da linha, e o canto do anal�
   `elevacaoNaLinha` (a 1ª de baixo para cima que chega a y, passos de 0,08 rad, e a busca binária entre ela e a de antes)
   no voo SEM o gol (`bola.js passagemLivre`: a mesma física até a linha, sem traves, rede e placas); com o efeito do
   colocado, o giro por secante (o giro que não chega à linha volta para o meio do caminho; nem a reta chega: gira contra o
-  efeito até chegar). Usadas pelo chute do jogo (`acoes.js chute`, só na bola rolando e com o analógico no canto: o
-  pênalti, o tiro livre com barreira e o chute sem mirar no canto ficam na conta de antes) e pela linha da cobrança mirada (`chuteMirado`, tiro livre direto sem barreira): a
-  linha continua a física da bola (teste-mira A, 0 cm, também com a barra cheia: 2,10 m na linha).
+  efeito até chegar). `noCanto(z)` = |z| ≥ meia-boca − `cheia.zCanto` (a régua do canto, a mesma nos dois). Usadas pelo
+  chute do jogo (`acoes.js chute`, só na bola rolando e com o analógico no canto: o pênalti, o tiro livre com barreira e o
+  chute sem mirar no canto ficam na conta de antes) e pela linha da cobrança mirada (`chuteMirado`, tiro livre direto sem
+  barreira e com a mira no canto; fora dele a conta de antes): a linha continua a física da bola (teste-mira A, 0 cm, também
+  com a barra cheia: no canto 2,10 m na linha, no meio 1,66 m, a curva de antes).
 - **Por que na linha e no voo sem o gol** (revisão do C2): a mira medida 0,4 m antes da linha subia mais até ela — de perto
   a elevação é de 38–44° e a barra cheia passava a 2,24–2,49 m, no travessão, mesmo sem erro (4–9 m: 100% → 90% de gols);
   e as buscas da saída (o giro do colocado e a elevação) usavam o voo de teste COM o gol, que com a mira alta batia no

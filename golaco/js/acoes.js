@@ -17,7 +17,7 @@ import {
 import { procurarOportunidade, preverBola } from './conducao.js';
 import { passoCorpo, copiaCinematica, infoPassada } from './jogador.js';
 import { registrarChute } from './regras-goleiro.js';
-import { chuteMirado, simularLinha, alturaMiraChute, zMaxMiraChute, miraCheia, saidaNaLinha } from './mira.js';
+import { chuteMirado, simularLinha, alturaMiraChute, zMaxMiraChute, miraCheia, noCanto, saidaNaLinha } from './mira.js';
 
 const DT = PASSO;
 const BOTOES_ACAO = [
@@ -787,13 +787,14 @@ function chute(m, j, pe, p, erroMult) {
   const zBruto = mirado ? zBrutoAnalogico(b, gx, lado, meio, mr) : 0;
   // a barra cheia (C2): só na bola rolando — o pênalti e o tiro livre com barreira ficam na mira de antes — e só com o
   // analógico apontado para um CANTO: a mira dele no ângulo, |z| ≥ meia-boca − cheia.zCanto (2,76 m: a régua do "no
-  // ângulo"; ~33° fora da reta bola–gol). Decisão do dono (28/10: "só o chute mirado sobe — com o analógico apontado para
-  // um canto, a barra cheia vai no ângulo; sem mirar, o chute fica na altura de hoje"): solto (o jogo escolhe o lado longe
-  // do goleiro), para o gol e nas diagonais leves, a curva de antes, bit a bit (y, z e a saída). Com o "mirado" (mag > 0,3)
+  // ângulo"; ~33° fora da reta bola–gol; mira.js noCanto, a mesma régua da cobrança mirada). Decisão do dono (28/10: "só o
+  // chute mirado sobe — com o analógico apontado para um canto, a barra cheia vai no ângulo; sem mirar, o chute fica na
+  // altura de hoje"): solto (o jogo escolhe o lado longe do goleiro), para o gol e nas diagonais leves, a curva de antes,
+  // bit a bit (y, z e a saída). Com o "mirado" (mag > 0,3)
   // a barra cheia subia também no MEIO do gol (2,1 m na linha, sem a chance do ângulo; contra o goleiro realista, para o gol
   // a bola alta no meio 18,5 → 57,3% dos chutes, e a ±17° −5,5 e −2,8 pontos de gol). Subir aos poucos pelo |z| perdia mais
   // que o limiar: no meio −0,6 ± 0,6 (a ±17°, −2,1) contra 0; no canto os dois iguais (CONTRATOS.md, C2: a grade por direção)
-  const cheia = Math.abs(zBruto) >= meio - cfg.cheia.zCanto && miraCheia(p.forca) && !p.penalti && !p.barreira && (gx - b.p.x) * lado > 0.5;
+  const cheia = noCanto(zBruto) && miraCheia(p.forca) && !p.penalti && !p.barreira && (gx - b.p.x) * lado > 0.5;
   if (cheia) {
     const zMax = zMaxMiraChute(p.forca);
     zMira = clamp(zBruto, -zMax, zMax);

@@ -56,10 +56,15 @@ export const comTrajetoria = t => t === 'alta' || t === 'tensa' || t === 'chute'
 // travessão) e o canto do analógico chega a meia-boca − cheia.zFolga m: o ângulo. Com o erro do chute (forcaMaxErro), uma
 // parte passa por cima. cheia = false: a curva de antes em toda força (o pênalti do humano: a mira dele vai só a
 // ±penaltiCanto, longe do ângulo, e a mira alta só somava bola por cima — com a barra cheia, 17% → 42% para fora; e o chute
-// do jogo sem o analógico no CANTO: solto, para o gol ou nas diagonais leves — decisão do dono, 28/10: "só o chute mirado
-// sobe — com o analógico apontado para um canto", acoes.js chute). A linha da cobrança mirada (chuteMirado) sobe sempre:
-// lá a pessoa mira sempre
+// SEM a mira no CANTO — decisão do dono, 28/10: "só o chute mirado sobe — com o analógico apontado para um canto, a barra
+// cheia vai no ângulo; sem mirar, o chute fica na altura de hoje"): no chute do jogo (acoes.js chute) o analógico solto,
+// para o gol ou nas diagonais leves; na cobrança mirada (chuteMirado) a mira que cruza a linha do gol fora do canto (no
+// meio do gol, onde ela começa: alvoPadrao). Os dois pela mesma régua, noCanto
 export const miraCheia = forca => forca > ACOES.chute.cheia.de;
+// A mira no CANTO (C2, 28/10): o z (m do meio do gol) onde ela cruza a linha do gol a ≥ meia-boca − cheia.zCanto (0,9 →
+// 2,76 m: a régua do "no ângulo"). A MESMA régua no chute do jogo (o z do analógico antes do limite da boca, acoes.js
+// zBrutoAnalogico) e na cobrança mirada (o z onde a reta da mira, sem o efeito, cruza a linha: chuteMirado)
+export const noCanto = z => Math.abs(z) >= CAMPO.gol.largura / 2 - ACOES.chute.cheia.zCanto;
 export function alturaMiraChute(forca, cheia = true) {
   const c = ACOES.chute, y = lerp(c.yAlvo[0], c.yAlvo[1], forca * forca), k = c.cheia;
   if (!cheia || !miraCheia(forca)) return y;
@@ -154,11 +159,16 @@ export function chuteMirado(m, j, pr, tipo, forca, ang, curva, out = {}) {
   let s = lerp(cfg.v[0], cfg.v[1], forca), el = cfg.elev;
   if (ch) {
     s *= lerp(0.86, 1.08, a.finalizacao / 100);
-    const lado = ladoDe(m, j.time), D = ux * lado > 0.05 ? Math.max(1, (lado * CAMPO.meioX - pp.x) / ux - 0.4) : 25, br = pr.barreira;
-    // (a barra cheia: a altura NA linha do gol, no voo sem o gol — a mesma conta do chute do jogo, saidaNaLinha)
+    const lado = ladoDe(m, j.time), gx = lado * CAMPO.meioX, D = ux * lado > 0.05 ? Math.max(1, (gx - pp.x) / ux - 0.4) : 25, br = pr.barreira;
+    // a barra cheia (C2) só com a mira no CANTO: a reta dela (sem o efeito) cruza a linha do gol a |z| ≥ meia-boca −
+    // cheia.zCanto (noCanto, a régua do chute do jogo); a altura NA linha do gol, no voo sem o gol (a mesma conta do chute
+    // do jogo, saidaNaLinha). Fora do canto — a mira parada no padrão (o meio do gol) e as diagonais leves — e a mira que
+    // não vai para o gol, a curva de antes, bit a bit (revisão de 29/10: a 33–35 m sem barreira, a mira no meio com a barra
+    // cheia cruzava a linha a 2,10 m contra 1,58 m na main). Com barreira, a de sempre
+    const canto = ux * lado > 0.05 && noCanto(pp.z + uz * (gx - pp.x) / ux);
     el = br && br.n > 0 && D > br.dist + 1 ? elevacaoParaAltura(pp, ux, uz, br.dist, s, BARREIRA.alturaPassar, w)
-      : miraCheia(forca) && ux * lado > 0.05 ? elevacaoNaLinha(pp, ux, uz, lado * CAMPO.meioX, s, alturaMiraChute(forca), w)
-        : elevacaoParaAltura(pp, ux, uz, D, s, alturaMiraChute(forca), w);
+      : canto && miraCheia(forca) ? elevacaoNaLinha(pp, ux, uz, gx, s, alturaMiraChute(forca), w)
+        : elevacaoParaAltura(pp, ux, uz, D, s, alturaMiraChute(forca, false), w);
   }
   const ce = MD.cos(el);
   out.v = { x: ux * s * ce, y: s * MD.sin(el), z: uz * s * ce }; out.w = w;
