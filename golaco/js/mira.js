@@ -58,13 +58,15 @@ export const comTrajetoria = t => t === 'alta' || t === 'tensa' || t === 'chute'
 // ±penaltiCanto, longe do ângulo, e a mira alta só somava bola por cima — com a barra cheia, 17% → 42% para fora; e o chute
 // SEM a mira no CANTO — decisão do dono, 28/10: "só o chute mirado sobe — com o analógico apontado para um canto, a barra
 // cheia vai no ângulo; sem mirar, o chute fica na altura de hoje"): no chute do jogo (acoes.js chute) o analógico solto,
-// para o gol ou nas diagonais leves; na cobrança mirada (chuteMirado) a mira que cruza a linha do gol fora do canto (no
-// meio do gol, onde ela começa: alvoPadrao). Os dois pela mesma régua, noCanto
+// para o gol ou nas diagonais leves; na cobrança mirada (chuteMirado) a bola subida que cruza a linha do gol fora da faixa
+// do canto (no meio do gol, onde a mira começa: alvoPadrao; ou fora da boca). Os dois pela mesma régua, noCanto
 export const miraCheia = forca => forca > ACOES.chute.cheia.de;
 // A mira no CANTO (C2, 28/10): o z (m do meio do gol) onde ela cruza a linha do gol a ≥ meia-boca − cheia.zCanto (0,9 →
 // 2,76 m: a régua do "no ângulo"). A MESMA régua no chute do jogo (o z do analógico antes do limite da boca, acoes.js
-// zBrutoAnalogico) e na cobrança mirada (o z onde a reta da mira, sem o efeito, cruza a linha: chuteMirado)
+// zBrutoAnalogico; a mira dele fica dentro da boca, zMaxMiraChute) e na cobrança mirada (naFaixaDoCanto: o z onde a bola
+// SUBIDA, com o efeito, cruza a linha, com o teto na trave: chuteMirado)
 export const noCanto = z => Math.abs(z) >= CAMPO.gol.largura / 2 - ACOES.chute.cheia.zCanto;
+export const naFaixaDoCanto = z => noCanto(z) && Math.abs(z) <= CAMPO.gol.largura / 2;
 export function alturaMiraChute(forca, cheia = true) {
   const c = ACOES.chute, y = lerp(c.yAlvo[0], c.yAlvo[1], forca * forca), k = c.cheia;
   if (!cheia || !miraCheia(forca)) return y;
@@ -81,28 +83,31 @@ export function zMaxMiraChute(forca) {
 // altura y, no voo SEM o gol (bola.js passagemLivre), de −8° a 50° como bola.js elevacaoParaAltura. A altura na linha não
 // cresce em toda a faixa (alta demais, a bola lenta cai antes da linha): a 1ª elevação de baixo para cima que chega a y
 // (passos de 0,08 rad) e a busca binária entre ela e a de antes — o chute mais tenso que chega lá; nenhuma chega, a que
-// passa mais alto
-export function elevacaoNaLinha(pp, ux, uz, gx, s, y, w) {
-  let lo = -0.14, yMelhor = -Infinity, elMelhor = lo;
+// passa mais alto. corta(zLo, zHi) (opcional; a cobrança mirada, elevacaoNoCanto): antes de cada passo da busca binária,
+// com o z onde as bolas dos dois lados do intervalo cruzam a linha (NaN quando a de baixo cai antes dela); true = desiste
+// (devolve NaN). Sem ele, as mesmas contas de sempre
+export function elevacaoNaLinha(pp, ux, uz, gx, s, y, w, corta = null) {
+  let lo = -0.14, yMelhor = -Infinity, elMelhor = lo, zLo = NaN;
   for (let el = lo; el <= 0.87 + 1e-9; el += 0.08) {
-    const yl = alturaNaLinha(pp, ux, uz, gx, s, el, w);
-    if (yl >= y) {
-      let hi = el;
+    const r = naLinha(pp, ux, uz, gx, s, el, w);
+    if (r.y >= y) {
+      let hi = el, zHi = r.z;
       for (let i = 0; i < 20; i++) {
-        const m = (lo + hi) / 2;
-        if (alturaNaLinha(pp, ux, uz, gx, s, m, w) < y) lo = m; else hi = m;
+        if (corta && corta(zLo, zHi)) return NaN;
+        const m = (lo + hi) / 2, q = naLinha(pp, ux, uz, gx, s, m, w);
+        if (q.y < y) { lo = m; zLo = q.caiu ? NaN : q.z; } else { hi = m; zHi = q.z; }
       }
       return (lo + hi) / 2;
     }
-    if (yl > yMelhor) { yMelhor = yl; elMelhor = el; }
-    lo = el;
+    if (r.y > yMelhor) { yMelhor = r.y; elMelhor = el; }
+    lo = el; zLo = r.caiu ? NaN : r.z;
   }
   return elMelhor;
 }
-function alturaNaLinha(pp, ux, uz, gx, s, el, w) {
+function naLinha(pp, ux, uz, gx, s, el, w) {
   const ce = MD.cos(el);
   _v.x = ux * s * ce; _v.y = s * MD.sin(el); _v.z = uz * s * ce;
-  return passagemLivre(pp, _v, w, gx).y;
+  return passagemLivre(pp, _v, w, gx);
 }
 const _v = { x: 0, y: 0, z: 0 };
 
@@ -144,10 +149,34 @@ export function saidaNaLinha(pp, gx, zMira, s, y, w, out = {}) {
   }
   return out;
 }
-function passaNaLinha(pp, u, el, s, w, gx) {
-  const ce = MD.cos(el);
-  _v.x = u.x * s * ce; _v.y = s * MD.sin(el); _v.z = u.z * s * ce;
-  return passagemLivre(pp, _v, w, gx);
+const passaNaLinha = (pp, u, el, s, w, gx) => naLinha(pp, u.x, u.z, gx, s, el, w);
+
+// onde a bola cruza a linha do gol: fora da boca (z < −meia-boca: −2; z > meia-boca: 2), na faixa do canto (−1, 1) ou no
+// meio (0) — a régua do naFaixaDoCanto
+function regiaoNaLinha(z) {
+  const mb = CAMPO.gol.largura / 2, zc = mb - ACOES.chute.cheia.zCanto;
+  return z < -mb ? -2 : z <= -zc ? -1 : z < zc ? 0 : z <= mb ? 1 : 2;
+}
+// com a curva, a busca da elevação subida desiste cedo (o custo: a linha é refeita a cada quadro, e fora da faixa a conta de
+// antes vem depois): as bolas dos dois lados do intervalo cruzando a linha na mesma região fora da faixa — o z anda junto com a
+// elevação (mais alta, mais tempo de voo, mais curva) — a subida cruza ali também. Na faixa, ou com os lados em regiões
+// diferentes, a busca vai até o fim e decide o voo da elevação achada
+const cortaForaDaFaixa = (zLo, zHi) => zLo === zLo && zHi === zHi && regiaoNaLinha(zLo) === regiaoNaLinha(zHi) && Math.abs(regiaoNaLinha(zHi)) !== 1;
+
+// A barra cheia da cobrança mirada (C2; revisão de 29/10): a elevação da bola SUBIDA — a altura y NA linha do gol no voo sem
+// o gol (elevacaoNaLinha, a conta do chute do jogo) com o efeito w (a curva Z/X e o giroFalta), a trajetória que sai
+// chutada e que a linha desenha — se ela cruza a linha do gol na faixa do canto, dentro da boca (naFaixaDoCanto); senão
+// null (no meio, fora da boca ou caindo antes da linha: a conta de antes). Julgar pela RETA da mira, sem o efeito, errava
+// com a curva: a bola cruzava 0,9–2,2 m de lá (no meio do gol a 2,1 m; ou chegava ao ângulo pela curva sem subir). Sem a
+// curva (w.y = 0; o giroFalta é (uz, 0, −ux)·g) o arrasto e o Magnus (g·vy·(ux, uz)) ficam no plano vertical da reta: a bola
+// cruza a linha no z da reta (bola.js passoNoAr; a ≤ 1e-12 m) e a conta sai sem o voo subido — o caso da mira padrão, que
+// fora do canto paga só a conta de antes (a linha é refeita a cada quadro: mira-linha.js)
+function elevacaoNoCanto(pp, ux, uz, gx, s, y, w) {
+  if (w.y === 0) return naFaixaDoCanto(pp.z + uz * (gx - pp.x) / ux) ? elevacaoNaLinha(pp, ux, uz, gx, s, y, w) : null;
+  const el = elevacaoNaLinha(pp, ux, uz, gx, s, y, w, cortaForaDaFaixa);
+  if (el !== el) return null;
+  const r = naLinha(pp, ux, uz, gx, s, el, w);
+  return !r.caiu && naFaixaDoCanto(r.z) ? el : null;
 }
 
 // {v, w} PRETENDIDOS (a mesma conta no chute e na linha); curva + = para a direita de quem bate (ωy < 0)
@@ -160,15 +189,17 @@ export function chuteMirado(m, j, pr, tipo, forca, ang, curva, out = {}) {
   if (ch) {
     s *= lerp(0.86, 1.08, a.finalizacao / 100);
     const lado = ladoDe(m, j.time), gx = lado * CAMPO.meioX, D = ux * lado > 0.05 ? Math.max(1, (gx - pp.x) / ux - 0.4) : 25, br = pr.barreira;
-    // a barra cheia (C2) só com a mira no CANTO: a reta dela (sem o efeito) cruza a linha do gol a |z| ≥ meia-boca −
-    // cheia.zCanto (noCanto, a régua do chute do jogo); a altura NA linha do gol, no voo sem o gol (a mesma conta do chute
-    // do jogo, saidaNaLinha). Fora do canto — a mira parada no padrão (o meio do gol) e as diagonais leves — e a mira que
-    // não vai para o gol, a curva de antes, bit a bit (revisão de 29/10: a 33–35 m sem barreira, a mira no meio com a barra
-    // cheia cruzava a linha a 2,10 m contra 1,58 m na main). Com barreira, a de sempre
-    const canto = ux * lado > 0.05 && noCanto(pp.z + uz * (gx - pp.x) / ux);
-    el = br && br.n > 0 && D > br.dist + 1 ? elevacaoParaAltura(pp, ux, uz, br.dist, s, BARREIRA.alturaPassar, w)
-      : canto && miraCheia(forca) ? elevacaoNaLinha(pp, ux, uz, gx, s, alturaMiraChute(forca), w)
-        : elevacaoParaAltura(pp, ux, uz, D, s, alturaMiraChute(forca, false), w);
+    // a barra cheia (C2) só SEM barreira (a de 0 conta como sem), com a mira indo para o gol e a bola SUBIDA (a altura NA
+    // linha do gol, com o efeito: elevacaoNoCanto) cruzando a linha do gol na faixa do canto, dentro da boca (revisão de
+    // 29/10). Senão, a conta de antes BIT A BIT: com barreira (a elevação que passa por cima dela; com a borda dela além da
+    // linha, D ≤ br.dist + 1, a altura de antes), a mira parada no padrão (o meio do gol), as diagonais leves, a curva que
+    // leva a bola para o meio ou para fora da boca, e a mira que não vai para o gol (antes, a 33–35 m sem barreira, a mira
+    // no meio com a barra cheia cruzava a linha a 2,10 m contra 1,58 m na main; e pela reta da mira, sem o efeito, a curva
+    // levava a bola subida ao meio do gol)
+    const comBarreira = br && br.n > 0;
+    const elCanto = !comBarreira && ux * lado > 0.05 && miraCheia(forca) ? elevacaoNoCanto(pp, ux, uz, gx, s, alturaMiraChute(forca), w) : null;
+    el = comBarreira && D > br.dist + 1 ? elevacaoParaAltura(pp, ux, uz, br.dist, s, BARREIRA.alturaPassar, w)
+      : elCanto ?? elevacaoParaAltura(pp, ux, uz, D, s, alturaMiraChute(forca, false), w);
   }
   const ce = MD.cos(el);
   out.v = { x: ux * s * ce, y: s * MD.sin(el), z: uz * s * ce }; out.w = w;

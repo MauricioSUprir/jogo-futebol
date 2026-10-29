@@ -15,14 +15,18 @@
 // informativo, com o número da main ao lado. Os gols por direção do analógico contra o goleiro realista (main × C2) ficam
 // só no CONTRATOS.md (C2): ~27 chutes/s na partida, e com menos de ~1.000 chutes por direção o Δ fica no ruído.
 // REFERÊNCIA GRAVADA da main (revisão de 29/10; tools/lib/chutes-ref.mjs, tools/dados/chutes-ref.json): fora do canto o
-// chute é o da main 46dd59ab BIT A BIT — 1.592 chutes fixos, cada um num mundo de treino novo com a semente dele e o toque
+// chute é o da main 46dd59ab BIT A BIT — 2.256 chutes fixos, cada um num mundo de treino novo com a semente dele e o toque
 // direto (os dois sentidos de ataque, forte e colocado, as duas pernas, forças 0,3–1, 7–31 m, o analógico solto, para o gol
-// com o módulo 1, 0,6 e 0,35, ±17° e a varredura fina até ±32°; o pênalti e o tiro livre com barreira em todas as
-// direções; a cobrança mirada do tiro livre direto fora do canto, com e sem efeito): a bola depois do toque (v, w, COM o
-// erro do rng), a mira e onde ela cruza a linha do gol, por hash dos bits. No CANTO (232 chutes, não gravados) a barra
-// cheia vai ao ângulo (o erro zerado: y na linha 2,0–2,2 m, |z| ≥ meia-boca − 0,9, dentro do gol). REGRAVAR só com
-// mudança DE PROPÓSITO no chute fora do canto (na física da bola, no toque ou no erro do chute), contra a versão que passa a
-// valer: `--gravar-referencia <pasta js> [--origem "texto"]` (o topo de tools/lib/chutes-ref.mjs e o CONTRATOS.md, C2).
+// com o módulo 1, 0,6 e 0,35, ±17°, a varredura fina até ±32° e o QUASE solto, módulo 0,21–0,3, também no canto; o pênalti
+// e o tiro livre com barreira em todas as direções; a cobrança mirada do tiro livre direto, com e sem efeito, a reta no
+// meio, no canto e fora do gol): a bola depois do toque (v, w, COM o erro do rng), a mira e onde ela cruza a linha do gol,
+// por hash dos bits. Na cobrança o "fora do canto" é pela bola SUBIDA, com o efeito (REF.classificarCobranca, o árbitro
+// sem o mira.js): fora da faixa do canto, a main bit a bit; na faixa, a altura do ângulo. No CANTO (o erro zerado) a barra
+// cheia vai ao ângulo: a bola rolando (160, não gravados) cruza a linha a 2,0–2,2 m, |z| ≥ meia-boca − 0,9, dentro do gol e
+// na mira julgada (≤ 1 cm, também no colocado); a cobrança (66 sem efeito, não gravados, e as da lista com a bola subida na
+// faixa) onde o árbitro diz. REGRAVAR só com mudança DE PROPÓSITO no chute fora do canto (na física da bola, no toque ou no
+// erro do chute), contra a versão que passa a valer: `--gravar-referencia <pasta js> [--origem "texto"]` (o topo de
+// tools/lib/chutes-ref.mjs e o CONTRATOS.md, C2).
 //   node tools/teste-chutes.mjs [--so-cheia | --so-arbitro | --so-referencia] [--sem-cheia <sementes da barra cheia com o
 //   sorteio, separadas por vírgula; padrão as 9: 7100,31100,47100,13100,23100,59100,67100,83100,97100>] [--js <pasta js>]
 //   (--js: mede outra cópia da lógica, ex.: a main — o "antes", que reprova só o canto; --so-arbitro: só a curva de antes,
@@ -454,43 +458,97 @@ if (!SO_REF) {
 }
 {
   // REFERÊNCIA GRAVADA da main 46dd59ab (revisão de 29/10): o árbitro de cima não vê o que não muda a mira (o efeito do
-  // colocado, o erro do sorteio, a elevação) nem o que ele não varre (o módulo do analógico, o time que ataca para −x, as
-  // direções entre ±17° e o canto, a cobrança mirada). Os chutes fixos de tools/lib/chutes-ref.mjs (o toque direto num mundo
-  // novo com a semente de cada um) contra tools/dados/chutes-ref.json, por hash dos bits (a bola depois do toque, a mira e
-  // onde ela cruza a linha do gol). Reprova também com o arquivo faltando ou com a lista dos casos mudada (regravar: o topo)
+  // colocado, o erro do sorteio, a elevação) nem o que ele não varre (o módulo do analógico — também o quase solto, 0,2–0,3 —,
+  // o time que ataca para −x, as direções entre ±17° e o canto, a cobrança mirada com e sem curva). Os chutes fixos de
+  // tools/lib/chutes-ref.mjs (o toque direto num mundo novo com a semente de cada um) contra tools/dados/chutes-ref.json, por
+  // hash dos bits (a bola depois do toque, a mira e onde ela cruza a linha do gol). Na cobrança mirada o "fora do canto" é
+  // pela bola SUBIDA, com o efeito (REF.classificarCobranca: o árbitro, nada do mira.js): fora da faixa do canto, a main bit
+  // a bit; na faixa, a altura do ângulo (o bloco de baixo). Reprova também com o arquivo faltando ou com a lista dos casos
+  // mudada (regravar: o topo da lib)
   const M = await REF.carregar(JS), casos = REF.casosReferencia();
   let ref = null, erroRef = null;
   try { ref = JSON.parse(fs.readFileSync(ARQ_REF, 'utf8')); } catch (e) { erroRef = e.message; }
   const conj = REF.hashConjunto(casos);
-  const porK = {}, NOME = { r: 'bola rolando', p: 'pênalti', b: 'tiro livre com barreira', c: 'cobrança mirada' };
+  const porK = {}, NOME = { r: 'bola rolando', p: 'pênalti', b: 'tiro livre com barreira', c: 'cobrança mirada (a bola subida fora da faixa)' };
   let dif = 0;
+  const cobr = []; // as cobranças com a bola subida na faixa do canto ou na borda dela: conferidas no bloco do canto
   const okConj = !!ref && ref.conjunto === conj && ref.n === casos.length && ref.casos?.length === casos.length;
   if (okConj) casos.forEach((cs, i) => {
+    const cl = REF.classificarCobranca(M, cs);
     const r = REF.resumo(REF.rodarCaso(M, cs)), g = ref.casos[i];
+    if (cl.cls !== 'fora') { cobr.push({ cs, cl, igualMain: r[0] === g[0] }); return; }
     const e = (porK[cs.k] ??= { n: 0, dif: 0, ex: [] });
     e.n++;
     if (r[0] !== g[0]) { e.dif++; dif++; if (e.ex.length < 2) e.ex.push(`${REF.textoCaso(cs)}: linha y/z ${g[1]}/${g[2]} → ${r[1]}/${r[2]} m`); }
   });
-  reg(`barra cheia — fora do canto: a referência GRAVADA da main, bit a bit (${casos.length} chutes; a bola depois do toque com o erro, a mira e a linha)`,
+  const nCob = casos.filter(cs => cs.k === 'c').length;
+  reg(`barra cheia — fora do canto: a referência GRAVADA da main, bit a bit (${casos.length} chutes; a bola depois do toque com o erro, a mira e a linha; na cobrança, as da bola subida fora da faixa do canto)`,
     !ref ? `sem a referência (${erroRef})` : !okConj ? `a lista dos casos mudou (conjunto ${conj} × gravado ${ref.conjunto}, n ${casos.length} × ${ref.n}): regravar com --gravar-referencia` :
-      Object.entries(porK).map(([k, e]) => `${NOME[k]}: ${e.dif} de ${e.n} diferentes${e.ex.length ? ` · ex.: ${e.ex.join(' · ')}` : ''}`).join(' | ') + ` (origem: ${ref.origem})`,
+      Object.entries(porK).map(([k, e]) => `${NOME[k]}: ${e.dif} de ${e.n} diferentes${e.ex.length ? ` · ex.: ${e.ex.join(' · ')}` : ''}`).join(' | ')
+      + ` (das ${nCob} cobranças, ${cobr.filter(o => o.cl.cls === 'faixa').length} com a bola subida na faixa e ${cobr.filter(o => o.cl.cls === 'borda').length} na borda: no bloco do canto) (origem: ${ref.origem})`,
     '0 diferentes', okConj && dif === 0);
-  // o CANTO (acima do limiar): a barra cheia vai ao ângulo, como hoje — o erro zerado (o do chute e o da cobrança)
-  const C = M.config, e0 = [C.ACOES.chute.erroBom, C.ACOES.chute.erroRuim, C.MIRA.erro];
-  C.ACOES.chute.erroBom = 0; C.ACOES.chute.erroRuim = 0; C.MIRA.erro = 0;
-  const cc = { rc: { n: 0, ok: 0, ys: [], ex: null }, cc: { n: 0, ok: 0, ys: [], ex: null } };
-  try {
+  // o CANTO (acima do limiar): a barra cheia vai ao ângulo — o erro zerado (o do chute e o da cobrança). Bola rolando (rc): na
+  // linha do gol no ângulo e NA MIRA julgada (m.voo.mira: a saída compensa o efeito do colocado, mira.js saidaNaLinha), nos
+  // dois sentidos de ataque, forte e colocado. Cobrança (cc, a reta no canto sem efeito; e as da lista gravada com a bola
+  // subida na faixa, também com curva): a bola cruza a linha onde o árbitro diz — na altura da barra cheia, dentro da faixa
+  // do canto — com a velocidade e o giro dele; na borda, ou a main bit a bit ou a subida (nada de um terceiro jeito)
+  const cc = { rc: { n: 0, ok: 0, ys: [], dz: 0, ex: null }, cc: { n: 0, ok: 0, ys: [], ex: null }, cf: { n: 0, ok: 0, ys: [], ex: null }, cb: { n: 0, ok: 0, main: 0, ex: null } };
+  // a saída da bola (o erro zerado) é a do árbitro: a velocidade, a direção da mira, o giro e a elevação da bola subida
+  const saidaDoArbitro = (cl, r) => {
+    const sh = Math.hypot(r.v.x, r.v.z), sv = Math.hypot(r.v.x, r.v.y, r.v.z);
+    return cl.el != null && Math.abs(sv - cl.s) <= 1e-6 * cl.s && Math.abs(Math.atan2(r.v.y, sh) - cl.el) <= 1e-3
+      && Math.abs(r.v.x / sh - Math.cos(cl.ang)) + Math.abs(r.v.z / sh - Math.sin(cl.ang)) <= 1e-9
+      && Math.abs(r.w.x - cl.w.x) + Math.abs(r.w.y - cl.w.y) + Math.abs(r.w.z - cl.w.z) <= 1e-6;
+  };
+  // e cruza a linha onde ele diz: na altura da barra cheia (≤ 3 cm), no z dele (≤ 2 cm), na faixa do canto dentro do gol
+  const subiuComoArbitro = (cs, cl, r) => {
+    const l = r.linha;
+    return !!l && !!cl.sub && Math.abs(l.y - cl.y) <= 0.03 && Math.abs(l.z - cl.sub.z) <= 0.02 && Math.abs(l.z) >= ANG_Z && Math.abs(l.z) < MEIO - R && saidaDoArbitro(cl, r);
+  };
+  const txtL = (cs, r, cl) => `${REF.textoCaso(cs)}: linha ${r.linha ? `y ${fmt(r.linha.y)} z ${fmt(r.linha.z)}` : 'não cruza'}${cl?.sub ? ` (o árbitro: y ${fmt(cl.y)} z ${fmt(cl.sub.z)})` : ''}`;
+  REF.semErro(M, () => {
     for (const cs of REF.casosCanto()) {
-      const r = REF.rodarCaso(M, cs), l = r.linha, e = cc[cs.k];
-      e.n++;
-      const ok = !!l && l.y >= 2.0 && l.y <= 2.2 && Math.abs(l.z) >= ANG_Z && Math.abs(l.z) < MEIO - R;
-      if (l) e.ys.push(l.y);
-      if (ok) e.ok++; else e.ex ??= `${REF.textoCaso(cs)}: linha ${l ? `y ${fmt(l.y)} z ${fmt(l.z)}` : 'não cruza'}`;
+      const r = REF.rodarCaso(M, cs), l = r.linha;
+      if (cs.k === 'rc') {
+        const e = cc.rc;
+        e.n++;
+        const dz = l && r.mira ? Math.max(Math.abs(l.z - r.mira.z), Math.abs(l.y - r.mira.y)) : Infinity;
+        e.dz = Math.max(e.dz, dz);
+        const ok = !!l && l.y >= 2.0 && l.y <= 2.2 && Math.abs(l.z) >= ANG_Z && Math.abs(l.z) < MEIO - R && !!r.mira && Math.abs(r.mira.z) >= ANG_Z && dz <= 0.01;
+        if (l) e.ys.push(l.y);
+        if (ok) e.ok++; else e.ex ??= `${txtL(cs, r)}${r.mira ? ` mira y ${fmt(r.mira.y)} z ${fmt(r.mira.z)}` : ''}`;
+      } else {
+        const cl = REF.classificarCobranca(M, cs), e = cc.cc;
+        if (cl.cls === 'borda') continue;
+        e.n++;
+        if (l) e.ys.push(l.y);
+        if (cl.cls === 'faixa' && subiuComoArbitro(cs, cl, r)) e.ok++; else e.ex ??= `${txtL(cs, r, cl)} [${cl.cls}]`;
+      }
     }
-  } finally { [C.ACOES.chute.erroBom, C.ACOES.chute.erroRuim, C.MIRA.erro] = e0; }
-  reg('barra cheia — no CANTO (acima do limiar), o erro zerado: na linha do gol no ângulo (bola rolando, analógico a ±33,5° … ±90°; cobrança mirada a |z| 2,9–3,5 m; os dois sentidos, força 1)',
-    Object.entries(cc).map(([k, e]) => `${k === 'rc' ? 'bola rolando' : 'cobrança mirada'}: ${e.ok} de ${e.n} · y ${fmt(Math.min(...e.ys))}–${fmt(Math.max(...e.ys))} m${e.ex ? ` · ex.: ${e.ex}` : ''}`).join(' | '),
-    `todos: y 2,0–2,2 m, |z| ≥ ${fmt(ANG_Z)} m, dentro do gol (main: não sobe — reprova)`, Object.values(cc).every(e => e.n > 0 && e.ok === e.n));
+    for (const o of cobr) {
+      const r = REF.rodarCaso(M, o.cs), l = r.linha;
+      if (o.cl.cls === 'faixa') {
+        const e = cc.cf;
+        e.n++;
+        if (l) e.ys.push(l.y);
+        if (subiuComoArbitro(o.cs, o.cl, r)) e.ok++; else e.ex ??= txtL(o.cs, r, o.cl);
+      } else {
+        // (na borda da trave a bola raspa nela e o voo com o gol não cruza a linha: a subida pela saída)
+        const e = cc.cb, sub = saidaDoArbitro(o.cl, r);
+        e.n++;
+        if (o.igualMain) e.main++;
+        if (o.igualMain || sub) e.ok++; else e.ex ??= txtL(o.cs, r, o.cl);
+      }
+    }
+  });
+  const faixaY = e => e.ys.length ? `${fmt(Math.min(...e.ys))}–${fmt(Math.max(...e.ys))} m` : '—';
+  reg('barra cheia — no CANTO (acima do limiar), o erro zerado: na linha do gol no ângulo (bola rolando, analógico a ±33,5° … ±90°, na mira julgada também no colocado; cobrança mirada com a bola subida na faixa do canto, com e sem curva; os dois sentidos)',
+    `bola rolando: ${cc.rc.ok} de ${cc.rc.n} · y ${faixaY(cc.rc)} · a linha × a mira ≤ ${fmt(cc.rc.dz * 100, 1)} cm${cc.rc.ex ? ` · ex.: ${cc.rc.ex}` : ''}`
+      + ` | cobrança, a reta no canto sem efeito: ${cc.cc.ok} de ${cc.cc.n} · y ${faixaY(cc.cc)}${cc.cc.ex ? ` · ex.: ${cc.cc.ex}` : ''}`
+      + ` | cobrança da lista com a bola subida na faixa (com curva): ${cc.cf.ok} de ${cc.cf.n} · y ${faixaY(cc.cf)}${cc.cf.ex ? ` · ex.: ${cc.cf.ex}` : ''}`
+      + ` | na borda: ${cc.cb.ok} de ${cc.cb.n} (${cc.cb.main} a main, ${cc.cb.ok - cc.cb.main} a subida)${cc.cb.ex ? ` · ex.: ${cc.cb.ex}` : ''}`,
+    `todos: bola rolando y 2,0–2,2 m, |z| ≥ ${fmt(ANG_Z)} m, dentro do gol, a ≤ 1 cm da mira; cobrança onde o árbitro diz (y a ≤ 3 cm da barra cheia, z a ≤ 2 cm, na faixa), com a saída dele (velocidade, direção, giro, elevação a ≤ 0,001 rad); na borda, a main bit a bit ou a saída da subida (main: não sobe — reprova)`,
+    Object.entries(cc).every(([k, e]) => (e.n > 0 || k === 'cb') && e.ok === e.n));
 }
 if (!SO_ARB) {
   // com o sorteio: o craque com a perna boa, metade chute forte, metade colocado (a chance de acertar o ângulo). As metas

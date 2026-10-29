@@ -15,14 +15,24 @@
 //  r (bola rolando, chute do jogo): os dois sentidos de ataque (+x e −x), forte e colocado, as duas pernas, finalização
 //    60–99, forças baixas e da barra cheia (0,3–1, a maioria 0,85–1), 7–31 m, até 42° da frente do gol, com e sem goleiro
 //    (o do lado do solto), e o analógico SOLTO, PARA O GOL com o módulo 1, 0,6 e 0,35, a ±17° e a varredura fina de
-//    ±0,5° a ±32° (|z| = sen(a) × MEIO × 1,4 < MEIO − 0,9 até ~32,6°; o módulo 1, 0,6 e 0,35);
+//    ±0,5° a ±32° (|z| = sen(a) × MEIO × 1,4 < MEIO − 0,9 até ~32,6°; o módulo 1, 0,6 e 0,35); e o QUASE SOLTO (o módulo
+//    0,21, 0,25 e 0,3: o jogo lê o analógico acima de 0,2, acoes.js mira, mas só mira acima de 0,3 — o chute é o solto) para
+//    o gol, a ±17° e no canto (±33,5° … ±90°), quase todo com a barra cheia (revisão de 29/10: com o 'solto' zerando
+//    j.imag/j.mira, nem esta lista nem o árbitro tinham módulo entre 0,2 e 0,3, e o erro do quase solto ×1,3 ou ele subindo
+//    no canto passavam);
 //  p (pênalti do humano): o analógico solto, para o gol, ±17°, no canto e de lado (a barra cheia não vale no pênalti);
 //  b (tiro livre com barreira pelo chute do jogo — a IA e o humano sem a cobrança mirada): todas as direções;
 //  c (cobrança mirada do tiro livre direto, `acoes.js cobrancaMirada` → `mira.js chuteMirado`): sem barreira (e com a
 //    barreira de 0) a mira cruzando a linha do gol a |z| ≤ 2,7 m (passos de 0,15 m) e as miras que não vão para o gol;
-//    com barreira, todas as direções (a barra cheia não vale com barreira); efeito de −1 a +1, 17–34,8 m.
+//    com barreira, todas as direções (a barra cheia não vale com barreira); efeito de −1 a +1, 17–34,8 m; e a CURVA (Z/X
+//    ±1 e ±0,5) com a reta da mira no meio, no canto (|z| 2,9–3,5) e fora do gol (4,2–9), quase toda com a barra cheia; e
+//    a barra cheia com a reta logo abaixo do canto (|z| 2,3–2,65) e com barreira e a reta no canto.
+//    Na cobrança o "fora do canto" é pela bola SUBIDA, com o efeito (classificarCobranca, o árbitro de baixo): a reta da
+//    mira não diz onde a bola com curva cruza a linha (0,9–2,2 m de lá); o teste confere a main bit a bit só nas que a
+//    bola subida cruza fora da faixa do canto, e nas da faixa a altura do ângulo.
 // E os casos do CANTO (não gravados; o teste confere pela regra que a barra cheia vai ao ângulo, como hoje): rc (bola
-// rolando, o analógico a ±33,5° … ±90°) e cc (cobrança sem barreira, a mira a |z| 2,9–3,5 m), força 1, o erro zerado.
+// rolando, o analógico a ±33,5° … ±90°; a bola cruza a linha na mira julgada, também no colocado, a ≤ 1 cm) e cc
+// (cobrança sem barreira, a mira a |z| 2,9–3,5 m, sem efeito), força 1, o erro zerado.
 //
 // Regravar (`node tools/teste-chutes.mjs --gravar-referencia <pasta js> [--origem "texto"]`) só com mudança DE
 // PROPÓSITO no chute fora do canto (ou na física da bola, no toque ou no erro do chute), gerando contra a versão que
@@ -34,6 +44,12 @@ import { pathToFileURL } from 'node:url';
 
 // a geometria do teste (conferida contra o config na carga: mudou o campo, regravar)
 export const MX = 52.5, MEIO = 3.66, Z_CANTO = 0.9;
+// a barra cheia da cobrança, do próprio teste (o ACOES.chute.cheia do C2 tem os mesmos de 0,9 e y 2,1; a main não tem
+// cheia): acima da força DE a mira sobe de yAlvo (a curva de antes, na força DE) até Y m na linha do gol
+export const CHEIA = { de: 0.9, y: 2.1 };
+// a faixa do canto na linha do gol (|z| m do meio): ZC ≤ |z| ≤ MEIO; a BORDA, onde o árbitro não decide (±2 cm da borda de
+// baixo; perto da trave, 3,50–3,90: a bola raspa nela e o voo com o gol do árbitro só extrapola onde cruzaria)
+export const ZC = MEIO - Z_CANTO, BORDA = { zc: 0.02, trave: [MEIO - 0.16, MEIO + 0.24] };
 const DEG = Math.PI / 180;
 // o maior ângulo do analógico (da reta bola–gol) fora do canto: sen(a) × MEIO × 1,4 < MEIO − Z_CANTO
 export const A_LIM = Math.asin((MEIO - Z_CANTO) / (1.4 * MEIO));
@@ -116,6 +132,41 @@ export function casosReferencia() {
         forca: FORCAS[(k * 7 + i) % 16], curva: CURVAS[(k * 3 + i) % 8], attr: { finalizacao: FIN[(k + i) % 4], pePreferido: pp, peFraco: 50 }, pe: (k + i) % 3 === 0 ? 1 - pp : pp, gk: null });
     }
   });
+  // (os casos de 29/10 no fim da lista: as sementes dos de antes não mudam)
+  // o quase solto (módulo 0,21–0,3): para o gol, ±17° e no canto; a barra cheia (e 0,85)
+  [0, 17, -17, 33.5, -33.5, 45, -45, 60, -60, 90, -90].forEach((a, i) => {
+    for (let k = 0; k < 8; k++) {
+      const lado = (k + i) % 2 ? -1 : 1, pp = (k >> 1) % 2;
+      novo({ k: 'r', lado, ...posBola(lado, DISTS[(k * 3 + i) % 10], POS[(k * 5 + i) % 8]), an: { a: a * DEG, mag: [0.21, 0.25, 0.3][(k + i) % 3] },
+        forca: k === 7 ? 0.85 : FORCAS_CHEIA[(k + i) % 8], mod: (k >> 2) % 2 === 1,
+        attr: { finalizacao: FIN[(k + i) % 4], pePreferido: pp, peFraco: 50 }, pe: (k + i) % 3 === 0 ? 1 - pp : pp, gk: [null, -1, 1.3][(k + i) % 3] });
+    }
+  });
+  // a curva (Z/X ±1 e ±0,5): a reta no meio, no canto e fora do gol; a barra cheia (e 0,85), sem barreira e com a de 0
+  const opcC2 = [];
+  for (const zL of [-9, -6, -4.2, -3.5, -3.2, -2.9, -1.5, 0, 1.5, 2.9, 3.2, 3.5, 4.2, 6, 9]) for (const curva of [1, -1, 0.5, -0.5]) opcC2.push({ zLinha: zL, curva });
+  opcC2.forEach((op, i) => {
+    for (let k = 0; k < 6; k++) {
+      const lado = (k + i) % 2 ? -1 : 1, pp = (k >> 1) % 2;
+      const d = [17, 19, 21, 23, 25, 28, 31, 33.5, 34.8][(k * 2 + i) % 9], pa = [-30, -18, -8, 0, 6, 15, 26][(k * 3 + i) % 7];
+      novo({ k: 'c', lado, ...posBola(lado, d, pa), zLinha: op.zLinha, fora: null, relativo: false, barreira: (k + i) % 3 === 0 ? { n: 0, dist: 9.15 } : null,
+        forca: k === 5 ? 0.85 : FORCAS_CHEIA[(k * 3 + i) % 8], curva: op.curva, attr: { finalizacao: FIN[(k + i) % 4], pePreferido: pp, peFraco: 50 }, pe: (k + i) % 3 === 0 ? 1 - pp : pp, gk: null });
+    }
+  });
+  // a reta logo abaixo do canto (|z| 2,3–2,65; o limiar da cobrança descendo) e a barreira (2–5) com a reta no canto: a
+  // barra cheia, sem efeito e com pouco
+  const opcC3 = [];
+  for (const zL of [-2.65, -2.5, -2.3, 2.3, 2.5, 2.65]) for (const curva of [0, 0.25, -0.25]) opcC3.push({ zLinha: zL, curva, barreira: null });
+  for (const zL of [-3.5, -3.2, -2.9, 2.9, 3.2, 3.5]) for (const curva of [0, 0.5, -0.5]) opcC3.push({ zLinha: zL, curva, barreira: 'n' });
+  opcC3.forEach((op, i) => {
+    for (let k = 0; k < 6; k++) {
+      const lado = (k + i) % 2 ? -1 : 1, pp = (k >> 1) % 2;
+      const d = [17, 19, 21, 23, 25, 28, 31, 33.5, 34.8][(k * 2 + i) % 9], pa = [-30, -18, -8, 0, 6, 15, 26][(k * 3 + i) % 7];
+      const barreira = op.barreira === 'n' ? { n: 2 + ((k + i) % 4), dist: 9.15 } : (k + i) % 3 === 0 ? { n: 0, dist: 9.15 } : null;
+      novo({ k: 'c', lado, ...posBola(lado, d, pa), zLinha: op.zLinha, fora: null, relativo: false, barreira,
+        forca: FORCAS_CHEIA[(k * 5 + i) % 8], curva: op.curva, attr: { finalizacao: FIN[(k + i) % 4], pePreferido: pp, peFraco: 50 }, pe: (k + i) % 3 === 0 ? 1 - pp : pp, gk: null });
+    }
+  });
   return casos;
 }
 
@@ -139,6 +190,80 @@ export function casosCanto() {
     }
   });
   return casos;
+}
+
+/** O ângulo da mira de uma cobrança (c/cc): a reta pela linha do gol em zLinha, ou de lado/para trás (o do rodarCaso). */
+function angCobranca(cs) {
+  const gx = cs.lado * MX, dirGol = Math.atan2(-cs.bz, gx - cs.bx);
+  return cs.zLinha != null ? Math.atan2(cs.zLinha - cs.bz, gx - cs.bx) : (cs.relativo ? dirGol : (cs.lado > 0 ? 0 : Math.PI)) + cs.fora;
+}
+
+/** Roda fn com o erro do chute e o do cobrador zerados (a mira, separada do sorteio). */
+export function semErro(M, fn) {
+  const C = M.config, e0 = [C.ACOES.chute.erroBom, C.ACOES.chute.erroRuim, C.MIRA.erro];
+  C.ACOES.chute.erroBom = 0; C.ACOES.chute.erroRuim = 0; C.MIRA.erro = 0;
+  try { return fn(); } finally { [C.ACOES.chute.erroBom, C.ACOES.chute.erroRuim, C.MIRA.erro] = e0; }
+}
+
+/** A altura da barra cheia na linha do gol pela força (CHEIA e o yAlvo do config: a curva de antes na força DE). */
+export function yCheia(M, f) {
+  const c = M.config.ACOES.chute, y0 = c.yAlvo[0] + (c.yAlvo[1] - c.yAlvo[0]) * CHEIA.de * CHEIA.de;
+  return y0 + (CHEIA.y - y0) * Math.min(1, Math.max(0, (f - CHEIA.de) / (1 - CHEIA.de)));
+}
+
+/** z na faixa do canto (a régua do teste: ZC ≤ |z| ≤ MEIO) e na borda dela (BORDA: o árbitro não decide). */
+export const naFaixa = z => Math.abs(z) >= ZC && Math.abs(z) <= MEIO;
+export const naBorda = z => { const a = Math.abs(z); return Math.abs(a - ZC) < BORDA.zc || (a > BORDA.trave[0] && a < BORDA.trave[1]); };
+
+/**
+ * Onde a bola, de p com {v, w}, cruza a linha do gol x = gx (bola.js passoBola, o voo do jogo): {y, z} ou null (quicou ou
+ * rolou antes). Batendo na trave ou no travessão antes de o centro cruzar, onde cruzaria pela reta do passo de antes (a
+ * ≤ 0,5 m da linha a ~25–30 m/s a gravidade quase não pesa).
+ */
+function cruzaLinha(M, p, v, w, gx, lado) {
+  const b = M.bola.criarBola(p.x, p.z);
+  b.p.y = p.y; M.bola.chutar(b, v, w);
+  const ev = [];
+  let ax = b.p.x, ay = b.p.y, az = b.p.z, vx = b.v.x, vy = b.v.y, vz = b.v.z;
+  for (let t = 1; t <= 400; t++) {
+    ev.length = 0; M.bola.passoBola(b, ev);
+    if (ev.some(e => e.tipo === 'trave') && (ax - gx) * lado < 0) { const tt = (gx - ax) / vx; return { y: ay + vy * tt - 4.905 * tt * tt, z: az + vz * tt }; }
+    if ((b.p.x - gx) * lado >= 0 && (ax - gx) * lado < 0) { const f = (gx - ax) / (b.p.x - ax); return { y: ay + (b.p.y - ay) * f, z: az + (b.p.z - az) * f }; }
+    if (b.rolando || ev.some(e => e.tipo === 'quique')) return null;
+    ax = b.p.x; ay = b.p.y; az = b.p.z; vx = b.v.x; vy = b.v.y; vz = b.v.z;
+  }
+  return null;
+}
+
+/**
+ * O ÁRBITRO da cobrança mirada (revisão de 29/10; nada do mira.js): a bola SUBIDA = a velocidade e o giro da cobrança pelas
+ * constantes do config (ACOES.chute.v × a finalização; o giroFalta e a curva × MIRA.giro × giroAtrib), na direção da mira,
+ * com a elevação — busca própria: de −0,12 rad em passos de 0,02 até a 1ª que cruza a linha do gol na altura da barra cheia
+ * (yCheia) e a bissecção entre ela e a de antes — e onde ela cruza a linha. {cls, sub: {y, z} | null, s, w, y}: cls 'fora' =
+ * sem a barra cheia (força ≤ DE), com barreira, a mira que não vai para o gol ou a bola subida cruzando fora da faixa do
+ * canto (a main bit a bit); 'faixa' = dentro dela (sobe ao ângulo); 'borda' = perto das bordas, ou sem chegar à altura. el =
+ * a elevação da bola subida (rad), ang = a direção da mira.
+ */
+export function classificarCobranca(M, cs) {
+  if ((cs.k !== 'c' && cs.k !== 'cc') || (cs.barreira && cs.barreira.n > 0) || !(cs.forca > CHEIA.de)) return { cls: 'fora', sub: null };
+  const lado = cs.lado, gx = lado * MX, ang = angCobranca(cs), ux = Math.cos(ang), uz = Math.sin(ang);
+  if (ux * lado <= 0.05) return { cls: 'fora', sub: null };
+  const { ACOES, MIRA } = M.config, fin = cs.attr.finalizacao, cv = ACOES.chute.v, ga = MIRA.giroAtrib, g = ACOES.chute.giroFalta;
+  const s = (cv[0] + (cv[1] - cv[0]) * cs.forca) * (0.86 + (1.08 - 0.86) * fin / 100);
+  const w = { x: uz * g, y: -Math.max(-1, Math.min(1, cs.curva)) * MIRA.giro * (ga[0] + (ga[1] - ga[0]) * Math.max(0, Math.min(1, fin / 100))), z: -ux * g };
+  const y = yCheia(M, cs.forca), p = { x: cs.bx, y: M.config.BOLA.raio, z: cs.bz };
+  const em = el => { const ce = Math.cos(el); return cruzaLinha(M, p, { x: ux * s * ce, y: s * Math.sin(el), z: uz * s * ce }, w, gx, lado); };
+  let lo = -0.14, sub = null, elSub = null;
+  for (let el = lo + 0.02; el <= 0.9 && !sub; el += 0.02) {
+    const r = em(el);
+    if (r && r.y >= y) {
+      let hi = el;
+      for (let i = 0; i < 30; i++) { const mm = (lo + hi) / 2, q = em(mm); if (!q || q.y < y) lo = mm; else hi = mm; }
+      sub = em(hi); elSub = hi;
+    } else lo = el;
+  }
+  const cls = !sub ? 'borda' : naBorda(sub.z) ? 'borda' : naFaixa(sub.z) ? 'faixa' : 'fora';
+  return { cls, sub, el: elSub, ang, s, w, y };
 }
 
 /** O hash da lista (o "conjunto" gravado: mudou a lista, regravar). */
