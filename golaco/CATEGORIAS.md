@@ -33,7 +33,7 @@
 | nº | o que é | horas |
 |---|---|---|
 | 12 | ✅ Goleiro realista: movimento, espalmadas, encaixes, saída no 1×1 e no cruzamento (#558) | 8 |
-| 13 | Chute com a barra cheia mais alto, podendo acertar o ângulo (com o analógico no canto; sai no próximo PR) | 5 |
+| 13 | ✅ Chute com a barra cheia mais alto, podendo acertar o ângulo, com o analógico no canto (#567) | 5 |
 | 14 | Goleiro espalmando bola alta | 4 |
 | 15 | Lançamento mais reto e rápido | 6 |
 | 16 | Reposição do goleiro com a mão (rolar, arremessar) | 5 |
@@ -151,6 +151,7 @@
 
 ## ✅ Entregue nesta rodada
 
+- 🎯 Chute no ângulo com a barra cheia e o analógico no canto (#567)
 - 🧤 Goleiro realista (#558)
 - 🧠 Categoria D inteira: a IA corre para marcar e para atacar, botão PRESSÃO, companheiros apertando, forma e apoio (#524, #530, #534, #536, #538, #542, #549, #550)
 
