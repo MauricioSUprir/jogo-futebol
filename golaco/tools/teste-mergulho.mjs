@@ -49,7 +49,7 @@
 //  I. nada atravessa o goleiro e o goleiro atrás da bola, na PARTIDA (pendências do C1 e do C2):
 //    I1. a bola a 1,0–1,6 m no tronco do goleiro FORA da área (sem a mão, parado no lance): nunca o atravessa (a main: 120/120);
 //    I2. a saída no cruzamento que falha (o sorteio forçado a errar em metade dos lances, e a mão que não chega): a bola nunca
-//        atravessa o corpo desenhado do pulo (a main: 24/33);
+//        atravessa o corpo desenhado do pulo (a main: 18/29; a saída que encaixa, soca ou "pega" com a mão do pulo deu certo);
 //    I3. o goleiro atrás da bola (a 18–45 m dela, ela indo para o gol vazio): nunca "defende" longe dela (a main: 4/120).
 //   node tools/teste-mergulho.mjs [--js <pasta js>] [--detalhe]
 import path from 'node:path';
@@ -579,7 +579,7 @@ function casoSaidaFalha(k, pZero) {
   if (pZero) C.p = 0;
   const xP = GX - 2.5 - 4 * r(), zP = -lado * (r() * 3 - 0.5);
   chutePara(L, xP, zP, 1.6 + 0.8 * r(), 15 + 7 * r(), 'cruzamento');
-  let saiu = false, bateu = false, atravessou = false, pulou = false, defendeu = false;
+  let saiu = false, bateu = false, atravessou = false, pulou = false, defendeu = false, quando = null;
   try {
     for (let i = 0; i < 150; i++) {
       const b0 = { x: m.bola.p.x, y: m.bola.p.y, z: m.bola.p.z };
@@ -587,7 +587,8 @@ function casoSaidaFalha(k, pZero) {
       for (const e of ev) {
         if (e.id !== g.id) continue;
         if (e.tipo === 'saidaGoleiro' && e.modo === 'cruzamento') saiu = true;
-        if (e.tipo === 'defesa' && e.saidaAlta) defendeu = true;
+        // (a saída que deu certo: o encaixe ou o soco dela, ou a bola que ele pega com a mão do pulo — "pegou")
+        if (e.tipo === 'defesa' && (e.saidaAlta || e.modo === 'pegou' || e.modo === 'encaixe')) defendeu = true;
         else if (e.tipo === 'bateuCorpo' || e.tipo === 'defesa') bateu = true;
       }
       if (bateu || defendeu || m.posse != null || m.naMao != null) break;
@@ -601,6 +602,7 @@ function casoSaidaFalha(k, pZero) {
           || dSeg(x, y, z, q.x, q.h, q.z, q.a0.x, q.a0.y, q.a0.z) < RB.perna + RBOLA - TOL || dSeg(x, y, z, q.x, q.h, q.z, q.a1.x, q.a1.y, q.a1.z) < RB.perna + RBOLA - TOL)) {
           // (segue até o fim do lance: a saída que encaixa ou soca no passo seguinte não conta — a bola chega às mãos, junto da
           // cabeça)
+          if (!atravessou) { const d0 = g.defesa; quando = `k ${k}${pZero ? ' (sorteio forçado a errar)' : ''}: tick ${m.tick}, contato ${d0 && d0.tick}, lida ${d0 && d0.lido}, fora ${!!(d0 && d0.fora)}, sucesso ${d0 && d0.sucesso}, tipo ${d0 && d0.tipo}, bola a ${m.bola.p.y.toFixed(2)} m`; }
           atravessou = true;
         }
       }
@@ -608,7 +610,7 @@ function casoSaidaFalha(k, pZero) {
     }
   } finally { C.p = p0; }
   // (a saída que falhou: ele pulou e não encaixou nem socou)
-  return pulou && !defendeu ? { bateu, atravessou } : null;
+  return pulou && !defendeu ? { bateu, atravessou, quando } : null;
 }
 const resI2 = [...Array.from({ length: 150 }, (_, k) => casoSaidaFalha(k, true)), ...Array.from({ length: 150 }, (_, k) => casoSaidaFalha(200 + k, false))].filter(Boolean);
 function casoAtras(k) {
@@ -682,6 +684,7 @@ if (detalhe) {
   for (const x of [...defesas, ...defB].filter(x => !(x.r.maoContato <= 0.25)).slice(0, 20)) console.log(`  mão longe: d ${fmt(x.c.d, 1)} ang ${fmt(x.c.ang, 0)} ${x.c.y != null ? `y ${x.c.y}` : `yA ${fmt(x.c.yA, 2)}`}: ${x.r.res}${x.r.recuo ? ' (cavadinha)' : ''}, mão a ${fmt(x.r.maoContato, 2)} m`);
   for (const x of jogB.slice(0, 12)) console.log(`  espalmada jogável: d ${fmt(x.c.d, 1)} ang ${fmt(x.c.ang, 0)} zA ${fmt(x.c.zA, 2)} yA ${fmt(x.c.yA, 2)}: (${fmt(x.r.jogavel.x, 1)}, ${fmt(x.r.jogavel.z, 1)}) aos ${fmt(x.r.jogavel.t, 2)} s`);
   for (const x of resE.filter(x => x.maoContato != null && x.maoContato > 0.25)) console.log(`  desvio, mão longe: ${x.res} (${x.tipo}), mão a ${fmt(x.maoContato, 2)} m, bola a ${fmt(x.dBola, 2)} m do centro`);
+  for (const x of resI2.filter(x => x.atravessou).slice(0, 12)) console.log(`  I2, a bola atravessou o pulo: ${x.quando}`);
   for (const x of resB.filter(x => x.r.vCentro > 5.5 || x.r.vPelve > 7.5 || x.r.giroTronco > 20).slice(0, 12)) console.log(`  corpo rápido: d ${fmt(x.c.d, 1)} ang ${fmt(x.c.ang, 0)}${x.c.rebote ? ' (rebote)' : ''}: centro ${fmt(x.r.vCentro, 1)} m/s, pelve ${fmt(x.r.vPelve, 1)} m/s, tronco ${fmt(x.r.giroTronco, 0)}°/quadro`);
 }
 const pc = (a, b) => `${fmt((100 * a) / Math.max(1, b), 1)}% (${a}/${b})`;
