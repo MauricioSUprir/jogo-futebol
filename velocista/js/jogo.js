@@ -29,6 +29,7 @@ import { criarVida } from './vida.js';
 import { salasAtrasDasJanelas } from './janelas.js';
 import { geometriaCarro } from './carros3d.js';
 import { criarObjetos } from './objetos.js';
+import { criarInteracoes, corridas, DESCANSO } from './interacoes.js';
 import { criarObjetos3d } from './objetos3d.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
 import { texturaDetalhe, comDetalhe } from './detalhe.js';
@@ -54,6 +55,7 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const suave = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const $ = (id) => document.getElementById(id);
 const el = {
+  acao: $('acao'), acaoRotulo: $('acaoRotulo'), corridaHud: $('corridaHud'), chNome: $('chNome'), chTempo: $('chTempo'), chInfo: $('chInfo'), jornal: $('jornal'), jnTitulo: $('jnTitulo'), jnLinha: $('jnLinha'), jnData: $('jnData'), flashFoto: $('flashFoto'),
   fade: document.getElementById('fade'),
   corpo: document.body, cena: $('cena'), esferas: $('esferas'), total: $('total'), vel: $('vel'), hora: $('hora'), nivel: $('nivel'),
   aviso: $('aviso'), avisoT: $('avisoTitulo'), avisoR: $('avisoRotulo'), coleta: $('coleta'), resumo: $('resumo'), dano: $('dano'), missao: $('missao'), capitulos: $('capitulos'), seta: $('seta'), dist: $('distEsfera'), mapa: $('mapa'), mapaBox: $('mapaBox'),
@@ -300,6 +302,8 @@ function construirBloco(b) {
     lamp.geo(geoCaixa, compor(p.x + dx, CALCADA + 7.1, p.z + dz, p.lado === 0 ? 0.5 : 0.7, 0.12, p.lado === 0 ? 0.7 : 0.5), null);
     poca.geo(geoPoca, compor(p.x + dx * 3, 0.05, p.z + dz * 3, 7, 1, 7), null);
   }
+  for (const q of b.itens || []) desenharItem(props, lamp, q);   // os pontos de interação dos parques (interacoes.js)
+  dados.itens = b.itens || [];
   if (b.marco) {                                                // os lugares da história: colunas, letreiros, relógio, a ponte...
     const api = {
       THREE, grupo, geos, compor,
@@ -334,6 +338,25 @@ function construirBloco(b) {
   return dados;
 }
 let labAtivo = null;
+// os pontos de interação (interacoes.js) no balde dos adereços do quarteirão (nenhuma chamada de desenho a mais): o banco de
+// praça (ripas de madeira e pés de ferro) e a banca de jornal (revistas penduradas na frente, toldo e a luz de dentro)
+const MADEIRA = [0.55, 0.36, 0.2], FERRO = [0.16, 0.17, 0.18], VERDE_BANCA = [0.1, 0.33, 0.21], CAPAS = [[0.85, 0.18, 0.15], [0.15, 0.4, 0.75], [0.95, 0.8, 0.2], [0.9, 0.9, 0.88], [0.2, 0.6, 0.35], [0.6, 0.2, 0.55]];
+function desenharItem(props, lamp, q) {
+  const c = Math.cos(q.rot), s = Math.sin(q.rot);
+  const L = (lx, ly, lz, sx, sy, sz, cor, geo = geoCaixa) => props.geo(geo, compor(q.x + lx * c + lz * s, CALCADA + ly, q.z - lx * s + lz * c, sx, sy, sz, q.rot), cor);
+  if (q.tipo === 'banco') {
+    for (const z of [-0.14, 0, 0.14]) L(0, 0.45, z, 1.8, 0.04, 0.11, MADEIRA);
+    for (const y of [0.62, 0.78]) L(0, y, -0.25, 1.8, 0.09, 0.03, MADEIRA);
+    for (const x of [-0.78, 0.78]) { L(x, 0.22, 0, 0.06, 0.44, 0.46, FERRO); L(x, 0.64, 0.02, 0.06, 0.04, 0.42, FERRO); L(x, 0.62, -0.27, 0.05, 0.46, 0.04, FERRO); }
+  } else if (q.tipo === 'banca') {
+    L(0, 1.05, 0, 2.2, 2.1, 1.4, VERDE_BANCA); L(0, 2.17, 0.18, 2.6, 0.12, 1.85, [0.07, 0.22, 0.14]);
+    L(0, 1.98, 0.71, 2.2, 0.26, 0.04, [0.95, 0.78, 0.18]);                                        // a faixa amarela do nome
+    L(0, 1.2, 0.69, 1.9, 1.15, 0.04, [0.12, 0.12, 0.13]);                                         // a abertura
+    for (let r = 0; r < 2; r++) for (let k = 0; k < 7; k++) L(-0.78 + k * 0.26, 0.86 + r * 0.42, 0.72, 0.21, 0.3, 0.02, CAPAS[(((k * 3 + r * 5 + Math.round(q.x)) % CAPAS.length) + CAPAS.length) % CAPAS.length]);
+    L(0, 0.62, 0.86, 1.9, 0.08, 0.3, [0.85, 0.84, 0.8]); for (let k = 0; k < 5; k++) L(-0.7 + k * 0.35, 0.69, 0.86, 0.26, 0.06, 0.2, [0.93, 0.92, 0.88]);   // os jornais dobrados no balcão
+    lamp.geo(geoCaixa, compor(q.x + 0.71 * s, CALCADA + 1.8, q.z + 0.71 * c, 1.6, 0.05, 0.06, q.rot), null);
+  }
+}
 const marcosAtivos = new Set();                   // extras animados dos lugares carregados (relógio, giroflex, letreiro...)
 const interioresAtivos = new Set();               // as salas de dentro dos lugares carregados (interiores3d.js)
 function descarregar(chave) {
@@ -485,7 +508,7 @@ const J = { modo: 'menu', coletadas: 0, total: 0, aviso: 0, inicioT: 0, alinhar:
 const teclas = new Set();
 const stick = { x: 0, y: 0 };
 const toque = { correr: false, vibrar: false };
-let pedidoPulo = false, pedidoBater = false, pedidoEspecial = null, pedidoTempo = false;
+let pedidoPulo = false, pedidoBater = false, pedidoEspecial = null, pedidoTempo = false, pedidoAcao = false;
 let esferas = [];
 
 function reiniciar() {
@@ -580,6 +603,7 @@ addEventListener('keydown', (e) => {
   if (k === ' ' || k.startsWith('arrow')) e.preventDefault();
   if (e.repeat) return;
   teclas.add(k);
+  if (k === 'x' && J.modo === 'jogando') pedidoAcao = true;                 // AÇÃO: sentar, ler o jornal, foto com o fã, desafio (o E é o CICLONE)
   if (k === ' ') pedidoPulo = true;
   else if (k === 'f') pedidoBater = true;
   else if (k === 't') pedidoTempo = true;
@@ -616,6 +640,8 @@ if (TOQUE) {
   for (const t of Object.keys(ESPECIAIS)) bt(`bt-${t}`, () => { pedidoEspecial = t; });
   bt('bt-tempo', () => { pedidoTempo = true; });
 }
+// o botão AÇÃO também no clique (PC) e no toque
+$('acao').addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); if (J.modo === 'jogando') pedidoAcao = true; });
 
 // ---------- física do herói ----------
 function entradaMov() {
@@ -635,6 +661,14 @@ function passoHeroi(dt) {
     P.t += dt; return;
   }
   const { ix, iz, m } = entradaMov();
+  if (interacoes.sentado) {                  // sentado no banco: descansa (a energia enche 3× mais rápido); andar ou pular levanta
+    const s = interacoes.sentado;
+    Object.assign(P, { x: s.x, z: s.z, h: s.h, y: CALCADA, vx: 0, vz: 0, vy: 0, noChao: true, parede: null, vibrando: false, embalo: 0, correndo: false });
+    P.energia = Math.min(1, P.energia + DESCANSO.recarga * dt);
+    if (m > 0.3 || pedidoPulo) { pedidoPulo = false; interacoes.levantar(P); rectsPerto = retangulosPerto(P.x, P.z, 1); }
+    P.t += dt; return;
+  }
+  if (interacoes.corrida?.fase === 'contagem') { P.vx = P.vz = 0; P.embalo = 0; P.t += dt; return; }   // (parado na largada até o "vai")
   const fx = Math.sin(C.yaw), fz = Math.cos(C.yaw), rx = -fz, rz = fx;
   const dx = fx * iz + rx * ix, dz = fz * iz + rz * ix;
   const querCorrer = (teclas.has('shift') || toque.correr) && (m > 0.1 || P.parede);
@@ -799,7 +833,7 @@ function animarHeroi(dt) {
   if (modelo) {
     const vv = P.parede ? P.parede.v : v;
     const luta = combate.poseHeroi();
-    modelo.aplicar({ v: luta.corrida ?? vv, noChao: P.noChao, parede: !!P.parede, vibrando: P.vibrando, golpe: luta.golpe, luta: Math.max(luta.luta, viloes.emLuta ? 1 : 0), fala: J.modo === 'cena' && historia.quemFala === 'heroi' }, dt);
+    modelo.aplicar({ v: luta.corrida ?? vv, noChao: P.noChao, parede: !!P.parede, vibrando: P.vibrando, golpe: luta.golpe, luta: Math.max(luta.luta, viloes.emLuta ? 1 : 0), fala: J.modo === 'cena' && historia.quemFala === 'heroi', sentado: !!interacoes.sentado }, dt);
     modelo.setVisivelProfundo(P.vibrando && estaDentroDeSolido());
   }
   P.fase += dt * (4 + v * 0.55);
@@ -907,6 +941,7 @@ function desenharMapa() {
   for (const o of esferas) if (!esferasColetadas.has(o.id) && Math.abs(o.x - P.x) < raioM * 1.1 && Math.abs(o.z - P.z) < raioM * 1.1) { gm.beginPath(); gm.arc(o.x, o.z, rr, 0, 6.3); gm.fill(); }
   // os carrinhos de cachorro-quente (energia): um quadradinho laranja no mapa de perto
   if (!grande) { gm.fillStyle = '#ff9a2e'; for (const o of objetos.perto(P.x, P.z, raioM)) if (o.tipo === 'lanche') gm.fillRect(o.x - 4, o.z - 4, 8, 8); }
+  { const t = grande ? 26 : 9; for (const c of corridas()) if (Math.abs(c.x - P.x) < raioM * 1.1 && Math.abs(c.z - P.z) < raioM * 1.1) { gm.fillStyle = '#fff'; gm.fillRect(c.x - t, c.z - t, 2 * t, 2 * t); gm.fillStyle = '#111'; gm.fillRect(c.x - t, c.z - t, t, t); gm.fillRect(c.x, c.z, t, t); } }   // as largadas dos desafios
   guia.desenharNoMapa(gm, grande ? 9 : 5);
   for (const e of combate.bandidos) if (e.estado !== 'caido' && e.estado !== 'fugiu') { gm.fillStyle = '#ff4d5e'; gm.beginPath(); gm.arc(e.x, e.z, grande ? 8 : 4, 0, 6.3); gm.fill(); }
   { const r = rivais.ativo; if (r) { gm.fillStyle = '#c86bff'; gm.beginPath(); gm.arc(r.x, r.z, grande ? 22 : 9, 0, 6.3); gm.fill(); gm.strokeStyle = '#fff'; gm.lineWidth = grande ? 4 : 2; gm.stroke(); } }   // o vilão do dia (roxo)
@@ -971,6 +1006,52 @@ function passoInteriores(dt) {
   P.x = I.cx + clamp(P.x - I.cx, u0 + 0.3, u1 - 0.3); P.z = I.cz + clamp(P.z - I.cz, v0 - 0.2, v1 - 0.3);
   if (noGatilhoDentro(I.id, P.x - I.cx, P.z - I.cz) && P.vz <= 0.5) atravessarPorta(I, false);
 }
+// ---------- pontos de interação: o botão AÇÃO (X), o banco, a banca, os fãs e os desafios de corrida ----------
+const fmtT = (t) => t.toFixed(2).replace('.', ',');
+const MEDALHA = { ouro: 'Ouro', prata: 'Prata', bronze: 'Bronze' };
+function passoInteracoes(dt) {
+  const m = missoes.atual;
+  const livre = J.modo === 'jogando' && !J.cenaPendente && !J.cron && !crimes.ativo && !viloes.ativo && !combate.ocupado && !J.interior && !J.esteira && !J.porta
+    && tempo.epoca === 'presente' && rivais.ativo?.estado !== 'luta' && !(m?.tipo === 'portais' && portais.estado().correndo);
+  const itens = []; for (const d of carregados.values()) for (const q of d.itens || []) if (Math.abs(q.x - P.x) < 30 && Math.abs(q.z - P.z) < 30) itens.push(q);
+  const fas = pedestres.pessoas.filter((p) => p.vivo && p.olhando && Math.abs(p.x - P.x) < 5 && Math.abs(p.z - P.z) < 5);
+  for (const ev of interacoes.atualizar(dt, P, { itens, fas, livre })) {
+    if (ev.tipo === 'contagem') avisar(String(ev.n), interacoes.corrida?.c.nome || 'Desafio', 'info');
+    else if (ev.tipo === 'largada') avisar('VAI!', interacoes.corrida?.c.nome || 'Desafio', 'ok');
+    else if (ev.tipo === 'ponto' && ev.k < ev.de) avisar(`Ponto ${ev.k}/${ev.de}`, fmtT(interacoes.corrida.t) + ' s', 'info');
+    else if (ev.tipo === 'chegada') {
+      try { armazem?.setItem(CHAVE_CORRIDAS, JSON.stringify(interacoes.recordes)); } catch { /* sem armazenamento */ }
+      const md = ev.medalha ? `Medalha de ${MEDALHA[ev.medalha]}` : 'Sem medalha', rec = ev.recorde ? (ev.anterior !== undefined ? ' · NOVO RECORDE' : ' · recorde') : ` · recorde ${fmtT(ev.anterior)} s`;
+      avisar(`${ev.nome}: ${fmtT(ev.t)} s`, md + rec, ev.medalha ? 'ok' : 'info');
+      missoes.contar('pontos', ev.medalha === 'ouro' ? 500 : ev.medalha === 'prata' ? 300 : ev.medalha === 'bronze' ? 150 : 50); missoes.contar('desafios');
+    } else if (ev.tipo === 'abandonou') avisar('Desafio interrompido', ev.motivo === 'tempo' ? 'O tempo acabou' : 'Outra coisa chamou o Flash', 'alerta');
+  }
+  if (pedidoAcao) { pedidoAcao = false; acaoInteracao(); }
+  corridas3d.atualizar(P.t);
+  // o botão AÇÃO (o rótulo do que está perto) e o painel da corrida
+  const p = interacoes.perto, C = interacoes.corrida;
+  const rot = interacoes.sentado ? 'Levantar' : interacoes.jornal ? 'Fechar o jornal' : p ? (p.tipo === 'corrida' && interacoes.recordes[p.q.id] !== undefined ? `${p.rotulo} · recorde ${fmtT(interacoes.recordes[p.q.id])} s` : p.rotulo) : null;
+  el.acao.hidden = !rot || J.modo !== 'jogando'; if (rot && el.acaoRotulo.textContent !== rot) el.acaoRotulo.textContent = rot;
+  el.corridaHud.hidden = !C;
+  if (C) {
+    el.chNome.textContent = C.c.nome;
+    el.chTempo.textContent = C.fase === 'contagem' ? String(Math.max(1, Math.ceil(C.t))) : fmtT(C.fase === 'fim' ? (interacoes.recordes[C.c.id] ?? 0) : C.t);
+    el.chInfo.textContent = C.fase === 'fim' ? 'Chegada' : `Ponto ${Math.min(C.k + 1, C.c.pontos.length)}/${C.c.pontos.length} · ouro ${C.c.ouro} s · prata ${C.c.prata} s · bronze ${C.c.bronze} s`;
+  }
+  const jn = interacoes.jornal; el.jornal.hidden = !jn;
+  if (jn && el.jnTitulo.textContent !== jn.titulo) { el.jnTitulo.textContent = jn.titulo; el.jnLinha.textContent = jn.linha; el.jnData.textContent = `Central City · ${el.hora.textContent} · Edição do dia`; }
+}
+function acaoInteracao() {
+  const fracao = missoes.livre ? 1 : missoes.indice / Math.max(1, MISSOES.length);
+  const ev = interacoes.acao(P, fracao); if (!ev) return;
+  if (ev.tipo === 'sentou') avisar('Descansando', 'Banco da praça · a energia enche mais rápido', 'info');
+  else if (ev.tipo === 'levantou') rectsPerto = retangulosPerto(P.x, P.z, 1);
+  else if (ev.tipo === 'foto') {
+    const f = ev.p; f.jeito = 'foto'; f.tOlha = 99; f.flash = 1;
+    el.flashFoto.classList.remove('on'); void el.flashFoto.offsetWidth; el.flashFoto.classList.add('on');
+    avisar('Foto com o fã', `${ev.n}ª foto do dia`, 'ok'); missoes.contar('fotos');
+  } else if (ev.tipo === 'desafio') { const r = interacoes.recordes[ev.c.id]; avisar(ev.c.nome, r !== undefined ? `Recorde: ${fmtT(r)} s · ouro em ${ev.c.ouro} s` : `${(ev.c.metros / 1000).toFixed(1).replace('.', ',')} km · ouro em ${ev.c.ouro} s`, 'info'); }
+}
 function atravessarPorta(I, entrando) {
   el.fade.classList.add('on');
   J.porta = { t: 0, feito: false, fazer: () => {
@@ -992,6 +1073,7 @@ function foraDasCelas() {
 }
 const NOME_SALA = { contencao: 'Câmara de contenção', cortex: 'Cortex', nucleo: 'Câmara do Núcleo', trajes: 'Sala dos trajes', medica: 'Sala médica', oficina: 'Oficina' };
 function alvoMissao() {
+  if (interacoes.corrida) { const a = interacoes.alvo(); if (a) return a; }   // num desafio de corrida, o guia leva ao próximo ponto
   if (viloes.ativo) return viloes.alvo();                  // capítulo dos vilões: o guia leva até eles (na luta, nada)
   const c = crimes.ativo;
   if (c) return { x: c.x, z: c.z, cor: '#ff4d5e', rotulo: c.nome };
@@ -1046,6 +1128,37 @@ const missoes = criarMissoes(armazem);
 const combate = criarCombate(cena, { mobile: MOBILE, colide: (x, z, y) => empurrar(rectsPerto, x, z, 0.35, y, 1.7), chao: (x, z, y) => chaoEm(rectsPerto, x, z, y) });
 const crimes = criarCrimes(cena, { combate });
 const guia = criarGuia(cena, { mobile: MOBILE });
+// ---------- pontos de interação (interacoes.js): o botão AÇÃO, o banco, a banca, os fãs e os desafios de corrida ----------
+const CHAVE_CORRIDAS = 'theflash.corridas.v1';
+const interacoes = criarInteracoes({ recordes: (() => { try { return JSON.parse(armazem?.getItem(CHAVE_CORRIDAS) || '{}'); } catch { return {}; } })() });
+const corridas3d = (() => {
+  const add = (m) => (m.toneMapped = false, m);
+  const matLarg = add(new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.75, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  const matFeixe = add(new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  const geoLarg = new THREE.RingGeometry(2.5, 3.1, 40); geoLarg.rotateX(-Math.PI / 2);
+  const geoXadrez = new THREE.PlaneGeometry(4.4, 1.1, 8, 2); geoXadrez.rotateX(-Math.PI / 2);
+  const geoFeixe = new THREE.CylinderGeometry(0.7, 0.7, 70, 12, 1, true); geoFeixe.translate(0, 35, 0);
+  const largadas = new THREE.Group();
+  for (const c of corridas()) { const r = new THREE.Mesh(geoLarg, matLarg), f = new THREE.Mesh(geoFeixe, matFeixe); r.position.set(c.x, 0.06, c.z); f.position.set(c.x, 0, c.z); largadas.add(r, f); }
+  cena.add(largadas);
+  // o ponto da corrida: um portal de luz de pé na rua (amarelo; a chegada é verde)
+  const matPonto = add(new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const ponto = new THREE.Mesh(new THREE.TorusGeometry(6.5, 0.32, 8, 48), matPonto); ponto.visible = false; cena.add(ponto);
+  const feixe = new THREE.Mesh(geoFeixe, matFeixe.clone()); feixe.visible = false; cena.add(feixe);
+  void geoXadrez;
+  return {
+    atualizar(t) {
+      const C = interacoes.corrida; largadas.visible = !C;
+      matLarg.opacity = 0.55 + 0.25 * Math.sin(t * 3);
+      const a = C && C.fase !== 'fim' ? interacoes.alvo() : null;
+      ponto.visible = feixe.visible = !!a; if (!a) return;
+      const k = Math.min(C.k, C.c.pontos.length - 1), ant = k ? C.c.pontos[k - 1] : C.c;
+      ponto.position.set(a.x, 6.8, a.z); ponto.rotation.y = Math.atan2(a.x - ant.x, a.z - ant.z);
+      feixe.position.set(a.x, 0, a.z); matPonto.color.set(a.cor); feixe.material.color.set(a.cor);
+      ponto.scale.setScalar(1 + 0.04 * Math.sin(t * 6));
+    },
+  };
+})();
 const viloes = criarViloes(cena, { mobile: MOBILE, aniso: ANISO, combate, armazem, avisar: (t, r, k) => avisar(t, r, k),
   colide: (x, z, y) => empurrar(rectsPerto, x, z, 0.4, y, 1.8), chao: (x, z, y) => chaoEm(rectsPerto, x, z, y),
   labPos: { x: LAB_B.plano.entrada.x, z: LAB_B.plano.entrada.z - 9 } });
@@ -1082,7 +1195,7 @@ function passoMissoes(dt) {
   const querCrime = m?.crime || m?.id === 'patrulha' || m?.patrulha || missoes.livre || crimes.ativo;   // um crime já em andamento sempre termina
   // um objetivo de cada vez (dono, 26/10: "não pode vir outra missão nem crime enquanto eu estiver dentro de uma missão ou
   // objetivo"): crime novo só com a cena e o rádio do passo terminados, sem cronômetro, corrida de portais ou vilão em cena
-  const ocupado = !!(J.cenaPendente || J.cron || (m?.tipo === 'portais' && portais.estado().correndo) || !historia.radioLivre || J.esteira || rivais.ativo?.estado === 'luta');
+  const ocupado = !!(J.cenaPendente || J.cron || (m?.tipo === 'portais' && portais.estado().correndo) || !historia.radioLivre || J.esteira || rivais.ativo?.estado === 'luta' || interacoes.corrida);
   const crAntes = crimes.ativo && { x: crimes.ativo.x, z: crimes.ativo.z };
   const ev = viloes.ativo || tempo.epoca === 'passado' || J.interior || !querCrime || (!crimes.ativo && ocupado) ? null : crimes.atualizar(J.dtM ?? dt, P, { forcar: m?.crime });
   if (ev?.inicio) avisar(ev.nome, 'Crime na cidade', 'crime');
@@ -1576,15 +1689,15 @@ function quadro() {
       else if (ev.tipo === 'especial' && ev.especial === 'tempestade') missoes.contar('tempestades');
       else if (ev.tipo === 'dano') { el.dano.style.opacity = '1'; }
     }
-    for (const ev of viloes.atualizar(dtM, P, { capitulo: missoes.atual?.capitulo, podeComecar: !crimes.ativo && !J.cenaPendente && !J.cron && !J.interior && historia.radioLivre && tempo.epoca !== 'passado' && rivais.ativo?.estado !== 'luta' })) eventoVilao(ev);
+    for (const ev of viloes.atualizar(dtM, P, { capitulo: missoes.atual?.capitulo, podeComecar: !crimes.ativo && !J.cenaPendente && !J.cron && !J.interior && !interacoes.corrida && historia.radioLivre && tempo.epoca !== 'passado' && rivais.ativo?.estado !== 'luta' })) eventoVilao(ev);
     J.danoVilao = Math.max(0, (J.danoVilao || 0) - dt * 2);
     el.missao.hidden = viloes.ativo; el.corpo.classList.toggle('capitulo', viloes.ativo);
     el.dano.style.opacity = String(Math.min(1, Math.max(combate.dano, J.danoVilao)));
     atualizarBotoesEspeciais();
-    passoMissoes(dt); passoInteriores(dt);
+    passoMissoes(dt); passoInteriores(dt); passoInteracoes(dt);
     { // os vilões do dia a dia: aparecem só com o herói solto (depois do Zoom), nada em andamento
       const m = missoes.atual, livre = !J.cenaPendente && !J.cron && historia.radioLivre && !crimes.ativo && !viloes.ativo && !J.interior && !J.esteira && tempo.epoca === 'presente'
-        && !(m?.tipo === 'portais' && portais.estado().correndo) && !m?.capitulo && (viloes.vencido('zoom') || missoes.livre);
+        && !(m?.tipo === 'portais' && portais.estado().correndo) && !m?.capitulo && !interacoes.corrida && (viloes.vencido('zoom') || missoes.livre);
       for (const ev of rivais.atualizar(dtM, P, { pode: livre })) {
         if (ev.tipo === 'dano') J.danoVilao = 1;
         if (ev.tipo === 'vencido') { missoes.contar('pontos', 300); missoes.contar('rivais'); }
@@ -1625,6 +1738,7 @@ function quadro() {
     for (const I of interioresAtivos) if (I.grupo.visible) I.atualizar(mundo.noite);
   }
   else if (J.modo !== 'menu' || carregados.size) { animarHeroi(J.modo === 'jogando' ? dt : 0); atualizarCamera(dt); }
+  if (J.modo !== 'jogando' && !el.acao.hidden) { el.acao.hidden = true; el.jornal.hidden = true; }   // (cena, pausa, menu: sem o botão AÇÃO nem o jornal)
   if (J.modo === 'jogando') guia.atualizar(dt, alvoMissao(), P, camera);
   else if (J.modo === 'cena') guia.atualizar(dt, null, P, camera);          // na cena, sem feixe nem setas por cima de quem fala
   atualizarAmbiente(camera.position);
@@ -1674,4 +1788,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { vitrine, equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { interacoes, corridas, vitrine, equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };

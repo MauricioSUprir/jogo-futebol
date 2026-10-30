@@ -168,6 +168,8 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
     est.planeio = lerp(est.planeio, e.planando ? 1 : 0, 1 - Math.exp(-9 * dt));
     est.parede = lerp(est.parede, e.parede ? 1 : 0, 1 - Math.exp(-10 * dt));
     est.vib = lerp(est.vib, e.vibrando ? 1 : 0, 1 - Math.exp(-12 * dt));
+    est.senta = lerp(est.senta || 0, e.sentado ? 1 : 0, 1 - Math.exp(-7 * dt));      // sentado no banco da praça (interacoes.js)
+    const Sb = est.senta;
     const r = clamp((v - 1.2) / 11, 0, 1), s2 = clamp((v - 18) / 36, 0, 1), vivo = clamp(v / 1.5, 0, 1);
     est.fase += dt * (e.parede ? 14 : (3.2 + v * 0.55 * (v > 25 ? 0.6 : 1)));
     const ph = est.fase;
@@ -205,7 +207,9 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
       hip = lerp(hip, -0.12 + lado * 0.05, est.planeio * noAr); knee = lerp(knee, 0.25, est.planeio * noAr);
       const Lp = est.luta * (1 - noAr) * (1 - r);               // base de luta: joelhos dobrados, pés afastados, um à frente
       knee += 0.32 * Lp; hip += 0.16 * Lp + (E ? 0.14 : -0.1) * Lp;
-      const abd = lado * (0.035 + 0.07 * Lp) * (1 - noAr);
+      let abd = lado * (0.035 + 0.07 * Lp) * (1 - noAr);
+      // sentado: coxas para a frente, canelas para baixo, joelhos um pouco abertos
+      hip = lerp(hip, 1.48, Sb); knee = lerp(knee, 1.52 + (E ? 0.08 : -0.05), Sb); abd = lerp(abd, lado * 0.12, Sb);
       mundo(co, par(hip, abd)); mundo(ca, par(hip - knee, abd * 0.5));
       const dedo = -(hip - knee) * 0.5 - 0.5 * Math.max(0, -Math.sin(p)) * (1 - noAr) - 0.25 * noAr;
       mundo(pe, par(dedo));
@@ -226,6 +230,7 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
         else if (meu && g.tipo === 'gancho') { swing = lerp(swing, 1.2, g.k); cot = lerp(cot, 1.05, g.k); abdB = lerp(abdB, lado * 0.95, g.k); }
         else { swing = lerp(swing, 0.35, g.k); cot = lerp(cot, 1.6, g.k); abdB = lerp(abdB, lado * 0.86, g.k); }   // o outro braço fica na guarda
       }
+      if (Sb > 0.01) { swing = lerp(swing, 0.62, Sb); cot = lerp(cot, 0.55, Sb); abdB = lerp(abdB, lado * 0.32, Sb); }   // as mãos nas coxas
       if (fl > 0.01) { const gst = 0.5 + 0.5 * Math.sin(tt * (E ? 2.3 : 1.9) + (E ? 0 : 1.7)); swing = lerp(swing, 0.32 + 0.22 * gst, fl * (E ? 0.6 : 1)); cot = lerp(cot, 1.15 + 0.35 * gst, fl * (E ? 0.6 : 1)); abdB = lerp(abdB, lado * 0.62, fl); }
       mundo(br, qz(swing, abdB)); mundo(an, qz(swing + cot, abdB));
       mundo(mao, wq[an].clone());

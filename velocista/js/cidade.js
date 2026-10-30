@@ -25,6 +25,7 @@ function mulberry(a) {
 import { LAB_CELULA, CAMPUS, planoLab } from './lab.js';
 import { marcoDaCelula, solidosForaPerto } from './marcos.js';
 import { INTERIORES, retangulosInterior } from './interiores.js';
+import { itensDoParque } from './interacoes.js';
 export { LAB_CELULA };
 export const celulaDe = (v) => Math.floor((v + MEIO) / CELL);
 export const centroDe = (i) => (i + 0.5) * CELL - MEIO;
@@ -75,7 +76,7 @@ export function bloco(i, j) {
     // as 4 células do campus: o centro (cx, cz) é o do campus; cada uma guarda os sólidos que a tocam (a colisão pega as
     // células em volta do herói); só a célula de canto (a "mestre") desenha o laboratório e guarda as esferas de dentro
     const pl = campusPlano(), C = CENTRO_CAMPUS, x0 = centroDe(i) - CELL / 2, x1 = x0 + CELL, z0 = centroDe(j) - CELL / 2, z1 = z0 + CELL;
-    const b = { i, j, cx: C.x, cz: C.z, celx: cx, celz: cz, tipo, mestre: i === CI0 && j === CJ0, plano: pl, lotes: [], arvores: [], orbes: [], rects: [], topo: [], carros: [], postes: [] };
+    const b = { i, j, cx: C.x, cz: C.z, celx: cx, celz: cz, tipo, mestre: i === CI0 && j === CJ0, plano: pl, lotes: [], arvores: [], orbes: [], rects: [], topo: [], carros: [], postes: [], itens: [] };
     b.rects.push(LAJE_CAMPUS || (LAJE_CAMPUS = { x0: pl.campus.x0, x1: pl.campus.x1, z0: pl.campus.z0, z1: pl.campus.z1, y0: -5, y1: CALCADA }));
     for (const q of pl.rects) if (q.x1 > x0 && q.x0 < x1 && q.z1 > z0 && q.z0 < z1) b.rects.push(q);
     if (b.mestre) b.orbes.push({ id: `${i},${j},cortex`, x: C.x + 8, y: 1.5, z: C.z }, { id: `${i},${j},cont`, x: C.x + 19.5, y: 1.5, z: C.z - 6 }, { id: `${i},${j},esteira`, x: C.x - 19.5, y: 1.5, z: C.z + 7 }, { id: `${i},${j},acel`, x: C.x, y: 1.5, z: C.z + 17 });
@@ -83,7 +84,7 @@ export function bloco(i, j) {
     return b;
   }
   const marco = marcoDaCelula(i, j);
-  const b = { i, j, cx, cz, tipo: marco ? 'marco' : tipo, lotes: [], arvores: [], orbes: [], rects: [], topo: [], carros: [], postes: [] };
+  const b = { i, j, cx, cz, tipo: marco ? 'marco' : tipo, lotes: [], arvores: [], orbes: [], rects: [], topo: [], carros: [], postes: [], itens: [] };
   b.rects.push({ x0: cx - BLOCO / 2, x1: cx + BLOCO / 2, z0: cz - BLOCO / 2, z1: cz + BLOCO / 2, y0: -5, y1: CALCADA });
   if (marco) {
     // um lugar da história: os prédios dele (no lugar do sorteio), os sólidos extras e a entrada
@@ -107,6 +108,8 @@ export function bloco(i, j) {
   if (tipo === 'parque') {
     const n = 22 + Math.floor(r() * 18);
     for (let k = 0; k < n; k++) b.arvores.push({ x: cx + (r() - 0.5) * (BLOCO - 6), z: cz + (r() - 0.5) * (BLOCO - 6), s: 0.8 + r() * 0.9 });
+    // os pontos de interação do parque (interacoes.js: bancos, banca de jornal, carrinho de lanche), com sorteio próprio
+    const it = itensDoParque(b); b.itens = it.itens; b.rects.push(...it.rects);
   } else if (tipo === 'torre') {
     const w = 22 + r() * 8, p = 22 + r() * 8;
     const h = 70 + r() * 70 + centro * 90;
