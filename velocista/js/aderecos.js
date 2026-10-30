@@ -71,6 +71,14 @@ export function colocarAderecos(id, modelo) {
     const raio = new THREE.Shape(); [[0, 0], [0.05, 0.016], [0.03, 0.03], [0.2, 0.02], [0.07, -0.005], [0.09, -0.018]].forEach(([x, y], i) => (i ? raio.lineTo(x, y) : raio.moveTo(x, y))); raio.closePath();
     peca(new THREE.ExtrudeGeometry(raio, { depth: 0.008, bevelEnabled: false }), lamina, mao, 0.02, -0.03, 0.14, 0, -Math.PI / 2, 0);
     ponta.position.set(0.02, -0.03, 0.34); mao.add(ponta);
+  } else if (id === 'violeta') {
+    // Parte 4: a velocista de roxo — a roupa tingida de roxo (o material é só deste corpo; o rosto fica), os óculos de corrida
+    // com as lentes violeta acesas e um raio pequeno no peito
+    modelo.materiais[0].color?.setRGB(0.62, 0.38, 0.95); modelo.materiais[0].emissive?.setRGB(0.04, 0.0, 0.07);
+    const faixa = mat(0x1d1428, 0, 0.3, 0.5), lente = mat(0xc58bff, 0x7a2aff, 0.1, 0.12), raio = mat(0xf1e4ff, 0xb070ff, 0.3, 0.2);
+    peca(new THREE.TorusGeometry(0.088, 0.008, 6, 28), faixa, cabeca, 0.0, 0.035, 0, Math.PI / 2, 0, 0).scale.set(1.08, 0.84, 1);
+    for (const lado of [-1, 1]) peca(new THREE.CylinderGeometry(0.026, 0.028, 0.02, 18), lente, cabeca, 0.098, 0.035, lado * 0.036, 0, 0, Math.PI / 2);
+    peca(new THREE.OctahedronGeometry(0.03, 0), raio, peito, 0.13, 0.12, 0).scale.set(0.4, 1.4, 1);
   } else if (id === 'godspeed') {
     // as ombreiras e a crista dourada do capacete (como as do Savitar, em ouro)
     const ouro = mat(0xd9b25a, 0, 0.95, 0.25), luz = mat(0xfff0c0, 0xffc040, 0.2, 0.2);

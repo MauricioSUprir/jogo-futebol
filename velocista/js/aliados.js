@@ -10,8 +10,9 @@ import { pontoMundo } from './marcos.js';
 import { colocarAderecos } from './aderecos.js';
 
 // Parte 2: o Cisco bilionário da linha do tempo alterada (na praça da Prefeitura), o Corredor Negro parado na praça e a
-// Cigarra mascarada (o corpo do Rocketbox com a máscara e a adaga de aderecos.js)
-const PERFIS = { joe: { pessoa: 'joe' }, iris: { pessoa: 'iris' }, cisco: { pessoa: 'cisco' }, caitlin: { pessoa: 'caitlin' }, cigarra: { pessoa: 'frio', aderecos: 'cigarra' }, vulto: { traje: 'vulto', vibra: true }, reverso: { traje: 'reverso', vibra: true }, negro: { traje: 'negro', vibra: true } };
+// Cigarra mascarada (o corpo do Rocketbox com a máscara e a adaga de aderecos.js); Parte 4: a velocista de roxo (o corpo da Iris
+// com a roupa roxa e os óculos de corrida: ela tem o rosto da mãe)
+const PERFIS = { joe: { pessoa: 'joe' }, iris: { pessoa: 'iris' }, cisco: { pessoa: 'cisco' }, caitlin: { pessoa: 'caitlin' }, cigarra: { pessoa: 'frio', aderecos: 'cigarra' }, violeta: { pessoa: 'iris', aderecos: 'violeta' }, vulto: { traje: 'vulto', vibra: true }, reverso: { traje: 'reverso', vibra: true }, negro: { traje: 'negro', vibra: true } };
 const IDS = Object.keys(PERFIS);
 
 export function criarAliados(cena, { mobile = false, aniso = 2, chao = () => 0.3 } = {}) {

@@ -55,6 +55,56 @@ for (const id of I.IDS_INTERIOR) {
   ok(cid.chaoEm(R, pf.x, pf.z, 0.3) <= cid.CALCADA + 0.01, `${id}: na rua o chão continua o da calçada`);
 }
 
+// NÃO ATRAVESSA PAREDE (dono, 30/10: "to conseguindo atravessar parede, ta bugando e ta estranho"): o passo do herói do jogo
+// (jogo.js passoHeroi) refeito aqui — subpassos, empurrar, a velocidade que sai da batida — correndo em todas as direções,
+// de pontos sorteados da sala, a 20 e a 60 qps. Um juiz independente (cruzamento de reta: o centro passou de um lado da
+// parede para o outro dentro do comprimento dela) conta as travessias. A regra ANTIGA (até 58 m/s, passos de 0,6 m, sem a
+// trava) atravessa; a NOVA (9 m/s dentro, passos de 0,12 m, a trava cruzaSolido) não.
+function rodarSala(id, regra, semente) {
+  const m = M.MARCOS.find((k) => k.id === id), cx = cid.centroDe(m.cel[0]), cz = cid.centroDe(m.cel[1]);
+  const R = cid.retangulosPerto(cx, cz, 1), D = I.INTERIORES[id], [u0, u1, v0, v1] = D.sala;
+  const sala = R.filter((q) => q.interior === id && q.y0 < I.Y0 + 0.05 + 1.8 && q.y1 > I.Y0 + 0.1);
+  let r = semente >>> 0; const rnd = () => { r = (r * 1664525 + 1013904223) >>> 0; return r / 4294967296; };
+  const livre = (x, z) => !cid.empurrar(R, x, z, 0.47, I.Y0, 1.8).bateu;
+  let travessias = 0, foraDaSala = 0, dentroDeSolido = 0;
+  for (let corrida = 0; corrida < 60; corrida++) {
+    let x, z, k = 0; do { x = cx + u0 + 0.6 + rnd() * (u1 - u0 - 1.2); z = cz + v0 + 0.6 + rnd() * (v1 - v0 - 1.2); } while (!livre(x, z) && k++ < 200);
+    const dt = corrida % 2 ? 1 / 20 : 1 / 60;
+    let ang = rnd() * Math.PI * 2, vx = 0, vz = 0;
+    for (let f = 0; f < 3 / dt; f++) {
+      if (rnd() < 0.04) ang += (rnd() - 0.5) * 2.4;                                   // muda o analógico de vez em quando
+      const vmax = regra.vmax, kk = 1 - Math.exp(-5 * dt);
+      vx += (Math.sin(ang) * vmax - vx) * kk; vz += (Math.cos(ang) * vmax - vz) * kk;
+      const n = Math.max(1, Math.ceil(Math.hypot(vx, vz) * dt / regra.passo)), sub = dt / n;
+      for (let s = 0; s < n; s++) {
+        const ox = x, oz = z; x += vx * sub; z += vz * sub;
+        const q = cid.empurrar(R, x, z, 0.45, I.Y0, 1.8);
+        if (q.bateu) { const antes = Math.hypot(vx, vz); x = q.x; z = q.z; vx = (x - ox) / sub * 0.98; vz = (z - oz) / sub * 0.98; const dep = Math.hypot(vx, vz); if (dep > antes) { vx *= antes / dep; vz *= antes / dep; } }
+        if (regra.trava && I.cruzaSolido(R, ox, oz, x, z, I.Y0, 1.8)) { x = ox; z = oz; vx *= 0.2; vz *= 0.2; }
+        // o juiz: cada sólido da sala, o centro cruzou o meio dele (na direção curta) dentro do comprimento?
+        for (const w of sala) {
+          const fino = w.x1 - w.x0 < w.z1 - w.z0, meio = fino ? (w.x0 + w.x1) / 2 : (w.z0 + w.z1) / 2;
+          const a = fino ? ox : oz, b = fino ? x : z; if ((a - meio) * (b - meio) >= 0) continue;
+          const t = (meio - a) / (b - a), along = fino ? oz + (z - oz) * t : ox + (x - ox) * t;
+          if (along > (fino ? w.z0 : w.x0) && along < (fino ? w.z1 : w.x1)) travessias++;
+        }
+      }
+      if (x < cx + u0 || x > cx + u1 || z < cz + v0 - 2.4 || z > cz + v1) foraDaSala++;
+      if (sala.some((w) => x > w.x0 + 0.02 && x < w.x1 - 0.02 && z > w.z0 + 0.02 && z < w.z1 - 0.02)) dentroDeSolido++;
+    }
+  }
+  return { travessias, foraDaSala, dentroDeSolido };
+}
+const ANTIGA = { vmax: 58, passo: 0.6, trava: false }, NOVA = { vmax: 9, passo: 0.12, trava: true };
+let antigaTotal = 0;
+for (const id of I.IDS_INTERIOR) {
+  const a = rodarSala(id, ANTIGA, 11), n = rodarSala(id, NOVA, 11);
+  antigaTotal += a.travessias + a.foraDaSala;
+  console.log(`     ${id}: regra antiga ${a.travessias} travessias, ${a.foraDaSala} quadros fora da sala → nova ${n.travessias} / ${n.foraDaSala} (centro dentro de sólido: ${n.dentroDeSolido})`);
+  ok(n.travessias === 0 && n.foraDaSala === 0 && n.dentroDeSolido === 0, `${id}: correndo em todas as direções (60 corridas, 20 e 60 qps) nunca atravessa parede nem sai da sala`);
+}
+ok(antigaTotal > 0, `a regra antiga atravessava (${antigaTotal}): o teste pega o defeito`);
+
 if (process.argv.includes('--navegador')) {
   const saida = process.argv[process.argv.indexOf('--navegador') + 1];
   if (saida && !saida.startsWith('--')) fs.mkdirSync(saida, { recursive: true });
@@ -76,6 +126,14 @@ if (process.argv.includes('--navegador')) {
     ok(entrou, `no jogo, encostar na porta leva para dentro de "${D.nome}"`);
     await pagina.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     if (saida && !saida.startsWith('--')) await pagina.screenshot({ path: path.join(saida, `dentro-${id}.png`), timeout: 600000 });
+    if (id === 'delegacia') {
+      // no jogo de verdade: a 40 m/s contra a parede de vidro do laboratório (16 cm, em u = 4), fora do vão da porta, e
+      // apertando VIBRAR: ele para do lado de cá, não vibra e não passa de 9 m/s
+      await pagina.evaluate(([x, z]) => { const R = window.__rel; Object.assign(R.P, { x, z, vx: 40, vz: 0, h: Math.PI / 2 }); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', code: 'KeyV' })); }, [cx + 1.5, cz - 6]);
+      await pagina.waitForTimeout(2500);
+      const r = await pagina.evaluate((cx) => { window.dispatchEvent(new KeyboardEvent('keyup', { key: 'v', code: 'KeyV' })); const P = window.__rel.P; return { u: P.x - cx, vib: P.vibrando, v: Math.hypot(P.vx, P.vz) }; }, cx);
+      ok(r.u < 4 - 0.08 && !r.vib && r.v <= 9.5, `a 40 m/s contra a parede de vidro, vibrando: fica do lado de cá (u = ${r.u.toFixed(2)}, vibrando ${r.vib}, ${r.v.toFixed(1)} m/s)`);
+    }
     // vira para a porta de saída e encosta nela
     await pagina.evaluate(([x, z]) => { const R = window.__rel; Object.assign(R.P, { x, z, vx: 0, vz: -1 }); }, [cx + (D.porta[0] + D.porta[1]) / 2, cz + D.sala[2] + 0.1]);
     const saiu = await espera(() => !window.__rel.J.interior && !window.__rel.J.porta && window.__rel.P.y < 3, null, 300000);
