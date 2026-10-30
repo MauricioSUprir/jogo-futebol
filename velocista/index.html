@@ -107,6 +107,27 @@
   #bt-tempo.pronto { border-color:#7fd8ff; color:#bfefff; background:rgba(0,40,60,.55); box-shadow:0 0 12px rgba(127,216,255,.5); }
   #chip-tempo.pronto { border-color:#7fd8ff; color:#bfefff; box-shadow:0 0 10px rgba(127,216,255,.35); }
   .bloq { display:none !important; }
+  /* pontos de interação: o botão AÇÃO (E no PC, toque no celular), o painel do desafio de corrida, o jornal da banca e o flash da foto */
+  #acao { position:absolute; left:50%; bottom:max(118px,calc(env(safe-area-inset-bottom) + 96px)); transform:translateX(-50%); display:flex; align-items:center; gap:8px; padding:7px 14px 7px 7px; border-radius:99px; border:1.5px solid var(--ouro); background:rgba(8,10,18,.72); color:#fff; font-weight:800; font-size:13px; letter-spacing:.03em; pointer-events:auto; touch-action:none; box-shadow:0 0 14px rgba(255,210,63,.35); white-space:nowrap; animation:acaoPulsa 1.6s ease-in-out infinite; }
+  #acao[hidden] { display:none; }
+  #acao b { display:grid; place-items:center; width:26px; height:26px; border-radius:50%; background:var(--ouro); color:#1a1300; font-size:13px; }
+  .toque #acao b { display:none; } .toque #acao { padding:9px 18px; }
+  @keyframes acaoPulsa { 50% { box-shadow:0 0 22px rgba(255,210,63,.6); } }
+  #corridaHud { position:absolute; right:max(14px,env(safe-area-inset-right)); top:max(150px,calc(env(safe-area-inset-top) + 140px)); min-width:170px; text-align:right; background:rgba(7,8,15,.66); border:1px solid rgba(255,210,63,.45); border-radius:12px; padding:7px 12px 8px; }
+  #corridaHud[hidden] { display:none; }
+  #chNome { font-size:11px; font-weight:800; letter-spacing:.12em; color:var(--ouro); text-transform:uppercase; }
+  #chTempo { font-size:30px; font-weight:900; font-variant-numeric:tabular-nums; line-height:1.1; text-shadow:0 0 12px rgba(255,210,63,.5); }
+  #chInfo { font-size:10px; opacity:.8; }
+  #jornal { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(-1.2deg); width:min(78vw,520px); background:#f3efe4; color:#16130e; border-radius:4px; padding:14px 20px 12px; box-shadow:0 18px 50px rgba(0,0,0,.6); font-family:Georgia, 'Times New Roman', serif; pointer-events:none; }
+  #jornal[hidden] { display:none; }
+  .jn-cab { font-weight:900; font-size:26px; letter-spacing:.08em; text-align:center; border-bottom:3px double #16130e; padding-bottom:4px; color:#7a1010; }
+  #jnData { font-size:11px; text-align:center; margin:4px 0 8px; border-bottom:1px solid #16130e; padding-bottom:4px; font-family:Arial, sans-serif; }
+  #jornal h2 { font-size:clamp(20px,4.2vw,34px); line-height:1.05; margin:6px 0 8px; font-weight:900; }
+  #jornal p { font-size:14px; line-height:1.35; margin:0 0 8px; }
+  #jornal small { display:block; text-align:right; font-size:10px; opacity:.6; font-family:Arial, sans-serif; }
+  #flashFoto { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; }
+  #flashFoto.on { animation:flashFoto .5s ease-out; }
+  @keyframes flashFoto { 0% { opacity:.85; } 100% { opacity:0; } }
   body.lento #cena { filter: saturate(.45) contrast(1.12) brightness(1.04) hue-rotate(-14deg); }
   /* no PC: os especiais como fichas acima da barra de energia */
   #chips { display:flex; gap:6px; justify-content:center; margin-bottom:5px; }
@@ -247,6 +268,10 @@
   <div id="fade"></div>
   <div id="coleta"></div>
   <div id="mira"></div>
+  <button id="acao" type="button" hidden><b>X</b><span id="acaoRotulo"></span></button>
+  <div id="corridaHud" hidden><div id="chNome"></div><div id="chTempo">0,00</div><div id="chInfo"></div></div>
+  <div id="jornal" hidden><div class="jn-cab">PICTURE NEWS</div><div id="jnData"></div><h2 id="jnTitulo"></h2><p id="jnLinha"></p><small>AÇÃO (X) para fechar</small></div>
+  <div id="flashFoto"></div>
   <div id="energia"><div id="chips"><span class="chip" id="chip-raio">1 · RAIO 25%</span><span class="chip" id="chip-ciclone">2 · CICLONE 35%</span><span class="chip" id="chip-sonico">3 · SÔNICO 50%</span><span class="chip bloq" id="chip-tempo">T · TEMPO 35%</span><span class="chip bloq" id="chip-tempestade">4 · TEMPESTADE 60%</span></div><div class="linhaEnergia"><span>Energia</span><span id="velBox"><b id="vel">0</b> km/h</span></div><div class="barra"><div class="nivel" id="nivel"></div><i class="marca" style="left:25%"></i><i class="marca" style="left:35%"></i><i class="marca" style="left:50%"></i></div></div>
 </div>
 <div id="toque">
