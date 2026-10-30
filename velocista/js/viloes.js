@@ -86,6 +86,24 @@ Object.assign(PERFIS, {
     rodeia: [1.0, 1.9], telegrafo: 0.52, recupera: 1.1, dano: 0.15, esquiva: 0.82, raios: true, fase2: true, regen: 0.012,
   },
 });
+// Parte 5: o BLOODWORK (o Dr. Ramsey Rosso com a matéria escura do Núcleo no sangue: o jato de sangue — o mesmo cone do fogo
+// do Onda Térmica, vermelho-escuro — que também drena a energia de quem acerta; na metade da vida ele fica mais forte) e dois
+// INFECTADOS (gente comum com o sangue dele: o mesmo jato, mais curto e mais fraco; capuz e olhos vermelhos — aderecos.js)
+const DICA_SANGUE = 'Fique fora do jato de sangue e bata quando ele parar';
+Object.assign(PERFIS, {
+  sangue: {
+    nome: 'BLOODWORK', titulo: 'Bloodwork', pessoa: 'onda', arma: 'fogo', dica: DICA_SANGUE, cor: '#c0182e', corRaio: [2.2, 0.06, 0.12],
+    vida: 150, esquiva: 0.55, dano: 0.13, telegrafo: 0.8, recupera: 1.5, rodeia: [1.2, 2.2], distancia: 9, regen: 0.012, fase2: true, drena: 0.15,
+  },
+  infectadoA: {
+    nome: 'INFECTADO', titulo: 'Infectado', pessoa: 'frio', arma: 'fogo', dica: DICA_SANGUE, cor: '#a8323f', corRaio: [1.7, 0.1, 0.16],
+    vida: 55, esquiva: 0.4, dano: 0.08, telegrafo: 0.95, recupera: 1.9, rodeia: [1.4, 2.4], distancia: 6.5, regen: 0.01, fase2: false,
+  },
+  infectadoB: {
+    nome: 'INFECTADO', titulo: 'Infectado', pessoa: 'mago', arma: 'fogo', dica: DICA_SANGUE, cor: '#a8323f', corRaio: [1.7, 0.1, 0.16],
+    vida: 55, esquiva: 0.4, dano: 0.08, telegrafo: 0.95, recupera: 1.9, rodeia: [1.4, 2.4], distancia: 6.5, regen: 0.01, fase2: false,
+  },
+});
 export const CAPITULOS = [
   { id: 'zoom', titulo: 'Capítulo 1 — Zoom', viloes: ['zoom'], perseguicao: true, texto: 'Um velocista de preto está aterrorizando a cidade. Encontre o Zoom e persiga-o.' },
   { id: 'frio', titulo: 'Capítulo 2 — Capitão Frio', viloes: ['frio'], perseguicao: false, lugar: 'cidade', texto: 'Um quarteirão do centro congelou. Encontre o Capitão Frio.' },
@@ -105,6 +123,8 @@ export const CAPITULOS = [
   { id: 'malandros', titulo: 'Capítulo 15 — Os Malandros', viloes: ['frio', 'onda', 'mago'], perseguicao: false, lugar: 'cidade', texto: 'Gelo, fogo e tempestade no mesmo quarteirão. Os três juntos.' },
   { id: 'devoe2', titulo: 'Capítulo 16 — O Pensador de metal', viloes: ['devoe'], perseguicao: false, lugar: 'cidade', texto: 'O corpo novo do DeVoe está pronto, num galpão perto da ponte.' },
   { id: 'reinicio', titulo: 'Capítulo 17 — O Grande Reinício', viloes: ['devoe', 'frio', 'onda', 'mago'], perseguicao: false, texto: 'O DeVoe e os Malandros, juntos, em frente ao S.T.A.R. Labs. O satélite está caindo.' },
+  { id: 'sangue', titulo: 'Capítulo 18 — Bloodwork', viloes: ['sangue'], perseguicao: false, lugar: 'cidade', texto: 'O Dr. Ramsey Rosso virou outra coisa. Encontre o Bloodwork.' },
+  { id: 'sangue2', titulo: 'Capítulo 19 — Sangue ruim', viloes: ['sangue', 'infectadoA', 'infectadoB'], perseguicao: false, texto: 'O Bloodwork e dois infectados na porta do S.T.A.R. Labs. A cura está pronta.' },
 ];
 const DANO = { soco: 5, gancho: 9, raio: 14, ciclone: 18, sonico: 28 };
 const CHAVE = 'theflash.viloes.v1';
@@ -211,7 +231,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     if (cap.lugar === 'cidade') for (const id of cap.viloes) {           // o rastro de cada um no chão (gelo do Frio, fogo do Onda)
       const pf = PERFIS[id];
       if (pf.arma === 'gelo') for (let k = 0; k < 9; k++) novoPerigo('gelo', base.x + rnd(-16, 16), base.z + rnd(-16, 16), rnd(2, 4.5), 1e9, [0.35, 0.75, 1.0], 0.3);
-      if (pf.arma === 'fogo') for (let k = 0; k < 5; k++) novoPerigo('fogo', base.x + rnd(-18, 18), base.z + rnd(-18, 18), rnd(1.8, 3), 1e9, [2.2, 0.7, 0.12], 0.45);
+      if (pf.arma === 'fogo') for (let k = 0; k < 5; k++) novoPerigo('fogo', base.x + rnd(-18, 18), base.z + rnd(-18, 18), rnd(1.8, 3), 1e9, pf.corRaio.map((c) => c * 0.85), 0.45);   // (a cor do jato de cada um: fogo, sangue)
     }
     const nomes = cap.viloes.map((id) => PERFIS[id].titulo);
     if (cap.viloes.length > 1) avisar(`${nomes.slice(0, -1).join(', ')} e ${nomes.at(-1)}`, cap.id === 'final' ? 'Batalha final' : cap.titulo.replace(/^.* — /, ''), cap.viloes[cap.viloes.length - 1]);
@@ -423,7 +443,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
   function novoPerigo(tipo, x, z, r, vida, rgb, op, geo = GEO.disco) {
     const mesh = new THREE.Mesh(geo, geo === GEO.disco ? matMancha(rgb, op * 1.4) : matAditivo(rgb, op)); mesh.position.set(x, (chao ? chao(x, z, 2) : 0) + 0.06, z); mesh.scale.setScalar(r);
     if (geo === GEO.disco) mesh.rotation.y = Math.random() * 6.28;
-    cena.add(mesh); const p = { tipo, x, z, r, t: 0, vida, mesh, op, vx: 0, vz: 0 }; perigos.push(p); return p;
+    cena.add(mesh); const p = { tipo, x, z, r, t: 0, vida, mesh, op, vx: 0, vz: 0, rgb }; perigos.push(p); return p;
   }
   function limparPerigos() { for (const p of perigos) { cena.remove(p.mesh); p.mesh.material.dispose(); } perigos.length = 0; }
   // o efeito que acompanha cada vilão (aviso no chão, feixe, chama) — criado na 1ª vez
@@ -551,7 +571,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       for (let i = 0; i < 2; i++) fx.raio(b.x, b.y, b.z, b.x + ux * 24, b.y - 0.6, b.z + uz * 24, { vida: 0.45, desvio: 0.15, r: c[0], g: c[1], b: c[2] });
     } else if (g === 'fogo') {
       const ux = Math.sin(v.mira), uz = Math.cos(v.mira);
-      novoPerigo('fogo', v.x + ux * 7.5, v.z + uz * 7.5, 2.6, 4.5, [2.2, 0.7, 0.12], 0.5);
+      novoPerigo('fogo', v.x + ux * 7.5, v.z + uz * 7.5, 2.6, 4.5, v.perf.corRaio.map((c) => c * 0.85), 0.5);
     } else if (g === 'tempo') {
       // o raio cai do céu no círculo
       const y0 = chao ? chao(v.alvo.x, v.alvo.z, P.y + 2) : 0;
@@ -596,7 +616,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
           if (p.tipo === 'gelo') C.lento = Math.max(C.lento || 0, 0.4);
           else if (p.tipo === 'fogo') ferirSemEmpurrar(P, 0.1 * dt);
         }
-        if (p.tipo === 'fogo' && Math.random() < dt * 5) fx.raio(p.x + rnd(-p.r, p.r) * 0.7, (p.mesh.position.y) + 0.1, p.z + rnd(-p.r, p.r) * 0.7, p.x + rnd(-1, 1), p.mesh.position.y + rnd(1, 2.4), p.z + rnd(-1, 1), { vida: 0.18, desvio: 0.4, r: 2.6, g: 0.9, b: 0.15 });
+        if (p.tipo === 'fogo' && Math.random() < dt * 5) fx.raio(p.x + rnd(-p.r, p.r) * 0.7, (p.mesh.position.y) + 0.1, p.z + rnd(-p.r, p.r) * 0.7, p.x + rnd(-1, 1), p.mesh.position.y + rnd(1, 2.4), p.z + rnd(-1, 1), { vida: 0.18, desvio: 0.4, r: p.rgb[0] / 0.85, g: p.rgb[1] / 0.85, b: p.rgb[2] / 0.85 });
       }
       if (p.t >= p.vida) { cena.remove(p.mesh); p.mesh.material.dispose(); perigos.splice(i, 1); }
     }
@@ -866,7 +886,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       pInfo.textContent = arma === 'mente' && torres ? `Derrube as torres do escudo (${torres} de pé) · pule o pulso mental`
         : v0.armadura > 0 ? `Quebre a armadura (${Math.round((v0.armadura / v0.perf.armadura) * 100)}%) · os especiais racham mais`
         : aberto ? (arma ? 'Agora! Ele está aberto' : 'Agora! Ele está cansado')
-        : arma === 'gelo' ? 'Saia da linha do raio de gelo e bata quando ele recarregar' : arma === 'adaga' ? 'Saia da linha da adaga e bata quando ela voltar para a mão' : arma === 'fogo' ? 'Fique fora do jato de fogo e bata quando ele parar'
+        : arma === 'gelo' ? 'Saia da linha do raio de gelo e bata quando ele recarregar' : arma === 'adaga' ? 'Saia da linha da adaga e bata quando ela voltar para a mão' : arma === 'fogo' ? (v0.perf.dica || 'Fique fora do jato de fogo e bata quando ele parar')
         : arma === 'tempo' ? 'Saia do círculo antes do raio e fuja do tornado'
         : arma === 'mente' ? 'Saia do círculo do carro, pule o pulso e ache o verdadeiro entre as cópias' : 'Desvie da investida (corra de lado, pule ou vibre) e bata quando ele cansar';
     }
@@ -897,7 +917,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
     get emLuta() { return !!C && (C.fase === 'luta' || C.fase === 'derrota'); },
     /** durante a perseguição a energia não gasta e vai enchendo */
     /** o que está no chão agora (gelo, fogo, tornado) — para os testes */
-    get perigos() { return perigos.map((p) => ({ tipo: p.tipo, x: p.x, z: p.z, t: p.t, vida: p.vida })); },
+    get perigos() { return perigos.map((p) => ({ tipo: p.tipo, x: p.x, z: p.z, t: p.t, vida: p.vida, rgb: p.rgb })); },
     /** o gelo do Capitão Frio deixa o herói lento (multiplica a velocidade máxima) */
     get lentidao() { return C && C.lento > 0 ? 0.42 : 1; },
     get energiaLivre() { return !!C && (C.fase === 'perseguicao' || C.fase === 'choque' || C.fase === 'aparece' || C.fase === 'encontro'); },

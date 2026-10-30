@@ -99,6 +99,23 @@ export function colocarAderecos(id, modelo) {
     peca(new THREE.CylinderGeometry(0.62, 0.5, 0.08, 32), base, disco, 0, 0, 0);
     peca(new THREE.TorusGeometry(0.6, 0.025, 8, 48), luz, disco, 0, -0.04, 0, Math.PI / 2, 0, 0);
     ponta.position.set(0.1, 0.1, 0); cabeca.add(ponta);
+  } else if (id === 'sangue') {
+    // Parte 5: o Bloodwork — a roupa vira uma casca vermelho-escura (o material é só deste corpo), a máscara de sangue seco com os
+    // olhos acesos, as veias que saem das costas e as mãos vermelhas brilhando (o jato sai da direita)
+    for (const m of modelo.materiais.slice(0, 2)) { m.color?.setRGB(0.3, 0.05, 0.07); m.emissive?.setRGB(0.05, 0.0, 0.01); }
+    const casca = mat(0x3a070c, 0x1a0002, 0.3, 0.45), olho = mat(0xff3048, 0xff0a2a, 0.1, 0.2), veia = mat(0x7a0a16, 0x5a0008, 0.2, 0.4);
+    peca(new THREE.SphereGeometry(0.12, 18, 12), casca, cabeca, 0.012, 0.03, 0).scale.set(1.05, 1.14, 0.96);
+    for (const lado of [-1, 1]) peca(new THREE.BoxGeometry(0.012, 0.014, 0.046), olho, cabeca, 0.124, 0.045, lado * 0.042, 0, 0, lado * 0.3);
+    for (let k = 0; k < 6; k++) { const lado = k % 2 ? 1 : -1, a = 0.35 + (k >> 1) * 0.3; peca(new THREE.ConeGeometry(0.022, 0.42, 6), veia, peito, -0.14, 0.08 + (k >> 1) * 0.08, lado * (0.06 + (k >> 1) * 0.04), -0.5, 0, lado * a).position.y += 0.1; }
+    for (const n of ['maoE', 'maoD']) { const o = osso(n); if (o) peca(new THREE.IcosahedronGeometry(0.045, 0), olho, o, 0.0, -0.02, (n === 'maoD' ? 1 : -1) * 0.07); }
+    ponta.position.set(0.02, -0.02, 0.12); mao.add(ponta);
+  } else if (id === 'infectadoA' || id === 'infectadoB') {
+    // os infectados: a roupa escurecida, um capuz e os olhos vermelhos do sangue do Bloodwork
+    for (const m of modelo.materiais.slice(0, 1)) m.color?.multiplyScalar(0.45);
+    const capuz = mat(0x1c1a1d, 0, 0.1, 0.85), olho = mat(0xff3048, 0xff0a2a, 0.1, 0.2);
+    peca(new THREE.SphereGeometry(0.125, 16, 12), capuz, cabeca, -0.01, 0.035, 0).scale.set(1.08, 1.12, 1.0);
+    for (const lado of [-1, 1]) peca(new THREE.SphereGeometry(0.011, 8, 6), olho, cabeca, 0.118, 0.04, lado * 0.036);
+    ponta.position.set(0.02, -0.02, 0.1); mao.add(ponta);
   }
   return { ponta, dispose() { mats.forEach((m) => m.dispose()); } };
 }

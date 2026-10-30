@@ -1113,6 +1113,7 @@ function alvoMissao() {
   if (m?.alvo === 'labPassado') { const e = LAB_B.plano.entrada; return { x: e.x, z: e.z - 4, cor: '#ffb347', rotulo: 'S.T.A.R. Labs — seis semanas atrás' }; }
   if (m?.alvo === 'predioAlto') { const p = predioAltoPerto(); if (p) return { ...p, cor: '#ffd23f', rotulo: 'Prédio de 50 m' }; }
   if (m?.alvo === 'esfera') { const o = esferaMaisPerto(); if (o) return { x: o.x, z: o.z, cor: '#3fd0ff', rotulo: 'Esfera' }; }
+  if (m?.alvo === 'largada') { let b = null; for (const c of corridas()) if (!b || Math.hypot(c.x - P.x, c.z - P.z) < Math.hypot(b.x - P.x, b.z - P.z)) b = c; return { x: b.x, z: b.z, cor: '#ffd23f', rotulo: `Desafio: ${b.nome}` }; }   // (Parte 5: a largada mais perto)
   return null;
 }
 // para onde a bússola aponta: o objetivo do guia ou a esfera mais perto
@@ -1507,6 +1508,21 @@ const GANCHOS_CENA = {
     if (a === 'explodeCeu') { combate.efeitos.clarao(P.x, 120, P.z, 60, 1); clarear(0.8); }
   } },
   'depois-p4-fim': { depois: () => { if (historia.viu('cena:depois-p4-fim')) mostrarCreditos(4); } },
+  // Parte 5: o Bloodwork escorrendo pelo bueiro, a luz dourada do Monitor e a cura
+  'derrotado-sangue': { aoAcao: (a) => {
+    if (a !== 'someSangue') return;
+    const f = viloes.foco('sangue') || focoHeroi();
+    for (let i = 0; i < 14; i++) { const g = Math.random() * 6.28; combate.efeitos.raio(f.x, f.y + 0.2 + Math.random() * 1.6, f.z, f.x + Math.cos(g) * 2.5, f.y + 0.05, f.z + Math.sin(g) * 2.5, { vida: 0.5, desvio: 0.5, r: 2.2, g: 0.06, b: 0.12 }); }
+    combate.efeitos.onda(f.x, f.y, f.z, 6, 0.5);
+  } },
+  'depois-p5-monitor': { aoAcao: (a) => { if (a === 'monitor') luzDoMonitor(); } },
+  'depois-p5-desafio': { aoAcao: (a) => { if (a === 'someMonitor') luzDoMonitor(); } },
+  'depois-p5-veredito': { aoAcao: (a) => { if (a === 'monitor') luzDoMonitor(); } },
+  'derrotado-sangue2': { aoAcao: (a) => {
+    if (a !== 'cura') return;
+    const f = viloes.foco('sangue') || focoHeroi();
+    combate.efeitos.clarao(f.x, f.y + 1.1, f.z, 5, 0.6); combate.efeitos.onda(f.x, f.y, f.z, 16, 0.9); clarear(0.5);
+  } },
   'derrotado-reverso2': { aoAcao: (a) => { if (a === 'batida') batidaNoNucleo(); } },
   'derrotado-negro2': { aoAcao: (a) => {
     if (a !== 'negroLevaHenry') return;
@@ -1526,6 +1542,12 @@ const GANCHOS_CENA = {
   },
 };
 /** alguém da cena some num raio (o homem de amarelo indo embora): raios em volta dele e ele sai da cena */
+// o Monitor chega e vai embora numa coluna de luz dourada, alguns metros à frente do herói
+function luzDoMonitor() {
+  const x = P.x + Math.sin(P.h) * 5, z = P.z + Math.cos(P.h) * 5;
+  for (let i = 0; i < 16; i++) { const g = Math.random() * 6.28; combate.efeitos.raio(x + Math.cos(g) * 0.6, P.y + 45, z + Math.sin(g) * 0.6, x + Math.cos(g) * 1.2, P.y + 0.2, z + Math.sin(g) * 1.2, { vida: 0.7, desvio: 0.6, r: 2.6, g: 2.0, b: 0.9 }); }
+  combate.efeitos.clarao(x, P.y + 1.5, z, 6, 0.6); clarear(0.45);
+}
 function someNumRaio(id, [r, g, b]) {
   const f = aliados.foco(id);
   if (f) for (let i = 0; i < 12; i++) { const a = Math.random() * 6.28; combate.efeitos.raio(f.x, f.y + 0.3 + Math.random() * 1.5, f.z, f.x + Math.cos(a) * 3, f.y + Math.random() * 2, f.z + Math.sin(a) * 3, { vida: 0.4, desvio: 0.7, r, g, b }); }
@@ -1606,7 +1628,7 @@ const CREDITOS_P4 = [
   ['Personagens', 'Caitlin · Nevasca · Cisco (Vibe) · Joe · Iris · Nora West-Allen, de 2049 e de um ano · DeVoe · Capitão Frio · Onda Térmica · Mago do Tempo'],
   ['O traje novo', 'Bateria, armadura, tempo lento e, agora, a TEMPESTADE'],
   ...CREDITOS.slice(2, -1),
-  ['Obrigado por jogar', 'A cidade continua precisando de você: todos os capítulos podem ser jogados de novo pela pausa.'],
+  ['Obrigado por jogar', 'Feche os créditos: a Parte 5 começa um ano antes da data do jornal.'],
 ];
 function mostrarCreditos(parte = 1) {
   let c = document.getElementById('creditos');

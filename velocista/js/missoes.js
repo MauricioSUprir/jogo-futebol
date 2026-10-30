@@ -199,6 +199,30 @@ export const MISSOES = [
   { id: 'p4-partida', titulo: 'Até 2049', texto: 'A Nora vai voltar para o tempo dela pelo Núcleo. Vá se despedir', alvoSala: 'nucleo', aliados: { violeta: 'nucleoReverso' }, checar: (c) => c.sala === 'nucleo' },
   { id: 'p4-bebe', titulo: 'A pequena Nora', texto: 'Volte para casa: a sua filha de um ano está esperando', ponto: 'jantar', aliados: { iris: 'jantar' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
   { id: 'p4-fim', titulo: 'O jornal do futuro', texto: 'A Caitlin e o Cisco acharam uma coisa estranha no Cortex', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
+  // ===== PARTE 5 — A Crise (dono, 30/10: "cria o resto da história, cria mais história") =====
+  // Ato 17 — Sangue novo: o Dr. Ramsey Rosso, amigo da Caitlin, tenta curar a própria doença com a matéria escura do Núcleo
+  { id: 'p5-aniversario', titulo: 'Dois anos', texto: 'Aniversário da Nora na casa dos West. Chegue na hora. Pelo menos hoje', cenaAbre: 'p5-abertura', ponto: 'jantar', aliados: { joe: 'sofaWest', iris: 'jantar' }, roupa: 'civil', tempo: 90, raio: 3.5, checar: (c) => c.perto },
+  { id: 'p5-ramsey', titulo: 'Um velho amigo', texto: 'A Caitlin quer apresentar um amigo da faculdade: vá à sala médica do S.T.A.R. Labs', alvoSala: 'medica', aliados: { caitlin: 'medicaCaitlin' }, semEquipe: ['caitlin'], checar: (c) => c.sala === 'medica' },
+  { id: 'p5-roubo', titulo: 'Roubo no hospital', texto: 'Alguém assaltou o Hospital Geral de Central City: pare o assalto', meta: 1, contador: 'assalto', crime: 'assalto' },
+  { id: 'p5-pistas', titulo: 'Gotas pretas', texto: 'O ladrão fugiu pela praça da Prefeitura: examine as 3 pistas (pare em cima de cada marcador)', ponto: 'prefeitura', aliados: { joe: 'prefeitura' }, pistas: [[-16, -16, 'Gotas de sangue escuro', 'ainda mornas'], [15, -20, 'Uma seringa quebrada', 'com um resto de líquido preto'], [1, -31, 'Pegadas', 'que somem no meio da praça']], meta: 3, contador: 'pistas', roupa: 'civil' },
+  { id: 'p5-amostra', titulo: 'Sangue com matéria escura', texto: 'Leve as amostras ao laboratório da perícia, na Delegacia', ponto: 'csi', roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p5-olhos', titulo: 'Olhos vermelhos', texto: 'Uma gangue de olhos vermelhos tomou uma rua: derrote-a', meta: 1, contador: 'gangue', crime: 'gangue' },
+  { id: 'p5-jitters', titulo: 'Café com o doutor', texto: 'A Caitlin marcou um café com o Ramsey no Jitters. Ela quer você junto', ponto: 'mesaCafe', aliados: { caitlin: 'mesaCafe' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p5-incendio', titulo: 'O laboratório dele', texto: 'O laboratório do Ramsey, no hospital, pegou fogo: apague o incêndio', meta: 1, contador: 'incendio', crime: 'incendio' },
+  { id: 'p5-fa', titulo: 'Esperança', texto: 'A cidade está com medo dos olhos vermelhos: tire uma foto com um fã (AÇÃO perto de quem está olhando)', meta: 1, contador: 'fotos' },
+  { id: 'cap-sangue', titulo: 'Bloodwork', texto: 'O Ramsey virou o Bloodwork: encontre-o e derrote-o', capitulo: 'sangue' },
+  { id: 'p5-culpa', titulo: 'A culpa é minha', texto: 'A Caitlin se trancou na sala médica', alvoSala: 'medica', aliados: { caitlin: 'medicaCaitlin' }, semEquipe: ['caitlin'], checar: (c) => c.sala === 'medica' },
+  // Ato 18 — O Monitor: alguém de fora do tempo aparece e diz o que vai acontecer em 2024
+  { id: 'p5-ceu', titulo: 'O céu rachou', texto: 'Rachaduras douradas no céu, sobre a cidade: feche 3 fendas (vibre dentro delas)', meta: 3, contador: 'fendas', alvo: 'fenda' },
+  { id: 'p5-monitor', titulo: 'O homem do céu', texto: 'Uma luz dourada parou sobre a praça da Prefeitura: vá até lá', ponto: 'prefeitura', raio: 10, checar: (c) => c.perto },
+  { id: 'p5-prova', titulo: 'A prova', texto: 'O Monitor quer ver do que você é capaz: fique 8 s acima de 400 km/h', tipo: 'bateria', checar: (c) => c.bateria >= 1 },
+  { id: 'p5-desafio', titulo: 'Mais rápido que o destino', texto: 'Complete um desafio de corrida (as largadas quadriculadas do mapa)', meta: 1, contador: 'desafios', alvo: 'largada' },
+  { id: 'p5-iris', titulo: 'A matéria que não foi escrita', texto: 'A Iris quer ver você na sala do editor do Picture News', ponto: 'editor', aliados: { iris: 'editor' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p5-joe', titulo: 'Os degraus de novo', texto: 'O Joe espera você na escada da Delegacia', ponto: 'delegacia', aliados: { joe: 'delegacia' }, roupa: 'civil', checar: (c) => c.perto },
+  { id: 'p5-infectados', titulo: 'A cidade sangra', texto: 'O Bloodwork fugiu e está infectando gente pela cidade: impeça 3 crimes', meta: 3, contador: 'crimes', patrulha: true },
+  { id: 'p5-vacina', titulo: 'A cura', texto: 'A Caitlin terminou a cura: busque a seringa na sala médica', alvoSala: 'medica', aliados: { caitlin: 'medicaCaitlin' }, semEquipe: ['caitlin'], checar: (c) => c.sala === 'medica' },
+  { id: 'cap-sangue2', titulo: 'Sangue ruim', texto: 'O Bloodwork e dois infectados na porta do S.T.A.R. Labs', capitulo: 'sangue2' },
+  { id: 'p5-veredito', titulo: 'O veredito', texto: 'O Monitor está esperando no Cortex', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
 ];
 /** os passos de uma época (os da linha do tempo alterada): o jogo põe o mundo nela enquanto o passo dura */
 export const EPOCA_DO_PASSO = (m) => m?.epoca || null;
@@ -208,7 +232,7 @@ const CHAVE_V1 = 'theflash.missoes.v1';
 // a lista da v1, para levar quem já tinha progresso ao mesmo passo
 const ORDEM_V1 = ['lab', 'velocidade', 'esferas', 'escalar', 'vibrar', 'assalto', 'gangue', 'especiais', 'portais', 'fuga', 'incendio', 'queda',
   'patrulha', 'relatorio', 'cap-reverso', 'fendas', 'tunel', 'passado', 'cap-savitar', 'cap-devoe', 'nucleo'];
-const STATS0 = { tempestades: 0, lentos: 0, pistas: 0, fendas: 0, subestacoes: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
+const STATS0 = { desafios: 0, fotos: 0, tempestades: 0, lentos: 0, pistas: 0, fendas: 0, subestacoes: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
 
 export function criarMissoes(armazem) {
   let salvo = null, v1 = null;
