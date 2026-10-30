@@ -223,6 +223,25 @@ export const MISSOES = [
   { id: 'p5-vacina', titulo: 'A cura', texto: 'A Caitlin terminou a cura: busque a seringa na sala médica', alvoSala: 'medica', aliados: { caitlin: 'medicaCaitlin' }, semEquipe: ['caitlin'], checar: (c) => c.sala === 'medica' },
   { id: 'cap-sangue2', titulo: 'Sangue ruim', texto: 'O Bloodwork e dois infectados na porta do S.T.A.R. Labs', capitulo: 'sangue2' },
   { id: 'p5-veredito', titulo: 'O veredito', texto: 'O Monitor está esperando no Cortex', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
+  // Ato 19 — A contagem: um ano passa; as sombras da onda chegam antes dela; a crise é antecipada; as despedidas
+  { id: 'p5-relogio', titulo: 'Trinta dias', texto: 'O relógio do Cisco chegou a 30 dias: reunião no Cortex', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
+  { id: 'p5-treino', titulo: 'O circuito do Cisco', texto: 'Treino: os 8 portais em até 70 s', tipo: 'portais' },
+  { id: 'p5-triciclo', titulo: 'O triciclo', texto: 'A Nora ganhou um triciclo. A Iris espera vocês dois em casa', ponto: 'sofaWest', aliados: { iris: 'sofaWest' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p5-video', titulo: 'Para a Nora de 2049', texto: 'Grave uma mensagem para a Nora do futuro, na sala do editor do Picture News', ponto: 'editor', aliados: { iris: 'editor' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p5-sombras-sinal', titulo: 'Fendas vermelhas', texto: 'Fendas vermelhas pela cidade: feche 3 (vibre dentro delas)', meta: 3, contador: 'fendas', alvo: 'fenda' },
+  { id: 'cap-sombras', titulo: 'Os demônios sombra', texto: 'Duas sombras vermelhas correm pela cidade: derrote-as', capitulo: 'sombras' },
+  { id: 'p5-antecipada', titulo: 'É hoje', texto: 'O Monitor apareceu de novo na praça da Prefeitura', ponto: 'prefeitura', raio: 10, checar: (c) => c.perto },
+  { id: 'p5-evacuar', titulo: 'Evacuação', texto: 'O céu ficou vermelho e a cidade está fugindo: impeça 3 crimes', meta: 3, contador: 'crimes', patrulha: true, crise: true },
+  { id: 'p5-joe-adeus', titulo: 'Pai vai buscar', texto: 'O Joe está na escada da Delegacia', ponto: 'delegacia', aliados: { joe: 'delegacia' }, crise: true, checar: (c) => c.perto },
+  { id: 'p5-equipe', titulo: 'Os teimosos e geniais', texto: 'A Caitlin e o Cisco esperam no Cortex', alvo: 'cortex', crise: true, checar: (c) => c.sala === 'cortex' },
+  { id: 'p5-iris-adeus', titulo: 'Volta para casa', texto: 'A Iris e a Nora esperam em casa', ponto: 'jantar', aliados: { iris: 'jantar' }, crise: true, raio: 3.5, checar: (c) => c.perto },
+  // Ato 20 — A Crise: a onda chega; o Antimonitor; a última corrida; o caminho de volta
+  { id: 'p5-onda', titulo: 'A onda', texto: 'A onda de antimatéria chegou à cidade: corra até o S.T.A.R. Labs', alvo: 'cortex', tempo: 75, perseguido: true, crise: true, checar: (c) => c.sala === 'cortex' },
+  { id: 'cap-antimonitor', titulo: 'O Antimonitor', texto: 'O Antimonitor e as sombras dele na porta do S.T.A.R. Labs', capitulo: 'antimonitor', crise: true },
+  { id: 'p5-ultima', titulo: 'A última corrida', texto: 'Corra mais rápido do que a onda: fique 8 s acima de 400 km/h', tipo: 'bateria', crise: true, checar: (c) => c.bateria >= 1 },
+  { id: 'p5-caminho', titulo: 'O caminho de volta', texto: 'Na Força de Aceleração, siga a voz da Iris: segure acima de 180 km/h por 5 s', tipo: 'tunel', checar: (c) => c.tunel >= 1 },
+  { id: 'p5-casa', titulo: 'O Flash volta para casa', texto: 'Vá para casa', ponto: 'jantar', aliados: { joe: 'sofaWest', iris: 'jantar' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
+  { id: 'p5-fim', titulo: 'O mundo que ele não viu', texto: 'O Monitor espera no Cortex uma última vez', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
 ];
 /** os passos de uma época (os da linha do tempo alterada): o jogo põe o mundo nela enquanto o passo dura */
 export const EPOCA_DO_PASSO = (m) => m?.epoca || null;

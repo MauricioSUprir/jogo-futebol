@@ -145,6 +145,14 @@ function atualizarAmbiente(posCam) {
   for (const m of materiaisFachada) m.emissiveIntensity = lit * (1 - 0.85 * (J.apagao || 0));   // no "Apagão" a cidade fica escura
   matLampada.color.setRGB(0.55 + 0.45 * lit, 0.5 + 0.43 * lit, 0.38 + 0.3 * lit); cena.environmentIntensity = 0.15 + 0.85 * (1 - mundo.noite);
   renderer.setClearColor(cena.fog.color);
+  // a CRISE (Parte 5, Atos 19 e 20: os passos com `crise`): o céu e a luz puxam para o vermelho da onda de antimatéria
+  const crise = missoes.atual?.crise && J.modo !== 'menu' ? 1 : 0;
+  J.crise = (J.crise || 0) + (crise - (J.crise || 0)) * 0.02;
+  if (J.crise > 0.01 && !J.interior) {
+    const k = J.crise; tmpA.setHex(0x5a0610); tmpB.setHex(0xc23a32);
+    matCeu.uniforms.topo.value.lerp(tmpA, 0.85 * k); matCeu.uniforms.horizonte.value.lerp(tmpB, 0.75 * k); cena.fog.color.lerp(tmpB, 0.6 * k);
+    hemi.color.lerp(tmpB.setHex(0xff8a7a), 0.5 * k); sol.color.lerp(tmpA.setHex(0xff6a50), 0.6 * k); renderer.setClearColor(cena.fog.color);
+  }
   // dentro dos lugares a luz é a das lâmpadas do teto: de cima, quente, igual de dia e de noite (o "sol" vira a luz da sala e,
   // no PC, as sombras dos móveis caem no chão); antes a sala era iluminada pelo sol da rua e à noite ficava no escuro
   if (J.interior) {
@@ -1254,7 +1262,8 @@ function passoMissoes(dt) {
     if (J.raioNegro <= 0) {
       J.raioNegro = 0.8 + Math.random() * 0.8;
       const a = P.h + Math.PI + (Math.random() - 0.5) * 1.3, r = 7 + Math.random() * 10, x = P.x + Math.sin(a) * r, z = P.z + Math.cos(a) * r, y = chaoEm(rectsPerto, x, z, P.y + 2);
-      combate.efeitos.raio(x, y + 30, z, x, y + 0.2, z, { vida: 0.35, desvio: 2.2, r: 1.45, g: 1.5, b: 1.7 }); combate.efeitos.clarao(x, y + 1, z, 3, 0.35);
+      const c = m.crise ? [2.4, 0.12, 0.18] : [1.45, 1.5, 1.7];                  // (na Crise, a onda: raios vermelhos)
+      combate.efeitos.raio(x, y + 30, z, x, y + 0.2, z, { vida: 0.35, desvio: 2.2, r: c[0], g: c[1], b: c[2] }); combate.efeitos.clarao(x, y + 1, z, 3, 0.35);
     }
   }
   // "Apagão": religar as subestações na ordem (o guia leva à próxima); a cidade fica escura até a última
@@ -1328,7 +1337,7 @@ function passoMissoes(dt) {
   el.missao.classList.toggle('urgente', !!cron && cron.resto < 10);
   if (ma?.tipo === 'portais') { const e = portais.estado(); txt = e.correndo ? `Portal ${e.indice + 1}/${e.total} · ${Math.ceil(e.restante)} s` : ma.texto; }
   if (ma?.tipo === 'bateria') txt = `Bateria do traje ${Math.round(Math.min(1, (J.bateriaT || 0) / 8) * 100)}% · fique acima de 400 km/h`;
-  if (ma?.tipo === 'tunel') txt = `Túnel do tempo ${Math.round(Math.min(1, (J.tunelT || 0) / 5) * 100)}% · fique acima de 180 km/h`;
+  if (ma?.tipo === 'tunel') txt = `${ma.id === 'p5-caminho' ? 'O caminho de volta' : 'Túnel do tempo'} ${Math.round(Math.min(1, (J.tunelT || 0) / 5) * 100)}% · fique acima de 180 km/h`;
   el.missaoTexto.textContent = txt;
   const c = crimes.ativo;
   if (c) { const d = Math.round(Math.hypot(c.x - P.x, c.z - P.z)); el.crimeLinha.textContent = `${c.nome}: ${c.texto}${c.tipo === 'incendio' ? ` (${Math.round((c.progresso || 0) * 100)}%)` : ''}${c.tipo === 'gangue' ? ` (${c.restantes ?? c.total} de pé)` : ''} · ${d} m · ${Math.max(0, Math.ceil(c.restante))} s`; el.crimeLinha.hidden = false; }
@@ -1518,6 +1527,19 @@ const GANCHOS_CENA = {
   'depois-p5-monitor': { aoAcao: (a) => { if (a === 'monitor') luzDoMonitor(); } },
   'depois-p5-desafio': { aoAcao: (a) => { if (a === 'someMonitor') luzDoMonitor(); } },
   'depois-p5-veredito': { aoAcao: (a) => { if (a === 'monitor') luzDoMonitor(); } },
+  // Atos 19 e 20: as sombras sumindo em fumaça vermelha, o Monitor, a onda, a última corrida e a volta
+  'derrotado-sombras': { aoAcao: (a) => { if (a === 'fumaca') for (const id of ['sombraA', 'sombraB']) { const f = viloes.foco(id); if (f) { combate.efeitos.onda(f.x, f.y, f.z, 7, 0.6); for (let i = 0; i < 8; i++) { const g = Math.random() * 6.28; combate.efeitos.raio(f.x, f.y + 0.3 + Math.random() * 1.5, f.z, f.x + Math.cos(g) * 3, f.y + Math.random() * 2, f.z + Math.sin(g) * 3, { vida: 0.5, desvio: 0.7, r: 2.4, g: 0.12, b: 0.18 }); } } } } },
+  'depois-p5-antecipada': { aoAcao: (a) => { if (a === 'monitor') luzDoMonitor(); } },
+  'derrotado-antimonitor': { aoAcao: (a) => {
+    if (a === 'onda') { combate.efeitos.onda(P.x, P.y, P.z, 40, 1.2); clarear(0.6); }
+  } },
+  'depois-p5-ultima': { aoAcao: (a) => {
+    if (a !== 'luz') return;
+    for (let i = 0; i < 30; i++) { const g = (i / 30) * 6.28, r = 3 + (i % 5); combate.efeitos.raio(P.x + Math.cos(g) * r, P.y + 0.5 + (i % 4) * 0.7, P.z + Math.sin(g) * r, P.x + Math.cos(g + 0.6) * r, P.y + 1 + (i % 4) * 0.7, P.z + Math.sin(g + 0.6) * r, { vida: 0.9, desvio: 0.7, r: 2.6, g: 2.0, b: 0.9 }); }
+    combate.efeitos.clarao(P.x, P.y + 1.2, P.z, 14, 1); clarear(1);
+  } },
+  'depois-p5-caminho': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, aoAcao: (a) => { if (a === 'chegou') clarear(0.8); }, depois: () => { tempo.tunel = false; J.corridaCena = false; } },
+  'depois-p5-fim': { aoAcao: (a) => { if (a === 'monitor') luzDoMonitor(); }, depois: () => { if (historia.viu('cena:depois-p5-fim')) mostrarCreditos(5); } },
   'derrotado-sangue2': { aoAcao: (a) => {
     if (a !== 'cura') return;
     const f = viloes.foco('sangue') || focoHeroi();
@@ -1623,6 +1645,13 @@ const CREDITOS_P3 = [
   ...CREDITOS.slice(2, -1),
   ['Obrigado por jogar', 'Feche os créditos: a Parte 4 começa um ano depois.'],
 ];
+const CREDITOS_P5 = [
+  ['A Parte 5: A Crise', 'Sangue novo · O Monitor · A contagem · A Crise'],
+  ['Personagens', 'Caitlin · Nevasca · Cisco · Joe · Iris · Nora, de dois e três anos · Dr. Ramsey Rosso (Bloodwork) · O Monitor · O Antimonitor'],
+  ['A manchete', '"O Flash volta para casa" — Iris West-Allen, Picture News'],
+  ...CREDITOS.slice(2, -1),
+  ['Obrigado por jogar', 'A cidade continua precisando de você: todos os capítulos e os desafios de corrida podem ser jogados de novo.'],
+];
 const CREDITOS_P4 = [
   ['A Parte 4: O futuro dela', 'A visitante · Os Malandros · A mente de DeVoe · O dia em que o Flash desaparece'],
   ['Personagens', 'Caitlin · Nevasca · Cisco (Vibe) · Joe · Iris · Nora West-Allen, de 2049 e de um ano · DeVoe · Capitão Frio · Onda Térmica · Mago do Tempo'],
@@ -1639,7 +1668,7 @@ function mostrarCreditos(parte = 1) {
   }
   if (c.dataset.parte !== String(parte)) {
     c.dataset.parte = String(parte);
-    c.innerHTML = `<div class="rolo"><img class="logo-fim" src="assets/logo/logo.webp" alt="THE FLASH">${(parte === 4 ? CREDITOS_P4 : parte === 3 ? CREDITOS_P3 : parte === 2 ? CREDITOS_P2 : CREDITOS).map(([t, d]) => `<section>${t ? `<h3>${t}</h3>` : ''}${d ? `<p>${d}</p>` : ''}</section>`).join('')}</div><button type="button" class="pular">Fechar</button>`;
+    c.innerHTML = `<div class="rolo"><img class="logo-fim" src="assets/logo/logo.webp" alt="THE FLASH">${(parte === 5 ? CREDITOS_P5 : parte === 4 ? CREDITOS_P4 : parte === 3 ? CREDITOS_P3 : parte === 2 ? CREDITOS_P2 : CREDITOS).map(([t, d]) => `<section>${t ? `<h3>${t}</h3>` : ''}${d ? `<p>${d}</p>` : ''}</section>`).join('')}</div><button type="button" class="pular">Fechar</button>`;
   }
   c.hidden = false; c.classList.remove('rola'); void c.offsetWidth; c.classList.add('rola');
   J.modo = 'creditos'; J.creditosT = 0;
