@@ -562,6 +562,26 @@ export function velParaPousar(p, ux, uz, D, el, w = { x: 0, y: 0, z: 0 }) {
 }
 
 /**
+ * Elevação (rad, entre lo e hi) para a bola, saindo de p a velocidade s na direção (ux,uz), cair a D metros. O alcance tem
+ * de crescer com a elevação em [lo, hi] (abaixo do ângulo do alcance máximo, ~42° com o arrasto daqui); quem chama confere
+ * antes que D cabe em [lo, hi] (alcancePousando). Busca binária sobre a simulação (o lançamento no teto: acoes.js).
+ */
+export function elevacaoParaPousar(p, ux, uz, D, s, lo, hi, w = { x: 0, y: 0, z: 0 }) {
+  for (let i = 0; i < 24; i++) {
+    const m = (lo + hi) / 2;
+    if (alcancePousando(p, ux, uz, s, m, w) < D) lo = m; else hi = m;
+  }
+  return (lo + hi) / 2;
+}
+
+/** Distância (m, na direção (ux,uz)) do 1º quique da bola saindo de p a velocidade s com elevação el. */
+export function alcancePousando(p, ux, uz, s, el, w = { x: 0, y: 0, z: 0 }) {
+  const ce = MD.cos(el), se = MD.sin(el);
+  const r = simularVoo(p, { x: ux * s * ce, y: s * se, z: uz * s * ce }, w, 600);
+  return (r.x - p.x) * ux + (r.z - p.z) * uz;
+}
+
+/**
  * Chute: elevação (rad) para a bola, saindo a velocidade s na direção (ux,uz), passar a D metros
  * na altura y. Busca binária na elevação entre −8° e 50°.
  */

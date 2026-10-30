@@ -428,7 +428,14 @@ export const ACOES = {
   toqueDuplo: 0.35,           // s — dois toques no LANÇAMENTO = cruzamento rasteiro; no CHUTE = cavadinha (2º aperto até isso depois de soltar o 1º)
   passe: { cone: 0.55, dMin: 3, dMax: 42, vChegada: [4.5, 8.0], adiante: 0.9, erroBom: 0.012, erroRuim: 0.07 },
   enfiada: { cone: 0.7, dMin: 5, dMax: 48, lead: [4.5, 12], vNoPonto: [3.5, 7], vMax: 26, erroBom: 0.015, erroRuim: 0.08 },
-  lancamento: { cone: 0.5, dMin: 16, dMax: 62, elev: [0.5, 0.72], erroBom: 1.2, erroRuim: 6 }, // erro em m a 40 m
+  // lançamento (C4, item 15 da FILA; dono, 15/10: "lançamento mais reto e rápido; hoje vai muito alto"; PESQUISA-ETAPA2.md
+  // §2.5a): a elevação vai de elev[0] (18°, a 20 m) a elev[1] (26°, a 60 m) — antes elevAlta, 28,6–41,3°, a do alcance
+  // máximo pela física da bola daqui (~42°): a 40 m o ápice ia a 8,0 m e a bola levava 2,48 s até o 1º quique; agora 4,7 m,
+  // 28,7 m/s e 1,87 s. O chutador real tira a velocidade com o ângulo (o ótimo para a distância cai a 25–30°: Sakamoto 2026,
+  // Linthorne & Everett 2006 no lateral) e o lançamento "tenso" do EA FC é mais baixo e mais rápido. Teto de saída vMax m/s
+  // (MIRA.tensa.v[1]; o chute mais forte do jogo, 31 × 1,08 = 33,5; Kellis & Katis 2007: 18–35 m/s): quando a elevação baixa
+  // pede mais que isso, ela sobe até a bola cair no ponto com vMax (acoes.js vooLancamento); nem com elevAlta → a de antes
+  lancamento: { cone: 0.5, dMin: 16, dMax: 62, elev: [0.314, 0.454], elevAlta: [0.5, 0.72], vMax: 33, erroBom: 1.2, erroRuim: 6 }, // erro em m a 40 m
   cruzamento: { terco: 17.5, faixa: 20, elevAlto: 0.42, elevTenso: 0.16, vRasteiro: 11, yAlto: 2.0, yTenso: 0.9, setor: 0.44 },
   // chute (pesquisa da Etapa 2): máximo de 30–34 m/s nos melhores (Shinkai 2008; DFL); colocado
   // a ~0,85 do forte e com 30–40 rad/s de efeito (Whiteside 2010); força máxima ×1,15 no erro
