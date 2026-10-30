@@ -2884,6 +2884,31 @@ IGUAL); a mão de cima é só desenho.
   a ~3 m: 68 das 334 cenas do B1 (20%) são essa bola — na StatsBomb, o goleiro a ≥ 2 m com a bola a ≥ 1,9 m é 2,3% das defesas
   (94 de 4.106). A meta do B1 continua passando (52,7% em 1009–1024, 57,9% em 1001–1008), com pouca folga.
 
+## Lançamento mais reto e rápido (C4, item 15; 30/10; contrato)
+
+Pedido do dono (15/10): "lançamento mais reto e rápido; hoje vai muito alto". Pesquisa e a tabela antes → depois em
+`PESQUISA-ETAPA2.md` §2.5a (StatsBomb open data da Copa 2022, medido aqui; Sakamoto 2026; EA FC; Kellis & Katis 2007).
+- **`acoes.js vooLancamento(pp, ux, uz, Lq, L, w)` → `{el, s}`** (puro; chamado só por `lancamentoOuCruzamento`, o ramo do
+  lançamento): a elevação pela distância PEDIDA `L` (`ACOES.lancamento.elev`, 18° a 20 m → 26° a 60 m; antes 28,6–41,3°,
+  hoje `elevAlta`) e a velocidade para a bola cair a `Lq` m (o ponto com o erro do lançador: `velParaPousar`, como antes).
+  Se ela pede mais que `ACOES.lancamento.vMax` (33 m/s), a elevação sobe entre a baixa e `elevAlta` até a bola cair no ponto
+  saindo a `vMax` (`bola.js elevacaoParaPousar(p, ux, uz, D, s, lo, hi, w)`, busca binária de 24 passos; o alcance cresce
+  com a elevação abaixo de ~42°, o ângulo do alcance máximo daqui, e `elevAlta` fica abaixo dele); se nem com `elevAlta` a
+  bola chega a `Lq` saindo a `vMax` (`bola.js alcancePousando`), sai a bola de antes (`elevAlta` e a velocidade que ela pede
+  — a de 61+ m). Nenhuma bola sai mais alta que antes; nenhuma acima de `vMax` que antes saía abaixo dele.
+- **Vale para tudo que é LANÇAMENTO**: a pessoa, a IA (`acaoIA 'lancamento'`), o tiro de meta e a falta longa da IA
+  (`partida.js`), o chutão do goleiro com o pé (`ia-tatica.js`) e a reposição/chutão com a bola nas mãos (`sim.js`). Não
+  mudam: o cruzamento (`cruzamento`, incluindo o escanteio), a cobrança mirada (`MIRA.alta`/`tensa`), o arremesso lateral
+  (`LATERAL.elevLongo`), a enfiada alta e o cabeceio.
+- **O adiantamento pela corrida do recebedor** (`r.v × tVoo`, até 5 m): `tVoo` = 0,65 + L/27,5 s (antes 0,6 + L/18), a
+  mesma folga de ~1,14 × sobre o voo até o 1º quique.
+- **Muda o hash de propósito**: toda partida com um lançamento (`hash-partida --ref <a main>`: DIFERENTE a partir do 1º) e o
+  treino de ataque com o LANÇAMENTO (`hash-igual --ref <a main>`); a condução fica igual.
+- **Testes**: `teste-passes` (a meta nova: o tempo do toque à RECEPÇÃO ≤ o p25 dos lançamentos altos certos do StatsBomb
+  a 35/45/55 m; a 40 m o ápice de 3 a 5,5 m e a saída ≥ 24 m/s; nenhuma saída acima de `vMax` — a de antes, o 1º quique na
+  mediana ±0,4 s, saiu: ela segurava a bola alta) e `teste-aereo-troca` (o canhão lança com a elevação do lançamento reto
+  quando a lógica tem `elevAlta`; na de antes, 26–37° como era).
+
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores
 que eu escolher, contra a quantidade de jogadores que eu escolher, pode ser adaptável durante a partida" (a Arena de Treino do

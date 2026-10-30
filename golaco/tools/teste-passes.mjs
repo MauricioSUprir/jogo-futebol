@@ -168,8 +168,8 @@ for (const [nome, attr, meta, peFraco] of [['bom (90)', 90, 0.85, 85], ['fraco (
   // Lançamento reto e rápido (C4, item 15 da FILA; dono, 15/10: "lançamento mais reto e rápido; hoje vai muito alto";
   // PESQUISA-ETAPA2.md §2.5a). A meta de antes era o tempo até o 1º QUIQUE na MEDIANA dos lançamentos altos do StatsBomb
   // (2,3 / 2,8 / 3,3 s ±0,4 a 35 / 45 / 55 m), mas o tempo do StatsBomb é do toque à RECEPÇÃO e a mediana é a da bola
-  // levantada: a meta segurava a bola alta (a 40 m, ápice de 8 m). Agora: (1) o tempo do toque à RECEPÇÃO (o recebedor
-  // parado domina) no máximo o p25 dos lançamentos altos CERTOS da Copa 2022 (StatsBomb open data, 24 partidas, medido
+  // levantada: a meta segurava a bola alta (a 40 m, ápice de 8 m). Agora: (1) o tempo do toque à RECEPÇÃO (o recebedor,
+  // parado até o toque, domina) no máximo o p25 dos lançamentos altos CERTOS da Copa 2022 (StatsBomb open data, 24 partidas, medido
   // para esta entrega: 35 ± 5 m 2,09 s, n 271; 45 ± 5 m 2,53 s, n 260; 55 ± 5 m 3,01 s, n 169) — a quarta parte mais rápida
   // do real, a bola tensa que o dono pediu; (2) o ápice a 40 m de 3 m (por cima de quem pula: no teste-aereo a bola a 2,9 m
   // passa por cima) a 5,5 m; (3) a saída a 40 m de 24 m/s a ACOES.lancamento.vMax (33; Kellis & Katis 2007: 18–35 m/s), e
@@ -182,7 +182,7 @@ for (const [nome, attr, meta, peFraco] of [['bom (90)', 90, 0.85, 85], ['fraco (
     apertar(m, BOTAO.LANCAMENTO, 30, 1, 0, 1);
     let l = null;
     for (let i = 0; i < 40 && !(l = primeiroPasse(m)); i++) passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
-    const v0 = l ? Math.hypot(m.bola.v.x, m.bola.v.y, m.bola.v.z) : 0;
+    const v0 = l ? l.v : 0; // a velocidade de saída (o log do toque)
     const dr = l ? Math.hypot(d - 30 - l.bx, l.bz) : 0;
     // parado até o toque (o lançamento sai para onde ele está); depois a IA dele vai à bola e domina (o 'parado' não pega)
     jogadorPorId(m, 1).papel = 'ia';
