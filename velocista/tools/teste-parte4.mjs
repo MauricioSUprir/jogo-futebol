@@ -13,7 +13,7 @@ const mis = await imp('missoes.js'), M = await imp('marcos.js'), cid = await imp
 let falhas = 0;
 const ok = (c, msg) => { console.log(`${c ? 'OK ' : 'ERRO'} ${msg}`); if (!c) falhas++; };
 const ler = (f) => fs.readFileSync(path.join(AQUI, '..', f), 'utf8');
-const ids = mis.MISSOES.map((m) => m.id), pos = (id) => ids.indexOf(id), P4 = mis.MISSOES.slice(pos('p4-consulta'));
+const ids = mis.MISSOES.map((m) => m.id), pos = (id) => ids.indexOf(id), P4 = mis.MISSOES.slice(pos('p4-consulta'), pos('p4-fim') + 1);
 const jogo = ler('js/jogo.js'), V = ler('js/viloes.js');
 
 // ---- 1. a ordem
@@ -22,6 +22,10 @@ const ordem = ['p4-consulta', 'p4-assalto', 'p4-beco', 'p4-gangue', 'p4-foto', '
   'p4-explica', 'p4-celas', 'p4-oficina', 'p4-tempestade', 'p4-incendio', 'p4-queda', 'p4-maefilha', 'cap-malandros', 'p4-vovo'];
 ok(ordem.every((id, k) => pos(id) >= 0 && (!k || pos(ordem[k - 1]) === pos(id) - 1)), 'Atos 13 e 14 na ordem: ' + ordem.join(' → '));
 ok(H.CENAS[mis.MISSOES[pos('p4-consulta')].cenaAbre]?.[0]?.titulo === 'O futuro dela', 'a Parte 4 abre com o cartão dela');
+const ordem2 = ['p4-vovo', 'p4-cela', 'p4-antenas', 'p4-fendas', 'p4-capangas', 'p4-vibe', 'p4-diario', 'p4-confronto', 'p4-sozinho', 'p4-joe', 'p4-perdao', 'cap-devoe2',
+  'p4-satelite', 'p4-plano', 'p4-fuga', 'p4-bateria', 'p4-corrida2', 'p4-panico', 'cap-reinicio', 'p4-despedida', 'p4-partida', 'p4-bebe', 'p4-fim'];
+ok(ordem2.every((id, k) => pos(id) >= 0 && (!k || pos(ordem2[k - 1]) === pos(id) - 1)) && (ids[pos('p4-fim') + 1] ?? 'p5-').startsWith('p5-'), 'Atos 15 e 16 na ordem, e a Parte 4 termina no Cortex: ' + ordem2.join(' → '));
+ok(P4.length >= 40, `${P4.length} passos na Parte 4`);
 // ---- 2. os lugares e a velocista de roxo
 const B = cid.bloco(cid.LAB_CELULA[0], cid.LAB_CELULA[1]); M.registrarPontosLab(B.cx, B.cz);
 for (const n of ['cortexVisita', 'oficinaCisco']) {
@@ -41,11 +45,15 @@ ok(/id="bt-tempestade"/.test(ler('index.html')) && /id="chip-tempestade"/.test(l
 ok(/id: 'malandros'[^}]*viloes: \['frio', 'onda', 'mago'\]/.test(V) && /const OFF = \[\[0, 0\], \[4, 2\], \[-4, 3\]/.test(V), 'os Malandros: os três juntos, cada um no seu lugar');
 ok(/FUGAS = \[\{ de: MISSOES\.findIndex\(\(m\) => m\.id === 'p4-celas'\), ate: 'malandros', ids: \['frio', 'onda', 'mago'\] \}\]/.test(jogo), 'eles somem das celas da contenção do p4-celas até o capítulo ser vencido');
 // ---- 5. as cenas e o rádio
-const fechaPeloRadio = (m) => m.alvo === 'esfera' || m.crime || m.tipo === 'portais' || mis.MISSOES[pos(m.id) + 1]?.capitulo;
+const fechaPeloRadio = (m) => m.alvo === 'esfera' || m.alvo === 'fenda' || m.alvo === 'subestacao' || m.crime || m.patrulha || m.tipo === 'portais' || m.tipo === 'bateria' || mis.MISSOES[pos(m.id) + 1]?.capitulo;
 const semCena = P4.filter((m) => !m.capitulo && !fechaPeloRadio(m) && !H.CENAS[`depois-${m.id}`]);
 ok(!semCena.length, `cada passo de história termina numa cena (${semCena.map((m) => m.id).join(', ') || 'todos'})`);
 ok(P4.filter((m) => !m.capitulo && m.id !== 'p4-consulta').every((m) => H.MISSOES_FALAS[m.id]?.abre?.length), 'cada passo (menos o primeiro, que abre com a cena) começa com rádio');
-ok(['cap', 'encontro', 'derrotado'].every((k) => H.CENAS[`${k}-malandros`]?.length >= 3) && ['capitulo', 'luta', 'derrota'].every((k) => H.RADIO[`${k}-malandros`]?.length), 'capítulo dos Malandros: cenas e rádio');
+for (const id of ['malandros', 'devoe2', 'reinicio']) ok(['cap', 'encontro', 'derrotado'].every((k) => H.CENAS[`${k}-${id}`]?.length >= 3) && ['capitulo', 'luta', 'derrota'].every((k) => H.RADIO[`${k}-${id}`]?.length), `capítulo ${id}: cenas e rádio`);
+ok(/id: 'reinicio'[^}]*viloes: \['devoe', 'frio', 'onda', 'mago'\][^}]*perseguicao: false/.test(V) && /id: 'devoe2'[^}]*viloes: \['devoe'\]/.test(V), 'o capítulo 16 (o corpo novo do DeVoe) e o 17 (o DeVoe e os três Malandros juntos)');
+ok(['escudo', 'fase2'].every((k) => H.RADIO[`${k}-devoe2`]?.length && H.RADIO[`${k}-reinicio`]?.length), 'o rádio do escudo e da 2ª fase do DeVoe nos dois capítulos');
+ok(H.CENAS['depois-p4-fim'].at(-1).titulo === 'Fim da Parte 4' && !P4.flatMap((m) => H.CENAS[`depois-${m.id}`] || []).some((f) => f.cartao && f.rotulo === 'Continua') && /mostrarCreditos\(4\)/.test(jogo), 'a Parte 4 termina com "Fim da Parte 4" e os créditos dela (sem "Continua")');
+ok(P4.filter((m) => m.tempo).every((m) => H.RADIO[`falhou-${m.id}`]?.length), 'cada cronômetro tem a fala de quando o tempo acaba');
 const todas = [...Object.values(H.CENAS).flat(), ...Object.values(H.RADIO).flat(), ...Object.values(H.MISSOES_FALAS).flatMap((v) => [...(v.abre || []), ...(v.fecha || [])])];
 ok(todas.every((f) => f.cartao || (H.PERSONAGENS[f.quem] && f.texto.length < 160)), `${todas.length} falas, todas com personagem e curtas`);
 ok(H.CENAS['depois-p3-fim'].at(-1).titulo === 'Fim da Parte 3' && /a Parte 4 começa/.test(jogo), 'a Parte 3 termina e os créditos dela avisam da Parte 4');
@@ -53,6 +61,7 @@ ok(H.CENAS['depois-p3-fim'].at(-1).titulo === 'Fim da Parte 3' && /a Parte 4 com
 const mem = (o) => ({ getItem: (k) => o[k] ?? null, setItem: (k, v) => { o[k] = v; } });
 ok(mis.criarMissoes(mem({ 'theflash.missoes.v2': JSON.stringify({ id: null, ultimo: 'p3-fim', stats: {} }) })).atual?.id === 'p4-consulta', 'terminou a Parte 3: continua no começo da Parte 4');
 ok(mis.criarMissoes(mem({ 'theflash.missoes.v2': JSON.stringify({ id: null, ultimo: ids.at(-1), stats: {} }) })).livre, 'terminou tudo: a cidade fica livre');
+ok(mis.criarMissoes(mem({ 'theflash.missoes.v2': JSON.stringify({ id: null, ultimo: 'p4-vovo', stats: {} }) })).atual?.id === 'p4-cela', 'terminou a 1ª entrega da Parte 4: continua no Ato 15');
 
 // ---- 7. no navegador
 if (process.argv.includes('--navegador')) {
@@ -79,6 +88,11 @@ if (process.argv.includes('--navegador')) {
   await abrirJogo('?capitulo=malandros');
   ok(await espera(() => window.__rel.viloes.fase === 'aparece' && window.__rel.viloes.viloes.length === 3 && window.__rel.viloes.viloes.every((v) => v.modelo)), 'o capítulo dos Malandros começa com os três, com corpo');
   ok(await pagina.evaluate(() => { const v = window.__rel.viloes.viloes; return Math.min(Math.hypot(v[0].x - v[1].x, v[0].z - v[1].z), Math.hypot(v[0].x - v[2].x, v[0].z - v[2].z), Math.hypot(v[1].x - v[2].x, v[1].z - v[2].z)) > 2; }), 'nenhum em cima do outro');
+  await abrirJogo('?capitulo=reinicio');
+  // (o capítulo 17 é em frente ao S.T.A.R. Labs, onde o herói começa: a luta já sai na hora)
+  ok(await espera(() => ['aparece', 'luta'].includes(window.__rel.viloes.fase) && window.__rel.viloes.viloes.length === 4 && window.__rel.viloes.viloes.every((v) => v.modelo)), 'o capítulo 17 começa com os quatro (o DeVoe e os Malandros), com corpo');
+  await pagina.evaluate(() => window.__rel.missoes.irPara('p4-partida'));
+  ok(await espera(() => !!window.__rel.aliados.pessoas.violeta), 'a Nora espera na Câmara do Núcleo para voltar (com corpo)');
   ok(!erros.length, `sem erros no console (${erros.slice(0, 3).join(' | ')})`);
   await navegador.close(); await srv.fechar();
 }

@@ -1328,6 +1328,16 @@ const GANCHOS_CENA = {
   // Parte 4: a velocista de roxo some num raio roxo
   'depois-p4-beco': { aoAcao: (a) => { if (a === 'someVioleta') someNumRaio('violeta', [1.5, 0.7, 2.6]); } },
   'depois-p4-jantar': { aoAcao: (a) => { if (a === 'someVioleta') someNumRaio('violeta', [1.5, 0.7, 2.6]); } },
+  'depois-p4-confronto': { aoAcao: (a) => { if (a === 'someVioleta') someNumRaio('violeta', [1.5, 0.7, 2.6]); } },
+  'depois-p4-partida': { aoAcao: (a) => { if (a === 'someVioleta') { someNumRaio('violeta', [1.5, 0.7, 2.6]); batidaNoNucleo(); } } },
+  // as telas do laboratório com o DeVoe, o vórtice de pai e filha e o satélite explodindo no céu
+  'depois-p4-cela': { aoAcao: (a) => { if (a === 'telas') clarear(0.3); } },
+  'derrotado-devoe2': { aoAcao: (a) => { if (a === 'telas') clarear(0.4); } },
+  'derrotado-reinicio': { aoAcao: (a) => {
+    if (a === 'vortice') for (let i = 0; i < 24; i++) { const g = (i / 24) * 6.28, r = 12 + (i % 3) * 6; combate.efeitos.raio(P.x + Math.cos(g) * r, P.y + 1 + (i % 4), P.z + Math.sin(g) * r, P.x + Math.cos(g + 0.5) * r, P.y + 2 + (i % 4), P.z + Math.sin(g + 0.5) * r, { vida: 0.8, desvio: 0.8, r: i % 2 ? 2.4 : 1.5, g: i % 2 ? 1.8 : 0.7, b: i % 2 ? 0.6 : 2.6 }); }
+    if (a === 'explodeCeu') { combate.efeitos.clarao(P.x, 120, P.z, 60, 1); clarear(0.8); }
+  } },
+  'depois-p4-fim': { depois: () => { if (historia.viu('cena:depois-p4-fim')) mostrarCreditos(4); } },
   'derrotado-reverso2': { aoAcao: (a) => { if (a === 'batida') batidaNoNucleo(); } },
   'derrotado-negro2': { aoAcao: (a) => {
     if (a !== 'negroLevaHenry') return;
@@ -1422,6 +1432,13 @@ const CREDITOS_P3 = [
   ...CREDITOS.slice(2, -1),
   ['Obrigado por jogar', 'Feche os créditos: a Parte 4 começa um ano depois.'],
 ];
+const CREDITOS_P4 = [
+  ['A Parte 4: O futuro dela', 'A visitante · Os Malandros · A mente de DeVoe · O dia em que o Flash desaparece'],
+  ['Personagens', 'Caitlin · Nevasca · Cisco (Vibe) · Joe · Iris · Nora West-Allen, de 2049 e de um ano · DeVoe · Capitão Frio · Onda Térmica · Mago do Tempo'],
+  ['O traje novo', 'Bateria, armadura, tempo lento e, agora, a TEMPESTADE'],
+  ...CREDITOS.slice(2, -1),
+  ['Obrigado por jogar', 'A cidade continua precisando de você: todos os capítulos podem ser jogados de novo pela pausa.'],
+];
 function mostrarCreditos(parte = 1) {
   let c = document.getElementById('creditos');
   if (!c) {
@@ -1431,7 +1448,7 @@ function mostrarCreditos(parte = 1) {
   }
   if (c.dataset.parte !== String(parte)) {
     c.dataset.parte = String(parte);
-    c.innerHTML = `<div class="rolo"><img class="logo-fim" src="assets/logo/logo.webp" alt="THE FLASH">${(parte === 3 ? CREDITOS_P3 : parte === 2 ? CREDITOS_P2 : CREDITOS).map(([t, d]) => `<section>${t ? `<h3>${t}</h3>` : ''}${d ? `<p>${d}</p>` : ''}</section>`).join('')}</div><button type="button" class="pular">Fechar</button>`;
+    c.innerHTML = `<div class="rolo"><img class="logo-fim" src="assets/logo/logo.webp" alt="THE FLASH">${(parte === 4 ? CREDITOS_P4 : parte === 3 ? CREDITOS_P3 : parte === 2 ? CREDITOS_P2 : CREDITOS).map(([t, d]) => `<section>${t ? `<h3>${t}</h3>` : ''}${d ? `<p>${d}</p>` : ''}</section>`).join('')}</div><button type="button" class="pular">Fechar</button>`;
   }
   c.hidden = false; c.classList.remove('rola'); void c.offsetWidth; c.classList.add('rola');
   J.modo = 'creditos'; J.creditosT = 0;
