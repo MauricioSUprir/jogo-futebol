@@ -13,7 +13,7 @@ const imp = (f) => import(pathToFileURL(path.join(AQUI, '../js', f)).href);
 const mis = await imp('missoes.js'), M = await imp('marcos.js'), cid = await imp('cidade.js'), H = await imp('historia.js');
 let falhas = 0;
 const ok = (c, msg) => { console.log(`${c ? 'OK ' : 'ERRO'} ${msg}`); if (!c) falhas++; };
-const ids = mis.MISSOES.map((m) => m.id), pos = (id) => ids.indexOf(id), P3 = mis.MISSOES.slice(pos('p3-convite'));
+const ids = mis.MISSOES.map((m) => m.id), pos = (id) => ids.indexOf(id), P3 = mis.MISSOES.slice(pos('p3-convite'), pos('p3-fim') + 1);
 const jogo = fs.readFileSync(path.join(AQUI, '../js/jogo.js'), 'utf8');
 
 // ---- 1. a ordem
@@ -23,7 +23,7 @@ ok(ordem.every((id, k) => pos(id) >= 0 && (!k || pos(ordem[k - 1]) === pos(id) -
 ok(H.CENAS[mis.MISSOES[pos('p3-convite')].cenaAbre]?.[0]?.titulo === 'A força do raio', 'a Parte 3 abre com o cartão dela');
 const ordem2 = ['p3-acordo', 'p3-fendas', 'p3-saida', 'p3-incendio', 'p3-iris-perigo', 'p3-joe2', 'p3-berco', 'p3-arquivo', 'p3-assalto', 'p3-cafe', 'p3-plano', 'p3-treino', 'p3-esferas', 'p3-fuga', 'cap-reverso2',
   'p3-perseguido', 'p3-presidio', 'p3-gangue2', 'p3-vigia', 'p3-queda2', 'p3-armadilha', 'p3-despedida', 'cap-negro2', 'p3-silencio', 'p3-nora', 'p3-padrinhos', 'p3-fim'];
-ok(ordem2.every((id, k) => pos(id) >= 0 && (!k || pos(ordem2[k - 1]) === pos(id) - 1)) && ids.at(-1) === 'p3-fim', 'Atos 11 e 12 na ordem, e a história termina na praça: ' + ordem2.join(' → '));
+ok(ordem2.every((id, k) => pos(id) >= 0 && (!k || pos(ordem2[k - 1]) === pos(id) - 1)) && (ids[pos('p3-fim') + 1] ?? 'p4-').startsWith('p4-'), 'Atos 11 e 12 na ordem, e a Parte 3 termina na praça (depois, a Parte 4): ' + ordem2.join(' → '));
 const P2n = pos('p2-fim') - pos('p2-exames') + 1;
 ok(P3.length > P2n, `a Parte 3 (${P3.length} passos) é maior que a Parte 2 (${P2n})`);
 // ---- 2. o traje: a Caitlin e o Cisco mostram na sala dos trajes, com a vitrine; ele veste no pedestal

@@ -2,7 +2,9 @@
 // golpes, o 3º é um gancho que derruba) e os golpes especiais pagos com a energia:
 //   RAIO     (25%) — arremessa um raio no bandido (pula para mais um perto dele);
 //   CICLONE  (35%) — corre em círculo em volta de si: o vórtice levanta todos os bandidos perto e os joga longe;
-//   SÔNICO   (50%) — some numa arrancada e volta na velocidade máxima: um soco com onda de choque.
+//   SÔNICO   (50%) — some numa arrancada e volta na velocidade máxima: um soco com onda de choque;
+//   TEMPESTADE (60%, Parte 4: o Cisco instala no traje novo) — o herói concentra o raio e chama uma tempestade: um relâmpago
+//   do céu em cada inimigo a até 24 m (o jogo só libera depois do passo 'p4-tempestade').
 // Os bandidos chegam perto, cercam, ameaçam e batem (dois de cada vez); cada golpe que acerta o herói tira energia.
 import * as THREE from 'three';
 
@@ -10,6 +12,7 @@ export const ESPECIAIS = {
   raio: { nome: 'Raio', custo: 0.25, teclas: ['1', 'q'] },
   ciclone: { nome: 'Ciclone', custo: 0.35, teclas: ['2', 'e'] },
   sonico: { nome: 'Sônico', custo: 0.5, teclas: ['3', 'r'] },
+  tempestade: { nome: 'Tempestade', custo: 0.6, teclas: ['4', 'g'] },
 };
 const AVANCO_MAX = 16;          // até onde o BATER alcança com o avanço relâmpago (m)
 const ALCANCE_SOCO = 1.6;
@@ -237,6 +240,7 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
     if (alvo) { const dx = alvo.x - P.x, dz = alvo.z - P.z, d = Math.hypot(dx, dz) || 1; hx = dx / d; hz = dz / d; P.h = Math.atan2(hx, hz); }
     else if (Math.hypot(dirX, dirZ) > 0.1) { const d = Math.hypot(dirX, dirZ); hx = dirX / d; hz = dirZ / d; P.h = Math.atan2(hx, hz); }
     if (tipo === 'raio') H.acao = { tipo, t: 0, dur: 0.62, bate: 0.3, alvo, hx, hz, feito: false };
+    else if (tipo === 'tempestade') H.acao = { tipo, t: 0, dur: 1.3, bate: 0.55, feito: false };
     else if (tipo === 'ciclone') H.acao = { tipo, t: 0, dur: 1.9, cx: P.x, cz: P.z, a0: Math.atan2(-hz, -hx), feito: false, presos: [] };
     else {
       const ix = alvo ? alvo.x : P.x + hx * 10, iz = alvo ? alvo.z : P.z + hz * 10;
@@ -294,6 +298,24 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
             if (outro) { fx.raio(tx, ty, tz, outro.x, outro.y + 1.2, outro.z, { vida: 0.3, desvio: 0.8, r: 2.4, g: 1.9, b: 0.6 }); acertar(outro, 'raio', alvo, { dano: 9, empurra: 10, alto: 5, especial: true }); }
           }
           H.tremor = 0.4; H.hitstop = 0.06;
+        }
+        if (A.t >= A.dur) H.acao = null;
+      } else if (A.tipo === 'tempestade') {
+        // 0–0,55 s: o raio sobe do herói para o céu (carregando); 0,55 s: um relâmpago desce em cada inimigo a até 24 m
+        P.vx = P.vz = 0;
+        if (!A.feito) for (let i = 0; i < (mobile ? 1 : 2); i++) fx.raio(P.x + rnd(-0.4, 0.4), P.y + 1.6, P.z + rnd(-0.4, 0.4), P.x + rnd(-3, 3), P.y + rnd(8, 16), P.z + rnd(-3, 3), { vida: 0.12, desvio: 1.2, r: 2.4, g: 1.9, b: 0.7 });
+        if (!A.feito && A.t >= A.bate) {
+          A.feito = true;
+          for (const e of todos()) {
+            if (!emPe(e)) continue;
+            const d = Math.hypot(e.x - P.x, e.z - P.z);
+            if (d > 24 || Math.abs(e.y - P.y) > 8) continue;
+            for (let i = 0; i < 2; i++) fx.raio(e.x + rnd(-1, 1), e.y + 32, e.z + rnd(-1, 1), e.x, e.y + 1, e.z, { vida: 0.4, desvio: 2.2, r: 2.6, g: 2.1, b: 0.8 });
+            fx.clarao(e.x, e.y + 1, e.z, 4, 0.3);
+            acertar(e, 'raio', P, { dano: 12, empurra: 10, alto: 7, especial: true });
+          }
+          fx.onda(P.x, P.y, P.z, 24, 0.8); fx.clarao(P.x, P.y + 8, P.z, 18, 0.45);
+          H.tremor = 1; H.hitstop = 0.16;
         }
         if (A.t >= A.dur) H.acao = null;
       } else if (A.tipo === 'ciclone') {

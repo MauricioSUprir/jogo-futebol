@@ -102,6 +102,7 @@ export const CAPITULOS = [
   { id: 'nevasca2', titulo: 'Capítulo 12 — Nevasca', viloes: ['nevasca'], perseguicao: false, lugar: 'cidade', texto: 'A Nevasca acordou dentro da Caitlin. Encontre-a e traga a Caitlin de volta.' },
   { id: 'reverso2', titulo: 'Capítulo 13 — O acordo', viloes: ['reverso'], perseguicao: true, texto: 'O homem de amarelo não foi para o Núcleo. Alcance o Flash Reverso.' },
   { id: 'negro2', titulo: 'Capítulo 14 — O fim de toda corrida', viloes: ['negro'], perseguicao: false, texto: 'O Corredor Negro espera em frente ao S.T.A.R. Labs. Tudo o que você tem: agora.' },
+  { id: 'malandros', titulo: 'Capítulo 15 — Os Malandros', viloes: ['frio', 'onda', 'mago'], perseguicao: false, lugar: 'cidade', texto: 'Gelo, fogo e tempestade no mesmo quarteirão. Os três juntos.' },
 ];
 const DANO = { soco: 5, gancho: 9, raio: 14, ciclone: 18, sonico: 28 };
 const CHAVE = 'theflash.viloes.v1';
@@ -199,17 +200,19 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       }
       base = base || { x: eixo(N / 2 + 4), z: eixo(N / 2 + 4), kx: N / 2 + 4, kz: N / 2 + 4 };
     } else base = { x: labPos.x, z: labPos.z };
+    const OFF = [[0, 0], [4, 2], [-4, 3], [2, -4]];                // (até quatro juntos sem um em cima do outro: os Malandros são três)
     C.viloes.forEach((v, k) => {
-      v.x = base.x + (k ? 4 : 0); v.z = base.z + (k ? 2 : 0); v.y = 0; v.estado = 'aparece'; v.grupo.visible = true;
+      v.x = base.x + OFF[k % 4][0]; v.z = base.z + OFF[k % 4][1]; v.y = 0; v.estado = 'aparece'; v.grupo.visible = true;
       v.cam = base.kx !== undefined ? { kx: base.kx, kz: base.kz, dir: Math.floor(Math.random() * 4), t: 0 } : null;
       combate.registrarAlvo(v);
     });
-    if (cap.lugar === 'cidade') {
-      const pf = PERFIS[cap.viloes[0]];
+    if (cap.lugar === 'cidade') for (const id of cap.viloes) {           // o rastro de cada um no chão (gelo do Frio, fogo do Onda)
+      const pf = PERFIS[id];
       if (pf.arma === 'gelo') for (let k = 0; k < 9; k++) novoPerigo('gelo', base.x + rnd(-16, 16), base.z + rnd(-16, 16), rnd(2, 4.5), 1e9, [0.35, 0.75, 1.0], 0.3);
       if (pf.arma === 'fogo') for (let k = 0; k < 5; k++) novoPerigo('fogo', base.x + rnd(-18, 18), base.z + rnd(-18, 18), rnd(1.8, 3), 1e9, [2.2, 0.7, 0.12], 0.45);
     }
-    if (cap.viloes.length > 1) avisar('Zoom e Flash Reverso', 'Batalha final', 'reverso');
+    const nomes = cap.viloes.map((id) => PERFIS[id].titulo);
+    if (cap.viloes.length > 1) avisar(`${nomes.slice(0, -1).join(', ')} e ${nomes.at(-1)}`, cap.id === 'final' ? 'Batalha final' : cap.titulo.replace(/^.* — /, ''), cap.viloes[cap.viloes.length - 1]);
     else avisar(`${PERFIS[cap.viloes[0]].titulo} apareceu`, 'Alerta na cidade', cap.viloes[0]);
     return C;
   }
@@ -229,7 +232,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
       if (v.perf.arma === 'mente') { limparDevoe(v); criarTorres(v); }
       v.estado = 'luta'; v.acao = 'rodeia'; v.at = rnd(...v.perf.rodeia) * (C.viloes.length > 1 ? 1.4 : 1); v.vida = v.perf.vida; v.fase2 = false; v.vx = v.vz = 0;
     }
-    avisar(C.viloes.length > 1 ? 'Derrote os dois' : C.viloes[0].perf.titulo, 'Luta', C.viloes.length > 1 ? 'reverso' : C.viloes[0].id);
+    avisar(C.viloes.length > 2 ? 'Derrote os três' : C.viloes.length > 1 ? 'Derrote os dois' : C.viloes[0].perf.titulo, 'Luta', C.viloes.length > 1 ? C.viloes[C.viloes.length - 1].id : C.viloes[0].id);
     eventos.push({ tipo: 'luta', id: C.cap.id });
   }
 

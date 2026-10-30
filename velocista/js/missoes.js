@@ -154,6 +154,27 @@ export const MISSOES = [
   { id: 'p3-nora', titulo: 'Nora', texto: 'A Iris vai ter o bebê! Corra para a casa dos West', ponto: 'jantar', aliados: { joe: 'sofaWest', iris: 'jantar' }, roupa: 'civil', tempo: 60, raio: 3.5, checar: (c) => c.perto },
   { id: 'p3-padrinhos', titulo: 'Os padrinhos', texto: 'A Caitlin e o Cisco têm um presente: vá à sala dos trajes', alvoSala: 'trajes', aliados: { caitlin: 'trajesCaitlin', cisco: 'trajesCisco' }, semEquipe: ['caitlin', 'cisco'], checar: (c) => c.sala === 'trajes' },
   { id: 'p3-fim', titulo: 'A cidade agradece', texto: 'A cidade inteira está na praça da Prefeitura', ponto: 'prefeitura', aliados: { joe: 'prefeitura', iris: 'prefeitura2' }, checar: (c) => c.perto },
+  // ===== PARTE 4 — O futuro dela (dono, 30/10: "e mais história, faça") =====
+  // Ato 13 — A visitante: uma velocista de roxo aparece pela cidade, sempre um passo à frente do Flash
+  { id: 'p4-consulta', titulo: 'Consulta de rotina', texto: 'Leve a pequena Nora para a consulta com a Caitlin, na sala médica do S.T.A.R. Labs', cenaAbre: 'p4-abertura', alvoSala: 'medica', aliados: { caitlin: 'medicaCaitlin' }, semEquipe: ['caitlin'], roupa: 'civil', checar: (c) => c.sala === 'medica' },
+  { id: 'p4-assalto', titulo: 'Alguém chegou antes', texto: 'Pare um assalto no centro', meta: 1, contador: 'assalto', crime: 'assalto' },
+  { id: 'p4-beco', titulo: 'A velocista de roxo', texto: 'Uma velocista de roxo foi vista atrás da Delegacia: vá até lá', ponto: 'beco', aliados: { violeta: 'beco' }, raio: 8, checar: (c) => c.perto },
+  { id: 'p4-gangue', titulo: 'Dupla dinâmica', texto: 'Derrote uma gangue. Talvez você não esteja sozinho', meta: 1, contador: 'gangue', crime: 'gangue' },
+  { id: 'p4-foto', titulo: 'A matéria da Iris', texto: 'A Iris quer mostrar a matéria sobre a velocista de roxo: vá ao Picture News', ponto: 'mesaIrisJornal', aliados: { iris: 'mesaIrisJornal' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p4-cortex', titulo: 'Visita no Cortex', texto: 'Alarme no S.T.A.R. Labs: tem alguém no Cortex', alvo: 'cortex', aliados: { violeta: 'cortexVisita' }, checar: (c) => c.sala === 'cortex' },
+  { id: 'p4-corrida', titulo: 'Aposta', texto: 'Aposte corrida com a velocista de roxo: os 8 portais em até 70 s', tipo: 'portais' },
+  { id: 'p4-jantar', titulo: 'Jantar com a visita', texto: 'A Iris convidou a velocista para jantar na casa dos West', ponto: 'jantar', aliados: { joe: 'sofaWest', iris: 'jantar', violeta: 'cozinha' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
+  { id: 'p4-revelacao', titulo: 'Quem é você?', texto: 'Ela fugiu do jantar. Está sozinha na praça da Prefeitura', ponto: 'prefeitura', aliados: { violeta: 'prefeitura' }, raio: 10, checar: (c) => c.perto },
+  // Ato 14 — Os Malandros: o Capitão Frio, o Onda Térmica e o Mago do Tempo, juntos
+  { id: 'p4-explica', titulo: 'Do futuro', texto: 'Volte ao Cortex com ela. A equipe precisa ouvir', alvo: 'cortex', aliados: { violeta: 'cortexVisita' }, checar: (c) => c.sala === 'cortex' },
+  { id: 'p4-celas', titulo: 'Três celas vazias', texto: 'Alarme na câmara de contenção', alvoSala: 'contencao', checar: (c) => c.sala === 'contencao' },
+  { id: 'p4-oficina', titulo: 'Um presente do Cisco', texto: 'O Cisco espera você na oficina do S.T.A.R. Labs', alvoSala: 'oficina', aliados: { cisco: 'oficinaCisco' }, semEquipe: ['cisco'], checar: (c) => c.sala === 'oficina' },
+  { id: 'p4-tempestade', titulo: 'A tempestade', texto: 'Use a TEMPESTADE numa gangue (tecla 4 ou G, ou o botão TEMPESTADE)', meta: 1, contador: 'tempestades', crime: 'gangue' },
+  { id: 'p4-incendio', titulo: 'A assinatura do fogo', texto: 'O Onda Térmica incendiou um prédio: apague o fogo', meta: 1, contador: 'incendio', crime: 'incendio' },
+  { id: 'p4-queda', titulo: 'A assinatura do raio', texto: 'O Mago do Tempo derrubou alguém do alto de um prédio: salve-o', meta: 1, contador: 'queda', crime: 'queda' },
+  { id: 'p4-maefilha', titulo: 'Café com a mãe', texto: 'A Iris marcou um café no Jitters. Com a filha. As duas', ponto: 'mesaCafe', aliados: { iris: 'mesaCafe', violeta: 'mesaIris' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'cap-malandros', titulo: 'Os Malandros', texto: 'O Capitão Frio, o Onda Térmica e o Mago do Tempo: os três juntos', capitulo: 'malandros' },
+  { id: 'p4-vovo', titulo: 'O avô', texto: 'O Joe quer conhecer a neta. A crescida', ponto: 'sofaWest', aliados: { joe: 'sofaWest', violeta: 'jantar' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
 ];
 /** os passos de uma época (os da linha do tempo alterada): o jogo põe o mundo nela enquanto o passo dura */
 export const EPOCA_DO_PASSO = (m) => m?.epoca || null;
@@ -163,7 +184,7 @@ const CHAVE_V1 = 'theflash.missoes.v1';
 // a lista da v1, para levar quem já tinha progresso ao mesmo passo
 const ORDEM_V1 = ['lab', 'velocidade', 'esferas', 'escalar', 'vibrar', 'assalto', 'gangue', 'especiais', 'portais', 'fuga', 'incendio', 'queda',
   'patrulha', 'relatorio', 'cap-reverso', 'fendas', 'tunel', 'passado', 'cap-savitar', 'cap-devoe', 'nucleo'];
-const STATS0 = { lentos: 0, pistas: 0, fendas: 0, subestacoes: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
+const STATS0 = { tempestades: 0, lentos: 0, pistas: 0, fendas: 0, subestacoes: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
 
 export function criarMissoes(armazem) {
   let salvo = null, v1 = null;
