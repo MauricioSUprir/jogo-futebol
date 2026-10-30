@@ -3,6 +3,7 @@ import { CELL, BLOCO, N, MEIO, CALCADA, LAB_CELULA, bloco, celulaDe, centroDe, d
 import { criarHeroi } from './humano.js';
 import { criarRaios, definirCameraRaios } from './raios.js';
 import { criarPosFx } from './posfx.js';
+import { PRESETS } from './superres.js';
 import { iniciarAtualizacao } from './atualizar.js';
 import { criarMissoes, MISSOES } from './missoes.js';
 import { criarCrimes } from './crimes.js';
@@ -430,6 +431,19 @@ const heroi = new THREE.Group(); const partes = {};
 cena.add(heroi);
 const raios = criarRaios(cena, { mobile: MOBILE }); definirCameraRaios(camera);
 const posfx = criarPosFx(renderer, cena, camera, { mobile: MOBILE });
+// SUPER RESOLUÇÃO (superres.js; o "DLSS" possível no navegador): a cena na resolução interna e a reconstrução na da tela.
+// Padrão: Qualidade no PC, Equilibrado no celular; a escolha da pausa fica guardada. ?imagem=nativa|qualidade|... força
+const CHAVE_IMAGEM = 'theflash.imagem.v1';
+let presetImagem = new URLSearchParams(location.search).get('imagem');
+if (!PRESETS[presetImagem]) { try { presetImagem = localStorage.getItem(CHAVE_IMAGEM); } catch { presetImagem = null; } }
+if (!PRESETS[presetImagem]) presetImagem = TOQUE ? 'equilibrado' : 'qualidade';
+function escolherImagem(p, guardar = false) {
+  presetImagem = p; posfx.definirEscala(PRESETS[p].escala);
+  for (const b of document.querySelectorAll('#imagem button')) b.classList.toggle('sel', b.dataset.p === p);
+  if (guardar) try { localStorage.setItem(CHAVE_IMAGEM, p); } catch { /* sem armazenamento */ }
+}
+escolherImagem(presetImagem);
+for (const b of document.querySelectorAll('#imagem button')) b.addEventListener('click', () => escolherImagem(b.dataset.p, true));
 // o corpo do herói: o Flash de traje e o Barry Allen à paisana (as missões da vida dele: interiores.js, missoes.js `roupa`);
 // os dois com o mesmo esqueleto e a mesma animação, um visível de cada vez (vestir)
 let modelo = null, modeloTraje = null, modeloCivil = null, carregandoCivil = null, modeloNovo = null, carregandoNovo = null;
@@ -1788,4 +1802,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { interacoes, corridas, vitrine, equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { posfx, escolherImagem, get presetImagem() { return presetImagem; }, interacoes, corridas, vitrine, equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };

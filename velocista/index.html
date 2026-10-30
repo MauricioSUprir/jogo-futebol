@@ -155,6 +155,12 @@
   #vidaHeroi .nivel { background:linear-gradient(90deg,#ff2b3d,#ff7b5a); transition:width .15s; }
   #capitulos { display:flex; flex-direction:column; gap:8px; width:min(80vw,380px); }
   #capitulos .cap-aviso { margin:0; font-size:13px; line-height:1.45; opacity:.75; text-align:center; }
+  #telaPausa { justify-content:safe center; }        /* (com a pausa mais alta que a tela do celular deitado, rola desde o topo) */
+  /* a super resolução na pausa (superres.js): como os presets do DLSS/FSR nos jogos */
+  .opcoes { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:6px; margin:4px 0 2px; pointer-events:auto; }
+  .opcoes span { width:100%; text-align:center; font-size:11px; letter-spacing:.14em; text-transform:uppercase; opacity:.7; }
+  .opcoes button { cursor:pointer; padding:6px 12px; border-radius:99px; border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.05); color:var(--texto); font:inherit; font-size:12.5px; }
+  .opcoes button.sel { border-color:var(--ouro); color:var(--ouro); background:rgba(255,210,63,.12); box-shadow:0 0 10px rgba(255,210,63,.3); }
   .recomecar { pointer-events:auto; cursor:pointer; padding:8px 18px; border-radius:99px; border:1px solid rgba(255,255,255,.28); background:none; color:var(--texto); font:inherit; font-size:13px; opacity:.85; }
   .recomecar.confirma { border-color:#ff6b5a; color:#ff8f80; opacity:1; box-shadow:0 0 14px rgba(255,107,90,.3); }
   .cap { pointer-events:auto; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.2); background:rgba(7,8,15,.65); color:var(--texto); font:inherit; text-align:left; }
@@ -300,7 +306,8 @@
     <span>Corra de frente para um prédio acima de 130 km/h</span><span>escala a parede até o topo (Shift)</span>
     <span><kbd>F</kbd> ou clique</span><span>bater (avança até o bandido; 3 seguidos = gancho)</span>
     <span><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></span><span>golpes especiais: raio, ciclone, sônico (gastam energia)</span>
-    <span><kbd>P</kbd></span><span>pausa (capítulos dos vilões)</span>
+    <span><kbd>X</kbd></span><span>ação: sentar no banco, ler o jornal, foto com o fã, desafio de corrida</span>
+    <span><kbd>P</kbd></span><span>pausa (capítulos dos vilões e a super resolução)</span>
     <span><kbd>M</kbd></span><span>mapa grande</span>
     <span><kbd>H</kbd></span><span>avançar o relógio</span>
   </div>
@@ -314,6 +321,7 @@
   <h2>PAUSADO</h2>
   <p id="resumo"></p>
   <button class="principal" id="btnContinuar" type="button">CONTINUAR</button>
+  <div id="imagem" class="opcoes" role="group" aria-label="Qualidade da imagem"><span>Super resolução</span><button type="button" data-p="nativa">Nativa</button><button type="button" data-p="qualidade">Qualidade</button><button type="button" data-p="equilibrado">Equilibrado</button><button type="button" data-p="desempenho">Desempenho</button></div>
   <div id="capitulos"></div>
   <button class="recomecar" id="btnRecomecar" type="button">Recomeçar a história do zero</button>
 </div>
