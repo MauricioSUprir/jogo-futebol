@@ -31,6 +31,7 @@ import { geometriaCarro } from './carros3d.js';
 import { criarObjetos } from './objetos.js';
 import { criarObjetos3d } from './objetos3d.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
+import { texturaDetalhe, comDetalhe } from './detalhe.js';
 import { passoEmbalo, tetoCorrida, gastoCorrida } from './velocidade.js';
 
 // ---------- constantes ----------
@@ -154,28 +155,33 @@ const LUZ_SALA = new THREE.Vector3(0.28, 1, 0.16).normalize();
 
 // ---------- materiais e texturas ----------
 const fachadas = criarFachadas(ANISO, { alta: !MOBILE }), lojas = criarLojas(ANISO);
+// o grão de perto (detalhe.js): pedrinhas no asfalto, poros no concreto, folhas na grama
+const DET = { asfalto: texturaDetalhe('asfalto', ANISO, MOBILE ? 256 : 512), concreto: texturaDetalhe('concreto', ANISO, MOBILE ? 256 : 512), grama: texturaDetalhe('grama', ANISO, MOBILE ? 256 : 512) };
 const TONS = [0xffffff, 0xe9dfcc, 0xcfd9ea];
 const matFachada = [];
 for (let k = 0; k < fachadas.length; k++) {
   matFachada.push(TONS.map((c) => {
     const vidro = k === 0;
     const m = new MatPadrao({ map: fachadas[k].mapa, color: c, emissive: 0xffffff, emissiveMap: fachadas[k].emissiva, emissiveIntensity: 0,
-      bumpMap: fachadas[k].mapa, bumpScale: vidro ? 0.4 : 1.6, roughness: vidro ? 0.18 : 0.82, metalness: vidro ? 0.55 : 0.05, envMapIntensity: vidro ? 1.3 : 0.25 });
+      bumpMap: fachadas[k].relevo || fachadas[k].mapa, bumpScale: vidro ? 0.6 : 2.4, roughness: vidro ? 0.18 : 0.82, metalness: vidro ? 0.55 : 0.05, envMapIntensity: vidro ? 1.3 : 0.25 });
     // no PC, cada janela vira uma sala de verdade (janelas.js); o vidro reflete o céu
     if (!MOBILE) salasAtrasDasJanelas(m, { mascara: fachadas[k].mascara, grade: fachadas[k].grade, espelho: fachadas[k].espelho, reflexo: vidro ? 1 : 3.2 });
+    if (!vidro) comDetalhe(m, DET.concreto, { escala: 2.2, forca: 0.32 });          // o poro da parede de perto (depois das salas: encadeia)
     materiaisFachada.push(m); return m;
   }));
 }
 const matLoja = lojas.map((t) => { const m = new MatPadrao({ map: t.mapa, emissive: 0xffffff, emissiveMap: t.emissiva, emissiveIntensity: 0, roughness: 0.55, metalness: 0.1, bumpMap: t.mapa, bumpScale: 1.2 }); materiaisFachada.push(m); return m; });
-const texTelhado = texturaTelhado(ANISO);
-const matTelhado = new MatPadrao({ map: texTelhado, bumpMap: texTelhado, bumpScale: 1.5, roughness: 0.95, metalness: 0 });
-const texCalcada = texturaCalcada(ANISO); texCalcada.repeat.set(BLOCO / CALCADA_M, BLOCO / CALCADA_M);
-const texGrama = texturaGrama(ANISO); texGrama.repeat.set(BLOCO / GRAMA_M, BLOCO / GRAMA_M);
-const matMeioFio = new MatPadrao({ color: 0x8a8d93, roughness: 0.9 });
-const matCalcada = new MatPadrao({ map: texCalcada, bumpMap: texCalcada, bumpScale: 1.2, roughness: 0.9 });
-const matGrama = new MatPadrao({ map: texGrama, roughness: 1 });
-const texAsfalto = texturaAsfalto(ANISO); texAsfalto.wrapS = texAsfalto.wrapT = THREE.RepeatWrapping; texAsfalto.repeat.set(N, N);
-const matAsfalto = new MatPadrao({ map: texAsfalto, roughness: 0.85, metalness: 0.05 });
+// (o relevo vem à parte em userData.relevo; a repetição dele acompanha a da cor)
+const comRelevo = (t) => { const b = t.userData.relevo; if (b) { b.wrapS = t.wrapS; b.wrapT = t.wrapT; b.repeat.copy(t.repeat); } return b || t; };
+const texTelhado = texturaTelhado(ANISO, { alta: !MOBILE });
+const matTelhado = new MatPadrao({ map: texTelhado, bumpMap: comRelevo(texTelhado), bumpScale: 2, roughness: 0.95, metalness: 0 });
+const texCalcada = texturaCalcada(ANISO, { alta: !MOBILE }); texCalcada.repeat.set(BLOCO / CALCADA_M, BLOCO / CALCADA_M);
+const texGrama = texturaGrama(ANISO, { alta: !MOBILE }); texGrama.repeat.set(BLOCO / GRAMA_M, BLOCO / GRAMA_M);
+const matMeioFio = comDetalhe(new MatPadrao({ color: 0x8a8d93, roughness: 0.9 }), DET.concreto, { escala: 1.2, forca: 0.5 });
+const matCalcada = comDetalhe(new MatPadrao({ map: texCalcada, bumpMap: comRelevo(texCalcada), bumpScale: 2.2, roughness: 0.9 }), DET.concreto, { escala: 1.4, forca: 0.45 });
+const matGrama = comDetalhe(new MatPadrao({ map: texGrama, bumpMap: comRelevo(texGrama), bumpScale: 1.5, roughness: 1 }), DET.grama, { escala: 0.9, forca: 0.5 });
+const texAsfalto = texturaAsfalto(ANISO, { alta: !MOBILE }); texAsfalto.wrapS = texAsfalto.wrapT = THREE.RepeatWrapping; texAsfalto.repeat.set(N, N);
+const matAsfalto = comDetalhe(new MatPadrao({ map: texAsfalto, bumpMap: comRelevo(texAsfalto), bumpScale: 1.6, roughness: 0.85, metalness: 0.05 }), DET.asfalto, { escala: 1.1, forca: 0.55 });
 const matProps = new MatPadrao({ vertexColors: true, roughness: 0.42, metalness: 0.35 });
 const matCopa = new MatPadrao({ map: texturaCopa(), roughness: 1 });
 const matLampada = new THREE.MeshBasicMaterial({ color: 0xffe9b0 });
