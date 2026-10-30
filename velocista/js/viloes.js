@@ -104,6 +104,25 @@ Object.assign(PERFIS, {
     vida: 55, esquiva: 0.4, dano: 0.08, telegrafo: 0.95, recupera: 1.9, rodeia: [1.4, 2.4], distancia: 6.5, regen: 0.01, fase2: false,
   },
 });
+// Parte 5, Atos 19 e 20: os DEMÔNIOS SOMBRA (velocistas que vêm com a onda: o corpo do Corredor Negro com o raio vermelho) e o
+// ANTIMONITOR (o irmão do Monitor: flutua, chama raios de antimatéria em círculo e o vórtice — a arma do Mago do Tempo, em
+// vermelho-escuro —, e na metade da vida fica mais forte; capacete e coroa de aderecos.js)
+Object.assign(PERFIS, {
+  sombraA: {
+    nome: 'DEMÔNIO SOMBRA', titulo: 'Demônio sombra', traje: 'negro', raio: 'vermelho', cor: '#ff4a5a', corRaio: [2.4, 0.12, 0.18],
+    vida: 70, capturas: 2, vFuga: 50, vCansado: 32, folego: 5, cansaco: 2.6,
+    rodeia: [1.4, 2.6], telegrafo: 0.62, recupera: 1.4, dano: 0.1, esquiva: 0.7, raios: true, fase2: false, regen: 0.012,
+  },
+  sombraB: {
+    nome: 'DEMÔNIO SOMBRA', titulo: 'Demônio sombra', traje: 'negro', raio: 'vermelho', cor: '#ff4a5a', corRaio: [2.4, 0.12, 0.18],
+    vida: 70, capturas: 2, vFuga: 50, vCansado: 32, folego: 5, cansaco: 2.6,
+    rodeia: [1.4, 2.6], telegrafo: 0.62, recupera: 1.4, dano: 0.1, esquiva: 0.7, raios: true, fase2: false, regen: 0.012,
+  },
+  antimonitor: {
+    nome: 'ANTIMONITOR', titulo: 'Antimonitor', pessoa: 'devoe', arma: 'tempo', dica: 'Saia do círculo antes do raio de antimatéria e fuja do vórtice', cor: '#ff3a6a', corRaio: [2.5, 0.2, 0.9],
+    vida: 220, esquiva: 0.5, dano: 0.15, telegrafo: 0.85, recupera: 1.45, rodeia: [1.1, 2.0], distancia: 15, regen: 0.012, fase2: true, flutua: 1.6,
+  },
+});
 export const CAPITULOS = [
   { id: 'zoom', titulo: 'Capítulo 1 — Zoom', viloes: ['zoom'], perseguicao: true, texto: 'Um velocista de preto está aterrorizando a cidade. Encontre o Zoom e persiga-o.' },
   { id: 'frio', titulo: 'Capítulo 2 — Capitão Frio', viloes: ['frio'], perseguicao: false, lugar: 'cidade', texto: 'Um quarteirão do centro congelou. Encontre o Capitão Frio.' },
@@ -125,6 +144,8 @@ export const CAPITULOS = [
   { id: 'reinicio', titulo: 'Capítulo 17 — O Grande Reinício', viloes: ['devoe', 'frio', 'onda', 'mago'], perseguicao: false, texto: 'O DeVoe e os Malandros, juntos, em frente ao S.T.A.R. Labs. O satélite está caindo.' },
   { id: 'sangue', titulo: 'Capítulo 18 — Bloodwork', viloes: ['sangue'], perseguicao: false, lugar: 'cidade', texto: 'O Dr. Ramsey Rosso virou outra coisa. Encontre o Bloodwork.' },
   { id: 'sangue2', titulo: 'Capítulo 19 — Sangue ruim', viloes: ['sangue', 'infectadoA', 'infectadoB'], perseguicao: false, texto: 'O Bloodwork e dois infectados na porta do S.T.A.R. Labs. A cura está pronta.' },
+  { id: 'sombras', titulo: 'Capítulo 20 — Os demônios sombra', viloes: ['sombraA', 'sombraB'], perseguicao: false, lugar: 'cidade', texto: 'Duas sombras vermelhas correm pela cidade. Elas vieram antes da onda.' },
+  { id: 'antimonitor', titulo: 'Capítulo 21 — A Crise', viloes: ['antimonitor', 'sombraA', 'sombraB'], perseguicao: false, texto: 'O Antimonitor e as sombras dele em frente ao S.T.A.R. Labs. A onda está chegando.' },
 ];
 const DANO = { soco: 5, gancho: 9, raio: 14, ciclone: 18, sonico: 28 };
 const CHAVE = 'theflash.viloes.v1';
@@ -887,7 +908,7 @@ export function criarViloes(cena, { mobile = false, aniso = 2, combate, colide =
         : v0.armadura > 0 ? `Quebre a armadura (${Math.round((v0.armadura / v0.perf.armadura) * 100)}%) · os especiais racham mais`
         : aberto ? (arma ? 'Agora! Ele está aberto' : 'Agora! Ele está cansado')
         : arma === 'gelo' ? 'Saia da linha do raio de gelo e bata quando ele recarregar' : arma === 'adaga' ? 'Saia da linha da adaga e bata quando ela voltar para a mão' : arma === 'fogo' ? (v0.perf.dica || 'Fique fora do jato de fogo e bata quando ele parar')
-        : arma === 'tempo' ? 'Saia do círculo antes do raio e fuja do tornado'
+        : arma === 'tempo' ? (v0.perf.dica || 'Saia do círculo antes do raio e fuja do tornado')
         : arma === 'mente' ? 'Saia do círculo do carro, pule o pulso e ache o verdadeiro entre as cópias' : 'Desvie da investida (corra de lado, pule ou vibre) e bata quando ele cansar';
     }
     else pInfo.textContent = '';

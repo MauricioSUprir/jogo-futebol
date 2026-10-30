@@ -109,6 +109,17 @@ export function colocarAderecos(id, modelo) {
     for (let k = 0; k < 6; k++) { const lado = k % 2 ? 1 : -1, a = 0.35 + (k >> 1) * 0.3; peca(new THREE.ConeGeometry(0.022, 0.42, 6), veia, peito, -0.14, 0.08 + (k >> 1) * 0.08, lado * (0.06 + (k >> 1) * 0.04), -0.5, 0, lado * a).position.y += 0.1; }
     for (const n of ['maoE', 'maoD']) { const o = osso(n); if (o) peca(new THREE.IcosahedronGeometry(0.045, 0), olho, o, 0.0, -0.02, (n === 'maoD' ? 1 : -1) * 0.07); }
     ponta.position.set(0.02, -0.02, 0.12); mao.add(ponta);
+  } else if (id === 'antimonitor') {
+    // o Antimonitor: a roupa vira uma armadura escura com brilho vermelho (o material é só deste corpo), o capacete fechado com a
+    // fenda dos olhos, a coroa de pontas e o núcleo vermelho no peito; o raio sai da mão direita
+    for (const m of modelo.materiais.slice(0, 2)) { m.color?.setRGB(0.16, 0.1, 0.14); m.emissive?.setRGB(0.05, 0.0, 0.02); }
+    const casco = mat(0x1a1218, 0, 0.9, 0.3), brilho = mat(0xff3a6a, 0xff1a4a, 0.2, 0.2), ouro = mat(0x6a2a3a, 0, 0.95, 0.25);
+    peca(new THREE.SphereGeometry(0.13, 18, 12), casco, cabeca, 0.012, 0.03, 0).scale.set(1.05, 1.18, 0.98);
+    peca(new THREE.BoxGeometry(0.014, 0.012, 0.11), brilho, cabeca, 0.128, 0.045, 0);
+    for (let k = 0; k < 5; k++) { const a = (k - 2) * 0.32; peca(new THREE.ConeGeometry(0.018, 0.16 - Math.abs(k - 2) * 0.03, 5), ouro, cabeca, Math.cos(a) * 0.05 - 0.02, 0.2, Math.sin(a) * 0.11, 0, 0, Math.sin(a) * 0.3); }
+    peca(new THREE.OctahedronGeometry(0.045, 0), brilho, peito, 0.13, 0.1, 0);
+    for (const n of ['bracoE', 'bracoD']) { const b = osso(n), lado = n.endsWith('E') ? -1 : 1; if (b) peca(new THREE.BoxGeometry(0.2, 0.07, 0.2), casco, b, 0.0, 0.07, lado * 0.02, 0, 0, lado * 0.3); }
+    ponta.position.set(0.02, -0.02, 0.12); mao.add(ponta);
   } else if (id === 'infectadoA' || id === 'infectadoB') {
     // os infectados: a roupa escurecida, um capuz e os olhos vermelhos do sangue do Bloodwork
     for (const m of modelo.materiais.slice(0, 1)) m.color?.multiplyScalar(0.45);
