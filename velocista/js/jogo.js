@@ -23,7 +23,7 @@ import { criarAliados } from './aliados.js';
 import { criarContencao } from './contencao.js';
 import { criarRivais } from './rivais.js';
 import { desenharMarco, blocoIlha, desenharFora } from './marcos3d.js';
-import { INTERIORES, Y0 as Y_INT, noGatilhoFora, noGatilhoDentro } from './interiores.js';
+import { INTERIORES, Y0 as Y_INT, noGatilhoFora, noGatilhoDentro, cruzaSolido } from './interiores.js';
 import { construirInterior } from './interiores3d.js';
 import { criarVida } from './vida.js';
 import { salasAtrasDasJanelas } from './janelas.js';
@@ -42,6 +42,7 @@ const MOV = { andar: 15, correr: 58, gravidade: 36, pulo: 14.5, puloCorrendo: 19
 const ENERGIA = { gasto: 0.17, parede: 0.2, vibrar: 0.28, recarga: 0.05, esfera: 0.3 };
 // Parte 3, os poderes do traje novo: a BATERIA (com o embalo acima de 0,55 — uns 400 km/h — a energia enche), a ARMADURA (os
 // golpes tiram 60% do que tiravam) e o TEMPO LENTO (T ou TEMPO: o mundo a 25% por 4,5 s; custa 35% da energia)
+const INTERIOR_VMAX = 9;              // m/s, dentro dos lugares (uns 32 km/h: o Barry com pressa)
 const BATERIA = { embalo: 0.55, carga: 0.06 }, ARMADURA = 0.6, TEMPO_LENTO = { fator: 0.25, dura: 4.5, custo: 0.35 };
 const DIA_SEGUNDOS = 480;
 const CAM = { dist: 4.3, alvoY: 1.55, pitch: 0.24, fov: 56 };   // câmera perto, por cima do ombro (o herói ~40% da altura da tela)
@@ -140,7 +141,16 @@ function atualizarAmbiente(posCam) {
   for (const m of materiaisFachada) m.emissiveIntensity = lit * (1 - 0.85 * (J.apagao || 0));   // no "Apagão" a cidade fica escura
   matLampada.color.setRGB(0.55 + 0.45 * lit, 0.5 + 0.43 * lit, 0.38 + 0.3 * lit); cena.environmentIntensity = 0.15 + 0.85 * (1 - mundo.noite);
   renderer.setClearColor(cena.fog.color);
+  // dentro dos lugares a luz é a das lâmpadas do teto: de cima, quente, igual de dia e de noite (o "sol" vira a luz da sala e,
+  // no PC, as sombras dos móveis caem no chão); antes a sala era iluminada pelo sol da rua e à noite ficava no escuro
+  if (J.interior) {
+    hemi.color.setHex(0xfff3e4); hemi.groundColor.setHex(0x66594b); hemi.intensity = 1.15;
+    sol.color.setHex(0xfff0dc); sol.intensity = 1.55;
+    sol.position.copy(vSol).addScaledVector(LUZ_SALA, 150);
+    renderer.toneMappingExposure = 1.0; cena.environmentIntensity = 0.32;
+  }
 }
+const LUZ_SALA = new THREE.Vector3(0.28, 1, 0.16).normalize();
 
 // ---------- materiais e texturas ----------
 const fachadas = criarFachadas(ANISO, { alta: !MOBILE }), lojas = criarLojas(ANISO);
@@ -296,7 +306,7 @@ function construirBloco(b) {
     dados.extra = b.marco.id === 'fora' ? desenharFora(THREE, api) : desenharMarco(THREE, b, api);
     marcosAtivos.add(dados.extra);
     // a sala de dentro do lugar (no alto; só aparece com o herói lá dentro)
-    if (INTERIORES[b.marco.id]) { const it = construirInterior(THREE, b.marco.id, b.cx, b.cz); Object.assign(it, { id: b.marco.id, cx: b.cx, cz: b.cz }); cena.add(it.grupo); interioresAtivos.add(it); dados.interior = it; }
+    if (INTERIORES[b.marco.id]) { const it = construirInterior(THREE, b.marco.id, b.cx, b.cz, { alta: !MOBILE, aniso: ANISO }); Object.assign(it, { id: b.marco.id, cx: b.cx, cz: b.cz }); cena.add(it.grupo); interioresAtivos.add(it); dados.interior = it; }
   }
   for (const [k, bd] of baldes) {
     const g = bd.gerar(); if (!g) continue; geos.push(g);
@@ -631,7 +641,8 @@ function passoHeroi(dt) {
   const dentroSolido = P.vibrando && estaDentroDeSolido();
   if (P.vibrando) { if ((!querVibrar && !dentroSolido) || P.energia <= 0.001) { P.vibrando = false; } }
   // perto de uma fenda aberta a vibração começa parada
-  else if (querVibrar && P.energia > 0.08 && (vh0 >= MOV.vibrarMin || tempo.pertoDeFenda(P)) && !P.parede) { P.vibrando = true; avisar('Atravesse tudo', 'Vibrando', 'info'); }
+  else if (querVibrar && P.energia > 0.08 && (vh0 >= MOV.vibrarMin || tempo.pertoDeFenda(P)) && !P.parede && !J.interior) { P.vibrando = true; avisar('Atravesse tudo', 'Vibrando', 'info'); }
+  if (J.interior) P.vibrando = false;                                 // (dentro dos lugares não se atravessa parede: a sala fica no alto, fora dela é o vazio)
   if (viloes.energiaLivre || missoes.atual?.tipo === 'tunel') P.energia = Math.min(1, P.energia + 0.06 * dt);      // perseguição a um vilão / túnel do tempo: energia livre, e enchendo
   else if (P.vibrando) P.energia = Math.max(0, P.energia - ENERGIA.vibrar * dt);
   else if (P.correndo && J.roupa === 'novo' && !P.parede && (P.embalo || 0) > BATERIA.embalo) P.energia = Math.min(1, P.energia + BATERIA.carga * dt);   // a bateria do traje novo: correndo muito rápido, enche
@@ -640,9 +651,11 @@ function passoHeroi(dt) {
   if (missoes.atual?.semEnergia) P.energia = 0;                      // (a recarga também fica trancada)
   // supervelocidade (velocidade.js): na reta, segurando CORRER, o embalo sobe o teto até ~830 km/h
   const angPedido = vh0 > 5 && m > 0.1 ? Math.acos(clamp((P.vx * dx + P.vz * dz) / (vh0 * (Math.hypot(dx, dz) || 1)), -1, 1)) : 0;
-  P.embalo = passoEmbalo(P.embalo || 0, { correndo: P.correndo && !P.vibrando && !P.parede, noChao: P.noChao, m, angulo: angPedido, bloqueado: viloes.ativo || combate.ocupado }, dt);
+  P.embalo = passoEmbalo(P.embalo || 0, { correndo: P.correndo && !P.vibrando && !P.parede, noChao: P.noChao, m, angulo: angPedido, bloqueado: viloes.ativo || combate.ocupado || !!J.interior }, dt);
   // o gelo do Capitão Frio deixa lento; na Parte 2, o raio fraco da linha do tempo alterada (`fraco`) e, sem poderes, um teto (`teto`)
-  const vmax = Math.min(missoes.atual?.teto ?? Infinity, ((P.correndo || P.vibrando) ? (P.vibrando ? MOV.correr : tetoCorrida(P.embalo, MOV.correr)) : MOV.andar) * m * viloes.lentidao * rivais.lentidao * (missoes.atual?.fraco || 1));
+  // dentro dos lugares (Delegacia, Jitters, Picture News, casa dos West) o Flash anda depressa, mas sem a supervelocidade:
+  // salas de 16 a 30 m não cabem 200 km/h (ele batia nas paredes de dentro e atravessava)
+  const vmax = Math.min(missoes.atual?.teto ?? Infinity, J.interior ? INTERIOR_VMAX : Infinity, ((P.correndo || P.vibrando) ? (P.vibrando ? MOV.correr : tetoCorrida(P.embalo, MOV.correr)) : MOV.andar) * m * viloes.lentidao * rivais.lentidao * (missoes.atual?.fraco || 1));
   const taxa = P.noChao ? (P.correndo ? 5 : 11) : 2.2;
   const k = 1 - Math.exp(-taxa * dt);
   // o Flash não voa (dono, 26/10: "o flash consegue voar pô"): no ar ele só mantém o embalo com que saiu do chão (vira e
@@ -661,7 +674,10 @@ function passoHeroi(dt) {
 
   const vh = Math.hypot(P.vx, P.vz);
   const veloc = P.parede ? P.parede.v : vh;
-  const n = Math.max(1, Math.ceil(Math.max(veloc * dt / 0.6, Math.abs(P.vy) * dt / 0.5)));
+  // passos de no máximo 0,6 m na cidade; 0,12 m dentro dos lugares (as paredes de dentro têm 16 cm e o corpo 0,45 m de raio:
+  // com passo maior o centro passava do meio da parede e a colisão empurrava para o outro lado)
+  const passoMax = J.interior ? 0.12 : 0.6;
+  const n = Math.max(1, Math.ceil(Math.max(veloc * dt / passoMax, Math.abs(P.vy) * dt / 0.5)));
   const sub = dt / n;
   for (let s = 0; s < n; s++) {
     if (P.parede) { escalarPasso(sub, ix, rx, rz); if (P.parede) continue; }
@@ -675,7 +691,7 @@ function passoHeroi(dt) {
     if (!P.vibrando) {
       // em velocidade, obstáculos baixos (carros, bancos) são pulados: o herói salta por cima em vez de parar
       const r = empurrar(rectsPerto, P.x, P.z, CORPO.raio, Math.max(P.y, yApoio), CORPO.alt, P.saltoAuto > 0 ? ehBaixo : null);
-      if (r.bateu && r.q && ehBaixo(r.q) && Math.hypot(P.vx, P.vz) > 10 && !P.parede) { P.saltoAuto = 0.45; P.vy = Math.max(P.vy, 10.5); P.noChao = false; P.x = ox + P.vx * sub; P.z = oz + P.vz * sub; continue; }
+      if (r.bateu && r.q && ehBaixo(r.q) && Math.hypot(P.vx, P.vz) > 10 && !P.parede && !J.interior) { P.saltoAuto = 0.45; P.vy = Math.max(P.vy, 10.5); P.noChao = false; P.x = ox + P.vx * sub; P.z = oz + P.vz * sub; continue; }
       if (r.bateu) {
         const antes = Math.hypot(P.vx, P.vz), vx0 = P.vx, vz0 = P.vz;
         P.x = r.x; P.z = r.z; P.vx = (P.x - ox) / sub * 0.98; P.vz = (P.z - oz) / sub * 0.98;
@@ -688,6 +704,8 @@ function passoHeroi(dt) {
         }
       }
     }
+    // dentro dos lugares: se o centro do corpo cortou uma parede (ou um móvel) neste passo, ele volta para onde estava
+    if (J.interior && !P.parede && cruzaSolido(rectsPerto, ox, oz, P.x, P.z, Math.max(P.y, yApoio), CORPO.alt)) { P.x = ox; P.z = oz; P.vx *= 0.2; P.vz *= 0.2; }
     const chao = chaoEm(rectsPerto, P.x, P.z, P.y);
     if (P.y <= chao && P.vy <= 0) { P.y = chao; P.vy = 0; P.noChao = true; P.pulos = 0; }
     else if (P.y > chao + 0.06) P.noChao = false;
@@ -810,6 +828,14 @@ function dentroDeSolido(x, y, z) {
   for (const q of rectsPerto) { if (q.y0 < 0) continue; if (x > q.x0 - 0.3 && x < q.x1 + 0.3 && z > q.z0 - 0.3 && z < q.z1 + 0.3 && y > q.y0 - 0.3 && y < q.y1 + 0.3) return true; }
   return false;
 }
+// dentro dos lugares as paredes de dentro têm 16 cm: o teste de ponto não vê a câmera do outro lado delas, então o caminho
+// do herói até a câmera é conferido a cada 8 cm (a câmera fica do lado de cá da parede, do vidro ou do móvel alto)
+function paredeNoCaminho(a, dx, dy, dz, d) {
+  const sala = rectsPerto.filter((q) => q.interior === J.interior);
+  for (let s = 0.5; s < d; s += 0.08) { const x = a.x + dx * s, y = a.y + dy * s, z = a.z + dz * s;
+    for (const q of sala) { if (x > q.x0 - 0.12 && x < q.x1 + 0.12 && z > q.z0 - 0.12 && z < q.z1 + 0.12 && y > q.y0 && y < q.y1 + 0.1) return true; } }
+  return false;
+}
 function atualizarCamera(dt) {
   const v = Math.hypot(P.vx, P.vz);
   const foco = combate.foco;
@@ -820,14 +846,24 @@ function atualizarCamera(dt) {
   const distIdeal = CAM.dist + clamp(v - 15, 0, 45) * 0.05 + Math.max(1.3 * combate.poseHeroi().luta, viloes.emLuta ? 2.4 : 0);
   let t = 1;
   if (P.parede && J.alinhar > 0) { J.alinhar -= dt; let d = P.h - C.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); C.yaw += d * (1 - Math.exp(-3 * dt)); }
-  for (; t > 0.15 && !P.vibrando; t -= 0.07) { const d = distIdeal * t; if (!dentroDeSolido(alvo.x - fx * cp * d, alvo.y + sp * d, alvo.z - fz * cp * d)) break; }
+  for (; t > 0.15 && !P.vibrando; t -= 0.07) { const d = distIdeal * t; if (!dentroDeSolido(alvo.x - fx * cp * d, alvo.y + sp * d, alvo.z - fz * cp * d) && !(J.interior && paredeNoCaminho(alvo, -fx * cp, sp, -fz * cp, d))) break; }
   const dAlvo = distIdeal * Math.max(t, 0.15);
   C.dist = dAlvo < C.dist ? dAlvo : lerp(C.dist, dAlvo, 1 - Math.exp(-6 * dt));
   camera.position.set(alvo.x - fx * cp * C.dist, Math.max(0.6, alvo.y + sp * C.dist), alvo.z - fz * cp * C.dist);
+  if (J.interior) prenderCameraNaSala();
   camera.lookAt(alvo);
   const tr = combate.tremor; if (tr > 0) { camera.position.x += (Math.random() - 0.5) * tr * 0.5; camera.position.y += (Math.random() - 0.5) * tr * 0.4; camera.position.z += (Math.random() - 0.5) * tr * 0.5; }
   const fovAlvo = CAM.fov + clamp(v - 15, 0, 45) * 0.38 + clamp(v - 60, 0, 170) * 0.045;   // na supervelocidade abre mais um pouco
   camera.fov = lerp(camera.fov, fovAlvo, 1 - Math.exp(-4 * dt)); camera.updateProjectionMatrix();
+}
+
+/** dentro de um lugar a câmera fica dentro da sala (as paredes são finas e a sala fica no alto: fora dela só há o vazio) */
+function prenderCameraNaSala() {
+  const I = [...interioresAtivos].find((k) => k.id === J.interior); if (!I) return;
+  const [u0, u1, v0, v1] = INTERIORES[I.id].sala, f = 0.35;
+  camera.position.x = I.cx + clamp(camera.position.x - I.cx, u0 + f, u1 - f);
+  camera.position.z = I.cz + clamp(camera.position.z - I.cz, v0 + f, v1 - f);
+  camera.position.y = clamp(camera.position.y, Y_INT + 0.4, Y_INT + INTERIORES[I.id].teto - 0.3);
 }
 
 // ---------- minimapa e bússola ----------
