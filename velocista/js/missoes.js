@@ -175,6 +175,30 @@ export const MISSOES = [
   { id: 'p4-maefilha', titulo: 'Café com a mãe', texto: 'A Iris marcou um café no Jitters. Com a filha. As duas', ponto: 'mesaCafe', aliados: { iris: 'mesaCafe', violeta: 'mesaIris' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
   { id: 'cap-malandros', titulo: 'Os Malandros', texto: 'O Capitão Frio, o Onda Térmica e o Mago do Tempo: os três juntos', capitulo: 'malandros' },
   { id: 'p4-vovo', titulo: 'O avô', texto: 'O Joe quer conhecer a neta. A crescida', ponto: 'sofaWest', aliados: { joe: 'sofaWest', violeta: 'jantar' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  // Ato 15 — A mente de DeVoe: o corpo dele fica na cela; a mente vai para os computadores, para o satélite e para um corpo novo
+  { id: 'p4-cela', titulo: 'Bom dia, Flash', texto: 'As telas do laboratório ligaram sozinhas: vá à câmara de contenção', alvoSala: 'contencao', checar: (c) => c.sala === 'contencao' },
+  { id: 'p4-antenas', titulo: 'As antenas', texto: 'O satélite usa as subestações como antenas: religue as 3 do jeito certo', meta: 3, contador: 'subestacoes', alvo: 'subestacao' },
+  { id: 'p4-fendas', titulo: 'O céu rasgado', texto: 'O satélite está abrindo fendas pela cidade: feche 4 (vibre dentro delas)', meta: 4, contador: 'fendas', alvo: 'fenda' },
+  { id: 'p4-capangas', titulo: 'Os capangas do Pensador', texto: 'Gente com os olhos acesos do DeVoe tomou uma rua: derrote a gangue', meta: 1, contador: 'gangue', crime: 'gangue' },
+  { id: 'p4-vibe', titulo: 'O que o Vibe vê', texto: 'O Cisco teve uma visão: encontre-o no Jitters', ponto: 'balcaoJitters', aliados: { cisco: 'mesaCafe' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
+  { id: 'p4-diario', titulo: 'O diário', texto: 'A Iris achou o diário da Nora. Vá à sala do editor do Picture News', ponto: 'editor', aliados: { iris: 'editor' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p4-confronto', titulo: 'A verdade', texto: 'A Nora espera você em casa. Ela já sabe que você sabe', ponto: 'sofaWest', aliados: { violeta: 'sofaWest' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
+  { id: 'p4-sozinho', titulo: 'O trabalho continua', texto: 'Mesmo com o coração partido: salve uma pessoa caindo de um prédio', meta: 1, contador: 'queda', crime: 'queda' },
+  { id: 'p4-joe', titulo: 'Pai vai buscar', texto: 'O Joe espera você na escada da Delegacia', ponto: 'delegacia', aliados: { joe: 'delegacia' }, roupa: 'civil', checar: (c) => c.perto },
+  { id: 'p4-perdao', titulo: 'Perdão', texto: 'A Nora está na praça da Prefeitura. Vá buscar a sua filha', ponto: 'prefeitura', aliados: { violeta: 'prefeitura' }, raio: 10, checar: (c) => c.perto },
+  { id: 'cap-devoe2', titulo: 'O Pensador de metal', texto: 'Encontre o corpo novo do DeVoe e derrote-o', capitulo: 'devoe2' },
+  // Ato 16 — O dia em que o Flash desaparece
+  { id: 'p4-satelite', titulo: 'O céu caindo', texto: 'O satélite está caindo sobre a cidade: chegue ao Cortex', alvo: 'cortex', tempo: 60, perseguido: true, checar: (c) => c.sala === 'cortex' },
+  { id: 'p4-plano', titulo: 'Pai e filha', texto: 'O plano: a Caitlin e o Cisco explicam no Cortex', alvo: 'cortex', aliados: { violeta: 'cortexVisita' }, checar: (c) => c.sala === 'cortex' },
+  { id: 'p4-fuga', titulo: 'Os Malandros de novo', texto: 'Os Malandros fugiram no caminho para Iron Heights: pare o carro deles', meta: 1, contador: 'fuga', crime: 'fuga' },
+  { id: 'p4-bateria', titulo: 'Carga máxima', texto: 'Fique 8 s acima de 400 km/h: a bateria do traje precisa estar cheia', tipo: 'bateria', checar: (c) => c.bateria >= 1 },
+  { id: 'p4-corrida2', titulo: 'Lado a lado', texto: 'Corra com a Nora pelo circuito do Cisco: os 8 portais em até 70 s', tipo: 'portais' },
+  { id: 'p4-panico', titulo: 'Pânico na cidade', texto: 'Com o satélite no céu, a cidade entrou em pânico: impeça 3 crimes', meta: 3, contador: 'crimes', patrulha: true },
+  { id: 'cap-reinicio', titulo: 'O Grande Reinício', texto: 'O DeVoe e os Malandros, juntos, em frente ao S.T.A.R. Labs', capitulo: 'reinicio' },
+  { id: 'p4-despedida', titulo: 'O jantar de despedida', texto: 'Um último jantar em família, na casa dos West', ponto: 'jantar', aliados: { joe: 'sofaWest', iris: 'jantar', violeta: 'cozinha' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
+  { id: 'p4-partida', titulo: 'Até 2049', texto: 'A Nora vai voltar para o tempo dela pelo Núcleo. Vá se despedir', alvoSala: 'nucleo', aliados: { violeta: 'nucleoReverso' }, checar: (c) => c.sala === 'nucleo' },
+  { id: 'p4-bebe', titulo: 'A pequena Nora', texto: 'Volte para casa: a sua filha de um ano está esperando', ponto: 'jantar', aliados: { iris: 'jantar' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
+  { id: 'p4-fim', titulo: 'O jornal do futuro', texto: 'A Caitlin e o Cisco acharam uma coisa estranha no Cortex', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
 ];
 /** os passos de uma época (os da linha do tempo alterada): o jogo põe o mundo nela enquanto o passo dura */
 export const EPOCA_DO_PASSO = (m) => m?.epoca || null;

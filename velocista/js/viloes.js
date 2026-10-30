@@ -103,6 +103,8 @@ export const CAPITULOS = [
   { id: 'reverso2', titulo: 'Capítulo 13 — O acordo', viloes: ['reverso'], perseguicao: true, texto: 'O homem de amarelo não foi para o Núcleo. Alcance o Flash Reverso.' },
   { id: 'negro2', titulo: 'Capítulo 14 — O fim de toda corrida', viloes: ['negro'], perseguicao: false, texto: 'O Corredor Negro espera em frente ao S.T.A.R. Labs. Tudo o que você tem: agora.' },
   { id: 'malandros', titulo: 'Capítulo 15 — Os Malandros', viloes: ['frio', 'onda', 'mago'], perseguicao: false, lugar: 'cidade', texto: 'Gelo, fogo e tempestade no mesmo quarteirão. Os três juntos.' },
+  { id: 'devoe2', titulo: 'Capítulo 16 — O Pensador de metal', viloes: ['devoe'], perseguicao: false, lugar: 'cidade', texto: 'O corpo novo do DeVoe está pronto, num galpão perto da ponte.' },
+  { id: 'reinicio', titulo: 'Capítulo 17 — O Grande Reinício', viloes: ['devoe', 'frio', 'onda', 'mago'], perseguicao: false, texto: 'O DeVoe e os Malandros, juntos, em frente ao S.T.A.R. Labs. O satélite está caindo.' },
 ];
 const DANO = { soco: 5, gancho: 9, raio: 14, ciclone: 18, sonico: 28 };
 const CHAVE = 'theflash.viloes.v1';
