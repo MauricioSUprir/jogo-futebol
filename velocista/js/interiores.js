@@ -29,6 +29,8 @@ export const INTERIORES = {
       [-12.6, -10.4, 7.2, 8.4, 0.78, 'mesa'],
       [5.4, 14.6, -10.6, -9.6, 0.95, 'bancada'], [5.4, 14.6, 9.6, 10.6, 0.95, 'bancada'], [8, 12, -1.6, 1.6, 0.95, 'bancada'],
       [14.2, 14.6, -6, 6, 2.4, 'estante'], [6, 8, 3.2, 5, 0.78, 'mesa'],
+      // (30/10) a planta do canto, o bebedouro, o banco de espera junto da porta e o arquivo da sala do Joe
+      [-14.7, -14.1, -10.7, -10.1, 1.4, 'planta'], [-14.65, -14.15, -6.4, -5.9, 1.5, 'bebedouro'], [2.2, 3.6, -10.75, -10.3, 0.5, 'banco'], [-14, -13, 10.4, 10.95, 1.3, 'arquivo'],
     ],
     // (o Joe espera na porta da perícia olhando para a bancada, e na sala dele atrás da mesa; o canto escuro da perícia é do vulto)
     pontos: { csi: [9.5, 4.1, Math.PI], portaCsi: [6.2, 0.2, 0.7], cantoCsi: [12.8, 7.6, -2.39], mesaJoe: [-11.5, 9.0, Math.PI], balcao: [-2, -8.6, Math.PI], quadro: [-13.6, -1.8, Math.PI / 2] },
@@ -42,6 +44,7 @@ export const INTERIORES = {
       [-6.5, 2.5, 3.4, 4.4, 1.1, 'balcao'], [-6.5, 2.5, 6.2, 6.6, 2.2, 'estante'],
       ...[[-6.5, -2.5], [-2.5, -4.2], [2, -2.4], [6.5, -4.4], [6.4, 0.6]].map(([u, v]) => [u - 0.45, u + 0.45, v - 0.45, v + 0.45, 0.76, 'mesaRedonda']),
       [7, 9.6, 3.4, 6.6, 0.8, 'sofa'],
+      [9.2, 9.8, -6.8, -6.2, 1.4, 'planta'], [-9.8, -9.2, -6.8, -6.2, 1.4, 'planta'],
     ],
     // (o rumo de quem espera deixa o herói, 3,6 m à frente, fora das mesas)
     pontos: { balcaoJitters: [-1.5, 2.6, Math.PI], mesaIris: [6.4, -0.6, -2.17], mesaCafe: [-6.5, -3.4, 1.07] },
@@ -58,6 +61,7 @@ export const INTERIORES = {
     moveis: [
       ...[-6, -2, 2].flatMap((v) => [[-11.5, -7.5, v - 0.5, v + 0.5, 0.76, 'mesa'], [-6.5, -2.5, v - 0.5, v + 0.5, 0.76, 'mesa']]),
       [1.8, 4.2, -6.6, -5.4, 0.76, 'mesa'], [8.6, 12.4, 6.6, 7.6, 0.76, 'mesa'], [13.4, 13.9, -8, -2, 1.3, 'estante'],
+      [-13.8, -13.2, 9.2, 9.8, 1.4, 'planta'], [3.9, 4.4, 9.4, 9.9, 1.5, 'bebedouro'],
     ],
     pontos: { mesaIrisJornal: [3, -7.2, 1.3], editor: [10.5, 8.2, Math.PI], redacao: [-4.5, 0, Math.PI] },
     entrada: [0, -8.4, 0],
@@ -70,6 +74,7 @@ export const INTERIORES = {
       [-7.2, -3.2, 2.2, 3.2, 0.8, 'sofa'], [-6.2, -4.2, -0.6, 0.6, 0.45, 'mesinha'], [-7.8, -7.2, -3, 1, 1.0, 'estante'],
       [1, 4, -1.2, 1.2, 0.78, 'mesa'], [6.8, 7.8, -5.4, 2.6, 0.95, 'bancada'], [6.8, 7.8, 3.4, 5, 2.0, 'geladeira'],
       [-7.8, -6, 3.8, 5.8, 2.4, 'escada'],
+      [-7.8, -7.2, -5.8, -5.2, 1.3, 'planta'],
     ],
     pontos: { sofaWest: [-5.2, 1.6, Math.PI], jantar: [2.5, -1.9, Math.PI], cozinha: [5.8, 0, -2.48] },
     entrada: [0, -4.4, 0],
@@ -111,6 +116,25 @@ export function retangulosInterior(id, cx, cz) {
   add(I.porta[0] - 0.5, I.porta[1] + 0.5, v0 - 2.4, v0 - PE, 0, I.teto);
   for (const [a, b, c, d, h] of I.moveis) add(a, b, c, d, 0, h);
   return L;
+}
+/** a trava das paredes finas: o caminho do centro do corpo de (x0, z0) a (x1, z1) corta algum sólido da sala na altura do
+ *  corpo? (as paredes de dentro têm 16 cm; empurrado contra uma delas por um móvel ou num passo longo, o corpo de 0,45 m de
+ *  raio podia sair do outro lado — com a trava ele volta para onde estava) */
+export function cruzaSolido(rects, x0, z0, x1, z1, y, alt = 1.8) {
+  const dx = x1 - x0, dz = z1 - z0;
+  if (Math.abs(dx) + Math.abs(dz) < 1e-6) return null;
+  for (const q of rects) {
+    if (!q.interior || y + alt <= q.y0 + 0.05 || y >= q.y1 - 0.05) continue;
+    if (x0 > q.x0 && x0 < q.x1 && z0 > q.z0 && z0 < q.z1) continue;          // (quem já começou dentro pode sair)
+    let t0 = 0, t1 = 1, fora = false;
+    for (const [o, d, a, b] of [[x0, dx, q.x0, q.x1], [z0, dz, q.z0, q.z1]]) {
+      if (Math.abs(d) < 1e-9) { if (o <= a || o >= b) { fora = true; break; } continue; }
+      let ta = (a - o) / d, tb = (b - o) / d; if (ta > tb) [ta, tb] = [tb, ta];
+      t0 = Math.max(t0, ta); t1 = Math.min(t1, tb); if (t0 >= t1) { fora = true; break; }
+    }
+    if (!fora) return q;
+  }
+  return null;
 }
 /** o interior onde (x, y, z) está, ou null (só conta no alto, perto de Y0) */
 export function interiorEm(x, z, y, marcoDe) {
