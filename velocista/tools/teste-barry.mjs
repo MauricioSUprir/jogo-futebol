@@ -25,7 +25,7 @@ ok(pos('cafe-pedido') + 1 === pos('cafe-entrega') && pos('gangue') < pos('cafe-p
 ok(pos('jornal') + 1 === pos('entrevista') && pos('entrevista') < pos('cap-zoom'), 'a entrevista com a Iris depois da foto do Picture News');
 ok(pos('ameaca-iris') + 1 === pos('cap-frio') && pos('ameaca-joe') + 1 === pos('cap-mago') && pos('visita') + 1 === pos('cap-reverso'), 'cada ameaça à família logo antes do capítulo do vilão');
 const civis = mis.MISSOES.filter((m) => m.roupa === 'civil');
-ok(civis.length >= 10 && civis.every((m) => (m.ponto || m.alvo) && !m.capitulo && !m.crime), `${civis.length} passos à paisana, todos num lugar (nenhum de luta)`);
+ok(civis.length >= 10 && civis.every((m) => (m.ponto || m.alvo || m.alvoSala) && !m.capitulo && !m.crime), `${civis.length} passos à paisana, todos num lugar (nenhum de luta)`);
 ok(['delegacia', 'atrasado', 'pericia', 'analise', 'troca', 'cafe-pedido', 'cafe-entrega', 'entrevista', 'cafe', 'relatorio', 'visita', 'casa'].every((id) => passo(id)?.roupa === 'civil'), 'a vida dele (trabalho, café, casa) à paisana');
 ok(['assalto', 'gangue', 'jornal', 'ameaca-iris', 'ameaca-joe'].every((id) => !passo(id).roupa), 'o herói (patrulha, foto, resgates) de traje');
 const comTempo = mis.MISSOES.slice(0, pos('p2-exames')).filter((m) => m.tempo);     // (os da Parte 2: teste-parte2.mjs)
