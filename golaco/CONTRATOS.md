@@ -2908,6 +2908,20 @@ Pedido do dono (15/10): "lançamento mais reto e rápido; hoje vai muito alto". 
   a 35/45/55 m; a 40 m o ápice de 3 a 5,5 m e a saída ≥ 24 m/s; nenhuma saída acima de `vMax` — a de antes, o 1º quique na
   mediana ±0,4 s, saiu: ela segurava a bola alta) e `teste-aereo-troca` (o canhão lança com a elevação do lançamento reto
   quando a lógica tem `elevAlta`; na de antes, 26–37° como era).
+- **Medidas (main 4658b3a1 × agora, mesmas sementes).** `teste-passes`: do toque à recepção a 35/45/55 m 5,58 / 2,70 / —
+  s → 1,60 / 2,12 / 2,60 s (na main a bola desce de cima e o recebedor a cabeceia — passe de cabeça — em vez de dominar; a
+  55 m não dominou em 6,7 s); a 38,7 m, ápice 7,2 → 4,2 m, saída 23,3 → 27,2 m/s, 1º quique 2,33 → 1,75 s. Canhão do
+  `teste-aereo-troca`: o controlado é quem disputa 94% (111/118) → 95% (127/134), com o analógico largado 97 → 95%, trocas
+  extras 0,11 → 0,15 por bola (metas ≥ 90% e ≤ 0,3). Painel de 144 (1001–1144): gols 1,68 → 1,76 (Δ +0,08 ± 0,22), passe
+  certo 86,5 → 86,5%, interceptações 10,47 → 10,88 por time, posses no último terço 43,5 → 42,6%, gols de cabeça 15,2 →
+  15,4%, duelos pelo alto com a bola rolando 2,4 → 2,3 por partida, goleiro 67,6 / 56,6 / 87,4% → 67,0 / 60,2 / 82,5%. Fora
+  da faixa: o goleiro de 6 a 16,5 m, 60,2% (meta 55–60; 194 de 322 — UMA defesa acima do limite; Δ +3,6, IC95 do bootstrap
+  por partida [−2,7; +10,0]; a main dá 57,5% nas 576 do C3). As defesas de ≥ 16,5 m caem 87,4 → 82,5% (Δ −4,9, IC95
+  [−9,1; −0,4]; na faixa 80–90%), mas não pelo lançamento: na partida IA × IA ele é raro (96 partidas: 2,4 por partida,
+  acerto 46,0 → 42,7% com n 226 / 232, ápice mediano 7,8 → 4,9 m, saída 24,4 → 28,5 m/s, do toque à posse 4,3 → 3,2 s) e
+  só 2 → 3 dos ~380 chutes de ≥ 16,5 m vêm de uma posse com lançamento nos 10 s antes — é a partida que diverge depois do 1º
+  lançamento. `hash-igual --base <main>`: ataque-demo e ataque-roteiro DIFERENTES (passos 9000 e 1200), condução IGUAL;
+  `hash-partida --base <main>`: demo 1–2 IGUAIS, demo 3–4 e humano 1–4 DIFERENTES.
 
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores
