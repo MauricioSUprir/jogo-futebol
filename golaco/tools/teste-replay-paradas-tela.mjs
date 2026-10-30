@@ -191,9 +191,10 @@ async function jogarLance(pg, o) {
  */
 async function forcarLance(pg, tipo, ponto = null, naChave = 0) {
   return pg.evaluate(([tipo, ponto, naChave]) => {
-    const g = window.__golaco, m = g.mundo, P = g.replay.paradas;
+    const g = window.__golaco;
+    let m = g.mundo, P = g.replay.paradas;
     if (!P) return { semApi: true };
-    const desde = m.tick;
+    let desde = m.tick, reinicios = 0;
     // naChave (V11): o lance no lugar em que a bola ESTAVA na chave, como uma falta de verdade (lances.js grava o ponto do
     // lance), e só a bola morta com a bola a |x| ≥ naChave num tick de 0,5 a 3,5 s antes dela (a chave = o último desses).
     // Antes o ponto era fixo (±49, −24) e a bola morta, qualquer uma: com a bola longe do ponto o olhar entre o lance e a
@@ -209,16 +210,25 @@ async function forcarLance(pg, tipo, ponto = null, naChave = 0) {
       return null;
     };
     const serve = () => !naChave || chaveDe() != null;
+    // a partida da página acabou sem a bola morta que serve (o lance com a bola a |x| ≥ 45 é raro: ~1 por partida, e a busca
+    // começa no meio dela; o C4 mudou as partidas e a semente da página passou a acabar sem nenhum — 30/10): partida nova com
+    // outra semente, a busca segue nela (o histórico dos replays de parada é da partida: zera)
+    const reinicia = () => {
+      if (m.partida?.estado !== 'fim') return;
+      g.reiniciar({ modo: 'partida', semente: (m.semente ?? 0) + 101 });
+      m = g.mundo; P = g.replay.paradas; desde = m.tick; reinicios++; anota();
+    };
     let n = 0;
     anota();
-    if (naChave) { while (n < 30000 && !(nova() && serve())) { g.rodarPassos(1, 'demo'); anota(); n++; } }
-    else while (n < 30000 && !nova()) { g.rodarPassos(20, 'demo'); n += 20; }
-    if (!nova() || !serve()) return { semParada: true, n };
+    if (naChave) { while (n < 60000 && !(nova() && serve())) { reinicia(); g.rodarPassos(1, 'demo'); anota(); n++; } }
+    else while (n < 60000 && !nova()) { reinicia(); g.rodarPassos(20, 'demo'); n += 20; }
+    if (!nova() || !serve()) return { semParada: true, n, reinicios };
     const b = m.bola.p, chave = chaveDe(), chance = ['espalmada', 'bloqueio', 'trave', 'passouPerto', 'chuteFora'].includes(tipo);
     const cx = hx[chave % H], cz = hz[chave % H];
     const x = naChave ? cx : ponto ? (b.x >= 0 ? 1 : -1) * Math.abs(ponto.x) : b.x, z = naChave ? cz : ponto ? ponto.z : b.z;
+    const hist = P.historico?.length ?? 0;
     const ok = P.forcar({ classe: 'A', tipo, chave, fim: chance ? chave + 30 : chave, x, z, lado: x >= 0 ? 1 : -1 });
-    return { ok, inicio: m.parada.inicio, chave, parada: m.parada.tipo, tick: m.tick, x, z, bx: b.x, bz: b.z };
+    return { ok, inicio: m.parada.inicio, chave, parada: m.parada.tipo, tick: m.tick, x, z, bx: b.x, bz: b.z, hist, reinicios };
   }, [tipo, ponto, naChave]);
 }
 /**
@@ -373,7 +383,7 @@ if (roda('D')) try {
       return { q, n, pior, piorY, atras };
     }, [f11.x, f11.z]) : null;
     meta('V11 câmera \'fechada\' com o lance na linha de fundo: o ponto do lance no quadro em todo o P2',
-      f11.semParada ? `nenhuma bola morta com a bola a |x| ≥ 45 de 0,5 a 3,5 s antes em ${f11.n} passos` : !a11.ativo ? `nenhum replay em ${a11.q} quadros (lance forçado em ${f11.x}, ${f11.z})` : `lance em (${f2(f11.x)}, ${f2(f11.z)}), chave ${f11.chave}, na bola morta ${f11.inicio} (${f11.parada}, bola em ${f2(f11.bx)}, ${f2(f11.bz)}); ${v11.n} quadros da 'fechada'; |x| máx ${v11.pior.toFixed(2).replace('.', ',')}, |y| máx ${v11.piorY.toFixed(2).replace('.', ',')}, ${v11.atras} atrás da câmera`,
+      f11.semParada ? `nenhuma bola morta com a bola a |x| ≥ 45 de 0,5 a 3,5 s antes em ${f11.n} passos` : !a11.ativo ? `nenhum replay em ${a11.q} quadros (lance forçado em ${f11.x}, ${f11.z})` : `lance em (${f2(f11.x)}, ${f2(f11.z)}), chave ${f11.chave}, na bola morta ${f11.inicio} (${f11.parada}, bola em ${f2(f11.bx)}, ${f2(f11.bz)}${f11.reinicios ? `; ${f11.reinicios} partida(s) nova(s) na busca` : ''}); ${v11.n} quadros da 'fechada'; |x| máx ${v11.pior.toFixed(2).replace('.', ',')}, |y| máx ${v11.piorY.toFixed(2).replace('.', ',')}, ${v11.atras} atrás da câmera`,
       '≥ 30 quadros; |x| ≤ 0,6; |y| ≤ 0,8; 0', !!v11 && v11.n >= 30 && v11.pior <= 0.6 && v11.piorY <= 0.8 && v11.atras === 0);
     // V6b: a opção da pausa desligada no meio do jogo: o lance armado não toca
     await pg.evaluate(() => window.__golaco.abrirMenu());
@@ -390,10 +400,10 @@ if (roda('D')) try {
       return { rep, naEspera, tick: m.tick, ligado: g.replay.paradas?.ligado ?? null, auto: g.replay.automatico(), hist: g.replay.paradas?.historico?.length ?? 0, armado: g.replay.paradas?.armado ?? null };
     }, f2b.inicio ?? 0);
     meta('V6b "Replays: Desligado" na pausa no meio do jogo: o lance armado não toca e a simulação passa da espera',
-      f2b.semApi ? `automático ${v6.auto}; sem a API de replays de parada (nada a armar: ${v6.rep} quadros de replay)` : `automático ${v6.auto}, ligado ${v6.ligado}; lance forçado na bola morta ${f2b.inicio} (${f2b.parada}): ${v6.rep} quadros de replay, ${v6.naEspera} quadros no tick da espera, tick ${v6.tick}; histórico ${v6.hist}, armado ${v6.armado ? 'sim' : 'não'}`,
-      'false; 0; ≤ 2; 2 (só os do V5a e do V11); não',
+      f2b.semApi ? `automático ${v6.auto}; sem a API de replays de parada (nada a armar: ${v6.rep} quadros de replay)` : `automático ${v6.auto}, ligado ${v6.ligado}; lance forçado na bola morta ${f2b.inicio} (${f2b.parada}): ${v6.rep} quadros de replay, ${v6.naEspera} quadros no tick da espera, tick ${v6.tick}; histórico ${v6.hist} (antes do lance ${f2b.hist}${f2b.reinicios ? `, ${f2b.reinicios} partida(s) nova(s) na busca` : ''}), armado ${v6.armado ? 'sim' : 'não'}`,
+      'false; 0; ≤ 2; o mesmo de antes do lance forçado (os do V5a e do V11, ou menos se a busca recomeçou a partida); não',
       // (na versão sem os replays de parada não há o que armar: passa só com a opção desligada e nenhum replay)
-      f2b.semApi ? v6.auto === false && v6.rep === 0 : v6.auto === false && v6.ligado === false && v6.rep === 0 && v6.naEspera <= 2 && v6.tick >= (f2b.inicio ?? 0) + 70 && v6.hist === 2 && !v6.armado);
+      f2b.semApi ? v6.auto === false && v6.rep === 0 : v6.auto === false && v6.ligado === false && v6.rep === 0 && v6.naEspera <= 2 && v6.tick >= (f2b.inicio ?? 0) + 70 && v6.hist === f2b.hist && !v6.armado);
   } finally { await P.fechar(); }
 } catch (e) { meta('D execução (PC, lance forçado: V5a, V6b)', erroCurto(e), 'sem exceção', false); }
 

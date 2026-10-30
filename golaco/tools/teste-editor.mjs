@@ -439,9 +439,11 @@ bloco('E10', () => {
   // da bola atrás da linha mudou de propósito; o ataque diverge depois do 1º chute ao gol — antes: ataque-1
   // [3678653782, 2725485303, 3876666268], ataque-2 [1851623551, 2700834158, 2698006015]). Pedido de 10/10 com as
   // correções da contraprova (base 980b0b0 era: ataque-1 [3298389666, 255764296, 4082737914], ataque-2 [3929265932,
-  // 3750097417, 646006693], conducao-7 [1415330591, 986885701, 4093573822])
+  // 3750097417, 646006693], conducao-7 [1415330591, 986885701, 4093573822]). O ataque-1 gravado de novo com o lançamento
+  // mais reto e rápido (C4, 30/10: o lançamento perto do tick 1777 sai a 18–26° — diverge no 3º hash; antes: ataque-1
+  // [3619134975, 1608967163, 1555434781]; o ataque-2 e a condução não mudam)
   const GRAVADO = {
-    'ataque-1': [3619134975, 1608967163, 1555434781],
+    'ataque-1': [3619134975, 1608967163, 954435794],
     'ataque-2': [1010992996, 2184279481, 1380498239],
     'conducao-7': [1241881221, 2297094772, 3558332514],
   };

@@ -92,14 +92,23 @@ function lancar(m, r, time) {
   else { x0 = a.x - lado * (22 + r() * 22); z0 = a.z + (r() - 0.5) * 30; }
   x0 = Math.max(-CAMPO.meioX + 2, Math.min(CAMPO.meioX - 2, x0)); z0 = Math.max(-CAMPO.meioZ + 2, Math.min(CAMPO.meioZ - 2, z0));
   // o ponto: onde o jogador vai estar (pela velocidade dele) mais um desvio sorteado
-  const h = 1.5 + r() * 0.7, el = cruz ? 0.3 + r() * 0.15 : 0.45 + r() * 0.2;
+  // a elevação: no cruzamento, 17–26°; no lançamento, a do jogo — com o lançamento reto do C4 (item 15; ACOES.lancamento
+  // com elevAlta) a da distância (18° a 20 m → 26° a 60 m, + até 3,4° sorteados) subindo de 0,03 rad até a saída caber no
+  // teto vMax; na lógica de antes (sem elevAlta), 26–37° como era. O mesmo sorteio nas duas (o r() da elevação é um só)
+  const h = 1.5 + r() * 0.7, sel = r(), LC = CFG.ACOES.lancamento, reto = !cruz && LC.elevAlta;
+  let el = cruz ? 0.3 + sel * 0.15 : 0.45 + sel * 0.2;
   let tx = a.x + (r() - 0.5) * 3, tz = a.z + (r() - 0.5) * 3;
   let s = 20, sol = null;
   for (let it = 0; it < 2; it++) {
     const D = Math.hypot(tx - x0, tz - z0), ux = (tx - x0) / D, uz = (tz - z0) / D;
     const p = { x: x0, y: 0.11, z: z0 };
-    let lo = 5, hi = 42;
-    for (let k = 0; k < 28; k++) { s = (lo + hi) / 2; if (B.alturaNaDistancia(p, ux, uz, D, s, el).y < h) lo = s; else hi = s; }
+    if (reto) el = LC.elev[0] + (LC.elev[1] - LC.elev[0]) * Math.min(1, Math.max(0, (D - 20) / 40)) + sel * 0.06;
+    for (let sobe = 0; sobe < 12; sobe++) {
+      let lo = 5, hi = 42;
+      for (let k = 0; k < 28; k++) { s = (lo + hi) / 2; if (B.alturaNaDistancia(p, ux, uz, D, s, el).y < h) lo = s; else hi = s; }
+      if (!reto || s <= LC.vMax) break;
+      el += 0.03;
+    }
     sol = B.alturaNaDistancia(p, ux, uz, D, s, el);
     if (Math.abs(sol.y - h) > 0.15) return false;
     if (it === 0) { tx += a.vx * sol.ticks * PASSO * 0.7; tz += a.vz * sol.ticks * PASSO * 0.7; }

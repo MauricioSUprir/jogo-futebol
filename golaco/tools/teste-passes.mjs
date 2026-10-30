@@ -4,7 +4,7 @@
 // primeira e tabela. Cenários com companheiros parados/correndo e sem marcação.
 //   node tools/teste-passes.mjs
 import { criarMundo, passo, jogadorPorId } from '../js/sim.js';
-import { BOTAO, PASSO, CAMPO } from '../js/config.js';
+import { BOTAO, PASSO, CAMPO, ACOES } from '../js/config.js';
 import { tabelaTexto, fmt, media, percentil, DEG } from './lib/medidas.mjs';
 
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
@@ -165,19 +165,48 @@ for (const [nome, attr, meta, peFraco] of [['bom (90)', 90, 0.85, 85], ['fraco (
     res.push(`${fmt(dr, 1)} m ${fmt(t, 2)} s (${fmt(tMin, 2)}–${fmt(tMax, 2)})`);
   }
   reg('passe rasteiro — tempo do toque à chegada (força média)', res.join(' · '), 'na faixa p25–p75 dos dados', ok);
-  const resL = [];
-  let okL = true;
-  for (const [d, tAlvo] of [[35, 2.3], [45, 2.8], [55, 3.3]]) {
-    const m = cena(900 + d, [{ id: 1, x: d - 15, z: 0, posicao: 'ATA', papel: 'parado' }], { x: -15 });
+  // Lançamento reto e rápido (C4, item 15 da FILA; dono, 15/10: "lançamento mais reto e rápido; hoje vai muito alto";
+  // PESQUISA-ETAPA2.md §2.5a). A meta de antes era o tempo até o 1º QUIQUE na MEDIANA dos lançamentos altos do StatsBomb
+  // (2,3 / 2,8 / 3,3 s ±0,4 a 35 / 45 / 55 m), mas o tempo do StatsBomb é do toque à RECEPÇÃO e a mediana é a da bola
+  // levantada: a meta segurava a bola alta (a 40 m, ápice de 8 m). Agora: (1) o tempo do toque à RECEPÇÃO (o recebedor,
+  // parado até o toque, domina) no máximo o p25 dos lançamentos altos CERTOS da Copa 2022 (StatsBomb open data, 24 partidas, medido
+  // para esta entrega: 35 ± 5 m 2,09 s, n 271; 45 ± 5 m 2,53 s, n 260; 55 ± 5 m 3,01 s, n 169) — a quarta parte mais rápida
+  // do real, a bola tensa que o dono pediu; (2) o ápice a 40 m de 3 m (por cima de quem pula: no teste-aereo a bola a 2,9 m
+  // passa por cima) a 5,5 m; (3) a saída a 40 m de 24 m/s a ACOES.lancamento.vMax (33; Kellis & Katis 2007: 18–35 m/s), e
+  // nenhuma acima do teto.
+  const resL = [], resA = [];
+  let okT = true, okA = true, okTeto = true;
+  for (const [d, tMax] of [[35, 2.09], [40, null], [45, 2.53], [55, 3.01]]) {
+    // (do meu campo: com o recebedor dentro da área a IA dele cabeceia a bola para o gol em vez de dominar)
+    const m = cena(900 + d, [{ id: 1, x: d - 30, z: 0, posicao: 'ATA', papel: 'parado' }], { x: -30 });
     apertar(m, BOTAO.LANCAMENTO, 30, 1, 0, 1);
     let l = null;
     for (let i = 0; i < 40 && !(l = primeiroPasse(m)); i++) passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
-    let t = null;
-    for (let i = 1; i <= 400 && t == null; i++) { passo(m, { 0: { x: 0, z: 0, botoes: 0 } }); if (m.eventos.some(e => e.tipo === 'quique')) t = i * PASSO; }
-    okL = okL && t != null && Math.abs(t - tAlvo) <= 0.4;
-    resL.push(`${d} m ${t == null ? '—' : fmt(t, 2)} s (${tAlvo})`);
+    const v0 = l ? l.v : 0; // a velocidade de saída (o log do toque)
+    const dr = l ? Math.hypot(d - 30 - l.bx, l.bz) : 0;
+    // parado até o toque (o lançamento sai para onde ele está); depois a IA dele vai à bola e domina (o 'parado' não pega)
+    jogadorPorId(m, 1).papel = 'ia';
+    let tq = null, tr = null, apice = m.bola.p.y;
+    for (let i = 1; i <= 400 && tr == null; i++) {
+      passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
+      if (tq == null) apice = Math.max(apice, m.bola.p.y);
+      if (tq == null && m.eventos.some(e => e.tipo === 'quique')) tq = i * PASSO;
+      if (m.posse === 1) tr = i * PASSO;
+    }
+    // o passo do toque conta (como no rasteiro)
+    if (tr != null) tr += PASSO;
+    okTeto = okTeto && v0 > 0 && v0 <= ACOES.lancamento.vMax + 0.05;
+    if (d === 40) {
+      okA = okA && apice >= 3 && apice <= 5.5 && v0 >= 24;
+      resA.push(`${fmt(dr, 1)} m: ápice ${fmt(apice, 1)} m, saída ${fmt(v0, 1)} m/s, 1º quique ${tq == null ? '—' : fmt(tq, 2)} s`);
+      continue;
+    }
+    okT = okT && tr != null && tr <= tMax;
+    resL.push(`${d} m (${fmt(dr, 1)}) ${tr == null ? '—' : fmt(tr, 2)} s (≤ ${tMax}; quique ${tq == null ? '—' : fmt(tq, 2)}, ápice ${fmt(apice, 1)} m, ${fmt(v0, 1)} m/s)`);
   }
-  reg('lançamento — tempo de voo', resL.join(' · '), '±0,4 s dos dados', okL);
+  reg('lançamento — tempo do toque à recepção', resL.join(' · '), '≤ p25 do real (StatsBomb)', okT);
+  reg('lançamento de 40 m — ápice e saída', resA.join(''), 'ápice 3–5,5 m e ≥ 24 m/s', okA);
+  reg('lançamento — saída no teto', okTeto ? `≤ ${ACOES.lancamento.vMax} m/s` : 'acima do teto', `≤ ${ACOES.lancamento.vMax} m/s`, okTeto);
 }
 
 // ------------------------------------------------ cruzamento: cai na zona pedida

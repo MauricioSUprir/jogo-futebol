@@ -2884,6 +2884,45 @@ IGUAL); a mão de cima é só desenho.
   a ~3 m: 68 das 334 cenas do B1 (20%) são essa bola — na StatsBomb, o goleiro a ≥ 2 m com a bola a ≥ 1,9 m é 2,3% das defesas
   (94 de 4.106). A meta do B1 continua passando (52,7% em 1009–1024, 57,9% em 1001–1008), com pouca folga.
 
+## Lançamento mais reto e rápido (C4, item 15; 30/10; contrato)
+
+Pedido do dono (15/10): "lançamento mais reto e rápido; hoje vai muito alto". Pesquisa e a tabela antes → depois em
+`PESQUISA-ETAPA2.md` §2.5a (StatsBomb open data da Copa 2022, medido aqui; Sakamoto 2026; EA FC; Kellis & Katis 2007).
+- **`acoes.js vooLancamento(pp, ux, uz, Lq, L, w)` → `{el, s}`** (puro; chamado só por `lancamentoOuCruzamento`, o ramo do
+  lançamento): a elevação pela distância PEDIDA `L` (`ACOES.lancamento.elev`, 18° a 20 m → 26° a 60 m; antes 28,6–41,3°,
+  hoje `elevAlta`) e a velocidade para a bola cair a `Lq` m (o ponto com o erro do lançador: `velParaPousar`, como antes).
+  Se ela pede mais que `ACOES.lancamento.vMax` (33 m/s), a elevação sobe entre a baixa e `elevAlta` até a bola cair no ponto
+  saindo a `vMax` (`bola.js elevacaoParaPousar(p, ux, uz, D, s, lo, hi, w)`, busca binária de 24 passos; o alcance cresce
+  com a elevação abaixo de ~42°, o ângulo do alcance máximo daqui, e `elevAlta` fica abaixo dele); se nem com `elevAlta` a
+  bola chega a `Lq` saindo a `vMax` (`bola.js alcancePousando`), sai a bola de antes (`elevAlta` e a velocidade que ela pede
+  — a de 61+ m). Nenhuma bola sai mais alta que antes; nenhuma acima de `vMax` que antes saía abaixo dele.
+- **Vale para tudo que é LANÇAMENTO**: a pessoa, a IA (`acaoIA 'lancamento'`), o tiro de meta e a falta longa da IA
+  (`partida.js`), o chutão do goleiro com o pé (`ia-tatica.js`) e a reposição/chutão com a bola nas mãos (`sim.js`). Não
+  mudam: o cruzamento (`cruzamento`, incluindo o escanteio), a cobrança mirada (`MIRA.alta`/`tensa`), o arremesso lateral
+  (`LATERAL.elevLongo`), a enfiada alta e o cabeceio.
+- **O adiantamento pela corrida do recebedor** (`r.v × tVoo`, até 5 m): `tVoo` = 0,65 + L/27,5 s (antes 0,6 + L/18), a
+  mesma folga de ~1,14 × sobre o voo até o 1º quique.
+- **Muda o hash de propósito**: toda partida com um lançamento (`hash-partida --ref <a main>`: DIFERENTE a partir do 1º) e o
+  treino de ataque com o LANÇAMENTO (`hash-igual --ref <a main>`); a condução fica igual.
+- **Testes**: `teste-passes` (a meta nova: o tempo do toque à RECEPÇÃO ≤ o p25 dos lançamentos altos certos do StatsBomb
+  a 35/45/55 m; a 40 m o ápice de 3 a 5,5 m e a saída ≥ 24 m/s; nenhuma saída acima de `vMax` — a de antes, o 1º quique na
+  mediana ±0,4 s, saiu: ela segurava a bola alta) e `teste-aereo-troca` (o canhão lança com a elevação do lançamento reto
+  quando a lógica tem `elevAlta`; na de antes, 26–37° como era).
+- **Medidas (main 4658b3a1 × agora, mesmas sementes).** `teste-passes`: do toque à recepção a 35/45/55 m 5,58 / 2,70 / —
+  s → 1,60 / 2,12 / 2,60 s (na main a bola desce de cima e o recebedor a cabeceia — passe de cabeça — em vez de dominar; a
+  55 m não dominou em 6,7 s); a 38,7 m, ápice 7,2 → 4,2 m, saída 23,3 → 27,2 m/s, 1º quique 2,33 → 1,75 s. Canhão do
+  `teste-aereo-troca`: o controlado é quem disputa 94% (111/118) → 95% (127/134), com o analógico largado 97 → 95%, trocas
+  extras 0,11 → 0,15 por bola (metas ≥ 90% e ≤ 0,3). Painel de 144 (1001–1144): gols 1,68 → 1,76 (Δ +0,08 ± 0,22), passe
+  certo 86,5 → 86,5%, interceptações 10,47 → 10,88 por time, posses no último terço 43,5 → 42,6%, gols de cabeça 15,2 →
+  15,4%, duelos pelo alto com a bola rolando 2,4 → 2,3 por partida, goleiro 67,6 / 56,6 / 87,4% → 67,0 / 60,2 / 82,5%. Fora
+  da faixa: o goleiro de 6 a 16,5 m, 60,2% (meta 55–60; 194 de 322 — UMA defesa acima do limite; Δ +3,6, IC95 do bootstrap
+  por partida [−2,7; +10,0]; a main dá 57,5% nas 576 do C3). As defesas de ≥ 16,5 m caem 87,4 → 82,5% (Δ −4,9, IC95
+  [−9,1; −0,4]; na faixa 80–90%), mas não pelo lançamento: na partida IA × IA ele é raro (96 partidas: 2,4 por partida,
+  acerto 46,0 → 42,7% com n 226 / 232, ápice mediano 7,8 → 4,9 m, saída 24,4 → 28,5 m/s, do toque à posse 4,3 → 3,2 s) e
+  só 2 → 3 dos ~380 chutes de ≥ 16,5 m vêm de uma posse com lançamento nos 10 s antes — é a partida que diverge depois do 1º
+  lançamento. `hash-igual --base <main>`: ataque-demo e ataque-roteiro DIFERENTES (passos 9000 e 1200), condução IGUAL;
+  `hash-partida --base <main>`: demo 1–2 IGUAIS, demo 3–4 e humano 1–4 DIFERENTES.
+
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores
 que eu escolher, contra a quantidade de jogadores que eu escolher, pode ser adaptável durante a partida" (a Arena de Treino do

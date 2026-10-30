@@ -35,7 +35,7 @@
 | 12 | ✅ Goleiro realista: movimento, espalmadas, encaixes, saída no 1×1 e no cruzamento (#558) | 8 |
 | 13 | ✅ Chute com a barra cheia mais alto, podendo acertar o ângulo, com o analógico no canto (#567) | 5 |
 | 14 | ✅ Goleiro espalmando bola alta com a mão de cima, e nada atravessa o goleiro (#568) | 4 |
-| 15 | Lançamento mais reto e rápido | 6 |
+| 15 | ✅ Lançamento mais reto e rápido: 18–26° com teto de 33 m/s, a 40 m o ápice de 8,0 para 4,7 m (#572) | 6 |
 | 16 | Reposição do goleiro com a mão (rolar, arremessar) | 5 |
 | 68 | 🆕 ⏳ **Mira pelo que se vê na tela do celular** (chute, passe e lançamento; hoje a câmera baixa engana a mira) | 6 |
 | 70 | 🆕 ⏳ **Cobranças com corrida** (pênalti, escanteio, tiro de meta) e **jeitos de bater o pênalti** (pulinho, paradinha, forte, colocado, cavadinha), com o goleiro reagindo | 24 |

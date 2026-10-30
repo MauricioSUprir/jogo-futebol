@@ -12,7 +12,7 @@ import { clamp, lerp, difAng } from './mat.js';
 import { normal } from './rng.js';
 import {
   chutarRasteiro, chutar, velParaChegarCom, velParaDistancia, velRolandoApos, velParaPousar, elevacaoParaAltura,
-  alturaNaDistancia, simularVoo,
+  alturaNaDistancia, simularVoo, elevacaoParaPousar, alcancePousando,
 } from './bola.js';
 import { procurarOportunidade, preverBola } from './conducao.js';
 import { passoCorpo, copiaCinematica, infoPassada } from './jogador.js';
@@ -603,7 +603,9 @@ function lancamentoOuCruzamento(m, j, pe, p, erroMult) {
   let tx, tz;
   if (r) {
     const L0 = MD.hypot(r.x - b.p.x, r.z - b.p.z);
-    const tVoo = 0.6 + L0 / 18;
+    // o voo previsto para adiantar o ponto pela corrida dele: o tempo até o 1º quique da trajetória de vooLancamento com
+    // a mesma folga de antes (~1,14 ×; antes 0,6 + L/18 para a bola alta: 2,82 s a 40 m contra 2,48 s de voo)
+    const tVoo = 0.65 + L0 / 27.5;
     let lx = r.vx * tVoo, lz = r.vz * tVoo;
     const ll = MD.hypot(lx, lz);
     if (ll > 5) { lx *= 5 / ll; lz *= 5 / ll; }
@@ -621,16 +623,31 @@ function lancamentoOuCruzamento(m, j, pe, p, erroMult) {
   const qx = ex - b.p.x, qz = ez - b.p.z;
   const Lq = MD.hypot(qx, qz) || 1;
   const ux = qx / Lq, uz = qz / Lq;
-  const el = lerp(cfg.elev[0], cfg.elev[1], clamp((L - 20) / 40, 0, 1));
   const w = { x: uz * 8, y: 0, z: -ux * 8 }; // um pouco de giro para trás
   const pp = { x: b.p.x, y: b.p.y, z: b.p.z };
-  const s = velParaPousar(pp, ux, uz, Lq, el, w);
+  const { el, s } = vooLancamento(pp, ux, uz, Lq, L, w);
   const ce = MD.cos(el), se = MD.sin(el);
   const voo = simularVoo(pp, { x: ux * s * ce, y: s * se, z: uz * s * ce }, w);
   finalizarChute(m, j, pe, 'lancamento', { x: ux * s * ce, y: s * se, z: uz * s * ce }, w, { x: ex, z: ez }, r, { voo: { alto: true, alvoPedido: { x: tx, z: tz } }, ticks: voo.ticks });
   if (r) marcarRecebedor(m, r, ex, ez, 'lancamento', m.tick + voo.ticks);
   tabela(m, j, p);
   return true;
+}
+
+/**
+ * Elevação e velocidade do lançamento (C4, item 15 da FILA; dono, 15/10: "lançamento mais reto e rápido; hoje vai muito
+ * alto"; config.js ACOES.lancamento): a bola, saindo de pp na direção (ux, uz), cai a Lq m (o ponto com o erro do lançador);
+ * a elevação vem da distância pedida L (elev[0] a 20 m → elev[1] a 60 m), como antes. Se a elevação baixa pede mais que
+ * vMax, ela sobe — até a de antes (elevAlta, abaixo do ângulo do alcance máximo: o alcance cresce com ela) — para a bola
+ * cair no ponto saindo a vMax; nem com elevAlta (a bola de 61+ m) → a bola de antes, na velocidade que ela pede. {el, s}
+ */
+function vooLancamento(pp, ux, uz, Lq, L, w) {
+  const cfg = ACOES.lancamento, t = clamp((L - 20) / 40, 0, 1);
+  const el = lerp(cfg.elev[0], cfg.elev[1], t), s = velParaPousar(pp, ux, uz, Lq, el, w);
+  if (s <= cfg.vMax) return { el, s };
+  const elA = lerp(cfg.elevAlta[0], cfg.elevAlta[1], t);
+  if (alcancePousando(pp, ux, uz, cfg.vMax, elA, w) >= Lq) return { el: elevacaoParaPousar(pp, ux, uz, Lq, cfg.vMax, el, elA, w), s: cfg.vMax };
+  return { el: elA, s: velParaPousar(pp, ux, uz, Lq, elA, w) };
 }
 
 function cruzamento(m, j, pe, p, erroMult) {

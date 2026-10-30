@@ -262,10 +262,77 @@ Este documento reúne as constantes, as regras e as metas da Etapa 2 do GOLAÇO 
    3. secante em vh até acertar o alcance.
 
    Na crise do arrasto (~9–13 m/s), usar regula falsi / Illinois, recaindo em bisseção. Parametrizar por ápice + velocidade no plano dá solução única. Fonte: Berkeley, Goff & Carré 2009, Goff 2017, Forrest Smith.
-2. **Ângulo.** 25–30° para o alcance máximo. Um lob mais alto sai mais lento. Fonte: Sakamoto 2026.
+2. **Ângulo.** 25–30° para o alcance máximo. Um lob mais alto sai mais lento. Fonte: Sakamoto 2026. (Desde o C4, 18–26° pela distância com o teto de 33 m/s: §2.5a.)
 3. **Teto de v0.** Se o alvo pede mais de ~35 m/s × atributo, baixar primeiro o ápice e depois o alcance. O jogo nunca gera bola impossível. Fonte: Kellis & Katis 2007.
 4. **Precisão.** O lançamento é menos preciso que o rasteiro, e metade termina em disputa aérea. Fonte: StatsBomb-149, EA FC 26 TU 1.5.0.
 5. **Contexto.** LANÇAR vira CRUZAR quando o condutor está na faixa lateral do último terço. Fonte: EA FIFA Mobile (botões).
+
+### 2.5a Lançamento mais reto e rápido (C4, item 15 da FILA; dono, 15/10: "lançamento mais reto e rápido; hoje vai muito alto")
+
+**O que estava.** A elevação ia de 28,6° (20 m) a 41,3° (60 m), e a velocidade era a que fazia a bola cair no ponto
+(`velParaPousar`). Pela física da bola daqui (arrasto com a crise de Asai & Seo, giro para trás de 8 rad/s), o alcance a
+uma velocidade fixa é máximo perto de **42°** (a 33 m/s: 15° 38,2 m · 25° 52,6 · 35° 59,7 · 42° 61,1 · 50° 59,2): o
+lançamento era a bola de menor energia, quase no ângulo do alcance máximo — a 40 m, ápice de 8,0 m e 2,48 s até o 1º
+quique. A meta do `teste-passes` (o 1º quique na MEDIANA do StatsBomb ±0,4 s) segurava essa bola.
+
+**O real (StatsBomb open data, Copa 2022, 24 partidas, medido para esta entrega; `pass.height`, passes com o pé, sem
+cruzamento nem bola parada; `duration` = do toque à recepção, só os certos).**
+
+| Lançamento alto certo | n | p10 | p25 | p50 | p75 |
+|---|---|---|---|---|---|
+| 35 ± 5 m | 271 | 1,86 s | 2,09 s | 2,36 s | 2,59 s |
+| 45 ± 5 m | 260 | 2,27 s | 2,53 s | 2,81 s | 3,10 s |
+| 55 ± 5 m | 169 | 2,71 s | 3,01 s | 3,25 s | 3,62 s |
+
+- Dos passes de 30–40 m, 41% são altos ("High": acima do ombro), 8% baixos ("Low": sai do chão e fica abaixo do ombro) e
+  52% rasteiros; de 40–50 m, 81% altos; de 50 m em diante quase todos altos. O tiro de meta longo (50–70 m) é alto em 98–100%
+  dos casos, com mediana de 3,5–3,7 s.
+- **Honestidade:** a mediana do lançamento alto real é a bola levantada. Pelo voo (h ≤ g·T²/8, sem arrasto), 2,81 s
+  permitem até ~9,7 m de ápice e 2,1 s dão ~5,5 m. A bola reta que o dono pediu é a CAUDA rápida do real: a de 45 m
+  (agora 2,05 s até o 1º quique) é mais rápida que ~90% dos lançamentos altos certos de 40–50 m. É uma escolha de produto
+  (o dono quer a bola tensa), não a mistura do real; por isso a meta nova é o p25 (a quarta parte mais rápida), não a
+  mediana.
+
+**Fontes do desenho.**
+- **Sakamoto 2026** (já usado em §1.3): com a troca entre ângulo e velocidade de quem chuta, o ângulo ótimo para a
+  distância cai a 25–30° (o chutador real perde velocidade com o ângulo; a bola daqui, com v0 livre, ia ao ângulo do
+  alcance máximo, ~42°). **Linthorne & Everett 2006** mostram o mesmo no lateral (a velocidade cai com o ângulo e o ótimo
+  baixa).
+- **EA FC 24, "Playstyles deep dive"** (Pitch Notes): o Long Ball Pass faz a bola "lower and faster trajectory if the path
+  is clear"; os guias do FC 25/26 descrevem o lançamento tenso ("driven lob") como mais baixo e mais rápido, para inverter o
+  jogo. É a referência de jogo do pedido. https://www.ea.com/news/fc-24-playstyles-deepdive
+- **Goff & Carré 2009** (Am J Phys 77, 1020): as bolas lançadas no ensaio saem a ~18 m/s e ~22° — ângulos de ~20° são os
+  de uma bola de passe normal, não de lob. https://wiki.penfieldrobotics.com/wiki/images/c/c0/Goff_Carre_AJP_2009.pdf
+- **Kellis & Katis 2007** (§1.3): o chute máximo vai de 18 a 35 m/s. O teto do lançamento é `ACOES.lancamento.vMax` = 33
+  m/s (o `MIRA.tensa.v[1]` da cobrança tensa; o chute mais forte do jogo é 31 × 1,08 = 33,5).
+- Procurado e **não achado**: medida publicada do ângulo de saída e do ápice do passe longo de verdade (a revisão de 2026
+  diz que "empirical studies examining launch angles in soccer long kicks remain limited"; Prassas, Terauds & Nathan 1990,
+  chutes altos × baixos, só com 1 jogador e sem o resumo dos ângulos; nenhum ápice nos dados de rastreamento abertos).
+
+**O desenho (`acoes.js vooLancamento`, `config.js ACOES.lancamento`).** A elevação vai de 18° (20 m) a 26° (60 m) pela
+distância pedida (`elev`); se ela pede mais que `vMax`, sobe (até a de antes, `elevAlta`, que fica abaixo do ângulo do
+alcance máximo — o alcance cresce com ela) para a bola cair no ponto saindo a `vMax` (`bola.js elevacaoParaPousar`); nem
+com a de antes (61+ m), a bola de antes. Vale para tudo que passa pelo LANÇAMENTO: a pessoa, a IA, o tiro de meta, o
+chutão do goleiro (do pé e da mão). A cobrança mirada (`MIRA.alta`/`tensa`), o cruzamento e o lateral não mudam. O
+adiantamento pela corrida do recebedor usa o voo novo (0,65 + L/27,5 s, a mesma folga de ~1,14 × de antes).
+
+| Distância | Antes: elevação · saída · ápice · 1º quique | Agora |
+|---|---|---|
+| 20 m | 28,6° · 17,0 m/s · 3,0 m · 1,52 s | 18,0° · 20,3 m/s · 1,8 m · 1,17 s |
+| 30 m | 31,8° · 20,9 · 5,2 · 2,00 | 20,0° · 24,8 · 3,1 · 1,52 |
+| 40 m | 35,0° · 24,7 · 8,0 · 2,48 | 22,0° · 28,7 · 4,7 · 1,87 |
+| 45 m | 36,5° · 26,6 · 9,7 · 2,73 | 23,0° · 30,5 · 5,6 · 2,05 |
+| 50 m | 38,1° · 28,5 · 11,6 · 2,98 | 24,0° · 32,3 · 6,6 · 2,23 |
+| 55 m | 39,7° · 30,4 · 13,7 · 3,25 | 27,7° (no teto) · 33,0 · 8,7 · 2,57 |
+| 60 m | 41,3° · 32,5 · 16,1 · 3,52 | 35,8° (no teto) · 33,0 · 13,2 · 3,18 |
+| 62 m | 41,3° · 33,4 · 16,7 · 3,58 | a de antes |
+
+(a bola saindo do chão, sem erro; a 40 m, a meta do item: ápice ≤ 5,5 m e saída ≥ 24 m/s.)
+
+**A meta nova do `teste-passes`.** Sai o "tempo de voo" (1º quique na mediana ±0,4 s). Entram: (1) o tempo do toque à
+RECEPÇÃO (o recebedor parado até o toque, depois a IA dele vai à bola e domina; o passador do meu campo — com o recebedor
+dentro da área a IA dele cabeceia para o gol) ≤ o p25 da tabela acima; (2) a 40 m, o ápice de 3 m (por cima de quem pula:
+no `teste-aereo`, a bola a 2,9 m passa por cima) a 5,5 m e a saída ≥ 24 m/s; (3) nenhuma saída acima de `vMax`.
 
 ### 2.6 Cruzamento por zonas
 1. **Três cruzamentos.** Alto (~1,8 s, ~20–23 m/s na saída), tenso (~1,1 s, 18–23 m/s) e rasteiro ou para trás (~0,9 s). Com marcador perto, a saída cai 12–17%. Meta de proporção: ~65/22/13. Fonte: StatsBomb-149, SHU cruzamento.
