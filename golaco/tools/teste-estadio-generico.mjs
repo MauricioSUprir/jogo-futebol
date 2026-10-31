@@ -4,7 +4,7 @@
 // (tools/teste-estadio-forma.mjs) e o que já existe (o gramado e a simulação não mudam):
 //   G1) a forma é válida e a família é a da pesquisa; a 1ª fileira contém a quina das placas (≥ 1,5 m) e a do lado de cá
 //       passa pela boca do túnel em x = 0 (na pista, mais longe e com a caixa do túnel por cima da pista);
-//   G2) os lugares da torcida: no degrau (≤ 5 cm), nenhum na boca do túnel, a cabeça fora dos sólidos, entre 3 mil e
+//   G2) os lugares da torcida: no degrau (≤ 5 cm; o piso da fileira da grade: item 69), nenhum na boca do túnel, a cabeça fora dos sólidos, entre 3 mil e
 //       26 mil (o orçamento da torcida no celular), em todo setor que tem arquibancada;
 //   G3) a festa no lugar: as n bandeiras de mastro (bandeiras.js lê sempre as n) no degrau, sinalizadores no degrau,
 //       faixas do lado de lá sem se encostar e na frente da mureta, bandeirões sem furar cabeça;
@@ -103,7 +103,8 @@ if (!G) {
     const porSetor = [0, 0, 0, 0], ex = [];
     L.iterar((st, f, a, x, y, z, esc) => {
       porSetor[st]++;
-      const th = Math.atan2(z, x), s = P.sDe(x, z), e = Math.abs(P.perfil(s, th) - y);
+      // o degrau: desde o item 69 (o degrau em escada) o lugar é uma cadeira da grade, no PISO da fileira (P.pisoEm)
+      const th = Math.atan2(z, x), s = P.sDe(x, z), e = Math.abs((P.pisoEm ? P.pisoEm(x, z) : P.perfil(s, th)) - y);
       maxErr = Math.max(maxErr, e);
       if (e > 0.05) fora++;
       if (z > 0 && Math.abs(x) < T.largura / 2 + 0.4 && y < T.altura + T.laje + 0.3) tunel++;

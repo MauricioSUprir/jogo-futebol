@@ -4,6 +4,7 @@
 import { CAMPO } from '../config.js';
 import { criarCanvas, texturaCanvas, hash2, ruido, gerador } from './util.js';
 import { desenharEscudo } from './escudo-desenho.js';
+import { ARQ_GOLACO, FAIXA_PISO, pintorGolaco } from './cadeiras-dados.js';
 
 // Área coberta pela textura do gramado (campo + entorno).
 export const GRAMA = {
@@ -205,7 +206,7 @@ function painelEscudo(g, p, x0, pw, H, img) {
   if (temImg) for (const cx of [x0 + pw * 0.14, x0 + pw * 0.86]) desenharEscudo(g, img, cx - tamE / 2, 7, tamE, tamE);
 }
 
-export const ARQ = { fileiras: 36, assentoLarg: 0.5, comprimento: 125 };
+export const ARQ = { fileiras: ARQ_GOLACO.fileiras, assentoLarg: ARQ_GOLACO.assento, comprimento: ARQ_GOLACO.comprimento };
 
 const _mascaras = new Map();
 /**
@@ -244,8 +245,13 @@ export function mascaraTexto(texto, kMax = Infinity) {
 }
 
 /**
- * Cadeiras da arquibancada: fileiras (degrau, assento, encosto), corredores e o nome
- * GOLAÇO em cadeiras verdes no meio. A faixa de cima (v > 0,95) é a cor das paredes.
+ * Cadeiras da arquibancada do Estádio Golaço, pintadas PELA GRADE (render/cadeiras-dados.js gradeGolaco/pintorGolaco: a
+ * mesma cor por cadeira na textura, na cadeira 3D de perto e no lugar da torcida): 36 fileiras × 250 células de 0,5 m
+ * (2 de escada a cada 26) e o nome GOLAÇO em cadeiras verdes no meio. Cada fileira tem duas faixas, uma por face do
+ * degrau (item 69: o degrau virou geometria): embaixo (v menor) o PISO — o assento visto de cima, encostado no espelho, e
+ * a passagem na frente dele — e em cima o ESPELHO — o encosto e a frente do assento vistos de frente, com a sombra
+ * embaixo do assento. As duas faces com ~a mesma fração de cor: de qualquer ângulo a arquibancada tem a cor de antes.
+ * A faixa de cima (v > 0,95) é a cor das paredes.
  * cores (identidade.js arquibancada, só com ?tm): {friso, mosaico, cadeira, tom, tom2} pelo mandante; mascara: a do
  * mosaico do mandante (mascaraTexto) — sem elas, as de hoje. Estádio real: cores.corCadeira (fachada-estilos.js).
  */
@@ -265,46 +271,41 @@ export function texArquibancada(aniso, comTexto = true, W = 2048, cores = null, 
   const hF = (H - topo) / nF;
   const nA = Math.round(ARQ.comprimento / ARQ.assentoLarg);
   const wA = W / nA;
-  // máscara do texto (uma célula por cadeira); a torcida (torcida.js) põe camisas verdes nela
-  const real = cores?.corCadeira ?? null;   // estádio real do TM: as letras só no padrão 'mosaico'
-  const mascara = comTexto && !(real && cores.padrao !== 'mosaico') ? (mascaraTm ?? mascaraGolaco()) : null;
-  const rnd = gerador(comTexto ? 5 : 9);
+  const hE = hF * (1 - FAIXA_PISO), hP = hF * FAIXA_PISO;   // espelho em cima, piso embaixo
+  const pintor = pintorGolaco({ comTexto, cores, mascara: mascaraTm ?? mascaraGolaco() });
   for (let f = 0; f < nF; f++) {
-    const y0 = topo + f * hF;
-    // degrau (concreto)
-    g.fillStyle = '#3b4043';
-    g.fillRect(0, y0, W, hF);
+    const y0 = topo + f * hF, yP = y0 + hE;
+    // o degrau (concreto): o espelho na sombra, o piso mais claro
+    g.fillStyle = '#3b4043'; g.fillRect(0, y0, W, hE);
+    g.fillStyle = '#43494c'; g.fillRect(0, yP, W, hP);
     for (let a = 0; a < nA; a++) {
-      const corredor = (a % 26) < 2;
       const x0 = a * wA;
-      if (corredor) {
+      const pc = pintor(f, a);
+      if (!pc) {
+        // a escada (concreto mais claro, os meios-degraus alternados)
         g.fillStyle = f % 2 ? '#4a4f52' : '#43484b';
         g.fillRect(x0, y0, wA, hF);
+        g.fillStyle = 'rgba(0,0,0,0.18)';
+        g.fillRect(x0, yP, wA, Math.max(1, hP * 0.12));
         continue;
       }
-      const texto = mascara ? mascara[a + f * nA] === 1 : false;
-      if (texto) {
+      if (pc.mosaico) {
         // cadeiras do mosaico: bloco cheio (as letras ficam legíveis de longe)
-        g.fillStyle = cores?.mosaico ?? '#0d8447';
+        g.fillStyle = pc.cor;
         g.fillRect(x0, y0, wA, hF);
         g.fillStyle = 'rgba(0,0,0,0.22)';
         g.fillRect(x0, y0 + hF * 0.82, wA, hF * 0.18);
         continue;
       }
-      let cor;
-      if (texto) cor = '#12b866';
-      else {
-        const r = rnd();
-        cor = real ? real(cores, f, a, nF, r) : cores ? (r < 0.06 ? cores.tom : r < 0.12 ? cores.tom2 : cores.cadeira) : r < 0.06 ? '#2a3033' : r < 0.12 ? '#0f5233' : '#14181a';
-      }
-      g.fillStyle = cor;
-      g.fillRect(x0 + 0.6, y0 + hF * 0.22, wA - 1.2, hF * 0.55);
-      g.fillStyle = 'rgba(0,0,0,0.55)';
-      g.fillRect(x0 + 0.6, y0 + hF * 0.22, wA - 1.2, hF * 0.12);
+      g.fillStyle = pc.cor;
+      // espelho: o encosto e a frente do assento (a parte de baixo é a sombra debaixo do assento)
+      g.fillRect(x0 + 0.6, y0, wA - 1.2, hE * 0.58);
+      // piso: o assento visto de cima, encostado no espelho (a passagem livre na frente)
+      g.fillRect(x0 + 0.6, yP, wA - 1.2, hP * 0.5);
+      g.fillStyle = 'rgba(0,0,0,0.5)';
+      g.fillRect(x0 + 0.6, y0, wA - 1.2, Math.max(1, hE * 0.1));
+      g.fillRect(x0 + 0.6, yP + hP * 0.42, wA - 1.2, Math.max(1, hP * 0.08));
     }
-    // sombra do degrau de cima
-    g.fillStyle = 'rgba(0,0,0,0.45)';
-    g.fillRect(0, y0, W, Math.max(1, hF * 0.12));
   }
   return texturaCanvas(c, { aniso });
 }

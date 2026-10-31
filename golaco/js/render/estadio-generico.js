@@ -23,6 +23,8 @@ import { PONTOS_SINALIZADOR } from './festa.js';
 import { CAMERA_GERAL } from './camera.js';
 import { texFachadaEstilo, texTalude, fachadaPorDentro } from './fachada-estilos.js';
 import { PISTA } from '../estadio-generico.js';
+import { aneisEscada, sLiso, pintorAnel } from './cadeiras-dados.js';
+import { trocarLod } from './campo.js';
 
 const RAD = Math.PI / 180;
 const clampN = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -104,50 +106,47 @@ const rgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), pars
 const hexDe = c => '#' + c.map(v => clampN(Math.round(v), 0, 255).toString(16).padStart(2, '0')).join('');
 const tom = (h, k) => hexDe(rgb(h).map(v => v * k));
 /**
- * As cadeiras: o ladrilho de 12 m (2 corredores de 1,2 m, u) × a profundidade inteira (v 0,04 → 0,97: 40 fileiras), nas
- * cores e no padrão da pesquisa (liso, misto: as cadeiras sorteadas entre as cores; faixas: uma cor por anel; mosaico:
- * blocos). v < 0,012 é branco puro: o retalho das peças por cor de vértice (faces, corredores, mureta, empenas).
+ * As cadeiras PELA GRADE (estadio-generico.js grade, item 69): o ladrilho de 12 m (2 escadas de 1,2 m, u) × a profundidade
+ * inteira (v 0,04 → 0,97 = s 0 → 1). Cada fileira da grade (~0,8 m) é uma fileira da textura com as cadeiras dela (≥ 0,5
+ * m) em duas faixas — o PISO (o assento visto de cima) embaixo e o ESPELHO (o encosto de frente) em cima —, nas cores e
+ * no padrão da pesquisa (pintorAnel: liso, misto, faixas, mosaico, setores, raios; a MESMA cor da cadeira 3D de perto).
+ * v < 0,012 é branco puro: o retalho das peças por cor de vértice (faces, corredores, mureta, empenas).
  */
+export function pintorGenerico(P) {
+  return pintorAnel({ padrao: P.forma.padrao, cores: P.forma.cadeiras, NF: P.grade.NF, semente: P.forma.semente || 7 });
+}
 function texCadeiras(P, q, aniso) {
   const W = q === 'baixa' ? 256 : 512, H = q === 'baixa' ? 512 : 1024;
   const c = criarCanvas(W, H), g = c.getContext('2d');
   const yPx = v => (1 - v) * H;
-  const r = gerador(P.forma.semente || 7);
-  const cs = P.forma.cadeiras, padrao = P.forma.padrao;
-  const pal = cs.length >= 2 ? cs : [cs[0], tom(cs[0], 0.82)];
+  const G = P.grade, pinta = pintorGenerico(P);
   g.fillStyle = '#ffffff'; g.fillRect(0, yPx(0.012), W, H - yPx(0.012));
   g.fillStyle = '#9d9c97'; g.fillRect(0, yPx(0.04), W, yPx(0.012) - yPx(0.04));
   g.fillStyle = '#b8b6af'; g.fillRect(0, 0, W, yPx(0.97));
-  const NR = 40, v0 = 0.04, v1 = 0.97, hRow = (yPx(v0) - yPx(v1)) / NR;
+  // entre as faixas de cadeira (as faces dos camarotes, ~0,4 cm de s): o concreto
+  g.fillStyle = '#8c8a84'; g.fillRect(0, yPx(0.97), W, yPx(0.04) - yPx(0.97));
   const corr = 0.1;      // 1,2 m de 12 m
-  const corDe = (k, s, xs) => {
-    if (padrao === 'misto') { const x = r(); return x < 0.56 ? pal[0] : x < 0.86 ? pal[1] : pal[2] ?? pal[0]; }
-    if (padrao === 'faixas') return pal[Math.min(pal.length - 1, Math.floor((k / NR) * Math.min(3, pal.length)))];
-    if (padrao === 'mosaico') return ((Math.floor(xs * 4) + Math.floor(k / 5)) % 3 === 0) ? pal[1] : pal[0];
-    // setores: blocos alternados de 6 m (os degraus pintados em faixas); raios: a 1ª cor cortada por faixas finas da 2ª
-    if (padrao === 'setores') return xs < 0.5 ? pal[0] : pal[1];
-    if (padrao === 'raios') return xs % 0.5 < 0.1 ? pal[1] : pal[0];
-    const x = r(); return x < 0.9 ? pal[0] : tom(pal[0], 0.86);
-  };
-  for (let k = 0; k < NR; k++) {
-    const yb = yPx(v0) - k * hRow;
-    g.fillStyle = '#5e5d59'; g.fillRect(0, yb - hRow, W, hRow);
-    g.fillStyle = '#8c8a84'; g.fillRect(0, yb - hRow * 0.3, W, hRow * 0.3);
-    for (const lado of [0, 0.5]) {
-      const x0 = (lado + corr) * W, x1 = (lado + 0.5) * W, nS = 9, w = (x1 - x0) / nS;
-      for (let s = 0; s < nS; s++) {
-        g.fillStyle = corDe(k, s, lado + (s / nS) * 0.5);
-        g.fillRect(x0 + s * w + w * 0.07, yb - hRow * 0.95, w * 0.86, hRow * 0.76);
+  for (const r of G.fileiras) {
+    const yE = yPx(r.v1), yM = yPx(r.vm), yB = yPx(r.v0);
+    g.fillStyle = '#6e6d68'; g.fillRect(0, yE, W, yM - yE);
+    g.fillStyle = '#8c8a84'; g.fillRect(0, yM, W, yB - yM);
+    for (const [h, lado] of [[0, 0], [1, 0.5]]) {
+      const x0 = (lado + corr) * W, x1 = (lado + 0.5) * W, w = (x1 - x0) / r.n;
+      for (let i = 0; i < r.n; i++) {
+        g.fillStyle = pinta(r.k, h, i, r.n);
+        g.fillRect(x0 + i * w + w * 0.07, yE, w * 0.86, (yM - yE) * 0.7);
+        g.fillRect(x0 + i * w + w * 0.07, yM, w * 0.86, (yB - yM) * 0.62);
         g.fillStyle = 'rgba(0,0,0,0.16)';
-        g.fillRect(x0 + s * w + w * 0.07, yb - hRow * 0.26, w * 0.86, hRow * 0.08);
+        g.fillRect(x0 + i * w + w * 0.07, yM + (yB - yM) * 0.5, w * 0.86, Math.max(1, (yB - yM) * 0.12));
       }
     }
   }
+  // as escadas (concreto, os meios-degraus na sombra)
   for (const lado of [0, 0.5]) {
-    g.fillStyle = '#76746e'; g.fillRect(lado * W, yPx(v1), corr * W, yPx(v0) - yPx(v1));
+    g.fillStyle = '#76746e'; g.fillRect(lado * W, yPx(0.97), corr * W, yPx(0.04) - yPx(0.97));
     g.fillStyle = 'rgba(0,0,0,0.28)';
-    for (let k = 0; k < 2 * NR; k++) g.fillRect(lado * W, yPx(v0) - k * (yPx(v0) - yPx(v1)) / (2 * NR), corr * W, 1.5);
-    g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect((lado + corr) * W - 1.5, yPx(v1), 1.5, yPx(v0) - yPx(v1));
+    for (const r of G.fileiras) { g.fillRect(lado * W, yPx(r.vm), corr * W, 1.5); g.fillRect(lado * W, yPx((r.v0 + r.vm) / 2), corr * W, 1); }
+    g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect((lado + corr) * W - 1.5, yPx(0.97), 1.5, yPx(0.04) - yPx(0.97));
   }
   const t = texturaCanvas(c, { aniso, repetir: true });
   t.wrapT = THREE.ClampToEdgeWrapping;
@@ -185,14 +184,26 @@ export function criarTigela(P, opc = {}) {
   const sombra = (x, y, z) => (P.luzDoSol(x, y + 0.3, z) < 1 ? SOMBRA : BRANCO);
   const mt = T.largura / 2 + 0.4, ti = T.largura / 2, ya = T.altura, ytt = T.altura + T.laje;
   const vDe = s => 0.04 + 0.93 * clampN(s, 0, 1);
-  // a fileira onde o degrau do lado de cá passa do teto do túnel (as cadeiras em cima da boca começam ali)
-  const sTunel = (() => { let lo = 0, hi = 1; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (P.perfilLado(3, m) < ytt + 0.3) lo = m; else hi = m; } return (lo + hi) / 2; })();
+  // DUAS malhas por setor (item 69; render/cadeiras-dados.js DEGRAU_LOD): a LISA de longe (a rampa de antes passando pelos
+  // assentos: y = perfil(sLiso(s)) — o torcedor sentado no piso fica em cima dela) e a em ESCADA de perto (cada fileira da
+  // grade um piso e um espelho, com a célula dela na textura)
+  const G = P.grade;
+  // a fileira onde o degrau do lado de cá passa do teto do túnel (as cadeiras em cima da boca começam ali): na lisa pela
+  // rampa; na escada, o bico da 1ª fileira acima dele
+  const sTunel = (() => { let lo = 0, hi = 1; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (P.perfilLado(3, sLiso(G, m)) < ytt + 0.3) lo = m; else hi = m; } return (lo + hi) / 2; })();
+  const sTunelDeg = (G.fileiras.find(r => P.perfilLado(3, r.s0) >= ytt + 0.3) ?? G.fileiras[G.NF - 1]).s0;
+  const semRepetir = l => l.filter((r, i) => i === 0 || Math.abs(r[0] - l[i - 1][0]) > 1e-7 || Math.abs(r[1] - l[i - 1][1]) > 1e-7);
   /** Uma arquibancada (um trecho da planta) na malha L: as faixas do perfil, a mureta, o parapeito, as empenas. */
-  function arquibancada(L, tr) {
+  function arquibancada(L, tr, deg = false, caixa = null) {
     const k = tr.k;
-    let aneis = (tr.fechado ? P.sAneis : P.nos[k].map(n => n[0])).slice();
-    if (k === 3) aneis.push(sTunel);
-    aneis = [...new Set(aneis.map(s => Math.round(s * 1e5) / 1e5))].sort((a, b) => a - b);
+    const sT = deg ? sTunelDeg : sTunel;
+    let base = (tr.fechado ? P.sAneis : P.nos[k].map(n => n[0])).slice();
+    if (k === 3 && !deg) base.push(sTunel);
+    base = [...new Set(base.map(s => Math.round(s * 1e5) / 1e5))].sort((a, b) => a - b);
+    // os anéis [s, sY (o y sai de perfil(sY)), v]: na escada, cada fileira da grade dentro de cada faixa
+    let aneis;
+    if (deg) aneis = semRepetir(aneisEscada(G, base, vDe));
+    else aneis = base.map(s => [s, sLiso(G, s), vDe(s)]);
     const yEm = (s, th) => (tr.fechado ? P.perfil(s, th) : P.perfilLado(k, s));
     const tipoEm = (s, th) => P.tipoEm(tr.fechado ? P.ladoEm(th) : k, s);
     // as colunas de cada anel (nos cantos abertos mudam de anel para anel: a ponta é uma reta)
@@ -216,25 +227,27 @@ export function criarTigela(P, opc = {}) {
       return out;
     };
     const thAlvoX = (s, xe) => { let lo = 1e-6, hi = Math.PI - 1e-6; for (let i = 0; i < 44; i++) { const m = (lo + hi) / 2; if (xe - P.ponto(m, s)[0] < 0) lo = m; else hi = m; } return (lo + hi) / 2; };
-    const colunas = aneis.map(colsDe);
+    const memo = new Map();
+    const colunas = aneis.map(([s]) => { if (!memo.has(s)) memo.set(s, colsDe(s)); return memo.get(s); });
     const nCol = colunas[0].length;
-    if (colunas.some(c => c.length !== nCol)) { for (let i = 0; i < colunas.length; i++) colunas[i] = tr.fechado ? cols0 : tr.cols(aneis[i]); }
-    const pt = (i, j) => { const s = aneis[i], th = colunas[i][j], [x, z] = P.ponto(th, s); return [x, yEm(s, th), z]; };
+    if (colunas.some(c => c.length !== nCol)) { for (let i = 0; i < colunas.length; i++) colunas[i] = tr.fechado ? cols0 : tr.cols(aneis[i][0]); }
+    const pt = (i, j) => { const [s, sY] = aneis[i], th = colunas[i][j], [x, z] = P.ponto(th, s); return [x, yEm(sY, th), z]; };
     // o u (em ladrilhos de 12 m): nos fechados pelo arco no meio, contínuo pela volta (as colunas do fundo −x passam de π)
-    const uAbs = (i, j) => { const th = colunas[i][j]; if (tr.fechado) return P.uTh(th) / 12; const [x, z] = P.ponto(th, aneis[i]); return P.uDe(x, z, k) / 12; };
+    const uAbs = (i, j) => { const th = colunas[i][j]; if (tr.fechado) return P.uTh(th) / 12; const [x, z] = P.ponto(th, aneis[i][0]); return P.uDe(x, z, k) / 12; };
     // em cima da boca do túnel (entre as paredes, abaixo da fileira que passa do teto): sem cadeira
     const xCol = (i, j) => (tr.fechado ? pt(0, j)[0] : pt(i, j)[0]);
-    const sobreTunel = (i, j) => k === 3 && aneis[i] < sTunel - 1e-6 && Math.max(Math.abs(xCol(i, j)), Math.abs(xCol(i, j + 1))) <= mt + 1e-3;
+    const sobreTunel = (i, j) => k === 3 && aneis[i + 1][0] <= sT + 1e-6 && Math.max(Math.abs(xCol(i, j)), Math.abs(xCol(i, j + 1))) <= mt + 1e-3;
     for (let i = 0; i + 1 < aneis.length; i++) {
-      const sm = (aneis[i] + aneis[i + 1]) / 2;
+      const sm = (aneis[i][0] + aneis[i + 1][0]) / 2;
       for (let j = 0; j + 1 < nCol; j++) {
         if (sobreTunel(i, j)) continue;
         const thm = (colunas[i][j] + colunas[i][j + 1]) / 2;
         const tp = tipoEm(sm, thm);
         const a = pt(i, j), b = pt(i, j + 1), c = pt(i + 1, j + 1), d = pt(i + 1, j);
+        if (caixa) for (const q of [a, c]) caixa.expandByPoint(_pc.set(q[0], q[1], q[2]));
         if (tp === 0) {
           const ua = uAbs(i, j), ub = uAbs(i, j + 1), uc = uAbs(i + 1, j + 1), ud = uAbs(i + 1, j);
-          const va = vDe(aneis[i]), vc = vDe(aneis[i + 1]);
+          const va = aneis[i][2], vc = aneis[i + 1][2];
           L.q4(a, b, c, d, sombra(...a), [[ua, va], [ub, va], [uc, vc], [ud, vc]]);
         } else {
           const ld = tr.fechado ? P.ladoEm(thm) : k;
@@ -263,34 +276,43 @@ export function criarTigela(P, opc = {}) {
     }
     return { colunas, aneis, pt };
   }
+  const _pc = new THREE.Vector3();
   const g = new THREE.Group();
   g.name = 'tigela';
   const trs = P.trechos(NCOL);
   const malhas = [];
+  /** Uma malha com as duas versões (lisa e em escada): monta(L, deg, caixa) desenha cada uma; a lisa começa no desenho. */
+  function duasVersoes(monta) {
+    const Ll = malha(), Ld = malha(), caixas = [];
+    monta(Ll, false, () => null);
+    monta(Ld, true, () => { const b = new THREE.Box3(); caixas.push(b); return b; });
+    const m = new THREE.Mesh(Ll.geo(), mat);
+    m.userData.lod = { liso: m.geometry, deg: Ld.geo(), caixas, emDegrau: false };
+    return m;
+  }
   // lado de lá
   {
-    const L = malha();
-    for (const tr of trs) if (tr.k === 0) arquibancada(L, tr);
-    const m = new THREE.Mesh(L.geo(), mat); m.name = 'arquibancada-lado'; malhas.push(m);
+    const m = duasVersoes((L, deg, cx) => { for (const tr of trs) if (tr.k === 0) arquibancada(L, tr, deg, cx()); });
+    m.name = 'arquibancada-lado'; malhas.push(m);
   }
   // fundos (+ a pista de atletismo no chão)
   {
-    const L = malha();
-    for (const tr of trs) if (tr.k === 1 || tr.k === 2) arquibancada(L, tr);
-    if (F.pista) pistaAtletismo(L);
-    else if (F.piso) pisoEmVolta(L);
-    const m = new THREE.Mesh(L.geo(), mat); m.name = 'arquibancada-fundos'; malhas.push(m);
+    const m = duasVersoes((L, deg, cx) => {
+      for (const tr of trs) if (tr.k === 1 || tr.k === 2) arquibancada(L, tr, deg, cx());
+      if (F.pista) pistaAtletismo(L);
+      else if (F.piso) pisoEmVolta(L);
+    });
+    m.name = 'arquibancada-fundos'; malhas.push(m);
   }
   // lado de cá: o túnel no meio, os bancos e a cobertura dele (some junto com a câmera de TV dentro)
   let ca;
   const caixasCa = [];
   {
-    const L = malha();
-    let info = null;
-    for (const tr of trs) if (tr.k === 3) info = arquibancada(L, tr);
-    tunelEBancos(L);
-    cobertura(L, null, k => k === 3);
-    ca = new THREE.Mesh(L.geo(), mat);
+    ca = duasVersoes((L, deg, cx) => {
+      for (const tr of trs) if (tr.k === 3) arquibancada(L, tr, deg, cx());
+      tunelEBancos(L, deg);
+      cobertura(L, null, k => k === 3);
+    });
     ca.name = 'arquibancada-ca';
     ca.frustumCulled = false;
     const xs = [], zs = [], ys = [];
@@ -304,7 +326,6 @@ export function criarTigela(P, opc = {}) {
       new THREE.Box3(new THREE.Vector3(-ESTADIO.bancos.x[1] - 0.5, -0.1, ESTADIO.bancos.z[0] - 0.8), new THREE.Vector3(ESTADIO.bancos.x[1] + 0.5, 2.6, T.z)),
     );
     ca.userData.caixas = caixasCa;
-    void info;
     malhas.push(ca);
   }
   for (const m of malhas) { m.castShadow = false; m.receiveShadow = false; g.add(m); }
@@ -324,6 +345,10 @@ export function criarTigela(P, opc = {}) {
   }
   g.userData.materiais = [mat, matCob];
   g.userData.ladoDeCa = ca;
+  // o degrau de perto (DEGRAU_LOD) e as cadeiras 3D (render/cadeiras3d.js: a grade, a cor de cada cadeira = a da textura)
+  g.userData.atualizarLod = (pos, soLisa) => trocarLod(malhas, pos, soLisa);
+  const pinta = pintorGenerico(P);
+  g.userData.cadeiras = { grade: G, cor: a => pinta(a.k, a.h, a.i, a.n), concreto: { piso: 0x8c8a84, espelho: 0x6e6d68 } };
   g.userData.definirHora = h => { const n = h === 'noite'; matEst.emissiveIntensity = n ? 1 : 0; matEst.color.setScalar(n ? 0.5 : 1); matCob.emissive.setHex(n ? 0x1a1b1c : 0x3a3c3e); };
   return g;
 
@@ -371,12 +396,13 @@ export function criarTigela(P, opc = {}) {
     }
   }
   /** O túnel (a boca, a laje, o corredor; na pista, a caixa por cima da pista até a arquibancada) e os bancos. */
-  function tunelEBancos(L) {
+  function tunelEBancos(L, deg = false) {
     const z0 = T.z, conc = cor(0xb9b7b0), escuro = c2 => cor(0x9d9c97).multiplyScalar(c2), moldura = cor(0x55585b);
     const zf = z0 + T.profundidade;
     // a laje (o teto do túnel saliente) e a frente dela
     const zFr = F.frente.ca;
-    const yT = P.perfilLado(3, sTunel), [, zT] = P.ponto(Math.PI / 2, sTunel);
+    const sT = deg ? sTunelDeg : sTunel;
+    const yT = P.perfilLado(3, deg ? sT : sLiso(G, sT)), [, zT] = P.ponto(Math.PI / 2, sT);
     L.q4([-mt, ytt, z0], [mt, ytt, z0], [mt, ytt, zT], [-mt, ytt, zT], cor(zFr > z0 + 0.5 ? 0x6f7275 : 0x8a8c8e));
     if (zFr > z0 + 0.5) {
       // a caixa de concreto por cima da pista (as paredes de fora)
@@ -392,7 +418,19 @@ export function criarTigela(P, opc = {}) {
     L.q4([-mt, ytt, zT], [mt, ytt, zT], [mt, yT, zT], [-mt, yT, zT], escuro(0.8));
     for (const s of [-1, 1]) {
       const [, za] = P.ponto(Math.PI / 2, 0);
-      const a = L.v(s * mt, P.perfilLado(3, 0), za, ...UV_BRANCO, conc), b = L.v(s * mt, ytt, za, ...UV_BRANCO, conc), c = L.v(s * mt, ytt, zT, ...UV_BRANCO, conc);
+      if (deg) {
+        // as paredes de fora da boca: do piso de cada fileira até a laje
+        for (const r of G.fileiras) {
+          if (r.s0 >= sT) break;
+          const yP = P.perfilLado(3, r.s0), [, zr0] = P.ponto(Math.PI / 2, r.s0), [, zr1] = P.ponto(Math.PI / 2, r.s1);
+          if (yP < ytt) L.q4([s * mt, yP, zr0], [s * mt, yP, zr1], [s * mt, ytt, zr1], [s * mt, ytt, zr0], conc);
+        }
+        continue;
+      }
+      let a2 = 0, b2 = sT;
+      for (let i = 0; i < 40; i++) { const m = (a2 + b2) / 2; if (P.perfilLado(3, sLiso(G, m)) < ytt) a2 = m; else b2 = m; }
+      const [, zc] = P.ponto(Math.PI / 2, (a2 + b2) / 2);
+      const a = L.v(s * mt, P.perfilLado(3, 0), za, ...UV_BRANCO, conc), b = L.v(s * mt, ytt, za, ...UV_BRANCO, conc), c = L.v(s * mt, ytt, zc, ...UV_BRANCO, conc);
       L.tri(a, b, c);
     }
     // os bancos de reservas (config.js ESTADIO.bancos): a cápsula de acrílico com os arcos de metal

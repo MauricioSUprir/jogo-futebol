@@ -21,6 +21,7 @@ export const LUZ_GOL = { redeDia: 0xaaadab, redeNoite: 0xaaadab, armDia: 0x2a2c2
 import { cameraNoLadoDeCa } from './torcida-dados.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ } from './luz-falsa.js';
 import { retasAreaTecnica } from '../estadio-forma.js';
+import { fileirasGolaco, gradeGolaco, pintorGolaco, TUNEL, CADEIRAS3D, DEGRAU_LOD } from './cadeiras-dados.js';
 
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
 const L = CAMPO.linha, h = L / 2;
@@ -467,18 +468,75 @@ function caixaL(L, cx, cy, cz, w, a, d, [u0, u1], [v0, v1], c) {
 // ------------------------------------------------------------------ arquibancada e entorno
 
 /**
- * Luz FALSA dos sinalizadores no concreto e nas cadeiras (luz-falsa.js: uniform vec4[8], nunca PointLight — uma luz de
- * verdade recompilaria todos os materiais do three.js no meio do gol). Sem sinalizador aceso, a conta nem roda.
+ * Máscara das cadeiras 3D de perto (item 69; render/cadeiras3d.js escreve): até `CADEIRAS3D.blocosMax` caixas orientadas
+ * (os blocos que viraram cadeira 3D) onde o material das arquibancadas troca a cadeira PINTADA pelo concreto do degrau
+ * (o piso e o espelho pela normal) — a cadeira 3D fica sozinha em cima do degrau, sem a pintada embaixo. Uniforms
+ * compartilhados por todos os materiais de arquibancada (nada recompila); sem bloco perto (n = 0) a conta nem roda.
  */
-function comLuzFalsa(mat, chave) {
+const NPERTO = CADEIRAS3D.blocosMax;
+export const UNIFORMS_PERTO = {
+  uPertoN: { value: 0 },
+  uPertoC: { value: Array.from({ length: NPERTO }, () => new THREE.Vector4()) },   // centro (x, y, z) e 0
+  uPertoE: { value: Array.from({ length: NPERTO }, () => new THREE.Vector4()) },   // meia-extensão (ao longo, y, de lado)
+  uPertoA: { value: Array.from({ length: NPERTO }, () => new THREE.Vector4()) },   // eixo ao longo (x, z)
+  uConcPiso: { value: new THREE.Color(0x43494c) }, uConcEspelho: { value: new THREE.Color(0x3b4043) },
+};
+const PERTO_GLSL = `
+uniform int uPertoN;
+uniform vec4 uPertoC[${NPERTO}];
+uniform vec4 uPertoE[${NPERTO}];
+uniform vec4 uPertoA[${NPERTO}];
+uniform vec3 uConcPiso;
+uniform vec3 uConcEspelho;
+varying vec3 vNormMundo;
+bool cadeiraPerto(vec3 p) {
+  for (int i = 0; i < ${NPERTO}; i++) {
+    if (i >= uPertoN) break;
+    vec3 q = p - uPertoC[i].xyz;
+    vec2 ax = uPertoA[i].xy;
+    float al = dot(q.xz, ax), at = dot(q.xz, vec2(-ax.y, ax.x));
+    if (abs(al) <= uPertoE[i].x && abs(q.y) <= uPertoE[i].y && abs(at) <= uPertoE[i].z) return true;
+  }
+  return false;
+}`;
+
+/**
+ * A malha de cada setor em escada só com a câmera perto dela (render/cadeiras-dados.js DEGRAU_LOD, com histerese): troca a
+ * geometria do Mesh (a lisa ↔ a em escada) — o desenho e o corte pela câmera não mudam (a mesma malha, o mesmo material;
+ * o vão da pré-carga do lado de cá, drawRange, passa junto). soLisa: a câmera de jogo (a TV, camera.js deJogo) fica sempre
+ * com a lisa — de 30 m ou mais o degrau não aparece e o custo do jogo na TV não sobe (a do fundo chegava a < 52 m).
+ */
+export function trocarLod(malhas, pos, soLisa = false) {
+  for (const m of malhas) {
+    const l = m.userData.lod;
+    if (!l) continue;
+    let d = Infinity;
+    if (!soLisa) for (const c of l.caixas) if (!c.isEmpty()) d = Math.min(d, c.distanceToPoint(pos));
+    const quer = l.emDegrau ? d <= DEGRAU_LOD.sai : d <= DEGRAU_LOD.entra;
+    if (quer === l.emDegrau) continue;
+    const velha = m.geometry, nova = quer ? l.deg : l.liso;
+    nova.setDrawRange(velha.drawRange.start, velha.drawRange.count);
+    velha.setDrawRange(0, Infinity);
+    m.geometry = nova;
+    l.emDegrau = quer;
+  }
+}
+/**
+ * Luz FALSA dos sinalizadores no concreto e nas cadeiras (luz-falsa.js: uniform vec4[8], nunca PointLight — uma luz de
+ * verdade recompilaria todos os materiais do three.js no meio do gol). Sem sinalizador aceso, a conta nem roda. Também a
+ * máscara das cadeiras 3D de perto (UNIFORMS_PERTO): dentro de um bloco em 3D, o concreto do degrau no lugar da pintura.
+ */
+export function comLuzFalsa(mat, chave) {
   mat.onBeforeCompile = sh => {
     sh.uniforms.uFlare = UNIFORMS_LUZ.uFlare;
     sh.uniforms.uFlareN = UNIFORMS_LUZ.uFlareN;
+    for (const k of Object.keys(UNIFORMS_PERTO)) sh.uniforms[k] = UNIFORMS_PERTO[k];
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vMundoFlare;')
-      .replace('#include <project_vertex>', '#include <project_vertex>\nvMundoFlare = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      .replace('#include <common>', '#include <common>\nvarying vec3 vMundoFlare;\nvarying vec3 vNormMundo;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvMundoFlare = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvNormMundo = normalize(mat3(modelMatrix) * objectNormal);');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vMundoFlare;' + LUZ_FALSA_GLSL)
+      .replace('#include <common>', '#include <common>\nvarying vec3 vMundoFlare;' + LUZ_FALSA_GLSL + PERTO_GLSL)
+      .replace('#include <map_fragment>', '#include <map_fragment>\nif (uPertoN > 0 && cadeiraPerto(vMundoFlare)) diffuseColor.rgb = diffuse * (abs(vNormMundo.y) > 0.5 ? uConcPiso : uConcEspelho);')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * luzFalsa(vMundoFlare);');
   };
   mat.customProgramCacheKey = () => 'arq-luz-falsa-' + chave;
@@ -517,12 +575,18 @@ function criarArquibancada(aniso, qualidade, ident = null) {
   const frenteZ = MZ + CAMPO.entorno + 4.5;           // 44,5
   const fundoZ = frenteZ + 30, yBase = 1.4, yTopo = 20;
   const xA = ARQ.comprimento / 2;                       // ±62,5 (encosta nas de trás dos gols)
+  // o DEGRAU em geometria (item 69): cada fileira da grade (render/cadeiras-dados.js) é um piso e um espelho, com a
+  // célula dela na textura (o piso na faixa de baixo, o espelho na de cima)
+  const FL = fileirasGolaco('lado'), FF = fileirasGolaco('fundo');
   // lado de lá (z negativo), de frente para a câmera de TV, com GOLAÇO nas cadeiras
   const L1 = construtor();
   {
-    const z0 = -frenteZ, z1 = -fundoZ;
+    const z0 = -frenteZ, z1 = -fundoZ, z = d => z0 - d;
     L1.quad([-xA, 0, z0], [xA, 0, z0], [xA, yBase, z0], [-xA, yBase, z0], 0, 1, V_PAREDE, 1);
-    L1.quad([-xA, yBase, z0], [xA, yBase, z0], [xA, yTopo, z1], [-xA, yTopo, z1], 0, 1, 0, vMax);
+    for (const r of FL) {
+      L1.quad([-xA, r.y, z(r.d0)], [xA, r.y, z(r.d0)], [xA, r.y, z(r.d1)], [-xA, r.y, z(r.d1)], 0, 1, r.v0, r.vm);
+      L1.quad([-xA, r.y, z(r.d1)], [xA, r.y, z(r.d1)], [xA, r.y1, z(r.d1)], [-xA, r.y1, z(r.d1)], 0, 1, r.vm, r.v1);
+    }
     L1.quad([-xA, yTopo, z1], [xA, yTopo, z1], [xA, yTopo + 5, z1], [-xA, yTopo + 5, z1], 0, 1, V_PAREDE, 1);
     L1.quad([-xA, yTopo + 5, z1], [xA, yTopo + 5, z1], [xA, yTopo + 6.5, z1 + 16], [-xA, yTopo + 6.5, z1 + 16], 0, 1, V_PAREDE, 1);
     // laterais (triângulos) fechando o fim da arquibancada nos cantos
@@ -536,24 +600,35 @@ function criarArquibancada(aniso, qualidade, ident = null) {
   // com ?tm: as cores das cadeiras, do friso e do mosaico pelo mandante, e o nome dele no mosaico (identidade.js)
   const coresArq = ident ? ident.arquibancada : null, mascaraTm = ident ? mascaraTexto(ident.mosaico.texto, 2.6) : null;
   const lado = L1.mesh(texArquibancada(aniso, true, larg, coresArq, mascaraTm), 'lado');
-  // atrás dos gols (x±): do canto de lá (z −74,5) até o lado de cá (z +44,5)
+  // atrás dos gols (x±): do canto de lá (z −74,5) até o lado de cá (z +44,5); 30 fileiras (as da textura até 82%)
   const L2 = construtor();
   for (const s of [-1, 1]) {
-    const x0 = s * (MX + CAMPO.entorno + 4), x1 = s * (MX + CAMPO.entorno + 4 + 26);
+    const x0 = s * (MX + CAMPO.entorno + 4), x1 = s * (MX + CAMPO.entorno + 4 + 26), x = d => x0 + s * d;
     const za = s > 0 ? frenteZ : -fundoZ, zb = s > 0 ? -fundoZ : frenteZ;
     const yT = 17;
     const u1 = (frenteZ + fundoZ) / ARQ.comprimento;
     L2.quad([x0, 0, za], [x0, 0, zb], [x0, yBase, zb], [x0, yBase, za], 0, u1, V_PAREDE, 1);
-    L2.quad([x0, yBase, za], [x0, yBase, zb], [x1, yT, zb], [x1, yT, za], 0, u1, 0, vMax * 0.82);
+    for (const r of FF) {
+      L2.quad([x(r.d0), r.y, za], [x(r.d0), r.y, zb], [x(r.d1), r.y, zb], [x(r.d1), r.y, za], 0, u1, r.v0, r.vm);
+      L2.quad([x(r.d1), r.y, za], [x(r.d1), r.y, zb], [x(r.d1), r.y1, zb], [x(r.d1), r.y1, za], 0, u1, r.vm, r.v1);
+    }
     L2.quad([x1, yT, za], [x1, yT, zb], [x1, yT + 5, zb], [x1, yT + 5, za], 0, u1, V_PAREDE, 1);
   }
   const texSemNome = texArquibancada(aniso, false, larg, coresArq);
   const fundos = L2.mesh(texSemNome, 'fundos');
   lado.name = 'arquibancada-lado';
   fundos.name = 'arquibancada-fundos';
-  const ca = criarLadoDeCa(construtor, texSemNome, { frenteZ, fundoZ, yBase, yTopo, xA, V_PAREDE, vMax });
+  const ca = criarLadoDeCa(construtor, texSemNome, { frenteZ, fundoZ, yBase, yTopo, xA, V_PAREDE, vMax, FL });
   g.userData.materiais = [lado.material, fundos.material, ca.material];
   g.userData.ladoDeCa = ca;
+  // a grade das cadeiras (as 3D de perto, sob demanda: render/cadeiras3d.js) com a MESMA cor de cada célula da textura
+  const pintLado = pintorGolaco({ comTexto: true, cores: coresArq, mascara: mascaraTm ?? mascaraTexto('GOLAÇO') });
+  const pintSem = pintorGolaco({ comTexto: false, cores: coresArq });
+  g.userData.cadeiras = {
+    grade: gradeGolaco(),
+    cor: a => (a.setor === 0 ? pintLado : pintSem)(a.f, a.a)?.cor ?? '#14181a',
+    concreto: { piso: 0x43494c, espelho: 0x3b4043 },
+  };
   g.add(lado, fundos, ca);
   return g;
 }
@@ -566,24 +641,31 @@ function criarArquibancada(aniso, qualidade, ident = null) {
  * com a câmera lá dentro (torcida-dados.js cameraNoLadoDeCa, a mesma conta da torcida).
  */
 function criarLadoDeCa(construtor, tex, A) {
-  const { frenteZ: z0, fundoZ: z1, yBase, yTopo, xA, V_PAREDE, vMax } = A;
+  const { frenteZ: z0, fundoZ: z1, yBase, yTopo, xA, V_PAREDE, vMax, FL } = A;
   const T = ESTADIO.tunel;
   const L = construtor(true);
   const ti = T.largura / 2, mt = ti + 0.4, ya = T.altura, ytt = T.altura + T.laje;
-  const yS = z => yBase + (yTopo - yBase) * (z - z0) / (z1 - z0);
-  const vS = z => vMax * (z - z0) / (z1 - z0);
-  const zt = z0 + (ytt + 0.3 - yBase) * (z1 - z0) / (yTopo - yBase);   // o degrau passa do teto do túnel aqui
+  void vMax;
+  const z = d => z0 + d;
+  // a 1ª fileira que passa por cima do teto do túnel (as de baixo não têm cadeira em cima da boca: a mesma conta da
+  // grade, render/cadeiras-dados.js — o piso abaixo do topo do túnel com a folga)
+  const jT = FL.findIndex(r => r.y >= TUNEL.topo);
+  const zt = z(FL[jT].d0);
   const uX = x => (x + xA) / (2 * xA);
-  // retalhos da textura das cadeiras: o concreto claro do corredor (célula da cadeira 0, no meio da fileira 17) e o
+  // retalhos da textura das cadeiras: o concreto claro da escada (célula da cadeira 0, no meio da fileira 17) e o
   // friso verde do parapeito (o topo da faixa de parede)
   const CU = [0.002, 0.006], CV = [0.484, 0.49], VERDE = [0.996, 0.999];
   // mureta da frente dos dois lados da boca
   L.quad([-xA, 0, z0], [-mt, 0, z0], [-mt, yBase, z0], [-xA, yBase, z0], uX(-xA), uX(-mt), V_PAREDE, 1);
   L.quad([mt, 0, z0], [xA, 0, z0], [xA, yBase, z0], [mt, yBase, z0], uX(mt), uX(xA), V_PAREDE, 1);
-  // degraus: os dois lados inteiros; no meio, só de onde passam por cima do teto do túnel
-  L.quad([-xA, yBase, z0], [-mt, yBase, z0], [-mt, yTopo, z1], [-xA, yTopo, z1], uX(-xA), uX(-mt), 0, vMax);
-  L.quad([mt, yBase, z0], [xA, yBase, z0], [xA, yTopo, z1], [mt, yTopo, z1], uX(mt), uX(xA), 0, vMax);
-  L.quad([-mt, yS(zt), zt], [mt, yS(zt), zt], [mt, yTopo, z1], [-mt, yTopo, z1], uX(-mt), uX(mt), vS(zt), vMax);
+  // degraus (piso + espelho): os dois lados inteiros; no meio, só os que passam por cima do teto do túnel
+  for (const r of FL) {
+    const trechos = r.j >= jT ? [[-xA, xA]] : [[-xA, -mt], [mt, xA]];
+    for (const [xa, xb] of trechos) {
+      L.quad([xa, r.y, z(r.d0)], [xb, r.y, z(r.d0)], [xb, r.y, z(r.d1)], [xa, r.y, z(r.d1)], uX(xa), uX(xb), r.v0, r.vm);
+      L.quad([xa, r.y, z(r.d1)], [xb, r.y, z(r.d1)], [xb, r.y1, z(r.d1)], [xa, r.y1, z(r.d1)], uX(xa), uX(xb), r.vm, r.v1);
+    }
+  }
   // parede de trás e um teto curto
   L.quad([-xA, yTopo, z1], [xA, yTopo, z1], [xA, yTopo + 5, z1], [-xA, yTopo + 5, z1], 0, 1, V_PAREDE, 1);
   L.quad([-xA, yTopo + 5, z1], [xA, yTopo + 5, z1], [xA, yTopo + 5.6, z1 - 4.5], [-xA, yTopo + 5.6, z1 - 4.5], 0, 1, V_PAREDE, 1);
@@ -592,11 +674,13 @@ function criarLadoDeCa(construtor, tex, A) {
     L.tri([x, 0, z0], [x, yBase, z0], [x, yTopo + 5, z1], [0.5, V_PAREDE], [0.5, 1], [0.6, 1]);
     L.tri([x, 0, z0], [x, yTopo + 5, z1], [x, 0, z1], [0.5, V_PAREDE], [0.6, 1], [0.6, V_PAREDE]);
   }
-  // a boca do túnel saliente entre os degraus: o teto (laje) e as paredes de fora em concreto, a moldura verde
+  // a boca do túnel saliente entre os degraus: o teto (laje), o espelho dele até o degrau de cima e as paredes de fora
+  // (de cada piso até a laje) em concreto, a moldura verde
   L.quad([-mt, ytt, z0], [mt, ytt, z0], [mt, ytt, zt], [-mt, ytt, zt], CU[0], CU[1], CV[0], CV[1], 1);
+  L.quad([-mt, ytt, zt], [mt, ytt, zt], [mt, FL[jT].y, zt], [-mt, FL[jT].y, zt], CU[0], CU[1], CV[0], CV[1], 0.8);
   for (const s of [-1, 1]) {
     const x = s * mt;
-    L.quad([x, yBase, z0], [x, ytt, z0], [x, ytt, zt], [x, yS(zt), zt], CU[0], CU[1], CV[0], CV[1], 0.9);
+    for (const r of FL.slice(0, jT)) L.quad([x, r.y, z(r.d0)], [x, ytt, z(r.d0)], [x, ytt, z(r.d1)], [x, r.y, z(r.d1)], CU[0], CU[1], CV[0], CV[1], 0.9);
     L.quad([s * ti, 0, z0], [s * mt, 0, z0], [s * mt, ytt, z0], [s * ti, ytt, z0], 0.2, 0.21, VERDE[0], VERDE[1], 0.8);
   }
   L.quad([-ti, ya, z0], [ti, ya, z0], [ti, ytt, z0], [-ti, ytt, z0], 0.2, 0.21, VERDE[0], VERDE[1], 0.8);
@@ -614,6 +698,7 @@ function criarLadoDeCa(construtor, tex, A) {
   // plano do Frustum (falso positivo) — 1 chamada de desenho à toa, medida em 20 instantes do jogo
   m.frustumCulled = false;
   const zm = z0 + 0.4 * (z1 - z0);
+  const yS = zz => yBase + (yTopo - yBase) * (zz - z0) / (z1 - z0);
   m.userData.caixas = [
     new THREE.Box3(new THREE.Vector3(-xA - 0.5, -0.5, z0 - 0.6), new THREE.Vector3(xA + 0.5, yS(zm) + 0.5, zm + 0.5)),
     new THREE.Box3(new THREE.Vector3(-xA - 0.5, yS(zm) - 0.5, zm - 0.5), new THREE.Vector3(xA + 0.5, yTopo + 6.2, z1 + 0.6)),
@@ -701,6 +786,8 @@ export function criarCampo(opc) {
   if (!f3) grupo.add(refl.grupo);
   const ladoDeCa = arq.userData.ladoDeCa;
   const _frustum = new THREE.Frustum(), _mat = new THREE.Matrix4();
+  // cadeiras 3D de perto (item 69; render/cadeiras3d.js sob demanda: ligarCadeiras quando o módulo chega)
+  let cad3d = null, alturaTela = 720, qualCad = opc.qualidade ?? 'media', horaCad = 'dia';
   // pré-carga (como a torcida): no 1º quadro, se a câmera não a vê, a arquibancada do lado de cá vai para a GPU com
   // 0 triângulos (geometria e programa prontos) — o 1º corte de câmera que a mostra não engasga
   let precarga = true, restaurar = false;
@@ -720,23 +807,50 @@ export function criarCampo(opc) {
       gols.matArm.emissive.setHex(noite ? LUZ_GOL.armNoite : LUZ_GOL.armDia);
       refl.matLamp.color.setHex(noite ? 0xf4f8ff : 0x3a4044);
       for (const b of refl.brilhos) b.visible = noite;
+      horaCad = hora;
+      cad3d?.definirHora(hora);
     },
     /**
      * t: s; camera (opcional): o lado de cá só vai para a GPU com a câmera fora dele e a caixa no quadro; desenha: este
      * quadro vai mesmo ser desenhado (com o celular em pé a tela de girar cobre tudo e nada é desenhado — a pré-carga
-     * espera o 1º quadro desenhado de verdade).
+     * espera o 1º quadro desenhado de verdade); deJogo: é a câmera de jogo (a TV: camera.js deJogo) — sem cadeira 3D.
      */
-    atualizar(t, camera = null, desenha = true) {
+    atualizar(t, camera = null, desenha = true, deJogo = false) {
       band.tempo.value = t;
       if (camera) {
         camera.updateMatrixWorld();
         _frustum.setFromProjectionMatrix(_mat.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
         const cx = ladoDeCa.userData.caixas;
-        const ver = !cameraNoLadoDeCa(camera.position) && cx.some(c => _frustum.intersectsBox(c));
+        const dentroCa = cameraNoLadoDeCa(camera.position);
+        const ver = !dentroCa && cx.some(c => _frustum.intersectsBox(c));
         if (restaurar) { restaurar = false; ladoDeCa.geometry.setDrawRange(0, Infinity); }
         if (precarga && desenha && !ver) { ladoDeCa.visible = true; ladoDeCa.geometry.setDrawRange(0, 0); restaurar = true; } else ladoDeCa.visible = ver;
         if (desenha) precarga = false;
+        // o degrau das plantas curvas (lisa de longe e na TV, em escada de perto) e as cadeiras 3D dos blocos perto da câmera
+        arq.userData.atualizarLod?.(camera.position, deJogo);
+        cad3d?.atualizar(camera, alturaTela, dentroCa, deJogo);
       }
+    },
+    /** Liga as cadeiras 3D de perto (o módulo render/cadeiras3d.js chegou: main.js SOB.cadeiras). */
+    ligarCadeiras(md) {
+      if (cad3d || !arq.userData.cadeiras) return;
+      cad3d = md.criarCadeiras3D({ grupo, info: arq.userData.cadeiras, uniforms: UNIFORMS_PERTO, qualidade: qualCad });
+      cad3d.definirHora(horaCad);
+    },
+    /** Altura da tela em px CSS (a escolha dos blocos de perto é pelos px da cadeira). */
+    definirAlturaTela(px) { if (px > 0) alturaTela = px; },
+    definirQualidade(q) { qualCad = q; cad3d?.definirQualidade(q); },
+    /** Mostra/esconde as cadeiras 3D (testes; escondidas, a cadeira pintada volta em todo bloco). */
+    mostrarCadeiras(v) { cad3d?.ligar(v); },
+    /** As cadeiras 3D neste quadro (testes): {carregado, blocos, instancias, teto} e a grade do estádio. */
+    get cadeiras() { return { carregado: !!cad3d, blocos: cad3d?.blocos ?? 0, instancias: cad3d?.instancias ?? 0, teto: cad3d?.teto ?? null, mascara: UNIFORMS_PERTO.uPertoN.value }; },
+    get grade() { return arq.userData.cadeiras?.grade ?? null; },
+    /** As malhas das arquibancadas agora (testes): {nome, visivel, triangulos, emDegrau (a malha em escada: DEGRAU_LOD)}. */
+    get arquibancadas() {
+      return arq.children.filter(m => /^arquibancada-/.test(m.name)).map(m => {
+        const gg = m.geometry, n = gg.index ? gg.index.count : gg.attributes.position.count;
+        return { nome: m.name, visivel: m.visible, triangulos: Math.round(Math.min(n, gg.drawRange.count) / 3), emDegrau: m.userData.lod ? m.userData.lod.emDegrau : true, trisLiso: m.userData.lod ? m.userData.lod.liso.index.count / 3 : null, trisDegrau: m.userData.lod ? m.userData.lod.deg.index.count / 3 : null };
+      });
     },
     /** A arquibancada do lado de cá (testes: visível ou não neste quadro). */
     get ladoDeCa() { return ladoDeCa; },

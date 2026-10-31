@@ -344,6 +344,12 @@ export function criarCamera(aspecto) {
     definirCinema(p) { est.cinema = p || null; if (!p) cin.nome = null; },
     /** Nome do plano de cinema agora ('steadicam', 'contraplano', 'reacao') ou null. */
     get cinema() { return est.cinema && cin.nome ? cin.nome : null; },
+    /**
+     * A câmera de JOGO agora (a TV/aproximada seguindo o lance: sem cinema, sem a livre dos testes, sem o plano geral, sem
+     * o efeito do gol e sem a câmera da bola parada)? Nela nada de perto entra (item 69: as cadeiras 3D só nas câmeras
+     * de perto — a do gol, a comemoração, as cenas, o replay, o pré-jogo).
+     */
+    get deJogo() { return !est.cinema && !est.livre && !est.geral && !est.gol.ativo && !(est.bp.ok && est.bp.s > 0.01); },
     bolaParada(pl) { est.bp.plano = pl || null; },
     get misturaBolaParada() { return est.bp.s; },
     /** Câmera livre para prints de conferência: {de:[x,y,z], para:[x,y,z], fov?} ou null. */

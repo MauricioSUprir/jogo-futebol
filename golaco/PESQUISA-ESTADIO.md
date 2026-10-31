@@ -465,3 +465,69 @@ bola puxada 60% para o gol e no máximo 18° para baixo); a bola no quadro do ch
 (antes 0,215 m); a parte 2 do treinador com ele inteiro no quadro 98,4% → 100%; o pênalti com o goleiro no quadro. Uma meta mudou de forma: "≤ 6 cm do olho bruto"
 vale na HORIZONTAL — com a passada de agora a cabeça oscila ±9 cm e um olho a ≤ 6 cm dela na vertical também balançaria;
 a vertical fica presa pela cabeça (≤ 0,15 m) e pelo balanço (≤ 1 cm).
+
+## 14. Cadeiras e degraus em 3D (item 69 da FILA, PR 1 de 4: a cadeira e o degrau; `js/render/cadeiras-dados.js`, `render/cadeiras3d.js`, `render/campo.js`, `render/estadio-real.js`, `render/estadio-generico.js`, `estadio-planta.js`, `estadio-generico.js`, `render/torcida-dados.js`)
+
+Pedido do dono (29/10): "cadeiras parecidas com as reais e torcida 3D, em todos os estádios". Antes deste PR a cadeira
+não tinha geometria em estádio nenhum: no Estádio Golaço a arquibancada era UMA rampa lisa com as cadeiras pintadas; no
+Maracanã e nas 104 genéricas, a textura nas faixas do perfil, sem degrau. O PR 1 faz a CADEIRA e o DEGRAU; o torcedor 3D
+(PR 2), o impostor/LOD da torcida (PR 3) e a calibração dos 523 estádios (PR 4) vêm depois.
+
+**Fontes e o que foi aproveitado de cada uma**
+- **FIFA Football Stadiums Guidelines (2022), §5.2 "Seating and standing areas"** (publications.fifa.com): "tread depths
+  of the terracing should be 800mm (minimum), with seat centres at 500mm (minimum)"; passagem livre (clearway) mínima de
+  400 mm na frente da cadeira; "a figure in the range of 28 seats between gangways is accepted as good practice
+  internationally" (14 com uma escada só). → `CADEIRA.largura` 0,5 m, `CADEIRA.fileira` 0,8 m, `CADEIRA.entreEscadas` 28,
+  `CADEIRA.passagem` 0,4 m; a fileira de cada planta curva sai da profundidade média ÷ 0,8 m e as cadeiras por gomo de
+  floor(comprimento ÷ 0,5 m) (nunca mais de 28).
+- **Guide to Safety at Sports Grounds ("Green Guide", 6ª ed., 2018; SGSA)**: largura recomendada de 500 mm (460 mínima),
+  fileira recomendada de 800 mm (§12.12; 700 mínima), o caimento de uma arquibancada de cadeiras não passa de 34°
+  (o valor citado nos manuais de estádio a partir dele); **SGSA SG02**: escada radial de 1,2 m. → `CADEIRA.caimentoMax` 34°
+  (o Golaço tem 31–32°, o Maracanã ≤ 26°; nas genéricas a forma da pesquisa às vezes passa — o PR 4 calibra) e a escada:
+  o Golaço tem 1,0 m (2 células de 0,5 m: mudar mexeria na textura e na torcida inteiras), a genérica 1,2 m, o Maracanã a
+  da textura aprovada nas rodadas da prévia (8% do gomo: 0,59 m na 1ª fileira, ~1,1 m na última) — anotado para o PR 4.
+- **UEFA Stadium Infrastructure Regulations / CAF Stadium Regulations**: as cadeiras individuais, fixas no piso, com
+  encosto de no mínimo 30 cm medido a partir do assento. → `CADEIRA.assento.encosto` 0,36 m e o teste C7 (≥ 0,30 m).
+- **OMSI, "How to choose stadium seating" (fabricante, 2026)**: assento de 45–50 cm de largura, 38–40 cm de fundo, encosto
+  de 35–40 cm, distância entre encostos ≥ 80–85 cm, mecanismo rebatível por mola em quase toda cadeira moderna. →
+  `CADEIRA.assento` {largura 0,46, fundo 0,40, altura 0,43, encosto 0,36}: a concha do assento (as bordas de lado mais altas
+  que o meio), o lábio da frente, o encosto em concha (as bordas 3 cm para a frente) e inclinado para trás, o pé no meio —
+  18 triângulos (`geometriaCadeira`); o centro do assento a 64% do piso (o encosto encostado no espelho de trás, a passagem
+  de 0,33 m na frente do assento rebaixado).
+- **three.js 0.170 — InstancedMesh** (docs): `count`, `setMatrixAt`/`instanceColor` com `needsUpdate`, e "the engine
+  automatically computes the bounding sphere when needed ... you may need to recompute it if an instance is transformed".
+  → uma malha instanciada só (1 chamada de desenho) com as matrizes e as cores escritas SÓ quando a escolha dos blocos
+  muda; `frustumCulled = false` (a escolha já é pelo cone da câmera: a esfera não precisa ser refeita).
+- **three.js 0.170 — LOD** (docs): `addLevel(object, distance, hysteresis)` — "threshold used to avoid flickering at LOD
+  boundaries, as a fraction of distance". → a MESMA ideia na escolha dos blocos (entra com a cadeira ≥ 10 px, sai abaixo
+  de 7,5 px) e no degrau das plantas curvas (a malha em escada entra a < 42 m da caixa do setor e sai além de 50 m), sem
+  o objeto LOD (a escolha é por bloco e pelos px na tela, não pela distância ao centro do objeto).
+- **GPU Gems 3, cap. 2 "Animated Crowd Rendering"** (NVIDIA) e **Millán & Rudomín, "Impostors, pseudo-instancing and image
+  maps for GPU crowd rendering"**: multidão com instâncias e nível de detalhe pela distância (geometria perto, imagem
+  longe). → a cadeira em geometria só nos blocos perto da câmera e, longe, a TEXTURA da mesma grade (o "impostor" da
+  arquibancada). O impostor do torcedor fica para o PR 3.
+
+**O que mudou (decisões)**
+- **A grade é a fonte única** (`cadeiras-dados.js`, puro): do Estádio Golaço (`gradeGolaco`: as 36 × 250 células de 0,5 m
+  de antes, a escada a cada 26 — a capacidade continua 29,6 mil) e das plantas curvas (`criarGradeAnel`: fileiras de ~0,8 m
+  pela profundidade média, cadeiras de ≥ 0,5 m em cada metade de ladrilho da textura; no Maracanã o u da textura passou a
+  ser o ARCO no meio da profundidade, não o ângulo — por ângulo a cadeira da frente dos lados tinha 0,36 m e a dos fundos
+  0,77 m; agora p1–p99 0,43–0,59 m, e as 60 escadas ficam a distâncias iguais na volta). A textura pinta CADA fileira da
+  grade em duas faixas — o PISO (o assento visto de cima) e o ESPELHO (o encosto visto de frente) —, as duas na cor da
+  cadeira: de longe a fração de cor é a mesma de qualquer ângulo (na TV do celular a média de cor da arquibancada de lá
+  mudou < 2 níveis de 255).
+- **O degrau em geometria**: no Golaço as arquibancadas são retas e cada fileira vira um piso e um espelho (~1 mil
+  triângulos a mais nas 4); nas curvas cada setor tem DUAS malhas — a lisa de antes (agora passando pelos assentos, para o
+  torcedor sentado no piso ficar em cima dela) e a em escada (com as colunas da curva: ~11–16 mil triângulos por setor) —
+  e a em escada só entra perto da câmera (a < 42 m, a mesma distância máxima da cadeira 3D: com 52 m o pré-jogo do San
+  Siro passava da meta de 130 mil triângulos no celular) e nunca na câmera de jogo (a TV fica sempre na lisa: com a bola
+  perto de um gol ela chegava perto do fundo e o San Siro pagava +13 mil triângulos na TV do celular; o plano aéreo e a
+  fachada do pré-jogo ficam na lisa pela distância).
+- **A torcida senta na grade**: cada torcedor é uma cadeira da grade (o piso do degrau, o centro do assento; um por
+  cadeira); no Golaço os mesmos sorteios e a mesma quantidade de antes (só o lugar mudou: ~0,26 m mais baixo, no piso);
+  no Maracanã o lado de baixo em todas as fileiras e o de cima em uma sim, uma não (o torcedor maior vale 2).
+- **A cadeira 3D de perto** (`cadeiras3d.js`, SOB DEMANDA): por BLOCO (a faixa entre duas escadas × 4 fileiras), pelos px
+  da cadeira na tela (0,5 m · altura da tela ÷ (2 · d · tan(fov/2))), com histerese, até `CADEIRAS3D.teto` cadeiras (Baixa
+  0, Média 320, Alta 3.072) e 20 blocos; dentro de um bloco em 3D o material das arquibancadas troca a pintura pelo
+  concreto do degrau (uma caixa orientada por bloco no shader: `UNIFORMS_PERTO`), e o lado de cá sai junto com a câmera
+  de TV dentro dele.

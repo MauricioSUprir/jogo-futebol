@@ -4022,3 +4022,66 @@ faixa por faixa da bola, contra a Metrica (`PESQUISA-CATEGORIA-D.md` §8). O que
   `--sementes`, `--roteiros`, `--par`, `--set`, `--json`, `--detalhe`, `--boot`. A coluna "antes" é a base do PR que ligou a
   meta (A e V1–V6: a main ebf0abc6, antes do D2; M e V7: a main 2c9e7066, antes do D3; 24 partidas). O `teste-defesa-corrida`
   ganhou `--set` (a mesma triagem).
+
+## Cadeiras 3D (item 69, PR 1: a cadeira e o degrau; 31/10; contrato)
+Pedido do dono (29/10): "cadeiras parecidas com as reais e torcida 3D, em todos os estádios" (FILA item 69, PR 1 de 4;
+pesquisa em `PESQUISA-ESTADIO.md` §14). Só DESENHO: nada do fecho do hash muda (`tools/fecho-hash.mjs --diff origin/main` = 0;
+`hash-igual --ref <base>` e `hash-partida` IGUAIS).
+- **A grade** (`js/render/cadeiras-dados.js`, PURO: sem three.js nem DOM; no download inicial — a textura, o degrau e a torcida
+  do 1º quadro dependem dela) é a fonte única da TEXTURA das cadeiras, do DEGRAU em geometria, dos LUGARES da torcida e das
+  CADEIRAS 3D de perto, com a mesma interface nas 3 malhas de estádio: `{fileiras, blocos, assentosDoBloco(i), assentoEm(...),
+  iterar(cb), capacidade}`; cada cadeira `{setor, f (0 = a fileira de cima), a, x, y (o PISO do degrau), z (o centro do
+  assento), rumo (para onde olha: (cos, sin) no plano xz), larg, chave}`.
+  - Estádio Golaço (`gradeGolaco`; o padrão, a edição pública, os estádios sem forma): as 36 fileiras × 250 células de 0,5 m da
+    textura de antes (escada de 2 células a cada 26: 24 cadeiras entre escadas), o lado de lá e o de cá com fileiras de
+    0,833 × 0,517 m, os fundos com 30 de 0,867 × 0,52 m; sem cadeira em cima da boca do túnel (o piso abaixo de `TUNEL.topo`).
+    Capacidade 29.556. `ARQ_GOLACO` = o `ARQUIBANCADA` de `torcida-dados.js` (reexportado).
+  - Plantas curvas (`criarGradeAnel(A)`: a tigela do Maracanã — `estadio-planta.js grade` — e as genéricas —
+    `estadio-generico.js grade`): as faixas de cadeira do perfil (o Maracanã: o anel de baixo e o de cima; as genéricas: os
+    trechos entre as faces dos camarotes) em fileiras de ~0,8 m pela profundidade média (uma faixa com menos de 3/4 de fileira
+    fica sem cadeira); em cada fileira, o u da TEXTURA em ladrilhos de 2 metades (cada metade começa com a escada: a fração
+    `corredor` dela) e `n` cadeiras iguais por metade (≥ 0,5 m na fileira média, ≤ 28). O u: no Maracanã o ARCO no meio da
+    profundidade (`P.uTex`, 30 ladrilhos = 60 gomos de comprimento igual; antes era o ângulo), nas genéricas o de antes (o arco
+    nos cantos fechados, o x/z nos abertos). Cada metade de ladrilho × 4 fileiras = um BLOCO.
+  - `perfilEmDegraus(fileiras)` / `aneisEmDegraus` / `aneisEscada(grade, base, vDe)`: o perfil em escada (bico → fundo do PISO
+    → topo do ESPELHO por fileira); `sLiso(grade, s)`: a malha lisa passa pelos assentos (y = perfil(s − 0,64·Δs)).
+- **A textura** pinta cada fileira da grade numa célula de duas faixas (`FAIXA_PISO` 0,6): embaixo (v menor) o PISO com o assento
+  visto de cima, em cima o ESPELHO com o encosto visto de frente — as duas na cor da cadeira (de longe a mesma cor e o mesmo
+  padrão de antes, de qualquer ângulo). Cor de cada cadeira: `pintorGolaco` (o de antes, com o sorteio por célula: o mosaico do
+  nome, as cores do mandante e a `corCadeira` da edição pro) e `pintorAnel` (os padrões da pesquisa: 'tigela-maracana', liso,
+  misto, faixas, mosaico, setores, raios) — a MESMA conta na textura e na cadeira 3D.
+- **O degrau em geometria**: no Golaço cada fileira é um piso + um espelho (sempre: ~1 mil triângulos nas 4 retas). Nas curvas
+  cada setor ('arquibancada-lado', '-fundos', '-ca') tem duas geometrias no MESMO Mesh — a LISA (a de antes, passando pelos
+  assentos) e a em ESCADA — e `campo.js trocarLod` troca a geometria pela distância da câmera às caixas das faixas do setor
+  (`DEGRAU_LOD`: escada a < 42 m — o `distMax` das cadeiras 3D: toda cadeira 3D cai num setor em escada —, lisa além de 50 m;
+  com 52/62 o pré-jogo do San Siro chegava a 135 mil triângulos no celular; o `drawRange` da pré-carga do lado de cá passa
+  junto). A câmera de JOGO (`camera.js deJogo`: a TV sem cinema, sem a câmera do gol e sem a da bola parada) fica SEMPRE na lisa
+  (`trocarLod(..., soLisa)`: com a bola perto de um gol a TV chegava perto do fundo — San Siro +13 mil triângulos na TV do
+  celular); o plano aéreo e a fachada do pré-jogo ficam na lisa pela distância (o custo de longe não muda).
+- **A torcida** senta na grade: cada torcedor = uma cadeira (o piso, o centro do assento; um por cadeira). Golaço: as mesmas
+  cadeiras, sorteios e quantidade de antes (só o lugar; o túnel pelo piso). Maracanã: o anel de baixo em todas as fileiras e o de
+  cima em uma sim, uma não (o torcedor maior vale 2), ~+5% de lugares; genéricas: os lugares de antes puxados para a cadeira em
+  que caem (sem repetir), −0% a −23%. `P.pisoEm(x, z)`: o piso da fileira do ponto (os testes F3/G2 conferem o lugar contra ele).
+  Os lugares usam `assentoEm(th, s, ti, true)` (LEVE: sem o rumo e a largura) e a inversa de u dos lados abertos das genéricas é
+  a regula falsi (`thDoAlvoRapido`, ~8 contas; a `thDoAlvo` das outras peças não muda). Custo na carga (Node, os 104 genéricos,
+  base × agora na mesma hora, a grade junto): média 72 → 116 ms, pior 146 → 204 ms (sem essas duas: pior 443 ms + 116 da grade).
+- **As cadeiras 3D de perto** (`js/render/cadeiras3d.js`, SOB DEMANDA: `main.js SOB.cadeiras`, `teste-carga` SOB_DEMANDA_ARQ):
+  a cadeira rebatível (`geometriaCadeira`: concha do assento, lábio, encosto em concha inclinado, pé; 18 triângulos; 0,46 m de
+  largura, assento a 0,43 m, encosto 0,36 m acima dele) instanciada (1 InstancedMesh, 1 chamada só com algum bloco perto) nos
+  blocos que `escolherBlocos` escolhe por quadro: pelos px da cadeira na tela (0,5 m · alturaPx ÷ (2 · d · tan(fov/2)), d = a
+  distância à esfera do bloco), entra com ≥ `pxEntra` 10 px, fica até `pxSai` 7,5 (histerese), só até `distMax` 42 m, no cone da
+  câmera, com teto de instâncias por qualidade (`teto`: Baixa 0, Média 320 — com 480 o placar do pós-jogo no celular passava dos 130 mil triângulos —, Alta 3.072) e de blocos (`blocosMax` 20; quem já
+  estava vale 20% mais no ranking); com a câmera dentro do lado de cá (a TV), nenhum bloco dele (`semSetor`). As matrizes e as
+  cores só são escritas quando a escolha muda; pré-carga: o 1º quadro depois de chegar compila o programa com 0 instâncias.
+  Dentro de um bloco em 3D o material das arquibancadas (`campo.js comLuzFalsa`, também o do Maracanã e das genéricas) troca a
+  pintura pelo concreto do degrau (`UNIFORMS_PERTO`: até `blocosMax` caixas orientadas; o piso e o espelho pela normal); sem
+  bloco perto a conta nem roda (`uPertoN` 0). API: `__golaco.estadio.cadeiras` {carregado, blocos, instancias, teto, mascara} e
+  `__golaco.estadio.arquibancadas` [{nome, visivel, triangulos, emDegrau, trisLiso, trisDegrau}]; `campo.ligarCadeiras(md)`,
+  `campo.definirAlturaTela(px)`, `campo.definirQualidade(q)`, `campo.grade`.
+- Testes: `teste-cadeiras` (Node, padrão; reprova na main: C1–C7 — pureza, medidas da pesquisa, capacidade, textura = grade,
+  lugares = cadeiras, o degrau nas 3 malhas, a escolha dos blocos com histerese/teto/lado de cá, a caixa da máscara, a cadeira);
+  `teste-torcida` (o torcedor na cadeira da grade), `teste-estadio-forma` F3 e `teste-estadio-generico` G2 (o lugar no PISO da
+  fileira: `P.pisoEm`); custo medido com `tools/medir-cadeiras.mjs` (TV, perto, pior plano do pré-jogo; `--tm` com o Maracanã,
+  os Aflitos e o San Siro; `--raiz` mede a base).
+- Para o PR 2 (torcedor 3D): o lugar do torcedor é a cadeira (`x, y, z, rumo`): virar o torcedor para `rumo` (o campo), sentar
+  com o quadril a ~0,43 m do piso (o assento) e os pés no piso da mesma fileira; a cadeira 3D do bloco perto fica embaixo dele.

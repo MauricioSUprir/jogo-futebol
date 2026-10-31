@@ -134,6 +134,7 @@ const LISTA = [
   // Estádio com forma própria (dono, 16/10: "não tem nada a ver com o maracanã"): a tigela do Maracanã (estadio-planta.js)
   ['estádio com forma própria (Maracanã): medidas da pesquisa, torcida no degrau, festa no lugar, câmera de TV, sem forma nada muda', 'teste-estadio-forma.mjs'],
   ['estádios de forma genérica (tigela, inglesa, arena, pista, pequeno): a base inteira — torcida, festa, câmera de TV, trilhos do pré-jogo', 'teste-estadio-generico.mjs'],
+  ['cadeiras e degraus (item 69): a grade das 3 malhas — medidas da pesquisa, textura = grade, torcida nas cadeiras, degrau em escada, blocos de perto', 'teste-cadeiras.mjs'],
   // Etapa 5 (corpo humano realista; só desenho): o esqueleto do desenho a partir das juntas e o nível de detalhe
   ['corpo humano: esqueleto do desenho pelas juntas (juntas exatas, sem saltos, sola no chão, dobra com volume) e os assets', 'teste-ossos.mjs'],
   ['corpo humano: nível de detalhe pela altura na tela (histerese, ≤ 2 na LOD0, ≤ 3 níveis, teto de triângulos)', 'teste-lod-humano.mjs'],

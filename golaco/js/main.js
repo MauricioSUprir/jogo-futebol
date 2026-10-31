@@ -390,6 +390,7 @@ const REPLAY_ATRASO_MAX = 45;  // passos: o replay do impedimento que chegou dep
 // (render/replay.js com o roteiro, as câmeras e a análise semiautomática) e o "Editar time" (editor-time.js + o CSS dele,
 // na mesma posição da cascata de antes: antes do prejogo.css e do tm.css). Pré-carga no 1º gesto ou ociosa depois do 1º
 // quadro (agendarSobDemanda); quem precisa antes pede aqui e usa quando chega. Só desenho e tela: o hash não muda.
+let MOD_CAD = null;   // render/cadeiras3d.js (sob demanda: SOB.cadeiras)
 const SOB = {
   replay: {
     carga: null, ok: false,
@@ -407,6 +408,12 @@ const SOB = {
   // as cenas das paradas (o cartão e o intervalo): as cenas puras, as constantes delas (js/cenas-config.js chega junto, pelo
   // import delas), o cartão 3D, a tela das tarjas e o CSS dela (antes do prejogo.css, como o do editor); o guardador de lances
   // (lg: a memória só na partida — garantirGuarda)
+  // as cadeiras 3D de perto (item 69: render/cadeiras3d.js; a câmera de TV nunca chega perto da arquibancada)
+  cadeiras: {
+    carga: null, ok: false,
+    baixar: () => import('./render/cadeiras3d.js'),
+    criar(md) { MOD_CAD = md; if (campo) campo.ligarCadeiras(md); },
+  },
   cenas: {
     carga: null, ok: false,
     baixar: () => Promise.all([import('./cena-cartao.js'), import('./cenas-config.js'), import('./render/cartao3d.js'), import('./cenas-tela.js'),
@@ -1375,7 +1382,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
   }
   if (bp.tela) bp.tela.desenhar(cenaGol || cenaSub || cenaCartao || cenaFim ? null : mundo, cam.camera, dt, bp.linha);
-  campo.atualizar(agoraMs / 1000, cam.camera, renderizar);
+  // (a câmera de jogo — a TV — sem cadeira 3D de perto: item 69)
+  campo.atualizar(agoraMs / 1000, cam.camera, renderizar, cam.deJogo);
   marcarCondutor();
   torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
@@ -2859,6 +2867,7 @@ function adaptarQualidade(dt, agora) {
 function aplicarQualidade(recriar) {
   cena3d.definirQualidade(qAtual, recriar);
   torcida.definirQualidade(qAtual);
+  campo.definirQualidade(qAtual);
   const sombras = QUALIDADE[qAtual].sombras;
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
@@ -2869,6 +2878,7 @@ function aplicarQualidade(recriar) {
 function redimensionar() {
   const w = window.innerWidth, h = window.innerHeight;
   cena3d.redimensionar(w, h);
+  campo?.definirAlturaTela(h);
   // celular (menor lado < 520 px CSS): a câmera fecha mais o plano (jogadores maiores)
   cam.redimensionar(w / h, Math.min(w, h) < 520);
   if (diretor) diretor.redimensionar(w / h, Math.min(w, h) < 520);
@@ -3361,6 +3371,7 @@ async function iniciar() {
   if (IDENT) { COR_TIME[0] = IDENT.hud.faixa[0]; COR_TIME[1] = IDENT.hud.faixa[1]; }
   campo = criarCampo({ qualidade: qAtual, aniso: cena3d.anisotropia(), identidade: IDENT });
   cena3d.cena.add(campo.grupo);
+  if (MOD_CAD) campo.ligarCadeiras(MOD_CAD);
   campo.definirHora(hora);
   hud.progresso('Enchendo as arquibancadas…');
   await proximoQuadro();
@@ -3633,9 +3644,9 @@ const api = {
    * chegaram — os testes de navegador esperam por ele depois do pronto (waitForFunction); estado = {replay, editor, cenas}.
    */
   sobDemanda: {
-    ja() { if (!SOB.replay.ok || !SOB.editor.ok || !SOB.cenas.ok) carregarSobDemanda().catch(() => {}); return SOB.replay.ok && SOB.editor.ok && SOB.cenas.ok; },
-    get carregado() { return SOB.replay.ok && SOB.editor.ok && SOB.cenas.ok; },
-    get estado() { return { replay: SOB.replay.ok, editor: SOB.editor.ok, cenas: SOB.cenas.ok }; },
+    ja() { if (!SOB.replay.ok || !SOB.editor.ok || !SOB.cenas.ok || !SOB.cadeiras.ok) carregarSobDemanda().catch(() => {}); return SOB.replay.ok && SOB.editor.ok && SOB.cenas.ok && SOB.cadeiras.ok; },
+    get carregado() { return SOB.replay.ok && SOB.editor.ok && SOB.cenas.ok && SOB.cadeiras.ok; },
+    get estado() { return { replay: SOB.replay.ok, editor: SOB.editor.ok, cenas: SOB.cenas.ok, cadeiras: SOB.cadeiras.ok }; },
   },
   /** A tela "Editar time" (aberto, abrir, voltar = PRONTO, esc, aba, rascunho). */
   editor: {
@@ -4313,6 +4324,12 @@ const api = {
         ladoDeCa: campo?.ladoDeCa ? campo.ladoDeCa.visible : null,
       };
     },
+    /** As cadeiras 3D de perto neste quadro (item 69): {carregado, blocos, instancias, teto, mascara}. */
+    get cadeiras() { return campo ? campo.cadeiras : null; },
+    /** As malhas das arquibancadas neste quadro: nome, visível, triângulos, em escada (item 69). */
+    get arquibancadas() { return campo ? campo.arquibancadas : null; },
+    /** Mostra/esconde as cadeiras 3D de perto (conferência nos testes: o mesmo quadro com e sem elas). */
+    mostrarCadeiras(v) { campo?.mostrarCadeiras(v); },
     get rede() {
       const t = tempoEstadio();
       return { batidas: ondas.total, ativa: redeAtiva(ondas, t), tempo: t, impactos: ondas.imp.filter(i => i.ativo).map(i => ({ ...i })) };

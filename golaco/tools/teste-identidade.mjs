@@ -74,7 +74,10 @@ if (I) {
     const src = fonte('render/texturas.js');
     const pain = literal(src, 'const PAINEIS =');
     const okP = igual(pain, P.paineis);
-    const okArq = ["'#12a95c'", "'#0d8447'", "'#2a3033'", "'#0f5233'", "'#14181a'"].every(c => src.includes(c))
+    // (item 69: as cores das cadeiras moraram para o pintor da grade, render/cadeiras-dados.js pintorGolaco)
+    let srcCad = '';
+    try { srcCad = fonte('render/cadeiras-dados.js'); } catch (_) { srcCad = ''; }
+    const okArq = ["'#12a95c'", "'#0d8447'", "'#2a3033'", "'#0f5233'", "'#14181a'"].every(c => src.includes(c) || srcCad.includes(c))
       && P.arquibancada.friso === '#12a95c' && P.arquibancada.mosaico === '#0d8447' && P.arquibancada.tom === '#2a3033' && P.arquibancada.tom2 === '#0f5233' && P.arquibancada.cadeira === '#14181a';
     const okEsc = /cores\?\.fundo \?\? '#19e07a'/.test(src) && /cores\?\.faixa \?\? '#07090a'/.test(src) && P.escanteio.fundo === '#19e07a' && P.escanteio.faixa === '#07090a';
     reg('A4 padrão: placas, cadeiras/friso/mosaico e bandeira de escanteio = os de hoje', `placas ${okP ? 'iguais' : 'diferentes'} · cadeiras ${okArq ? 'iguais' : 'diferentes'} · escanteio ${okEsc ? 'igual' : 'diferente'}`, 'iguais', okP && okArq && okEsc);
