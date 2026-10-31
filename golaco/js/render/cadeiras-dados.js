@@ -41,16 +41,18 @@ export const CADEIRAS3D = Object.freeze({
   fileirasBloco: 4,      // fileiras por bloco (o bloco é a faixa entre duas escadas × 4 fileiras)
   pxEntra: 10,           // px (CSS) da cadeira na tela para o bloco ENTRAR em 3D
   pxSai: 7.5,            // ... e para SAIR (histerese: abaixo disto volta à textura)
-  distMax: 42,           // m: nunca além disto (o degrau das plantas curvas só vira geometria até DEGRAU_LOD.entra)
+  distMax: 42,           // m: nunca além disto (= DEGRAU_LOD.entra: o degrau das plantas curvas vira geometria até ali)
   favorAnterior: 1.2,    // no ranking do teto, quem já está em 3D vale 20% mais (não pisca na borda do teto)
   // teto de instâncias por qualidade (Baixa: só a textura) e de blocos (a máscara do material das arquibancadas)
   teto: Object.freeze({ baixa: 0, media: 480, alta: 3072 }),
   blocosMax: 20,
 });
 // LOD do degrau das plantas CURVAS (o Maracanã e as genéricas): cada setor tem a malha lisa (a de antes, com a textura
-// nova) e a em escada; a escada só com a câmera a menos de `entra` m da caixa do setor (sai além de `sai`). O Estádio
-// Golaço (arquibancadas retas: o degrau custa ~1 mil triângulos) fica sempre em escada.
-export const DEGRAU_LOD = Object.freeze({ entra: 52, sai: 62 });
+// nova) e a em escada; a escada só com a câmera a menos de `entra` m da caixa do setor (sai além de `sai`). `entra` =
+// `CADEIRAS3D.distMax`: toda cadeira 3D cai num setor em escada (a caixa do setor está mais perto que a do bloco) e o degrau
+// não paga triângulos onde a cadeira não aparece (com 52 m o pré-jogo do San Siro chegava a 135 mil no celular: a meta é
+// 130 mil). O Estádio Golaço (arquibancadas retas: o degrau custa ~1 mil triângulos) fica sempre em escada.
+export const DEGRAU_LOD = Object.freeze({ entra: 42, sai: 50 });
 
 // ------------------------------------------------------------------ o Estádio Golaço (as 4 arquibancadas retas)
 // (as medidas de render/campo.js; torcida-dados.js reexporta como ARQUIBANCADA)

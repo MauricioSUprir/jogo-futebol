@@ -500,7 +500,7 @@ Maracanã e nas 104 genéricas, a textura nas faixas do perfil, sem degrau. O PR
   muda; `frustumCulled = false` (a escolha já é pelo cone da câmera: a esfera não precisa ser refeita).
 - **three.js 0.170 — LOD** (docs): `addLevel(object, distance, hysteresis)` — "threshold used to avoid flickering at LOD
   boundaries, as a fraction of distance". → a MESMA ideia na escolha dos blocos (entra com a cadeira ≥ 10 px, sai abaixo
-  de 7,5 px) e no degrau das plantas curvas (a malha em escada entra a < 52 m da caixa do setor e sai além de 62 m), sem
+  de 7,5 px) e no degrau das plantas curvas (a malha em escada entra a < 42 m da caixa do setor e sai além de 50 m), sem
   o objeto LOD (a escolha é por bloco e pelos px na tela, não pela distância ao centro do objeto).
 - **GPU Gems 3, cap. 2 "Animated Crowd Rendering"** (NVIDIA) e **Millán & Rudomín, "Impostors, pseudo-instancing and image
   maps for GPU crowd rendering"**: multidão com instâncias e nível de detalhe pela distância (geometria perto, imagem
@@ -519,9 +519,10 @@ Maracanã e nas 104 genéricas, a textura nas faixas do perfil, sem degrau. O PR
 - **O degrau em geometria**: no Golaço as arquibancadas são retas e cada fileira vira um piso e um espelho (~1 mil
   triângulos a mais nas 4); nas curvas cada setor tem DUAS malhas — a lisa de antes (agora passando pelos assentos, para o
   torcedor sentado no piso ficar em cima dela) e a em escada (com as colunas da curva: ~11–16 mil triângulos por setor) —
-  e a em escada só entra perto da câmera e nunca na câmera de jogo (a TV fica sempre na lisa: com a bola perto de um gol
-  ela chegava a < 52 m do fundo e o San Siro pagava +13 mil triângulos na TV do celular; o plano aéreo e a fachada do
-  pré-jogo ficam na lisa pela distância).
+  e a em escada só entra perto da câmera (a < 42 m, a mesma distância máxima da cadeira 3D: com 52 m o pré-jogo do San
+  Siro passava da meta de 130 mil triângulos no celular) e nunca na câmera de jogo (a TV fica sempre na lisa: com a bola
+  perto de um gol ela chegava perto do fundo e o San Siro pagava +13 mil triângulos na TV do celular; o plano aéreo e a
+  fachada do pré-jogo ficam na lisa pela distância).
 - **A torcida senta na grade**: cada torcedor é uma cadeira da grade (o piso do degrau, o centro do assento; um por
   cadeira); no Golaço os mesmos sorteios e a mesma quantidade de antes (só o lugar mudou: ~0,26 m mais baixo, no piso);
   no Maracanã o lado de baixo em todas as fileiras e o de cima em uma sim, uma não (o torcedor maior vale 2).

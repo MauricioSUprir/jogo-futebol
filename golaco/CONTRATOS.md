@@ -3998,10 +3998,11 @@ pesquisa em `PESQUISA-ESTADIO.md` §14). Só DESENHO: nada do fecho do hash muda
 - **O degrau em geometria**: no Golaço cada fileira é um piso + um espelho (sempre: ~1 mil triângulos nas 4 retas). Nas curvas
   cada setor ('arquibancada-lado', '-fundos', '-ca') tem duas geometrias no MESMO Mesh — a LISA (a de antes, passando pelos
   assentos) e a em ESCADA — e `campo.js trocarLod` troca a geometria pela distância da câmera às caixas das faixas do setor
-  (`DEGRAU_LOD`: escada a < 52 m, lisa além de 62 m; o `drawRange` da pré-carga do lado de cá passa junto). A câmera de JOGO
-  (`camera.js deJogo`: a TV sem cinema, sem a câmera do gol e sem a da bola parada) fica SEMPRE na lisa (`trocarLod(..., soLisa)`:
-  com a bola perto de um gol a TV chegava a < 52 m do fundo — San Siro +13 mil triângulos na TV do celular); o plano aéreo e a
-  fachada do pré-jogo ficam na lisa pela distância (o custo de longe não muda).
+  (`DEGRAU_LOD`: escada a < 42 m — o `distMax` das cadeiras 3D: toda cadeira 3D cai num setor em escada —, lisa além de 50 m;
+  com 52/62 o pré-jogo do San Siro chegava a 135 mil triângulos no celular; o `drawRange` da pré-carga do lado de cá passa
+  junto). A câmera de JOGO (`camera.js deJogo`: a TV sem cinema, sem a câmera do gol e sem a da bola parada) fica SEMPRE na lisa
+  (`trocarLod(..., soLisa)`: com a bola perto de um gol a TV chegava perto do fundo — San Siro +13 mil triângulos na TV do
+  celular); o plano aéreo e a fachada do pré-jogo ficam na lisa pela distância (o custo de longe não muda).
 - **A torcida** senta na grade: cada torcedor = uma cadeira (o piso, o centro do assento; um por cadeira). Golaço: as mesmas
   cadeiras, sorteios e quantidade de antes (só o lugar; o túnel pelo piso). Maracanã: o anel de baixo em todas as fileiras e o de
   cima em uma sim, uma não (o torcedor maior vale 2), ~+5% de lugares; genéricas: os lugares de antes puxados para a cadeira em

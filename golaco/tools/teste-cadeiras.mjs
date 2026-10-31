@@ -238,6 +238,15 @@ if (!CD) {
       `Golaço lado ${gl.pisos}/${gl.espelhos}, fundos ${gf.pisos}/${gf.espelhos}; Maracanã ${mm.pisos}/${mm.espelhos}; genérica ${gg.pisos}/${gg.espelhos}; ruins ${gl.ruins + gf.ruins + mm.ruins + gg.ruins}; as malhas usam: campo.js ${usa.campo}, estadio-real.js ${usa.real}, estadio-generico.js ${usa.gen}`,
       'pisos = espelhos = fileiras; 0 ruins; as 3 usam',
       gl.pisos === 36 && gl.espelhos === 36 && gf.pisos === 30 && gf.espelhos === 30 && mm.pisos === GM.NF && mm.espelhos >= GM.NF - 1 && gg.pisos >= 10 && gl.ruins + gf.ruins + mm.ruins + gg.ruins === 0 && usa.campo && usa.real && usa.gen);
+    // o LOD do degrau das curvas: a escada entra até a distância máxima da cadeira 3D (nenhuma cadeira 3D em cima da lisa:
+    // a caixa do setor está mais perto que a do bloco), com histerese; na câmera de jogo (a TV) sempre a lisa (o custo da TV
+    // não sobe) — campo.js trocarLod(..., soLisa) com o deJogo da câmera
+    const L = CD.DEGRAU_LOD, D3 = CD.CADEIRAS3D;
+    const tvLisa = /soLisa/.test(src.campo) && /atualizarLod\?\.\(camera\.position, deJogo\)/.test(src.campo)
+      && /\(pos, soLisa\) => trocarLod\(malhas, pos, soLisa\)/.test(src.real) && /\(pos, soLisa\) => trocarLod\(malhas, pos, soLisa\)/.test(src.gen);
+    reg('C5 o LOD do degrau das curvas: escada até a distância máxima da cadeira 3D, com histerese; na TV sempre a lisa',
+      `entra ${L.entra} m, sai ${L.sai} m; cadeira 3D até ${D3.distMax} m; TV na lisa: ${tvLisa}`, 'entra ≥ distMax; sai > entra; sim',
+      L.entra >= D3.distMax && L.sai > L.entra && tvLisa);
     // o torcedor senta no piso: o assento a NO_PISO da profundidade da fileira (o encosto encostado no espelho de trás)
     const r = CD.fileirasGolaco('lado')[10], frente = NO_PISO * (r.d1 - r.d0) - CADEIRA.assento.fundo / 2;
     reg('C5 o assento no piso: a passagem livre na frente ≥ 0,25 m e o encosto dentro da fileira', `passagem ${fmt(frente, 2)} m; o encosto a ${fmt((1 - NO_PISO) * (r.d1 - r.d0) - CADEIRA.assento.fundo / 2, 2)} m do espelho`, '≥ 0,25; ≥ 0', frente >= 0.25 && (1 - NO_PISO) * (r.d1 - r.d0) - CADEIRA.assento.fundo / 2 >= 0);
