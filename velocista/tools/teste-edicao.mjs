@@ -83,12 +83,25 @@ if (!args.includes('--sem-navegador')) {
   await pagina.evaluate(() => new Promise((r) => { let k = 0; const f = () => (++k >= 20 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }));
   await pagina.evaluate(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' })); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'p' })); });
   ok(await pagina.evaluate(() => !document.getElementById('seloPausa').hidden), 'o selo também na pausa');
+  ok(await pagina.evaluate(() => { const b = document.getElementById('btnEdicao'); return document.getElementById('telaPausa').contains(b) && b.offsetParent !== null && b.textContent === 'Versão normal' && getComputedStyle(document.getElementById('seloEdicao')).display === 'none'; }),
+    'na pausa, o botão da edição (aqui, "Versão normal"), sem repetir o selo');
   // volta para a versão normal
   await Promise.all([pagina.waitForNavigation({ timeout: 1200000 }), pagina.evaluate(() => document.getElementById('btnEdicao').click())]);
   await pronto();
   ok(await pagina.evaluate(() => window.__rel.PESSOAL === false && !localStorage.getItem('theflash.edicao.v1') && document.getElementById('seloEdicao').hidden), '"Versão normal": esquece a senha neste aparelho e volta como era');
   await pagina.waitForFunction(() => !!window.__rel.modelo, null, { timeout: 1200000, polling: 500 });
   ok(await pagina.evaluate(() => window.__rel.modelo.materiais[0].customProgramCacheKey() === 'traje-corpo-heroi'), 'e o herói volta ao traje de sempre');
+  // no meio do jogo (dono, 31/10: "não sei como bota"): a entrada da edição pessoal também na pausa, com o campo da senha
+  await pagina.evaluate(() => { Element.prototype.requestFullscreen = undefined; document.getElementById('btnJogar').click(); });
+  await pagina.evaluate(() => new Promise((r) => { let k = 0; const f = () => (++k >= 10 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }));
+  await pagina.evaluate(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' })); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'p' })); });
+  ok(await pagina.evaluate(() => { const b = document.getElementById('btnEdicao'); return window.__rel.J.modo === 'pausa' && document.getElementById('telaPausa').contains(b) && b.offsetParent !== null && b.textContent === 'Edição pessoal'; }),
+    'versão normal, no meio do jogo: a pausa tem o botão "Edição pessoal"');
+  await pagina.evaluate(() => document.getElementById('btnEdicao').click());
+  ok(await pagina.evaluate(() => !document.getElementById('formSenha').hidden && document.getElementById('formSenha').offsetParent !== null && document.activeElement?.id === 'senha'), 'e ele abre o campo da senha ali mesmo');
+  await pagina.keyboard.type('p errada'); await pagina.keyboard.press('Enter');
+  await pagina.waitForFunction(() => !document.getElementById('senhaErro').hidden, null, { timeout: 60000 });
+  ok(await pagina.evaluate(() => window.__rel.J.modo === 'pausa' && !localStorage.getItem('theflash.edicao.v1')), 'digitar a senha na pausa não despausa o jogo (nem o P); senha errada não entra');
   // os outros dois trajes da série na vitrine (compilam sem erro)
   await pagina.evaluate((h) => localStorage.setItem('theflash.edicao.v1', h), HASH);
   for (const t of ['novo', 'reverso']) {

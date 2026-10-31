@@ -257,6 +257,15 @@ export const MISSOES = PESSOAL ? MISSOES_SERIE : MISSOES_NORMAL;
 /** os passos de uma época (os da linha do tempo alterada): o jogo põe o mundo nela enquanto o passo dura */
 export const EPOCA_DO_PASSO = (m) => m?.epoca || null;
 
+/** o progresso gravado (o texto de 'theflash.missoes.v2') é desta lista de passos? Um id que a lista não tem (ou o fim de uma
+ *  lista que ela não termina) é de uma versão antiga: a edição pessoal recomeça a temporada do zero (jogo.js VERSAO_SERIE) */
+export function progressoDaLista(texto, lista = MISSOES) {
+  let s = null; try { s = JSON.parse(texto || 'null'); } catch { return false; }
+  if (!s || !Object.hasOwn(s, 'id')) return false;
+  const ids = new Set(lista.map((m) => m.id));
+  return s.id === null ? ids.has(s.ultimo) : ids.has(s.id);
+}
+
 const CHAVE = 'theflash.missoes.v2';                       // grava o id do passo (v1 gravava a posição na lista antiga)
 const CHAVE_V1 = 'theflash.missoes.v1';
 // a lista da v1, para levar quem já tinha progresso ao mesmo passo
