@@ -545,7 +545,7 @@ cadeira 3D nos blocos de perto. Este PR põe um CORPO 3D nessas cadeiras de pert
   (ou a normal, comprimida no alfa) noutra, com opção de 16/32 bits em ponto flutuante ("HDR") e o conselho de não fazer
   texturas compridas e baixas demais. → a VAT daqui (`vatDados`) é uma textura RGBA float (32 bits: a GPU lê com
   `texelFetch`, sem filtro, e o JS faz a mesma conta bit a bit) com a posição e a normal de cada vértice em duas linhas por
-  pose; são só 8 "quadros" (as 8 poses) e 4 malhas: 235 × 64 texels (240 KB na GPU).
+  pose; são só 8 "quadros" (as 8 poses) e 4 malhas: 235 × 64 texels (~235 KB na GPU).
 - **Epic, "AnimToTexture" (Unreal 5.1, a multidão do City Sample)** (dev.epicgames.com, "Baking out vertex animation in
   editor with AnimToTexture"): o modo VÉRTICE grava a posição de cada vértice e capta qualquer deformação, ao preço de mais
   textura e de cada malha ser assada à parte; o modo OSSO guarda os ossos (menos memória, reaproveitável); a malha animada
