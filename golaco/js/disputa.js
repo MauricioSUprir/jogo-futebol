@@ -18,7 +18,8 @@
 //    a trave, sem cruzar a linha nem passar pelo goleiro na física prevista) — a bola que bate no goleiro e entra é gol; dado
 //    o resultado, a bola está morta (m.golTick: nenhum gol conta depois dele).
 // Estados (m.disputa.estado): 'caminhada' (o cobrador entra a DISPUTA.caminhada.dist m da marca — corte de câmera — e anda
-// até a bola pela locomoção do jogo: j.guia, o pedido de movimento que o sim.js usa para quem está 'parado'), 'cobranca'
+// até o ponto de partida da corrida dele pela locomoção do jogo: j.guia, o pedido de movimento que o sim.js usa para quem
+// está 'parado'; de lá ele corre até a bola na cobrança — item 70, P1, corrida.js), 'cobranca'
 // (a parada do pênalti montada: prepararPenalti), 'chute' (a bola rolou: esperando o fim da cobrança), 'reacao' (o resultado
 // saiu: o cobrador volta para o círculo comemorando ou lamentando; DISPUTA.reacao s) e 'fim'. Todos ficam 'parado' (a IA
 // não joga); só o goleiro que defende vira 'ia' na montagem (ou o do humano, controlado por ele).

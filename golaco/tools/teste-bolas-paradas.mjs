@@ -22,7 +22,8 @@
 //     barreira 15–40%, gol 2–12%, no alvo 18–36% (Opta: 2,4–4,4% de gol nas grandes ligas, com a mediana a 27,6 m; o
 //     canhão só tem as faltas perigosas) — cada faixa reprova quando a contagem prova (binomial, p < 5%).
 //  E. 8 partidas IA × IA: lateral, escanteio, tiro de meta e tiro livre acontecem; nenhuma parada passa de 8 s; o
-//     time fica com a bola em ≥ 55% dos laterais; nada de NaN.
+//     time fica com a bola em ≥ 55% dos laterais (reprova quando a contagem prova menos: binomial, p < 5%; ≥ 16 laterais,
+//     até 16 partidas); nada de NaN.
 //
 //   node tools/teste-bolas-paradas.mjs              (lógica do repositório)
 //   node tools/teste-bolas-paradas.mjs --js <pasta> (outra cópia; a publicada antes desta parte → REPROVA)
@@ -96,6 +97,8 @@ function ateMontar(m, tipo, ent = P.entradaDemoPartida, max = 400) {
   return null;
 }
 const jog = (m, id) => m.jogadores.find(o => o.id === id);
+/** P(X ≤ k) para X ~ Binomial(n, p). */
+function caudaBinomialAbaixo(k, n, p) { return 1 - caudaBinomialDe(k + 1, n, p); }
 /** P(X ≥ k) para X ~ Binomial(n, p) (termos em log: n de centenas sem estourar). */
 function caudaBinomialDe(k, n, p) {
   if (k <= 0) return 1;
@@ -412,9 +415,9 @@ function tiroLivre(s, t, u, w) {
 {
   const tipos = {}, lat = { n: 0, fica: 0 };
   let paradaMax = 0, nan = false;
-  // (E2 precisa de laterais: com menos de 8 nas 8 partidas, segue com mais sementes, até 16 partidas — com a defesa que corta
-  // o passe e acompanha a arrancada, 8 partidas chegaram a ter só 3 laterais; o E1 olha só as 8 primeiras)
-  for (let s = 2001; s < 2009 || (lat.n < 8 && s < 2017); s++) {
+  // (E2 precisa de laterais: com menos de 16 nas 8 partidas, segue com mais sementes, até 16 partidas — com a defesa que
+  // corta o passe e acompanha a arrancada, 8 partidas chegaram a ter só 3 laterais; o E1 olha só as 8 primeiras)
+  for (let s = 2001; s < 2009 || (lat.n < 16 && s < 2017); s++) {
     const so2 = s >= 2009;
     const m = P.criarPartida({ semente: s });
     let ini = null, l = null;
@@ -435,6 +438,11 @@ function tiroLivre(s, t, u, w) {
   reg('E1. 8 partidas: lateral, escanteio, tiro de meta e tiro livre acontecem; parada mais longa; NaN',
     `${['lateral', 'escanteio', 'tiroDeMeta', 'tiroLivre'].map(k => `${k} ${tipos[k] ?? 0}`).join(' · ')} · ${f2(paradaMax)} s · NaN ${nan ? 'sim' : 'não'}`,
     `todos > 0 · ≤ ${PARTIDA.paradaMax} s · não`, tem && paradaMax <= PARTIDA.paradaMax + 0.05 && !nan);
-  reg('E2. o time fica com a bola depois do lateral', `${lat.fica} de ${lat.n} (${f1(pct(lat.fica, lat.n))}%)`, '≥ 55%', lat.n >= 4 && pct(lat.fica, lat.n) >= 55);
+  // E2 reprova quando a contagem PROVA que o time fica com a bola em menos de 55% (binomial, p < 5%), como as outras taxas do
+  // teste: com a corrida das cobranças (item 70) a partida IA × IA mudou e nas 8 partidas o time ficou com 7 de 14 laterais
+  // (50%); com 32 partidas (2001–2032) a main 630960d4 fica com 34/46 (73,9%) e a corrida com 39/50 (78,0%) — o lateral não
+  // mudou, a amostra pequena é que oscila
+  const pE2 = caudaBinomialAbaixo(lat.fica, lat.n, 0.55);
+  reg('E2. o time fica com a bola depois do lateral', `${lat.fica} de ${lat.n} (${f1(pct(lat.fica, lat.n))}%; p = ${f2(pE2)} contra 55%)`, '≥ 55% (p ≥ 0,05)', lat.n >= 8 && pE2 >= 0.05);
 }
 fim();

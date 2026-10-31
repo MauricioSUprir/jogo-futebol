@@ -1,5 +1,5 @@
 // teste-corrida-cobranca (item 70, P1 da golaco/FILA.md; contrato "Cobranças com corrida (item 70, P1)" no CONTRATOS.md;
-// js/corrida.js; pesquisa em PESQUISA-ETAPA4.md §14): no pênalti, no escanteio, no tiro de meta e no tiro livre (direto e
+// js/corrida.js; pesquisa em PESQUISA-ETAPA4.md §16): no pênalti, no escanteio, no tiro de meta e no tiro livre (direto e
 // indireto) o cobrador sai do ponto de partida e CORRE até a bola pela locomoção do jogo; o contato é o toque de ação com o
 // pé de apoio ao lado da bola. Antes (a main 630960d4) ninguém corria: o cobrador era levado a 0,4 m da bola e a bola saía no
 // tick do pedido — o teste REPROVA nela (anda 0 m).

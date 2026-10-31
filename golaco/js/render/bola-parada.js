@@ -14,19 +14,23 @@ import { alvoPadrao, chuteAGol } from '../mira.js';
 import { preverMira } from '../mira-linha.js';
 
 export const CAMERA_BOLA_PARADA = {
-  atras: 4.6, lado: 1.9, altura: 2.6, bolaY: 0.76, alvoY: 0.4, fov: [40, 74],
+  atras: 4.6, lado: 1.9, altura: 2.6, bolaY: 0.76, alvoY: 0.4, fov: [40, 74], recuo: 2.4,
   folgaSolido: 0.4, folgaJogador: 1.0, tentativas: 6,
 };
 const TIPOS_CAM = ['escanteio', 'tiroLivre', 'tiroDeMeta', 'penalti'];
 
-/** Plano {de, para, fov (vertical)} atrás da bola (bx, bz) olhando o alvo (tx, ty, tz); lado −1 = câmera à esquerda. */
-export function planoBolaParada(bx, bz, tx, ty, tz, lado, jogadores, out) {
+/**
+ * Plano {de, para, fov (vertical)} atrás da bola (bx, bz) olhando o alvo (tx, ty, tz); lado −1 = câmera à esquerda.
+ * atrasMin (m; a corrida da cobrança, item 70): a câmera recua até ficar isto atrás da bola (o cobrador no ponto de partida
+ * da corrida fica no quadro, à frente dela).
+ */
+export function planoBolaParada(bx, bz, tx, ty, tz, lado, jogadores, out, atrasMin = 0) {
   const C = CAMERA_BOLA_PARADA;
   out.de ??= [0, 0, 0]; out.para ??= [0, 0, 0];
   let dx = tx - bx, dz = tz - bz;
   const D = Math.hypot(dx, dz) || 1;
   dx /= D; dz /= D;
-  let atras = C.atras, alt = C.altura, ld = C.lado, px = 0, pz = 0;
+  let atras = Math.max(C.atras, atrasMin), alt = C.altura, ld = C.lado, px = 0, pz = 0;
   for (let k = 0; k <= C.tentativas; k++) {
     px = bx - dx * atras - dz * ld * lado; pz = bz - dz * atras + dx * ld * lado;
     let livre = !solidoEm(px, alt, pz, C.folgaSolido, false);
@@ -165,7 +169,10 @@ export function criarTelaBolaParada(cena, raiz) {
         };
         ladoCam = fora(1) < fora(-1) - 0.05 ? 1 : -1; chave = k;
       }
-      planoBolaParada(pr.x, pr.z, alvo.x, pr.tipo === 'penalti' || chuteAGol(m, pr) ? 1.0 : 0, alvo.z, ladoCam, m.jogadores, plano);
+      // a corrida da cobrança (item 70, P1; corrida.js): a câmera recua até o ponto de partida do cobrador (+ C.recuo m) — o
+      // ponto fica parado a parada inteira (a câmera não anda com a corrida)
+      const cr = pr.corrida, atrasMin = cr ? ((pr.x - cr.x0) * dx + (pr.z - cr.z0) * dz) / d + CAMERA_BOLA_PARADA.recuo : 0;
+      planoBolaParada(pr.x, pr.z, alvo.x, pr.tipo === 'penalti' || chuteAGol(m, pr) ? 1.0 : 0, alvo.z, ladoCam, m.jogadores, plano, atrasMin);
       return { plano, yaw: Math.atan2(dz, dx), alvo };
     },
     /** A linha e o painel (depois da câmera do quadro). */

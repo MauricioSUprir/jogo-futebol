@@ -688,3 +688,54 @@ bola no goleiro e quase não há companheiro livre a 10–18 m; aproximar o apoi
 por cima chega a quem recebe na coxa/peito; os poucos que se perdem (5 de 72) são a bola que o recebedor não domina no ar —
 o domínio aéreo é o de sempre. A IA não usa o bate-pronto (só o humano): o real mistura os dois no "Drop Kick".
 
+
+## 16. Cobranças com corrida (item 70, P1 da FILA; pedido do dono de 29/10, aval de 31/10)
+
+**O que estava.** Ninguém corria: na montagem o cobrador era levado a 0,4 m atrás da bola e ficava 'parado'; a bola saía no
+MESMO tick do pedido (`partida.js cobrar` → `executarAcao`) e o pé não fazia o gesto (o 'parado' nunca marcava o toque de
+ação). Só a disputa de pênaltis andava até a marca (a 2,5 m/s, parando a 0,4 m).
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| Scurr & Hall 2009, "The effects of approach angle on penalty kicking accuracy and kick kinematics with recreational soccer players", J Sports Sci Med 8(2):230 (PMC3761486) | 7 jogadores amadores; ângulo de corrida escolhido 30,3 ± 15,2°; "a maioria deu 3 a 5 passadas"; o pé de apoio no impacto a 32,7 ± 7 cm AO LADO e 9,7 ± 8,1 cm ATRÁS da bola (30°: 31,1 e 10,6; 45°: 34,6 e 11,3); a bola a 24–25 m/s; mudar o ângulo não mudou a precisão nem a velocidade | o perfil do pênalti (25–35°, 4–5 m: 3–5 passadas), `apoio.lado` 0,3 e `apoio.atras` 0,08 m, a meta C3 do teste (0,2–0,45 m do centro da bola) |
+| Isokawa & Lees 1988 (citado por Scurr & Hall e por Kellis & Katis) | de 0° a 90°, o ângulo de 30–45° é o melhor (a canela mais rápida a 30°, a bola mais rápida a 45°) | os ângulos dos perfis (20–40°; o escanteio até 40°) |
+| Kellis & Katis 2007, "Biomechanics characteristics and determinants of instep soccer kick", J Sports Sci Med 6(2):154 | revisão: "2 ou 3 passos antes da ação principal do chute"; Hay 1993: o pé de apoio 5–10 cm atrás e 5–28 cm ao lado da bola (não confirmado em laboratório); bola de 18–35 m/s | o passe/lançamento com a corrida mais curta (2,6–3,2 m); a faixa do pé de apoio |
+| Lees et al. 2010, "The biomechanics of kicking in soccer: a review", J Sports Sci 28(8):805 (citado por Augustus, Hudson & Smith, Kingston eprints 54573) | corrida de 3 m dá 3–5 passos; a velocidade da corrida escolhida pelo jogador; uma revisão que cita Kellis & Katis e Lees põe a corrida do chute de peito do pé em ~3–4 m/s (não conferido no original) | as velocidades dos perfis (3,0–4,4 m/s) e a meta C2 (2,5–5 m/s) |
+| Potthast et al. (ISBS, ojs.ub.uni-konstanz.de) e Augustus, Hudson & Smith | a freada do corpo no último apoio se correlaciona com a bola mais rápida (r = 0,6); a perna de apoio regula a freada quando a velocidade da corrida muda | a última passada da regulagem freia ou acelera para o pé de apoio pousar no ponto (o corpo segue embalado até o contato) |
+| Lee, Lishman & Thomson 1982, "Regulation of gait in long jumping", J Exp Psychol Hum Percept Perform 8(3):448 | o saltador em distância acerta a tábua ajustando as ÚLTIMAS passadas pela vista (a variação do pé cai perto da tábua) | a regulagem da passada (`corrida.js guiarCorrida`): o ritmo e a velocidade escolhidos a cada passo para o pé de apoio pousar no ponto, e o pouso marcado na última passada |
+| Pênaltis em ligas (estudo de >1.700 pênaltis, 2015/16–2018/19, dergipark.org.tr; Liverpool John Moores, phys.org 05/2010) | corrida de 2–5 passos e de 4–6 passos as mais eficazes; a de 10 m a pior | o pênalti de 4–5 m (4–6 passos na regulagem) |
+| EA FC / FIFA (guias: EA FIFA 14 "save and score more penalties", fifplay FIFA 17, operationsports EA FC 25) | na bola parada a força é a do botão segurado e o soltar começa a corrida; a hesitação ("stutter") na corrida é um botão (L2/LT) e faz o goleiro se comprometer | soltar o botão guarda a força e a mira e começa a corrida (a pessoa não controla a corrida); a paradinha/hesitação fica para a P2 |
+| IFAB, Regras 13, 14, 16 e 17 | 14: o pênalti só depois do sinal do árbitro; a finta NA corrida é permitida, depois de completada não; 13: o tiro livre cerimonial (com a barreira) espera o apito; 16 e 17: a bola parada no ponto, em jogo quando chutada e se mexe | a corrida da IA no pênalti começa no apito; o apito no pênalti e no tiro livre com barreira; a bola presa no ponto até o contato |
+
+**O que mudou** (só na partida e na disputa; o treino não tem bola parada: `hash-igual` IGUAL). `js/corrida.js` (puro): o ponto
+de partida por tipo e pelo pé, a regulagem da passada (velocidade de cruzeiro ±15% e o ritmo × 0,8–1,2 do natural, contando a
+aceleração; o ritmo vai à passada pelo `pousoEm` do pé no ar), o contato no meio do apoio do pé de apoio e o gesto pelo toque
+'acao' marcado; `partida.js`: o cobrador no ponto de partida no fim da montagem, a IA que começa antes (a previsão da corrida,
+`estimarTicks`), a zona livre e os zagueiros previstos para o fim da corrida, o apito; `sim.js`: o cobrador da corrida sem a
+condução nem a "bola perdida", o contato no passo 3, o ritmo na passada; `bolas-paradas.js`: quem ataca a zona sai junto;
+`mira-linha.js`: a linha do pedido guardado; `render/bola-parada.js`: a câmera recua.
+
+**Medido** (`tools/teste-corrida-cobranca.mjs`, main 630960d4 → agora; 16 cenas por tipo e caminho, IA e demo, + a pessoa).
+
+| | main | agora |
+|---|---|---|
+| anda até a bola (mínimo): pênalti · escanteio · tiro de meta · tiro livre D · I | 0 · 0 · 0 · 0 · 0 m | 4,31 · 2,97 · 2,41 · 2,45 · 2,45 m |
+| velocidade no contato | 0,10–0,15 m/s | 3,01–4,68 m/s |
+| pé de apoio a … do centro da bola (plantado) | 0,41 m (parado ao lado dela) | 0,31–0,36 m (150/150) |
+| pé que bate no contato: no ar, peso do gesto · tornozelo desenhado | — | 150/150: 0,81–0,93 · 0,06–0,26 m |
+| patinação (plantado · salto/limite · pouso/limite · pé plantado andou) | 0 · 0 · 0 · 0 (parado) | 0,00 m/s · 0,94 · 0,00 · 0 m |
+| bola morta → rolando, média pareada com a main (IA / demo): pênalti | — | −0,11 / +0,07 s |
+| escanteio · tiro de meta · tiro livre D · I | — | −0,00/−0,00 · −0,02/−0,09 · +0,05/+0,06 · −0,07/−0,03 s |
+| linha mirada no soltar × bola real | — | 0,00 cm |
+| cavadinha com o 2º toque a 0,5 s do 1º, na corrida | 0/4 (a bola já tinha saído) | 4/4 |
+
+O pênalti da IA corria antes do apito (a previsão da corrida, ~1,45 s, é maior que o atraso dela, 0,6–1,4 s) e, com a corrida
+no apito, a bola rolava ~0,4 s depois de antes; a montagem do pênalti foi de 1,5 para 1,25 s (medido: 1,2 → −0,13/+0,06 s;
+1,3 → −0,03/+0,16 s; 1,5 → +0,17/+0,36 s). Antes disso, com a corrida começando antes do apito, o pênalti da IA batia
+0,23 s ANTES da main (24 cenas): na main a IA espera os jogadores que entram na folga da meia-lua (0,05–0,28 m) saírem, o que
+a corrida, decidida ~1,45 s antes, não prevê.
+
+**Pendente/limites.** A P2 (os estilos do pênalti: normal, forte, colocado, paradinha, pulinho; o goleiro da IA que se
+compromete cedo e o cobrador que lê; o goleiro na linha até o chute na partida). A corrida é uma reta do ponto de partida ao
+pé de apoio (a do jogador real faz uma curva leve no fim); o gesto do pé é o do toque de ação de sempre (o pé vai à bola),
+sem o balanço para trás da perna — a perna do chute desenhada fica para o desenho da P2 (pulinho, perna, câmera).

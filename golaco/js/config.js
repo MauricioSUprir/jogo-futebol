@@ -2136,7 +2136,7 @@ export const DISPUTA = {
 // O cobrador do pênalti, do escanteio, do tiro de meta e do tiro livre (direto e indireto) sai de um PONTO DE PARTIDA atrás
 // da bola e corre até ela pela locomoção do jogo (j.guia → passoCorpo/passoPassada); o contato é o toque de ação de sempre,
 // com o pé de apoio plantado ao lado da bola. Contrato "Cobranças com corrida (item 70, P1)" no CONTRATOS.md; pesquisa em
-// PESQUISA-ETAPA4.md §14. O saída de bola e o lateral não mudam.
+// PESQUISA-ETAPA4.md §16. A saída de bola e o lateral não mudam.
 //  - perfis (por tipo; cada jogador tem a SUA corrida dentro das faixas, pelo id — sem sorteio): dist = m da bola ao ponto
 //    de partida; ang = graus fora do eixo da cobrança, para o lado do pé de apoio; vel = m/s pedidos na chegada.
 //    Pênalti 4–5 m a 25–35° (Scurr & Hall 2009: ângulo escolhido 30,3 ± 15,2°, 3–5 passadas; Isokawa & Lees 1988: 30–45°

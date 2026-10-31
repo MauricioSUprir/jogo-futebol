@@ -1,7 +1,7 @@
 // Cobranças com corrida (item 70, P1; pedido do dono de 29/10: "no pênalti, no escanteio e no tiro de meta o cobrador corre
 // até a bola e bate"; aval de 31/10, com a falta junto). PURO: sem three.js nem DOM; matemática pelo MD; sem sorteio (a
 // corrida de cada jogador sai do id dele). Contrato "Cobranças com corrida (item 70, P1)" no CONTRATOS.md; constantes em
-// config.js CORRIDA_COBRANCA; pesquisa em PESQUISA-ETAPA4.md §14.
+// config.js CORRIDA_COBRANCA; pesquisa em PESQUISA-ETAPA4.md §16.
 //
 // O plano (m.parada.corrida, montado pelo partida.js no fim da montagem do pênalti, do escanteio, do tiro de meta e do tiro
 // livre): o PONTO DE PARTIDA (x0, z0) atrás da bola, pelo perfil do tipo e pelo pé que bate (o lado do pé de apoio), o ponto
@@ -27,6 +27,14 @@ import { passoCorpo, copiaCinematica, freqPassada, cargaPassada, faseLocal } fro
 import { executarAcao } from './acoes.js';
 
 export const TIPOS_CORRIDA = CC.tipos;
+/**
+ * Ganchos do partida.js (ligados na importação dele; corrida.js não importa o partida.js). pedidoIA(m, j): o pedido da
+ * cobrança da IA decidido de novo no contato (o pedido marcado `ia`). rolou(m), a bola rolou — chamado no
+ * passo do contato, LOGO depois da batida, como a cobrança de antes (partida.js cobrar → rolou, antes do passo): o goleiro
+ * lê o chute do pênalti com o pênalti em aberto (m.partida.penaltiAberto: o lado escolhido antes), a barreira pula no
+ * chute, o escanteio marca os lugares (m.partida.bp) e o cobrador volta a se mexer no mesmo passo.
+ */
+export const ganchosCorrida = { rolou: null, pedidoIA: null };
 export const ESTADOS_CORRIDA = ['espera', 'corre'];
 const s60 = s => Math.round(s / PASSO);
 const RAD = Math.PI / 180;
@@ -255,12 +263,13 @@ export function contatoCorrida(m, j) {
 function baterCorrida(m, j, cr) {
   const a = cr.mira0;
   if (a) { j.ix = a.ix; j.iz = a.iz; j.imx = a.imx; j.imz = a.imz; j.imag = a.imag; j.mira = a.mira; }
-  j.pedido = cr.pedido;
+  j.pedido = cr.pedido && cr.pedido.ia && ganchosCorrida.pedidoIA ? ganchosCorrida.pedidoIA(m, j) : cr.pedido;
   if (j.cond) j.cond.toque = null;
   const ok = executarAcao(m, j, cr.pe, false);
   j.miraAuto = null;
   // segue embalado e freia (sem o pedido de corrida: na partida ele volta a jogar; na disputa, para)
   if (j.guia) j.guia.vel = 0;
   if (!ok) { cr.estado = 'espera'; cr.pedido = null; cr.plantou = -1; cr.k = -1; cr.contato = -1; }
+  else if (ganchosCorrida.rolou) ganchosCorrida.rolou(m);
   return ok;
 }

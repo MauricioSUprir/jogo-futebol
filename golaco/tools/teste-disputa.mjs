@@ -150,7 +150,9 @@ if (!DS) {
           // C: o lugar de cada um com a cobrança montada
           const G = D.gol;
           for (const j of m.jogadores) {
-            if (j.id === D.cobrador) { marcaN++; if (Math.hypot(j.x - G * (MX - CAMPO.marcaPenalti - 0.4), j.z) < 0.05) marca++; }
+            // (com a corrida da cobrança — item 70, P1 — no ponto de partida dela; antes, 0,4 m atrás da marca)
+            const cr = m.parada?.corrida, px = cr ? cr.x0 : G * (MX - CAMPO.marcaPenalti - 0.4), pz = cr ? cr.z0 : 0;
+            if (j.id === D.cobrador) { marcaN++; if (Math.hypot(j.x - px, j.z - pz) < 0.05) marca++; }
             else if (j.id === D.goleiro) { linhaN++; if (Math.abs(j.x - G * MX) <= 0.65 && Math.abs(j.z) < CAMPO.gol.largura / 2) linhaGol++; }
             else if (j.id === D.goleiroCobra) { esqN++; if (Math.abs(j.x - G * MX) < 1 && Math.abs(j.z) > CAMPO.area.largura / 2 && Math.abs(j.z) < CAMPO.area.largura / 2 + 2) esquina++; }
             else { circN++; if (Math.hypot(j.x, j.z) <= 9.15) circ++; }
@@ -186,8 +188,8 @@ if (!DS) {
   reg('B2. Ninguém bate depois de decidido; ordem ABAB', `bateu depois em ${depois}; ABAB em ${abab}/${NB}`, `0; ${NB}/${NB}`, depois === 0 && abab === NB);
   reg('B3. Cobradores pela fila (todos antes de repetir; 11 na ordem, o goleiro por último); placar do mundo = da disputa', `fila ${filaOk}/${NB}; ordem ${ordemGol}/${ordemOk}; placar ${placarOk}/${NB}`, `${NB}/${NB}; ${2 * NB}/${2 * NB}; ${NB}/${NB}`, filaOk === NB && ordemGol === ordemOk && placarOk === NB);
   reg('C1. Na cobrança: os que esperam no círculo central (≤ 9,15 m do centro)', `${circ}/${circN}`, 'todos', circ === circN && circN > 0);
-  reg('C2. Goleiro do time que bate na linha de fundo, fora da área; o que defende na linha entre as traves; cobrador na marca', `esquina ${esquina}/${esqN}, linha ${linhaGol}/${linhaN}, marca ${marca}/${marcaN}`, 'todos', esquina === esqN && linhaGol === linhaN && marca === marcaN && marcaN > 0);
-  reg('C3. Caminhada: a bola parada na marca, o cobrador anda até ela (passo ≤ 0,1 m; levado na montagem ≤ 0,1 m)', `bola mexeu ${tocouCam}; maior passo ${fmt(saltoMax, 3)} m; levado ${fmt(levadoMax, 3)} m`, '0; ≤ 0,1; ≤ 0,1', tocouCam === 0 && saltoMax <= 0.1 && levadoMax <= 0.1);
+  reg('C2. Goleiro do time que bate na linha de fundo, fora da área; o que defende na linha entre as traves; cobrador na marca (no ponto de partida da corrida)', `esquina ${esquina}/${esqN}, linha ${linhaGol}/${linhaN}, marca ${marca}/${marcaN}`, 'todos', esquina === esqN && linhaGol === linhaN && marca === marcaN && marcaN > 0);
+  reg('C3. Caminhada: a bola parada na marca, o cobrador anda até o ponto de partida da corrida (passo ≤ 0,1 m; levado na montagem ≤ 0,1 m)', `bola mexeu ${tocouCam}; maior passo ${fmt(saltoMax, 3)} m; levado ${fmt(levadoMax, 3)} m`, '0; ≤ 0,1; ≤ 0,1', tocouCam === 0 && saltoMax <= 0.1 && levadoMax <= 0.1);
   reg('C4. Regra 14: no chute, o goleiro que defende NA linha (centro e pé mais perto dela; a linha tem 0,12 m)', `${chuteN} chutes: centro até ${fmt(gkCentroMax, 2)} m, pé até ${fmt(gkPeMax, 2)} m da linha`, 'centro ≤ 0,2 m; pé ≤ 0,12 m (antes 0,56–0,67 / 0,45–0,50)', chuteN > 0 && gkCentroMax <= 0.2 && gkPeMax <= 0.12);
   reg('G2. IA × IA: dado o resultado, nenhum gol conta e nenhuma bola dada como perdida entra; \'defesa\' só com o goleiro tocando', `gol depois do resultado ${golDepois}; entrou depois ${entrouDepois}; defesa sem toque ${defSemToque}/${defN}${exG.length ? ' — ' + exG.join('; ') : ''}`, '0; 0; 0', golDepois === 0 && entrouDepois === 0 && defSemToque === 0);
   const nT = res.gol + res.defesa + res.fora;

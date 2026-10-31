@@ -34,6 +34,10 @@
 // O cobrador é levado ao ponto na montagem e fica parado (papel 'parado': a simulação não o move)
 // até cobrar; a cobrança é a ação de verdade (acoes.js executarAcao, a mesma do jogo). A IA cobra em
 // 0,6–1,4 s depois de pronta; o humano tem até 6 s desde a bola morta, depois a IA cobra por ele.
+// Cobranças com corrida (item 70, P1; corrida.js): no pênalti, no escanteio, no tiro de meta e no tiro livre o
+// cobrador espera no PONTO DE PARTIDA da corrida; o pedido (da pessoa ou da IA) começa a corrida pela locomoção
+// (j.guia) e o contato sai no passo, com o pé de apoio ao lado da bola; a IA começa antes, para a bola rolar na
+// hora de sempre.
 // Quem está dentro do raio sai andando (até PARTIDA.empurrao m/s) e ninguém entra até a bola rolar:
 // a parede (paredeParada, chamada pelo sim.js antes de passoCorpo) só muda o PEDIDO de movimento, pela
 // locomoção, e nunca a posição do corpo (os pés seguem pela passada). Nenhuma parada passa de
@@ -57,7 +61,7 @@ import { limparRegraMao, segundosNaMao, pontoTiroLivreMao } from './regras-golei
 import { segurarLateral, opcoesLateral, opcaoMirada, alvoLongoNaArea, vMaxArremesso } from './lateral.js';
 import { alvoBolaParada, papeisEscanteio, pontoEscanteio, pontoMarcador, bolaParadaAtiva, barreiraDoTiroLivre } from './bolas-paradas.js';
 import { TIPOS_MIRA, criarMira, atualizarMira, tipoMirado, comTrajetoria } from './mira.js';
-import { planejarCorrida, estimarTicks, perfilDaParada, iniciarCorrida, guiarCorrida, ESTADOS_CORRIDA } from './corrida.js';
+import { planejarCorrida, estimarTicks, perfilDaParada, iniciarCorrida, guiarCorrida, ESTADOS_CORRIDA, ganchosCorrida } from './corrida.js';
 
 export const ESTADOS = ['jogo', 'parada', 'gol', 'intervalo', 'fim'];
 export const TIPOS_PARADA = ['saida', 'lateral', 'escanteio', 'tiroDeMeta', 'tiroLivre', 'penalti'];
@@ -267,10 +271,12 @@ function fecharMontagem(m, c, levado) {
   }
 }
 
+const _orig = { x: 0, z: 0 }; // onde o cobrador estava antes da montagem (colocarNaCorrida: o levado de verdade)
 /** Põe o cobrador atrás da bola (a 0,4 m), virado para `rumo`, com a posse; devolve a distância andada. */
 function cobradorNoPonto(m, c, bx, bz, rumo) {
   const x = bx - MD.cos(rumo) * 0.4, z = bz - MD.sin(rumo) * 0.4;
   const levado = MD.hypot(c.x - x, c.z - z);
+  _orig.x = c.x; _orig.z = c.z;
   teleportar(c, x, z, rumo);
   Object.assign(m.bola, criarBola(bx, bz));
   m.posse = c.id; m.naMao = null; m.voo = null;
@@ -289,12 +295,13 @@ function colocarNaCorrida(m, c, rumo) {
   const perfil = perfilDaParada(m, pr, pessoa);
   if (!perfil) return 0;
   const cr = planejarCorrida(c, pr.x, pr.z, rumo, perfil);
-  const levado = MD.hypot(c.x - cr.x0, c.z - cr.z0);
+  // (o levado é o de onde ele estava antes da montagem até o ponto de partida: na disputa ele já andou até lá)
+  const levado = MD.hypot(_orig.x - cr.x0, _orig.z - cr.z0);
   teleportar(c, cr.x0, cr.z0, cr.rumo0);
   c.guia = null;
   cr.ticks = estimarTicks(c, cr);
   pr.corrida = cr;
-  pr.levado += levado;
+  pr.levado = levado;
   return levado;
 }
 
@@ -389,7 +396,7 @@ function montarBolaParada(m) {
   fecharMontagem(m, c, levado);
   if (pr.tipo === 'tiroLivre') colocarNaCorrida(m, c, rumo); // a corrida da cobrança (item 70, P1)
   if (pr.tipo === 'lateral') m.eventos.push({ tipo: 'lateral', time: t, x: pr.x, z: pr.z, id: c.id, levado });
-  else if (pr.tipo === 'tiroLivre') m.eventos.push({ tipo: 'tiroLivre', time: t, x: pr.x, z: pr.z, id: c.id, levado, indireto: !pr.direto });
+  else if (pr.tipo === 'tiroLivre') m.eventos.push({ tipo: 'tiroLivre', time: t, x: pr.x, z: pr.z, id: c.id, levado: pr.levado, indireto: !pr.direto });
   else m.eventos.push({ tipo: 'escanteio', time: t, lado: pr.z >= 0 ? 1 : -1, id: c.id, levado });
 }
 
@@ -511,7 +518,7 @@ function montarEscanteio(m, c) {
   m.partida.estado = 'parada'; m.partida.desde = m.tick;
   fecharMontagem(m, c, levado);
   colocarNaCorrida(m, c, rumo); // a corrida da cobrança (item 70, P1)
-  m.eventos.push({ tipo: 'escanteio', time: t, lado: sz, id: c.id, levado }, { tipo: 'corteBolaParada', parada: 'escanteio' });
+  m.eventos.push({ tipo: 'escanteio', time: t, lado: sz, id: c.id, levado: pr.levado }, { tipo: 'corteBolaParada', parada: 'escanteio' });
 }
 const _pe = { x: 0, z: 0 };
 
@@ -577,7 +584,7 @@ export function prepararPenalti(m, c, gk) {
     pr.palpite = gk.palpite;
   }
   colocarNaCorrida(m, c, lado > 0 ? 0 : Math.PI); // a corrida da cobrança (item 70, P1)
-  m.eventos.push({ tipo: 'cobrancaPenalti', time: t, id: c.id, levado });
+  m.eventos.push({ tipo: 'cobrancaPenalti', time: t, id: c.id, levado: pr.levado });
 }
 
 /**
@@ -613,7 +620,7 @@ function montarTiroDeMeta(m) {
   fecharMontagem(m, g, levado);
   pr.curta = uniforme(m.rng) < TIRO_DE_META.curta;
   colocarNaCorrida(m, g, rumo); // a corrida da cobrança (item 70, P1): longa ou curta pela escolha da IA
-  m.eventos.push({ tipo: 'tiroDeMeta', time: t, id: g.id, levado });
+  m.eventos.push({ tipo: 'tiroDeMeta', time: t, id: g.id, levado: pr.levado });
   if (tirou) m.eventos.push({ tipo: 'corteBolaParada', parada: 'tiroDeMeta' });
 }
 
@@ -1049,9 +1056,8 @@ export function cobrar(m, entrada) {
   const iaAssume = !humano || m.tick - pr.inicio >= seg(PARTIDA.cobrancaHumanoMax);
   if (iaAssume) {
     if (!iaPodeCobrar(m, antecipa(pr))) { c.pedido = null; c.carga = null; return false; }
-    const a = alvoCobranca(m, c, pr.tipo);
     c.carga = null;
-    c.pedido = { tipo: a.tipo, forca: a.forca, mod: a.tipo === 'chute' && !!pr.direto, tick: m.tick, dir: { x: a.dx, z: a.dz } };
+    c.pedido = pedidoDaIA(m, c, pr);
   } else {
     // os botões valem já na montagem (o cobrador já é o controlado e os botões de ataque já aparecem): o aperto feito
     // antes da hora forma o pedido e ele ESPERA a bola ficar pronta — antes os botões eram zerados até `pronta` e o
@@ -1104,6 +1110,8 @@ export function cobrar(m, entrada) {
   if (pr.barreira && pr.barreira.n > 0 && c.pedido.tipo === 'chute') c.pedido.barreira = { dist: pr.barreira.dist, altura: BARREIRA.alturaPassar };
   if (pr.mira && !iaAssume) c.pedido.dir = { x: MD.cos(pr.mira.ang), z: MD.sin(pr.mira.ang) };
   else if (c.pedido.mirada) c.pedido.mirada = null;
+  // (a corrida: o pedido da IA — e o da IA jogando pelo humano — é decidido de novo no contato, com o mundo de lá)
+  if (cr && (iaAssume || (entrada && entrada.iaCobra))) c.pedido.ia = true;
   // a corrida (item 70, P1): o pedido (força, mira, tipo) fica guardado e o cobrador corre até a bola; o contato sai no
   // passo, com o pé de apoio ao lado dela (corrida.js contatoCorrida, chamado pelo sim.js)
   if (cr) { iniciarCorrida(m, c, cr, c.pedido); guiarCorrida(m, c, cr); return false; }
@@ -1135,6 +1143,20 @@ function correrCobranca(m, c, cr, entrada) {
     c.pedido = null;
   }
   guiarCorrida(m, c, cr);
+}
+
+/**
+ * O pedido da cobrança da IA (alvoCobranca: o tipo, a força e a direção; a pressão do pênalti; o chute por cima da
+ * barreira). Na cobrança com corrida (item 70) também no CONTATO (corrida.js ganchosCorrida.pedidoIA): a IA decide de novo
+ * com o mundo de lá — o zagueiro da saída curta que chegou, o companheiro livre, o goleiro — como o cobrador que olha
+ * enquanto corre; a pessoa bate o que pediu ao soltar.
+ */
+function pedidoDaIA(m, c, pr) {
+  const a = alvoCobranca(m, c, pr.tipo);
+  const p = { tipo: a.tipo, forca: a.forca, mod: a.tipo === 'chute' && !!pr.direto, tick: m.tick, dir: { x: a.dx, z: a.dz } };
+  if (pr.tipo === 'penalti') p.penalti = true;
+  if (pr.barreira && pr.barreira.n > 0 && p.tipo === 'chute') p.barreira = { dist: pr.barreira.dist, altura: BARREIRA.alturaPassar };
+  return p;
 }
 
 /**
@@ -1186,7 +1208,10 @@ export function ladoPenaltiHumano(j) {
   return mod > 1e-6 && Math.abs(iz) >= GOLEIRO.penalti.ladoMin * mod ? (iz > 0 ? 1 : -1) : 0;
 }
 
-/** A bola rolou: fim da parada (o cobrador volta a se mexer), evento `cobranca`. Exportada para a disputa de pênaltis. */
+/**
+ * A bola rolou: fim da parada (o cobrador volta a se mexer), evento `cobranca`. Exportada para a disputa de pênaltis e
+ * chamada pela corrida da cobrança no passo do contato (corrida.js ganchosCorrida, ligado abaixo).
+ */
 export function rolou(m) {
   const pr = m.parada;
   pr.rolou = true;
@@ -1731,3 +1756,7 @@ export function misturarPartida(h, m) {
   if (cr) for (const v of [ESTADOS_CORRIDA.indexOf(cr.estado), cr.x0, cr.z0, cr.ticks, cr.t0, cr.k, cr.plantou, cr.meio, cr.contato, cr.pedido ? cr.pedido.forca : -1]) h = misturarHash(h, v);
   return h;
 }
+
+// a corrida da cobrança (corrida.js) chama o rolou no passo do contato e decide de novo a cobrança da IA no contato
+ganchosCorrida.rolou = rolou;
+ganchosCorrida.pedidoIA = (m, j) => pedidoDaIA(m, j, m.parada);
