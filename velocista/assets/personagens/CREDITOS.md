@@ -10,6 +10,9 @@ Corpos, roupas e rostos: Microsoft Rocketbox Avatar Library (licença MIT, `LICE
 - `mago/` — avatar `Adults/Male_Adult_20` (roupa tingida de verde).
 - `joe/` — avatar `Professions/Business_Male_04` (colete e camisa; o detetive Joe);
 - `iris/` — avatar `Professions/Business_Female_01` (terninho escuro; a repórter Iris).
+- `devoe/` — avatar `Adults/Male_Adult_03` (paletó de tweed).
+- `wells/` — o mesmo avatar do `devoe/` (`Adults/Male_Adult_03`) com o cabelo escurecido e a roupa tingida de azul-marinho (só na
+  edição pessoal; `velocista/tools/personagens/tingir-wells.py` refaz as texturas a partir das do `devoe/`).
 
 Os adereços dos vilões (óculos, pistola de gelo, lança-chamas e tanque, bastão) são geometria própria (`js/aderecos.js`).
 

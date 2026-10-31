@@ -140,6 +140,7 @@ import { criarLaco, avancarLaco } from './laco.js';
 import * as COND from './conducao.js';
 import * as S from './sessao.js';
 import { criarEntrada } from './entrada.js';
+import { cameraDaMatriz } from './controle.js';
 import { criarHud } from './hud.js';
 import { criarCena } from './render/cena.js';
 import { criarCampo } from './render/campo.js';
@@ -631,15 +632,16 @@ function idControlado() { return mundo.controlado?.[TIME_HUMANO] ?? ID_HUMANO; }
 function controlado() { return jogadorPorId(mundo, idControlado()) ?? jogadorPorId(mundo, ID_HUMANO); }
 
 /**
- * Entrada do humano no formato POR TIME ({0: {x, z, botoes}}). x/z/botoes também ficam no
+ * Entrada do humano no formato POR TIME ({0: {x, z, botoes, mx, mz}}). x/z/botoes (e a mira mx/mz, C6) também ficam no
  * próprio objeto (não enumeráveis) para o passoTreino que recebe a entrada do jogador direto:
  * os dois formatos leem os mesmos números (o hash não muda). Um objeto só, reaproveitado a cada
  * passo (a lógica lê os números no passo e não guarda a referência).
  */
-const _entTime = { [TIME_HUMANO]: { x: 0, z: 0, botoes: 0, repete: false, iaCobra: false } };
+const _entTime = { [TIME_HUMANO]: { x: 0, z: 0, botoes: 0, repete: false, iaCobra: false, mx: null, mz: null } };
 Object.defineProperties(_entTime, {
   x: { value: 0, writable: true }, z: { value: 0, writable: true }, botoes: { value: 0, writable: true },
   repete: { value: false, writable: true }, iaCobra: { value: false, writable: true },
+  mx: { value: null, writable: true }, mz: { value: null, writable: true },
 });
 // trava "só o meu jogador" (Rumo ao Estrelato do TM): TROCAR e GOLEIRO não chegam ao mundo (a lógica também recusa a troca)
 // "só o meu jogador": sem TROCAR; sem GOLEIRO (sair com o goleiro) a não ser que o travado seja o próprio goleiro
@@ -652,9 +654,11 @@ function entradaDoTime(e) {
   // `ia` a página nunca entregou (a recepção e o goleiro da demo da página seguem como antes; contraprova 13/10: sem a
   // marca, a cobrança da demo virava cavadinha, 9 em 40 pênaltis)
   const ia = !!(e && (e.ia || e.iaCobra));
+  // a mira pela tela (C6): só a da pessoa (a entrada da página); sem ela, a do analógico (sim.js aplicarEntrada)
+  const mx = e?.mx ?? null, mz = e?.mz ?? null;
   const d = _entTime[TIME_HUMANO];
-  d.x = x; d.z = z; d.botoes = botoes; d.repete = repete; d.iaCobra = ia;
-  _entTime.x = x; _entTime.z = z; _entTime.botoes = botoes; _entTime.repete = repete; _entTime.iaCobra = ia;
+  d.x = x; d.z = z; d.botoes = botoes; d.repete = repete; d.iaCobra = ia; d.mx = mx; d.mz = mz;
+  _entTime.x = x; _entTime.z = z; _entTime.botoes = botoes; _entTime.repete = repete; _entTime.iaCobra = ia; _entTime.mx = mx; _entTime.mz = mz;
   return _entTime;
 }
 
@@ -1145,6 +1149,10 @@ const _bpDes = { x: 0, y: 0, z: 0 }, _emp = { x: 0, y: 0, z: 0 };
 // testes: desliga a onda da rede só no desenho (o mesmo quadro com e sem a deformação)
 let redeLigada = true;
 const _proj = new THREE.Vector3();
+// a mira pela tela (C6, contrato "Mira pela tela"): a câmera que desenhou o último quadro (o que a pessoa viu) e o ponto do
+// gramado de onde a ação sai — a entrada do próximo quadro leva a direção do analógico na tela ao gramado por ela
+// (controle.js miraPelaTela). ok = false antes do 1º quadro desenhado (a entrada usa o rumo, paraMundo)
+const telaMira = { cam: {}, ox: 0, oz: 0, ok: false };
 const alvoCam = { jx: 0, jz: 0, jvx: 0, jvz: 0, bx: 0, bz: 0, ax: NaN, az: NaN };
 /** Ponto do mundo → px CSS (sem alocar). */
 function projetar(x, y, z, out) {
@@ -1331,6 +1339,15 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   cam.bolaParada(bp.plano?.plano);
   cam.atualizar(dt, alvoCam, corteCamera);
   corteCamera = false;
+  // a câmera deste quadro para a mira (a TV, a da bola parada, as do Livre, a da disputa: a que desenha) e o ponto de onde
+  // a ação sai: a bola perto do controlado (no pé, na cobrança, nas mãos), senão ele (a bola chegando: o 1º toque é dele).
+  // As câmeras das cenas (comemoração, substituição, cartão, intervalo/fim, o plano geral) não valem: o 1º quadro depois
+  // delas usa o rumo (paraMundo) até a câmera de jogo desenhar
+  cam.camera.updateMatrixWorld();
+  cameraDaMatriz(cam.camera.matrixWorld.elements, telaMira.cam);
+  const bolaPerto = Math.hypot(_bp.x - hx, _bp.z - hz) <= CFG.ENTRADA.miraBolaPerto;
+  telaMira.ox = bolaPerto ? _bp.x : hx; telaMira.oz = bolaPerto ? _bp.z : hz;
+  telaMira.ok = (achou || !!h) && !cenaGol && !cenaSub && !cenaCartao && !cenaFim && !cam.geral;
   const f = cam.foco();
   cena3d.acompanhar(f.x, f.z);
   const tj0 = performance.now();
@@ -2804,7 +2821,7 @@ function quadroOnline(dt, ent, agoraMs) {
     // editor entregou, a edição do MEU time (vai pelo canal confiável, marcada na entrada)
     const acao = edicaoNaFila && edicaoNaFila.time === TIME_HUMANO ? edicaoNaFila : null;
     edicaoNaFila = null;
-    const minha = ia ? { x: 0, z: 0, botoes: 0, ia: true } : { x: ent.x, z: ent.z, botoes: ent.botoes, repete: i > 0 };
+    const minha = ia ? { x: 0, z: 0, botoes: 0, ia: true } : { x: ent.x, z: ent.z, mx: ent.mx, mz: ent.mz, botoes: ent.botoes, repete: i > 0 };
     entrada.passoUsou(minha.botoes);
     const nProd = MOD_ON.produzir(s, minha, acao);
     if (acao) PAG_ONLINE.enviarControle({ tipo: 'acao', n: nProd, acao });
@@ -3382,7 +3399,7 @@ async function iniciar() {
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
   // os controles de toque apareceram/sumiram: o topo se ajusta e o padrão do minimapa (celular × PC) muda junto
-  entrada = criarEntrada({ forcarToque: params.get('toque') === '1', aoAcao: tratarAcao, aoMudarLayout: () => { hud.ajustarTopo(); hud.definirEstado({ minimapa: minimapaLigado() }); } });
+  entrada = criarEntrada({ forcarToque: params.get('toque') === '1', aoAcao: tratarAcao, tela: () => (telaMira.ok ? telaMira : null), aoMudarLayout: () => { hud.ajustarTopo(); hud.definirEstado({ minimapa: minimapaLigado() }); } });
   // Total Match, "só o meu jogador": sem TROCAR nem GOLEIRO na tela (a entrada mascara as teclas e o mundo recusa a troca)
   // Total Match (html.tm; js/tm-cara.js): a Inter do TM chega depois do 1º layout — os nomes dos botões de toque (medidos
   // pelo canvas) e o topo do HUD medem de novo com ela. Sem ?tm o aviso 'tm:fontes' nunca vem
@@ -3564,7 +3581,7 @@ const api = {
         // a edição na fila (Editar time / editarTime) entra no 1º passo, como no laço da página (e a do Livre)
         if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
         { const al = PAG_LIVRE?.tirarDaFila(); if (al) ac = ac ? [al, ...ac] : [al]; }
-        rodarPasso({ x: e.x ?? 0, z: e.z ?? 0, botoes: e.botoes ?? 0, iaCobra: !!(e.ia || e.iaCobra) }, ac);
+        rodarPasso({ x: e.x ?? 0, z: e.z ?? 0, mx: e.mx, mz: e.mz, botoes: e.botoes ?? 0, iaCobra: !!(e.ia || e.iaCobra) }, ac);
       }
     } finally { emRodarPassos = false; }
     return hashMundo(mundo);

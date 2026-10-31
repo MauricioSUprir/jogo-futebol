@@ -123,5 +123,7 @@ export const TEMPOS_NAVEGADOR = {
   'teste-livre-tela.mjs': 120,
   'teste-online-tela.mjs': 160,
   'teste-corpo-tela.mjs': 150,
+  // (31/10, C6: medido aqui com a máquina dividida, carga ~10 em 4 núcleos: 52 s; acertar pelo log do CI)
+  'teste-mira-tela.mjs': 60,
   'teste-desempenho-celular.mjs': 35,
 };

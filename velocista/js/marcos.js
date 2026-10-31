@@ -127,6 +127,7 @@ export function limitar(x, z, folga = 4) {
 // h = para onde a pessoa olha (o rumo do jogo: 0 = +z, π = −z, −π/2 = −x). Lugares da cidade em coordenadas locais.
 export const PONTOS = {
   delegacia: { marco: 'delegacia', u: 0, v: -23.4, h: Math.PI },
+  ponteBaia: { x: (PONTE.x0 + PONTE.x1) / 2, z: PONTE.z, h: Math.PI / 2 },       // o meio da Ponte da Baía (a temporada da série: a bomba no rio)
   jornal: { marco: 'jornal', u: -3, v: -26.6, h: Math.PI },
   cafe: { marco: 'cafe', u: -14, v: -28.4, h: Math.PI },
   casa: { marco: 'casa', u: 0, v: -6.2, h: Math.PI },
@@ -150,7 +151,7 @@ export function pontoMundo(id) {
 /** Parte 3: lugares dentro do S.T.A.R. Labs, em [u, v, h] a partir do centro do campus (a planta de lab.js): a vitrine do
  *  traje novo na sala dos trajes (no fundo, entre as vitrines antigas), a Caitlin e o Cisco na frente dela, e a Caitlin na
  *  sala médica. O jogo registra com o centro do laboratório (registrarPontosLab), que marcos.js não conhece. */
-export const PONTOS_LAB = { vitrine: [49, -26.6, 0], trajesCaitlin: [46, -24.2, 0], trajesCisco: [52, -24.2, 0], medicaCaitlin: [-49, -18, 0],
+export const PONTOS_LAB = { cortexWells: [0.2, -2.4, Math.PI], vitrine: [49, -26.6, 0], trajesCaitlin: [46, -24.2, 0], trajesCisco: [52, -24.2, 0], medicaCaitlin: [-49, -18, 0],
   // a Câmara do Núcleo (o reator no meio, v 50): o homem de amarelo diante da base, a Caitlin e o Cisco entre os pilares
   nucleoReverso: [0, 42.4, Math.PI], nucleoCaitlin: [-6.5, 42, Math.PI], nucleoCisco: [6.5, 42, Math.PI],
   // Parte 4: a visita no Cortex (atrás do anel dos consoles, de frente para a porta) e o Cisco na oficina

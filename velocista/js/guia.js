@@ -131,9 +131,13 @@ export function criarGuia(cena, { mobile = false } = {}) {
     mk.style.display = 'flex';
     // o rótulo nunca corta na borda nem fica por cima dos botões (celular: canto de baixo à direita) e dos painéis
     let px = clamp((sx * 0.5 + 0.5) * W, 85, W - 85), py = clamp((sy * 0.5 + 0.5) * H, 95, H - 120);
+    // nem por cima do objetivo e das mensagens do alto (o rádio, o aviso): a faixa do meio de cima fica livre até topoLivre
+    if (Math.abs(px - W / 2) < Math.min(W * 0.27, 300) && py < topoLivre + 26) py = topoLivre + 26;
     if (document.body.classList.contains('toque')) {
       if (px > W - 450 && py > H - 245) py = H - 245;
       if (px > W - 250 && py < 180) py = 180;
+      if (px < 230 && py > H - 205) py = H - 205;                 // nem por cima do joystick (canto de baixo à esquerda)
+      if (px < 170 && py < 175) py = 175;                         // nem do minimapa e da pausa
     }
     mk.style.transform = `translate(${px}px, ${py}px)`;
     mk.style.color = alvo.cor; mkSvg.style.filter = `drop-shadow(0 0 6px ${alvo.cor})`;
@@ -150,5 +154,6 @@ export function criarGuia(cena, { mobile = false } = {}) {
     g.stroke(); g.globalAlpha = 1;
   }
 
-  return { atualizar, desenharNoMapa, get rota() { return rota; }, get setas() { return setas.count; }, marcador: mk };
+  let topoLivre = 0;
+  return { atualizar, desenharNoMapa, definirTopoLivre(y) { topoLivre = y; }, get rota() { return rota; }, get setas() { return setas.count; }, marcador: mk };
 }

@@ -39,7 +39,7 @@ ok(conv.alvoSala === 'trajes' && conv.aliados.caitlin && conv.aliados.cisco && v
 const cv = H.CENAS['depois-p3-convite'], cve = H.CENAS['depois-p3-veste'];
 ok(cv.some((f) => f.quem === 'caitlin') && cv.some((f) => f.quem === 'cisco') && cv.some((f) => f.acao === 'luzes') && cv.length >= 10, `a apresentação: a Caitlin e o Cisco mostram o traje (${cv.length} falas, com as luzes da vitrine)`);
 ok(cve.some((f) => f.acao === 'veste') && /mundo inteiro fica lento/.test(cve.map((f) => f.texto).join(' ')), 'ele veste o traje na cena e eles contam o tempo lento');
-ok(/trajeNovo = \(\) => missoes\.livre \|\| missoes\.indice > POS_VESTE/.test(jogo) && /if \(roupa === 'traje' && trajeNovo\(\)\) roupa = 'novo'/.test(jogo), 'depois do p3-veste, todo "traje" é o traje novo');
+ok(/trajeNovo = \(\) => POS_VESTE >= 0 && \(missoes\.livre \|\| missoes\.indice > POS_VESTE\)/.test(jogo) && /if \(roupa === 'traje' && trajeNovo\(\)\) roupa = 'novo'/.test(jogo), 'depois do p3-veste, todo "traje" é o traje novo');
 ok(/traje: 'novo'/.test(jogo) && /novo: \{ verm:/.test(fs.readFileSync(path.join(AQUI, '../js/traje.js'), 'utf8')), 'o corpo do traje novo é o desenho "novo" de traje.js (o da vitrine traje.html)');
 // ---- 3. os poderes
 ok(/BATERIA = \{ embalo: 0\.55, carga: 0\.06 \}, ARMADURA = 0\.6, TEMPO_LENTO = \{ fator: 0\.25, dura: 4\.5, custo: 0\.35 \}/.test(jogo), 'bateria (embalo 0,55), armadura (60%), tempo lento (25%, 4,5 s, 35% de energia)');

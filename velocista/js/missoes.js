@@ -17,7 +17,10 @@
 // cronômetro corre: o Corredor Negro atrás dele), patrulha? (crimes quaisquer aparecem, como no "Guardião da cidade").
 // Depois do último passo a cidade fica livre (crimes, esferas e os capítulos para jogar de novo na pausa). Quem terminou
 // uma versão da história com menos passos volta no primeiro passo novo (o save guarda o último passo que existia).
-export const MISSOES = [
+import { PESSOAL } from './edicao.js';
+import { MISSOES_SERIE } from './serie.js';
+
+const MISSOES_NORMAL = [
   { id: 'lab', titulo: 'Bem-vindo ao S.T.A.R. Labs', texto: 'Entre no laboratório e vá até o Cortex', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
   { id: 'velocidade', titulo: 'Teste de velocidade', texto: 'Chegue a 200 km/h (segure CORRER)', checar: (c) => c.v * 3.6 >= 200 },
   { id: 'esferas', titulo: 'Recarga', texto: 'Recolha 5 esferas de energia', meta: 5, contador: 'esferas', alvo: 'esfera' },
@@ -243,6 +246,8 @@ export const MISSOES = [
   { id: 'p5-casa', titulo: 'O Flash volta para casa', texto: 'Vá para casa', ponto: 'jantar', aliados: { joe: 'sofaWest', iris: 'jantar' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
   { id: 'p5-fim', titulo: 'O mundo que ele não viu', texto: 'O Monitor espera no Cortex uma última vez', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
 ];
+/** na edição pessoal (js/edicao.js), a temporada da série (js/serie.js) no lugar da história de sempre, com o progresso à parte */
+export const MISSOES = PESSOAL ? MISSOES_SERIE : MISSOES_NORMAL;
 /** os passos de uma época (os da linha do tempo alterada): o jogo põe o mundo nela enquanto o passo dura */
 export const EPOCA_DO_PASSO = (m) => m?.epoca || null;
 
@@ -251,7 +256,7 @@ const CHAVE_V1 = 'theflash.missoes.v1';
 // a lista da v1, para levar quem já tinha progresso ao mesmo passo
 const ORDEM_V1 = ['lab', 'velocidade', 'esferas', 'escalar', 'vibrar', 'assalto', 'gangue', 'especiais', 'portais', 'fuga', 'incendio', 'queda',
   'patrulha', 'relatorio', 'cap-reverso', 'fendas', 'tunel', 'passado', 'cap-savitar', 'cap-devoe', 'nucleo'];
-const STATS0 = { desafios: 0, fotos: 0, tempestades: 0, lentos: 0, pistas: 0, fendas: 0, subestacoes: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
+const STATS0 = { lanches: 0, desafios: 0, fotos: 0, tempestades: 0, lentos: 0, pistas: 0, fendas: 0, subestacoes: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
 
 export function criarMissoes(armazem) {
   let salvo = null, v1 = null;
