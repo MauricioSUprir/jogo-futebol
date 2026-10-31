@@ -4030,3 +4030,55 @@ pesquisa em `PESQUISA-ESTADIO.md` §14). Só DESENHO: nada do fecho do hash muda
   os Aflitos e o San Siro; `--raiz` mede a base).
 - Para o PR 2 (torcedor 3D): o lugar do torcedor é a cadeira (`x, y, z, rumo`): virar o torcedor para `rumo` (o campo), sentar
   com o quadril a ~0,43 m do piso (o assento) e os pés no piso da mesma fileira; a cadeira 3D do bloco perto fica embaixo dele.
+
+## Torcedor 3D (item 69, PR 2: o torcedor; 31/10; contrato)
+Pedido do dono (29/10): "torcida 3D, em todos os estádios" (FILA item 69, PR 2 de 4; pesquisa em `PESQUISA-ESTADIO.md` §15;
+recomendações aceitas no aval de 31/10, "Depende do dono" 11: a Baixa sem bonecos 3D, a Média só perto da câmera, a Alta
+mais longe). Só DESENHO: nada do fecho do hash muda (`tools/fecho-hash.mjs --diff <base>` = 0; `hash-igual`/`hash-partida`
+IGUAIS).
+- **O modelo** (`assets/torcedor/torcedor.bin`, 55 KB, `TCD1`; créditos e licença MIT do Rocketbox em `assets/torcedor/`;
+  como refazer em `tools/torcedor/README.md`): homem (`Adults/Male_Adult_16`) e mulher (`Adults/Female_Adult_17`), cada um em
+  2 níveis — o 0 com ~300 triângulos, o 1 com ~125 (o joelho e o cotovelo protegidos no Decimate) —, regiões por vértice
+  (`REGIAO`: camisa, pele, cabelo, calça, sapato, acento) e as 8 POSES da torcida (as de `torcida-dados.js POSE`) assadas
+  vértice a vértice no espaço da CADEIRA: a origem no piso, no centro do assento; z para a frente (o rumo), x para a
+  esquerda da pessoa, y para cima. Sentado (poses 0 e 1): as nádegas no assento (`CADEIRA.assento.altura` 0,43 m ± 1 cm), as
+  costas na frente do encosto, os pés no piso da fileira; de pé (2–7): na passagem livre, os pés entre o lábio do assento e
+  o bico do degrau. O cachecol (acento) é uma faixa entre as mãos SÓ no CACHECOL (nas outras poses, fechado num ponto do
+  peito: área zero).
+- **A textura de animação (VAT)** (`render/torcedor-dados.js vatDados`, PURO): RGBA float, largura = o maior nº de
+  vértices, altura = variações × níveis × 8 poses × 2 — na linha `linha(v, l) + 2·pose` a posição e na seguinte a normal; o
+  vértice é a coluna (`gl_VertexID`). `TORCEDOR_GLSL` (`torcedorLocal`, `torcedorMundo`, `torcedorNormal`) e as mesmas contas
+  em JS (`torcedorLocal`, `torcedorMundo`): a escala (`aPos.w` limitada a 0,94–1,06; pivô no assento sentado e no piso de pé),
+  o balanço de lado (cresce com a altura), o pulo (SÓ de pé: sentado não sai do assento) e a cadeira (`aCad` = x, z, cos e sen
+  do rumo; o y do piso é o `aPos.y`).
+- **A pose é a do quadro** (`render/torcedor-pose.js`, PURO, no download inicial): `ESTADO_GLSL` (os uniforms do ânimo e
+  `torcedorEstado(lugar, h, info)` → pose, pulo, balanço: a regra `POSE_REGRA`, a OLA e quem fica debaixo do BANDEIRÃO
+  aberto) é incluído pelos DOIS shaders — o quadro (`torcida.js`) e o 3D (`torcedor3d.js`) — com o mesmo lugar (`aPos`, com o
+  sorteio de ± 6 cm) e as mesmas sementes; o material do 3D usa os MESMOS objetos de uniform da torcida (`torcida.uniforms`).
+  `estadoTorcedor()` é a conta em JS (a GPU = JS no `teste-estadio` 9).
+- **Quem vira 3D** (`render/torcedor3d.js`, SOB DEMANDA: chega com o `render/cadeiras3d.js`, que o cria quando a torcida liga
+  — `campo.ligarTorcida(torcida)` em `main.js`; o `.bin` é pedido no 1º quadro fora da Baixa): a unidade é a FILEIRA de um
+  bloco de cadeira 3D deste quadro (`escolherBlocos`; o torcedor 3D sempre senta numa cadeira 3D), pelos px da cadeira no
+  meio dela (`pxCadeira`), com histerese e o teto de TRIÂNGULOS da qualidade (`TORCEDOR3D.qual`: Baixa 0 — o quadro de hoje;
+  Média 9.000, a partir de 14 px; Alta 160.000, a partir de 10 px; o nível 0 a partir de 30 px na Média e 28 na Alta, com a
+  saída 4 px abaixo), `escolherTorcedores` (pura). Os torcedores de cada fileira são os do quadro sentados nas cadeiras dela
+  (o mapa por célula de 0,5 m; só os do nível da qualidade, `dados.nivel`); a variação (homem/mulher, 36% mulheres) pela
+  semente (`variacaoDe`). Na TV (a câmera de jogo) e com as cadeiras 3D desligadas, nenhum. Uma malha por (variação, nível):
+  até 4 chamadas de desenho, só com alguém nelas; as instâncias e o `aOculto` só mudam quando a escolha muda.
+- **O quadro de quem está em 3D sai do desenho**: `torcida.js` ganhou o atributo por instância `aOculto` (1 byte; o vertex
+  shader joga o quadro para fora do recorte) e `torcida.ocultar(indices)` (só as malhas que mudaram sobem de novo), `dados` e
+  `nOcultos`. Com a torcida escondida (`mostrarTorcida(false)`), o 3D some junto.
+- **Cor e luz**: camisa, pele e cabelo os do torcedor do quadro (com a sombra da cobertura que já vem nelas); a calça e o tênis
+  pela semente (`TORCEDOR3D.calca/sapato`); o cachecol na cor do time (`uAcento0/1`, a identidade do TM). O sol de dia pela
+  normal (0,6 + 0,44·N·L, a do quadro pela normal de cada setor), os refletores à noite (0,33–0,5), a fileira da frente
+  escurecendo as pernas, a luz FALSA dos sinalizadores (`luz-falsa.js`, uniform) e a névoa.
+- API: `__golaco.estadio.cadeiras.torcedores` {carregado, torcedores, blocos, triangulos, lods: [nível 0, nível 1], ocultos},
+  `__golaco.estadio.torcedor3d` (malhas, modelo, vat), `__golaco.estadio.torcidaObj`.
+- Testes: `teste-torcida` G (o modelo, sentado na cadeira, de pé na passagem, o rumo, a escala, as 8 poses, o cachecol, a pose
+  do quadro com a ola e o bandeirão, a escolha), `teste-estadio` 9 (GPU = JS: o estado do torcedor e a VAT nas 8 poses) e 14b
+  (nunca na TV; perto, fora do quadro e no teto; sem as cadeiras 3D, nenhum), `teste-carga` (os dois módulos e o `.bin` fora
+  do download inicial e pedidos depois); custo com `tools/medir-cadeiras.mjs` (agora com a câmera `frente` e os torcedores
+  3D por plano).
+- Para o PR 3 (impostor e densidade): o impostor octaédrico pode ser assado NA CARGA a partir das mesmas malhas e poses
+  (`lerModelo` + `vatDados`: 8 poses × 2 variações); a densidade real perto (1 por cadeira nos estádios grandes) muda o
+  `gerarTorcidaNiveis`/`lugares` — o torcedor 3D segue sozinho (ele lê os torcedores sentados nas cadeiras da fileira).

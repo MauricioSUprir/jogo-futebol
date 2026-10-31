@@ -262,11 +262,11 @@ export function criarTorcedores3D(opc) {
       const k = qualidade + '|' + [...r.escolha].map(([c, l]) => c + '=' + l).sort().join(',');
       if (k !== chave) { chave = k; aplicar(r, porChave); }
       ant = r.escolha;
-      // pré-carga: o 1º quadro depois de chegar desenha as malhas com 0 instâncias (o programa compila antes do 1º plano
-      // de perto); depois, só as que têm alguém
-      // no desenho só junto com a torcida (os testes escondem a torcida inteira: torcida.mesh.visible)
+      // pré-carga: o 1º quadro depois de chegar desenha UMA malha com 0 instâncias (as 4 usam o mesmo programa: ele
+      // compila antes do 1º plano de perto, com 1 chamada a mais num quadro só); depois, só as que têm alguém. No desenho
+      // só junto com a torcida (os testes escondem a torcida inteira: torcida.mesh.visible)
       const comTorcida = torcida.mesh ? torcida.mesh.visible !== false : true;
-      for (const pv of malhas) for (const m of pv) m.visible = comTorcida && (precarga || m.userData.k > 0);
+      for (const pv of malhas) for (const m of pv) m.visible = comTorcida && ((precarga && m === malhas[0][0]) || m.userData.k > 0);
       precarga = false;
     },
     definirQualidade(q) { if (TORCEDOR3D.qual[q]) { qualidade = q; chave = ''; baixar(); } },

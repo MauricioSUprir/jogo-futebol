@@ -531,3 +531,67 @@ Maracanã e nas 104 genéricas, a textura nas faixas do perfil, sem degrau. O PR
   0, Média 480, Alta 3.072) e 20 blocos; dentro de um bloco em 3D o material das arquibancadas troca a pintura pelo
   concreto do degrau (uma caixa orientada por bloco no shader: `UNIFORMS_PERTO`), e o lado de cá sai junto com a câmera
   de TV dentro dele.
+
+## 15. O torcedor 3D (item 69 da FILA, PR 2 de 4; `js/render/torcedor-pose.js`, `torcedor-dados.js`, `torcedor3d.js`, `torcida.js`, `cadeiras3d.js`; `tools/torcedor/`)
+
+Pedido do dono (29/10): "torcida 3D, em todos os estádios"; aval de 31/10 ("68, 69 é 70 faz") com as recomendações do
+"Depende do dono" 11: a Baixa sem bonecos 3D, a Média só perto da câmera, a Alta mais longe. Até aqui o torcedor era só um
+QUADRO de 2 triângulos virado para a câmera (um atlas SDF de 8 poses); o PR 1 sentou cada um numa cadeira da grade e pôs a
+cadeira 3D nos blocos de perto. Este PR põe um CORPO 3D nessas cadeiras de perto, com a mesma pose do quadro.
+
+**Fontes e o que foi aproveitado de cada uma**
+- **SideFX Labs, "Vertex Animation Textures" 3.0/3.1 (Houdini)** (sidefx.com/docs/houdini/nodes/out/labs--vertex_animation_
+  textures-3.0): no modo de corpo mole o exportador grava a POSIÇÃO de cada vértice em cada quadro numa textura e a rotação
+  (ou a normal, comprimida no alfa) noutra, com opção de 16/32 bits em ponto flutuante ("HDR") e o conselho de não fazer
+  texturas compridas e baixas demais. → a VAT daqui (`vatDados`) é uma textura RGBA float (32 bits: a GPU lê com
+  `texelFetch`, sem filtro, e o JS faz a mesma conta bit a bit) com a posição e a normal de cada vértice em duas linhas por
+  pose; são só 8 "quadros" (as 8 poses) e 4 malhas: 235 × 64 texels (240 KB na GPU).
+- **Epic, "AnimToTexture" (Unreal 5.1, a multidão do City Sample)** (dev.epicgames.com, "Baking out vertex animation in
+  editor with AnimToTexture"): o modo VÉRTICE grava a posição de cada vértice e capta qualquer deformação, ao preço de mais
+  textura e de cada malha ser assada à parte; o modo OSSO guarda os ossos (menos memória, reaproveitável); a malha animada
+  vai numa Instanced Static Mesh com dados por instância (`PerInstanceCustomData`) para cada um se mexer diferente. → o modo
+  vértice (as poses são poucas e as malhas pequenas: 55 KB no arquivo) e os dados por instância (as cores, as sementes e a
+  cadeira de cada torcedor) numa `InstancedBufferGeometry` por malha.
+- **NVIDIA, GPU Gems 3, cap. 2 "Animated Crowd Rendering"** (Dudash): a multidão inteira por instâncias com a animação lida
+  de textura no vertex shader, variação por instância (cor, animação) e nível de detalhe por malhas diferentes. → as cores
+  do torcedor (camisa, pele, cabelo — as do quadro) e a semente por instância, a REGIÃO de cor por vértice (camisa, pele,
+  cabelo, calça, sapato, acento) e dois níveis (~300 e ~125 triângulos) em malhas separadas.
+- **Millán & Rudomín, "Impostors, pseudo-instancing and image maps for GPU crowd rendering"** e a discussão da Unity
+  "How to treat huge amount of Stadium Crowds" (discussions.unity.com): geometria perto, impostor (imagem) longe, escolhidos
+  por um mapa de nível de detalhe; o **PopcornFX "Stadium Crowd using Skeletal Mesh particles"**: a troca pela distância vai
+  das malhas 3D até impostores 2D. → o torcedor 3D só nas fileiras de perto (pelos px da cadeira na tela) e o QUADRO de hoje
+  como o impostor no resto; o impostor octaédrico assado na carga é o PR 3.
+- **Gonzalez-Franco et al., "The Rocketbox Library and the Utility of Freely Available Rigged Avatars" (Frontiers in
+  Virtual Reality, 2020)** e o repositório microsoft/Microsoft-Rocketbox (MIT): 115 avatares com o esqueleto do Biped e as
+  texturas. → `Adults/Male_Adult_16` e `Adults/Female_Adult_17` (camiseta e jeans: a camiseta vira a camisa do time) pela
+  mesma cadeia do corpo dos jogadores (`tools/humano`: os 22 ossos do jogo, os pesos somados no ancestral).
+- **Blender 4.5, modificador Decimate (Collapse)** (docs.blender.org): redução por colapso de arestas, simetria em x e um
+  grupo de vértices que diz onde reduzir (invertido: protege). → o nível 0 direto da malha original e o nível 1 a partir do
+  nível 0 com o joelho e o cotovelo protegidos (da original, o anel do joelho tinha dezenas de vértices e o Decimate parava
+  em ~250 triângulos; sem proteção a perna do nível 1 virava um tubo reto que não dobrava no sentado).
+- **three.js 0.170** (docs): `InstancedBufferGeometry`/`InstancedBufferAttribute` (`instanceCount`, `setUsage(Dynamic
+  DrawUsage)`, `addUpdateRange` — sobe só o pedaço escrito), `DataTexture` com `FloatType` e `NearestFilter`, `ShaderMaterial`
+  em GLSL ES 3.0 (`gl_VertexID`, `texelFetch`) com `UniformsLib.fog`. → uma malha por (variação, nível), o vértice achado pelo
+  `gl_VertexID` (sem um 2º UV), os uniforms do ânimo COMPARTILHADOS com o material da torcida (os mesmos objetos).
+- **FIFA/Green Guide/OMSI** (§14): o assento a 0,43 m, a fileira de 0,8 m, a passagem livre ≥ 0,4 m na frente. → sentado,
+  as nádegas no assento, as costas na frente do encosto e os pés no piso da fileira; de pé, os pés na passagem (entre o lábio
+  do assento e o bico do degrau).
+
+**O que mudou (decisões)**
+- **A mesma pose no quadro e no 3D**: a conta da pose saiu do vertex shader da torcida para `torcedor-pose.js ESTADO_GLSL`
+  (a regra `POSE_REGRA`, a ola, o bandeirão aberto, o pulo e o balanço) e os DOIS shaders a incluem, com o mesmo lugar e as
+  mesmas sementes; o 3D usa os mesmos uniforms da torcida. `estadoTorcedor()` é a conta em JS; a GPU = JS no `teste-estadio`
+  9 (4096 torcedores com a ola e os dois bandeirões; a VAT em 4 malhas × 4096 vértices nas 8 poses).
+- **As 8 poses** postas por cinemática (direta na coluna, inversa de 2 ossos nos braços e pernas, alvos pelas juntas do
+  próprio avatar) e assadas por mistura linear dos pesos: sentado com as mãos nas coxas ou batendo palmas; de pé com os
+  braços soltos, batendo palmas, em V, um braço erguido, o cachecol aberto acima da cabeça (a faixa entre as mãos, na cor
+  do time; fechada num ponto nas outras poses) e as mãos na cabeça. Quem está sentado não pula (o quadro sobe junto da ola;
+  o 3D sairia do assento); a escala do quadro (até 2 no anel de cima do Maracanã) fica entre 0,94 e 1,06 e escala em volta
+  do assento (sentado) ou do piso (de pé).
+- **A unidade é a FILEIRA do bloco**: o bloco inteiro (24 cadeiras × 4 fileiras, ~93 torcedores na frente) não cabia nos
+  9 mil triângulos da Média nem no nível 1; por fileira, a Média mostra 1–3 fileiras (as de mais px) e a Alta até ~1.200
+  torcedores. Teto em TRIÂNGULOS (o orçamento do celular é em triângulos), histerese na entrada e no nível 0.
+- **O quadro de quem está em 3D sai** por um byte por instância (`aOculto`), escrito só quando a escolha muda.
+- **Custo** (tools/medir-cadeiras.mjs, antes = a base do PR 1, depois = este PR; a tabela no PR): na TV nada muda; o pior
+  plano do pré-jogo no celular fica igual (40 chamadas e 127,8 mil triângulos no padrão: é o plano aéreo, sem 3D); nos
+  planos de perto, +2 a +4 chamadas e até +9 mil triângulos na Média.
