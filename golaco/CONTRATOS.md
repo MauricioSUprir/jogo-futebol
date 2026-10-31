@@ -4070,12 +4070,14 @@ pesquisa em `PESQUISA-ESTADIO.md` §14). Só DESENHO: nada do fecho do hash muda
   largura, assento a 0,43 m, encosto 0,36 m acima dele) instanciada (1 InstancedMesh, 1 chamada só com algum bloco perto) nos
   blocos que `escolherBlocos` escolhe por quadro: pelos px da cadeira na tela (0,5 m · alturaPx ÷ (2 · d · tan(fov/2)), d = a
   distância à esfera do bloco), entra com ≥ `pxEntra` 10 px, fica até `pxSai` 7,5 (histerese), só até `distMax` 42 m, no cone da
-  câmera, com teto de instâncias por qualidade (`teto`: Baixa 0, Média 320 — com 480 o placar do pós-jogo no celular passava dos 130 mil triângulos —, Alta 3.072) e de blocos (`blocosMax` 20; quem já
+  câmera, com teto de instâncias por qualidade (`teto`: Baixa 0, Média 320, Alta 3.072 — o MÁXIMO da qualidade: quanto cabe em
+  cada quadro quem decide é o ORÇAMENTO de triângulos do quadro, contrato "Torcedor 3D") e de blocos (`blocosMax` 20; quem já
   estava vale 20% mais no ranking); com a câmera dentro do lado de cá (a TV), nenhum bloco dele (`semSetor`). As matrizes e as
   cores só são escritas quando a escolha muda; pré-carga: o 1º quadro depois de chegar compila o programa com 0 instâncias.
   Dentro de um bloco em 3D o material das arquibancadas (`campo.js comLuzFalsa`, também o do Maracanã e das genéricas) troca a
   pintura pelo concreto do degrau (`UNIFORMS_PERTO`: até `blocosMax` caixas orientadas; o piso e o espelho pela normal); sem
-  bloco perto a conta nem roda (`uPertoN` 0). API: `__golaco.estadio.cadeiras` {carregado, blocos, instancias, teto, mascara} e
+  bloco perto a conta nem roda (`uPertoN` 0). API: `__golaco.estadio.cadeiras` {carregado, blocos, instancias, teto, mascara,
+  torcedores, orcamento} e
   `__golaco.estadio.arquibancadas` [{nome, visivel, triangulos, emDegrau, trisLiso, trisDegrau}]; `campo.ligarCadeiras(md)`,
   `campo.definirAlturaTela(px)`, `campo.definirQualidade(q)`, `campo.grade`.
 - Testes: `teste-cadeiras` (Node, padrão; reprova na main: C1–C7 — pureza, medidas da pesquisa, capacidade, textura = grade,
@@ -4119,7 +4121,30 @@ IGUAIS).
   saída 4 px abaixo), `escolherTorcedores` (pura). Os torcedores de cada fileira são os do quadro sentados nas cadeiras dela
   (o mapa por célula de 0,5 m; só os do nível da qualidade, `dados.nivel`); a variação (homem/mulher, 36% mulheres) pela
   semente (`variacaoDe`). Na TV (a câmera de jogo) e com as cadeiras 3D desligadas, nenhum. Uma malha por (variação, nível):
-  até 4 chamadas de desenho, só com alguém nelas; as instâncias e o `aOculto` só mudam quando a escolha muda.
+  até 4 chamadas de desenho, só com alguém nelas; as instâncias e o `aOculto` só mudam quando a escolha muda. O
+  `torcedor3d.js` só diz o que QUER (`desejo(lista, cam, anteriores)`: as fileiras com px, n e o nível, pela
+  `escolherTorcedores`) e desenha o que o orçamento der (`aplicarEscolha(Map chave → nível)`; `desenhados` = os triângulos
+  das malhas visíveis).
+- **O ORÇAMENTO de triângulos por quadro** (`render/cadeiras-dados.js`: `ORCAMENTO3D`, `corteDeCamera`, `orcamentoPerto`,
+  `criarOrcamento3D` — PUROS; `render/cadeiras3d.js` o aplica; `teste-cadeiras` C8): o 3D de perto inteiro (as cadeiras 3D
+  e os torcedores 3D) ganha, a cada quadro, no máximo `alvo − resto`, em QUALQUER plano e estádio. O `resto` é o total do
+  último desenho (`renderer.info.render.triangles`, pelo `medidor` que o `main.js` passa: `campo.definirMedidor(() =>
+  cena3d.info().render)`) menos o que o próprio 3D de perto pôs nele (as cadeiras `count × 18` e as malhas visíveis do
+  torcedor; nada com o grupo do estádio escondido); a parte do 3D de perto é conhecida antes de desenhar. Alvos
+  (`ORCAMENTO3D.alvo`): Baixa 0 (sem 3D de perto), Média 127.500 (o celular: a meta é 130 mil no pior plano, a folga é a
+  variação do resto de um quadro para o outro), Alta 400.000 (o PC: o que ele já desenhava de perto, ~384 mil no padrão).
+  Os tetos da qualidade (`CADEIRAS3D.teto`, `TORCEDOR3D.qual.teto`) continuam como o MÁXIMO. A divisão: primeiro as PESSOAS
+  — as fileiras do torcedor 3D, as de mais px primeiro, cada uma com as cadeiras 3D do bloco dela (o torcedor sempre senta
+  numa cadeira 3D), no nível desejado e, se não couber, no 1 — e depois as cadeiras sem ninguém, as de mais px primeiro.
+  Histerese (`orcamentoPerto`): só DESCE quando o que está desenhado passa do orçamento (primeiro as cadeiras sem gente,
+  depois o nível 0 de menos px vira 1, depois sai a fileira de menos px, até caber) e SOBE devagar — `sobe` 1 unidade
+  inteira por quadro (a fileira, o nível 0 ou o bloco) e só abaixo de `orçamento − margem` (`margem` 2.000). No CORTE de
+  câmera (`corteDeCamera`: outra câmera, entrou/saiu da câmera de jogo, pulou > 2,5 m, virou > 25° ou o campo de visão
+  mudou > 20%) o resto de antes não vale: o quadro do corte não tem 3D de perto (o resto da câmera nova é medido nele) e o
+  seguinte faz a escolha inteira de uma vez, sem histerese (também ao religar as cadeiras 3D e ao trocar a qualidade); o
+  renderizador novo (o contador de quadros voltou) e o 1º quadro também esperam uma medida. Sem medidor (a página de teste
+  da rede), só os tetos, como antes. A TV de jogo continua sem nenhum 3D de perto. API: `__golaco.estadio.cadeiras.orcamento`
+  {alvo, resto, orcamento, gasto: {total, cadeiras, torcedores}, corte, esperando, novo, medido}.
 - **O quadro de quem está em 3D sai do desenho**: `torcida.js` ganhou o atributo por instância `aOculto` (1 byte; o vertex
   shader joga o quadro para fora do recorte) e `torcida.ocultar(indices)` (só as malhas que mudaram sobem de novo), `dados` e
   `nOcultos`. Com a torcida escondida (`mostrarTorcida(false)`), o 3D some junto.
@@ -4129,7 +4154,10 @@ IGUAIS).
   escurecendo as pernas, a luz FALSA dos sinalizadores (`luz-falsa.js`, uniform) e a névoa.
 - API: `__golaco.estadio.cadeiras.torcedores` {carregado, torcedores, blocos, triangulos, lods: [nível 0, nível 1], ocultos},
   `__golaco.estadio.torcedor3d` (malhas, modelo, vat), `__golaco.estadio.torcidaObj`.
-- Testes: `teste-torcida` G (o modelo, sentado na cadeira, de pé na passagem, o rumo, a escala, as 8 poses, o cachecol, a pose
+- Testes: `teste-cadeiras` C8 (o orçamento: do nada, a histerese, o corte e 6000 quadros com o resto andando ± 2,5 mil por
+  quadro e pulando no corte — o total ≤ 130 mil na Média; parado, nada pisca), `teste-cenas-tela` F8/C8/F9 (o pior plano no
+  celular ≤ 130 mil, agora com as cadeiras e os torcedores 3D de cada plano no medido), `teste-torcida` G (o modelo, sentado
+  na cadeira, de pé na passagem, o rumo, a escala, as 8 poses, o cachecol, a pose
   do quadro com a ola e o bandeirão, a escolha), `teste-estadio` 9 (GPU = JS: o estado do torcedor e a VAT nas 8 poses) e 14b
   (nunca na TV; perto, fora do quadro e no teto; sem as cadeiras 3D, nenhum), `teste-carga` (os dois módulos e o `.bin` fora
   do download inicial e pedidos depois); custo com `tools/medir-cadeiras.mjs` (agora com a câmera `frente` e os torcedores

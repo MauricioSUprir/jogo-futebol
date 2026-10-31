@@ -24,10 +24,11 @@ export const TORCEDOR3D = Object.freeze({
   escala: [0.94, 1.06],            // a escala do torcedor (aPos.w) limitada: o maior do quadro do Maracanã vale 2 lugares
   alturaBal: 1.2,                  // m: o balanço (± 3,5 cm) cresce do piso (ou do assento) até esta altura
   mulher: 0.36,                    // fração de mulheres (pela semente)
-  // por qualidade: o teto de TRIÂNGULOS dos torcedores 3D (o pior plano do pré-jogo no celular não tem folga: ≤ 130 mil —
-  // medido com tools/medir-cadeiras.mjs), os px da cadeira na tela para o bloco ganhar o torcedor 3D (entra/sai, com
-  // histerese) e para o nível 0 (~300 triângulos; abaixo, o nível 1). Baixa: nenhum (o quadro de hoje). Na Média só
-  // perto da câmera; na Alta mais longe (as recomendações do dono, FILA "Depende do dono" 11).
+  // por qualidade: o teto de TRIÂNGULOS dos torcedores 3D (o máximo da qualidade; quanto cabe em cada quadro quem decide é
+  // o orçamento de triângulos do quadro: render/cadeiras-dados.js ORCAMENTO3D, as pessoas antes das cadeiras), os px da
+  // cadeira na tela para o bloco ganhar o torcedor 3D (entra/sai, com histerese) e para o nível 0 (~300 triângulos;
+  // abaixo, o nível 1). Baixa: nenhum (o quadro de hoje). Na Média só perto da câmera; na Alta mais longe (as
+  // recomendações do dono, FILA "Depende do dono" 11).
   qual: Object.freeze({
     baixa: Object.freeze({ teto: 0, pxEntra: Infinity, pxSai: Infinity, pxLod0: Infinity, pxLod0Sai: Infinity }),
     media: Object.freeze({ teto: 9000, pxEntra: 14, pxSai: 11, pxLod0: 30, pxLod0Sai: 26 }),

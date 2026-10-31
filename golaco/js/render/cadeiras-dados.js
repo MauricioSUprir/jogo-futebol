@@ -43,9 +43,10 @@ export const CADEIRAS3D = Object.freeze({
   pxSai: 7.5,            // ... e para SAIR (histerese: abaixo disto volta à textura)
   distMax: 42,           // m: nunca além disto (= DEGRAU_LOD.entra: o degrau das plantas curvas vira geometria até ali)
   favorAnterior: 1.2,    // no ranking do teto, quem já está em 3D vale 20% mais (não pisca na borda do teto)
-  // teto de instâncias por qualidade (Baixa: só a textura) e de blocos (a máscara do material das arquibancadas)
-  // (Média 320: com 480 o plano do placar do pós-jogo no celular ia de 122 a 131 mil triângulos — teste-cenas-tela F8, meta
-  // 130 mil; 320 × 18 = 5,8 mil)
+  // teto de instâncias por qualidade (Baixa: só a textura) e de blocos (a máscara do material das arquibancadas): o MÁXIMO
+  // da qualidade; quanto cabe em cada quadro quem decide é o orçamento de triângulos (ORCAMENTO3D, mais abaixo: o 3D de
+  // perto ganha o alvo da qualidade menos o resto do quadro). (Média 320 desde o PR 1: com 480 o placar do pós-jogo no
+  // celular ia de 122 a 131 mil triângulos, antes do orçamento)
   teto: Object.freeze({ baixa: 0, media: 320, alta: 3072 }),
   blocosMax: 20,
 });
@@ -492,6 +493,180 @@ export function escolherBlocos(blocos, cam, anteriores = new Set(), opc = {}) {
   }
   lista.sort((p, q) => p - q);
   return { lista, instancias: inst, px: pxs };
+}
+
+// ------------------------------------------------------------------ o ORÇAMENTO de triângulos por quadro (puro)
+// O 3D de perto (as cadeiras 3D e os torcedores 3D: render/cadeiras3d.js e render/torcedor3d.js) ganha, a cada quadro, no
+// máximo (alvo da qualidade − o RESTO do quadro): o resto é o total do último desenho (renderer.info.render.triangles) menos
+// o que o próprio 3D de perto pôs nele — a parte que ele não controla, medida (reativa); a parte dele é conhecida antes de
+// desenhar (preditiva: Funkhouser & Séquin, SIGGRAPH 1993). O que sobra vai primeiro às PESSOAS (as fileiras do torcedor 3D,
+// as de mais px primeiro, com as cadeiras do bloco delas: o torcedor 3D sempre senta numa cadeira 3D) e depois às cadeiras
+// sem ninguém. Histerese: só DESCE quando estoura o alvo (primeiro as cadeiras sem gente, depois o nível 0 vira 1, depois sai
+// a fileira de menos px) e SOBE devagar (`sobe` unidades inteiras por quadro — a fileira, o nível ou o bloco — e só com
+// `margem` de folga). No CORTE de câmera (a câmera nova: corteDeCamera) o resto de antes não vale: 1 quadro sem 3D de perto
+// (o resto da câmera nova medido) e, no seguinte, a escolha inteira de uma vez, sem histerese — a troca fica colada no corte,
+// onde a vista não a percebe (Smith & Henderson 2008, "Edit Blindness"; Shimamura et al. 2015). PESQUISA-ESTADIO.md §15.
+export const ORCAMENTO3D = Object.freeze({
+  // alvo do quadro inteiro (triângulos), por qualidade: a Média (o celular) ≤ 130 mil no pior plano (teste-cenas-tela
+  // F8/C8/F9, teste-prejogo) com folga para a variação de um quadro para o outro; a Alta (o PC: sem meta de 130 mil) no que
+  // o PC já desenha de perto; a Baixa sem 3D de perto
+  alvo: Object.freeze({ baixa: 0, media: 127500, alta: 400000 }),
+  margem: 2000,          // triângulos de folga para SUBIR (a histerese: desce acima do alvo, sobe só abaixo de alvo − margem)
+  sobe: 1,               // unidades (fileira, nível ou bloco) que entram por quadro fora do corte
+  // o corte de câmera entre dois quadros: outra câmera, entrou/saiu da câmera de jogo, pulou > `dist` m, virou > `ang`
+  // graus ou mudou o campo de visão > `fov` (fração)
+  corte: Object.freeze({ dist: 2.5, ang: 25, fov: 0.2 }),
+});
+
+/**
+ * A câmera mudou de plano entre dois quadros? a (a do quadro anterior, ou null) e b = {obj (o objeto da câmera), x, y, z,
+ * fx, fy, fz (frente, unitário), fov (graus), deJogo}. Sem a anterior é corte.
+ */
+export function corteDeCamera(a, b, opc = ORCAMENTO3D.corte) {
+  if (!a) return true;
+  if (a.obj !== b.obj || !!a.deJogo !== !!b.deJogo) return true;
+  if (Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) > opc.dist) return true;
+  const c = clamp(a.fx * b.fx + a.fy * b.fy + a.fz * b.fz, -1, 1);
+  if ((Math.acos(c) * 180) / Math.PI > opc.ang) return true;
+  return Math.abs(b.fov / Math.max(1e-6, a.fov) - 1) > opc.fov;
+}
+
+const maisPx = (a, b) => b.px - a.px || (String(a.k) < String(b.k) ? -1 : String(a.k) > String(b.k) ? 1 : 0);
+/**
+ * O 3D de perto de um quadro dentro do orçamento (puro). desejo = {blocos: [{i, px, n}] (escolherBlocos: px, histerese,
+ * cone, distância e o teto da qualidade), fileiras: [{chave, bloco, px, n, nivel}] (escolherTorcedores: o teto da
+ * qualidade, a histerese e o nível desejado), tri: [triângulos do torcedor no nível 0, no 1], triCadeira}; atual = o que o
+ * quadro anterior desenhou {blocos: Set, fileiras: Map(chave → nível)}; opc = {orcamento (triângulos), margem, sobe, novo
+ * (sem histerese: tudo de uma vez, partindo do nada)}. Devolve {blocos: Set, fileiras: Map, triCadeiras, triTorcedores,
+ * total, desceu, subiu}.
+ */
+export function orcamentoPerto(desejo, atual, opc = {}) {
+  const tri = desejo.tri ?? [0, 0], tc = desejo.triCadeira ?? 18;
+  const B = Math.max(0, opc.orcamento ?? Infinity), margem = opc.margem ?? ORCAMENTO3D.margem;
+  const novo = !!opc.novo || !atual;
+  const blocos = new Map();
+  for (const b of desejo.blocos ?? []) blocos.set(b.i, { ...b, k: b.i });
+  const filas = [];
+  for (const f of desejo.fileiras ?? []) if (f.n > 0 && blocos.has(f.bloco)) filas.push({ ...f, k: f.chave });
+  const cB = b => b.n * tc, cF = (f, l) => f.n * tri[l];
+  const kb = new Set(), kf = new Map(), nf = new Map();
+  const poeFila = (f, l) => { kf.set(f.chave, l); nf.set(f.bloco, (nf.get(f.bloco) ?? 0) + 1); };
+  let total = 0;
+  // o que fica do quadro anterior (o nível desejado 1 rebaixa na hora; o 0 vindo do 1 é uma subida, mais abaixo)
+  if (!novo) {
+    for (const i of atual.blocos) { const b = blocos.get(i); if (b) { kb.add(i); total += cB(b); } }
+    for (const f of filas) {
+      const l = atual.fileiras.get(f.chave);
+      if (l === undefined || !kb.has(f.bloco)) continue;
+      const lv = Math.max(l, f.nivel);
+      poeFila(f, lv); total += cF(f, lv);
+    }
+  }
+  // desce só quando estoura: as cadeiras sem gente, o nível 0 (o de menos px) vira 1, a fileira de menos px sai
+  let desceu = false;
+  if (total > B) {
+    desceu = true;
+    const fs = filas.filter(f => kf.has(f.chave)).sort((a, b) => maisPx(b, a));
+    const bs = [...kb].map(i => blocos.get(i)).sort((a, b) => maisPx(b, a));
+    while (total > B) {
+      const b = bs.find(x => kb.has(x.i) && !(nf.get(x.i) > 0));
+      if (b) { kb.delete(b.i); total -= cB(b); continue; }
+      const f0 = fs.find(f => kf.get(f.chave) === 0);
+      if (f0) { kf.set(f0.chave, 1); total -= cF(f0, 0) - cF(f0, 1); continue; }
+      const f1 = fs.find(f => kf.has(f.chave));
+      if (!f1) break;
+      kf.delete(f1.chave); nf.set(f1.bloco, nf.get(f1.bloco) - 1); total -= cF(f1, 1);
+    }
+  }
+  // sobe devagar (novo: tudo de uma vez), só abaixo de orçamento − margem: as pessoas (fileira nova ou o nível 0) e depois
+  // as cadeiras sem ninguém, as de mais px primeiro
+  let n = novo ? Infinity : opc.sobe ?? ORCAMENTO3D.sobe, subiu = 0;
+  const lim = B - margem;
+  if (!desceu && n > 0 && lim > total) {
+    const cands = [];
+    for (const f of filas) {
+      const l = kf.get(f.chave);
+      if (l === undefined) cands.push({ f, nivel: false, px: f.px, k: f.chave });
+      else if (l === 1 && f.nivel === 0) cands.push({ f, nivel: true, px: f.px, k: f.chave });
+    }
+    cands.sort(maisPx);
+    for (const c of cands) {
+      if (n <= 0) break;
+      const f = c.f;
+      if (c.nivel) {
+        const d = cF(f, 0) - cF(f, 1);
+        if (total + d <= lim) { kf.set(f.chave, 0); total += d; n--; subiu++; }
+        continue;
+      }
+      const extra = kb.has(f.bloco) ? 0 : cB(blocos.get(f.bloco));
+      for (const l of f.nivel === 0 ? [0, 1] : [1]) {
+        const d = cF(f, l) + extra;
+        if (total + d > lim) continue;
+        if (extra) kb.add(f.bloco);
+        poeFila(f, l); total += d; n--; subiu++;
+        break;
+      }
+    }
+    for (const b of [...blocos.values()].filter(x => !kb.has(x.i)).sort(maisPx)) {
+      if (n <= 0) break;
+      if (total + cB(b) <= lim) { kb.add(b.i); total += cB(b); n--; subiu++; }
+    }
+  }
+  let triCadeiras = 0, triTorcedores = 0;
+  for (const i of kb) triCadeiras += cB(blocos.get(i));
+  for (const f of filas) { const l = kf.get(f.chave); if (l !== undefined) triTorcedores += cF(f, l); }
+  return { blocos: kb, fileiras: kf, triCadeiras, triTorcedores, total, desceu, subiu };
+}
+
+/**
+ * O orçamento do 3D de perto quadro a quadro (o estado; puro). opc = {qualidade, ...ORCAMENTO3D}. A cada quadro:
+ * `inicio(info, cam)` com o último desenho (info = {frame, triangles}: renderer.info.render; null = sem medidor — sem
+ * orçamento, como antes) e a câmera deste quadro ({obj, x, y, z, fx, fy, fz, fov, deJogo}) → {orcamento, novo,
+ * semAnteriores, corte, resto, esperando}; `planejar(desejo, ctx)` → orcamentoPerto (guarda o plano como o atual);
+ * `gastou(tri, {cadeiras, torcedores})`: os triângulos que o 3D de perto vai desenhar neste quadro (o resto do próximo é o
+ * total menos eles).
+ */
+export function criarOrcamento3D(opc = {}) {
+  const O = { ...ORCAMENTO3D, ...opc };
+  let alvo = O.alvo[opc.qualidade] ?? O.alvo.media;
+  const vazio = () => ({ blocos: new Set(), fileiras: new Map() });
+  let atual = vazio(), camAnt = null, frame = null, pendente = 0, resto = null, esperando = true, replanejar = true;
+  let ultimo = { orcamento: 0, novo: true, semAnteriores: true, corte: true, resto: null, esperando: true }, gasto = { total: 0, cadeiras: 0, torcedores: 0 };
+  return {
+    inicio(info, cam) {
+      const corte = corteDeCamera(camAnt, cam, O.corte);
+      camAnt = { ...cam };
+      if (!info) { ultimo = { orcamento: Infinity, novo: true, semAnteriores: false, corte, resto: null, esperando: false }; return ultimo; }
+      // houve desenho desde o último quadro: o resto dele (o 3D de perto desse desenho é o `pendente`); o renderizador novo
+      // (o contador voltou) ou o 1º quadro: sem medida
+      let mediu = false;
+      if (frame !== null && info.frame > frame) { resto = Math.max(0, info.triangles - pendente); mediu = true; }
+      else if (frame === null || info.frame < frame) esperando = true;
+      frame = info.frame;
+      if (esperando && mediu) { esperando = false; replanejar = true; }
+      if (corte) esperando = true;
+      if (esperando) ultimo = { orcamento: 0, novo: true, semAnteriores: true, corte, resto, esperando: true };
+      else {
+        const novo = replanejar;
+        replanejar = false;
+        ultimo = { orcamento: Math.max(0, alvo - resto), novo, semAnteriores: novo, corte, resto, esperando: false };
+      }
+      return ultimo;
+    },
+    planejar(desejo, ctx = ultimo) {
+      const r = orcamentoPerto(desejo, ctx.novo ? null : atual, { orcamento: ctx.orcamento, margem: O.margem, sobe: O.sobe, novo: ctx.novo });
+      atual = { blocos: r.blocos, fileiras: r.fileiras };
+      return r;
+    },
+    /** O que o 3D de perto vai desenhar neste quadro: tri (o total) e o detalhe {cadeiras, torcedores}. */
+    gastou(tri, det = {}) { pendente = tri; gasto = { total: tri, cadeiras: det.cadeiras ?? 0, torcedores: det.torcedores ?? 0 }; },
+    definirQualidade(q) { alvo = O.alvo[q] ?? alvo; replanejar = true; },
+    /** Escolhe de novo, de uma vez (as cadeiras 3D religadas). */
+    replanejar() { replanejar = true; },
+    get atual() { return atual; },
+    get alvo() { return alvo; },
+    get estado() { return { alvo, resto, orcamento: ultimo.orcamento, corte: ultimo.corte, esperando: ultimo.esperando, novo: ultimo.novo, gasto }; },
+  };
 }
 
 // ------------------------------------------------------------------ a cadeira rebatível (geometria pura)

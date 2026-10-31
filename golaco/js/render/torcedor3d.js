@@ -1,7 +1,8 @@
 // Torcedor 3D de perto (three.js; SOB DEMANDA — chega junto do render/cadeiras3d.js, que o cria; o modelo,
 // assets/torcedor/torcedor.bin, só é baixado fora da qualidade Baixa). Item 69 da FILA, PR 2 de 4. Nos blocos de cadeiras
 // 3D mais perto da câmera (render/cadeiras-dados.js escolherBlocos; render/torcedor-dados.js escolherTorcedores: px da
-// cadeira na tela com histerese e teto de triângulos por qualidade), os torcedores do quadro de hoje (render/torcida.js)
+// cadeira na tela com histerese e teto de triângulos por qualidade; e o ORÇAMENTO de triângulos do quadro, que divide o que
+// sobra entre as pessoas e as cadeiras: cadeiras-dados.js orcamentoPerto), os torcedores do quadro de hoje (render/torcida.js)
 // viram um corpo 3D (homem ou mulher, ~300 ou ~125 triângulos) sentado NA cadeira, virado para o campo (o rumo dela). A
 // pose é a MESMA do quadro no mesmo instante (render/torcedor-pose.js ESTADO_GLSL, com os uniforms do ânimo da própria
 // torcida.js: os mesmos objetos) e o corpo dela vem da textura de animação (VAT, torcedor-dados.js): uma linha por pose,
@@ -81,15 +82,16 @@ const ATRIB = [['aPos', 4, Float32Array, false], ['aCad', 4, Float32Array, false
 /**
  * Cria os torcedores 3D. opc = {grupo (THREE.Group do estádio), grade (a das cadeiras), torcida (render/torcida.js: dados,
  * uniforms, ocultar), qualidade, hora}. O modelo é baixado na 1ª qualidade que o desenha (não na Baixa). Devolve
- * {atualizar(lista, cam), definirQualidade(q), definirHora(h), carregado, torcedores, blocos, triangulos, lods, malhas, modelo,
- * vat, dispose()}.
+ * {desejo(lista, cam, anteriores), aplicarEscolha(escolha), definirQualidade(q), definirHora(h), carregado, torcedores,
+ * blocos, triangulos, desenhados, tri, lods, malhas, modelo, vat, dispose()} — quem decide quantos é o orçamento do quadro
+ * (render/cadeiras3d.js com render/cadeiras-dados.js orcamentoPerto).
  */
 export function criarTorcedores3D(opc) {
   const { grade, torcida } = opc;
   const U = torcida.uniforms;
   let qualidade = opc.qualidade ?? 'media', hora = opc.hora ?? 'dia';
   let modelo = null, vat = null, tex = null, malhas = null, carga = null, falhou = false;
-  let ant = new Map(), chave = '', nTor = 0, nTri = 0, nBlocos = 0, lods = [0, 0], precarga = 0;
+  let chave = '', nTor = 0, nTri = 0, nBlocos = 0, lods = [0, 0], precarga = 0;
   const porBloco = new Map();
   let hash = null;
   const calca = TORCEDOR3D.calca.map(c => new THREE.Color(c));
@@ -198,14 +200,15 @@ export function criarTorcedores3D(opc) {
   }
   const quantos = f => { const d = torcida.dados, q = qIdx(); let n = 0; for (const t of f.idx) if (d.nivel[t] <= q) n++; return n; };
 
-  /** Escreve as instâncias das fileiras escolhidas e tira o quadro delas. */
-  function aplicar(esc, porChave) {
+  /** Escreve as instâncias das fileiras escolhidas (Map chave → nível) e tira o quadro delas. */
+  function aplicar(escolha) {
     const d = torcida.dados, q = qIdx(), ocultos = [];
     for (const pv of malhas) for (const m of pv) m.userData.k = 0;
     nTor = 0; nTri = 0; lods = [0, 0];
     const blocos = new Set();
-    for (const [ch, l] of esc.escolha) {
+    for (const [ch, l] of escolha) {
       const f = porChave.get(ch);
+      if (!f) continue;
       blocos.add(ch.split(':')[0]);
       for (let j = 0; j < f.idx.length; j++) {
         const t = f.idx[j];
@@ -233,6 +236,9 @@ export function criarTorcedores3D(opc) {
     nBlocos = blocos.size;
     torcida.ocultar(ocultos);
   }
+  // as fileiras já montadas (doBloco), pela chave 'bloco:fileira'
+  const porChave = new Map();
+  const comTorcida = () => (torcida.mesh ? torcida.mesh.visible !== false : true);
 
   return {
     get carregado() { return !!malhas; },
@@ -243,33 +249,50 @@ export function criarTorcedores3D(opc) {
     get malhas() { return malhas ? malhas.flat() : []; },
     get modelo() { return modelo; },
     get vat() { return vat; },
+    /** Pede o modelo (fora da Baixa), se ainda não veio: a cada quadro, também na TV (chega antes do 1º plano de perto). */
+    preparar() { if (!malhas) baixar(); },
+    /** Os triângulos de um torcedor em cada nível (o maior das variações): [nível 0, nível 1]. */
+    get tri() { return tri(); },
+    /** Os triângulos que as malhas visíveis desenham agora (o gasto do torcedor 3D neste quadro). */
+    get desenhados() { let s = 0; if (malhas) for (const pv of malhas) for (const m of pv) if (m.visible) s += m.geometry.instanceCount * m.userData.tri; return s; },
     /**
-     * Os blocos de cadeiras 3D deste quadro (escolherBlocos) e a câmera dele (cam = {x, y, z, fov, alturaPx}) — a lista vem
-     * vazia na TV (a câmera de jogo) e com as cadeiras 3D desligadas. Escolhe as fileiras do torcedor 3D (pelos px da
-     * cadeira no meio de cada uma) e escreve as instâncias só quando a escolha muda.
+     * O que o torcedor 3D QUER neste quadro: as fileiras dos blocos de cadeira 3D candidatos (`lista`, de escolherBlocos) com
+     * a câmera dele (cam = {x, y, z, fov, alturaPx}), pelos px da cadeira no meio de cada uma, no teto da qualidade e com a
+     * histerese contra `anteriores` (Map chave → nível do que está desenhado; vazio no corte) — escolherTorcedores. Devolve
+     * {fileiras: [{chave, bloco, px, n, nivel}], tri}. Sem o modelo (pede o download), na Baixa e com a torcida escondida, nada.
      */
-    atualizar(lista, cam) {
-      if (!malhas) { baixar(); return; }
-      const O = opcQ(), unidades = [], porChave = new Map();
-      if (O.teto > 0) {
+    desejo(lista, cam, anteriores = new Map()) {
+      if (!malhas) { baixar(); return { fileiras: [], tri: [0, 0] }; }
+      const O = opcQ(), unidades = [];
+      if (O.teto > 0 && comTorcida()) {
         for (const i of lista) for (const f of doBloco(i)) {
           const d = Math.hypot(f.c[0] - cam.x, f.c[1] - cam.y, f.c[2] - cam.z);
-          unidades.push({ chave: f.chave, px: pxCadeira(d, cam), n: quantos(f) });
+          unidades.push({ chave: f.chave, bloco: i, px: pxCadeira(d, cam), n: quantos(f) });
           porChave.set(f.chave, f);
         }
       }
-      const r = escolherTorcedores(unidades, ant, { ...O, tri: tri() });
-      const k = qualidade + '|' + [...r.escolha].map(([c, l]) => c + '=' + l).sort().join(',');
-      if (k !== chave) { chave = k; aplicar(r, porChave); }
-      ant = r.escolha;
+      const t = tri();
+      const r = escolherTorcedores(unidades, anteriores, { ...O, tri: t });
+      const fileiras = [];
+      for (const u of unidades) { const l = r.escolha.get(u.chave); if (l !== undefined) fileiras.push({ ...u, nivel: l }); }
+      return { fileiras, tri: t };
+    },
+    /**
+     * Desenha as fileiras escolhidas (Map chave → nível: o plano do orçamento, render/cadeiras-dados.js orcamentoPerto) —
+     * as instâncias só mudam quando a escolha muda — e a pré-carga das malhas.
+     */
+    aplicarEscolha(escolha) {
+      if (!malhas) return;
+      const k = qualidade + '|' + [...escolha].map(([c, l]) => c + '=' + l).sort().join(',');
+      if (k !== chave) { chave = k; aplicar(escolha); }
       // pré-carga: nos 4 primeiros quadros depois de chegar, uma malha por quadro vai para a GPU com 0 instâncias (o
       // programa — o mesmo nas 4 — compila no 1º e a geometria de cada uma sobe antes do 1º plano de perto: 1 chamada a
       // mais por quadro, nunca 4 de uma vez); depois, só as que têm alguém. No desenho só junto com a torcida (os testes
       // escondem a torcida inteira: torcida.mesh.visible)
-      const comTorcida = torcida.mesh ? torcida.mesh.visible !== false : true;
+      const vis = comTorcida();
       const todas = malhas.flat(), pre = precarga < todas.length ? todas[precarga] : null;
-      for (const m of todas) m.visible = comTorcida && (m === pre || m.userData.k > 0);
-      if (pre && comTorcida) precarga++;
+      for (const m of todas) m.visible = vis && (m === pre || m.userData.k > 0);
+      if (pre && vis) precarga++;
     },
     definirQualidade(q) { if (TORCEDOR3D.qual[q]) { qualidade = q; chave = ''; baixar(); } },
     definirHora(h) { hora = h; uNoite.value = h === 'noite' ? 1 : 0; },
