@@ -35,6 +35,7 @@ import { criarObjetos3d } from './objetos3d.js';
 import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, texturaTelhado, texturaCalcada, texturaGrama, texturaAsfalto, texturaCopa } from './texturas.js';
 import { texturaDetalhe, comDetalhe } from './detalhe.js';
 import { passoEmbalo, tetoCorrida, gastoCorrida } from './velocidade.js';
+import { PESSOAL, conferirSenha, entrarPessoal, sairPessoal } from './edicao.js';
 
 // ---------- constantes ----------
 const TOQUE = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -616,6 +617,24 @@ $('btnRecomecar').addEventListener('click', () => {
   location.reload();
 });
 $('btnJogar').addEventListener('click', () => { deitar(); reiniciar(); });
+// EDIÇÃO PESSOAL (js/edicao.js): o botão da tela de início abre o campo da senha (conferida pelo SHA-256; certa, o aparelho
+// lembra e a página recarrega com os visuais da série); dentro dela, o selo na entrada e na pausa e o botão "Versão normal"
+document.documentElement.classList.toggle('pessoal', PESSOAL);
+$('seloEdicao').hidden = $('seloPausa').hidden = !PESSOAL;
+$('btnEdicao').textContent = PESSOAL ? 'Versão normal' : 'Edição pessoal';
+$('btnEdicao').addEventListener('click', () => {
+  if (PESSOAL) { sairPessoal(); return; }
+  $('formSenha').hidden = false; $('btnEdicao').hidden = true; $('senhaErro').hidden = true; $('senha').value = ''; $('senha').focus();
+});
+$('btnSenhaVoltar').addEventListener('click', () => { $('formSenha').hidden = true; $('btnEdicao').hidden = false; });
+$('senha').addEventListener('keydown', (e) => e.stopPropagation());        // digitar a senha não mexe no jogo (Enter, P, M, H…)
+$('senha').addEventListener('keyup', (e) => e.stopPropagation());
+$('formSenha').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const certa = await conferirSenha($('senha').value);
+  if (certa) { entrarPessoal(); return; }
+  $('senhaErro').hidden = false; $('senha').select();
+});
 // no Android, tela cheia + trava deitada; no iPhone a tela "Gire o celular" cuida disso
 function deitar() { if (!TOQUE) return; try { const p = document.documentElement.requestFullscreen?.(); p?.then?.(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {}); } catch { /* sem tela cheia */ } }
 $('btnDeNovo').addEventListener('click', reiniciar);
@@ -1853,4 +1872,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { posfx, escolherImagem, get presetImagem() { return presetImagem; }, interacoes, corridas, vitrine, equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { PESSOAL, posfx, escolherImagem, get presetImagem() { return presetImagem; }, interacoes, corridas, vitrine, equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };

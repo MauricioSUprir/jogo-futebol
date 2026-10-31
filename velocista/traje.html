@@ -76,10 +76,11 @@ async function carregar(traje) {
   m.grupo.rotation.y = -Math.PI / 2;                     // o modelo olha para +x; aqui, para a câmera
   m.grupo.visible = false; giro.add(m.grupo); modelos[traje] = m; return m;
 }
-let traje = q.get('traje') === 'heroi' ? 'heroi' : 'novo', pose = q.get('pose') || 'parado', girando = q.get('girar') !== '0';
+// (?traje=reverso: o do Flash Reverso, para conferir; na edição pessoal, js/edicao.js, os três saem no estilo da série)
+let traje = ['heroi', 'reverso'].includes(q.get('traje')) ? q.get('traje') : 'novo', pose = q.get('pose') || 'parado', girando = q.get('girar') !== '0';
 await carregar(traje);
 document.getElementById('carregando').hidden = true;
-carregar(traje === 'novo' ? 'heroi' : 'novo');          // o outro, para comparar, carrega depois
+if (traje !== 'reverso') carregar(traje === 'novo' ? 'heroi' : 'novo');          // o outro, para comparar, carrega depois
 
 const botoes = [...document.querySelectorAll('#barra button')];
 const marcar = () => { botoes.forEach((b) => b.classList.toggle('on', b.dataset.traje === traje || b.dataset.pose === pose || (b.id === 'girar' && girando))); document.querySelector('h1 b').textContent = traje === 'novo' ? 'NOVO' : 'ATUAL'; };

@@ -245,6 +245,18 @@
   @keyframes girar { 0%,20% { transform:rotate(0); } 50%,80% { transform:rotate(-90deg); } 100% { transform:rotate(0); } }
   @media (orientation: portrait) { .toque #girar { display:flex; } }
   /* telas iniciais cabem no celular deitado (altura pequena) */
+  /* EDIÇÃO PESSOAL (js/edicao.js): o botão discreto na tela de início, o campo da senha e o selo da edição */
+  #edicao { display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:auto; }
+  .edicao-bt { cursor:pointer; padding:6px 14px; border-radius:99px; border:1px solid rgba(255,255,255,.22); background:transparent; color:var(--texto); opacity:.7; font:inherit; font-size:12px; letter-spacing:.08em; }
+  .edicao-bt:hover, .edicao-bt:focus-visible { opacity:1; border-color:var(--ouro); }
+  #formSenha { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:6px; }
+  #formSenha[hidden] { display:none; }
+  #formSenha input { width:min(220px, 56vw); padding:8px 12px; border-radius:99px; border:1px solid rgba(255,255,255,.3); background:rgba(0,0,0,.45); color:var(--texto); font:inherit; font-size:14px; }
+  #formSenha button { cursor:pointer; padding:7px 14px; border-radius:99px; border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.06); color:var(--texto); font:inherit; font-size:12.5px; }
+  #formSenha button[type=submit] { border-color:var(--ouro); color:var(--ouro); }
+  #senhaErro { width:100%; color:#ff6a6a; font-size:12px; }
+  .selo-edicao { display:inline-block; padding:3px 10px; border-radius:4px; border:1px solid var(--ouro); color:var(--ouro); font-family:'Rajdhani','Inter',system-ui,sans-serif; font-weight:700; font-size:12px; letter-spacing:.22em; background:rgba(255,210,63,.08); }
+  .selo-edicao[hidden] { display:none; }
   @media (max-height: 520px) { .tela { gap:8px; padding:12px 24px; justify-content:safe center; } h1 { font-size:clamp(30px,9vh,56px); } h1.logo img { width:min(80vw, 33vh * 2.99); margin:-4px auto -2px; } h2 { font-size:clamp(24px,7vh,40px); } .tela p { font-size:13px; line-height:1.4; } button.principal { padding:10px 34px; font-size:16px; } }
   /* a cortina das portas dos lugares (entrar e sair) */
   #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .28s ease; z-index: 40; }
@@ -315,10 +327,20 @@
   <div id="carregando">Gerando a cidade…</div>
   <div id="barraCarga"><i id="barraCargaI"></i></div>
   <button class="principal" id="btnJogar" type="button" hidden>COMEÇAR</button>
+  <div id="edicao">
+    <span class="selo-edicao" id="seloEdicao" hidden>EDIÇÃO PESSOAL</span>
+    <button class="edicao-bt" id="btnEdicao" type="button">Edição pessoal</button>
+    <form id="formSenha" hidden autocomplete="off">
+      <input id="senha" type="password" placeholder="Senha" aria-label="Senha da edição pessoal" enterkeyhint="go">
+      <button type="submit">Entrar</button><button type="button" id="btnSenhaVoltar">Cancelar</button>
+      <small id="senhaErro" role="alert" hidden>Senha errada.</small>
+    </form>
+  </div>
 </div>
 
 <div id="telaPausa" class="tela" hidden>
   <h2>PAUSADO</h2>
+  <span class="selo-edicao" id="seloPausa" hidden>EDIÇÃO PESSOAL</span>
   <p id="resumo"></p>
   <button class="principal" id="btnContinuar" type="button">CONTINUAR</button>
   <div id="imagem" class="opcoes" role="group" aria-label="Qualidade da imagem"><span>Super resolução</span><button type="button" data-p="nativa">Nativa</button><button type="button" data-p="qualidade">Qualidade</button><button type="button" data-p="equilibrado">Equilibrado</button><button type="button" data-p="desempenho">Desempenho</button></div>
