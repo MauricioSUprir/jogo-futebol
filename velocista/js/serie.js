@@ -99,7 +99,7 @@ export const MISSOES_SERIE = [
   { id: 's1e16-trato', titulo: 'O trato', texto: 'O Snart sabe quem você é. Encontre-o no beco atrás da Delegacia', ponto: 'beco', roupa: 'civil', raio: 4, checar: (c) => c.perto },
   // ---------- Episódio 17 — Trapaceiros ----------
   { id: 's1e17-axel', titulo: 'O Trapaceiro', texto: 'O Axel Walker espalha bombas pelo centro: derrube a gangue dele', meta: 1, contador: 'gangue', crime: 'gangue', crimeNome: 'O Trapaceiro', crimeTexto: 'a gangue do Axel Walker', cenaAbre: 'pov-e17' },
-  { id: 's1e17-bomba', titulo: 'Não pare', texto: 'O Trapaceiro prendeu uma bomba em você: se parar, ela explode (fique 5 s acima de 180 km/h)', tipo: 'tunel', checar: (c) => c.tunel >= 1 },
+  { id: 's1e17-bomba', semTunel: true, titulo: 'Não pare', texto: 'O Trapaceiro prendeu uma bomba em você: se parar, ela explode (fique 5 s acima de 180 km/h)', tipo: 'tunel', checar: (c) => c.tunel >= 1 },
   { id: 's1e17-vibrar', titulo: 'Através', texto: 'Vibre as moléculas e atravesse um prédio: a bomba fica para trás (segure VIBRAR correndo)', meta: 1, contador: 'atravessados', libera: ['vibrar'] },
   // ---------- Episódio 18 — Todo o Time Unido ----------
   { id: 's1e18-ray', titulo: 'O Átomo', texto: 'A Felicity e o Ray Palmer chegaram ao S.T.A.R. Labs: vá até o Cortex', alvo: 'cortex', cenaAbre: 'pov-e18', checar: (c) => c.sala === 'cortex' },
@@ -126,7 +126,12 @@ export const MISSOES_SERIE = [
   { id: 's1e23-casamento', semEquipe: ['wells'], titulo: 'O casamento', texto: 'A Caitlin e o Ronnie vão se casar no S.T.A.R. Labs: vá ao Cortex', alvo: 'cortex', reversoPreso: true, roupa: 'civil', checar: (c) => c.sala === 'cortex' },
   { id: 's1e23-pai', semEquipe: ['wells'], titulo: 'O que um pai diz', texto: 'Antes de decidir, fale com o seu pai em Iron Heights', ponto: 'presidio', aliados: { joe: 'presidio' }, roupa: 'civil', reversoPreso: true, checar: (c) => c.perto },
   { id: 's1e23-passado', semEquipe: ['wells'], titulo: 'Quinze anos', texto: 'O acelerador está pronto: corra para o passado (fique 5 s acima de 180 km/h)', tipo: 'tunel', reversoPreso: true, checar: (c) => c.tunel >= 1 },
-  { id: 's1e23-final', semEquipe: ['wells'], titulo: 'Eobard Thawne', texto: 'Você voltou e o Thawne quer ir embora: impeça-o na frente do S.T.A.R. Labs', capitulo: 's1-final' },
+  // a viagem é jogável (dono, 31/10: "eu que tenho que impedir e fazer as coisas"): você chega na noite de quinze anos atrás,
+  // corre até a casa contra o relógio, se segura para não entrar (o Flash do futuro te bloqueia) e volta pelo túnel
+  { id: 's1e23-casa', semEquipe: ['wells'], titulo: 'A noite da Nora', texto: 'Quinze anos atrás: corra até a casa dos Allen antes do raio', epoca: 'noite', ponto: 'casa', tempo: 80, reversoPreso: true, cenaAbre: 'ep23-chegada', checar: (c) => c.perto },
+  { id: 's1e23-espera', semEquipe: ['wells'], titulo: 'Não interfira', texto: 'O Flash do futuro pediu: não entre. Espere do lado de fora até ele levar o menino (8 s parado)', epoca: 'noite', ponto: 'casa', tipo: 'espera', espera: 8, raio: 22, naoEntrar: 5, reversoPreso: true, checar: (c) => c.espera >= 1 },
+  { id: 's1e23-volta', semEquipe: ['wells'], titulo: 'De volta', texto: 'Volte para o presente: corra pelo túnel (fique 5 s acima de 180 km/h)', epoca: 'noite', tipo: 'tunel', reversoPreso: true, checar: (c) => c.tunel >= 1 },
+  { id: 's1e23-final', semEquipe: ['wells'], cenaAbre: 'ep23-volta', titulo: 'Eobard Thawne', texto: 'Você voltou e o Thawne quer ir embora: impeça-o na frente do S.T.A.R. Labs', capitulo: 's1-final' },
   { id: 's1e23-buraco', semEquipe: ['wells'], titulo: 'O buraco negro', texto: 'Um buraco negro está engolindo a cidade: corra para dentro dele (fique 5 s acima de 180 km/h)', tipo: 'tunel', crise: true, libera: ['raio'], checar: (c) => c.tunel >= 1 },
 ];
 
@@ -673,10 +678,9 @@ export const CENAS_SERIE = {
     CARTAO('A baía', 'O Mardon criou uma onda gigante'),
   ],
   'depois-s1e15-tsunami': [
-    { ...F('heroi', 'Mais rápido... preciso de uma parede de vento na orla inteira...'), acao: 'tunel' },
-    F('heroi', 'A luz está mudando. O céu está andando para trás...'),
+    F('heroi', 'Eu corri mais rápido do que a onda... e a luz mudou. O céu andou para trás.'),
     CARTAO('Ontem', 'Vinte e quatro horas antes'),
-    { ...F('heroi', 'Eu voltei. Eu voltei um dia inteiro no tempo.'), acao: 'fimTunel' },
+    F('heroi', 'Eu voltei. Eu voltei um dia inteiro no tempo.'),
   ],
   // ---------- Episódio 16 ----------
   'ep-16': [
@@ -900,13 +904,20 @@ export const CENAS_SERIE = {
     F('pai', 'E você não seria o homem que é hoje. Eu tenho orgulho desse homem.'),
     F('joe', 'A decisão é sua, filho. A gente apoia o que você escolher.'),
   ],
-  'depois-s1e23-passado': [
-    { ...F('heroi', 'O acelerador está abrindo... eu vejo as noites passando...'), acao: 'tunel' },
-    CARTAO('Quinze anos atrás', 'A casa dos Allen'),
+  'ep23-chegada': [
+    CARTAO('Quinze anos atrás', 'A noite em que a Nora morreu'),
+    F('heroi', 'Eu cheguei. A cidade de quinze anos atrás, no escuro.'),
+    F('cisco', 'Barry... o sinal... corre... sss...'),
+    F('heroi', 'A casa fica a poucas quadras. Eu ainda tenho tempo.'),
+  ],
+  'depois-s1e23-casa': [
     { ...F('nora', 'Barry, fica aí em cima! Não desce!'), acao: 'raioCasa' },
     F('crianca', 'Mãe! Tem um raio dentro da casa!'),
     { ...F('heroi', 'Lá estão eles. O amarelo... e o vermelho. O vermelho sou eu.'), acao: 'raioCasa' },
+    F('heroi', 'Eu posso entrar agora. Eu posso tirar ela dali.'),
     F('heroi', 'O de vermelho está olhando para mim... e balançando a cabeça. Não.'),
+  ],
+  'depois-s1e23-espera': [
     { ...F('crianca', 'Mãe!'), acao: 'raioCasa' },
     F('heroi', 'Ele levou o menino para longe. Agora ela está sozinha.'),
     F('nora', 'Quem... quem é você?'),
@@ -917,11 +928,15 @@ export const CENAS_SERIE = {
     F('heroi', 'Eu te amo, mãe.'),
     F('nora', 'Eu te amo. Agora vai. Corre.'),
   ],
+  'ep23-volta': [
+    F('heroi', 'O túnel me trouxe de volta. O presente.'),
+    F('caitlin', 'Barry! Enquanto você estava lá, ele saiu da cela! Ele está na frente do laboratório, com a máquina dele!'),
+  ],
   'depois-s1e23-buraco': [
     F('cisco', 'O buraco negro está engolindo tudo! O Eddie sumiu dentro dele!'),
     F('iris', 'Barry, não!'),
-    F('heroi', 'Se eu correr no sentido contrário, mais rápido do que ele gira... talvez feche.'),
-    { ...F('heroi', 'Eu sou rápido o suficiente.'), acao: 'tunel' },
+    F('heroi', 'Se eu correr para dentro dele, mais rápido do que ele gira... talvez feche.'),
+    F('heroi', 'Eu sou rápido o suficiente.'),
     CARTAO('Continua', 'Temporada 2'),
   ],
   // ---------- os capítulos dos vilões ----------
@@ -1028,7 +1043,7 @@ export const CENAS_SERIE = {
   ],
   'cap-s1-final': [
     CARTAO('Eobard Thawne', 'A máquina do tempo'),
-    F('caitlin', 'Ele escapou da cela enquanto você estava no passado! Está na frente do laboratório, com a máquina dele!'),
+    F('heroi', 'Você não vai a lugar nenhum, Thawne.'),
   ],
   'encontro-s1-final': [
     F('thawne', 'Você teve a sua mãe nos braços e deixou ela ir. Fraco.'),
@@ -1070,6 +1085,12 @@ export const RADIO_SERIE = {
   'luta-s1-final': [F('thawne', 'Você nunca vai ser rápido o bastante.'), F('joe', 'Você é, filho. Mostra pra ele.')],
   'fase2-s1-final': [F('caitlin', 'Ele acelerou! Não para!')],
   'derrota-s1-final': [F('thawne', 'Previsível.'), F('iris', 'Levanta, Barry! A gente está com você!')],
+  // quando o cronômetro acaba (o passo recomeça)
+  'falhou-s1e3-ironheights': [F('caitlin', 'O Joe ainda está vivo, mas o gás está subindo! Corre de novo, Barry!')],
+  'falhou-s1e5-bomba': [F('cisco', 'A temperatura dela ainda dá! Mais rápido até a ponte!')],
+  'falhou-s1e13-nuclear': [F('caitlin', 'Ele ainda não explodiu! Corre!')],
+  'falhou-s1e20-iris': [F('caitlin', 'Ele ainda não chegou nela! Corre, Barry!')],
+  'falhou-s1e23-casa': [F('heroi', 'Não... eu ainda dá tempo. O túnel me deixou perto. Corre!')],
 };
 
 export const FALAS_SERIE = {
@@ -1125,6 +1146,8 @@ export const FALAS_SERIE = {
   's1e22-transporte': { abre: [F('caitlin', 'O caminhão saiu do caminho! Alcança ele!')] },
   's1e23-casamento': { abre: [F('cisco', 'Barry, roupa social. A Caitlin e o Ronnie vão se casar. Hoje. Aqui.')] },
   's1e23-pai': { abre: [F('joe', 'Antes de decidir, fala com o seu pai. Eu te levo.')] },
-  's1e23-passado': { abre: [F('cisco', 'O acelerador está pronto. Corre, e ele te leva para quinze anos atrás. Volta para a gente, tá?')] },
-  's1e23-buraco': { abre: [F('caitlin', 'O buraco negro está crescendo! Barry!')] },
+  's1e23-passado': { abre: [F('cisco', 'O acelerador está pronto. Corre, e o túnel abre em volta de você. Quinze anos atrás. Volta para a gente, tá?')] },
+  's1e23-espera': { abre: [F('heroi', 'Ele me pediu para não entrar. Eu fico aqui. Eu fico aqui...')] },
+  's1e23-volta': { abre: [F('heroi', 'Tchau, mãe. Agora eu volto. Corre, Barry.')] },
+  's1e23-buraco': { abre: [F('caitlin', 'O buraco negro está crescendo! Barry! Corre para dentro dele: o túnel vai abrir em volta de você!')] },
 };

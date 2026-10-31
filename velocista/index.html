@@ -247,6 +247,9 @@
   /* telas iniciais cabem no celular deitado (altura pequena) */
   /* EDIÇÃO PESSOAL (js/edicao.js): o botão discreto na tela de início, o campo da senha e o selo da edição */
   #edicao { display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:auto; }
+  /* sempre à vista, no canto de cima (dono, 31/10: no celular deitado o botão ficava fora da tela, embaixo do COMEÇAR) */
+  #telaInicio #edicao { position:fixed; top:max(10px,env(safe-area-inset-top)); right:max(12px,env(safe-area-inset-right)); align-items:flex-end; z-index:6; }
+  #telaInicio .edicao-bt { opacity:.9; background:rgba(7,8,15,.55); }
   .edicao-bt { cursor:pointer; padding:6px 14px; border-radius:99px; border:1px solid rgba(255,255,255,.22); background:transparent; color:var(--texto); opacity:.7; font:inherit; font-size:12px; letter-spacing:.08em; }
   .edicao-bt:hover, .edicao-bt:focus-visible { opacity:1; border-color:var(--ouro); }
   #formSenha { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:6px; }

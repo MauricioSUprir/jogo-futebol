@@ -471,10 +471,21 @@ void traje(vec3 p) { MASCARA = 0.0; TR_COR = vec3(1.0); TR_RUG = 0.6; TR_MET = 0
 /** Liga o traje num material MeshStandard/MeshPhysical do corpo ('corpo') ou da cabeça ('cabeca', mantém a pele do mapa). */
 export function aplicarTraje(material, parte, variante = 'heroi') {
   const ehCabeca = parte === 'cabeca', P = PALETAS[variante] || PALETAS.heroi;
+  // a VIBRAÇÃO (dono, 31/10: "melhore a vibração"): como na série, o corpo vibra rápido demais para o olho — cada quadro um
+  // deslocamento diferente (o borrão), mais forte no rosto — e um contorno elétrico na cor dos frisos (humano.js liga uVib/uSem)
+  const uVib = material.userData.uVib ??= { value: 0 }, uSem = material.userData.uSem ??= { value: 0 };
   material.onBeforeCompile = (sh) => {
+    sh.uniforms.uVib = uVib; sh.uniforms.uSem = uSem;
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vRep;\nvarying vec2 vUv0;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRep = position; vUv0 = uv;');
+      .replace('#include <common>', '#include <common>\nvarying vec3 vRep;\nvarying vec2 vUv0;\nuniform float uVib;\nuniform float uSem;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+vRep = position; vUv0 = uv;
+if (uVib > 0.001) {
+  float tCab = smoothstep(1.45, 1.62, position.y);
+  vec3 tF = position * vec3(31.0, 23.0, 37.0) + uSem * vec3(97.0, 61.0, 83.0);
+  vec3 tD = vec3(sin(tF.x) * cos(tF.y * 0.7), 0.35 * sin(tF.y + 1.3), cos(tF.z) * sin(tF.x * 0.6 + 2.1));
+  transformed += tD * uVib * (0.01 + 0.022 * tCab);
+}`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\n' + COMUM + cores(P) + (P.desenho === 'novo' ? (ehCabeca ? CABECA_NOVO : CORPO_NOVO) : P.desenho === 'civil' ? (ehCabeca ? CABECA_CIVIL : CORPO_CIVIL) : (ehCabeca ? CABECA : CORPO)))
       .replace('#include <map_fragment>', ehCabeca
@@ -487,7 +498,8 @@ export function aplicarTraje(material, parte, variante = 'heroi') {
         ? '#include <metalnessmap_fragment>\nmetalnessFactor = mix(metalnessFactor, TR_MET, MASCARA);'
         : 'float metalnessFactor = TR_MET;')
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\ntPerturba(normal, TR_ALT * 0.0016);')
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += TR_EMIS;');
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += TR_EMIS;\nif (uVib > 0.001) totalEmissiveRadiance += T_OURO * 1.3 * uVib * pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 4.0);');
+    sh.fragmentShader = 'uniform float uVib;\n' + sh.fragmentShader;
   };
   material.customProgramCacheKey = () => `traje-${parte}-${variante}`;
   material.needsUpdate = true;

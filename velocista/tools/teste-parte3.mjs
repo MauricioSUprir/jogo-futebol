@@ -24,7 +24,8 @@ ok(H.CENAS[mis.MISSOES[pos('p3-convite')].cenaAbre]?.[0]?.titulo === 'A força d
 const ordem2 = ['p3-acordo', 'p3-fendas', 'p3-saida', 'p3-incendio', 'p3-iris-perigo', 'p3-joe2', 'p3-berco', 'p3-arquivo', 'p3-assalto', 'p3-cafe', 'p3-plano', 'p3-treino', 'p3-esferas', 'p3-fuga', 'cap-reverso2',
   'p3-perseguido', 'p3-presidio', 'p3-gangue2', 'p3-vigia', 'p3-queda2', 'p3-armadilha', 'p3-despedida', 'cap-negro2', 'p3-silencio', 'p3-nora', 'p3-padrinhos', 'p3-fim'];
 ok(ordem2.every((id, k) => pos(id) >= 0 && (!k || pos(ordem2[k - 1]) === pos(id) - 1)) && (ids[pos('p3-fim') + 1] ?? 'p4-').startsWith('p4-'), 'Atos 11 e 12 na ordem, e a Parte 3 termina na praça (depois, a Parte 4): ' + ordem2.join(' → '));
-const P2n = pos('p2-fim') - pos('p2-exames') + 1;
+// (sem os passos jogáveis da viagem no tempo, na noite do passado: eles são a mesma cena, agora jogada)
+const P2n = mis.MISSOES.slice(pos('p2-exames'), pos('p2-fim') + 1).filter((m) => m.epoca !== 'noite').length;
 ok(P3.length > P2n, `a Parte 3 (${P3.length} passos) é maior que a Parte 2 (${P2n})`);
 // ---- 2. o traje: a Caitlin e o Cisco mostram na sala dos trajes, com a vitrine; ele veste no pedestal
 const B = cid.bloco(cid.LAB_CELULA[0], cid.LAB_CELULA[1]); M.registrarPontosLab(B.cx, B.cz);

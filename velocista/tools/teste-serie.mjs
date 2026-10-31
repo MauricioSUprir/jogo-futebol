@@ -120,6 +120,13 @@ ok(S.missoes.find((m) => m.id === 's1e7-refens')?.semEnergia && S.missoes.find((
 ok(S.missoes.filter((m) => epDo[m.id] >= 20 && m.id !== 's1e20-memorias' && m.id !== 's1e20-plano' && m.id !== 's1e20-armadilha').every((m) => m.semEquipe?.includes('wells')), 'depois que a armadilha o desmascara (episódio 20), o Wells some do Cortex');
 ok(S.missoes.filter((m) => m.reversoPreso).every((m) => epDo[m.id] === 23), 'o Flash Reverso só fica na cela depois de preso pelas nanites (episódio 23)');
 ok(S.missoes.find((m) => m.id === 's1e23-buraco')?.crise, 'o buraco negro: o céu da crise');
+// a viagem no tempo é jogável (dono, 31/10: "ele fica correndo e eu não faço nada, eu que tenho que impedir e fazer as coisas")
+{ const i = S.missoes.findIndex((m) => m.id === 's1e23-passado'), [t1, casa, esp, volta, fim] = S.missoes.slice(i, i + 5);
+  ok(t1.tipo === 'tunel' && casa.epoca === 'noite' && casa.tempo && casa.ponto && S.cenas[casa.cenaAbre] && esp.tipo === 'espera' && esp.naoEntrar > 0 && esp.epoca === 'noite' && volta.tipo === 'tunel' && volta.epoca === 'noite' && fim.capitulo && S.cenas[fim.cenaAbre],
+    'episódio 23 jogável: o túnel é a sua corrida, você corre até a casa no passado contra o relógio, se segura para não entrar (o Flash do futuro te bloqueia), volta pelo túnel e enfrenta o Thawne'); }
+ok(!Object.entries(S.cenas).some(([k, v]) => daSerie(k) && v.some((f) => f.acao === 'tunel')), 'nenhuma cena da temporada com o herói correndo sozinho no túnel');
+ok(S.missoes.find((m) => m.id === 's1e17-bomba')?.semTunel, 'a corrida com a bomba (episódio 17) não abre o túnel do tempo');
+ok(/uniform float uVib/.test(ler('js/traje.js')) && /tCab = smoothstep\(1\.45, 1\.62, position\.y\)/.test(ler('js/traje.js')) && /mt\.userData\.uVib\.value = vj/.test(ler('js/humano.js')), 'a vibração nova: o corpo e mais o rosto tremendo a cada quadro no shader do traje, com o contorno elétrico');
 
 // ---- 4. no jogo ----
 const jogo = ler('js/jogo.js');
@@ -170,7 +177,9 @@ if (process.argv.includes('--navegador')) {
   await quadros(3);
   ok(await pagina.evaluate(() => document.getElementById('jornal').hidden), 'e some quando a cena acaba');
   // a cena sem o Barry (episódio 15): o herói sai de cena, o Wells se levanta para o Cisco e vira o homem de amarelo; no fim, o herói volta
-  await pagina.evaluate(() => { const R = window.__rel; Object.assign(R.P, { x: R.P.x + 260, z: R.P.z + 40, vx: 0, vz: 0 }); });
+  // (um lugar aberto: a praça da Prefeitura; espera uns quadros para o herói assentar antes de anotar onde ele está)
+  await pagina.evaluate(() => { const R = window.__rel, w = R.pontoMundo('prefeitura'); Object.assign(R.P, { x: w.x, z: w.z, vx: 0, vz: 0 }); });
+  await quadros(6);
   const antes = await pagina.evaluate(() => ({ x: window.__rel.P.x, z: window.__rel.P.z }));
   await pagina.evaluate(() => window.__rel.missoes.irPara('s1e15-iris'));
   await pagina.waitForFunction(() => window.__rel.historia.cenaAtual === 'pov-cisco', null, { polling: 300 });
@@ -180,7 +189,23 @@ if (process.argv.includes('--navegador')) {
   ok(await pagina.evaluate(() => { const R = window.__rel, f = R.aliados.foco('reverso'), w = R.equipe.focos().wells(); return R.J.wellsVirou && Math.hypot(f.x - w.x, f.z - w.z) < 1.5; }), 'o Wells vira o homem de amarelo no lugar dele, diante do Cisco');
   await pagina.evaluate(() => window.__rel.historia.pular());
   await pagina.waitForFunction(() => window.__rel.J.modo === 'jogando', null, { polling: 300 });
-  ok(await pagina.evaluate((a) => { const R = window.__rel; return !R.J.heroiFora && R.heroi.visible && Math.hypot(R.P.x - a.x, R.P.z - a.z) < 1 && !R.J.wellsVirou; }, antes), 'no fim, o Barry volta exatamente para onde estava');
+  const depois = await pagina.evaluate(() => ({ x: window.__rel.P.x, z: window.__rel.P.z, fora: window.__rel.J.heroiFora, vis: window.__rel.heroi.visible, virou: window.__rel.J.wellsVirou }));
+  ok(!depois.fora && depois.vis && Math.hypot(depois.x - antes.x, depois.z - antes.z) < 1 && !depois.virou, `no fim, o Barry volta exatamente para onde estava (${Math.hypot(depois.x - antes.x, depois.z - antes.z).toFixed(2)} m)`);
+  // a viagem jogável do episódio 23: na noite do passado, perto demais da casa o Flash do futuro te empurra; parado, a espera conta
+  await pagina.evaluate(() => window.__rel.missoes.irPara('s1e23-espera'));
+  await pagina.waitForFunction(() => window.__rel.tempo.epoca === 'noite', null, { polling: 300 });
+  ok(await pagina.evaluate(() => document.body.classList.contains('passado')), 'episódio 23: a noite do passado (as cores de outra época)');
+  await pagina.evaluate(() => { const R = window.__rel, w = R.pontoMundo('casa'); Object.assign(R.P, { x: w.x + 1, z: w.z + 1, vx: 0, vz: 0 }); });
+  await quadros(3);
+  ok(await pagina.evaluate(() => { const R = window.__rel, w = R.pontoMundo('casa'); return Math.hypot(R.P.x - w.x, R.P.z - w.z) >= 4.9; }), 'chegou perto demais da porta: o Flash do futuro te empurra para fora');
+  await pagina.evaluate(() => { const R = window.__rel, w = R.pontoMundo('casa'); Object.assign(R.P, { x: w.x + 9, z: w.z + 6, vx: 0, vz: 0 }); });
+  await pagina.waitForFunction(() => window.__rel.historia.cenaAtual === 'depois-s1e23-espera', null, { polling: 300 });
+  ok(true, 'parado do lado de fora, a espera termina e vem a despedida da Nora');
+  await pagina.evaluate(() => window.__rel.historia.pular());
+  await pagina.waitForFunction(() => window.__rel.J.modo === 'jogando' && window.__rel.missoes.atual?.id === 's1e23-volta', null, { polling: 300 });
+  await pagina.evaluate(() => { window.__rel.J.tunelT = 3; });
+  await quadros(2);
+  ok(await pagina.evaluate(() => window.__rel.tempo.tunel === true), 'na volta, o túnel do tempo abre em volta de você enquanto você corre');
   ok(!erros.length, `sem erros no console (${erros.slice(0, 3).join(' | ')})`);
   await navegador.close(); await srv.fechar();
 }
