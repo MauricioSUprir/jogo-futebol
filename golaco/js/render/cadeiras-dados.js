@@ -630,7 +630,8 @@ export function criarOrcamento3D(opc = {}) {
   const O = { ...ORCAMENTO3D, ...opc };
   let alvo = O.alvo[opc.qualidade] ?? O.alvo.media;
   const vazio = () => ({ blocos: new Set(), fileiras: new Map() });
-  let atual = vazio(), camAnt = null, frame = null, pendente = 0, resto = null, esperando = true, replanejar = true;
+  // pular: medidas a ignorar (a troca de qualidade: o desenho que vem a seguir ainda é o da qualidade de antes)
+  let atual = vazio(), camAnt = null, frame = null, pendente = 0, resto = null, esperando = true, replanejar = true, pular = 0;
   let ultimo = { orcamento: 0, novo: true, semAnteriores: true, corte: true, resto: null, esperando: true }, gasto = { total: 0, cadeiras: 0, torcedores: 0 };
   return {
     inicio(info, cam) {
@@ -640,8 +641,10 @@ export function criarOrcamento3D(opc = {}) {
       // houve desenho desde o último quadro: o resto dele (o 3D de perto desse desenho é o `pendente`); o renderizador novo
       // (o contador voltou) ou o 1º quadro: sem medida
       let mediu = false;
-      if (frame !== null && info.frame > frame) { resto = Math.max(0, info.triangles - pendente); mediu = true; }
-      else if (frame === null || info.frame < frame) esperando = true;
+      if (frame !== null && info.frame > frame) {
+        if (pular > 0) pular--;
+        else { resto = Math.max(0, info.triangles - pendente); mediu = true; }
+      } else if (frame === null || info.frame < frame) esperando = true;
       frame = info.frame;
       if (esperando && mediu) { esperando = false; replanejar = true; }
       if (corte) esperando = true;
@@ -660,8 +663,12 @@ export function criarOrcamento3D(opc = {}) {
     },
     /** O que o 3D de perto vai desenhar neste quadro: tri (o total) e o detalhe {cadeiras, torcedores}. */
     gastou(tri, det = {}) { pendente = tri; gasto = { total: tri, cadeiras: det.cadeiras ?? 0, torcedores: det.torcedores ?? 0 }; },
-    definirQualidade(q) { alvo = O.alvo[q] ?? alvo; replanejar = true; },
-    /** Escolhe de novo, de uma vez (as cadeiras 3D religadas). */
+    /**
+     * A qualidade mudou: o alvo dela e o resto medido de novo (o próximo desenho ainda é o da qualidade de antes: ignorado;
+     * até a medida nova, sem 3D de perto) e a escolha inteira de uma vez.
+     */
+    definirQualidade(q) { alvo = O.alvo[q] ?? alvo; esperando = true; pular = 1; replanejar = true; },
+    /** Escolhe de novo, de uma vez (as cadeiras 3D religadas, o modelo do torcedor chegou, a torcida voltou). */
     replanejar() { replanejar = true; },
     get atual() { return atual; },
     get alvo() { return alvo; },

@@ -409,6 +409,30 @@ if (!CD) {
         `certos; ≤ ${(alvo + VAR) / 1000} mil e ≤ 130; 0; 0; = cortes; parado: 0 descidas, ≤ 3 subidas e 3D em ≥ 1990`,
         errCorte.length === 0 && A.pior <= alvo + VAR && A.pior <= 130000 && A.piorCorte === 0 && A.semDepois === 0 && A.deUmaVez === A.cortes && P.desceu === 0 && P.trocas <= 3 && P.com3d >= 1990 && P.pior <= alvo);
     }
+    // d) a troca de qualidade: o desenho logo depois dela ainda é o da qualidade de antes (ignorado) — sem 3D de perto até a
+    //    medida da nova, e então a escolha inteira de uma vez com o alvo novo; na Baixa nada; `replanejar` (o modelo do
+    //    torcedor chegou, a torcida voltou) = a escolha inteira de novo no próximo quadro, sem esperar medida
+    {
+      const O = CD.criarOrcamento3D({ qualidade: 'media' });
+      const cam = { obj: 1, x: 0, y: 5, z: 0, fx: 0, fy: 0, fz: -1, fov: 50, deJogo: false };
+      let fr = 0, gasto = 0;
+      // um quadro: o desenho anterior teve `restoAnt` + o 3D de perto dele
+      const quadro = restoAnt => { const ctx = O.inicio({ frame: fr++, triangles: restoAnt + gasto }, cam); const r = O.planejar(D, ctx); gasto = r.total; O.gastou(gasto, { cadeiras: r.triCadeiras, torcedores: r.triTorcedores }); return { ctx, r }; };
+      let q = null;
+      for (let i = 0; i < 40; i++) q = quadro(100000);
+      const media = q;
+      O.definirQualidade('alta');
+      const t1 = quadro(100000), t2 = quadro(150000), t3 = quadro(150000);
+      O.replanejar();
+      const rp = quadro(150000);
+      O.definirQualidade('baixa');
+      const b1 = quadro(150000), b2 = quadro(90000), b3 = quadro(90000);
+      reg('C8 a troca de qualidade: sem 3D de perto até a medida da qualidade nova (o desenho de antes é ignorado), então a escolha inteira com o alvo novo; Baixa nada; replanejar = de uma vez, sem esperar',
+        `Média (resto 100 mil): ${(media.r.total / 1000).toFixed(1)}k de 3D (orçamento ${(media.ctx.orcamento / 1000).toFixed(1)}k); → Alta: 1º quadro ${t1.ctx.esperando ? 'esperando' : 'NÃO esperou'} (${t1.r.total}), 2º ${t2.ctx.novo ? 'de uma vez' : 'aos poucos'} com orçamento ${(t2.ctx.orcamento / 1000).toFixed(0)}k (${(t2.r.total / 1000).toFixed(1)}k), 3º ${(t3.r.total / 1000).toFixed(1)}k; replanejar: ${rp.ctx.novo && !rp.ctx.esperando ? 'de uma vez' : 'NÃO'}; → Baixa: ${b1.r.total}/${b2.r.total}/${b3.r.total}`,
+        `≤ ${(OR.alvo.media - 100000 - M) / 1000}k; esperando (0); de uma vez com ${(OR.alvo.alta - 150000) / 1000}k (tudo); igual; de uma vez; 0/0/0`,
+        media.r.total > 0 && media.r.total <= OR.alvo.media - 100000 - M && t1.ctx.esperando && t1.r.total === 0 && t2.ctx.novo && !t2.ctx.esperando && t2.ctx.orcamento === OR.alvo.alta - 150000
+          && t2.r.fileiras.size === D.fileiras.length && t3.r.total === t2.r.total && rp.ctx.novo && !rp.ctx.esperando && rp.r.total === t2.r.total && b1.r.total === 0 && b2.r.total === 0 && b3.r.total === 0);
+    }
     reg('C8 os alvos por qualidade: Baixa 0 (sem 3D de perto), Média ≤ 128 mil (o celular: 130 mil com a variação de um quadro), Alta > Média',
       `Baixa ${OR.alvo.baixa}; Média ${OR.alvo.media}; Alta ${OR.alvo.alta}; margem ${OR.margem}; sobe ${OR.sobe}/quadro`, '0; ≤ 128 mil; > Média',
       OR.alvo.baixa === 0 && OR.alvo.media <= 128000 && OR.alvo.media + OR.margem <= 130000 && OR.alvo.alta > OR.alvo.media && OR.sobe >= 1);

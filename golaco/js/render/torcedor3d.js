@@ -251,6 +251,8 @@ export function criarTorcedores3D(opc) {
     get vat() { return vat; },
     /** Pede o modelo (fora da Baixa), se ainda não veio: a cada quadro, também na TV (chega antes do 1º plano de perto). */
     preparar() { if (!malhas) baixar(); },
+    /** Desenha alguém agora? (o modelo chegou, a qualidade tem torcedor 3D e a torcida está no desenho) */
+    get pronto() { return !!malhas && opcQ().teto > 0 && comTorcida(); },
     /** Os triângulos de um torcedor em cada nível (o maior das variações): [nível 0, nível 1]. */
     get tri() { return tri(); },
     /** Os triângulos que as malhas visíveis desenham agora (o gasto do torcedor 3D neste quadro). */

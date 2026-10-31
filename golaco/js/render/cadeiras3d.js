@@ -50,7 +50,7 @@ export function criarCadeiras3D(opc) {
   let teto = CADEIRAS3D.teto[opc.qualidade] ?? CADEIRAS3D.teto.media, qual = opc.qualidade ?? 'media', hora = 'dia';
   // o torcedor 3D (item 69, PR 2: render/torcedor3d.js) nos blocos mais perto, quando a torcida existe (ligarTorcida)
   let tor = null;
-  let chave = '', inst = 0, nBlocos = 0, ligado = true, medidor = opc.medidor ?? null;
+  let chave = '', inst = 0, nBlocos = 0, ligado = true, medidor = opc.medidor ?? null, torPronto = false;
   // o orçamento de triângulos do quadro (puro: cadeiras-dados.js) e o que ele deu neste quadro
   const orc = criarOrcamento3D({ qualidade: qual });
   const VAZIO = { blocos: [], fileiras: [], tri: [0, 0], triCadeira: G.triangulos };
@@ -113,8 +113,12 @@ export function criarCadeiras3D(opc) {
       // o orçamento deste quadro: o último desenho (o resto dele) e a câmera (o corte)
       camOrc.obj = camera; camOrc.x = cam.x; camOrc.y = cam.y; camOrc.z = cam.z; camOrc.fx = cam.fx; camOrc.fy = cam.fy; camOrc.fz = cam.fz;
       camOrc.fov = cam.fov; camOrc.deJogo = !!deJogo;
-      const ctx = orc.inicio(medidor ? medidor() : null, camOrc);
       tor?.preparar();
+      // o torcedor 3D passou a desenhar (o modelo chegou, a torcida voltou ao desenho) ou deixou: a escolha inteira de novo
+      // (as pessoas primeiro — subindo aos poucos, as cadeiras que já ocupam o orçamento não dariam lugar a elas)
+      const tp = !!tor && tor.pronto;
+      if (tp !== torPronto) { torPronto = tp; orc.replanejar(); }
+      const ctx = orc.inicio(medidor ? medidor() : null, camOrc);
       let desejo = VAZIO;
       if (ligado && !deJogo && ctx.orcamento > 0) {
         // o que cada parte QUER (os tetos da qualidade e a histerese dos px contra o que está desenhado; no corte, sem ela)
