@@ -5,7 +5,7 @@ import { criarRaios, definirCameraRaios } from './raios.js';
 import { criarPosFx } from './posfx.js';
 import { PRESETS } from './superres.js';
 import { iniciarAtualizacao } from './atualizar.js';
-import { criarMissoes, MISSOES } from './missoes.js';
+import { criarMissoes, MISSOES, progressoDaLista } from './missoes.js';
 import { criarCrimes } from './crimes.js';
 import { criarPortais } from './portais.js';
 import { criarTrafego } from './trafego.js';
@@ -611,6 +611,10 @@ function pausar() {
   if (J.modo !== 'jogando') return;
   J.modo = 'pausa'; el.pausa.hidden = false; document.exitPointerLock?.();
   armarRecomecar(false); mostrarPoderes();
+  // a entrada da edição pessoal também na pausa (dono, 31/10: no meio do jogo, "não sei como bota"): o mesmo botão e campo da
+  // senha da tela de início, que depois do COMEÇAR não aparece mais
+  if ($('edicao').parentElement !== el.pausa) el.pausa.appendChild($('edicao'));
+  $('formSenha').hidden = true; $('btnEdicao').hidden = false;
   // o que saiu da tela de jogo fica aqui: missão, pontos, esferas e hora
   const ma = missoes.atual;
   el.resumo.innerHTML = `${historia.capitulo ? `<span class="hist">${historia.capitulo}</span><br>` : ''}${ma ? `História ${missoes.indice + 1}/${missoes.total}: <b>${ma.titulo}</b>` : 'História concluída: a cidade é sua'}<br>${missoes.stats.pontos} pontos · esferas ${J.coletadas}/${J.total} · ${el.hora.textContent}`;
@@ -1237,6 +1241,17 @@ try { ESTEIRA.recorde = Math.max(ESTEIRA.recorde, Number(armazem?.getItem('thefl
 // qualquer módulo ler o que está gravado (assim nada que a página velha ainda grave antes de sair volta a valer)
 const PROGRESSO = ['theflash.missoes.v2', 'theflash.missoes.v1', 'theflash.historia.v1', 'theflash.viloes.v1', 'theflash.poderes.v1'];   // missoes.js, historia.js, viloes.js, poderes.js
 try { if (sessionStorage.getItem('theflash.recomecar')) { sessionStorage.removeItem('theflash.recomecar'); for (const k of PROGRESSO) armazem?.removeItem(k); } } catch { /* sem armazenamento */ }
+// EDIÇÃO PESSOAL: a temporada foi refeita episódio por episódio (31/10). Quem jogou uma versão anterior dela tinha passos que
+// não existem mais e a abertura (a noite do acelerador, o coma) marcada como vista: o jogo caía no 1º passo sem a abertura e
+// parecia a história antiga. Progresso de outra versão = a temporada recomeça do zero, com a abertura. Ao refazer a temporada
+// de novo, suba VERSAO_SERIE.
+const VERSAO_SERIE = '2';
+if (PESSOAL) try {
+  if (armazem && armazem.getItem('theflash.serie.versao') !== VERSAO_SERIE) {
+    if (!progressoDaLista(armazem.getItem('theflash.missoes.v2'))) for (const k of PROGRESSO) armazem.removeItem(k);
+    armazem.setItem('theflash.serie.versao', VERSAO_SERIE);
+  }
+} catch { /* sem armazenamento */ }
 const missoes = criarMissoes(armazem);
 const combate = criarCombate(cena, { mobile: MOBILE, colide: (x, z, y) => empurrar(rectsPerto, x, z, 0.35, y, 1.7), chao: (x, z, y) => chaoEm(rectsPerto, x, z, y) });
 const crimes = criarCrimes(cena, { combate });

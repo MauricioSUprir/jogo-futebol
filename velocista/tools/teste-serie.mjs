@@ -137,6 +137,20 @@ ok(/function cenaNoLab\(on\)/.test(jogo) && /J\.heroiFora/.test(jogo) && /heroi\
 ok(/m\.crimeNome/.test(jogo) && /crimeTexto/.test(jogo), 'o crime leva o nome do meta do episódio');
 ok(/if \(PESSOAL\) LUGARES\.wells = \{/.test(ler('js/equipe.js')) && fs.existsSync(path.join(RAIZ, 'assets/personagens/wells/corpo.bin')) && fs.existsSync(path.join(RAIZ, 'assets/personagens/retratos/wells.webp')), 'o Wells no Cortex (corpo e retrato próprios)');
 
+// quem jogou uma versão anterior da temporada (dono, 31/10: "o meu jogo não atualizou a nova história"): o progresso de outra
+// versão (passos que não existem mais, a abertura marcada como vista) faz a temporada recomeçar do zero, com a abertura
+{ const r = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
+    globalThis.localStorage = { getItem: (k) => (k === 'theflash.edicao.v1' ? '${HASH}' : null), setItem() {}, removeItem() {} };
+    const m = await import(${JSON.stringify(pathToFileURL(path.join(RAIZ, 'js/missoes.js')).href)});
+    const t = (o) => m.progressoDaLista(JSON.stringify(o));
+    console.log(JSON.stringify({ antiga: t({ id: 's1-mardon', ultimo: 's1-singularidade' }), antigaFim: t({ id: null, ultimo: 's1-singularidade' }), parte1: t({ id: 's1-rory', ultimo: 's1-casa' }),
+      nova: t({ id: 's1e15-iris', ultimo: 's1e23-buraco' }), novaFim: t({ id: null, ultimo: 's1e23-buraco' }), nada: m.progressoDaLista(null), quebrado: m.progressoDaLista('{x') }));
+  `], { encoding: 'utf8' }));
+  ok(!r.antiga && !r.antigaFim && !r.parte1 && r.nova && r.novaFim && !r.nada && !r.quebrado, `o progresso das versões anteriores da temporada não vale na nova; o desta vale (${JSON.stringify(r)})`);
+  ok(/const VERSAO_SERIE = '\d+'/.test(jogo) && /if \(!progressoDaLista\(armazem\.getItem\('theflash\.missoes\.v2'\)\)\) for \(const k of PROGRESSO\) armazem\.removeItem\(k\)/.test(jogo)
+    && jogo.indexOf('VERSAO_SERIE') < jogo.indexOf('const missoes = criarMissoes(armazem)') && jogo.indexOf('VERSAO_SERIE') < jogo.indexOf('criarHistoria({ armazem })'),
+    'na edição pessoal, progresso de outra versão da temporada some antes de qualquer módulo ler (a temporada recomeça com a abertura)'); }
+
 if (process.argv.includes('--navegador')) {
   const { servidor, abrir } = await import(pathToFileURL(path.join(AQUI, '../../golaco/tools/lib/navegador.mjs')).href);
   const srv = await servidor(0, RAIZ);
