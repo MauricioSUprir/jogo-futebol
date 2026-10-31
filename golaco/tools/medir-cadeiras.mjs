@@ -11,7 +11,7 @@
 // Estádios: o padrão (Estádio Golaço) e, com --tm, os da edição pro do Total Match (o Maracanã, os Aflitos e um grande
 // da planta genérica).
 //   node tools/medir-cadeiras.mjs [--raiz <pasta do jogo>] [--n 12] [--so tv,perto,prejogo] [--tm] [--prints <pasta>]
-//                                 [--json <arquivo>] [--prejogo-pc]
+//                                 [--json <arquivo>] [--prejogo-pc] [--disp celular,pc]
 import fs from 'node:fs';
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -23,6 +23,7 @@ const N = +arg('--n', 12);
 const SO = new Set(arg('--so', 'tv,perto,prejogo').split(','));
 const PRINTS = arg('--prints', null);
 const COM_TM = args.includes('--tm');
+const DISP = new Set(arg('--disp', 'celular,pc').split(','));
 const PREJOGO_PC = args.includes('--prejogo-pc');
 if (PRINTS) fs.mkdirSync(PRINTS, { recursive: true });
 const SEMENTE = 4;
@@ -55,7 +56,7 @@ const txtTor = t => (t ? ` · torcedores 3D: ${t.torcedores} (${k(t.triangulos)}
 // o orçamento do quadro (PR 2): o resto e o máximo do 3D de perto
 const txtOrc = o => (o && o.resto != null ? ` · resto ${k(o.resto)}, orçamento ${Number.isFinite(o.orcamento) ? k(o.orcamento) : '∞'}` : '');
 
-for (const [nomeDisp, disp] of [['celular', { largura: 844, altura: 390, dpr: 2, toque: true, q: 'media' }], ['pc', { largura: 1280, altura: 720, dpr: 1, toque: false, q: 'alta' }]]) {
+for (const [nomeDisp, disp] of [['celular', { largura: 844, altura: 390, dpr: 2, toque: true, q: 'media' }], ['pc', { largura: 1280, altura: 720, dpr: 1, toque: false, q: 'alta' }]].filter(([n]) => DISP.has(n))) {
   const srv = await servidor(0, raiz);
   const { navegador, contexto, pagina: pg, erros } = await abrir(disp);
   if (COM_TM) await pedidoTM(contexto);

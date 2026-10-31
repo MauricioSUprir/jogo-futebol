@@ -4141,10 +4141,14 @@ IGUAIS).
   inteira por quadro (a fileira, o nível 0 ou o bloco) e só abaixo de `orçamento − margem` (`margem` 2.000). No CORTE de
   câmera (`corteDeCamera`: outra câmera, entrou/saiu da câmera de jogo, pulou > 2,5 m, virou > 25° ou o campo de visão
   mudou > 20%) o resto de antes não vale: o quadro do corte não tem 3D de perto (o resto da câmera nova é medido nele) e o
-  seguinte faz a escolha inteira de uma vez, sem histerese (também ao religar as cadeiras 3D e ao trocar a qualidade); o
-  renderizador novo (o contador de quadros voltou) e o 1º quadro também esperam uma medida. Sem medidor (a página de teste
-  da rede), só os tetos, como antes. A TV de jogo continua sem nenhum 3D de perto. API: `__golaco.estadio.cadeiras.orcamento`
-  {alvo, resto, orcamento, gasto: {total, cadeiras, torcedores}, corte, esperando, novo, medido}.
+  seguinte faz a escolha inteira de uma vez, sem histerese; o renderizador novo (o contador de quadros voltou) e o 1º quadro
+  também esperam uma medida. A TROCA DE QUALIDADE ignora a medida seguinte (o desenho que vem logo depois ainda é o da
+  qualidade de antes) e fica sem 3D de perto até a medida da nova; religar as cadeiras 3D e o torcedor 3D que passa a
+  desenhar (o modelo chegou, a torcida voltou ao desenho) ou deixa de desenhar fazem a escolha inteira de novo no quadro
+  seguinte (`replanejar`; subindo aos poucos, as cadeiras que já ocupam o orçamento não dariam lugar às pessoas). Sem
+  medidor (quem cria o campo sem o `main.js`), só os tetos, como antes. A TV de jogo continua sem nenhum 3D de perto. API:
+  `__golaco.estadio.cadeiras.orcamento` {alvo, resto, orcamento, gasto: {total, cadeiras, torcedores}, corte, esperando,
+  novo, medido}; `torcedor3d.pronto` (desenha alguém agora).
 - **O quadro de quem está em 3D sai do desenho**: `torcida.js` ganhou o atributo por instância `aOculto` (1 byte; o vertex
   shader joga o quadro para fora do recorte) e `torcida.ocultar(indices)` (só as malhas que mudaram sobem de novo), `dados` e
   `nOcultos`. Com a torcida escondida (`mostrarTorcida(false)`), o 3D some junto.
@@ -4155,7 +4159,8 @@ IGUAIS).
 - API: `__golaco.estadio.cadeiras.torcedores` {carregado, torcedores, blocos, triangulos, lods: [nível 0, nível 1], ocultos},
   `__golaco.estadio.torcedor3d` (malhas, modelo, vat), `__golaco.estadio.torcidaObj`.
 - Testes: `teste-cadeiras` C8 (o orçamento: do nada, a histerese, o corte e 6000 quadros com o resto andando ± 2,5 mil por
-  quadro e pulando no corte — o total ≤ 130 mil na Média; parado, nada pisca), `teste-cenas-tela` F8/C8/F9 (o pior plano no
+  quadro e pulando no corte — o total ≤ 130 mil na Média; parado, nada pisca; a troca de qualidade e o replanejar),
+  `teste-cenas-tela` F8/C8/F9 (o pior plano no
   celular ≤ 130 mil, agora com as cadeiras e os torcedores 3D de cada plano no medido), `teste-torcida` G (o modelo, sentado
   na cadeira, de pé na passagem, o rumo, a escala, as 8 poses, o cachecol, a pose
   do quadro com a ola e o bandeirão, a escolha), `teste-estadio` 9 (GPU = JS: o estado do torcedor e a VAT nas 8 poses) e 14b
