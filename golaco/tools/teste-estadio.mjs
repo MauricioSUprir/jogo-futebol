@@ -17,7 +17,9 @@
 //   8) "GOL!" no celular (568×320, 667×375, 844×390) não encosta no analógico, nos botões, no placar nem no
 //      minimapa (contraprova M2);
 //   9) as contas da GPU são as mesmas do JS: pose da torcida e deslocamento da rede avaliados no shader de verdade
-//      (WebGL2, float) × torcida-dados.js/rede-onda.js (contraprova M9; a rede véu de noiva: o vetor redeDesloc(vec3));
+//      (WebGL2, float) × torcida-dados.js/rede-onda.js (contraprova M9; a rede véu de noiva: o vetor redeDesloc(vec3)); o
+//      estado de cada torcedor (a pose com a ola e o bandeirão: torcedor-pose.js, o mesmo nos dois shaders) e o vértice do
+//      torcedor 3D lido da textura de animação nas 8 poses (torcedor-dados.js; item 69, PR 2);
 //  10) a torcida DURANTE O JOGO no celular deitado (844×390, Média; dono, 10/10): 20 instantes de uma partida IA×IA,
 //      cada um desenhado com e sem a torcida — ela ocupa ≥ 1% da tela em ≥ 90% deles, e o jogador controlado não
 //      fica menor na tela (≥ 33 px de altura: a câmera antiga dava 36 px; ≤ 10% a menos);
@@ -29,7 +31,8 @@
 //      sinalizadores); overdraw ≤ 0,5 tela;
 //  13) tiro de meta (Regra 16) com adversários na área: saem na montagem e a câmera CORTA (evento corteBolaParada);
 //  14) cadeiras e degraus (item 69, PR 1; celular e PC): o degrau em escada nas arquibancadas, as cadeiras 3D de perto
-//      nunca na câmera de TV (20 instantes), perto da arquibancada de lá ≥ 1 bloco, +1 chamada e 18 triângulos por cadeira.
+//      nunca na câmera de TV (20 instantes), perto da arquibancada de lá ≥ 1 bloco, +1 chamada e 18 triângulos por cadeira;
+//      o torcedor 3D (PR 2) nunca na TV e, perto, sentado nas cadeiras 3D, fora do quadro e no teto de triângulos.
 // As páginas abrem com ?replay=0&comemoracao=0: o replay automático (testado em tools/teste-replay.mjs) e a comemoração
 // do gol (tools/teste-comemoracao-tela.mjs) segurariam a simulação ~10 s e ~7,5 s depois do gol, e os itens 4 e 10 andam
 // o relógio atravessando a saída — o que eles medem é a câmera do gol do jogo (com a comemoração ligada ela é o plano da
@@ -477,6 +480,106 @@ void main() { vec4 a = texelFetch(uEntrada, ivec2(int(gl_FragCoord.x), 0), 0);
   });
   meta('GPU = JS: pose da torcida (4096 torcedores sorteados)', gpu.erro ?? `${gpu.poseDif} poses diferentes; pulo difere até ${(gpu.puloDif * 1000).toFixed(2)} mm`, '≤ 0,2% (limiar no float) e ≤ 1 mm', !gpu.erro && gpu.poseDif <= 0.002 * gpu.N && gpu.puloDif <= 0.001);
   meta('GPU = JS: deslocamento da rede (4096 pontos do véu e das laterais, 4 batidas; vetor × fixação)', gpu.erro ?? `difere até ${(gpu.redeDif * 1000).toFixed(3)} mm (bolsa até ${f2(gpu.maxD)} m)`, '≤ 0,1 mm', !gpu.erro && gpu.redeDif <= 1e-4 && gpu.maxD > 0.1);
+  // 9b) o TORCEDOR 3D (item 69, PR 2): (a) o estado de cada torcedor (render/torcedor-pose.js ESTADO_GLSL — a pose da regra,
+  //     a ola e o bandeirão; o MESMO código nos dois shaders) na GPU = estadoTorcedor() no JS, com a ola passando e os dois
+  //     bandeirões abertos; (b) o vértice da VAT nas 8 poses (render/torcedor-dados.js TORCEDOR_GLSL: a pose lida da
+  //     textura, a escala, o pulo, o balanço, a cadeira e o rumo) na GPU = torcedorLocal/torcedorMundo no JS
+  const gpu3 = await pg.evaluate(async () => {
+    const TP = await import('./js/render/torcedor-pose.js');
+    const TQ = await import('./js/render/torcedor-dados.js');
+    const BD = await import('./js/render/bandeiras-dados.js');
+    if (!TP.ESTADO_GLSL || !TQ.TORCEDOR_GLSL) return { erro: 'sem ESTADO_GLSL/TORCEDOR_GLSL' };
+    const buf = await (await fetch('./' + TQ.TORCEDOR3D.arquivo)).arrayBuffer();
+    const mod = TQ.lerModelo(buf), vat = TQ.vatDados(mod);
+    const cv = document.createElement('canvas');
+    const gl = cv.getContext('webgl2');
+    if (!gl || !gl.getExtension('EXT_color_buffer_float')) return { erro: 'sem WebGL2 com textura float' };
+    const N = 4096;
+    const prog = frag => {
+      const sh = (tipo, src) => { const x = gl.createShader(tipo); gl.shaderSource(x, src); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; };
+      const p = gl.createProgram();
+      gl.attachShader(p, sh(gl.VERTEX_SHADER, '#version 300 es\nvoid main(){ vec2 v = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(v * 2.0 - 1.0, 0.0, 1.0); }'));
+      gl.attachShader(p, sh(gl.FRAGMENT_SHADER, frag));
+      gl.linkProgram(p);
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+      return p;
+    };
+    const tex = (dados, w, h) => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, w, h, 0, gl.RGBA, gl.FLOAT, dados); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); return t; };
+    const alvo = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, alvo); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, N, 1, 0, gl.RGBA, gl.FLOAT, null);
+    const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, alvo, 0);
+    const rodar = (p, texs) => {
+      gl.useProgram(p); gl.viewport(0, 0, N, 1);
+      texs.forEach(([nome, t], k) => { gl.activeTexture(gl.TEXTURE0 + k); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(gl.getUniformLocation(p, nome), k); });
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      const out = new Float32Array(4 * N); gl.readPixels(0, 0, N, 1, gl.RGBA, gl.FLOAT, out); return out;
+    };
+    let semente = 777;
+    const rnd = () => { semente = (semente * 1664525 + 1013904223) >>> 0; return semente / 4294967296; };
+    // (a) o estado: ânimo dos 2 times, a ola no meio da crista, os 2 bandeirões abertos; lugares em volta deles e da volta
+    const B = BD.bandeiroes();
+    const U = { tempo: 37.3, tempoOrg: 12.9, animada: 1, ola: { theta: 1.1, largura: 0.18, forca: 0.9, ativa: true }, bandeiroes: B, abre: [0.8, 1] };
+    const niveis = [{ excita: 0.3, tensao: 0.4, lamento: 0.1, palmas: 0.5 }, { excita: 0.05, tensao: 0.7, lamento: 0.45, palmas: 0.2 }];
+    const ent = new Float32Array(4 * N * 2);
+    for (let i = 0; i < N; i++) {
+      let p;
+      const r = rnd();
+      if (r < 0.35) { const b = B[i % 2], u = rnd() * 1.2 - 0.1, v = rnd() * 1.2 - 0.1; p = [0, 1, 2].map(k => b.A[k] + b.U[k] * u + b.V[k] * v - b.N[k] * BD.BANDEIRAS.bandeirao.altura); }
+      else { const th = (r < 0.7 ? 1.1 : rnd() * 6.283) + (rnd() - 0.5) * 0.5, R = 50 + rnd() * 25; p = [R * Math.cos(th), 1.4 + rnd() * 18, R * Math.sin(th)]; }
+      ent.set([p[0], p[1], p[2], Math.floor(rnd() * 256) / 255], 4 * i);
+      ent.set([rnd() < 0.5 ? 0 : 1, Math.floor(rnd() * 4) * 85 / 255, rnd() < 0.2 ? 1 : 0, Math.floor(rnd() * 256) / 255], 4 * (N + i));
+    }
+    const pE = prog(`#version 300 es
+precision highp float; precision highp sampler2D;
+uniform sampler2D uEntrada; out vec4 cor;
+${TP.ESTADO_GLSL}
+void main() { int i = int(gl_FragCoord.x); vec4 a = texelFetch(uEntrada, ivec2(i, 0), 0), b = texelFetch(uEntrada, ivec2(i, 1), 0);
+  cor = vec4(torcedorEstado(a.xyz, a.w, b), 1.0); }`);
+    gl.useProgram(pE);
+    const u1 = (n, v) => gl.uniform1f(gl.getUniformLocation(pE, n), v), u2 = (n, a, b) => gl.uniform2f(gl.getUniformLocation(pE, n), a, b);
+    u1('uTempo', U.tempo); u1('uTempoOrg', U.tempoOrg); u1('uAnimada', 1);
+    u2('uExcita', niveis[0].excita, niveis[1].excita); u2('uTensao', niveis[0].tensao, niveis[1].tensao);
+    u2('uLamento', niveis[0].lamento, niveis[1].lamento); u2('uPalmas', niveis[0].palmas, niveis[1].palmas);
+    gl.uniform4f(gl.getUniformLocation(pE, 'uOla'), U.ola.theta, U.ola.largura, U.ola.forca, 1);
+    gl.uniform3fv(gl.getUniformLocation(pE, 'uBandA'), B.flatMap(b => b.A)); gl.uniform3fv(gl.getUniformLocation(pE, 'uBandU'), B.flatMap(b => b.U));
+    gl.uniform3fv(gl.getUniformLocation(pE, 'uBandV'), B.flatMap(b => b.V)); u2('uAbre', U.abre[0], U.abre[1]);
+    const oE = rodar(pE, [['uEntrada', tex(ent, N, 2)]]);
+    let poseDif = 0, puloDif = 0, balDif = 0, sob = 0, ola = 0;
+    for (let i = 0; i < N; i++) {
+      const a = ent.subarray(4 * i, 4 * i + 4), b = ent.subarray(4 * (N + i), 4 * (N + i) + 4);
+      const r = TP.estadoTorcedor(niveis, [a[0], a[1], a[2]], a[3], [b[0], b[1], b[2], b[3]], U);
+      if (r.pose !== Math.round(oE[4 * i])) poseDif++;
+      puloDif = Math.max(puloDif, Math.abs(r.pulo - oE[4 * i + 1])); balDif = Math.max(balDif, Math.abs(r.bal - oE[4 * i + 2]));
+      if (B.some((bb, k) => BD.sobBandeirao([a[0], a[1], a[2]], bb, U.abre[k], BD.BANDEIRAS.sob.torcedor))) sob++;
+      else if (r.pulo > 0.1 && r.pose === 4) ola++;
+    }
+    // (b) a VAT: 4 malhas (homem/mulher × 2 níveis), cada uma com N/4 vértices sorteados nas 8 poses
+    const tVat = tex(vat.dados, vat.largura, vat.altura);
+    let vatDif = 0, n8 = new Set();
+    const pV = prog(`#version 300 es
+precision highp float; precision highp sampler2D; precision highp int;
+uniform sampler2D uEntrada; out vec4 cor;
+${TQ.TORCEDOR_GLSL}
+void main() { int i = int(gl_FragCoord.x); vec4 a = texelFetch(uEntrada, ivec2(i, 0), 0), b = texelFetch(uEntrada, ivec2(i, 1), 0), c = texelFetch(uEntrada, ivec2(i, 2), 0);
+  vec3 nl; vec3 q = torcedorLocal(int(a.x), a.y, a.z, a.w, b.x, nl);
+  cor = vec4(torcedorMundo(q, c, b.y), 1.0); }`);
+    for (let v = 0; v < mod.nVar; v++) for (let l = 0; l < mod.nLod; l++) {
+      const m = mod.malhas[v][l], e = new Float32Array(4 * N * 3), js = [];
+      for (let i = 0; i < N; i++) {
+        const vi = Math.floor(rnd() * m.nV), pose = i % 8, esc = 0.9 + rnd() * 0.2, pulo = rnd() * 0.3, bal = (rnd() - 0.5) * 0.07;
+        const rumo = rnd() * 6.283, cad = [(rnd() - 0.5) * 200, (rnd() - 0.5) * 150, Math.cos(rumo), Math.sin(rumo)], y = rnd() * 20;
+        e.set([vi, pose, esc, pulo], 4 * i); e.set([bal, y, 0, 0], 4 * (N + i)); e.set(cad, 4 * (2 * N + i));
+        js.push(TQ.torcedorMundo(TQ.torcedorLocal(vat, vat.linha(v, l), vi, pose, esc, pulo, bal).p, cad, y));
+        n8.add(pose);
+      }
+      gl.useProgram(pV); gl.uniform1f(gl.getUniformLocation(pV, 'uLinha'), vat.linha(v, l));
+      const o = rodar(pV, [['uEntrada', tex(e, N, 3)], ['uVat', tVat]]);
+      for (let i = 0; i < N; i++) vatDif = Math.max(vatDif, Math.hypot(o[4 * i] - js[i][0], o[4 * i + 1] - js[i][1], o[4 * i + 2] - js[i][2]));
+    }
+    return { N, poseDif, puloDif, balDif, sob, ola, vatDif, poses: n8.size, malhas: mod.nVar * mod.nLod };
+  });
+  meta('GPU = JS: estado do torcedor (quadro e 3D: a pose, a ola e o bandeirão; 4096 sorteados)', gpu3.erro ?? `${gpu3.poseDif} poses diferentes; pulo até ${(gpu3.puloDif * 1000).toFixed(2)} mm, balanço até ${(gpu3.balDif * 1000).toFixed(2)} mm (${gpu3.sob} debaixo do bandeirão, ${gpu3.ola} levantados pela ola)`,
+    '≤ 0,2%, ≤ 1 mm; ≥ 400 debaixo e ≥ 100 na ola', !gpu3.erro && gpu3.poseDif <= 0.002 * gpu3.N && gpu3.puloDif <= 0.001 && gpu3.balDif <= 0.001 && gpu3.sob >= 400 && gpu3.ola >= 100);
+  meta('GPU = JS: torcedor 3D — a textura de animação (VAT) nas 8 poses (4 malhas × 4096 vértices; escala, pulo, balanço, cadeira e rumo)', gpu3.erro ?? `difere até ${(gpu3.vatDif * 1000).toFixed(3)} mm (${gpu3.poses} poses, ${gpu3.malhas} malhas)`, '≤ 0,1 mm, 8 poses, 4 malhas', !gpu3.erro && gpu3.vatDif <= 1e-4 && gpu3.poses === 8 && gpu3.malhas === 4);
   // 12) FESTA (pedido de 11/10: "bandeirões, sinalizadores"): (a) as faixas/bandeiras/bandeirões e os sinalizadores
   //     custam no máximo 2 chamadas de desenho a mais no jogo (20 instantes, inclusive a saída com sinalizadores); (b) a
   //     onda da bandeira na GPU = no JS (4096 pontos); (c) no gol da casa, a organizada atrás do gol muda na câmera do
@@ -697,10 +800,13 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
     try {
       await pagina.goto(`${srv.url}?q=${q}&demo=1&semente=4&hora=dia&replay=0&comemoracao=0`, { waitUntil: 'load' });
       await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
+      // o modelo do torcedor 3D (PR 2) chega depois do módulo das cadeiras (pedido no 1º quadro desenhado)
+      await pagina.evaluate(() => window.__golaco.desenhar());
+      await pagina.waitForFunction(() => window.__golaco.estadio.cadeiras?.torcedores?.carregado, null, { timeout: 60000 }).catch(() => {});
       const r = await pagina.evaluate(() => {
         const g = window.__golaco;
         g.relogio.usarManual(true);
-        let viu = 0, n = 0, cad = 0;
+        let viu = 0, n = 0, cad = 0, tor = 0;
         for (let k = 0; k < 20; k++) {
           for (let i = 0; i < 90; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
           g.desenhar();
@@ -708,9 +814,11 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
           if (t.ladoDeCa || t.grupos.some(x => x.nome.startsWith('torcida-ca') && x.visivel)) viu++;
           // 14) as cadeiras 3D de perto nunca na câmera de TV
           cad = Math.max(cad, g.estadio.cadeiras?.instancias ?? 0);
+          // 14b) nem o torcedor 3D (PR 2)
+          tor = Math.max(tor, g.estadio.cadeiras?.torcedores?.torcedores ?? 0, g.estadio.cadeiras?.torcedores?.ocultos ?? 0);
           n++;
         }
-        return { viu, n, cad };
+        return { viu, n, cad, tor, carregado: !!g.estadio.cadeiras?.torcedores?.carregado };
       });
       // do outro lado do campo, olhando para o lado de cá (o túnel no meio): o mesmo quadro com × sem a torcida, lido
       // direto do canvas (a 1/4; a faixa de cima, 5–60% da altura)
@@ -779,6 +887,26 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
         `${cad.arq.join(', ')}; TV: máx ${r.cad} cadeiras em 20 instantes; perto: ${cad.com.blocos} blocos, ${cad.com.instancias} cadeiras (teto ${cad.com.teto}), +${cad.com.c - cad.sem.c} chamada, +${cad.com.t - cad.sem.t} triângulos`,
         'todas em escada; 0; ≥ 1, +1, 18/cadeira, ≤ teto',
         cad.arq.length === 3 && cad.arq.every(a => a.endsWith('escada')) && r.cad === 0 && cad.com.carregado && cad.com.blocos >= 1 && cad.com.instancias > 0 && cad.com.instancias <= cad.com.teto && cad.com.c - cad.sem.c === 1 && cad.com.t - cad.sem.t === 18 * cad.com.instancias && cad.sem.inst === 0);
+      // 14b) o TORCEDOR 3D (item 69, PR 2): na TV nenhum (os 20 instantes de cima); perto da arquibancada de lá, com a
+      //      torcida: ≥ 1 torcedor 3D sentado nas cadeiras 3D, cada um FORA do quadro (o mesmo número saiu da torcida), no
+      //      teto de triângulos da qualidade, e o mesmo quadro sem as cadeiras 3D tira o torcedor 3D junto (≤ 4 chamadas a
+      //      mais: uma por malha — homem/mulher × 2 níveis — e os triângulos dele)
+      const tor = await pagina.evaluate(async () => {
+        const g = window.__golaco;
+        const { TORCEDOR3D } = await import('./js/render/torcedor-dados.js');
+        g.cameraLivre({ de: [8, 3.2, -41.5], para: [9, 4.6, -47], fov: 50 });
+        g.desenhar(); g.desenhar();
+        const com = { ...g.estadio.cadeiras.torcedores, cadeiras: g.estadio.cadeiras.instancias, c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos, malhas: (g.estadio.torcedor3d?.malhas ?? []).filter(m => m.visible).length };
+        g.estadio.mostrarCadeiras(false); g.desenhar(); g.desenhar();
+        const sem = { c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos, tor: g.estadio.cadeiras.torcedores.torcedores, ocultos: g.estadio.cadeiras.torcedores.ocultos };
+        g.estadio.mostrarCadeiras(true); g.cameraLivre(null); g.desenhar();
+        return { com, sem, teto: TORCEDOR3D.qual[g.estadio.torcida.qualidade].teto };
+      });
+      meta(`Torcedor 3D (${nome}): nunca na TV; perto, sentado nas cadeiras 3D, fora do quadro, no teto de triângulos`,
+        `TV: máx ${r.tor} em 20 instantes (modelo ${r.carregado ? 'carregado' : 'NÃO carregado'}); perto: ${tor.com.torcedores} torcedores (níveis ${tor.com.lods?.join('/')}), ${tor.com.ocultos} fora do quadro, ${tor.com.triangulos} triângulos (teto ${tor.teto}); sem as cadeiras 3D: ${tor.sem.tor} e ${tor.sem.ocultos} fora, −${tor.com.c - tor.sem.c} chamadas, −${tor.com.t - tor.sem.t} triângulos`,
+        '0 na TV; perto ≥ 1, todos fora do quadro, ≤ teto; sem cadeiras 0 e 0, −(1 + malhas) chamadas e −(18/cadeira + os dele)',
+        r.carregado && r.tor === 0 && tor.com.torcedores >= 1 && tor.com.ocultos === tor.com.torcedores && tor.com.triangulos <= tor.teto && tor.sem.tor === 0 && tor.sem.ocultos === 0
+          && tor.com.c - tor.sem.c === 1 + tor.com.malhas && tor.com.malhas >= 1 && tor.com.malhas <= 4 && tor.com.t - tor.sem.t === 18 * tor.com.cadeiras + tor.com.triangulos);
     } finally { await nav.close(); }
   } catch (e) {
     meta(`Execução (lado de cá, ${nome})`, e.message, 'sem exceção', false);

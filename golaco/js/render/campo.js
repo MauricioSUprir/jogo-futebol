@@ -787,7 +787,7 @@ export function criarCampo(opc) {
   const ladoDeCa = arq.userData.ladoDeCa;
   const _frustum = new THREE.Frustum(), _mat = new THREE.Matrix4();
   // cadeiras 3D de perto (item 69; render/cadeiras3d.js sob demanda: ligarCadeiras quando o módulo chega)
-  let cad3d = null, alturaTela = 720, qualCad = opc.qualidade ?? 'media', horaCad = 'dia';
+  let cad3d = null, alturaTela = 720, qualCad = opc.qualidade ?? 'media', horaCad = 'dia', torcidaCad = null;
   // pré-carga (como a torcida): no 1º quadro, se a câmera não a vê, a arquibancada do lado de cá vai para a GPU com
   // 0 triângulos (geometria e programa prontos) — o 1º corte de câmera que a mostra não engasga
   let precarga = true, restaurar = false;
@@ -836,14 +836,19 @@ export function criarCampo(opc) {
       if (cad3d || !arq.userData.cadeiras) return;
       cad3d = md.criarCadeiras3D({ grupo, info: arq.userData.cadeiras, uniforms: UNIFORMS_PERTO, qualidade: qualCad });
       cad3d.definirHora(horaCad);
+      if (torcidaCad) cad3d.ligarTorcida(torcidaCad);
     },
+    /** A torcida do estádio (render/torcida.js) ficou pronta: o torcedor 3D de perto senta nas cadeiras 3D (item 69, PR 2). */
+    ligarTorcida(t) { torcidaCad = t; cad3d?.ligarTorcida(t); },
     /** Altura da tela em px CSS (a escolha dos blocos de perto é pelos px da cadeira). */
     definirAlturaTela(px) { if (px > 0) alturaTela = px; },
     definirQualidade(q) { qualCad = q; cad3d?.definirQualidade(q); },
     /** Mostra/esconde as cadeiras 3D (testes; escondidas, a cadeira pintada volta em todo bloco). */
     mostrarCadeiras(v) { cad3d?.ligar(v); },
     /** As cadeiras 3D neste quadro (testes): {carregado, blocos, instancias, teto} e a grade do estádio. */
-    get cadeiras() { return { carregado: !!cad3d, blocos: cad3d?.blocos ?? 0, instancias: cad3d?.instancias ?? 0, teto: cad3d?.teto ?? null, mascara: UNIFORMS_PERTO.uPertoN.value }; },
+    get cadeiras() { return { carregado: !!cad3d, blocos: cad3d?.blocos ?? 0, instancias: cad3d?.instancias ?? 0, teto: cad3d?.teto ?? null, mascara: UNIFORMS_PERTO.uPertoN.value, torcedores: cad3d?.torcedores ?? null }; },
+    /** O torcedor 3D (testes: as malhas, o modelo e a VAT de render/torcedor3d.js), ou null. */
+    get torcedor3d() { return cad3d?.torcedor3d ?? null; },
     get grade() { return arq.userData.cadeiras?.grade ?? null; },
     /** As malhas das arquibancadas agora (testes): {nome, visivel, triangulos, emDegrau (a malha em escada: DEGRAU_LOD)}. */
     get arquibancadas() {

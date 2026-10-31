@@ -5,9 +5,12 @@
 // na tela, com histerese e teto de instâncias/blocos (cadeiras-dados.js escolherBlocos, pura). Dentro de um bloco em 3D o
 // material das arquibancadas troca a cadeira pintada pelo concreto do degrau (render/campo.js UNIFORMS_PERTO): a 3D fica
 // sozinha em cima do piso. Uma malha instanciada (1 chamada de desenho, só quando algum bloco está perto); cada cadeira
-// com a cor da sua célula da textura (a mesma conta: pintorGolaco / pintorAnel). Só desenho: o hash não muda.
+// com a cor da sua célula da textura (a mesma conta: pintorGolaco / pintorAnel). PR 2: nos blocos mais perto o torcedor do
+// quadro vira o torcedor 3D sentado na cadeira (render/torcedor3d.js, criado aqui quando a torcida liga: ligarTorcida).
+// Só desenho: o hash não muda.
 import * as THREE from 'three';
 import { geometriaCadeira, escolherBlocos, matrizCadeira, escalaLargura, CADEIRAS3D } from './cadeiras-dados.js';
+import { criarTorcedores3D } from './torcedor3d.js';
 
 const _v = new THREE.Vector3();
 const _cor = new THREE.Color();
@@ -15,7 +18,7 @@ const _cor = new THREE.Color();
 /**
  * Cria as cadeiras 3D. opc = {grupo (THREE.Group do estádio), info: {grade, cor(assento) → '#rrggbb', concreto: {piso,
  * espelho}} (a do estádio: render/campo.js), uniforms (campo.js UNIFORMS_PERTO), qualidade} (sem a luz falsa dos sinalizadores: o material dela tem a máscara, que apagaria a própria cadeira).
- * Devolve {atualizar(camera, alturaPx, semCa, deJogo), definirHora(h), definirQualidade(q), ligar(v), blocos, instancias,
+ * Devolve {atualizar(camera, alturaPx, semCa, deJogo), definirHora(h), definirQualidade(q), ligar(v), ligarTorcida(t), torcedores, blocos, instancias,
  * teto, mesh, dispose()}.
  */
 export function criarCadeiras3D(opc) {
@@ -40,7 +43,9 @@ export function criarCadeiras3D(opc) {
   opc.grupo.add(mesh);
   U.uConcPiso.value.set(info.concreto?.piso ?? 0x43494c);
   U.uConcEspelho.value.set(info.concreto?.espelho ?? 0x3b4043);
-  let teto = CADEIRAS3D.teto[opc.qualidade] ?? CADEIRAS3D.teto.media;
+  let teto = CADEIRAS3D.teto[opc.qualidade] ?? CADEIRAS3D.teto.media, qual = opc.qualidade ?? 'media', hora = 'dia';
+  // o torcedor 3D (item 69, PR 2: render/torcedor3d.js) nos blocos mais perto, quando a torcida existe (ligarTorcida)
+  let tor = null;
   let ant = new Set(), chave = '', inst = 0, nBlocos = 0, ligado = true;
   const cam = { x: 0, y: 0, z: 0, fx: 0, fy: 0, fz: -1, fov: 50, aspecto: 1, alturaPx: 720 };
   // pré-carga: no 1º quadro depois de chegar a malha vai para a GPU com 0 instâncias (o programa compila antes do 1º
@@ -90,6 +95,7 @@ export function criarCadeiras3D(opc) {
      */
     atualizar(camera, alturaPx, semCa = false, deJogo = false) {
       if (!camera || !camera.isPerspectiveCamera) return;
+      let lista = [];
       if (!ligado || deJogo) {
         if (chave !== '-') { chave = '-'; aplicar([]); ant = new Set(); }
       } else {
@@ -102,14 +108,26 @@ export function criarCadeiras3D(opc) {
         const k = r.lista.join(',');
         if (k !== chave) { chave = k; aplicar(r.lista); }
         ant = new Set(r.lista);
+        lista = r.lista;
       }
+      // os torcedores 3D: só nos blocos de cadeira 3D deste quadro (na TV, nenhum)
+      tor?.atualizar(lista, cam);
       // pré-carga: só o 1º quadro com 0 instâncias (o programa compila); depois, desenhada só com alguma cadeira
       if (precarga) { precarga = false; mesh.visible = true; } else mesh.visible = mesh.count > 0;
     },
-    definirHora(h) { mat.color.setScalar(h === 'noite' ? 0.5 : 1); },
+    definirHora(h) { hora = h; mat.color.setScalar(h === 'noite' ? 0.5 : 1); tor?.definirHora(h); },
+    /** A torcida do estádio (render/torcida.js) existe: liga o torcedor 3D nos blocos de perto (o modelo baixa fora da Baixa). */
+    ligarTorcida(torcida) {
+      if (tor || !torcida || !torcida.dados) return;
+      tor = criarTorcedores3D({ grupo: opc.grupo, grade, torcida, qualidade: qual, hora });
+    },
+    /** O torcedor 3D agora (testes e medidas): {carregado, torcedores, blocos, triangulos, lods: [nível 0, nível 1]}. */
+    get torcedores() { return tor ? { carregado: tor.carregado, torcedores: tor.torcedores, blocos: tor.blocos, triangulos: tor.triangulos, lods: tor.lods } : null; },
+    /** O torcedor 3D (testes: as malhas, o modelo e a VAT). */
+    get torcedor3d() { return tor; },
     /** Liga/desliga (testes: o mesmo quadro com e sem as cadeiras 3D; desligadas, a pintura volta em todo bloco). */
     ligar(v) { ligado = !!v; if (ligado) chave = ''; },
-    definirQualidade(q) { teto = CADEIRAS3D.teto[q] ?? teto; chave = ''; },
-    dispose() { opc.grupo.remove(mesh); geo.dispose(); mat.dispose(); mesh.dispose?.(); U.uPertoN.value = 0; },
+    definirQualidade(q) { teto = CADEIRAS3D.teto[q] ?? teto; qual = q; chave = ''; tor?.definirQualidade(q); },
+    dispose() { tor?.dispose(); opc.grupo.remove(mesh); geo.dispose(); mat.dispose(); mesh.dispose?.(); U.uPertoN.value = 0; },
   };
 }

@@ -32,8 +32,11 @@ const FOLGA_MIN = 120 * 1024;
 const SOB_DEMANDA_ARQ = ['js/render/replay.js', 'js/render/replay-roteiro.js', 'js/render/replay-olhos.js', 'js/render/replay-saot.js', 'js/editor-time.js', 'css/editor.css',
   'js/cena-cartao.js', 'js/cena-atores.js', 'js/cenas-config.js', 'js/render/cartao3d.js', 'js/cenas-tela.js', 'css/cenas.css', 'js/render/lances-guarda.js',
   'js/cena-fim.js',
-  // as cadeiras 3D de perto (item 69: a câmera de TV nunca chega perto da arquibancada)
-  'js/render/cadeiras3d.js'];
+  // as cadeiras 3D de perto (item 69: a câmera de TV nunca chega perto da arquibancada) e o torcedor 3D que senta nelas
+  // (PR 2: o módulo chega junto das cadeiras; o modelo com a textura de animação, depois dele — fora da qualidade Baixa)
+  'js/render/cadeiras3d.js', 'js/render/torcedor3d.js', 'js/render/torcedor-dados.js'];
+// o que é baixado só DEPOIS de um módulo sob demanda chegar (nunca no download inicial; pedido depois da pré-carga)
+const SOB_DEMANDA_DEPOIS = ['assets/torcedor/torcedor.bin'];
 // só do estádio real da edição pro do Total Match (render/identidade-pagina.js por import()): nunca no download inicial
 // e sem pré-carga (a página sem ?tm não os pede nunca)
 const SO_TM_PRO_ARQ = ['js/estadio-planta.js', 'js/render/estadio-real.js', 'js/render/fachada-estilos.js'];
@@ -207,8 +210,8 @@ try {
   const total = bytesSrv + bytesCdn;
   meta('Download inicial', `${(total / 1048576).toFixed(2)} MB (nosso ${(bytesSrv / 1024).toFixed(0)} KB + CDN ${(bytesCdn / 1024).toFixed(0)} KB)`, '≤ 4 MB', total <= LIMITE_BYTES && (srv ? bytesSrv > 0 : true));
   meta('Folga no download inicial (até os 4 MB)', `${((LIMITE_BYTES - total) / 1024).toFixed(1)} KB (medido ${tMedida.toFixed(1)} s depois do 1º quadro)`, `≥ ${FOLGA_MIN / 1024} KB`, LIMITE_BYTES - total >= FOLGA_MIN);
-  const noInicial = [...SOB_DEMANDA_ARQ, ...SO_TM_PRO_ARQ].filter(a => pedidosIniciais.includes(a));
-  meta('Sob demanda fora do download inicial (replay, Editar time, cenas das paradas e o estádio real do TM)', noInicial.length ? `baixados: ${noInicial.join(', ')}` : `nenhum dos ${SOB_DEMANDA_ARQ.length + SO_TM_PRO_ARQ.length}`, 'nenhum', noInicial.length === 0);
+  const noInicial = [...SOB_DEMANDA_ARQ, ...SO_TM_PRO_ARQ, ...SOB_DEMANDA_DEPOIS].filter(a => pedidosIniciais.includes(a));
+  meta('Sob demanda fora do download inicial (replay, Editar time, cenas das paradas, cadeiras e torcedor 3D, o estádio real do TM)', noInicial.length ? `baixados: ${noInicial.join(', ')}` : `nenhum dos ${SOB_DEMANDA_ARQ.length + SO_TM_PRO_ARQ.length + SOB_DEMANDA_DEPOIS.length}`, 'nenhum', noInicial.length === 0);
 
   // 4) passo fixo a 60/120/144 Hz com relógio manual
   const laco = await pagina.evaluate(() => {
@@ -382,7 +385,9 @@ try {
   // os dois chegavam logo depois do fim da espera e o item reprovava com o estado {replay: true, editor: true})
   const chegou = await pagina.waitForFunction(() => window.__golaco.sobDemanda?.carregado, null, { timeout: Math.max(15000, espera - (Date.now() - tPronto)) }).then(() => true, () => false);
   const tChegou = (Date.now() - tPronto) / 1000;
-  const faltam = SOB_DEMANDA_ARQ.filter(a => !pedidos.includes(a));
+  // o modelo do torcedor 3D é pedido no quadro seguinte ao das cadeiras chegarem (até 5 s)
+  if (chegou) await pagina.waitForFunction(() => window.__golaco.estadio?.cadeiras?.torcedores?.carregado, null, { timeout: 5000 }).catch(() => {});
+  const faltam = [...SOB_DEMANDA_ARQ, ...SOB_DEMANDA_DEPOIS].filter(a => !pedidos.includes(a));
   const estSob = await pagina.evaluate(() => window.__golaco.sobDemanda?.estado ?? null);
   meta('Pré-carga ociosa: o replay, o Editar time e as cenas chegaram sem gesto', chegou && !faltam.length ? `sim (até ${tChegou.toFixed(1)} s depois do 1º quadro)` : `não (${JSON.stringify(estSob)}; faltam ${faltam.join(', ') || '—'})`, 'sim, sem erro', chegou && !faltam.length && erros.length === 0);
 

@@ -2,8 +2,9 @@
 // chamadas de desenho e triângulos (renderer.info) em três situações, no celular deitado (844×390, Média, dpr 2) e no
 // PC (1280×720, Alta):
 //   TV)       o jogo na câmera de TV (?demo=1): `n` instantes de uma partida da IA, a cada 3 s — mediana e máximo;
-//   PERTO)    as câmeras de perto das arquibancadas (a do gol, a de trás do gol, a do canto da comemoração, a do túnel)
-//             e o que elas desenham (as cadeiras 3D, quando existirem: g.estadio.cadeiras);
+//   PERTO)    as câmeras de perto das arquibancadas (a do gol, a de trás do gol, a do canto da comemoração, a do túnel, a
+//             das fileiras da frente bem de perto) e o que elas desenham (as cadeiras 3D e, desde o PR 2, os torcedores 3D:
+//             g.estadio.cadeiras.torcedores);
 //   PREJOGO)  o pior plano do pré-jogo (todos os planos do roteiro completo, só no celular).
 // Estádios: o padrão (Estádio Golaço) e, com --tm, os da edição pro do Total Match (o Maracanã, os Aflitos e um grande
 // da planta genérica).
@@ -33,6 +34,8 @@ async function pedidoTM(contexto) {
   await contexto.addInitScript(lista => { for (const [k2, v] of lista) try { localStorage.setItem(k2, v); } catch (_) { /* nada */ } },
     CASOS_TM.map(([nome, id]) => ['tm3d:pedido:med-' + id, JSON.stringify({ ...PED_A, id: 'med-' + id, edicao: 'pro', home: { ...PED_A.home, stadium: nome } })]));
 }
+// o modelo do torcedor 3D (PR 2) chega depois do módulo das cadeiras (pedido no 1º quadro): espera, se a página tiver
+const esperaTorcedor = pg => pg.waitForFunction(() => { const c = window.__golaco.estadio?.cadeiras; return !c || !c.carregado || !c.torcedores || c.torcedores.carregado; }, null, { timeout: 60000 }).catch(() => {});
 const ESTADIOS = [['padrao', '']].concat(COM_TM ? CASOS_TM.map(([, id]) => [id, `tm=med-${id}&`]) : []);
 
 // câmeras de perto: [nome, de, para, fov]
@@ -42,7 +45,10 @@ const PERTO = [
   ['canto', [48, 1.7, -30], [62, 6, -44], 50],             // comemoração no canto (bandeirinha), de frente para a torcida
   ['lado', [10, 2.2, -36], [14, 9, -52], 55],              // na lateral, a arquibancada de lá de perto
   ['tunel', [0, 3.5, 40], [0, 8, 10], 60],                 // na boca do túnel, olhando o campo (a arquibancada de lá ao fundo)
+  ['frente', [8, 3.2, -41.5], [9, 4.6, -47], 50],          // na beira do campo, as fileiras da frente do lado de lá bem de perto
 ];
+// o torcedor 3D (PR 2) num texto curto: quantos, em quantas fileiras de blocos, triângulos e os níveis
+const txtTor = t => (t ? ` · torcedores 3D: ${t.torcedores} (${k(t.triangulos)} tri, níveis ${t.lods.join('/')})` : '');
 
 for (const [nomeDisp, disp] of [['celular', { largura: 844, altura: 390, dpr: 2, toque: true, q: 'media' }], ['pc', { largura: 1280, altura: 720, dpr: 1, toque: false, q: 'alta' }]]) {
   const srv = await servidor(0, raiz);
@@ -56,6 +62,7 @@ for (const [nomeDisp, disp] of [['celular', { largura: 844, altura: 390, dpr: 2,
         await pg.goto(`${srv.url}?${qs}q=${disp.q}&demo=1${disp.toque ? '&toque=1' : ''}&replay=0&comemoracao=0&prejogo=0&semente=${SEMENTE}&hora=dia`, { waitUntil: 'load', timeout: 180000 });
         await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
         await pg.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); for (let i = 0; i < 30; i++) g.relogio.avancar(1000 / 60, { desenhar: true }); });
+        await esperaTorcedor(pg);
         if (SO.has('tv')) {
           const tv = await pg.evaluate(n => {
             const g = window.__golaco, c = [], t = [];
@@ -78,11 +85,11 @@ for (const [nomeDisp, disp] of [['celular', { largura: 844, altura: 390, dpr: 2,
                 g.cameraLivre({ de: de2, para: para2, fov: fov2 });
                 g.desenhar(); g.desenhar(); g.desenhar();
                 const e = g.estado(), cad = g.estadio?.cadeiras ?? null;
-                return { c: e.desenhoChamadas, t: e.desenhoTriangulos, cad: cad ? { blocos: cad.blocos, instancias: cad.instancias } : null };
+                return { c: e.desenhoChamadas, t: e.desenhoTriangulos, cad: cad ? { blocos: cad.blocos, instancias: cad.instancias, torcedores: cad.torcedores ?? null } : null };
               }, [de, para, fov]);
               if (hora === 'dia') {
                 saida.perto[`${chave}/${nome}`] = r;
-                console.log(`PERTO ${chave} ${nome}: chamadas ${r.c} · triângulos ${k(r.t)}${r.cad ? ` · cadeiras: ${r.cad.blocos} blocos, ${r.cad.instancias} instâncias` : ''}`);
+                console.log(`PERTO ${chave} ${nome}: chamadas ${r.c} · triângulos ${k(r.t)}${r.cad ? ` · cadeiras: ${r.cad.blocos} blocos, ${r.cad.instancias} instâncias${txtTor(r.cad.torcedores)}` : ''}`);
               }
               if (PRINTS) await pg.screenshot({ path: path.join(PRINTS, `perto-${nome}-${nomeDisp}-${est}-${hora}.png`), timeout: 180000 });
             }
@@ -96,15 +103,16 @@ for (const [nomeDisp, disp] of [['celular', { largura: 844, altura: 390, dpr: 2,
         await pg.goto(`${srv.url}?${qs}q=${disp.q}&prejogo=1&semente=${SEMENTE}&hora=dia${disp.toque ? '&toque=1' : ''}`, { waitUntil: 'load', timeout: 180000 });
         await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
         const planos = await pg.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); g.relogio.avancar(16); g.relogio.avancar(16); g.prejogo.comecar(); g.relogio.avancar(16); return g.prejogo.planos; });
+        await esperaTorcedor(pg);
         const por = [];
         for (const p of planos) {
-          const r = await pg.evaluate(t => { const g = window.__golaco, pj = g.prejogo; pj.irPara(t - 0.04); g.relogio.avancar(16); g.relogio.avancar(16); const d = pj.desenho; const cad = g.estadio?.cadeiras ?? null; return { plano: pj.plano, c: d.chamadas, t: d.triangulos, cad: cad ? cad.instancias : null }; }, (p.t0 + p.t1) / 2);
+          const r = await pg.evaluate(t => { const g = window.__golaco, pj = g.prejogo; pj.irPara(t - 0.04); g.relogio.avancar(16); g.relogio.avancar(16); const d = pj.desenho; const cad = g.estadio?.cadeiras ?? null; return { plano: pj.plano, c: d.chamadas, t: d.triangulos, cad: cad ? cad.instancias : null, tor: cad?.torcedores ? cad.torcedores.torcedores : null }; }, (p.t0 + p.t1) / 2);
           por.push({ id: p.id, ...r });
           if (PRINTS && ['dentro', 'tunel', 'entrada', 'organizada', 'ladoDeLa', 'visitantes'].includes(p.id)) await pg.screenshot({ path: path.join(PRINTS, `prejogo-${p.id}-${est}.png`), timeout: 180000 });
         }
         const pc = Math.max(...por.map(x => x.c)), pt = Math.max(...por.map(x => x.t));
         saida.prejogo[chave] = { piorChamadas: pc, piorTriangulos: pt, planos: por };
-        console.log(`PREJOGO ${chave}: pior ${pc} chamadas, ${k(pt)} triângulos — ${por.map(x => `${x.id} ${x.c}/${Math.round(x.t / 1000)}k${x.cad ? `(${x.cad})` : ''}`).join(' ')}`);
+        console.log(`PREJOGO ${chave}: pior ${pc} chamadas, ${k(pt)} triângulos — ${por.map(x => `${x.id} ${x.c}/${Math.round(x.t / 1000)}k${x.cad ? `(${x.cad}${x.tor ? `+${x.tor}` : ''})` : ''}`).join(' ')}`);
       }
     }
     if (erros.length) console.log(`erros no console (${nomeDisp}): ${erros.slice(0, 3).join(' | ')}`);
