@@ -385,9 +385,11 @@ try {
   // os dois chegavam logo depois do fim da espera e o item reprovava com o estado {replay: true, editor: true})
   const chegou = await pagina.waitForFunction(() => window.__golaco.sobDemanda?.carregado, null, { timeout: Math.max(15000, espera - (Date.now() - tPronto)) }).then(() => true, () => false);
   const tChegou = (Date.now() - tPronto) / 1000;
-  // o modelo do torcedor 3D é pedido no quadro seguinte ao das cadeiras chegarem (até 5 s)
-  if (chegou) await pagina.waitForFunction(() => window.__golaco.estadio?.cadeiras?.torcedores?.carregado, null, { timeout: 5000 }).catch(() => {});
-  const faltam = [...SOB_DEMANDA_ARQ, ...SOB_DEMANDA_DEPOIS].filter(a => !pedidos.includes(a));
+  // o modelo do torcedor 3D é pedido no quadro seguinte ao das cadeiras chegarem (até 5 s) — fora da Baixa (a qualidade
+  // automática pode ter descido numa máquina lenta: na Baixa ele não é pedido)
+  const qTorcida = await pagina.evaluate(() => window.__golaco.estadio?.torcida?.qualidade ?? null);
+  if (chegou && qTorcida !== 'baixa') await pagina.waitForFunction(() => window.__golaco.estadio?.cadeiras?.torcedores?.carregado, null, { timeout: 5000 }).catch(() => {});
+  const faltam = [...SOB_DEMANDA_ARQ, ...(qTorcida === 'baixa' ? [] : SOB_DEMANDA_DEPOIS)].filter(a => !pedidos.includes(a));
   const estSob = await pagina.evaluate(() => window.__golaco.sobDemanda?.estado ?? null);
   meta('Pré-carga ociosa: o replay, o Editar time e as cenas chegaram sem gesto', chegou && !faltam.length ? `sim (até ${tChegou.toFixed(1)} s depois do 1º quadro)` : `não (${JSON.stringify(estSob)}; faltam ${faltam.join(', ') || '—'})`, 'sim, sem erro', chegou && !faltam.length && erros.length === 0);
 
