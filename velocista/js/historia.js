@@ -2102,6 +2102,16 @@ export const CENAS = {
 
 /** falas de rádio dos capítulos (sem parar o jogo) */
 export const RADIO = {
+  // os PODERES QUE EVOLUEM COM AS BATALHAS (poderes.js): a habilidade nova de cada nível, explicada pela equipe
+  'nivel-2': [F('caitlin', 'Barry, seus impulsos elétricos mudaram depois dessa luta. Agora os socos carregam raio: batem 20% mais forte.')],
+  'nivel-3': [F('cisco', 'Cara, sua recuperação disparou. Parado, a energia volta bem mais rápido. Vou chamar de Fôlego de Raio.')],
+  'nivel-4': [F('cisco', 'Truque novo: Passo Relâmpago. O BATER te leva até bandido a 22 metros. Pisca e chegou.')],
+  'nivel-5': [F('caitlin', 'Suas células se regeneram no meio da luta. Os golpes deles vão doer bem menos.')],
+  'nivel-6': [F('cisco', 'Arranque! A supervelocidade embala 30% mais rápido. Segura o CORRER numa reta e sente.')],
+  'nivel-7': [F('caitlin', 'As esferas reagem a você de outro jeito agora. Cada uma vale o dobro de energia.')],
+  'nivel-8': [F('cisco', 'Punho de Trovão. Eu medi: 40% mais forte que o soco do primeiro dia. Só não testa em mim.')],
+  'nivel-9': [F('caitlin', 'Seu corpo absorve os golpes como se fossem descarga elétrica. Você aguenta muito mais agora.')],
+  'nivel-10': [F('cisco', 'Barry... você chegou lá. Velocista completo.'), F('caitlin', 'A energia volta 50% mais rápido. O resto é com você.')],
   'capitulo-zoom': [F('caitlin', 'O pico azul está no centro, drenando os geradores da cidade.'), F('cisco', 'O guia está marcando. Vai lá ver quem é.')],
   'capitulo-reverso': [F('cisco', 'A assinatura vermelha está se movendo pela cidade. O guia mostra onde.')],
   'capitulo-final': [F('caitlin', 'Alarme no S.T.A.R. Labs! Os dois estão na porta do laboratório!'), F('cisco', 'Eles querem o Núcleo. Volta pra cá, rápido!')],

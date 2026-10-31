@@ -155,6 +155,7 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
   const cache = new Map();
   const mats = { mobile, cor: (c) => { if (!cache.has(c)) cache.set(c, new THREE.MeshLambertMaterial({ color: c })); return cache.get(c); } };
   const fx = criarEfeitos(cena, mobile);
+  const bonus = { forca: 1, alcance: AVANCO_MAX };              // os poderes do nível (poderes.js): força dos golpes e alcance do BATER
   const bandidos = [];
   let proxGangue = 1;
   const H = { acao: null, combo: 0, ultimoGolpe: -9, tempo: 0, tremor: 0, hitstop: 0, dano: 0, luta: 0, sofridos: 0 };
@@ -187,6 +188,7 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
 
   // ---------- dano ----------
   function acertar(e, tipo, P, { dano = 1, empurra = 3, alto = 0, especial = false } = {}) {
+    dano *= bonus.forca;                                       // (os poderes que evoluem com as batalhas: poderes.js)
     if (e.extra) return e.golpe(tipo, P, { dano, especial });
     if (!emPe(e) && e.estado !== 'preso') return false;
     e.vida -= dano;
@@ -217,7 +219,7 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
   function bater(P, dirX, dirZ) {
     if (H.acao && H.acao.tipo !== 'soco') return false;
     if (H.acao) { H.fila = true; return true; }                  // aperto durante o golpe: emenda o próximo (combo)
-    const alvo = alvoMaisPerto(P, dirX, dirZ, AVANCO_MAX);
+    const alvo = alvoMaisPerto(P, dirX, dirZ, bonus.alcance);
     if (alvo?.extra && alvo.estado === 'perseguicao') { alvo.golpe('soco', P); return true; }   // vilão fugindo: o avanço o alcança na hora
     H.combo = H.tempo - H.ultimoGolpe < 0.9 ? (H.combo + 1) % 3 : 0;
     const gancho = H.combo === 2;
@@ -451,6 +453,8 @@ export function criarCombate(cena, { mobile = false, colide = null, chao = null 
 
   return {
     gerarGangue, vivos, centro, remover, bater, especial, passo, poseHeroi,
+    /** os bônus do nível dos poderes (poderes.js bonusDe): {forca, alcance} */
+    definirBonus(b) { bonus.forca = b?.forca ?? 1; bonus.alcance = b?.alcance ?? AVANCO_MAX; },
     registrarAlvo: (a) => { if (!extras.includes(a)) extras.push(a); },
     removerAlvo: (a) => { const i = extras.indexOf(a); if (i >= 0) extras.splice(i, 1); },
     /** o herói no meio de um avanço ou de um golpe especial: rápido demais para levar golpe */
