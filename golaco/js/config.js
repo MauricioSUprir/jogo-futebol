@@ -332,6 +332,9 @@ export const ENTRADA = {
   // toque (DOM, entrada.js criarToqueOuSegura): DIVIDIDA solta antes disto = bote; segurada = CONTER (como o
   // "Sprint & Tackle" do FC Mobile: segurar perto = marca; tocar = bote em pé). Medido no relógio do jogo.
   toqueCurto: 0.25,           // s
+  // mira pela tela (C6, contrato "Mira pela tela"; main.js telaMira): a direção da ação sai da bola quando ela está a até
+  // isto do controlado (no pé, na cobrança, nas mãos do goleiro); mais longe (a bola chegando), sai dele
+  miraBolaPerto: 2.0,         // m
 };
 
 // Botões (máscara de bits). Os da Etapa 2+ já têm número reservado.

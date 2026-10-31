@@ -248,7 +248,7 @@ function recuar(m, g, d) {
     limpar(m); A.assumirControle(m, 0, d);
     // a bola na cabeça do zagueiro: cabeceio de passe na direção do goleiro (o humano aponta o analógico)
     const b = m.bola; b.p.x = d.x + Math.cos(d.rumo) * 0.3; b.p.z = d.z + Math.sin(d.rumo) * 0.3; b.p.y = 1.8; b.v.x = b.v.y = b.v.z = 0; b.rolando = false;
-    d.imag = 1; d.ix = Math.cos(d.rumo); d.iz = Math.sin(d.rumo);
+    d.imag = 1; d.ix = Math.cos(d.rumo); d.iz = Math.sin(d.rumo); d.imx = d.ix; d.imz = d.iz; // a mira (C6) = o analógico
     A.executarCabeceio(m, d, { tipo: 'passe', forca: 0.5 });
     n++;
     for (let i = 0; i < 180; i++) {
