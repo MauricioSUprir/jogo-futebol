@@ -85,7 +85,7 @@ const LISTA = [
   // Estádio: rede que balança, torcida e som (contas puras do desenho)
   ['rede que balança: bolsa, onda, batidas com a física da bola, bola desenhada no bojo', 'teste-rede.mjs'],
   ['rede véu de noiva: forma pela física, morre no fundo, nada atravessa, gol pelo véu, desenho', 'teste-rede-veu.mjs'],
-  ['torcida: lugares, setores, atlas das poses e ânimo (murmúrio, gol, "uuuh", apitos)', 'teste-torcida.mjs'],
+  ['torcida: lugares, setores, atlas das poses e ânimo (murmúrio, gol, "uuuh", apitos); o torcedor 3D na cadeira (item 69)', 'teste-torcida.mjs'],
   ['replay: anel dos últimos 10 s, roteiros do gol/impedimento/pausa e o replay de lances de verdade', 'teste-replay-anel.mjs'],
   ['replays nas paradas: o classificador de lances (árbitro independente), o roteiro, o orçamento, a pureza e o predicado da montagem', 'teste-replay-paradas.mjs'],
   ['replay: a cena semiautomática do impedimento e a checagem de posição legal (durações, critério, câmera, selo, coerência)', 'teste-saot.mjs'],
