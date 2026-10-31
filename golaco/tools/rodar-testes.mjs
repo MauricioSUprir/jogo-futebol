@@ -116,6 +116,8 @@ const LISTA = [
   // 8–10,5, agressão ≤ 78%, retomada 34–54%; 3 processos)
   ['pressão da IA contra a pessoa (D3): PPDA, agressão e retomada contra o espelho', 'teste-pressao.mjs', ['--humano'], 'padrao', 3],
   ['goleiro pelas Leis do Jogo (mão só na área, recuo, 8 s) e na mão do humano (anda, TROCAR, PEGAR)', 'teste-goleiro-regras.mjs'],
+  // C5 (item 16 da FILA): a reposição com a bola nas mãos — canhão de estados do meio da partida (IA × IA) e o gesto
+  ['reposição do goleiro com a mão: a IA rola/arremessa ou dá o chutão pela pressão, a bola na mão desenhada, o bate-pronto quica antes do pé', 'teste-reposicao.mjs'],
   // Pedido do dono de 15/10 ("defende mais bolas difíceis do que fáceis", espalmar e segurar realistas, movimento) e a
   // pendência #114 (sai no 1×1 e no cruzamento): canhão de estados do meio da partida em 4 processos
   ['goleiro realista: defende a fácil e não a difícil, segura × espalma, set no chute, 1×1, bola solta e saída no cruzamento', 'teste-goleiro-realista.mjs', [], 'padrao', 4],

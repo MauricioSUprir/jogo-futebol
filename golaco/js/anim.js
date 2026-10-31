@@ -24,6 +24,7 @@ import { progressoBalanco } from './jogador.js';
 import { mergulhoAtivo, quadroMergulho, maosMergulho, maoDaEspalmada, eixosMergulho, MAO_PRONTA_FRENTE, MAO_PRONTA_BAIXO, baseGoleiro } from './goleiro.js';
 import { alturaSalto } from './bolas-paradas.js';
 import { puloAtivo, quadroPulo, inclinacaoAte } from './cabeceio.js';
+import { quadroReposicao, novoQuadroReposicao } from './reposicao.js';
 
 export const JUNTAS = [
   'pelve', 'lombar', 'peito', 'pescoco', 'cabeca',
@@ -354,12 +355,15 @@ export function alturaQuadril(j, m) {
 export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
   if (j.posicao === 'GOL' && mergulhoAtivo(j, m.tick)) return poseMergulho(j, m, out, info);
   const { s, h, fx, fz, rx, rz, af, al, c, pes, px, pz, qrx, qrz, torcao, hy: teto, hyPulo } = pesEQuadril(j, m);
-  const hy = hyPulo != null ? hyPulo : j.quadril == null ? teto : Math.min(teto, j.quadril);
+  // goleiro na reposição com a mão (C5; reposicao.js quadroReposicao, a mesma conta da bola do estado): o corpo desce e
+  // inclina rolando, os braços levam a bola e a perna do chute vai à bola (só desenho: o quadril da simulação não muda)
+  const qr = j.posicao === 'GOL' && j.arremessoGk ? quadroReposicao(j, m, _qr) : null;
+  const hy = (hyPulo != null ? hyPulo : j.quadril == null ? teto : Math.min(teto, j.quadril)) - (qr ? qr.desce : 0);
   por(out, J.pelve, px, hy, pz);
 
   // ---- tronco: inclinação para a frente (velocidade + aceleração) e para o lado (curva)
   let pitch = 0.03 + 0.022 * s + MD.atan2(af, G) * 0.8 + GOLEIRO.realista.mov.inclina * baseGoleiro(m, j, s);
-  pitch = clamp(pitch, -0.3, 0.42);
+  pitch = clamp(pitch, -0.3, 0.42) + (qr ? qr.inclina : 0);
   const roll = clamp(MD.atan2(al, G) * 0.7, -0.35, 0.35);
   // vetor "para cima" do tronco: gira em torno do eixo direito (pitch) e da frente (roll)
   const cp = MD.cos(pitch), sp = MD.sin(pitch), cr = MD.cos(roll), sr = MD.sin(roll);
@@ -464,6 +468,13 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
       const mx = out[iM * 3] + (ax - out[iM * 3]) * braco, my = out[iM * 3 + 1] + (ay - out[iM * 3 + 1]) * braco, mz = out[iM * 3 + 2] + (az - out[iM * 3 + 2]) * braco;
       ikBraco(ox, oy, oz, mx, my, mz, orx * lado * 0.3 - fx * 0.3 - ux * 0.5, -uy * 0.5, orz * lado * 0.3 - fz * 0.3 - uz * 0.5, out, iC, iM);
     }
+    // reposição do goleiro (C5): a mão do gesto sobre a do desenho de agora, pelo peso (entra e sai sem salto)
+    const ir = lado < 0 ? 0 : 1;
+    if (qr && qr.w[ir] > 0) {
+      const w = qr.w[ir], g = qr.m[ir];
+      const mx = out[iM * 3] + (g.x - out[iM * 3]) * w, my = out[iM * 3 + 1] + (g.y - out[iM * 3 + 1]) * w, mz = out[iM * 3 + 2] + (g.z - out[iM * 3 + 2]) * w;
+      ikBraco(ox, oy, oz, mx, my, mz, orx * lado - ux * 0.4 - fx * 0.2, -uy * 0.4, orz * lado - uz * 0.4 - fz * 0.2, out, iC, iM);
+    }
   }
 
   // ---- pernas (IK) e pés
@@ -478,17 +489,20 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
     const pe = pes[p];
     const pr = pe.rumo ?? h;
     const pfx = MD.cos(pr), pfz = MD.sin(pr);
+    // a perna do bate-pronto/chutão do goleiro (C5): o tornozelo do gesto sobre o desenhado, pelo peso
+    const wc = qr && qr.pe === p ? qr.wp : 0;
+    const ax = wc > 0 ? pe.x + (qr.p.x - pe.x) * wc : pe.x, ay = wc > 0 ? pe.y + (qr.p.y - pe.y) * wc : pe.y, az = wc > 0 ? pe.z + (qr.p.z - pe.z) * wc : pe.z;
     // joelho aponta para a frente do pé (um pouco para fora)
-    ik(qx, qy, qz, pe.x, pe.y, pe.z, pfx + qrx * lado * 0.1, 0.05, pfz + qrz * lado * 0.1, out, iJ, iT);
+    ik(qx, qy, qz, ax, ay, az, pfx + qrx * lado * 0.1, 0.05, pfz + qrz * lado * 0.1, out, iJ, iT);
     const tx = out[iT * 3], ty = out[iT * 3 + 1], tz = out[iT * 3 + 2];
     // ponta do pé: no chão quando apoiado; no balanço aponta um pouco para baixo
-    const incl = pe.apoio ? 0 : -0.35 * MD.sin(Math.PI * (pe.u ?? 0));
+    const incl = wc > 0 ? qr.ponta * wc : pe.apoio ? 0 : -0.35 * MD.sin(Math.PI * (pe.u ?? 0));
     por(out, iP, tx + pfx * 0.17 * MD.cos(incl), Math.max(0.025, ty - 0.055 + 0.17 * MD.sin(incl)), tz + pfz * 0.17 * MD.cos(incl));
     if (info) {
       info.pes = info.pes || [{}, {}];
-      info.pes[p].apoio = pe.apoio;
+      info.pes[p].apoio = pe.apoio && !(wc > 0);
       info.pes[p].x = tx; info.pes[p].y = ty; info.pes[p].z = tz;
-      info.pes[p].alvoX = pe.x; info.pes[p].alvoZ = pe.z;
+      info.pes[p].alvoX = ax; info.pes[p].alvoZ = az;
     }
   }
   // barreira (Etapa 4): o pulo no chute sobe o corpo inteiro (bolas-paradas.js alturaSalto: a mesma conta da colisão)
@@ -499,6 +513,7 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
 
 // ---------------------------------------------------------------- goleiro: mergulho, salto e defesa em pé
 const _qa = {}, _qp = {}, _mp = {}, _ep = {};
+const _qr = novoQuadroReposicao();
 const _ic = { a: 0, y: 0 }; // cabeceio: inclinação do tronco
 const BOLA_MAO = GOLEIRO.bolaMao;
 export const BRACO = 0.29, ANTEBRACO = 0.26;

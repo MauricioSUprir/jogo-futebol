@@ -101,7 +101,10 @@ export function limparRegraMao(m) {
 export function segundosNaMao(m, g) {
   if (!m.partida || m.naMao !== g.id || !g.segura || g.segura.dePe == null) return null;
   if (m.parada && !m.parada.rolou) return null;
-  return (m.tick - g.segura.dePe) * PASSO;
+  // no gesto da reposição (C5; reposicao.js) a bola já está saindo: o relógio para no começo dele (o árbitro não apita o
+  // arremesso no meio)
+  const ar = g.arremessoGk, ate = ar && ar.feito == null && ar.desde === g.segura.desde ? Math.min(m.tick, ar.tick0) : m.tick;
+  return (ate - g.segura.dePe) * PASSO;
 }
 
 /**

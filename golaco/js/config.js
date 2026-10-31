@@ -436,6 +436,14 @@ export const ACOES = {
   // (MIRA.tensa.v[1]; o chute mais forte do jogo, 31 × 1,08 = 33,5; Kellis & Katis 2007: 18–35 m/s): quando a elevação baixa
   // pede mais que isso, ela sobe até a bola cair no ponto com vMax (acoes.js vooLancamento); nem com elevAlta → a de antes
   lancamento: { cone: 0.5, dMin: 16, dMax: 62, elev: [0.314, 0.454], elevAlta: [0.5, 0.72], vMax: 33, erroBom: 1.2, erroRuim: 6 }, // erro em m a 40 m
+  // bate-pronto do goleiro (C5, item 16 da FILA; o LANÇAMENTO com a bola nas mãos; PESQUISA-ETAPA4.md §15): a bola solta das
+  // mãos, toca o chão e o pé bate logo depois — mais baixo e mais tenso que o chutão (o "Driven Kick" do EA FC 25, R1 + ▢):
+  // a mesma conta do lançamento (acoes.js vooLancamento) com a elevação de 11,5° (20 m) a 17° (60 m), subindo só até a do
+  // chutão (o elev do lançamento) quando a bola não chega saindo a vMax, e menos giro para trás (o pé bate de chapa no quique)
+  batePronto: { elev: [0.2, 0.3], elevAlta: [0.314, 0.454], vMax: 33, giro: 4 },
+  // arremesso do goleiro com a mão (C5): quem pode receber (acoes.js escolherAlvo, a mesma nota e o mesmo risco do passe):
+  // para a frente e para os lados (o cone em volta da direção pedida — a IA: o ataque), fora da própria área
+  reposicaoMao: { cone: 1.35, dMin: 8, dMax: 40 },
   cruzamento: { terco: 17.5, faixa: 20, elevAlto: 0.42, elevTenso: 0.16, vRasteiro: 11, yAlto: 2.0, yTenso: 0.9, setor: 0.44 },
   // chute (pesquisa da Etapa 2): máximo de 30–34 m/s nos melhores (Shinkai 2008; DFL); colocado
   // a ~0,85 do forte e com 30–40 rad/s de efeito (Whiteside 2010); força máxima ×1,15 no erro
@@ -606,6 +614,29 @@ export const GOLEIRO = {
   // do encaixe desenhado a bola vai do peito a esse ponto nos últimos tJunta s (sem salto de bola nem de braço);
   // a bola pega solta (ou no chão, no tiro de meta) chega às mãos a vJunta m/s, sem salto
   bolaMao: { frente: 0.32, altura: 1.05, palma: 0.12, tJunta: 0.3, vJunta: 4 },
+  // Reposição com a bola nas mãos (C5, item 16 da FILA; PESQUISA-ETAPA4.md §15; só na PARTIDA — o treino segue como era).
+  // StatsBomb open data (149 partidas, 1.915 reposições da mão, medido aqui): 56–81% com a mão por competição (68% no
+  // total; 96% certas; mediana 19 m, p10–p90 10–36 m; até 25 m 97% rasteiras), 16–41% bate-pronto/chutão (mediana 58 m,
+  // 32% certos). A IA arremessa para o companheiro LIVRE que o escolherAlvo('reposicaoMao') acha — nenhum adversário a menos
+  // de `livre` m dele e o risco da linha até `riscoMax` —; senão, o chutão. O humano: PASSE = arremesso (rola até rolarMax m
+  // ou com a barra até ombroForca; acima, por cima do ombro), LANÇAMENTO = bate-pronto, CHUTE = chutão, ENFIADA = no chão.
+  // O gesto (reposicao.js, a bola do estado nas mãos até a soltura; anim.js desenha pela mesma conta): rolar = o corpo desce
+  // (agacha m, inclina rad), a bola vai para trás e para baixo e sai rente ao chão (rolarSolta, vyRolar m/s para baixo);
+  // ombro = a bola vai para trás da cabeça e sai por cima do ombro a ~1,9 m (ombroSolta) e chega a quem recebe a yOmbro m
+  // (descendo, na coxa/peito, como o arremesso curto do lateral); bate-pronto e chutão = as mãos
+  // levam a bola à frente do pé que chuta (soltaPe) e a soltam: o chutão bate nela no ar (yChutao m), o bate-pronto no tick
+  // depois do quique. Pontos [frente, lado (do braço/pé que arremessa/chuta), altura] do CENTRO da bola, na base do corpo.
+  // Velocidade do braço (o teto, pela força e pelo passe longo): rolando vRolar, por cima vOmbro (van den Tillaar & Ettema
+  // 2004: 21,5 m/s com bola de 0,41 kg, jogadores de handebol; Gutiérrez-Davila 2012: 24–25 m/s com a de handebol)
+  reposicao: {
+    livre: 10, riscoMax: 0.2, rolarMax: 30, ombroForca: 0.75, dHumano: [8, 38], virarMax: 1.75,
+    vRolar: [13, 17], vOmbro: [19, 24], elevOmbro: [0.26, 0.4], yOmbro: 1.0, erroBom: 0.01, erroRuim: 0.03,
+    tRolar: 0.45, tOmbro: 0.42, tSolta: 0.18, seguimento: 0.4, chuteSegue: 0.45,
+    agacha: 0.36, inclina: 0.95,
+    rolarTras: [-0.05, 0.28, 0.55], rolarBaixo: [0.22, 0.22, 0.12], rolarSolta: [0.6, 0.18, 0.3], vyRolar: -1.2,
+    ombroTras: [-0.3, 0.24, 1.66], ombroCima: [0.02, 0.22, 2.02], ombroSolta: [0.3, 0.2, 1.9],
+    soltaPe: [0.42, 0.12, 0.95], yChutao: 0.42,
+  },
   // m: a bola, no tick da defesa, longe disso do ponto lido (desvio depois da leitura) → não há defesa
   desvioMax: 0.3,
   pegaMergulho: 0.3,          // m da mão desenhada à bola para pegar a bola solta no meio da defesa desenhada

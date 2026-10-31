@@ -6,7 +6,7 @@
 // Com a bola, a ação sai no próximo toque possível (toque marcado com tipo 'acao', o pé de apoio
 // no chão); com a bola chegando, sai de primeira no tick do domínio.
 
-import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, GOLEIRO, LATERAL, AEREO, RECEPCAO, CABECEIO, MIRA } from './config.js';
+import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, GOLEIRO, LATERAL, AEREO, RECEPCAO, CABECEIO, MIRA, BOLA } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { normal } from './rng.js';
@@ -16,7 +16,7 @@ import {
 } from './bola.js';
 import { procurarOportunidade, preverBola } from './conducao.js';
 import { passoCorpo, copiaCinematica, infoPassada } from './jogador.js';
-import { registrarChute } from './regras-goleiro.js';
+import { registrarChute, naPropriaArea } from './regras-goleiro.js';
 import { chuteMirado, simularLinha, alturaMiraChute, zMaxMiraChute, miraCheia, noCanto, saidaNaLinha } from './mira.js';
 
 const DT = PASSO;
@@ -246,9 +246,16 @@ function dirPedida(j) {
   if (a) return { x: a.x, z: a.z };
   return { x: MD.cos(j.rumo), z: MD.sin(j.rumo) };
 }
+/** A direção da ação pedida (a mira, o analógico ou o corpo) — a reposição do goleiro guarda a do aperto (sim.js). */
+export const direcaoPedida = dirPedida;
 
-/** Risco de um adversário cortar a linha de passe de (ax,az) a (bx,bz) com a bola a v. */
-export function riscoLinha(m, j, ax, az, bx, bz, v) {
+/**
+ * Risco de um adversário cortar a linha de passe de (ax,az) a (bx,bz) com a bola a v. aoSegmento (a reposição do goleiro,
+ * C5): a distância do adversário ao ponto da linha (o recebedor, para quem está além dele) em vez da distância à reta
+ * inteira — sem isso o adversário 20 m ALÉM do recebedor, perto da reta, contava como na linha (risco 1 em quase toda
+ * reposição medida); o passe de sempre segue com a reta (a escolha dele não muda).
+ */
+export function riscoLinha(m, j, ax, az, bx, bz, v, aoSegmento = false) {
   let risco = 0;
   const dx = bx - ax, dz = bz - az;
   const L = MD.hypot(dx, dz) || 1;
@@ -256,8 +263,8 @@ export function riscoLinha(m, j, ax, az, bx, bz, v) {
   for (const o of m.jogadores) {
     if (o.time === j.time) continue;
     const ox = o.x - ax, oz = o.z - az;
-    const s = clamp(ox * ux + oz * uz, 0, L);
-    const lat = Math.abs(-ox * uz + oz * ux);
+    const s0 = ox * ux + oz * uz, s = clamp(s0, 0, L);
+    const lat = aoSegmento ? MD.hypot(s0 - s, -ox * uz + oz * ux) : Math.abs(-ox * uz + oz * ux);
     // tempo da bola até s × tempo do adversário até a linha (reação 0,25 s + corrida)
     const tBola = s / Math.max(v, 3);
     const tAdv = 0.25 + Math.max(0, lat - 0.9) / 6.5;
@@ -268,9 +275,10 @@ export function riscoLinha(m, j, ax, az, bx, bz, v) {
 
 /**
  * Companheiro alvo pelo analógico (cone), distância e risco da linha. Devolve o jogador ou null.
- * tipo: 'passe' | 'enfiada' | 'lancamento'
+ * tipo: 'passe' | 'enfiada' | 'lancamento' | 'reposicaoMao' (o arremesso do goleiro: a nota do passe). aceita (opcional):
+ * o → false tira o companheiro da escolha (a reposição da IA: só quem está livre e fora da própria área).
  */
-export function escolherAlvo(m, j, tipo) {
+export function escolherAlvo(m, j, tipo, aceita = null) {
   const cfg = ACOES[tipo];
   const d = dirPedida(j);
   const lado = ataca(m, j.time);
@@ -288,18 +296,95 @@ export function escolherAlvo(m, j, tipo) {
       if (L < cfg.dMin || L > cfg.dMax) continue;
       const a = Math.abs(difAng(MD.atan2(d.z, d.x), MD.atan2(oz, ox)));
       if (a > cone) continue;
+      if (aceita && !aceita(o)) continue;
       // nota em "graus equivalentes": passe = ângulo + 0,3 × distância (Metrica: acerta o recebedor
       // real em 92,6% dos passes, contra ~86% de "o mais perto no cone")
       let score = a * (180 / Math.PI);
-      if (tipo === 'passe') score += 0.3 * L;
+      if (tipo === 'passe' || tipo === 'reposicaoMao') score += 0.3 * L;
       if (tipo === 'enfiada') score -= 31.5 * (clamp((o.x - j.x) * lado / 30, -0.3, 0.6) + clamp((o.vx * lado) / 8, 0, 0.4));
       if (tipo === 'lancamento') score += 31.5 * Math.abs(L - 35) / 60;
       const v = tipo === 'lancamento' ? 20 : 12;
-      score += 38 * riscoLinha(m, j, j.x, j.z, o.x, o.z, v);
+      score += 38 * riscoLinha(m, j, j.x, j.z, o.x, o.z, v, tipo === 'reposicaoMao');
       if (score < mScore) { mScore = score; melhor = o; }
     }
   }
   return melhor;
+}
+
+/**
+ * Reposição com a mão (C5): o companheiro para o arremesso do goleiro g na direção dir {x, z} — escolherAlvo('reposicaoMao'),
+ * a nota e o risco do passe. seguro (a IA): só quem está fora da própria área, sem adversário a menos de
+ * GOLEIRO.reposicao.livre m e com o risco da linha (riscoLinha, a bola a 12 m/s rolando ou 18 por cima) até riscoMax.
+ * Devolve o jogador ou null.
+ */
+export function alvoReposicao(m, g, dir, seguro) {
+  const C = GOLEIRO.reposicao, ma = g.miraAuto;
+  g.miraAuto = dir;
+  const r = escolherAlvo(m, g, 'reposicaoMao', seguro ? o => {
+    if (naPropriaArea(m, g, o.x, o.z, 0)) return false;
+    for (const a of m.jogadores) if (a.time !== g.time && MD.hypot(a.x - o.x, a.z - o.z) < C.livre) return false;
+    // a velocidade média da bola até ele: rolando, a do passe rasteiro da distância (StatsBomb: 12,4 m/s a 15–20 m, 14,6 a
+    // 25–30 m — PESQUISA-ETAPA2.md §1); por cima, 18
+    const L = MD.hypot(o.x - g.x, o.z - g.z), v = L > C.rolarMax ? 18 : Math.min(15, 8 + 0.25 * L);
+    return riscoLinha(m, g, g.x, g.z, o.x, o.z, v, true) <= C.riscoMax;
+  } : null);
+  g.miraAuto = ma;
+  return r;
+}
+
+/**
+ * Arremesso do goleiro com a mão (C5; GOLEIRO.reposicao; a bola já no ponto da soltura do gesto — reposicao.js): ar.tipo
+ * 'rolar' (rente ao chão, um pouco para baixo: quica perto e rola — a velocidade do passe rasteiro para a distância, até o
+ * teto do braço vRolar) ou 'ombro' (por cima do ombro, elevação elevOmbro pela distância, pousando antesOmbro da distância
+ * antes de quem recebe, até vOmbro). Para r (o recebedor, adiantado pela corrida dele) ou, sem ele, na direção ar.dx/dz a
+ * ar.L m. Erro pelo passe (erroBom–erroRuim rad) e pela pressão. Voo 'passe' (rolar) ou 'lancamento' (ombro) com
+ * `reposicao: ar.tipo`; evento 'passe' como os outros.
+ */
+export function arremessoGoleiro(m, j, ar, r) {
+  const b = m.bola, C = GOLEIRO.reposicao, ombro = ar.tipo === 'ombro', a = j.par.attr;
+  let tx, tz;
+  if (r) {
+    const L0 = MD.hypot(r.x - b.p.x, r.z - b.p.z);
+    const tVoo = ombro ? 0.4 + L0 / 20 : L0 / 11;
+    let lx = r.vx * tVoo, lz = r.vz * tVoo;
+    const ll = MD.hypot(lx, lz), lim = ombro ? 3 : ACOES.passe.adiante;
+    if (ll > lim) { lx *= lim / ll; lz *= lim / ll; }
+    tx = r.x + lx; tz = r.z + lz;
+  } else { tx = b.p.x + ar.dx * ar.L; tz = b.p.z + ar.dz * ar.L; }
+  ({ x: tx, z: tz } = dentroDoCampo(tx, tz, 0.5));
+  let ux = tx - b.p.x, uz = tz - b.p.z;
+  const D = MD.hypot(ux, uz) || 1;
+  ux /= D; uz /= D;
+  // o teto do braço pela força e pelo passe longo (como o do lateral: lateral.js vMaxArremesso)
+  const n = clamp((0.6 * (a.forca ?? 60) + 0.4 * (a.passeLongo ?? 60) - 40) / 55, 0, 1);
+  const sig = lerp(C.erroRuim, C.erroBom, (a.passe ?? 60) / 100) * (1 + 0.8 * pressaoSobre(m, j));
+  const u = girar(ux, uz, normal(m.rng) * sig);
+  const pp = { x: b.p.x, y: b.p.y, z: b.p.z };
+  const pe = j.par.attr.pePreferido ?? 1;
+  if (!ombro) {
+    const cfg = ACOES.passe;
+    const vCh = lerp(cfg.vChegada[0], cfg.vChegada[1], Math.sqrt(clamp(D / 35, 0, 1)));
+    let v0 = Math.min(lerp(C.vRolar[0], C.vRolar[1], n), velParaChegarCom(Math.max(0, D - 0.3), vCh));
+    v0 *= 1 + normal(m.rng) * sig * 0.8;
+    const R = BOLA.raio;
+    // giro de rolamento já na saída (a bola que quica não derrapa)
+    const v = { x: u.x * v0, y: C.vyRolar, z: u.z * v0 }, w = { x: u.z * v0 / R, y: 0, z: -u.x * v0 / R };
+    finalizarChute(m, j, pe, 'passe', v, w, { x: tx, z: tz }, r, { voo: { alto: false, reposicao: 'rolar' }, solto: true });
+    if (r) marcarRecebedor(m, r, tx, tz, 'passe', 0);
+    return true;
+  }
+  // por cima do ombro: chega a quem recebe na altura yOmbro (coxa/peito, como o arremesso curto do lateral), descendo
+  const el = lerp(C.elevOmbro[0], C.elevOmbro[1], clamp((D - C.rolarMax) / 16, 0, 1));
+  const w = { x: u.z * 3, y: 0, z: -u.x * 3 }; // um pouco de giro para trás (sai das pontas dos dedos)
+  let s = Math.min(velParaAlturaEm(pp, u.x, u.z, D, el, w, C.yOmbro), lerp(C.vOmbro[0], C.vOmbro[1], n));
+  s *= 1 + normal(m.rng) * sig * 0.6;
+  const ce = MD.cos(el), se = MD.sin(el);
+  const v = { x: u.x * s * ce, y: s * se, z: u.z * s * ce };
+  const voo = simularVoo(pp, v, w);
+  const chega = alturaNaDistancia(pp, u.x, u.z, D, s, el, w);
+  finalizarChute(m, j, pe, 'lancamento', v, w, { x: tx, z: tz }, r, { voo: { alto: true, reposicao: 'ombro' }, ticks: chega.caiu ? voo.ticks : chega.ticks, solto: true });
+  if (r) marcarRecebedor(m, r, tx, tz, 'lancamento', m.tick + (chega.caiu ? voo.ticks : chega.ticks));
+  return true;
 }
 
 /**
@@ -382,7 +467,8 @@ function finalizarChute(m, j, pe, tipo, v, w, alvo, para, extra = {}) {
   // a batida para baixo (ou reta) só vira bola ROLANDO com a bola no chão ou na altura do pé: no ar ela sai voando de onde
   // está (antes o cabeceio a gol, com elevação negativa, aparecia no chão aos pés de quem cabeceou no mesmo quadro — o
   // "teleporte" da contraprova de 11/10: 200 de 200 cabeceios a gol)
-  if (v.y <= 0.01 && (b.rolando || b.p.y <= RECEPCAO.alturaPe)) chutarRasteiro(b, v.x, v.z);
+  // (extra.solto: a bola que sai da mão do goleiro rolando — C5 — cai da altura da soltura e quica: não vai ao chão)
+  if (v.y <= 0.01 && !extra.solto && (b.rolando || b.p.y <= RECEPCAO.alturaPe)) chutarRasteiro(b, v.x, v.z);
   const c = j.cond;
   const sv = MD.hypot(v.x, v.z) || 1;
   c.ult = { tick: m.tick, pe, bx: b.p.x, bz: b.p.z, dx: v.x / sv, dz: v.z / sv, v: MD.hypot(v.x, v.y, v.z), tipo };
@@ -623,12 +709,15 @@ function lancamentoOuCruzamento(m, j, pe, p, erroMult) {
   const qx = ex - b.p.x, qz = ez - b.p.z;
   const Lq = MD.hypot(qx, qz) || 1;
   const ux = qx / Lq, uz = qz / Lq;
-  const w = { x: uz * 8, y: 0, z: -ux * 8 }; // um pouco de giro para trás
+  // (o bate-pronto do goleiro — C5, p.repos 'bate' —: a conta do lançamento com ACOES.batePronto e menos giro)
+  const bate = p.repos === 'bate', gi = bate ? ACOES.batePronto.giro : 8;
+  const w = { x: uz * gi, y: 0, z: -ux * gi }; // um pouco de giro para trás
   const pp = { x: b.p.x, y: b.p.y, z: b.p.z };
-  const { el, s } = vooLancamento(pp, ux, uz, Lq, L, w);
+  const { el, s } = vooLancamento(pp, ux, uz, Lq, L, w, bate ? ACOES.batePronto : cfg);
   const ce = MD.cos(el), se = MD.sin(el);
   const voo = simularVoo(pp, { x: ux * s * ce, y: s * se, z: uz * s * ce }, w);
-  finalizarChute(m, j, pe, 'lancamento', { x: ux * s * ce, y: s * se, z: uz * s * ce }, w, { x: ex, z: ez }, r, { voo: { alto: true, alvoPedido: { x: tx, z: tz } }, ticks: voo.ticks });
+  const vv = p.repos ? { alto: true, alvoPedido: { x: tx, z: tz }, reposicao: p.repos } : { alto: true, alvoPedido: { x: tx, z: tz } };
+  finalizarChute(m, j, pe, 'lancamento', { x: ux * s * ce, y: s * se, z: uz * s * ce }, w, { x: ex, z: ez }, r, { voo: vv, ticks: voo.ticks });
   if (r) marcarRecebedor(m, r, ex, ez, 'lancamento', m.tick + voo.ticks);
   tabela(m, j, p);
   return true;
@@ -640,9 +729,10 @@ function lancamentoOuCruzamento(m, j, pe, p, erroMult) {
  * a elevação vem da distância pedida L (elev[0] a 20 m → elev[1] a 60 m), como antes. Se a elevação baixa pede mais que
  * vMax, ela sobe — até a de antes (elevAlta, abaixo do ângulo do alcance máximo: o alcance cresce com ela) — para a bola
  * cair no ponto saindo a vMax; nem com elevAlta (a bola de 61+ m) → a bola de antes, na velocidade que ela pede. {el, s}
+ * cfg: ACOES.lancamento (padrão) ou ACOES.batePronto (o bate-pronto do goleiro, C5: mais baixo; elevAlta = o elev do chutão).
  */
-function vooLancamento(pp, ux, uz, Lq, L, w) {
-  const cfg = ACOES.lancamento, t = clamp((L - 20) / 40, 0, 1);
+function vooLancamento(pp, ux, uz, Lq, L, w, cfg = ACOES.lancamento) {
+  const t = clamp((L - 20) / 40, 0, 1);
   const el = lerp(cfg.elev[0], cfg.elev[1], t), s = velParaPousar(pp, ux, uz, Lq, el, w);
   if (s <= cfg.vMax) return { el, s };
   const elA = lerp(cfg.elevAlta[0], cfg.elevAlta[1], t);

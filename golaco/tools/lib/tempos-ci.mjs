@@ -74,6 +74,7 @@ export const TEMPOS_NODE = {
   // (25/10, D3: 48 partidas de 4 min contra o espelho em 3 processos; localmente ~100 s)
   'teste-pressao.mjs --humano': 150,
   'teste-goleiro-regras.mjs': 146,
+  'teste-reposicao.mjs': 80, // C5: 6 partidas da demo (o canhão de ~104 reposições) + 4 cenas do gesto; ~77 s aqui com outro processo
   'teste-goleiro-realista.mjs': 150, // (estimado: 8 sementes do canhão do goleiro em 4 processos, ~100 s na máquina de dev)
   'teste-bolas-paradas.mjs': 237,
   'teste-botoes.mjs': 95,

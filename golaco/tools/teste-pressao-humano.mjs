@@ -39,6 +39,10 @@
 //     (a histeresePasse um pouco maior, medindo o M2 junto), não afrouxando a meta;
 //  M12 (contraprova, 24/10) a retomada pela MÃO do goleiro (o encaixe e o PEGAR não passam por sim.js ganhouPosse) encerra
 //     o pedido: um toque de 1 passo, o encaixe, a reposição cortada dentro de 1 s — o pedido não volta (antes: 9 de 9 e 7 de 7).
+//     (C5, 31/10: a reposição com a mão ganhou o gesto — ≥ 0,45 s depois dos 20 passos — e mira o companheiro livre: cortada
+//     dentro de 1 s do toque ela não acontece mais (0 de 11 estados; a mais cedo, 84 passos). O caminho mais rápido que
+//     sobrou é o da ENFIADA — a bola no chão e o goleiro sai jogando com o PASSE de pé —, o mesmo passe do pé de antes: 6 de
+//     6 cortados entre 42 e 51 passos nas sementes 7001–7002; com o pressaoPedida sem o m.possePorTime, 6 de 6 voltam.)
 // AMOSTRA (15/10): 32 partidas (sementes 7001–7032, modelos alternados como antes), uma por processo filho (--par, padrão
 // 3). Com 8, a mesma lógica passava ou reprovava pelo sorteio dos lances: na main (c2f76d69), em 16 conjuntos disjuntos
 // de 8 partidas (sementes 7001–7032, 7101–7132, 7201–7232, 7301–7332), o M1 ia de 0,80 a 2,02 m, o M2 de 48 a 73%, a
@@ -117,6 +121,8 @@ async function retomadaPelaMao() {
   // V: a validade do pedido em passos (DEFESA_HUMANO.pressao.validade s; na main antes do D1, 1 PASSO — lá o toque nunca
   // durava até a reposição e o M12 passa sem a janela ter sentido)
   // (a reposição cortada dentro da validade é rara e depende dos estados: as sementes seguem, até 6, até ≥ 4 na janela)
+  // (C5: ENFIADA = a bola no chão no passo 21 depois do encaixe; o PASSE de pé apertado 3 passos depois da soltura — o aperto
+  // no passo da soltura sai com ela —, pelo analógico na direção do adversário a 5 m, como antes)
   const { BOTAO: B } = CFG, V = Math.round(CFG.DEFESA_HUMANO.pressao.validade / PASSO), sementes = [];
   let casosM = 0, janela = 0, fant = 0;
   for (let sem = SEM0; sem < SEM0 + 6 && (sementes.length < 2 || janela < 4); sem++) {
@@ -139,7 +145,7 @@ async function retomadaPelaMao() {
       adv.x = g.x - sx * 5; adv.z = g.z; adv.vx = adv.vz = 0;
       let perdeu = -1, f = false;
       for (let k = 0; k < V + 10; k++) {
-        P.passoPartida(w, k < 3 ? { x: -sx, z: 0, botoes: B.PASSE } : { x: 0, z: 0, botoes: 0 });
+        P.passoPartida(w, k < 3 ? { x: -sx, z: 0, botoes: B.ENFIADA } : k >= 24 && k < 27 ? { x: -sx, z: 0, botoes: B.PASSE } : { x: 0, z: 0, botoes: 0 });
         const d = w.posse != null ? S.jogadorPorId(w, w.posse) : null;
         if (perdeu < 0 && w.naMao == null && d && d.time === 1) perdeu = w.tick - tq;
         if (perdeu >= 0 && (D.pressaoPedida(w, 0) || D.pressionadorVisivel(w, 0) >= 0)) f = true;
@@ -214,7 +220,8 @@ const ep11 = n3 ? epSoma(porPartida.map(p => soma(p.casos.filter(c => c.t3), c =
 reg('M11 trocas do chamado em 3 s segurado (a marca que pula de jogador), por posse', `${fmt(n3 ? tr / n3 : NaN, 2)} ± ${fmt(ep11, 2)} (${tr} em ${n3})`, '≤ 0,8', n3 >= 200 && tr / n3 <= 0.8);
 // M12 a retomada pela MÃO do goleiro encerra o pedido (contraprova do D1, 24/10): toque de 1 passo no PRESSÃO com o
 // adversário de posse → encaixe do goleiro do time 0 (as atribuições do goleiro.js aplicarDefesa: não passa por sim.js
-// ganhouPosse) → o humano, no goleiro, passa no adversário a 5 m → a bola perdida dentro da validade do toque. Sem o botão
+// ganhouPosse) → o humano, no goleiro, solta a bola no chão (ENFIADA; C5) e passa de pé no adversário a 5 m → a bola
+// perdida dentro da validade do toque. Sem o botão
 // desde o toque, o pedido não volta a valer (pressaoPedida) nem chama ninguém (pressionadorVisivel). Antes da correção
 // (defesa.js pressaoPedida sem m.possePorTime): todos voltavam (9 de 9 nas sementes 7001–7002, 7 de 7 nas 7101–7102)
 const m12 = await retomadaPelaMao();
