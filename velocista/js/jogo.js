@@ -12,7 +12,7 @@ import { criarTrafego } from './trafego.js';
 import { criarPedestres } from './pedestres.js';
 import { criarCombate, ESPECIAIS } from './combate.js';
 import { criarGuia } from './guia.js';
-import { criarViloes } from './viloes.js';
+import { criarViloes, CAPITULOS } from './viloes.js';
 import { criarHistoria } from './historia.js';
 import { criarEquipe } from './equipe.js';
 import { criarTempo } from './tempo.js';
@@ -36,6 +36,7 @@ import { FACHADA_M, TELHADO_M, CALCADA_M, GRAMA_M, criarFachadas, criarLojas, te
 import { texturaDetalhe, comDetalhe } from './detalhe.js';
 import { passoEmbalo, tetoCorrida, gastoCorrida } from './velocidade.js';
 import { PESSOAL, conferirSenha, entrarPessoal, sairPessoal } from './edicao.js';
+import { criarPoderes, NIVEIS, XP } from './poderes.js';
 
 // ---------- constantes ----------
 const TOQUE = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -608,7 +609,7 @@ function continuar() { J.modo = 'jogando'; el.pausa.hidden = true; if (!TOQUE) p
 function pausar() {
   if (J.modo !== 'jogando') return;
   J.modo = 'pausa'; el.pausa.hidden = false; document.exitPointerLock?.();
-  armarRecomecar(false);
+  armarRecomecar(false); mostrarPoderes();
   // o que saiu da tela de jogo fica aqui: missão, pontos, esferas e hora
   const ma = missoes.atual;
   el.resumo.innerHTML = `${historia.capitulo ? `<span class="hist">${historia.capitulo}</span><br>` : ''}${ma ? `História ${missoes.indice + 1}/${missoes.total}: <b>${ma.titulo}</b>` : 'História concluída: a cidade é sua'}<br>${missoes.stats.pontos} pontos · esferas ${J.coletadas}/${J.total} · ${el.hora.textContent}`;
@@ -634,7 +635,7 @@ function armarRecomecar(ligado) {
 }
 $('btnRecomecar').addEventListener('click', () => {
   if (performance.now() > confirmaAte) { armarRecomecar(true); setTimeout(() => { if (performance.now() >= confirmaAte) armarRecomecar(false); }, 4100); return; }
-  try { sessionStorage.setItem('theflash.recomecar', '1'); } catch { missoes.zerar(); historia.zerar(); viloes.zerar(); }   // sem sessionStorage: zera direto
+  try { sessionStorage.setItem('theflash.recomecar', '1'); } catch { missoes.zerar(); historia.zerar(); viloes.zerar(); poderes.zerar(); }   // sem sessionStorage: zera direto
   location.reload();
 });
 $('btnJogar').addEventListener('click', () => { deitar(); reiniciar(); });
@@ -735,7 +736,7 @@ function passoHeroi(dt) {
   const dx = fx * iz + rx * ix, dz = fz * iz + rz * ix;
   const querCorrer = (teclas.has('shift') || toque.correr) && (m > 0.1 || P.parede);
   if (missoes.atual?.semEnergia) P.energia = 0;                      // (Parte 2: a adaga trancou o raio: nem vibrar nem especial)
-  P.protecao = J.roupa === 'novo' ? ARMADURA : 1;                     // (Parte 3: a armadura do traje novo; combate.js e viloes.js leem)
+  P.protecao = (J.roupa === 'novo' ? ARMADURA : 1) * poderes.bonus.protecao;                     // (Parte 3: a armadura do traje novo; combate.js e viloes.js leem)
   P.correndo = querCorrer && P.energia > 0.02;
   const vh0 = Math.hypot(P.vx, P.vz);
   // vibração: atravessa prédios e objetos (precisa de velocidade para começar e de energia para continuar)
@@ -749,11 +750,11 @@ function passoHeroi(dt) {
   else if (P.vibrando) P.energia = Math.max(0, P.energia - ENERGIA.vibrar * dt);
   else if (P.correndo && J.roupa === 'novo' && !P.parede && (P.embalo || 0) > BATERIA.embalo) P.energia = Math.min(1, P.energia + BATERIA.carga * dt);   // a bateria do traje novo: correndo muito rápido, enche
   else if (P.correndo) P.energia = Math.max(0, P.energia - (P.parede ? ENERGIA.parede : ENERGIA.gasto * gastoCorrida(P.embalo || 0)) * dt);
-  else if (!combate.pertoDeBandido(P, 12) && !viloes.emLuta) P.energia = Math.min(1, P.energia + ENERGIA.recarga * dt * (m < 0.1 ? 3 : 1));   // no meio da briga não recarrega
+  else if (!combate.pertoDeBandido(P, 12) && !viloes.emLuta) P.energia = Math.min(1, P.energia + ENERGIA.recarga * dt * (m < 0.1 ? 3 : 1) * poderes.bonus.recarga);   // no meio da briga não recarrega
   if (missoes.atual?.semEnergia) P.energia = 0;                      // (a recarga também fica trancada)
   // supervelocidade (velocidade.js): na reta, segurando CORRER, o embalo sobe o teto até ~830 km/h
   const angPedido = vh0 > 5 && m > 0.1 ? Math.acos(clamp((P.vx * dx + P.vz * dz) / (vh0 * (Math.hypot(dx, dz) || 1)), -1, 1)) : 0;
-  P.embalo = passoEmbalo(P.embalo || 0, { correndo: P.correndo && !P.vibrando && !P.parede, noChao: P.noChao, m, angulo: angPedido, bloqueado: viloes.ativo || combate.ocupado || !!J.interior }, dt);
+  P.embalo = passoEmbalo(P.embalo || 0, { correndo: P.correndo && !P.vibrando && !P.parede, noChao: P.noChao, m, angulo: angPedido, bloqueado: viloes.ativo || combate.ocupado || !!J.interior, ganho: poderes.bonus.embalo }, dt);
   // o gelo do Capitão Frio deixa lento; na Parte 2, o raio fraco da linha do tempo alterada (`fraco`) e, sem poderes, um teto (`teto`)
   // dentro dos lugares (Delegacia, Jitters, Picture News, casa dos West) o Flash anda depressa, mas sem a supervelocidade:
   // salas de 16 a 30 m não cabem 200 km/h (ele batia nas paredes de dentro e atravessava)
@@ -871,7 +872,7 @@ function esferasProximas(dt) {
     const r = orbesAtivos[i], o = r.o;
     r.mesh.position.y = o.y + Math.sin(P.t * 3 + o.x) * 0.25; r.mesh.rotation.y += dt * 2;
     if (Math.abs(o.x - P.x) < 2.8 && Math.abs(o.z - P.z) < 2.8 && Math.abs(o.y - (P.y + 0.9)) < 2.6) {
-      esferasColetadas.add(o.id); J.coletadas++; P.energia = Math.min(1, P.energia + ENERGIA.esfera);
+      esferasColetadas.add(o.id); J.coletadas++; P.energia = Math.min(1, P.energia + ENERGIA.esfera * poderes.bonus.esfera);
       const grupo = r.mesh.parent; if (grupo) grupo.remove(r.mesh);
       for (const d of carregados.values()) { const k = d.orbes.indexOf(r); if (k >= 0) d.orbes.splice(k, 1); }
       orbesAtivos.splice(i, 1);
@@ -1185,7 +1186,7 @@ let armazem = null; try { armazem = localStorage; } catch { armazem = null; }
 try { ESTEIRA.recorde = Math.max(ESTEIRA.recorde, Number(armazem?.getItem('theflash.esteira.v1')) || 0); } catch { /* sem armazenamento */ }
 // "Recomeçar a história do zero" (pausa): a página anterior marcou o pedido e recarregou; o progresso some AQUI, antes de
 // qualquer módulo ler o que está gravado (assim nada que a página velha ainda grave antes de sair volta a valer)
-const PROGRESSO = ['theflash.missoes.v2', 'theflash.missoes.v1', 'theflash.historia.v1', 'theflash.viloes.v1'];   // missoes.js, historia.js, viloes.js
+const PROGRESSO = ['theflash.missoes.v2', 'theflash.missoes.v1', 'theflash.historia.v1', 'theflash.viloes.v1', 'theflash.poderes.v1'];   // missoes.js, historia.js, viloes.js, poderes.js
 try { if (sessionStorage.getItem('theflash.recomecar')) { sessionStorage.removeItem('theflash.recomecar'); for (const k of PROGRESSO) armazem?.removeItem(k); } } catch { /* sem armazenamento */ }
 const missoes = criarMissoes(armazem);
 const combate = criarCombate(cena, { mobile: MOBILE, colide: (x, z, y) => empurrar(rectsPerto, x, z, 0.35, y, 1.7), chao: (x, z, y) => chaoEm(rectsPerto, x, z, y) });
@@ -1225,6 +1226,27 @@ const corridas3d = (() => {
 const viloes = criarViloes(cena, { mobile: MOBILE, aniso: ANISO, combate, armazem, avisar: (t, r, k) => avisar(t, r, k),
   colide: (x, z, y) => empurrar(rectsPerto, x, z, 0.4, y, 1.8), chao: (x, z, y) => chaoEm(rectsPerto, x, z, y),
   labPos: { x: LAB_B.plano.entrada.x, z: LAB_B.plano.entrada.z - 9 } });
+// PODERES QUE EVOLUEM COM AS BATALHAS (dono, 31/10; poderes.js): cada vitória dá experiência; a cada nível, uma habilidade
+// nova, com o aviso e a fala da Caitlin ou do Cisco (um nível de cada vez, depois do aviso que estiver na tela). Quem já tinha
+// jogado começa com a experiência dos vilões que já venceu.
+const poderes = criarPoderes({ armazem, inicial: CAPITULOS.filter((c) => viloes.vencido(c.id)).length * XP.vilao });
+combate.definirBonus(poderes.bonus);
+const filaNivel = [];
+function ganharXp(tipo) { for (const n of poderes.ganhar(tipo)) filaNivel.push(n); combate.definirBonus(poderes.bonus); }
+function passoNivel() {
+  if (!filaNivel.length || J.aviso > 0 || J.modo !== 'jogando' || historia.emCena) return;
+  const n = filaNivel.shift();
+  avisar(n.nome, `Nível ${n.nivel} · habilidade nova`, 'ok'); historia.radio(`nivel-${n.nivel}`);
+}
+// na pausa: o nível, a barra até o próximo e as dez habilidades (as aprendidas acesas)
+function mostrarPoderes() {
+  const caixa = $('poderes'); if (!caixa) return;
+  const n = poderes.nivel, pr = poderes.progresso, prox = NIVEIS[n];
+  caixa.innerHTML = `<div class="pod-topo"><b>Poderes</b><span>Nível ${n} · ${NIVEIS[n - 1].nome}</span></div>`
+    + `<div class="pod-barra"><i style="width:${(pr.fracao * 100).toFixed(0)}%"></i></div>`
+    + `<small>${prox ? `Próxima: ${prox.nome} (faltam ${prox.xp - poderes.xp} de experiência). ${prox.texto}` : 'Todas as habilidades aprendidas.'}</small>`
+    + `<div class="pod-lista">${NIVEIS.map((h, i) => `<span class="hab${i < n ? ' aprendida' : ''}" title="${h.texto}">${h.nome}</span>`).join('')}</div>`;
+}
 const portais = criarPortais(cena);
 // os vilões do dia a dia (rivais.js): opcionais, só com nada em andamento
 const rivais = criarRivais(cena, { mobile: MOBILE, aniso: ANISO, combate, fx: combate.efeitos, avisar: (t, r, k) => avisar(t, r, k) });
@@ -1263,7 +1285,7 @@ function passoMissoes(dt) {
   const ev = viloes.ativo || tempo.epoca === 'passado' || J.interior || !querCrime || (!crimes.ativo && ocupado) ? null : crimes.atualizar(J.dtM ?? dt, P, { forcar: m?.crime });
   if (ev?.inicio) avisar(ev.nome, 'Crime na cidade', 'crime');
   else if (ev) {
-    if (ev.ok) { missoes.contar('crimes'); missoes.contar(ev.tipo); missoes.contar('pontos', 250); avisar(`${ev.nome} impedido`, '+250 pontos', 'ok'); J.festaPed = crAntes || { x: P.x, z: P.z }; }
+    if (ev.ok) { ganharXp('crime'); missoes.contar('crimes'); missoes.contar(ev.tipo); missoes.contar('pontos', 250); avisar(`${ev.nome} impedido`, '+250 pontos', 'ok'); J.festaPed = crAntes || { x: P.x, z: P.z }; }
     else avisar(ev.tipo === 'queda' ? 'Não chegou a tempo' : 'O criminoso escapou', ev.nome, 'alerta');
   }
   const sala = LAB_B.plano.dentro(P.x, P.z, P.y);
@@ -1758,7 +1780,7 @@ function eventoVilao(ev) {
   else if (ev.tipo === 'derrota') historia.radio(`derrota-${id}`, { sempre: true });
   else if (ev.tipo === 'escapou') historia.radio(`escapou-${id}`, { sempre: true });
   else if (ev.tipo === 'derrotado') rodarCena(`derrotado-${id}`, focosVilao(), () => viloes.continuar());
-  else if (ev.tipo === 'vitoria') { missoes.contar('pontos', id === 'final' ? 5000 : 2000); J.festaPed = { x: P.x, z: P.z }; }
+  else if (ev.tipo === 'vitoria') { ganharXp('vilao'); missoes.contar('pontos', id === 'final' ? 5000 : 2000); J.festaPed = { x: P.x, z: P.z }; }
 }
 
 // ---------- laço ----------
@@ -1791,7 +1813,7 @@ function quadro() {
     const dtM = J.dtM = J.lento > 0 ? dt * TEMPO_LENTO.fator : dt;
     passoHeroi(dt); passoEsteira(dt); esferasProximas(dt);
     for (const ev of combate.passo(dt, P, { dtMundo: dtM })) {
-      if (ev.tipo === 'nocaute') { missoes.contar('nocautes'); missoes.contar('pontos', 50); if (ev.especial) missoes.contar('especiais'); }
+      if (ev.tipo === 'nocaute') { ganharXp('nocaute'); missoes.contar('nocautes'); missoes.contar('pontos', 50); if (ev.especial) missoes.contar('especiais'); }
       else if (ev.tipo === 'especial' && ev.especial === 'tempestade') missoes.contar('tempestades');
       else if (ev.tipo === 'dano') { el.dano.style.opacity = '1'; }
     }
@@ -1799,14 +1821,14 @@ function quadro() {
     J.danoVilao = Math.max(0, (J.danoVilao || 0) - dt * 2);
     el.missao.hidden = viloes.ativo; el.corpo.classList.toggle('capitulo', viloes.ativo); medirTopo();
     el.dano.style.opacity = String(Math.min(1, Math.max(combate.dano, J.danoVilao)));
-    atualizarBotoesEspeciais();
+    atualizarBotoesEspeciais(); passoNivel();
     passoMissoes(dt); passoInteriores(dt); passoInteracoes(dt);
     { // os vilões do dia a dia: aparecem só com o herói solto (depois do Zoom), nada em andamento
       const m = missoes.atual, livre = !J.cenaPendente && !J.cron && historia.radioLivre && !crimes.ativo && !viloes.ativo && !J.interior && !J.esteira && tempo.epoca === 'presente'
         && !(m?.tipo === 'portais' && portais.estado().correndo) && !m?.capitulo && !interacoes.corrida && (viloes.vencido('zoom') || missoes.livre);
       for (const ev of rivais.atualizar(dtM, P, { pode: livre })) {
         if (ev.tipo === 'dano') J.danoVilao = 1;
-        if (ev.tipo === 'vencido') { missoes.contar('pontos', 300); missoes.contar('rivais'); }
+        if (ev.tipo === 'vencido') { ganharXp('rival'); missoes.contar('pontos', 300); missoes.contar('rivais'); }
       }
     }
     { // as pessoas fogem do perigo (o vilão do dia, o crime, os vilões da história) e comemoram a vitória do herói
@@ -1894,4 +1916,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { PESSOAL, posfx, escolherImagem, get presetImagem() { return presetImagem; }, interacoes, corridas, vitrine, equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { PESSOAL, poderes, ganharXp, posfx, escolherImagem, get presetImagem() { return presetImagem; }, interacoes, corridas, vitrine, equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
