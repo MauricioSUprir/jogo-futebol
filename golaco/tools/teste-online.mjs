@@ -1,8 +1,9 @@
 // Online 1×1, etapa 2 (contrato "Online 1×1" no CONTRATOS.md): a sessão de troca de entradas (js/online.js) em Node,
 // com dois "aparelhos" — cada um com o seu mundo, a sua sessão e o seu relógio — ligados por uma rede de mentira
 // (tools/lib/rede-memoria.mjs: latência, variação, perda, rajada, duplicação, controle confiável). Confere:
-//  O1 formato: 100 mil entradas sorteadas + extremos — decodificar(codificar(e)) = a quantização do jogo (1/1024, ±1);
-//     pacotes inválidos (tipo, tamanho, k > 16, bits reservados) descartados;
+//  O1 formato: 100 mil entradas sorteadas + extremos — decodificar(codificar(e)) = a quantização do jogo (1/1024, ±1),
+//     também a mira pela tela (C6: mx, mz; sem ela, a do analógico); pacotes inválidos (tipo, tamanho, k > 16, bits
+//     reservados, mira fora de −1…1) descartados;
 //  O2 o MESMO jogo nos dois: em 5 redes (15±10 ms; 40±20 com 2% de perda; 80±40 com 5%; 40±20 com B a 30 qps e o relógio
 //     de B 0,5% mais rápido; 40±20 com 10% duplicados, degrau de latência 20 → 120 → 20 ms e rajada de 300 ms sem nada),
 //     com "replays" locais (um aparelho para sozinho 2–6 s), menu aberto (bit IA) e edições do time dos dois lados: o hash
@@ -45,13 +46,20 @@ function gerador(sem) {
   let ruins = 0;
   const b = new Uint8Array(O.BYTES);
   const extremos = [{ x: 1, z: -1, botoes: 0x7fff, repete: true, ia: true, acao: true }, { x: -1.7, z: 3, botoes: 0, repete: false },
-    { x: 0, z: 0, botoes: 0 }, { x: -0, z: 1e-9, botoes: BOTAO.CHUTE }, { x: 0.99951171875, z: -0.00048828125, botoes: 1 }];
-  const casos = extremos.concat(Array.from({ length: 100000 }, () => ({ x: (r() * 2.4 - 1.2), z: (r() * 2.4 - 1.2), botoes: Math.floor(r() * 0x8000), repete: r() < 0.5, ia: r() < 0.2, acao: r() < 0.1 })));
+    { x: 0, z: 0, botoes: 0 }, { x: -0, z: 1e-9, botoes: BOTAO.CHUTE }, { x: 0.99951171875, z: -0.00048828125, botoes: 1 },
+    { x: 0.5, z: 0.5, mx: -1.3, mz: 2, botoes: 0 }, { x: 0.2, z: -0.4, mx: -0, mz: 1e-9, botoes: 3 }, { x: 0.3, z: 0.1, mx: null, mz: null, botoes: 0 }];
+  // metade com a mira pela tela (C6), metade sem (a mira volta como a do analógico)
+  const casos = extremos.concat(Array.from({ length: 100000 }, () => {
+    const e = { x: (r() * 2.4 - 1.2), z: (r() * 2.4 - 1.2), botoes: Math.floor(r() * 0x8000), repete: r() < 0.5, ia: r() < 0.2, acao: r() < 0.1 };
+    if (r() < 0.5) { e.mx = r() * 2.4 - 1.2; e.mz = r() * 2.4 - 1.2; }
+    return e;
+  }));
   for (const e of casos) {
     O.codificar(e, b, 0);
     const d = O.decodificar(b, 0);
-    if (d.x !== q(e.x) || d.z !== q(e.z) || d.botoes !== (e.botoes & 0x7fff) || d.repete !== !!e.repete || d.ia !== !!e.ia || d.acao !== !!e.acao) ruins++;
-    if (!Object.is(d.x, d.x + 0) || !Object.is(d.z, d.z + 0)) ruins++; // nunca −0
+    const mx = e.mx == null ? q(e.x) : q(e.mx), mz = e.mx == null ? q(e.z) : q(e.mz);
+    if (d.x !== q(e.x) || d.z !== q(e.z) || d.mx !== mx || d.mz !== mz || d.botoes !== (e.botoes & 0x7fff) || d.repete !== !!e.repete || d.ia !== !!e.ia || d.acao !== !!e.acao) ruins++;
+    if (!Object.is(d.x, d.x + 0) || !Object.is(d.z, d.z + 0) || !Object.is(d.mx, d.mx + 0) || !Object.is(d.mz, d.mz + 0)) ruins++; // nunca −0
   }
   // pacotes inválidos
   const s = O.criarSessao({ lado: 0, D: 4 });
@@ -60,9 +68,11 @@ function gerador(sem) {
   const ruimTam = bom.slice(0, bom.byteLength - 1);
   const ruimBit = bom.slice(0); new Uint8Array(ruimBit)[O.CABECALHO + 5] = 0x80;
   const ruimK = new ArrayBuffer(O.CABECALHO + O.BYTES * 17); new DataView(ruimK).setUint8(0, 1); new DataView(ruimK).setUint8(20, 17);
-  const invalidos = [ruimTipo, ruimTam, ruimBit, ruimK, new ArrayBuffer(3)].filter(x => O.lerPacote(x) !== null).length;
+  // a mira (C6) fora de −1…1: mx com os 12 bits em 4095
+  const ruimMira = bom.slice(0); new Uint8Array(ruimMira)[O.CABECALHO + 6] = 0xff; new Uint8Array(ruimMira)[O.CABECALHO + 7] |= 0x0f;
+  const invalidos = [ruimTipo, ruimTam, ruimBit, ruimK, ruimMira, new ArrayBuffer(3)].filter(x => O.lerPacote(x) !== null).length;
   linha('O1 formato: decodificar(codificar(e)) = a quantização do jogo (100 mil + extremos)', `${ruins} diferentes de ${casos.length}`, '0', ruins === 0);
-  linha('O1 pacotes inválidos (tipo, tamanho, bit reservado, k > 16) descartados', `${5 - invalidos} de 5`, '5 de 5', invalidos === 0 && O.lerPacote(bom) !== null);
+  linha('O1 pacotes inválidos (tipo, tamanho, bit reservado, k > 16, mira fora) descartados', `${6 - invalidos} de 6`, '6 de 6', invalidos === 0 && O.lerPacote(bom) !== null);
 }
 
 // ------------------------------------------------------------------ dois aparelhos
@@ -82,7 +92,9 @@ function criarPessoa(sem, lado) {
     if (r() < 0.0008) { menu = 120 + Math.floor(r() * 300); }
     if (dura-- <= 0) {
       const ang = r() * 2 * Math.PI, mag = r() < 0.2 ? 0 : 0.3 + 0.7 * r();
-      e = { x: Math.cos(ang) * mag, z: Math.sin(ang) * mag, botoes: LISTA[Math.floor(r() * LISTA.length)] };
+      // a mira pela tela (C6) fora da direção do analógico (até ±0,45 rad, pelo próprio ângulo: sem sortear de novo)
+      const am = ang + ((Math.floor(ang * 1000) % 7) - 3) * 0.15;
+      e = { x: Math.cos(ang) * mag, z: Math.sin(ang) * mag, mx: Math.cos(am) * mag, mz: Math.sin(am) * mag, botoes: LISTA[Math.floor(r() * LISTA.length)] };
       dura = 10 + Math.floor(r() * 50);
     }
     return e;

@@ -1,5 +1,6 @@
 // Entrada (DOM): teclado, controle (Gamepad API) e toque. Junta tudo numa saída por quadro
-// {x, z, botoes} com o analógico JÁ no mundo (paraMundo com o yaw da câmera) e a máscara BOTAO.
+// {x, z, mx, mz, botoes} com o analógico JÁ no mundo — x/z pelo rumo da câmera (paraMundo: a corrida e a condução), mx/mz
+// pela câmera do quadro (miraPelaTela: a MIRA das ações, a direção na tela levada ao gramado; C6) — e a máscara BOTAO.
 // A máscara só diz "apertado agora": quem mede o tempo segurado (força do passe/chute) é a
 // lógica. Um toque mais curto que um quadro não se perde: o aperto fica marcado (pulso) até um
 // passo de simulação consumir (limparPulsos); soltar e apertar de novo antes de um passo também não (o passo vê o
@@ -30,7 +31,7 @@
 // time" aberto) não deixa nada vazar para o jogo: só a pausa (Esc/P/Start) passa, e o que estava
 // segurado conta como solto até ser apertado de novo.
 
-import { processarAnalogico, teclasParaAnalogico, paraMundo } from './controle.js';
+import { processarAnalogico, teclasParaAnalogico, paraMundo, miraPelaTela } from './controle.js';
 import { BOTAO, ENTRADA } from './config.js';
 import { aoTocar } from './toque-botao.js';
 
@@ -273,7 +274,7 @@ export function calcularLayoutToque(W, H, sa, tamanho = 1, vagas = ['grande', 'a
 }
 
 /**
- * opc = {forcarToque: bool, aoAcao(acao), aoMudarLayout()}. Devolve a interface da entrada.
+ * opc = {forcarToque: bool, aoAcao(acao), aoMudarLayout(), tela() → {cam, ox, oz} | null (a câmera do quadro para a mira: C6)}. Devolve a interface da entrada.
  * aoMudarLayout: os controles de toque apareceram/sumiram (o HUD do topo se ajusta).
  */
 export function criarEntrada(opc = {}) {
@@ -686,21 +687,25 @@ export function criarEntrada(opc = {}) {
   }
 
   // repete: o main.js marca os passos do quadro depois do 1º (a mesma leitura; sim.js aplicarEntrada)
-  const saida = { x: 0, z: 0, botoes: 0, ax: 0, ay: 0, mag: 0, repete: false };
+  // mx/mz: a mira das ações pela tela (C6; null = a do analógico, x/z — a entrada forçada dos testes)
+  const saida = { x: 0, z: 0, mx: null, mz: null, botoes: 0, ax: 0, ay: 0, mag: 0, repete: false };
+  const _mira = { x: 0, z: 0 };
   return {
     /**
      * Lê todas as fontes. yaw = rumo da câmera no chão; agora = ms do laço (o relógio do jogo, manual nos testes:
-     * mede o toque curto × segurado da DIVIDIDA). botoes = apertados agora + pulsos.
+     * mede o toque curto × segurado da DIVIDIDA). botoes = apertados agora + pulsos. A mira (mx, mz) vem da câmera do
+     * último quadro desenhado (opc.tela() = {cam, ox, oz} do main.js, ou null: a do rumo).
      */
     ler(yaw, agora = performance.now()) {
       if (forcada) {
         saida.x = forcada.x ?? 0; saida.z = forcada.z ?? 0; saida.botoes = (forcada.botoes ?? 0) | 0;
+        saida.mx = forcada.mx ?? null; saida.mz = forcada.mz ?? null;
         saida.ax = saida.ay = 0; saida.mag = Math.hypot(saida.x, saida.z);
         return saida;
       }
       const t = lerTeclado(), c = lerControle(), q = lerToque(agora);
       if (bloqueada) {
-        saida.x = 0; saida.z = 0; saida.botoes = 0; saida.ax = 0; saida.ay = 0; saida.mag = 0;
+        saida.x = 0; saida.z = 0; saida.mx = null; saida.mz = null; saida.botoes = 0; saida.ax = 0; saida.ay = 0; saida.mag = 0;
         return saida;
       }
       let ax = 0, ay = 0, mag = 0, botoes = 0;
@@ -711,6 +716,11 @@ export function criarEntrada(opc = {}) {
         if (f.mag > mag) { mag = f.mag; ax = f.ax; ay = f.ay; }
       }
       const w = paraMundo(ax, ay, yaw);
+      // a mira das ações (C6): a MESMA direção na tela, levada ao gramado pela câmera que desenhou o quadro (a reta do olho
+      // por cada ponto da tela até y = 0; controle.js miraPelaTela). Teclado, controle e toque iguais: o que a pessoa vê
+      const tl = mag > 0 && opc.tela ? opc.tela() : null;
+      const mt = tl ? miraPelaTela(ax, ay, tl.cam, tl.ox, tl.oz, _mira) : null;
+      saida.mx = mt ? mt.x * mag : w.x; saida.mz = mt ? mt.z * mag : w.z;
       botoes |= pulsos;
       // soltou e apertou de novo sem um passo no meio: este passo vê solto, o próximo vê o reaperto (pulso). Os
       // segurados contínuos (CORRER, modificador) ficam de fora: duas teclas do mesmo bit (os dois Shift) não piscam

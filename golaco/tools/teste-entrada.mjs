@@ -1,6 +1,9 @@
 // Entrada: zona morta RADIAL (uma diagonal sutil vale, nada trava em 8 direções), módulo
 // contínuo na borda da zona morta, teclado normalizado e conversão tela → mundo da câmera de
 // TV. No fim, o jogador de verdade anda na diagonal sutil pedida.
+// Mira pela tela (C6, contrato "Mira pela tela"): controle.js miraPelaTela, a conta pura — câmera olhando de cima = o rumo
+// (paraMundo); câmeras inclinadas (a TV do celular, a do PC, atrás do cobrador, girada): a direção da tela de um ponto do
+// gramado até outro = a direção no gramado entre eles; cameraDaMatriz lê a matriz (coluna a coluna) do three.js.
 // Etapa 3 (Parte 4; plano 2.8): botões que mudam de sentido pela fase (J/K/O e A/B/Y/RB: passe/CONTER,
 // chute/DIVIDIDA, PEGAR/PRESSÃO — o PEGAR do goleiro com a bola no pé, pedido de 11/10; antes era nada —,
 // enfiada/goleiro) com o sentido FIXADO NO APERTO (a posse muda com o botão segurado e ele não troca de função
@@ -10,7 +13,7 @@
 // tocar = bote, segurar = conter, como o "Sprint & Tackle" do FC Mobile) e a PRESSÃO saiu do 2º anel (vaga d, em
 // cima da jogada) para a vaga b; do toque ao jogo: o toque curto faz o bote e o segurado contém o condutor.
 //   node tools/teste-entrada.mjs
-import { processarAnalogico, teclasParaAnalogico, paraMundo } from '../js/controle.js';
+import { processarAnalogico, teclasParaAnalogico, paraMundo, miraPelaTela, cameraDaMatriz } from '../js/controle.js';
 import { criarMundo, passo } from '../js/sim.js';
 import { ENTRADA, BOTAO } from '../js/config.js';
 import * as ENT from '../js/entrada.js';
@@ -57,6 +60,57 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
   const d = paraMundo(1, 0, -Math.PI / 2), c = paraMundo(0, 1, -Math.PI / 2);
   reg('direita na tela = +x no mundo', `(${fmt(d.x)}, ${fmt(d.z)})`, '(1, 0)', Math.abs(d.x - 1) < 1e-9 && Math.abs(d.z) < 1e-9);
   reg('para cima na tela = para longe da câmera (−z)', `(${fmt(c.x)}, ${fmt(c.z)})`, '(0, −1)', Math.abs(c.x) < 1e-9 && Math.abs(c.z + 1) < 1e-9);
+}
+// mira pela tela (C6): câmera de mentira pela pose (olho, alvo) — a mesma conta do lookAt do three.js, em números
+{
+  const cam = (ex, ey, ez, tx, ty, tz) => {
+    let fx = tx - ex, fy = ty - ey, fz = tz - ez; const lf = Math.hypot(fx, fy, fz); fx /= lf; fy /= lf; fz /= lf;
+    let rx = -fz, rz = fx; const lr = Math.hypot(rx, rz); rx /= lr; rz /= lr; // direita = frente × cima (sem rolar)
+    const ux = -rz * fy, uy = rz * fx - rx * fz, uz = rx * fy;               // cima = direita × frente
+    return { px: ex, py: ey, pz: ez, rx, ry: 0, rz, ux, uy, uz, fx, fy, fz };
+  };
+  // a tela (sem fov: pixel quadrado) de um ponto do gramado
+  const tela = (c, x, z) => {
+    const dx = x - c.px, dy = -c.py, dz = z - c.pz, zc = dx * c.fx + dy * c.fy + dz * c.fz;
+    return [(dx * c.rx + dy * c.ry + dz * c.rz) / zc, (dx * c.ux + dy * c.uy + dz * c.uz) / zc];
+  };
+  // de cima (quase a pino, olhando para −z na tela de cima): o mesmo que o rumo da câmera
+  const cima = cam(10, 80, 5.001, 10, 0, 5);
+  let pior0 = 0;
+  for (let a = 0; a < 360; a += 15) {
+    const ax = Math.cos(a / DEG), ay = Math.sin(a / DEG), w = miraPelaTela(ax, ay, cima, 10, 5), y = paraMundo(ax, ay, -Math.PI / 2);
+    pior0 = Math.max(pior0, Math.abs(Math.atan2(w.z, w.x) - Math.atan2(y.z, y.x) + 3 * Math.PI) % (2 * Math.PI) - Math.PI);
+  }
+  reg('mira pela tela, câmera de cima = o rumo da câmera (paraMundo), 24 direções', `pior ${fmt(Math.abs(pior0) * DEG, 3)}°`, '< 0,01°', Math.abs(pior0) * DEG < 0.01);
+  // inclinadas: a TV do celular (15°), a do PC (24,6°), atrás do cobrador (2,6 m de altura, 4,6 m atrás, de lado) e uma
+  // girada 37° no chão: apontar NA TELA de O para T = apontar no gramado de O para T
+  const cams = [['TV do celular', cam(20, 12.3, 46 + 6, 20, 0, 6)], ['TV do PC', cam(-15, 18.3, 40 - 4, -15, 0, -4)],
+    ['atrás do cobrador', cam(41.5 - 4.6, 2.6, 1.9, 52.5, 1, 0)], ['girada 37°', cam(0, 9, 0, 30 * Math.cos(0.65), 0, 30 * Math.sin(0.65))]];
+  let pior = 0, n = 0;
+  for (const [, c] of cams) {
+    for (const [ox, oz] of [[30, 10], [45, -8], [38, 0.5], [25, 20], [41.5, 0]]) {
+      for (const [tx, tz] of [[52.5, 0], [52.5, 3.66], [52.5, -3.66], [ox + 12, oz - 9], [ox - 6, oz + 7]]) {
+        const so = tela(c, ox, oz), st = tela(c, tx, tz);
+        const zo = (ox - c.px) * c.fx - c.py * c.fy + (oz - c.pz) * c.fz, zt = (tx - c.px) * c.fx - c.py * c.fy + (tz - c.pz) * c.fz;
+        if (zo <= 0.5 || zt <= 0.5) continue;
+        const w = miraPelaTela(st[0] - so[0], st[1] - so[1], c, ox, oz);
+        if (!w) { pior = Infinity; continue; }
+        const e = Math.abs(((Math.atan2(w.z, w.x) - Math.atan2(tz - oz, tx - ox)) * DEG + 540) % 360 - 180);
+        pior = Math.max(pior, e); n++;
+      }
+    }
+  }
+  reg('mira pela tela: a direção na tela de O a T = a direção no gramado de O a T (4 câmeras inclinadas)', `${n} casos, pior ${fmt(pior, 4)}°`, '≥ 80 casos, < 0,01°', n >= 80 && pior < 0.01);
+  // ponto atrás do olho e analógico zerado: null (a página usa o rumo)
+  const tv = cams[0][1];
+  reg('mira pela tela: ponto atrás da câmera ou analógico zerado → null', `${miraPelaTela(1, 0, tv, 20, 80)} · ${miraPelaTela(0, 0, tv, 20, 6)}`, 'null · null',
+    miraPelaTela(1, 0, tv, 20, 80) === null && miraPelaTela(0, 0, tv, 20, 6) === null);
+  // cameraDaMatriz: a matrixWorld do three.js (coluna a coluna; a câmera olha para −z local)
+  const c0 = cams[2][1], e = new Array(16).fill(0);
+  e[0] = c0.rx; e[1] = c0.ry; e[2] = c0.rz; e[4] = c0.ux; e[5] = c0.uy; e[6] = c0.uz; e[8] = -c0.fx; e[9] = -c0.fy; e[10] = -c0.fz; e[12] = c0.px; e[13] = c0.py; e[14] = c0.pz; e[15] = 1;
+  const lida = cameraDaMatriz(e);
+  reg('cameraDaMatriz lê a matriz do three.js (olho, direita, cima, frente)', ['px', 'py', 'pz', 'rx', 'rz', 'ux', 'uy', 'uz', 'fx', 'fy', 'fz'].every(k => Math.abs(lida[k] - c0[k]) < 1e-12) ? 'igual' : 'diferente', 'igual',
+    ['px', 'py', 'pz', 'rx', 'rz', 'ux', 'uy', 'uz', 'fx', 'fy', 'fz'].every(k => Math.abs(lida[k] - c0[k]) < 1e-12));
 }
 // o jogador anda na diagonal sutil
 {

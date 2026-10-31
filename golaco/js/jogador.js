@@ -48,6 +48,8 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     par,
     // intenção (já em coordenadas do mundo)
     ix: MD.cos(rumo), iz: MD.sin(rumo), imag: 0, botoes: 0, botoesAnt: 0,
+    // a mira das ações (C6: a direção do analógico NA TELA levada ao gramado; sim.js aplicarEntrada)
+    imx: MD.cos(rumo), imz: MD.sin(rumo),
     intRumo: rumo, intW: 0, saltoTick: -1, leituraTick: -1,
     // controle de bola (preenchido por conducao.js)
     cond: null,
