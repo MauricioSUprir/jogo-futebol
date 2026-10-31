@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { lerCorpo } from './corpo-dados.js';
 import { aplicarTraje } from './traje.js';
+import { PESSOAL } from './edicao.js';
 
 const BASE = new URL('../assets/humano/', import.meta.url);
 // pessoas da história (Caitlin, Cisco): outro corpo do Rocketbox, com a roupa e o rosto das texturas dele
@@ -19,7 +20,14 @@ const EMBLEMAS = {
   civil: { disco: 0, cor: 0, emissivo: 0, forma: 'faisca', brilhoTecido: 0x1a2440 },   // à paisana: sem emblema, brilho de tecido azul
   vulto: { disco: 0, cor: 0, emissivo: 0, forma: 'faisca', brilhoTecido: 0x101012 },   // o vulto: sem emblema, tecido fosco
   novo: { disco: 0x3a0309, cor: 0xffc93a, emissivo: 0x9a6a08, forma: 'losango', brilhoTecido: 0xa0141a },
+  // EDIÇÃO PESSOAL (estilo da série, desenho daqui): o raio dourado no círculo claro; o do Reverso, vermelho no círculo preto
+  heroiSerie: { disco: 0xefe8da, cor: 0xf2b52a, emissivo: 0x5a3c06, forma: 'raio', brilhoTecido: 0x6a0c0c },
+  novoSerie: { disco: 0xf6f1e6, cor: 0xffc23a, emissivo: 0x7a5208, forma: 'raio', brilhoTecido: 0xa0141a },
+  reversoSerie: { disco: 0x0c0a0a, cor: 0xc8140e, emissivo: 0x500404, forma: 'raio', brilhoTecido: 0x806010 },
 };
+// na edição pessoal, o herói (os dois trajes) e o Flash Reverso vestem os trajes no estilo da série (traje.js SERIE)
+const TRAJE_SERIE = { heroi: 'heroiSerie', novo: 'novoSerie', reverso: 'reversoSerie' };
+export const trajeDaEdicao = (traje, pessoal = PESSOAL) => (pessoal && TRAJE_SERIE[traje]) || traje;
 const SEM_EMBLEMA = new Set(['civil', 'vulto', 'negro', 'godspeed', 'bumerangue', 'trapaceiro', 'espelhos', 'piao', 'peekaboo']);
 // trajes maiores que o herói (a armadura do Savitar)
 const ESCALA_TRAJE = { savitar: 1.14 };
@@ -75,6 +83,7 @@ function malha(parte, esqueleto, material) {
 
 /** Cria o herói (ou, com `pessoa`, alguém da história). Devolve {grupo, aplicar(est, dt), materiais, dispose()}. */
 export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = 'heroi', pessoa = null } = {}) {
+  if (!pessoa) traje = trajeDaEdicao(traje);
   const base = pessoa ? new URL(`../assets/personagens/${pessoa}/`, import.meta.url) : BASE;
   const [ind, bin] = await Promise.all([fetch(new URL('corpo.json', base)).then((r) => r.json()), fetch(new URL('corpo.bin', base)).then((r) => r.arrayBuffer())]);
   const dados = lerCorpo(ind, bin), L = dados.lods[lod];
@@ -127,10 +136,17 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
   } else {
   const disco = new THREE.Mesh(new THREE.CircleGeometry(0.06, 32), matDisco); disco.position.z = -0.001; emb.add(disco);
   emb.add(new THREE.Mesh(new THREE.RingGeometry(0.06, 0.075, 40), matEmb));
+  if (EM.forma === 'raio') {                            // o raio em diagonal, passando um pouco do círculo, em relevo
+    [[0.038, 0.07], [0.004, 0.013], [0.025, 0.013], [-0.038, -0.072], [-0.006, -0.006], [-0.027, -0.006], [0.011, 0.07]].forEach(([x, y], i) => (i ? faisca.lineTo(x, y) : faisca.moveTo(x, y)));
+    faisca.closePath();
+    const mr = new THREE.Mesh(new THREE.ExtrudeGeometry(faisca, { depth: 0.003, bevelEnabled: true, bevelThickness: 0.0012, bevelSize: 0.001, bevelSegments: 1, curveSegments: 1 }), matEmb);
+    mr.position.z = 0.0005; emb.add(mr);
+  } else {
   if (EM.forma === 'divisa') {                          // duas divisas (setas) apontando para a frente
     for (const o of [-0.022, 0.018]) { faisca.moveTo(o - 0.018, 0.04); faisca.lineTo(o + 0.022, 0); faisca.lineTo(o - 0.018, -0.04); faisca.lineTo(o - 0.032, -0.04); faisca.lineTo(o + 0.008, 0); faisca.lineTo(o - 0.032, 0.04); faisca.closePath(); }
   } else { faisca.moveTo(0, 0.052); faisca.lineTo(0.014, 0.014); faisca.lineTo(0.052, 0); faisca.lineTo(0.014, -0.014); faisca.lineTo(0, -0.052); faisca.lineTo(-0.014, -0.014); faisca.lineTo(-0.052, 0); faisca.lineTo(-0.014, 0.014); faisca.closePath(); }
   emb.add(new THREE.Mesh(new THREE.ShapeGeometry(faisca), matEmb));
+  }
   }
   // a frente do peito em repouso fica em x = 0,145: o emblema logo à frente dela, no meio do peitoral
   emb.scale.setScalar(1.15); emb.position.set(0.152, 1.325 - J.peito[1], 0); emb.rotation.y = Math.PI / 2;
