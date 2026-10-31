@@ -17,7 +17,10 @@
 // cronômetro corre: o Corredor Negro atrás dele), patrulha? (crimes quaisquer aparecem, como no "Guardião da cidade").
 // Depois do último passo a cidade fica livre (crimes, esferas e os capítulos para jogar de novo na pausa). Quem terminou
 // uma versão da história com menos passos volta no primeiro passo novo (o save guarda o último passo que existia).
-export const MISSOES = [
+import { PESSOAL } from './edicao.js';
+import { MISSOES_SERIE } from './serie.js';
+
+const MISSOES_NORMAL = [
   { id: 'lab', titulo: 'Bem-vindo ao S.T.A.R. Labs', texto: 'Entre no laboratório e vá até o Cortex', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
   { id: 'velocidade', titulo: 'Teste de velocidade', texto: 'Chegue a 200 km/h (segure CORRER)', checar: (c) => c.v * 3.6 >= 200 },
   { id: 'esferas', titulo: 'Recarga', texto: 'Recolha 5 esferas de energia', meta: 5, contador: 'esferas', alvo: 'esfera' },
@@ -70,6 +73,10 @@ export const MISSOES = [
   { id: 'p2-caixinha', titulo: 'A caixinha de música', texto: 'O Joe chamou você para jantar na casa da família West', ponto: 'jantar', aliados: { joe: 'jantar' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
   { id: 'p2-limite', titulo: 'Só um teste', texto: 'Passe dos 400 km/h (segure CORRER numa reta longa)', checar: (c) => c.v * 3.6 >= 400 },
   { id: 'p2-tunel', titulo: 'Vinte anos atrás', texto: 'Fique 5 s acima de 180 km/h: o túnel do tempo vai abrir', tipo: 'tunel', checar: (c) => c.tunel >= 1 },
+  // a viagem no tempo é jogável (dono, 31/10: "ele fica correndo e eu não faço nada, eu que tenho que impedir e fazer as
+  // coisas"): no passado (epoca 'noite'), você corre até a casa contra o relógio e segura o seu pai (tipo 'espera')
+  { id: 'p2-noite', titulo: 'A noite do fogo', texto: 'Vinte anos atrás: chegue à casa dos seus pais antes do raio', epoca: 'noite', ponto: 'jantar', roupa: 'civil', raio: 3.5, tempo: 80, cenaAbre: 'p2-chegada', checar: (c) => c.perto },
+  { id: 'p2-segurar', titulo: 'Segure o raio', texto: 'Fique ao lado do seu pai, parado, até o raio passar (6 s)', epoca: 'noite', ponto: 'jantar', roupa: 'civil', tipo: 'espera', espera: 6, raio: 5, checar: (c) => c.espera >= 1 },
   { id: 'p2-mundo', titulo: 'O dia que nunca aconteceu', texto: 'Volte ao S.T.A.R. Labs', epoca: 'ignicao', fraco: 0.55, alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
   { id: 'p2-joe', titulo: 'Um estranho', texto: 'Vá à Delegacia Central: o Joe vai saber o que aconteceu', epoca: 'ignicao', fraco: 0.55, ponto: 'delegacia', aliados: { joe: 'delegacia' }, roupa: 'civil', checar: (c) => c.perto },
   { id: 'p2-iris', titulo: 'Prazer, Iris West', texto: 'A Iris toma café no Jitters todo fim de tarde', epoca: 'ignicao', fraco: 0.55, ponto: 'mesaCafe', aliados: { iris: 'mesaCafe' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
@@ -79,6 +86,8 @@ export const MISSOES = [
   { id: 'cap-nevasca', titulo: 'Projeto Nevasca', texto: 'Encontre a Nevasca e derrote-a', epoca: 'ignicao', fraco: 0.55, capitulo: 'nevasca' },
   { id: 'p2-mae', titulo: 'Jantar em família', texto: 'Seus pais esperam você para jantar. Na mesma casa', epoca: 'ignicao', fraco: 0.55, ponto: 'jantar', roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
   { id: 'p2-desfazer', titulo: 'Desfazer', texto: 'Fique 5 s acima de 180 km/h e volte àquela noite', epoca: 'ignicao', fraco: 0.55, tipo: 'tunel', checar: (c) => c.tunel >= 1 },
+  { id: 'p2-noite2', titulo: 'A mesma noite', texto: 'Vinte anos atrás, de novo: chegue à casa antes do raio', epoca: 'noite', ponto: 'casa', roupa: 'civil', tempo: 80, cenaAbre: 'p2-chegada2', checar: (c) => c.perto },
+  { id: 'p2-espera', titulo: 'Só olhar', texto: 'Desta vez, não entre: espere do lado de fora até o raio passar (8 s parado)', epoca: 'noite', ponto: 'casa', roupa: 'civil', tipo: 'espera', espera: 8, raio: 22, naoEntrar: 5, checar: (c) => c.espera >= 1 },
   { id: 'p2-volta', titulo: 'Os ecos', texto: 'Volte ao Cortex', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
   // Ato 6 — O Corredor Negro
   { id: 'p2-boatos', titulo: 'O homem sem rosto', texto: 'A Iris quer mostrar uma coisa na redação do Picture News', ponto: 'mesaIrisJornal', aliados: { iris: 'mesaIrisJornal' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
@@ -243,6 +252,8 @@ export const MISSOES = [
   { id: 'p5-casa', titulo: 'O Flash volta para casa', texto: 'Vá para casa', ponto: 'jantar', aliados: { joe: 'sofaWest', iris: 'jantar' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
   { id: 'p5-fim', titulo: 'O mundo que ele não viu', texto: 'O Monitor espera no Cortex uma última vez', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
 ];
+/** na edição pessoal (js/edicao.js), a temporada da série (js/serie.js) no lugar da história de sempre, com o progresso à parte */
+export const MISSOES = PESSOAL ? MISSOES_SERIE : MISSOES_NORMAL;
 /** os passos de uma época (os da linha do tempo alterada): o jogo põe o mundo nela enquanto o passo dura */
 export const EPOCA_DO_PASSO = (m) => m?.epoca || null;
 
@@ -251,7 +262,7 @@ const CHAVE_V1 = 'theflash.missoes.v1';
 // a lista da v1, para levar quem já tinha progresso ao mesmo passo
 const ORDEM_V1 = ['lab', 'velocidade', 'esferas', 'escalar', 'vibrar', 'assalto', 'gangue', 'especiais', 'portais', 'fuga', 'incendio', 'queda',
   'patrulha', 'relatorio', 'cap-reverso', 'fendas', 'tunel', 'passado', 'cap-savitar', 'cap-devoe', 'nucleo'];
-const STATS0 = { desafios: 0, fotos: 0, tempestades: 0, lentos: 0, pistas: 0, fendas: 0, subestacoes: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
+const STATS0 = { lanches: 0, desafios: 0, fotos: 0, tempestades: 0, lentos: 0, pistas: 0, fendas: 0, subestacoes: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
 
 export function criarMissoes(armazem) {
   let salvo = null, v1 = null;

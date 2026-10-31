@@ -44,7 +44,9 @@ export const CADEIRAS3D = Object.freeze({
   distMax: 42,           // m: nunca além disto (= DEGRAU_LOD.entra: o degrau das plantas curvas vira geometria até ali)
   favorAnterior: 1.2,    // no ranking do teto, quem já está em 3D vale 20% mais (não pisca na borda do teto)
   // teto de instâncias por qualidade (Baixa: só a textura) e de blocos (a máscara do material das arquibancadas)
-  teto: Object.freeze({ baixa: 0, media: 480, alta: 3072 }),
+  // (Média 320: com 480 o plano do placar do pós-jogo no celular ia de 122 a 131 mil triângulos — teste-cenas-tela F8, meta
+  // 130 mil; 320 × 18 = 5,8 mil)
+  teto: Object.freeze({ baixa: 0, media: 320, alta: 3072 }),
   blocosMax: 20,
 });
 // LOD do degrau das plantas CURVAS (o Maracanã e as genéricas): cada setor tem a malha lisa (a de antes, com a textura

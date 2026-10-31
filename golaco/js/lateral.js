@@ -105,7 +105,7 @@ export function opcaoMirada(m, c, ops, cosMin = -2) {
   let mel = 0, mc = -Infinity;
   for (let i = 0; i < ops.length; i++) {
     const o = ops[i], ox = o.x - b.x, oz = o.z - b.z, l = MD.hypot(ox, oz) || 1;
-    const cos = (ox * c.ix + oz * c.iz) / l;
+    const cos = (ox * c.imx + oz * c.imz) / l; // a mira (pela tela: C6)
     if (cos > mc) { mc = cos; mel = i; }
   }
   return mc < cosMin ? -1 : mel;

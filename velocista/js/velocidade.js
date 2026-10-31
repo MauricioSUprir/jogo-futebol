@@ -5,11 +5,12 @@
 export const SUPER = { base: 58, max: 230, sobe: 0.34, cai: 1.4, curva: 0.42, curvaCai: 2.2, expoente: 1.6, economia: 0.6 };
 
 /** o embalo (0..1) depois de dt segundos. angulo = entre a velocidade e a direção pedida (rad) */
-export function passoEmbalo(e, { correndo, noChao, m, angulo = 0, bloqueado = false }, dt) {
+/** ganho: o quanto o embalo sobe mais rápido (o poder "Arranque", poderes.js) */
+export function passoEmbalo(e, { correndo, noChao, m, angulo = 0, bloqueado = false, ganho = 1 }, dt) {
   if (!correndo || bloqueado || m < 0.7) return Math.max(0, e - SUPER.cai * dt);
   if (angulo > SUPER.curva) return Math.max(0, e - SUPER.curvaCai * dt * (angulo / SUPER.curva));
   if (!noChao) return e;                                       // no ar (um pulo por cima de um carro) o embalo fica
-  return Math.min(1, e + SUPER.sobe * dt);
+  return Math.min(1, e + SUPER.sobe * ganho * dt);
 }
 /** o teto da corrida (m/s) para um embalo */
 export const tetoCorrida = (e, base = SUPER.base) => base + (SUPER.max - base) * Math.pow(Math.max(0, Math.min(1, e)), SUPER.expoente);

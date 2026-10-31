@@ -37,7 +37,7 @@
 | 14 | ✅ Goleiro espalmando bola alta com a mão de cima, e nada atravessa o goleiro (#568) | 4 |
 | 15 | ✅ Lançamento mais reto e rápido: 18–26° com teto de 33 m/s, a 40 m o ápice de 8,0 para 4,7 m (#572) | 6 |
 | 16 | ✅ Reposição do goleiro com a mão: rolar, por cima do ombro, bate-pronto e chutão; a IA repõe com a mão em ~69% (#579) | 5 |
-| 68 | 🆕 ⏳ **Mira pelo que se vê na tela do celular** (chute, passe e lançamento; hoje a câmera baixa engana a mira) | 6 |
+| 68 | ✅ Mira pelo que se vê na tela: o meio do gol visto vai no meio (no celular, antes, 1 em 3 ia para um canto), o pênalti na trave vista (#583) | 6 |
 | 70 | 🆕 ⏳ **Cobranças com corrida** (pênalti, escanteio, tiro de meta) e **jeitos de bater o pênalti** (pulinho, paradinha, forte, colocado, cavadinha), com o goleiro reagindo | 24 |
 
 ---
@@ -117,7 +117,7 @@
 
 | nº | o que é | horas |
 |---|---|---|
-| 69 | 🆕 ⏳ **Cadeiras e torcida em 3D**, parecidas com as reais, em todos os estádios (4 PRs; o 1º — a cadeira e o degrau — e o 2º — o torcedor 3D sentado nas cadeiras de perto, com as poses do quadro — feitos; faltam o impostor/LOD e os 523 estádios) | 52 |
+| 69 | 🆕 ⏳ **Cadeiras e torcida em 3D**, parecidas com as reais, em todos os estádios (4 PRs; o 1º — a cadeira e o degrau (#586) — e o 2º — o torcedor 3D sentado nas cadeiras de perto, com as poses do quadro — feitos; faltam o impostor/LOD e os 523 estádios) | 52 |
 | 61 | 🆕 **Passada natural** (no túnel e na fila parecem marchar) | 5 |
 | 62 | 🆕 Linha escura na nuca (costura da textura da cabeça) | 2 |
 | 63 | 🆕 Bordas tracejadas em volta dos números e patrocínios das camisas | 2 |

@@ -24,7 +24,8 @@ ok(H.CENAS[mis.MISSOES[pos('p3-convite')].cenaAbre]?.[0]?.titulo === 'A força d
 const ordem2 = ['p3-acordo', 'p3-fendas', 'p3-saida', 'p3-incendio', 'p3-iris-perigo', 'p3-joe2', 'p3-berco', 'p3-arquivo', 'p3-assalto', 'p3-cafe', 'p3-plano', 'p3-treino', 'p3-esferas', 'p3-fuga', 'cap-reverso2',
   'p3-perseguido', 'p3-presidio', 'p3-gangue2', 'p3-vigia', 'p3-queda2', 'p3-armadilha', 'p3-despedida', 'cap-negro2', 'p3-silencio', 'p3-nora', 'p3-padrinhos', 'p3-fim'];
 ok(ordem2.every((id, k) => pos(id) >= 0 && (!k || pos(ordem2[k - 1]) === pos(id) - 1)) && (ids[pos('p3-fim') + 1] ?? 'p4-').startsWith('p4-'), 'Atos 11 e 12 na ordem, e a Parte 3 termina na praça (depois, a Parte 4): ' + ordem2.join(' → '));
-const P2n = pos('p2-fim') - pos('p2-exames') + 1;
+// (sem os passos jogáveis da viagem no tempo, na noite do passado: eles são a mesma cena, agora jogada)
+const P2n = mis.MISSOES.slice(pos('p2-exames'), pos('p2-fim') + 1).filter((m) => m.epoca !== 'noite').length;
 ok(P3.length > P2n, `a Parte 3 (${P3.length} passos) é maior que a Parte 2 (${P2n})`);
 // ---- 2. o traje: a Caitlin e o Cisco mostram na sala dos trajes, com a vitrine; ele veste no pedestal
 const B = cid.bloco(cid.LAB_CELULA[0], cid.LAB_CELULA[1]); M.registrarPontosLab(B.cx, B.cz);
@@ -39,7 +40,7 @@ ok(conv.alvoSala === 'trajes' && conv.aliados.caitlin && conv.aliados.cisco && v
 const cv = H.CENAS['depois-p3-convite'], cve = H.CENAS['depois-p3-veste'];
 ok(cv.some((f) => f.quem === 'caitlin') && cv.some((f) => f.quem === 'cisco') && cv.some((f) => f.acao === 'luzes') && cv.length >= 10, `a apresentação: a Caitlin e o Cisco mostram o traje (${cv.length} falas, com as luzes da vitrine)`);
 ok(cve.some((f) => f.acao === 'veste') && /mundo inteiro fica lento/.test(cve.map((f) => f.texto).join(' ')), 'ele veste o traje na cena e eles contam o tempo lento');
-ok(/trajeNovo = \(\) => missoes\.livre \|\| missoes\.indice > POS_VESTE/.test(jogo) && /if \(roupa === 'traje' && trajeNovo\(\)\) roupa = 'novo'/.test(jogo), 'depois do p3-veste, todo "traje" é o traje novo');
+ok(/trajeNovo = \(\) => POS_VESTE >= 0 && \(missoes\.livre \|\| missoes\.indice > POS_VESTE\)/.test(jogo) && /if \(roupa === 'traje' && trajeNovo\(\)\) roupa = 'novo'/.test(jogo), 'depois do p3-veste, todo "traje" é o traje novo');
 ok(/traje: 'novo'/.test(jogo) && /novo: \{ verm:/.test(fs.readFileSync(path.join(AQUI, '../js/traje.js'), 'utf8')), 'o corpo do traje novo é o desenho "novo" de traje.js (o da vitrine traje.html)');
 // ---- 3. os poderes
 ok(/BATERIA = \{ embalo: 0\.55, carga: 0\.06 \}, ARMADURA = 0\.6, TEMPO_LENTO = \{ fator: 0\.25, dura: 4\.5, custo: 0\.35 \}/.test(jogo), 'bateria (embalo 0,55), armadura (60%), tempo lento (25%, 4,5 s, 35% de energia)');

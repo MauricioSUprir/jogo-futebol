@@ -18,6 +18,9 @@
 // A cidade (entre os capítulos): o detetive Joe, que criou você, na Delegacia Central, em Iron Heights e em casa; a Iris,
 // repórter do Picture News, no jornal e no Café Jitters; o apagão que o Zoom deixa; a cidade agradecendo na Prefeitura.
 
+import { PESSOAL } from './edicao.js';
+import { PERSONAGENS_SERIE, CENAS_SERIE, RADIO_SERIE, FALAS_SERIE } from './serie.js';
+
 export const PERSONAGENS = {
   caitlin: { nome: 'Caitlin', sigla: 'CA', cor: '#8fd8ff', papel: 'S.T.A.R. Labs · medicina' },
   cisco: { nome: 'Cisco', sigla: 'CI', cor: '#ffb347', papel: 'S.T.A.R. Labs · engenharia' },
@@ -105,7 +108,7 @@ export const MISSOES_FALAS = {
   'p2-esferas': { abre: [F('cisco', 'Meus satélites mostram as esferas. Pega cinco, e rápido: o seu sinal está ficando fraco.')],
     fecha: [F('cisco', 'Cinco! O seu sinal estabilizou. Por enquanto.'), F('cisco', 'Má notícia: a Nevasca está no centro. E está procurando VOCÊ.')] },
   'p2-mae': { abre: [F('heroi', 'A mesma casa. A mesma porta. E do outro lado, a voz dela.')] },
-  'p2-desfazer': { abre: [F('heroi', 'Me desculpa, mãe.'), F('cisco', 'O túnel abre uma última vez com a energia que sobrou. Não erra.')] },
+  'p2-desfazer': { abre: [F('heroi', 'Me desculpa, mãe.'), F('cisco', 'O túnel abre uma última vez com a energia que sobrou. Não erra.'), F('cisco', 'Barry! Se der certo, eu não vou lembrar de nada disso, né?'), F('heroi', 'Não.'), F('cisco', 'Então... foi legal ser seu melhor amigo. Em qualquer mundo.')] },
   'p2-volta': { abre: [F('caitlin', 'Barry? Barry! O sinal dele voltou! Cisco, ele voltou!')] },
   'p2-boatos': { abre: [F('iris', 'Barry, passa na redação? Tem uma coisa nas minhas fotos que eu não consigo explicar.')] },
   'p2-silhueta': { abre: [F('caitlin', 'O sinal está parado no meio da praça. Vai devagar, Barry.')] },
@@ -279,7 +282,7 @@ export const MISSOES_FALAS = {
   prefeitura: { abre: [F('caitlin', 'A cidade inteira está na praça da Prefeitura. Querem agradecer ao Flash.'), F('cisco', 'Vai lá. E, por favor, não pare para dar autógrafo.')] },
   capitulos: { abre: [F('caitlin', 'O homem de amarelo ainda está lá fora. O guia mostra quando ele aparecer.')] },
   fendas: { abre: [F('cisco', 'O Núcleo está rasgando o ar pela cidade! Quatro fendas. E tem coisa saindo de lá.'), F('caitlin', 'Vibre dentro de cada uma, na mesma frequência. Ela deve fechar.')], fecha: [F('cisco', 'Quatro abertas, quatro fechadas. Agora vem pro Cortex: descobri uma coisa.')] },
-  tunel: { abre: [F('cisco', 'A avenida principal é reta o bastante. Passe dos 180 e segure. O Núcleo vai te alimentar.')] },
+  tunel: { abre: [F('cisco', 'A avenida principal é reta o bastante. Passe dos 180 e segure. O Núcleo vai te alimentar.'), F('caitlin', 'Pense na noite do acidente. Segure essa lembrança e não solte. O túnel abre em volta de você.')] },
   passado: { abre: [F('caitlin', '...Flash? ...consegue me ouvir? ...o sinal está...'), F('heroi', 'A cidade inteira está como naquela noite. O laboratório brilhando... Eu vou até lá.')] },
 };
 
@@ -550,10 +553,9 @@ export const CENAS = {
     F('caitlin', 'Correr no tempo? Você pode não conseguir voltar.'),
     F('cisco', 'Ou pode. Passe dos 180 e segure: o Núcleo abre o caminho. Eu fico no rádio o tempo todo.'),
   ],
+  // (a corrida no túnel é sua: as falas dela vêm pelo rádio enquanto você corre; a cena é a chegada)
   'depois-tunel': [
-    F('cisco', 'Cento e oitenta, noventa, duzentos... não para! O Núcleo está abrindo o caminho!'),
-    F('heroi', 'Estou vendo a cidade inteira... todos os dias ao mesmo tempo.'),
-    F('caitlin', 'Pense na noite do acidente. Segure essa lembrança e não solte.'),
+    F('heroi', 'Eu vi a cidade inteira... todos os dias ao mesmo tempo.'),
     F('cisco', 'Estou perdendo o sinal... se cuida, Flash... sss...'),
     CARTAO('Seis semanas atrás', 'A noite do acidente'),
   ],
@@ -687,14 +689,21 @@ export const CENAS = {
     F('heroi', 'É lasanha de novo?'),
     F('joe', 'É a única coisa que eu sei fazer. E você vai elogiar.'),
   ],
-  'depois-p2-tunel': [
-    F('heroi', 'Vinte anos para trás... cada noite passando como um relâmpago.'),
-    F('cisco', 'Barry, volta! O sinal está... sss...'),
+  // a viagem é jogável: chegar (cenaAbre do passo 'p2-noite', já na noite do passado), correr até a casa, segurar o pai
+  'p2-chegada': [
     CARTAO('Vinte anos atrás', 'A noite do fogo'),
+    F('heroi', 'Vinte anos para trás. A cidade inteira no escuro, e os carros de outra época.'),
+    F('cisco', 'Barry, volta! O sinal está... sss...'),
+    F('heroi', 'A casa dos meus pais fica a poucas quadras. Eu tenho pouco tempo.'),
+  ],
+  'depois-p2-noite': [
     F('nora', 'Henry? Henry, o que está acontecendo com você? Você está tremendo.'),
     F('pai', 'Nora, se afasta! Tem alguma coisa dentro de mim... um raio... eu não consigo parar!'),
     { ...F('heroi', 'Pai! Não corre! Olha para mim e não corre!'), acao: 'raioCasa' },
     F('pai', 'Quem é você? Por que você tem os olhos dela?'),
+    F('nora', 'Henry, quem é esse rapaz? Como ele entrou aqui?'),
+  ],
+  'depois-p2-segurar': [
     F('heroi', 'Respira. Segura o raio dentro de você. Se você correr agora, ela morre.'),
     F('pai', '...Está passando. Está passando.'),
     F('nora', 'Henry! O que foi isso? E quem é esse rapaz na nossa sala?'),
@@ -794,14 +803,21 @@ export const CENAS = {
     F('heroi', 'São só sonhos, pai.'),
     F('pai', 'Então por que, toda vez que eu olho para você, eu tenho vontade de pedir perdão?'),
   ],
-  'depois-p2-desfazer': [
-    F('cisco', 'Barry! Se der certo, eu não vou lembrar de nada disso, né?'),
-    F('heroi', 'Não.'),
-    F('cisco', 'Então... foi legal ser seu melhor amigo. Em qualquer mundo.'),
+  'p2-chegada2': [
     CARTAO('Vinte anos atrás', 'A noite do fogo, de novo'),
+    F('heroi', 'A mesma noite. A mesma rua. Desta vez eu sei o que tenho que fazer.'),
+  ],
+  'depois-p2-noite2': [
+    F('nora', 'Henry? Henry, o que está acontecendo?'),
     F('pai', 'Nora, se afasta! Tem alguma coisa dentro de mim... eu não consigo parar!'),
+    F('heroi', 'Eu conheço essa noite de cor. Cada segundo dela.'),
     F('heroi', 'Desta vez eu não entro. Desta vez eu só olho.'),
+    F('heroi', 'O raio ainda não saiu. Eu fico aqui fora. Parado.'),
+  ],
+  'depois-p2-espera': [
     { ...F('nora', 'Henry!'), acao: 'raioCasa' },
+    F('heroi', 'O raio passou pela janela. Eu não entrei.'),
+    F('heroi', 'O meu pai vai ser preso. E eu vou crescer na casa do Joe. Tudo de novo.'),
     F('heroi', 'Me perdoa, mãe. Me perdoa.'),
     CARTAO('Ponto de Ignição', 'Desfeito'),
   ],
@@ -2102,6 +2118,16 @@ export const CENAS = {
 
 /** falas de rádio dos capítulos (sem parar o jogo) */
 export const RADIO = {
+  // os PODERES QUE EVOLUEM COM AS BATALHAS (poderes.js): a habilidade nova de cada nível, explicada pela equipe
+  'nivel-2': [F('caitlin', 'Barry, seus impulsos elétricos mudaram depois dessa luta. Agora os socos carregam raio: batem 20% mais forte.')],
+  'nivel-3': [F('cisco', 'Cara, sua recuperação disparou. Parado, a energia volta bem mais rápido. Vou chamar de Fôlego de Raio.')],
+  'nivel-4': [F('cisco', 'Truque novo: Passo Relâmpago. O BATER te leva até bandido a 22 metros. Pisca e chegou.')],
+  'nivel-5': [F('caitlin', 'Suas células se regeneram no meio da luta. Os golpes deles vão doer bem menos.')],
+  'nivel-6': [F('cisco', 'Arranque! A supervelocidade embala 30% mais rápido. Segura o CORRER numa reta e sente.')],
+  'nivel-7': [F('caitlin', 'As esferas reagem a você de outro jeito agora. Cada uma vale o dobro de energia.')],
+  'nivel-8': [F('cisco', 'Punho de Trovão. Eu medi: 40% mais forte que o soco do primeiro dia. Só não testa em mim.')],
+  'nivel-9': [F('caitlin', 'Seu corpo absorve os golpes como se fossem descarga elétrica. Você aguenta muito mais agora.')],
+  'nivel-10': [F('cisco', 'Barry... você chegou lá. Velocista completo.'), F('caitlin', 'A energia volta 50% mais rápido. O resto é com você.')],
   'capitulo-zoom': [F('caitlin', 'O pico azul está no centro, drenando os geradores da cidade.'), F('cisco', 'O guia está marcando. Vai lá ver quem é.')],
   'capitulo-reverso': [F('cisco', 'A assinatura vermelha está se movendo pela cidade. O guia mostra onde.')],
   'capitulo-final': [F('caitlin', 'Alarme no S.T.A.R. Labs! Os dois estão na porta do laboratório!'), F('cisco', 'Eles querem o Núcleo. Volta pra cá, rápido!')],
@@ -2168,6 +2194,8 @@ export const RADIO = {
   'fase2-negro2': [F('cisco', 'Ele acelerou! Mas você também pode. Tudo o que você tem, Barry!')],
   'derrota-negro2': [F('negro', 'Todos param.'), F('caitlin', 'Não para, Barry! Bateria, armadura, tempo lento. Tudo junto.')],
   'escapou-negro2': [F('cisco', 'Ele virou cinza e voltou. Ele sempre volta.')],
+  'falhou-p2-noite': [F('heroi', 'Tarde demais... não! O túnel ainda está aberto. De novo, mais rápido!')],
+  'falhou-p2-noite2': [F('heroi', 'Eu me atrasei. Mais uma vez. Eu sei o caminho: corre!')],
   'falhou-p3-iris-perigo': [F('caitlin', 'Ele ainda está sentado do lado dela, sorrindo. Corre mais, Barry!')],
   'falhou-p3-perseguido': [F('cisco', 'Ele quase te alcançou! As defesas do laboratório seguraram ele por um segundo. Corre!')],
   'falhou-p3-nora': [F('joe', 'Barry! Onde você está?! Ela está chamando por você! CORRE!')],
@@ -2212,6 +2240,9 @@ export const RADIO = {
   'falhou-ameaca-iris': [F('caitlin', 'O gelo chegou ao pescoço dela! O Cisco ligou o aquecedor do Jitters no máximo: mais um minuto. Vai!')],
   'falhou-ameaca-joe': [F('cisco', 'Um raio caiu no telhado! O Joe está bem, mas o próximo não erra. Mais rápido!')],
 };
+// EDIÇÃO PESSOAL (js/edicao.js): a temporada da série (js/serie.js) troca as cenas, o rádio, as falas das missões e os nomes
+if (PESSOAL) { Object.assign(PERSONAGENS, PERSONAGENS_SERIE); Object.assign(CENAS, CENAS_SERIE); Object.assign(RADIO, RADIO_SERIE); Object.assign(MISSOES_FALAS, FALAS_SERIE); }
+
 const PROVOCA = { reverso2: ['Isso não é nada.', 'Eu te ensinei isso.', 'Você ainda corre como criança.'], negro2: ['Todos param.', 'O tempo cobra.', 'Você está cansando.'], godspeed: ['Lento demais, Barry.', 'Eu medi cada passo seu.', 'Deuses não cansam.'], negro: ['Lento.', 'Todos param.', 'Eu sinto o seu coração cansar.', 'O tempo cobra.'], savitar: ['Lento.', 'Eu já estive aqui antes.', 'Você vai virar o que eu sou.'], zoom: ['Sorte.', 'Ainda não.', 'Você está ficando lento.'], reverso: ['Isso não é nada.', 'Perto. Mas não o bastante.', 'Eu deixei.', 'Você está me divertindo.'] };
 
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -2228,10 +2259,10 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
   const radio = document.createElement('div'); radio.id = 'radio'; radio.innerHTML = '<i class="retrato"></i><div><b></b><span></span></div>';
   document.getElementById('hud').appendChild(radio);
   const rRetrato = radio.querySelector('.retrato'), rNome = radio.querySelector('b'), rTexto = radio.querySelector('span');
-  const fila = []; let falando = null, tFala = 0;
+  const fila = []; let falando = null, tFala = 0, ocupado = null, escondido = false;   // ocupado(): um aviso no lugar do rádio
   function falar(falas) { for (const f of falas) fila.push(f); }
   // o rosto de cada personagem (tools/gerar-retratos.mjs renderiza a partir do modelo 3D); quem não tem fica com a sigla
-  const RETRATOS = ['heroi', 'zoom', 'reverso', 'caitlin', 'cisco', 'joe', 'iris', 'frio', 'onda', 'mago', 'savitar', 'devoe'];
+  const RETRATOS = ['heroi', 'zoom', 'reverso', 'caitlin', 'cisco', 'joe', 'iris', 'frio', 'onda', 'mago', 'savitar', 'devoe', ...(PESSOAL ? ['wells'] : [])];
   const retratos = Object.fromEntries(RETRATOS.map((id) => [id, new URL(`../assets/personagens/retratos/${id}.webp`, import.meta.url).href]));
   for (const url of Object.values(retratos)) new Image().src = url;                    // já baixados quando a 1ª fala aparecer
   function mostrar(el, ret, nome, f) {
@@ -2297,6 +2328,9 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
       else if (C.t > 2.2 + f.texto.length * 0.055) avancar();                       // avança sozinho depois de dar tempo de ler
       return;
     }
+    // um aviso no lugar do rádio (dono, 31/10: "muita informação na tela"): a fala some e volta de onde parou quando ele sair
+    if (ocupado?.()) { if (falando && !escondido) { escondido = true; radio.classList.remove('vis'); } return; }
+    if (escondido) { escondido = false; if (falando) radio.classList.add('vis'); }
     if (falando) { tFala -= dt; if (tFala <= 0) { falando = null; radio.classList.remove('vis'); } }
     else if (fila.length) {
       falando = fila.shift(); tFala = 2.4 + falando.texto.length * 0.05;
@@ -2368,6 +2402,10 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
     get radioLivre() { return !falando && !fila.length; },
     /** cala o rádio agora (testes: sem GPU o jogo roda a menos de 1 quadro por segundo e cada fala dura minutos) */
     calarRadio() { fila.length = 0; falando = null; radio.classList.remove('vis'); },
+    /** fn() = true enquanto um aviso ocupa o lugar do rádio: a fala espera (sem perder o tempo dela) */
+    esperarSe(fn) { ocupado = fn; },
+    /** um aviso acabou de entrar: a fala no ar sai já (sem esperar o próximo quadro) */
+    recolherRadio() { if (falando && !escondido) { escondido = true; radio.classList.remove('vis'); } },
     get capitulo() { return capitulo; },
     get cartaoAtual() { const f = C?.falas[C.i]; return f?.cartao ? `${f.rotulo} — ${f.titulo}` : null; },
     viu: (id) => vistas.has(id),

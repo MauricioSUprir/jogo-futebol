@@ -235,7 +235,9 @@ vez por passo de simulação; o desenho interpola entre a pose anterior e a atua
 - Na simulação (`sim.js aplicarEntrada`) a entrada é quantizada em 1/1024 (sem zero negativo) e
   há um limiar ÚNICO de direção (`ENTRADA.magDirecao`): abaixo dele o pedido é zero — nem anda no
   rumo antigo nem vira o tronco.
-- `paraMundo(ax, ay, yawCamera)` converte o analógico da tela para o mundo.
+- `paraMundo(ax, ay, yawCamera)` converte o analógico da tela para o mundo pelo rumo da câmera: a corrida e a condução.
+- `miraPelaTela(ax, ay, cam, ox, oz)` (C6): a MIRA das ações, a direção na tela levada ao gramado pela câmera do quadro
+  (contrato "Mira pela tela").
 
 ## Página e desenho (`index.html`, `js/main.js`, `js/render/*`, `js/hud.js`, `js/entrada.js`)
 - `js/sessao.js` (puro): `criarTreino`, `passoTreino(m, entrada, acoes)` (passo + bola fora +
@@ -2980,6 +2982,58 @@ bola rolando** (`sim.js goleiroComBola` → `reposicaoPartida`; o treino e a bol
   <main>`: IGUAL (o treino não mudou); `hash-partida --base <main>`: demo 1, 2 e 4 IGUAIS, demo 3 e humano 1–4 DIFERENTES (a
   partir da 1ª reposição com a mão).
 
+## Mira pela tela (C6, item 68; 31/10; contrato)
+
+Item 68 da FILA (achado na revisão do C2; aval do dono 31/10). Pesquisa e números em `PESQUISA-ETAPA2.md` §2.12.
+- **A regra.** A direção da MIRA das ações é a direção do analógico NA TELA, levada ao gramado pela câmera que desenhou o
+  último quadro: a reta do olho por cada ponto da tela até y = 0, a partir do ponto do gramado de onde a ação sai. Vale para
+  o chute, o passe, a enfiada, o lançamento, o cruzamento, o lateral (a opção e a direção do arremesso) e a reposição do
+  goleiro. A corrida, a condução, o 1º toque da recepção, o lado do goleiro no pênalti contra e o giro da cobrança mirada
+  (`mira.js atualizarMira`) seguem pelo rumo (`paraMundo`). Teclado, controle e toque são iguais (o analógico combinado).
+- **Página (DOM).** `controle.js miraPelaTela(ax, ay, cam, ox, oz, out)` é PURA: a jacobiana da projeção gramado → tela no
+  ponto (ox, 0, oz), invertida. `cam` = {px, py, pz, rx…, ux…, fx…}: o olho e os eixos (direita, cima, frente), que
+  `cameraDaMatriz(matrixWorld.elements)` lê do three.js. Devolve null com o ponto atrás do olho (zc ≤ 0,5 m), a câmera
+  rasante ou o analógico zerado; aí a mira é a do rumo. `main.js desenharQuadro`, depois de `cam.atualizar`, guarda em
+  `telaMira` a câmera do quadro (`updateMatrixWorld`) e o ponto de onde a ação sai: a bola, se ela está a ≤
+  `ENTRADA.miraBolaPerto` (2 m) do controlado; senão o controlado. Nas câmeras das cenas (comemoração, substituição,
+  cartão, intervalo/fim, plano geral), `ok = false`. `entrada.js ler()` lê `opc.tela()` e devolve `mx`, `mz` (= direção ×
+  módulo do analógico; sem a câmera, = x, z). `forcar(e)` dos testes: `mx` = `e.mx` ou null.
+- **Lógica (pura).** A entrada ganha `mx`, `mz` opcionais. `sim.js aplicarEntrada` quantiza em 1/1024 e guarda a direção
+  unitária em `j.imx`, `j.imz` (sem `mx`: = `j.ix`, `j.iz`; só com o analógico acima de `magDirecao`, como `ix`). Quem lê a
+  mira: `acoes.js mira()`, `j.mira` guardada na carga, `direcaoPedida`, `lateral.js opcaoMirada` e a direção do arremesso
+  (`partida.js comecarArremesso`). A IA, a demo e as entradas montadas pela defesa/recepção não têm `mx`: a partida IA × IA
+  e o treino ficam bit a bit iguais. `main.js entradaDoTime` e `rodarPassos` passam `mx`/`mz` adiante.
+- **Pênalti da pessoa** (`p.penalti && p.humano`; a câmera atrás do cobrador): o z da mira do chute e da cavadinha é o
+  ponto da linha do gol para onde a mira aponta (`acoes.js zNaLinhaDoGol`; para o lado ou para trás, o lado dela além da
+  trave). Depois vale o limite da boca e o `penaltiCanto` (±2,5 m) de antes. Fora do pênalti, a conta do C2 não muda
+  (`zBrutoAnalogico`: o canto a ~33° da reta bola–gol).
+- **Online.** A mira viaja pronta (o formato de 6 → 9 bytes; contrato "Online 1×1", etapa 2). Cada aparelho faz a conta com
+  a SUA câmera.
+- **Teste `tools/teste-mira-tela.mjs`** (navegador, CI parte 2). A página de verdade com um controle de mentira
+  (`navigator.getGamepads`) empurrando o analógico na direção em que a pessoa vê o alvo, com o CHUTE segurado; lê `j.mira`.
+  Mede 364 posições do último terço, PC 1280×720 e celular 844×390:
+  - M1: a mira cruza a linha do gol mais perto do alvo apontado (meio, pau de perto, pau de longe), ≥ 90% cada;
+  - M2: o meio visto vira chute no meio (fora dos cantos da régua do C2), ≥ 90%;
+  - M3: erro p95 ≤ 1°;
+  - M4: no pênalti, meio ≤ 0,6 m e traves ≥ 2 m do lado certo;
+  - M5: sem erro;
+  - M6: a câmera aproximada e as câmeras Atrás e Jogador do Livre, ≥ 90% e p95 ≤ 1°.
+
+  `--raiz <pasta>` mede outra cópia (a main: reprova 13 de 19). `teste-entrada` confere a conta pura em 4 câmeras
+  inclinadas e `teste-online` O1, o formato.
+- **Medidas (main 630960d4 × agora).**
+
+  | | celular | PC |
+  |---|---|---|
+  | meio visto → a mira no meio | 3,8 → 100% | 6,9 → 100% |
+  | pau de longe visto → a mira no pau de longe | 1,4 → 100% | 3,0 → 100% |
+  | meio visto → chute num canto | 32,7 → 0% | 7,4 → 0% |
+  | erro p95 | 46,6° → 0,03° | 33,8° → 0,03° |
+  | pênalti, meio · traves | −2,50 · −0,54 · −2,50 → 0,00 · 2,50 · −2,50 m | igual |
+
+  `hash-igual` IGUAL; `hash-partida` IGUAL (demo e humano: as entradas de Node não têm `mx`). `teste-online` O12: a banda
+  ~10 → 11,7 KB/s por sentido (≤ 15).
+
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores
 que eu escolher, contra a quantidade de jogadores que eu escolher, pode ser adaptável durante a partida" (a Arena de Treino do
@@ -3162,7 +3216,8 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   produz entrada, e o outro PARA esperando (sem mensagem nenhuma). Do gol até a saída as entradas valem neutras nos dois
   (`passoOnline`: a cena é local, a regra não). Menu aberto sem parar = bit IA: a IA joga pelo meu controlado DENTRO do
   passo, nos dois (time 0 antes do 1: ela escreve na memória da IA).
-- **Formato:** 6 bytes por entrada (x e z ±1024 em 12 bits, botões 15 bits + `repete`, bits IA e AÇÃO); a entrada LOCAL
+- **Formato:** 9 bytes por entrada (x e z ±1024 em 12 bits, botões 15 bits + `repete`, bits IA e AÇÃO, e — desde o C6 — a
+  mira pela tela mx e mz em 12 bits cada; sem `mx`, a do analógico); a entrada LOCAL
   passa pela mesma codificação antes da simulação (`quantizada`). Pacote do canal 'jogo' com todas as entradas não
   confirmadas (até 16), o ack, o passo atual e o eco do relógio (RTT); inválido = descartado.
 - **Relógio:** quem fica à frente (média de ~0,5 s da vantagem > 1 passo) roda 1 passo a menos no quadro
@@ -4015,7 +4070,7 @@ pesquisa em `PESQUISA-ESTADIO.md` §14). Só DESENHO: nada do fecho do hash muda
   largura, assento a 0,43 m, encosto 0,36 m acima dele) instanciada (1 InstancedMesh, 1 chamada só com algum bloco perto) nos
   blocos que `escolherBlocos` escolhe por quadro: pelos px da cadeira na tela (0,5 m · alturaPx ÷ (2 · d · tan(fov/2)), d = a
   distância à esfera do bloco), entra com ≥ `pxEntra` 10 px, fica até `pxSai` 7,5 (histerese), só até `distMax` 42 m, no cone da
-  câmera, com teto de instâncias por qualidade (`teto`: Baixa 0, Média 480, Alta 3.072) e de blocos (`blocosMax` 20; quem já
+  câmera, com teto de instâncias por qualidade (`teto`: Baixa 0, Média 320 — com 480 o placar do pós-jogo no celular passava dos 130 mil triângulos —, Alta 3.072) e de blocos (`blocosMax` 20; quem já
   estava vale 20% mais no ranking); com a câmera dentro do lado de cá (a TV), nenhum bloco dele (`semSetor`). As matrizes e as
   cores só são escritas quando a escolha muda; pré-carga: o 1º quadro depois de chegar compila o programa com 0 instâncias.
   Dentro de um bloco em 3D o material das arquibancadas (`campo.js comLuzFalsa`, também o do Maracanã e das genéricas) troca a

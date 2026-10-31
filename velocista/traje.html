@@ -98,7 +98,7 @@ renderer.setAnimationLoop(() => {
   const dt = Math.min(relogio.getDelta(), 0.05);
   for (const [k, m] of Object.entries(modelos)) {
     m.grupo.visible = k === traje;
-    if (k === traje) m.aplicar(pose === 'correndo' ? { v: 11, noChao: true } : pose === 'luta' ? { v: 0, noChao: true, luta: 1 } : { v: 0, noChao: true }, dt);
+    if (k === traje) m.aplicar(pose === 'correndo' ? { v: 11, noChao: true } : pose === 'luta' ? { v: 0, noChao: true, luta: 1 } : pose === 'vibrando' ? { v: 6, noChao: true, vibrando: true } : { v: 0, noChao: true }, dt);
   }
   if (girando) giro.rotation.y += dt * 0.45;
   ctl.update(); renderer.render(cena, camera); window.__traje.quadros++;
