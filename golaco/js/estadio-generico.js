@@ -20,6 +20,7 @@
 // render/torcida-dados.js, render/bandeiras-dados.js e prejogo-roteiro.js usam): lugares, solido, cameraNoLadoDeCa,
 // faixas, bandeiras, bandeiroes, sinalizadores, ajustarPlano, ajustarAbertura, cameraGeral.
 import { ESTADIO, CAMPO } from './config.js';
+import { criarGradeAnel } from './render/cadeiras-dados.js';
 
 const RAD = Math.PI / 180;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -524,8 +525,76 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   const ESC = clamp(kEsp, 0.95, 1.3);
   const PASSO = 0.72 * kEsp, FILA = clamp(0.92 * kEsp, 0.8, 1.7);
   const NF = Math.max(8, Math.round(T0 / FILA));
+  // ---------------------------------------------------------------- a grade das cadeiras (item 69)
+  // As fileiras de ~0,8 m em cada faixa do perfil (os anéis de todos os lados: sAneis; o número pela profundidade média;
+  // as faces dos camarotes, de 0,4 cm de s, ficam sem fileira) e, em cada uma, as cadeiras de ≥ 0,5 m entre as escadas
+  // do ladrilho de 12 m (2 escadas de 1,2 m: render/estadio-generico.js). Fonte única da textura das cadeiras, do degrau em
+  // escada e dos lugares da torcida. Nos cantos fechados o u é o arco no meio (uTh); nos abertos, o x (lados) ou o z (fundos).
+  const mtG = T.largura / 2 + 0.4, topoTunelG = T.altura + T.laje + 0.3;
+  let _grade = null;
+  function grade() {
+    if (_grade) return _grade;
+    const N = 720;
+    let soma = 0, nn = 0;
+    for (let i = 0; i < N; i++) {
+      const th = -Math.PI + (2 * Math.PI * (i + 0.5)) / N, D = rB(th) - rF(th);
+      if (D < 2.5) continue;
+      const [px, pz] = ponto(th, 0.02);
+      if (!temArquibancada(px, pz)) continue;
+      soma += D; nn++;
+    }
+    const profMedia = nn ? soma / nn : 20;
+    // as faixas de cadeira: os trechos do perfil entre as faces (as faixas de < 0,01 de s: a face dos camarotes ou do anel)
+    // — os nós intermediários (as quebras de inclinação) ficam dentro da faixa (o degrau segue o perfil pelos bicos)
+    const faixasS = [];
+    for (let i = 0; i + 1 < sAneis.length; i++) {
+      if (sAneis[i + 1] - sAneis[i] <= 0.01) continue;
+      const u = faixasS[faixasS.length - 1];
+      if (u && Math.abs(u[1] - sAneis[i]) < 1e-9) u[1] = sAneis[i + 1]; else faixasS.push([sAneis[i], sAneis[i + 1]]);
+    }
+    // o perímetro de uma fileira (a meia do ladrilho: 6 m no meio da profundidade, nos cantos fechados)
+    const perim = sm => { let t = 0, px = 0, pz = 0; for (let i = 0; i <= N; i++) { const [x, z] = ponto(-Math.PI + (2 * Math.PI * i) / N, sm); if (i) t += Math.hypot(x - px, z - pz); px = x; pz = z; } return t; };
+    const p05 = abertos ? 1 : perim(0.5);
+    const Lu = abertos ? 0 : arcoMeio(Math.PI) - arcoMeio(-Math.PI);
+    const trs = abertos
+      ? [0, 1, 2, 3].filter(k => LD[k].prof > 0).map(k => {
+        const lim = (k === 0 || k === 3 ? XP : ZP) / 12;
+        return { k, u0: -lim, u1: lim, uDe: (th, sm) => { const [x, z] = ponto(th, sm); return (k === 0 || k === 3 ? x : z) / 12; }, thDe: (u, sm) => thDoAlvo(k, sm, 12 * u) };
+      })
+      : [(() => {
+        // a inversa do arco no meio (tabela)
+        const M = 4096, us = new Float64Array(M + 1);
+        for (let i = 0; i <= M; i++) us[i] = arcoMeio(-Math.PI + (2 * Math.PI * i) / M) / 12;
+        const thDe = u => {
+          let lo = 0, hi = M;
+          const uu = clamp(u, us[0], us[M]);
+          while (hi - lo > 1) { const m = (lo + hi) >> 1; if (us[m] <= uu) lo = m; else hi = m; }
+          return -Math.PI + (2 * Math.PI * (lo + (uu - us[lo]) / ((us[hi] - us[lo]) || 1))) / M;
+        };
+        return { k: -1, u0: us[0], u1: us[M], uDe: th => arcoMeio(th) / 12, thDe };
+      })()];
+    void Lu;
+    _grade = criarGradeAnel({
+      faixas: faixasS, profMedia,
+      perfil: (s2, th) => perfil(s2, th), ponto, setor,
+      vDe: s2 => 0.04 + 0.93 * clamp(s2, 0, 1),
+      trechos: trs, corredor: 0.2,
+      meiaMedia: sm => (abertos ? 6 : (6 * perim(sm)) / p05),
+      existe: (th, r, x, z, y) => {
+        if (rB(th) - rF(th) < 2.5 || !temArquibancada(x, z)) return false;
+        if (tipoEm(ladoEm(th), r.sAssento) !== 0) return false;
+        if (z > 0 && Math.abs(x) < mtG && y < topoTunelG) return false;
+        return true;
+      },
+    });
+    return _grade;
+  }
+  /** O índice do trecho da grade do ponto (x, z): 0 nos cantos fechados; nos abertos, o do lado dele. */
+  const trechoDe = (x, z) => (abertos ? Math.max(0, grade().trechos.findIndex(t => t.k === setor(x, z))) : 0);
+  /** O piso do degrau (y) da fileira que contém o ponto (x, z) — onde o torcedor senta (null fora das cadeiras). */
+  function pisoEm(x, z) { const r = grade().fileiraDe(sDe(x, z)); return r ? perfil(r.s0, Math.atan2(z, x)) : null; }
   function gerarLugares() {
-    const lista = [];
+    const lista = [], vistos = new Set(), G = grade();
     const mt = T.largura / 2 + 0.4, topoTunel = T.altura + T.laje + 0.3;
     const M = 4320;
     const lentes = PLANOS_LENTES(), ARCOS = MARCAS_P.filter(m => m.tipo === 'arco');
@@ -548,14 +617,15 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
         if (!temArquibancada(x, z)) continue;
         const k = setor(x, z);
         if (tipoEm(ladoEm(th), s) !== 0) continue;
-        const y = perfil(s, th);
-        // corredores (os da textura: a cada 12 m, 1,2 m de largura) e a boca do túnel
-        const u = uDe(x, z, k), g = ((u % 12) + 12) % 12;
-        if (g < 1.25 || (g > 6 && g < 7.25)) continue;
-        if (z > 0 && Math.abs(x) < mt && y < topoTunel) continue;
-        if (lentes(x, y, z)) continue;
+        // a cadeira da grade em que o lugar cai (item 69: o torcedor senta no assento dela; na escada — os corredores da
+        // textura, a cada 12 m — nada) e a boca do túnel
+        const cad = G.assentoEm(th, s, trechoDe(x, z));
+        if (!cad || vistos.has(cad.chave)) continue;
+        const { y } = cad;
+        if (z > 0 && Math.abs(cad.x) < mt && y < topoTunel) continue;
+        if (lentes(cad.x, y, cad.z)) continue;
         // ninguém com a cabeça no arco das marcas (as pontas dele descem até a arquibancada: o Dragão)
-        if (ARCOS.length && ARCOS.some(m => arcoPerto(m, x, y + 1.7 * ESC * 1.08, z, 0.4))) continue;
+        if (ARCOS.length && ARCOS.some(m => arcoPerto(m, cad.x, y + 1.7 * ESC * 1.08, cad.z, 0.4))) continue;
         const hs = h2(i, j * 31 + 7);
         // as cadeiras soltas à mostra (as brechas) e a última fileira (debaixo do parapeito) vazia
         if (hs < 0.06 || s > 0.985) continue;
@@ -565,7 +635,8 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
           const pp = psi(x, z), uu = clamp((pp + 135) / 90, 0, 1);
           im = Math.min(249, Math.floor(uu * 250)) + Math.min(35, NF - 1 - j) * 250;
         }
-        lista.push(k, f, i, x, y, z, s > 0.5 ? ESC * 1.08 : ESC, im, luzDoSol(x, y + 1.2, z));
+        vistos.add(cad.chave);
+        lista.push(k, f, i, cad.x, y, cad.z, s > 0.5 ? ESC * 1.08 : ESC, im, luzDoSol(cad.x, y + 1.2, cad.z));
       }
     }
     // o teto da torcida (25,5 mil: a Alta do celular): acima dele sai um a cada tanto, sem buraco (pelo sorteio fixo)
@@ -1346,6 +1417,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     rF, rB, rFach, yFach, casca, perfilCasca, talude, dTal, ponto, sDe, perfil, perfilLado, tipoEm, nos: NOS, sAneis, setor, psi, thDivisa, pesos, ladoEm,
     temArquibancada, trechos, uDe, XP, ZP, abertos, yTopo, topoLado, cobEm, alturaCobEm, cobContinua, luzDoSol,
     get lugares() { return _lugares ?? (_lugares = gerarLugares()); },
+    get grade() { return grade(); }, pisoEm, trechoDe,
     solido, cameraNoLadoDeCa, noDegrau, torres: TORRES, marcas: MARCAS_P,
     predios, arvores, torcedoresFora, agua, naAgua, relevo, rEsplanada, rMax, yMax, estacionamentos, canteiros, carros, pecasRua, ruas, avenida: AVENIDA, uTh: arcoMeio,
     faixas, bandeiras, bandeiroes, sinalizadores,

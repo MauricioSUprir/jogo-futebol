@@ -16,17 +16,12 @@
 // acento (cachecol, na cor do time). Os pesos já vêm multiplicados pela cobertura: os mipmaps (média)
 // continuam certos e o shader troca as cores por torcedor sem textura nova.
 import { ESTADIO } from '../config.js';
+import { ARQ_GOLACO, gradeGolaco } from './cadeiras-dados.js';
 
-export const ARQUIBANCADA = {
-  frenteZ: 44.5,          // z da frente do lado de lá (CAMPO.meioZ + entorno + 4,5)
-  profLado: 30, yBase: 1.4, yTopoLado: 20,
-  meioComprimento: 62.5,  // ±x do lado de lá
-  fundoX0: 62.5,          // x da frente dos fundos (CAMPO.meioX + entorno + 4)
-  profFundo: 26, yTopoFundo: 17,
-  fileiras: 36, assento: 0.5, comprimento: 125, corredor: 26,
-  vMax: 1 - 24 / 512,     // v do topo da textura (a faixa de cima é a parede)
-  vFundo: 0.82,           // os fundos usam até 82% da altura da textura
-};
+// as medidas das arquibancadas do Estádio Golaço (a fonte é a grade das cadeiras: render/cadeiras-dados.js)
+export const ARQUIBANCADA = ARQ_GOLACO;
+let _grade = null;
+const grade = () => _grade ?? (_grade = gradeGolaco());
 
 export const TORCIDA = {
   ocupacao: { baixa: 0.38, media: 0.62, alta: 0.9 },
@@ -99,32 +94,13 @@ export function cadeiraNoTunel(x, y) {
 
 /**
  * Cadeiras de cada arquibancada: lista de {setor: 0 lado de lá | 1 fundo +x | 2 fundo −x | 3 lado de cá, f
- * (fileira, 0 = a de cima), a (cadeira), x, y, z (base, sobre o degrau)}. O lado de cá é o de lá espelhado em z,
- * sem as cadeiras da boca do túnel.
+ * (fileira, 0 = a de cima), a (cadeira), x, y (o PISO do degrau), z (o centro do assento)} — as da grade (render/
+ * cadeiras-dados.js gradeGolaco; item 69: o degrau virou geometria e o torcedor senta no assento dele). O lado de cá é
+ * o de lá espelhado em z, sem as cadeiras da boca do túnel.
  */
 export function cadeiras() {
-  const A = ARQUIBANCADA, lista = [];
-  const nA = Math.round(A.comprimento / A.assento);
-  for (let f = 0; f < A.fileiras; f++) {
-    const sLado = 1 - (f + 0.5) / A.fileiras;            // 0 = frente, 1 = topo (v / vMax)
-    const sFundo = sLado / A.vFundo;
-    for (let a = 0; a < nA; a++) {
-      if (a % A.corredor < 2) continue;
-      const u = (a + 0.5) / nA;
-      const x = -A.meioComprimento + A.comprimento * u, y = A.yBase + (A.yTopoLado - A.yBase) * sLado, z = A.frenteZ + A.profLado * sLado;
-      lista.push({ setor: 0, f, a, x, y, z: -z });
-      if (sFundo <= 1) {
-        const u1 = (A.frenteZ + A.frenteZ + A.profLado) / A.comprimento; // 119/125
-        if (u <= u1) {
-          for (const s of [1, -1]) {
-            const za = s > 0 ? A.frenteZ : -(A.frenteZ + A.profLado), zb = s > 0 ? -(A.frenteZ + A.profLado) : A.frenteZ;
-            lista.push({ setor: s > 0 ? 1 : 2, f, a, x: s * (A.fundoX0 + A.profFundo * sFundo), y: A.yBase + (A.yTopoFundo - A.yBase) * sFundo, z: za + (zb - za) * (u / u1) });
-          }
-        }
-      }
-      if (!cadeiraNoTunel(x, y)) lista.push({ setor: 3, f, a, x, y, z });
-    }
-  }
+  const lista = [];
+  grade().iterar(c => lista.push({ setor: c.setor, f: c.f, a: c.a, x: c.x, y: c.y, z: c.z }));
   return lista;
 }
 
@@ -223,25 +199,10 @@ export function gerarTorcidaNiveis(mascara = null, paletas = null, lugares = nul
     tG[n] = setor < 3 ? setor : (NF - 1 - f < T.caFaixa ? 3 : 4);
     n++;
   }
-  const u1 = (A.frenteZ + A.frenteZ + A.profLado) / A.comprimento; // 119/125
+  // o Estádio Golaço: as cadeiras da grade, na ordem de sempre (os MESMOS sorteios por cadeira: só o lugar mudou — o
+  // assento, no piso do degrau)
   if (lugares) lugares.iterar(cadeira);
-  else for (let f = 0; f < A.fileiras; f++) {
-    const sLado = 1 - (f + 0.5) / A.fileiras;
-    const sFundo = sLado / A.vFundo;
-    for (let a = 0; a < nA; a++) {
-      if (a % A.corredor < 2) continue;
-      const u = (a + 0.5) / nA;
-      const x = -A.meioComprimento + A.comprimento * u, y = A.yBase + (A.yTopoLado - A.yBase) * sLado, zl = A.frenteZ + A.profLado * sLado;
-      cadeira(0, f, a, x, y, -zl);
-      if (sFundo <= 1 && u <= u1) {
-        for (let s = 1; s >= -1; s -= 2) {
-          const za = s > 0 ? A.frenteZ : -(A.frenteZ + A.profLado), zb = s > 0 ? -(A.frenteZ + A.profLado) : A.frenteZ;
-          cadeira(s > 0 ? 1 : 2, f, a, s * (A.fundoX0 + A.profFundo * sFundo), A.yBase + (A.yTopoFundo - A.yBase) * sFundo, za + (zb - za) * (u / u1));
-        }
-      }
-      if (!cadeiraNoTunel(x, y)) cadeira(3, f, a, x, y, zl);
-    }
-  }
+  else grade().iterar(c => cadeira(c.setor, c.f, c.a, c.x, c.y, c.z));
   // ordem por (grupo, nível, fileira da frente para cima): contagem por balde (estável)
   const F = NF, NG = GRUPOS.length, NB = NG * 3 * F;
   const conta = new Int32Array(NB + 1);

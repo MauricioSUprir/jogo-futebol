@@ -31,7 +31,9 @@ const FOLGA_MIN = 120 * 1024;
 // download inicial com a cena do intervalo: ela lê cada passo da partida desde o 1º — PLANO-CENAS.md R4)
 const SOB_DEMANDA_ARQ = ['js/render/replay.js', 'js/render/replay-roteiro.js', 'js/render/replay-olhos.js', 'js/render/replay-saot.js', 'js/editor-time.js', 'css/editor.css',
   'js/cena-cartao.js', 'js/cena-atores.js', 'js/cenas-config.js', 'js/render/cartao3d.js', 'js/cenas-tela.js', 'css/cenas.css', 'js/render/lances-guarda.js',
-  'js/cena-fim.js'];
+  'js/cena-fim.js',
+  // as cadeiras 3D de perto (item 69: a câmera de TV nunca chega perto da arquibancada)
+  'js/render/cadeiras3d.js'];
 // só do estádio real da edição pro do Total Match (render/identidade-pagina.js por import()): nunca no download inicial
 // e sem pré-carga (a página sem ?tm não os pede nunca)
 const SO_TM_PRO_ARQ = ['js/estadio-planta.js', 'js/render/estadio-real.js', 'js/render/fachada-estilos.js'];

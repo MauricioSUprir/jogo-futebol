@@ -27,7 +27,9 @@
 //  12) a FESTA (11/10): faixas/bandeiras/bandeirões e sinalizadores ≤ 2 chamadas de desenho no jogo; onda da bandeira
 //      GPU = JS; "debaixo do bandeirão" GPU = JS (12/10); no gol da casa a organizada muda na câmera do gol (bandeirão e
 //      sinalizadores); overdraw ≤ 0,5 tela;
-//  13) tiro de meta (Regra 16) com adversários na área: saem na montagem e a câmera CORTA (evento corteBolaParada).
+//  13) tiro de meta (Regra 16) com adversários na área: saem na montagem e a câmera CORTA (evento corteBolaParada);
+//  14) cadeiras e degraus (item 69, PR 1; celular e PC): o degrau em escada nas arquibancadas, as cadeiras 3D de perto
+//      nunca na câmera de TV (20 instantes), perto da arquibancada de lá ≥ 1 bloco, +1 chamada e 18 triângulos por cadeira.
 // As páginas abrem com ?replay=0&comemoracao=0: o replay automático (testado em tools/teste-replay.mjs) e a comemoração
 // do gol (tools/teste-comemoracao-tela.mjs) segurariam a simulação ~10 s e ~7,5 s depois do gol, e os itens 4 e 10 andam
 // o relógio atravessando a saída — o que eles medem é a câmera do gol do jogo (com a comemoração ligada ela é o plano da
@@ -698,15 +700,17 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
       const r = await pagina.evaluate(() => {
         const g = window.__golaco;
         g.relogio.usarManual(true);
-        let viu = 0, n = 0;
+        let viu = 0, n = 0, cad = 0;
         for (let k = 0; k < 20; k++) {
           for (let i = 0; i < 90; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
           g.desenhar();
           const t = g.estadio.torcida;
           if (t.ladoDeCa || t.grupos.some(x => x.nome.startsWith('torcida-ca') && x.visivel)) viu++;
+          // 14) as cadeiras 3D de perto nunca na câmera de TV
+          cad = Math.max(cad, g.estadio.cadeiras?.instancias ?? 0);
           n++;
         }
-        return { viu, n };
+        return { viu, n, cad };
       });
       // do outro lado do campo, olhando para o lado de cá (o túnel no meio): o mesmo quadro com × sem a torcida, lido
       // direto do canvas (a 1/4; a faixa de cima, 5–60% da altura)
@@ -756,6 +760,25 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
       meta(`Lado de cá (${nome}): fora do desenho na câmera de TV, visível do outro lado`, `${r.viu}/${r.n} instantes do jogo com algo do lado de cá no desenho · do outro lado: arquibancada ${vis.ladoDeCa ? 'sim' : 'não'}, torcida [${vis.ca}], ${(100 * d).toFixed(0)}% da faixa de cima é torcida, túnel a ${(100 * vis.tunelX).toFixed(0)}% da largura`,
         '0 no jogo; do outro lado: arquibancada, as 2 faixas da torcida, ≥ 20% e o túnel no meio (45–55%)', r.viu === 0 && vis.ladoDeCa && vis.ca.length === 2 && d >= 0.2 && Math.abs(vis.tunelX - 0.5) <= 0.05 && errosCa.length === 0);
       meta(`Bancos de reservas fora da TV (${nome}): bola perto da linha de cá`, `${bancos.bancoNaTela}/${bancos.perto} instantes com a cobertura dos bancos na tela e desenhada`, '0 (e ≥ 3 instantes medidos)', bancos.bancoNaTela === 0 && bancos.perto >= 3);
+      // 14) cadeiras e degraus (item 69, PR 1): o degrau em escada nas 4 arquibancadas; as cadeiras 3D (sob demanda) só perto:
+      //     na TV nenhuma (os 20 instantes de cima), perto da arquibancada de lá ≥ 1 bloco com +1 chamada de desenho e
+      //     18 triângulos por cadeira (o mesmo quadro com e sem elas), dentro do teto da qualidade
+      const cad = await pagina.evaluate(() => {
+        const g = window.__golaco;
+        const arq = g.estadio.arquibancadas ?? [];
+        g.cameraLivre({ de: [0, 3, -40], para: [0, 8, -60], fov: 55 });
+        g.estadio.mostrarTorcida(false);
+        g.desenhar(); g.desenhar();
+        const com = { ...g.estadio.cadeiras, c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos };
+        g.estadio.mostrarCadeiras(false); g.desenhar(); g.desenhar();
+        const sem = { c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos, inst: g.estadio.cadeiras.instancias };
+        g.estadio.mostrarCadeiras(true); g.estadio.mostrarTorcida(true); g.cameraLivre(null); g.desenhar();
+        return { arq: arq.map(a => `${a.nome.replace('arquibancada-', '')} ${a.emDegrau ? 'escada' : 'lisa'}`), com, sem };
+      });
+      meta(`Cadeiras e degraus (${nome}): o degrau em escada; as cadeiras 3D nunca na TV; perto ≥ 1 bloco, +1 chamada e 18 triângulos por cadeira, no teto`,
+        `${cad.arq.join(', ')}; TV: máx ${r.cad} cadeiras em 20 instantes; perto: ${cad.com.blocos} blocos, ${cad.com.instancias} cadeiras (teto ${cad.com.teto}), +${cad.com.c - cad.sem.c} chamada, +${cad.com.t - cad.sem.t} triângulos`,
+        'todas em escada; 0; ≥ 1, +1, 18/cadeira, ≤ teto',
+        cad.arq.length === 3 && cad.arq.every(a => a.endsWith('escada')) && r.cad === 0 && cad.com.carregado && cad.com.blocos >= 1 && cad.com.instancias > 0 && cad.com.instancias <= cad.com.teto && cad.com.c - cad.sem.c === 1 && cad.com.t - cad.sem.t === 18 * cad.com.instancias && cad.sem.inst === 0);
     } finally { await nav.close(); }
   } catch (e) {
     meta(`Execução (lado de cá, ${nome})`, e.message, 'sem exceção', false);

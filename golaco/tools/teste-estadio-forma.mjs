@@ -5,7 +5,7 @@
 //   F2) medidas da pesquisa: furo da cobertura 172 × 134 (± 5 m; o de 160 × 122 da Structurae parecia pequeno nas aéreas,
 //       rodada 2 da prévia), profundidade da cobertura 62 m, fachada ~304 × 266,
 //       a última fileira a ~25 m;
-//   F3) os lugares da torcida: no degrau (≤ 5 cm), nenhum na boca do túnel nem com a cabeça dentro de um sólido, nos 4
+//   F3) os lugares da torcida: no degrau (≤ 5 cm; o piso da fileira da grade: item 69), nenhum na boca do túnel nem com a cabeça dentro de um sólido, nos 4
 //       setores; a torcida de cada qualidade com até 15% a mais e até 30% a menos de torcedores que a de hoje (cadeiras à mostra);
 //   F4) a festa no lugar: sinalizadores e bandeiras de mastro no degrau, faixas sem se encostar e na frente da mureta,
 //       bandeirões sem furar a cabeça de ninguém (o mais alto, 2,15 m, embaixo do pano);
@@ -75,7 +75,8 @@ if (!PL) {
     const T = ESTADIO.tunel;
     L.iterar((st, f, a, x, y, z, esc) => {
       porSetor[st]++;
-      const s = P.sDe(x, z), e = Math.abs(P.perfil(s) - y);
+      // o degrau: desde o item 69 (o degrau em escada) o lugar é uma cadeira da grade, no PISO da fileira (P.pisoEm)
+      const s = P.sDe(x, z), e = Math.abs((P.pisoEm ? P.pisoEm(x, z) : P.perfil(s)) - y);
       maxErr = Math.max(maxErr, e);
       if (e > 0.05) foraDegrau++;
       if (z > 0 && Math.abs(x) < T.largura / 2 + 0.4 && y < T.altura + T.laje + 0.3) noTunel++;
