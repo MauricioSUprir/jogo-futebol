@@ -13,11 +13,22 @@ const forcaNormal = (() => { try { return new URLSearchParams(globalThis.locatio
 /** a página está na edição pessoal (senha conferida neste aparelho) */
 export const PESSOAL = salvo === HASH && !forcaNormal;
 
-const normalizar = (t) => String(t ?? '').trim().toLowerCase();
-/** confere a senha (o SHA-256 do texto, sem espaços nas pontas e em minúsculas) */
+// o que o "copiar e colar" do celular traz junto (dono, 31/10: "senha errada, copiei e colei" — a seleção pegou o "P" da frase
+// seguinte): espaços e quebras de linha (também os invisíveis), traços tipográficos no lugar do hífen, acentos que o corretor
+// põe e maiúsculas não contam; e texto a mais grudado também não: vale se a senha estiver em algum trecho do que
+// foi colado (quem não sabe a senha continua sem ter como montar um texto que a contenha)
+const normalizar = (t) => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-').replace(/[\s\u00AD\u200B-\u200D\u2060\uFEFF]+/g, '').toLowerCase();
+const TRECHO_MIN = 6, COLADO_MAX = 64;
+/** confere a senha (o SHA-256 do texto normalizado; ou de um trecho dele, com sobra colada antes ou depois) */
 export async function conferirSenha(texto) {
-  const t = normalizar(texto); if (!t) return false;
-  return (await sha256(t)) === HASH;
+  const t = normalizar(texto).slice(0, COLADO_MAX); if (!t) return false;
+  if ((await sha256(t)) === HASH) return true;
+  const enc = new TextEncoder();
+  for (let i = 0; i < t.length; i++) for (let j = t.length; j - i >= TRECHO_MIN; j--) {
+    if ((i || j < t.length) && hex(sha256JS(enc.encode(t.slice(i, j)))) === HASH) return true;
+  }
+  return false;
 }
 /** entra na edição pessoal (a senha já foi conferida): guarda e recarrega a página */
 export function entrarPessoal() { try { globalThis.localStorage.setItem(CHAVE, HASH); } catch { /* sem armazenamento */ } globalThis.location?.reload(); }
