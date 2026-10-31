@@ -290,7 +290,7 @@ export function rodarCaso(M, cs) {
     p.mirada = { tipo: 'chute' }; p.mod = false; p.dir = { x: Math.cos(ang), z: Math.sin(ang) };
     if (cs.barreira && cs.barreira.n > 0) p.barreira = { dist: cs.barreira.dist, altura: BARREIRA.alturaPassar };
   } else {
-    if (cs.an) { const a = dirGol + cs.an.a; j.ix = Math.cos(a); j.iz = Math.sin(a); j.imag = cs.an.mag; } else { j.imag = 0; j.mira = null; }
+    if (cs.an) { const a = dirGol + cs.an.a; j.ix = Math.cos(a); j.iz = Math.sin(a); j.imx = j.ix; j.imz = j.iz; j.imag = cs.an.mag; } else { j.imag = 0; j.mira = null; }
     if (cs.penalti) p.penalti = true;
     if (cs.barreiraChute) p.barreira = { dist: 9.15, altura: BARREIRA.alturaPassar };
   }
