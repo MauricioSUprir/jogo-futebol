@@ -43,7 +43,7 @@ ok(pos('p4-oficina') + 1 === pos('p4-tempestade') && mis.MISSOES[pos('p4-tempest
 ok(/id="bt-tempestade"/.test(ler('index.html')) && /id="chip-tempestade"/.test(ler('index.html')), 'o botão TEMPESTADE (celular) e a ficha 4 (PC)');
 // ---- 4. os Malandros
 ok(/id: 'malandros'[^}]*viloes: \['frio', 'onda', 'mago'\]/.test(V) && /const OFF = \[\[0, 0\], \[4, 2\], \[-4, 3\]/.test(V), 'os Malandros: os três juntos, cada um no seu lugar');
-ok(/FUGAS = \[\{ de: MISSOES\.findIndex\(\(m\) => m\.id === 'p4-celas'\), ate: 'malandros', ids: \['frio', 'onda', 'mago'\] \}\]/.test(jogo), 'eles somem das celas da contenção do p4-celas até o capítulo ser vencido');
+ok(/FUGAS = \[\{ de: MISSOES\.findIndex\(\(m\) => m\.id === 'p4-celas'\), ate: 'malandros', ids: \['frio', 'onda', 'mago'\] \}[,\]]/.test(jogo), 'eles somem das celas da contenção do p4-celas até o capítulo ser vencido');
 // ---- 5. as cenas e o rádio
 const fechaPeloRadio = (m) => m.alvo === 'esfera' || m.alvo === 'fenda' || m.alvo === 'subestacao' || m.crime || m.patrulha || m.tipo === 'portais' || m.tipo === 'bateria' || mis.MISSOES[pos(m.id) + 1]?.capitulo;
 const semCena = P4.filter((m) => !m.capitulo && !fechaPeloRadio(m) && !H.CENAS[`depois-${m.id}`]);

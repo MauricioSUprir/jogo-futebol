@@ -19,7 +19,7 @@ const ok = (c, msg) => { console.log(`${c ? 'OK ' : 'ERRO'} ${msg}`); if (!c) fa
 const ids = mis.MISSOES.map((m) => m.id), pos = (id) => ids.indexOf(id), P2 = mis.MISSOES.slice(pos('p2-exames'), pos('p2-fim') + 1);
 ok(pos('p2-exames') === pos('nucleo') + 1, 'a Parte 2 começa logo depois do fim da Parte 1 (o Núcleo)');
 ok(P2.length >= 20, `${P2.length} passos na Parte 2`);
-const ordem = ['p2-exames', 'p2-caixinha', 'p2-limite', 'p2-tunel', 'p2-mundo', 'p2-joe', 'p2-iris', 'p2-assalto', 'p2-cisco', 'p2-esferas', 'cap-nevasca', 'p2-mae', 'p2-desfazer', 'p2-volta',
+const ordem = ['p2-exames', 'p2-caixinha', 'p2-limite', 'p2-tunel', 'p2-noite', 'p2-segurar', 'p2-mundo', 'p2-joe', 'p2-iris', 'p2-assalto', 'p2-cisco', 'p2-esferas', 'cap-nevasca', 'p2-mae', 'p2-desfazer', 'p2-noite2', 'p2-espera', 'p2-volta',
   'p2-boatos', 'p2-silhueta', 'p2-celas', 'p2-incendio', 'p2-fuga', 'cap-negro', 'p2-lista'];
 ok(ordem.every((id, k) => pos(id) >= 0 && (!k || pos(ordem[k - 1]) === pos(id) - 1)), 'Atos 5 e 6 na ordem: ' + ordem.join(' → '));
 const ordem2 = ['p2-lista', 'p2-iron', 'p2-august', 'p2-anel', 'p2-pedido', 'p2-gangue', 'p2-adaga', 'p2-sempoderes', 'p2-esferas2', 'p2-grace', 'cap-cigarra', 'p2-casamento',
@@ -33,7 +33,15 @@ ok(mis.MISSOES[pos('p2-esferas2')].fraco === 0.6, 'depois do choque, a velocidad
 // ---- 2. o Ponto de Ignição: do primeiro passo depois do túnel até o passo de desfazer, contínuo e com o raio fraco
 const ig = mis.MISSOES.filter((m) => m.epoca === 'ignicao');
 ok(ig.length >= 8 && ig.every((m, k) => !k || pos(m.id) === pos(ig[k - 1].id) + 1), `${ig.length} passos seguidos na linha do tempo alterada`);
-ok(ig[0].id === 'p2-mundo' && ig.at(-1).id === 'p2-desfazer' && !mis.MISSOES[pos('p2-desfazer') + 1].epoca, 'entra depois do túnel e sai depois de desfazer');
+ok(ig[0].id === 'p2-mundo' && ig.at(-1).id === 'p2-desfazer' && mis.MISSOES[pos('p2-desfazer') + 1].epoca === 'noite' && !mis.MISSOES[pos('p2-volta')].epoca, 'entra depois da noite do passado e sai depois de desfazer (e da noite de novo)');
+// a viagem no tempo é jogável (dono, 31/10: "ele fica correndo e eu não faço nada"): depois de cada túnel, a noite do passado
+// (epoca 'noite'): correr até a casa contra o relógio e, lá, ficar parado (tipo 'espera'): segurar o pai / não entrar
+{ const n1 = mis.MISSOES[pos('p2-noite')], s1 = mis.MISSOES[pos('p2-segurar')], n2 = mis.MISSOES[pos('p2-noite2')], e2 = mis.MISSOES[pos('p2-espera')];
+  ok(n1.epoca === 'noite' && n1.tempo && n1.ponto && n1.cenaAbre && s1.tipo === 'espera' && s1.espera > 0, 'a 1ª viagem: corra até a casa no passado (com cronômetro) e segure o seu pai parado ao lado dele');
+  ok(n2.epoca === 'noite' && n2.tempo && e2.tipo === 'espera' && e2.naoEntrar > 0, 'a 2ª viagem: corra até a casa e, desta vez, não entre (chegar perto demais te empurra para trás)'); }
+{ const j = fs.readFileSync(path.join(AQUI, '../js/jogo.js'), 'utf8');
+  ok(!/'depois-p2-tunel'|'depois-p2-desfazer'/.test(j) && !/'depois-tunel': \{ antes: \(\) => \{ tempo\.tunel = true; J\.corridaCena = true/.test(j), 'nenhuma cena de túnel com o herói correndo sozinho (a corrida é sua)');
+  ok(/tempo\.tunel = J\.tunelT > 1 && !m\.semTunel/.test(j) && /J\.tunelT = 0; J\.esperaT = 0;/.test(j) && /m\?\.tipo === 'espera'/.test(j) && /if \(ep === 'noite'\)/.test(j), 'o túnel abre em volta de você na sua corrida; cada túnel começa do zero; a espera e a época "noite" no jogo'); }
 ok(ig.every((m) => m.fraco > 0.3 && m.fraco < 1), 'lá a velocidade fica mais fraca em todos os passos');
 const teto = vel.tetoCorrida(1) * 3.6;
 ok(teto >= 400 * 1.05, `os 400 km/h do teste cabem no teto (${teto.toFixed(0)} km/h)`);
@@ -49,7 +57,8 @@ ok(P2.filter((m) => m.alvoSala).every((m) => ['contencao', 'cortex', 'nucleo', '
 // ---- 4. as cenas, as falas e o rádio
 // (as esferas fecham pelo rádio; o passo logo antes de um capítulo segue direto para a cena do capítulo)
 const fechaPeloRadio = (m) => m.alvo === 'esfera' || m.alvo === 'subestacao' || mis.MISSOES[pos(m.id) + 1]?.capitulo;
-const semCena = P2.filter((m) => (m.ponto || m.alvo || m.alvoSala || m.tipo === 'tunel') && !fechaPeloRadio(m) && !H.CENAS[`depois-${m.id}`]);
+// (o túnel termina na chegada: a cena de abertura do passo seguinte, já na noite do passado)
+const semCena = P2.filter((m) => (m.ponto || m.alvo || m.alvoSala || m.tipo === 'tunel') && !fechaPeloRadio(m) && !H.CENAS[`depois-${m.id}`] && !(m.tipo === 'tunel' && H.CENAS[mis.MISSOES[pos(m.id) + 1]?.cenaAbre]));
 ok(!semCena.length, `cada passo de história termina numa cena (${semCena.map((m) => m.id).join(', ') || 'todos'})`);
 ok(P2.filter(fechaPeloRadio).every((m) => H.MISSOES_FALAS[m.id]?.abre?.length), 'esses abrem com rádio');
 ok(P2.filter((m) => H.CENAS[`depois-${m.id}`]).every((m) => H.CENAS[`depois-${m.id}`].length >= 5), 'cada cena com pelo menos 5 falas');

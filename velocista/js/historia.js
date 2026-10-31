@@ -108,7 +108,7 @@ export const MISSOES_FALAS = {
   'p2-esferas': { abre: [F('cisco', 'Meus satélites mostram as esferas. Pega cinco, e rápido: o seu sinal está ficando fraco.')],
     fecha: [F('cisco', 'Cinco! O seu sinal estabilizou. Por enquanto.'), F('cisco', 'Má notícia: a Nevasca está no centro. E está procurando VOCÊ.')] },
   'p2-mae': { abre: [F('heroi', 'A mesma casa. A mesma porta. E do outro lado, a voz dela.')] },
-  'p2-desfazer': { abre: [F('heroi', 'Me desculpa, mãe.'), F('cisco', 'O túnel abre uma última vez com a energia que sobrou. Não erra.')] },
+  'p2-desfazer': { abre: [F('heroi', 'Me desculpa, mãe.'), F('cisco', 'O túnel abre uma última vez com a energia que sobrou. Não erra.'), F('cisco', 'Barry! Se der certo, eu não vou lembrar de nada disso, né?'), F('heroi', 'Não.'), F('cisco', 'Então... foi legal ser seu melhor amigo. Em qualquer mundo.')] },
   'p2-volta': { abre: [F('caitlin', 'Barry? Barry! O sinal dele voltou! Cisco, ele voltou!')] },
   'p2-boatos': { abre: [F('iris', 'Barry, passa na redação? Tem uma coisa nas minhas fotos que eu não consigo explicar.')] },
   'p2-silhueta': { abre: [F('caitlin', 'O sinal está parado no meio da praça. Vai devagar, Barry.')] },
@@ -282,7 +282,7 @@ export const MISSOES_FALAS = {
   prefeitura: { abre: [F('caitlin', 'A cidade inteira está na praça da Prefeitura. Querem agradecer ao Flash.'), F('cisco', 'Vai lá. E, por favor, não pare para dar autógrafo.')] },
   capitulos: { abre: [F('caitlin', 'O homem de amarelo ainda está lá fora. O guia mostra quando ele aparecer.')] },
   fendas: { abre: [F('cisco', 'O Núcleo está rasgando o ar pela cidade! Quatro fendas. E tem coisa saindo de lá.'), F('caitlin', 'Vibre dentro de cada uma, na mesma frequência. Ela deve fechar.')], fecha: [F('cisco', 'Quatro abertas, quatro fechadas. Agora vem pro Cortex: descobri uma coisa.')] },
-  tunel: { abre: [F('cisco', 'A avenida principal é reta o bastante. Passe dos 180 e segure. O Núcleo vai te alimentar.')] },
+  tunel: { abre: [F('cisco', 'A avenida principal é reta o bastante. Passe dos 180 e segure. O Núcleo vai te alimentar.'), F('caitlin', 'Pense na noite do acidente. Segure essa lembrança e não solte. O túnel abre em volta de você.')] },
   passado: { abre: [F('caitlin', '...Flash? ...consegue me ouvir? ...o sinal está...'), F('heroi', 'A cidade inteira está como naquela noite. O laboratório brilhando... Eu vou até lá.')] },
 };
 
@@ -553,10 +553,9 @@ export const CENAS = {
     F('caitlin', 'Correr no tempo? Você pode não conseguir voltar.'),
     F('cisco', 'Ou pode. Passe dos 180 e segure: o Núcleo abre o caminho. Eu fico no rádio o tempo todo.'),
   ],
+  // (a corrida no túnel é sua: as falas dela vêm pelo rádio enquanto você corre; a cena é a chegada)
   'depois-tunel': [
-    F('cisco', 'Cento e oitenta, noventa, duzentos... não para! O Núcleo está abrindo o caminho!'),
-    F('heroi', 'Estou vendo a cidade inteira... todos os dias ao mesmo tempo.'),
-    F('caitlin', 'Pense na noite do acidente. Segure essa lembrança e não solte.'),
+    F('heroi', 'Eu vi a cidade inteira... todos os dias ao mesmo tempo.'),
     F('cisco', 'Estou perdendo o sinal... se cuida, Flash... sss...'),
     CARTAO('Seis semanas atrás', 'A noite do acidente'),
   ],
@@ -690,14 +689,21 @@ export const CENAS = {
     F('heroi', 'É lasanha de novo?'),
     F('joe', 'É a única coisa que eu sei fazer. E você vai elogiar.'),
   ],
-  'depois-p2-tunel': [
-    F('heroi', 'Vinte anos para trás... cada noite passando como um relâmpago.'),
-    F('cisco', 'Barry, volta! O sinal está... sss...'),
+  // a viagem é jogável: chegar (cenaAbre do passo 'p2-noite', já na noite do passado), correr até a casa, segurar o pai
+  'p2-chegada': [
     CARTAO('Vinte anos atrás', 'A noite do fogo'),
+    F('heroi', 'Vinte anos para trás. A cidade inteira no escuro, e os carros de outra época.'),
+    F('cisco', 'Barry, volta! O sinal está... sss...'),
+    F('heroi', 'A casa dos meus pais fica a poucas quadras. Eu tenho pouco tempo.'),
+  ],
+  'depois-p2-noite': [
     F('nora', 'Henry? Henry, o que está acontecendo com você? Você está tremendo.'),
     F('pai', 'Nora, se afasta! Tem alguma coisa dentro de mim... um raio... eu não consigo parar!'),
     { ...F('heroi', 'Pai! Não corre! Olha para mim e não corre!'), acao: 'raioCasa' },
     F('pai', 'Quem é você? Por que você tem os olhos dela?'),
+    F('nora', 'Henry, quem é esse rapaz? Como ele entrou aqui?'),
+  ],
+  'depois-p2-segurar': [
     F('heroi', 'Respira. Segura o raio dentro de você. Se você correr agora, ela morre.'),
     F('pai', '...Está passando. Está passando.'),
     F('nora', 'Henry! O que foi isso? E quem é esse rapaz na nossa sala?'),
@@ -797,14 +803,21 @@ export const CENAS = {
     F('heroi', 'São só sonhos, pai.'),
     F('pai', 'Então por que, toda vez que eu olho para você, eu tenho vontade de pedir perdão?'),
   ],
-  'depois-p2-desfazer': [
-    F('cisco', 'Barry! Se der certo, eu não vou lembrar de nada disso, né?'),
-    F('heroi', 'Não.'),
-    F('cisco', 'Então... foi legal ser seu melhor amigo. Em qualquer mundo.'),
+  'p2-chegada2': [
     CARTAO('Vinte anos atrás', 'A noite do fogo, de novo'),
+    F('heroi', 'A mesma noite. A mesma rua. Desta vez eu sei o que tenho que fazer.'),
+  ],
+  'depois-p2-noite2': [
+    F('nora', 'Henry? Henry, o que está acontecendo?'),
     F('pai', 'Nora, se afasta! Tem alguma coisa dentro de mim... eu não consigo parar!'),
+    F('heroi', 'Eu conheço essa noite de cor. Cada segundo dela.'),
     F('heroi', 'Desta vez eu não entro. Desta vez eu só olho.'),
+    F('heroi', 'O raio ainda não saiu. Eu fico aqui fora. Parado.'),
+  ],
+  'depois-p2-espera': [
     { ...F('nora', 'Henry!'), acao: 'raioCasa' },
+    F('heroi', 'O raio passou pela janela. Eu não entrei.'),
+    F('heroi', 'O meu pai vai ser preso. E eu vou crescer na casa do Joe. Tudo de novo.'),
     F('heroi', 'Me perdoa, mãe. Me perdoa.'),
     CARTAO('Ponto de Ignição', 'Desfeito'),
   ],
@@ -2181,6 +2194,8 @@ export const RADIO = {
   'fase2-negro2': [F('cisco', 'Ele acelerou! Mas você também pode. Tudo o que você tem, Barry!')],
   'derrota-negro2': [F('negro', 'Todos param.'), F('caitlin', 'Não para, Barry! Bateria, armadura, tempo lento. Tudo junto.')],
   'escapou-negro2': [F('cisco', 'Ele virou cinza e voltou. Ele sempre volta.')],
+  'falhou-p2-noite': [F('heroi', 'Tarde demais... não! O túnel ainda está aberto. De novo, mais rápido!')],
+  'falhou-p2-noite2': [F('heroi', 'Eu me atrasei. Mais uma vez. Eu sei o caminho: corre!')],
   'falhou-p3-iris-perigo': [F('caitlin', 'Ele ainda está sentado do lado dela, sorrindo. Corre mais, Barry!')],
   'falhou-p3-perseguido': [F('cisco', 'Ele quase te alcançou! As defesas do laboratório seguraram ele por um segundo. Corre!')],
   'falhou-p3-nora': [F('joe', 'Barry! Onde você está?! Ela está chamando por você! CORRE!')],

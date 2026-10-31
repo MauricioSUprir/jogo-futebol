@@ -117,7 +117,7 @@
 
 | nº | o que é | horas |
 |---|---|---|
-| 69 | 🆕 ⏳ **Cadeiras e torcida em 3D**, parecidas com as reais, em todos os estádios (4 PRs; os 2 primeiros, ~30 h, já mostram o 3D de perto) | 52 |
+| 69 | 🆕 ⏳ **Cadeiras e torcida em 3D**, parecidas com as reais, em todos os estádios (4 PRs; o 1º — a cadeira e o degrau — feito (#586); os 2 primeiros, ~30 h, já mostram o 3D de perto) | 52 |
 | 61 | 🆕 **Passada natural** (no túnel e na fila parecem marchar) | 5 |
 | 62 | 🆕 Linha escura na nuca (costura da textura da cabeça) | 2 |
 | 63 | 🆕 Bordas tracejadas em volta dos números e patrocínios das camisas | 2 |

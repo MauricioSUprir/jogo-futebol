@@ -96,6 +96,9 @@ export function criarEquipe(cena, { mobile = false, aniso = 2, renderer = null, 
 
   return {
     carregar, atualizar, retratar,
+    /** a temporada da série: o Wells se levanta da cadeira (e volta a sentar depois da cena) */
+    levantar(id) { if (LUGARES[id]) LUGARES[id].sentado = false; },
+    sentar(id) { if (LUGARES[id]) LUGARES[id].sentado = true; },
     get pronta() { return Object.keys(pessoas).length === Object.keys(LUGARES).length; },
     /** os focos da câmera numa cena: {caitlin: () => ponto, cisco: () => ponto} */
     focos() { return Object.fromEntries(Object.values(pessoas).map((p) => [p.id, () => ({ x: p.x, y: PISO, z: p.z })])); },

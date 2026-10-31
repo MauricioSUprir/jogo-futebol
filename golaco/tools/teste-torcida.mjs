@@ -39,21 +39,25 @@ if (TD) {
   reg('Torcedores por qualidade (Baixa < Média < Alta)', `baixa ${Q.baixa.n} · média ${Q.media.n} · alta ${Q.alta.n} (de ${nCad} cadeiras, com o lado de cá)`, 'alta ≥ 22 mil, média 16–22 mil, baixa ≤ 15 mil',
     Q.alta.n >= 22000 && Q.media.n >= 16000 && Q.media.n <= 22000 && Q.baixa.n <= 15000 && Q.baixa.n < Q.media.n && Q.media.n < Q.alta.n);
   const R = Q.alta;
-  // em cima do degrau de cada arquibancada
+  // em cima do degrau de cada arquibancada: desde o item 69 (o degrau em geometria) cada torcedor senta no ASSENTO de uma
+  // cadeira da grade (render/cadeiras-dados.js gradeGolaco: o piso do degrau e o centro do assento; ± 6 cm de sorteio na x)
+  const CD = await imp('render/cadeiras-dados.js');
+  const GR = CD ? CD.gradeGolaco() : null;
   let foraDoDegrau = 0, foraLimites = 0;
-  const sLado = (y) => (y - A.yBase) / (A.yTopoLado - A.yBase);
+  const cadeiraDe = i => {
+    if (!GR) return null;
+    const x = R.pos[4 * i], z = R.pos[4 * i + 2], setor = Math.round(R.info[4 * i + 1] / 85);
+    // o sorteio de ±6 cm na x: a cadeira mais perto das 3 vizinhas
+    let melhor = null, dm = Infinity;
+    for (const dx of [0, -0.25, 0.25]) { const c = GR.assentoEm(x + dx, z, setor); if (c) { const d = Math.hypot(c.x - x, c.z - z); if (d < dm) { dm = d; melhor = c; } } }
+    return melhor;
+  };
   for (let i = 0; i < R.n; i++) {
     const x = R.pos[4 * i], y = R.pos[4 * i + 1], z = R.pos[4 * i + 2], setor = Math.round(R.info[4 * i + 1] / 85);
-    if (setor === 0 || setor === 3) {
-      const s = sLado(y), sz = setor === 0 ? -1 : 1;
-      if (Math.abs(z - sz * (A.frenteZ + A.profLado * s)) > 0.01) foraDoDegrau++;
-      if (Math.abs(x) > A.meioComprimento || s < 0 || s > 1) foraLimites++;
-    } else {
-      const sg = setor === 1 ? 1 : -1;
-      const s = (y - A.yBase) / (A.yTopoFundo - A.yBase);
-      if (Math.abs(sg * x - (A.fundoX0 + A.profFundo * s)) > 0.07) foraDoDegrau++;
-      if (z < -(A.frenteZ + A.profLado) || z > A.frenteZ || s < 0 || s > 1) foraLimites++;
-    }
+    const c = cadeiraDe(i);
+    if (!c || Math.abs(c.y - y) > 0.01 || Math.hypot(c.x - x, c.z - z) > 0.07) foraDoDegrau++;
+    if (setor === 0 || setor === 3) { if (Math.abs(x) > A.meioComprimento || Math.abs(z) < A.frenteZ || Math.abs(z) > A.frenteZ + A.profLado) foraLimites++; }
+    else if (z < -(A.frenteZ + A.profLado) || z > A.frenteZ || Math.abs(x) < A.fundoX0 || Math.abs(x) > A.fundoX0 + A.profFundo) foraLimites++;
   }
   reg('Todos sentados nos degraus das arquibancadas', `${foraDoDegrau} fora do degrau, ${foraLimites} fora dos limites`, '0 e 0', foraDoDegrau === 0 && foraLimites === 0);
   // setores e times
@@ -78,7 +82,9 @@ if (TD) {
   for (const c of cadeiras()) if (c.setor === 0 && mascara[c.a + c.f * nA]) mosaicoTotal++;
   for (let i = 0; i < R.n; i++) {
     if (Math.round(R.info[4 * i + 1] / 85) !== 0) continue;
-    const a = Math.round((R.pos[4 * i] + A.meioComprimento) / A.assento - 0.5), f = Math.round((1 - (R.pos[4 * i + 1] - A.yBase) / (A.yTopoLado - A.yBase)) * A.fileiras - 0.5);
+    const c = cadeiraDe(i);
+    if (!c) continue;
+    const a = c.a, f = c.f;
     if (mascara[a + f * nA] && R.camisa[4 * i] === verde[0] && R.camisa[4 * i + 1] === verde[1] && R.camisa[4 * i + 2] === verde[2]) mosaicoVerde++;
   }
   reg('Mosaico "GOLAÇO" vira camisas verdes (Alta)', `${mosaicoVerde} de ${mosaicoTotal} cadeiras do mosaico`, 'todas', mosaicoVerde === mosaicoTotal && mosaicoTotal > 0);
@@ -136,7 +142,8 @@ if (TD) {
       let t = 0;
       for (let i = 0; i < Q[q].n; i++) {
         if (Math.round(Q[q].info[4 * i + 1] / 85) !== 0) continue;
-        const f = Math.round((1 - (Q[q].pos[4 * i + 1] - A.yBase) / (A.yTopoLado - A.yBase)) * A.fileiras - 0.5);
+        // a fileira pelo piso do degrau (item 69: o torcedor senta no piso da fileira dele)
+        const f = A.fileiras - 1 - Math.round((Q[q].pos[4 * i + 1] - A.yBase) / ((A.yTopoLado - A.yBase) / A.fileiras));
         if (A.fileiras - 1 - f < 9) t++;
       }
       oc[q] = t / nFrente;

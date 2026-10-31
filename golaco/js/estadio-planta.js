@@ -20,6 +20,7 @@
 // Contas por ÂNGULO POLAR θ = atan2(z, x): cada fileira é a interpolação RADIAL entre a 1ª e a última (r = rF + s·(rB
 // − rF)), então os corredores são radiais (os 60 vomitórios) e a conta inversa (ponto → fileira) é O(1) por tabela.
 import { ESTADIO, CAMPO } from './config.js';
+import { criarGradeAnel } from './render/cadeiras-dados.js';
 
 const RAD = Math.PI / 180;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -264,33 +265,102 @@ export function criarPlanta(formaBruta, opc = {}) {
     const u = uCob(x + SOLD[0] * t, z + SOLD[2] * t);
     return u >= -0.02 && u <= 1.0 ? 0.66 : 1;
   }
+  // ---------------------------------------------------------------- a grade das cadeiras (item 69)
+  // As fileiras de ~0,8 m (render/cadeiras-dados.js criarGradeAnel: o número pela profundidade média de cada anel) e, em
+  // cada uma, as cadeiras de ≥ 0,5 m entre as 60 escadas radiais (o gomo: 1/60 da volta pelo arco no meio; a escada nos
+  // primeiros corredorU dele).
+  // Fonte única da textura das cadeiras (render/estadio-real.js), do degrau em escada e dos lugares da torcida.
+  const passoCorrG = 360 / F.corredores;
+  const TT = ESTADIO.tunel, mtT = TT.largura / 2 + 0.4, topoTunelT = TT.altura + TT.laje + 0.3;
+  // o u da textura das cadeiras pelo ARCO no meio da profundidade (s = 0,5): os 30 ladrilhos (60 gomos, cada um com a
+  // escada no começo) de comprimento igual pela volta — as escadas radiais a distâncias iguais e a cadeira com ~a mesma
+  // largura nos lados e nos fundos (por ângulo, a frente dos lados tinha cadeiras de 0,36 m e a dos fundos de 0,77 m)
+  const NLAD = F.corredores / 2;
+  const arcoU = (() => {
+    const N = 3600, acc = new Float64Array(N + 1);
+    let px = 0, pz = 0;
+    for (let i = 0; i <= N; i++) {
+      const th = -Math.PI + (2 * Math.PI * i) / N, [x, z] = ponto(th, 0.5);
+      if (i > 0) acc[i] = acc[i - 1] + Math.hypot(x - px, z - pz);
+      px = x; pz = z;
+    }
+    const tot = acc[N];
+    for (let i = 0; i <= N; i++) acc[i] = (acc[i] / tot) * NLAD - NLAD / 2;
+    const uDe = th => { let u = ((th + Math.PI) / (2 * Math.PI)) * N; u = clamp(u, 0, N); const i = Math.min(N - 1, Math.floor(u)); return acc[i] + (acc[i + 1] - acc[i]) * (u - i); };
+    const thDe = u => {
+      let lo = 0, hi = N;
+      const uu = clamp(u, acc[0], acc[N]);
+      while (hi - lo > 1) { const m = (lo + hi) >> 1; if (acc[m] <= uu) lo = m; else hi = m; }
+      const w = (uu - acc[lo]) / ((acc[hi] - acc[lo]) || 1);
+      return -Math.PI + (2 * Math.PI * (lo + w)) / N;
+    };
+    return { uDe, thDe, u0: -NLAD / 2, u1: NLAD / 2 };
+  })();
+  /** O u da textura das cadeiras no ângulo th (ladrilhos de 2 gomos) e a posição no gomo (0–1). */
+  const uTex = th => arcoU.uDe(th);
+  const noGomo = th => { const u = arcoU.uDe(th) * 2; return u - Math.floor(u); };
+  let _grade = null;
+  function grade() {
+    if (_grade) return _grade;
+    let soma = 0;
+    const N = 360;
+    for (let i = 0; i < N; i++) { const th = -Math.PI + (2 * Math.PI * (i + 0.5)) / N; soma += rB(th) - rF(th); }
+    const profMedia = soma / N;
+    // a metade do ladrilho (um gomo) na fileira s: o perímetro dela pelos 60 gomos
+    const meiaMedia = sm => { let t = 0, px = 0, pz = 0; for (let i = 0; i <= N; i++) { const [x, z] = ponto(-Math.PI + (2 * Math.PI * i) / N, sm); if (i) t += Math.hypot(x - px, z - pz); px = x; pz = z; } return t / F.corredores; };
+    _grade = criarGradeAnel({
+      faixas: [[0, Pf.sInf], [sC, 1]], profMedia,
+      perfil: s2 => perfil(s2), ponto, vDe, setor,
+      trechos: [arcoU],
+      corredor: F.corredorU, meiaMedia,
+      existe: (th, r, x, z, y) => {
+        if (z > 0 && Math.abs(x) < mtT && y < topoTunelT) return false;
+        // os vomitórios: a boca escura no meio de cada gomo, nas VOM.fileiras de cima do anel de baixo
+        if (r.faixa === 0 && r.iFaixa >= r.nFaixa - VOM.fileiras) { const g = noGomo(th) * passoCorrG; if (g >= VOM.g0 && g <= VOM.g1) return false; }
+        return true;
+      },
+    });
+    return _grade;
+  }
+  /** O piso do degrau (y) da fileira que contém o ponto (x, z) — onde o torcedor senta (null fora das cadeiras). */
+  function pisoEm(x, z) { const r = grade().fileiraDe(sDe(x, z)); return r ? perfil(r.s0) : null; }
+
+  /**
+   * Os lugares (um torcedor desenhado vale ~1 cadeira embaixo e ~2 em cima): {n, fileiras, iterar(cadeira)} no formato
+   * de torcida-dados.js gerarTorcidaNiveis (cadeira(setor, f, a, x, y, z, escala, iMascara, luz)). Cada lugar é uma
+   * CADEIRA da grade (item 69: o piso do degrau, o centro do assento): embaixo todas as fileiras dela, em cima uma sim,
+   * uma não (o torcedor maior vale 2); f = 0 é a fileira de cima; nada na escada, nos vomitórios nem na boca do túnel.
+   */
   function gerarLugares() {
-    const [nI, nS] = F.fileiras, NF = nI + nS;
+    const G = grade();
+    const k1 = G.fileiras.find(q => q.faixa === 1).k;
+    const usadas = G.fileiras.filter(r => r.faixa === 0 || (r.k - k1) % 2 === 0);
+    const nI = usadas.filter(r => r.faixa === 0).length, nS = usadas.length - nI, NF = usadas.length;
+    // o mesmo número de lugares de antes (32 fileiras a 0,66 m embaixo, 22 a 0,88 m em cima)
+    const passos = [F.passo[0] * nI / F.fileiras[0], F.passo[1] * nS / F.fileiras[1]];
     const lista = [];
+    const vistos = new Set();
     const M = 2880;   // amostras da fileira (0,125°)
-    const T = ESTADIO.tunel, mt = T.largura / 2 + 0.4, topoTunel = T.altura + T.laje + 0.3;
-    const passoCorr = 360 / F.corredores, largCorr = passoCorr * F.corredorU;
     // ninguém a menos de 6 m da lente do plano de dentro do pré-jogo (rodada 4: "torcedores quadrados colados na câmera")
     const lente = PLANOS.dentro.cam.de, l0 = lente[0], l1 = lente[lente.length - 1];
     const pertoDaLente = (x, y, z) => { const xa = l0[0] - 4, xb = l1[0] + 16, xc = clamp(x, xa, xb); return z > 0 && Math.hypot(x - xc, z - l0[2]) < 7 && y < 9; };
-    for (let f = 0; f < NF; f++) {
-      const j = NF - 1 - f;                                    // da frente (0) para cima
-      const inf = j < nI;
-      const s = inf ? ((j + 0.5) / nI) * Pf.sInf : sC + ((j - nI + 0.5) / nS) * (1 - sC);
-      const y = perfil(s), passo = inf ? F.passo[0] : F.passo[1], esc = inf ? F.escala[0] : F.escala[1];
-      // a fileira como polilinha; um lugar a cada `passo` m de arco
+    usadas.forEach((r, j) => {
+      const f = NF - 1 - j;                                    // 0 = a de cima
+      const inf = r.faixa === 0;
+      const s = r.sAssento;
+      const passo = inf ? passos[0] : passos[1], esc = inf ? F.escala[0] : F.escala[1];
+      // a fileira como polilinha; um lugar a cada `passo` m de arco, puxado para a cadeira da grade em que cai
       let acum = passo * 0.5, px = 0, pz = 0, a = 0;
       for (let i = 0; i <= M; i++) {
         const th = -Math.PI + (2 * Math.PI * i) / M;
-        const [x, z] = ponto(th, s);
-        if (i > 0) acum += Math.hypot(x - px, z - pz);
-        px = x; pz = z;
+        const [x0, z0] = ponto(th, s);
+        if (i > 0) acum += Math.hypot(x0 - px, z0 - pz);
+        px = x0; pz = z0;
         if (acum < passo) continue;
         acum -= passo;
-        // corredor (o da textura: os primeiros corredorU de cada fatia de 6°)
-        const g = (((th / RAD) % passoCorr) + passoCorr) % passoCorr;
-        if (g < largCorr + 0.15) continue;
-        if (z > 0 && Math.abs(x) < mt && y < topoTunel) continue;
+        const c = G.assentoEm(th, s, 0, true);
+        if (!c || vistos.has(c.chave)) continue;
+        const { x, y, z } = c;
         const st = setor(x, z);
         // cadeiras à mostra (rodada 1 da prévia: "o vermelho em 100% apaga o Maracanã"): as fileiras de cima (debaixo da
         // borda da cobertura) e manchas soltas, mais no setor visitante (fundo −x); rodada 2: sem o vão ao lado de cada
@@ -299,10 +369,8 @@ export function criarPlanta(formaBruta, opc = {}) {
         // (rodada 4: "gente de pé em cima da viga da cobertura"): as 3 de cima vazias (as cadeiras debaixo da borda)
         if (!inf && j - nI >= nS - 3) continue;
         if (!inf && j - nI === nS - 4 && hs < 0.7) continue;
-        // as cadeiras soltas à mostra entre a torcida (o mosaico amarelo/azul/branco nas brechas) e os vomitórios: a boca
-        // escura no meio de cada gomo, nas 3 fileiras de cima do anel de baixo (o mesmo vão da textura)
+        // as cadeiras soltas à mostra entre a torcida (o mosaico amarelo/azul/branco nas brechas)
         if (hs < 0.05) continue;
-        if (inf && j >= nI - VOM.fileiras && g >= VOM.g0 && g <= VOM.g1) continue;
         if (pertoDaLente(x, y, z)) continue;
         if (h2(Math.floor((th / RAD + 180) / 1.6), Math.floor(j / 3) + 977) < (st === 2 && !dividida ? 0.26 : 0.22)) continue;
         if (dividida && Math.abs(x) < 3 && (st === 0 || st === 3)) continue;
@@ -312,10 +380,11 @@ export function criarPlanta(formaBruta, opc = {}) {
           const u = (psi(x, z) + 135) / 90, k = j - nI;
           im = Math.min(249, Math.max(0, Math.floor(u * 250))) + Math.min(35, Math.floor(((nS - 1 - k) * 36) / nS)) * 250;
         }
+        vistos.add(c.chave);
         // a sombra da cobertura só onde o sol bate (o lado de lá e o fundo +x; os outros dois já ficam de costas para ele)
         lista.push(st, f, a++, x, y, z, esc, im, st < 2 ? luzDoSol(x, y + 1.2, z) : 1);
       }
-    }
+    });
     const n = lista.length / 9;
     return {
       n, fileiras: NF, dividida,
@@ -660,6 +729,7 @@ export function criarPlanta(formaBruta, opc = {}) {
     rF, rB, rCobFora, rCobDentro, rFach, ponto, sDe, perfil, vDe, nos, sC, setor, psi, thDivisa,
     nosCob, alturaCob, pontoCob, uCob, uMastro, cone, luzDoSol, dividida, COSTELA, nFachada, yRampa, entorno: E, distTrilho, estacionamentos: ESTAC, TELOES, vom: VOM,
     get lugares() { return _lugares ?? (_lugares = gerarLugares()); },
+    get grade() { return grade(); }, pisoEm, uTex, noGomo,
     solido, cameraNoLadoDeCa, noDegrau,
     predios, bairro, palmeiras, carros, torcedoresFora,
     faixas, bandeiras, bandeiroes, sinalizadores,
