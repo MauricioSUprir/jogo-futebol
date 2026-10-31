@@ -89,7 +89,7 @@ export function criarTorcedores3D(opc) {
   const U = torcida.uniforms;
   let qualidade = opc.qualidade ?? 'media', hora = opc.hora ?? 'dia';
   let modelo = null, vat = null, tex = null, malhas = null, carga = null, falhou = false;
-  let ant = new Map(), chave = '', nTor = 0, nTri = 0, nBlocos = 0, lods = [0, 0], precarga = true;
+  let ant = new Map(), chave = '', nTor = 0, nTri = 0, nBlocos = 0, lods = [0, 0], precarga = 0;
   const porBloco = new Map();
   let hash = null;
   const calca = TORCEDOR3D.calca.map(c => new THREE.Color(c));
@@ -262,12 +262,14 @@ export function criarTorcedores3D(opc) {
       const k = qualidade + '|' + [...r.escolha].map(([c, l]) => c + '=' + l).sort().join(',');
       if (k !== chave) { chave = k; aplicar(r, porChave); }
       ant = r.escolha;
-      // pré-carga: o 1º quadro depois de chegar desenha UMA malha com 0 instâncias (as 4 usam o mesmo programa: ele
-      // compila antes do 1º plano de perto, com 1 chamada a mais num quadro só); depois, só as que têm alguém. No desenho
-      // só junto com a torcida (os testes escondem a torcida inteira: torcida.mesh.visible)
+      // pré-carga: nos 4 primeiros quadros depois de chegar, uma malha por quadro vai para a GPU com 0 instâncias (o
+      // programa — o mesmo nas 4 — compila no 1º e a geometria de cada uma sobe antes do 1º plano de perto: 1 chamada a
+      // mais por quadro, nunca 4 de uma vez); depois, só as que têm alguém. No desenho só junto com a torcida (os testes
+      // escondem a torcida inteira: torcida.mesh.visible)
       const comTorcida = torcida.mesh ? torcida.mesh.visible !== false : true;
-      for (const pv of malhas) for (const m of pv) m.visible = comTorcida && ((precarga && m === malhas[0][0]) || m.userData.k > 0);
-      precarga = false;
+      const todas = malhas.flat(), pre = precarga < todas.length ? todas[precarga] : null;
+      for (const m of todas) m.visible = comTorcida && (m === pre || m.userData.k > 0);
+      if (pre && comTorcida) precarga++;
     },
     definirQualidade(q) { if (TORCEDOR3D.qual[q]) { qualidade = q; chave = ''; baixar(); } },
     definirHora(h) { hora = h; uNoite.value = h === 'noite' ? 1 : 0; },
