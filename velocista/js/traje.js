@@ -29,6 +29,21 @@ float tRaioTesta(vec3 p) {
   float w = 0.0045 + (p.y - 1.671) * 0.045, f = fwidth(d) * 1.2 + 1e-5;
   return 1.0 - smoothstep(w - f, w + f, d);
 }
+// EDIÇÃO PESSOAL (estilo da série): costura em losangos (o couro acolchoado), some quando a célula fica menor que um pixel
+float tLosangos(vec2 u, float w) {
+  vec2 s = vec2(u.x + u.y, u.x - u.y), a = abs(fract(s + 0.5) - 0.5), f = fwidth(s) * 1.2 + 1e-5;
+  vec2 l = 1.0 - smoothstep(vec2(w), vec2(w) + f, a);
+  return max(l.x, l.y) * (1.0 - smoothstep(0.15, 0.35, max(f.x, f.y)));
+}
+// EDIÇÃO PESSOAL: os RAIOS DAS ORELHAS do capuz (de cada lado da cabeça, por cima da orelha: um zigue-zague deitado que
+// sai da têmpora e aponta para trás e um pouco para cima; grosso na frente, fino na ponta)
+float tOrelha(vec3 q) {
+  if (q.z < 0.05) return 0.0;
+  vec2 s = vec2(q.x, q.y);
+  float d = min(min(tSeg2(s, vec2(0.042, 1.664), vec2(-0.012, 1.645)), tSeg2(s, vec2(-0.012, 1.645), vec2(0.0, 1.667))), tSeg2(s, vec2(0.0, 1.667), vec2(-0.074, 1.692)));
+  float w = 0.0032 + max(0.0, q.x + 0.074) * 0.055, f = fwidth(d) * 1.2 + 1e-5;
+  return (1.0 - smoothstep(w - f, w + f, d)) * smoothstep(0.05, 0.066, q.z);
+}
 void tPerturba(inout vec3 n, float h) {
   vec3 dpx = dFdx(-vViewPosition), dpy = dFdy(-vViewPosition);
   float hx = dFdx(h), hy = dFdy(h);
@@ -66,6 +81,11 @@ const PALETAS = {
   // o Godspeed: branco-prata com os frisos dourados e os olhos de ouro, armadura metálica (Parte 2, Ato 8)
   godspeed: { verm: [0.62, 0.62, 0.64], vesc: [0.16, 0.16, 0.17], ouro: [0.95, 0.72, 0.22], graf: [0.05, 0.05, 0.055], brilho: 0.6, olho: [2.4, 1.9, 0.7], mascaraFechada: true, met: 0.75, rug: 0.32 },
   civil: { verm: [0, 0, 0], vesc: [0, 0, 0], ouro: [0, 0, 0], graf: [0, 0, 0], brilho: 0, olho: [0, 0, 0], desenho: 'civil' },
+  // EDIÇÃO PESSOAL (js/edicao.js; recriação de fã no estilo da série, desenhada aqui): o couro vinho acolchoado, sem as faixas
+  // douradas, o capuz com os raios nas orelhas; o emblema é o raio no círculo claro (humano.js). Só com a senha.
+  heroiSerie: { verm: [0.15, 0.0075, 0.011], vesc: [0.075, 0.0045, 0.0065], ouro: [0.95, 0.62, 0.12], graf: [0.06, 0.004, 0.006], brilho: 0.05, olho: [0, 0, 0], mascaraFechada: false, serie: true, orelhas: true, rug: 0.4, met: 0.1 },
+  novoSerie: { verm: [0.34, 0.012, 0.016], vesc: [0.10, 0.005, 0.008], ouro: [0.98, 0.66, 0.13], graf: [0.03, 0.02, 0.022], brilho: 0.12, veia: 0.35, olho: [1.0, 0.5, 0.08], mascaraFechada: false, desenho: 'novo', orelhas: true, rug: 0.38 },
+  reversoSerie: { verm: [0.78, 0.44, 0.012], vesc: [0.30, 0.14, 0.006], ouro: [0.62, 0.02, 0.02], graf: [0.05, 0.01, 0.01], brilho: 0.3, olho: [2.4, 0.06, 0.04], mascaraFechada: false, serie: true, orelhas: true, rug: 0.42, met: 0.08 },
   novo: { verm: [0.30, 0.011, 0.018], vesc: [0.075, 0.004, 0.008], ouro: [0.95, 0.60, 0.11], graf: [0.022, 0.02, 0.024], brilho: 0.08, veia: 0.55, olho: [1.2, 0.55, 0.08], mascaraFechada: false, desenho: 'novo', raioTesta: true },
 };
 const v3 = (c) => `vec3(${c.map((x) => x.toFixed(4)).join(', ')})`;
@@ -81,6 +101,8 @@ const vec3 T_OLHO = ${v3(P.olho)};
 const float T_VEIA = ${(P.veia ?? 0).toFixed(3)};
 ${P.mascaraFechada ? '#define MASCARA_FECHADA' : ''}
 ${P.raioTesta ? '#define RAIO_TESTA' : ''}
+${P.serie ? '#define SERIE' : ''}
+${P.orelhas ? '#define ORELHAS' : ''}
 vec3 TR_EMIS = vec3(0.0);
 `;
 
@@ -105,11 +127,20 @@ void traje(vec3 p) {
     vec3 c = ante ? cB : cA, u = normalize(ante ? W - E : E - S);
     vec3 r = q - c, cima = normalize(vec3(0.0, 1.0, 0.0) - u * u.y), lado = normalize(cross(u, cima));
     vec3 rn = normalize(r);
+#ifdef SERIE
+    // série: o alto do braço em couro acolchoado (losangos costurados, do ombro ao cotovelo) e a luva com costura no punho
+    float ang = atan(dot(rn, lado), dot(rn, cima));
+    if (!ante && tA > 0.3 && abs(ang) < 1.25) cost = max(cost, tLosangos(vec2(tA * 0.29, ang * 0.06) / 0.026, 0.05));
+    cost = max(cost, tLinha(abs(ang) - 1.25, 0.05) * (ante ? step(tB, 0.8) : step(0.3, tA)));
+    if (ante && tB > 0.82) escuro = 1.0;
+    if (ante) cost = max(cost, tLinha(tB - 0.815, 0.016));
+#else
     // friso dourado no alto do braço, do ombro até a luva
     ouro = max(ouro, tLinha(dot(rn, lado), 0.16) * step(0.0, dot(rn, cima)) * (ante ? step(tB, 0.8) : step(0.32, tA)));
     // luva: depois do punho, vermelho-escuro com aro dourado
     if (ante && tB > 0.82) escuro = 1.0;
     if (ante) ouro = max(ouro, tLinha(tB - 0.815, 0.022));
+#endif
     // costura da cotoveleira
     cost = max(cost, tLinha(length((q - E) * vec3(1.0, 1.0, 1.0)) - 0.055, 0.004) * step(0.0, dot(q - E, vec3(-1.0, 0.0, 0.0))));
     // ombreira (costura em arco em volta do ombro)
@@ -119,9 +150,15 @@ void traje(vec3 p) {
     vec3 c = canela ? cD : cC, u = normalize(canela ? A - K : K - H);
     vec3 r = q - c; r -= u * dot(r, u);
     vec2 rn = normalize(vec2(r.x, r.z));
+#ifdef SERIE
+    // série: o painel acolchoado na lateral de fora da coxa, com a costura em volta
+    if (!canela && rn.y > 0.55 && q.y > 0.62) cost = max(cost, tLosangos(vec2(q.y, atan(rn.y, rn.x) * 0.075) / 0.028, 0.05));
+    cost = max(cost, tLinha(rn.y - 0.55, 0.05) * step(0.42, q.y));
+#else
     // as duas faixas da lateral externa
     float fora = step(0.35, rn.y);
     ouro = max(ouro, fora * max(tLinha(rn.x - 0.16, 0.065), tLinha(rn.x + 0.16, 0.065)) * step(0.42, q.y));
+#endif
     // joelheira
     float dk = length((q - K) * vec3(1.0, 0.75, 1.0));
     if (rn.x > 0.25 && dk < 0.07) painel = 1.0;
@@ -129,7 +166,11 @@ void traje(vec3 p) {
     // bota: vermelho-escuro, aro dourado com bico na frente, sola grafite
     float aro = 0.40 + 0.035 * smoothstep(0.3, 1.0, rn.x);
     if (q.y < aro) escuro = 1.0;
+#ifdef SERIE
+    cost = max(cost, tLinha(q.y - aro - 0.006, 0.008));
+#else
     ouro = max(ouro, tLinha(q.y - aro - 0.006, 0.012));
+#endif
     if (q.y < 0.028) graf = 1.0;
     // costura de trás da coxa
     cost = max(cost, tLinha(rn.y, 0.035) * step(rn.x, -0.5) * step(0.6, q.y));
@@ -137,15 +178,27 @@ void traje(vec3 p) {
     // ---- tronco ----
     vec2 rn = normalize(vec2(q.x, q.z));
     // faixas laterais (continuam as das pernas)
+#ifdef SERIE
+    // série: os flancos e o alto dos ombros em couro acolchoado, com a costura na divisa
+    if (rn.y > 0.72 && q.y > 1.0 && q.y < 1.40) cost = max(cost, tLosangos(vec2(q.y, q.x) / 0.028, 0.05));
+    cost = max(cost, tLinha(rn.y - 0.72, 0.04) * step(1.0, q.y) * step(q.y, 1.40));
+    if (q.y > 1.455 && q.z > 0.07) cost = max(cost, tLosangos(vec2(q.z, q.y) / 0.026, 0.05));
+#else
     float lado = step(0.35, rn.y) * step(q.y, 1.39);
     ouro = max(ouro, lado * max(tLinha(rn.x - 0.16, 0.065), tLinha(rn.x + 0.16, 0.065)));
+#endif
     // peitoral em escudo com friso dourado
     float w = 0.125 - max(0.0, 1.32 - q.y) * 1.25;
     float sd = q.z - w;
     float frente = step(0.035, q.x);
     if (frente > 0.0 && sd < 0.0 && q.y > 1.22 && q.y < 1.445) painel = 1.0;
+#ifdef SERIE
+    cost = max(cost, frente * tLinha(sd, 0.005) * step(1.22, q.y) * step(q.y, 1.445));     // o peitoral só costurado
+    cost = max(cost, frente * tLinha(q.y - 1.445, 0.005) * step(q.z, 0.125));
+#else
     ouro = max(ouro, frente * tLinha(sd, 0.0075) * step(1.22, q.y) * step(q.y, 1.445));
     ouro = max(ouro, frente * tLinha(q.y - 1.445, 0.0075) * step(q.z, 0.125));
+#endif
     // costuras: abdômen (centro e duas transversais), coluna, gola
     cost = max(cost, frente * tLinha(q.z, 0.0035) * step(1.04, q.y) * step(q.y, 1.225));
     cost = max(cost, frente * step(q.z, 0.075) * max(tLinha(q.y - 1.115, 0.0035), tLinha(q.y - 1.17, 0.0035)));
@@ -193,13 +246,21 @@ void traje(vec3 p) {
   float f = fwidth(sd) * 1.2 + 1e-5;
   MASCARA = smoothstep(-f, f, sd);
   float ouro = tLinha(sdRosto - 0.0035, 0.0045) * step(0.06, q.x);
-#ifdef RAIO_TESTA
+#ifdef SERIE
+  ouro = 0.0;                                                      // série: sem friso dourado no rosto nem no alto da cabeça
+#elif defined(RAIO_TESTA)
   ouro = max(ouro, tLinha(q.z, 0.006) * step(1.69, q.y) * step(q.x, 0.035));    // friso no alto da cabeça, do raio da testa à nuca
   ouro = max(ouro, tRaioTesta(p));
 #else
   ouro = max(ouro, tLinha(q.z, 0.006) * step(1.69, q.y) * step(q.x, 0.14));     // friso no alto da cabeça, da testa à nuca
 #endif
+#ifdef ORELHAS
+  ouro = max(ouro, tOrelha(q));                                    // os raios das orelhas
+#endif
   float cost = tLinha(sdOlho - 0.004, 0.003) * step(0.08, q.x);
+#ifdef SERIE
+  cost = max(cost, max(tLinha(sdRosto - 0.0035, 0.0035) * step(0.06, q.x), tLinha(q.z, 0.004) * step(1.7, q.y)));   // costuras do capuz
+#endif
   vec2 uh = vUv0 * vec2(240.0, 240.0);
   float hx = tHex(uh) * (1.0 - smoothstep(0.25, 0.6, length(fwidth(uh))));
   vec3 cor = T_VERM * (0.95 + 0.05 * (1.0 - hx));
@@ -341,9 +402,13 @@ void traje(vec3 p) {
   // friso dourado em volta do rosto e as ASAS pintadas: duas linhas que saem da sobrancelha e varrem para trás pela têmpora
   float ouro = tLinha(sdRosto - 0.0035, 0.0055) * step(0.06, q.x);
   float wy = q.y - (1.676 + (0.10 - q.x) * 0.42);
+#ifdef ORELHAS
+  float asa = tOrelha(q), raioT = 0.0; ouro = max(ouro, asa);          // edição pessoal: os raios das orelhas no lugar das asas
+#else
   float asa = max(tLinha(wy, 0.0065) * step(0.058, q.z) * step(-0.06, q.x) * step(q.x, 0.105), tLinha(wy + 0.024, 0.0045) * step(0.066, q.z) * step(-0.045, q.x) * step(q.x, 0.095));
   ouro = max(ouro, asa);
   float raioT = tRaioTesta(p); ouro = max(ouro, raioT);
+#endif
   // o aro dos olhos (lente escura que acende fraco) e a costura do alto do capuz
   float lente = tLinha(sdOlho - 0.0045, 0.0045) * step(0.08, q.x);
   float cost = tLinha(q.z, 0.004) * step(1.7, q.y) * step(q.x, 0.05);
