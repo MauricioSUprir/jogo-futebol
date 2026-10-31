@@ -16,7 +16,8 @@ import {
   executarToque, saidaParaToque, atualizarGesto, peLivre, noAlcance, preverBola,
 } from './conducao.js';
 import { MD } from './matdet.js';
-import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, executarCabeceio, ataca, assumirControle } from './acoes.js';
+import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, executarCabeceio, ataca, assumirControle, alvoReposicao, arremessoGoleiro, direcaoPedida } from './acoes.js';
+import { iniciarReposicao, reposicaoAtiva, bolaReposicao, chutaDaMao } from './reposicao.js';
 import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol, mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho, maoNaBola, abafar, goleiroSaiNoAlto, atualizarBaseGoleiro } from './goleiro.js';
 import { entradaIA } from './ia.js';
 import { ACOES } from './config.js';
@@ -621,6 +622,9 @@ export function passo(m, entradas) {
       if (mergulhoAtivo(j, m.tick + 1)) { passoMergulho(m, j); continue; }
       // partida: o goleiro do humano com a bola nas mãos anda pelo analógico até a borda da área (nunca sai dela)
       if (m.partida && m.naMao === j.id && ehControlado(m, j) && !m.iaJoga?.[j.time] && !(m.parada && !m.parada.rolou)) mv = andarComBolaNaMao(m, j);
+      // no gesto da reposição (C5; reposicao.js) ele para e vira para onde vai a bola
+      const ar = m.partida && m.naMao === j.id ? reposicaoAtiva(m, j) : null;
+      if (ar) mv = { dx: MD.cos(ar.rumo), dz: MD.sin(ar.rumo), vel: 0, rumoAlvo: ar.rumo };
     } else if (m.posse === j.id) {
       if (j.pedidoPedalada) {
         j.pedidoPedalada = false;
@@ -723,7 +727,10 @@ export function passo(m, entradas) {
   // 5) bola
   if (m.naMao != null) {
     const g = jogadorPorId(m, m.naMao);
-    if (g) bolaNaMao(m, g);
+    // (no gesto da reposição — C5 —, a bola do gesto: nas mãos até a soltura e caindo até o pé no bate-pronto/chutão)
+    const ar = g ? reposicaoAtiva(m, g) : null;
+    if (ar) bolaNaReposicao(m, g, ar);
+    else if (g) bolaNaMao(m, g);
   } else if (m.parada && segurarLateral(m)) {
     // lateral (Etapa 4): a bola nas duas mãos (atrás da cabeça ou no arco do arremesso), sem física
   } else {
@@ -1331,6 +1338,8 @@ function goleiroComBola(m, g) {
   const humano = ehControlado(m, g);
   const pr = m.parada && !m.parada.rolou ? m.parada : null;
   const livre = humano && m.partida && !m.iaJoga?.[g.time];
+  // partida com a bola rolando: a reposição com o gesto (C5; o treino e a bola parada seguem como eram)
+  if (m.partida && !pr) { reposicaoPartida(m, g, humano, livre); return; }
   if (!livre) {
     // IA: repõe depois de 1,5 s. Treino e demo: se o humano não apertar botão de ação (nem estiver carregando um), a IA
     // repõe por ele depois de GOLEIRO.esperaHumano — antes o goleiro ficava com a bola para sempre: "trava"
@@ -1369,6 +1378,99 @@ function goleiroComBola(m, g) {
     }
   }
 }
+
+/**
+ * Reposição com a bola nas mãos na partida (C5, item 16 da FILA; contrato "Reposição do goleiro com a mão"; reposicao.js).
+ * A IA (e a demo / o treino pelo humano: m.iaJoga) espera GOLEIRO.esperaIA (esperaHumano) s e escolhe pela pressão: o
+ * arremesso para o companheiro LIVRE que acoes.js alvoReposicao acha (rola até GOLEIRO.reposicao.rolarMax m; acima, por cima
+ * do ombro) ou o chutão. O humano: PASSE = arremesso (rola; por cima acima de rolarMax m ou com a barra até ombroForca),
+ * LANÇAMENTO = bate-pronto, CHUTE = chutão, ENFIADA = a bola no chão (soltarNoChao). A direção é a do aperto (no máximo
+ * reposicao.virarMax rad do ataque: nunca para o próprio gol). O gesto leva a bola até a soltura (andamentoReposicao).
+ */
+function reposicaoPartida(m, g, humano, livre) {
+  const ar = reposicaoAtiva(m, g);
+  if (ar) { g.pedido = null; g.carga = null; andamentoReposicao(m, g, ar); return; }
+  const desde = g.segura?.desde ?? m.tick;
+  if (!livre) {
+    const espera = Math.round((humano ? GOLEIRO.esperaHumano : GOLEIRO.esperaIA) / PASSO);
+    if (!(m.tick - desde > espera)) return;
+    g.pedido = null; g.carga = null;
+    const C = GOLEIRO.reposicao, lado = ataca(m, g.time);
+    const r = alvoReposicao(m, g, { x: lado, z: 0 }, true);
+    if (r) {
+      const dx = r.x - g.x, dz = r.z - g.z, L = MD.hypot(dx, dz) || 1;
+      iniciarReposicao(m, g, { tipo: L <= C.rolarMax ? 'rolar' : 'ombro', para: r.id, dx: dx / L, dz: dz / L, L, forca: 0.7, gx: linhaDoGol(m, g) });
+    } else iniciarReposicao(m, g, { tipo: 'chutao', para: null, dx: lado, dz: 0, L: 0, forca: 0.7, gx: linhaDoGol(m, g) });
+    return;
+  }
+  if (!g.pedido || !(m.tick - desde > 20)) return;
+  const p = g.pedido;
+  // ENFIADA: solta a bola no chão e sai jogando com o pé (Regra 12.2: não pega de novo com a mão antes de outro tocar)
+  if (p.tipo === 'enfiada') { soltarNoChao(m, g); return; }
+  const C = GOLEIRO.reposicao, lado = ataca(m, g.time);
+  let d = direcaoPedida(g);
+  // nunca para trás: no máximo virarMax do ataque (para o próprio gol a bola entrava no gol ou voltava para ele)
+  const a0 = MD.atan2(0, lado), a = MD.atan2(d.z, d.x), da = difAng(a0, a);
+  if (Math.abs(da) > C.virarMax) { const aa = a0 + Math.sign(da) * C.virarMax; d = { x: MD.cos(aa), z: MD.sin(aa) }; }
+  g.pedido = null;
+  if (p.tipo === 'passe') {
+    const r = alvoReposicao(m, g, d, false);
+    const L = r ? MD.hypot(r.x - g.x, r.z - g.z) : lerp(C.dHumano[0], C.dHumano[1], p.forca);
+    const dx = r ? (r.x - g.x) / L : d.x, dz = r ? (r.z - g.z) / L : d.z;
+    iniciarReposicao(m, g, { tipo: L > C.rolarMax || p.forca >= C.ombroForca ? 'ombro' : 'rolar', para: r ? r.id : null, dx, dz, L, forca: p.forca, gx: linhaDoGol(m, g) });
+  } else iniciarReposicao(m, g, { tipo: p.tipo === 'chute' ? 'chutao' : 'bate', para: null, dx: d.x, dz: d.z, L: 0, forca: p.forca, gx: linhaDoGol(m, g) });
+}
+
+/**
+ * O gesto em andamento (reposicao.js): no tick da soltura o arremesso sai (acoes.js arremessoGoleiro) ou a bola cai das mãos
+ * (o ponto guardado em ar.s); no tick do chute, o bate-pronto/chutão (o LANÇAMENTO de sempre, com a direção do aperto).
+ */
+function andamentoReposicao(m, g, ar) {
+  const b = m.bola, chuta = chutaDaMao(ar.tipo);
+  if (chuta && !ar.s && m.tick >= ar.solta) {
+    if (m.partida) bolaAquemDaLinha(m, g, b);
+    ar.s = { x: b.p.x, y: b.p.y, z: b.p.z };
+    if (m.tick < ar.chuta) return;
+  }
+  if (m.tick < (chuta ? ar.chuta : ar.solta)) return;
+  ar.feito = m.tick;
+  m.naMao = null; g.segura = null; b.rolando = false;
+  if (m.partida) bolaAquemDaLinha(m, g, b);
+  let para = null;
+  if (chuta) {
+    g.pedido = { tipo: 'lancamento', forca: ar.forca, mod: false, tick: m.tick, dir: { x: ar.dx, z: ar.dz }, repos: ar.tipo };
+    executarAcao(m, g, ar.pe, false);
+    g.miraAuto = null;
+    para = m.voo?.para ?? null;
+  } else {
+    const r = ar.para != null ? m.jogadores.find(o => o.id === ar.para && o.time === g.time) ?? null : null;
+    arremessoGoleiro(m, g, ar, r);
+    para = r ? r.id : null;
+  }
+  m.eventos.push({ tipo: 'reposicao', id: g.id, modo: ar.tipo, para });
+  // sem recebedor (bola no espaço), o humano não fica controlando o goleiro sem a bola: o controle vai para o jogador de
+  // linha mais perto de onde ela cai (como antes)
+  if (ehControlado(m, g)) {
+    const a = m.voo?.alvo ?? b.p;
+    let mel = null, dm = Infinity;
+    for (const o of m.jogadores) {
+      if (o.time !== g.time || o.posicao === 'GOL') continue;
+      const d = MD.hypot(o.x - a.x, o.z - a.z);
+      if (d < dm) { dm = d; mel = o; }
+    }
+    if (mel && assumirControle(m, g.time, mel)) m.eventos.push({ tipo: 'troca', id: mel.id, auto: true });
+  }
+}
+
+/** A bola do gesto da reposição (reposicao.js bolaReposicao, no fim deste passo): sem física, sem giro. */
+function bolaNaReposicao(m, g, ar) {
+  const b = m.bola;
+  bolaReposicao(g, ar, m.tick + 1, _br);
+  b.p.x = _br.x; b.p.y = _br.y; b.p.z = _br.z;
+  b.v.x = 0; b.v.y = _br.vy; b.v.z = 0; b.w.x = 0; b.w.y = 0; b.w.z = 0;
+  b.rolando = false;
+}
+const _br = { x: 0, y: 0, z: 0, vy: 0 };
 
 /** ENFIADA com a bola nas mãos (partida): a bola no chão, no pé dele, e ele sai jogando (o "Drop Ball" do EA FC). */
 function soltarNoChao(m, g) {

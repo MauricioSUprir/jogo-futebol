@@ -177,7 +177,7 @@ export function copiaJogador(j) {
   // não saiu do chão não sai mais. Cópia: a cena nunca escreve no plano do mundo
   c.cab = j.cab && (j.cab.saiu || !(j.cab.h > 0)) ? clonar(j.cab) : null; c.disputaAlta = null;
   c.cond = null; c.defesa = null; c.travaApoio = null; c.alvo = null; c.recebe = null; c.corrida = null; c.carga = null;
-  c.pedido = null; c.mira = null; c.miraAuto = null; c.conter = null; c.defH = null; c.salto = null; c.arremesso = null;
+  c.pedido = null; c.mira = null; c.miraAuto = null; c.conter = null; c.defH = null; c.salto = null; c.arremesso = null; c.arremessoGk = null;
   c.segura = null; c.saindo = null; c.ia = null; c.iaA = null; c.iaT = null; c.recep = null; c.contorno = null;
   c.intercepta = null; c.iaAcao = null; c.pedidoPedalada = null; c.botoes = 0; c.botoesAnt = 0;
   return c;
