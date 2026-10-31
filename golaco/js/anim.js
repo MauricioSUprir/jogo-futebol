@@ -505,10 +505,25 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
       info.pes[p].alvoX = ax; info.pes[p].alvoZ = az;
     }
   }
-  // barreira (Etapa 4): o pulo no chute sobe o corpo inteiro (bolas-paradas.js alturaSalto: a mesma conta da colisão)
-  const hs = j.salto ? alturaSalto(j, m.tick) : 0;
+  // barreira (Etapa 4): o pulo no chute sobe o corpo inteiro (bolas-paradas.js alturaSalto: a mesma conta da colisão);
+  // o pulinho do pênalti (item 70, P2: alturaPulinho, só desenho) também
+  const hs = (j.salto ? alturaSalto(j, m.tick) : 0) + alturaPulinho(j, m);
   if (hs > 0) for (let i = 1; i < out.length; i += 3) out[i] += hs;
   return out;
+}
+
+/**
+ * O pulinho do pênalti (item 70, P2; corrida.js cr.pulo): no voo do penúltimo apoio até o pouso do pé de apoio ao lado da
+ * bola, o corpo inteiro sobe h·sen²(π·v) — v, a fração do balanço do pé de apoio desde o começo do pulinho (u0): 0 na saída
+ * do pé que bate, 1 no pouso (a subida e o pouso sem velocidade a mais: o pé não salta nem pousa batendo). Os dois pés
+ * estão no ar. Só desenho (a simulação não lê: o ritmo do pulinho é a lógica da corrida).
+ */
+export function alturaPulinho(j, m) {
+  const pr = m.parada, cr = pr && pr.corrida, pu = cr && cr.pulo;
+  if (!pu || pr.rolou || pr.cobrador !== j.id || cr.plantou >= 0 || j.pes[cr.ps].apoio || j.pes[cr.pe].apoio) return 0;
+  const u = progressoBalanco(j, cr.ps, m.posse === j.id).u;
+  const v = clamp((u - pu.u0) / Math.max(1 - pu.u0, 1e-3), 0, 1), sv = MD.sin(Math.PI * v);
+  return pu.h * sv * sv;
 }
 
 // ---------------------------------------------------------------- goleiro: mergulho, salto e defesa em pé

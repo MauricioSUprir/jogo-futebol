@@ -43,7 +43,7 @@
 // locomoção, e nunca a posição do corpo (os pés seguem pela passada). Nenhuma parada passa de
 // PARTIDA.paradaMax (8 s).
 
-import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META, ESCANTEIO, BARREIRA, DISPUTA, CORRIDA_COBRANCA } from './config.js';
+import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META, ESCANTEIO, BARREIRA, DISPUTA, CORRIDA_COBRANCA, ESTILO_PENALTI } from './config.js';
 import { criarMundo, passo, jogadorPorId, misturarHash, aplicarEntrada } from './sim.js';
 import { criarBola } from './bola.js';
 import { MD } from './matdet.js';
@@ -61,7 +61,10 @@ import { limparRegraMao, segundosNaMao, pontoTiroLivreMao } from './regras-golei
 import { segurarLateral, opcoesLateral, opcaoMirada, alvoLongoNaArea, vMaxArremesso } from './lateral.js';
 import { alvoBolaParada, papeisEscanteio, pontoEscanteio, pontoMarcador, bolaParadaAtiva, barreiraDoTiroLivre } from './bolas-paradas.js';
 import { TIPOS_MIRA, criarMira, atualizarMira, tipoMirado, comTrajetoria } from './mira.js';
-import { planejarCorrida, estimarTicks, perfilDaParada, iniciarCorrida, guiarCorrida, ESTADOS_CORRIDA, ganchosCorrida } from './corrida.js';
+import { planejarCorrida, estimarTicks, perfilDaParada, iniciarCorrida, guiarCorrida, ESTADOS_CORRIDA, ganchosCorrida, fracDoJogador,
+  sortearEstilo, definirEstilo, perfilDoEstilo, cabeEstilo, dependeDoGoleiro, leituraDoGoleiro, ladoPenaltiHumano, ESTILOS_PENALTI } from './corrida.js';
+// (o lado do analógico do goleiro do humano no pênalti mora no corpo da corrida — P2 — e segue exportado daqui: sim.js)
+export { ladoPenaltiHumano };
 
 export const ESTADOS = ['jogo', 'parada', 'gol', 'intervalo', 'fim'];
 export const TIPOS_PARADA = ['saida', 'lateral', 'escanteio', 'tiroDeMeta', 'tiroLivre', 'penalti'];
@@ -289,12 +292,17 @@ function cobradorNoPonto(m, c, bx, bz, rumo) {
  * bate; corte de câmera, como a montagem), de frente para a corrida, e o plano fica em pr.corrida (com a previsão da corrida
  * em ticks: a IA começa antes). A bola e a posse ficam como estão (presa no ponto até o contato). Devolve a distância andada.
  */
-function colocarNaCorrida(m, c, rumo) {
+function colocarNaCorrida(m, c, rumo, estilo = null) {
   const pr = m.parada;
   const pessoa = m.humanos.includes(pr.time) && m.controlado[pr.time] === c.id;
-  const perfil = perfilDaParada(m, pr, pessoa);
+  // (o pênalti da IA sai do ponto de partida do estilo dela — P2; o da pessoa e o da demo, do normal: o estilo é do soltar)
+  const perfil = estilo && !pessoa ? perfilDoEstilo(estilo) : perfilDaParada(m, pr, pessoa);
   if (!perfil) return 0;
   const cr = planejarCorrida(c, pr.x, pr.z, rumo, perfil);
+  if (estilo) {
+    cr.estiloIA = estilo;
+    if (!pessoa) definirEstilo(c, cr, estilo);
+  }
   // (o levado é o de onde ele estava antes da montagem até o ponto de partida: na disputa ele já andou até lá)
   const levado = MD.hypot(_orig.x - cr.x0, _orig.z - cr.z0);
   teleportar(c, cr.x0, cr.z0, cr.rumo0);
@@ -539,9 +547,10 @@ function montarPenalti(m) {
   if (!c) { montarBolaParada(m); return; }
   limparAcoes(m);
   const gx = lado * CAMPO.meioX;
-  // goleiro de quem defende: na linha, no meio, de frente para a bola
+  // goleiro de quem defende: NA linha (Regra 14: até o chute; P2 do item 70 — antes a 0,3 m dela e a parede o deixava
+  // ir a 0,6 m), no meio, de frente para a bola
   const gk = m.jogadores.find(o => o.time !== t && o.posicao === 'GOL');
-  if (gk) teleportar(gk, gx - lado * 0.3, 0, lado > 0 ? Math.PI : 0);
+  if (gk) teleportar(gk, gx - lado * DISPUTA.goleiroLinha, 0, lado > 0 ? Math.PI : 0);
   // os outros (fora o goleiro de quem cobra): na beira da área (meia-lua no meio), alternando os times
   const outros = m.jogadores.filter(o => o !== c && o !== gk && !(o.time === t && o.posicao === 'GOL'));
   const porVaga = (a, b) => (a.vagaIdx ?? 0) - (b.vagaIdx ?? 0) || a.id - b.id; // total: desempate pelo id (online 1×1)
@@ -559,11 +568,12 @@ function montarPenalti(m) {
 
 /**
  * O cobrador `c` na marca (pr.x, pr.z) e a cobrança montada: prazo, atraso e o controle do humano (fecharMontagem), o
- * canto e a força da IA e o lado do goleiro `gk` sorteados (m.rng), evento `cobrancaPenalti`. A parte do montarPenalti
+ * canto e a força da IA e o lado do goleiro `gk` sorteados (m.rng), o estilo da IA e se o goleiro sai cedo (item 70, P2;
+ * `estiloDado`: o já sorteado pela disputa), evento `cobrancaPenalti`. A parte do montarPenalti
  * depois de levar os outros para fora da área — a disputa de pênaltis (disputa.js) usa só esta (os outros ficam no círculo
  * central). Mesma ordem de sorteios de antes (hash igual).
  */
-export function prepararPenalti(m, c, gk) {
+export function prepararPenalti(m, c, gk, estiloDado = null) {
   const pr = m.parada;
   const t = pr.time, lado = m.ataca[t];
   const levado = cobradorNoPonto(m, c, pr.x, pr.z, lado > 0 ? 0 : Math.PI);
@@ -583,7 +593,18 @@ export function prepararPenalti(m, c, gk) {
     for (const [z, w] of G) { if (q < w) { gk.palpite = z; break; } q -= w; }
     pr.palpite = gk.palpite;
   }
-  colocarNaCorrida(m, c, lado > 0 ? 0 : Math.PI); // a corrida da cobrança (item 70, P1)
+  // os estilos (item 70, P2): o da IA nesta cobrança (o preferido do jogador ou o normal) e o goleiro que sai cedo — a chance
+  // pela paciência dele (pelo id) e quando, s antes do contato previsto (sorteios do m.rng, sempre os três, na mesma ordem)
+  // (a disputa sorteia o estilo antes, na entrada do cobrador: a caminhada termina no ponto de partida dele — estiloDado)
+  const estilo = estiloDado ?? sortearEstilo(m, c);
+  const G = ESTILO_PENALTI.goleiro;
+  const uC = uniforme(m.rng), uA = uniforme(m.rng);
+  pr.gkCedo = 0;
+  if (gk) {
+    const pac = lerp(G.paciencia[0], G.paciencia[1], fracDoJogador(gk.id, 9));
+    if (uC < lerp(G.cedo[0], G.cedo[1], pac)) pr.gkCedo = lerp(G.antes[0], G.antes[1], uA);
+  }
+  colocarNaCorrida(m, c, lado > 0 ? 0 : Math.PI, estilo); // a corrida da cobrança (item 70, P1) com o estilo da IA (P2)
   m.eventos.push({ tipo: 'cobrancaPenalti', time: t, id: c.id, levado: pr.levado });
 }
 
@@ -680,8 +701,9 @@ function foraDaBarreira(br, out) {
 function restricaoPenalti(m, p, j, out) {
   const lado = m.ataca[p.time], gx = lado * CAMPO.meioX;
   if (j.time !== p.time && j.posicao === 'GOL') {
-    // (disputa de pênaltis: NA linha — Regra 14, um pé sobre ela no chute — a DISPUTA.goleiroLinha m; a partida segue com 0,6)
-    out.x = gx - lado * clamp((gx - out.x) * lado, 0, m.disputa ? DISPUTA.goleiroLinha : 0.6);
+    // NA linha — Regra 14, um pé sobre ela no chute — a DISPUTA.goleiroLinha m, na disputa e na partida (P2 do item 70: na
+    // partida a parede o deixava ir a 0,6 m e a IA dele ia para a bissetriz)
+    out.x = gx - lado * clamp((gx - out.x) * lado, 0, DISPUTA.goleiroLinha);
     // o goleiro do humano: só o passo para o lado escolhido (GOLEIRO.penalti.passo), não até a trave (sim.js
     // goleiroComoLinha); a IA, a largura do gol
     const humano = m.humanos.includes(j.time) && m.controlado[j.time] === j.id && !m.iaJoga?.[j.time];
@@ -1070,6 +1092,11 @@ export function cobrar(m, entrada) {
     c.porHumano = !!entrada && !entrada.ia && !entrada.iaCobra;
     // a cobrança da IA pelo humano (a demo) com corrida (item 70): como a da IA, começa a corrida antes da bola pronta
     const iaCorre = !!cr && !!entrada && !!entrada.iaCobra;
+    // os estilos do pênalti da pessoa (item 70, P2): PARADINHA e PULINHO apertados antes do soltar ficam marcados
+    if (pr.tipo === 'penalti' && c.porHumano) {
+      const b = entrada.botoes ?? 0;
+      if (b & BOTAO.PARADINHA) pr.estiloPedido = 'paradinha'; else if (b & BOTAO.PULINHO) pr.estiloPedido = 'pulinho';
+    }
     aplicarEntrada(c, aGol && m.tick < pr.pronta && entrada && !iaCorre ? { x: entrada.x ?? 0, z: entrada.z ?? 0, mx: entrada.mx, mz: entrada.mz, botoes: (entrada.botoes ?? 0) & ~BOTAO.CHUTE } : entrada, m.tick);
     c.pedidoPedalada = false; // parado não pedala (o pedido ficaria para depois da cobrança)
     // cobrança mirada da pessoa (mira.js; a IA e a demo não)
@@ -1111,10 +1138,19 @@ export function cobrar(m, entrada) {
   if (pr.mira && !iaAssume) c.pedido.dir = { x: MD.cos(pr.mira.ang), z: MD.sin(pr.mira.ang) };
   else if (c.pedido.mirada) c.pedido.mirada = null;
   // (a corrida: o pedido da IA — e o da IA jogando pelo humano — é decidido de novo no contato, com o mundo de lá)
-  if (cr && (iaAssume || (entrada && entrada.iaCobra))) c.pedido.ia = true;
+  const iaPede = !!cr && (iaAssume || !!(entrada && entrada.iaCobra));
+  if (iaPede) c.pedido.ia = true;
+  // o estilo do pênalti (item 70, P2): o da IA (sorteado na montagem); o da pessoa pelos botões — PARADINHA e PULINHO
+  // marcados, CORRER segurado no soltar = forte, MOD = colocado (a cavadinha se vê no contato: o 2º toque vem na corrida)
+  if (cr && pr.tipo === 'penalti') definirEstilo(c, cr, iaPede ? cr.estiloIA : estiloDaPessoa(pr, c.pedido, entrada));
   // a corrida (item 70, P1): o pedido (força, mira, tipo) fica guardado e o cobrador corre até a bola; o contato sai no
   // passo, com o pé de apoio ao lado dela (corrida.js contatoCorrida, chamado pelo sim.js)
-  if (cr) { iniciarCorrida(m, c, cr, c.pedido); guiarCorrida(m, c, cr); return false; }
+  if (cr) {
+    iniciarCorrida(m, c, cr, c.pedido);
+    cr.ladoMira = ladoDaMira(cr.mira0);
+    guiarCorrida(m, c, cr);
+    return false;
+  }
   const ok = executarAcao(m, c, c.par.attr.pePreferido ?? 1, false);
   c.miraAuto = null; // a direção da cobrança não vale para o próximo passe dele
   if (!ok) return false;
@@ -1130,7 +1166,27 @@ export function cobrar(m, entrada) {
  */
 function correrCobranca(m, c, cr, entrada) {
   const p = cr.pedido;
-  if (p && p.tipo === 'chute' && p.humano && (!p.cavadinha || p.segura) && entrada && !entrada.ia && !entrada.iaCobra) {
+  const pessoa = !!p && !!p.humano && !!entrada && !entrada.ia && !entrada.iaCobra;
+  if (pessoa && m.parada.tipo === 'penalti') {
+    // os estilos do pênalti (item 70, P2): PARADINHA ou PULINHO no meio da corrida, enquanto cabem (a paradinha precisa de
+    // espaço para frear antes do último apoio; o pulinho, de a última passada não ter começado)
+    const b = entrada.botoes ?? 0;
+    const e = b & BOTAO.PARADINHA ? 'paradinha' : b & BOTAO.PULINHO ? 'pulinho' : null;
+    if (e && e !== cr.estilo && cabeEstilo(c, cr, e)) definirEstilo(c, cr, e);
+    // quem depende do goleiro olha e mira até o pé de apoio pousar (a troca de canto tarde erra mais: estiloNoPedido)
+    if (dependeDoGoleiro(cr.estilo) && cr.plantou < 0) {
+      const a = { ix: c.ix, iz: c.iz, imx: c.imx, imz: c.imz, imag: c.imag, mira: c.mira };
+      aplicarEntrada(c, { x: entrada.x ?? 0, z: entrada.z ?? 0, mx: entrada.mx, mz: entrada.mz, botoes: 0 }, m.tick);
+      if (c.imag > 0.3) {
+        cr.mira0 = { ix: c.ix, iz: c.iz, imx: c.imx, imz: c.imz, imag: c.imag, mira: a.mira };
+        const l = ladoDaMira(cr.mira0);
+        if (l && cr.ladoMira && l !== cr.ladoMira) cr.troca = m.tick;
+        if (l) cr.ladoMira = l;
+      } else { c.ix = a.ix; c.iz = a.iz; c.imx = a.imx; c.imz = a.imz; c.imag = a.imag; }
+      c.mira = a.mira;
+    }
+  }
+  if (pessoa && p.tipo === 'chute' && (!p.cavadinha || p.segura)) {
     const a = { ix: c.ix, iz: c.iz, imx: c.imx, imz: c.imz, imag: c.imag, mira: c.mira };
     c.porHumano = true;
     aplicarEntrada(c, { x: entrada.x ?? 0, z: entrada.z ?? 0, mx: entrada.mx, mz: entrada.mz, botoes: (entrada.botoes ?? 0) & BOTAO.CHUTE }, m.tick);
@@ -1145,16 +1201,46 @@ function correrCobranca(m, c, cr, entrada) {
   guiarCorrida(m, c, cr);
 }
 
+/** O estilo do pênalti da pessoa no soltar do CHUTE (item 70, P2): PARADINHA/PULINHO marcados, CORRER = forte, MOD = colocado. */
+function estiloDaPessoa(pr, p, entrada) {
+  if (pr.estiloPedido) return pr.estiloPedido;
+  if ((entrada?.botoes ?? 0) & BOTAO.CORRER) return 'forte';
+  return p && p.mod ? 'colocado' : 'normal';
+}
+
+/** O lado (sinal de z no mundo) para onde a mira guardada aponta: o canto que a pessoa escolheu (0 = o meio, solto). */
+function ladoDaMira(a) {
+  if (!a || !(a.imag > 0.3)) return 0;
+  const z = a.imz ?? a.iz ?? 0, x = a.imx ?? a.ix ?? 0;
+  return Math.abs(z) > 0.15 * MD.hypot(x, z) ? (z > 0 ? 1 : -1) : 0;
+}
+
 /**
  * O pedido da cobrança da IA (alvoCobranca: o tipo, a força e a direção; a pressão do pênalti; o chute por cima da
  * barreira). Na cobrança com corrida (item 70) também no CONTATO (corrida.js ganchosCorrida.pedidoIA): a IA decide de novo
  * com o mundo de lá — o zagueiro da saída curta que chegou, o companheiro livre, o goleiro — como o cobrador que olha
  * enquanto corre; a pessoa bate o que pediu ao soltar.
  */
-function pedidoDaIA(m, c, pr) {
+function pedidoDaIA(m, c, pr, contato = false) {
   const a = alvoCobranca(m, c, pr.tipo);
   const p = { tipo: a.tipo, forca: a.forca, mod: a.tipo === 'chute' && !!pr.direto, tick: m.tick, dir: { x: a.dx, z: a.dz } };
   if (pr.tipo === 'penalti') p.penalti = true;
+  // o pênalti de quem depende do goleiro (item 70, P2: paradinha, pulinho), no contato: o goleiro que ele viu comprometido
+  // até o pé de apoio pousar → o canto oposto com a chance da rampa (van der Kamp 2006: 400 ms antes do contato, quase
+  // sempre; 150 ms, o acaso), errando mais quando a leitura é tarde; sem nada para ler (o goleiro esperou), o canto dele com
+  // o erro de quem decide no fim (Noël, van der Kamp & Klatt 2021)
+  const cr = pr.corrida;
+  if (contato && pr.tipo === 'penalti' && cr && dependeDoGoleiro(cr.estilo) && p.tipo === 'chute') {
+    const L = leituraDoGoleiro(m, cr), E = ESTILO_PENALTI.leitura;
+    if (L.lado) {
+      const certo = uniforme(m.rng) < 0.5 + 0.5 * L.r;
+      const lado = ataca(m, c.time), zw = (certo ? -L.lado : L.lado) * E.canto;
+      const d = dirParaZ(m.bola.p, lado, zw * lado);
+      p.dir = { x: d.dx, z: d.dz };
+      p.erroEstilo = 1 + E.erroTarde * (1 - L.r);
+      cr.leu = { lado: L.lado, L: L.L, r: L.r, certo };
+    } else { p.erroEstilo = E.semLeitura; cr.leu = { lado: 0, L: 0, r: 0, certo: false }; }
+  }
   if (pr.barreira && pr.barreira.n > 0 && p.tipo === 'chute') p.barreira = { dist: pr.barreira.dist, altura: BARREIRA.alturaPassar };
   return p;
 }
@@ -1197,18 +1283,6 @@ function soltarLateral(m, c) {
 }
 
 /**
- * Canto do pênalti contra escolhido pelo analógico do goleiro do humano (Regra 14): −1/+1 = o sinal de z (o canto do lado
- * de lá / de cá da linha do gol), 0 = nenhum (fica no meio). Só a componente AO LONGO da linha do gol escolhe: o empurrão
- * principalmente para o batedor ou para o gol (|iz| < GOLEIRO.penalti.ladoMin × o módulo; com a câmera de TV, esquerda e
- * direita da tela) ou o analógico solto não escolhe — antes o sinal de iz ≈ 0 dava sempre +z. Pura.
- */
-export function ladoPenaltiHumano(j) {
-  if (!(j.imag > 0.3)) return 0;
-  const iz = j.iz ?? 0, mod = MD.hypot(j.ix ?? 0, iz);
-  return mod > 1e-6 && Math.abs(iz) >= GOLEIRO.penalti.ladoMin * mod ? (iz > 0 ? 1 : -1) : 0;
-}
-
-/**
  * A bola rolou: fim da parada (o cobrador volta a se mexer), evento `cobranca`. Exportada para a disputa de pênaltis e
  * chamada pela corrida da cobrança no passo do contato (corrida.js ganchosCorrida, ligado abaixo).
  */
@@ -1223,13 +1297,17 @@ export function rolou(m) {
   if (pr.barreira) desfazerBarreira(m, pr);
   if (pr.tipo === 'escanteio' && pr.papeis) m.partida.bp = { tipo: 'escanteio', time: pr.time, sz: pr.sz, papeis: pr.papeis, tick: m.tick };
   if (pr.tipo === 'penalti') {
-    m.partida.penaltiAberto = { tick: m.tick, time: pr.time, id: pr.cobrador };
+    m.partida.penaltiAberto = { tick: m.tick, time: pr.time, id: pr.cobrador, cedo: 0 };
     // goleiro do humano: o lado é o do analógico na hora do chute — só o z dele, ao longo da linha do gol (para o batedor,
     // para o gol ou solto: fica no meio)
     const gk = m.jogadores.find(o => o.time !== pr.time && o.posicao === 'GOL');
     if (gk && m.humanos.includes(gk.time) && m.controlado[gk.time] === gk.id) {
       gk.palpite = ladoPenaltiHumano(gk) * GOLEIRO.penalti.palpite[GOLEIRO.penalti.palpite.length - 1][0];
     }
+    // o goleiro que se comprometeu antes (item 70, P2: o da IA que saiu cedo; o da pessoa que segura o lado desde então): s
+    // de adiantamento no lado escolhido — o goleiro.js lerChute dá a vantagem no lado certo
+    const g = pr.corrida && pr.corrida.gk;
+    if (gk && g && g.desde >= 0 && g.lado && Math.sign(gk.palpite ?? 0) === g.lado) m.partida.penaltiAberto.cedo = (m.tick - g.desde) * PASSO;
   }
   encerrarParada(m);
   m.golTick = null; m.foraDesde = null;
@@ -1754,9 +1832,12 @@ export function misturarPartida(h, m) {
   // a corrida da cobrança (item 70, P1; corrida.js)
   const cr = pr.corrida;
   if (cr) for (const v of [ESTADOS_CORRIDA.indexOf(cr.estado), cr.x0, cr.z0, cr.ticks, cr.t0, cr.k, cr.plantou, cr.meio, cr.contato, cr.pedido ? cr.pedido.forca : -1]) h = misturarHash(h, v);
+  // os estilos do pênalti (item 70, P2)
+  if (cr) for (const v of [ESTILOS_PENALTI.indexOf(cr.estilo), ESTILOS_PENALTI.indexOf(cr.estiloIA), FASES_PARADINHA.indexOf(cr.fasePar), cr.pausaAte, cr.pulo ? cr.pulo.t0 : -1, cr.gk.lado, cr.gk.desde, cr.troca, cr.ladoMira, pr.gkCedo ?? -1]) h = misturarHash(h, v);
   return h;
 }
 
+const FASES_PARADINHA = [null, 'antes', 'freia', 'pausa', 'retoma'];
 // a corrida da cobrança (corrida.js) chama o rolou no passo do contato e decide de novo a cobrança da IA no contato
 ganchosCorrida.rolou = rolou;
-ganchosCorrida.pedidoIA = (m, j) => pedidoDaIA(m, j, m.parada);
+ganchosCorrida.pedidoIA = (m, j) => pedidoDaIA(m, j, m.parada, true);

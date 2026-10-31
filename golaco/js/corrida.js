@@ -19,11 +19,20 @@
 //    (partida.js regrasPartida): a linha da cobrança mirada continua a física da bola real.
 // A IA começa a corrida `ticks` antes da hora de hoje (a previsão da corrida pela mesma locomoção: estimarTicks), para a
 // bola rolar no mesmo tempo (o relógio não para nas bolas paradas).
+//
+// Estilos do pênalti (item 70, P2; contrato "Estilos de pênalti (item 70, P2)"; config.js ESTILO_PENALTI; pesquisa §17):
+// cr.estilo ∈ normal | forte | colocado | paradinha | pulinho | cavadinha. A corrida da paradinha tem fases (cr.fasePar:
+// 'antes' → 'freia' → 'pausa' → 'retoma'): a pausa abaixo de 1 m/s acontece com o corpo a pausaEm m do meio do apoio — sempre
+// ANTES do último apoio: a finta depois da corrida (Regra 14) não existe por construção. O pulinho: no penúltimo apoio (o
+// pé que bate sai do chão na última passada) o corpo fica no ar mais tempo (cr.pulo; o ritmo é lógica, o salto é desenho:
+// anim.js). O goleiro: cr.gk = {lado, desde} o lado em que ele está comprometido (o da IA que saiu cedo; o da pessoa pelo
+// analógico) e cr.gkLido, o que o cobrador viu até o pé de apoio pousar — a leitura do cobrador que depende do goleiro.
 
-import { CORRIDA_COBRANCA as CC, CAMPO, PASSO, PASSADA, GESTO, CONDUCAO } from './config.js';
+import { CORRIDA_COBRANCA as CC, CAMPO, PASSO, PASSADA, GESTO, CONDUCAO, ESTILO_PENALTI as EP, GOLEIRO } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp } from './mat.js';
-import { passoCorpo, copiaCinematica, freqPassada, cargaPassada, faseLocal } from './jogador.js';
+import { uniforme } from './rng.js';
+import { passoCorpo, copiaCinematica, freqPassada, cargaPassada, faseLocal, progressoBalanco } from './jogador.js';
 import { executarAcao } from './acoes.js';
 
 export const TIPOS_CORRIDA = CC.tipos;
@@ -93,7 +102,141 @@ export function planejarCorrida(c, bx, bz, rumo, perfil) {
   return {
     estado: 'espera', perfil, pe, ps, ux, uz, x0, z0, rumo0: MD.atan2(dz, dx), dx, dz, sx, sz, mx, mz, vel, ticks: 0,
     t0: -1, k: -1, ritmo: 0, plantou: -1, meio: 0, supApoio: true, contato: -1, pedido: null, mira0: null,
+    // estilos do pênalti (P2): o estilo da corrida, o que a IA usaria, a paradinha, o pulinho, o goleiro e a troca de mira
+    estilo: 'normal', estiloIA: 'normal', fasePar: null, par: null, pausaAte: -1, pulo: null, pul: null,
+    gk: { lado: 0, desde: -1 }, gkLido: null, troca: -1, ladoMira: 0, penult: -1,
   };
+}
+
+// ---------------------------------------------------------------------------- estilos do pênalti (item 70, P2)
+
+export const ESTILOS_PENALTI = EP.estilos;
+/** O estilo depende do goleiro (van der Kamp 2006: o cobrador olha o goleiro na corrida)? */
+export const dependeDoGoleiro = e => e === 'paradinha' || e === 'pulinho';
+
+/** O estilo preferido do jogador `id` (pura: pelo id, ESTILO_PENALTI.ia.pesos). */
+export function estiloPreferido(id) {
+  const P = EP.ia.pesos;
+  let r = fracDoJogador(id, 5) * P.reduce((a, q) => a + q[1], 0);
+  for (const [e, w] of P) { if (r < w) return e; r -= w; }
+  return P[P.length - 1][0];
+}
+
+/** O estilo da IA nesta cobrança: o preferido com a chance ESTILO_PENALTI.ia.fiel, senão o normal (um sorteio do m.rng). */
+export function sortearEstilo(m, c) {
+  return uniforme(m.rng) < EP.ia.fiel ? estiloPreferido(c.id) : 'normal';
+}
+
+/** O perfil da corrida do estilo (config.js CORRIDA_COBRANCA.perfis; o normal é o 'penalti'). */
+export const perfilDoEstilo = e => EP.perfil[e] ?? 'penalti';
+
+/**
+ * O estilo `e` no plano `cr` do cobrador `c` (puro; os números do jogador pelo id): a velocidade da corrida do perfil do estilo
+ * (o ponto de partida fica: o da IA já é o do estilo; o da pessoa, o do normal), a pausa da paradinha e o salto do pulinho.
+ */
+export function definirEstilo(c, cr, e) {
+  cr.estilo = e;
+  const P = CC.perfis[perfilDoEstilo(e)];
+  cr.vel = lerp(P.vel[0], P.vel[1], fracDoJogador(c.id, 2));
+  const A = EP.paradinha;
+  cr.fasePar = e === 'paradinha' ? 'antes' : null;
+  cr.par = e === 'paradinha' ? {
+    em: lerp(A.pausaEm[0], A.pausaEm[1], fracDoJogador(c.id, 3)), t: lerp(A.tPausa[0], A.tPausa[1], fracDoJogador(c.id, 4)),
+    vRetoma: lerp(A.vRetoma[0], A.vRetoma[1], fracDoJogador(c.id, 6)),
+  } : null;
+  cr.pul = e === 'pulinho' ? { h: lerp(EP.pulinho.altura[0], EP.pulinho.altura[1], fracDoJogador(c.id, 7)) } : null;
+}
+
+/**
+ * A paradinha ou o pulinho ainda cabem nesta corrida (o pedido da pessoa no meio dela)? A paradinha precisa de espaço para
+ * frear até a pausa antes do último apoio; o pulinho, de o pé de apoio ainda não estar na última passada.
+ */
+export function cabeEstilo(c, cr, e) {
+  if (cr.estado === 'espera') return true;
+  if (cr.plantou >= 0 || cr.estado !== 'corre' || cr.fasePar || cr.pulo) return false;
+  const Dl = (cr.mx - c.x) * cr.dx + (cr.mz - c.z) * cr.dz, s = MD.hypot(c.vx, c.vz);
+  if (e === 'paradinha') return Dl > distFreio(c, s) + lerp(EP.paradinha.pausaEm[0], EP.paradinha.pausaEm[1], fracDoJogador(c.id, 3)) + 0.2;
+  if (e === 'pulinho') return cr.k !== 0 && Dl > 1.2;
+  return false;
+}
+
+/** m que o corpo a s m/s leva para frear até a velocidade da pausa da paradinha (a freada suave, `paradinha.freio`) + a folga. */
+function distFreio(c, s) {
+  const vP = EP.paradinha.vPausa;
+  return Math.max(0, (s * s - vP * vP) / (2 * EP.paradinha.freio)) + EP.paradinha.folgaFreio;
+}
+
+/** O goleiro que defende a parada (o do outro time) ou null. */
+function goleiroDaParada(m) {
+  const t = m.parada.time;
+  for (const o of m.jogadores) if (o.time !== t && o.posicao === 'GOL') return o;
+  return null;
+}
+
+/**
+ * Canto do pênalti contra escolhido pelo analógico do goleiro do humano (Regra 14): −1/+1 = o sinal de z (o canto do lado
+ * de lá / de cá da linha do gol), 0 = nenhum (fica no meio). Só a componente AO LONGO da linha do gol escolhe: o empurrão
+ * principalmente para o batedor ou para o gol (|iz| < GOLEIRO.penalti.ladoMin × o módulo; com a câmera de TV, esquerda e
+ * direita da tela) ou o analógico solto não escolhe — antes o sinal de iz ≈ 0 dava sempre +z. Pura (partida.js reexporta).
+ */
+export function ladoPenaltiHumano(j) {
+  if (!(j.imag > 0.3)) return 0;
+  const iz = j.iz ?? 0, mod = MD.hypot(j.ix ?? 0, iz);
+  return mod > 1e-6 && Math.abs(iz) >= GOLEIRO.penalti.ladoMin * mod ? (iz > 0 ? 1 : -1) : 0;
+}
+
+/**
+ * O goleiro na corrida do pênalti (antes do passo; P2): o da pessoa está comprometido com o lado do analógico (cr.gk, desde
+ * quando); o da IA que sai CEDO (pr.gkCedo s antes do contato, sorteado na montagem) se compromete com o lado do palpite
+ * quando o contato previsto chega a isso — e dá o passo para lá (goleiro.js). Até o pé de apoio pousar, o cobrador vê
+ * (cr.gkLido: contatoCorrida guarda no pouso).
+ */
+function vigiarGoleiro(m, c, cr) {
+  const pr = m.parada, gk = goleiroDaParada(m);
+  if (!gk || pr.tipo !== 'penalti') return;
+  const humano = m.humanos.includes(gk.time) && m.controlado[gk.time] === gk.id && !m.iaJoga?.[gk.time];
+  if (humano) {
+    const l = ladoPenaltiHumano(gk);
+    if (l !== cr.gk.lado) { cr.gk.lado = l; cr.gk.desde = l ? m.tick : -1; }
+    return;
+  }
+  if (cr.gk.desde >= 0 || !(pr.gkCedo > 0) || !gk.palpite) return;
+  const s = MD.hypot(c.vx, c.vz), Dl = (cr.mx - c.x) * cr.dx + (cr.mz - c.z) * cr.dz;
+  const falta = cr.contato >= 0 ? (cr.contato - m.tick) * PASSO
+    : cr.plantou >= 0 ? (cr.plantou + cr.meio - m.tick) * PASSO : Math.max(0, Dl) / Math.max(s, 0.5);
+  if (falta <= pr.gkCedo) { cr.gk.lado = gk.palpite > 0 ? 1 : -1; cr.gk.desde = m.tick; cr.gk.ia = true; }
+}
+
+/** Rampa da leitura (van der Kamp 2006): o goleiro comprometido L s antes do contato — 0 em 150 ms (o acaso), 1 em 400 ms. */
+export const rampaLeitura = L => clamp((L - EP.leitura.tempo[0]) / (EP.leitura.tempo[1] - EP.leitura.tempo[0]), 0, 1);
+
+/**
+ * A leitura do cobrador da IA que depende do goleiro (no contato; P2): {lado (o sinal de z do goleiro visto, 0 = nada para
+ * ler), L (s do compromisso ao contato), r (a rampa)} — o que o cobrador viu até o pé de apoio pousar (cr.gkLido).
+ */
+export function leituraDoGoleiro(m, cr) {
+  const g = cr.gkLido;
+  if (!g || !g.lado || g.desde < 0) return { lado: 0, L: 0, r: 0 };
+  const L = (m.tick - g.desde) * PASSO;
+  return { lado: g.lado, L, r: rampaLeitura(L) };
+}
+
+/**
+ * O estilo no pedido da batida (no contato; P2): forte (mais força, mais erro), colocado (o chute colocado), a corrida que
+ * espera (paradinha, pulinho: a força × kd.forca) e, da pessoa que trocou de canto na corrida, o erro pela rampa da troca
+ * (tarde erra mais). A leitura da IA é do partida.js (pedidoDaIA: a direção do canto). Muda p; devolve p.
+ */
+export function estiloNoPedido(m, cr, p) {
+  if (!p || p.tipo !== 'chute') return p;
+  if (p.cavadinha) { cr.estilo = 'cavadinha'; return p; }
+  const e = cr.estilo;
+  if (e === 'forte') { p.forca = p.forca + (1 - p.forca) * EP.forte.forca; p.erroEstilo = (p.erroEstilo ?? 1) * EP.forte.erro; p.mod = false; }
+  else if (e === 'colocado') p.mod = true;
+  else if (dependeDoGoleiro(e)) {
+    p.forca *= EP.kd.forca;
+    if (!p.ia && cr.troca >= 0) p.erroEstilo = (p.erroEstilo ?? 1) * (1 + EP.leitura.erroTarde * (1 - rampaLeitura((m.tick - cr.troca) * PASSO)));
+  }
+  return p;
 }
 
 /**
@@ -165,13 +308,42 @@ function tempoAte(d, s, v, a, fr) {
  */
 export function guiarCorrida(m, c, cr) {
   const g = c.guia ?? (c.guia = { dx: cr.dx, dz: cr.dz, vel: 0, rumoAlvo: cr.rumo0 });
+  vigiarGoleiro(m, c, cr);
   const ex = cr.mx - c.x, ez = cr.mz - c.z, d = MD.hypot(ex, ez);
   const Dl = ex * cr.dx + ez * cr.dz; // o que falta ao longo da corrida
   // a direção: para o ponto do corpo no meio do apoio (corrige o lado); perto dele, a da corrida
   if (d > 0.3 && Dl > 0.2) { g.dx = ex / d; g.dz = ez / d; } else { g.dx = cr.dx; g.dz = cr.dz; }
   g.rumoAlvo = cr.rumo0;
   const s = MD.hypot(c.vx, c.vz);
-  if (cr.plantou >= 0 || Dl <= 0) {
+  // o pulinho (P2): na última passada (o pé de apoio no ar, pousando no ponto) o pé que bate pisa — o PENÚLTIMO apoio (cr.penult)
+  // — e sai do chão mais cedo (saidaCorrida: a carga do pulinho), num voo longo até o pé de apoio pousar ao lado da bola. O
+  // salto é desenho (anim.js, pela fração do balanço do pé de apoio desde u0)
+  if (cr.estilo === 'pulinho' && !cr.pulo && cr.k === 0 && cr.plantou < 0 && !c.pes[cr.ps].apoio) {
+    if (c.pes[cr.pe].apoio) { if (cr.penult < 0) cr.penult = m.tick; }
+    else if (cr.penult >= 0) cr.pulo = { t0: m.tick, u0: progressoBalanco(c, cr.ps, true).u, h: cr.pul ? cr.pul.h : EP.pulinho.altura[0] };
+  }
+  // a paradinha (P2): até a pausa a corrida segue no ritmo natural (sem a regulagem); com o corpo a pausaEm m do meio do apoio
+  // + o que ele leva para frear, freia até a velocidade da pausa; abaixo de `abaixo` m/s fica tPausa s e retoma pela regulagem
+  // (a vRetoma) — a pausa é sempre antes do último apoio (o pé de apoio ainda vai pousar ao lado da bola)
+  let regula = true;
+  if (cr.fasePar && cr.fasePar !== 'retoma' && cr.plantou < 0) {
+    const P = cr.par, A = EP.paradinha;
+    if (cr.fasePar === 'antes' && Dl <= P.em + distFreio(c, s)) cr.fasePar = 'freia';
+    if (cr.fasePar === 'freia' && s < A.abaixo) { cr.fasePar = 'pausa'; cr.pausaAte = m.tick + Math.max(1, Math.round(P.t / PASSO)); }
+    // (retoma com o pé de apoio no chão — ou passada a espera dele: dois passos até o último apoio, o do pé que bate e o do
+    // pé de apoio ao lado da bola; com o pé de apoio no ar a regulagem fazia uma passada só, longa e lenta)
+    if (cr.fasePar === 'pausa' && m.tick >= cr.pausaAte && (c.pes[cr.ps].apoio || m.tick >= cr.pausaAte + Math.round(A.esperaApoio / PASSO))) {
+      cr.fasePar = 'retoma'; cr.vel = P.vRetoma;
+    }
+    // (a freada é suave — a velocidade pedida cai como √(vPausa² + 2·freio·d) até o ponto da pausa: pedir a vPausa de uma vez
+    // freava no limite do corpo, com a passada longa da corrida, e o quadril afundava entre os dois pés plantados)
+    if (cr.fasePar === 'freia') g.vel = Math.min(cr.vel, Math.sqrt(A.vPausa * A.vPausa + 2 * A.freio * Math.max(0, Dl - P.em)));
+    else g.vel = cr.fasePar === 'antes' ? cr.vel : A.vPausa;
+    if (cr.fasePar !== 'retoma') { cr.ritmo = 0; cr.k = -1; regula = false; }
+  }
+  if (!regula) {
+    // (a paradinha antes da retomada: o pedido já está em g.vel)
+  } else if (cr.plantou >= 0 || Dl <= 0) {
     // o pé de apoio já está no lugar (ou o corpo passou do ponto): segue embalado até o contato
     g.vel = Math.max(s, 1);
   } else {
@@ -220,18 +392,21 @@ export function saidaCorrida(m, j) {
   const pr = m.parada, cr = pr && pr.corrida;
   if (!cr || cr.estado !== 'corre' || pr.rolou || pr.cobrador !== j.id || cr.plantou >= 0) return null;
   const sup = j.pes[cr.ps];
+  // o pulinho (P2): no penúltimo apoio (a última passada, o pé que bate no chão) ele sai mais cedo — a carga do pulinho: os
+  // dois pés no ar por mais tempo até o pé de apoio pousar
+  const carga = cr.estilo === 'pulinho' && cr.k === 0 && !sup.apoio ? EP.pulinho.carga : undefined;
   // a última passada (o pé de apoio no ar, pousando no ponto): o pouso quando o ponto de pouso chega ao dele
   if (cr.k === 0 && !sup.apoio) {
     const s = MD.hypot(j.vx, j.vz), f = Math.max(freqPassada(Math.max(s, 0.5), true), 0.5);
     const Dl = (cr.mx - j.x) * cr.dx + (cr.mz - j.z) * cr.dz;
     const t = Dl / Math.max(s, 1) - cargaPassada(s) / f;
-    if (t <= CC.pousoUltimo) return { pe: cr.ps, em: PASSO, pousoEm: Math.max(t, PASSO) };
+    if (t <= CC.pousoUltimo) return { pe: cr.ps, em: PASSO, pousoEm: Math.max(t, PASSO), carga };
   }
   // antes: o pé no ar pousa no ritmo da regulagem (cr.ritmo, fase por segundo)
   if (!(cr.ritmo > 0)) return null;
   const p = !sup.apoio ? cr.ps : !j.pes[cr.pe].apoio ? cr.pe : -1;
   if (p < 0) return null;
-  return { pe: p, em: PASSO, pousoEm: Math.max(PASSO, (j.pes[p].fasePouso - j.fase) / cr.ritmo) };
+  return { pe: p, em: PASSO, pousoEm: Math.max(PASSO, (j.pes[p].fasePouso - j.fase) / cr.ritmo), carga };
 }
 
 /**
@@ -247,6 +422,8 @@ export function contatoCorrida(m, j) {
     const s = MD.hypot(j.vx, j.vz);
     cr.plantou = m.tick;
     cr.meio = Math.max(1, Math.round(cargaPassada(s) / Math.max(freqPassada(Math.max(s, 0.5), true), 0.5) / PASSO));
+    // o que o cobrador viu do goleiro até o último apoio (P2: a leitura de quem depende do goleiro)
+    cr.gkLido = { lado: cr.gk.lado, desde: cr.gk.desde };
   }
   cr.supApoio = sup.apoio;
   const hx = MD.cos(j.rumo), hz = MD.sin(j.rumo);
@@ -264,6 +441,8 @@ function baterCorrida(m, j, cr) {
   const a = cr.mira0;
   if (a) { j.ix = a.ix; j.iz = a.iz; j.imx = a.imx; j.imz = a.imz; j.imag = a.imag; j.mira = a.mira; }
   j.pedido = cr.pedido && cr.pedido.ia && ganchosCorrida.pedidoIA ? ganchosCorrida.pedidoIA(m, j) : cr.pedido;
+  // o estilo do pênalti no chute (P2: forte, colocado, a corrida que espera; a leitura da IA vem no pedidoIA)
+  if (m.parada.tipo === 'penalti') estiloNoPedido(m, cr, j.pedido);
   if (j.cond) j.cond.toque = null;
   const ok = executarAcao(m, j, cr.pe, false);
   j.miraAuto = null;
