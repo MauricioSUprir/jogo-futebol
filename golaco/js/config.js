@@ -744,7 +744,11 @@ export const GOLEIRO = {
     // cruzamento sem leitura, o mergulho depois do contato — e na saída no cruzamento que falha bate a bola acima das pernas
     // no corpo DESENHADO: sim.js colisaoCorpoGoleiro, anim.js solidosCorpo; `alcance` m em volta dele cabe o corpo desenhado
     // com a bola: os braços, ~0,74 m do centro, e o raio dela)
-    bloqueio: { tronco: [0.22, 0.8], perna: 0.13, alto: 1.75, ticks: 8, fora: 0.5, amostra: 0.05, alcance: 1.0 },
+    // (31/10: `quadril` m — no mergulho, a pelve é uma esfera deste raio no quadril, além do tronco — um cilindro que SAI do
+    // quadril — e das pernas finas: o batido que o embalo levou para cima do caminho da bola deixava a bola rasteira passar
+    // rente por baixo da pelve, 1,6 cm fora do tronco e a 0,17 m do centro dele — teste-goleiro-realista A5, semente 1004 do
+    // PR #588; só o batido usa: goleiro.js corpoNaBola)
+    bloqueio: { tronco: [0.22, 0.8], perna: 0.13, quadril: 0.25, alto: 1.75, ticks: 8, fora: 0.5, amostra: 0.05, alcance: 1.0 },
     // bola NO CORPO (a até `corpo` m de lado e abaixo de `corpoAlto`): o corpo está no caminho — é sempre parada (encaixe
     // ou bloqueio que escapa); nada atravessa o goleiro (antes o sorteio que falhava deixava a bola passar pelo corpo
     // desenhado: 58 gols "pelo corpo" no canhão de 2.535 chutes)
