@@ -256,7 +256,7 @@ const CHAVE_V1 = 'theflash.missoes.v1';
 // a lista da v1, para levar quem já tinha progresso ao mesmo passo
 const ORDEM_V1 = ['lab', 'velocidade', 'esferas', 'escalar', 'vibrar', 'assalto', 'gangue', 'especiais', 'portais', 'fuga', 'incendio', 'queda',
   'patrulha', 'relatorio', 'cap-reverso', 'fendas', 'tunel', 'passado', 'cap-savitar', 'cap-devoe', 'nucleo'];
-const STATS0 = { desafios: 0, fotos: 0, tempestades: 0, lentos: 0, pistas: 0, fendas: 0, subestacoes: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
+const STATS0 = { lanches: 0, desafios: 0, fotos: 0, tempestades: 0, lentos: 0, pistas: 0, fendas: 0, subestacoes: 0, esferas: 0, atravessados: 0, crimes: 0, assalto: 0, fuga: 0, incendio: 0, queda: 0, gangue: 0, especiais: 0, nocautes: 0, pontos: 0 };
 
 export function criarMissoes(armazem) {
   let salvo = null, v1 = null;

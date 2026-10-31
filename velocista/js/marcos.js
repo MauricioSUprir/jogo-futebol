@@ -127,6 +127,7 @@ export function limitar(x, z, folga = 4) {
 // h = para onde a pessoa olha (o rumo do jogo: 0 = +z, π = −z, −π/2 = −x). Lugares da cidade em coordenadas locais.
 export const PONTOS = {
   delegacia: { marco: 'delegacia', u: 0, v: -23.4, h: Math.PI },
+  ponteBaia: { x: (PONTE.x0 + PONTE.x1) / 2, z: PONTE.z, h: Math.PI / 2 },       // o meio da Ponte da Baía (a temporada da série: a bomba no rio)
   jornal: { marco: 'jornal', u: -3, v: -26.6, h: Math.PI },
   cafe: { marco: 'cafe', u: -14, v: -28.4, h: Math.PI },
   casa: { marco: 'casa', u: 0, v: -6.2, h: Math.PI },
