@@ -1650,8 +1650,10 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
   linha do gol o rumo pedido fica no arco em que a bola nas mãos fica a ≥ `GOLEIRO.soltaLinha` m aquém dela — virar para o
   gol não faz gol contra); `bolaAquemDaLinha` (partida: a bola que sai das mãos fica a ≥ `soltaLinha` m aquém da linha);
   `goleiroComBola` (IA: `esperaIA`; treino e demo — `m.iaJoga[time]`, a entrada com `ia` —: `esperaHumano`; humano na
-  partida: sem reposição automática, ENFIADA = `soltarNoChao` (evento `soltou`, `regraMao.soltou`), CHUTE vira
-  LANÇAMENTO; tiro de meta: a IA cobra por ele em `PARTIDA.cobrancaHumanoMax`); `pegarDoHumano` (PEGAR na borda, bola a ≤
+  partida: sem reposição automática, ENFIADA = `soltarNoChao` (evento `soltou`, `regraMao.soltou`); desde o C5 (31/10) a
+  partida com a bola rolando repõe com o gesto — contrato "Reposição do goleiro com a mão": PASSE arremessa, LANÇAMENTO é
+  o bate-pronto, CHUTE o chutão, a IA arremessa ou dá o chutão pela pressão; tiro de meta: a IA cobra por ele em
+  `PARTIDA.cobrancaHumanoMax`); `pegarDoHumano` (PEGAR na borda, bola a ≤
   `GOLEIRO.pegaPe` m, no pé dele ou solta a ≤ `GOLEIRO.pegaVMax` m/s — a bola rápida é da defesa automática —, na área: mão → "pegou"; sem mão → `m.infracaoMao` e evento `maoGoleiro {id, motivo}`);
   `trocarJogador`: TROCAR segurado `GOLEIRO.trocarGoleiro` s → o goleiro (evento `troca {id, goleiro: true}`;
   `m.trocarDesde[time]`). O goleiro da IA com o pé recebe `ia-tatica.js entradaGoleiroPe` (sem a bola: ao ponto de
@@ -2922,6 +2924,61 @@ Pedido do dono (15/10): "lançamento mais reto e rápido; hoje vai muito alto". 
   só 2 → 3 dos ~380 chutes de ≥ 16,5 m vêm de uma posse com lançamento nos 10 s antes — é a partida que diverge depois do 1º
   lançamento. `hash-igual --base <main>`: ataque-demo e ataque-roteiro DIFERENTES (passos 9000 e 1200), condução IGUAL;
   `hash-partida --base <main>`: demo 1–2 IGUAIS, demo 3–4 e humano 1–4 DIFERENTES.
+
+## Reposição do goleiro com a mão — rolar, por cima do ombro, bate-pronto e chutão (C5, item 16; 31/10; contrato)
+
+Item 16 da FILA (a parte 3b da Etapa 4; regras do goleiro do #470). Pesquisa e números em `PESQUISA-ETAPA4.md` §15 (StatsBomb
+open data, 149 partidas medidas aqui; van den Tillaar & Ettema 2004; Linthorne & Patel 2011; EA FC 25). **Só na PARTIDA com a
+bola rolando** (`sim.js goleiroComBola` → `reposicaoPartida`; o treino e a bola parada seguem como eram).
+- **Escolha.** IA (e a demo / quem joga pela IA: `m.iaJoga`): depois de `GOLEIRO.esperaIA` (`esperaHumano`) s, `acoes.js
+  alvoReposicao(m, g, dir, seguro)` = `escolherAlvo(m, g, 'reposicaoMao', aceita)` (`ACOES.reposicaoMao`: cone 1,35 rad em
+  volta do ataque, 8–40 m; a nota do passe, ângulo + 0,3 × distância + 38 × risco) só com quem está FORA da própria área, sem
+  adversário a menos de `GOLEIRO.reposicao.livre` (10) m e com `riscoLinha(..., v, true)` ≤ `riscoMax` (0,2) — v = a
+  velocidade média do passe rasteiro da distância (`min(15, 8 + 0,25 L)`) ou 18 por cima. Achou: rola até `rolarMax` (30)
+  m, por cima acima disso; não achou: o chutão. Humano na partida: PASSE = arremesso (o companheiro do `alvoReposicao` sem os
+  filtros na direção do aperto, ou `dHumano` pela barra; por cima acima de `rolarMax` ou com a barra ≥ `ombroForca`),
+  LANÇAMENTO = bate-pronto, CHUTE = chutão, ENFIADA = `soltarNoChao` (como antes). A direção é a do aperto
+  (`acoes.js direcaoPedida`), no máximo `virarMax` (1,75 rad) do ataque.
+- **`riscoLinha(m, j, ax, az, bx, bz, v, aoSegmento = false)`**: com `aoSegmento` (só a reposição — também na nota do
+  `escolherAlvo('reposicaoMao')`), a distância do adversário ao ponto da linha em vez da distância à reta inteira (o adversário
+  além do recebedor contava como na linha: risco 1 em quase toda reposição medida). O passe de sempre não muda.
+- **O gesto (`js/reposicao.js`, PURO):** `iniciarReposicao(m, g, plano)` grava `g.arremessoGk = {tipo: 'rolar'|'ombro'|'bate'|
+  'chutao', desde, tick0, solta, chuta, lado, pe, para, dx, dz, L, forca, rumo, o, s, feito, gx}` (`lado` = o braço/pé
+  preferido; `o` = a diferença da bola para o ponto de segurar, que some na 1ª parte; `gx` = a linha do gol dele).
+  `reposicaoAtiva(m, g)` (feito nulo, `m.naMao === g.id`, a mesma `segura`); `bolaReposicao(j, ar, k, out)` = o centro da bola
+  no tick k: nas mãos pela curva (rolar: para trás e para baixo, sai rente ao chão a `rolarSolta`; por cima: atrás da cabeça
+  e por cima do ombro a `ombroSolta` ~1,9 m; bate-pronto/chutão: as mãos levam a bola a `soltaPe` e soltam), sempre a ≥
+  `GOLEIRO.soltaLinha` m aquém da linha (`teste-goleiro-regras` G3c); depois da soltura do bate-pronto/chutão, a queda livre de
+  `ar.s` até o chão. `quadroReposicao(j, m, q)` = o desenho (as duas mãos com peso, o quadril que desce e o tronco que inclina
+  rolando, o tornozelo do pé do chute: arma, vai à bola no tick `chuta`, segue e volta ao pé plantado). Linha do tempo:
+  `solta` = tick0 + `tRolar`/`tOmbro`/`tSolta` s; o chutão bate no ar a `yChutao` m; o bate-pronto no tick DEPOIS do quique.
+- **Simulação (`sim.js`).** No gesto o goleiro para e vira para `ar.rumo` (o movimento do goleiro); a bola do estado é a do
+  gesto (`bolaNaReposicao`, no lugar de `bolaNaMao`). `andamentoReposicao`: na soltura do bate-pronto/chutão guarda `ar.s`; no
+  tick da soltura (rolar/por cima) ou do chute: `m.naMao = null`, `ar.feito`, e `acoes.js arremessoGoleiro(m, g, ar, r)`
+  (rolando: a velocidade do passe rasteiro para a distância até `vRolar` pela força e pelo passe longo, `vyRolar` para baixo,
+  giro de rolamento, voo 'passe' com `solto` — não vai ao chão no tick —; por cima: elevação `elevOmbro` pela distância,
+  chega a quem recebe a `yOmbro` m, até `vOmbro`, voo 'lancamento'; erro `erroBom–erroRuim` rad pelo passe e pela pressão) ou
+  o LANÇAMENTO de sempre (`executarAcao` com `pedido.repos`: 'bate' usa `ACOES.batePronto` — `vooLancamento(..., cfg)` — e
+  giro 4; 'chutao' é o lançamento do C4). `m.voo.reposicao` = o tipo; evento `{tipo: 'reposicao', id, modo, para}`. Depois,
+  o controle do humano vai ao jogador de linha mais perto de onde a bola cai (como antes).
+- **Regra 12.3 (8 s):** o relógio para no começo do gesto (`regras-goleiro.js segundosNaMao`: a bola está saindo).
+- **Pose (`anim.js pose`)**: o goleiro com `j.arremessoGk` usa `quadroReposicao` (pelve − `desce`, pitch + `inclina`, a mão do
+  gesto sobre a do desenho pelo peso, o tornozelo do chute sobre o desenhado; `info.pes[p].apoio` falso com o pé do chute
+  no gesto). O corpo novo (`render/esqueleto.js`) desenha pelas juntas: a mão fica na bola como no manequim (medido: ≤ 0,15
+  m nos dois). Cópias da cena (`comemoracao.js copiaJogador`): `arremessoGk = null`.
+- **Testes:** `tools/teste-reposicao.mjs` (padrão; A: canhão de estados do meio da partida, 6 partidas da demo — fração com a
+  mão 55–82%, certas ≥ 90%, distância mediana 14,3–27,4 m, nada para a própria área nem de volta ao goleiro; B: o gesto — a mão
+  desenhada na bola até a soltura, alturas, o bate-pronto quica antes do pé, o chutão no ar, mais baixo e mais rápido, o
+  quadril/a mão/o pé na pose, sem salto, os botões). Reprova 11 na main. `teste-goleiro-regras` G3c continua 0/24.
+- **Medidas (main 973de847 × agora).** `teste-reposicao`: com a mão 0% (0/107) → 69,2% (72/104; rolar 66, por cima 6), certas
+  — → 93,1%, distância mediana — → 24,5 m, perda a < 40 m do próprio gol logo depois 9/107 → 10/104; o gesto: a mão a ≤ 0,12
+  m da bola (0,19 nas duas mãos do bate-pronto), soltura a 0,30 m rolando e 1,90 m por cima, o bate-pronto quica no tick 256 e
+  o pé bate no 257, 12,2° e 28,6 m/s × o chutão 19,1° e 23,6 m/s. Painel de 144 (1001–1144): gols 1,76 → 1,76, passe certo
+  86,5 → 86,8%, interceptações 10,88 → 10,73 por time, posses no último terço 42,6 → 42,4%, origem "erro na saída de bola"
+  35 → 31% dos gols de bola rolando, goleiro 67,0 / 60,2 / 82,5% → 66,3 / 56,2 / 85,4% (a faixa de 6–16,5 m volta à meta),
+  gols de fora da área 17,1 → 13,5%, gols de cabeça 15,4 → 17,0%; nenhuma meta que estava na faixa saiu. `hash-igual --base
+  <main>`: IGUAL (o treino não mudou); `hash-partida --base <main>`: demo 1, 2 e 4 IGUAIS, demo 3 e humano 1–4 DIFERENTES (a
+  partir da 1ª reposição com a mão).
 
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores

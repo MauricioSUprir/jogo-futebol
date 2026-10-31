@@ -634,3 +634,57 @@ uniforme até 2,3 m com o goleiro a ~3 m); na StatsBomb, o goleiro a ≥ 2 m com
 O chute com a barra cheia no ângulo (C2) contra o goleiro realista posicionado, a grade da sonda do C2 só com o analógico nos
 cantos (2.160 chutes, os mesmos nas duas versões): gols 68,2% → 68,3% (Δ +0,1 ± 0,1) — a espalmada alta nova não é defesa
 "milagrosa": a chance não mudou, só o desenho.
+
+## 15. Reposição do goleiro com a mão: rolar, arremessar por cima do ombro e o bate-pronto (C5, item 16 da FILA)
+
+**O que estava.** Com a bola nas mãos, a IA só dava o chutão (a bola ia ao chão no pé dele e saía o LANÇAMENTO, `sim.js
+goleiroComBola`); o "PASSE com a mão" do humano era o passe rasteiro com o pé a partir do chão; não havia gesto (a bola
+pulava das mãos para o chão num quadro).
+
+**O real (StatsBomb open data, medido para esta entrega; `pass.body_part` do passe do goleiro na bola rolando: "Keeper Arm"
+= arremesso, "Drop Kick" = bate-pronto/chutão, e o passe com o pé depois de pegar com a mão na mesma posse = a bola no chão).**
+Scripts fora do repositório (`sb_repos2.py` na pasta de trabalho da sessão); 149 partidas, 1.915 reposições da mão.
+
+| Competição | partidas | com a mão | bate-pronto/chutão | no chão (pé) | certas com a mão | certos do bate-pronto |
+|---|---|---|---|---|---|---|
+| Premier League 2015/16 (40) | 40 | 56,3% | 41,2% | 2,6% | 94,2% | 32,7% |
+| Bundesliga 2015/16 (34) | 34 | 61,2% | 35,6% | 3,2% | 93,6% | 32,1% |
+| Copa do Mundo 2022 (24) | 24 | 79,4% | 18,0% | 2,6% | 98,6% | 22,4% |
+| Euro 2024 (51) | 51 | 80,9% | 16,0% | 3,0% | 98,0% | 36,7% |
+| **total** | 149 | **68,1%** | 29,0% | 2,9% | **96,1%** | 32,3% |
+
+- Distância do arremesso: p10/p25/p50/p75/p90 = 10,3 / 14,3 / 19,4 / 27,4 / 35,7 m. Até 15 m: 28% (99% certos, 99% rasteiros);
+  15–25 m: 42% (99%, 88% rasteiros); 25–35 m: 19% (96%; rasteiro 53%, baixo 31%, alto 16%); 35–50 m: 9% (84%, quase todos no ar).
+- O bate-pronto/chutão: mediana 57,7 m (p25 51,3, p75 65,1), alto em 98%, 32% certos (a disputa no alto).
+- Sem sinal de pressão no momento da reposição (StatsBomb marca "under pressure" em 0% delas: o adversário não pode
+  pressionar o goleiro com a bola nas mãos — Regra 12.3); a escolha é pelo campo, não pelo goleiro pressionado.
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| StatsBomb open data (acima) | A mistura mão × pé por competição, o acerto e a distância | `GOLEIRO.reposicao.livre`/`riscoMax`/`rolarMax`: a IA arremessa quando há companheiro livre (fração 55–82% = a faixa das 4 competições); rola até 30 m (até 25 m 97% rasteiros, 25–35 m metade); por cima acima disso; o teste (A1–A4) |
+| van den Tillaar & Ettema 2004, J Sports Sci Med 3(4):211 (jssm.org) | Arremesso por cima com bola de 0,409 kg: ~21,5 m/s (handebolistas experientes) | `vOmbro` 19–24 m/s pela força e pelo passe longo (o goleiro com a bola maior, que a mão agarra menos) |
+| Gutiérrez-Davila et al. 2012, J Hum Kinet 34:41 (PMC3590836) | 24–25 m/s no arremesso de handebol de elite | o teto de `vOmbro` (24) |
+| EA FC 25, controles (fifplay.com/fc-25-controls) | Goleiro: Throw/Pass (X/A: rola curto, arremessa mais longe), Driven Throw (R1+X), Drop Kick (◯/▢), Driven Kick (R1+▢), Drop Ball (△) | PASSE = arremesso (rola; por cima com a barra cheia — o "driven throw" — ou longe), LANÇAMENTO = bate-pronto (o "driven kick": mais baixo e mais tenso), CHUTE = chutão, ENFIADA = no chão (já era) |
+| Human Kinetics, "Understanding the goalkeeper as an orchestrator" (us.humankinetics.com, trecho de livro de treino de goleiros) | "O drop kick é um golpe de meia-volta" (a bola toca o chão e o pé bate logo depois), mais preciso que o punt para avançar a bola | `reposicao.js`: o bate-pronto chuta no tick depois do quique; o chutão bate no ar a `yChutao` 0,42 m |
+| Linthorne & Patel 2011, "Optimum projection angle for attaining maximum distance in a soccer punt kick", J Sports Sci Med 10(1):203 (PMC3737918) | No punt do goleiro a velocidade de saída fica quase igual em todos os ângulos (22–28 m/s; 27,1 m/s no ângulo preferido) e o ângulo ótimo para a distância é alto (49–52° nos dois goleiros medidos) — o punt é a bola ALTA | o bate-pronto mais BAIXO e mais tenso que o chutão (`ACOES.batePronto` 11,5–17°; o chutão é o lançamento do C4, 18–26°, sobe até `elevAlta` quando precisa) |
+
+**O que mudou** (só na partida; o treino segue como era, `hash-igual` IGUAL): o gesto em `js/reposicao.js` (puro); a IA
+escolhe pela pressão (`acoes.js alvoReposicao`: `escolherAlvo('reposicaoMao')` com a nota do passe e o `riscoLinha` — com a
+distância ao SEGMENTO: o adversário 20 m além do recebedor, perto da reta, contava como na linha e dava risco 1 em quase
+toda reposição medida —, só o companheiro fora da própria área, sem adversário a menos de 10 m e com risco ≤ 0,2); o
+arremesso em `acoes.js arremessoGoleiro` (rolando: a velocidade do passe rasteiro para a distância, até o braço; por cima:
+chega a quem recebe na coxa/peito, como o curto do lateral); o bate-pronto pela conta do lançamento com `ACOES.batePronto`.
+
+**Medido** (`tools/teste-reposicao.mjs`, 6 partidas da demo, 104–107 reposições do canhão; main → agora): com a mão 0% →
+69,2% (rolar 66, por cima 6; chutão 32); certas com a mão — → 93,1% (meta ≥ 90%: StatsBomb 96,1%); distância mediana — →
+24,5 m (p25 22,3, p75 27,5: o time abre a ~25 m do gol com a bola no goleiro — `ia-tatica.js` —, mais longe que o real, 19,4 m);
+perda a < 40 m do próprio gol logo depois 9/107 → 10/104 (informativo; o painel decide). Painel de 144 (1001–1144, a main
+973de847 com as mesmas sementes): gols 1,76 → 1,76, passe certo 86,5 → 86,8%, interceptações 10,88 → 10,73, último terço
+42,6 → 42,4%, origem "erro na saída de bola" 35 → 31%, goleiro 67,0 / 60,2 / 82,5% → 66,3 / 56,2 / 85,4%: nenhuma meta que
+estava na faixa saiu (a de 6–16,5 m, fora na main, voltou).
+
+**Pendente/limites.** A distância do arremesso fica acima do real (mediana 24,5 × 19,4 m): o time abre a ~25 m do gol com a
+bola no goleiro e quase não há companheiro livre a 10–18 m; aproximar o apoio é da IA (categoria D), não daqui. O arremesso
+por cima chega a quem recebe na coxa/peito; os poucos que se perdem (5 de 72) são a bola que o recebedor não domina no ar —
+o domínio aéreo é o de sempre. A IA não usa o bate-pronto (só o humano): o real mistura os dois no "Drop Kick".
+
