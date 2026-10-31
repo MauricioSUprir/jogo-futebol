@@ -17,7 +17,7 @@ const ids = (process.argv[2] || 'heroi,zoom,reverso,caitlin,cisco,joe,iris,frio,
 for (const id of ids) {
   const url = await pagina.evaluate(async (id) => {
     const { criarHeroi } = await import('./js/humano.js'), { colocarAderecos } = await import('./js/aderecos.js');
-    const pessoa = ['caitlin', 'cisco', 'joe', 'iris', 'frio', 'onda', 'mago', 'devoe'].includes(id) ? id : null;
+    const pessoa = ['caitlin', 'cisco', 'joe', 'iris', 'frio', 'onda', 'mago', 'devoe', 'wells'].includes(id) ? id : null;
     const m = await criarHeroi({ lod: 0, pessoa, traje: pessoa ? 'heroi' : id });
     if (['frio', 'onda', 'mago', 'devoe', 'savitar'].includes(id)) colocarAderecos(id, m);
     let saida = null; window.__rel.historia.definirRetrato = (_, u) => { saida = u; };

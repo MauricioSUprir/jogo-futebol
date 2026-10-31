@@ -469,7 +469,7 @@ function carregarNovo() {
 }
 const POS_VESTE = MISSOES.findIndex((m) => m.id === 'p3-veste'), POS_TEMPO = MISSOES.findIndex((m) => m.id === 'p3-tempo'), POS_P3 = MISSOES.findIndex((m) => m.id === 'p3-convite');
 /** o herói já vestiu o traje novo (passou do 'p3-veste'; a cidade livre depois da história também) */
-const trajeNovo = () => missoes.livre || missoes.indice > POS_VESTE;
+const trajeNovo = () => POS_VESTE >= 0 && (missoes.livre || missoes.indice > POS_VESTE);   // (a temporada da série não tem)
 /** a roupa do herói: 'traje' (o Flash: o traje novo depois da Parte 3), 'novo' ou 'civil' (Barry à paisana). Com efeito: a troca
  *  relâmpago (raios em volta e o aviso) */
 function vestir(roupa, efeito = true) {
@@ -889,6 +889,35 @@ function fimDeJogo() {
   el.corpo.classList.remove('jogando'); el.fim.hidden = false;
 }
 
+// ---------- o Barry em coma (temporada da série): deitado de costas numa maca, os pés onde ele estava ----------
+let maca = null;
+const eDeitado = new THREE.Euler(0, 0, 0, 'YXZ');
+function deitarHeroi(sim) {
+  J.deitado = sim;
+  if (sim && !maca) {
+    maca = new THREE.Group();
+    const colchao = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.16, 2.1), new THREE.MeshStandardMaterial({ color: 0xe6edf3, roughness: 0.85 }));
+    colchao.position.y = 0.72;
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.6, 1.9), new THREE.MeshStandardMaterial({ color: 0x46525e, roughness: 0.45, metalness: 0.55 }));
+    base.position.y = 0.34;
+    const monitor = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.36, 0.06), new THREE.MeshStandardMaterial({ color: 0x0b1218, emissive: 0x1dd18a, emissiveIntensity: 0.35, roughness: 0.4 }));
+    monitor.position.set(0.75, 1.45, -0.7); monitor.rotation.y = -0.6;
+    const haste = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.3, 8), base.material); haste.position.set(0.75, 0.65, -0.7);
+    maca.add(colchao, base, monitor, haste); cena.add(maca);
+  }
+  if (!maca) return;
+  maca.visible = sim;
+  if (sim) { maca.position.set(P.x - Math.sin(P.h) * 0.92, P.y, P.z - Math.cos(P.h) * 0.92); maca.rotation.y = P.h; }
+}
+/** a noite em que a mãe morreu: raios amarelos e vermelhos girando pela sala */
+function raiosNaSala() {
+  clarear(0.6);
+  for (let i = 0; i < 14; i++) {
+    const g = (i / 14) * 6.28 + Math.random() * 0.4, r = 2 + Math.random() * 2, cor = i % 2 ? [2.4, 1.9, 0.6] : [2.8, 0.35, 0.2];
+    combate.efeitos.raio(P.x + Math.cos(g) * r, P.y + 0.4 + Math.random() * 1.8, P.z + Math.sin(g) * r, P.x + Math.cos(g + 1.2) * r, P.y + 0.3 + Math.random() * 2, P.z + Math.sin(g + 1.2) * r, { vida: 0.45, desvio: 0.7, r: cor[0], g: cor[1], b: cor[2] });
+  }
+}
+
 // ---------- animação do herói ----------
 const mBase = new THREE.Matrix4(), vTmp = new THREE.Vector3(), vTmp2 = new THREE.Vector3(), vUp = new THREE.Vector3(0, 1, 0), vY = new THREE.Vector3(0, 1, 0), qAlvo = new THREE.Quaternion();
 function animarHeroi(dt) {
@@ -906,6 +935,7 @@ function animarHeroi(dt) {
     if (P.parede) { const w = P.parede; heroi.position.set(P.x - w.nx * (CORPO.raio - 0.06), P.y, P.z - w.nz * (CORPO.raio - 0.06)); mBase.makeBasis(vTmp.set(-w.nz, 0, w.nx), vTmp2.set(w.nx, 0, w.nz), vUp); qAlvo.setFromRotationMatrix(mBase); }
     else { heroi.position.set(P.x, P.y, P.z); qAlvo.setFromAxisAngle(vY, P.h); }
     heroi.quaternion.slerp(qAlvo, 1 - Math.exp(-(P.parede ? 12 : 30) * dt));
+    if (J.deitado) { heroi.position.set(P.x, P.y + 0.8, P.z); heroi.quaternion.setFromEuler(eDeitado.set(-Math.PI / 2, P.h, 0)); }   // em coma, na maca
   } else {
   const alvoInc = P.noChao ? 0.12 + forte * 1.0 : 0.25 + forte * 0.5;
   p.corpo.rotation.x = lerp(p.corpo.rotation.x, alvoInc, 0.2);
@@ -1130,8 +1160,9 @@ const POS_CINZAS = MISSOES.findIndex((m) => m.id === 'p2-celas'), FORA_CINZAS = 
 // quem fugiu da contenção num passo da história e volta para a cela quando o capítulo dele é vencido (Parte 4: os Malandros)
 const FUGAS = [{ de: MISSOES.findIndex((m) => m.id === 'p4-celas'), ate: 'malandros', ids: ['frio', 'onda', 'mago'] }];
 function foraDasCelas() {
-  const fora = new Set(missoes.livre || missoes.indice >= POS_CINZAS ? FORA_CINZAS : []);
+  const fora = new Set(POS_CINZAS >= 0 && (missoes.livre || missoes.indice >= POS_CINZAS) ? FORA_CINZAS : []);
   for (const f of FUGAS) if (!missoes.livre && f.de >= 0 && missoes.indice >= f.de && !viloes.vencido(f.ate)) f.ids.forEach((id) => fora.add(id));
+  if (PESSOAL) fora.add('reverso');                    // (na temporada da série o homem de amarelo sempre escapa: nunca fica numa cela)
   return fora;
 }
 const NOME_SALA = { contencao: 'Câmara de contenção', cortex: 'Cortex', nucleo: 'Câmara do Núcleo', trajes: 'Sala dos trajes', medica: 'Sala médica', oficina: 'Oficina' };
@@ -1183,6 +1214,13 @@ function atualizarBussola() {
 
 // ---------- missões, crimes e portais ----------
 let armazem = null; try { armazem = localStorage; } catch { armazem = null; }
+// EDIÇÃO PESSOAL: a temporada da série (serie.js) tem o progresso dela, nas mesmas chaves com 'theflash.serie.' (a história
+// normal, guardada nas chaves de sempre, não muda)
+const CHAVES_HISTORIA = new Set(['theflash.missoes.v2', 'theflash.missoes.v1', 'theflash.historia.v1', 'theflash.viloes.v1', 'theflash.poderes.v1']);
+if (PESSOAL && armazem) {
+  const base = armazem, k = (c) => (CHAVES_HISTORIA.has(c) ? c.replace('theflash.', 'theflash.serie.') : c);
+  armazem = { getItem: (c) => base.getItem(k(c)), setItem: (c, v) => base.setItem(k(c), v), removeItem: (c) => base.removeItem(k(c)) };
+}
 try { ESTEIRA.recorde = Math.max(ESTEIRA.recorde, Number(armazem?.getItem('theflash.esteira.v1')) || 0); } catch { /* sem armazenamento */ }
 // "Recomeçar a história do zero" (pausa): a página anterior marcou o pedido e recarregou; o progresso some AQUI, antes de
 // qualquer módulo ler o que está gravado (assim nada que a página velha ainda grave antes de sair volta a valer)
@@ -1419,7 +1457,7 @@ const vitrine = { grupo: new THREE.Group(), pivo: new THREE.Group(), modelo: nul
   vitrine.grupo.visible = false; cena.add(vitrine.grupo);
 }
 function passoVitrine(dt) {
-  const w = pontoMundo('vitrine'), perto = w && (missoes.livre || missoes.indice >= POS_P3) && Math.hypot(P.x - w.x, P.z - w.z) < 90;
+  const w = pontoMundo('vitrine'), perto = w && POS_P3 >= 0 && (missoes.livre || missoes.indice >= POS_P3) && Math.hypot(P.x - w.x, P.z - w.z) < 90;
   vitrine.grupo.visible = !!perto; if (!perto) return;
   const quer = trajeNovo() ? 'heroi' : 'novo';
   if (vitrine.traje !== quer && !vitrine.carregando) {
@@ -1444,10 +1482,14 @@ function direcaoPedida() {
   return [fx, fz];
 }
 /** o tempo lento: liberado no passo 'p3-tempo' (a Caitlin e o Cisco ensinam); só de traje novo, com energia para pagar */
-const podeTempo = () => missoes.livre || missoes.indice >= POS_TEMPO;
+const podeTempo = () => POS_TEMPO >= 0 && (missoes.livre || missoes.indice >= POS_TEMPO);
 /** a TEMPESTADE (combate.js): liberada no passo 'p4-tempestade', depois que o Cisco instala o amplificador no traje novo */
 const POS_TEMPESTADE = MISSOES.findIndex((m) => m.id === 'p4-tempestade');
-const podeTempestade = () => missoes.livre || missoes.indice >= POS_TEMPESTADE;
+const podeTempestade = () => POS_TEMPESTADE >= 0 && (missoes.livre || missoes.indice >= POS_TEMPESTADE);
+// a temporada da série ensina cada golpe especial num treino (missoes `libera`, serie.js): antes dele, o botão não aparece
+const POS_LIBERA = {};
+MISSOES.forEach((m, i) => (m.libera || []).forEach((t) => { if (POS_LIBERA[t] === undefined) POS_LIBERA[t] = i; }));
+const podeEspecial = (t) => POS_LIBERA[t] === undefined || missoes.livre || missoes.indice >= POS_LIBERA[t];
 function usarTempoLento() {
   pedidoTempo = false;
   if (!podeTempo() || J.lento > 0 || J.roupa === 'civil') return;
@@ -1463,14 +1505,14 @@ function processarGolpes() {
     // apertado no meio de um soco: espera o soco acabar (até 0,6 s)
     if (combate.ocupado) { if (!J.espT) J.espT = P.t; if (P.t - J.espT > 0.6) { pedidoEspecial = null; J.espT = 0; } return; }
     const t = pedidoEspecial; pedidoEspecial = null; J.espT = 0;
-    if (P.parede || (t === 'tempestade' && !podeTempestade())) return;     // (a TEMPESTADE só depois que o Cisco instala: Parte 4)
+    if (P.parede || (t === 'tempestade' && !podeTempestade()) || !podeEspecial(t)) return;     // (a TEMPESTADE só depois que o Cisco instala: Parte 4)
     if (P.energia < ESPECIAIS[t].custo) { avisar(`${ESPECIAIS[t].nome} precisa de ${Math.round(ESPECIAIS[t].custo * 100)}%`, 'Energia insuficiente', 'alerta'); return; }
     P.vibrando = false; const [dx, dz] = direcaoPedida(); combate.especial(t, P, dx, dz);
   }
 }
 const botoesEsp = Object.keys(ESPECIAIS).map((t) => [t, $(`bt-${t}`), $(`chip-${t}`)]);
 function atualizarBotoesEspeciais() {
-  for (const [t, b, c] of botoesEsp) { const ok = P.energia >= ESPECIAIS[t].custo; b?.classList.toggle('pronto', ok); c?.classList.toggle('pronto', ok); }
+  for (const [t, b, c] of botoesEsp) { const ok = P.energia >= ESPECIAIS[t].custo; b?.classList.toggle('pronto', ok); c?.classList.toggle('pronto', ok); if (t !== 'tempestade') for (const e of [b, c]) e?.classList.toggle('bloq', !podeEspecial(t)); }
   const tem = podeTempo(), ok = tem && P.energia >= TEMPO_LENTO.custo && !(J.lento > 0) && J.roupa !== 'civil';
   for (const e of [$('bt-tempo'), $('chip-tempo')]) { e?.classList.toggle('bloq', !tem); e?.classList.toggle('pronto', ok); }
   for (const e of [$('bt-tempestade'), $('chip-tempestade')]) e?.classList.toggle('bloq', !podeTempestade());
@@ -1501,11 +1543,14 @@ const focosCena = () => {
   const fs = { heroi: focoHeroi, joe: () => aliados.foco('joe'), iris: () => aliados.foco('iris'), vulto: () => aliados.foco('vulto'), reverso: () => aliados.foco('reverso'), negro: () => aliados.foco('negro'), cigarra: () => aliados.foco('cigarra'),
     violeta: () => aliados.foco('violeta'), noraf: () => aliados.foco('violeta'),
     devoe: () => { const p = contencao.presos.devoe; return p?.raiz.visible ? { x: p.raiz.position.x, y: p.raiz.position.y, z: p.raiz.position.z } : null; } };
-  for (const id of ['caitlin', 'cisco']) fs[id] = () => (equipe.pronta && noCortex() && tempo.epoca !== 'ignicao' ? equipe.focos()[id]() : aliados.foco(id));
+  for (const id of ['caitlin', 'cisco', 'wells']) fs[id] = () => (equipe.pronta && noCortex() && tempo.epoca !== 'ignicao' ? equipe.focos()[id]?.() ?? null : aliados.foco(id));   // (o Wells: só na temporada da série)
   return fs;
 };
 /** cenas que mexem no mundo: o túnel do tempo aparece em volta do herói correndo */
 const GANCHOS_CENA = {
+  // a temporada da série (edição pessoal): os nove meses de coma (o Barry deitado numa maca no Cortex) e a noite da mãe
+  prologo: { aoAcao: (a) => { if (a === 'deita') deitarHeroi(true); else if (a === 'acorda') { deitarHeroi(false); clarear(0.35); } }, depois: () => deitarHeroi(false) },
+  'depois-s1-casa': { aoAcao: (a) => { if (a === 'raioCasa') raiosNaSala(); } },
   // a noite do raio: o Joe vai embora, o vulto aparece no canto escuro da perícia, faíscas, e o raio do Núcleo atravessa tudo
   'noite-do-raio': { aoAcao: (a) => {
     if (a === 'joeSai') J.cenaAliados = { aliados: {} };
@@ -1825,7 +1870,7 @@ function quadro() {
     passoMissoes(dt); passoInteriores(dt); passoInteracoes(dt);
     { // os vilões do dia a dia: aparecem só com o herói solto (depois do Zoom), nada em andamento
       const m = missoes.atual, livre = !J.cenaPendente && !J.cron && historia.radioLivre && !crimes.ativo && !viloes.ativo && !J.interior && !J.esteira && tempo.epoca === 'presente'
-        && !(m?.tipo === 'portais' && portais.estado().correndo) && !m?.capitulo && !interacoes.corrida && (viloes.vencido('zoom') || missoes.livre);
+        && !(m?.tipo === 'portais' && portais.estado().correndo) && !m?.capitulo && !interacoes.corrida && (viloes.vencido(CAPITULOS[0].id) || missoes.livre);   // (depois do 1º capítulo)
       for (const ev of rivais.atualizar(dtM, P, { pode: livre })) {
         if (ev.tipo === 'dano') J.danoVilao = 1;
         if (ev.tipo === 'vencido') { ganharXp('rival'); missoes.contar('pontos', 300); missoes.contar('rivais'); }

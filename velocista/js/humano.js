@@ -9,7 +9,7 @@ import { PESSOAL } from './edicao.js';
 const BASE = new URL('../assets/humano/', import.meta.url);
 // pessoas da história (Caitlin, Cisco): outro corpo do Rocketbox, com a roupa e o rosto das texturas dele
 // (velocista/tools/personagens), o mesmo esqueleto e a mesma animação do herói
-const PESSOAS = { caitlin: { escala: 0.94 }, cisco: { escala: 1 }, joe: { escala: 1.01 }, iris: { escala: 0.95 }, frio: { escala: 1.02 }, onda: { escala: 1.04 }, mago: { escala: 1 }, devoe: { escala: 1 } };
+const PESSOAS = { wells: { escala: 1 }, caitlin: { escala: 0.94 }, cisco: { escala: 1 }, joe: { escala: 1.01 }, iris: { escala: 0.95 }, frio: { escala: 1.02 }, onda: { escala: 1.04 }, mago: { escala: 1 }, devoe: { escala: 1 } };
 // emblema do peito de cada traje (desenhos próprios): disco, cor do anel e do símbolo, símbolo
 const EMBLEMAS = {
   heroi: { disco: 0x1a1416, cor: 0xf6c82a, emissivo: 0x8a6008, forma: 'faisca', brilhoTecido: 0x8a1010 },

@@ -18,6 +18,9 @@
 // A cidade (entre os capítulos): o detetive Joe, que criou você, na Delegacia Central, em Iron Heights e em casa; a Iris,
 // repórter do Picture News, no jornal e no Café Jitters; o apagão que o Zoom deixa; a cidade agradecendo na Prefeitura.
 
+import { PESSOAL } from './edicao.js';
+import { PERSONAGENS_SERIE, CENAS_SERIE, RADIO_SERIE, FALAS_SERIE } from './serie.js';
+
 export const PERSONAGENS = {
   caitlin: { nome: 'Caitlin', sigla: 'CA', cor: '#8fd8ff', papel: 'S.T.A.R. Labs · medicina' },
   cisco: { nome: 'Cisco', sigla: 'CI', cor: '#ffb347', papel: 'S.T.A.R. Labs · engenharia' },
@@ -2222,6 +2225,9 @@ export const RADIO = {
   'falhou-ameaca-iris': [F('caitlin', 'O gelo chegou ao pescoço dela! O Cisco ligou o aquecedor do Jitters no máximo: mais um minuto. Vai!')],
   'falhou-ameaca-joe': [F('cisco', 'Um raio caiu no telhado! O Joe está bem, mas o próximo não erra. Mais rápido!')],
 };
+// EDIÇÃO PESSOAL (js/edicao.js): a temporada da série (js/serie.js) troca as cenas, o rádio, as falas das missões e os nomes
+if (PESSOAL) { Object.assign(PERSONAGENS, PERSONAGENS_SERIE); Object.assign(CENAS, CENAS_SERIE); Object.assign(RADIO, RADIO_SERIE); Object.assign(MISSOES_FALAS, FALAS_SERIE); }
+
 const PROVOCA = { reverso2: ['Isso não é nada.', 'Eu te ensinei isso.', 'Você ainda corre como criança.'], negro2: ['Todos param.', 'O tempo cobra.', 'Você está cansando.'], godspeed: ['Lento demais, Barry.', 'Eu medi cada passo seu.', 'Deuses não cansam.'], negro: ['Lento.', 'Todos param.', 'Eu sinto o seu coração cansar.', 'O tempo cobra.'], savitar: ['Lento.', 'Eu já estive aqui antes.', 'Você vai virar o que eu sou.'], zoom: ['Sorte.', 'Ainda não.', 'Você está ficando lento.'], reverso: ['Isso não é nada.', 'Perto. Mas não o bastante.', 'Eu deixei.', 'Você está me divertindo.'] };
 
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -2241,7 +2247,7 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
   const fila = []; let falando = null, tFala = 0, ocupado = null, escondido = false;   // ocupado(): um aviso no lugar do rádio
   function falar(falas) { for (const f of falas) fila.push(f); }
   // o rosto de cada personagem (tools/gerar-retratos.mjs renderiza a partir do modelo 3D); quem não tem fica com a sigla
-  const RETRATOS = ['heroi', 'zoom', 'reverso', 'caitlin', 'cisco', 'joe', 'iris', 'frio', 'onda', 'mago', 'savitar', 'devoe'];
+  const RETRATOS = ['heroi', 'zoom', 'reverso', 'caitlin', 'cisco', 'joe', 'iris', 'frio', 'onda', 'mago', 'savitar', 'devoe', ...(PESSOAL ? ['wells'] : [])];
   const retratos = Object.fromEntries(RETRATOS.map((id) => [id, new URL(`../assets/personagens/retratos/${id}.webp`, import.meta.url).href]));
   for (const url of Object.values(retratos)) new Image().src = url;                    // já baixados quando a 1ª fala aparecer
   function mostrar(el, ret, nome, f) {
