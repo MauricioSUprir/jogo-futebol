@@ -2228,7 +2228,7 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
   const radio = document.createElement('div'); radio.id = 'radio'; radio.innerHTML = '<i class="retrato"></i><div><b></b><span></span></div>';
   document.getElementById('hud').appendChild(radio);
   const rRetrato = radio.querySelector('.retrato'), rNome = radio.querySelector('b'), rTexto = radio.querySelector('span');
-  const fila = []; let falando = null, tFala = 0;
+  const fila = []; let falando = null, tFala = 0, ocupado = null, escondido = false;   // ocupado(): um aviso no lugar do rádio
   function falar(falas) { for (const f of falas) fila.push(f); }
   // o rosto de cada personagem (tools/gerar-retratos.mjs renderiza a partir do modelo 3D); quem não tem fica com a sigla
   const RETRATOS = ['heroi', 'zoom', 'reverso', 'caitlin', 'cisco', 'joe', 'iris', 'frio', 'onda', 'mago', 'savitar', 'devoe'];
@@ -2297,6 +2297,9 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
       else if (C.t > 2.2 + f.texto.length * 0.055) avancar();                       // avança sozinho depois de dar tempo de ler
       return;
     }
+    // um aviso no lugar do rádio (dono, 31/10: "muita informação na tela"): a fala some e volta de onde parou quando ele sair
+    if (ocupado?.()) { if (falando && !escondido) { escondido = true; radio.classList.remove('vis'); } return; }
+    if (escondido) { escondido = false; if (falando) radio.classList.add('vis'); }
     if (falando) { tFala -= dt; if (tFala <= 0) { falando = null; radio.classList.remove('vis'); } }
     else if (fila.length) {
       falando = fila.shift(); tFala = 2.4 + falando.texto.length * 0.05;
@@ -2368,6 +2371,10 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
     get radioLivre() { return !falando && !fila.length; },
     /** cala o rádio agora (testes: sem GPU o jogo roda a menos de 1 quadro por segundo e cada fala dura minutos) */
     calarRadio() { fila.length = 0; falando = null; radio.classList.remove('vis'); },
+    /** fn() = true enquanto um aviso ocupa o lugar do rádio: a fala espera (sem perder o tempo dela) */
+    esperarSe(fn) { ocupado = fn; },
+    /** um aviso acabou de entrar: a fala no ar sai já (sem esperar o próximo quadro) */
+    recolherRadio() { if (falando && !escondido) { escondido = true; radio.classList.remove('vis'); } },
     get capitulo() { return capitulo; },
     get cartaoAtual() { const f = C?.falas[C.i]; return f?.cartao ? `${f.rotulo} — ${f.titulo}` : null; },
     viu: (id) => vistas.has(id),
