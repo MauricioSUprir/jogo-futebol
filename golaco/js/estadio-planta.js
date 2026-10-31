@@ -358,7 +358,7 @@ export function criarPlanta(formaBruta, opc = {}) {
         px = x0; pz = z0;
         if (acum < passo) continue;
         acum -= passo;
-        const c = G.assentoEm(th, s);
+        const c = G.assentoEm(th, s, 0, true);
         if (!c || vistos.has(c.chave)) continue;
         const { x, y, z } = c;
         const st = setor(x, z);

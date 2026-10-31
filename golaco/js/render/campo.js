@@ -503,14 +503,15 @@ bool cadeiraPerto(vec3 p) {
 /**
  * A malha de cada setor em escada só com a câmera perto dela (render/cadeiras-dados.js DEGRAU_LOD, com histerese): troca a
  * geometria do Mesh (a lisa ↔ a em escada) — o desenho e o corte pela câmera não mudam (a mesma malha, o mesmo material;
- * o vão da pré-carga do lado de cá, drawRange, passa junto).
+ * o vão da pré-carga do lado de cá, drawRange, passa junto). soLisa: a câmera de jogo (a TV, camera.js deJogo) fica sempre
+ * com a lisa — de 30 m ou mais o degrau não aparece e o custo do jogo na TV não sobe (a do fundo chegava a < 52 m).
  */
-export function trocarLod(malhas, pos) {
+export function trocarLod(malhas, pos, soLisa = false) {
   for (const m of malhas) {
     const l = m.userData.lod;
     if (!l) continue;
     let d = Infinity;
-    for (const c of l.caixas) if (!c.isEmpty()) d = Math.min(d, c.distanceToPoint(pos));
+    if (!soLisa) for (const c of l.caixas) if (!c.isEmpty()) d = Math.min(d, c.distanceToPoint(pos));
     const quer = l.emDegrau ? d <= DEGRAU_LOD.sai : d <= DEGRAU_LOD.entra;
     if (quer === l.emDegrau) continue;
     const velha = m.geometry, nova = quer ? l.deg : l.liso;
@@ -825,8 +826,8 @@ export function criarCampo(opc) {
         if (restaurar) { restaurar = false; ladoDeCa.geometry.setDrawRange(0, Infinity); }
         if (precarga && desenha && !ver) { ladoDeCa.visible = true; ladoDeCa.geometry.setDrawRange(0, 0); restaurar = true; } else ladoDeCa.visible = ver;
         if (desenha) precarga = false;
-        // o degrau das plantas curvas (lisa de longe, em escada de perto) e as cadeiras 3D dos blocos perto da câmera
-        arq.userData.atualizarLod?.(camera.position);
+        // o degrau das plantas curvas (lisa de longe e na TV, em escada de perto) e as cadeiras 3D dos blocos perto da câmera
+        arq.userData.atualizarLod?.(camera.position, deJogo);
         cad3d?.atualizar(camera, alturaTela, dentroCa, deJogo);
       }
     },

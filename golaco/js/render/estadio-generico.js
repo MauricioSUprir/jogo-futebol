@@ -346,7 +346,7 @@ export function criarTigela(P, opc = {}) {
   g.userData.materiais = [mat, matCob];
   g.userData.ladoDeCa = ca;
   // o degrau de perto (DEGRAU_LOD) e as cadeiras 3D (render/cadeiras3d.js: a grade, a cor de cada cadeira = a da textura)
-  g.userData.atualizarLod = pos => trocarLod(malhas, pos);
+  g.userData.atualizarLod = (pos, soLisa) => trocarLod(malhas, pos, soLisa);
   const pinta = pintorGenerico(P);
   g.userData.cadeiras = { grade: G, cor: a => pinta(a.k, a.h, a.i, a.n), concreto: { piso: 0x8c8a84, espelho: 0x6e6d68 } };
   g.userData.definirHora = h => { const n = h === 'noite'; matEst.emissiveIntensity = n ? 1 : 0; matEst.color.setScalar(n ? 0.5 : 1); matCob.emissive.setHex(n ? 0x1a1b1c : 0x3a3c3e); };

@@ -228,7 +228,7 @@ function blocoDe(as, extra = {}) {
  *   trechos: [{uDe(th, s), thDe(u, s), u0, u1}] (a volta inteira ou cada lado reto),
  *   corredor (fração da metade do ladrilho), meiaMedia(s) → m de uma metade de ladrilho na fileira s,
  *   existe(th, fileira, x, z, yPiso) → a cadeira existe ali (tem arquibancada, é cadeira e não é a boca do túnel),
- *   setor(x, z), fileiraMin (m: a fileira mais rasa que vale; padrão 0,6)
+ *   setor(x, z)
  * }. Devolve a mesma interface da gradeGolaco (fileiras = a lista; cada uma {k (índice da frente), f (0 = a de cima), s0,
  * s1, v0, vm, v1, n (cadeiras por metade de ladrilho), faixa, iFaixa (da frente, na faixa), nFaixa}).
  */
@@ -263,14 +263,19 @@ export function criarGradeAnel(A) {
   }
   /** u do centro da cadeira (ladrilho t, metade h, cadeira i) na fileira r. */
   const uCentro = (r, t, h, i) => t + h / 2 + (c + ((i + 0.5) * (1 - c)) / r.n) / 2;
-  /** A cadeira da fileira r no trecho tr com u (o centro), ou null (não existe ali). */
-  function assentoU(tr, ti, r, t, h, i) {
+  /**
+   * A cadeira da fileira r no trecho tr com u (o centro), ou null (não existe ali). leve: sem o rumo e a largura (os
+   * lugares da torcida só precisam de onde ela fica: 2 inversas de u a menos por lugar).
+   */
+  function assentoU(tr, ti, r, t, h, i, leve = false) {
     const u = uCentro(r, t, h, i);
     if (u < tr.u0 || u > tr.u1) return null;
     const th = tr.thDe(u, r.sAssento);
     const [x, z] = A.ponto(th, r.sAssento);
     const y = A.perfil(r.s0, th);
     if (!A.existe(th, r, x, z, y)) return null;
+    const chave = ((ti * NF + r.k) * 100003 + (t + 50000) * 2 + h) * 32 + i;
+    if (leve) return { setor: A.setor(x, z), f: r.f, a: (t * 2 + h) * CADEIRA.entreEscadas + i, k: r.k, t, h, i, n: r.n, x, y, z, chave, th, s: r.sAssento };
     // o rumo da cadeira: perpendicular à fileira, para dentro (a tangente da fileira em th)
     const e = 1e-3, [xa, za] = A.ponto(th - e, r.sAssento), [xb, zb] = A.ponto(th + e, r.sAssento);
     let tx = xb - xa, tz = zb - za; const lt = Math.hypot(tx, tz) || 1; tx /= lt; tz /= lt;
@@ -280,7 +285,7 @@ export function criarGradeAnel(A) {
     const du = (1 - c) / (4 * r.n);
     const [x1, z1] = A.ponto(tr.thDe(u - du, r.sAssento), r.sAssento), [x2, z2] = A.ponto(tr.thDe(u + du, r.sAssento), r.sAssento);
     const larg = Math.hypot(x2 - x1, z2 - z1);
-    return { setor: A.setor(x, z), f: r.f, a: (t * 2 + h) * CADEIRA.entreEscadas + i, k: r.k, t, h, i, n: r.n, x, y, z, rumo: Math.atan2(nz, nx), larg, chave: ((ti * NF + r.k) * 100003 + (t + 50000) * 2 + h) * 32 + i, th, s: r.sAssento };
+    return { setor: A.setor(x, z), f: r.f, a: (t * 2 + h) * CADEIRA.entreEscadas + i, k: r.k, t, h, i, n: r.n, x, y, z, rumo: Math.atan2(nz, nx), larg, chave, th, s: r.sAssento };
   }
   // os blocos: em cada trecho, cada metade de ladrilho × 4 fileiras da mesma faixa (só as cadeiras que existem)
   const blocos = [], ref = [];
@@ -330,15 +335,15 @@ export function criarGradeAnel(A) {
   }
   /**
    * A cadeira em que cai o ponto (th, s) do trecho ti (o lugar de um torcedor puxado para a cadeira da grade): null na
-   * escada, fora das fileiras ou onde a cadeira não existe.
+   * escada, fora das fileiras ou onde a cadeira não existe. leve: sem o rumo e a largura (assentoU).
    */
-  function assentoEm(th, s, ti = 0) {
+  function assentoEm(th, s, ti = 0, leve = false) {
     const r = fileiraDe(s), tr = A.trechos[ti];
     if (!r || !tr) return null;
     const u = tr.uDe(th, r.sAssento), t = Math.floor(u), w = u - t, h = w >= 0.5 ? 1 : 0, q = (w - h / 2) * 2;
     if (q < c) return null;
     const i = Math.min(r.n - 1, Math.floor(((q - c) / (1 - c)) * r.n));
-    return assentoU(tr, ti, r, t, h, i);
+    return assentoU(tr, ti, r, t, h, i, leve);
   }
   return {
     tipo: 'anel', fileiras, NF, corredor: c, trechos: A.trechos,

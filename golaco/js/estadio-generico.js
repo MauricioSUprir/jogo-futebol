@@ -387,6 +387,28 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     for (let i = 0; i < 44; i++) { const m = (lo + hi) / 2; if (f(m) < 0) lo = m; else hi = m; }
     return norm((lo + hi) / 2);
   }
+  /**
+   * A mesma conta da thDoAlvo pela regula falsi (Illinois): ~8 contas em vez de 44 (a grade das cadeiras chama a inversa
+   * em cada cadeira; a thDoAlvo das outras peças — pilares, marcas — fica como era). Para no erro de 0,1 µm.
+   */
+  function thDoAlvoRapido(k, s, alvo) {
+    let lo, hi, f;
+    if (k === 0) { lo = -Math.PI + 1e-6; hi = -1e-6; f = th => ponto(th, s)[0] - alvo; }
+    else if (k === 3) { lo = 1e-6; hi = Math.PI - 1e-6; f = th => alvo - ponto(th, s)[0]; }
+    else if (k === 1) { lo = -Math.PI / 2 + 1e-6; hi = Math.PI / 2 - 1e-6; f = th => ponto(th, s)[1] - alvo; }
+    else { lo = Math.PI / 2 + 1e-6; hi = 1.5 * Math.PI - 1e-6; f = th => alvo - ponto(th, s)[1]; }
+    let flo = f(lo), fhi = f(hi), lado = 0;
+    if (flo >= 0) return norm(lo);
+    if (fhi <= 0) return norm(hi);
+    for (let i = 0; i < 60; i++) {
+      let m = (lo * fhi - hi * flo) / (fhi - flo);
+      if (!(m > lo && m < hi)) m = (lo + hi) / 2;
+      const fm = f(m);
+      if (Math.abs(fm) < 1e-7 || hi - lo < 1e-12) return norm(m);
+      if (fm < 0) { lo = m; flo = fm; if (lado < 0) fhi /= 2; lado = -1; } else { hi = m; fhi = fm; if (lado > 0) flo /= 2; lado = 1; }
+    }
+    return norm((lo + hi) / 2);
+  }
   /** Comprimento de arco no meio da profundidade (s = 0,5) de −π até th (para a textura: o u das cadeiras em m). */
   const arcoMeio = (() => {
     const N = 3600, acc = new Float64Array(N + 1);
@@ -559,7 +581,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     const trs = abertos
       ? [0, 1, 2, 3].filter(k => LD[k].prof > 0).map(k => {
         const lim = (k === 0 || k === 3 ? XP : ZP) / 12;
-        return { k, u0: -lim, u1: lim, uDe: (th, sm) => { const [x, z] = ponto(th, sm); return (k === 0 || k === 3 ? x : z) / 12; }, thDe: (u, sm) => thDoAlvo(k, sm, 12 * u) };
+        return { k, u0: -lim, u1: lim, uDe: (th, sm) => { const [x, z] = ponto(th, sm); return (k === 0 || k === 3 ? x : z) / 12; }, thDe: (u, sm) => thDoAlvoRapido(k, sm, 12 * u) };
       })
       : [(() => {
         // a inversa do arco no meio (tabela)
@@ -619,7 +641,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
         if (tipoEm(ladoEm(th), s) !== 0) continue;
         // a cadeira da grade em que o lugar cai (item 69: o torcedor senta no assento dela; na escada — os corredores da
         // textura, a cada 12 m — nada) e a boca do túnel
-        const cad = G.assentoEm(th, s, trechoDe(x, z));
+        const cad = G.assentoEm(th, s, trechoDe(x, z), true);
         if (!cad || vistos.has(cad.chave)) continue;
         const { y } = cad;
         if (z > 0 && Math.abs(cad.x) < mt && y < topoTunel) continue;

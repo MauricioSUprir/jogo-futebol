@@ -15,7 +15,8 @@ const _cor = new THREE.Color();
 /**
  * Cria as cadeiras 3D. opc = {grupo (THREE.Group do estádio), info: {grade, cor(assento) → '#rrggbb', concreto: {piso,
  * espelho}} (a do estádio: render/campo.js), uniforms (campo.js UNIFORMS_PERTO), qualidade} (sem a luz falsa dos sinalizadores: o material dela tem a máscara, que apagaria a própria cadeira).
- * Devolve {atualizar(camera, alturaPx), definirHora(h), definirQualidade(q), blocos, instancias, mesh, dispose()}.
+ * Devolve {atualizar(camera, alturaPx, semCa, deJogo), definirHora(h), definirQualidade(q), ligar(v), blocos, instancias,
+ * teto, mesh, dispose()}.
  */
 export function criarCadeiras3D(opc) {
   const { info, uniforms: U } = opc;
@@ -24,8 +25,8 @@ export function criarCadeiras3D(opc) {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(G.posicao, 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(G.normal, 3));
-  // plástico injetado (polipropileno): um pouco de brilho próprio para a sombra do encosto não virar preto
-  const mat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide, emissive: 0x000000 });
+  // plástico injetado (polipropileno) fosco: Lambert dos dois lados (a concha é uma casca fina, vista por trás também)
+  const mat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide });
   const maxInst = Math.max(1, CADEIRAS3D.teto.alta);
   const mesh = new THREE.InstancedMesh(geo, mat, maxInst);
   mesh.name = 'cadeiras3d';
