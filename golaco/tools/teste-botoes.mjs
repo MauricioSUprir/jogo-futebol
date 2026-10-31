@@ -823,12 +823,16 @@ if (faz('B15')) {
     if (!pr || pr.tipo !== (penalti ? 'penalti' : 'tiroLivre') || m.controlado[0] !== pr.cobrador) return null;
     return m;
   }
-  /** Tick da cobrança com a entrada bt(tick, pronta) (null: não saiu em 4 s). */
+  /**
+   * Tick em que a cobrança começa com a entrada bt(tick, pronta) (null: não começou em 4 s depois de pronta): a bola rolou
+   * ou — na cobrança com corrida (item 70, P1: o pênalti e o tiro livre) — a corrida do cobrador começou (o soltar do CHUTE;
+   * o contato sai no fim dela, ~1,5 s depois).
+   */
   function cobranca(m, bt) {
-    const pronta = m.parada.pronta;
-    for (let i = 0; i < 240 + (pronta - m.tick); i++) {
+    const pronta = m.parada.pronta, pr = m.parada, n = 240 + (pronta - m.tick);
+    for (let i = 0; i < n; i++) {
       const evs = P.passoPartida(m, { x: 0, z: 0, botoes: bt(m.tick, pronta) });
-      if (evs.some(e => e.tipo === 'cobranca')) return { t: m.tick, pronta };
+      if (evs.some(e => e.tipo === 'cobranca') || (pr.corrida && pr.corrida.estado === 'corre')) return { t: m.tick, pronta };
     }
     return { t: null, pronta };
   }

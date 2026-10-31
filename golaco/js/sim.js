@@ -35,6 +35,7 @@ import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta, chegada, guarda
 import { maoPermitida, motivoSemMao, registrarToque, estadoMao, paredeAreaMao, naPropriaArea, goleiroNoPe } from './regras-goleiro.js';
 import { lateralSegurando, segurarLateral } from './lateral.js';
 import { notaAerea, colisaoBarreira } from './bolas-paradas.js';
+import { naCorrida, correndo, saidaCorrida, contatoCorrida } from './corrida.js';
 
 const BOTOES_DEFESA = BOTAO.CONTER | BOTAO.DIVIDIDA | BOTAO.PRESSAO;
 /** Parada da partida ainda não cobrada: só o cobrador toca a bola. */
@@ -690,7 +691,8 @@ export function passo(m, entradas) {
     if (voando(j, m.tick + 1)) { pesNoAr(m, j); continue; }
     const ped = j.cond && j.cond.pedalada ? pesDaPedalada(m, j) : null;
     if (!(j.cond && j.cond.pedalada) && j.travaApoio != null) j.travaApoio = null;
-    passoPassada(j, m.posse === j.id, PASSO, null, ped || saidaParaToque(m, j));
+    // (a corrida da cobrança, item 70: na última passada o pouso do pé de apoio no ponto dele — corrida.js saidaCorrida)
+    passoPassada(j, m.posse === j.id, PASSO, null, ped || (m.parada ? saidaCorrida(m, j) : null) || saidaParaToque(m, j));
   }
   // 3) ações e controle de bola
   for (const j of js) if (j.pedido) processarPedido(m, j);
@@ -701,7 +703,10 @@ export function passo(m, entradas) {
     // lateral (Etapa 4): a bola está nas mãos do cobrador — nada de condução até o arremesso (partida.js cobrar)
   } else if (m.posse != null) {
     const dono = jogadorPorId(m, m.posse);
-    if (dono) {
+    if (dono && m.parada && naCorrida(m, dono)) {
+      // a cobrança com corrida (item 70, P1): a bola presa no ponto, sem condução; correndo, o contato (corrida.js)
+      if (correndo(m, dono)) contatoCorrida(m, dono);
+    } else if (dono) {
       const t = dono.cond.toque;
       if (t && t.tipo === 'acao' && m.tick >= t.tick) {
         if (!executarAcaoMarcada(m, dono)) controlarComBola(m, dono);
@@ -752,7 +757,7 @@ export function passo(m, entradas) {
   // 6) posse
   if (m.posse != null && m.naMao == null && !(m.parada && lateralSegurando(m))) {
     const dono = jogadorPorId(m, m.posse);
-    if (dono) verificarPerda(m, dono);
+    if (dono && !(m.parada && naCorrida(m, dono))) verificarPerda(m, dono);
   }
   if (m.voo && m.posse != null) m.voo = null;
   // "o cobrador não toca de novo" acaba quando outro jogador toca a bola (posse, mão, chute/passe/bote/defesa, corpo)

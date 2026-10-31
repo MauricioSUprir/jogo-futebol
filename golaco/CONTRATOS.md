@@ -2211,7 +2211,8 @@ módulos novos (`disputa.js`, `disputa-tela.js`) só por import dinâmico (fora 
     sobre ela; `partida.js restricaoPenalti` e `goleiro.js movimentoGoleiro` com `m.disputa` — na partida ele segue na
     bissetriz, segurado a 0,6 m), o do time que bate na linha de fundo além da linha da área (`DISPUTA.esquina`), o cobrador a
     `caminhada.dist` m atrás da marca (corte de câmera); o humano controla o cobrador dele ou o goleiro dele.
-  - Estados: `caminhada` (o cobrador anda até 0,4 m atrás da bola pela locomoção do jogo: `j.guia` — o pedido de movimento
+  - Estados: `caminhada` (o cobrador anda até o ponto de partida da corrida dele — item 70, P1: contrato "Cobranças com
+    corrida"; antes, até 0,4 m atrás da bola — pela locomoção do jogo: `j.guia` — o pedido de movimento
     pronto que o `sim.js` usa para quem está 'parado'; sem `j.guia`, parado como sempre) → `cobranca` (`partida.js
     prepararPenalti`: a mesma montagem do pênalti da partida, o goleiro que defende vira 'ia'; `pr.inicio` + `esperaHumano` s,
     `pr.pronta` em `DISPUTA.pronta` s e a força da IA na faixa `DISPUTA.forcaIA`) → `chute` (a bola rolou: `partida.js cobrar`/
@@ -3033,6 +3034,91 @@ Item 68 da FILA (achado na revisão do C2; aval do dono 31/10). Pesquisa e núme
 
   `hash-igual` IGUAL; `hash-partida` IGUAL (demo e humano: as entradas de Node não têm `mx`). `teste-online` O12: a banda
   ~10 → 11,7 KB/s por sentido (≤ 15).
+
+## Cobranças com corrida (item 70, P1; 31/10; contrato)
+
+Item 70 da FILA, parte 1 (pedido do dono de 29/10: "no pênalti, no escanteio e no tiro de meta o cobrador corre até a bola e
+bate"; aval de 31/10 — "68, 69 é 70 faz" — com as escolhas recomendadas do "Depende do dono" 12). Pesquisa em
+`PESQUISA-ETAPA4.md` §16; constantes em `config.js CORRIDA_COBRANCA`; lógica em `js/corrida.js` (PURA: sem DOM nem three.js,
+matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na linha até o chute na partida, a leitura do goleiro)
+é outro PR.
+- **Quem corre.** O cobrador do pênalti, do escanteio, do tiro de meta e do tiro livre (direto e indireto). A saída de bola e o
+  lateral não mudam (bit a bit). No fim da montagem (`partida.js colocarNaCorrida`, depois de `fecharMontagem` e dos sorteios
+  de sempre, na mesma ordem: nenhum sorteio a mais) o cobrador vai do ponto atrás da bola ao PONTO DE PARTIDA (corte de
+  câmera, como a montagem), de frente para a corrida, e o plano fica em `m.parada.corrida` (no hash: `misturarPartida`).
+- **O ponto de partida** (`corrida.js planejarCorrida`): pelo perfil do tipo (`CORRIDA_COBRANCA.perfis`; cada jogador tem a
+  SUA distância, ângulo e velocidade dentro da faixa, pelo id — `fracDoJogador`) e pelo pé que bate (`pePreferido`; o ponto
+  fica do lado do pé de apoio): pênalti 4–5 m a 25–35°; tiro livre com chute a gol (direto, a ≤ 30 m, dentro da largura da
+  área) como o pênalti; o de passe/lançamento 2,6–3,2 m a 20–30°; escanteio 2,5–4 m a 25–40°; tiro de meta longo 4–5,5 m a
+  30–40° e curto 2,5–3 m (o curto pela escolha da IA, `pr.curta`; a pessoa sempre o longo). O ponto nunca passa das placas
+  (`borda`) nem fica dentro do gol (`linhaGol`): a distância encolhe na mesma reta (≥ 1,8 m). O pé de apoio tem o ponto dele:
+  `apoio.lado` 0,3 m ao lado do centro da bola e `apoio.atras` 0,08 m atrás.
+- **Os estados** (`ESTADOS_CORRIDA`): `'espera'` — o cobrador ('parado', sem `j.guia`) no ponto de partida; a pessoa mira e
+  carrega como antes (`cobrar`: a mira, o pedido que espera a bola pronta, o tiro de meta com a área livre). `'corre'` — o
+  pedido formado (a pessoa soltou o botão; a IA decidiu) fica em `cr.pedido` com a mira do momento (`cr.mira0`: o analógico e
+  a mira guardada; no contato valem esses, como se o pedido saísse ali; o passe/lançamento sem mira nenhuma vai no eixo da
+  cobrança) e o cobrador corre. O 1º toque rápido (a janela da cavadinha) e o 2º toque segurado não seguram o começo da
+  corrida.
+- **A corrida** é a LOCOMOÇÃO do jogo: `corrida.js guiarCorrida` (no `cobrar`, antes do passo) escreve `j.guia`, o pedido de
+  movimento que o `sim.js` usa para quem está 'parado' → `passoCorpo`/`passoPassada`; nada de teletransporte, nada de mover
+  o corpo ou o pé sem a passada. A velocidade e o RITMO da passada saem de uma regulagem: para k = 0…5 passadas a mais até o
+  pé de apoio pousar no ponto dele e a velocidade de cruzeiro a ±`velVaria` da do perfil, o tempo até o corpo chegar ao meio
+  do apoio (com a aceleração ou a freada de agora, × `acelUsa`) e o ritmo que põe a fase ali; a escolha é a mais perto da
+  velocidade do perfil com o ritmo natural (dentro de `ritmo` × o da velocidade). O ritmo vai à passada pelo `pousoEm` do
+  pé no ar (`corrida.js saidaCorrida`, chamado pelo `sim.js` no lugar do `saidaParaToque` do cobrador); na última passada o
+  pouso do pé de apoio é marcado para quando o ponto de pouso (`jogador.js pontoPouso`) chega ao dele.
+- **O contato** (`corrida.js contatoCorrida`, no passo 3 do `sim.js`, no lugar da condução do cobrador — que não roda, nem a
+  "bola perdida", enquanto a parada tem corrida: `naCorrida`): o pouso do pé de apoio a ≤ `planta` m do centro da bola marca
+  `cr.plantou`; no meio desse apoio (`cr.meio`) — ou com o corpo chegando à altura da bola — sai o toque de ação de sempre
+  (`acoes.js executarAcao`) com o pé que bate e o pedido guardado. O gesto do pé sobe com o toque 'acao' marcado na hora
+  prevista (`guiarCorrida`: até `GESTO.janela` + 0,1 s antes; `conducao.js atualizarGesto` → a pose). Trava proibida: passou
+  do ponto sem o apoio certo, ou da corrida prevista + `max` s, bate assim mesmo. No mesmo passo a bola rolou
+  (`ganchosCorrida.rolou` = `partida.js rolou`): o goleiro lê o pênalti com ele em aberto, a barreira pula, o escanteio marca
+  os lugares — como quando a cobrança saía antes do passo. Depois do contato o cobrador freia (`j.guia.vel` 0; na partida
+  ele volta a jogar).
+- **A bola** fica presa no ponto até o contato (`regrasPartida`, como antes; a trava de `PARTIDA.paradaMax` não corta a corrida
+  em andamento — a dela é o `max`). A linha da cobrança mirada (`mira-linha.js preverMira`) mostra, na corrida, o pedido
+  guardado (tipo e força do soltar): a bola real passa a 0 cm dela sem o erro do cobrador (`teste-corrida-cobranca` C6).
+- **A IA começa antes.** `cr.ticks` = a previsão da corrida (`estimarTicks`: a mesma locomoção, com a bola, na velocidade do
+  perfil). A IA (`iaPodeCobrar(m, ant)`) e a IA jogando pelo humano (a demo: `entradaCobranca` aperta antes; com `iaCobra` o
+  pedido não espera a bola pronta) começam a corrida `ant` ticks antes da hora de bater de antes (`pronta + atraso`), com as
+  esperas também adiantadas: a zona livre conta quem sai até o fim da corrida (`zonaLivre(m, t)`: a velocidade com que a
+  parede o tira + `folgaZona`) e a saída curta do tiro de meta, o zagueiro que vem vindo (`TIRO_DE_META.chegaVel`) e chega até
+  lá. No pênalti a corrida da IA começa no apito (Regra 14: nada antes do sinal) e a montagem do pênalti foi de 1,5 para
+  1,25 s (`PARTIDA.montagemPor.penalti`) — a bola rola no tempo de antes (o relógio não para nas bolas paradas).
+- **O apito** (`partida.js apitoDaCobranca`, também na disputa): no pênalti e no tiro livre com barreira (Regras 13 e 14: a
+  cobrança cerimonial), um evento `apito {motivo: 'cobranca'}` por parada, no `pronta` ou quando a corrida da IA começa antes.
+  Escanteio, tiro de meta e o tiro livre sem barreira não têm apito.
+- **Escanteio.** Quem ataca a zona sai junto com o cobrador (`bolas-paradas.js escanteio`): trotando até `zonaAntes` (0,15) do
+  caminho da saída à zona; a arrancada para a zona é no chute, como antes. Com 0,35 os atacantes chegavam com um terço do
+  caminho andado e o canhão de escanteios da IA (331, as mesmas sementes) ia de 6,3% (main) a 11,8% de gols e de 39 a 51% de
+  chutes; com 0,15, 5,8% e 43% (com 0, 4,2% e 41%).
+- **A disputa de pênaltis** (`disputa.js`): a caminhada termina no ponto de partida da corrida (o mesmo `planejarCorrida`) e a
+  cobrança corre de lá; o apito pelo `apitoDaCobranca`; a trava da cobrança não corta a corrida.
+- **Câmera** (`render/bola-parada.js`, só desenho): o quadro é montado pelo ponto da linha bola–alvo na altura do ponto de
+  partida do cobrador (os pés dele em `bolaY`, a bola mais acima, à frente dele, e o alvo em `alvoY`), com a lente atrás dele
+  `atrasMin`–`atras` (3,2–4,6 m) e a até `distMax` 7,6 m da bola — o cobrador inteiro na metade de baixo (`teste-bola-parada-tela`
+  item 1); o ponto é fixo na parada inteira (a câmera não anda com a corrida).
+- **Mira pela tela** (`main.js telaMira`, contrato "Mira pela tela"): na cobrança do controlado a direção sai sempre da BOLA
+  (ele espera longe dela, a 2,5–5 m; pelo `miraBolaPerto` ela sairia dele e o pênalti mirado no meio do gol visto ia à trave:
+  `teste-mira-tela` M4).
+- **Online.** A corrida é lógica determinística: os dois aparelhos rodam igual (`teste-corrida-cobranca` C8; `teste-dois-humanos`,
+  `teste-online`).
+- **Decisão para o dono confirmar** (escolha recomendada do item 12 aplicada): a cavadinha segue a regra escrita ("o 2º aperto
+  do CHUTE antes de o chute do 1º tocar na bola vira cavadinha") — com a corrida, a janela do 2º toque vale a corrida toda
+  (`partida.js correrCobranca`: o pedido guardado é renovado a cada passo; só o CHUTE conta na corrida).
+- **Teste `tools/teste-corrida-cobranca.mjs`** (Node, padrão; reprova na main 630960d4). Cenas do COMEÇO de partidas IA × IA
+  (as duas versões bit a bit iguais até a 1ª bola parada com corrida) com a parada forçada; 16 por tipo e caminho (IA, demo) +
+  a pessoa: C1 anda ≥ 3,5 m no pênalti e ≥ 2 m nos outros; C2 2,5–5 m/s no contato; C3 o pé de apoio plantado a 0,2–0,45 m
+  do centro da bola; C3b o pé que bate no ar com o gesto (peso ≥ 0,5, tornozelo desenhado a ≤ 0,35 m da bola); C4 a régua do
+  `teste-patinacao` no cobrador e o pé plantado da simulação parado; C5 a bola morta → rolando por tipo, a média da diferença
+  PAREADA com a main a ≤ ±0,2 s (os tempos da main em `tools/dados/corrida-ref.json`: `--gravar-referencia <pasta js> --origem "main <commit>"` — mudou
+  de propósito o começo da partida IA × IA ou as bolas paradas da main? regravar e dizer no PR); C6 a linha da cobrança
+  mirada no soltar × a bola real ≤ 3 cm; C7 a cavadinha com o 2º toque no meio da corrida; C8 dois humanos com o mesmo hash;
+  C9 o apito; C10 o escanteio: quem ataca a zona sai junto (no contato, em média ≥ 3% do caminho da saída à zona) e não chega
+  antes (ninguém além de 20%). As guardas conferidas por mutação (corrida curta, pé de apoio longe, IA sem adiantar, pé
+  arrastado, velocidade alta, a linha sem o pedido, a janela da cavadinha, sem apito, sorteio fora do mundo, a zona parada
+  (`zonaAntes` 0) e a zona adiantada (0,35): cada uma reprova o item dela).
 
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores
