@@ -14,6 +14,8 @@ import { CELL, N, MEIO } from './cidade.js';
 import { criarHeroi } from './humano.js';
 import { criarRaios } from './raios.js';
 import { colocarAderecos } from './aderecos.js';
+import { PESSOAL } from './edicao.js';
+import { CAPITULOS_SERIE } from './serie.js';
 
 export const PERFIS = {
   zoom: {
@@ -123,7 +125,7 @@ Object.assign(PERFIS, {
     vida: 220, esquiva: 0.5, dano: 0.15, telegrafo: 0.85, recupera: 1.45, rodeia: [1.1, 2.0], distancia: 15, regen: 0.012, fase2: true, flutua: 1.6,
   },
 });
-export const CAPITULOS = [
+const CAPITULOS_NORMAL = [
   { id: 'zoom', titulo: 'Capítulo 1 — Zoom', viloes: ['zoom'], perseguicao: true, texto: 'Um velocista de preto está aterrorizando a cidade. Encontre o Zoom e persiga-o.' },
   { id: 'frio', titulo: 'Capítulo 2 — Capitão Frio', viloes: ['frio'], perseguicao: false, lugar: 'cidade', texto: 'Um quarteirão do centro congelou. Encontre o Capitão Frio.' },
   { id: 'onda', titulo: 'Capítulo 3 — Onda Térmica', viloes: ['onda'], perseguicao: false, lugar: 'cidade', texto: 'Incêndios pelo centro. O Onda Térmica está no meio do fogo.' },
@@ -147,6 +149,8 @@ export const CAPITULOS = [
   { id: 'sombras', titulo: 'Capítulo 20 — Os demônios sombra', viloes: ['sombraA', 'sombraB'], perseguicao: false, lugar: 'cidade', texto: 'Duas sombras vermelhas correm pela cidade. Elas vieram antes da onda.' },
   { id: 'antimonitor', titulo: 'Capítulo 21 — A Crise', viloes: ['antimonitor', 'sombraA', 'sombraB'], perseguicao: false, texto: 'O Antimonitor e as sombras dele em frente ao S.T.A.R. Labs. A onda está chegando.' },
 ];
+/** na edição pessoal, os capítulos da temporada da série (js/serie.js): a ordem e o texto dela, o resto o do capítulo de mesmo id */
+export const CAPITULOS = PESSOAL ? CAPITULOS_SERIE.map((c) => ({ ...CAPITULOS_NORMAL.find((n) => n.id === c.id), ...c })) : CAPITULOS_NORMAL;
 const DANO = { soco: 5, gancho: 9, raio: 14, ciclone: 18, sonico: 28 };
 const CHAVE = 'theflash.viloes.v1';
 const eixo = (k) => k * CELL - MEIO;

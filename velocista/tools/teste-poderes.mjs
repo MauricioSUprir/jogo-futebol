@@ -43,7 +43,7 @@ ok(melhora, 'cada nível melhora exatamente uma coisa e nada piora');
 }
 // ---- 3. a história inteira leva até o fim: os capítulos de vilão (sem contar crimes e rivais) chegam perto do topo ----
 {
-  const viloes = ler('js/viloes.js'), caps = (/export const CAPITULOS = \[([\s\S]*?)\n\];/.exec(viloes)?.[1].match(/\{ id: '/g) || []).length;
+  const viloes = ler('js/viloes.js'), caps = (/const CAPITULOS_NORMAL = \[([\s\S]*?)\n\];/.exec(viloes)?.[1].match(/\{ id: '/g) || []).length;
   const xp = caps * P.XP.vilao;
   ok(caps >= 15 && P.nivelDe(xp) >= 8 && P.nivelDe(xp + 40 * P.XP.crime + 10 * P.XP.rival) === 10, `os ${caps} capítulos de vilão levam ao nível ${P.nivelDe(xp)}; com os crimes e os rivais pelo caminho, ao 10`);
   ok(P.nivelDe(6 * P.XP.vilao) <= 6, `os 6 primeiros capítulos (Parte 1) não passam do nível 6 (${P.nivelDe(6 * P.XP.vilao)})`);
