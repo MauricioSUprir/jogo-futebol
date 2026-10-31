@@ -885,7 +885,7 @@ export const PARTIDA = {
   montagem: 1.2,              // s de montagem do recomeço (corte de câmera na saída)
   // s de montagem por recomeço, depois da bola morta (o cobrador já no ponto; os outros se ajeitam):
   // a saída e o escanteio esperam o time se posicionar; o lateral é rápido; no tiro de meta os zagueiros abrem
-  montagemPor: { saida: 1.2, lateral: 0.3, escanteio: 1.2, tiroDeMeta: 1.0, tiroLivre: 1.0, penalti: 1.5 },
+  montagemPor: { saida: 1.2, lateral: 0.3, escanteio: 1.2, tiroDeMeta: 1.0, tiroLivre: 1.0, penalti: 1.25 },
   cobrancaIA: [0.6, 1.4],     // s que a IA espera para cobrar (sorteio pelo m.rng)
   cobrancaHumanoMax: 6,       // s desde a bola morta — depois disso a IA cobra pelo humano
   paradaMax: 8,               // s — nenhuma parada dura mais que isto (trava proibida)
@@ -977,6 +977,7 @@ export const TIRO_DE_META = {
   curtoLivre: 7,              // m — o zagueiro está livre se nenhum adversário está a menos disto
   esperaMax: 5,               // s da bola morta — na saída curta o goleiro espera os zagueiros abrirem até isto...
   chegou: 3,                  // ...(a esta distância do lugar deles)
+  chegaVel: 1.0,              // m/s — com a corrida da cobrança (item 70), quem vem vindo (a esta velocidade ou mais) e chega até o fim dela já conta
   // zagueiros abertos: a ~aberto.u m da própria linha de fundo, a aberto.z m do meio (dentro da área, nos cantos);
   // o volante encosta na meia-lua; os laterais sobem pelos lados
   aberto: { u: 12.5, z: 17 }, volante: { u: 21, z: 0 }, laterais: { u: 30, z: 29 },
@@ -2129,6 +2130,50 @@ export const DISPUTA = {
   // círculo central: as duas filas de frente para o gol (o time que começa mais perto), `passo` m entre os jogadores
   circulo: { x: [1.7, 0.1], passo: 0.95 },
   esquina: 0.9,                 // m além da linha da área (o goleiro do time que bate, na linha de fundo)
+};
+
+// ------------------------------------------------------------------- Cobranças com corrida (item 70, P1; js/corrida.js)
+// O cobrador do pênalti, do escanteio, do tiro de meta e do tiro livre (direto e indireto) sai de um PONTO DE PARTIDA atrás
+// da bola e corre até ela pela locomoção do jogo (j.guia → passoCorpo/passoPassada); o contato é o toque de ação de sempre,
+// com o pé de apoio plantado ao lado da bola. Contrato "Cobranças com corrida (item 70, P1)" no CONTRATOS.md; pesquisa em
+// PESQUISA-ETAPA4.md §14. O saída de bola e o lateral não mudam.
+//  - perfis (por tipo; cada jogador tem a SUA corrida dentro das faixas, pelo id — sem sorteio): dist = m da bola ao ponto
+//    de partida; ang = graus fora do eixo da cobrança, para o lado do pé de apoio; vel = m/s pedidos na chegada.
+//    Pênalti 4–5 m a 25–35° (Scurr & Hall 2009: ângulo escolhido 30,3 ± 15,2°, 3–5 passadas; Isokawa & Lees 1988: 30–45°
+//    o melhor; Lees et al. 2010: 3 m dão 3–5 passos) a 3,6–4,4 m/s (Kellis & Katis 2007, Lees et al.: ~3–4 m/s). O tiro
+//    livre com o chute a gol corre como o pênalti; o de passe/lançamento, mais curto. Escanteio 2,5–4 m. Tiro de meta: 4–5,5 m
+//    no longo (o goleiro não sai de dentro do gol: a distância encolhe até o ponto ficar `linhaGol` m à frente da linha) e
+//    2,5–3 m no curto (o 1,5 m do plano daria ~1,2 m de corrida: 2–3 passos ainda).
+//  - apoio: o pé de apoio plantado `lado` m ao lado do centro da bola e `atras` m atrás (Scurr & Hall 2009: 32,7 ± 7 cm ao
+//    lado e 9,7 ± 8,1 cm atrás no ângulo escolhido; Hay 1993 em Kellis & Katis 2007: 5–28 cm ao lado, 5–10 cm atrás).
+//  - velMin/velMax: a faixa da velocidade da regulagem da passada (o regulador escolhe quantas passadas faltam para o pé de
+//    apoio pousar no ponto, com a velocidade mais perto da do perfil, dentro dela); `planta` m: o pé de apoio pousado a até
+//    isto do ponto conta como o apoio da batida; `max` s além da corrida prevista: o contato sai de qualquer jeito (trava
+//    proibida); `pousoUltimo` s: na última passada o pouso do pé de apoio é ajustado (passoPassada pousoEm) até isto antes.
+//  - escanteio: quem ataca a zona sai junto com o cobrador (bolas-paradas.js) até `zonaAntes` do caminho (a arrancada é no
+//    chute, como antes); a IA começa a corrida antes (a previsão da corrida), para a bola rolar no tempo de hoje.
+export const CORRIDA_COBRANCA = {
+  tipos: ['penalti', 'escanteio', 'tiroDeMeta', 'tiroLivre'],
+  perfis: {
+    penalti: { dist: [4.0, 5.0], ang: [25, 35], vel: [3.6, 4.4] },
+    tiroLivreChute: { dist: [4.0, 5.0], ang: [25, 35], vel: [3.6, 4.4] },
+    tiroLivrePasse: { dist: [2.6, 3.2], ang: [20, 30], vel: [3.0, 3.6] },
+    escanteio: { dist: [2.5, 4.0], ang: [25, 40], vel: [3.2, 4.0] },
+    tiroDeMetaLongo: { dist: [4.0, 5.5], ang: [30, 40], vel: [3.6, 4.4] },
+    tiroDeMetaCurto: { dist: [2.5, 3.0], ang: [20, 30], vel: [2.8, 3.3] },
+  },
+  apoio: { lado: 0.3, atras: 0.08 },
+  velMin: 2.6, velMax: 4.9,
+  planta: 0.6,
+  linhaGol: 0.6,                // m à frente da linha do gol, no mínimo (tiro de meta)
+  borda: 1.0,                   // m antes das placas (o entorno do campo)
+  max: 1.5,
+  pousoUltimo: 0.4,
+  acelUsa: 0.7,                 // × a aceleração (e a freada) do jogador que a regulagem conta (a locomoção chega com folga)
+  velVaria: 0.15,               // a regulagem procura a velocidade de cruzeiro a até ±15% da do perfil...
+  ritmo: [0.8, 1.2],            // ...e o ritmo da passada a até isto × o natural daquela velocidade (fora: mal visto)
+  zonaAntes: 0.35,
+  folgaZona: 0.25,              // s — a IA começa a corrida se quem está no raio sai dele até o fim dela com esta folga
 };
 
 // ------------------------------------------------------------------- Modo Livre (dono, 16/10; js/livre.js, CONTRATOS.md)
