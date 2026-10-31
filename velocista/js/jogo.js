@@ -909,6 +909,12 @@ function deitarHeroi(sim) {
   maca.visible = sim;
   if (sim) { maca.position.set(P.x - Math.sin(P.h) * 0.92, P.y, P.z - Math.cos(P.h) * 0.92); maca.rotation.y = P.h; }
 }
+/** o jornal do futuro (temporada da série): a mesma página do jornal da banca, com a manchete de 2024 */
+function jornalFuturo(sim) {
+  el.jornal.hidden = !sim; el.jornal.classList.toggle('futuro', sim);
+  if (sim) { el.jnTitulo.textContent = 'O FLASH DESAPARECE NA CRISE'; el.jnLinha.textContent = 'Depois de uma batalha que deixou um rastro de destruição, o herói de Central City sumiu sem deixar sinal. Por Iris West-Allen.'; el.jnData.textContent = 'Central City · Quinta-feira, 25 de abril de 2024'; }
+  else el.jnTitulo.textContent = '';
+}
 /** a noite em que a mãe morreu: raios amarelos e vermelhos girando pela sala */
 function raiosNaSala() {
   clarear(0.6);
@@ -1158,7 +1164,8 @@ function atravessarPorta(I, entrando) {
 registrarPontosLab(LAB_B.cx, LAB_B.cz);                                   // (a vitrine, a Caitlin e o Cisco dentro do laboratório)
 const POS_CINZAS = MISSOES.findIndex((m) => m.id === 'p2-celas'), FORA_CINZAS = new Set(['zoom']);   // a cela do Zoom vazia, só cinza
 // quem fugiu da contenção num passo da história e volta para a cela quando o capítulo dele é vencido (Parte 4: os Malandros)
-const FUGAS = [{ de: MISSOES.findIndex((m) => m.id === 'p4-celas'), ate: 'malandros', ids: ['frio', 'onda', 'mago'] }];
+const FUGAS = [{ de: MISSOES.findIndex((m) => m.id === 'p4-celas'), ate: 'malandros', ids: ['frio', 'onda', 'mago'] },
+  { de: MISSOES.findIndex((m) => m.id === 's1-transporte'), ate: 'malandros', ids: ['frio', 'onda', 'mago'] }];   // (a temporada da série: a fuga do transporte)
 function foraDasCelas() {
   const fora = new Set(POS_CINZAS >= 0 && (missoes.livre || missoes.indice >= POS_CINZAS) ? FORA_CINZAS : []);
   for (const f of FUGAS) if (!missoes.livre && f.de >= 0 && missoes.indice >= f.de && !viloes.vencido(f.ate)) f.ids.forEach((id) => fora.add(id));
@@ -1166,6 +1173,7 @@ function foraDasCelas() {
   return fora;
 }
 const NOME_SALA = { contencao: 'Câmara de contenção', cortex: 'Cortex', nucleo: 'Câmara do Núcleo', trajes: 'Sala dos trajes', medica: 'Sala médica', oficina: 'Oficina' };
+if (PESSOAL) NOME_SALA.alaLeste = 'A sala escondida';           // (a temporada da série: a sala do futuro, na ala leste)
 function alvoMissao() {
   if (interacoes.corrida) { const a = interacoes.alvo(); if (a) return a; }   // num desafio de corrida, o guia leva ao próximo ponto
   if (viloes.ativo) return viloes.alvo();                  // capítulo dos vilões: o guia leva até eles (na luta, nada)
@@ -1543,6 +1551,7 @@ const focosCena = () => {
   const fs = { heroi: focoHeroi, joe: () => aliados.foco('joe'), iris: () => aliados.foco('iris'), vulto: () => aliados.foco('vulto'), reverso: () => aliados.foco('reverso'), negro: () => aliados.foco('negro'), cigarra: () => aliados.foco('cigarra'),
     violeta: () => aliados.foco('violeta'), noraf: () => aliados.foco('violeta'),
     devoe: () => { const p = contencao.presos.devoe; return p?.raiz.visible ? { x: p.raiz.position.x, y: p.raiz.position.y, z: p.raiz.position.z } : null; } };
+  fs.thawne = () => aliados.foco('reverso') || (equipe.pronta ? equipe.focos().wells?.() ?? null : null);   // (temporada da série)
   for (const id of ['caitlin', 'cisco', 'wells']) fs[id] = () => (equipe.pronta && noCortex() && tempo.epoca !== 'ignicao' ? equipe.focos()[id]?.() ?? null : aliados.foco(id));   // (o Wells: só na temporada da série)
   return fs;
 };
@@ -1551,6 +1560,22 @@ const GANCHOS_CENA = {
   // a temporada da série (edição pessoal): os nove meses de coma (o Barry deitado numa maca no Cortex) e a noite da mãe
   prologo: { aoAcao: (a) => { if (a === 'deita') deitarHeroi(true); else if (a === 'acorda') { deitarHeroi(false); clarear(0.35); } }, depois: () => deitarHeroi(false) },
   'depois-s1-casa': { aoAcao: (a) => { if (a === 'raioCasa') raiosNaSala(); } },
+  // a onda e o dia que volta, e a corrida até a noite da mãe: o túnel do tempo em volta do herói
+  'depois-s1-um-dia': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, depois: () => { tempo.tunel = false; J.corridaCena = false; } },
+  'depois-s1-noite-nora': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, aoAcao: (a) => { if (a === 'raioCasa') { tempo.tunel = false; J.corridaCena = false; raiosNaSala(); } }, depois: () => { tempo.tunel = false; J.corridaCena = false; } },
+  // a sala escondida: a luz da Gideon e o jornal do futuro na tela
+  'depois-s1-sala': { aoAcao: (a) => { if (a === 'luzGideon') clarear(0.25); else if (a === 'jornalFuturo') jornalFuturo(true); else if (a === 'fechaJornal') jornalFuturo(false); }, depois: () => jornalFuturo(false) },
+  // o Wells se levanta da cadeira e, num raio vermelho, vira o homem de amarelo
+  'depois-s1-revelacao': { antes: () => aliados.carregar('reverso'), aoAcao: (a) => {
+    if (a === 'levanta') equipe.levantar('wells');
+    if (a === 'vira') {
+      J.wellsVirou = true; J.cenaAliados = { aliados: { reverso: 'cortexWells' } }; clarear(0.4);
+      const w = pontoMundo('cortexWells');
+      if (w) for (let i = 0; i < 12; i++) { const g = Math.random() * 6.28; combate.efeitos.raio(w.x, PISO_LAB + 0.3 + Math.random() * 1.6, w.z, w.x + Math.cos(g) * 2.5, PISO_LAB + Math.random() * 2, w.z + Math.sin(g) * 2.5, { vida: 0.45, desvio: 0.7, r: 2.8, g: 0.35, b: 0.2 }); }
+    }
+  }, depois: () => { J.wellsVirou = false; J.cenaAliados = null; equipe.sentar('wells'); } },
+  'depois-s1-eddie': { aoAcao: (a) => { if (a === 'apaga') clarear(0.7); } },
+  'depois-s1-singularidade': { aoAcao: (a) => { if (a === 'fecha') clarear(0.9); } },
   // a noite do raio: o Joe vai embora, o vulto aparece no canto escuro da perícia, faíscas, e o raio do Núcleo atravessa tudo
   'noite-do-raio': { aoAcao: (a) => {
     if (a === 'joeSai') J.cenaAliados = { aliados: {} };
@@ -1899,7 +1924,8 @@ function quadro() {
     ultBussola += dt; if (ultBussola > 0.2) { ultBussola = 0; atualizarBussola(); }
   }
   historia.atualizar(Math.min(dtBruto, 0.1));
-  equipe.atualizar(dt, P, { noCortex: noCortex(), quemFala: J.modo === 'cena' ? historia.quemFala : null, oculto: tempo.epoca === 'ignicao', fora: (J.cenaPasso || missoes.atual)?.semEquipe });
+  const semEquipe = (J.cenaPasso || missoes.atual)?.semEquipe;
+  equipe.atualizar(dt, P, { noCortex: noCortex(), quemFala: J.modo === 'cena' ? historia.quemFala : null, oculto: tempo.epoca === 'ignicao', fora: J.wellsVirou ? [...(semEquipe || []), 'wells'] : semEquipe });
   aliados.posicionar((J.cenaAliados || missoes.atual)?.aliados || null);
   aliados.atualizar(dt, P, { quemFala: J.modo === 'cena' ? historia.quemFala : null });
   passoVitrine(dt);                                                         // (também nas cenas: o traje gira na apresentação)
