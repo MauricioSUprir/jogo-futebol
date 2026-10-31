@@ -157,6 +157,7 @@ export function criarPartida(opc = {}) {
 export function teleportar(j, x, z, rumo) {
   j.x = x; j.z = z; j.vx = 0; j.vz = 0; j.ax = 0; j.az = 0; j.rumo = rumo; j.giro = 0; j.inv = false;
   j.ix = MD.cos(rumo); j.iz = MD.sin(rumo); j.imag = 0; j.intRumo = rumo; j.intW = 0;
+  j.imx = j.ix; j.imz = j.iz;
   // pés como os de um jogador recém-criado (jogador.js criarPe), com a passada recomeçando
   const rx = -MD.sin(rumo), rz = MD.cos(rumo);
   j.fase = 0;
@@ -1002,7 +1003,7 @@ export function cobrar(m, entrada) {
     const aGol = pr.tipo === 'penalti' || (pr.tipo === 'tiroLivre' && pr.direto);
     // a pessoa (não a demo nem a cobrança da IA pelo humano): dois toques no CHUTE = cavadinha (acoes.js)
     c.porHumano = !!entrada && !entrada.ia && !entrada.iaCobra;
-    aplicarEntrada(c, aGol && m.tick < pr.pronta && entrada ? { x: entrada.x ?? 0, z: entrada.z ?? 0, botoes: (entrada.botoes ?? 0) & ~BOTAO.CHUTE } : entrada, m.tick);
+    aplicarEntrada(c, aGol && m.tick < pr.pronta && entrada ? { x: entrada.x ?? 0, z: entrada.z ?? 0, mx: entrada.mx, mz: entrada.mz, botoes: (entrada.botoes ?? 0) & ~BOTAO.CHUTE } : entrada, m.tick);
     c.pedidoPedalada = false; // parado não pedala (o pedido ficaria para depois da cobrança)
     // cobrança mirada da pessoa (mira.js; a IA e a demo não)
     if (c.porHumano && TIPOS_MIRA.includes(pr.tipo)) {
@@ -1067,7 +1068,7 @@ function comecarArremesso(m, c, ia) {
     const k = opcaoMirada(m, c, ops, p.tipo === 'lancamento' ? COS_LONGO : -2);
     if (k >= 0) para = ops[k].id;
   }
-  const dir = p.dir ?? (c.imag > 0.3 ? { x: c.ix, z: c.iz } : { x: MD.cos(c.rumo), z: MD.sin(c.rumo) });
+  const dir = p.dir ?? (c.imag > 0.3 ? { x: c.imx, z: c.imz } : { x: MD.cos(c.rumo), z: MD.sin(c.rumo) }); // a mira (pela tela: C6)
   pr.arremesso = { tick0: m.tick, solta: m.tick + seg(LATERAL.tempo), tipo: p.tipo, forca: p.forca, para, longo, dx: dir.x, dz: dir.z };
   m.eventos.push({ tipo: 'arremesso', id: c.id, para });
   return false;

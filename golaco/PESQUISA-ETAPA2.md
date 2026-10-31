@@ -428,6 +428,83 @@ O comando apertado com a bola chegando fica guardado e sai no 1º contato, sem d
 
    Duas vezes a tecla de cruzamento = cruzamento baixo. TROCAR na Q. GOLEIRO segurado em G/Y. Fonte: EA FIFA 20 manual.
 
+### 2.12 Mira pelo que se vê na tela (C6, item 68 da FILA; 31/10)
+**O problema.** `controle.js paraMundo` levava o analógico ao gramado só pelo RUMO da câmera (o yaw). Isso só é certo com a
+câmera olhando de cima. Na TV o gramado é visto de lado e baixo: a profundidade fica achatada na tela (a 15° do celular, um
+metro de profundidade vira ~0,26 m na altura da tela) e as retas de profundidade convergem para o ponto de fuga. Empurrar o
+analógico na direção em que a pessoa VÊ o alvo mandava a mira para outro lugar.
+
+**Medido na main 630960d4** (`tools/teste-mira-tela.mjs`; a página de verdade, a câmera de verdade; 364 posições do último
+terço a cada 2,5 m; o analógico apontado do ponto da bola no gramado para o alvo no gramado, como a pessoa vê):
+
+| | celular 844×390 (TV a 15°) | PC 1280×720 (TV a 24,6°) |
+|---|---|---|
+| meio do gol visto → a mira cruza a linha mais perto do meio | 3,8% | 6,9% |
+| pau de longe visto → a mira cai no pau de longe | 1,4% | 3,0% |
+| meio do gol visto → o chute vai num CANTO (régua do C2) | 32,7% (29,7% no de perto) | 7,4% |
+| erro da mira (mediana / p95) | 28,0° / 46,6° | 19,6° / 33,8° |
+| câmera aproximada: erro p95 | 45,1° | 32,5° |
+| Modo Livre, câmeras Atrás e Jogador (celular): erro p95 | 22,3° e 21,9° | — |
+| pênalti (câmera atrás do cobrador): meio · trave +z · trave −z vistos | z = −2,50 · −0,54 · −2,50 m | igual |
+
+O erro é sempre para o mesmo lado: o rumo sozinho achata a profundidade, e a mira cai mais perto da câmera do que a pessoa
+apontou (o "pau de perto" quase sempre "acerta" por isso). No pênalti a câmera fica 1,9 m de lado: o meio do gol visto ia ao
+canto do lado dela.
+
+**O que se fez.** A direção da MIRA das ações (chute, passe, enfiada, lançamento, cruzamento, o lateral e a reposição do
+goleiro) é a direção NA TELA levada ao gramado pela câmera que desenhou o quadro: a reta do olho por cada ponto da tela até o
+plano y = 0, saindo do ponto do gramado da bola (ou do controlado, com a bola longe). A corrida e a condução seguem pelo rumo
+(paraMundo), como o dono aprovou. A página faz a conta (`controle.js miraPelaTela`, pura, chamada pelo `entrada.js` com a
+câmera que o `main.js` guarda a cada quadro) e manda a mira já no mundo (`e.mx`, `e.mz`); a lógica só a usa. Com a câmera que
+desenha, vale em qualquer câmera: a TV, a aproximada, a da bola parada, as do Modo Livre e a da disputa de pênaltis.
+
+**Fontes e o que aproveitamos.**
+- **three.js r170, `Raycaster.setFromCamera` + `Ray.intersectPlane`**
+  (https://threejs.org/docs/pages/Raycaster.html; o código da r170: a origem na posição da câmera e a direção pelo ponto NDC
+  desprojetado, `direction.set(x, y, 0.5).unproject(camera).sub(origin)`). Aproveitado: a definição — o ponto do gramado que
+  a pessoa vê atrás de cada ponto da tela. Em vez de dois raycasts (a bola e um ponto um pouco adiante na tela), a derivada
+  da projeção do gramado na tela (uma homografia: leva reta em reta) no ponto da bola, invertida. É a mesma direção, exata
+  para qualquer distância, sem cair acima do horizonte e sem depender do fov nem do formato da tela (o three.js usa o mesmo
+  foco nos dois eixos: pixel quadrado).
+- **Fórum do Godot, "Twin stick movement in 2.5D like Enter the Gungeon"**
+  (https://forum.godotengine.org/t/twin-stick-movement-in-2-5d-like-enter-the-gungeon/2577). Projeta a origem do tiro na
+  tela, pega o vetor da tela até o cursor e estica a vertical por √2 para uma câmera a 45°. Aproveitado: o princípio (a
+  vertical da tela é a profundidade encolhida pela inclinação). Aqui a correção sai da câmera de verdade: a 15° a
+  profundidade encolhe ~3,9×, não √2, e muda pelo quadro (as retas de profundidade convergem).
+- **Fórum da Unreal, "Twin stick aiming camera relative"**
+  (https://forums.unrealengine.com/t/solved-twin-stick-aiming-camera-relative/99244). É a prática comum: o controle relativo
+  à câmera pelo RUMO dela. Aproveitado: continua assim para a corrida e a condução. O movimento é contínuo e a pessoa corrige
+  vendo o corpo, enquanto a mira é um disparo só.
+- **Discussão da Unity, "top down shooter – shooting up and down in elevation"**
+  (https://discussions.unity.com/t/top-down-shooter-shooting-up-and-down-in-elevation/419067). O raycast no chão mira baixo
+  quando o alvo está no alto. Aproveitado: os alvos e a origem ficam NO GRAMADO. A bola anda no chão, e o gol visto é
+  ambíguo: na TV do celular o alto da trave de perto aparece na altura do pé da trave de longe (2,44 m de trave ≈ 9 m de
+  profundidade).
+- **Tutorial de chute do FIFA** (https://fifaaddiction.com/tutorials/shooting; comentário de leitor). O "relógio": 3 h = o
+  meio do gol, 2 h = o canto de longe, 1 h = para fora. O FIFA escolhe o canto por um ÂNGULO grande do analógico em relação
+  ao gol, não pelo ponto exato. É o mesmo desenho do `zBrutoAnalogico` (C2: o canto a ~33° da reta bola–gol) e ele fica. A
+  pergunta "o relógio muda com a câmera?" ficou sem resposta no próprio tutorial. Não achamos fonte oficial (EA FC,
+  eFootball) que diga se a mira do chute é relativa à câmera ou ao gol: a escolha aqui é pelo que se vê.
+
+**Depois** (a mesma ferramenta): a mira cai no alvo em 100% das posições, no celular e no PC, para os três alvos; o meio
+visto vira chute no meio em 100%; erro p95 0,03° (a quantização da entrada, 1/1024). Também com a câmera aproximada e as
+câmeras Atrás e Jogador do Modo Livre (p95 0,03°).
+
+**O pênalti.** Com a mira certa e o ganho do C2, a trave vista ia a só 1,6 m do meio: a 11 m o gol inteiro cabe em ±18°, e o
+canto do ganho pede ~33°. No pênalti DA PESSOA a mira do chute (e a da cavadinha) passa a ser o ponto da linha do gol para
+onde ela aponta (`acoes.js zNaLinhaDoGol`), limitado ao `penaltiCanto` (±2,5 m) como antes. Depois: meio 0,00, traves ±2,50
+(antes −2,50 · −0,54 · −2,50). A demo e a IA seguem com a conta de sempre.
+
+**Decisões para o dono.** No chute com a bola rolando, o pau visto vai a ~0,5–1,3 m do meio (zona do meio do C2). O canto
+continua a ~33° da reta bola–gol NO GRAMADO, e na tela do celular isso fica bem mais perto do meio. Conta à mão com a pose da
+câmera, a 20 m de frente para o gol: o canto começa a ±9,5° do meio visto no celular e ±15° no PC (antes, pelo rumo, ±33°, mas
+torto: de lado, +53°/−12°). Opções:
+- (a) manter assim;
+- (b) o canto pelo ângulo NA TELA em relação ao meio do gol visto: a janela de ±33° em qualquer câmera, mas precisa de mais
+  um dado na entrada (o ângulo do meio visto);
+- (c) a mira no ponto apontado também com a bola rolando (o pau visto = o pau). Só que de longe, no celular, o gol inteiro
+  cabe em poucos graus da tela, e quase todo chute iria a um canto: muda a calibração do C2.
+
 ## 3. O que aproveitamos de cada fonte
 
 **Dados de jogo e análises próprias**

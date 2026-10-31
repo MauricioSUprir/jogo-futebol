@@ -115,8 +115,8 @@ export function atualizarBotoesAcao(m, j) {
       soltarCarga(m, j);
     }
   }
-  // guarda a mira enquanto carrega ou espera o toque
-  if ((j.carga || j.pedido) && j.imag > 0.2) j.mira = { x: j.ix, z: j.iz, mag: j.imag };
+  // guarda a mira enquanto carrega ou espera o toque (a direção da mira: imx/imz — pela tela, C6)
+  if ((j.carga || j.pedido) && j.imag > 0.2) j.mira = { x: j.imx, z: j.imz, mag: j.imag };
   if (j.carga && (m.tick - j.carga.t0) * DT >= ACOES.cargaMax) soltarCarga(m, j);
   // (a cavadinha com o 2º toque ainda segurado não expira: a idade conta de novo quando ele é solto)
   if (j.pedido && !j.pedido.segura) {
@@ -233,11 +233,13 @@ export function processarPedido(m, j) {
 
 /**
  * Mira da ação: o analógico de agora ou, se ele já foi solto, o último segurado durante a carga
- * (quem solta o botão e o analógico juntos não perde a direção). {x, z, mag} ou null.
+ * (quem solta o botão e o analógico juntos não perde a direção). {x, z, mag} ou null. A direção é a da MIRA (j.imx/imz,
+ * sim.js aplicarEntrada: o analógico NA TELA levado ao gramado pela câmera — C6, contrato "Mira pela tela"; sem a tela,
+ * a do analógico), não a da corrida.
  */
 function mira(j) {
   if (j.miraAuto) return { x: j.miraAuto.x, z: j.miraAuto.z, mag: 1 }; // reposição automática
-  if (j.imag > 0.2) return { x: j.ix, z: j.iz, mag: j.imag };
+  if (j.imag > 0.2) return { x: j.imx, z: j.imz, mag: j.imag };
   return j.mira ?? null;
 }
 
@@ -865,6 +867,18 @@ function zPeloAnalogico(b, gx, lado, meio, mr) {
   return clamp(zBrutoAnalogico(b, gx, lado, meio, mr), -meio + 0.5, meio - 0.5);
 }
 
+/**
+ * O z da mira no PÊNALTI da pessoa (C6, contrato "Mira pela tela"): onde a reta da mira cruza a linha do gol — o que se vê
+ * na câmera atrás do cobrador (a trave vista = a trave; o meio visto = o meio). Com a mira pela tela, o ganho do chute
+ * (zBrutoAnalogico: o canto a ~33° da reta bola–gol) deixava a trave vista a 1,6 m do meio: a 11 m o gol inteiro cabe em
+ * ±18°. Mira para o lado ou para trás (não cruza a linha): o lado dela, além da trave. Quem chama limita à boca e ao
+ * ±penaltiCanto do pênalti.
+ */
+function zNaLinhaDoGol(b, gx, lado, meio, mr) {
+  if (mr.x * lado > 1e-3) return b.p.z + mr.z * (gx - b.p.x) / mr.x;
+  return (mr.z >= 0 ? 1 : -1) * meio * 1.4;
+}
+
 /** Goleiro adversário (o mais perto do gol atacado). */
 export function goleiroAdversario(m, time) {
   for (const o of m.jogadores) if (o.time !== time && o.posicao === 'GOL') return o;
@@ -891,7 +905,8 @@ function chute(m, j, pe, p, erroMult) {
   let zMira;
   const mr = mira(j);
   const mirado = !!(mr && mr.mag > 0.3);
-  const zBruto = mirado ? zBrutoAnalogico(b, gx, lado, meio, mr) : 0;
+  // (o pênalti da pessoa: o ponto da linha do gol para onde ela aponta — C6, zNaLinhaDoGol; a demo e a IA, a conta de sempre)
+  const zBruto = !mirado ? 0 : p.penalti && p.humano ? zNaLinhaDoGol(b, gx, lado, meio, mr) : zBrutoAnalogico(b, gx, lado, meio, mr);
   // a barra cheia (C2): só na bola rolando — o pênalti e o tiro livre com barreira ficam na mira de antes — e só com o
   // analógico apontado para um CANTO: a mira dele no ângulo, |z| ≥ meia-boca − cheia.zCanto (2,76 m: a régua do "no
   // ângulo"; ~33° fora da reta bola–gol; mira.js noCanto, a mesma régua da cobrança mirada). Decisão do dono (28/10: "só o
@@ -993,7 +1008,9 @@ function cavadinha(m, j, pe, p, erroMult, gx) {
     // depois da linha: de longe é um balão, de perto uma cavadinha curta)
     const meio = CAMPO.gol.largura / 2;
     const mr = mira(j);
-    const zM = mr && mr.mag > 0.3 ? zPeloAnalogico(b, gx, lado, meio, mr) : clamp(b.p.z * 0.4, -meio + 0.6, meio - 0.6);
+    // (no pênalti da pessoa, o ponto da linha do gol para onde ela aponta, como o chute: C6)
+    const zM = !(mr && mr.mag > 0.3) ? clamp(b.p.z * 0.4, -meio + 0.6, meio - 0.6)
+      : p.penalti && p.humano ? clamp(zNaLinhaDoGol(b, gx, lado, meio, mr), -meio + 0.5, meio - 0.5) : zPeloAnalogico(b, gx, lado, meio, mr);
     uz = zM - b.p.z;
     // (a Panenka sobe no máximo até penalti.elevMax: mais em pé que isso, de 11 m, é um balão de ~5 m que 1% de força
     // muda 0,3 m na altura em que chega ao goleiro)

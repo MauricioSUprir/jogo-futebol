@@ -2,27 +2,30 @@
 // PURO: sem DOM, sem three.js, sem relógio próprio (quem chama passa o tempo em ms); só aritmética exata.
 //
 // Por que funciona: a simulação é determinística (passo fixo, rng com semente, matemática exata — matdet.js), então os
-// dois aparelhos rodam a MESMA partida se receberem as MESMAS entradas nos MESMOS passos. Só as entradas viajam: 6 bytes
-// por passo de cada jogador. O passo n só roda quando as duas entradas de n existem; a minha entrada lida AGORA vale para
-// o passo n + D (o atraso D cobre a ida pela rede, ~50–170 ms). Sem a entrada do outro o aparelho PARA — e é isso que
+// dois aparelhos rodam a MESMA partida se receberem as MESMAS entradas nos MESMOS passos. Só as entradas viajam: 9 bytes
+// por passo de cada jogador (6 até a mira pela tela, C6). O passo n só roda quando as duas entradas de n existem; a minha
+// entrada lida AGORA vale para o passo n + D (o atraso D cobre a ida pela rede, ~50–170 ms). Sem a entrada do outro o aparelho PARA — e é isso que
 // sincroniza todo o resto sem mensagem nenhuma: a pausa, o replay e a comemoração são locais (quem está nelas não roda
 // passo nem produz entrada) e o outro simplesmente espera ("Aguardando o adversário"). Nada que é local entra no passo
-// (câmera, preferências, quadros por segundo, qual lado é o meu).
+// (câmera, preferências, quadros por segundo, qual lado é o meu) — a mira pela tela (C6) é feita com a câmera de cada
+// aparelho, mas viaja PRONTA, já no mundo (mx, mz), como o analógico.
 //
-// Formato da entrada (6 bytes, a mesma conta nos dois sentidos — a entrada LOCAL também passa por ela antes de ir para
+// Formato da entrada (9 bytes, a mesma conta nos dois sentidos — a entrada LOCAL também passa por ela antes de ir para
 // a simulação, senão um lado usaria o número cru e o outro o arredondado):
 //   0–2  x e z: inteiro clamp(round(v · 1024), −1024, 1024) + 1024 em 12 bits cada (a quantização ENTRADA.quant)
 //   3–4  botões (bits 0–14, config.js BOTAO) + bit 15 `repete` (2º passo do mesmo quadro a 30 qps: a mesma leitura)
 //   5    bit0 IA (a IA joga pelo meu controlado neste passo: menu aberto, editor, ausência — calculada DENTRO do passo,
 //        nos dois aparelhos); bit1 AÇÃO (há uma ação — a edição do time — para este passo no canal de controle)
+//   6–8  mx e mz (C6, a mira das ações pela tela, contrato "Mira pela tela"): os 12 bits de x e z; sem mira (a entrada
+//        sem `mx`), a do analógico (mx = x, mz = z — o mesmo que a simulação faz sem ela)
 // Pacote do canal 'jogo' (ArrayBuffer, little-endian; não confiável e sem ordem: leva TODAS as entradas ainda não
 // confirmadas, até 16):
 //   0 tipo = 1 · 1 n0 (u32: o passo da 1ª entrada) · 5 ack (u32: + 1 do maior passo do outro recebido sem buraco) ·
 //   9 nAgora (u32: o passo que o remetente executa) · 13 t (u16: relógio do remetente em ms, mod 65536) · 15 eco (u16:
 //   o último t recebido do outro) · 17 segurou (u16: ms entre receber esse t e mandar este pacote) · 19 estado (u8:
-//   bit0 30 qps, bit1 menu aberto, bit2 aba escondida) · 20 k (u8: entradas) · 21 6·k bytes.
+//   bit0 30 qps, bit1 menu aberto, bit2 aba escondida) · 20 k (u8: entradas) · 21 9·k bytes.
 
-export const BYTES = 6;
+export const BYTES = 9;
 export const MAX_ENTRADAS = 16;        // por pacote (≈ 267 ms de entradas sem confirmação)
 export const CABECALHO = 21;
 export const TIPO_JOGO = 1;
@@ -38,23 +41,36 @@ function inteiro(v) {
   return (r < -Q ? -Q : r > Q ? Q : r) + Q;
 }
 
-/** Codifica a entrada e = {x, z, botoes, repete?, ia?, acao?} em buf[o..o+5]. */
+/** Dois inteiros de 12 bits (0…2048) em buf[o..o+2]. */
+function par12(a, c, buf, o) {
+  buf[o] = a & 0xff;
+  buf[o + 1] = ((a >> 8) & 0x0f) | ((c & 0x0f) << 4);
+  buf[o + 2] = (c >> 4) & 0xff;
+}
+
+/** Codifica a entrada e = {x, z, mx?, mz?, botoes, repete?, ia?, acao?} em buf[o..o+8]. */
 export function codificar(e, buf, o = 0) {
   const xi = inteiro(e?.x), zi = inteiro(e?.z);
+  // a mira pela tela (C6); sem ela, a do analógico
+  const sem = e?.mx == null;
+  const mxi = sem ? xi : inteiro(e.mx), mzi = sem ? zi : inteiro(e.mz);
   const b = (((e?.botoes ?? 0) | 0) & 0x7fff) | (e?.repete ? 0x8000 : 0);
-  buf[o] = xi & 0xff;
-  buf[o + 1] = ((xi >> 8) & 0x0f) | ((zi & 0x0f) << 4);
-  buf[o + 2] = (zi >> 4) & 0xff;
+  par12(xi, zi, buf, o);
   buf[o + 3] = b & 0xff;
   buf[o + 4] = (b >> 8) & 0xff;
   buf[o + 5] = (e?.ia ? F_IA : 0) | (e?.acao ? F_ACAO : 0);
+  par12(mxi, mzi, buf, o + 6);
 }
 
-/** Decodifica buf[o..o+5] (o mesmo valor nos dois aparelhos: x e z em múltiplos exatos de 1/1024). */
+/** Decodifica buf[o..o+8] (o mesmo valor nos dois aparelhos: x, z, mx e mz em múltiplos exatos de 1/1024). */
 export function decodificar(buf, o = 0) {
   const xi = buf[o] | ((buf[o + 1] & 0x0f) << 8), zi = (buf[o + 1] >> 4) | (buf[o + 2] << 4);
   const b = buf[o + 3] | (buf[o + 4] << 8), f = buf[o + 5];
-  return { x: (xi - Q) / Q + 0, z: (zi - Q) / Q + 0, botoes: b & 0x7fff, repete: !!(b & 0x8000), ia: !!(f & F_IA), acao: !!(f & F_ACAO) };
+  const mxi = buf[o + 6] | ((buf[o + 7] & 0x0f) << 8), mzi = (buf[o + 7] >> 4) | (buf[o + 8] << 4);
+  return {
+    x: (xi - Q) / Q + 0, z: (zi - Q) / Q + 0, mx: (mxi - Q) / Q + 0, mz: (mzi - Q) / Q + 0,
+    botoes: b & 0x7fff, repete: !!(b & 0x8000), ia: !!(f & F_IA), acao: !!(f & F_ACAO),
+  };
 }
 
 /** A entrada como a simulação a recebe (codificada e decodificada): use SEMPRE esta, também na entrada local. */
@@ -64,10 +80,11 @@ export function quantizada(e) {
   return decodificar(b, 0);
 }
 
-/** Uma entrada válida? (bits reservados zerados; x/z dentro de −1024…1024). */
+/** Uma entrada válida? (bits reservados zerados; x, z, mx e mz dentro de −1024…1024). */
 export function entradaValida(buf, o = 0) {
   const xi = buf[o] | ((buf[o + 1] & 0x0f) << 8), zi = (buf[o + 1] >> 4) | (buf[o + 2] << 4);
-  return xi <= 2 * Q && zi <= 2 * Q && (buf[o + 5] & ~(F_IA | F_ACAO)) === 0;
+  const mxi = buf[o + 6] | ((buf[o + 7] & 0x0f) << 8), mzi = (buf[o + 7] >> 4) | (buf[o + 8] << 4);
+  return xi <= 2 * Q && zi <= 2 * Q && mxi <= 2 * Q && mzi <= 2 * Q && (buf[o + 5] & ~(F_IA | F_ACAO)) === 0;
 }
 
 /** Atraso D (passos) pelo RTT (ms) e se algum aparelho está a 30 qps (contrato 2.3). */

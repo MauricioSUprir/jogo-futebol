@@ -124,6 +124,13 @@ export function aplicarEntrada(j, e, tick) {
     }
     j.intRumo = r;
     j.ix = x / mag; j.iz = z / mag;
+    // a mira das ações (C6, contrato "Mira pela tela"): a direção do analógico NA TELA levada ao gramado pela câmera do
+    // quadro (a página manda e.mx/e.mz, quantizados como x/z); sem ela (IA, demo, a entrada que a defesa e a recepção
+    // montam, os testes de Node) a mesma do analógico. A corrida e a condução seguem com ix/iz
+    if (e.mx != null) {
+      const mx = quantizar(e.mx, q), mz = quantizar(e.mz ?? 0, q), mm = MD.hypot(mx, mz);
+      if (mm > 1e-9) { j.imx = mx / mm; j.imz = mz / mm; } else { j.imx = j.ix; j.imz = j.iz; }
+    } else { j.imx = j.ix; j.imz = j.iz; }
   } else {
     j.intW *= MD.exp(-PASSO / 0.1);
   }
