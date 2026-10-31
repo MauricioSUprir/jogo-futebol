@@ -150,7 +150,7 @@ const CAPITULOS_NORMAL = [
   { id: 'antimonitor', titulo: 'Capítulo 21 — A Crise', viloes: ['antimonitor', 'sombraA', 'sombraB'], perseguicao: false, texto: 'O Antimonitor e as sombras dele em frente ao S.T.A.R. Labs. A onda está chegando.' },
 ];
 /** na edição pessoal, os capítulos da temporada da série (js/serie.js): a ordem e o texto dela, o resto o do capítulo de mesmo id */
-export const CAPITULOS = PESSOAL ? CAPITULOS_SERIE.map((c) => ({ ...CAPITULOS_NORMAL.find((n) => n.id === c.id), ...c })) : CAPITULOS_NORMAL;
+export const CAPITULOS = PESSOAL ? CAPITULOS_SERIE.map((c) => ({ ...CAPITULOS_NORMAL.find((n) => n.id === (c.base || c.id)), ...c })) : CAPITULOS_NORMAL;   // (base: um capítulo novo com o vilão e o jeito de outro)
 const DANO = { soco: 5, gancho: 9, raio: 14, ciclone: 18, sonico: 28 };
 const CHAVE = 'theflash.viloes.v1';
 const eixo = (k) => k * CELL - MEIO;

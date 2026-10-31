@@ -29,59 +29,105 @@ const N = resumo(false), S = resumo(true);
 
 // ---- 1. a versão normal não muda; a pessoal é a temporada ----
 ok(N.missoes[0].id === 'lab' && N.missoes.length > 150 && N.cenas['noite-do-raio'][0].rotulo === 'Seis semanas atrás' && !N.pers.wells, 'sem a senha: a história de sempre (começa no "lab", a noite do raio de seis semanas atrás, sem o Wells)');
-ok(S.missoes.every((m) => m.id.startsWith('s1-')) && S.missoes.length >= 20, `com a senha: só os passos da temporada (${S.missoes.length})`);
+ok(S.missoes.every((m) => m.id.startsWith('s1e')) && S.missoes.length >= 20, `com a senha: só os passos da temporada (${S.missoes.length})`);
 ok(S.cenas['noite-do-raio'][0].titulo === 'A noite do acelerador' && /Harrison Wells/.test(JSON.stringify(S.cenas['noite-do-raio'])), 'a abertura é a noite do acelerador, com o Dr. Harrison Wells na TV');
 
 // ---- 2. cada passo tem o que precisa ----
 const marcos = ler('js/marcos.js'), viloes = ler('js/viloes.js'), serie = ler('js/serie.js');
 const pontos = new Set([...(marcos + ler('js/interiores.js')).matchAll(/([a-zA-Z0-9]+): [[{]/g)].map((m) => m[1]));
-const capsSerie = [...serie.matchAll(/\{ id: '([a-z0-9]+)', titulo: 'Capítulo/g)].map((m) => m[1]);
+const capsSerie = [...serie.matchAll(/\{ id: '([a-z0-9-]+)',(?: base: '([a-z0-9]+)',)?[^\n]*titulo: 'Ep\. /g)].map((m) => ({ id: m[1], base: m[2] || m[1] }));
 const capsNormal = new Set([...viloes.matchAll(/\{ id: '([a-z0-9]+)', titulo: '/g)].map((m) => m[1]));
-ok(capsSerie.every((c) => capsNormal.has(c)), `os capítulos da temporada existem em viloes.js (${capsSerie.join(', ')})`);
+ok(capsSerie.length >= 6 && capsSerie.every((c) => capsNormal.has(c.base)), `os capítulos da temporada partem de capítulos que existem em viloes.js (${capsSerie.map((c) => c.id).join(', ')})`);
 const semPonto = S.missoes.filter((m) => m.ponto && !pontos.has(m.ponto)).map((m) => `${m.id}:${m.ponto}`);
 ok(!semPonto.length, `todo lugar dos passos existe no mapa (${semPonto.join(', ')})`);
-ok(S.missoes.filter((m) => m.capitulo).every((m) => capsSerie.includes(m.capitulo)), 'todo capítulo dos passos está na lista da temporada');
+ok(S.missoes.filter((m) => m.capitulo).every((m) => capsSerie.some((c) => c.id === m.capitulo)) && new Set(S.missoes.filter((m) => m.capitulo).map((m) => m.capitulo)).size === S.missoes.filter((m) => m.capitulo).length, 'todo capítulo dos passos está na lista da temporada, e cada um uma vez só');
 ok(new Set(S.missoes.map((m) => m.id)).size === S.missoes.length, 'nenhum passo repetido');
 const STATS = /const STATS0 = \{([^}]*)\}/.exec(ler('js/missoes.js'))[1];
-ok(S.missoes.filter((m) => m.contador).every((m) => new RegExp(`\\b${m.contador}:`).test(STATS)), 'todo contador dos passos existe');
-const ACOES = new Set(['joeSai', 'tempestade', 'raio', 'deita', 'acorda', 'raioCasa', 'luzGideon', 'jornalFuturo', 'fechaJornal', 'levanta', 'vira', 'apaga', 'fecha']);
-const quem = new Set(Object.keys(S.pers)), faltam = new Set(), acoesRuins = new Set();
-for (const [id, falas] of Object.entries(S.cenas)) for (const f of falas) { if (!f.cartao && !quem.has(f.quem)) faltam.add(`${id}:${f.quem}`); if (f.acao && serie.includes(`'${id}'`) && !ACOES.has(f.acao)) acoesRuins.add(`${id}:${f.acao}`); }
+ok(S.missoes.filter((m) => m.contador).every((m) => new RegExp(`\\b${m.contador}:`).test(STATS)), 'todo contador dos passos existe (inclusive os cachorros-quentes do episódio 2)');
+const ACOES = new Set(['joeSai', 'tempestade', 'raio', 'deita', 'acorda', 'raioCasa', 'luzGideon', 'jornalFuturo', 'fechaJornal', 'levanta', 'senta', 'vira', 'desvira', 'someReverso', 'tunel', 'fimTunel', 'clarao']);
+const quem = new Set(Object.keys(S.pers)), faltam = new Set(), acoesRuins = new Set(), cartaoComAcao = [];
+const daSerie = (id) => serie.includes(`'${id}': [`) || serie.includes(`\n  ${id}: [`);
+for (const [id, falas] of Object.entries(S.cenas)) for (const f of falas) {
+  if (!f.cartao && !quem.has(f.quem)) faltam.add(`${id}:${f.quem}`);
+  if (f.acao && daSerie(id) && !ACOES.has(f.acao)) acoesRuins.add(`${id}:${f.acao}`);
+  if (f.cartao && f.acao) cartaoComAcao.push(id);
+}
 for (const fs2 of [...Object.values(S.radio), ...Object.values(S.falas).flatMap((o) => Object.values(o))]) for (const f of fs2) if (!quem.has(f.quem)) faltam.add(f.quem);
 ok(!faltam.size, `toda fala é de alguém que existe (${[...faltam].slice(0, 5).join(', ')})`);
-ok(!acoesRuins.size, `as cenas da temporada só usam ações que o jogo conhece (${[...acoesRuins].join(', ')})`);
+ok(!acoesRuins.size, `as cenas só usam ações que o jogo conhece (${[...acoesRuins].join(', ')})`);
+ok(!cartaoComAcao.length, `nenhum cartão com ação (cartão não dispara ação: ${cartaoComAcao.join(', ')})`);
 const ids = new Set(S.missoes.map((m) => m.id));
-const orfas = Object.keys(S.cenas).filter((k) => k.startsWith('depois-s1-') && !ids.has(k.slice(7)));
-ok(!orfas.length, `toda cena "depois-" da temporada tem o passo dela (${orfas.join(', ')})`);
-ok(S.cenas['prologo'].some((f) => f.acao === 'deita' && !f.cartao) && S.cenas['prologo'].some((f) => f.acao === 'acorda'), 'as ações do coma ficam em falas (cartão não dispara ação)');
+const orfas = Object.keys(S.cenas).filter((k) => k.startsWith('depois-s1') && !ids.has(k.slice(7)));
+ok(!orfas.length, `toda cena "depois-" tem o passo dela (${orfas.join(', ')})`);
+const abre = S.missoes.filter((m) => m.cenaAbre).map((m) => m.cenaAbre);
+ok(abre.every((c) => S.cenas[c]), 'toda cena de abertura de episódio existe');
+const POV = [...serie.matchAll(/'(pov-[a-z0-9]+)'/g)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i);
+ok(POV.length >= 12 && POV.every((c) => abre.includes(c) && S.cenas[c]) && /export const CENAS_NO_LAB = new Set\(\[/.test(serie), `as cenas sem o Barry (o Wells sozinho) abrem os passos certos (${POV.length})`);
 
-// ---- 3. o que o dono pediu ----
-const txt = (c) => JSON.stringify(S.cenas[c] || []);
-ok(['Semana 1', 'Mês 3', 'Mês 6', 'Mês 9'].every((m) => txt('prologo').includes(m)) && /Nove meses/.test(txt('prologo')), 'os nove meses de coma, mês a mês, no prólogo');
-ok(/"quem":"wells"/.test(txt('prologo')) && /"quem":"wells"/.test(txt('depois-s1-volta')) && S.pers.wells.nome === 'Dr. Harrison Wells', 'o Dr. Harrison Wells cuidando do coma e explicando os poderes');
-const lib = S.missoes.map((m, i) => [m.libera, i]).filter(([l]) => l).flatMap(([l, i]) => l.map((t) => [t, i]));
-const pos = Object.fromEntries(lib);
-ok(pos.ciclone < pos.raio && pos.raio < pos.sonico && Object.keys(pos).length === 3, `o Barry aprende os golpes num treino cada: ciclone (passo ${pos.ciclone}), raio (${pos.raio}), sônico (${pos.sonico})`);
-ok(S.missoes.some((m) => m.id === 's1-parede') && S.missoes.some((m) => m.id === 's1-vibrar') && S.missoes.some((m) => m.id === 's1-teste'), 'os treinos do Wells: velocidade, escalar e vibrar');
-ok(/Iron Heights/.test(txt('depois-s1-presidio')) && /"quem":"pai"/.test(txt('depois-s1-presidio')), 'a visita ao pai em Iron Heights');
-ok(/Quinze anos atrás/.test(txt('depois-s1-casa')) && /"quem":"nora"/.test(txt('depois-s1-casa')) && /amarelo/.test(txt('depois-s1-casa')), 'a noite em que a mãe morreu, com o homem de amarelo dentro do raio');
-ok(S.missoes.some((m) => m.capitulo === 'reverso') && /O homem de amarelo/.test(S.pers.reverso.nome), 'o homem de amarelo (ainda sem rosto nesta parte)');
-ok(/Continua\.\.\./.test(txt('depois-s1-casa')), 'a parte 1 termina com o "Continua..."');
-// a parte 2: a suspeita, o futuro, Eobard Thawne, a noite da Nora e o fim da temporada
-ok(/"quem":"gideon"/.test(txt('depois-s1-sala')) && /2024/.test(txt('depois-s1-sala')) && /West\.\.\. Allen/.test(txt('depois-s1-sala')) && S.cenas['depois-s1-sala'].some((f) => f.acao === 'jornalFuturo'), 'o futuro: a sala escondida, a Gideon e o jornal de 2024 assinado por Iris West-Allen');
-ok(/Vinte e quatro horas antes/.test(txt('depois-s1-um-dia')) && S.missoes.find((m) => m.id === 's1-um-dia')?.tipo === 'tunel', 'o Barry corre mais rápido que o tempo e volta um dia');
-{ const r = txt('depois-s1-revelacao'), i = S.cenas['depois-s1-revelacao'];
-  ok(/Eobard Thawne/.test(r) && i.findIndex((f) => f.acao === 'levanta') < i.findIndex((f) => f.acao === 'vira') && /menino de onze anos/.test(r) && /a sua mãe|minha mãe/.test(r) && /rosto/.test(r), 'a revelação: o Wells se levanta da cadeira, vira o Eobard Thawne, o plano de matar o Barry criança, a mãe e o rosto roubado'); }
-ok(S.missoes.find((m) => m.id === 's1-thawne')?.capitulo === 'reverso2' && S.missoes.slice(S.missoes.findIndex((m) => m.id === 's1-thawne')).every((m) => m.semEquipe?.includes('wells')), 'depois da revelação, a luta com o Thawne e o Wells some do Cortex');
-ok(/Quinze anos atrás/.test(txt('depois-s1-noite-nora')) && /balançando a cabeça/.test(txt('depois-s1-noite-nora')) && /Eu te amo, mãe/.test(txt('depois-s1-noite-nora')), 'a volta à noite da Nora: o Flash do futuro diz não, e a despedida');
-ok(/"quem":"eddie"/.test(txt('depois-s1-eddie')) && S.missoes.find((m) => m.id === 's1-singularidade')?.crise && /Temporada 1/.test(txt('depois-s1-singularidade')), 'o Eddie, a singularidade (o céu da crise) e o fim da temporada 1');
-ok(['malandros', 'reverso2'].every((c) => capsSerie.includes(c)), 'os capítulos da parte 2: a fuga da contenção e Eobard Thawne');
+// ---- 3. igual à série: os 23 episódios, na ordem, com os títulos brasileiros (pesquisa: Wikipédia EN e PT) ----
+const TITULOS = ['Piloto', 'O Homem Mais Rápido Vivo', 'O Que Não Dá Para Ultrapassar', 'Trapaceando', 'Plástico', 'O Surgimento do Flash', 'Queda de Energia', 'Flash vs. Arqueiro',
+  'O Homem na Roupa Amarela', 'A Vingança dos Trapaceiros', 'O Som e a Fúria', 'Louco por Você', 'O Homem Nuclear', 'Recaída', 'Fora do Tempo', 'Tempo Trapaceiro', 'Trapaceiros',
+  'Todo o Time Unido', 'Quem é Harrison Wells?', 'A Armadilha', 'As Vidas de Grodd', 'Trapaça no Ar', 'Rápido o Suficiente'];
+// a ordem em que o jogador vê os cartões: o prólogo, depois a abertura de cada passo e a cena depois dele
+const ordem = [...S.cenas.prologo];
+for (const m of S.missoes) { if (m.cenaAbre) ordem.push(...S.cenas[m.cenaAbre]); ordem.push(...(S.cenas[`depois-${m.id}`] || [])); }
+const eps = ordem.filter((f) => f.cartao && /^Episódio \d+$/.test(f.rotulo)).map((f) => [Number(f.rotulo.slice(9)), f.titulo]);
+ok(eps.length === 23 && eps.every(([n, t], i) => n === i + 1 && t === TITULOS[i]), `os 23 episódios aparecem na ordem, com os títulos brasileiros (${eps.length}: ${eps.slice(-2).map((e) => e.join(' ')).join(', ')})`);
+// em que episódio cada passo e cada cena caem
+const epDo = {}; { let e = 1; for (const m of S.missoes) { if (m.cenaAbre) for (const f of S.cenas[m.cenaAbre]) if (f.cartao && /^Episódio \d+$/.test(f.rotulo)) e = Number(f.rotulo.slice(9)); epDo[m.id] = e; } }
+const txtEp = (n) => JSON.stringify(S.missoes.filter((m) => epDo[m.id] === n).flatMap((m) => [m, ...(S.cenas[`depois-${m.id}`] || [])]));
+const tudo = (c) => JSON.stringify(S.cenas[c] || []);
+const fatos = [
+  [1, ['Clyde Mardon', 'Ferris Air', 'Starling City', 'Um tiro', 'Flash'], 'Ep. 1: o teste no Ferris Air, o Oliver em Starling, o Clyde Mardon, o tornado, o Joe atira e o nome Flash'],
+  [2, ['Danton Black', 'Multiplex', 'Hipoglicemia', 'cachorros-quentes'], 'Ep. 2: o Multiplex e a fome do metabolismo acelerado'],
+  [3, ['Kyle Nimbus', 'Ronnie', 'Iron Heights', 'cela'], 'Ep. 3: o Névoa, a prisão no anel do acelerador e o Ronnie'],
+  [4, ['Leonard Snart', 'Felicity', 'pistola de frio', 'Mick'], 'Ep. 4: o Snart com a pistola de frio, a Felicity e o encontro com o Mick Rory'],
+  [5, ['Bette', 'Eiling', 'rio'], 'Ep. 5: a Bette Sans Souci, o General Eiling e a bomba no rio'],
+  [6, ['Tony Woodward', 'Mach 1', 'O Flash', 'arquivo da Nora Allen'], 'Ep. 6: o Girder, o soco supersônico, o nome dado à Iris e o homem de amarelo ameaçando o Joe'],
+  [7, ['Farooq', 'Tockman', 'velocidade sumiu'], 'Ep. 7: o Blackout drena a velocidade e o Tockman na Delegacia'],
+  [8, ['Bivolo', 'Oliver', 'Ronnie', 'força-tarefa'], 'Ep. 8: o Bivolo, o Flash contra o Arqueiro e o rosto do Ronnie no fogo'],
+  [9, ['Mercury Labs', 'táquions', 'apaixonado', 'armadilha'], 'Ep. 9: a Mercury Labs, a confissão para a Iris e a armadilha'],
+  [10, ['Caitlin', 'Lisa'], 'Ep. 10: o Snart e o Rory sequestram a Caitlin; a Lisa tira os dois do transporte'],
+  [11, ['Hartley', 'podia explodir'], 'Ep. 11: o Hartley Rathaway e o risco que o Wells sabia'],
+  [12, ['Shawna', 'Linda', 'jeito de correr', 'FUNDIRAM'], 'Ep. 12: a Peek-a-Boo, a Linda Park, o pai desconfiando e o Ronnie fundido com o Stein'],
+  [13, ['Stein', 'Barry adulto', 'explodir'], 'Ep. 13: o Firestorm e o sangue do Barry adulto na casa'],
+  [14, ['Eiling', 'voltar', 'Mason'], 'Ep. 14: o exército, o Ronnie e o Stein indo embora e o Barry decidido a voltar no tempo'],
+  [15, ['Mark Mardon', 'eu sou o Flash', 'Vinte e quatro horas antes'], 'Ep. 15: o Mark Mardon, a Iris sabendo e o Barry voltando um dia no tempo'],
+  [16, ['vivo', 'Lisa', 'Fechado'], 'Ep. 16: o Cisco vivo de novo, o sequestro pela Lisa e o trato com o Snart'],
+  [17, ['Axel Walker', 'James Jesse', 'bomba', 'homem de amarelo'], 'Ep. 17: os Trapaceiros, a bomba e o Barry contando que o Wells é o homem de amarelo'],
+  [18, ['Ray Palmer', 'Brie Larvan', 'Tina', 'sonhos'], 'Ep. 18: o Ray Palmer, as abelhas-robô da Brie Larvan e os sonhos do Cisco'],
+  [19, ['Hannibal Bates', 'verdadeiro Harrison Wells', '2024'], 'Ep. 19: o Everyman, o corpo do verdadeiro Wells e a sala escondida com o jornal de 2024'],
+  [20, ['óculos', 'Hannibal Bates', 'você vai morrer'], 'Ep. 20: as memórias do Cisco, a armadilha, o Joe atira no Bates e a promessa do Wells ao Barry em coma'],
+  [21, ['Grodd', 'trem', 'Eiling'], 'Ep. 21: o Grodd controlando o Eiling e o trem'],
+  [22, ['cadeira de rodas', 'Lian Yu', 'nanites', 'ficha'], 'Ep. 22: a cadeira de rodas, o transporte, o Snart e as nanites do Arqueiro'],
+  [23, ['odiava o Flash', 'marido e mulher', 'balançando a cabeça', 'Eu te amo, mãe', 'buraco negro', 'Temporada 2'], 'Ep. 23: o porquê do Thawne, o casamento, a despedida da Nora, o Eddie, o buraco negro e "continua"'],
+];
+const textoEp = (n) => txtEp(n) + JSON.stringify(Object.entries(S.cenas).filter(([k]) => (k.startsWith('pov-') || k.startsWith('ep-') || k.startsWith('cap-') || k.startsWith('encontro-') || k.startsWith('derrotado-')) && S.missoes.some((m) => epDo[m.id] === n && (m.cenaAbre === k || (m.capitulo && k.endsWith(`-${m.capitulo}`))))).map(([, v]) => v));
+for (const [n, palavras, msg] of fatos) { const t = textoEp(n), faltando = palavras.filter((p) => !t.includes(p)); ok(!faltando.length, `${msg}${faltando.length ? ` (falta: ${faltando.join(', ')})` : ''}`); }
+// as revelações no episódio certo (o que a série mostra sem o Barry)
+ok(/2024/.test(tudo('pov-e2')) && tudo('pov-e2').indexOf('jornalFuturo') < tudo('pov-e2').indexOf('Episódio 2'), 'o fim do episódio 1: o Wells sozinho, andando, lendo o jornal de 2024');
+ok(/Stagg/.test(tudo('pov-e3')) && tudo('pov-e3').indexOf('Stagg') < tudo('pov-e3').indexOf('Episódio 3'), 'o fim do episódio 2: o Wells vai até o Stagg');
+ok(/raio/.test(tudo('pov-e4')) && /gravação/.test(tudo('pov-e4')), 'o fim do episódio 3: o Wells assistindo à gravação do raio na perícia');
+ok(/Grodd/.test(tudo('pov-e6')), 'o fim do episódio 5: o Wells e o Grodd numa jaula, cinco anos antes');
+ok(S.cenas['pov-e10'].some((f) => f.acao === 'vira') && tudo('pov-e10').indexOf('vira') < tudo('pov-e10').indexOf('Episódio 10'), 'o fim do episódio 9: o Wells é o homem de amarelo (o traje na sala escondida)');
+ok(/Eobard Thawne/.test(tudo('pov-cisco')) && S.cenas['pov-cisco'].findIndex((f) => f.acao === 'levanta') < S.cenas['pov-cisco'].findIndex((f) => f.acao === 'vira') && epDo['s1e15-iris'] === 15, 'episódio 15: o Wells se levanta para o Cisco, diz que é o Eobard Thawne e mata o Cisco (na linha do tempo que o Barry desfaz)');
+ok(/Mason/.test(tudo('pov-e17')) && /Tess/.test(tudo('pov-e18')) && /De hoje em diante, eu sou Harrison Wells/.test(tudo('pov-e18')), 'episódios 16 e 17: o Mason some; e o Thawne mata o verdadeiro Wells e toma o lugar dele');
+ok(/criou/.test(tudo('ep-20')) && /se casa/.test(tudo('ep-20')), 'episódio 20: a Gideon conta que o Barry a criou e que ele se casa com a Iris');
+// os poderes no episódio em que a série mostra o Barry aprendendo
+const lib = Object.fromEntries(S.missoes.flatMap((m) => (m.libera || []).map((t) => [t, epDo[m.id]])));
+ok(lib.ciclone === 1 && lib.sonico === 6 && lib.vibrar === 17 && lib.raio === 23 && S.missoes.at(-1).libera?.includes('raio'), `os poderes no episódio da série: ciclone no 1 (o tornado), soco supersônico no 6, atravessar vibrando no 17; o raio só depois da temporada (${JSON.stringify(lib)})`);
+ok(S.missoes.find((m) => m.id === 's1e7-refens')?.semEnergia && S.missoes.find((m) => m.id === 's1e7-refens')?.teto <= 8, 'episódio 7: sem a velocidade (o Blackout drenou)');
+ok(S.missoes.filter((m) => epDo[m.id] >= 20 && m.id !== 's1e20-memorias' && m.id !== 's1e20-plano' && m.id !== 's1e20-armadilha').every((m) => m.semEquipe?.includes('wells')), 'depois que a armadilha o desmascara (episódio 20), o Wells some do Cortex');
+ok(S.missoes.filter((m) => m.reversoPreso).every((m) => epDo[m.id] === 23), 'o Flash Reverso só fica na cela depois de preso pelas nanites (episódio 23)');
+ok(S.missoes.find((m) => m.id === 's1e23-buraco')?.crise, 'o buraco negro: o céu da crise');
 
 // ---- 4. no jogo ----
 const jogo = ler('js/jogo.js');
 ok(/CHAVES_HISTORIA = new Set\(\['theflash\.missoes\.v2'/.test(jogo) && /c\.replace\('theflash\.', 'theflash\.serie\.'\)/.test(jogo), 'o progresso da temporada em chaves próprias (theflash.serie.*)');
-ok(/const podeEspecial = \(t\) =>/.test(jogo) && /!podeEspecial\(t\)\) return;/.test(jogo), 'golpe especial trancado até o treino que ensina');
-ok(/POS_VESTE >= 0 &&/.test(jogo) && /POS_TEMPO >= 0 &&/.test(jogo) && /POS_TEMPESTADE >= 0 &&/.test(jogo), 'sem o traje novo, o tempo lento e a tempestade na temporada (os passos deles não existem nela)');
+ok(/const podeEspecial = \(t\) =>/.test(jogo) && /!podeEspecial\(t\)\) return;/.test(jogo) && /querVibrar && podeEspecial\('vibrar'\)/.test(jogo), 'golpe especial e vibrar trancados até o episódio que ensina');
+ok(/POS_VESTE >= 0 &&/.test(jogo) && /POS_TEMPO >= 0 &&/.test(jogo) && /POS_TEMPESTADE >= 0 &&/.test(jogo), 'sem o traje novo, o tempo lento e a tempestade na temporada');
+ok(/function cenaNoLab\(on\)/.test(jogo) && /J\.heroiFora/.test(jogo) && /heroi\.visible = !J\.heroiFora/.test(jogo), 'as cenas sem o Barry: ele some e volta para onde estava');
+ok(/m\.crimeNome/.test(jogo) && /crimeTexto/.test(jogo), 'o crime leva o nome do meta do episódio');
 ok(/if \(PESSOAL\) LUGARES\.wells = \{/.test(ler('js/equipe.js')) && fs.existsSync(path.join(RAIZ, 'assets/personagens/wells/corpo.bin')) && fs.existsSync(path.join(RAIZ, 'assets/personagens/retratos/wells.webp')), 'o Wells no Cortex (corpo e retrato próprios)');
 
 if (process.argv.includes('--navegador')) {
@@ -93,6 +139,7 @@ if (process.argv.includes('--navegador')) {
   await pagina.goto(srv.url + '?historia=1');
   await pagina.waitForSelector('#btnJogar:not([hidden])');
   await pagina.evaluate(() => { Element.prototype.requestFullscreen = undefined; document.getElementById('btnJogar').click(); });
+  const quadros = (n) => pagina.evaluate((n) => new Promise((r) => { let k = 0; const f = () => (++k >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
   await pagina.waitForFunction(() => window.__rel.historia.cenaAtual === 'noite-do-raio', null, { polling: 300 });
   ok(await pagina.evaluate(() => window.__rel.historia.cartaoAtual === 'Nove meses atrás — A noite do acelerador'), 'a abertura: "Nove meses atrás — A noite do acelerador"');
   await pagina.evaluate(() => window.__rel.historia.pular());
@@ -102,35 +149,38 @@ if (process.argv.includes('--navegador')) {
   ok(true, 'o coma: o Barry deitado na maca do Cortex');
   await pagina.evaluate(() => window.__rel.historia.pular());
   await pagina.waitForFunction(() => window.__rel.J.modo === 'jogando' && window.__rel.J.deitado === false, null, { polling: 300 });
-  ok(await pagina.evaluate(() => window.__rel.missoes.atual?.id === 's1-jitters' && window.__rel.J.roupa === 'civil'), 'acordou: o 1º passo (o Jitters), à paisana');
+  ok(await pagina.evaluate(() => window.__rel.missoes.atual?.id === 's1e1-jitters' && window.__rel.J.roupa === 'civil'), 'acordou: o 1º passo do episódio 1 (o Jitters), à paisana');
   await pagina.waitForFunction(() => window.__rel.equipe.pronta, null, { polling: 500 });
   ok(await pagina.evaluate(() => typeof window.__rel.equipe.focos().wells === 'function'), 'o Wells está no Cortex');
-  const quadros = (n) => pagina.evaluate((n) => new Promise((r) => { let k = 0; const f = () => (++k >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
-  await quadros(4);                                      // (os botões se atualizam no quadro do jogo)
-  ok(await pagina.evaluate(() => ['raio', 'ciclone', 'sonico'].every((t) => document.getElementById(`bt-${t}`).classList.contains('bloq'))), 'no começo, nenhum golpe especial (ainda não aprendeu)');
-  await pagina.evaluate(() => window.__rel.missoes.irPara('s1-raio'));
   await quadros(4);
-  ok(await pagina.evaluate(() => !document.getElementById('bt-ciclone').classList.contains('bloq') && document.getElementById('bt-sonico').classList.contains('bloq')), 'no treino do raio: o raio e o ciclone (aprendido antes) liberados, o sônico ainda não');
-  ok(await pagina.evaluate(() => JSON.parse(localStorage.getItem('theflash.serie.missoes.v2') || '{}').id === 's1-raio' && JSON.parse(localStorage.getItem('theflash.missoes.v2')).id === 'cafe'), 'o progresso da temporada fica em theflash.serie.* e o da história normal não muda');
-  // a sala escondida: chegou na ala leste, a cena com a Gideon e o jornal de 2024 na tela
+  ok(await pagina.evaluate(() => ['raio', 'ciclone', 'sonico'].every((t) => document.getElementById(`bt-${t}`).classList.contains('bloq')) && document.getElementById('btVibrar').classList.contains('bloq')), 'no começo, nenhum golpe especial e nem vibrar (ainda não aprendeu)');
+  await pagina.evaluate(() => window.__rel.missoes.irPara('s1e6-girder')); await quadros(4);
+  ok(await pagina.evaluate(() => !document.getElementById('bt-ciclone').classList.contains('bloq') && !document.getElementById('bt-sonico').classList.contains('bloq') && document.getElementById('bt-raio').classList.contains('bloq') && document.getElementById('btVibrar').classList.contains('bloq')), 'no episódio 6: o ciclone (ep. 1) e o soco supersônico liberados; o raio e o vibrar ainda não');
+  await pagina.evaluate(() => window.__rel.missoes.irPara('s1e17-vibrar')); await quadros(4);
+  ok(await pagina.evaluate(() => !document.getElementById('btVibrar').classList.contains('bloq') && document.getElementById('bt-raio').classList.contains('bloq')), 'no episódio 17: vibrar liberado; o raio ainda não');
+  ok(await pagina.evaluate(() => JSON.parse(localStorage.getItem('theflash.serie.missoes.v2') || '{}').id === 's1e17-vibrar' && JSON.parse(localStorage.getItem('theflash.missoes.v2')).id === 'cafe'), 'o progresso da temporada fica em theflash.serie.* e o da história normal não muda');
+  // a sala escondida (episódio 19): o jornal de 2024 na tela
   const ate = (id) => pagina.evaluate((id) => { const R = window.__rel, s = R.LAB_B.plano.pontosDeInteresse.find((q) => q.nome === id); Object.assign(R.P, { x: s.x, y: s.y, z: s.z, vx: 0, vz: 0 }); }, id);
-  await pagina.evaluate(() => window.__rel.missoes.irPara('s1-sala')); await ate('alaLeste');
-  await pagina.waitForFunction(() => window.__rel.historia.cenaAtual === 'depois-s1-sala', null, { polling: 300 });
+  await pagina.evaluate(() => window.__rel.missoes.irPara('s1e19-sala')); await ate('alaLeste');
+  await pagina.waitForFunction(() => window.__rel.historia.cenaAtual === 'depois-s1e19-sala', null, { polling: 300 });
   for (let i = 0; i < 60 && await pagina.evaluate(() => document.getElementById('jornal').hidden); i++) { await pagina.waitForTimeout(500); await pagina.evaluate(() => { const h = window.__rel.historia; h.avancar(); h.avancar(); }); }
-  ok(await pagina.evaluate(() => !document.getElementById('jornal').hidden && /2024/.test(document.getElementById('jnData').textContent) && /CRISE/.test(document.getElementById('jnTitulo').textContent)), 'na sala escondida, o jornal do futuro aparece na tela (25 de abril de 2024)');
+  ok(await pagina.evaluate(() => !document.getElementById('jornal').hidden && /2024/.test(document.getElementById('jnData').textContent)), 'episódio 19: na sala escondida, o jornal de 2024 aparece na tela');
   await pagina.evaluate(() => window.__rel.historia.pular());
   await pagina.waitForFunction(() => window.__rel.J.modo === 'jogando', null, { polling: 300 });
   await quadros(3);
   ok(await pagina.evaluate(() => document.getElementById('jornal').hidden), 'e some quando a cena acaba');
-  // a revelação no Cortex: o Wells se levanta, some, e o homem de amarelo aparece onde ele estava
-  await pagina.evaluate(() => window.__rel.missoes.irPara('s1-revelacao')); await ate('cortex');
-  await pagina.waitForFunction(() => window.__rel.historia.cenaAtual === 'depois-s1-revelacao', null, { polling: 300 });
+  // a cena sem o Barry (episódio 15): o herói sai de cena, o Wells se levanta para o Cisco e vira o homem de amarelo; no fim, o herói volta
+  await pagina.evaluate(() => { const R = window.__rel; Object.assign(R.P, { x: R.P.x + 260, z: R.P.z + 40, vx: 0, vz: 0 }); });
+  const antes = await pagina.evaluate(() => ({ x: window.__rel.P.x, z: window.__rel.P.z }));
+  await pagina.evaluate(() => window.__rel.missoes.irPara('s1e15-iris'));
+  await pagina.waitForFunction(() => window.__rel.historia.cenaAtual === 'pov-cisco', null, { polling: 300 });
+  ok(await pagina.evaluate(() => window.__rel.J.heroiFora === true && !window.__rel.heroi.visible), 'episódio 15, a cena do Cisco: o Barry fora de cena');
   for (let i = 0; i < 80 && await pagina.evaluate(() => !window.__rel.J.wellsVirou); i++) { await pagina.waitForTimeout(500); await pagina.evaluate(() => { const h = window.__rel.historia; h.avancar(); h.avancar(); }); }
   await pagina.waitForFunction(() => !!window.__rel.aliados.foco('reverso'), null, { polling: 300 });
-  ok(await pagina.evaluate(() => { const R = window.__rel, f = R.aliados.foco('reverso'), w = R.equipe.focos().wells(); return R.J.wellsVirou && Math.hypot(f.x - w.x, f.z - w.z) < 1.5 && R.historia.quemFala === 'thawne'; }), 'a revelação: o Wells vira o homem de amarelo no lugar dele, e quem fala é o Eobard Thawne');
+  ok(await pagina.evaluate(() => { const R = window.__rel, f = R.aliados.foco('reverso'), w = R.equipe.focos().wells(); return R.J.wellsVirou && Math.hypot(f.x - w.x, f.z - w.z) < 1.5; }), 'o Wells vira o homem de amarelo no lugar dele, diante do Cisco');
   await pagina.evaluate(() => window.__rel.historia.pular());
   await pagina.waitForFunction(() => window.__rel.J.modo === 'jogando', null, { polling: 300 });
-  ok(await pagina.evaluate(() => window.__rel.missoes.atual?.id === 's1-thawne' && !window.__rel.J.wellsVirou), 'depois: o capítulo do Eobard Thawne');
+  ok(await pagina.evaluate((a) => { const R = window.__rel; return !R.J.heroiFora && R.heroi.visible && Math.hypot(R.P.x - a.x, R.P.z - a.z) < 1 && !R.J.wellsVirou; }, antes), 'no fim, o Barry volta exatamente para onde estava');
   ok(!erros.length, `sem erros no console (${erros.slice(0, 3).join(' | ')})`);
   await navegador.close(); await srv.fechar();
 }
