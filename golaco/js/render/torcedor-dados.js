@@ -3,7 +3,7 @@
 // hash). SOB DEMANDA, junto do render/torcedor3d.js (o 1º quadro e a TV não precisam dele).
 //
 // O modelo (assets/torcedor/torcedor.bin, ~56 KB; tools/torcedor/README.md): dois avatares Rocketbox (MIT) — homem e
-// mulher — reduzidos a ~300 e ~130 triângulos (2 níveis de detalhe), com as 8 POSES da torcida (as de torcida-dados.js
+// mulher — reduzidos a ~300 e ~125 triângulos (2 níveis de detalhe), com as 8 POSES da torcida (as de torcida-dados.js
 // POSE: sentado, sentado batendo palmas, de pé, de pé batendo palmas, braços em V, um braço, cachecol e mãos na cabeça)
 // ASSADAS vértice a vértice: a textura de animação (VAT) — cada linha uma pose (posição e normal), cada coluna um vértice
 // (o gl_VertexID). O vertex shader escolhe a pose pela MESMA conta do quadro (render/torcedor-pose.js ESTADO_GLSL) e lê a

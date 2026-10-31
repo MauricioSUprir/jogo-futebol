@@ -2,7 +2,7 @@
 // assets/torcedor/torcedor.bin, só é baixado fora da qualidade Baixa). Item 69 da FILA, PR 2 de 4. Nos blocos de cadeiras
 // 3D mais perto da câmera (render/cadeiras-dados.js escolherBlocos; render/torcedor-dados.js escolherTorcedores: px da
 // cadeira na tela com histerese e teto de triângulos por qualidade), os torcedores do quadro de hoje (render/torcida.js)
-// viram um corpo 3D (homem ou mulher, ~300 ou ~130 triângulos) sentado NA cadeira, virado para o campo (o rumo dela). A
+// viram um corpo 3D (homem ou mulher, ~300 ou ~125 triângulos) sentado NA cadeira, virado para o campo (o rumo dela). A
 // pose é a MESMA do quadro no mesmo instante (render/torcedor-pose.js ESTADO_GLSL, com os uniforms do ânimo da própria
 // torcida.js: os mesmos objetos) e o corpo dela vem da textura de animação (VAT, torcedor-dados.js): uma linha por pose,
 // uma coluna por vértice (gl_VertexID). As cores são as do torcedor do quadro (camisa, pele, cabelo, o cachecol na cor do
