@@ -592,6 +592,11 @@ cadeira 3D nos blocos de perto. Este PR põe um CORPO 3D nessas cadeiras de pert
   9 mil triângulos da Média nem no nível 1; por fileira, a Média mostra 1–3 fileiras (as de mais px) e a Alta até ~1.200
   torcedores. Teto em TRIÂNGULOS (o orçamento do celular é em triângulos), histerese na entrada e no nível 0.
 - **O quadro de quem está em 3D sai** por um byte por instância (`aOculto`), escrito só quando a escolha muda.
-- **Custo** (tools/medir-cadeiras.mjs, antes = a base do PR 1, depois = este PR; a tabela no PR): na TV nada muda; o pior
-  plano do pré-jogo no celular fica igual (40 chamadas e 127,8 mil triângulos no padrão: é o plano aéreo, sem 3D); nos
-  planos de perto, +2 a +4 chamadas e até +9 mil triângulos na Média.
+- **Custo** (tools/medir-cadeiras.mjs, antes = a base do PR 1, depois = este PR, padrão, Maracanã, Aflitos e San Siro): na
+  TV nada muda (celular 29 chamadas e 99,8 mil triângulos no padrão, igual; nenhum torcedor 3D em 20 instantes do jogo no
+  `teste-estadio`); o pior plano do pré-jogo no celular fica IGUAL nos 4 estádios (padrão 40/127,8 mil, Maracanã 38/125,3
+  mil, Aflitos 37/99,8 mil, San Siro 37/123,6 mil: são os planos aéreos, sem 3D) — o 3D aparece no plano do lado de lá
+  (24–58 torcedores, 20–26 chamadas, ≤ 113 mil) e no alto (Aflitos e San Siro, ≤ 33 chamadas, ≤ 104 mil); nas câmeras de
+  perto do celular, +2 a +4 chamadas e +2 a +9 mil triângulos (17–70 torcedores); no PC Alta, até ~1.250 torcedores com
+  +2 a +4 chamadas e até +160 mil triângulos (o padrão de perto passa de ~225 para ~383 mil). Baixa: nada (o modelo nem é
+  baixado). O que baixa sob demanda: o modelo 55 KB + os módulos 26 KB.
