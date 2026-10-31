@@ -839,7 +839,7 @@ function direcaoReacao(rumo, giro) {
   _dirR.x = Math.cos(a); _dirR.z = Math.sin(a);
   return _dirR;
 }
-const GIROS_REACAO = [0, 0.5, -0.5, 1.0, -1.0];
+const GIROS_REACAO = [0, 0.5, -0.5, 0.75, -0.75, 1.0, -1.0, 1.25, -1.25, 1.5, -1.5];
 const _cr = { de: [0, 0, 0] };
 // Quadros da câmera da reação (tangente da meia largura e giro do eixo) no pior formato de tela: o PC sem deslocar (até
 // 2,2:1) e o celular deitado (fov × celular, até 2,2:1) com quem reage no terço esquerdo — o eixo gira para o lado
@@ -915,20 +915,25 @@ function preverAtores(c, T, dt) {
 /**
  * Giro da câmera da reação (rad em volta de quem reage), escolhido UMA vez no começo da reação: o primeiro de GIROS_REACAO
  * (0 = o plano de sempre, que só muda se tiver gente de verdade na frente) com menos gente colada na lente (a < 2,2 m de
- * profundidade, dentro do quadro do PC ou do celular) ou entre a lente e quem reage, na reação INTEIRA (até o fim da cena;
- * as posições previstas por preverAtores). Contraprovas: um jogador do time que sofreu, andando para a saída, passava
- * colado na lente (um corpo a 2 m enche a altura do quadro) em ~15% das cenas curtas; e (15/10) na cena curta a reação
- * dura até 2 s, mas o custo só olhava o 1º segundo — um colega correndo para o abraço passou rente à lente no celular.
+ * profundidade, dentro do quadro do PC ou do celular) e, entre os que empatam nisso, menos gente colada mais gente entre a
+ * lente e quem reage, na reação INTEIRA (até o fim da cena; as posições previstas por preverAtores). Contraprovas: um
+ * jogador do time que sofreu, andando para a saída, passava colado na lente (um corpo a 2 m enche a altura do quadro) em
+ * ~15% das cenas curtas; e (15/10) na cena curta a reação dura até 2 s, mas o custo só olhava o 1º segundo — um colega
+ * correndo para o abraço passou rente à lente no celular. (31/10, C7: com a corrida das cobranças, no gol da semente 101
+ * @6040 quem reage é o goleiro na linha do gol e um zagueiro sai da pequena área andando para a lente; os 5 giros de antes
+ * tinham todos alguém colado nela, e a soma única escolhia o de 57° — um corpo rente à borda do quadro do celular, a 1,87 m,
+ * custava 0,035 m·s, menos que ~0,3 s de alguém cruzando a linha de visão do outro lado: 1 quadro ruim. Colado na lente
+ * vem primeiro (é o que o quadro não pode ter) e a grade ganhou os giros de 43°, 72° e 86°.)
  */
 const DT_GIRO = 0.05;
 function escolherGiroReacao(c) {
   const r = c.reacao ?? c.autor, R = C.camera.reacao, rj = r.j, n = c.atores.length, ir = c.atores.indexOf(r);
   const ns = preverAtores(c, Math.max(0, c.kFim - c.k) * PASSO, DT_GIRO);
-  let melhor = 0, menor = Infinity;
+  let melhor = 0, menorL = Infinity, menor = Infinity;
   for (const giro of GIROS_REACAO) {
     const d = direcaoReacao(rj.rumo, giro), dx = d.x, dz = d.z;
-    let custo = 0;
-    // custo = integral no tempo (m·s)
+    let lente = 0, custo = 0;
+    // custos = integral no tempo (m·s): `lente` só o colado na lente; `custo` ele mais a linha de visão
     for (let k = 0; k < ns; k++) {
       const sx = _prev[(k * n + ir) * 2], sz = _prev[(k * n + ir) * 2 + 1];
       _cr.de[0] = sx + dx * R.dist; _cr.de[1] = R.altura; _cr.de[2] = sz + dz * R.dist;
@@ -939,7 +944,8 @@ function escolherGiroReacao(c) {
         if (i === ir) continue;
         const px = _prev[(k * n + i) * 2], pz = _prev[(k * n + i) * 2 + 1];
         // colado na lente, dentro do quadro do PC ou do celular
-        custo += custoLente(px - cx, pz - cz, fx, fz) * DT_GIRO;
+        const cl = custoLente(px - cx, pz - cz, fx, fz) * DT_GIRO;
+        lente += cl; custo += cl;
         // entre a lente e quem reage (perto da linha de visão)
         const u = ((px - cx) * ex + (pz - cz) * ez) / el2, lado = Math.hypot(px - cx - ex * u, pz - cz - ez * u);
         if (u > 0.05 && u < 0.95 && lado < 0.8) custo += (0.8 - lado) * DT_GIRO;
@@ -947,8 +953,9 @@ function escolherGiroReacao(c) {
     }
     // o plano de sempre (giro 0) só muda com gente de verdade na frente (um corpo cruzando a linha de visão por ~0,2 s já
     // custa ~0,1 m·s; um colado na lente o plano inteiro, 1–3)
-    if (giro === 0 && custo <= 0.03) return 0;
-    if (custo < menor - 1e-9) { menor = custo; melhor = giro; }
+    // (31/10: e sem ninguém colado na lente — um só rente à borda do quadro já custa menos que 0,03)
+    if (giro === 0 && lente <= 0 && custo <= 0.03) return 0;
+    if (lente < menorL - 1e-9 || (lente <= menorL + 1e-9 && custo < menor - 1e-9)) { menorL = lente; menor = custo; melhor = giro; }
   }
   return melhor;
 }
