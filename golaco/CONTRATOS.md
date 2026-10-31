@@ -3089,8 +3089,10 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
 - **O apito** (`partida.js apitoDaCobranca`, também na disputa): no pênalti e no tiro livre com barreira (Regras 13 e 14: a
   cobrança cerimonial), um evento `apito {motivo: 'cobranca'}` por parada, no `pronta` ou quando a corrida da IA começa antes.
   Escanteio, tiro de meta e o tiro livre sem barreira não têm apito.
-- **Escanteio.** Quem ataca a zona sai junto com o cobrador (`bolas-paradas.js escanteio`): trotando até `zonaAntes` do caminho
-  da saída à zona; a arrancada para a zona é no chute, como antes.
+- **Escanteio.** Quem ataca a zona sai junto com o cobrador (`bolas-paradas.js escanteio`): trotando até `zonaAntes` (0,15) do
+  caminho da saída à zona; a arrancada para a zona é no chute, como antes. Com 0,35 os atacantes chegavam com um terço do
+  caminho andado e o canhão de escanteios da IA (331, as mesmas sementes) ia de 6,3% (main) a 11,8% de gols e de 39 a 51% de
+  chutes; com 0,15, 5,8% e 43% (com 0, 4,2% e 41%).
 - **A disputa de pênaltis** (`disputa.js`): a caminhada termina no ponto de partida da corrida (o mesmo `planejarCorrida`) e a
   cobrança corre de lá; o apito pelo `apitoDaCobranca`; a trava da cobrança não corta a corrida.
 - **Câmera** (`render/bola-parada.js`, só desenho): o quadro é montado pelo ponto da linha bola–alvo na altura do ponto de
@@ -3113,8 +3115,10 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
   PAREADA com a main a ≤ ±0,2 s (os tempos da main em `tools/dados/corrida-ref.json`: `--gravar-referencia <pasta js> --origem "main <commit>"` — mudou
   de propósito o começo da partida IA × IA ou as bolas paradas da main? regravar e dizer no PR); C6 a linha da cobrança
   mirada no soltar × a bola real ≤ 3 cm; C7 a cavadinha com o 2º toque no meio da corrida; C8 dois humanos com o mesmo hash;
-  C9 o apito. As guardas conferidas por mutação (corrida curta, pé de apoio longe, IA sem adiantar, pé arrastado, velocidade
-  alta, a linha sem o pedido, a janela da cavadinha, sem apito, sorteio fora do mundo: cada uma reprova o item dela).
+  C9 o apito; C10 o escanteio: quem ataca a zona sai junto (no contato, em média ≥ 3% do caminho da saída à zona) e não chega
+  antes (ninguém além de 20%). As guardas conferidas por mutação (corrida curta, pé de apoio longe, IA sem adiantar, pé
+  arrastado, velocidade alta, a linha sem o pedido, a janela da cavadinha, sem apito, sorteio fora do mundo, a zona parada
+  (`zonaAntes` 0) e a zona adiantada (0,35): cada uma reprova o item dela).
 
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores

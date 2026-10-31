@@ -28,6 +28,9 @@
 //  C8 dois humanos (online 1×1): o mesmo jogo nos dois aparelhos — dois mundos com as mesmas entradas (um deles copiado no
 //     meio da corrida) têm o MESMO hash a cada passo, da montagem ao fim do voo;
 //  C9 o apito da cobrança no pênalti e no tiro livre com barreira: um por parada, no pronta ou no começo da corrida da IA.
+//  C10 o escanteio: quem ataca a zona SAI JUNTO com o cobrador (no contato andou em média ≥ 3% do caminho da saída à zona)
+//     e não chega antes (no contato, ninguém além de 20% dele): a arrancada para a zona é no chute, como antes — com 35% do
+//     caminho já andado na corrida o canhão de escanteios da IA ia de 6,3 a 11,8% de gols (331 escanteios; main 6,3%).
 //
 //   node tools/teste-corrida-cobranca.mjs                               (lógica do repositório)
 //   node tools/teste-corrida-cobranca.mjs --js <pasta js>                (outra cópia: a main → REPROVA)
@@ -50,6 +53,7 @@ const P = await imp('partida.js');
 const S = await imp('sim.js');
 const AN = await imp('anim.js');
 const C = await imp('config.js');
+const BP = await imp('bolas-paradas.js');
 const temCorrida = fs.existsSync(path.join(JS, 'corrida.js'));
 const ML = fs.existsSync(path.join(JS, 'mira-linha.js')) ? await imp('mira-linha.js') : null;
 const { PASSO, BOTAO, CAMPO, MIRA, ACOES } = C;
@@ -111,7 +115,19 @@ function cena(tipo, k) {
   return { m, t };
 }
 
-const vazio = () => ({ andou: [], v: [], apoio: [], planta: [], tempo: [], gesto: [], plantado: 0, razao: 0, pouso: 0, arrasta: 0, n: 0, semCorrida: 0, falhou: 0 });
+const vazio = () => ({ andou: [], v: [], apoio: [], planta: [], tempo: [], gesto: [], zona: [], plantado: 0, razao: 0, pouso: 0, arrasta: 0, n: 0, semCorrida: 0, falhou: 0 });
+const _zs = { x: 0, z: 0 }, _zz = { x: 0, z: 0 };
+/** Quem ataca a zona no escanteio pr: [{id, sx, sz, zx, zz}] (a saída e a zona no mundo; bolas-paradas.js pontoEscanteio). */
+function zonasDoEscanteio(m, pr) {
+  if (!pr || pr.tipo !== 'escanteio' || !pr.papeis || !BP.pontoEscanteio) return [];
+  const sz = pr.z >= 0 ? 1 : -1, l = [];
+  for (const q of pr.papeis) {
+    if (q.papel !== 'atacaZona') continue;
+    BP.pontoEscanteio(m, pr.time, sz, q.su, q.sw, _zs); BP.pontoEscanteio(m, pr.time, sz, q.u, q.w, _zz);
+    l.push({ id: q.id, sx: _zs.x, sz: _zs.z, zx: _zz.x, zz: _zz.z });
+  }
+  return l;
+}
 const limiteBalanco = v => 2.5 * v + 3, limitePouso = v => 0.19 * v + 0.81;
 const TORN = [J.tornozeloE, J.tornozeloD];
 const _pose = new Float32Array(AN.NJ * 3);
@@ -122,14 +138,15 @@ const _pose = new Float32Array(AN.NJ * 3);
  * apitos. ent(m, pr) = a entrada do passo.
  */
 function rodar(m, ent) {
-  const r = { andou: 0, v: NaN, dApoio: NaN, apoiado: false, tempo: NaN, corrida: false, plantado: 0, razao: 0, pouso: 0, arrasta: 0, apitos: 0, tipoVoo: null, pr: null };
+  const r = { andou: 0, v: NaN, dApoio: NaN, apoiado: false, tempo: NaN, corrida: false, plantado: 0, razao: 0, pouso: 0, arrasta: 0, apitos: 0, tipoVoo: null, pr: null, zona: null };
+  let zonas = [];
   let pr = null, ant = null, px = 0, pz = 0, inicio = -1;
   for (let i = 0; i < 60 * 15; i++) {
     const p0 = m.parada;
     if (p0 && !p0.rolou) { pr = p0; if (inicio < 0) inicio = p0.inicio; }
     const correndo = !!(pr && pr.corrida && pr.corrida.estado === 'corre');
     const c = pr && pr.cobrador != null ? jog(m, pr.cobrador) : null;
-    if (correndo && !r.corrida) { r.corrida = true; px = c.x; pz = c.z; }
+    if (correndo && !r.corrida) { r.corrida = true; px = c.x; pz = c.z; zonas = zonasDoEscanteio(m, pr); }
     const ev = P.passoPartida(m, ent(m, pr));
     r.apitos += ev.filter(e => e.tipo === 'apito' && e.motivo === 'cobranca').length;
     const c1 = pr && pr.cobrador != null ? jog(m, pr.cobrador) : null;
@@ -157,6 +174,11 @@ function rodar(m, ent) {
       r.tempo = (m.tick - inicio) * PASSO;
       r.tipoVoo = m.voo ? m.voo.tipo : null;
       r.pr = pr;
+      // o escanteio (C10): a fração do caminho da saída à zona que cada um de quem ataca a zona andou até o contato
+      if (zonas.length) r.zona = zonas.map(z => {
+        const j = jog(m, z.id), ux = z.zx - z.sx, uz = z.zz - z.sz, L2 = ux * ux + uz * uz;
+        return j && L2 > 1 ? ((j.x - z.sx) * ux + (j.z - z.sz) * uz) / L2 : NaN;
+      }).filter(Number.isFinite);
       if (c1) {
         r.v = Math.hypot(c1.vx, c1.vz);
         const ps = pr.corrida ? pr.corrida.ps : 1 - ((c1.par.attr.pePreferido ?? 1) === 0 ? 0 : 1);
@@ -178,6 +200,7 @@ function somar(a, r) {
   if (!Number.isFinite(r.tempo)) { a.falhou++; return; }
   if (!r.corrida) a.semCorrida++;
   if (r.gesto) a.gesto.push(r.gesto);
+  if (r.zona && r.zona.length) a.zona.push(r.zona);
   a.andou.push(r.andou); a.v.push(r.v); a.apoio.push(r.dApoio); a.planta.push(r.apoiado ? 1 : 0); a.tempo.push(r.tempo);
   a.plantado = Math.max(a.plantado, r.plantado); a.razao = Math.max(a.razao, r.razao); a.pouso = Math.max(a.pouso, r.pouso); a.arrasta = Math.max(a.arrasta, r.arrasta);
 }
@@ -270,6 +293,13 @@ else {
     reg(`C5 ${T.nome} (${K.nome}): bola morta → rolando, a diferença pareada com a main (média)`, `${mm >= 0 ? '+' : ''}${f2(mm)} s (${l.length} pares; ${f2(min(l))} a ${f2(max(l))})`,
       '±0,2 s', l.length >= Math.min(4, NC) && Math.abs(mm) <= 0.2);
   }
+}
+{
+  // C10 o escanteio: quem ataca a zona sai junto com o cobrador e não chega antes
+  const z = porTipo.escanteio.zona, todos = z.flat(), medias = z.map(media);
+  reg('C10 escanteio: quem ataca a zona sai junto (fração média do caminho da saída à zona no contato) e não chega antes (a maior)',
+    `média ${f2(media(medias))} (menor por escanteio ${f2(min(medias))}) · maior ${f2(max(todos))} (${z.length} escanteios, ${todos.length} atacantes)`,
+    'média ≥ 0,03 · maior ≤ 0,20', z.length >= Math.min(4, NC) && media(medias) >= 0.03 && max(todos) <= 0.2);
 }
 reg('C9 o apito da cobrança: um no pênalti e no tiro livre com barreira, nenhum nos outros', `${apitosRuins} paradas fora disso (${apitosVistos} com apito)`, '0', apitosRuins === 0 && apitosVistos > 0);
 

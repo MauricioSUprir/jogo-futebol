@@ -2172,7 +2172,7 @@ export const CORRIDA_COBRANCA = {
   acelUsa: 0.7,                 // × a aceleração (e a freada) do jogador que a regulagem conta (a locomoção chega com folga)
   velVaria: 0.15,               // a regulagem procura a velocidade de cruzeiro a até ±15% da do perfil...
   ritmo: [0.8, 1.2],            // ...e o ritmo da passada a até isto × o natural daquela velocidade (fora: mal visto)
-  zonaAntes: 0.35,
+  zonaAntes: 0.15,              // (0,35 dava 11,8% de gols no canhão de escanteios da IA, main 6,3%; 0,15: 5,8%; 331 escanteios)
   folgaZona: 0.25,              // s — a IA começa a corrida se quem está no raio sai dele até o fim dela com esta folga
 };
 

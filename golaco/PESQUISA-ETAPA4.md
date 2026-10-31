@@ -728,6 +728,13 @@ condução nem a "bola perdida", o contato no passo 3, o ritmo na passada; `bola
 | escanteio · tiro de meta · tiro livre D · I | — | −0,00/−0,00 · −0,02/−0,09 · +0,05/+0,06 · −0,07/−0,03 s |
 | linha mirada no soltar × bola real | — | 0,00 cm |
 | cavadinha com o 2º toque a 0,5 s do 1º, na corrida | 0/4 (a bola já tinha saído) | 4/4 |
+| escanteio: quem ataca a zona andou até o contato (fração do caminho saída → zona; média · maior) | 0 · 0 (ninguém corria) | 0,06 · 0,10 |
+| canhão de escanteios da IA (331, 16 sementes): gol · chute · 1º contato do ataque | 6,3 · 39,0 · 45,3% | 5,8 · 43,0 · 47,8% |
+
+Quem ataca a zona do escanteio sai junto com o cobrador, trotando até `zonaAntes` do caminho. Com 0,35 (a 1ª calibração)
+eles chegavam com um terço do caminho andado e o canhão de escanteios (331, as mesmas sementes) ia a 11,8% de gols e 51,4% de
+chutes (main 6,3% e 39,0%; real: 2,6% dos escanteios viram gol, Copa 2022); com 0,15 voltou a 5,8% e 43,0% (com 0, 4,2% e
+40,7%). O `teste-corrida-cobranca` C10 segura os dois lados (sai junto e não chega antes).
 
 O pênalti da IA corria antes do apito (a previsão da corrida, ~1,45 s, é maior que o atraso dela, 0,6–1,4 s) e, com a corrida
 no apito, a bola rolava ~0,4 s depois de antes; a montagem do pênalti foi de 1,5 para 1,25 s (medido: 1,2 → −0,13/+0,06 s;
