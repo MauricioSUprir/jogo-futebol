@@ -565,6 +565,27 @@ function esconderTelas() { el.inicio.hidden = el.pausa.hidden = el.fim.hidden = 
 function avisar(titulo, rotulo = '', tipo = 'info') {
   el.avisoT.textContent = titulo; el.avisoR.textContent = rotulo; el.avisoR.hidden = !rotulo;
   el.aviso.className = `t-${tipo}`; void el.aviso.offsetWidth; el.aviso.classList.add('vis'); J.aviso = 2.6;
+  recolherRadio?.();                                     // a fala que estava no ar sai já (volta depois do aviso)
+}
+let recolherRadio = null;
+// o aviso está na tela (ou saindo: até o fim da animação de saída, que só começa no quadro seguinte): o rádio espera (um de
+// cada vez, dono, 31/10)
+let avisoSaiAte = 0;
+const avisoNaTela = () => J.aviso > 0 || performance.now() < avisoSaiAte;
+el.aviso.addEventListener('animationend', (e) => { if (e.animationName === 'avisoSai') avisoSaiAte = 0; });
+// o rádio e os avisos ficam no espaço logo abaixo do objetivo (ou do painel do vilão), sem cobrir nada: mede a cada quadro
+// (o painel do vilão muda de altura quando a linha de baixo quebra)
+// e o marcador do guia não entra nessa faixa (guia.definirTopoLivre: até o fim do rádio ou do aviso que estiver aparecendo)
+let radioEl = null;
+function medirTopo() {
+  const alto = viloes.ativo ? $('chefe') : el.missao, r = alto && !alto.hidden ? alto.getBoundingClientRect() : null;
+  const y = Math.round((r && r.height ? r.bottom : 12) + 8);
+  if (y !== J.topoPainel) { J.topoPainel = y; document.documentElement.style.setProperty('--msgTopo', `${y}px`); }
+}
+function topoLivre() {
+  radioEl ||= $('radio');
+  const msg = radioEl?.classList.contains('vis') ? radioEl : avisoNaTela() ? el.aviso : null;
+  guia.definirTopoLivre(msg ? Math.max(J.topoPainel || 0, msg.getBoundingClientRect().bottom) : (J.topoPainel || 0));
 }
 
 // ---------- entrada ----------
@@ -1435,6 +1456,7 @@ function atualizarBotoesEspeciais() {
 
 // ---------- história: cenas e rádio (historia.js) ----------
 const historia = criarHistoria({ armazem });
+historia.esperarSe(avisoNaTela); recolherRadio = () => historia.recolherRadio();
 const focoHeroi = () => ({ x: P.x, y: P.y, z: P.z });
 // a equipe do S.T.A.R. Labs (Caitlin e Cisco) no Cortex
 const tempo = criarTempo(cena, { mobile: MOBILE, aniso: ANISO, fx: combate.efeitos, lab: { cx: LAB_B.cx, cz: LAB_B.cz, entrada: LAB_B.plano.entrada }, chao: (x, z, y) => chaoEm(rectsPerto, x, z, y) });
@@ -1775,7 +1797,7 @@ function quadro() {
     }
     for (const ev of viloes.atualizar(dtM, P, { capitulo: missoes.atual?.capitulo, podeComecar: !crimes.ativo && !J.cenaPendente && !J.cron && !J.interior && !interacoes.corrida && historia.radioLivre && tempo.epoca !== 'passado' && rivais.ativo?.estado !== 'luta' })) eventoVilao(ev);
     J.danoVilao = Math.max(0, (J.danoVilao || 0) - dt * 2);
-    el.missao.hidden = viloes.ativo; el.corpo.classList.toggle('capitulo', viloes.ativo);
+    el.missao.hidden = viloes.ativo; el.corpo.classList.toggle('capitulo', viloes.ativo); medirTopo();
     el.dano.style.opacity = String(Math.min(1, Math.max(combate.dano, J.danoVilao)));
     atualizarBotoesEspeciais();
     passoMissoes(dt); passoInteriores(dt); passoInteracoes(dt);
@@ -1800,7 +1822,7 @@ function quadro() {
     if (labAtivo) labAtivo.atualizar(dt, P.t, mundo.noite, camera, P);
     for (const e of marcosAtivos) e.atualizar(dt, P.t, mundo);
     atualizarQuarteiroes(P.x, P.z, carregados.size < 30 ? 8 : 2);
-    if (J.aviso > 0) { J.aviso -= dt; if (J.aviso <= 0) { el.aviso.classList.remove('vis'); el.aviso.classList.add('sai'); } }
+    if (J.aviso > 0) { J.aviso -= dt; if (J.aviso <= 0) { el.aviso.classList.remove('vis'); el.aviso.classList.add('sai'); avisoSaiAte = performance.now() + 2500; } }   // (o fim da animação libera antes)
     el.vel.textContent = Math.round((P.parede ? P.parede.v : Math.hypot(P.vx, P.vz)) * 3.6);
     el.vel.parentElement.style.color = Math.hypot(P.vx, P.vz) >= MOV.escalar || P.parede ? '#ffd23f' : '';
     el.nivel.style.width = `${(P.energia * 100).toFixed(1)}%`;
@@ -1823,7 +1845,7 @@ function quadro() {
   }
   else if (J.modo !== 'menu' || carregados.size) { animarHeroi(J.modo === 'jogando' ? dt : 0); atualizarCamera(dt); }
   if (J.modo !== 'jogando' && !el.acao.hidden) { el.acao.hidden = true; el.jornal.hidden = true; }   // (cena, pausa, menu: sem o botão AÇÃO nem o jornal)
-  if (J.modo === 'jogando') guia.atualizar(dt, alvoMissao(), P, camera);
+  if (J.modo === 'jogando') { topoLivre(); guia.atualizar(dt, alvoMissao(), P, camera); }
   else if (J.modo === 'cena') guia.atualizar(dt, null, P, camera);          // na cena, sem feixe nem setas por cima de quem fala
   atualizarAmbiente(camera.position);
   posfx.ajustar(J.modo === 'jogando' ? Math.min(1, Math.max(0, (Math.hypot(P.vx, P.vz) - 20) / 35)) : 0, mundo.noite);
