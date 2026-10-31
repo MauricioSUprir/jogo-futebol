@@ -1331,7 +1331,7 @@ function passoMissoes(dt) {
   // objetivo"): crime novo só com a cena e o rádio do passo terminados, sem cronômetro, corrida de portais ou vilão em cena
   const ocupado = !!(J.cenaPendente || J.cron || (m?.tipo === 'portais' && portais.estado().correndo) || !historia.radioLivre || J.esteira || rivais.ativo?.estado === 'luta' || interacoes.corrida);
   const crAntes = crimes.ativo && { x: crimes.ativo.x, z: crimes.ativo.z };
-  const ev = viloes.ativo || tempo.epoca === 'passado' || J.interior || !querCrime || (!crimes.ativo && ocupado) ? null : crimes.atualizar(J.dtM ?? dt, P, { forcar: m?.crime });
+  const ev = viloes.ativo || tempo.epoca === 'passado' || tempo.epoca === 'noite' || J.interior || !querCrime || (!crimes.ativo && ocupado) ? null : crimes.atualizar(J.dtM ?? dt, P, { forcar: m?.crime });
   const nomeCrime = (c) => (m?.crime && m.crimeNome) || c.nome;          // (a temporada da série dá o nome do meta do episódio)
   if (ev?.inicio) avisar(nomeCrime(ev), 'Crime na cidade', 'crime');
   else if (ev) {
@@ -1349,7 +1349,23 @@ function passoMissoes(dt) {
     if (m.id === 'tunel') tempo.prepararReverso();                    // o Reverso do passado já vai sendo carregado
     const v = Math.hypot(P.vx, P.vz) * 3.6;
     J.tunelT = v >= 180 && !P.parede ? (J.tunelT || 0) + dt : Math.max(0, (J.tunelT || 0) - dt * 0.6);
+    tempo.tunel = J.tunelT > 1 && !m.semTunel;                        // o túnel abre em volta de você enquanto você corre
     if (J.tunelT > 0.5 && Math.random() < dt * J.tunelT * 4) { const a = Math.random() * 6.28; combate.efeitos.raio(P.x, P.y + 1, P.z, P.x + Math.cos(a) * 4, P.y + 1 + Math.random() * 3, P.z + Math.sin(a) * 4, { vida: 0.15, desvio: 0.6, r: 2.2, g: 1.6, b: 0.5 }); }
+  }
+  else if (tempo.tunel && J.modo === 'jogando') tempo.tunel = false;
+  // não interferir (tipo 'espera'): parado perto do lugar enquanto os raios giram lá dentro; correr para lá (ou chegar perto
+  // demais, naoEntrar) zera a espera e algo te empurra para trás
+  if (m?.tipo === 'espera' && m.ponto && !J.cenaPendente) {
+    const w = pontoMundo(m.ponto), d = Math.hypot(P.x - w.x, P.z - w.z), v = Math.hypot(P.vx, P.vz), wy = w.y ?? P.y;
+    if (Math.random() < dt * 7) { const a = Math.random() * 6.28, r = 1 + Math.random() * 2.5, cor = Math.random() < 0.5 ? [2.4, 1.9, 0.6] : [2.8, 0.35, 0.2];
+      combate.efeitos.raio(w.x + Math.cos(a) * r, wy + 0.4 + Math.random() * 1.8, w.z + Math.sin(a) * r, w.x + Math.cos(a + 1.4) * r, wy + 0.3 + Math.random() * 2, w.z + Math.sin(a + 1.4) * r, { vida: 0.35, desvio: 0.7, r: cor[0], g: cor[1], b: cor[2] }); }
+    const perto = d < (m.raio ?? 12);
+    if ((m.naoEntrar && d < m.naoEntrar) || (d < (m.raio ?? 12) + 10 && v > 9)) {
+      if ((J.esperaT || 0) > 0.2 || !(J.esperaAviso > 0)) { avisar('Não interfira', m.naoEntrar ? 'O Flash do futuro bloqueou o caminho' : 'Fique parado', 'alerta'); J.esperaAviso = 2; }
+      J.esperaT = 0;
+      if (m.naoEntrar && d < m.naoEntrar) { const k = m.naoEntrar / Math.max(d, 0.1); P.x = w.x + (P.x - w.x) * k; P.z = w.z + (P.z - w.z) * k; P.vx = P.vz = 0; clarear(0.15); }   // o raio vermelho do futuro te tira da porta
+    } else if (perto && v < 2.5) J.esperaT = (J.esperaT || 0) + dt;
+    J.esperaAviso = Math.max(0, (J.esperaAviso || 0) - dt);
   }
   // Parte 3: o teste da bateria (8 s acima de 400 km/h)
   if (m?.tipo === 'bateria') { const v = Math.hypot(P.vx, P.vz) * 3.6; J.bateriaT = v >= 400 && !P.parede ? (J.bateriaT || 0) + dt : Math.max(0, (J.bateriaT || 0) - dt * 0.5); }
@@ -1417,8 +1433,9 @@ function passoMissoes(dt) {
   // passo num lugar da cidade: chegou perto do ponto (raio do passo)
   const pw = m?.ponto ? pontoMundo(m.ponto) : null, perto = !!pw && Math.hypot(P.x - pw.x, P.z - pw.z) < (m.raio ?? 9) && Math.abs(P.y - (pw.y ?? P.y)) < 6;
   const feita = missoes.avaliar({ sala, v: Math.hypot(P.vx, P.vz), y: P.y, noChao: P.noChao, portaisFeitos: rp?.feito, perto,
-    vencido: (id) => viloes.vencido(id), tunel: (J.tunelT || 0) / 5, voltouDoPassado: !!J.voltouDoPassado, bateria: (J.bateriaT || 0) / 8 });
+    vencido: (id) => viloes.vencido(id), tunel: (J.tunelT || 0) / 5, espera: (J.esperaT || 0) / (missoes.atual?.espera || 8), voltouDoPassado: !!J.voltouDoPassado, bateria: (J.bateriaT || 0) / 8 });
   if (feita) {
+    J.tunelT = 0; J.esperaT = 0;                     // (o próximo túnel começa do zero: antes, sobrava do anterior)
     avisar(feita.titulo, 'Missão concluída', 'missao'); historia.missao(feita.id, 'fecha');
     const abrir = () => { if (missoes.atual) historia.missao(missoes.atual.id, 'abre'); };
     // cena da história depois da missão: entra quando o rádio termina de falar (com o Joe/Iris, eles ficam até ela acabar)
@@ -1589,8 +1606,9 @@ const GANCHOS_CENA = {
     J.cenaAliados = { aliados: {} };
   } },
   // Parte 2: a viagem à noite do fogo (o túnel em volta do herói; o clarão do raio na casa) e o Corredor Negro sumindo
-  'depois-p2-tunel': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, aoAcao: (a) => { if (a === 'raioCasa') clarear(0.7); }, depois: () => { tempo.tunel = false; J.corridaCena = false; } },
-  'depois-p2-desfazer': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, aoAcao: (a) => { if (a === 'raioCasa') clarear(0.9); }, depois: () => { tempo.tunel = false; J.corridaCena = false; } },
+  // Parte 2: a viagem no tempo jogável (o raio na casa quando você chega, quando segura o seu pai e quando não interfere)
+  'depois-p2-noite': { aoAcao: (a) => { if (a === 'raioCasa') clarear(0.7); } },
+  'depois-p2-espera': { aoAcao: (a) => { if (a === 'raioCasa') clarear(0.9); } },
   'depois-p2-silhueta': { aoAcao: (a) => {
     if (a !== 'someNegro') return;
     const f = aliados.foco('negro');
@@ -1685,7 +1703,7 @@ const GANCHOS_CENA = {
   'depois-p3-fim': { depois: () => { if (historia.viu('cena:depois-p3-fim')) mostrarCreditos(3); } },
   // o fim da Parte 2: depois do epílogo, os créditos dela
   'depois-p2-fim': { depois: () => { if (historia.viu('cena:depois-p2-fim')) mostrarCreditos(2); } },
-  'depois-tunel': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, depois: () => { tempo.tunel = false; J.corridaCena = false; irAoPassado(); } },
+  'depois-tunel': { depois: () => { tempo.tunel = false; irAoPassado(); } },          // (o túnel foi a sua corrida; a cena é a chegada)
   'volta-tunel': { antes: () => { tempo.tunel = true; J.corridaCena = true; }, depois: () => { tempo.tunel = false; J.corridaCena = false; } },
   // o fim: o herói entra no Núcleo (túnel em volta dele), volta, e vêm o epílogo e os créditos
   'depois-nucleo': {
@@ -1764,11 +1782,11 @@ function cenaNoLab(on) {
     povSalvo = { x: P.x, y: P.y, z: P.z, h: P.h, yaw: C.yaw };
     const l = equipe.lugarDoHeroi();
     Object.assign(P, { x: l.x, y: l.y, z: l.z - 2, vx: 0, vz: 0, vy: 0 });
-    J.heroiFora = true; atualizarQuarteiroes(P.x, P.z, 999); rectsPerto = retangulosPerto(P.x, P.z, 1);
+    J.heroiFora = true; heroi.visible = false; atualizarQuarteiroes(P.x, P.z, 999); rectsPerto = retangulosPerto(P.x, P.z, 1);
   } else if (povSalvo) {
     const v = povSalvo; povSalvo = null;
     Object.assign(P, { x: v.x, y: v.y, z: v.z, h: v.h, vx: 0, vz: 0, vy: 0 }); C.yaw = v.yaw;
-    J.heroiFora = false; J.povFora = null; atualizarQuarteiroes(P.x, P.z, 999); rectsPerto = retangulosPerto(P.x, P.z, 1);
+    J.heroiFora = false; J.povFora = null; heroi.visible = true; atualizarQuarteiroes(P.x, P.z, 999); rectsPerto = retangulosPerto(P.x, P.z, 1);   // (visível já, não só no próximo quadro)
   }
 }
 /** as ações das falas da temporada (serie.js) */
@@ -1856,8 +1874,10 @@ function fecharCreditos() {
 }
 /** Parte 2: entra ou sai da linha do tempo alterada (o Ponto de Ignição): crepúsculo parado, outras cores, ninguém no Cortex */
 function mudarEpoca(ep) {
+  // a noite do passado jogável (viagem no tempo: corra até a casa, não interfira): noite parada, cores de outra época
+  if (ep === 'noite') { if (tempo.epoca === 'presente') J.tAntesIg = mundo.T; mundo.T = 0.03; tempo.definirEpoca('noite'); avisar('O passado', 'Túnel do tempo', 'info'); return; }
   if (ep === 'ignicao') { J.tAntesIg = mundo.T; mundo.T = 0.77; tempo.definirEpoca('ignicao'); avisar('Ponto de Ignição', 'Uma linha do tempo que não deveria existir', 'info'); }
-  else { tempo.definirEpoca('presente'); mundo.T = J.tAntesIg ?? 0.45; avisar('A linha do tempo de volta', 'Presente', 'info'); }
+  else { const doPassado = tempo.epoca === 'noite'; tempo.definirEpoca('presente'); mundo.T = J.tAntesIg ?? 0.45; avisar(doPassado ? 'De volta ao presente' : 'A linha do tempo de volta', doPassado ? 'Túnel do tempo' : 'Presente', 'info'); }
 }
 function irAoPassado(silencioso = false) {
   if (tempo.epoca === 'passado') return;
@@ -2032,4 +2052,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { PESSOAL, poderes, ganharXp, posfx, escolherImagem, get presetImagem() { return presetImagem; }, interacoes, corridas, vitrine, equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { PESSOAL, pontoMundo, poderes, ganharXp, posfx, escolherImagem, get presetImagem() { return presetImagem; }, interacoes, corridas, vitrine, equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };

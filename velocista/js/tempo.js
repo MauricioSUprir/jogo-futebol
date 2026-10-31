@@ -133,7 +133,7 @@ export function criarTempo(cena, { mobile = false, aniso = 2, fx, lab, chao = nu
       epoca = e;
       coluna.visible = e === 'passado';
       if (reverso) reverso.visible = e === 'passado';
-      document.body.classList.toggle('passado', e === 'passado');
+      document.body.classList.toggle('passado', e === 'passado' || e === 'noite');   // ('noite': o passado jogável, sem o laboratório)
       document.body.classList.toggle('ignicao', e === 'ignicao');     // Parte 2: a linha do tempo alterada (index.html)
     },
     /** onde está o Reverso do passado (foco da cena), com ele já carregado */

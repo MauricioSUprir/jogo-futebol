@@ -114,6 +114,23 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
   }
   const corpo = malha(L.partes.corpo, esqueleto, matCorpo), cabeca = malha(L.partes.cabeca, esqueleto, matCabeca);
   for (const m of [corpo, cabeca]) { raiz.add(m); m.bind(esqueleto, new THREE.Matrix4()); }
+  // a VIBRAÇÃO (dono, 31/10: "melhore a vibração"): como na série, o rastro de quem vibra rápido demais para o olho — duas
+  // cópias translúcidas do corpo e do rosto (a mesma malha e o mesmo esqueleto), cada quadro deslocadas para um lado (na
+  // tela, em metros), o rosto mais. Só aparecem vibrando (4 desenhos a mais nessa hora; parado, nada).
+  const fantasmas = [];
+  if (!pessoa) for (let k = 0; k < 2; k++) for (const base of [corpo, cabeca]) {
+    const uOff = { value: new THREE.Vector2() };
+    const mt = new THREE.MeshBasicMaterial({ color: k ? 0xffc23a : 0xff3a24, transparent: true, opacity: 0, depthWrite: false });
+    mt.onBeforeCompile = (sh) => {
+      sh.uniforms.uOff = uOff;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform vec2 uOff;')
+        .replace('#include <project_vertex>', '#include <project_vertex>\ngl_Position = projectionMatrix * (mvPosition + vec4(uOff, -0.09, 0.0));');   // (atrás do corpo: só aparecem em volta da silhueta)
+    };
+    mt.customProgramCacheKey = () => 'vibracao-fantasma';
+    const g = new THREE.SkinnedMesh(base.geometry, mt); g.frustumCulled = false; g.visible = false; g.renderOrder = 2;
+    raiz.add(g); g.bind(esqueleto, new THREE.Matrix4());
+    fantasmas.push({ g, mt, uOff, cab: base === cabeca });
+  }
 
   // emblema próprio do herói (no centro do peitoral): disco grafite, anel dourado e uma faísca de quatro pontas
   const J = ind.repouso.juntas;
@@ -259,8 +276,15 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
 
     // vibração: tremor do corpo todo
     const vj = est.vib;
-    raiz.position.set(vj * rnd() * 0.05, 0, vj * rnd() * 0.05);
-    raiz.rotation.set(vj * rnd() * 0.06, 0, vj * rnd() * 0.06);
+    raiz.position.set(vj * rnd() * 0.02, 0, vj * rnd() * 0.02);
+    raiz.rotation.set(vj * rnd() * 0.025, 0, vj * rnd() * 0.025);
+    // (o tremor de verdade é no shader do traje: cada parte do corpo, e mais o rosto, num lugar diferente a cada quadro)
+    for (const mt of [matCorpo, matCabeca]) if (mt.userData.uVib) { mt.userData.uVib.value = vj; mt.userData.uSem.value = Math.random() * 100; }
+    for (const f of fantasmas) {
+      f.g.visible = vj > 0.05; if (!f.g.visible) continue;
+      const a = f.cab ? 0.06 : 0.04;
+      f.mt.opacity = (f.cab ? 0.34 : 0.26) * vj; f.uOff.value.set((Math.random() - 0.5) * 2 * a * vj, (Math.random() - 0.5) * 0.6 * a * vj);
+    }
     // pé no chão: o osso do tornozelo mais baixo toca a altura de repouso
     if (!e.parede && noAr < 0.5) {
       let minY = 9;
@@ -269,8 +293,8 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
       raiz.position.y = (0.115 - minY) * (1 - noAr * 2);
     }
     // material: vibração = translúcido com brilho
-    if (!pessoa) matCorpo.emissive.setRGB(0.02 + 0.8 * vj * (0.5 + 0.5 * Math.sin(tt * 90)), 0.003 + 0.3 * vj, 0.004);
-    matCorpo.opacity = 1 - 0.38 * vj; matCorpo.transparent = vj > 0.02;
+    if (!pessoa) matCorpo.emissive.setRGB(0.02 + 0.05 * vj * (0.5 + 0.5 * Math.sin(tt * 90)), 0.003, 0.004);   // (o brilho da vibração é o contorno do traje.js)
+    matCorpo.opacity = 1 - 0.12 * vj; matCorpo.transparent = vj > 0.02;
     matCabeca.opacity = matCorpo.opacity; matCabeca.transparent = matCorpo.transparent;
     return raiz.position.y;
   }
@@ -281,10 +305,10 @@ export async function criarHeroi({ aniso = 4, lod = 1, mobile = false, traje = '
   frente.rotation.y = -Math.PI / 2; frente.add(raiz);
   if (pessoa) frente.scale.setScalar(PESSOAS[pessoa]?.escala ?? 1);
   else if (ESCALA_TRAJE[traje]) frente.scale.setScalar(ESCALA_TRAJE[traje]);
-  const materiais = [matCorpo, matCabeca, matDisco, matEmb, texCabeca, ...texs];
+  const materiais = [matCorpo, matCabeca, matDisco, matEmb, texCabeca, ...texs, ...fantasmas.map((f) => f.mt)];
   return {
     grupo: frente, aplicar, materiais, ossos, raiz,
-    setVisivelProfundo(prof) { for (const m of [matCorpo, matCabeca, matDisco, matEmb]) { m.depthTest = !prof; } },
+    setVisivelProfundo(prof) { for (const m of [matCorpo, matCabeca, matDisco, matEmb, ...fantasmas.map((f) => f.mt)]) { m.depthTest = !prof; } },
     dispose() { corpo.geometry.dispose(); cabeca.geometry.dispose(); materiais.forEach((m) => m.dispose?.()); },
   };
 }

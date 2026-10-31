@@ -73,6 +73,10 @@ const MISSOES_NORMAL = [
   { id: 'p2-caixinha', titulo: 'A caixinha de música', texto: 'O Joe chamou você para jantar na casa da família West', ponto: 'jantar', aliados: { joe: 'jantar' }, roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
   { id: 'p2-limite', titulo: 'Só um teste', texto: 'Passe dos 400 km/h (segure CORRER numa reta longa)', checar: (c) => c.v * 3.6 >= 400 },
   { id: 'p2-tunel', titulo: 'Vinte anos atrás', texto: 'Fique 5 s acima de 180 km/h: o túnel do tempo vai abrir', tipo: 'tunel', checar: (c) => c.tunel >= 1 },
+  // a viagem no tempo é jogável (dono, 31/10: "ele fica correndo e eu não faço nada, eu que tenho que impedir e fazer as
+  // coisas"): no passado (epoca 'noite'), você corre até a casa contra o relógio e segura o seu pai (tipo 'espera')
+  { id: 'p2-noite', titulo: 'A noite do fogo', texto: 'Vinte anos atrás: chegue à casa dos seus pais antes do raio', epoca: 'noite', ponto: 'jantar', roupa: 'civil', raio: 3.5, tempo: 80, cenaAbre: 'p2-chegada', checar: (c) => c.perto },
+  { id: 'p2-segurar', titulo: 'Segure o raio', texto: 'Fique ao lado do seu pai, parado, até o raio passar (6 s)', epoca: 'noite', ponto: 'jantar', roupa: 'civil', tipo: 'espera', espera: 6, raio: 5, checar: (c) => c.espera >= 1 },
   { id: 'p2-mundo', titulo: 'O dia que nunca aconteceu', texto: 'Volte ao S.T.A.R. Labs', epoca: 'ignicao', fraco: 0.55, alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
   { id: 'p2-joe', titulo: 'Um estranho', texto: 'Vá à Delegacia Central: o Joe vai saber o que aconteceu', epoca: 'ignicao', fraco: 0.55, ponto: 'delegacia', aliados: { joe: 'delegacia' }, roupa: 'civil', checar: (c) => c.perto },
   { id: 'p2-iris', titulo: 'Prazer, Iris West', texto: 'A Iris toma café no Jitters todo fim de tarde', epoca: 'ignicao', fraco: 0.55, ponto: 'mesaCafe', aliados: { iris: 'mesaCafe' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
@@ -82,6 +86,8 @@ const MISSOES_NORMAL = [
   { id: 'cap-nevasca', titulo: 'Projeto Nevasca', texto: 'Encontre a Nevasca e derrote-a', epoca: 'ignicao', fraco: 0.55, capitulo: 'nevasca' },
   { id: 'p2-mae', titulo: 'Jantar em família', texto: 'Seus pais esperam você para jantar. Na mesma casa', epoca: 'ignicao', fraco: 0.55, ponto: 'jantar', roupa: 'civil', raio: 3.5, checar: (c) => c.perto },
   { id: 'p2-desfazer', titulo: 'Desfazer', texto: 'Fique 5 s acima de 180 km/h e volte àquela noite', epoca: 'ignicao', fraco: 0.55, tipo: 'tunel', checar: (c) => c.tunel >= 1 },
+  { id: 'p2-noite2', titulo: 'A mesma noite', texto: 'Vinte anos atrás, de novo: chegue à casa antes do raio', epoca: 'noite', ponto: 'casa', roupa: 'civil', tempo: 80, cenaAbre: 'p2-chegada2', checar: (c) => c.perto },
+  { id: 'p2-espera', titulo: 'Só olhar', texto: 'Desta vez, não entre: espere do lado de fora até o raio passar (8 s parado)', epoca: 'noite', ponto: 'casa', roupa: 'civil', tipo: 'espera', espera: 8, raio: 22, naoEntrar: 5, checar: (c) => c.espera >= 1 },
   { id: 'p2-volta', titulo: 'Os ecos', texto: 'Volte ao Cortex', alvo: 'cortex', checar: (c) => c.sala === 'cortex' },
   // Ato 6 — O Corredor Negro
   { id: 'p2-boatos', titulo: 'O homem sem rosto', texto: 'A Iris quer mostrar uma coisa na redação do Picture News', ponto: 'mesaIrisJornal', aliados: { iris: 'mesaIrisJornal' }, roupa: 'civil', raio: 3, checar: (c) => c.perto },
