@@ -713,7 +713,7 @@ aceleração; o ritmo vai à passada pelo `pousoEm` do pé no ar), o contato no 
 'acao' marcado; `partida.js`: o cobrador no ponto de partida no fim da montagem, a IA que começa antes (a previsão da corrida,
 `estimarTicks`), a zona livre e os zagueiros previstos para o fim da corrida, o apito; `sim.js`: o cobrador da corrida sem a
 condução nem a "bola perdida", o contato no passo 3, o ritmo na passada; `bolas-paradas.js`: quem ataca a zona sai junto;
-`mira-linha.js`: a linha do pedido guardado; `render/bola-parada.js`: a câmera recua.
+`mira-linha.js`: a linha do pedido guardado; `render/bola-parada.js`: a câmera monta o quadro pelo ponto de partida do cobrador (ele inteiro na metade de baixo).
 
 **Medido** (`tools/teste-corrida-cobranca.mjs`, main 630960d4 → agora; 16 cenas por tipo e caminho, IA e demo, + a pessoa).
 

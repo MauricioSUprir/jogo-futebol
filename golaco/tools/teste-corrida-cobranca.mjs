@@ -31,7 +31,8 @@
 //
 //   node tools/teste-corrida-cobranca.mjs                               (lógica do repositório)
 //   node tools/teste-corrida-cobranca.mjs --js <pasta js>                (outra cópia: a main → REPROVA)
-//   node tools/teste-corrida-cobranca.mjs --gravar-referencia <pasta js> (grava os tempos da main em tools/dados/corrida-ref.json)
+//   node tools/teste-corrida-cobranca.mjs --gravar-referencia <pasta js> [--origem "main <commit>"] (grava os tempos da main em
+//     tools/dados/corrida-ref.json)
 //   [--cenas 16] (cenas por tipo e caminho)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -196,7 +197,8 @@ const CAMINHOS = [
 
 // ---------------------------------------------------------------------------------- gravação da referência
 if (GRAVA) {
-  const ref = { js: path.relative(path.join(AQUI, '..'), JS), cenas: NC, tempos: {} };
+  // (de onde: --origem <texto>, ex.: "main 630960d4"; o caminho da pasta não vai para o arquivo — é da máquina de quem gravou)
+  const ref = { origem: arg('--origem', 'main'), cenas: NC, tempos: {} };
   for (const T of TIPOS) for (const K of CAMINHOS) {
     const l = [];
     for (let k = 0; k < NC; k++) {

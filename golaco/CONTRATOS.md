@@ -3093,8 +3093,13 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
   da saída à zona; a arrancada para a zona é no chute, como antes.
 - **A disputa de pênaltis** (`disputa.js`): a caminhada termina no ponto de partida da corrida (o mesmo `planejarCorrida`) e a
   cobrança corre de lá; o apito pelo `apitoDaCobranca`; a trava da cobrança não corta a corrida.
-- **Câmera** (`render/bola-parada.js`, só desenho): atrás do cobrador ela recua até o ponto de partida + `recuo` 2,4 m (o
-  cobrador fica no quadro, à frente dela); o ponto é fixo na parada inteira (a câmera não anda com a corrida).
+- **Câmera** (`render/bola-parada.js`, só desenho): o quadro é montado pelo ponto da linha bola–alvo na altura do ponto de
+  partida do cobrador (os pés dele em `bolaY`, a bola mais acima, à frente dele, e o alvo em `alvoY`), com a lente atrás dele
+  `atrasMin`–`atras` (3,2–4,6 m) e a até `distMax` 7,6 m da bola — o cobrador inteiro na metade de baixo (`teste-bola-parada-tela`
+  item 1); o ponto é fixo na parada inteira (a câmera não anda com a corrida).
+- **Mira pela tela** (`main.js telaMira`, contrato "Mira pela tela"): na cobrança do controlado a direção sai sempre da BOLA
+  (ele espera longe dela, a 2,5–5 m; pelo `miraBolaPerto` ela sairia dele e o pênalti mirado no meio do gol visto ia à trave:
+  `teste-mira-tela` M4).
 - **Online.** A corrida é lógica determinística: os dois aparelhos rodam igual (`teste-corrida-cobranca` C8; `teste-dois-humanos`,
   `teste-online`).
 - **Decisão para o dono confirmar** (escolha recomendada do item 12 aplicada): a cavadinha segue a regra escrita ("o 2º aperto
@@ -3105,7 +3110,7 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
   a pessoa: C1 anda ≥ 3,5 m no pênalti e ≥ 2 m nos outros; C2 2,5–5 m/s no contato; C3 o pé de apoio plantado a 0,2–0,45 m
   do centro da bola; C3b o pé que bate no ar com o gesto (peso ≥ 0,5, tornozelo desenhado a ≤ 0,35 m da bola); C4 a régua do
   `teste-patinacao` no cobrador e o pé plantado da simulação parado; C5 a bola morta → rolando por tipo, a média da diferença
-  PAREADA com a main a ≤ ±0,2 s (os tempos da main em `tools/dados/corrida-ref.json`: `--gravar-referencia <pasta js>` — mudou
+  PAREADA com a main a ≤ ±0,2 s (os tempos da main em `tools/dados/corrida-ref.json`: `--gravar-referencia <pasta js> --origem "main <commit>"` — mudou
   de propósito o começo da partida IA × IA ou as bolas paradas da main? regravar e dizer no PR); C6 a linha da cobrança
   mirada no soltar × a bola real ≤ 3 cm; C7 a cavadinha com o 2º toque no meio da corrida; C8 dois humanos com o mesmo hash;
   C9 o apito. As guardas conferidas por mutação (corrida curta, pé de apoio longe, IA sem adiantar, pé arrastado, velocidade
