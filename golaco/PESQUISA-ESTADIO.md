@@ -528,6 +528,6 @@ Maracanã e nas 104 genéricas, a textura nas faixas do perfil, sem degrau. O PR
   no Maracanã o lado de baixo em todas as fileiras e o de cima em uma sim, uma não (o torcedor maior vale 2).
 - **A cadeira 3D de perto** (`cadeiras3d.js`, SOB DEMANDA): por BLOCO (a faixa entre duas escadas × 4 fileiras), pelos px
   da cadeira na tela (0,5 m · altura da tela ÷ (2 · d · tan(fov/2))), com histerese, até `CADEIRAS3D.teto` cadeiras (Baixa
-  0, Média 480, Alta 3.072) e 20 blocos; dentro de um bloco em 3D o material das arquibancadas troca a pintura pelo
+  0, Média 320, Alta 3.072) e 20 blocos; dentro de um bloco em 3D o material das arquibancadas troca a pintura pelo
   concreto do degrau (uma caixa orientada por bloco no shader: `UNIFORMS_PERTO`), e o lado de cá sai junto com a câmera
   de TV dentro dele.

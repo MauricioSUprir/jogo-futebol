@@ -4070,7 +4070,7 @@ pesquisa em `PESQUISA-ESTADIO.md` §14). Só DESENHO: nada do fecho do hash muda
   largura, assento a 0,43 m, encosto 0,36 m acima dele) instanciada (1 InstancedMesh, 1 chamada só com algum bloco perto) nos
   blocos que `escolherBlocos` escolhe por quadro: pelos px da cadeira na tela (0,5 m · alturaPx ÷ (2 · d · tan(fov/2)), d = a
   distância à esfera do bloco), entra com ≥ `pxEntra` 10 px, fica até `pxSai` 7,5 (histerese), só até `distMax` 42 m, no cone da
-  câmera, com teto de instâncias por qualidade (`teto`: Baixa 0, Média 480, Alta 3.072) e de blocos (`blocosMax` 20; quem já
+  câmera, com teto de instâncias por qualidade (`teto`: Baixa 0, Média 320 — com 480 o placar do pós-jogo no celular passava dos 130 mil triângulos —, Alta 3.072) e de blocos (`blocosMax` 20; quem já
   estava vale 20% mais no ranking); com a câmera dentro do lado de cá (a TV), nenhum bloco dele (`semSetor`). As matrizes e as
   cores só são escritas quando a escolha muda; pré-carga: o 1º quadro depois de chegar compila o programa com 0 instâncias.
   Dentro de um bloco em 3D o material das arquibancadas (`campo.js comLuzFalsa`, também o do Maracanã e das genéricas) troca a
