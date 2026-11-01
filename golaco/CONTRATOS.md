@@ -4148,7 +4148,10 @@ IGUAIS).
   seguinte (`replanejar`; subindo aos poucos, as cadeiras que já ocupam o orçamento não dariam lugar às pessoas). Sem
   medidor (quem cria o campo sem o `main.js`), só os tetos, como antes. A TV de jogo continua sem nenhum 3D de perto. API:
   `__golaco.estadio.cadeiras.orcamento` {alvo, resto, orcamento, gasto: {total, cadeiras, torcedores}, corte, esperando,
-  novo, medido}; `torcedor3d.pronto` (desenha alguém agora).
+  novo, medido}; `torcedor3d.pronto` (desenha alguém agora). Medido (PESQUISA-ESTADIO §15): o plano do placar do pós-jogo
+  no celular Média 137 → 125 mil triângulos (o 3D de perto de 288 cadeiras + 69 torcedores para 96 + 9); o cartão (115 mil),
+  o corpo novo (106), o pré-jogo e as 24 câmeras de perto dos 4 estádios medidos não mudam (o orçamento sobra); o PC igual
+  (o pior, 390 mil, abaixo dos 400).
 - **O quadro de quem está em 3D sai do desenho**: `torcida.js` ganhou o atributo por instância `aOculto` (1 byte; o vertex
   shader joga o quadro para fora do recorte) e `torcida.ocultar(indices)` (só as malhas que mudaram sobem de novo), `dados` e
   `nOcultos`. Com a torcida escondida (`mostrarTorcida(false)`), o 3D some junto.

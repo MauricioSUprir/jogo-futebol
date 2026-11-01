@@ -600,3 +600,49 @@ cadeira 3D nos blocos de perto. Este PR põe um CORPO 3D nessas cadeiras de pert
   perto do celular, +2 a +4 chamadas e +2 a +9 mil triângulos (17–70 torcedores); no PC Alta, até ~1.250 torcedores com
   +2 a +4 chamadas e até +160 mil triângulos (o padrão de perto passa de ~225 para ~383 mil). Baixa: nada (o modelo nem é
   baixado). O que baixa sob demanda: o modelo 55 KB + os módulos 26 KB.
+
+**O orçamento de triângulos por quadro do 3D de perto** (31/10, depois do PR 2 juntar a main com o PR 1: o
+`teste-cenas-tela` F8 reprovou — o plano do placar do pós-jogo no celular Média com 30 chamadas e 137 mil triângulos, meta
+≤ 130 mil; antes do item 69 eram 27/122 mil, com o PR 1 28/128 mil). Os tetos FIXOS por qualidade (o PR 1 baixou o das
+cadeiras da Média de 480 para 320 por causa do mesmo plano) só valem para um plano: o resto do quadro (jogadores, a torcida
+em quadros, o estádio, o corpo novo) muda de plano para plano e de estádio para estádio. Pedido: um orçamento por quadro
+que garanta o teto do celular em QUALQUER plano e estádio.
+- **Funkhouser & Séquin, "Adaptive Display Algorithm for Interactive Frame Rates During Visualization of Complex Virtual
+  Environments" (SIGGRAPH 1993)**: a cada quadro escolhe o nível de detalhe de cada objeto por custo × benefício dentro de
+  um orçamento; o algoritmo PREDITIVO (o custo do quadro estimado antes de desenhar) não oscila como o REATIVO (que só olha
+  o quadro anterior). → a parte do 3D de perto é preditiva (os triângulos dele se sabem antes de desenhar: 18 por cadeira,
+  ~306/~128 por torcedor nos níveis 0/1) e só o RESTO do quadro, que ele não controla, vem do desenho anterior
+  (`renderer.info.render.triangles` menos o que o próprio 3D de perto pôs nele); o benefício são os px na tela.
+- **Epic, Animation Budget Allocator (plugin do Unreal Engine 4.24+)**: um orçamento fixo por plataforma (ms do game
+  thread) e, quando não cabe tudo, o corte pela SIGNIFICÂNCIA — os mais perto e importantes na taxa cheia, os outros
+  reduzidos —, com o gasto do quadro anterior informado ao alocador. → o alvo por qualidade (Baixa 0, Média 127,5 mil, Alta
+  400 mil) e a ordem pela importância: as PESSOAS antes das cadeiras (com o torcedor sentado, a cadeira de baixo dele quase
+  não aparece) e, entre elas, as fileiras de mais px; quando não cabe, o nível 1 antes de tirar a fileira.
+- **Luebke et al., "Level of Detail for 3D Graphics" (Morgan Kaufmann, 2003)**, a histerese na troca de nível de detalhe
+  (um limiar só faz o objeto piscar na borda) → só DESCE quando o que está desenhado passa do orçamento; SOBE só abaixo do
+  orçamento − 2 mil e uma unidade inteira por quadro (a fileira, o nível 0 ou o bloco).
+- **Smith & Henderson, "Edit Blindness: The relationship between attention and global change blindness in dynamic scenes"
+  (Journal of Eye Movement Research, 2008)** e **Shimamura et al., "How Attention Is Driven by Film Edits: A Multimodal
+  Experience" (Psychology of Aesthetics, Creativity, and the Arts, 2015**, sobre como o corte conduz a atenção): um quarto dos
+  cortes entre dois pontos de vista da mesma cena passa sem ser notado (um terço com movimento junto). → no CORTE
+  de câmera o resto de antes não vale: o quadro do corte vai sem 3D de perto (o resto da câmera nova é medido nele) e o
+  seguinte faz a escolha inteira de uma vez, sem histerese — a troca fica colada no corte, onde a imagem inteira já muda.
+- **Como ficou** (`render/cadeiras-dados.js` `ORCAMENTO3D`, `corteDeCamera`, `orcamentoPerto`, `criarOrcamento3D` — puros;
+  `render/cadeiras3d.js` aplica; `torcedor3d.js` diz o que QUER e desenha o que o orçamento der): alvo − resto por quadro;
+  as fileiras do torcedor 3D com o bloco de cadeiras delas, as de mais px primeiro (no nível 1 se o 0 não couber), depois os
+  blocos sem ninguém; desce só estourando, sobe 1 unidade por quadro com 2 mil de folga; o corte (outra câmera, a TV, pulo
+  > 2,5 m, giro > 25°, zoom > 20%) com 1 quadro sem 3D de perto; a troca de qualidade espera a medida da nova; o modelo do
+  torcedor que chega replaneja tudo (senão as cadeiras que já ocupam o orçamento não dariam lugar às pessoas). A Média ficou
+  em 127,5 mil (130 menos a variação do resto de um quadro para o outro); a Alta em 400 mil, o que o PC já desenha (o pior
+  medido: 390 mil no pré-jogo do padrão, 384 mil de perto) — ela não corta nada nos planos medidos e só segura um caso pior.
+- **Medido** (antes = o PR 2 sem o orçamento, depois = com ele; `teste-cenas-tela`, `teste-prejogo`, `tools/medir-cadeiras.mjs`
+  com o padrão, o Maracanã, os Aflitos e o San Siro): o plano do PLACAR do pós-jogo (F8, celular Média) 137 → 125 mil
+  triângulos (30 chamadas nos dois) — o 3D de perto de 288 cadeiras + 69 torcedores para 96 + 9 (o resto do plano é ~123
+  mil: sobram ~2,9 mil para o 3D). O resto não mudou: o cartão (C8) no pior plano 115 mil (282 cadeiras + 65 torcedores, o
+  túnel do vermelho), o corpo novo (F9) 106 mil, o pré-jogo do celular 127,8 mil no padrão (planos sem 3D), 125,3 no
+  Maracanã, 99,8 nos Aflitos, 123,6 no San Siro; as 24 câmeras de perto do celular com o mesmo 3D (o resto delas fica entre
+  53 e 109 mil e o orçamento entre 18 e 75 mil: sobra para todo o 3D que os tetos deixam, até 15 mil; só o San Siro atrás
+  muda de 297 para 300 cadeiras, pela ordem da escolha de uma vez depois do corte); no PC o pré-jogo dos 4 estádios
+  igual e as câmeras de perto iguais menos 3 com a mesma diferença da escolha de uma vez (padrão atrás 1.920 → 1.872
+  cadeiras, Aflitos atrás 696 + 378 → 704 + 408, San Siro atrás 508 + 154 → 516 + 153); o pior do PC, 390 mil, com até
+  1.920 cadeiras + 1.249 torcedores. Na TV de jogo, nenhum 3D de perto (gasto 0 em 20 instantes, `teste-estadio` 14c).
