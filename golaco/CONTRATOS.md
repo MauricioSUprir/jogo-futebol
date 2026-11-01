@@ -3138,7 +3138,11 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
   batendo, como o `colocarNaCorrida`; o C3 e o C4 também neles) — 522a4e36: 0,336 m, 82 de 265 com ≥ 0,15 m, a cabeça
   0,38 m; agora 0,100 m, 0, 0,16 m. As guardas conferidas por mutação (corrida curta, pé de apoio longe, IA sem adiantar, pé
   arrastado, velocidade alta, a linha sem o pedido, a janela da cavadinha, sem apito, sorteio fora do mundo, a zona parada
-  (`zonaAntes` 0,15) e a zona adiantada (0,35): cada uma reprova o item dela).
+  (`zonaAntes` 0,15) e a zona adiantada (0,35): cada uma reprova o item dela). O C11: a lógica de 522a4e36 (0,336 m, 82 de 265
+  com ≥ 0,15 m), sem a escolha do pé que sai primeiro (`trocaPe` −1: 0,142 m, e o C3, o C5 do pênalti da demo e o C3 do canhão
+  também) e sem as DUAS guardas do apoio e do voo (o `ritmoVoo` também com um pé no chão e `vooMin` 0: 0,141 m) reprovam; uma
+  delas sozinha cobre a outra nestas cenas (só o apoio esticado: 0,100 m, porque com o voo ≥ 0,8 o apoio estica no máximo a
+  0,93× o natural; só o voo sem piso: 0,110 m) — as duas ficam (o apoio natural é o mecanismo; o piso do voo evita o salto).
 
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores
