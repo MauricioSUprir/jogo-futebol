@@ -77,6 +77,11 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     // goleiro realista (goleiro.js, só na partida): a base larga dos pés, parado na zona do ponto, a bola solta na área,
     // a saída no cruzamento lida, o descanso depois de tentar abafar e a base desenhada (0–1, a pose: anim.js)
     baseGk: undefined, gkParado: undefined, varre: undefined, altoLido: undefined, abafaAte: undefined, baseF: undefined, setGk: undefined,
+    // (01/11, CI do #588: ficaram de fora o choque das faltas — faltas.js —, os braços do arremesso do lateral e do goleiro,
+    // o pulo da barreira — bolas-paradas.js — e o pedido de movimento da corrida da cobrança e da disputa — j.guia —: a
+    // partida chegava a 12 formas de jogador, a main a 9, e cada passo com a bola rolando custava ~40% mais depois da 1ª
+    // cobrança com corrida; teste-custo 2,61× com a meta de 2,5×)
+    choque: undefined, arremesso: undefined, arremessoGk: undefined, salto: undefined, guia: undefined,
   };
   return j;
 }

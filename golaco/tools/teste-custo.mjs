@@ -127,4 +127,28 @@ const rm = pct(razMedia, 0.5), rp = pct(razP95, 0.5);
 reg('razão da média (partida ÷ treino; mediana dos blocos)', `${fmt(rm)}× (total ${fmt(mp / mt)}×)`, '≤ 2,5×', rm <= 2.5);
 reg('razão do p95 (partida ÷ treino; mediana dos blocos)', `${fmt(rp)}× (total ${fmt(p95p / p95t)}×)`, '≤ 2,5×', rp <= 2.5);
 reg('passo mais lento da partida (sem a espera do sistema)', `${fmt(maxP, 1)} ms (parede ${fmt(maxPParede, 1)}${maxPCpu ? `; CPU do fio no pior acima de 20 ms: ${fmt(maxPCpu, 1)}` : ''})`, '≤ 50 ms', maxP <= 50);
+// As FORMAS do jogador (01/11, CI do #588): campo posto no jogador DEPOIS de criado dá a ele outra classe oculta do motor
+// JS; com mais de 4 formas nos 22, os acessos viram megamórficos e o passo inteiro fica mais caro — a corrida da cobrança
+// punha o j.guia no cobrador (12 formas; a main tinha 9 pelo choque das faltas, os arremessos e o pulo da barreira) e, depois
+// da 1ª cobrança com corrida, cada passo com a bola rolando custava ~40% mais (a razão da média 2,61×). Duas partidas
+// inteiras (2 × 4 min), as chaves de cada jogador conferidas a cada 600 passos contra as da criação (jogador.js criarJogador:
+// "campo novo no jogador: declarar aqui"). Na main de 01/11 (117abc28): choque, arremesso, salto e arremessoGk.
+{
+  const novos = new Set(), formas = new Set();
+  for (const sem of [1, 2]) {
+    const p = P.criarPartida({ semente: sem, iaClassica: ANTES });
+    const base = new Map(p.jogadores.map(j => [j.id, Object.keys(j)]));
+    for (let i = 0; i < 30000 && !(p.partida && p.partida.fase === 'fim'); i++) {
+      P.passoPartida(p, P.entradaDemoPartida(p));
+      if (i % 600 !== 0) continue;
+      for (const j of p.jogadores) {
+        const k = Object.keys(j), b = base.get(j.id);
+        formas.add(k.join(','));
+        if (b) for (const c of k) if (!b.includes(c)) novos.add(c);
+      }
+    }
+  }
+  reg('formas do jogador em 2 partidas inteiras (as chaves de cada um a cada 600 passos)',
+    `${formas.size}${novos.size ? ` (postos depois de criado: ${[...novos].join(', ')})` : ''}`, '1', formas.size === 1 && novos.size === 0);
+}
 fim();
