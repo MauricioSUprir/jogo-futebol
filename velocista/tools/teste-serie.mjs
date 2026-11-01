@@ -191,6 +191,8 @@ if (process.argv.includes('--navegador')) {
   await quadros(3);
   ok(await pagina.evaluate(() => document.getElementById('jornal').hidden), 'e some quando a cena acaba');
   // a cena sem o Barry (episódio 15): o herói sai de cena, o Wells se levanta para o Cisco e vira o homem de amarelo; no fim, o herói volta
+  // (antes: a cena que vem logo depois da descoberta — o episódio 20, com a Gideon na sala secreta — acaba; ela devolve o herói)
+  for (let i = 0; i < 10 && await pagina.evaluate(() => !!window.__rel.historia.cenaAtual); i++) { await pagina.evaluate(() => window.__rel.historia.pular()); await quadros(3); }
   // (um lugar aberto: a praça da Prefeitura; espera uns quadros para o herói assentar antes de anotar onde ele está)
   await pagina.evaluate(() => { const R = window.__rel, w = R.pontoMundo('prefeitura'); Object.assign(R.P, { x: w.x, z: w.z, vx: 0, vz: 0 }); });
   await quadros(6);
@@ -200,7 +202,7 @@ if (process.argv.includes('--navegador')) {
   ok(await pagina.evaluate(() => window.__rel.J.heroiFora === true && !window.__rel.heroi.visible), 'episódio 15, a cena do Cisco: o Barry fora de cena');
   for (let i = 0; i < 80 && await pagina.evaluate(() => !window.__rel.J.wellsVirou); i++) { await pagina.waitForTimeout(500); await pagina.evaluate(() => { const h = window.__rel.historia; h.avancar(); h.avancar(); }); }
   await pagina.waitForFunction(() => !!window.__rel.aliados.foco('reverso'), null, { polling: 300 });
-  ok(await pagina.evaluate(() => { const R = window.__rel, f = R.aliados.foco('reverso'), w = R.equipe.focos().wells(); return R.J.wellsVirou && Math.hypot(f.x - w.x, f.z - w.z) < 1.5; }), 'o Wells vira o homem de amarelo no lugar dele, diante do Cisco');
+  ok(await pagina.evaluate(() => { const R = window.__rel, f = R.aliados.foco('reverso'), w = R.pontoMundo('cortexWells'); return R.J.wellsVirou && !R.equipe.focos().wells() && Math.hypot(f.x - w.x, f.z - w.z) < 1.5; }), 'o Wells vira o homem de amarelo no lugar dele, diante do Cisco');
   await pagina.evaluate(() => window.__rel.historia.pular());
   await pagina.waitForFunction(() => window.__rel.J.modo === 'jogando', null, { polling: 300 });
   const depois = await pagina.evaluate(() => ({ x: window.__rel.P.x, z: window.__rel.P.z, fora: window.__rel.J.heroiFora, vis: window.__rel.heroi.visible, virou: window.__rel.J.wellsVirou }));
