@@ -759,7 +759,7 @@ Constantes em `config.js COMEMORACAO`.
   quadro do celular a 1,87 m (1 quadro); (01/11, C7) o corpo contava pelo centro + 0,4 m de lado na profundidade do centro,
   e no CI de 522a4e36 (1º gol da semente 32, com o bloqueio do teste, a lente presa ao lado do gol) o centro ficava 1 cm
   fora da conta e o joelho, 0,5 m mais fundo, dentro do quadro do celular (13 quadros); `teste-comemoracao` 13, com mais 12
-  gols naturais, e a FOLGA: ninguém a < 2,3 m dentro de 1,25 × o quadro); câmera nunca além de 5,5 m das linhas nem dentro do gol; celular: fov × 0,88 e o assunto no terço
+  gols naturais, e a FOLGA do bloqueio: o jogador parado nunca a < 2,3 m dentro de 1,25 × o quadro); câmera nunca além de 5,5 m das linhas nem dentro do gol; celular: fov × 0,88 e o assunto no terço
   esquerdo. Exporta `ik`/`ikBraco`/`BRACO`/`ANTEBRACO` do `anim.js` (só exportar: o hash não muda).
 - **Golpes e gestos** (todos por IK: os ossos ficam com o comprimento certo): de joelhos (o corpo desliza desacelerando
   até parar no alvo, entre 2,5 e 7 m/s²; pelve na altura de joelhos, joelho 6 cm à frente do quadril a 6,5 cm do chão,
