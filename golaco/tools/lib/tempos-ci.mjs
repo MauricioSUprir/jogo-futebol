@@ -85,6 +85,7 @@ export const TEMPOS_NODE = {
   'teste-estadio-forma.mjs': 1,
   'teste-estadio-generico.mjs': 90, // item 69: a grade das cadeiras nos lugares (+~0,15 s por estádio)
   'teste-cadeiras.mjs': 30, // item 69 (estimado: ~20 s aqui sozinho; as 104 genéricas)
+  'teste-cadeiras-estadios.mjs': 40, // item 69, PR 4 (medido: 33 s aqui com 3 linhas de execução — ocupa 3 vagas; ~70 s numa só)
   'teste-corrida-cobranca.mjs': 40, // item 70 P1 (medido: ~15 s aqui com outro processo; 01/11, + o C11 com o canhão de 75 cobradores: ~19 s) (01/11, P2: + o canhão de estilos, 68 cobranças)
   'teste-estilos-penalti.mjs': 130, // item 70 P2: 1.760 cobranças da IA em 3 processos + a pessoa, a disputa e a IA (~80 s aqui com 3 processos e a máquina livre; estimado)
   'teste-ossos.mjs': 25,

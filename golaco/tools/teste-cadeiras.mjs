@@ -67,7 +67,9 @@ if (!CD) {
       `cadeira ${fmt(A.assento, 2)} m; fileira ${fmt(Math.min(...prof), 3)}–${fmt(Math.max(...prof), 3)} m; ${entre} entre escadas; caimento ${fmt(Math.min(...caim), 1)}–${fmt(Math.max(...caim), 1)}°`,
       '0,5; 0,75–0,9; ≤ 28; ≤ 34°', A.assento >= 0.5 && Math.min(...prof) >= 0.75 && Math.max(...prof) <= 0.9 && entre <= CADEIRA.entreEscadas && Math.max(...caim) <= CADEIRA.caimentoMax);
     const nCad = TD.cadeiras().length;
-    reg('C2 Golaço: a capacidade da grade = as cadeiras da textura de antes (36 × 250, sem escadas, os fundos até 82%, sem o túnel)', `${GG.capacidade} cadeiras (torcida-dados.js cadeiras(): ${nCad})`, '29.500–29.700 e iguais', GG.capacidade >= 29500 && GG.capacidade <= 29700 && nCad === GG.capacidade);
+    // (item 69, PR 4: −144 cadeiras — a escada de cada lado da boca do túnel nas fileiras de baixo e a do poste do refletor
+    // nos fundos)
+    reg('C2 Golaço: a capacidade da grade = as cadeiras da textura de antes (36 × 250, sem escadas, os fundos até 82%, sem o túnel, as escadas do túnel e do poste)', `${GG.capacidade} cadeiras (torcida-dados.js cadeiras(): ${nCad})`, '29.400–29.700 e iguais', GG.capacidade >= 29400 && GG.capacidade <= 29700 && nCad === GG.capacidade);
   }
   // ---------------------------------------------------------------- C2 (Maracanã)
   const PM = PL.criarPlanta(PL.validarForma(base.maracana.forma));
@@ -83,8 +85,11 @@ if (!CD) {
       for (let i = 0; i < 90; i++) {
         const th = -Math.PI + (2 * Math.PI * (i + 0.5)) / 90, D = P.rB(th) - P.rF(th);
         if (D < 2.5) continue;
-        const p = D * (r.s1 - r.s0); soma += p; n++;
-        const sub = (P.perfil.length > 1 ? P.perfil(r.s1, th) - P.perfil(r.s0, th) : P.perfil(r.s1) - P.perfil(r.s0));
+        // (as fileiras por metro das genéricas, item 69 PR 4: o s de cada uma em cada ângulo; null = não existe ali)
+        const L = G.limites ? G.limites(r, th) : [r.s0, r.s1];
+        if (!L) continue;
+        const p = D * (L[1] - L[0]); soma += p; n++;
+        const sub = (P.perfil.length > 1 ? P.perfil(L[1], th) - P.perfil(L[0], th) : P.perfil(L[1]) - P.perfil(L[0]));
         cmax = Math.max(cmax, Math.atan2(sub, p) * 180 / Math.PI);
       }
       if (n) { profs.push(soma / n); caims.push(cmax); }
@@ -116,10 +121,12 @@ if (!CD) {
       const m = medidasAnel(P, P.grade);
       razoes.push([k, m.cap / e.capacidade]);
       if (m.l1 < 0.4 || m.l99 > 0.8 || m.l50 < 0.46 || m.l50 > 0.62) ruinsL.push(`${k} ${fmt(m.l1, 2)}/${fmt(m.l50, 2)}/${fmt(m.l99, 2)}`);
-      if (Math.abs(m.pm - CADEIRA.fileira) > 0.12 || m.p10 < 0.55) ruinsP.push(`${k} ${fmt(m.p10, 2)}/${fmt(m.pm, 2)}`);
+      // (a profundidade RADIAL média pela volta: por metro, a fileira tem 0,8 m pela perpendicular — teste-cadeiras-estadios
+      // E4 — e a radial passa disso nos cantos e nas pontas; a última de cada ângulo fica com o que sobra)
+      if (Math.abs(m.pm - CADEIRA.fileira) > 0.15 || m.p10 < 0.55) ruinsP.push(`${k} ${fmt(m.p10, 2)}/${fmt(m.pm, 2)}`);
       if (m.entre > 28) ruinsE.push(k);
     }
-    reg(`C2 genéricas (${amostra.length}): cadeira p1 ≥ 0,40, p50 0,46–0,62, p99 ≤ 0,80 m; fileira (média pela volta) mediana 0,8 ± 0,12 m e p10 ≥ 0,55; ≤ 28 entre escadas (escada 1,2 m)`,
+    reg(`C2 genéricas (${amostra.length}): cadeira p1 ≥ 0,40, p50 0,46–0,62, p99 ≤ 0,80 m; fileira (radial, média pela volta) mediana 0,8 ± 0,15 m e p10 ≥ 0,55; ≤ 28 entre escadas (escada 1,2 m)`,
       `${ruinsL.length ? 'largura: ' + ruinsL.slice(0, 4).join('; ') : 'larguras ok'}; ${ruinsP.length ? 'fileira: ' + ruinsP.slice(0, 4).join('; ') : 'fileiras ok'}; ${ruinsE.length ? 'entre escadas: ' + ruinsE.join(', ') : '≤ 28'}`,
       'todas', !ruinsL.length && !ruinsP.length && !ruinsE.length);
     const rs = razoes.map(r => r[1]), dentro = rs.filter(r => r >= 0.65 && r <= 1.35).length;
@@ -154,9 +161,11 @@ if (!CD) {
         nA2++;
         const tr = G.trechos[0].k == null || G.trechos.length === 1 ? G.trechos[0] : G.trechos[P.trechoDe ? P.trechoDe(c.x, c.z) : 0];
         const u = tr.uDe(c.th, c.s), w = (u - Math.floor(u)) * 2, h = Math.floor(w), q = w - h;
-        if (q < G.corredor) emEscada++;
-        const i = Math.floor(((q - G.corredor) / (1 - G.corredor)) * c.n);
-        const r = G.fileiras[c.k], v = P.vDe ? P.vDe(c.s) : 0.04 + 0.93 * c.s;
+        const r = G.fileiras[c.k], cc = G.corredorDe ? G.corredorDe(r, h) : G.corredor;
+        if (q < cc) emEscada++;
+        const i = Math.floor(((q - cc) / (1 - cc)) * c.n);
+        // (por metro, o v da célula da fileira em th: vLiso)
+        const vDe = P.vDe ?? (s => 0.04 + 0.93 * s), v = G.metrico ? CD.vLiso(G, c.s, c.th, vDe) : vDe(c.s);
         if (h !== c.h || i !== c.i || v < r.v0 - 1e-9 || v > r.v1 + 1e-9) ruinsA++;
         const ti = P.trechoDe ? P.trechoDe(c.x, c.z) : 0;
         const b = G.assentoEm(c.th, c.s, ti);
