@@ -554,12 +554,17 @@ export function construirLab(THREE, cx, cz, opc = {}) {
     for (const du of [-6, 6]) box('luz', um + du - 0.14, um + du + 0.14, s0.teto - 0.1, s0.teto - 0.02, s0.v[0] + 1, s0.v[1] - 1);
   }
   // os saguões: o emblema na parede do fundo, banco, vasos e um telão
+  // (edição pessoal: no leste, a parede da sala secreta do Wells fecha o fundo do saguão — o emblema vai nela, de disfarce;
+  // banco e vasos ficam do lado de cá; o resto é a sala, desenhada em cofre3d.js)
+  const cofre = !!SALAS.cofre;
   for (const lado of [-1, 1]) {
-    const uf = lado < 0 ? -60.97 : 60.97, dir = -lado, ub = lado < 0 ? -53 : 53;
-    faceX('logoL', -1.8, 1.8, 2.2, 8.2, uf, dir, 1, [0.2, 0.8, 0, 1]);
+    const fundo = lado > 0 && cofre ? 51.68 : lado < 0 ? -60.97 : 60.97, uf = fundo, dir = -lado, ub = lado < 0 ? -53 : cofre ? 46 : 53;
+    const naParede = lado > 0 && cofre;                     // (na parede secreta: o emblema acima da porta escondida)
+    if (naParede) faceX('logoL', -1.2, 1.2, 5.4, 9.4, uf, dir, 1, [0.2, 0.8, 0, 1]); else faceX('logoL', -1.8, 1.8, 2.2, 8.2, uf, dir, 1, [0.2, 0.8, 0, 1]);
     box('acoEsc', ub - 2, ub + 2, PISO, 0.45, -1, 1); box('mov', ub - 1.9, ub + 1.9, 0.45, 0.55, -0.9, 0.9);
-    for (const v of [-4.4, 4.4]) { const u = lado < 0 ? -59.6 : 59.6; cil('pav', u, 0.75, v, 0.55, 0.9, 0, 0, 0, 12); for (let k = 0; k < 4; k++) esf('verde', u + (rnd() - 0.5) * 0.6, 1.6 + k * 0.3, v + (rnd() - 0.5) * 0.6, 0.55 - k * 0.06, 1, 1, 1, 1); }
-    box('ciano', lado < 0 ? -60.99 : 60.95, lado < 0 ? -60.95 : 60.99, 0.9, 0.96, -5.4, 5.4);
+    for (const v of [-4.4, 4.4]) { const u = lado < 0 ? -59.6 : cofre ? 50.2 : 59.6; cil('pav', u, 0.75, v, 0.55, 0.9, 0, 0, 0, 12); for (let k = 0; k < 4; k++) esf('verde', u + (rnd() - 0.5) * 0.6, 1.6 + k * 0.3, v + (rnd() - 0.5) * 0.6, 0.55 - k * 0.06, 1, 1, 1, 1); }
+    if (naParede) for (const [v0, v1] of [[-5.4, -1.35], [1.35, 5.4]]) box('ciano', fundo - 0.02, fundo + 0.02, 0.9, 0.96, v0, v1);
+    else box('ciano', lado < 0 ? -60.99 : fundo - 0.02, lado < 0 ? -60.95 : fundo + 0.02, 0.9, 0.96, -5.4, 5.4);
   }
   // um manequim com traje: pernas, corpo, braços, capuz e a base (o material escolhe a cor)
   const manequim = (k, u, v, rumo = 0) => {

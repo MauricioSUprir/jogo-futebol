@@ -147,6 +147,10 @@ export const CAPITULOS_SERIE = [
 ];
 
 /** as cenas que a série mostra sem o Barry (o Wells sozinho, o Cisco com ele): o herói some e a câmera vai para o Cortex */
+// as cenas do Wells na SALA SECRETA (lab.js COFRE, cofre3d.js): ele entra pela porta escondida e fala com a Gideon; e as
+// duas em que o Barry está lá dentro (a descoberta, no episódio 19, e a conversa com a Gideon, no 20)
+export const CENAS_NO_COFRE = new Set(['pov-e2', 'pov-e4', 'pov-e7', 'pov-e8', 'pov-e18']);
+export const CENAS_COFRE_HEROI = new Set(['depois-s1e19-sala', 'ep-20']);
 export const CENAS_NO_LAB = new Set(['pov-e2', 'pov-e3', 'pov-e4', 'pov-e6', 'pov-e7', 'pov-e8', 'pov-e10', 'pov-e11', 'pov-e12', 'pov-e15', 'pov-cisco', 'pov-e17', 'pov-e18', 'pov-e22']);
 
 export const PERSONAGENS_SERIE = {

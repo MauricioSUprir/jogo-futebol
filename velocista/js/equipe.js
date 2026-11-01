@@ -101,7 +101,7 @@ export function criarEquipe(cena, { mobile = false, aniso = 2, renderer = null, 
     sentar(id) { if (LUGARES[id]) LUGARES[id].sentado = true; },
     get pronta() { return Object.keys(pessoas).length === Object.keys(LUGARES).length; },
     /** os focos da câmera numa cena: {caitlin: () => ponto, cisco: () => ponto} */
-    focos() { return Object.fromEntries(Object.values(pessoas).map((p) => [p.id, () => ({ x: p.x, y: PISO, z: p.z })])); },
+    focos() { return Object.fromEntries(Object.values(pessoas).map((p) => [p.id, () => (p.raiz.visible ? { x: p.x, y: PISO, z: p.z } : null)])); },   // (quem não está desenhado não é foco: a câmera não vai para um Cortex vazio)
     /** onde o herói fica no começo da história: no Cortex, de frente para os dois */
     lugarDoHeroi() { return { x: P0.x, y: PISO, z: P0.z - 7.6, h: Math.atan2(0, 1) }; },
   };
