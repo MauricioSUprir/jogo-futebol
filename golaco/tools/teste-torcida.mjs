@@ -7,7 +7,9 @@
 //   B) emocao.js: murmúrio sobe com a bola no terço final, explosão no gol (segura e cai), "uuuh" na
 //      chance perdida (defesa, trave, fora perto da trave), palmas da outra torcida, apitos;
 //   C) a regra da pose (a mesma do vertex shader): calma = sentada, ataque = em pé, gol = braços para
-//      cima pulando, chance perdida = mãos na cabeça.
+//      cima pulando, chance perdida = mãos na cabeça;
+//   G) o torcedor 3D (item 69, PR 2): o modelo com as 8 poses, sentado na cadeira e virado para o campo, a escala, as
+//      poses, o cachecol, a pose do quadro (o mesmo ESTADO_GLSL; a ola e o bandeirão) e a escolha das fileiras.
 // Na versão publicada a arquibancada é vazia e não há som: este teste reprova (os módulos não existem).
 //   node tools/teste-torcida.mjs [--js <pasta js>]
 import path from 'node:path';
@@ -618,6 +620,163 @@ if (EM) {
     const erros = [];
     for (const c of CASOS) { const r = caso(c.passos); if (!r || r.id !== c.id || r.contra !== c.contra) erros.push(`${c.nome}: ${JSON.stringify(r)}`); }
     reg('Autor do gol pelo último toque de verdade (6 lances)', erros.length ? erros.join(' | ') : `os ${CASOS.length} certos (condução conta; desvio/defesa → quem chutou)`, '6 certos', erros.length === 0);
+  }
+}
+
+// G) o TORCEDOR 3D (item 69, PR 2 — dono, 29/10: "torcida 3D, em todos os estádios"): o modelo (Rocketbox, homem e mulher,
+//    2 níveis) com as 8 poses da torcida numa textura de animação (VAT); sentado NA cadeira da grade (o quadril no assento,
+//    os pés no piso, as costas na frente do encosto) e de pé na frente dela; virado para o rumo da cadeira (o campo, não a
+//    câmera); a escala não tira ninguém do assento; o cachecol só no CACHECOL; a pose é a do quadro (o mesmo
+//    ESTADO_GLSL nos dois shaders: a ola e o bandeirão); a escolha das fileiras pelo teto de triângulos com histerese.
+//    (A GPU = JS da VAT e do estado fica no navegador: tools/teste-estadio.mjs, item 9.)
+{
+  const TQ = await imp('render/torcedor-dados.js');
+  const TP = await imp('render/torcedor-pose.js');
+  const CD = await imp('render/cadeiras-dados.js');
+  if (!TQ || !TP) reg('Torcedor 3D (render/torcedor-dados.js, render/torcedor-pose.js)', 'não existe (só o quadro virado para a câmera)', 'existe', false);
+  else {
+    const fs = await import('node:fs');
+    const raizJogo = path.resolve(pastaJs, '..');
+    const arq = path.join(raizJogo, TQ.TORCEDOR3D.arquivo);
+    const bin = fs.existsSync(arq) ? fs.readFileSync(arq) : null;
+    const M = bin ? TQ.lerModelo(bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength)) : null;
+    if (!M) reg('Torcedor 3D: o modelo (assets/torcedor/torcedor.bin)', 'não existe', 'existe', false);
+    else {
+      const V = TQ.vatDados(M), R = TQ.REGIAO, P = TD.POSE;
+      const kb = f => fs.statSync(path.join(pastaJs, f)).size / 1024;
+      const tam = bin.length / 1024 + kb('render/torcedor3d.js') + kb('render/torcedor-dados.js');
+      const tris = M.malhas.map(pv => pv.map(m => m.nTri));
+      const regs = M.malhas.flat().map(m => new Set(m.regiao).size);
+      reg('Torcedor 3D: modelo (homem e mulher × 2 níveis) e o que baixa sob demanda', `${M.nVar} variações, ${M.nLod} níveis, ${M.nPoses} poses; triângulos ${tris.map(t => t.join('/')).join(' · ')}; ${regs.join('/')} regiões; VAT ${V.largura}×${V.altura}; modelo + módulos ${fmt(tam, 0)} KB`,
+        '2 × 2 × 8; nível 0 250–340, nível 1 100–150; 6 regiões; ≤ 150 KB',
+        M.nVar === 2 && M.nLod === 2 && M.nPoses === 8 && tris.every(t => t[0] >= 250 && t[0] <= 340 && t[1] >= 100 && t[1] <= 150) && regs.every(n => n === 6) && tam <= 150);
+      // as posições de uma malha numa pose (no espaço da cadeira, escala 1, sem pulo nem balanço)
+      const pts = (v, l, pose, esc = 1, pulo = 0, bal = 0) => {
+        const m = M.malhas[v][l], out = [];
+        for (let i = 0; i < m.nV; i++) out.push(TQ.torcedorLocal(V, V.linha(v, l), i, pose, esc, pulo, bal).p);
+        return out;
+      };
+      const reg5 = (v, l, r) => { const m = M.malhas[v][l]; const s2 = new Set(); for (let i = 0; i < m.nV; i++) if (m.regiao[i] === r) s2.add(i); return s2; };
+      const ASS = CD.CADEIRA.assento.altura;
+      // sentado: o quadril no assento, os pés no piso, as costas na frente do encosto; de pé: os pés no piso na frente do
+      // assento (a passagem livre), nada dentro do assento
+      const sent = [], pe = [];
+      for (let v = 0; v < M.nVar; v++) for (let l = 0; l < M.nLod; l++) {
+        for (const pose of [P.SENTADO, P.SENTADO_PALMAS]) {
+          const q = pts(v, l, pose);
+          const nad = q.filter(p => Math.abs(p[0]) < 0.17 && p[2] > -0.2 && p[2] < 0.1 && p[1] > 0.25);
+          const pisoY = Math.min(...q.map(p => p[1]));
+          const costas = Math.min(...q.filter(p => p[1] > ASS + 0.08 && p[1] < ASS + 0.4 && Math.abs(p[0]) < 0.2).map(p => p[2]));
+          const pesZ = q.filter(p => p[1] < 0.12).map(p => p[2]);
+          sent.push({ v, l, pose, nad: Math.min(...nad.map(p => p[1])), pisoY, costas, pes: [Math.min(...pesZ), Math.max(...pesZ)] });
+        }
+        for (const pose of [2, 3, 4, 5, 6, 7]) {
+          const q = pts(v, l, pose);
+          const pisoY = Math.min(...q.map(p => p[1]));
+          const pesZ = q.filter(p => p[1] < 0.12).map(p => p[2]);
+          const noAssento = Math.min(...q.filter(p => p[1] > ASS - 0.06 && p[1] < ASS + 0.06 && Math.abs(p[0]) < 0.23).map(p => p[2]));
+          pe.push({ pose, pisoY, pes: [Math.min(...pesZ), Math.max(...pesZ)], noAssento });
+        }
+      }
+      const faixa = (l, f) => `${fmt(Math.min(...l.map(f)), 3)}–${fmt(Math.max(...l.map(f)), 3)}`;
+      reg('Torcedor 3D sentado NA cadeira (2 poses × 4 malhas): o quadril no assento, os pés no piso, as costas na frente do encosto',
+        `nádegas a ${faixa(sent, x => x.nad)} m; pés a ${faixa(sent, x => x.pisoY)} m, z ${faixa(sent, x => x.pes[0])} a ${faixa(sent, x => x.pes[1])}; costas em z ≥ ${fmt(Math.min(...sent.map(x => x.costas)), 3)}`,
+        `nádegas ${ASS} ± 0,035; pés −0,015–0,03 e no piso da fileira (z −0,25…0,50); costas ≥ −0,25 (o encosto: −0,22…−0,27)`,
+        sent.every(x => Math.abs(x.nad - ASS) <= 0.035 && x.pisoY >= -0.015 && x.pisoY <= 0.03 && x.pes[0] >= -0.25 && x.pes[1] <= 0.5 && x.costas >= -0.25));
+      reg('Torcedor 3D de pé (6 poses × 4 malhas): na passagem livre na frente do assento, pés no piso',
+        `pés a ${faixa(pe, x => x.pisoY)} m, z ${faixa(pe, x => x.pes[0])} a ${faixa(pe, x => x.pes[1])}; na altura do assento nada antes de z ${fmt(Math.min(...pe.map(x => x.noAssento)), 3)}`,
+        'pés −0,015–0,03, z 0,05…0,50 (o lábio do assento a 0,2 e o bico a ~0,51); nada antes de z 0,12 na altura do assento',
+        pe.every(x => x.pisoY >= -0.015 && x.pisoY <= 0.03 && x.pes[0] >= 0.05 && x.pes[1] <= 0.5 && x.noAssento >= 0.12));
+      // virado para o rumo da cadeira (o campo), no lugar dela: o nariz (o ponto mais à frente da cabeça) na direção do rumo
+      const GR = CD.gradeGolaco();
+      let rumoMin = 1, campoMin = 1, lugarMax = 0, nC = 0;
+      const q0 = pts(0, 0, P.SENTADO);
+      const topo = Math.max(...q0.map(p => p[1]));
+      const cab = q0.filter(p => p[1] > topo - 0.25);
+      const nariz = cab.reduce((a, b) => (b[2] > a[2] ? b : a));
+      const meioCab = [cab.reduce((s2, p) => s2 + p[0], 0) / cab.length, nariz[1], cab.reduce((s2, p) => s2 + p[2], 0) / cab.length];
+      GR.iterar(c => {
+        if ((c.a * 7 + c.f * 3) % 97) return;
+        nC++;
+        const cad = [c.x, c.z, Math.cos(c.rumo), Math.sin(c.rumo)];
+        const n = TQ.torcedorMundo(nariz, cad, c.y), mc = TQ.torcedorMundo(meioCab, cad, c.y), s0 = TQ.torcedorMundo([0, ASS, 0], cad, c.y);
+        const dx = n[0] - mc[0], dz = n[2] - mc[2], L = Math.hypot(dx, dz);
+        rumoMin = Math.min(rumoMin, (dx * cad[2] + dz * cad[3]) / L);
+        // o ponto do campo mais perto da cadeira (o gramado: ±52,5 × ±34)
+        const px = Math.max(-52.5, Math.min(52.5, c.x)) - c.x, pz = Math.max(-34, Math.min(34, c.z)) - c.z, Lc = Math.hypot(px, pz);
+        campoMin = Math.min(campoMin, (dx * px + dz * pz) / (L * Lc));
+        lugarMax = Math.max(lugarMax, Math.hypot(s0[0] - c.x, s0[1] - (c.y + ASS), s0[2] - c.z));
+      });
+      reg('Torcedor 3D virado para o rumo da cadeira — o campo, não a câmera (cadeiras dos 4 setores do Estádio Golaço)',
+        `${nC} cadeiras: o rosto × o rumo ≥ ${fmt(rumoMin, 3)}; × a direção do ponto do gramado mais perto ≥ ${fmt(campoMin, 3)}; o assento do modelo a ≤ ${fmt(lugarMax * 1000, 2)} mm do da cadeira`,
+        '≥ 0,95; ≥ 0,3 (as pontas dos fundos passam do canto do gramado e o veem de viés); ≤ 0,01 mm', nC >= 100 && rumoMin >= 0.95 && campoMin >= 0.3 && lugarMax <= 1e-5);
+      // a escala (aPos.w) não tira ninguém do assento nem do piso; sentado não pula; de pé o pulo levanta tudo
+      const sNad = e => Math.min(...pts(1, 0, P.SENTADO, e).filter(p => Math.abs(p[0]) < 0.17 && p[2] > -0.2 && p[2] < 0.1 && p[1] > 0.25).map(p => p[1]));
+      const dNad = Math.max(Math.abs(sNad(0.5) - sNad(1)), Math.abs(sNad(2) - sNad(1)));
+      const dPe = Math.max(...[0.5, 2].map(e => Math.abs(Math.min(...pts(1, 0, P.EM_PE, e).map(p => p[1])) - Math.min(...pts(1, 0, P.EM_PE).map(p => p[1])))));
+      const puloSent = Math.max(...pts(0, 1, P.SENTADO, 1, 0.3).map((p, i) => Math.abs(p[1] - pts(0, 1, P.SENTADO)[i][1])));
+      const puloPe = Math.min(...pts(0, 1, P.BRACOS_V, 1, 0.3).map((p, i) => p[1] - pts(0, 1, P.BRACOS_V)[i][1]));
+      reg('Torcedor 3D: a escala do quadro (0,5–2) não tira do assento nem do piso; sentado não pula, de pé o pulo levanta o corpo inteiro',
+        `nádegas mudam ${fmt(dNad * 1000, 1)} mm, os pés ${fmt(dPe * 1000, 1)} mm; pulo de 0,3 m: sentado ${fmt(puloSent, 3)} m, de pé ${fmt(puloPe, 3)} m`,
+        'nádegas ≤ 12 mm (a altura do assento menos o quadril escalado), pés ≤ 1 mm; 0 e 0,3', dNad <= 0.012 && dPe <= 0.001 && puloSent === 0 && Math.abs(puloPe - 0.3) < 1e-6);
+      // as 8 poses: sentado baixo, de pé alto, braços acima da cabeça, mãos na cabeça, palmas na frente do peito
+      const alt = (v, l, pose) => Math.max(...pts(v, l, pose).map(p => p[1]));
+      const frente = (v, l, pose, y0, y1, z0) => pts(v, l, pose).filter(p => p[1] > y0 && p[1] < y1 && p[2] > z0).length;
+      const falhaPose = [];
+      for (let v = 0; v < M.nVar; v++) for (let l = 0; l < M.nLod; l++) {
+        const h = Array.from({ length: 8 }, (_, k) => alt(v, l, k));
+        if (!(h[0] < 1.5 && h[1] < 1.5)) falhaPose.push(`${v}/${l} sentado alto (${fmt(h[0], 2)})`);
+        if (!(h[2] > 1.55)) falhaPose.push(`${v}/${l} de pé baixo (${fmt(h[2], 2)})`);
+        for (const k of [P.BRACOS_V, P.UM_BRACO, P.CACHECOL]) if (!(h[k] > h[2] + 0.2)) falhaPose.push(`${v}/${l} pose ${k} sem braço acima da cabeça`);
+        if (!(h[P.MAOS_CABECA] < h[2] + 0.15 && h[P.MAOS_CABECA] > h[2] - 0.02)) falhaPose.push(`${v}/${l} mãos na cabeça (${fmt(h[7] - h[2], 2)})`);
+        if (!(frente(v, l, P.SENTADO_PALMAS, 0.85, 1.4, 0.15) > frente(v, l, P.SENTADO, 0.85, 1.4, 0.15) + 2)) falhaPose.push(`${v}/${l} palmas sentado`);
+        if (!(frente(v, l, P.EM_PE_PALMAS, 1.0, 1.5, 0.55) > frente(v, l, P.EM_PE, 1.0, 1.5, 0.55) + 2)) falhaPose.push(`${v}/${l} palmas de pé`);
+        // o cachecol (região acento): só no CACHECOL, aberto acima da cabeça
+        const ac = reg5(v, l, R.acento), m = M.malhas[v][l];
+        const area = pose => { const q = pts(v, l, pose); let a = 0; for (let t = 0; t < m.nTri; t++) { const [i, j, k] = [m.indice[3 * t], m.indice[3 * t + 1], m.indice[3 * t + 2]]; if (!ac.has(i)) continue; const u = [0, 1, 2].map(c => q[j][c] - q[i][c]), w = [0, 1, 2].map(c => q[k][c] - q[i][c]); a += 0.5 * Math.hypot(u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]); } return a; };
+        for (let k = 0; k < 8; k++) { const a = area(k); if (k === P.CACHECOL ? a < 0.08 : a > 1e-6) falhaPose.push(`${v}/${l} cachecol na pose ${k} (${fmt(a, 3)} m²)`); }
+        const yAc = Math.min(...[...ac].map(i => pts(v, l, P.CACHECOL)[i][1]));
+        if (!(yAc > h[2] - 0.15)) falhaPose.push(`${v}/${l} cachecol baixo (${fmt(yAc, 2)})`);
+      }
+      reg('Torcedor 3D: as 8 poses do quadro (sentado, palmas, de pé, braços em V, um braço, cachecol, mãos na cabeça) e o cachecol só no CACHECOL',
+        falhaPose.length ? falhaPose.slice(0, 6).join(' | ') : 'as 8 nas 4 malhas', 'nenhuma falha', falhaPose.length === 0);
+      // a pose do 3D é a do quadro: o MESMO ESTADO_GLSL nos dois shaders (e nada de pose escrita à mão no quadro); a ola
+      // levanta quem está na crista; debaixo do bandeirão aberto, braços em V sem pular
+      const fonte = f => fs.readFileSync(path.join(pastaJs, f), 'utf8');
+      const tq = fonte('render/torcida.js'), t3 = fonte('render/torcedor3d.js');
+      const usaMesmo = [tq, t3].every(t => /import \{[^}]*ESTADO_GLSL[^}]*\} from '\.\/torcedor-pose\.js'/.test(t) && t.includes('${ESTADO_GLSL}') && t.includes('torcedorEstado(aPos.xyz, h, aInfo)')) && !/torcidaPose\(/.test(tq);
+      const BD = await imp('render/bandeiras-dados.js'), FE = await imp('render/festa.js');
+      const B = BD.bandeiroes();
+      const calmos = [{ excita: 0, tensao: 0, lamento: 0, palmas: 0 }, { excita: 0, tensao: 0, lamento: 0, palmas: 0 }];
+      const U0 = { tempo: 10, tempoOrg: 10, animada: 1, ola: null, bandeiroes: B, abre: [0, 0] };
+      const lugarSob = [0, 1, 2].map(k => B[0].A[k] + B[0].U[k] * 0.5 + B[0].V[k] * 0.4 - B[0].N[k] * BD.BANDEIRAS.bandeirao.altura);
+      const calmo = TP.estadoTorcedor(calmos, lugarSob, 0.5, [0, 0, 0, 0.5], U0);
+      const sob = TP.estadoTorcedor(calmos, lugarSob, 0.5, [0, 0, 0, 0.5], { ...U0, abre: [1, 0] });
+      const thL = Math.atan2(lugarSob[2], lugarSob[0]);
+      const naOla = TP.estadoTorcedor(calmos, lugarSob, 0.5, [0, 0, 0, 0.5], { ...U0, ola: { theta: thL, largura: 0.2, forca: 1, ativa: true } });
+      reg('Torcedor 3D: a pose é a do quadro (o mesmo ESTADO_GLSL nos dois shaders); a ola levanta e o bandeirão segura',
+        `mesmo código: ${usaMesmo ? 'sim' : 'NÃO'}; calmo pose ${calmo.pose}; debaixo do bandeirão aberto pose ${sob.pose} pulo ${sob.pulo}; na crista da ola pose ${naOla.pose} pulo ${fmt(naOla.pulo, 2)} (peso ${fmt(FE.olaPeso(lugarSob[0], lugarSob[2], { theta: thL, largura: 0.2, forca: 1, ativa: true }), 2)})`,
+        `sim; ${P.SENTADO}; ${P.BRACOS_V} e 0; ${P.BRACOS_V} e 0,3`,
+        usaMesmo && calmo.pose === P.SENTADO && sob.pose === P.BRACOS_V && sob.pulo === 0 && naOla.pose === P.BRACOS_V && Math.abs(naOla.pulo - 0.3) < 1e-9);
+      // a escolha das fileiras (pura): Baixa nada; o teto de triângulos; a histerese de entrada/saída e do nível 0; na TV
+      // (nenhum bloco de cadeira 3D) nada
+      const Q = TQ.TORCEDOR3D.qual, tri = [306, 128];
+      const un = Array.from({ length: 40 }, (_, i) => ({ chave: 'b:' + i, px: 8 + i, n: 24 }));
+      const eB = TQ.escolherTorcedores(un, new Map(), { ...Q.baixa, tri });
+      const eM = TQ.escolherTorcedores(un, new Map(), { ...Q.media, tri });
+      const eA = TQ.escolherTorcedores(un, new Map(), { ...Q.alta, tri });
+      const meio = Q.media.pxSai + (Q.media.pxEntra - Q.media.pxSai) / 2;
+      const entra = TQ.escolherTorcedores([{ chave: 'x', px: meio, n: 10 }], new Map(), { ...Q.media, tri }).escolha.size;
+      const fica = TQ.escolherTorcedores([{ chave: 'x', px: meio, n: 10 }], new Map([['x', 1]]), { ...Q.media, tri }).escolha.size;
+      const l0Entra = TQ.escolherTorcedores([{ chave: 'x', px: (Q.alta.pxLod0 + Q.alta.pxLod0Sai) / 2, n: 10 }], new Map([['x', 1]]), { ...Q.alta, tri }).escolha.get('x');
+      const l0Fica = TQ.escolherTorcedores([{ chave: 'x', px: (Q.alta.pxLod0 + Q.alta.pxLod0Sai) / 2, n: 10 }], new Map([['x', 0]]), { ...Q.alta, tri }).escolha.get('x');
+      const tv = TQ.escolherTorcedores([], new Map(), { ...Q.alta, tri }).escolha.size;
+      const maisPerto = [...eM.escolha.keys()].every(k => +k.split(':')[1] >= Math.min(...[...eM.escolha.keys()].map(c => +c.split(':')[1])));
+      reg('Torcedor 3D: a escolha das fileiras — Baixa sem 3D, o teto de triângulos, a histerese (entrar/sair e o nível 0), TV sem nada',
+        `Baixa ${eB.escolha.size}; Média ${eM.torcedores} torcedores (${eM.triangulos} ≤ ${Q.media.teto}), as de mais px: ${maisPerto ? 'sim' : 'não'}; Alta ${eA.torcedores} (${eA.triangulos} ≤ ${Q.alta.teto}); entre a saída e a entrada: entra ${entra}, fica ${fica}; nível 0 entre os limiares: vindo do 1 → ${l0Entra}, vindo do 0 → ${l0Fica}; TV ${tv}`,
+        '0; ≥ 1 e ≤ teto, sim; > Média e ≤ teto; 0 e 1; 1 e 0; 0',
+        eB.escolha.size === 0 && eM.torcedores >= 1 && eM.triangulos <= Q.media.teto && maisPerto && eA.torcedores > eM.torcedores && eA.triangulos <= Q.alta.teto && entra === 0 && fica === 1 && l0Entra === 1 && l0Fica === 0 && tv === 0);
+    }
   }
 }
 

@@ -146,7 +146,10 @@ try {
     await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
     const r = await pg.evaluate(() => ({ ativo: !!window.__golaco.prejogo?.ativo, wd: navigator.webdriver }));
     meta('Testes automatizados (webdriver) abrem direto no jogo', `pré-jogo ativo ${r.ativo} (webdriver ${r.wd})`, 'false', r.ativo === false && erros.length === 0);
-    // memória do jogo sem pré-jogo (item 8): 120 quadros do jogo
+    // memória do jogo sem pré-jogo (item 8): 120 quadros do jogo — com o modelo do torcedor 3D já baixado (item 69, PR 2: ele
+    // é pedido no 1º quadro e as 4 malhas sobem uma por quadro; sem esperar, a conta dependia de quando o arquivo chegava)
+    await pg.evaluate(() => window.__golaco.desenhar());
+    await pg.waitForFunction(() => window.__golaco.estadio?.cadeiras?.torcedores?.carregado ?? true, null, { timeout: 60000 }).catch(() => {});
     await pg.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); for (let i = 0; i < 120; i++) g.relogio.avancar(16.7); });
     memoria.sem = await pg.evaluate(() => { const e = window.__golaco.estado(); return { geometrias: e.geometrias, texturas: e.texturas }; });
     await navegador.close();
