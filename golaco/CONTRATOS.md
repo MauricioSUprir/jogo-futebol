@@ -2395,7 +2395,11 @@ GOLEIRO.realista`; pesquisa e números em `PESQUISA-ETAPA4.md` §13.
   (`d.bloqueio`, espalmada) — `uniforme ≥ bloqueio.fora` → rebote perto, senão desvio para fora. (C3, 29/10: fora da defesa
   desenhada viva — e na saída no cruzamento que falha — o corpo é o DESENHADO, na `sim.js colisaoCorpoGoleiro`: seção
   "Goleiro espalma bola alta e nada atravessa o goleiro (C3)". O bloqueio daqui, dentro da janela da defesa, segue com os
-  raios de `bloqueio` — pendência anotada lá.)
+  raios de `bloqueio` — pendência anotada lá.) (31/10, ebecbcb7: no mergulho a pelve é também uma esfera de `bloqueio.quadril`
+  0,25 m no quadril — a bola rasteira passava rente por baixo dela, 1,6 cm fora do tronco: `teste-goleiro-realista` A5. Na
+  partida IA × IA ela quase nunca decide: nas 144 do painel do #588, 0 das 43 defesas por bloqueio do batido saíram só dela;
+  e a conta nova do `estadoEspalmada` abaixo — a bola que fica jogável e DEPOIS entra é 2 — mudou a direção de 1 espalmada.
+  O goleiro de 6–16,5 m fora da meta no painel do #588 não veio do goleiro: contrato "Cobranças com corrida".)
 - `estadoEspalmada(b, gx, sentido)` → 0 fora do perigo, 1 jogável na zona perigosa, 2 entra no gol (`espalmadaSegura` =
   0). `espalmar` na partida: sem direção segura, fica a 1ª que não entra no gol (antes a última tentativa valia mesmo
   entrando: 1,6% das espalmadas do canhão iam para o próprio gol); se todas entram, bem aberta para o lado dela, um pouco
@@ -3130,6 +3134,14 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
 - **Decisão para o dono confirmar** (escolha recomendada do item 12 aplicada): a cavadinha segue a regra escrita ("o 2º aperto
   do CHUTE antes de o chute do 1º tocar na bola vira cavadinha") — com a corrida, a janela do 2º toque vale a corrida toda
   (`partida.js correrCobranca`: o pedido guardado é renovado a cada passo; só o CHUTE conta na corrida).
+- **O goleiro de 6–16,5 m (01/11).** No painel do CI (522a4e36) as defesas do goleiro de 6–16,5 m saíram da meta (main 56,2 →
+  61,5%). Não é o goleiro nem a pelve do ebecbcb7 (0 defesas decididas por ela em 144 partidas): sem corrida nenhuma o PR é
+  a main bit a bit. Nas sementes 1001–1144 a divisão por peças pôs o salto na corrida do PASSE de tiro livre (o cobrador segue
+  correndo para a frente depois do passe curto); nas outras amostras o efeito some no sorteio (main 56,2 · 56,7 · 60,8 ×
+  PR 62,4 · 61,6 · 56,5 nas 1001 · 3001 · 5001; 61,5 × 63,5 nas 7001): nas 576 partidas de cada, 58,8 × 61,1%, Δ +2,3
+  pontos, IC95 [−0,4; +5,9], p = 0,053 — empate pela regra da amostra 4× (a main fora da faixa em 2 das 4). Recalibrar o
+  goleiro tiraria ≥ 16,5 m e o total da meta. Nada muda no código; números, o experimento pareado e a proposta (para o dono:
+  o passe de tiro livre sem a corrida) na PESQUISA-ETAPA4.md §16.
 - **Teste `tools/teste-corrida-cobranca.mjs`** (Node, padrão; reprova na main 630960d4). Cenas do COMEÇO de partidas IA × IA
   (as duas versões bit a bit iguais até a 1ª bola parada com corrida) com a parada forçada; 16 por tipo e caminho (IA, demo) +
   a pessoa: C1 anda ≥ 3,5 m no pênalti e ≥ 2 m nos outros; C2 2,5–5 m/s no contato; C3 o pé de apoio plantado a 0,2–0,45 m

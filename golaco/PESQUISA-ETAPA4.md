@@ -796,6 +796,66 @@ o balanço dele (±3 cm a 4 m/s) e o alcance das pernas (o quadril baixa no fim 
 mais que os ~7 cm do centro de massa real (Lee & Farley 1998). Chegar aos ~8 cm do real pede mexer na corrida de todos (o
 `anim.js`, fora deste PR: a corrida e a condução foram aprovadas pelo dono e o treino tem de ficar bit a bit).
 
+**O goleiro de 6 a 16,5 m no painel (01/11, CI do #588).** No painel de 144 do CI (522a4e36) as defesas do goleiro nos chutes
+de 6 a 16,5 m saíram da meta (55–60%): main 56,2% (338) → 61,5% (322); nas sementes 3001–3144, 56,7 → 61,6%. O resto do
+goleiro ficou na meta. Medido com uma cópia do painel que grava, por chute, a chance que o goleiro leu (`leituraGoleiro.p`), o
+modo da defesa e o bloqueio do batido, e desligando uma peça por vez (144 partidas cada; a main é a 117abc28):
+
+| versão (sementes 1001–1144) | 6–16,5 m | no alvo, total | ≥ 16,5 m |
+|---|---|---|---|
+| main | 56,2% (338) | 66,3% | 85,4% |
+| PR 73250b5c | 62,4% (346) | 69,1% | 82,8% |
+| PR sem corrida nenhuma | = main (56 de 60 partidas idênticas; as outras 4 pela montagem do pênalti, 1,25 s) | | |
+| só a corrida do tiro de meta · só a do escanteio | 56,9% (350) · 55,0% (347) | | |
+| todas menos a do tiro livre | 55,1% (350) | 65,6% | 83,7% |
+| só a do tiro livre · só a do chute direto de tiro livre · só a do PASSE de tiro livre | 63,2% (378) · 57,2% (334) · 63,6% (376) | | |
+| só a do passe, sem a IA refazer o pedido no contato | 60,1% (353) | | |
+| só a do passe, com o cobrador parado logo depois da batida (diagnóstico) | 59,5% (341) | | |
+| todas menos a do passe de tiro livre | 56,5% (345) | 66,6% | 82,2% |
+
+- **Não é a pelve (ebecbcb7).** Contadas numa cópia instrumentada do PR (o mesmo jogo bit a bit), nas 144 partidas: a esfera da
+  pelve decidiu 0 defesas (os 43 bloqueios do batido também batiam no tronco ou nas pernas) e a conferência nova da espalmada
+  mudou a direção de 1 espalmada (depois da defesa: não entra na conta).
+- **Não é o goleiro.** A posição dele no chute é a mesma (profundidade mediana 1,78 × 1,79 m; parado em 88% × 88% dos chutes com
+  o pé) e a conta da chance não mudou. Mudaram os chutes: a chance média lida nos chutes no alvo de 6–16,5 m foi de 50,1 para
+  55,0% (main → PR); as defesas acima da chance lida (quase todas o bloqueio do batido) ficaram (+6,1 → +7,4 pontos).
+- **Onde, nas sementes 1001–1144.** Antes do 1º tiro livre de cada partida main e PR são iguais (57,9 × 58,9%); depois dele as
+  partidas divergem e, nesta amostra, 15–60 s depois de um tiro livre os chutes no alvo de 6–16,5 m foram de 52 a 83 e as defesas
+  de 50,0 a 68,7% (chance lida 41 → 56%). Na divisão por peças (tabela) o salto veio todo da corrida do PASSE de tiro livre. A
+  batida em si não muda (experimento pareado: o mesmo mundo no 1º tick da falta cobrado com e sem a corrida, 113 passes de 48
+  partidas — o recebedor a 13,0 × 12,8 m e −4,3 × −4,2 m à frente, a posse aos 3/8/15 s igual, a bola rola no mesmo tick ±1);
+  depois dela o cobrador segue correndo para a frente (3,2 m/s no contato × 0,1 parado) e a bola aos 15/30 s fica 0,6/1,3 m
+  mais à frente, em média. Com o cobrador parado logo depois da batida (diagnóstico, não é física) 59,5%; sem a IA refazer o
+  pedido no contato 60,1%.
+- **Nas outras sementes o efeito some no sorteio.** A medida de 144 partidas varia ~±3 pontos entre amostras (a própria main
+  sai da faixa nas 5001–5144 e nas 7001–7144; no alvo total 67,6 × 68,7% e ≥ 16,5 m 83,5 × 83,4% nas quatro):
+
+  | sementes | main | PR | todas as corridas menos a do passe de tiro livre |
+  |---|---|---|---|
+  | 1001–1144 | 56,2% (338) | 62,4% (346; 73250b5c) | 56,5% (345) |
+  | 3001–3144 | 56,7% (356) | 61,6% (362; ed3a17b8) | 61,3% (362) |
+  | 5001–5144 | 60,8% (332) | 56,5% (340; 1bf1349a) | 57,8% (332) |
+  | 7001–7144 | 61,5% (348) | 63,5% (367; 1bf1349a) | — |
+  | juntas | 58,8% (808/1374) | 61,1% (864/1415) | 58,6% (609/1039; 1001–5144) |
+
+  Δ PR − main nas quatro (576 partidas de cada, 4× o painel; bootstrap por partida, 4000 reamostras): +2,3 pontos, IC95
+  [−0,4; +5,9], P(Δ ≤ 0) = 0,053. Só com 1001 e 3001 o Δ era +5,5 [1,3; 10,5]; com a 5001, +2,3 [−0,9; +6,4] (P = 0,067).
+  É a mesma oscilação já anotada no C4 (56,6 → 60,2%, IC do Δ com o zero) e no C5 (60,2 → 56,2%): a divisão por peças numa
+  amostra só acha o que, ali, mudou as partidas depois da 1ª divergência.
+- **Recalibrar o goleiro não dá sem recuo.** Pela chance lida de cada chute do PR, `GOLEIRO.realista.c0` −0,3 (o necessário
+  para ≤ 60% nas 1001–1144) levaria ≥ 16,5 m a ~79,7% e o total a ~66,1% (as duas no limite das metas); na main a mesma
+  mudança tiraria as três da meta. E não há o que recalibrar: o goleiro e a chance dele não mudaram.
+- **Conclusão e proposta.** Nada a corrigir no goleiro nem na pelve. Pela regra do projeto (amostra ~4× da base e do PR; no
+  empate a guarda só reprova quando a contagem prova), a linha do goleiro de 6–16,5 m EMPATA com a main (Δ +2,3, IC95
+  [−0,4; +5,9], p = 0,053: a contagem não prova o recuo, e a própria main fica fora da faixa em 2 das 4 amostras) — nada muda
+  no código; o PR segue como está. Se o dono quiser tirar o candidato que a divisão por peças achou — a corrida do passe de
+  tiro livre, que não estava no pedido de 29/10 (pênalti, escanteio e tiro de meta) —, o passe de tiro livre sem a corrida dá
+  58,6% nas três amostras em que foi medido (main 57,9%): decisão dele. Uma corrida mais lenta no passe não foi medida: abaixo
+  de 2,5 m/s no contato a meta C2 do `teste-corrida-cobranca` reprova (e `velMin` é 2,6).
+- **Os impedimentos (meta ≥ 1), de passagem:** main 1,03 · 0,97 · 0,90 · 0,87 × PR 0,81 · 0,85 · 0,84 · 0,92 (1001 · 3001 ·
+  5001 · 7001; 543 × 493 em 576 partidas, z ≈ 1,6: não prova) e 0,94 · 1,01 · 0,86 sem a corrida do passe de tiro livre; a main
+  já fica abaixo de 1 em 3 das 4 amostras (0,94 juntas) — fica para quem cuida do impedimento.
+
 **Pendente/limites.** A P2 (os estilos do pênalti: normal, forte, colocado, paradinha, pulinho; o goleiro da IA que se
 compromete cedo e o cobrador que lê; o goleiro na linha até o chute na partida). A corrida é uma reta do ponto de partida ao
 pé de apoio (a do jogador real faz uma curva leve no fim); o gesto do pé é o do toque de ação de sempre (o pé vai à bola),
