@@ -55,6 +55,8 @@ const LISTA = [
   ['cavadinha com dois toques no CHUTE (humano): de qualquer lugar, um toque nunca, chute carregado no mesmo tick, bola parada, botão herdado na troca', 'teste-cavadinha.mjs'],
   // Item 70, P1 (dono, 29/10; aval 31/10): o cobrador do pênalti, escanteio, tiro de meta e tiro livre corre até a bola
   ['cobranças com corrida: anda até a bola, pé de apoio ao lado, sem patinar, a bola rola na hora de antes, a linha, a cavadinha, online', 'teste-corrida-cobranca.mjs'],
+  // Item 70, P2 (aval do dono 31/10): os estilos do pênalti, a leitura do goleiro e o goleiro na linha até o chute
+  ['estilos de pênalti: a assinatura de cada um, nenhuma finta depois da corrida, a leitura do goleiro que sai cedo, a conversão, a Regra 14, os comandos, online e a IA', 'teste-estilos-penalti.mjs', [], 'padrao', 3],
   ['goleiro: defesas pelos dados, posição, botão GOLEIRO, mãos', 'teste-goleiro.mjs'],
   ['goleiro pula e espalma: mergulho desenhado, mão na bola, espalmada para fora do perigo', 'teste-mergulho.mjs'],
   ['jogo aéreo: domínio no peito e cabeceio', 'teste-aereo.mjs'],

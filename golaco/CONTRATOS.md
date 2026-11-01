@@ -3165,6 +3165,100 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
   delas sozinha cobre a outra nestas cenas (só o apoio esticado: 0,100 m, porque com o voo ≥ 0,8 o apoio estica no máximo a
   0,93× o natural; só o voo sem piso: 0,110 m) — as duas ficam (o apoio natural é o mecanismo; o piso do voo evita o salto).
 
+## Estilos de pênalti (item 70, P2; 01/11; contrato)
+
+Item 70 da FILA, parte 2 (pedido do dono de 29/10: "o pênalti ganha jeitos de bater, com pulinho, com paradinha e outros";
+aval de 31/10 — "68, 69 é 70 faz" — com as escolhas RECOMENDADAS do "Depende do dono" 12, registradas abaixo). Pesquisa em
+`PESQUISA-ETAPA4.md` §17; constantes em `config.js ESTILO_PENALTI` (e os perfis `CORRIDA_COBRANCA.perfis.penalti*`); lógica em
+`js/corrida.js` (puro: os estilos, a paradinha, o pulinho, a leitura), `partida.js` (a montagem, os botões da pessoa, a
+leitura da IA no contato), `goleiro.js` (a linha, o passo do que sai cedo, a vantagem do que sai cedo para o lado certo),
+`disputa.js` (os mesmos estilos), `jogador.js` (a carga do pulinho), `anim.js` (o salto do pulinho, só desenho).
+- **As escolhas do dono (31/10, as recomendadas do item 12).** (1) Os comandos como no EA FC: CORRER segurado no soltar do
+  CHUTE = forte; MOD = colocado; LT/L2 = paradinha; um botão para o pulinho; no toque, PARADINHA e PULINHO só na cobrança do
+  pênalti da pessoa. (2) A paradinha depois da corrida é IMPOSSÍVEL por construção (sempre antes do último apoio; a Regra 14
+  nunca precisa ser aplicada). (3) O rendimento REALISTA: o normal ~77% de gol; paradinha e pulinho a ± 10 pontos dele.
+  (4) O goleiro fica NA LINHA até o chute também na partida (Regra 14), recalibrando para os ~77,5% de hoje. (5) A cavadinha
+  de hoje continua (o 2º aperto do CHUTE antes de o 1º tocar na bola).
+- **Os estilos** (`ESTILO_PENALTI.estilos`; `cr.estilo` no plano da corrida, no hash: `partida.js misturarPartida`):
+  `normal` (a corrida da P1), `forte` (a corrida longa e rápida — o perfil `penaltiForte` — e a força + `forte.forca` × o que
+  falta até 1), `colocado` (a corrida curta e lenta, `penaltiColocado`, e o chute colocado de sempre com o erro ×
+  `colocado.erro`), `paradinha`, `pulinho` e `cavadinha` (o 2º toque no CHUTE: `corrida.js estiloNoPedido` marca no contato).
+  O estilo vale no CONTATO (`corrida.js baterCorrida` → `estiloNoPedido`): só o pênalti.
+- **A paradinha** (`corrida.js guiarCorrida`, `cr.fasePar`: 'antes' → 'freia' → 'pausa' → 'retoma'): com o corpo a
+  `pausaEm` + a distância de freada (`distFreio`) do meio do apoio do pé de apoio, freia suave (a velocidade pedida
+  √(vPausa² + 2·freio·d)) até abaixo de `abaixo` (1 m/s), fica `tPausa` s a `vPausa` m/s e retoma pela regulagem da passada
+  a `vRetoma` m/s. A pausa é sempre ANTES do último apoio (o pé de apoio ainda vai pousar ao lado da bola): a finta depois de
+  completada a corrida não existe. A pessoa que aperta a PARADINHA no meio da corrida só a ganha enquanto CABE
+  (`cabeEstilo`: a distância de freada + `pausaEm` + 0,2 m pela frente; depois, nada muda). Os passos: antes da freada a
+  passada vai no ritmo da regulagem (como a corrida normal: o 1º apoio da arrancada curto); na freada e na pausa, curtos e
+  rápidos (`corrida.js saidaCorrida`: o ritmo do começo da freada × `ritmo`; com os dois pés no chão o de trás sai em `saiPe`
+  s); a retomada espera o pé de apoio no chão com ≥ `faseRetoma` da fase até o próximo pouso dele — o pé que bate dá o passo
+  primeiro e o de apoio pousa ao lado da bola no segundo — até `esperaApoio` s. (01/11: sem os passos curtos o corpo freava
+  entre dois pés plantados longe e o quadril caía 0,18 m; sem a espera do pé, o pé de apoio pousava a 0,58 m da bola num passo
+  só de ~1,5 m; sem o ritmo antes da freada, a saída caía 0,13 m — o C11 do `teste-corrida-cobranca`.)
+- **O pulinho** (`guiarCorrida` `cr.pulo`; `saidaCorrida` `carga`): na última passada (o pé de apoio no ar, pousando no ponto
+  dele), o pé que bate pisa (o PENÚLTIMO apoio) e sai do chão cedo — a carga desta passada é `pulinho.carga` (`jogador.js
+  passoPassada`: o pé no chão sai em 2·carga da fase) — e os dois pés ficam no ar até o pé de apoio pousar ao lado da bola
+  (≥ `voo` s; o ritmo do voo continua o da P1, ≥ `vooMin` × o natural). O salto é só desenho: `anim.js alturaPulinho` sobe o
+  corpo h·sen²(π·v) pela fração do balanço do pé de apoio desde o começo do pulinho (`h` = `pulinho.altura`, pelo id).
+- **A leitura do goleiro** (paradinha e pulinho: a estratégia que DEPENDE do goleiro). `corrida.js vigiarGoleiro` (antes de
+  cada passo da corrida): o goleiro da PESSOA está comprometido com o lado do analógico desde quando o escolheu
+  (`ladoPenaltiHumano`, que passou do `partida.js` para o `corrida.js` e segue exportado por ele); o da IA que SAI CEDO
+  (`pr.gkCedo` > 0, sorteado na montagem) se compromete com o lado do palpite quando o contato previsto chega a `gkCedo` s.
+  O que o cobrador viu até o pé de apoio pousar fica em `cr.gkLido` (`contatoCorrida`). No contato, a IA
+  (`partida.js pedidoDaIA(…, contato = true)`): com um goleiro lido, o canto oposto (a `leitura.canto` m do meio, no lado
+  aberto) com a chance 0,5 + 0,5·r — r a rampa de `leitura.tempo` sobre o tempo do compromisso ao contato (`rampaLeitura`) — e
+  o erro × 1 + `erroTarde`·(1 − r); sem goleiro para ler, o canto que já tinha com o erro × `semLeitura`. A pessoa lê com os
+  próprios olhos: na paradinha e no pulinho o analógico mira até o pé de apoio pousar (`partida.js correrCobranca`), e a troca
+  de canto (`cr.troca`) erra mais quando tarde (a mesma rampa). A corrida que espera chuta `kd.forca` × a força.
+- **O goleiro da IA que sai cedo** (`partida.js prepararPenalti`, três sorteios do m.rng sempre, na mesma ordem: o estilo, se
+  sai cedo, quando): a chance pela paciência dele (`goleiro.paciencia` pelo id; `goleiro.cedo` [0,6 → 0,1]; ~34% na média) e
+  `goleiro.antes` s antes do contato previsto. Saindo, ele dá o passo para o lado NA linha (`goleiro.js movimentoGoleiro`:
+  `goleiro.passo` m; o visto no chute fica a 0,17–0,42 m do meio) e, com o lado certo, o tempo adiantado (até `ganhoMax` s;
+  `m.partida.penaltiAberto.cedo`, gravado no `rolou`) soma no tempo para se mexer (`goleiro.js lerChute`: o alcance) e dá
+  `ganho` × ele no logit; o goleiro que espera, `espera` no logit. O da pessoa que segura o lado desde antes ganha o mesmo.
+- **O goleiro na linha até o chute (Regra 14), também na partida.** `goleiro.js movimentoGoleiro` (`naLinha` com qualquer
+  pênalti montado) e `partida.js restricaoPenalti` (a parede: `DISPUTA.goleiroLinha` m, a mesma da disputa; antes a parede o
+  deixava ir a 0,6 m e a IA dele ia para a bissetriz); a montagem já o põe a `goleiroLinha` m (antes 0,3).
+- **A IA: um estilo por jogador** (`corrida.js estiloPreferido`, puro pelo id e `ia.pesos`; os 5 aparecem nos 46 do elenco) e
+  o preferido com a chance `ia.fiel`, o resto normal (`sortearEstilo`, um sorteio do m.rng na montagem; na disputa, na entrada
+  do cobrador, para a caminhada terminar no ponto de partida do estilo). O cobrador da IA sai do ponto de partida do estilo
+  dele (o perfil); o da pessoa e o da demo, do normal (o estilo da pessoa sai no soltar do CHUTE ou na corrida).
+- **Os comandos da pessoa** (`entrada.js`): teclado F = PARADINHA e barra de espaço = PULINHO (fora da cobrança do pênalti da
+  pessoa a lógica não os lê; com a pausa aberta o espaço segue o botão em foco), Shift no soltar = forte, E = colocado, K duas
+  vezes = cavadinha; o controle na cobrança do pênalti da pessoa (`PAD_PENALTI`, como o pênalti do EA FC: LT = paradinha — o
+  "stutter" —, RB = colocado — o "finesse" —, LB = pulinho — o lugar da cavadinha do EA FC, que aqui é o 2º aperto do B —, RT
+  no soltar = forte), ligado por `main.js` (`entrada.definirCobrancaPenalti`, a cada passo: o pênalti montado, do time da
+  pessoa, com o cobrador controlado); no toque os botões PARADINHA e PULINHO (ícone + nome, vagas d e e: as do PEGAR/TROCAR
+  da bola na mão e da CURVA, que não existem nela) aparecem só com a classe `cobranca-penalti` no `#toque` (css/estilo.css).
+  `partida.js cobrar`: PARADINHA/PULINHO apertados antes do soltar ficam marcados (`pr.estiloPedido`); no soltar,
+  `estiloDaPessoa` (marcado > CORRER = forte > MOD = colocado > normal); na corrida (`correrCobranca`), enquanto cabem. A ajuda
+  (index.html) lista os comandos nas três colunas.
+- **Online.** Os bits `BOTAO.PARADINHA` (1 << 15) e `PULINHO` (1 << 16) não cabem nos 15 bits de botões da entrada: vão no
+  byte 5 (o das marcas), bits 2 e 3 (`online.js F_PARADINHA`/`F_PULINHO`); a mesma conta nos dois sentidos.
+- **Não muda:** a saída de bola, o lateral, o escanteio, o tiro de meta e o tiro livre (a P1 bit a bit; `hash-igual` IGUAL — o
+  treino não tem pênalti); a cavadinha (a mesma janela). O `hash-partida` muda a partir do 1º pênalti de cada partida.
+- **Teste `tools/teste-estilos-penalti.mjs`** (Node, padrão; reprova na base d971fe54: sem os estilos e com o goleiro a 0,62 m
+  da linha). 8 estados da partida (sementes 5000–5007) com o gerador ressemeado por cobrança, o cobrador um dos 3 de maior
+  finalização do time, a IA com o estilo forçado; 400 por estilo (normal, paradinha, pulinho), 160 (forte, colocado), 120 com
+  o goleiro forçado a sair cedo (paradinha, pulinho), em 3 processos. A0 o estilo pedido; A1 forte (pareado): corrida mais
+  rápida e bola ≥ +1,5 m/s; A2 colocado: corrida mais lenta, bola ≤ −1,5 m/s, o voo colocado; A3 paradinha: < 1 m/s antes do
+  último apoio por ≥ 0,2 s e ≥ 2 m/s no contato, em todas; A4 pulinho: o pé que bate sai por último, os dois no ar ≥ `voo`
+  s e o salto desenhado ≥ 8 cm, em todos (o normal com o voo menor em ≥ 90%); B nenhuma finta (abaixo de 1 m/s depois do
+  último apoio) em ≥ 1000 cobranças (a IA e a pessoa que aperta a PARADINHA a qualquer hora); C1 contra o goleiro da IA que
+  sai cedo o canto oposto em ≥ 60% (binomial); C2 o goleiro da pessoa que segura o lado desde o apito é lido (≥ 60% oposto) e
+  o que escolhe depois do pé de apoio não; C3 o passo do goleiro que sai cedo, na linha; D1 o normal ~77% (reprova se prova
+  fora de 72–82%); D2 paradinha e pulinho a ± 10 pontos do normal (reprova se a diferença prova fora); D3 informativo (forte,
+  colocado e o padrão de Noël 2021); E1/E2 o goleiro a ≤ 0,15 m da linha do apito ao chute na partida e na disputa; F1 as
+  teclas, o controle e os botões; F2 a pessoa na partida (cada comando → o estilo e a assinatura dele; a PARADINHA depois do
+  último apoio não muda nada); F3 a disputa; G online (os bits na entrada; dois humanos com o pulinho, o mesmo hash); H1/H2 a
+  IA (o preferido pelo id, a mesma semente = o mesmo estilo, o preferido com a chance `fiel` ± 0,1, binomial). As guardas
+  conferidas por MUTAÇÃO (lista e números na §17).
+- **Testes que mudaram.** `teste-corrida-cobranca` C11 com o canhão de estilos (a IA forçada em forte, colocado, paradinha e
+  pulinho, cada cena com outro cobrador; a pessoa com PARADINHA e PULINHO) — o C3/C4 também neles; `teste-disputa` B4 (a bola
+  rola a ≤ 4 s da montagem) passa sem mudar com a paradinha (a demo bate de 3,82 s no pior); `teste-botoes` B6d (o "fim" é 0,3 s antes do chute — com a corrida, do fim dela —, o cobrador da IA no
+  estilo normal e o segurado × o certo no fim PAREADOS, reprovando quando os pares provam) e B11 (120 por mira, binomial).
+
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores
 que eu escolher, contra a quantidade de jogadores que eu escolher, pode ser adaptável durante a partida" (a Arena de Treino do

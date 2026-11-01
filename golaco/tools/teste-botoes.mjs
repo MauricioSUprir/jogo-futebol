@@ -13,15 +13,20 @@
 //  B6 pênalti contra: o goleiro do humano fica na linha com o analógico segurado e o mergulho vai para o lado escolhido;
 //     no lado certo a defesa vale (goleiro.js lerChute/iniciarMergulho, sim.js goleiroComoLinha);
 //     B6d (contraprova, 38 pênaltis no canto, a mesma cena do medir5 da auditoria do goleiro): o lado certo escolhido no
-//     fim (0,3 s) defende como na main (o passo de ~0,4 m para o lado, na linha) e segurado desde a montagem não defende
-//     menos (no máximo GOLEIRO.penalti.passo do meio: nem a trave, nem parado no meio); o lado errado não defende;
+//     fim (0,3 s antes do chute: com a corrida, do fim dela) defende como na main (o passo de ~0,4 m para o lado, na linha)
+//     e segurado desde a montagem não defende menos (pareado: reprova quando os pares discordantes provam, binomial; no
+//     máximo GOLEIRO.penalti.passo do meio: nem a trave, nem parado no meio); o lado errado não defende — com o cobrador
+//     da IA no estilo normal (item 70, P2: o goleiro segurado é lido por quem depende do goleiro, teste-estilos-penalti C2);
 //     B6e (contraprova): o canto sai só do z do analógico (ao longo da linha do gol); com a câmera de TV, esquerda/direita
 //     da tela (para o batedor ou para o gol) não escolhe canto e o goleiro fica no meio, como sem analógico (antes: +z);
 //  B7 LANÇAMENTO dois toques na ponta = cruzamento rasteiro (acoes.js processarPedido);
 //  B8 CHUTE de primeira no passe longo (24–30 m): bate de primeira (acoes.js atualizarBotoesAcao);
 //  B9 TROCAR na barreira: nunca um jogador parado (sim.js candidatoTroca);
 //  B10 tiro livre contra: o chute alto da IA não tira o controle do goleiro (troca.js);
-//  B11 pênalti a favor: com qualquer mira, 4–12% para fora (meta do dono ~6%; acoes.js chute);
+//  B11 pênalti a favor: com qualquer mira, 4–12% para fora (meta do dono ~6%; acoes.js chute) — 120 por mira, reprova quando
+//     a contagem PROVA fora da faixa (binomial unilateral, p < 5%; em cada mira, quando prova acima de 20%). (01/11, item 70
+//     P2: com 30 por mira a branch deu 13,3% e a base d971fe54 10,0%; com 120, 9,4% × 6,4% — 34 × 23 de 360, a contagem não
+//     prova diferença: o sorteio muda com os sorteios a mais da montagem do pênalti, o estilo da IA e o goleiro que sai cedo);
 //  B12 quem cobrou a bola parada não toca de novo antes de outro (Regra 15; partida.js rolou, sim.js bolaLivre);
 //  B13 cruzamento do adversário com o goleiro escolhido pelo TROCAR segurado (sem reassumir o controle a cada passo, como
 //     o G7 do teste-goleiro-regras): o controle fica no goleiro (troca.js trocaAerea, m.trocaManual).
@@ -50,6 +55,7 @@ const S = await imp('sim.js');
 const F = await imp('faltas.js');
 const AC = await imp('acoes.js');
 const { BOTAO, PASSO, CAMPO, PARTIDA, ACOES, GOLEIRO } = await imp('config.js');
+const { provaFora, cdfAlto } = await import('./lib/binomial.mjs');
 // calibração (B11): outro canto da mira do pênalti do humano, sem mexer no config.js
 if (arg('--canto', null) != null && ACOES.chute) ACOES.chute.penaltiCanto = +arg('--canto');
 
@@ -377,7 +383,11 @@ if (faz('B6')) {
     let res = null, zChute = null;
     for (let i = 0; i < 60 * 15 && !res; i++) {
       const pr = m.parada;
-      const fim = pr && !pr.rolou && pr.pronta != null && m.tick >= pr.pronta + pr.atraso - 18;
+      // (o "fim" é 0,3 s antes do chute: com a corrida da cobrança — item 70, P1 — o chute é no fim da corrida, a previsão
+      // dela desde o 1º passo; antes, pronta + atraso. Com o pronta + atraso de antes o "fim" caía no meio da corrida, até
+      // ~1,1 s antes do chute, e o B6d reprovava desde a d971fe54: certo no fim 45 × segurado 39 em 146)
+      const cr = pr && pr.corrida;
+      const fim = pr && !pr.rolou && pr.pronta != null && (cr ? cr.estado === 'corre' && m.tick >= cr.t0 + cr.ticks - 18 : m.tick >= pr.pronta + pr.atraso - 18);
       const az = modo === 'certoFim' ? (fim ? s : 0) : modo === 'erradoFim' ? (fim ? -s : 0) : (pr && !pr.rolou ? s : 0);
       for (const e of P.passoPartida(m, { x: 0, z: az, botoes: 0 })) {
         if (e.tipo === 'cobranca' && e.parada === 'penalti') zChute = g.z;
@@ -387,20 +397,33 @@ if (faz('B6')) {
     return { res, z: Math.abs(zChute ?? 0) };
   }
   const t = { certoFim: [0, []], certoSempre: [0, []], erradoFim: [0, []] };
-  let n = 0;
+  let n = 0, soFim = 0, soSempre = 0; // (os pares discordantes: só o certo no fim defendeu · só o segurado defendeu)
+  // (item 70, P2: o goleiro da pessoa que segura o lado desde a montagem se comprometeu e o cobrador da IA que depende do
+  // goleiro — paradinha, pulinho — o lê e bate no outro canto: é o jogo. O B6d confere o LUGAR do goleiro segurado, então
+  // a IA bate aqui o estilo normal; a leitura tem o teste dela, teste-estilos-penalti C2)
+  const EPb = (await imp('config.js')).ESTILO_PENALTI, fiel0 = EPb ? EPb.ia.fiel : null;
+  if (EPb) EPb.ia.fiel = 0;
   for (let k = 0; k < 40; k++) {
     const base = montarPen(8000 + k);
     if (!base || Math.abs(base.parada.miraZ) < 0.5) continue;
     n++;
     const s = ladoReal(base);
-    for (const md of Object.keys(t)) { const r = pen(base, md, s); if (r.res === 'defesa') t[md][0]++; t[md][1].push(r.z); }
+    const def = {};
+    for (const md of Object.keys(t)) { const r = pen(base, md, s); def[md] = r.res === 'defesa'; if (def[md]) t[md][0]++; t[md][1].push(r.z); }
+    if (def.certoFim && !def.certoSempre) soFim++;
+    if (def.certoSempre && !def.certoFim) soSempre++;
   }
+  if (EPb) EPb.ia.fiel = fiel0;
   const zMax = l => Math.max(...l);
   const passo = GOLEIRO.penalti.passo ?? 0;
+  // (segurado × certo no fim, PAREADOS — a mesma cena: reprova quando os pares discordantes PROVAM o segurado pior, binomial
+  // unilateral p < 5%. 01/11, item 70 P2: "segurado ≥ certo no fim" na contagem crua reprovava por sorteio — com 146 cenas,
+  // 60 × 66, z ≈ 0,7; a base d971fe54 37 × 39 com o "fim" de verdade)
+  const segPior = cdfAlto(soFim, soFim + soSempre, 0.5) < 0.05 && soFim > soSempre;
   reg('B6d pênalti contra, 38 no canto: lado certo no fim (0,3 s) e segurado desde a montagem (defesas, |z| máx no chute); lado errado',
-    `certo no fim ${t.certoFim[0]}/${n} (|z| ≤ ${f1(zMax(t.certoFim[1]), 2)}) · segurado ${t.certoSempre[0]}/${n} (|z| ≤ ${f1(zMax(t.certoSempre[1]), 2)}) · errado ${t.erradoFim[0]}/${n}`,
-    'certo no fim ≥ 7 (a main) · segurado ≥ certo no fim, |z| ≤ 0,6 m · errado 0',
-    n >= 30 && t.certoFim[0] >= 7 && t.certoSempre[0] >= t.certoFim[0] && zMax(t.certoSempre[1]) <= 0.6 && passo > 0 && t.erradoFim[0] === 0);
+    `certo no fim ${t.certoFim[0]}/${n} (|z| ≤ ${f1(zMax(t.certoFim[1]), 2)}) · segurado ${t.certoSempre[0]}/${n} (|z| ≤ ${f1(zMax(t.certoSempre[1]), 2)}; pares: só o fim ${soFim}, só o segurado ${soSempre}) · errado ${t.erradoFim[0]}/${n}`,
+    'certo no fim ≥ 7 (a main) · o segurado não pior (pareado, binomial p < 5%), |z| ≤ 0,6 m · errado 0',
+    n >= 30 && t.certoFim[0] >= 7 && !segPior && zMax(t.certoSempre[1]) <= 0.6 && passo > 0 && t.erradoFim[0] === 0);
 }
 
 // B6e (contraprova): o canto sai só da componente do analógico AO LONGO da linha do gol (z do mundo). Com a câmera de TV
@@ -591,7 +614,7 @@ if (faz('B10')) {
 
 // ------------------------------------------------------------------ B11. pênalti a favor: para fora
 if (faz('B11')) {
-  const N = +arg('--penaltis', 30);
+  const N = +arg('--penaltis', 120);
   const res = {};
   for (const modo of ['mais', 'menos', 'sem']) {
     const r = res[modo] = { gol: 0, defesa: 0, fora: 0, nada: 0 };
@@ -623,7 +646,9 @@ if (faz('B11')) {
   const txt = Object.entries(res).map(([k, r]) => `${k}: ${r.gol}/${r.defesa}/${r.fora}${r.nada ? ` (${r.nada} sem)` : ''}`).join(' · ');
   const pf = tot ? 100 * fora / tot : 100;
   const piorModo = Math.max(...Object.values(res).map(r => r.fora / Math.max(1, r.gol + r.defesa + r.fora)));
-  reg('B11 pênalti a favor, CHUTE 0,3 s (analógico +z, −z, solto): gol/defesa/fora', `${txt} · fora ${f1(pf)}%`, '4–12% para fora no total; ≤ 20% em cada mira', tot >= 3 * N * 0.9 && pf >= 4 && pf <= 12 && piorModo <= 0.2);
+  const modoProva = Object.values(res).some(r => provaFora(r.fora, r.gol + r.defesa + r.fora, null, 0.2));
+  reg('B11 pênalti a favor, CHUTE 0,3 s (analógico +z, −z, solto): gol/defesa/fora', `${txt} · fora ${f1(pf)}% (pior mira ${f1(100 * piorModo)}%)`,
+    '4–12% para fora no total; ≤ 20% em cada mira (reprova se a contagem prova fora, binomial p < 5%)', tot >= 3 * N * 0.9 && !provaFora(fora, tot, 0.04, 0.12) && !modoProva);
 }
 
 // ------------------------------------------------------------------ B12. quem cobrou não toca de novo

@@ -211,7 +211,11 @@ export function lerChute(m, j) {
     const c0 = bolaDepois(b, Math.max(0, plano.ticks - 1));
     if (!maoPermitida(m, j, c0.x, c0.z)) { j.defesa = { chave: m.voo?.tickChave, fora: true, semMao: true, tick: m.tick + plano.ticks, lido: m.tick }; return; }
   }
-  const tau = (plano.ticks - reac) * DT + (ehPenalti && !palpiteErrado ? GOLEIRO.penalti.antecipa : 0); // tempo para se mexer depois de reagir
+  // (pênalti, item 70 P2: o goleiro que se comprometeu ANTES com o lado certo — o da IA que saiu cedo, o da pessoa que segura
+  // o lado desde antes, m.partida.penaltiAberto.cedo — já está indo para lá: o tempo adiantado, até ESTILO_PENALTI.goleiro
+  // .ganhoMax s, soma no tempo para se mexer)
+  const cedoPen = ehPenalti && !palpiteErrado ? Math.min(pen.cedo ?? 0, ESTILO_PENALTI.goleiro.ganhoMax) : 0;
+  const tau = (plano.ticks - reac) * DT + (ehPenalti && !palpiteErrado ? GOLEIRO.penalti.antecipa + cedoPen : 0); // tempo para se mexer depois de reagir
   const lat = plano.z - j.z;
   const dist = Math.abs(lat);
   const alcance = alcanceGoleiro(tau, lerp(0.9, 1.08, a.mergulho / 100));
@@ -241,9 +245,9 @@ export function lerChute(m, j) {
     // (o tempo de voo só conta no cabeceio a gol: GOLEIRO.logit.cTempo)
     // (pênalti, item 70 P2: o goleiro que se comprometeu antes com o lado certo — o da IA que saiu cedo, o da pessoa que
     // segura o lado desde antes — defende mais: `ganho` no logit por s de adiantamento, até ganhoMax; o que esperou, `espera`)
-    const EG = ESTILO_PENALTI.goleiro, cedo = ehPenalti ? Math.min(pen.cedo ?? 0, EG.ganhoMax) : 0;
+    const EG = ESTILO_PENALTI.goleiro;
     pDefesa = alturaOk ? chanceDefesa(dist, dChute, plano.y, alcance, a, !!m.partida, m.voo && m.voo.tipo === 'cabeceio' ? plano.ticks * DT : null,
-      ehPenalti ? GOLEIRO.penalti.c0Partida + (cedo > 0 ? EG.ganho * cedo : EG.espera) : null) : 0;
+      ehPenalti ? GOLEIRO.penalti.c0Partida + (cedoPen > 0 ? EG.ganho * cedoPen : EG.espera) : null) : 0;
   }
   // Panenka com o goleiro que ficou no meio: tempo de sobra — pega (encaixa) a que alcança, como o recuo; a que passa
   // por cima dele ainda alta ele busca voltando para a linha (recuoBolaAlta)

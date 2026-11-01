@@ -234,7 +234,7 @@ export function estiloNoPedido(m, cr, p) {
   if (p.cavadinha) { cr.estilo = 'cavadinha'; return p; }
   const e = cr.estilo;
   if (e === 'forte') { p.forca = p.forca + (1 - p.forca) * EP.forte.forca; p.erroEstilo = (p.erroEstilo ?? 1) * EP.forte.erro; p.mod = false; }
-  else if (e === 'colocado') p.mod = true;
+  else if (e === 'colocado') { p.mod = true; p.erroEstilo = (p.erroEstilo ?? 1) * EP.colocado.erro; }
   else if (dependeDoGoleiro(e)) {
     p.forca *= EP.kd.forca;
     if (!p.ia && cr.troca >= 0) p.erroEstilo = (p.erroEstilo ?? 1) * (1 + EP.leitura.erroTarde * (1 - rampaLeitura((m.tick - cr.troca) * PASSO)));
@@ -401,18 +401,25 @@ export function guiarCorrida(m, c, cr) {
   let regula = true;
   if (cr.fasePar && cr.fasePar !== 'retoma' && cr.plantou < 0) {
     const P = cr.par, A = EP.paradinha;
-    if (cr.fasePar === 'antes' && Dl <= P.em + distFreio(c, s)) cr.fasePar = 'freia';
+    if (cr.fasePar === 'antes' && Dl <= P.em + distFreio(c, s)) { cr.fasePar = 'freia'; P.ritmo = A.ritmo * Math.max(freqPassada(Math.max(s, 0.5), true), 0.5); }
     if (cr.fasePar === 'freia' && s < A.abaixo) { cr.fasePar = 'pausa'; cr.pausaAte = m.tick + Math.max(1, Math.round(P.t / PASSO)); }
-    // (retoma com o pé de apoio no chão — ou passada a espera dele: dois passos até o último apoio, o do pé que bate e o do
-    // pé de apoio ao lado da bola; com o pé de apoio no ar a regulagem fazia uma passada só, longa e lenta)
-    if (cr.fasePar === 'pausa' && m.tick >= cr.pausaAte && (c.pes[cr.ps].apoio || m.tick >= cr.pausaAte + Math.round(A.esperaApoio / PASSO))) {
+    // (retoma com o pé de apoio no chão e o pé que bate saindo primeiro — o pé de apoio pousou por último: falta ≥ 1,5 da fase
+    // até o pouso dele —, ou passada a espera: dois passos até o último apoio, o do pé que bate e o do pé de apoio ao lado da
+    // bola. Com o pé de apoio no ar, ou no chão mas saindo primeiro — o de trás —, a regulagem fazia um passo só de ~1,5 m
+    // saindo quase parado: o pé de apoio pousava cedo, a 0,58 m da bola)
+    const vez = c.pes[cr.ps].apoio && faseAtePouso(c, cr.ps, c.fase) >= A.faseRetoma;
+    if (cr.fasePar === 'pausa' && m.tick >= cr.pausaAte && (vez || m.tick >= cr.pausaAte + Math.round(A.esperaApoio / PASSO))) {
       cr.fasePar = 'retoma'; cr.vel = P.vRetoma;
     }
     // (a freada é suave — a velocidade pedida cai como √(vPausa² + 2·freio·d) até o ponto da pausa: pedir a vPausa de uma vez
     // freava no limite do corpo, com a passada longa da corrida, e o quadril afundava entre os dois pés plantados)
     if (cr.fasePar === 'freia') g.vel = Math.min(cr.vel, Math.sqrt(A.vPausa * A.vPausa + 2 * A.freio * Math.max(0, Dl - P.em)));
     else g.vel = cr.fasePar === 'antes' ? cr.vel : A.vPausa;
-    if (cr.fasePar !== 'retoma') { cr.ritmo = 0; cr.k = -1; regula = false; }
+    // (antes da freada, o ritmo da passada é o da regulagem até o ponto do apoio — como na corrida normal, o 1º apoio da
+    // arrancada não fica longo: sem ele o quadril caía 0,13 m na saída —, com a velocidade da corrida da paradinha)
+    if (cr.fasePar === 'antes') cr.ritmo = regular(c, cr, c.fase, s, Dl, _reg).rv;
+    else cr.ritmo = 0;
+    if (cr.fasePar !== 'retoma') { cr.k = -1; regula = false; }
   }
   if (!regula) {
     // (a paradinha antes da retomada: o pedido já está em g.vel)
@@ -449,6 +456,16 @@ export function saidaCorrida(m, j) {
   const pr = m.parada, cr = pr && pr.corrida;
   if (!cr || cr.estado !== 'corre' || pr.rolou || pr.cobrador !== j.id || cr.plantou >= 0) return null;
   const sup = j.pes[cr.ps];
+  // a paradinha (P2), na freada e na pausa: os passos curtos e rápidos de quem para olhando o goleiro — a passada segue no
+  // ritmo do começo da freada (cr.par.ritmo) e, com os dois pés no chão, o de trás sai do chão. Sem isso o pé da frente
+  // pousava longe (o passo da corrida) e o corpo freava entre os dois pés plantados: o quadril caía até 0,18 m abaixo da
+  // altura da corrida (a régua do C11 do teste-corrida-cobranca)
+  if ((cr.fasePar === 'freia' || cr.fasePar === 'pausa') && cr.par && cr.par.ritmo > 0) {
+    if (!sup.apoio || !j.pes[cr.pe].apoio) return { pe: !sup.apoio ? cr.ps : cr.pe, em: PASSO, ritmoVoo: cr.par.ritmo };
+    const hx = MD.cos(j.rumo), hz = MD.sin(j.rumo);
+    const a0 = (j.pes[0].x - j.x) * hx + (j.pes[0].z - j.z) * hz, a1 = (j.pes[1].x - j.x) * hx + (j.pes[1].z - j.z) * hz;
+    return { pe: a0 <= a1 ? 0 : 1, em: EP.paradinha.saiPe, ritmoVoo: cr.par.ritmo };
+  }
   // o pulinho (P2): no penúltimo apoio (a última passada, o pé que bate no chão) ele sai mais cedo — a carga do pulinho: os
   // dois pés no ar por mais tempo até o pé de apoio pousar
   const carga = cr.estilo === 'pulinho' && cr.k === 0 && !sup.apoio ? EP.pulinho.carga : undefined;
