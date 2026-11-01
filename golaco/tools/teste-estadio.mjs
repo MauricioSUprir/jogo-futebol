@@ -32,7 +32,11 @@
 //  13) tiro de meta (Regra 16) com adversários na área: saem na montagem e a câmera CORTA (evento corteBolaParada);
 //  14) cadeiras e degraus (item 69, PR 1; celular e PC): o degrau em escada nas arquibancadas, as cadeiras 3D de perto
 //      nunca na câmera de TV (20 instantes), perto da arquibancada de lá ≥ 1 bloco, +1 chamada e 18 triângulos por cadeira;
-//      o torcedor 3D (PR 2) nunca na TV e, perto, sentado nas cadeiras 3D, fora do quadro e no teto de triângulos.
+//      o torcedor 3D (PR 2) nunca na TV e, perto, sentado nas cadeiras 3D, fora do quadro e no teto de triângulos;
+//  14c) o ORÇAMENTO de triângulos por quadro do 3D de perto (PR 2; render/cadeiras-dados.js criarOrcamento3D) na página:
+//      medido (o renderer.info), na TV gasto 0; perto, o total do quadro = o resto medido + o gasto do 3D de perto
+//      (cadeiras × 18 + os triângulos do torcedor), o gasto ≤ o orçamento − a margem e o orçamento = o alvo da qualidade −
+//      o resto; o quadro do corte de câmera sem 3D de perto e o seguinte com a escolha inteira.
 // As páginas abrem com ?replay=0&comemoracao=0: o replay automático (testado em tools/teste-replay.mjs) e a comemoração
 // do gol (tools/teste-comemoracao-tela.mjs) segurariam a simulação ~10 s e ~7,5 s depois do gol, e os itens 4 e 10 andam
 // o relógio atravessando a saída — o que eles medem é a câmera do gol do jogo (com a comemoração ligada ela é o plano da
@@ -806,7 +810,7 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
       const r = await pagina.evaluate(() => {
         const g = window.__golaco;
         g.relogio.usarManual(true);
-        let viu = 0, n = 0, cad = 0, tor = 0;
+        let viu = 0, n = 0, cad = 0, tor = 0, gastoTV = 0, medido = true;
         for (let k = 0; k < 20; k++) {
           for (let i = 0; i < 90; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
           g.desenhar();
@@ -816,9 +820,12 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
           cad = Math.max(cad, g.estadio.cadeiras?.instancias ?? 0);
           // 14b) nem o torcedor 3D (PR 2)
           tor = Math.max(tor, g.estadio.cadeiras?.torcedores?.torcedores ?? 0, g.estadio.cadeiras?.torcedores?.ocultos ?? 0);
+          // 14c) o orçamento: medido e, na TV, nada gasto
+          const o = g.estadio.cadeiras?.orcamento;
+          gastoTV = Math.max(gastoTV, o?.gasto?.total ?? 0); medido = medido && !!o?.medido;
           n++;
         }
-        return { viu, n, cad, tor, carregado: !!g.estadio.cadeiras?.torcedores?.carregado };
+        return { viu, n, cad, tor, gastoTV, medido, carregado: !!g.estadio.cadeiras?.torcedores?.carregado };
       });
       // do outro lado do campo, olhando para o lado de cá (o túnel no meio): o mesmo quadro com × sem a torcida, lido
       // direto do canvas (a 1/4; a faixa de cima, 5–60% da altura)
@@ -895,8 +902,13 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
         const g = window.__golaco;
         const { TORCEDOR3D } = await import('./js/render/torcedor-dados.js');
         g.cameraLivre({ de: [8, 3.2, -41.5], para: [9, 4.6, -47], fov: 50 });
-        g.desenhar(); g.desenhar();
-        const com = { ...g.estadio.cadeiras.torcedores, cadeiras: g.estadio.cadeiras.instancias, c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos, malhas: (g.estadio.torcedor3d?.malhas ?? []).filter(m => m.visible).length };
+        // 14c) o quadro do corte (a câmera livre longe da anterior): sem 3D de perto; o seguinte, a escolha inteira
+        g.desenhar();
+        const oc = g.estadio.cadeiras.orcamento, corte = { corte: oc.corte, esperando: oc.esperando, gasto: oc.gasto.total, inst: g.estadio.cadeiras.instancias };
+        g.desenhar();
+        const o1 = g.estadio.cadeiras.orcamento, depois = { novo: o1.novo, esperando: o1.esperando };
+        g.desenhar();
+        const com = { ...g.estadio.cadeiras.torcedores, cadeiras: g.estadio.cadeiras.instancias, c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos, malhas: (g.estadio.torcedor3d?.malhas ?? []).filter(m => m.visible).length, orc: g.estadio.cadeiras.orcamento, corte, depois };
         g.estadio.mostrarCadeiras(false); g.desenhar(); g.desenhar();
         const sem = { c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos, tor: g.estadio.cadeiras.torcedores.torcedores, ocultos: g.estadio.cadeiras.torcedores.ocultos };
         g.estadio.mostrarCadeiras(true); g.cameraLivre(null); g.desenhar();
@@ -907,6 +919,13 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
         '0 na TV; perto ≥ 1, todos fora do quadro, ≤ teto; sem cadeiras 0 e 0, −(1 + malhas) chamadas e −(18/cadeira + os dele)',
         r.carregado && r.tor === 0 && tor.com.torcedores >= 1 && tor.com.ocultos === tor.com.torcedores && tor.com.triangulos <= tor.teto && tor.sem.tor === 0 && tor.sem.ocultos === 0
           && tor.com.c - tor.sem.c === 1 + tor.com.malhas && tor.com.malhas >= 1 && tor.com.malhas <= 4 && tor.com.t - tor.sem.t === 18 * tor.com.cadeiras + tor.com.triangulos);
+      // 14c) o orçamento de triângulos por quadro na página (a câmera parada: o resto medido no quadro anterior é o deste)
+      const O = tor.com.orc, gc = 18 * tor.com.cadeiras + tor.com.triangulos;
+      meta(`Orçamento do 3D de perto (${nome}): medido; na TV nada gasto; perto, o total = o resto + o gasto, o gasto ≤ o orçamento − a margem, o orçamento = o alvo − o resto; o corte sem 3D e o seguinte de uma vez`,
+        `${r.medido && O?.medido ? 'medido' : 'SEM medida'}; TV: gasto máx ${r.gastoTV}; perto: alvo ${O?.alvo}, resto ${O?.resto}, orçamento ${O?.orcamento}, gasto ${O?.gasto?.total} (cadeiras ${O?.gasto?.cadeiras} + torcedores ${O?.gasto?.torcedores}; a conta dá ${gc}), total ${tor.com.t}; quadro do corte: ${tor.com.corte.corte ? 'corte' : 'SEM corte'}, gasto ${tor.com.corte.gasto}, ${tor.com.corte.inst} cadeiras; o seguinte ${tor.com.depois.novo ? 'de uma vez' : 'aos poucos'}`,
+        'medido; 0; total = resto + gasto; gasto = a conta ≤ orçamento − 2 mil; orçamento = alvo − resto; corte com 0 e 0; de uma vez',
+        r.medido && !!O?.medido && r.gastoTV === 0 && O.gasto.total === gc && O.gasto.total > 0 && tor.com.t === O.resto + O.gasto.total && O.gasto.total <= O.orcamento - 2000
+          && O.orcamento === Math.max(0, O.alvo - O.resto) && tor.com.corte.corte && tor.com.corte.esperando && tor.com.corte.gasto === 0 && tor.com.corte.inst === 0 && tor.com.depois.novo && !tor.com.depois.esperando);
     } finally { await nav.close(); }
   } catch (e) {
     meta(`Execução (lado de cá, ${nome})`, e.message, 'sem exceção', false);

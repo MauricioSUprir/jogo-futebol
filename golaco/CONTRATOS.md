@@ -4160,7 +4160,8 @@ IGUAIS).
   `__golaco.estadio.torcedor3d` (malhas, modelo, vat), `__golaco.estadio.torcidaObj`.
 - Testes: `teste-cadeiras` C8 (o orçamento: do nada, a histerese, o corte e 6000 quadros com o resto andando ± 2,5 mil por
   quadro e pulando no corte — o total ≤ 130 mil na Média; parado, nada pisca; a troca de qualidade e o replanejar),
-  `teste-cenas-tela` F8/C8/F9 (o pior plano no
+  `teste-estadio` 14c (o orçamento na página, celular e PC: medido, na TV nada gasto, o total do quadro = o resto + o gasto,
+  o gasto ≤ o orçamento − a margem, o quadro do corte sem 3D de perto e o seguinte de uma vez), `teste-cenas-tela` F8/C8/F9 (o pior plano no
   celular ≤ 130 mil, agora com as cadeiras e os torcedores 3D de cada plano no medido), `teste-torcida` G (o modelo, sentado
   na cadeira, de pé na passagem, o rumo, a escala, as 8 poses, o cachecol, a pose
   do quadro com a ola e o bandeirão, a escolha), `teste-estadio` 9 (GPU = JS: o estado do torcedor e a VAT nas 8 poses) e 14b
