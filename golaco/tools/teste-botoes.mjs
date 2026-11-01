@@ -369,25 +369,29 @@ if (faz('B6')) {
     for (let i = 0; i < 120 && m.parada.cobrador == null; i++) P.passoPartida(m, NADA);
     return m;
   }
-  /** O lado (no mundo, sinal de z) para onde a IA bate: a mesma montagem, sem o goleiro escolher. */
+  /**
+   * O lado (no mundo, sinal de z) para onde a IA bate e o tick do chute: a mesma montagem, sem o goleiro escolher. (01/11,
+   * CI do #588: com a corrida a IA só corre depois do apito e o chute sai ~1 s depois de pr.pronta + pr.atraso — o "fim"
+   * contado de lá virava ~1,3 s antes do chute e o lado certo no fim defendia 45 de 146 contra 34 na main; o fim é 0,3 s
+   * antes do chute DE VERDADE.)
+   */
   function ladoReal(base) {
     const m = clone(base);
     for (let i = 0; i < 60 * 15; i++) {
-      const ev = P.passoPartida(m, NADA);
-      if (ev.some(e => e.tipo === 'cobranca' && e.parada === 'penalti')) { P.passoPartida(m, NADA); return Math.sign(m.bola.v.z) || 1; }
+      const t0 = m.tick, ev = P.passoPartida(m, NADA);
+      if (ev.some(e => e.tipo === 'cobranca' && e.parada === 'penalti')) { P.passoPartida(m, NADA); return { s: Math.sign(m.bola.v.z) || 1, tChute: t0 }; }
     }
-    return 1;
+    return { s: 1, tChute: Infinity };
   }
-  function pen(base, modo, s) {
+  function pen(base, modo, s, tChute) {
     const m = clone(base), g = gkDe(m, 0);
     let res = null, zChute = null;
     for (let i = 0; i < 60 * 15 && !res; i++) {
       const pr = m.parada;
-      // (o "fim" é 0,3 s antes do chute: com a corrida da cobrança — item 70, P1 — o chute é no fim da corrida, a previsão
-      // dela desde o 1º passo; antes, pronta + atraso. Com o pronta + atraso de antes o "fim" caía no meio da corrida, até
-      // ~1,1 s antes do chute, e o B6d reprovava desde a d971fe54: certo no fim 45 × segurado 39 em 146)
-      const cr = pr && pr.corrida;
-      const fim = pr && !pr.rolou && pr.pronta != null && (cr ? cr.estado === 'corre' && m.tick >= cr.t0 + cr.ticks - 18 : m.tick >= pr.pronta + pr.atraso - 18);
+      // (o "fim" é 0,3 s antes do chute DE VERDADE — o tick do chute no mesmo lance sem o goleiro escolher, ladoReal: com a
+      // corrida da cobrança — item 70, P1 — o chute é no fim da corrida; com o pronta + atraso de antes o "fim" caía no meio
+      // dela, até ~1,1 s antes do chute, e o B6d reprovava desde a d971fe54: certo no fim 45 × segurado 39 em 146)
+      const fim = pr && !pr.rolou && m.tick >= tChute - 18;
       const az = modo === 'certoFim' ? (fim ? s : 0) : modo === 'erradoFim' ? (fim ? -s : 0) : (pr && !pr.rolou ? s : 0);
       for (const e of P.passoPartida(m, { x: 0, z: az, botoes: 0 })) {
         if (e.tipo === 'cobranca' && e.parada === 'penalti') zChute = g.z;
@@ -407,9 +411,9 @@ if (faz('B6')) {
     const base = montarPen(8000 + k);
     if (!base || Math.abs(base.parada.miraZ) < 0.5) continue;
     n++;
-    const s = ladoReal(base);
+    const { s, tChute } = ladoReal(base);
     const def = {};
-    for (const md of Object.keys(t)) { const r = pen(base, md, s); def[md] = r.res === 'defesa'; if (def[md]) t[md][0]++; t[md][1].push(r.z); }
+    for (const md of Object.keys(t)) { const r = pen(base, md, s, tChute); def[md] = r.res === 'defesa'; if (def[md]) t[md][0]++; t[md][1].push(r.z); }
     if (def.certoFim && !def.certoSempre) soFim++;
     if (def.certoSempre && !def.certoFim) soSempre++;
   }

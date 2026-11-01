@@ -37,12 +37,12 @@ export const TEMPOS_NODE = {
   'teste-goleiro-trava.mjs': 105,
   'teste-movimento.mjs': 41,
   'teste-movimento.mjs --modo partida': 150, // D5: entrou no CI (110 s aqui com a máquina dividida); C1: 32 sementes em 4 processos (estimado)
-  'teste-custo.mjs': 15,
+  'teste-custo.mjs': 25, // (01/11: + a guarda das formas do jogador, 2 partidas inteiras: ~15 s aqui)
   'teste-partida.mjs': 84,
   'teste-editor.mjs': 16,
   'teste-taticas.mjs': 57,
   'teste-defesa-humano.mjs': 59,
-  'teste-aereo-troca.mjs --so canhao': 125,
+  'teste-aereo-troca.mjs --so canhao': 170, // (01/11: a assistência com 16 partidas, eram 8)
   'teste-aereo-troca.mjs --so natural': 400, // (31/10: com a cobrança das bolas paradas no laço dos dois humanos, ~5,5 disputas por partida: as 120 em ~22 partidas, eram 44–69; estimado)
   'teste-transicao.mjs': 685,
   'teste-defesa-corrida.mjs': 449,

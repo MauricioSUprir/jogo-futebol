@@ -3142,6 +3142,12 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
   pontos, IC95 [−0,4; +5,9], p = 0,053 — empate pela regra da amostra 4× (a main fora da faixa em 2 das 4). Recalibrar o
   goleiro tiraria ≥ 16,5 m e o total da meta. Nada muda no código; números, o experimento pareado e a proposta (para o dono:
   o passe de tiro livre sem a corrida) na PESQUISA-ETAPA4.md §16.
+- **As formas do jogador (01/11, CI do #588).** A corrida punha o `j.guia` no cobrador depois de criado: os 22 chegavam a 12
+  formas (classes ocultas do motor JS; a main já tinha 9 pelo `choque`, o `arremesso`, o `arremessoGk` e o `salto`), os acessos
+  viravam megamórficos e, depois da 1ª cobrança com corrida, cada passo com a bola rolando custava ~40% mais (`teste-custo`
+  2,61×, meta ≤ 2,5×; no trecho em que as duas versões jogam igual, o mesmo custo). Os cinco estão declarados em
+  `jogador.js criarJogador` (1 forma; o passo ~10–15% abaixo da main; hash-partida e hash-igual IGUAIS) e o `teste-custo` ganhou
+  a guarda: as chaves de cada jogador em 2 partidas inteiras, 1 forma (reprova na main e sem a declaração do `guia`).
 - **Teste `tools/teste-corrida-cobranca.mjs`** (Node, padrão; reprova na main 630960d4). Cenas do COMEÇO de partidas IA × IA
   (as duas versões bit a bit iguais até a 1ª bola parada com corrida) com a parada forçada; 16 por tipo e caminho (IA, demo) +
   a pessoa: C1 anda ≥ 3,5 m no pênalti e ≥ 2 m nos outros; C2 2,5–5 m/s no contato; C3 o pé de apoio plantado a 0,2–0,45 m

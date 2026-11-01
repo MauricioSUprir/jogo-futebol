@@ -32,7 +32,10 @@ const NS_NAT = +arg('--naturais', 6);   // partidas sem o canhão, no mínimo (n
 const NAT_MAX = +arg('--naturais-max', 96); // (Etapa 4: o tiro de meta curto e o lateral com as mãos tiraram bolas altas; com as regras e controles ~1,7 disputa por partida: 64 partidas davam 107 — a amostra, não a meta, pede mais partidas)
 const NAT_DISP = +arg('--disputas', 120); // disputas do natural (a amostra: ver o critério no fim do arquivo)
 const MIN_NAT = +arg('--min-natural', 4);
-const NS_SOLTO = +arg('--soltos', 8);   // partidas com o canhão e o analógico largado (assistência; com 2, ~37 disputas: a taxa real ~95% (main 94% 228/243, D2 96% 221/231 em 12 partidas) caía abaixo de 90% em ~1 rodada de 8 só pelo sorteio; com 8, ~150 disputas, < 1%)
+const NS_SOLTO = +arg('--soltos', 16); // partidas com o canhão e o analógico largado (assistência; com 2, ~37 disputas: a taxa real ~95% (main 94% 228/243, D2 96% 221/231 em 12 partidas) caía abaixo de 90% em ~1 rodada de 8 só pelo sorteio; com 8, ~150 disputas, < 1%)
+// (01/11, CI do #588: com 8 partidas, 116/129 = 89,9% e REPROVOU — o sorteio das 8 primeiras; com 4× a amostra (32) main 94,3%
+// 544/577 × PR 94,2% 504/535, empate. Com 16, ~260 disputas: a ~94% real cai abaixo de 90% em < 0,5% das rodadas; main
+// 270/291 e PR 236/255, os dois 93%. A meta não mudou.)
 const BASE = +arg('--base', 1);
 const SO = arg('--so', null);           // 'canhao' | 'natural' (o rodar-testes roda as duas partes em paralelo)
 const DEPURA = !!process.env.DEPURA;
