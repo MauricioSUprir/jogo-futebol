@@ -22,6 +22,10 @@
 //     e, na barra de cima da pausa, título, opções, tela cheia e X não encostam (folga ≥ 4 px) nas 3 telas do H1;
 //     o submenu "Modo de jogo" (Pré-jogo e a cena de substituição, 12/10) cabe sem rolar no celular deitado
 //  H8 os ajustes de toque antigos (golaco.toque.v1) não valem mais: todo mundo recebe o padrão novo (80%, 55%)
+//  H11 (item 70, P2) os botões PARADINHA e PULINHO aparecem SÓ na cobrança do pênalti da pessoa (a classe cobranca-penalti
+//     do #toque, main.js): no ataque e na defesa, nenhum; na cobrança, os dois (e saem ENFIADA e LANÇAMENTO) — com o nome
+//     inteiro no círculo (H9) e a área do HUD no orçamento (H1, que mede também esse estado); na página de verdade (H11b), o pênalti a favor montado
+//     (__golaco.faltaDeTeste na área) liga a classe e a bola rolando a desliga
 //  H10 placar (dono, 12/10: "quero o placar assim, tem que ser algo menor e mais com a nossa cara", com a barra de TV de
 //     referência): nas 3 telas do celular (com entalhe) e no PC 1280×720, no jogo ("34'"), nos acréscimos ("45+2'" com
 //     "1º T +4") e no intervalo —
@@ -217,6 +221,7 @@ const placarEncosta = [], placarTreino = []; let placarAria = '';
 // H1 + H2: layout nas duas fases e três telas de celular (determinístico, sem simular)
 let piorArea = 0, piorTexto = 0; const txtVisto = new Set(); const linhasH1 = [];
 const nomesBotoes = { botoes: 0, comNome: 0, sem: new Set() };
+const estilosVistos = []; let estilosFalhas = 0;
 let piorPausa = Infinity; const linhasPausa = [];
 for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
   const { navegador, pagina } = await abrir({ largura: w, altura: h, dpr: 2, toque: true });
@@ -228,11 +233,16 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
       const g = window.__golaco; g.relogio.usarManual(true);
       for (let i = 0; i < 240; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
       const out = {};
-      for (const fase of ['ataque', 'defesa']) {
+      // (item 70, P2: 'penalti' = o ataque na cobrança do pênalti da pessoa — a classe cobranca-penalti, com os botões
+      // PARADINHA e PULINHO; fora dela eles não aparecem)
+      const vis = id => { const b = document.getElementById(id); return !!b && getComputedStyle(b).display !== 'none' && b.offsetWidth > 0; };
+      for (const fase of ['ataque', 'defesa', 'penalti']) {
         const tq = document.getElementById('toque');
-        tq.classList.toggle('fase-ataque', fase === 'ataque'); tq.classList.toggle('fase-defesa', fase === 'defesa');
+        tq.classList.toggle('fase-ataque', fase !== 'defesa'); tq.classList.toggle('fase-defesa', fase === 'defesa');
+        tq.classList.toggle('cobranca-penalti', fase === 'penalti');
         const x = formas();
-        out[fase] = { area: area(x.f, innerWidth, innerHeight), pecas: x.f.length, fora: x.fora, txt: x.txt, nomes: x.nomes };
+        out[fase] = { area: area(x.f, innerWidth, innerHeight), pecas: x.f.length, fora: x.fora, txt: x.txt, nomes: x.nomes, estilos: [vis('btn-paradinha'), vis('btn-pulinho')], saem: [vis('btn-enfiada'), vis('btn-lancamento')] };
+        tq.classList.remove('cobranca-penalti');
       }
       g.sincronizarFase?.();
       // a barra de cima da pausa (título, Minimapa, Nomes nos botões, tela cheia, X): nada encosta nem passa da janela
@@ -253,7 +263,9 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
       g.fecharMenu?.();
       return out;
     }, [FORMAS.toString(), AREA.toString()]);
-    for (const fase of ['ataque', 'defesa']) {
+    estilosVistos.push(`${w}×${h}: ataque ${r.ataque.estilos.filter(Boolean).length}, defesa ${r.defesa.estilos.filter(Boolean).length}, pênalti ${r.penalti.estilos.filter(Boolean).length} (ENFIADA/LANÇAMENTO ${r.penalti.saem.filter(Boolean).length})`);
+    if (r.ataque.estilos.some(Boolean) || r.defesa.estilos.some(Boolean) || !r.penalti.estilos.every(Boolean) || r.penalti.saem.some(Boolean)) estilosFalhas++;
+    for (const fase of ['ataque', 'defesa', 'penalti']) {
       piorArea = Math.max(piorArea, r[fase].area); piorTexto = Math.max(piorTexto, r[fase].fora);
       r[fase].txt.forEach(t => txtVisto.add(t));
       nomesBotoes.botoes += r[fase].nomes.botoes; nomesBotoes.comNome += r[fase].nomes.comNome; r[fase].nomes.sem.forEach(id => nomesBotoes.sem.add(`${w}×${h} ${fase} ${id}`));
@@ -309,8 +321,41 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
   } finally { await navegador.close(); }
 }
 meta('H9 nomes dos botões de toque por padrão (dono, 12/10), inteiros dentro do círculo do botão (3 telas, 2 fases)', `${nomesBotoes.comNome}/${nomesBotoes.botoes} botões com o nome${nomesBotoes.sem.size ? ' — sem: ' + [...nomesBotoes.sem].slice(0, 8).join(', ') : ''}`, 'todos', nomesBotoes.botoes > 0 && nomesBotoes.comNome === nomesBotoes.botoes);
-meta('H1 área do HUD no celular (pior caso, ataque e defesa, 3 telas)', `${(piorArea * 100).toFixed(1)}% — ${linhasH1.join('; ')}`, '≤ 11%', piorArea <= 0.11);
+meta('H1 área do HUD no celular (pior caso, ataque, defesa e a cobrança do pênalti da pessoa, 3 telas)', `${(piorArea * 100).toFixed(1)}% — ${linhasH1.join('; ')}`, '≤ 11%', piorArea <= 0.11);
+meta('H11 os botões PARADINHA e PULINHO (item 70, P2): só na cobrança do pênalti da pessoa (3 telas; visíveis de 2)', estilosVistos.join('; '), 'ataque 0, defesa 0, pênalti 2 (ENFIADA/LANÇAMENTO 0)', estilosVistos.length === 3 && estilosFalhas === 0);
 meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada encosta nem transborda (3 telas com entalhe)', linhasPausa.join('; ') || 'sem a pausa', 'folga ≥ 4 px (a do ENCOSTA)', linhasPausa.length === 3 && piorPausa >= 4);
+
+// H11b (item 70, P2): na página de verdade, o pênalti a favor montado (a falta na área, __golaco.faltaDeTeste) liga a classe
+// cobranca-penalti com o cobrador da pessoa (os dois botões aparecem) e a bola rolando a desliga
+if (!soPlacar) {
+  const { navegador, pagina } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
+  try {
+    await pagina.goto(`${srv.url}?q=baixa&toque=1&semente=4&replay=0&comemoracao=0&cenas=0`, { waitUntil: 'load' });
+    await pronta(pagina);
+    const r = await pagina.evaluate(() => {
+      const g = window.__golaco; g.relogio.usarManual(true);
+      const tq = document.getElementById('toque');
+      const vis = id => { const b = document.getElementById(id); return !!b && getComputedStyle(b).display !== 'none' && b.offsetWidth > 0; };
+      const out = { antes: tq.classList.contains('cobranca-penalti') || vis('btn-paradinha') };
+      for (let i = 0; i < 60; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      const f = g.faltaDeTeste({ area: true, cartao: null });
+      out.parada = f && f.parada;
+      // até a cobrança montada (o cobrador da pessoa no ponto de partida)
+      for (let i = 0; i < 300 && !(g.mundo.parada && g.mundo.parada.corrida); i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      g.relogio.avancar(1000 / 60, { desenhar: false });
+      out.na = tq.classList.contains('cobranca-penalti') && vis('btn-paradinha') && vis('btn-pulinho');
+      out.cobrador = g.mundo.parada?.cobrador === g.mundo.controlado?.[0];
+      // a pessoa não bate: a IA assume no prazo e a bola rola; a classe sai
+      for (let i = 0; i < 60 * 12 && g.mundo.parada && !g.mundo.parada.rolou; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      for (let i = 0; i < 4; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      out.depois = tq.classList.contains('cobranca-penalti') || vis('btn-paradinha');
+      return out;
+    });
+    meta('H11b a página: o pênalti a favor montado liga os botões PARADINHA e PULINHO (o cobrador da pessoa) e a bola rolando os desliga',
+      `antes ${r.antes ? 'visíveis' : 'não'} · ${r.parada} montado: ${r.na ? 'visíveis' : 'NÃO'} (cobrador da pessoa ${r.cobrador ? 'sim' : 'não'}) · depois ${r.depois ? 'visíveis' : 'não'}`,
+      'não · visíveis · não', !r.antes && r.parada === 'penalti' && r.na && r.cobrador && !r.depois);
+  } finally { await navegador.close(); }
+}
 
 // H2 (jogo) + H3 + H4 + H6: jogo de verdade no celular 844×390
 if (!soPlacar) {

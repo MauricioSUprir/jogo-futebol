@@ -3230,14 +3230,21 @@ leitura da IA no contato), `goleiro.js` (a linha, o passo do que sai cedo, a van
   "stutter" —, RB = colocado — o "finesse" —, LB = pulinho — o lugar da cavadinha do EA FC, que aqui é o 2º aperto do B —, RT
   no soltar = forte), ligado por `main.js` (`entrada.definirCobrancaPenalti`, a cada passo: o pênalti montado, do time da
   pessoa, com o cobrador controlado); no toque os botões PARADINHA e PULINHO (ícone + nome, vagas d e e: as do PEGAR/TROCAR
-  da bola na mão e da CURVA, que não existem nela) aparecem só com a classe `cobranca-penalti` no `#toque` (css/estilo.css).
-  `partida.js cobrar`: PARADINHA/PULINHO apertados antes do soltar ficam marcados (`pr.estiloPedido`); no soltar,
+  da bola na mão e da CURVA, que não existem nela) aparecem só com a classe `cobranca-penalti` no `#toque` (css/estilo.css);
+  nela saem ENFIADA e LANÇAMENTO (da marca a enfiada é o mesmo passe curto do PASSE e o lançamento, uma bola alta de 11 m)
+  para o HUD caber no orçamento (≤ 11% em 568×320: com os dois a mais dava 12,0%; assim 10,0%, o mesmo do ataque) — o PASSE
+  fica (o pênalti tocado para frente vale) e o teclado e o controle continuam com tudo. Na disputa (Pênaltis 3D), o toque
+  mostra o CHUTE e os dois estilos na vez da pessoa (`disputa-tela.js`). `partida.js cobrar`: PARADINHA/PULINHO apertados antes do soltar ficam marcados (`pr.estiloPedido`); no soltar,
   `estiloDaPessoa` (marcado > CORRER = forte > MOD = colocado > normal); na corrida (`correrCobranca`), enquanto cabem. A ajuda
   (index.html) lista os comandos nas três colunas.
 - **Online.** Os bits `BOTAO.PARADINHA` (1 << 15) e `PULINHO` (1 << 16) não cabem nos 15 bits de botões da entrada: vão no
   byte 5 (o das marcas), bits 2 e 3 (`online.js F_PARADINHA`/`F_PULINHO`); a mesma conta nos dois sentidos.
-- **Não muda:** a saída de bola, o lateral, o escanteio, o tiro de meta e o tiro livre (a P1 bit a bit; `hash-igual` IGUAL — o
-  treino não tem pênalti); a cavadinha (a mesma janela). O `hash-partida` muda a partir do 1º pênalti de cada partida.
+- **Não muda:** a saída de bola, o lateral, o escanteio, o tiro de meta e o tiro livre (o jogo da P1: posições, bola e `m.rng`
+  iguais aos da d971fe54 do começo ao fim nas 5 partidas do `hash-partida` que mudaram, nenhuma com pênalti; `hash-igual`
+  IGUAL — o treino não tem pênalti); a cavadinha (a mesma janela). O VALOR do hash difere DURANTE a corrida de toda cobrança
+  (os campos dos estilos entram no hash de toda corrida: o `hash-partida` acusa 5 das 8 partidas, a 1ª amostra diferente nos
+  passos 600–12300, a 1ª diferença de verdade nos passos 416–12193, sempre num tiro de meta, tiro livre ou escanteio com
+  corrida); o jogo muda só a partir do 1º pênalti.
 - **Teste `tools/teste-estilos-penalti.mjs`** (Node, padrão; reprova na base d971fe54: sem os estilos e com o goleiro a 0,62 m
   da linha). 8 estados da partida (sementes 5000–5007) com o gerador ressemeado por cobrança, o cobrador um dos 3 de maior
   finalização do time, a IA com o estilo forçado; 400 por estilo (normal, paradinha, pulinho), 160 (forte, colocado), 120 com
@@ -3257,7 +3264,11 @@ leitura da IA no contato), `goleiro.js` (a linha, o passo do que sai cedo, a van
 - **Testes que mudaram.** `teste-corrida-cobranca` C11 com o canhão de estilos (a IA forçada em forte, colocado, paradinha e
   pulinho, cada cena com outro cobrador; a pessoa com PARADINHA e PULINHO) — o C3/C4 também neles; `teste-disputa` B4 (a bola
   rola a ≤ 4 s da montagem) passa sem mudar com a paradinha (a demo bate de 3,82 s no pior); `teste-botoes` B6d (o "fim" é 0,3 s antes do chute — com a corrida, do fim dela —, o cobrador da IA no
-  estilo normal e o segurado × o certo no fim PAREADOS, reprovando quando os pares provam) e B11 (120 por mira, binomial).
+  estilo normal e o segurado × o certo no fim PAREADOS, reprovando quando os pares provam) e B11 (120 por mira, binomial);
+  `teste-controles` (F/espaço, LT/LB e o toque na cobrança, na página), `teste-hud-minimo` H1 com a cobrança do pênalti, H11 e
+  H11b (os botões só nela, a página de verdade), `teste-penaltis-tela` 4a (o CHUTE e os estilos só na vez da pessoa) e a conta
+  das bolinhas do item 2 (a janela das 7 rodadas conta a que está por bater: com a disputa mais longa, o teste antigo
+  esperava as 7 primeiras e a tela — certa — mostrava as 6 últimas e a vazia).
 
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores

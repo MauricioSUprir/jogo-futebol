@@ -860,3 +860,72 @@ modo da defesa e o bloqueio do batido, e desligando uma peça por vez (144 parti
 compromete cedo e o cobrador que lê; o goleiro na linha até o chute na partida). A corrida é uma reta do ponto de partida ao
 pé de apoio (a do jogador real faz uma curva leve no fim); o gesto do pé é o do toque de ação de sempre (o pé vai à bola),
 sem o balanço para trás da perna — a perna do chute desenhada fica para o desenho da P2 (pulinho, perna, câmera).
+
+## 17. Estilos de pênalti (item 70, P2 da FILA; pedido do dono de 29/10, aval de 31/10)
+
+**O que estava** (a P1, d971fe54). Todo pênalti corria igual (o perfil `penalti`): a IA decidia o canto e a força na montagem
+(`PARTIDA.penaltiIA`) sem olhar o goleiro; o goleiro da IA sorteava o lado na montagem e saía com o chute (+0,08 s); na partida
+a parede deixava o goleiro a 0,6 m da linha e a IA dele ia para a bissetriz (só a disputa o prendia na linha). A cavadinha (o
+2º aperto do CHUTE) já existia. O trabalho começado (840e0c99) tinha os estilos, a leitura e o goleiro na linha, sem teste e
+sem calibração.
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| van der Kamp 2006, "A field simulation study of the effectiveness of penalty kick strategies in soccer", J Sports Sci 24(5):467–477 (doi 10.1080/02640410500190841; VU Research Portal) | 10 jogadores; estratégia que depende do goleiro × que não depende; o alvo que troca de lado com menos tempo antes do contato erra o lado E a colocação; com o "goleiro" saindo ~150 ms antes do contato, o acaso; com ~400 ms, quase sempre certo | a rampa da leitura (`leitura.tempo` 0,15–0,40 s: 50% → 100% no canto oposto) e o erro maior de quem muda tarde (`leitura.erroTarde`), também na pessoa que troca de canto na corrida |
+| Noël, van der Kamp & Klatt 2021, "The interplay of goalkeepers and penalty takers affects their chances of success", Front Psychol 12:645312 | 395 cobranças de disputas de Copa e Euro (1984–2016), 73,2% de gols; goleiro "cedo" (≥ 200 ms antes do contato) em 33,9%; quem NÃO depende do goleiro: 60,0% contra o que sai cedo × 79,7% contra o que espera; quem depende: 81,8% × 63,6% (a tabela 2 dá 65,6%); 27% dependem; a fluidez da corrida (de parada a fluida) é um dos sinais da estratégia | a chance de sair cedo (`goleiro.cedo` pela paciência, ~34% na média), a vantagem do que sai cedo para o lado certo (o tempo adiantado no alcance e no logit), o goleiro que espera (`espera`), o erro de quem depende contra ele (`semLeitura`); o padrão inteiro é o D3 do teste (informativo); a corrida mais lenta da paradinha e do pulinho |
+| Schweizer et al. 2009 e Noël, van der Kamp & Memmert 2015 (citados nas buscas, não lidos no original) | a janela para mudar o chute ~0,3 s; o mergulho cedo (~400 ms antes do contato) deixa o cobrador dependente mudar | conferem a rampa de 0,15–0,40 s |
+| Jordet (5 temporadas da Premier League, citado por Sky Sports, 2026) e a Copa de 2026 (Sky Sports; Opta) | a corrida com hesitação ganhou até +10 pontos sobre a corrida de sempre na Premier League; na Copa de 2026, 19 com hesitação, 9 perdidas (~53%) × 71% sem; nas disputas, 7 de 14 × 18 de 26 | o "realista" do dono: a paradinha e o pulinho a ± 10 pontos do normal — as duas pontas existem no real; a média fica perto do normal |
+| Jorginho (o pulinho): FootyStats (43 de 50 na carreira, 86%), Football Italia (Pickford na final da Euro 2020 e Martínez esperaram) | o pulinho funciona contra o goleiro que se mexe e perde força contra o que espera | o pulinho como estilo que depende do goleiro, com a mesma leitura da paradinha |
+| IFAB, Lei 14 (2025/26 e 2026/27, The FA; theifab.com) | a finta NA corrida é permitida; a finta para chutar depois de completada a corrida é infração: amarelo ao cobrador e tiro livre indireto (com ou sem gol); desde 2016 a finta no fim da corrida não vale | a escolha recomendada ao dono: a paradinha sempre ANTES do último apoio (a finta depois da corrida não existe por construção — o B do teste: 0 em 1.836) |
+| EA SPORTS FC 25, guias dos controles (keengamer, fifagamenews, fifplay) | no pênalti: L2/LT = hesitação ("stutter"), R1/RB + chute = colocado ("finesse"), L1/LB + chute = cavadinha, R2/RT = correr; o analógico mira | os comandos: LT paradinha, RB colocado, RT no soltar = forte; o LB (a cavadinha do EA FC) vira o pulinho, porque a cavadinha daqui é o 2º aperto do CHUTE (a regra escrita do dono); no teclado F e a barra de espaço; no toque, PARADINHA e PULINHO só na cobrança |
+| Lees et al. 2010 (J Sports Sci 28(8):805, a revisão da §16) | a velocidade da corrida é escolha do jogador | a corrida longa e rápida do forte e a curta e lenta do colocado |
+| Lee & Farley 1998 e Lees et al. 2010 (a régua do C11, §16) | o centro de massa baixa ~7 cm no apoio da corrida | a paradinha e o pulinho na mesma régua do C11 (≤ 0,12 m): os passos curtos da freada, o ritmo antes dela e a retomada no pé certo |
+
+**O que mudou.** `js/corrida.js`: os estilos no plano da corrida (`definirEstilo`, `estiloNoPedido`), a paradinha (as fases,
+os passos curtos e rápidos na freada e na pausa, o ritmo da regulagem antes dela, a retomada no pé certo), o pulinho (a carga
+do penúltimo apoio), a leitura (`vigiarGoleiro`, `cr.gkLido`, `rampaLeitura`, `leituraDoGoleiro`), o estilo preferido e o
+sorteio da IA; `partida.js`: o estilo da IA na montagem e o goleiro que sai cedo (três sorteios do m.rng), a pessoa (os botões
+antes do soltar, no soltar e na corrida), a leitura da IA no contato, o goleiro NA linha na montagem e na parede; `goleiro.js`:
+NA linha também na partida, o passo do que sai cedo, o tempo adiantado no alcance e no logit; `disputa.js`: os mesmos estilos;
+`jogador.js`: a carga do pulinho; `anim.js`: o salto do pulinho (só desenho); `entrada.js`/`main.js`/`index.html`/`css`: os
+comandos; `online.js`: os bits novos no byte das marcas.
+
+**Calibração** (o canhão de pênaltis IA × IA, os 3 de maior finalização de cada time, as mesmas sementes por estilo; a
+pesquisa: Noël 2021). Sem nada além da linha, o goleiro NA linha defendia mais que a 0,6 m (o tempo de reação: a bola chega
+mais tarde) — com o goleiro que espera sem ajuste, o normal ia a 75,2% e, com o que sai cedo, a ~74%; `goleiro.espera` −0,5
+(o logit do que espera) devolve o normal a ~76–77% e o padrão de Noël (o normal contra o que espera, 79,7%). O que sai cedo
+para o lado certo ganhava pouco só pelo logit (o alcance limitava: 17% de defesas no lado dele): o tempo adiantado entrou
+também no alcance. A paradinha e o pulinho contra o goleiro que sai cedo erravam muito para fora (o canto a 2,6 m e o erro
+dobrado na leitura tarde): o canto do lado aberto a 2,0 m (`leitura.canto`) e `erroTarde` 0,5. O forte com o erro a mais
+(× 1,25) ia a 24% para fora: o erro da força maior (`ACOES.chute.forcaMaxErro`) já basta (`forte.erro` 1). O colocado
+convertia 84,8% (2,5% para fora): o erro × 1,35 (0,6 × 1,35 ≈ 0,8 do normal) o leva a ~77%.
+
+**Medido** (`tools/teste-estilos-penalti.mjs`, d971fe54 → agora; 400 cobranças por estilo — forte e colocado 160 —, IA × IA).
+
+| | d971fe54 | agora |
+|---|---|---|
+| o goleiro do apito ao chute, distância da linha do gol (pior): partida · disputa | 0,65 m · 0,10 m | 0,10 · 0,10 m |
+| normal: gol / defesa / fora | (sem estilos) 74,8 / 12,8 / 12,5% | 75,8 / 15,3 / 9,0% |
+| forte · colocado | — | 74,4% · 76,9% (160 cada) |
+| paradinha · pulinho (Δ do normal) | — | 74,3% (−1,5 ± 6,0) · 77,0% (+1,3 ± 5,9) |
+| contra o goleiro que sai cedo × o que espera: normal · paradinha · pulinho (Noël 2021: 60,0 × 79,7; 81,8 × 63,6) | — | 64,2 × 79,9 · 81,1 × 71,8 · 90,6 × 72,1% |
+| o canto oposto ao goleiro que saiu cedo: paradinha · pulinho (rampa média) | — | 83,5% (0,62) · 87,6% (0,84) |
+| o goleiro da pessoa segurando o lado desde o apito: lido · canto oposto · escolhendo depois do pé de apoio: lido | — | 30/30 · 93,3% · 0/30 |
+| a paradinha: abaixo de 1 m/s antes do último apoio · por quanto tempo · no contato | — | 400/400 · 0,22–0,62 s · 2,60–2,75 m/s |
+| o pulinho: os dois pés no ar no penúltimo apoio · o salto desenhado (normal: o voo) | — | 0,22–0,23 s · 11–14 cm (0,11 s) |
+| forte × normal (pareado): a corrida · a bola no contato | — | +0,29 m/s · +2,0 m/s |
+| colocado × normal: a corrida · a bola | — | −0,36 m/s · −4,2 m/s |
+| a finta depois da corrida (abaixo de 1 m/s depois do último apoio) | — | 0 em 1.836 |
+| o tempo da corrida (1º passo → contato): normal · forte · colocado · paradinha · pulinho | 1,47 s | 1,47 · 1,66 · 1,24 · 2,16 · 1,50 s |
+| a queda do quadril (C11 do `teste-corrida-cobranca`, pior por perfil; régua 0,12 m) | penalti 0,11 | penalti 0,10 · forte 0,10 · colocado 0,08 · paradinha 0,08 · pulinho 0,11 m |
+| canhão de 400 pênaltis do `teste-faltas` (C; a demo, o ATA de maior finalização; meta 70–82%) | 81,8 / 13,8 / 4,5% | 77,8 / 14,5 / 7,8% |
+| disputa IA × IA (`teste-disputa` D, 32 disputas): gol / defesa / fora · o ritmo (B4, ≤ 4 s) | 75 / 13 / 12% · 3,50 s | 73 / 18 / 9% · 3,82 s |
+
+**As guardas por mutação** (`teste-estilos-penalti --n 120 --so …`; cada uma reprova o item dela): 21 de 22 pegas — a paradinha sem pausa e a pausa depois do último apoio (A3: 0/120), a finta depois da corrida (B: 156 em 528), a carga do pulinho e o pulinho sem salto (A4), o forte sem força e o colocado sem o MOD (A1, A2), o estilo da IA ignorado (A0–A2), a leitura ao acaso (C1 37%, C2 43%), o goleiro da pessoa que não é lido (C2 0/30), o goleiro que sai cedo sem o passo e o goleiro fora da linha (C3 0/54), a leitura forte demais de quem depende sem ler (D2 −25,8 pontos), o F sem efeito, o forte da pessoa ignorado e o estilo que cabe sempre (F1, F2), a disputa só com o CHUTE (F3 0/4), o online sem os bits (G), todos preferindo o normal e o sorteio fora do `m.rng` (H1, H2). A que escapou: o goleiro que espera com o logit +2 (o normal a 71,7% em 120 — a 5 pontos da meta, a contagem não prova); a mais forte (`GOLEIRO.penalti.fator` 1,6: 64,3% em 400) reprova o D1. Com 120 o C1 reprova em todas pela amostra (27 goleiros que saíram cedo, a meta pede 30); na amostra cheia passa.
+
+**Limites/pendente.** A paradinha da pessoa e da demo sai do ponto de partida do normal (o estilo se escolhe no soltar) e por
+isso corre mais (2,16 s na média, ~0,7 s a mais que o normal): a demo na disputa bate a 3,82 s da montagem no pior (o B4 do
+`teste-disputa` pede ≤ 4 s). O cobrador da IA não troca de estilo no meio da corrida (a pessoa troca enquanto cabe). O goleiro
+da IA não lê a paradinha (só sai cedo ou espera, pela paciência); a pessoa defendendo não tem a vantagem do goleiro que lê. O
+salto do pulinho é o corpo inteiro subindo (a perna de impulsão não estende mais que na passada). No toque não há o colocado
+(não há MOD no toque, como no resto do jogo).

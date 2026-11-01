@@ -225,9 +225,10 @@ export function leituraDoGoleiro(m, cr) {
 }
 
 /**
- * O estilo no pedido da batida (no contato; P2): forte (mais força, mais erro), colocado (o chute colocado), a corrida que
- * espera (paradinha, pulinho: a força × kd.forca) e, da pessoa que trocou de canto na corrida, o erro pela rampa da troca
- * (tarde erra mais). A leitura da IA é do partida.js (pedidoDaIA: a direção do canto). Muda p; devolve p.
+ * O estilo no pedido da batida (no contato; P2): forte (mais força; o erro da força maior vem com ela), colocado (o chute
+ * colocado, com o erro próprio), a corrida que espera (paradinha, pulinho: a força × kd.forca) e, da pessoa que trocou de
+ * canto na corrida, o erro pela rampa da troca (tarde erra mais). A leitura da IA é do partida.js (pedidoDaIA: a direção do
+ * canto). Muda p; devolve p.
  */
 export function estiloNoPedido(m, cr, p) {
   if (!p || p.tipo !== 'chute') return p;
@@ -395,9 +396,10 @@ export function guiarCorrida(m, c, cr) {
     if (c.pes[cr.pe].apoio) { if (cr.penult < 0) cr.penult = m.tick; }
     else if (cr.penult >= 0) cr.pulo = { t0: m.tick, u0: progressoBalanco(c, cr.ps, true).u, h: cr.pul ? cr.pul.h : EP.pulinho.altura[0] };
   }
-  // a paradinha (P2): até a pausa a corrida segue no ritmo natural (sem a regulagem); com o corpo a pausaEm m do meio do apoio
-  // + o que ele leva para frear, freia até a velocidade da pausa; abaixo de `abaixo` m/s fica tPausa s e retoma pela regulagem
-  // (a vRetoma) — a pausa é sempre antes do último apoio (o pé de apoio ainda vai pousar ao lado da bola)
+  // a paradinha (P2): até a freada a corrida vai na velocidade da paradinha (o ritmo da passada, o da regulagem); com o corpo a
+  // pausaEm m do meio do apoio + o que ele leva para frear, freia até a velocidade da pausa (passos curtos: saidaCorrida);
+  // abaixo de `abaixo` m/s fica tPausa s e retoma pela regulagem (a vRetoma) — a pausa é sempre antes do último apoio (o pé de
+  // apoio ainda vai pousar ao lado da bola)
   let regula = true;
   if (cr.fasePar && cr.fasePar !== 'retoma' && cr.plantou < 0) {
     const P = cr.par, A = EP.paradinha;

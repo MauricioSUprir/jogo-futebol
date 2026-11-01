@@ -405,9 +405,12 @@ html.nomes-botoes .btn-toque span { display: block; text-shadow: 0 1px 2px rgba(
 .toque:not(.goleiro-mao) .btn-trocar-mao { display: none; }
 html:not(.cobranca-mirada) .btn-efeito, html.cobranca-mirada .btn-pegar, html.cobranca-mirada .btn-trocar-mao { display: none; }
 /* estilos do pênalti (item 70, P2): PARADINHA e PULINHO só na cobrança do pênalti da pessoa (classe cobranca-penalti no #toque,
-   main.js) — nas vagas d e e, as do PEGAR/TROCAR da bola na mão e da CURVA, que não existem nela */
+   main.js) — nas vagas d e e, as do PEGAR/TROCAR da bola na mão e da CURVA, que não existem nela. Para caber no orçamento do
+   HUD (≤ 11% da tela em 568×320; teste-hud-minimo H1), na cobrança saem ENFIADA e LANÇAMENTO: da marca a enfiada é o mesmo
+   passe curto do PASSE (mira.js tipoMirado) e o lançamento, uma bola alta de 11 m (a cavadinha faz melhor); o PASSE fica (o
+   pênalti tocado para frente vale, Regra 14) e o teclado e o controle continuam com tudo */
 .toque:not(.cobranca-penalti) .btn-estilo-penalti, .toque.cobranca-penalti .btn-pegar, .toque.cobranca-penalti .btn-trocar-mao,
-.toque.cobranca-penalti .btn-efeito { display: none; }
+.toque.cobranca-penalti .btn-efeito, .toque.cobranca-penalti .btn-enfiada, .toque.cobranca-penalti .btn-lancamento { display: none; }
 .btn-estilo-penalti svg { stroke: #c6ff3d; }
 .btn-estilo-penalti.ativo svg { stroke: var(--preto); }
 @keyframes bt-aparece { from { transform: scale(0.82); opacity: 0; } to { transform: none; } }

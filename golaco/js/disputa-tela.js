@@ -3,7 +3,7 @@
 //  - as bolinhas de cada time (convertido: verde; perdido: vermelho com um traço; a bater: vazia; a da vez pisca), 5 por
 //    time e, nas alternadas, uma a mais por rodada (as últimas 7 quando passa disso);
 //  - quem bate agora (número e nome, na cor do time).
-// E as classes do <html>: modo-penaltis (nenhum botão de toque além do CHUTE), penaltis-bate (a cobrança do humano montada:
+// E as classes do <html>: modo-penaltis (nenhum botão de toque além do CHUTE e dos estilos do pênalti), penaltis-bate (a cobrança do humano montada:
 // o CHUTE aparece) e penaltis-defende (o humano defende: só o analógico). As cores são as da página (var(--verde)...: com ?tm,
 // as do Total Match). Escreve no DOM só quando muda. Nada aqui mexe no mundo.
 
@@ -31,9 +31,10 @@ const CSS = `
 .disputa-vez[hidden] { display: none; }
 @media (min-width: 1001px) { .disputa { font-size: 12px; } .disputa-bola { width: 12px; height: 12px; } .disputa-linha { height: 14px; } }
 @media (prefers-reduced-motion: reduce) { .disputa-bola.vez { animation: none; box-shadow: 0 0 0 2px rgba(234, 243, 238, 0.5); } }
-/* botões de toque na disputa: só o CHUTE quando o humano bate (a fase de ataque do jogo já o mostra); defendendo, nenhum */
-html.modo-penaltis .toque .btn-toque:not(#btn-chute) { display: none !important; }
-html.modo-penaltis:not(.penaltis-bate) .toque #btn-chute { display: none !important; }
+/* botões de toque na disputa: só o CHUTE quando o humano bate (a fase de ataque do jogo já o mostra) — e os estilos do
+   pênalti PARADINHA e PULINHO (item 70, P2; a classe cobranca-penalti do #toque, main.js); defendendo, nenhum */
+html.modo-penaltis .toque .btn-toque:not(#btn-chute):not(.btn-estilo-penalti) { display: none !important; }
+html.modo-penaltis:not(.penaltis-bate) .toque #btn-chute, html.modo-penaltis:not(.penaltis-bate) .toque .btn-estilo-penalti { display: none !important; }
 /* (a dica de teclas do PC — "H controles · Esc menu" — fica, como na partida: no toque o estilo.css já a esconde) */
 /* os avisos (as dicas da vez) descem para baixo das bolinhas: no celular o aviso largo passava por cima delas */
 html.modo-penaltis .aviso { top: calc(var(--sa-t) + var(--m) + var(--placar-h) + 74px); }
