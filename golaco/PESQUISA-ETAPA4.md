@@ -736,6 +736,14 @@ eles chegavam com um terço do caminho andado e o canhão de escanteios (331, as
 chutes (main 6,3% e 39,0%; real: 2,6% dos escanteios viram gol, Copa 2022); com 0,15 voltou a 5,8% e 43,0% (com 0, 4,2% e
 40,7%). O `teste-corrida-cobranca` C10 segura os dois lados (sai junto e não chega antes).
 
+(31/10, CI do #588) O canhão de escanteios do `teste-goleiro-realista` (estados do MEIO da partida, a bola posta fora perto do
+gol) mostrou o contrário do canhão do `teste-bolas-paradas`: com 0,15 o gol de escanteio foi a 11,2% (57 de 507, sementes
+1001–1008 e 2001–2008) × main 5,1% (22 de 435) — z ≈ 3,4. Desligando peça por peça nas mesmas sementes: sem a corrida no
+escanteio, 5,5% (27 de 492); com a corrida e a zona parada (`zonaAntes` 0), 6,9% (33 de 480); com 0,05, 0,08 e 0,11 ninguém sai
+do lugar (o ponto fica a menos de `IA.modos.pressa.retoma`, 0,6 m) e os números são os do 0; com 0,13, 2% do caminho. A saída
+junto era o que dobrava o gol: quem ataca a zona chegava ao chute já andando, à frente da marcação. `zonaAntes` passa a 0 e o C10
+passa a cobrar a espera (média ≤ 2%); a mutação 0,15 reprova.
+
 O pênalti da IA corria antes do apito (a previsão da corrida, ~1,45 s, é maior que o atraso dela, 0,6–1,4 s) e, com a corrida
 no apito, a bola rolava ~0,4 s depois de antes; a montagem do pênalti foi de 1,5 para 1,25 s (medido: 1,2 → −0,13/+0,06 s;
 1,3 → −0,03/+0,16 s; 1,5 → +0,17/+0,36 s). Antes disso, com a corrida começando antes do apito, o pênalti da IA batia

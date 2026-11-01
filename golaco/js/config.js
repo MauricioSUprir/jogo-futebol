@@ -2154,8 +2154,8 @@ export const DISPUTA = {
 //    apoio pousar no ponto, com a velocidade mais perto da do perfil, dentro dela); `planta` m: o pé de apoio pousado a até
 //    isto do ponto conta como o apoio da batida; `max` s além da corrida prevista: o contato sai de qualquer jeito (trava
 //    proibida); `pousoUltimo` s: na última passada o pouso do pé de apoio é ajustado (passoPassada pousoEm) até isto antes.
-//  - escanteio: quem ataca a zona sai junto com o cobrador (bolas-paradas.js) até `zonaAntes` do caminho (a arrancada é no
-//    chute, como antes); a IA começa a corrida antes (a previsão da corrida), para a bola rolar no tempo de hoje.
+//  - escanteio: na corrida, quem ataca a zona espera no lugar dele, sem correr (bolas-paradas.js; `zonaAntes` = 0: a arrancada
+//    é no chute, como antes); a IA começa a corrida antes (a previsão da corrida), para a bola rolar no tempo de hoje.
 export const CORRIDA_COBRANCA = {
   tipos: ['penalti', 'escanteio', 'tiroDeMeta', 'tiroLivre'],
   perfis: {
@@ -2176,7 +2176,12 @@ export const CORRIDA_COBRANCA = {
   acelUsa: 0.7,                 // × a aceleração (e a freada) do jogador que a regulagem conta (a locomoção chega com folga)
   velVaria: 0.15,               // a regulagem procura a velocidade de cruzeiro a até ±15% da do perfil...
   ritmo: [0.8, 1.2],            // ...e o ritmo da passada a até isto × o natural daquela velocidade (fora: mal visto)
-  zonaAntes: 0.15,              // (0,35 dava 11,8% de gols no canhão de escanteios da IA, main 6,3%; 0,15: 5,8%; 331 escanteios)
+  // (0,35 dava 11,8% de gols no canhão de escanteios do teste-bolas-paradas, main 6,3%; 0,15, 5,8%; 331 escanteios. 31/10: no
+  // canhão de escanteios do teste-goleiro-realista — estados do MEIO da partida, sementes 1001–1008 e 2001–2008 — com 0,15
+  // era 11,2% (57 de 507) × main 5,1% (22 de 435): quem ataca a zona chegava ao chute já andando, à frente da marcação; com
+  // 0, 6,9% (33 de 480). Abaixo de ~0,12 ninguém sai do lugar (o ponto fica a menos de IA.modos.pressa.retoma): não há meio
+  // termo que mostre a saída sem a vantagem)
+  zonaAntes: 0,
   folgaZona: 0.25,              // s — a IA começa a corrida se quem está no raio sai dele até o fim dela com esta folga
 };
 

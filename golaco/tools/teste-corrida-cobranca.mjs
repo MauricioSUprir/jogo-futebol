@@ -28,9 +28,11 @@
 //  C8 dois humanos (online 1×1): o mesmo jogo nos dois aparelhos — dois mundos com as mesmas entradas (um deles copiado no
 //     meio da corrida) têm o MESMO hash a cada passo, da montagem ao fim do voo;
 //  C9 o apito da cobrança no pênalti e no tiro livre com barreira: um por parada, no pronta ou no começo da corrida da IA.
-//  C10 o escanteio: quem ataca a zona SAI JUNTO com o cobrador (no contato andou em média ≥ 3% do caminho da saída à zona)
-//     e não chega antes (no contato, ninguém além de 20% dele): a arrancada para a zona é no chute, como antes — com 35% do
-//     caminho já andado na corrida o canhão de escanteios da IA ia de 6,3 a 11,8% de gols (331 escanteios; main 6,3%).
+//  C10 o escanteio: quem ataca a zona ESPERA no lugar dele na corrida (no contato andou em média ≤ 2% do caminho da saída à
+//     zona; ninguém além de 20% dele): a arrancada para a zona é no chute, como antes. (31/10: até aqui ele saía junto com o
+//     cobrador — em média ≥ 3% —, com zonaAntes 0,15; no canhão de escanteios do teste-goleiro-realista, estados do meio da
+//     partida, o gol de escanteio ia de 5,1% (main, 22 de 435) a 11,2% (57 de 507), e com ele parado, 6,9% (33 de 480); com
+//     35% do caminho, o canhão do teste-bolas-paradas ia de 6,3 a 11,8%.)
 //
 //   node tools/teste-corrida-cobranca.mjs                               (lógica do repositório)
 //   node tools/teste-corrida-cobranca.mjs --js <pasta js>                (outra cópia: a main → REPROVA)
@@ -295,11 +297,11 @@ else {
   }
 }
 {
-  // C10 o escanteio: quem ataca a zona sai junto com o cobrador e não chega antes
+  // C10 o escanteio: quem ataca a zona espera no lugar na corrida (a arrancada é no chute) e não chega antes
   const z = porTipo.escanteio.zona, todos = z.flat(), medias = z.map(media);
-  reg('C10 escanteio: quem ataca a zona sai junto (fração média do caminho da saída à zona no contato) e não chega antes (a maior)',
-    `média ${f2(media(medias))} (menor por escanteio ${f2(min(medias))}) · maior ${f2(max(todos))} (${z.length} escanteios, ${todos.length} atacantes)`,
-    'média ≥ 0,03 · maior ≤ 0,20', z.length >= Math.min(4, NC) && media(medias) >= 0.03 && max(todos) <= 0.2);
+  reg('C10 escanteio: quem ataca a zona espera no lugar na corrida (fração média do caminho da saída à zona no contato) e não chega antes (a maior)',
+    `média ${f2(media(medias))} (maior por escanteio ${f2(max(medias))}) · maior ${f2(max(todos))} (${z.length} escanteios, ${todos.length} atacantes)`,
+    'média ≤ 0,02 · maior ≤ 0,20', z.length >= Math.min(4, NC) && media(medias) <= 0.02 && max(todos) <= 0.2);
 }
 reg('C9 o apito da cobrança: um no pênalti e no tiro livre com barreira, nenhum nos outros', `${apitosRuins} paradas fora disso (${apitosVistos} com apito)`, '0', apitosRuins === 0 && apitosVistos > 0);
 
