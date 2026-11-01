@@ -38,6 +38,7 @@ import { passoEmbalo, tetoCorrida, gastoCorrida } from './velocidade.js';
 import { PESSOAL, conferirSenha, entrarPessoal, sairPessoal } from './edicao.js';
 import { criarPoderes, NIVEIS, XP } from './poderes.js';
 import { CENAS_NO_LAB } from './serie.js';
+import { ELENCO } from './aliados.js';
 
 // ---------- constantes ----------
 const TOQUE = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -981,6 +982,22 @@ function paredeNoCaminho(a, dx, dy, dz, d) {
     for (const q of sala) { if (x > q.x0 - 0.12 && x < q.x1 + 0.12 && z > q.z0 - 0.12 && z < q.z1 + 0.12 && y > q.y0 && y < q.y1 + 0.1) return true; } }
   return false;
 }
+// a câmera das cenas não entra em parede (dono, 31/10: as imagens vazias — o céu, a rua, um muro cinza — eram a câmera da cena
+// dentro de um prédio, de um monumento ou atrás de uma parede): do ponto para onde ela olha até ela, a cada 12 cm; no primeiro
+// sólido, ela fica 30 cm antes dele
+function cameraDaCenaLivre() {
+  const a = historia.alvoCamera, c = camera.position; if (!a) return;
+  const dx = c.x - a.x, dy = c.y - a.y, dz = c.z - a.z, d = Math.hypot(dx, dy, dz); if (d < 0.6) return;
+  for (let s = 0.45; s <= d + 0.2; s += 0.12) {
+    const x = a.x + dx / d * s, y = a.y + dy / d * s, z = a.z + dz / d * s;
+    for (const q of rectsPerto) {
+      if (q.y0 < 0) continue;                                               // (o chão do quarteirão; como no dentroDeSolido)
+      if (x > q.x0 - 0.12 && x < q.x1 + 0.12 && z > q.z0 - 0.12 && z < q.z1 + 0.12 && y > q.y0 - 0.12 && y < q.y1 + 0.12) {
+        const k = Math.max(0.45, s - 0.3) / d; c.set(a.x + dx * k, a.y + dy * k, a.z + dz * k); return;
+      }
+    }
+  }
+}
 function atualizarCamera(dt) {
   const v = Math.hypot(P.vx, P.vz);
   const foco = combate.foco;
@@ -1574,6 +1591,11 @@ const noCortex = () => LAB_B.plano.dentro(P.x, P.z, P.y) === 'cortex';
 // o Joe e a Iris, nos lugares da história (o passo atual diz onde; a cena do passo segura eles até acabar)
 const contencao = criarContencao(cena, { mobile: MOBILE, aniso: ANISO, lab: LAB_B });     // os vilões vencidos presos nas celas
 const aliados = criarAliados(cena, { mobile: MOBILE, aniso: ANISO, chao: (x, z) => chaoEm(retangulosPerto(x, z, 0), x, z, 2) });
+// EDIÇÃO PESSOAL: o quadro de vídeo das cenas (estudio.js): a equipe falando do Cortex pelo comunicador, a TV ao vivo
+let estudio = null;
+if (PESSOAL) import('./estudio.js').then(({ criarEstudio }) => { estudio = criarEstudio({ mobile: MOBILE, aniso: ANISO }); }).catch((e) => console.warn('quadro de vídeo indisponível', e));
+const pertoDoLab = () => Math.hypot(P.x - LAB_B.cx, P.z - LAB_B.cz) < 70;          // (a equipe só existe em 3D com o herói perto: equipe.js)
+const DO_LAB = new Set(['caitlin', 'cisco', 'wells', 'thawne']);
 // a vida do Barry: a pista da perícia, o gelo do Frio, a tempestade do Mago e os raios da noite do raio (vida.js)
 const vida = criarVida(cena, { fx: combate.efeitos, mobile: MOBILE });
 // as subestações do "Apagão": armário com a luz vermelha (desligada) ou verde (religada)
@@ -1591,8 +1613,9 @@ const focosCena = () => {
   fs.thawne = () => {                                                       // (temporada da série: de amarelo, preso na cela ou com o rosto do Wells)
     const a = aliados.foco('reverso'); if (a) return a;
     const p = contencao.presos?.reverso; if (p?.raiz.visible) return { x: p.raiz.position.x, y: p.raiz.position.y, z: p.raiz.position.z };
-    return equipe.pronta ? equipe.focos().wells?.() ?? null : null;
+    return equipe.pronta && pertoDoLab() ? equipe.focos().wells?.() ?? null : null;   // (longe do laboratório, a equipe não está desenhada)
   };
+  if (PESSOAL) for (const id of [...ELENCO, 'mago', 'mark', 'frio', 'onda']) fs[id] = () => aliados.foco(id);   // o elenco da temporada (encenarElenco)
   if (PESSOAL) {
     fs.reverso = () => aliados.foco('reverso') || fs.thawne();
     fs.heroi = () => (J.heroiFora ? null : focoHeroi());
@@ -1601,6 +1624,12 @@ const focosCena = () => {
   for (const id of ['caitlin', 'cisco', 'wells']) fs[id] = () => (equipe.pronta && noCortex() && tempo.epoca !== 'ignicao' ? equipe.focos()[id]?.() ?? null : aliados.foco(id));   // (o Wells: só na temporada da série)
   return fs;
 };
+/** numa cena (edição pessoal), para onde cada um olha: quem escuta, para quem fala; quem fala, para o herói */
+function olharNaCena(id) {
+  const q = historia.quemFala, heroiPt = historia.pontoDe('heroi') || historia.pontoDe('padrao');
+  if (!q || q === id || q === 'tv') return heroiPt;
+  return historia.pontoDe(q) || heroiPt;
+}
 /** cenas que mexem no mundo: o túnel do tempo aparece em volta do herói correndo */
 const GANCHOS_CENA = {
   // a temporada da série (edição pessoal): os nove meses de coma (o Barry deitado numa maca no Cortex) e a noite da mãe
@@ -1785,8 +1814,26 @@ function rodarCena(id, foco, depois, opc) {
   const g = GANCHOS_CENA[id]; g?.antes?.();
   const noLab = PESSOAL && CENAS_NO_LAB.has(id);                                  // (a temporada: o que a série mostra sem o Barry)
   if (noLab) { cenaNoLab(true); J.povFora = id === 'pov-cisco' ? ['caitlin'] : ['caitlin', 'cisco']; }   // (só o Wells; com o Cisco na cena dele)
-  historia.cena(id, foco, () => { J.modo = 'jogando'; g?.depois?.(); if (PESSOAL) limparSerie(); if (noLab) cenaNoLab(false); depois?.(); },
+  if (PESSOAL && (historia.vaiTocar(id) || opc?.sempre)) encenarElenco(id, foco);
+  historia.cena(id, foco, () => { J.modo = 'jogando'; g?.depois?.(); if (PESSOAL) { limparSerie(); aliados.dispensar(); estudio?.mostrar(null); } if (noLab) cenaNoLab(false); depois?.(); },
     { ...(opc || {}), aoAcao: opc?.aoAcao || g?.aoAcao || (PESSOAL ? acaoSerie : undefined) });
+}
+// EDIÇÃO PESSOAL (dono, 31/10: "todos os personagens terem seu boneco"): quem fala numa cena e não está nela entra andando
+// até uma marca em volta do herói (aliados.js encenar; sem parede no caminho); a equipe do S.T.A.R. Labs, com o herói longe
+// do laboratório, fala pelo comunicador (o quadro de vídeo, estudio.js); o Thawne fora do laboratório vem de amarelo
+function encenarElenco(id, foco) {
+  const fs = typeof foco === 'function' ? {} : foco || {}, quem = historia.falantes(id), lista = [];
+  for (const q of quem) {
+    if (q === 'heroi' || q === 'tv' || q === 'gideon') continue;
+    if (q === 'thawne' || q === 'reverso') { if (!fs.thawne?.() && !fs.reverso?.() && !pertoDoLab()) lista.push('reverso'); continue; }
+    if (fs[q]?.()) continue;
+    if (DO_LAB.has(q) && !pertoDoLab()) continue;                         // pelo comunicador: o quadro de vídeo
+    if (aliados.temPerfil(q)) lista.push(q);
+  }
+  estudio?.preparar(quem);
+  if (!lista.length) return;
+  const livre = (x, z, y) => { const q = empurrar(rectsPerto, x, z, 0.42, y, 1.7); return !q.bateu && Math.abs(chaoEm(rectsPerto, x, z, y + 0.5) - chaoEm(rectsPerto, P.x, P.z, P.y + 0.5)) < 0.45; };
+  aliados.encenar([...new Set(lista)], { x: P.x, y: P.y, z: P.z, h: P.h }, livre);
 }
 // ---------- a temporada da série (edição pessoal): as ações das cenas e as cenas do laboratório sem o Barry ----------
 // a cena que a série mostra do ponto de vista do Wells (ou de quem estiver no S.T.A.R. Labs): o herói some e a câmera vai para o
@@ -2007,12 +2054,14 @@ function quadro() {
   const fora = J.wellsVirou || J.povFora ? [...(semEquipe || []), ...(J.wellsVirou ? ['wells'] : []), ...(J.povFora || [])] : semEquipe;
   equipe.atualizar(dt, P, { noCortex: noCortex(), quemFala: J.modo === 'cena' ? historia.quemFala : null, oculto: tempo.epoca === 'ignicao', fora });
   aliados.posicionar((J.cenaAliados || missoes.atual)?.aliados || null);
-  aliados.atualizar(dt, P, { quemFala: J.modo === 'cena' ? historia.quemFala : null });
+  aliados.atualizar(dt, P, { quemFala: J.modo === 'cena' ? historia.quemFala : null, olhar: J.modo === 'cena' && PESSOAL ? olharNaCena : null });
+  // o quadro de vídeo: quem fala do laboratório (sem estar na cena) ou a TV
+  if (estudio) { const q = J.modo === 'cena' ? historia.quemFala : null; estudio.mostrar(q && (q === 'tv' || (DO_LAB.has(q) && !historia.presente(q))) ? q : null); }
   passoVitrine(dt);                                                         // (também nas cenas: o traje gira na apresentação)
   contencao.atualizar(dt, P, viloes, { vazia: tempo.epoca === 'ignicao', fora: foraDasCelas() });
   tempo.atualizar(dt, camera, P, { quemFala: J.modo === 'cena' ? historia.quemFala : null });
   if (J.modo === 'cena') {
-    viloes.posar(dt, historia.quemFala); animarHeroi(dt); if (!historia.camera(camera, dt)) atualizarCamera(dt);
+    viloes.posar(dt, historia.quemFala); animarHeroi(dt); if (!historia.camera(camera, dt)) atualizarCamera(dt); else cameraDaCenaLivre();
     combate.efeitos.atualizar(dt);                                                  // (os raios das cenas)
     for (const I of interioresAtivos) if (I.grupo.visible) I.atualizar(mundo.noite);
   }
@@ -2024,6 +2073,7 @@ function quadro() {
   posfx.ajustar(J.modo === 'jogando' ? Math.min(1, Math.max(0, (Math.hypot(P.vx, P.vz) - 20) / 35)) : 0, mundo.noite);
   atualizarSilhueta();
   posfx.render();
+  if (estudio?.atual) estudio.desenhar(renderer, Math.min(dtBruto, 0.1), el.cena);   // (por cima da imagem do jogo)
 }
 
 // O tamanho do desenho segue o tamanho REAL do canvas na tela, conferido a cada quadro. Só o evento 'resize' não bastava:
@@ -2067,4 +2117,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { PESSOAL, pontoMundo, poderes, ganharXp, posfx, escolherImagem, get presetImagem() { return presetImagem; }, interacoes, corridas, vitrine, equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { PESSOAL, pontoMundo, rodarCena, focosCena, aliados, get estudio() { return estudio; }, poderes, ganharXp, posfx, escolherImagem, get presetImagem() { return presetImagem; }, interacoes, corridas, vitrine, equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
