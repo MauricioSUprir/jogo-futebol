@@ -832,7 +832,7 @@ modo da defesa e o bloqueio do batido, e desligando uma peça por vez (144 parti
 
   | sementes | main | PR | todas as corridas menos a do passe de tiro livre |
   |---|---|---|---|
-  | 1001–1144 | 56,2% (338) | 62,4% (346; 73250b5c) | 56,5% (345) |
+  | 1001–1144 (a do CI) | 56,2% (338) | 62,4% (346; 73250b5c e 1bf1349a) | 56,5% (345) |
   | 3001–3144 | 56,7% (356) | 61,6% (362; ed3a17b8) | 61,3% (362) |
   | 5001–5144 | 60,8% (332) | 56,5% (340; 1bf1349a) | 57,8% (332) |
   | 7001–7144 | 61,5% (348) | 63,5% (367; 1bf1349a) | — |
