@@ -476,7 +476,9 @@ export function urlEscudoSigla(sigla, cor1, cor2) {
 export const ESTADIO_TM = Object.freeze({ nome: 'Estádio Total Match', placa: 'ESTÁDIO TOTAL MATCH', mosaico: 'TOTAL MATCH' });
 export const ESTILOS_FACHADA = Object.freeze(['vidro', 'concreto', 'metal', 'membrana', 'tijolo', 'trelica', 'paineis']);
 export const COBERTURAS = Object.freeze(['total', 'lados', 'parcial', 'nenhuma']);
-export const PADROES_CADEIRAS = Object.freeze(['liso', 'misto', 'faixas', 'mosaico']);
+// ('setores' e 'raios': só nos estádios com forma genérica, que os desenham — estadio-generico.js PADROES; a base guarda o padrão
+// que o jogo desenha desde o item 69, PR 4. Na geometria do Golaço eles ficam com uma cor só, como o 'liso')
+export const PADROES_CADEIRAS = Object.freeze(['liso', 'misto', 'faixas', 'mosaico', 'setores', 'raios']);
 
 // letras que a decomposição Unicode não separa do acento (ß, ø, æ, ł, ı...)
 const LETRAS_ESPECIAIS = { 'ß': 'ss', 'ø': 'o', 'æ': 'ae', 'œ': 'oe', 'ł': 'l', 'đ': 'd', 'ð': 'd', 'þ': 'th', 'ı': 'i', 'ħ': 'h', 'ŧ': 't' };

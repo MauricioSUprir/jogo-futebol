@@ -2084,7 +2084,8 @@ com o estádio achado); o código dos módulos de sempre cresce ~3 KB (`render/e
 - **Base** `assets/tm/estadios.json` = `{versao: 1, estadios: {"<nome normalizado>": {nome, cidade?, fachada_estilo:
   'vidro'|'concreto'|'metal'|'membrana'|'tijolo'|'trelica'|'paineis', fachada_cor, fachada_cor2, fachada_led|null, cobertura:
   'total'|'lados'|'parcial'|'nenhuma', cobertura_cor, cadeiras_cor, cadeiras_cor2|null, cadeiras_padrao:
-  'liso'|'misto'|'faixas'|'mosaico', aneis 1–3, marca?, confianca?, ...}}, homonimos?: {"<nome normalizado>": [Estadio &
+  'liso'|'misto'|'faixas'|'mosaico'|'setores'|'raios' (os dois últimos só com `forma` genérica: o padrão que ela desenha; item 69,
+  PR 4), aneis 1–3, marca?, confianca?, ...}}, homonimos?: {"<nome normalizado>": [Estadio &
   {clubes: [nome do clube no TM, ...]}]}}` (campos a mais são ignorados). **Estádios de mesmo nome** (ex.: "estadio
   centenario" = Montevidéu do Montevideo City Torque × Caxias do Sul do Caxias): `acharEstadio(base, nomes, clube)` usa a
   entrada de `homonimos[chave]` cujo `clubes` tem o `home.name` do pedido; nenhum clube bate (ou sem `homonimos`) →
