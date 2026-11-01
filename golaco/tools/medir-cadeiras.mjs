@@ -38,8 +38,12 @@ async function pedidoTM(contexto) {
   await contexto.addInitScript(lista => { for (const [k2, v] of lista) try { localStorage.setItem(k2, v); } catch (_) { /* nada */ } },
     CASOS_TM.map(([nome, id]) => ['tm3d:pedido:med-' + id, JSON.stringify({ ...PED_A, id: 'med-' + id, edicao: 'pro', home: { ...PED_A.home, stadium: nome } })]));
 }
-// o modelo do torcedor 3D (PR 2) chega depois do módulo das cadeiras (pedido no 1º quadro): espera, se a página tiver
-const esperaTorcedor = pg => pg.waitForFunction(() => { const c = window.__golaco.estadio?.cadeiras; return !c || !c.carregado || !c.torcedores || c.torcedores.carregado; }, null, { timeout: 60000 }).catch(() => {});
+// o modelo do torcedor 3D (PR 2) chega depois do módulo das cadeiras (pedido no 1º quadro) e o impostor da torcida (PR 3) é
+// assado depois dele, em fatias no tempo ocioso: espera os dois, se a página tiver (a Baixa não tem nenhum)
+const esperaTorcedor = async pg => {
+  await pg.waitForFunction(() => { const c = window.__golaco.estadio?.cadeiras; return !c || !c.carregado || !c.torcedores || c.torcedores.carregado; }, null, { timeout: 60000 }).catch(() => {});
+  await pg.waitForFunction(() => { const g = window.__golaco; g.desenhar(); const i = g.estadio?.impostor; return !i || i.pronto || i.falhou || !i.spec && i.assando == null && !g.estadio.cadeiras?.torcedores?.carregado; }, null, { timeout: 60000, polling: 100 }).catch(() => {});
+};
 const ESTADIOS = [['padrao', '']].concat(COM_TM ? CASOS_TM.map(([, id]) => [id, `tm=med-${id}&`]) : []);
 
 // câmeras de perto: [nome, de, para, fov]
@@ -55,6 +59,8 @@ const PERTO = [
 const txtTor = t => (t ? ` · torcedores 3D: ${t.torcedores} (${k(t.triangulos)} tri, níveis ${t.lods.join('/')})` : '');
 // o orçamento do quadro (PR 2): o resto e o máximo do 3D de perto
 const txtOrc = o => (o && o.resto != null ? ` · resto ${k(o.resto)}, orçamento ${Number.isFinite(o.orcamento) ? k(o.orcamento) : '∞'}` : '');
+// o impostor (PR 3): blocos e torcedores nele, grupos no programa dele e as pessoas da malha perto (a densidade real)
+const txtImp = i => (i && i.pronto ? ` · impostor: ${i.blocos} blocos, ${i.torcedores} torcedores, ${i.torcida.grupos.length} grupos, perto ${i.torcida.perto}` : '');
 
 for (const [nomeDisp, disp] of [['celular', { largura: 844, altura: 390, dpr: 2, toque: true, q: 'media' }], ['pc', { largura: 1280, altura: 720, dpr: 1, toque: false, q: 'alta' }]].filter(([n]) => DISP.has(n))) {
   const srv = await servidor(0, raiz);
@@ -91,11 +97,11 @@ for (const [nomeDisp, disp] of [['celular', { largura: 844, altura: 390, dpr: 2,
                 g.cameraLivre({ de: de2, para: para2, fov: fov2 });
                 g.desenhar(); g.desenhar(); g.desenhar();
                 const e = g.estado(), cad = g.estadio?.cadeiras ?? null;
-                return { c: e.desenhoChamadas, t: e.desenhoTriangulos, cad: cad ? { blocos: cad.blocos, instancias: cad.instancias, torcedores: cad.torcedores ?? null, orcamento: cad.orcamento ?? null } : null };
+                return { c: e.desenhoChamadas, t: e.desenhoTriangulos, cad: cad ? { blocos: cad.blocos, instancias: cad.instancias, torcedores: cad.torcedores ?? null, orcamento: cad.orcamento ?? null } : null, imp: g.estadio?.impostor ?? null };
               }, [de, para, fov]);
               if (hora === 'dia') {
                 saida.perto[`${chave}/${nome}`] = r;
-                console.log(`PERTO ${chave} ${nome}: chamadas ${r.c} · triângulos ${k(r.t)}${r.cad ? ` · cadeiras: ${r.cad.blocos} blocos, ${r.cad.instancias} instâncias${txtTor(r.cad.torcedores)}${txtOrc(r.cad.orcamento)}` : ''}`);
+                console.log(`PERTO ${chave} ${nome}: chamadas ${r.c} · triângulos ${k(r.t)}${r.cad ? ` · cadeiras: ${r.cad.blocos} blocos, ${r.cad.instancias} instâncias${txtTor(r.cad.torcedores)}${txtOrc(r.cad.orcamento)}` : ''}${txtImp(r.imp)}`);
               }
               if (PRINTS) await pg.screenshot({ path: path.join(PRINTS, `perto-${nome}-${nomeDisp}-${est}-${hora}.png`), timeout: 180000 });
             }
@@ -112,13 +118,13 @@ for (const [nomeDisp, disp] of [['celular', { largura: 844, altura: 390, dpr: 2,
         await esperaTorcedor(pg);
         const por = [];
         for (const p of planos) {
-          const r = await pg.evaluate(t => { const g = window.__golaco, pj = g.prejogo; pj.irPara(t - 0.04); g.relogio.avancar(16); g.relogio.avancar(16); const d = pj.desenho; const cad = g.estadio?.cadeiras ?? null; return { plano: pj.plano, c: d.chamadas, t: d.triangulos, cad: cad ? cad.instancias : null, tor: cad?.torcedores ? cad.torcedores.torcedores : null }; }, (p.t0 + p.t1) / 2);
+          const r = await pg.evaluate(t => { const g = window.__golaco, pj = g.prejogo; pj.irPara(t - 0.04); g.relogio.avancar(16); g.relogio.avancar(16); const d = pj.desenho; const cad = g.estadio?.cadeiras ?? null; const im = g.estadio?.impostor; return { plano: pj.plano, c: d.chamadas, t: d.triangulos, cad: cad ? cad.instancias : null, tor: cad?.torcedores ? cad.torcedores.torcedores : null, imp: im?.pronto ? im.torcedores : null }; }, (p.t0 + p.t1) / 2);
           por.push({ id: p.id, ...r });
           if (PRINTS && ['dentro', 'tunel', 'entrada', 'organizada', 'ladoDeLa', 'visitantes'].includes(p.id)) await pg.screenshot({ path: path.join(PRINTS, `prejogo-${p.id}-${est}.png`), timeout: 180000 });
         }
         const pc = Math.max(...por.map(x => x.c)), pt = Math.max(...por.map(x => x.t));
         saida.prejogo[chave] = { piorChamadas: pc, piorTriangulos: pt, planos: por };
-        console.log(`PREJOGO ${chave}: pior ${pc} chamadas, ${k(pt)} triângulos — ${por.map(x => `${x.id} ${x.c}/${Math.round(x.t / 1000)}k${x.cad ? `(${x.cad}${x.tor ? `+${x.tor}` : ''})` : ''}`).join(' ')}`);
+        console.log(`PREJOGO ${chave}: pior ${pc} chamadas, ${k(pt)} triângulos — ${por.map(x => `${x.id} ${x.c}/${Math.round(x.t / 1000)}k${x.cad ? `(${x.cad}${x.tor ? `+${x.tor}` : ''})` : ''}${x.imp ? `[imp ${x.imp}]` : ''}`).join(' ')}`);
       }
     }
     if (erros.length) console.log(`erros no console (${nomeDisp}): ${erros.slice(0, 3).join(' | ')}`);

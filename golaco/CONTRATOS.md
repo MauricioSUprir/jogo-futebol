@@ -4418,3 +4418,83 @@ IGUAIS).
 - Para o PR 3 (impostor e densidade): o impostor octaédrico pode ser assado NA CARGA a partir das mesmas malhas e poses
   (`lerModelo` + `vatDados`: 8 poses × 2 variações); a densidade real perto (1 por cadeira nos estádios grandes) muda o
   `gerarTorcidaNiveis`/`lugares` — o torcedor 3D segue sozinho (ele lê os torcedores sentados nas cadeiras da fileira).
+
+## Impostor da torcida (item 69, PR 3: o impostor octaédrico e a densidade real perto; 01/11; contrato)
+Pedido do dono (29/10): "torcida 3D, em todos os estádios" (FILA item 69, PR 3 de 4; pesquisa em `PESQUISA-ESTADIO.md` §16;
+as recomendações do "Depende do dono" 11 valem: a Baixa sem bonecos 3D, a Média só perto, a Alta mais longe). Só DESENHO:
+nada do fecho do hash muda (`tools/fecho-hash.mjs --diff origin/main` = 0; `hash-igual`/`hash-partida` IGUAIS).
+- **O atlas** (`js/render/impostor-dados.js`, PURO, sob demanda — chega com o `render/cadeiras3d.js`): o torcedor 3D do PR 2
+  (`assets/torcedor/torcedor.bin`, o nível 0 de cada variação, as 8 poses da VAT: 16 OBJETOS = variação × 8 + pose)
+  fotografado de N × N direções num HEMI-OCTAEDRO de polo inclinado `IMPOSTOR.inclinacao` (45°) da vertical para a frente
+  (o espaço do torcedor do `torcedor-dados.js`: x a esquerda da pessoa, y para cima, z o rumo da cadeira; `codificar(d)` →
+  [u, w] ∈ [−1, 1]², `decodificar`, `direcaoDoQuadro(fx, fy, N)` — os vértices da grade; abaixo do horizonte inclinado, a
+  borda). Cada foto: a base `base(d)` (bx = y × d, by = d × bx; d quase vertical: bx = x) e o RETÂNGULO do objeto (a união
+  da figura em todas as fotos, relativo ao centro da caixa do objeto, mais `margem` 1,5 texel; `ret` x0, y0, largura,
+  altura em m; `cen` o centro). Duas texturas RGBA8 (`a` = camisa, pele, cabelo, cobertura; `b` = calça, nx, ny, altura/2,5
+  m — tudo multiplicado pela cobertura; o resto, cobertura − as 4 regiões, é o tênis ou, na pose do cachecol acima de 1 m,
+  o cachecol) com o nível 1 do mipmap feito dentro de cada foto (a textura imutável com 2 níveis). `especificacao(q)`:
+  Baixa null; Média N 6, fotos de 20 × 32 (480 × 768, ~3,5 MB na GPU); Alta N 8, 28 × 44 (896 × 1408, ~12 MB). A ordem no
+  atlas: `porLinha` 4 objetos por linha, a foto (fx, fy) do objeto o em `origemDaFoto`.
+- **O assamento** (`criarAssador(modelo, spec)`: `passo(ms)` assa até o tempo — uma unidade é o retângulo de um objeto ou uma
+  foto; `assarImpostor` de uma vez nos testes): rasterizador de triângulos em JS com `ss` 2 × 2 amostras por pixel e teste
+  de profundidade; a região de cada amostra é a do vértice de maior peso, a normal interpolada (virada para a câmera: dos
+  dois lados) no espaço da foto, a altura pelo y. Determinístico (o mesmo resultado no Node e no navegador). Na página
+  (`render/impostor.js criarImpostor`): começa quando o modelo do torcedor 3D chega (`render/torcedor3d.js`, fora da
+  Baixa), em fatias de `fatiaMs` 6 ms (até 2,5 fatias quando o navegador dá mais tempo ocioso) por `requestIdleCallback`;
+  a troca de qualidade com outro atlas assa de novo e fica com o de antes até o novo ficar pronto; a Baixa desliga.
+- **O quadro do impostor** (`IMPOSTOR_GLSL` e as mesmas contas em JS: `quadros`, `reprojetar`, `impostorDoTorcedor`): no
+  vertex shader, com a pose do quadro (`torcedorEstado`: a MESMA pose, pulo e balanço), o objeto (a variação pela semente,
+  `variacaoDe`; a pose), a escala (`aPos.w` limitada a `IMPOSTOR.escala` 0,9–1,25; pelo assento sentado, pelo piso de pé),
+  o pulo (de pé), o balanço (o centro de lado, pela altura), o rumo da cadeira (`aRumo`: cos e sen × 127); a direção da
+  câmera no espaço do torcedor → as 3 fotos e os pesos (Brucks: o quadrado da grade e a diagonal; a foto exata pesa 1) → o
+  quadro virado para a câmera (a base da direção da câmera) do tamanho do retângulo → o uv de cada canto em cada foto pela
+  PROJEÇÃO VIRTUAL (o raio paralelo à câmera até o plano da foto) e a luz (o sol de dia, para cima à noite) no espaço de
+  cada foto. No fragment shader: as 3 fotos que caem dentro delas somadas pelos pesos, o recorte em `alfa` 0,5, as cores
+  do torcedor (as do quadro; a calça e o tênis pela semente; o cachecol do time) e a luz do torcedor 3D (0,6 + 0,44·N·L de
+  dia; 0,33 + 0,17·(0,5 + 0,5·N·y) à noite; × 0,88–1,12 de cada um; a fileira da frente nas pernas pela altura; + a luz
+  falsa).
+- **Na torcida** (`render/torcida.js`): os shaders saem de `shaders(imp)` — sem imp, o programa de hoje (o quadro SDF); com
+  `ligarImpostor({vertPars, vertMain, fragPars, fragMain, uniforms, rumo})` (o GLSL do `render/impostor.js
+  GLSL_IMPOSTOR`), o material de DOIS RAMOS (`aLod` 0 = o quadro, 1 = o impostor; os uniforms são os mesmos objetos da
+  torcida mais os do impostor) e os atributos `aLod` (1 byte) e `aRumo` (2 bytes) em cada grupo. `definirLod(indices)`: os
+  torcedores em impostor agora (só os grupos que mudaram sobem; o grupo sem ninguém em impostor volta ao programa de hoje).
+  A pré-carga do programa no 1º quadro desenhado depois de ligar (a malha perto) e a CONFERÊNCIA no seguinte (`opc.programas`
+  = os programas do renderizador, `main.js`): um programa com `diagnostics.runnable` falso → `desligarImpostor(true)`, o
+  quadro SDF para sempre na página. API `torcida.impostor` {ligado, falhou, torcedores, grupos, perto, precarga}.
+- **A escolha por BLOCO** (`escolherImpostor(blocos, cam, anteriores, opc)`, pura; `render/impostor.js atualizar` a chama a
+  cada quadro pelo `render/cadeiras3d.js`): os blocos da grade das cadeiras pelos px da CADEIRA (0,5 m) no ponto do bloco mais
+  perto da câmera, no cone dela; entra com ≥ `pxEntra`, fica com ≥ `pxSai`; o teto conta torcedores desenhados (os de mais px
+  primeiro; quem já estava vale `favorAnterior` 1,2); o lado de cá com a câmera dentro dele fora. `IMPOSTOR.qual`: Baixa
+  nada; Média 6/5 px, 6 mil torcedores, NÃO na TV de jogo (`naTV` false: na TV do celular, o programa de hoje); Alta 4/3,3
+  px, 60 mil, também na TV. Cada torcedor no bloco da sua cadeira: `blocosDosTorcedores(blocos, pos, n)` (pela caixa
+  orientada do bloco; na divisa, o centro mais perto; fora de todas, o centro a até o raio) → {bloco, rumo (o do bloco,
+  apontando para o campo), inicio/idx (os torcedores de cada bloco)}. Os triângulos e as chamadas NÃO mudam (o mesmo quadro).
+- **A densidade real perto** (`preencherBloco(assentos, ocup, dados, q, eixo)`, pura; `render/torcedor3d.js` por bloco e
+  qualidade): nos blocos das cadeiras 3D do quadro, 1 pessoa por cadeira ocupada — a ocupação alvo é `dados.publico` (o
+  público do pedido do TM; `gerarTorcidaNiveis` passou a devolvê-lo) × `perto.cheio` 0,96; ficam os desenhados (nível ≤ a
+  qualidade), entram os da torcida de nível acima nas cadeiras vazias e, se faltar, gente nova só nas cadeiras com alguém a
+  até `raio` cadeiras (cadeiras por pessoa no bloco, 1–`raioMax` 4) na fileira dela ou nas vizinhas, com o time, o setor e
+  a organizada do mais perto, a camisa de um do mesmo time no bloco e a pele e o cabelo de outros (pela chave da cadeira:
+  `sorteioCadeira`). As fileiras em 3D (o plano do orçamento) desenham essas pessoas em 3D; as outras fileiras dos blocos vão
+  para a MALHA PERTO da torcida (`torcida.definirPerto(P)`; o impostor, ou o quadro sem ele; a escala de verdade
+  `perto.escala` 0,94–1,06; o rumo da cadeira); os desenhados desses blocos saem do quadro (`ocultar`). Custo: +1 chamada
+  (só com alguém nela) e 2 triângulos por pessoa, contados no ORÇAMENTO do PR 2 (`gasto.perto`; no plano a cadeira custa 18 +
+  2 com o torcedor 3D pronto). Sem o modelo do torcedor, nada disso (as cadeiras 3D com o quadro de hoje).
+- API (testes): `__golaco.estadio.impostor` {pronto, assando, falhou, ms, spec, blocos, torcedores, mapeados, torcida:
+  {ligado, falhou, torcedores, grupos, perto, precarga}}, `__golaco.estadio.impostorObj` (o resultado do assamento, o mapa,
+  os uniforms, `pausar(v)`: o mesmo quadro sem o impostor), `cadeiras.torcedores` {…, perto, pessoas}, `cadeiras.orcamento.gasto.perto`.
+- Testes: `teste-torcida` H1–H8 (Node; reprova na main: o módulo não existe) — a pureza, o mapa (ida e volta, a borda, as
+  câmeras do jogo dentro, as vizinhas), as 3 fotos e os pesos (sem estalo), o atlas (toda foto com gente, nada na borda, a
+  caixa = a projeção dos vértices, as regiões, a normal, a altura, determinístico, os MB), o quadro cobre o corpo 3D e a
+  projeção virtual, a escolha por bloco (histerese, cone, teto, Baixa), os blocos e o rumo (Golaço e Banorte), a densidade
+  real (Banorte 37% → 96%, o público, a divisa da visitante vazia); conferido por mutação (10 mutações, 9 reprovam; a que
+  passa tira só a guarda do sentido do rumo, redundante com a caixa do bloco). `teste-estadio` 9c (GPU = JS das contas do
+  impostor), 14d (celular e PC: pronto, a TV da Média sem impostor, de perto o mesmo custo com outra imagem, a Baixa, a
+  malha perto no gasto), 14e (o programa que não compila volta ao SDF), 15 (sem o modelo, o SDF), 14b/14c com a malha perto.
+  Custo com `tools/medir-cadeiras.mjs` (agora espera o impostor e mostra os blocos e torcedores dele).
+- Medido (PESQUISA-ESTADIO §16, `tools/medir-cadeiras.mjs --tm`): a TV de jogo do celular e o pior plano do pré-jogo IGUAIS
+  nos 4 estádios (padrão 29/99,8 mil e 40/127,8 mil); de perto no celular +1 chamada e +0,4–2,1 mil triângulos (a densidade
+  real), no orçamento; o PC até 257 mil de perto (alvo 400 mil); o impostor em si não muda chamada nem triângulo.
+- Para o PR 4 (os 523 estádios e a calibração): a densidade real vale em qualquer planta (a grade); a escala do quadro nos
+  genéricos (até 1,3–1,5 no SDF) fica limitada a 1,25 no impostor — calibrar com os estádios; o retângulo e o atlas não
+  dependem do estádio.

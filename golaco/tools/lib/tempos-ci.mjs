@@ -49,7 +49,7 @@ export const TEMPOS_NODE = {
   'teste-intercepta.mjs': 560, // C1: parte A 12 → 96 partidas (10–18 s de CPU cada, 4 processos) + a parte B (~125 s de CPU); estimado
   'teste-rede.mjs': 1,
   'teste-rede-veu.mjs': 3,
-  'teste-torcida.mjs': 10,
+  'teste-torcida.mjs': 12, // item 69, PR 3: + H (o assamento 2×, o Banorte: ~+1,5 s aqui)
   'teste-replay-anel.mjs': 715, // (C3: + G18, o canhão de 60 cruzamentos gravado no anel: ~25 s)
   'teste-replay-paradas.mjs': 680, // 28/10: 24 → 48 partidas (localmente 623–640 s com 2 processos; as 24, 285–315 s)
   'teste-saot.mjs': 215,
@@ -106,7 +106,7 @@ export const TEMPOS_NAVEGADOR = {
   'teste-carga.mjs': 36,
   'teste-controles.mjs': 64,
   'teste-editor-tela.mjs': 51,
-  'teste-estadio.mjs': 229,
+  'teste-estadio.mjs': 290, // item 69, PR 3: + o impostor (9c, 14d/14e nos 2 aparelhos e a página sem o modelo, 15: ~+60 s)
   'teste-prejogo.mjs': 298,
   'teste-som-jogo.mjs': 105,
   'teste-rede-tela.mjs': 53,

@@ -10,6 +10,12 @@
 //      cima pulando, chance perdida = mãos na cabeça;
 //   G) o torcedor 3D (item 69, PR 2): o modelo com as 8 poses, sentado na cadeira e virado para o campo, a escala, as
 //      poses, o cachecol, a pose do quadro (o mesmo ESTADO_GLSL; a ola e o bandeirão) e a escolha das fileiras.
+//   H) o IMPOSTOR octaédrico (item 69, PR 3): o mapa hemi-octaédrico de polo inclinado (ida e volta, a borda, as câmeras
+//      do jogo dentro dele, o espaçamento das fotos), as 3 fotos e os pesos (somam 1, a foto exata pesa 1, sem pulo), o
+//      assamento (todas as fotos com gente, nada na borda, as regiões no lugar, a normal e a altura, o mesmo resultado
+//      sempre), o quadro do impostor cobre o corpo 3D de qualquer direção, a escolha por bloco (px com histerese, cone,
+//      teto, Baixa sem), cada torcedor no bloco da cadeira dele com o rumo dela e a DENSIDADE REAL perto (1 por cadeira
+//      ocupada pelo público, os vazios de propósito ficam, o time do vizinho). (A GPU = JS fica no teste-estadio, item 9c.)
 // Na versão publicada a arquibancada é vazia e não há som: este teste reprova (os módulos não existem).
 //   node tools/teste-torcida.mjs [--js <pasta js>]
 import path from 'node:path';
@@ -776,6 +782,329 @@ if (EM) {
         `Baixa ${eB.escolha.size}; Média ${eM.torcedores} torcedores (${eM.triangulos} ≤ ${Q.media.teto}), as de mais px: ${maisPerto ? 'sim' : 'não'}; Alta ${eA.torcedores} (${eA.triangulos} ≤ ${Q.alta.teto}); entre a saída e a entrada: entra ${entra}, fica ${fica}; nível 0 entre os limiares: vindo do 1 → ${l0Entra}, vindo do 0 → ${l0Fica}; TV ${tv}`,
         '0; ≥ 1 e ≤ teto, sim; > Média e ≤ teto; 0 e 1; 1 e 0; 0',
         eB.escolha.size === 0 && eM.torcedores >= 1 && eM.triangulos <= Q.media.teto && maisPerto && eA.torcedores > eM.torcedores && eA.triangulos <= Q.alta.teto && entra === 0 && fica === 1 && l0Entra === 1 && l0Fica === 0 && tv === 0);
+    }
+  }
+}
+
+// H) o IMPOSTOR OCTAÉDRICO (item 69, PR 3 — dono, 29/10: "torcida 3D, em todos os estádios"): o torcedor 3D do PR 2
+//    fotografado de N × N direções na carga (um hemi-octaedro de polo inclinado para a frente) e desenhado no quadro de
+//    2 triângulos misturando as 3 fotos mais perto; a escolha por bloco; a densidade real perto. Contas puras (Node).
+{
+  const IM = await imp('render/impostor-dados.js');
+  const TQ = await imp('render/torcedor-dados.js');
+  const CD = await imp('render/cadeiras-dados.js');
+  if (!IM || !TQ || !CD || !TD) reg('H impostor octaédrico (render/impostor-dados.js)', 'não existe (o quadro tirado do atlas SDF desenhado por código)', 'existe', false);
+  else {
+    const fs = await import('node:fs');
+    const fonte = f => fs.readFileSync(path.join(pastaJs, f), 'utf8');
+    const I = IM.IMPOSTOR;
+    const ang = (a, b) => Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]))) * 180 / Math.PI;
+    const nrm = a => { const l = Math.hypot(...a); return a.map(v => v / l); };
+    let sem = 12345;
+    const rnd = () => { sem = (sem * 1664525 + 1013904223) >>> 0; return sem / 4294967296; };
+    // H1 pureza: nada de three.js nem DOM no módulo puro; a torcida monta o MESMO programa de hoje sem o impostor (o ramo só
+    // existe com ele) e o ramo do impostor usa o MESMO estado do torcedor (torcedorEstado: a pose do quadro e do 3D)
+    {
+      const s = fonte('render/impostor-dados.js'), tq = fonte('render/torcida.js'), ti = fonte('render/impostor.js');
+      const ruins = ["from 'three'", 'document.', 'window.', 'navigator.', 'getContext('].filter(t => s.includes(t));
+      const ramo = /function shaders\(imp = null\)/.test(tq) && /\$\{imp \? `vImpModo = step\(0\.5, aLod\);/.test(tq) && /\$\{imp \? imp\.vertPars : ''\}/.test(tq);
+      const mesmoEstado = /vec3 est = torcedorEstado\(aPos\.xyz, h, aInfo\);/.test(tq) && /float iPose = floor\(pose \+ 0\.5\);/.test(ti) && /iSent \? 0\.0 : pulo/.test(ti) && /bal \* clamp/.test(ti);
+      reg('H1 impostor: puro (sem three.js nem DOM); o programa de hoje sem ele; o ramo dele com a pose do quadro (torcedorEstado)',
+        `${ruins.length ? 'usa ' + ruins.join(', ') : 'puro'}; ramo só com o impostor: ${ramo ? 'sim' : 'NÃO'}; a mesma pose, o pulo e o balanço: ${mesmoEstado ? 'sim' : 'NÃO'}`, 'puro; sim; sim', !ruins.length && ramo && mesmoEstado);
+    }
+    // H2 o mapa: ida e volta exata no hemisfério inclinado; abaixo do horizonte inclinado, a borda; as câmeras do jogo dentro
+    // (a TV a 15° de cima, a do gol olhando de baixo a 22°, as de perto a 30° de baixo, o lado, o aéreo por trás a 45°); o
+    // espaçamento das fotos (as vizinhas)
+    {
+      let ida = 0, borda = 1, nIda = 0;
+      for (let k = 0; k < 4000; k++) {
+        const d = nrm([rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1]);
+        const e = IM.paraInclinado(d);
+        if (e[1] >= 0) { ida = Math.max(ida, ang(d, IM.decodificar(IM.codificar(d)))); nIda++; }
+        else { const uv = IM.codificar(d); borda = Math.min(borda, Math.max(Math.abs(uv[0]), Math.abs(uv[1]))); }
+      }
+      const deg = Math.PI / 180;
+      const cams = { 'TV (15° de cima)': [0, Math.sin(15 * deg), Math.cos(15 * deg)], 'gol (22° de baixo)': [0, -Math.sin(22 * deg), Math.cos(22 * deg)],
+        'perto (30° de baixo e 30° de lado)': nrm([Math.sin(30 * deg) * Math.cos(30 * deg), -Math.sin(30 * deg), Math.cos(30 * deg) * Math.cos(30 * deg)]), 'frente (40° de baixo)': [0, -Math.sin(40 * deg), Math.cos(40 * deg)],
+        'lado (horizonte)': nrm([1, 0.05, 0.1]), 'aéreo por trás (50°)': [0, Math.sin(50 * deg), -Math.cos(50 * deg)] };
+      const fora = Object.entries(cams).filter(([, d]) => IM.paraInclinado(d)[1] < 0.02 || ang(d, IM.decodificar(IM.codificar(d))) > 1e-6).map(([n]) => n);
+      const esp = {};
+      for (const q of ['media', 'alta']) {
+        const N = I.qual[q].N;
+        let mx = 0;
+        for (let fy = 0; fy < N; fy++) for (let fx = 0; fx < N; fx++) {
+          const d = IM.direcaoDoQuadro(fx, fy, N);
+          if (fx + 1 < N) mx = Math.max(mx, ang(d, IM.direcaoDoQuadro(fx + 1, fy, N)));
+          if (fy + 1 < N) mx = Math.max(mx, ang(d, IM.direcaoDoQuadro(fx, fy + 1, N)));
+        }
+        esp[q] = mx;
+      }
+      reg('H2 impostor: o mapa hemi-octaédrico de polo inclinado — ida e volta, a borda, as câmeras do jogo dentro, as fotos vizinhas',
+        `ida e volta até ${fmt(ida * 1000, 4)} mili-grau (${nIda} direções); abaixo do horizonte na borda (máx |u|,|w| ≥ ${fmt(borda, 6)}); fora do mapa: ${fora.length ? fora.join(', ') : 'nenhuma'} (de ${Object.keys(cams).length}); vizinhas a até ${fmt(esp.media, 1)}° (Média ${I.qual.media.N}×${I.qual.media.N}) e ${fmt(esp.alta, 1)}° (Alta ${I.qual.alta.N}×${I.qual.alta.N})`,
+        '≤ 1e-5° (o arredondamento do acos); 1; nenhuma; ≤ 44° e ≤ 33°', ida <= 1e-5 && borda >= 1 - 1e-9 && fora.length === 0 && esp.media <= 44 && esp.alta <= 33);
+    }
+    // H3 as 3 fotos e os pesos (Brucks): pesos ≥ 0 que somam 1, as 3 vizinhas na grade; na foto exata ela pesa 1; andando a
+    // câmera em passos de 0,25° nenhum peso pula mais de 0,1 (a troca de foto é contínua: sem estalo)
+    {
+      const N = I.qual.media.N;
+      let soma = 0, neg = 0, viz = 0, exata = 0, pulo = 0;
+      for (let k = 0; k < 6000; k++) {
+        const q = IM.quadros([rnd() * 2 - 1, rnd() * 2 - 1], N);
+        soma = Math.max(soma, Math.abs(q.w[0] + q.w[1] + q.w[2] - 1));
+        if (q.w.some(w => w < -1e-12)) neg++;
+        if (q.f.some(([x, y]) => x < 0 || y < 0 || x >= N || y >= N) || Math.abs(q.f[2][0] - q.f[0][0]) !== 1 || Math.abs(q.f[2][1] - q.f[0][1]) !== 1) viz++;
+      }
+      for (let fy = 0; fy < N; fy++) for (let fx = 0; fx < N; fx++) {
+        const q = IM.quadros([(fx / (N - 1)) * 2 - 1, (fy / (N - 1)) * 2 - 1], N);
+        let w = 0;
+        q.f.forEach(([x, y], i) => { if (x === fx && y === fy) w += q.w[i]; });
+        if (Math.abs(w - 1) > 1e-9) exata++;
+      }
+      // o caminho: de baixo pela frente, sobe para o lado e passa por cima (o polo)
+      const pesos = d => { const q = IM.quadros(IM.codificar(d), N), m = new Map(); q.f.forEach(([x, y], i) => m.set(x + ',' + y, (m.get(x + ',' + y) ?? 0) + q.w[i])); return m; };
+      let ant = null;
+      for (let t = 0; t <= 720; t++) {
+        const a = (t * 0.25 * Math.PI) / 180;
+        const d = nrm([Math.sin(a) * 0.9, Math.sin(a * 0.7) - 0.3, Math.cos(a)]);
+        const m = pesos(d);
+        if (ant) { const ch = new Set([...m.keys(), ...ant.keys()]); for (const c of ch) pulo = Math.max(pulo, Math.abs((m.get(c) ?? 0) - (ant.get(c) ?? 0))); }
+        ant = m;
+      }
+      reg('H3 impostor: as 3 fotos mais perto e os pesos (somam 1, vizinhas; a foto exata pesa 1; sem estalo andando a câmera)',
+        `soma − 1 até ${soma.toExponential(1)}, ${neg} pesos negativos, ${viz} trios fora da grade/não vizinhos; ${exata} fotos exatas sem peso 1 (de ${N * N}); maior pulo de peso em 0,25° ${fmt(pulo, 3)}`,
+        '≤ 1e-12, 0, 0; 0; ≤ 0,1', soma <= 1e-12 && neg === 0 && viz === 0 && exata === 0 && pulo <= 0.1);
+    }
+    // o modelo (o mesmo do torcedor 3D)
+    const arqM = path.join(pastaJs, '..', TQ.TORCEDOR3D.arquivo);
+    const bin = fs.existsSync(arqM) ? fs.readFileSync(arqM) : null;
+    const M = bin ? TQ.lerModelo(bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength)) : null;
+    const V = M ? TQ.vatDados(M) : null;
+    const S = IM.especificacao('media');
+    const t0 = performance.now();
+    const R = M ? IM.assarImpostor(M, S) : null;
+    const msAssar = performance.now() - t0;
+    if (!R) reg('H4 impostor: o assamento', 'sem o modelo', 'o atlas', false);
+    else {
+      // H4 o atlas: toda foto com gente, nada na borda (a margem), o retângulo cobre o corpo projetado (± 1 px), as regiões no
+      // lugar (cabeça em cima da camisa, a camisa em cima da calça), a normal virada para a câmera, a altura subindo, o mesmo
+      // resultado sempre, a Baixa sem atlas, o tamanho na GPU
+      const px = (o, fx, fy, x, y) => { const [ox, oy] = IM.origemDaFoto(S, o, fx, fy), k = 4 * ((oy + y) * S.largura + ox + x); return [R.a[k], R.a[k + 1], R.a[k + 2], R.a[k + 3], R.b[k], R.b[k + 1], R.b[k + 2], R.b[k + 3]]; };
+      let vazias = 0, naBorda = 0, caixaErro = 0, regiaoErro = [], nzMedio = 1, altErro = 0;
+      const nP = TQ.TORCEDOR3D.poses;
+      for (let o = 0; o < IM.OBJETOS; o++) {
+        const v = Math.floor(o / nP), p = o % nP, m = M.malhas[v][0];
+        const C = [R.cen[4 * o], R.cen[4 * o + 1], R.cen[4 * o + 2]], Rt = R.ret.subarray(4 * o, 4 * o + 4);
+        for (let fy = 0; fy < S.N; fy++) for (let fx = 0; fx < S.N; fx++) {
+          const d = IM.direcaoDoQuadro(fx, fy, S.N), B = IM.base(d);
+          let n = 0, x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+          for (let y = 0; y < S.ch; y++) for (let x = 0; x < S.cw; x++) {
+            const q = px(o, fx, fy, x, y);
+            if (q[3] > 0 && (x === 0 || y === 0 || x === S.cw - 1 || y === S.ch - 1)) naBorda++;
+            if (q[3] < 128) continue;
+            n++; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+          }
+          if (!n) { vazias++; continue; }
+          // a projeção dos vértices na mesma foto (independente do rasterizador)
+          let a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9;
+          for (let i = 0; i < m.nV; i++) {
+            const r = [0, 1, 2].map(k => m.pos[3 * (p * m.nV + i) + k] - C[k]);
+            const s = ((r[0] * B.bx[0] + r[1] * B.bx[1] + r[2] * B.bx[2] - Rt[0]) / Rt[2]) * S.cw, t = ((r[0] * B.by[0] + r[1] * B.by[1] + r[2] * B.by[2] - Rt[1]) / Rt[3]) * S.ch;
+            a0 = Math.min(a0, s); a1 = Math.max(a1, s); b0 = Math.min(b0, t); b1 = Math.max(b1, t);
+          }
+          caixaErro = Math.max(caixaErro, Math.abs(x0 - a0), Math.abs(x1 + 1 - a1), Math.abs(y0 - b0), Math.abs(y1 + 1 - b1));
+        }
+        // a foto de frente (a TV): a altura média de cada região na imagem e a normal
+        const q0 = IM.quadros(IM.codificar([0, 0.26, 0.97]), S.N), [ffx, ffy] = q0.f[q0.w.indexOf(Math.max(...q0.w))];
+        const alt = [0, 0, 0, 0], peso = [0, 0, 0, 0];
+        let nzs = 0, nn = 0, altSobe = [0, 0], altN = [0, 0];
+        for (let y = 0; y < S.ch; y++) for (let x = 0; x < S.cw; x++) {
+          const q = px(o, ffx, ffy, x, y);
+          if (q[3] < 200) continue;
+          [q[0], q[1] + q[2], 0, q[4]].forEach((w, k) => { alt[k] += w * y; peso[k] += w; });
+          const nx = (q[5] / q[3]) * 2 - 1, ny = (q[6] / q[3]) * 2 - 1;
+          nzs += Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny)); nn++;
+          const h = y < S.ch / 2 ? 0 : 1; altSobe[h] += q[7] / q[3]; altN[h]++;
+        }
+        const ya = alt.map((s2, k) => (peso[k] ? s2 / peso[k] : NaN));
+        // (cabeça = pele + cabelo; nas poses de braço erguido a pele das mãos sobe a média: só a camisa acima da calça vale nelas)
+        if (!(ya[0] > ya[3]) || ([0, 1, 2, 3, 7].includes(p) && !(ya[1] > ya[0]))) regiaoErro.push(`${v}/${p}: cabeça ${fmt(ya[1], 1)} camisa ${fmt(ya[0], 1)} calça ${fmt(ya[3], 1)}`);
+        nzMedio = Math.min(nzMedio, nzs / Math.max(1, nn));
+        if (!(altSobe[1] / altN[1] > altSobe[0] / altN[0] + 0.15)) altErro++;
+      }
+      const hash = u => { let h = 2166136261; for (let i = 0; i < u.length; i++) h = Math.imul(h ^ u[i], 16777619); return (h >>> 0).toString(16); };
+      const R2 = IM.assarImpostor(M, S);
+      const igual = hash(R.a) === hash(R2.a) && hash(R.b) === hash(R2.b) && hash(R.mip.a) === hash(R2.mip.a);
+      const SA = IM.especificacao('alta');
+      const mb = s2 => (2 * s2.largura * s2.altura * 4 * 1.25) / 1048576;
+      reg('H4 impostor: o atlas assado do torcedor 3D — toda foto com gente, nada na borda, o retângulo = o corpo projetado, as regiões, a normal e a altura, o mesmo sempre',
+        `${IM.OBJETOS} objetos × ${S.N * S.N} fotos de ${S.cw}×${S.ch}: ${vazias} vazias, ${naBorda} px na borda; a caixa da figura difere da projeção dos vértices até ${fmt(caixaErro, 2)} px; regiões fora do lugar: ${regiaoErro.length ? regiaoErro.slice(0, 3).join(' | ') : 'nenhuma'}; normal de frente: nz médio ≥ ${fmt(nzMedio, 2)}; altura subindo: ${IM.OBJETOS - altErro}/${IM.OBJETOS}; o mesmo resultado: ${igual ? 'sim' : 'NÃO'} (${fmt(msAssar, 0)} ms); Baixa: ${IM.especificacao('baixa') ? 'atlas' : 'sem atlas'}; GPU ${fmt(mb(S), 1)} MB (Média), ${fmt(mb(SA), 1)} MB (Alta)`,
+        '0, 0; ≤ 2 px (as partes finas cobrem menos de meio pixel); nenhuma; ≥ 0,55; 16/16; sim; sem atlas; ≤ 4 e ≤ 13 MB',
+        vazias === 0 && naBorda === 0 && caixaErro <= 2 && !regiaoErro.length && nzMedio >= 0.55 && altErro === 0 && igual && !IM.especificacao('baixa') && mb(S) <= 4 && mb(SA) <= 13);
+      // H5 o quadro do impostor cobre o corpo 3D (o mesmo modelo nas mesmas poses, as contas de torcedor-dados.js) de qualquer
+      // direção do mapa: todo vértice cai dentro do quadro; e na direção de uma foto, o canto do quadro é o canto da foto
+      let foraQ = 0, nQ = 0, cantoErro = 0;
+      for (let k = 0; k < 160; k++) {
+        const v = k % 2, pose = Math.floor(k / 2) % 8;
+        let d;
+        do d = nrm([rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1]); while (IM.paraInclinado(d)[1] < 0.02);
+        const t = { pos: [0, 0, 0], esc: 1, rumo: [0, 1], pose, pulo: 0, bal: 0, v };
+        const cam = d.map(c => c * 60);
+        const q = IM.impostorDoTorcedor(t, cam, R, S);
+        const c00 = q.canto(0, 0).p, c10 = q.canto(1, 0).p, c01 = q.canto(0, 1).p;
+        const ex = c10.map((c, i) => c - c00[i]), ey = c01.map((c, i) => c - c00[i]);
+        const m = M.malhas[v][0];
+        for (let i = 0; i < m.nV; i++) {
+          const p = TQ.torcedorMundo(TQ.torcedorLocal(V, V.linha(v, 0), i, pose, 1, 0, 0).p, [0, 0, 0, 1], 0);
+          // o ponto no plano do quadro pela direção da câmera: p + λ·v = c00 + a·ex + b·ey
+          const vv = nrm(cam.map((c, j) => c - p[j]));
+          const A3 = [[ex[0], ey[0], -vv[0]], [ex[1], ey[1], -vv[1]], [ex[2], ey[2], -vv[2]]], bb = p.map((c, j) => c - c00[j]);
+          const det = m3 => m3[0][0] * (m3[1][1] * m3[2][2] - m3[1][2] * m3[2][1]) - m3[0][1] * (m3[1][0] * m3[2][2] - m3[1][2] * m3[2][0]) + m3[0][2] * (m3[1][0] * m3[2][1] - m3[1][1] * m3[2][0]);
+          const D = det(A3), col = (j) => A3.map((l, r) => l.map((x, c) => (c === j ? bb[r] : x)));
+          const a = det(col(0)) / D, b = det(col(1)) / D;
+          nQ++;
+          if (a < -0.02 || a > 1.02 || b < -0.02 || b > 1.02) foraQ++;
+        }
+      }
+      for (let fy = 0; fy < S.N; fy++) for (let fx = 0; fx < S.N; fx++) {
+        const d = IM.direcaoDoQuadro(fx, fy, S.N);
+        if (IM.paraInclinado(d)[1] < 1e-6) continue;
+        const q = IM.impostorDoTorcedor({ pos: [0, 0, 0], esc: 1, rumo: [0, 1], pose: 2, pulo: 0, bal: 0, v: 0 }, d.map(c => c * 1e6), R, S);
+        const i = q.f.findIndex(([x, y], j) => x === fx && y === fy && q.w[j] > 0.999);
+        if (i < 0) continue;
+        for (const [qx, qy] of [[0, 0], [1, 0], [0, 1], [1, 1], [0.3, 0.7]]) { const uv = q.canto(qx, qy).uv[i]; cantoErro = Math.max(cantoErro, Math.abs(uv[0] - qx), Math.abs(uv[1] - qy)); }
+      }
+      // a projeção virtual (Brucks): o ponto do quadro, andando pela direção da câmera até o plano de cada uma das 3 fotos,
+      // cai no uv que o quadro dá a ela (a conta direta, sem reprojetar)
+      let virtualErro = 0;
+      for (let k = 0; k < 60; k++) {
+        let d;
+        do d = nrm([rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1]); while (IM.paraInclinado(d)[1] < 0.05);
+        const q = IM.impostorDoTorcedor({ pos: [0, 0, 0], esc: 1, rumo: [0, 1], pose: k % 8, pulo: 0, bal: 0, v: k % 2 }, d.map(c => c * 1e5), R, S);
+        const o = IM.objetoDe(k % 2, k % 8), Rt = R.ret.subarray(4 * o, 4 * o + 4);
+        const a = rnd(), b = rnd(), c = q.canto(a, b);
+        q.f.forEach(([fx, fy], i) => {
+          const di = IM.direcaoDoQuadro(fx, fy, S.N), Bi = IM.base(di);
+          const lam = ((q.centro[0] - c.p[0]) * di[0] + (q.centro[1] - c.p[1]) * di[1] + (q.centro[2] - c.p[2]) * di[2]) / (q.v[0] * di[0] + q.v[1] * di[1] + q.v[2] * di[2]);
+          const X = c.p.map((x, j) => x + lam * q.v[j] - q.centro[j]);
+          const s2 = X[0] * Bi.bx[0] + X[1] * Bi.bx[1] + X[2] * Bi.bx[2], t2 = X[0] * Bi.by[0] + X[1] * Bi.by[1] + X[2] * Bi.by[2];
+          virtualErro = Math.max(virtualErro, Math.abs((s2 - Rt[0]) / Rt[2] - c.uv[i][0]), Math.abs((t2 - Rt[1]) / Rt[3] - c.uv[i][1]));
+        });
+      }
+      reg('H5 impostor: o quadro cobre o corpo 3D de qualquer direção (160 vistas, as 8 poses); na direção de uma foto o canto do quadro é o dela; a projeção virtual nas 3 fotos',
+        `${foraQ} de ${nQ} vértices fora do quadro; o canto na foto exata difere até ${cantoErro.toExponential(1)}; o uv da projeção virtual difere da conta direta até ${virtualErro.toExponential(1)} (60 vistas)`, '0; ≤ 1e-4; ≤ 1e-6', foraQ === 0 && cantoErro <= 1e-4 && virtualErro <= 1e-6);
+    }
+    // H6 a escolha por BLOCO (pura): Baixa sem; os px da cadeira com histerese; fora do cone, nada; o teto de torcedores (os de
+    // mais px; quem já estava vale 20% mais); o lado de cá com a câmera dentro dele fora
+    {
+      const Q = I.qual.media;
+      const cam = { x: 0, y: 2, z: 0, fx: 0, fy: 0, fz: -1, fov: 50, aspecto: 1.8, alturaPx: 390 };
+      const tg = Math.tan((50 * Math.PI) / 360), dPx = px2 => (0.5 * 390) / (2 * px2 * tg);
+      const bloco = (z, n = 50, setor = 0, x = 0) => ({ c: [x, 2, z], raio: 1, n, setor });
+      const meio = (Q.pxSai + Q.pxEntra) / 2;
+      const B1 = [bloco(-(dPx(meio) + 1))];
+      const entra = IM.escolherImpostor(B1, cam, new Set(), Q).lista.size, fica = IM.escolherImpostor(B1, cam, new Set([0]), Q).lista.size;
+      const baixa = IM.escolherImpostor(B1.map(b => ({ ...b, c: [0, 2, -3] })), cam, new Set(), { ...Q, teto: 0 }).lista.size;
+      const atras = IM.escolherImpostor([{ ...bloco(5), c: [0, 2, 8] }], cam, new Set(), Q).lista.size;
+      const muitos = Array.from({ length: 40 }, (_, i) => bloco(-(dPx(8 + i * 0.5) + 1), 100));
+      const r = IM.escolherImpostor(muitos, cam, new Set(), { ...Q, teto: 1000 });
+      const maisPx = [...r.lista].every(i => i >= 30);
+      const par = [bloco(-(dPx(10) + 1), 100), bloco(-(dPx(11) + 1), 100, 0, 0.5)];
+      const favor = [...IM.escolherImpostor(par, cam, new Set([0]), { ...Q, teto: 100 }).lista];
+      const ca = IM.escolherImpostor([bloco(-3, 50, 3)], cam, new Set(), { ...Q, semSetor: 3 }).lista.size;
+      reg('H6 impostor: a escolha por bloco — px da cadeira com histerese, Baixa sem, fora do cone nada, teto pelos de mais px (quem já estava vale mais), lado de cá fora',
+        `entre a saída e a entrada: entra ${entra}, fica ${fica}; Baixa ${baixa}; atrás da câmera ${atras}; teto 1000 de 40×100: ${r.torcedores} torcedores, os de mais px: ${maisPx ? 'sim' : 'não'}; dois quase iguais com teto para um: fica o que já estava (${favor.join(',')}); lado de cá ${ca}`,
+        '0 e 1; 0; 0; 1000, sim; 0; 0', entra === 0 && fica === 1 && baixa === 0 && atras === 0 && r.torcedores === 1000 && maisPx && favor.length === 1 && favor[0] === 0 && ca === 0);
+    }
+    // H7 cada torcedor no bloco da SUA cadeira e virado para onde ela olha (o rumo do impostor): o Estádio Golaço inteiro e o
+    // Banorte (genérico, 87,5 mil lugares)
+    const PE = await imp('estadio-generico.js');
+    const baseE = JSON.parse(fs.readFileSync(path.join(pastaJs, '../assets/tm/estadios.json'), 'utf8')).estadios;
+    const celula = (x, z) => (Math.floor(x * 2) + 4096) * 8192 + (Math.floor(z * 2) + 4096);
+    /** O torcedor de cada cadeira (a conta de render/torcedor3d.js torcedorDa: o lugar é a cadeira com ± 6 cm em x). */
+    function porCadeira(d) {
+      const h = new Map();
+      for (let i = 0; i < d.n; i++) { const k = celula(d.pos[4 * i], d.pos[4 * i + 2]); const l = h.get(k); if (l) l.push(i); else h.set(k, [i]); }
+      return c => {
+        let melhor = -1, dm = Infinity;
+        for (const dx of [-0.07, 0, 0.07]) for (const dz of [-0.02, 0.02]) for (const i of h.get(celula(c.x + dx, c.z + dz)) ?? []) {
+          const ex = Math.abs(d.pos[4 * i] - c.x), ez = Math.abs(d.pos[4 * i + 2] - c.z), ey = Math.abs(d.pos[4 * i + 1] - c.y);
+          if (ex <= 0.07 && ez <= 0.02 && ey <= 0.02 && ex + ez < dm) { dm = ex + ez; melhor = i; }
+        }
+        return melhor;
+      };
+    }
+    const GG = CD.gradeGolaco(), dG = TD.gerarTorcidaNiveis(null);
+    const PB = PE.criarPlantaGenerica(PE.validarFormaGenerica(baseE['estadio banorte'].forma));
+    const GB = PB.grade, dB = TD.gerarTorcidaNiveis(null, null, PB.lugares);
+    const conferirMapa = (G, d) => {
+      const mapa = IM.blocosDosTorcedores(G.blocos, d.pos, d.n), achar = porCadeira(d);
+      let certos = 0, comCadeira = 0, rumoMin = 1, semBloco = 0;
+      for (let b = 0; b < G.blocos.length; b++) for (const c of G.assentosDoBloco(b)) {
+        const t = achar(c);
+        if (t < 0) continue;
+        comCadeira++;
+        if (mapa.bloco[t] === b) certos++;
+        rumoMin = Math.min(rumoMin, (mapa.rumo[2 * t] * Math.cos(c.rumo) + mapa.rumo[2 * t + 1] * Math.sin(c.rumo)) / 127);
+      }
+      for (let t = 0; t < d.n; t++) if (mapa.bloco[t] < 0) semBloco++;
+      const csr = mapa.idx.length === d.n - semBloco && mapa.inicio[G.blocos.length] === mapa.idx.length;
+      return { certos, comCadeira, rumoMin, semBloco, n: d.n, csr };
+    };
+    const mG = conferirMapa(GG, dG), mB = conferirMapa(GB, dB);
+    reg('H7 impostor: cada torcedor no bloco da sua cadeira e virado para onde ela olha (Estádio Golaço e Banorte)',
+      `Golaço: ${mG.certos}/${mG.comCadeira} no bloco certo, rumo × o da cadeira ≥ ${fmt(mG.rumoMin, 3)}, ${mG.semBloco} sem bloco; Banorte: ${mB.certos}/${mB.comCadeira}, rumo ≥ ${fmt(mB.rumoMin, 3)}, ${mB.semBloco} sem bloco (de ${mB.n}); listas por bloco ${mG.csr && mB.csr ? 'certas' : 'ERRADAS'}`,
+      'Golaço ≥ 99,9% e ≥ 0,99; Banorte ≥ 99% e ≥ 0,97; ≤ 0,5% sem bloco (na divisa de dois blocos, o centro mais perto)',
+      mG.certos >= 0.999 * mG.comCadeira && mG.rumoMin >= 0.99 && mB.certos >= 0.99 * mB.comCadeira && mB.rumoMin >= 0.97 && mG.semBloco <= 0.005 * mG.n && mB.semBloco <= 0.005 * mB.n && mG.csr && mB.csr);
+    // H8 a DENSIDADE REAL perto (1 por cadeira ocupada): nos blocos da frente do Banorte (1 torcedor desenhado vale ~3,5
+    // lugares) a ocupação vai ao público × 96%; ninguém em duas cadeiras nem duas pessoas numa; gente nova com o time de um
+    // vizinho; com o público do TM a 50%, metade; no Golaço a divisa da torcida visitante (4 m vazios) continua vazia no meio
+    {
+      const ocupacao = (G, d, blocos, q) => {
+        const achar = porCadeira(d);
+        let cad = 0, antes = 0, depois = 0, dup = 0, timeErr = 0, novos = 0;
+        for (const b of blocos) {
+          const as = G.assentosDoBloco(b), oc = Int32Array.from(as.map(achar));
+          const eixo = G.blocos[b].caixa.eixo;
+          const P = IM.preencherBloco(as, oc, d, q, eixo);
+          cad += as.length; antes += P.desenhados; depois += P.n; novos += P.novos;
+          if (new Set(P.assento).size !== P.n) dup++;
+          for (let e = 0; e < P.n; e++) {
+            if (P.origem[e] >= 0) continue;
+            const c = as[P.assento[e]];
+            if (Math.abs(P.pos[4 * e] - c.x) > 1e-4 || Math.abs(P.pos[4 * e + 2] - c.z) > 1e-4 || Math.abs(P.pos[4 * e + 1] - c.y) > 1e-4) dup++;
+            // um vizinho real do mesmo time (a fileira ou as vizinhas, a até 4 cadeiras)
+            let ok = false;
+            for (let j = 0; j < P.n && !ok; j++) if (P.origem[j] >= 0 && P.info[4 * j] === P.info[4 * e] && Math.abs(as[P.assento[j]].f - c.f) <= 1 && Math.hypot(as[P.assento[j]].x - c.x, as[P.assento[j]].z - c.z) <= 2.6) ok = true;
+            if (!ok) timeErr++;
+          }
+        }
+        return { cad, antes: antes / cad, depois: depois / cad, dup, timeErr, novos };
+      };
+      const frente = G => { const l = []; G.blocos.forEach((b, i) => { if (b.setor === 0 && (b.k0 ?? b.j0) === 0 && Math.abs(b.c[0]) < 30) l.push(i); }); return l; };
+      const fB = frente(GB);
+      const oB = ocupacao(GB, dB, fB, 1);
+      const dB5 = TD.gerarTorcidaNiveis(null, { publico: 0.5 }, PB.lugares);
+      const oB5 = ocupacao(GB, dB5, fB, 1);
+      // o Golaço: os blocos do fundo −x com a divisa da torcida visitante (z em [−26, −22] e [18, 22])
+      const V = TD.TORCIDA.visitante, achG = porCadeira(dG);
+      let divisa = 0, divisaCheia = 0, meioDiv = 0, meioCheio = 0;
+      GG.blocos.forEach((b, i) => {
+        if (b.setor !== 2) return;
+        const as = GG.assentosDoBloco(i), oc = Int32Array.from(as.map(achG));
+        const P = IM.preencherBloco(as, oc, dG, 1, b.caixa.eixo), cheia = new Set(P.assento);
+        as.forEach((c, j) => {
+          const naDivisa = (c.z >= V.z[0] - V.vazio && c.z < V.z[0]) || (c.z > V.z[1] && c.z <= V.z[1] + V.vazio);
+          if (!naDivisa) return;
+          divisa++; if (cheia.has(j)) divisaCheia++;
+          const meio2 = Math.abs(c.z - (V.z[0] - V.vazio / 2)) < 0.8 || Math.abs(c.z - (V.z[1] + V.vazio / 2)) < 0.8;
+          if (meio2) { meioDiv++; if (cheia.has(j)) meioCheio++; }
+        });
+      });
+      const alvo = I.perto.cheio;
+      reg('H8 impostor: a densidade real perto — 1 por cadeira ocupada pelo público (Banorte: 1 desenhado vale ~3,5 lugares), o time do vizinho, os vazios de propósito ficam',
+        `Banorte, ${fB.length} blocos da frente (${oB.cad} cadeiras): desenhados ${fmt(100 * oB.antes, 0)}% → ${fmt(100 * oB.depois, 1)}% (${oB.novos} gente nova); público 50%: ${fmt(100 * oB5.depois, 1)}%; ${oB.dup + oB5.dup} cadeiras repetidas/fora do lugar; ${oB.timeErr + oB5.timeErr} sem um vizinho do mesmo time; Golaço, a divisa da visitante: ${divisaCheia}/${divisa} cheias, o meio dela ${meioCheio}/${meioDiv}`,
+        `${fmt(100 * alvo - 4, 0)}–${fmt(100 * alvo + 1, 0)}%; ${fmt(50 * alvo - 5, 0)}–${fmt(50 * alvo + 5, 0)}%; 0; 0; a divisa ≤ 50%, o meio 0`,
+        fB.length >= 4 && oB.antes < 0.5 && oB.depois >= alvo - 0.04 && oB.depois <= alvo + 0.01 && Math.abs(oB5.depois - 0.5 * alvo) <= 0.05 && oB.dup + oB5.dup === 0 && oB.timeErr + oB5.timeErr === 0 && divisa > 0 && divisaCheia <= 0.5 * divisa && meioDiv > 0 && meioCheio === 0);
     }
   }
 }

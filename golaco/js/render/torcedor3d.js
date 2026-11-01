@@ -14,6 +14,7 @@
 import * as THREE from 'three';
 import { TORCEDOR3D, lerModelo, vatDados, variacaoDe, TORCEDOR_GLSL, escolherTorcedores, pxCadeira } from './torcedor-dados.js';
 import { ESTADO_GLSL } from './torcedor-pose.js';
+import { preencherBloco, IMPOSTOR } from './impostor-dados.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ } from './luz-falsa.js';
 
 const VERT = /* glsl */`
@@ -91,7 +92,7 @@ export function criarTorcedores3D(opc) {
   const U = torcida.uniforms;
   let qualidade = opc.qualidade ?? 'media', hora = opc.hora ?? 'dia';
   let modelo = null, vat = null, tex = null, malhas = null, carga = null, falhou = false;
-  let chave = '', nTor = 0, nTri = 0, nBlocos = 0, lods = [0, 0], precarga = 0;
+  let chave = '', nTor = 0, nTri = 0, nBlocos = 0, lods = [0, 0], precarga = 0, nPerto = 0, nPessoas = 0;
   const porBloco = new Map();
   let hash = null;
   const calca = TORCEDOR3D.calca.map(c => new THREE.Color(c));
@@ -178,54 +179,84 @@ export function criarTorcedores3D(opc) {
     return melhor;
   }
   /**
-   * As fileiras do bloco i com os torcedores delas: [{chave ('bloco:fileira'), idx: Int32Array (índices da torcida), cad:
-   * Float32Array (x, z, cos e sen do rumo de cada cadeira), c: [x, y, z] (o meio da fileira)}].
+   * As PESSOAS do bloco i com a densidade real (item 69, PR 3: render/impostor-dados.js preencherBloco — 1 por cadeira
+   * ocupada: os desenhados, os da torcida de nível acima e gente nova perto deles) e as fileiras delas: {P (as pessoas:
+   * origem, pos, camisa, pele, cabelo, info), rumo: Int8Array (cos e sen da cadeira × 127), linhas: [{chave
+   * ('bloco:fileira'), ent: Int32Array (as pessoas da fileira), cad: Float32Array (x, z, cos e sen do rumo de cada
+   * cadeira), c: [x, y, z] (o meio da fileira)}]}. Por qualidade (os desenhados mudam com ela).
    */
   function doBloco(i) {
-    let b = porBloco.get(i);
+    const q = qIdx(), ch = i + ':' + q;
+    let b = porBloco.get(ch);
     if (b) return b;
     if (!hash) montarHash();
-    const por = new Map();
-    for (const c of grade.assentosDoBloco(i)) {
-      const t = torcedorDa(c);
-      if (t < 0) continue;
+    const as = grade.assentosDoBloco(i);
+    const ocup = new Int32Array(as.length);
+    for (let j = 0; j < as.length; j++) ocup[j] = torcedorDa(as[j]);
+    const cx = grade.blocos[i].caixa;
+    const P = preencherBloco(as, ocup, torcida.dados, q, cx ? cx.eixo : [1, 0]);
+    const rumo = new Int8Array(2 * P.n), por = new Map();
+    for (let e = 0; e < P.n; e++) {
+      const c = as[P.assento[e]], cr = Math.cos(c.rumo), sr = Math.sin(c.rumo);
+      rumo[2 * e] = Math.round(cr * 127); rumo[2 * e + 1] = Math.round(sr * 127);
       let f = por.get(c.f);
-      if (!f) por.set(c.f, f = { idx: [], cad: [], sx: 0, sy: 0, sz: 0 });
-      f.idx.push(t); f.cad.push(c.x, c.z, Math.cos(c.rumo), Math.sin(c.rumo));
+      if (!f) por.set(c.f, f = { ent: [], cad: [], sx: 0, sy: 0, sz: 0 });
+      f.ent.push(e); f.cad.push(c.x, c.z, cr, sr);
       f.sx += c.x; f.sy += c.y; f.sz += c.z;
     }
-    b = [...por].map(([fi, f]) => ({ chave: i + ':' + fi, idx: Int32Array.from(f.idx), cad: Float32Array.from(f.cad), c: [f.sx / f.idx.length, f.sy / f.idx.length + 0.8, f.sz / f.idx.length] }));
-    porBloco.set(i, b);
+    const linhas = [...por].map(([fi, f]) => ({ chave: i + ':' + fi, ent: Int32Array.from(f.ent), cad: Float32Array.from(f.cad), c: [f.sx / f.ent.length, f.sy / f.ent.length + 0.8, f.sz / f.ent.length] }));
+    b = { P, rumo, linhas };
+    porBloco.set(ch, b);
     return b;
   }
-  const quantos = f => { const d = torcida.dados, q = qIdx(); let n = 0; for (const t of f.idx) if (d.nivel[t] <= q) n++; return n; };
+  const quantos = f => f.ent.length;
 
-  /** Escreve as instâncias das fileiras escolhidas (Map chave → nível) e tira o quadro delas. */
-  function aplicar(escolha) {
-    const d = torcida.dados, q = qIdx(), ocultos = [];
+  /**
+   * Escreve as instâncias das fileiras escolhidas (Map chave → nível) e a DENSIDADE REAL dos blocos das cadeiras 3D
+   * (`blocos`): as fileiras em 3D viram o corpo 3D; as outras, a malha perto da torcida (o impostor ou o quadro, na escala
+   * de verdade); os desenhados desses blocos saem do quadro (aOculto).
+   */
+  function aplicar(escolha, blocos) {
+    const ocultos = [];
     for (const pv of malhas) for (const m of pv) m.userData.k = 0;
     nTor = 0; nTri = 0; lods = [0, 0];
-    const blocos = new Set();
-    for (const [ch, l] of escolha) {
-      const f = porChave.get(ch);
-      if (!f) continue;
-      blocos.add(ch.split(':')[0]);
-      for (let j = 0; j < f.idx.length; j++) {
-        const t = f.idx[j];
-        if (d.nivel[t] > q) continue;
-        const v = variacaoDe(d.pele[4 * t + 3] / 255, d.info[4 * t + 3] / 255);
-        const m = malhas[Math.min(v, malhas.length - 1)][l], k = m.userData.k;
-        if (k >= m.userData.cap) continue;
-        const A = m.geometry.attributes;
-        A.aPos.array.set(d.pos.subarray(4 * t, 4 * t + 4), 4 * k);
-        A.aCad.array.set(f.cad.subarray(4 * j, 4 * j + 4), 4 * k);
-        A.aCamisa.array.set(d.camisa.subarray(4 * t, 4 * t + 4), 4 * k);
-        A.aPele.array.set(d.pele.subarray(4 * t, 4 * t + 4), 4 * k);
-        A.aCabelo.array.set(d.cabelo.subarray(4 * t, 4 * t + 4), 4 * k);
-        A.aInfo.array.set(d.info.subarray(4 * t, 4 * t + 4), 4 * k);
-        m.userData.k = k + 1;
-        ocultos.push(t);
-        nTor++; nTri += m.userData.tri; lods[l]++;
+    const comTor = new Set();
+    // a malha perto: quantos lugares (as pessoas das fileiras sem 3D)
+    let nx = 0;
+    const Bs = [...blocos].map(i => doBloco(i));
+    for (const B of Bs) for (const L of B.linhas) if (!escolha.has(L.chave)) nx += L.ent.length;
+    const X = { n: 0, pos: new Float32Array(4 * nx), camisa: new Uint8Array(4 * nx), pele: new Uint8Array(4 * nx), cabelo: new Uint8Array(4 * nx), info: new Uint8Array(4 * nx), rumo: new Int8Array(2 * nx) };
+    const [e0, e1] = IMPOSTOR.perto.escala;
+    for (const B of Bs) {
+      const P = B.P;
+      for (let e = 0; e < P.n; e++) if (P.origem[e] >= 0) ocultos.push(P.origem[e]);
+      for (const L of B.linhas) {
+        const l = escolha.get(L.chave);
+        for (let j = 0; j < L.ent.length; j++) {
+          const e = L.ent[j];
+          if (l === undefined) {
+            const k = X.n++;
+            X.pos.set(P.pos.subarray(4 * e, 4 * e + 4), 4 * k);
+            X.pos[4 * k + 3] = Math.min(e1, Math.max(e0, X.pos[4 * k + 3]));
+            X.camisa.set(P.camisa.subarray(4 * e, 4 * e + 4), 4 * k); X.pele.set(P.pele.subarray(4 * e, 4 * e + 4), 4 * k);
+            X.cabelo.set(P.cabelo.subarray(4 * e, 4 * e + 4), 4 * k); X.info.set(P.info.subarray(4 * e, 4 * e + 4), 4 * k);
+            X.rumo.set(B.rumo.subarray(2 * e, 2 * e + 2), 2 * k);
+            continue;
+          }
+          const v = variacaoDe(P.pele[4 * e + 3] / 255, P.info[4 * e + 3] / 255);
+          const m = malhas[Math.min(v, malhas.length - 1)][l], k = m.userData.k;
+          if (k >= m.userData.cap) continue;
+          const A = m.geometry.attributes;
+          A.aPos.array.set(P.pos.subarray(4 * e, 4 * e + 4), 4 * k);
+          A.aCad.array.set(L.cad.subarray(4 * j, 4 * j + 4), 4 * k);
+          A.aCamisa.array.set(P.camisa.subarray(4 * e, 4 * e + 4), 4 * k);
+          A.aPele.array.set(P.pele.subarray(4 * e, 4 * e + 4), 4 * k);
+          A.aCabelo.array.set(P.cabelo.subarray(4 * e, 4 * e + 4), 4 * k);
+          A.aInfo.array.set(P.info.subarray(4 * e, 4 * e + 4), 4 * k);
+          m.userData.k = k + 1;
+          comTor.add(L.chave.split(':')[0]);
+          nTor++; nTri += m.userData.tri; lods[l]++;
+        }
       }
     }
     for (const pv of malhas) for (const m of pv) {
@@ -233,11 +264,10 @@ export function criarTorcedores3D(opc) {
       for (const [nome] of ATRIB) { A[nome].clearUpdateRanges?.(); A[nome].addUpdateRange?.(0, k * A[nome].itemSize); A[nome].needsUpdate = true; }
       m.geometry.instanceCount = k;
     }
-    nBlocos = blocos.size;
+    nBlocos = comTor.size; nPerto = X.n; nPessoas = nTor + X.n;
     torcida.ocultar(ocultos);
+    torcida.definirPerto?.(X.n ? X : null);
   }
-  // as fileiras já montadas (doBloco), pela chave 'bloco:fileira'
-  const porChave = new Map();
   const comTorcida = () => (torcida.mesh ? torcida.mesh.visible !== false : true);
 
   return {
@@ -245,6 +275,13 @@ export function criarTorcedores3D(opc) {
     get torcedores() { return nTor; },
     get triangulos() { return nTri; },
     get blocos() { return nBlocos; },
+    /** As pessoas da densidade real fora do 3D (a malha perto da torcida) e todas (3D + perto) neste quadro. */
+    get perto() { return nPerto; },
+    get pessoas() { return nPessoas; },
+    /** Os triângulos da malha perto que vão ser desenhados (2 por pessoa; nada com a torcida escondida). */
+    get trianguloPerto() { return comTorcida() ? 2 * nPerto : 0; },
+    /** As pessoas de um bloco com a densidade real (testes: render/impostor-dados.js preencherBloco). */
+    pessoasDoBloco(i) { return doBloco(i); },
     get lods() { return lods.slice(); },
     get malhas() { return malhas ? malhas.flat() : []; },
     get modelo() { return modelo; },
@@ -267,10 +304,9 @@ export function criarTorcedores3D(opc) {
       if (!malhas) { baixar(); return { fileiras: [], tri: [0, 0] }; }
       const O = opcQ(), unidades = [];
       if (O.teto > 0 && comTorcida()) {
-        for (const i of lista) for (const f of doBloco(i)) {
+        for (const i of lista) for (const f of doBloco(i).linhas) {
           const d = Math.hypot(f.c[0] - cam.x, f.c[1] - cam.y, f.c[2] - cam.z);
           unidades.push({ chave: f.chave, bloco: i, px: pxCadeira(d, cam), n: quantos(f) });
-          porChave.set(f.chave, f);
         }
       }
       const t = tri();
@@ -280,13 +316,14 @@ export function criarTorcedores3D(opc) {
       return { fileiras, tri: t };
     },
     /**
-     * Desenha as fileiras escolhidas (Map chave → nível: o plano do orçamento, render/cadeiras-dados.js orcamentoPerto) —
+     * Desenha as fileiras escolhidas (Map chave → nível: o plano do orçamento, render/cadeiras-dados.js orcamentoPerto) e
+     * a densidade real dos blocos das cadeiras 3D do plano (`blocos`: Set; as fileiras sem 3D na malha perto da torcida) —
      * as instâncias só mudam quando a escolha muda — e a pré-carga das malhas.
      */
-    aplicarEscolha(escolha) {
+    aplicarEscolha(escolha, blocos = new Set()) {
       if (!malhas) return;
-      const k = qualidade + '|' + [...escolha].map(([c, l]) => c + '=' + l).sort().join(',');
-      if (k !== chave) { chave = k; aplicar(escolha); }
+      const k = qualidade + '|' + [...blocos].sort((a, b) => a - b).join(',') + '|' + [...escolha].map(([c, l]) => c + '=' + l).sort().join(',');
+      if (k !== chave) { chave = k; aplicar(escolha, blocos); }
       // pré-carga: nos 4 primeiros quadros depois de chegar, uma malha por quadro vai para a GPU com 0 instâncias (o
       // programa — o mesmo nas 4 — compila no 1º e a geometria de cada uma sobe antes do 1º plano de perto: 1 chamada a
       // mais por quadro, nunca 4 de uma vez); depois, só as que têm alguém. No desenho só junto com a torcida (os testes
@@ -303,6 +340,7 @@ export function criarTorcedores3D(opc) {
       if (malhas) for (const pv of malhas) for (const m of pv) { opc.grupo.remove(m); m.geometry.dispose(); m.material.dispose(); }
       tex?.dispose();
       torcida.ocultar([]);
+      torcida.definirPerto?.(null);
     },
   };
 }

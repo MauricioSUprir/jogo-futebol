@@ -34,7 +34,9 @@ const SOB_DEMANDA_ARQ = ['js/render/replay.js', 'js/render/replay-roteiro.js', '
   'js/cena-fim.js',
   // as cadeiras 3D de perto (item 69: a câmera de TV nunca chega perto da arquibancada) e o torcedor 3D que senta nelas
   // (PR 2: o módulo chega junto das cadeiras; o modelo com a textura de animação, depois dele — fora da qualidade Baixa)
-  'js/render/cadeiras3d.js', 'js/render/torcedor3d.js', 'js/render/torcedor-dados.js'];
+  'js/render/cadeiras3d.js', 'js/render/torcedor3d.js', 'js/render/torcedor-dados.js',
+  // o impostor octaédrico da torcida (item 69, PR 3): chega com as cadeiras 3D e assa quando o modelo do torcedor chega
+  'js/render/impostor.js', 'js/render/impostor-dados.js'];
 // o que é baixado só DEPOIS de um módulo sob demanda chegar (nunca no download inicial; pedido depois da pré-carga)
 const SOB_DEMANDA_DEPOIS = ['assets/torcedor/torcedor.bin'];
 // só do estádio real da edição pro do Total Match (render/identidade-pagina.js por import()): nunca no download inicial

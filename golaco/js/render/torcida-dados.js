@@ -133,7 +133,7 @@ export const GRUPOS = [
  * gerador (o resto da torcida não muda por causa dele).
  * mascara: Uint8Array(nA × fileiras) com 1 nas cadeiras do mosaico "GOLAÇO" do lado de lá (ou null).
  * Devolve {n, pos: Float32Array(4n) [x, y, z, escala], camisa, pele, cabelo, info: Uint8Array(4n), nivel:
- * Uint8Array(n), faixas: [{inicio, porNivel: [n0, n1, n2], setor, nome}] por GRUPO} — info = [time·255, setor·85,
+ * Uint8Array(n), faixas: [{inicio, porNivel: [n0, n1, n2], setor, nome}] por GRUPO, publico} — info = [time·255, setor·85,
  * organizada·255, semente2]; pele[3] = semente.
  * paletas (só com ?tm; identidade.js torcida + publico): {casa, fora: [[hex, peso]…], mosaico: hex, foraLados (fração de
  * visitantes espalhados pelos lados), publico (0,1–1: a ocupação)} — as MESMAS cadeiras e os mesmos sorteios; só a cor
@@ -219,7 +219,8 @@ export function gerarTorcidaNiveis(mascara = null, paletas = null, lugares = nul
     faixas[tG[i]].porNivel[tNiv[i]]++;
   }
   for (let g = 1; g < NG; g++) faixas[g].inicio = faixas[g - 1].inicio + faixas[g - 1].porNivel[0] + faixas[g - 1].porNivel[1] + faixas[g - 1].porNivel[2];
-  return { n, pos, camisa, pele, cabelo, info, nivel, faixas };
+  // publico: a ocupação do pedido do TM (0,1–1; 1 sem ele) — a densidade real perto da câmera (item 69, PR 3: render/impostor.js)
+  return { n, pos, camisa, pele, cabelo, info, nivel, faixas, publico };
 }
 
 /** Quantos torcedores de um grupo de desenho (GRUPOS) a qualidade desenha (os primeiros da faixa dele). */
