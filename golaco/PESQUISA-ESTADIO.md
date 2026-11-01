@@ -814,7 +814,7 @@ por estádio. Não repete o §14–§16 (cadeira de 0,5 m, fileira de 0,8 m, 28 
 | Os sem forma: a Alta com mais gente que os lugares | 250 de 418 (2.500 lugares: 25,6 mil torcedores) | só as fileiras da frente do lado de lá (2.500 lugares: 4,3 mil, o teto 4,5 mil) | a lotação pela capacidade |
 | Homônimo sem a forma | o Centenario do Montevideo City Torque | 0 | o gerador copia a forma |
 | Capacidade da grade ÷ a oficial (p50) | tigela 0,76, arena 0,95, inglesa 0,94, pista 0,97, pequeno 1,43 | tigela 0,86, arena 0,81, inglesa 0,91, pista 0,98, pequeno 1,37 (mediana das 105 plantas 0,88; p10 0,69, p90 1,30) | as cunhas preenchidas (+), a fileira de 0,8 m e a escada de 1,3 m (−) |
-| A carga de uma genérica no Node (planta + grade + lugares) | 118 ms de média, 238 no pior | ~240 ms de média, ~450 no pior | a conta exata de cada cadeira (a perpendicular, a corda, o giro, o sólido perto) |
+| A carga de uma genérica no Node (os lugares; a main medida na mesma rodada) | 100 ms de média, 160–188 no pior | 105 ms de média, 181–224 no pior (no mesmo processo, alternando: 1,09× a main na média e 0,97× no pior) | a conta exata de cada cadeira (a perpendicular, a corda, o giro, o sólido perto) pagou-se com o sólido em coluna (as contas que só dependem de x, z uma vez por ponto), só os itens que alcançam o ponto e as contas repetidas no mesmo ângulo guardadas — a saída igual bit a bit (1765 impressões digitais) |
 
 **O que o PR 4 fez (na FONTE; só desenho)**
 - **As fileiras POR METRO** (genéricas): cada fileira de cada faixa tem 0,8 m pela perpendicular em todo ângulo; onde a faixa é mais
