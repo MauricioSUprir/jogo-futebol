@@ -756,3 +756,99 @@ e as cadeiras 3D mostravam os vazios.
   - **O assamento**: Média 6 × 6 fotos de 20 × 32 em ~130 ms de CPU, Alta 8 × 8 de 28 × 44 em ~330 ms (no navegador desta
     máquina, em fatias no tempo ocioso; pronto ~1 s depois do modelo); na GPU ~3,5 MB (Média) e ~12 MB (Alta); fora do
     download inicial (folga do `teste-carga` 1014,7 KB).
+
+## 17. Os 523 estádios: escadas, caimento, fileiras, capacidade e a torcida (item 69 da FILA, PR 4 de 4; `js/estadio-generico.js`, `render/cadeiras-dados.js`, `render/estadio-generico.js`, `render/campo.js`, `render/torcida-dados.js`, `render/torcida.js`, `identidade.js`, `estadio-planta.js`, `tools/estadios/gerar-formas.mjs`, `assets/tm/estadios.json`)
+
+Pedido do dono (29/10): "cadeiras parecidas com as reais e torcida 3D, em todos os estádios"; aval de 31/10 ("68, 69 é 70 faz").
+Os PRs 1–3 fizeram a cadeira e o degrau (a grade), o torcedor 3D e o impostor com a densidade real perto; o PR 4 calibra isso
+nos 523 estádios da base (105 com `forma`: 104 pela planta genérica e o Maracanã; 418 na geometria do Estádio Golaço) e no
+padrão. Primeiro a AUDITORIA (`tools/auditar-cadeiras.mjs`: as mesmas funções puras do jogo, por estádio e por lado/anel),
+depois a pesquisa das normas e dos dados que faltavam, e só então a mudança — na FONTE (a planta e a grade), nunca estádio
+por estádio. Não repete o §14–§16 (cadeira de 0,5 m, fileira de 0,8 m, 28 entre escadas, a cadeira OMSI, o impostor).
+
+**Fontes e o que foi aproveitado de cada uma**
+- **Guide to Safety at Sports Grounds ("Green Guide"), 5ª ed. (DCMS/FLA, 2008; PDF livre em jesip.org.uk)** — a 6ª ed.
+  (SGSA, 2018) é paga e mudou a numeração, então os NÚMEROS são do texto da 5ª, conferidos linha a linha: §12.9b (escada em
+  área de cadeiras ≥ 1,1 m, 1,2 m em obra nova), §8.5 (máximo 1,8 m; acima de 2,2 m, canais), §12.11 (o caimento das radiais
+  "should not exceed … 34°"; os espelhos crescem para trás, as facetas), §11 (34° com cadeira, 25° em pé), §12.13 (fileira ≥
+  700 mm, 800 recomendada; cadeira ≥ 460, 500 recomendada), §12.16 (≤ 14 cadeiras com escada numa ponta, ≤ 28 com escada nas
+  duas), §2.6 (a capacidade de um setor de cadeiras não é o número de cadeiras). → as metas E1–E4 do `teste-cadeiras-estadios`
+  (1,1–1,8 m, ≤ 28/≤ 14, ≤ 34°, ≥ 0,7 m) e o teto do perfil.
+- **SGSA, "Worked Example A: Football/Rugby" (2018)** — a capacidade final é a menor entre lugares × (P)/(S), entrada, saída e
+  emergência; 4 vomitórios de 1,5 m para 1.848 lugares. → por que a grade não precisa bater 1:1 com a capacidade oficial.
+- **FIFA Football Stadiums Guidelines (2022)**: §5.2 (já no §14) e "Stadium Bowl" (C-value 60 mínimo, 90 preferido, 120 ótimo;
+  "when increasing the C-value of a tier, its rake increases together with its overall height"). → os ALVOS do perfil por
+  anel (o de cima mais em pé) e a regra "o que passa do teto vai para a face dos camarotes, não para a fileira".
+- **CBMGO, NT 12/2023** (a regra brasileira de fato): 4.3 (radial ≥ 1,20 m), 6.2.2 (fileira de até 20 m com acesso nas duas
+  pontas), 6.3.1 (caimento máximo 37°, recomendado < 32°, guarda-corpo por fila acima de 32°), 8.1.4.1 (lotação = cadeiras
+  demarcadas). → o 1,2 m da escada e o "no Brasil até 40 cadeiras entre escadas" (anotado; o jogo segue o FIFA/Green Guide).
+- **Caimentos reais**: Südtribüne 37° e Tottenham 34° (NSS), BMO Stadium 34° (Sightline), Independência 40° com grade (ALMG,
+  2012), Arena da Baixada com guarda-corpo no anel de cima (Gazeta Esportiva, 2015), Maracanã 2013 mais inclinado e mais perto.
+  → os anéis de cima reais ficam em 34–37°; os 40–51° da base não saem de C nenhum entre 60 e 120 nessas posições.
+- **Capacidade e lotação**: StadiumDB (o Bernabéu com 3–4 "capacidades": 78–84 mil), Premier League 2024/25 97,9%, Bundesliga
+  95,9/96,1%, Brasileirão 2025 de 37 a 86% por clube (tmc.com.br; média 57,6%). → o "público × 0,96" do PR 3 é o teto de um
+  jogo esgotado (fica); o Brasileirão típico vem do `publico` do pedido.
+- **ANSUR II (U.S. Army, 2012; contas próprias)**: altura sentada 918/857 mm, estatura com p5/p95 a 0,94/1,065 da mediana. →
+  a escala 0,94–1,06 do 3D e da malha perto é a variação natural; o 1,3–1,5 das genéricas não é gente (o PR 4 limita a 1,15
+  com o sorteio de ± 8% dentro de 1,25, a do impostor).
+- **Jogos**: Madden NFL 10 (GDC 2010: 60 mil personagens, 27 em alta), Geopostors (I3D 2005: 9.900 impostores + 100 em
+  geometria), HITMAN 2 (Intel/GDC 2019: LOD com teto de CONTAGEM por nível), Forza Motorsport (2023), o fórum da Unreal (VAT
+  instanciado) e o modding de FIFA/PES (a torcida POR LUGAR, a lotação por probabilidade de cada cadeira; ninguém estica o
+  torcedor). → mais gente nos grandes no lugar de esticar (o teto 25,5 → 30 mil) e a lotação dos sem forma por cadeira.
+- **Padrões de cor** (Trondheim, Brentford, Tóquio, San Jose, CSKA, Maracanã 2013, Regina): o misto para disfarçar vazios, as
+  faixas por anel, o mosaico com letras; nenhuma fonte publica a PROPORÇÃO das cores. → a fonte das cores passa a ser UMA (a
+  forma revista contra as fotos), e o 'liso' com 2ª cor vira 'misto'.
+
+**Medido na base (a f1b59c19, o PR 3: `tools/auditar-cadeiras.mjs`, 525 estádios; e o `teste-cadeiras-estadios`)**
+
+| O quê | Antes | Depois | Por quê |
+|---|---|---|---|
+| Cadeiras acima de 34° (as 105 plantas) | 1,41 milhão de 4,13 (34%); o anel de cima com mediana de 40° (p90 44,6°), até 85,7° nas cunhas | 0 de 3,83 milhões; o anel de cima 32° (p90 32,6°) | o perfil com o teto e os alvos por anel; o fundo sem cunha; nenhuma cadeira onde a fileira passa de 34° |
+| Fileira menor que 0,7 m (Green Guide: o mínimo) | 1,10 milhão (27%; 0,05 m a mais fina) | 0,7% (todas ≥ 0,6 m), fora o Maracanã | as fileiras por metro (0,8 m pela perpendicular) |
+| Cadeiras 3D sobrepostas | 39.231 em 18 estádios | 0 | as fileiras por metro, a largura pela menor meia largura e o giro ≤ 6° |
+| Escada das genéricas | 0,66 m na frente a 2,15 m atrás (p1 0,80; 71% entre 1,1 e 1,8 m) | p1 1,15, p50 1,30, p99 1,52 m (99,5% entre 1,1 e 1,8) | 1,3 m em cada fileira (a fração da metade do ladrilho muda) |
+| Cadeiras entre escadas | o Golaço com 23 do túnel até a escada (um lado só) | ≤ 14 com um lado, ≤ 24 com os dois, em todos | as escadas ao lado da boca do túnel |
+| Cadeira dentro de um sólido | o poste do refletor do Golaço (4 + 4 encostadas), o arco do Dragão (227 no tubo, 373 com a folga) | 0 | a escada do poste; o sólido no `existe` |
+| Escala do torcedor (Alta) | até 1,52; 29 estádios acima de 1,25 (o impostor encolhia até 18% na troca) | 0,90–1,24 em todos | `TORCEDOR_ESC` [0,98, 1,15] e o Maracanã 1,3 → 1,15 |
+| Cores da cadeira × a base | 89 genéricas diferentes, 4 'liso' com 2ª cor, o Maracanã ΔE 10,5 | 0 | uma fonte só (a forma) |
+| Os sem forma: a Alta com mais gente que os lugares | 250 de 418 (2.500 lugares: 25,6 mil torcedores) | só as fileiras da frente do lado de lá (2.500 lugares: 4,3 mil, o teto 4,5 mil) | a lotação pela capacidade |
+| Homônimo sem a forma | o Centenario do Montevideo City Torque | 0 | o gerador copia a forma |
+| Capacidade da grade ÷ a oficial (p50) | tigela 0,76, arena 0,95, inglesa 0,94, pista 0,97, pequeno 1,43 | tigela 0,86, arena 0,81, inglesa 0,91, pista 0,98, pequeno 1,37 (mediana 0,83) | as cunhas preenchidas (+), a fileira de 0,8 m e a escada de 1,3 m (−) |
+| A carga de uma genérica no Node (planta + grade + lugares) | 118 ms de média, 238 no pior | ~240 ms de média, ~450 no pior | a conta exata de cada cadeira (a perpendicular, a corda, o giro, o sólido perto) |
+
+**O que o PR 4 fez (na FONTE; só desenho)**
+- **As fileiras POR METRO** (genéricas): cada fileira de cada faixa tem 0,8 m pela perpendicular em todo ângulo; onde a faixa é mais
+  rasa as de trás não existem e a última fica com o que sobra (0,6–1,4 m). Antes, um número de fileiras para a volta inteira
+  pela profundidade MÉDIA: o lado raso com fileiras de 0,6 m e o fundo com 1,5 m (a razão de profundidade entre os lados de
+  um estádio vai a 3,75 na base; p50 1,19, p90 2,27). A textura dá a cada faixa fileiras de altura igual; na malha em escada o
+  degrau que não existe cai no fim da faixa (área zero, fora da malha); a lisa pega o v da fileira de cada coluna.
+- **O caimento**: os alvos por anel do C constante (FIFA "Stadium Bowl": o C maior pede mais caimento atrás) e o teto do Green
+  Guide; o que sobra da altura da pesquisa vai para as FACES dos camarotes (o real: o anel de cima começa mais alto), nunca para
+  a fileira. Fora dos cantos o anel de cima foi de 40° de mediana para 32°.
+- **O fundo sem cunha**: a profundidade nunca abaixo da do lado (o máximo suave com a superelipse de antes). As derivadas das
+  tabelas por ±0,01 rad: com 1e-3 elas viam as quinas das tabelas de 0,1° e a fileira por metro saía com quinas de até 60°.
+- **A escada de 1,2 m** em cada fileira (o alvo 1,3 m: a curva a faz variar pela volta). As duas escadas por ladrilho de 12 m (~9
+  cadeiras entre escadas) ficam — o real tem 24–28 (14 m); com uma escada por ladrilho a capacidade subiria ~10% e a escada
+  do lado do túnel e as pontas dos lados abertos passariam de 14 com um lado só (decisão do dono).
+- **Onde não há cadeira**: fileira < 0,6 m, caimento > 34°, cadeira < 0,42 m, a fileira virando > 6° numa cadeira (a quina da
+  1ª fileira dos cantos: o raio de ~2,5 m da superelipse), um sólido do assento ao pulo (o arco, as colunas, a cobertura).
+- **O Golaço**: as escadas do lado do túnel e a do poste (as cadeiras tiradas guardam os sorteios: o resto da torcida igual).
+  A escada de 1,0 m fica (3 células mudariam a textura e a torcida inteiras: decisão do dono).
+- **A torcida**: o torcedor até 1,15 (o sorteio ± 8% por cima ≤ 1,242, dentro do impostor) e o teto de 25,5 → 30 mil nos grandes
+  (0,6 → 0,75 da capacidade). A escala de gente (o ANSUR: 0,94–1,06) pediria ~1,7 vez mais torcedores nos grandes: decisão do
+  dono (o custo no celular). Nos sem forma, a LOTAÇÃO: a gente de verdade do estádio na geometria do Golaço.
+- **As cores**: o `gerar-formas.mjs` regrava `cadeiras_cor/cor2/padrao` da forma (a revista contra as fotos) e copia a forma ao
+  homônimo da mesma cidade; o 'liso' com 2ª cor vira 'misto'; o Maracanã com as cores da textura aprovada.
+
+**Medido no navegador** (`tools/medir-cadeiras.mjs --tm --estadios …`, antes = a f1b59c19 na mesma máquina, celular Média
+844 × 390; o padrão, o Maracanã, 2 tigelas — Aflitos, Camp Nou —, 2 arenas — San Siro, Allianz Arena —, 2 inglesas — Anfield,
+Vila Belmiro —, 2 pistas — Nilton Santos, Almeidão — e 1 sem forma — Zubieta, 2.500 lugares):
+- **TV de jogo**: igual ou menos (padrão 29 chamadas, 99,8 → 100,2 mil triângulos — as escadas novas do Golaço; Maracanã 28/78,4
+  igual; Aflitos 67,9 → 68,4; Camp Nou 73,7 → 72,2; San Siro 78,1 → 78,0; Allianz 77,8 → 76,0; Anfield 78,0 → 78,1; Vila Belmiro
+  68,1 → 67,8; Nilton Santos 85,0 → 86,2; Almeidão 79,2 → 79,7; Zubieta 75,6 → 66,5 — a lotação).
+- **Pior plano do pré-jogo** (meta ≤ 40 / ≤ 130 mil): padrão 40/127,8 → 40/128,1 mil; Maracanã 38/125,3 igual; Aflitos 37/99,8 →
+  104,3; Camp Nou 113,0 → 110,7; San Siro 123,6 → 123,8; Allianz 117,7 → 116,3; Anfield 120,3 → 122,1; Vila Belmiro 98,2 → 100,5;
+  Nilton Santos 117,2 → 119,6; Almeidão 115,3 → 116,9; Zubieta 106,7 → 87,8. (Antes de tirar os degraus de área zero da malha em escada,
+  Anfield ia a 131,4 mil: o degrau de perto pagava as fileiras do lado mais fundo em toda a volta.)
+- **Câmeras de perto do celular** (dentro do orçamento de cada quadro): padrão gol 92,7 → 93,1, lado 111,0 → 111,4, frente 102,5
+  → 103,0; San Siro gol 104,9 → 96,2, frente 86,5 → 82,3; Anfield gol 101,0 → 92,9; Zubieta frente 64,4 → 60,3.

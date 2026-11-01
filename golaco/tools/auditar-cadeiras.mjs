@@ -345,13 +345,13 @@ function auditarGeometria(geo) {
       const ti = trechoIdx(c), ch = ti + '|' + c.k + '|' + c.t + '|' + c.h;
       fila.push(ti * 10000 + c.k);
       let g = grupos.get(ch);
-      if (!g) grupos.set(ch, g = { ti, k: c.k, t: c.t, h: c.h, n: c.n, setor, an, is: [] });
+      if (!g) grupos.set(ch, g = { ti, k: c.k, t: c.t, h: c.h, n: c.n, setor, an, is: [], s: c.s });
       g.is.push(c.i);
       // em cima da escada: a borda da cadeira 3D (1 cm para dentro) na faixa da escada da metade dela
       const w = LARG3D * CD.escalaLargura(c.larg) / 2 - 0.01, tx = -Math.sin(c.rumo), tz = Math.cos(c.rumo), tr = G.trechos[ti];
       for (const sg of [-1, 1]) {
         const ex = c.x + sg * w * tx, ez = c.z + sg * w * tz;
-        const u = tr.uDe(Math.atan2(ez, ex), r.sAssento), fr = u - Math.floor(u), hh = fr >= 0.5 ? 1 : 0, qq = (fr - hh / 2) * 2;
+        const u = tr.uDe(Math.atan2(ez, ex), c.s), fr = u - Math.floor(u), hh = fr >= 0.5 ? 1 : 0, qq = (fr - hh / 2) * 2;
         if (qq < (G.corredorDe ? G.corredorDe(r, hh) : G.corredor)) { N.naEscada++; break; }
       }
     } else {
@@ -470,8 +470,8 @@ function auditarGeometria(geo) {
         if (j < g.is.length) a0 = g.is[j];
       }
       // a largura da escada no começo desta metade, na fileira dela (só a que existe)
-      if (escadaEm(tr, g.t, g.h, r)) {
-        const ua = g.t + g.h / 2, ub = ua + ccDe(r, g.h) / 2, s = r.sAssento;
+      if (g.is[0] === 0 && escadaEm(tr, g.t, g.h, r)) {
+        const ua = g.t + g.h / 2, ub = ua + ccDe(r, g.h) / 2, s = g.s ?? r.sAssento;
         const naF = th => P.ponto(th, limDe(r, th)[2]);
         const [xa, za] = naF(tr.thDe(ua, s)), [xb, zb] = naF(tr.thDe(ub, s));
         if (fechado(tr) || (ua >= tr.u0 && ub <= tr.u1)) L.escada.push(Math.hypot(xb - xa, zb - za));
@@ -490,7 +490,9 @@ function auditarGeometria(geo) {
         const ia = a0, ib = g.as[j - 1];
         // o vizinho que falta: a ponta da arquibancada, a escada (a que cai no corte do túnel não existe) ou a boca do túnel
         const sobreTunel = a => g.setor === 3 && Math.abs(-A.meioComprimento + A.assento * (a + 0.5)) < MT && FL[nFG - 1 - g.f].y < TOPO_TUNEL;
-        const fim = a => (a < 0 || a >= nA ? 'ponta' : sobreTunel(a) ? 'tunel' : escadaCel(a) ? 'escada' : 'ponta');
+        // (item 69, PR 4: a escada ao lado do túnel e a do poste do refletor — gradeGolaco().escadaEm)
+        const esc = a => (G.escadaEm ? G.escadaEm(g.setor, g.f, a) : escadaCel(a));
+        const fim = a => (a < 0 || a >= nA ? 'ponta' : esc(a) ? 'escada' : sobreTunel(a) ? 'tunel' : 'ponta');
         registrarRun(L, ib - ia + 1, [fim(ia - 1), fim(ib + 1)], onde);
         if (j < g.as.length) a0 = g.as[j];
       }

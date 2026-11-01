@@ -117,7 +117,7 @@
 
 | nº | o que é | horas |
 |---|---|---|
-| 69 | 🆕 ⏳ **Cadeiras e torcida em 3D**, parecidas com as reais, em todos os estádios (4 PRs; o 1º — a cadeira e o degrau (#586) —, o 2º — o torcedor 3D sentado nas cadeiras de perto, com as poses do quadro (#593) — e o 3º — o impostor octaédrico assado na carga, a escolha por bloco e a densidade real perto (#595) — feitos; falta o 4º, os 523 estádios) | 52 |
+| 69 | ✅ **Cadeiras e torcida em 3D**, parecidas com as reais, em todos os estádios (4 PRs: a cadeira e o degrau (#586); o torcedor 3D sentado nas cadeiras de perto, com as poses do quadro (#593); o impostor octaédrico assado na carga, a escolha por bloco e a densidade real perto (#595); os 523 estádios calibrados — fileiras de 0,8 m por metro, caimento ≤ 34°, escada de ~1,2 m, nenhuma cadeira sobreposta ou dentro de um sólido, o torcedor no tamanho de gente, a lotação dos sem forma e as cores da base = as desenhadas (branch golaco/i69-estadios)) | 52 |
 | 61 | 🆕 **Passada natural** (no túnel e na fila parecem marchar) | 5 |
 | 62 | 🆕 Linha escura na nuca (costura da textura da cabeça) | 2 |
 | 63 | 🆕 Bordas tracejadas em volta dos números e patrocínios das camisas | 2 |

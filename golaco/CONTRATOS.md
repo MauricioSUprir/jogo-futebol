@@ -4498,3 +4498,71 @@ nada do fecho do hash muda (`tools/fecho-hash.mjs --diff origin/main` = 0; `hash
 - Para o PR 4 (os 523 estádios e a calibração): a densidade real vale em qualquer planta (a grade); a escala do quadro nos
   genéricos (até 1,3–1,5 no SDF) fica limitada a 1,25 no impostor — calibrar com os estádios; o retângulo e o atlas não
   dependem do estádio.
+
+## Os 523 estádios (item 69, PR 4: as cadeiras, o torcedor, o impostor e a densidade calibrados em todos; 01/11; contrato)
+Pedido do dono (29/10): "cadeiras parecidas com as reais e torcida 3D, em todos os estádios" (FILA item 69, PR 4 de 4; aval de
+31/10, "68, 69 é 70 faz"; as escolhas abertas seguem a recomendada e ficam no "Depende do dono" 11; auditoria
+`tools/auditar-cadeiras.mjs`, pesquisa em `PESQUISA-ESTADIO.md` §17). Só DESENHO: nada do fecho do hash muda
+(`tools/fecho-hash.mjs --diff origin/main` = 0; `hash-igual`/`hash-partida` IGUAIS).
+- **As fileiras POR METRO nas genéricas** (`render/cadeiras-dados.js criarGradeAnel(A)` com `A.metrico = {dS, sD, dp,
+  amostras}`; `js/estadio-generico.js grade`): em cada faixa de cadeira a fileira j vai de j·0,8 a (j+1)·0,8 m da frente da faixa
+  PELA PERPENDICULAR da fileira (`dS(th, s)` e a inversa `sD`: a profundidade (rB − rF)·cos β, β o ângulo entre o raio e a normal
+  da fileira, linear em s entre a 1ª e a última; `dp(th)` dá os dois de uma vez); a última de cada ângulo fica com o que sobra
+  (`nFileirasEm(d)`: 0,6–1,4 m) e, onde a faixa é mais rasa, as de trás não existem — o lado raso tem MENOS fileiras, não
+  fileiras mais finas (antes: o número pela profundidade média da volta, 0,05–1,58 m). A grade ganhou `limites(r, th)` →
+  [s0, s1, sAssento] da fileira no ângulo (null: não existe ali), `fileiraDe(s, th)`, `faixas`, `metrico`; cada fileira guarda o
+  s TÍPICO (`s0`, `s1`, `sAssento`: o da profundidade mediana) e a textura dá a cada faixa fileiras de altura igual (`v0/vm/v1`).
+  O rumo e a largura da cadeira saem da fileira de verdade (o s muda com o ângulo): a direção é a CORDA entre as bordas da
+  cadeira, a largura o dobro da menor meia largura com 6% de folga e `giro` (o quanto a fileira vira na cadeira). Sem
+  `metrico` (o Maracanã), tudo como antes, bit a bit.
+- **Onde a cadeira existe** (as genéricas: `existe(th, r, x, z, yPiso, lim, geo)` e, por metro, o próprio `criarGradeAnel`): a
+  fileira ali pela perpendicular ≥ 0,6 m (`FILEIRA_MIN`), o caimento ≤ 34° (`CAIMENTO.max`), a cadeira ≥ 0,42 m (`LARG_MIN`), a
+  fileira virando ≤ 6° na largura de uma cadeira (`GIRO_MAX`: a quina da 1ª fileira dos cantos; com a largura pela menor meia
+  largura, a borda da cadeira 3D não entra na escada) e nenhum sólido da planta do assento ao pulo (`ALTURAS_CAD` 0,45/1,3/1,85/2,15 m: o arco das marcas,
+  as colunas, a cobertura baixa; o sólido inteiro só perto de alguma marca, torre ou cobertura — `pertoDeObstaculo`, uma
+  grade de 8 m e a parte de baixo da cobertura por ângulo). As mesmas contas leves e não leves: os lugares da torcida caem
+  só em cadeiras que existem.
+- **O perfil com o teto de 34°** (`estadio-generico.js nosDoLado`, `CAIMENTO = {teto: 33,6, max: 34, pot: 1,12, alvo}`): a subida
+  útil de cada lado dividida pelos anéis pelos alvos (1 anel 34°; 2: 27/33°; 3: 25/30/33° — o C constante do Green Guide), cada
+  anel até o teto no degrau mais íngreme da curva; o que passa: o anel fica reto, depois vai para as FACES entre os anéis (os
+  camarotes mais altos); com um anel só, o topo desce até o teto. Antes: frações fixas, o anel de cima com mediana de 40°.
+- **O fundo sem cunha** (`rB` = o máximo SUAVE, k = 4 m, entre a superelipse/pista de antes `rB0` e rF + a profundidade do lado
+  pela perpendicular da 1ª fileira — a mistura dos lados pelos pesos nos cantos fechados, a do próprio lado nos abertos):
+  nos cantos a arquibancada não afina mais até 2,5 m com as mesmas fileiras. As derivadas das tabelas por ±0,01 rad (as de
+  1e-3 viam as quinas das tabelas de 0,1° e a fileira por metro saía com quinas de até 60°). A fachada, a cobertura e os
+  trilhos seguem a planta (o `teste-estadio-generico` G5 confere).
+- **A escada de 1,2 m** (as genéricas: `corredorDe(r) = 1,3 m ÷ a meia do ladrilho na fileira`; a textura desenha a escada de cada
+  fileira com a largura dela, `render/estadio-generico.js texCadeiras`): 1,1–1,8 m em 99,5% das escadas (Green Guide §12.9b/§8.5;
+  antes 0,66 m na frente a 2,15 m atrás). As duas escadas por ladrilho de 12 m ficam (decisão do dono). A grade tem
+  `corredorDe(r, h)` e `escadasPorLadrilho` (2; com 1, só a 1ª metade começa com escada); cada fileira, `c` e `nh[h]`.
+- **O Estádio Golaço** (o padrão, a pública e os 418 sem forma; `gradeGolaco`): as células 115–116 e 133–134 (`ESCADA_TUNEL`) são
+  escada nas fileiras do lado de cá ao lado da boca do túnel (eram 23 cadeiras com escada de um lado só; agora ≤ 14), e o
+  poste do refletor das torres de z −56 fica numa escada de 2 células de cima a baixo do fundo (`REFLETORES_GOLACO`,
+  `escadaDoPoste(setor)`: as células 200–201 do fundo +x e 36–37 do −x; o poste passava por dentro de 4 cadeiras); a malha do
+  lado de cá e a dos fundos pintam o concreto da escada ali (o retalho da textura; `render/campo.js`). `gradeGolaco().escadaEm(
+  setor, f, a)`; `iterar(cb, true)` devolve também as cadeiras tiradas, marcadas `fantasma`: a torcida gasta os sorteios delas e o
+  resto da torcida do Golaço fica IGUAL (−28 torcedores). Capacidade 29.556 → 29.412. A escada de 1,0 m (2 células) fica
+  (decisão do dono).
+- **O Maracanã**: a textura aprovada nas rodadas fica (a escada de 0,45–1,18 m, as fileiras de 0,56–0,8 m: decisão do dono); só o
+  torcedor de cima sai de 1,3 para 1,15 (`estadio-planta.js escala`).
+- **A torcida das genéricas** (`TETO_LUGARES` 30.000, `TORCEDOR_ESC` [0,98, 1,15]): o torcedor na escala de até 1,15 (com o sorteio
+  de 0,92–1,08 da `torcida-dados.js`, ≤ 1,242: dentro da escala do impostor, 0,9–1,25 — a troca do quadro pelo impostor não
+  muda o tamanho de ninguém; antes até 1,52) e mais gente nos grandes no lugar de esticar (`nAlvo` = mín(30 mil, 0,75·cap + 6
+  mil); antes mín(25,5 mil, 0,6·cap + 6 mil)); sem o × 1,08 da metade de cima. A densidade real perto (PR 3) vale em todas.
+- **A lotação dos sem forma** (`render/torcida-dados.js gerarTorcidaNiveis`: `paletas.capacidade` → `lotacao` = mín(1,
+  capacidade ÷ (`TORCIDA.lotacaoCheia` 0,9 × as cadeiras do Golaço))): um estádio de 2.500 lugares desenhado na geometria do
+  Golaço tem a gente dele, não 25 mil — menos nas fileiras da frente do lado de lá (as da TV, cheias como antes); o `publico`
+  devolvido (a densidade real perto) é o do pedido × a lotação, e `lotacao` à parte. A capacidade vem da base:
+  `identidade.js dadosEstadio().capacidade` e `identidade.capacidade` (só o real SEM forma), passada por `render/torcida.js`.
+- **As cores da base = as da cadeira 3D = as da textura** (`tools/estadios/gerar-formas.mjs sincronizarCadeiras`, que roda no fim
+  do gerador): nas 104 genéricas, `cadeiras_cor`, `cadeiras_cor2` e `cadeiras_padrao` saem da forma revista contra as fotos (89
+  regravadas); o Maracanã com as cores da textura aprovada (#f2c21b, #2e6fc0) e 'misto'; nos sem forma, o 'liso' com uma 2ª cor
+  diferente vira 'misto' (4: o liso não desenha a 2ª cor); o homônimo da MESMA cidade ganha a forma da entrada principal (o
+  Estadio Centenario do Montevideo City Torque jogava na geometria do Golaço).
+- Testes: `teste-cadeiras-estadios` (Node, padrão, 3 linhas de execução, ~33 s; reprova 10 na f1b59c19: E1 escadas 1,1–1,8 m
+  em ≥ 99%, E2 ≤ 28/≤ 14, E3 caimento ≤ 34° em toda cadeira, E4 0 sobreposta e a fileira ≥ 0,6 (≥ 0,7 em 99%; o Maracanã fora:
+  decisão), E5 0 fora do degrau/na escada/em sólido, E6 o torcedor na cadeira e a escala 0,9–1,25, E7 a densidade perto ≥ 0,90 no
+  p5, E8 as cores = a base nos 523, E9 a capacidade por família, a lotação e o homônimo; conferido por mutação: 13 mutações),
+  `teste-cadeiras` (C2 com o s de cada fileira por ângulo e a capacidade do Golaço 29.400–29.700; C3 com o corredor e o v por
+  fileira), `teste-estadio-generico` G2 (até `TETO_LUGARES`); a auditoria `tools/auditar-cadeiras.mjs` (por estádio) e
+  `tools/medir-cadeiras.mjs --tm --estadios a,b,c` (os planos no navegador).
