@@ -43,7 +43,7 @@ export const TEMPOS_NODE = {
   'teste-taticas.mjs': 57,
   'teste-defesa-humano.mjs': 59,
   'teste-aereo-troca.mjs --so canhao': 125,
-  'teste-aereo-troca.mjs --so natural': 913,
+  'teste-aereo-troca.mjs --so natural': 400, // (31/10: com a cobrança das bolas paradas no laço dos dois humanos, ~5,5 disputas por partida: as 120 em ~22 partidas, eram 44–69; estimado)
   'teste-transicao.mjs': 685,
   'teste-defesa-corrida.mjs': 449,
   'teste-intercepta.mjs': 560, // C1: parte A 12 → 96 partidas (10–18 s de CPU cada, 4 processos) + a parte B (~125 s de CPU); estimado
