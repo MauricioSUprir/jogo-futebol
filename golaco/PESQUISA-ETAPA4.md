@@ -783,6 +783,14 @@ de linha do time batendo), 522a4e36 → agora:
 | a cabeça (de pé → mínimo), pior | 0,38 m | 0,16 m |
 | a corrida normal do jogo (IA × IA, sementes 3001–3004), abaixo de 0,92 m: p50 · p90 · p95 | 4–4,5 m/s: 0,063 · 0,106 · 0,113; 4,5–5 m/s: 0,078 · 0,128 · 0,137 | (igual: o treino e a corrida normal não mudam) |
 
+Nas partidas inteiras (IA × IA, sementes 1–16, a régua do agente das cenas: 85 corridas) o pior ficou em 0,098 m, menos uma
+corrida: na semente 8 o goleiro esperando o tiro de meta no ponto de partida levou uma trombada (0 → 3,8 m/s num tick), a IA
+começou a corrida 2 ticks depois com ele indo para o lado de lá a 3,6 m/s e a freada com a virada levou o quadril a 0,59 m. A
+corrida passa a começar só com o cobrador parado (`paradoMax` 0,5 m/s; nas sementes 1–8 a guarda age só nessa parada, 34
+ticks): 0,091 m. No canhão de pênaltis do G5 do `teste-replay-anel` (a falta na área de cada semente, 1–30), o balanço da 1ª
+pessoa nos gols de pênalti foi de 7,48–7,52 cm (25 de 25 acima de 1 cm, 522a4e36) a ≤ 0,17 cm (0 de 26); o G6 do teste passa
+com 0,62 cm.
+
 A meta (≤ 0,12 m, nenhuma ≥ 0,15 m) é a da corrida normal do jogo na mesma velocidade, não a do real: o desenho da corrida soma
 o balanço dele (±3 cm a 4 m/s) e o alcance das pernas (o quadril baixa no fim do voo), uns 10 cm abaixo de 0,92 m a 4–5 m/s —
 mais que os ~7 cm do centro de massa real (Lee & Farley 1998). Chegar aos ~8 cm do real pede mexer na corrida de todos (o
