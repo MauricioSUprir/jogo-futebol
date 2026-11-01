@@ -10,7 +10,9 @@
 //     partidas medidas para esta entrega: 56,3% Premier League 15/16, 61,2% Bundesliga 15/16, 79,4% Copa 2022, 80,9%
 //     Euro 2024; 68,1% no total). Reprova na main (0%: a IA só dava o chutão);
 //  A2 as reposições com a mão que chegam a um companheiro (a próxima posse é do time): ≥ 90% (StatsBomb 96,1%; 93,6% na
-//     competição mais baixa, menos ~1,5 desvio da amostra do teste);
+//     competição mais baixa, menos ~1,5 desvio da amostra do teste) — reprova quando a contagem PROVA menos de 90% (binomial,
+//     p < 5%). (31/10, item 70: com a corrida das cobranças o CI deu 89,8% (53/59) nas 6 partidas; com 24, a main 93,3%
+//     (251/269) e a corrida 91,2% (229/251) — empate; a amostra passa a 12 partidas, ~120 reposições com a mão);
 //  A3 distância das reposições com a mão: a mediana entre o p25 e o p75 do real (14,3–27,4 m; mediana 19,4);
 //  A4 nenhuma reposição com a mão para dentro da própria área (o ponto e o recebedor), nenhuma para o goleiro e o 1º a ter
 //     a bola depois dela nunca é o próprio goleiro (0);
@@ -26,14 +28,21 @@
 //  B4 sem salto: mão e tornozelo desenhados andam ≤ 0,25 m por tick (15 m/s) em todo o gesto;
 //  B5 os botões: PASSE perto = rolar, PASSE com a barra cheia = por cima, LANÇAMENTO = bate-pronto, CHUTE = chutão.
 //   node tools/teste-reposicao.mjs                     (lógica do repositório)
-//   node tools/teste-reposicao.mjs --js <pasta js>     (outra cópia da lógica, ex.: a main)   [--partidas 6]
+//   node tools/teste-reposicao.mjs --js <pasta js>     (outra cópia da lógica, ex.: a main)   [--partidas 12]
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const JS = args.includes('--js') ? path.resolve(arg('--js')) : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../js');
-const NP = +arg('--partidas', 6);
+const NP = +arg('--partidas', 12);
+/** P(X ≤ k) para X ~ Binomial(n, p) (termos em log). */
+function caudaBinomialAte(k, n, p) {
+  let lt = n * Math.log(1 - p), soma = 0;
+  const r = Math.log(p / (1 - p));
+  for (let i = 0; i <= k; i++) { soma += Math.exp(lt); lt += Math.log((n - i) / (i + 1)) + r; }
+  return Math.min(1, soma);
+}
 const imp = f => import(pathToFileURL(path.join(JS, f)).href);
 const P = await imp('partida.js');
 const S = await imp('sim.js');
@@ -96,7 +105,8 @@ const MAO = new Set(['rolar', 'ombro']);
   const ds = [...t.dist].sort((a, b) => a - b), med = ds.length ? ds[Math.floor((ds.length - 1) / 2)] : NaN;
   const tipos = Object.entries(t.tipos).map(([k, n]) => `${k} ${n}`).join(', ');
   reg(`A1 IA × IA: reposições com a mão entre as da mão (${NP} partidas: ${tipos})`, `${frac.toFixed(1)}% (${t.mao}/${t.n})`, '55–82%', t.n >= 30 && frac >= 55 && frac <= 82);
-  reg('A2 reposições com a mão que chegam a um companheiro', `${cert.toFixed(1)}% (${t.maoCerto}/${t.maoFim})`, '≥ 90%', t.maoFim > 0 && cert >= 90);
+  const pA2 = caudaBinomialAte(t.maoCerto, t.maoFim, 0.9);
+  reg('A2 reposições com a mão que chegam a um companheiro', `${cert.toFixed(1)}% (${t.maoCerto}/${t.maoFim}; p = ${pA2.toFixed(2)} contra 90%)`, '≥ 90% (p ≥ 0,05)', t.maoFim >= 30 && pA2 >= 0.05);
   reg('A3 distância das reposições com a mão (mediana)', ds.length ? `${med.toFixed(1)} m (p25 ${ds[Math.floor((ds.length - 1) / 4)].toFixed(1)}, p75 ${ds[Math.floor(3 * (ds.length - 1) / 4)].toFixed(1)})` : '—', '14,3–27,4 m', med >= 14.3 && med <= 27.4);
   reg('A4 para dentro da própria área / para o goleiro / de volta ao goleiro', `${t.area} / ${t.paraGol} / ${t.deVolta}`, '0 / 0 / 0', t.area === 0 && t.paraGol === 0 && t.deVolta === 0);
   linhas.push(['A5 (informativo) perda a < 40 m do próprio gol logo depois da reposição', `${t.perdaPerto}/${t.n}`, 'painel: "erro na saída de bola"', '—']);
