@@ -746,15 +746,20 @@ Constantes em `config.js COMEMORACAO`.
   menos gente perto da lente nos próximos 0,8 s, escolhido uma vez no começo do abraço: `c.ladoContra`) olhando 6 m além
   dele a 2,4 m de altura (a torcida atrás do alvo enche o fundo; o resto do time para a 10 m, atrás da câmera), fov 36; reação de frente para quem sofreu (puxada para o lado da
   TV), 4,8 m, fov 30, girada em volta dele pelo giro escolhido UMA vez no começo da reação (`c.giroReacao`: entre 0, ±0,5,
-  ±0,75, ±1, ±1,25 e ±1,5 rad, o de MENOS gente colada na lente — a < 2,2 m de profundidade dentro do quadro do PC ou do
-  celular (fov × 0,88, até 2,2:1, o eixo girado para o terço esquerdo) — e, entre os que empatam nisso, o de menor custo
+  ±0,75, ±1, ±1,25 e ±1,5 rad, o de MENOS gente colada na lente — o CORPO, um cilindro de 0,6 m em volta do centro
+  (`LENTE.corpo`: os pontos do quadro ficam a até 0,49 m do centro em pé e 0,57 m caído), com o ponto mais perto a < 2,2 m
+  de profundidade e a borda de dentro no quadro do PC ou do celular (fov × 0,88, até 2,2:1, o eixo girado para o terço
+  esquerdo) na profundidade da borda de trás — e, entre os que empatam nisso, o de menor custo
   somando a gente perto da linha de visão, integrado na reação INTEIRA (até o fim da cena: na curta ela dura até 2 s), cada
   um andando reto para o destino dele na cena (a vaga do abraço, a saída, 10 m do grupo) e parando nele; o 0 fica se ninguém
   colar na lente e o custo dele for ≤ 0,03 m·s — contraprovas: um defensor andando para a saída passava a < 1 m da lente em
   ~15% das cenas curtas; (15/10) o custo só olhava o 1º segundo e o quadro do PC e um colega correndo para o abraço passava
   rente à lente no celular; (31/10, C7) com o goleiro na linha do gol reagindo e um zagueiro saindo da pequena área para a
   lente, os 5 giros de antes tinham todos alguém colado nela e a soma única escolhia o de 1 rad, com um corpo rente à borda do
-  quadro do celular a 1,87 m (1 quadro); `teste-comemoracao` 13, com mais 12 gols naturais); câmera nunca além de 5,5 m das linhas nem dentro do gol; celular: fov × 0,88 e o assunto no terço
+  quadro do celular a 1,87 m (1 quadro); (01/11, C7) o corpo contava pelo centro + 0,4 m de lado na profundidade do centro,
+  e no CI de 522a4e36 (1º gol da semente 32, com o bloqueio do teste, a lente presa ao lado do gol) o centro ficava 1 cm
+  fora da conta e o joelho, 0,5 m mais fundo, dentro do quadro do celular (13 quadros); `teste-comemoracao` 13, com mais 12
+  gols naturais, e a FOLGA: ninguém a < 2,3 m dentro de 1,25 × o quadro); câmera nunca além de 5,5 m das linhas nem dentro do gol; celular: fov × 0,88 e o assunto no terço
   esquerdo. Exporta `ik`/`ikBraco`/`BRACO`/`ANTEBRACO` do `anim.js` (só exportar: o hash não muda).
 - **Golpes e gestos** (todos por IK: os ossos ficam com o comprimento certo): de joelhos (o corpo desliza desacelerando
   até parar no alvo, entre 2,5 e 7 m/s²; pelve na altura de joelhos, joelho 6 cm à frente do quadril a 6,5 cm do chão,
