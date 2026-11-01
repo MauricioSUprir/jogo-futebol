@@ -1,15 +1,17 @@
 // Botões de defesa do jogador do humano (Etapa 3, Parte 4; plano 2.8): CONTER (acompanha o condutor entre a bola e o
-// gol), DIVIDIDA (bote em pé) e PRESSÃO (o companheiro que chega primeiro aperta o condutor; marca no desenho). Pura;
-// constantes em config.js DEFESA_HUMANO. Ganchos em sim.js (só agem com os bits apertados ou j.defH ligado; a PRESSÃO
-// só na IA tática da partida): entradaConter/pedidoPressao (passo 1) e dividida (passo 3), semAtropelar. Estado:
+// gol), DIVIDIDA (bote em pé), PRESSÃO (o companheiro que chega primeiro aperta o condutor; marca no desenho) e o
+// disparo do CARRINHO (carrinho; o corpo é do carrinho.js). Pura; constantes em config.js DEFESA_HUMANO. Ganchos em sim.js
+// (só agem com os bits apertados ou j.defH ligado; a PRESSÃO só na IA tática da partida): entradaConter/pedidoPressao
+// (passo 1), carrinho (passo 2) e dividida (passo 3), semAtropelar. Estado:
 // j.defH = null | {bote: null | {tick0, contato, cond, longe, pe, bx, bz}, semReacaoAte, tick}; j.conter (filtro e
 // histerese do CORRER). iaClassica (o "antes" dos testes): nada disto age. Contrato: CONTRATOS.md.
 
-import { BOTAO, CAMPO, PASSO, ENTRADA, DEFESA_HUMANO, FALTAS, JOGADOR, IA_PESSOA } from './config.js';
+import { BOTAO, CAMPO, PASSO, ENTRADA, DEFESA_HUMANO, FALTAS, JOGADOR, IA_PESSOA, SUBPASSOS_BOLA } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp } from './mat.js';
 import { uniforme } from './rng.js';
-import { chutarRasteiro } from './bola.js';
+import { chutarRasteiro, proxVelRolando, DT_BOLA } from './bola.js';
+import { montarCarrinho, bolaAlta } from './carrinho.js';
 import { ataca } from './acoes.js';
 import { para } from './ia.js';
 import { estadoIA } from './ia-tatica.js';
@@ -211,6 +213,7 @@ export function chanceDividida(j, d0, bx, bz) {
  * Eventos: `dividida {id, ganhou, motivo}` e, ganhando, `roubada {id, dividida: true}`.
  */
 export function dividida(m, j) {
+  if (j.carrinho) return; // no carrinho (carrinho.js): uma ação de cada vez — a DIVIDIDA apertada no tick do aperto não sai
   const h = j.defH;
   if (h) {
     if (m.tick - h.tick > 2) { j.defH = null; } // estado velho (o controle saiu dele): descarta
@@ -296,6 +299,94 @@ function resolverBote(m, j, h) {
   // errou: sem reação (se o controle sair dele, a IA também não dá bote nesse tempo)
   j.defH = { bote: null, semReacaoAte: m.tick + seg(D.semReacao), tick: m.tick };
   j.descansoBote = Math.max(j.descansoBote ?? 0, seg(D.semReacao));
+}
+
+// ------------------------------------------------------------------------------------ CARRINHO
+// (item 34 da FILA; pedido do dono de 17/10: "botão de CARRINHO — dividida deslizando"). O corpo é um PLANO puro montado
+// no aperto (carrinho.js montarCarrinho, como o j.mergulho do goleiro) e um QUADRO puro do tempo, lidos pela simulação
+// (sim.js passo 2/2b/8), pela altura do quadril e pela pose (anim.js poseCarrinho). Aqui só o DISPARO: a borda do bit no
+// controlado, as guardas da especificação (A.2) e a bola prevista da ajuda de mira pelo encontro (A.3). Contrato:
+// CONTRATOS.md "Carrinho (item 34)". Nada sorteia; sem o botão nada daqui roda (a IA nunca liga o bit).
+
+const KC = DEFESA_HUMANO.carrinho;
+// a bola prevista para a ajuda de mira: nos instantes da procura (até encontro[1] s) e um tick além (a interpolação)
+const N_PREV = Math.round(KC.encontro[1] / PASSO) + 1;
+const _distRol = new Float64Array(N_PREV + 1);
+const _prev = { rolando: false, x: 0, z: 0, vx: 0, vz: 0, ux: 0, uz: 0 };
+const _bolaAgora = { x: 0, z: 0 };
+
+/** A bola prevista t s depois do aperto (em out.x/out.z; t aceita fração: a procura interpola o encontro). */
+function preverBolaCarrinho(t, out) {
+  const P = _prev;
+  if (P.rolando) {
+    // rolando sem dono: a distância exata da rolagem (bola.js distRolando, tick a tick) interpolada entre os ticks
+    let f = t / PASSO;
+    if (!(f > 0)) f = 0; else if (f > N_PREV) f = N_PREV;
+    let n = Math.floor(f);
+    if (n >= N_PREV) n = N_PREV - 1;
+    const d = _distRol[n] + (_distRol[n + 1] - _distRol[n]) * (f - n);
+    out.x = P.x + P.ux * d; out.z = P.z + P.uz * d;
+  } else { out.x = P.x + P.vx * t; out.z = P.z + P.vz * t; }
+  return out;
+}
+
+/** Monta a previsão da bola (o condutor adversário com ela no pé; rolando sem dono; no ar, baixa) em _prev. */
+function montarPrevisao(m) {
+  const b = m.bola, P = _prev;
+  P.x = b.p.x; P.z = b.p.z; P.rolando = false;
+  const d0 = m.posse != null ? porId(m, m.posse) : null;
+  if (d0) { P.vx = d0.vx; P.vz = d0.vz; return; }
+  if (!b.rolando) { P.vx = b.v.x; P.vz = b.v.z; return; }
+  const s0 = MD.hypot(b.v.x, b.v.z);
+  P.rolando = true;
+  if (s0 > 1e-9) { P.ux = b.v.x / s0; P.uz = b.v.z / s0; } else { P.ux = 1; P.uz = 0; }
+  // a mesma conta do distRolando (bola.js), guardando a distância no fim de cada tick: _distRol[n] = distRolando(s0, n)
+  let s = s0, d = 0;
+  _distRol[0] = 0;
+  for (let i = 1; i <= N_PREV; i++) {
+    if (s > 0) for (let k = 0; k < SUBPASSOS_BOLA; k++) { s = proxVelRolando(s, DT_BOLA); d += s * DT_BOLA; }
+    _distRol[i] = d;
+  }
+}
+
+/**
+ * CARRINHO (gancho do passo 2 do sim.js, só o CONTROLADO): na borda de BOTAO.CARRINHO monta o plano em j.carrinho e
+ * devolve true (o sim.js anda o corpo pelo quadro no mesmo passo). Só na partida (11×11 ou Modo Livre) com a bola VIVA —
+ * fora de parada não cobrada, do tick do gol e da disputa de pênaltis —, fora do goleiro, de um carrinho em andamento, do
+ * ar (o pulo do cabeceio saído), da DIVIDIDA em andamento ou sem reação; com a bola fora do pé de um companheiro, das
+ * mãos do goleiro e de um voo do próprio time (o bit chega cru no Node e no online), e não alta (carrinho.js bolaAlta).
+ * No aperto: a ação carregada/pedida, a DIVIDIDA, o CONTER, a recepção e o toque marcado caem; o pulo do cabeceio ainda
+ * no chão e a disputa pelo alto também (sim.js faz o mesmo na bola morta: senão o alguemNoAlto, o agendarDisputa e a
+ * trocaAerea o contariam como quem vai cabecear). Evento `carrinho {id, fase: 'inicio'}`.
+ */
+export function carrinho(m, j) {
+  if (!((j.botoes & BOTAO.CARRINHO) && !(j.botoesAnt & BOTAO.CARRINHO))) return false;
+  if (j.carrinho || !m.times || !m.partida || m.partida.estado !== 'jogo' || m.disputa || desligado(m)) return false;
+  if (j.posicao === 'GOL' || j.papel === 'parado' || j.papel === 'marcador') return false;
+  // a bola viva: nem parada não cobrada (naParada; o gol cria a parada), nem o tick do gol (sim.js grava m.golTick antes
+  // do regrasPartida)
+  if ((m.parada && !m.parada.rolou) || m.golTick != null) return false;
+  // uma ação de cada vez: no ar (o pulo do cabeceio que saiu do chão), a DIVIDIDA em andamento ou sem reação (o estado
+  // velho — o controle saiu dele no meio — o dividida descarta)
+  if (j.cab && j.cab.saiu && m.tick <= j.cab.tf) return false;
+  const h = j.defH;
+  if (h && m.tick - h.tick <= 2 && (h.bote || m.tick < h.semReacaoAte)) return false;
+  // a bola: nem nas mãos (Regra 12.3), nem no pé de um companheiro, nem num voo do meu time, nem alta (a perna não alcança)
+  if (m.naMao != null) return false;
+  if (m.posse != null) { const d0 = porId(m, m.posse); if (!d0 || d0.time === j.time) return false; }
+  if (m.voo && m.voo.time === j.time) return false;
+  if (bolaAlta(m)) return false;
+  // o plano (puro; a ajuda de mira pela bola prevista)
+  montarPrevisao(m);
+  _bolaAgora.x = m.bola.p.x; _bolaAgora.z = m.bola.p.z;
+  j.carrinho = montarCarrinho(j, m.tick, { bola: _bolaAgora, prever: preverBolaCarrinho });
+  // o aperto: uma ação de cada vez
+  j.defH = null; j.carga = null; j.pedido = null; j.conter = null; j.recebe = null;
+  if (j.cond) j.cond.toque = null;
+  if (j.cab && !j.cab.saiu) j.cab = null;
+  j.disputaAlta = null;
+  m.eventos.push({ tipo: 'carrinho', id: j.id, fase: 'inicio' });
+  return true;
 }
 
 // ------------------------------------------------------------------------------------ PRESSÃO
@@ -429,7 +520,8 @@ export function pressionadorDe(m, time, excluir = -1) {
   if (d0) {
     let mt = Infinity;
     for (const o of m.jogadores) {
-      if (o.time !== time || o.posicao === 'GOL' || o.id === ctrl || o.papel === 'parado' || o.papel === 'marcador') continue;
+      // (quem está no carrinho, deitado no chão — carrinho.js —, não é chamado)
+      if (o.time !== time || o.posicao === 'GOL' || o.id === ctrl || o.papel === 'parado' || o.papel === 'marcador' || o.carrinho) continue;
       if (o.id === excluir && o.id !== atual) continue;
       let t = pontoEncontro(m, time, o, d0, d0.vx, d0.vz, _pc).t;
       // a vantagem de quem já ia só vale se ele continua indo para lá: com o ponto novo (o passe do adversário mudou o

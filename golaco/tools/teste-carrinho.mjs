@@ -4,9 +4,9 @@
 // "Carrinho (item 34)"; constantes: config.js DEFESA_HUMANO.carrinho.
 //
 // Na base (sem js/carrinho.js) REPROVA: "o carrinho existe — não existe nesta lógica" (como o teste-faltas com o faltas.js).
-// Este é o commit 1 da entrega (o plano e o quadro): as partes A e P medem o carrinho.js puro, sem a simulação. As metas
-// que dependem da pose (anim.js poseCarrinho: P1 pele, P2, P3, P4 cabeça, P5 pela pose) e as partes B–G (contato, canhão,
-// regras, travas, determinismo, cenas) entram nos commits seguintes — listadas no fim como PENDENTE, sem reprovar.
+// Commits 1–2 da entrega: o plano e o quadro (A, P pelo quadro), a pose e o corpo novo (P), o corpo na simulação com o
+// disparo e as travas (E, sem o contato com a bola) e o F1. O contato (B), o canhão (C), as regras (D), o resto de F e as
+// cenas (G) entram nos commits seguintes.
 //
 // Metas (as exatas reprovam em qualquer caso; "·" = informativa, não reprova):
 //  0. estrutura: o campo `carrinho` declarado no jogador (forma única; undefined sem o botão); as constantes; os raios das
@@ -35,10 +35,26 @@
 //     A9 ajuda de mira pelo encontro: condutor a 5 m/s cruzando a frente do carrinho a 2, 4 e 5,5 m (entradas a 4,75, 6 e
 //        7 m/s), o analógico 15° à frente da direção do encontro: a ponta passa a ≤ 0,3 m da bola NO MESMO instante (um
 //        horizonte fixo puxa a mira para trás da bola: 0/6; a mira pelo instante da MENOR distância parava a 0,34 m: 2/6).
-//  P. o corpo nos quadros de A (o que não depende da pose): os dois ossos de cada perna com o comprimento exato e o
-//     tornozelo ao alcance (o esqueleto do corpo novo só aceita 0,9–1,1 por osso); o fundo das cápsulas das pernas, da pelve
-//     e dos quadris ≥ −1 cm (P1); o joelho dobrado ≥ 0,06 m e a pelve 0,14–0,20 m no deslize (P1); o tronco 40–60° para
-//     trás no deslize (P4); o quadro não escreve no plano (P5).
+//  P. o corpo nos quadros de A: pelo quadro, os dois ossos de cada perna com o comprimento exato e o tornozelo ao alcance
+//     (o esqueleto do corpo novo só aceita 0,9–1,1 por osso); o fundo das cápsulas das pernas, da pelve e dos quadris ≥ −1 cm
+//     (P1); o joelho dobrado ≥ 0,06 m e a pelve 0,14–0,20 m no deslize (P1); o tronco 40–60° para trás no deslize (P4); o
+//     quadro não escreve no plano (P5). Pela pose (anim.js poseCarrinho): P2 as juntas das pernas = as do quadro (o Float32
+//     da conta); P1 o fundo de todas as cápsulas do manequim e da cabeça ≥ −1 cm e o vértice mais baixo da pele do corpo novo
+//     (LOD0, a carga do teste-ossos; a cada 3 quadros nos estados de partida) ≥ −1 cm; P3 o esqueleto do corpo novo na
+//     sequência pose normal no aperto → carrinho → pose normal de pé: O1 juntas ≤ 1 mm, O2 saltos > 40° com o eixo < 20°
+//     ≤ 0,03%, O3 NaN 0 e a escala no limite ≤ 0,5% (as réguas do teste-ossos, que só vê IA × IA); P4 a cabeça ≤ 17° da linha
+//     peito → pescoço (o portão da postura do corpo novo) e o tronco 40–60° do vertical no deslize; P5 100 leituras da pose
+//     e da altura do quadril não escrevem no plano.
+//  E. as travas na simulação (estados de uma partida de verdade, semente 3102; o humano no time 0): E1 com o carrinho os
+//     outros botões não mexem no corpo dele (bit a bit), ele não domina a bola (colada no pé no tick do aperto; rolando
+//     para ele no chão), não recebe o controle (TROCAR, candidatoTroca), o boteIA dele não sai e volta no passo do fim;
+//     E2 o disparo bloqueado deixa o mundo bit a bit igual ao sem o aperto (bola no pé do meu time, voo do meu time,
+//     goleiro, parada, tick do gol, bola nas mãos, alta, subindo, no ar, DIVIDIDA em andamento ou sem reação, já no
+//     carrinho, treino, disputa de pênaltis); E3 a borda (segurar não repete; o segurado na troca não dispara; o aperto novo
+//     depois do fim dispara); E4 o TROCAR no meio não muda o carrinho (bit a bit); E5 sai parado (impulso vMin), com a
+//     bola livre e no passe rasteiro deles; E7 o aperto zera o pulo no chão, o toque aéreo e a disputa pelo alto; E8 a IA
+//     não o escolhe (1º/2º homem, marcação, bola livre, PRESSÃO, alvo de passe) e a forma continua contando com ele.
+//  F1 a mesma semente e as mesmas entradas, com carrinhos: o mesmo hash em 2 rodadas.
 //   node tools/teste-carrinho.mjs              (lógica do repositório)
 //   node tools/teste-carrinho.mjs --js <pasta> (outra cópia da lógica; a da main antes do carrinho → REPROVA)
 //   node tools/teste-carrinho.mjs --detalhe    (a tabela por entrada e cada caso do A9)
@@ -73,6 +89,19 @@ const CFG = await imp('config.js');
 const P = await imp('partida.js');
 const A = await imp('anim.js');
 const JG = await imp('jogador.js');
+const SIM = await imp('sim.js');
+const AC = await imp('acoes.js');
+// o corpo novo (Etapa 5: o esqueleto do desenho e a malha LOD0 — a mesma carga do teste-ossos), para P1 e P3
+let ES = null, CORPO = null;
+try {
+  ES = await imp('render/esqueleto.js');
+  const CD = await imp('render/corpo-dados.js');
+  const raiz = path.resolve(JS, '..');
+  const ix = JSON.parse(fs.readFileSync(path.join(raiz, 'assets/jogador/corpo.json'), 'utf8'));
+  const bf = fs.readFileSync(path.join(raiz, 'assets/jogador/corpo.bin'));
+  CORPO = CD.lerCorpo(ix, bf.buffer.slice(bf.byteOffset, bf.byteOffset + bf.byteLength));
+} catch { ES = null; CORPO = null; }
+const TEM_POSE = typeof A.poseCarrinho === 'function';
 const CC = CFG.DEFESA_HUMANO.carrinho;
 const PASSO = CFG.PASSO;
 const T_AR = CC.tAr, T_D = CC.tAr + CC.tImpacto;
@@ -156,8 +185,162 @@ const segR = (a, b) => { const s = S.find(x => x[0] === a && x[1] === b); return
 const R_COXA = segR(JJ.quadrilE, JJ.joelhoE), R_CANELA = segR(JJ.joelhoE, JJ.tornozeloE), R_PE = segR(JJ.tornozeloE, JJ.pontaE);
 const R_PELVE = segR(JJ.pelve, JJ.lombar)[0], R_QUADRIS = segR(JJ.quadrilE, JJ.quadrilD)[0];
 
-/** Mede o plano c do jogador j (pel0: a pelve da pose normal no aperto) em todas as metas por quadro. */
-function medir(j, c, pel0) {
+// ------------------------------------------------------------------ P: a pose (anim.js poseCarrinho) e o corpo novo
+const NJ = A.NJ, SEG = A.SEGMENTOS, fr = Math.fround;
+const RP = {
+  seqs: 0, quadros: 0, p2: 0, p2pior: 0, fundo: 0, fundoPior: Infinity, fundoEx: '', cab: 0, cabPior: 0, troncoN: 0, tronco: 0,
+  troncoFaixa: [Infinity, -Infinity], p5: 0, nan: 0,
+  // o corpo novo: o vértice mais baixo da pele (LOD0), O1 juntas, O2 saltos, O3 NaN/escala no limite
+  peleN: 0, pele: 0, pelePior: Infinity, o1: 0, o1pior: 0, o2: 0, o2n: 0, o2ex: '', o3nan: 0, o3lim: 0, o3n: 0,
+};
+const angulo = (ax, ay, az, bx, by, bz) => Math.acos(Math.max(-1, Math.min(1, (ax * bx + ay * by + az * bz) / (Math.hypot(ax, ay, az) * Math.hypot(bx, by, bz) || 1)))) / GRAU;
+const dif3 = (po, i, a, b) => [po[b * 3] - po[a * 3], po[b * 3 + 1] - po[a * 3 + 1], po[b * 3 + 2] - po[a * 3 + 2]];
+// o esqueleto do corpo novo (as contas do teste-ossos)
+let EQ = null;
+if (ES && CORPO) {
+  const E = ES.criarEsqueleto(CORPO.repouso);
+  const JE = Object.fromEntries(ES.JUNTAS_ESQ.map((n, i) => [n, i]));
+  for (const n of ES.JUNTAS_ESQ) if (JE[n] !== A.J[n]) throw new Error(`a ordem das juntas do esqueleto (${n}) não é a do anim.js`);
+  const partes = Object.values(CORPO.lods[0].partes).map(pt => ({ nv: pt.nv, pos: pt.pos, ossos: pt.ossos, w: Float64Array.from(pt.pesos, x => x / 255) }));
+  EQ = {
+    E, JE, partes, NOS: ES.NOSSOS, NPR: ES.N_PRINC, D0: E.desenhoRepouso, COMPR: E.comprimentos,
+    IA: ES.OSSOS.map(o => JE[o[0]]), IB: ES.OSSOS.map(o => (o[1] ? JE[o[1]] : -1)), S: new Float64Array(ES.NOSSOS * 12),
+  };
+}
+const angAxis = (pa, po, a, b) => angulo(pa[b * 3] - pa[a * 3], pa[b * 3 + 1] - pa[a * 3 + 1], pa[b * 3 + 2] - pa[a * 3 + 2], po[b * 3] - po[a * 3], po[b * 3 + 1] - po[a * 3 + 1], po[b * 3 + 2] - po[a * 3 + 2]);
+const dobraJ = (q, a, b, c) => angulo(q[b * 3] - q[a * 3], q[b * 3 + 1] - q[a * 3 + 1], q[b * 3 + 2] - q[a * 3 + 2], q[c * 3] - q[b * 3], q[c * 3 + 1] - q[b * 3 + 1], q[c * 3 + 2] - q[b * 3 + 2]);
+/** O corpo novo numa sequência de poses (a normal no aperto, as do carrinho, a normal de pé no fim): O1, O2 e O3 como no
+ * teste-ossos (O2 entre quadros seguidos) e o vértice mais baixo da pele a cada `cada` quadros. */
+function esqueletoSeq(poses, vels, cada, nome) {
+  const { E, JE, partes, NOS, NPR, D0, COMPR, IA, IB, S } = EQ;
+  let aS = null, aD = null;
+  for (let i = 0; i < poses.length; i++) {
+    E.pele(poses[i], S, 0, vels[i], 1);
+    const D = E.desenho;
+    if (!S.every(Number.isFinite)) RP.o3nan++;
+    for (let b = 0; b < NPR; b++) {
+      const o = b * 12, temEixo = IB[b] >= 0 && b !== 15 && b !== 18;
+      if (temEixo) {
+        RP.o3n++;
+        const a = IA[b] * 3, c2 = IB[b] * 3;
+        const k = Math.hypot(D[c2] - D[a], D[c2 + 1] - D[a + 1], D[c2 + 2] - D[a + 2]) / COMPR[b];
+        if (k < 0.9 || k > 1.1) { RP.o3lim++; continue; }
+      }
+      for (const jt of temEixo ? [IA[b], IB[b]] : [IA[b]]) {
+        const x = D0[jt * 3], y = D0[jt * 3 + 1], z = D0[jt * 3 + 2];
+        const e = Math.hypot(S[o] * x + S[o + 1] * y + S[o + 2] * z + S[o + 3] - D[jt * 3], S[o + 4] * x + S[o + 5] * y + S[o + 6] * z + S[o + 7] - D[jt * 3 + 1],
+          S[o + 8] * x + S[o + 9] * y + S[o + 10] * z + S[o + 11] - D[jt * 3 + 2]);
+        if (e > RP.o1pior) RP.o1pior = e;
+        if (e > 0.001) RP.o1++;
+      }
+    }
+    RP.o2n++;
+    if (aS) {
+      for (let b = 0; b < NPR; b++) {
+        const o = b * 12;
+        let tr = 0;
+        for (let c2 = 0; c2 < 3; c2++) {
+          let na = 0, nb = 0, d = 0;
+          for (let r = 0; r < 3; r++) { na += aS[o + r * 4 + c2] ** 2; nb += S[o + r * 4 + c2] ** 2; d += aS[o + r * 4 + c2] * S[o + r * 4 + c2]; }
+          tr += d / (Math.sqrt(na * nb) || 1);
+        }
+        const th = Math.acos(Math.max(-1, Math.min(1, (tr - 1) / 2))) / GRAU;
+        if (th <= 40) continue;
+        const bb = IB[b] >= 0 ? b : ES.PAI[b];
+        const ang = angAxis(aD, D, IA[bb], IB[bb]);
+        let angPe = 0, angDobra = 0;
+        if (b >= 13 && b <= 18) {
+          const esq = b < 16;
+          angPe = angAxis(aD, D, esq ? JE.tornozeloE : JE.tornozeloD, esq ? JE.pontaE : JE.pontaD);
+          angDobra = Math.abs(dobraJ(aD, esq ? JE.quadrilE : JE.quadrilD, esq ? JE.joelhoE : JE.joelhoD, esq ? JE.tornozeloE : JE.tornozeloD)
+            - dobraJ(D, esq ? JE.quadrilE : JE.quadrilD, esq ? JE.joelhoE : JE.joelhoD, esq ? JE.tornozeloE : JE.tornozeloD));
+        } else if (b >= 6 && b <= 12 && b !== 9) {
+          const esq = b < 9;
+          angDobra = Math.abs(dobraJ(aD, esq ? JE.ombroE : JE.ombroD, esq ? JE.cotoveloE : JE.cotoveloD, esq ? JE.maoE : JE.maoD)
+            - dobraJ(D, esq ? JE.ombroE : JE.ombroD, esq ? JE.cotoveloE : JE.cotoveloD, esq ? JE.maoE : JE.maoD));
+        }
+        if (ang < 20 && angPe < 20 && angDobra < 15) { RP.o2++; if (!RP.o2ex) RP.o2ex = `${nome} quadro ${i} osso ${ES.NOMES_OSSOS[b]} ${th.toFixed(0)}°`; }
+      }
+    }
+    aS = Float64Array.from(S); aD = Float64Array.from(D);
+    // o vértice mais baixo da pele (a altura do vértice pela pele linear: só o y)
+    if (i > 0 && i < poses.length - 1 && i % cada === 0) {
+      let mn = Infinity, osso = -1;
+      for (const pt of partes) {
+        const { nv, pos, ossos, w } = pt;
+        for (let v = 0; v < nv; v++) {
+          const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2];
+          let oy = 0;
+          for (let k = 0; k < 4; k++) {
+            const wk = w[v * 4 + k];
+            if (!wk) continue;
+            const ib = ossos[v * 4 + k] * 12;
+            oy += wk * (S[ib + 4] * x + S[ib + 5] * y + S[ib + 6] * z + S[ib + 7]);
+          }
+          if (oy < mn) { mn = oy; osso = ossos[v * 4]; }
+        }
+      }
+      RP.peleN++;
+      if (mn < RP.pelePior) { RP.pelePior = mn; RP.peleEx = `${nome} quadro ${i} (osso ${ES.NOMES_OSSOS[osso]})`; }
+      if (mn < -0.01) RP.pele++;
+    }
+  }
+}
+const _poP5 = new Float32Array(NJ * 3);
+/** A pose do carrinho nos quadros do plano c (o mundo mw: a página/o mundo com o tick do quadro) e o corpo novo. */
+function medirPose(j, c, qs, mw, poseFim, velFim, cada, nome) {
+  const antes = JSON.stringify(c), salvo = j.carrinho;
+  j.carrinho = c;
+  const poses = [], vels = [];
+  for (let i = 0; i < qs.length; i++) {
+    mw.tick = c.tick0 + i;
+    const po = A.pose(j, mw, new Float32Array(NJ * 3));
+    poses.push(po);
+    vels.push(i === 0 ? Math.hypot(j.vx, j.vz) : Math.hypot(qs[i].vx, qs[i].vz));
+    if (i === 0) continue;
+    RP.quadros++;
+    const q = qs[i];
+    for (let k = 0; k < po.length; k++) if (!Number.isFinite(po[k])) { RP.nan++; break; }
+    // P2: as pernas da pose = as do quadro (o Float32 da pose: a conta do quadro arredondada)
+    for (let p = 0; p < 2; p++) {
+      const ids = p === 0 ? [A.J.quadrilE, A.J.joelhoE, A.J.tornozeloE, A.J.pontaE] : [A.J.quadrilD, A.J.joelhoD, A.J.tornozeloD, A.J.pontaD];
+      const pts = [q.qd[p], q.jo[p], q.to[p], q.po[p]];
+      for (let k = 0; k < 4; k++) {
+        const d = Math.max(Math.abs(po[ids[k] * 3] - fr(pts[k].x)), Math.abs(po[ids[k] * 3 + 1] - fr(pts[k].y)), Math.abs(po[ids[k] * 3 + 2] - fr(pts[k].z)));
+        if (d > RP.p2pior) RP.p2pior = d;
+        if (d !== 0) RP.p2++;
+      }
+    }
+    // P1 (manequim): o fundo de todas as cápsulas e da cabeça ≥ −1 cm
+    let fundo = po[A.J.cabeca * 3 + 1] - A.RAIO_CABECA, onde = 'cabeça';
+    for (const [a, b, ra, rb] of SEG) {
+      const f = Math.min(po[a * 3 + 1] - ra, po[b * 3 + 1] - rb);
+      if (f < fundo) { fundo = f; onde = `${A.JUNTAS[a]}–${A.JUNTAS[b]}`; }
+    }
+    if (fundo < RP.fundoPior) { RP.fundoPior = fundo; RP.fundoEx = `${nome} quadro ${i} (${onde})`; }
+    if (fundo < -0.01 - 1e-6) RP.fundo++;
+    // P4: a cabeça a ≤ 17° da linha peito → pescoço (o portão da postura do corpo novo); o tronco 40–60° para trás no deslize
+    const t1 = dif3(po, 0, A.J.peito, A.J.pescoco), t2 = dif3(po, 0, A.J.pescoco, A.J.cabeca);
+    const ac = angulo(...t1, ...t2);
+    if (ac > RP.cabPior) RP.cabPior = ac;
+    if (ac > 17) RP.cab++;
+    if (q.fase === 2) {
+      const tr = dif3(po, 0, A.J.pelve, A.J.pescoco), at = angulo(...tr, 0, 1, 0);
+      RP.troncoN++;
+      RP.troncoFaixa[0] = Math.min(RP.troncoFaixa[0], at); RP.troncoFaixa[1] = Math.max(RP.troncoFaixa[1], at);
+      if (at < 40 || at > 60) RP.tronco++;
+    }
+  }
+  // P5: a pose e a altura do quadril não escrevem no plano (100 leituras)
+  for (let i = 0; i < 100; i++) { mw.tick = c.tick0 + 1 + (i % (qs.length - 1)); A.pose(j, mw, _poP5); A.alturaQuadril(j, mw); }
+  if (JSON.stringify(c) !== antes) RP.p5++;
+  j.carrinho = salvo;
+  RP.seqs++;
+  if (EQ) esqueletoSeq([...poses, poseFim], [...vels, velFim], cada, nome);
+}
+
+/** Mede o plano c do jogador j (pel0: a pelve da pose normal no aperto; mw: o mundo da pose) em todas as metas por quadro. */
+function medir(j, c, pel0, mw = null, cada = 1, nome = '') {
   R.casos++;
   const antes = JSON.stringify(c);
   const qs = quadros(c);
@@ -247,13 +430,14 @@ function medir(j, c, pel0) {
     const pe = j2.pes[p];
     pe.apoio = true; pe.x = qF.to[p].x; pe.z = qF.to[p].z; pe.rumo = qF.yaw; pe.lx = pe.x; pe.lz = pe.z; pe.tx = pe.x; pe.tz = pe.z;
   }
-  const pf = pelvePose(j2);
+  const poseFim = A.pose(j2, m, new Float32Array(NJ * 3)), pf = { x: poseFim[0], y: poseFim[1], z: poseFim[2] };
   const dFim = Math.hypot(pf.x - qF.x, pf.y - qF.h, pf.z - qF.z);
   R.a6piorFim = Math.max(R.a6piorFim, dFim);
   if (dFim > 0.05) R.a6fim++;
   // P5 (a parte do quadro): ler o plano não o muda
   for (let i = 0; i < 100; i++) { K.quadroCarrinho(c, (i % 90) * 0.02, K.novoQuadroCarrinho()); K.carrinhoAtivo({ carrinho: c }, c.tick0 + i); K.tempoCarrinho(c, c.tick0 + i); }
   if (JSON.stringify(c) !== antes) R.p5++;
+  if (TEM_POSE && mw) medirPose(j, c, qs, mw, poseFim, 0, cada, nome);
   return qs;
 }
 
@@ -272,7 +456,7 @@ for (const e of ENTRADAS) {
     const j = jogadorSint({ v: e.v, angV, analog: angV + lado * e.desv * GRAU });
     const pel0 = pelvePose(j);
     const c = K.montarCarrinho(j, m.tick, { bola: null, prever: null });
-    const qs = medir(j, c, pel0);
+    const qs = medir(j, c, pel0, Object.assign({}, m), 1, `${e.nome} lado ${lado}`);
     if (lado === 1) {
       const qS = K.quadroCarrinho(c, c.tS, K.novoQuadroCarrinho());
       const dq = Math.hypot(qS.x - c.x0, qS.z - c.z0);
@@ -314,7 +498,7 @@ for (const e of ENTRADAS) {
         const ang = tras ? j0.rumo + Math.PI + (rnd() - 0.5) * 80 * GRAU : rnd() * 2 * Math.PI;
         j.imag = tras || rnd() < 0.85 ? 1 : 0; j.ix = Math.cos(ang); j.iz = Math.sin(ang);
         const c = K.montarCarrinho(j, mm.tick, { bola, prever });
-        medir(j, c, pel0);
+        medir(j, c, pel0, Object.assign({}, mm), 3, `partida 3002 tick ${mm.tick} j${j.id}${tras ? ' (para trás)' : ''}`);
       }
       n++;
     }
@@ -342,7 +526,7 @@ for (const e of ENTRADAS) {
       o.apoio = pe.apoio; o.x = mx(...pe.xz); o.z = mz(...pe.xz); o.rumo = R0 + pe.r;
       o.tx = mx(pe.t[0], pe.t[1]); o.tz = mz(pe.t[0], pe.t[1]); o.ty = pe.t[2]; o.ox = 0; o.oz = 0; o.lrumo = R0 + pe.lr;
     });
-    medir(j, K.montarCarrinho(j, m.tick, { bola: { x: mx(...e.bola), z: mz(...e.bola) } }), null);
+    medir(j, K.montarCarrinho(j, m.tick, { bola: { x: mx(...e.bola), z: mz(...e.bola) } }), null, Object.assign({}, m), 1, `gravado q=${e.q}`);
   }
   info('A estados de partida gravados (o joelho no chão sem a guarda)', PINADOS.length, 'as metas A2–A4, A6 (fim) e P');
 }
@@ -492,11 +676,367 @@ reg('P1 pelve no deslize 0,14–0,20 m', `${R.pelve} (${f3(R.pelveFaixa[0])}–$
 reg('P4 tronco 40–60° para trás no deslize', `${R.tronco} (${f2(R.troncoFaixa[0])}–${f2(R.troncoFaixa[1])}°)`, '0', R.tronco === 0);
 reg('P5 o quadro não escreve no plano (100 leituras)', R.p5, '0', R.p5 === 0);
 reg('nenhum NaN nos quadros', R.nan, '0', R.nan === 0);
-for (const [k, txt] of [
-  ['P1', 'vértice mais baixo da pele do corpo novo ≥ −1 cm (LOD0)'], ['P2', 'as juntas das pernas da pose = as do quadro'],
-  ['P3', 'esqueleto nos quadros (O1, O2, O3)'], ['P4', 'cabeça ≤ 17° da linha do tronco'], ['P5', 'a pose não escreve no plano'],
-  ['B–G', 'contato, canhão, regras, travas, determinismo, cenas'],
-]) linhas.push(['…', `${k} ${txt}`, 'PENDENTE', 'commits 2–5 (poseCarrinho, contato, faltas, cenas)']);
+// P pela pose (anim.js poseCarrinho) e pelo corpo novo
+if (!TEM_POSE) reg('P a pose do carrinho (anim.js poseCarrinho)', 'não existe nesta lógica', 'existe', false);
+else {
+  reg('P2 as juntas das pernas da pose = as do quadro (Float32)', `${RP.p2} juntas×quadros (pior ${RP.p2pior.toExponential(1)} m) em ${RP.quadros} quadros`, '0', RP.p2 === 0 && RP.quadros > 0);
+  reg('P1 fundo das cápsulas do manequim e da cabeça (pose) ≥ −1 cm', `${RP.fundo} (pior ${f3(RP.fundoPior)} m${RP.fundo || DETALHE ? `: ${RP.fundoEx}` : ''})`, '0', RP.fundo === 0);
+  reg('P4 cabeça ≤ 17° da linha peito → pescoço', `${RP.cab} (pior ${f2(RP.cabPior)}°)`, '0', RP.cab === 0);
+  reg('P4 tronco 40–60° do vertical no deslize (pose)', `${RP.tronco} de ${RP.troncoN} (${f2(RP.troncoFaixa[0])}–${f2(RP.troncoFaixa[1])}°)`, '0', RP.tronco === 0 && RP.troncoN > 0);
+  reg('P5 a pose e a altura do quadril não escrevem no plano (100 leituras)', `${RP.p5} de ${RP.seqs}`, '0', RP.p5 === 0);
+  reg('P nenhum NaN na pose', RP.nan, '0', RP.nan === 0);
+  if (!EQ) reg('P1/P3 o corpo novo (render/esqueleto.js, assets/jogador/corpo.*)', 'não carregou', 'carrega', false);
+  else {
+    reg('P1 vértice mais baixo da pele do corpo novo (LOD0) ≥ −1 cm', `${RP.pele} de ${RP.peleN} quadros (pior ${f3(RP.pelePior)} m${RP.pele || DETALHE ? `: ${RP.peleEx}` : ''})`, '0', RP.pele === 0 && RP.peleN > 0);
+    reg('P3 O1 juntas do esqueleto ≤ 1 mm', `${RP.o1} (pior ${(RP.o1pior * 1000).toFixed(3)} mm)`, '0', RP.o1 === 0);
+    const tx = RP.o2 / Math.max(1, RP.o2n);
+    reg('P3 O2 saltos (> 40° com o eixo < 20°)', `${RP.o2} em ${RP.o2n} quadros (${(tx * 100).toFixed(4)}%)${RP.o2ex ? '; ex.: ' + RP.o2ex : ''}`, '≤ 0,03%', tx <= 0.0003);
+    const tl = RP.o3lim / Math.max(1, RP.o3n);
+    reg('P3 O3 NaN e escala no limite [0,9; 1,1]', `NaN ${RP.o3nan}; limite ${(tl * 100).toFixed(3)}%`, '0; ≤ 0,5%', RP.o3nan === 0 && tl <= 0.005);
+  }
+}
 
+// ------------------------------------------------------------------ E: as travas na simulação (sem o contato com a bola)
+// Estados de uma partida de verdade (semente 3102, a demo nos dois times até cada situação aparecer a 1ª vez: a bola no pé
+// do adversário, no pé do meu time, num passe do meu time, num passe rasteiro deles, nas mãos do goleiro deles, uma parada,
+// a bola livre, a bola alta deles, um cabeceio no ar do meu time). O humano é o time 0; o controlado vai para quem o caso pede
+// (acoes.js assumirControle) e a entrada é a da pessoa (sem a marca `ia`). Sem o contato (commit 3) a perna ainda não toca a
+// bola; aqui só o corpo, o disparo e as travas.
+const B = CFG.BOTAO;
+const porId = (w, id) => w.jogadores.find(o => o.id === id) ?? null;
+const ESTADOS = {};
+{
+  const mm = P.criarPartida({ semente: 3102, minutosPorTempo: 4 });
+  const preds = {
+    posse1: (w, jogo, d) => jogo && d && d.time === 1 && d.posicao !== 'GOL' && w.naMao == null,
+    posse0: (w, jogo, d) => jogo && d && d.time === 0 && w.naMao == null,
+    voo0: (w, jogo) => jogo && w.voo && w.voo.time === 0 && w.posse == null,
+    passeRas1: (w, jogo) => jogo && w.voo && w.voo.time === 1 && w.posse == null && w.bola.rolando && w.voo.para != null,
+    naMao1: (w, jogo) => jogo && w.naMao != null && porId(w, w.naMao).time === 1,
+    parada: w => w.parada && !w.parada.rolou && w.partida.estado !== 'intervalo',
+    livre: (w, jogo) => jogo && w.posse == null && w.voo == null && w.bola.rolando && w.naMao == null,
+    alta1: (w, jogo) => jogo && w.voo && w.voo.time === 1 && w.posse == null && K.bolaAlta(w),
+    cab0: (w, jogo) => jogo && w.jogadores.some(o => o.time === 0 && o.posicao !== 'GOL' && o.cab && o.cab.saiu && w.tick <= o.cab.tf),
+  };
+  for (let i = 0; i < 9000 && Object.keys(ESTADOS).length < Object.keys(preds).length; i++) {
+    P.passoPartida(mm, P.entradaDemoPartida(mm));
+    if (mm.tick < 600) continue;
+    const jogo = mm.partida.estado === 'jogo' && !(mm.parada && !mm.parada.rolou) && mm.golTick == null;
+    const d = mm.posse != null ? porId(mm, mm.posse) : null;
+    for (const k in preds) if (!ESTADOS[k] && preds[k](mm, jogo, d)) ESTADOS[k] = SIM.copiarMundo(mm);
+  }
+  info('E estados de partida achados (semente 3102)', Object.keys(ESTADOS).map(k => `${k}@${ESTADOS[k].tick}`).join(' '), '9 situações');
+}
+/** O jogador de linha do time 0 mais perto de (x, z) (sem `fora`). */
+function linhaPerto(w, x, z, fora = -1) {
+  let mel = null, dm = Infinity;
+  for (const o of w.jogadores) if (o.time === 0 && o.posicao !== 'GOL' && o.id !== fora) { const d = Math.hypot(o.x - x, o.z - z); if (d < dm) { dm = d; mel = o; } }
+  return mel;
+}
+/** A entrada da pessoa: o analógico de j para (x, z) e os botões. */
+function entPara(j, x, z, botoes = 0) {
+  const dx = x - j.x, dz = z - j.z, l = Math.hypot(dx, dz) || 1;
+  return { x: dx / l, z: dz / l, botoes };
+}
+const passo = (w, e) => P.passoPartida(w, e);
+/** Um estado com o controlado em j (do time 0) e o carrinho apertado nele (o analógico para a bola). Devolve {w, j} ou null. */
+function apertar(base, escolher, prep = null) {
+  const w = SIM.copiarMundo(base);
+  if (prep) prep(w);
+  const j = escolher(w);
+  if (!j || !AC.assumirControle(w, 0, j)) return null;
+  passo(w, entPara(j, w.bola.p.x, w.bola.p.z, B.CARRINHO));
+  return j.carrinho ? { w, j } : null;
+}
+const quadroEstado = j => ({ x: j.x, z: j.z, vx: j.vx, vz: j.vz, rumo: j.rumo, q: j.quadril, pes: j.pes.map(p => [p.apoio, p.x, p.z, p.tx, p.ty, p.tz]) });
+const igualEstado = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+// E1: durante o carrinho (desde o tick do aperto) os outros botões não fazem nada nele; não domina a bola; não recebe o
+// controle pelo TROCAR; o boteIA dele não sai — e volta no passo seguinte ao fim (nenhum descansoBote sobrando)
+{
+  const base = ESTADOS.posse1;
+  const ap = base && apertar(base, w => { const d = porId(w, w.posse); return linhaPerto(w, d.x, d.z); });
+  if (!ap) reg('E1 o carrinho sai no estado com a bola no pé do adversário', 'não saiu', 'sai', false);
+  else {
+    // (a) os botões: a mesma trajetória com e sem PASSE/CHUTE/LANÇAMENTO/ENFIADA/DIVIDIDA/CONTER/PRESSÃO apertados
+    const a = SIM.copiarMundo(ap.w), b = SIM.copiarMundo(ap.w);
+    const ja = porId(a, ap.j.id), jb = porId(b, ap.j.id);
+    const ciclo = [B.PASSE, 0, B.CHUTE, 0, B.LANCAMENTO, 0, B.ENFIADA, 0, B.DIVIDIDA, 0, B.CONTER, B.CONTER, 0, B.PRESSAO, B.PRESSAO, 0];
+    let difs = 0, acoes = 0, passos = 0, divEv = 0;
+    for (let i = 0; ja.carrinho && i < 400; i++) {
+      passo(a, entPara(ja, a.bola.p.x, a.bola.p.z, 0));
+      const ang = i * 0.7;
+      passo(b, { x: Math.cos(ang), z: Math.sin(ang), botoes: ciclo[i % ciclo.length] });
+      if (!ja.carrinho) break; // (o passo em que o plano sai já é da locomoção: lá as entradas diferentes valem)
+      passos++;
+      if (!igualEstado(quadroEstado(ja), quadroEstado(jb))) difs++;
+      if (jb.carga || jb.pedido || jb.defH) acoes++;
+      for (const e of b.eventos) if (e.tipo === 'dividida' && e.id === jb.id) divEv++;
+    }
+    reg('E1 com PASSE/CHUTE/LANÇAMENTO/ENFIADA/DIVIDIDA/CONTER/PRESSÃO: o corpo é o mesmo', `${difs} de ${passos} passos diferentes; ação/DIVIDIDA nele ${acoes}/${divEv}`, '0; 0/0', difs === 0 && acoes === 0 && divEv === 0 && passos > 30);
+    // (b) não domina: a bola parada colada no pé no tick do aperto e a bola rolando para ele no chão
+    let dominou = 0, casos = 0, semCarrinho = 0;
+    {
+      const w = SIM.copiarMundo(base), w2 = SIM.copiarMundo(base);
+      for (const x of [w, w2]) {
+        const j = linhaPerto(x, x.bola.p.x, x.bola.p.z);
+        AC.assumirControle(x, 0, j);
+        x.posse = null; x.voo = null;
+        const bb = x.bola;
+        bb.p.x = j.x + Math.cos(j.rumo) * 0.35; bb.p.z = j.z + Math.sin(j.rumo) * 0.35; bb.p.y = CFG.BOLA.raio; bb.v.x = 0; bb.v.y = 0; bb.v.z = 0; bb.rolando = true;
+      }
+      const j = porId(w, linhaPerto(w, w.bola.p.x, w.bola.p.z).id), j2 = porId(w2, j.id);
+      passo(w, entPara(j, w.bola.p.x, w.bola.p.z, B.CARRINHO)); casos++;
+      if (!j.carrinho) casos = -999;
+      for (let i = 0; i < 200 && (j.carrinho || i === 0); i++) { if (w.posse === j.id) { dominou++; break; } passo(w, entPara(j, 0, 0, 0)); }
+      for (let i = 0; i < 30; i++) { passo(w2, entPara(j2, w2.bola.p.x, w2.bola.p.z, 0)); if (w2.posse === j2.id) { semCarrinho++; break; } }
+    }
+    {
+      // no chão (depois da parada): a bola rolando para o corpo dele a 1 m/s
+      const w = SIM.copiarMundo(ap.w), j = porId(w, ap.j.id);
+      while (j.carrinho && w.tick < j.carrinho.tick0 + Math.ceil(j.carrinho.tS / PASSO) + 2) passo(w, entPara(j, 0, 0, 0));
+      if (j.carrinho) {
+        const bb = w.bola; w.posse = null; w.voo = null;
+        bb.p.x = j.x + 0.6; bb.p.z = j.z; bb.p.y = CFG.BOLA.raio; bb.v.x = -1; bb.v.y = 0; bb.v.z = 0; bb.rolando = true;
+        casos++;
+        for (let i = 0; j.carrinho && i < 200; i++) { passo(w, entPara(j, 0, 0, 0)); if (w.posse === j.id) { dominou++; break; } }
+      }
+    }
+    reg('E1 não domina a bola no carrinho (colada no pé no tick do aperto; rolando para ele no chão)', `${dominou} de ${casos}`, '0 de 2', dominou === 0 && casos === 2);
+    info('E1 a mesma bola colada no pé, sem o carrinho', semCarrinho ? 'domina' : 'não domina em 0,5 s', 'mostra a trava');
+    // (c) o controle: com o controle em outro, o TROCAR e o candidatoTroca nunca dão o deslizante; o boteIA dele não sai
+    {
+      const w = SIM.copiarMundo(ap.w), j = porId(w, ap.j.id);
+      const k = linhaPerto(w, j.x, j.z, j.id);
+      AC.assumirControle(w, 0, k);
+      j.descansoBote = 30;
+      let escolhido = 0, semGuarda = 0, trocouPara = 0, desc = 0, n = 0;
+      for (let i = 0; j.carrinho && i < 400; i++) {
+        const c = j.carrinho; j.carrinho = undefined;
+        if (SIM.candidatoTroca(w, 0)?.id === j.id) semGuarda++;
+        j.carrinho = c;
+        if (SIM.candidatoTroca(w, 0)?.id === j.id) escolhido++;
+        passo(w, { x: 0, z: 0, botoes: i % 4 === 0 ? B.TROCAR : 0 });
+        if (w.controlado[0] === j.id) trocouPara++;
+        if (j.carrinho && j.descansoBote !== 30) desc++;
+        n++;
+      }
+      reg('E1 TROCAR e candidato à troca nunca dão o deslizante', `escolhido ${escolhido}, controle nele ${trocouPara} (de ${n} passos)`, '0; 0', escolhido === 0 && trocouPara === 0);
+      info('E1 o candidatoTroca sem a guarda', `${semGuarda} de ${n} passos dariam o deslizante`, 'mostra a guarda');
+      // (o laço sai no passo em que o plano acaba — o 1º com m.tick ≥ fim —: ali o boteIA já roda e desconta 1)
+      reg('E1 boteIA parado no carrinho e de volta no passo que começa no fim', `descansoBote mudou ${desc}× no carrinho; 30 → ${j.descansoBote} no passo do fim`, '0×; 30 → 29',
+        desc === 0 && j.descansoBote === 29);
+    }
+  }
+}
+
+// E2: o disparo bloqueado deixa o mundo IGUAL (bit a bit, 30 passos) ao mundo sem o aperto
+{
+  const casos = [];
+  /** (w) → j (o controlado), opcional prep(w) nos dois mundos e a sequência de botões do aperto. */
+  function bloqueio(nome, base, escolher, prep = null, seq = [B.CARRINHO]) {
+    if (!base) { casos.push([nome, 'sem estado']); return; }
+    const a = SIM.copiarMundo(base), b = SIM.copiarMundo(base);
+    let jid = -1;
+    for (const w of [a, b]) {
+      if (prep) prep(w);
+      const j = escolher(w);
+      jid = j.id;
+      if (w.controlado[0] !== j.id) AC.assumirControle(w, 0, j);
+    }
+    const ja = porId(a, jid), jb = porId(b, jid);
+    let dif = 0, plano = 0;
+    for (let i = 0; i < 30; i++) {
+      const bot = seq[i] ?? 0;
+      passo(a, entPara(ja, a.bola.p.x, a.bola.p.z, bot));
+      passo(b, entPara(jb, b.bola.p.x, b.bola.p.z, bot & ~B.CARRINHO));
+      if (SIM.hashMundo(a) !== SIM.hashMundo(b)) dif++;
+      if (a.jogadores.some(o => o.carrinho)) plano++;
+    }
+    casos.push([nome, dif || plano ? `${dif} hashes diferentes, plano em ${plano}` : null]);
+  }
+  const doTime = (w, t) => w.jogadores.find(o => o.time === t && o.posicao === 'GOL');
+  const pertoBola = w => linhaPerto(w, w.bola.p.x, w.bola.p.z, w.posse ?? -1);
+  bloqueio('bola no pé de um companheiro', ESTADOS.posse0, w => pertoBola(w));
+  bloqueio('bola no pé dele mesmo', ESTADOS.posse0, w => porId(w, w.posse));
+  bloqueio('voo do próprio time', ESTADOS.voo0, w => linhaPerto(w, w.bola.p.x, w.bola.p.z, w.voo.de ?? -1));
+  bloqueio('goleiro', ESTADOS.posse1, w => doTime(w, 0));
+  bloqueio('parada não cobrada', ESTADOS.parada, w => pertoBola(w));
+  bloqueio('tick do gol (m.golTick)', ESTADOS.posse1, w => pertoBola(w), w => { w.golTick = w.tick - 1; });
+  bloqueio('bola nas mãos do goleiro', ESTADOS.naMao1, w => pertoBola(w));
+  bloqueio('bola alta (no ar acima de 0,6 m)', ESTADOS.alta1, w => pertoBola(w));
+  bloqueio('bola subindo (0,3 m)', ESTADOS.livre, w => pertoBola(w), w => { w.bola.p.y = 0.3; w.bola.v.y = 3; w.bola.rolando = false; });
+  bloqueio('no ar (o pulo do cabeceio saído)', ESTADOS.cab0, w => w.jogadores.find(o => o.time === 0 && o.posicao !== 'GOL' && o.cab && o.cab.saiu));
+  bloqueio('sem reação depois da DIVIDIDA', ESTADOS.posse1, w => pertoBola(w), w => { const j = pertoBola(w); j.defH = { bote: null, semReacaoAte: w.tick + 40, tick: w.tick - 1 }; });
+  {
+    // a DIVIDIDA em andamento: o defensor a 0,8 m do condutor aperta a DIVIDIDA e, no passo seguinte, o CARRINHO
+    const prepD = w => { const d = porId(w, w.posse), j = linhaPerto(w, d.x, d.z); P.teleportar(j, d.x - 0.8, d.z, 0); };
+    bloqueio('DIVIDIDA em andamento', ESTADOS.posse1, w => linhaPerto(w, porId(w, w.posse).x, porId(w, w.posse).z), prepD, [B.DIVIDIDA, B.CARRINHO]);
+  }
+  {
+    // já no carrinho: soltar e apertar de novo no meio dele não monta outro plano
+    const ap = ESTADOS.posse1 && apertar(ESTADOS.posse1, w => { const d = porId(w, w.posse); return linhaPerto(w, d.x, d.z); });
+    if (ap) {
+      const c0 = ap.j.carrinho;
+      for (let i = 0; i < 20; i++) passo(ap.w, entPara(ap.j, 0, 0, i % 2 ? B.CARRINHO : 0));
+      casos.push(['já no carrinho (apertos de novo)', ap.j.carrinho === c0 && c0.tick0 === ap.j.carrinho.tick0 ? null : 'outro plano']);
+    } else casos.push(['já no carrinho (apertos de novo)', 'o 1º não saiu']);
+  }
+  {
+    // o treino (sem m.times): o bit cru não faz nada
+    const mk = () => SIM.criarMundo({ semente: 5, jogadores: [{ id: 1, x: 0, z: 0, rumo: 0 }, { id: 2, x: 3, z: 0, rumo: Math.PI, time: 1, papel: 'marcador' }], bola: { x: 2.5, z: 0 } });
+    const a = mk(), b = mk();
+    let dif = 0;
+    for (let i = 0; i < 60; i++) { SIM.passo(a, { 0: { x: 1, z: 0, botoes: i === 3 ? B.CARRINHO : 0 } }); SIM.passo(b, { 0: { x: 1, z: 0, botoes: 0 } }); if (SIM.hashMundo(a) !== SIM.hashMundo(b)) dif++; }
+    casos.push(['treino (sem m.times)', dif || a.jogadores.some(o => o.carrinho) ? `${dif} hashes diferentes` : null]);
+  }
+  {
+    // a disputa de pênaltis: o bit cru junto da entrada da demo, o tempo todo
+    const D = await imp('disputa.js');
+    const md = D.criarDisputa({ semente: 7 });
+    let plano = 0;
+    for (let i = 0; i < 1500; i++) { const e = D.entradaDemoDisputa(md); D.passoDisputa(md, { ...e, botoes: (e.botoes | 0) | (i % 2 ? B.CARRINHO : 0) }); if (md.jogadores.some(o => o.carrinho)) plano++; }
+    casos.push(['disputa de pênaltis', plano ? `plano em ${plano} passos` : null]);
+  }
+  const ruins = casos.filter(c => c[1]);
+  reg('E2 disparo bloqueado: o mundo bit a bit igual ao sem o aperto (30 passos)', `${casos.length - ruins.length}/${casos.length}${ruins.length ? ': ' + ruins.map(c => `${c[0]} (${c[1]})`).join('; ') : ''}`,
+    'todos', ruins.length === 0 && casos.length >= 15);
+  if (DETALHE) console.log('E2 casos: ' + casos.map(c => c[0]).join(' | '));
+}
+
+// E3: a borda — segurar não repete; o botão segurado na troca de controle não dispara no novo; o aperto novo depois do fim
+// dispara. E4: o TROCAR no meio não muda nada no carrinho (a trajetória e o fim bit a bit iguais)
+{
+  const ap = ESTADOS.posse1 && apertar(ESTADOS.posse1, w => { const d = porId(w, w.posse); return linhaPerto(w, d.x, d.z); });
+  if (!ap) reg('E3 o carrinho sai', 'não saiu', 'sai', false);
+  else {
+    const { j } = ap;
+    // segurado o tempo todo (e 60 passos depois do fim): um carrinho só
+    const w1 = SIM.copiarMundo(ap.w), j1 = porId(w1, j.id);
+    let inicios = 0;
+    for (let i = 0; i < 260; i++) { passo(w1, entPara(j1, 0, 0, B.CARRINHO)); for (const e of w1.eventos) if (e.tipo === 'carrinho' && e.fase === 'inicio') inicios++; }
+    // segurado + TROCAR no meio: o novo controlado não dispara
+    const w2 = SIM.copiarMundo(ap.w), j2 = porId(w2, j.id);
+    let novo = 0, trocou = -1;
+    for (let i = 0; i < 80; i++) {
+      passo(w2, { x: 0, z: 0, botoes: B.CARRINHO | (i === 10 ? B.TROCAR : 0) });
+      if (i >= 10 && w2.controlado[0] !== j2.id) { trocou = w2.controlado[0]; if (porId(w2, trocou)?.carrinho) novo++; }
+    }
+    // solto e apertado de novo depois do fim: outro carrinho
+    const w3 = SIM.copiarMundo(ap.w), j3 = porId(w3, j.id);
+    while (j3.carrinho) passo(w3, entPara(j3, 0, 0, 0));
+    passo(w3, entPara(j3, w3.bola.p.x, w3.bola.p.z, 0));
+    const pode = !(w3.parada && !w3.parada.rolou) && !K.bolaAlta(w3) && w3.partida.estado === 'jogo';
+    passo(w3, entPara(j3, w3.bola.p.x, w3.bola.p.z, B.CARRINHO));
+    reg('E3 segurar não repete; o segurado na troca não dispara no novo; o aperto novo depois do fim dispara',
+      `inícios ${inicios}; no novo controlado ${novo} (trocou: ${trocou >= 0}); de novo ${j3.carrinho ? 'sim' : 'não'}${pode ? '' : ' (bola morta/alta no 2º aperto)'}`,
+      '0 (além do do aperto); 0; sim', inicios === 0 && novo === 0 && trocou >= 0 && (!!j3.carrinho || !pode));
+    // E4: TROCAR no 20º passo do carrinho × sem TROCAR
+    const a = SIM.copiarMundo(ap.w), b = SIM.copiarMundo(ap.w), ja = porId(a, j.id), jb = porId(b, j.id);
+    const fimA = ja.carrinho.fim;
+    let difs = 0, n = 0, trocouB = false;
+    for (let i = 0; ja.carrinho && i < 400; i++) {
+      passo(a, { x: 0, z: 0, botoes: 0 });
+      passo(b, { x: 0, z: 0, botoes: i === 20 ? B.TROCAR : 0 });
+      if (b.controlado[0] !== jb.id) trocouB = true;
+      if (!ja.carrinho) break; // (o passo em que o plano sai já é da locomoção)
+      if (!igualEstado(quadroEstado(ja), quadroEstado(jb)) || (jb.carrinho && jb.carrinho.fim !== fimA)) difs++;
+      n++;
+    }
+    reg('E4 TROCAR no meio: a trajetória do carrinho (corpo, pés, quadril, fim) bit a bit a mesma', `${difs} de ${n} passos diferentes (trocou: ${trocouB})`, '0', difs === 0 && trocouB && n > 30);
+  }
+}
+// (o "inícios" do E3 conta os eventos depois do aperto: o do aperto ficou no passo do apertar)
+
+// E5: vale parado, com a bola livre e num passe rasteiro do adversário (o corte do passe pela perna é do commit 3)
+{
+  const r = [];
+  const parado = ESTADOS.posse1 && apertar(ESTADOS.posse1, w => { const d = porId(w, w.posse), j = linhaPerto(w, d.x, d.z); j.vx = 0; j.vz = 0; return j; });
+  r.push(['parado', !!parado && Math.abs(parado.j.carrinho.ve - CC.vMin * parado.j.carrinho.esc) < 1e-12]);
+  r.push(['bola livre', !!(ESTADOS.livre && apertar(ESTADOS.livre, w => linhaPerto(w, w.bola.p.x, w.bola.p.z)))]);
+  r.push(['passe rasteiro do adversário', !!(ESTADOS.passeRas1 && apertar(ESTADOS.passeRas1, w => linhaPerto(w, w.bola.p.x, w.bola.p.z)))]);
+  reg('E5 o carrinho sai parado (impulso vMin), com a bola livre e no passe rasteiro deles', r.map(([n, ok]) => `${n} ${ok ? 'sim' : 'NÃO'}`).join('; '), 'os três', r.every(x => x[1]));
+}
+
+// E7: o cabeceio planejado — o aperto zera o pulo ainda no chão, o toque 'aereo' e a disputa pelo alto marcada (senão o
+// alguemNoAlto, o agendarDisputa e a trocaAerea o contariam como quem vai cabecear)
+{
+  const ap = ESTADOS.livre && apertar(ESTADOS.livre, w => linhaPerto(w, w.bola.p.x, w.bola.p.z), w => {
+    const j = linhaPerto(w, w.bola.p.x, w.bola.p.z), t = w.tick;
+    w.bola.p.y = 0.3; w.bola.v.y = -1; w.bola.rolando = false; // a bola baixa, descendo (o carrinho sai)
+    j.cab = { saiu: false, h: 0.3, td: t + 20, tc: t + 30, tp: t + 40, tf: t + 50, cabeceio: true, bx: j.x + 2, by: 2, bz: j.z, cx: j.x + 1.8, cz: j.z };
+    j.cond.toque = { tick: t + 30, pe: 1, bx: j.x + 2, bz: j.z, tipo: 'aereo', y: 2 };
+    j.disputaAlta = { contra: -1, tc: t + 30 };
+  });
+  reg('E7 o aperto zera o pulo no chão, o toque aéreo e a disputa pelo alto', ap ? `cab ${ap.j.cab}, toque ${ap.j.cond.toque}, disputa ${ap.j.disputaAlta}` : 'o carrinho não saiu',
+    'null, null, null', !!ap && ap.j.cab === null && ap.j.cond.toque === null && ap.j.disputaAlta === null);
+}
+
+// E8: a IA — o deslizante (o controle em outro) não é escolhido pelo 1º/2º homem, pela marcação, pela bola livre, pelo chamado
+// da PRESSÃO nem como alvo de passe; na forma (a referência do bloco) continua contando
+{
+  const IAt = await imp('ia-tatica.js'), IA = await imp('ia.js'), DF = await imp('defesa.js');
+  const ap = ESTADOS.posse1 && apertar(ESTADOS.posse1, w => { const d = porId(w, w.posse); return linhaPerto(w, d.x, d.z); });
+  if (!ap) reg('E8 o carrinho sai', 'não saiu', 'sai', false);
+  else {
+    const w = ap.w, j = ap.j, k = linhaPerto(w, j.x, j.z, j.id);
+    AC.assumirControle(w, 0, k);
+    const st = { n: 0, p12: 0, p12sem: 0, marca: 0, marcaSem: 0, livre: 0, livreSem: 0, press: 0, pressSem: 0, alvo: 0, alvoSem: 0, forma: 0 };
+    /** f(copia) na cópia com o plano e na cópia sem ele (o "sem a guarda"). */
+    const dois = f => { const c1 = SIM.copiarMundo(w), c2 = SIM.copiarMundo(w); porId(c2, j.id).carrinho = undefined; return [f(c1), f(c2)]; };
+    for (let i = 0; j.carrinho && i < 400; i++) {
+      st.n++;
+      const [b1, b2] = dois(c => { const B2 = IAt.blocoDoTime(c, 0); return { p: [B2.p1, B2.p2], ref: Array.from(B2.ref) }; });
+      if (b1.p.includes(j.id)) st.p12++;
+      if (b2.p.includes(j.id)) st.p12sem++;
+      if (JSON.stringify(b1.ref) !== JSON.stringify(b2.ref)) st.forma++;
+      const mg = c => -c.ataca[1] * CFG.CAMPO.meioX;
+      const [m1, m2] = dois(c => { const a0 = IA.marcacao(c, 0, null, -c.ataca[0] * CFG.CAMPO.meioX), a1 = IA.marcacao(c, 1, null, mg(c)); return a0.alvo.has(j.id) || [...a1.alvo.values()].some(o => o.id === j.id); });
+      if (m1) st.marca++;
+      if (m2) st.marcaSem++;
+      // a bola livre aos pés dele: ele não vai; o companheiro mais perto vai
+      const [l1, l2] = dois(c => { const jj = porId(c, j.id); c.posse = null; c.voo = null; c.bola.p.x = jj.x + 0.3; c.bola.p.z = jj.z; return IA.vaiNaBolaLivre(c, jj); });
+      if (l1) st.livre++;
+      if (l2) st.livreSem++;
+      // o chamado da PRESSÃO (o controlado é o k)
+      const [q1, q2] = dois(c => DF.pressionadorDe(c, 0) === j.id);
+      if (q1) st.press++;
+      if (q2) st.pressSem++;
+      // o alvo de passe do companheiro k com a bola e o analógico para o deslizante
+      const [a1, a2] = dois(c => {
+        const kk = porId(c, k.id), jj = porId(c, j.id);
+        c.posse = kk.id; c.voo = null; c.naMao = null; c.bola.p.x = kk.x + 0.3; c.bola.p.z = kk.z;
+        const dx = jj.x - kk.x, dz = jj.z - kk.z, l = Math.hypot(dx, dz) || 1;
+        kk.imag = 1; kk.imx = dx / l; kk.imz = dz / l; kk.miraAuto = null;
+        return AC.escolherAlvo(c, kk, 'passe')?.id === j.id;
+      });
+      if (a1) st.alvo++;
+      if (a2) st.alvoSem++;
+      passo(w, { x: 0, z: 0, botoes: B.PRESSAO });
+    }
+    reg('E8 a IA não escolhe o deslizante (1º/2º homem, marcação, bola livre, PRESSÃO, alvo de passe)',
+      `${st.p12}, ${st.marca}, ${st.livre}, ${st.press}, ${st.alvo} de ${st.n} passos`, '0 em todos', st.p12 + st.marca + st.livre + st.press + st.alvo === 0 && st.n > 30);
+    info('E8 sem a guarda (o mesmo estado sem o plano)', `${st.p12sem}, ${st.marcaSem}, ${st.livreSem}, ${st.pressSem}, ${st.alvoSem}`, 'mostra cada guarda');
+    reg('E8 na forma ele continua contando (a referência do bloco igual com e sem o plano)', `${st.forma} de ${st.n} diferentes`, '0', st.forma === 0);
+  }
+}
+
+// F1 (o determinismo com carrinhos; a parte F completa vem com as faltas): a mesma semente e as mesmas entradas — o aperto, o
+// analógico e os botões — dão o mesmo hash em duas rodadas
+{
+  const rodar = () => {
+    const w = SIM.copiarMundo(ESTADOS.posse1);
+    const d = porId(w, w.posse), j = linhaPerto(w, d.x, d.z);
+    AC.assumirControle(w, 0, j);
+    const hs = [];
+    for (let i = 0; i < 240; i++) { passo(w, entPara(j, w.bola.p.x, w.bola.p.z, i === 0 || i === 150 ? B.CARRINHO : 0)); hs.push(SIM.hashMundo(w)); }
+    return hs;
+  };
+  const h1 = rodar(), h2 = rodar();
+  const dif = h1.filter((h, i) => h !== h2[i]).length;
+  reg('F1 mesma semente e mesmas entradas com carrinhos: o mesmo hash em 2 rodadas', `${dif} de ${h1.length} diferentes`, '0', dif === 0);
+}
+
+linhas.push(['…', 'B, C, D, E6, F2–F4, G (contato com a bola e com o homem, canhão, Regra 12, bola morta, sorteios, cenas)', 'PENDENTE', 'commits 3–5']);
 if (DETALHE) console.log(tabela.map(l => l.join(' | ')).join('\n') + '\n');
 fim();

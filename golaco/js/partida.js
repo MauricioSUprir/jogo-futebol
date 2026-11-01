@@ -183,6 +183,9 @@ export function teleportar(j, x, z, rumo) {
   // o pulo do cabeceio e a disputa marcada (cabeceio.js): teletransportado no ar, os pés ficavam no ponto de pouso velho, a
   // até 15 m do corpo, e eram plantados lá (contraprova de 14/10, semente 1008: a montagem do tiro de meta)
   j.cab = null; j.disputaAlta = null;
+  // o carrinho (carrinho.js): de pé no ponto novo — o plano e a altura do quadril saem (sem zerar o quadril, ele subiria do
+  // chão a 1,5 m/s no ponto novo; zerar o de todos mudaria a demo: a altura entra no cabeceio e no mergulho)
+  if (j.carrinho) { j.carrinho = null; j.quadril = null; }
   const c = j.cond;
   if (c) { c.toque = null; c.busca = false; c.ref = null; c.longeDesde = -1; c.ult = null; c.pedalada = null; c.cortePendente = null; c.corteRumo = null; c.puxada = null; }
 }
@@ -265,7 +268,7 @@ function fecharMontagem(m, c, levado) {
     } else {
       let mel = null, dm = Infinity;
       for (const o of m.jogadores) {
-        if (o.time !== t || o.posicao === 'GOL') continue;
+        if (o.time !== t || o.posicao === 'GOL' || o.carrinho) continue; // (no carrinho, deitado: não recebe o controle)
         const d = MD.hypot(o.x - pr.x, o.z - pr.z);
         if (d < dm) { dm = d; mel = o; }
       }
@@ -1358,6 +1361,9 @@ function anunciarAcrescimo(m) {
 
 function fimDoTempo(m) {
   const p = m.partida;
+  // o carrinho em andamento para no apito (carrinho.js congela): no intervalo e no fim o passoPartida só anda o tick — sem
+  // isto a pose deslizaria e levantaria com o corpo parado. O plano congelado sai na saída do 2º tempo (teleportar)
+  for (const j of m.jogadores) if (j.carrinho) j.carrinho.congela = m.tick;
   encerrarParada(m);
   m.golTick = null; m.foraDesde = null;
   p.imped = null;

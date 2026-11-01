@@ -123,7 +123,8 @@ function avaliar(m, t, st, ctrl) {
   // disputa — o toque aéreo dele, marcado, segura a bola mesmo que ela passe antes perto de outro
   const para = m.voo ? m.voo.para : null;
   for (const o of m.jogadores) {
-    if (o.time !== t || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+    // (no carrinho, deitado — carrinho.js —: não disputa a bola alta nem recebe o controle)
+    if (o.time !== t || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador' || o.carrinho) continue;
     pontoDeDisputa(o, _p);
     if (_p.i < 0) continue;
     if (o === ctrl) st.iCtrl = _p.i;
@@ -191,7 +192,7 @@ export function trocaAerea(m) {
     const janela = Math.round(T.janelaMarcado / PASSO);
     const para = m.voo ? m.voo.para : null, b = m.bola.p;
     for (const o of m.jogadores) {
-      if (o.time !== t || o.posicao === 'GOL') continue;
+      if (o.time !== t || o.posicao === 'GOL' || o.carrinho) continue;
       const tq = o.cond && o.cond.toque;
       // (cabeceio na bola rolando, sim.js agendarDisputa: quem vai pular ombro com ombro contra o cabeceio do adversário
       // — j.disputaAlta, sem toque marcado — também é quem disputa pelo time dele)

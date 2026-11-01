@@ -112,14 +112,14 @@ export function pontoInterceptacao(m, j, aPartirDe = null) {
  * chegar antes do recebedor).
  */
 export function vaiNaBolaLivre(m, j) {
-  if (j.posicao === 'GOL') return false;
+  if (j.posicao === 'GOL' || j.carrinho) return false; // (no carrinho, deitado: carrinho.js)
   const v = m.voo;
   if (v && v.para != null && v.time === j.time && v.para !== j.id) return false;
   const b = m.bola;
   const t = o => MD.hypot(o.x - b.p.x, o.z - b.p.z) / o.par.vArrancada;
   const tj = t(j);
   for (const o of m.jogadores) {
-    if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+    if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador' || o.carrinho) continue;
     const to = t(o);
     if (to < tj || (to === tj && o.id < j.id)) return false;
   }
@@ -261,10 +261,11 @@ export function marcacao(m, time, pressiona, meuGol) {
   if (cache && cache.tick === m.tick) return cache;
   const antes = cache?.pares ?? {};
   const humano = m.humanos?.includes(time) ? m.controlado?.[time] : null; // o controlado não segue a IA
+  // (no carrinho — carrinho.js —, deitado: nem marca nem é marcado)
   const livres = m.jogadores.filter(o => o.time === time && o.posicao !== 'GOL' && o !== pressiona
-    && o.papel !== 'parado' && o.papel !== 'marcador' && o.id !== humano);
+    && o.papel !== 'parado' && o.papel !== 'marcador' && o.id !== humano && !o.carrinho);
   const advs = m.jogadores.filter(o => o.time !== time && o.posicao !== 'GOL' && o.papel !== 'parado'
-    && o.papel !== 'marcador' && o.id !== m.posse)
+    && o.papel !== 'marcador' && o.id !== m.posse && !o.carrinho)
     .sort((a, c) => MD.hypot(a.x - meuGol, a.z) - MD.hypot(c.x - meuGol, c.z) || a.id - c.id);
   const alvo = new Map(), pares = {};
   for (const o of advs) {
@@ -294,7 +295,7 @@ function defesa(m, j, d0, lado, extra) {
   if (!maisPerto) {
     let dm = Infinity, atual = null, dAtual = Infinity;
     for (const o of m.jogadores) {
-      if (o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado') continue;
+      if (o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.carrinho) continue;
       const d = MD.hypot(o.x - b.p.x, o.z - b.p.z);
       if (d < dm) { dm = d; maisPerto = o; }
       if (ps && o.id === ps.id) { atual = o; dAtual = d; }

@@ -1757,11 +1757,13 @@ export const DEFESA_HUMANO = {
     pelveDeitado: 0.6,        // m — adversário com a pelve desenhada abaixo disto: o corpo inteiro dele conta (desenho)
     // o DESENHO do corpo deitado (sem fonte numérica: pesquisa §3.4): a perna da bola com o calcanhar a `yBola` m; a dobrada
     // com a coxa no chão para a frente e para fora (`joelho` rad de u, o joelho a `yJoelho` m) e a canela para trás e para
-    // dentro (`canela` rad de u; o tornozelo à altura de sempre); a mão de apoio no chão atrás do quadril, do lado da dobrada
-    // ([frente, fora, altura] m); o pé da bola sobe até `passoLevanta` m no levantar
+    // dentro (`canela` rad de u; o tornozelo à altura de sempre); a mão de apoio atrás do quadril, do lado da dobrada, com o
+    // antebraço deitado no chão ([frente, fora, altura do punho] m: o cotovelo embaixo do ombro e o antebraço para trás e para
+    // fora — os dedos do corpo novo seguem o antebraço 0,175 m além do punho; com o punho a 0,04 m e o antebraço inclinado
+    // eles entravam até 11 cm no chão, teste-carrinho P1); o pé da bola sobe até `passoLevanta` m no levantar
     yBola: 0.09,
     dobra: { joelho: 50 * Math.PI / 180, canela: 200 * Math.PI / 180, yJoelho: 0.07 },
-    mao: [-0.38, 0.24, 0.04],
+    mao: [-0.56, 0.54, 0.11],
     passoLevanta: 0.12,
   },
   // PRESSÃO (segurar): grava m.pedidoPressao[time] = tick (contrato da Parte 0); o pedido vale até `validade` s depois do

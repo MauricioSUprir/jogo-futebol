@@ -25,6 +25,8 @@ import { mergulhoAtivo, quadroMergulho, maosMergulho, maoDaEspalmada, eixosMergu
 import { alturaSalto } from './bolas-paradas.js';
 import { puloAtivo, quadroPulo, inclinacaoAte } from './cabeceio.js';
 import { quadroReposicao, novoQuadroReposicao } from './reposicao.js';
+// o carrinho (item 34): o quadro puro do plano — as pernas da pose são as do quadro, sem IK (carrinho.js; folha, sem ciclo)
+import { carrinhoAtivo, quadroCarrinho, tempoCarrinho, novoQuadroCarrinho } from './carrinho.js';
 
 export const JUNTAS = [
   'pelve', 'lombar', 'peito', 'pescoco', 'cabeca',
@@ -339,6 +341,8 @@ const _qpulo = { off: 0, w: 0, arco: 0, braco: 0 };
  * passa por baixo do corpo, o pé que pousa).
  */
 export function alturaQuadril(j, m) {
+  // carrinho: a pelve do quadro (cai pela gravidade, deitada no deslize, sobe no levantar; carrinho.js)
+  if (j.carrinho && carrinhoAtivo(j, m.tick)) return quadroCarrinho(j.carrinho, tempoCarrinho(j.carrinho, m.tick), _qcA).h;
   // goleiro na defesa desenhada: a altura do quadro do mergulho (goleiro.js quadroMergulho)
   if (j.posicao === 'GOL' && mergulhoAtivo(j, m.tick)) return quadroMergulho(j.mergulho, m.tick, _qa).h;
   const { hy, hyPulo } = pesEQuadril(j, m);
@@ -353,6 +357,7 @@ export function alturaQuadril(j, m) {
  * quadril é a guardada pela simulação (alturaQuadril), nunca acima do teto deste tick.
  */
 export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
+  if (j.carrinho && carrinhoAtivo(j, m.tick)) return poseCarrinho(j, m, out, info);
   if (j.posicao === 'GOL' && mergulhoAtivo(j, m.tick)) return poseMergulho(j, m, out, info);
   const { s, h, fx, fz, rx, rz, af, al, c, pes, px, pz, qrx, qrz, torcao, hy: teto, hyPulo } = pesEQuadril(j, m);
   // goleiro na reposição com a mão (C5; reposicao.js quadroReposicao, a mesma conta da bola do estado): o corpo desce e
@@ -608,6 +613,125 @@ export function poseMergulho(j, m, out, info) {
       info.pes[p].apoio = pe.apoio;
       info.pes[p].x = ax; info.pes[p].y = ay; info.pes[p].z = az;
       info.pes[p].alvoX = tx; info.pes[p].alvoZ = tz;
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- carrinho (item 34)
+const _qcA = novoQuadroCarrinho(), _qcP = novoQuadroCarrinho();
+// a cabeça a no máximo CAB_MAX da linha peito → pescoço (abaixo do POSTURA.cabecaMax 17° do corpo novo, render/esqueleto.js:
+// o passo 3 da postura não age e o corpo novo = o manequim); tangente pela conta exata do ângulo
+const CAB_MAX = 16 * Math.PI / 180;
+const CAB_TAN = MD.sin(CAB_MAX) / MD.cos(CAB_MAX);
+// o braço de apoio: quase em pé (APOIO rad para trás e para fora do vertical: a mão a 0,28 m abaixo do ombro, com o
+// antebraço deitado); o abre do balanço da pose normal (0,12 rad); o quanto o antebraço passa por fora na transição
+const APOIO = 15 * Math.PI / 180, SEN_APOIO = MD.sin(APOIO), COS_APOIO = MD.cos(APOIO);
+const SEN_ABRE = MD.sin(0.12), COS_ABRE = MD.cos(0.12), BOLHA = 0.7;
+
+/**
+ * Pose de quem dá o carrinho (pura; só LÊ o plano — carrinho.js quadroCarrinho): a pelve, os quadris, os joelhos, os
+ * tornozelos e as pontas são COPIADOS do quadro, sem IK — a perna que a simulação confere com a bola e com o adversário é
+ * a desenhada. O tronco sai da inclinação da corrida no aperto (a da pose normal: 0,03 + 0,022·v) para trás (q.incl) e
+ * caído para o lado da perna dobrada (q.rol), pelo peso deitado (q.w: smoothstep da queda e do levantar); a cabeça olha a
+ * bola a ≤ 16° da linha do tronco; o braço do lado da perna dobrada apoia a mão no chão (q.mao) e o outro abre para cima e
+ * para a frente (equilíbrio), saindo do balanço da passada no aperto (j.fase fica parada no carrinho). info.pes: o apoio
+ * do quadro (nenhum no deslize; o dobrado plantado no levantar).
+ */
+export function poseCarrinho(j, m, out, info) {
+  const c = j.carrinho;
+  const q = quadroCarrinho(c, tempoCarrinho(c, m.tick), _qcP);
+  const w = q.w, px = q.x, py = q.h, pz = q.z;
+  por(out, J.pelve, px, py, pz);
+  const fx = MD.cos(q.yaw), fz = MD.sin(q.yaw), rx = -fz, rz = fx;
+  // ---- tronco: o eixo "para cima" (unitário) pela inclinação para a frente/trás (pitch) e para o lado (roll)
+  const v0 = Math.sqrt(c.vx0 * c.vx0 + c.vz0 * c.vz0);
+  const pitch = clamp(0.03 + 0.022 * v0, -0.3, 0.42) * (1 - w) - q.incl;
+  const roll = q.rol * q.lado;
+  const sp = MD.sin(pitch), cp = MD.cos(pitch), sr = MD.sin(roll), cr = MD.cos(roll);
+  const ux = fx * sp * cr + rx * sr, uy = cp * cr, uz = fz * sp * cr + rz * sr;
+  const lomb = [px + ux * 0.17, py + uy * 0.17, pz + uz * 0.17];
+  por(out, J.lombar, lomb[0], lomb[1], lomb[2]);
+  const pei = [lomb[0] + ux * 0.22, lomb[1] + uy * 0.22, lomb[2] + uz * 0.22];
+  por(out, J.peito, pei[0], pei[1], pei[2]);
+  const pes2 = [pei[0] + ux * 0.13, pei[1] + uy * 0.13, pei[2] + uz * 0.13];
+  por(out, J.pescoco, pes2[0], pes2[1], pes2[2]);
+  // ---- cabeça: de pé um pouco à frente (a da pose normal); deitado, para a bola — a ≤ CAB_MAX da linha do tronco
+  {
+    const b = m.bola.p;
+    let dx = b.x - pes2[0], dy = b.y - pes2[1], dz = b.z - pes2[2];
+    const du = dx * ux + dy * uy + dz * uz;
+    dx -= du * ux; dy -= du * uy; dz -= du * uz;
+    const dl = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    // a componente perpendicular ao tronco (para a bola), limitada pelo ângulo: tan ≤ CAB_TAN (para trás do tronco, o máximo)
+    const k = dl > 1e-9 ? (du > 0 ? Math.min(CAB_TAN, dl / du) : CAB_TAN) / dl : 0;
+    let hx = ux * 0.13 + (fx * 0.02 * (1 - w) + dx * k * 0.13 * w);
+    let hy = uy * 0.13 + dy * k * 0.13 * w;
+    let hz = uz * 0.13 + (fz * 0.02 * (1 - w) + dz * k * 0.13 * w);
+    // a soma das duas (a de pé e a da bola) também a ≤ CAB_MAX
+    const hu = hx * ux + hy * uy + hz * uz;
+    const tx = hx - hu * ux, ty = hy - hu * uy, tz = hz - hu * uz, tl = Math.sqrt(tx * tx + ty * ty + tz * tz);
+    if (tl > hu * CAB_TAN && tl > 1e-12) {
+      const f = hu * CAB_TAN / tl;
+      hx = hu * ux + tx * f; hy = hu * uy + ty * f; hz = hu * uz + tz * f;
+    }
+    por(out, J.cabeca, pes2[0] + hx, pes2[1] + hy, pes2[2] + hz);
+  }
+  // ---- ombros e braços: a direita do tronco (perpendicular ao eixo, inclinada com o roll). Cada braço pelas DIREÇÕES do
+  // braço e do antebraço (comprimentos exatos), da passada no aperto à deitada pelo peso deitado — sem a IK por um polo: o
+  // polo que vira com o peso passava paralelo ao braço e o cotovelo girava 60–80° num quadro (teste-carrinho P3)
+  const rd = rx * ux + rz * uz;
+  let ex = rx - rd * ux, ey = -rd * uy, ez = rz - rd * uz;
+  const el = Math.sqrt(ex * ex + ey * ey + ez * ez) || 1;
+  ex /= el; ey /= el; ez /= el;
+  // o balanço da passada no aperto (as contas da pose normal; a fase fica parada no carrinho)
+  const amp = lerp(0.25, 0.95, clamp(v0 / 7, 0, 1)), flex = lerp(0.35, 1.45, clamp(v0 / 5, 0, 1));
+  const ld = q.lado; // o lado da perna dobrada (−1 esquerda, +1 direita): o braço de apoio
+  const bolha = 4 * w * (1 - w); // o antebraço passa por fora (nunca alinhado ao braço: a torção do corpo novo pula)
+  for (let lado = -1; lado <= 1; lado += 2) {
+    const iO = lado < 0 ? J.ombroE : J.ombroD, iC = lado < 0 ? J.cotoveloE : J.cotoveloD, iM = lado < 0 ? J.maoE : J.maoD;
+    const ox = pei[0] + ux * 0.07 + ex * lado * 0.19, oy = pei[1] + uy * 0.07 + ey * lado * 0.19, oz = pei[2] + uz * 0.07 + ez * lado * 0.19;
+    por(out, iO, ox, oy, oz);
+    // de pé: o braço e o antebraço do balanço (as direções da pose normal)
+    const balanco = amp * MD.sin(Math.PI * j.fase) * (lado < 0 ? 1 : -1), a2 = balanco + flex;
+    let bx = fx * MD.sin(balanco) + rx * lado * SEN_ABRE, by = -MD.cos(balanco) * COS_ABRE, bz = fz * MD.sin(balanco) + rz * lado * SEN_ABRE;
+    let ax = fx * MD.sin(a2) + rx * lado * 0.08, ay = -MD.cos(a2), az = fz * MD.sin(a2) + rz * lado * 0.08;
+    let l = Math.sqrt(bx * bx + by * by + bz * bz) || 1; bx /= l; by /= l; bz /= l;
+    l = Math.sqrt(ax * ax + ay * ay + az * az) || 1; ax /= l; ay /= l; az /= l;
+    // deitado: o de apoio (lado da perna dobrada) com o braço quase em pé e o antebraço deitado no chão para o ponto q.mao
+    // (atrás e para fora: a mão a ~0,28 m abaixo do ombro); o outro aberto para o lado e para a frente, o antebraço para cima
+    let b1x, b1y, b1z, a1x, a1y, a1z;
+    if (lado === ld) {
+      let hx = q.mao.x - ox, hz = q.mao.z - oz;
+      const hl = Math.sqrt(hx * hx + hz * hz) || 1; hx /= hl; hz /= hl;
+      b1x = hx * SEN_APOIO; b1y = -COS_APOIO; b1z = hz * SEN_APOIO;
+      a1x = hx; a1y = 0; a1z = hz;
+    } else {
+      b1x = ex * lado * 0.7 + fx * 0.4; b1y = ey * lado * 0.7 + 0.1; b1z = ez * lado * 0.7 + fz * 0.4;
+      a1x = fx * 0.6 + ex * lado * 0.2; a1y = 0.6 + ey * lado * 0.2; a1z = fz * 0.6 + ez * lado * 0.2;
+    }
+    l = Math.sqrt(b1x * b1x + b1y * b1y + b1z * b1z) || 1; b1x /= l; b1y /= l; b1z /= l;
+    l = Math.sqrt(a1x * a1x + a1y * a1y + a1z * a1z) || 1; a1x /= l; a1y /= l; a1z /= l;
+    bx += (b1x - bx) * w; by += (b1y - by) * w; bz += (b1z - bz) * w;
+    ax += (a1x - ax) * w + ex * lado * BOLHA * bolha; ay += (a1y - ay) * w + ey * lado * BOLHA * bolha; az += (a1z - az) * w + ez * lado * BOLHA * bolha;
+    l = Math.sqrt(bx * bx + by * by + bz * bz) || 1; bx /= l; by /= l; bz /= l;
+    l = Math.sqrt(ax * ax + ay * ay + az * az) || 1; ax /= l; ay /= l; az /= l;
+    const cx = ox + bx * BRACO, cy = oy + by * BRACO, cz = oz + bz * BRACO;
+    por(out, iC, cx, cy, cz);
+    por(out, iM, cx + ax * ANTEBRACO, cy + ay * ANTEBRACO, cz + az * ANTEBRACO);
+  }
+  // ---- pernas: COPIADAS do quadro (a perna da simulação)
+  for (let p = 0; p < 2; p++) {
+    const H = q.qd[p], K = q.jo[p], T = q.to[p], P = q.po[p];
+    por(out, p === 0 ? J.quadrilE : J.quadrilD, H.x, H.y, H.z);
+    por(out, p === 0 ? J.joelhoE : J.joelhoD, K.x, K.y, K.z);
+    por(out, p === 0 ? J.tornozeloE : J.tornozeloD, T.x, T.y, T.z);
+    por(out, p === 0 ? J.pontaE : J.pontaD, P.x, P.y, P.z);
+    if (info) {
+      info.pes = info.pes || [{}, {}];
+      info.pes[p].apoio = p === 0 ? q.apoio0 : q.apoio1;
+      info.pes[p].x = T.x; info.pes[p].y = T.y; info.pes[p].z = T.z;
+      info.pes[p].alvoX = T.x; info.pes[p].alvoZ = T.z;
     }
   }
   return out;

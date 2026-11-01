@@ -4,7 +4,8 @@
 // SEM IK depois, e a perna que a simulação confere com a bola e com o adversário é, bit a bit, a perna desenhada.
 // Módulo FOLHA: só config.js, matdet.js e mat.js (o anim.js importa este; nada do jogo é importado aqui). Sem three.js
 // nem DOM; trigonometria só pelo MD (matdet.js: o online compara o hash dos dois aparelhos; teste-math-proibido). Nada
-// aqui sorteia. Contrato: CONTRATOS.md "Carrinho (item 34)"; constantes em config.js DEFESA_HUMANO.carrinho.
+// aqui sorteia. Contrato: CONTRATOS.md "Carrinho (item 34)"; constantes em config.js DEFESA_HUMANO.carrinho. O disparo (o
+// aperto, as guardas e a bola prevista da ajuda de mira) mora no defesa.js carrinho; a pose no anim.js poseCarrinho.
 //
 // Fases (t em s desde o aperto, o tick0; o quadro de t = 0 é o corpo no aperto):
 //   0 queda     0 → tAr       a pelve cai pela gravidade (h0 → hImpacto) em QUALQUER entrada; a velocidade horizontal
@@ -44,9 +45,12 @@ const DA_F = DK_F + HA * MD.cos(C.dobra.canela), DA_O = DK_O + HA * MD.sin(C.dob
 const POLO_FORA = 0.1, POLO_CIMA = 0.05;
 // o joelho nunca abaixo disto (o do desenho deitado, menos a folga do arredondamento): joelhoFora
 const Y_JOELHO_MIN = C.dobra.yJoelho - 1e-6;
-// a ponta do pé: de pé, a do anim.js (0,17 m à frente, 0,055 abaixo do tornozelo, y ≥ 0,025); deitado, `PONTA` m pela
-// direção da canela com a sola para a bola, y ≥ 0,03
+// a ponta do pé: de pé, a do anim.js (0,17 m à frente, 0,055 abaixo do tornozelo, y ≥ 0,025: PONTA_DE_PE m do tornozelo);
+// deitado, `PONTA` m de través com a canela (a da bola a 45° para cima, com a sola para a bola; a dobrada para fora), y ≥ 0,03
 const PONTA_PE = 0.17, PONTA_BAIXO = 0.055, PONTA = 0.19, PONTA_Y0 = 0.025, PONTA_Y1 = 0.03;
+const PONTA_DE_PE = Math.sqrt(PONTA_PE * PONTA_PE + PONTA_BAIXO * PONTA_BAIXO);
+// a elevação da ponta: de pé (−0,055 m em 0,17: −17,9°), deitada a da bola (45° para cima) e a dobrada (0)
+const EL_PE = -MD.atan2(PONTA_BAIXO, PONTA_PE), EL_BOLA = Math.PI / 4, MEIO_PI = Math.PI / 2;
 
 /** Os raios das cápsulas das pernas que o contato confere (coxa, canela, chuteira): o maior de cada uma no SEGMENTOS do
  * anim.js (o teste-carrinho confere que são os mesmos). */
@@ -410,12 +414,20 @@ export function quadroCarrinho(c, t, q) {
     const J = q.jo[k], T = q.to[k];
     joelho2Ossos(H.x, H.y, H.z, H.x + ax, H.y + ay, H.z + az, px, py, pz, J, T);
     joelhoFora(H, T, J, Y_JOELHO_MIN);
-    // a ponta: a de pé (pela frente do pé) → a deitada (pela canela), pelo peso deitado
-    const cx = (T.x - J.x) / L2, cy = (T.y - J.y) / L2, cz = (T.z - J.z) / L2;
-    const P = q.po[k];
-    P.x = T.x + pcx * PONTA_PE * (1 - w) + cx * PONTA * w;
-    P.y = T.y - PONTA_BAIXO * (1 - w) + cy * PONTA * w;
-    P.z = T.z + pcz * PONTA_PE * (1 - w) + cz * PONTA * w;
+    // a ponta: a de pé (pela frente do pé, 0,055 m para baixo) → a deitada, pelo peso deitado, girando o ÂNGULO (o rumo e a
+    // elevação; uma soma de vetores passava perto de zero quando o corpo vira muito na queda — o pé apontava para o chão e o
+    // corpo novo o enterrava 10 cm). Deitada, o pé fica de través com a canela: o da bola a 45° para CIMA e para a frente (o
+    // calcanhar no chão, a sola para a bola; a canela quase deitada para a frente: ~40° entre as duas), o dobrado deitado no
+    // chão para FORA do lado dele (a canela para trás e para dentro). Pela canela (o pé no prolongamento dela) o esqueleto do
+    // corpo novo degenerava — o eixo do pé paralelo ao da canela não dá a torção da perna (render/esqueleto.js basePe/membro):
+    // a coxa e a canela da perna da bola giravam 180° num quadro no começo e no fim do deslize e o pé dobrado virava 100–160°
+    // na queda (teste-carrinho P3 O2: 6,8% dos quadros). O rumo vai pelo caminho do corpo (o que falta do giro do yaw) + o
+    // do pé em relação ao corpo, sem o atalho do normAng que trocaria de lado no meio da queda.
+    const giroResto = t < c.tq ? normAng(yawU - c.rumo0) * (1 - sm(t / c.tq)) : 0;
+    const rp = pf + w * (giroResto + normAng((k === b ? 0 : s * MEIO_PI) - dp));
+    const el = EL_PE + ((k === b ? EL_BOLA : 0) - EL_PE) * w, ce = MD.cos(el);
+    const P = q.po[k], L = PONTA_DE_PE + (PONTA - PONTA_DE_PE) * w;
+    P.x = T.x + MD.cos(rp) * ce * L; P.y = T.y + MD.sin(el) * L; P.z = T.z + MD.sin(rp) * ce * L;
     const yMin = PONTA_Y0 + (PONTA_Y1 - PONTA_Y0) * w;
     if (P.y < yMin) P.y = yMin;
   }
@@ -423,4 +435,49 @@ export function quadroCarrinho(c, t, q) {
   const ap0 = lev && (d === 0 || t >= tF), ap1 = lev && (d === 1 || t >= tF);
   q.apoio0 = ap0; q.apoio1 = ap1;
   return q;
+}
+
+// ------------------------------------------------------------------ o corpo na simulação (o molde do mergulho)
+// sim.js: no passo 2 o corpo de quem tem o plano anda pelo quadro (passoCarrinho, no lugar da locomoção) e depois das
+// trombadas volta a ele (fixarCarrinho: o carrinho não é empurrado); os pés são os do quadro (pesCarrinho, no lugar da
+// passada). Tudo pelo quadro do PRÓXIMO tick (o laço do passo incrementa m.tick no fim), como goleiro.js passoMergulho.
+
+const _qs = novoQuadroCarrinho();
+
+/** O corpo de j no quadro do próximo tick: centro, velocidade (a do quadro) e rumo; sem giro, aceleração nem inversão. */
+export function passoCarrinho(m, j) {
+  const c = j.carrinho;
+  const q = quadroCarrinho(c, tempoCarrinho(c, m.tick + 1), _qs);
+  j.x = q.x; j.z = q.z; j.vx = q.vx; j.vz = q.vz;
+  j.rumo = q.yaw; j.giro = 0; j.ax = 0; j.az = 0; j.inv = false;
+}
+
+/** Recoloca o centro E a velocidade do quadro depois das trombadas (sim.js colisaoCorpos): o carrinho não é empurrado. */
+export function fixarCarrinho(m, j) {
+  const c = j.carrinho;
+  const q = quadroCarrinho(c, tempoCarrinho(c, m.tick + 1), _qs);
+  j.x = q.x; j.z = q.z; j.vx = q.vx; j.vz = q.vz;
+}
+
+/**
+ * Os pés de j no carrinho (no lugar da passada; o pesMergulho do goleiro): o pé apoiado no quadro é PLANTADO no tornozelo
+ * do quadro (o rumo do pé = o do corpo: a pose normal seguinte começa igual; faseApoio pela j.fase, que fica parada no
+ * carrinho); no ar (deslizando com o corpo, de lado no chão) apoio = false com o pé desenhado (tx, ty, tz) no tornozelo do
+ * quadro. No fim os dois ficam plantados e v = 0 (a locomoção volta dali).
+ */
+export function pesCarrinho(m, j) {
+  const c = j.carrinho;
+  const q = quadroCarrinho(c, tempoCarrinho(c, m.tick + 1), _qs);
+  for (let p = 0; p < 2; p++) {
+    const pe = j.pes[p], a = q.to[p], apoio = p === 0 ? q.apoio0 : q.apoio1;
+    if (apoio) {
+      if (!pe.apoio || pe.x !== a.x || pe.z !== a.z) {
+        pe.apoio = true; pe.x = a.x; pe.z = a.z; pe.rumo = q.yaw; pe.faseApoio = j.fase - (p === 0 ? 0 : 1);
+        pe.lx = a.x; pe.lz = a.z; pe.lrumo = q.yaw; pe.bx = a.x; pe.bz = a.z; pe.gx = a.x; pe.gz = a.z;
+        pe.chegou = false; pe.pendente = false; pe.k = 0; pe.puxa = 0;
+      }
+    } else pe.apoio = false;
+    pe.tx = a.x; pe.ty = a.y; pe.tz = a.z; pe.ox = 0; pe.oz = 0;
+  }
+  if (m.tick + 1 >= c.fim) { j.vx = 0; j.vz = 0; }
 }
