@@ -651,3 +651,87 @@ que garanta o teto do celular em QUALQUER plano e estádio.
   resto de um quadro para o outro sem corte foi 4,7 mil (a organizada, com 20 mil de folga): a folga de um quadro é a do
   alvo (2,5 mil) mais a da subida (2 mil) — com o resto colado no alvo e um salto maior que 4,5 mil, um quadro pode passar
   dos 130 mil até a descida do quadro seguinte (não visto nas cenas medidas).
+
+## 16. O impostor octaédrico da torcida e a densidade real perto (item 69 da FILA, PR 3 de 4; `js/render/impostor-dados.js`, `impostor.js`, `torcida.js`, `torcedor3d.js`, `cadeiras3d.js`)
+
+Pedido do dono (29/10): "cadeiras parecidas com as reais e torcida 3D, em todos os estádios"; plano do PR 3 na FILA: "LOD:
+impostor octaédrico assado NA CARGA a partir do 3D, no lugar do atlas SDF; a escolha é por bloco, pelos px na tela, com
+histerese e teto; perto da câmera, densidade real (1 por cadeira)". Até aqui o torcedor que não era 3D era um QUADRO tirado
+de um atlas SDF desenhado por código: 3 cores chapadas (camisa, pele, cabelo/calça), a luz do setor inteiro e sempre virado
+para a lente (de lado, todos olhavam a câmera, não o campo). Perto, nos genéricos grandes, um quadro valia até 3,5 lugares
+e as cadeiras 3D mostravam os vazios.
+
+**Fontes e o que foi aproveitado de cada uma**
+- **Ryan Brucks, "Octahedral Impostors" (shaderbits.com, 18/03/2018; o Impostor Baker do Fortnite)**: as fotos do objeto
+  tiradas dos VÉRTICES de uma grade virtual sobre um octaedro ("each vertex on the grid will become a rendered frame"); o
+  HEMI-octaedro dobra a resolução quando a vista nunca vem de baixo; a foto mais perto num sprite "gira loucamente" e estala
+  — a mistura das 3 fotos do triângulo da grade (o quadrado em que a direção cai e a diagonal que troca o vizinho da direita
+  pelo de baixo; na foto exata ela pesa 1) tira o estalo; a "projeção virtual" das 3 fotos é feita no VERTEX shader (o
+  sprite comum, sem UV); 8 × 8 fotos para as árvores pequenas do Fortnite, 12 × 12 para as grandes; no celular, atlas de
+  1024; o recorte do sprite pela união do alfa de todas as fotos. → `impostor-dados.js` (`codificar`/`decodificar`,
+  `quadros` com os mesmos pesos, `reprojetar`, `IMPOSTOR_GLSL`; tudo no vertex shader: o fragment shader só lê 3 fotos e
+  mistura); 6 × 6 fotos na Média (o celular: atlas de 480 × 768) e 8 × 8 na Alta (896 × 1408); o quadro do torcedor é o
+  RETÂNGULO da união da figura em todas as fotos (mais 1,5 texel de margem), não o círculo da esfera. Não aproveitado: a
+  profundidade (o "pixel depth offset" e o paralaxe — caros no celular e o próprio autor diz que só ficam bons com muito
+  mais fotos); no lugar dela o canal guarda a ALTURA do pixel (a sombra da fileira da frente nas pernas).
+- **O polo inclinado (decisão nossa a partir do hemi-octaedro do Brucks)**: o hemisfério de cima (o das árvores) deixa de
+  fora as câmeras que olham a torcida DE BAIXO — a do gol (−22° nas fileiras de cima atrás dele), as de perto da beira do
+  campo (até ~−40°). A torcida nunca é vista de baixo E de trás (seria de dentro da arquibancada), então o polo do mapa vai
+  inclinado 45° da vertical para a frente (`IMPOSTOR.inclinacao`): de frente o mapa vai de 45° abaixo até em cima, de lado
+  do horizonte para cima, por trás de 45° para cima (o aéreo do pré-jogo); fora dele, a borda (o horizonte inclinado).
+  `teste-torcida` H2 confere as 6 câmeras do jogo dentro do mapa; com o polo para cima (mutação M1) a do gol cai fora.
+- **Dobbyn, Hamill, O'Conor & O'Sullivan, "Geopostors: a real-time geometry/impostor crowd rendering system" (ACM I3D 2005 /
+  TOG)**: a multidão híbrida — o corpo 3D perto, o impostor longe — trocando quando o PIXEL do impostor fica do tamanho do
+  TEXEL (1:1: mais perto, o impostor estica e borra); a imagem de cada foto guarda a NORMAL "with respect to the camera"
+  (a luz dinâmica) e um ID de MATERIAL no alfa (a cor de cada um por região: roupa, pele, cabelo); 17 × 8 vistas; as
+  posições dos vértices de cada quadro pré-calculadas (o que a nossa VAT do PR 2 faz). → cada foto guarda os PESOS das
+  regiões (camisa, pele, cabelo, calça; o resto é o tênis ou o cachecol — pesos, não IDs: a média do mipmap continua
+  certa) e a normal no espaço da foto, e o fragment shader faz a MESMA luz do torcedor 3D (0,6 + 0,44·N·L do sol de dia;
+  0,33 + 0,17·(0,5 + 0,5·n.y) dos refletores à noite; a fileira da frente escurecendo as pernas; a luz falsa dos
+  sinalizadores) com as cores de cada torcedor (as do quadro; a calça e o tênis pela semente, como no 3D). A troca 1:1
+  vale na Alta (a foto tem ~27 px/m sentado e o 3D entra com a cadeira a 10 px = 20 px/m); na Média a foto é menor (18–20
+  px/m, o atlas do celular) e o 3D só entra a 14 px (28 px/m, o orçamento de triângulos manda): o impostor estica até ~1,5×
+  nas fileiras logo antes do 3D (anotado).
+- **three.js forum, "A forest of octahedral impostors" (agargaro, 2025; a biblioteca octahedral-impostor com o
+  InstancedMesh2) e as respostas de Usnul (o Meep Engine)**: o hemi-octaedro como opção (`useHemiOctahedron`), os 3 sprites
+  escolhidos no vertex shader, o recorte pelo alfa (`alphaClamp` 0,45) e, para o mipmap, as MARGENS em volta de cada foto
+  ("margins to support mipmaps without bleeding"); um polígono justo em volta das fotos tira ~30% dos pixels. → a margem de
+  1,5 texel, o mipmap só até o nível 1 e feito DENTRO de cada foto (a média 2 × 2: as fotos têm lado par; o nível 2
+  misturaria fotos vizinhas) — a textura imutável com 2 níveis (`mipmaps` com 2 entradas: o three.js 0.170 cria o
+  `texStorage2D` com `mipmaps.length` níveis, conferido no código dele); o recorte em 0,5 (o do quadro SDF); o retângulo
+  justo da figura (não o polígono: 2 triângulos, o mesmo quadro de hoje).
+- **Unity, Industry Toolkit "Bake Impostor"** (docs.unity3d.com): o hemi-octaedro "when users can't view the model from
+  below". → o mesmo motivo, com o polo inclinado.
+- **Funkhouser & Séquin (1993), Luebke et al. (2003)** (já no §15): a histerese na troca e o custo × benefício por
+  orçamento. → a escolha por BLOCO entra com a cadeira a ≥ `pxEntra` e sai abaixo de `pxSai`; o teto de torcedores em
+  impostor por qualidade (o custo é por PIXEL: 6 leituras de textura contra 1 do quadro — os triângulos não mudam); quem já
+  estava vale 20% mais no teto.
+
+**O que mudou (decisões)**
+- **Assado na carga, na CPU**: o atlas é o torcedor 3D do PR 2 (o nível 0, ~300 triângulos, as 8 poses da VAT; homem e
+  mulher = 16 objetos) rasterizado em JS (2 × 2 amostras por pixel, teste de profundidade, a normal interpolada e virada
+  para a câmera) — o mesmo resultado bit a bit no Node e no navegador, testável no `teste-torcida` sem GPU, sem estado do
+  WebGL nem leitura de volta. Em fatias de até ~15 ms no tempo ocioso (`requestIdleCallback`; o 1º quadro não espera):
+  ~120–150 ms de CPU na Média e ~300 ms na Alta (Node, esta máquina). Fora do download inicial (vem com as cadeiras 3D,
+  sob demanda) e só depois do modelo do torcedor (que já não baixa na Baixa).
+- **O mesmo quadro, o mesmo grupo, a mesma pose**: o impostor é um ramo do programa da torcida (`torcida.js shaders(imp)`):
+  cada torcedor tem um byte `aLod` (0 o quadro SDF, 1 o impostor) e o rumo da cadeira (`aRumo`, 2 bytes); o grupo
+  (o lado de lá, os fundos, o lado de cá) só troca para o programa de dois ramos com alguém em impostor — sem ninguém, o
+  programa de hoje (na TV do celular, sempre). A pose, o pulo, o balanço, a ola e o bandeirão são o MESMO `ESTADO_GLSL`.
+  Nenhum triângulo nem chamada a mais (o mesmo `instanceCount`).
+- **A escolha por bloco**: os blocos da grade das cadeiras (o mesmo bloco das cadeiras 3D); cada torcedor no bloco da sua
+  cadeira pela caixa do bloco (`blocosDosTorcedores`; o rumo também vem dele). Baixa: nada (o atlas nem é assado). Média:
+  impostor com a cadeira a ≥ 6 px (sai a 5), até 6 mil torcedores, só FORA da TV de jogo (replays, comemoração, cartão,
+  pré-jogo, cenas). Alta: ≥ 4 px (sai a 3,3), até 60 mil, também na TV.
+- **A densidade real perto** (`preencherBloco`): nos blocos das cadeiras 3D do quadro (os do orçamento do PR 2) cada cadeira
+  ocupada tem gente — a ocupação é o público do pedido do TM × 96%; entram primeiro os torcedores da própria torcida de nível
+  acima da qualidade sentados nas cadeiras vazias e, se faltar, gente nova só nas cadeiras com alguém a até 1–4 cadeiras na
+  fileira dela ou nas vizinhas (os vazios de propósito — a divisa da visitante, as fileiras debaixo da cobertura, os
+  vomitórios, as manchas do Maracanã — ficam vazios), com o time, o setor e a organizada do vizinho e as cores de outros do
+  bloco. As fileiras em 3D desenham essas pessoas em 3D; as outras fileiras dos blocos vão para a malha PERTO da torcida (o
+  impostor, ou o quadro sem ele, na escala de verdade: 0,94–1,06); os desenhados desses blocos saem do quadro (o `aOculto`
+  do PR 2). O orçamento de triângulos do PR 2 conta 2 triângulos por pessoa da malha perto (`gasto.perto`; a cadeira do
+  plano custa 18 + 2).
+- **Cair sempre para o que funciona**: a Baixa, sem o modelo (a rede), o assamento que falhou e o programa que não compila
+  (a torcida confere os programas do renderizador no quadro seguinte à pré-carga: `diagnostics.runnable` falso) = o quadro
+  SDF de hoje, para sempre naquela página (`teste-estadio` 14e e 15).

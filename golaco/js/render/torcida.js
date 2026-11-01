@@ -277,9 +277,10 @@ export function criarTorcida(cena, opc) {
   const QUAD = () => mesh.children[0].geometry;
   /** A malha PERTO (a densidade real: as pessoas dos blocos das cadeiras 3D fora das fileiras em 3D), com `cap` lugares. */
   function criarPerto(cap) {
+    // o quadro: uma cópia própria (a malha perto pode ser trocada por uma maior — o dispose dela não leva os buffers dos grupos)
     const geo = new THREE.InstancedBufferGeometry();
-    geo.setAttribute('position', QUAD().attributes.position);
-    geo.setIndex(QUAD().index);
+    geo.setAttribute('position', QUAD().attributes.position.clone());
+    geo.setIndex(QUAD().index.clone());
     const at = (nome, k, Tipo, normal) => { const a = new THREE.InstancedBufferAttribute(new Tipo(cap * k), k, normal); a.setUsage(THREE.DynamicDrawUsage); geo.setAttribute(nome, a); };
     at('aPos', 4, Float32Array, false); at('aCamisa', 4, Uint8Array, true); at('aPele', 4, Uint8Array, true); at('aCabelo', 4, Uint8Array, true);
     at('aInfo', 4, Uint8Array, true); at('aOculto', 1, Uint8Array, true); at('aLod', 1, Uint8Array, true); at('aRumo', 2, Int8Array, true);
