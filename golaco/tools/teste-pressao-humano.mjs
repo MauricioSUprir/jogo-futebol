@@ -22,16 +22,19 @@
 //     do #588 — item 70, a corrida das cobranças — ela deu Δ 1,44 em 32 partidas (n = 184). Com 4× a amostra, 128 partidas
 //     (7001–7128, 96 delas fora das do CI), a main deu 1,90 (IC 90% 1,65–2,10) e a corrida 2,01 (1,83–2,23): empate — a
 //     corrida só troca os lances. Tiradas 32 partidas das 128 da main, a conta direta reprovava em 11%, e em blocos de 8
-//     partidas ia de 1,10 a 2,77. E ela quase não via o defeito que mede: com o botão sem somar ninguém (MUTAÇÃO M3 abaixo)
-//     as medianas ainda davam Δ ~1,3–1,5 — o limite caía em cima da mutante (reprovava 76–82% das amostras; pela prova,
-//     ~20%) —, porque a mediana de cada ramo pula entre os dois grupos de casos (o 2º a ~3 m e a ~6–8 m) e mede QUAIS casos
-//     caem de um lado, não quanto cada um chega mais perto. A média pareada separa: main 1,82 (1,66–1,97), corrida 1,95
-//     (1,79–2,10), a mutante MUT3 — (—); pela prova, a main reprova em 0,2% das amostras de 32 partidas e 0% das de 64, a
-//     mutante em MUT3P. A amostra foi de 32 para 64 partidas (3 processos, 3 vagas no rodar-testes).)
+//     partidas ia de 1,10 a 2,77. E ela mal separava o defeito que mede: com o botão sem somar ninguém (MUTAÇÃO M3 abaixo)
+//     as medianas deram Δ 0,73 (IC 90% 0,45–1,27) em 64 partidas, mas 1,50 nas 16 primeiras e 1,33 nas 20 — a mediana de
+//     cada ramo pula entre os dois grupos de casos (o 2º a ~2–3 m e a ~6–8 m) e mede QUAIS casos caem de cada lado, não
+//     quanto cada um chega mais perto; pela prova ela reprovaria a mutante em 84% das amostras de 64 partidas e 18% das de
+//     32. A média pareada separa: main 1,82 (1,67–1,96) e corrida 1,95 (1,79–2,11) nas 128; nas 64 do CI, 1,77 (1,57–1,97)
+//     e 1,95 (1,70–2,20); a mutante 0,84 (0,65–1,02). Pela prova, a main reprova em 0,2% das amostras de 32 partidas e 0%
+//     das de 64; a mutante em 99,2% e 100%. A amostra foi de 32 para 64 partidas, 7001–7064 (3 processos, 3 vagas no
+//     rodar-testes).)
 //     MUTAÇÃO M3 (o botão não soma pressão): o chamado segue como o 1º homem — sem as duas travas do "um a mais", o `excluir`
 //     de defesa.js pressionadorDe (o 1º homem da IA já apertando não é chamado) e o `pedAnt` de ia-tatica.js (o chamado do
-//     tick anterior sai da escolha do 1º homem e o papel dele passa ao próximo). Só sem o `excluir` nada muda (Δ medianas
-//     2,38 e média pareada 1,64 em 20 partidas, o M7 em 99,2%): o pedAnt sozinho já mantém o um a mais;
+//     tick anterior sai da escolha do 1º homem e o papel dele passa ao próximo): Δ 0,84 m, p = 0 — REPROVA (e o M7 cai a
+//     24,5%). Só sem o `excluir` nada muda (média pareada 1,77 e medianas 1,97 em 24 partidas; o M7 em 99,2%): o pedAnt
+//     sozinho já mantém o um a mais;
 //  M4 sem abuso: faltas do time 0 com o botão ≤ 1,5 × as de sem o botão + 2 (todos os casos);
 //  M5 corre de verdade: o escolhido a mais de 4 m do condutor, ≥ 1 s depois de escolhido (o tempo de acelerar: do
 //     parado a 6 m/s leva ~1,1 s no perfil de aceleração do jogo), a ≥ vCorrida em ≥ 80% dos ticks;
