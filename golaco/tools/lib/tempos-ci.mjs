@@ -62,7 +62,7 @@ export const TEMPOS_NODE = {
   'teste-tecnicos.mjs': 482,
   'teste-tecnicos.mjs --so-sinteticos --estresse': 103,
   'teste-impedimento.mjs': 156,
-  'teste-faltas.mjs': 302,
+  'teste-faltas.mjs': 400, // (31/10: a parte D com 48 partidas, eram 36)
   'teste-faltas-sentido.mjs': 330,
   'teste-parado.mjs': 7,
   // (24/10, D1: + os ramos de 3 s de M9–M11 e o M12; localmente 371 → 496 s com 3 processos numa máquina de 4 vCPU)
