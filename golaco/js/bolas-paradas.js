@@ -147,8 +147,9 @@ function escanteio(m, j, out, B, depois) {
   if (p.papel === 'atacaZona') {
     if (depois) pontoEscanteio(m, t, B.sz, p.u, p.w, out);
     else if (B.corrida && B.corrida.estado === 'corre') {
-      // a corrida da cobrança (item 70, P1): quem ataca a zona sai junto com o cobrador — trotando até CORRIDA_COBRANCA
-      // .zonaAntes do caminho; a arrancada para a zona é no chute, como antes
+      // a corrida da cobrança (item 70, P1): quem ataca a zona espera no lugar dele, sem correr (até CORRIDA_COBRANCA
+      // .zonaAntes do caminho: 0 — com 0,15, saindo junto com o cobrador, o gol de escanteio dobrava: config.js); a arrancada
+      // para a zona é no chute, como antes
       const k = CORRIDA_COBRANCA.zonaAntes;
       pontoEscanteio(m, t, B.sz, p.su + (p.u - p.su) * k, p.sw + (p.w - p.sw) * k, out);
       out.correr = false;

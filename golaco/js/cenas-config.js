@@ -143,8 +143,12 @@ export const CENA_FIM = {
   troca: { pares: 1, x: 7, z: 13, lado: 0.56, vel: 1.05 },
   // PR 4 — os TREINADORES se cumprimentam (o plano 'treinador'; só com o gancho tecnicos.js): ELIPSE — os dois entre as
   // áreas técnicas, na frente do túnel (x = ±`x`, `z`), andando um para o outro e apertando a mão (sem o outro, o do
-  // vencedor comemora sozinho na área técnica)
-  treinadores: { x: 1.25, z: 36.4, vel: 1.2 },
+  // vencedor comemora sozinho na área técnica). `margem` (31/10, C7): m — a cópia entra a ≥ isto das bordas da área técnica (a
+  // régua do teste-cenas C). O vivo RECUA até z 39,2 (0,5 m do fundo) com a bola perto da linha de cá — para não tapar a TV
+  // do jogo (tecnicos.js, TECNICOS.recuo) — e a esquiva vai a 0,35 m da frente; na cena isso não vale (a bola morta, a
+  // câmera é outra): a cena começa num corte (o plano do apito) e a cópia é um ator novo parado, então ela entra por dentro
+  // (com a corrida das cobranças, a semente 370 do canhão C chegou ao apito do 1º tempo com o vivo recuando: z 39,17)
+  treinadores: { x: 1.25, z: 36.4, vel: 1.2, margem: 0.6 },
   // (da branch golaco/cenas-jogo) atores
   velAnda: 1.4,               // m/s — os pares caminham para o aperto de mão
   lenteLivre: 4.6,            // m — quem não é do plano sai de perto da câmera (os closes têm a lente fechada)

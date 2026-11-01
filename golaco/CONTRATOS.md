@@ -745,13 +745,21 @@ Constantes em `config.js COMEMORACAO`.
   6,5 m à frente e 2,4 m do lado da TV, 1,6 m de altura, fov 32; contraplano 7,5 m atrás do grupo e 2,5 m de lado (o lado com
   menos gente perto da lente nos próximos 0,8 s, escolhido uma vez no começo do abraço: `c.ladoContra`) olhando 6 m além
   dele a 2,4 m de altura (a torcida atrás do alvo enche o fundo; o resto do time para a 10 m, atrás da câmera), fov 36; reação de frente para quem sofreu (puxada para o lado da
-  TV), 4,8 m, fov 30, girada em volta dele pelo giro escolhido UMA vez no começo da reação (`c.giroReacao`: entre 0, ±0,5 e
-  ±1 rad, o de menor custo — gente na frente da lente a < 2,2 m de profundidade dentro do quadro do PC ou do celular
-  (fov × 0,88, até 2,2:1, o eixo girado para o terço esquerdo) ou perto da linha de visão, integrado na reação INTEIRA (até
-  o fim da cena: na curta ela dura até 2 s), cada um andando reto para o destino dele na cena (a vaga do abraço, a saída,
-  10 m do grupo) e parando nele; o 0 fica se o custo dele for ≤ 0,03 m·s — contraprovas: um defensor andando para a saída
-  passava a < 1 m da lente em ~15% das cenas curtas; (15/10) o custo só olhava o 1º segundo e o quadro do PC e um colega
-  correndo para o abraço passava rente à lente no celular; `teste-comemoracao` 13, com mais 12 gols naturais); câmera nunca além de 5,5 m das linhas nem dentro do gol; celular: fov × 0,88 e o assunto no terço
+  TV), 4,8 m, fov 30, girada em volta dele pelo giro escolhido UMA vez no começo da reação (`c.giroReacao`: entre 0, ±0,5,
+  ±0,75, ±1, ±1,25 e ±1,5 rad, o de MENOS gente colada na lente — o CORPO, um cilindro de 0,6 m em volta do centro
+  (`LENTE.corpo`: os pontos do quadro ficam a até 0,49 m do centro em pé e 0,57 m caído), com o ponto mais perto a < 2,2 m
+  de profundidade e a borda de dentro no quadro do PC ou do celular (fov × 0,88, até 2,2:1, o eixo girado para o terço
+  esquerdo) na profundidade da borda de trás — e, entre os que empatam nisso, o de menor custo
+  somando a gente perto da linha de visão, integrado na reação INTEIRA (até o fim da cena: na curta ela dura até 2 s), cada
+  um andando reto para o destino dele na cena (a vaga do abraço, a saída, 10 m do grupo) e parando nele; o 0 fica se ninguém
+  colar na lente e o custo dele for ≤ 0,03 m·s — contraprovas: um defensor andando para a saída passava a < 1 m da lente em
+  ~15% das cenas curtas; (15/10) o custo só olhava o 1º segundo e o quadro do PC e um colega correndo para o abraço passava
+  rente à lente no celular; (31/10, C7) com o goleiro na linha do gol reagindo e um zagueiro saindo da pequena área para a
+  lente, os 5 giros de antes tinham todos alguém colado nela e a soma única escolhia o de 1 rad, com um corpo rente à borda do
+  quadro do celular a 1,87 m (1 quadro); (01/11, C7) o corpo contava pelo centro + 0,4 m de lado na profundidade do centro,
+  e no CI de 522a4e36 (1º gol da semente 32, com o bloqueio do teste, a lente presa ao lado do gol) o centro ficava 1 cm
+  fora da conta e o joelho, 0,5 m mais fundo, dentro do quadro do celular (13 quadros); `teste-comemoracao` 13, com mais 12
+  gols naturais, e a FOLGA do bloqueio: o jogador parado nunca a < 2,3 m dentro de 1,25 × o quadro); câmera nunca além de 5,5 m das linhas nem dentro do gol; celular: fov × 0,88 e o assunto no terço
   esquerdo. Exporta `ik`/`ikBraco`/`BRACO`/`ANTEBRACO` do `anim.js` (só exportar: o hash não muda).
 - **Golpes e gestos** (todos por IK: os ossos ficam com o comprimento certo): de joelhos (o corpo desliza desacelerando
   até parar no alvo, entre 2,5 e 7 m/s²; pelve na altura de joelhos, joelho 6 cm à frente do quadril a 6,5 cm do chão,
@@ -1679,8 +1687,10 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
 `teste-parado`, `teste-pressao-humano` (pareado, `tools/lib/pressao-pareada.mjs`; 32 partidas, uma por processo — com 8 a
 mesma lógica passava ou reprovava pelo sorteio dos lances; nas 128 partidas da main o M4 ficava acima da meta, 1,58× as
 faltas, e o M5 no limite, 80,6% — o chamado fazia falta demais e corria de menos; corrigido com a chegada pelo perfil de
-aceleração, a curva de chegada, o desvio e o bote sem entrar no corpo: `PESQUISA-ETAPA3.md` §17.3) e `teste-goleiro-regras`
-no padrão;
+aceleração, a curva de chegada, o desvio e o bote sem entrar no corpo: `PESQUISA-ETAPA3.md` §17.3; desde 01/11, 64 partidas
+em 3 processos e o M3 — o "um a mais" — pela média PAREADA caso a caso, reprovando quando o bootstrap por partida PROVA o Δ
+abaixo de 1,5 m: a diferença das medianas de cada ramo quase não via o botão que não soma ninguém; ver o cabeçalho do teste)
+e `teste-goleiro-regras` no padrão;
 `teste-defesa-humano` (a meta antiga do PRESSÃO, que passava sem o botão, virou a pareada); `teste-controles` (celular:
 a marca do PRESSÃO, o PEGAR, o goleiro andando com a bola e o anel); `teste-goleiro-trava` segue medindo o treino;
 `teste-entrada` (O/RB no ataque = PEGAR; preso como PEGAR, vira PRESSÃO quando a fase vira defesa); `teste-taticas` mede a
@@ -2385,7 +2395,11 @@ GOLEIRO.realista`; pesquisa e números em `PESQUISA-ETAPA4.md` §13.
   (`d.bloqueio`, espalmada) — `uniforme ≥ bloqueio.fora` → rebote perto, senão desvio para fora. (C3, 29/10: fora da defesa
   desenhada viva — e na saída no cruzamento que falha — o corpo é o DESENHADO, na `sim.js colisaoCorpoGoleiro`: seção
   "Goleiro espalma bola alta e nada atravessa o goleiro (C3)". O bloqueio daqui, dentro da janela da defesa, segue com os
-  raios de `bloqueio` — pendência anotada lá.)
+  raios de `bloqueio` — pendência anotada lá.) (31/10, ebecbcb7: no mergulho a pelve é também uma esfera de `bloqueio.quadril`
+  0,25 m no quadril — a bola rasteira passava rente por baixo dela, 1,6 cm fora do tronco: `teste-goleiro-realista` A5. Na
+  partida IA × IA ela quase nunca decide: nas 144 do painel do #588, 0 das 43 defesas por bloqueio do batido saíram só dela;
+  e a conta nova do `estadoEspalmada` abaixo — a bola que fica jogável e DEPOIS entra é 2 — mudou a direção de 1 espalmada.
+  O goleiro de 6–16,5 m fora da meta no painel do #588 não veio do goleiro: contrato "Cobranças com corrida".)
 - `estadoEspalmada(b, gx, sentido)` → 0 fora do perigo, 1 jogável na zona perigosa, 2 entra no gol (`espalmadaSegura` =
   0). `espalmar` na partida: sem direção segura, fica a 1ª que não entra no gol (antes a última tentativa valia mesmo
   entrando: 1,6% das espalmadas do canhão iam para o próprio gol); se todas entram, bem aberta para o lado dela, um pouco
@@ -3057,16 +3071,27 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
   carrega como antes (`cobrar`: a mira, o pedido que espera a bola pronta, o tiro de meta com a área livre). `'corre'` — o
   pedido formado (a pessoa soltou o botão; a IA decidiu) fica em `cr.pedido` com a mira do momento (`cr.mira0`: o analógico e
   a mira guardada; no contato valem esses, como se o pedido saísse ali; o passe/lançamento sem mira nenhuma vai no eixo da
-  cobrança) e o cobrador corre. O 1º toque rápido (a janela da cavadinha) e o 2º toque segurado não seguram o começo da
+  cobrança) e o cobrador corre — só com ele parado (|v| ≤ `paradoMax` 0,5 m/s; empurrado numa trombada enquanto espera, o
+  pedido espera ele frear: 01/11, o goleiro que levou uma trombada a 3,8 m/s começava a corrida de costas e a freada com a
+  virada levava o quadril a 0,59 m). O 1º toque rápido (a janela da cavadinha) e o 2º toque segurado não seguram o começo da
   corrida.
 - **A corrida** é a LOCOMOÇÃO do jogo: `corrida.js guiarCorrida` (no `cobrar`, antes do passo) escreve `j.guia`, o pedido de
   movimento que o `sim.js` usa para quem está 'parado' → `passoCorpo`/`passoPassada`; nada de teletransporte, nada de mover
   o corpo ou o pé sem a passada. A velocidade e o RITMO da passada saem de uma regulagem: para k = 0…5 passadas a mais até o
   pé de apoio pousar no ponto dele e a velocidade de cruzeiro a ±`velVaria` da do perfil, o tempo até o corpo chegar ao meio
   do apoio (com a aceleração ou a freada de agora, × `acelUsa`) e o ritmo que põe a fase ali; a escolha é a mais perto da
-  velocidade do perfil com o ritmo natural (dentro de `ritmo` × o da velocidade). O ritmo vai à passada pelo `pousoEm` do
-  pé no ar (`corrida.js saidaCorrida`, chamado pelo `sim.js` no lugar do `saidaParaToque` do cobrador); na última passada o
-  pouso do pé de apoio é marcado para quando o ponto de pouso (`jogador.js pontoPouso`) chega ao dele.
+  velocidade do perfil com o ritmo natural (dentro de `ritmo` × o da velocidade). O ritmo vai à passada pelo `ritmoVoo`
+  (`corrida.js saidaCorrida`, chamado pelo `sim.js` no lugar do `saidaParaToque` do cobrador): **a regulagem estica ou
+  encolhe só o VOO** — com os dois pés no ar o ritmo é o da regulagem; com um pé no chão, o da passada de sempre (natural,
+  adiantado, urgente) ou o da regulagem, o mais rápido (`jogador.js passoPassada`): o apoio nunca fica mais longo que o
+  natural, e o do voo nunca abaixo de `vooMin` 0,8 × o natural (`corrida.js regular`: o tempo de cada escolha com o apoio no
+  natural e o resto no voo, `faseNoAr`/`ritmoDoVoo`). Na última passada o pouso do pé de apoio é marcado para quando o ponto
+  de pouso (`jogador.js pontoPouso`) chega ao dele, pelo ritmo do voo (≥ `vooMin`). No começo da corrida, parado com os
+  dois pés no chão e a fase a ≤ `trocaPe` de um inteiro (|sen π·fase|), a regulagem escolhe o PÉ QUE SAI PRIMEIRO (a fase
+  + 1; o desenho parado é o mesmo): com ele, o pé de apoio pousa ao lado da bola num número par ou ímpar de passos. (01/11:
+  com o ritmo da passada inteira a 0,8× o natural, o pé de apoio da penúltima passada ficava plantado com o corpo a ~4,8 m/s
+  andando ~1 m por cima dele — o `pousoEm` passava por cima do ritmo adiantado/urgente — e o quadril caía até 0,29 m abaixo
+  da altura da corrida, a cabeça até 0,38 m: no replay do gol de pênalti a 1ª pessoa balançava 7,5 cm.)
 - **O contato** (`corrida.js contatoCorrida`, no passo 3 do `sim.js`, no lugar da condução do cobrador — que não roda, nem a
   "bola perdida", enquanto a parada tem corrida: `naCorrida`): o pouso do pé de apoio a ≤ `planta` m do centro da bola marca
   `cr.plantou`; no meio desse apoio (`cr.meio`) — ou com o corpo chegando à altura da bola — sai o toque de ação de sempre
@@ -3089,10 +3114,12 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
 - **O apito** (`partida.js apitoDaCobranca`, também na disputa): no pênalti e no tiro livre com barreira (Regras 13 e 14: a
   cobrança cerimonial), um evento `apito {motivo: 'cobranca'}` por parada, no `pronta` ou quando a corrida da IA começa antes.
   Escanteio, tiro de meta e o tiro livre sem barreira não têm apito.
-- **Escanteio.** Quem ataca a zona sai junto com o cobrador (`bolas-paradas.js escanteio`): trotando até `zonaAntes` (0,15) do
-  caminho da saída à zona; a arrancada para a zona é no chute, como antes. Com 0,35 os atacantes chegavam com um terço do
-  caminho andado e o canhão de escanteios da IA (331, as mesmas sementes) ia de 6,3% (main) a 11,8% de gols e de 39 a 51% de
-  chutes; com 0,15, 5,8% e 43% (com 0, 4,2% e 41%).
+- **Escanteio.** Na corrida, quem ataca a zona ESPERA no lugar dele, sem correr (`bolas-paradas.js escanteio`, `zonaAntes`
+  0); a arrancada para a zona é no chute, como antes. (31/10: saindo junto com o cobrador, trotando até 0,15 do caminho, o canhão
+  de escanteios do `teste-goleiro-realista` — estados do meio da partida, sementes 1001–1008 e 2001–2008 — ia de 5,1% de gols
+  (main, 22 de 435) a 11,2% (57 de 507): ele chegava ao chute já andando, à frente da marcação; parado, 6,9% (33 de 480). Abaixo
+  de ~0,12 ninguém sai do lugar — o ponto fica a menos de `IA.modos.pressa.retoma` —: não há meio-termo que mostre a saída sem a
+  vantagem. Antes, com 0,35, o canhão do `teste-bolas-paradas` ia de 6,3 a 11,8%.)
 - **A disputa de pênaltis** (`disputa.js`): a caminhada termina no ponto de partida da corrida (o mesmo `planejarCorrida`) e a
   cobrança corre de lá; o apito pelo `apitoDaCobranca`; a trava da cobrança não corta a corrida.
 - **Câmera** (`render/bola-parada.js`, só desenho): o quadro é montado pelo ponto da linha bola–alvo na altura do ponto de
@@ -3107,6 +3134,14 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
 - **Decisão para o dono confirmar** (escolha recomendada do item 12 aplicada): a cavadinha segue a regra escrita ("o 2º aperto
   do CHUTE antes de o chute do 1º tocar na bola vira cavadinha") — com a corrida, a janela do 2º toque vale a corrida toda
   (`partida.js correrCobranca`: o pedido guardado é renovado a cada passo; só o CHUTE conta na corrida).
+- **O goleiro de 6–16,5 m (01/11).** No painel do CI (522a4e36) as defesas do goleiro de 6–16,5 m saíram da meta (main 56,2 →
+  61,5%). Não é o goleiro nem a pelve do ebecbcb7 (0 defesas decididas por ela em 144 partidas): sem corrida nenhuma o PR é
+  a main bit a bit. Nas sementes 1001–1144 a divisão por peças pôs o salto na corrida do PASSE de tiro livre (o cobrador segue
+  correndo para a frente depois do passe curto); nas outras amostras o efeito some no sorteio (main 56,2 · 56,7 · 60,8 ×
+  PR 62,4 · 61,6 · 56,5 nas 1001 · 3001 · 5001; 61,5 × 63,5 nas 7001): nas 576 partidas de cada, 58,8 × 61,1%, Δ +2,3
+  pontos, IC95 [−0,4; +5,9], p = 0,053 — empate pela regra da amostra 4× (a main fora da faixa em 2 das 4). Recalibrar o
+  goleiro tiraria ≥ 16,5 m e o total da meta. Nada muda no código; números, o experimento pareado e a proposta (para o dono:
+  o passe de tiro livre sem a corrida) na PESQUISA-ETAPA4.md §16.
 - **Teste `tools/teste-corrida-cobranca.mjs`** (Node, padrão; reprova na main 630960d4). Cenas do COMEÇO de partidas IA × IA
   (as duas versões bit a bit iguais até a 1ª bola parada com corrida) com a parada forçada; 16 por tipo e caminho (IA, demo) +
   a pessoa: C1 anda ≥ 3,5 m no pênalti e ≥ 2 m nos outros; C2 2,5–5 m/s no contato; C3 o pé de apoio plantado a 0,2–0,45 m
@@ -3115,10 +3150,20 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
   PAREADA com a main a ≤ ±0,2 s (os tempos da main em `tools/dados/corrida-ref.json`: `--gravar-referencia <pasta js> --origem "main <commit>"` — mudou
   de propósito o começo da partida IA × IA ou as bolas paradas da main? regravar e dizer no PR); C6 a linha da cobrança
   mirada no soltar × a bola real ≤ 3 cm; C7 a cavadinha com o 2º toque no meio da corrida; C8 dois humanos com o mesmo hash;
-  C9 o apito; C10 o escanteio: quem ataca a zona sai junto (no contato, em média ≥ 3% do caminho da saída à zona) e não chega
-  antes (ninguém além de 20%). As guardas conferidas por mutação (corrida curta, pé de apoio longe, IA sem adiantar, pé
+  C9 o apito; C10 o escanteio: quem ataca a zona espera no lugar (no contato, em média ≤ 2% do caminho da saída à zona) e não
+  chega antes (ninguém além de 20%); C11 sem mergulho: do 1º passo ao contato, o quadril (o da simulação, `j.quadril`) no
+  máximo 0,12 m abaixo de 0,92 m (a altura da corrida do jogo a ~4 m/s) e nenhuma corrida com ≥ 0,15 m, a cabeça desenhada
+  no máximo 0,20 m abaixo da de pé (Lee & Farley 1998: o centro de massa baixa ~7 cm no apoio da corrida; Lees et al. 2010:
+  o joelho de apoio a ~26° no pouso e ~42° no contato; a corrida normal do jogo a 4–5 m/s fica 0,106–0,128 m abaixo de 0,92
+  no p90), nas corridas da IA, da demo, da pessoa e num CANHÃO DE COBRADORES (cada cena com outro jogador de linha do time
+  batendo, como o `colocarNaCorrida`; o C3 e o C4 também neles) — 522a4e36: 0,336 m, 82 de 265 com ≥ 0,15 m, a cabeça
+  0,38 m; agora 0,100 m, 0, 0,16 m. As guardas conferidas por mutação (corrida curta, pé de apoio longe, IA sem adiantar, pé
   arrastado, velocidade alta, a linha sem o pedido, a janela da cavadinha, sem apito, sorteio fora do mundo, a zona parada
-  (`zonaAntes` 0) e a zona adiantada (0,35): cada uma reprova o item dela).
+  (`zonaAntes` 0,15) e a zona adiantada (0,35): cada uma reprova o item dela). O C11: a lógica de 522a4e36 (0,336 m, 82 de 265
+  com ≥ 0,15 m), sem a escolha do pé que sai primeiro (`trocaPe` −1: 0,142 m, e o C3, o C5 do pênalti da demo e o C3 do canhão
+  também) e sem as DUAS guardas do apoio e do voo (o `ritmoVoo` também com um pé no chão e `vooMin` 0: 0,141 m) reprovam; uma
+  delas sozinha cobre a outra nestas cenas (só o apoio esticado: 0,100 m, porque com o voo ≥ 0,8 o apoio estica no máximo a
+  0,93× o natural; só o voo sem piso: 0,110 m) — as duas ficam (o apoio natural é o mecanismo; o piso do voo evita o salto).
 
 ## Modo Livre — o treino N contra M (16/10; contrato)
 Pedido do dono (16/10): "adicione tbm um modo livre, como no fifa, um modo de treino, onde pode ter a quantidade de jogadores
@@ -3747,7 +3792,9 @@ cada lance do anel, comprimido, para vagas fixas — só lê o anel: o hash não
   `proximoBloco`, `tarjaPlacarVisivel`, `infoAtoresFim`. Planos: `apito` 1,5 s → `campo` 2,5 s (o placar pesa no gesto: mãos
   na cintura, nos joelhos, cabeça baixa de quem perde, apertos de mão) → `tunel` 3,5 s (ELIPSE: o funil para o túnel, a
   câmera na boca, o vão das placas aberto) → `torcida` 1,5 s → [lances do 1º tempo] → `estatisticas` 6 s → `geral` 3 s. Os
-  treinadores pelo gancho `tecnicos.js treinadorDoTime` (cópias; os vivos parados).
+  treinadores pelo gancho `tecnicos.js treinadorDoTime` (cópias; os vivos parados), cada cópia a ≥ `CENA_FIM.treinadores.margem`
+  (0,6 m) das bordas da área técnica do time (31/10, C7: o vivo RECUADO para não tapar a TV, z 39,2, ou na esquiva fica mais
+  perto da borda; a cena começa num corte e a cópia entra por dentro, parada; também no fim de jogo).
 - **Página** (`main.js`): o evento `intervalo` vira a cena (na fila, depois do replay do gol do último lance e do cartão do
   último apito); `seguraIntervalo()` segura o laço no tick do evento até o `geral`; ali o laço solta, os 3 s de
   `PARTIDA.intervalo` correm por baixo com o desenho ainda da cena (o campo vazio) e a `saida` do 2º tempo acaba a cena —

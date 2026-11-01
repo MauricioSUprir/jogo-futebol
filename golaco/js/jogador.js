@@ -275,6 +275,8 @@ const PE_TORTO = 1.2;       // rad — torção máxima do pé plantado: além d
  * (o toque sai sempre do pé livre); parado, o pé que vai tocar não é apressado para pousar.
  * pousoEm (pedalada, sim.js): com o pé `pe` no ar, o ritmo faz ele pousar daqui a pousoEm s.
  * carga (o pulinho do pênalti, corrida.js): o fator de carga desta passada — o pé no chão sai em 2·carga da fase local.
+ * ritmoVoo (a corrida da cobrança, corrida.js saidaCorrida): com os dois pés no ar, o ritmo é este; com um pé no chão, o da
+ * passada de sempre ou este, o mais rápido (o apoio nunca mais longo que o natural).
  *
  * A fase NUNCA salta: o pé no balanço é desenhado pela fase (anim.js), então um salto de fase
  * era um pé que teletransportava. Quando um pé precisa sair antes (ficou para trás, torto, ou
@@ -370,6 +372,13 @@ export function passoPassada(j, comBola, dt, ev, saida = null) {
     // bola) — o passo fica mais lento ou mais rápido, sem salto de fase
     const resta = j.pes[saida.pe].fasePouso - f0;
     if (resta > 0) ritmo = clamp(resta / Math.max(saida.pousoEm, dt), 0.3 * f, PASSADA.ritmoSaidaToque);
+  }
+  if (saida && saida.ritmoVoo != null) {
+    // (a corrida da cobrança, item 70: corrida.js saidaCorrida) a regulagem estica ou encolhe só o VOO (os dois pés no ar);
+    // com um pé no chão, o ritmo da passada — ou o da regulagem, se for mais rápido: o apoio nunca fica mais longo que o
+    // natural (o pé plantado com o corpo andando por cima dele esticava a perna e o quadril caía até ~30 cm)
+    const rv = clamp(saida.ritmoVoo, 0.3 * f, PASSADA.ritmoSaidaToque);
+    ritmo = j.pes[0].apoio || j.pes[1].apoio ? Math.max(ritmo, rv) : rv;
   }
   if (pedido) {
     // tira o pé do toque do chão a tempo (parado: no ritmo certo para sair `em` segundos depois).

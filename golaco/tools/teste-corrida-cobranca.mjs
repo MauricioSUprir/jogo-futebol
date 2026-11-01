@@ -28,9 +28,24 @@
 //  C8 dois humanos (online 1×1): o mesmo jogo nos dois aparelhos — dois mundos com as mesmas entradas (um deles copiado no
 //     meio da corrida) têm o MESMO hash a cada passo, da montagem ao fim do voo;
 //  C9 o apito da cobrança no pênalti e no tiro livre com barreira: um por parada, no pronta ou no começo da corrida da IA.
-//  C10 o escanteio: quem ataca a zona SAI JUNTO com o cobrador (no contato andou em média ≥ 3% do caminho da saída à zona)
-//     e não chega antes (no contato, ninguém além de 20% dele): a arrancada para a zona é no chute, como antes — com 35% do
-//     caminho já andado na corrida o canhão de escanteios da IA ia de 6,3 a 11,8% de gols (331 escanteios; main 6,3%).
+//  C10 o escanteio: quem ataca a zona ESPERA no lugar dele na corrida (no contato andou em média ≤ 2% do caminho da saída à
+//     zona; ninguém além de 20% dele): a arrancada para a zona é no chute, como antes. (31/10: até aqui ele saía junto com o
+//     cobrador — em média ≥ 3% —, com zonaAntes 0,15; no canhão de escanteios do teste-goleiro-realista, estados do meio da
+//     partida, o gol de escanteio ia de 5,1% (main, 22 de 435) a 11,2% (57 de 507), e com ele parado, 6,9% (33 de 480); com
+//     35% do caminho, o canhão do teste-bolas-paradas ia de 6,3 a 11,8%.)
+//  C11 sem mergulho (01/11: na penúltima passada o pé de apoio ficava plantado com o corpo a ~4,8 m/s andando ~1 m por cima
+//     dele — a regulagem esticava o ritmo da passada inteira, o apoio junto — e o quadril caía de 0,92 a 0,63 m em ~0,1 s, a
+//     cabeça de 1,55 a 1,26 m; no replay do gol de pênalti a 1ª pessoa balançava 7,5 cm, o G6 do teste-replay-anel): em cada
+//     corrida, do 1º passo ao contato, a QUEDA DO QUADRIL abaixo de 0,92 m (a altura da corrida do jogo a ~4 m/s, anim.js
+//     0,985 − o agachamento da velocidade) ≤ 0,12 m e nenhuma ≥ 0,15 m, e a da CABEÇA (de pé no ponto de partida → o mínimo)
+//     ≤ 0,20 m. A régua: no apoio da corrida o centro de massa baixa ~7 cm (Lee & Farley 1998, J Exp Biol 201:2935) e o
+//     joelho de apoio do chute está a ~26° no pouso e ~42° no contato (Lees et al. 2010, J Sports Sci 28(8):805) — o quadril
+//     ~2–5 cm abaixo da perna esticada; o desenho da corrida do jogo soma o balanço dele (±3 cm a 4 m/s) e o alcance das
+//     pernas: a corrida normal (IA × IA, main, sementes 3001–3004) fica abaixo de 0,92 m 0,063 m na mediana, 0,106 no p90 e
+//     0,113 no p95 a 4–4,5 m/s (0,078 · 0,128 · 0,137 a 4,5–5 m/s) — a corrida da cobrança não desce mais que a corrida
+//     do jogo na mesma velocidade (o mergulho era 0,29 m). As corridas de todas as partes (A, B) e um
+//     CANHÃO DE COBRADORES (cada cena com outro jogador de linha do time batendo: a distância, o ângulo e a velocidade da
+//     corrida são de cada um — corrida.js fracDoJogador — e o pé de apoio também), que confere também o C3 e o C4 neles.
 //
 //   node tools/teste-corrida-cobranca.mjs                               (lógica do repositório)
 //   node tools/teste-corrida-cobranca.mjs --js <pasta js>                (outra cópia: a main → REPROVA)
@@ -55,6 +70,7 @@ const AN = await imp('anim.js');
 const C = await imp('config.js');
 const BP = await imp('bolas-paradas.js');
 const temCorrida = fs.existsSync(path.join(JS, 'corrida.js'));
+const CO = temCorrida ? await imp('corrida.js') : null;
 const ML = fs.existsSync(path.join(JS, 'mira-linha.js')) ? await imp('mira-linha.js') : null;
 const { PASSO, BOTAO, CAMPO, MIRA, ACOES } = C;
 const MX = CAMPO.meioX, J = AN.J;
@@ -115,7 +131,28 @@ function cena(tipo, k) {
   return { m, t };
 }
 
-const vazio = () => ({ andou: [], v: [], apoio: [], planta: [], tempo: [], gesto: [], zona: [], plantado: 0, razao: 0, pouso: 0, arrasta: 0, n: 0, semCorrida: 0, falhou: 0 });
+const vazio = () => ({ andou: [], v: [], apoio: [], planta: [], tempo: [], gesto: [], zona: [], queda: [], plantado: 0, razao: 0, pouso: 0, arrasta: 0, n: 0, semCorrida: 0, falhou: 0 });
+// C11: a altura do quadril da corrida do jogo a ~4 m/s (anim.js pesEQuadril: 0,985 − 0,03 − 0,05·v/7), a régua da queda
+const QUADRIL_CORRIDA = 0.92;
+/**
+ * O canhão de cobradores (C11): o q-ésimo jogador de linha do time (sem o cobrador escolhido) passa a bater — o mesmo que o
+ * partida.js colocarNaCorrida faz com o escolhido (o plano pelo perfil da parada, ele no ponto de partida, a previsão) — e o
+ * escolhido vai para o lugar dele.
+ */
+function trocarCobrador(m, pr, q) {
+  const c = jog(m, pr.cobrador), cr = pr.corrida;
+  const l = m.jogadores.filter(o => o.time === pr.time && o.posicao !== 'GOL' && o.id !== c.id).sort((a, b) => a.id - b.id);
+  if (!l.length || !CO) return;
+  const n = l[q % l.length];
+  P.teleportar(c, n.x, n.z, n.rumo);
+  const cr2 = CO.planejarCorrida(n, pr.x, pr.z, Math.atan2(cr.uz, cr.ux), cr.perfil);
+  P.teleportar(n, cr2.x0, cr2.z0, cr2.rumo0);
+  n.guia = null; c.guia = null;
+  // (o papel: o cobrador fica 'parado' — o sim.js o move pelo j.guia —, o de antes volta ao dele: partida.js fecharMontagem)
+  const papel = n.papel; n.papel = 'parado'; c.papel = pr.papel; pr.papel = papel;
+  cr2.ticks = CO.estimarTicks(n, cr2);
+  pr.corrida = cr2; pr.cobrador = n.id; m.posse = n.id;
+}
 const _zs = { x: 0, z: 0 }, _zz = { x: 0, z: 0 };
 /** Quem ataca a zona no escanteio pr: [{id, sx, sz, zx, zz}] (a saída e a zona no mundo; bolas-paradas.js pontoEscanteio). */
 function zonasDoEscanteio(m, pr) {
@@ -137,16 +174,22 @@ const _pose = new Float32Array(AN.NJ * 3);
  * o pé de apoio no contato, a patinação dos pés desenhados dele na corrida, o tempo da bola morta à bola rolando e os
  * apitos. ent(m, pr) = a entrada do passo.
  */
-function rodar(m, ent) {
-  const r = { andou: 0, v: NaN, dApoio: NaN, apoiado: false, tempo: NaN, corrida: false, plantado: 0, razao: 0, pouso: 0, arrasta: 0, apitos: 0, tipoVoo: null, pr: null, zona: null };
+function rodar(m, ent, troca = null) {
+  const r = { andou: 0, v: NaN, dApoio: NaN, apoiado: false, tempo: NaN, corrida: false, plantado: 0, razao: 0, pouso: 0, arrasta: 0, apitos: 0, tipoVoo: null, pr: null, zona: null,
+    qMin: Infinity, cab0: NaN, cabMin: Infinity, perfil: null, id: null };
   let zonas = [];
-  let pr = null, ant = null, px = 0, pz = 0, inicio = -1;
+  let pr = null, ant = null, px = 0, pz = 0, inicio = -1, trocou = troca == null;
   for (let i = 0; i < 60 * 15; i++) {
     const p0 = m.parada;
     if (p0 && !p0.rolou) { pr = p0; if (inicio < 0) inicio = p0.inicio; }
+    // o canhão de cobradores (C11): com o plano montado e o cobrador esperando, outro jogador de linha do time bate
+    if (!trocou && pr && pr.corrida && pr.corrida.estado === 'espera') { trocou = true; trocarCobrador(m, pr, troca); }
     const correndo = !!(pr && pr.corrida && pr.corrida.estado === 'corre');
     const c = pr && pr.cobrador != null ? jog(m, pr.cobrador) : null;
-    if (correndo && !r.corrida) { r.corrida = true; px = c.x; pz = c.z; zonas = zonasDoEscanteio(m, pr); }
+    if (correndo && !r.corrida) {
+      r.corrida = true; px = c.x; pz = c.z; zonas = zonasDoEscanteio(m, pr);
+      AN.pose(c, m, _pose); r.cab0 = _pose[J.cabeca * 3 + 1]; r.perfil = pr.corrida.perfil; r.id = c.id;
+    }
     const ev = P.passoPartida(m, ent(m, pr));
     r.apitos += ev.filter(e => e.tipo === 'apito' && e.motivo === 'cobranca').length;
     const c1 = pr && pr.cobrador != null ? jog(m, pr.cobrador) : null;
@@ -154,6 +197,8 @@ function rodar(m, ent) {
       r.andou += Math.hypot(c1.x - px, c1.z - pz); px = c1.x; pz = c1.z;
       // a régua do teste-patinacao no cobrador da corrida (o quadro da montagem não conta: ela teletransporta)
       AN.pose(c1, m, _pose);
+      // C11: o quadril (o guardado pela simulação, o mesmo do desenho) e a cabeça desenhada até o contato
+      if (!(pr.rolou || m.parada !== pr)) { r.qMin = Math.min(r.qMin, c1.quadril ?? Infinity); r.cabMin = Math.min(r.cabMin, _pose[J.cabeca * 3 + 1]); }
       const atu = { t: TORN.map(k => [_pose[k * 3], _pose[k * 3 + 1], _pose[k * 3 + 2]]), sim: c1.pes.map(p => ({ apoio: p.apoio, x: p.x, z: p.z })), v: Math.hypot(c1.vx, c1.vz) };
       if (ant) {
         const v = Math.max(atu.v, ant.v);
@@ -202,6 +247,7 @@ function somar(a, r) {
   if (r.gesto) a.gesto.push(r.gesto);
   if (r.zona && r.zona.length) a.zona.push(r.zona);
   a.andou.push(r.andou); a.v.push(r.v); a.apoio.push(r.dApoio); a.planta.push(r.apoiado ? 1 : 0); a.tempo.push(r.tempo);
+  if (r.corrida && Number.isFinite(r.qMin)) a.queda.push({ q: QUADRIL_CORRIDA - r.qMin, c: r.cab0 - r.cabMin, perfil: r.perfil, id: r.id });
   a.plantado = Math.max(a.plantado, r.plantado); a.razao = Math.max(a.razao, r.razao); a.pouso = Math.max(a.pouso, r.pouso); a.arrasta = Math.max(a.arrasta, r.arrasta);
 }
 
@@ -295,11 +341,11 @@ else {
   }
 }
 {
-  // C10 o escanteio: quem ataca a zona sai junto com o cobrador e não chega antes
+  // C10 o escanteio: quem ataca a zona espera no lugar na corrida (a arrancada é no chute) e não chega antes
   const z = porTipo.escanteio.zona, todos = z.flat(), medias = z.map(media);
-  reg('C10 escanteio: quem ataca a zona sai junto (fração média do caminho da saída à zona no contato) e não chega antes (a maior)',
-    `média ${f2(media(medias))} (menor por escanteio ${f2(min(medias))}) · maior ${f2(max(todos))} (${z.length} escanteios, ${todos.length} atacantes)`,
-    'média ≥ 0,03 · maior ≤ 0,20', z.length >= Math.min(4, NC) && media(medias) >= 0.03 && max(todos) <= 0.2);
+  reg('C10 escanteio: quem ataca a zona espera no lugar na corrida (fração média do caminho da saída à zona no contato) e não chega antes (a maior)',
+    `média ${f2(media(medias))} (maior por escanteio ${f2(max(medias))}) · maior ${f2(max(todos))} (${z.length} escanteios, ${todos.length} atacantes)`,
+    'média ≤ 0,02 · maior ≤ 0,20', z.length >= Math.min(4, NC) && media(medias) <= 0.02 && max(todos) <= 0.2);
 }
 reg('C9 o apito da cobrança: um no pênalti e no tiro livre com barreira, nenhum nos outros', `${apitosRuins} paradas fora disso (${apitosVistos} com apito)`, '0', apitosRuins === 0 && apitosVistos > 0);
 
@@ -429,6 +475,34 @@ if (ML) {
     }
   }
   reg('C8 dois humanos (online 1×1): o mesmo hash nos dois aparelhos, da corrida ao fim', `${iguais ? 'iguais' : 'DIFERENTES'} em ${passos} passos (${corridas} corridas)`, 'iguais · 2 corridas', iguais && corridas === 2 && passos > 0);
+}
+
+// ---------------------------------------------------------------------------------- D. sem mergulho (C11)
+{
+  // o canhão de cobradores: as cenas da parte A (a IA) com outro jogador de linha do time batendo em cada uma
+  const can = vazio();
+  for (const T of TIPOS) {
+    for (let k = 0; k < NC; k++) {
+      const q = cena(T.tipo, k);
+      if (!q) continue;
+      q.m.humanos = [];
+      somar(can, rodar(q.m, () => NADA, k));
+    }
+  }
+  const qs = [...tot.queda, ...pes.queda, ...can.queda];
+  const pior = qs.reduce((a, b) => (b.q > a.q ? b : a), { q: -Infinity });
+  const porPerfil = {};
+  for (const x of qs) (porPerfil[x.perfil] ??= []).push(x.q);
+  const resumo = Object.entries(porPerfil).map(([k, v]) => `${k} ${f2(Math.max(...v))}`).join(', ');
+  const fundas = qs.filter(x => x.q >= 0.15).length, cab = Math.max(...qs.map(x => x.c));
+  reg('C11 sem mergulho na corrida: a queda do quadril abaixo de 0,92 m (pior; por perfil) · corridas com ≥ 0,15 m · a da cabeça (de pé → mínimo)',
+    `${pior.q.toFixed(3).replace('.', ',')} m (${pior.perfil}, id ${pior.id}; ${resumo}) · ${fundas}/${qs.length} (${f2(100 * fundas / Math.max(1, qs.length))}%) · ${f2(cab)} m (${can.queda.length} do canhão de cobradores)`,
+    '≤ 0,12 m · 0 · ≤ 0,20 m', qs.length >= 39 && can.queda.length >= 39 && pior.q <= 0.12 && fundas === 0 && cab <= 0.2);
+  const plantadosC = can.planta.reduce((x, y) => x + y, 0);
+  reg('C11 o canhão de cobradores: o pé de apoio plantado a 0,2–0,45 m (C3) e sem patinar (C4: plantado · salto · pouso · pé plantado andou)',
+    `${f2(min(can.apoio))}–${f2(max(can.apoio))} m, plantado ${plantadosC}/${can.planta.length} · ${f2(can.plantado)} m/s · ${f2(can.razao)} · ${f2(can.pouso)} · ${f2(can.arrasta)} m (não rolou ${can.falhou})`,
+    '0,2–0,45 m, todos · ≤ 0,05 · ≤ 1 · ≤ 1 · 0', can.apoio.length >= 39 && can.falhou === 0 && min(can.apoio) >= 0.2 && max(can.apoio) <= 0.45 && plantadosC === can.planta.length
+      && can.plantado <= 0.05 && can.razao <= 1 && can.pouso <= 1 && can.arrasta === 0);
 }
 
 // ---------------------------------------------------------------------------------- saída

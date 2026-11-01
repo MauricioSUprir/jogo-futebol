@@ -591,6 +591,7 @@ function corpoNaBola(j, tick, p, p1 = null) {
     const s = i === 0 ? p : _pb;
     if (i > 0) { _pb.x = p.x + (p1.x - p.x) * u; _pb.y = p.y + (p1.y - p.y) * u; _pb.z = p.z + (p1.z - p.z) * u; }
     if (ativo) {
+      if (MD.hypot(s.x - q.x, s.y - q.h, s.z - q.z) < R.quadril + rb) return true; // a pelve (31/10: config.js bloqueio.quadril)
       if (distSeg(s, q.x, q.h, q.z, tx, ty, tz) < R.tronco[0] + rb) return true;
       if (distSeg(s, q.x, q.h, q.z, q.a0.x, q.a0.y, q.a0.z) < R.perna + rb || distSeg(s, q.x, q.h, q.z, q.a1.x, q.a1.y, q.a1.z) < R.perna + rb) return true;
     } else if (MD.hypot(s.x - j.x, s.z - j.z) < R.tronco[0] + rb && s.y < R.alto) return true;
@@ -713,15 +714,19 @@ function estadoEspalmada(b, gx, sentido) {
   const E = GOLEIRO.espalmada, c = _be;
   Object.assign(c.p, b.p); c.v.x = _ve.x; c.v.y = _ve.y; c.v.z = _ve.z; c.w.x = 0; c.w.y = 0; c.w.z = 0; c.rolando = false;
   const n = Math.round(E.tConfere / DT), n0 = Math.round(E.tSai / DT);
+  // (31/10: a bola que fica jogável na zona e DEPOIS entra sem ninguém tocar nela — devagar, ou voltando da trave — é gol:
+  // antes a conta parava no 1º passo jogável e dizia 1; no teste-goleiro-realista B4, semente 1007, a espalmada para a
+  // trave voltou da trave e entrou 0,5 s depois. A bola nunca jogável segue igual: o 0 não muda)
+  let jogavel = false;
   for (let i = 1; i <= n; i++) {
     passoBola(c, null);
     // passou da linha de fundo (gol contra ou escanteio) ou da lateral: decidido
-    if ((c.p.x - gx) * sentido > 0) return Math.abs(c.p.z) < CAMPO.gol.largura / 2 + 0.15 && c.p.y < CAMPO.gol.altura + 0.15 ? 2 : 0;
-    if (Math.abs(c.p.z) > CAMPO.meioZ) return 0;
-    if (i < n0) continue;
-    if (c.p.y < E.jogavelAlt && Math.abs(gx - c.p.x) < E.zonaX && Math.abs(c.p.z) < E.zonaZ && MD.hypot(c.v.x, c.v.z) < E.jogavelV) return 1;
+    if ((c.p.x - gx) * sentido > 0) return Math.abs(c.p.z) < CAMPO.gol.largura / 2 + 0.15 && c.p.y < CAMPO.gol.altura + 0.15 ? 2 : jogavel ? 1 : 0;
+    if (Math.abs(c.p.z) > CAMPO.meioZ) return jogavel ? 1 : 0;
+    if (i < n0 || jogavel) continue;
+    if (c.p.y < E.jogavelAlt && Math.abs(gx - c.p.x) < E.zonaX && Math.abs(c.p.z) < E.zonaZ && MD.hypot(c.v.x, c.v.z) < E.jogavelV) jogavel = true;
   }
-  return 0;
+  return jogavel ? 1 : 0;
 }
 
 /** Goleiro deve sair (1×1 da IA ou botão GOLEIRO do humano)? */

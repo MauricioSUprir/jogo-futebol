@@ -43,7 +43,7 @@ export const TEMPOS_NODE = {
   'teste-taticas.mjs': 57,
   'teste-defesa-humano.mjs': 59,
   'teste-aereo-troca.mjs --so canhao': 125,
-  'teste-aereo-troca.mjs --so natural': 913,
+  'teste-aereo-troca.mjs --so natural': 400, // (31/10: com a cobrança das bolas paradas no laço dos dois humanos, ~5,5 disputas por partida: as 120 em ~22 partidas, eram 44–69; estimado)
   'teste-transicao.mjs': 685,
   'teste-defesa-corrida.mjs': 449,
   'teste-intercepta.mjs': 560, // C1: parte A 12 → 96 partidas (10–18 s de CPU cada, 4 processos) + a parte B (~125 s de CPU); estimado
@@ -62,19 +62,19 @@ export const TEMPOS_NODE = {
   'teste-tecnicos.mjs': 482,
   'teste-tecnicos.mjs --so-sinteticos --estresse': 103,
   'teste-impedimento.mjs': 156,
-  'teste-faltas.mjs': 302,
+  'teste-faltas.mjs': 400, // (31/10: a parte D com 48 partidas, eram 36)
   'teste-faltas-sentido.mjs': 330,
   'teste-parado.mjs': 7,
   // (24/10, D1: + os ramos de 3 s de M9–M11 e o M12; localmente 371 → 496 s com 3 processos numa máquina de 4 vCPU)
-  'teste-pressao-humano.mjs': 420,
+  'teste-pressao-humano.mjs': 900, // (01/11: 64 partidas em 3 vagas, eram 32 numa vaga com 3 processos — 652 s no CI do 522a4e36; estimado)
   // (24/10, D2: 12 partidas de 2 × 4 min + o portão + o bootstrap; localmente 65 s com 4 processos numa máquina de 4 vCPU
   // sozinha, 8 s dele no bootstrap. 25/10, D3: 24 partidas, a lógica instrumentada e a seção M; localmente ~200 s com 4
   // processos)
   'teste-ia-corre.mjs --sementes 8': 330,
   // (25/10, D3: 48 partidas de 4 min contra o espelho em 3 processos; localmente ~100 s)
-  'teste-pressao.mjs --humano': 150,
+  'teste-pressao.mjs --humano': 300, // (31/10: 96 sementes, eram 48)
   'teste-goleiro-regras.mjs': 146,
-  'teste-reposicao.mjs': 80, // C5: 6 partidas da demo (o canhão de ~104 reposições) + 4 cenas do gesto; ~77 s aqui com outro processo
+  'teste-reposicao.mjs': 150, // C5: 12 partidas da demo (31/10: eram 6; o canhão de ~200 reposições) + 4 cenas do gesto; estimado
   'teste-goleiro-realista.mjs': 150, // (estimado: 8 sementes do canhão do goleiro em 4 processos, ~100 s na máquina de dev)
   'teste-bolas-paradas.mjs': 237,
   'teste-botoes.mjs': 95,
@@ -85,7 +85,7 @@ export const TEMPOS_NODE = {
   'teste-estadio-forma.mjs': 1,
   'teste-estadio-generico.mjs': 90, // item 69: a grade das cadeiras nos lugares (+~0,15 s por estádio)
   'teste-cadeiras.mjs': 30, // item 69 (estimado: ~20 s aqui sozinho; as 104 genéricas)
-  'teste-corrida-cobranca.mjs': 30, // item 70 P1 (medido: ~15 s aqui com outro processo)
+  'teste-corrida-cobranca.mjs': 30, // item 70 P1 (medido: ~15 s aqui com outro processo; 01/11, + o C11 com o canhão de 75 cobradores: ~19 s)
   'teste-ossos.mjs': 25,
   'teste-lod-humano.mjs': 1,
   'teste-rostos-reais.mjs': 1,

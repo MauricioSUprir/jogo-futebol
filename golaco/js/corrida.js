@@ -11,8 +11,11 @@
 //    pedido de movimento que o sim.js usa para quem está 'parado') → passoCorpo/passoPassada; nada de teletransporte. A
 //    velocidade é a de uma REGULAGEM DA PASSADA: a cada passo, quantas passadas faltam para o pé de apoio pousar no ponto
 //    dele (a fase da passada e o ritmo do jogador.js) com a velocidade mais perto da do perfil; na última passada o pouso é
-//    ajustado no tempo (passoPassada pousoEm: o ritmo, sem salto de fase), como o atleta que ajusta as últimas passadas
-//    pela vista (Lee, Lishman & Thomson 1982);
+//    ajustado no tempo, como o atleta que ajusta as últimas passadas pela vista (Lee, Lishman & Thomson 1982). O ajuste vai
+//    só ao VOO (passoPassada ritmoVoo: com um pé no chão, o ritmo da passada de sempre — ou mais rápido): a passada mais
+//    longa é um voo um pouco mais longo, nunca o pé plantado com o corpo andando por cima dele (01/11: com o ritmo da
+//    passada inteira esticado, o pé de apoio da penúltima passada ficava no chão com o corpo a ~4,8 m/s e o quadril caía de
+//    0,92 a 0,63 m — teste-corrida-cobranca C11); no começo, parado, a regulagem escolhe o pé que sai primeiro;
 //  - o CONTATO (sim.js, no lugar da condução do cobrador): com o pé de apoio plantado ao lado da bola, no meio do apoio (ou o
 //    corpo chegando à altura da bola), o toque de ação de sempre (acoes.js executarAcao) com o pé que bate — o gesto do pé
 //    (conducao.js atualizarGesto) sobe com o toque 'acao' marcado na hora prevista. A bola fica presa no ponto até lá
@@ -279,14 +282,56 @@ export function iniciarCorrida(m, c, cr, p) {
   // passe/lançamento sem mira nenhuma (o analógico solto): a direção é o eixo da cobrança (antes, o rumo do corpo parado
   // no ponto — agora o corpo chega pela corrida, de lado)
   if (p.tipo !== 'chute' && !p.dir && !(c.imag > 0.2) && !c.mira) p.dir = { x: cr.ux, z: cr.uz };
+  // o pé que sai primeiro (parado, com os dois pés no chão): a fase da passada decide qual sai (o de fase local maior) e,
+  // com ela, se o pé de apoio pousa ao lado da bola num número par ou ímpar de passos; a regulagem escolhe entre a fase de
+  // agora e a mesma + 1 (o outro pé sai primeiro) — sem isso, a corrida curta (2,5–3,2 m) do destro saía com 2 ou 4 passos
+  // (o voo esticado ou o ritmo apertado), nunca com 3. Parado o desenho é o mesmo nas duas (o balanço do quadril vai pelo
+  // cos 2π·fase; o desvio de lado e a torção, pelo sen π·fase, só trocam de sinal: com |sen π·fase| ≤ trocaPe, ≤ 5 mm; o
+  // cobrador levado ao ponto de partida tem a fase 0)
+  const p0 = c.pes[0], p1 = c.pes[1];
+  if (p0.apoio && p1.apoio && Math.abs(MD.sin(Math.PI * c.fase)) <= CC.trocaPe) {
+    const Dl = (cr.mx - c.x) * cr.dx + (cr.mz - c.z) * cr.dz, s = MD.hypot(c.vx, c.vz);
+    if (Dl > 0 && regular(c, cr, c.fase + 1, s, Dl, _reg2).nota < regular(c, cr, c.fase, s, Dl, _reg).nota) {
+      c.fase += 1;
+      p0.faseApoio = 2 * Math.floor(c.fase / 2); p1.faseApoio = 1 + 2 * Math.floor((c.fase - 1) / 2);
+    }
+  }
   cr.supApoio = c.pes[cr.ps].apoio;
   c.pedido = null; c.carga = null;
 }
 
-/** Fase que falta para o pé de apoio pousar de novo (no ar: o pouso marcado; no chão: depois do passo do outro pé). */
-function faseAtePouso(c, ps) {
+/**
+ * Fase que falta para o pé de apoio pousar de novo com a passada na fase `fase` (no ar: o pouso marcado; no chão: depois do
+ * passo do outro pé).
+ */
+function faseAtePouso(c, ps, fase) {
   const pe = c.pes[ps];
-  return pe.apoio ? 2 - faseLocal(c.fase, ps) : Math.max(0.02, pe.fasePouso - c.fase);
+  return pe.apoio ? 2 - faseLocal(fase, ps) : Math.max(0.02, pe.fasePouso - fase);
+}
+
+/**
+ * Fase da passada com os DOIS pés no ar (o voo da corrida) entre as fases a e b (a ≤ b), com o fator de carga `carga`: o
+ * apoio de cada pé é [n, n + 2·carga) da fase dele (n ≡ pé, mod 2), então o voo de cada passo é [n + 2·carga, n + 1). Andando
+ * (2·carga ≥ 1) não há voo.
+ */
+function faseNoAr(a, b, carga) {
+  const sair = 2 * carga;
+  if (!(sair < 1) || !(b > a)) return 0;
+  let soma = 0;
+  for (let n = Math.floor(a); n < b; n++) soma += Math.max(0, Math.min(b, n + 1) - Math.max(a, n + sair));
+  return soma;
+}
+
+/**
+ * O ritmo do VOO (fase por segundo, com os dois pés no ar) para a fase andar `fase` em `t` s com o apoio no ritmo natural `f`
+ * (ou mais rápido, quando o ritmo uniforme fase/t já passa dele): a passada mais longa é VOO mais longo, nunca apoio mais
+ * longo (o pé plantado com o corpo andando por cima dele fazia a perna esticar e o quadril cair até ~30 cm na penúltima
+ * passada; Lee & Farley 1998: no apoio da corrida o centro de massa baixa ~7 cm). noAr = a parte de `fase` no voo.
+ */
+function ritmoDoVoo(fase, noAr, t, f) {
+  const R = fase / Math.max(t, PASSO);
+  if (R >= f || !(noAr > 1e-3)) return R;
+  return noAr / Math.max(t - (fase - noAr) / f, PASSO);
 }
 
 /** s para andar d m saindo a s m/s e indo a v (acelerando a `a` m/s² ou freando a `fr` m/s²) e seguindo em v. */
@@ -300,6 +345,34 @@ function tempoAte(d, s, v, a, fr) {
     return disc >= 0 ? (s - Math.sqrt(disc)) / fr : tv;
   }
   return tv + (d - dv) / Math.max(v, 0.1);
+}
+
+const _reg = { nota: 0, v: 0, k: 0, rv: 0 }, _reg2 = { nota: 0, v: 0, k: 0, rv: 0 };
+/**
+ * A regulagem da passada (a dos saltadores: Lee, Lishman & Thomson 1982) com a fase da passada em `fase`: para k = 0, 1, 2…
+ * passadas a mais até o pouso do pé de apoio no ponto, e a velocidade de cruzeiro v perto da do perfil, o tempo T até o
+ * corpo chegar ao meio do apoio (com a aceleração ou a freada de agora até v) e o ritmo que põe a fase ali nesse tempo.
+ * O apoio fica no ritmo natural (ou mais rápido) e a diferença vai ao VOO (ritmoDoVoo): a escolha é a de velocidade e ritmo
+ * mais perto dos naturais — o ritmo médio dentro de CC.ritmo × o da velocidade e o do voo ≥ CC.vooMin × ele (a passada mais
+ * longa é um voo um pouco mais longo, nunca um salto). Escreve em `out` {nota, v, k, rv (o ritmo do voo)} e devolve `out`.
+ */
+function regular(c, cr, fase, s, Dl, out) {
+  const f0 = faseAtePouso(c, cr.ps, fase);
+  const a = c.par.acel0 * c.par.acelComBola * CC.acelUsa, fr = c.par.freio * CC.acelUsa;
+  out.nota = Infinity; out.v = cr.vel; out.k = 0; out.rv = 0;
+  for (let k = 0; k <= 5; k++) {
+    for (let iv = -3; iv <= 3; iv++) {
+      const v = cr.vel * (1 + CC.velVaria * iv / 3);
+      const T = tempoAte(Dl, s, v, a, fr);
+      if (!(T > 0.05)) continue;
+      const F = f0 + 2 * k + cargaPassada(v), fn = Math.max(freqPassada(Dl / T, true), 0.5);
+      const rel = F / T / fn, rv = ritmoDoVoo(F, faseNoAr(fase, fase + F, cargaPassada(v)), T, fn), voo = rv / fn;
+      const nota = Math.abs(v - cr.vel) / cr.vel + 2 * Math.abs(rel - 1) + (rel < CC.ritmo[0] ? 20 * (CC.ritmo[0] - rel) : 0)
+        + (rel > CC.ritmo[1] ? 20 * (rel - CC.ritmo[1]) : 0) + (voo < CC.vooMin ? 20 * (CC.vooMin - voo) : 0);
+      if (nota < out.nota) { out.nota = nota; out.v = v; out.k = k; out.rv = rv; }
+    }
+  }
+  return out;
 }
 
 /**
@@ -347,27 +420,10 @@ export function guiarCorrida(m, c, cr) {
     // o pé de apoio já está no lugar (ou o corpo passou do ponto): segue embalado até o contato
     g.vel = Math.max(s, 1);
   } else {
-    // regulagem da passada (a dos saltadores: Lee, Lishman & Thomson 1982): para k = 0, 1, 2… passadas a mais até o pouso do
-    // pé de apoio no ponto, e a velocidade de cruzeiro v perto da do perfil, o tempo T até o corpo chegar ao meio do apoio
-    // (com a aceleração ou a freada de agora até v) e o RITMO da passada que põe a fase ali nesse tempo; a escolha é a de
-    // velocidade e ritmo mais perto dos naturais (o ritmo dentro de CC.ritmo × o da velocidade)
-    const f0 = faseAtePouso(c, cr.ps);
-    const a = c.par.acel0 * c.par.acelComBola * CC.acelUsa, fr = c.par.freio * CC.acelUsa;
-    let melhor = Infinity, vMelhor = cr.vel, kMelhor = 0, rMelhor = 0;
-    for (let k = 0; k <= 5; k++) {
-      for (let iv = -3; iv <= 3; iv++) {
-        const v = cr.vel * (1 + CC.velVaria * iv / 3);
-        const T = tempoAte(Dl, s, v, a, fr);
-        if (!(T > 0.05)) continue;
-        const R = (f0 + 2 * k + cargaPassada(v)) / T, rel = R / Math.max(freqPassada(Dl / T, true), 0.5);
-        const nota = Math.abs(v - cr.vel) / cr.vel + 2 * Math.abs(rel - 1) + (rel < CC.ritmo[0] ? 20 * (CC.ritmo[0] - rel) : 0)
-          + (rel > CC.ritmo[1] ? 20 * (rel - CC.ritmo[1]) : 0);
-        if (nota < melhor) { melhor = nota; vMelhor = v; kMelhor = k; rMelhor = R; }
-      }
-    }
-    cr.ritmo = rMelhor;
-    cr.k = kMelhor;
-    g.vel = clamp(vMelhor, 0.5, CC.velMax + 0.3);
+    const r = regular(c, cr, c.fase, s, Dl, _reg);
+    cr.ritmo = r.rv;
+    cr.k = r.k;
+    g.vel = clamp(r.v, 0.5, CC.velMax + 0.3);
   }
   // a hora prevista do contato: o pouso do pé de apoio + meio apoio (ou o já plantado + o meio)
   const f = Math.max(freqPassada(Math.max(s, 0.5), true), 0.5), meio = cargaPassada(s) / f;
@@ -384,9 +440,10 @@ export function guiarCorrida(m, c, cr) {
 }
 
 /**
- * O pedido à passada do cobrador na corrida (sim.js, no passo 2, depois do corpo): na última passada (o pé de apoio no ar e
- * pousando no ponto), o pouso daqui a pousoEm s — o tempo em que o ponto de pouso (o corpo no meio do apoio) chega ao do pé
- * de apoio. Fora disso, null (a passada de sempre; o toque marcado pede o pé que bate).
+ * O pedido à passada do cobrador na corrida (sim.js, no passo 2, depois do corpo): o ritmo do VOO (jogador.js passoPassada
+ * ritmoVoo; com um pé no chão vale o da passada, ou este se for mais rápido). Na última passada (o pé de apoio no ar e
+ * pousando no ponto), o do pouso quando o ponto de pouso (o corpo no meio do apoio) chega ao do pé de apoio — nunca abaixo de
+ * CC.vooMin × o natural; antes, o da regulagem (cr.ritmo). Com os dois pés no chão, null (a passada de sempre).
  */
 export function saidaCorrida(m, j) {
   const pr = m.parada, cr = pr && pr.corrida;
@@ -395,18 +452,24 @@ export function saidaCorrida(m, j) {
   // o pulinho (P2): no penúltimo apoio (a última passada, o pé que bate no chão) ele sai mais cedo — a carga do pulinho: os
   // dois pés no ar por mais tempo até o pé de apoio pousar
   const carga = cr.estilo === 'pulinho' && cr.k === 0 && !sup.apoio ? EP.pulinho.carga : undefined;
-  // a última passada (o pé de apoio no ar, pousando no ponto): o pouso quando o ponto de pouso chega ao dele
+  // a última passada (o pé de apoio no ar, pousando no ponto): o pouso quando o ponto de pouso chega ao dele — o tempo vai
+  // ao VOO (o apoio do outro pé, se ainda falta, no ritmo natural: ritmoDoVoo; no pulinho, com a carga dele), que nunca
+  // estica além de vooMin
   if (cr.k === 0 && !sup.apoio) {
     const s = MD.hypot(j.vx, j.vz), f = Math.max(freqPassada(Math.max(s, 0.5), true), 0.5);
     const Dl = (cr.mx - j.x) * cr.dx + (cr.mz - j.z) * cr.dz;
     const t = Dl / Math.max(s, 1) - cargaPassada(s) / f;
-    if (t <= CC.pousoUltimo) return { pe: cr.ps, em: PASSO, pousoEm: Math.max(t, PASSO), carga };
+    if (t <= CC.pousoUltimo) {
+      const fase = Math.max(0, sup.fasePouso - j.fase);
+      const rv = ritmoDoVoo(fase, faseNoAr(j.fase, sup.fasePouso, carga ?? cargaPassada(s)), Math.max(t, PASSO), f);
+      return { pe: cr.ps, em: PASSO, ritmoVoo: Math.max(CC.vooMin * f, rv), carga };
+    }
   }
-  // antes: o pé no ar pousa no ritmo da regulagem (cr.ritmo, fase por segundo)
+  // antes: o voo no ritmo da regulagem (cr.ritmo, fase por segundo); o apoio no da passada (jogador.js passoPassada ritmoVoo)
   if (!(cr.ritmo > 0)) return null;
   const p = !sup.apoio ? cr.ps : !j.pes[cr.pe].apoio ? cr.pe : -1;
   if (p < 0) return null;
-  return { pe: p, em: PASSO, pousoEm: Math.max(PASSO, (j.pes[p].fasePouso - j.fase) / cr.ritmo), carga };
+  return { pe: p, em: PASSO, ritmoVoo: cr.ritmo, carga };
 }
 
 /**

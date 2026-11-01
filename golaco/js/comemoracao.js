@@ -839,7 +839,7 @@ function direcaoReacao(rumo, giro) {
   _dirR.x = Math.cos(a); _dirR.z = Math.sin(a);
   return _dirR;
 }
-const GIROS_REACAO = [0, 0.5, -0.5, 1.0, -1.0];
+const GIROS_REACAO = [0, 0.5, -0.5, 0.75, -0.75, 1.0, -1.0, 1.25, -1.25, 1.5, -1.5];
 const _cr = { de: [0, 0, 0] };
 // Quadros da câmera da reação (tangente da meia largura e giro do eixo) no pior formato de tela: o PC sem deslocar (até
 // 2,2:1) e o celular deitado (fov × celular, até 2,2:1) com quem reage no terço esquerdo — o eixo gira para o lado
@@ -851,17 +851,32 @@ const QUADROS_REACAO = (() => {
   const tCel = Math.tan((R.fov * C.camera.celular * Math.PI) / 360) * ASPECTO_MAX, b = Math.atan(tCel * C.camera.terco);
   return [{ th: tPC, cos: 1, sin: 0 }, { th: tCel, cos: Math.cos(b), sin: Math.sin(b) }];
 })();
+// O CORPO em volta do centro do ator: os pontos que o quadro vê (pelve, peito, cabeça, joelhos e ombros — os do
+// teste-comemoracao 13) ficam na reação a até 0,49 m do centro na horizontal (passada, tronco inclinado, abraço: p99 0,44
+// em 132 cenas) e a 0,57 m num corpo caído com as pernas esticadas (o jogador parado do bloqueio do teste, que chega sem
+// mudar os pés de lugar: a pelve a 8 cm do chão), então o corpo é um cilindro de `corpo` m de raio. `prof`: a
+// profundidade, com folga, a partir da qual nada conta (a régua do teste é 2 m).
+const LENTE = { corpo: 0.6, prof: 2.2 };
 /**
- * Quanto um corpo em (dx, dz) da lente (olhar unitário f, no chão) está colado nela DENTRO de algum dos quadros: 2,2 m
- * menos a profundidade (0 fora). A régua do teste: < 2 m de profundidade e dentro do quadro (meia largura × 1,1); aqui
- * com folga (2,2 m e o corpo, 0,4 m de lado).
+ * Quanto um corpo com o centro em (dx, dz) da lente (olhar unitário f, no chão) está colado nela DENTRO de algum dos
+ * quadros: `prof` menos a profundidade do ponto do corpo mais perto da lente (0 fora). A régua do teste é a da caixa dos
+ * pontos do corpo: o ponto mais perto decide "perto" (< 2 m) e QUALQUER ponto dentro de 1,1 × o quadro, na profundidade
+ * DELE, decide "dentro" — o quadro abre com a distância, então um ponto mais fundo e mais para dentro do que o centro
+ * entra mesmo com o centro fora. Aqui, o mesmo com o cilindro: perto = z − corpo; dentro = a borda de dentro do corpo
+ * (lado − corpo) contra o quadro na profundidade da borda de trás (z + corpo). Contraprova de 01/11 (C7, CI de 522a4e36,
+ * 1º gol da semente 32 com o bloqueio do teste): quem reage é o goleiro na linha do gol, a lente do giro 0 fica presa a
+ * 4,6 m do meio do gol (limitarCamera: 2,3 m para o lado) e o jogador parado, posto na frente da lente sem a trava, cai na
+ * borda do quadro do celular — o centro a 1,82 m de profundidade e 1,44 m de lado, 1 cm fora da conta antiga (o centro
+ * contra o quadro na profundidade dele + 0,4 m de corpo, até 2,2 m), mas o joelho, 0,5 m mais fundo e 0,22 m para dentro,
+ * entrava no quadro: 13 quadros ruins no giro que a conta antiga dava como livre.
  */
 function custoLente(dx, dz, fx, fz) {
   let pior = 0;
+  const K = LENTE.corpo;
   for (let i = 0; i < QUADROS_REACAO.length; i++) {
     const q = QUADROS_REACAO[i], ax = fx * q.cos - fz * q.sin, az = fz * q.cos + fx * q.sin;
-    const z = dx * ax + dz * az, lado = Math.abs(dz * ax - dx * az);
-    if (z > -0.2 && z < 2.2 && lado < Math.max(0, z) * q.th * 1.1 + 0.4 && 2.2 - z > pior) pior = 2.2 - z;
+    const z = dx * ax + dz * az, lado = Math.abs(dz * ax - dx * az), perto = z - K;
+    if (z > -K && perto < LENTE.prof && lado - K < (z + K) * q.th * 1.1 && LENTE.prof - perto > pior) pior = LENTE.prof - perto;
   }
   return pior;
 }
@@ -914,21 +929,27 @@ function preverAtores(c, T, dt) {
 }
 /**
  * Giro da câmera da reação (rad em volta de quem reage), escolhido UMA vez no começo da reação: o primeiro de GIROS_REACAO
- * (0 = o plano de sempre, que só muda se tiver gente de verdade na frente) com menos gente colada na lente (a < 2,2 m de
- * profundidade, dentro do quadro do PC ou do celular) ou entre a lente e quem reage, na reação INTEIRA (até o fim da cena;
- * as posições previstas por preverAtores). Contraprovas: um jogador do time que sofreu, andando para a saída, passava
- * colado na lente (um corpo a 2 m enche a altura do quadro) em ~15% das cenas curtas; e (15/10) na cena curta a reação
- * dura até 2 s, mas o custo só olhava o 1º segundo — um colega correndo para o abraço passou rente à lente no celular.
+ * (0 = o plano de sempre, que só muda se tiver gente de verdade na frente) com menos gente colada na lente (o corpo, um
+ * cilindro de LENTE.corpo m, com algum ponto a < 2,2 m de profundidade dentro do quadro do PC ou do celular: custoLente)
+ * e, entre os que empatam nisso, menos gente colada mais gente entre a
+ * lente e quem reage, na reação INTEIRA (até o fim da cena; as posições previstas por preverAtores). Contraprovas: um
+ * jogador do time que sofreu, andando para a saída, passava colado na lente (um corpo a 2 m enche a altura do quadro) em
+ * ~15% das cenas curtas; e (15/10) na cena curta a reação dura até 2 s, mas o custo só olhava o 1º segundo — um colega
+ * correndo para o abraço passou rente à lente no celular. (31/10, C7: com a corrida das cobranças, no gol da semente 101
+ * @6040 quem reage é o goleiro na linha do gol e um zagueiro sai da pequena área andando para a lente; os 5 giros de antes
+ * tinham todos alguém colado nela, e a soma única escolhia o de 57° — um corpo rente à borda do quadro do celular, a 1,87 m,
+ * custava 0,035 m·s, menos que ~0,3 s de alguém cruzando a linha de visão do outro lado: 1 quadro ruim. Colado na lente
+ * vem primeiro (é o que o quadro não pode ter) e a grade ganhou os giros de 43°, 72° e 86°.)
  */
 const DT_GIRO = 0.05;
 function escolherGiroReacao(c) {
   const r = c.reacao ?? c.autor, R = C.camera.reacao, rj = r.j, n = c.atores.length, ir = c.atores.indexOf(r);
   const ns = preverAtores(c, Math.max(0, c.kFim - c.k) * PASSO, DT_GIRO);
-  let melhor = 0, menor = Infinity;
+  let melhor = 0, menorL = Infinity, menor = Infinity;
   for (const giro of GIROS_REACAO) {
     const d = direcaoReacao(rj.rumo, giro), dx = d.x, dz = d.z;
-    let custo = 0;
-    // custo = integral no tempo (m·s)
+    let lente = 0, custo = 0;
+    // custos = integral no tempo (m·s): `lente` só o colado na lente; `custo` ele mais a linha de visão
     for (let k = 0; k < ns; k++) {
       const sx = _prev[(k * n + ir) * 2], sz = _prev[(k * n + ir) * 2 + 1];
       _cr.de[0] = sx + dx * R.dist; _cr.de[1] = R.altura; _cr.de[2] = sz + dz * R.dist;
@@ -939,7 +960,8 @@ function escolherGiroReacao(c) {
         if (i === ir) continue;
         const px = _prev[(k * n + i) * 2], pz = _prev[(k * n + i) * 2 + 1];
         // colado na lente, dentro do quadro do PC ou do celular
-        custo += custoLente(px - cx, pz - cz, fx, fz) * DT_GIRO;
+        const cl = custoLente(px - cx, pz - cz, fx, fz) * DT_GIRO;
+        lente += cl; custo += cl;
         // entre a lente e quem reage (perto da linha de visão)
         const u = ((px - cx) * ex + (pz - cz) * ez) / el2, lado = Math.hypot(px - cx - ex * u, pz - cz - ez * u);
         if (u > 0.05 && u < 0.95 && lado < 0.8) custo += (0.8 - lado) * DT_GIRO;
@@ -947,8 +969,9 @@ function escolherGiroReacao(c) {
     }
     // o plano de sempre (giro 0) só muda com gente de verdade na frente (um corpo cruzando a linha de visão por ~0,2 s já
     // custa ~0,1 m·s; um colado na lente o plano inteiro, 1–3)
-    if (giro === 0 && custo <= 0.03) return 0;
-    if (custo < menor - 1e-9) { menor = custo; melhor = giro; }
+    // (31/10: e sem ninguém colado na lente — um só rente à borda do quadro já custa menos que 0,03)
+    if (giro === 0 && lente <= 0 && custo <= 0.03) return 0;
+    if (lente < menorL - 1e-9 || (lente <= menorL + 1e-9 && custo < menor - 1e-9)) { menorL = lente; menor = custo; melhor = giro; }
   }
   return melhor;
 }

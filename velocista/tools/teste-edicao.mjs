@@ -27,6 +27,16 @@ ok(ed.PESSOAL === false, 'sem a senha guardada, a página é a versão normal');
 ok(!(await ed.conferirSenha('')) && !(await ed.conferirSenha('flash')) && !(await ed.conferirSenha('barry allen')) && !(await ed.conferirSenha(HASH)), 'senha vazia, errada ou o próprio hash não entram');
 if (SENHA) {
   ok(await ed.conferirSenha(SENHA) && await ed.conferirSenha(`  ${SENHA.toUpperCase()} `), 'a senha certa entra (sem diferença de maiúsculas e espaços nas pontas)');
+  // o que o copiar e colar do celular traz junto (dono, 31/10: "senha errada, copiei e colei"; a seleção pegou o "P" da frase seguinte)
+  const colados = [`${SENHA}\n\nP`, `${SENHA}P`, `Senha: ${SENHA}. Pode digitar`, SENHA.replace(/-/g, '\u2011'), SENHA.replace(/-/g, ' – '), SENHA.replace('a', 'á'),
+    `\u200B${SENHA}\uFEFF`, SENHA.split('').join('\u200B'), `${SENHA}\n`];
+  const r = []; for (const c of colados) r.push(await ed.conferirSenha(c));
+  ok(r.every(Boolean), `colada com sobra, quebra de linha, traço tipográfico, acento do corretor ou caractere invisível: entra (${r.map((x) => (x ? 'ok' : 'NÃO')).join(' ')})`);
+  const quase = [SENHA.slice(0, -1), SENHA.slice(1), SENHA.slice(0, -1) + (SENHA.at(-1) === '0' ? '1' : '0'), SENHA.slice(0, 20), `${SENHA.slice(0, 15)}x${SENHA.slice(15)}`];
+  const q = []; for (const c of quase) q.push(await ed.conferirSenha(c));
+  ok(!q.some(Boolean), `um pedaço dela ou ela com um caractere trocado no meio: não entra (${q.map((x) => (x ? 'ENTROU' : 'ok')).join(' ')})`);
+  const t0 = performance.now(); await ed.conferirSenha('x'.repeat(200)); const ms = performance.now() - t0;
+  ok(ms < 1500, `conferir um texto colado bem comprido (200 letras) leva ${ms.toFixed(0)} ms (< 1,5 s)`);
   // a senha não pode estar escrita em lugar nenhum do jogo (nem no repositório inteiro)
   const achados = [], olhar = (dir) => { for (const n of fs.readdirSync(dir, { withFileTypes: true })) { if (n.name === '.git' || n.name === 'node_modules') continue; const f = path.join(dir, n.name); if (n.isDirectory()) olhar(f); else if (fs.statSync(f).size < 8e6 && fs.readFileSync(f).includes(SENHA)) achados.push(f); } };
   olhar(path.join(RAIZ, '..'));
@@ -68,7 +78,7 @@ if (!args.includes('--sem-navegador')) {
   await pagina.waitForFunction(() => !document.getElementById('senhaErro').hidden, null, { timeout: 60000 });
   ok(await pagina.evaluate((m) => window.__rel.J.modo === 'menu' && document.getElementById('mapaBox').classList.contains('grande') === m && !localStorage.getItem('theflash.edicao.v1'), mapa0), 'senha errada: avisa, não entra, e as teclas digitadas não mexeram no jogo (nem o Enter começou)');
   if (SENHA) {
-    await pagina.fill('#senha', SENHA);
+    await pagina.fill('#senha', `${SENHA}\n\nP`);                 // (como o dono colou: a seleção pegou o começo da frase seguinte)
     await Promise.all([pagina.waitForNavigation({ timeout: 1200000 }), pagina.press('#senha', 'Enter')]);
   } else {
     await pagina.evaluate((h) => localStorage.setItem('theflash.edicao.v1', h), HASH);
@@ -83,12 +93,25 @@ if (!args.includes('--sem-navegador')) {
   await pagina.evaluate(() => new Promise((r) => { let k = 0; const f = () => (++k >= 20 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }));
   await pagina.evaluate(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' })); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'p' })); });
   ok(await pagina.evaluate(() => !document.getElementById('seloPausa').hidden), 'o selo também na pausa');
+  ok(await pagina.evaluate(() => { const b = document.getElementById('btnEdicao'); return document.getElementById('telaPausa').contains(b) && b.offsetParent !== null && b.textContent === 'Versão normal' && getComputedStyle(document.getElementById('seloEdicao')).display === 'none'; }),
+    'na pausa, o botão da edição (aqui, "Versão normal"), sem repetir o selo');
   // volta para a versão normal
   await Promise.all([pagina.waitForNavigation({ timeout: 1200000 }), pagina.evaluate(() => document.getElementById('btnEdicao').click())]);
   await pronto();
   ok(await pagina.evaluate(() => window.__rel.PESSOAL === false && !localStorage.getItem('theflash.edicao.v1') && document.getElementById('seloEdicao').hidden), '"Versão normal": esquece a senha neste aparelho e volta como era');
   await pagina.waitForFunction(() => !!window.__rel.modelo, null, { timeout: 1200000, polling: 500 });
   ok(await pagina.evaluate(() => window.__rel.modelo.materiais[0].customProgramCacheKey() === 'traje-corpo-heroi'), 'e o herói volta ao traje de sempre');
+  // no meio do jogo (dono, 31/10: "não sei como bota"): a entrada da edição pessoal também na pausa, com o campo da senha
+  await pagina.evaluate(() => { Element.prototype.requestFullscreen = undefined; document.getElementById('btnJogar').click(); });
+  await pagina.evaluate(() => new Promise((r) => { let k = 0; const f = () => (++k >= 10 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }));
+  await pagina.evaluate(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' })); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'p' })); });
+  ok(await pagina.evaluate(() => { const b = document.getElementById('btnEdicao'); return window.__rel.J.modo === 'pausa' && document.getElementById('telaPausa').contains(b) && b.offsetParent !== null && b.textContent === 'Edição pessoal'; }),
+    'versão normal, no meio do jogo: a pausa tem o botão "Edição pessoal"');
+  await pagina.evaluate(() => document.getElementById('btnEdicao').click());
+  ok(await pagina.evaluate(() => !document.getElementById('formSenha').hidden && document.getElementById('formSenha').offsetParent !== null && document.activeElement?.id === 'senha'), 'e ele abre o campo da senha ali mesmo');
+  await pagina.keyboard.type('p errada'); await pagina.keyboard.press('Enter');
+  await pagina.waitForFunction(() => !document.getElementById('senhaErro').hidden, null, { timeout: 60000 });
+  ok(await pagina.evaluate(() => window.__rel.J.modo === 'pausa' && !localStorage.getItem('theflash.edicao.v1')), 'digitar a senha na pausa não despausa o jogo (nem o P); senha errada não entra');
   // os outros dois trajes da série na vitrine (compilam sem erro)
   await pagina.evaluate((h) => localStorage.setItem('theflash.edicao.v1', h), HASH);
   for (const t of ['novo', 'reverso']) {

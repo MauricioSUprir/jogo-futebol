@@ -137,6 +137,20 @@ ok(/function cenaNoLab\(on\)/.test(jogo) && /J\.heroiFora/.test(jogo) && /heroi\
 ok(/m\.crimeNome/.test(jogo) && /crimeTexto/.test(jogo), 'o crime leva o nome do meta do episódio');
 ok(/if \(PESSOAL\) LUGARES\.wells = \{/.test(ler('js/equipe.js')) && fs.existsSync(path.join(RAIZ, 'assets/personagens/wells/corpo.bin')) && fs.existsSync(path.join(RAIZ, 'assets/personagens/retratos/wells.webp')), 'o Wells no Cortex (corpo e retrato próprios)');
 
+// quem jogou uma versão anterior da temporada (dono, 31/10: "o meu jogo não atualizou a nova história"): o progresso de outra
+// versão (passos que não existem mais, a abertura marcada como vista) faz a temporada recomeçar do zero, com a abertura
+{ const r = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
+    globalThis.localStorage = { getItem: (k) => (k === 'theflash.edicao.v1' ? '${HASH}' : null), setItem() {}, removeItem() {} };
+    const m = await import(${JSON.stringify(pathToFileURL(path.join(RAIZ, 'js/missoes.js')).href)});
+    const t = (o) => m.progressoDaLista(JSON.stringify(o));
+    console.log(JSON.stringify({ antiga: t({ id: 's1-mardon', ultimo: 's1-singularidade' }), antigaFim: t({ id: null, ultimo: 's1-singularidade' }), parte1: t({ id: 's1-rory', ultimo: 's1-casa' }),
+      nova: t({ id: 's1e15-iris', ultimo: 's1e23-buraco' }), novaFim: t({ id: null, ultimo: 's1e23-buraco' }), nada: m.progressoDaLista(null), quebrado: m.progressoDaLista('{x') }));
+  `], { encoding: 'utf8' }));
+  ok(!r.antiga && !r.antigaFim && !r.parte1 && r.nova && r.novaFim && !r.nada && !r.quebrado, `o progresso das versões anteriores da temporada não vale na nova; o desta vale (${JSON.stringify(r)})`);
+  ok(/const VERSAO_SERIE = '\d+'/.test(jogo) && /if \(!progressoDaLista\(armazem\.getItem\('theflash\.missoes\.v2'\)\)\) for \(const k of PROGRESSO\) armazem\.removeItem\(k\)/.test(jogo)
+    && jogo.indexOf('VERSAO_SERIE') < jogo.indexOf('const missoes = criarMissoes(armazem)') && jogo.indexOf('VERSAO_SERIE') < jogo.indexOf('criarHistoria({ armazem })'),
+    'na edição pessoal, progresso de outra versão da temporada some antes de qualquer módulo ler (a temporada recomeça com a abertura)'); }
+
 if (process.argv.includes('--navegador')) {
   const { servidor, abrir } = await import(pathToFileURL(path.join(AQUI, '../../golaco/tools/lib/navegador.mjs')).href);
   const srv = await servidor(0, RAIZ);
@@ -177,6 +191,8 @@ if (process.argv.includes('--navegador')) {
   await quadros(3);
   ok(await pagina.evaluate(() => document.getElementById('jornal').hidden), 'e some quando a cena acaba');
   // a cena sem o Barry (episódio 15): o herói sai de cena, o Wells se levanta para o Cisco e vira o homem de amarelo; no fim, o herói volta
+  // (antes: a cena que vem logo depois da descoberta — o episódio 20, com a Gideon na sala secreta — acaba; ela devolve o herói)
+  for (let i = 0; i < 10 && await pagina.evaluate(() => !!window.__rel.historia.cenaAtual); i++) { await pagina.evaluate(() => window.__rel.historia.pular()); await quadros(3); }
   // (um lugar aberto: a praça da Prefeitura; espera uns quadros para o herói assentar antes de anotar onde ele está)
   await pagina.evaluate(() => { const R = window.__rel, w = R.pontoMundo('prefeitura'); Object.assign(R.P, { x: w.x, z: w.z, vx: 0, vz: 0 }); });
   await quadros(6);
@@ -186,7 +202,7 @@ if (process.argv.includes('--navegador')) {
   ok(await pagina.evaluate(() => window.__rel.J.heroiFora === true && !window.__rel.heroi.visible), 'episódio 15, a cena do Cisco: o Barry fora de cena');
   for (let i = 0; i < 80 && await pagina.evaluate(() => !window.__rel.J.wellsVirou); i++) { await pagina.waitForTimeout(500); await pagina.evaluate(() => { const h = window.__rel.historia; h.avancar(); h.avancar(); }); }
   await pagina.waitForFunction(() => !!window.__rel.aliados.foco('reverso'), null, { polling: 300 });
-  ok(await pagina.evaluate(() => { const R = window.__rel, f = R.aliados.foco('reverso'), w = R.equipe.focos().wells(); return R.J.wellsVirou && Math.hypot(f.x - w.x, f.z - w.z) < 1.5; }), 'o Wells vira o homem de amarelo no lugar dele, diante do Cisco');
+  ok(await pagina.evaluate(() => { const R = window.__rel, f = R.aliados.foco('reverso'), w = R.pontoMundo('cortexWells'); return R.J.wellsVirou && !R.equipe.focos().wells() && Math.hypot(f.x - w.x, f.z - w.z) < 1.5; }), 'o Wells vira o homem de amarelo no lugar dele, diante do Cisco');
   await pagina.evaluate(() => window.__rel.historia.pular());
   await pagina.waitForFunction(() => window.__rel.J.modo === 'jogando', null, { polling: 300 });
   const depois = await pagina.evaluate(() => ({ x: window.__rel.P.x, z: window.__rel.P.z, fora: window.__rel.J.heroiFora, vis: window.__rel.heroi.visible, virou: window.__rel.J.wellsVirou }));

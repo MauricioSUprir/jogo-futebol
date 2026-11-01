@@ -1145,6 +1145,10 @@ export function cobrar(m, entrada) {
   if (cr && pr.tipo === 'penalti') definirEstilo(c, cr, iaPede ? cr.estiloIA : estiloDaPessoa(pr, c.pedido, entrada));
   // a corrida (item 70, P1): o pedido (força, mira, tipo) fica guardado e o cobrador corre até a bola; o contato sai no
   // passo, com o pé de apoio ao lado dela (corrida.js contatoCorrida, chamado pelo sim.js)
+  // (a corrida começa com o cobrador parado no ponto de partida: empurrado numa trombada enquanto espera, o pedido espera ele
+  // frear — 01/11: o goleiro esperando o tiro de meta levou uma trombada, 0 → 3,8 m/s num tick, a corrida começou 2 ticks
+  // depois de costas para a bola e a freada com a virada levou o quadril a 0,59 m)
+  if (cr && MD.hypot(c.vx, c.vz) > CORRIDA_COBRANCA.paradoMax) return false;
   if (cr) {
     iniciarCorrida(m, c, cr, c.pedido);
     cr.ladoMira = ladoDaMira(cr.mira0);
