@@ -86,12 +86,13 @@ export function criarAliados(cena, { mobile = false, aniso = 2, chao = () => 0.3
   const VOLTA = [[2.5, 0], [2.7, 0.8], [2.7, -0.8], [3.1, 1.45], [3.1, -1.45], [3.5, 0.4], [3.5, -0.4], [3.6, 2.1], [3.6, -2.1], [3.9, 0], [2.6, 2.6], [2.6, -2.6]];
   /** a cena: `ids` entram andando até marcas em volta de `centro` ({x, y, z, h}: o herói e para onde ele olha); `livre(x, z, y)`
    *  diz se um corpo cabe ali */
-  function encenar(ids, centro, livre = () => true) {
+  function encenar(ids, centro, livre = () => true, fixas = {}) {
     marcas.clear();
     const usadas = [];
     for (const id of ids) {
       if (!PERFIS[id]) continue;
-      let m = null;
+      let m = fixas[id] || null;                                // (uma marca dada: o Wells entrando pela porta da sala secreta)
+      if (m) { usadas.push(m); marcas.set(id, m); carregar(id); continue; }
       for (const [d, a] of VOLTA) {
         const h = centro.h + a, x = centro.x + Math.sin(h) * d, z = centro.z + Math.cos(h) * d;
         if (usadas.some((u) => Math.hypot(u.x - x, u.z - z) < 1.15) || !livre(x, z, centro.y)) continue;

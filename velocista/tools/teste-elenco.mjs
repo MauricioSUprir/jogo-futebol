@@ -50,6 +50,7 @@ if (process.argv.includes('--navegador')) {
   const { navegador, pagina, erros } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
   pagina.setDefaultTimeout(1200000);
   await pagina.addInitScript((h) => {
+    if (sessionStorage.getItem('teste.normal')) return;                // (a última parte do teste: a versão normal)
     localStorage.setItem('theflash.edicao.v1', h); localStorage.setItem('theflash.serie.versao', '2');
     localStorage.setItem('theflash.serie.historia.v1', JSON.stringify({ vistas: ['cena:noite-do-raio', 'cena:prologo'], capitulo: null }));
   }, HASH);
@@ -91,15 +92,16 @@ if (process.argv.includes('--navegador')) {
   const ca = desc.filter((l) => l.q === 'caitlin');
   ok(ca.length && ca.every((l) => l.quadro === 'caitlin' && l.qvVisivel), `a Caitlin falando do laboratório: o quadro de vídeo do Cortex com ela (${ca.map((l) => l.quadro).join(',')})`);
   ok(desc.filter((l) => l.q === 'heroi').every((l) => !l.qvVisivel), 'e o quadro some quando é o Barry que fala');
-  // a TV ao vivo (a abertura)
-  await pagina.evaluate(() => { window.__rel.estudio.mostrar('tv'); });
+  // a TV ao vivo (a abertura: a noite do acelerador)
+  await pagina.evaluate(() => window.__rel.rodarCena('noite-do-raio', window.__rel.focosCena(), null, { sempre: true }));
+  for (let i = 0; i < 12 && await pagina.evaluate(() => window.__rel.historia.quemFala !== 'tv'); i++) { await quadros(3); await pagina.evaluate(() => { const h = window.__rel.historia; h.avancar(); h.avancar(); }); }
   await quadros(4);
-  ok(await pagina.evaluate(() => { const q = document.getElementById('quadroVideo'); return !q.hidden && q.classList.contains('tv') && /AO VIVO/.test(q.textContent); }), 'a TV: o quadro "AO VIVO" com o S.T.A.R. Labs');
+  ok(await pagina.evaluate(() => { const q = document.getElementById('quadroVideo'); return window.__rel.historia.quemFala === 'tv' && !q.hidden && q.classList.contains('tv') && /AO VIVO/.test(q.textContent) && window.__rel.estudio.atual === 'tv'; }), 'a TV: o quadro "AO VIVO" com o S.T.A.R. Labs');
   await pagina.screenshot({ path: '/tmp/teste-elenco-tv.png' });
-  await pagina.evaluate(() => { window.__rel.estudio.mostrar(null); });
+  await pagina.evaluate(() => window.__rel.historia.pular()); await quadros(3);
   ok(!erros.length, `sem erros no console (${erros.slice(0, 3).join(' | ')})`);
   // a versão normal: nada disso
-  await pagina.evaluate(() => localStorage.removeItem('theflash.edicao.v1'));
+  await pagina.evaluate(() => { sessionStorage.setItem('teste.normal', '1'); localStorage.removeItem('theflash.edicao.v1'); });
   await pagina.reload();
   await pagina.waitForSelector('#btnJogar:not([hidden])');
   await pagina.waitForTimeout(3000);

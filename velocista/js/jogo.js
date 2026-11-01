@@ -37,7 +37,7 @@ import { texturaDetalhe, comDetalhe } from './detalhe.js';
 import { passoEmbalo, tetoCorrida, gastoCorrida } from './velocidade.js';
 import { PESSOAL, conferirSenha, entrarPessoal, sairPessoal } from './edicao.js';
 import { criarPoderes, NIVEIS, XP } from './poderes.js';
-import { CENAS_NO_LAB } from './serie.js';
+import { CENAS_NO_LAB, CENAS_NO_COFRE, CENAS_COFRE_HEROI } from './serie.js';
 import { ELENCO } from './aliados.js';
 
 // ---------- constantes ----------
@@ -799,7 +799,7 @@ function passoHeroi(dt) {
     { const L = limitar(P.x, P.z); P.x = L.x; P.z = L.z; }       // a cidade, a ponte e a ilha do presídio
     if (!P.vibrando) {
       // em velocidade, obstáculos baixos (carros, bancos) são pulados: o herói salta por cima em vez de parar
-      const r = empurrar(rectsPerto, P.x, P.z, CORPO.raio, Math.max(P.y, yApoio), CORPO.alt, P.saltoAuto > 0 ? ehBaixo : null);
+      const r = empurrar(rectsPerto, P.x, P.z, CORPO.raio, Math.max(P.y, yApoio), CORPO.alt, J.cofreAberto ? ignorarComPorta : P.saltoAuto > 0 ? ehBaixo : null);
       if (r.bateu && r.q && ehBaixo(r.q) && Math.hypot(P.vx, P.vz) > 10 && !P.parede && !J.interior) { P.saltoAuto = 0.45; P.vy = Math.max(P.vy, 10.5); P.noChao = false; P.x = ox + P.vx * sub; P.z = oz + P.vz * sub; continue; }
       if (r.bateu) {
         const antes = Math.hypot(P.vx, P.vz), vx0 = P.vx, vz0 = P.vz;
@@ -970,8 +970,10 @@ function animarHeroi(dt) {
 }
 
 // ---------- câmera ----------
+/** (edição pessoal) a porta da sala secreta aberta não segura ninguém */
+const ignorarComPorta = (q) => q.cofre || (P.saltoAuto > 0 && ehBaixo(q));
 function dentroDeSolido(x, y, z) {
-  for (const q of rectsPerto) { if (q.y0 < 0) continue; if (x > q.x0 - 0.3 && x < q.x1 + 0.3 && z > q.z0 - 0.3 && z < q.z1 + 0.3 && y > q.y0 - 0.3 && y < q.y1 + 0.3) return true; }
+  for (const q of rectsPerto) { if (q.y0 < 0 || (q.cofre && J.cofreAberto)) continue; if (x > q.x0 - 0.3 && x < q.x1 + 0.3 && z > q.z0 - 0.3 && z < q.z1 + 0.3 && y > q.y0 - 0.3 && y < q.y1 + 0.3) return true; }
   return false;
 }
 // dentro dos lugares as paredes de dentro têm 16 cm: o teste de ponto não vê a câmera do outro lado delas, então o caminho
@@ -991,7 +993,7 @@ function cameraDaCenaLivre() {
   for (let s = 0.45; s <= d + 0.2; s += 0.12) {
     const x = a.x + dx / d * s, y = a.y + dy / d * s, z = a.z + dz / d * s;
     for (const q of rectsPerto) {
-      if (q.y0 < 0) continue;                                               // (o chão do quarteirão; como no dentroDeSolido)
+      if (q.y0 < 0 || (q.cofre && J.cofreAberto)) continue;                 // (o chão do quarteirão; a porta secreta aberta)
       if (x > q.x0 - 0.12 && x < q.x1 + 0.12 && z > q.z0 - 0.12 && z < q.z1 + 0.12 && y > q.y0 - 0.12 && y < q.y1 + 0.12) {
         const k = Math.max(0.45, s - 0.3) / d; c.set(a.x + dx * k, a.y + dy * k, a.z + dz * k); return;
       }
@@ -1596,6 +1598,11 @@ let estudio = null;
 if (PESSOAL) import('./estudio.js').then(({ criarEstudio }) => { estudio = criarEstudio({ mobile: MOBILE, aniso: ANISO }); }).catch((e) => console.warn('quadro de vídeo indisponível', e));
 const pertoDoLab = () => Math.hypot(P.x - LAB_B.cx, P.z - LAB_B.cz) < 70;          // (a equipe só existe em 3D com o herói perto: equipe.js)
 const DO_LAB = new Set(['caitlin', 'cisco', 'wells', 'thawne']);
+// EDIÇÃO PESSOAL: a SALA SECRETA do Wells (lab.js COFRE; o desenho em cofre3d.js). Fechada até a equipe descobrir (episódio 19)
+let cofre = null;
+if (PESSOAL) import('./cofre3d.js').then(({ criarCofre }) => { cofre = criarCofre(cena, { cx: LAB_B.cx, cz: LAB_B.cz, mobile: MOBILE, aniso: ANISO }); aliados.carregar('wells'); }).catch((e) => console.warn('sala secreta indisponível', e));
+const POS_SALA = PESSOAL ? MISSOES.findIndex((m) => m.id === 's1e19-sala') : -1;
+const cofreDescoberto = () => POS_SALA >= 0 && (missoes.livre || missoes.indice > POS_SALA);
 // a vida do Barry: a pista da perícia, o gelo do Frio, a tempestade do Mago e os raios da noite do raio (vida.js)
 const vida = criarVida(cena, { fx: combate.efeitos, mobile: MOBILE });
 // as subestações do "Apagão": armário com a luz vermelha (desligada) ou verde (religada)
@@ -1617,15 +1624,20 @@ const focosCena = () => {
   };
   if (PESSOAL) for (const id of [...ELENCO, 'mago', 'mark', 'frio', 'onda']) fs[id] = () => aliados.foco(id);   // o elenco da temporada (encenarElenco)
   if (PESSOAL) {
+    fs.gideon = () => cofre?.focoGideon() ?? null;                          // o rosto holográfico da sala secreta
+    const th = fs.thawne; fs.thawne = () => aliados.foco('wells') || th();   // (na sala secreta, o Thawne é o Wells andando)
+  }
+  if (PESSOAL) {
     fs.reverso = () => aliados.foco('reverso') || fs.thawne();
     fs.heroi = () => (J.heroiFora ? null : focoHeroi());
-    fs.padrao = () => (J.heroiFora ? (equipe.pronta && equipe.focos().wells?.()) || { x: LAB_B.cx, y: PISO_LAB, z: LAB_B.cz } : focoHeroi());
+    fs.padrao = () => (J.cenaCofre && cofre ? (aliados.foco('wells') || { x: cofre.pontos.centro.x, y: PISO_LAB, z: cofre.pontos.centro.z }) : J.heroiFora ? (equipe.pronta && equipe.focos().wells?.()) || { x: LAB_B.cx, y: PISO_LAB, z: LAB_B.cz } : focoHeroi());
   }
   for (const id of ['caitlin', 'cisco', 'wells']) fs[id] = () => (equipe.pronta && noCortex() && tempo.epoca !== 'ignicao' ? equipe.focos()[id]?.() ?? null : aliados.foco(id));   // (o Wells: só na temporada da série)
   return fs;
 };
 /** numa cena (edição pessoal), para onde cada um olha: quem escuta, para quem fala; quem fala, para o herói */
 function olharNaCena(id) {
+  if (J.cenaCofre && id === 'wells' && cofre && !J.cenaCofre.startsWith('depois-s1e19') && J.heroiFora) { const g = cofre.pontos.gideon; return { x: g.x, z: g.z }; }
   const q = historia.quemFala, heroiPt = historia.pontoDe('heroi') || historia.pontoDe('padrao');
   if (!q || q === id || q === 'tv') return heroiPt;
   return historia.pontoDe(q) || heroiPt;
@@ -1812,10 +1824,12 @@ function rodarCena(id, foco, depois, opc) {
   P.vx = P.vz = 0; teclas.clear(); stick.x = stick.y = 0; toque.correr = toque.vibrar = false;
   J.modo = 'cena';
   const g = GANCHOS_CENA[id]; g?.antes?.();
-  const noLab = PESSOAL && CENAS_NO_LAB.has(id);                                  // (a temporada: o que a série mostra sem o Barry)
+  const naSala = PESSOAL && cofre && (CENAS_NO_COFRE.has(id) || CENAS_COFRE_HEROI.has(id)) && (historia.vaiTocar(id) || opc?.sempre);
+  const noLab = PESSOAL && CENAS_NO_LAB.has(id) && !naSala;                     // (a temporada: o que a série mostra sem o Barry)
+  if (naSala) cenaNoCofre(true, CENAS_COFRE_HEROI.has(id), id);
   if (noLab) { cenaNoLab(true); J.povFora = id === 'pov-cisco' ? ['caitlin'] : ['caitlin', 'cisco']; }   // (só o Wells; com o Cisco na cena dele)
   if (PESSOAL && (historia.vaiTocar(id) || opc?.sempre)) encenarElenco(id, foco);
-  historia.cena(id, foco, () => { J.modo = 'jogando'; g?.depois?.(); if (PESSOAL) { limparSerie(); aliados.dispensar(); estudio?.mostrar(null); } if (noLab) cenaNoLab(false); depois?.(); },
+  historia.cena(id, foco, () => { J.modo = 'jogando'; g?.depois?.(); if (PESSOAL) { limparSerie(); aliados.dispensar(); estudio?.mostrar(null); } if (noLab) cenaNoLab(false); if (naSala) cenaNoCofre(false, CENAS_COFRE_HEROI.has(id), id); depois?.(); },
     { ...(opc || {}), aoAcao: opc?.aoAcao || g?.aoAcao || (PESSOAL ? acaoSerie : undefined) });
 }
 // EDIÇÃO PESSOAL (dono, 31/10: "todos os personagens terem seu boneco"): quem fala numa cena e não está nela entra andando
@@ -1833,7 +1847,10 @@ function encenarElenco(id, foco) {
   estudio?.preparar(quem);
   if (!lista.length) return;
   const livre = (x, z, y) => { const q = empurrar(rectsPerto, x, z, 0.42, y, 1.7); return !q.bateu && Math.abs(chaoEm(rectsPerto, x, z, y + 0.5) - chaoEm(rectsPerto, P.x, P.z, P.y + 0.5)) < 0.45; };
-  aliados.encenar([...new Set(lista)], { x: P.x, y: P.y, z: P.z, h: P.h }, livre);
+  // na sala secreta, o Wells entra pela porta escondida até diante da Gideon
+  const c = J.cenaCofre && cofre?.pontos, fixas = c ? { wells: { x: c.wells.x, z: c.wells.z, y: PISO_LAB, h: Math.PI / 2, sx: c.porta.x, sz: c.porta.z } } : {};
+  if (c && quem.includes('thawne') && !lista.includes('wells')) lista.push('wells');
+  aliados.encenar([...new Set(lista)], { x: P.x, y: P.y, z: P.z, h: P.h }, livre, fixas);
 }
 // ---------- a temporada da série (edição pessoal): as ações das cenas e as cenas do laboratório sem o Barry ----------
 // a cena que a série mostra do ponto de vista do Wells (ou de quem estiver no S.T.A.R. Labs): o herói some e a câmera vai para o
@@ -1851,11 +1868,30 @@ function cenaNoLab(on) {
     J.heroiFora = false; J.povFora = null; heroi.visible = true; atualizarQuarteiroes(P.x, P.z, 999); rectsPerto = retangulosPerto(P.x, P.z, 1);   // (visível já, não só no próximo quadro)
   }
 }
+// a SALA SECRETA (edição pessoal): nas cenas do Wells, o herói sai de cena e o Wells entra pela porta escondida (que abre na
+// hora) até diante da Gideon; nas do Barry (a descoberta e a conversa com a Gideon), ele já está lá dentro. No fim, o herói volta
+// para onde estava (menos na descoberta: ele está na sala que acabou de achar) e a porta fecha se a sala ainda é segredo
+function cenaNoCofre(on, comHeroi, id) {
+  const c = cofre.pontos;
+  if (on) {
+    povSalvo = { x: P.x, y: P.y, z: P.z, h: P.h, yaw: C.yaw };
+    J.cenaCofre = id; cofre.porta(true, comHeroi);
+    if (comHeroi) { Object.assign(P, { x: c.dentro.x, y: PISO_LAB, z: c.dentro.z, h: Math.PI / 2, vx: 0, vz: 0, vy: 0 }); C.yaw = Math.PI / 2; }
+    else { Object.assign(P, { x: c.centro.x, y: PISO_LAB, z: c.centro.z + 2.4, h: Math.PI / 2, vx: 0, vz: 0, vy: 0 }); J.heroiFora = true; heroi.visible = false; J.povFora = ['wells']; }
+    if (id === 'ep-20') cofre.gideon(true);
+    atualizarQuarteiroes(P.x, P.z, 999); rectsPerto = retangulosPerto(P.x, P.z, 1);
+  } else {
+    J.cenaCofre = null; cofre.gideon(false);
+    if (!comHeroi) { J.heroiFora = false; J.povFora = null; heroi.visible = true; }
+    if (povSalvo && id !== 'depois-s1e19-sala') { const v = povSalvo; Object.assign(P, { x: v.x, y: v.y, z: v.z, h: v.h, vx: 0, vz: 0, vy: 0 }); C.yaw = v.yaw; }
+    povSalvo = null; atualizarQuarteiroes(P.x, P.z, 999); rectsPerto = retangulosPerto(P.x, P.z, 1);
+  }
+}
 /** as ações das falas da temporada (serie.js) */
 function acaoSerie(a) {
   if (a === 'deita') deitarHeroi(true);
   else if (a === 'acorda') { deitarHeroi(false); clarear(0.35); }
-  else if (a === 'levanta') equipe.levantar('wells');
+  else if (a === 'levanta') { if (J.cenaCofre) cofre?.gideon(true); else equipe.levantar('wells'); }   // (na sala secreta ele já está de pé: chama a Gideon)
   else if (a === 'senta') equipe.sentar('wells');
   else if (a === 'vira') {                                    // o Wells some num raio vermelho e o homem de amarelo fica no lugar dele
     J.wellsVirou = true; J.cenaAliados = { aliados: { reverso: 'cortexWells' } }; aliadosDaSerie = true; clarear(0.4);
@@ -1870,7 +1906,7 @@ function acaoSerie(a) {
   else if (a === 'fimTunel') { tempo.tunel = false; J.corridaCena = false; clarear(0.5); }
   else if (a === 'jornalFuturo') jornalFuturo(true);
   else if (a === 'fechaJornal') jornalFuturo(false);
-  else if (a === 'luzGideon') clarear(0.25);
+  else if (a === 'luzGideon') { clarear(0.25); cofre?.luzes(1); if (J.cenaCofre === 'ep-20') cofre?.gideon(true); }   // a sala acende (e, no episódio 20, a Gideon)
   else if (a === 'clarao') clarear(0.8);
 }
 /** o fim de qualquer cena da temporada: nada do que as ações ligaram fica ligado */
@@ -2055,6 +2091,12 @@ function quadro() {
   equipe.atualizar(dt, P, { noCortex: noCortex(), quemFala: J.modo === 'cena' ? historia.quemFala : null, oculto: tempo.epoca === 'ignicao', fora });
   aliados.posicionar((J.cenaAliados || missoes.atual)?.aliados || null);
   aliados.atualizar(dt, P, { quemFala: J.modo === 'cena' ? historia.quemFala : null, olhar: J.modo === 'cena' && PESSOAL ? olharNaCena : null });
+  // a sala secreta: a porta aberta quando descoberta (ou numa cena lá dentro); a Gideon acende quando fala
+  if (cofre) {
+    if (!J.cenaCofre) cofre.porta(cofreDescoberto());
+    cofre.atualizar(dt, P, { visivel: pertoDoLab(), falaGideon: J.modo === 'cena' && historia.quemFala === 'gideon' });
+    J.cofreAberto = cofre.aberta;
+  }
   // o quadro de vídeo: quem fala do laboratório (sem estar na cena) ou a TV
   if (estudio) { const q = J.modo === 'cena' ? historia.quemFala : null; estudio.mostrar(q && (q === 'tv' || (DO_LAB.has(q) && !historia.presente(q))) ? q : null); }
   passoVitrine(dt);                                                         // (também nas cenas: o traje gira na apresentação)
@@ -2117,4 +2159,4 @@ requestAnimationFrame(quadro);
 // versão nova publicada: recarrega ao voltar para o jogo (ou no menu)
 iniciarAtualizacao({ podeRecarregar: () => J.modo !== 'jogando' });
 
-window.__rel = { PESSOAL, pontoMundo, rodarCena, focosCena, aliados, get estudio() { return estudio; }, poderes, ganharXp, posfx, escolherImagem, get presetImagem() { return presetImagem; }, interacoes, corridas, vitrine, equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };
+window.__rel = { PESSOAL, pontoMundo, rodarCena, focosCena, aliados, get estudio() { return estudio; }, get cofre() { return cofre; }, cofreDescoberto, poderes, ganharXp, posfx, escolherImagem, get presetImagem() { return presetImagem; }, interacoes, corridas, vitrine, equipe, aliados, contencao, rivais, vida, tempo,  avisar, historia, viloes, combate, guia, alvoMissao, ESPECIAIS, camera, cena, sol, posfx, hemi, trafego, pedestres, missoes, crimes, portais, LAB_B, RES, renderer, heroi, P, C, J, CAM, get modelo() { return modelo; }, teclas, stick, reiniciar, carregados, orbesAtivos, esferasColetadas, mundo, desenharMapa, get rects() { return rectsPerto; } };

@@ -1,6 +1,7 @@
 // LABORATÓRIOS ESTRELA — o plano (puro: sem three.js nem DOM). Uma só fonte para a colisão (retângulos) e para o desenho
 // (lab3d.js lê PAREDES, CELAS, CONSOLES... daqui). Coordenadas LOCAIS: u = x - cx, v = z - cz, y para cima.
 // A FRENTE (entrada) olha para -z. Sem aleatoriedade: o plano é determinístico.
+import { PESSOAL } from './edicao.js';
 export const LAB_CELULA = [22, 22];          // célula de canto (noroeste) do campus, logo a nordeste do centro da cidade (N = 44)
 // o CAMPUS ocupa 2 × 2 células (22–23 nos dois eixos): as ruas de dentro viram praça e o prédio fica no meio dele
 export const CAMPUS = { n: 2, meio: 68 };    // meio = metade do lado da praça (2 × 76 − 16 de rua = 136 m)
@@ -145,6 +146,19 @@ export const MOVEIS_ANEXOS = [
   [-19.6, -18.2, 45, 55, 1.05], [18.2, 19.6, 45, 55, 1.05],
   ...[-17, -11, 11, 17].map((u) => [u - 0.5, u + 0.5, 59.7, 61, NUCLEO.teto]),
 ];
+// EDIÇÃO PESSOAL — a SALA SECRETA do Wells (dono, 31/10: "na parte do dr wells, tem que ter uma sala secreta, que só descobrem
+// depois, onde ele entra, fala com a Gideon"): o fundo do saguão da ala leste, atrás de uma parede que não está em nenhuma
+// planta. A porta é um painel da própria parede (o retângulo `cofre` do plano, que o jogo ignora com ela aberta; desenho em
+// cofre3d.js). O banco do saguão vai para o meio dele.
+export const COFRE = { u0: 52.3, u1: 61, v0: -5.5, v1: 5.5, parede: 52, t: 0.6, porta: [-1.3, 1.3], teto: 5.2 };
+if (PESSOAL) {
+  ANEXO_PAREDES.push({ id: 'cofre', eixo: 'z', c: COFRE.parede, t: COFRE.t, a: -5.5, b: 5.5, ext: 0, y1: ALA_TETO, vaos: [COFRE.porta], janelas: [] });
+  SALAS.alaLeste.u = [37, COFRE.parede - COFRE.t / 2];
+  SALAS.cofre = { u: [COFRE.u0, COFRE.u1], v: [COFRE.v0, COFRE.v1], teto: ALA_TETO };
+  const b = MOVEIS_ANEXOS.findIndex((m) => m[0] === 51 && m[1] === 55 && m[2] === -1); if (b >= 0) MOVEIS_ANEXOS[b] = [44, 48, -1, 1, 0.5];
+  // a vitrine do traje amarelo e o pedestal do jornal, sólidos
+  MOVEIS_ANEXOS.push([59.2, 60.6, -5.2, -3.8, 2.6], [56.3, 57.3, -0.5, 0.5, 1.05]);
+}
 export const MONUMENTO = { u0: 12, u1: 40, v0: -62, v1: -59.6, y1: 4.4 };     // o letreiro de pedra na entrada do campus (ao lado do caminho)
 export const FRENTE = { cerca: 29.4, portao: [-6, 6], marquise: { u: [-8, 8], v0: -27, v1: -32, y: 5.3 }, guarita: { u0: 8, u1: 10.6, v0: -29, v1: -27.4, y1: 2.7 } };
 
@@ -215,6 +229,8 @@ export function planoLab(cx, cz) {
     add(N.u - N.esfera.r, N.u + N.esfera.r, N.v - N.esfera.r, N.v + N.esfera.r, N.esfera.y - N.esfera.r, N.esfera.y + N.esfera.r);
     for (let k = 0; k < N.pilares.n; k++) { const a = (k / N.pilares.n) * Math.PI * 2, u = N.u + N.pilares.R * Math.cos(a), v = N.v + N.pilares.R * Math.sin(a); add(u - 0.7, u + 0.7, v - 0.7, v + 0.7, PISO, N.pilares.y1); } }
   for (const [u0, u1, v0, v1, y1] of MOVEIS_ANEXOS) add(u0, u1, v0, v1, PISO, y1);
+  // (edição pessoal) a porta da sala secreta: sólida enquanto fechada
+  if (PESSOAL) L.push({ x0: r6(cx + COFRE.parede - COFRE.t / 2), x1: r6(cx + COFRE.parede + COFRE.t / 2), z0: r6(cz + COFRE.porta[0]), z1: r6(cz + COFRE.porta[1]), y0: PISO, y1: PORTA_Y, cofre: true });
   for (const p of PASSARELAS) add(p.u0, p.u1, p.v0, p.v1, p.y0, p.y1);
   add(MONUMENTO.u0, MONUMENTO.u1, MONUMENTO.v0, MONUMENTO.v1, PISO, MONUMENTO.y1);
   // fora: guarita e marquise (a cerca saiu: o campus é aberto para a cidade)
@@ -244,6 +260,7 @@ export function planoLab(cx, cz) {
     pt('nucleo', 0, 0.3, 42), pt('medica', -49, 0.3, -20), pt('alaOeste', -45, 0.3, 0), pt('oficina', -49, 0.3, 19),
     pt('trajes', 50, 0.3, -20), pt('alaLeste', 45, 0.3, 0), pt('fenda', 49, 0.3, 20), pt('corredorNorte', 0, 0.3, 32),
     pt('corredorOeste', -31, 0.3, 0), pt('corredorLeste', 31, 0.3, 0),
+    ...(PESSOAL ? [pt('cofre', 55.4, 0.3, 0), pt('portaCofre', 50.4, 0.3, 0)] : []),
   ];
   return { rects: L, caixaExterna, campus, entrada, dentro, pontosDeInteresse };
 }
