@@ -26,7 +26,7 @@ import { TORCEDOR3D, REGIAO, variacaoDe } from './torcedor-dados.js';
 import { CADEIRA } from './cadeiras-dados.js';
 
 export const IMPOSTOR = Object.freeze({
-  inclinacao: 30,        // graus: o polo do hemi-octaedro inclinado para a frente (vê de frente até 30° de baixo; por trás só do alto)
+  inclinacao: 45,        // graus: o polo do hemi-octaedro inclinado da vertical para a frente (vê de frente até 45° de baixo; por trás, de 45° para cima)
   alturaMax: 2.5,        // m: o canal da altura (0–1 = 0–2,5 m do piso)
   margem: 1.5,           // texels livres em volta da figura em cada foto (o filtro e o mip 1 não pegam a vizinha)
   ss: 2,                 // amostras por pixel em cada eixo no assamento (2×2: a borda suave)
@@ -55,14 +55,16 @@ export const IMPOSTOR = Object.freeze({
 export const OBJETOS = 16;   // 2 variações (homem, mulher) × 8 poses
 
 const RAD = Math.PI / 180;
-const CI = Math.cos(IMPOSTOR.inclinacao * RAD), SI = Math.sin(IMPOSTOR.inclinacao * RAD);
+// o polo P a (90° − inclinação) acima do horizonte, para a frente: P = (0, SI, CI)
+const CI = Math.cos((90 - IMPOSTOR.inclinacao) * RAD), SI = Math.sin((90 - IMPOSTOR.inclinacao) * RAD);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const norm = a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 
 // ------------------------------------------------------------------ o mapa hemi-octaédrico (o polo inclinado)
 // Espaço do TORCEDOR (o do torcedor-dados.js): x para a esquerda da pessoa, y para cima, z para a frente (o campo). O polo
-// P = (0, sen i, cos i); a base inclinada X' = x, Y' = P, Z' = X' × Y' = (0, −cos i, sen i).
+// P = (0, cos i, sen i) (i = a inclinação da vertical); a base inclinada X' = x, Y' = P, Z' = X' × Y'. De frente, o mapa vai
+// de i − 90° (de baixo) até em cima; por trás, de 90° − i para cima; de lado, do horizonte para cima.
 /** Do espaço do torcedor para o inclinado (o polo em +y'). */
 export function paraInclinado(d) { return [d[0], d[1] * SI + d[2] * CI, -d[1] * CI + d[2] * SI]; }
 /** Do inclinado para o espaço do torcedor. */

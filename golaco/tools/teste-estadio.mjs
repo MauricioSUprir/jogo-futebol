@@ -33,6 +33,11 @@
 //  14) cadeiras e degraus (item 69, PR 1; celular e PC): o degrau em escada nas arquibancadas, as cadeiras 3D de perto
 //      nunca na câmera de TV (20 instantes), perto da arquibancada de lá ≥ 1 bloco, +1 chamada e 18 triângulos por cadeira;
 //      o torcedor 3D (PR 2) nunca na TV e, perto, sentado nas cadeiras 3D, fora do quadro e no teto de triângulos;
+//   9c) o IMPOSTOR octaédrico (item 69, PR 3): as contas do vertex shader dele (render/impostor-dados.js IMPOSTOR_GLSL) na
+//      GPU = as de JS;
+//  14d) o impostor na página (celular e PC): assado em fatias, na TV da Média nenhum (o programa de hoje), de perto com o
+//      mesmo custo e outra imagem, a Baixa no quadro SDF, a densidade real perto no orçamento; 14e) o programa que não
+//      compila volta ao quadro SDF; 15) sem o modelo do torcedor (o assamento não acontece), o quadro SDF;
 //  14c) o ORÇAMENTO de triângulos por quadro do 3D de perto (PR 2; render/cadeiras-dados.js criarOrcamento3D) na página:
 //      medido (o renderer.info), na TV gasto 0; perto, o total do quadro = o resto medido + o gasto do 3D de perto
 //      (cadeiras × 18 + os triângulos do torcedor), o gasto ≤ o orçamento − a margem e o orçamento = o alvo da qualidade −
@@ -584,6 +589,75 @@ void main() { int i = int(gl_FragCoord.x); vec4 a = texelFetch(uEntrada, ivec2(i
   meta('GPU = JS: estado do torcedor (quadro e 3D: a pose, a ola e o bandeirão; 4096 sorteados)', gpu3.erro ?? `${gpu3.poseDif} poses diferentes; pulo até ${(gpu3.puloDif * 1000).toFixed(2)} mm, balanço até ${(gpu3.balDif * 1000).toFixed(2)} mm (${gpu3.sob} debaixo do bandeirão, ${gpu3.ola} levantados pela ola)`,
     '≤ 0,2%, ≤ 1 mm; ≥ 400 debaixo e ≥ 100 na ola', !gpu3.erro && gpu3.poseDif <= 0.002 * gpu3.N && gpu3.puloDif <= 0.001 && gpu3.balDif <= 0.001 && gpu3.sob >= 400 && gpu3.ola >= 100);
   meta('GPU = JS: torcedor 3D — a textura de animação (VAT) nas 8 poses (4 malhas × 4096 vértices; escala, pulo, balanço, cadeira e rumo)', gpu3.erro ?? `difere até ${(gpu3.vatDif * 1000).toFixed(3)} mm (${gpu3.poses} poses, ${gpu3.malhas} malhas)`, '≤ 0,1 mm, 8 poses, 4 malhas', !gpu3.erro && gpu3.vatDif <= 1e-4 && gpu3.poses === 8 && gpu3.malhas === 4);
+  // 9c) o IMPOSTOR octaédrico (item 69, PR 3): as contas do vertex shader dele (render/impostor-dados.js IMPOSTOR_GLSL — o
+  //     mapa hemi-octaédrico de polo inclinado, as 3 fotos e os pesos, a direção e a base de cada foto, a projeção virtual)
+  //     na GPU = as de JS, nas grades da Média e da Alta (4096 direções sorteadas, também abaixo do horizonte inclinado)
+  const gpuImp = await pg.evaluate(async () => {
+    const IM = await import('./js/render/impostor-dados.js').catch(() => null);
+    if (!IM || !IM.IMPOSTOR_GLSL) return { erro: 'sem IMPOSTOR_GLSL (o quadro SDF)' };
+    const cv = document.createElement('canvas');
+    const gl = cv.getContext('webgl2');
+    if (!gl || !gl.getExtension('EXT_color_buffer_float')) return { erro: 'sem WebGL2 com textura float' };
+    const N = 4096;
+    const sh = (tipo, src) => { const x = gl.createShader(tipo); gl.shaderSource(x, src); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; };
+    const prog = corpo => {
+      const p = gl.createProgram();
+      gl.attachShader(p, sh(gl.VERTEX_SHADER, '#version 300 es\nvoid main(){ vec2 v = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(v * 2.0 - 1.0, 0.0, 1.0); }'));
+      gl.attachShader(p, sh(gl.FRAGMENT_SHADER, `#version 300 es
+precision highp float; precision highp sampler2D; precision highp int;
+uniform sampler2D uEntrada; uniform float uN; out vec4 cor;
+${IM.IMPOSTOR_GLSL}
+void main() { int i = int(gl_FragCoord.x); vec3 d = texelFetch(uEntrada, ivec2(i, 0), 0).xyz, lp = texelFetch(uEntrada, ivec2(i, 1), 0).xyz;
+  vec2 uv = impCodifica(d); vec2 f0, f1, f2; vec3 w; impQuadros(uv, uN, f0, f1, f2, w); vec3 d1 = impDirecao(f1, uN);
+  vec3 bx, by, bx1, by1; impBase(d, bx, by); impBase(d1, bx1, by1);
+  ${corpo} }`));
+      gl.linkProgram(p);
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+      return p;
+    };
+    const ent = new Float32Array(4 * N * 2);
+    let s = 4242;
+    const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+    for (let i = 0; i < N; i++) {
+      let d = [rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1]; const l = Math.hypot(...d); d = d.map(v => v / l);
+      ent.set([...d, 0], 4 * i); ent.set([rnd() * 2 - 1, rnd() * 2.2 - 0.2, rnd() * 2 - 1, 0], 4 * (N + i));
+    }
+    const tE = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tE); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, N, 2, 0, gl.RGBA, gl.FLOAT, ent);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    const alvo = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, alvo); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, N, 1, 0, gl.RGBA, gl.FLOAT, null);
+    const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, alvo, 0);
+    const saidas = ['cor = vec4(uv, w.xy);', 'cor = vec4(f0, f1);', 'cor = vec4(f2, w.z, 0.0);', 'cor = vec4(d1, 0.0);', 'cor = vec4(bx, 0.0);', 'cor = vec4(by, 0.0);', 'cor = vec4(impReprojeta(lp, d, d1, bx1, by1), 0.0, 0.0);'];
+    const progs = saidas.map(prog);
+    const r = { uv: 0, w: 0, quadro: 0, dir: 0, base: 0, rep: 0, n: 0, abaixo: 0 };
+    for (const nG of [IM.IMPOSTOR.qual.media.N, IM.IMPOSTOR.qual.alta.N]) {
+      const o = progs.map(p => {
+        gl.useProgram(p); gl.viewport(0, 0, N, 1);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tE); gl.uniform1i(gl.getUniformLocation(p, 'uEntrada'), 0); gl.uniform1f(gl.getUniformLocation(p, 'uN'), nG);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        const out = new Float32Array(4 * N); gl.readPixels(0, 0, N, 1, gl.RGBA, gl.FLOAT, out); return out;
+      });
+      for (let i = 0; i < N; i++) {
+        const d = [ent[4 * i], ent[4 * i + 1], ent[4 * i + 2]], lp = [ent[4 * (N + i)], ent[4 * (N + i) + 1], ent[4 * (N + i) + 2]];
+        if (IM.paraInclinado(d)[1] < 0) r.abaixo++;
+        const uv = IM.codificar(d), q = IM.quadros(uv, nG);
+        r.uv = Math.max(r.uv, Math.abs(uv[0] - o[0][4 * i]), Math.abs(uv[1] - o[0][4 * i + 1]));
+        const fg = [[o[1][4 * i], o[1][4 * i + 1]], [o[1][4 * i + 2], o[1][4 * i + 3]], [o[2][4 * i], o[2][4 * i + 1]]];
+        if (fg.some((f, k) => f[0] !== q.f[k][0] || f[1] !== q.f[k][1])) { r.quadro++; continue; }
+        r.w = Math.max(r.w, Math.abs(q.w[0] - o[0][4 * i + 2]), Math.abs(q.w[1] - o[0][4 * i + 3]), Math.abs(q.w[2] - o[2][4 * i + 2]));
+        const d1 = IM.direcaoDoQuadro(q.f[1][0], q.f[1][1], nG), B = IM.base(d), B1 = IM.base(d1);
+        r.dir = Math.max(r.dir, ...d1.map((v, k) => Math.abs(v - o[3][4 * i + k])));
+        r.base = Math.max(r.base, ...B.bx.map((v, k) => Math.abs(v - o[4][4 * i + k])), ...B.by.map((v, k) => Math.abs(v - o[5][4 * i + k])));
+        const st = IM.reprojetar(lp, d, d1, B1.bx, B1.by);
+        r.rep = Math.max(r.rep, Math.abs(st[0] - o[6][4 * i]), Math.abs(st[1] - o[6][4 * i + 1]));
+        r.n++;
+      }
+    }
+    return r;
+  });
+  meta('GPU = JS: o impostor octaédrico (o mapa de polo inclinado, as 3 fotos e os pesos, a direção e a base de cada foto, a projeção virtual; Média e Alta, 4096 direções)',
+    gpuImp.erro ?? `uv até ${gpuImp.uv.toExponential(1)}, pesos ${gpuImp.w.toExponential(1)}, direção ${gpuImp.dir.toExponential(1)}, base ${gpuImp.base.toExponential(1)}, projeção ${gpuImp.rep.toExponential(1)} m; ${gpuImp.quadro} fotos diferentes (na divisa da grade) de ${gpuImp.n + gpuImp.quadro}; ${gpuImp.abaixo} abaixo do horizonte inclinado`,
+    '≤ 1e-5, ≤ 1e-4, ≤ 1e-5, ≤ 1e-5, ≤ 1e-4 m; ≤ 0,5%; ≥ 500 abaixo',
+    !gpuImp.erro && gpuImp.uv <= 1e-5 && gpuImp.w <= 1e-4 && gpuImp.dir <= 1e-5 && gpuImp.base <= 1e-5 && gpuImp.rep <= 1e-4 && gpuImp.quadro <= 0.005 * (gpuImp.n + gpuImp.quadro) && gpuImp.abaixo >= 500);
   // 12) FESTA (pedido de 11/10: "bandeirões, sinalizadores"): (a) as faixas/bandeiras/bandeirões e os sinalizadores
   //     custam no máximo 2 chamadas de desenho a mais no jogo (20 instantes, inclusive a saída com sinalizadores); (b) a
   //     onda da bandeira na GPU = no JS (4096 pontos); (c) no gol da casa, a organizada atrás do gol muda na câmera do
@@ -915,21 +989,110 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
         return { com, sem, teto: TORCEDOR3D.qual[g.estadio.torcida.qualidade].teto };
       });
       meta(`Torcedor 3D (${nome}): nunca na TV; perto, sentado nas cadeiras 3D, fora do quadro, no teto de triângulos`,
-        `TV: máx ${r.tor} em 20 instantes (modelo ${r.carregado ? 'carregado' : 'NÃO carregado'}); perto: ${tor.com.torcedores} torcedores (níveis ${tor.com.lods?.join('/')}), ${tor.com.ocultos} fora do quadro, ${tor.com.triangulos} triângulos (teto ${tor.teto}); sem as cadeiras 3D: ${tor.sem.tor} e ${tor.sem.ocultos} fora, −${tor.com.c - tor.sem.c} chamadas, −${tor.com.t - tor.sem.t} triângulos`,
-        '0 na TV; perto ≥ 1, todos fora do quadro, ≤ teto; sem cadeiras 0 e 0, −(1 + malhas) chamadas e −(18/cadeira + os dele)',
-        r.carregado && r.tor === 0 && tor.com.torcedores >= 1 && tor.com.ocultos === tor.com.torcedores && tor.com.triangulos <= tor.teto && tor.sem.tor === 0 && tor.sem.ocultos === 0
-          && tor.com.c - tor.sem.c === 1 + tor.com.malhas && tor.com.malhas >= 1 && tor.com.malhas <= 4 && tor.com.t - tor.sem.t === 18 * tor.com.cadeiras + tor.com.triangulos);
+        `TV: máx ${r.tor} em 20 instantes (modelo ${r.carregado ? 'carregado' : 'NÃO carregado'}); perto: ${tor.com.torcedores} torcedores (níveis ${tor.com.lods?.join('/')}), ${tor.com.ocultos} fora do quadro (${tor.com.pessoas} pessoas com a densidade real, ${tor.com.perto} na malha perto), ${tor.com.triangulos} triângulos (teto ${tor.teto}); sem as cadeiras 3D: ${tor.sem.tor} e ${tor.sem.ocultos} fora, −${tor.com.c - tor.sem.c} chamadas, −${tor.com.t - tor.sem.t} triângulos`,
+        '0 na TV; perto ≥ 1, os desenhados dos blocos fora do quadro (≥ os em 3D), ≤ teto; sem cadeiras 0 e 0, −(1 + malhas + a malha perto) chamadas e −(18/cadeira + os dele + 2/pessoa da malha perto)',
+        r.carregado && r.tor === 0 && tor.com.torcedores >= 1 && tor.com.ocultos >= tor.com.torcedores && tor.com.ocultos <= tor.com.pessoas && tor.com.triangulos <= tor.teto && tor.sem.tor === 0 && tor.sem.ocultos === 0
+          && tor.com.c - tor.sem.c === 1 + tor.com.malhas + (tor.com.perto > 0 ? 1 : 0) && tor.com.malhas >= 1 && tor.com.malhas <= 4 && tor.com.t - tor.sem.t === 18 * tor.com.cadeiras + tor.com.triangulos + 2 * tor.com.perto);
       // 14c) o orçamento de triângulos por quadro na página (a câmera parada: o resto medido no quadro anterior é o deste)
-      const O = tor.com.orc, gc = 18 * tor.com.cadeiras + tor.com.triangulos;
+      const O = tor.com.orc, gc = 18 * tor.com.cadeiras + tor.com.triangulos + 2 * (tor.com.perto ?? 0);
       meta(`Orçamento do 3D de perto (${nome}): medido; na TV nada gasto; perto, o total = o resto + o gasto, o gasto ≤ o orçamento − a margem, o orçamento = o alvo − o resto; o corte sem 3D e o seguinte de uma vez`,
-        `${r.medido && O?.medido ? 'medido' : 'SEM medida'}; TV: gasto máx ${r.gastoTV}; perto: alvo ${O?.alvo}, resto ${O?.resto}, orçamento ${O?.orcamento}, gasto ${O?.gasto?.total} (cadeiras ${O?.gasto?.cadeiras} + torcedores ${O?.gasto?.torcedores}; a conta dá ${gc}), total ${tor.com.t}; quadro do corte: ${tor.com.corte.corte ? 'corte' : 'SEM corte'}, gasto ${tor.com.corte.gasto}, ${tor.com.corte.inst} cadeiras; o seguinte ${tor.com.depois.novo ? 'de uma vez' : 'aos poucos'}`,
+        `${r.medido && O?.medido ? 'medido' : 'SEM medida'}; TV: gasto máx ${r.gastoTV}; perto: alvo ${O?.alvo}, resto ${O?.resto}, orçamento ${O?.orcamento}, gasto ${O?.gasto?.total} (cadeiras ${O?.gasto?.cadeiras} + torcedores ${O?.gasto?.torcedores} + a malha perto ${O?.gasto?.perto ?? 0}; a conta dá ${gc}), total ${tor.com.t}; quadro do corte: ${tor.com.corte.corte ? 'corte' : 'SEM corte'}, gasto ${tor.com.corte.gasto}, ${tor.com.corte.inst} cadeiras; o seguinte ${tor.com.depois.novo ? 'de uma vez' : 'aos poucos'}`,
         'medido; 0; total = resto + gasto; gasto = a conta ≤ orçamento − 2 mil; orçamento = alvo − resto; corte com 0 e 0; de uma vez',
         r.medido && !!O?.medido && r.gastoTV === 0 && O.gasto.total === gc && O.gasto.total > 0 && tor.com.t === O.resto + O.gasto.total && O.gasto.total <= O.orcamento - 2000
           && O.orcamento === Math.max(0, O.alvo - O.resto) && tor.com.corte.corte && tor.com.corte.esperando && tor.com.corte.gasto === 0 && tor.com.corte.inst === 0 && tor.com.depois.novo && !tor.com.depois.esperando);
+      // 14d) o IMPOSTOR octaédrico (item 69, PR 3) na página: o atlas assado em fatias (pronto, sem falha); na TV de jogo da
+      //      Média nenhum torcedor em impostor e o programa de hoje em todo grupo (na TV do celular nada fica mais caro); na
+      //      câmera de perto da arquibancada atrás do gol, blocos em impostor com o programa de dois ramos e o MESMO custo (as
+      //      chamadas e os triângulos com × sem o impostor) e a imagem da torcida diferente; a Baixa no quadro SDF; a
+      //      densidade real perto (a malha perto: 2 triângulos por pessoa no orçamento)
+      await pagina.waitForFunction(() => { const i = window.__golaco.estadio.impostor; return i && (i.pronto || i.falhou); }, null, { timeout: 90000, polling: 100 }).catch(() => {});
+      const im = await pagina.evaluate(async () => {
+        const g = window.__golaco, E = g.estadio;
+        const est0 = E.impostor;
+        // a TV de jogo (a câmera do jogo de verdade: 10 instantes)
+        let tvTor = 0, tvGrupos = 0;
+        for (let k = 0; k < 10; k++) {
+          for (let i = 0; i < 60; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+          g.desenhar();
+          tvTor = Math.max(tvTor, E.impostor.torcida.torcedores); tvGrupos = Math.max(tvGrupos, E.impostor.torcida.grupos.length);
+        }
+        // de perto (atrás do gol, a arquibancada visitante): com × sem o impostor no mesmo quadro
+        g.cameraLivre({ de: [-56, 6, -8], para: [-70, 10, 6], fov: 55 });
+        g.desenhar(); g.desenhar(); g.desenhar();
+        const cv = document.querySelector('canvas'), off = document.createElement('canvas'); off.width = 240; off.height = 120;
+        const cx = off.getContext('2d', { willReadFrequently: true });
+        const ler = () => { cx.drawImage(cv, 0, 0, off.width, off.height); return cx.getImageData(0, 0, off.width, off.height).data; };
+        const com = { c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos, imp: E.impostor, cad: E.cadeiras, px: ler() };
+        E.impostorObj?.pausar(true); g.desenhar(); g.desenhar();
+        const sem = { c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos, imp: E.impostor, px: ler() };
+        E.impostorObj?.pausar(false); g.desenhar(); g.desenhar();
+        let dif = 0;
+        for (let i = 0; i < com.px.length; i += 4) if ((Math.abs(com.px[i] - sem.px[i]) + Math.abs(com.px[i + 1] - sem.px[i + 1]) + Math.abs(com.px[i + 2] - sem.px[i + 2])) / 3 > 20) dif++;
+        // a Baixa: o quadro SDF (sem atlas, sem 3D)
+        const q0 = g.qualidade;
+        g.definirQualidade('baixa'); for (let i = 0; i < 4; i++) g.desenhar();
+        const baixa = { tor: E.impostor.torcida.torcedores, grupos: E.impostor.torcida.grupos.length, perto: E.impostor.torcida.perto };
+        g.definirQualidade(q0); for (let i = 0; i < 4; i++) g.desenhar();
+        g.cameraLivre(null); g.desenhar();
+        const o = com.cad.orcamento, tq = com.cad.torcedores;
+        return { est0, tvTor, tvGrupos, com: { c: com.c, t: com.t, imp: com.imp, perto: tq?.perto ?? 0, pessoas: tq?.pessoas ?? 0, gasto: o?.gasto, orc: o?.orcamento }, sem: { c: sem.c, t: sem.t, tor: sem.imp.torcida.torcedores, grupos: sem.imp.torcida.grupos.length }, dif: dif / (com.px.length / 4), baixa, q0 };
+      });
+      const media = nome === 'celular';
+      meta(`Impostor octaédrico (${nome}): assado em fatias, na TV ${media ? 'da Média nenhum (o programa de hoje)' : 'da Alta, sim'}; de perto o impostor com o mesmo custo (chamadas e triângulos) e outra imagem; a Baixa no quadro SDF; a densidade real perto no orçamento`,
+        `pronto ${im.est0?.pronto ? 'sim' : 'NÃO'}${im.est0?.falhou ? ' (FALHOU)' : ''} (${Math.round(im.est0?.ms ?? 0)} ms de assamento, ${im.est0?.spec ? `${im.est0.spec.N}×${im.est0.spec.N} fotos de ${im.est0.spec.celula.join('×')}` : 'sem atlas'}, ${im.est0?.mapeados} torcedores nos blocos); TV: ${im.tvTor} em impostor, ${im.tvGrupos} grupos no programa dele; perto: ${im.com.imp.blocos} blocos, ${im.com.imp.torcida.torcedores} torcedores, grupos [${im.com.imp.torcida.grupos.join(', ')}], ${im.com.c}/${im.com.t} × sem ${im.sem.c}/${im.sem.t} (chamadas/triângulos), ${(100 * im.dif).toFixed(1)}% da imagem muda; densidade real: ${im.com.pessoas} pessoas (${im.com.perto} na malha perto, ${im.com.gasto?.perto} triângulos no gasto); Baixa: ${im.baixa.tor} em impostor, ${im.baixa.grupos} grupos, ${im.baixa.perto} perto`,
+        `pronto; TV ${media ? '0 e 0' : '≥ 1'}; perto ≥ 1 bloco, ≥ 100 torcedores, ≥ 1 grupo, chamadas e triângulos iguais, ≥ 2% muda; perto = 2/pessoa; Baixa 0, 0, 0`,
+        im.est0?.pronto && !im.est0.falhou && (media ? im.tvTor === 0 && im.tvGrupos === 0 : im.tvTor >= 1) && im.com.imp.blocos >= 1 && im.com.imp.torcida.torcedores >= 100 && im.com.imp.torcida.grupos.length >= 1
+          && im.com.c === im.sem.c && im.com.t === im.sem.t && im.sem.tor === 0 && im.sem.grupos === 0 && im.dif >= 0.02 && im.com.gasto?.perto === 2 * im.com.perto && im.baixa.tor === 0 && im.baixa.grupos === 0 && im.baixa.perto === 0);
+      // 14e) a QUEDA para o quadro SDF quando o programa do impostor não compila (o celular sem algo do GLSL 3): a torcida
+      //      confere o programa no quadro depois da pré-carga e volta ao de hoje, para sempre (o erro do shader no console é
+      //      o esperado aqui — os outros itens já conferiram o console)
+      if (media) {
+        const qd = await pagina.evaluate(() => {
+          const g = window.__golaco, T = g.estadio.torcidaObj;
+          T.desligarImpostor();
+          const ok = T.ligarImpostor({ vertPars: '', vertMain: 'ISTO NAO E GLSL;', fragPars: '', fragMain: '', uniforms: {}, rumo: new Int8Array(2 * T.dados.n) });
+          g.cameraLivre({ de: [-56, 6, -8], para: [-70, 10, 6], fov: 55 });
+          for (let i = 0; i < 4; i++) g.desenhar();
+          const r = { ok, ...T.impostor, material: undefined };
+          for (let i = 0; i < 2; i++) g.desenhar();
+          r.depois = g.estadio.impostor.torcida;
+          g.cameraLivre(null); g.desenhar();
+          return r;
+        });
+        meta('Impostor: o programa que não compila volta ao quadro SDF (para sempre nesta página)', `ligou ${qd.ok ? 'sim' : 'não'}; depois: falhou ${qd.depois.falhou ? 'sim' : 'NÃO'}, ligado ${qd.depois.ligado ? 'SIM' : 'não'}, ${qd.depois.torcedores} em impostor, grupos [${qd.depois.grupos}]`,
+          'sim; sim, não, 0, []', qd.ok && qd.depois.falhou && !qd.depois.ligado && qd.depois.torcedores === 0 && qd.depois.grupos.length === 0);
+      }
     } finally { await nav.close(); }
   } catch (e) {
     meta(`Execução (lado de cá, ${nome})`, e.message, 'sem exceção', false);
   }
+}
+// ------------------------------------------------------------------------------------------------------------------
+// 15) sem o modelo do torcedor (o assets/torcedor/torcedor.bin não veio: a rede caiu), nada é assado — a torcida fica no
+//     quadro SDF de hoje, sem erro de página, e o jogo segue (celular Média)
+try {
+  const { navegador: nav, pagina, erros: errosSem } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
+  try {
+    await pagina.route('**/torcedor.bin', r => r.abort());
+    await pagina.goto(`${srv.url}?q=media&toque=1&demo=1&semente=4&hora=dia&replay=0&comemoracao=0&prejogo=0`, { waitUntil: 'load' });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
+    const r = await pagina.evaluate(async () => {
+      const g = window.__golaco;
+      g.relogio.usarManual(true);
+      g.cameraLivre({ de: [-56, 6, -8], para: [-70, 10, 6], fov: 55 });
+      for (let k = 0; k < 20; k++) { g.desenhar(); await new Promise(ok => setTimeout(ok, 100)); }
+      const i = g.estadio.impostor, c = g.estadio.cadeiras;
+      g.cameraLivre(null);
+      return { pronto: !!i?.pronto, ligado: !!i?.torcida?.ligado, tor: i?.torcida?.torcedores ?? 0, modelo: !!c?.torcedores?.carregado, cad: c?.instancias ?? 0, torcida: g.estadio.torcida?.visivel };
+    });
+    // o único erro esperado é o do pedido do modelo cortado
+    const outros = errosSem.filter(e => !/torcedor\.bin|ERR_FAILED|Failed to load resource/i.test(e));
+    meta('Impostor: sem o modelo do torcedor, nada assado — a torcida no quadro SDF, as cadeiras 3D de perto ficam, sem erro de página',
+      `impostor ${r.pronto ? 'PRONTO' : 'não'}, programa ${r.ligado ? 'LIGADO' : 'de hoje'}, ${r.tor} em impostor; modelo ${r.modelo ? 'CARREGADO' : 'não'}; ${r.cad} cadeiras 3D; torcida ${r.torcida ? 'no desenho' : 'FORA'}; erros: ${outros.length ? outros.slice(0, 2).join(' | ') : 'nenhum'}`,
+      'não, de hoje, 0; não; ≥ 1; no desenho; nenhum', !r.pronto && !r.ligado && r.tor === 0 && !r.modelo && r.cad >= 1 && r.torcida && outros.length === 0);
+  } finally { await nav.close(); }
+} catch (e) {
+  meta('Execução (impostor sem o modelo)', e.message, 'sem exceção', false);
 }
 // ------------------------------------------------------------------------------------------------------------------
 // Etapa 4 (bolas paradas): no lateral do humano, a bola fica nas mãos acima da cabeça e as opções aparecem marcadas no

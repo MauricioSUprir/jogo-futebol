@@ -172,7 +172,7 @@ export function criarImpostor(opc) {
   const { torcida, grade } = opc;
   let qualidade = opc.qualidade ?? 'media', hora = opc.hora ?? 'dia';
   let modelo = null, assador = null, specAssando = null, atlas = null, tex = null, mapa = null, ligado = false, falhou = false;
-  let anteriores = new Set(), nPor = null, nPorQ = -1, chave = '', agendado = false, msAssando = 0, descartado = false;
+  let anteriores = new Set(), nPor = null, nPorQ = -1, chave = '', agendado = false, msAssando = 0, descartado = false, pausado = false;
   const ret = Array.from({ length: OBJETOS }, () => new THREE.Vector4()), cen = Array.from({ length: OBJETOS }, () => new THREE.Vector4());
   const U = {
     uImpA: { value: null }, uImpB: { value: null }, uImpN: { value: 6 }, uImpCel: { value: new THREE.Vector2(1, 1) },
@@ -258,7 +258,7 @@ export function criarImpostor(opc) {
     atualizar(cam, deJogo = false, semCa = false) {
       if (!ligado || !atlas || !torcida.impostor?.ligado) return;
       const Q = I.qual[qualidade];
-      if (!Q || (deJogo && !Q.naTV)) { anteriores = new Set(); aplicar(anteriores); return; }
+      if (!Q || (deJogo && !Q.naTV) || pausado) { anteriores = new Set(); aplicar(anteriores); return; }
       const r = escolherImpostor(grade.blocos, cam, anteriores, { pxEntra: Q.pxEntra, pxSai: Q.pxSai, teto: Q.teto, nPor: porBloco(), semSetor: semCa ? 3 : null });
       anteriores = r.lista;
       aplicar(r.lista);
@@ -270,6 +270,8 @@ export function criarImpostor(opc) {
       assar();
     },
     definirHora(h) { hora = h; definirHoraU(); },
+    /** Testes: o mesmo quadro com e sem o impostor (pausado: todos no quadro SDF; o atlas e o programa ficam). */
+    pausar(v) { pausado = !!v; },
     /**
      * O impostor agora (testes e medidas): {pronto (o atlas e o programa), assando (0–1, ou null), falhou, ms (o tempo do
      * assamento), spec, blocos (em impostor), torcedores (em impostor), mapeados (torcedores com bloco), largura, altura}.
