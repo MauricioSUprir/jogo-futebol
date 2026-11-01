@@ -1684,7 +1684,8 @@ export const IA_PESSOA = {
 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca
-// Botões de defesa do humano (plano 2.8; defesa.js): CONTER, DIVIDIDA e PRESSÃO. CARRINHO fica na Etapa 4.
+// Botões de defesa do humano (plano 2.8; defesa.js): CONTER, DIVIDIDA, PRESSÃO e CARRINHO (item 34 da FILA: o bloco
+// `carrinho` abaixo, carrinho.js).
 // Mapa dos controles como no EA FC 25 (FIFPlay, KeenGamer, TeamGullit): segurar A = conter, B = bote em pé,
 // segurar RB = companheiro pressiona. Taxa de acerto do bote em pé: 44–71% entre os titulares da Premier League
 // 2022/23 (premierleague.com; definição Opta: tirar a bola do adversário num desarme legal no chão).
@@ -1716,6 +1717,52 @@ export const DEFESA_HUMANO = {
     soltaIni: 0.39, soltaFaixa: 0.435, // (0,45 e 0,5 × 0,87 com a condução curta de 12/10: a bola mais perto do pé)
     vSai: 3.2,                // m/s — a bola tirada sai para longe do condutor (como o boteIA)
     semDominio: 0.5,          // s — quem perdeu a bola não a domina de novo logo em seguida
+  },
+  // CARRINHO (borda; item 34 da FILA; carrinho.js, contrato "Carrinho (item 34)" no CONTRATOS.md): o corpo é um PLANO montado
+  // no aperto e um QUADRO puro do tempo, como o mergulho do goleiro. Fases: queda da pelve pela gravidade (tAr) → impacto do
+  // joelho ao quadril (tImpacto, perde perdaImpacto) → deslize (desac) → chão → levantar. Fontes: van den Eijnde 2017 (tese,
+  // Radboud: 36 carrinhos a 4,5–5,0 m/s; Δt do impacto 0,15–0,16 s; "~1 s" de deslize — a ÚNICA régua medida do tempo),
+  // Verhelst (bancada de deslize a 2,4–6,1 m/s), Tay et al. 2017 (μ ≈ 0,57 no sintético), GOALS 0.42.0 (o atributo), FIFA 19 /
+  // EA FC 26 (o tempo no chão). O que não tem fonte está marcado: "estimativa", "calibração" ou "desenho".
+  carrinho: {
+    vMin: 3.0,                // m/s — o impulso de um passo, inclusive parado (bancada 2,4–6,1 m/s, Verhelst)
+    vMax: 7.0,                // m/s — teto da entrada (laboratório 4,5–5,0; bancada até 6,1): na arrancada de 8,4 freia ao entrar
+    tAr: 0.25,                // s — queda da pelve até o joelho no "sliding-in" (técnica defensiva): √(2·0,3/9,81), em QUALQUER entrada
+    aEntrada: 12,             // m/s² — o passo de saída na horizontal: tq = clamp(|Vq − V0|/aEntrada, tAr, tAr + tImpacto) (estimativa)
+    tImpacto: 0.15,           // s — joelho → quadril, Δt 0,15–0,16 s (van den Eijnde 2017, tabela 2)
+    perdaImpacto: 1.5,        // m/s — picos horizontais de 0,6–1,8 kN em ~80 kg ao longo do impacto (idem)
+    desac: 5.0,               // m/s² — deslize com μ ≈ 0,5 (Tay 2017: 0,57 no sintético com preenchimento; grama natural sem medida)
+    attr: [0.85, 1.05],       // escala `esc` pelo desarme 40 → 90 em vMin·esc e desac/esc (GOALS 0.42.0: "lower-rated players slide
+                              // more slowly and with reduced distance"; sem número)
+    chaoErrou: 1.2,           // s — da parada até de pé no erro (plano da FILA; FIFA 19: "a couple of seconds"; GOALS: o errado levanta depois)
+    chaoAcertou: 0.5,         // s — da parada até de pé quando GANHOU a bola (= só o levantar; GOALS: acerto < erro) — estimativa
+    levantar: 0.5,            // s — o fim do tempo no chão (o mesmo GOLEIRO.mergulho.tLevanta)
+    hImpacto: 0.45, hChao: 0.16, hPe: 0.92, // m — a pelve no impacto do joelho / deitada de lado (o goleiro: 0,17) / de pé
+    tronco: 0.9, rolagem: 0.35, // rad — tronco para trás (52°) e caído para o lado da perna dobrada (20°): técnica (van den
+                              // Eijnde; Wikipedia "Sliding tackle"), desenho
+    joelhoFrente: 0.2,        // rad — a perna da bola quase reta (≤ 15°, pesquisa §3.4: desenho)
+    // ajuda de mira pelo ENCONTRO (o "Tackle Assistance" do EA FC 26): a ponta da perna no quadro × a bola prevista nos
+    // instantes `encontro` (s), duas voltas; só gira u até `assist` rad do pedido; sem analógico, a bola a ≤ assistLonge m
+    // (calibração)
+    assist: 0.35, encontro: [0.2, 1.0], assistLonge: 8,
+    // sem carrinho de costas para a corrida e sem o giro passar do impacto: com a corrida a ≥ desvioLivre m/s, o desvio de u
+    // em relação a ela vai até a tabela (m/s → rad: 90° a 2 → 45° a 6) e até asin(aEntrada·(tAr + tImpacto)/v) (desenho + conta)
+    desvio: [[2, Math.PI / 2], [6, Math.PI / 4]], desvioLivre: 2,
+    altoBola: 0.6,            // m — centro da bola acima disto (ou subindo): a perna não alcança; o carrinho não sai (desenho)
+    vPernaRel: 2.0,           // m/s — teto da velocidade da perna em relação ao corpo na física do toque (calibração)
+    eBola: 0.3, subpassos: 4, // restituição da bola na perna (mole); subpassos do teste da bola contra a perna
+    rouboVRel: 1.0,           // m/s — a bola a pelo menos isto do condutor depois do toque: GANHOU (calibração)
+    tentouMira: 0.5, tentouLonge: 2.0, // m — a intenção de jogar a bola (Regra 12.4): mirou a ≤ 0,5 m e a bola a ≤ 2 m no contato (calibração)
+    alcanceHomem: 2.5,        // m — adversários candidatos ao contato do homem (da ponta da perna da bola)
+    pelveDeitado: 0.6,        // m — adversário com a pelve desenhada abaixo disto: o corpo inteiro dele conta (desenho)
+    // o DESENHO do corpo deitado (sem fonte numérica: pesquisa §3.4): a perna da bola com o calcanhar a `yBola` m; a dobrada
+    // com a coxa no chão para a frente e para fora (`joelho` rad de u, o joelho a `yJoelho` m) e a canela para trás e para
+    // dentro (`canela` rad de u; o tornozelo à altura de sempre); a mão de apoio no chão atrás do quadril, do lado da dobrada
+    // ([frente, fora, altura] m); o pé da bola sobe até `passoLevanta` m no levantar
+    yBola: 0.09,
+    dobra: { joelho: 50 * Math.PI / 180, canela: 200 * Math.PI / 180, yJoelho: 0.07 },
+    mao: [-0.38, 0.24, 0.04],
+    passoLevanta: 0.12,
   },
   // PRESSÃO (segurar): grava m.pedidoPressao[time] = tick (contrato da Parte 0); o pedido vale até `validade` s depois do
   // último passo com o botão, só com o time defendendo (a retomada o encerra: defesa.js pressaoPedida/encerrarPressao).
