@@ -646,3 +646,8 @@ que garanta o teto do celular em QUALQUER plano e estádio.
   igual e as câmeras de perto iguais menos 3 com a mesma diferença da escolha de uma vez (padrão atrás 1.920 → 1.872
   cadeiras, Aflitos atrás 696 + 378 → 704 + 408, San Siro atrás 508 + 154 → 516 + 153); o pior do PC, 390 mil, com até
   1.920 cadeiras + 1.249 torcedores. Na TV de jogo, nenhum 3D de perto (gasto 0 em 20 instantes, `teste-estadio` 14c).
+  O pré-jogo completo do padrão QUADRO A QUADRO no celular Média (2.448 quadros a 30 qps): o pior 128,0 mil (o geral, sem
+  3D), com 3D de perto em 401 quadros e o pior deles 110,6 mil (a entrada), 0 quadro acima de 130 mil. A maior subida do
+  resto de um quadro para o outro sem corte foi 4,7 mil (a organizada, com 20 mil de folga): a folga de um quadro é a do
+  alvo (2,5 mil) mais a da subida (2 mil) — com o resto colado no alvo e um salto maior que 4,5 mil, um quadro pode passar
+  dos 130 mil até a descida do quadro seguinte (não visto nas cenas medidas).
