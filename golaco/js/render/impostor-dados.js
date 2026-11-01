@@ -39,8 +39,8 @@ export const IMPOSTOR = Object.freeze({
   // por qualidade: a grade (N × N fotos por objeto), o tamanho de cada foto (px; pares — o mip 1 fica dentro dela), os px da
   // CADEIRA na tela para o bloco ENTRAR/SAIR do impostor (histerese), o teto de torcedores em impostor (o custo por pixel:
   // 6 leituras de textura contra 1 do quadro) e se vale na TV de jogo. Baixa: nada (o quadro SDF de hoje). Média (o
-  // celular): 6 × 6 fotos de 20 × 32 px (~3,7 MB na GPU), só fora da TV de jogo (na TV do celular nada fica mais caro que
-  // hoje: o mesmo programa do quadro). Alta (o PC): 8 × 8 de 28 × 44 px (~12,6 MB), também na TV.
+  // celular): 6 × 6 fotos de 20 × 32 px (~3,5 MB na GPU com o mip 1), só fora da TV de jogo (na TV do celular nada fica mais caro que
+  // hoje: o mesmo programa do quadro). Alta (o PC): 8 × 8 de 28 × 44 px (~12 MB), também na TV.
   qual: Object.freeze({
     baixa: null,
     media: Object.freeze({ N: 6, celula: Object.freeze([20, 32]), pxEntra: 6, pxSai: 5, teto: 6000, naTV: false }),
