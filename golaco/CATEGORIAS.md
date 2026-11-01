@@ -38,7 +38,7 @@
 | 15 | ✅ Lançamento mais reto e rápido: 18–26° com teto de 33 m/s, a 40 m o ápice de 8,0 para 4,7 m (#572) | 6 |
 | 16 | ✅ Reposição do goleiro com a mão: rolar, por cima do ombro, bate-pronto e chutão; a IA repõe com a mão em ~69% (#579) | 5 |
 | 68 | ✅ Mira pelo que se vê na tela: o meio do gol visto vai no meio (no celular, antes, 1 em 3 ia para um canto), o pênalti na trave vista (#583) | 6 |
-| 70 | ✅ P1 (corrida) · P2 (estilos). **Cobranças com corrida**: no pênalti, escanteio, tiro de meta e falta o cobrador sai de 2,5–5 m e corre até a bola (3–4,7 m/s), o pé de apoio ao lado dela; a bola rola na mesma hora de antes (#588). **Jeitos de bater o pênalti** (pulinho, paradinha, forte, colocado, cavadinha), com o goleiro que sai cedo e o cobrador que o lê; o goleiro na linha até o chute (P2) | 24 |
+| 70 | ✅ P1 (corrida) · P2 (estilos). **Cobranças com corrida**: no pênalti, escanteio, tiro de meta e falta o cobrador sai de 2,5–5 m e corre até a bola (3–4,7 m/s), o pé de apoio ao lado dela; a bola rola na mesma hora de antes (#588). **Jeitos de bater o pênalti** (pulinho, paradinha, forte, colocado, cavadinha), com o goleiro que sai cedo e o cobrador que o lê; o goleiro na linha até o chute (P2, #594) | 24 |
 
 ---
 
