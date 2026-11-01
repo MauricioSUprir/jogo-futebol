@@ -247,10 +247,13 @@ function instalar() {
       if (icone()) M.icone++;
       for (const t of textosFora()) M.textos.add(t);
       if (des) {
-        const s = g.estado(), p = (M.por[e.fase] ??= { cham: 0, tri: 0, triCorpo: 0, n: 0 });
+        const s = g.estado(), p = (M.por[e.fase] ??= { cham: 0, tri: 0, triCorpo: 0, n: 0, cad: 0, tor: 0 });
         p.n++; p.cham = Math.max(p.cham, s.desenhoChamadas); p.tri = Math.max(p.tri, s.desenhoTriangulos);
         const corpo = g.estadio.corpo;
         if (corpo?.pronto) p.triCorpo = Math.max(p.triCorpo, corpo.triangulos);
+        // o 3D de perto do plano (item 69: as cadeiras e os torcedores 3D dentro do orçamento do quadro; informativo)
+        const cd = g.estadio.cadeiras;
+        p.cad = Math.max(p.cad, cd?.instancias ?? 0); p.tor = Math.max(p.tor, cd?.torcedores?.torcedores ?? 0);
       }
     }
     return { n, ativo: !!g.cenas?.ativo, tempo: g.cenas?.estado?.tempo ?? null };
@@ -691,7 +694,7 @@ if (roda('C')) try {
       const pior = Object.entries(M.por);
       const cham = Math.max(0, ...pior.map(([, p]) => p.cham)), tri = Math.max(0, ...pior.map(([, p]) => p.tri));
       meta(`C8 celular 844×390 Média, ${rotulo} (manequim): o pior plano ≤ ${LIM.chamadas} chamadas e ≤ ${LIM.triangulos / 1000} mil triângulos`,
-        pior.length ? pior.map(([f, p]) => `${f} ${p.cham}/${(p.tri / 1000).toFixed(0)} mil (${p.n})`).join(' · ') : 'nenhum plano desenhado (sem a cena)',
+        pior.length ? pior.map(([f, p]) => `${f} ${p.cham}/${(p.tri / 1000).toFixed(0)} mil (${p.n})${p.cad || p.tor ? ` [3D ${p.cad} cad. + ${p.tor} torc.]` : ''}`).join(' · ') : 'nenhum plano desenhado (sem a cena)',
         `≤ ${LIM.chamadas}; ≤ ${LIM.triangulos / 1000} mil; os ${PLANOS[chave].nomes.length} planos`,
         F.ativo && pior.length === PLANOS[chave].nomes.length && cham <= LIM.chamadas && tri <= LIM.triangulos);
     }
@@ -1530,10 +1533,13 @@ function instalarFim() {
           if (nt) M.close.push({ alt: nt.altura / innerHeight, dentro: nt.dentro });
         }
         if (des) {
-          const s = g.estado(), p = (M.por[f] ??= { cham: 0, tri: 0, triCorpo: 0, n: 0 });
+          const s = g.estado(), p = (M.por[f] ??= { cham: 0, tri: 0, triCorpo: 0, n: 0, cad: 0, tor: 0 });
           p.n++; p.cham = Math.max(p.cham, s.desenhoChamadas); p.tri = Math.max(p.tri, s.desenhoTriangulos);
           const corpo = g.estadio.corpo;
           if (corpo?.pronto) p.triCorpo = Math.max(p.triCorpo, corpo.triangulos);
+          // o 3D de perto do plano (item 69: as cadeiras e os torcedores 3D dentro do orçamento do quadro; informativo)
+          const cd = g.estadio.cadeiras;
+          p.cad = Math.max(p.cad, cd?.instancias ?? 0); p.tor = Math.max(p.tor, cd?.torcedores?.torcedores ?? 0);
         }
         if (o.ate && f === o.ate && ++dentro >= (o.ateQuadros ?? 1)) return { parou: true, fase: f };
         if (e.faixaFinal && ++M.faixaQuadros > (o.depois ?? 60)) break;
@@ -1693,13 +1699,13 @@ function conferirTroca(rot, M, px, opcTroca = {}) {
 }
 /** As chamadas e os triângulos do pior plano de uma cena medida (M.por). */
 function piorPlano(M) {
-  let cham = 0, tri = 0, triCorpo = 0, fc = '-', ft = '-';
+  let cham = 0, tri = 0, triCorpo = 0, fc = '-', ft = '-', cad = 0, tor = 0;
   for (const [f, p] of Object.entries(M?.por ?? {})) {
     if (p.cham > cham) { cham = p.cham; fc = f; }
-    if (p.tri > tri) { tri = p.tri; ft = f; }
+    if (p.tri > tri) { tri = p.tri; ft = f; cad = p.cad ?? 0; tor = p.tor ?? 0; }
     triCorpo = Math.max(triCorpo, p.triCorpo);
   }
-  return { cham, tri, triCorpo, fc, ft };
+  return { cham, tri, triCorpo, fc, ft, cad, tor };
 }
 /** As chamadas com a troca × sem ela (?troca=0), plano a plano (os planos dos dois). */
 function conferirCustoTroca(rot, M1, M0) {
@@ -2071,7 +2077,7 @@ if (roda('FC')) try {
     'fora; tick pequeno; fora; false; na tela', !!volta && !volta.cena && volta.tick < 200 && !volta.faixa && !volta.fimFaixa && volta.toque && volta.correr);
   const pp = piorPlano(r1.M);
   meta(`F8 celular 844×390 Média (manequim): ≤ ${LIM_FIM.chamadas} chamadas de desenho e ≤ ${LIM_FIM.triangulos / 1000} mil triângulos no pior plano`,
-    r1.M ? `${pp.cham} chamadas (${pp.fc}), ${(pp.tri / 1000).toFixed(0)} mil triângulos (${pp.ft}); ${Object.entries(r1.M.por).map(([f, p]) => `${f} ${p.cham}`).join(', ')}` : 'nenhuma cena',
+    r1.M ? `${pp.cham} chamadas (${pp.fc}), ${(pp.tri / 1000).toFixed(0)} mil triângulos (${pp.ft}; 3D de perto: ${pp.cad} cadeiras + ${pp.tor} torcedores); ${Object.entries(r1.M.por).map(([f, p]) => `${f} ${p.cham}`).join(', ')}` : 'nenhuma cena',
     `≤ ${LIM_FIM.chamadas}; ≤ ${LIM_FIM.triangulos / 1000} mil`, !!r1.M && pp.cham > 0 && pp.cham <= LIM_FIM.chamadas && pp.tri <= LIM_FIM.triangulos);
   conferirCustoTroca('celular, manequim', r1.M, r0?.M);
   meta('F6 celular: o toque na tela antes de 0,5 s não pula; depois = o próximo bloco (≤ 2 quadros); o "Pular" (≥ 48 px) = a faixa final (≤ 2 quadros), o mundo parado',
@@ -2096,7 +2102,7 @@ if (roda('FU')) try {
   conferirF1('celular, ?corpo=humano, 2–1', u1.A, u1.M ?? {}, fimEsperado('vitoria'), 'vitoria');
   const pp = piorPlano(u1.M);
   meta(`F9 ?corpo=humano no celular 844×390 Média: o corpo novo pronto, ≤ ${LIM_FIM.chamadas} chamadas, ≤ ${LIM_FIM.triangulos / 1000} mil triângulos no pior plano e os jogadores ≤ ${LIM_FIM.triCorpoMedia / 1000} mil`,
-    u1.M ? `corpo ${corpo?.pronto ? 'pronto' : corpo?.erro ? `erro ${corpo.erro}` : 'não'}; ${pp.cham} chamadas (${pp.fc}), ${(pp.tri / 1000).toFixed(0)} mil (${pp.ft}), jogadores ${(pp.triCorpo / 1000).toFixed(0)} mil` : 'nenhuma cena',
+    u1.M ? `corpo ${corpo?.pronto ? 'pronto' : corpo?.erro ? `erro ${corpo.erro}` : 'não'}; ${pp.cham} chamadas (${pp.fc}), ${(pp.tri / 1000).toFixed(0)} mil (${pp.ft}; 3D de perto: ${pp.cad} cadeiras + ${pp.tor} torcedores), jogadores ${(pp.triCorpo / 1000).toFixed(0)} mil` : 'nenhuma cena',
     `pronto; ≤ ${LIM_FIM.chamadas}; ≤ ${LIM_FIM.triangulos / 1000} mil; ≤ ${LIM_FIM.triCorpoMedia / 1000} mil`, !!u1.M && !!corpo?.pronto && pp.cham > 0 && pp.cham <= LIM_FIM.chamadas && pp.tri <= LIM_FIM.triangulos && pp.triCorpo > 0 && pp.triCorpo <= LIM_FIM.triCorpoMedia);
   conferirTroca('celular, corpo novo', u1.M, u1.px);
   conferirCustoTroca('celular, corpo novo', u1.M, u0?.M);

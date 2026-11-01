@@ -19,9 +19,10 @@
 // câmera fora do volume dele: a câmera de TV fica DENTRO da arquibancada do lado de cá (12,3 m de altura a até 69 m
 // do meio no celular) e o teste da caixa daria verdadeiro — os torcedores de lá cobririam a tela.
 import * as THREE from 'three';
-import { gerarTorcidaNiveis, quantosNoSetor, atlasTorcida, TORCIDA, POSE_GLSL, CAIXA_POSE, POSE, cameraNoLadoDeCa } from './torcida-dados.js';
-import { OLA_GLSL, estadoOla, aberturaBandeirao } from './festa.js';
-import { BANDEIRAS, bandeiroes, SOB_GLSL } from './bandeiras-dados.js';
+import { gerarTorcidaNiveis, quantosNoSetor, atlasTorcida, TORCIDA, CAIXA_POSE, cameraNoLadoDeCa } from './torcida-dados.js';
+import { estadoOla, aberturaBandeirao } from './festa.js';
+import { bandeiroes } from './bandeiras-dados.js';
+import { ESTADO_GLSL } from './torcedor-pose.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ, atualizarLuzFalsa } from './luz-falsa.js';
 import { criarBandeiras } from './bandeiras.js';
 import { criarSinalizadores } from './sinalizadores.js';
@@ -34,19 +35,8 @@ attribute vec4 aCamisa;
 attribute vec4 aPele;
 attribute vec4 aCabelo;
 attribute vec4 aInfo;
-uniform float uTempo;
-uniform float uTempoOrg;
-uniform float uAnimada;
-uniform vec2 uExcita;
-uniform vec2 uTensao;
-uniform vec2 uLamento;
-uniform vec2 uPalmas;
+attribute float aOculto;
 uniform vec4 uLuz;
-uniform vec4 uOla;
-uniform vec3 uBandA[2];
-uniform vec3 uBandU[2];
-uniform vec3 uBandV[2];
-uniform vec2 uAbre;
 uniform vec3 uCamPos;
 uniform vec3 uAcento0;
 uniform vec3 uAcento1;
@@ -59,38 +49,23 @@ varying float vLuz;
 varying float vAltura;
 varying vec3 vFlare;
 vec3 lin(vec3 c) { return c * c * (0.3 + 0.7 * c); }
-${POSE_GLSL}
-${OLA_GLSL}
-${SOB_GLSL}
+${ESTADO_GLSL}
 ${LUZ_FALSA_GLSL}
 const vec2 CAIXA[${CAIXA_POSE.length}] = vec2[${CAIXA_POSE.length}](${CAIXA_POSE.map(([w, h]) => `vec2(${w.toFixed(3)}, ${h.toFixed(3)})`).join(', ')});
 void main() {
+  // o torcedor desenhado em 3D (render/torcedor3d.js, os blocos perto da câmera) sai do quadro: nada a rasterizar
+  if (aOculto > 0.5) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
   float time = step(0.5, aInfo.x);
   float setor = floor(aInfo.y * 3.0 + 0.5);
-  bool org = aInfo.z > 0.5;
   float h = aPele.w;
   float h2 = aInfo.w;
-  float ex = mix(uExcita.x, uExcita.y, time);
-  float te = mix(uTensao.x, uTensao.y, time);
-  float la = mix(uLamento.x, uLamento.y, time);
-  float pa = mix(uPalmas.x, uPalmas.y, time);
-  // a pose e o pulo: a MESMA regra de torcida-dados.js (POSE_GLSL, gerado de POSE_REGRA)
-  // a organizada no relógio da batucada (pula no surdo da gravação quando o som toca)
-  vec2 pp = torcidaPose(ex, te, la, pa, h, h2, org ? 1.0 : 0.0, org ? uTempoOrg : uTempo, uAnimada);
-  float pose = pp.x;
-  float pulo = pp.y;
-  // ola: quem está na crista levanta com os braços em V (a mesma conta de festa.js olaPeso)
-  float ola = torcidaOla(aPos.xz, uOla);
-  if (ola > 0.45) pose = ${POSE.BRACOS_V}.0;
-  pulo += ola * 0.3 * uAnimada;
-  // debaixo do bandeirão aberto: segura o pano (braços em V, sem pular) — ninguém fura o pano (bandeiras-dados.js
-  // sobBandeirao, a mesma conta)
-  vec2 mt = vec2(${BANDEIRAS.sob.torcedor.map(v => v.toFixed(2)).join(', ')});
-  if (max(sobBandeirao(aPos.xyz, uBandA[0], uBandU[0], uBandV[0], uAbre.x, mt), sobBandeirao(aPos.xyz, uBandA[1], uBandU[1], uBandV[1], uAbre.y, mt)) > 0.5) {
-    pose = ${POSE.BRACOS_V}.0;
-    pulo = 0.0;
-  }
-  float bal = uAnimada > 0.5 ? sin(uTempo * (0.8 + h2 * 0.9) + h * 40.0) * 0.035 : 0.0;
+  // a pose, o pulo e o balanço: a MESMA conta do torcedor 3D (render/torcedor-pose.js ESTADO_GLSL: a regra de
+  // torcida-dados.js POSE_REGRA, a ola de festa.js e o bandeirão de bandeiras-dados.js; a organizada no relógio da
+  // batucada — pula no surdo da gravação quando o som toca)
+  vec3 est = torcedorEstado(aPos.xyz, h, aInfo);
+  float pose = est.x;
+  float pulo = est.y;
+  float bal = est.z;
   // virado para a câmera, girando só em volta do eixo vertical
   vec3 paraCam = uCamPos - aPos.xyz;
   paraCam.y = 0.0;
@@ -187,6 +162,8 @@ export function criarTorcida(cena, opc) {
   // cachecol de cada time (Total Match): as cores da identidade
   if (ident) { uni.uAcento0.value.set(ident.torcida.acentos[0]); uni.uAcento1.value.set(ident.torcida.acentos[1]); }
   let mesh = null, material = null, qualidade = null, n = 0, dados = null;
+  // quem está desenhado em 3D agora (render/torcedor3d.js): 255 sai do quadro (aOculto); os índices são os de `dados`
+  let oculto = null, ocultos = [];
   const _frustum = new THREE.Frustum(), _mat = new THREE.Matrix4();
   function desmontar() {
     if (!mesh) return;
@@ -201,6 +178,7 @@ export function criarTorcida(cena, opc) {
     desmontar();
     const d = gerarTorcidaNiveis(opc.mascara ?? null, ident ? { ...ident.torcida, publico: ident.publico } : null, ident?.forma3d?.planta.lugares);
     dados = d;
+    oculto = new Uint8Array(d.n); ocultos = [];
     const [cw, ch] = TORCIDA.atlas;
     const at = atlasTorcida(cw, ch);
     const tex = new THREE.DataTexture(at.dados, at.largura, at.altura, THREE.RGBAFormat, THREE.UnsignedByteType);
@@ -239,6 +217,7 @@ export function criarTorcida(cena, opc) {
       geo.setAttribute('aPele', new THREE.InstancedBufferAttribute(d.pele.subarray(a, b), 4, true));
       geo.setAttribute('aCabelo', new THREE.InstancedBufferAttribute(d.cabelo.subarray(a, b), 4, true));
       geo.setAttribute('aInfo', new THREE.InstancedBufferAttribute(d.info.subarray(a, b), 4, true));
+      geo.setAttribute('aOculto', new THREE.InstancedBufferAttribute(oculto.subarray(f.inicio, f.inicio + k), 1, true));
       geo.instanceCount = k;
       // os quadros saem do shader: o corte é por CAIXA (os fundos são compridos: 119 m em z — uma esfera de corte
       // pegaria a câmera de TV no meio-campo), feito em atualizar() com o frustum da câmera
@@ -246,6 +225,7 @@ export function criarTorcida(cena, opc) {
       m.frustumCulled = false;
       m.userData.caixa = new THREE.Box3(new THREE.Vector3(x0 - 1, y0 - 0.2, z0 - 1), new THREE.Vector3(x1 + 1, y1 + TORCIDA.altura + 0.6, z1 + 1));
       m.userData.grupo = grupo;
+      m.userData.faixa = [f.inicio, f.inicio + k];
       m.userData.ladoDeCa = f.setor === 3;
       m.name = `torcida-${f.nome}`;
       mesh.add(m);
@@ -317,6 +297,23 @@ export function criarTorcida(cena, opc) {
         }
       }
     },
+    /** Os torcedores de todas as qualidades (gerarTorcidaNiveis: posições, cores, sementes, nível): o torcedor 3D lê daqui. */
+    get dados() { return dados; },
+    /**
+     * Os torcedores desenhados em 3D agora (render/torcedor3d.js: os índices de `dados`) saem do quadro — só eles (os de
+     * antes voltam). Só as malhas que mudaram sobem de novo para a GPU.
+     */
+    ocultar(indices) {
+      if (!mesh) return;
+      const mudou = new Set();
+      const grupoDe = i => { for (const m of mesh.children) if (i >= m.userData.faixa[0] && i < m.userData.faixa[1]) return m; return null; };
+      for (const i of ocultos) { oculto[i] = 0; const m = grupoDe(i); if (m) mudou.add(m); }
+      ocultos = Array.from(indices ?? []);
+      for (const i of ocultos) { oculto[i] = 255; const m = grupoDe(i); if (m) mudou.add(m); }
+      for (const m of mudou) m.geometry.attributes.aOculto.needsUpdate = true;
+    },
+    /** Quantos torcedores estão fora do quadro agora (desenhados em 3D). */
+    get nOcultos() { return ocultos.length; },
     definirHora(h) { uni.uLuz.value.set(...(h === 'noite' ? LUZ.noite : LUZ.dia)); bandeiras.definirHora(h); sinalizadores.definirHora(h); },
     definirQualidade(q) { if (q !== qualidade && TORCIDA.ocupacao[q]) { aplicarQualidade(q); bandeiras.definirQualidade(q); sinalizadores.definirQualidade(q); } },
     /** Faixas/bandeiras/bandeirões e sinalizadores (testes e prints). */

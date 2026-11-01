@@ -3380,11 +3380,15 @@ async function iniciar() {
   if (IDENT) { COR_TIME[0] = IDENT.hud.faixa[0]; COR_TIME[1] = IDENT.hud.faixa[1]; }
   campo = criarCampo({ qualidade: qAtual, aniso: cena3d.anisotropia(), identidade: IDENT });
   cena3d.cena.add(campo.grupo);
+  // o orçamento de triângulos por quadro do 3D de perto (item 69) lê o total do último desenho
+  campo.definirMedidor(() => cena3d.info().render);
   if (MOD_CAD) campo.ligarCadeiras(MOD_CAD);
   campo.definirHora(hora);
   hud.progresso('Enchendo as arquibancadas…');
   await proximoQuadro();
   torcida = criarTorcida(cena3d.cena, { qualidade: qAtual, mascara: mascaraDaIdentidade(IDENT), hora, identidade: IDENT });
+  // o torcedor 3D de perto (item 69, PR 2) senta nas cadeiras 3D quando elas chegam (render/torcedor3d.js)
+  campo.ligarTorcida(torcida);
   hud.progresso('Montando os jogadores…');
   await proximoQuadro();
   bola3d = criarBola3D(cena3d.cena, qAtual);
@@ -4333,8 +4337,16 @@ const api = {
         ladoDeCa: campo?.ladoDeCa ? campo.ladoDeCa.visible : null,
       };
     },
-    /** As cadeiras 3D de perto neste quadro (item 69): {carregado, blocos, instancias, teto, mascara}. */
-    get cadeiras() { return campo ? campo.cadeiras : null; },
+    /**
+     * As cadeiras 3D de perto neste quadro (item 69): {carregado, blocos, instancias, teto, mascara, torcedores: {carregado,
+     * torcedores, blocos, triangulos, lods} — o torcedor 3D (PR 2) — e quantos saíram do quadro (ocultos), orcamento: {alvo,
+     * resto, orcamento, gasto: {total, cadeiras, torcedores}, corte, esperando, novo, medido} — o orçamento de triângulos do
+     * quadro (render/cadeiras-dados.js criarOrcamento3D)}.
+     */
+    get cadeiras() { if (!campo) return null; const c = campo.cadeiras; if (c.torcedores) c.torcedores.ocultos = torcida?.nOcultos ?? 0; return c; },
+    /** O torcedor 3D (testes: as malhas, o modelo e a VAT de render/torcedor3d.js) e a torcida (os dados do quadro). */
+    get torcedor3d() { return campo?.torcedor3d ?? null; },
+    get torcidaObj() { return torcida ?? null; },
     /** As malhas das arquibancadas neste quadro: nome, visível, triângulos, em escada (item 69). */
     get arquibancadas() { return campo ? campo.arquibancadas : null; },
     /** Mostra/esconde as cadeiras 3D de perto (conferência nos testes: o mesmo quadro com e sem elas). */
