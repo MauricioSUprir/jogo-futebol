@@ -2153,7 +2153,13 @@ export const DISPUTA = {
 //  - velMin/velMax: a faixa da velocidade da regulagem da passada (o regulador escolhe quantas passadas faltam para o pé de
 //    apoio pousar no ponto, com a velocidade mais perto da do perfil, dentro dela); `planta` m: o pé de apoio pousado a até
 //    isto do ponto conta como o apoio da batida; `max` s além da corrida prevista: o contato sai de qualquer jeito (trava
-//    proibida); `pousoUltimo` s: na última passada o pouso do pé de apoio é ajustado (passoPassada pousoEm) até isto antes.
+//    proibida); `pousoUltimo` s: na última passada o pouso do pé de apoio é ajustado (corrida.js saidaCorrida) até isto antes.
+//  - vooMin (01/11): a regulagem estica só o VOO (os dois pés no ar; o apoio no ritmo natural: jogador.js passoPassada
+//    ritmoVoo) e nunca abaixo disto × o ritmo natural — antes o ritmo da passada inteira ia a 0,8× e o pé de apoio da penúltima
+//    passada ficava no chão com o corpo a ~4,8 m/s (o quadril caía até 0,29 m abaixo da altura da corrida; teste-corrida-cobranca
+//    C11). Corrida de aproximação real: a última passada um pouco mais longa (Lees & Nolan 2002, em Lees et al. 2010) e o centro
+//    de massa baixando ~7 cm no apoio (Lee & Farley 1998). `trocaPe`: no começo, parado com os dois pés no chão e a fase perto de
+//    um inteiro, a regulagem escolhe o pé que sai primeiro (a fase + 1: o desenho parado é o mesmo).
 //  - escanteio: na corrida, quem ataca a zona espera no lugar dele, sem correr (bolas-paradas.js; `zonaAntes` = 0: a arrancada
 //    é no chute, como antes); a IA começa a corrida antes (a previsão da corrida), para a bola rolar no tempo de hoje.
 export const CORRIDA_COBRANCA = {
@@ -2176,6 +2182,8 @@ export const CORRIDA_COBRANCA = {
   acelUsa: 0.7,                 // × a aceleração (e a freada) do jogador que a regulagem conta (a locomoção chega com folga)
   velVaria: 0.15,               // a regulagem procura a velocidade de cruzeiro a até ±15% da do perfil...
   ritmo: [0.8, 1.2],            // ...e o ritmo da passada a até isto × o natural daquela velocidade (fora: mal visto)
+  vooMin: 0.8,                  // ...e o do VOO (o apoio fica no natural) a pelo menos isto × o natural (vooMin acima)
+  trocaPe: 0.1,                 // |sen π·fase| até onde o começo da corrida escolhe o pé que sai primeiro (corrida.js iniciarCorrida)
   // (0,35 dava 11,8% de gols no canhão de escanteios do teste-bolas-paradas, main 6,3%; 0,15, 5,8%; 331 escanteios. 31/10: no
   // canhão de escanteios do teste-goleiro-realista — estados do MEIO da partida, sementes 1001–1008 e 2001–2008 — com 0,15
   // era 11,2% (57 de 507) × main 5,1% (22 de 435): quem ataca a zona chegava ao chute já andando, à frente da marcação; com
