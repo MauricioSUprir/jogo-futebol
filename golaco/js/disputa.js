@@ -38,7 +38,7 @@ import { profundidadeVeu } from './rede-forma.js';
 import { passo, jogadorPorId } from './sim.js';
 import { assumirControle } from './acoes.js';
 import { criarPartida, bolaMorta, prepararPenalti, cobrar, rolou, teleportar, entradaCobranca, apitoDaCobranca } from './partida.js';
-import { planejarCorrida } from './corrida.js';
+import { planejarCorrida, sortearEstilo, perfilDoEstilo } from './corrida.js';
 import { gesto, cabeca, G_V, G_PUNHO, G_CABECA, G_CINTURA } from './comemoracao.js';
 
 export const ESTADOS_DISPUTA = ['caminhada', 'cobranca', 'chute', 'reacao', 'fim'];
@@ -172,8 +172,11 @@ function iniciarCobranca(m) {
   D.vez = t; D.cobrador = c.id; D.goleiro = gk ? gk.id : null; D.goleiroCobra = gkC && gkC !== c ? gkC.id : null;
   D.chuteTick = -1; D.tocou = false; D.trave = false; D.cavadinha = false;
   // o ponto em que ele para: o ponto de partida da corrida dele (item 70, P1; o mesmo de partida.js colocarNaCorrida), de
-  // frente para a corrida — de lá ele corre até a bola na cobrança
-  const cr = planejarCorrida(c, mx, 0, rumoGol, 'penalti');
+  // frente para a corrida — de lá ele corre até a bola na cobrança. O estilo da IA (P2) é sorteado aqui (o da pessoa sai do
+  // ponto do normal: o estilo dela se escolhe no soltar do CHUTE)
+  D.estilo = sortearEstilo(m, c);
+  const pessoa = m.humanos.includes(t) && m.controlado[t] === c.id;
+  const cr = planejarCorrida(c, mx, 0, rumoGol, pessoa ? 'penalti' : perfilDoEstilo(D.estilo));
   D.alvo.x = cr.x0; D.alvo.z = cr.z0; D.alvo.rumo = cr.rumo0;
   m.eventos.push({ tipo: 'disputaCobrador', time: t, id: c.id, n: n + 1, k });
 }
@@ -204,7 +207,7 @@ function montarCobranca(m) {
   const c = jogadorPorId(m, D.cobrador), gk = D.goleiro != null ? jogadorPorId(m, D.goleiro) : null;
   c.guia = null;
   if (gk) gk.papel = 'ia';
-  prepararPenalti(m, c, gk);
+  prepararPenalti(m, c, gk, D.estilo);
   const pr = m.parada;
   // o humano tem DISPUTA.esperaHumano s a mais para bater (a cobrança da partida conta desde a bola morta)
   pr.inicio = m.tick + seg(DISPUTA.esperaHumano);
@@ -242,11 +245,13 @@ function lerCavadinhas(m, gk, pr) {
 // ------------------------------------------------------------------------------------ passo
 
 const _e = { x: 0, z: 0, botoes: 0, repete: false, ia: false, iaCobra: false };
-/** A entrada do humano na cobrança: quem bate só tem o analógico e o CHUTE; o goleiro só o analógico. */
+// quem bate: o CHUTE e os estilos do pênalti (item 70, P2: CORRER = forte, MOD = colocado, PARADINHA, PULINHO)
+const BOTOES_COBRADOR = BOTAO.CHUTE | BOTAO.CORRER | BOTAO.MOD | BOTAO.PARADINHA | BOTAO.PULINHO;
+/** A entrada do humano na cobrança: quem bate só tem o analógico, o CHUTE e os estilos; o goleiro só o analógico. */
 function entradaDaVez(m, e) {
   const D = m.disputa, h = m.timeHumano ?? 0;
   _e.x = e?.x ?? 0; _e.z = e?.z ?? 0;
-  _e.botoes = D.vez === h ? ((e?.botoes ?? 0) | 0) & BOTAO.CHUTE : 0;
+  _e.botoes = D.vez === h ? ((e?.botoes ?? 0) | 0) & BOTOES_COBRADOR : 0;
   _e.repete = !!e?.repete; _e.ia = !!e?.ia; _e.iaCobra = !!e?.iaCobra;
   return _e;
 }

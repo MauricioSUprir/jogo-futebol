@@ -160,17 +160,23 @@ if (!CJ) {
   // ---------------------------------------------------------------- custo e o mundo da partida
   // custo: o MELHOR de 3 medições (a do laço acima + 2 cortejos refeitos da foto do começo, só o passoCortejo) — com os
   // testes em paralelo na mesma máquina (CI em partes, rodar-testes) uma medição só oscilava acima da meta pela fila
-  // do escalonador (0,271 ms numa rodada do CI, 0,2 ms aqui); a meta não muda
-  const medidas = [msPasso / (T / PASSO)];
+  // do escalonador (0,271 ms numa rodada do CI, 0,2 ms aqui); a meta não muda. (01/11, CI do #593: o melhor de 3 pela
+  // PAREDE deu 0,263 ms — 0,377 / 0,280 / 0,263 — com a mesma lógica que passou no deploy da main e mede 0,023–0,042 ms
+  // aqui com a máquina parada: a parede conta a espera na fila com 4 testes por máquina. Nos 2 refeitos vale a CPU DO FIO
+  // — process.threadCpuUsage, como o teste-custo; inclui a coleta de lixo do fio, não a espera —, a parede só impressa.)
+  const cpuFio = typeof process.threadCpuUsage === 'function' ? () => { const c = process.threadCpuUsage(); return (c.user + c.system) / 1000; } : null;
+  const medidas = [msPasso / (T / PASSO)], cpus = [];
   for (let r = 0; r < 2; r++) {
     const cr = criarCortejo(mA.times);
     restaurarCortejo(cr, foto0);
     let ms = 0;
+    const c0 = cpuFio ? cpuFio() : 0;
     for (let i = 0; i < T / PASSO; i++) { const t0 = performance.now(); passoCortejo(cr); ms += performance.now() - t0; }
+    if (cpuFio) cpus.push((cpuFio() - c0) / (T / PASSO));
     medidas.push(ms / (T / PASSO));
   }
-  const msMedio = Math.min(...medidas);
-  reg('Custo do cortejo (25 andantes, Node)', `${fmt(msMedio, 3)} ms por passo (melhor de ${medidas.map(v => fmt(v, 3)).join(' / ')})`, '≤ 0,25 ms', msMedio <= 0.25);
+  const msMedio = cpus.length ? Math.min(...cpus) : Math.min(...medidas);
+  reg('Custo do cortejo (25 andantes, Node)', `${fmt(msMedio, 3)} ms por passo (${cpus.length ? `CPU do fio, melhor de ${cpus.map(v => fmt(v, 3)).join(' / ')}; parede ` : 'melhor de '}${medidas.map(v => fmt(v, 3)).join(' / ')})`, '≤ 0,25 ms', msMedio <= 0.25);
   const hA1 = hashMundo(mA);
   for (let i = 0; i < 600; i++) passoPartida(mA, { 0: { x: 0, z: 0, botoes: 0 } }, null);
   const mB = criarPartida({ semente: 7 });

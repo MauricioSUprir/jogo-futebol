@@ -169,6 +169,13 @@
     <button id="btn-efeito-d" class="btn-toque btn-efeito" data-caixa="btn-efeito-d" data-fase="ataque" type="button" aria-label="Curva à direita">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20C7 11 11 6.5 18 6M14.4 2.6 18 6l-3.6 3.4"/></svg><span>CURVA</span>
     </button>
+    <!-- estilos do pênalti (item 70, P2): só na cobrança do pênalti da pessoa (classe cobranca-penalti no #toque: main.js) -->
+    <button id="btn-paradinha" class="btn-toque btn-estilo-penalti btn-paradinha" data-caixa="btn-paradinha" data-fase="ataque" type="button" aria-label="Paradinha (pênalti: a corrida para antes do último passo)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15h4M9 7v10M15 7v10M17 15h4"/></svg><span>PARADINHA</span>
+    </button>
+    <button id="btn-pulinho" class="btn-toque btn-estilo-penalti btn-pulinho" data-caixa="btn-pulinho" data-fase="ataque" type="button" aria-label="Pulinho (pênalti: um pulo no penúltimo passo)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c2-8 14-8 16 0M3 18h3M18 18h3"/><circle cx="12" cy="7" r="1.6"/></svg><span>PULINHO</span>
+    </button>
     <button id="btn-correr" class="btn-toque btn-correr" data-caixa="btn-correr" data-fase="ambas" type="button" aria-label="Correr (segure)">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6l6 6-6 6M12.5 6l6 6-6 6"/></svg><span>CORRER</span>
     </button>
@@ -355,6 +362,7 @@
             <dt><kbd>E</kbd> <kbd>E</kbd></dt><dd>Dois toques rápidos: pedalada</dd>
             <dt><kbd>Q</kbd></dt><dd>Trocar de jogador; segure: vai para o goleiro (partida)</dd>
             <dt><kbd>Z</kbd> <kbd>X</kbd></dt><dd>Escanteio e falta: curva (as setas giram a mira)</dd>
+            <dt>Pênalti: <kbd>F</kbd> <kbd>Espaço</kbd></dt><dd>Batendo: <kbd>F</kbd> paradinha, <kbd>Espaço</kbd> pulinho (antes de soltar o <kbd>K</kbd> ou na corrida); <kbd>Shift</kbd> ao soltar: forte; <kbd>E</kbd>: colocado; <kbd>K</kbd> duas vezes: cavadinha</dd>
             <dt>Defesa: <kbd>G</kbd></dt><dd>Segure: o goleiro sai do gol</dd>
             <dt>Goleiro: <kbd>O</kbd></dt><dd>Com a bola no pé, na área: pega com a mão (não no recuo de um companheiro)</dd>
             <dt>Goleiro</dt><dd>As setas o movem, com e sem a bola nas mãos. Com ela: J rola, L ou K é o chutão, I solta no chão; até 8 s.<span class="so-partida-pen"> No pênalti contra, as setas para a esquerda ou para a direita (para uma das traves) escolhem o canto; sem isso, ele fica no meio</span></dd>
@@ -381,6 +389,7 @@
             <dt><kbd>RT</kbd></dt><dd>Correr (arrancada)</dd>
             <dt><kbd>LT</kbd></dt><dd>Modificador (colocado, enfiada alta, cruzamento tenso, proteção)</dd>
             <dt>Analógico direito</dt><dd>Escanteio e falta: curva</dd>
+            <dt>Pênalti</dt><dd>Batendo: <kbd>LT</kbd> paradinha, <kbd>LB</kbd> pulinho (antes de soltar o <kbd>B</kbd> ou na corrida); <kbd>RT</kbd> ao soltar: forte; <kbd>RB</kbd>: colocado; <kbd>B</kbd> duas vezes: cavadinha</dd>
             <dt><kbd>R3</kbd></dt><dd>Câmera</dd>
             <dt><kbd>Start</kbd> / <kbd>View</kbd></dt><dd>Pausa e menu / esta ajuda</dd>
             <dt>Na pausa</dt><dd>Cruz ou analógico escolhem, <kbd>A</kbd> confirma, <kbd>B</kbd> volta</dd>
@@ -395,6 +404,7 @@
             <dt>Com a bola</dt><dd>CHUTE (o maior), PASSE (seta), ENFIADA (seta cortando a linha), LANÇAMENTO (curva; dois toques na ponta: cruzamento rasteiro) e CORRER (seta dupla), em arco ao alcance do polegar</dd>
             <dt>Sem a bola</dt><dd>TROCAR (o maior; segure: vai para o goleiro), GOLEIRO (segure: ele sai), PRESSÃO (segure: um companheiro aperta), DIVIDIDA (toque: bote; segure: conter) e CORRER</dd>
             <dt>Goleiro</dt><dd>Segure TROCAR para controlar o goleiro; o analógico o move, com e sem a bola nas mãos. Bola no pé, na área: PEGAR (mão; não aparece no recuo de um companheiro). Bola nas mãos: PASSE rola, LANÇAMENTO ou CHUTE é o chutão, ENFIADA solta no chão, TROCAR passa para um jogador de linha; até 8 s.<span class="so-partida-pen"> No pênalti contra, o analógico para a esquerda ou para a direita (para uma das traves) escolhe o canto; sem isso, ele fica no meio</span></dd>
+            <dt>Pênalti</dt><dd>Batendo: PARADINHA e PULINHO aparecem (antes de soltar o CHUTE ou na corrida); CORRER ao soltar: forte; CHUTE duas vezes: cavadinha</dd>
             <dt>Segurar</dt><dd>Mais força (a barra aparece perto do jogador)</dd>
             <dt>Botão do topo</dt><dd>Pausa e menu (Editar time na partida, treinos, câmera)</dd>
           </dl>

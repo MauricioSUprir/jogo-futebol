@@ -870,6 +870,13 @@ function atualizarFase() {
     const c = jogadorPorId(mundo, idControlado());
     entrada.definirGoleiroMao(!!(mundo.partida && c && c.posicao === 'GOL' && mundo.naMao === c.id));
   }
+  // a cobrança do pênalti da pessoa (item 70, P2; partida e disputa): os botões PARADINHA e PULINHO aparecem no toque e o
+  // controle passa ao do pênalti (entrada.js PAD_PENALTI: LT paradinha, RB colocado, LB pulinho), até a bola rolar
+  if (entrada && entrada.definirCobrancaPenalti) {
+    const pr = mundo.parada;
+    entrada.definirCobrancaPenalti(!!(pr && !pr.rolou && pr.tipo === 'penalti' && pr.time === TIME_HUMANO && pr.cobrador != null
+      && pr.cobrador === idControlado() && mundo.humanos?.includes(TIME_HUMANO) && !mundo.iaJoga?.[TIME_HUMANO]));
+  }
 }
 
 /** Fim dos efeitos do gol (saída de bola, recomeço do treino): o "GOL!" sai e a câmera de jogo volta. */

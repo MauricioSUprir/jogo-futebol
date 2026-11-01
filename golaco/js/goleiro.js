@@ -3,7 +3,7 @@
 // alcance real, encaixe ou espalmada, bola nas mãos e reposição, e saída (botão GOLEIRO
 // segurado ou 1×1). Puro: sem three.js nem DOM; sorteios pelo gerador do mundo.
 
-import { GOLEIRO, CAMPO, PASSO, BOLA, BOTAO, JOGADOR, G, BARREIRA, DISPUTA, CABECEIO } from './config.js';
+import { GOLEIRO, CAMPO, PASSO, BOLA, BOTAO, JOGADOR, G, BARREIRA, DISPUTA, CABECEIO, ESTILO_PENALTI } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng, tabela } from './mat.js';
 import { uniforme } from './rng.js';
@@ -211,7 +211,11 @@ export function lerChute(m, j) {
     const c0 = bolaDepois(b, Math.max(0, plano.ticks - 1));
     if (!maoPermitida(m, j, c0.x, c0.z)) { j.defesa = { chave: m.voo?.tickChave, fora: true, semMao: true, tick: m.tick + plano.ticks, lido: m.tick }; return; }
   }
-  const tau = (plano.ticks - reac) * DT + (ehPenalti && !palpiteErrado ? GOLEIRO.penalti.antecipa : 0); // tempo para se mexer depois de reagir
+  // (pênalti, item 70 P2: o goleiro que se comprometeu ANTES com o lado certo — o da IA que saiu cedo, o da pessoa que segura
+  // o lado desde antes, m.partida.penaltiAberto.cedo — já está indo para lá: o tempo adiantado, até ESTILO_PENALTI.goleiro
+  // .ganhoMax s, soma no tempo para se mexer)
+  const cedoPen = ehPenalti && !palpiteErrado ? Math.min(pen.cedo ?? 0, ESTILO_PENALTI.goleiro.ganhoMax) : 0;
+  const tau = (plano.ticks - reac) * DT + (ehPenalti && !palpiteErrado ? GOLEIRO.penalti.antecipa + cedoPen : 0); // tempo para se mexer depois de reagir
   const lat = plano.z - j.z;
   const dist = Math.abs(lat);
   const alcance = alcanceGoleiro(tau, lerp(0.9, 1.08, a.mergulho / 100));
@@ -239,8 +243,11 @@ export function lerChute(m, j) {
     pDefesa = corpo ? 1 : alturaOk ? chanceReal(dist, plano.y, alcR - erroL, a) : 0;
   } else {
     // (o tempo de voo só conta no cabeceio a gol: GOLEIRO.logit.cTempo)
+    // (pênalti, item 70 P2: o goleiro que se comprometeu antes com o lado certo — o da IA que saiu cedo, o da pessoa que
+    // segura o lado desde antes — defende mais: `ganho` no logit por s de adiantamento, até ganhoMax; o que esperou, `espera`)
+    const EG = ESTILO_PENALTI.goleiro;
     pDefesa = alturaOk ? chanceDefesa(dist, dChute, plano.y, alcance, a, !!m.partida, m.voo && m.voo.tipo === 'cabeceio' ? plano.ticks * DT : null,
-      ehPenalti ? GOLEIRO.penalti.c0Partida : null) : 0;
+      ehPenalti ? GOLEIRO.penalti.c0Partida + (cedoPen > 0 ? EG.ganho * cedoPen : EG.espera) : null) : 0;
   }
   // Panenka com o goleiro que ficou no meio: tempo de sobra — pega (encaixa) a que alcança, como o recuo; a que passa
   // por cima dele ainda alta ele busca voltando para a linha (recuoBolaAlta)
@@ -919,9 +926,9 @@ export function movimentoGoleiro(m, j, humano) {
   const dBola = MD.hypot(bx - gx, bz);
   const P = GOLEIRO.profundidade;
   const pr = m.parada;
-  // disputa de pênaltis (disputa.js), a cobrança montada: na linha do gol até o chute (Regra 14, que vale na Regra 10) — na
-  // partida ele vai para a bissetriz e a parede do pênalti o segura a até 0,6 m (só a disputa muda: o hash da partida é o mesmo)
-  const naLinha = m.disputa && pr && !pr.rolou && pr.tipo === 'penalti' && pr.time !== j.time;
+  // o pênalti montado (a disputa de pênaltis e, desde a P2 do item 70, a partida): na linha do gol até o chute (Regra 14, que
+  // vale na Regra 10) — antes, na partida, ele ia para a bissetriz e a parede do pênalti o segurava a até 0,6 m
+  const naLinha = pr && !pr.rolou && pr.tipo === 'penalti' && pr.time !== j.time;
   let dLinha = naLinha ? DISPUTA.goleiroLinha : dBola <= 20 ? lerp(P[0], P[1], clamp((dBola - 6) / 14, 0, 1))
     : lerp(P[1], GOLEIRO.profundidadeLonge, clamp((dBola - 20) / 20, 0, 1));
   // (partida) a bola aberta perto da linha de fundo (escanteio, cruzamento da ponta): perto da linha do gol — a
@@ -930,7 +937,11 @@ export function movimentoGoleiro(m, j, humano) {
   if (m.partida && !naLinha) dLinha = Math.min(dLinha, lerp(GOLEIRO.realista.mov.linhaPerto, dLinha, clamp(Math.abs(bx - gx) / GOLEIRO.realista.mov.linhaU, 0, 1)));
   const p = pontoBissetriz(bx, bz, gx, dLinha);
   // tiro livre com barreira (Etapa 4): ela tapa o lado do 1º pau; o goleiro fica para o lado do 2º
-  const pz = pr && !pr.rolou && pr.barreira && pr.barreira.n > 0 && pr.time !== j.time ? p.z + pr.barreira.ladoLongo * BARREIRA.goleiro : p.z;
+  let pz = pr && !pr.rolou && pr.barreira && pr.barreira.n > 0 && pr.time !== j.time ? p.z + pr.barreira.ladoLongo * BARREIRA.goleiro : p.z;
+  // o pênalti (item 70, P2): o goleiro da IA que saiu cedo (corrida.js vigiarGoleiro: cr.gk) dá o passo para o lado escolhido
+  // na linha antes do chute — é o que o cobrador que depende do goleiro lê
+  const cg = naLinha && pr.corrida ? pr.corrida.gk : null;
+  if (cg && cg.ia && cg.desde >= 0) pz = cg.lado * ESTILO_PENALTI.goleiro.passo;
   const dx = p.x - j.x, dz = pz - j.z;
   const dd = MD.hypot(dx, dz);
   let vel = Math.min(4.5, dd * 3);

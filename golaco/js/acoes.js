@@ -524,6 +524,7 @@ export function executarAcao(m, j, pe, primeira = false) {
     // (a Panenka — cavadinha pedida no pênalti — tem o erro próprio, ACOES.cavadinha.penalti, sem a pressão do pênalti)
     const em = (primeira ? ACOES.chute.primeiraErro : 1) * (1 + (perto ? ACOES.chute.pressaoErro : 0) * pressaoSobre(m, j)) * multPeFraco(j, pe)
       * (p.penalti && !p.cavadinha ? ACOES.chute.penaltiErro : 1) // a pressão da cobrança do pênalti
+      * (p.erroEstilo && !p.cavadinha ? p.erroEstilo : 1) // o estilo do pênalti (item 70, P2: corrida.js estiloNoPedido, a leitura)
       * (p.barreira ? ACOES.chute.faltaErro : 1); // o tiro livre por cima da barreira: subir e descer no gol é difícil
     if (p.mirada && !p.cavadinha && m.parada?.mira) return cobrancaMirada(m, j, pe, p, em);
     return chute(m, j, pe, p, em);

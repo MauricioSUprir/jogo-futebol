@@ -12,11 +12,14 @@
 // L lançamento; I enfiada (goleiro com a bola nas mãos: solta no chão); Shift correr; E modificador (colocado /
 // enfiada alta / cruzamento tenso; condução curta e proteção; dois toques = pedalada); Q trocar (segurar 0,4 s: o
 // goleiro, na partida); G goleiro (defesa; segurar = sai do gol); R recomeçar; M máquina de passes; N marcador; C câmera;
-// H ou F1 ajuda; Esc pausa; Z / X curva na cobrança mirada.
+// H ou F1 ajuda; Esc pausa; Z / X curva na cobrança mirada; F paradinha e barra de espaço pulinho (a cobrança do pênalti
+// da pessoa: item 70, P2 — com Shift no soltar do CHUTE, forte; com E, colocado).
 // Controle: analógico esquerdo; A passe / CONTER; B chute / DIVIDIDA; X lançamento; Y enfiada /
 // goleiro (segurar); RB PEGAR / PRESSÃO (defesa, segurar); LB trocar (segurar: o goleiro); RT correr; LT modificador;
 // Start pausa; View ajuda; R3 câmera; analógico direito = curva na cobrança mirada. (O mapa da defesa é o do EA FC: segurar A = conter, B = bote em pé, segurar
 // RB = companheiro pressiona.) Na pausa e na Ajuda: cruz/analógico escolhem o botão, A confirma, B volta.
+// Na cobrança do pênalti da pessoa (item 70, P2; main.js definirCobrancaPenalti) o controle é o do pênalti do EA FC
+// (PAD_PENALTI): LT = paradinha, RB = colocado (o MOD; o "finesse" do EA FC), LB = pulinho, RT segurado = forte.
 // G só vale na defesa (como o Y do controle). Os botões que mudam de sentido pela fase (J, K, O, G, A, B, Y, RB) têm o
 // sentido FIXADO NO APERTO, pela fase do mundo NAQUELE passo (sem a histerese de 0,25 s dos botões visíveis):
 // segurar J enquanto a posse muda não troca o passe por CONTER no meio (criarSentidoFixo, pura). Só o O/RB preso como
@@ -57,7 +60,13 @@ export const TECLA_BIT = {
   KeyQ: BOTAO.TROCAR, KeyE: BOTAO.MOD,
   ShiftLeft: BOTAO.CORRER, ShiftRight: BOTAO.CORRER,
   KeyZ: BOTAO.EFEITO_E, KeyX: BOTAO.EFEITO_D,
+  // os estilos do pênalti (item 70, P2): F = paradinha (o LT do controle), barra de espaço = pulinho (o LB) — fora da
+  // cobrança do pênalti da pessoa não fazem nada (a lógica só os lê nela)
+  KeyF: BOTAO.PARADINHA, Space: BOTAO.PULINHO,
 };
+// O controle na cobrança do pênalti da pessoa (item 70, P2; como o pênalti do EA FC: LT = paradinha — o "stutter" —, RB = o
+// chute colocado — o "finesse" —, e um botão para o pulinho): o botão → o bit no lugar do de sempre
+export const PAD_PENALTI = { LT: 'PARADINHA', RB: 'MOD', LB: 'PULINHO' };
 // Botões físicos que mudam de sentido pela fase: [bit no ataque, bit na defesa] (0 = nada). Teclas pelo
 // `code`; botões do controle como 'pad:A' etc. (plano 2.8; mapa da defesa do EA FC)
 export const SENTIDO_FASE = {
@@ -79,6 +88,7 @@ export const RELE_NA_DEFESA = new Set(['KeyO', 'pad:RB']);
 const PASSA_BLOQUEADA = new Set(['pausa']);
 // bits em que o reaperto entre dois passos vira solto + apertado (os de segurar continuamente ficam de fora)
 const REAPERTO = ~(BOTAO.CORRER | BOTAO.MOD);
+// (PARADINHA e PULINHO: um aperto marca o estilo — o reaperto entre passos vira solto + apertado, como os de ação)
 
 /**
  * Sentido fixado no aperto (pura; os testes em Node chamam): bit(id, apertado, fase) devolve o bit do
@@ -139,6 +149,10 @@ export const BOTOES_TOQUE = [
   // CURVA (cobrança mirada; html.cobranca-mirada): as vagas do PEGAR e do TROCAR da bola na mão
   { id: 'btn-efeito-e', bit: 'EFEITO_E', fase: 'ataque', vaga: 'e', rotulo: 'CURVA' },
   { id: 'btn-efeito-d', bit: 'EFEITO_D', fase: 'ataque', vaga: 'd', rotulo: 'CURVA' },
+  // estilos do pênalti (item 70, P2): só na cobrança do pênalti da pessoa (classe cobranca-penalti: main.js) — as mesmas
+  // vagas da CURVA (o pênalti não é cobrança mirada) e do PEGAR/TROCAR da bola na mão (que não existem nela)
+  { id: 'btn-paradinha', bit: 'PARADINHA', fase: 'ataque', vaga: 'd', rotulo: 'PARADINHA', curto: 'PARAR' },
+  { id: 'btn-pulinho', bit: 'PULINHO', fase: 'ataque', vaga: 'e', rotulo: 'PULINHO', curto: 'PULO' },
 ];
 // diâmetro de cada vaga (px CSS com tamanho 100%); nada fica abaixo de 48 px
 const DIAM = { grande: 104, a: 80, b: 72, c: 76, d: 68, e: 68, correr: 76 };
@@ -297,6 +311,7 @@ export function criarEntrada(opc = {}) {
   let faseVisivel = 'ataque';
   let bloqueada = false;   // "Editar time" aberto: nada vai para o jogo (só a pausa)
   let menuAtivo = false;   // pausa ou Ajuda aberta: o controle navega nos botões dela (lerMenuPad)
+  let penalti = false;     // a cobrança do pênalti da pessoa (item 70, P2): o controle do pênalti (PAD_PENALTI)
   const sentido = criarSentidoFixo(); // J/K/O e A/B/Y/RB: o sentido do aperto vale até soltar
   const ajustes = lerAjustes();
 
@@ -312,7 +327,8 @@ export function criarEntrada(opc = {}) {
     const usado = ehMov(code) || TECLA_BIT[code] || SENTIDO_FASE[code] || ACOES_TECLA[code];
     if (usado) {
       // Ctrl + tecla do jogo não pode virar atalho do navegador (salvar, favoritos...)
-      if (e.ctrlKey || code.startsWith('Arrow') || code === 'F1' || code === 'F3' || code === 'Space') e.preventDefault();
+      // (a barra de espaço — o pulinho — não rola a página; com a pausa ou a Ajuda abertas ela segue apertando o botão em foco)
+      if (e.ctrlKey || code.startsWith('Arrow') || code === 'F1' || code === 'F3' || (code === 'Space' && !menuAtivo)) e.preventDefault();
     }
     if (e.repeat) return;
     teclas.add(code);
@@ -406,13 +422,14 @@ export function criarEntrada(opc = {}) {
     const a = processarAnalogico(ax, ay, ENTRADA.zonaMorta, ENTRADA.zonaExterna);
     bPad = 0;
     segura(PAD.RT, BOTAO.CORRER);
-    segura(PAD.LT, BOTAO.MOD);
+    // (a cobrança do pênalti da pessoa: o controle do pênalti do EA FC — PAD_PENALTI)
+    segura(PAD.LT, penalti ? BOTAO[PAD_PENALTI.LT] : BOTAO.MOD);
     seguraFase(PAD.A, 'pad:A');
     seguraFase(PAD.B, 'pad:B');
     segura(PAD.X, BOTAO.LANCAMENTO);
-    segura(PAD.LB, BOTAO.TROCAR);
+    segura(PAD.LB, penalti ? BOTAO[PAD_PENALTI.LB] : BOTAO.TROCAR);
     seguraFase(PAD.Y, 'pad:Y');
-    seguraFase(PAD.RB, 'pad:RB');
+    if (penalti) segura(PAD.RB, BOTAO[PAD_PENALTI.RB]); else seguraFase(PAD.RB, 'pad:RB');
     const rx = gp.axes[2] ?? 0; // analógico direito: a curva
     segura(100, BOTAO.EFEITO_E, rx < -0.55); segura(101, BOTAO.EFEITO_D, rx > 0.55);
     borda(PAD.START, 'pausa'); borda(PAD.VIEW, 'ajuda'); borda(PAD.R3, 'camera');
@@ -758,6 +775,15 @@ export function criarEntrada(opc = {}) {
     definirGoleiroPe(v) { if (raizToque) raizToque.classList.toggle('goleiro-pe', !!v); },
     /** Goleiro do humano com a bola nas mãos (o TROCAR aparece no ataque, na vaga 'e'). */
     definirGoleiroMao(v) { if (raizToque) raizToque.classList.toggle('goleiro-mao', !!v); },
+    /**
+     * A cobrança do pênalti da pessoa (item 70, P2): os botões PARADINHA e PULINHO aparecem (vagas d e e) e o controle passa ao
+     * do pênalti (PAD_PENALTI: LT paradinha, RB colocado, LB pulinho).
+     */
+    definirCobrancaPenalti(v) {
+      penalti = !!v;
+      if (raizToque) raizToque.classList.toggle('cobranca-penalti', penalti);
+    },
+    get cobrancaPenalti() { return penalti; },
     /** Reaplica no DOM a fase visível (testes que mexem nas classes à mão). */
     sincronizarFase() { trocarFaseSePuder(true); },
     /** Ações pendentes (recomecar, maquina, marcador, camera, ajuda, pausa, qps). */
