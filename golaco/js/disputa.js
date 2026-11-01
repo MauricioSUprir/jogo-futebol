@@ -18,7 +18,8 @@
 //    a trave, sem cruzar a linha nem passar pelo goleiro na física prevista) — a bola que bate no goleiro e entra é gol; dado
 //    o resultado, a bola está morta (m.golTick: nenhum gol conta depois dele).
 // Estados (m.disputa.estado): 'caminhada' (o cobrador entra a DISPUTA.caminhada.dist m da marca — corte de câmera — e anda
-// até a bola pela locomoção do jogo: j.guia, o pedido de movimento que o sim.js usa para quem está 'parado'), 'cobranca'
+// até o ponto de partida da corrida dele pela locomoção do jogo: j.guia, o pedido de movimento que o sim.js usa para quem
+// está 'parado'; de lá ele corre até a bola na cobrança — item 70, P1, corrida.js), 'cobranca'
 // (a parada do pênalti montada: prepararPenalti), 'chute' (a bola rolou: esperando o fim da cobrança), 'reacao' (o resultado
 // saiu: o cobrador volta para o círculo comemorando ou lamentando; DISPUTA.reacao s) e 'fim'. Todos ficam 'parado' (a IA
 // não joga); só o goleiro que defende vira 'ia' na montagem (ou o do humano, controlado por ele).
@@ -36,7 +37,8 @@ import { criarBola, passoBola } from './bola.js';
 import { profundidadeVeu } from './rede-forma.js';
 import { passo, jogadorPorId } from './sim.js';
 import { assumirControle } from './acoes.js';
-import { criarPartida, bolaMorta, prepararPenalti, cobrar, rolou, teleportar, entradaCobranca } from './partida.js';
+import { criarPartida, bolaMorta, prepararPenalti, cobrar, rolou, teleportar, entradaCobranca, apitoDaCobranca } from './partida.js';
+import { planejarCorrida } from './corrida.js';
 import { gesto, cabeca, G_V, G_PUNHO, G_CABECA, G_CINTURA } from './comemoracao.js';
 
 export const ESTADOS_DISPUTA = ['caminhada', 'cobranca', 'chute', 'reacao', 'fim'];
@@ -116,7 +118,7 @@ export function criarDisputa(opc = {}) {
     ordem: { 0: [], 1: [] }, vagas: {},
     cobrancas: [], placar: [0, 0], chutes: [0, 0], vencedor: null,
     vez: null, cobrador: null, goleiro: null, goleiroCobra: null,
-    chuteTick: -1, tocou: false, trave: false, cavadinha: false, ultima: null, alvo: { x: 0, z: 0 },
+    chuteTick: -1, tocou: false, trave: false, cavadinha: false, ultima: null, alvo: { x: 0, z: 0, rumo: 0 },
   };
   for (const t of [0, 1]) D.ordem[t] = ordemCobradores(m, t);
   vagasCirculo(m, D);
@@ -169,8 +171,10 @@ function iniciarCobranca(m) {
   D.estado = 'caminhada'; D.desde = m.tick;
   D.vez = t; D.cobrador = c.id; D.goleiro = gk ? gk.id : null; D.goleiroCobra = gkC && gkC !== c ? gkC.id : null;
   D.chuteTick = -1; D.tocou = false; D.trave = false; D.cavadinha = false;
-  // o ponto em que ele para: 0,4 m atrás da bola, de frente para o gol (o mesmo de partida.js cobradorNoPonto)
-  D.alvo.x = mx - G * 0.4; D.alvo.z = 0;
+  // o ponto em que ele para: o ponto de partida da corrida dele (item 70, P1; o mesmo de partida.js colocarNaCorrida), de
+  // frente para a corrida — de lá ele corre até a bola na cobrança
+  const cr = planejarCorrida(c, mx, 0, rumoGol, 'penalti');
+  D.alvo.x = cr.x0; D.alvo.z = cr.z0; D.alvo.rumo = cr.rumo0;
   m.eventos.push({ tipo: 'disputaCobrador', time: t, id: c.id, n: n + 1, k });
 }
 
@@ -190,7 +194,7 @@ function caminhar(m) {
   const D = m.disputa, C = DISPUTA.caminhada;
   const c = jogadorPorId(m, D.cobrador);
   if (!c) return;
-  const d = guiar(c, D.alvo.x, D.alvo.z, C.vel, C.freio, D.gol > 0 ? 0 : Math.PI);
+  const d = guiar(c, D.alvo.x, D.alvo.z, C.vel, C.freio, D.alvo.rumo ?? (D.gol > 0 ? 0 : Math.PI));
   if ((d <= C.chegou && MD.hypot(c.vx, c.vz) < 0.4) || m.tick - D.desde >= seg(C.max)) montarCobranca(m);
 }
 
@@ -274,10 +278,11 @@ function regrasDisputa(m) {
   if (D.estado === 'cobranca') {
     const pr = m.parada;
     if (pr && !pr.rolou) {
-      if (m.tick === pr.pronta) m.eventos.push({ tipo: 'apito', motivo: 'cobranca' });
+      apitoDaCobranca(m, pr); // no pronta, ou quando a corrida da IA começa antes (item 70, P1)
       const b = m.bola;
       const saiu = MD.hypot(b.p.x - pr.x, b.p.z - pr.z) > 0.6;
-      if (m.posse !== pr.cobrador || m.voo || saiu || m.tick - pr.inicio > seg(PARTIDA.paradaMax)) rolou(m);
+      const correndo = !!pr.corrida && pr.corrida.estado === 'corre'; // (a corrida acaba no contato: corrida.js)
+      if (m.posse !== pr.cobrador || m.voo || saiu || (m.tick - pr.inicio > seg(PARTIDA.paradaMax) && !correndo)) rolou(m);
       else {
         // a bola fica no ponto até a cobrança (como na partida: regrasPartida)
         b.p.x = pr.x; b.p.z = pr.z; b.p.y = BOLA.raio; b.v.x = 0; b.v.y = 0; b.v.z = 0; b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = true;

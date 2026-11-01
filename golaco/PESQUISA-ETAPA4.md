@@ -688,3 +688,175 @@ bola no goleiro e quase não há companheiro livre a 10–18 m; aproximar o apoi
 por cima chega a quem recebe na coxa/peito; os poucos que se perdem (5 de 72) são a bola que o recebedor não domina no ar —
 o domínio aéreo é o de sempre. A IA não usa o bate-pronto (só o humano): o real mistura os dois no "Drop Kick".
 
+
+## 16. Cobranças com corrida (item 70, P1 da FILA; pedido do dono de 29/10, aval de 31/10)
+
+**O que estava.** Ninguém corria: na montagem o cobrador era levado a 0,4 m atrás da bola e ficava 'parado'; a bola saía no
+MESMO tick do pedido (`partida.js cobrar` → `executarAcao`) e o pé não fazia o gesto (o 'parado' nunca marcava o toque de
+ação). Só a disputa de pênaltis andava até a marca (a 2,5 m/s, parando a 0,4 m).
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| Scurr & Hall 2009, "The effects of approach angle on penalty kicking accuracy and kick kinematics with recreational soccer players", J Sports Sci Med 8(2):230 (PMC3761486) | 7 jogadores amadores; ângulo de corrida escolhido 30,3 ± 15,2°; "a maioria deu 3 a 5 passadas"; o pé de apoio no impacto a 32,7 ± 7 cm AO LADO e 9,7 ± 8,1 cm ATRÁS da bola (30°: 31,1 e 10,6; 45°: 34,6 e 11,3); a bola a 24–25 m/s; mudar o ângulo não mudou a precisão nem a velocidade | o perfil do pênalti (25–35°, 4–5 m: 3–5 passadas), `apoio.lado` 0,3 e `apoio.atras` 0,08 m, a meta C3 do teste (0,2–0,45 m do centro da bola) |
+| Isokawa & Lees 1988 (citado por Scurr & Hall e por Kellis & Katis) | de 0° a 90°, o ângulo de 30–45° é o melhor (a canela mais rápida a 30°, a bola mais rápida a 45°) | os ângulos dos perfis (20–40°; o escanteio até 40°) |
+| Kellis & Katis 2007, "Biomechanics characteristics and determinants of instep soccer kick", J Sports Sci Med 6(2):154 | revisão: "2 ou 3 passos antes da ação principal do chute"; Hay 1993: o pé de apoio 5–10 cm atrás e 5–28 cm ao lado da bola (não confirmado em laboratório); bola de 18–35 m/s | o passe/lançamento com a corrida mais curta (2,6–3,2 m); a faixa do pé de apoio |
+| Lees et al. 2010, "The biomechanics of kicking in soccer: a review", J Sports Sci 28(8):805 (citado por Augustus, Hudson & Smith, Kingston eprints 54573) | corrida de 3 m dá 3–5 passos; a velocidade da corrida escolhida pelo jogador; uma revisão que cita Kellis & Katis e Lees põe a corrida do chute de peito do pé em ~3–4 m/s (não conferido no original) | as velocidades dos perfis (3,0–4,4 m/s) e a meta C2 (2,5–5 m/s) |
+| Potthast et al. (ISBS, ojs.ub.uni-konstanz.de) e Augustus, Hudson & Smith | a freada do corpo no último apoio se correlaciona com a bola mais rápida (r = 0,6); a perna de apoio regula a freada quando a velocidade da corrida muda | a última passada da regulagem freia ou acelera para o pé de apoio pousar no ponto (o corpo segue embalado até o contato) |
+| Lee, Lishman & Thomson 1982, "Regulation of gait in long jumping", J Exp Psychol Hum Percept Perform 8(3):448 | o saltador em distância acerta a tábua ajustando as ÚLTIMAS passadas pela vista (a variação do pé cai perto da tábua) | a regulagem da passada (`corrida.js guiarCorrida`): o ritmo e a velocidade escolhidos a cada passo para o pé de apoio pousar no ponto, e o pouso marcado na última passada |
+| Lee & Farley 1998, "Determinants of the center of mass trajectory in human walking and running", J Exp Biol 201(21):2935 | correndo, o centro de massa DESCE ~0,073 m na 1ª metade do apoio (a perna como mola; andando, sobe 0,031 m) | a régua do mergulho (01/11): a corrida da cobrança não desce mais que a oscilação da corrida (C11 do teste) |
+| Lees et al. 2010 (a revisão acima) e Lees & Nolan 2002 (Science and Football IV, citados por ela) | o joelho de apoio do chute está a ~26° no pouso do pé e ~42° no contato (o quadril ~2–5 cm abaixo da perna esticada); os profissionais dão a ÚLTIMA passada mais longa (mais retração da pelve) | a passada mais longa da regulagem é VOO mais longo, nunca apoio mais longo (`ritmoVoo`); o voo no máximo 1/0,8 do natural (`vooMin`) |
+| Pênaltis em ligas (estudo de >1.700 pênaltis, 2015/16–2018/19, dergipark.org.tr; Liverpool John Moores, phys.org 05/2010) | corrida de 2–5 passos e de 4–6 passos as mais eficazes; a de 10 m a pior | o pênalti de 4–5 m (4–6 passos na regulagem) |
+| EA FC / FIFA (guias: EA FIFA 14 "save and score more penalties", fifplay FIFA 17, operationsports EA FC 25) | na bola parada a força é a do botão segurado e o soltar começa a corrida; a hesitação ("stutter") na corrida é um botão (L2/LT) e faz o goleiro se comprometer | soltar o botão guarda a força e a mira e começa a corrida (a pessoa não controla a corrida); a paradinha/hesitação fica para a P2 |
+| IFAB, Regras 13, 14, 16 e 17 | 14: o pênalti só depois do sinal do árbitro; a finta NA corrida é permitida, depois de completada não; 13: o tiro livre cerimonial (com a barreira) espera o apito; 16 e 17: a bola parada no ponto, em jogo quando chutada e se mexe | a corrida da IA no pênalti começa no apito; o apito no pênalti e no tiro livre com barreira; a bola presa no ponto até o contato |
+
+**O que mudou** (só na partida e na disputa; o treino não tem bola parada: `hash-igual` IGUAL). `js/corrida.js` (puro): o ponto
+de partida por tipo e pelo pé, a regulagem da passada (velocidade de cruzeiro ±15% e o ritmo × 0,8–1,2 do natural, contando a
+aceleração; o ritmo vai à passada pelo `pousoEm` do pé no ar), o contato no meio do apoio do pé de apoio e o gesto pelo toque
+'acao' marcado; `partida.js`: o cobrador no ponto de partida no fim da montagem, a IA que começa antes (a previsão da corrida,
+`estimarTicks`), a zona livre e os zagueiros previstos para o fim da corrida, o apito; `sim.js`: o cobrador da corrida sem a
+condução nem a "bola perdida", o contato no passo 3, o ritmo na passada; `bolas-paradas.js`: quem ataca a zona sai junto;
+`mira-linha.js`: a linha do pedido guardado; `render/bola-parada.js`: a câmera monta o quadro pelo ponto de partida do cobrador (ele inteiro na metade de baixo).
+
+**Medido** (`tools/teste-corrida-cobranca.mjs`, main 630960d4 → agora; 16 cenas por tipo e caminho, IA e demo, + a pessoa).
+
+| | main | agora |
+|---|---|---|
+| anda até a bola (mínimo): pênalti · escanteio · tiro de meta · tiro livre D · I | 0 · 0 · 0 · 0 · 0 m | 4,31 · 2,97 · 2,41 · 2,45 · 2,45 m |
+| velocidade no contato | 0,10–0,15 m/s | 3,01–4,68 m/s |
+| pé de apoio a … do centro da bola (plantado) | 0,41 m (parado ao lado dela) | 0,31–0,36 m (150/150) |
+| pé que bate no contato: no ar, peso do gesto · tornozelo desenhado | — | 150/150: 0,81–0,93 · 0,06–0,26 m |
+| patinação (plantado · salto/limite · pouso/limite · pé plantado andou) | 0 · 0 · 0 · 0 (parado) | 0,00 m/s · 0,94 · 0,00 · 0 m |
+| bola morta → rolando, média pareada com a main (IA / demo): pênalti | — | −0,11 / +0,07 s |
+| escanteio · tiro de meta · tiro livre D · I | — | −0,00/−0,00 · −0,02/−0,09 · +0,05/+0,06 · −0,07/−0,03 s |
+| linha mirada no soltar × bola real | — | 0,00 cm |
+| cavadinha com o 2º toque a 0,5 s do 1º, na corrida | 0/4 (a bola já tinha saído) | 4/4 |
+| escanteio: quem ataca a zona andou até o contato (fração do caminho saída → zona; média · maior) | 0 · 0 (ninguém corria) | 0,06 · 0,10 |
+| canhão de escanteios da IA (331, 16 sementes): gol · chute · 1º contato do ataque | 6,3 · 39,0 · 45,3% | 5,8 · 43,0 · 47,8% |
+
+Quem ataca a zona do escanteio sai junto com o cobrador, trotando até `zonaAntes` do caminho. Com 0,35 (a 1ª calibração)
+eles chegavam com um terço do caminho andado e o canhão de escanteios (331, as mesmas sementes) ia a 11,8% de gols e 51,4% de
+chutes (main 6,3% e 39,0%; real: 2,6% dos escanteios viram gol, Copa 2022); com 0,15 voltou a 5,8% e 43,0% (com 0, 4,2% e
+40,7%). O `teste-corrida-cobranca` C10 segura os dois lados (sai junto e não chega antes).
+
+(31/10, CI do #588) O canhão de escanteios do `teste-goleiro-realista` (estados do MEIO da partida, a bola posta fora perto do
+gol) mostrou o contrário do canhão do `teste-bolas-paradas`: com 0,15 o gol de escanteio foi a 11,2% (57 de 507, sementes
+1001–1008 e 2001–2008) × main 5,1% (22 de 435) — z ≈ 3,4. Desligando peça por peça nas mesmas sementes: sem a corrida no
+escanteio, 5,5% (27 de 492); com a corrida e a zona parada (`zonaAntes` 0), 6,9% (33 de 480); com 0,05, 0,08 e 0,11 ninguém sai
+do lugar (o ponto fica a menos de `IA.modos.pressa.retoma`, 0,6 m) e os números são os do 0; com 0,13, 2% do caminho. A saída
+junto era o que dobrava o gol: quem ataca a zona chegava ao chute já andando, à frente da marcação. `zonaAntes` passa a 0 e o C10
+passa a cobrar a espera (média ≤ 2%); a mutação 0,15 reprova.
+
+O pênalti da IA corria antes do apito (a previsão da corrida, ~1,45 s, é maior que o atraso dela, 0,6–1,4 s) e, com a corrida
+no apito, a bola rolava ~0,4 s depois de antes; a montagem do pênalti foi de 1,5 para 1,25 s (medido: 1,2 → −0,13/+0,06 s;
+1,3 → −0,03/+0,16 s; 1,5 → +0,17/+0,36 s). Antes disso, com a corrida começando antes do apito, o pênalti da IA batia
+0,23 s ANTES da main (24 cenas): na main a IA espera os jogadores que entram na folga da meia-lua (0,05–0,28 m) saírem, o que
+a corrida, decidida ~1,45 s antes, não prevê.
+
+**O mergulho do quadril (01/11, CI do #588).** O G6 do `teste-replay-anel` (o balanço da 1ª pessoa no replay do gol ≤ 1 cm)
+reprovou com 7,5 cm nos gols de pênalti do camisa 10 (sementes 8 e 9). O mecanismo: a regulagem pedia à passada o pouso do
+pé no ar (`pousoEm`) pelo ritmo da passada INTEIRA, e esse ritmo ia ao piso, 0,8× o natural (a corrida de 4–5 m saía com um
+passo a menos que o natural; o outro número de passos dava 1,2–1,4×). Com o ritmo assim, o pé que estava no chão ficava lá —
+o `pousoEm` passava por cima do ritmo adiantado/urgente que tira o pé de apoio que ficou para trás —, o corpo a ~4,8 m/s andava
+~1 m por cima dele, a perna esticava e o quadril caía de 0,92 a 0,63 m (a cabeça de 1,55 a 1,26 m) em ~0,1 s, na penúltima
+passada (15–17 ticks antes da batida). Um mergulho visível no jogo e na TV, não só no replay: no levantamento do agente das cenas
+(sementes 1–8, 39 corridas), 11 com ≥ 15 cm (pênalti até 29 cm, escanteio até 24, tiro livre de passe até 28).
+
+Tentativas medidas: o piso do ritmo pelo urgente no ramo do `pousoEm` (29 → 20 cm: o urgente só começa com o pé a 0,62 m); a
+câmera não resolve (prender o olho tira a 1ª pessoa pela `lenteRuimPrimeira`). A correção é na regulagem: o apoio no ritmo
+natural e o ajuste no VOO (`ritmoVoo`: com um pé no chão vale o ritmo da passada de sempre ou o da regulagem, o mais rápido).
+Só isso levou o pênalti a 0,118 m, mas o voo ia a 0,5–0,6× o natural (o voo de 0,23 s a 4,8 m/s, um salto, e o quadril do
+desenho baixa no voo longo: o pé que acabou de sair fica para trás); com o voo ≥ 0,8× o natural na escolha (`vooMin`), a
+regulagem passa a preferir o número de passos com o ritmo um pouco mais rápido (≤ 1,2×), e a corrida fica com a passada da
+corrida normal do jogo. Faltava a corrida curta (2,5–3,2 m) do destro: parado na fase 0, o pé direito sai primeiro e o esquerdo
+(o de apoio) pousa ao lado da bola no 2º ou no 4º passo — nunca no 3º —; a regulagem escolhe agora o pé que sai primeiro (a fase
++ 1, o desenho parado é o mesmo). Com o número de passos certo, o ritmo da regulagem fica um pouco acima do natural e vale
+também no apoio (o mais rápido): o 1º apoio da arrancada, que segurava o quadril a 0,79 m com o corpo acelerando de 0 a ~2,4
+m/s (como em toda arrancada do jogo), fica mais curto.
+
+Medido (`teste-corrida-cobranca` C11, 265 corridas: IA, demo, a pessoa e um canhão de cobradores — cada cena com outro jogador
+de linha do time batendo), 522a4e36 → agora:
+
+| | 522a4e36 | agora |
+|---|---|---|
+| queda do quadril abaixo de 0,92 m, pior: pênalti · escanteio · tiro de meta curto · longo · tiro livre chute · passe | 0,29 · 0,34 · 0,15 · 0,11 · 0,16 · 0,28 m | 0,10 · 0,08 · 0,07 · 0,08 · 0,10 · 0,07 m |
+| corridas com ≥ 0,15 m | 82 de 265 (31%) | 0 |
+| a cabeça (de pé → mínimo), pior | 0,38 m | 0,16 m |
+| a corrida normal do jogo (IA × IA, sementes 3001–3004), abaixo de 0,92 m: p50 · p90 · p95 | 4–4,5 m/s: 0,063 · 0,106 · 0,113; 4,5–5 m/s: 0,078 · 0,128 · 0,137 | (igual: o treino e a corrida normal não mudam) |
+
+Nas partidas inteiras (IA × IA, sementes 1–16, a régua do agente das cenas: 85 corridas) o pior ficou em 0,098 m, menos uma
+corrida: na semente 8 o goleiro esperando o tiro de meta no ponto de partida levou uma trombada (0 → 3,8 m/s num tick), a IA
+começou a corrida 2 ticks depois com ele indo para o lado de lá a 3,6 m/s e a freada com a virada levou o quadril a 0,59 m. A
+corrida passa a começar só com o cobrador parado (`paradoMax` 0,5 m/s; nas sementes 1–8 a guarda age só nessa parada, 34
+ticks): 0,091 m. No canhão de pênaltis do G5 do `teste-replay-anel` (a falta na área de cada semente, 1–30), o balanço da 1ª
+pessoa nos gols de pênalti foi de 7,48–7,52 cm (25 de 25 acima de 1 cm, 522a4e36) a ≤ 0,17 cm (0 de 26); o G6 do teste passa
+com 0,62 cm.
+
+A meta (≤ 0,12 m, nenhuma ≥ 0,15 m) é a da corrida normal do jogo na mesma velocidade, não a do real: o desenho da corrida soma
+o balanço dele (±3 cm a 4 m/s) e o alcance das pernas (o quadril baixa no fim do voo), uns 10 cm abaixo de 0,92 m a 4–5 m/s —
+mais que os ~7 cm do centro de massa real (Lee & Farley 1998). Chegar aos ~8 cm do real pede mexer na corrida de todos (o
+`anim.js`, fora deste PR: a corrida e a condução foram aprovadas pelo dono e o treino tem de ficar bit a bit).
+
+**O goleiro de 6 a 16,5 m no painel (01/11, CI do #588).** No painel de 144 do CI (522a4e36) as defesas do goleiro nos chutes
+de 6 a 16,5 m saíram da meta (55–60%): main 56,2% (338) → 61,5% (322); nas sementes 3001–3144, 56,7 → 61,6%. O resto do
+goleiro ficou na meta. Medido com uma cópia do painel que grava, por chute, a chance que o goleiro leu (`leituraGoleiro.p`), o
+modo da defesa e o bloqueio do batido, e desligando uma peça por vez (144 partidas cada; a main é a 117abc28):
+
+| versão (sementes 1001–1144) | 6–16,5 m | no alvo, total | ≥ 16,5 m |
+|---|---|---|---|
+| main | 56,2% (338) | 66,3% | 85,4% |
+| PR 73250b5c | 62,4% (346) | 69,1% | 82,8% |
+| PR sem corrida nenhuma | = main (56 de 60 partidas idênticas; as outras 4 pela montagem do pênalti, 1,25 s) | | |
+| só a corrida do tiro de meta · só a do escanteio | 56,9% (350) · 55,0% (347) | | |
+| todas menos a do tiro livre | 55,1% (350) | 65,6% | 83,7% |
+| só a do tiro livre · só a do chute direto de tiro livre · só a do PASSE de tiro livre | 63,2% (378) · 57,2% (334) · 63,6% (376) | | |
+| só a do passe, sem a IA refazer o pedido no contato | 60,1% (353) | | |
+| só a do passe, com o cobrador parado logo depois da batida (diagnóstico) | 59,5% (341) | | |
+| todas menos a do passe de tiro livre | 56,5% (345) | 66,6% | 82,2% |
+
+- **Não é a pelve (ebecbcb7).** Contadas numa cópia instrumentada do PR (o mesmo jogo bit a bit), nas 144 partidas: a esfera da
+  pelve decidiu 0 defesas (os 43 bloqueios do batido também batiam no tronco ou nas pernas) e a conferência nova da espalmada
+  mudou a direção de 1 espalmada (depois da defesa: não entra na conta).
+- **Não é o goleiro.** A posição dele no chute é a mesma (profundidade mediana 1,78 × 1,79 m; parado em 88% × 88% dos chutes com
+  o pé) e a conta da chance não mudou. Mudaram os chutes: a chance média lida nos chutes no alvo de 6–16,5 m foi de 50,1 para
+  55,0% (main → PR); as defesas acima da chance lida (quase todas o bloqueio do batido) ficaram (+6,1 → +7,4 pontos).
+- **Onde, nas sementes 1001–1144.** Antes do 1º tiro livre de cada partida main e PR são iguais (57,9 × 58,9%); depois dele as
+  partidas divergem e, nesta amostra, 15–60 s depois de um tiro livre os chutes no alvo de 6–16,5 m foram de 52 a 83 e as defesas
+  de 50,0 a 68,7% (chance lida 41 → 56%). Na divisão por peças (tabela) o salto veio todo da corrida do PASSE de tiro livre. A
+  batida em si não muda (experimento pareado: o mesmo mundo no 1º tick da falta cobrado com e sem a corrida, 113 passes de 48
+  partidas — o recebedor a 13,0 × 12,8 m e −4,3 × −4,2 m à frente, a posse aos 3/8/15 s igual, a bola rola no mesmo tick ±1);
+  depois dela o cobrador segue correndo para a frente (3,2 m/s no contato × 0,1 parado) e a bola aos 15/30 s fica 0,6/1,3 m
+  mais à frente, em média. Com o cobrador parado logo depois da batida (diagnóstico, não é física) 59,5%; sem a IA refazer o
+  pedido no contato 60,1%.
+- **Nas outras sementes o efeito some no sorteio.** A medida de 144 partidas varia ~±3 pontos entre amostras (a própria main
+  sai da faixa nas 5001–5144 e nas 7001–7144; no alvo total 67,6 × 68,7% e ≥ 16,5 m 83,5 × 83,4% nas quatro):
+
+  | sementes | main | PR | todas as corridas menos a do passe de tiro livre |
+  |---|---|---|---|
+  | 1001–1144 (a do CI) | 56,2% (338) | 62,4% (346; 73250b5c e 1bf1349a) | 56,5% (345) |
+  | 3001–3144 | 56,7% (356) | 61,6% (362; ed3a17b8) | 61,3% (362) |
+  | 5001–5144 | 60,8% (332) | 56,5% (340; 1bf1349a) | 57,8% (332) |
+  | 7001–7144 | 61,5% (348) | 63,5% (367; 1bf1349a) | — |
+  | juntas | 58,8% (808/1374) | 61,1% (864/1415) | 58,6% (609/1039; 1001–5144) |
+
+  Δ PR − main nas quatro (576 partidas de cada, 4× o painel; bootstrap por partida, 4000 reamostras): +2,3 pontos, IC95
+  [−0,4; +5,9], P(Δ ≤ 0) = 0,053. Só com 1001 e 3001 o Δ era +5,5 [1,3; 10,5]; com a 5001, +2,3 [−0,9; +6,4] (P = 0,067).
+  É a mesma oscilação já anotada no C4 (56,6 → 60,2%, IC do Δ com o zero) e no C5 (60,2 → 56,2%): a divisão por peças numa
+  amostra só acha o que, ali, mudou as partidas depois da 1ª divergência.
+- **Recalibrar o goleiro não dá sem recuo.** Pela chance lida de cada chute do PR, `GOLEIRO.realista.c0` −0,3 (o necessário
+  para ≤ 60% nas 1001–1144) levaria ≥ 16,5 m a ~79,7% e o total a ~66,1% (as duas no limite das metas); na main a mesma
+  mudança tiraria as três da meta. E não há o que recalibrar: o goleiro e a chance dele não mudaram.
+- **Conclusão e proposta.** Nada a corrigir no goleiro nem na pelve. Pela regra do projeto (amostra ~4× da base e do PR; no
+  empate a guarda só reprova quando a contagem prova), a linha do goleiro de 6–16,5 m EMPATA com a main (Δ +2,3, IC95
+  [−0,4; +5,9], p = 0,053: a contagem não prova o recuo, e a própria main fica fora da faixa em 2 das 4 amostras) — nada muda
+  no código; o PR segue como está. Se o dono quiser tirar o candidato que a divisão por peças achou — a corrida do passe de
+  tiro livre, que não estava no pedido de 29/10 (pênalti, escanteio e tiro de meta) —, o passe de tiro livre sem a corrida dá
+  58,6% nas três amostras em que foi medido (main 57,9%): decisão dele. Uma corrida mais lenta no passe não foi medida: abaixo
+  de 2,5 m/s no contato a meta C2 do `teste-corrida-cobranca` reprova (e `velMin` é 2,6).
+- **Os impedimentos (meta ≥ 1), de passagem:** main 1,03 · 0,97 · 0,90 · 0,87 × PR 0,81 · 0,85 · 0,84 · 0,92 (1001 · 3001 ·
+  5001 · 7001; 543 × 493 em 576 partidas, z ≈ 1,6: não prova) e 0,94 · 1,01 · 0,86 sem a corrida do passe de tiro livre; a main
+  já fica abaixo de 1 em 3 das 4 amostras (0,94 juntas) — fica para quem cuida do impedimento.
+
+**Pendente/limites.** A P2 (os estilos do pênalti: normal, forte, colocado, paradinha, pulinho; o goleiro da IA que se
+compromete cedo e o cobrador que lê; o goleiro na linha até o chute na partida). A corrida é uma reta do ponto de partida ao
+pé de apoio (a do jogador real faz uma curva leve no fim); o gesto do pé é o do toque de ação de sempre (o pé vai à bola),
+sem o balanço para trás da perna — a perna do chute desenhada fica para o desenho da P2 (pulinho, perna, câmera).

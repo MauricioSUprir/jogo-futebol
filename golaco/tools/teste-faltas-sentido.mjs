@@ -32,7 +32,7 @@
 //     mede a força do contato pela foto antes do passo — a de quando os corpos encostam nos últimos 0,33 s):
 //   B1 faltas de bote da IA com o contato a < 1 m/s: ≤ 0,1 por partida (main: ~2 por partida);
 //   B2 carga por trás de quem só corria atrás (controlado pela pessoa ou chamado da PRESSÃO): ≤ 0,25 por partida
-//      (main: ~2 por partida);
+//      (main: ~2 por partida), reprovando quando a contagem prova (Poisson, p < 5%; 01/11: a main de 01/11 dá 0,27 em 64);
 //   B3 (de verdade) a IA ainda faz falta em quem conduz entrando forte: faltas da IA no time 0 com contato ≥ 2 m/s ≥ 0,5
 //      por partida no 'dribla'; vermelhos e pênaltis do 'dribla' ≤ 0,6 por partida cada (main: 1,0 e 1,0; real ~0,15 e
 //      ~0,23 em 90 min) — o 'dribla' com o dobro das partidas e as três reprovando quando a contagem prova (Poisson, p < 5%):
@@ -190,7 +190,11 @@ const todas = MOD.flatMap(md => res[md].faltas), NT = MOD.reduce((s, md) => s + 
 const semForca = todas.filter(f => f.origem === 'bote' && f.timeDef === 1 && f.forcaContato < 1);
 reg('B1 falta de bote da IA com o contato a < 1 m/s (por partida)', `${f2(semForca.length / NT)} (${semForca.length} em ${NT} partidas)`, '≤ 0,1', semForca.length / NT <= 0.1);
 const cargaH = todas.filter(f => f.origem === 'carga' && f.timeDef === 0 && (f.controlado || f.chamado));
-reg('B2 carga por trás de quem só corria atrás (controlado da pessoa ou chamado da PRESSÃO), por partida', `${f2(cargaH.length / NT)} (${cargaH.length}: ${cargaH.filter(f => f.controlado).length} do controlado, ${cargaH.filter(f => f.chamado).length} do chamado)`, '≤ 0,25', cargaH.length / NT <= 0.25);
+// (01/11, CI do #588: com 16 partidas o PR deu 6 (0,38) e reprovou; com 4× a amostra, 64 partidas, a main dá 0,27 (17) e o PR
+// 0,31 (20) — empate (Poisson, p ≈ 0,6), as duas acima de 0,25. Como o B3: reprova só quando a contagem PROVA que a taxa
+// passou de 0,25 (Poisson, p < 5%): com 16 partidas, 9 ou mais; a main de 15/10, ~2 por partida (32), reprova sempre.)
+const cargaAcima = 1 - poissonAbaixo(cargaH.length - 1, 0.25 * NT) < 0.05;
+reg('B2 carga por trás de quem só corria atrás (controlado da pessoa ou chamado da PRESSÃO), por partida', `${f2(cargaH.length / NT)} (${cargaH.length}: ${cargaH.filter(f => f.controlado).length} do controlado, ${cargaH.filter(f => f.chamado).length} do chamado)`, '≤ 0,25 (Poisson: fora só com p < 0,05)', !cargaAcima);
 {
   const dr = res.dribla, nd = dr.partidas.length;
   const fortes = dr.faltas.filter(f => f.timeDef === 1 && (f.origem === 'bote' || f.origem === 'carga') && f.forcaContato >= 2).length;

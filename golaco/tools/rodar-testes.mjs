@@ -53,6 +53,8 @@ const LISTA = [
   ['passes: rasteiro, enfiada, lançamento, cruzamento, primeira, tabela', 'teste-passes.mjs'],
   ['chute: velocidade, curva, dispersão, perna ruim, cavadinha', 'teste-chutes.mjs'],
   ['cavadinha com dois toques no CHUTE (humano): de qualquer lugar, um toque nunca, chute carregado no mesmo tick, bola parada, botão herdado na troca', 'teste-cavadinha.mjs'],
+  // Item 70, P1 (dono, 29/10; aval 31/10): o cobrador do pênalti, escanteio, tiro de meta e tiro livre corre até a bola
+  ['cobranças com corrida: anda até a bola, pé de apoio ao lado, sem patinar, a bola rola na hora de antes, a linha, a cavadinha, online', 'teste-corrida-cobranca.mjs'],
   ['goleiro: defesas pelos dados, posição, botão GOLEIRO, mãos', 'teste-goleiro.mjs'],
   ['goleiro pula e espalma: mergulho desenhado, mão na bola, espalmada para fora do perigo', 'teste-mergulho.mjs'],
   ['jogo aéreo: domínio no peito e cabeceio', 'teste-aereo.mjs'],
@@ -106,7 +108,8 @@ const LISTA = [
   ['faltas com sentido: contato a passo não é falta, quem só corre atrás não atropela, a falta de verdade continua', 'teste-faltas-sentido.mjs'],
   // Pedidos do dono de 11/10 (regras e controles)
   ['jogador parado com a bola: a IA fecha e dá o bote (condutor lento)', 'teste-parado.mjs'],
-  ['PRESSÃO perceptível: com × sem o botão (pareado), marca, um a mais na pressão', 'teste-pressao-humano.mjs'],
+  // (01/11, item 70: 64 partidas em 3 processos — eram 32 num processo de vaga; o M3 pela prova, teste-pressao-humano.mjs)
+  ['PRESSÃO perceptível: com × sem o botão (pareado), marca, um a mais na pressão', 'teste-pressao-humano.mjs', [], 'padrao', 3],
   // Categoria D (dono, 24/10: "a IA correr, tanto pra marcar, tanto pra atacar, pq ela não corre"): a régua da corrida da IA
   // contra a pessoa (3 roteiros × 8 sementes — a amostra da decisão: com 4, a roubada sofrida pela IA, V5, ia de 2,21 a 2,79
   // entre a base e o D3 nas sementes 1–4 e 2,33 → 2,34 nas 8; seções P o portão, A ataque, M marcação (D3) e V guardas

@@ -111,6 +111,14 @@ function carregarESoltar(m, b, k, extra = 0) {
   const forca = Math.min(1, Math.max(0.08, (m.tick - c.carga.t0) * PASSO / ACOES.cargaCheia));
   return { forca, c };
 }
+/**
+ * A cobrança com corrida (item 70, P1; corrida.js): depois de soltar o botão o cobrador corre até a bola e o contato sai
+ * no fim da corrida — anda (sem botão) até o passo em que a bola rolou (a parada `pr` acabou). No fim, a bola andou o 1º
+ * passo do voo, como quando a cobrança saía no tick do soltar. Sem corrida (a main), não anda nada.
+ */
+function ateRolar(m, pr, max = 300) {
+  for (let i = 0; i < max && pr && m.parada === pr && !pr.rolou; i++) P.passoPartida(m, NADA);
+}
 const longe = (m, pr) => { for (const o of m.jogadores) if (o.id !== pr.cobrador) P.teleportar(o, -m.ataca[pr.time] * 8 + (o.id % 7), (o.id % 11) - 5, 0); };
 
 if (temMira) {
@@ -153,7 +161,8 @@ if (temMira) {
       const fr = (MX - Math.abs(pts[i * 3 - 3])) / (Math.abs(pts[i * 3]) - Math.abs(pts[i * 3 - 3]));
       yLinha = pts[i * 3 - 2] + (pts[i * 3 + 1] - pts[i * 3 - 2]) * fr; zLinha = pts[i * 3 - 1] + (pts[i * 3 + 2] - pts[i * 3 - 1]) * fr;
     }
-    P.passoPartida(m, NADA); // solta: a cobrança sai (cobrar) e a bola anda um passo
+    P.passoPartida(m, NADA); // solta: a cobrança sai (cobrar) e a bola anda um passo — com a corrida, ela começa
+    ateRolar(m, pr);          // (e o contato sai no fim dela: a bola anda o 1º passo ali)
     // (na barra cheia sem barreira, até a linha do gol: dali em diante entram o goleiro e a rede. Na main, com todos
     // levados para o meio-campo, o goleiro a 56 m "espalmava" a bola que cruzava a linha no z dele — goleiro.js: sem o plano
     // dele à frente da bola, a leitura cai no cruzamento da linha do gol e só mede o lado; pendente, fora do C2)
@@ -226,8 +235,9 @@ if (temMira) {
     rotulos.push(`falta CHUTE ${M.preverMira(qf, ptsC, info)?.rotulo}`);
     // a linha some no chute
     for (let i = 0; i < 30; i++) P.passoPartida(qf, { x: 0, z: 0, botoes: BOTAO.CHUTE });
-    const antesChute = !!M.preverMira(qf, ptsC, info);
+    const antesChute = !!M.preverMira(qf, ptsC, info), prf = qf.parada;
     P.passoPartida(qf, NADA);
+    ateRolar(qf, prf); // (a corrida da cobrança: a linha fica até o contato)
     const depoisChute = !!M.preverMira(qf, ptsC, info);
     // tiro de meta: sem efeito; PASSE na direção da mira (girada para a esquerda)
     const qm = copia(1004); qm.humanos = [0];
@@ -241,9 +251,12 @@ if (temMira) {
       // o PASSE do jogo escolhe o companheiro no cone da mira: a mira apontada para um companheiro
       const gk = jog(qm, pm.cobrador);
       const alvo = qm.jogadores.filter(o => o.time === 0 && o.id !== gk.id && o.posicao !== 'GOL').sort((a, b) => Math.hypot(a.x - gk.x, a.z - gk.z) - Math.hypot(b.x - gk.x, b.z - gk.z))[0];
+      // (a corrida da cobrança, item 70: o passe sai ~1,5 s depois de soltar e vai ao companheiro no cone da mira, onde
+      // ele estiver — o companheiro mirado fica parado no lugar, a 14 m, para a direção medir a mira e não a corrida dele)
+      P.teleportar(alvo, qm.bola.p.x + qm.ataca[0] * 12, qm.bola.p.z - 7, 0); alvo.papel = 'parado';
       pm.mira.ang = Math.atan2(alvo.z - qm.bola.p.z, alvo.x - qm.bola.p.x);
       for (let i = 0; i < 10; i++) P.passoPartida(qm, { x: 0, z: 0, botoes: BOTAO.PASSE });
-      for (let i = 0; i < 40 && !qm.parada?.rolou && qm.parada; i++) P.passoPartida(qm, NADA);
+      for (let i = 0; i < 300 && !qm.parada?.rolou && qm.parada; i++) P.passoPartida(qm, NADA); // (a corrida até o contato)
       const v = qm.bola.v;
       metaAng = Math.abs(((Math.atan2(v.z, v.x) - pm.mira.ang + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
     }
@@ -268,6 +281,7 @@ if (temMira) {
       if (!pr) continue;
       carregarESoltar(m, BOTAO.LANCAMENTO, 30);
       P.passoPartida(m, NADA);
+      ateRolar(m, pr);
       if (m.voo?.mirada) quedas.push({ x: m.voo.alvo.x * Math.sign(m.ataca[0]), z: m.voo.alvo.z, b: m.bola.v });
     }
     // o desvio da DIREÇÃO de saída (a mesma mira e força: só o erro do cobrador muda)

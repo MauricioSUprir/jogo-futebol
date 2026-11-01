@@ -32,7 +32,10 @@ const NS_NAT = +arg('--naturais', 6);   // partidas sem o canhão, no mínimo (n
 const NAT_MAX = +arg('--naturais-max', 96); // (Etapa 4: o tiro de meta curto e o lateral com as mãos tiraram bolas altas; com as regras e controles ~1,7 disputa por partida: 64 partidas davam 107 — a amostra, não a meta, pede mais partidas)
 const NAT_DISP = +arg('--disputas', 120); // disputas do natural (a amostra: ver o critério no fim do arquivo)
 const MIN_NAT = +arg('--min-natural', 4);
-const NS_SOLTO = +arg('--soltos', 8);   // partidas com o canhão e o analógico largado (assistência; com 2, ~37 disputas: a taxa real ~95% (main 94% 228/243, D2 96% 221/231 em 12 partidas) caía abaixo de 90% em ~1 rodada de 8 só pelo sorteio; com 8, ~150 disputas, < 1%)
+const NS_SOLTO = +arg('--soltos', 16); // partidas com o canhão e o analógico largado (assistência; com 2, ~37 disputas: a taxa real ~95% (main 94% 228/243, D2 96% 221/231 em 12 partidas) caía abaixo de 90% em ~1 rodada de 8 só pelo sorteio; com 8, ~150 disputas, < 1%)
+// (01/11, CI do #588: com 8 partidas, 116/129 = 89,9% e REPROVOU — o sorteio das 8 primeiras; com 4× a amostra (32) main 94,3%
+// 544/577 × PR 94,2% 504/535, empate. Com 16, ~260 disputas: a ~94% real cai abaixo de 90% em < 0,5% das rodadas; main
+// 270/291 e PR 236/255, os dois 93%. A meta não mudou.)
 const BASE = +arg('--base', 1);
 const SO = arg('--so', null);           // 'canhao' | 'natural' (o rodar-testes roda as duas partes em paralelo)
 const DEPURA = !!process.env.DEPURA;
@@ -141,7 +144,9 @@ function lancar(m, r, time) {
  */
 function entradaHumano(m, solto, time = 0) {
   const jc = S.jogadorPorId(m, m.controlado[time]);
-  const e = time === 0 ? P.entradaDemoPartida(m) : jc ? IAT.entradaIATatica(m, jc) : { x: 0, z: 0, botoes: 0 };
+  // (o cobrador do time 1 cobra como a IA pelo humano — a cobrança da demo, partida.js entradaDemoPartida: iaCobra)
+  const pr = m.parada, cobra = time === 1 && jc && pr && !pr.rolou && pr.cobrador === jc.id;
+  const e = time === 0 || cobra ? P.entradaDemoPartida(m, time) : jc ? IAT.entradaIATatica(m, jc) : { x: 0, z: 0, botoes: 0 };
   const b = m.bola;
   if (b.rolando || m.posse != null || m.naMao != null) return e;
   if (solto) return { x: 0, z: 0, botoes: 0 };
@@ -213,12 +218,11 @@ function rodar(sem, min, injeta, solto = false) {
     const v0 = m.voo, chuteDe = v0 && (v0.tipo === 'chute' || v0.tipo === 'colocado' || v0.tipo === 'cavadinha'
       || (v0.tipo === 'cabeceio' && v0.cabeceio === 'chute')) ? v0.time : null;
     if (dois) {
-      // o mesmo passo da partida (partida.js passoPartida) com a entrada dos dois humanos
+      // o passo da partida (partida.js passoPartida) com a entrada dos dois humanos — com a COBRANÇA das bolas paradas, como
+      // no jogo (31/10, item 70: este laço chamava sim.js passo + regrasPartida sem o `cobrar`, e toda bola parada só rolava
+      // pela trava dos 8 s — com o cobrador da corrida longe da bola, a do escanteio virava um cruzamento dele andando)
       const e0 = entradaHumano(m, solto, 0), e1 = entradaHumano(m, solto, 1);
-      const est = m.partida.estado;
-      if (est === 'intervalo' || est === 'fim') { m.eventos = []; m.tick++; } else S.passo(m, { 0: e0, 1: e1 });
-      P.regrasPartida(m);
-      ev = m.eventos;
+      ev = P.passoPartida(m, { 0: e0, 1: e1 }, null);
     } else ev = P.passoPartida(m, entradaHumano(m, solto), null);
     for (const e of ev) if (e.tipo === 'passe' && ALTOS.has(e.modo)) R.bolas.natural++;
     if (!voo) {
@@ -309,6 +313,11 @@ if (SO !== 'canhao') {
   // disputas agrupadas por partida) sem nada mudar. Agora: o dobro de disputas (120) e reprova só se a contagem PROVA
   // menos de 90%: P(X ≤ k | n, 0,9) < 5% (binomial), como os vermelhos do teste-faltas. Com 120 disputas (reprova com
   // k ≤ 101, 84%) uma taxa real de 80% reprova em ~90% das rodadas, a de 85% em ~45%, a de 93% em 0,1%.
+  // (31/10, item 70: até aqui o laço dos dois humanos não chamava a COBRANÇA — toda bola parada rolava pela trava dos 8 s, sem
+  // escanteio cruzado nem tiro de meta longo. Com a cobrança do jogo (passoPartida), a main fica com 90–91% (220/242 nas
+  // sementes 501+, 325/360 nas 1501+) e a corrida das cobranças com 86–92% (312/361 e 333/361): juntas, 90,1% × 89,3% (735 e
+  // 722 disputas), empate. A taxa real das duas está NA meta — as bolas altas da bola parada e os cruzamentos para a área
+  // cheia são onde a troca mais erra (~80–88% nas duas versões) — e a rodada passa ou reprova pela janela de sementes)
   const pNat = caudaBinomialAte(R.natural[0], R.natural[1], 0.9);
   console.log(`natural, bola alta que é chute do adversário (fora da conta: a troca aérea não troca no chute dele, #474): ${pc(...R.naturalChuteAdv)}`);
   reg('natural (IA × IA, os dois times): o controlado é quem disputa', `${pc(...R.natural)} em ${nNat} × ${MIN_NAT} min (p = ${fmt(pNat)} contra 90%)`, `≥ 90% (p ≥ 0,05) com ≥ ${NAT_DISP} disputas`, R.natural[1] >= NAT_DISP && pNat >= 0.05);

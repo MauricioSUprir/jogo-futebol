@@ -33,8 +33,8 @@
 // IA (time 1, Média) contra uma PESSOA no time 0 (sem a marca `ia` na entrada: tatica.js contraPessoa liga) — o 'construtor'
 // (lib/partida-tatica.mjs: o ataque substituto só no time 0 — trota, segura 2,5–5 s e passa para o mais livre, ~11 passes por
 // minuto como no jogo real; os roteiros do tools/lib/humano-roteiro.mjs quase não passam: contra eles o PPDA da IA dá ~1,5 e a
-// retomada ~74%, medidas do roteiro e não da IA) —, N sementes (padrão 48: com 24 o PPDA variava ±1 entre calibrações
-// vizinhas) × 4 min em 3 processos. Mede só a IA defendendo,
+// retomada ~74%, medidas do roteiro e não da IA) —, N sementes (padrão 96, eram 48 até 31/10: com 24 o PPDA variava ±1 entre
+// calibrações vizinhas) × 4 min em 3 processos. Mede só a IA defendendo,
 // com as MESMAS definições de cima:
 //  - PPDA (Wyscout) da IA: 8–10,5 — o alvo do plano D3 é 9–10,5 e o piso 8 (os times que mais apertam: Liverpool 2021/22
 //    8,62, Wyscout via Coaches' Voice; Bournemouth 2024/25 9,9, Opta; a média das 5 grandes ligas, 11,01);
@@ -42,8 +42,11 @@
 //    item 20 da FILA).
 //    O "≤ 33%" do plano D3 é o máximo REAL da StatsBomb (Leeds de Bielsa 29–30%), que conta EVENTOS de pressão — outra
 //    definição (a nota da agressão acima);
-//  - retomada da IA em ≤ 5 s depois da perda: 34–54% (Metrica 44,1 ± 10, a mesma definição).
-//   node tools/teste-pressao.mjs --humano [--sementes 48] [--roteiros espelho] [--js <pasta>] [--set CONST.caminho=valor]
+//  - retomada da IA em ≤ 5 s depois da perda: 34–54% (Metrica 44,1 ± 10, a mesma definição) — reprova quando a contagem PROVA
+//    que está fora da faixa (binomial, p < 5% abaixo de 34% ou acima de 54%). (31/10, item 70: com a corrida das cobranças o CI
+//    deu 33,4% de 359 nas 48 sementes; com 192, a main 36,5% (527/1444) e a corrida 34,7% (501/1445) — empate, as duas perto do
+//    piso; a amostra passa a 96 sementes.)
+//   node tools/teste-pressao.mjs --humano [--sementes 96] [--roteiros espelho] [--js <pasta>] [--set CONST.caminho=valor]
 import * as T from './lib/partida-tatica.mjs';
 import { fork } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -105,7 +108,7 @@ process.exit(falhas ? 1 : 0);
 // --------------------------------------------------------------------------- variante --humano (D3)
 async function varianteHumano() {
   const argv = process.argv.slice(2), val = (n, d) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
-  const a = T.argumentos(48);
+  const a = T.argumentos(96);
   if (argv.includes('--filho')) {
     // --set CONST.caminho=valorJSON (repetível; triagem): o config.js trocado antes de a lógica carregar
     const sets = argv.flatMap((x, i) => (x === '--set' ? [argv[i + 1]] : []));
@@ -142,10 +145,22 @@ async function varianteHumano() {
   const reg = (nome, medido, meta, ok) => { linhas.push([nome, medido, meta, ok ? 'PASSOU' : 'REPROVOU']); if (!ok) falhas++; };
   reg('PPDA da IA (Wyscout)', `${T.fmt(ppda, 2)} (${ROT.join(' / ')}: ${ppdaR}; ${soma('acoes')} ações)`, '8–10,5 (alvo 9–10,5)', ppda >= 8 && ppda <= 10.5);
   reg('agressão: recepção da pessoa com a IA a ≤ 4,6 m em ≤ 2 s', `${T.fmt(agr)}% de ${soma('recepcoes')}`, '58–78% (Metrica 68 ± 10)', agr >= 58 && agr <= 78);
-  reg('retomada da IA em ≤ 5 s depois da perda', `${T.fmt(ret)}% de ${soma('perdas')}`, '34–54% (Metrica 44,1 ± 10)', ret >= 34 && ret <= 54);
+  // (a faixa pelo teste binomial: reprova quando a contagem PROVA que está abaixo de 34% ou acima de 54%)
+  const kRet = soma('retomada5'), nRet = soma('perdas');
+  const pBaixo = caudaBinomAte(kRet, nRet, 0.34), pAlto = 1 - caudaBinomAte(kRet - 1, nRet, 0.54);
+  reg('retomada da IA em ≤ 5 s depois da perda', `${T.fmt(ret)}% de ${nRet} (p = ${T.fmt(pBaixo, 2)} contra 34%, ${T.fmt(pAlto, 2)} contra 54%)`, '34–54% (Metrica 44,1 ± 10; p ≥ 0,05)', nRet >= 100 && pBaixo >= 0.05 && pAlto >= 0.05);
   console.log(`teste-pressao --humano — lógica: ${a.js} · ${ROT.join(', ')} × ${a.sementes.length} sementes × 4 min, ${((Date.now() - t0) / 1000).toFixed(0)} s · passes da pessoa (os que contam no PPDA) por min ${T.fmt(soma('passesAdv') / Math.max(1, res.reduce((s, r) => s + r.minutos, 0)), 1)}`);
   const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));
   console.log(linhas.map(l => l.map((x, c) => String(x).padEnd(larg[c])).join(' | ')).join('\n'));
   console.log(falhas ? `\nteste-pressao --humano: REPROVOU (${falhas})` : '\nteste-pressao --humano: PASSOU');
   process.exit(falhas ? 1 : 0);
+}
+
+/** P(X ≤ k) para X ~ Binomial(n, p) (termos em log: n de milhares sem estourar). */
+function caudaBinomAte(k, n, p) {
+  if (k < 0) return 0;
+  let lt = n * Math.log(1 - p), soma = 0;
+  const r = Math.log(p / (1 - p));
+  for (let i = 0; i <= Math.min(k, n); i++) { soma += Math.exp(lt); lt += Math.log((n - i) / (i + 1)) + r; }
+  return Math.min(1, soma);
 }
