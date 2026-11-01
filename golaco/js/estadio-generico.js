@@ -99,16 +99,27 @@ export function raioPista(th, L, R) {
   if (s > 1e-9) { const t = R / s; if (t * c <= L) return t; }
   return L * c + Math.sqrt(Math.max(0, L * L * c * c - L * L + R * R));
 }
-/** Tabela de 3600 amostras (0,1°) de uma função de θ ∈ [−π, π), com leitura por interpolação. */
+/**
+ * Tabela de 3600 amostras (0,1°) de uma função de θ ∈ [−π, π), com leitura por interpolação. (Com u em [0, N) — todo θ
+ * de −π a π —, ((u % N) + N) % N é (u + N) − N: u % N = u, a soma arredonda igual e a 2ª % é a subtração exata — ou 0
+ * quando a soma dá 2N; o mesmo u bit a bit sem as duas % de ponto flutuante, que pesavam nos lugares da torcida. Fora
+ * disso, a conta de sempre.)
+ */
+const NTAB = 3600;
 function tabela(fn) {
-  const N = 3600, t = new Float64Array(N + 1);
+  const N = NTAB, t = new Float64Array(N + 1);
   for (let i = 0; i <= N; i++) t[i] = fn(-Math.PI + (2 * Math.PI * i) / N);
-  return th => {
-    let u = ((th + Math.PI) / (2 * Math.PI)) * N;
-    u = ((u % N) + N) % N;
-    const i = Math.floor(u), w = u - i;
-    return t[i] + (t[i + 1] - t[i]) * w;
-  };
+  const ler = th => { indiceTabela(th); return t[_ti] + (t[_ti + 1] - t[_ti]) * _tw; };
+  ler.t = t;   // (as amostras: para ler duas tabelas no mesmo θ com um índice só — a mesma conta de cada uma)
+  return ler;
+}
+// o índice (_ti) e o peso (_tw) de θ nas tabelas: a conta de toda leitura de tabela (escritos aqui e lidos logo depois)
+let _ti = 0, _tw = 0;
+function indiceTabela(th) {
+  const N = NTAB;
+  let u = ((th + Math.PI) / (2 * Math.PI)) * N;
+  if (u >= 0 && u < N) { u = u + N - N; if (u === N) u = 0; } else u = ((u % N) + N) % N;
+  _ti = Math.floor(u); _tw = u - _ti;
 }
 const h2 = (a, b) => { let t = Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263); t = Math.imul(t ^ (t >>> 13), 1274126177); return ((t ^ (t >>> 16)) >>> 0) / 4294967296; };
 export const gerador = semente => { let s = semente >>> 0 || 1; return () => { s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -246,25 +257,54 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     }
     return Math.max(rF(th) + 0.01, raioSuper(th, aF(c) + Math.max(pa, 0.01), bF(s) + Math.max(pb, 0.01), nB));
   });
-  /** Ponto (x, z) da fileira s no ângulo polar th. */
-  function ponto(th, s) { const r = rF(th) + s * (rB(th) - rF(th)); return [r * Math.cos(th), r * Math.sin(th)]; }
+  /**
+   * Ponto (x, z) da fileira s no ângulo polar th. (Guarda o último θ — rF, rB, o cosseno e o seno: a cadeira pede o
+   * assento, o bico e o fundo da fileira no mesmo θ; as mesmas contas, o mesmo ponto.)
+   */
+  let _pTh, _pA = 0, _pB = 0, _pC = 0, _pS = 0;
+  function ponto(th, s) {
+    if (!Object.is(th, _pTh)) { rFrB(th); _pA = _ra; _pB = _rb; _pC = Math.cos(th); _pS = Math.sin(th); _pTh = th; }
+    const r = _pA + s * (_pB - _pA);
+    return [r * _pC, r * _pS];
+  }
+  /** ponto(th, s) escrito em out, sem guardar o θ (a mesma conta: as bordas da cadeira, que não se repetem). */
+  function pontoBorda(th, s, out) { rFrB(th); const a = _ra, r = a + s * (_rb - a); out[0] = r * Math.cos(th); out[1] = r * Math.sin(th); return out; }
   /** Fração da profundidade do ponto (x, z): < 0 antes da 1ª fileira, > 1 depois da última. */
   function sDe(x, z) { const th = Math.atan2(z, x), a = rF(th), b = rB(th); return (Math.hypot(x, z) - a) / Math.max(1e-6, b - a); }
   // ψ normalizado pela 1ª fileira (a diagonal do canto em ±45°)
   const psi = (x, z) => Math.atan2(z / bF(z), x / aF(x)) / RAD;
   /** 0 lado de lá (z −), 1 fundo +x, 2 fundo −x, 3 lado de cá (z +). */
-  function setor(x, z) { const p = psi(x, z); return p >= -135 && p <= -45 ? 0 : p > -45 && p < 45 ? 1 : p >= 45 && p <= 135 ? 3 : 2; }
+  // (guarda o último ponto: a cadeira pergunta o setor do mesmo ponto duas vezes — se tem arquibancada e o setor dela)
+  let _sx, _sz, _sv = 0;
+  function setor(x, z) {
+    if (Object.is(x, _sx) && Object.is(z, _sz)) return _sv;
+    const p = psi(x, z);
+    _sx = x; _sz = z;
+    return (_sv = p >= -135 && p <= -45 ? 0 : p > -45 && p < 45 ? 1 : p >= 45 && p <= 135 ? 3 : 2);
+  }
   const thDivisa = [Math.atan2(-Fr.la, Fr.fa), Math.atan2(Fr.ca, Fr.fa), Math.atan2(Fr.ca, -Fr.fb), Math.atan2(-Fr.la, -Fr.fb)];
   // pesos dos 4 lados no ângulo (a mistura dos perfis nos cantos fechados: ±BL° de ψ em volta da diagonal)
   const BL = F.cantos === 'parciais' ? 9 : 14;
   const CENTRO = [-90, 0, 180, 90];
-  /** ψ do raio no ângulo th (o mesmo ângulo normalizado pela 1ª fileira). */
-  const psiTh = th => Math.atan2(Math.sin(th) / bF(Math.sin(th)), Math.cos(th) / aF(Math.cos(th))) / RAD;
+  /**
+   * ψ do raio no ângulo th (o mesmo ângulo normalizado pela 1ª fileira). (Guarda o último θ — Object.is: o −0 e o NaN à
+   * parte —: os pesos e o mergulho do canto pedem o mesmo θ em seguida; a mesma conta, o mesmo valor.)
+   */
+  let _psTh, _psV = 0;
+  const psiTh = th => {
+    if (Object.is(th, _psTh)) return _psV;
+    _psTh = th;
+    // (o seno e o cosseno guardados por ponto quando é o mesmo θ — o perfil vem logo depois do ponto da cadeira: os mesmos
+    // números)
+    const mesmo = Object.is(th, _pTh), sn = mesmo ? _pS : Math.sin(th), cs = mesmo ? _pC : Math.cos(th);
+    return (_psV = Math.atan2(sn / bF(sn), cs / aF(cs)) / RAD);
+  };
   function pesos(th, out = [0, 0, 0, 0]) {
     const pp = psiTh(th);
     let soma = 0;
     for (let k = 0; k < 4; k++) {
-      let d = Math.abs(pp - CENTRO[k]) % 360; if (d > 180) d = 360 - d;
+      // (|ψ − centro| fica em [0, 360]: abaixo de 360 o resto da divisão é ele mesmo — a % de ponto flutuante só fora disso)
+      let d = Math.abs(pp - CENTRO[k]); if (!(d < 360)) d %= 360; if (d > 180) d = 360 - d;
       const w = abertos ? (d < 45 ? 1 : 0) : suave((45 + BL - d) / (2 * BL));
       out[k] = w; soma += w;
     }
@@ -299,6 +339,10 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     const f = rF(th) + D / Math.max(0.5, cosFrente(th)), k = 4;
     return (b + f + Math.sqrt((b - f) * (b - f) + k * k)) / 2;
   });
+  // rF(θ) e rB(θ) com um índice só (a mesma leitura das duas tabelas): em _ra e _rb
+  const TF = rF.t, TB = rB.t;
+  let _ra = 0, _rb = 0;
+  function rFrB(th) { indiceTabela(th); const i = _ti, w = _tw; _ra = TF[i] + (TF[i + 1] - TF[i]) * w; _rb = TB[i] + (TB[i + 1] - TB[i]) * w; }
 
   // ---------------------------------------------------------------- perfil de cada lado (s: 0 = 1ª fileira, 1 = última)
   // nós [s, y, tipo]: tipo 0 = cadeiras, 1 = face de vidro/concreto dos camarotes (quase em pé), 2 = o piso do corredor.
@@ -363,10 +407,14 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     for (let i = 1; i < nos.length; i++) if (s <= nos[i][0]) return nos[i][2];
     return 0;
   }
+  // (os pesos em _w são os do último θ, _wTh: a cadeira pede o perfil e o lado no mesmo θ várias vezes — o piso, o lado que
+  // manda, o espelho de trás —; os pesos são função só do θ, então guardá-los dá o mesmo valor)
   const _w = [0, 0, 0, 0];
+  let _wTh;
+  const pesosW = th => { if (!Object.is(th, _wTh)) { pesos(th, _w); _wTh = th; } };
   /** y do degrau na fração s da profundidade, no ângulo th (a mistura dos lados; o canto parcial desce). */
   function perfil(s, th) {
-    pesos(th, _w);
+    pesosW(th);
     let y = 0;
     for (let k = 0; k < 4; k++) if (_w[k] > 0) y += _w[k] * perfilLado(k, clamp(s, 0, 1));
     const mg = mergulhoCanto(th);
@@ -374,7 +422,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     return y;
   }
   /** O lado que manda no ângulo th (o de maior peso). */
-  function ladoEm(th) { pesos(th, _w); let k = 0; for (let i = 1; i < 4; i++) if (_w[i] > _w[k]) k = i; return k; }
+  function ladoEm(th) { pesosW(th); let k = 0; for (let i = 1; i < 4; i++) if (_w[i] > _w[k]) k = i; return k; }
   /** Os anéis do perfil (s de todos os nós de todos os lados, sem repetir): o desenho faz uma faixa entre cada par. */
   const sAneis = [...new Set(NOS.flat().map(n => Math.round(n[0] * 1e4) / 1e4))].sort((a, b) => a - b);
   // a ponta das arquibancadas nos cantos abertos: os lados vão até |x| ≤ X (um pouco além da linha de fundo) e os fundos
@@ -432,7 +480,17 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     }
     return out;
   }
-  const norm = t => { t = ((t + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return t; };
+  // (com t + π em [0, 2π) as duas % são (t + π + 2π) − 2π — a 2ª, exata — ou 0 quando a soma dá 4π, como em tabela: o mesmo
+  // número sem a % de ponto flutuante; fora disso, a conta de sempre)
+  const DOIS_PI = 2 * Math.PI;
+  const norm = t => {
+    const v = t + Math.PI;
+    if (v >= 0 && v < DOIS_PI) { let u = v + DOIS_PI - DOIS_PI; if (u === DOIS_PI) u = 0; return u - Math.PI; }
+    t = ((t + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return t;
+  };
+  // ponto(th, s)[0] e [1] sem a outra coordenada (a mesma conta: r·cos θ ou r·sin θ) — as inversas pela regula falsi
+  const pontoX = (th, s) => { rFrB(th); const a = _ra; return (a + s * (_rb - a)) * Math.cos(th); };
+  const pontoZ = (th, s) => { rFrB(th); const a = _ra; return (a + s * (_rb - a)) * Math.sin(th); };
   function thDoAlvo(k, s, alvo) {
     let lo, hi, f;
     if (k === 0) { lo = -Math.PI + 1e-6; hi = -1e-6; f = th => ponto(th, s)[0] - alvo; }
@@ -448,10 +506,10 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
    */
   function thDoAlvoRapido(k, s, alvo) {
     let lo, hi, f;
-    if (k === 0) { lo = -Math.PI + 1e-6; hi = -1e-6; f = th => ponto(th, s)[0] - alvo; }
-    else if (k === 3) { lo = 1e-6; hi = Math.PI - 1e-6; f = th => alvo - ponto(th, s)[0]; }
-    else if (k === 1) { lo = -Math.PI / 2 + 1e-6; hi = Math.PI / 2 - 1e-6; f = th => ponto(th, s)[1] - alvo; }
-    else { lo = Math.PI / 2 + 1e-6; hi = 1.5 * Math.PI - 1e-6; f = th => alvo - ponto(th, s)[1]; }
+    if (k === 0) { lo = -Math.PI + 1e-6; hi = -1e-6; f = th => pontoX(th, s) - alvo; }
+    else if (k === 3) { lo = 1e-6; hi = Math.PI - 1e-6; f = th => alvo - pontoX(th, s); }
+    else if (k === 1) { lo = -Math.PI / 2 + 1e-6; hi = Math.PI / 2 - 1e-6; f = th => pontoZ(th, s) - alvo; }
+    else { lo = Math.PI / 2 + 1e-6; hi = 1.5 * Math.PI - 1e-6; f = th => alvo - pontoZ(th, s); }
     let flo = f(lo), fhi = f(hi), lado = 0;
     if (flo >= 0) return norm(lo);
     if (fhi <= 0) return norm(hi);
@@ -515,10 +573,13 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     return { fora: b + 1.6, dentro, yFora: yt + 3.2, yDentro: C.sust === 'pilares' ? yt + 3.6 : yt + C.folga };
   }
   /** Dentro da projeção da cobertura (e, nos cantos abertos, da arquibancada dela)? Devolve a altura ou null. */
-  function alturaCobEm(x, z) {
-    const th = Math.atan2(z, x), c = cobEm(th);
+  function alturaCobEm(x, z) { return alturaCobDe(cobEm(Math.atan2(z, x)), x, z, Math.hypot(x, z)); }
+  /**
+   * A conta de alturaCobEm com a cobertura c do ângulo do ponto (cobEm(atan2(z, x))) e o raio r = |(x, z)| já calculados (o
+   * sólido da coluna tem os dois: a mesma resposta).
+   */
+  function alturaCobDe(c, x, z, r) {
     if (!c) return null;
-    const r = Math.hypot(x, z);
     if (r < c.dentro || r > c.fora) return null;
     if (abertos && !temArquibancada(...pontoNaMesmaFileira(x, z))) return null;
     const u = (c.fora - r) / (c.fora - c.dentro);
@@ -534,23 +595,40 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   const SOLD = [-0.42, 0.74, 0.52];
   // a cobertura por ângulo numa tabela (só para a sombra: 25 mil lugares × 22 passos de cobEm pesavam metade da conta dos
   // lugares no CI; 4096 ângulos = 0,09°, menos de 0,2 m na borda da sombra)
-  let _cobTab = null;
+  // (_cobMin/_cobMax: a cobertura mais baixa e a mais alta da tabela; _cobR0/_cobR1: a menor borda de dentro e a maior de
+  // fora — um raio fora delas não está debaixo de cobertura nenhuma da tabela: null sem o ângulo)
+  let _cobTab = null, _cobMin = Infinity, _cobMax = -Infinity, _cobR0 = Infinity, _cobR1 = -Infinity;
   const NCT = 4096;
+  function tabelaCob() {
+    _cobTab = new Array(NCT);
+    for (let i = 0; i < NCT; i++) {
+      const c = (_cobTab[i] = cobEm(-Math.PI + (2 * Math.PI * (i + 0.5)) / NCT));
+      if (c) { _cobMin = Math.min(_cobMin, c.yFora, c.yDentro); _cobMax = Math.max(_cobMax, c.yFora, c.yDentro); _cobR0 = Math.min(_cobR0, c.dentro); _cobR1 = Math.max(_cobR1, c.fora); }
+    }
+  }
   function alturaCobSombra(x, z) {
-    if (!_cobTab) { _cobTab = new Array(NCT); for (let i = 0; i < NCT; i++) _cobTab[i] = cobEm(-Math.PI + (2 * Math.PI * (i + 0.5)) / NCT); }
+    if (!_cobTab) tabelaCob();
+    const r = Math.hypot(x, z);
+    if (r > _cobR1 || r < _cobR0) return null;
     const th = Math.atan2(z, x);
     let i = Math.floor(((th + Math.PI) / (2 * Math.PI)) * NCT);
     const c = _cobTab[i < 0 ? 0 : i >= NCT ? NCT - 1 : i];
     if (!c) return null;
-    const r = Math.hypot(x, z);
     if (r < c.dentro || r > c.fora) return null;
     if (abertos && !temArquibancada(...pontoNaMesmaFileira(x, z))) return null;
     return lerp(c.yFora, c.yDentro, (c.fora - r) / (c.fora - c.dentro));
   }
   function luzDoSol(x, y, z) {
     if (C.tipo === 'nenhuma') return 1;
-    // o raio até o sol: passa pela chapa da cobertura (de baixo para cima) em algum passo?
+    // o raio até o sol: passa pela chapa da cobertura (de baixo para cima) em algum passo? (A altura da chapa é a mistura de
+    // yFora e yDentro: fica entre a mais baixa e a mais alta da tabela — _cobMin e _cobMax. O raio só sobe: o passo que
+    // termina mais de 1 m abaixo da faixa de ±0,3 m da mais baixa não passa por ela — nem se pergunta —, e com o começo do
+    // passo 1 m acima da faixa da mais alta nenhum passo dali em diante passa — a resposta é 1. A margem de 1 m cobre o
+    // arredondamento da mistura; as mesmas respostas dos passos pulados.)
+    if (!_cobTab) tabelaCob();
     for (let t = 3; t <= 66; t += 3) {
+      if (y + SOLD[1] * (t - 3) > _cobMax + 1.3) return 1;
+      if (y + SOLD[1] * t < _cobMin - 1.3) continue;
       const yc = alturaCobSombra(x + SOLD[0] * t, z + SOLD[2] * t);
       if (yc != null && y + SOLD[1] * t >= yc - 0.3 && y + SOLD[1] * (t - 3) <= yc + 0.3) return 0.66;
     }
@@ -632,7 +710,17 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
       if (u && Math.abs(u[1] - sAneis[i]) < 1e-9) u[1] = sAneis[i + 1]; else faixasS.push([sAneis[i], sAneis[i + 1]]);
     }
     // o perímetro de uma fileira (a meia do ladrilho: 6 m no meio da profundidade, nos cantos fechados)
-    const perim = sm => { let t = 0, px = 0, pz = 0; for (let i = 0; i <= N; i++) { const [x, z] = ponto(-Math.PI + (2 * Math.PI * i) / N, sm); if (i) t += Math.hypot(x - px, z - pz); px = x; pz = z; } return t; };
+    // (os N + 1 ângulos são os mesmos em toda fileira: rF, rB, o cosseno e o seno de cada um uma vez — as contas de ponto)
+    let PA = null, PB = null, PC = null, PS = null;
+    const perim = sm => {
+      if (!PA) {
+        PA = new Float64Array(N + 1); PB = new Float64Array(N + 1); PC = new Float64Array(N + 1); PS = new Float64Array(N + 1);
+        for (let i = 0; i <= N; i++) { const th = -Math.PI + (2 * Math.PI * i) / N; PA[i] = rF(th); PB[i] = rB(th); PC[i] = Math.cos(th); PS[i] = Math.sin(th); }
+      }
+      let t = 0, px = 0, pz = 0;
+      for (let i = 0; i <= N; i++) { const r = PA[i] + sm * (PB[i] - PA[i]), x = r * PC[i], z = r * PS[i]; if (i) t += Math.hypot(x - px, z - pz); px = x; pz = z; }
+      return t;
+    };
     const p05 = abertos ? 1 : perim(0.5);
     const Lu = abertos ? 0 : arcoMeio(Math.PI) - arcoMeio(-Math.PI);
     const trs = abertos
@@ -653,12 +741,16 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
         return { k: -1, u0: us[0], u1: us[M], uDe: th => arcoMeio(th) / 12, thDe };
       })()];
     void Lu;
-    const meia = sm => (abertos ? 6 : (6 * perim(sm)) / p05);
+    // (a meia de cada s uma vez só: o corredor e as cadeiras da fileira pedem a mesma — o perímetro de 720 trechos)
+    const _meia = new Map();
+    const meia = sm => { let v = _meia.get(sm); if (v === undefined) { v = abertos ? 6 : (6 * perim(sm)) / p05; _meia.set(sm, v); } return v; };
     _grade = criarGradeAnel({
       faixas: faixasS, profMedia,
       // as fileiras POR METRO (item 69, PR 4): 0,8 m pela perpendicular em todo lado; o lado mais raso tem menos fileiras
       metrico: { dS, sD, dp, amostras },
-      perfil: (s2, th) => perfil(s2, th), ponto, setor,
+      // (pontoBorda: as bordas da cadeira — o ponto sem guardar o θ, que não se repete: o do assento fica guardado para o
+      // existe, que pede o bico e o fundo da fileira no mesmo θ)
+      perfil: (s2, th) => perfil(s2, th), ponto, pontoBorda, setor,
       vDe: s2 => 0.04 + 0.93 * clamp(s2, 0, 1),
       trechos: trs,
       // a escada radial de ~1,2 m em TODA fileira (FIFA 2022 e Green Guide para obra nova; NT 12 do CBMGO 4.3: 1,20 m; a
@@ -668,7 +760,8 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
       corredorDe: r => clamp(ESCADA_G / meia(r.sAssento), 0.04, 0.5),
       meiaMedia: meia,
       existe: (th, r, x, z, y, L, geo) => {
-        if (rB(th) - rF(th) < 2.5 || !temArquibancada(x, z)) return false;
+        rFrB(th);
+        if (_rb - _ra < 2.5 || !temArquibancada(x, z)) return false;
         if (tipoEm(ladoEm(th), L[2]) !== 0) return false;
         if (z > 0 && Math.abs(x) < mtG && y < topoTunelG) return false;
         // a fileira ali, pela perpendicular dela (o rumo da cadeira): ≥ 0,6 m (o encosto não entra no espelho de trás), o
@@ -679,7 +772,8 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
         if (prof < FILEIRA_MIN || geo.larg < LARG_MIN || perfil(L[1], th) - y > prof * TAN_MAX) return false;
         // nada de cadeira dentro de um sólido da planta, do assento ao pulo de quem está de pé: o arco das marcas (as pontas
         // dele descem até a arquibancada: o Dragão), as colunas, a cobertura baixa demais (o sólido inteiro só perto de algum)
-        if (pertoDeObstaculo(x, y, z, th)) for (const h of ALTURAS_CAD) if (solido(x, y + h, z, 0, true, false)) return false;
+        // (as 4 alturas na mesma coluna do sólido: as contas de (x, z) uma vez só — colunaSolido; a mesma resposta)
+        if (pertoDeObstaculo(x, y, z, th)) { const K = colunaSolido(x, z, 0, true, false); for (const h of ALTURAS_CAD) if (solidoNaAltura(K, y + h)) return false; }
         return true;
       },
     });
@@ -742,7 +836,21 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   }
   const cosDe = fr => tabela(th => { const e = 0.01, r = fr(th), d = (fr(th + e) - fr(th - e)) / (2 * e); return 1 / Math.sqrt(1 + (d / r) ** 2); });
   let _cF = null, _cB = null;
-  const dp = th => { if (!_cF) { _cF = cosDe(rF); _cB = cosDe(rB); } const D = rB(th) - rF(th); return [D * _cF(th), D * _cB(th)]; };
+  // (guarda o último θ: a fileira da cadeira, os limites dela e as inversas pedem o mesmo θ em seguida — a mesma conta;
+  // quem chama só lê o par na hora — dS, sD e os limites da grade —, então o par mora num espaço só)
+  let _dpTh;
+  const _dpV = [0, 0];
+  // (as 4 tabelas no mesmo θ com um índice só)
+  const dp = th => {
+    if (Object.is(th, _dpTh)) return _dpV;
+    if (!_cF) { _cF = cosDe(rF); _cB = cosDe(rB); }
+    indiceTabela(th);
+    const i = _ti, w = _tw, CF = _cF.t, CB = _cB.t;
+    const D = (TB[i] + (TB[i + 1] - TB[i]) * w) - (TF[i] + (TF[i + 1] - TF[i]) * w);
+    _dpTh = th;
+    _dpV[0] = D * (CF[i] + (CF[i + 1] - CF[i]) * w); _dpV[1] = D * (CB[i] + (CB[i + 1] - CB[i]) * w);
+    return _dpV;
+  };
   function dS(th, s) { const [a, b] = dp(th); return a * s + ((b - a) * s * s) / 2; }
   function sD(th, d) {
     const [a, b] = dp(th), q = b - a;
@@ -772,18 +880,21 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     const mt = T.largura / 2 + 0.4, topoTunel = T.altura + T.laje + 0.3;
     const M = 4320;
     const lentes = PLANOS_LENTES(), ARCOS = MARCAS_P.filter(m => m.tipo === 'arco');
+    // as amostras da volta são as mesmas em toda fileira: o θ, rF, rB, o cosseno e o seno de cada uma calculados uma vez (as
+    // mesmas contas de ponto(θ, s): r = rF + s·(rB − rF), (r·cos θ, r·sin θ))
+    const TH = new Float64Array(M + 1), RA = new Float64Array(M + 1), RB = new Float64Array(M + 1), CO = new Float64Array(M + 1), SE = new Float64Array(M + 1);
+    for (let i = 0; i <= M; i++) { const th = -Math.PI + (2 * Math.PI * i) / M; TH[i] = th; RA[i] = rF(th); RB[i] = rB(th); CO[i] = Math.cos(th); SE[i] = Math.sin(th); }
     for (let j = 0; j < NF; j++) {
       const f = NF - 1 - j;            // 0 = a de cima
-      const sj = (j + 0.5) / NF;
       let acum = PASSO * h2(j, 77), px = 0, pz = 0, ini = true;
       for (let i = 0; i <= M; i++) {
-        const th = -Math.PI + (2 * Math.PI * i) / M;
-        const a = rF(th), b = rB(th), Dl = b - a;
+        const th = TH[i];
+        const a = RA[i], b = RB[i], Dl = b - a;
         if (Dl < 2.5) { ini = true; continue; }
         // a fileira j só existe onde a arquibancada é funda o bastante (nos lados rasos as de cima somem)
         const s = ((j + 0.5) * FILA) / Dl;
         if (s > 1) { ini = true; continue; }
-        const [x, z] = ponto(th, s);
+        const r0 = a + s * (b - a), x = r0 * CO[i], z = r0 * SE[i];
         if (!ini) acum += Math.hypot(x - px, z - pz);
         px = x; pz = z; ini = false;
         if (acum < PASSO) continue;
@@ -832,6 +943,13 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   const rMax = Math.max(...Array.from({ length: 72 }, (_, i) => rFach(-Math.PI + (i * Math.PI) / 36))) + (casca ? BOJO : 0);
   const yMax = Math.max(...LADOS.map((_, k) => topoLado(k)));
   const MARCAS_P = montarMarcas();
+  // as marcas que o sólido confere em cada laço (as outras — a pele de LED, os refletores, que estão em TORRES… — não entram
+  // em nenhum teste dele: fora da lista, a mesma resposta)
+  const MARCAS_SOL1 = [], MARCAS_SOL2 = [];
+  MARCAS_P.forEach((m, i) => {
+    if (m.tipo === 'vigas' || m.tipo === 'cubo' || m.tipo === 'telao') MARCAS_SOL1.push(i);
+    if (['torres', 'rampas_espiral', 'bola', 'portal', 'mastros', 'arco', 'estatua', 'colunas', 'cupula'].includes(m.tipo)) MARCAS_SOL2.push(i);
+  });
   function montarMarcas() {
     const out = [];
     const angLado = { la: -Math.PI / 2, fa: 0, fb: Math.PI, ca: Math.PI / 2 };
@@ -955,64 +1073,99 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
    * O ponto está dentro de algo sólido da forma (ou a menos de `f` m)? Nome ou null. `fora`: conta também a fachada, as
    * marcas e o entorno (o estádio do pré-jogo). `noTunel`: o corredor do túnel (livre).
    */
-  function solido(x, y, z, f = 0.3, fora = true, noTunel = false) {
-    const r = Math.hypot(x, z), th = Math.atan2(z, x);
-    const a = rF(th), b = rB(th);
+  function solido(x, y, z, f = 0.3, fora = true, noTunel = false) { return solidoNaAltura(colunaSolido(x, z, f, fora, noTunel), y); }
+  /**
+   * A COLUNA do sólido em (x, z) (item 69, PR 4: a carga dos lugares): as contas que só dependem de (x, z) e da folga — o
+   * raio, o ângulo, a frente e o fundo, e (na 1ª vez que servem) o piso da arquibancada, o topo da parede de trás, a
+   * cobertura e a fachada — guardadas para as alturas seguintes no mesmo ponto (a cadeira da grade confere 4: ALTURAS_CAD).
+   * As mesmas contas na mesma ordem de antes (a resposta é a mesma, bit a bit); o solido de sempre é a coluna de uma altura.
+   */
+  function colunaSolido(x, z, f, fora, noTunel) {
+    const th = Math.atan2(z, x);
+    rFrB(th);
+    return { x, z, f, fora, noTunel, r: Math.hypot(x, z), th, a: _ra, b: _rb, rf: rFach(th), arq: undefined, par: undefined, yc: undefined, baixo: 0, fach: undefined, tP: null, dM: null };
+  }
+  /** O sólido da coluna K na altura y (nome ou null): solido(x, y, z, ...) com as contas de (x, z) guardadas em K. */
+  function solidoNaAltura(K, y) {
+    const { x, z, f, noTunel, r, th, a, b, rf } = K;
     // o túnel do lado de cá entre a boca e a 1ª fileira (a pista: a caixa por cima da pista)
     if (z > 0 && Fr.ca > T.z + 0.5 && !noTunel && Math.abs(x) <= T.largura / 2 + 0.4 + f && z >= T.z - f && z <= Fr.ca + f && y <= T.altura + T.laje + f) return 'túnel (paredes)';
     if (r >= a - f && r <= b + f && !noTunel) {
-      const s = clamp((r - a) / Math.max(1e-6, b - a), 0, 1);
-      const [px, pz] = ponto(th, s);
-      if (b - a >= 2.5 && temArquibancadaFolga(px, pz, f) && y <= perfil(s, th) + f) {
+      // (o piso da arquibancada debaixo do ponto; null: sem arquibancada ali)
+      if (K.arq === undefined) {
+        const s = clamp((r - a) / Math.max(1e-6, b - a), 0, 1);
+        const [px, pz] = ponto(th, s);
+        K.arq = b - a >= 2.5 && temArquibancadaFolga(px, pz, f) ? perfil(s, th) : null;
+      }
+      if (K.arq !== null && y <= K.arq + f) {
         return z > 0 && Math.abs(x) < T.largura / 2 + 0.4 + f && y < T.altura + T.laje + f ? 'túnel (paredes)' : 'arquibancada';
       }
     }
     // a parede de trás (o parapeito da última fileira) e o miolo até a fachada
-    const rf = rFach(th);
     if (!noTunel && r > b - f && r <= (talude ? b + recuoFach : rf) + f && b - a >= 2.5) {
-      const [px, pz] = ponto(th, 1);
-      if (temArquibancadaFolga(px, pz, f) && y <= yTopo(th) + 1.3 + f) return 'parede de trás';
+      if (K.par === undefined) { const [px, pz] = ponto(th, 1); K.par = temArquibancadaFolga(px, pz, f) ? yTopo(th) : null; }
+      if (K.par !== null && y <= K.par + 1.3 + f) return 'parede de trás';
     }
     // cobertura (a chapa e a treliça da borda de dentro)
-    const yc = alturaCobEmFolga(x, z, f);
-    if (yc != null) {
-      // a chapa (1,2 m) e, perto da borda de dentro, a treliça e a testeira penduradas embaixo dela
-      const c = cobEm(th), uu = c ? (c.fora - r) / Math.max(1e-6, c.fora - c.dentro) : 0;
-      const baixo = uu > 0.85 ? (C.sust === 'trelica' ? 3.6 : 2.2) : 1.2;
-      if (y - yc <= 1.2 + f && yc - y <= baixo + f) return 'cobertura';
-    }
-    // torres de refletor (sem cobertura)
-    for (const t of TORRES) {
-      if (t.larga) { if (Math.abs(z - t.z) <= 3 + f && Math.abs(x) <= 60 + f && y >= t.alto - 8 - f && y <= t.alto + 1 + f) return 'refletor'; if (Math.abs(z - t.z) <= 1.5 + f && Math.abs(Math.abs(x) - 62) <= 1.5 + f && y <= t.alto + f) return 'refletor'; continue; }
-      if (Math.hypot(x - t.x, z - t.z) <= (y > t.alto - (t.poste ? 2.5 : 4) ? (t.poste ? 2.2 : 3.4) : (t.poste ? 0.4 : 0.7)) + f && y <= t.alto + 1 + f) return 'refletor';
-    }
-    for (const m of MARCAS_P) {
-      if (m.tipo === 'vigas' && y >= m.y - m.alto - f && y <= m.y + 1 + f && ((Math.abs(Math.abs(x) - m.hx) <= 2 + f && Math.abs(z) <= m.hz + 25) || (Math.abs(Math.abs(z) - m.hz) <= 2 + f && Math.abs(x) <= m.hx + 25))) return 'viga';
-      if (m.tipo === 'cubo' && Math.abs(x) <= m.lado / 2 + f && Math.abs(z) <= m.lado / 2 + f && Math.abs(y - m.y) <= m.alt / 2 + f) return 'cubo';
-      if (m.tipo === 'telao') {
-        const lx = (x - m.x) * -Math.sin(m.th) + (z - m.z) * Math.cos(m.th), lr = (x - m.x) * Math.cos(m.th) + (z - m.z) * Math.sin(m.th);
-        if (Math.abs(lx) <= m.larg / 2 + f && Math.abs(lr) <= 1.2 + f && y >= m.y - m.alt / 2 - (m.pendurado ? 0 : 3) - f && y <= m.y + m.alt / 2 + (m.pendurado ? 3 : 0) + f) return 'telão';
+    if (K.yc === undefined) {
+      // (sem folga, alturaCobEmFolga é alturaCobEm: a cobertura no ângulo da coluna uma vez só, para a altura e para a borda)
+      const c0 = f <= 0 ? cobEm(th) : null;
+      K.yc = f <= 0 ? alturaCobDe(c0, x, z, r) : alturaCobEmFolga(x, z, f);
+      if (K.yc != null) {
+        // a chapa (1,2 m) e, perto da borda de dentro, a treliça e a testeira penduradas embaixo dela
+        const c = f <= 0 ? c0 : cobEm(th), uu = c ? (c.fora - r) / Math.max(1e-6, c.fora - c.dentro) : 0;
+        K.baixo = uu > 0.85 ? (C.sust === 'trelica' ? 3.6 : 2.2) : 1.2;
       }
     }
-    if (!fora) return null;
+    const yc = K.yc;
+    if (yc != null) {
+      if (y - yc <= 1.2 + f && yc - y <= K.baixo + f) return 'cobertura';
+    }
+    // torres de refletor (sem cobertura) (só as que alcançam a coluna em alguma altura, com a distância no chão: torresDaColuna)
+    if (TORRES.length) {
+      const tP = K.tP ?? torresDaColuna(K);
+      for (let q = 0; q < tP.length; q += 2) {
+        const t = TORRES[tP[q]];
+        if (t.larga) { if (Math.abs(z - t.z) <= 3 + f && Math.abs(x) <= 60 + f && y >= t.alto - 8 - f && y <= t.alto + 1 + f) return 'refletor'; if (Math.abs(z - t.z) <= 1.5 + f && Math.abs(Math.abs(x) - 62) <= 1.5 + f && y <= t.alto + f) return 'refletor'; continue; }
+        if (tP[q + 1] <= (y > t.alto - (t.poste ? 2.5 : 4) ? (t.poste ? 2.2 : 3.4) : (t.poste ? 0.4 : 0.7)) + f && y <= t.alto + 1 + f) return 'refletor';
+      }
+    }
+    for (const mi of MARCAS_SOL1) {
+      const m = MARCAS_P[mi];
+      if (m.tipo === 'vigas' && y >= m.y - m.alto - f && y <= m.y + 1 + f && ((Math.abs(Math.abs(x) - m.hx) <= 2 + f && Math.abs(z) <= m.hz + 25) || (Math.abs(Math.abs(z) - m.hz) <= 2 + f && Math.abs(x) <= m.hx + 25))) return 'viga';
+      if (m.tipo === 'cubo' && Math.abs(x) <= m.lado / 2 + f && Math.abs(z) <= m.lado / 2 + f && Math.abs(y - m.y) <= m.alt / 2 + f) return 'cubo';
+      // (a coluna dentro do telão, no plano dele: da coluna, distanciasMarca)
+      if (m.tipo === 'telao' && distanciasMarca(K, mi) && y >= m.y - m.alt / 2 - (m.pendurado ? 0 : 3) - f && y <= m.y + m.alt / 2 + (m.pendurado ? 3 : 0) + f) return 'telão';
+    }
+    if (!K.fora) return null;
     // a fachada (a casca de 2 m em volta; a pele abaulada da casca vai até BOJO m para fora)
     if (talude && !noTunel && r > b - f && r <= rf + 0.6 + f) {
-      // o barranco: do topo da arquibancada (atrás da última fileira) ao chão na base
-      const [px, pz] = ponto(th, 1), h = (yTopo(th) + 1.2) * clamp((rf + 0.6 - r) / Math.max(1, rf + 0.6 - b), 0, 1);
-      if (y <= h + 0.4 + f && temArquibancadaFolga(px, pz, f + 2)) return 'talude';
-    } else if (!noTunel && r > Math.max(rf - 3, b + 0.4) - f && r <= rf + (casca ? BOJO + 0.6 : 1.2) + f && y <= (casca ? (cobEm(th)?.yFora ?? yFach(th)) + 1.2 : yFach(th) + 0.6) + f) {
-      const [px, pz] = ponto(th, 1);
-      if (temArquibancadaFolga(px, pz, f + 2)) return 'fachada';
+      // o barranco: do topo da arquibancada (atrás da última fileira) ao chão na base (null: sem arquibancada atrás)
+      if (K.fach === undefined) {
+        const [px, pz] = ponto(th, 1), h = (yTopo(th) + 1.2) * clamp((rf + 0.6 - r) / Math.max(1, rf + 0.6 - b), 0, 1);
+        K.fach = temArquibancadaFolga(px, pz, f + 2) ? h : null;
+      }
+      if (K.fach !== null && y <= K.fach + 0.4 + f) return 'talude';
+    } else if (!noTunel && r > Math.max(rf - 3, b + 0.4) - f && r <= rf + (casca ? BOJO + 0.6 : 1.2) + f) {
+      // (o topo da fachada; null: sem arquibancada atrás)
+      if (K.fach === undefined) {
+        const [px, pz] = ponto(th, 1);
+        K.fach = temArquibancadaFolga(px, pz, f + 2) ? (casca ? (cobEm(th)?.yFora ?? yFach(th)) + 1.2 : yFach(th) + 0.6) : null;
+      }
+      if (K.fach !== null && y <= K.fach + f) return 'fachada';
     }
-    for (const m of MARCAS_P) {
-      if (m.tipo === 'torres' || m.tipo === 'rampas_espiral') for (const t of m.torres) if (Math.hypot(x - t.x, z - t.z) <= t.raio * (m.espiral ? 1 : 0.62) + 1.2 + f && y <= t.alto + 1.2 + f) return 'torre';
+    // (as torres, os mastros e as colunas que alcançam a coluna, com a distância no chão, e a distância à estátua e à cúpula:
+    // da coluna, distanciasMarca)
+    for (const mi of MARCAS_SOL2) {
+      const m = MARCAS_P[mi];
+      if (m.tipo === 'torres' || m.tipo === 'rampas_espiral') { const d = distanciasMarca(K, mi); for (let q = 0; q < d.length; q += 2) { const t = m.torres[d[q]]; if (d[q + 1] <= t.raio * (m.espiral ? 1 : 0.62) + 1.2 + f && y <= t.alto + 1.2 + f) return 'torre'; } }
       if (m.tipo === 'bola' && (Math.hypot(x - m.x, y - m.y0 - m.raio, z - m.z) <= m.raio + f || (Math.hypot(x - m.x, z - m.z) <= 1.4 + f && y <= m.y0 + f))) return 'bola';
       if (m.tipo === 'portal' && Math.abs(x) <= m.hx + f && z >= m.z0 - f && z <= m.z1 + f && y <= m.alto + f) return 'portal';
-      if (m.tipo === 'mastros') for (const t of m.mastros) if (Math.hypot(x - t.x, z - t.z) <= 1.6 + f && y <= t.alto + 1 + f) return 'mastro';
+      if (m.tipo === 'mastros') { const d = distanciasMarca(K, mi); for (let q = 0; q < d.length; q += 2) { const t = m.mastros[d[q]]; if (d[q + 1] <= 1.6 + f && y <= t.alto + 1 + f) return 'mastro'; } }
       if (m.tipo === 'arco' && arcoPerto(m, x, y, z, f)) return 'arco';
-      if (m.tipo === 'estatua' && Math.hypot(x - m.x, z - m.z) <= 3.5 + f && y <= m.alto + 1 + f) return 'estátua';
-      if (m.tipo === 'colunas') for (const cc of m.colunas) { const cx = cc.r0 * Math.cos(cc.th), cz = cc.r0 * Math.sin(cc.th); if (Math.hypot(x - cx, z - cz) <= m.larg + 1 + f && y <= cc.y1 + 1 + f) return 'coluna'; }
-      if (m.tipo === 'cupula') { const d = Math.hypot(x - m.x, z - m.z); if (d <= m.raio + f) { const h = m.parede + m.alto * Math.sqrt(Math.max(0, 1 - (d / m.raio) ** 2)); if (y <= h + f) return 'cúpula'; } }
+      if (m.tipo === 'estatua' && distanciasMarca(K, mi) <= 3.5 + f && y <= m.alto + 1 + f) return 'estátua';
+      if (m.tipo === 'colunas') { const d = distanciasMarca(K, mi); for (let q = 0; q < d.length; q += 2) { const cc = m.colunas[d[q]]; if (d[q + 1] <= m.larg + 1 + f && y <= cc.y1 + 1 + f) return 'coluna'; } }
+      if (m.tipo === 'cupula') { const d = distanciasMarca(K, mi); if (d <= m.raio + f) { const h = m.parede + m.alto * Math.sqrt(Math.max(0, 1 - (d / m.raio) ** 2)); if (y <= h + f) return 'cúpula'; } }
     }
     if (r > rMax + 30) {
       for (const p of predios()) {
@@ -1029,6 +1182,57 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     }
     if (r > rMax + 8) for (const p of arvores()) if (Math.hypot(x - p.x, z - p.z) <= (y > p.h * 0.45 ? p.raio : 0.4) + f && y <= p.h + f) return 'árvore';
     return null;
+  }
+  // OS ITENS QUE ALCANÇAM A COLUNA (torresDaColuna, distanciasMarca): de cada torre, mastro ou coluna, o sólido só pergunta
+  // se a distância no chão (o hypot) fica dentro de um raio R (+ a folga f) — em qualquer altura, R ≤ o maior dos raios. Com
+  // |dx| ou |dz| mais de 1 m além dele, a distância passa dele (o hypot é ≥ o maior dos dois catetos; a margem de 1 m cobre
+  // qualquer arredondamento) e nenhuma altura alcança aquele item: ele fica fora da lista. Os outros entram com o hypot de
+  // sempre, na ordem de antes — as mesmas respostas, sem o hypot de cada um dos 32 refletores (o Levy Sobrinho) ou das 300
+  // colunas em cada cadeira.
+  /** As torres de refletor que alcançam a coluna K: [i, distância no chão (0 nas largas), …]. Uma vez por coluna. */
+  function torresDaColuna(K) {
+    const { x, z, f } = K, out = [], lim = 3.4 + f + 1;
+    for (let i = 0; i < TORRES.length; i++) {
+      const t = TORRES[i];
+      // (a larga: a faixa em z e em x de cada um dos dois testes dela)
+      if (t.larga) { if ((Math.abs(z - t.z) <= 3 + f && Math.abs(x) <= 60 + f) || (Math.abs(z - t.z) <= 1.5 + f && Math.abs(Math.abs(x) - 62) <= 1.5 + f)) out.push(i, 0); continue; }
+      if (Math.abs(x - t.x) > lim || Math.abs(z - t.z) > lim) continue;
+      out.push(i, Math.hypot(x - t.x, z - t.z));
+    }
+    return (K.tP = out);
+  }
+  // o centro (cx, cz) de cada coluna das marcas 'colunas' (r0·cos θ, r0·sin θ: as mesmas contas), uma vez por planta
+  const _centrosCol = [];
+  function centrosColunas(mi) {
+    if (_centrosCol[mi]) return _centrosCol[mi];
+    const cs = MARCAS_P[mi].colunas, c = new Float64Array(2 * cs.length);
+    cs.forEach((cc, i) => { c[2 * i] = cc.r0 * Math.cos(cc.th); c[2 * i + 1] = cc.r0 * Math.sin(cc.th); });
+    return (_centrosCol[mi] = c);
+  }
+  /**
+   * O que a marca MARCAS_P[mi] pede de (x, z) da coluna K, uma vez por coluna (as mesmas contas que o sólido fazia em cada
+   * altura): as torres, os mastros ou as colunas que alcançam a coluna ([i, distância no chão, …]); a distância à estátua e
+   * à cúpula; e no telão, se a coluna cai dentro dele no plano dele (|lx| e |lr|: a parte do teste que não depende da altura).
+   */
+  function distanciasMarca(K, mi) {
+    const dM = K.dM ?? (K.dM = []);
+    if (dM[mi] !== undefined) return dM[mi];
+    const m = MARCAS_P[mi], { x, z, f } = K;
+    let v;
+    if (m.tipo === 'telao') { const lx = (x - m.x) * -Math.sin(m.th) + (z - m.z) * Math.cos(m.th), lr = (x - m.x) * Math.cos(m.th) + (z - m.z) * Math.sin(m.th); v = Math.abs(lx) <= m.larg / 2 + f && Math.abs(lr) <= 1.2 + f; }
+    else if (m.tipo === 'torres' || m.tipo === 'rampas_espiral') {
+      v = [];
+      m.torres.forEach((t, i) => { const lim = t.raio * (m.espiral ? 1 : 0.62) + 1.2 + f + 1; if (Math.abs(x - t.x) <= lim && Math.abs(z - t.z) <= lim) v.push(i, Math.hypot(x - t.x, z - t.z)); });
+    } else if (m.tipo === 'mastros') {
+      v = [];
+      const lim = 1.6 + f + 1;
+      m.mastros.forEach((t, i) => { if (Math.abs(x - t.x) <= lim && Math.abs(z - t.z) <= lim) v.push(i, Math.hypot(x - t.x, z - t.z)); });
+    } else if (m.tipo === 'colunas') {
+      v = [];
+      const c = centrosColunas(mi), lim = m.larg + 1 + f + 1;
+      for (let i = 0; i < m.colunas.length; i++) { const cx = c[2 * i], cz = c[2 * i + 1]; if (Math.abs(x - cx) <= lim && Math.abs(z - cz) <= lim) v.push(i, Math.hypot(x - cx, z - cz)); }
+    } else v = Math.hypot(x - m.x, z - m.z);
+    return (dM[mi] = v);
   }
   function temArquibancadaFolga(x, z, f) {
     if (temArquibancada(x, z)) return true;

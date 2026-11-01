@@ -74,6 +74,14 @@ export const ARQ_GOLACO = Object.freeze({
 export const TUNEL = Object.freeze({ meiaLargura: ESTADIO.tunel.largura / 2 + 0.4, topo: ESTADIO.tunel.altura + ESTADIO.tunel.laje + 0.3 });
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+// a profundidade por metro de uma fileira (criarGradeAnel: dS = a·s + (b − a)·s²/2 com q = b − a, e a inversa) — funções do
+// módulo no lugar das que cada chamada criava (a mesma conta)
+const dSde = (a, q, s) => a * s + (q * s * s) / 2;
+function sDde(a, q, d) {
+  if (Math.abs(q) < 1e-9 * Math.max(1, a)) return d / Math.max(1e-9, a);
+  const disc = a * a + 2 * q * d;
+  return disc <= 0 ? -a / q : (-a + Math.sqrt(disc)) / q;
+}
 /** Sorteio fixo por célula (inteiros i, j e a semente): 0–1, o mesmo em toda abertura (a textura e a cadeira 3D casam). */
 export function sorteioCelula(i, j, semente = 0) {
   let t = Math.imul(i | 0, 374761393) + Math.imul(j | 0, 668265263) + Math.imul(semente | 0, 2246822519);
@@ -293,6 +301,9 @@ export const nFileirasEm = d => (d < 0.75 * CADEIRA.fileira ? 0 : Math.floor((d 
  */
 export function criarGradeAnel(A) {
   const M = A.metrico ?? null, PF = CADEIRA.fileira;
+  // (o ponto das bordas da cadeira: A.pontoBorda(th, s, out) — a mesma conta do A.ponto, escrita em out e sem mexer no θ que
+  // ele guarda — ou o A.ponto)
+  const pontoBorda = A.pontoBorda ?? A.ponto;
   const e2 = (A.escadasPorLadrilho ?? 2) === 2;
   const fileiras = [], faixas = [];
   A.faixas.forEach(([s0, s1], fx) => {
@@ -340,14 +351,25 @@ export function criarGradeAnel(A) {
   });
   const corredorDe = (r, h) => (e2 || h === 0 ? r.c : 0);
   /** [s0, s1, sAssento] da fileira r no ângulo th (null: por metro, a fileira não existe ali). */
-  function limites(r, th) {
-    if (!M) return [r.s0, r.s1, r.sAssento];
+  function limites(r, th) { return limitesEm(r, th, [0, 0, 0]); }
+  /** limites(r, th) escritos em `out` (devolve out, ou null). */
+  function limitesEm(r, th, out) {
+    if (!M) { out[0] = r.s0; out[1] = r.s1; out[2] = r.sAssento; return out; }
     // (a profundidade em th uma vez só: M.dp(th) → [a, b], dS = a·s + (b − a)·s²/2 e a inversa)
-    const [a, b] = M.dp(th), q = b - a, dS = s => a * s + (q * s * s) / 2;
-    const sD = d => { if (Math.abs(q) < 1e-9 * Math.max(1, a)) return d / Math.max(1e-9, a); const disc = a * a + 2 * q * d; return disc <= 0 ? -a / q : (-a + Math.sqrt(disc)) / q; };
-    const F = faixas[r.faixa], d0 = dS(F.s0), n = nFileirasEm(dS(F.s1) - d0), j = r.iFaixa;
+    const [a, b] = M.dp(th), q = b - a;
+    const F = faixas[r.faixa], d0 = dSde(a, q, F.s0), n = nFileirasEm(dSde(a, q, F.s1) - d0), j = r.iFaixa;
     if (j >= n) return null;
-    return [sD(d0 + j * PF), j + 1 >= n ? F.s1 : sD(d0 + (j + 1) * PF), sD(d0 + (j + NO_PISO) * PF)];
+    out[0] = sDde(a, q, d0 + j * PF); out[1] = j + 1 >= n ? F.s1 : sDde(a, q, d0 + (j + 1) * PF); out[2] = sDde(a, q, d0 + (j + NO_PISO) * PF);
+    return out;
+  }
+  // (a conta de cada cadeira em espaços guardados: os limites dela, o ponto das bordas e o rumo/largura — lidos ali mesmo e
+  // no existe, que não os guarda; a cadeira devolvida é sempre um objeto novo. Menos lixo por cadeira, as mesmas contas)
+  const _L = [0, 0, 0], _pb = [0, 0], _geo = { rumo: 0, larg: 0, giro: 0 };
+  /** Só o sAssento dos limites (o 3º): a mesma conta, sem as outras duas inversas; null onde a fileira não existe. */
+  function sAssentoEm(r, th) {
+    const [a, b] = M.dp(th), q = b - a;
+    const F = faixas[r.faixa], d0 = dSde(a, q, F.s0), n = nFileirasEm(dSde(a, q, F.s1) - d0), j = r.iFaixa;
+    return j >= n ? null : sDde(a, q, d0 + (j + NO_PISO) * PF);
   }
   /** A fileira que contém s (no ângulo th, por metro; null fora das faixas de cadeira). */
   function fileiraDe(s, th = 0) {
@@ -368,21 +390,13 @@ export function criarGradeAnel(A) {
   }
   /** u do centro da cadeira (ladrilho t, metade h, cadeira i) na fileira r. */
   const uCentro = (r, t, h, i) => { const c = corredorDe(r, h); return t + h / 2 + (c + ((i + 0.5) * (1 - c)) / r.nh[h]) / 2; };
-  /** O θ e os limites da fileira r no u (por metro, nos lados abertos o θ depende do s: duas voltas). */
-  function thLim(tr, r, u) {
-    let th = tr.thDe(u, r.sAssento);
-    let L = limites(r, th);
-    if (M && L && tr.k !== -1) { th = tr.thDe(u, L[2]); L = limites(r, th); }
-    return L ? [th, L] : null;
-  }
   /** O rumo da cadeira (perpendicular à fileira, para dentro: a tangente da fileira em th) e a largura de verdade dela. */
   function rumoLargura(tr, r, h, u, th, sA, x, z) {
-    // o ponto da fileira no ângulo t: por metro o s dela muda com o ângulo (a fileira não é a curva de s constante)
-    const sEm = t => (M ? (limites(r, t) ?? [0, 0, sA])[2] : sA);
-    const naFileira = t => A.ponto(t, sEm(t));
-    // as bordas dela estão a ±(1 − c)/(4n) do centro em u
+    // as bordas dela estão a ±(1 − c)/(4n) do centro em u; o ponto da fileira em cada uma: por metro o s dela muda com o
+    // ângulo (a fileira não é a curva de s constante; o sAssento dos limites ali, ou sA onde ela não existe)
     const du = (1 - corredorDe(r, h)) / (4 * r.nh[h]);
-    const [x1, z1] = naFileira(tr.thDe(u - du, sA)), [x2, z2] = naFileira(tr.thDe(u + du, sA));
+    const t1 = tr.thDe(u - du, sA), [x1, z1] = pontoBorda(t1, M ? (sAssentoEm(r, t1) ?? sA) : sA, _pb);
+    const t2 = tr.thDe(u + du, sA), [x2, z2] = pontoBorda(t2, M ? (sAssentoEm(r, t2) ?? sA) : sA, _pb);
     // a direção da fileira: a tangente no centro (nas plantas por fração, como antes) ou, por metro, a corda entre as bordas
     // (a tangente pontual pegava as quinas da fileira por metro e virava a cadeira até 80° da vizinha)
     let tx, tz;
@@ -392,11 +406,13 @@ export function criarGradeAnel(A) {
     if (nx * -x + nz * -z < 0) { nx = -nx; nz = -nz; }
     // (por metro: o dobro da MENOR meia largura, com 6% de folga — onde a curva aperta a fileira, a meia largura da vizinha
     // é menor que a desta e a cadeira 3D passava dela 1 cm; nas plantas por fração, a distância entre as bordas, como antes)
-    const larg = M ? 1.88 * Math.min(Math.hypot(x - x1, z - z1), Math.hypot(x2 - x, z2 - z)) : Math.hypot(x2 - x1, z2 - z1);
+    // (as duas meias cordas uma vez só: a largura e o giro usam as mesmas)
+    const ax = x - x1, az = z - z1, bx = x2 - x, bz = z2 - z, la = Math.hypot(ax, az), lb = Math.hypot(bx, bz);
+    const larg = M ? 1.88 * Math.min(la, lb) : Math.hypot(x2 - x1, z2 - z1);
     // o quanto a fileira vira na largura da cadeira (o ângulo entre as duas meias cordas)
-    const ax = x - x1, az = z - z1, bx = x2 - x, bz = z2 - z;
-    const giro = Math.acos(clamp((ax * bx + az * bz) / ((Math.hypot(ax, az) * Math.hypot(bx, bz)) || 1), -1, 1));
-    return { rumo: Math.atan2(nz, nx), larg, giro };
+    const giro = Math.acos(clamp((ax * bx + az * bz) / ((la * lb) || 1), -1, 1));
+    _geo.rumo = Math.atan2(nz, nx); _geo.larg = larg; _geo.giro = giro;
+    return _geo;
   }
   /**
    * A cadeira da fileira r no trecho tr com u (o centro), ou null (não existe ali). leve: sem o rumo e a largura (os
@@ -405,9 +421,11 @@ export function criarGradeAnel(A) {
   function assentoU(tr, ti, r, t, h, i, leve = false) {
     const u = uCentro(r, t, h, i), nh = r.nh[h];
     if (u < tr.u0 || u > tr.u1) return null;
-    const tl = thLim(tr, r, u);
-    if (!tl) return null;
-    const [th, L] = tl, sA = L[2];
+    // o θ e os limites da fileira r no u (por metro, nos lados abertos o θ depende do s: duas voltas)
+    let th = tr.thDe(u, r.sAssento), L = limitesEm(r, th, _L);
+    if (M && L && tr.k !== -1) { th = tr.thDe(u, L[2]); L = limitesEm(r, th, _L); }
+    if (!L) return null;
+    const sA = L[2];
     const [x, z] = A.ponto(th, sA);
     const y = A.perfil(L[0], th);
     // (por metro, o rumo e a largura entram na conta de onde a cadeira existe: o mesmo resultado leve ou não)
@@ -421,7 +439,7 @@ export function criarGradeAnel(A) {
     return { setor: A.setor(x, z), f: r.f, a: (t * 2 + h) * CADEIRA.entreEscadas + i, k: r.k, t, h, i, n: nh, x, y, z, rumo: geo.rumo, larg: geo.larg, chave, th, s: sA };
   }
   // os blocos: em cada trecho, cada metade de ladrilho × 4 fileiras da mesma faixa (só as cadeiras que existem)
-  const blocos = [], ref = [];
+  const blocos = [], ref = [], visto = [];
   const NB = CADEIRAS3D.fileirasBloco;
   A.trechos.forEach((tr, ti) => {
     const tA = Math.floor(tr.u0), tB = Math.ceil(tr.u1);
@@ -431,12 +449,16 @@ export function criarGradeAnel(A) {
       for (let t = tA; t < tB; t++) for (let h = 0; h < 2; h++) {
         // a caixa pelas 4 quinas (a lista de cadeiras só quando o bloco chega perto: assentosDoBloco)
         const quinas = [];
+        // (a mesma cadeira pedida de novo no bloco — o bloco de 1 fileira, a metade com 1 ou 2 cadeiras, o meio da 1ª e da
+        // última fileira de novo na volta pelo meio — sai da conta já feita: as mesmas cadeiras na mesma ordem)
+        visto.length = 0;
+        const quina = (k, i) => { for (let v = 0; v < visto.length; v += 2) if (visto[v] === k * 64 + i) return visto[v + 1]; const q = assentoU(tr, ti, fileiras[k], t, h, i); visto.push(k * 64 + i, q); return q; };
         // (as 4 quinas e o meio da 1ª e da última fileira: a fileira curva estufa no meio)
-        for (const k of [k0, k1 - 1]) { const nn = fileiras[k].nh[h]; for (const i of [0, nn >> 1, nn - 1]) { const q = assentoU(tr, ti, fileiras[k], t, h, i); if (q) quinas.push(q); } }
+        for (const k of [k0, k1 - 1]) { const nn = fileiras[k].nh[h]; for (const i of [0, nn >> 1, nn - 1]) { const q = quina(k, i); if (q) quinas.push(q); } }
         if (!quinas.length) {
           // a metade pode existir só no meio (a ponta de um lado aberto, o túnel; por metro: as de trás só onde é fundo)
           const ks = M ? Array.from({ length: k1 - k0 }, (_, j) => k0 + j) : [(k0 + k1 - 1) >> 1];
-          for (const k of ks) { const q = assentoU(tr, ti, fileiras[k], t, h, fileiras[k].nh[h] >> 1); if (q) { quinas.push(q); break; } }
+          for (const k of ks) { const q = quina(k, fileiras[k].nh[h] >> 1); if (q) { quinas.push(q); break; } }
           if (!quinas.length) continue;
         }
         let n = 0;
