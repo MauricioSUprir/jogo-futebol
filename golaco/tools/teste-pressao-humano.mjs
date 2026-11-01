@@ -63,12 +63,12 @@
 //     sobrou é o da ENFIADA — a bola no chão e o goleiro sai jogando com o PASSE de pé —, o mesmo passe do pé de antes: 6 de
 //     6 cortados entre 42 e 51 passos nas sementes 7001–7002; com o pressaoPedida sem o m.possePorTime, 6 de 6 voltam.)
 // AMOSTRA (15/10): 32 partidas (sementes 7001–7032, modelos alternados como antes), uma por processo filho (--par, padrão
-// 3). (01/11, item 70: 64 partidas, 7001–7064 — ver o M3.) Com 8, a mesma lógica passava ou reprovava pelo sorteio dos lances: na main (c2f76d69), em 16 conjuntos disjuntos
-// de 8 partidas (sementes 7001–7032, 7101–7132, 7201–7232, 7301–7332), o M1 ia de 0,80 a 2,02 m, o M2 de 48 a 73%, a
-// folga do M4 de −3,5 a 7 e o M5 de 77 a 83% — só 5 dos 16 passavam em tudo (7001–7008, a do CI, era um deles); qualquer
-// mudança da simulação que não mexe na pressão troca os lances e o resultado. As 128 partidas juntas (main c2f76d69, 15/10,
-// antes da chegada pelo perfil de aceleração e do desvio): M1 Δ 1,38 m, M2 63%, M3 Δ 2,74 m, M4 110 → 174 faltas (1,58×),
-// M5 80,6%, M6 e M7 100%.
+// 3; desde 01/11, item 70, 64 partidas, 7001–7064 — ver o M3). Com 8, a mesma lógica passava ou reprovava pelo sorteio
+// dos lances: na main (c2f76d69), em 16 conjuntos disjuntos de 8 partidas (sementes 7001–7032, 7101–7132, 7201–7232,
+// 7301–7332), o M1 ia de 0,80 a 2,02 m, o M2 de 48 a 73%, a folga do M4 de −3,5 a 7 e o M5 de 77 a 83% — só 5 dos 16
+// passavam em tudo (7001–7008, a do CI, era um deles); qualquer mudança da simulação que não mexe na pressão troca os
+// lances e o resultado. As 128 partidas juntas (main c2f76d69, 15/10, antes da chegada pelo perfil de aceleração e do
+// desvio): M1 Δ 1,38 m, M2 63%, M3 Δ 2,74 m, M4 110 → 174 faltas (1,58×), M5 80,6%, M6 e M7 100%.
 // Decisão: a conta direta de cada meta, sem mudar nenhuma, na amostra 4× maior. Reamostrando as 128 partidas (bootstrap por
 // partida, 1000 amostras), a chance de reprovar só pelo sorteio cai no M1 de 11% (8 partidas) para 0,7% (32), no M2 de 30%
 // para 13% e no M3 de 7% para 0,1%. Em 15/10 o M4 e o M5 estavam no limite (é o jogo, não a amostra: 1,58× as faltas — o
