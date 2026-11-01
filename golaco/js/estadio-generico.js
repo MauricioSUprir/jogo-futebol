@@ -41,6 +41,10 @@ const MARCAS = ['arco', 'torres', 'torres_luz', 'rampas_espiral', 'mastros', 'co
 
 // a pista de atletismo oficial (World Athletics: 400 m, raio de dentro 36,5 m, 8 raias de 1,22 m; as retas de 84,39 m)
 export const PISTA = Object.freeze({ meiaReta: 42.195, raio: 36.5, raias: 8, raia: 1.22 });
+// o caimento das arquibancadas de cadeiras (item 69, PR 4; PESQUISA-ESTADIO.md §17): o teto do degrau mais íngreme
+// (Green Guide 5ª ed. §11/§12.11: 34° com cadeira; aqui 33,6° de folga), os alvos de cada anel da frente para trás (o
+// perfil de C constante: C = 90 dá 22–29° no anel de baixo, 29–31° no do meio e 34–35° no de cima) e a curva dele
+export const CAIMENTO = Object.freeze({ teto: 33.6, max: 34, pot: 1.12, alvo: Object.freeze({ 1: [34], 2: [27, 33], 3: [25, 30, 33] }) });
 const Q = 44;   // a quadra do bairro (m; as ruas de 9 m entre elas: render/estadio-generico.js pinta o chão na mesma grade)
 
 /** As cores das casas e dos prédios e dos telhados por região (a do país do estádio; tools/estadios/gerar-formas.mjs). */
@@ -225,7 +229,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   const rF = tabela(th => (F.pista ? raioPista(th, Fr.L, Fr.R) : raioSuper(th, aF(Math.cos(th)), bF(Math.sin(th)), Fr.n)));
   // a última fileira: a mesma curva com os semi-eixos + a profundidade de cada lado (na tigela e na pista, mais redonda)
   const nB = F.familia === 'tigela' || F.pista ? Math.min(Fr.n, 2.4) : Fr.n;
-  const rB = tabela(th => {
+  const rB0 = tabela(th => {
     const c = Math.cos(th), s = Math.sin(th);
     const pa = c >= 0 ? profDe(1) : profDe(2), pb = s >= 0 ? profDe(3) : profDe(0);
     if (F.pista) {
@@ -269,30 +273,69 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     for (const dg of [45, 135, -45, -135]) { let e = Math.abs(pp - dg) % 360; if (e > 180) e = 360 - e; d = Math.min(d, e); }
     return 0.42 * (1 - suave(d / (BL + 4)));
   }
+  // o fundo nunca em CUNHA (item 69, PR 4; auditoria de 01/11): a profundidade da arquibancada, pela perpendicular da 1ª
+  // fileira, é ao menos a do lado (a mistura dos lados pelos pesos nos cantos fechados; nos abertos, a do próprio lado). A
+  // superelipse mais redonda do fundo (a tigela e a pista) e o semi-eixo do lado vizinho encolhiam os cantos e as pontas
+  // até 2,5 m com as mesmas fileiras (os Aflitos: 22–26 m nos lados, 10–12 m a ±30° deles): o caimento passava de 50° e a
+  // fileira afinava até 5 cm. Onde a superelipse já é mais funda, nada muda.
+  const _wB = [0, 0, 0, 0];
+  const cosFrente = th => { const e = 1e-3, r = rF(th), d = (rF(th + e) - rF(th - e)) / (2 * e); return 1 / Math.sqrt(1 + (d / r) ** 2); };
+  const rB = tabela(th => {
+    const b = rB0(th);
+    pesos(th, _wB);
+    let D = 0;
+    for (let k = 0; k < 4; k++) D += _wB[k] * LD[k].prof;
+    return D > 0 ? Math.max(b, rF(th) + D / Math.max(0.5, cosFrente(th))) : b;
+  });
 
   // ---------------------------------------------------------------- perfil de cada lado (s: 0 = 1ª fileira, 1 = última)
-  // nós [s, y, tipo]: tipo 0 = cadeiras, 1 = face de vidro/concreto dos camarotes (quase em pé), 2 = o piso do corredor
+  // nós [s, y, tipo]: tipo 0 = cadeiras, 1 = face de vidro/concreto dos camarotes (quase em pé), 2 = o piso do corredor.
+  // O CAIMENTO (item 69, PR 4; PESQUISA-ESTADIO.md §17): a subida útil (sem as faces) é dividida pelos anéis pelos alvos
+  // de cada um (o de cima mais em pé, como o perfil de C constante do Green Guide: 25–27°, 30°, 33°) e nenhum trecho de
+  // cadeira passa do TETO (34° no Green Guide; aqui 33,6° no degrau mais íngreme da curva). O que passa do teto: primeiro
+  // o anel fica reto (a curva mais em pé no alto sai), depois vai para as FACES entre os anéis (os camarotes ficam mais
+  // altos, como nos estádios de verdade); com um anel só, o topo desce até o teto — nunca uma fileira mais íngreme. Antes,
+  // as frações fixas [0,4 0,6] e [0,26 0,34 0,4] davam 40° de mediana ao anel de cima (até 51°).
   function nosDoLado(L) {
     const y0 = L.y0, top = L.alto, a = L.aneis;
     if (L.prof <= 0) return [[0, y0, 0], [1, y0, 0]];
     const out = [[0, y0, 0]];
     const faixa = L.camarotes ? 3.4 : 1.2;   // a altura da face entre os anéis
     const quebras = a === 1 ? [] : a === 2 ? [0.5] : [0.36, 0.7];
-    const subir = (s0, y0b, s1, y1b, n = 3, pot = 1.12) => { for (let i = 1; i <= n; i++) { const u = i / n; out.push([s0 + (s1 - s0) * u, y0b + (y1b - y0b) * Math.pow(u, pot), 0]); } };
-    // a subida útil (sem as faces) dividida pelos anéis: os de cima mais em pé
-    const util = top - y0 - faixa * quebras.length;
-    const fr = a === 1 ? [1] : a === 2 ? [0.4, 0.6] : [0.26, 0.34, 0.4];
-    let s = 0, y = y0;
-    for (let i = 0; i <= quebras.length; i++) {
-      const s1 = i < quebras.length ? quebras[i] : 1, y1 = y + util * fr[i];
-      subir(s, y, s1, y1, i === quebras.length ? 4 : 2);
-      s = s1; y = y1;
-      if (i < quebras.length) {
-        out.push([s + 0.004, y + faixa, 1]);
-        out.push([s + 0.03, y + faixa, 2]);
-        s += 0.03; y += faixa;
+    const subir = (s0, y0b, s1, y1b, n, pot) => { for (let i = 1; i <= n; i++) { const u = i / n; out.push([s0 + (s1 - s0) * u, y0b + (y1b - y0b) * Math.pow(u, pot), 0]); } };
+    const an = [];
+    for (let i = 0, s = 0; i <= quebras.length; i++) { const s1 = i < quebras.length ? quebras[i] : 1; an.push({ s0: s, s1, n: i === quebras.length ? 4 : 2, pot: CAIMENTO.pot }); s = s1 + 0.03; }
+    const tg = Math.tan(CAIMENTO.teto * RAD), alvos = CAIMENTO.alvo[an.length];
+    // o degrau mais íngreme da curva y = u^pot em n trechos: n·(1 − ((n − 1)/n)^pot) vezes a inclinação média
+    const teto = A => ((A.s1 - A.s0) * L.prof * tg) / (A.n * (1 - Math.pow((A.n - 1) / A.n, A.pot)));
+    const peso = an.map((A, i) => (A.s1 - A.s0) * Math.tan(alvos[i] * RAD));
+    const util = Math.max(0, top - y0 - faixa * quebras.length);
+    let sobe;
+    /** A subida de cada anel pelos pesos, cada um até o seu teto (o que passa vai aos outros); devolve o que sobrou. */
+    const reparte = () => {
+      sobe = an.map(() => 0);
+      let resto = util, livres = an.map((_, i) => i);
+      while (resto > 1e-9 && livres.length) {
+        const sw = livres.reduce((t, i) => t + peso[i], 0) || 1, prox = [];
+        let exc = 0;
+        for (const i of livres) { const q = sobe[i] + (resto * peso[i]) / sw, m = teto(an[i]); if (q > m) { exc += q - m; sobe[i] = m; } else { sobe[i] = q; prox.push(i); } }
+        resto = exc; livres = prox;
       }
-    }
+      return resto;
+    };
+    let sobra = reparte();
+    if (sobra > 1e-6) { for (const A of an) A.pot = 1; sobra = reparte(); }
+    const extraFace = quebras.length && sobra > 1e-6 ? sobra / quebras.length : 0;
+    let y = y0;
+    an.forEach((A, i) => {
+      subir(A.s0, y, A.s1, y + sobe[i], A.n, A.pot);
+      y += sobe[i];
+      if (i < quebras.length) {
+        out.push([A.s1 + 0.004, y + faixa + extraFace, 1]);
+        out.push([A.s1 + 0.03, y + faixa + extraFace, 2]);
+        y += faixa + extraFace;
+      }
+    });
     return out;
   }
   const NOS = LD.map(nosDoLado);
@@ -596,25 +639,66 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
         return { k: -1, u0: us[0], u1: us[M], uDe: th => arcoMeio(th) / 12, thDe };
       })()];
     void Lu;
+    const meia = sm => (abertos ? 6 : (6 * perim(sm)) / p05);
+    const arcos = MARCAS_P.filter(m => m.tipo === 'arco');
     _grade = criarGradeAnel({
       faixas: faixasS, profMedia,
+      // as fileiras POR METRO (item 69, PR 4): 0,8 m pela perpendicular em todo lado; o lado mais raso tem menos fileiras
+      metrico: { dS, sD, amostras },
       perfil: (s2, th) => perfil(s2, th), ponto, setor,
       vDe: s2 => 0.04 + 0.93 * clamp(s2, 0, 1),
-      trechos: trs, corredor: 0.2,
-      meiaMedia: sm => (abertos ? 6 : (6 * perim(sm)) / p05),
-      existe: (th, r, x, z, y) => {
+      trechos: trs,
+      // a escada radial de ~1,2 m em TODA fileira (FIFA 2022 e Green Guide para obra nova; NT 12 do CBMGO 4.3: 1,20 m; a
+      // largura da escada muda pela volta com a curva — o alvo 1,3 m a deixa entre 1,1 e 1,8 m, os limites do Green Guide)
+      // e as duas por ladrilho de 12 m de antes (~9 cadeiras entre escadas: menos que as 24–28 dos estádios de verdade —
+      // decisão do dono, FILA "Depende do dono" 11). Antes, a fração fixa do arco no meio: 0,66 m na frente, 2,15 m atrás
+      corredorDe: r => clamp(ESCADA_G / meia(r.sAssento), 0.04, 0.5),
+      meiaMedia: meia,
+      existe: (th, r, x, z, y, L) => {
         if (rB(th) - rF(th) < 2.5 || !temArquibancada(x, z)) return false;
-        if (tipoEm(ladoEm(th), r.sAssento) !== 0) return false;
+        if (tipoEm(ladoEm(th), L[2]) !== 0) return false;
         if (z > 0 && Math.abs(x) < mtG && y < topoTunelG) return false;
+        // o caimento da fileira ali (Green Guide: ≤ 34° com cadeira): o espelho ÷ a profundidade pela perpendicular — o
+        // perfil já respeita o teto no meio de cada lado; nos cantos a mistura dos lados pode passar (sem cadeira)
+        if (perfil(L[1], th) - y > (dS(th, L[1]) - dS(th, L[0])) * TAN_MAX) return false;
+        // nada de cadeira no arco das marcas (as pontas dele descem até a arquibancada: o Dragão), do assento ao pulo
+        if (arcos.length && arcos.some(m => [0.45, 1.3, 1.85, 2.15].some(h => arcoPerto(m, x, y + h, z, 0)))) return false;
         return true;
       },
     });
     return _grade;
   }
+  // a profundidade pela PERPENDICULAR da fileira (as fileiras por metro): a fileira s no ângulo th é a interpolação radial
+  // entre rF e rB, e a distância entre duas vizinhas é (rB − rF)·cos β·ds — β, o ângulo entre o raio e a normal da fileira
+  // (o da 1ª e o da última, linear em s). dS e a inversa sD analíticas (uma parábola em s).
+  const ESCADA_G = 1.3, TAN_MAX = Math.tan(CAIMENTO.max * RAD);
+  const cosDe = fr => tabela(th => { const e = 1e-3, r = fr(th), d = (fr(th + e) - fr(th - e)) / (2 * e); return 1 / Math.sqrt(1 + (d / r) ** 2); });
+  let _cF = null, _cB = null;
+  const dp = th => { if (!_cF) { _cF = cosDe(rF); _cB = cosDe(rB); } const D = rB(th) - rF(th); return [D * _cF(th), D * _cB(th)]; };
+  function dS(th, s) { const [a, b] = dp(th); return a * s + ((b - a) * s * s) / 2; }
+  function sD(th, d) {
+    const [a, b] = dp(th), q = b - a;
+    if (Math.abs(q) < 1e-9 * Math.max(1, a)) return d / Math.max(1e-9, a);
+    const disc = a * a + 2 * q * d;
+    return disc <= 0 ? -a / q : (-a + Math.sqrt(disc)) / q;
+  }
+  const amostras = (() => {
+    const out = [];
+    for (let i = 0; i < 720; i++) {
+      const th = -Math.PI + (2 * Math.PI * (i + 0.5)) / 720;
+      if (rB(th) - rF(th) < 2.5) continue;
+      const [px, pz] = ponto(th, 0.02);
+      if (temArquibancada(px, pz)) out.push(th);
+    }
+    return out;
+  })();
   /** O índice do trecho da grade do ponto (x, z): 0 nos cantos fechados; nos abertos, o do lado dele. */
   const trechoDe = (x, z) => (abertos ? Math.max(0, grade().trechos.findIndex(t => t.k === setor(x, z))) : 0);
   /** O piso do degrau (y) da fileira que contém o ponto (x, z) — onde o torcedor senta (null fora das cadeiras). */
-  function pisoEm(x, z) { const r = grade().fileiraDe(sDe(x, z)); return r ? perfil(r.s0, Math.atan2(z, x)) : null; }
+  function pisoEm(x, z) {
+    const th = Math.atan2(z, x), G = grade(), r = G.fileiraDe(sDe(x, z), th), L = r && G.limites(r, th);
+    return L ? perfil(L[0], th) : null;
+  }
   function gerarLugares() {
     const lista = [], vistos = new Set(), G = grade();
     const mt = T.largura / 2 + 0.4, topoTunel = T.altura + T.laje + 0.3;

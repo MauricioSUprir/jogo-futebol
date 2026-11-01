@@ -117,6 +117,14 @@ export function perfilEmDegraus(fileiras) {
 export function sobreTunelGolaco(rl, x) {
   return Math.abs(x) < TUNEL.meiaLargura && rl.y < TUNEL.topo;
 }
+// item 69, PR 4 (auditoria de 01/11): nas fileiras do lado de cá ao lado da boca do túnel, a fileira ia do túnel até a
+// escada da célula 156 (23 cadeiras com escada de um lado só; FIFA 2022 §5.2 e Green Guide §12.16: ≤ 14) — as células
+// 115–116 e 133–134 viram escada nelas (a malha do lado de cá pinta o concreto ali: render/campo.js criarLadoDeCa)
+export const ESCADA_TUNEL = Object.freeze([115, 116, 133, 134]);
+// as torres de refletor do Estádio Golaço (render/campo.js criarRefletores, estadio-forma.js): as de z −56 caem dentro dos
+// fundos — nenhuma cadeira com o centro a menos de `raio` do eixo do poste (0,45 m de raio + a meia cadeira)
+export const REFLETORES_GOLACO = Object.freeze({ pontos: Object.freeze([[72, 56], [72, -56], [-72, 56], [-72, -56]]), raio: 0.8 });
+const juntoAoPoste = (x, z) => REFLETORES_GOLACO.pontos.some(([px, pz]) => Math.hypot(x - px, z - pz) < REFLETORES_GOLACO.raio);
 
 /**
  * A grade do Estádio Golaço: as 4 arquibancadas retas com as cadeiras da textura (36 fileiras × 250 células de 0,5 m,
@@ -130,29 +138,40 @@ export function gradeGolaco() {
   const FL = fileirasGolaco('lado'), FF = fileirasGolaco('fundo');
   const u1 = (A.frenteZ + A.frenteZ + A.profLado) / A.comprimento;   // 119/125: o comprimento dos fundos (z)
   const corredor = a => a % A.corredor < 2;
-  /** A cadeira (setor, f, a) ou null (escada, fora do fundo, em cima do túnel). */
-  function assento(setor, f, a) {
+  /**
+   * A cadeira (setor, f, a) ou null (escada, fora do fundo, em cima do túnel). fantasma: devolve também as que o PR 4
+   * tirou (a escada ao lado do túnel, o poste do refletor) marcadas `fantasma` — a torcida gasta os sorteios delas e o
+   * resto da torcida fica com os mesmos.
+   */
+  function assento(setor, f, a, fantasma = false) {
     if (a < 0 || a >= nA || f < 0 || f >= nF || corredor(a)) return null;
     const j = nF - 1 - f;
     if (setor === 0 || setor === 3) {
       const r = FL[j], x = -A.meioComprimento + A.assento * (a + 0.5), d = r.d0 + NO_PISO * r.p;
       if (setor === 3 && sobreTunelGolaco(r, x)) return null;
+      const fora = setor === 3 && r.y < TUNEL.topo && ESCADA_TUNEL.includes(a);
+      if (fora && !fantasma) return null;
       const sz = setor === 0 ? -1 : 1;
-      return { setor, f, a, x, y: r.y, z: sz * (A.frenteZ + d), rumo: setor === 0 ? Math.PI / 2 : -Math.PI / 2, larg: A.assento, chave: (setor * nF + f) * nA + a };
+      return { setor, f, a, x, y: r.y, z: sz * (A.frenteZ + d), rumo: setor === 0 ? Math.PI / 2 : -Math.PI / 2, larg: A.assento, chave: (setor * nF + f) * nA + a, ...(fora ? { fantasma: true } : {}) };
     }
     if (j >= FF.length) return null;
     const u = (a + 0.5) / nA;
     if (u > u1) return null;
     const r = FF[j], s = setor === 1 ? 1 : -1, d = r.d0 + NO_PISO * r.p;
     const za = s > 0 ? A.frenteZ : -(A.frenteZ + A.profLado), zb = s > 0 ? -(A.frenteZ + A.profLado) : A.frenteZ;
-    return { setor, f, a, x: s * (A.fundoX0 + d), y: r.y, z: za + (zb - za) * (u / u1), rumo: s > 0 ? Math.PI : 0, larg: A.assento, chave: (setor * nF + f) * nA + a };
+    const x = s * (A.fundoX0 + d), z = za + (zb - za) * (u / u1), fora = juntoAoPoste(x, z);
+    if (fora && !fantasma) return null;
+    return { setor, f, a, x, y: r.y, z, rumo: s > 0 ? Math.PI : 0, larg: A.assento, chave: (setor * nF + f) * nA + a, ...(fora ? { fantasma: true } : {}) };
   }
-  /** Todas as cadeiras na ordem de sempre (f de cima para baixo; a; setores 0, 1, 2, 3) — a da torcida-dados.js. */
-  function iterar(cb) {
+  /**
+   * Todas as cadeiras na ordem de sempre (f de cima para baixo; a; setores 0, 1, 2, 3) — a da torcida-dados.js.
+   * fantasmas: também as tiradas no PR 4 (marcadas `fantasma`: a torcida só gasta os sorteios delas).
+   */
+  function iterar(cb, fantasmas = false) {
     for (let f = 0; f < nF; f++) {
       for (let a = 0; a < nA; a++) {
         if (corredor(a)) continue;
-        for (const st of [0, 1, 2, 3]) { const c = assento(st, f, a); if (c) cb(c); }
+        for (const st of [0, 1, 2, 3]) { const c = assento(st, f, a, fantasmas); if (c) cb(c); }
       }
     }
   }
@@ -223,43 +242,97 @@ function blocoDe(as, extra = {}) {
 }
 
 // ------------------------------------------------------------------ as plantas curvas (anel)
+/** Quantas fileiras de `CADEIRA.fileira` cabem numa faixa de d m (a última fica com o que sobra: 0,6–1,4 m). */
+export const nFileirasEm = d => (d < 0.75 * CADEIRA.fileira ? 0 : Math.floor((d + 0.25 * CADEIRA.fileira) / CADEIRA.fileira));
 /**
  * A grade de uma planta CURVA (a tigela do Maracanã, as genéricas): as fileiras em faixas de s (a fração da profundidade)
- * e, em cada fileira, as cadeiras pelo u da textura (ladrilhos: cada ladrilho tem 2 metades, cada metade começa com a
- * escada — a fração `corredor` da metade — e tem `n` cadeiras iguais). A = {
- *   faixas: [[s0, s1]…] as faixas de cadeira (cada uma vira `n` fileiras de ~0,8 m pela profundidade média),
- *   profMedia: m (a profundidade média da arquibancada, para o número de fileiras),
+ * e, em cada fileira, as cadeiras pelo u da textura (ladrilhos: cada ladrilho tem 2 metades; a metade que começa com a
+ * escada tem a fração `corredor` dela de escada; `n` cadeiras iguais por metade). A = {
+ *   faixas: [[s0, s1]…] as faixas de cadeira,
+ *   profMedia: m (a profundidade média da arquibancada, para o número de fileiras de cada faixa — sem `metrico`),
+ *   metrico (as genéricas, item 69 PR 4): {dS(th, s) → m da 1ª fileira até s pela perpendicular da fileira, sD(th, d) → a
+ *     inversa, amostras: [θ…] onde há arquibancada} — as fileiras POR METRO: na faixa, a fileira j vai de j·0,8 a
+ *     (j + 1)·0,8 m da frente dela em cada θ; a última de cada θ fica com o que sobra (0,6–1,4 m) e, onde a faixa é mais
+ *     rasa, as de trás não existem (o lado raso tem menos fileiras, não fileiras mais finas),
  *   perfil(s, th) → y, ponto(th, s) → [x, z], vDe(s) → v (linear em cada faixa),
  *   trechos: [{uDe(th, s), thDe(u, s), u0, u1}] (a volta inteira ou cada lado reto),
- *   corredor (fração da metade do ladrilho), meiaMedia(s) → m de uma metade de ladrilho na fileira s,
- *   existe(th, fileira, x, z, yPiso) → a cadeira existe ali (tem arquibancada, é cadeira e não é a boca do túnel),
+ *   corredor (fração da metade do ladrilho) ou corredorDe(r) (a da fileira r: a escada de largura fixa em metros),
+ *   escadasPorLadrilho: 2 (cada metade começa com a escada) ou 1 (só a 1ª),
+ *   meiaMedia(s) → m de uma metade de ladrilho na fileira s,
+ *   existe(th, fileira, x, z, yPiso, lim) → a cadeira existe ali (tem arquibancada, é cadeira e não é a boca do túnel; lim
+ *     = [s0, s1, sAssento] da fileira em th),
  *   setor(x, z)
  * }. Devolve a mesma interface da gradeGolaco (fileiras = a lista; cada uma {k (índice da frente), f (0 = a de cima), s0,
- * s1, v0, vm, v1, n (cadeiras por metade de ladrilho), faixa, iFaixa (da frente, na faixa), nFaixa}).
+ * s1, sAssento (por metro: os de uma volta típica), v0, vm, v1, n (cadeiras por metade de ladrilho; nh: por metade), c
+ * (o corredor), faixa, iFaixa (da frente, na faixa), nFaixa}) e mais `limites(r, th)` → [s0, s1, sAssento] da fileira em
+ * th (null: não existe ali).
  */
 export function criarGradeAnel(A) {
-  const fileiras = [];
+  const M = A.metrico ?? null, PF = CADEIRA.fileira;
+  const e2 = (A.escadasPorLadrilho ?? 2) === 2;
+  const fileiras = [], faixas = [];
   A.faixas.forEach(([s0, s1], fx) => {
+    const F = { s0, s1, n: 0, k0: fileiras.length, dTip: 0 };
+    faixas.push(F);
+    if (M) {
+      // o maior número de fileiras da faixa pela volta; as fileiras típicas pela profundidade mediana
+      const ds = M.amostras.map(th => M.dS(th, s1) - M.dS(th, s0)).sort((a, b) => a - b);
+      for (const d of ds) F.n = Math.max(F.n, nFileirasEm(d));
+      F.dTip = ds.length ? ds[ds.length >> 1] : 0;
+      for (let k = 0; k < F.n; k++) {
+        const fr = d => s0 + (s1 - s0) * clamp(d / Math.max(1e-6, F.dTip), 0, 1);
+        fileiras.push({ s0: fr(k * PF), s1: k + 1 >= F.n ? s1 : fr((k + 1) * PF), sAssento: fr((k + NO_PISO) * PF), faixa: fx, iFaixa: k, nFaixa: F.n });
+      }
+      return;
+    }
     // (uma faixa mais rasa que ~3/4 de fileira fica sem cadeira: o corredor entre os anéis de uma arquibancada que divide
     // o perfil das outras)
     if ((s1 - s0) * A.profMedia < 0.75 * CADEIRA.fileira) return;
     const n = Math.max(1, Math.round(((s1 - s0) * A.profMedia) / CADEIRA.fileira));
+    F.n = n;
     for (let k = 0; k < n; k++) {
       const a = s0 + ((s1 - s0) * k) / n, b = s0 + ((s1 - s0) * (k + 1)) / n;
       fileiras.push({ s0: a, s1: b, faixa: fx, iFaixa: k, nFaixa: n });
     }
   });
   const NF = fileiras.length;
-  const c = A.corredor;
   fileiras.forEach((r, k) => {
     r.k = k; r.f = NF - 1 - k;
-    r.v0 = A.vDe(r.s0); r.v1 = A.vDe(r.s1); r.vm = r.v0 + FAIXA_PISO * (r.v1 - r.v0);
-    r.sAssento = r.s0 + NO_PISO * (r.s1 - r.s0);
-    // cadeiras por metade de ladrilho: a largura ≥ 0,5 m na fileira média (≤ 28 entre escadas)
-    r.n = clamp(Math.floor((A.meiaMedia(r.sAssento) * (1 - c)) / CADEIRA.largura + 1e-6), 1, CADEIRA.entreEscadas);
+    if (M) {
+      // a textura: cada faixa em fileiras de altura igual (de vDe(s0) a vDe(s1) da faixa)
+      const F = faixas[r.faixa], va = A.vDe(F.s0), vb = A.vDe(F.s1);
+      r.v0 = va + ((vb - va) * r.iFaixa) / F.n; r.v1 = va + ((vb - va) * (r.iFaixa + 1)) / F.n;
+    } else {
+      r.v0 = A.vDe(r.s0); r.v1 = A.vDe(r.s1);
+      r.sAssento = r.s0 + NO_PISO * (r.s1 - r.s0);
+    }
+    r.vm = r.v0 + FAIXA_PISO * (r.v1 - r.v0);
+    // a escada: a fração da metade (fixa, ou a de 1,2 m nesta fileira) e as cadeiras por metade — a largura ≥ 0,5 m na
+    // fileira média (≤ 28 entre escadas)
+    r.c = A.corredorDe ? A.corredorDe(r) : A.corredor;
+    const ch = h => (e2 || h === 0 ? r.c : 0);
+    r.nh = [0, 1].map(h => clamp(Math.floor((A.meiaMedia(r.sAssento) * (1 - ch(h))) / CADEIRA.largura + 1e-6), 1, CADEIRA.entreEscadas));
+    r.n = r.nh[0];
   });
-  /** A fileira que contém s (null fora das faixas de cadeira). */
-  function fileiraDe(s) {
+  const corredorDe = (r, h) => (e2 || h === 0 ? r.c : 0);
+  /** [s0, s1, sAssento] da fileira r no ângulo th (null: por metro, a fileira não existe ali). */
+  function limites(r, th) {
+    if (!M) return [r.s0, r.s1, r.sAssento];
+    const F = faixas[r.faixa], d0 = M.dS(th, F.s0), n = nFileirasEm(M.dS(th, F.s1) - d0), j = r.iFaixa;
+    if (j >= n) return null;
+    return [M.sD(th, d0 + j * PF), j + 1 >= n ? F.s1 : M.sD(th, d0 + (j + 1) * PF), M.sD(th, d0 + (j + NO_PISO) * PF)];
+  }
+  /** A fileira que contém s (no ângulo th, por metro; null fora das faixas de cadeira). */
+  function fileiraDe(s, th = 0) {
+    if (M) {
+      for (const F of faixas) {
+        if (!F.n || s < F.s0 - 1e-9 || s > F.s1 + 1e-9) continue;
+        const d0 = M.dS(th, F.s0), n = nFileirasEm(M.dS(th, F.s1) - d0);
+        if (!n) return null;
+        return fileiras[F.k0 + clamp(Math.floor((M.dS(th, s) - d0) / PF), 0, n - 1)];
+      }
+      return null;
+    }
     let lo = 0, hi = NF - 1;
     if (!NF || s < fileiras[0].s0 || s > fileiras[NF - 1].s1) return null;
     while (lo < hi) { const m = (lo + hi + 1) >> 1; if (fileiras[m].s0 <= s) lo = m; else hi = m - 1; }
@@ -267,30 +340,39 @@ export function criarGradeAnel(A) {
     return s <= r.s1 + 1e-9 ? r : null;
   }
   /** u do centro da cadeira (ladrilho t, metade h, cadeira i) na fileira r. */
-  const uCentro = (r, t, h, i) => t + h / 2 + (c + ((i + 0.5) * (1 - c)) / r.n) / 2;
+  const uCentro = (r, t, h, i) => { const c = corredorDe(r, h); return t + h / 2 + (c + ((i + 0.5) * (1 - c)) / r.nh[h]) / 2; };
+  /** O θ e os limites da fileira r no u (por metro, nos lados abertos o θ depende do s: duas voltas). */
+  function thLim(tr, r, u) {
+    let th = tr.thDe(u, r.sAssento);
+    let L = limites(r, th);
+    if (M && L && tr.k !== -1) { th = tr.thDe(u, L[2]); L = limites(r, th); }
+    return L ? [th, L] : null;
+  }
   /**
    * A cadeira da fileira r no trecho tr com u (o centro), ou null (não existe ali). leve: sem o rumo e a largura (os
    * lugares da torcida só precisam de onde ela fica: 2 inversas de u a menos por lugar).
    */
   function assentoU(tr, ti, r, t, h, i, leve = false) {
-    const u = uCentro(r, t, h, i);
+    const u = uCentro(r, t, h, i), nh = r.nh[h];
     if (u < tr.u0 || u > tr.u1) return null;
-    const th = tr.thDe(u, r.sAssento);
-    const [x, z] = A.ponto(th, r.sAssento);
-    const y = A.perfil(r.s0, th);
-    if (!A.existe(th, r, x, z, y)) return null;
+    const tl = thLim(tr, r, u);
+    if (!tl) return null;
+    const [th, L] = tl, sA = L[2];
+    const [x, z] = A.ponto(th, sA);
+    const y = A.perfil(L[0], th);
+    if (!A.existe(th, r, x, z, y, L)) return null;
     const chave = ((ti * NF + r.k) * 100003 + (t + 50000) * 2 + h) * 32 + i;
-    if (leve) return { setor: A.setor(x, z), f: r.f, a: (t * 2 + h) * CADEIRA.entreEscadas + i, k: r.k, t, h, i, n: r.n, x, y, z, chave, th, s: r.sAssento };
+    if (leve) return { setor: A.setor(x, z), f: r.f, a: (t * 2 + h) * CADEIRA.entreEscadas + i, k: r.k, t, h, i, n: nh, x, y, z, chave, th, s: sA };
     // o rumo da cadeira: perpendicular à fileira, para dentro (a tangente da fileira em th)
-    const e = 1e-3, [xa, za] = A.ponto(th - e, r.sAssento), [xb, zb] = A.ponto(th + e, r.sAssento);
+    const e = 1e-3, [xa, za] = A.ponto(th - e, sA), [xb, zb] = A.ponto(th + e, sA);
     let tx = xb - xa, tz = zb - za; const lt = Math.hypot(tx, tz) || 1; tx /= lt; tz /= lt;
     let nx = -tz, nz = tx;
     if (nx * -x + nz * -z < 0) { nx = -nx; nz = -nz; }
     // a largura de verdade desta cadeira: as bordas dela estão a ±(1 − c)/(4n) do centro em u
-    const du = (1 - c) / (4 * r.n);
-    const [x1, z1] = A.ponto(tr.thDe(u - du, r.sAssento), r.sAssento), [x2, z2] = A.ponto(tr.thDe(u + du, r.sAssento), r.sAssento);
+    const du = (1 - corredorDe(r, h)) / (4 * nh);
+    const [x1, z1] = A.ponto(tr.thDe(u - du, sA), sA), [x2, z2] = A.ponto(tr.thDe(u + du, sA), sA);
     const larg = Math.hypot(x2 - x1, z2 - z1);
-    return { setor: A.setor(x, z), f: r.f, a: (t * 2 + h) * CADEIRA.entreEscadas + i, k: r.k, t, h, i, n: r.n, x, y, z, rumo: Math.atan2(nz, nx), larg, chave, th, s: r.sAssento };
+    return { setor: A.setor(x, z), f: r.f, a: (t * 2 + h) * CADEIRA.entreEscadas + i, k: r.k, t, h, i, n: nh, x, y, z, rumo: Math.atan2(nz, nx), larg, chave, th, s: sA };
   }
   // os blocos: em cada trecho, cada metade de ladrilho × 4 fileiras da mesma faixa (só as cadeiras que existem)
   const blocos = [], ref = [];
@@ -304,15 +386,15 @@ export function criarGradeAnel(A) {
         // a caixa pelas 4 quinas (a lista de cadeiras só quando o bloco chega perto: assentosDoBloco)
         const quinas = [];
         // (as 4 quinas e o meio da 1ª e da última fileira: a fileira curva estufa no meio)
-        for (const k of [k0, k1 - 1]) for (const i of [0, fileiras[k].n >> 1, fileiras[k].n - 1]) { const q = assentoU(tr, ti, fileiras[k], t, h, i); if (q) quinas.push(q); }
+        for (const k of [k0, k1 - 1]) { const nn = fileiras[k].nh[h]; for (const i of [0, nn >> 1, nn - 1]) { const q = assentoU(tr, ti, fileiras[k], t, h, i); if (q) quinas.push(q); } }
         if (!quinas.length) {
-          // a metade pode existir só no meio (a ponta de um lado aberto, o túnel): confere a cadeira do meio
-          const q = assentoU(tr, ti, fileiras[(k0 + k1 - 1) >> 1], t, h, fileiras[(k0 + k1 - 1) >> 1].n >> 1);
-          if (!q) continue;
-          quinas.push(q);
+          // a metade pode existir só no meio (a ponta de um lado aberto, o túnel; por metro: as de trás só onde é fundo)
+          const ks = M ? Array.from({ length: k1 - k0 }, (_, j) => k0 + j) : [(k0 + k1 - 1) >> 1];
+          for (const k of ks) { const q = assentoU(tr, ti, fileiras[k], t, h, fileiras[k].nh[h] >> 1); if (q) { quinas.push(q); break; } }
+          if (!quinas.length) continue;
         }
         let n = 0;
-        for (let k = k0; k < k1; k++) n += fileiras[k].n;
+        for (let k = k0; k < k1; k++) n += fileiras[k].nh[h];
         const b = blocoDe(quinas, { trecho: ti, k0, k1, t, h });
         b.n = n;
         b.setor = A.setor(b.c[0], b.c[2]);
@@ -325,7 +407,7 @@ export function criarGradeAnel(A) {
   function assentosDoBloco(i) {
     if (ref[i]) return ref[i];
     const b = blocos[i], tr = A.trechos[b.trecho], as = [];
-    for (let k = b.k0; k < b.k1; k++) { const r = fileiras[k]; for (let ii = 0; ii < r.n; ii++) { const q = assentoU(tr, b.trecho, r, b.t, b.h, ii); if (q) as.push(q); } }
+    for (let k = b.k0; k < b.k1; k++) { const r = fileiras[k]; for (let ii = 0; ii < r.nh[b.h]; ii++) { const q = assentoU(tr, b.trecho, r, b.t, b.h, ii); if (q) as.push(q); } }
     ref[i] = as;
     // a caixa da máscara por TODAS as cadeiras do bloco (a das quinas deixava de fora as do meio quando faltava uma quina:
     // o vomitório, o túnel, a ponta de um lado aberto)
@@ -335,7 +417,7 @@ export function criarGradeAnel(A) {
   /** Todas as cadeiras (lento: ~0,1 s para 80 mil; os testes e a capacidade). */
   function iterar(cb) {
     A.trechos.forEach((tr, ti) => {
-      for (const r of fileiras) for (let t = Math.floor(tr.u0); t < Math.ceil(tr.u1); t++) for (let h = 0; h < 2; h++) for (let i = 0; i < r.n; i++) { const q = assentoU(tr, ti, r, t, h, i); if (q) cb(q); }
+      for (const r of fileiras) for (let t = Math.floor(tr.u0); t < Math.ceil(tr.u1); t++) for (let h = 0; h < 2; h++) for (let i = 0; i < r.nh[h]; i++) { const q = assentoU(tr, ti, r, t, h, i); if (q) cb(q); }
     });
   }
   /**
@@ -343,16 +425,19 @@ export function criarGradeAnel(A) {
    * escada, fora das fileiras ou onde a cadeira não existe. leve: sem o rumo e a largura (assentoU).
    */
   function assentoEm(th, s, ti = 0, leve = false) {
-    const r = fileiraDe(s), tr = A.trechos[ti];
+    const r = fileiraDe(s, th), tr = A.trechos[ti];
     if (!r || !tr) return null;
-    const u = tr.uDe(th, r.sAssento), t = Math.floor(u), w = u - t, h = w >= 0.5 ? 1 : 0, q = (w - h / 2) * 2;
+    const L = limites(r, th);
+    if (!L) return null;
+    const u = tr.uDe(th, L[2]), t = Math.floor(u), w = u - t, h = w >= 0.5 ? 1 : 0, q = (w - h / 2) * 2;
+    const c = corredorDe(r, h);
     if (q < c) return null;
-    const i = Math.min(r.n - 1, Math.floor(((q - c) / (1 - c)) * r.n));
+    const i = Math.min(r.nh[h] - 1, Math.floor(((q - c) / (1 - c)) * r.nh[h]));
     return assentoU(tr, ti, r, t, h, i, leve);
   }
   return {
-    tipo: 'anel', fileiras, NF, corredor: c, trechos: A.trechos,
-    fileiraDe, blocos, assentosDoBloco, iterar, assentoEm,
+    tipo: 'anel', fileiras, NF, corredor: A.corredor ?? null, corredorDe, trechos: A.trechos, metrico: !!M, faixas,
+    escadasPorLadrilho: e2 ? 2 : 1, limites, fileiraDe, blocos, assentosDoBloco, iterar, assentoEm,
     get capacidade() { let n = 0; iterar(() => { n++; }); return n; },
   };
 }
@@ -371,6 +456,8 @@ export function aneisEmDegraus(fileiras) {
  * Os anéis da malha em ESCADA de uma planta curva a partir dos nós do perfil `base` (os s dela, em ordem): cada faixa de
  * cadeiras da grade vira os degraus das fileiras dela (aneisEmDegraus); os nós de fora das faixas (as faces, os corredores
  * entre os anéis) ficam como estão ([s, s, vDe(s)]); os de dentro de uma faixa saem (o degrau segue o perfil pelos bicos).
+ * Na grade POR METRO cada anel de uma fileira é [s(th), sY(th), v, sRep] (as funções da coluna th: onde a fileira não
+ * existe, o anel cai no fim da faixa e o degrau some — área zero; sRep, o s típico, para as colunas e o tipo do trecho).
  */
 export function aneisEscada(grade, base, vDe) {
   const corridas = [];
@@ -378,29 +465,53 @@ export function aneisEscada(grade, base, vDe) {
     const u = corridas[corridas.length - 1];
     if (u && u.faixa === r.faixa) { u.rows.push(r); u.s1 = r.s1; } else corridas.push({ faixa: r.faixa, s0: r.s0, s1: r.s1, rows: [r] });
   }
+  if (grade.metrico) for (const c of corridas) { const F = grade.faixas[c.faixa]; c.s0 = F.s0; c.s1 = F.s1; }
   const itens = [];
   for (const s of base) if (!corridas.some(c => s > c.s0 + 1e-9 && s < c.s1 - 1e-9)) itens.push({ s, ordem: s, run: null });
   for (const c of corridas) if (c.s1 > base[0] - 1e-9 && c.s0 < base[base.length - 1] + 1e-9) itens.push({ s: c.s0, ordem: c.s0 + 1e-12, run: c });
   itens.sort((a, b) => a.ordem - b.ordem);
   const out = [];
-  const empurra = a => { const l = out[out.length - 1]; if (!l || Math.abs(l[0] - a[0]) > 1e-7 || Math.abs(l[1] - a[1]) > 1e-7) out.push(a); };
+  const empurra = a => { const l = out[out.length - 1]; if (!l || typeof a[0] === 'function' || typeof l[0] === 'function' || Math.abs(l[0] - a[0]) > 1e-7 || Math.abs(l[1] - a[1]) > 1e-7) out.push(a); };
   for (const it of itens) {
-    if (it.run) for (const a of aneisEmDegraus(it.run.rows)) empurra(a);
-    else empurra([it.s, it.s, vDe(it.s)]);
+    if (!it.run) { empurra([it.s, it.s, vDe(it.s)]); continue; }
+    if (!grade.metrico) { for (const a of aneisEmDegraus(it.run.rows)) empurra(a); continue; }
+    const fim = grade.faixas[it.run.faixa].s1;
+    for (const r of it.run.rows) {
+      const s0 = th => grade.limites(r, th)?.[0] ?? fim, s1 = th => grade.limites(r, th)?.[1] ?? fim;
+      out.push([s0, s0, r.v0, r.s0], [s1, s0, r.vm, r.s1], [s1, s1, r.v1, r.s1]);
+    }
   }
   return out;
 }
 
 /**
  * A malha LISA (de longe) passa pelos assentos: y = perfil(s − NO_PISO·Δs) dentro de uma faixa de cadeiras (Δs = a
- * profundidade de uma fileira dela) — o torcedor sentado no piso fica em cima dela como ficava na rampa de antes.
+ * profundidade de uma fileira dela) — o torcedor sentado no piso fica em cima dela como ficava na rampa de antes. Na
+ * grade por metro, no ângulo th.
  */
-export function sLiso(grade, s) {
-  const r = grade.fileiraDe(s);
+export function sLiso(grade, s, th = 0) {
+  const r = grade.fileiraDe(s, th);
   if (!r) return s;
+  if (grade.metrico) {
+    const L = grade.limites(r, th);
+    return L ? Math.max(grade.faixas[r.faixa].s0, s - (L[2] - L[0])) : s;
+  }
   let k = r.k;
   while (k > 0 && grade.fileiras[k - 1].faixa === r.faixa) k--;
   return Math.max(grade.fileiras[k].s0, s - NO_PISO * (r.s1 - r.s0));
+}
+
+/**
+ * O v da textura na fração s (no ângulo th) da malha LISA: na grade por metro, a fileira de th (a célula dela na textura:
+ * do bico ao topo do espelho); fora das faixas, ou na grade por fração, vDe(s).
+ */
+export function vLiso(grade, s, th, vDe) {
+  if (!grade.metrico) return vDe(s);
+  const r = grade.fileiraDe(s, th);
+  if (!r) return vDe(s);
+  const L = grade.limites(r, th);
+  if (!L) return vDe(s);
+  return r.v0 + clamp((s - L[0]) / Math.max(1e-9, L[1] - L[0]), 0, 1) * (r.v1 - r.v0);
 }
 
 // ------------------------------------------------------------------ cores das cadeiras (a textura e a 3D, iguais)

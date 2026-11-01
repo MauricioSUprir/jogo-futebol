@@ -162,9 +162,11 @@ export function gerarTorcidaNiveis(mascara = null, paletas = null, lugares = nul
   // uma cadeira: os MESMOS 7 sorteios por cadeira e na mesma ordem de cadeiras() (o resultado não muda)
   // forma própria: a torcida dividida do clássico (metade de cada uma, a do mandante em +x) e a sombra da cobertura (luz)
   const dividida = !!(lugares && lugares.dividida);
-  function cadeira(setor, f, a, x, y, z, esc = 1, im = a + f * nA, luz = 1) {
+  function cadeira(setor, f, a, x, y, z, esc = 1, im = a + f * nA, luz = 1, fantasma = false) {
     const g = setor === 3 ? rndCa : rnd;
     const r = g(), r2 = g(), r3 = g(), r4 = g(), r5 = g(), r6 = g(), r7 = g();
+    // a cadeira que o PR 4 tirou da grade (a escada ao lado do túnel, o poste do refletor): só os sorteios dela
+    if (fantasma) return;
     let time = 0, org = 0, mosaico = false;
     const frente = NF - 1 - f < T.frente;
     const lado = setor === 0 || setor === 3;
@@ -202,7 +204,7 @@ export function gerarTorcidaNiveis(mascara = null, paletas = null, lugares = nul
   // o Estádio Golaço: as cadeiras da grade, na ordem de sempre (os MESMOS sorteios por cadeira: só o lugar mudou — o
   // assento, no piso do degrau)
   if (lugares) lugares.iterar(cadeira);
-  else grade().iterar(c => cadeira(c.setor, c.f, c.a, c.x, c.y, c.z));
+  else grade().iterar(c => cadeira(c.setor, c.f, c.a, c.x, c.y, c.z, 1, c.a + c.f * nA, 1, !!c.fantasma), true);
   // ordem por (grupo, nível, fileira da frente para cima): contagem por balde (estável)
   const F = NF, NG = GRUPOS.length, NB = NG * 3 * F;
   const conta = new Int32Array(NB + 1);
