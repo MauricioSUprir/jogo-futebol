@@ -851,7 +851,9 @@ export function criarCampo(opc) {
     /** Mostra/esconde as cadeiras 3D (testes; escondidas, a cadeira pintada volta em todo bloco). */
     mostrarCadeiras(v) { cad3d?.ligar(v); },
     /** As cadeiras 3D neste quadro (testes): {carregado, blocos, instancias, teto, mascara, torcedores, orcamento}. */
-    get cadeiras() { return { carregado: !!cad3d, blocos: cad3d?.blocos ?? 0, instancias: cad3d?.instancias ?? 0, teto: cad3d?.teto ?? null, mascara: UNIFORMS_PERTO.uPertoN.value, torcedores: cad3d?.torcedores ?? null, orcamento: cad3d?.orcamento ?? null }; },
+    get cadeiras() { return { carregado: !!cad3d, blocos: cad3d?.blocos ?? 0, instancias: cad3d?.instancias ?? 0, teto: cad3d?.teto ?? null, mascara: UNIFORMS_PERTO.uPertoN.value, torcedores: cad3d?.torcedores ?? null, orcamento: cad3d?.orcamento ?? null, impostor: cad3d?.impostor ?? null }; },
+    /** O impostor da torcida (item 69, PR 3: render/impostor.js), ou null. */
+    get impostorObj() { return cad3d?.impostorObj ?? null; },
     /** O torcedor 3D (testes: as malhas, o modelo e a VAT de render/torcedor3d.js), ou null. */
     get torcedor3d() { return cad3d?.torcedor3d ?? null; },
     get grade() { return arq.userData.cadeiras?.grade ?? null; },

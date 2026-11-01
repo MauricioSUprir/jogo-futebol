@@ -13,6 +13,7 @@
 import * as THREE from 'three';
 import { geometriaCadeira, escolherBlocos, matrizCadeira, escalaLargura, criarOrcamento3D, CADEIRAS3D } from './cadeiras-dados.js';
 import { criarTorcedores3D } from './torcedor3d.js';
+import { criarImpostor } from './impostor.js';
 
 const _v = new THREE.Vector3();
 const _cor = new THREE.Color();
@@ -48,8 +49,9 @@ export function criarCadeiras3D(opc) {
   U.uConcPiso.value.set(info.concreto?.piso ?? 0x43494c);
   U.uConcEspelho.value.set(info.concreto?.espelho ?? 0x3b4043);
   let teto = CADEIRAS3D.teto[opc.qualidade] ?? CADEIRAS3D.teto.media, qual = opc.qualidade ?? 'media', hora = 'dia';
-  // o torcedor 3D (item 69, PR 2: render/torcedor3d.js) nos blocos mais perto, quando a torcida existe (ligarTorcida)
-  let tor = null;
+  // o torcedor 3D (item 69, PR 2: render/torcedor3d.js) nos blocos mais perto, quando a torcida existe (ligarTorcida), e o
+  // impostor octaédrico da torcida no meio (PR 3: render/impostor.js; assa quando o modelo do torcedor chega)
+  let tor = null, imp = null;
   let chave = '', inst = 0, nBlocos = 0, ligado = true, medidor = opc.medidor ?? null, torPronto = false;
   // o orçamento de triângulos do quadro (puro: cadeiras-dados.js) e o que ele deu neste quadro
   const orc = criarOrcamento3D({ qualidade: qual });
@@ -114,6 +116,8 @@ export function criarCadeiras3D(opc) {
       camOrc.obj = camera; camOrc.x = cam.x; camOrc.y = cam.y; camOrc.z = cam.z; camOrc.fx = cam.fx; camOrc.fy = cam.fy; camOrc.fz = cam.fz;
       camOrc.fov = cam.fov; camOrc.deJogo = !!deJogo;
       tor?.preparar();
+      // o impostor: assa quando o modelo chegou; os blocos dele pelos px da cadeira (na TV da Média, nenhum)
+      if (imp) { if (tor?.modelo) imp.preparar(tor.modelo); imp.atualizar(cam, !!deJogo, semCa); }
       // o torcedor 3D passou a desenhar (o modelo chegou, a torcida voltou ao desenho) ou deixou: a escolha inteira de novo
       // (as pessoas primeiro — subindo aos poucos, as cadeiras que já ocupam o orçamento não dariam lugar a elas)
       const tp = !!tor && tor.pronto;
@@ -125,20 +129,23 @@ export function criarCadeiras3D(opc) {
         const at = orc.atual, antB = ctx.semAnteriores ? new Set() : at.blocos;
         const r = escolherBlocos(grade.blocos, cam, antB, { teto, semSetor: semCa ? 3 : null });
         const dt = tor ? tor.desejo(r.lista, cam, ctx.semAnteriores ? new Map() : at.fileiras) : null;
-        desejo = { blocos: r.lista.map(i => ({ i, px: r.px.get(i), n: grade.blocos[i].n })), fileiras: dt ? dt.fileiras : [], tri: dt ? dt.tri : [0, 0], triCadeira: G.triangulos };
+        // cada cadeira do bloco custa a cadeira e, com o torcedor 3D pronto, o quadro de quem senta nela (a densidade real:
+        // as fileiras sem 3D na malha perto da torcida, 2 triângulos por pessoa — o teto, com toda cadeira ocupada)
+        desejo = { blocos: r.lista.map(i => ({ i, px: r.px.get(i), n: grade.blocos[i].n })), fileiras: dt ? dt.fileiras : [], tri: dt ? dt.tri : [0, 0], triCadeira: G.triangulos + (tp ? 2 : 0) };
       }
       // o que cabe no orçamento (as pessoas primeiro; histerese; no corte, nada neste quadro)
       const plano = orc.planejar(desejo, ctx);
       const lista = [...plano.blocos].sort((p, q) => p - q);
       const k = lista.join(',');
       if (k !== chave) { chave = k; aplicar(lista); }
-      // os torcedores 3D: só nas fileiras do plano (sentados nas cadeiras 3D dele; na TV, nenhum)
-      tor?.aplicarEscolha(plano.fileiras);
+      // os torcedores 3D: só nas fileiras do plano (sentados nas cadeiras 3D dele; na TV, nenhum) e a densidade real dos
+      // blocos do plano (as outras fileiras na malha perto da torcida)
+      tor?.aplicarEscolha(plano.fileiras, plano.blocos);
       // pré-carga: só o 1º quadro com 0 instâncias (o programa compila); depois, desenhada só com alguma cadeira
       if (precarga) { precarga = false; mesh.visible = true; } else mesh.visible = mesh.count > 0;
       // o que o 3D de perto vai desenhar neste quadro (o resto do próximo quadro é o total menos isto)
-      const vis = naCena(), gc = vis && mesh.visible ? mesh.count * G.triangulos : 0, gt = vis && tor ? tor.desenhados : 0;
-      orc.gastou(gc + gt, { cadeiras: gc, torcedores: gt });
+      const vis = naCena(), gc = vis && mesh.visible ? mesh.count * G.triangulos : 0, gt = vis && tor ? tor.desenhados : 0, gp = vis && tor ? tor.trianguloPerto : 0;
+      orc.gastou(gc + gt + gp, { cadeiras: gc, torcedores: gt, perto: gp });
     },
     /**
      * O orçamento agora (testes e medidas): {alvo, resto (o último desenho menos o 3D de perto dele), orcamento (alvo −
@@ -148,19 +155,24 @@ export function criarCadeiras3D(opc) {
     get orcamento() { return { ...orc.estado, medido: !!medidor }; },
     /** De onde vem o total do último desenho: () → {frame, triangles} (renderer.info.render). */
     definirMedidor(fn) { medidor = fn ?? null; },
-    definirHora(h) { hora = h; mat.color.setScalar(h === 'noite' ? 0.5 : 1); tor?.definirHora(h); },
+    definirHora(h) { hora = h; mat.color.setScalar(h === 'noite' ? 0.5 : 1); tor?.definirHora(h); imp?.definirHora(h); },
     /** A torcida do estádio (render/torcida.js) existe: liga o torcedor 3D nos blocos de perto (o modelo baixa fora da Baixa). */
     ligarTorcida(torcida) {
       if (tor || !torcida || !torcida.dados) return;
       tor = criarTorcedores3D({ grupo: opc.grupo, grade, torcida, qualidade: qual, hora });
+      if (torcida.ligarImpostor) imp = criarImpostor({ torcida, grade, qualidade: qual, hora });
     },
     /** O torcedor 3D agora (testes e medidas): {carregado, torcedores, blocos, triangulos, lods: [nível 0, nível 1]}. */
-    get torcedores() { return tor ? { carregado: tor.carregado, torcedores: tor.torcedores, blocos: tor.blocos, triangulos: tor.triangulos, lods: tor.lods } : null; },
+    get torcedores() { return tor ? { carregado: tor.carregado, torcedores: tor.torcedores, blocos: tor.blocos, triangulos: tor.triangulos, lods: tor.lods, perto: tor.perto, pessoas: tor.pessoas } : null; },
+    /** O impostor da torcida agora (testes e medidas: render/impostor.js estado), ou null. */
+    get impostor() { return imp ? imp.estado : null; },
+    /** O impostor (testes: o resultado do assamento, o mapa dos blocos, os uniforms). */
+    get impostorObj() { return imp; },
     /** O torcedor 3D (testes: as malhas, o modelo e a VAT). */
     get torcedor3d() { return tor; },
     /** Liga/desliga (testes: o mesmo quadro com e sem as cadeiras 3D; desligadas, a pintura volta em todo bloco). */
     ligar(v) { const era = ligado; ligado = !!v; if (ligado && !era) { chave = ''; orc.replanejar(); } },
-    definirQualidade(q) { teto = CADEIRAS3D.teto[q] ?? teto; qual = q; chave = ''; orc.definirQualidade(q); tor?.definirQualidade(q); },
-    dispose() { tor?.dispose(); opc.grupo.remove(mesh); geo.dispose(); mat.dispose(); mesh.dispose?.(); U.uPertoN.value = 0; },
+    definirQualidade(q) { teto = CADEIRAS3D.teto[q] ?? teto; qual = q; chave = ''; orc.definirQualidade(q); tor?.definirQualidade(q); imp?.definirQualidade(q); },
+    dispose() { imp?.dispose(); tor?.dispose(); opc.grupo.remove(mesh); geo.dispose(); mat.dispose(); mesh.dispose?.(); U.uPertoN.value = 0; },
   };
 }

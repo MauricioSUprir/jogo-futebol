@@ -3379,7 +3379,8 @@ async function iniciar() {
   campo.definirHora(hora);
   hud.progresso('Enchendo as arquibancadas…');
   await proximoQuadro();
-  torcida = criarTorcida(cena3d.cena, { qualidade: qAtual, mascara: mascaraDaIdentidade(IDENT), hora, identidade: IDENT });
+  // programas: os do renderizador (o impostor da torcida confere o dele: não compilou, o quadro SDF de volta — item 69, PR 3)
+  torcida = criarTorcida(cena3d.cena, { qualidade: qAtual, mascara: mascaraDaIdentidade(IDENT), hora, identidade: IDENT, programas: () => cena3d.info().programs ?? [] });
   // o torcedor 3D de perto (item 69, PR 2) senta nas cadeiras 3D quando elas chegam (render/torcedor3d.js)
   campo.ligarTorcida(torcida);
   hud.progresso('Montando os jogadores…');
@@ -4340,6 +4341,16 @@ const api = {
     /** O torcedor 3D (testes: as malhas, o modelo e a VAT de render/torcedor3d.js) e a torcida (os dados do quadro). */
     get torcedor3d() { return campo?.torcedor3d ?? null; },
     get torcidaObj() { return torcida ?? null; },
+    /**
+     * O IMPOSTOR octaédrico da torcida (item 69, PR 3: render/impostor.js): {pronto, assando, falhou, ms, spec, blocos,
+     * torcedores, mapeados} do impostor, a parte da torcida {ligado, falhou, torcedores, grupos, perto} e o objeto (testes).
+     */
+    get impostor() {
+      if (!campo || !torcida) return null;
+      const t = torcida.impostor;
+      return { ...(campo.cadeiras.impostor ?? { pronto: false }), torcida: { ligado: t.ligado, falhou: t.falhou, torcedores: t.torcedores, grupos: t.grupos, perto: t.perto, precarga: t.precarga } };
+    },
+    get impostorObj() { return campo?.impostorObj ?? null; },
     /** As malhas das arquibancadas neste quadro: nome, visível, triângulos, em escada (item 69). */
     get arquibancadas() { return campo ? campo.arquibancadas : null; },
     /** Mostra/esconde as cadeiras 3D de perto (conferência nos testes: o mesmo quadro com e sem elas). */

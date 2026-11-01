@@ -661,8 +661,8 @@ export function criarOrcamento3D(opc = {}) {
       atual = { blocos: r.blocos, fileiras: r.fileiras };
       return r;
     },
-    /** O que o 3D de perto vai desenhar neste quadro: tri (o total) e o detalhe {cadeiras, torcedores}. */
-    gastou(tri, det = {}) { pendente = tri; gasto = { total: tri, cadeiras: det.cadeiras ?? 0, torcedores: det.torcedores ?? 0 }; },
+    /** O que o 3D de perto vai desenhar neste quadro: tri (o total) e o detalhe {cadeiras, torcedores, perto (a malha perto da torcida: a densidade real)}. */
+    gastou(tri, det = {}) { pendente = tri; gasto = { total: tri, cadeiras: det.cadeiras ?? 0, torcedores: det.torcedores ?? 0, perto: det.perto ?? 0 }; },
     /**
      * A qualidade mudou: o alvo dela e o resto medido de novo (o próximo desenho ainda é o da qualidade de antes: ignorado;
      * até a medida nova, sem 3D de perto) e a escolha inteira de uma vez.

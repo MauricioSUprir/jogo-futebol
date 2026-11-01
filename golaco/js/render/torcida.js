@@ -27,7 +27,13 @@ import { LUZ_FALSA_GLSL, UNIFORMS_LUZ, atualizarLuzFalsa } from './luz-falsa.js'
 import { criarBandeiras } from './bandeiras.js';
 import { criarSinalizadores } from './sinalizadores.js';
 
-const VERT = /* glsl */`
+/**
+ * Os shaders do quadro (o atlas SDF de hoje). imp (o impostor octaédrico do item 69, PR 3: render/impostor.js, sob demanda)
+ * = {vertPars, vertMain, fragPars, fragMain}: o MESMO programa com um ramo por torcedor (aLod: 0 o quadro, 1 o impostor) — o
+ * quadro SDF continua igual; sem imp (o programa de hoje, a única coisa que a TV do celular desenha), nada do impostor.
+ */
+function shaders(imp = null) {
+  const vert = /* glsl */`
 #include <common>
 #include <fog_pars_vertex>
 attribute vec4 aPos;
@@ -52,6 +58,7 @@ vec3 lin(vec3 c) { return c * c * (0.3 + 0.7 * c); }
 ${ESTADO_GLSL}
 ${LUZ_FALSA_GLSL}
 const vec2 CAIXA[${CAIXA_POSE.length}] = vec2[${CAIXA_POSE.length}](${CAIXA_POSE.map(([w, h]) => `vec2(${w.toFixed(3)}, ${h.toFixed(3)})`).join(', ')});
+${imp ? imp.vertPars : ''}
 void main() {
   // o torcedor desenhado em 3D (render/torcedor3d.js, os blocos perto da câmera) sai do quadro: nada a rasterizar
   if (aOculto > 0.5) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
@@ -66,35 +73,40 @@ void main() {
   float pose = est.x;
   float pulo = est.y;
   float bal = est.z;
-  // virado para a câmera, girando só em volta do eixo vertical
-  vec3 paraCam = uCamPos - aPos.xyz;
-  paraCam.y = 0.0;
-  vec3 dir = normalize(paraCam + vec3(1e-4, 0.0, 0.0));
-  vec3 dirX = vec3(dir.z, 0.0, -dir.x);
-  float esc = aPos.w;
-  // o quadro encolhe para a caixa da pose (fração da célula): qx em −w/2…w/2, qy em 0…h
-  vec2 cx = CAIXA[int(pose + 0.5)];
-  float qx = position.x * cx.x;
-  float qy = position.y * cx.y;
-  vec3 p = aPos.xyz + dirX * (qx * ${TORCIDA.largura.toFixed(3)} * esc + bal)
-         + vec3(0.0, qy * ${TORCIDA.altura.toFixed(3)} * esc + pulo, 0.0)
-         + dir * (h2 - 0.5) * 0.08;
-  vec4 mvPosition = viewMatrix * vec4(p, 1.0);
-  gl_Position = projectionMatrix * mvPosition;
-  vUv = vec2((pose + qx + 0.5) / ${TORCIDA.quadros}.0, qy);
   vCamisa = lin(aCamisa.rgb);
   vPele = lin(aPele.rgb);
   vCabelo = lin(aCabelo.rgb);
   vAcento = time > 0.5 ? uAcento1 : uAcento0;
-  float luz = setor < 0.5 ? uLuz.x : (setor < 1.5 ? uLuz.y : (setor < 2.5 ? uLuz.z : uLuz.w));
-  vLuz = luz * (0.88 + 0.24 * fract(h * 7.31));
-  vAltura = qy;
   vFlare = luzFalsa(aPos.xyz + vec3(0.0, 1.2, 0.0));
+  vec4 mvPosition;
+  ${imp ? `vImpModo = step(0.5, aLod);
+  if (aLod > 0.5) {
+${imp.vertMain}
+  } else {` : '{'}
+    // virado para a câmera, girando só em volta do eixo vertical
+    vec3 paraCam = uCamPos - aPos.xyz;
+    paraCam.y = 0.0;
+    vec3 dir = normalize(paraCam + vec3(1e-4, 0.0, 0.0));
+    vec3 dirX = vec3(dir.z, 0.0, -dir.x);
+    float esc = aPos.w;
+    // o quadro encolhe para a caixa da pose (fração da célula): qx em −w/2…w/2, qy em 0…h
+    vec2 cx = CAIXA[int(pose + 0.5)];
+    float qx = position.x * cx.x;
+    float qy = position.y * cx.y;
+    vec3 p = aPos.xyz + dirX * (qx * ${TORCIDA.largura.toFixed(3)} * esc + bal)
+           + vec3(0.0, qy * ${TORCIDA.altura.toFixed(3)} * esc + pulo, 0.0)
+           + dir * (h2 - 0.5) * 0.08;
+    mvPosition = viewMatrix * vec4(p, 1.0);
+    vUv = vec2((pose + qx + 0.5) / ${TORCIDA.quadros}.0, qy);
+    float luz = setor < 0.5 ? uLuz.x : (setor < 1.5 ? uLuz.y : (setor < 2.5 ? uLuz.z : uLuz.w));
+    vLuz = luz * (0.88 + 0.24 * fract(h * 7.31));
+    vAltura = qy;
+  }
+  gl_Position = projectionMatrix * mvPosition;
   #include <fog_vertex>
 }
 `;
-
-const FRAG = /* glsl */`
+  const frag = /* glsl */`
 #include <common>
 #include <fog_pars_fragment>
 uniform sampler2D uAtlas;
@@ -107,25 +119,33 @@ varying vec3 vAcento;
 varying float vLuz;
 varying float vAltura;
 varying vec3 vFlare;
+${imp ? imp.fragPars : ''}
 void main() {
-  vec4 t = texture2D(uAtlas, vUv);
-  // cobertura preservada de longe (mipmap tira opacidade das partes finas): sobe o alfa pelo nível do
-  // mipmap (Castaño, "Computing Alpha Mipmaps"; Golus, "Anti-aliased Alpha Test")
-  vec2 d = fwidth(vUv * uTamAtlas);
-  float nivel = max(0.0, log2(max(max(d.x, d.y), 1e-4)));
-  float a = t.a * (1.0 + 0.22 * nivel);
-  if (a < 0.5) discard;
-  vec3 w = t.rgb / max(t.a, 0.004);
-  float ac = max(0.0, 1.0 - w.r - w.g - w.b);
-  vec3 cor = w.r * vCamisa + w.g * vPele + w.b * vCabelo + ac * vAcento;
-  // a fileira da frente faz sombra nas pernas; o resto pela luz do setor
-  cor *= vLuz * (0.68 + 0.32 * smoothstep(0.08, 0.7, vAltura)) + vFlare;
+  vec3 cor;
+  ${imp ? `if (vImpModo > 0.5) {
+${imp.fragMain}
+  } else {` : '{'}
+    vec4 t = texture2D(uAtlas, vUv);
+    // cobertura preservada de longe (mipmap tira opacidade das partes finas): sobe o alfa pelo nível do
+    // mipmap (Castaño, "Computing Alpha Mipmaps"; Golus, "Anti-aliased Alpha Test")
+    vec2 d = fwidth(vUv * uTamAtlas);
+    float nivel = max(0.0, log2(max(max(d.x, d.y), 1e-4)));
+    float a = t.a * (1.0 + 0.22 * nivel);
+    if (a < 0.5) discard;
+    vec3 w = t.rgb / max(t.a, 0.004);
+    float ac = max(0.0, 1.0 - w.r - w.g - w.b);
+    cor = w.r * vCamisa + w.g * vPele + w.b * vCabelo + ac * vAcento;
+    // a fileira da frente faz sombra nas pernas; o resto pela luz do setor
+    cor *= vLuz * (0.68 + 0.32 * smoothstep(0.08, 0.7, vAltura)) + vFlare;
+  }
   gl_FragColor = vec4(cor, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
   #include <fog_fragment>
 }
 `;
+  return { vert, frag };
+}
 
 // luz por setor: [lado de lá (de frente para +z), fundo +x (de frente para −x), fundo −x (para +x), lado de cá (para −z)]
 function luzDoSol(sol) {
@@ -164,14 +184,20 @@ export function criarTorcida(cena, opc) {
   let mesh = null, material = null, qualidade = null, n = 0, dados = null;
   // quem está desenhado em 3D agora (render/torcedor3d.js): 255 sai do quadro (aOculto); os índices são os de `dados`
   let oculto = null, ocultos = [];
+  // o IMPOSTOR (item 69, PR 3; render/impostor.js liga): o material com os dois ramos (impMat), o aLod por torcedor (255 = em
+  // impostor; o grupo só usa impMat com alguém nele — sem ninguém, o programa de hoje), a malha PERTO (a densidade real nos
+  // blocos das cadeiras 3D, fora das fileiras em 3D) e a conferência do programa (falhou = o quadro SDF de volta)
+  let impMat = null, lod = null, emImp = [], perto = null, precargaImp = false, conferir = 0, falhasAntes = 0, impFalhou = false;
+  const grupos = () => (mesh ? mesh.children.filter(m => m.userData.grupo !== undefined) : []);
   const _frustum = new THREE.Frustum(), _mat = new THREE.Matrix4();
   function desmontar() {
     if (!mesh) return;
     cena.remove(mesh);
     for (const m of mesh.children) m.geometry.dispose();
     material?.dispose();
+    impMat?.dispose();
     uni.uAtlas.value?.dispose();
-    mesh = null;
+    mesh = null; perto = null; impMat = null;
   }
   /** Monta TODOS os torcedores (os da Alta) uma vez; a qualidade só escolhe quantos desenhar. */
   function montar() {
@@ -189,7 +215,8 @@ export function criarTorcida(cena, opc) {
     tex.needsUpdate = true;
     uni.uAtlas.value = tex;
     uni.uTamAtlas.value.set(at.largura, at.altura);
-    material = new THREE.ShaderMaterial({ uniforms: uni, vertexShader: VERT, fragmentShader: FRAG, fog: true });
+    const sh = shaders();
+    material = new THREE.ShaderMaterial({ uniforms: uni, vertexShader: sh.vert, fragmentShader: sh.frag, fog: true });
     // um InstancedMesh por grupo (lado de lá, fundo +x, fundo −x, lado de cá frente, lado de cá cima): o mesmo
     // material e o mesmo atlas, cada um com a caixa de corte dos seus torcedores — com a câmera de TV no meio-campo
     // os fundos e o lado de cá ficam fora do quadro e nem chegam à GPU (só 1 chamada de desenho no jogo).
@@ -236,7 +263,7 @@ export function criarTorcida(cena, opc) {
   function aplicarQualidade(q) {
     qualidade = q;
     n = 0;
-    for (const m of mesh.children) { const k = quantosNoSetor(dados, m.userData.grupo, q); m.userData.k = k; m.geometry.instanceCount = k; n += k; }
+    for (const m of grupos()) { const k = quantosNoSetor(dados, m.userData.grupo, q); m.userData.k = k; m.geometry.instanceCount = k; n += k; }
     uni.uAnimada.value = TORCIDA.animada[q] ? 1 : 0;
   }
   montar();
@@ -245,6 +272,105 @@ export function criarTorcida(cena, opc) {
   const bandeiras = criarBandeiras(cena, { qualidade, hora: opc.hora, identidade: ident });
   const sinalizadores = criarSinalizadores(cena, { qualidade, hora: opc.hora });
   let festaVisivel = true;
+  // ---------------------------------------------------------------- o impostor (item 69, PR 3) e a densidade real perto
+  const contarFalhas = () => (opc.programas?.() ?? []).filter(p => p && p.diagnostics && p.diagnostics.runnable === false).length;
+  const QUAD = () => mesh.children[0].geometry;
+  /** A malha PERTO (a densidade real: as pessoas dos blocos das cadeiras 3D fora das fileiras em 3D), com `cap` lugares. */
+  function criarPerto(cap) {
+    const geo = new THREE.InstancedBufferGeometry();
+    geo.setAttribute('position', QUAD().attributes.position);
+    geo.setIndex(QUAD().index);
+    const at = (nome, k, Tipo, normal) => { const a = new THREE.InstancedBufferAttribute(new Tipo(cap * k), k, normal); a.setUsage(THREE.DynamicDrawUsage); geo.setAttribute(nome, a); };
+    at('aPos', 4, Float32Array, false); at('aCamisa', 4, Uint8Array, true); at('aPele', 4, Uint8Array, true); at('aCabelo', 4, Uint8Array, true);
+    at('aInfo', 4, Uint8Array, true); at('aOculto', 1, Uint8Array, true); at('aLod', 1, Uint8Array, true); at('aRumo', 2, Int8Array, true);
+    geo.instanceCount = 0;
+    const m = new THREE.Mesh(geo, impMat ?? material);
+    m.name = 'torcida-perto';
+    m.frustumCulled = false;      // a escolha já é pelo cone da câmera (os blocos das cadeiras 3D)
+    m.visible = false;
+    m.userData = { k: 0, cap };
+    mesh.add(m);
+    return m;
+  }
+  /**
+   * Liga o impostor: imp = {vertPars, vertMain, fragPars, fragMain (o GLSL do render/impostor.js), uniforms (os dele: o
+   * atlas e as contas), rumo: Int8Array(2·n) (cos e sen do rumo de cada torcedor × 127)}. O programa compila no próximo
+   * quadro desenhado (a malha perto com 0 instâncias) e é conferido no seguinte (falhou: o quadro SDF de volta).
+   */
+  function ligarImpostor(imp) {
+    if (!mesh || impFalhou) return false;
+    const sh = shaders(imp);
+    impMat?.dispose();
+    impMat = new THREE.ShaderMaterial({ uniforms: { ...uni, ...imp.uniforms }, vertexShader: sh.vert, fragmentShader: sh.frag, fog: true });
+    impMat.name = 'torcida-impostor';
+    lod = new Uint8Array(dados.n); emImp = [];
+    for (const m of grupos()) {
+      const [i0, i1] = m.userData.faixa;
+      m.geometry.setAttribute('aLod', new THREE.InstancedBufferAttribute(lod.subarray(i0, i1), 1, true));
+      m.geometry.setAttribute('aRumo', new THREE.InstancedBufferAttribute(imp.rumo.subarray(2 * i0, 2 * i1), 2, true));
+      m.userData.nImp = 0;
+      m.material = material;
+    }
+    if (!perto) perto = criarPerto(256);
+    else if (perto.userData.k) { const L = perto.geometry.attributes.aLod; L.array.fill(255, 0, perto.userData.k); L.needsUpdate = true; }
+    falhasAntes = contarFalhas();
+    precargaImp = true;
+    return true;
+  }
+  /** O quadro SDF em tudo (a Baixa, o programa que falhou: `falhou` = para sempre nesta página). */
+  function desligarImpostor(falhou = false) {
+    if (falhou) impFalhou = true;
+    if (!mesh) return;
+    for (const m of grupos()) { m.material = material; m.userData.nImp = 0; }
+    if (lod) { lod.fill(0); for (const m of grupos()) if (m.geometry.attributes.aLod) m.geometry.attributes.aLod.needsUpdate = true; }
+    emImp = [];
+    if (perto) { perto.material = material; const L = perto.geometry.attributes.aLod; L.array.fill(0); L.needsUpdate = true; }
+    impMat?.dispose();
+    impMat = null; precargaImp = false; conferir = 0;
+  }
+  /**
+   * Os torcedores em IMPOSTOR agora (índices de `dados`; os outros, o quadro SDF): só os grupos que mudaram sobem de novo
+   * para a GPU; o grupo sem ninguém em impostor volta ao programa de hoje (o do quadro).
+   */
+  function definirLod(indices) {
+    if (!impMat || !lod) return;
+    const mudou = new Set();
+    const gs = grupos();
+    const grupoDe = i => { for (const m of gs) if (i >= m.userData.faixa[0] && i < m.userData.faixa[1]) return m; return null; };
+    for (const i of emImp) { lod[i] = 0; const m = grupoDe(i); if (m) { mudou.add(m); m.userData.nImp--; } }
+    emImp = Array.from(indices ?? []);
+    for (const i of emImp) { lod[i] = 255; const m = grupoDe(i); if (m) { mudou.add(m); m.userData.nImp++; } }
+    for (const m of mudou) m.geometry.attributes.aLod.needsUpdate = true;
+    for (const m of gs) m.material = m.userData.nImp > 0 ? impMat : material;
+  }
+  /**
+   * As pessoas da densidade real perto (render/impostor-dados.js preencherBloco; as das fileiras sem 3D dos blocos das
+   * cadeiras 3D): P = {n, pos, camisa, pele, cabelo, info, rumo (Int8Array 2n)} ou null. Em impostor se ele está ligado.
+   */
+  function definirPerto(P) {
+    const k = P ? P.n : 0;
+    if (!mesh || (!k && !perto)) return;
+    if (!perto || perto.userData.cap < k) {
+      if (perto) { mesh.remove(perto); perto.geometry.dispose(); }
+      perto = criarPerto(Math.max(256, 1 << Math.ceil(Math.log2(k))));
+    }
+    const A = perto.geometry.attributes;
+    if (k) {
+      A.aPos.array.set(P.pos.subarray(0, 4 * k)); A.aCamisa.array.set(P.camisa.subarray(0, 4 * k));
+      A.aPele.array.set(P.pele.subarray(0, 4 * k)); A.aCabelo.array.set(P.cabelo.subarray(0, 4 * k));
+      A.aInfo.array.set(P.info.subarray(0, 4 * k)); A.aRumo.array.set(P.rumo.subarray(0, 2 * k));
+      A.aOculto.array.fill(0, 0, k); A.aLod.array.fill(impMat ? 255 : 0, 0, k);
+      for (const nome of ['aPos', 'aCamisa', 'aPele', 'aCabelo', 'aInfo', 'aRumo', 'aOculto', 'aLod']) {
+        const a = A[nome];
+        a.clearUpdateRanges?.(); a.addUpdateRange?.(0, k * a.itemSize); a.needsUpdate = true;
+      }
+    }
+    perto.userData.k = k;
+    perto.geometry.instanceCount = k;
+    perto.material = impMat ?? material;
+    perto.visible = k > 0;
+  }
+
   // pré-carga: no 1º quadro desenhado os grupos fora do quadro (o lado de cá, os fundos) vão para a GPU com 0
   // instâncias — geometria enviada e programa pronto, nenhuma chamada de desenho —, para a 1ª vez que aparecem (um
   // corte de câmera) não engasgar nem subir a memória da GPU no meio do jogo
@@ -289,11 +415,21 @@ export function criarTorcida(cena, opc) {
         _frustum.setFromProjectionMatrix(_mat.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
         const dentro = cameraNoLadoDeCa(camera.position);
         if (mesh) {
-          for (const m of mesh.children) {
+          for (const m of grupos()) {
             const ver = !(m.userData.ladoDeCa && dentro) && _frustum.intersectsBox(m.userData.caixa);
             if (precarga && desenha && !ver) { m.visible = true; m.geometry.instanceCount = 0; } else { m.visible = ver; m.geometry.instanceCount = m.userData.k; }
           }
           if (desenha) precarga = false;
+          // a malha perto (a densidade real): só com alguém; a pré-carga do programa do impostor no 1º quadro desenhado
+          // depois de ligar (0 instâncias: compila, nenhuma chamada) e, no seguinte, a conferência dele
+          if (perto) {
+            if (precargaImp && desenha && impMat) { perto.material = impMat; perto.visible = true; perto.geometry.instanceCount = perto.userData.k; precargaImp = false; conferir = 2; }
+            else { perto.visible = perto.userData.k > 0; perto.geometry.instanceCount = perto.userData.k; }
+          }
+          if (conferir && desenha && --conferir === 0 && opc.programas && impMat) {
+            // o programa com o impostor não compilou (o celular sem algo do GLSL 3): o quadro SDF de volta, para sempre
+            if (contarFalhas() > falhasAntes) desligarImpostor(true);
+          }
         }
       }
     },
@@ -306,7 +442,7 @@ export function criarTorcida(cena, opc) {
     ocultar(indices) {
       if (!mesh) return;
       const mudou = new Set();
-      const grupoDe = i => { for (const m of mesh.children) if (i >= m.userData.faixa[0] && i < m.userData.faixa[1]) return m; return null; };
+      const grupoDe = i => { for (const m of grupos()) if (i >= m.userData.faixa[0] && i < m.userData.faixa[1]) return m; return null; };
       for (const i of ocultos) { oculto[i] = 0; const m = grupoDe(i); if (m) mudou.add(m); }
       ocultos = Array.from(indices ?? []);
       for (const i of ocultos) { oculto[i] = 255; const m = grupoDe(i); if (m) mudou.add(m); }
@@ -314,6 +450,18 @@ export function criarTorcida(cena, opc) {
     },
     /** Quantos torcedores estão fora do quadro agora (desenhados em 3D). */
     get nOcultos() { return ocultos.length; },
+    // o impostor (item 69, PR 3: render/impostor.js) e a densidade real perto
+    ligarImpostor, desligarImpostor, definirLod, definirPerto,
+    /**
+     * O impostor agora (testes): {ligado (o programa com os dois ramos existe), falhou, torcedores (em impostor), grupos
+     * (os que usam o programa do impostor), perto (as pessoas da malha perto), programa (o material)}.
+     */
+    get impostor() {
+      const gs = grupos();
+      return { ligado: !!impMat, falhou: impFalhou, torcedores: emImp.length, grupos: gs.filter(m => m.material === impMat && impMat).map(m => m.name), perto: perto ? perto.userData.k : 0, precarga: precargaImp || conferir > 0, material: impMat };
+    },
+    /** A malha perto (testes). */
+    get malhaPerto() { return perto; },
     definirHora(h) { uni.uLuz.value.set(...(h === 'noite' ? LUZ.noite : LUZ.dia)); bandeiras.definirHora(h); sinalizadores.definirHora(h); },
     definirQualidade(q) { if (q !== qualidade && TORCIDA.ocupacao[q]) { aplicarQualidade(q); bandeiras.definirQualidade(q); sinalizadores.definirQualidade(q); } },
     /** Faixas/bandeiras/bandeirões e sinalizadores (testes e prints). */
