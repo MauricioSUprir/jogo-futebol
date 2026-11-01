@@ -735,3 +735,24 @@ e as cadeiras 3D mostravam os vazios.
 - **Cair sempre para o que funciona**: a Baixa, sem o modelo (a rede), o assamento que falhou e o programa que não compila
   (a torcida confere os programas do renderizador no quadro seguinte à pré-carga: `diagnostics.runnable` falso) = o quadro
   SDF de hoje, para sempre naquela página (`teste-estadio` 14e e 15).
+- **Medido** (antes = a main 5e2ecd16, depois = este PR; `tools/medir-cadeiras.mjs --tm`, a mesma página, a mesma semente;
+  `teste-prejogo`; o tempo por plano com `desenhar` + a leitura de 1 px, no Chromium sem GPU — o SwiftShader desenha na CPU,
+  então o custo por PIXEL do impostor aparece, exagerado: a leitura de textura dele é cara):
+  - **TV de jogo**: celular Média IGUAL nos 4 estádios (padrão 29 chamadas / 99,8 mil triângulos, Maracanã 28/78,4, Aflitos
+    27/67,9, San Siro 28/77,4; nenhum torcedor em impostor, o programa de hoje; ~255–290 ms no SwiftShader nos dois); PC Alta
+    igual em chamadas e triângulos (29/192,0 mil no padrão) com ~5,9 mil torcedores em impostor (SwiftShader 412–434 → 460–504 ms).
+  - **Pior plano do pré-jogo no celular Média**: IGUAL (padrão 40/127,8 mil, Maracanã 38/125,3, Aflitos 37/99,8, San Siro
+    37/123,6 — os planos aéreos, sem 3D nem impostor); o impostor aparece na entrada, na organizada, no lado de lá e nos
+    visitantes (até ~2,7 mil torcedores no padrão), sem triângulo nem chamada a mais.
+  - **Câmeras de perto do celular**: +1 chamada (a malha perto, só com alguém nela) e +0,4 a +2,1 mil triângulos (as pessoas da
+    densidade real: 2 por pessoa na malha perto e mais gente nas fileiras em 3D — no San Siro do lado 56 → 70 em 3D), dentro do
+    orçamento de cada quadro (padrão: gol 20/92,0 → 21/92,6 mil, atrás 25/111,6 → 26/112,1, lado 24/110,3 → 25/110,8, frente
+    23/101,8 → 24/102,3); 1,8–2,9 mil torcedores em impostor no padrão, 0,3–1 mil no Maracanã e nos genéricos. No SwiftShader
+    esses planos ficam +30 a +80% mais lentos (gol 292 → 383 ms, frente 389 → 708; o recorte pela cobertura antes da 2ª
+    textura e o peso mínimo de 0,04 tiraram ~13% disso).
+  - **Câmeras de perto do PC**: +1 chamada e, com a densidade real, mais gente em 3D nos genéricos e no Maracanã (San Siro de
+    frente 104 → 387 torcedores 3D, 122,0 → 205,6 mil triângulos; Maracanã de frente 385 → 826, 173,2 → 257,3 mil), sempre
+    abaixo do alvo de 400 mil; no padrão +0,2 a +1,5 mil (gol 367,1 → 368,6, atrás 382,0 → 382,1).
+  - **O assamento**: Média 6 × 6 fotos de 20 × 32 em ~130 ms de CPU, Alta 8 × 8 de 28 × 44 em ~330 ms (no navegador desta
+    máquina, em fatias no tempo ocioso; pronto ~1 s depois do modelo); na GPU ~3,5 MB (Média) e ~12 MB (Alta); fora do
+    download inicial (folga do `teste-carga` 1014,7 KB).

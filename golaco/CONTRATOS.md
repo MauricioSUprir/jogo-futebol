@@ -4387,6 +4387,9 @@ nada do fecho do hash muda (`tools/fecho-hash.mjs --diff origin/main` = 0; `hash
   impostor), 14d (celular e PC: pronto, a TV da Média sem impostor, de perto o mesmo custo com outra imagem, a Baixa, a
   malha perto no gasto), 14e (o programa que não compila volta ao SDF), 15 (sem o modelo, o SDF), 14b/14c com a malha perto.
   Custo com `tools/medir-cadeiras.mjs` (agora espera o impostor e mostra os blocos e torcedores dele).
+- Medido (PESQUISA-ESTADIO §16, `tools/medir-cadeiras.mjs --tm`): a TV de jogo do celular e o pior plano do pré-jogo IGUAIS
+  nos 4 estádios (padrão 29/99,8 mil e 40/127,8 mil); de perto no celular +1 chamada e +0,4–2,1 mil triângulos (a densidade
+  real), no orçamento; o PC até 257 mil de perto (alvo 400 mil); o impostor em si não muda chamada nem triângulo.
 - Para o PR 4 (os 523 estádios e a calibração): a densidade real vale em qualquer planta (a grade); a escala do quadro nos
   genéricos (até 1,3–1,5 no SDF) fica limitada a 1,25 no impostor — calibrar com os estádios; o retângulo e o atlas não
   dependem do estádio.

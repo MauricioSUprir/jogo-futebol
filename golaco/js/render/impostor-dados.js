@@ -22,7 +22,7 @@
 // O ASSAMENTO é na CPU (um rasterizador de triângulos com 2×2 amostras por pixel e teste de profundidade), em fatias de
 // alguns ms (criarAssador: o 1º quadro não espera) — o mesmo resultado bit a bit no Node (tools/teste-torcida.mjs H) e no
 // navegador; nenhum estado do WebGL. Fontes em PESQUISA-ESTADIO.md §16.
-import { TORCEDOR3D, REGIAO, variacaoDe } from './torcedor-dados.js';
+import { TORCEDOR3D, REGIAO } from './torcedor-dados.js';
 import { CADEIRA } from './cadeiras-dados.js';
 
 export const IMPOSTOR = Object.freeze({
@@ -535,6 +535,3 @@ export function preencherBloco(assentos, ocup, dados, q, eixo, opc = {}) {
   }
   return { n, origem, assento, pos, camisa, pele, cabelo, info, desenhados, daTorcida, novos };
 }
-
-/** A variação (homem/mulher) de um torcedor pelas sementes dele (a do torcedor 3D: variacaoDe). */
-export const variacaoDoTorcedor = (pele, info, t) => variacaoDe(pele[4 * t + 3] / 255, info[4 * t + 3] / 255);
