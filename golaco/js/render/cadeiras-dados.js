@@ -380,13 +380,16 @@ export function criarGradeAnel(A) {
     // o ponto da fileira no ângulo t: por metro o s dela muda com o ângulo (a fileira não é a curva de s constante)
     const sEm = t => (M ? (limites(r, t) ?? [0, 0, sA])[2] : sA);
     const naFileira = t => A.ponto(t, sEm(t));
-    const e = 1e-3, [xa, za] = naFileira(th - e), [xb, zb] = naFileira(th + e);
-    let tx = xb - xa, tz = zb - za; const lt = Math.hypot(tx, tz) || 1; tx /= lt; tz /= lt;
-    let nx = -tz, nz = tx;
-    if (nx * -x + nz * -z < 0) { nx = -nx; nz = -nz; }
     // as bordas dela estão a ±(1 − c)/(4n) do centro em u
     const du = (1 - corredorDe(r, h)) / (4 * r.nh[h]);
     const [x1, z1] = naFileira(tr.thDe(u - du, sA)), [x2, z2] = naFileira(tr.thDe(u + du, sA));
+    // a direção da fileira: a tangente no centro (nas plantas por fração, como antes) ou, por metro, a corda entre as bordas
+    // (a tangente pontual pegava as quinas da fileira por metro e virava a cadeira até 80° da vizinha)
+    let tx, tz;
+    if (M) { tx = x2 - x1; tz = z2 - z1; } else { const e = 1e-3, [xa, za] = A.ponto(th - e, sA), [xb, zb] = A.ponto(th + e, sA); tx = xb - xa; tz = zb - za; }
+    const lt = Math.hypot(tx, tz) || 1; tx /= lt; tz /= lt;
+    let nx = -tz, nz = tx;
+    if (nx * -x + nz * -z < 0) { nx = -nx; nz = -nz; }
     // (por metro: o dobro da MENOR meia largura, com 6% de folga — onde a curva aperta a fileira, a meia largura da vizinha
     // é menor que a desta e a cadeira 3D passava dela 1 cm; nas plantas por fração, a distância entre as bordas, como antes)
     const larg = M ? 1.88 * Math.min(Math.hypot(x - x1, z - z1), Math.hypot(x2 - x, z2 - z)) : Math.hypot(x2 - x1, z2 - z1);

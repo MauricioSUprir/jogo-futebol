@@ -284,13 +284,19 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   // até 2,5 m com as mesmas fileiras (os Aflitos: 22–26 m nos lados, 10–12 m a ±30° deles): o caimento passava de 50° e a
   // fileira afinava até 5 cm. Onde a superelipse já é mais funda, nada muda.
   const _wB = [0, 0, 0, 0];
-  const cosFrente = th => { const e = 1e-3, r = rF(th), d = (rF(th + e) - rF(th - e)) / (2 * e); return 1 / Math.sqrt(1 + (d / r) ** 2); };
+  // (a derivada pela diferença de ±0,6°: as tabelas de rF e rB são lineares por trecho de 0,1°, e a de 1e-3 rad via a quina
+  // de cada trecho — a fileira por metro saía com quinas de até 60°)
+  const cosFrente = th => { const e = 0.01, r = rF(th), d = (rF(th + e) - rF(th - e)) / (2 * e); return 1 / Math.sqrt(1 + (d / r) ** 2); };
   const rB = tabela(th => {
     const b = rB0(th);
     pesos(th, _wB);
     let D = 0;
     for (let k = 0; k < 4; k++) D += _wB[k] * LD[k].prof;
-    return D > 0 ? Math.max(b, rF(th) + D / Math.max(0.5, cosFrente(th))) : b;
+    if (!(D > 0)) return b;
+    // (o máximo SUAVE: com o máximo seco a fileira por metro fazia uma quina onde o fundo troca de curva, e as cadeiras de
+    // cada lado da quina viravam até 50° uma da outra)
+    const f = rF(th) + D / Math.max(0.5, cosFrente(th)), k = 4;
+    return (b + f + Math.sqrt((b - f) * (b - f) + k * k)) / 2;
   });
 
   // ---------------------------------------------------------------- perfil de cada lado (s: 0 = 1ª fileira, 1 = última)
@@ -733,7 +739,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
     if (l) for (const [cx, cz, r] of l) if (Math.hypot(x - cx, z - cz) <= r) return true;
     return false;
   }
-  const cosDe = fr => tabela(th => { const e = 1e-3, r = fr(th), d = (fr(th + e) - fr(th - e)) / (2 * e); return 1 / Math.sqrt(1 + (d / r) ** 2); });
+  const cosDe = fr => tabela(th => { const e = 0.01, r = fr(th), d = (fr(th + e) - fr(th - e)) / (2 * e); return 1 / Math.sqrt(1 + (d / r) ** 2); });
   let _cF = null, _cB = null;
   const dp = th => { if (!_cF) { _cF = cosDe(rF); _cB = cosDe(rB); } const D = rB(th) - rF(th); return [D * _cF(th), D * _cB(th)]; };
   function dS(th, s) { const [a, b] = dp(th); return a * s + ((b - a) * s * s) / 2; }

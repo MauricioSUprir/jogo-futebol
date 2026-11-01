@@ -28,8 +28,10 @@
 //       verdade mais as fileiras da frente (a TV); o homônimo da mesma cidade com a forma da entrada principal.
 //   node tools/teste-cadeiras-estadios.mjs [--js <pasta js>] [--so chave1,chave2] [--rapido (1 em 6 genéricas)] [--lista]
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
+import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { tabelaTexto, fmt } from './lib/medidas.mjs';
 
 const args = process.argv.slice(2);
@@ -37,6 +39,8 @@ const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] :
 const pastaJs = path.resolve(arg('--js', path.join(path.dirname(new URL(import.meta.url).pathname), '../js')));
 const SO = arg('--so', null)?.split(',').map(s => s.trim()).filter(Boolean) ?? null;
 const RAPIDO = args.includes('--rapido');
+// as genéricas em linhas de execução paralelas (o padrão: até 3, os núcleos da máquina − 1)
+const PAR = Math.max(1, Math.min(3, Number(arg('--par', Math.max(1, (os.availableParallelism?.() ?? os.cpus().length) - 1))) || 1));
 const imp = f => import(pathToFileURL(path.join(pastaJs, f)).href);
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
 let falhas = 0;
@@ -267,6 +271,12 @@ for (const [k, e] of Object.entries(BASE.estadios)) {
   else semForma.push([k, e]);
 }
 const amostraG = genericas.filter(([k], i) => (!SO || SO.includes(k)) && (!RAPIDO || i % 6 === 0));
+if (!isMainThread) {
+  // a linha de execução de uma fatia das genéricas: mede e devolve (o resto do teste roda na principal)
+  const medir = ([k, e]) => { const P = GE.criarPlantaGenerica(GE.validarFormaGenerica(e.forma)); const N = medirGeometria(P), T = medirTorcida(P), d = medirDensidade(P, T.dados); return [P.familia, k, N, { n: T.n, fora: T.fora, dois: T.dois, eMax: T.eMax, eMin: T.eMin }, d, N.cadeiras / e.capacidade]; };
+  parentPort.postMessage(workerData.chaves.map(k => medir([k, BASE.estadios[k]])));
+  process.exit(0);
+}
 const R = { familias: new Map() };
 const ac = fam => { let a = R.familias.get(fam); if (!a) R.familias.set(fam, a = { n: 0, cad: 0, caim34: 0, caimMax: 0, fil06: 0, fil07: 0, filMin: Infinity, fora: 0, naEscada: 0, solidos: 0, sobre: 0, escadas: [], runs2: 0, runs1: 0, viol: [], solEx: new Map(), tFora: 0, tDois: 0, eMax: 0, eMin: Infinity, dens: [], razoes: [], piores: [] }); return a; };
 function juntar(fam, chave, N, T, dens, razao) {
@@ -293,12 +303,22 @@ if (maracana && (!SO || SO.includes('maracana'))) {
   const N = medirGeometria(P), T = medirTorcida(P), d = medirDensidade(P, T.dados);
   juntar('maracanã', 'maracana', N, T, d, N.cadeiras / maracana[1].capacidade);
 }
-// as genéricas
-for (const [k, e] of amostraG) {
+// as genéricas (em PAR linhas de execução: cada uma mede a sua fatia e devolve as medidas)
+const medirGenerica = ([k, e]) => {
   const P = GE.criarPlantaGenerica(GE.validarFormaGenerica(e.forma));
   const N = medirGeometria(P), T = medirTorcida(P), d = medirDensidade(P, T.dados);
-  juntar(P.familia, k, N, T, d, N.cadeiras / e.capacidade);
-}
+  return [P.familia, k, N, { n: T.n, fora: T.fora, dois: T.dois, eMax: T.eMax, eMin: T.eMin }, d, N.cadeiras / e.capacidade];
+};
+if (PAR > 1 && amostraG.length > 6) {
+  const fatias = Array.from({ length: PAR }, (_, w) => amostraG.filter((_, i) => i % PAR === w).map(([k]) => k));
+  const res = await Promise.all(fatias.map(ch => new Promise((ok, erro) => {
+    const w = new Worker(fileURLToPath(import.meta.url), { workerData: { chaves: ch }, argv: args.filter((a, i) => a !== '--par' && args[i - 1] !== '--par').concat(['--par', '1']) });
+    w.once('message', ok); w.once('error', erro);
+  })));
+  let n = 0;
+  for (const lista of res) for (const r of lista) { juntar(...r); n++; }
+  if (n !== amostraG.length) reg('as linhas de execução devolveram todas as genéricas', `${n} de ${amostraG.length}`, 'todas', false);
+} else for (const g of amostraG) juntar(...medirGenerica(g));
 const todas = [...R.familias.values()];
 const soma = f => todas.reduce((t, a) => t + f(a), 0);
 const nomeFam = [...R.familias.keys()];
@@ -406,13 +426,17 @@ const nomeFam = [...R.familias.keys()];
   const testes = [caps[0], pct(caps, 0.25), pct(caps, 0.5), pct(caps, 0.9)];
   const res = [];
   let ok = true;
+  const FL = CD.fileirasGolaco('lado');
   for (const cap of testes) {
     const Rr = TD.gerarTorcidaNiveis(null, { capacidade: cap, publico: 1 }, null);
-    // as fileiras da frente (TORCIDA.frente) contadas à parte: cheias para a TV
+    // as fileiras da frente do lado de lá (TD.TORCIDA.frente: as da TV, cheias) contadas à parte
     let nf = 0, nAlta = 0;
-    for (let i = 0; i < Rr.n; i++) { if (Rr.nivel[i] <= 2) nAlta++; }
-    const R1 = TD.gerarTorcidaNiveis(null, { capacidade: 1, publico: 1 }, null);
-    for (let i = 0; i < R1.n; i++) if (R1.nivel[i] <= 2) nf++;
+    for (let i = 0; i < Rr.n; i++) {
+      if (Rr.nivel[i] > 2) continue;
+      nAlta++;
+      const st = Math.round(Rr.info[4 * i + 1] / 85), y = Rr.pos[4 * i + 1];
+      if (st === 0 && y < FL[TD.TORCIDA.frente].y - 1e-3) nf++;
+    }
     const teto = cap + nf;
     res.push(`${cap} lugares: ${nAlta} na Alta (teto ${teto})`);
     if (nAlta > teto || (cap >= 0.9 * capG && nAlta < 0.85 * Math.min(cap, capG))) ok = false;
