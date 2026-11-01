@@ -178,6 +178,14 @@
   #radio span { display:block; font-size:13px; line-height:1.35; }
   @media (max-height: 520px) { #radio span { font-size:11px; } #radio b { font-size:10.5px; } #radio { padding:5px 10px; } #radio .retrato { width:28px; height:28px; font-size:10px; } }
   #cenaHist { position:fixed; inset:0; z-index:6; pointer-events:auto; touch-action:none; }
+  /* EDIÇÃO PESSOAL: o quadro de vídeo das cenas (js/estudio.js desenha o Cortex ou a TV dentro dele, na imagem do jogo) */
+  #quadroVideo { position:fixed; z-index:5; left:max(2.5vw, calc(env(safe-area-inset-left) + 10px)); top:13vh; width:min(31vw, 420px); aspect-ratio:16/9; border:1px solid rgba(110,200,255,.6); border-radius:6px; box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 6px 24px rgba(0,0,0,.55), 0 0 18px rgba(80,190,255,.2); pointer-events:none; }
+  #quadroVideo[hidden] { display:none; }
+  #quadroVideo .qv-rotulo { position:absolute; left:7px; bottom:6px; display:flex; align-items:center; gap:6px; font:700 10.5px/1 'Rajdhani','Inter',system-ui,sans-serif; letter-spacing:.14em; color:#d5e9ff; background:rgba(4,8,16,.62); padding:4px 7px; border-radius:3px; }
+  #quadroVideo .qv-rotulo i { width:7px; height:7px; border-radius:50%; background:#5fd8ff; }
+  #quadroVideo.tv { border-color:rgba(255,90,80,.6); }
+  #quadroVideo.tv .qv-rotulo i { background:#ff3b30; animation:qvPisca 1s steps(2) infinite; }
+  @keyframes qvPisca { 50% { opacity:.2; } }
   #cenaHist .faixa { position:absolute; left:0; right:0; background:#000; }
   #cenaHist .cima { top:0; height:11vh; }
   #cenaHist .baixo { bottom:0; min-height:21vh; display:flex; gap:14px; align-items:center; padding:10px max(24px,env(safe-area-inset-left)) max(10px,env(safe-area-inset-bottom)); }

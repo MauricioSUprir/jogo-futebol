@@ -20,6 +20,13 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.fbx(filepath=arq, automatic_bone_orientation=False)
 arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
 malha = next(o for o in bpy.data.objects if o.type == 'MESH')
+# as crianças do Rocketbox têm o esqueleto 'Bip02': os mesmos ossos com outro prefixo
+for b in arm.data.bones:
+    if b.name.startswith('Bip02 '): b.name = 'Bip01 ' + b.name[6:]
+for o in bpy.data.objects:
+    if o.type == 'MESH':
+        for vg in o.vertex_groups:
+            if vg.name.startswith('Bip02 '): vg.name = 'Bip01 ' + vg.name[6:]
 
 # 1) pesos: cada grupo de osso tirado vai para o ancestral mais próximo que fica
 def ancestral(nome):
