@@ -813,7 +813,7 @@ por estádio. Não repete o §14–§16 (cadeira de 0,5 m, fileira de 0,8 m, 28 
 | Cores da cadeira × a base | 89 genéricas diferentes, 4 'liso' com 2ª cor, o Maracanã ΔE 10,5 | 0 | uma fonte só (a forma) |
 | Os sem forma: a Alta com mais gente que os lugares | 250 de 418 (2.500 lugares: 25,6 mil torcedores) | só as fileiras da frente do lado de lá (2.500 lugares: 4,3 mil, o teto 4,5 mil) | a lotação pela capacidade |
 | Homônimo sem a forma | o Centenario do Montevideo City Torque | 0 | o gerador copia a forma |
-| Capacidade da grade ÷ a oficial (p50) | tigela 0,76, arena 0,95, inglesa 0,94, pista 0,97, pequeno 1,43 | tigela 0,86, arena 0,81, inglesa 0,91, pista 0,98, pequeno 1,37 (mediana 0,83) | as cunhas preenchidas (+), a fileira de 0,8 m e a escada de 1,3 m (−) |
+| Capacidade da grade ÷ a oficial (p50) | tigela 0,76, arena 0,95, inglesa 0,94, pista 0,97, pequeno 1,43 | tigela 0,86, arena 0,81, inglesa 0,91, pista 0,98, pequeno 1,37 (mediana das 105 plantas 0,88; p10 0,69, p90 1,30) | as cunhas preenchidas (+), a fileira de 0,8 m e a escada de 1,3 m (−) |
 | A carga de uma genérica no Node (planta + grade + lugares) | 118 ms de média, 238 no pior | ~240 ms de média, ~450 no pior | a conta exata de cada cadeira (a perpendicular, a corda, o giro, o sólido perto) |
 
 **O que o PR 4 fez (na FONTE; só desenho)**
@@ -852,3 +852,6 @@ Vila Belmiro —, 2 pistas — Nilton Santos, Almeidão — e 1 sem forma — Zu
   Anfield ia a 131,4 mil: o degrau de perto pagava as fileiras do lado mais fundo em toda a volta.)
 - **Câmeras de perto do celular** (dentro do orçamento de cada quadro): padrão gol 92,7 → 93,1, lado 111,0 → 111,4, frente 102,5
   → 103,0; San Siro gol 104,9 → 96,2, frente 86,5 → 82,3; Anfield gol 101,0 → 92,9; Zubieta frente 64,4 → 60,3.
+- **Câmeras de perto do PC** (meta ≤ 400 mil; as 6 de cada estádio): o padrão no pior plano 28/384,5 → 28/384,8 mil (as escadas
+  novas); o Maracanã igual (pior 257,6); Aflitos 181,0 → 182,3; San Siro 205,8 → 159,9; Anfield 201,5 → 164,0 — os 20 blocos
+  mais perto têm menos cadeiras (a escada de 1,3 m e a fileira de 0,8 m: a frente do San Siro com 544 → 436 cadeiras 3D).

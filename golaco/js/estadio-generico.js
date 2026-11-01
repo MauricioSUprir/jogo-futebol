@@ -42,14 +42,15 @@ const MARCAS = ['arco', 'torres', 'torres_luz', 'rampas_espiral', 'mastros', 'co
 // a pista de atletismo oficial (World Athletics: 400 m, raio de dentro 36,5 m, 8 raias de 1,22 m; as retas de 84,39 m)
 export const PISTA = Object.freeze({ meiaReta: 42.195, raio: 36.5, raias: 8, raia: 1.22 });
 // o caimento das arquibancadas de cadeiras (item 69, PR 4; PESQUISA-ESTADIO.md §17): o teto do degrau mais íngreme
-// (Green Guide 5ª ed. §11/§12.11: 34° com cadeira; aqui 33,6° de folga), os alvos de cada anel da frente para trás (o
-// perfil de C constante: C = 90 dá 22–29° no anel de baixo, 29–31° no do meio e 34–35° no de cima) e a curva dele
+// (Green Guide 5ª ed. §11/§12.11: 34° com cadeira; aqui 33,6° de folga), o máximo que o teste aceita, a curva de cada anel
+// (y = u^pot) e os alvos de cada anel da frente para trás (o perfil de C constante: C = 90 dá 22–29° no anel de baixo,
+// 29–31° no do meio e 34–35° no de cima)
+export const CAIMENTO = Object.freeze({ teto: 33.6, max: 34, pot: 1.12, alvo: Object.freeze({ 1: [34], 2: [27, 33], 3: [25, 30, 33] }) });
 // a torcida das genéricas (item 69, PR 4): o teto de torcedores desenhados (a Alta) e a escala do torcedor — o sorteio de
 // 0,92–1,08 por cima dela fica dentro da escala do impostor (render/impostor-dados.js IMPOSTOR.escala: 0,9–1,25), então a
-// troca do quadro pelo impostor não muda o tamanho de ninguém (antes, até 1,3 × 1,08 × 1,08 = 1,52)
+// troca do quadro pelo impostor não muda o tamanho de ninguém (antes, até 1,3 × 1,08 da metade de cima × 1,08 = 1,52)
 export const TETO_LUGARES = 30000;
 export const TORCEDOR_ESC = Object.freeze([0.98, 1.15]);
-export const CAIMENTO = Object.freeze({ teto: 33.6, max: 34, pot: 1.12, alvo: Object.freeze({ 1: [34], 2: [27, 33], 3: [25, 30, 33] }) });
 const Q = 44;   // a quadra do bairro (m; as ruas de 9 m entre elas: render/estadio-generico.js pinta o chão na mesma grade)
 
 /** As cores das casas e dos prédios e dos telhados por região (a do país do estádio; tools/estadios/gerar-formas.mjs). */
@@ -579,7 +580,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   }
 
   // ---------------------------------------------------------------- lugares da torcida
-  // quantos torcedores desenhados: ~1 por lugar até ~20 mil; nos grandes, até ~25 mil (cada um vale vários lugares)
+  // quantos torcedores desenhados: ~1 por lugar até ~20 mil; nos grandes, até 30 mil (cada um vale vários lugares)
   // (item 69, PR 4: o torcedor na escala de gente — até TORCEDOR_ESC, com o sorteio de ± 8% dentro da escala do impostor,
   // 1,25 — e mais gente nos grandes no lugar de esticar: o teto 25,5 → 30 mil e 0,6 → 0,75 da capacidade)
   const nAlvo = Math.round(Math.min(TETO_LUGARES, 0.75 * F.capacidade + 6000));
@@ -812,7 +813,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
         lista.push(k, f, i, cad.x, y, cad.z, ESC, im, luzDoSol(cad.x, y + 1.2, cad.z));
       }
     }
-    // o teto da torcida (25,5 mil: a Alta do celular): acima dele sai um a cada tanto, sem buraco (pelo sorteio fixo)
+    // o teto da torcida (TETO_LUGARES, 30 mil: a Alta do celular): acima dele sai um a cada tanto, sem buraco (pelo sorteio fixo)
     if (lista.length / 9 > TETO_LUGARES) {
       const k = TETO_LUGARES / (lista.length / 9);
       let w = 0;
