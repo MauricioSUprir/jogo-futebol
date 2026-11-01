@@ -27,7 +27,8 @@
 //     cada ramo pula entre os dois grupos de casos (o 2º a ~2–3 m e a ~6–8 m) e mede QUAIS casos caem de cada lado, não
 //     quanto cada um chega mais perto; pela prova ela reprovaria a mutante em 84% das amostras de 64 partidas e 18% das de
 //     32. A média pareada separa: main 1,82 (1,67–1,96) e corrida 1,95 (1,79–2,11) nas 128; nas 64 do CI, 1,77 (1,57–1,97)
-//     e 1,95 (1,70–2,20); a mutante 0,84 (0,65–1,02). Pela prova, a main reprova em 0,2% das amostras de 32 partidas e 0%
+//     e 1,95 (1,70–2,20) — com a corrida que começa parada (b12ee6b1), 1,93 (1,68–2,18), p = 0,998, o teste inteiro PASSOU
+//     —; a mutante 0,84 (0,65–1,02). Pela prova, a main reprova em 0,2% das amostras de 32 partidas e 0%
 //     das de 64; a mutante em 99,2% e 100%. A amostra foi de 32 para 64 partidas, 7001–7064 (3 processos, 3 vagas no
 //     rodar-testes).)
 //     MUTAÇÃO M3 (o botão não soma pressão): o chamado segue como o 1º homem — sem as duas travas do "um a mais", o `excluir`
