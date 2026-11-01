@@ -68,6 +68,9 @@ const VERT_MAIN = /* glsl */`
     vec2 iF0, iF1, iF2;
     vec3 iW;
     impQuadros(impCodifica(iV), uImpN, iF0, iF1, iF2, iW);
+    // perto de uma foto, as outras pesam quase nada: abaixo de ${I.pesoMin} saem e o resto é renormalizado (menos leituras)
+    iW *= step(${g(I.pesoMin)}, iW);
+    iW /= max(1e-4, iW.x + iW.y + iW.z);
     vec3 iD0 = impDirecao(iF0, uImpN), iD1 = impDirecao(iF1, uImpN), iD2 = impDirecao(iF2, uImpN);
     vec3 iBx0, iBy0, iBx1, iBy1, iBx2, iBy2, iBxv, iByv;
     impBase(iD0, iBx0, iBy0);
@@ -110,24 +113,32 @@ varying vec3 vImpL0;
 varying vec3 vImpL1;
 varying vec3 vImpL2;
 varying vec4 vImpX;
-// uma foto: as regiões e a normal (já vezes a cobertura) somadas pelo peso; N·L no espaço dela
-void impAmostra(vec2 cel, vec2 uv, float w, vec3 L, inout vec4 A, inout vec4 B, inout float ndl) {
-  if (w <= 0.0 || uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return;
-  vec2 c = cel + uv * uImpCel / uImpTam;
-  vec4 ta = texture2D(uImpA, c), tb = texture2D(uImpB, c);
-  A += w * ta;
+// o peso da foto que vale neste pixel (0 fora do retângulo dela) e o ponto no atlas
+float impPeso(vec2 uv, float w) { return (w <= 0.0 || uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) ? 0.0 : w; }
+vec2 impAtlas(vec2 cel, vec2 uv) { return cel + uv * uImpCel / uImpTam; }
+// a 2ª textura de uma foto (a calça, a normal, a altura) somada pelo peso; N·L no espaço dela (a normal × a cobertura)
+void impAmostraB(vec2 c, float w, float a, vec3 L, inout vec4 B, inout float ndl) {
+  if (w <= 0.0) return;
+  vec4 tb = texture2D(uImpB, c);
   B += w * tb;
-  vec2 n = tb.gb * 2.0 - ta.a;
-  ndl += w * dot(vec3(n, sqrt(max(ta.a * ta.a - dot(n, n), 0.0))), L);
+  vec2 n = tb.gb * 2.0 - a;
+  ndl += w * dot(vec3(n, sqrt(max(a * a - dot(n, n), 0.0))), L);
 }
 `;
 const FRAG_MAIN = /* glsl */`
-    vec4 iA = vec4(0.0), iB = vec4(0.0);
-    float iNdl = 0.0;
-    impAmostra(vImpCel01.xy, vImpUv01.xy, vImpW.x, vImpL0, iA, iB, iNdl);
-    impAmostra(vImpCel01.zw, vImpUv01.zw, vImpW.y, vImpL1, iA, iB, iNdl);
-    impAmostra(vImpCel2, vImpUv2, vImpW.z, vImpL2, iA, iB, iNdl);
+    // 1º a cobertura e as regiões (a 1ª textura das 3 fotos): o recorte antes da 2ª textura — metade do quadro é vazio
+    float iW0 = impPeso(vImpUv01.xy, vImpW.x), iW1 = impPeso(vImpUv01.zw, vImpW.y), iW2 = impPeso(vImpUv2, vImpW.z);
+    vec2 iC0 = impAtlas(vImpCel01.xy, vImpUv01.xy), iC1 = impAtlas(vImpCel01.zw, vImpUv01.zw), iC2 = impAtlas(vImpCel2, vImpUv2);
+    vec4 iA0 = iW0 > 0.0 ? texture2D(uImpA, iC0) : vec4(0.0);
+    vec4 iA1 = iW1 > 0.0 ? texture2D(uImpA, iC1) : vec4(0.0);
+    vec4 iA2 = iW2 > 0.0 ? texture2D(uImpA, iC2) : vec4(0.0);
+    vec4 iA = iW0 * iA0 + iW1 * iA1 + iW2 * iA2;
     if (iA.a < ${g(I.alfa)}) discard;
+    vec4 iB = vec4(0.0);
+    float iNdl = 0.0;
+    impAmostraB(iC0, iW0, iA0.a, vImpL0, iB, iNdl);
+    impAmostraB(iC1, iW1, iA1.a, vImpL1, iB, iNdl);
+    impAmostraB(iC2, iW2, iA2.a, vImpL2, iB, iNdl);
     vec3 iWr = iA.rgb / iA.a;
     float iWc = iB.r / iA.a;
     float iAlt = iB.a / iA.a * ${g(I.alturaMax)};
@@ -256,7 +267,7 @@ export function criarImpostor(opc) {
      * Média, nada em impostor), semCa (a câmera dentro do lado de cá: os blocos dele não entram).
      */
     atualizar(cam, deJogo = false, semCa = false) {
-      if (!ligado || !atlas || !torcida.impostor?.ligado) return;
+      if (!ligado || !atlas || !torcida.impostorLigado) return;
       const Q = I.qual[qualidade];
       if (!Q || (deJogo && !Q.naTV) || pausado) { anteriores = new Set(); aplicar(anteriores); return; }
       const r = escolherImpostor(grade.blocos, cam, anteriores, { pxEntra: Q.pxEntra, pxSai: Q.pxSai, teto: Q.teto, nPor: porBloco(), semSetor: semCa ? 3 : null });

@@ -461,6 +461,8 @@ export function criarTorcida(cena, opc) {
       const gs = grupos();
       return { ligado: !!impMat, falhou: impFalhou, torcedores: emImp.length, grupos: gs.filter(m => m.material === impMat && impMat).map(m => m.name), perto: perto ? perto.userData.k : 0, precarga: precargaImp || conferir > 0, material: impMat };
     },
+    /** O programa com o impostor existe (barato: a cada quadro). */
+    get impostorLigado() { return !!impMat; },
     /** A malha perto (testes). */
     get malhaPerto() { return perto; },
     definirHora(h) { uni.uLuz.value.set(...(h === 'noite' ? LUZ.noite : LUZ.dia)); bandeiras.definirHora(h); sinalizadores.definirHora(h); },

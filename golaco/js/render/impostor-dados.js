@@ -32,6 +32,7 @@ export const IMPOSTOR = Object.freeze({
   ss: 2,                 // amostras por pixel em cada eixo no assamento (2×2: a borda suave)
   porLinha: 4,           // objetos (variação × pose) por linha do atlas: 2 × 8 = 16 objetos em 4 × 4
   alfa: 0.5,             // cobertura mínima de um pixel (o recorte, como o do quadro SDF)
+  pesoMin: 0.04,         // no shader, as fotos com peso abaixo disto saem (renormaliza): perto de uma foto, 1–2 leituras
   escala: Object.freeze([0.9, 1.25]),   // a escala do torcedor (aPos.w) no impostor (o maior do quadro vale 1,3–2 lugares)
   favorAnterior: 1.2,    // no teto, o bloco que já estava em impostor vale 20% mais (não pisca na borda do teto)
   fatiaMs: 6,            // ms de assamento por fatia (no tempo ocioso: o 1º quadro não espera)
