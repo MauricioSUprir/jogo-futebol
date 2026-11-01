@@ -16,8 +16,10 @@
 //   T8 nada sobre nada: folga ≥ 4 px entre a faixa (na cena e no jogo) e o placar, o menu, o minimapa (ligado e
 //      desligado), o aviso, o "Pular" e os botões de toque, em 1280×720, 844×390 com entalhe, 667×375 e 568×320; o número
 //      e a palavra nunca cortados; a faixa cobre ≤ 10% da caixa do ator principal; a opção salva vale depois de recarregar;
-//   T9 celular 844×390 Média: p95 da CPU do quadro na cena ≤ p95 do jogo + 1 ms; chamadas de desenho ≤ jogo + 3; os
-//      programas de shader não aumentam na cena (pré-carga); 0 geometria e 0 textura a mais depois de 10 trocas;
+//   T9 celular 844×390 Média: p95 da CPU do quadro na cena ≤ p95 do jogo + 1 ms; chamadas de desenho ≤ jogo + 3 (sem
+//      contar a malha perto da torcida — a densidade real do item 69, PR 3: 1 chamada quando a câmera está perto da
+//      arquibancada, que o teste-estadio 14b/14d confere e o orçamento do 3D de perto paga; a main já ficava no teto, 29 ×
+//      26); os programas de shader não aumentam na cena (pré-carga); 0 geometria e 0 textura a mais depois de 10 trocas;
 //   T10 a placa com ≥ 40 px de largura no celular no plano ENTRA, com os números certos;
 //   T11 com 2, 3, 4 e 5 trocas na mesma parada, cada par na faixa ≥ 1,5 s (cena + jogo) e nenhuma página por < 0,5 s
 //       seguidos (contraprova de 14/10: com 4 e 5 um par NUNCA aparecia; no fim do ENTRA uma página piscava 0,1 s);
@@ -448,22 +450,25 @@ for (const L of roda('L') ? LAYOUTS.filter(L => !telas || telas.some(t => L.nome
             g.reiniciar({ modo: 'partida', semente: 7 });
             for (let i = 0; i < 120; i++) g.relogio.avancar(1000 / 60, { desenhar: i % 4 === 0 });
             g.medirQuadro({ zerar: true });
-            let cham = 0;
-            for (let i = 0; i < 300; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); if (i % 50 === 0) { g.relogio.avancar(1000 / 60, { desenhar: true }); cham = Math.max(cham, g.estado().desenhoChamadas); } }
+            // a malha perto da torcida (a densidade real, item 69 PR 3: render/torcida.js definirPerto) é 1 chamada quando tem
+            // gente (visible = k > 0, sem recorte): fora da conta da cena, que mede o lado de cá e a placa
+            const perto = () => ((g.estadio?.impostor?.torcida?.perto ?? 0) > 0 ? 1 : 0);
+            let cham = 0, pertoJ = 0;
+            for (let i = 0; i < 300; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); if (i % 50 === 0) { g.relogio.avancar(1000 / 60, { desenhar: true }); const p = perto(); pertoJ = Math.max(pertoJ, p); cham = Math.max(cham, g.estado().desenhoChamadas - p); } }
             const jogo = g.medirQuadro({ zerar: true });
             g.substituicaoDeTeste({ parada: 'lateral' });
             let q = 0;
             while (!g.cenaSubst.ativo && q < 400) { g.relogio.avancar(1000 / 60, { desenhar: false }); q++; }
             g.medirQuadro({ zerar: true }); g.cenaSubst.zerarCusto();
-            let chamC = 0, n = 0;
-            while (g.cenaSubst.ativo && n < 500) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; if (n % 25 === 0) { g.relogio.avancar(1000 / 60, { desenhar: true }); chamC = Math.max(chamC, g.estado().desenhoChamadas); } }
-            return { jogo: jogo.cpu, cena: g.medirQuadro({ zerar: true }).cpu, custo: g.cenaSubst.custo, cham, chamC, n };
+            let chamC = 0, n = 0, pertoC = 0;
+            while (g.cenaSubst.ativo && n < 500) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; if (n % 25 === 0) { g.relogio.avancar(1000 / 60, { desenhar: true }); const p = perto(); pertoC = Math.max(pertoC, p); chamC = Math.max(chamC, g.estado().desenhoChamadas - p); } }
+            return { jogo: jogo.cpu, cena: g.medirQuadro({ zerar: true }).cpu, custo: g.cenaSubst.custo, cham, chamC, n, pertoJ, pertoC };
           });
           if (!melhor || r.cena.p95 - r.jogo.p95 < melhor.cena.p95 - melhor.jogo.p95) melhor = r;
           if (r.cena.p95 <= r.jogo.p95 + 1) break;
         }
         meta('T9 celular: p95 da CPU do quadro na cena ≤ p95 do jogo + 1 ms', `cena ${f2(melhor.cena.p95)} ms (média ${f2(melhor.cena.media)}; a cena ${f2(melhor.custo.msPorTick)} ms/tick) × jogo ${f2(melhor.jogo.p95)} ms`, '≤ jogo + 1', melhor.cena.p95 <= melhor.jogo.p95 + 1);
-        meta('T9 celular: chamadas de desenho na cena ≤ jogo + 3 (lado de cá + placa)', `cena ${melhor.chamC} (a 1ª medida: ${chamCena}) × jogo ${melhor.cham}`, `≤ ${melhor.cham + 3}`, melhor.chamC <= melhor.cham + 3);
+        meta('T9 celular: chamadas de desenho na cena ≤ jogo + 3 (lado de cá + placa; sem a malha perto da torcida)', `cena ${melhor.chamC}${melhor.pertoC ? ' + 1 da malha perto' : ''} (a 1ª medida: ${chamCena}) × jogo ${melhor.cham}${melhor.pertoJ ? ' + 1 da malha perto' : ''}`, `≤ ${melhor.cham + 3}`, melhor.chamC <= melhor.cham + 3);
         // a mesma sequência duas vezes: "só a faixa" (o que o JOGO sobe para a GPU na 1ª vez que aparece — o anel do
         // "próximo da troca" na defesa — fica nesta) e depois com a cena (o que crescer aqui é da cena)
         const lotesMem = ligada => pg.evaluate(ligada => {
