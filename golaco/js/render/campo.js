@@ -21,7 +21,7 @@ export const LUZ_GOL = { redeDia: 0xaaadab, redeNoite: 0xaaadab, armDia: 0x2a2c2
 import { cameraNoLadoDeCa } from './torcida-dados.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ } from './luz-falsa.js';
 import { retasAreaTecnica } from '../estadio-forma.js';
-import { fileirasGolaco, gradeGolaco, pintorGolaco, TUNEL, CADEIRAS3D, DEGRAU_LOD } from './cadeiras-dados.js';
+import { fileirasGolaco, gradeGolaco, pintorGolaco, TUNEL, CADEIRAS3D, DEGRAU_LOD, ESCADA_TUNEL, escadaDoPoste } from './cadeiras-dados.js';
 
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
 const L = CAMPO.linha, h = L / 2;
@@ -608,9 +608,15 @@ function criarArquibancada(aniso, qualidade, ident = null) {
     const yT = 17;
     const u1 = (frenteZ + fundoZ) / ARQ.comprimento;
     L2.quad([x0, 0, za], [x0, 0, zb], [x0, yBase, zb], [x0, yBase, za], 0, u1, V_PAREDE, 1);
-    for (const r of FF) {
-      L2.quad([x(r.d0), r.y, za], [x(r.d0), r.y, zb], [x(r.d1), r.y, zb], [x(r.d1), r.y, za], 0, u1, r.v0, r.vm);
-      L2.quad([x(r.d1), r.y, za], [x(r.d1), r.y, zb], [x(r.d1), r.y1, zb], [x(r.d1), r.y1, za], 0, u1, r.vm, r.v1);
+    // a escada do poste do refletor (item 69, PR 4: render/cadeiras-dados.js escadaDoPoste) no concreto da escada (o retalho
+    // da textura: a célula 0, a escada da fileira 17)
+    const ep = escadaDoPoste(s > 0 ? 1 : 2), nA = Math.round(ARQ.comprimento / ARQ.assentoLarg);
+    const zU = u => za + (zb - za) * (u / u1);
+    const trechos = ep ? [[0, ep[0] / nA, false], [ep[0] / nA, (ep[1] + 1) / nA, true], [(ep[1] + 1) / nA, u1, false]] : [[0, u1, false]];
+    for (const r of FF) for (const [ua, ub, esc] of trechos) {
+      const [qa, qb, qv0, qv1] = esc ? [0.002, 0.006, 0.484, 0.49] : [ua, ub, null, null];
+      L2.quad([x(r.d0), r.y, zU(ua)], [x(r.d0), r.y, zU(ub)], [x(r.d1), r.y, zU(ub)], [x(r.d1), r.y, zU(ua)], qa, qb, qv0 ?? r.v0, qv1 ?? r.vm);
+      L2.quad([x(r.d1), r.y, zU(ua)], [x(r.d1), r.y, zU(ub)], [x(r.d1), r.y1, zU(ub)], [x(r.d1), r.y1, zU(ua)], qa, qb, qv0 ?? r.vm, qv1 ?? r.v1, esc ? 0.8 : 1);
     }
     L2.quad([x1, yT, za], [x1, yT, zb], [x1, yT + 5, zb], [x1, yT + 5, za], 0, u1, V_PAREDE, 1);
   }
@@ -658,12 +664,20 @@ function criarLadoDeCa(construtor, tex, A) {
   // mureta da frente dos dois lados da boca
   L.quad([-xA, 0, z0], [-mt, 0, z0], [-mt, yBase, z0], [-xA, yBase, z0], uX(-xA), uX(-mt), V_PAREDE, 1);
   L.quad([mt, 0, z0], [xA, 0, z0], [xA, yBase, z0], [mt, yBase, z0], uX(mt), uX(xA), V_PAREDE, 1);
-  // degraus (piso + espelho): os dois lados inteiros; no meio, só os que passam por cima do teto do túnel
+  // degraus (piso + espelho): os dois lados inteiros; no meio, só os que passam por cima do teto do túnel. Ao lado da
+  // boca, nas fileiras de baixo, as escadas das células ESCADA_TUNEL (item 69, PR 4: a grade tira as cadeiras delas) no
+  // concreto da escada (o retalho CU/CV)
+  const xCel = a => -ARQ.comprimento / 2 + ARQ.assentoLarg * a;
+  const eE = [xCel(ESCADA_TUNEL[0]), -mt], eD = [mt, xCel(ESCADA_TUNEL[3] + 1)];
   for (const r of FL) {
-    const trechos = r.j >= jT ? [[-xA, xA]] : [[-xA, -mt], [mt, xA]];
+    const trechos = r.j >= jT ? [[-xA, xA]] : [[-xA, eE[0]], [eD[1], xA]];
     for (const [xa, xb] of trechos) {
       L.quad([xa, r.y, z(r.d0)], [xb, r.y, z(r.d0)], [xb, r.y, z(r.d1)], [xa, r.y, z(r.d1)], uX(xa), uX(xb), r.v0, r.vm);
       L.quad([xa, r.y, z(r.d1)], [xb, r.y, z(r.d1)], [xb, r.y1, z(r.d1)], [xa, r.y1, z(r.d1)], uX(xa), uX(xb), r.vm, r.v1);
+    }
+    if (r.j < jT) for (const [xa, xb] of [eE, eD]) {
+      L.quad([xa, r.y, z(r.d0)], [xb, r.y, z(r.d0)], [xb, r.y, z(r.d1)], [xa, r.y, z(r.d1)], CU[0], CU[1], CV[0], CV[1], 1);
+      L.quad([xa, r.y, z(r.d1)], [xb, r.y, z(r.d1)], [xb, r.y1, z(r.d1)], [xa, r.y1, z(r.d1)], CU[0], CU[1], CV[0], CV[1], 0.8);
     }
   }
   // parede de trás e um teto curto

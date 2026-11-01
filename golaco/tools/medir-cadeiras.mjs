@@ -11,7 +11,7 @@
 // Estádios: o padrão (Estádio Golaço) e, com --tm, os da edição pro do Total Match (o Maracanã, os Aflitos e um grande
 // da planta genérica).
 //   node tools/medir-cadeiras.mjs [--raiz <pasta do jogo>] [--n 12] [--so tv,perto,prejogo] [--tm] [--prints <pasta>]
-//                                 [--json <arquivo>] [--prejogo-pc] [--disp celular,pc]
+//                                 [--json <arquivo>] [--prejogo-pc] [--disp celular,pc] [--estadios nome1,nome2 (com --tm)]
 import fs from 'node:fs';
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -32,7 +32,9 @@ const k = v => `${(v / 1000).toFixed(1)}k`;
 const saida = { raiz, tv: {}, perto: {}, prejogo: {} };
 
 // estádios do Total Match (pedido v2 montado à mão, edição pro: o estádio real do mandante)
-const CASOS_TM = [['Maracanã', 'maracana'], ['Aflitos', 'aflitos'], ['San Siro', 'sansiro']];
+// (--estadios a,b,c: os nomes da base no lugar destes 3 — item 69, PR 4: as famílias da planta genérica e um sem forma)
+const LISTA_TM = arg('--estadios', null)?.split(',').map(s => s.trim()).filter(Boolean) ?? null;
+const CASOS_TM = LISTA_TM ? LISTA_TM.map(n => [n, n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '')]) : [['Maracanã', 'maracana'], ['Aflitos', 'aflitos'], ['San Siro', 'sansiro']];
 async function pedidoTM(contexto) {
   const { PED_A } = await import(new URL('./lib/pedidos-tm.mjs', import.meta.url).href);
   await contexto.addInitScript(lista => { for (const [k2, v] of lista) try { localStorage.setItem(k2, v); } catch (_) { /* nada */ } },

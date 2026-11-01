@@ -263,7 +263,7 @@ if (I) {
     const arqBase = args.includes('--base') ? path.resolve(args[args.indexOf('--base') + 1]) : path.resolve(pastaJs, '../assets/tm/estadios.json');
     let BASE = null, erroBase = null;
     try { BASE = JSON.parse(fs.readFileSync(arqBase, 'utf8')); } catch (e) { erroBase = e.message; }
-    const ESTILOS = ['vidro', 'concreto', 'metal', 'membrana', 'tijolo', 'trelica', 'paineis'], COB = ['total', 'lados', 'parcial', 'nenhuma'], PAD = ['liso', 'misto', 'faixas', 'mosaico'];
+    const ESTILOS = ['vidro', 'concreto', 'metal', 'membrana', 'tijolo', 'trelica', 'paineis'], COB = ['total', 'lados', 'parcial', 'nenhuma'], PAD = ['liso', 'misto', 'faixas', 'mosaico', 'setores', 'raios'];
     const hexN = v => v === null || hex(v);
     // E1 a base no formato do contrato: {versao: 1, estadios: {"<nome normalizado>": Estadio}}, chave = normalizar(nome)
     {

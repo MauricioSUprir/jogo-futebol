@@ -5,7 +5,7 @@
 //   G1) a forma é válida e a família é a da pesquisa; a 1ª fileira contém a quina das placas (≥ 1,5 m) e a do lado de cá
 //       passa pela boca do túnel em x = 0 (na pista, mais longe e com a caixa do túnel por cima da pista);
 //   G2) os lugares da torcida: no degrau (≤ 5 cm; o piso da fileira da grade: item 69), nenhum na boca do túnel, a cabeça fora dos sólidos, entre 3 mil e
-//       26 mil (o orçamento da torcida no celular), em todo setor que tem arquibancada;
+//       30 mil (G.TETO_LUGARES: o teto da Alta desde o item 69, PR 4; antes 26 mil), em todo setor que tem arquibancada;
 //   G3) a festa no lugar: as n bandeiras de mastro (bandeiras.js lê sempre as n) no degrau, sinalizadores no degrau,
 //       faixas do lado de lá sem se encostar e na frente da mureta, bandeirões sem furar cabeça;
 //   G4) a câmera de TV (PC e celular, a bola em qualquer lugar) fora dos sólidos que ficam no desenho: atrás da 1ª fileira
@@ -111,7 +111,7 @@ if (!G) {
       if (k++ % 5 === 0) { const sol = F.solidoEm(x, y + 1.7 * esc, z, 0, true); if (sol) { cabeca++; if (ex.length < 2) ex.push(`${sol} (${fmt(x, 1)}, ${fmt(y, 1)}, ${fmt(z, 1)})`); } }
     });
     const setoresVazios = [0, 1, 2, 3].filter(i => P.forma.lados[G.LADOS[i]].prof > 0 && porSetor[i] < 150);
-    if (fora || tunel || cabeca || L.n < 3000 || L.n > 26000 || setoresVazios.length) res.g2.push(`${chave}: ${L.n} (${porSetor.join('/')}) fora ${fora} (máx ${fmt(maxErr * 100, 0)} cm), túnel ${tunel}, cabeça ${cabeca}${ex.length ? ' ' + ex.join(', ') : ''}${setoresVazios.length ? ', setores vazios ' + setoresVazios.join(',') : ''}`);
+    if (fora || tunel || cabeca || L.n < 3000 || L.n > (G.TETO_LUGARES ?? 26000) || setoresVazios.length) res.g2.push(`${chave}: ${L.n} (${porSetor.join('/')}) fora ${fora} (máx ${fmt(maxErr * 100, 0)} cm), túnel ${tunel}, cabeça ${cabeca}${ex.length ? ' ' + ex.join(', ') : ''}${setoresVazios.length ? ', setores vazios ' + setoresVazios.join(',') : ''}`);
     // G3 festa
     const band = BD.bandeiras(), errB = band.filter(b => Math.abs(P.perfil(P.sDe(b.x, b.z), Math.atan2(b.z, b.x)) + 1.45 - b.y) > 0.05 || P.sDe(b.x, b.z) < 0).length;
     const sinal = P.sinalizadores(), errS = [];
@@ -176,7 +176,7 @@ if (!G) {
   const lista = (r, n = 3) => (r.length ? `${r.length}: ${r.slice(0, n).join(' · ')}` : 'todos');
   reg(`G1 a forma é válida (${nCasos} estádios); a quina das placas (≥ 1,5 m) e a boca do túnel`, lista(res.g1), 'todos', res.g1.length === 0);
   nLug.sort((a, b) => a - b);
-  reg('G2 lugares no degrau, fora do túnel e dos sólidos, 3–26 mil, em todo setor com arquibancada', `${lista(res.g2)} (de ${nLug[0] ?? 0} a ${nLug[nLug.length - 1] ?? 0} torcedores)`, 'todos', res.g2.length === 0);
+  reg(`G2 lugares no degrau, fora do túnel e dos sólidos, 3–${Math.round((G.TETO_LUGARES ?? 26000) / 1000)} mil, em todo setor com arquibancada`, `${lista(res.g2)} (de ${nLug[0] ?? 0} a ${nLug[nLug.length - 1] ?? 0} torcedores)`, 'todos', res.g2.length === 0);
   reg('G3 festa: 32 bandeiras e sinalizadores no degrau, faixas sem encostar e na frente da mureta, 2 bandeirões sem furar', lista(res.g3), 'todos', res.g3.length === 0);
   reg('G4 câmera de TV (PC e celular) fora dos sólidos do desenho (o lado de cá escondido atrás da 1ª fileira)', lista(res.g4), 'todos', res.g4.length === 0);
   reg('G5 trilhos do pré-jogo fora dos sólidos (0,5 m), −60…+20°, fov 20–60°, túnel por dentro', lista(res.g5, 2), 'todos', res.g5.length === 0);

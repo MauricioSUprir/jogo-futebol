@@ -23,7 +23,7 @@ import { PONTOS_SINALIZADOR } from './festa.js';
 import { CAMERA_GERAL } from './camera.js';
 import { texFachadaEstilo, texTalude, fachadaPorDentro } from './fachada-estilos.js';
 import { PISTA } from '../estadio-generico.js';
-import { aneisEscada, sLiso, pintorAnel } from './cadeiras-dados.js';
+import { aneisEscada, sLiso, vLiso, pintorAnel } from './cadeiras-dados.js';
 import { trocarLod } from './campo.js';
 
 const RAD = Math.PI / 180;
@@ -125,28 +125,28 @@ function texCadeiras(P, q, aniso) {
   g.fillStyle = '#b8b6af'; g.fillRect(0, 0, W, yPx(0.97));
   // entre as faixas de cadeira (as faces dos camarotes, ~0,4 cm de s): o concreto
   g.fillStyle = '#8c8a84'; g.fillRect(0, yPx(0.97), W, yPx(0.04) - yPx(0.97));
-  const corr = 0.1;      // 1,2 m de 12 m
   for (const r of G.fileiras) {
     const yE = yPx(r.v1), yM = yPx(r.vm), yB = yPx(r.v0);
     g.fillStyle = '#6e6d68'; g.fillRect(0, yE, W, yM - yE);
     g.fillStyle = '#8c8a84'; g.fillRect(0, yM, W, yB - yM);
     for (const [h, lado] of [[0, 0], [1, 0.5]]) {
-      const x0 = (lado + corr) * W, x1 = (lado + 0.5) * W, w = (x1 - x0) / r.n;
-      for (let i = 0; i < r.n; i++) {
-        g.fillStyle = pinta(r.k, h, i, r.n);
+      // a escada de cada fileira tem a largura dela (item 69, PR 4: 1,3 m em toda fileira; a fração da metade muda)
+      const ch = G.corredorDe(r, h), nh = r.nh[h];
+      const x0 = (lado + ch / 2) * W, x1 = (lado + 0.5) * W, w = (x1 - x0) / nh;
+      for (let i = 0; i < nh; i++) {
+        g.fillStyle = pinta(r.k, h, i, nh);
         g.fillRect(x0 + i * w + w * 0.07, yE, w * 0.86, (yM - yE) * 0.7);
         g.fillRect(x0 + i * w + w * 0.07, yM, w * 0.86, (yB - yM) * 0.62);
         g.fillStyle = 'rgba(0,0,0,0.16)';
         g.fillRect(x0 + i * w + w * 0.07, yM + (yB - yM) * 0.5, w * 0.86, Math.max(1, (yB - yM) * 0.12));
       }
+      // a escada (concreto, os meios-degraus na sombra)
+      if (ch > 0) {
+        g.fillStyle = '#76746e'; g.fillRect(lado * W, yE, (ch / 2) * W, yB - yE);
+        g.fillStyle = 'rgba(0,0,0,0.28)'; g.fillRect(lado * W, yM, (ch / 2) * W, 1.5); g.fillRect(lado * W, yPx((r.v0 + r.vm) / 2), (ch / 2) * W, 1);
+        g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x0 - 1.5, yE, 1.5, yB - yE);
+      }
     }
-  }
-  // as escadas (concreto, os meios-degraus na sombra)
-  for (const lado of [0, 0.5]) {
-    g.fillStyle = '#76746e'; g.fillRect(lado * W, yPx(0.97), corr * W, yPx(0.04) - yPx(0.97));
-    g.fillStyle = 'rgba(0,0,0,0.28)';
-    for (const r of G.fileiras) { g.fillRect(lado * W, yPx(r.vm), corr * W, 1.5); g.fillRect(lado * W, yPx((r.v0 + r.vm) / 2), corr * W, 1); }
-    g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect((lado + corr) * W - 1.5, yPx(0.97), 1.5, yPx(0.04) - yPx(0.97));
   }
   const t = texturaCanvas(c, { aniso, repetir: true });
   t.wrapT = THREE.ClampToEdgeWrapping;
@@ -190,9 +190,15 @@ export function criarTigela(P, opc = {}) {
   const G = P.grade;
   // a fileira onde o degrau do lado de cá passa do teto do túnel (as cadeiras em cima da boca começam ali): na lisa pela
   // rampa; na escada, o bico da 1ª fileira acima dele
-  const sTunel = (() => { let lo = 0, hi = 1; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (P.perfilLado(3, sLiso(G, m)) < ytt + 0.3) lo = m; else hi = m; } return (lo + hi) / 2; })();
-  const sTunelDeg = (G.fileiras.find(r => P.perfilLado(3, r.s0) >= ytt + 0.3) ?? G.fileiras[G.NF - 1]).s0;
-  const semRepetir = l => l.filter((r, i) => i === 0 || Math.abs(r[0] - l[i - 1][0]) > 1e-7 || Math.abs(r[1] - l[i - 1][1]) > 1e-7);
+  // (as fileiras por metro: o s de cada uma muda com o ângulo — no meio do lado de cá, th = π/2)
+  const TH_CA = Math.PI / 2;
+  const sTunel = (() => { let lo = 0, hi = 1; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (P.perfilLado(3, sLiso(G, m, TH_CA)) < ytt + 0.3) lo = m; else hi = m; } return (lo + hi) / 2; })();
+  const s0Ca = r => (G.limites(r, TH_CA) ?? [r.s0])[0];
+  const sTunelDeg = s0Ca(G.fileiras.find(r => P.perfilLado(3, s0Ca(r)) >= ytt + 0.3) ?? G.fileiras[G.NF - 1]);
+  const ehFn = v => typeof v === 'function';
+  const val = (v, th) => (ehFn(v) ? v(th) : v);
+  const sRep = a => (ehFn(a[0]) ? a[3] : a[0]);
+  const semRepetir = l => l.filter((r, i) => i === 0 || ehFn(r[0]) || ehFn(l[i - 1][0]) || Math.abs(r[0] - l[i - 1][0]) > 1e-7 || Math.abs(r[1] - l[i - 1][1]) > 1e-7);
   /** Uma arquibancada (um trecho da planta) na malha L: as faixas do perfil, a mureta, o parapeito, as empenas. */
   function arquibancada(L, tr, deg = false, caixa = null) {
     const k = tr.k;
@@ -200,9 +206,12 @@ export function criarTigela(P, opc = {}) {
     let base = (tr.fechado ? P.sAneis : P.nos[k].map(n => n[0])).slice();
     if (k === 3 && !deg) base.push(sTunel);
     base = [...new Set(base.map(s => Math.round(s * 1e5) / 1e5))].sort((a, b) => a - b);
-    // os anéis [s, sY (o y sai de perfil(sY)), v]: na escada, cada fileira da grade dentro de cada faixa
+    // os anéis [s, sY (o y sai de perfil(sY)), v]: na escada, cada fileira da grade dentro de cada faixa. Por metro (item
+    // 69, PR 4), cada um é uma função da coluna th (com o s típico no 4º lugar, para as colunas): na escada, o bico e o
+    // espelho da fileira ali; na lisa, o sY dos assentos e o v da fileira ali
     let aneis;
     if (deg) aneis = semRepetir(aneisEscada(G, base, vDe));
+    else if (G.metrico) aneis = base.map(s => [s, th => sLiso(G, s, th), th => vLiso(G, s, th, vDe), s]);
     else aneis = base.map(s => [s, sLiso(G, s), vDe(s)]);
     const yEm = (s, th) => (tr.fechado ? P.perfil(s, th) : P.perfilLado(k, s));
     const tipoEm = (s, th) => P.tipoEm(tr.fechado ? P.ladoEm(th) : k, s);
@@ -228,27 +237,29 @@ export function criarTigela(P, opc = {}) {
     };
     const thAlvoX = (s, xe) => { let lo = 1e-6, hi = Math.PI - 1e-6; for (let i = 0; i < 44; i++) { const m = (lo + hi) / 2; if (xe - P.ponto(m, s)[0] < 0) lo = m; else hi = m; } return (lo + hi) / 2; };
     const memo = new Map();
-    const colunas = aneis.map(([s]) => { if (!memo.has(s)) memo.set(s, colsDe(s)); return memo.get(s); });
+    const colunas = aneis.map(a => { const s = sRep(a); if (!memo.has(s)) memo.set(s, colsDe(s)); return memo.get(s); });
     const nCol = colunas[0].length;
-    if (colunas.some(c => c.length !== nCol)) { for (let i = 0; i < colunas.length; i++) colunas[i] = tr.fechado ? cols0 : tr.cols(aneis[i][0]); }
-    const pt = (i, j) => { const [s, sY] = aneis[i], th = colunas[i][j], [x, z] = P.ponto(th, s); return [x, yEm(sY, th), z]; };
+    if (colunas.some(c => c.length !== nCol)) { for (let i = 0; i < colunas.length; i++) colunas[i] = tr.fechado ? cols0 : tr.cols(sRep(aneis[i])); }
+    const pt = (i, j) => { const th = colunas[i][j], [x, z] = P.ponto(th, val(aneis[i][0], th)); return [x, yEm(val(aneis[i][1], th), th), z]; };
     // o u (em ladrilhos de 12 m): nos fechados pelo arco no meio, contínuo pela volta (as colunas do fundo −x passam de π)
-    const uAbs = (i, j) => { const th = colunas[i][j]; if (tr.fechado) return P.uTh(th) / 12; const [x, z] = P.ponto(th, aneis[i][0]); return P.uDe(x, z, k) / 12; };
+    const uAbs = (i, j) => { const th = colunas[i][j]; if (tr.fechado) return P.uTh(th) / 12; const [x, z] = P.ponto(th, val(aneis[i][0], th)); return P.uDe(x, z, k) / 12; };
+    const vAnel = (i, j) => val(aneis[i][2], colunas[i][j]);
     // em cima da boca do túnel (entre as paredes, abaixo da fileira que passa do teto): sem cadeira
     const xCol = (i, j) => (tr.fechado ? pt(0, j)[0] : pt(i, j)[0]);
-    const sobreTunel = (i, j) => k === 3 && aneis[i + 1][0] <= sT + 1e-6 && Math.max(Math.abs(xCol(i, j)), Math.abs(xCol(i, j + 1))) <= mt + 1e-3;
+    const sobreTunel = (i, j) => k === 3 && val(aneis[i + 1][0], TH_CA) <= sT + 1e-6 && Math.max(Math.abs(xCol(i, j)), Math.abs(xCol(i, j + 1))) <= mt + 1e-3;
     for (let i = 0; i + 1 < aneis.length; i++) {
-      const sm = (aneis[i][0] + aneis[i + 1][0]) / 2;
       for (let j = 0; j + 1 < nCol; j++) {
         if (sobreTunel(i, j)) continue;
         const thm = (colunas[i][j] + colunas[i][j + 1]) / 2;
-        const tp = tipoEm(sm, thm);
+        const tp = tipoEm((val(aneis[i][0], thm) + val(aneis[i + 1][0], thm)) / 2, thm);
         const a = pt(i, j), b = pt(i, j + 1), c = pt(i + 1, j + 1), d = pt(i + 1, j);
+        // (por metro: a fileira que não existe nesta coluna cai no fim da faixa e o degrau dela tem área zero — fora da malha,
+        // senão o degrau de perto pagava os triângulos das fileiras do lado mais fundo em toda a volta)
+        if (G.metrico && Math.hypot(a[0] - d[0], a[1] - d[1], a[2] - d[2]) < 1e-5 && Math.hypot(b[0] - c[0], b[1] - c[1], b[2] - c[2]) < 1e-5) continue;
         if (caixa) for (const q of [a, c]) caixa.expandByPoint(_pc.set(q[0], q[1], q[2]));
         if (tp === 0) {
           const ua = uAbs(i, j), ub = uAbs(i, j + 1), uc = uAbs(i + 1, j + 1), ud = uAbs(i + 1, j);
-          const va = aneis[i][2], vc = aneis[i + 1][2];
-          L.q4(a, b, c, d, sombra(...a), [[ua, va], [ub, va], [uc, vc], [ud, vc]]);
+          L.q4(a, b, c, d, sombra(...a), [[ua, vAnel(i, j)], [ub, vAnel(i, j + 1)], [uc, vAnel(i + 1, j + 1)], [ud, vAnel(i + 1, j)]]);
         } else {
           const ld = tr.fechado ? P.ladoEm(thm) : k;
           L.q4(a, b, c, d, (tp === 1 ? (LD[ld].camarotes ? vidro : concretoEsc) : piso).clone().multiply(sombra(...a)));
@@ -402,7 +413,7 @@ export function criarTigela(P, opc = {}) {
     // a laje (o teto do túnel saliente) e a frente dela
     const zFr = F.frente.ca;
     const sT = deg ? sTunelDeg : sTunel;
-    const yT = P.perfilLado(3, deg ? sT : sLiso(G, sT)), [, zT] = P.ponto(Math.PI / 2, sT);
+    const yT = P.perfilLado(3, deg ? sT : sLiso(G, sT, Math.PI / 2)), [, zT] = P.ponto(Math.PI / 2, sT);
     L.q4([-mt, ytt, z0], [mt, ytt, z0], [mt, ytt, zT], [-mt, ytt, zT], cor(zFr > z0 + 0.5 ? 0x6f7275 : 0x8a8c8e));
     if (zFr > z0 + 0.5) {
       // a caixa de concreto por cima da pista (as paredes de fora)
@@ -428,7 +439,7 @@ export function criarTigela(P, opc = {}) {
         continue;
       }
       let a2 = 0, b2 = sT;
-      for (let i = 0; i < 40; i++) { const m = (a2 + b2) / 2; if (P.perfilLado(3, sLiso(G, m)) < ytt) a2 = m; else b2 = m; }
+      for (let i = 0; i < 40; i++) { const m = (a2 + b2) / 2; if (P.perfilLado(3, sLiso(G, m, Math.PI / 2)) < ytt) a2 = m; else b2 = m; }
       const [, zc] = P.ponto(Math.PI / 2, (a2 + b2) / 2);
       const a = L.v(s * mt, P.perfilLado(3, 0), za, ...UV_BRANCO, conc), b = L.v(s * mt, ytt, za, ...UV_BRANCO, conc), c = L.v(s * mt, ytt, zc, ...UV_BRANCO, conc);
       L.tri(a, b, c);

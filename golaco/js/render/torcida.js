@@ -202,7 +202,7 @@ export function criarTorcida(cena, opc) {
   /** Monta TODOS os torcedores (os da Alta) uma vez; a qualidade só escolhe quantos desenhar. */
   function montar() {
     desmontar();
-    const d = gerarTorcidaNiveis(opc.mascara ?? null, ident ? { ...ident.torcida, publico: ident.publico } : null, ident?.forma3d?.planta.lugares);
+    const d = gerarTorcidaNiveis(opc.mascara ?? null, ident ? { ...ident.torcida, publico: ident.publico, capacidade: ident.capacidade } : null, ident?.forma3d?.planta.lugares);
     dados = d;
     oculto = new Uint8Array(d.n); ocultos = [];
     const [cw, ch] = TORCIDA.atlas;

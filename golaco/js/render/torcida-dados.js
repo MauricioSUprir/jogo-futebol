@@ -37,6 +37,9 @@ export const TORCIDA = {
   atlas: [64, 128],         // px de cada célula do atlas (um atlas só para as 3 qualidades: o mipmap faz a Baixa)
   largura: 1.1, altura: 2.2,  // m do quadro de cada torcedor (cabe os braços para cima)
   visitante: { x: -1, z: [-22, 18], vazio: 4 },   // fundo −x; 4 m de cadeiras vazias de cada lado
+  // a lotação dos sem forma (item 69, PR 4): a capacidade de verdade ÷ (isto × as cadeiras do Golaço) — a Alta desenha ~90%
+  // das cadeiras, então um estádio com 90% delas já fica cheio
+  lotacaoCheia: 0.9,
   organizada: { x: 1, z: [-18, 18] },              // fundo +x
   quadros: 8,
 };
@@ -146,6 +149,10 @@ export function gerarTorcidaNiveis(mascara = null, paletas = null, lugares = nul
   const rgbMosaico = paletas && paletas.mosaico ? hex(paletas.mosaico) : RGB_MOSAICO;
   const foraLados = paletas && Number.isFinite(paletas.foraLados) ? paletas.foraLados : 0.03;
   const publico = paletas && Number.isFinite(paletas.publico) ? Math.max(0.1, Math.min(1, paletas.publico)) : 1;
+  // a LOTAÇÃO (item 69, PR 4): um estádio sem forma própria (a geometria do Golaço, ~29,4 mil cadeiras) com menos lugares
+  // de verdade (a capacidade da base, paletas.capacidade) desenha a gente dele, não a do Golaço — fora das fileiras da
+  // frente do lado de lá (as da TV, cheias como antes)
+  const lotacao = !lugares && paletas && Number.isFinite(paletas.capacidade) && paletas.capacidade > 0 ? Math.min(1, paletas.capacidade / (TORCIDA.lotacaoCheia * grade().capacidade)) : 1;
   const ocs = NIVEIS.map(q => T.ocupacao[q]);
   const ocF = NIVEIS.map(q => T.ocupacaoFrente[q]);
   const ocCa = NIVEIS.map(q => T.ocupacaoCa[q]);
@@ -162,9 +169,11 @@ export function gerarTorcidaNiveis(mascara = null, paletas = null, lugares = nul
   // uma cadeira: os MESMOS 7 sorteios por cadeira e na mesma ordem de cadeiras() (o resultado não muda)
   // forma própria: a torcida dividida do clássico (metade de cada uma, a do mandante em +x) e a sombra da cobertura (luz)
   const dividida = !!(lugares && lugares.dividida);
-  function cadeira(setor, f, a, x, y, z, esc = 1, im = a + f * nA, luz = 1) {
+  function cadeira(setor, f, a, x, y, z, esc = 1, im = a + f * nA, luz = 1, fantasma = false) {
     const g = setor === 3 ? rndCa : rnd;
     const r = g(), r2 = g(), r3 = g(), r4 = g(), r5 = g(), r6 = g(), r7 = g();
+    // a cadeira que o PR 4 tirou da grade (a escada ao lado do túnel, o poste do refletor): só os sorteios dela
+    if (fantasma) return;
     let time = 0, org = 0, mosaico = false;
     const frente = NF - 1 - f < T.frente;
     const lado = setor === 0 || setor === 3;
@@ -181,8 +190,9 @@ export function gerarTorcidaNiveis(mascara = null, paletas = null, lugares = nul
     // alguns visitantes espalhados pelos lados
     if (lado && !mosaico && r7 < foraLados) time = 1;
     if (dividida) time = (x < 0) !== (r7 < 0.02) ? 1 : 0;
-    // público do Total Match (só desenho): menos gente nas mesmas cadeiras
+    // público do Total Match (só desenho): menos gente nas mesmas cadeiras; a lotação do estádio fora da frente
     if (publico < 1) for (let q = 0; q < 3; q++) pq[q] *= publico;
+    if (lotacao < 1 && !(frente && setor === 0)) for (let q = 0; q < 3; q++) pq[q] *= lotacao;
     let nivel = 3;
     for (let q = 2; q >= 0; q--) if (r < pq[q]) nivel = q;
     if (nivel > 2) return;
@@ -202,7 +212,7 @@ export function gerarTorcidaNiveis(mascara = null, paletas = null, lugares = nul
   // o Estádio Golaço: as cadeiras da grade, na ordem de sempre (os MESMOS sorteios por cadeira: só o lugar mudou — o
   // assento, no piso do degrau)
   if (lugares) lugares.iterar(cadeira);
-  else grade().iterar(c => cadeira(c.setor, c.f, c.a, c.x, c.y, c.z));
+  else grade().iterar(c => cadeira(c.setor, c.f, c.a, c.x, c.y, c.z, 1, c.a + c.f * nA, 1, !!c.fantasma), true);
   // ordem por (grupo, nível, fileira da frente para cima): contagem por balde (estável)
   const F = NF, NG = GRUPOS.length, NB = NG * 3 * F;
   const conta = new Int32Array(NB + 1);
@@ -219,8 +229,9 @@ export function gerarTorcidaNiveis(mascara = null, paletas = null, lugares = nul
     faixas[tG[i]].porNivel[tNiv[i]]++;
   }
   for (let g = 1; g < NG; g++) faixas[g].inicio = faixas[g - 1].inicio + faixas[g - 1].porNivel[0] + faixas[g - 1].porNivel[1] + faixas[g - 1].porNivel[2];
-  // publico: a ocupação do pedido do TM (0,1–1; 1 sem ele) — a densidade real perto da câmera (item 69, PR 3: render/impostor.js)
-  return { n, pos, camisa, pele, cabelo, info, nivel, faixas, publico };
+  // publico: a ocupação do pedido do TM (0,1–1; 1 sem ele) vezes a lotação — a densidade real perto da câmera (item 69, PR 3:
+  // render/impostor.js)
+  return { n, pos, camisa, pele, cabelo, info, nivel, faixas, publico: publico * lotacao, lotacao };
 }
 
 /** Quantos torcedores de um grupo de desenho (GRUPOS) a qualidade desenha (os primeiros da faixa dele). */
