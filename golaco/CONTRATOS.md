@@ -3060,7 +3060,9 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
   carrega como antes (`cobrar`: a mira, o pedido que espera a bola pronta, o tiro de meta com a área livre). `'corre'` — o
   pedido formado (a pessoa soltou o botão; a IA decidiu) fica em `cr.pedido` com a mira do momento (`cr.mira0`: o analógico e
   a mira guardada; no contato valem esses, como se o pedido saísse ali; o passe/lançamento sem mira nenhuma vai no eixo da
-  cobrança) e o cobrador corre. O 1º toque rápido (a janela da cavadinha) e o 2º toque segurado não seguram o começo da
+  cobrança) e o cobrador corre — só com ele parado (|v| ≤ `paradoMax` 0,5 m/s; empurrado numa trombada enquanto espera, o
+  pedido espera ele frear: 01/11, o goleiro que levou uma trombada a 3,8 m/s começava a corrida de costas e a freada com a
+  virada levava o quadril a 0,59 m). O 1º toque rápido (a janela da cavadinha) e o 2º toque segurado não seguram o começo da
   corrida.
 - **A corrida** é a LOCOMOÇÃO do jogo: `corrida.js guiarCorrida` (no `cobrar`, antes do passo) escreve `j.guia`, o pedido de
   movimento que o `sim.js` usa para quem está 'parado' → `passoCorpo`/`passoPassada`; nada de teletransporte, nada de mover
