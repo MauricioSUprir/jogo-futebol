@@ -745,13 +745,16 @@ Constantes em `config.js COMEMORACAO`.
   6,5 m à frente e 2,4 m do lado da TV, 1,6 m de altura, fov 32; contraplano 7,5 m atrás do grupo e 2,5 m de lado (o lado com
   menos gente perto da lente nos próximos 0,8 s, escolhido uma vez no começo do abraço: `c.ladoContra`) olhando 6 m além
   dele a 2,4 m de altura (a torcida atrás do alvo enche o fundo; o resto do time para a 10 m, atrás da câmera), fov 36; reação de frente para quem sofreu (puxada para o lado da
-  TV), 4,8 m, fov 30, girada em volta dele pelo giro escolhido UMA vez no começo da reação (`c.giroReacao`: entre 0, ±0,5 e
-  ±1 rad, o de menor custo — gente na frente da lente a < 2,2 m de profundidade dentro do quadro do PC ou do celular
-  (fov × 0,88, até 2,2:1, o eixo girado para o terço esquerdo) ou perto da linha de visão, integrado na reação INTEIRA (até
-  o fim da cena: na curta ela dura até 2 s), cada um andando reto para o destino dele na cena (a vaga do abraço, a saída,
-  10 m do grupo) e parando nele; o 0 fica se o custo dele for ≤ 0,03 m·s — contraprovas: um defensor andando para a saída
-  passava a < 1 m da lente em ~15% das cenas curtas; (15/10) o custo só olhava o 1º segundo e o quadro do PC e um colega
-  correndo para o abraço passava rente à lente no celular; `teste-comemoracao` 13, com mais 12 gols naturais); câmera nunca além de 5,5 m das linhas nem dentro do gol; celular: fov × 0,88 e o assunto no terço
+  TV), 4,8 m, fov 30, girada em volta dele pelo giro escolhido UMA vez no começo da reação (`c.giroReacao`: entre 0, ±0,5,
+  ±0,75, ±1, ±1,25 e ±1,5 rad, o de MENOS gente colada na lente — a < 2,2 m de profundidade dentro do quadro do PC ou do
+  celular (fov × 0,88, até 2,2:1, o eixo girado para o terço esquerdo) — e, entre os que empatam nisso, o de menor custo
+  somando a gente perto da linha de visão, integrado na reação INTEIRA (até o fim da cena: na curta ela dura até 2 s), cada
+  um andando reto para o destino dele na cena (a vaga do abraço, a saída, 10 m do grupo) e parando nele; o 0 fica se ninguém
+  colar na lente e o custo dele for ≤ 0,03 m·s — contraprovas: um defensor andando para a saída passava a < 1 m da lente em
+  ~15% das cenas curtas; (15/10) o custo só olhava o 1º segundo e o quadro do PC e um colega correndo para o abraço passava
+  rente à lente no celular; (31/10, C7) com o goleiro na linha do gol reagindo e um zagueiro saindo da pequena área para a
+  lente, os 5 giros de antes tinham todos alguém colado nela e a soma única escolhia o de 1 rad, com um corpo rente à borda do
+  quadro do celular a 1,87 m (1 quadro); `teste-comemoracao` 13, com mais 12 gols naturais); câmera nunca além de 5,5 m das linhas nem dentro do gol; celular: fov × 0,88 e o assunto no terço
   esquerdo. Exporta `ik`/`ikBraco`/`BRACO`/`ANTEBRACO` do `anim.js` (só exportar: o hash não muda).
 - **Golpes e gestos** (todos por IK: os ossos ficam com o comprimento certo): de joelhos (o corpo desliza desacelerando
   até parar no alvo, entre 2,5 e 7 m/s²; pelve na altura de joelhos, joelho 6 cm à frente do quadril a 6,5 cm do chão,
@@ -3749,7 +3752,9 @@ cada lance do anel, comprimido, para vagas fixas — só lê o anel: o hash não
   `proximoBloco`, `tarjaPlacarVisivel`, `infoAtoresFim`. Planos: `apito` 1,5 s → `campo` 2,5 s (o placar pesa no gesto: mãos
   na cintura, nos joelhos, cabeça baixa de quem perde, apertos de mão) → `tunel` 3,5 s (ELIPSE: o funil para o túnel, a
   câmera na boca, o vão das placas aberto) → `torcida` 1,5 s → [lances do 1º tempo] → `estatisticas` 6 s → `geral` 3 s. Os
-  treinadores pelo gancho `tecnicos.js treinadorDoTime` (cópias; os vivos parados).
+  treinadores pelo gancho `tecnicos.js treinadorDoTime` (cópias; os vivos parados), cada cópia a ≥ `CENA_FIM.treinadores.margem`
+  (0,6 m) das bordas da área técnica do time (31/10, C7: o vivo RECUADO para não tapar a TV, z 39,2, ou na esquiva fica mais
+  perto da borda; a cena começa num corte e a cópia entra por dentro, parada; também no fim de jogo).
 - **Página** (`main.js`): o evento `intervalo` vira a cena (na fila, depois do replay do gol do último lance e do cartão do
   último apito); `seguraIntervalo()` segura o laço no tick do evento até o `geral`; ali o laço solta, os 3 s de
   `PARTIDA.intervalo` correm por baixo com o desenho ainda da cena (o campo vazio) e a `saida` do 2º tempo acaba a cena —

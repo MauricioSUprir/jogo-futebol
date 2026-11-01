@@ -60,7 +60,7 @@ import {
 } from './cena-atores.js';
 import { cameraDoPlano } from './prejogo-roteiro.js';
 import { copiarBola, passoBola } from './bola.js';
-import { solidoEm } from './estadio-forma.js';
+import { solidoEm, areaTecnica } from './estadio-forma.js';
 
 const K = CENA_FIM;
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
@@ -69,10 +69,19 @@ const TUNEL = CENAS.tunel;
 const VAZIO = { torcida: true, lances: true, estatisticas: true, geral: true };
 
 // ------------------------------------------------------------------------------------------------ plano
-/** Os treinadores do gancho em {0, 1} (aceita [a, b] ou {0: a, 1: b}; null = sem treinadores). */
+/**
+ * Os treinadores do gancho em {0, 1} (aceita [a, b] ou {0: a, 1: b}; null = sem treinadores), cada um a ≥
+ * K.treinadores.margem m das bordas da área técnica do time dele (31/10: o vivo recuado para não tapar a TV — z 39,2 — ou na
+ * esquiva fica mais perto da borda; a cena começa num corte e a cópia entra por dentro, parada).
+ */
 function treinadoresDe(tr) {
   if (!tr) return { 0: null, 1: null };
-  return { 0: tr[0] ? { ...tr[0] } : null, 1: tr[1] ? { ...tr[1] } : null };
+  const dentro = (o, t) => {
+    if (!o) return null;
+    const a = areaTecnica(o.time ?? t), mg = K.treinadores.margem;
+    return { ...o, x: clamp(o.x, a.x0 + mg, a.x1 - mg), z: clamp(o.z, a.z0 + mg, a.z1 - mg) };
+  };
+  return { 0: dentro(tr[0], 0), 1: dentro(tr[1], 1) };
 }
 
 /**
