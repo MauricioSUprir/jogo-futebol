@@ -20,6 +20,9 @@
 
 import { PESSOAL } from './edicao.js';
 import { PERSONAGENS_SERIE, CENAS_SERIE, RADIO_SERIE, FALAS_SERIE } from './serie.js';
+// (edição pessoal) os rostos do elenco da temporada (tools/gerar-retratos.mjs; os corpos de tools/personagens/elenco.py)
+const ELENCO_RETRATOS = ['oliver', 'pai', 'nora', 'crianca', 'eddie', 'singh', 'felicity', 'ronnie', 'stein', 'eiling', 'stagg', 'bette', 'tony', 'hartley',
+  'linda', 'mason', 'lisa', 'tina', 'lance', 'ray', 'grodd'];
 
 export const PERSONAGENS = {
   caitlin: { nome: 'Caitlin', sigla: 'CA', cor: '#8fd8ff', papel: 'S.T.A.R. Labs · medicina' },
@@ -2262,7 +2265,7 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
   const fila = []; let falando = null, tFala = 0, ocupado = null, escondido = false;   // ocupado(): um aviso no lugar do rádio
   function falar(falas) { for (const f of falas) fila.push(f); }
   // o rosto de cada personagem (tools/gerar-retratos.mjs renderiza a partir do modelo 3D); quem não tem fica com a sigla
-  const RETRATOS = ['heroi', 'zoom', 'reverso', 'caitlin', 'cisco', 'joe', 'iris', 'frio', 'onda', 'mago', 'savitar', 'devoe', ...(PESSOAL ? ['wells'] : [])];
+  const RETRATOS = ['heroi', 'zoom', 'reverso', 'caitlin', 'cisco', 'joe', 'iris', 'frio', 'onda', 'mago', 'savitar', 'devoe', ...(PESSOAL ? ['wells', ...ELENCO_RETRATOS] : [])];
   const retratos = Object.fromEntries(RETRATOS.map((id) => [id, new URL(`../assets/personagens/retratos/${id}.webp`, import.meta.url).href]));
   for (const url of Object.values(retratos)) new Image().src = url;                    // já baixados quando a 1ª fala aparecer
   function mostrar(el, ret, nome, f) {
@@ -2355,6 +2358,7 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
     else tipo = 'close';
     return { tipo, alvo, outro, lado: Math.random() < 0.5 ? -1 : 1, ang: rnd(-0.7, 0.7), t: 0, emCena };
   }
+  const alvoCam = { x: 0, y: 0, z: 0 };                               // para onde a câmera da cena olha (jogo.js: a câmera não entra em parede)
   function camera(cam, dt) {
     if (!C) return false;
     const f = C.falas[C.i];
@@ -2365,32 +2369,43 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
     const a = ponto(pl.alvo); if (!a) return false;
     const o = pl.outro ? ponto(pl.outro) : null;
     pl.t += dt; const deriva = pl.t * 0.12;                           // um movimento lento dentro do plano
+    // (edição pessoal; dono, 31/10: "as cenas NÃO podem ser paradas, tem que ter movimento"): todo plano anda — aproxima,
+    // faz um arco em volta de quem está no quadro e balança de leve, como a câmera na mão de uma série
+    const M = PESSOAL ? 1 : 0, tm = Math.min(pl.t, 9);
     let px, py, pz, lx = a.x, ly = a.y + 1.5, lz = a.z, fov = 40;
     if ((pl.tipo === 'ombro' || pl.tipo === 'dois') && o) {
       // por trás do ombro de quem ouve, olhando para quem fala (no 'dois', mais aberto e com os dois no quadro)
       let dx = a.x - o.x, dz = a.z - o.z; const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;
-      const atras = pl.tipo === 'dois' ? 3.2 + deriva : 1.15 + deriva * 0.4, lado = (pl.tipo === 'dois' ? 1.6 : 0.8) * pl.lado;
+      const atras = pl.tipo === 'dois' ? 3.2 + deriva - M * tm * 0.16 : 1.15 + deriva * 0.4 * (1 - M), lado = (pl.tipo === 'dois' ? 1.6 : 0.8) * pl.lado * (1 + M * tm * 0.05);
       px = o.x - dx * atras - dz * lado; pz = o.z - dz * atras + dx * lado; py = o.y + (pl.tipo === 'dois' ? 2.2 : 1.62);
       if (pl.tipo === 'dois') { lx = (a.x + o.x) / 2; lz = (a.z + o.z) / 2; ly = (a.y + o.y) / 2 + 1.3; fov = 46; }
       else { ly = a.y + 1.35; fov = 32; }
     } else if (pl.tipo === 'close') {
       // de frente para quem fala, um pouco de lado, à altura do rosto
       const ref = o || ponto('heroi') || a, h = Math.atan2(ref.x - a.x, ref.z - a.z) + pl.ang;
-      const d = 2.4 - deriva * 0.3;
+      const d = M ? Math.max(1.55, 2.7 - tm * 0.16) : 2.4 - deriva * 0.3;
       px = a.x + Math.sin(h) * d; pz = a.z + Math.cos(h) * d; py = a.y + 1.62; ly = a.y + 1.55; fov = 34;
     } else {
       // aberto: gira devagar em volta de quem escuta
-      C.ang += dt * 0.15;
-      const d = C.id.endsWith('-final') ? 7 : 4.6;
-      px = a.x + Math.sin(C.ang + pl.ang) * d; pz = a.z + Math.cos(C.ang + pl.ang) * d; py = a.y + 2.1; ly = a.y + 1.3; fov = 46;
+      C.ang += dt * (0.15 + M * 0.17);
+      const d = (C.id.endsWith('-final') ? 7 : 4.6) - M * tm * 0.12;
+      px = a.x + Math.sin(C.ang + pl.ang) * d; pz = a.z + Math.cos(C.ang + pl.ang) * d; py = a.y + 2.1 + M * 0.45 * Math.sin(pl.t * 0.4); ly = a.y + 1.3; fov = 46;
     }
-    cam.position.set(px, py, pz); cam.lookAt(lx, ly, lz);
+    if (M) {
+      // o arco: a câmera gira devagar em volta do que ela olha (o lado sorteado no plano); e a mão de quem segura a câmera
+      if (pl.tipo !== 'aberto') { const g = pl.lado * tm * 0.06, c = Math.cos(g), s = Math.sin(g), ox = px - lx, oz = pz - lz; px = lx + ox * c - oz * s; pz = lz + ox * s + oz * c; }
+      const tt = pl.t + pl.ang * 10;
+      px += 0.022 * Math.sin(tt * 1.13) + 0.012 * Math.sin(tt * 2.71); py += 0.016 * Math.sin(tt * 1.57 + 1); pz += 0.02 * Math.sin(tt * 0.93 + 2);
+      lx += 0.012 * Math.sin(tt * 1.9); ly += 0.01 * Math.sin(tt * 1.41 + 0.5);
+    }
+    cam.position.set(px, py, pz); cam.lookAt(lx, ly, lz); alvoCam.x = lx; alvoCam.y = ly; alvoCam.z = lz;
     if (Math.abs(cam.fov - fov) > 0.01) { cam.fov = fov; cam.updateProjectionMatrix(); }
     return true;
   }
 
   return {
     atualizar, camera, avancar, pular: terminar,
+    get alvoCamera() { return C ? alvoCam : null; },
     get emCena() { return !!C; }, get cenaAtual() { return C?.id || null; },
     /** quem está falando agora (na cena ou no rádio): o modelo dele gesticula */
     get quemFala() { if (C) { const f = C.falas[C.i]; return f.cartao ? null : f.quem; } return falando?.quem || null; },
@@ -2409,6 +2424,12 @@ export function criarHistoria({ armazem = null, raiz = document.body } = {}) {
     get capitulo() { return capitulo; },
     get cartaoAtual() { const f = C?.falas[C.i]; return f?.cartao ? `${f.rotulo} — ${f.titulo}` : null; },
     viu: (id) => vistas.has(id),
+    /** quem fala numa cena (sem os cartões) */
+    falantes: (id) => [...new Set((CENAS[id] || []).filter((f) => !f.cartao).map((f) => f.quem))],
+    /** quem fala agora está na cena (tem um lugar onde a câmera olha) */
+    presente: (q) => !!(C && q && C.focos[q] && C.focos[q]()),
+    /** onde está quem está na cena agora (null fora de cena ou se não está) */
+    pontoDe: (q) => (C && q && C.focos[q] ? C.focos[q]() : null),
     tem: (id) => !!CENAS[id],
     /** a cena (uma vez só, a não ser que `sempre`). `focos`: função (o foco) ou {heroi, zoom, reverso, padrao: () => ponto} */
     cena(id, focos, aoFim, { sempre = false } = {}) {
