@@ -120,6 +120,10 @@ export function colocarAderecos(id, modelo) {
     peca(new THREE.OctahedronGeometry(0.045, 0), brilho, peito, 0.13, 0.1, 0);
     for (const n of ['bracoE', 'bracoD']) { const b = osso(n), lado = n.endsWith('E') ? -1 : 1; if (b) peca(new THREE.BoxGeometry(0.2, 0.07, 0.2), casco, b, 0.0, 0.07, lado * 0.02, 0, 0, lado * 0.3); }
     ponta.position.set(0.02, -0.02, 0.12); mao.add(ponta);
+  } else if (id === 'grodd') {
+    // (edição pessoal) o Grodd nos túneis: os olhos vermelhos acesos no escuro
+    const olho = mat(0xff2a1a, 0xff2a1a, 0, 0.3);
+    for (const lado of [-1, 1]) peca(new THREE.SphereGeometry(0.0065, 10, 8), olho, cabeca, 0.086, 0.03, lado * 0.03);
   } else if (id === 'infectadoA' || id === 'infectadoB') {
     // os infectados: a roupa escurecida, um capuz e os olhos vermelhos do sangue do Bloodwork
     for (const m of modelo.materiais.slice(0, 1)) m.color?.multiplyScalar(0.45);

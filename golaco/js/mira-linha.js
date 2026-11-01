@@ -19,9 +19,11 @@ export function preverMira(m, pts, out = {}) {
   for (const j of m.jogadores) if (j.id === pr.cobrador) { c = j; break; }
   if (!c) return null;
   const mi = pr.mira, cg = c.carga;
-  const tipo = tipoMirado(m, pr, cg ? cg.tipo : null, (cg && cg.mod) || (c.botoes & BOTAO.MOD) !== 0);
-  out.tipo = tipo; out.rotulo = ROTULO_MIRA[tipo]; out.curva = mi.curva; out.carregando = !!cg; out.ang = mi.ang;
-  out.forca = cg ? clamp((m.tick - cg.t0) * PASSO / ACOES.cargaCheia, 0.08, 1) : MIRA.forcaPadrao;
+  // na corrida da cobrança (item 70, P1; corrida.js): a linha do pedido guardado (tipo e força do soltar), parada até o chute
+  const pc = pr.corrida && pr.corrida.estado === 'corre' ? pr.corrida.pedido : null;
+  const tipo = pc && pc.mirada ? pc.mirada.tipo : tipoMirado(m, pr, cg ? cg.tipo : null, (cg && cg.mod) || (c.botoes & BOTAO.MOD) !== 0);
+  out.tipo = tipo; out.rotulo = ROTULO_MIRA[tipo]; out.curva = mi.curva; out.carregando = !!cg || !!pc; out.ang = mi.ang;
+  out.forca = pc ? pc.forca : cg ? clamp((m.tick - cg.t0) * PASSO / ACOES.cargaCheia, 0.08, 1) : MIRA.forcaPadrao;
   out.trajetoria = comTrajetoria(tipo);
   if (!out.trajetoria) {
     // só a direção (no chão)

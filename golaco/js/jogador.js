@@ -77,6 +77,11 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     // goleiro realista (goleiro.js, só na partida): a base larga dos pés, parado na zona do ponto, a bola solta na área,
     // a saída no cruzamento lida, o descanso depois de tentar abafar e a base desenhada (0–1, a pose: anim.js)
     baseGk: undefined, gkParado: undefined, varre: undefined, altoLido: undefined, abafaAte: undefined, baseF: undefined, setGk: undefined,
+    // (01/11, CI do #588: ficaram de fora o choque das faltas — faltas.js —, os braços do arremesso do lateral e do goleiro,
+    // o pulo da barreira — bolas-paradas.js — e o pedido de movimento da corrida da cobrança e da disputa — j.guia —: a
+    // partida chegava a 12 formas de jogador, a main a 9, e cada passo com a bola rolando custava ~40% mais depois da 1ª
+    // cobrança com corrida; teste-custo 2,61× com a meta de 2,5×)
+    choque: undefined, arremesso: undefined, arremessoGk: undefined, salto: undefined, guia: undefined,
   };
   return j;
 }
@@ -274,6 +279,8 @@ const PE_TORTO = 1.2;       // rad — torção máxima do pé plantado: além d
  * saidaParaToque). Com os dois pés no chão, a passada tira esse pé do chão em até `em` segundos
  * (o toque sai sempre do pé livre); parado, o pé que vai tocar não é apressado para pousar.
  * pousoEm (pedalada, sim.js): com o pé `pe` no ar, o ritmo faz ele pousar daqui a pousoEm s.
+ * ritmoVoo (a corrida da cobrança, corrida.js saidaCorrida): com os dois pés no ar, o ritmo é este; com um pé no chão, o da
+ * passada de sempre ou este, o mais rápido (o apoio nunca mais longo que o natural).
  *
  * A fase NUNCA salta: o pé no balanço é desenhado pela fase (anim.js), então um salto de fase
  * era um pé que teletransportava. Quando um pé precisa sair antes (ficou para trás, torto, ou
@@ -367,6 +374,13 @@ export function passoPassada(j, comBola, dt, ev, saida = null) {
     // bola) — o passo fica mais lento ou mais rápido, sem salto de fase
     const resta = j.pes[saida.pe].fasePouso - f0;
     if (resta > 0) ritmo = clamp(resta / Math.max(saida.pousoEm, dt), 0.3 * f, PASSADA.ritmoSaidaToque);
+  }
+  if (saida && saida.ritmoVoo != null) {
+    // (a corrida da cobrança, item 70: corrida.js saidaCorrida) a regulagem estica ou encolhe só o VOO (os dois pés no ar);
+    // com um pé no chão, o ritmo da passada — ou o da regulagem, se for mais rápido: o apoio nunca fica mais longo que o
+    // natural (o pé plantado com o corpo andando por cima dele esticava a perna e o quadril caía até ~30 cm)
+    const rv = clamp(saida.ritmoVoo, 0.3 * f, PASSADA.ritmoSaidaToque);
+    ritmo = j.pes[0].apoio || j.pes[1].apoio ? Math.max(ritmo, rv) : rv;
   }
   if (pedido) {
     // tira o pé do toque do chão a tempo (parado: no ritmo certo para sair `em` segundos depois).

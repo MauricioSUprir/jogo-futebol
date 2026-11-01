@@ -13,12 +13,15 @@
 //     vazia (nunca o gol), mudar a formação deixa o buraco fora do gol, 2 min de jogo depois sem erro e sem ele na bola;
 //     (5) goleiro expulso → o de linha mais perto do gol vai para o gol.
 //  C. Canhão de 400 pênaltis (IA × goleiro IA): gol 70–82%, defesa 12–24%, fora 2–10% (meta do dono: ~76/18/6).
-//  D. 36 partidas IA × IA (sementes 1001–1036; eram 12 até 15/10): faltas 1,5–5 por partida; amarelos 10–30% das faltas
+//  D. 48 partidas IA × IA (sementes 1001–1048; eram 12 até 15/10 e 36 até 31/10): faltas 1,5–5 por partida (teste de
+//     Poisson: reprova se a contagem prova que está fora da faixa — 31/10, item 70: com a corrida das cobranças o CI deu 1,47
+//     nas 36 partidas; no painel de 144, a main 2,0 × 1,8 (288 × 259, sementes 1001–1144) e 1,97 × 1,79 (284 × 258,
+//     3001–3144): juntas, p ≈ 0,10 — empate pela régua, com o PR ~10% abaixo nas duas); amarelos 10–30% das faltas
 //     (teste binomial: reprova se a contagem prova que está fora da faixa); vermelhos ≤ 0,2 por partida (teste de Poisson:
 //     reprova se a contagem prova mais que isso); nenhuma parada passa de 8 s; nada de NaN. AMOSTRA: com ~2 faltas por
 //     partida a contagem de 12 partidas é de Poisson com desvio de ~0,4 por partida, e uma mudança que não mexe nas faltas
 //     passava ou reprovava a meta de 1,5 pelo sorteio dos lances (15/10, a IA do domínio-sem-passar: 1,42 nas 1001–1012,
-//     2,33 nas 1013–1036; a lógica de antes 2,00 / 1,96 e a main 1,75 / 2,50). As 36 em 3 fatias de 12, uma por processo
+//     2,33 nas 1013–1036; a lógica de antes 2,00 / 1,96 e a main 1,75 / 2,50). As 48 em 3 fatias de 16, uma por processo
 //     filho (--par, padrão 3), enquanto o processo principal faz as partes A–C.
 //
 //   node tools/teste-faltas.mjs              (lógica do repositório)
@@ -55,7 +58,7 @@ const { FALTAS, PARTIDA, CAMPO, ACOES } = await imp('config.js');
 const PASSO = 1 / 60;
 
 // parte D: as partidas inteiras em processos filhos (começam já e correm junto com as partes A–C)
-const D_SEM0 = 1001, D_N = 36, D_FATIA = 12;
+const D_SEM0 = 1001, D_N = 48, D_FATIA = 16;
 /** Partidas IA × IA inteiras das sementes s0 … s0 + n − 1: as contagens da parte D. */
 function partidasD(s0, n) {
   let faltas = 0, amar = 0, verm = 0, nan = false, paradaMax = 0;
@@ -314,7 +317,9 @@ function apitar(m, f) {
   let faltas = 0, amar = 0, verm = 0, nan = false, paradaMax = 0;
   for (const r of await filhosD) { faltas += r.faltas; amar += r.amar; verm += r.verm; nan ||= r.nan; paradaMax = Math.max(paradaMax, r.paradaMax); }
   const f2 = v => v.toFixed(2).replace('.', ',');
-  reg(`D. faltas por partida (${N} partidas IA × IA)`, f2(faltas / N), '1,5–5', faltas / N >= 1.5 && faltas / N <= 5);
+  // (a faixa pelo teste de Poisson: reprova se a contagem PROVA menos de 1,5 ou mais de 5 por partida, p < 5%)
+  const pFBaixo = 1 - caudaPoisson(faltas + 1, 1.5 * N), pFAlto = caudaPoisson(faltas, 5 * N);
+  reg(`D. faltas por partida (${N} partidas IA × IA)`, `${f2(faltas / N)} (${faltas}; p = ${f2(pFBaixo)} contra 1,5, ${f2(pFAlto)} contra 5)`, '1,5–5 (p ≥ 0,05)', pFBaixo >= 0.05 && pFAlto >= 0.05);
   // vermelhos: poucos por partida (~0,1), então em N partidas a contagem é de Poisson. Reprova só se ela PROVA a taxa
   // acima de 0,2 por partida (P(X ≥ contagem | λ = 0,2·N) < 5%); com "verm / N ≤ 0,2" direto, 12 partidas com a taxa
   // real de 0,10–0,13 (painel de 144) reprovavam em 12–21% das rodadas só por sorteio

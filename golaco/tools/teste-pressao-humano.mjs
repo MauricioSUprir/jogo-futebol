@@ -15,7 +15,27 @@
 //     fica com a bola também com ele a 9–12 m, e a amostra de todos os longos passou a medir a distância, não a PRESSÃO
 //     (32 partidas, 7001–7032: a base D1 65% em todos e 73,3% ± 4,1 ao alcance; o D2 58% em todos e 70,3% ± 3,1 ao
 //     alcance, 79,1% ± 2,4 em 7101–7132 — por faixa de distância, a mesma taxa);
-//  M3 um a MAIS na pressão: mediana da distância do 2º companheiro mais perto ao condutor em 2 s, com ≤ sem − 1,5 m;
+//  M3 um a MAIS na pressão: o 2º companheiro mais perto do condutor em 2 s chega, em média, ≥ 1,5 m mais perto com o botão
+//     (sem − com, caso a caso: os dois ramos de cada caso partem do mesmo mundo) — reprova quando a amostra PROVA o Δ abaixo
+//     de 1,5 m: bootstrap por partida (o par de ramos de cada caso junto), p = fração das 4000 reamostras com Δ ≥ 1,5, e
+//     reprova com p < 0,05. (Até 01/11 era a diferença das MEDIANAS de cada ramo, com ≤ sem − 1,5 m pela conta direta. No CI
+//     do #588 — item 70, a corrida das cobranças — ela deu Δ 1,44 em 32 partidas (n = 184). Com 4× a amostra, 128 partidas
+//     (7001–7128, 96 delas fora das do CI), a main deu 1,90 (IC 90% 1,65–2,10) e a corrida 2,01 (1,83–2,23): empate — a
+//     corrida só troca os lances. Tiradas 32 partidas das 128 da main, a conta direta reprovava em 11%, e em blocos de 8
+//     partidas ia de 1,10 a 2,77. E ela mal separava o defeito que mede: com o botão sem somar ninguém (MUTAÇÃO M3 abaixo)
+//     as medianas deram Δ 0,73 (IC 90% 0,45–1,27) em 64 partidas, mas 1,50 nas 16 primeiras e 1,33 nas 20 — a mediana de
+//     cada ramo pula entre os dois grupos de casos (o 2º a ~2–3 m e a ~6–8 m) e mede QUAIS casos caem de cada lado, não
+//     quanto cada um chega mais perto; pela prova ela reprovaria a mutante em 84% das amostras de 64 partidas e 18% das de
+//     32. A média pareada separa: main 1,82 (1,67–1,96) e corrida 1,95 (1,79–2,11) nas 128; nas 64 do CI, 1,77 (1,57–1,97)
+//     e 1,95 (1,70–2,20) — com a corrida que começa parada (b12ee6b1), 1,93 (1,68–2,18), p = 0,998, o teste inteiro PASSOU
+//     —; a mutante 0,84 (0,65–1,02). Pela prova, a main reprova em 0,2% das amostras de 32 partidas e 0%
+//     das de 64; a mutante em 99,2% e 100%. A amostra foi de 32 para 64 partidas, 7001–7064 (3 processos, 3 vagas no
+//     rodar-testes).)
+//     MUTAÇÃO M3 (o botão não soma pressão): o chamado segue como o 1º homem — sem as duas travas do "um a mais", o `excluir`
+//     de defesa.js pressionadorDe (o 1º homem da IA já apertando não é chamado) e o `pedAnt` de ia-tatica.js (o chamado do
+//     tick anterior sai da escolha do 1º homem e o papel dele passa ao próximo): Δ 0,84 m, p = 0 — REPROVA (e o M7 cai a
+//     24,5%). Só sem o `excluir` nada muda (média pareada 1,77 e medianas 1,97 em 24 partidas; o M7 em 99,2%): o pedAnt
+//     sozinho já mantém o um a mais;
 //  M4 sem abuso: faltas do time 0 com o botão ≤ 1,5 × as de sem o botão + 2 (todos os casos);
 //  M5 corre de verdade: o escolhido a mais de 4 m do condutor, ≥ 1 s depois de escolhido (o tempo de acelerar: do
 //     parado a 6 m/s leva ~1,1 s no perfil de aceleração do jogo), a ≥ vCorrida em ≥ 80% dos ticks;
@@ -44,12 +64,12 @@
 //     sobrou é o da ENFIADA — a bola no chão e o goleiro sai jogando com o PASSE de pé —, o mesmo passe do pé de antes: 6 de
 //     6 cortados entre 42 e 51 passos nas sementes 7001–7002; com o pressaoPedida sem o m.possePorTime, 6 de 6 voltam.)
 // AMOSTRA (15/10): 32 partidas (sementes 7001–7032, modelos alternados como antes), uma por processo filho (--par, padrão
-// 3). Com 8, a mesma lógica passava ou reprovava pelo sorteio dos lances: na main (c2f76d69), em 16 conjuntos disjuntos
-// de 8 partidas (sementes 7001–7032, 7101–7132, 7201–7232, 7301–7332), o M1 ia de 0,80 a 2,02 m, o M2 de 48 a 73%, a
-// folga do M4 de −3,5 a 7 e o M5 de 77 a 83% — só 5 dos 16 passavam em tudo (7001–7008, a do CI, era um deles); qualquer
-// mudança da simulação que não mexe na pressão troca os lances e o resultado. As 128 partidas juntas (main c2f76d69, 15/10,
-// antes da chegada pelo perfil de aceleração e do desvio): M1 Δ 1,38 m, M2 63%, M3 Δ 2,74 m, M4 110 → 174 faltas (1,58×),
-// M5 80,6%, M6 e M7 100%.
+// 3; desde 01/11, item 70, 64 partidas, 7001–7064 — ver o M3). Com 8, a mesma lógica passava ou reprovava pelo sorteio
+// dos lances: na main (c2f76d69), em 16 conjuntos disjuntos de 8 partidas (sementes 7001–7032, 7101–7132, 7201–7232,
+// 7301–7332), o M1 ia de 0,80 a 2,02 m, o M2 de 48 a 73%, a folga do M4 de −3,5 a 7 e o M5 de 77 a 83% — só 5 dos 16
+// passavam em tudo (7001–7008, a do CI, era um deles); qualquer mudança da simulação que não mexe na pressão troca os
+// lances e o resultado. As 128 partidas juntas (main c2f76d69, 15/10, antes da chegada pelo perfil de aceleração e do
+// desvio): M1 Δ 1,38 m, M2 63%, M3 Δ 2,74 m, M4 110 → 174 faltas (1,58×), M5 80,6%, M6 e M7 100%.
 // Decisão: a conta direta de cada meta, sem mudar nenhuma, na amostra 4× maior. Reamostrando as 128 partidas (bootstrap por
 // partida, 1000 amostras), a chance de reprovar só pelo sorteio cai no M1 de 11% (8 partidas) para 0,7% (32), no M2 de 30%
 // para 13% e no M3 de 7% para 0,1%. Em 15/10 o M4 e o M5 estavam no limite (é o jogo, não a amostra: 1,58× as faltas — o
@@ -57,6 +77,7 @@
 // faltas e M5 82,1% ± 0,8. Testado e NÃO adotado: reprovar só quando a amostra prova a meta furada (como os cartões do
 // teste-faltas) deixava a main estável (~9%), mas a lógica de antes do PRESSÃO novo (#470) passava em M2, M4 e M5 (58%,
 // 1,89× as faltas, 78%): com 32 partidas a prova não tem força para separar o limite de um defeito — seria afrouxar as metas.
+// (O M3 passou à prova em 01/11 com outra estatística — a média pareada, que separa a mutante dele — e 64 partidas: ver o M3.)
 // O erro-padrão entre as partidas aparece no "medido" (M2, M4, M5, M9, M11) só para dizer se o resultado está dentro do
 // sorteio.
 // Informativos: as metas do diagnóstico que a física do jogo não deixa cumprir (o mais perto ≥ 2 m mais perto em 1,0 s —
@@ -64,7 +85,7 @@
 // ≥ 1 s), o alcance do bote nos casos longos e os dois modelos do humano.
 //   node tools/teste-pressao-humano.mjs                       (lógica do repositório)
 //   node tools/teste-pressao-humano.mjs --js <pasta js>       (outra cópia da lógica, ex.: a base)
-//   node tools/teste-pressao-humano.mjs --partidas 32 --sem 7001 --min 4 --par 3   (amostra: partidas de 2 × min minutos)
+//   node tools/teste-pressao-humano.mjs --partidas 64 --sem 7001 --min 4 --par 3   (amostra: partidas de 2 × min minutos)
 import { fork } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -74,7 +95,7 @@ const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const JS = args.includes('--js') ? path.resolve(arg('--js')) : path.resolve(AQUI, '../js');
-const NP = +arg('--partidas', 32), MIN = +arg('--min', 4), SEM0 = +arg('--sem', 7001);
+const NP = +arg('--partidas', 64), MIN = +arg('--min', 4), SEM0 = +arg('--sem', 7001);
 const MODELOS = ['persegue', 'parado'];
 const PASSO = 1 / 60;
 const K2 = Math.round(2 / PASSO);
@@ -162,6 +183,28 @@ const pc = (a, b) => `${a}/${b} (${b ? Math.round(100 * a / b) : 0}%)`;
 // erro-padrão da soma de uma grandeza por partida (as partidas são independentes): √(n · var) — só para mostrar se o
 // resultado está dentro do sorteio (a decisão é a conta direta da meta)
 function epSoma(v) { const n = v.length, mu = v.reduce((s, x) => s + x, 0) / n; return Math.sqrt(n * v.reduce((s, x) => s + (x - mu) ** 2, 0) / Math.max(1, n - 1)); }
+// M3 pela prova (ver o cabeçalho): Δ = a MÉDIA, caso a caso, de quanto o 2º companheiro mais perto está mais perto do condutor
+// em 2 s com o botão (sem − com: os dois ramos de cada caso partem do mesmo mundo). O IC sai do bootstrap por PARTIDA (as
+// partidas sorteadas com reposição — o par de ramos de cada caso vai junto, e os casos de uma partida também), com semente
+// fixa (o resultado não muda de uma rodada para outra). p = fração das reamostras com Δ ≥ meta (percentil, unilateral): com
+// p < 0,05 a amostra PROVA o Δ abaixo da meta. IC 90% = os percentis 5 e 95.
+const M3_META = 1.5, M3_REAMOSTRAS = 4000;
+function bootM3(grupos, meta, nB) {
+  // (por partida só a soma das diferenças e o número de casos: a média de uma reamostra é Σ somas / Σ casos)
+  const g = grupos.map(cs => [cs.reduce((t, c) => t + c.A.s2 - c.B.s2, 0), cs.length]);
+  let s = 0x7001;
+  const r = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const ds = [];
+  for (let k = 0; k < nB; k++) {
+    let a = 0, n = 0;
+    for (let i = 0; i < g.length; i++) { const x = g[Math.floor(r() * g.length)]; a += x[0]; n += x[1]; }
+    ds.push(n ? a / n : NaN);
+  }
+  // (reamostra sem caso nenhum = Δ indefinido: conta como meta não cumprida; só acontece com amostras minúsculas)
+  const ok = ds.filter(Number.isFinite).sort((x, y) => x - y), q = f => ok[Math.min(ok.length - 1, Math.floor(f * ok.length))];
+  return { p: ok.filter(d => d >= meta).length / nB, p05: q(0.05), p95: q(0.95) };
+}
+const mediaPareada = cs => (cs.length ? cs.reduce((t, c) => t + c.A.s2 - c.B.s2, 0) / cs.length : NaN);
 
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
 let falhas = 0;
@@ -185,9 +228,13 @@ const c2 = LA.filter(ok2).length, c2A = LA.filter(ok2A).length;
 const ep2 = LA.length ? Math.sqrt(c2 / LA.length * (1 - c2 / LA.length) / LA.length) : NaN;
 reg(`M2 (guarda) com o botão: um companheiro a ≤ 2 m do condutor em ≤ 1,5 s (o mais perto a ≤ ${fmt(M2_ALCANCE, 1)} m no começo)`, `${pc(c2, LA.length)} (${fmt(100 * c2 / LA.length, 1)}% ± ${fmt(100 * ep2, 1)}; sem: ${pc(c2A, LA.length)})`, '≥ 60%', LA.length >= NMIN && c2 >= 0.6 * LA.length);
 reg('(informativo) o M2 em todos os casos longos (o mais perto a ≤ 12 m)', `${pc(L.filter(ok2).length, L.length)} (sem: ${pc(L.filter(ok2A).length, L.length)})`, '—', true, true);
-const L2 = L.filter(c => c.A.s2 != null && c.B.s2 != null);
-const s2A = med(L2.map(c => c.A.s2)), s2B = med(L2.map(c => c.B.s2));
-reg('M3 um a mais na pressão: 2º companheiro mais perto do condutor em 2 s, sem → com', `${fmt(s2A)} → ${fmt(s2B)} m (Δ ${fmt(s2A - s2B)}; n = ${L2.length})`, 'Δ ≥ 1,5 m', L2.length >= NMIN / 2 && s2A - s2B >= 1.5);
+// (M3 pela PROVA, 01/11 — ver o cabeçalho: a média pareada caso a caso; reprova quando a amostra prova o Δ abaixo de 1,5 m.
+// As medianas de cada ramo — a conta de antes — seguem impressas)
+const L2p = porPartida.map(p => p.casos.filter(c => longo(c) && c.A.s2 != null && c.B.s2 != null));
+const L2 = L2p.flat();
+const s2A = med(L2.map(c => c.A.s2)), s2B = med(L2.map(c => c.B.s2)), d3 = mediaPareada(L2);
+const b3 = bootM3(L2p, M3_META, M3_REAMOSTRAS);
+reg('M3 um a mais na pressão: o 2º companheiro mais perto do condutor em 2 s, quanto mais perto com o botão (média por caso)', `Δ ${fmt(d3)} m (IC 90% ${fmt(b3.p05)}–${fmt(b3.p95)}; p = ${fmt(b3.p, 3)}; n = ${L2.length}; medianas sem → com ${fmt(s2A)} → ${fmt(s2B)} m)`, 'Δ ≥ 1,5 m (reprova com p < 0,05)', L2.length >= NMIN / 2 && b3.p >= 0.05);
 const soma = (cs, f) => cs.reduce((s, c) => s + f(c), 0);
 const fA = soma(casos, c => c.A.faltas), fB = soma(casos, c => c.B.faltas);
 const ep4 = epSoma(porPartida.map(p => soma(p.casos, c => c.B.faltas - 1.5 * c.A.faltas)));
@@ -253,9 +300,10 @@ if (porPartida.length >= 16) {
     const Lb2 = Lb.filter(c => c.d0 <= M2_ALCANCE), m2 = Lb2.filter(ok2).length / Lb2.length;
     const a4 = soma(cs, c => c.A.faltas), b4 = soma(cs, c => c.B.faltas);
     const m5 = soma(cs, c => c.B.corre1) / soma(cs, c => c.B.correTot1);
-    blocos.push(`${porPartida[b].s}: ${fmt(m1)} · ${Math.round(100 * m2)}% · ${a4}→${b4} · ${fmt(100 * m5, 1)}%`);
+    const m3 = mediaPareada(Lb.filter(c => c.A.s2 != null && c.B.s2 != null));
+    blocos.push(`${porPartida[b].s}: ${fmt(m1)} · ${Math.round(100 * m2)}% · ${fmt(m3)} · ${a4}→${b4} · ${fmt(100 * m5, 1)}%`);
   }
-  reg('(dispersão) blocos de 8 partidas: M1 Δ · M2 · M4 · M5 pela conta direta', blocos.join(' | '), '—', true, true);
+  reg('(dispersão) blocos de 8 partidas: M1 Δ · M2 · M3 Δ · M4 · M5 pela conta direta', blocos.join(' | '), '—', true, true);
 }
 const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));
 console.log(`lógica: ${JS} · ${NP} partidas de 2 × ${MIN} min (sementes ${SEM0}–${SEM0 + NP - 1}, ${nPar} processos) · ${casos.length} casos · ${((Date.now() - t0) / 1000).toFixed(0)} s`);

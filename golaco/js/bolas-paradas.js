@@ -14,7 +14,7 @@
 //    chute (alturaSalto) e a bola que bate nela (colisaoBarreira, chamada pelo sim.js depois da colisão de sempre).
 // Coordenadas: as vagas estão no referencial de quem ataca para +x (a direita dele é +z); no mundo, x e z × m.ataca.
 
-import { TIRO_DE_META, ESCANTEIO, BARREIRA, CAMPO, PASSO, BOLA } from './config.js';
+import { TIRO_DE_META, ESCANTEIO, BARREIRA, CAMPO, PASSO, BOLA, CORRIDA_COBRANCA } from './config.js';
 import { FORMACOES } from './formacoes.js';
 import { MD } from './matdet.js';
 import { clamp, difAng } from './mat.js';
@@ -146,7 +146,15 @@ function escanteio(m, j, out, B, depois) {
   }
   if (p.papel === 'atacaZona') {
     if (depois) pontoEscanteio(m, t, B.sz, p.u, p.w, out);
-    else pontoEscanteio(m, t, B.sz, p.su, p.sw, out);
+    else if (B.corrida && B.corrida.estado === 'corre') {
+      // a corrida da cobrança (item 70, P1): quem ataca a zona espera no lugar dele, sem correr (até CORRIDA_COBRANCA
+      // .zonaAntes do caminho: 0 — com 0,15, saindo junto com o cobrador, o gol de escanteio dobrava: config.js); a arrancada
+      // para a zona é no chute, como antes
+      const k = CORRIDA_COBRANCA.zonaAntes;
+      pontoEscanteio(m, t, B.sz, p.su + (p.u - p.su) * k, p.sw + (p.w - p.sw) * k, out);
+      out.correr = false;
+      return out;
+    } else pontoEscanteio(m, t, B.sz, p.su, p.sw, out);
   } else if (p.papel === 'marca' || (p.papel === 'borda' && p.marca >= 0)) {
     let a = null;
     for (const q of m.jogadores) if (q.id === p.marca) { a = q; break; }

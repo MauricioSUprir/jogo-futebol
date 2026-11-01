@@ -30,7 +30,11 @@
 //      (nas 8 cenas e em mais 12 gols naturais — todos os gols das partidas das sementes 101 em diante —, cada uma também
 //      com um jogador parado na frente da lente). Contraprova de 15/10: na cena curta a reação dura até 2 s e a escolha do
 //      giro só olhava o 1º segundo e o quadro do PC — no 1º gol da semente 29 um colega correndo para o abraço passou
-//      rente à lente no celular (2/121 quadros).
+//      rente à lente no celular (2/121 quadros). E a FOLGA do bloqueio (01/11, C7): o jogador parado do bloqueio nunca a
+//      < 2,3 m dentro de 1,25 × o quadro — o obstáculo parado a escolha conhece, então não pode deixá-lo rente à régua: no
+//      CI de 522a4e36 a mudança das partidas levou um plano rente (ele na borda do quadro do celular, o joelho 0,5 m mais
+//      fundo que o centro) para dentro dela (1º gol da semente 32: 13/60 quadros); a escolha antiga passa na régua nas
+//      partidas de agora, mas não na folga (semente 103 @9611).
 // "Antes" (informativo): o pós-gol da versão sem cena, medido na simulação (a IA leva o autor de volta; nenhuma mão acima
 // da cabeça; colega mais perto a 16–24 m). Na versão sem js/comemoracao.js o teste REPROVA (o módulo não existe).
 //   node tools/teste-comemoracao.mjs [--js <pasta js>] [--detalhe]
@@ -355,9 +359,17 @@ function min(arr, f) { return Math.min(...arr.map(f)); }
 // saída, passava colado na lente em ~15% das cenas curtas). Antes, com 2 gols naturais de sementes fixas (1º gol das
 // sementes 2 e 15); a rede véu mudou a física do gol e esses lances deixaram de existir, então o bloqueio não depende
 // de semente. A versão sem a escolha do giro (51c1bbb7) reprova no bloqueio: 5–10 quadros por cena no PC, 2–7 no celular.
+// O jogador do bloqueio chega sem mudar os pés de lugar (quase sempre o goleiro do outro gol, a ~100 m): fica caído, a
+// pelve a 8 cm do chão e os joelhos até 0,57 m do centro — um corpo largo que a escolha tem de ver inteiro. A FOLGA (01/11):
+// a mesma conta com 2,3 m e 1,25 × o quadro, só para o jogador do bloqueio (o obstáculo parado que a escolha conhece; quem
+// passa andando numa cena cheia pode chegar perto da folga sem passar da régua: no gol da semente 225 @26254 só os giros de
+// perfil, ±1,5 rad, ficam livres, e um colega chega a 2,1 m na borda do quadro); a escolha que contava o corpo pelo centro
+// (+ 0,4 m de lado; antes de 01/11) passa na régua nas partidas de agora mas não na folga (60 quadros no celular com o
+// bloqueio no gol da semente 103 @9611), e reprovava na régua nas partidas do CI de 522a4e36 (1º gol da semente 32: 13/60).
 {
   const PTS = [J.pelve, J.peito, J.cabeca, J.joelhoE, J.joelhoD, J.ombroE, J.ombroD];
-  const colados = (c, pc, aspecto) => {
+  // perto: o ponto mais perto a < zL m; dentro: a caixa dos pontos dentro de nL × o quadro (só = um ator só)
+  const colados = (c, pc, aspecto, zL = 2, nL = 1.1, so = null) => {
     const f = [pc.para[0] - pc.de[0], pc.para[1] - pc.de[1], pc.para[2] - pc.de[2]];
     const lf = Math.hypot(...f); f[0] /= lf; f[1] /= lf; f[2] /= lf;
     const lr = Math.hypot(f[2], f[0]) || 1, r = [-f[2] / lr, 0, f[0] / lr];
@@ -366,7 +378,7 @@ function min(arr, f) { return Math.min(...arr.map(f)); }
     const sujeito = c.reacao ?? c.autor;
     let n = 0;
     for (const a of c.atores) {
-      if (a === sujeito) continue;
+      if (a === sujeito || (so && a !== so)) continue;
       let zmin = Infinity, x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
       for (const i of PTS) {
         const d = [a.atu[i * 3] - pc.de[0], a.atu[i * 3 + 1] - pc.de[1], a.atu[i * 3 + 2] - pc.de[2]];
@@ -375,21 +387,23 @@ function min(arr, f) { return Math.min(...arr.map(f)); }
         const nx = (d[0] * r[0] + d[1] * r[1] + d[2] * r[2]) / (z * th), ny = (d[0] * u[0] + d[1] * u[1] + d[2] * u[2]) / (z * tv);
         zmin = Math.min(zmin, z); x0 = Math.min(x0, nx); x1 = Math.max(x1, nx); y0 = Math.min(y0, ny); y1 = Math.max(y1, ny);
       }
-      if (zmin < 2 && x1 > -1.1 && x0 < 1.1 && y1 > -1.1 && y0 < 1.1) n++;
+      if (zmin < zL && x1 > -nL && x0 < nL && y1 > -nL && y0 < nL) n++;
     }
     return n;
   };
+  const FOLGA = { z: 2.3, n: 1.25 };
   const R = C.COMEMORACAO.camera.reacao;
-  // bloqueio: põe um jogador em pé parado 1,2 m na frente da lente do plano de sempre (giro 0), no tick antes da reação
+  // bloqueio: põe um jogador em pé parado 1,2 m na frente da lente do plano de sempre (giro 0), no tick antes da reação;
+  // devolve o ator (ou null)
   const bloquear = c => {
     while (!c.acabou && !(c.kFimAbraco > 0 && c.k === c.kFimAbraco - 1)) CM.passoCena(c);
     const r = c.reacao ?? c.autor, rj = r.j, P = J.peito * 3 + 1;
     let vx = Math.cos(rj.rumo), vz = Math.sin(rj.rumo) + R.ladoTV;
     const vl = Math.hypot(vx, vz) || 1; vx /= vl; vz /= vl;
     const bl = c.atores.filter(a => a !== r && a !== c.autor && a.atu[P] > 1.2).sort((a, b) => Math.hypot(a.j.vx, a.j.vz) - Math.hypot(b.j.vx, b.j.vz))[0];
-    if (!bl) return false;
+    if (!bl) return null;
     bl.j.x = rj.x + vx * (R.dist - 1.2); bl.j.z = rj.z + vz * (R.dist - 1.2); bl.j.vx = 0; bl.j.vz = 0;
-    return true;
+    return bl;
   };
   // amostra maior (contraprova de 15/10): mais 12 gols naturais, todos os gols das partidas inteiras das sementes 101 em diante
   const extras = [];
@@ -397,29 +411,33 @@ function min(arr, f) { return Math.min(...arr.map(f)); }
     for (const g of golsNaturaisNode(L, s, 30000, 12 - extras.length)) extras.push({ ...g, nome: `natural (semente ${s} @${g.golTick})` });
   }
   const gols13 = [...gols, ...extras];
-  const linhas13 = [];
-  let pior = 0, bloqueios = 0;
+  const linhas13 = [], linhasF = [];
+  let pior = 0, piorF = 0, bloqueios = 0;
   for (const g of gols13) {
     for (const bloqueio of [false, true]) {
       for (const [nomeT, pequena, aspecto] of [['PC', false, 16 / 9], ['celular', true, 844 / 390]]) {
         const c = CM.criarCena(CM.planejarComemoracao(g.m, g.gol, { timeHumano: 0 }), g.m);
-        if (bloqueio && bloquear(c)) bloqueios++;
+        const bl = bloqueio ? bloquear(c) : null;
+        if (bl) bloqueios++;
         const pc = CM.criarPlanoCamera();
-        let ruins = 0, total = 0;
+        let ruins = 0, rentes = 0, total = 0;
         while (!c.acabou) {
           CM.passoCena(c);
           c.alfa = 1; CM.planoCamera(c, { pequena, aspecto }, pc); c.alfa = 0;
           if (pc.nome !== 'reacao') continue;
           total++;
           if (colados(c, pc, aspecto) > 0) ruins++;
+          if (bl && colados(c, pc, aspecto, FOLGA.z, FOLGA.n, bl) > 0) rentes++;
         }
-        pior = Math.max(pior, ruins);
+        pior = Math.max(pior, ruins); piorF = Math.max(piorF, rentes);
         if (ruins) linhas13.push(`${g.nome}${bloqueio ? ' com bloqueio' : ''} ${nomeT}: ${ruins}/${total}`);
+        if (rentes) linhasF.push(`${g.nome} ${nomeT}: ${rentes}/${total}`);
       }
     }
   }
   const nb = gols13.length * 2;
   reg('13 plano da reação: ninguém a < 2 m da lente dentro do quadro (PC e celular; também com um jogador parado na frente da lente)', `${linhas13.join('; ') || 'nenhum quadro'} (${gols13.length} cenas: as 8 + ${extras.length} gols naturais das sementes 101+; ${gols13.filter(g => CM.planejarComemoracao(g.m, g.gol, { timeHumano: 0 }).curta).length} curtas; bloqueios ${bloqueios}/${nb})`, '0 quadros (≥ 20 cenas)', extras.length >= 12 && bloqueios === nb && pior === 0);
+  reg(`13 folga do bloqueio: o jogador parado nunca a < ${String(FOLGA.z).replace('.', ',')} m dentro de ${String(FOLGA.n).replace('.', ',')} × o quadro (as mesmas cenas)`, linhasF.join('; ') || 'nenhum quadro', '0 quadros', extras.length >= 12 && bloqueios === nb && piorF === 0);
 }
 
 // 14 (contraprova de 14/10) o gol sai com quem cabeceou ainda no ar: a cena termina o pulo (mundo do treino: o lançamento

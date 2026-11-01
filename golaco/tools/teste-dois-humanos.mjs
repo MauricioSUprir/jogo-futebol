@@ -140,7 +140,9 @@ function cenaCobranca(m0, tipo, T, variante, sem) {
     if (variante === 'A1' && pr && m.tick >= solta - APERTO && m.tick < solta) eT = { x: q(m.ataca[T] * 0.8), z: q(0.3), botoes: botao };
     const tick = m.tick;
     P.passoPartida(m, ents2(T, eT, outro()), null);
-    if (pr && (pr.rolou || pr.arremesso || m.parada !== pr)) inicio = tick;
+    // a cobrança começa: a bola rolou, o arremesso do lateral ou — na cobrança com corrida (item 70, P1: pênalti, escanteio,
+    // tiro de meta, tiro livre) — a corrida do cobrador (o contato sai ~1–1,6 s depois, no fim dela)
+    if (pr && (pr.rolou || pr.arremesso || m.parada !== pr || (pr.corrida && pr.corrida.estado === 'corre'))) inicio = tick;
   }
   if (!pr) return { ok: false, motivo: 'a bola parada não foi montada' };
   const c = S.jogadorPorId(m, pr.cobrador);

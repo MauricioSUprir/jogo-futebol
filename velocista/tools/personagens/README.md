@@ -27,3 +27,13 @@ delas não encaixa); o cabelo é o da malha da cabeça. Nada daqui vai para o si
    Nos vilões a roupa é tingida antes de gravar: tira parte da cor (frio 65%, onda 35%, mago 55%) e multiplica por
    (0,72; 0,9; 1,25), (1,25; 0,62; 0,32) e (0,55; 1,0; 0,62).
 5. Conferir: `node velocista/tools/vista-equipe.mjs <pasta>` (retratos e o Cortex) e `node velocista/tools/teste-historia.mjs --celular`.
+
+## O elenco da temporada (edição pessoal)
+
+`elenco.py` faz os passos 3 e 4 de uma vez para cada personagem da lista `ELENCO` (avatar e tinta da roupa):
+```bash
+$B -I $S/elenco.py $E/rocketbox $E/rascunho velocista/assets/personagens [nome ...]
+```
+O sparse-checkout precisa do FBX (`Export/<avatar>.fbx`) e das texturas `*_color*.tga` de cada avatar da lista. As crianças do
+Rocketbox têm o esqueleto `Bip02` (o `glb.py` renomeia para `Bip01`). Depois: `node velocista/tools/gerar-retratos.mjs <ids>`
+(os rostos da caixa de fala) e `node velocista/tools/teste-elenco.mjs`.

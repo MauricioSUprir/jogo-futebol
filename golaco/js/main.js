@@ -1345,7 +1345,9 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   // delas usa o rumo (paraMundo) até a câmera de jogo desenhar
   cam.camera.updateMatrixWorld();
   cameraDaMatriz(cam.camera.matrixWorld.elements, telaMira.cam);
-  const bolaPerto = Math.hypot(_bp.x - hx, _bp.z - hz) <= CFG.ENTRADA.miraBolaPerto;
+  // (na cobrança dele a mira sai sempre da bola: com a corrida da cobrança, item 70, ele espera a 2,5–5 m dela)
+  const prMira = mundo.parada, cobraMira = !!h && !!prMira && !prMira.rolou && prMira.cobrador === h.id;
+  const bolaPerto = cobraMira || Math.hypot(_bp.x - hx, _bp.z - hz) <= CFG.ENTRADA.miraBolaPerto;
   telaMira.ox = bolaPerto ? _bp.x : hx; telaMira.oz = bolaPerto ? _bp.z : hz;
   telaMira.ok = (achou || !!h) && !cenaGol && !cenaSub && !cenaCartao && !cenaFim && !cam.geral;
   const f = cam.foco();
