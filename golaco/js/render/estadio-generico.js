@@ -253,6 +253,9 @@ export function criarTigela(P, opc = {}) {
         const thm = (colunas[i][j] + colunas[i][j + 1]) / 2;
         const tp = tipoEm((val(aneis[i][0], thm) + val(aneis[i + 1][0], thm)) / 2, thm);
         const a = pt(i, j), b = pt(i, j + 1), c = pt(i + 1, j + 1), d = pt(i + 1, j);
+        // (por metro: a fileira que não existe nesta coluna cai no fim da faixa e o degrau dela tem área zero — fora da malha,
+        // senão o degrau de perto pagava os triângulos das fileiras do lado mais fundo em toda a volta)
+        if (G.metrico && Math.hypot(a[0] - d[0], a[1] - d[1], a[2] - d[2]) < 1e-5 && Math.hypot(b[0] - c[0], b[1] - c[1], b[2] - c[2]) < 1e-5) continue;
         if (caixa) for (const q of [a, c]) caixa.expandByPoint(_pc.set(q[0], q[1], q[2]));
         if (tp === 0) {
           const ua = uAbs(i, j), ub = uAbs(i, j + 1), uc = uAbs(i + 1, j + 1), ud = uAbs(i + 1, j);

@@ -399,19 +399,6 @@ export function criarGradeAnel(A) {
     return { rumo: Math.atan2(nz, nx), larg, giro };
   }
   /**
-   * A borda da cadeira 3D (a largura dela: escalaLargura, 1 cm para dentro) cai na faixa de uma escada? (por metro: na
-   * quina da 1ª fileira a curva aperta a fileira e a última cadeira da metade encostava na escada da seguinte)
-   */
-  function bordaNaEscada(tr, r, x, z, sA, geo) {
-    const w = (CADEIRA.assento.largura * escalaLargura(geo.larg)) / 2 - 0.01, tx = -Math.sin(geo.rumo), tz = Math.cos(geo.rumo);
-    for (const sg of [-1, 1]) {
-      const ex = x + sg * w * tx, ez = z + sg * w * tz;
-      const u = tr.uDe(Math.atan2(ez, ex), sA), fr = u - Math.floor(u), hh = fr >= 0.5 ? 1 : 0;
-      if ((fr - hh / 2) * 2 < corredorDe(r, hh)) return true;
-    }
-    return false;
-  }
-  /**
    * A cadeira da fileira r no trecho tr com u (o centro), ou null (não existe ali). leve: sem o rumo e a largura (os
    * lugares da torcida só precisam de onde ela fica: 2 inversas de u a menos por lugar; por metro, a conta é feita igual).
    */
@@ -426,8 +413,8 @@ export function criarGradeAnel(A) {
     // (por metro, o rumo e a largura entram na conta de onde a cadeira existe: o mesmo resultado leve ou não)
     const geo = M || !leve ? rumoLargura(tr, r, h, u, th, sA, x, z) : null;
     // (por metro: na quina da 1ª fileira a fileira vira em poucos metros — nenhuma cadeira onde ela vira mais que
-    // GIRO_MAX na largura de uma cadeira, a 3D passava da vizinha — nem com a borda dentro da escada)
-    if (M && (geo.giro > GIRO_MAX || bordaNaEscada(tr, r, x, z, sA, geo))) return null;
+    // GIRO_MAX na largura de uma cadeira: a 3D passava da vizinha e a borda dela entrava na escada)
+    if (M && geo.giro > GIRO_MAX) return null;
     if (!A.existe(th, r, x, z, y, L, geo)) return null;
     const chave = ((ti * NF + r.k) * 100003 + (t + 50000) * 2 + h) * 32 + i;
     if (leve) return { setor: A.setor(x, z), f: r.f, a: (t * 2 + h) * CADEIRA.entreEscadas + i, k: r.k, t, h, i, n: nh, x, y, z, chave, th, s: sA };
