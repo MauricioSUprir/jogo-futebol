@@ -3067,9 +3067,18 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
   o corpo ou o pé sem a passada. A velocidade e o RITMO da passada saem de uma regulagem: para k = 0…5 passadas a mais até o
   pé de apoio pousar no ponto dele e a velocidade de cruzeiro a ±`velVaria` da do perfil, o tempo até o corpo chegar ao meio
   do apoio (com a aceleração ou a freada de agora, × `acelUsa`) e o ritmo que põe a fase ali; a escolha é a mais perto da
-  velocidade do perfil com o ritmo natural (dentro de `ritmo` × o da velocidade). O ritmo vai à passada pelo `pousoEm` do
-  pé no ar (`corrida.js saidaCorrida`, chamado pelo `sim.js` no lugar do `saidaParaToque` do cobrador); na última passada o
-  pouso do pé de apoio é marcado para quando o ponto de pouso (`jogador.js pontoPouso`) chega ao dele.
+  velocidade do perfil com o ritmo natural (dentro de `ritmo` × o da velocidade). O ritmo vai à passada pelo `ritmoVoo`
+  (`corrida.js saidaCorrida`, chamado pelo `sim.js` no lugar do `saidaParaToque` do cobrador): **a regulagem estica ou
+  encolhe só o VOO** — com os dois pés no ar o ritmo é o da regulagem; com um pé no chão, o da passada de sempre (natural,
+  adiantado, urgente) ou o da regulagem, o mais rápido (`jogador.js passoPassada`): o apoio nunca fica mais longo que o
+  natural, e o do voo nunca abaixo de `vooMin` 0,8 × o natural (`corrida.js regular`: o tempo de cada escolha com o apoio no
+  natural e o resto no voo, `faseNoAr`/`ritmoDoVoo`). Na última passada o pouso do pé de apoio é marcado para quando o ponto
+  de pouso (`jogador.js pontoPouso`) chega ao dele, pelo ritmo do voo (≥ `vooMin`). No começo da corrida, parado com os
+  dois pés no chão e a fase a ≤ `trocaPe` de um inteiro (|sen π·fase|), a regulagem escolhe o PÉ QUE SAI PRIMEIRO (a fase
+  + 1; o desenho parado é o mesmo): com ele, o pé de apoio pousa ao lado da bola num número par ou ímpar de passos. (01/11:
+  com o ritmo da passada inteira a 0,8× o natural, o pé de apoio da penúltima passada ficava plantado com o corpo a ~4,8 m/s
+  andando ~1 m por cima dele — o `pousoEm` passava por cima do ritmo adiantado/urgente — e o quadril caía até 0,29 m abaixo
+  da altura da corrida, a cabeça até 0,38 m: no replay do gol de pênalti a 1ª pessoa balançava 7,5 cm.)
 - **O contato** (`corrida.js contatoCorrida`, no passo 3 do `sim.js`, no lugar da condução do cobrador — que não roda, nem a
   "bola perdida", enquanto a parada tem corrida: `naCorrida`): o pouso do pé de apoio a ≤ `planta` m do centro da bola marca
   `cr.plantou`; no meio desse apoio (`cr.meio`) — ou com o corpo chegando à altura da bola — sai o toque de ação de sempre
@@ -3121,7 +3130,13 @@ matemática pelo MD, sem sorteio). A P2 (os estilos do pênalti, o goleiro na li
   de propósito o começo da partida IA × IA ou as bolas paradas da main? regravar e dizer no PR); C6 a linha da cobrança
   mirada no soltar × a bola real ≤ 3 cm; C7 a cavadinha com o 2º toque no meio da corrida; C8 dois humanos com o mesmo hash;
   C9 o apito; C10 o escanteio: quem ataca a zona espera no lugar (no contato, em média ≤ 2% do caminho da saída à zona) e não
-  chega antes (ninguém além de 20%). As guardas conferidas por mutação (corrida curta, pé de apoio longe, IA sem adiantar, pé
+  chega antes (ninguém além de 20%); C11 sem mergulho: do 1º passo ao contato, o quadril (o da simulação, `j.quadril`) no
+  máximo 0,12 m abaixo de 0,92 m (a altura da corrida do jogo a ~4 m/s) e nenhuma corrida com ≥ 0,15 m, a cabeça desenhada
+  no máximo 0,20 m abaixo da de pé (Lee & Farley 1998: o centro de massa baixa ~7 cm no apoio da corrida; Lees et al. 2010:
+  o joelho de apoio a ~26° no pouso e ~42° no contato; a corrida normal do jogo a 4–5 m/s fica 0,106–0,128 m abaixo de 0,92
+  no p90), nas corridas da IA, da demo, da pessoa e num CANHÃO DE COBRADORES (cada cena com outro jogador de linha do time
+  batendo, como o `colocarNaCorrida`; o C3 e o C4 também neles) — 522a4e36: 0,336 m, 82 de 265 com ≥ 0,15 m, a cabeça
+  0,38 m; agora 0,100 m, 0, 0,16 m. As guardas conferidas por mutação (corrida curta, pé de apoio longe, IA sem adiantar, pé
   arrastado, velocidade alta, a linha sem o pedido, a janela da cavadinha, sem apito, sorteio fora do mundo, a zona parada
   (`zonaAntes` 0,15) e a zona adiantada (0,35): cada uma reprova o item dela).
 

@@ -703,6 +703,8 @@ ação). Só a disputa de pênaltis andava até a marca (a 2,5 m/s, parando a 0,
 | Lees et al. 2010, "The biomechanics of kicking in soccer: a review", J Sports Sci 28(8):805 (citado por Augustus, Hudson & Smith, Kingston eprints 54573) | corrida de 3 m dá 3–5 passos; a velocidade da corrida escolhida pelo jogador; uma revisão que cita Kellis & Katis e Lees põe a corrida do chute de peito do pé em ~3–4 m/s (não conferido no original) | as velocidades dos perfis (3,0–4,4 m/s) e a meta C2 (2,5–5 m/s) |
 | Potthast et al. (ISBS, ojs.ub.uni-konstanz.de) e Augustus, Hudson & Smith | a freada do corpo no último apoio se correlaciona com a bola mais rápida (r = 0,6); a perna de apoio regula a freada quando a velocidade da corrida muda | a última passada da regulagem freia ou acelera para o pé de apoio pousar no ponto (o corpo segue embalado até o contato) |
 | Lee, Lishman & Thomson 1982, "Regulation of gait in long jumping", J Exp Psychol Hum Percept Perform 8(3):448 | o saltador em distância acerta a tábua ajustando as ÚLTIMAS passadas pela vista (a variação do pé cai perto da tábua) | a regulagem da passada (`corrida.js guiarCorrida`): o ritmo e a velocidade escolhidos a cada passo para o pé de apoio pousar no ponto, e o pouso marcado na última passada |
+| Lee & Farley 1998, "Determinants of the center of mass trajectory in human walking and running", J Exp Biol 201(21):2935 | correndo, o centro de massa DESCE ~0,073 m na 1ª metade do apoio (a perna como mola; andando, sobe 0,031 m) | a régua do mergulho (01/11): a corrida da cobrança não desce mais que a oscilação da corrida (C11 do teste) |
+| Lees et al. 2010 (a revisão acima) e Lees & Nolan 2002 (Science and Football IV, citados por ela) | o joelho de apoio do chute está a ~26° no pouso do pé e ~42° no contato (o quadril ~2–5 cm abaixo da perna esticada); os profissionais dão a ÚLTIMA passada mais longa (mais retração da pelve) | a passada mais longa da regulagem é VOO mais longo, nunca apoio mais longo (`ritmoVoo`); o voo no máximo 1/0,8 do natural (`vooMin`) |
 | Pênaltis em ligas (estudo de >1.700 pênaltis, 2015/16–2018/19, dergipark.org.tr; Liverpool John Moores, phys.org 05/2010) | corrida de 2–5 passos e de 4–6 passos as mais eficazes; a de 10 m a pior | o pênalti de 4–5 m (4–6 passos na regulagem) |
 | EA FC / FIFA (guias: EA FIFA 14 "save and score more penalties", fifplay FIFA 17, operationsports EA FC 25) | na bola parada a força é a do botão segurado e o soltar começa a corrida; a hesitação ("stutter") na corrida é um botão (L2/LT) e faz o goleiro se comprometer | soltar o botão guarda a força e a mira e começa a corrida (a pessoa não controla a corrida); a paradinha/hesitação fica para a P2 |
 | IFAB, Regras 13, 14, 16 e 17 | 14: o pênalti só depois do sinal do árbitro; a finta NA corrida é permitida, depois de completada não; 13: o tiro livre cerimonial (com a barreira) espera o apito; 16 e 17: a bola parada no ponto, em jogo quando chutada e se mexe | a corrida da IA no pênalti começa no apito; o apito no pênalti e no tiro livre com barreira; a bola presa no ponto até o contato |
@@ -749,6 +751,42 @@ no apito, a bola rolava ~0,4 s depois de antes; a montagem do pênalti foi de 1,
 1,3 → −0,03/+0,16 s; 1,5 → +0,17/+0,36 s). Antes disso, com a corrida começando antes do apito, o pênalti da IA batia
 0,23 s ANTES da main (24 cenas): na main a IA espera os jogadores que entram na folga da meia-lua (0,05–0,28 m) saírem, o que
 a corrida, decidida ~1,45 s antes, não prevê.
+
+**O mergulho do quadril (01/11, CI do #588).** O G6 do `teste-replay-anel` (o balanço da 1ª pessoa no replay do gol ≤ 1 cm)
+reprovou com 7,5 cm nos gols de pênalti do camisa 10 (sementes 8 e 9). O mecanismo: a regulagem pedia à passada o pouso do
+pé no ar (`pousoEm`) pelo ritmo da passada INTEIRA, e esse ritmo ia ao piso, 0,8× o natural (a corrida de 4–5 m saía com um
+passo a menos que o natural; o outro número de passos dava 1,2–1,4×). Com o ritmo assim, o pé que estava no chão ficava lá —
+o `pousoEm` passava por cima do ritmo adiantado/urgente que tira o pé de apoio que ficou para trás —, o corpo a ~4,8 m/s andava
+~1 m por cima dele, a perna esticava e o quadril caía de 0,92 a 0,63 m (a cabeça de 1,55 a 1,26 m) em ~0,1 s, na penúltima
+passada (15–17 ticks antes da batida). Um mergulho visível no jogo e na TV, não só no replay: no levantamento do agente das cenas
+(sementes 1–8, 39 corridas), 11 com ≥ 15 cm (pênalti até 29 cm, escanteio até 24, tiro livre de passe até 28).
+
+Tentativas medidas: o piso do ritmo pelo urgente no ramo do `pousoEm` (29 → 20 cm: o urgente só começa com o pé a 0,62 m); a
+câmera não resolve (prender o olho tira a 1ª pessoa pela `lenteRuimPrimeira`). A correção é na regulagem: o apoio no ritmo
+natural e o ajuste no VOO (`ritmoVoo`: com um pé no chão vale o ritmo da passada de sempre ou o da regulagem, o mais rápido).
+Só isso levou o pênalti a 0,118 m, mas o voo ia a 0,5–0,6× o natural (o voo de 0,23 s a 4,8 m/s, um salto, e o quadril do
+desenho baixa no voo longo: o pé que acabou de sair fica para trás); com o voo ≥ 0,8× o natural na escolha (`vooMin`), a
+regulagem passa a preferir o número de passos com o ritmo um pouco mais rápido (≤ 1,2×), e a corrida fica com a passada da
+corrida normal do jogo. Faltava a corrida curta (2,5–3,2 m) do destro: parado na fase 0, o pé direito sai primeiro e o esquerdo
+(o de apoio) pousa ao lado da bola no 2º ou no 4º passo — nunca no 3º —; a regulagem escolhe agora o pé que sai primeiro (a fase
++ 1, o desenho parado é o mesmo). Com o número de passos certo, o ritmo da regulagem fica um pouco acima do natural e vale
+também no apoio (o mais rápido): o 1º apoio da arrancada, que segurava o quadril a 0,79 m com o corpo acelerando de 0 a ~2,4
+m/s (como em toda arrancada do jogo), fica mais curto.
+
+Medido (`teste-corrida-cobranca` C11, 265 corridas: IA, demo, a pessoa e um canhão de cobradores — cada cena com outro jogador
+de linha do time batendo), 522a4e36 → agora:
+
+| | 522a4e36 | agora |
+|---|---|---|
+| queda do quadril abaixo de 0,92 m, pior: pênalti · escanteio · tiro de meta curto · longo · tiro livre chute · passe | 0,29 · 0,34 · 0,15 · 0,11 · 0,16 · 0,28 m | 0,10 · 0,08 · 0,07 · 0,08 · 0,10 · 0,07 m |
+| corridas com ≥ 0,15 m | 82 de 265 (31%) | 0 |
+| a cabeça (de pé → mínimo), pior | 0,38 m | 0,16 m |
+| a corrida normal do jogo (IA × IA, sementes 3001–3004), abaixo de 0,92 m: p50 · p90 · p95 | 4–4,5 m/s: 0,063 · 0,106 · 0,113; 4,5–5 m/s: 0,078 · 0,128 · 0,137 | (igual: o treino e a corrida normal não mudam) |
+
+A meta (≤ 0,12 m, nenhuma ≥ 0,15 m) é a da corrida normal do jogo na mesma velocidade, não a do real: o desenho da corrida soma
+o balanço dele (±3 cm a 4 m/s) e o alcance das pernas (o quadril baixa no fim do voo), uns 10 cm abaixo de 0,92 m a 4–5 m/s —
+mais que os ~7 cm do centro de massa real (Lee & Farley 1998). Chegar aos ~8 cm do real pede mexer na corrida de todos (o
+`anim.js`, fora deste PR: a corrida e a condução foram aprovadas pelo dono e o treino tem de ficar bit a bit).
 
 **Pendente/limites.** A P2 (os estilos do pênalti: normal, forte, colocado, paradinha, pulinho; o goleiro da IA que se
 compromete cedo e o cobrador que lê; o goleiro na linha até o chute na partida). A corrida é uma reta do ponto de partida ao
