@@ -517,6 +517,8 @@ export function dadosEstadio(e, nomeReserva = '') {
     marca: String(e.marca || ''), confianca: ESCOLHA(e.confianca, ['alta', 'media', 'baixa'], 'baixa'),
     // a forma própria do estádio (estadio-planta.js valida; sem ela, a forma de sempre)
     forma: e.forma && typeof e.forma === 'object' && !Array.isArray(e.forma) ? e.forma : null,
+    // os lugares de verdade (item 69, PR 4: a lotação da torcida nos sem forma; render/torcida-dados.js)
+    capacidade: Number.isFinite(Number(e.capacidade)) && Number(e.capacidade) > 0 ? Number(e.capacidade) : null,
   };
 }
 
@@ -696,6 +698,8 @@ export function identidadeDoPedido(pedido, base = null, uniformes = null) {
   const festaPreto = deltaE(cc.outra, cc.forte) >= 15 ? cc.outra : textoSobre(cc.forte);
   return {
     tm: true, neutro, publico,
+    // a capacidade do estádio real SEM forma própria (desenhado na geometria do Golaço): a lotação da torcida
+    capacidade: real && !real.forma ? real.capacidade : null,
     competicao: String(pedido?.partida?.competicao || ''),
     times,
     kits: un.kits, uniformes: { escolha: un.escolha, medidas: un.medidas },

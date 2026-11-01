@@ -44,6 +44,11 @@ export const PISTA = Object.freeze({ meiaReta: 42.195, raio: 36.5, raias: 8, rai
 // o caimento das arquibancadas de cadeiras (item 69, PR 4; PESQUISA-ESTADIO.md §17): o teto do degrau mais íngreme
 // (Green Guide 5ª ed. §11/§12.11: 34° com cadeira; aqui 33,6° de folga), os alvos de cada anel da frente para trás (o
 // perfil de C constante: C = 90 dá 22–29° no anel de baixo, 29–31° no do meio e 34–35° no de cima) e a curva dele
+// a torcida das genéricas (item 69, PR 4): o teto de torcedores desenhados (a Alta) e a escala do torcedor — o sorteio de
+// 0,92–1,08 por cima dela fica dentro da escala do impostor (render/impostor-dados.js IMPOSTOR.escala: 0,9–1,25), então a
+// troca do quadro pelo impostor não muda o tamanho de ninguém (antes, até 1,3 × 1,08 × 1,08 = 1,52)
+export const TETO_LUGARES = 30000;
+export const TORCEDOR_ESC = Object.freeze([0.98, 1.15]);
 export const CAIMENTO = Object.freeze({ teto: 33.6, max: 34, pot: 1.12, alvo: Object.freeze({ 1: [34], 2: [27, 33], 3: [25, 30, 33] }) });
 const Q = 44;   // a quadra do bairro (m; as ruas de 9 m entre elas: render/estadio-generico.js pinta o chão na mesma grade)
 
@@ -569,7 +574,9 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
 
   // ---------------------------------------------------------------- lugares da torcida
   // quantos torcedores desenhados: ~1 por lugar até ~20 mil; nos grandes, até ~25 mil (cada um vale vários lugares)
-  const nAlvo = Math.round(Math.min(25500, 0.6 * F.capacidade + 6000));
+  // (item 69, PR 4: o torcedor na escala de gente — até TORCEDOR_ESC, com o sorteio de ± 8% dentro da escala do impostor,
+  // 1,25 — e mais gente nos grandes no lugar de esticar: o teto 25,5 → 30 mil e 0,6 → 0,75 da capacidade)
+  const nAlvo = Math.round(Math.min(TETO_LUGARES, 0.75 * F.capacidade + 6000));
   const T0 = Math.max(...LD.map(l => l.prof));
   // a área das cadeiras (m², só os trechos de cadeira: sem as faces e os corredores entre os anéis)
   const areaCadeiras = (() => {
@@ -587,7 +594,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   })();
   // o espaço de cada torcedor desenhado: ~0,66 m² × k² (k ≥ 0,85; até 1,35 o boneco cresce, depois só se espaçam)
   const kEsp = clamp(Math.sqrt((areaCadeiras * 0.8) / (nAlvo * 0.66)), 0.85, 2.6);
-  const ESC = clamp(kEsp, 0.95, 1.3);
+  const ESC = clamp(kEsp, TORCEDOR_ESC[0], TORCEDOR_ESC[1]);
   const PASSO = 0.72 * kEsp, FILA = clamp(0.92 * kEsp, 0.8, 1.7);
   const NF = Math.max(8, Math.round(T0 / FILA));
   // ---------------------------------------------------------------- a grade das cadeiras (item 69)
@@ -640,11 +647,10 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
       })()];
     void Lu;
     const meia = sm => (abertos ? 6 : (6 * perim(sm)) / p05);
-    const arcos = MARCAS_P.filter(m => m.tipo === 'arco');
     _grade = criarGradeAnel({
       faixas: faixasS, profMedia,
       // as fileiras POR METRO (item 69, PR 4): 0,8 m pela perpendicular em todo lado; o lado mais raso tem menos fileiras
-      metrico: { dS, sD, amostras },
+      metrico: { dS, sD, dp, amostras },
       perfil: (s2, th) => perfil(s2, th), ponto, setor,
       vDe: s2 => 0.04 + 0.93 * clamp(s2, 0, 1),
       trechos: trs,
@@ -654,15 +660,19 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
       // decisão do dono, FILA "Depende do dono" 11). Antes, a fração fixa do arco no meio: 0,66 m na frente, 2,15 m atrás
       corredorDe: r => clamp(ESCADA_G / meia(r.sAssento), 0.04, 0.5),
       meiaMedia: meia,
-      existe: (th, r, x, z, y, L) => {
+      existe: (th, r, x, z, y, L, geo) => {
         if (rB(th) - rF(th) < 2.5 || !temArquibancada(x, z)) return false;
         if (tipoEm(ladoEm(th), L[2]) !== 0) return false;
         if (z > 0 && Math.abs(x) < mtG && y < topoTunelG) return false;
-        // o caimento da fileira ali (Green Guide: ≤ 34° com cadeira): o espelho ÷ a profundidade pela perpendicular — o
-        // perfil já respeita o teto no meio de cada lado; nos cantos a mistura dos lados pode passar (sem cadeira)
-        if (perfil(L[1], th) - y > (dS(th, L[1]) - dS(th, L[0])) * TAN_MAX) return false;
-        // nada de cadeira no arco das marcas (as pontas dele descem até a arquibancada: o Dragão), do assento ao pulo
-        if (arcos.length && arcos.some(m => [0.45, 1.3, 1.85, 2.15].some(h => arcoPerto(m, x, y + h, z, 0)))) return false;
+        // a fileira ali, pela perpendicular dela (o rumo da cadeira): ≥ 0,6 m (o encosto não entra no espelho de trás), o
+        // caimento ≤ 34° (Green Guide, com cadeira) e a cadeira ≥ 0,42 m (a 3D não encosta na vizinha) — o perfil e as
+        // fileiras por metro já dão isso nos lados; nos cantos (a mistura dos lados, a quina da 1ª fileira) a cadeira sai
+        const [x0, z0] = ponto(th, L[0]), [x1, z1] = ponto(th, L[1]);
+        const prof = Math.abs((x1 - x0) * Math.cos(geo.rumo) + (z1 - z0) * Math.sin(geo.rumo));
+        if (prof < FILEIRA_MIN || geo.larg < LARG_MIN || perfil(L[1], th) - y > prof * TAN_MAX) return false;
+        // nada de cadeira dentro de um sólido da planta, do assento ao pulo de quem está de pé: o arco das marcas (as pontas
+        // dele descem até a arquibancada: o Dragão), as colunas, a cobertura baixa demais (o sólido inteiro só perto de algum)
+        if (pertoDeObstaculo(x, y, z, th)) for (const h of ALTURAS_CAD) if (solido(x, y + h, z, 0, true, false)) return false;
         return true;
       },
     });
@@ -671,7 +681,58 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
   // a profundidade pela PERPENDICULAR da fileira (as fileiras por metro): a fileira s no ângulo th é a interpolação radial
   // entre rF e rB, e a distância entre duas vizinhas é (rB − rF)·cos β·ds — β, o ângulo entre o raio e a normal da fileira
   // (o da 1ª e o da última, linear em s). dS e a inversa sD analíticas (uma parábola em s).
-  const ESCADA_G = 1.3, TAN_MAX = Math.tan(CAIMENTO.max * RAD);
+  const ESCADA_G = 1.3, TAN_MAX = Math.tan(CAIMENTO.max * RAD), FILEIRA_MIN = 0.6, LARG_MIN = 0.42;
+  // as alturas acima do piso da cadeira que não podem cair num sólido: o assento, a cabeça sentado, de pé e no pulo
+  const ALTURAS_CAD = [0.45, 1.3, 1.85, 2.15];
+  // o filtro rápido (a carga: o sólido inteiro em cada cadeira triplicava o tempo dos lugares): as marcas, as torres e a
+  // cobertura em discos/caixas no chão com folga, numa grade de 8 m; a parte de baixo da cobertura por ângulo
+  let _obst = null;
+  function obstaculos() {
+    if (_obst) return _obst;
+    const CEL = 8, grade8 = new Map(), caixas = [];
+    let sempre = false;
+    const disco = (x, z, r) => {
+      for (let i = Math.floor((x - r) / CEL); i <= Math.floor((x + r) / CEL); i++) for (let j = Math.floor((z - r) / CEL); j <= Math.floor((z + r) / CEL); j++) {
+        const k = i * 4096 + j; const l = grade8.get(k); if (l) l.push([x, z, r]); else grade8.set(k, [[x, z, r]]);
+      }
+    };
+    for (const t of TORRES) {
+      if (t.larga) { caixas.push([-64, t.z - 5, 64, t.z + 5]); continue; }
+      disco(t.x, t.z, (t.poste ? 2.2 : 3.4) + 2);
+    }
+    for (const m of MARCAS_P) {
+      if (m.tipo === 'colunas') for (const cc of m.colunas) disco(cc.r0 * Math.cos(cc.th), cc.r0 * Math.sin(cc.th), m.larg + 3);
+      else if (m.tipo === 'mastros') for (const t of m.mastros) disco(t.x, t.z, 3.6);
+      else if (m.tipo === 'torres' || m.tipo === 'rampas_espiral') for (const t of m.torres) disco(t.x, t.z, t.raio + 3.2);
+      else if (m.tipo === 'arco') {
+        const sl = [-1, 1, -1, 1][m.k];
+        for (let ao = -m.meia - 1; ao <= m.meia + 1; ao += 1) disco(m.lado ? ao : sl * m.dist, m.lado ? sl * m.dist : ao, m.raio + 3);
+      } else if (m.tipo === 'telao') disco(m.x, m.z, m.larg / 2 + 3);
+      else if (m.tipo === 'estatua' || m.tipo === 'bola') disco(m.x, m.z, (m.raio ?? 3.5) + 3);
+      else if (m.tipo === 'cupula') disco(m.x, m.z, m.raio + 3);
+      else if (m.tipo === 'vigas') caixas.push([-(m.hx + 27), -(m.hz + 27), m.hx + 27, m.hz + 27]);
+      else if (m.tipo !== 'cubo') sempre = true;
+    }
+    // a parte de baixo da cobertura em cada ângulo (o menor y da chapa e da treliça; a mesma tabela da sombra, e o
+    // vizinho de cada lado)
+    const N = 1440, baixo = new Float64Array(N);
+    for (let i = 0; i < N; i++) {
+      let b = Infinity;
+      for (const d of [-0.6, 0, 0.6]) { const c = cobEm(-Math.PI + (2 * Math.PI * (i + 0.5 + d)) / N); if (c) b = Math.min(b, Math.min(c.yFora, c.yDentro) - 3.6 - 1.2); }
+      baixo[i] = b;
+    }
+    return (_obst = { CEL, grade8, caixas, sempre, baixo, N });
+  }
+  function pertoDeObstaculo(x, y, z, th) {
+    const O = obstaculos();
+    if (O.sempre) return true;
+    const ib = Math.min(O.N - 1, Math.max(0, Math.floor(((th + Math.PI) / (2 * Math.PI)) * O.N)));
+    if (y + 2.15 + 0.5 >= O.baixo[ib]) return true;
+    for (const [a, b, c, d] of O.caixas) if (x >= a && x <= c && z >= b && z <= d) return true;
+    const l = O.grade8.get(Math.floor(x / O.CEL) * 4096 + Math.floor(z / O.CEL));
+    if (l) for (const [cx, cz, r] of l) if (Math.hypot(x - cx, z - cz) <= r) return true;
+    return false;
+  }
   const cosDe = fr => tabela(th => { const e = 1e-3, r = fr(th), d = (fr(th + e) - fr(th - e)) / (2 * e); return 1 / Math.sqrt(1 + (d / r) ** 2); });
   let _cF = null, _cB = null;
   const dp = th => { if (!_cF) { _cF = cosDe(rF); _cB = cosDe(rB); } const D = rB(th) - rF(th); return [D * _cF(th), D * _cB(th)]; };
@@ -731,7 +792,7 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
         if (z > 0 && Math.abs(cad.x) < mt && y < topoTunel) continue;
         if (lentes(cad.x, y, cad.z)) continue;
         // ninguém com a cabeça no arco das marcas (as pontas dele descem até a arquibancada: o Dragão)
-        if (ARCOS.length && ARCOS.some(m => arcoPerto(m, cad.x, y + 1.7 * ESC * 1.08, cad.z, 0.4))) continue;
+        if (ARCOS.length && ARCOS.some(m => arcoPerto(m, cad.x, y + 1.7 * ESC, cad.z, 0.4))) continue;
         const hs = h2(i, j * 31 + 7);
         // as cadeiras soltas à mostra (as brechas) e a última fileira (debaixo do parapeito) vazia
         if (hs < 0.06 || s > 0.985) continue;
@@ -742,12 +803,12 @@ export function criarPlantaGenerica(formaBruta, opc = {}) {
           im = Math.min(249, Math.floor(uu * 250)) + Math.min(35, NF - 1 - j) * 250;
         }
         vistos.add(cad.chave);
-        lista.push(k, f, i, cad.x, y, cad.z, s > 0.5 ? ESC * 1.08 : ESC, im, luzDoSol(cad.x, y + 1.2, cad.z));
+        lista.push(k, f, i, cad.x, y, cad.z, ESC, im, luzDoSol(cad.x, y + 1.2, cad.z));
       }
     }
     // o teto da torcida (25,5 mil: a Alta do celular): acima dele sai um a cada tanto, sem buraco (pelo sorteio fixo)
-    if (lista.length / 9 > 25500) {
-      const k = 25500 / (lista.length / 9);
+    if (lista.length / 9 > TETO_LUGARES) {
+      const k = TETO_LUGARES / (lista.length / 9);
       let w = 0;
       for (let i = 0; i < lista.length; i += 9) if (h2(i / 9, 9173) < k) { for (let c = 0; c < 9; c++) lista[w + c] = lista[i + c]; w += 9; }
       lista.length = w;

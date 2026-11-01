@@ -331,11 +331,13 @@ function auditarGeometria(geo) {
     if (anel) {
       const r = G.fileiras[c.k];
       an = r.faixa;
-      const [x0, z0] = P.ponto(c.th, r.s0), [x1, z1] = P.ponto(c.th, r.s1);
+      // (item 69, PR 4: as fileiras por metro das genéricas — o s de cada fileira muda com o ângulo: G.limites)
+      const Lr = G.limites ? G.limites(r, c.th) : [r.s0, r.s1];
+      const [x0, z0] = P.ponto(c.th, Lr[0]), [x1, z1] = P.ponto(c.th, Lr[1]);
       const nx = Math.cos(c.rumo), nz = Math.sin(c.rumo);
       prof = Math.abs((x1 - x0) * nx + (z1 - z0) * nz);
-      const y0 = perfil(r.s0, c.th);
-      esp = perfil(r.s1, c.th) - y0;
+      const y0 = perfil(Lr[0], c.th);
+      esp = perfil(Lr[1], c.th) - y0;
       canto = (P.rB(c.th) - P.rF(c.th)) < RAZ_CANTO * profNominal(c.th);
       const dg = Math.abs(c.y - y0);
       if (dg > 0.01) N.foraDoDegrau++;
@@ -350,7 +352,7 @@ function auditarGeometria(geo) {
       for (const sg of [-1, 1]) {
         const ex = c.x + sg * w * tx, ez = c.z + sg * w * tz;
         const u = tr.uDe(Math.atan2(ez, ex), r.sAssento), fr = u - Math.floor(u), hh = fr >= 0.5 ? 1 : 0, qq = (fr - hh / 2) * 2;
-        if (qq < G.corredor) { N.naEscada++; break; }
+        if (qq < (G.corredorDe ? G.corredorDe(r, hh) : G.corredor)) { N.naEscada++; break; }
       }
     } else {
       const j = nFG - 1 - c.f, r = setor === 0 || setor === 3 ? FL[j] : FF[j];
@@ -430,12 +432,17 @@ function auditarGeometria(geo) {
     if (len > lim) { L.runs.viol++; L.runs.cadViol += len; exemploRun(L, `${len} cadeiras entre ${ends.join(' e ')} (${onde})`); }
   }
   if (anel) {
-    const cc = G.corredor;
+    // (item 69, PR 4: o corredor e as cadeiras por metade de cada fileira — G.corredorDe, r.nh — e o s da fileira por
+    // metro em cada ângulo — G.limites)
+    const ccDe = (r, h) => (G.corredorDe ? G.corredorDe(r, h) : G.corredor);
+    const nDe = (r, h) => (r.nh ? r.nh[h] : r.n);
+    const limDe = (r, th) => (G.limites ? G.limites(r, th) ?? [r.s0, r.s1, r.sAssento] : [r.s0, r.s1, r.sAssento]);
     // o motivo de faltar a cadeira de índice i (a ponta, o túnel, a face, o vomitório) na metade (t, h) da fileira r
     const motivo = (tr, r, t, h, i) => {
-      const u = t + h / 2 + (cc + ((i + 0.5) * (1 - cc)) / r.n) / 2;
+      const cc = ccDe(r, h);
+      const u = t + h / 2 + (cc + ((i + 0.5) * (1 - cc)) / nDe(r, h)) / 2;
       if (u < tr.u0 || u > tr.u1) return 'ponta';
-      const th = tr.thDe(u, r.sAssento), [x, z] = P.ponto(th, r.sAssento), y = perfil(r.s0, th);
+      const th = tr.thDe(u, r.sAssento), L = limDe(r, th), [x, z] = P.ponto(th, L[2]), y = perfil(L[0], th);
       if (z > 0 && Math.abs(x) < MT && y < TOPO_TUNEL) return 'tunel';
       if (geo.tipo === 'maracana') {
         if (r.faixa === 0 && r.iFaixa >= r.nFaixa - PL.VOM.fileiras) { const g = P.noGomo(th) * (360 / P.forma.corredores); if (g >= PL.VOM.g0 && g <= PL.VOM.g1) return 'vomitorio'; }
@@ -447,7 +454,7 @@ function auditarGeometria(geo) {
     };
     const fechado = tr => tr.k === undefined || tr.k === -1;
     // a escada no começo da metade (t, h) existe? (dentro do trecho; na volta fechada, sempre)
-    const escadaEm = (tr, t, h) => { if (fechado(tr)) return true; const u = t + h / 2 + cc / 4; return u >= tr.u0 && u <= tr.u1; };
+    const escadaEm = (tr, t, h, r) => { if (r && ccDe(r, h) <= 0) return false; if (fechado(tr)) return true; const u = t + h / 2 + (r ? ccDe(r, h) : 0.1) / 4; return u >= tr.u0 && u <= tr.u1; };
     for (const g of grupos.values()) {
       const tr = G.trechos[g.ti], r = G.fileiras[g.k], L = lado(g.setor, g.an);
       g.is.sort((a, b) => a - b);
@@ -456,16 +463,17 @@ function auditarGeometria(geo) {
       for (let j = 1; j <= g.is.length; j++) {
         if (j < g.is.length && g.is[j] === g.is[j - 1] + 1) continue;
         const ia = a0, ib = g.is[j - 1];
-        const esq = ia === 0 ? (escadaEm(tr, g.t, g.h) ? 'escada' : 'ponta') : motivo(tr, r, g.t, g.h, ia - 1);
+        const esq = ia === 0 ? (escadaEm(tr, g.t, g.h, r) ? 'escada' : 'ponta') : motivo(tr, r, g.t, g.h, ia - 1);
         const [tn, hn] = g.h === 0 ? [g.t, 1] : [g.t + 1, 0];
-        const dir = ib === g.n - 1 ? (escadaEm(tr, tn, hn) ? 'escada' : 'ponta') : motivo(tr, r, g.t, g.h, ib + 1);
+        const dir = ib === g.n - 1 ? (escadaEm(tr, tn, hn, r) ? 'escada' : 'ponta') : motivo(tr, r, g.t, g.h, ib + 1);
         registrarRun(L, ib - ia + 1, [esq, dir], onde);
         if (j < g.is.length) a0 = g.is[j];
       }
       // a largura da escada no começo desta metade, na fileira dela (só a que existe)
-      if (escadaEm(tr, g.t, g.h)) {
-        const ua = g.t + g.h / 2, ub = ua + cc / 2, s = r.sAssento;
-        const [xa, za] = P.ponto(tr.thDe(ua, s), s), [xb, zb] = P.ponto(tr.thDe(ub, s), s);
+      if (escadaEm(tr, g.t, g.h, r)) {
+        const ua = g.t + g.h / 2, ub = ua + ccDe(r, g.h) / 2, s = r.sAssento;
+        const naF = th => P.ponto(th, limDe(r, th)[2]);
+        const [xa, za] = naF(tr.thDe(ua, s)), [xb, zb] = naF(tr.thDe(ub, s));
         if (fechado(tr) || (ua >= tr.u0 && ub <= tr.u1)) L.escada.push(Math.hypot(xb - xa, zb - za));
       }
     }

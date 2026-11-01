@@ -43,7 +43,8 @@ export const TIGELA_PADRAO = Object.freeze({
   // anéis vira o espelho de 0,4 m do corredor de circulação (0,7 m de piso), onde abrem os vomitórios
   perfil: { y0: 1.8, sInf: 0.42, yInf: 10.6, sCam: 0.012, yCam: 11.0, yTopo: 24.2, curva: 1.1, parapeito: 1.2, laje: 24.0, muro: 3.4, muroR: 1.4 },
   // lugares da torcida: fileiras (inferior, superior), passo na fileira (m) e escala do torcedor (o de cima vale ~2)
-  fileiras: [32, 22], passo: [0.66, 0.88], escala: [1, 1.3],
+  // (a escala do torcedor de cima: 1,3 → 1,15 no item 69, PR 4 — com o sorteio de ± 8%, dentro da escala do impostor, 1,25)
+  fileiras: [32, 22], passo: [0.66, 0.88], escala: [1, 1.15],
   corredores: 60, corredorU: 0.08,
   // a borda de fora 2,8 m acima das almofadas (o vão de luz que a faz "flutuar"; a face do anel de compressão tem 1,6 m);
   // rodada 2: o furo ~10% maior (172 × 134; "160 × 122 em 296 × 259 parece pequeno" nas aéreas), a linha dos nós a ~2/3

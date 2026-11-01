@@ -4,10 +4,14 @@
 // (pele de LED, arco, torres, mastros, telão, cúpula); a pista de atletismo e as estruturas pela cor das notas. O
 // Maracanã (forma própria em estadio-planta.js, entorno 'maracana') não é tocado. Ajustes à mão por estádio em
 // tools/estadios/ajustes-forma.json ({chave: {campo: valor}}, aplicados por cima no fim).
+// Item 69, PR 4 (a mesma fonte para as cadeiras): depois das formas, os campos de cadeira da base (cadeiras_cor,
+// cadeiras_cor2, cadeiras_padrao) saem da forma que o jogo desenha (a revista contra as fotos: a cadeira 3D = a textura =
+// a base); o homônimo da MESMA cidade ganha a forma da entrada principal (o jogo acha o homônimo pelo clube); nos sem
+// forma, o 'liso' com uma 2ª cor diferente vira 'misto' (o liso não desenha a 2ª cor).
 //   node tools/estadios/gerar-formas.mjs [--pesquisa a.json,b.json] [--saida <estadios.json>] [--so chave1,chave2] [--seco]
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.resolve(AQUI, '../..');
@@ -130,6 +134,43 @@ export function formaDaPesquisa(e) {
   return forma;
 }
 
+/**
+ * A mesma fonte para as cadeiras (item 69, PR 4): os campos de cadeira da base pela forma desenhada; o homônimo da mesma
+ * cidade com a forma da principal; o 'liso' com 2ª cor dos sem forma vira 'misto'. Devolve quantos mudaram.
+ */
+export async function sincronizarCadeiras(base) {
+  const GE = await import(pathToFileURL(path.join(RAIZ, 'js', 'estadio-generico.js')).href);
+  const PL = await import(pathToFileURL(path.join(RAIZ, 'js', 'estadio-planta.js')).href);
+  let n = 0;
+  const poe = (ent, k, v) => { if ((ent[k] ?? null) !== v) { ent[k] = v; n++; } };
+  const campos = (ent, forma) => {
+    if (forma.entorno === 'maracana') {
+      // o Maracanã: as cores da textura aprovada nas rodadas da prévia (o padrão dele, 'tigela-maracana', é um misto)
+      const cs = PL.validarForma(forma).cadeiras;
+      poe(ent, 'cadeiras_cor', cs[0]); poe(ent, 'cadeiras_cor2', cs[1] ?? null); poe(ent, 'cadeiras_padrao', 'misto');
+      return;
+    }
+    const F = GE.validarFormaGenerica(forma);
+    if (!F) return;
+    poe(ent, 'cadeiras_cor', F.cadeiras[0]); poe(ent, 'cadeiras_cor2', F.cadeiras[1] ?? null); poe(ent, 'cadeiras_padrao', F.padrao);
+  };
+  for (const ent of Object.values(base.estadios)) {
+    if (ent.forma && typeof ent.forma === 'object') { campos(ent, ent.forma); continue; }
+    const c2 = hex(ent.cadeiras_cor2), c1 = hex(ent.cadeiras_cor);
+    if ((ent.cadeiras_padrao ?? 'liso') === 'liso' && c2 && c2 !== c1) poe(ent, 'cadeiras_padrao', 'misto');
+  }
+  for (const [k, l] of Object.entries(base.homonimos ?? {})) {
+    const t = base.estadios[k];
+    if (!t || !t.forma) continue;
+    for (const h of l) {
+      if (h.cidade !== t.cidade) continue;
+      if (JSON.stringify(h.forma ?? null) !== JSON.stringify(t.forma)) { h.forma = JSON.parse(JSON.stringify(t.forma)); n++; }
+      campos(h, h.forma);
+    }
+  }
+  return n;
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const base = JSON.parse(fs.readFileSync(SAIDA, 'utf8'));
   const ajustes = fs.existsSync(path.join(AQUI, 'ajustes-forma.json')) ? JSON.parse(fs.readFileSync(path.join(AQUI, 'ajustes-forma.json'), 'utf8')) : {};
@@ -151,6 +192,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     if (Number.isFinite(e.capacidade) && e.capacidade > 1000) ent.capacidade = e.capacidade;
     n++;
   }
+  await sincronizarCadeiras(base);
   if (!SECO) fs.writeFileSync(SAIDA, JSON.stringify(base));
   console.log(`${n} formas ${SECO ? '(seco: nada gravado)' : 'gravadas em ' + SAIDA}${faltou.length ? `; fora da base: ${faltou.join(', ')}` : ''}`);
 }
