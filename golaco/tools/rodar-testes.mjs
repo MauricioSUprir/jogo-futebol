@@ -108,7 +108,8 @@ const LISTA = [
   ['faltas com sentido: contato a passo não é falta, quem só corre atrás não atropela, a falta de verdade continua', 'teste-faltas-sentido.mjs'],
   // Pedidos do dono de 11/10 (regras e controles)
   ['jogador parado com a bola: a IA fecha e dá o bote (condutor lento)', 'teste-parado.mjs'],
-  ['PRESSÃO perceptível: com × sem o botão (pareado), marca, um a mais na pressão', 'teste-pressao-humano.mjs'],
+  // (01/11, item 70: 64 partidas em 3 processos — eram 32 num processo de vaga; o M3 pela prova, teste-pressao-humano.mjs)
+  ['PRESSÃO perceptível: com × sem o botão (pareado), marca, um a mais na pressão', 'teste-pressao-humano.mjs', [], 'padrao', 3],
   // Categoria D (dono, 24/10: "a IA correr, tanto pra marcar, tanto pra atacar, pq ela não corre"): a régua da corrida da IA
   // contra a pessoa (3 roteiros × 8 sementes — a amostra da decisão: com 4, a roubada sofrida pela IA, V5, ia de 2,21 a 2,79
   // entre a base e o D3 nas sementes 1–4 e 2,33 → 2,34 nas 8; seções P o portão, A ataque, M marcação (D3) e V guardas

@@ -1687,8 +1687,10 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
 `teste-parado`, `teste-pressao-humano` (pareado, `tools/lib/pressao-pareada.mjs`; 32 partidas, uma por processo — com 8 a
 mesma lógica passava ou reprovava pelo sorteio dos lances; nas 128 partidas da main o M4 ficava acima da meta, 1,58× as
 faltas, e o M5 no limite, 80,6% — o chamado fazia falta demais e corria de menos; corrigido com a chegada pelo perfil de
-aceleração, a curva de chegada, o desvio e o bote sem entrar no corpo: `PESQUISA-ETAPA3.md` §17.3) e `teste-goleiro-regras`
-no padrão;
+aceleração, a curva de chegada, o desvio e o bote sem entrar no corpo: `PESQUISA-ETAPA3.md` §17.3; desde 01/11, 64 partidas
+em 3 processos e o M3 — o "um a mais" — pela média PAREADA caso a caso, reprovando quando o bootstrap por partida PROVA o Δ
+abaixo de 1,5 m: a diferença das medianas de cada ramo quase não via o botão que não soma ninguém; ver o cabeçalho do teste)
+e `teste-goleiro-regras` no padrão;
 `teste-defesa-humano` (a meta antiga do PRESSÃO, que passava sem o botão, virou a pareada); `teste-controles` (celular:
 a marca do PRESSÃO, o PEGAR, o goleiro andando com a bola e o anel); `teste-goleiro-trava` segue medindo o treino;
 `teste-entrada` (O/RB no ataque = PEGAR; preso como PEGAR, vira PRESSÃO quando a fase vira defesa); `teste-taticas` mede a
