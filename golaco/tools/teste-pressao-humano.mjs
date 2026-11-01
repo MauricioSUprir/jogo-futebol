@@ -162,6 +162,24 @@ const pc = (a, b) => `${a}/${b} (${b ? Math.round(100 * a / b) : 0}%)`;
 // erro-padrão da soma de uma grandeza por partida (as partidas são independentes): √(n · var) — só para mostrar se o
 // resultado está dentro do sorteio (a decisão é a conta direta da meta)
 function epSoma(v) { const n = v.length, mu = v.reduce((s, x) => s + x, 0) / n; return Math.sqrt(n * v.reduce((s, x) => s + (x - mu) ** 2, 0) / Math.max(1, n - 1)); }
+// M3 pela prova: o bootstrap por PARTIDA (as partidas sorteadas com reposição; os dois ramos de cada caso vão juntos — o
+// pareamento fica — e os casos de uma partida também) da diferença das medianas, com semente fixa (o resultado não muda de
+// uma rodada para outra). p = fração das reamostras com Δ ≥ meta: a chance de a amostra ser compatível com a meta cumprida
+// (percentil, unilateral); com p < 0,05 a amostra PROVA o Δ abaixo dela. IC 90% = os percentis 5 e 95.
+const M3_META = 1.5, M3_REAMOSTRAS = 2000;
+function bootM3(grupos, meta, nB) {
+  let s = 0x7001;
+  const r = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const ds = [];
+  for (let k = 0; k < nB; k++) {
+    const a = [], b = [];
+    for (let i = 0; i < grupos.length; i++) for (const c of grupos[Math.floor(r() * grupos.length)]) { a.push(c.A.s2); b.push(c.B.s2); }
+    ds.push(med(a) - med(b));
+  }
+  // (reamostra sem caso nenhum = Δ indefinido: conta como meta não cumprida; só acontece com amostras minúsculas)
+  const ok = ds.filter(Number.isFinite).sort((x, y) => x - y), q = f => ok[Math.min(ok.length - 1, Math.floor(f * ok.length))];
+  return { p: ok.filter(d => d >= meta).length / nB, p05: q(0.05), p95: q(0.95) };
+}
 
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
 let falhas = 0;
@@ -185,9 +203,13 @@ const c2 = LA.filter(ok2).length, c2A = LA.filter(ok2A).length;
 const ep2 = LA.length ? Math.sqrt(c2 / LA.length * (1 - c2 / LA.length) / LA.length) : NaN;
 reg(`M2 (guarda) com o botão: um companheiro a ≤ 2 m do condutor em ≤ 1,5 s (o mais perto a ≤ ${fmt(M2_ALCANCE, 1)} m no começo)`, `${pc(c2, LA.length)} (${fmt(100 * c2 / LA.length, 1)}% ± ${fmt(100 * ep2, 1)}; sem: ${pc(c2A, LA.length)})`, '≥ 60%', LA.length >= NMIN && c2 >= 0.6 * LA.length);
 reg('(informativo) o M2 em todos os casos longos (o mais perto a ≤ 12 m)', `${pc(L.filter(ok2).length, L.length)} (sem: ${pc(L.filter(ok2A).length, L.length)})`, '—', true, true);
-const L2 = L.filter(c => c.A.s2 != null && c.B.s2 != null);
+// (M3 pela PROVA, 01/11 — ver o cabeçalho: reprova quando a amostra prova o Δ abaixo de 1,5 m — bootstrap por partida, os
+// dois ramos de cada caso juntos, p = fração das reamostras com Δ ≥ 1,5)
+const L2p = porPartida.map(p => p.casos.filter(c => longo(c) && c.A.s2 != null && c.B.s2 != null));
+const L2 = L2p.flat();
 const s2A = med(L2.map(c => c.A.s2)), s2B = med(L2.map(c => c.B.s2));
-reg('M3 um a mais na pressão: 2º companheiro mais perto do condutor em 2 s, sem → com', `${fmt(s2A)} → ${fmt(s2B)} m (Δ ${fmt(s2A - s2B)}; n = ${L2.length})`, 'Δ ≥ 1,5 m', L2.length >= NMIN / 2 && s2A - s2B >= 1.5);
+const b3 = bootM3(L2p, M3_META, M3_REAMOSTRAS);
+reg('M3 um a mais na pressão: 2º companheiro mais perto do condutor em 2 s, sem → com', `${fmt(s2A)} → ${fmt(s2B)} m (Δ ${fmt(s2A - s2B)}; IC 90% ${fmt(b3.p05)}–${fmt(b3.p95)}; p = ${fmt(b3.p, 3)}; n = ${L2.length})`, 'Δ ≥ 1,5 m (reprova com p < 0,05)', L2.length >= NMIN / 2 && b3.p >= 0.05);
 const soma = (cs, f) => cs.reduce((s, c) => s + f(c), 0);
 const fA = soma(casos, c => c.A.faltas), fB = soma(casos, c => c.B.faltas);
 const ep4 = epSoma(porPartida.map(p => soma(p.casos, c => c.B.faltas - 1.5 * c.A.faltas)));
@@ -253,9 +275,10 @@ if (porPartida.length >= 16) {
     const Lb2 = Lb.filter(c => c.d0 <= M2_ALCANCE), m2 = Lb2.filter(ok2).length / Lb2.length;
     const a4 = soma(cs, c => c.A.faltas), b4 = soma(cs, c => c.B.faltas);
     const m5 = soma(cs, c => c.B.corre1) / soma(cs, c => c.B.correTot1);
-    blocos.push(`${porPartida[b].s}: ${fmt(m1)} · ${Math.round(100 * m2)}% · ${a4}→${b4} · ${fmt(100 * m5, 1)}%`);
+    const Lb3 = Lb.filter(c => c.A.s2 != null && c.B.s2 != null), m3 = med(Lb3.map(c => c.A.s2)) - med(Lb3.map(c => c.B.s2));
+    blocos.push(`${porPartida[b].s}: ${fmt(m1)} · ${Math.round(100 * m2)}% · ${fmt(m3)} · ${a4}→${b4} · ${fmt(100 * m5, 1)}%`);
   }
-  reg('(dispersão) blocos de 8 partidas: M1 Δ · M2 · M4 · M5 pela conta direta', blocos.join(' | '), '—', true, true);
+  reg('(dispersão) blocos de 8 partidas: M1 Δ · M2 · M3 Δ · M4 · M5 pela conta direta', blocos.join(' | '), '—', true, true);
 }
 const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));
 console.log(`lógica: ${JS} · ${NP} partidas de 2 × ${MIN} min (sementes ${SEM0}–${SEM0 + NP - 1}, ${nPar} processos) · ${casos.length} casos · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
