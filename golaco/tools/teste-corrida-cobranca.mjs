@@ -150,6 +150,8 @@ function trocarCobrador(m, pr, q) {
   n.guia = null; c.guia = null;
   // (o papel: o cobrador fica 'parado' — o sim.js o move pelo j.guia —, o de antes volta ao dele: partida.js fecharMontagem)
   const papel = n.papel; n.papel = 'parado'; c.papel = pr.papel; pr.papel = papel;
+  // (o estilo do pênalti da IA — item 70, P2 —: o mesmo da cena, com os números do jogador novo)
+  if (cr.estiloIA && CO.definirEstilo) { cr2.estiloIA = cr.estiloIA; CO.definirEstilo(n, cr2, cr.estiloIA); }
   cr2.ticks = CO.estimarTicks(n, cr2);
   pr.corrida = cr2; pr.cobrador = n.id; m.posse = n.id;
 }
@@ -489,17 +491,45 @@ if (ML) {
       somar(can, rodar(q.m, () => NADA, k));
     }
   }
-  const qs = [...tot.queda, ...pes.queda, ...can.queda];
+  // o canhão de estilos (item 70, P2): as cenas de pênalti com o estilo FORÇADO na IA (forte, colocado, paradinha, pulinho),
+  // cada uma com outro jogador de linha batendo, e a pessoa com a PARADINHA e o PULINHO
+  const est = vazio();
+  const EP = C.ESTILO_PENALTI;
+  if (EP) {
+    const fiel0 = EP.ia.fiel, pesos0 = EP.ia.pesos;
+    for (const e of ['forte', 'colocado', 'paradinha', 'pulinho']) {
+      EP.ia.fiel = 1; EP.ia.pesos = [[e, 1]];
+      for (let k = 0; k < NC; k++) {
+        const q = cena('penalti', k);
+        if (!q) continue;
+        q.m.humanos = [];
+        somar(est, rodar(q.m, () => NADA, k));
+      }
+    }
+    EP.ia.fiel = fiel0; EP.ia.pesos = pesos0;
+    for (const b of [BOTAO.PARADINHA, BOTAO.PULINHO]) {
+      for (let k = 0; k < 4; k++) {
+        const q = cena('penalti', k);
+        if (!q) continue;
+        q.m.humanos = [q.t]; q.m.timeHumano = q.t;
+        somar(est, rodar(q.m, pessoa(BOTAO.CHUTE | b, 28, { x: q.m.ataca[q.t], z: 0.35 })));
+      }
+    }
+  }
+  for (const k of ['apoio', 'planta']) can[k].push(...est[k]);
+  for (const k of ['plantado', 'razao', 'pouso', 'arrasta']) can[k] = Math.max(can[k], est[k]);
+  can.falhou += est.falhou;
+  const qs = [...tot.queda, ...pes.queda, ...can.queda, ...est.queda];
   const pior = qs.reduce((a, b) => (b.q > a.q ? b : a), { q: -Infinity });
   const porPerfil = {};
   for (const x of qs) (porPerfil[x.perfil] ??= []).push(x.q);
   const resumo = Object.entries(porPerfil).map(([k, v]) => `${k} ${f2(Math.max(...v))}`).join(', ');
   const fundas = qs.filter(x => x.q >= 0.15).length, cab = Math.max(...qs.map(x => x.c));
   reg('C11 sem mergulho na corrida: a queda do quadril abaixo de 0,92 m (pior; por perfil) · corridas com ≥ 0,15 m · a da cabeça (de pé → mínimo)',
-    `${pior.q.toFixed(3).replace('.', ',')} m (${pior.perfil}, id ${pior.id}; ${resumo}) · ${fundas}/${qs.length} (${f2(100 * fundas / Math.max(1, qs.length))}%) · ${f2(cab)} m (${can.queda.length} do canhão de cobradores)`,
-    '≤ 0,12 m · 0 · ≤ 0,20 m', qs.length >= 39 && can.queda.length >= 39 && pior.q <= 0.12 && fundas === 0 && cab <= 0.2);
+    `${pior.q.toFixed(3).replace('.', ',')} m (${pior.perfil}, id ${pior.id}; ${resumo}) · ${fundas}/${qs.length} (${f2(100 * fundas / Math.max(1, qs.length))}%) · ${f2(cab)} m (${can.queda.length} do canhão de cobradores, ${est.queda.length} do de estilos)`,
+    '≤ 0,12 m · 0 · ≤ 0,20 m', qs.length >= 39 && can.queda.length >= 39 && (!EP || est.queda.length >= 4 * NC) && pior.q <= 0.12 && fundas === 0 && cab <= 0.2);
   const plantadosC = can.planta.reduce((x, y) => x + y, 0);
-  reg('C11 o canhão de cobradores: o pé de apoio plantado a 0,2–0,45 m (C3) e sem patinar (C4: plantado · salto · pouso · pé plantado andou)',
+  reg('C11 o canhão de cobradores e o de estilos: o pé de apoio plantado a 0,2–0,45 m (C3) e sem patinar (C4: plantado · salto · pouso · pé plantado andou)',
     `${f2(min(can.apoio))}–${f2(max(can.apoio))} m, plantado ${plantadosC}/${can.planta.length} · ${f2(can.plantado)} m/s · ${f2(can.razao)} · ${f2(can.pouso)} · ${f2(can.arrasta)} m (não rolou ${can.falhou})`,
     '0,2–0,45 m, todos · ≤ 0,05 · ≤ 1 · ≤ 1 · 0', can.apoio.length >= 39 && can.falhou === 0 && min(can.apoio) >= 0.2 && max(can.apoio) <= 0.45 && plantadosC === can.planta.length
       && can.plantado <= 0.05 && can.razao <= 1 && can.pouso <= 1 && can.arrasta === 0);

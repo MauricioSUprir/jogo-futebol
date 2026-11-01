@@ -15,7 +15,9 @@
 //   0–2  x e z: inteiro clamp(round(v · 1024), −1024, 1024) + 1024 em 12 bits cada (a quantização ENTRADA.quant)
 //   3–4  botões (bits 0–14, config.js BOTAO) + bit 15 `repete` (2º passo do mesmo quadro a 30 qps: a mesma leitura)
 //   5    bit0 IA (a IA joga pelo meu controlado neste passo: menu aberto, editor, ausência — calculada DENTRO do passo,
-//        nos dois aparelhos); bit1 AÇÃO (há uma ação — a edição do time — para este passo no canal de controle)
+//        nos dois aparelhos); bit1 AÇÃO (há uma ação — a edição do time — para este passo no canal de controle); bit2 e bit3
+//        os botões PARADINHA e PULINHO (os estilos do pênalti, item 70 P2: os bits 15 e 16 do BOTAO, que não cabem nos 15
+//        bits dos bytes 3–4)
 //   6–8  mx e mz (C6, a mira das ações pela tela, contrato "Mira pela tela"): os 12 bits de x e z; sem mira (a entrada
 //        sem `mx`), a do analógico (mx = x, mz = z — o mesmo que a simulação faz sem ela)
 // Pacote do canal 'jogo' (ArrayBuffer, little-endian; não confiável e sem ordem: leva TODAS as entradas ainda não
@@ -30,7 +32,9 @@ export const MAX_ENTRADAS = 16;        // por pacote (≈ 267 ms de entradas sem
 export const CABECALHO = 21;
 export const TIPO_JOGO = 1;
 export const D_MIN = 3, D_MAX = 10;
-export const F_IA = 1, F_ACAO = 2;
+export const F_IA = 1, F_ACAO = 2, F_PARADINHA = 4, F_PULINHO = 8;
+// (os bits do BOTAO além do 14: config.js BOTAO.PARADINHA e PULINHO)
+const B_PARADINHA = 1 << 15, B_PULINHO = 1 << 16;
 export const E_30QPS = 1, E_MENU = 2, E_ESCONDIDA = 4;
 const Q = 1024;
 
@@ -58,7 +62,8 @@ export function codificar(e, buf, o = 0) {
   par12(xi, zi, buf, o);
   buf[o + 3] = b & 0xff;
   buf[o + 4] = (b >> 8) & 0xff;
-  buf[o + 5] = (e?.ia ? F_IA : 0) | (e?.acao ? F_ACAO : 0);
+  const bb = (e?.botoes ?? 0) | 0;
+  buf[o + 5] = (e?.ia ? F_IA : 0) | (e?.acao ? F_ACAO : 0) | (bb & B_PARADINHA ? F_PARADINHA : 0) | (bb & B_PULINHO ? F_PULINHO : 0);
   par12(mxi, mzi, buf, o + 6);
 }
 
@@ -69,7 +74,7 @@ export function decodificar(buf, o = 0) {
   const mxi = buf[o + 6] | ((buf[o + 7] & 0x0f) << 8), mzi = (buf[o + 7] >> 4) | (buf[o + 8] << 4);
   return {
     x: (xi - Q) / Q + 0, z: (zi - Q) / Q + 0, mx: (mxi - Q) / Q + 0, mz: (mzi - Q) / Q + 0,
-    botoes: b & 0x7fff, repete: !!(b & 0x8000), ia: !!(f & F_IA), acao: !!(f & F_ACAO),
+    botoes: (b & 0x7fff) | (f & F_PARADINHA ? B_PARADINHA : 0) | (f & F_PULINHO ? B_PULINHO : 0), repete: !!(b & 0x8000), ia: !!(f & F_IA), acao: !!(f & F_ACAO),
   };
 }
 

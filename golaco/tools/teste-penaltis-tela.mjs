@@ -7,7 +7,8 @@
 //   3  A faixa do fim: "X venceu nos pênaltis", o placar com as siglas e "Jogar de novo"; o clique abre outra disputa (outra
 //      moeda: a semente seguinte) sem a faixa.
 //   4  Celular 844×390 com toque, o humano de verdade pelo TECLADO (a entrada da página, com a câmera atrás do cobrador):
-//      nenhum botão de toque além do CHUTE, e o CHUTE só com a cobrança dele montada; segurando → (direita da tela) e o K,
+//      nenhum botão de toque além do CHUTE e dos estilos (PARADINHA e PULINHO, item 70, P2), e eles só com a cobrança dele
+//      montada; segurando → (direita da tela) e o K,
 //      a bola vai para a direita da tela; defendendo com → antes do chute, o goleiro escolhe a direita da tela; nada encosta
 //      (bolinhas, placar, menu, CHUTE, aviso); a disputa acaba.
 //   5  "Modo de jogo" da pausa: o botão "Pênaltis" ao lado da Partida (numa linha: a pausa cabe sem rolar no celular) troca
@@ -70,11 +71,15 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
     if (v.aviso) avisos.add(v.aviso);
     if (v.tela?.vez) vezes.add(v.tela.vez);
     if (v.gols.join() !== d.placar.join()) okPlacar = false;
-    // as bolinhas de cada time = as cobranças dele (g convertido, x perdido) — as últimas 7
+    // as bolinhas de cada time = as cobranças dele (g convertido, x perdido) — as das últimas 7 rodadas, contando a que está
+    // por bater (disputa-tela.js: com a disputa viva, a rodada da vez entra na janela e a mais antiga sai — com 7 cobranças
+    // de cada lado e a 8ª da vez, aparecem as 6 últimas e a vazia)
+    const vivo = ['caminhada', 'cobranca', 'chute'].includes(d.estado);
+    const ini = Math.max(0, Math.max(5, d.chutes[0], d.chutes[1], vivo ? d.chutes[d.vez] + 1 : 0) - 7);
     for (const t of [0, 1]) {
       const lista = d.cobrancas.filter(c => c.time === t).map(c => (c.resultado === 'gol' ? 'g' : 'x')).join('');
       const tl = (v.tela?.linhas?.[t] ?? '').replace(/[o*]/g, '');
-      if (!lista.endsWith(tl) || (lista.length <= 7 && tl !== lista)) okBolas = false;
+      if (tl !== lista.slice(ini)) okBolas = false;
     }
   }
   meta('2 PC: a disputa vai até o fim; planos da câmera; placar do topo = o da disputa; bolinhas = as cobranças; quem bate',
@@ -136,7 +141,7 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
   await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
   await pg.evaluate(() => window.__golaco.relogio.usarManual(true));
   const visiveis = () => pg.evaluate(() => [...document.querySelectorAll('#toque .btn-toque')].filter(b => { const st = getComputedStyle(b); return !b.hidden && st.display !== 'none' && st.visibility !== 'hidden' && b.getBoundingClientRect().width > 0; }).map(b => b.id));
-  let outros = new Set(), chuteFora = 0, chuteNaVez = 0, nVez = 0;
+  let outros = new Set(), chuteFora = 0, chuteNaVez = 0, nVez = 0, estilosNaVez = 0, estilosFora = 0;
   let bate = 0, bateDir = 0, defende = 0, defDir = 0, encostou = [];
   let d = await quadros(pg, 1);
   let segura = 0, teclaDir = false;
@@ -154,9 +159,12 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
     const antes = d;
     d = await quadros(pg, 3);
     const vs = await visiveis();
-    for (const id of vs) if (id !== 'btn-chute') outros.add(id);
     // (o estado DEPOIS dos quadros: é o que o último quadro desenhou)
     const naVez = d.vez === humano && d.estado === 'cobranca';
+    // os estilos do pênalti (item 70, P2): PARADINHA e PULINHO só com a cobrança do humano montada
+    for (const id of vs) if (id !== 'btn-chute' && id !== 'btn-paradinha' && id !== 'btn-pulinho') outros.add(id);
+    if (vs.includes('btn-paradinha') && vs.includes('btn-pulinho')) { if (naVez) estilosNaVez++; else estilosFora++; }
+    else if (vs.includes('btn-paradinha') || vs.includes('btn-pulinho')) estilosFora++;
     if (vs.includes('btn-chute')) { if (naVez) chuteNaVez++; else chuteFora++; }
     if (naVez) nVez++;
     // a cobrança acabou de sair: o lado da bola (batendo) ou o do goleiro (defendendo), na direita da tela = z·gol > 0
@@ -169,9 +177,9 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
     }
   }
   if (teclaDir) await pg.keyboard.up('ArrowRight');
-  meta('4a celular: na disputa nenhum botão de toque além do CHUTE, e o CHUTE só com a cobrança do humano montada',
-    `outros ${outros.size ? [...outros].join(', ') : 'nenhum'}; CHUTE visível em ${chuteNaVez}/${nVez} amostras da vez dele, ${chuteFora} fora dela`,
-    outros.size === 0 && chuteFora === 0 && chuteNaVez >= nVez * 0.8);
+  meta('4a celular: na disputa nenhum botão de toque além do CHUTE e dos estilos (PARADINHA, PULINHO), e eles só com a cobrança do humano montada',
+    `outros ${outros.size ? [...outros].join(', ') : 'nenhum'}; CHUTE visível em ${chuteNaVez}/${nVez} amostras da vez dele, ${chuteFora} fora dela; PARADINHA e PULINHO em ${estilosNaVez}/${nVez}, ${estilosFora} fora dela`,
+    outros.size === 0 && chuteFora === 0 && chuteNaVez >= nVez * 0.8 && estilosFora === 0 && estilosNaVez >= nVez * 0.5);
   meta('4b celular: o humano pelo teclado (câmera atrás do cobrador) bate para a direita da tela e o goleiro dele escolhe a direita da tela',
     `bateu ${bateDir}/${bate} para a direita; defendeu escolhendo a direita ${defDir}/${defende}; disputa ${d.estado} (${d.placar.join(' × ')})`,
     bate >= 3 && bateDir >= bate - 1 && defende >= 3 && defDir === defende && d.estado === 'fim');

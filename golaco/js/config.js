@@ -353,6 +353,9 @@ export const BOTAO = {
   GOLEIRO: 2048,
   PEGAR: 4096,                // goleiro com a bola no pé, na área: pega com a mão (o "Pick Up Ball" do EA FC)
   EFEITO_E: 8192, EFEITO_D: 16384, // curva da cobrança mirada (mira.js)
+  // estilos do pênalti (item 70, P2; ESTILO_PENALTI abaixo): só valem na cobrança do pênalti da pessoa (o online leva os dois
+  // no byte das marcas: online.js)
+  PARADINHA: 32768, PULINHO: 65536,
 };
 
 // Atributos padrão (0–100).
@@ -2171,6 +2174,17 @@ export const CORRIDA_COBRANCA = {
     escanteio: { dist: [2.5, 4.0], ang: [25, 40], vel: [3.2, 4.0] },
     tiroDeMetaLongo: { dist: [4.0, 5.5], ang: [30, 40], vel: [3.6, 4.4] },
     tiroDeMetaCurto: { dist: [2.5, 3.0], ang: [20, 30], vel: [2.8, 3.3] },
+    // os estilos do pênalti (item 70, P2; ESTILO_PENALTI): só o cobrador da IA sai do ponto de partida do estilo dele — o da
+    // pessoa (e da demo) sai do ponto do pênalti normal (o estilo se escolhe no soltar do CHUTE ou na corrida) e o estilo muda
+    // a velocidade, a paradinha, o pulinho e o chute. Forte: mais longa e mais rápida (4,2–4,6 m/s: com 4,4–4,8 o quadril da
+    // corrida ia ao limite do C11, 0,12 m — a corrida do jogo a 4,5–5 m/s desce até 0,128 no p90); colocado: curta e mais
+    // lenta (Lees et al. 2010: a velocidade da corrida é a escolha do jogador); paradinha e pulinho: a aproximação mais lenta de
+    // quem olha o goleiro (Noël, van der Kamp & Klatt 2021: a fluidez da corrida, de parada a fluida, é um dos sinais da
+    // estratégia que depende do goleiro)
+    penaltiForte: { dist: [5.0, 6.0], ang: [20, 30], vel: [4.2, 4.6] },
+    penaltiColocado: { dist: [3.0, 3.8], ang: [30, 40], vel: [3.0, 3.4] },
+    penaltiParadinha: { dist: [3.6, 4.4], ang: [25, 35], vel: [3.3, 3.7] },
+    penaltiPulinho: { dist: [3.5, 4.5], ang: [25, 35], vel: [2.8, 3.2] },
   },
   apoio: { lado: 0.3, atras: 0.08 },
   velMin: 2.6, velMax: 4.9,
@@ -2192,6 +2206,61 @@ export const CORRIDA_COBRANCA = {
   // termo que mostre a saída sem a vantagem)
   zonaAntes: 0,
   folgaZona: 0.25,              // s — a IA começa a corrida se quem está no raio sai dele até o fim dela com esta folga
+};
+
+// ------------------------------------------------------------------- Estilos de pênalti (item 70, P2; js/corrida.js)
+// Contrato "Estilos de pênalti (item 70, P2)" no CONTRATOS.md; pesquisa em PESQUISA-ETAPA4.md §17; teste
+// tools/teste-estilos-penalti.mjs. O pênalti ganha jeitos de bater (aval do dono, 31/10, com as escolhas recomendadas do
+// "Depende do dono" 12 — os comandos como no EA FC, a paradinha depois da corrida impossível por construção, o rendimento
+// realista, o goleiro na linha até o chute também na partida, a cavadinha de hoje):
+//  - normal (a corrida da P1); forte (CORRER segurado no soltar do CHUTE: a corrida longa e rápida e o chute mais forte —
+//    `forte.forca` do que falta da força até 1 a mais; o erro da força maior, ACOES.chute.forcaMaxErro, já vem com ela:
+//    `forte.erro` 1); colocado (MOD — no controle, RB na cobrança do pênalti —: a corrida curta e o chute colocado de sempre,
+//    ACOES.chute.colocado*, com o erro × `colocado.erro`: o colocado erra 0,6 × 1,35 ≈ 0,8 do chute normal — sem isso ele
+//    convertia 84,8% contra 76,9% do normal, 2,5% para fora); cavadinha (o 2º aperto do CHUTE antes de o 1º tocar na bola,
+//    como antes, a regra escrita do dono);
+//  - paradinha (PARADINHA: LT do controle na cobrança, F no teclado, o botão de toque PARADINHA): a corrida freia até ficar
+//    abaixo de `paradinha.abaixo` m/s com o corpo a `pausaEm` m do meio do apoio do pé de apoio — sempre ANTES do último
+//    apoio: a finta depois da corrida (Regra 14: amarelo + tiro livre indireto) nunca acontece, por construção —, fica
+//    `tPausa` s a `vPausa` m/s e retoma a `vRetoma` m/s pela regulagem da passada até o pé de apoio pousar ao lado da bola.
+//    Na freada e na pausa os passos ficam curtos e rápidos (o ritmo do começo da freada × `ritmo`; com os dois pés no chão,
+//    o de trás sai em `saiPe` s: o quadril não afunda entre dois pés plantados longe); antes da freada a passada vai no ritmo
+//    da regulagem (o 1º apoio da arrancada curto, como na corrida normal); a retomada espera o pé de apoio no chão com ≥
+//    `faseRetoma` da fase até o próximo pouso dele (o pé que bate sai primeiro: dois passos até o último apoio) — até
+//    `esperaApoio` s;
+//  - pulinho (PULINHO: LB do controle na cobrança, a barra de espaço, o botão de toque PULINHO): no penúltimo apoio (o do pé
+//    que bate) o pé sai do chão cedo — a carga desta passada é `pulinho.carga` (jogador.js passoPassada: sai em 2·carga da
+//    fase) — e os dois pés ficam no ar até o pé de apoio pousar ao lado da bola (≥ `voo` s: o RITMO é lógica); o salto
+//    (`pulinho.altura` m) é só desenho (anim.js alturaPulinho);
+//  - paradinha e pulinho são da estratégia que DEPENDE do goleiro (van der Kamp 2006): o cobrador olha o goleiro na corrida.
+//    O da IA LÊ o goleiro que se comprometeu (o da IA que saiu cedo; o da pessoa que escolheu um lado com o analógico antes
+//    do pé de apoio do cobrador pousar) e vai ao canto oposto — no lado aberto, a `leitura.canto` m do meio — com a chance da
+//    rampa `leitura.tempo` (van der Kamp 2006: com o goleiro saindo ~400 ms antes do contato quase sempre certo; 150 ms, o
+//    acaso), errando mais quando a leitura é tarde (o erro × 1 + `leitura.erroTarde` × (1 − a rampa)); sem goleiro para ler
+//    (o que espera), bate o canto que já tinha com o erro × `leitura.semLeitura` (Noël, van der Kamp & Klatt 2021, 395
+//    cobranças de Copa e Euro: quem depende do goleiro converte 81,8% contra o que sai cedo e 63,6% contra o que espera; quem
+//    não depende, 60,0% e 79,7%). A pessoa lê com os olhos: na paradinha e no pulinho o analógico mira até o pé de apoio
+//    pousar, e a troca de canto tarde erra mais (a mesma rampa). A corrida que espera chuta `kd.forca` × a força;
+//  - a IA tem um estilo por jogador (`ia.pesos` pelo id: o preferido, corrida.js estiloPreferido) e o usa com a chance
+//    `ia.fiel` (o resto, normal) — um sorteio do m.rng na montagem (determinístico);
+//  - o goleiro da IA tem uma paciência pelo id (`goleiro.paciencia`); na montagem sorteia (m.rng) se sai CEDO (a chance pela
+//    paciência, `goleiro.cedo`: ~34% na média — Noël et al. 2021: 33,9% dos goleiros saem ≥ 200 ms antes do contato) e quando
+//    (`goleiro.antes` s antes do contato previsto); saindo, ele dá o passo para o lado escolhido NA linha (`goleiro.passo` m)
+//    e, no lado certo, o tempo adiantado (até `goleiro.ganhoMax` s) soma no tempo para se mexer e dá `goleiro.ganho` × ele
+//    no logit da defesa; o goleiro que espera, `goleiro.espera` no logit (a calibração: o normal ~77% de gol com o goleiro
+//    NA linha — antes, na partida, a parede o deixava a 0,6 m dela). Ele fica na linha até o chute (Regra 14) também na
+//    partida (DISPUTA.goleiroLinha, a mesma da disputa).
+export const ESTILO_PENALTI = {
+  estilos: ['normal', 'forte', 'colocado', 'paradinha', 'pulinho', 'cavadinha'],
+  perfil: { forte: 'penaltiForte', colocado: 'penaltiColocado', paradinha: 'penaltiParadinha', pulinho: 'penaltiPulinho' },
+  forte: { forca: 0.5, erro: 1.0 },
+  colocado: { erro: 1.35 },
+  paradinha: { pausaEm: [1.5, 1.8], abaixo: 1.0, vPausa: 0.45, tPausa: [0.12, 0.2], vRetoma: [2.9, 3.3], freio: 3.5, folgaFreio: 0.1, esperaApoio: 0.4, faseRetoma: 1.5, saiPe: 0.05, ritmo: 1.3 },
+  pulinho: { carga: 0.15, voo: 0.18, altura: [0.1, 0.14] },
+  kd: { forca: 0.94 },
+  leitura: { tempo: [0.15, 0.4], erroTarde: 0.5, semLeitura: 1.45, canto: 2.0 },
+  ia: { pesos: [['normal', 0.36], ['forte', 0.18], ['colocado', 0.18], ['paradinha', 0.14], ['pulinho', 0.14]], fiel: 0.75 },
+  goleiro: { paciencia: [0.15, 0.95], cedo: [0.6, 0.1], antes: [0.3, 0.6], passo: 0.5, ganho: 3.5, ganhoMax: 0.4, espera: -0.5 },
 };
 
 // ------------------------------------------------------------------- Modo Livre (dono, 16/10; js/livre.js, CONTRATOS.md)

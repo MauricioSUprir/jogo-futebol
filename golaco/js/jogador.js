@@ -279,6 +279,7 @@ const PE_TORTO = 1.2;       // rad — torção máxima do pé plantado: além d
  * saidaParaToque). Com os dois pés no chão, a passada tira esse pé do chão em até `em` segundos
  * (o toque sai sempre do pé livre); parado, o pé que vai tocar não é apressado para pousar.
  * pousoEm (pedalada, sim.js): com o pé `pe` no ar, o ritmo faz ele pousar daqui a pousoEm s.
+ * carga (o pulinho do pênalti, corrida.js): o fator de carga desta passada — o pé no chão sai em 2·carga da fase local.
  * ritmoVoo (a corrida da cobrança, corrida.js saidaCorrida): com os dois pés no ar, o ritmo é este; com um pé no chão, o da
  * passada de sempre ou este, o mais rápido (o apoio nunca mais longo que o natural).
  *
@@ -318,7 +319,9 @@ export function passoPassada(j, comBola, dt, ev, saida = null) {
   const toqueVindo = !!saida;
   if (!ativa && ambosNoChao && !pedido) return; // parado com os dois pés no chão
   const f0 = j.fase;
-  const sair = 2 * carga;
+  // (saida.carga: o pulinho do pênalti — item 70, P2, corrida.js saidaCorrida —: o pé no chão sai mais cedo, o voo até o
+  // pouso do outro fica mais longo; o resto da passada, o de sempre)
+  const sair = 2 * (saida && saida.carga != null ? saida.carga : carga);
   // o pé no ar está no gesto do toque: a passada não acelera (o gesto acabaria de uma vez)
   const gesto = (!j.pes[0].apoio && j.pes[0].puxa > 0) || (!j.pes[1].apoio && j.pes[1].puxa > 0);
   let ritmo = f, ritmoFim = 0, gestoParado = false, ritmoUrgente = 0;

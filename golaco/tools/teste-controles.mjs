@@ -27,6 +27,8 @@
 //    quem foi chamado em ≤ 3 quadros e ele chega a ≤ 2,5 m do condutor em 1,5 s; goleiro do humano com a bola no pé —
 //    o PEGAR aparece (sem encostar; também nos layouts de 70–140%) e pega com a mão; com o recuo ele não aparece; com a
 //    bola nas mãos ele anda pelo analógico sem sair da área e o anel dos 8 s aparece nos últimos 5 s.
+//  - Pênalti da pessoa (item 70, P2): F = PARADINHA e espaço = PULINHO no teclado, LT/LB no controle (o controle do
+//    pênalti), e no celular os botões PARADINHA e PULINHO só na cobrança — o estilo fica marcado antes do CHUTE.
 // Itens que dependem da lógica (Etapa 2: m.controlado, j.carga, m.voo...; Etapa 3: a entrada da
 // defesa da Parte 4) saem como AGUARDANDO enquanto ela não existir — nunca como PASSOU.
 //   node tools/teste-controles.mjs [--raiz <pasta do jogo>]   (--raiz: mede outra cópia, ex.: a base)
@@ -566,6 +568,55 @@ async function conferirTodosLayouts(pagina) {
         `fase ${a0.fase}: máscara ${oA.mask}; depois do domínio (fase ${oD[oD.length - 1].fase}): PRESSÃO sem PEGAR em ${fim.filter(q => (q.b & BIT.PRESSAO) && !(q.b & BIT.PEGAR)).length}/${fim.length} quadros, marca em ${marcas}/${oD.length}`,
         a0.fase === 'ataque' && (oA.mask & BIT.PEGAR) !== 0 && !(oA.mask & BIT.PRESSAO) && okD && marcas >= 10);
     }
+    // estilos do pênalti da pessoa (item 70, P2): no pênalti do meu time, com a corrida montada, F = PARADINHA e espaço =
+    // PULINHO no teclado; no controle LT = PARADINHA e LB = PULINHO (o controle do pênalti, PAD_PENALTI). O estilo fica
+    // marcado na cobrança (pr.estiloPedido) antes do CHUTE.
+    {
+      const penalti = () => pagina.evaluate(() => {
+        const g = window.__golaco;
+        g.reiniciar({ modo: 'partida', semente: 3 }); g.relogio.usarManual(true);
+        for (let i = 0; i < 5; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+        g.faltaDeTeste({ area: true, cartao: null });
+        for (let i = 0; i < 600; i++) {
+          const pr = g.mundo.parada;
+          if (pr && pr.tipo === 'penalti' && pr.corrida && pr.cobrador === g.estado().controlado) break;
+          g.relogio.avancar(1000 / 60, { desenhar: false });
+        }
+        const pr = g.mundo.parada;
+        return { tipo: pr?.tipo ?? null, pronta: !!(pr && pr.corrida && pr.cobrador === g.estado().controlado), classe: document.getElementById('toque')?.classList.contains('cobranca-penalti') ?? null };
+      });
+      const estilo = () => pagina.evaluate(() => window.__golaco.mundo.parada?.estiloPedido ?? 'nenhum');
+      const pk = {};
+      for (const [tecla, nome] of [['KeyF', 'F'], ['Space', 'espaço']]) {
+        const p0 = await penalti();
+        await pagina.keyboard.down(tecla);
+        await quadros(pagina, 4);
+        await pagina.keyboard.up(tecla);
+        await quadros(pagina, 2);
+        pk[nome] = { ...p0, estilo: await estilo() };
+      }
+      meta('Pênalti da pessoa (teclado): F = paradinha, espaço = pulinho, marcados na cobrança antes do CHUTE',
+        `F → ${pk.F.estilo} (pênalti ${pk.F.tipo}, cobrança pronta ${pk.F.pronta}) · espaço → ${pk['espaço'].estilo}`,
+        pk.F.pronta && pk.F.estilo === 'paradinha' && pk['espaço'].pronta && pk['espaço'].estilo === 'pulinho');
+      const pg = {};
+      for (const [i, nome] of [[6, 'LT'], [4, 'LB']]) {
+        const p0 = await penalti();
+        pg[nome] = await pagina.evaluate(i => {
+          const g = window.__golaco;
+          const bt = n => Array.from({ length: 17 }, (_, k) => ({ pressed: n.includes(k), value: n.includes(k) ? 1 : 0, touched: false }));
+          let botoes = [i];
+          navigator.getGamepads = () => [{ connected: true, mapping: 'standard', axes: [0, 0, 0, 0], buttons: bt(botoes) }];
+          for (let k = 0; k < 4; k++) g.relogio.avancar(1000 / 60, { desenhar: false });
+          botoes = [];
+          for (let k = 0; k < 2; k++) g.relogio.avancar(1000 / 60, { desenhar: false });
+          navigator.getGamepads = () => [];
+          return g.mundo.parada?.estiloPedido ?? 'nenhum';
+        }, i);
+        pg[nome + 'ok'] = p0.pronta;
+      }
+      meta('Pênalti da pessoa (controle): LT = paradinha, LB = pulinho (o controle do pênalti)',
+        `LT → ${pg.LT} · LB → ${pg.LB}`, pg.LTok && pg.LT === 'paradinha' && pg.LBok && pg.LB === 'pulinho');
+    }
     meta('PC sem erro no console', erros.length ? erros.join(' | ') : '0', erros.length === 0);
   } finally { await navegador.close(); }
 }
@@ -1014,6 +1065,39 @@ async function conferirTodosLayouts(pagina) {
       meta('Bola nas mãos do goleiro (toque): TROCAR aparece sem encostar e passa o controle a um jogador de linha',
         `botões ${lm.ids.join(', ')}${lm.problemas.length ? ' — ' + lm.problemas.join('; ') : ''}; controlado ${tm0} → ${tm1?.estado.controlado ?? '-'} (${tmPos ?? '-'})`,
         lm.ids.includes('trocar-mao') && lm.problemas.length === 0 && !!tm1 && tm1.estado.controlado !== tm0 && tmPos !== 'GOL');
+      // pênalti da pessoa (item 70, P2): PARADINHA e PULINHO aparecem só na cobrança (sem encostar, ≥ 48 px) e o toque
+      // marca o estilo na cobrança; fora dela não aparecem
+      const pen = {};
+      for (const nome of ['paradinha', 'pulinho']) {
+        await pagina.evaluate(() => {
+          const g = window.__golaco;
+          g.reiniciar({ modo: 'partida', semente: 3 }); g.relogio.usarManual(true);
+          for (let i = 0; i < 5; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+          g.faltaDeTeste({ area: true, cartao: null });
+          for (let i = 0; i < 600; i++) {
+            const pr = g.mundo.parada;
+            if (pr && pr.tipo === 'penalti' && pr.corrida && pr.cobrador === g.estado().controlado) break;
+            g.relogio.avancar(1000 / 60, { desenhar: false });
+          }
+        });
+        await quadros(pagina, 2);
+        const lp = await layoutToque(pagina);
+        const b = await naTela('#btn-' + nome);
+        if (b) {
+          await toque('touchStart', [{ x: b.x, y: b.y, id: 60 }]);
+          await quadros(pagina, 3);
+          await toque('touchEnd', []);
+          await quadros(pagina, 2);
+        }
+        pen[nome] = { ids: lp.ids, problemas: lp.problemas, estilo: await pagina.evaluate(() => window.__golaco.mundo.parada?.estiloPedido ?? 'nenhum') };
+      }
+      await pagina.evaluate(() => { const g = window.__golaco; g.reiniciar({ modo: 'partida', semente: 3 }); g.relogio.usarManual(true); for (let i = 0; i < 5; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); });
+      await quadros(pagina, 2);
+      const lfora = await layoutToque(pagina);
+      meta('Pênalti da pessoa (toque): PARADINHA e PULINHO só na cobrança (sem encostar; ENFIADA e LANÇAMENTO saem) e o toque marca o estilo',
+        `cobrança: ${pen.paradinha.ids.join(', ')}${pen.paradinha.problemas.length ? ' — ' + pen.paradinha.problemas.join('; ') : ''}; PARADINHA → ${pen.paradinha.estilo}, PULINHO → ${pen.pulinho.estilo}; fora: ${lfora.ids.join(', ')}`,
+        ['paradinha', 'pulinho'].every(b => pen.paradinha.ids.includes(b)) && !pen.paradinha.ids.some(b => b === 'enfiada' || b === 'lancamento') && pen.paradinha.problemas.length === 0 &&
+        pen.paradinha.estilo === 'paradinha' && pen.pulinho.estilo === 'pulinho' && !lfora.ids.some(b => b === 'paradinha' || b === 'pulinho'));
     }
     const m = await centro('btn-menu');
     await pagina.touchscreen.tap(m.x, m.y);

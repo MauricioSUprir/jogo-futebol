@@ -38,7 +38,7 @@
 | 15 | ✅ Lançamento mais reto e rápido: 18–26° com teto de 33 m/s, a 40 m o ápice de 8,0 para 4,7 m (#572) | 6 |
 | 16 | ✅ Reposição do goleiro com a mão: rolar, por cima do ombro, bate-pronto e chutão; a IA repõe com a mão em ~69% (#579) | 5 |
 | 68 | ✅ Mira pelo que se vê na tela: o meio do gol visto vai no meio (no celular, antes, 1 em 3 ia para um canto), o pênalti na trave vista (#583) | 6 |
-| 70 | ⏳ P1 ✅ (corrida) · P2 pendente (estilos). **Cobranças com corrida**: no pênalti, escanteio, tiro de meta e falta o cobrador sai de 2,5–5 m e corre até a bola (3–4,7 m/s), o pé de apoio ao lado dela; a bola rola na mesma hora de antes (#588). **Jeitos de bater o pênalti** (pulinho, paradinha, forte, colocado, cavadinha), com o goleiro reagindo: P2 | 24 |
+| 70 | ✅ P1 (corrida) · P2 (estilos). **Cobranças com corrida**: no pênalti, escanteio, tiro de meta e falta o cobrador sai de 2,5–5 m e corre até a bola (3–4,7 m/s), o pé de apoio ao lado dela; a bola rola na mesma hora de antes (#588). **Jeitos de bater o pênalti** (pulinho, paradinha, forte, colocado, cavadinha), com o goleiro que sai cedo e o cobrador que o lê; o goleiro na linha até o chute (P2, #594) | 24 |
 
 ---
 
@@ -145,7 +145,7 @@
 8. 🙂 Rostos da edição pública (fonte e licença).
 9. 📊 O painel de estatísticas fica no pós-jogo?
 10. 🏟️ Item 69: a qualidade Baixa sem bonecos 3D? Gente em toda cadeira perto da câmera nos estádios grandes? Entrega em 2 ou em 4 PRs?
-11. 🎯 Item 70: P1 feita com as escolhas recomendadas (a falta também corre; a IA começa antes; a janela da cavadinha vale a corrida toda — confirmar). Para a P2: os botões da paradinha e do pulinho no celular? A paradinha errada impossível ou punida (Regra 14)? Quanto a paradinha rende?
+11. 🎯 Item 70: P1 e P2 feitas com as escolhas recomendadas (aval de 31/10: a falta também corre; a IA começa antes; os comandos do EA FC, com PARADINHA e PULINHO no toque só na cobrança do pênalti; a paradinha depois da corrida impossível; o rendimento realista, ± 10 pontos do normal; o goleiro na linha até o chute também na partida). Falta confirmar: a janela da cavadinha vale a corrida toda.
 
 ---
 
