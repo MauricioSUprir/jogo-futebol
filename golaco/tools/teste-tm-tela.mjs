@@ -13,7 +13,8 @@
 //      humano 1, o controlado é o travado; TROCAR, GOLEIRO e o TROCAR da bola na mão escondidos; TROCAR/GOLEIRO apertados
 //      não tiram o controle dele; a pausa sem "Editar time", "Reiniciar partida" e os treinos (o submenu vira "Cenas da partida").
 //   5b Celular (itens 59 e 60): o travado com a bola mostra o nome no canto de baixo à DIREITA (o humano é o visitante: o time
-//      da direita do placar), com a fonte do TM (Inter TM) e a faixa da cor do time 1 do placar.
+//      da direita do placar), com a fonte do TM (Inter TM) e a faixa da cor do time 1 do placar — inteira: o recorte do raio
+//      do cartão deixa ≥ 85% da altura dela na coluna do meio (com o raio de 8 px, ~64%: a faixa virava um ")").
 //   6  Celular: "Simular o resto" → o resultado traz `jogador` com o tmId do travado e a nota (4,5–10).
 //   7  Sem ?tm: nada do TM (sem "Simular o resto" nem "Voltar ao Total Match" na pausa, "Reiniciar partida" e "Modo de jogo"
 //      à vista, __golaco.tm null, nenhuma mensagem ao pai).
@@ -181,12 +182,23 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
     const out = { vis, dir: !!e?.classList.contains('dir'), noHud: !!e?.closest('#hud'), fonte: cs?.fontFamily ?? '', fontes: document.documentElement.dataset.fontesTm ?? '-',
       cor: cor ? getComputedStyle(cor).backgroundColor : null, corPlacar: pc ? getComputedStyle(pc).backgroundColor : null,
       borda: r ? sa.right - r.right : NaN, base: r ? sa.bottom - r.bottom : NaN, texto: e?.textContent ?? '' };
+    // a faixa da cor inteira (revisão): o recorte do raio do cartão (overflow hidden) na coluna do MEIO da faixa, nas duas
+    // pontas — a fração da altura dela que sobra (raio 8 numa caixa de 15 px: ~64%, um ")"; raio 4: ~94%)
+    if (cor && r) {
+      const q = cor.getBoundingClientRect(), dir = q.left + q.width / 2 > r.left + r.width / 2;
+      const raio = Math.min(...[dir ? cs.borderTopRightRadius : cs.borderTopLeftRadius, dir ? cs.borderBottomRightRadius : cs.borderBottomLeftRadius].map(parseFloat), r.height / 2);
+      const ri = Math.max(0, raio - parseFloat(dir ? cs.borderRightWidth : cs.borderLeftWidth));
+      const x = (dir ? r.right - parseFloat(cs.borderRightWidth) - (q.left + q.width / 2) : q.left + q.width / 2 - r.left - parseFloat(cs.borderLeftWidth));
+      const corte = x >= ri ? 0 : ri - Math.sqrt(Math.max(0, ri * ri - (ri - x) ** 2));
+      out.faixaInteira = q.height > 0 ? Math.max(0, q.height - 2 * corte) / q.height : 0;
+      out.raio = raio;
+    }
     g.mundo.posse = posse0; g.pausar(false); g.relogio.usarManual(false);
     return out;
   });
   meta('5b celular, Estrelato: o travado com a bola — o nome no canto de baixo à direita (o time da direita do placar), fonte Inter TM, a cor do time 1 do placar',
-    `${nm.vis ? `"${nm.texto}" ${nm.dir ? 'à direita' : 'à ESQUERDA'}${nm.noHud ? '' : ' (fora do #hud)'}, a ${nm.borda.toFixed(0)} px da borda e ${nm.base.toFixed(0)} da base; fonte ${nm.fonte} (fontes ${nm.fontes}); cor ${nm.cor} × placar ${nm.corPlacar}` : 'o nome não aparece'}`,
-    nm.vis && nm.dir && nm.noHud && nm.borda <= 16 && nm.base <= 6.5 && /Inter TM/.test(nm.fonte) && !!nm.cor && nm.cor === nm.corPlacar);
+    `${nm.vis ? `"${nm.texto}" ${nm.dir ? 'à direita' : 'à ESQUERDA'}${nm.noHud ? '' : ' (fora do #hud)'}, a ${nm.borda.toFixed(0)} px da borda e ${nm.base.toFixed(0)} da base; fonte ${nm.fonte} (fontes ${nm.fontes}); cor ${nm.cor} × placar ${nm.corPlacar}; faixa inteira em ${((nm.faixaInteira ?? 0) * 100).toFixed(0)}% da altura (raio ${nm.raio ?? '-'} px)` : 'o nome não aparece'}`,
+    nm.vis && nm.dir && nm.noHud && nm.borda <= 16 && nm.base <= 6.5 && /Inter TM/.test(nm.fonte) && !!nm.cor && nm.cor === nm.corPlacar && nm.faixaInteira >= 0.85);
   const it = await itensDaPausa(fr);
   meta('5 celular, Estrelato: humano 1, o controlado é o travado, sem TROCAR/GOLEIRO, a trava não solta, pausa sem Editar/Reiniciar/treinos',
     `humano ${info.humano} · travado ${info.trava} (${info.tmIdTrava}) · controlado ${info.ctrl} · escondidos ${escondidos.join(', ')} · controlados depois dos apertos [${depois.join(', ')}] · pausa: ${listaItens(it)}`,
