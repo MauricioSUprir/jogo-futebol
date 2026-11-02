@@ -1024,7 +1024,8 @@ sementes 1–6, humano 'passivo' 1–4; celular / PC):
 |---|---|---|---|
 | Bola no miolo 50% × 50% (demo) | 94,5 / 95,8% | 98,3 / 98,4% | ≥ 96% |
 | Idem, 'passivo' | 89,7 / 92,5% | 97,1 / 96,7% | ≥ 95% |
-| Bola fora do quadro (demo; 'passivo') | 0,14 / 0,05%; 0,35 / 0,07% | 0,03 / 0,00%; 0,00 / 0,00% | ≤ 0,05% |
+| Bola fora do quadro, até a altura que cabe (10,0 m no celular, 14,4 no PC; demo; 'passivo') | 0,09 / 0,05%; 0,28 / 0,07% | 0,00 / 0,00%; 0,00 / 0,00% | ≤ 0,05% |
+| O chão debaixo da bola fora do quadro (demo; 'passivo') | 0,06 / 0,04%; 0,21 / 0,07% | 0,00 / 0,00%; 0,00 / 0,00% | 0 |
 | \|NDC x\| p90 (demo; 'passivo') | 0,34 / 0,30; 0,46 / 0,41 | 0,28 / 0,24; 0,26 / 0,22 | ≤ 0,30; ≤ 0,32 |
 | Meio-campo, bola no pé: u mediano; mais quadro à frente | 0,52; 38,9% | 0,46; 81–84% ('passivo' 0,48; 70–74%) | 0,40–0,48; ≥ 65% |
 | Bola na área: a área inteira (demo; 'passivo') | 15,9 / 25,5%; 12,5 / 24,2% | 96,7 / 99,0%; 97,9 / 98,9% | ≥ 90% |
@@ -1048,6 +1049,19 @@ cruzamento com a bola no quadro e a área inteira com a bola nela em 100% (o de 
 106 estádios × 4 cantos × corrida de 0, 2 e 4 m): nenhuma lente em sólido, a faixa ≥ 15% em 100% (mediana 24,2%; no Golaço
 ≥ 21,8%), o jogador na marca ≥ 18 px em 93,1% (no Golaço ≥ 19,0 px; o pior, 14,0 px, num estádio de arquibancada encostada,
 onde a lente sobe e olha mais de cima).
+
+**A bola alta (revisão R1, R4).** A TV não inclina: anda. Acima de uma altura não há foco que mostre a bola e o chão debaixo
+dela (a conta fechada `alturaQueCabe`: 9,5 m no celular e 13,6 no PC com a caixa do alvo; 10,0 e 14,4 com a dura). A 1ª
+versão limitava a bola pela altura dela: atrás de um balão de 15 m do lado de cá o foco andava de 18 a 37 m para a frente, o
+chão (os jogadores, onde ela cai) saía do quadro e a bola continuava fora — na página (demo s11 com as cenas, quadros
+6150–6420, a projeção própria conferida com a da página em 0,0003 NDC): o chão fora 0 → 87 quadros, a bola fora 124 → 108. Agora
+o limite usa no máximo a altura que cabe e o piso é o chão debaixo da bola: o chão fora 0, a bola fora 110 (sai por cima e
+volta quando desce), o foco a z ≥ 10,5 (antes −3,8); com o humano parado (s5, 6000–6300) o chão fora 19 → 0 e a bola fora 125
+→ 119; nos 30 mil quadros das duas, o chão fora 87 → 0 e 33 → 2 (os 2 com a bola além da linha de fundo, fora de jogo). O voo
+sintético (teste-camera S8, 5 voos × 2 telas × 60 e 30 qps): o chão fora 767 → 0 quadros, a bola fora 674 → 747 (o legado
+1.126), o ponto de queda fora 1.224 → 749; o chutão de 13 m leva o foco a −20 (antes −40). Por isso a meta "bola fora ≤ 0,05%"
+vale para a bola ATÉ a altura que cabe (M2); acima dela a bola sai por cima de propósito (na página, com a bola rolando: s5
+0,90% na base → 0,58%; s11 0,48% → 0,43%; nas partidas sem bola acima de ~6 m, 0,00%) e o M2b cobra o chão.
 
 **O que custou e o que ficou.** O controlado no celular perde 2,2 px (o "afastar" pedido; o p10 vai a 31,3 px). O tiro livre
 na TV a 30–35 m da linha não põe a área inteira no celular sem abrir o plano (a bola e o gol sim; 61,9% da grade). A bola

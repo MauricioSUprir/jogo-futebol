@@ -2570,10 +2570,14 @@ acusa o `config.js`, só o `CAMERA`, que a simulação não lê) e todo o resto 
   área: wA = suave((32 − dl)/14), dl = 52,5 − |P.x|; os 4 cantos da grande área e o alto das 2 traves com |NDC| ≤ 0,94 pela
   conta fechada (o intervalo de fz e depois o de fx; vazio = o meio); foco = lerp(foco, foco da área, wA). (7) O limite do
   foco em x = lerp(38,5; 44,5; wA), z de −22 a 23. (8) A bola no limite do ALVO (NDC x ±0,78, y de −0,62 a 0,80; a bola que
-  sobe entra pela altura que terá em ≤ 0,5 s; só a bola ALTA leva o foco além do lado de lá, até `bolaAlta` 18 m: o chutão de
-  12 m de altura). (9) A mola crítica (ω 4,5 em x e z) contra o alvo andando com 0,5 × a velocidade dele (filtrada 0,12 s; o
+  sobe entra pela altura que terá em ≤ 0,5 s; o piso pelo CHÃO debaixo da bola e o teto pela bola na altura que cabe —
+  `alturaQueCabe`, a conta fechada da altura acima da qual não há foco com a bola e o chão debaixo dela na caixa: 9,5 m no
+  celular, 13,6 no PC; a TV não inclina, então acima disto a bola sai por cima e o chão, onde estão os jogadores e onde ela
+  cai, fica (revisão R1: antes o foco ia até 37 m para a frente atrás do balão de 15 m, o chão saía e a bola continuava fora);
+  só a bola ALTA do lado de lá leva o foco além do limite, até `bolaAlta` 18 m). (9) A mola crítica (ω 4,5 em x e z) contra o alvo andando com 0,5 × a velocidade dele (filtrada 0,12 s; o
   alvo que salta > 3 m num quadro não tem velocidade), exata para qualquer dt (dt 0 não mexe). (10) O limite DURO na saída da
-  mola (`limiteDuro`): fora de NDC x ±0,86, y de −0,72 a 0,86, a velocidade do foco no eixo passa a ser no MÍNIMO a do
+  mola (`limiteDuro`): fora de NDC x ±0,86, y de −0,72 a 0,86 (a mesma conta do chão e da altura que cabe: 10,0 m no
+  celular, 14,4 no PC), a velocidade do foco no eixo passa a ser no MÍNIMO a do
   próprio limite (ele anda com a bola) + a que volta em 0,25 s — um piso, sem acumular (a 1ª versão, que somava a cada
   quadro, levou o foco a 75 m/s atrás de uma bola alta e bateu na borda: 4.946°/s²); depois o teto de aceleração 150 m/s²
   na soma dos eixos, a freada antes da caixa do campo (√(2·A·d)), o teto de velocidade 36 m/s (≤ 1,2 m por quadro a 30 qps)
@@ -2591,7 +2595,8 @@ acusa o `config.js`, só o `CAMERA`, que a simulação não lê) e todo o resto 
   a bola saía do quadro de 0,3 a 0,9 s).
 - **API.** `cam.cortou` (o corte de verdade deste quadro: o pedido, o 1º quadro, a bola teletransportada, a volta oposta) e
   `cam.enquadramento` ({novo, wA, lado, frente, parada, duro, limX}); `__golaco.bolaParadaDeTeste(tipo, {time, lado})`.
-- **Testes.** `teste-camera` (Node, padrão; S sintético a 60 e 30 qps, G geometria — a área, o escanteio e o tiro livre na
+- **Testes.** `teste-camera` (Node, padrão; S sintético a 60 e 30 qps — S8 a bola alta: o chão debaixo dela nunca sai do
+  quadro —, G geometria — a área, o escanteio e o tiro livre na
   TV, a projeção, o escanteio da pessoa em 106 estádios —, P 10 partidas com o legado lado a lado; `--rastro` confere com a
   página) e `teste-camera-tela` (navegador, CI: J a página × a projeção e × o Node, HUD, torcida, controlado, custo; A a área;
   E o escanteio da pessoa; F a bola parada da IA na TV; N noite). As cópias da pose (teste-tecnicos, teste-livre-tela,

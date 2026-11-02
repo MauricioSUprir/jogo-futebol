@@ -5,14 +5,16 @@
 //      brusca (passa ≤ 0,5 m e assenta a ≤ 0,5 m em ≤ 0,35 s); S3 a aceleração ≤ 150 m/s²; S4 o alvo que salta 20 m (troca
 //      de controlado: sem tranco, sem passar do ponto, a ≤ 1 m em ≤ 1,2 s); S5 a bola teletransportada = corte; S6 a bola
 //      fora do campo (atrás do gol, dentro da rede, além da lateral): o foco nos limites e nenhum passo > 1,2 m; S7 a
-//      histerese do espaço à frente (a posse que troca a cada 0,3 s não vira o lado; a de 0,6 s vira, a ≤ 6 m/s).
+//      histerese do espaço à frente (a posse que troca a cada 0,3 s não vira o lado; a de 0,6 s vira, a ≤ 6 m/s); S8 a bola
+//      ALTA (5 voos de 6 a 20 m de pico): o chão debaixo dela nunca sai do quadro e a bola fora ≤ a do legado (R1 da revisão).
 //   G) geometria: G1 a grade de bolas nas duas áreas (x 36–52,5, z ±20, de 1 em 1 m) com o foco em regime: os 4 cantos e
 //      o alto das 2 traves dentro de 0,94 e a bola dentro do limite; G2 o escanteio na TV nos 4 cantos; G3 o tiro livre na
 //      TV de 18 a 35 m da linha (z ±25): a área, o gol e a bola no quadro; G4 a projeção fechada contra uma 4×4.
 //   P) partidas inteiras (demo IA × IA como a página com ?demo=1, sementes 1–6; o humano roteirizado 'passivo', 1–4), nas
 //      duas telas: o alvo pelo preencherAlvo (o do main.js) e a TV nova e a de HOJE (o legado, a cópia exata da 79bbfbc2)
 //      lado a lado. Reprova se a nova não cumpre M1–M6c, M9–M11 e R1 (as metas no cabeçalho de cada linha); o legado sai
-//      impresso ao lado (ele reprova M1, M6 e M9).
+//      impresso ao lado (ele reprova M1, M6 e M9). M2 conta a bola até a altura que cabe no quadro com o chão debaixo dela
+//      (enquadramento.js alturaQueCabe: 10,0 m no celular, 14,4 no PC); acima dela a bola sai por cima e o M2b cobra o chão.
 //   node tools/teste-camera.mjs [--js <pasta js>] [--so S|G|P] [--sementes 1-6] [--passivo 1-4] [--par 2]
 //   --rastro <json>: só a conferência com a página (teste-camera-tela J1). Diagnóstico (stderr): CAM_DBG=<m> os passos do foco
 //   maiores que isso, CAM_FORA=1 os instantes com a bola fora do quadro, CAM_G5=1 cada lente do G5.
@@ -54,6 +56,9 @@ for (const T of TELAS) {
   T.p = EQ.perfilCamera({}, 0, T.asp, T.pequena); T.g = EQ.geometriaTV({}, T.p, T.asp, T.pequena); T.W = EQ.larguraVista(T.p, T.pequena);
   T.pA = { ...T.p, largura: ANTES.largura, distancia: T.pequena ? ANTES.celular.distancia : ANTES.distancia, altura: T.pequena ? ANTES.celular.altura : ANTES.altura };
   T.gA = EQ.geometriaTV({}, T.pA, T.asp, T.pequena);
+  // a altura mais alta da bola que cabe no quadro com o chão debaixo dela (enquadramento.js alturaQueCabe, a caixa dura; a
+  // base sem ela: sem limite)
+  T.yCabe = EQ.alturaQueCabe ? EQ.alturaQueCabe(T.g, EQ.ENQUADRAMENTO.bolaDuro) : Infinity;
 }
 const AMOSTRA = 15; // quadros (0,25 s a 60 qps)
 const _n = { x: 0, y: 0, c: 0, ok: false }, _n2 = { x: 0, y: 0, c: 0, ok: false };
@@ -213,6 +218,8 @@ async function coletar(modo, sem, rastro = null) {
         for (const j of m.jogadores) { EQ.projetarTV(g, fx, fz, j.x, 0, j.z, _n); if (!dentro(_n, 1.02)) continue; EQ.projetarTV(g, fx, fz, j.x, 1.8, j.z, _n2); hs.push(Math.abs(_n2.y - _n.y) / 2 * T.h); }
         hs.sort((x, y) => x - y);
         s.push(hc, hs.length ? hs[hs.length >> 1] : NaN);
+        // o chão debaixo da bola no quadro e a bola acima da altura que cabe (a TV não inclina: R1 da revisão)
+        s.push(dentro(EQ.projetarTV(g, fx, fz, b.x, 0, b.z, _n)) ? 1 : 0, b.y > T.yCabe ? 1 : 0);
         k.amostras.push(s);
       }
     }
@@ -288,6 +295,48 @@ function molaSozinha(qps, dur, r) {
   }
   return serie;
 }
+// os voos altos do S8 (nome, a bola no chute, a velocidade): pico de 9 a 20 m, perto do lado de cá e no meio
+const CENAS_ALTAS = [
+  ['chutão do goleiro (pico 13 m)', [-45, 0.11, 5], [24, 16, -3]],
+  ['balão do lado de cá na entrada da área (pico 15 m; o da demo s11)', [43, 0.11, 28], [-2, 17, -3]],
+  ['balão no meio (pico 20 m)', [0, 0.11, 0], [3, 20, -2]],
+  ['lançamento de lá para cá (pico 9 m)', [0, 0.11, -25], [4, 13, 20]],
+  ['cruzamento alto do lado de cá (pico 6 m)', [44, 0.11, 30], [-3, 11, -18]],
+];
+/**
+ * Um voo alto sintético (sem arrasto; no chão a bola perde metade e rola), 1 s parada antes: a TV nova (nova) ou a de hoje
+ * (o legado com a pose de antes). Conta os quadros do chute até 1 s depois da queda com o chão debaixo da bola fora do
+ * quadro, a bola fora e (a nova) o ponto de queda fora enquanto ela voa.
+ */
+function vooAlto(T, qps, b0, v0, nova) {
+  const dt = 1 / qps, E = EQ.criarEnquadramento(), est = { x: 0, z: 0, vx: 0, vz: 0 }, a = alvoVazio(), o = {}, _a = {};
+  const b = [...b0], v = [...v0], tq = 2 * v0[1] / 9.81, ax = b0[0] + v0[0] * tq, az = b0[2] + v0[2] * tq;
+  const g = nova ? T.g : T.gA, p = nova ? T.p : T.pA;
+  let n = 0, chao = 0, bola = 0, queda = 0, voando = false;
+  for (let k = -qps; k < Math.round((tq + 1) * qps); k++) {
+    if (k >= 0) {
+      if (k === 0 || voando) {
+        b[0] += v[0] * dt; b[1] += v[1] * dt; b[2] += v[2] * dt; v[1] -= 9.81 * dt;
+        if (b[1] < 0.11) { b[1] = 0.11; v[0] *= 0.5; v[1] = 0; v[2] *= 0.5; }
+      } else { b[0] += v[0] * dt; b[2] += v[2] * dt; v[0] *= Math.pow(0.99, 60 * dt); v[2] *= Math.pow(0.99, 60 * dt); }
+      voando = b[1] > 0.11;
+    }
+    Object.assign(a, { jx: b[0] - 5, jz: b[2] + 3, jvx: 0, jvz: 0, bx: b[0], by: b[1], bz: b[2], bvx: k >= 0 ? v[0] : 0, bvy: k >= 0 ? v[1] : 0,
+      bvz: k >= 0 ? v[2] : 0, ax: voando ? ax : NaN, az: voando ? az : NaN, tRest: voando ? Math.max(0, tq - k * dt) : 0, dir: 1 });
+    if (nova) EQ.focoTV(E, est, a, p, g, T.W, dt, k === -qps);
+    else {
+      EQ.alvoLegado(a, p, _a);
+      const fx = Math.max(-p.limX, Math.min(p.limX, _a.x)), fz = Math.max(p.limZ0, Math.min(p.limZ1, _a.z));
+      if (k === -qps) { est.x = fx; est.z = fz; } else EQ.molaLegada(est, fx, fz, dt);
+    }
+    if (k < 0) continue;
+    n++;
+    if (!dentro(EQ.projetarTV(g, est.x, est.z, b[0], 0, b[2], o))) chao++;
+    if (!dentro(EQ.projetarTV(g, est.x, est.z, b[0], b[1], b[2], o))) bola++;
+    if (voando && !dentro(EQ.projetarTV(g, est.x, est.z, ax, 0, az, o))) queda++;
+  }
+  return { n, chao, bola, queda };
+}
 if (!SO || SO === 'S') {
   for (const qps of [60, 30]) {
     // S1: rampas — o atraso em regime (a partir de 1,5 s) / v; S3: a aceleração
@@ -346,6 +395,21 @@ if (!SO || SO === 'S') {
     let vFrente = 0;
     for (let i = 1; i < s7b.length; i++) vFrente = Math.max(vFrente, Math.abs(s7b[i].frente - s7b[i - 1].frente) * qps);
     reg(`S7 ${qps} qps: espaço à frente — posse trocando a cada 0,3 s: viradas; a cada 0,6 s: viradas e velocidade`, `${viraA}; ${viraB}, ${f1(vFrente)} m/s`, `0; ≥ 5, ≤ ${Q.frenteVel} m/s`, viraA === 0 && viraB >= 5 && vFrente <= Q.frenteVel + 1e-6);
+  }
+  // S8: a bola ALTA (revisão R1): a câmera não inclina, então acima de uma altura não há foco que mostre a bola E o chão
+  // debaixo dela; aí o chão (onde estão os jogadores e onde ela vai cair) fica no quadro e a bola sai por cima. Antes a TV
+  // andava até 37 m para a frente atrás da bola, o chão saía do quadro e a bola continuava fora (o balão de 15 m da demo s11)
+  {
+    let chaoN = 0, bolaN = 0, bolaL = 0, chaoL = 0, nS8 = 0, queda = 0;
+    const det = [];
+    for (const qps of [60, 30]) for (const T of TELAS) for (const [nome, b0, v0] of CENAS_ALTAS) {
+      const n = vooAlto(T, qps, b0, v0, true), l = vooAlto(T, qps, b0, v0, false);
+      chaoN += n.chao; bolaN += n.bola; bolaL += l.bola; chaoL += l.chao; nS8 += n.n; queda += n.queda;
+      if (n.chao) det.push(`${T.chave} ${qps} qps, ${nome}: ${n.chao}`);
+    }
+    reg(`S8 a bola alta (${CENAS_ALTAS.length} voos de 9 a 20 m × 2 telas × 60 e 30 qps; ${nS8} quadros): o chão debaixo da bola fora do quadro`,
+      `${chaoN} quadro(s)${det.length ? ` (${det.slice(0, 3).join('; ')})` : ''} (legado ${chaoL})`, '0', chaoN === 0);
+    reg('S8 … a bola fora do quadro (sai por cima acima do que cabe); o ponto de queda fora do quadro', `${bolaN} (legado ${bolaL}); ${queda}`, '≤ o legado; informativo', bolaN <= bolaL);
   }
   // M8: a largura vista no foco
   reg('M8 largura vista no foco: celular / PC', `${f1(TELAS[0].W)} / ${f1(TELAS[1].W)} m (hoje 39,6 / 45)`, '41,5–43,5 / 47–49 m', TELAS[0].W >= 41.5 && TELAS[0].W <= 43.5 && TELAS[1].W >= 47 && TELAS[1].W <= 49);
@@ -507,7 +571,7 @@ if (!SO || SO === 'P') {
   }));
   console.error(`P: ${res.length} partidas em ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   // índices da amostra
-  const I = { rol: 0, x: 1, y: 2, pe: 3, zona: 4, area: 5, dGol: 6, u: 7, lag: 8, vb: 9, aFrac: 10, aInt: 11, aTrav: 12, hCtrl: 13, hMed: 14 };
+  const I = { rol: 0, x: 1, y: 2, pe: 3, zona: 4, area: 5, dGol: 6, u: 7, lag: 8, vb: 9, aFrac: 10, aInt: 11, aTrav: 12, hCtrl: 13, hMed: 14, chao: 15, alta: 16 };
   const dk = (s, k) => Number.isFinite(s[I.x]) && Math.abs(s[I.x]) <= k && Math.abs(s[I.y]) <= k;
   function medidas(modo, cam) {
     const L = res.filter(r => r.modo === modo).map(r => r.cams[cam]);
@@ -518,7 +582,9 @@ if (!SO || SO === 'P') {
     return {
       n: rol.length,
       miolo50: pct(rol.filter(s => dk(s, 0.5)).length, rol.length),
-      fora: pct(rol.filter(s => !dk(s, 1)).length, rol.length),
+      fora: pct(rol.filter(s => !s[I.alta] && !dk(s, 1)).length, rol.filter(s => !s[I.alta]).length),
+      chaoFora: pct(rol.filter(s => !s[I.chao]).length, rol.length),
+      nAlta: rol.filter(s => s[I.alta]).length, foraAlta: rol.filter(s => s[I.alta] && !dk(s, 1)).length,
       xP90: q(rol.map(s => Math.abs(s[I.x])), 0.9),
       fora80Pe: pct(pe.filter(s => !dk(s, 0.8)).length, pe.length), fora80Ar: pct(ar.filter(s => !dk(s, 0.8)).length, ar.length),
       uMeio: q(meio.map(s => s[I.u]), 0.5), frenteMeio: pct(meio.filter(s => s[I.u] <= 0.5).length, meio.length),
@@ -542,7 +608,9 @@ if (!SO || SO === 'P') {
       const ab = (fn, fmt = f1) => `${fmt(fn(L))} → ${fmt(fn(N))}`;
       const m1 = d ? 96 : 95;
       reg(`M1 ${tag}: bola no miolo 50% × 50% (bola rolando, ${N.n} instantes)`, `${ab(o => o.miolo50)}%`, `≥ ${m1}%`, N.miolo50 >= m1);
-      reg(`M2 ${tag}: bola fora do quadro`, `${ab(o => o.fora, f2)}%`, '≤ 0,05%', N.fora <= 0.05);
+      reg(`M2 ${tag}: bola fora do quadro (até a altura que cabe, ${f1(T.yCabe)} m)`, `${ab(o => o.fora, f2)}%`, '≤ 0,05%', N.fora <= 0.05);
+      reg(`M2b ${tag}: o chão debaixo da bola fora do quadro; a bola acima da altura que cabe fora (informativo)`,
+        `${ab(o => o.chaoFora, f2)}%; ${L.foraAlta}/${L.nAlta} → ${N.foraAlta}/${N.nAlta}`, '0%', N.chaoFora === 0);
       const m3 = d ? 0.30 : 0.32;
       reg(`M3 ${tag}: |NDC x| da bola, p90`, ab(o => o.xP90, f2), `≤ ${f2(m3)}`, N.xP90 <= m3);
       if (cel) reg(`M3b ${tag}: fora dos 80% centrais — no pé / no ar`, `${f2(L.fora80Pe)} / ${f2(L.fora80Ar)}% → ${f2(N.fora80Pe)} / ${f2(N.fora80Ar)}%`, '≤ 0,1% / ≤ 0,6%', N.fora80Pe <= 0.1 && N.fora80Ar <= 0.6);

@@ -90,10 +90,16 @@ export function projetarTV(g, fx, fz, x, y, z, out) {
   out.c = c; out.ok = c > 0.5;
   return out;
 }
-/** s (= z − fz) que põe um ponto da altura y em NDC y = Y (NDC y cai quando s cresce: perto = embaixo). */
+/**
+ * s (= z − fz) que põe um ponto da altura y (abaixo da lente) em NDC y = Y (NDC y cai quando s cresce: perto = embaixo, longe
+ * = o horizonte, h/(D·tanV)). Com Y no horizonte ou acima dele (a TV baixa e longe do Livre) a linha Y da tela não desce até
+ * essa altura: todo ponto fica abaixo dela — −∞ (o intervalo de fz sem teto).
+ */
 function sDeY(g, y, Y) {
+  const den = Y * g.tanV * g.D - g.h;
+  if (den >= 0) return -Infinity;
   const K = g.D * g.D + g.h * (g.H - y);
-  return (Y * g.tanV * K - (y - g.oy) * g.D) / (Y * g.tanV * g.D - g.h);
+  return (Y * g.tanV * K - (y - g.oy) * g.D) / den;
 }
 /** Intervalo de fz que põe o ponto (y, z) com NDC y em [lo, hi]. */
 function intervaloFz(g, y, z, lo, hi, out) { out.min = z - sDeY(g, y, lo); out.max = z - sDeY(g, y, hi); return out; }
@@ -168,9 +174,10 @@ export const ENQUADRAMENTO = {
   bolaDuro: { x: 0.86, baixo: -0.72, cima: 0.86, tempo: 0.25 }, // NDC: na saída da mola, pela velocidade (volta em `tempo` s)
   bolaCampo: { x: 53.5, z: 35 }, // m: nas contas, a bola presa às linhas (atrás do gol, dentro da rede, na placa)
   profMin: 5,                // m: com a bola a menos disto da lente (profundidade), o limite da bola não vale no quadro
-  bolaAlta: 18,              // m: além do limite do campo do lado de lá (limZ0), só para a bola ALTA não sair por cima (o
-                             // chutão de 12 m de altura perto do meio pede o foco em z ~ −39 no celular, de 15°: com o foco
-                             // preso em −22 ela saía do quadro; a câmera não inclina — anda — e volta quando a bola desce)
+  bolaAlta: 18,              // m: além do limite do campo do lado de lá (limZ0), só para a bola ALTA do lado de lá não sair
+                             // por cima (a câmera não inclina — anda — e volta quando a bola desce). A altura que entra na
+                             // conta é no máximo a que cabe com o chão debaixo dela (alturaQueCabe): o chão nunca sai do
+                             // quadro (revisão R1; antes o chutão de 13 m levava o foco a −40 e o chão saía)
   salto: 6,                  // m num quadro: a bola teletransportada (montagem sem evento de corte) = corte
   omega: 4.5,                // 1/s: a mola crítica, em x e em z (hoje 3,2 e 2,56)
   avanco: 0.5,               // a mola segue o alvo andando com esta fração da velocidade dele (o atraso cai de 0,62 para 0,22 s × v)
@@ -235,7 +242,7 @@ export function preencherAlvo(alvo, m, posDe, bola) {
   return alvo;
 }
 
-const _i = { min: 0, max: 0 }, _j = { min: 0, max: 0 }, _l = { x: 0, z: 0 }, _r = { x: 0, z: 0 };
+const _i = { min: 0, max: 0, y: 0 }, _j = { min: 0, max: 0 }, _l = { x: 0, z: 0 }, _r = { x: 0, z: 0 };
 // os pontos da área que têm de caber: os 4 cantos da grande área e o alto das 2 traves (u = da linha de fundo para dentro)
 const PONTOS_AREA = [[0, 0, AL], [AP, 0, AL], [0, 0, -AL], [AP, 0, -AL], [0, GA, GL], [0, GA, -GL]];
 /** A bola, presa às linhas para as contas (atrás do gol, na rede, além da lateral). */
@@ -244,13 +251,44 @@ function bolaNasLinhas(a, out) {
   out.y = Math.max(RAIO_BOLA, Number.isFinite(a.by) ? a.by : RAIO_BOLA);
   return out;
 }
-const _b = { x: 0, y: 0, z: 0 };
-/** O foco mais perto de (fx, fz) que põe a bola (bx, by, bz) dentro da caixa B (NDC); a bola perto da lente: não mexe. */
+const _b = { x: 0, y: 0, z: 0 }, _c = { min: 0, max: 0 };
+/**
+ * A altura mais alta em que a bola ainda cabe na caixa B (NDC y ≤ B.cima) com o CHÃO debaixo dela também dentro (NDC y ≥
+ * B.baixo) — a conta fechada, que não depende de z (revisão R1). A TV não inclina, anda: acima disto não há foco que mostre
+ * os dois. O limite da bola usa no máximo esta altura: o chão (onde estão os jogadores e onde ela cai) fica no quadro e a bola
+ * sai por cima até descer — antes a TV andava até 37 m para a frente atrás dela, o chão saía e a bola continuava fora. TV do
+ * celular (15°): 9,5 m com a caixa do alvo, 10,0 com a dura; PC (24,6°): 13,6 e 14,4 m. Com a linha de cima da caixa no
+ * horizonte ou acima dele (a TV baixa e longe do Livre), 1 m abaixo da lente.
+ */
+export function alturaQueCabe(g, B) {
+  const t = B.cima * g.tanV, den = t * g.D - g.h;
+  if (den >= 0) return g.H - 1;
+  const s0 = sDeY(g, 0, B.baixo);
+  return Math.min(g.H - 1, (t * (g.D * g.D + g.h * g.H) + g.oy * g.D - s0 * den) / (t * g.h + g.D));
+}
+/**
+ * O intervalo de fz que põe a bola (y, z) — na altura que cabe — dentro da caixa B: o teto pela bola, o piso pelo chão
+ * debaixo dela (o ponto mais baixo dos dois na tela). Devolve em out a altura usada (out.y).
+ */
+function intervaloBola(g, y, z, B, out) {
+  const yc = Math.min(y, alturaQueCabe(g, B));
+  intervaloFz(g, yc, z, B.baixo, B.cima, out);
+  intervaloFz(g, 0, z, B.baixo, B.cima, _c);
+  if (_c.min > out.min) out.min = _c.min;
+  if (_c.max < out.max) out.max = _c.max;
+  if (out.min > out.max) out.min = out.max = 0.5 * (out.min + out.max); // (só o arredondamento: a altura que cabe garante)
+  out.y = yc;
+  return out;
+}
+/**
+ * O foco mais perto de (fx, fz) que põe a bola (bx, by, bz) dentro da caixa B (NDC) — a bola acima da altura que cabe, por
+ * ela (alturaQueCabe), e o chão debaixo dela também dentro —; a bola perto da lente: não mexe.
+ */
 export function limitarBola(g, bx, by, bz, B, fx, fz, out) {
-  intervaloFz(g, by, bz, B.baixo, B.cima, _i);
-  const fz2 = clamp(fz, _i.min, _i.max);
-  if (!(profundidade(g, by, bz - fz2) >= Q.profMin)) { out.x = fx; out.z = fz; return out; }
-  intervaloFx(g, fz2, bx, by, bz, B.x, _j);
+  intervaloBola(g, by, bz, B, _i);
+  const y = _i.y, fz2 = clamp(fz, _i.min, _i.max);
+  if (!(profundidade(g, y, bz - fz2) >= Q.profMin)) { out.x = fx; out.z = fz; return out; }
+  intervaloFx(g, fz2, bx, y, bz, B.x, _j);
   out.x = clamp(fx, _j.min, _j.max); out.z = fz2;
   return out;
 }
@@ -337,7 +375,8 @@ export function alvoTV(E, a, g, W, p, dt, corte, out) {
   fx = clamp(fx, -E.limX, E.limX); fz = clamp(fz, E.limZ0, E.limZ1);
   // 7) a bola (de verdade) dentro do limite do alvo — prioridade —, e o foco sempre dentro dos limites do campo
   // (só a bola ALTA leva o foco além do limite do lado de lá, até bolaAlta m: limiteDuro; a bola que SOBE entra pela
-  // altura que terá em até anteVoo s — a câmera sai antes, sem chicotear atrás dela)
+  // altura que terá em até anteVoo s — a câmera sai antes, sem chicotear atrás dela —, no máximo a que cabe com o chão
+  // debaixo dela no quadro: acima disto a bola sai por cima e o chão fica — limitarBola/alturaQueCabe)
   const vy = Number.isFinite(a.bvy) ? a.bvy : 0, tSobe = clamp(vy / 9.81, 0, Q.anteVoo);
   limitarBola(g, b.x, b.y + Math.max(0, vy * tSobe - 4.905 * tSobe * tSobe), b.z, Q.bola, fx, fz, _l);
   out.x = clamp(_l.x, -E.limX, E.limX); out.z = clamp(_l.z, E.limZ0 - Q.bolaAlta, E.limZ1);
@@ -385,13 +424,14 @@ export function limiteDuro(E, est, a, g, dt, vx0, vz0, px0 = NaN, pz0 = NaN) {
   if (!(dt > 0)) return;
   const B = Q.bolaDuro, b = bolaNasLinhas(a, _b);
   const x1 = est.x, z1 = est.z, vx1 = est.vx, vz1 = est.vz;
-  // os limites deste quadro (o intervalo do foco que põe a bola na caixa B, preso aos limites do campo) e a velocidade deles
-  intervaloFz(g, b.y, b.z, B.baixo, B.cima, _i);
-  const zMin = E.limZ0 - Q.bolaAlta;
+  // os limites deste quadro (o intervalo do foco que põe a bola — na altura que cabe — e o chão debaixo dela na caixa B, preso
+  // aos limites do campo) e a velocidade deles
+  intervaloBola(g, b.y, b.z, B, _i);
+  const yB = _i.y, zMin = E.limZ0 - Q.bolaAlta;
   let z0 = clamp(_i.min, zMin, E.limZ1), zz1 = clamp(_i.max, zMin, E.limZ1);
   const zc = clamp(z1, z0, zz1);
-  const valido = profundidade(g, b.y, b.z - zc) >= Q.profMin;
-  intervaloFx(g, zc, b.x, b.y, b.z, B.x, _j);
+  const valido = profundidade(g, yB, b.z - zc) >= Q.profMin;
+  intervaloFx(g, zc, b.x, yB, b.z, B.x, _j);
   let x0 = clamp(_j.min, -E.limX, E.limX), xx1 = clamp(_j.max, -E.limX, E.limX);
   if (!valido) { x0 = -E.limX; xx1 = E.limX; z0 = zMin; zz1 = E.limZ1; }
   const L = E.lim ?? (E.lim = { ok: false, x0: 0, x1: 0, z0: 0, z1: 0 });
