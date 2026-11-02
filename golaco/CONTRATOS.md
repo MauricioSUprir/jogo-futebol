@@ -2599,7 +2599,9 @@ acusa o `config.js`, só o `CAMERA`, que a simulação não lê) e todo o resto 
   desenho, a regra da TV); bloqueada, chega 15% e sobe 1 m por tentativa (10). Os outros tipos: o `CAMERA_BOLA_PARADA` de
   sempre. A volta para a TV: a mistura de 1,1 s, menos quando o olhar da bola parada e o da TV apontam para lados opostos
   (cosseno < −0,5: o escanteio de lá) — aí CORTA (`camera.js BP.corteOposto`; misturando 180°, o olhar passava pelo chão e
-  a bola saía do quadro de 0,3 a 0,9 s).
+  a bola saía do quadro de 0,3 a 0,9 s). No Modo Livre, contra o rumo da câmera dele no chão (`est.extra.yaw`: as de lado
+  olham como a TV e cortam; Atrás e Jogador, pelo comprimento, misturam; revisão R5 — antes no Livre a volta misturava e a
+  bola saía de 0,27 a 0,80 s: teste-camera-tela E8).
 - **API.** `cam.cortou` (o corte de verdade deste quadro: o pedido, o 1º quadro, a bola teletransportada, a volta oposta) e
   `cam.enquadramento` ({novo, wA, lado, frente, parada, duro, limX}); `__golaco.bolaParadaDeTeste(tipo, {time, lado})`.
 - **Testes.** `teste-camera` (Node, padrão; S sintético a 60 e 30 qps — S8 a bola alta: o chão debaixo dela nunca sai do

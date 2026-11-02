@@ -1088,6 +1088,12 @@ do item 66 nas mesmas partidas (Altura 20/Distância 0 no celular: 0,59 e 30,6% 
 0,12 e 7,1% agora). O que sobra fora é o enquadrar do Livre (`camera-livre.js enquadrar`), que põe o controlado e o chão
 debaixo da bola no quadro antes da bola alta.
 
+**A volta do escanteio de lá no Modo Livre (revisão R5).** No jogo a volta da câmera do escanteio de lá para a TV é por corte
+(os dois olhares apontam para lados opostos); no Livre ela continuava misturando 180° e, com a câmera alta do escanteio do
+item 66, a bola saía do quadro de 0,27 a 0,80 s depois do cruzamento (33 de 181 quadros, 81,8% no quadro; antes do item 66,
+com a câmera baixa, 0). Agora o Livre corta pelo rumo da câmera dele (as de lado; Atrás e Jogador misturam): 100% no quadro
+(teste-camera-tela E8, celular, semente 4).
+
 **O que custou e o que ficou.** O controlado no celular perde 2,2 px (o "afastar" pedido; o p10 vai a 31,3 px). O tiro livre
 na TV a 30–35 m da linha não põe a área inteira no celular sem abrir o plano (a bola e o gol sim; 61,9% da grade). A bola
 do lado de lá dentro da área sobe no quadro (o preço de mostrar a área). O vai e volta com o 'passivo' subiu 10,2 → 10,6/min

@@ -24,7 +24,8 @@ import {
 // quando ela olha para o lado OPOSTO ao da TV (o escanteio do lado de lá, de trás do cobrador para o lado de cá; item 66):
 // aí a volta é por CORTE (como o diretor de TV corta da câmera do escanteio para a principal; corte não enjoa — Eiserloh,
 // GDC 2016): misturando 180° de rumo, o olhar passava pelo chão e a bola saía do quadro de 0,3 a 0,9 s depois do chute
-// (teste-camera-tela E6: 81% com a bola no quadro). corteOposto = o cosseno entre os dois olhares abaixo do qual corta
+// (teste-camera-tela E6: 81% com a bola no quadro; no Modo Livre, contra o rumo da câmera dele: E8). corteOposto = o cosseno
+// entre os dois olhares abaixo do qual corta
 // (−0,5: mais de 120°; o escanteio de lá dá ~−0,9; o pênalti, o tiro livre e o tiro de meta, olhando para o gol, ~0 ± 0,3
 // e continuam misturando — com 0, o pênalti cortava: teste-bola-parada-tela item 4).
 const BP = { entra: 0.6, sai: 1.1, mola: 7, corteOposto: -0.5 };
@@ -209,15 +210,22 @@ export function criarCamera(aspecto) {
     camera.fov = lerp(camera.fov, fovFixo(q[6]), e); camera.updateProjectionMatrix();
   }
   const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d1 = new THREE.Vector3(), _d2 = new THREE.Vector3();
-  /** O olhar da bola parada (q: de, para) e o da TV (perfil p) apontam para lados opostos? */
-  function opostaTV(q, p) {
-    const dx = q[3] - q[0], dy = q[4] - q[1], dz = q[5] - q[2], ty = p.olharY - p.altura, tz = -p.distancia;
+  /**
+   * O olhar da bola parada (q: de, para) e o da câmera de jogo apontam para lados opostos? A TV (perfil p) ou, no Modo Livre,
+   * a câmera dele pelo rumo no chão (est.extra.yaw: de lado −π/2, como a TV; Atrás e Jogador pelo comprimento). No Livre a
+   * volta do escanteio de lá misturava 180° e a bola saía do quadro de 0,27 a 0,80 s depois do cruzamento (revisão R5; antes
+   * do item 66, com a câmera da bola parada baixa, não saía).
+   */
+  function oposta(q, p) {
+    const dx = q[3] - q[0], dy = q[4] - q[1], dz = q[5] - q[2];
+    if (est.extra) { const y = est.extra.yaw; return (dx * Math.cos(y) + dz * Math.sin(y)) / (Math.hypot(dx, dz) || 1) < BP.corteOposto; }
+    const ty = p.olharY - p.altura, tz = -p.distancia;
     return (dy * ty + dz * tz) / ((Math.hypot(dx, dy, dz) * Math.hypot(ty, tz)) || 1) < BP.corteOposto;
   }
   function atualizarBP(dt, corte, p) {
     const bp = est.bp, pl = bp.plano;
     if (!pl) {
-      if (bp.ok && bp.s > 0 && !est.extra && opostaTV(bp.p, p)) { bp.s = 0; bp.ok = false; est.corteBP = true; return; }
+      if (bp.ok && bp.s > 0 && oposta(bp.p, p)) { bp.s = 0; bp.ok = false; est.corteBP = true; return; }
       bp.s = Math.max(0, bp.s - dt / BP.sai); if (!bp.s) bp.ok = false; return;
     }
     const alvo = [...pl.de, ...pl.para, pl.fov], novo = !bp.ok || corte || bp.s <= 0;

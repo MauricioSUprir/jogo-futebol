@@ -16,7 +16,8 @@
 //     E4 o cobrador inteiro (cabeça ≥ 40%, pés ≤ 92% da altura); E5 nada sólido na lente e nenhum jogador a < 0,8 m; E6 o
 //     cruzamento (LANÇAMENTO 0,5 s) e os 3 s depois: a bola no quadro ≥ 85%, a área inteira quando a bola está nela ≥ 90%, a
 //     mistura a 0 em ≤ 1,3 s sem passo > 2,5 m (o de lá, que olha para o lado oposto ao da TV, volta por corte); E7 o pior
-//     quadro no celular ≤ 40 chamadas e ≤ 130 mil triângulos.
+//     quadro no celular ≤ 40 chamadas e ≤ 130 mil triângulos; E8 no Modo Livre (TV, celular) o de lá também volta por corte
+//     e a bola fica no quadro ≥ 85% (revisão R5).
 //  F  a TV na bola parada da IA (o escanteio dos 2 lados e a falta a 25 m): F1 a área inteira, o gol e a bola no quadro.
 //  N  de noite, os mesmos ticks: render.camera igual (Δ ≤ 1 mm: só o resto da mola do relógio de verdade antes do manual).
 //  Nenhum erro no console.
@@ -345,6 +346,45 @@ try {
         } finally { await navegador.close(); }
       }
     }
+  }
+  if (parte('E')) {
+    // E8 (revisão R5): no Modo Livre a volta do escanteio de lá também é por corte (contra o rumo da câmera dele: a TV do Livre
+    // olha como a TV); misturando 180°, a bola saía do quadro de 0,27 a 0,80 s depois do cruzamento (33 de 181 quadros)
+    const T = TELAS[0];
+    const { navegador, pagina, erros } = await abrir({ largura: T.largura, altura: T.altura, dpr: T.dpr, toque: T.toque });
+    try {
+      await pagina.goto(`${srv.url}?q=media&semente=4${T.toque ? '&toque=1' : ''}&hora=dia&replay=0&comemoracao=0&modo=livre`, { waitUntil: 'load' });
+      await pronta(pagina);
+      await pagina.evaluate(() => document.getElementById('btn-livre-jogar')?.click());
+      await pagina.evaluate(() => window.__golaco.bolaParada.carregar());
+      const e = await bolaParada(pagina, 'escanteio', { lado: 'la', pessoa: true }, false);
+      if (e.erro || !e.ativa) meta('E8 celular, Modo Livre (TV), escanteio de lá: a câmera atrás do cobrador', e.erro ?? 'não veio', false);
+      else {
+        const D = await pagina.evaluate(([AX]) => {
+          const X = eval(AX), g = window.__golaco, L = [];
+          let chute = -1, i = 0;
+          const um = () => { g.relogio.avancar(1000 / 60, { desenhar: false }); i++; const m = g.mundo; if (chute < 0 && (!m.parada || m.parada.rolou)) chute = i; };
+          g.forcarEntrada({ x: 0, z: 0, botoes: 16 });
+          for (let k = 0; k < 30; k++) um();
+          g.forcarEntrada({ x: 0, z: 0, botoes: 0 });
+          let mAnt = g.bolaParada?.estado?.mistura ?? 0;
+          for (let k = 0; k < 900 && (chute < 0 || i - chute < 180); k++) {
+            um();
+            const mi = g.bolaParada?.estado?.mistura ?? 0;
+            if (chute < 0) { mAnt = mi; continue; }
+            const bo = g.mundo.bola.p;
+            L.push({ bola: X.naQ(g.naTela(bo.x, bo.y, bo.z)), corte: mAnt > 0.5 && mi === 0 });
+            mAnt = mi;
+          }
+          g.forcarEntrada(null);
+          return L;
+        }, [AUX]);
+        const bolaPct = D.length ? D.filter(x => x.bola).length / D.length : NaN, cortou = D.some(x => x.corte);
+        meta('E8 celular, Modo Livre (TV), escanteio de lá: o cruzamento e os 3 s depois — bola no quadro; a volta por corte',
+          `${f1(100 * bolaPct)}% (${D.length} quadros); ${cortou ? 'corte' : 'misturando'}`, bolaPct >= 0.85 && cortou, '≥ 85%; corte');
+      }
+      errosTot += erros.length;
+    } finally { await navegador.close(); }
   }
   if (parte('F')) {
     for (const T of TELAS) {
