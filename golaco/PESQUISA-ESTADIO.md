@@ -1061,7 +1061,8 @@ volta quando desce), o foco a z ≥ 10,5 (antes −3,8); com o humano parado (s5
 sintético (teste-camera S8, 5 voos × 2 telas × 60 e 30 qps): o chão fora 767 → 0 quadros, a bola fora 674 → 747 (o legado
 1.126), o ponto de queda fora 1.224 → 749; o chutão de 13 m leva o foco a −20 (antes −40). Por isso a meta "bola fora ≤ 0,05%"
 vale para a bola ATÉ a altura que cabe (M2); acima dela a bola sai por cima de propósito (na página, com a bola rolando: s5
-0,90% na base → 0,58%; s11 0,48% → 0,43%; nas partidas sem bola acima de ~6 m, 0,00%) e o M2b cobra o chão.
+0,90% na base → 0,58%; s11 0,48% → 0,43%; a demo s4 no 844×390, s7 no 667×375 e s9 no 568×320, sem bola acima da altura que
+cabe: 0,00 / 0,05 / 0,00% → 0,00%) e o M2b cobra o chão.
 
 **O Rumo ao Estrelato (revisão R2).** Sem troca (`?tm` com a trava: só o meu jogador), o controlado não é quem está perto da
 bola, e a TV que segue a bola (o controlado puxa ≤ 25%) o deixava fora do quadro bem mais que a de antes. Agora os pés e a
@@ -1099,3 +1100,16 @@ na TV a 30–35 m da linha não põe a área inteira no celular sem abrir o plan
 do lado de lá dentro da área sobe no quadro (o preço de mostrar a área). O vai e volta com o 'passivo' subiu 10,2 → 10,6/min
 (dentro da meta de +1). O u do meio-campo com o 'passivo' fica em 0,483 (a régua de 2 casas da meta, 0,48). Pendentes para
 o dono: a mesma previsão na câmera aproximada; o plano 'fechada' do replay com o foco novo; a TV girando como a real (D5).
+
+**A revisão (R7, A1–A3), sem mudança.** Na página (a régua independente da revisão, 30 mil quadros por tela, a base → agora):
+os jogadores encolhem ~6% em toda tela (o controlado, mediana: 844×390 37,2 → 34,6 px, p10 33,1 → 30,8; 667×375 29,6 →
+27,8; 568×320 25,1 → 23,5) — o piso de 34 px só é cobrado no 844×390 (teste-estadio 34,9 px, meta ≥ 33; teste-camera R1
+35,2, p10 31,3; teste-camera-tela J4 35,1), com 0,6 a 1,3 px de folga. A lente acelera mais vezes (p99 66 → 111 m/s² no
+844×390, 64 → 106 no 667, 71 → 116 no 568; p99,9 no teto de 150; a 50 m da lente ~170°/s², abaixo dos ~200 de Kato), sem
+tremor visível (passa-alta p99 ~1 px); o vai e volta com histerese de 1 m fica perto da base (s4 19,0 → 16,8/min, s7 18,6
+→ 18,6, s9 18,3 → 18,8, s11 18,5 → 19,6) e com 2 m sobe um pouco em todas (14,7 → 15,2 a 15,3 → 17,7). Se o dono achar a
+câmera "agitada": o `acelMax` a ~120. O custo no celular (teste-desempenho-celular, informativo; a base reprova nos mesmos
+2 itens desta máquina): ~+0,08 ms por quadro com a CPU 4× mais lenta (~0,02 ms de verdade), dentro do ruído; chamadas 28 =
+28 e triângulos p95 101,2 mil = base (teste-camera-tela J5). O `fecho-hash --diff` acusa só o `config.js` (o `CAMERA`, que a
+simulação não lê): tirar as medidas da TV dele deixaria o `CAMERA` com os valores velhos ao lado dos novos no
+enquadramento.js (e os testes de estádio leem o `CAMERA`) — ficou; `hash-igual` e `hash-partida` IGUAIS.
