@@ -277,6 +277,9 @@ function procurar(c, prever, o) {
  * em até duas voltas, pelo ângulo (visto do corpo no aperto) entre a ponta da perna no quadro e a bola prevista no
  * instante do encontro, se o u novo fica a ≤ assist rad do pedido (com o corpo parado ou alinhado, é a direção da bola
  * prevista no encontro). O desvio de u em relação à corrida é limitado (desvioMax) em todo plano montado.
+ * Os campos que a simulação escreve depois (defesa.js): `bola` (o tick do 1º toque da perna na bola, −1 sem toque), `tChao`/
+ * `fim` (marcarAcerto) e `homem` (null ou o 1º contato com um adversário: {id, tick, depois, falta, f, fExc, ch} — a força
+ * dos corpos na normal, a do corpo de quem desliza e a chegada; contatosHomemCarrinho).
  */
 export function montarCarrinho(j, tick, opc = {}) {
   const bola = opc.bola ?? null, prever = opc.prever ?? null;

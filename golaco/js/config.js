@@ -1183,6 +1183,22 @@ export const FALTAS = {
   vantagemVel: 3.0,           // m/s — vantagem só se quem sofreu segue com a bola indo para a frente a pelo menos isto
   queda: 0.7,                 // s — quem sofre a falta perde o equilíbrio (sem domínio, devagar)
   icone: 2.5,                 // s — o cartão em cima do jogador (desenho)
+  // CARRINHO (item 34; faltas.js chanceFaltaCarrinho/faltaNoCarrinho, defesa.js contatosHomemCarrinho; contrato "Carrinho
+  // (item 34)"): falta só no contato da perna desenhada com o HOMEM. `antes` da bola (ou sem ela; também o tropeço depois da
+  // parada) × fatorForca(f) — Regra 12 e USSF 2011 ("not getting the ball first does make the tackle illegal"); `depois` da
+  // bola pela chegada × (1 + porVel·(v − vLivre)⁺) × a rampa da força — CALIBRAÇÃO: a ordem trás > lado > frente é a de
+  // Fuller et al. 2004 (falta no carrinho: trás 42,5%, lado 30,5%, frente 20,2%) e Tscholl 2007, a razão não (a de Fuller,
+  // 2,1 : 1,5 : 1, daria 0,10/0,15/0,21); "the faster ... the more likely" (Ask a Soccer Referee). Vermelho direto (força
+  // excessiva, IFAB 12.4: "from the front, from the side or from behind") antes da bola com o CORPO a ≥ excessivoF m/s no
+  // homem (a régua do `temerario`) e o sorteio excessivoP (Wyscout: 1,4% das faltas de carrinho, informativo). O amarelo
+  // (temerário) sorteado pela chegada — calibração; alvo informativo ~40% das faltas de carrinho (Wyscout 2017/18: 39,9%)
+  carrinho: {
+    antes: 0.9,
+    depois: { frente: 0.10, lado: 0.20, tras: 0.45 },
+    porVel: 0.15, vLivre: 4.5,
+    excessivoF: 6.0, excessivoP: 0.25,
+    amarelo: { frente: 0.30, lado: 0.35, tras: 0.55 },
+  },
 };
 
 export const IMPEDIMENTO = {

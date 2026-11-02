@@ -4,9 +4,9 @@
 // "Carrinho (item 34)"; constantes: config.js DEFESA_HUMANO.carrinho.
 //
 // Na base (sem js/carrinho.js) REPROVA: "o carrinho existe — não existe nesta lógica" (como o teste-faltas com o faltas.js).
-// Commits 1–3 da entrega: o plano e o quadro (A, P pelo quadro), a pose e o corpo novo (P), o corpo na simulação com o
-// disparo e as travas (E), o contato da perna com a bola (B, E6) e o F1. O canhão contra o condutor (C), as regras (D), o
-// resto de F e as cenas (G) entram nos commits seguintes.
+// Commits 1–4 da entrega: o plano e o quadro (A, P pelo quadro), a pose e o corpo novo (P), o corpo na simulação com o
+// disparo e as travas (E), o contato da perna com a bola (B, E6), o contato com o homem e a Regra 12 (C, D) e o
+// determinismo (F). As cenas (G) entram no commit seguinte. 2 processos (o canhão C dividido; --par 1: um só), ~60 s.
 //
 // Metas (as exatas reprovam em qualquer caso; "·" = informativa, não reprova):
 //  0. estrutura: o campo `carrinho` declarado no jogador (forma única; undefined sem o botão); as constantes; os raios das
@@ -71,12 +71,41 @@
 //     de quem chutou; o cruzamento desviado para o próprio gol é gol contra na súmula e no resultado do TM; o passe cortado
 //     não conta; o impedido que desliza é marcado); B7 dois carrinhos na mesma bola: o mais cedo, no empate o time
 //     m.tick % 2, o mesmo resultado nas duas ordens de m.jogadores.
-//  F1 a mesma semente e as mesmas entradas, com carrinhos: o mesmo hash em 2 rodadas.
+//  C. o canhão contra o condutor (molde do teste-intercepta B: estados do MEIO da partida, semente 3001 + k, k = 0–15, a
+//     demo até a bola no pé de um jogador de linha do time 1; 36 casos por estado: o jogador do time 0 a 2/3/4/5,5 m da bola ×
+//     frente/lado/trás pela direção do condutor × 3/5/6,5 m/s, o analógico para a bola e o bit no 1º passo; 2 s de partida
+//     pela demo; 576 carrinhos). C1 (reprova pela prova binomial, p < 5%): a bola do FANTASMA (a cópia logo depois do aperto
+//     com o mesmo plano e sem os contatos da perna: o condutor vê o mesmo corpo deslizando) a ≤ raio + 0,11 m da perna da
+//     bola NO MESMO instante, antes de a perna chegar ao homem → toca ≥ 85%; a menor distância ≥ 1,0 m → toca ≤ 5% (pela
+//     cópia da DEMO, a da especificação, informativa: o condutor reage ao defensor de pé). C2–C5 informativas (toca, o time
+//     com a bola 2 s depois, falta, amarelo/vermelho por falta; todos e o alcançável) contra a Wyscout 2017/18. C6 (reprova):
+//     antes da bola com f ≥ 1,5 m/s falta ≥ 85% (chance 0,95); de frente tocando a bola primeiro ≤ 15%; sem contato no
+//     homem 0 (exato); por trás informativo (Fuller). C7: nenhum NaN; o Modo Livre (3 estados × 36): nenhuma falta.
+//  D. a Regra 12 em contatos MONTADOS (a partida em jogo com os outros longe; o carrinho em andamento e o adversário sobre a
+//     perna da bola; o contato do fim do passo chamado direto, com o gerador numa semente achada): D1 chanceFaltaCarrinho =
+//     a tabela C.1 (exato); D2 DOGSO fora da área vermelho, na área tentando a bola pênalti + amarelo, sem intenção pênalti +
+//     vermelho; D3 SPA na área tentando a bola pênalti SEM cartão só no carrinho (a DIVIDIDA e o bote como hoje); D4 a
+//     vantagem (e nenhuma na força excessiva); D5 Modo Livre sem falta; D6 o carrinho por trás com os corpos se tocando: uma
+//     falta só, nunca 'carga' (na partida, 40 sementes); D7 o vermelho direto (fExc ≥ 6 antes da bola, o gerador achado por
+//     busca) e nunca com o mesmo gerador com fExc < 6 ou depois da bola; D8 o goleiro deitado (num mergulho de verdade) pelo
+//     corpo inteiro e com a bola nas mãos falta em 100% e tiro livre dele; D9 a intenção não muda com a fase da passada; D10
+//     o tropeço na perna parada (falta a 3,5 m/s; incidental a 0,8; nada no levantar); D11 dois carrinhos opostos: falta só
+//     de quem não tocou a bola quando o outro tocou (nas duas ordens e com os times trocados).
+//  F1 a mesma semente e as mesmas entradas, com carrinhos: o mesmo hash em 2 rodadas. F2 os sorteios do m.rng por ORIGEM (um
+//     Proxy que lê a pilha): 0 do carrinho sem contato no homem (também na partida, e o bloqueio sorteado nunca com o
+//     deslizante); com contato exatamente 1 da chance (0 < p < 1) + os do cartão — nos montados e nos 36 casos do estado 0
+//     do canhão. F3 o passo com o carrinho (o canhão inteiro, nos dois processos) não chama Math não exato (contado como no
+//     teste-math-proibido). F4 online (dois humanos): os dois carrinhos com os times trocados — quem toca a bola e quem faz a
+//     falta saem pelo papel, não pelo time.
 //   node tools/teste-carrinho.mjs              (lógica do repositório)
 //   node tools/teste-carrinho.mjs --js <pasta> (outra cópia da lógica; a da main antes do carrinho → REPROVA)
-//   node tools/teste-carrinho.mjs --detalhe    (a tabela por entrada e cada caso do A9)
+//   node tools/teste-carrinho.mjs --detalhe    (a tabela por entrada, cada caso do A9 e os encontros do C1 sem toque)
+//   node tools/teste-carrinho.mjs --estados N  (os estados do canhão C; padrão 16 — com poucos, C1/C6 não têm amostra)
+//   node tools/teste-carrinho.mjs --par 1      (sem o processo filho do canhão)
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import { fork } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
@@ -85,6 +114,26 @@ const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] :
 const JS = path.resolve(arg('--js', path.join(AQUI, '../js')));
 const DETALHE = args.includes('--detalhe');
 const imp = f => import(pathToFileURL(path.join(JS, f)).href);
+
+// F3 (o caminho do carrinho não usa Math não exato: o online compara o hash dos dois aparelhos): as funções de Math que não são
+// exatas pelo IEEE 754 contam as chamadas DENTRO da janela (o passo do mundo com o carrinho), trocadas ANTES de importar a
+// lógica (como o teste-math-proibido: a lógica que guardasse `const sin = Math.sin` também conta)
+const PROIBIDAS = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2', 'exp', 'expm1', 'log', 'log2', 'log10', 'log1p',
+  'pow', 'hypot', 'cbrt', 'sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh', 'random'];
+let dentroF3 = false, chamadasF3 = 0;
+const ondeF3 = new Map();
+for (const n of PROIBIDAS) {
+  const f = Math[n];
+  Math[n] = function (...a) {
+    if (dentroF3) {
+      chamadasF3++;
+      if (ondeF3.size < 8) { const l = (new Error().stack.split('\n')[2] ?? '?').trim().replace(/.*\/golaco\//, ''); ondeF3.set(`Math.${n} ${l}`, 1); }
+    }
+    return f.apply(Math, a);
+  };
+}
+/** A janela do F3: o que roda dentro dela é o passo do mundo. */
+function janelaF3(f) { dentroF3 = true; try { return f(); } finally { dentroF3 = false; } }
 
 const linhas = [];
 let falhas = 0;
@@ -129,6 +178,167 @@ const f2 = x => (Number.isFinite(x) ? x.toFixed(2) : String(x));
 const f3 = x => (Number.isFinite(x) ? x.toFixed(3) : String(x));
 const dist3 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 const angDif = (a, b) => { let d = (b - a) % (2 * Math.PI); if (d <= -Math.PI) d += 2 * Math.PI; else if (d > Math.PI) d -= 2 * Math.PI; return d; };
+
+// ------------------------------------------------------------------ C: o canhão contra o condutor (estados do MEIO da partida)
+// (o molde do teste-intercepta B: estados de saída enganam). 16 estados (semente 3001 + k: a demo por 1600 + 600·(k % 4) passos
+// e depois até a bola no pé de um jogador de linha do time 1, em jogo, sem parada, voo nem gol) × 36 casos: o jogador de linha
+// do time 0 mais perto da bola posto a 2 / 3 / 4 / 5,5 m dela × de frente / de lado / por trás pela direção do condutor × a 3 /
+// 5 / 6,5 m/s na direção da bola, o controle nele, o analógico para a bola e o bit no 1º passo; depois 2 s de partida pela demo.
+// As referências, no MESMO instante de cada tick (a bola de um mundo × a perna da bola do quadro):
+//  - o FANTASMA: a cópia do mundo logo depois do aperto com o mesmo plano, sem os contatos da perna (o corpo desliza igual: o
+//    condutor vê o mesmo defensor) — a bola dela é a de A até o 1º contato de A; o C1 (reprova) usa esta;
+//  - a DEMO: a cópia sem o bit, o controlado pela demo (o da especificação; o condutor reage ao defensor de pé — informativo).
+const porIdC = (w, id) => { for (const o of w.jogadores) if (o.id === id) return o; return null; };
+const RB_C = CFG.BOLA.raio, RAIO_PERNA_C = [0.085, 0.058, 0.045];
+const _qC = K.novoQuadroCarrinho();
+/** A menor distância do centro da bola p à superfície das 3 cápsulas da perna k do quadro q. */
+function dPernaBola(q, k, p) {
+  let d = Infinity;
+  const juntas = [[q.qd[k], q.jo[k]], [q.jo[k], q.to[k]], [q.to[k], q.po[k]]];
+  for (let i = 0; i < 3; i++) {
+    const [a, b] = juntas[i];
+    const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, l2 = dx * dx + dy * dy + dz * dz;
+    let u = l2 > 0 ? ((p.x - a.x) * dx + (p.y - a.y) * dy + (p.z - a.z) * dz) / l2 : 0;
+    u = Math.max(0, Math.min(1, u));
+    d = Math.min(d, Math.hypot(a.x + dx * u - p.x, a.y + dy * u - p.y, a.z + dz * u - p.z) - RAIO_PERNA_C[i]);
+  }
+  return d;
+}
+/** A bola do mundo w pode ser tocada pela perna do carrinho c (do time 0) no instante t? (viva, baixa, fora do meu time) */
+function tocavel(w, c, t) {
+  if (!(t <= c.tS + 1e-9) || !K.vivaCarrinho(w) || w.naMao != null || w.bola.p.y > CC.altoBola) return false;
+  const d = w.posse != null ? porIdC(w, w.posse) : null;
+  return !(d && d.time === 0) && !(w.voo && w.voo.time === 0);
+}
+/** Conta os sorteios do m.rng vindos do caminho do carrinho (a pilha: faltaNoCarrinho, o contato com o homem, carrinho.js). */
+function contarSorteios(w) {
+  const alvo = w.rng, cont = { carrinho: 0, total: 0 };
+  w.rng = new Proxy(alvo, {
+    get(t, k) {
+      if (k === 's') {
+        cont.total++;
+        const lim = Error.stackTraceLimit;
+        Error.stackTraceLimit = 40;
+        const st = new Error().stack;
+        Error.stackTraceLimit = lim;
+        if (!/hashMundo/.test(st) && /faltaNoCarrinho|contatosHomemCarrinho|homemDoCarrinho|resolverDoisCarrinhos|\/js\/carrinho\.js/.test(st)) cont.carrinho++;
+      }
+      return t[k];
+    },
+  });
+  return { cont, devolver: () => { w.rng = alvo; } };
+}
+/** Os sorteios que o 1º contato com o homem deve fazer (C.2): a chance (0 < p < 1) e os do cartão. */
+function sorteiosEsperados(h, falta, naMao, livre, outraFalta) {
+  if (!h || outraFalta) return 0;
+  if (livre) return 0;
+  let n = naMao ? 0 : h.f > CFG.FALTAS.forca.min ? 1 : 0;
+  if (falta) n += (!h.depois && h.fExc >= CFG.FALTAS.carrinho.excessivoF ? 1 : 0) + (falta.grau === 'excessivo' ? 0 : 1);
+  return n;
+}
+/**
+ * O canhão C nos estados k0..k1−1 (`livre`: o Modo Livre, `f2`: conta os sorteios do carrinho em A). Devolve os casos
+ * compactos e as contagens (NaN, Math não exato na janela).
+ */
+function canhaoC(k0, k1, { livre = false, f2 = false } = {}) {
+  const out = [];
+  let nan = 0;
+  const LVm = livre ? LV_C : null;
+  const passoC = w => (LVm ? LVm.passoLivre(w, LVm.entradaDemoLivre(w), null) : P.passoPartida(w, P.entradaDemoPartida(w)));
+  for (let k = k0; k < k1; k++) {
+    const w0 = LVm ? LVm.criarLivre({ semente: 3001 + k }) : P.criarPartida({ semente: 3001 + k, minutosPorTempo: 4 });
+    const ok = () => { const d = w0.posse != null ? porIdC(w0, w0.posse) : null; return w0.partida.estado === 'jogo' && !(w0.parada && !w0.parada.rolou) && w0.golTick == null && w0.naMao == null && !w0.voo && d && d.time === 1 && d.posicao !== 'GOL'; };
+    const N = 1600 + 600 * (k % 4);
+    for (let i = 0; i < N + 3000 && !(i >= N && ok()); i++) passoC(w0);
+    if (!ok()) { out.push({ k, sem: true }); continue; }
+    const c0 = porIdC(w0, w0.posse), vc = Math.hypot(c0.vx, c0.vz);
+    const dx0 = vc >= 1 ? c0.vx / vc : Math.cos(c0.rumo), dz0 = vc >= 1 ? c0.vz / vc : Math.sin(c0.rumo);
+    let idx = 0;
+    for (const dist of [2.0, 3.0, 4.0, 5.5]) for (const lado of ['frente', 'lado', 'tras']) for (const vel of [3, 5, 6.5]) {
+      idx++;
+      const ang = lado === 'frente' ? 0 : lado === 'tras' ? Math.PI : ((k + idx) % 2 ? 1 : -1) * Math.PI / 2;
+      const ux = dx0 * Math.cos(ang) - dz0 * Math.sin(ang), uz = dx0 * Math.sin(ang) + dz0 * Math.cos(ang);
+      const b0 = w0.bola.p;
+      const px = Math.max(-51, Math.min(51, b0.x + ux * dist)), pz = Math.max(-33, Math.min(33, b0.z + uz * dist));
+      const A0 = SIM.copiarMundo(w0);
+      let j = null, dm = Infinity;
+      for (const o of A0.jogadores) if (o.time === 0 && o.posicao !== 'GOL') { const d = Math.hypot(o.x - b0.x, o.z - b0.z); if (d < dm) { dm = d; j = o; } }
+      const rx = b0.x - px, rz = b0.z - pz, rl = Math.hypot(rx, rz) || 1;
+      P.teleportar(j, px, pz, Math.atan2(rz, rx));
+      j.vx = vel * rx / rl; j.vz = vel * rz / rl;
+      AC.assumirControle(A0, 0, j);
+      const id = j.id;
+      const Bd = SIM.copiarMundo(A0), A = SIM.copiarMundo(A0);
+      const ja = porIdC(A, id);
+      const ev1 = janelaF3(() => (LVm ? LVm.passoLivre(A, { x: rx / rl, z: rz / rl, botoes: B_C.CARRINHO }, null) : P.passoPartida(A, { x: rx / rl, z: rz / rl, botoes: B_C.CARRINHO })));
+      const c = ja.carrinho;
+      if (!c) { out.push({ k, d: dist, l: lado, v: vel, saiu: false }); continue; }
+      // o fantasma: o mesmo mundo logo depois do aperto, sem os contatos da perna (a bola não, o homem não)
+      const contato1 = c.bola >= 0 || !!c.homem;
+      const Bg = SIM.copiarMundo(A), cg = porIdC(Bg, id).carrinho;
+      cg.bola = 1e9; cg.homem = { id: -1, fantasma: true };
+      const cnt = f2 && !contato1 ? contarSorteios(A) : null;
+      let dG = Infinity, nG = -1, dD = Infinity, hT = contato1 && c.homem ? 1 : -1, ganhou = false, fal = null, naMaoH = false, outraFalta = false, div = -1;
+      const anota = (ev, n) => {
+        for (const e of ev) {
+          if (e.tipo === 'dividida' && e.id === id && e.ganhou) ganhou = true;
+          if (e.tipo === 'falta' && e.def === id && !fal) fal = { grau: e.grau, cartao: e.cartao, motivo: e.motivo, origem: e.origem, area: e.area };
+        }
+        if (c.homem && hT < 0) {
+          hT = n; naMaoH = A.naMao === c.homem.id;
+          outraFalta = ev.some(e => e.tipo === 'falta' && e.origem !== 'carrinho');
+        }
+      };
+      anota(ev1, 1);
+      // (o contato já no passo do aperto: o fantasma já sai depois dele — a bola tocada ali é o encontro)
+      if (contato1 && c.bola >= 0) { dG = -1; nG = 1; }
+      for (let n = 1; n <= 120; n++) {
+        const t = n * PASSO;
+        if (n > 1) {
+          anota(janelaF3(() => passoC(A)), n);
+          janelaF3(() => passoC(Bg));
+        }
+        passoC(Bd);
+        if (div < 0 && (A.bola.p.x !== Bg.bola.p.x || A.bola.p.z !== Bg.bola.p.z || A.bola.p.y !== Bg.bola.p.y)) div = n;
+        if (!contato1 && tocavel(Bg, c, t)) { K.quadroCarrinho(c, t, _qC); const d = dPernaBola(_qC, c.frente, Bg.bola.p); if (d < dG) dG = d; if (nG < 0 && d <= RB_C) nG = n; }
+        if (tocavel(Bd, c, t)) { K.quadroCarrinho(c, t, _qC); const d = dPernaBola(_qC, c.frente, Bd.bola.p); if (d < dD) dD = d; }
+        for (const o of A.jogadores) if (!Number.isFinite(o.x + o.z + o.vx + o.vz + (o.quadril ?? 0))) nan++;
+        if (!Number.isFinite(A.bola.p.x + A.bola.p.y + A.bola.p.z)) nan++;
+      }
+      const dono = A.posse != null ? porIdC(A, A.posse) : A.naMao != null ? porIdC(A, A.naMao) : null;
+      const h = c.homem;
+      const caso = {
+        k, d: dist, l: lado, v: vel, saiu: true, toca: c.bola >= 0, tb: c.bola >= 0 ? c.bola - c.tick0 : -1, div, ganhou, com: dono ? dono.time : -1, dG, nG, dD, hT, contato1,
+        h: h ? { depois: h.depois, f: h.f, fExc: h.fExc, ch: h.ch, falta: h.falta, naMao: naMaoH } : null, fal,
+      };
+      if (cnt) {
+        cnt.devolver();
+        caso.f2 = { obs: cnt.cont.carrinho, esp: sorteiosEsperados(h, fal, naMaoH, !!A.livre, outraFalta) };
+      }
+      out.push(caso);
+    }
+  }
+  return { casos: out, nan, f3: chamadasF3 };
+}
+const B_C = CFG.BOTAO;
+let LV_C = null;
+try { LV_C = await imp('livre.js'); } catch { LV_C = null; }
+if (args.includes('--filho-c')) {
+  const r = canhaoC(+arg('--k0'), +arg('--k1'));
+  await new Promise(ok => process.send(r, ok));
+  process.exit(0);
+}
+// a metade de cima dos estados num processo filho, enquanto este faz o resto (2 processos; --par 1: tudo aqui)
+const K_C = +arg('--estados', 16), PAR_C = Math.max(1, Math.min(2, +arg('--par', 2), os.availableParallelism?.() ?? os.cpus().length));
+const MEIO_C = PAR_C > 1 ? K_C / 2 : K_C;
+const filhoC = PAR_C > 1 && typeof (await imp('defesa.js')).contatosHomemCarrinho === 'function'
+  ? new Promise((ok, erro) => {
+    // (serialização 'advanced': o Infinity das distâncias nunca medidas chega como Infinity — em JSON viraria null, e null ≤ x)
+    const c = fork(fileURLToPath(import.meta.url), [...args, '--filho-c', '--k0', String(MEIO_C), '--k1', String(K_C)], { serialization: 'advanced' });
+    c.on('message', ok); c.on('error', erro);
+    c.on('exit', cod => { if (cod) erro(new Error(`canhão C, estados ${MEIO_C}–${K_C - 1}: saiu com ${cod}`)); });
+  })
+  : null;
 
 // o mundo da pose (a pose normal lê o mundo: posse, parada, bola) — uma partida de verdade no meio do jogo
 const m = P.criarPartida({ semente: 3001, minutosPorTempo: 4 });
@@ -1621,6 +1831,556 @@ if (TEM_CONTATO && ESTADOS.posse1) {
   reg('F1 mesma semente e mesmas entradas com carrinhos: o mesmo hash em 2 rodadas', `${dif} de ${h1.length} diferentes`, '0', dif === 0);
 }
 
-linhas.push(['…', 'C, D, F2–F4, G (contato com o homem, canhão, Regra 12, sorteios, cenas)', 'PENDENTE', 'commits 4–5']);
+// ------------------------------------------------------------------ C, D, F: o homem, a Regra 12 e o determinismo
+const FT = await imp('faltas.js');
+const RNG = await imp('rng.js');
+const BIN = await import(pathToFileURL(path.join(AQUI, 'lib/binomial.mjs')).href);
+const FALT = CFG.FALTAS, FK = FALT.carrinho;
+const TEM_HOMEM = typeof DF.contatosHomemCarrinho === 'function' && typeof FT.faltaNoCarrinho === 'function';
+const pctC = (a, b) => `${a}/${b} (${b ? (100 * a / b).toFixed(1) : '–'}%)`;
+
+// ---- os contatos MONTADOS (D, F2): uma partida em jogo com os outros 20 longe (cada um no seu canto); o carrinho de um jogador
+// do time 1 (o plano da entrada v m/s no rumo `ang`, montado `n` ticks antes de agora, o corpo no quadro de agora) e o
+// adversário (time 0) com o centro sobre a perna da bola do quadro, virado de través (os pés dele na linha da perna). Chama o
+// contato do fim do passo (defesa.js contatosHomemCarrinho) direto, com o gerador numa semente dada.
+/** O mundo limpo: a partida (ou o Modo Livre) em jogo, sem parada, os outros longe. O time 0 ataca +x. */
+function mundoLimpo({ livre = false, sem = 3201 } = {}) {
+  const w = livre ? LV_C.criarLivre({ semente: sem }) : P.criarPartida({ semente: sem, minutosPorTempo: 4 });
+  w.partida.estado = 'jogo'; w.parada = null; w.golTick = null; w.voo = null; w.naMao = null; w.posse = null; w.faltaPendente = null; w.eventos = [];
+  w.ataca = { 0: 1, 1: -1 }; w.tick = 1000; w.partida.tick0Tempo = 0;
+  let n = 0;
+  for (const o of w.jogadores) {
+    if (o.posicao === 'GOL') P.teleportar(o, o.time === 0 ? -51 : 51, 30, o.time === 0 ? 0 : Math.PI);
+    else P.teleportar(o, o.time === 0 ? -48 : -44, -32 + (n++ % 11) * 2.5, 0);
+  }
+  return w;
+}
+const linhaDe = (w, t, i = 0) => w.jogadores.filter(o => o.time === t && o.posicao !== 'GOL')[i];
+/** O corpo de j no quadro do carrinho de agora. */
+function seguirQuadro(w, j) {
+  const q = K.quadroCarrinho(j.carrinho, K.tempoCarrinho(j.carrinho, w.tick), K.novoQuadroCarrinho());
+  j.x = q.x; j.z = q.z; j.vx = q.vx; j.vz = q.vz; j.rumo = q.yaw;
+  return q;
+}
+/** O carrinho de j: a entrada a v m/s no rumo ang a partir de (x, z), montada n ticks antes de agora. */
+function porCarrinho(w, j, { x, z, v, ang, n = 0, aposParada = null, mirou = true, bola = false }) {
+  P.teleportar(j, x, z, ang);
+  j.vx = v * Math.cos(ang); j.vz = v * Math.sin(ang); j.quadril = CC.hPe;
+  j.imag = 1; j.ix = Math.cos(ang); j.iz = Math.sin(ang);
+  const c = K.montarCarrinho(j, w.tick - n, { bola: null, prever: null });
+  // (aposParada: o plano montado agora e o relógio levado a tS + aposParada s)
+  if (aposParada != null) { c.tick0 = w.tick - Math.round((c.tS + aposParada) / PASSO); c.fim = c.tick0 + Math.round((c.tS + c.tChao) / PASSO); }
+  c.mirou = mirou;
+  if (bola) c.bola = c.tick0 + 2; // tocou a bola logo no começo (o "depois")
+  j.carrinho = c;
+  seguirQuadro(w, j);
+  return c;
+}
+/** O adversário o com o centro sobre a perna da bola do carrinho de j (fr: 0 tornozelo → 1 ponta; ao m ao longo de u; lat m
+ * de lado), virado de través (os pés na linha da perna) ou no rumo `ango`, correndo a vo m/s no rumo `angv` (padrão: o rumo). */
+function porNaPerna(w, j, o, { fr = 0.5, ao = 0, lat = 0, vo = 0, ango = null, angv = null } = {}) {
+  const c = j.carrinho, q = K.quadroCarrinho(c, K.tempoCarrinho(c, w.tick), K.novoQuadroCarrinho());
+  const T = q.to[c.frente], Pp = q.po[c.frente];
+  const px = T.x + (Pp.x - T.x) * fr + c.ux * ao - c.uz * lat, pz = T.z + (Pp.z - T.z) * fr + c.uz * ao + c.ux * lat;
+  const rumo = ango ?? Math.atan2(c.ux, -c.uz);
+  P.teleportar(o, px, pz, rumo);
+  const av = angv ?? rumo;
+  o.vx = vo * Math.cos(av); o.vz = vo * Math.sin(av);
+  o.quadril = A.alturaQuadril(o, w);
+}
+/** O contato numa cópia com o gerador na semente `sem` (null: o do mundo): {w, c (o plano), h (c.homem), f (a falta)}. */
+function contatoEm(w0, idC, sem = null, depois = null) {
+  const w = SIM.copiarMundo(w0);
+  if (sem != null) w.rng = RNG.criarRng(sem);
+  w.eventos = []; w.faltaPendente = null;
+  DF.contatosHomemCarrinho(w);
+  const j = porIdC(w, idC);
+  if (depois) depois(w);
+  return { w, c: j.carrinho, h: j.carrinho.homem, f: w.faltaPendente };
+}
+/** A 1ª semente (de 1 em diante) em que `quer(r)` vale para o resultado do contato. */
+function acharSemente(w0, idC, quer, max = 4000) {
+  for (let s = 1; s <= max; s++) if (quer(contatoEm(w0, idC, s))) return s;
+  return null;
+}
+
+if (!TEM_HOMEM) reg('C/D o contato com o homem e a falta (defesa.js contatosHomemCarrinho, faltas.js faltaNoCarrinho)', 'não existe nesta lógica', 'contatosHomemCarrinho', false);
+else {
+  // ---- D1: a tabela C.1 exata (chanceFaltaCarrinho; o d e o c sintéticos: a chegada pela direção do condutor)
+  {
+    const mm = { livre: null }, ml = { livre: {} };
+    const cond = { x: 0, z: 0, vx: 4, vz: 0, rumo: 0 };
+    const de = { frente: { x: 2, z: 0 }, lado: { x: 0, z: 2 }, tras: { x: -2, z: 0 } };
+    const rampa = f => Math.max(0, Math.min(1, (f - FALT.forca.min) / (FALT.forca.cheia - FALT.forca.min)));
+    const fator = f => rampa(f) * (1 + FALT.forca.porForca * Math.max(0, f - FALT.forca.min));
+    const r = [];
+    const ok = (nome, obtido, esperado) => r.push([nome, Math.abs(obtido - esperado) < 1e-12, `${f3(obtido)} × ${f3(esperado)}`]);
+    for (const ch of ['frente', 'lado', 'tras']) {
+      const d = { ...de[ch], vx: 0, vz: 0 };
+      for (const v of [3, 6.5]) for (const f of [0.5, 1.25, 3]) {
+        ok(`depois ${ch} v${v} f${f}`, FT.chanceFaltaCarrinho(mm, d, cond, { depois: true, f, fExc: 0, v }), Math.min(0.95, FK.depois[ch] * (1 + FK.porVel * Math.max(0, v - FK.vLivre)) * rampa(f)));
+        ok(`antes ${ch} v${v} f${f}`, FT.chanceFaltaCarrinho(mm, d, cond, { depois: false, f, fExc: 0, v }), Math.min(0.95, FK.antes * fator(f)));
+      }
+    }
+    ok('goleiro com a bola na mão (f 0)', FT.chanceFaltaCarrinho(mm, de.frente, cond, { depois: true, f: 0, v: 3, naMao: true }), 1);
+    ok('Livre: antes f 3', FT.chanceFaltaCarrinho(ml, de.tras, cond, { depois: false, f: 3, v: 6 }), 0);
+    ok('Livre: goleiro com a bola na mão', FT.chanceFaltaCarrinho(ml, de.tras, cond, { depois: false, f: 3, v: 6, naMao: true }), 0);
+    ok('dois carrinhos f 2', FT.chanceFaltaCarrinho(mm, de.lado, cond, { dois: true, depois: false, f: 2, v: 4 }), 1);
+    ok('dois carrinhos f 0,8 (incidental)', FT.chanceFaltaCarrinho(mm, de.lado, cond, { dois: true, depois: false, f: 0.8, v: 4 }), 0);
+    const ruins = r.filter(x => !x[1]);
+    reg('D1 chanceFaltaCarrinho = a tabela C.1 (antes/depois × chegada × v × f, goleiro na mão 1, Livre 0, dois carrinhos)', `${r.length - ruins.length}/${r.length}${ruins.length ? ': ' + ruins.slice(0, 3).map(x => `${x[0]} ${x[2]}`).join('; ') : ''}`, 'exato', ruins.length === 0);
+  }
+
+  // ---- montagem comum: o carrinho do time 1 (j) e o condutor do time 0 (a) sobre a perna dele
+  /** Monta: o carrinho de j (time 1) e o adversário a (time 0) na perna; opções do carrinho e do adversário; posse: a bola com a a
+   * `bolaD` m à frente dele no rumo da corrida. Devolve {w, j, a} (o contato ainda não rodou). */
+  function cena(opcC, opcA = {}, { posse = true, bolaD = 0.4, livre = false, x0 = null } = {}) {
+    const w = mundoLimpo({ livre });
+    const j = linhaDe(w, 1, 0), a = linhaDe(w, 0, 0);
+    porCarrinho(w, j, opcC);
+    porNaPerna(w, j, a, opcA);
+    if (posse) {
+      const v = Math.hypot(a.vx, a.vz), ux = v > 0.1 ? a.vx / v : Math.cos(a.rumo), uz = v > 0.1 ? a.vz / v : Math.sin(a.rumo);
+      w.posse = a.id; w.ultimoToque = { id: a.id, time: 0, tick: w.tick - 5 };
+      const b = w.bola; b.p.x = a.x + ux * bolaD; b.p.z = a.z + uz * bolaD; b.p.y = RB_C; b.v.x = a.vx; b.v.y = 0; b.v.z = a.vz; b.rolando = true;
+    } else { const b = w.bola; b.p.x = 0; b.p.z = 30; b.p.y = RB_C; b.v.x = 0; b.v.y = 0; b.v.z = 0; b.rolando = true; }
+    return { w, j, a };
+  }
+  // o condutor no ataque (+x) atravessado pela perna: o carrinho vem de lado (−z → +z), no deslize (0,55 s a 5 m/s: ~3,3 m/s)
+  const lado = (x, z, opc = {}) => cena({ x, z: z - 2.4, v: 5, ang: Math.PI / 2, n: 33, ...opc.c }, { fr: 0.5, vo: opc.vo ?? 5, angv: 0, ango: 0, ...opc.a }, opc.o);
+
+  // ---- D2: DOGSO (Regra 12.4) — fora da área vermelho; na área tentando a bola (mirou, bola ≤ 2 m) pênalti + amarelo; sem
+  // intenção (mirou longe) pênalti + vermelho
+  {
+    const r = [];
+    const caso = (nome, x, mirou, esperado) => {
+      const { w, j } = lado(x, 2, { c: { mirou } });
+      const s = acharSemente(w, j.id, x2 => !!x2.f, 200);
+      const res = s != null ? contatoEm(w, j.id, s) : null;
+      const f = res?.f;
+      const pen = f ? (() => { const w2 = res.w; P.regrasPartida(w2); return w2.eventos.some(e => e.tipo === 'penaltiMarcado'); })() : false;
+      const got = f ? `${f.area ? 'pênalti' : 'tiro livre'} + ${f.cartao ?? 'sem cartão'} '${f.motivo}'${pen ? ' (marcado)' : ''}` : (res?.h ? 'contato sem falta' : 'sem contato');
+      r.push([nome, got === esperado, got]);
+    };
+    caso('fora da área', 28, true, "tiro livre + vermelho 'dogso'");
+    caso('na área, tentando a bola', 40, true, "pênalti + amarelo 'dogsoArea' (marcado)");
+    caso('na área, sem intenção', 40, false, "pênalti + vermelho 'dogso' (marcado)");
+    reg('D2 DOGSO: fora da área vermelho; na área tentando a bola pênalti + amarelo; sem intenção pênalti + vermelho', r.map(x => `${x[0]}: ${x[2]}`).join('; '), 'a Regra 12.4', r.every(x => x[1]));
+  }
+
+  // ---- D3: SPA na própria área tentando a bola → pênalti SEM cartão (só no carrinho); fora da área → amarelo 'spa'; a DIVIDIDA
+  // e o bote da IA no mesmo lance continuam como hoje (amarelo)
+  {
+    // o condutor na área correndo para a frente e para fora (não é DOGSO: o ângulo do gol; contra a perna que vem de −z), com
+    // 2 defensores à frente (o do carrinho e mais um)
+    const montar = x => {
+      const { w, j, a } = lado(x, -10, { a: { angv: -0.7, vo: 5.5 } });
+      let n = 0;
+      for (const o of w.jogadores) if (o.time === 1 && o.posicao !== 'GOL' && o !== j && n < 1) { P.teleportar(o, x + 6 + n, -15 + 3 * n, Math.PI); n++; }
+      return { w, j, a };
+    };
+    const r = [];
+    for (const [nome, x, origem, tentou, esperado] of [
+      ['carrinho na área, tentando', 42, 'carrinho', true, 'pênalti sem cartão'],
+      ['carrinho na área, sem tentar', 42, 'carrinho', false, "pênalti + amarelo 'spa'"],
+      ['carrinho fora da área', 28, 'carrinho', true, "tiro livre + amarelo 'spa'"],
+      ['DIVIDIDA na área (como hoje)', 42, 'dividida', true, "pênalti + amarelo 'spa'"],
+      ['bote da IA na área (como hoje)', 42, 'bote', true, "pênalti + amarelo 'spa'"],
+    ]) {
+      const { w, j, a } = montar(x);
+      const spa = FT.ataquePromissor(w, a) && !FT.chanceClara(w, a, j);
+      const f = FT.montarFalta(w, j, a, origem, tentou);
+      const got = `${f.area ? 'pênalti' : 'tiro livre'}${f.cartao ? ` + ${f.cartao} '${f.motivo}'` : ' sem cartão'}`;
+      r.push([nome, spa && got === esperado, `${got}${spa ? '' : ' (o lance não é SPA!)'}`]);
+    }
+    // e pelo contato montado (origem 'carrinho' de ponta a ponta: o pênalti marcado e nenhum cartão pendente)
+    {
+      const { w, j } = montar(42);
+      // (o amarelo do temerário sorteado não: ele daria cartão por outro motivo)
+      const s = acharSemente(w, j.id, x2 => !!x2.f && x2.f.grau === 'imprudente', 400);
+      const res = s != null ? contatoEm(w, j.id, s) : null;
+      if (res?.f) P.regrasPartida(res.w);
+      const ok = !!res?.f && res.f.origem === 'carrinho' && res.f.cartao == null && res.w.eventos.some(e => e.tipo === 'penaltiMarcado') && res.w.partida.cartoesPendentes.length === 0;
+      r.push(['o contato montado na área (mirou)', ok, res?.f ? `${res.f.origem}, cartão ${res.f.cartao}, pênalti ${res.w.eventos.some(e => e.tipo === 'penaltiMarcado')}` : 'sem falta']);
+    }
+    reg('D3 SPA na área tentando a bola: pênalti SEM cartão só no carrinho; fora da área e a DIVIDIDA/bote: amarelo', r.map(x => `${x[0]}: ${x[2]}`).join('; '), 'a Regra 12.4', r.every(x => x[1]));
+  }
+
+  // ---- D4: a vantagem — o condutor segue com a bola indo para a frente (8 m/s; a falta tira metade) → evento vantagem; a falta
+  // de força excessiva (fExc ≥ 6: o carrinho a 7 m/s no começo) → apito, sem vantagem
+  {
+    const r = [];
+    {
+      const { w, j } = lado(10, 0, { vo: 8 });
+      const s = acharSemente(w, j.id, x2 => !!x2.f && x2.f.grau !== 'excessivo', 200);
+      const res = contatoEm(w, j.id, s);
+      P.regrasPartida(res.w);
+      r.push(['falta comum', res.w.eventos.some(e => e.tipo === 'vantagem') && !res.w.parada, res.w.eventos.map(e => e.tipo).join(',')]);
+    }
+    {
+      // o carrinho a 7 m/s no começo (o corpo dele a ≥ 6 m/s na normal do contato), de lado no condutor que corre a 8 m/s
+      const { w, j } = lado(10, 0, { vo: 8, c: { v: 7, n: 6 } });
+      const s = acharSemente(w, j.id, x2 => !!x2.f && x2.f.grau === 'excessivo', 4000);
+      const res = s != null ? contatoEm(w, j.id, s) : null;
+      if (res) P.regrasPartida(res.w);
+      r.push(['força excessiva', !!res && !res.w.eventos.some(e => e.tipo === 'vantagem') && res.w.eventos.some(e => e.tipo === 'apito'), res ? `fExc ${f2(res.h.fExc)}: ${res.w.eventos.map(e => e.tipo).join(',')}` : 'não achou o excessivo']);
+    }
+    reg('D4 vantagem: o condutor segue com a bola → vantagem; força excessiva → apito, sem vantagem', r.map(x => `${x[0]}: ${x[2]}`).join('; '), 'vantagem; apito', r.every(x => x[1]));
+  }
+
+  // ---- D5: Modo Livre — o contato no homem nunca vira falta (antes da bola com força, o goleiro com a bola na mão), 40 sementes
+  {
+    let contatos = 0, faltas = 0;
+    {
+      const { w, j } = lado(10, 0, { o: { livre: true } });
+      for (let s = 1; s <= 40; s++) { const r = contatoEm(w, j.id, s); if (r.h) contatos++; if (r.f) faltas++; }
+    }
+    reg('D5 Modo Livre: contato no homem nunca é falta', `${faltas} faltas em ${contatos} contatos`, '0 (≥ 40 contatos)', faltas === 0 && contatos >= 40);
+  }
+
+  // ---- D6: o carrinho por trás no condutor com contato de corpo (os discos se tocam no mesmo passo): uma falta só, origem
+  // 'carrinho', nunca 'carga' (a carga não roda com o carrinho) — na partida (passoPartida), 40 sementes
+  {
+    const origens = {};
+    let duas = 0, n = 0;
+    for (let s = 1; s <= 40; s++) {
+      const w = mundoLimpo({ sem: 3300 + s });
+      const j = linhaDe(w, 1, 0), a = linhaDe(w, 0, 0);
+      porCarrinho(w, j, { x: 0, z: 0, v: 7, ang: 0, n: 4 });
+      // o condutor a 0,45 m à frente do corpo do carrinho (os discos de 0,3 m se tocam: a carga por trás, ≥ 1,8 m/s, seria
+      // sorteada no colisaoCorpos; a perna chega nele no 1º passo), andando no mesmo sentido
+      P.teleportar(a, j.x + 0.45, j.z + 0.05, 0); a.vx = 1; a.vz = 0;
+      AC.assumirControle(w, 0, a);
+      w.posse = a.id; const b = w.bola; b.p.x = a.x + 0.4; b.p.z = a.z; b.p.y = RB_C; b.v.x = 1; b.v.y = 0; b.v.z = 0; b.rolando = true;
+      w.ultimoToque = { id: a.id, time: 0, tick: w.tick - 5 };
+      for (let i = 0; i < 6; i++) {
+        const ev = P.passoPartida(w, { x: 0.2, z: 0, botoes: 0 });
+        const fs = ev.filter(e => e.tipo === 'falta');
+        if (fs.length > 1) duas++;
+        for (const f of fs) { origens[f.origem] = (origens[f.origem] ?? 0) + 1; n++; }
+        if (fs.length) break;
+      }
+    }
+    const txt = Object.entries(origens).map(([k, v]) => `${k} ${v}`).join(', ') || 'nenhuma';
+    reg('D6 carrinho por trás com contato de corpo: uma falta só, origem carrinho, nunca carga', `${n} faltas (${txt}); duas no mesmo passo ${duas}`, "só 'carrinho' (≥ 20)", duas === 0 && !origens.carga && (origens.carrinho ?? 0) >= 20);
+  }
+
+  // ---- D7: o vermelho direto — antes da bola com fExc ≥ 6 e o gerador achado por busca (o 1º sorteio < p e o 2º < 0,25) →
+  // vermelho 'forcaExcessiva'; com o MESMO gerador: fExc < 6 (o carrinho mais devagar; o atacante a 7 m/s entrando na perna
+  // parada) e depois da bola → nunca
+  {
+    const forte = () => lado(10, 0, { vo: 0, c: { v: 7, n: 6 } });
+    // a busca do gerador: os dois primeiros uniformes (a falta e o excessivo) abaixo de p e de excessivoP
+    let sem = null;
+    for (let s = 1; s < 5000 && sem == null; s++) { const r = RNG.criarRng(s); if (RNG.uniforme(r) < 0.9 && RNG.uniforme(r) < FK.excessivoP) sem = s; }
+    const r = [];
+    {
+      const { w, j } = forte();
+      const res = contatoEm(w, j.id, sem);
+      r.push(['fExc ≥ 6 antes da bola', res.h && res.h.fExc >= FK.excessivoF && res.f?.cartao === 'vermelho' && res.f.motivo === 'forcaExcessiva', res.h ? `fExc ${f2(res.h.fExc)}: ${res.f ? `${res.f.cartao} ${res.f.motivo}` : 'sem falta'}` : 'sem contato']);
+    }
+    {
+      const { w, j } = forte();
+      j.carrinho.bola = j.carrinho.tick0 + 2; // tocou a bola antes
+      const res = contatoEm(w, j.id, sem);
+      r.push(['depois da bola', res.h && res.f?.cartao !== 'vermelho', res.h ? `${res.f ? `${res.f.cartao ?? 'sem cartão'} ${res.f.motivo}` : 'sem falta'}` : 'sem contato']);
+    }
+    {
+      // o carrinho mais devagar (5 m/s no deslize: ~3,3 m/s)
+      const { w, j } = lado(10, 0, { vo: 0 });
+      const res = contatoEm(w, j.id, sem);
+      r.push(['fExc < 6 (o carrinho a ~3,3 m/s)', res.h && res.h.fExc < FK.excessivoF && res.f?.cartao !== 'vermelho', res.h ? `fExc ${f2(res.h.fExc)}: ${res.f ? `${res.f.cartao ?? 'sem cartão'}` : 'sem falta'}` : 'sem contato']);
+    }
+    {
+      // o atacante a 7 m/s entrando na perna parada (depois da parada): f 7, fExc 0
+      const { w, j } = lado(10, 0, { vo: 7, c: { aposParada: 0.1 }, a: { angv: -Math.PI / 2 } });
+      const res = contatoEm(w, j.id, sem);
+      r.push(['o atacante a 7 m/s na perna parada', res.h && res.h.f >= 6 && res.f && res.f.cartao !== 'vermelho', res.h ? `f ${f2(res.h.f)} fExc ${f2(res.h.fExc)}: ${res.f ? `${res.f.cartao ?? 'sem cartão'}` : 'sem falta'}` : 'sem contato']);
+    }
+    reg('D7 vermelho direto: fExc ≥ 6 antes da bola (gerador achado) → forcaExcessiva; o mesmo gerador com fExc < 6 ou depois da bola → nunca', `semente ${sem}: ` + r.map(x => `${x[0]}: ${x[2]}`).join('; '), 'vermelho só no 1º', r.every(x => x[1]));
+  }
+
+  // ---- D8: o goleiro — deitado (no mergulho de verdade: um estado de partida achado pela demo) o contato vale pelo corpo
+  // inteiro (a perna passando pelo tronco/cabeça dele, longe das pernas); com a bola nas mãos, falta em 100% e tiro livre para
+  // o time dele (nunca pênalti)
+  {
+    const r = [];
+    // (a) deitado: a demo até um goleiro com a pelve desenhada abaixo de pelveDeitado
+    let wm = null, gk = null;
+    {
+      const mm = P.criarPartida({ semente: 3401, minutosPorTempo: 4 });
+      for (let i = 0; i < 30000 && !wm; i++) {
+        P.passoPartida(mm, P.entradaDemoPartida(mm));
+        if (!(mm.partida.estado === 'jogo' && !(mm.parada && !mm.parada.rolou) && mm.golTick == null)) continue;
+        for (const g of mm.jogadores) {
+          if (g.posicao !== 'GOL' || !g.mergulho) continue;
+          const po = A.pose(g, mm);
+          if (po[JJ.pelve * 3 + 1] < CC.pelveDeitado - 0.1) { wm = SIM.copiarMundo(mm); gk = g.id; break; }
+        }
+      }
+    }
+    if (!wm) r.push(['goleiro deitado (estado achado)', false, 'não achou em 30000 passos']);
+    else {
+      const g = porIdC(wm, gk), po = A.pose(g, wm);
+      const alvo = { x: po[JJ.lombar * 3], z: po[JJ.lombar * 3 + 2] };
+      // o carrinho do outro time com a canela da perna da bola sobre o tronco dele: procura a translação do plano em que a
+      // perna toca o tronco/cabeça e fica a ≥ 3 cm das pernas dele (a geometria do teste, independente)
+      const segsG = (P0, quais) => quais.map(([a, b, rr]) => [{ x: P0[a * 3], y: P0[a * 3 + 1], z: P0[a * 3 + 2] }, { x: P0[b * 3], y: P0[b * 3 + 1], z: P0[b * 3 + 2] }, rr]);
+      const SEGR = A.SEGMENTOS.map(s => [s[0], s[1], Math.max(s[2], s[3])]);
+      const pernasG = SEGR.filter(s => [JJ.joelhoE, JJ.tornozeloE, JJ.pontaE, JJ.joelhoD, JJ.tornozeloD, JJ.pontaD].includes(s[1]));
+      const troncoG = SEGR.filter(s => !pernasG.includes(s));
+      const dSegSeg = (a0, a1, b0, b1) => { let d = Infinity; for (let i = 0; i <= 40; i++) { const t = i / 40, p = { x: a0.x + (a1.x - a0.x) * t, y: a0.y + (a1.y - a0.y) * t, z: a0.z + (a1.z - a0.z) * t }; d = Math.min(d, dPS(p.x, p.y, p.z, b0, b1)); } return d; };
+      const folgaG = (q, quais, cab) => {
+        let gm = Infinity;
+        for (const [a, b, ri] of segsQ(q)) {
+          for (const [c0, c1, rr] of segsG(po, quais)) gm = Math.min(gm, dSegSeg(a, b, c0, c1) - RAIO_SEG[ri] - rr);
+          if (cab) { const h = { x: po[JJ.cabeca * 3], y: po[JJ.cabeca * 3 + 1], z: po[JJ.cabeca * 3 + 2] }; gm = Math.min(gm, dPS(h.x, h.y, h.z, a, b) - RAIO_SEG[ri] - A.RAIO_CABECA); }
+        }
+        return gm;
+      };
+      let achou = null;
+      const time = 1 - g.time;
+      for (let tent = 0; tent < 400 && !achou; tent++) {
+        const ang = (tent % 16) * Math.PI / 8, des = 0.05 * Math.floor(tent / 16);
+        const w = SIM.copiarMundo(wm), gg = porIdC(w, gk);
+        const j = w.jogadores.find(o => o.time === time && o.posicao !== 'GOL');
+        // o plano no deslize (0,6 s), transladado para a canela da perna da bola cair no tronco dele
+        const c = porCarrinho(w, j, { x: 0, z: 0, v: 5, ang, n: 36 });
+        const q = K.quadroCarrinho(c, K.tempoCarrinho(c, w.tick), K.novoQuadroCarrinho());
+        const mx = (q.jo[c.frente].x + q.to[c.frente].x) / 2, mz = (q.jo[c.frente].z + q.to[c.frente].z) / 2;
+        const tx = alvo.x - mx + Math.cos(ang + Math.PI / 2) * des, tz = alvo.z - mz + Math.sin(ang + Math.PI / 2) * des;
+        c.x0 += tx; c.z0 += tz; c.levX += tx; c.levZ += tz; for (const p0 of c.p0) { p0.x += tx; p0.z += tz; }
+        const q2 = seguirQuadro(w, j);
+        if (folgaG(q2, troncoG, true) <= -0.01 && folgaG(q2, pernasG, false) >= 0.03) achou = { w, j, gg };
+      }
+      if (!achou) r.push(['a perna no tronco do goleiro deitado (montagem)', false, 'não montou']);
+      else {
+        const res = contatoEm(achou.w, achou.j.id, 1);
+        r.push(['deitado: a perna no tronco/cabeça (longe das pernas) dá contato', res.h?.id === gk, res.h ? `contato com ${res.h.id === gk ? 'o goleiro' : res.h.id}` : 'sem contato']);
+      }
+    }
+    // (b) o goleiro com a bola nas mãos (de pé, na área dele): a perna nas pernas dele → falta em 100% (40 sementes), tiro livre
+    // para o time dele
+    {
+      const w = mundoLimpo();
+      const j = linhaDe(w, 0, 0), g = w.jogadores.find(o => o.time === 1 && o.posicao === 'GOL');
+      porCarrinho(w, j, { x: 44, z: 0, v: 3, ang: 0, n: 40 });
+      porNaPerna(w, j, g, { fr: 0.5, vo: 0, ango: Math.PI / 2 });
+      w.naMao = g.id; w.posse = g.id; g.segura = { desde: w.tick - 10 };
+      const b = w.bola; b.p.x = g.x; b.p.z = g.z; b.p.y = 1.0; b.v.x = 0; b.v.y = 0; b.v.z = 0; b.rolando = false;
+      let faltas = 0, livres = 0, n = 0, fmin = Infinity;
+      for (let s = 1; s <= 40; s++) {
+        const res = contatoEm(w, j.id, s);
+        if (!res.h) continue;
+        n++; fmin = Math.min(fmin, res.h.f);
+        if (res.f) { faltas++; P.regrasPartida(res.w); const pr = res.w.parada; if (pr && pr.tipo === 'tiroLivre' && pr.time === g.time) livres++; }
+      }
+      r.push(['bola nas mãos: falta 100%, tiro livre do time dele', n === 40 && faltas === 40 && livres === 40, `${faltas}/${n} faltas (f mínima ${f2(fmin)}), ${livres} tiros livres dele`]);
+    }
+    reg('D8 goleiro: deitado conta o corpo inteiro; com a bola nas mãos falta sempre e tiro livre do time dele', r.map(x => `${x[0]}: ${x[2]}`).join('; '), 'todos', r.every(x => x[1]));
+  }
+
+  // ---- D9: a intenção (Regra 12.4) não muda com a fase da passada — o mesmo lance (o mesmo aperto, mirou) com a bola a 0,4 m e
+  // a 1,4 m do pé do condutor no contato: o mesmo cartão (DOGSO na área tentando a bola: amarelo 'dogsoArea')
+  {
+    const res = [];
+    for (const bolaD of [0.4, 1.4]) {
+      const { w, j } = lado(40, 2, { o: { bolaD } });
+      const s = acharSemente(w, j.id, x2 => !!x2.f, 200);
+      const rr = s != null ? contatoEm(w, j.id, s) : null;
+      res.push(rr?.f ? `${rr.f.cartao} '${rr.f.motivo}'` : 'sem falta');
+    }
+    reg('D9 a intenção: a bola a 0,4 m e a 1,4 m do pé do condutor (o mesmo aperto) dão o mesmo cartão', res.join(' × '), "amarelo 'dogsoArea' nos dois", res[0] === res[1] && res[0] === "amarelo 'dogsoArea'");
+  }
+
+  // ---- D10: o tropeço — depois da parada (tS), sem ter tocado a bola, o condutor a ≥ 3 m/s entrando na perna parada → falta
+  // (chance 0,95); andando a < 1 m/s → incidental (0 faltas); no levantar → sem contato
+  {
+    // a perna parada (tS + aposParada) com o condutor entrando nela (−z, contra o corpo do carrinho) a vo m/s
+    const parado = (vo, aposParada) => lado(10, 0, { vo, c: { aposParada }, a: { angv: -Math.PI / 2 } });
+    const conta = ({ w, j }) => { let h = 0, f = 0, p = null; for (let s = 1; s <= 60; s++) { const r = contatoEm(w, j.id, s); if (r.h) { h++; if (p == null) p = FT.chanceFaltaCarrinho(r.w, porIdC(r.w, j.id), porIdC(r.w, r.h.id), { depois: r.h.depois, f: r.h.f, v: 0 }); } if (r.f) f++; } return { h, f, p }; };
+    const c3 = conta(parado(3.5, 0.1));
+    const c05 = conta(parado(0.8, 0.1));
+    // no levantar (0,2 s antes de ficar de pé: o pé da bola sobe e pousa ao lado), a mesma entrada no lugar da perna parada
+    const cl = conta(parado(3.5, CC.chaoErrou - 0.2));
+    const ok3 = c3.h === 60 && Math.abs(c3.p - 0.95) < 1e-12 && !BIN.provaFora(c3.f, c3.h, 0.85, null);
+    reg('D10 tropeço: na perna parada a 3,5 m/s falta (chance 0,95); a 0,8 m/s incidental; no levantar sem contato', `3,5 m/s: ${c3.f}/${c3.h} (chance ${f2(c3.p)}); 0,8 m/s: ${c05.f}/${c05.h}; levantar: ${cl.h} contatos`, '≥ 85% (0,95); 0 (≥ 60 contatos); 0', ok3 && c05.f === 0 && c05.h === 60 && cl.h === 0);
+  }
+
+  // ---- D11: dois carrinhos de times opostos que se tocam — sem falta se nenhum ou os dois tocaram a bola; falta de quem NÃO
+  // tocou se só um tocou; o mesmo com os lados trocados (espelhado) e nas duas ordens de m.jogadores
+  {
+    /** Os dois carrinhos de frente um para o outro (o de `t0` vem da esquerda); tocou = [o da esquerda, o da direita]. */
+    const doisC = (t0, tocou, inverte) => {
+      const w = mundoLimpo();
+      const jE = linhaDe(w, t0, 0), jD = linhaDe(w, 1 - t0, 0);
+      const cE = porCarrinho(w, jE, { x: -1.6, z: -0.15, v: 5, ang: 0, bola: tocou[0] });
+      const cD = porCarrinho(w, jD, { x: 1.6, z: 0.15, v: 5, ang: Math.PI, bola: tocou[1] });
+      if (inverte) w.jogadores.reverse();
+      // o tick do 1º contato: os dois andam pelo quadro até um contato (cópias, até 1 s)
+      const tk0 = w.tick;
+      for (let n = 1; n <= 60; n++) {
+        w.tick = tk0 + n; seguirQuadro(w, jE); seguirQuadro(w, jD);
+        const r = contatoEm(w, jE.id, 7);
+        if (r.h) {
+          const f = r.f;
+          return { h: true, quem: f ? (f.def === jE.id ? 'E' : 'D') : '-', hE: !!porIdC(r.w, jE.id).carrinho.homem, hD: !!porIdC(r.w, jD.id).carrinho.homem, fE: r.c.homem.f };
+        }
+      }
+      return { h: false, quem: 'sem contato' };
+    };
+    const r = [];
+    for (const [tocou, esperado] of [[[false, false], '-'], [[true, true], '-'], [[true, false], 'D'], [[false, true], 'E']]) {
+      for (const t0 of [0, 1]) for (const inv of [false, true]) {
+        const x = doisC(t0, tocou, inv);
+        r.push([`tocou ${tocou.map(b => (b ? 's' : 'n')).join('')} t${t0}${inv ? ' inv' : ''}`, x.h && x.hE && x.hD && x.quem === esperado, x.quem]);
+      }
+    }
+    const ruins = r.filter(x => !x[1]);
+    reg('D11 dois carrinhos opostos: falta só de quem NÃO tocou a bola quando o outro tocou; espelhado e nas duas ordens', `${r.length - ruins.length}/${r.length}${ruins.length ? ': ' + ruins.map(x => `${x[0]} → ${x[2]}`).join('; ') : ''}`, 'todos', ruins.length === 0);
+  }
+
+  // ---- F2: os sorteios por ORIGEM (o m.rng embrulhado: cada sorteio pela pilha). Sem contato no homem: 0 do carrinho (também na
+  // partida, com o bloqueio sorteado nunca para o deslizante); com contato: exatamente 1 da chance (0 < p < 1) + os do cartão
+  {
+    const r = [];
+    const conferir = (nome, w0, idC, sem, espFn) => {
+      const w = SIM.copiarMundo(w0);
+      w.rng = RNG.criarRng(sem);
+      w.eventos = []; w.faltaPendente = null;
+      const cnt = contarSorteios(w);
+      DF.contatosHomemCarrinho(w);
+      cnt.devolver();
+      const j = porIdC(w, idC), h = j.carrinho.homem, f = w.faltaPendente;
+      const esp = espFn(h, f);
+      r.push([nome, cnt.cont.carrinho === esp, `${cnt.cont.carrinho} (esperado ${esp})`]);
+    };
+    // antes da bola com força: 1 + os do cartão
+    { const { w, j } = lado(10, 0); for (const s of [1, 2, 3, 4, 5]) conferir(`antes s${s}`, w, j.id, s, (h, f) => sorteiosEsperados(h, f, false, false, false)); }
+    // depois da bola, a força abaixo do mínimo (a chance 0): nenhum
+    { const { w, j } = lado(10, 0, { c: { bola: true }, vo: 3.2, a: { angv: Math.PI / 2 } }); conferir('depois, f < mínimo', w, j.id, 1, (h, f) => (h && h.f <= FALT.forca.min ? 0 : sorteiosEsperados(h, f, false, false, false))); }
+    // o goleiro com a bola nas mãos: só os do cartão
+    {
+      const w = mundoLimpo();
+      const j = linhaDe(w, 0, 0), g = w.jogadores.find(o => o.time === 1 && o.posicao === 'GOL');
+      porCarrinho(w, j, { x: 44, z: 0, v: 3, ang: 0, n: 40 });
+      porNaPerna(w, j, g, { fr: 0.5, vo: 0, ango: Math.PI / 2 });
+      w.naMao = g.id; w.posse = g.id;
+      conferir('goleiro com a bola na mão', w, j.id, 3, (h, f) => sorteiosEsperados(h, f, true, false, false));
+    }
+    // sem contato (o adversário longe da perna): nenhum
+    { const { w, j, a } = lado(10, 0); P.teleportar(a, a.x + 3, a.z, 0); conferir('sem contato', w, j.id, 1, () => 0); }
+    // na partida: o carrinho na bola livre, sem ninguém perto (40 passos) — nenhum sorteio do carrinho e o bloqueio sorteado
+    // nunca com o deslizante
+    {
+      const w = mundoLimpo();
+      const j = linhaDe(w, 1, 0);
+      w.humanos = [0, 1]; P.teleportar(j, 0, 0, 0); j.vx = 5; AC.assumirControle(w, 1, j);
+      w.bola.p.x = 2; w.bola.p.z = 0.2;
+      const cnt = contarSorteios(w);
+      let bloq = 0;
+      P.passoPartida(w, { 0: { x: 0, z: 0, botoes: 0 }, 1: { x: 1, z: 0, botoes: B.CARRINHO } });
+      const saiu = !!j.carrinho;
+      for (let i = 0; i < 40; i++) { P.passoPartida(w, { 0: { x: 0, z: 0, botoes: 0 }, 1: { x: 0, z: 0, botoes: 0 } }); if (w.bloq?.feitos?.includes(j.id)) bloq++; }
+      cnt.devolver();
+      r.push(['na partida, sem contato no homem', saiu && cnt.cont.carrinho === 0 && bloq === 0, `${saiu ? '' : 'não saiu; '}${cnt.cont.carrinho} sorteios do carrinho (de ${cnt.cont.total}), bloqueio com ele ${bloq}`]);
+    }
+    const ruins = r.filter(x => !x[1]);
+    reg('F2 sorteios por origem: 0 sem contato no homem; com contato 1 da chance + os do cartão', `${r.length - ruins.length}/${r.length}${ruins.length ? ': ' + ruins.map(x => `${x[0]} ${x[2]}`).join('; ') : ''}`, 'todos', ruins.length === 0);
+  }
+
+  // ---- F4: online (dois humanos, criarPartida({humanos: [0, 1]})): dois carrinhos apertados no mesmo passo, a mesma geometria
+  // com os TIMES trocados (o 1º papel no time 0 e no time 1) — quem toca a bola e quem comete a falta saem pelo PAPEL (a
+  // geometria), nunca pelo time: (a) o 1º na bola e o 2º entrando de lado nele depois dela (o 2º faz a falta); (b) os papéis
+  // trocados; (c) os dois de frente na bola (os dois a tocam: sem falta)
+  {
+    const rodar = (t1, [x1, z1, a1, x2, z2, a2]) => {
+      const w = P.criarPartida({ semente: 3501, minutosPorTempo: 4, humanos: [0, 1] });
+      w.partida.estado = 'jogo'; w.parada = null; w.golTick = null; w.voo = null; w.naMao = null; w.posse = null; w.faltaPendente = null;
+      let n = 0;
+      for (const o of w.jogadores) P.teleportar(o, o.time === 0 ? -40 : 40, -30 + (n++ % 11) * 6, 0);
+      const j1 = linhaDe(w, t1, 3), j2 = linhaDe(w, 1 - t1, 3);
+      for (const x of [j1, j2]) { x.par.attr.desarme = 70; x.quadril = CC.hPe; }
+      P.teleportar(j1, x1, z1, a1); j1.vx = 5 * Math.cos(a1); j1.vz = 5 * Math.sin(a1);
+      P.teleportar(j2, x2, z2, a2); j2.vx = 5 * Math.cos(a2); j2.vz = 5 * Math.sin(a2);
+      AC.assumirControle(w, t1, j1); AC.assumirControle(w, 1 - t1, j2);
+      const b = w.bola; b.p.x = 0; b.p.z = 0; b.p.y = RB_C; b.v.x = 0; b.v.y = 0; b.v.z = 0; b.rolando = true;
+      const ents = bt => ({ [t1]: { x: Math.cos(a1), z: Math.sin(a1), botoes: bt }, [1 - t1]: { x: Math.cos(a2), z: Math.sin(a2), botoes: bt } });
+      P.passoPartida(w, ents(B.CARRINHO));
+      const c1 = j1.carrinho, c2 = j2.carrinho;
+      if (!c1 || !c2) return 'não saiu';
+      let falta = null;
+      for (let i = 0; i < 90 && !falta; i++) falta = P.passoPartida(w, ents(0)).find(e => e.tipo === 'falta') ?? null;
+      const bola = c1.bola >= 0 && c2.bola >= 0 ? (c1.bola < c2.bola ? '1 e 2' : c2.bola < c1.bola ? '2 e 1' : 'juntos') : c1.bola >= 0 ? '1' : c2.bola >= 0 ? '2' : '-';
+      return `bola ${bola}, falta ${falta ? (falta.def === j1.id ? '1' : falta.def === j2.id ? '2' : '?') : '-'}`;
+    };
+    const r = [];
+    const L = Math.PI / 2;
+    for (const [nome, g] of [['(a) 1º na bola, 2º de lado', [-1.9, 0, 0, -0.5, -2.2, L]], ['(b) os papéis trocados', [-0.5, -2.2, L, -1.9, 0, 0]], ['(c) de frente', [-1.9, 0.05, 0, 2.5, -0.05, Math.PI]]]) {
+      const a = rodar(0, g), b = rodar(1, g);
+      r.push([nome, a === b, `1º no time 0: ${a}; no time 1: ${b}`]);
+    }
+    const algumaFalta = r.some(x => /falta [12]/.test(x[2]));
+    reg('F4 online: dois carrinhos com os times trocados — quem toca a bola e quem faz a falta pelo papel, não pelo time', r.map(x => `${x[0]}: ${x[2]}`).join('; '), 'iguais (≥ 1 falta)', r.every(x => x[1]) && algumaFalta);
+  }
+}
+
+// ---- C: o canhão contra o condutor (a metade de baixo dos estados aqui, a de cima no filho) e o Modo Livre (C7)
+if (TEM_HOMEM) {
+  const meu = canhaoC(0, Math.min(1, MEIO_C), { f2: true });
+  const resto = MEIO_C > 1 ? canhaoC(1, MEIO_C) : { casos: [], nan: 0, f3: 0 };
+  const deles = filhoC ? await filhoC : { casos: [], nan: 0, f3: 0 };
+  const todos = [...meu.casos, ...resto.casos, ...deles.casos];
+  const semEstado = todos.filter(x => x.sem).length, s = todos.filter(x => x.saiu);
+  const naoSaiu = todos.filter(x => !x.sem && !x.saiu).length;
+  info('C canhão: estados × casos (o carrinho saiu)', `${K_C - semEstado} estados, ${s.length} carrinhos (não saiu ${naoSaiu})`, '16 × 36 = 576');
+  // C1: o encontro no espaço-tempo pelo FANTASMA (a bola chega à perna antes de a perna chegar ao homem)
+  // (o encontro: um instante de verdade, nG ≥ 1; o longe: a bola tocável em algum instante e sempre a ≥ 1 m)
+  const enc = s.filter(x => x.nG >= 1 && x.dG <= RB_C && (x.hT < 0 || x.nG <= x.hT));
+  const encHomem = s.filter(x => x.nG >= 1 && x.dG <= RB_C && x.hT >= 0 && x.nG > x.hT);
+  const longe = s.filter(x => Number.isFinite(x.dG) && x.dG >= 1.0);
+  const tocaEnc = enc.filter(x => x.toca).length, tocaLonge = longe.filter(x => x.toca).length;
+  reg('C1 encontro (a bola do fantasma na perna da bola no MESMO instante, antes do homem): toca', pctC(tocaEnc, enc.length), '≥ 85% (pela prova, p < 5%)', enc.length >= 20 && !BIN.provaFora(tocaEnc, enc.length, 0.85, null));
+  reg('C1 longe (a menor distância no mesmo instante ≥ 1,0 m): toca', pctC(tocaLonge, longe.length), '≤ 5% (pela prova)', longe.length >= 50 && !BIN.provaFora(tocaLonge, longe.length, null, 0.05));
+  if (DETALHE) for (const x of enc.filter(x => !x.toca)) console.log(`C1 encontro sem toque: estado ${x.k} ${x.d} m ${x.l} ${x.v} m/s — encontro no tick ${x.nG} (${f2(x.dG)} m), homem ${x.hT}, a bola de A ≠ a do fantasma desde ${x.div}`);
+  info('C1 o encontro com o homem antes (a perna chegou ao homem primeiro): toca', pctC(encHomem.filter(x => x.toca).length, encHomem.length), 'a falta apitada mata a bola');
+  const encD = s.filter(x => Number.isFinite(x.dD) && x.dD <= RB_C);
+  info('C1 pela cópia da DEMO (o controlado de pé pela IA; a especificação): encontro toca', pctC(encD.filter(x => x.toca).length, encD.length), 'o condutor reage ao defensor de pé');
+  // C2–C5 (informativas): todos e o alcançável (o fantasma a ≤ 0,3 m)
+  const alc = s.filter(x => Number.isFinite(x.dG) && x.dG <= 0.3);
+  const fal = s.filter(x => x.fal), falA = alc.filter(x => x.fal);
+  info('C2 toca a bola: todos / alcançável', `${pctC(s.filter(x => x.toca).length, s.length)} / ${pctC(alc.filter(x => x.toca).length, alc.length)}`, 'Wyscout contra o condutor: 45,8%');
+  info('C3 o time do carrinho com a bola 2 s depois: todos / alcançável', `${pctC(s.filter(x => x.com === 0).length, s.length)} / ${pctC(alc.filter(x => x.com === 0).length, alc.length)}`, '20,3% ganhou; 22,8% no lance seguinte');
+  info('C3 desarme (dividida ganhou: a bola tirada do condutor)', pctC(s.filter(x => x.ganhou).length, s.length), '—');
+  info('C4 falta: todos / alcançável', `${pctC(fal.length, s.length)} / ${pctC(falA.length, alc.length)}`, 'Wyscout: 19,8% contra o condutor');
+  info('C5 amarelo / falta; vermelho direto / falta', `${pctC(fal.filter(x => x.fal.cartao === 'amarelo').length, fal.length)}; ${pctC(fal.filter(x => x.fal.motivo === 'forcaExcessiva').length, fal.length)}`, '39,9%; 1,4%');
+  const motivos = {};
+  for (const x of fal) { const k = `${x.fal.cartao ?? 'sem'}:${x.fal.motivo}`; motivos[k] = (motivos[k] ?? 0) + 1; }
+  info('C5 as faltas do canhão por cartão:motivo', Object.entries(motivos).map(([k, v]) => `${k} ${v}`).join(', '), '—');
+  // C6: as condicionais pela regra
+  const comH = s.filter(x => x.h);
+  const antesF = comH.filter(x => !x.h.depois && x.h.f >= 1.5 && !x.h.naMao), frenteD = comH.filter(x => x.h.depois && x.h.ch === 'frente');
+  const fA = antesF.filter(x => x.h.falta).length, fF = frenteD.filter(x => x.h.falta).length;
+  reg('C6 antes da bola com f ≥ 1,5 m/s: falta', pctC(fA, antesF.length), '≥ 85% (chance 0,95; pela prova)', antesF.length >= 20 && !BIN.provaFora(fA, antesF.length, 0.85, null));
+  reg('C6 de frente tocando a bola primeiro: falta', pctC(fF, frenteD.length), '≤ 15% (pela prova)', frenteD.length >= 5 && !BIN.provaFora(fF, frenteD.length, null, 0.15));
+  const semHfalta = s.filter(x => !x.h && x.fal).length, foraOrigem = fal.filter(x => x.fal.origem !== 'carrinho').length;
+  reg('C6 sem contato no homem: falta do carrinho (exato)', `${semHfalta} (faltas dele com outra origem: ${foraOrigem})`, '0', semHfalta === 0 && foraOrigem === 0);
+  const tras = comH.filter(x => x.h.ch === 'tras');
+  info('C6 por trás, todos os contatos: falta', pctC(tras.filter(x => x.h.falta).length, tras.length), 'Fuller B-si 42,5%');
+  info('C contato no homem (o 1º): todos', `${pctC(comH.length, s.length)}; antes ${comH.filter(x => !x.h.depois).length}, depois ${comH.filter(x => x.h.depois).length}`, '—');
+  // C7: nenhum NaN; o Modo Livre (1 estado do canhão no Livre): nenhuma falta
+  const liv = canhaoC(0, 3, { livre: true });
+  const lsaiu = liv.casos.filter(x => x.saiu), lfal = lsaiu.filter(x => x.fal).length, lh = lsaiu.filter(x => x.h).length;
+  const nan = meu.nan + resto.nan + deles.nan + liv.nan;
+  reg('C7 nenhum NaN; Modo Livre: nenhuma falta (3 estados × 36 no Livre)', `NaN ${nan}; Livre: ${lfal} faltas em ${lh} contatos (${lsaiu.length} carrinhos)`, '0; 0 (≥ 5 contatos)', nan === 0 && lfal === 0 && lh >= 5);
+  // F2 no canhão (o estado 0): os sorteios do carrinho na partida = os esperados pelo contato
+  const f2c = meu.casos.filter(x => x.f2), f2ruins = f2c.filter(x => x.f2.obs !== x.f2.esp);
+  reg('F2 na partida (o estado 0 do canhão): os sorteios do carrinho = os esperados pelo contato', `${f2c.length - f2ruins.length}/${f2c.length} casos (${f2c.reduce((a, x) => a + x.f2.obs, 0)} sorteios)${f2ruins.length ? '; ' + f2ruins.slice(0, 3).map(x => `${x.d}/${x.l}/${x.v}: ${x.f2.obs}×${x.f2.esp}`).join(', ') : ''}`, 'todos (≥ 20 casos)', f2c.length >= 20 && f2ruins.length === 0);
+  // F3: o caminho do carrinho sem Math não exato (o passo do mundo em todos os casos do canhão, nos dois processos)
+  const f3n = chamadasF3 + deles.f3;
+  reg('F3 o passo com o carrinho não chama Math não exato (sin, cos, atan2, hypot, exp…)', `${f3n} chamadas${ondeF3.size ? ': ' + [...ondeF3.keys()].slice(0, 3).join('; ') : ''}`, '0', f3n === 0);
+}
+
+linhas.push(['…', 'G (as cenas continuam o deslize: comemoração, cartão, intervalo, substituição, Livre)', 'PENDENTE', 'commit 5']);
 if (DETALHE) console.log(tabela.map(l => l.join(' | ')).join('\n') + '\n');
 fim();

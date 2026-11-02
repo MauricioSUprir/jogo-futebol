@@ -26,7 +26,7 @@ import { ACOES } from './config.js';
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
 import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe, cortandoPasse } from './ia-tatica.js';
 import { trocaAerea, alvoAereo, escolhaManual } from './troca.js';
-import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida, semAtropelar, chamadoRecente, boteContidoDoChamado, encerrarPressao, entradaPressaoPropria, carrinho, contatosCarrinho, fimDoDeslize } from './defesa.js';
+import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida, semAtropelar, chamadoRecente, boteContidoDoChamado, encerrarPressao, entradaPressaoPropria, carrinho, contatosCarrinho, fimDoDeslize, contatosHomemCarrinho } from './defesa.js';
 // o carrinho (item 34; carrinho.js): o corpo pelo quadro do plano, como o mergulho do goleiro
 import { passoCarrinho, fixarCarrinho, pesCarrinho } from './carrinho.js';
 import { misturarTimes } from './escalacao.js';
@@ -200,8 +200,9 @@ function colisaoCorpos(m) {
       const rv = (q.vx - p.vx) * nx + (q.vz - p.vz) * nz;
       // (só na partida) a força com que cada um entrou no outro, antes da resposta (faltas.js forcaContato)
       if (rv < 0 && m.partida) guardarChoque(m, p, q, nx, nz);
-      // Etapa 4 (só na partida): carga por trás no condutor (faltas.js; o árbitro decide nas regras)
-      if (rv < 0 && m.partida && m.posse != null && (p.id === m.posse || q.id === m.posse) && !m.faltaPendente) {
+      // Etapa 4 (só na partida): carga por trás no condutor (faltas.js; o árbitro decide nas regras). Com o carrinho num dos
+      // dois, a falta é só a do carrinho (defesa.js contatosHomemCarrinho): nunca duas pelo mesmo lance
+      if (rv < 0 && m.partida && m.posse != null && (p.id === m.posse || q.id === m.posse) && !m.faltaPendente && !p.carrinho && !q.carrinho) {
         const f = faltaNaCarga(m, p, q, -rv);
         if (f) registrarFalta(m, f);
       }
@@ -804,6 +805,10 @@ export function passo(m, entradas) {
   for (const j of js) if (!(j.posicao === 'GOL' && mergulhoAtivo(j, m.tick + 1)) && !voando(j, m.tick + 1) && !j.carrinho) passoPeDesenhado(j, m, PASSO);
   m.tick++;
   for (const j of js) j.quadril = alturaQuadril(j, m);
+  // o carrinho (item 34): a perna DESENHADA de quem desliza no adversário, com o quadro e a pose do tick novo — a falta pela
+  // Regra 12 (defesa.js contatosHomemCarrinho, faltas.js faltaNoCarrinho: os únicos sorteios do carrinho; sem carrinho nada
+  // roda)
+  if (m.partida) contatosHomemCarrinho(m);
 }
 
 /**
