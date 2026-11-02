@@ -25,6 +25,12 @@ export const BANDEIRAS = {
   // debaixo do bandeirão aberto (sobBandeirao): margem [na largura, na profundidade] em m — o torcedor (o quadro tem
   // 1,1 m) segura o pano (braços em V, sem pular) e a bandeira de mastro (pano de 2 m ao lado do mastro) abaixa
   sob: { torcedor: [0.6, 0], bandeira: [2.4, 0.6] },
+  // perto da LENTE da câmera da bola parada (render/plano-bola-parada.js; a do escanteio sobe 8 m atrás do cobrador, até em
+  // cima das fileiras da frente da arquibancada de lá — item 66): a bandeira de mastro com a mão a menos de `raio` m da lente
+  // abaixa (some na mão, como debaixo do bandeirão) e de `raio` a `raio` + `folga` sobe aos poucos — só nesse plano
+  // (main.js; alturaPelaLente). Revisão R2 do item 65: no Golaço o pano ficava a 0,4–2,5 m da lente, uma placa verde e preta
+  // de 12–19% do quadro encostada na bola; com 9 + 2 o que sobra fica a ≥ 8,6 m nos 106 estádios × 4 cantos (teste-camera G5)
+  lente: { raio: 9, folga: 2 },
 };
 
 // Faixas: [texto, fundo, letra, detalhe] — tudo FICTÍCIO (Golaço FC de preto e verde; Ventania FC de branco e cinza)
@@ -149,6 +155,23 @@ export function sobBandeirao(p, b, abre, [mu, mv] = [0, 0]) {
   const u = (dx * b.U[0] + dy * b.U[1] + dz * b.U[2]) / lu, v = (dx * b.V[0] + dy * b.V[1] + dz * b.V[2]) / lv;
   return u > -mu && u < lu + mu && v > -mv && v < lv * abre + mv;
 }
+
+/**
+ * Quanto a bandeira de mastro da mão p (x, y, z) fica erguida com a lente L = [x, y, z, liga] da câmera da bola parada: 1
+ * inteira, 0 abaixada (o pano e o mastro somem na mão). liga ≤ 0 (fora desse plano): 1. A MESMA conta de LENTE_GLSL.
+ */
+export function alturaPelaLente(p, L) {
+  if (!L || !(L[3] > 0)) return 1;
+  const { raio, folga } = BANDEIRAS.lente, d = Math.hypot(p[0] - L[0], p[1] - L[1], p[2] - L[2]);
+  return Math.min(1, Math.max(0, (d - raio) / folga));
+}
+/** float alturaPelaLente(vec3 p, vec4 L): a MESMA conta. */
+export const LENTE_GLSL = `
+float alturaPelaLente(vec3 p, vec4 L) {
+  if (!(L.w > 0.0)) return 1.0;
+  return clamp((distance(p, L.xyz) - ${BANDEIRAS.lente.raio.toFixed(2)}) / ${BANDEIRAS.lente.folga.toFixed(2)}, 0.0, 1.0);
+}
+`;
 
 const TAU = Math.PI * 2;
 /**

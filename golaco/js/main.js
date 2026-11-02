@@ -1433,7 +1433,9 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   // (a câmera de jogo — a TV — sem cadeira 3D de perto: item 69)
   campo.atualizar(agoraMs / 1000, cam.camera, renderizar, cam.deJogo);
   marcarCondutor(agoraMs);
-  torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar);
+  // (com a câmera da bola parada — a do escanteio sobe atrás do cobrador até em cima da arquibancada, item 66 — as bandeiras de
+  // mastro perto da lente abaixam: revisão R2 do item 65)
+  torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar, cam.misturaBolaParada > 0 ? cam.camera.position : null);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
   const td0 = performance.now();
   if (renderizar) cena3d.desenhar(cam.camera);
@@ -4440,7 +4442,7 @@ const api = {
     /** Os bancos de reservas neste quadro (vão na malha do lado de cá: fora do desenho com a câmera de TV dentro dela). */
     get bancosVisiveis() { return campo?.ladoDeCa ? campo.ladoDeCa.visible : null; },
     /** Faixas, bandeiras e sinalizadores agora: visíveis, vértices desenhados, instâncias, abertura do bandeirão. */
-    get festaVisual() { return torcida ? { bandeiras: torcida.bandeiras.mesh.visible, vertices: torcida.bandeiras.mesh.geometry.drawRange.count, sinalizadores: torcida.sinalizadores.mesh.visible && torcida.sinalizadores.quantas > 0, instancias: torcida.sinalizadores.quantas, abre: torcida.bandeiras.uniforms.uAbre.value.x } : null; },
+    get festaVisual() { return torcida ? { bandeiras: torcida.bandeiras.mesh.visible, vertices: torcida.bandeiras.mesh.geometry.drawRange.count, sinalizadores: torcida.sinalizadores.mesh.visible && torcida.sinalizadores.quantas > 0, instancias: torcida.sinalizadores.quantas, abre: torcida.bandeiras.uniforms.uAbre.value.x, lente: torcida.bandeiras.uniforms.uLente.value.toArray() } : null; },
     /** A agenda da festa (festa.js): canto, batucada, vaia, sinalizadores, bandeirão e ola. */
     get festa() { const f = emocao.festa; return { canto: { ...f.canto, cantados: [...f.canto.cantados] }, batucada: f.batucada, vaia: { ...f.vaia }, acesos: f.acesos, flares: f.flares.filter(s => s.ativo).map(s => ({ ...s })), bandeirao: { ...f.bandeirao }, ola: { ...f.ola }, t: f.t }; },
     /** Liga/desliga a onda da rede SÓ no desenho (testes: o mesmo instante com e sem a deformação). */
