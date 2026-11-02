@@ -113,8 +113,10 @@ html.noite .vinheta { display: block; }
 .placar-relogio:not(.com-tempo) small { display: none; }
 .placar-relogio.parado { background: var(--verde-escuro); color: var(--texto); }
 .placar-relogio.parado b { font-size: 13px; letter-spacing: 0; }
-/* telas baixas do celular (568×320, o iPhone SE de 2016): 26 px */
-@media (max-width: 1000px) and (max-height: 340px) {
+/* telas baixas do celular (568×320, o iPhone SE de 2016) e as pequenas de 360 px de altura (640×360, o Android de 360 dp
+   deitado; até 700 px de largura): 26 px — com 28, a 640×360 passava dos 11% de HUD (H1) nos acréscimos e no intervalo.
+   De 720×360 para cima, 28 */
+@media (max-width: 1000px) and (max-height: 340px), (max-width: 700px) and (max-height: 360px) {
   :root { --placar-h: 26px; }
   .placar-gols { height: 20px; }
   .placar-escudo { width: 14px; height: 15px; }

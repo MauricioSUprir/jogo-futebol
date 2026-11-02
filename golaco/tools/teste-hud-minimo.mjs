@@ -3,22 +3,24 @@
 // parar por impedimento, aí no replay vai mostrar a linha". Diagnóstico e pesquisa: PESQUISA-ESTADIO.md, "Tela limpa".
 //  H1 área do HUD no celular deitado (união geométrica: caixas visíveis do #hud + botões de toque como círculos +
 //     analógico em repouso quando a opacidade passa de 0,25), no ataque, na defesa e na cobrança do pênalti, em 844×390,
-//     667×375 e 568×320 (entalhe simulado), com o nome do condutor mais largo no canto da fase — desde o item 32
+//     667×375, 568×320 e 640×360 (entalhe simulado), com o nome do condutor mais largo no canto da fase — desde o item 32
 //     (17/10: placar maior e relógio MM:SS) em 4 estados do relógio ("34:12", "47:13 +4", "97:13 +10", "Intervalo"; o H1 de
 //     antes media o relógio em "0'", 240 passos depois de abrir, e o pior caso do jogo de verdade passava dele: 568×320 ia a
 //     11,06% com "34'" e a 11,95% nos acréscimos) e, desde a revisão, nos 4 MAIS LARGOS (gols de 2 dígitos com "+10", o
 //     relógio de 3 dígitos "100:18 +10", os dois com 10-10 e o intervalo com 10-9: o hud aperta o placar por dígito a mais),
-//     sem e com a cara do TM: ≤ 11% em 844×390 e 667×375 e ≤ 12% em 568×320 (a tela do iPhone SE de 2016: com MM:SS,
-//     escudos e siglas a barra teria de ter ≤ 169 px para os 11%; decisão do dono, FILA "Depende do dono" 15)
-//  H1b (revisão do item 32) nos 4 estados largos do H1, nas 3 telas e sem e com a cara do TM: os espaços do placar apertam
+//     sem e com a cara do TM: ≤ 11% em 844×390, 667×375 e 640×360 e ≤ 12% em 568×320 (a tela do iPhone SE de 2016: com MM:SS,
+//     escudos e siglas a barra teria de ter ≤ 169 px para os 11%; decisão do dono, FILA "Depende do dono" 15). A 640×360 (o
+//     Android de 360 dp deitado) entrou na revisão: a base já passava dos 11% nela (11,09% nos acréscimos); o placar dela é o de
+//     26 px, como o da 568×320
+//  H1b (revisão do item 32) nos 4 estados largos do H1, nas 4 telas e sem e com a cara do TM: os espaços do placar apertam
 //     (topo-c4) com 1 dígito a mais e o "+N" sai (topo-c3) só com 2 ou mais; relógio e gols com o texto certo, as fontes nos
 //     mínimos do H10 (gols ≥ 18, relógio ≥ 16, siglas ≥ 12 — 11 nas baixas —, escudos ≥ 14) e nada sai da barra nem se sobrepõe
 //  H2 texto na tela durante o jogo fora do placar e dos NOMES dos botões de toque (barra de força, painel, avisos):
-//     0 caracteres — nas duas fases das 3 telas e em 2 min de jogo de verdade (a barra de força aparece quando a IA
+//     0 caracteres — nas duas fases das 4 telas e em 2 min de jogo de verdade (a barra de força aparece quando a IA
 //     carrega o passe). Os nomes dos botões voltaram por pedido do dono (12/10: "coloca o nome da função do botão
 //     de novo") e são medidos no H9
 //  H9 nomes dos botões de toque por padrão (dono, 12/10): todo botão visível mostra o nome da função, inteiro dentro
-//     do CÍRCULO do botão (a corda na altura do texto), nas duas fases das 3 telas (na versão anterior, só o ícone:
+//     do CÍRCULO do botão (a corda na altura do texto), nas duas fases das 4 telas (na versão anterior, só o ícone:
 //     reprova; com os botões a 80%, "LANÇAMENTO" passava da borda — em telas pequenas vira "LANÇAR")
 //  H3 torcida visível escondida pelo HUD no celular 844×390 (pixels de torcida do canvas — torcida ligada ×
 //     desligada, a conta do item 10 do teste-estadio — que caem dentro das formas do HUD), 8 instantes: ≤ 15%
@@ -28,7 +30,7 @@
 //  H6 (informativo) jogadores a < 20 m da bola com ≥ 30% do corpo atrás do HUD, média por instante
 //  H7 opções da pausa: "Minimapa" (padrão desligado no celular e ligado no PC) e "Nomes nos botões" (padrão
 //     LIGADO desde 12/10) mudam a tela, ficam salvas e, com os dois ligados, nada encosta
-//     e, na barra de cima da pausa, título, opções, tela cheia e X não encostam (folga ≥ 4 px) nas 3 telas do H1;
+//     e, na barra de cima da pausa, título, opções, tela cheia e X não encostam (folga ≥ 4 px) nas 4 telas do H1;
 //     o submenu "Modo de jogo" (Pré-jogo e a cena de substituição, 12/10) cabe sem rolar no celular deitado
 //  H8 os ajustes de toque antigos (golaco.toque.v1) não valem mais: todo mundo recebe o padrão novo (80%, 55%)
 //  H11 (item 70, P2) os botões PARADINHA e PULINHO aparecem SÓ na cobrança do pênalti da pessoa (a classe cobranca-penalti
@@ -37,7 +39,7 @@
 //     (__golaco.faltaDeTeste na área) liga a classe e a bola rolando a desliga
 //  H10 placar — 12/10 o dono pediu MENOR ("quero o placar assim, tem que ser algo menor e mais com a nossa cara", com a
 //     barra de TV de referência: o H10 exigia ≤ 24/26 px e menor que o de antes); 17/10, POSTERIOR, manda MAIOR ("o placar
-//     com mais a cara do Total Match, um pouco MAIOR e o relógio com os SEGUNDOS além dos minutos": item 32). Nas 3 telas
+//     com mais a cara do Total Match, um pouco MAIOR e o relógio com os SEGUNDOS além dos minutos": item 32). Nas 4 telas
 //     do celular (com entalhe) e no PC 1280×720, sem e com a cara do TM, no jogo ("34:12"), nos acréscimos ("47:13 +4" e
 //     "97:13 +10"), no intervalo e no fim —
 //     a) formato: marca (o símbolo do GOLAÇO ou do TM; na partida só com mais de 700 px de largura e no PC — até 700 px,
@@ -45,11 +47,11 @@
 //        fechando a barra; #relogio em MM:SS no jogo e nos acréscimos, o "+N" visível só nos acréscimos, "Intervalo"/"Fim"
 //        no lugar do relógio com .parado; bloco verde rolando e escuro parado, contraste ≥ 4,5:1 nos dois; com a cara do
 //        TM, a Inter TM no relógio e nos gols (document.fonts.check) e o símbolo do TM na marca;
-//     b) maior, "um pouco": altura 28 ± 0,5 px nos celulares com mais de 340 px de altura, 26 em 568×320 e 30 no PC; maior
-//        que a de 12/10 (PLACAR_1210: 24/26 px, medido na b3041818 com --raiz); gols ≥ 18 px (PC ≥ 20) e relógio ≥ 16 px
-//        (PC ≥ 17) no jogo e nos acréscimos; "um pouco": ≤ 29 px no celular (a referência do dono), a área no jogo ≤ 1,5 × a
-//        de 12/10 na mesma tela e, em 844×390, ≤ 7192 px² (a referência, 248×29);
-//     c) legível: siglas ≥ 11 px (≥ 12 acima de 340 px de altura e no PC; Apple HIG e Material 3: 11), "+N" ≥ 11 px,
+//     b) maior, "um pouco": altura 28 ± 0,5 px nos celulares, 26 nos baixos (≤ 340 px de altura ou ≤ 700 × 360: 568×320 e
+//        640×360) e 30 no PC; maior que a de 12/10 (PLACAR_1210: 24/26 px, medido na b3041818 com --raiz); gols ≥ 18 px
+//        (PC ≥ 20) e relógio ≥ 16 px (PC ≥ 17) no jogo e nos acréscimos; "um pouco": ≤ 29 px no celular (a referência do
+//        dono), a área no jogo ≤ 1,5 × a de 12/10 na mesma tela e, em 844×390, ≤ 7192 px² (a referência, 248×29);
+//     c) legível: siglas ≥ 11 px (≥ 12 fora das telas baixas e no PC; Apple HIG e Material 3: 11), "+N" ≥ 11 px,
 //        "Intervalo"/"Fim" ≥ 13 px, escudos ≥ 14 px;
 //     d) nada encosta: as peças dentro da barra e sem se sobrepor; com o minimapa ligado e o placar mais largo ("+10"),
 //        nada encosta (folga ≥ 4 px) e o "+N" continua na tela; com gols de 2 dígitos (10-9) também; no treino de ataque com
@@ -62,22 +64,22 @@
 //     "Intervalo" com .parado, o 2º tempo abre em "45:0x", o "+N" no 2º tempo e "Fim" com .parado
 //  H12 (itens 59 e 60, dono 23/10: "o campinho que está lá em cima tem que ficar lá embaixo") o minimapa embaixo, no meio,
 //     entre o analógico e os botões —
-//     a) celular 844×390, 667×375 e 568×320, com e sem entalhe: a 80% (o padrão) visível com 92×60; a 70, 100 e 140% visível
-//        (≥ 76×50, |cx − W/2| ≤ 0,12·W, base a ≤ 6 px de H − sa.b, ≥ 8 px do analógico em repouso e de todo botão das duas
-//        fases, ≥ 4 px dos dois nomes forçados) OU escondido com html.mapa-sem-lugar e a varredura do PRÓPRIO teste confirma
-//        que nenhum 76×50 caberia (não some à toa);
+//     a) celular 844×390, 667×375, 568×320 e 640×360, com e sem entalhe: a 80% (o padrão) visível com 92×60; a 70, 100 e
+//        140% visível (≥ 76×50, |cx − W/2| ≤ 0,12·W, base a ≤ 6 px de H − sa.b, ≥ 8 px do analógico em repouso e de todo
+//        botão das duas fases, ≥ 4 px dos dois nomes forçados) OU escondido com html.mapa-sem-lugar e a varredura do PRÓPRIO
+//        teste confirma que nenhum 76×50 caberia (não some à toa);
 //     b) nada no alto: na partida com o minimapa ligado, nenhuma caixa do #hud com o topo acima de 30% da altura além do
-//        placar e do menu (3 telas e o PC);
+//        placar e do menu (4 telas e o PC);
 //     c) torcida atrás do minimapa ligado (844×390, os 8 instantes do H3): ≤ 1% dos pixels de torcida (na base, no alto: 5,5%);
 //     d) a faixa do fim de jogo (com os botões) esconde o minimapa; a do intervalo e a "Você foi expulso" (com o botão) ficam
-//        a ≥ 4 px dele — 3 telas com entalhe, com e sem a cara do TM (a faixa do TM desce para baixo do aviso);
+//        a ≥ 4 px dele — 4 telas com entalhe, com e sem a cara do TM (a faixa do TM desce para baixo do aviso);
 //     e) o "Tamanho" mudado na pausa (70 → 140 → 80%) reposiciona sem resize: volta ao lugar do 80%;
 //     f) PC 1280×720 e 1920×1080: como antes (centro em W/2 ± 1, base em H − 14 ± 1)
 //  H13 (item 60, dono 23/10: "o nome do jogador com a bola fica tapando e atrapalhando o jogo") o nome nos cantos de baixo —
 //     a) o time da ESQUERDA do placar (0) com a bola: canto inferior esquerdo (≤ 16 px da borda segura, base a ≤ 6 px de
 //        H − sa.b, acima nada: topo ≥ base do analógico em repouso + 2); o da direita (1): canto inferior direito (topo ≥ base
 //        do círculo mais baixo do arco + 2); ≥ 4 px de todo botão, do minimapa ligado e do placar; pelo caminho de verdade
-//        (cenaDeTeste: o meu goleiro com a bola no pé × o adversário com a bola) e com o nome mais largo forçado, nas 3 telas,
+//        (cenaDeTeste: o meu goleiro com a bola no pé × o adversário com a bola) e com o nome mais largo forçado, nas 4 telas,
 //        com e sem entalhe, a 70, 80 e 100%; PC nos cantos a 14 px;
 //     b) o texto é "número camisa" da ficha de quem tem a bola; letra ≥ 11 px (celular) / 12 (PC); contraste ≥ 4,5:1; a faixa
 //        de cor = a do placar daquele time;
@@ -277,10 +279,11 @@ const MEDIR_PLACAR = async (gols, rel) => {
 const PLACAR_1210 = { celular: { h: 24, area: 4847 }, pc: { h: 26, area: 5349 } };
 const PLACAR_REF = { h: 29, area: 248 * 29 };
 const PLACAR_ALT = { celular: 28, baixo: 26, pc: 30 };
-/** As telas do celular deitado (com entalhe) do H1, H7, H9, H10, H11, H12 e H13. */
-const TELAS_CEL = [[844, 390], [667, 375], [568, 320]];
-/** A tela baixa do celular, com o placar de 26 px (o estilo.css): ≤ 340 px de altura. */
-const telaBaixa = (W, H) => H <= 340;
+/** As telas do celular deitado (com entalhe) do H1, H7, H9, H10, H11, H12 e H13: 844×390, 667×375, 568×320 e, desde a revisão do
+ * item 32, a 640×360 (o Android de 360 dp deitado: a base já passava dos 11% de HUD nela, 11,09% nos acréscimos). */
+const TELAS_CEL = [[844, 390], [667, 375], [568, 320], [640, 360]];
+/** A tela baixa do celular, com o placar de 26 px (o estilo.css): ≤ 340 px de altura, ou ≤ 700 × 360. */
+const telaBaixa = (W, H) => H <= 340 || (W <= 700 && H <= 360);
 const placarFalhas = [], placarLinhas = [];
 /** Confere um estado medido (H10 a–d). tela: '844×390' etc.; tipo: 'celular' | 'pc'. */
 function conferirPlacar(tela, tipo, estado, r) {
@@ -506,10 +509,10 @@ const AREA_FASES = ([FS, AS]) => {
   g.sincronizarFase?.();
   return out;
 };
-/** A meta do H1 por tela: 11%; 12% em 568×320 (≤ 340 px de altura: decisão do dono, "Depende do dono" 15). */
+/** A meta do H1 por tela: 11%; 12% em 568×320 (≤ 340 px de altura: decisão do dono, "Depende do dono" 15); 11% em 640×360. */
 const metaH1 = h => (h <= 340 ? 0.12 : 0.11);
 
-// H1 + H2: layout nas duas fases e três telas de celular (determinístico, sem simular)
+// H1 + H2: layout nas duas fases e nas quatro telas de celular (determinístico, sem simular)
 let piorTexto = 0, h1SemNome = 0, h1Falhas = 0; const txtVisto = new Set(); const linhasH1 = [];
 const nomesBotoes = { botoes: 0, comNome: 0, sem: new Set() };
 const estilosVistos = []; let estilosFalhas = 0;
@@ -692,24 +695,24 @@ for (const [w, h] of TELAS_CEL) {
     }
   } finally { await navegador.close(); }
 }
-meta('H9 nomes dos botões de toque por padrão (dono, 12/10), inteiros dentro do círculo do botão (3 telas, 2 fases)', `${nomesBotoes.comNome}/${nomesBotoes.botoes} botões com o nome${nomesBotoes.sem.size ? ' — sem: ' + [...nomesBotoes.sem].slice(0, 8).join(', ') : ''}`, 'todos', nomesBotoes.botoes > 0 && nomesBotoes.comNome === nomesBotoes.botoes);
-meta('H1 área do HUD no celular (pior caso: ataque, defesa e a cobrança do pênalti da pessoa × os 4 estados do relógio e os 4 mais largos — gols de 2 dígitos, o relógio de 3, os dois — × sem e com a cara do TM, 3 telas; com o nome do condutor mais largo no canto da fase; o ≡ transparente pelo ícone)',
-  `${linhasH1.join(' | ')}${h1SemNome ? ` — ${h1SemNome} medidas sem o nome` : ''}`, '≤ 11% em 844×390 e 667×375, ≤ 12% em 568×320 (decisão do dono, "Depende do dono" 15); o nome contado em todas', linhasH1.length === TELAS_CEL.length && h1Falhas === 0 && h1SemNome === 0);
-meta('H1b o placar nos estados mais largos (revisão do item 32): o hud aperta pelos passos do aperto — os espaços com 1 dígito a mais, também o "+N" com 2 ou mais —, os textos certos, as fontes nos mínimos do H10 e nada sai da barra nem se sobrepõe (3 telas, sem e com a cara do TM)',
+meta('H9 nomes dos botões de toque por padrão (dono, 12/10), inteiros dentro do círculo do botão (4 telas, 2 fases)', `${nomesBotoes.comNome}/${nomesBotoes.botoes} botões com o nome${nomesBotoes.sem.size ? ' — sem: ' + [...nomesBotoes.sem].slice(0, 8).join(', ') : ''}`, 'todos', nomesBotoes.botoes > 0 && nomesBotoes.comNome === nomesBotoes.botoes);
+meta('H1 área do HUD no celular (pior caso: ataque, defesa e a cobrança do pênalti da pessoa × os 4 estados do relógio e os 4 mais largos — gols de 2 dígitos, o relógio de 3, os dois — × sem e com a cara do TM, 4 telas; com o nome do condutor mais largo no canto da fase; o ≡ transparente pelo ícone)',
+  `${linhasH1.join(' | ')}${h1SemNome ? ` — ${h1SemNome} medidas sem o nome` : ''}`, '≤ 11% em 844×390, 667×375 e 640×360, ≤ 12% em 568×320 (decisão do dono, "Depende do dono" 15); o nome contado em todas', linhasH1.length === TELAS_CEL.length && h1Falhas === 0 && h1SemNome === 0);
+meta('H1b o placar nos estados mais largos (revisão do item 32): o hud aperta pelos passos do aperto — os espaços com 1 dígito a mais, também o "+N" com 2 ou mais —, os textos certos, as fontes nos mínimos do H10 e nada sai da barra nem se sobrepõe (4 telas, sem e com a cara do TM)',
   `${largoFalhas.length ? 'FALHAS: ' + largoFalhas.join(' | ') + ' — ' : ''}${largoLinhas.join('; ')}`, 'topo-c4 em todos; o "+N" com 1 dígito a mais, sem ele com 2 ou mais; gols ≥ 18, relógio ≥ 16, siglas ≥ 12 (11 nas baixas), escudos ≥ 14; nada sobrepõe',
   largoFalhas.length === 0 && largoLinhas.length === 2 * TELAS_CEL.length * ESTADOS_H1_LARGOS.length);
 if (!soPlacar) {
-  meta('H12a o minimapa embaixo, no meio, entre o analógico e os botões (3 telas, com e sem entalhe; 80% = 92×60; 70/100/140%: no lugar ou sem lugar de verdade)',
+  meta('H12a o minimapa embaixo, no meio, entre o analógico e os botões (4 telas, com e sem entalhe; 80% = 92×60; 70/100/140%: no lugar ou sem lugar de verdade)',
     `${h12aFalhas.length ? 'FALHAS: ' + h12aFalhas.join(' | ') + ' — ' : ''}${h12a.join('; ')}`, '80%: 92×60 no meio; ≥ 76×50, ≤ 12% de W do meio, base ≤ 6 px, ≥ 8 px do analógico e dos botões, ≥ 4 px dos nomes; ou sem lugar', h12a.length === 8 * TELAS_CEL.length && h12aFalhas.length === 0);
   meta('H12e o "Tamanho" mudado (70 → 140 → 80%) reposiciona o minimapa sem resize (de volta ao lugar do 80%)', h12e.join('; '), 'mesmo lugar', h12e.length === 2 * TELAS_CEL.length && h12eOk);
-  meta('H12b nada no alto além do placar e do menu (partida, minimapa ligado; 3 telas)', h12b.join('; '), 'só placar e menu', h12b.length === TELAS_CEL.length && h12bFalhas.length === 0);
-  meta('H12d a faixa do fim de jogo esconde o minimapa; intervalo e "Você foi expulso" a ≥ 4 px dele (3 telas com entalhe, com e sem a cara do TM)',
+  meta('H12b nada no alto além do placar e do menu (partida, minimapa ligado; 4 telas)', h12b.join('; '), 'só placar e menu', h12b.length === TELAS_CEL.length && h12bFalhas.length === 0);
+  meta('H12d a faixa do fim de jogo esconde o minimapa; intervalo e "Você foi expulso" a ≥ 4 px dele (4 telas com entalhe, com e sem a cara do TM)',
     `${h12dFalhas.length ? 'FALHAS: ' + h12dFalhas.join(' | ') + ' — ' : ''}${h12d.join('; ')}`, 'fim sem o minimapa; ≥ 4 px', h12d.length === 2 * TELAS_CEL.length && h12dFalhas.length === 0);
-  meta('H13a os nomes forçados (o mais largo) nos cantos de baixo, embaixo do analógico e do arco, sem encostar (3 telas, com e sem entalhe, 70/80/100%)',
+  meta('H13a os nomes forçados (o mais largo) nos cantos de baixo, embaixo do analógico e do arco, sem encostar (4 telas, com e sem entalhe, 70/80/100%)',
     `${h13aFalhas.length ? 'FALHAS: ' + [...new Set(h13aFalhas)].slice(0, 12).join(' | ') + ' — ' : ''}${h13a.join('; ')}`, 'esq/dir ≤ 16 px da borda, base ≤ 6 px, embaixo do analógico/arco, ≥ 4 px de tudo', h13a.length === 8 * TELAS_CEL.length && h13aFalhas.length === 0);
 }
-meta('H11 os botões PARADINHA e PULINHO (item 70, P2): só na cobrança do pênalti da pessoa (3 telas; visíveis de 2)', estilosVistos.join('; '), 'ataque 0, defesa 0, pênalti 2 (ENFIADA/LANÇAMENTO 0)', estilosVistos.length === TELAS_CEL.length && estilosFalhas === 0);
-meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada encosta nem transborda (3 telas com entalhe)', linhasPausa.join('; ') || 'sem a pausa', 'folga ≥ 4 px (a do ENCOSTA)', linhasPausa.length === TELAS_CEL.length && piorPausa >= 4);
+meta('H11 os botões PARADINHA e PULINHO (item 70, P2): só na cobrança do pênalti da pessoa (4 telas; visíveis de 2)', estilosVistos.join('; '), 'ataque 0, defesa 0, pênalti 2 (ENFIADA/LANÇAMENTO 0)', estilosVistos.length === TELAS_CEL.length && estilosFalhas === 0);
+meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada encosta nem transborda (4 telas com entalhe)', linhasPausa.join('; ') || 'sem a pausa', 'folga ≥ 4 px (a do ENCOSTA)', linhasPausa.length === TELAS_CEL.length && piorPausa >= 4);
 
 // H11b (item 70, P2): na página de verdade, o pênalti a favor montado (a falta na área, __golaco.faltaDeTeste) liga a classe
 // cobranca-penalti com o cobrador da pessoa (os dois botões aparecem) e a bola rolando a desliga
@@ -839,7 +842,7 @@ if (!soPlacar) {
     // (o nome do condutor, item 60: a exceção escrita — só "número nome", nada mais, em toda amostra dos 2 min)
     const NOME_OK = /^\d{1,2}\s?\S.{0,15}$/;
     const nomesRuins = r.nomesTxt.filter(t => !NOME_OK.test(t));
-    meta('H2 texto fora do placar, dos nomes dos botões e do nome do condutor durante o jogo (3 telas, 2 fases e 2 min de partida); o nome do condutor só "número nome"',
+    meta('H2 texto fora do placar, dos nomes dos botões e do nome do condutor durante o jogo (4 telas, 2 fases e 2 min de partida); o nome do condutor só "número nome"',
       `${piorTexto} caracteres${txtVisto.size ? ': ' + [...txtVisto].join(' ') : ''}; barra de força com rótulo em ${r.cargaTexto}/${r.comCarga} amostras; nome do condutor: ${r.nomesTxt.length} textos${r.nomesTxt.length ? ' (' + r.nomesTxt.slice(0, 4).join(', ') + ')' : ''}${nomesRuins.length ? ' — fora do formato: ' + nomesRuins.join(', ') : ''}`,
       '0; só número e nome', piorTexto === 0 && r.cargaTexto === 0 && nomesRuins.length === 0);
     const frMapa = r.torcMapa / Math.max(1, r.torc);
@@ -1162,9 +1165,9 @@ if (!soPlacar) {
     const h5Pior = Math.max(...h5Largo.map(x => x.a));
     meta('H5 PC 1280×720 com o placar mais largo ("97:13 +10", sem e com a cara do TM) e o nome mais largo no canto de cada time',
       h5Largo.map(x => `${x.tm ? 'TM' : 'sem TM'} ${(x.a * 100).toFixed(2)}%`).join('; '), '≤ 2,5%', h5Largo.length === 2 && h5Pior <= 0.025);
-    meta('H10 placar maior e com a cara do TM (17/10, depois do "menor" de 12/10): formato com MM:SS, "+N" e "Intervalo"/"Fim", altura 28/26/30 px, legível e sem encostar (3 telas do celular + PC, sem e com o TM; jogo, +4, +10, intervalo e fim)',
+    meta('H10 placar maior e com a cara do TM (17/10, depois do "menor" de 12/10): formato com MM:SS, "+N" e "Intervalo"/"Fim", altura 28/26/30 px, legível e sem encostar (4 telas do celular + PC, sem e com o TM; jogo, +4, +10, intervalo e fim)',
       `${placarFalhas.length ? 'FALHAS: ' + placarFalhas.join(' | ') + ' — ' : ''}${placarLinhas.join('; ')}; com o minimapa: ${placarEncosta.join('; ')}; treino com o minimapa: ${placarTreino.join('; ')}; leitor de tela: ${placarAria}`,
-      `marca (> 700 px e PC), 2 escudos, 2 siglas, placar, relógio MM:SS no bloco verde ("+N" só nos acréscimos; parado escuro); altura ${PLACAR_ALT.celular}/${PLACAR_ALT.baixo} (568×320)/${PLACAR_ALT.pc} (PC) > 12/10 (${PLACAR_1210.celular.h}/${PLACAR_1210.pc.h}) e ≤ ${PLACAR_REF.h} no celular; área no jogo ≤ 1,5 × a de 12/10 e ≤ ${PLACAR_REF.area} em 844×390; gols ≥ 18 (PC 20), relógio ≥ 16 (PC 17), siglas ≥ 12 (11 em 568×320), "+N" ≥ 11, palavra ≥ 13, escudos ≥ 14; nada encosta`,
+      `marca (> 700 px e PC), 2 escudos, 2 siglas, placar, relógio MM:SS no bloco verde ("+N" só nos acréscimos; parado escuro); altura ${PLACAR_ALT.celular}/${PLACAR_ALT.baixo} (568×320 e 640×360)/${PLACAR_ALT.pc} (PC) > 12/10 (${PLACAR_1210.celular.h}/${PLACAR_1210.pc.h}) e ≤ ${PLACAR_REF.h} no celular; área no jogo ≤ 1,5 × a de 12/10 e ≤ ${PLACAR_REF.area} em 844×390; gols ≥ 18 (PC 20), relógio ≥ 16 (PC 17), siglas ≥ 12 (11 em 568×320 e 640×360), "+N" ≥ 11, palavra ≥ 13, escudos ≥ 14; nada encosta`,
       placarFalhas.length === 0 && placarLinhas.length === 10 * (TELAS_CEL.length + 1) && placarEncosta.length === TELAS_CEL.length && placarTreino.length === TELAS_CEL.length && !!placarAria);
   } finally { await navegador.close(); }
 }
