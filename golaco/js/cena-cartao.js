@@ -160,8 +160,9 @@ export function desvioDaBola(j, tick, bp, out, ox = 0, oz = 0) {
   if (!cp || !carrinhoAtivo(j, tick + 1) || bp.y >= 0.6) return out;
   const cq = cp.congela != null ? { ...cp, congela: null } : cp;
   if (entradaNaBola(cq, j.fase, tick, bp, ox, oz) <= 0) return out;
-  // as 4 direções: de lado (primeiro o lado de lá da bola), para trás e para a frente do deslize
-  const lat = (bp.x - cp.x0 - ox) * -cp.uz + (bp.z - cp.z0 - oz) * cp.ux, s = lat >= 0 ? -1 : 1;
+  // as 4 direções: de lado (primeiro o lado de lá da bola: lat > 0 = a bola do lado de n = (−uz, ux), e a 1ª vai para −n),
+  // para trás e para a frente do deslize; vale o menor desvio (a ordem só decide o empate)
+  const lat = (bp.x - cp.x0 - ox) * -cp.uz + (bp.z - cp.z0 - oz) * cp.ux, s = lat >= 0 ? 1 : -1;
   const dirs = [[cp.uz * s, -cp.ux * s], [-cp.uz * s, cp.ux * s], [-cp.ux, -cp.uz], [cp.ux, cp.uz]];
   let melhor = Infinity;
   for (const [nx, nz] of dirs) {
