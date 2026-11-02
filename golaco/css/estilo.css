@@ -833,8 +833,12 @@ html.com-toque .nome-condutor.dir { left: auto; right: calc(var(--sa-r) + 8px); 
   html.com-toque .nome-condutor { max-width: min(88px, var(--nome-livre-esq, 88px)); }
   html.com-toque .nome-condutor.dir { max-width: min(88px, var(--nome-livre-dir, 88px)); }
 }
-/* PC: a dica de teclas (8 s) mora no canto de baixo à esquerda — o nome da esquerda sobe para cima dela enquanto ela está na
-   tela (hud.js mostrarDica; no celular a dica não aparece) */
-html.dica-visivel:not(.com-toque) .nome-condutor:not(.dir) { bottom: calc(var(--sa-b) + var(--m) + 34px + 6px); }
+/* PC: a dica de teclas (8 s) mora no canto de baixo à esquerda — enquanto ela está na tela o nome da esquerda fica na mesma
+   linha, à direita dela (hud.js mostrarDica: --dica-w; em cima dela encostava na faixa ENTRA/SAI do jogo, logo acima; no
+   celular a dica não aparece) */
+html.dica-visivel:not(.com-toque) .nome-condutor:not(.dir) {
+  left: calc(var(--sa-l) + var(--m) + var(--dica-w, 210px) + 8px);
+  max-width: min(200px, calc(50vw - 56px - 16px - var(--m) - var(--sa-l) - var(--dica-w, 210px)));
+}
 /* a disputa de pênaltis (o painel dela diz quem bate) e sem lugar no canto (140% em telas pequenas): nada */
 html.modo-penaltis .nome-condutor, html.nome-sem-lugar-esq .nome-condutor:not(.dir), html.nome-sem-lugar-dir .nome-condutor.dir { display: none; }

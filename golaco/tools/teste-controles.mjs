@@ -1255,6 +1255,8 @@ for (const t of [{ largura: 844, altura: 390 }, { largura: 568, altura: 320 }]) 
       if (!n.vis) { meta(`${nome}: o nome ${lado === 'esq' ? 'da esquerda' : 'da direita'} não pega toque`, 'o nome não aparece', false); continue; }
       const noCanto = lado === 'esq' ? n.l - n.saL <= 16 && n.saB - n.b <= 6.5 : n.saR - n.r <= 16 && n.saB - n.b <= 6.5;
       await toque('touchStart', [{ x: Math.round(n.cx), y: Math.round(n.cy), id: 7 }]);
+      // (o navegador entrega o pointerdown do toque no quadro seguinte: espera o analógico acender, ou 0,4 s)
+      await pagina.waitForFunction(() => document.getElementById('analogico').classList.contains('ativo'), null, { timeout: 400 }).catch(() => {});
       const durante = await pagina.evaluate(() => ({ analogico: document.getElementById('analogico').classList.contains('ativo'), botoes: [...document.querySelectorAll('#toque .btn-toque.ativo')].map(b => b.id) }));
       await toque('touchEnd', []);
       const depois = await pagina.evaluate(() => ({ menu: !document.getElementById('menu').hidden }));

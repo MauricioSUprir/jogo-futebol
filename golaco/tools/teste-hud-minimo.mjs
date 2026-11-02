@@ -66,7 +66,8 @@
 //     e) some: bola solta (0,5 s apagado, 1,0 s fora), intervalo e fim, as 4 camadas (replay, comemoração, substituição,
 //        cena), treino de ataque, disputa de pênaltis e ?prints=1; aparece no Modo Livre;
 //     f) sem piscar: em 2 min de jogo, 0 voltas depois de < 0,8 s escondido (na base, 22); escritas no DOM (informativo);
-//     g) PC: com a dica de teclas na tela o nome da esquerda fica ≥ 4 px acima dela; depois que ela some, no canto
+//     g) PC: com a dica de teclas na tela o nome da esquerda fica na linha de baixo, à direita dela (≥ 4 px; em cima dela
+//        encostava na faixa ENTRA/SAI do jogo); depois que ela some, no canto
 //   node tools/teste-hud-minimo.mjs [--raiz <pasta do jogo>] [--so-placar]   (--raiz: mede outra cópia, ex.: a base;
 //   --so-placar: só as telas do H1/H7/H9 e o H5 com o H10, sem os 2 min de jogo nem as opções salvas — para iterar no placar)
 import path from 'node:path';
@@ -858,7 +859,7 @@ if (!soPlacar) {
       g.nomeCantoDeTeste({ time: 0, num: 88, nome: 'Wwwwwwwwww' });
       const n = eval(LN)(), d = document.getElementById('dica').getBoundingClientRect();
       g.nomeCantoDeTeste(null);
-      return { vis: n.vis, b: n.rect.b, l: n.rect.l, w: n.rect.w, dicaT: d.top, dicaR: d.right };
+      return { vis: n.vis, b: n.rect.b, t: n.rect.t, l: n.rect.l, r: n.rect.r, w: n.rect.w, dicaT: d.top, dicaB: d.bottom, dicaL: d.left, dicaR: d.right, H: n.H, sab: n.sa.b };
     }, LER_NOME.toString());
     // a dica some pelo relógio das animações da página (8 s + 0,6 s de esmaecer). Com a máquina carregada o Chromium sem
     // GPU desenha poucos quadros e esse relógio atrasa ~1–2 s do real: esperar um tempo fixo media a dica ainda na tela
@@ -888,8 +889,11 @@ if (!soPlacar) {
       const f = [], txt = [];
       if (!nomeDica || !pcNomes) f.push('sem a API do nome nos cantos');
       else {
-        if (!nomeDica.vis || !(nomeDica.b <= nomeDica.dicaT - 4)) f.push(`com a dica: nome ${nomeDica.vis ? `com a base em ${nomeDica.b.toFixed(0)}, dica no topo ${nomeDica.dicaT.toFixed(0)}` : 'escondido'}`);
-        txt.push(`com a dica: base ${nomeDica.b.toFixed(0)} × dica ${nomeDica.dicaT.toFixed(0)}`);
+        // (com a dica, o nome fica na mesma linha, à direita dela: em cima dela encostava na faixa ENTRA/SAI do jogo)
+        const dd = nomeDica.vis ? Math.max(nomeDica.l - nomeDica.dicaR, nomeDica.dicaL - nomeDica.r, nomeDica.t - nomeDica.dicaB, nomeDica.dicaT - nomeDica.b) : -Infinity;
+        const baseD = nomeDica.H - nomeDica.sab - nomeDica.b;
+        if (!nomeDica.vis || !(dd >= 4) || Math.abs(baseD - 14) > 1) f.push(`com a dica: nome ${nomeDica.vis ? `a ${dd.toFixed(0)} px da dica, base a ${baseD.toFixed(0)} px` : 'escondido'}`);
+        txt.push(`com a dica: o nome em ${nomeDica.l.toFixed(0)}–${nomeDica.r.toFixed(0)} × ${nomeDica.t.toFixed(0)}–${nomeDica.b.toFixed(0)}, a dica em ${nomeDica.dicaL.toFixed(0)}–${nomeDica.dicaR.toFixed(0)} × ${nomeDica.dicaT.toFixed(0)}–${nomeDica.dicaB.toFixed(0)}`);
         for (const t of [0, 1]) {
           const n = pcNomes[t];
           if (!n.vis) { f.push(`nome ${t} escondido`); continue; }
@@ -901,7 +905,7 @@ if (!soPlacar) {
           txt.push(`${t ? 'dir' : 'esq'} ${n.rect.l.toFixed(0)}–${n.rect.r.toFixed(0)} × ${n.rect.t.toFixed(0)}–${n.rect.b.toFixed(0)}, ${n.fs} px`);
         }
       }
-      meta('H13g PC 1280×720: com a dica na tela o nome da esquerda fica ≥ 4 px acima dela; depois, os dois nos cantos a 14 px (≤ 200 px, letra ≥ 12 px)', `${f.length ? 'FALHAS: ' + f.join(', ') + ' — ' : ''}${txt.join('; ')}`, 'acima da dica; cantos a 14 ± 1 px', f.length === 0);
+      meta('H13g PC 1280×720: com a dica na tela o nome da esquerda fica na linha de baixo a ≥ 4 px dela; depois, os dois nos cantos a 14 px (≤ 200 px, letra ≥ 12 px)', `${f.length ? 'FALHAS: ' + f.join(', ') + ' — ' : ''}${txt.join('; ')}`, 'longe da dica; cantos a 14 ± 1 px', f.length === 0);
     }
     // H12f + H12b no PC: o minimapa no lugar de antes (centro W/2 ± 1, base H − 14 ± 1) em 1280×720 e 1920×1080; nada no alto
     {

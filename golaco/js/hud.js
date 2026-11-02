@@ -358,13 +358,15 @@ export function criarHud(opc) {
 
   /**
    * A dica de teclas do PC aparece de novo e some 8 s depois (CSS .dica: animação que começa ao ser reposta). Enquanto ela
-   * está na tela, html.dica-visivel (o nome da esquerda sobe para cima dela; o fim da animação tira).
+   * está na tela, html.dica-visivel e --dica-w (a largura dela): o nome da esquerda fica na mesma linha, à DIREITA dela (em
+   * cima dela encostava na faixa ENTRA/SAI do jogo, que mora logo acima); o fim da animação tira.
    */
   function mostrarDica() {
     if (!el.dica) return;
     el.dica.style.animation = 'none';
-    void el.dica.offsetWidth;
+    const w = el.dica.offsetWidth;
     el.dica.style.animation = '';
+    if (w > 0) raiz.style.setProperty('--dica-w', `${Math.ceil(w)}px`);
     raiz.classList.add('dica-visivel');
   }
   // (só o FIM da animação: a reposta acima cancela a anterior, e o cancelamento chega depois da classe nova)
