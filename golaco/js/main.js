@@ -164,6 +164,9 @@ import { montarFalta } from './faltas.js';
 import { pressionadorVisivel } from './defesa.js';
 // a bola alta (o mesmo predicado que barra o disparo do carrinho): na defesa, o L e o X apertados com ela ficam LANÇAMENTO
 import { bolaAlta } from './carrinho.js';
+// o L e o X na defesa (entrada.js SENTIDO_FASE): LANÇAMENTO com a bola alta (o pedido de primeira) e nos TREINOS (sem
+// m.times o carrinho não sai: era um bit morto no lugar do lançamento de antes do carrinho); CARRINHO no resto
+const lancaNaDefesa = m => !m.times || bolaAlta(m);
 import { relogioMao, maoPermitida } from './regras-goleiro.js';
 import { assumirControle } from './acoes.js';
 import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
@@ -856,7 +859,7 @@ function atualizarFase() {
   fase.agora = f;
   // o adversário com a bola no pé: a perda é certa (o toque no botão de ataque ainda visível vale pelo da defesa)
   fase.posseRival = mundo.posse != null && timeDe(mundo.posse) !== TIME_HUMANO;
-  if (entrada) entrada.definirFase(fase.atual, fase.agora, fase.posseRival, bolaAlta(mundo));
+  if (entrada) entrada.definirFase(fase.atual, fase.agora, fase.posseRival, lancaNaDefesa(mundo));
   // o PEGAR aparece com o goleiro do humano com a bola no pé (partida), com a bola em jogo e a MÃO VALENDO ali
   // (regras-goleiro.js maoPermitida: na própria área, sem recuo e sem a bola que ele mesmo soltou) — onde o toque pega a
   // bola (sim.js pegarDoHumano). Depois do recuo ele não aparece: pegar seria tiro livre indireto (Regra 12.2; a tecla
@@ -3542,7 +3545,7 @@ function trocarMundo(m, opc = {}) {
   if (editor?.aberto) editor.fechar();
   iniciarEstados();
   corteCamera = true;
-  if (entrada) entrada.definirFase(fase.atual, fase.agora, fase.posseRival, bolaAlta(mundo));
+  if (entrada) entrada.definirFase(fase.atual, fase.agora, fase.posseRival, lancaNaDefesa(mundo));
   hud.definirEstado({ marcador: marcadorLigado(mundo), modoTreino: mundo.modo, fim: false });
   hud.definirTimes(timesDoMundo(mundo));
   hud.faixa(null);
@@ -3696,7 +3699,7 @@ const api = {
   /** Ataque × defesa (estado do mundo, com a espera de 0,25 s para a defesa). */
   get fase() { return fase.atual; },
   /** Botões de toque: reaplica a fase visível e muda o tamanho (testes de layout). */
-  sincronizarFase() { entrada.definirFase(fase.atual, fase.agora, fase.posseRival, bolaAlta(mundo)); entrada.sincronizarFase(); },
+  sincronizarFase() { entrada.definirFase(fase.atual, fase.agora, fase.posseRival, lancaNaDefesa(mundo)); entrada.sincronizarFase(); },
   toqueTamanho(v) { comando('toqueTamanho', v); },
   relogio: {
     /** Relógio manual: o laço usa um tempo controlado (testes a 60/120/144 Hz). */
