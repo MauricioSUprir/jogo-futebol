@@ -632,7 +632,8 @@ const SEN_ABRE = MD.sin(0.12), COS_ABRE = MD.cos(0.12), BOLHA = 0.7;
 /**
  * Pose de quem dá o carrinho (pura; só LÊ o plano — carrinho.js quadroCarrinho): a pelve, os quadris, os joelhos, os
  * tornozelos e as pontas são COPIADOS do quadro, sem IK — a perna que a simulação confere com a bola e com o adversário é
- * a desenhada. O tronco sai da inclinação da corrida no aperto (a da pose normal: 0,03 + 0,022·v) para trás (q.incl) e
+ * a desenhada. O tronco sai da inclinação da corrida no aperto (a da pose normal: 0,03 + 0,022·v; no levantar, a de pé
+ * parado: v = 0) para trás (q.incl) e
  * caído para o lado da perna dobrada (q.rol), pelo peso deitado (q.w: smoothstep da queda e do levantar); a cabeça olha a
  * bola a ≤ 16° da linha do tronco; o braço do lado da perna dobrada apoia a mão no chão (q.mao) e o outro abre para cima e
  * para a frente (equilíbrio), saindo do balanço da passada no aperto (j.fase fica parada no carrinho). info.pes: o apoio
@@ -645,7 +646,10 @@ export function poseCarrinho(j, m, out, info) {
   por(out, J.pelve, px, py, pz);
   const fx = MD.cos(q.yaw), fz = MD.sin(q.yaw), rx = -fz, rz = fx;
   // ---- tronco: o eixo "para cima" (unitário) pela inclinação para a frente/trás (pitch) e para o lado (roll)
-  const v0 = Math.sqrt(c.vx0 * c.vx0 + c.vz0 * c.vz0);
+  // (no levantar — fase 4 — o tronco e o balanço dos braços terminam nos de quem está de pé PARADO, v = 0: a 1ª pose normal
+  // depois do fim; com os da corrida do aperto as mãos saltavam até ~0,35 m e a cabeça ~0,15 m além da pelve no tick
+  // seguinte. No começo do levantar w = 1 e nada disto pesa: a troca não salta)
+  const v0 = q.fase === 4 ? 0 : Math.sqrt(c.vx0 * c.vx0 + c.vz0 * c.vz0);
   const pitch = clamp(0.03 + 0.022 * v0, -0.3, 0.42) * (1 - w) - q.incl;
   const roll = q.rol * q.lado;
   const sp = MD.sin(pitch), cp = MD.cos(pitch), sr = MD.sin(roll), cr = MD.cos(roll);

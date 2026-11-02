@@ -28,7 +28,8 @@
 //     A5 da parada até de pé: errou 1,2 s ± 1 tick; ganhou (marcarAcerto antes da parada) 0,5 s ± 1 tick; o toque depois da
 //        parada não muda nada (o raspão = errou); no fim os dois pés plantados, v = 0, pelve 0,92 ± 0,02;
 //     A6 continuidade: a pelve salta ≤ 0,05 m (além do que o centro anda) entre a pose normal no aperto e o 1º quadro, e
-//        entre o último quadro e a pose normal de pé com os pés onde o quadro os plantou;
+//        entre o último quadro e a pose normal de pé com os pés onde o quadro os plantou; nesse fim, as mãos e a cabeça além
+//        do que a pelve anda ≤ a RÉGUA: o p99,9 do salto de um tick delas na pose normal correndo (≥ 4 m/s, IA × IA);
 //     A7 atributo: com desarme 90 o deslize vai mais longe que com 40, na mesma entrada (GOALS 0.42.0);
 //     A8 tq ≤ tAr + tImpacto em todas as entradas (0–9,4 m/s × 0–180°) e o desvio pedido além do limite fica no limite
 //        (desvioMax); a aceleração da queda ≤ 13 m/s²;
@@ -101,13 +102,13 @@
 //     parte E, alguns passos depois do aperto): G1 a cópia no meio do carrinho (cena-atores com os braços para o céu o
 //     tempo todo em todos, como no meio do jogo e com o `congela` do apito): o 1º quadro = a pose do mundo, a pelve
 //     desenhada = a do quadro da cópia até ficar de pé, sem salto além do centro (≤ 0,1 m/tick), nenhum gesto no carrinho
-//     nem no 1º tick de pé (= a pose pura, exato), as mãos ≤ 0,15 m/tick além da pelve na rampa dos gestos (o tick do fim do
-//     quadro: informativo), e o plano do MUNDO igual (comparação profunda) depois de 200 passos; G3 a
+//     nem no 1º tick de pé (= a pose pura, exato), as mãos ≤ 0,15 m/tick além da pelve na rampa dos gestos (no tick do fim do
+//     quadro, as mãos e a cabeça ≤ a régua do A6), e o plano do MUNDO igual (comparação profunda) depois de 200 passos; G3 a
 //     comemoração com um defensor no carrinho no tick do gol: G1; G3b com o AUTOR no carrinho: a finalização (e o abraço)
 //     só depois do levantar, ele corre ≥ 1,5 m para o alvo em 1,5 s de pé e não fica preso (nem fixo nem no carrinho);
 //     G2 a cena do cartão com o punido no chão (o amarelo do próprio deslizante no tick da falta, variação 'aceita', a de
 //     reação mais cedo): nenhum gesto enquanto ele desliza, a reação depois de ficar de pé e por ≥ 0,5 s, sem salto da pelve
-//     (≤ 0,1) nem das mãos (≤ 0,15 m/tick além da pelve, fora o tick do fim do quadro: informativo), o árbitro no ponto do
+//     (≤ 0,1) nem das mãos (≤ 0,15 m/tick além da pelve; no tick do fim do quadro, mãos e cabeça ≤ a régua do A6), o árbitro no ponto do
 //     plano (≤ 0,3 m: a paradaPrevista pelo fim do quadro); G4 o teleportar zera o plano e o quadril (de pé no ponto novo
 //     depois de 1 passo) e a cópia da cena de substituição fica de pé no lugar; G5 o intervalo (o carrinho no último tick do
 //     1º tempo): a pelve desenhada parada (≤ 0,05 m) e a saída do 2º tempo zera o plano e o quadril; G6 o levar (3, −2 m) no
@@ -420,7 +421,7 @@ const R = {
   casos: 0, a2t0: 0, a2pos: 0, a2vel: 0, a2velImp: 0, a2yaw: 0, a2piorPos: 0, a2piorVel: 0, a2piorVelImp: 0, a2piorYaw: 0,
   a3: 0, a3n: 0, a3pior: Infinity, a3baixos: 0,
   a4plant: 0, a4ar: 0, a4deslize: 0, a4piorPlant: 0, a4piorArRazao: 0, a4maxPe: 0,
-  a6ini: 0, a6fim: 0, a6piorIni: 0, a6piorFim: 0,
+  a6ini: 0, a6fim: 0, a6piorIni: 0, a6piorFim: 0, a6n: 0, a6piorMao: 0, a6piorCab: 0,
   ossos: 0, ossoPior: 0, alcance: 0, fundo: 0, fundoPior: Infinity, joelho: 0, joelhoPior: Infinity, pelve: 0, pelveFaixa: [Infinity, -Infinity],
   tronco: 0, troncoFaixa: [Infinity, -Infinity], p5: 0, nan: 0,
 };
@@ -531,6 +532,31 @@ function esqueletoSeq(poses, vels, cada, nome) {
   }
 }
 const _poP5 = new Float32Array(NJ * 3);
+// o salto de um tick das juntas `ids` além do que a pelve anda (o máximo entre elas)
+const MAOS_A6 = [A.J.maoE, A.J.maoD], CAB_A6 = [A.J.cabeca];
+function saltoAlemPelve(a, b, ids) {
+  const ip = A.J.pelve * 3, dpx = b[ip] - a[ip], dpy = b[ip + 1] - a[ip + 1], dpz = b[ip + 2] - a[ip + 2];
+  let s = 0;
+  for (const id of ids) { const k = id * 3; s = Math.max(s, Math.hypot(b[k] - a[k] - dpx, b[k + 1] - a[k + 1] - dpy, b[k + 2] - a[k + 2] - dpz)); }
+  return s;
+}
+// A RÉGUA do salto das mãos e da cabeça (A6, G1, G2): o p99,9 do salto de um tick além da pelve na pose NORMAL correndo (≥ 4 m/s;
+// os jogadores de linha da partida dos estados de A, IA × IA: sem teleporte, cabeceio nem arremesso). O máximo puro não serve
+// de régua: a pose normal tem picos raros (a torção na virada) que chegam a ~0,3 m
+const REGUA = { mao: [], cab: [] };
+const _poR = new Map();
+function amostrarRegua(mm) {
+  if (mm.partida.estado !== 'jogo') { _poR.clear(); return; }
+  for (const j of mm.jogadores) {
+    if (j.posicao === 'GOL') continue;
+    const po = A.pose(j, mm, new Float32Array(NJ * 3));
+    const a = _poR.get(j.id);
+    _poR.set(j.id, { po, x: j.x, z: j.z });
+    if (!a || j.cab || j.carrinho || j.arremesso || Math.hypot(j.x - a.x, j.z - a.z) > 0.2 || Math.hypot(j.vx, j.vz) < 4) continue;
+    REGUA.mao.push(saltoAlemPelve(a.po, po, MAOS_A6)); REGUA.cab.push(saltoAlemPelve(a.po, po, CAB_A6));
+  }
+}
+const p999 = l => { const s = Float64Array.from(l).sort(); return s.length ? s[Math.min(s.length - 1, Math.floor(0.999 * s.length))] : NaN; };
 /** A pose do carrinho nos quadros do plano c (o mundo mw: a página/o mundo com o tick do quadro) e o corpo novo. */
 function medirPose(j, c, qs, mw, poseFim, velFim, cada, nome) {
   const antes = JSON.stringify(c), salvo = j.carrinho;
@@ -574,6 +600,14 @@ function medirPose(j, c, qs, mw, poseFim, velFim, cada, nome) {
       RP.troncoFaixa[0] = Math.min(RP.troncoFaixa[0], at); RP.troncoFaixa[1] = Math.max(RP.troncoFaixa[1], at);
       if (at < 40 || at > 60) RP.tronco++;
     }
+  }
+  // A6 (mãos e cabeça): a última pose do carrinho (o fim do levantar) → a 1ª pose normal de pé, além do que a pelve anda
+  {
+    const pu = poses[poses.length - 1];
+    const sm = saltoAlemPelve(pu, poseFim, MAOS_A6), sc = saltoAlemPelve(pu, poseFim, CAB_A6);
+    R.a6n++;
+    if (sm > R.a6piorMao) { R.a6piorMao = sm; R.a6exMao = nome; }
+    if (sc > R.a6piorCab) { R.a6piorCab = sc; R.a6exCab = nome; }
   }
   // P5: a pose e a altura do quadril não escrevem no plano (100 leituras)
   for (let i = 0; i < 100; i++) { mw.tick = c.tick0 + 1 + (i % (qs.length - 1)); A.pose(j, mw, _poP5); A.alturaQuadril(j, mw); }
@@ -726,6 +760,7 @@ for (const e of ENTRADAS) {
   const rnd = () => ((s = (s * 1103515245 + 12345) % 2147483648) / 2147483648);
   for (let i = 0; i < 6000 && n < 120; i++) {
     P.passoPartida(mm, P.entradaDemoPartida(mm));
+    if (i >= 600) amostrarRegua(mm);
     if (i < 600 || i % 37 !== 0 || mm.partida.estado !== 'jogo') continue;
     const linha = mm.jogadores.filter(j => j.posicao !== 'GOL');
     for (let r = 0; r < 2 && n < 120; r++) {
@@ -788,6 +823,11 @@ info('A4 o tornozelo mais rápido (todos os quadros)', `${f2(R.a4maxPe)} m/s`, '
 reg('A4 nenhum pé apoiado no deslize', R.a4deslize, '0', R.a4deslize === 0);
 reg('A6 pelve no começo (pose normal → 1º quadro)', `${R.a6ini} (pior ${f3(R.a6piorIni)} m)`, '≤ 0,05 m: 0', R.a6ini === 0);
 reg('A6 pelve no fim (último quadro → pose normal)', `${R.a6fim} (pior ${f3(R.a6piorFim)} m)`, '≤ 0,05 m: 0', R.a6fim === 0);
+// (a régua: a pose normal correndo; o levantar terminava nos braços e no tronco da corrida do aperto — as mãos saltavam ~0,35 m)
+const REG_MAO = p999(REGUA.mao), REG_CAB = p999(REGUA.cab);
+info('A6 a régua: o salto de um tick além da pelve na pose normal correndo (p99,9): mãos / cabeça', `${f3(REG_MAO)} / ${f3(REG_CAB)} m (${REGUA.cab.length} amostras)`, 'IA × IA, semente 3002, ≥ 4 m/s');
+reg('A6 mãos e cabeça no fim (último quadro → pose normal de pé), além da pelve', `${R.a6n} fins; pior mãos ${f3(R.a6piorMao)} m (${R.a6exMao ?? '–'}), cabeça ${f3(R.a6piorCab)} m (${R.a6exCab ?? '–'})`,
+  '≤ a régua', R.a6n > 0 && REGUA.cab.length >= 1000 && R.a6piorMao <= REG_MAO && R.a6piorCab <= REG_CAB);
 
 // ------------------------------------------------------------------ A5: o tempo no chão
 {
@@ -2420,14 +2460,14 @@ function deslizante(n) {
  * do mundo no tick da cópia; o salto da pelve desenhada além do centro por tick; a pelve fora do quadro da cópia enquanto ele
  * está no carrinho; os GESTOS — a pose desenhada contra a pose sem gestos (anim.js pose, pura: a do quadro no carrinho, a da
  * locomoção de pé) — no carrinho e no 1º tick de pé (a rampa começa do 0: as duas exatas); o salto das mãos além da pelve
- * depois (a rampa) e no tick do fim do quadro (o anim.js poseCarrinho: informativo); o tick da 1ª pose de pé; a pelve no fim.
+ * depois (a rampa) e, das mãos e da cabeça, no tick do fim do quadro (o anim.js poseCarrinho); o tick da 1ª pose de pé; a pelve no fim.
  */
 const _qG = K.novoQuadroCarrinho(), _poseG = new Float32Array(A.NJ * 3);
 const MAOS_G = [A.J.maoE * 3, A.J.maoD * 3];
 function medirCena(c, a, w, jm, passos, passoC) {
   const p0 = A.pose(jm, w);
   const r = { entrada: Math.hypot(a.atu[JP] - p0[JP], a.atu[JP + 1] - p0[JP + 1], a.atu[JP + 2] - p0[JP + 2]), salto: 0, foraQuadro: 0,
-    noCarr0: !!a.noCarrinho, kPe: -1, ticksCarr: 0, pelveFim: 0, n: 0, gestoChao: 0, gestoPe: 0, saltoMao: 0, saltoFim: 0 };
+    noCarr0: !!a.noCarrinho, kPe: -1, ticksCarr: 0, pelveFim: 0, n: 0, gestoChao: 0, gestoPe: 0, saltoMao: 0, saltoFim: 0, saltoCab: 0 };
   const ant = Float32Array.from(a.atu);
   let cx = a.j.x, cz = a.j.z;
   for (let k = 0; k < passos; k++) {
@@ -2438,6 +2478,7 @@ function medirCena(c, a, w, jm, passos, passoC) {
     r.salto = Math.max(r.salto, Math.hypot(dpx - (j.x - cx), dpy, dpz - (j.z - cz)));
     let sm = 0;
     for (const i of MAOS_G) sm = Math.max(sm, Math.hypot(o[i] - ant[i] - dpx, o[i + 1] - ant[i + 1] - dpy, o[i + 2] - ant[i + 2] - dpz));
+    const sc = saltoAlemPelve(ant, o, CAB_A6);
     ant.set(o); cx = j.x; cz = j.z;
     A.pose(j, c.mF, _poseG);
     let dif = 0;
@@ -2447,16 +2488,16 @@ function medirCena(c, a, w, jm, passos, passoC) {
       r.gestoChao = Math.max(r.gestoChao, dif);
       K.quadroCarrinho(j.carrinho, K.tempoCarrinho(j.carrinho, c.mF.tick), _qG);
       r.foraQuadro = Math.max(r.foraQuadro, Math.hypot(o[JP] - _qG.x, o[JP + 1] - _qG.h, o[JP + 2] - _qG.z));
-    } else if (r.kPe < 0) { r.kPe = c.k; r.gestoPe = dif; r.saltoFim = sm; }
+    } else if (r.kPe < 0) { r.kPe = c.k; r.gestoPe = dif; r.saltoFim = sm; r.saltoCab = sc; }
     else r.saltoMao = Math.max(r.saltoMao, sm);
   }
   r.pelveFim = a.atu[JP + 1];
   return r;
 }
-const txtCena = r => `entrada ${f3(r.entrada)} m, salto ${f3(r.salto)} m/tick, fora do quadro ${r.foraQuadro.toExponential(1)} m, ${r.ticksCarr} ticks no carrinho, de pé no tick ${r.kPe} (pelve ${f2(r.pelveFim)}); gesto no chão ${r.gestoChao.toExponential(1)}, no 1º tick de pé ${r.gestoPe.toExponential(1)} m; mãos depois ${f3(r.saltoMao)} m/tick (no fim do quadro ${f3(r.saltoFim)})`;
+const txtCena = r => `entrada ${f3(r.entrada)} m, salto ${f3(r.salto)} m/tick, fora do quadro ${r.foraQuadro.toExponential(1)} m, ${r.ticksCarr} ticks no carrinho, de pé no tick ${r.kPe} (pelve ${f2(r.pelveFim)}); gesto no chão ${r.gestoChao.toExponential(1)}, no 1º tick de pé ${r.gestoPe.toExponential(1)} m; mãos depois ${f3(r.saltoMao)} m/tick; no fim do quadro mãos / cabeça ${f3(r.saltoFim)} / ${f3(r.saltoCab)} m`;
 const okCena = r => r.noCarr0 && r.entrada <= 0.1 && r.salto <= 0.1 && r.foraQuadro <= 1e-4 && r.ticksCarr >= 10 && r.kPe > 0 && r.pelveFim >= 0.85
-  && r.gestoChao <= 1e-6 && r.gestoPe <= 1e-6 && r.saltoMao <= 0.15;
-const META_CENA = 'entrada e salto ≤ 0,1 m; pelve = quadro; de pé ≥ 0,85; sem gesto no chão nem no 1º tick de pé; mãos ≤ 0,15 m/tick';
+  && r.gestoChao <= 1e-6 && r.gestoPe <= 1e-6 && r.saltoMao <= 0.15 && r.saltoFim <= REG_MAO && r.saltoCab <= REG_CAB;
+const META_CENA = 'entrada e salto ≤ 0,1 m; pelve = quadro; de pé ≥ 0,85; sem gesto no chão nem no 1º tick de pé; mãos ≤ 0,15 m/tick; no fim do quadro ≤ a régua (A6)';
 /** A cena das cena-atores com todos copiados e parados (sem gestos): a base do cartão e do fim. */
 function cenaParada(w, prep = null) {
   const c = CA.criarBase(w);
@@ -2583,7 +2624,7 @@ else {
           const dpx = o[JP] - ant[JP], dpy = o[JP + 1] - ant[JP + 1], dpz = o[JP + 2] - ant[JP + 2];
           salto = Math.max(salto, Math.hypot(dpx - (pun.x1 - pun.x0), dpy, dpz - (pun.z1 - pun.z0)));
           // (o tick da 1ª pose de pé à parte: o salto do fim do quadro para a pose normal é do anim.js poseCarrinho, no mundo
-          // também — informativo abaixo)
+          // também — a régua do A6 abaixo)
           const transicao = !pun.noCarrinho && kPe < 0;
           for (const i of MAOS) {
             const sm = Math.hypot(o[i] - ant[i] - dpx, o[i + 1] - ant[i + 1] - dpy, o[i + 2] - ant[i + 2] - dpz);
@@ -2606,7 +2647,7 @@ else {
       reg('G2 cena do cartão com o punido no chão: a reação depois de ele ficar de pé, sem salto; o árbitro no ponto do plano',
         `no carrinho no começo ${noCarr0 ? 'sim' : 'não'}; gesto no chão ${gestoNoChao} ticks; de pé no tick ${kPe}, 1º gesto no ${kGesto}; gestos ${f2(ativo * PASSO)} s; salto pelve ${f3(salto)} / mãos ${f3(saltoMao)} m/tick; árbitro a ${arbErro != null ? f2(arbErro) : '–'} m do ponto`,
         'sim; 0; gesto > de pé; ≥ 0,5 s; ≤ 0,1 / ≤ 0,15; ≤ 0,3 m', noCarr0 && gestoNoChao === 0 && kPe > 0 && kGesto > kPe && ativo * PASSO >= 0.5 && salto <= 0.1 && saltoMao <= 0.15 && arbErro != null && arbErro <= 0.3);
-      info('G2 a última pose do carrinho → a 1ª de pé (anim.js poseCarrinho; o mesmo no mundo): mãos / cabeça além da pelve', `${f3(saltoFim)} / ${f3(saltoCab)} m`, 'o levantar termina nos braços e no tronco da corrida do aperto (v0), não nos de pé: para o dono');
+      reg('G2 a última pose do carrinho → a 1ª de pé (anim.js poseCarrinho; o mesmo no mundo): mãos / cabeça além da pelve', `${f3(saltoFim)} / ${f3(saltoCab)} m`, `≤ a régua (A6: ${f3(REG_MAO)} / ${f3(REG_CAB)} m)`, kPe > 0 && saltoFim <= REG_MAO && saltoCab <= REG_CAB);
     }
   }
 
