@@ -6,7 +6,7 @@
 // Na base (sem js/carrinho.js) REPROVA: "o carrinho existe — não existe nesta lógica" (como o teste-faltas com o faltas.js).
 // Commits 1–5 da entrega: o plano e o quadro (A, P pelo quadro), a pose e o corpo novo (P), o corpo na simulação com o
 // disparo e as travas (E), o contato da perna com a bola (B, E6), o contato com o homem e a Regra 12 (C, D), o
-// determinismo (F) e as cenas (G). 2 processos (o canhão C dividido; --par 1: um só), ~65 s.
+// determinismo (F) e as cenas (G). 2 processos (o canhão C dividido; --par 1: um só), ~90 s.
 //
 // Metas (as exatas reprovam em qualquer caso; "·" = informativa, não reprova):
 //  0. estrutura: o campo `carrinho` declarado no jogador (forma única; undefined sem o botão); as constantes; os raios das
@@ -2393,7 +2393,7 @@ else {
   // lance é a falta (a nota do jogador e a do Rumo ao Estrelato premiavam quem fez a falta e puniam quem a sofreu); com a
   // falta 'depois' em OUTRO jogador, o desarme fica
   {
-    const caso = mesmo => {
+    const caso = (mesmo, meio = false) => {
       const { w, j, a } = lado(10, 0, { vo: 0, c: { v: 7, n: 6 } });
       j.carrinho.bola = j.carrinho.tick0 + 2; // tocou a bola antes (o 'depois')
       j.carrinho.desarmou = mesmo ? a.id : -1;
@@ -2405,17 +2405,25 @@ else {
       wq.posse = null;
       SU.sumulaPasso(s, wq, [{ tipo: 'dividida', id: j.id, ganhou: true, motivo: null, carrinho: true }, { tipo: 'roubada', id: j.id, carrinho: true }]);
       const no = { des: s.jog[j.id]?.desarmes ?? 0, rou: s.jog[j.id]?.roubadas ?? 0, per: s.jog[a.id]?.perdas ?? 0 };
+      if (meio) {
+        // outro carrinho (um companheiro dele, em outro adversário) desarma no tick seguinte, antes da falta do 1º
+        const comp = wq.jogadores.find(o => o.id !== j.id && o.time === j.time);
+        const adv = wq.jogadores.find(o => o.id !== a.id && o.time === a.time);
+        wq.tick += 1; wq.posse = adv.id; SU.sumulaPasso(s, wq, []);
+        wq.posse = null; SU.sumulaPasso(s, wq, [{ tipo: 'dividida', id: comp.id, ganhou: true, motivo: null, carrinho: true }, { tipo: 'roubada', id: comp.id, carrinho: true }]);
+      }
       wq.tick += 2; SU.sumulaPasso(s, wq, ev);
       const dep = { des: s.jog[j.id]?.desarmes ?? 0, rou: s.jog[j.id]?.roubadas ?? 0, per: s.jog[a.id]?.perdas ?? 0, fal: s.jog[j.id]?.faltas ?? 0 };
       return { falta: !!res.f, anulado: iA >= 0 && (iF < 0 || iA < iF) && ev[iA].id === j.id && ev[iA].de === a.id, outro: iA >= 0, no, dep };
     };
-    const m1 = caso(true), m2 = caso(false);
+    const m1 = caso(true), m2 = caso(false), m3 = caso(true, true);
     const txt = x => `desarmes/roubadas/perdas no toque ${x.no.des}/${x.no.rou}/${x.no.per} → depois da falta ${x.dep.des}/${x.dep.rou}/${x.dep.per} (faltas ${x.dep.fal})`;
     reg('D14 a falta \'depois\' no jogador que o carrinho desarmou: desarmeAnulado e a súmula sem desarme, roubada e perdas; noutro, o desarme fica',
-      `no mesmo: ${m1.falta ? 'falta' : 'SEM falta'}, ${m1.anulado ? 'desarmeAnulado' : 'sem desarmeAnulado'}, ${txt(m1)}; noutro: ${m2.outro ? 'desarmeAnulado' : 'sem evento'}, ${txt(m2)}`,
-      'mesmo: 1/1/2 → 0/0/0; outro: fica 1/1/2',
+      `no mesmo: ${m1.falta ? 'falta' : 'SEM falta'}, ${m1.anulado ? 'desarmeAnulado' : 'sem desarmeAnulado'}, ${txt(m1)}; noutro: ${m2.outro ? 'desarmeAnulado' : 'sem evento'}, ${txt(m2)}; com outro carrinho desarmando no meio: ${txt(m3)}`,
+      'mesmo: 1/1/2 → 0/0/0 (também com outro carrinho no meio); outro: fica 1/1/2',
       m1.falta && m1.anulado && m1.no.des === 1 && m1.no.rou === 1 && m1.no.per === 2 && m1.dep.des === 0 && m1.dep.rou === 0 && m1.dep.per === 0 && m1.dep.fal === 1
-      && m2.falta && !m2.outro && m2.dep.des === 1 && m2.dep.rou === 1 && m2.dep.per === 2);
+      && m2.falta && !m2.outro && m2.dep.des === 1 && m2.dep.rou === 1 && m2.dep.per === 2
+      && m3.falta && m3.anulado && m3.dep.des === 0 && m3.dep.rou === 0 && m3.dep.per === 0);
   }
 
   // ---- D12: a montagem do tiro livre com o deslizante ainda no carrinho (deitado: ele pula a paredeParada). A bola posta no

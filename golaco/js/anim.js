@@ -647,7 +647,7 @@ export function poseCarrinho(j, m, out, info) {
   const fx = MD.cos(q.yaw), fz = MD.sin(q.yaw), rx = -fz, rz = fx;
   // ---- tronco: o eixo "para cima" (unitário) pela inclinação para a frente/trás (pitch) e para o lado (roll)
   // (no levantar — fase 4 — o tronco e o balanço dos braços terminam nos de quem está de pé PARADO, v = 0: a 1ª pose normal
-  // depois do fim; com os da corrida do aperto as mãos saltavam até ~0,35 m e a cabeça ~0,15 m além da pelve no tick
+  // depois do fim; com os da corrida do aperto as mãos saltavam até ~0,55 m e a cabeça ~0,13 m além da pelve no tick
   // seguinte. No começo do levantar w = 1 e nada disto pesa: a troca não salta)
   const v0 = q.fase === 4 ? 0 : Math.sqrt(c.vx0 * c.vx0 + c.vz0 * c.vz0);
   const pitch = clamp(0.03 + 0.022 * v0, -0.3, 0.42) * (1 - w) - q.incl;
