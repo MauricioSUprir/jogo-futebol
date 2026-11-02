@@ -64,6 +64,7 @@ export const TEMPOS_NODE = {
   'teste-impedimento.mjs': 156,
   'teste-faltas.mjs': 400, // (31/10: a parte D com 48 partidas, eram 36)
   'teste-faltas-sentido.mjs': 330,
+  'teste-carrinho.mjs': 100, // item 34 (medido: 86–113 s aqui com 2 processos e a máquina dividida, carga 4–7; ocupa 2 vagas)
   'teste-parado.mjs': 7,
   // (24/10, D1: + os ramos de 3 s de M9–M11 e o M12; localmente 371 → 496 s com 3 processos numa máquina de 4 vCPU)
   'teste-pressao-humano.mjs': 900, // (01/11: 64 partidas em 3 vagas, eram 32 numa vaga com 3 processos — 652 s no CI do 522a4e36; estimado)

@@ -2,9 +2,9 @@
 
 > Resumo da `golaco/FILA.md` (lá estão o status, a evidência e o plano de cada item).
 > **Como funciona:** o dono escolhe a categoria; nada começa sem o aval dele. Cada item vira um PR.
-> Atualizado em 29/10.
+> Atualizado em 02/11.
 
-**Legenda:** 🆕 pedido novo (23/10 ou 29/10) · ⏳ espera o seu aval para começar · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo) · ✅ entregue
+**Legenda:** 🆕 pedido novo (23/10 ou 29/10) · 🔎 achado na entrega do carrinho (02/11) · ⏳ espera o seu aval para começar · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo) · ✅ entregue
 
 ---
 
@@ -16,15 +16,20 @@
 
 ---
 
-## 🛠️ B. Correções e regras — ~13 h
+## 🛠️ B. Correções e regras — ~20 h
 
 | nº | o que é | horas |
 |---|---|---|
 | 57 | 🆕 ⚙️ **Impedimento pela parte do corpo mais perto do gol** (não pelo centro), e o replay com as linhas nesses pontos | 6 |
-| 8 | Estádios de nome igual (o Centenário com o Montevideo City Torque; Caxias do Sul) | 1,5 |
+| 8 | Estádios de nome igual: falta a forma do Centenário de Caxias do Sul (o de Montevidéu ficou certo no #596) | 1 |
 | 9 | Duas metas da condução que seguem marcadas como pendentes | 0,5 |
 | 10 | Textos da documentação que contradizem o código | 1 |
 | 11 | ⚙️ Tiro livre indireto perto do gol: os defensores na linha entre as traves | 4 |
+| 74 | 🔎 ⚙️ ⏳ SPA na área tentando a bola sem cartão também no bote da IA e na DIVIDIDA (Regra 12.4; no carrinho já é assim) | 1,5 |
+| 73 | 🔎 O "descanso" da DIVIDIDA errada fica guardado e tira o bote da IA desse jogador mais tarde | 1 |
+| 72 | 🔎 O mergulho do goleiro e o pulo do cabeceio continuam no desenho durante o intervalo | 2 |
+| 78 | 🔎 Carrinho: conferir as outras listas onde o jogador deitado ainda pode contar | 2 |
+| 71 | 🔎 Um item do teste do estádio (o "GOL!" na tela) que não mede nada | 1 |
 
 ---
 
@@ -59,21 +64,22 @@
 
 ---
 
-## ⚖️ E. Equilíbrio — ~26 h ⚙️ *(depois da IA)*
+## ⚖️ E. Equilíbrio — ~38 h ⚙️ *(depois da IA)*
 
 | nº | o que é | horas |
 |---|---|---|
 | 26 | Mais chutes e menos precisos (hoje poucos e certeiros demais) | 16 |
 | 27 | Gols por partida: de ~1,8 para 2,3–3,5 | 4 |
 | 28 | Faltas que ainda não existem (duelo pelo alto, segurar no escanteio) | 6 |
+| 75 | 🔎 A IA também dar carrinho (2–5,5 por time por partida, como no real) | 12 |
 
 ---
 
-## 📱 F. Telas, HUD, câmera e controles — ~87 h
+## 📱 F. Telas, HUD, câmera e controles — ~90 h a fazer
 
 | nº | o que é | horas |
 |---|---|---|
-| 34 | ⭐ **Botão de CARRINHO** | 14 |
+| 34 | ✅ ⭐ **Botão de CARRINHO**: L e X na defesa (com a bola alta, lançamento) e o botão "CARRIN." no celular; desliza na bola pela perna desenhada, quem erra fica ~1,2 s no chão, falta e cartão pela Regra 12 (#597) | 14 |
 | 66 | 🆕 **Câmera**: acompanhar a bola, mostrar a área inteira, um pouco mais aberta e centralizada | 8 |
 | 58 | 🆕 **Menu de pausa igual ao do FC 24**, com o campinho do seu time no canto direito | 8 |
 | 64 | 🆕 **Tela antes do jogo** (todo modo) no nível da do EA FC, com a cara do TM | 12 |
@@ -86,6 +92,9 @@
 | 32 | Placar um pouco maior, com o relógio em minutos e segundos | 4 |
 | 33 | Escolher o tempo de jogo e a dificuldade | 9 |
 | 35 | Clássico mais pegado (mais faltas pela vontade dos jogadores) | 7 |
+| 76 | 🔎 Quem sofre o carrinho cai e levanta (hoje só perde velocidade e o domínio) | 8 |
+| 80 | 🔎 ⏳ Carrinho: menos falta antes da bola (o atacante pular o carrinho, ou o contato colado na bola contar como bola primeiro) | 6 |
+| 79 | 🔎 Carrinho: depois do apito, até a cobrança ser montada, a bola não passar por dentro das pernas de quem está deitado | 3 |
 
 ---
 
@@ -113,7 +122,7 @@
 
 ---
 
-## 🎨 I. Visual, corpo e estádios — ~130 h + lotes
+## 🎨 I. Visual, corpo e estádios — ~132 h + lotes
 
 | nº | o que é | horas |
 |---|---|---|
@@ -121,6 +130,7 @@
 | 61 | 🆕 **Passada natural** (no túnel e na fila parecem marchar) | 5 |
 | 62 | 🆕 Linha escura na nuca (costura da textura da cabeça) | 2 |
 | 63 | 🆕 Bordas tracejadas em volta dos números e patrocínios das camisas | 2 |
+| 77 | 🔎 Carrinho: a mão de apoio do boneco simples encostar no chão | 2 |
 | F1 | Rostos do Brasileirão com o processo novo (a versão de teste) | 6 |
 | 45 | Gráficos melhores no celular (Baixa e Média) | 12 |
 | 46 | Sombra do estádio no gramado de dia | 6 |
@@ -146,11 +156,13 @@
 9. 📊 O painel de estatísticas fica no pós-jogo?
 10. 🏟️ Item 69: a qualidade Baixa sem bonecos 3D? Gente em toda cadeira perto da câmera nos estádios grandes? Entrega em 2 ou em 4 PRs?
 11. 🎯 Item 70: P1 e P2 feitas com as escolhas recomendadas (aval de 31/10: a falta também corre; a IA começa antes; os comandos do EA FC, com PARADINHA e PULINHO no toque só na cobrança do pênalti; a paradinha depois da corrida impossível; o rendimento realista, ± 10 pontos do normal; o goleiro na linha até o chute também na partida). Falta confirmar: a janela da cavadinha vale a corrida toda.
+12. 🦵 Item 34 (carrinho): feito com as escolhas recomendadas — "CARRIN." no botão; quem sofre não cai (item 76); sem "levantar rápido"; vale em toda bola baixa e parado; ~1,2 s no chão no erro e 0,5 s no acerto; L e X = carrinho na defesa e lançamento com a bola alta; vermelho direto de qualquer lado; dois carrinhos: falta só de quem não tocou a bola; o seu jogador no Rumo ao Estrelato também dá carrinho. A escolher: menos falta antes da bola (item 80), o SPA na área sem cartão para todos (item 74) e a IA dar carrinho (item 75).
 
 ---
 
 ## ✅ Entregue nesta rodada
 
+- 🦵 Botão de CARRINHO: L e X na defesa e o botão "CARRIN." no celular, a perna desenhada na bola, falta e cartão pela Regra 12, as cenas continuam o deslize (#597)
 - 🧤 Goleiro espalmando bola alta (#568)
 - 🎯 Chute no ângulo com a barra cheia e o analógico no canto (#567)
 - 🧤 Goleiro realista (#558)

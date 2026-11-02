@@ -108,6 +108,8 @@ const LISTA = [
   ['faltas, vantagem, cartões e expulsão (Regra 12), tiro livre direto e pênalti (Regra 14)', 'teste-faltas.mjs', [], 'padrao', 3],
   // Pedido do dono de 15/10: "faltas muito forçadas e sem sentido"
   ['faltas com sentido: contato a passo não é falta, quem só corre atrás não atropela, a falta de verdade continua', 'teste-faltas-sentido.mjs'],
+  // Item 34 (dono, 17/10 e 23/10: "preciso do botão de carrinho"): o canhão de 576 carrinhos (parte C) em 2 processos
+  ['carrinho: o corpo pelo quadro (resposta, pés, pose, esqueleto), a perna desenhada na bola, a falta e o cartão pela Regra 12, as travas, o determinismo e as cenas', 'teste-carrinho.mjs', [], 'padrao', 2],
   // Pedidos do dono de 11/10 (regras e controles)
   ['jogador parado com a bola: a IA fecha e dá o bote (condutor lento)', 'teste-parado.mjs'],
   // (01/11, item 70: 64 partidas em 3 processos — eram 32 num processo de vaga; o M3 pela prova, teste-pressao-humano.mjs)

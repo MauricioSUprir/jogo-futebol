@@ -217,7 +217,8 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   corrida de volta); contra os roteiros o PPDA da IA não se mede (eles quase não passam): o espelho; com a base no teto de
   uma guarda de volume, todo ganho perto da bola tem de ser pago longe dela; (9)
   editar o TEMPO de jogo e a DIFICULDADE (na pausa/antes do jogo e vindo do TM pelo pedido); (10) botão de CARRINHO
-  (dividida deslizando; falta/cartão pela Regra 12 em `faltas.js`; cabe no orçamento de HUD do celular); (11) clássico mais
+  (dividida deslizando; falta/cartão pela Regra 12 em `faltas.js`; cabe no orçamento de HUD do celular) — FEITO no item 34
+  (#597; "Carrinho (item 34)" na seção do GOLAÇO NOVO); (11) clássico mais
   PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores (bote mais forte, mais contato), não pelo árbitro (o pedido do TM
   já traz `partida.classico`).
 - Tudo em **português do Brasil**: textos da interface, comentários e mensagens de commit.
@@ -805,6 +806,29 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   não usa (hash-partida da demo IGUAL). Testes: `teste-mira` (Node) e `teste-bola-parada-tela` (navegador). **Download
   inicial** (`teste-carga` 4 MB): desde 21/10 os sons da torcida (~1,4 MB de MP3) baixam no 1º GESTO (`render/som.js`;
   antes dele nada toca) — 3,88 → 2,57 MB, folga ~1,4 MB; código novo que não precisa do começo continua sob demanda.
+- **Carrinho (item 34)** (dono, 17/10 e 23/10: "preciso do botão de carrinho"; contrato "Carrinho (item 34)",
+  `PESQUISA-ETAPA4.md` §18, PR #597): `js/carrinho.js` (puro, folha) = um PLANO montado no aperto (`j.carrinho`, como o
+  `j.mergulho`) e um QUADRO puro do tempo (`quadroCarrinho`: a pelve cai pela gravidade em 0,25 s, impacto, deslize — ~1 s a
+  4,75 m/s —, da parada até de pé 1,2 s no erro e 0,5 s no acerto), lido pela simulação, pela pose (`anim.js poseCarrinho`:
+  as pernas copiadas do quadro, sem IK) e pelas cenas; o disparo em `defesa.js carrinho` (só o controlado, a bola viva e
+  baixa, nunca no próprio time); a perna DESENHADA na bola (`contatosCarrinho`: segmento × segmento em 4 trechos por passo,
+  sem sorteio) e no homem (`contatosHomemCarrinho` → `faltas.js faltaNoCarrinho`, os ÚNICOS sorteios: Regra 12 — antes da
+  bola é falta, depois pela chegada, vermelho direto de qualquer lado, SPA na área sem cartão só no carrinho); L e X na
+  defesa (com a bola alta e nos treinos, lançamento) e "CARRIN." na vaga 'e' no `pointerdown` (H1 10,98% em 568×320: peça
+  nova de HUD na defesa do celular estreito não cabe). Escolhas do dono pelas recomendadas (FILA "Depende do dono" 13); a IA
+  não usa (item 75); o que ficou: itens 71–80. Sem o botão nada muda (hash-igual e hash-partida IGUAIS; o painel repete a
+  base). Testes: `teste-carrinho` (padrão, 2 processos, ~90 s) e os de entrada e tela. Lições: na SIMULAÇÃO "fora do lance" é
+  o plano EXISTIR (no tick do aperto o relógio do quadro ainda dá false, e o domínio e a DIVIDIDA do mesmo tick passavam); a
+  perna que a física confere é a do quadro e a pose a COPIA (P2: diferença 0); a força da falta e o vermelho pelos CORPOS (a
+  perna desenhada passa de 11 m/s na transição); o pé deitado no prolongamento da canela degenera o esqueleto do corpo novo
+  (O2 6,8%: o pé vai de través); o levantar termina na pose de PÉ PARADO (terminava na da corrida do aperto e as mãos
+  saltavam 0,55 m; a régua do salto é o p99,9 da pose normal correndo); quem está deitado pula a `paredeParada` e o separar
+  das cenas — a montagem da bola parada (`tirarCarrinhos`) e a cena do cartão (`desvioDaBola`) o tiram de cima da bola; nas
+  cenas, a cópia FUNDA do plano sem o `congela`, o `a.noCarrinho` zerado a cada passo (o `a.fixo` nunca volta) e o assentar
+  voltando os ticks absolutos de TODOS os planos das cópias (carrinho, mergulho, pulo); um desfecho por lance (o 'fora' só
+  quando a janela do homem fecha); as informativas contra o real no subconjunto COMPARÁVEL e pela MESMA medida da fonte (a
+  foto aos 2 s contava o passe no ar como "sem dono": 8,7% no alcançável; a próxima posse em 4 s, como a Wyscout, dá 19,2%
+  contra 22,8%); o processo filho do teste com a serialização 'advanced' (o JSON troca Infinity por null).
 - **Etapa 5 — corpo humano realista** (dono, 22/10: "vamos trabalhar intensivamente no corpo e face dos jogadores"; plano e
   pesquisa em `golaco/PESQUISA-ETAPA5.md`, contrato "Corpo humano realista — Etapa 5.1" no `CONTRATOS.md`): o Rocketbox
   `Sports_Male_02` (MIT) encaixado nas medidas do jogo (`tools/humano/`, README), 25 ossos do desenho pelas juntas
