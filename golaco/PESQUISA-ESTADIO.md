@@ -976,7 +976,7 @@ Vila Belmiro —, 2 pistas — Nilton Santos, Almeidão — e 1 sem forma — Zu
   novas); o Maracanã igual (pior 257,6); Aflitos 181,0 → 182,3; San Siro 205,8 → 159,9; Anfield 201,5 → 164,0 — os 20 blocos
   mais perto têm menos cadeiras (a escada de 1,3 m e a fileira de 0,8 m: a frente do San Siro com 544 → 436 cadeiras 3D).
 
-## 18. A câmera de TV que acompanha a bola e mostra a área (item 66 da FILA; `js/render/enquadramento.js`, `render/camera.js`, `render/plano-bola-parada.js`, `main.js`, `render/replay.js`)
+## 18. A câmera de TV que acompanha a bola e mostra a área (item 66 da FILA, PR #600; `js/render/enquadramento.js`, `render/camera.js`, `render/plano-bola-parada.js`, `render/camera-livre.js`, `main.js`, `render/replay.js`)
 Pedido do dono (23/10, com o print de um escanteio do time dele): "a câmera não acompanha a bola e não dá pra ver a área
 completamente, e isso acontece durante todo o jogo ... tem que afastar muito pouco mais e centralizar mais". Contrato
 "Câmera de TV (item 66)" no `CONTRATOS.md`.
@@ -1007,6 +1007,16 @@ em 26–48 m de largura no foco (p10–p90, mediana ~35 m), o piso é o jogador 
 | Chen & Carr (WACV 2015), Chen et al. (CVPR 2016), Carr et al. (ACM MM 2013), Chen & Carr (survey, AAAI 2014) | O foco pela bola; filtrar = atrasar, então prever (a mola com a velocidade do alvo); medir as mudanças de direção (o vai e volta, M10) e a histerese de Schmitt; o tamanho pelo que tem de caber (a área) |
 | Pixellot ("How to properly film soccer") | Largura útil de 1/3 a 1/2 do campo: 42 m (celular) e 47,7 m (PC) |
 | StatsBomb Open Data 360 (66.524 quadros de TV de 22 jogos da Copa 2022 e da Euro 2024; `tools/pesquisa/sb_quadro.py`) | As réguas: no meio-campo a bola fica um pouco atrás do centro (u mediano 0,37; 74% com mais quadro à frente), no último terço centrada (0,50), quase nunca nos 10% das bordas (2,2%); a TV mostra ~93% da área com a bola a < 16 m da linha mas a área INTEIRA só em 33–42% — o dono pede mais que a TV (decisão D4) |
+
+De Kato et al. (ITE 1995; SMPTE 1997) NÃO entrou a frenagem do pan ~60% mais longa que a arrancada: a mola é crítica e
+simétrica, e só a chegada à borda do campo freia mais devagar (√(2·A·d)). Lidas, com pouco ou nada aproveitado: os guias Dexerto,
+Realsport101, Mein-MMO e 90min (o Tele Broadcast com zoom 0 quase unânime entre os competitivos) — reforçam o "afastar" (D1);
+os de eFootball (pesmodding; FIFPlay, PES 2020: a "Dynamic Wide" anda de lado atrás da bola) e Shapiro (Game Developer, 2012)
+— o padrão da câmera lateral que persegue a bola, sem número; "The World Cup Camera Angles Edition" (Why Is This Interesting,
+2022) — a "master view" gira do meio-campo (o porquê de a área real aparecer com o plano fechado; aqui o D5); Ariki et al.
+(IEEE ISM 2006) e Gans et al. (2009, pelo survey de Chen & Carr) — o plano pela situação (a bola parada na TV com a área,
+`paradaComArea`) e o centro pela média com o tamanho pelo que tem de caber (aqui pelo deslocamento: a TV não respira o zoom);
+Golovkin et al. (CVPRW 2025, o campo de visão do SoccerNet) — só em figura, sem números extraídos.
 
 Não confirmado: o limite de cima de 15° da UEFA (o trecho não traz o número; a OP-32 dá 12–16°); nenhum manual público de
 enquadramento da Premier League, da HBS ou da UEFA; o Tele Broadcast do FC só por guias de fã; o livro do Haigh-Hutchinson
@@ -1098,8 +1108,10 @@ com a câmera baixa, 0). Agora o Livre corta pelo rumo da câmera dele (as de la
 **O que custou e o que ficou.** O controlado no celular perde 2,2 px (o "afastar" pedido; o p10 vai a 31,3 px). O tiro livre
 na TV a 30–35 m da linha não põe a área inteira no celular sem abrir o plano (a bola e o gol sim; 61,9% da grade). A bola
 do lado de lá dentro da área sobe no quadro (o preço de mostrar a área). O vai e volta com o 'passivo' subiu 10,2 → 10,6/min
-(dentro da meta de +1). O u do meio-campo com o 'passivo' fica em 0,483 (a régua de 2 casas da meta, 0,48). Pendentes para
-o dono: a mesma previsão na câmera aproximada; o plano 'fechada' do replay com o foco novo; a TV girando como a real (D5).
+(dentro da meta de +1). O u do meio-campo com o 'passivo' fica em 0,483 (a régua de 2 casas da meta, 0,48). Pendentes: a
+mesma TV na câmera aproximada, no retrato e no plano 'fechada' do replay (FILA item 85); a bola alta no `enquadrar` do Livre
+com a Altura alta (item 86); o tiro livre a 30–35 m no celular (item 87); para o dono, a TV girando como a real (D5) e as
+outras escolhas ("Depende do dono" 16).
 
 **A revisão (R7, A1–A3), sem mudança.** Na página (a régua independente da revisão, 30 mil quadros por tela, a base → agora):
 os jogadores encolhem ~6% em toda tela (o controlado, mediana: 844×390 37,2 → 34,6 px, p10 33,1 → 30,8; 667×375 29,6 →

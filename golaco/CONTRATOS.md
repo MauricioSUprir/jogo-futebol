@@ -2547,6 +2547,14 @@ acusa o `config.js`, só o `CAMERA`, que a simulação não lê) e todo o resto 
   `criarEnquadramento`, `preencherAlvo`, `alvoTV`, `passoMola`, `limiteDuro`, `limitarBola`, `focoTV`). `render/camera.js`
   aplica no three; o `teste-camera` (Node) usa as MESMAS funções. `js/render/plano-bola-parada.js` (PURO, sob demanda com o
   `bola-parada.js`, que reexporta): `CAMERA_BOLA_PARADA`, `CAMERA_ESCANTEIO`, `perfilBolaParada`, `planoBolaParada`.
+- **Constantes.** `ENQUADRAMENTO` (`enquadramento.js`, fora do fecho): `pesoBola` 0,75 e `raio` 0,22 (o controlado), `meioCondutor`
+  0,5, `anteBola` 0,3 s (≤ `anteMax` 6 m), `anteVoo` 0,5 s, `filtroVel` 0,15 s, `frente` 0,07 × W (some de `frenteAte` 45 a
+  `frenteDe` 25 m; anda ≤ `frenteVel` 6 m/s; `histerese` 0,5 s), `zonaMorta` 2 m, `area` {de 32, ate 18, limX 44,5, margem
+  0,94}, `bola` e `bolaDuro` (NDC; `tempo` 0,25 s), `bolaCampo`, `profMin` 5 m, `bolaAlta` 18 m, `salto` 6 m, `omega` 4,5,
+  `avanco` 0,5, `filtroAlvo` 0,12 s, `saltoAlvo` 3 m, `acelMax` 150 m/s², `velMax` 36 m/s, `paradaPerto` 35 m, `jogador` (a
+  caixa do travado). `CAMERA` (`config.js`, × 1,06: `largura` 47,7, `distancia` 42,4, `altura` 19,4; `celular` 48,76 e 13,04;
+  a `rigidez` 3,2 ficou para o foco de antes). `CAMERA_ESCANTEIO` (`plano-bola-parada.js`). Mexer no `ENQUADRAMENTO` não toca
+  o fecho; no `CAMERA`, o `fecho-hash --diff` acusa o `config.js` e o hash continua IGUAL (a simulação não lê o `CAMERA`).
 - **A pose.** A lente em (fx, H, fz + D) olhando (fx, oy, fz), yaw −π/2 (o rumo do analógico não muda), o fov pela largura
   (`fovPara`). TV × 1,06: celular 48,76 m e 13,04 m (15°), 42,0 m vistos no foco; PC 42,4 m e 19,4 m (24,6°), 47,7 m. A
   projeção fechada (`projetarTV`): s = z − fz, c = (D² + h(H − y) − sD)/n, NDC x = (x − fx)/(c·tanV·asp), NDC y =
@@ -2604,6 +2612,20 @@ acusa o `config.js`, só o `CAMERA`, que a simulação não lê) e todo o resto 
   bola saía de 0,27 a 0,80 s: teste-camera-tela E8).
 - **API.** `cam.cortou` (o corte de verdade deste quadro: o pedido, o 1º quadro, a bola teletransportada, a volta oposta) e
   `cam.enquadramento` ({novo, wA, lado, frente, parada, duro, limX}); `__golaco.bolaParadaDeTeste(tipo, {time, lado})`.
+- **Metas** (as que reprovam; `teste-camera` P nas duas telas, demo 1–6 e 'passivo' 1–4, a TV nova e o legado nas MESMAS
+  partidas): M1 a bola no miolo 50% × 50% ≥ 96% (demo) / ≥ 95% ('passivo'); M2 a bola fora do quadro, até a altura que cabe,
+  ≤ 0,05%, e M2b o chão debaixo dela fora = 0; M3 |NDC x| p90 ≤ 0,30 / 0,32; M4 no meio-campo com a bola no pé u mediano
+  0,40–0,48 e mais quadro à frente ≥ 65%; M5 no último terço u 0,45–0,55; M6 a área inteira com a bola nela ≥ 90%, M6b a ≤ 25
+  m do gol ≥ 70%, M6c a área no quadro p10 ≥ 95% e as traves ≥ 97%; M8 a largura vista no foco 41,5–43,5 / 47–49 m; M9 o
+  atraso p90 com a bola a ≥ 8 m/s ≤ 7,0 / 7,5 m; M10 o vai e volta ≤ o legado + 1 por minuto; M11 a aceleração do olhar p99,9
+  ≤ 200°/s² e o máximo ≤ 400; R1 o controlado ≥ 34 px no celular 844×390 e ≥ 43 no PC (mediana); T o travado inteiro no quadro
+  ≥ o legado − 1 ponto em cada posição; L a bola fora e a bola alta fora ≤ as da TV de antes; G1 e G2 100%, G3 a área inteira
+  ≥ 95% de 18 a 29 m (30–35 m informativo), G5 0 lente em sólido, a faixa da área ≥ 15% em ≥ 95% e o jogador na marca ≥ 18 px
+  no Golaço. Na página (`teste-camera-tela`): J1 ≤ 1,5 px da projeção e ≤ 0,2 m do Node, J2 a bola atrás do HUD 0, J3 a
+  torcida com ≥ 1% da tela em ≥ 95% dos instantes, J4 ≥ 34 px, J5 ≤ a base + 2 chamadas e ≤ × 1,10 triângulos, A1 12/12, E2 a
+  faixa da área ≥ 18%, E3 os jogadores na área ≥ 18 / 32 px, E7 ≤ 40 chamadas e ≤ 130 mil triângulos, E8 e F1.
+- **Fica** (FILA itens 85–87; as escolhas no "Depende do dono" 16): a mesma TV na aproximada, no retrato e no plano 'fechada';
+  o `enquadrar` do Livre com a bola alta; o tiro livre a 30–35 m no celular sem a área inteira; a TV que gira (D5).
 - **Testes.** `teste-camera` (Node, padrão; S sintético a 60 e 30 qps — S8 a bola alta: o chão debaixo dela nunca sai do
   quadro —, G geometria — a área, o escanteio e o tiro livre na TV, a projeção, o escanteio da pessoa em 106 estádios —, P 10
   partidas com o legado lado a lado, T o travado do Rumo ao Estrelato em 8 partidas, L a TV do Livre com a Altura e a
