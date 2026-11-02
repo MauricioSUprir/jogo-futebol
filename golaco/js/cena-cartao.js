@@ -177,6 +177,14 @@ export function desvioDaBola(j, tick, bp, out, ox = 0, oz = 0) {
 }
 
 const _pp = { x: 0, z: 0 }, _dv = { x: 0, z: 0 };
+// os ticks absolutos dos planos das cópias (carrinho.js; goleiro.js j.mergulho; cabeceio.js j.cab)
+const TICKS_CARRINHO = ['tick0', 'fim'], TICKS_MERGULHO = ['tick0', 'tc', 'tp', 'fim', 'ate'], TICKS_CAB = ['tA', 'td', 'tc', 'tp', 'tf'];
+/** Os planos com tick absoluto da cópia j voltam dt ticks (o relógio da cena que o assentar andou volta ao do cartão). */
+function voltarRelogio(j, dt) {
+  for (const [p, ks] of [[j.carrinho, TICKS_CARRINHO], [j.mergulho, TICKS_MERGULHO], [j.cab, TICKS_CAB]]) {
+    if (p) for (const k of ks) if (Number.isFinite(p[k])) p[k] -= dt;
+  }
+}
 /**
  * Plano da cena (só LÊ o mundo). cartao = escolherCartao(...). opc = {ultimaAmarelo, ultimaVermelho, variante (força:
  * testes), timeHumano, posAntes(id) → {x, z} | null (o expulso saiu do mundo no passo do cartão: a posição DESENHADA no
@@ -346,10 +354,11 @@ export function criarCenaCartao(plano, m) {
       if (d <= K.arbitro.preRolagem) break;
       passoSozinho(j, c.mF, ex / d, ez / d, vel, Math.atan2(ez, ex));
     }
-    // (o assentar — a vantagem que virou gol — andou o relógio da cena: o plano do carrinho das cópias volta junto, e o
-    // quadro de agora fica o mesmo)
+    // (o assentar — a vantagem que virou gol — andou o relógio da cena: os planos das cópias com tick absoluto — o carrinho,
+    // o mergulho do goleiro e o pulo do cabeceio — voltam junto, e o quadro de agora fica o mesmo; sem isso o fixarMergulho
+    // levava a cópia do goleiro ao quadro de antes do assentar, um salto de 0,2–0,3 m no 1º passo)
     const dt = c.mF.tick - m.tick;
-    if (dt) for (const a of c.atores) if (a.j.carrinho) { a.j.carrinho.tick0 -= dt; a.j.carrinho.fim -= dt; }
+    if (dt) for (const a of c.atores) voltarRelogio(a.j, dt);
     c.mF.tick = m.tick;
   }
   // o punido no chão (o carrinho faltoso): a reação dele — e a do companheiro — começa depois de ele ficar de pé (a 1ª pose

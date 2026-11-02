@@ -126,7 +126,9 @@
 //     meio do carrinho: sem salto e o pé dobrado parado no 1º tick do levantar (≤ 0,02 m); G7 o Modo Livre, "Bola no meu
 //     pé" com o controlado no carrinho: de pé no lugar, plano e quadril zerados, a bola a ≤ 0,5 m; G8 a cena do cartão com o
 //     punido no carrinho (≥ 12 cenas do cartão do próprio deslizante, ≥ 6 com a bola a ≤ 0,3 m dele): a bola parada do
-//     mundo nunca dentro do corpo desenhado dele (as cápsulas do manequim e a cabeça) enquanto ele está no chão.
+//     mundo nunca dentro do corpo desenhado dele (as cápsulas do manequim e a cabeça) enquanto ele está no chão; G9 o assentar da
+//     cena do cartão (a vantagem que virou gol) volta também o relógio do mergulho e do pulo das cópias: o centro da cópia do
+//     goleiro no meio da defesa não salta no 1º passo (≤ 0,1 m).
 //   node tools/teste-carrinho.mjs              (lógica do repositório)
 //   node tools/teste-carrinho.mjs --js <pasta> (outra cópia da lógica; a da main antes do carrinho → REPROVA)
 //   node tools/teste-carrinho.mjs --detalhe    (a tabela por entrada, cada caso do A9 e os encontros do C1 sem toque)
@@ -3022,6 +3024,36 @@ else {
       `${n} cenas (${perto} com a bola a ≤ 0,3 m dele no tick do cartão): ${dentro} com a bola dentro; menor folga ${f3(pior)} m (${piorEx})`,
       '≥ 12 cenas, ≥ 6 perto; 0 dentro (folga ≥ 0)', n >= 12 && perto >= 6 && dentro === 0);
     info('G8 depois de ficar de pé (1 s; separarDaBola): a menor folga do corpo desenhado à bola', `${f3(depois)} m`, '—');
+  }
+
+  // ---- G9: o ASSENTAR da cena do cartão (a vantagem que virou gol: o relógio da cena anda e volta ao do cartão) volta também os
+  // relógios do MERGULHO do goleiro e do pulo do cabeceio das cópias, como o do carrinho: o 1º passo da cena não salta o centro
+  // da cópia do goleiro (o fixarMergulho a levava ao quadro do tick de antes do assentar). Montado: um goleiro no meio da
+  // defesa desenhada (semente 7003), o estado forçado a 'gol' (o assentar liga), o amarelo de um jogador de linha do outro time
+  {
+    const GO = await imp('goleiro.js');
+    const m9 = P.criarPartida({ semente: 7003, minutosPorTempo: 4 });
+    let g = null;
+    for (let i = 0; i < 12000 && !g; i++) {
+      P.passoPartida(m9, P.entradaDemoPartida(m9));
+      if (m9.partida.estado !== 'jogo') continue;
+      g = m9.jogadores.find(o => o.posicao === 'GOL' && o.mergulho && GO.mergulhoAtivo(o, m9.tick) && m9.tick - o.mergulho.tick0 > 8 && o.mergulho.fim - m9.tick > 30) ?? null;
+    }
+    if (!g) reg('G9 o assentar e o mergulho', 'nenhum goleiro no meio da defesa achado', 'achado', false);
+    else {
+      const w = SIM.copiarMundo(m9);
+      w.partida.estado = 'gol';
+      const pun = w.jogadores.find(o => o.posicao !== 'GOL' && o.time !== g.time);
+      const plano = CCt.planejarCartao(w, { id: pun.id, time: pun.time, cor: 'amarelo', segundo: false, motivo: 'temerario', outros: [] }, {});
+      const c = CCt.criarCenaCartao(plano, w);
+      const a = c.porId.get(g.id);
+      const ativo = !!a.j.mergulho && GO.mergulhoAtivo(a.j, c.mF.tick), x0 = a.j.x, z0 = a.j.z;
+      CCt.passoCenaCartao(c);
+      const salto = Math.hypot(a.j.x - x0, a.j.z - z0);
+      reg('G9 o assentar da cena do cartão volta também o relógio do mergulho: o centro da cópia do goleiro não salta no 1º passo',
+        `@${m9.tick}: assentar ${plano.assentar ? 'sim' : 'NÃO'}, mergulho ${ativo ? 'ativo' : 'NÃO ativo'} na cena; o centro andou ${f3(salto)} m no 1º passo`,
+        'sim; ativo; ≤ 0,1 m', plano.assentar && ativo && salto <= 0.1);
+    }
   }
 
   // ---- G6: o levar da cena (cena-atores.js; o expulso levado ao ponto desenhado no tick anterior) no meio do carrinho: o plano
