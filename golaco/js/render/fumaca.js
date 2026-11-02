@@ -13,10 +13,33 @@ export const FUMACA = {
   alfa: 0.4,
   porQualidade: { baixa: 0, media: 10, alta: 14 },
   fogo: 1.9,                    // m acima da base do torcedor
+  // o fogo (sinalizadores.js): o NÚCLEO num quadro de nucleo·(0,85 + 0,25·força) m e o HALO num quadro de halo m, os dois
+  // centrados no fogo (a luz falsa: luz-falsa.js LUZ_FALSA.altura)
+  nucleo: 0.9, halo: 6,
+  // perto da LENTE da câmera da bola parada (render/plano-bola-parada.js; a do escanteio sobe 8 m atrás do cobrador, até em
+  // cima das fileiras da frente da arquibancada de lá — item 66, onde ficam as quinas da festa.js): cada quadro (o núcleo, o
+  // halo e cada partícula de fumaça) com a borda a menos de `raio` m da lente some, e de `raio` a `raio` + `folga` volta aos
+  // poucos (a força do fogo e o alfa da fumaça) — só nesse plano (main.js; forcaPelaLente). Revisão R2 do item 65, como as
+  // bandeiras de mastro (bandeiras-dados.js BANDEIRAS.lente): no Golaço a quina ficava a 3–4 m da lente e a fumaça dela
+  // passava por ela (um véu em todo o quadro, por cima da bola); com 9 + 3 o que sobra fica a ≥ 9,5 m e ≤ 4,1% do quadro
+  // nos 106 estádios × 4 cantos × corrida (teste-camera G5; com 9 + 2, como as bandeiras, o halo de 6 m passava de 5%)
+  lente: { raio: 9, folga: 3 },
 };
 
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+
 function frac(x) { return x - Math.floor(x); }
+
+/**
+ * Quanto um quadro do sinalizador (o núcleo, o halo ou uma partícula de fumaça: centro c = [x, y, z], raio r m) fica com a
+ * lente L = [x, y, z, liga] da câmera da bola parada: 1 inteiro, 0 apagado (multiplica a força do fogo / o alfa da fumaça).
+ * liga ≤ 0 (fora desse plano): 1. A MESMA conta de LENTE_FUMACA_GLSL.
+ */
+export function forcaPelaLente(c, r, L) {
+  if (!L || !(L[3] > 0)) return 1;
+  const { raio, folga } = FUMACA.lente, d = Math.hypot(c[0] - L[0], c[1] - L[1], c[2] - L[2]);
+  return clamp((d - r - raio) / folga, 0, 1);
+}
 
 /**
  * Partícula p (0…P−1) da fumaça do sinalizador s ({ativo, t0, dur, x, y, z, semente}) no tempo t: {x, y, z, tam,
@@ -81,3 +104,11 @@ vec4 fumacaParticula(vec4 s, vec4 sb, float p, float P, float t, out float alfa)
 }
 `;
 })();
+
+/** float forcaPelaLente(vec3 c, float r, vec4 L): a MESMA conta. */
+export const LENTE_FUMACA_GLSL = `
+float forcaPelaLente(vec3 c, float r, vec4 L) {
+  if (!(L.w > 0.0)) return 1.0;
+  return clamp((distance(c, L.xyz) - r - ${FUMACA.lente.raio.toFixed(2)}) / ${FUMACA.lente.folga.toFixed(2)}, 0.0, 1.0);
+}
+`;

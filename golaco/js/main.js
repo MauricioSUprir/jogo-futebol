@@ -1434,7 +1434,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   campo.atualizar(agoraMs / 1000, cam.camera, renderizar, cam.deJogo);
   marcarCondutor(agoraMs);
   // (com a câmera da bola parada — a do escanteio sobe atrás do cobrador até em cima da arquibancada, item 66 — as bandeiras de
-  // mastro perto da lente abaixam: revisão R2 do item 65)
+  // mastro perto da lente abaixam e o fogo e a fumaça dos sinalizadores perto dela somem: revisão R2 do item 65)
   torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar, cam.misturaBolaParada > 0 ? cam.camera.position : null);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
   const td0 = performance.now();

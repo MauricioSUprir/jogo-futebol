@@ -7,7 +7,7 @@
 // ONE_MINUS_SRC_ALPHA): o aditivo e a fumaça no mesmo desenho, sem ordenar. A LUZ vermelha no estádio é falsa
 // (luz-falsa.js: uniform na torcida, na arquibancada e nas bandeiras; nunca PointLight).
 import * as THREE from 'three';
-import { FUMACA, FUMACA_GLSL } from './fumaca.js';
+import { FUMACA, FUMACA_GLSL, LENTE_FUMACA_GLSL } from './fumaca.js';
 import { FESTA, fogoSinalizador } from './festa.js';
 import { LUZ_FALSA } from './luz-falsa.js';
 import { criarCanvas, texturaCanvas, gerador } from './util.js';
@@ -26,10 +26,12 @@ uniform float uT;
 uniform float uP;
 uniform float uNoite;
 uniform float uDepura;
+uniform vec4 uLente;               // a lente da câmera da bola parada (x, y, z, liga); w 0 fora dela
 varying vec2 vUv;
 varying vec4 vCor;
 varying float vTipo;
 ${FUMACA_GLSL}
+${LENTE_FUMACA_GLSL}
 void main() {
   int k = int(aInst.x + 0.5);
   float j = aInst.y;
@@ -43,10 +45,10 @@ void main() {
   vec3 cfogo = sb.y < 0.5 ? vec3(1.0, 0.36, 0.12) : vec3(1.0, 0.95, 0.85);
   if (j < 0.5) {
     // núcleo: pequeno, quase branco no meio, cintilando
-    tam = fogo > 0.0 ? 0.9 * (0.85 + 0.25 * fogo) : 0.0;
+    tam = fogo > 0.0 ? ${FUMACA.nucleo.toFixed(2)} * (0.85 + 0.25 * fogo) : 0.0;
     vCor = vec4(mix(cfogo, vec3(1.0, 0.95, 0.8), 0.55) * (1.6 + 0.8 * fogo), 0.0);
   } else if (j < 1.5) {
-    tam = fogo > 0.0 ? 6.0 : 0.0;
+    tam = fogo > 0.0 ? ${FUMACA.halo.toFixed(1)} : 0.0;
     vCor = vec4(cfogo * fogo * mix(0.35, 0.7, uNoite), 0.0);
   } else {
     float a;
@@ -59,6 +61,11 @@ void main() {
     vec3 base = sb.y < 0.5 ? vec3(0.72, 0.68, 0.68) : vec3(0.86, 0.86, 0.86);
     vCor = vec4(mix(base * mix(1.0, 0.45, uNoite), cfogo, 0.45 * perto), a);
   }
+  // perto da lente da câmera da bola parada (o escanteio de lá: a lente alta em cima das quinas) o quadro some — a força do
+  // fogo (aditivo) e o alfa da fumaça (pré-multiplicada); fumaca.js forcaPelaLente, uLente.w 0 fora desse plano: 1
+  float fl = forcaPelaLente(centro, 0.5 * tam, uLente);
+  if (j < 1.5) vCor.rgb *= fl; else vCor.a *= fl;
+  if (fl <= 0.0) tam = 0.0;
   if (tam <= 0.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vUv = vec2(0.0); return; }
   // quadro virado para a câmera
   vec3 dir = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
@@ -134,6 +141,7 @@ export function criarSinalizadores(cena, opc = {}) {
     uFlB: { value: Array.from({ length: MAX }, () => new THREE.Vector4()) },
     uFogo: { value: new Float32Array(MAX) },
     uT: { value: 0 }, uP: { value: 0 }, uNoite: { value: 0 }, uDepura: { value: 0 }, uFumaca: { value: tex },
+    uLente: { value: new THREE.Vector4(0, 0, 0, 0) },
   };
   const material = new THREE.ShaderMaterial({
     uniforms: uni, vertexShader: VERT, fragmentShader: FRAG, fog: true, transparent: true, depthWrite: false,
@@ -176,6 +184,8 @@ export function criarSinalizadores(cena, opc = {}) {
       geo.instanceCount = cheio;
     },
     definirHora(h) { uni.uNoite.value = h === 'noite' ? 1 : 0; },
+    /** A lente da câmera da bola parada ({x, y, z}) neste quadro, ou null fora desse plano: o fogo e a fumaça perto dela somem. */
+    definirLente(p) { if (p) uni.uLente.value.set(p.x, p.y, p.z, 1); else uni.uLente.value.w = 0; },
     get quantas() { return geo.instanceCount; },
     /**
      * Overdraw da fumaça (testes): desenha só os sinalizadores numa passada aditiva de 1/255 por camada e soma os pixels
