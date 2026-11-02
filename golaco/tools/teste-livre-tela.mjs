@@ -724,7 +724,10 @@ document.body.appendChild(f);
     }
     return false;
   };
-  const fimLinha = () => pg.evaluate(() => { const g = window.__golaco, p = g.bolaParada.pontos(); if (!p.length) return null; const q = p[Math.min(p.length - 1, 40)]; return g.naTela(q[0], q[1], q[2]); });
+  // (os 41 primeiros pontos da linha na tela; a comparação usa o mesmo ponto nas duas — o ponto 40, ou o último das duas se a
+  // linha ficou mais curta: no escanteio de cá a direita encurta a linha de 105 para 14 pontos, e o ponto 40 da 1ª contra o
+  // último da 2ª media o encurtar — com a câmera alta do escanteio do item 66 ele aparece na vertical da tela)
+  const fimLinha = () => pg.evaluate(() => { const g = window.__golaco, p = g.bolaParada.pontos(); if (!p.length) return null; return p.slice(0, 41).map(q => { const t = g.naTela(q[0], q[1], q[2]); return { x: t.x, y: t.y }; }); });
   const linhasH1 = []; let okH1 = true;
   for (const [cam, tipo] of [['tv', 'tiroDeMeta'], ['alta', 'escanteio'], ['atras', 'tiroDeMeta']]) {
     await pg.evaluate(c => window.__golaco.definirCamera(c), cam);
@@ -737,7 +740,8 @@ document.body.appendChild(f);
     await pg.keyboard.down('ArrowRight'); await quadros(pg, 40);
     const b = await fimLinha();
     await pg.keyboard.up('ArrowRight'); await quadros(pg, 2);
-    const dx = a && b ? b.x - a.x : 0, dy = a && b ? b.y - a.y : 0;
+    const iq = a && b ? Math.min(40, a.length - 1, b.length - 1) : 0;
+    const dx = a && b ? b[iq].x - a[iq].x : 0, dy = a && b ? b[iq].y - a[iq].y : 0;
     // a cobrança (PASSE) e a volta à câmera do Livre: o maior passo da câmera por quadro enquanto a mistura sai
     await pg.keyboard.down('KeyJ'); await quadros(pg, 12); await pg.keyboard.up('KeyJ');
     const volta = await pg.evaluate(() => {
