@@ -169,6 +169,9 @@ mundo recebe as mesmas máscaras (hash do treino e da partida iguais). "Minimapa
 liga/desliga na barra da pausa: na lista de opções sobravam 3 px em 844×390 e uma linha a mais fazia a pausa rolar 62 px.
 Retorno do dono (12/10): "coloca o nome da função do botão de novo" — os nomes voltaram por padrão (a opção continua na
 pausa para quem quiser só o ícone); o resto da tela limpa fica como está (`teste-hud-minimo` H9).
+Depois (itens 59 e 60, dono 23/10): o minimapa ligado saiu do alto do celular para baixo no meio, entre o analógico e o
+arco, e o nome do jogador com a bola saiu de cima dele para os cantos de baixo, pelo lado do time no placar — o topo da
+partida ficou só placar e menu, como no "Time/Score Display" do FC. Fontes, decisões e medidas no §7.2.
 ### 7.1 Placar no formato da referência, menor e com a cara do GOLAÇO (12/10; `index.html`, `css/estilo.css`, `js/hud.js`)
 
 Pedido do dono (12/10), com uma imagem de referência: "quero o placar assim, tem que ser algo menor e mais com a nossa
@@ -224,8 +227,8 @@ baixo" no `CONTRATOS.md`.
 | EA FC 26, guia da "Player Name Bar" (terceiro) — https://www.magicgameworld.com/?p=128868 | A barra fica "at the bottom of the screen", com o nome e a estamina; Off / Enabled / Enabled with Overhead | No console o nome do jogador fica EMBAIXO, não em cima dele: confirma o pedido |
 | FC 25, configurações (FIFPlay) — https://www.fifplay.com/fc-25-game-settings/ (já no §7) | "Radar Off/2D/3D", "Time/Score Display" | O padrão da TV é só placar e relógio; o resto é opcional |
 | FC Mobile, guia de configurações (terceiro, FC Mobile 24) — https://gamingonphone.com/guides/fc-mobile-best-settings-guide-and-tips | O radar é "a mini-pitch map in the middle of the screen", liga e desliga | No celular o radar fica no meio. Alto ou baixo não está escrito (sem fonte oficial) |
-| Fórum da EA (FC Mobile: diminuir o minimapa; FC 26 Clubs: minimapa transparente demais) — 403 na leitura, só o resumo da busca | Reclamam do tamanho do minimapa no celular e de transparência demais | O menor tamanho legível (92×60, até 76×50) sem baixar a opacidade de 0,8; sem lugar, ele some em vez de tapar os controles |
-| Konami, notas da versão 1.1.4 do eFootball 2022 (Mobile) e guia do eFootball (terceiro) | "Mostrar radar" em Opções > Tela da partida; "Display Radar: Toggle ON" | O radar é opção da tela da partida (como aqui); a posição no celular não está escrita |
+| Fórum da EA (FC Mobile: diminuir o minimapa — https://forums.ea.com/discussions/fc-mobile-general-discussion-en/request-option-to-reduce-minimap-size/13539206; FC 26 Clubs: minimapa transparente demais — https://forums.ea.com/discussions/fc-26-feedback-en/please-improve-mini-map-visibility-and-customization-in-clubs/13697620) — 403 na leitura, só o resumo da busca | Reclamam do tamanho do minimapa no celular e de transparência demais | O menor tamanho legível (92×60, até 76×50) sem baixar a opacidade de 0,8; sem lugar, ele some em vez de tapar os controles |
+| Konami, notas da versão 1.1.4 do eFootball 2022 (Mobile) — https://www.konami.com/efootball/es/page/2022/season2_patch-notes_v1-1-4 — e guia do eFootball (terceiro) — https://gamingonphone.com/guides/efootball-guide-to-the-best-gameplay-and-game-plan-settings-for-a-smooth-experience/ | "Mostrar radar" em Opções > Tela da partida; "Display Radar: Toggle ON" | O radar é opção da tela da partida (como aqui); a posição no celular não está escrita |
 | Apple HIG / Material 3 (os do placar, §7.1) | Mínimo de 11 pt (Label Small 11) | O nome tem 11 px no celular e 12 no PC |
 
 Limite: não há texto OFICIAL da EA, do FC Mobile nem do eFootball Mobile com a posição do radar no celular; a evidência mais

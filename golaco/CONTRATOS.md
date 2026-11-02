@@ -882,7 +882,8 @@ faixa ENTRA/SAI (a simulação não muda).
   de par em par, sem trocar a < 0,5 s do corte); no jogo (depois da cena ou sem ela) passam primeiro as páginas vistas por
   menos de 0,6·porPar (a última da cena primeiro), cada uma porPar s, e a faixa vai até max(dur, o fim delas) — todo par
   aparece ≥ 1,5 s (`teste-substituicao-tela` T11).
-  Lugar: PC embaixo à esquerda (64 px da borda, 280–520 px; no jogo, sem chegar no minimapa); celular na cena embaixo à
+  Lugar: PC embaixo à esquerda (64 px da borda, 280–520 px; no jogo, sem chegar no minimapa nem no nome do jogador com a bola
+  dos cantos de baixo, itens 59 e 60: `teste-substituicao-tela` T8); celular na cena embaixo à
   esquerda (área segura + 14 px, ≤ 64 px de altura, sem chegar no "Pular"); celular no jogo, uma linha compacta no lugar
   do aviso (topo + 74 px, ≤ 360 px, nomes da camisa) com o aviso descendo 42 px (`html.faixa-subst-topo`). Sem aviso de
   texto da substituição (`TEXTO_EVENTO` sem `substituicao`).
@@ -1643,16 +1644,19 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
 `ia*.js` mudou e o mundo recebe as mesmas máscaras de sempre (`hash-igual` IGUAL; `teste-determinismo` passa).
 - **Orçamento de tela** (`tools/teste-hud-minimo.mjs`, navegador, no CI e antes do deploy): no celular deitado (844×390,
   667×375, 568×320 com entalhe, ataque e defesa) a união das formas do HUD (caixas visíveis do `#hud`, botões como
-  círculos, analógico em repouso se a opacidade passar de 0,25) cobre ≤ 11% da tela; 0 caracteres fora do placar; ≤ 15%
+  círculos, analógico em repouso se a opacidade passar de 0,25) cobre ≤ 11% da tela; 0 caracteres fora do placar (desde os
+  itens 59 e 60, também fora do nome do condutor nos cantos de baixo: exceção escrita, só "número nome"); ≤ 15%
   dos pixels de torcida atrás do HUD; 0 amostras com a linha viva; PC ≤ 2,5% depois de 9 s. Peça nova de HUD na partida
   tem de caber nisso (ou ir para a pausa). Desde os itens 59 e 60 (seção "Faixa de baixo" abaixo) o nome do jogador com a
   bola conta (o mais largo, no canto da fase) e a caixa sem fundo, sem borda e sem sombra conta pelo que se vê (o ≡ da
-  partida pelo ícone).
+  partida pelo ícone): no pior caso 10,95% (568×320 com entalhe, defesa, o nome de 88 px); pela régua de antes daria 11,77%
+  — o H1 só passa com a régua nova (FILA "Depende do dono" 14).
 - **`index.html`/`css/estilo.css`**: o placar é a barra de TV da seção "Placar (12/10)" abaixo (antes: compacto de 30 px
   no celular e 34 no PC, sem a marca) e o "1º T" só aparece com
   `.placar-relogio.com-tempo` (intervalo, fim e acréscimos; o texto fica no DOM); menu só com o ícone (44×44); barra de
   força 44×6 sem o rótulo (`#carga-tipo` continua com o texto, escondido); dica de teclas do PC (`#dica`) some 8 s depois
-  de `hud.pronto()` e de cada troca de modo. Botões de toque translúcidos (fundo 0,32, borda 1,5–2 px, sem sombra) com
+  de `hud.pronto()` e de cada troca de modo (desde os itens 59 e 60 ela não volta quando uma camada sai: `.vista` no
+  `animationend`, até o próximo `mostrarDica`). Botões de toque translúcidos (fundo 0,32, borda 1,5–2 px, sem sombra) com
   o ícone e o nome (`html.nomes-botoes`, `--ic`, `--fs`) — LIGADO sem escolha salva desde 12/10 (dono: "coloca o nome da
   função do botão de novo"; `main.js nomesLigados`); "Nomes nos botões" desligado na pausa = só o ícone (`--ic-so`). Analógico em repouso a 0,3 × a
   opacidade e sem o pino; com o dedo, como antes. Minimapa 112×73 a 0,8 (embaixo no meio; no celular também, 92×60, desde o
@@ -1678,7 +1682,7 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
 - **Desenho** (só lê o mundo): `render/linha-impedimento.js` com `IMPEDIMENTO.linhaViva` (false); `render/jogador3d.js`
   sem a seta no chão do controlado (anel + triângulo de 2,2% do menor lado da tela); `render/marcas.js criarMarcas(cena,
   {timeHumano})`: a marca de queda só para a bola alta do time do humano (`m.voo.time`; null = os dois times).
-- **Testes**: `teste-hud-minimo` (H1–H8; `--raiz <pasta>` mede outra cópia; o H5 espera a animação da dica acabar — o
+- **Testes**: `teste-hud-minimo` (H1–H8; H12 e H13 da faixa de baixo; `--raiz <pasta>` mede outra cópia; o H5 espera a animação da dica acabar — o
   relógio das animações do Chromium sem GPU atrasa do real com a máquina carregada — e o H7 confere a barra da pausa nas 3
   telas), `teste-entrada` (5 botões, nada no 2º anel, `criarToqueOuSegura` e do toque ao jogo: tocada = bote, segurada =
   conter), `teste-controles` (lista da defesa com 5 e a DIVIDIDA tocada/segurada/cancelada pelo sistema com toque de
@@ -2135,9 +2139,10 @@ IGUAL; o hash Node = Chromium do `teste-carga` continua).
   bloco `--verde` (parado — intervalo e fim — o bloco fica `--verde-escuro` com letras `--texto`), "1º T +4" de 10 px; faixa de cor do time de 2 px de
   cima a baixo (casa verde depois da marca, visitante branca antes do relógio). Topo apertado (`hud.js ajustarTopo`):
   `topo-c1` tira a marca SÓ nos treinos e só se sem ela ainda encostar; `topo-c3` tira o "1º T"; `topo-c4` aperta só os
-  espaços (as fontes ficam nos mínimos do H10); depois o minimapa sai do meio e encosta à direita do placar (como antes).
-  Na PARTIDA o `topo-c3` vem por último: o "1º T +4", o "Intervalo" e o "Fim" só saem se nem com o minimapa ao lado couber
-  (contraprova de 13/10). O topo também se refaz quando os gols mudam de número de dígitos (9 → 10).
+  espaços (as fontes ficam nos mínimos do H10). Na PARTIDA o `topo-c3` vem por último (c1 → c2 → c4 → c3): o "1º T +4", o
+  "Intervalo" e o "Fim" são os últimos a sair (contraprova de 13/10). O topo também se refaz quando os gols mudam de número
+  de dígitos (9 → 10). Desde os itens 59 e 60 (seção "Faixa de baixo") o minimapa não mora mais no topo: saiu o passo que o
+  encostava à direita do placar (`mapaAoLado`) e, na partida, o topo é só placar e menu (nada encosta nas telas medidas).
 - **`hud.js`**: `definirTimes([{sigla, nome, escudo}])` — `escudo` = id do elenco (`main.js timesDoMundo`: `e.id`; treino:
   `golaco`/`ventania`); escreve sigla, o `href` do `<use>` (id desconhecido → o do treino) e o `aria-label` do time (o nome
   só para leitor de tela: nenhum texto novo na tela; cada `.placar-time` é `role="img"` — num `<span>` sem papel o nome
@@ -2150,7 +2155,8 @@ IGUAL; o hash Node = Chromium do `teste-carga` continua).
   contraste ≥ 4,5:1, nessa ordem), altura ≤ 24 px (PC ≤ 26) e altura e área menores que as de antes (`PLACAR_ANTES`) e que a
   referência (248×29 px), números ≥ 14 px, siglas ≥ 11, "1º T +4" ≥ 10, escudos ≥ 12, peças sem sobrepor e dentro da barra,
   e com o minimapa ligado o placar dos acréscimos não encosta no minimapa nem no menu, mantém o "1º T +4" e, com gols 10-9,
-  continua sem encostar; no treino de ataque com o minimapa e o painel nada encosta e a marca fica; a árvore de
+  continua sem encostar (desde os itens 59 e 60 o minimapa fica embaixo: o caso continua no teste e passa com folga; o
+  minimapa embaixo é medido no H12); no treino de ataque com o minimapa e o painel nada encosta e a marca fica; a árvore de
   acessibilidade tem "Golaço FC" e "Ventania FC" (contraprova de 13/10). `--so-placar` roda só essa parte
   (sem os 2 min de jogo).
 
