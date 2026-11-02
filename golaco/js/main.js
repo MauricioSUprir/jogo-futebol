@@ -380,9 +380,14 @@ function entradaDemoDoMundo(m) {
 const ehJogo = m => m.modo === 'partida' || m.modo === 'penaltis' || m.modo === 'livre';
 /** Rumo da câmera no chão para o analógico: na disputa, o da câmera atrás do cobrador (esquerda/direita da tela). */
 function yawEntrada() { return mundo.disputa && MOD_DISP ? MOD_DISP.yawDisputa(mundo) : (bp.yaw ?? cam.yaw); }
-// bola parada no estilo FIFA (render/bola-parada.js, sob demanda): câmera atrás do cobrador (bp.yaw), linha e painel
+// bola parada no estilo FIFA (render/bola-parada.js, sob demanda): câmera atrás do cobrador (bp.yaw) e a mira (a linha, o anel
+// do alvo e o arco da curva). O programa da mira (um ShaderMaterial) compila na CARGA do módulo (renderer.compileAsync; item
+// 65): a 1ª cobrança mirada da pessoa não paga a compilação
 const bp = { tela: null, carga: null, yaw: null, plano: null, linha: true };
-const carregarBP = () => (bp.carga ??= import('./render/bola-parada.js').then(md => { bp.tela = md.criarTelaBolaParada(cena3d.cena, document.getElementById('hud')); }));
+const carregarBP = () => (bp.carga ??= import('./render/bola-parada.js').then(md => {
+  bp.tela = md.criarTelaBolaParada(cena3d.cena);
+  try { cena3d.renderer.compileAsync(bp.tela.malha, cam.camera, cena3d.cena).catch(() => {}); } catch (_) { /* sem compileAsync: compila no 1º desenho */ }
+}));
 function novoMundo(opc) {
   const ini = DEMO_ON && S.DEMO && modoPagina === 'conducao' ? S.DEMO.inicio : { x: 0, z: 0, rumo: 0 };
   return criarMundoTreino({ ...ini, marcador: params.get('marcador') === '1', ...opc });
@@ -1414,7 +1419,17 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     else linhaImped.atualizar(mundo, dt, renderizar);
     marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
   }
-  if (bp.tela) bp.tela.desenhar(cenaGol || cenaSub || cenaCartao || cenaFim ? null : mundo, cam.camera, dt, bp.linha);
+  if (bp.tela) {
+    const cena = cenaGol || cenaSub || cenaCartao || cenaFim, v = bp.tela.desenhar(cena ? null : mundo, cam.camera, dt, bp.linha);
+    // a curva por arrasto no toque (item 65): a cobrança mirada da PESSOA esperando — fora do tiro de meta (sem curva), da
+    // corrida do item 70 (a mira e a curva congeladas) e das cenas
+    if (entrada?.definirCurva) {
+      const pr = mundo.parada;
+      const ativa = !!v && !cena && !!pr?.mira && pr.tipo !== 'tiroDeMeta' && pr.time === TIME_HUMANO && mundo.controlado?.[TIME_HUMANO] === pr.cobrador
+        && !(pr.corrida && pr.corrida.estado === 'corre');
+      entrada.definirCurva(ativa, ativa ? pr.mira.curva : 0);
+    }
+  }
   // (a câmera de jogo — a TV — sem cadeira 3D de perto: item 69)
   campo.atualizar(agoraMs / 1000, cam.camera, renderizar, cam.deJogo);
   marcarCondutor(agoraMs);
@@ -2435,7 +2450,7 @@ function desenharReplay(dt, agoraMs, renderizar = true) {
   // análise; o selo da decisão no terço de baixo (só no quadro final)
   marcas.grupo.visible = false;
   marcasLat.atualizar(mundo, semPosicao, agoraMs / 1000, dt);
-  if (bp.tela) bp.tela.esconder();
+  if (bp.tela) { bp.tela.esconder(); entrada?.definirCurva?.(false); }
   linhaImped.mostrar(diretor.linha(dt));
   linhaImped.mostrarSaot(sc.ativa ? sc : null);
   hud.terco(sc.ativa && sc.decidido ? sc : null);
