@@ -364,6 +364,13 @@ IA × IA e o 25 (a corrida dos lances rápidos) com o dono ("Depende do dono" 9a
     - Notado nos prints: no tiro de meta a linha branca de 12 m no chão lembra uma linha do campo (o contorno escuro de 1 px a
       separa de perto); a linha passa por cima do cobrador e da barreira (sem teste de profundidade, como no EA) — se o dono
       achar estranho, volta o teste de profundidade só para a linha e o arco vai para uma 2ª chamada que só existe com curva.
+    - Limitações conhecidas (revisão 1 do item 65; das CÂMERAS da base, não da mira): (a) no tiro de meta em 667×375 e 568×320
+      com entalhe a bola e o começo da linha ficam debaixo do CORRER translúcido (a câmera do tiro de meta de antes; a linha
+      antiga também começava ali; no PC, no 844×390 e no 568×320 sem entalhe, nada atrás do HUD) — o conserto é na câmera do
+      tiro de meta das telas com ≤ 375 px de altura (subir ou afastar a bola da faixa dos botões); (b) no escanteio da pessoa do
+      LADO DE LÁ a câmera alta do item 66 (#600, `render/plano-bola-parada.js`) fica colada a uma bandeira de mastro da torcida
+      (um quadrilátero verde e preto no canto de baixo, encostado na bola; com e sem a mira; já na 2a13ca14) — vai para a frente
+      da câmera, com o escanteio do lado de lá no `teste-bola-parada-tela` 1/2 (hoje só o de cá).
 
 ## Obsoleto
 
