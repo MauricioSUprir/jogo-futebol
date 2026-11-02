@@ -103,6 +103,65 @@ export function marcarAcerto(c, tick) {
   return true;
 }
 
+/** A bola está VIVA para o carrinho (contato com a bola e com o homem: CONTRATOS.md "Carrinho", B.0)? Na partida em jogo,
+ * fora de parada não cobrada e sem gol (m.golTick: o próprio tick do gol e a bola morta — partida.js bolaMorta grava MORTA).
+ * Fora disso o corpo segue pelo quadro sem efeito nenhum: nenhum toque, evento, tempo no chão ou sorteio (o registrarFalta
+ * da bola morta viraria uma falta fantasma: contada na súmula sem apito nem cartão). */
+export function vivaCarrinho(m) {
+  return !!m.partida && m.partida.estado === 'jogo' && !(m.parada && !m.parada.rolou) && m.golTick == null;
+}
+
+// ------------------------------------------------------------------ geometria do contato (pura; defesa.js)
+
+const EPS_SEG = 1e-14;
+
+/**
+ * Os pontos mais perto entre os segmentos P1→Q1 (parâmetro s) e P2→Q2 (parâmetro t), s, t ∈ [0, 1] (Ericson, "Real-Time
+ * Collision Detection" §5.1.9). Escreve o.s, o.t e o.d2 (a distância ao quadrado). Exata a menos do arredondamento: o
+ * contato da perna com a bola (defesa.js contatosCarrinho) e com o homem.
+ */
+export function segSeg(p1x, p1y, p1z, q1x, q1y, q1z, p2x, p2y, p2z, q2x, q2y, q2z, o) {
+  const d1x = q1x - p1x, d1y = q1y - p1y, d1z = q1z - p1z;
+  const d2x = q2x - p2x, d2y = q2y - p2y, d2z = q2z - p2z;
+  const rx = p1x - p2x, ry = p1y - p2y, rz = p1z - p2z;
+  const a = d1x * d1x + d1y * d1y + d1z * d1z, e = d2x * d2x + d2y * d2y + d2z * d2z;
+  const f = d2x * rx + d2y * ry + d2z * rz;
+  let s, t;
+  if (a <= EPS_SEG && e <= EPS_SEG) { s = 0; t = 0; }
+  else if (a <= EPS_SEG) { s = 0; t = clamp(f / e, 0, 1); }
+  else {
+    const c = d1x * rx + d1y * ry + d1z * rz;
+    if (e <= EPS_SEG) { t = 0; s = clamp(-c / a, 0, 1); }
+    else {
+      const b = d1x * d2x + d1y * d2y + d1z * d2z, den = a * e - b * b;
+      s = den > EPS_SEG ? clamp((b * f - c * e) / den, 0, 1) : 0;
+      t = (b * s + f) / e;
+      if (t < 0) { t = 0; s = clamp(-c / a, 0, 1); }
+      else if (t > 1) { t = 1; s = clamp((b - c) / a, 0, 1); }
+    }
+  }
+  const dx = p1x + d1x * s - (p2x + d2x * t), dy = p1y + d1y * s - (p2y + d2y * t), dz = p1z + d1z * s - (p2z + d2z * t);
+  o.s = s; o.t = t; o.d2 = dx * dx + dy * dy + dz * dz;
+  return o;
+}
+
+/** A distância do ponto P ao segmento A→B; o parâmetro do ponto mais perto em o.t (se o for dado). */
+export function distPontoSeg(px, py, pz, ax, ay, az, bx, by, bz, o = null) {
+  const dx = bx - ax, dy = by - ay, dz = bz - az;
+  const l2 = dx * dx + dy * dy + dz * dz;
+  let t = l2 > EPS_SEG ? ((px - ax) * dx + (py - ay) * dy + (pz - az) * dz) / l2 : 0;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const ex = ax + dx * t - px, ey = ay + dy * t - py, ez = az + dz * t - pz;
+  if (o) o.t = t;
+  return Math.sqrt(ex * ex + ey * ey + ez * ez);
+}
+
+/** A junta do começo (fim = false) ou do fim do segmento i (0 coxa: quadril → joelho; 1 canela: joelho → tornozelo; 2
+ * chuteira: tornozelo → ponta) da perna k no quadro q (a mesma ordem dos RAIOS_PERNA). */
+export function juntaPerna(q, k, i, fim) {
+  return i === 0 ? (fim ? q.jo[k] : q.qd[k]) : i === 1 ? (fim ? q.to[k] : q.jo[k]) : (fim ? q.po[k] : q.to[k]);
+}
+
 /**
  * Joelho e tornozelo pela conta de 2 ossos (coxa, canela) do quadril H ao alvo T, com o polo P (para onde o joelho aponta):
  * a MESMA fórmula do anim.js ik (copiada: o anim.js importa este módulo). Escreve em jo e to ({x, y, z}).

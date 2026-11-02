@@ -26,7 +26,7 @@ import { ACOES } from './config.js';
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
 import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe, cortandoPasse } from './ia-tatica.js';
 import { trocaAerea, alvoAereo, escolhaManual } from './troca.js';
-import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida, semAtropelar, chamadoRecente, boteContidoDoChamado, encerrarPressao, entradaPressaoPropria, carrinho } from './defesa.js';
+import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida, semAtropelar, chamadoRecente, boteContidoDoChamado, encerrarPressao, entradaPressaoPropria, carrinho, contatosCarrinho, fimDoDeslize } from './defesa.js';
 // o carrinho (item 34; carrinho.js): o corpo pelo quadro do plano, como o mergulho do goleiro
 import { passoCarrinho, fixarCarrinho, pesCarrinho } from './carrinho.js';
 import { misturarTimes } from './escalacao.js';
@@ -299,6 +299,8 @@ function colisaoBolaCorpo(m) {
     // decidida (sorteio da leitura) também não: o resultado é o da leitura
     if (m.ultimoToque && m.ultimoToque.id === j.id && m.tick - m.ultimoToque.tick < 10) continue;
     if (j.defesa && !j.defesa.fora && m.tick <= j.defesa.tick + 2) continue;
+    // a perna do carrinho acabou de tocar a bola neste passo (defesa.js contatosCarrinho): o contato já foi resolvido
+    if (j.carrinho && j.carrinho.bola === m.tick) continue;
     const dx = b.p.x - j.x, dz = b.p.z - j.z;
     const d = MD.hypot(dx, dz);
     const lim = RAIO_CORPO_BOLA;
@@ -765,11 +767,15 @@ export function passo(m, entradas) {
   } else {
     const bx0 = m.bola.p.x, by0 = m.bola.p.y, bz0 = m.bola.p.z;
     passoBola(m.bola, m.eventos);
-    if (m.partida) bloqueioPerna(m, bx0, bz0);
+    // o carrinho (item 34): a perna DESENHADA de quem desliza na bola (defesa.js contatosCarrinho; sem carrinho nada roda) —
+    // tocou, o bloqueio sorteado não roda neste passo (um contato só)
+    if (m.partida && !contatosCarrinho(m, bx0, by0, bz0)) bloqueioPerna(m, bx0, bz0);
     colisaoBolaCorpo(m);
     if (m.partida) colisaoCorpoGoleiro(m, bx0, by0, bz0);
     if (m.partida && m.partida.barreira) colisaoBarreira(m); // tiro livre: a bola na barreira que pula (Etapa 4)
   }
+  // o carrinho que chegou à parada sem tocar a bola: o evento do erro (defesa.js fimDoDeslize; sem carrinho nada roda)
+  if (m.partida) fimDoDeslize(m);
   verificarGol(m);
   // 6) posse
   if (m.posse != null && m.naMao == null && !(m.parada && lateralSegurando(m))) {
