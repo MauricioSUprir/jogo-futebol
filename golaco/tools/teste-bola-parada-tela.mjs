@@ -28,7 +28,8 @@
 //     em ≥ 95% das tiras, e L5b em qualquer fundo o miolo ou o contorno ≥ 3:1; L6 nenhum pixel amarelo nem azul que a mira tenha
 //     posto; A2 o anel do alvo no escanteio ≥ 20 × 6 px e ≥ 95% fora do HUD; C1 com curva 0 nenhum pixel verde junto da bola,
 //     e o arco cresce ≥ 4 px (celular) / 8 px (PC) por degrau; ≤ +1 chamada, ≤ +500 triângulos e nenhum programa WebGL novo
-//     quando a mira aparece pela 1ª vez (compilado na carga do módulo).
+//     quando a mira aparece pela 1ª vez (compilado na carga do módulo: a 1ª contagem com a mira nunca desenhada, a 2ª com ela
+//     acesa).
 //  0  O módulo (render/bola-parada.js) não está no download inicial: carregado sob demanda.
 //   node tools/teste-bola-parada-tela.mjs [--prints <pasta>] [--raiz <pasta do jogo>] [--so 7]
 import path from 'node:path';
@@ -454,15 +455,20 @@ if (!SO || SO.split(',').includes('7')) for (const T of TELAS7) {
   await pg.goto(`${srv.url}?semente=5&q=media&replay=0&comemoracao=0${T.toque ? '&toque=1&entalhe=1' : ''}`, { waitUntil: 'load' });
   await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 240000 });
   await pg.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); for (let i = 0; i < 240; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); });
-  // a 1ª cobrança mirada: os programas WebGL antes e depois de a mira aparecer (compilada na carga do módulo: nenhum novo)
+  // a 1ª cobrança mirada: os programas WebGL antes e depois de a mira aparecer (compilada na carga do módulo — main.js
+  // carregarBP, renderer.compileAsync —: nenhum novo). A mira fica DESLIGADA da carga até a 1ª contagem (nenhum quadro a desenha
+  // antes dela: o montar desenha um quadro) e depois liga e ACENDE (0,15 s do relógio: g.desenhar() não anda o tempo, os quadros
+  // andam). Antes a mira desenhada no montar já tinha compilado o programa e a meta passava também sem o compileAsync
+  await pg.evaluate(() => window.__golaco.bolaParada.linha(false));
   await pg.evaluate(() => window.__golaco.bolaParada.carregar());
   await pg.evaluate(async () => { const g = window.__golaco; for (let i = 0; i < 30; i++) { g.relogio.avancar(1000 / 60, { desenhar: true }); await new Promise(ok => setTimeout(ok, 5)); } });
   await montar(pg, 'escanteio');
   const prog = await pg.evaluate(() => {
     const g = window.__golaco;
-    g.bolaParada.linha(false); g.desenhar(); g.desenhar(); const p1 = g.estado().programas;
-    g.bolaParada.linha(true); g.desenhar(); g.desenhar(); const p2 = g.estado().programas;
-    return { p1, p2 };
+    g.desenhar(); g.desenhar(); const p1 = g.estado().programas, vis1 = g.bolaParada.estado.linha.visivel;
+    g.bolaParada.linha(true); for (let i = 0; i < 12; i++) g.relogio.avancar(1000 / 60, { desenhar: true });
+    const p2 = g.estado().programas, vis2 = g.bolaParada.estado.linha.visivel;
+    return { p1, p2, vis1, vis2 };
   });
   await terminar(pg);
   const L = [], arcos = [];
@@ -526,8 +532,8 @@ if (!SO || SO.split(',').includes('7')) for (const T of TELAS7) {
   }
   // custo
   meta(`7 custo ${T.nome}: ≤ +1 chamada e ≤ +500 triângulos com a mira; nenhum programa WebGL novo quando ela aparece pela 1ª vez (compilado na carga do módulo)`,
-    `${okL.map(x => `${x.tipo} ${x.hora} +${x.chamadas}/+${x.triangulos}`).join(' · ')} · programas ${prog.p1} → ${prog.p2}`,
-    okL.length === 6 && okL.every(x => x.chamadas <= 1 && x.triangulos <= 500) && prog.p2 === prog.p1);
+    `${okL.map(x => `${x.tipo} ${x.hora} +${x.chamadas}/+${x.triangulos}`).join(' · ')} · programas ${prog.p1} (a mira ${prog.vis1 ? 'JÁ desenhada' : 'nunca desenhada'}) → ${prog.p2} (a mira ${prog.vis2 ? 'desenhada' : 'NÃO desenhada'})`,
+    okL.length === 6 && okL.every(x => x.chamadas <= 1 && x.triangulos <= 500) && !prog.vis1 && prog.vis2 && prog.p2 === prog.p1);
   meta(`7 ${T.nome}: nenhum erro no console`, s.erros.length ? s.erros.slice(0, 3).join(' | ') : 'nenhum', !s.erros.length);
   await s.navegador.close();
 }
