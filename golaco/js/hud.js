@@ -257,8 +257,9 @@ export function criarHud(opc) {
       }
     }
     // a faixa de baixo (o minimapa e os nomes): todo lugar que refaz o topo refaz ela também (resize, layout dos botões,
-    // "Tamanho", o botão Minimapa, as fontes do TM)
+    // "Tamanho", o botão Minimapa, as fontes do TM); no PC, o nome da esquerda com a dica na tela (janela estreita)
     ajustarBaixo();
+    nomeComDica();
   }
   /**
    * Os passos do aperto, em ordem, até nada encostar (ajustarTopo). Na partida o tempo escrito ("1º T +4", "Intervalo",
@@ -365,18 +366,42 @@ export function criarHud(opc) {
   /**
    * A dica de teclas do PC aparece de novo e some 8 s depois (CSS .dica: animação que começa ao ser reposta). Enquanto ela
    * está na tela, html.dica-visivel e --dica-w (a largura dela): o nome da esquerda fica na mesma linha, à DIREITA dela (em
-   * cima dela encostava na faixa ENTRA/SAI do jogo, que mora logo acima); o fim da animação tira.
+   * cima dela encostava na faixa ENTRA/SAI do jogo, que mora logo acima); o fim da animação tira as duas e ESCONDE a dica
+   * (.dica.vista) até a próxima vez que ela for mostrada — sem isso, cada camada (replay, comemoração, cena, substituição)
+   * que a escondia com display:none fazia a animação recomeçar na saída e ela voltava por 8 s, sem o dica-visivel, debaixo
+   * do nome da esquerda (revisão dos itens 59 e 60).
    */
   function mostrarDica() {
     if (!el.dica) return;
+    el.dica.classList.remove('vista');
     el.dica.style.animation = 'none';
     const w = el.dica.offsetWidth;
     el.dica.style.animation = '';
     if (w > 0) raiz.style.setProperty('--dica-w', `${Math.ceil(w)}px`);
     raiz.classList.add('dica-visivel');
+    nomeComDica();
+  }
+  /**
+   * Janela de PC estreita com a dica na tela: o nome da esquerda, à direita dela, fica entre a dica e o minimapa do meio (a
+   * conta do max-width do estilo.css: até W/2 − 56 − 8); abaixo de NOME_BAIXO.minimo ele não cabe e some enquanto ela está na
+   * tela (html.nome-sem-lugar-dica; em 560 px sobrava uma lasca de 8 px — só o padding — por cima do minimapa).
+   */
+  function nomeComDica() {
+    if (!el.dica) return;
+    let sem = false;
+    if (raiz.classList.contains('dica-visivel') && !raiz.classList.contains('com-toque')) {
+      const d = el.dica.getBoundingClientRect();
+      if (!(d.width > 0)) return; // escondida por uma camada agora: fica como estava
+      sem = innerWidth / 2 - 56 - 8 - (d.right + 8) < NOME_BAIXO.minimo;
+    }
+    if (raiz.classList.contains('nome-sem-lugar-dica') !== sem) raiz.classList.toggle('nome-sem-lugar-dica', sem);
   }
   // (só o FIM da animação: a reposta acima cancela a anterior, e o cancelamento chega depois da classe nova)
-  el.dica?.addEventListener('animationend', e => { if (e.target === el.dica) raiz.classList.remove('dica-visivel'); });
+  el.dica?.addEventListener('animationend', e => {
+    if (e.target !== el.dica) return;
+    el.dica.classList.add('vista');
+    raiz.classList.remove('dica-visivel', 'nome-sem-lugar-dica');
+  });
   /** Itens do menu pelo modo (partida × treinos) e pelo fim de jogo. */
   function aplicarModoNoMenu() {
     // a disputa de pênaltis (modo Pênaltis) é um jogo como a partida: o topo e a pausa dela (data-so "partida penaltis":

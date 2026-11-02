@@ -67,7 +67,9 @@
 //        cena), treino de ataque, disputa de pênaltis e ?prints=1; aparece no Modo Livre;
 //     f) sem piscar: em 2 min de jogo, 0 voltas depois de < 0,8 s escondido (na base, 22); escritas no DOM (informativo);
 //     g) PC: com a dica de teclas na tela o nome da esquerda fica na linha de baixo, à direita dela (≥ 4 px; em cima dela
-//        encostava na faixa ENTRA/SAI do jogo); depois que ela some, no canto
+//        encostava na faixa ENTRA/SAI do jogo); em janela estreita (560 × 600) ele cabe entre a dica e o minimapa (≥ 56 px,
+//        ≥ 4 px dos dois) ou some até ela sumir (era uma lasca de 8 px por cima do minimapa); depois que ela some, no canto, e
+//        uma camada (replay, cena) que liga e desliga não a traz de volta (voltava por 8 s debaixo do nome)
 //   node tools/teste-hud-minimo.mjs [--raiz <pasta do jogo>] [--so-placar]   (--raiz: mede outra cópia, ex.: a base;
 //   --so-placar: só as telas do H1/H7/H9 e o H5 com o H10, sem os 2 min de jogo nem as opções salvas — para iterar no placar)
 import path from 'node:path';
@@ -853,6 +855,9 @@ if (!soPlacar) {
     await pronta(pagina);
     await pagina.waitForTimeout(1000);
     const dica0 = await pagina.evaluate(() => { const d = document.getElementById('dica'); const s = d && getComputedStyle(d); return !!d && s.display !== 'none' && s.visibility !== 'hidden' && +s.opacity > 0.5; });
+    // o tempo da animação que a apaga (8 s + 0,6 s de esmaecer), lido enquanto ela roda: no fim a dica ganha .vista
+    // (display:none) e a animação deixa de existir
+    const fimAnim = await pagina.evaluate(() => { const a = document.getElementById('dica')?.getAnimations()[0]; return a ? Math.round(+(a.effect?.getComputedTiming().endTime ?? -1)) : -1; });
     // H13g (com a dica na tela): o nome da esquerda (forçado, o mais largo) fica ≥ 4 px acima dela
     const nomeDica = await pagina.evaluate(LN => {
       const g = window.__golaco; if (!g.nomeCantoDeTeste) return null;
@@ -861,16 +866,34 @@ if (!soPlacar) {
       g.nomeCantoDeTeste(null);
       return { vis: n.vis, b: n.rect.b, t: n.rect.t, l: n.rect.l, r: n.rect.r, w: n.rect.w, dicaT: d.top, dicaB: d.bottom, dicaL: d.left, dicaR: d.right, H: n.H, sab: n.sa.b };
     }, LER_NOME.toString());
+    // H13g (revisão): janela de PC estreita com a dica na tela — o nome da esquerda cabe entre a dica e o minimapa (≥ 56 px, a
+    // ≥ 4 px dos dois) ou some até ela sumir (em 560 px era uma lasca de 8 px por cima do minimapa); 800 px: cabe
+    const nomeEstreito = [];
+    for (const [W, H] of [[560, 600], [800, 600]]) {
+      await pagina.setViewportSize({ width: W, height: H });
+      await pagina.waitForTimeout(300);
+      nomeEstreito.push(await pagina.evaluate(async ([LN, W]) => {
+        await new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(ok)));
+        const g = window.__golaco; if (!g.nomeCantoDeTeste) return null;
+        g.nomeCantoDeTeste({ time: 0, num: 88, nome: 'Wwwwwwwwww' });
+        const n = eval(LN)(), d = document.getElementById('dica'), ds = getComputedStyle(d), q = d.getBoundingClientRect();
+        const mp = document.getElementById('minimapa'), m = mp && getComputedStyle(mp).display !== 'none' ? mp.getBoundingClientRect() : null;
+        g.nomeCantoDeTeste(null);
+        const sep = (a, b) => Math.max(a.l - b.r, b.l - a.r, a.t - b.b, b.t - a.b);
+        return { W, dica: ds.display !== 'none' && ds.visibility !== 'hidden' && +ds.opacity > 0.5, vis: n.vis, w: n.rect.w, l: n.rect.l, r: n.rect.r,
+          dDica: n.vis ? sep(n.rect, { l: q.left, r: q.right, t: q.top, b: q.bottom }) : null, dMapa: n.vis && m ? sep(n.rect, { l: m.left, r: m.right, t: m.top, b: m.bottom }) : null };
+      }, [LER_NOME.toString(), W]));
+    }
+    await pagina.setViewportSize({ width: 1280, height: 720 });
+    await pagina.waitForTimeout(300);
     // a dica some pelo relógio das animações da página (8 s + 0,6 s de esmaecer). Com a máquina carregada o Chromium sem
     // GPU desenha poucos quadros e esse relógio atrasa ~1–2 s do real: esperar um tempo fixo media a dica ainda na tela
     // (2,5% "passando" por arredondamento). Espera o fim da animação (até 40 s reais) e mede o tempo DELA.
     const fimDica = await pagina.waitForFunction(() => {
-      const d = document.getElementById('dica'); if (!d) return { ms: -1 };
+      const d = document.getElementById('dica'); if (!d) return false;
       const s = getComputedStyle(d);
-      if (s.visibility !== 'hidden' && +s.opacity > 0.01) return false;
-      const a = d.getAnimations()[0];
-      return { ms: a ? Math.round(+(a.effect?.getComputedTiming().endTime ?? a.currentTime)) : -1 };
-    }, null, { timeout: 40000, polling: 250 }).then(h => h.jsonValue()).catch(() => null);
+      return s.display === 'none' || s.visibility === 'hidden' || +s.opacity <= 0.01;
+    }, null, { timeout: 40000, polling: 250 }).then(() => ({ ms: fimAnim })).catch(() => null);
     const r = await pagina.evaluate(([FS, AS]) => { const x = eval(FS)(); return { area: eval(AS)(x.f, innerWidth, innerHeight), nomes: x.f.map(s => s.nome) }; }, [FORMAS.toString(), AREA.toString()]);
     meta('H5 área do HUD no PC 1280×720 (depois que a dica some)', `${(r.area * 100).toFixed(1)}% (${r.nomes.join(', ')})`, '≤ 2,5%', r.area <= 0.025);
     meta('H5 a dica de teclas do PC aparece no começo e some sozinha em ≤ 9 s', `${dica0 ? 'visível 1 s depois de abrir' : 'não aparece'}; ${fimDica ? `some aos ${(fimDica.ms / 1000).toFixed(1)} s de animação` : 'não some em 40 s'}`, 'visível; some ≤ 9 s',
@@ -887,10 +910,36 @@ if (!soPlacar) {
       g.nomeCantoDeTeste(null);
       return out;
     }, LER_NOME.toString());
+    // (revisão) depois que a dica some, uma camada (replay, cena do cartão) a escondia com display:none e, na saída, a animação
+    // recomeçava: ela voltava por 8 s, debaixo do nome da esquerda no canto. Liga e desliga cada camada e olha 0,5 s depois
+    const voltaCamada = [];
+    for (const cl of ['em-replay', 'em-cena']) {
+      await pagina.evaluate(cl => { window.__golaco.nomeCantoDeTeste?.({ time: 0, num: 88, nome: 'Wwwwwwwwww' }); document.documentElement.classList.add(cl); }, cl);
+      await pagina.waitForTimeout(300);
+      await pagina.evaluate(cl => document.documentElement.classList.remove(cl), cl);
+      await pagina.waitForTimeout(500);
+      voltaCamada.push(await pagina.evaluate(([LN, cl]) => {
+        const n = eval(LN)(), d = document.getElementById('dica'), ds = getComputedStyle(d), q = d.getBoundingClientRect();
+        window.__golaco.nomeCantoDeTeste?.(null);
+        const dica = ds.display !== 'none' && ds.visibility !== 'hidden' && +ds.opacity > 0.01;
+        const sobre = dica && n.vis && q.left < n.rect.r + 4 && n.rect.l < q.right + 4 && q.top < n.rect.b + 4 && n.rect.t < q.bottom + 4;
+        return { cl, dica, op: +ds.opacity, sobre, borda: n.vis ? n.rect.l - n.sa.l : null };
+      }, [LER_NOME.toString(), cl]));
+    }
     {
       const f = [], txt = [];
-      if (!nomeDica || !pcNomes) f.push('sem a API do nome nos cantos');
+      if (!nomeDica || !pcNomes || nomeEstreito.some(x => !x)) f.push('sem a API do nome nos cantos');
       else {
+        for (const x of nomeEstreito) {
+          const ok = x.vis ? x.w >= 56 && x.dDica >= 4 && (x.dMapa === null || x.dMapa >= 4) : x.W < 692;
+          if (!x.dica) f.push(`${x.W} px: a dica já tinha sumido`);
+          else if (!ok) f.push(`${x.W} px com a dica: nome ${x.vis ? `${x.w.toFixed(0)} px em ${x.l.toFixed(0)}–${x.r.toFixed(0)}, a ${x.dDica.toFixed(0)} px da dica e ${x.dMapa === null ? '-' : x.dMapa.toFixed(0)} do minimapa` : 'escondido'}`);
+          txt.push(`${x.W} px com a dica: ${x.vis ? `${x.w.toFixed(0)} px, a ${x.dDica.toFixed(0)} da dica e ${x.dMapa === null ? '-' : x.dMapa.toFixed(0)} do minimapa` : 'nome escondido'}`);
+        }
+        for (const v of voltaCamada) {
+          if (v.dica || v.sobre || v.borda === null || Math.abs(v.borda - 14) > 1) f.push(`depois de ${v.cl}: a dica ${v.dica ? `voltou (opacidade ${v.op.toFixed(2)})${v.sobre ? ' debaixo do nome' : ''}` : 'fora'}, nome ${v.borda === null ? 'escondido' : `a ${v.borda.toFixed(0)} px da borda`}`);
+          txt.push(`depois de ${v.cl}: dica ${v.dica ? 'VOLTOU' : 'fora'}`);
+        }
         // (com a dica, o nome fica na mesma linha, à direita dela: em cima dela encostava na faixa ENTRA/SAI do jogo)
         const dd = nomeDica.vis ? Math.max(nomeDica.l - nomeDica.dicaR, nomeDica.dicaL - nomeDica.r, nomeDica.t - nomeDica.dicaB, nomeDica.dicaT - nomeDica.b) : -Infinity;
         const baseD = nomeDica.H - nomeDica.sab - nomeDica.b;
@@ -907,7 +956,8 @@ if (!soPlacar) {
           txt.push(`${t ? 'dir' : 'esq'} ${n.rect.l.toFixed(0)}–${n.rect.r.toFixed(0)} × ${n.rect.t.toFixed(0)}–${n.rect.b.toFixed(0)}, ${n.fs} px`);
         }
       }
-      meta('H13g PC 1280×720: com a dica na tela o nome da esquerda fica na linha de baixo a ≥ 4 px dela; depois, os dois nos cantos a 14 px (≤ 200 px, letra ≥ 12 px)', `${f.length ? 'FALHAS: ' + f.join(', ') + ' — ' : ''}${txt.join('; ')}`, 'longe da dica; cantos a 14 ± 1 px', f.length === 0);
+      meta('H13g PC 1280×720: com a dica na tela o nome da esquerda fica na linha de baixo a ≥ 4 px dela (560 e 800 px: ≥ 56 px longe da dica e do minimapa ou escondido abaixo de ~690 px); depois, os dois nos cantos a 14 px (≤ 200 px, letra ≥ 12 px) e a dica não volta depois de uma camada (replay, cena)',
+        `${f.length ? 'FALHAS: ' + f.join(', ') + ' — ' : ''}${txt.join('; ')}`, 'longe da dica e do minimapa; cantos a 14 ± 1 px; a dica fora', f.length === 0);
     }
     // H12f + H12b no PC: o minimapa no lugar de antes (centro W/2 ± 1, base H − 14 ± 1) em 1280×720 e 1920×1080; nada no alto
     {

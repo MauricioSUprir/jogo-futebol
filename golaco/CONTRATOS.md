@@ -1731,7 +1731,11 @@ tapando e atrapalhando o jogo" (60). Pesquisa e medidas em `PESQUISA-ESTADIO.md`
   vez. CSS: some nas 4 camadas (`html.em-*`), com `fim-faixa`, `modo-penaltis`, `modo-prints`, `sem-hud` e sem lugar; no PC,
   com a dica de teclas na tela (`html.dica-visivel` e `--dica-w`, ligados em `mostrarDica` e a classe tirada no `animationend`
   do `#dica`) o nome da esquerda fica na mesma linha, à DIREITA dela (em cima dela, como a especificação propunha, ele
-  encostava 8 px na faixa ENTRA/SAI do jogo, que mora logo acima: `teste-substituicao-tela` T8). O `.qps` (depuração) foi para o alto à direita também no PC. API de teste:
+  encostava 8 px na faixa ENTRA/SAI do jogo, que mora logo acima: `teste-substituicao-tela` T8); em janela estreita (entre a
+  dica e o minimapa do meio cabem < 56 px, abaixo de ~690 px) ele some até a dica sumir (`html.nome-sem-lugar-dica`, `hud.js
+  nomeComDica`, refeito no resize). No `animationend` a dica ganha `.vista` (display:none) até o próximo `mostrarDica`: antes,
+  cada camada que a escondia (replay, comemoração, cena, substituição) recomeçava a animação na saída e ela voltava por 8 s
+  sem o `dica-visivel`, debaixo do nome (defeito da volta já existia na base; H13g liga e desliga `em-replay`/`em-cena`). O `.qps` (depuração) foi para o alto à direita também no PC. API de teste:
   `__golaco.nomeCantoDeTeste(spec | 'nenhum' | null)` e `__golaco.nomeCantoEstado`.
 - **Orçamento** (`teste-hud-minimo`): o nome conta no H1 (o mais largo, forçado no canto da fase) e a régua mede pelo que se
   vê a caixa `[data-caixa]` sem fundo, sem borda e sem sombra (a união dos filhos visíveis: o ≡ da partida, alvo de 44×44

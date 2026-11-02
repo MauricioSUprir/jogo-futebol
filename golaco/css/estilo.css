@@ -338,9 +338,11 @@ html.em-partida .carga-barra { width: 44px; height: 6px; }
   background: rgba(7, 9, 10, 0.62); padding: 6px 10px; border-radius: 8px;
 }
 .dica .sep { width: 1px; height: 14px; background: rgba(255, 255, 255, 0.15); margin: 0 4px; }
-/* some sozinha 8 s depois de aparecer (hud.js reinicia quando o jogo fica pronto e a cada troca de modo) */
+/* some sozinha 8 s depois de aparecer (hud.js reinicia quando o jogo fica pronto e a cada troca de modo); depois de sumir fica
+   fora (.vista, posta no animationend) até a próxima vez — senão uma camada que a esconde (display:none) recomeçava a animação */
 .dica { animation: dica-some 0.6s ease 8s forwards; }
 @keyframes dica-some { to { opacity: 0; visibility: hidden; } }
+.dica.vista { display: none; }
 html.com-toque .dica { display: none; }
 
 /* ------------------------------------------------------------------ toque */
@@ -840,5 +842,8 @@ html.dica-visivel:not(.com-toque) .nome-condutor:not(.dir) {
   left: calc(var(--sa-l) + var(--m) + var(--dica-w, 210px) + 8px);
   max-width: min(200px, calc(50vw - 56px - 16px - var(--m) - var(--sa-l) - var(--dica-w, 210px)));
 }
+/* janela estreita (abaixo de ~690 px): entre a dica e o minimapa não cabem 56 px — o nome espera a dica sumir (hud.js
+   nomeComDica; em 560 px sobrava uma lasca de 8 px por cima do minimapa) */
+html.dica-visivel.nome-sem-lugar-dica:not(.com-toque) .nome-condutor:not(.dir) { display: none; }
 /* a disputa de pênaltis (o painel dela diz quem bate) e sem lugar no canto (140% em telas pequenas): nada */
 html.modo-penaltis .nome-condutor, html.nome-sem-lugar-esq .nome-condutor:not(.dir), html.nome-sem-lugar-dir .nome-condutor.dir { display: none; }
