@@ -569,6 +569,7 @@ function tocarBolaCarrinho(m, j, s, u, k, i, bx0, by0, bz0, d0) {
       m.ultimoToque = { id: j.id, time: j.time, tick: m.tick };
       if (m.stats) m.stats.roubadas++;
       marcarAcerto(c, m.tick);
+      c.desarmou = d0.id;
       m.eventos.push({ tipo: 'dividida', id: j.id, ganhou: true, motivo: null, carrinho: true });
       m.eventos.push({ tipo: 'roubada', id: j.id, carrinho: true });
     } else {
@@ -753,6 +754,12 @@ function homemDoCarrinho(m, j, c, t) {
       depois, f, fExc, v: MD.hypot(j.vx, j.vz), naMao: m.naMao === o.id, tentouBola: tentouBolaCarrinho(m, c, q),
     });
     if (fal) {
+      // a perna tirou a bola DELE e o seguimento o derrubou (o 'depois' no mesmo jogador): o lance é a falta — a súmula
+      // desfaz o desarme, a roubada e as perdas que deu no toque (evento desarmeAnulado)
+      if (depois && c.desarmou === o.id) {
+        if (m.stats) m.stats.roubadas--;
+        m.eventos.push({ tipo: 'desarmeAnulado', id: j.id, de: o.id, carrinho: true });
+      }
       m.eventos.push({ tipo: 'dividida', id: j.id, ganhou: false, motivo: 'falta', carrinho: true });
       registrarFalta(m, fal);
       h.falta = true;

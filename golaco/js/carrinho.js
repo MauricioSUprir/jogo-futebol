@@ -279,7 +279,8 @@ function procurar(c, prever, o) {
  * prevista no encontro). O desvio de u em relação à corrida é limitado (desvioMax) em todo plano montado.
  * Os campos que a simulação escreve depois (defesa.js): `bola` (o tick do 1º toque da perna na bola, −1 sem toque), `tChao`/
  * `fim` (marcarAcerto) e `homem` (null ou o 1º contato com um adversário: {id, tick, depois, falta, f, fExc, ch} — a força
- * dos corpos na normal, a do corpo de quem desliza e a chegada; contatosHomemCarrinho).
+ * dos corpos na normal, a do corpo de quem desliza e a chegada; contatosHomemCarrinho) e `desarmou` (o id do condutor de quem
+ * a perna tirou a bola, −1 sem isso: a falta 'depois' nele desfaz o desarme — tocarBolaCarrinho/homemDoCarrinho).
  */
 export function montarCarrinho(j, tick, opc = {}) {
   const bola = opc.bola ?? null, prever = opc.prever ?? null;
@@ -288,7 +289,7 @@ export function montarCarrinho(j, tick, opc = {}) {
     tick0: tick, x0: j.x, z0: j.z, vx0: j.vx, vz0: j.vz, rumo0: j.rumo, h0: j.quadril ?? C.hPe,
     ux: 1, uz: 0, ve: 0, tq: T_AR, v1: 0, aD: C.desac / esc, tD: T_D, tS: T_D,
     frente: 1, p0: [peDesenhado(j.pes[0]), peDesenhado(j.pes[1])], levX: j.x, levZ: j.z,
-    esc, mirou: false, tChao: C.chaoErrou, fim: tick, bola: -1, homem: null,
+    esc, mirou: false, tChao: C.chaoErrou, fim: tick, bola: -1, homem: null, desarmou: -1,
   };
   // 1) a direção pedida
   let ux, uz;

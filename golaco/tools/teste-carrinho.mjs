@@ -100,7 +100,8 @@
 //     no carrinho e ninguém do time que defende no carrinho a < 9,15 m dela, da montagem até a cobrança (partida.js
 //     tirarCarrinhos: deitado, ele pula a paredeParada); D13 um desfecho só por carrinho, pelo passo inteiro: o tropeço na
 //     perna parada depois da parada dá a falta sem o 'fora' antes, e sem ninguém perto o 'fora' sai quando a janela do homem
-//     fecha (tS + 0,7 s).
+//     fecha (tS + 0,7 s); D14 a falta 'depois' no jogador que a perna desarmou (o seguimento): o evento desarmeAnulado e a
+//     súmula sem o desarme, a roubada e as perdas do toque (noutro jogador o desarme fica).
 //  F1 a mesma semente e as mesmas entradas, com carrinhos: o mesmo hash em 2 rodadas. F2 os sorteios do m.rng por ORIGEM (um
 //     Proxy que lê a pilha): 0 do carrinho sem contato no homem (também na partida, e o bloqueio sorteado nunca com o
 //     deslizante); com contato exatamente 1 da chance (0 < p < 1) + os do cartão — nos montados e nos 36 casos do estado 0
@@ -1705,6 +1706,7 @@ if (TEM_CONTATO && ESTADOS.posse1) {
   const vRel = gh.c.bola >= 0 ? Math.hypot(gh.w.bola.v.x, gh.w.bola.v.z) : 0;
   ok.push([`condutor (bola a ${f2(vRel)} m/s dele) → dividida ganhou + roubada`, evGh.length === 2 && evGh[0].tipo === 'dividida' && evGh[0].ganhou && evGh[0].carrinho && evGh[1].tipo === 'roubada' && evGh[1].carrinho
     && gh.w.posse === null && gh.w.stats.roubadas === 1 && gh.w.ultimoToque.id === idD && gh.w.jogadores[1].cond.semDominioAte === gh.c.bola + Math.round(CFG.DEFESA_HUMANO.dividida.semDominio / PASSO)]);
+  ok.push(['o plano guarda de quem a perna tirou a bola (c.desarmou: a falta \'depois\' nele desfaz o desarme, D14)', gh.c.desarmou === idA]);
   // raspão: no deslize, a bola do condutor encostando na perna da bola (1 cm dentro dela no fim do 1º trecho) e indo embora
   // mais rápido que ela, com o condutor junto — o toque não a empurra (a velocidade relativa na normal já é de saída)
   const T_RP = 30;
@@ -2322,6 +2324,36 @@ else {
     }
     const ruins = r.filter(x => !x[1]);
     reg('D11 dois carrinhos opostos: falta só de quem NÃO tocou a bola quando o outro tocou; espelhado e nas duas ordens', `${r.length - ruins.length}/${r.length}${ruins.length ? ': ' + ruins.map(x => `${x[0]} → ${x[2]}`).join('; ') : ''}`, 'todos', ruins.length === 0);
+  }
+
+  // ---- D14: o carrinho que tirou a bola do condutor (c.desarmou) e o derrubou com o seguimento (a falta 'depois' no MESMO
+  // jogador): o evento desarmeAnulado antes da falta, e a súmula sem o desarme, a roubada e as perdas que deu no toque — o
+  // lance é a falta (a nota do jogador e a do Rumo ao Estrelato premiavam quem fez a falta e puniam quem a sofreu); com a
+  // falta 'depois' em OUTRO jogador, o desarme fica
+  {
+    const caso = mesmo => {
+      const { w, j, a } = lado(10, 0, { vo: 0, c: { v: 7, n: 6 } });
+      j.carrinho.bola = j.carrinho.tick0 + 2; // tocou a bola antes (o 'depois')
+      j.carrinho.desarmou = mesmo ? a.id : -1;
+      const res = contatoEm(w, j.id, acharSemente(w, j.id, rr => !!rr.f));
+      const ev = res.w.eventos, iA = ev.findIndex(e => e.tipo === 'desarmeAnulado'), iF = ev.findIndex(e => e.tipo === 'falta');
+      // a súmula: o passo do toque (dividida ganhou + roubada do carrinho, com ele dono antes do passo) e o da falta
+      const wq = res.w, s = SU.criarSumula();
+      wq.posse = a.id; SU.sumulaPasso(s, wq, []);
+      wq.posse = null;
+      SU.sumulaPasso(s, wq, [{ tipo: 'dividida', id: j.id, ganhou: true, motivo: null, carrinho: true }, { tipo: 'roubada', id: j.id, carrinho: true }]);
+      const no = { des: s.jog[j.id]?.desarmes ?? 0, rou: s.jog[j.id]?.roubadas ?? 0, per: s.jog[a.id]?.perdas ?? 0 };
+      wq.tick += 2; SU.sumulaPasso(s, wq, ev);
+      const dep = { des: s.jog[j.id]?.desarmes ?? 0, rou: s.jog[j.id]?.roubadas ?? 0, per: s.jog[a.id]?.perdas ?? 0, fal: s.jog[j.id]?.faltas ?? 0 };
+      return { falta: !!res.f, anulado: iA >= 0 && (iF < 0 || iA < iF) && ev[iA].id === j.id && ev[iA].de === a.id, outro: iA >= 0, no, dep };
+    };
+    const m1 = caso(true), m2 = caso(false);
+    const txt = x => `desarmes/roubadas/perdas no toque ${x.no.des}/${x.no.rou}/${x.no.per} → depois da falta ${x.dep.des}/${x.dep.rou}/${x.dep.per} (faltas ${x.dep.fal})`;
+    reg('D14 a falta \'depois\' no jogador que o carrinho desarmou: desarmeAnulado e a súmula sem desarme, roubada e perdas; noutro, o desarme fica',
+      `no mesmo: ${m1.falta ? 'falta' : 'SEM falta'}, ${m1.anulado ? 'desarmeAnulado' : 'sem desarmeAnulado'}, ${txt(m1)}; noutro: ${m2.outro ? 'desarmeAnulado' : 'sem evento'}, ${txt(m2)}`,
+      'mesmo: 1/1/2 → 0/0/0; outro: fica 1/1/2',
+      m1.falta && m1.anulado && m1.no.des === 1 && m1.no.rou === 1 && m1.no.per === 2 && m1.dep.des === 0 && m1.dep.rou === 0 && m1.dep.per === 0 && m1.dep.fal === 1
+      && m2.falta && !m2.outro && m2.dep.des === 1 && m2.dep.rou === 1 && m2.dep.per === 2);
   }
 
   // ---- D12: a montagem do tiro livre com o deslizante ainda no carrinho (deitado: ele pula a paredeParada). A bola posta no
