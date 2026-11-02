@@ -9,7 +9,7 @@
 //     instantes com ≥ 1% da tela e mediana ≥ 6%; J4 o controlado ≥ 34 px no celular (mediana); J5 o custo no celular Média
 //     (chamadas: mediana ≤ a da base + 2; triângulos: p95 ≤ a da base × 1,10; a base gravada abaixo — `--raiz <base>`
 //     mede e imprime); J6 a área "à vista" (no quadro e fora do HUD) com a bola a ≤ 25 m do gol (informativo).
-//  A  a bola posta em 6 pontos de cada área (a bola teletransportada corta): A1 os 4 cantos e o alto das 2 traves no quadro
+//  A  a bola presa em 6 pontos de cada área por 2 s: A1 os 4 cantos e o alto das 2 traves no quadro
 //     (pelo naTela) e A2 a bola dentro do limite do alvo, nos 12 casos × 2 telas.
 //  E  o escanteio da pessoa (__golaco.bolaParadaDeTeste('escanteio', {lado: 'ca'|'la'})), celular e PC: E1 a área 100% no
 //     quadro e ≥ 95% fora do HUD; E2 a faixa da área ≥ 18% da altura; E3 os jogadores na área ≥ 18 px (celular) / 32 px (PC);
@@ -224,10 +224,12 @@ try {
           const out = [];
           for (const s of [1, -1]) for (const [u, z] of [[3, 0], [8, 12], [8, -12], [14, 18], [14, -18], [11, 0]]) {
             const m = g.mundo;
-            m.posse = null; m.naMao = null; m.voo = null; m.parada = null; m.partida.estado = 'jogo';
-            // longe primeiro (a bola teletransportada corta a câmera), depois no ponto: a câmera em regime nele
-            Object.assign(m.bola.p, { x: s * (52.5 - u), y: 0.11, z }); Object.assign(m.bola.v, { x: 0, y: 0, z: 0 });
-            g.relogio.avancar(1000 / 60, { desenhar: false });
+            // a bola presa no ponto por 2 s (a câmera em regime nele; a teletransportada corta na TV nova)
+            for (let k = 0; k < 120; k++) {
+              m.posse = null; m.naMao = null; m.voo = null; m.parada = null; m.partida.estado = 'jogo';
+              Object.assign(m.bola.p, { x: s * (52.5 - u), y: 0.11, z }); Object.assign(m.bola.v, { x: 0, y: 0, z: 0 });
+              g.relogio.avancar(1000 / 60, { desenhar: false });
+            }
             Object.assign(m.bola.p, { x: s * (52.5 - u), y: 0.11, z }); Object.assign(m.bola.v, { x: 0, y: 0, z: 0 });
             g.desenhar();
             const a = X.area(g, s * 52.5, null), bo = m.bola.p, pb = g.naTela(bo.x, bo.y, bo.z);

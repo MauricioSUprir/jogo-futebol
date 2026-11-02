@@ -55,6 +55,7 @@ for (const c of CONFIGS) {
       const RO = await import('./js/render/rede-onda.js');
       const { CAMPO, CAMERA } = await import('./js/config.js');
       const { CAMERA_GOL } = await import('./js/render/camera.js');
+      let EQ = null; try { EQ = await import('./js/render/enquadramento.js'); } catch (_) { EQ = null; }
       let RF = null; try { RF = await import('./js/rede-forma.js'); } catch (_) { RF = null; }
       const MX = CAMPO.meioX, HG = CAMPO.gol.altura, ZL = CAMPO.gol.largura / 2;
       const canvas = document.createElement('canvas');
@@ -83,12 +84,23 @@ for (const c of CONFIGS) {
       }
       const forma = { fundoChao, fundoAlto, teto, faixas, vertices: pos.count, triangulos: malha.geometry.index.count / 3 };
 
-      // câmeras: TV (foco no limite perto do gol), câmera do gol (CAMERA_GOL) e perfil
+      // câmeras: TV (a do jogo com a bola no fundo da rede: item 66, o foco da TV em regime pelo render/enquadramento.js —
+      // antes dele, o foco no limite x = 52,5 − 14 perto do gol), câmera do gol (CAMERA_GOL) e perfil
       const pequena = Math.min(cfg.w, cfg.h) < 520;
       const tv = pequena ? { ...CAMERA, ...CAMERA.celular } : CAMERA;
-      const fx = MX - 14;
+      let camTV;
+      if (EQ) {
+        const asp = cfg.w / cfg.h, p = EQ.perfilCamera({}, 0, asp, pequena), G = EQ.geometriaTV({}, p, asp, pequena);
+        const a = { jx: MX - 6, jz: 0, jvx: 0, jvz: 0, bx: MX + 1.2, by: 0.11, bz: 0, bvx: 0, bvz: 0, ax: NaN, az: NaN, cx: NaN, cz: NaN, dir: 1, temParada: false };
+        const E = EQ.criarEnquadramento(), f = { x: 0, z: 0, vx: 0, vz: 0 };
+        EQ.focoTV(E, f, a, p, G, EQ.larguraVista(p, pequena), 1 / 60, true);
+        camTV = EQ.poseTV(p, f.x, f.z, asp, pequena, {});
+      } else {
+        const fx = MX - 14;
+        camTV = { de: [fx, tv.altura, tv.distancia], para: [fx, 0, 0], fov: 2 * Math.atan(CAMERA.largura * (pequena ? CAMERA.telaPequena : 1) / (cfg.w / cfg.h) / 2 / Math.hypot(tv.altura, tv.distancia)) * 180 / Math.PI };
+      }
       const cams = {
-        tv: { de: [fx, tv.altura, tv.distancia], para: [fx, 0, 0], fov: 2 * Math.atan(CAMERA.largura * (pequena ? CAMERA.telaPequena : 1) / (cfg.w / cfg.h) / 2 / Math.hypot(tv.altura, tv.distancia)) * 180 / Math.PI },
+        tv: camTV,
         gol: { de: [MX - CAMERA_GOL.recuo, CAMERA_GOL.altura, CAMERA_GOL.lateral], para: [MX + CAMERA_GOL.olharAlem, CAMERA_GOL.olharY, 0], fov: CAMERA_GOL.fov },
         perfil: { de: [MX + 1.4, 1.5, 13.5], para: [MX + 1.4, 1.2, 0], fov: 32 },
         // de perto, de dentro do gol olhando a rede de fundo a ~1,1 m: o fio com vários pixels (a cor dele, sem mistura)

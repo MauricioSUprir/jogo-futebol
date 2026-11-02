@@ -28,7 +28,7 @@ import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 import { acharGol } from './lib/acha-gol.mjs';
 import { golRoteirizado } from './lib/gol-roteirizado.mjs';
-import { CAMERA } from '../js/config.js';
+import * as EQ from '../js/render/enquadramento.js';
 import { acharImpedimento } from './lib/acha-impedimento.mjs';
 import { acharLegal } from './lib/acha-legal.mjs';
 
@@ -663,11 +663,20 @@ async function preparar(pagina, prep, gol = null) {
   }, { prep, gol });
 }
 
-/** A câmera de TV do jogo para a tela da cena (celular: a mais baixa e mais longe, plano um pouco mais fechado). */
+/**
+ * A câmera de TV do jogo para a tela da cena com a bola no fundo da rede (item 66: o foco em regime pelo módulo puro
+ * render/enquadramento.js, o mesmo da página; celular: a mais baixa e mais longe): {1: pose, -1: pose} pelo lado do gol.
+ */
 function tvDe(c) {
-  const pequena = Math.min(c.largura, c.altura) < 520;
-  const t = pequena ? { ...CAMERA, ...CAMERA.celular } : CAMERA;
-  return { altura: t.altura, distancia: t.distancia, largura: CAMERA.largura * (pequena ? CAMERA.telaPequena : 1) };
+  const pequena = Math.min(c.largura, c.altura) < 520, asp = c.largura / c.altura;
+  const p = EQ.perfilCamera({}, 0, asp, pequena), G = EQ.geometriaTV({}, p, asp, pequena), out = {};
+  for (const s of [1, -1]) {
+    const a = { jx: s * 46.5, jz: 0, jvx: 0, jvz: 0, bx: s * 53.7, by: 0.11, bz: 0, bvx: 0, bvz: 0, ax: NaN, az: NaN, cx: NaN, cz: NaN, dir: s, temParada: false };
+    const f = { x: 0, z: 0, vx: 0, vz: 0 };
+    EQ.focoTV(EQ.criarEnquadramento(), f, a, p, G, EQ.larguraVista(p, pequena), 1 / 60, true);
+    out[s] = EQ.poseTV(p, f.x, f.z, asp, pequena, {});
+  }
+  return out;
 }
 
 const srv = await servidor();
@@ -756,11 +765,10 @@ for (const c of CENAS) {
         let de = l.rel ? [j.x + l.rel[0], l.rel[1], j.z + l.rel[2]] : l.de;
         let para = l.rel ? [j.x, 0.9, j.z] : l.para;
         let fov = l.fov;
-        // câmera de TV (a do jogo, CAMERA ou CAMERA.celular, com o foco no limite perto do gol: 14 m antes da linha)
+        // câmera de TV (a do jogo com a bola no fundo da rede, pelo lado do gol: tvDe)
         if (l.tv) {
-          const s = window.__golLado?.s ?? 1, tv = l.tv, fx = s * (52.5 - 14);
-          de = [fx, tv.altura, tv.distancia]; para = [fx, 0, 0];
-          fov = 2 * Math.atan(tv.largura / (innerWidth / innerHeight) / 2 / Math.hypot(tv.altura, tv.distancia)) * 180 / Math.PI;
+          const pose = l.tv[(window.__golLado?.s ?? 1) > 0 ? 1 : -1];
+          de = pose.de; para = pose.para; fov = pose.fov;
         }
         // câmera "do gol": espelha pelo lado do gol e olha para o z da batida (zFixo: olha para o z pedido)
         else if (l.doGol && window.__golLado) { const { s, z } = window.__golLado; de = [s * de[0], de[1], de[2]]; para = [s * para[0], para[1], l.zFixo ? para[2] : z]; }
