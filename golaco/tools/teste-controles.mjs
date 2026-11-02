@@ -6,12 +6,15 @@
 //    Q trocar, G goleiro (segurar), toque curto que não se perde, barra de força no HUD.
 //  - Controle: A passe, B chute, X lançamento, Y enfiada (ataque) / goleiro (defesa), LB trocar,
 //    RT correr.
+//  - Carrinho (item 34): L e X são o CARRINHO na defesa (sem lançamento) e LANÇAMENTO no ataque; no cruzamento do
+//    adversário (a bola ALTA) continuam LANÇAMENTO (o pedido de primeira / o cabeceio para longe), sem carrinho; na partida o
+//    L, o X e o botão CARRINHO do toque põem o controlado no carrinho — o do toque já no quadro do pointerdown.
 //  - Cavadinha (pedido do dono, 12/10): o MESMO botão de chute duas vezes (K, B do controle, CHUTE do celular) = cavadinha;
 //    uma vez = chute, nunca cavadinha; soltar e apertar de novo sem quadro no meio também é dois toques; a repetição
 //    automática da tecla não conta; o toque cancelado pelo sistema é soltar (não prende o botão).
 //  - Celular: CONDUÇÃO não existe mais; ataque = CHUTE (o maior), PASSE, ENFIADA, LANÇAMENTO e
-//    CORRER; defesa = TROCAR, GOLEIRO, PRESSÃO, DIVIDIDA e CORRER (tela limpa, 11/10: 5 botões — o CONTER
-//    virou a DIVIDIDA SEGURADA, conferida aqui com toque de verdade: tocar = bote, segurar = CONTER);
+//    CORRER; defesa = TROCAR, GOLEIRO, PRESSÃO, DIVIDIDA, CARRINHO e CORRER (tela limpa, 11/10 + o carrinho: 6 botões — o
+//    CONTER virou a DIVIDIDA SEGURADA, conferida aqui com toque de verdade: tocar = bote, segurar = CONTER);
 //    nenhum botão encosta em outro, no analógico em repouso nem no HUD
 //    (e as caixas do HUD não encostam entre si, com o texto de modo mais longo e o placar com o
 //    relógio da partida), todos ≥ 48 px e dentro da área segura, em 844×390 e 812×375 (com
@@ -42,12 +45,44 @@ const meta = (nome, medido, ok) => res.push({ nome, medido, ok });
 const argv = process.argv.slice(2);
 const srv = await servidor(0, path.resolve(argv.includes('--raiz') ? argv[argv.indexOf('--raiz') + 1] : RAIZ));
 
-const BIT = { CORRER: 1, MOD: 2, PASSE: 4, ENFIADA: 8, LANCAMENTO: 16, CHUTE: 32, CONTER: 64, DIVIDIDA: 128, PRESSAO: 512, TROCAR: 1024, GOLEIRO: 2048, PEGAR: 4096 };
+const BIT = { CORRER: 1, MOD: 2, PASSE: 4, ENFIADA: 8, LANCAMENTO: 16, CHUTE: 32, CONTER: 64, DIVIDIDA: 128, CARRINHO: 256, PRESSAO: 512, TROCAR: 1024, GOLEIRO: 2048, PEGAR: 4096 };
 const AG4 = 'aguardando4';
 /** A entrada da Parte 4 posiciona os botões da defesa da Etapa 3 (CONTER, DIVIDIDA, PRESSÃO)? */
 const temDefesaE3 = pagina => pagina.evaluate(() => { const b = document.getElementById('btn-dividida'); return !!window.__golaco.entradaEtapa3 || (!!b && b.hasAttribute('style')); });
-// defesa do toque (tela limpa, 11/10): 5 botões — o CONTER é a DIVIDIDA segurada e a PRESSÃO fica no 1º anel
-const DEFESA_TOQUE = ['correr', 'dividida', 'goleiro', 'pressao', 'trocar'];
+// defesa do toque (tela limpa, 11/10; carrinho, item 34): 6 botões — o CONTER é a DIVIDIDA segurada, a PRESSÃO fica no 1º
+// anel e o CARRINHO na vaga 'e' (a de baixo do 2º anel)
+const DEFESA_TOQUE = ['carrinho', 'correr', 'dividida', 'goleiro', 'pressao', 'trocar'];
+/**
+ * Partida limpa com o adversário com a bola no pé (cenaDeTeste 'pressao': bola viva; 20 quadros para a fase VISÍVEL, com a
+ * espera de 0,25 s, virar defesa) e, com `alta`, a bola no ar subindo (o cruzamento do adversário: carrinho.js bolaAlta) —
+ * um passo depois, para a fase (e a bola alta) da página valerem.
+ */
+const partidaDefesa = (pagina, alta = false) => pagina.evaluate(alta => {
+  const g = window.__golaco;
+  g.reiniciar({ modo: 'partida', semente: 3 }); g.relogio.usarManual(true);
+  for (let i = 0; i < 5; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+  g.cenaDeTeste('pressao');
+  for (let i = 0; i < 20; i++) g.relogio.avancar(1000 / 60, { desenhar: i === 19 });
+  if (alta) { const m = g.mundo, b = m.bola; m.posse = null; m.voo = null; b.p.y = 1.6; b.v.x = 0; b.v.y = 5; b.v.z = 0; b.rolando = false; }
+  g.relogio.avancar(1000 / 60, { desenhar: false });
+  const m = g.mundo;
+  return { fase: g.estado().fase, ctrl: m.controlado[0], alta: !m.bola.rolando && (m.bola.p.y > 0.6 || m.bola.v.y > 0) };
+}, alta);
+/** n quadros: a máscara do time 0 (controlado + botoesTime) e quem do time 0 entrou no carrinho (o 1º quadro em que o plano aparece). */
+const quadrosCarrinho = (pagina, n) => pagina.evaluate(n => {
+  const g = window.__golaco;
+  let mask = 0, quadro = -1, quem = null;
+  for (let i = 0; i < n; i++) {
+    g.relogio.avancar(1000 / 60, { desenhar: false });
+    const m = g.mundo;
+    for (const j of m.jogadores) {
+      if (j.time !== 0) continue;
+      mask |= (j.botoesTime | 0);
+      if (j.carrinho && quadro < 0) { quadro = i + 1; quem = j.id; }
+    }
+  }
+  return { mask, quadro, quem };
+}, n);
 
 async function quadros(pagina, n) {
   return pagina.evaluate(n => { const g = window.__golaco; for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: i === n - 1 }); return g.estado(); }, n);
@@ -398,6 +433,8 @@ async function conferirTodosLayouts(pagina) {
       av(20);
       res.faseDefesa = g.fase;
       res.Y_defesa = testar(3, 8);
+      // defesa: X = CARRINHO (item 34; no treino só a máscara)
+      res.X_defesa = testar(2, 8);
       navigator.getGamepads = () => [];
       return res;
     });
@@ -405,6 +442,8 @@ async function conferirTodosLayouts(pagina) {
     meta('Controle: B chute, X lançamento, LB trocar', `B ${gp.B}, X ${gp.X}, LB ${gp.LB}`, (gp.B & BIT.CHUTE) && (gp.X & BIT.LANCAMENTO) && (gp.LB & BIT.TROCAR) ? true : false);
     meta('Controle: A = passe', `passes ${gp.passesA}`, sem(gp.passesA >= 1));
     meta('Controle: B duas vezes = cavadinha; B uma vez = chute', `duas: chutes ${gp.BB.chutes}, voos ${gp.BB.voos.join(',') || '-'} · uma: chutes ${gp.B1.chutes}, voos ${gp.B1.voos.join(',') || '-'}`, sem(gp.BB.chutes === 1 && gp.BB.voos.includes('cavadinha') && gp.B1.chutes === 1 && !gp.B1.voos.includes('cavadinha')));
+    meta('Controle: X = lançamento no ataque e CARRINHO na defesa', `fase ${gp.faseAtaque}: ${gp.X}; fase ${gp.faseDefesa}: ${gp.X_defesa}`,
+      gp.faseAtaque === 'ataque' && (gp.X & BIT.LANCAMENTO) !== 0 && !(gp.X & BIT.CARRINHO) && gp.faseDefesa === 'defesa' && (gp.X_defesa & BIT.CARRINHO) !== 0 && !(gp.X_defesa & BIT.LANCAMENTO));
     meta('Controle: Y = enfiada no ataque e goleiro na defesa', `fase ${gp.faseAtaque}: ${gp.Y_ataque}; fase ${gp.faseDefesa}: ${gp.Y_defesa}`, gp.faseAtaque === 'ataque' && (gp.Y_ataque & BIT.ENFIADA) !== 0 && !(gp.Y_ataque & BIT.GOLEIRO) && gp.faseDefesa === 'defesa' && (gp.Y_defesa & BIT.GOLEIRO) !== 0 && !(gp.Y_defesa & BIT.ENFIADA));
     // controle na pausa (auditoria dos botões, 12/10: a cruz, o analógico e o A não faziam nada; só o Start fechava): a cruz
     // move o foco, o A aperta o botão em foco, o B fecha — e o A apertado na pausa não vira passe ao voltar
@@ -474,6 +513,46 @@ async function conferirTodosLayouts(pagina) {
     const dJ = await def('KeyJ'), dK = await def('KeyK'), dO = await def('KeyO'), dG = await def('KeyG');
     const okDef = dJ.fase === 'defesa' && (dJ.mask & BIT.CONTER) && !(dJ.mask & BIT.PASSE) && (dK.mask & BIT.DIVIDIDA) && !(dK.mask & BIT.CHUTE) && (dO.mask & BIT.PRESSAO);
     meta('Defesa: J = CONTER, K = DIVIDIDA, O = PRESSÃO (sem passe nem chute)', `fase ${dJ.fase}; J ${dJ.mask}, K ${dK.mask}, O ${dO.mask}`, defE3 ? !!okDef : AG4);
+    // CARRINHO (item 34): L na defesa = CARRINHO, sem lançamento (no treino só a máscara: o carrinho é da partida)
+    const dL = await def('KeyL');
+    meta('Defesa: L = CARRINHO (sem lançamento)', `fase ${dL.fase}; L ${dL.mask}`, dL.fase === 'defesa' && (dL.mask & BIT.CARRINHO) !== 0 && !(dL.mask & BIT.LANCAMENTO));
+    // na partida: L com a bola no pé do adversário = o controlado no carrinho; no cruzamento do adversário (a bola alta), L
+    // = LANÇAMENTO (o pedido de primeira / o cabeceio para longe), sem carrinho
+    {
+      const p0 = await partidaDefesa(pagina, false);
+      await pagina.keyboard.down('KeyL');
+      const c0 = await quadrosCarrinho(pagina, 6);
+      await pagina.keyboard.up('KeyL');
+      const p1 = await partidaDefesa(pagina, true);
+      await pagina.keyboard.down('KeyL');
+      const c1 = await quadrosCarrinho(pagina, 6);
+      await pagina.keyboard.up('KeyL');
+      await quadros(pagina, 2);
+      meta('Partida: L com a bola no pé do adversário = o controlado no carrinho; L no cruzamento (bola alta) = LANÇAMENTO, sem carrinho',
+        `pé: fase ${p0.fase}, máscara ${c0.mask}, carrinho ${c0.quem != null ? (c0.quem === p0.ctrl ? 'o controlado' : 'outro ' + c0.quem) : 'nenhum'} no quadro ${c0.quadro}; alta (${p1.alta ? 'sim' : 'NÃO'}): fase ${p1.fase}, máscara ${c1.mask}, carrinho ${c1.quem ?? 'nenhum'}`,
+        p0.fase === 'defesa' && (c0.mask & BIT.CARRINHO) !== 0 && !(c0.mask & BIT.LANCAMENTO) && c0.quem === p0.ctrl &&
+        p1.alta && p1.fase === 'defesa' && (c1.mask & BIT.LANCAMENTO) !== 0 && !(c1.mask & BIT.CARRINHO) && c1.quem == null);
+      // X do controle: o mesmo (o carrinho na defesa; LANÇAMENTO com a bola alta)
+      const padX = async alta => {
+        const p = await partidaDefesa(pagina, alta);
+        // (o X solto antes de o controle sumir: sem a leitura do soltar, o sentido do X ficaria fixado para o próximo aperto)
+        await pagina.evaluate(() => {
+          const bt = n => Array.from({ length: 17 }, (_, i) => ({ pressed: n.includes(i), value: n.includes(i) ? 1 : 0, touched: false }));
+          window.__padX = [2];
+          navigator.getGamepads = () => [{ connected: true, mapping: 'standard', axes: [0, 0, 0, 0], buttons: bt(window.__padX) }];
+        });
+        const c = await quadrosCarrinho(pagina, 6);
+        await pagina.evaluate(() => { window.__padX = []; });
+        await quadros(pagina, 2);
+        await pagina.evaluate(() => { navigator.getGamepads = () => []; });
+        return { ...p, ...c };
+      };
+      const x0 = await padX(false), x1 = await padX(true);
+      meta('Partida, controle: X com a bola no pé do adversário = carrinho; X no cruzamento (bola alta) = LANÇAMENTO, sem carrinho',
+        `pé: máscara ${x0.mask}, carrinho ${x0.quem != null ? (x0.quem === x0.ctrl ? 'o controlado' : 'outro') : 'nenhum'}; alta (${x1.alta ? 'sim' : 'NÃO'}): máscara ${x1.mask}, carrinho ${x1.quem ?? 'nenhum'}`,
+        x0.fase === 'defesa' && (x0.mask & BIT.CARRINHO) !== 0 && !(x0.mask & BIT.LANCAMENTO) && x0.quem === x0.ctrl &&
+        x1.alta && (x1.mask & BIT.LANCAMENTO) !== 0 && !(x1.mask & BIT.CARRINHO) && x1.quem == null);
+    }
     // replay com a tecla que estava SEGURADA quando ele começou (contraprova 13/10): solta e apertada de novo, pula (como
     // na main). O reaperto entre passos (entrada.js) não pode valer fora do laço — sem passo nenhum no replay, a soltura
     // ficava guardada e a tecla segurada no começo nunca mais pulava. Dois caminhos: o "Replay" da pausa (fora do passo)
@@ -745,7 +824,7 @@ async function conferirTodosLayouts(pagina) {
     const ld = await layoutToque(pagina);
     const defE3c = await temDefesaE3(pagina);
     meta('Sem a bola: TROCAR, GOLEIRO e CORRER (ataque some)', `fase ${d0.fase}, posse ${d0.posse}, botões ${ld.ids.join(', ')}`, d0.fase === 'defesa' && ['correr', 'goleiro', 'trocar'].every(b => ld.ids.includes(b)) && !ld.ids.some(b => ['chute', 'passe', 'enfiada', 'lancamento'].includes(b)));
-    meta('Sem a bola: 5 botões (TROCAR, GOLEIRO, PRESSÃO, DIVIDIDA, CORRER) no arco da defesa (≥ 48 px, sem encostar)', `botões ${ld.ids.join(', ')}; menor ${ld.menor} px${ld.problemas.length ? ' — ' + ld.problemas.join('; ') : ''}`,
+    meta('Sem a bola: 6 botões (TROCAR, GOLEIRO, PRESSÃO, DIVIDIDA, CARRINHO, CORRER) no arco da defesa (≥ 48 px, sem encostar)', `botões ${ld.ids.join(', ')}; menor ${ld.menor} px${ld.problemas.length ? ' — ' + ld.problemas.join('; ') : ''}`,
       defE3c ? JSON.stringify(ld.ids) === JSON.stringify(DEFESA_TOQUE) && ld.problemas.length === 0 : AG4);
     const bt = await centro('btn-trocar');
     await toque('touchStart', [{ x: bt.x, y: bt.y, id: 14 }]);
@@ -797,6 +876,26 @@ async function conferirTodosLayouts(pagina) {
     const pr1 = await rodar(pagina, 10);
     await toque('touchEnd', [{ x: bpr.x, y: bpr.y, id: 19 }]);
     meta('PRESSÃO segurada (1º anel) chega ao jogo', `máscara ${pr1.mask}`, defE3c ? (pr1.mask & BIT.PRESSAO) !== 0 : AG4);
+    // CARRINHO (item 34; vaga 'e'): botão simples — o bit sai no pointerdown, então o controlado já está no carrinho no
+    // PRIMEIRO quadro depois do dedo encostar (sem esperar soltar); na partida (bola viva, o adversário com ela no pé)
+    if (!(await pagina.evaluate(() => !!document.getElementById('btn-carrinho')))) {
+      meta('Partida, toque: CARRINHO (vaga e) — o controlado no carrinho no 1º quadro do toque (pointerdown), sem LANÇAMENTO', 'sem o botão btn-carrinho na página', false);
+    } else {
+      const pc = await partidaDefesa(pagina, false);
+      const lc = await layoutToque(pagina);
+      const bcr = await centro('btn-carrinho');
+      await toque('touchStart', [{ x: bcr.x, y: bcr.y, id: 23 }]);
+      // (o CDP pode devolver antes de a página tratar o pointerdown: espera o botão acender, até 2 s)
+      await pagina.waitForFunction(() => document.getElementById('btn-carrinho').classList.contains('ativo'), null, { timeout: 2000 }).catch(() => {});
+      const c1 = await quadrosCarrinho(pagina, 1);
+      const c2 = await quadrosCarrinho(pagina, 5);
+      await toque('touchEnd', [{ x: bcr.x, y: bcr.y, id: 23 }]);
+      await quadros(pagina, 2);
+      const estado = await pagina.evaluate(id => { const j = window.__golaco.mundo.jogadores.find(o => o.id === id); return j?.carrinho ? { tick0: j.carrinho.tick0, fim: j.carrinho.fim } : null; }, pc.ctrl);
+      meta('Partida, toque: CARRINHO (vaga e) — o controlado no carrinho no 1º quadro do toque (pointerdown), sem LANÇAMENTO',
+        `fase ${pc.fase}; botões ${lc.ids.join(', ')}; 1º quadro: máscara ${c1.mask}, carrinho ${c1.quem != null ? (c1.quem === pc.ctrl ? 'o controlado' : 'outro') : 'nenhum'}; depois: máscara ${c2.mask}; plano ${estado ? `${estado.tick0} → ${estado.fim}` : 'nenhum'}`,
+        pc.fase === 'defesa' && lc.ids.includes('carrinho') && lc.problemas.length === 0 && (c1.mask & BIT.CARRINHO) !== 0 && c1.quem === pc.ctrl && c1.quadro === 1 && !((c1.mask | c2.mask) & BIT.LANCAMENTO) && !!estado);
+    }
     // chute carregando não some debaixo do dedo quando a posse muda
     await novo();
     await quadros(pagina, 4);

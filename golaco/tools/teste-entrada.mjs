@@ -12,6 +12,10 @@
 // Tela limpa (11/10): no toque a defesa tem 5 botões — o CONTER virou a DIVIDIDA SEGURADA (criarToqueOuSegura:
 // tocar = bote, segurar = conter, como o "Sprint & Tackle" do FC Mobile) e a PRESSÃO saiu do 2º anel (vaga d, em
 // cima da jogada) para a vaga b; do toque ao jogo: o toque curto faz o bote e o segurado contém o condutor.
+// Carrinho (item 34): L e X com TRÊS sentidos — ataque = LANÇAMENTO, defesa = CARRINHO, defesa com a bola ALTA =
+// LANÇAMENTO (o afastamento de primeira e o cabeceio para longe no cruzamento do adversário), fixados no aperto (a 3ª
+// coluna do SENTIDO_FASE; os outros botões, sem ela, ficam com o da defesa); no toque a defesa ganha o 6º botão,
+// CARRINHO na vaga 'e' (a de baixo do 2º anel), sem nada encostar.
 //   node tools/teste-entrada.mjs
 import { processarAnalogico, teclasParaAnalogico, paraMundo, miraPelaTela, cameraDaMatriz } from '../js/controle.js';
 import { criarMundo, passo } from '../js/sim.js';
@@ -162,6 +166,8 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
       ['KeyG', 0, BOTAO.GOLEIRO],
       ['pad:A', BOTAO.PASSE, BOTAO.CONTER], ['pad:B', BOTAO.CHUTE, BOTAO.DIVIDIDA],
       ['pad:Y', BOTAO.ENFIADA, BOTAO.GOLEIRO], ['pad:RB', BOTAO.PEGAR, BOTAO.PRESSAO],
+      // o carrinho (item 34): L no teclado e X no controle — LANÇAMENTO no ataque, CARRINHO na defesa
+      ['KeyL', BOTAO.LANCAMENTO, BOTAO.CARRINHO], ['pad:X', BOTAO.LANCAMENTO, BOTAO.CARRINHO],
     ];
     // (D1, 23/10) o O/RB preso como PEGAR — um toque, sem uso segurado — relê a fase quando ela vira defesa: PRESSÃO
     const rele = new Set(['KeyO', 'pad:RB']);
@@ -192,26 +198,56 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
         `O ${o.map(nome).join(' ')}; RB ${rb.map(nome).join(' ')}; J ${jj.map(nome).join(' ')}`,
         'PEGAR PEGAR PRESSAO PRESSAO PRESSAO; J PASSE', okO && okJ);
     }
+    // (item 34) a defesa com a bola ALTA (a 3ª coluna): L e X voltam a ser LANÇAMENTO (o afastamento de primeira e o
+    // cabeceio para longe no cruzamento do adversário); os outros, sem a 3ª coluna, ficam com o da defesa. No ataque a bola
+    // alta não muda nada
+    {
+      const res = casos.map(([id, atq, def]) => {
+        const sf = criarSentidoFixo();
+        const da = sf.bit(id, true, 'defesa', true); sf.bit(id, false);
+        const aa = sf.bit(id, true, 'ataque', true); sf.bit(id, false);
+        const meta = id === 'KeyL' || id === 'pad:X' ? BOTAO.LANCAMENTO : def;
+        return { id, da, aa, ok: da === meta && aa === atq };
+      });
+      const ruins = res.filter(r => !r.ok);
+      reg('defesa com a bola alta: L e X = LANÇAMENTO; J/K/O/G e A/B/Y/RB = o da defesa; no ataque, o do ataque',
+        res.map(r => `${r.id} ${nome(r.da)}`).join(', '), 'L, X LANCAMENTO; o resto o da defesa', ruins.length === 0);
+      // fixado no aperto também pela bola: o L apertado no cruzamento (alta) segue LANÇAMENTO quando a bola desce; o
+      // apertado com ela rasteira segue CARRINHO se ela subir; o X igual
+      const seq = (id, altas) => { const sf = criarSentidoFixo(); return altas.map(a => sf.bit(id, true, 'defesa', a)); };
+      const L = BOTAO.LANCAMENTO, C = BOTAO.CARRINHO;
+      const lA = seq('KeyL', [true, false, false]), lB = seq('KeyL', [false, true, true]), xA = seq('pad:X', [true, false]), xB = seq('pad:X', [false, true]);
+      const okS = lA.every(b => b === L) && lB.every(b => b === C) && xA.every(b => b === L) && xB.every(b => b === C);
+      reg('L/X segurado: o sentido da bola alta também fica fixado no aperto',
+        `L (alta→baixa) ${lA.map(nome).join(' ')}; L (baixa→alta) ${lB.map(nome).join(' ')}; X ${xA.map(nome).join(' ')} / ${xB.map(nome).join(' ')}`,
+        'LANCAMENTO…; CARRINHO…', okS);
+      // o L/X apertado no ataque (lançamento carregando) segue lançamento quando a posse muda (não está no RELE_NA_DEFESA)
+      const lAtq = (() => { const sf = criarSentidoFixo(); return [sf.bit('KeyL', true, 'ataque'), sf.bit('KeyL', true, 'defesa'), sf.bit('KeyL', true, 'defesa', true)]; })();
+      reg('L carregando o lançamento no ataque e a posse muda: segue LANÇAMENTO (nunca vira carrinho no meio)', lAtq.map(nome).join(' '), 'LANCAMENTO ×3', lAtq.every(b => b === L));
+    }
     // teclas novas sem conflito com as ações de um toque nem com os bits fixos
     const teclasFase = Object.keys(SENTIDO_FASE).filter(k => !k.startsWith('pad:'));
     const conflito = teclasFase.filter(k => ACOES_TECLA[k] || TECLA_BIT[k]);
     const defesaTeclado = teclasFase.reduce((b, k) => b | SENTIDO_FASE[k][1], 0);
     const defesaPad = Object.keys(SENTIDO_FASE).filter(k => k.startsWith('pad:')).reduce((b, k) => b | SENTIDO_FASE[k][1], 0);
-    const precisa = BOTAO.CONTER | BOTAO.DIVIDIDA | BOTAO.PRESSAO;
-    reg('teclas da defesa (J, K, O) sem conflito com R/M/N/C/H/F1/Esc/P/F3 e L/I/Q/G/E/Shift', conflito.length ? conflito.join(', ') : 'nenhum', 'nenhum', conflito.length === 0);
-    reg('CONTER, DIVIDIDA e PRESSÃO no teclado e no controle', `teclado ${nome(defesaTeclado & precisa)}; controle ${nome(defesaPad & precisa)}`, 'os três nos dois', (defesaTeclado & precisa) === precisa && (defesaPad & precisa) === precisa);
-    // arco do toque na defesa (tela limpa, 11/10): 5 botões, todos no 1º anel — PRESSÃO (b) e DIVIDIDA (c, que
-    // segurada vira CONTER); nada no 2º anel (d e e), nada encosta, nada < 48 px
+    const precisa = BOTAO.CONTER | BOTAO.DIVIDIDA | BOTAO.PRESSAO | BOTAO.CARRINHO;
+    reg('teclas da defesa (J, K, O, G, L) sem conflito com R/M/N/C/H/F1/Esc/P/F3 e I/Q/E/Shift/Z/X/F/Espaço', conflito.length ? conflito.join(', ') : 'nenhum', 'nenhum', conflito.length === 0);
+    reg('CONTER, DIVIDIDA, PRESSÃO e CARRINHO no teclado e no controle', `teclado ${nome(defesaTeclado & precisa)}; controle ${nome(defesaPad & precisa)}`, 'os quatro nos dois', (defesaTeclado & precisa) === precisa && (defesaPad & precisa) === precisa);
+    // arco do toque na defesa (tela limpa, 11/10; carrinho, item 34): 6 botões — PRESSÃO (b) e DIVIDIDA (c, que
+    // segurada vira CONTER) no 1º anel; no 2º anel só o CARRINHO na 'e' (a de baixo; a 'd' subia para dentro do campo);
+    // nada encosta, nada < 48 px
     const def = BOTOES_TOQUE.filter(b => b.fase === 'defesa' || b.fase === 'ambas');
     const vagaDe = bit => def.find(b => b.bit === bit)?.vaga;
     const vagasDef = def.map(b => b.vaga);
     const repetida = vagasDef.length !== new Set(vagasDef).size;
     const segurada = def.find(b => b.bit === 'DIVIDIDA')?.segura;
     const anel2 = vagasDef.filter(v => v === 'd' || v === 'e');
-    reg('toque: defesa com 5 botões — PRESSÃO na vaga b, DIVIDIDA na c (segurada = CONTER), nada no 2º anel',
-      `${def.length} botões (${def.map(b => b.bit).join(', ')}); PRESSÃO ${vagaDe('PRESSAO')}, DIVIDIDA ${vagaDe('DIVIDIDA')} (segurada: ${segurada ?? '-'}); CONTER ${vagaDe('CONTER') ?? 'sem botão'}; 2º anel ${anel2.join(',') || 'vazio'}${repetida ? ' (vaga repetida!)' : ''}`,
-      '5; b; c (CONTER); sem botão; vazio',
-      def.length === 5 && vagaDe('PRESSAO') === 'b' && vagaDe('DIVIDIDA') === 'c' && segurada === 'CONTER' && !vagaDe('CONTER') && anel2.length === 0 && !repetida);
+    const car = def.find(b => b.bit === 'CARRINHO');
+    reg('toque: defesa com 6 botões — PRESSÃO na vaga b, DIVIDIDA na c (segurada = CONTER), CARRINHO na e (2º anel só a e; botão simples, nome curto)',
+      `${def.length} botões (${def.map(b => b.bit).join(', ')}); PRESSÃO ${vagaDe('PRESSAO')}, DIVIDIDA ${vagaDe('DIVIDIDA')} (segurada: ${segurada ?? '-'}); CONTER ${vagaDe('CONTER') ?? 'sem botão'}; CARRINHO ${car?.vaga ?? 'sem botão'}${car?.segura ? ' (segurado: ' + car.segura + '!)' : ''}, curto "${car?.curto ?? '-'}"; 2º anel ${anel2.join(',') || 'vazio'}${repetida ? ' (vaga repetida!)' : ''}`,
+      '6; b; c (CONTER); sem botão; e, "CARRIN."; e',
+      def.length === 6 && vagaDe('PRESSAO') === 'b' && vagaDe('DIVIDIDA') === 'c' && segurada === 'CONTER' && !vagaDe('CONTER') &&
+      car?.vaga === 'e' && !car.segura && car.curto === 'CARRIN.' && anel2.length === 1 && anel2[0] === 'e' && !repetida);
     let pior = Infinity, menor = Infinity, fora = 0;
     for (const [W, H] of [[844, 390], [390, 844], [1280, 720], [667, 375], [1920, 1080]]) {
       for (const tam of [0.7, 1, 1.4]) for (const sa of [{ l: 0, r: 0, t: 0, b: 0 }, { l: 44, r: 44, t: 0, b: 21 }, { l: 0, r: 0, t: 47, b: 34 }]) {

@@ -38,6 +38,10 @@
 //  B15 (contraprova) pênalti e tiro livre direto a favor: o CHUTE tocado na montagem não bate sozinho na hora da bola
 //     pronta (fraco e sem a mira); a cobrança é a do aperto depois de pronta, e o CHUTE segurado desde a montagem
 //     ainda bate (partida.js cobrar).
+//  B16 CARRINHO (item 34; defesa.js carrinho, carrinho.js): o controlado correndo para o adversário com a bola no pé
+//     (0,5 s de arrancada desde 9 m), o aperto o põe no carrinho (o evento do disparo e o plano nele no mesmo passo), o
+//     corpo desliza (≥ 1,5 m pelo quadro, a pelve desenhada abaixo de 0,5 m) e, no fim, o plano some com ele de pé (a
+//     pelve desenhada ≥ 0,8 m); com a bola no pé DELE (ataque) ou alta (no ar, subindo), o mesmo aperto não faz nada.
 //   node tools/teste-botoes.mjs                 (lógica do repositório)
 //   node tools/teste-botoes.mjs --js <pasta>    (outra cópia da lógica, ex.: a base → REPROVA)
 //   node tools/teste-botoes.mjs --so B3         (um item só)
@@ -881,6 +885,74 @@ if (faz('B15')) {
   reg('B15a pênalti / tiro livre direto: CHUTE tocado 1 s antes de pronta não bate sozinho (vale o aperto depois de pronta, +2)',
     `${okA}/${nA} · ${det.slice(0, 4).join(' · ')}`, `${nA}/${nA}`, nA >= 10 && okA === nA);
   reg('B15b (guarda) CHUTE segurado desde a montagem até depois de pronta: bate', `${okB}/${nB}`, `${nB}/${nB}`, nB >= 10 && okB === nB);
+}
+
+// ------------------------------------------------------------------ B16. CARRINHO (item 34)
+if (faz('B16')) {
+  const CR = await imp('carrinho.js').catch(() => null);
+  const AN = await imp('anim.js');
+  let n = 0, ok = 0, nAtq = 0, okAtq = 0, nAlta = 0, okAlta = 0;
+  const det = [];
+  for (const sem of [41, 42, 43, 44, 45, 46]) {
+    const m0 = novaPartida(sem);
+    limpar(m0);
+    const c0 = ctrl(m0);
+    // o adversário de linha mais perto do controlado, com a bola parada no pé (do lado do controlado, 0,4 m)
+    let o0 = null, dm = Infinity;
+    for (const o of m0.jogadores) {
+      if (o.time !== 1 || o.posicao === 'GOL') continue;
+      const d = Math.hypot(o.x - c0.x, o.z - c0.z);
+      if (d < dm) { dm = d; o0 = o; }
+    }
+    // o adversário a 9 m à frente do controlado (rumo dele), virado para ele: a bola no pé, a ~8,6 m
+    o0.x = c0.x + Math.cos(c0.rumo) * 9; o0.z = c0.z + Math.sin(c0.rumo) * 9; o0.rumo = c0.rumo + Math.PI; o0.vx = 0; o0.vz = 0;
+    bolaNoPe(m0, o0);
+    const rumoBola = (m, j) => { const dx = m.bola.p.x - j.x, dz = m.bola.p.z - j.z, d = Math.hypot(dx, dz) || 1; return { x: dx / d, z: dz / d }; };
+    // (a) a defesa: 0,5 s de arrancada para a bola e o carrinho
+    {
+      const m = clone(m0), id = ctrl(m).id;
+      for (let k = 0; k < 30; k++) { const u = rumoBola(m, porId(m, id)); P.passoPartida(m, { x: u.x, z: u.z, botoes: BOTAO.CORRER }); }
+      const j = porId(m, id), x0 = j.x, z0 = j.z, u = rumoBola(m, j), v0 = Math.hypot(j.vx, j.vz);
+      const ev = P.passoPartida(m, { x: u.x, z: u.z, botoes: BOTAO.CARRINHO });
+      const disparou = ev.some(e => e.tipo === 'carrinho' && e.fase === 'inicio' && e.id === id) && !!porId(m, id).carrinho;
+      const fim = porId(m, id).carrinho?.fim ?? m.tick;
+      let quadrilMin = Infinity, max = 0, plano = 0, pelveFim = 0;
+      const out = new Float32Array(AN.NJ * 3);
+      for (let k = 0; m.tick <= fim + 2 && k < 400; k++) {
+        P.passoPartida(m, NADA);
+        const jj = porId(m, id);
+        if (jj.carrinho) plano++;
+        AN.pose(jj, m, out);
+        pelveFim = out[AN.J.pelve * 3 + 1];
+        quadrilMin = Math.min(quadrilMin, pelveFim);
+        max = Math.max(max, Math.hypot(jj.x - x0, jj.z - z0));
+      }
+      const dePe = !porId(m, id).carrinho && pelveFim >= 0.8;
+      const bom = disparou && max >= 1.5 && quadrilMin < 0.5 && dePe;
+      n++; if (bom) ok++;
+      det.push(`${sem}: ${disparou ? 'disparou' : 'NÃO disparou'} a ${f1(v0)} m/s, ${f1(max)} m, pelve ${f1(quadrilMin, 2)} → ${f1(pelveFim, 2)} m, ${plano} passos${dePe ? '' : ', NÃO de pé'}`);
+    }
+    // (b) o ataque: a bola no pé do controlado — nada
+    {
+      const m = clone(m0), j = ctrl(m), id = j.id;
+      bolaNoPe(m, j);
+      const ev = P.passoPartida(m, { x: 0, z: 0, botoes: BOTAO.CARRINHO });
+      nAtq++; if (!ev.some(e => e.tipo === 'carrinho') && !porId(m, id).carrinho) okAtq++;
+    }
+    // (c) a bola alta (no ar, subindo, acima da perna) vinda do adversário: nada
+    {
+      const m = clone(m0), j = ctrl(m), id = j.id, b = m.bola;
+      m.posse = null;
+      b.p.x = j.x + 3; b.p.y = 1.2; b.p.z = j.z; b.v.x = -6; b.v.y = 3; b.v.z = 0; b.rolando = false;
+      const alta = CR ? CR.bolaAlta(m) : true;
+      const ev = P.passoPartida(m, { x: 0, z: 0, botoes: BOTAO.CARRINHO });
+      nAlta++; if (alta && !ev.some(e => e.tipo === 'carrinho') && !porId(m, id).carrinho) okAlta++;
+    }
+  }
+  reg('B16a CARRINHO com a bola no pé do adversário: dispara no aperto, desliza ≥ 1,5 m deitado (pelve < 0,5 m) e termina de pé',
+    `${ok}/${n} · ${det.slice(0, 3).join(' · ')}`, `${n}/${n}`, n >= 6 && ok === n);
+  for (const d of det) console.log('  B16a ' + d);
+  reg('B16b CARRINHO com a bola no pé do controlado (ataque) ou alta: nada', `pé ${okAtq}/${nAtq}, alta ${okAlta}/${nAlta}`, 'tudo', okAtq === nAtq && okAlta === nAlta && nAtq >= 6);
 }
 
 const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));

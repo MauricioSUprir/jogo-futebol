@@ -394,7 +394,9 @@ html.nomes-botoes .btn-toque span { display: block; text-shadow: 0 1px 2px rgba(
 .btn-toque[data-etapa="3"]:not([style]) { display: none; }
 .btn-pressao svg { stroke: #9ff5c6; }
 .btn-dividida svg { stroke: var(--verde); }
-.btn-pressao.ativo svg, .btn-dividida.ativo svg { stroke: var(--preto); }
+/* CARRINHO (item 34): âmbar — a ação de risco da defesa (errar deixa no chão; o contato no homem pode dar falta e cartão) */
+.btn-carrinho svg { stroke: var(--alerta); }
+.btn-pressao.ativo svg, .btn-dividida.ativo svg, .btn-carrinho.ativo svg { stroke: var(--preto); }
 .toque.fase-ataque .btn-toque[data-fase="defesa"], .toque.fase-defesa .btn-toque[data-fase="ataque"] { display: none; }
 /* PEGAR: só com o goleiro do humano com a bola no pé (recuo, a bola que ele soltou) — classe goleiro-pe, main.js */
 .toque:not(.goleiro-pe) .btn-pegar { display: none; }

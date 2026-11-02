@@ -129,8 +129,10 @@ function gerador(sem) {
   return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
 }
 const q = v => Math.round(v * 1024) / 1024 + 0; // quantizado como a rede (round é exata)
+// (o CARRINHO, item 34: o caminho do carrinho — o plano, o quadro, a pose deitada — passa a ser contado)
 const LISTA = [0, 0, 0, BOTAO.CORRER, BOTAO.PASSE, BOTAO.CHUTE, BOTAO.CHUTE, BOTAO.LANCAMENTO, BOTAO.ENFIADA, BOTAO.TROCAR,
-  BOTAO.CONTER, BOTAO.DIVIDIDA, BOTAO.PRESSAO, BOTAO.MOD, BOTAO.GOLEIRO, BOTAO.PEGAR, BOTAO.EFEITO_E, BOTAO.CORRER | BOTAO.PASSE];
+  BOTAO.CONTER, BOTAO.DIVIDIDA, BOTAO.PRESSAO, BOTAO.MOD, BOTAO.GOLEIRO, BOTAO.PEGAR, BOTAO.EFEITO_E, BOTAO.CORRER | BOTAO.PASSE,
+  BOTAO.CARRINHO];
 
 /** Entrada de "pessoa" do time t: sorteada, a IA dele sem a marca `ia` (caminhos do humano) ou a IA pelo humano. */
 function criarPessoa(sem, t) {

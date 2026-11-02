@@ -269,7 +269,8 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
       piorArea = Math.max(piorArea, r[fase].area); piorTexto = Math.max(piorTexto, r[fase].fora);
       r[fase].txt.forEach(t => txtVisto.add(t));
       nomesBotoes.botoes += r[fase].nomes.botoes; nomesBotoes.comNome += r[fase].nomes.comNome; r[fase].nomes.sem.forEach(id => nomesBotoes.sem.add(`${w}×${h} ${fase} ${id}`));
-      linhasH1.push(`${w}×${h} ${fase} ${(r[fase].area * 100).toFixed(1)}% (${r[fase].pecas} peças)`);
+      // (2 casas: com o CARRINHO na defesa, item 34, a folga em 568×320 é de ~0,02 ponto — com 1 casa ela sumia)
+      linhasH1.push(`${w}×${h} ${fase} ${(r[fase].area * 100).toFixed(2)}% (${r[fase].pecas} peças)`);
     }
     if (r.pausa) { linhasPausa.push(`${w}×${h} folga ${r.pausa.folga.toFixed(0)} px (${r.pausa.par})${r.pausa.transborda > 0 ? `, transborda ${r.pausa.transborda} px` : ''}`); piorPausa = Math.min(piorPausa, r.pausa.transborda > 0 ? -1 : r.pausa.folga); }
     // H10: o placar nos 3 estados (minimapa desligado, o padrão do celular) e, com o minimapa ligado, o mais largo
@@ -321,7 +322,7 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
   } finally { await navegador.close(); }
 }
 meta('H9 nomes dos botões de toque por padrão (dono, 12/10), inteiros dentro do círculo do botão (3 telas, 2 fases)', `${nomesBotoes.comNome}/${nomesBotoes.botoes} botões com o nome${nomesBotoes.sem.size ? ' — sem: ' + [...nomesBotoes.sem].slice(0, 8).join(', ') : ''}`, 'todos', nomesBotoes.botoes > 0 && nomesBotoes.comNome === nomesBotoes.botoes);
-meta('H1 área do HUD no celular (pior caso, ataque, defesa e a cobrança do pênalti da pessoa, 3 telas)', `${(piorArea * 100).toFixed(1)}% — ${linhasH1.join('; ')}`, '≤ 11%', piorArea <= 0.11);
+meta('H1 área do HUD no celular (pior caso, ataque, defesa e a cobrança do pênalti da pessoa, 3 telas)', `${(piorArea * 100).toFixed(2)}% — ${linhasH1.join('; ')}`, '≤ 11%', piorArea <= 0.11);
 meta('H11 os botões PARADINHA e PULINHO (item 70, P2): só na cobrança do pênalti da pessoa (3 telas; visíveis de 2)', estilosVistos.join('; '), 'ataque 0, defesa 0, pênalti 2 (ENFIADA/LANÇAMENTO 0)', estilosVistos.length === 3 && estilosFalhas === 0);
 meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada encosta nem transborda (3 telas com entalhe)', linhasPausa.join('; ') || 'sem a pausa', 'folga ≥ 4 px (a do ENCOSTA)', linhasPausa.length === 3 && piorPausa >= 4);
 
