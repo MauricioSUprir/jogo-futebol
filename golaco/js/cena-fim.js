@@ -61,6 +61,7 @@ import {
 import { cameraDoPlano } from './prejogo-roteiro.js';
 import { copiarBola, passoBola } from './bola.js';
 import { solidoEm, areaTecnica } from './estadio-forma.js';
+import { carrinhoAtivo } from './carrinho.js';
 
 const K = CENA_FIM;
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
@@ -321,11 +322,11 @@ function montarGrupos(c) {
  * No corte do começo da cena (o apito; ELIPSE do corte, como as de cena-atores.js recriarAtor): quem vinha correndo para um
  * sólido do estádio (o gol, as placas) e não pararia antes dele pela locomoção (a freada: CENA_FIM.solidos.freio do freio
  * dele) recomeça `solidos.folga` m antes do ponto onde, andando a velAnda, ele para — com a passada viva. O goleiro numa
- * defesa desenhada termina a defesa (fica).
+ * defesa desenhada termina a defesa e quem está num carrinho (carrinho.js) termina o deslize pelo quadro: ficam.
  */
 function longeDosSolidos(c, a) {
   const j = a.j, v = Math.hypot(j.vx, j.vz), S = K.solidos;
-  if (a.goleiro && j.mergulho) return;
+  if ((a.goleiro && j.mergulho) || (j.carrinho && carrinhoAtivo(j, c.mF.tick))) return;
   // já DENTRO de um sólido no apito (quem correu atrás da bola para dentro do gol) ou atrás das placas (quem foi buscar a
   // bola lá fora): reaparece do lado de dentro, para o meio do campo, `folga` m além da borda, parado — senão andava através
   // delas para voltar

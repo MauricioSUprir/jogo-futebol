@@ -4,9 +4,9 @@
 // "Carrinho (item 34)"; constantes: config.js DEFESA_HUMANO.carrinho.
 //
 // Na base (sem js/carrinho.js) REPROVA: "o carrinho existe — não existe nesta lógica" (como o teste-faltas com o faltas.js).
-// Commits 1–4 da entrega: o plano e o quadro (A, P pelo quadro), a pose e o corpo novo (P), o corpo na simulação com o
-// disparo e as travas (E), o contato da perna com a bola (B, E6), o contato com o homem e a Regra 12 (C, D) e o
-// determinismo (F). As cenas (G) entram no commit seguinte. 2 processos (o canhão C dividido; --par 1: um só), ~60 s.
+// Commits 1–5 da entrega: o plano e o quadro (A, P pelo quadro), a pose e o corpo novo (P), o corpo na simulação com o
+// disparo e as travas (E), o contato da perna com a bola (B, E6), o contato com o homem e a Regra 12 (C, D), o
+// determinismo (F) e as cenas (G). 2 processos (o canhão C dividido; --par 1: um só), ~65 s.
 //
 // Metas (as exatas reprovam em qualquer caso; "·" = informativa, não reprova):
 //  0. estrutura: o campo `carrinho` declarado no jogador (forma única; undefined sem o botão); as constantes; os raios das
@@ -97,6 +97,22 @@
 //     do canhão. F3 o passo com o carrinho (o canhão inteiro, nos dois processos) não chama Math não exato (contado como no
 //     teste-math-proibido). F4 online (dois humanos): os dois carrinhos com os times trocados — quem toca a bola e quem faz a
 //     falta saem pelo papel, não pelo time.
+//  G. as cenas continuam o deslize (a cópia do plano pelo MESMO quadro, no relógio da cena; o deslizante do estado posse1 da
+//     parte E, alguns passos depois do aperto): G1 a cópia no meio do carrinho (cena-atores com os braços para o céu o
+//     tempo todo em todos, como no meio do jogo e com o `congela` do apito): o 1º quadro = a pose do mundo, a pelve
+//     desenhada = a do quadro da cópia até ficar de pé, sem salto além do centro (≤ 0,1 m/tick), nenhum gesto no carrinho
+//     nem no 1º tick de pé (= a pose pura, exato), as mãos ≤ 0,15 m/tick além da pelve na rampa dos gestos (o tick do fim do
+//     quadro: informativo), e o plano do MUNDO igual (comparação profunda) depois de 200 passos; G3 a
+//     comemoração com um defensor no carrinho no tick do gol: G1; G3b com o AUTOR no carrinho: a finalização (e o abraço)
+//     só depois do levantar, ele corre ≥ 1,5 m para o alvo em 1,5 s de pé e não fica preso (nem fixo nem no carrinho);
+//     G2 a cena do cartão com o punido no chão (o amarelo do próprio deslizante no tick da falta, variação 'aceita', a de
+//     reação mais cedo): nenhum gesto enquanto ele desliza, a reação depois de ficar de pé e por ≥ 0,5 s, sem salto da pelve
+//     (≤ 0,1) nem das mãos (≤ 0,15 m/tick além da pelve, fora o tick do fim do quadro: informativo), o árbitro no ponto do
+//     plano (≤ 0,3 m: a paradaPrevista pelo fim do quadro); G4 o teleportar zera o plano e o quadril (de pé no ponto novo
+//     depois de 1 passo) e a cópia da cena de substituição fica de pé no lugar; G5 o intervalo (o carrinho no último tick do
+//     1º tempo): a pelve desenhada parada (≤ 0,05 m) e a saída do 2º tempo zera o plano e o quadril; G6 o levar (3, −2 m) no
+//     meio do carrinho: sem salto e o pé dobrado parado no 1º tick do levantar (≤ 0,02 m); G7 o Modo Livre, "Bola no meu
+//     pé" com o controlado no carrinho: de pé no lugar, plano e quadril zerados, a bola a ≤ 0,5 m.
 //   node tools/teste-carrinho.mjs              (lógica do repositório)
 //   node tools/teste-carrinho.mjs --js <pasta> (outra cópia da lógica; a da main antes do carrinho → REPROVA)
 //   node tools/teste-carrinho.mjs --detalhe    (a tabela por entrada, cada caso do A9 e os encontros do C1 sem toque)
@@ -2381,6 +2397,336 @@ if (TEM_HOMEM) {
   reg('F3 o passo com o carrinho não chama Math não exato (sin, cos, atan2, hypot, exp…)', `${f3n} chamadas${ondeF3.size ? ': ' + [...ondeF3.keys()].slice(0, 3).join('; ') : ''}`, '0', f3n === 0);
 }
 
-linhas.push(['…', 'G (as cenas continuam o deslize: comemoração, cartão, intervalo, substituição, Livre)', 'PENDENTE', 'commit 5']);
+// ------------------------------------------------------------------ G: as cenas continuam o deslize
+// As cenas copiam o mundo (comemoracao.js copiaJogador; cena-atores.js, cena-cartao.js, cena-fim.js, substituicao.js) e andam
+// o resto do carrinho pelo MESMO quadro da simulação, no relógio delas (a cópia do plano sem o `congela`), sem escrever no plano
+// do mundo; a reação e os gestos só depois de ficar de pé. O deslizante: o controlado do time 0 contra o condutor do time 1 do
+// estado posse1 da parte E, alguns passos depois do aperto.
+const CM = await imp('comemoracao.js');
+let CA = null, CCt = null, SUB = null, EL = null;
+try { CA = await imp('cena-atores.js'); CCt = await imp('cena-cartao.js'); SUB = await imp('substituicao.js'); EL = await imp('elenco.js'); } catch { CA = null; }
+const TEM_G = !!CA && typeof CA.noCarrinho === 'function' && typeof CM.RAMPA_CARRINHO === 'number';
+const { isDeepStrictEqual } = await import('node:util');
+const JP = A.J.pelve * 3;
+/** O deslizante `n` passos depois do aperto, com o carrinho ainda em andamento: {w, j} ou null. */
+function deslizante(n) {
+  const ap = ESTADOS.posse1 && apertar(ESTADOS.posse1, w => { const d = porId(w, w.posse); return linhaPerto(w, d.x, d.z); });
+  if (!ap) return null;
+  for (let i = 0; i < n && ap.j.carrinho; i++) passo(ap.w, entPara(ap.j, ap.w.bola.p.x, ap.w.bola.p.z, 0));
+  return ap.j.carrinho && K.carrinhoAtivo(ap.j, ap.w.tick + 1) ? ap : null;
+}
+/**
+ * Anda a cena (passo(c) um tick) e mede o ator `a` (copiado de jm, o deslizante do mundo w): o 1º quadro da cena contra a pose
+ * do mundo no tick da cópia; o salto da pelve desenhada além do centro por tick; a pelve fora do quadro da cópia enquanto ele
+ * está no carrinho; os GESTOS — a pose desenhada contra a pose sem gestos (anim.js pose, pura: a do quadro no carrinho, a da
+ * locomoção de pé) — no carrinho e no 1º tick de pé (a rampa começa do 0: as duas exatas); o salto das mãos além da pelve
+ * depois (a rampa) e no tick do fim do quadro (o anim.js poseCarrinho: informativo); o tick da 1ª pose de pé; a pelve no fim.
+ */
+const _qG = K.novoQuadroCarrinho(), _poseG = new Float32Array(A.NJ * 3);
+const MAOS_G = [A.J.maoE * 3, A.J.maoD * 3];
+function medirCena(c, a, w, jm, passos, passoC) {
+  const p0 = A.pose(jm, w);
+  const r = { entrada: Math.hypot(a.atu[JP] - p0[JP], a.atu[JP + 1] - p0[JP + 1], a.atu[JP + 2] - p0[JP + 2]), salto: 0, foraQuadro: 0,
+    noCarr0: !!a.noCarrinho, kPe: -1, ticksCarr: 0, pelveFim: 0, n: 0, gestoChao: 0, gestoPe: 0, saltoMao: 0, saltoFim: 0 };
+  const ant = Float32Array.from(a.atu);
+  let cx = a.j.x, cz = a.j.z;
+  for (let k = 0; k < passos; k++) {
+    if (passoC(c) === false) break;
+    r.n++;
+    const o = a.atu, j = a.j;
+    const dpx = o[JP] - ant[JP], dpy = o[JP + 1] - ant[JP + 1], dpz = o[JP + 2] - ant[JP + 2];
+    r.salto = Math.max(r.salto, Math.hypot(dpx - (j.x - cx), dpy, dpz - (j.z - cz)));
+    let sm = 0;
+    for (const i of MAOS_G) sm = Math.max(sm, Math.hypot(o[i] - ant[i] - dpx, o[i + 1] - ant[i + 1] - dpy, o[i + 2] - ant[i + 2] - dpz));
+    ant.set(o); cx = j.x; cz = j.z;
+    A.pose(j, c.mF, _poseG);
+    let dif = 0;
+    for (let i = 0; i < o.length; i++) dif = Math.max(dif, Math.abs(o[i] - _poseG[i]));
+    if (a.noCarrinho) {
+      r.ticksCarr++;
+      r.gestoChao = Math.max(r.gestoChao, dif);
+      K.quadroCarrinho(j.carrinho, K.tempoCarrinho(j.carrinho, c.mF.tick), _qG);
+      r.foraQuadro = Math.max(r.foraQuadro, Math.hypot(o[JP] - _qG.x, o[JP + 1] - _qG.h, o[JP + 2] - _qG.z));
+    } else if (r.kPe < 0) { r.kPe = c.k; r.gestoPe = dif; r.saltoFim = sm; }
+    else r.saltoMao = Math.max(r.saltoMao, sm);
+  }
+  r.pelveFim = a.atu[JP + 1];
+  return r;
+}
+const txtCena = r => `entrada ${f3(r.entrada)} m, salto ${f3(r.salto)} m/tick, fora do quadro ${r.foraQuadro.toExponential(1)} m, ${r.ticksCarr} ticks no carrinho, de pé no tick ${r.kPe} (pelve ${f2(r.pelveFim)}); gesto no chão ${r.gestoChao.toExponential(1)}, no 1º tick de pé ${r.gestoPe.toExponential(1)} m; mãos depois ${f3(r.saltoMao)} m/tick (no fim do quadro ${f3(r.saltoFim)})`;
+const okCena = r => r.noCarr0 && r.entrada <= 0.1 && r.salto <= 0.1 && r.foraQuadro <= 1e-4 && r.ticksCarr >= 10 && r.kPe > 0 && r.pelveFim >= 0.85
+  && r.gestoChao <= 1e-6 && r.gestoPe <= 1e-6 && r.saltoMao <= 0.15;
+const META_CENA = 'entrada e salto ≤ 0,1 m; pelve = quadro; de pé ≥ 0,85; sem gesto no chão nem no 1º tick de pé; mãos ≤ 0,15 m/tick';
+/** A cena das cena-atores com todos copiados e parados (sem gestos): a base do cartão e do fim. */
+function cenaParada(w, prep = null) {
+  const c = CA.criarBase(w);
+  for (const o of w.jogadores) CA.adicionarJogador(c, o, 'resto');
+  if (prep) prep(c);
+  for (const a of c.atores) CA.poseInicial(c, a);
+  return c;
+}
+const desejoParado = (c, a) => CA.parar(c, a);
+// (os dois braços para o céu o tempo todo, em todos: quem está no carrinho não gesticula e de pé os braços sobem na rampa)
+const gestoCeu = (c, a) => CA.gCeu(a.atu, a.j.rumo, 1);
+const passoParada = c => CA.passoAtores(c, desejoParado, gestoCeu);
+
+if (!TEM_G) reg('G as cenas continuam o deslize (cena-atores.js noCarrinho, comemoracao.js RAMPA_CARRINHO)', 'não existe nesta lógica', 'existe', false);
+else {
+  // ---- G1: a cópia no meio do carrinho (cena-atores: o molde do cartão e do fim) — com o plano do mundo como está e com o
+  // `congela` do apito (partida.js fimDoTempo): a cena anda o deslize, o chão e o levantar pelo quadro da CÓPIA e o plano do
+  // mundo fica igual (comparação profunda) depois de 200 passos
+  for (const [nome, congela] of [['no meio do jogo', false], ['com o congela do apito', true]]) {
+    const st = deslizante(12);
+    if (!st) { reg(`G1 cópia no meio do carrinho (${nome})`, 'sem deslizante', 'existe', false); continue; }
+    if (congela) st.j.carrinho.congela = st.w.tick;
+    const antes = structuredClone(st.j.carrinho);
+    const c = cenaParada(st.w);
+    const a = c.porId.get(st.j.id);
+    const r = medirCena(c, a, st.w, st.j, 200, passoParada);
+    const igual = isDeepStrictEqual(st.j.carrinho, antes);
+    reg(`G1 cópia no meio do carrinho (${nome}; gestos o tempo todo): o quadro da cópia até de pé; o plano do mundo igual depois de 200 passos`, `${txtCena(r)}; mundo ${igual ? 'igual' : 'MUDOU'}`,
+      META_CENA + '; mundo igual', okCena(r) && igual);
+  }
+
+  // ---- G3: a comemoração com um DEFENSOR no carrinho no tick do gol (o gol do time 1): G1 na cena do gol
+  {
+    const st = deslizante(12);
+    const cond = st && (porId(st.w, st.w.posse) ?? st.w.jogadores.find(o => o.time === 1 && o.posicao !== 'GOL'));
+    if (!st || !cond) reg('G3 comemoração com um defensor no carrinho', 'sem deslizante', 'existe', false);
+    else {
+      const antes = structuredClone(st.j.carrinho);
+      const c = CM.criarCena(CM.planejarComemoracao(st.w, { tipo: 'gol', time: 1, id: cond.id, tick: st.w.tick }, {}), st.w);
+      const a = c.atores.find(x => x.id === st.j.id);
+      const r = medirCena(c, a, st.w, st.j, 300, CM.passoCena);
+      const igual = isDeepStrictEqual(st.j.carrinho, antes);
+      reg('G3 comemoração com um defensor no carrinho no tick do gol (G1; o gesto de quem sofreu começa a 0,6 s)', `${txtCena(r)}; mundo ${igual ? 'igual' : 'MUDOU'}`, 'como G1', okCena(r) && igual);
+    }
+  }
+
+  // ---- G3b: a comemoração com o AUTOR do gol no carrinho (o gol do time 0, dele): a corrida e a finalização só depois do
+  // levantar; depois do fim ele não fica preso (nem fixo nem no carrinho: cede e a lente o tratam como quem corre)
+  {
+    const st = deslizante(12);
+    if (!st) reg('G3b comemoração com o autor no carrinho', 'sem deslizante', 'existe', false);
+    else {
+      const plano = CM.planejarComemoracao(st.w, { tipo: 'gol', time: 0, id: st.j.id, tick: st.w.tick }, { variante: 'bracos' });
+      const c = CM.criarCena(plano, st.w);
+      const a = c.autor;
+      let finalNoChao = 0, kPe = -1, presoDepois = 0, d0 = null, dMin = Infinity, noCarr0 = !!a.noCarrinho, vMax = 0;
+      for (let k = 0; k < 420 && CM.passoCena(c); k++) {
+        if (a.noCarrinho) { if (c.kFinal >= 0) finalNoChao++; continue; }
+        if (kPe < 0) { kPe = c.k; d0 = Math.hypot(a.j.x - plano.alvo.x, a.j.z - plano.alvo.z); }
+        if (a.fixo || a.noCarrinho) presoDepois++;
+        if (c.k - kPe <= 90) { dMin = Math.min(dMin, Math.hypot(a.j.x - plano.alvo.x, a.j.z - plano.alvo.z)); vMax = Math.max(vMax, Math.hypot(a.j.vx, a.j.vz)); }
+      }
+      const corre = d0 != null && d0 - dMin >= 1.5;
+      reg('G3b comemoração com o AUTOR no carrinho: a finalização (e o abraço) só depois do levantar; depois, ele corre e não fica preso',
+        `no carrinho no começo ${noCarr0 ? 'sim' : 'não'}; finalização com ele no chão ${finalNoChao} ticks; de pé no tick ${kPe}, finalização no ${c.kFinal}; em 1,5 s de pé ${d0 != null ? f2(d0 - dMin) : '–'} m para o alvo (v máx ${f2(vMax)}); preso depois do fim ${presoDepois} ticks`,
+        'sim; 0; kFinal ≥ de pé; ≥ 1,5 m; 0', noCarr0 && finalNoChao === 0 && kPe > 0 && c.kFinal >= kPe && corre && presoDepois === 0);
+    }
+  }
+
+  // ---- G2: a cena do CARTÃO com o punido no chão (o carrinho faltoso — o caso comum). O cartão amarelo do próprio deslizante
+  // no tick da falta (as entradas do canhão C no estado posse1, a que deixa mais carrinho pela frente), a variação 'aceita'
+  // (a desculpa começa antes do plano 'reacao': a mais exigente): a reação (os gestos) só depois de ele ficar de pé e por
+  // ≥ 0,5 s (a janela da desculpa é 0,8 s), sem salto da pelve nem das mãos; o árbitro, fixo no fim do cartão no alto, a
+  // ≤ 0,3 m do ponto do plano (a paradaPrevista: o fim do quadro, não a freada de quem corre)
+  {
+    let g = null, nCasos = 0;
+    // (os estados: a partida da parte E, semente 3102, com a bola no pé de um jogador de linha do time 1, a cada ≥ 700 passos
+    // a partir do 600 — o 1º, o posse1 da parte E, não dá cartão em nenhuma das 60 entradas)
+    const mm = P.criarPartida({ semente: 3102, minutosPorTempo: 4 });
+    let ultimo = -1e9;
+    procura: for (let i = 0; i < 12000; i++) {
+      P.passoPartida(mm, P.entradaDemoPartida(mm));
+      if (mm.tick < 600 || mm.tick - ultimo <= 700) continue;
+      const dm = mm.posse != null ? porId(mm, mm.posse) : null;
+      if (!(mm.partida.estado === 'jogo' && !(mm.parada && !mm.parada.rolou) && mm.golTick == null && mm.naMao == null && dm && dm.time === 1 && dm.posicao !== 'GOL')) continue;
+      ultimo = mm.tick;
+      const base = SIM.copiarMundo(mm);
+      for (const dist of [2.0, 2.5, 3.0, 3.5]) for (const ang of [Math.PI, 2.6, -2.6, Math.PI / 2, -Math.PI / 2]) for (const vel of [6.5, 5.5, 4.5]) {
+      nCasos++;
+      const w = SIM.copiarMundo(base), d = porId(w, w.posse);
+      const vc = Math.hypot(d.vx, d.vz), dx0 = vc >= 1 ? d.vx / vc : Math.cos(d.rumo), dz0 = vc >= 1 ? d.vz / vc : Math.sin(d.rumo);
+      const ux = dx0 * Math.cos(ang) - dz0 * Math.sin(ang), uz = dx0 * Math.sin(ang) + dz0 * Math.cos(ang);
+      const b0 = w.bola.p, px = b0.x + ux * dist, pz = b0.z + uz * dist, j = linhaPerto(w, b0.x, b0.z);
+      const rx = b0.x - px, rz = b0.z - pz, rl = Math.hypot(rx, rz) || 1;
+      P.teleportar(j, px, pz, Math.atan2(rz, rx)); j.vx = vel * rx / rl; j.vz = vel * rz / rl;
+      if (!AC.assumirControle(w, 0, j)) continue;
+      passo(w, { x: rx / rl, z: rz / rl, botoes: B.CARRINHO });
+      if (!j.carrinho) continue;
+      for (let n = 0; n < 200 && j.carrinho; n++) {
+        const ev = passo(w, { x: 0, z: 0, botoes: 0 });
+        const cart = CCt.escolherCartao(ev);
+        if (!cart) continue;
+        if (cart.id === j.id && cart.cor === 'amarelo' && K.carrinhoAtivo(j, w.tick + 1)) {
+          const resto = (j.carrinho.fim + 1 - w.tick) * PASSO;
+          if (!g || Math.abs(resto - 2.0) < Math.abs(g.resto - 2.0)) g = { w: SIM.copiarMundo(w), cart, resto, tick: base.tick };
+          if (resto >= 1.8 && resto <= 2.15) break procura;
+        }
+        break;
+      }
+      }
+    }
+    if (!g) reg('G2 cena do cartão com o punido no carrinho', 'nenhum amarelo do deslizante no carrinho achado', 'achado', false);
+    else {
+      const plano = CCt.planejarCartao(g.w, g.cart, { variante: 'aceita' });
+      const c = CCt.criarCenaCartao(plano, g.w);
+      const pun = c.punido, T = plano.tempos, tmp = new Float32Array(A.NJ * 3);
+      const MAOS = [A.J.maoE * 3, A.J.maoD * 3];
+      let kPe = -1, kGesto = -1, ativo = 0, gestoNoChao = 0, salto = 0, saltoMao = 0, saltoFim = 0, saltoCab = 0, arbErro = null, noCarr0 = !!pun.noCarrinho;
+      const ant = Float32Array.from(pun.atu);
+      for (let k = 0; k < 1500 && !c.acabou; k++) {
+        CCt.passoCenaCartao(c);
+        const o = pun.atu;
+        if (pun.recriado !== c.k) {
+          const dpx = o[JP] - ant[JP], dpy = o[JP + 1] - ant[JP + 1], dpz = o[JP + 2] - ant[JP + 2];
+          salto = Math.max(salto, Math.hypot(dpx - (pun.x1 - pun.x0), dpy, dpz - (pun.z1 - pun.z0)));
+          // (o tick da 1ª pose de pé à parte: o salto do fim do quadro para a pose normal é do anim.js poseCarrinho, no mundo
+          // também — informativo abaixo)
+          const transicao = !pun.noCarrinho && kPe < 0;
+          for (const i of MAOS) {
+            const sm = Math.hypot(o[i] - ant[i] - dpx, o[i + 1] - ant[i + 1] - dpy, o[i + 2] - ant[i + 2] - dpz);
+            if (transicao) saltoFim = Math.max(saltoFim, sm); else saltoMao = Math.max(saltoMao, sm);
+          }
+          if (transicao) { const ic = A.J.cabeca * 3; saltoCab = Math.hypot(o[ic] - ant[ic] - dpx, o[ic + 1] - ant[ic + 1] - dpy, o[ic + 2] - ant[ic + 2] - dpz); }
+        }
+        ant.set(o);
+        // o gesto: as mãos fora da pose sem gestos (a da locomoção, ou a do quadro no carrinho: anim.js pose, pura)
+        A.pose(pun.j, c.mF, tmp);
+        let dif = 0;
+        for (const i of MAOS) dif = Math.max(dif, Math.hypot(o[i] - tmp[i], o[i + 1] - tmp[i + 1], o[i + 2] - tmp[i + 2]));
+        if (pun.noCarrinho) { if (dif > 0.02) gestoNoChao++; continue; }
+        if (kPe < 0) kPe = c.k;
+        if (dif > 0.02) { if (kGesto < 0) kGesto = c.k; ativo++; }
+        if (c.arbFixo && arbErro == null) arbErro = Math.hypot(c.arbitro.j.x - plano.arb.x1, c.arbitro.j.z - plano.arb.z1);
+      }
+      if (arbErro == null && c.arbFixo) arbErro = Math.hypot(c.arbFixo.x - plano.arb.x1, c.arbFixo.z - plano.arb.z1);
+      info('G2 o caso (amarelo do deslizante; o carrinho que falta no tick do cartão; o atraso da reação)', `estado @${g.tick}, ${nCasos} entradas; ${f2(g.resto)} s de carrinho; atraso ${f2(c.atrasoPun)} s; variação ${plano.variante}`, 'a desculpa começa a T.alto + 0,5 = ' + f2(T.alto + 0.5) + ' s');
+      reg('G2 cena do cartão com o punido no chão: a reação depois de ele ficar de pé, sem salto; o árbitro no ponto do plano',
+        `no carrinho no começo ${noCarr0 ? 'sim' : 'não'}; gesto no chão ${gestoNoChao} ticks; de pé no tick ${kPe}, 1º gesto no ${kGesto}; gestos ${f2(ativo * PASSO)} s; salto pelve ${f3(salto)} / mãos ${f3(saltoMao)} m/tick; árbitro a ${arbErro != null ? f2(arbErro) : '–'} m do ponto`,
+        'sim; 0; gesto > de pé; ≥ 0,5 s; ≤ 0,1 / ≤ 0,15; ≤ 0,3 m', noCarr0 && gestoNoChao === 0 && kPe > 0 && kGesto > kPe && ativo * PASSO >= 0.5 && salto <= 0.1 && saltoMao <= 0.15 && arbErro != null && arbErro <= 0.3);
+      info('G2 a última pose do carrinho → a 1ª de pé (anim.js poseCarrinho; o mesmo no mundo): mãos / cabeça além da pelve', `${f3(saltoFim)} / ${f3(saltoCab)} m`, 'o levantar termina nos braços e no tronco da corrida do aperto (v0), não nos de pé: para o dono');
+    }
+  }
+
+  // ---- G4: teleportar (partida.js) zera o plano e o quadril — de pé no ponto novo, sem a pelve subindo do chão; a cópia da
+  // cena de substituição (a troca na parada da falta dele) começa DE PÉ no lugar, e o plano do mundo fica
+  {
+    const st = deslizante(12);
+    if (!st) reg('G4 teleportar e a substituição', 'sem deslizante', 'existe', false);
+    else {
+      // a substituição: uma troca do time 1 montada (o reserva que entrou já está na vaga, como depois do aplicarPendentes)
+      const antes = structuredClone(st.j.carrinho);
+      const w = st.w, emCampo = new Set(w.jogadores.map(o => o.id));
+      const entra = w.jogadores.find(o => o.time === 1 && o.posicao !== 'GOL' && o.id !== w.posse);
+      let sai = null;
+      for (let id = 101; id <= 123 && sai == null; id++) if (!emCampo.has(id) && EL.fichaDe(id)) sai = id;
+      let txtS = 'sem troca montada', okS = false;
+      if (entra && sai != null) {
+        const pares = [{ tipo: 'substituicao', time: 1, sai, entra: entra.id }];
+        const plS = SUB.planejarSubstituicao(w, pares, { timeHumano: 0, posAntes: id => (id === sai ? { x: entra.x, z: entra.z } : null) });
+        const cs = SUB.criarCenaSubst(plS, w);
+        const a = cs.atores.find(x => x.id === st.j.id);
+        const pe = a.j.pes.every(p => p.apoio), v = Math.hypot(a.j.vx, a.j.vz), pel = a.atu[JP + 1];
+        const igual = isDeepStrictEqual(st.j.carrinho, antes);
+        okS = !a.j.carrinho && pe && v === 0 && pel >= 0.85 && Math.hypot(a.j.x - st.j.x, a.j.z - st.j.z) < 1e-9 && igual;
+        txtS = `cópia: plano ${a.j.carrinho ? 'FICOU' : 'null'}, pés ${pe ? 'plantados' : 'no ar'}, v ${f2(v)}, pelve ${f2(pel)} no mesmo ponto; mundo ${igual ? 'igual' : 'MUDOU'}`;
+      }
+      // o teleportar do mundo
+      P.teleportar(st.j, st.j.x + 5, st.j.z, st.j.rumo);
+      const zerou = st.j.carrinho == null && st.j.quadril == null;
+      passo(w, { x: 0, z: 0, botoes: 0 });
+      const q1 = st.j.quadril, pel1 = A.pose(st.j, w)[JP + 1];
+      reg('G4 teleportar: plano e quadril zerados, de pé no ponto novo (sem a pelve subindo); a cópia da substituição de pé no lugar',
+        `teleportar: ${zerou ? 'zerou' : 'NÃO zerou'}; 1 passo depois quadril ${f2(q1)}, pelve ${f2(pel1)}; ${txtS}`, 'zerou; ≥ 0,85; de pé, plano null, mundo igual',
+        zerou && q1 >= 0.85 && pel1 >= 0.85 && okS);
+    }
+  }
+
+  // ---- G5: o intervalo (Node, passoPartida até 'intervalo', como `?cenas=0`): o carrinho no último tick do 1º tempo — a pelve
+  // desenhada parada durante o intervalo (o congela) e a saída do 2º tempo zera o plano e o quadril
+  {
+    const st = deslizante(8);
+    if (!st) reg('G5 intervalo com o carrinho', 'sem deslizante', 'existe', false);
+    else {
+      const w = st.w, p = w.partida;
+      p.acrescimo = 0; p.ticksPorTempo = w.tick + 1 - p.tick0Tempo;
+      passo(w, { x: 0, z: 0, botoes: 0 });
+      const noApito = p.estado === 'intervalo' && st.j.carrinho && st.j.carrinho.congela === w.tick && K.carrinhoAtivo(st.j, w.tick);
+      const p0 = A.pose(st.j, w);
+      let mexeu = 0, n = 0;
+      for (; n < 1200 && p.estado === 'intervalo'; n++) {
+        passo(w, { x: 0, z: 0, botoes: 0 });
+        if (p.estado !== 'intervalo') break;
+        const o = A.pose(st.j, w);
+        mexeu = Math.max(mexeu, Math.hypot(o[JP] - p0[JP], o[JP + 1] - p0[JP + 1], o[JP + 2] - p0[JP + 2]));
+      }
+      const zerou = p.tempo === 2 && st.j.carrinho == null && st.j.quadril == null;
+      passo(w, { x: 0, z: 0, botoes: 0 });
+      const q1 = st.j.quadril;
+      reg('G5 intervalo: a pelve desenhada parada no intervalo (congela); a saída do 2º tempo zera o plano e o quadril',
+        `no apito ${noApito ? 'congelado' : 'NÃO'}; ${n} ticks de intervalo, a pelve andou ${f3(mexeu)} m; saída: ${zerou ? 'zerou' : 'NÃO zerou'} (quadril depois ${f2(q1)})`,
+        'congelado; ≤ 0,05 m; zerou; ≥ 0,85', noApito && n >= 60 && mexeu <= 0.05 && zerou && q1 >= 0.85);
+    }
+  }
+
+  // ---- G6: o levar da cena (cena-atores.js; o expulso levado ao ponto desenhado no tick anterior) no meio do carrinho: o plano
+  // da cópia anda junto — o corpo não volta e o pé dobrado não salta no começo do levantar
+  {
+    const st = deslizante(6);
+    if (!st) reg('G6 levar no meio do carrinho', 'sem deslizante', 'existe', false);
+    else {
+      const c = cenaParada(st.w, cc => CA.levar(cc.porId.get(st.j.id).j, 3, -2));
+      const a = c.porId.get(st.j.id), plano = a.j.carrinho;
+      const kd = 1 - (plano?.frente ?? 1), iT = (kd === 0 ? A.J.tornozeloE : A.J.tornozeloD) * 3;
+      let tx = a.atu[iT], tz = a.atu[iT + 2], saltoPe = 0, fase4 = false, salto = 0, px = a.atu[JP], pz = a.atu[JP + 2], cx = a.j.x, cz = a.j.z;
+      for (let k = 0; k < 300 && (a.noCarrinho || k === 0); k++) {
+        passoParada(c);
+        const o = a.atu;
+        salto = Math.max(salto, Math.hypot(o[JP] - px - (a.j.x - cx), o[JP + 2] - pz - (a.j.z - cz)));
+        px = o[JP]; pz = o[JP + 2]; cx = a.j.x; cz = a.j.z;
+        if (a.noCarrinho && plano) {
+          const f = K.quadroCarrinho(plano, K.tempoCarrinho(plano, c.mF.tick), _qG).fase;
+          if (f === 4 && !fase4) { fase4 = true; saltoPe = Math.hypot(o[iT] - tx, o[iT + 2] - tz); }
+        }
+        tx = o[iT]; tz = o[iT + 2];
+      }
+      reg('G6 levar no meio do carrinho (3, −2 m): o corpo segue o quadro levado e o pé dobrado não salta no começo do levantar',
+        `salto da pelve ${f3(salto)} m/tick; pé dobrado no 1º tick do levantar ${fase4 ? f3(saltoPe) : '(sem levantar)'} m`, '≤ 0,1; ≤ 0,02 m', fase4 && salto <= 0.1 && saltoPe <= 0.02);
+    }
+  }
+
+  // ---- G7: o Modo Livre, "Bola no meu pé" (livre.js recomecarLivre 'pe') com o controlado no carrinho: de pé no lugar, plano e
+  // quadril zerados, a bola no pé dele
+  {
+    let txt = 'sem Livre', ok = false;
+    if (LV_C) {
+      const w = LV_C.criarLivre({ semente: 3001 });
+      const emJogo = () => w.partida.estado === 'jogo' && !(w.parada && !w.parada.rolou) && w.golTick == null && w.naMao == null && !K.bolaAlta(w);
+      for (let i = 0; i < 4000 && !(i >= 900 && emJogo()); i++) LV_C.passoLivre(w, LV_C.entradaDemoLivre(w), null);
+      const b0 = w.bola.p;
+      const j = linhaPerto(w, b0.x, b0.z);
+      if (emJogo() && j && AC.assumirControle(w, 0, j)) {
+        // (a bola livre, 6 m à frente dele, do lado do meio do campo: o carrinho sai pelo analógico, sem depender do lance)
+        w.posse = null; w.voo = null;
+        const sg = b0.x >= 0 ? 1 : -1;
+        P.teleportar(j, b0.x - 6 * sg, b0.z, sg > 0 ? 0 : Math.PI); j.vx = 5 * sg;
+        LV_C.passoLivre(w, { x: sg, z: 0, botoes: B.CARRINHO }, null);
+        const saiu = !!j.carrinho;
+        for (let i = 0; i < 10 && j.carrinho; i++) LV_C.passoLivre(w, { x: 0, z: 0, botoes: 0 }, null);
+        const x = j.x, z = j.z, deitado = j.carrinho && K.carrinhoAtivo(j, w.tick);
+        LV_C.recomecarLivre(w, 'pe');
+        const pe = j.pes.every(p => p.apoio), dB = Math.hypot(w.bola.p.x - j.x, w.bola.p.z - j.z);
+        const zerou = j.carrinho == null && j.quadril == null && j.x === x && j.z === z;
+        LV_C.passoLivre(w, { x: 0, z: 0, botoes: 0 }, null);
+        ok = saiu && !!deitado && zerou && pe && dB <= 0.5 && j.quadril >= 0.85;
+        txt = `carrinho ${saiu && deitado ? 'deslizando' : 'NÃO'}; recomeço: ${zerou ? 'plano e quadril zerados no lugar' : 'NÃO zerou'}, pés ${pe ? 'plantados' : 'no ar'}, bola a ${f2(dB)} m; quadril depois ${f2(j.quadril)}`;
+      }
+    }
+    reg('G7 Modo Livre, "Bola no meu pé" com o controlado no carrinho: de pé no lugar com a bola no pé', txt, 'zerado; bola ≤ 0,5 m; ≥ 0,85', ok);
+  }
+}
+
 if (DETALHE) console.log(tabela.map(l => l.join(' | ')).join('\n') + '\n');
 fim();

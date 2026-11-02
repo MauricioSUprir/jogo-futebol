@@ -32,6 +32,7 @@ import { pose, alturaQuadril, J, NJ, ik } from './anim.js';
 import { criarAtor, separar, maoEm, gesto, hashGol, limitarCamera, ajustarCelular } from './comemoracao.js';
 import { fichaDe, atributosDe } from './elenco.js';
 import { solidoEm } from './estadio-forma.js';
+import { teleportar } from './partida.js';
 
 const S = SUBST;
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
@@ -237,6 +238,10 @@ export function criarCenaSubst(plano, m) {
     if (k == null) {
       const a = novoAtor(j, i, CAMPO_T);
       a.j.mergulho = null;
+      // no carrinho (carrinho.js; a troca vem na parada da falta dele): a cópia fica DE PÉ no lugar — a conta do teleportar
+      // no próprio ponto (os pés plantados ao lado, v = 0, o plano e a altura do quadril zerados). A cena começa num corte,
+      // como a do goleiro na defesa acima; o levar daqui nunca vê o plano
+      if (a.j.carrinho) teleportar(a.j, a.j.x, a.j.z, a.j.rumo);
       // (dentro do gol na parada — quem correu atrás da bola que saiu pela linha de fundo: a cena começa num corte de
       // câmera, então ele já aparece 1 m para dentro do campo, parado; senão ficava dentro do gol a cena inteira — a cena do
       // fim faz o mesmo: cena-fim.js longeDosSolidos)
