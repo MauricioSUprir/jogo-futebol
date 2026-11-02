@@ -75,13 +75,17 @@
 //  C. o canhão contra o condutor (molde do teste-intercepta B: estados do MEIO da partida, semente 3001 + k, k = 0–15, a
 //     demo até a bola no pé de um jogador de linha do time 1; 36 casos por estado: o jogador do time 0 a 2/3/4/5,5 m da bola ×
 //     frente/lado/trás pela direção do condutor × 3/5/6,5 m/s, o analógico para a bola e o bit no 1º passo; 2 s de partida
-//     pela demo; 576 carrinhos). C1 (reprova pela prova binomial, p < 5%): a bola do FANTASMA (a cópia logo depois do aperto
-//     com o mesmo plano e sem os contatos da perna: o condutor vê o mesmo corpo deslizando) a ≤ raio + 0,11 m da perna da
-//     bola NO MESMO instante, antes de a perna chegar ao homem → toca ≥ 85%; a menor distância ≥ 1,0 m → toca ≤ 5% (pela
-//     cópia da DEMO, a da especificação, informativa: o condutor reage ao defensor de pé). C2–C5 informativas (toca, o time
-//     com a bola 2 s depois, falta, amarelo/vermelho por falta; todos e o alcançável) contra a Wyscout 2017/18. C6 (reprova):
-//     antes da bola com f ≥ 1,5 m/s falta ≥ 85% (chance 0,95); de frente tocando a bola primeiro ≤ 15%; sem contato no
-//     homem 0 (exato); por trás informativo (Fuller). C7: nenhum NaN; o Modo Livre (3 estados × 36): nenhuma falta.
+//     pela demo — até 4 s só para a próxima posse ainda sem dono —; 576 carrinhos). C1 (reprova pela prova binomial, p <
+//     5%): a bola do FANTASMA (a cópia logo depois do aperto com o mesmo plano e sem os contatos da perna: o condutor vê o
+//     mesmo corpo deslizando) a ≤ raio + 0,11 m da perna da bola NO MESMO instante, antes de a perna chegar ao homem → toca
+//     ≥ 85%; a menor distância ≥ 1,0 m → toca ≤ 5% (pela cópia da DEMO, a da especificação, informativa: o condutor reage
+//     ao defensor de pé). C2–C5 informativas contra a Wyscout 2017/18 (carrinhos TENTADOS: o subconjunto comparável é o
+//     ALCANÇÁVEL, a bola do fantasma a ≤ 0,3 m da perna da bola no mesmo instante; "todos" só para o antes → depois): toca
+//     a bola; a PRÓXIMA POSSE depois do lance (até 4 s, a régua da Wyscout; a foto aos 2 s contava o passe no ar como sem
+//     dono) do time do carrinho; falta, e de onde ela vem (antes da bola × depois); amarelo e vermelho direto por falta. Elas
+//     não calibram a física nem a Regra 12 (a mistura do canhão é arbitrária). C6 (reprova): antes da bola com f ≥ 1,5 m/s
+//     falta ≥ 85% (chance 0,95); de frente tocando a bola primeiro ≤ 15%; sem contato no homem 0 (exato); por chegada
+//     informativo (Fuller 2004: frente / lado / trás). C7: nenhum NaN; o Modo Livre (3 estados × 36): nenhuma falta.
 //  D. a Regra 12 em contatos MONTADOS (a partida em jogo com os outros longe; o carrinho em andamento e o adversário sobre a
 //     perna da bola; o contato do fim do passo chamado direto, com o gerador numa semente achada): D1 chanceFaltaCarrinho =
 //     a tabela C.1 (exato); D2 DOGSO fora da área vermelho, na área tentando a bola pênalti + amarelo, sem intenção pênalti +
@@ -205,7 +209,8 @@ const angDif = (a, b) => { let d = (b - a) % (2 * Math.PI); if (d <= -Math.PI) d
 // (o molde do teste-intercepta B: estados de saída enganam). 16 estados (semente 3001 + k: a demo por 1600 + 600·(k % 4) passos
 // e depois até a bola no pé de um jogador de linha do time 1, em jogo, sem parada, voo nem gol) × 36 casos: o jogador de linha
 // do time 0 mais perto da bola posto a 2 / 3 / 4 / 5,5 m dela × de frente / de lado / por trás pela direção do condutor × a 3 /
-// 5 / 6,5 m/s na direção da bola, o controle nele, o analógico para a bola e o bit no 1º passo; depois 2 s de partida pela demo.
+// 5 / 6,5 m/s na direção da bola, o controle nele, o analógico para a bola e o bit no 1º passo; depois 2 s de partida pela demo
+// (até 4 s só para a próxima posse, C3).
 // As referências, no MESMO instante de cada tick (a bola de um mundo × a perna da bola do quadro):
 //  - o FANTASMA: a cópia do mundo logo depois do aperto com o mesmo plano, sem os contatos da perna (o corpo desliza igual: o
 //    condutor vê o mesmo defensor) — a bola dela é a de A até o 1º contato de A; o C1 (reprova) usa esta;
@@ -301,6 +306,18 @@ function canhaoC(k0, k1, { livre = false, f2 = false } = {}) {
       cg.bola = 1e9; cg.homem = { id: -1, fantasma: true };
       const cnt = f2 && !contato1 ? contarSorteios(A) : null;
       let dG = Infinity, nG = -1, dD = Infinity, hT = contato1 && c.homem ? 1 : -1, ganhou = false, fal = null, naMaoH = false, outraFalta = false, div = -1;
+      // C3: a PRÓXIMA POSSE depois do lance (a régua da Wyscout: o próximo lance com a bola em até 4 s) — a partir do 1º de: o
+      // toque na bola, o contato no homem, a parada do deslize; o 1º dono (pé ou mão) desde ali, ou a bola morta antes dele
+      // ('falta' do carrinho, 'parada' por outro motivo). A foto aos 2 s não serve: o passe no ar não tem dono (no canhão, 203
+      // dos 242 "sem dono" aos 2 s eram passes deles no ar) e a bola que ainda rola depois do desarme também não.
+      let toqueT = c.bola >= 0 ? 1 : -1, prox = null;
+      const tSn = Math.ceil(c.tS / PASSO - 1e-9);
+      const proxima = n => {
+        if (prox || n < Math.min(toqueT > 0 ? toqueT : Infinity, hT > 0 ? hT : Infinity, tSn)) return;
+        if (!K.vivaCarrinho(A)) { prox = fal ? 'falta' : 'parada'; return; }
+        const dono = A.posse != null ? A.posse : A.naMao;
+        if (dono != null) prox = porIdC(A, dono).time === 0 ? 'meu' : 'deles';
+      };
       const anota = (ev, n) => {
         for (const e of ev) {
           if (e.tipo === 'dividida' && e.id === id && e.ganhou) ganhou = true;
@@ -310,6 +327,8 @@ function canhaoC(k0, k1, { livre = false, f2 = false } = {}) {
           hT = n; naMaoH = A.naMao === c.homem.id;
           outraFalta = ev.some(e => e.tipo === 'falta' && e.origem !== 'carrinho');
         }
+        if (c.bola >= 0 && toqueT < 0) toqueT = n;
+        proxima(n);
       };
       anota(ev1, 1);
       // (o contato já no passo do aperto: o fantasma já sai depois dele — a bola tocada ali é o encontro)
@@ -327,16 +346,18 @@ function canhaoC(k0, k1, { livre = false, f2 = false } = {}) {
         for (const o of A.jogadores) if (!Number.isFinite(o.x + o.z + o.vx + o.vz + (o.quadril ?? 0))) nan++;
         if (!Number.isFinite(A.bola.p.x + A.bola.p.y + A.bola.p.z)) nan++;
       }
-      const dono = A.posse != null ? porIdC(A, A.posse) : A.naMao != null ? porIdC(A, A.naMao) : null;
       const h = c.homem;
       const caso = {
-        k, d: dist, l: lado, v: vel, saiu: true, toca: c.bola >= 0, tb: c.bola >= 0 ? c.bola - c.tick0 : -1, div, ganhou, com: dono ? dono.time : -1, dG, nG, dD, hT, contato1,
+        k, d: dist, l: lado, v: vel, saiu: true, toca: c.bola >= 0, tb: c.bola >= 0 ? c.bola - c.tick0 : -1, div, ganhou, dG, nG, dD, hT, contato1,
         h: h ? { depois: h.depois, f: h.f, fExc: h.fExc, ch: h.ch, falta: h.falta, naMao: naMaoH } : null, fal,
       };
       if (cnt) {
         cnt.devolver();
         caso.f2 = { obs: cnt.cont.carrinho, esp: sorteiosEsperados(h, fal, naMaoH, !!A.livre, outraFalta) };
       }
+      // (o resto da janela da próxima posse: só o mundo A, só enquanto ela não saiu, depois de tudo o que o caso já mediu nos 2 s)
+      for (let n = 121; n <= 240 && !prox; n++) { janelaF3(() => passoC(A)); proxima(n); }
+      caso.prox = prox ?? 'nada';
       out.push(caso);
     }
   }
@@ -2478,14 +2499,28 @@ if (TEM_HOMEM) {
   info('C1 o encontro com o homem antes (a perna chegou ao homem primeiro): toca', pctC(encHomem.filter(x => x.toca).length, encHomem.length), 'a falta apitada mata a bola');
   const encD = s.filter(x => Number.isFinite(x.dD) && x.dD <= RB_C);
   info('C1 pela cópia da DEMO (o controlado de pé pela IA; a especificação): encontro toca', pctC(encD.filter(x => x.toca).length, encD.length), 'o condutor reage ao defensor de pé');
-  // C2–C5 (informativas): todos e o alcançável (o fantasma a ≤ 0,3 m)
-  const alc = s.filter(x => Number.isFinite(x.dG) && x.dG <= 0.3);
+  // C2–C5 (informativas): a Wyscout conta carrinhos TENTADOS por jogadores de verdade, que só deslizam quando a bola está ao
+  // alcance — a comparação é no ALCANÇÁVEL (a bola do fantasma a ≤ 0,3 m da perna da bola no mesmo instante; nele o toque fica
+  // perto do "sucesso" real, 45,8%). "Todos" mistura os casos que não alcançam por construção (5,5 m a 3 m/s): só antes → depois.
+  // Por falta (C5), o mesmo: as faltas do alcançável. A mistura de direções do canhão (1/3 cada) não é a real (Fuller 2004:
+  // lado 52%, frente 29%, trás 19%) e por trás o carrinho quase sempre chega ao homem antes da bola (C6 por chegada).
+  const alc = s.filter(x => Number.isFinite(x.dG) && x.dG <= 0.3), quase = alc.filter(x => x.dG > RB_C);
   const fal = s.filter(x => x.fal), falA = alc.filter(x => x.fal);
-  info('C2 toca a bola: todos / alcançável', `${pctC(s.filter(x => x.toca).length, s.length)} / ${pctC(alc.filter(x => x.toca).length, alc.length)}`, 'Wyscout contra o condutor: 45,8%');
-  info('C3 o time do carrinho com a bola 2 s depois: todos / alcançável', `${pctC(s.filter(x => x.com === 0).length, s.length)} / ${pctC(alc.filter(x => x.com === 0).length, alc.length)}`, '20,3% ganhou; 22,8% no lance seguinte');
-  info('C3 desarme (dividida ganhou: a bola tirada do condutor)', pctC(s.filter(x => x.ganhou).length, s.length), '—');
-  info('C4 falta: todos / alcançável', `${pctC(fal.length, s.length)} / ${pctC(falA.length, alc.length)}`, 'Wyscout: 19,8% contra o condutor');
-  info('C5 amarelo / falta; vermelho direto / falta', `${pctC(fal.filter(x => x.fal.cartao === 'amarelo').length, fal.length)}; ${pctC(fal.filter(x => x.fal.motivo === 'forcaExcessiva').length, fal.length)}`, '39,9%; 1,4%');
+  const amar = l => pctC(l.filter(x => x.fal.cartao === 'amarelo').length, l.length);
+  info('C2 toca a bola: alcançável / todos', `${pctC(alc.filter(x => x.toca).length, alc.length)} / ${pctC(s.filter(x => x.toca).length, s.length)}`, 'Wyscout contra o condutor: 45,8% (sucesso)');
+  info('C3 a próxima posse (até 4 s) é do time do carrinho: alcançável / todos', `${pctC(alc.filter(x => x.prox === 'meu').length, alc.length)} / ${pctC(s.filter(x => x.prox === 'meu').length, s.length)}`, 'Wyscout: 22,8% (o próximo lance com a bola em até 4 s); ganhou 20,3% contra o condutor');
+  const proxDe = l => ['meu', 'deles', 'falta', 'parada', 'nada'].map(k => `${k} ${(100 * l.filter(x => x.prox === k).length / (l.length || 1)).toFixed(1)}`).join(' / ');
+  info('C3 a próxima posse no alcançável: meu / deles / falta do carrinho / parada / nada (%)', proxDe(alc), 'Wyscout (todos os carrinhos): 22,8 / 27,9 / 18,3 / 7,0 / 24,0');
+  info('C3 desarme (dividida ganhou: a bola tirada do condutor): alcançável / todos', `${pctC(alc.filter(x => x.ganhou).length, alc.length)} / ${pctC(s.filter(x => x.ganhou).length, s.length)}`, '—');
+  // (a falta a mais do alcançável é a de ANTES da bola — a Regra 12, que o C6 cobra: o quase que passa ao lado da bola e leva o
+  // pé do condutor, e o carrinho no condutor que virou de costas para proteger a bola. O defensor de verdade não escolhe esses
+  // carrinhos, e aqui o condutor não pula a perna. A chance `antes` fica saturada pelo fatorForca — a força desses contatos
+  // passa de 3 m/s na maioria —: com `antes` 0,6 ou 0,3 o C4 do alcançável fica em 35–36%; só um valor que derruba o C6 o move)
+  info('C4 falta: alcançável / todos', `${pctC(falA.length, alc.length)} / ${pctC(fal.length, s.length)}`, 'Wyscout: 19,8% contra o condutor');
+  info('C4 de onde vêm as faltas do alcançável: antes da bola / depois; a bola a 0,11–0,3 m da perna (o quase)',
+    `${falA.filter(x => x.h && !x.h.depois).length} / ${falA.filter(x => x.h && x.h.depois).length}; quase: falta ${pctC(quase.filter(x => x.fal).length, quase.length)}`, 'antes = Regra 12 (C6), não calibração');
+  info('C5 amarelo / falta: alcançável / todos', `${amar(falA)} / ${amar(fal)}`, 'Wyscout: 41,4% contra o condutor (39,9% de todos os carrinhos)');
+  info('C5 vermelho direto / falta (todos)', pctC(fal.filter(x => x.fal.motivo === 'forcaExcessiva').length, fal.length), 'Wyscout: 1,4%');
   const motivos = {};
   for (const x of fal) { const k = `${x.fal.cartao ?? 'sem'}:${x.fal.motivo}`; motivos[k] = (motivos[k] ?? 0) + 1; }
   info('C5 as faltas do canhão por cartão:motivo', Object.entries(motivos).map(([k, v]) => `${k} ${v}`).join(', '), '—');
@@ -2497,8 +2532,10 @@ if (TEM_HOMEM) {
   reg('C6 de frente tocando a bola primeiro: falta', pctC(fF, frenteD.length), '≤ 15% (pela prova)', frenteD.length >= 5 && !BIN.provaFora(fF, frenteD.length, null, 0.15));
   const semHfalta = s.filter(x => !x.h && x.fal).length, foraOrigem = fal.filter(x => x.fal.origem !== 'carrinho').length;
   reg('C6 sem contato no homem: falta do carrinho (exato)', `${semHfalta} (faltas dele com outra origem: ${foraOrigem})`, '0', semHfalta === 0 && foraOrigem === 0);
-  const tras = comH.filter(x => x.h.ch === 'tras');
-  info('C6 por trás, todos os contatos: falta', pctC(tras.filter(x => x.h.falta).length, tras.length), 'Fuller B-si 42,5%');
+  // (Fuller 2004 conta o desafio com contato de corpo: o contato no homem, pela chegada; por trás a perna passa pelo homem antes
+  // da bola — falta pela Regra 12 —, e o "por trás" real que pega a bola primeiro vem de trás e de lado: no canhão é 'lado')
+  const porCh = ch => { const l = comH.filter(x => x.h.ch === ch); return `${pctC(l.filter(x => x.h.falta).length, l.length)} [antes ${l.filter(x => !x.h.depois).length}]`; };
+  info('C6 por chegada, todos os contatos no homem: falta — frente / lado / trás', `${porCh('frente')} / ${porCh('lado')} / ${porCh('tras')}`, 'Fuller: 20,2 / 30,5 / 42,5%');
   info('C contato no homem (o 1º): todos', `${pctC(comH.length, s.length)}; antes ${comH.filter(x => !x.h.depois).length}, depois ${comH.filter(x => x.h.depois).length}`, '—');
   // C7: nenhum NaN; o Modo Livre (1 estado do canhão no Livre): nenhuma falta
   const liv = canhaoC(0, 3, { livre: true });
