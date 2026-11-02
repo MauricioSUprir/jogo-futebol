@@ -2191,7 +2191,10 @@ IGUAIS.
   ≤ 1,5 × a de 12/10 e ≤ 7192 px² em 844×390, legível, nada encosta; 3 telas e o PC, sem e com o TM, 5 estados; a base
   reprova), H5 (o placar mais largo), H14 (o relógio anda: 113 s de jogo em 10 s reais, 0 voltas, escritas ≤ textos + 1,
   a largura constante; os estados com `?min=0.25`; a base reprova); `teste-controles` (MM:SS); `teste-tm-tela` 1c (30 px,
-  MM:SS na Inter TM, o símbolo do TM). `--so-placar` roda o H1/H10/H14 sem os 2 min de jogo.
+  MM:SS na Inter TM, o símbolo do TM); `teste-replay` A6 (o texto do placar na tela do replay aceita o MM:SS);
+  `teste-online-tela` P7 ("Fim" nas duas abas); `teste-penaltis-tela` 9 (com a `--placar-h` de 28 px as bolinhas da disputa
+  descem 4 px: a faixa do fim desce para baixo delas também nas telas de até 380 px de altura, `disputa-tela.js`).
+  `--so-placar` roda o H1/H10/H14 sem os 2 min de jogo.
 
 ## Ponte com o Total Match (15/10; contrato)
 Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Match (TM). O TM grava o pedido em
