@@ -2535,6 +2535,105 @@ módulos novos (`disputa.js`, `disputa-tela.js`) só por import dinâmico (fora 
   `legacy-total-match/ferramentas/testar-penaltis.mjs` (ponta a ponta no site montado: menu, seletor, Viverde com a senha de
   `TM_SENHA_VIVERDE`, 3D, Simular o resto, resultado no TM, Jogar de novo, nada sobre nada).
 
+## Câmera de TV (item 66; contrato)
+Pedido do dono (23/10, com o print de um escanteio do time dele): "a câmera não acompanha a bola e não dá pra ver a área
+completamente, e isso acontece durante todo o jogo ... tem que afastar muito pouco mais e centralizar mais". Pesquisa,
+fontes e medidas em `PESQUISA-ESTADIO.md` §18. **Só desenho**: o `CAMERA` do `config.js` muda (× 1,06; o `fecho-hash --diff`
+acusa o `config.js`, só o `CAMERA`, que a simulação não lê) e todo o resto mora fora do fecho; `hash-igual` e
+`hash-partida` IGUAIS.
+- **Onde mora.** `js/render/enquadramento.js` (PURO, no download inicial): os perfis da câmera de jogo (`PERFIS_CAMERA`,
+  `TV_CELULAR`, `RETRATO`, `perfilCamera`, `fovPara`, `larguraVista`), a geometria da TV (`geometriaTV`, `projetarTV`,
+  `poseTV`), o foco de HOJE (`alvoLegado`, `molaLegada`: a cópia exata da 79bbfbc2) e a TV nova (`ENQUADRAMENTO`,
+  `criarEnquadramento`, `preencherAlvo`, `alvoTV`, `passoMola`, `limiteDuro`, `limitarBola`, `focoTV`). `render/camera.js`
+  aplica no three; o `teste-camera` (Node) usa as MESMAS funções. `js/render/plano-bola-parada.js` (PURO, sob demanda com o
+  `bola-parada.js`, que reexporta): `CAMERA_BOLA_PARADA`, `CAMERA_ESCANTEIO`, `perfilBolaParada`, `planoBolaParada`.
+- **Constantes.** `ENQUADRAMENTO` (`enquadramento.js`, fora do fecho): `pesoBola` 0,75 e `raio` 0,22 (o controlado), `meioCondutor`
+  0,5, `anteBola` 0,3 s (≤ `anteMax` 6 m), `anteVoo` 0,5 s, `filtroVel` 0,15 s, `frente` 0,07 × W (some de `frenteAte` 45 a
+  `frenteDe` 25 m; anda ≤ `frenteVel` 6 m/s; `histerese` 0,5 s), `zonaMorta` 2 m, `area` {de 32, ate 18, limX 44,5, margem
+  0,94}, `bola` e `bolaDuro` (NDC; `tempo` 0,25 s), `bolaCampo`, `profMin` 5 m, `bolaAlta` 18 m, `salto` 6 m, `omega` 4,5,
+  `avanco` 0,5, `filtroAlvo` 0,12 s, `saltoAlvo` 3 m, `acelMax` 150 m/s², `velMax` 36 m/s, `paradaPerto` 35 m, `jogador` (a
+  caixa do travado). `CAMERA` (`config.js`, × 1,06: `largura` 47,7, `distancia` 42,4, `altura` 19,4; `celular` 48,76 e 13,04;
+  a `rigidez` 3,2 ficou para o foco de antes). `CAMERA_ESCANTEIO` (`plano-bola-parada.js`). Mexer no `ENQUADRAMENTO` não toca
+  o fecho; no `CAMERA`, o `fecho-hash --diff` acusa o `config.js` e o hash continua IGUAL (a simulação não lê o `CAMERA`).
+- **A pose.** A lente em (fx, H, fz + D) olhando (fx, oy, fz), yaw −π/2 (o rumo do analógico não muda), o fov pela largura
+  (`fovPara`). TV × 1,06: celular 48,76 m e 13,04 m (15°), 42,0 m vistos no foco; PC 42,4 m e 19,4 m (24,6°), 47,7 m. A
+  projeção fechada (`projetarTV`): s = z − fz, c = (D² + h(H − y) − sD)/n, NDC x = (x − fx)/(c·tanV·asp), NDC y =
+  ((y − oy)D − hs)/(n·c·tanV), com h = H − oy e n = |(D, h)| — a mesma do `project` do three (teste-camera G4: 4e-14;
+  teste-camera-tela J1: 0,00 px).
+- **O alvo (`main.js` → `preencherAlvo(alvo, m, posDesenhada, _bp)`; o replay preenche o dele).** jx, jz, jvx, jvz (o
+  controlado, como antes) e: bx, by, bz (a bola desenhada), bvx, bvy, bvz (`m.bola.v`), ax, az (a queda do voo em andamento)
+  e tRest (o tempo até ela), cx, cz, cvx, cvz (o condutor: `m.posse` sem `m.naMao`, na posição DESENHADA), dir (±1: o ataque
+  de quem tem a bola — posse → voo.time → ultimoToque.time; 0 sem ninguém), parada/temParada ({tipo, x, z, dir} enquanto
+  a bola parada não rolou), legado (o plano 'fechada' do replay), jCaixa (o controlado TRAVADO do Rumo ao Estrelato no
+  `?tm`: `main.js` TRAVA_TM — revisão R2).
+- **Quem usa a TV nova.** A TV com a mistura TV ↔ aproximada em 0, em paisagem (`retrato` 0), sem o efeito de gol do treino e
+  sem `alvo.legado`: o jogo, o plano 'tv' do replay (a velocidade da bola gravada à frente e o lado do lance) e a "TV" do
+  Livre (lê o foco; com a Altura e a Distância dele a geometria dos limites é a da pose que ele desenha — `perfilAjustado`,
+  altura × fa, distância e largura × fd — e a lente presa pelo `segurarPose` perto do foco de agora — `camera-livre.js
+  segurarTV`: z ≤ 70 e a caixa da arquibancada de cá; revisão R3: com a geometria da TV padrão, a Altura 20 e a Distância 0
+  deixavam a bola alta fora do quadro em 62% dos instantes na página, antes do item 66 34%). O foco de hoje fica na aproximada, no retrato, na transição de 0,6 s e no plano 'fechada' (o V11 do
+  teste-replay-paradas-tela intacto); a troca parte do estado (E.ok falso: a mola começa de onde está, sem salto). Não mudam:
+  a câmera do gol, a comemoração, as cenas, o plano geral, o pré-jogo, a disputa e as 5 câmeras próprias do Livre.
+- **A TV nova, por quadro (`focoTV`).** (1) A bola andando > `salto` 6 m num quadro = corte. (2) O ponto da bola P: no voo,
+  bola + (queda − bola)·min(1, 0,5/tRest); no pé, o condutor + metade do caminho até a bola + a velocidade dele filtrada
+  (0,15 s) × 0,3 s (≤ 6 m); solta, bola + a velocidade dela filtrada × 0,3 s. (3) O lado do ataque com histerese de 0,5 s e o
+  espaço à frente dir × 0,07 × W (W = a largura vista no foco), que some entre 45 e 25 m da linha atacada e anda ≤ 6 m/s.
+  (4) O controlado puxa ≤ 25%, nunca a mais de 0,22·W de P. (5) A zona morta de 2 m (x e z, separados) ANTES da área. (6) A
+  área: wA = suave((32 − dl)/14), dl = 52,5 − |P.x|; os 4 cantos da grande área e o alto das 2 traves com |NDC| ≤ 0,94 pela
+  conta fechada (o intervalo de fz e depois o de fx; vazio = o meio); foco = lerp(foco, foco da área, wA). (7) O limite do
+  foco em x = lerp(38,5; 44,5; wA), z de −22 a 23. (8) A bola no limite do ALVO (NDC x ±0,78, y de −0,62 a 0,80; a bola que
+  sobe entra pela altura que terá em ≤ 0,5 s; o piso pelo CHÃO debaixo da bola e o teto pela bola na altura que cabe —
+  `alturaQueCabe`, a conta fechada da altura acima da qual não há foco com a bola e o chão debaixo dela na caixa: 9,5 m no
+  celular, 13,6 no PC; a TV não inclina, então acima disto a bola sai por cima e o chão, onde estão os jogadores e onde ela
+  cai, fica (revisão R1: antes o foco ia até 37 m para a frente atrás do balão de 15 m, o chão saía e a bola continuava fora);
+  só a bola ALTA do lado de lá leva o foco além do limite, até `bolaAlta` 18 m). Com `alvo.jCaixa` (o Rumo ao Estrelato: só o
+  meu jogador, sem troca), os pés e a cabeça do travado entram na mesma conta, com prioridade menor que a bola e maior que a
+  área (`ENQUADRAMENTO.jogador`: NDC x ±0,85, y de −0,80 a 0,85; o intervalo dele cruzado com o da bola, em z e depois em x —
+  vazio, só a bola; fora da bola parada com a área). Sem a trava o controlado é quase sempre quem está perto da bola: nada muda. (9) A mola crítica (ω 4,5 em x e z) contra o alvo andando com 0,5 × a velocidade dele (filtrada 0,12 s; o
+  alvo que salta > 3 m num quadro não tem velocidade), exata para qualquer dt (dt 0 não mexe). (10) O limite DURO na saída da
+  mola (`limiteDuro`): fora de NDC x ±0,86, y de −0,72 a 0,86 (a mesma conta do chão e da altura que cabe: 10,0 m no
+  celular, 14,4 no PC), a velocidade do foco no eixo passa a ser no MÍNIMO a do
+  próprio limite (ele anda com a bola) + a que volta em 0,25 s — um piso, sem acumular (a 1ª versão, que somava a cada
+  quadro, levou o foco a 75 m/s atrás de uma bola alta e bateu na borda: 4.946°/s²); depois o teto de aceleração 150 m/s²
+  na soma dos eixos, a freada antes da caixa do campo (√(2·A·d)), o teto de velocidade 36 m/s (≤ 1,2 m por quadro a 30 qps)
+  e a posição pela média das velocidades do começo e do fim do quadro (só com a velocidade mudada); a caixa (|x| ≤ 44,5,
+  z de −22 − 18 a 23) como guarda final. Com a bola a < 5 m de profundidade da lente o limite da bola não vale no quadro.
+- **Bola parada na TV (`alvoTV`, `paradaComArea`).** O escanteio e o tiro livre a ≤ 35 m da linha atacada, sem rolar: P =
+  a bola, sem espaço à frente nem controlado, wA = 1 e o limite de x da área. O tiro livre de 30–35 m no celular (42 m no
+  foco) não cabe inteiro sem abrir o plano (a bola e o gol sim): G3 do teste-camera.
+- **O escanteio da pessoa (`CAMERA_ESCANTEIO`).** Atrás do cobrador e ALTO: 13 m atrás, 1,2 m de lado, 8 m de altura, a bola
+  em 86% da altura do quadro e o alvo em 30%, fov 26–62°, a até 17 m da bola com a corrida (atrás do cobrador 6,5–13 m);
+  a lente ≥ 2 m acima do que houver embaixo (`folgaCabeca`); dentro da caixa da arquibancada de cá ela não bloqueia (sai do
+  desenho, a regra da TV); bloqueada, chega 15% e sobe 1 m por tentativa (10). Os outros tipos: o `CAMERA_BOLA_PARADA` de
+  sempre. A volta para a TV: a mistura de 1,1 s, menos quando o olhar da bola parada e o da TV apontam para lados opostos
+  (cosseno < −0,5: o escanteio de lá) — aí CORTA (`camera.js BP.corteOposto`; misturando 180°, o olhar passava pelo chão e
+  a bola saía do quadro de 0,3 a 0,9 s). No Modo Livre, contra o rumo da câmera dele no chão (`est.extra.yaw`: as de lado
+  olham como a TV e cortam; Atrás e Jogador, pelo comprimento, misturam; revisão R5 — antes no Livre a volta misturava e a
+  bola saía de 0,27 a 0,80 s: teste-camera-tela E8).
+- **API.** `cam.cortou` (o corte de verdade deste quadro: o pedido, o 1º quadro, a bola teletransportada, a volta oposta) e
+  `cam.enquadramento` ({novo, wA, lado, frente, parada, duro, limX}); `__golaco.bolaParadaDeTeste(tipo, {time, lado})`.
+- **Metas** (as que reprovam; `teste-camera` P nas duas telas, demo 1–6 e 'passivo' 1–4, a TV nova e o legado nas MESMAS
+  partidas): M1 a bola no miolo 50% × 50% ≥ 96% (demo) / ≥ 95% ('passivo'); M2 a bola fora do quadro, até a altura que cabe,
+  ≤ 0,05%, e M2b o chão debaixo dela fora = 0; M3 |NDC x| p90 ≤ 0,30 / 0,32; M4 no meio-campo com a bola no pé u mediano
+  0,40–0,48 e mais quadro à frente ≥ 65%; M5 no último terço u 0,45–0,55; M6 a área inteira com a bola nela ≥ 90%, M6b a ≤ 25
+  m do gol ≥ 70%, M6c a área no quadro p10 ≥ 95% e as traves ≥ 97%; M8 a largura vista no foco 41,5–43,5 / 47–49 m; M9 o
+  atraso p90 com a bola a ≥ 8 m/s ≤ 7,0 / 7,5 m; M10 o vai e volta ≤ o legado + 1 por minuto; M11 a aceleração do olhar p99,9
+  ≤ 200°/s² e o máximo ≤ 400; R1 o controlado ≥ 34 px no celular 844×390 e ≥ 43 no PC (mediana); T o travado inteiro no quadro
+  ≥ o legado − 1 ponto em cada posição; L a bola fora e a bola alta fora ≤ as da TV de antes; G1 e G2 100%, G3 a área inteira
+  ≥ 95% de 18 a 29 m (30–35 m informativo), G5 0 lente em sólido, a faixa da área ≥ 15% em ≥ 95% e o jogador na marca ≥ 18 px
+  no Golaço. Na página (`teste-camera-tela`): J1 ≤ 1,5 px da projeção e ≤ 0,2 m do Node, J2 a bola atrás do HUD 0, J3 a
+  torcida com ≥ 1% da tela em ≥ 95% dos instantes, J4 ≥ 34 px, J5 ≤ a base + 2 chamadas e ≤ × 1,10 triângulos, A1 12/12, E2 a
+  faixa da área ≥ 18%, E3 os jogadores na área ≥ 18 / 32 px, E7 ≤ 40 chamadas e ≤ 130 mil triângulos, E8 e F1.
+- **Fica** (FILA itens 85–87; as escolhas no "Depende do dono" 16): a mesma TV na aproximada, no retrato e no plano 'fechada';
+  o `enquadrar` do Livre com a bola alta; o tiro livre a 30–35 m no celular sem a área inteira; a TV que gira (D5).
+- **Testes.** `teste-camera` (Node, padrão; S sintético a 60 e 30 qps — S8 a bola alta: o chão debaixo dela nunca sai do
+  quadro —, G geometria — a área, o escanteio e o tiro livre na TV, a projeção, o escanteio da pessoa em 106 estádios —, P 10
+  partidas com o legado lado a lado, T o travado do Rumo ao Estrelato em 8 partidas, L a TV do Livre com a Altura e a
+  Distância nas pontas; `--rastro` confere com a página),
+  `teste-camera-tela` (navegador, CI: J a página × a projeção e × o Node, HUD, torcida, controlado, custo; A a área; E o
+  escanteio da pessoa; F a bola parada da IA na TV; N noite) e `teste-tm-tela` 5c (o travado parado na tela da página). As
+  cópias da pose (teste-tecnicos, teste-livre-tela, teste-rede-tela, prints) importam o módulo.
+
 ## Cobrança mirada e câmera da bola parada (16/10; contrato)
 
 Pedido do dono (com a imagem do EA FC): câmera "quase 1ª pessoa" atrás do cobrador nos escanteios, faltas, pênaltis e tiros

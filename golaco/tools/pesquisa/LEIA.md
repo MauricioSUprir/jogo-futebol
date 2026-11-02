@@ -35,3 +35,8 @@ python3 -I tools/pesquisa/intensidade_metrica.py <pasta-com-os-csv>
 ```
 
 A pasta `tools/` não vai para o site.
+
+- `sb_quadro.py` — item 66 (a câmera de TV; `PESQUISA-ESTADIO.md` §18): o quadro da TV de verdade pela StatsBomb Open Data 360
+  (o `visible_area` de cada evento, 22 jogos da Copa 2022 e da Euro 2024): a largura vista na profundidade da bola, onde a
+  bola fica nela (u), a grande área e o gol no quadro, por zona e por lance (as réguas do `teste-camera`).
+  `python3 -I sb_quadro.py <pasta com ev_*.json e 360_*.json>`.

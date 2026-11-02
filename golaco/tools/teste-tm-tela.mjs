@@ -20,6 +20,8 @@
 //   5b Celular (itens 59 e 60): o travado com a bola mostra o nome no canto de baixo à DIREITA (o humano é o visitante: o time
 //      da direita do placar), com a fonte do TM (Inter TM) e a faixa da cor do time 1 do placar — inteira: o recorte do raio
 //      do cartão deixa ≥ 85% da altura dela na coluna do meio (com o raio de 8 px, ~64%: a faixa virava um ")").
+//   5c Celular (item 66, revisão R2): a TV de jogo com o travado parado (ninguém mexe nele) por 60 s: ele inteiro (os pés e a
+//      cabeça) na tela em ≥ 85% dos instantes e a bola em todos (a TV que segue a bola o deixava fora sem a caixa dele).
 //   6  Celular: "Simular o resto" → o resultado traz `jogador` com o tmId do travado e a nota (4,5–10).
 //   7  Sem ?tm: nada do TM (sem "Simular o resto" nem "Voltar ao Total Match" na pausa, "Reiniciar partida" e "Modo de jogo"
 //      à vista, __golaco.tm null, nenhuma mensagem ao pai).
@@ -250,6 +252,29 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
   meta('6 celular: Simular o resto → resultado com o jogador travado e a nota',
     r ? `${r.homeGoals} × ${r.awayGoals} · jogador ${r.jogador ? `${r.jogador.tmId} nota ${r.jogador.nota} (${r.jogador.toques} toques, ${r.jogador.passes} passes)` : 'ausente'}${e6.length ? ' · ' + e6.join('; ') : ''}` : 'sem resultado',
     !!r && !!r.jogador && r.jogador.tmId === PED_B.controle.tmId && r.jogador.nota >= 4.5 && r.jogador.nota <= 10 && !e6.length);
+  // 5c (item 66, revisão R2): a TV segue a bola e, sem troca, o travado (aqui parado: ninguém mexe nele) ficava fora do quadro;
+  // agora os pés e a cabeça dele entram na conta quando cabem com a bola. 60 s de jogo no relógio manual, 1 instante a cada
+  // 0,5 s com a câmera de jogo (sem a da bola parada): o travado inteiro na tela e a bola na tela. Depois do 6, na partida
+  // nova da mesma semente (a mesma em toda versão: o começo do 5 anda no relógio de verdade)
+  const t5c = await fr.evaluate(() => {
+    const g = window.__golaco, r = g.render, W = innerWidth, H = innerHeight;
+    const naQ = p => !p.atras && p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= H;
+    g.relogio.usarManual(true);
+    g.reiniciar({ modo: 'partida', semente: 5 });
+    let n = 0, jog = 0, bola = 0;
+    for (let f = 0; f < 3600; f++) {
+      g.relogio.avancar(1000 / 60, { desenhar: false });
+      if (f % 30 || g.estadio.planoCamera !== 'jogo' || g.mundo.partida?.estado !== 'jogo' || (g.bolaParada?.estado?.mistura ?? 0) > 0.01) continue;
+      n++;
+      if (naQ(g.naTela(r.jogador.x, 0, r.jogador.z)) && naQ(g.naTela(r.jogador.x, 1.8, r.jogador.z))) jog++;
+      if (naQ(g.naTela(r.bola.x, Math.max(0.11, r.bola.y), r.bola.z))) bola++;
+    }
+    g.relogio.usarManual(false);
+    return { n, jog, bola };
+  });
+  meta('5c celular, Estrelato: o travado (parado) inteiro na tela da TV; a bola na tela (60 s, 1 instante a cada 0,5 s)',
+    `${t5c.jog}/${t5c.n} (${(100 * t5c.jog / Math.max(1, t5c.n)).toFixed(1)}%); a bola ${t5c.bola}/${t5c.n}`,
+    t5c.n >= 60 && t5c.jog >= 0.85 * t5c.n && t5c.bola >= t5c.n - 1);
   meta('8b celular: sem erro no console', s.erros.length ? s.erros.slice(0, 3).join(' | ') : 'nenhum', s.erros.length === 0);
   await s.navegador.close();
 }

@@ -96,7 +96,7 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   no chute fora do canto = regravar com `--gravar-referencia <pasta js>` e dizer no PR.
   **Dono, 23/10: a fila por CATEGORIAS** (A–I da FILA.md; a D FEITA em 26/10, #524–#550): ele diz qual categoria fazer e nada começa sem o aval dele
   ("tem algumas coisas a mais que vou te sinalizar, que vc só cmc dps do meu aval"). Os pedidos de 23/10 são os itens 57–66:
-  impedimento pelas partes do corpo (B), pausa igual à do FIFA, minimapa embaixo e nome do condutor nos cantos (59 e 60 FEITOS, #598), a tela antes do jogo no nível do EA FC com a cara do TM (64), a mira das bolas paradas minimalista com uma curva boa (65), a câmera que acompanha a bola e mostra a área (66) (F),
+  impedimento pelas partes do corpo (B), pausa igual à do FIFA, minimapa embaixo e nome do condutor nos cantos (59 e 60 FEITOS, #598), a tela antes do jogo no nível do EA FC com a cara do TM (64), a mira das bolas paradas minimalista com uma curva boa (65), a câmera que acompanha a bola e mostra a área (66 FEITO, #600) (F),
   passada natural, costura da nuca e bordas dos decalques (I).
   **Pedidos de 29/10 (dono: "add nas categorias"; esperam o aval dele):** item 68, a mira pelo que se vê na tela do celular
   (achado na revisão do C2; dono: "publicar o C2 e pôr a mira na fila") e item 70, cobranças com corrida (pênalti, escanteio,
@@ -406,13 +406,30 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `assets/sons/CREDITOS.md`; liga no 1º gesto; "Som da torcida" na pausa). **Sem narração na tela:** lance nenhum vira
   texto (hud.js `TEXTO_EVENTO` só tem avisos de comando); na partida o topo é placar + menu (painel
   "Conduzindo" só nos treinos; o minimapa embaixo no meio desde os itens 59 e 60). **Câmera do celular deitado** (`CAMERA.celular`, só com `pequena`; o PC não muda): TV
-  mais baixa e mais longe (12,3 m a 46 m = 15°, o limite de cima da câmera principal da UEFA, 12–15°) — a torcida do
+  mais baixa e mais longe (12,3 m a 46 m = 15°, o limite de cima da câmera principal da UEFA, 12–15°; × 1,06 desde o item 66:
+  13,04 m a 48,76 m) — a torcida do
   outro lado entra no alto do quadro durante o jogo (40/40 instantes, mediana 11% da tela; antes 13/40) e o plano pela
   largura mantém o tamanho dos jogadores (36 → 38 px). **Celular só deitado:** em pé (com toque) a tela "Gire o celular" cobre tudo e o jogo
   para (`main.js` retratoBloqueado + `#girar`); janela estreita de PC continua jogando. O render nunca muda o hash
   (hash-igual IGUAL). Testes: `teste-rede`, `teste-torcida` (padrão), `teste-estadio` (navegador, CI; gol roteirizado
   por `tools/lib/gol-roteirizado.mjs`, sem depender de semente; item 10 = torcida durante o jogo no celular);
   `teste-controles`/`teste-editor-tela` conferem a tela de girar.
+- **Câmera de TV que acompanha a bola e mostra a área** (item 66, dono 23/10: "a câmera não acompanha a bola e não dá pra ver a
+  área completamente ... afastar muito pouco mais e centralizar mais"; PR #600, `PESQUISA-ESTADIO.md` §18, contrato "Câmera de
+  TV (item 66)"): o foco da TV mora em `js/render/enquadramento.js` (PURO, fora do fecho; o `camera.js` aplica no three e o
+  `teste-camera` usa as MESMAS funções, com a TV de antes lado a lado): a bola pesa 75% (no pé o condutor + metade do caminho,
+  0,3 s à frente; no voo a queda), espaço à frente de 0,07 da largura com histerese, zona morta de 2 m, a área inteira de 32 a
+  18 m da linha, a bola no limite do alvo e, na saída da mola, por velocidade, mola crítica 4,5/s com metade da velocidade do
+  alvo (atraso 0,62 → 0,22 s × v), tetos de 150 m/s² e 36 m/s; a TV × 1,06 (o ângulo igual; controlado ~35 px no 844×390). O
+  foco de antes (`alvoLegado`) fica na aproximada, no retrato e no plano 'fechada'. O escanteio da pessoa atrás do cobrador e
+  ALTO (`render/plano-bola-parada.js CAMERA_ESCANTEIO`, 13 m atrás e 8 m de altura); a volta do de lá para a TV por CORTE
+  (também no Livre); no Rumo ao Estrelato o travado entra no limite do alvo (`alvo.jCaixa`). Hash IGUAL; o fecho acusa só o
+  `CAMERA`. Testes: `teste-camera` (Node, padrão) e `teste-camera-tela` (navegador, CI). Lições: a TV não inclina — acima da
+  altura que cabe com o chão (`alturaQueCabe`, ~10 m no celular) a bola sai por cima e o CHÃO fica (perseguir o balão tirava
+  os jogadores do quadro e a bola seguia fora); limite duro que SOMA velocidade a cada quadro acumula (o olhar a 4.946°/s²):
+  piso; misturar 180° na volta de uma câmera que olha para o outro lado tira a bola do quadro — corte; no modo sem troca a TV
+  que segue a bola perde o travado; antecipar pela bola no pé amplifica o vai e volta (o corpo do condutor, não a bola);
+  quem copia a pose da TV num teste importa o módulo; comparar a página com o Node emulando o meio-passo do desenho (alfa 0,5).
 - **Estádio cheio e som da torcida no jogo** (pedido de 11/10; `PESQUISA-ESTADIO.md` §6, contrato em `CONTRATOS.md`):
   som nivelado por LUFS (`render/mixagem.js`, alvo −16) com limitador no fim (pico ≤ −1 dBFS), agenda de cantos/batucada/
   vaia/incentivo/festa em `render/festa.js` (pura, relógio do estádio), cantos decodificados sob demanda (≤ 2 na memória),

@@ -147,6 +147,7 @@ import { criarCampo } from './render/campo.js';
 import { criarBola3D } from './render/bola3d.js';
 import { criarJogadores3D } from './render/jogador3d.js';
 import { criarCamera } from './render/camera.js';
+import { preencherAlvo } from './render/enquadramento.js';
 import { criarMarcas } from './render/marcas.js';
 import { criarLinhaImpedimento } from './render/linha-impedimento.js';
 import { criarMarcasLateral } from './render/marcas-lateral.js';
@@ -1170,7 +1171,11 @@ const _proj = new THREE.Vector3();
 // gramado de onde a ação sai — a entrada do próximo quadro leva a direção do analógico na tela ao gramado por ela
 // (controle.js miraPelaTela). ok = false antes do 1º quadro desenhado (a entrada usa o rumo, paraMundo)
 const telaMira = { cam: {}, ox: 0, oz: 0, ok: false };
-const alvoCam = { jx: 0, jz: 0, jvx: 0, jvz: 0, bx: 0, bz: 0, ax: NaN, az: NaN };
+// o alvo da câmera de jogo: o controlado (jx, jz, jvx, jvz) daqui e o resto pelo render/enquadramento.js preencherAlvo (a
+// bola desenhada e a velocidade dela, a queda do voo e o tempo até ela, o condutor desenhado, o lado do ataque, a parada).
+// jCaixa: o controlado TRAVADO do Rumo ao Estrelato (só o meu jogador) com os pés e a cabeça no quadro quando cabem com a
+// bola (item 66, revisão R2: sem troca, ele não é quem está perto da bola e a TV que segue a bola o deixava fora)
+const alvoCam = { jx: 0, jz: 0, jvx: 0, jvz: 0, bx: 0, by: 0, bz: 0, bvx: 0, bvy: 0, bvz: 0, ax: NaN, az: NaN, tRest: 0, cx: NaN, cz: NaN, cvx: 0, cvz: 0, dir: 0, parada: null, temParada: false, jCaixa: false };
 /** Ponto do mundo → px CSS (sem alocar). */
 function projetar(x, y, z, out) {
   _proj.set(x, y, z).project(cam.camera);
@@ -1348,12 +1353,11 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   const h = controlado();
   if (!achou && h) { hx = h.x; hz = h.z; }
   else if (!achou && TRAVA_TM != null) { hx = _bp.x; hz = _bp.z; }
-  // câmera: controlado + bola; com a bola no ar, antecipa a queda (m.voo.alvo)
-  const voo = mundo.voo;
+  // câmera: o controlado + a bola (a desenhada e a velocidade dela), a queda do voo em andamento, o condutor desenhado, o
+  // lado do ataque e a bola parada (render/enquadramento.js preencherAlvo, a mesma conta do teste-camera)
   alvoCam.jx = hx; alvoCam.jz = hz; alvoCam.jvx = h ? h.vx : 0; alvoCam.jvz = h ? h.vz : 0;
-  alvoCam.bx = _bp.x; alvoCam.bz = _bp.z;
-  const vooAtivo = voo && voo.alvo && Number.isFinite(voo.alvo.x) && (voo.tickChegada == null || mundo.tick <= voo.tickChegada);
-  alvoCam.ax = vooAtivo ? voo.alvo.x : NaN; alvoCam.az = vooAtivo ? voo.alvo.z : NaN;
+  alvoCam.jCaixa = TRAVA_TM != null && (achou || !!h);
+  preencherAlvo(alvoCam, mundo, posDesenhada, _bp);
   if (cenaCartao) cameraCartao();
   else if (cenaFim) cameraFim();
   else if (cenaSub) cameraSubst();
@@ -3849,15 +3853,18 @@ const api = {
   /**
    * Bola parada de teste (prints): a bola sai com o último toque certo e a partida monta o recomeço como no jogo.
    * tipo: 'lateral' | 'escanteio' (do time do humano, que cobra) | 'tiroDeMeta' (do time do humano: o goleiro dele).
+   * opc (item 66, teste-camera-tela): time = o time que cobra (padrão o do humano; o outro = a IA cobrando, vista na TV) e
+   * lado = 'ca' (z +, o lado da câmera) | 'la' (z −) — sem ele, os lados de sempre.
    */
-  bolaParadaDeTeste(tipo) {
+  bolaParadaDeTeste(tipo, opc = {}) {
     const m = mundo;
     if (!m.partida) return null;
-    const t = TIME_HUMANO, lado = m.ataca[t], C = CFG.CAMPO;
+    const t = opc.time ?? TIME_HUMANO, lado = m.ataca[t], C = CFG.CAMPO;
+    const sz = opc.lado === 'la' ? -1 : opc.lado === 'ca' ? 1 : 0;
     let x, z, ult;
-    if (tipo === 'lateral') { x = lado * 14; z = C.meioZ + 0.5; ult = 1 - t; }
-    else if (tipo === 'escanteio') { x = lado * (C.meioX + 0.6); z = 10; ult = 1 - t; }
-    else { x = -lado * (C.meioX + 0.6); z = -9; ult = 1 - t; }
+    if (tipo === 'lateral') { x = lado * 14; z = (sz || 1) * (C.meioZ + 0.5); ult = 1 - t; }
+    else if (tipo === 'escanteio') { x = lado * (C.meioX + 0.6); z = (sz || 1) * 10; ult = 1 - t; }
+    else { x = -lado * (C.meioX + 0.6); z = (sz || -1) * 9; ult = 1 - t; }
     const j = m.jogadores.find(o => o.time === ult && o.posicao !== 'GOL');
     m.posse = null; m.naMao = null; m.voo = null; m.parada = null; m.partida.estado = 'jogo'; m.golTick = null; m.foraDesde = null;
     Object.assign(m.bola.p, { x, y: CFG.BOLA.raio, z }); Object.assign(m.bola.v, { x: 0, y: 0, z: 0 });

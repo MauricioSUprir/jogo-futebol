@@ -11,45 +11,33 @@
 // virar metade céu. Tela pequena (celular) fecha mais (CAMERA.telaPequena) e, deitado, usa a TV mais baixa e mais
 // longe (CAMERA.celular): a torcida do outro lado aparece no alto do quadro durante o jogo.
 //
-// Bola longe (lançamento, defesa): a bola manda — o foco nunca fica a mais de ~0,31 da largura
-// vista do "ponto da bola", e a bola nunca sai do quadro. Com a bola no ar (m.voo), o ponto da
-// bola antecipa a queda (vai parte do caminho até m.voo.alvo); a mola deixa tudo suave.
+// TV de jogo (item 66; dono, 23/10: "a câmera não acompanha a bola e não dá pra ver a área completamente"): o foco segue a
+// BOLA com a previsão do caso, o espaço à frente do ataque, a área inteira no último terço e a bola com prioridade, numa mola
+// com a velocidade do alvo (render/enquadramento.js focoTV; contrato "Câmera de TV (item 66)"). O foco de antes (o controlado +
+// a bola) fica na aproximada, no retrato e na transição (alvoLegado/molaLegada).
 import * as THREE from 'three';
-import { CAMERA, CAMPO } from '../config.js';
-
-/** Mola crítica exata (a mesma de util.js molaCritica), escrevendo no estado: sem alocar. */
-function mola(est, kx, kv, alvo, w, dt) {
-  const y = est[kx] - alvo;
-  const j1 = est[kv] + y * w;
-  const e = Math.exp(-w * dt);
-  est[kx] = alvo + (y + j1 * dt) * e;
-  est[kv] = (est[kv] - j1 * w * dt) * e;
-}
-// câmera da bola parada (plano: render/bola-parada.js): entra em `entra` s (no corte, direto) e volta em `sai` s
-const BP = { entra: 0.6, sai: 1.1, mola: 7 };
+import {
+  mola, PERFIS_CAMERA as PERFIS, ASPECTO_TV, perfilCamera, fovPara as fovParaTV, alvoLegado, molaLegada,
+  criarEnquadramento, focoTV, geometriaTV, larguraVista, poseTV, perfilAjustado,
+} from './enquadramento.js';
+// câmera da bola parada (plano: render/bola-parada.js): entra em `entra` s (no corte, direto) e volta em `sai` s — menos
+// quando ela olha para o lado OPOSTO ao da TV (o escanteio do lado de lá, de trás do cobrador para o lado de cá; item 66):
+// aí a volta é por CORTE (como o diretor de TV corta da câmera do escanteio para a principal; corte não enjoa — Eiserloh,
+// GDC 2016): misturando 180° de rumo, o olhar passava pelo chão e a bola saía do quadro de 0,3 a 0,9 s depois do chute
+// (teste-camera-tela E6: 81% com a bola no quadro; no Modo Livre, contra o rumo da câmera dele: E8). corteOposto = o cosseno
+// entre os dois olhares abaixo do qual corta
+// (−0,5: mais de 120°; o escanteio de lá dá ~−0,9; o pênalti, o tiro livre e o tiro de meta, olhando para o gol, ~0 ± 0,3
+// e continuam misturando — com 0, o pênalti cortava: teste-bola-parada-tela item 4).
+const BP = { entra: 0.6, sai: 1.1, mola: 7, corteOposto: -0.5 };
 
 
 export const MODOS_CAMERA = ['tv', 'aproximada'];
 
-const PERFIS = {
-  tv: {
-    largura: CAMERA.largura, distancia: CAMERA.distancia, altura: CAMERA.altura,
-    pesoBola: 0.45, antecipa: 0.55, anteVoo: 0.42, limX: CAMPO.meioX - 14, limZ0: -CAMPO.meioZ + 12, limZ1: CAMPO.meioZ - 11, olharY: 0,
-  },
-  aproximada: {
-    largura: CAMERA.aproximada.largura, distancia: CAMERA.aproximada.distancia, altura: CAMERA.aproximada.altura,
-    pesoBola: 0.3, antecipa: 0.35, anteVoo: 0.3, limX: CAMPO.meioX - 3, limZ0: -CAMPO.meioZ + 3, limZ1: CAMPO.meioZ - 2, olharY: 0.6,
-  },
-};
-// celular deitado: a TV mais baixa e mais longe (a torcida no alto do quadro); a mesma largura vista no foco
-const TV_CELULAR = { ...PERFIS.tv, ...CAMERA.celular };
-// celular em pé: mesmos pesos, câmera mais alta/inclinada e limites que deixam chegar às linhas
-const RETRATO = {
-  tv: { ...PERFIS.tv, ...CAMERA.retrato, limX: CAMPO.meioX - 8, limZ0: -CAMPO.meioZ + 6, limZ1: CAMPO.meioZ - 6 },
-  aproximada: { ...PERFIS.aproximada, ...CAMERA.retratoAproximada },
-};
-const ASPECTO_TV = 16 / 9;
-const CHAVES = Object.keys(PERFIS.tv);
+// os perfis (TV, aproximada, celular deitado, retrato), o fov pela largura e o foco moram no módulo puro
+// render/enquadramento.js (os testes em Node usam as mesmas contas). A TV (mistura 0, paisagem) segue o foco NOVO do
+// item 66 (a bola com a previsão certa, o espaço à frente, a área inteira no último terço, a bola com prioridade, a mola
+// com a velocidade do alvo: enquadramento.js focoTV); a aproximada, o retrato, a transição, o efeito do gol do treino e o
+// plano 'fechada' do replay (alvo.legado) seguem o de hoje (alvoLegado/molaLegada) — a troca parte do estado, sem salto.
 
 // Efeito do gol (render): zoom leve (o fov fecha até 9%) e um tremor curto que morre em ~1 s — sem
 // enjoar: amplitude ≤ 0,12 m (a 44 m do foco: ~0,15°), 6–9,5 Hz, sem girar a câmera além do que o "olhar" desloca (metade do tremor), e o
@@ -107,31 +95,14 @@ export function criarCamera(aspecto) {
   const cin = { nome: null, de0: [0, 0, 0], para: [0, 0, 0], reduz: false };
   const yaw = -Math.PI / 2;
   const _p = {};
-  const _foco = { x: 0, z: 0 };
+  const _foco = { x: 0, z: 0 }, _leg = { x: 0, z: 0 }, _pose = { de: [0, 0, 0], para: [0, 0, 0], fov: 32 };
+  const E = criarEnquadramento(), G = {}; // a TV nova (item 66): o estado dela e a geometria do quadro
+  const _pAj = {}; // o perfil da TV com a Altura e a Distância do Livre (a geometria que ele desenha)
   const interno = { camera, est, p: _p, fovPara };
-  function perfil() {
-    // TV ↔ aproximada pela transição; paisagem ↔ retrato pelo formato da tela (1,25 → 0,75)
-    const s = suave(est.mistura);
-    const r = suave((1.25 - est.aspecto) / 0.5);
-    const tv = est.pequena ? TV_CELULAR : PERFIS.tv;
-    for (const k of CHAVES) {
-      const pais = lerp(tv[k], PERFIS.aproximada[k], s);
-      const ret = lerp(RETRATO.tv[k], RETRATO.aproximada[k], s);
-      _p[k] = lerp(pais, ret, r);
-    }
-    _p.retrato = r;
-    return _p;
-  }
+  // TV ↔ aproximada pela transição; paisagem ↔ retrato pelo formato da tela (1,25 → 0,75)
+  function perfil() { return perfilCamera(_p, est.mistura, est.aspecto, est.pequena); }
   /** fov vertical que mostra a largura do perfil no foco, para o formato desta tela. */
-  function fovPara(p) {
-    const a = est.aspecto;
-    let larg = p.largura;
-    // paisagem mais estreita que 16:9 (4:3) perde só metade da largura; o retrato já tem a sua
-    if (a < ASPECTO_TV) larg *= lerp(Math.sqrt(Math.max(a, 1.25) / ASPECTO_TV), 1, p.retrato);
-    if (est.pequena) larg *= CAMERA.telaPequena;
-    const d = Math.hypot(p.distancia, p.altura - p.olharY);
-    return (2 * Math.atan(larg / 2 / d / a) * 180) / Math.PI;
-  }
+  function fovPara(p) { return fovParaTV(p, est.aspecto, est.pequena); }
   /** Zoom (fração do fov) e tremor (m) do efeito do gol no tempo do efeito. */
   function efeitoGol() {
     const g = est.gol;
@@ -217,8 +188,9 @@ export function criarCamera(aspecto) {
       camera.position.set(est.x + ef.tx, p.altura + ef.ty, est.z + p.distancia);
       camera.lookAt(est.x + ef.tx * 0.5, p.olharY + ef.ty * 0.5, est.z);
     } else {
-      camera.position.set(est.x, p.altura, est.z + p.distancia);
-      camera.lookAt(est.x, p.olharY, est.z);
+      poseTV(p, est.x, est.z, est.aspecto, est.pequena, _pose);
+      camera.position.set(_pose.de[0], _pose.de[1], _pose.de[2]);
+      camera.lookAt(_pose.para[0], _pose.para[1], _pose.para[2]);
     }
     // bola parada: mistura posição, direção do olhar e fov (sem salto)
     if (est.bp.ok && suave(est.bp.s)) misturarBP(_d1.set(est.x, p.olharY, est.z).sub(camera.position).normalize());
@@ -238,9 +210,24 @@ export function criarCamera(aspecto) {
     camera.fov = lerp(camera.fov, fovFixo(q[6]), e); camera.updateProjectionMatrix();
   }
   const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d1 = new THREE.Vector3(), _d2 = new THREE.Vector3();
-  function atualizarBP(dt, corte) {
+  /**
+   * O olhar da bola parada (q: de, para) e o da câmera de jogo apontam para lados opostos? A TV (perfil p) ou, no Modo Livre,
+   * a câmera dele pelo rumo no chão (est.extra.yaw: de lado −π/2, como a TV; Atrás e Jogador pelo comprimento). No Livre a
+   * volta do escanteio de lá misturava 180° e a bola saía do quadro de 0,27 a 0,80 s depois do cruzamento (revisão R5; antes
+   * do item 66, com a câmera da bola parada baixa, não saía).
+   */
+  function oposta(q, p) {
+    const dx = q[3] - q[0], dy = q[4] - q[1], dz = q[5] - q[2];
+    if (est.extra) { const y = est.extra.yaw; return (dx * Math.cos(y) + dz * Math.sin(y)) / (Math.hypot(dx, dz) || 1) < BP.corteOposto; }
+    const ty = p.olharY - p.altura, tz = -p.distancia;
+    return (dy * ty + dz * tz) / ((Math.hypot(dx, dy, dz) * Math.hypot(ty, tz)) || 1) < BP.corteOposto;
+  }
+  function atualizarBP(dt, corte, p) {
     const bp = est.bp, pl = bp.plano;
-    if (!pl) { bp.s = Math.max(0, bp.s - dt / BP.sai); if (!bp.s) bp.ok = false; return; }
+    if (!pl) {
+      if (bp.ok && bp.s > 0 && oposta(bp.p, p)) { bp.s = 0; bp.ok = false; est.corteBP = true; return; }
+      bp.s = Math.max(0, bp.s - dt / BP.sai); if (!bp.s) bp.ok = false; return;
+    }
     const alvo = [...pl.de, ...pl.para, pl.fov], novo = !bp.ok || corte || bp.s <= 0;
     for (let i = 0; i < 7; i++) if (novo) { bp.p[i] = alvo[i]; bp.p[7 + i] = 0; } else mola(bp.p, i, 7 + i, alvo[i], BP.mola, dt);
     bp.ok = true;
@@ -265,24 +252,9 @@ export function criarCamera(aspecto) {
       const metaMistura = est.modo === 'aproximada' ? 1 : 0;
       est.mistura += clamp(metaMistura - est.mistura, -dt / 0.6, dt / 0.6);
       const p = perfil();
-      // ponto da bola: no ar, antecipa a queda (parte do caminho até o alvo)
-      let px = alvo.bx, pz = alvo.bz;
-      if (Number.isFinite(alvo.ax) && Number.isFinite(alvo.az)) {
-        px += (alvo.ax - alvo.bx) * p.anteVoo;
-        pz += (alvo.az - alvo.bz) * p.anteVoo;
-      }
-      // foco: entre jogador e bola. Perto, a bola pesa pesoBola; um pouco longe (passe da
-      // máquina chegando) pesa menos; muito longe, a bola manda (o foco fica a ≤ R dela)
-      const dbx = px - alvo.jx, dbz = pz - alvo.jz;
-      const db = Math.hypot(dbx, dbz);
-      const R = p.largura * 0.31;
-      const w = db > 12 ? Math.max(p.pesoBola * 12 / db, 1 - R / db) : p.pesoBola;
-      let fx = alvo.jx + dbx * w + alvo.jvx * p.antecipa;
-      let fz = alvo.jz + dbz * w + alvo.jvz * p.antecipa;
-      // a bola (de verdade) nunca sai do quadro: na profundidade se vê menos que na largura
-      const mx = p.largura * 0.38, mz = p.largura * 0.24;
-      fx = clamp(fx, alvo.bx - mx, alvo.bx + mx);
-      fz = clamp(fz, alvo.bz - mz, alvo.bz + mz);
+      // o foco de hoje (o legado: entre o controlado e o ponto da bola; enquadramento.js alvoLegado)
+      alvoLegado(alvo, p, _leg);
+      let fx = _leg.x, fz = _leg.z;
       // efeito do gol: o foco puxa um pouco para a boca do gol (a rede estufada no quadro); a câmera do gol da
       // partida (fechado) fica até a saída de bola (ou maxDuracao) e corta de volta
       const g = est.gol;
@@ -300,13 +272,22 @@ export function criarCamera(aspecto) {
       fx = clamp(fx, -p.limX, p.limX);
       fz = clamp(fz, p.limZ0, p.limZ1);
       if (est.corte) { corte = true; est.corte = false; }
-      atualizarBP(dt, corte);
-      if (!est.iniciado || corte) {
-        est.x = fx; est.z = fz; est.vx = 0; est.vz = 0; est.iniciado = true;
+      est.corteBP = false;
+      atualizarBP(dt, corte, p);
+      const novo = est.mistura === 0 && p.retrato === 0 && !(g.ativo && !g.fechado) && !alvo.legado;
+      if (novo) {
+        // a TV nova (item 66): a bola teletransportada também corta (E.cortou). No Livre, a geometria com a Altura e a
+        // Distância dele (a pose que a câmera dele desenha: render/camera-livre.js poseLateral; revisão R3)
+        const aj = est.extra?.fatores, pg = aj && (aj.fa !== 1 || aj.fd !== 1) ? perfilAjustado(_pAj, p, aj.fa, aj.fd) : p;
+        geometriaTV(G, pg, est.aspecto, est.pequena);
+        if (est.extra?.segurarTV && est.iniciado && !corte) est.extra.segurarTV(G, est.z);
+        focoTV(E, est, alvo, p, G, larguraVista(pg, est.pequena), dt, corte || !est.iniciado);
+        est.iniciado = true;
       } else {
-        const wr = CAMERA.rigidez;
-        mola(est, 'x', 'vx', fx, wr, dt);
-        mola(est, 'z', 'vz', fz, wr * 0.8, dt);
+        E.ok = false; E.cortou = corte || !est.iniciado;
+        if (!est.iniciado || corte) {
+          est.x = fx; est.z = fz; est.vx = 0; est.vz = 0; est.iniciado = true;
+        } else molaLegada(est, fx, fz, dt);
       }
       posicionar(p);
       if (est.extra && !est.cinema && !(g.ativo && g.fechado) && !est.geral && !est.livre) {
@@ -351,6 +332,10 @@ export function criarCamera(aspecto) {
      */
     get deJogo() { return !est.cinema && !est.livre && !est.geral && !est.gol.ativo && !(est.bp.ok && est.bp.s > 0.01); },
     bolaParada(pl) { est.bp.plano = pl || null; },
+    /** Este quadro cortou (o corte pedido, o 1º quadro, na TV nova a bola teletransportada, ou a volta da bola parada oposta)? */
+    get cortou() { return !!E.cortou || !!est.corteBP; },
+    /** A TV nova agora (testes): o peso da área (wA), o lado do espaço à frente, a bola parada com a área, o limite duro. */
+    get enquadramento() { return { novo: E.ok, wA: E.wA, lado: E.dir, frente: E.frente, parada: E.parada, duro: E.duro, limX: E.limX }; },
     get misturaBolaParada() { return est.bp.s; },
     /** Câmera livre para prints de conferência: {de:[x,y,z], para:[x,y,z], fov?} ou null. */
     definirLivre(l) { est.livre = l ? { de: [...l.de], para: [...l.para], fov: l.fov } : null; },

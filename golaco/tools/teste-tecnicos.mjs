@@ -94,12 +94,18 @@ function distSeg(px, py, pz, qx, qy, qz, rx, ry, rz, sx, sy, sz) {
 const CAP_TV = { y0: 0.3, y1: 1.55, r: 0.3 };
 /** O raio de C até B cruza a cápsula do treinador em (cx, cz)? */
 const cruza = (C, bx, by, bz, cx, cz) => distSeg(C[0], C[1], C[2], bx, by, bz, cx, CAP_TV.y0, cz, cx, CAP_TV.y1, cz) < CAP_TV.r;
-/** Câmera de TV com o foco na bola (os limites do foco da câmera de TV: render/camera.js PERFIS.tv). */
+// A TV com o foco na bola: a pose e os limites do foco do módulo puro (render/enquadramento.js, item 66: o x do foco vai até
+// 44,5 perto do gol); sem ele (uma versão de antes do item 66 com --js), a cópia de antes (±38,5; 40/18,3 e 46/12,3)
+let EQ = null;
+try { EQ = await imp('render/enquadramento.js'); } catch { EQ = null; }
+const LIM_X = EQ ? EQ.ENQUADRAMENTO.area.limX : 38.5;
+/** Câmera de TV com o foco na bola (os limites do foco da TV). */
 function cameraTV(bx, bz, dist, alt, out) {
-  out[0] = Math.max(-38.5, Math.min(38.5, bx)); out[1] = alt; out[2] = Math.max(-22, Math.min(23, bz)) + dist;
+  out[0] = Math.max(-LIM_X, Math.min(LIM_X, bx)); out[1] = alt; out[2] = Math.max(-22, Math.min(23, bz)) + dist;
   return out;
 }
-const TVS = [['PC', 40, 18.3], ['celular', 46, 12.3]];
+const perfilTV = (asp, peq) => { const p = EQ.perfilCamera({}, 0, asp, peq); return [p.distancia, p.altura]; };
+const TVS = EQ ? [['PC', ...perfilTV(16 / 9, false)], ['celular', ...perfilTV(844 / 390, true)]] : [['PC', 40, 18.3], ['celular', 46, 12.3]];
 
 // ------------------------------------------------------------------------------------------------ uma partida (filho)
 async function coletar(sem) {

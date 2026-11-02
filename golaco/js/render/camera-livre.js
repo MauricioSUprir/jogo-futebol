@@ -255,6 +255,7 @@ export function criarCameraLivre(opc = {}) {
   const focos = {};
   for (const m of ['ampla', 'alta', 'atras', 'jogador']) focos[m] = { x: 0, z: 0, vx: 0, vz: 0 };
   let iniciado = false, atual = null, anterior = null, t = TRANSICAO, fa = 1, fd = 1, dir = 1;
+  const fatores = { fa: 1, fd: 1 };
   const pA = novaPose(), pB = novaPose(), fim = novaPose();
   const _pts = [0, 0, 0, 0, 0, 0, 0, 0, 0];
   const _foco = { x: 0, z: 0 };
@@ -330,7 +331,29 @@ export function criarCameraLivre(opc = {}) {
     /** O foco da sombra (camera.js foco). */
     get foco() { return _foco; },
     /** Altura e Distância (0–20; 10 = o perfil). */
-    definirAjuste(a) { fa = fatorAjuste(a?.altura); fd = fatorAjuste(a?.distancia); },
+    definirAjuste(a) { fa = fatorAjuste(a?.altura); fd = fatorAjuste(a?.distancia); fatores.fa = fa; fatores.fd = fd; },
+    /**
+     * Os fatores de agora (altura × fa; distância e largura × fd) — camera.js põe a geometria da TV nova com eles (os limites
+     * da bola e da área na pose que a TV daqui desenha; revisão R3 do item 66).
+     */
+    get fatores() { return fatores; },
+    /**
+     * A geometria da TV nova (enquadramento.js geometriaTV, já com a Altura e a Distância) perto do foco fz de agora com o que
+     * segurarPose faz com a lente da TV daqui: presa em z ≤ zCaMax (o fov fica) e, dentro da caixa da arquibancada de cá e
+     * acima dela, andando pela reta até o ponto olhado com o plano aberto na mesma conta (a mesma direção do olhar: D e h ×
+     * (1 − l), tanV ÷ (1 − l)). Uma aproximação local (no foco de agora), o bastante para os limites da bola e da área.
+     */
+    segurarTV(G, fz) {
+      const S = SEGURANCA;
+      let dz = fz + G.D;
+      if (dz > S.zCaMax) { G.D = Math.max(1, S.zCaMax - fz); dz = fz + G.D; }
+      if (dz > S.zCa && G.H > S.yCa) {
+        const l = Math.min((dz - S.zCa) / G.D, G.H > G.oy ? (G.H - S.yCa) / (G.H - G.oy) : 1, 0.9);
+        G.D *= 1 - l; G.H = G.oy + (G.H - G.oy) * (1 - l); G.tanV /= 1 - l; G.fov = (2 * Math.atan(G.tanV) * 180) / Math.PI;
+      }
+      G.h = G.H - G.oy; G.n = Math.hypot(G.h, G.D);
+      return G;
+    },
     /** Estado para os testes: o modo, o de antes (na transição), a fração dela, o rumo e os fatores. */
     resumo() { return { modo: atual, anterior: t < TRANSICAO ? anterior : null, transicao: Math.min(1, t / TRANSICAO), yaw: yawDe(atual ?? 'tv', dir), dir, fa, fd, cortesJogador }; },
     /**

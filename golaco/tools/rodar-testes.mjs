@@ -89,6 +89,9 @@ const LISTA = [
   // Estádio: rede que balança, torcida e som (contas puras do desenho)
   ['rede que balança: bolsa, onda, batidas com a física da bola, bola desenhada no bojo', 'teste-rede.mjs'],
   ['rede véu de noiva: forma pela física, morre no fundo, nada atravessa, gol pelo véu, desenho', 'teste-rede-veu.mjs'],
+  // Item 66 (dono, 23/10: "a câmera não acompanha a bola e não dá pra ver a área completamente"): a TV nova em Node (a mola, a
+  // geometria da área e da bola parada, 10 partidas com o legado lado a lado; 2 processos)
+  ['câmera de TV: acompanha a bola (atraso, miolo, espaço à frente), a área inteira no último terço e na bola parada, a bola com prioridade (a alta sem tirar o chão do quadro), sem tranco, jogadores ≥ 34 px, o travado do Rumo ao Estrelato no quadro', 'teste-camera.mjs', [], 'padrao', 2],
   ['torcida: lugares, setores, atlas das poses e ânimo (murmúrio, gol, "uuuh", apitos); o torcedor 3D na cadeira (item 69)', 'teste-torcida.mjs'],
   ['replay: anel dos últimos 10 s, roteiros do gol/impedimento/pausa e o replay de lances de verdade', 'teste-replay-anel.mjs'],
   ['replays nas paradas: o classificador de lances (árbitro independente), o roteiro, o orçamento, a pureza e o predicado da montagem', 'teste-replay-paradas.mjs'],
@@ -140,7 +143,9 @@ const LISTA = [
   ['identidade dos times: padrão = hoje, uniformes sem confusão (ΔE₀₀), torcida, faixas, placas, HUD do TM e o estádio (real na pro, Estádio Total Match na pública)', 'teste-identidade.mjs'],
   // Estádio com forma própria (dono, 16/10: "não tem nada a ver com o maracanã"): a tigela do Maracanã (estadio-planta.js)
   ['estádio com forma própria (Maracanã): medidas da pesquisa, torcida no degrau, festa no lugar, câmera de TV, sem forma nada muda', 'teste-estadio-forma.mjs'],
-  ['estádios de forma genérica (tigela, inglesa, arena, pista, pequeno): a base inteira — torcida, festa, câmera de TV, trilhos do pré-jogo', 'teste-estadio-generico.mjs'],
+  // (4 vagas = SOZINHO, não para dividir partidas: o G7 mede o TEMPO da planta e dos lugares, e com a parte do CI cheia passava
+  // da meta — 1131 e 1070 ms nos dois CIs do #600, com 323 ms aqui e 325 na base; o teste ignora o --par)
+  ['estádios de forma genérica (tigela, inglesa, arena, pista, pequeno): a base inteira — torcida, festa, câmera de TV, trilhos do pré-jogo', 'teste-estadio-generico.mjs', [], 'padrao', 4],
   ['cadeiras e degraus (item 69): a grade das 3 malhas — medidas da pesquisa, textura = grade, torcida nas cadeiras, degrau em escada, blocos de perto', 'teste-cadeiras.mjs'],
   ['cadeiras e torcida nos 524 estádios (item 69, PR 4): escadas, caimento ≤ 34°, fileiras, sólidos, torcida na cadeira, escala, densidade perto, cores = base, lotação', 'teste-cadeiras-estadios.mjs', [], 'padrao', 3],
   // Etapa 5 (corpo humano realista; só desenho): o esqueleto do desenho a partir das juntas e o nível de detalhe

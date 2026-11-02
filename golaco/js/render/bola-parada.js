@@ -1,61 +1,20 @@
 // Bolas paradas no estilo FIFA na tela (pedido do dono, 16/10; carregado SOB DEMANDA pelo main.js na 1ª bola parada da
 // partida: fora do download inicial). Contrato "Cobrança mirada e câmera da bola parada" no CONTRATOS.md; pesquisa em
 // PESQUISA-ETAPA4.md §12. Só lê o mundo (o hash não muda).
-//  - Câmera atrás do cobrador (escanteio, tiro livre, tiro de meta e pênalti do humano; pênalti contra): `atras` m atrás,
-//    `lado` m para o lado (o que fica mais para dentro do campo), `altura` m; olhar e fov pela conta (a bola em `bolaY`
-//    da altura do quadro, o alvo em `alvoY`); fora dos sólidos (estadio-forma.js solidoEm) e de jogadores: chega e sobe.
+//  - Câmera atrás do cobrador (escanteio, tiro livre, tiro de meta e pênalti do humano; pênalti contra): o plano em
+//    render/plano-bola-parada.js (puro) — no escanteio, alta (item 66: a área inteira grande no quadro).
 //  - Linha da cobrança mirada (mira-linha.js preverMira: a física da bola): uma fita virada para a câmera, miolo amarelo →
 //    azul e bordas escuras, 1 chamada de desenho; some no chute.
 //  - Painel embaixo: o rótulo de COMANDO do tipo (ALTA, TENSA, CHUTE, CURTA, LONGA) e o trilho do efeito (Z/X no PC).
 import * as THREE from 'three';
 import { CAMPO, MIRA } from '../config.js';
-import { solidoEm } from '../estadio-forma.js';
 import { alvoPadrao, chuteAGol } from '../mira.js';
+import { CAMERA_BOLA_PARADA, CAMERA_ESCANTEIO, planoBolaParada, perfilBolaParada } from './plano-bola-parada.js';
+// o plano da câmera (puro, testado em Node) mora em render/plano-bola-parada.js
+export { CAMERA_BOLA_PARADA, CAMERA_ESCANTEIO, planoBolaParada, perfilBolaParada };
 import { preverMira } from '../mira-linha.js';
 
-export const CAMERA_BOLA_PARADA = {
-  atras: 4.6, lado: 1.9, altura: 2.6, bolaY: 0.76, alvoY: 0.4, fov: [40, 74], distMax: 7.6, atrasMin: 3.2,
-  folgaSolido: 0.4, folgaJogador: 1.0, tentativas: 6,
-};
 const TIPOS_CAM = ['escanteio', 'tiroLivre', 'tiroDeMeta', 'penalti'];
-
-/**
- * Plano {de, para, fov (vertical)} atrás da bola (bx, bz) olhando o alvo (tx, ty, tz); lado −1 = câmera à esquerda.
- * recuo (m; a corrida da cobrança, item 70): o cobrador espera `recuo` m atrás da bola (na linha bola–alvo). O quadro é
- * montado pelo ponto da linha na altura dele (no lugar da bola: os pés dele em bolaY, a bola mais acima, à frente dele), com
- * a lente a até C.distMax m da bola (atrás dele C.atrasMin–C.atras m) — o cobrador inteiro na metade de baixo.
- */
-export function planoBolaParada(bx, bz, tx, ty, tz, lado, jogadores, out, recuo = 0) {
-  const C = CAMERA_BOLA_PARADA;
-  out.de ??= [0, 0, 0]; out.para ??= [0, 0, 0];
-  let dx = tx - bx, dz = tz - bz;
-  const D = Math.hypot(dx, dz) || 1;
-  dx /= D; dz /= D;
-  let atras = C.atras;
-  if (recuo > 0) { bx -= dx * recuo; bz -= dz * recuo; atras = Math.max(C.atrasMin, Math.min(C.atras, C.distMax - recuo)); }
-  let alt = C.altura, ld = C.lado, px = 0, pz = 0;
-  for (let k = 0; k <= C.tentativas; k++) {
-    px = bx - dx * atras - dz * ld * lado; pz = bz - dz * atras + dx * ld * lado;
-    let livre = !solidoEm(px, alt, pz, C.folgaSolido, false);
-    if (livre && alt < 2.3) for (const j of jogadores) if (Math.hypot(j.x - px, j.z - pz) < C.folgaJogador) { livre = false; break; }
-    if (livre) break;
-    atras *= 0.82; alt += 0.55; ld *= 0.9;
-  }
-  // arfagem p e tan(fov/2) t: a bola em bolaY e o alvo em alvoY (ângulos abaixo do horizonte, por bissecção)
-  const tb = Math.atan2(alt - 0.11, Math.hypot(bx - px, bz - pz)), tt = Math.atan2(alt - ty, Math.hypot(tx - px, tz - pz));
-  const k2 = 2 * (C.bolaY - 0.5);
-  const yAlvo = p => 0.5 - Math.tan(p - tt) * k2 / (2 * Math.tan(tb - p));
-  let lo = tt - 0.3, hi = tb - 0.02;
-  for (let i = 0; i < 30; i++) { const m = (lo + hi) / 2; if (yAlvo(m) > C.alvoY) lo = m; else hi = m; }
-  const f = Math.max(C.fov[0], Math.min(C.fov[1], (2 * Math.atan(Math.tan(tb - (lo + hi) / 2) / k2) * 180) / Math.PI));
-  const p = tb - Math.atan(Math.tan((f * Math.PI) / 360) * k2); // com o fov limitado, a bola volta para bolaY
-  let lx = (bx + tx) / 2 - px, lz = (bz + tz) / 2 - pz;
-  const ll = Math.hypot(lx, lz) || 1;
-  out.de[0] = px; out.de[1] = alt; out.de[2] = pz;
-  out.para[0] = px + lx / ll * 10; out.para[1] = alt - Math.tan(p) * 10; out.para[2] = pz + lz / ll * 10;
-  out.fov = f;
-  return out;
-}
 
 const CSS = `
 .mira-cobranca { position: absolute; left: 50%; bottom: calc(var(--sa-b) + 8px); transform: translateX(-50%); display: flex;
@@ -175,7 +134,7 @@ export function criarTelaBolaParada(cena, raiz) {
       // a corrida da cobrança (item 70, P1; corrida.js): o quadro pelo ponto de partida do cobrador (a distância dele atrás da
       // bola, na linha bola–alvo) — o ponto fica parado a parada inteira (a câmera não anda com a corrida)
       const cr = pr.corrida, recuo = cr ? Math.max(0, ((pr.x - cr.x0) * dx + (pr.z - cr.z0) * dz) / d) : 0;
-      planoBolaParada(pr.x, pr.z, alvo.x, pr.tipo === 'penalti' || chuteAGol(m, pr) ? 1.0 : 0, alvo.z, ladoCam, m.jogadores, plano, recuo);
+      planoBolaParada(pr.x, pr.z, alvo.x, pr.tipo === 'penalti' || chuteAGol(m, pr) ? 1.0 : 0, alvo.z, ladoCam, m.jogadores, plano, recuo, perfilBolaParada(pr.tipo));
       return { plano, yaw: Math.atan2(dz, dx), alvo };
     },
     /** A linha e o painel (depois da câmera do quadro). */

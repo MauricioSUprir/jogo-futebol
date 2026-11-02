@@ -50,6 +50,11 @@ const CL = await imp('../js/render/camera-livre.js');
 const { solidoEm } = await imp('../js/estadio-forma.js');
 const { cameraNoLadoDeCa } = await imp('../js/render/torcida-dados.js');
 const { CAMERA, CAMPO } = await imp('../js/config.js');
+// os perfis da TV e da aproximada e o fov pela largura: os da câmera de jogo (render/enquadramento.js, item 66 — a TV vai com
+// o foco até x ±44,5 perto do gol), em vez de cópias
+const EQ = await imp('../js/render/enquadramento.js');
+const TV_ = { ...EQ.PERFIS_CAMERA.tv, limX: EQ.ENQUADRAMENTO.area.limX, retrato: 0 }, TVC_ = { ...EQ.TV_CELULAR, limX: EQ.ENQUADRAMENTO.area.limX, retrato: 0 };
+const AP_ = { ...EQ.PERFIS_CAMERA.aproximada, retrato: 0 };
 const { PED_A } = await imp('lib/pedidos-tm.mjs');
 const res = [];
 const meta = (nome, medido, ok) => res.push({ nome, medido, ok: !!ok });
@@ -58,9 +63,7 @@ const errosTodos = [];
 // ------------------------------------------------------------------ A: varredura das poses (Node)
 function varrer(semLimites) {
   const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
-  const TV = { largura: CAMERA.largura, distancia: CAMERA.distancia, altura: CAMERA.altura, olharY: 0, limX: MX - 14, limZ0: -MZ + 12, limZ1: MZ - 11 };
-  const TVC = { ...TV, ...CAMERA.celular };
-  const AP = { largura: CAMERA.aproximada.largura, distancia: CAMERA.aproximada.distancia, altura: CAMERA.aproximada.altura, olharY: 0.6, limX: MX - 3, limZ0: -MZ + 3, limZ1: MZ - 2 };
+  const TV = TV_, TVC = TVC_, AP = AP_;
   const ARQ = /arquibancada|fundo|parede|marquise|teto|túnel/;
   const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], norm = v => { const l = Math.hypot(...v); return v.map(x => x / l); };
   let poses = 0; const falhas = [];
@@ -147,15 +150,8 @@ function varrer(semLimites) {
 // da TV/Aproximada (o de camera.js) = o controlado preso nos limites dela (a bola no pé: o pior caso perto da borda).
 {
   const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
-  const TV = { largura: CAMERA.largura, distancia: CAMERA.distancia, altura: CAMERA.altura, olharY: 0, limX: MX - 14, limZ0: -MZ + 12, limZ1: MZ - 11, retrato: 0 };
-  const TVC = { ...TV, ...CAMERA.celular };
-  const AP = { largura: CAMERA.aproximada.largura, distancia: CAMERA.aproximada.distancia, altura: CAMERA.aproximada.altura, olharY: 0.6, limX: MX - 3, limZ0: -MZ + 3, limZ1: MZ - 2, retrato: 0 };
-  const fovParaDe = (a, peq) => p => {   // a conta de camera.js fovPara (paisagem)
-    let larg = p.largura;
-    if (a < 16 / 9) larg *= Math.sqrt(Math.max(a, 1.25) / (16 / 9));
-    if (peq) larg *= CAMERA.telaPequena;
-    return (2 * Math.atan(larg / 2 / Math.hypot(p.distancia, p.altura - p.olharY) / a) * 180) / Math.PI;
-  };
+  const TV = TV_, TVC = TVC_, AP = AP_;
+  const fovParaDe = (a, peq) => p => EQ.fovPara({ ...p, retrato: 0 }, a, peq);   // a conta da câmera de jogo (paisagem)
   const nova = () => ({ de: [0, 0, 0], para: [0, 0, 0], fov: 0 });
   const fat = [0, 5, 10, 15, 20];
   // A3: continuidade — o foco andando de 0,05 em 0,05 m pela faixa toda: a câmera anda ≤ 0,6 m (o degrau de 0,5 m da subida
@@ -728,7 +724,10 @@ document.body.appendChild(f);
     }
     return false;
   };
-  const fimLinha = () => pg.evaluate(() => { const g = window.__golaco, p = g.bolaParada.pontos(); if (!p.length) return null; const q = p[Math.min(p.length - 1, 40)]; return g.naTela(q[0], q[1], q[2]); });
+  // (os 41 primeiros pontos da linha na tela; a comparação usa o mesmo ponto nas duas — o ponto 40, ou o último das duas se a
+  // linha ficou mais curta: no escanteio de cá a direita encurta a linha de 105 para 14 pontos, e o ponto 40 da 1ª contra o
+  // último da 2ª media o encurtar — com a câmera alta do escanteio do item 66 ele aparece na vertical da tela)
+  const fimLinha = () => pg.evaluate(() => { const g = window.__golaco, p = g.bolaParada.pontos(); if (!p.length) return null; return p.slice(0, 41).map(q => { const t = g.naTela(q[0], q[1], q[2]); return { x: t.x, y: t.y }; }); });
   const linhasH1 = []; let okH1 = true;
   for (const [cam, tipo] of [['tv', 'tiroDeMeta'], ['alta', 'escanteio'], ['atras', 'tiroDeMeta']]) {
     await pg.evaluate(c => window.__golaco.definirCamera(c), cam);
@@ -741,7 +740,8 @@ document.body.appendChild(f);
     await pg.keyboard.down('ArrowRight'); await quadros(pg, 40);
     const b = await fimLinha();
     await pg.keyboard.up('ArrowRight'); await quadros(pg, 2);
-    const dx = a && b ? b.x - a.x : 0, dy = a && b ? b.y - a.y : 0;
+    const iq = a && b ? Math.min(40, a.length - 1, b.length - 1) : 0;
+    const dx = a && b ? b[iq].x - a[iq].x : 0, dy = a && b ? b[iq].y - a[iq].y : 0;
     // a cobrança (PASSE) e a volta à câmera do Livre: o maior passo da câmera por quadro enquanto a mistura sai
     await pg.keyboard.down('KeyJ'); await quadros(pg, 12); await pg.keyboard.up('KeyJ');
     const volta = await pg.evaluate(() => {
