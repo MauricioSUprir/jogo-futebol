@@ -211,7 +211,7 @@ html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 74px); }
   78% { transform: scale(1.05) rotate(-3deg); }
   86%, 100% { transform: scale(1) rotate(-3deg); }
 }
-/* celular: compacto, logo abaixo da barra de cima (placar e minimapa terminam a ~74 px) e no meio, entre o
+/* celular: compacto, logo abaixo da barra de cima (placar e aviso terminam a ~74 px) e no meio, entre o
    analógico (esquerda, embaixo) e o arco de botões (direita): em 568×320 sobram ~180 px de largura ali
    (tools/teste-estadio confere 568×320, 667×375 e 844×390 nas duas fases dos botões) */
 html.com-toque .gol-tela { top: calc(var(--sa-t) + 128px); gap: 3px; }
@@ -249,7 +249,8 @@ html.com-toque .gol-faixa { height: clamp(64px, 26vmin, 150px); }
 
 /* minimapa: campo preto com linhas verdes e pontos dos dois times e da bola. Opção da pausa ("Minimapa", como o
    radar do EA FC): ligado no PC e DESLIGADO no celular por padrão (main.js liga html.mapa-ligado / mapa-desligado
-   quando a pessoa escolhe; sem escolha, html.com-toque decide) */
+   quando a pessoa escolhe; sem escolha, html.com-toque decide). EMBAIXO no meio, no PC e no celular (item 59, dono 23/10:
+   "o campinho que está lá em cima tem que ficar lá embaixo"; o "Radar" do PES 2019 embaixo no meio, com o nome de cada lado) */
 .minimapa {
   position: absolute; left: 50%; transform: translateX(-50%);
   bottom: calc(var(--sa-b) + var(--m)); width: 112px; height: 73px;
@@ -257,27 +258,34 @@ html.com-toque .gol-faixa { height: clamp(64px, 26vmin, 150px); }
   opacity: 0.8;
 }
 html.com-toque:not(.mapa-ligado) .minimapa, html.mapa-desligado .minimapa { display: none; }
-/* celular deitado: no topo, entre o placar e o painel (nada de dedo em cima) */
-html.com-toque .minimapa { bottom: auto; top: calc(var(--sa-t) + var(--m)); width: 92px; height: 60px; }
-/* celular: o painel mostra só o modo e a posição (o km/h fica para o PC) e abre espaço ao minimapa */
+/* celular deitado: embaixo no meio, ENTRE o analógico e o arco de botões, a 3 px da borda segura (a faixa de baixo de 22 px:
+   entrada.js FAIXA_BAIXO); o lugar (até 12% de W para o lado do vão) e o tamanho (92×60, 84×55 ou 76×50) vêm do hud.js
+   ajustarBaixo, a ≥ 8 px do analógico em repouso e de todas as vagas do arco. Sem lugar (a 140% em telas pequenas) some
+   sozinho (html.mapa-sem-lugar; o botão da pausa continua ligado). Some também com a faixa do fim de jogo (os botões dela
+   descem até ele) e com uma faixa do meio que chegue a ele (html.mapa-sob-faixa: a "Você foi expulso" em telas baixas) */
+html.com-toque .minimapa {
+  top: auto; bottom: calc(var(--sa-b) + 3px); left: var(--mapa-cx, 50%);
+  width: var(--mapa-w, 92px); height: var(--mapa-h, 60px); transform: translateX(-50%);
+}
+html.mapa-sem-lugar .minimapa, html.fim-faixa .minimapa, html.mapa-sob-faixa .minimapa { display: none; }
+/* celular: o painel mostra só o modo e a posição (o km/h fica para o PC) */
 @media (max-width: 1000px) {
   html.com-toque .vel { display: none; }
   html.com-toque .modo { border-left: 0; padding-left: 0; min-width: 0; }
 }
-/* topo apertado (celular estreito ou com entalhe; medido em js/hud.js ajustarTopo):
-   1) nos TREINOS sai a marca do placar, só se sem ela ainda encostar (na partida ela fica: o minimapa é que sai do meio,
-   passo 5); 2) sai o texto do
+/* topo apertado (celular estreito ou com entalhe; medido em js/hud.js ajustarTopo — o topo é placar | painel dos treinos |
+   menu; o minimapa foi para baixo): 1) nos TREINOS sai a marca do placar, só se sem ela ainda encostar; 2) sai o texto do
    modo (fica o ponto de estado e a posição) */
 html.topo-c1:not(.em-partida) .placar-marca { display: none; }
 html.topo-c2 .modo { font-size: 0; letter-spacing: 0; gap: 0; }
 html.topo-c2 .painel-jogo { gap: 9px; padding: 0 10px 0 12px; }
 /* arco de botões grande (140%) chegando ao topo: o painel desce para baixo do placar, à esquerda */
 html.topo-desce .painel-jogo { right: auto; left: calc(var(--sa-l) + var(--m)); top: calc(var(--sa-t) + var(--m) + var(--placar-h) + 8px); }
-/* 3) sai o "1º T" do relógio (fica o minuto); na PARTIDA só depois do passo 5 (o "1º T +4" e o "Intervalo" ficam se o
-   minimapa encostado à direita do placar resolver: hud.js ajustarTopo) */
+/* 3) sai o "1º T" do relógio (fica o minuto); na PARTIDA só depois do passo 4 (o "1º T +4" e o "Intervalo" são os últimos a
+   sair: hud.js apertarTopo) */
 html.topo-c3 .placar-relogio small { display: none; }
 /* 4) celular estreito com o relógio de 2 dígitos ou nos acréscimos ("45+2'"): os espaços apertam (as fontes NÃO: ficam
-   nos mínimos de leitura do H10); 5) se ainda encostar, o minimapa sai do meio e encosta à direita do placar (hud.js) */
+   nos mínimos de leitura do H10) */
 html.topo-c4 .placar-time { gap: 2px; padding-right: 4px; letter-spacing: 0.02em; }
 html.topo-c4 .placar-time.t1 { padding: 0 0 0 4px; }
 html.topo-c4 .placar-resultado { padding: 0 4px; gap: 2px; }
@@ -318,21 +326,23 @@ html.em-partida .carga-tipo { display: none; }
 html.em-partida .carga-barra { width: 44px; height: 6px; }
 .carga.cheia .carga-barra { border-color: #fff; box-shadow: 0 0 8px rgba(25, 224, 122, 0.9); }
 
+/* (depuração) no alto à direita, abaixo do menu — embaixo é a faixa do minimapa e dos nomes (itens 59 e 60) */
 .qps {
-  position: absolute; right: calc(var(--sa-r) + var(--m)); bottom: calc(var(--sa-b) + var(--m));
+  position: absolute; right: calc(var(--sa-r) + var(--m)); top: calc(var(--sa-t) + var(--m) + 58px);
   font: 600 11px/1.4 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; color: var(--texto-2);
   background: rgba(7, 9, 10, 0.7); padding: 4px 8px; border-radius: 6px; white-space: pre;
 }
-html.com-toque .qps { bottom: auto; top: calc(var(--sa-t) + var(--m) + 58px); }
 .dica {
   position: absolute; left: calc(var(--sa-l) + var(--m)); bottom: calc(var(--sa-b) + var(--m));
   display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--texto-2);
   background: rgba(7, 9, 10, 0.62); padding: 6px 10px; border-radius: 8px;
 }
 .dica .sep { width: 1px; height: 14px; background: rgba(255, 255, 255, 0.15); margin: 0 4px; }
-/* some sozinha 8 s depois de aparecer (hud.js reinicia quando o jogo fica pronto e a cada troca de modo) */
+/* some sozinha 8 s depois de aparecer (hud.js reinicia quando o jogo fica pronto e a cada troca de modo); depois de sumir fica
+   fora (.vista, posta no animationend) até a próxima vez — senão uma camada que a esconde (display:none) recomeçava a animação */
 .dica { animation: dica-some 0.6s ease 8s forwards; }
 @keyframes dica-some { to { opacity: 0; visibility: hidden; } }
+.dica.vista { display: none; }
 html.com-toque .dica { display: none; }
 
 /* ------------------------------------------------------------------ toque */
@@ -592,11 +602,9 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
 @media (max-width: 480px) {
   .painel-jogo { top: calc(var(--sa-t) + var(--m) + 48px + 10px); right: calc(var(--sa-r) + var(--m)); }
   .aviso { top: calc(var(--sa-t) + var(--m) + 116px); }
-  /* com o minimapa à direita na mesma altura, o aviso desce para baixo dele (aviso largo,
-     como "Defesa: espalmou", passaria por cima do minimapa) */
+  /* (celular em pé: o jogo fica parado embaixo do "Gire o celular"; o aviso e o qps descem para baixo do painel) */
   html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 186px); }
   html.com-toque .qps { top: calc(var(--sa-t) + var(--m) + 116px); right: auto; left: calc(var(--sa-l) + var(--m)); }
-  html.com-toque .minimapa { top: calc(var(--sa-t) + var(--m) + 116px); left: auto; right: calc(var(--sa-r) + var(--m)); transform: none; }
 }
 
 /* ------------------------------------------------------------------ celular em pé: gire o celular
@@ -658,26 +666,26 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
 html.com-toque .btn-replay-pular { display: flex; }
 html.em-replay .minimapa, html.em-replay .btn-menu, html.em-replay .aviso, html.em-replay .carga, html.em-replay .cartao-icone,
 html.em-replay .dica, html.em-replay .painel-jogo, html.em-replay .gol-tela, html.em-replay .faixa, html.em-replay .toque,
-html.em-replay .qps { display: none; }
+html.em-replay .qps, html.em-replay .nome-condutor { display: none; }
 /* comemoração do gol (js/comemoracao.js): a mesma camada do replay (qualquer toque pula depois de 0,5 s); do HUD fica só o
    placar e o "GOL!" até o 1º corte — no celular os botões de toque cobriam o autor */
 html.em-comemoracao .minimapa, html.em-comemoracao .btn-menu, html.em-comemoracao .aviso, html.em-comemoracao .carga,
 html.em-comemoracao .cartao-icone, html.em-comemoracao .dica, html.em-comemoracao .painel-jogo, html.em-comemoracao .faixa,
-html.em-comemoracao .toque, html.em-comemoracao .qps { display: none; }
+html.em-comemoracao .toque, html.em-comemoracao .qps, html.em-comemoracao .nome-condutor { display: none; }
 /* a faixa do fim de jogo (hud.faixa final): sem os controles de toque — depois do apito final eles não comandam nada, e no
    celular o arco encostava nos botões da faixa e a zona do analógico ficava com o toque da metade esquerda deles */
-html.fim-faixa .toque { display: none; }
+html.fim-faixa .toque, html.fim-faixa .nome-condutor { display: none; }
 /* cena de substituição (js/substituicao.js): a mesma camada (qualquer toque pula depois de 0,5 s); do HUD ficam o placar e
    a faixa ENTRA/SAI */
 html.em-substituicao .minimapa, html.em-substituicao .btn-menu, html.em-substituicao .aviso, html.em-substituicao .carga,
 html.em-substituicao .cartao-icone, html.em-substituicao .dica, html.em-substituicao .painel-jogo, html.em-substituicao .faixa,
-html.em-substituicao .toque, html.em-substituicao .qps, html.em-substituicao .gol-tela { display: none; }
+html.em-substituicao .toque, html.em-substituicao .qps, html.em-substituicao .gol-tela, html.em-substituicao .nome-condutor { display: none; }
 /* cena do cartão (js/cena-cartao.js; cenas das paradas, 22/10): a mesma camada (qualquer toque pula depois de 0,5 s); do
    HUD fica só o placar (a tarja de identificação é da tela das cenas, css/cenas.css). O ícone do cartão não aparece: o
    cartão está na mão do árbitro (3D). A faixa "Você foi expulso" espera a cena (e o replay) acabar. */
 html.em-cena .minimapa, html.em-cena .btn-menu, html.em-cena .aviso, html.em-cena .carga, html.em-cena .cartao-icone,
 html.em-cena .dica, html.em-cena .painel-jogo, html.em-cena .gol-tela, html.em-cena .faixa, html.em-cena .toque,
-html.em-cena .qps, html.em-cena .faixa-subst { display: none; }
+html.em-cena .qps, html.em-cena .faixa-subst, html.em-cena .nome-condutor { display: none; }
 
 /* faixa ENTRA/SAI (lower third de TV; pedido do dono de 12/10). Só sigla, ▲/▼, ENTRA/SAI, número e nome: a palavra e o
    triângulo sempre escritos (a cor não é a única pista). Na cena: embaixo à esquerda, a linha de quem está no quadro em
@@ -787,17 +795,55 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
 @media (prefers-reduced-motion: reduce) { .terco-selo { animation: none; } }
 
 /* ?prints=1: cena limpa para prints (sem dicas, avisos nem menus) */
-html.modo-prints .dica, html.modo-prints .aviso, html.modo-prints .gol-tela, html.modo-prints .carregando, html.modo-prints .replay-faixa { display: none; }
+html.modo-prints .dica, html.modo-prints .aviso, html.modo-prints .gol-tela, html.modo-prints .carregando, html.modo-prints .replay-faixa,
+html.modo-prints .nome-condutor { display: none; }
 html.modo-prints .faixa:not(.forcada) { display: none; }
 html.sem-hud .hud, html.sem-hud .toque, html.sem-hud .replay, html.sem-hud .comemoracao, html.sem-hud .terco, html.sem-hud .tarja-cena { display: none; }
 
-/* o nome em cima do jogador com a bola (dono, 17/10; main.js marcarCondutor) */
-/* nome do condutor numa caixa (dono, 17/10: "bota dentro de um quadrado"): número em verde + nome da camisa */
-#nome-condutor { position: fixed; left: 0; top: 0; z-index: 4; pointer-events: none; white-space: nowrap;
-  display: flex; align-items: center; gap: 5px; padding: 3px 7px 3px 5px; box-sizing: border-box;
-  background: rgba(5, 8, 7, 0.82); border: 1px solid rgba(255, 255, 255, 0.14); border-left: 3px solid var(--verde);
-  border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
-  font: 700 11px/1 Inter, system-ui, sans-serif; letter-spacing: .03em; color: #fff; will-change: transform; }
-#nome-condutor .nc-num { color: var(--verde); font-weight: 900; font-variant-numeric: tabular-nums; }
-#nome-condutor .nc-nome { text-transform: uppercase; }
-#nome-condutor[hidden] { display: none; }
+/* ------------------------------------------------------------------ o nome do jogador com a bola (item 60, dono 23/10:
+   "fica tapando e atrapalhando o jogo"). Nos CANTOS de baixo (main.js marcarCondutor → hud.js nomeCanto), a "faixa de baixo
+   simétrica" com o minimapa no meio: o do time da esquerda do placar à esquerda, [faixa da cor do time | número | nome]; o da
+   direita espelhado à direita, [nome | número | faixa] (o Player Box do PES 2019). A exceção escrita à "sem narração" (dono,
+   17/10): só número e nome — sem caixa alta (cabe e lê melhor a 11 px; reticências se passar). Celular: 15 px de altura a
+   3 px da borda segura, embaixo do analógico e do arco (entrada.js FAIXA_BAIXO), até 88 px (≤ 600 px de largura) / 120 px e
+   nunca além da largura livre do canto (hud.js ajustarBaixo: --nome-livre-esq/dir; sem lugar, some). PC: 18 px a 14 px dos
+   cantos, até 200 px (e sem chegar ao minimapa do meio). Apagado = a bola solta. Nunca pega toque. */
+.nome-condutor {
+  position: absolute; left: calc(var(--sa-l) + var(--m)); bottom: calc(var(--sa-b) + var(--m));
+  display: flex; align-items: center; gap: 5px; height: 18px; box-sizing: border-box; padding: 0 8px 0 0;
+  max-width: min(200px, calc(50vw - 56px - 8px - var(--m) - var(--sa-l)));
+  overflow: hidden; white-space: nowrap; pointer-events: none;
+  background: rgba(7, 9, 10, 0.8); border-radius: 4px; font: 700 12px/1 var(--fonte); color: #fff;
+}
+.nome-condutor[hidden] { display: none; }
+.nome-condutor.dir {
+  left: auto; right: calc(var(--sa-r) + var(--m)); flex-direction: row-reverse; padding: 0 0 0 8px;
+  max-width: min(200px, calc(50vw - 56px - 8px - var(--m) - var(--sa-r)));
+}
+.nome-condutor.apagado { opacity: 0.6; }
+/* a faixa da cor do time: a mesma do placar (.placar-time.tN .placar-cor; com o Total Match, a do time — hud.js) */
+.nc-cor { align-self: stretch; width: 3px; flex: none; background: var(--verde); }
+.nome-condutor.dir .nc-cor { background: #e7eaec; }
+.nc-num { flex: none; font-weight: 900; font-variant-numeric: tabular-nums; }
+.nc-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+html.com-toque .nome-condutor {
+  left: calc(var(--sa-l) + 8px); bottom: calc(var(--sa-b) + 3px); height: 15px; gap: 4px; padding-right: 6px;
+  font-size: 11px; max-width: min(120px, var(--nome-livre-esq, 120px));
+}
+html.com-toque .nome-condutor.dir { left: auto; right: calc(var(--sa-r) + 8px); padding: 0 0 0 6px; max-width: min(120px, var(--nome-livre-dir, 120px)); }
+@media (max-width: 600px) {
+  html.com-toque .nome-condutor { max-width: min(88px, var(--nome-livre-esq, 88px)); }
+  html.com-toque .nome-condutor.dir { max-width: min(88px, var(--nome-livre-dir, 88px)); }
+}
+/* PC: a dica de teclas (8 s) mora no canto de baixo à esquerda — enquanto ela está na tela o nome da esquerda fica na mesma
+   linha, à direita dela (hud.js mostrarDica: --dica-w; em cima dela encostava na faixa ENTRA/SAI do jogo, logo acima; no
+   celular a dica não aparece) */
+html.dica-visivel:not(.com-toque) .nome-condutor:not(.dir) {
+  left: calc(var(--sa-l) + var(--m) + var(--dica-w, 210px) + 8px);
+  max-width: min(200px, calc(50vw - 56px - 16px - var(--m) - var(--sa-l) - var(--dica-w, 210px)));
+}
+/* janela estreita (abaixo de ~690 px): entre a dica e o minimapa não cabem 56 px — o nome espera a dica sumir (hud.js
+   nomeComDica; em 560 px sobrava uma lasca de 8 px por cima do minimapa) */
+html.dica-visivel.nome-sem-lugar-dica:not(.com-toque) .nome-condutor:not(.dir) { display: none; }
+/* a disputa de pênaltis (o painel dela diz quem bate) e sem lugar no canto (140% em telas pequenas): nada */
+html.modo-penaltis .nome-condutor, html.nome-sem-lugar-esq .nome-condutor:not(.dir), html.nome-sem-lugar-dir .nome-condutor.dir { display: none; }

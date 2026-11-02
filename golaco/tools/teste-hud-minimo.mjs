@@ -40,6 +40,36 @@
 //        encosta (contraprova de 13/10: em 568×320 o "1º T +4" sumia e o 10-9 passava 2,5 px por cima do minimapa); no
 //        treino de ataque com o minimapa e o painel, nada encosta e a marca fica (saía em 568 e 667 px sem precisar);
 //     e) leitor de tela: o placar tem o nome dos dois times (Golaço FC e Ventania FC; na tela só as siglas)
+//  H12 (itens 59 e 60, dono 23/10: "o campinho que está lá em cima tem que ficar lá embaixo") o minimapa embaixo, no meio,
+//     entre o analógico e os botões —
+//     a) celular 844×390, 667×375 e 568×320, com e sem entalhe: a 80% (o padrão) visível com 92×60; a 70, 100 e 140% visível
+//        (≥ 76×50, |cx − W/2| ≤ 0,12·W, base a ≤ 6 px de H − sa.b, ≥ 8 px do analógico em repouso e de todo botão das duas
+//        fases, ≥ 4 px dos dois nomes forçados) OU escondido com html.mapa-sem-lugar e a varredura do PRÓPRIO teste confirma
+//        que nenhum 76×50 caberia (não some à toa);
+//     b) nada no alto: na partida com o minimapa ligado, nenhuma caixa do #hud com o topo acima de 30% da altura além do
+//        placar e do menu (3 telas e o PC);
+//     c) torcida atrás do minimapa ligado (844×390, os 8 instantes do H3): ≤ 1% dos pixels de torcida (na base, no alto: 5,5%);
+//     d) a faixa do fim de jogo (com os botões) esconde o minimapa; a do intervalo e a "Você foi expulso" (com o botão) ficam
+//        a ≥ 4 px dele — 3 telas com entalhe, com e sem a cara do TM (a faixa do TM desce para baixo do aviso);
+//     e) o "Tamanho" mudado na pausa (70 → 140 → 80%) reposiciona sem resize: volta ao lugar do 80%;
+//     f) PC 1280×720 e 1920×1080: como antes (centro em W/2 ± 1, base em H − 14 ± 1)
+//  H13 (item 60, dono 23/10: "o nome do jogador com a bola fica tapando e atrapalhando o jogo") o nome nos cantos de baixo —
+//     a) o time da ESQUERDA do placar (0) com a bola: canto inferior esquerdo (≤ 16 px da borda segura, base a ≤ 6 px de
+//        H − sa.b, acima nada: topo ≥ base do analógico em repouso + 2); o da direita (1): canto inferior direito (topo ≥ base
+//        do círculo mais baixo do arco + 2); ≥ 4 px de todo botão, do minimapa ligado e do placar; pelo caminho de verdade
+//        (cenaDeTeste: o meu goleiro com a bola no pé × o adversário com a bola) e com o nome mais largo forçado, nas 3 telas,
+//        com e sem entalhe, a 70, 80 e 100%; PC nos cantos a 14 px;
+//     b) o texto é "número camisa" da ficha de quem tem a bola; letra ≥ 11 px (celular) / 12 (PC); contraste ≥ 4,5:1; a faixa
+//        de cor = a do placar daquele time;
+//     c) nome de 10 'W': caixa ≤ 88 px (≤ 600 px de largura) / 120 (outros celulares) / 200 (PC), reticências, número inteiro;
+//     d) o lado vem do placar: no 2º tempo (o campo trocou de lado) o meu goleiro com a bola continua à esquerda;
+//     e) some: bola solta (0,5 s apagado, 1,0 s fora), intervalo e fim, as 4 camadas (replay, comemoração, substituição,
+//        cena), treino de ataque, disputa de pênaltis e ?prints=1; aparece no Modo Livre;
+//     f) sem piscar: em 2 min de jogo, 0 voltas depois de < 0,8 s escondido (na base, 22); escritas no DOM (informativo);
+//     g) PC: com a dica de teclas na tela o nome da esquerda fica na linha de baixo, à direita dela (≥ 4 px; em cima dela
+//        encostava na faixa ENTRA/SAI do jogo); em janela estreita (560 × 600) ele cabe entre a dica e o minimapa (≥ 56 px,
+//        ≥ 4 px dos dois) ou some até ela sumir (era uma lasca de 8 px por cima do minimapa); depois que ela some, no canto, e
+//        uma camada (replay, cena) que liga e desliga não a traz de volta (voltava por 8 s debaixo do nome)
 //   node tools/teste-hud-minimo.mjs [--raiz <pasta do jogo>] [--so-placar]   (--raiz: mede outra cópia, ex.: a base;
 //   --so-placar: só as telas do H1/H7/H9 e o H5 com o H10, sem os 2 min de jogo nem as opções salvas — para iterar no placar)
 import path from 'node:path';
@@ -54,12 +84,31 @@ const srv = await servidor(0, raiz);
 const pronta = pg => pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
 
 // formas do HUD visíveis (no navegador): retângulos e círculos; e o texto visível fora do placar
+// (itens 59 e 60: a caixa SEM fundo, sem borda e sem sombra — o ≡ da partida, um alvo de toque de 44 × 44 transparente com o
+// ícone de 22 × 22 — conta pelo que se vê: a união dos filhos visíveis. A régua de antes contava o alvo inteiro)
 const FORMAS = () => {
   const vis = e => e && e.offsetParent !== null && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden' && +getComputedStyle(e).opacity > 0.01;
+  const alfa = c => { const v = (c.match(/[\d.]+/g) ?? []).map(Number); return v.length > 3 ? v[3] : v.length ? 1 : 0; };
+  const transparente = e => {
+    const s = getComputedStyle(e);
+    return alfa(s.backgroundColor) < 0.01 && s.backgroundImage === 'none' && s.boxShadow === 'none'
+      && ['Top', 'Right', 'Bottom', 'Left'].every(l => parseFloat(s[`border${l}Width`]) === 0 || s[`border${l}Style`] === 'none' || alfa(s[`border${l}Color`]) < 0.01);
+  };
   const f = [];
   for (const e of document.querySelectorAll('#hud [data-caixa], #carga.visivel')) {
     if (!vis(e)) continue;
-    const r = e.getBoundingClientRect();
+    let r = e.getBoundingClientRect();
+    if (e.children.length && transparente(e)) {
+      let u = null;
+      for (const c of e.children) {
+        const cs = getComputedStyle(c);
+        if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+        const q = c.getBoundingClientRect();
+        if (q.width < 1 || q.height < 1) continue;
+        u = u ? { left: Math.min(u.left, q.left), top: Math.min(u.top, q.top), right: Math.max(u.right, q.right), bottom: Math.max(u.bottom, q.bottom) } : { left: q.left, top: q.top, right: q.right, bottom: q.bottom };
+      }
+      if (u) r = { ...u, width: u.right - u.left, height: u.bottom - u.top };
+    }
     if (r.width >= 1 && r.height >= 1) f.push({ nome: e.dataset.caixa || e.id, ret: [r.left, r.top, r.right, r.bottom] });
   }
   for (const e of document.querySelectorAll('#toque:not([hidden]) .btn-toque')) {
@@ -69,11 +118,15 @@ const FORMAS = () => {
   const ab = document.querySelector('#toque:not([hidden]) .analogico-base');
   const op = ab ? +getComputedStyle(document.getElementById('analogico')).opacity : 0;
   if (ab && op > 0.25) { const r = ab.getBoundingClientRect(); if (r.width > 0) f.push({ nome: 'analogico', circ: [r.left + r.width / 2, r.top + r.height / 2, r.width / 2] }); }
+  // (o nome do jogador com a bola, item 60: a exceção escrita à "sem narração", como o placar — só número e nome, conferido
+  // à parte pelo H2)
   let fora = 0; const txt = [];
   for (const e of document.querySelectorAll('#hud *, #toque *')) {
-    if (!vis(e) || e.closest('.placar') || e.closest('.btn-toque')) continue;
+    if (!vis(e) || e.closest('.placar') || e.closest('.btn-toque') || e.closest('#nome-condutor')) continue;
     for (const n of e.childNodes) if (n.nodeType === 3 && n.textContent.trim()) { fora += n.textContent.trim().length; txt.push(n.textContent.trim()); }
   }
+  const nc = document.getElementById('nome-condutor');
+  const nome = nc && nc.closest('#hud') && vis(nc) ? [...nc.querySelectorAll('.nc-num, .nc-nome')].map(x => x.textContent.trim()).filter(Boolean).join(' ') : null;
   // nomes dos botões de toque (H9): visível, com texto e inteiro dentro do botão
   const nomes = { botoes: 0, comNome: 0, sem: [] };
   for (const b of document.querySelectorAll('#toque:not([hidden]) .btn-toque')) {
@@ -88,7 +141,7 @@ const FORMAS = () => {
     const ok = sp && vis(sp) && sp.textContent.trim() && rs.width > 0 && rs.left >= cx - meia - 0.5 && rs.right <= cx + meia + 0.5;
     if (ok) nomes.comNome++; else nomes.sem.push(b.id);
   }
-  return { f, fora, txt: [...new Set(txt)], nomes };
+  return { f, fora, txt: [...new Set(txt)], nomes, nome };
 };
 const AREA = (f, W, H) => {
   let n = 0, t = 0;
@@ -218,8 +271,107 @@ function conferirPlacar(tela, tipo, estado, r) {
 }
 const placarEncosta = [], placarTreino = []; let placarAria = '';
 
+// H12 + H13a: a faixa de baixo no celular (itens 59 e 60). No navegador: as margens seguras, os círculos de TODAS as vagas
+// do arco (as duas fases: o estilo que a entrada escreve), o analógico em repouso, o minimapa e os dois nomes forçados (o
+// mais largo; sem a API, a base, nenhum)
+const MEDIR_BAIXO = async () => {
+  const g = window.__golaco;
+  await new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(ok)));
+  const sonda = document.createElement('div');
+  sonda.style.cssText = 'position:fixed;left:var(--sa-l);right:var(--sa-r);top:var(--sa-t);bottom:var(--sa-b);pointer-events:none;visibility:hidden';
+  document.body.append(sonda);
+  const s0 = sonda.getBoundingClientRect(); sonda.remove();
+  const W = innerWidth, H = innerHeight;
+  const ret = e => {
+    if (!e || e.hidden) return null;
+    const cs = getComputedStyle(e);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || (e.checkVisibility && !e.checkVisibility({ checkVisibilityCSS: true }))) return null;
+    const q = e.getBoundingClientRect();
+    return q.width > 0 && q.height > 0 ? { l: q.left, t: q.top, r: q.right, b: q.bottom } : null;
+  };
+  const botoes = [...document.querySelectorAll('#toque .btn-toque[style]')].map(b => {
+    const d = parseFloat(b.style.width);
+    return d > 0 ? { id: b.id, x: parseFloat(b.style.left) + d / 2, y: parseFloat(b.style.top) + d / 2, d } : null;
+  }).filter(Boolean);
+  const ba = document.querySelector('#toque:not([hidden]) .analogico-base')?.getBoundingClientRect();
+  const nomes = {};
+  if (g.nomeCantoDeTeste) {
+    for (const t of [0, 1]) { g.nomeCantoDeTeste({ time: t, num: 88, nome: 'Wwwwwwwwww' }); nomes[t] = ret(document.getElementById('nome-condutor')); }
+    g.nomeCantoDeTeste(null);
+  }
+  return {
+    W, H, sa: { l: s0.left, t: s0.top, r: W - s0.right, b: H - s0.bottom }, botoes,
+    analogico: ba && ba.width > 0 ? { x: ba.left + ba.width / 2, y: ba.top + ba.height / 2, d: ba.width } : null,
+    mapa: ret(document.getElementById('minimapa')), placar: ret(document.querySelector('#hud .placar')), nomes,
+    api: !!g.nomeCantoDeTeste, cls: document.documentElement.className,
+  };
+};
+const dRetCirc = (q, c) => Math.hypot(c.x - Math.max(q.l, Math.min(c.x, q.r)), c.y - Math.max(q.t, Math.min(c.y, q.b))) - c.d / 2;
+const dRetRet = (a, b) => Math.max(b.l - a.r, a.l - b.r, b.t - a.b, a.t - b.b);
+/** Algum 76×50 caberia embaixo no meio (a regra do H12a: base a 3 px, até 12% de W para o lado, ≥ 8 px de cada círculo)? */
+function cabeMapa(m) {
+  const circ = [...m.botoes, ...(m.analogico ? [m.analogico] : [])];
+  const b = m.H - m.sa.b - 3, t = b - 50;
+  for (let cx = Math.ceil(m.W / 2 - 0.12 * m.W); cx <= m.W / 2 + 0.12 * m.W; cx++) {
+    const q = { l: cx - 38, t, r: cx + 38, b };
+    if (q.l < m.sa.l || q.r > m.W - m.sa.r) continue;
+    if (circ.every(c => dRetCirc(q, c) >= 8)) return cx;
+  }
+  return null;
+}
+/** H12a: o minimapa (ligado) na faixa de baixo. Devolve a lista de falhas (vazia = ok) e o resumo. */
+function conferirMapa(m, tam) {
+  const f = [];
+  const mp = m.mapa;
+  if (!mp) {
+    if (!/\bmapa-sem-lugar\b/.test(m.cls)) f.push('escondido sem mapa-sem-lugar');
+    const cx = cabeMapa(m);
+    if (cx != null) f.push(`sumiu à toa (76×50 caberia em x ${cx})`);
+    return { f, txt: 'sem lugar' };
+  }
+  const w = mp.r - mp.l, h = mp.b - mp.t, cx = (mp.l + mp.r) / 2;
+  if (tam === 0.8 && (Math.abs(w - 92) > 0.6 || Math.abs(h - 60) > 0.6)) f.push(`${w.toFixed(0)}×${h.toFixed(0)} (≠ 92×60)`);
+  if (w < 75.5 || h < 49.5) f.push(`${w.toFixed(0)}×${h.toFixed(0)} < 76×50`);
+  if (Math.abs(cx - m.W / 2) > 0.12 * m.W + 0.6) f.push(`fora do meio (${(cx - m.W / 2).toFixed(0)} px)`);
+  const base = m.H - m.sa.b - mp.b;
+  if (base > 6.5 || base < -0.5) f.push(`base a ${base.toFixed(1)} px de H − sa.b`);
+  if (mp.t < m.H * 0.5) f.push(`no alto (topo em ${mp.t.toFixed(0)} px)`);
+  if (m.analogico && dRetCirc(mp, m.analogico) < 7.5) f.push(`analógico a ${dRetCirc(mp, m.analogico).toFixed(1)} px`);
+  for (const c of m.botoes) if (dRetCirc(mp, c) < 7.5) f.push(`${c.id} a ${dRetCirc(mp, c).toFixed(1)} px`);
+  for (const t of [0, 1]) if (m.nomes[t] && dRetRet(mp, m.nomes[t]) < 4) f.push(`nome ${t} a ${dRetRet(mp, m.nomes[t]).toFixed(1)} px`);
+  return { f, txt: `${w.toFixed(0)}×${h.toFixed(0)} ${Math.abs(cx - m.W / 2) < 1 ? 'meio' : (cx - m.W / 2).toFixed(0)}` };
+}
+/** H13a (geometria): os dois nomes forçados nos cantos de baixo. Devolve a lista de falhas e o resumo. */
+function conferirNomesCantos(m, pc = false) {
+  const f = [], txt = [];
+  if (!m.api) return { f: ['sem a API do nome nos cantos (o nome fica em cima do jogador)'], txt: '-' };
+  const baseArco = Math.max(...m.botoes.map(c => c.y + c.d / 2), -Infinity);
+  for (const t of [0, 1]) {
+    const n = m.nomes[t];
+    const semLugar = new RegExp(`\\bnome-sem-lugar-${t ? 'dir' : 'esq'}\\b`).test(m.cls);
+    if (!n) { if (!semLugar) f.push(`nome ${t} escondido`); txt.push(`${t ? 'dir' : 'esq'} sem lugar`); continue; }
+    const borda = t === 0 ? n.l - m.sa.l : m.W - m.sa.r - n.r;
+    const lim = pc ? 15 : 16;
+    if (borda > lim || borda < -0.5) f.push(`nome ${t} a ${borda.toFixed(1)} px da borda ${t ? 'direita' : 'esquerda'}`);
+    const base = m.H - m.sa.b - n.b;
+    if (pc ? Math.abs(base - 14) > 1 : (base > 6.5 || base < -0.5)) f.push(`nome ${t} com a base a ${base.toFixed(1)} px de H − sa.b`);
+    if (!pc) {
+      if (t === 0 && m.analogico && n.t < m.analogico.y + m.analogico.d / 2 + 2) f.push(`nome 0 (topo ${n.t.toFixed(0)}) não fica embaixo do analógico (${(m.analogico.y + m.analogico.d / 2).toFixed(0)})`);
+      if (t === 1 && n.t < baseArco + 2) f.push(`nome 1 (topo ${n.t.toFixed(0)}) não fica embaixo do arco (${baseArco.toFixed(0)})`);
+      for (const c of m.botoes) if (dRetCirc(n, c) < 4) f.push(`nome ${t} × ${c.id} (${dRetCirc(n, c).toFixed(1)} px)`);
+      if (m.analogico && dRetCirc(n, m.analogico) < 4) f.push(`nome ${t} × analógico`);
+    }
+    if (m.mapa && dRetRet(n, m.mapa) < 4) f.push(`nome ${t} × minimapa (${dRetRet(n, m.mapa).toFixed(1)} px)`);
+    if (m.placar && dRetRet(n, m.placar) < 4) f.push(`nome ${t} × placar`);
+    txt.push(`${t ? 'dir' : 'esq'} ${(n.r - n.l).toFixed(0)} px`);
+  }
+  return { f, txt: txt.join(', ') };
+}
+const h12a = [], h12aFalhas = [], h13a = [], h13aFalhas = [], h12b = [], h12bFalhas = [], h12d = [], h12dFalhas = [], h12e = [];
+let h12eOk = true;
+
 // H1 + H2: layout nas duas fases e três telas de celular (determinístico, sem simular)
-let piorArea = 0, piorTexto = 0; const txtVisto = new Set(); const linhasH1 = [];
+let piorArea = 0, piorTexto = 0, h1SemNome = 0; const txtVisto = new Set(); const linhasH1 = [];
 const nomesBotoes = { botoes: 0, comNome: 0, sem: new Set() };
 const estilosVistos = []; let estilosFalhas = 0;
 let piorPausa = Infinity; const linhasPausa = [];
@@ -240,8 +392,13 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
         const tq = document.getElementById('toque');
         tq.classList.toggle('fase-ataque', fase !== 'defesa'); tq.classList.toggle('fase-defesa', fase === 'defesa');
         tq.classList.toggle('cobranca-penalti', fase === 'penalti');
-        const x = formas();
-        out[fase] = { area: area(x.f, innerWidth, innerHeight), pecas: x.f.length, fora: x.fora, txt: x.txt, nomes: x.nomes, estilos: [vis('btn-paradinha'), vis('btn-pulinho')], saem: [vis('btn-enfiada'), vis('btn-lancamento')] };
+        // (itens 59 e 60) o nome do jogador com a bola no canto da fase, no pior caso (o mais largo: o max-width decide) —
+        // ataque e pênalti à esquerda (o meu time, o 0), defesa à direita; "sem o nome" = as mesmas formas sem ele
+        const sem = formas();
+        sem.f = sem.f.filter(s => s.nome !== 'nome');
+        let x = sem;
+        if (g.nomeCantoDeTeste) { g.nomeCantoDeTeste({ time: fase === 'defesa' ? 1 : 0, num: 88, nome: 'Wwwwwwwwww' }); x = formas(); g.nomeCantoDeTeste(null); }
+        out[fase] = { area: area(x.f, innerWidth, innerHeight), areaSem: area(sem.f, innerWidth, innerHeight), comNome: x.f.some(s => s.nome === 'nome'), pecas: x.f.length, fora: x.fora, txt: x.txt, nomes: x.nomes, estilos: [vis('btn-paradinha'), vis('btn-pulinho')], saem: [vis('btn-enfiada'), vis('btn-lancamento')] };
         tq.classList.remove('cobranca-penalti');
       }
       g.sincronizarFase?.();
@@ -270,7 +427,8 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
       r[fase].txt.forEach(t => txtVisto.add(t));
       nomesBotoes.botoes += r[fase].nomes.botoes; nomesBotoes.comNome += r[fase].nomes.comNome; r[fase].nomes.sem.forEach(id => nomesBotoes.sem.add(`${w}×${h} ${fase} ${id}`));
       // (2 casas: com o CARRINHO na defesa, item 34, a folga em 568×320 é de ~0,02 ponto — com 1 casa ela sumia)
-      linhasH1.push(`${w}×${h} ${fase} ${(r[fase].area * 100).toFixed(2)}% (${r[fase].pecas} peças)`);
+      linhasH1.push(`${w}×${h} ${fase} ${(r[fase].area * 100).toFixed(2)}%${r[fase].comNome ? ` com o nome (${(r[fase].areaSem * 100).toFixed(2)}% sem)` : ' (sem o nome)'} (${r[fase].pecas} peças)`);
+      if (!r[fase].comNome) h1SemNome++;
     }
     if (r.pausa) { linhasPausa.push(`${w}×${h} folga ${r.pausa.folga.toFixed(0)} px (${r.pausa.par})${r.pausa.transborda > 0 ? `, transborda ${r.pausa.transborda} px` : ''}`); piorPausa = Math.min(piorPausa, r.pausa.transborda > 0 ? -1 : r.pausa.folga); }
     // H10: o placar nos 3 estados (minimapa desligado, o padrão do celular) e, com o minimapa ligado, o mais largo
@@ -301,6 +459,67 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
     if (enc.p.length || !enc.nomes.includes('minimapa')) placarFalhas.push(`${w}×${h} com o minimapa: ${enc.p.join(', ') || 'minimapa não aparece'}`);
     if (enc.tempo !== '1º T +4') placarFalhas.push(`${w}×${h} com o minimapa: "1º T +4" ${enc.tempo === null ? 'escondido' : `"${enc.tempo}"`}`);
     if (enc.p2.length) placarFalhas.push(`${w}×${h} com o minimapa e gols 10-9: ${enc.p2.join(', ')}`);
+    // H12 + H13a (itens 59 e 60): o minimapa ligado e os dois nomes na faixa de baixo — com e sem entalhe, a 80% (o padrão),
+    // 70, 100 e 140% (o "Tamanho" mudado como na pausa, sem resize) e de volta a 80% (H12e: o mesmo lugar); o entalhe muda
+    // pela classe + resize (as margens seguras são variáveis CSS)
+    if (!soPlacar) {
+      await pagina.evaluate(() => document.getElementById('chip-minimapa')?.click());
+      const tela = `${w}×${h}`;
+      for (const entalhe of [true, false]) {
+        await pagina.evaluate(v => { document.documentElement.classList.toggle('entalhe-simulado', v); dispatchEvent(new Event('resize')); }, entalhe);
+        let ref80 = null;
+        for (const tam of [0.8, 0.7, 1, 1.4, 0.8]) {
+          await pagina.evaluate(t => window.__golaco.toqueTamanho(t), tam);
+          const m = await pagina.evaluate(MB => eval(MB)(), MEDIR_BAIXO.toString());
+          const cm = conferirMapa(m, tam);
+          const rot = `${tela}${entalhe ? ' entalhe' : ''} ${Math.round(tam * 100)}%`;
+          if (ref80 === null && tam === 0.8) { ref80 = m.mapa; h12a.push(`${rot}: ${cm.txt}`); if (cm.f.length) h12aFalhas.push(`${rot}: ${cm.f.join(', ')}`); }
+          else if (tam === 0.8) {
+            // H12e: de volta a 80% sem resize, o mesmo lugar
+            const igual = !!ref80 && !!m.mapa && ['l', 't', 'r', 'b'].every(k => Math.abs(ref80[k] - m.mapa[k]) < 0.6);
+            h12e.push(`${rot}: ${igual ? 'mesmo lugar' : 'MUDOU'}`); if (!igual) h12eOk = false;
+          } else { h12a.push(`${rot}: ${cm.txt}`); if (cm.f.length) h12aFalhas.push(`${rot}: ${cm.f.join(', ')}`); }
+          if (tam <= 1) {
+            const cn = conferirNomesCantos(m);
+            h13a.push(`${rot}: ${cn.txt}`); if (cn.f.length) h13aFalhas.push(`${rot}: ${cn.f.join(', ')}`);
+          }
+        }
+      }
+      await pagina.evaluate(() => { document.documentElement.classList.add('entalhe-simulado'); dispatchEvent(new Event('resize')); window.__golaco.toqueTamanho(0.8); });
+      // H12b: nada no alto além do placar e do menu (a 80%, com entalhe, o minimapa ligado)
+      const alto = await pagina.evaluate(async FS => { await new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(ok))); return eval(FS)().f.filter(x => x.ret && x.ret[1] < innerHeight * 0.3 && !['placar', 'menu'].includes(x.nome)).map(x => `${x.nome} (topo ${x.ret[1].toFixed(0)})`); }, FORMAS.toString());
+      h12b.push(`${tela}: ${alto.length ? alto.join(', ') : 'só placar e menu'}`); if (alto.length) h12bFalhas.push(`${tela}: ${alto.join(', ')}`);
+      // H12d: as faixas do meio da tela com o minimapa ligado (sem e com a cara do TM: a faixa do TM desce para baixo do aviso)
+      for (const tm of [false, true]) {
+        const r = await pagina.evaluate(async tm => {
+          const g = window.__golaco, espera = () => new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(ok)));
+          if (tm && !document.documentElement.classList.contains('tm')) {
+            document.documentElement.classList.add('tm');
+            const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'css/tm.css'; l.id = 'tm-teste';
+            await new Promise(ok => { l.onload = ok; l.onerror = ok; document.head.append(l); });
+          }
+          const cx = e => { if (!e || e.hidden) return null; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden') return null; const q = e.getBoundingClientRect(); return q.width > 0 ? { l: q.left, t: q.top, r: q.right, b: q.bottom } : null; };
+          const folga = (a, b) => Math.max(b.l - a.r, a.l - b.r, b.t - a.b, a.t - b.b);
+          const out = {};
+          for (const [k, f] of [['fim', { final: true, titulo: 'Fim de jogo', placar: 'GLÇ 2 × 1 VNT', botao: true, botao2: true }], ['intervalo', { titulo: 'Intervalo', placar: 'GLÇ 1 × 0 VNT' }],
+            ['expulso', { titulo: 'Você foi expulso', placar: 'GLÇ 1 × 0 VNT', botao: true, botaoTexto: 'Simular o resto', botaoCmd: 'simular-resto' }]]) {
+            g.mostrarFaixa(f); await espera();
+            const fx = cx(document.getElementById('faixa')), mp = cx(document.getElementById('minimapa'));
+            out[k] = { mapa: !!mp, folga: fx && mp ? folga(fx, mp) : null, faixa: fx ? [fx.t, fx.b].map(Math.round) : null };
+            g.mostrarFaixa(null); await espera();
+          }
+          if (tm) { document.documentElement.classList.remove('tm'); document.getElementById('tm-teste')?.remove(); await espera(); }
+          return out;
+        }, tm);
+        const rot = `${tela}${tm ? ' TM' : ''}`;
+        const f = [];
+        if (r.fim.mapa) f.push(`fim: minimapa na tela${r.fim.folga != null ? ` (${r.fim.folga.toFixed(0)} px da faixa)` : ''}`);
+        for (const k of ['intervalo', 'expulso']) if (r[k].mapa && !(r[k].folga >= 4)) f.push(`${k}: ${r[k].folga?.toFixed(0)} px`);
+        h12d.push(`${rot}: fim ${r.fim.mapa ? 'COM o minimapa' : 'sem o minimapa'}, intervalo ${r.intervalo.mapa ? `${r.intervalo.folga?.toFixed(0)} px` : 'sem o minimapa'}, expulso ${r.expulso.mapa ? `${r.expulso.folga?.toFixed(0)} px` : 'sem o minimapa'}`);
+        if (f.length) h12dFalhas.push(`${rot}: ${f.join(', ')}`);
+      }
+      await pagina.evaluate(() => document.getElementById('chip-minimapa')?.click());
+    }
     // treino de ataque com o minimapa ligado e o painel ("Conduzindo" + posição): nada encosta e a marca do GOLAÇO fica
     // (contraprova de 13/10: em 568 e 667 px ela saía com 40–90 px livres à direita do placar — quem encostava era o
     // painel, e apertar o painel, passo 2, já resolvia)
@@ -322,7 +541,17 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
   } finally { await navegador.close(); }
 }
 meta('H9 nomes dos botões de toque por padrão (dono, 12/10), inteiros dentro do círculo do botão (3 telas, 2 fases)', `${nomesBotoes.comNome}/${nomesBotoes.botoes} botões com o nome${nomesBotoes.sem.size ? ' — sem: ' + [...nomesBotoes.sem].slice(0, 8).join(', ') : ''}`, 'todos', nomesBotoes.botoes > 0 && nomesBotoes.comNome === nomesBotoes.botoes);
-meta('H1 área do HUD no celular (pior caso, ataque, defesa e a cobrança do pênalti da pessoa, 3 telas)', `${(piorArea * 100).toFixed(2)}% — ${linhasH1.join('; ')}`, '≤ 11%', piorArea <= 0.11);
+meta('H1 área do HUD no celular (pior caso, ataque, defesa e a cobrança do pênalti da pessoa, 3 telas; com o nome do condutor mais largo no canto da fase; o ≡ transparente pelo ícone)', `${(piorArea * 100).toFixed(2)}% — ${linhasH1.join('; ')}`, '≤ 11%, o nome contado nas 9', piorArea <= 0.11 && h1SemNome === 0);
+if (!soPlacar) {
+  meta('H12a o minimapa embaixo, no meio, entre o analógico e os botões (3 telas, com e sem entalhe; 80% = 92×60; 70/100/140%: no lugar ou sem lugar de verdade)',
+    `${h12aFalhas.length ? 'FALHAS: ' + h12aFalhas.join(' | ') + ' — ' : ''}${h12a.join('; ')}`, '80%: 92×60 no meio; ≥ 76×50, ≤ 12% de W do meio, base ≤ 6 px, ≥ 8 px do analógico e dos botões, ≥ 4 px dos nomes; ou sem lugar', h12a.length === 24 && h12aFalhas.length === 0);
+  meta('H12e o "Tamanho" mudado (70 → 140 → 80%) reposiciona o minimapa sem resize (de volta ao lugar do 80%)', h12e.join('; '), 'mesmo lugar', h12e.length === 6 && h12eOk);
+  meta('H12b nada no alto além do placar e do menu (partida, minimapa ligado; 3 telas)', h12b.join('; '), 'só placar e menu', h12b.length === 3 && h12bFalhas.length === 0);
+  meta('H12d a faixa do fim de jogo esconde o minimapa; intervalo e "Você foi expulso" a ≥ 4 px dele (3 telas com entalhe, com e sem a cara do TM)',
+    `${h12dFalhas.length ? 'FALHAS: ' + h12dFalhas.join(' | ') + ' — ' : ''}${h12d.join('; ')}`, 'fim sem o minimapa; ≥ 4 px', h12d.length === 6 && h12dFalhas.length === 0);
+  meta('H13a os nomes forçados (o mais largo) nos cantos de baixo, embaixo do analógico e do arco, sem encostar (3 telas, com e sem entalhe, 70/80/100%)',
+    `${h13aFalhas.length ? 'FALHAS: ' + [...new Set(h13aFalhas)].slice(0, 12).join(' | ') + ' — ' : ''}${h13a.join('; ')}`, 'esq/dir ≤ 16 px da borda, base ≤ 6 px, embaixo do analógico/arco, ≥ 4 px de tudo', h13a.length === 24 && h13aFalhas.length === 0);
+}
 meta('H11 os botões PARADINHA e PULINHO (item 70, P2): só na cobrança do pênalti da pessoa (3 telas; visíveis de 2)', estilosVistos.join('; '), 'ataque 0, defesa 0, pênalti 2 (ENFIADA/LANÇAMENTO 0)', estilosVistos.length === 3 && estilosFalhas === 0);
 meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada encosta nem transborda (3 telas com entalhe)', linhasPausa.join('; ') || 'sem a pausa', 'folga ≥ 4 px (a do ENCOSTA)', linhasPausa.length === 3 && piorPausa >= 4);
 
@@ -378,11 +607,32 @@ if (!soPlacar) {
       const dentro = (f, x, y) => f.some(s => (s.ret ? x >= s.ret[0] && x <= s.ret[2] && y >= s.ret[1] && y <= s.ret[3] : (x - s.circ[0]) ** 2 + (y - s.circ[1]) ** 2 <= s.circ[2] ** 2));
       const carga = document.getElementById('carga'), cargaTipo = document.getElementById('carga-tipo');
       let torc = 0, torcEsc = 0, viva = 0, lance = 0, amostras = 0, comCarga = 0, cargaTexto = 0, textoJogo = 0;
-      const txt = new Set();
+      const txt = new Set(), nomesTxt = new Set();
       const perto = [];
+      // H12c: a torcida atrás do minimapa LIGADO (o chip só para ler a caixa: os pixels vêm do canvas 3D e o H3 fica no estado
+      // padrão, com ele desligado)
+      let torcMapa = 0, caixaMapa = null;
+      const chip = document.getElementById('chip-minimapa');
+      // H13f: o nome do condutor sem piscar — em todo passo, visível? (sem a API, a base: o #nome-condutor sem hidden); voltas
+      // depois de < 0,8 s (48 quadros) escondido. Escritas no DOM do nome (informativo) por MutationObserver
+      const nomeVis = () => { const e = g.nomeCantoEstado; if (e) return !!e.visivel; const el = document.getElementById('nome-condutor'); return !!el && !el.hidden; };
+      let nv = null, nvDesde = 0, voltasCurtas = 0, voltasLongas = 0, trocasNome = 0, ultNome = '', quadroN = 0, quadrosVis = 0;
+      const elNome0 = document.getElementById('nome-condutor');
+      const obs = new MutationObserver(() => {});
+      let escritas = 0;
+      const observar = el => { if (el && !el.__obs) { obs.observe(el, { attributes: true, childList: true, characterData: true, subtree: true }); el.__obs = true; } };
+      observar(elNome0);
       for (let k = 0; k < 8; k++) {
         for (let i = 0; i < 900; i++) {
           g.relogio.avancar(1000 / 60, { desenhar: false });
+          {
+            observar(document.getElementById('nome-condutor'));
+            const v = nomeVis();
+            quadroN++; if (v) quadrosVis++;
+            if (v) { const el = document.getElementById('nome-condutor'); const t = el ? el.textContent : ''; if (t !== ultNome) { trocasNome++; ultNome = t; } }
+            if (nv === null) { nv = v; nvDesde = quadroN; }
+            else if (v !== nv) { if (v) { if (quadroN - nvDesde < 48) voltasCurtas++; else voltasLongas++; } nv = v; nvDesde = quadroN; }
+          }
           if (i % 6 === 0) {
             const li = g.linhaImpedimento; const rol = g.mundo.partida?.estado === 'jogo' && !(g.mundo.parada && !g.mundo.parada.rolou);
             if (rol) { amostras++; if (li?.visivel && !li.lance) viva++; if (li?.visivel && li.lance) lance++; }
@@ -391,17 +641,23 @@ if (!soPlacar) {
               comCarga++;
               if (cargaTipo && cargaTipo.textContent.trim() && getComputedStyle(cargaTipo).display !== 'none' && cargaTipo.offsetWidth > 0) cargaTexto++;
             }
-            if (i % 60 === 0) { const x = formas(); textoJogo = Math.max(textoJogo, x.fora); x.txt.forEach(t => txt.add(t)); }
+            if (i % 60 === 0) { const x = formas(); textoJogo = Math.max(textoJogo, x.fora); x.txt.forEach(t => txt.add(t)); if (x.nome != null) nomesTxt.add(x.nome); }
           }
         }
         g.estadio.mostrarTorcida(true); g.desenhar(); const a = ler();
         g.estadio.mostrarTorcida(false); g.desenhar(); const b = ler();
         g.estadio.mostrarTorcida(true); g.desenhar();
         const { f } = formas();
+        chip?.click();
+        const qm = document.getElementById('minimapa').getBoundingClientRect();
+        caixaMapa = qm.width > 0 ? [qm.left, qm.top, qm.right, qm.bottom].map(Math.round) : null;
+        chip?.click();
         for (let p = 0, i = 0; i < a.length; i += 4, p++) {
           if ((Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2])) / 3 <= 24) continue;
           torc++;
-          if (dentro(f, ((p % off.width) + 0.5) * sx, (Math.floor(p / off.width) + 0.5) * sy)) torcEsc++;
+          const x = ((p % off.width) + 0.5) * sx, y = (Math.floor(p / off.width) + 0.5) * sy;
+          if (dentro(f, x, y)) torcEsc++;
+          if (qm.width > 0 && x >= qm.left && x <= qm.right && y >= qm.top && y <= qm.bottom) torcMapa++;
         }
         const m = g.mundo; let n = 0;
         for (const j of m.jogadores) {
@@ -418,11 +674,22 @@ if (!soPlacar) {
       p.ultimoImped = { tick: g.mundo.tick, linhaX: 18 * (g.mundo.ataca?.[0] ?? 1), id: -1, time: 0 };
       g.desenhar();
       const li = g.linhaImpedimento;
-      return { torc, torcEsc, viva, lance, amostras, perto, comCarga, cargaTexto, textoJogo, txt: [...txt], apito: li ? { visivel: li.visivel, lance: li.lance, x: li.x } : null };
+      escritas = obs.takeRecords().length; obs.disconnect();
+      return { torc, torcEsc, viva, lance, amostras, perto, comCarga, cargaTexto, textoJogo, txt: [...txt], apito: li ? { visivel: li.visivel, lance: li.lance, x: li.x } : null,
+        torcMapa, caixaMapa, nomesTxt: [...nomesTxt], nome: { voltasCurtas, voltasLongas, trocasNome, escritas, visivel: quadrosVis / Math.max(1, quadroN) } };
     }, [FORMAS.toString()]);
     piorTexto = Math.max(piorTexto, r.textoJogo + (r.cargaTexto ? 1 : 0));
     r.txt.forEach(t => txtVisto.add(t));
-    meta('H2 texto fora do placar e dos nomes dos botões durante o jogo (3 telas, 2 fases e 2 min de partida)', `${piorTexto} caracteres${txtVisto.size ? ': ' + [...txtVisto].join(' ') : ''}; barra de força com rótulo em ${r.cargaTexto}/${r.comCarga} amostras`, '0', piorTexto === 0 && r.cargaTexto === 0);
+    // (o nome do condutor, item 60: a exceção escrita — só "número nome", nada mais, em toda amostra dos 2 min)
+    const NOME_OK = /^\d{1,2}\s?\S.{0,15}$/;
+    const nomesRuins = r.nomesTxt.filter(t => !NOME_OK.test(t));
+    meta('H2 texto fora do placar, dos nomes dos botões e do nome do condutor durante o jogo (3 telas, 2 fases e 2 min de partida); o nome do condutor só "número nome"',
+      `${piorTexto} caracteres${txtVisto.size ? ': ' + [...txtVisto].join(' ') : ''}; barra de força com rótulo em ${r.cargaTexto}/${r.comCarga} amostras; nome do condutor: ${r.nomesTxt.length} textos${r.nomesTxt.length ? ' (' + r.nomesTxt.slice(0, 4).join(', ') + ')' : ''}${nomesRuins.length ? ' — fora do formato: ' + nomesRuins.join(', ') : ''}`,
+      '0; só número e nome', piorTexto === 0 && r.cargaTexto === 0 && nomesRuins.length === 0);
+    const frMapa = r.torcMapa / Math.max(1, r.torc);
+    meta('H12c torcida atrás do minimapa ligado (celular 844×390, os 8 instantes do H3)', `${(frMapa * 100).toFixed(1)}% de ${r.torc} pixels de torcida (minimapa em ${r.caixaMapa ? r.caixaMapa.join(', ') : 'nenhum lugar'})`, '≤ 1%', !!r.caixaMapa && frMapa <= 0.01 && r.torc > 500);
+    meta('H13f o nome do condutor sem piscar (2 min de jogo, celular): voltas depois de < 0,8 s escondido', `${r.nome.voltasCurtas} (voltas depois de ≥ 0,8 s: ${r.nome.voltasLongas}; ${r.nome.trocasNome} nomes; visível ${(100 * r.nome.visivel).toFixed(1)}% do tempo; informativo: ${r.nome.escritas} escritas no DOM, ${(r.nome.escritas / Math.max(1, r.nome.trocasNome)).toFixed(1)} por nome)`,
+      '0', r.nome.voltasCurtas === 0 && r.nome.trocasNome > 5);
     const fr = r.torcEsc / Math.max(1, r.torc);
     meta('H3 torcida visível escondida pelo HUD (celular 844×390, 8 instantes)', `${(fr * 100).toFixed(1)}% de ${r.torc} pixels de torcida`, '≤ 15%', fr <= 0.15 && r.torc > 500 && erros.length === 0);
     meta('H4 linha de impedimento viva com a bola rolando (2 min de jogo)', `${r.viva}/${r.amostras} amostras (${(100 * r.viva / Math.max(1, r.amostras)).toFixed(1)}%); linha do lance ${r.lance}`, '0', r.viva === 0 && r.amostras > 500);
@@ -430,6 +697,154 @@ if (!soPlacar) {
     const med = r.perto.reduce((s, v) => s + v, 0) / r.perto.length;
     meta('H6 (informativo) jogadores a < 20 m da bola atrás do HUD', `média ${med.toFixed(2)} por instante (${r.perto.join(',')})`, 'informativo', true);
   } finally { await navegador.close(); }
+}
+
+// H13 b–e (item 60): o nome do condutor pelo caminho de verdade (main.js marcarCondutor) no celular 844×390 com entalhe —
+// a simulação parada (pausar) e o relógio manual andando: o desenho lê mundo.posse
+/** No navegador: o nome na tela agora ({vis, lado, texto, rect, fs, apagado, contraste, cor, corPlacar, ...}). */
+const LER_NOME = () => {
+  const e = document.getElementById('nome-condutor');
+  if (!e) return { vis: false, existe: false };
+  const cs = getComputedStyle(e);
+  const vis = !e.hidden && cs.display !== 'none' && cs.visibility !== 'hidden' && e.getBoundingClientRect().width > 0 && (!e.checkVisibility || e.checkVisibility({ checkVisibilityCSS: true }));
+  const q = e.getBoundingClientRect();
+  const num = e.querySelector('.nc-num'), nome = e.querySelector('.nc-nome'), cor = e.querySelector('.nc-cor');
+  const rgb = c => (c.match(/[\d.]+/g) ?? []).map(Number);
+  const lum = ([r, g, b]) => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+  const fundo = rgb(cs.backgroundColor), a = fundo.length > 3 ? fundo[3] : 1, letra = rgb(getComputedStyle(nome ?? e).color);
+  // o fundo composto sobre preto e sobre branco: o menor contraste
+  const cont = base => { const f = fundo.slice(0, 3).map((v, i) => v * a + base * (1 - a)); const l1 = lum(f), l2 = lum(letra); return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05); };
+  const placarCor = t => { const c = document.querySelector(`#placar-time-${t} .placar-cor`); return c ? getComputedStyle(c).backgroundColor : null; };
+  return {
+    existe: true, vis, noHud: !!e.closest('#hud'), dir: e.classList.contains('dir'), apagado: e.classList.contains('apagado') || +cs.opacity < 0.95,
+    texto: [num, nome].filter(Boolean).map(x => x.textContent.trim()).filter(Boolean).join(' '), rect: { l: q.left, t: q.top, r: q.right, b: q.bottom, w: q.width, h: q.height },
+    fs: Math.min(...[num, nome].filter(Boolean).map(x => parseFloat(getComputedStyle(x).fontSize))), contraste: Math.min(cont(0), cont(255)),
+    cor: cor ? getComputedStyle(cor).backgroundColor : null, corPlacar: [placarCor(0), placarCor(1)], fonte: cs.fontFamily,
+    elipse: nome ? getComputedStyle(nome).textOverflow === 'ellipsis' && nome.scrollWidth > nome.clientWidth : false, numInteiro: num ? num.scrollWidth <= num.clientWidth + 0.5 : false,
+    eventos: e.style.pointerEvents || cs.pointerEvents,
+    sa: (() => { const s = document.createElement('div'); s.style.cssText = 'position:fixed;left:var(--sa-l);right:var(--sa-r);top:var(--sa-t);bottom:var(--sa-b);visibility:hidden'; document.body.append(s); const r = s.getBoundingClientRect(); s.remove(); return { l: r.left, r: innerWidth - r.right, b: innerHeight - r.bottom }; })(),
+    W: innerWidth, H: innerHeight,
+  };
+};
+if (!soPlacar) {
+  const h13b = [], h13bF = [], h13e = [], h13eF = [];
+  let h13d = null, h13dOk = false, h13c = null, h13cOk = false;
+  const { navegador, pagina, erros } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
+  try {
+    await pagina.goto(`${srv.url}?q=baixa&toque=1&entalhe=1&demo=1&semente=4&min=1&replay=0&comemoracao=0&cenas=0`, { waitUntil: 'load' });
+    await pronta(pagina);
+    const ficha = await pagina.evaluate(async () => { const m = await import('./js/elenco.js'); window.__fichaTeste = id => { const f = m.fichaDe(id); return f ? `${f.num} ${f.camisa ?? f.nome}` : null; }; return true; });
+    const ler = () => pagina.evaluate(LN => eval(LN)(), LER_NOME.toString());
+    const passo = ms => pagina.evaluate(ms => window.__golaco.relogio.avancar(ms), ms);
+    await pagina.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); for (let i = 0; i < 60; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); g.pausar(true); });
+    // b) o caminho de verdade: o meu goleiro com a bola no pé (time 0, à esquerda) e o adversário com a bola (time 1)
+    for (const [cena, t] of [['goleiroPe', 0], ['pressao', 1]]) {
+      const esperado = await pagina.evaluate(c => { const g = window.__golaco; g.cenaDeTeste(c); return window.__fichaTeste(g.mundo.posse); }, cena);
+      await passo(1000);
+      const n = await ler();
+      const f = [];
+      if (!n.vis) f.push('não aparece');
+      else {
+        if (!n.noHud) f.push('fora do #hud');
+        if (n.dir !== (t === 1)) f.push(`lado ${n.dir ? 'direito' : 'esquerdo'}`);
+        const borda = t === 0 ? n.rect.l - n.sa.l : n.W - n.sa.r - n.rect.r, base = n.H - n.sa.b - n.rect.b;
+        if (borda > 16 || base > 6.5) f.push(`fora do canto (borda ${borda.toFixed(0)} px, base ${base.toFixed(0)} px)`);
+        if (n.texto !== esperado) f.push(`texto "${n.texto}" ≠ "${esperado}"`);
+        if (!(n.fs >= 11)) f.push(`letra ${n.fs} px`);
+        if (!(n.contraste >= 4.5)) f.push(`contraste ${n.contraste.toFixed(1)}:1`);
+        if (n.cor !== n.corPlacar[t]) f.push(`cor ${n.cor} ≠ a do placar ${n.corPlacar[t]}`);
+        if (n.eventos !== 'none') f.push(`pointer-events ${n.eventos}`);
+        if (n.apagado) f.push('apagado com a bola no pé');
+      }
+      h13b.push(`${cena} (time ${t}): ${n.vis ? `"${n.texto}" ${n.dir ? 'à direita' : 'à esquerda'} em ${n.rect.l.toFixed(0)}–${n.rect.r.toFixed(0)} × ${n.rect.t.toFixed(0)}–${n.rect.b.toFixed(0)}, ${n.fs} px, contraste ${n.contraste.toFixed(1)}:1` : 'escondido'}`);
+      if (f.length) h13bF.push(`${cena}: ${f.join(', ')}`);
+    }
+    // c) o nome mais largo: a caixa no max-width (844 px > 600: ≤ 120), reticências, o número inteiro
+    {
+      await pagina.evaluate(() => window.__golaco.nomeCantoDeTeste?.({ time: 0, num: 88, nome: 'Wwwwwwwwww' }));
+      const n = await ler();
+      await pagina.evaluate(() => window.__golaco.nomeCantoDeTeste?.(null));
+      h13cOk = n.vis && n.rect.w <= 120.5 && n.elipse && n.numInteiro;
+      h13c = n.vis ? `844×390: ${n.rect.w.toFixed(0)} px, reticências ${n.elipse ? 'sim' : 'NÃO'}, número ${n.numInteiro ? 'inteiro' : 'CORTADO'}` : '844×390: sem o nome forçado';
+    }
+    // e) some: bola solta (0,5 s apagado, 1,0 s fora), intervalo e fim, as 4 camadas
+    {
+      const r = await pagina.evaluate(async LN => {
+        const g = window.__golaco, ler = eval(LN), out = {};
+        g.cenaDeTeste('goleiroPe'); g.relogio.avancar(1000);
+        out.antes = ler().vis;
+        g.mundo.posse = null; g.relogio.avancar(500); const a = ler(); out.meio = { vis: a.vis, apagado: a.apagado };
+        g.relogio.avancar(500); out.depois = ler().vis;
+        for (const est of ['intervalo', 'fim']) {
+          g.cenaDeTeste('goleiroPe'); g.relogio.avancar(1000);
+          const p = g.mundo.partida, e0 = p.estado; p.estado = est; g.relogio.avancar(16); out[est] = ler().vis; p.estado = e0; g.relogio.avancar(16);
+        }
+        g.cenaDeTeste('goleiroPe'); g.relogio.avancar(1000);
+        out.camadas = {};
+        for (const c of ['em-replay', 'em-comemoracao', 'em-substituicao', 'em-cena']) { document.documentElement.classList.add(c); out.camadas[c] = ler().vis; document.documentElement.classList.remove(c); }
+        out.semCamada = ler().vis;
+        return out;
+      }, LER_NOME.toString());
+      h13e.push(`bola solta: antes ${r.antes ? 'visível' : 'ESCONDIDO'}, 0,5 s ${r.meio.vis ? (r.meio.apagado ? 'apagado' : 'ACESO') : 'ESCONDIDO'}, 1,0 s ${r.depois ? 'VISÍVEL' : 'fora'}`);
+      if (!r.antes || !r.meio.vis || !r.meio.apagado || r.depois) h13eF.push('bola solta');
+      h13e.push(`intervalo ${r.intervalo ? 'VISÍVEL' : 'fora'}, fim ${r.fim ? 'VISÍVEL' : 'fora'}`);
+      if (r.intervalo || r.fim) h13eF.push('intervalo/fim');
+      const cam = Object.entries(r.camadas).filter(([, v]) => v).map(([k]) => k);
+      h13e.push(`camadas: ${cam.length ? 'VISÍVEL em ' + cam.join(', ') : 'fora nas 4'} (sem camada ${r.semCamada ? 'visível' : 'ESCONDIDO'})`);
+      if (cam.length || !r.semCamada) h13eF.push('camadas');
+    }
+    // d) o lado vem do placar: no 2º tempo (o campo trocou de lado) o meu goleiro com a bola continua à esquerda
+    {
+      const r = await pagina.evaluate(LN => {
+        const g = window.__golaco, ler = eval(LN);
+        const a0 = g.mundo.ataca[0];
+        for (let k = 0; k < 60 && !(g.mundo.partida.tempo === 2 && g.mundo.partida.estado === 'jogo'); k++) g.rodarPassos(300, 'demo');
+        const ok2 = g.mundo.partida.tempo === 2 && g.mundo.ataca[0] === -a0;
+        g.cenaDeTeste('goleiroPe'); g.relogio.avancar(1000);
+        const n = ler();
+        return { ok2, tempo: g.mundo.partida.tempo, a0, a1: g.mundo.ataca[0], vis: n.vis, dir: n.dir, l: n.rect?.l, canto: n.vis && n.rect.l - n.sa.l <= 16 && n.H - n.sa.b - n.rect.b <= 6.5 };
+      }, LER_NOME.toString());
+      h13dOk = r.ok2 && r.vis && !r.dir && r.canto;
+      h13d = `${r.tempo}º tempo, o time 0 ataca ${r.a0 > 0 ? '+x' : '−x'} → ${r.a1 > 0 ? '+x' : '−x'}; o meu goleiro com a bola: ${r.vis ? (r.dir ? 'à DIREITA' : `à esquerda (x ${r.l.toFixed(0)}${r.canto ? ', no canto' : ', FORA do canto'})`) : 'ESCONDIDO'}`;
+    }
+    // e) os modos: treino de ataque e disputa de pênaltis (some), Modo Livre (aparece, o meu time à esquerda)
+    {
+      const modo = async (v, pronto) => {
+        await pagina.evaluate(v => { const g = window.__golaco; g.pausar(false); g.trocarModo(v); }, v);
+        await pagina.waitForFunction(pronto, null, { timeout: 120000 }).catch(() => {});
+      };
+      await modo('ataque', () => window.__golaco.mundo.modo === 'ataque');
+      const tr = await pagina.evaluate(LN => { const g = window.__golaco; g.pausar(true); const j = g.mundo.jogadores.find(o => o.time === 0); if (j) g.mundo.posse = j.id; g.relogio.avancar(1000); return eval(LN)().vis; }, LER_NOME.toString());
+      h13e.push(`treino de ataque ${tr ? 'VISÍVEL' : 'fora'}`); if (tr) h13eF.push('treino');
+      await modo('penaltis', () => !!window.__golaco.mundo.disputa && (window.__golaco.sobDemanda?.ja() ?? true));
+      const pen = await pagina.evaluate(LN => {
+        const g = window.__golaco, ler = eval(LN); g.pausar(false);
+        let visto = 0, comPosse = 0;
+        for (let i = 0; i < 60 * 25; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); if (g.mundo.posse != null) { comPosse++; if (ler().vis) visto++; } }
+        return { visto, comPosse };
+      }, LER_NOME.toString());
+      h13e.push(`disputa de pênaltis: ${pen.visto ? `VISÍVEL em ${pen.visto}` : 'fora'} de ${pen.comPosse} quadros com a bola no pé`); if (pen.visto || !pen.comPosse) h13eF.push('pênaltis');
+      await modo('livre', () => !!window.__golaco.mundo.livre && (window.__golaco.sobDemanda?.ja() ?? true));
+      const lv = await pagina.evaluate(LN => { const g = window.__golaco; g.pausar(true); const j = g.mundo.jogadores.find(o => o.time === 0 && o.posicao !== 'GOL') ?? g.mundo.jogadores.find(o => o.time === 0); if (j) g.mundo.posse = j.id; g.relogio.avancar(1000); const n = eval(LN)(); return { vis: n.vis, dir: n.dir }; }, LER_NOME.toString());
+      h13e.push(`Modo Livre: ${lv.vis ? (lv.dir ? 'à DIREITA' : 'à esquerda') : 'ESCONDIDO'}`); if (!lv.vis || lv.dir) h13eF.push('livre');
+    }
+  } finally { await navegador.close(); }
+  // ?prints=1: nunca
+  {
+    const s2 = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
+    try {
+      await s2.pagina.goto(`${srv.url}?q=baixa&toque=1&prints=1&demo=1&semente=4`, { waitUntil: 'load' });
+      await pronta(s2.pagina);
+      const vis = await s2.pagina.evaluate(LN => { const g = window.__golaco; g.relogio.usarManual(true); g.pausar(true); g.cenaDeTeste('goleiroPe'); g.relogio.avancar(1000); return eval(LN)().vis; }, LER_NOME.toString());
+      h13e.push(`?prints=1 ${vis ? 'VISÍVEL' : 'fora'}`); if (vis) h13eF.push('prints');
+    } finally { await s2.navegador.close(); }
+  }
+  meta('H13b o nome pelo caminho de verdade: "número camisa" de quem tem a bola, no canto do time no placar, letra ≥ 11 px, contraste ≥ 4,5:1, a cor da faixa do placar, sem pegar toque',
+    `${h13bF.length ? 'FALHAS: ' + h13bF.join(' | ') + ' — ' : ''}${h13b.join('; ')}`, 'time 0 à esquerda, time 1 à direita, texto da ficha', h13b.length === 2 && h13bF.length === 0);
+  meta('H13c o nome mais largo no celular: ≤ 120 px (844 px de largura), reticências, o número inteiro', h13c ?? '-', '≤ 120 px, reticências, número inteiro', h13cOk);
+  meta('H13d o lado vem do placar: no 2º tempo (o campo trocou de lado) o meu goleiro com a bola continua à esquerda', h13d ?? '-', 'à esquerda', h13dOk);
+  meta('H13e o nome some: bola solta (0,5 s apagado, 1,0 s fora), intervalo e fim, as 4 camadas, treino, disputa de pênaltis e ?prints=1; aparece no Modo Livre',
+    `${h13eF.length ? 'FALHAS: ' + h13eF.join(', ') + ' — ' : ''}${h13e.join('; ')}`, 'como pedido', h13e.length === 7 && h13eF.length === 0 && erros.length === 0);
 }
 
 // H5: PC 1280×720 — a dica de teclas aparece no começo e some sozinha; 9 s depois o HUD ocupa ≤ 2,5%
@@ -440,22 +855,131 @@ if (!soPlacar) {
     await pronta(pagina);
     await pagina.waitForTimeout(1000);
     const dica0 = await pagina.evaluate(() => { const d = document.getElementById('dica'); const s = d && getComputedStyle(d); return !!d && s.display !== 'none' && s.visibility !== 'hidden' && +s.opacity > 0.5; });
+    // o tempo da animação que a apaga (8 s + 0,6 s de esmaecer), lido enquanto ela roda: no fim a dica ganha .vista
+    // (display:none) e a animação deixa de existir
+    const fimAnim = await pagina.evaluate(() => { const a = document.getElementById('dica')?.getAnimations()[0]; return a ? Math.round(+(a.effect?.getComputedTiming().endTime ?? -1)) : -1; });
+    // H13g (com a dica na tela): o nome da esquerda (forçado, o mais largo) fica ≥ 4 px acima dela
+    const nomeDica = await pagina.evaluate(LN => {
+      const g = window.__golaco; if (!g.nomeCantoDeTeste) return null;
+      g.nomeCantoDeTeste({ time: 0, num: 88, nome: 'Wwwwwwwwww' });
+      const n = eval(LN)(), d = document.getElementById('dica').getBoundingClientRect();
+      g.nomeCantoDeTeste(null);
+      return { vis: n.vis, b: n.rect.b, t: n.rect.t, l: n.rect.l, r: n.rect.r, w: n.rect.w, dicaT: d.top, dicaB: d.bottom, dicaL: d.left, dicaR: d.right, H: n.H, sab: n.sa.b };
+    }, LER_NOME.toString());
+    // H13g (revisão): janela de PC estreita com a dica na tela — o nome da esquerda cabe entre a dica e o minimapa (≥ 56 px, a
+    // ≥ 4 px dos dois) ou some até ela sumir (em 560 px era uma lasca de 8 px por cima do minimapa); 800 px: cabe
+    const nomeEstreito = [];
+    for (const [W, H] of [[560, 600], [800, 600]]) {
+      await pagina.setViewportSize({ width: W, height: H });
+      await pagina.waitForTimeout(300);
+      nomeEstreito.push(await pagina.evaluate(async ([LN, W]) => {
+        await new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(ok)));
+        const g = window.__golaco; if (!g.nomeCantoDeTeste) return null;
+        g.nomeCantoDeTeste({ time: 0, num: 88, nome: 'Wwwwwwwwww' });
+        const n = eval(LN)(), d = document.getElementById('dica'), ds = getComputedStyle(d), q = d.getBoundingClientRect();
+        const mp = document.getElementById('minimapa'), m = mp && getComputedStyle(mp).display !== 'none' ? mp.getBoundingClientRect() : null;
+        g.nomeCantoDeTeste(null);
+        const sep = (a, b) => Math.max(a.l - b.r, b.l - a.r, a.t - b.b, b.t - a.b);
+        return { W, dica: ds.display !== 'none' && ds.visibility !== 'hidden' && +ds.opacity > 0.5, vis: n.vis, w: n.rect.w, l: n.rect.l, r: n.rect.r,
+          dDica: n.vis ? sep(n.rect, { l: q.left, r: q.right, t: q.top, b: q.bottom }) : null, dMapa: n.vis && m ? sep(n.rect, { l: m.left, r: m.right, t: m.top, b: m.bottom }) : null };
+      }, [LER_NOME.toString(), W]));
+    }
+    await pagina.setViewportSize({ width: 1280, height: 720 });
+    await pagina.waitForTimeout(300);
     // a dica some pelo relógio das animações da página (8 s + 0,6 s de esmaecer). Com a máquina carregada o Chromium sem
     // GPU desenha poucos quadros e esse relógio atrasa ~1–2 s do real: esperar um tempo fixo media a dica ainda na tela
     // (2,5% "passando" por arredondamento). Espera o fim da animação (até 40 s reais) e mede o tempo DELA.
     const fimDica = await pagina.waitForFunction(() => {
-      const d = document.getElementById('dica'); if (!d) return { ms: -1 };
+      const d = document.getElementById('dica'); if (!d) return false;
       const s = getComputedStyle(d);
-      if (s.visibility !== 'hidden' && +s.opacity > 0.01) return false;
-      const a = d.getAnimations()[0];
-      return { ms: a ? Math.round(+(a.effect?.getComputedTiming().endTime ?? a.currentTime)) : -1 };
-    }, null, { timeout: 40000, polling: 250 }).then(h => h.jsonValue()).catch(() => null);
+      return s.display === 'none' || s.visibility === 'hidden' || +s.opacity <= 0.01;
+    }, null, { timeout: 40000, polling: 250 }).then(() => ({ ms: fimAnim })).catch(() => null);
     const r = await pagina.evaluate(([FS, AS]) => { const x = eval(FS)(); return { area: eval(AS)(x.f, innerWidth, innerHeight), nomes: x.f.map(s => s.nome) }; }, [FORMAS.toString(), AREA.toString()]);
     meta('H5 área do HUD no PC 1280×720 (depois que a dica some)', `${(r.area * 100).toFixed(1)}% (${r.nomes.join(', ')})`, '≤ 2,5%', r.area <= 0.025);
     meta('H5 a dica de teclas do PC aparece no começo e some sozinha em ≤ 9 s', `${dica0 ? 'visível 1 s depois de abrir' : 'não aparece'}; ${fimDica ? `some aos ${(fimDica.ms / 1000).toFixed(1)} s de animação` : 'não some em 40 s'}`, 'visível; some ≤ 9 s',
       dica0 && fimDica && fimDica.ms > 0 && fimDica.ms <= 9000);
     const mapa = await pagina.evaluate(() => { const m = document.getElementById('minimapa'); return !!m && getComputedStyle(m).display !== 'none' && m.offsetWidth > 0; });
     meta('H7 PC: o minimapa continua ligado por padrão', String(mapa), 'true', mapa);
+    // H13g + H13a/c no PC (depois que a dica some): os dois nomes forçados nos cantos a 14 px, ≤ 200 px, letra ≥ 12 px (o
+    // animationend da dica, que devolve o nome ao canto, chega no quadro seguinte ao fim da animação: espera ele, até 3 s)
+    await pagina.waitForFunction(() => !document.documentElement.classList.contains('dica-visivel'), null, { timeout: 3000 }).catch(() => {});
+    const pcNomes = await pagina.evaluate(LN => {
+      const g = window.__golaco; if (!g.nomeCantoDeTeste) return null;
+      const out = {};
+      for (const t of [0, 1]) { g.nomeCantoDeTeste({ time: t, num: 88, nome: 'Wwwwwwwwww' }); out[t] = eval(LN)(); }
+      g.nomeCantoDeTeste(null);
+      return out;
+    }, LER_NOME.toString());
+    // (revisão) depois que a dica some, uma camada (replay, cena do cartão) a escondia com display:none e, na saída, a animação
+    // recomeçava: ela voltava por 8 s, debaixo do nome da esquerda no canto. Liga e desliga cada camada e olha 0,5 s depois
+    const voltaCamada = [];
+    for (const cl of ['em-replay', 'em-cena']) {
+      await pagina.evaluate(cl => { window.__golaco.nomeCantoDeTeste?.({ time: 0, num: 88, nome: 'Wwwwwwwwww' }); document.documentElement.classList.add(cl); }, cl);
+      await pagina.waitForTimeout(300);
+      await pagina.evaluate(cl => document.documentElement.classList.remove(cl), cl);
+      await pagina.waitForTimeout(500);
+      voltaCamada.push(await pagina.evaluate(([LN, cl]) => {
+        const n = eval(LN)(), d = document.getElementById('dica'), ds = getComputedStyle(d), q = d.getBoundingClientRect();
+        window.__golaco.nomeCantoDeTeste?.(null);
+        const dica = ds.display !== 'none' && ds.visibility !== 'hidden' && +ds.opacity > 0.01;
+        const sobre = dica && n.vis && q.left < n.rect.r + 4 && n.rect.l < q.right + 4 && q.top < n.rect.b + 4 && n.rect.t < q.bottom + 4;
+        return { cl, dica, op: +ds.opacity, sobre, borda: n.vis ? n.rect.l - n.sa.l : null };
+      }, [LER_NOME.toString(), cl]));
+    }
+    {
+      const f = [], txt = [];
+      if (!nomeDica || !pcNomes || nomeEstreito.some(x => !x)) f.push('sem a API do nome nos cantos');
+      else {
+        for (const x of nomeEstreito) {
+          const ok = x.vis ? x.w >= 56 && x.dDica >= 4 && (x.dMapa === null || x.dMapa >= 4) : x.W < 692;
+          if (!x.dica) f.push(`${x.W} px: a dica já tinha sumido`);
+          else if (!ok) f.push(`${x.W} px com a dica: nome ${x.vis ? `${x.w.toFixed(0)} px em ${x.l.toFixed(0)}–${x.r.toFixed(0)}, a ${x.dDica.toFixed(0)} px da dica e ${x.dMapa === null ? '-' : x.dMapa.toFixed(0)} do minimapa` : 'escondido'}`);
+          txt.push(`${x.W} px com a dica: ${x.vis ? `${x.w.toFixed(0)} px, a ${x.dDica.toFixed(0)} da dica e ${x.dMapa === null ? '-' : x.dMapa.toFixed(0)} do minimapa` : 'nome escondido'}`);
+        }
+        for (const v of voltaCamada) {
+          if (v.dica || v.sobre || v.borda === null || Math.abs(v.borda - 14) > 1) f.push(`depois de ${v.cl}: a dica ${v.dica ? `voltou (opacidade ${v.op.toFixed(2)})${v.sobre ? ' debaixo do nome' : ''}` : 'fora'}, nome ${v.borda === null ? 'escondido' : `a ${v.borda.toFixed(0)} px da borda`}`);
+          txt.push(`depois de ${v.cl}: dica ${v.dica ? 'VOLTOU' : 'fora'}`);
+        }
+        // (com a dica, o nome fica na mesma linha, à direita dela: em cima dela encostava na faixa ENTRA/SAI do jogo)
+        const dd = nomeDica.vis ? Math.max(nomeDica.l - nomeDica.dicaR, nomeDica.dicaL - nomeDica.r, nomeDica.t - nomeDica.dicaB, nomeDica.dicaT - nomeDica.b) : -Infinity;
+        const baseD = nomeDica.H - nomeDica.sab - nomeDica.b;
+        if (!nomeDica.vis || !(dd >= 4) || Math.abs(baseD - 14) > 1) f.push(`com a dica: nome ${nomeDica.vis ? `a ${dd.toFixed(0)} px da dica, base a ${baseD.toFixed(0)} px` : 'escondido'}`);
+        txt.push(`com a dica: o nome em ${nomeDica.l.toFixed(0)}–${nomeDica.r.toFixed(0)} × ${nomeDica.t.toFixed(0)}–${nomeDica.b.toFixed(0)}, a dica em ${nomeDica.dicaL.toFixed(0)}–${nomeDica.dicaR.toFixed(0)} × ${nomeDica.dicaT.toFixed(0)}–${nomeDica.dicaB.toFixed(0)}`);
+        for (const t of [0, 1]) {
+          const n = pcNomes[t];
+          if (!n.vis) { f.push(`nome ${t} escondido`); continue; }
+          const borda = t === 0 ? n.rect.l - n.sa.l : n.W - n.sa.r - n.rect.r, base = n.H - n.sa.b - n.rect.b;
+          if (Math.abs(borda - 14) > 1 || Math.abs(base - 14) > 1) f.push(`nome ${t} a ${borda.toFixed(0)} px da borda e ${base.toFixed(0)} da base`);
+          if (n.rect.w > 200.5) f.push(`nome ${t} com ${n.rect.w.toFixed(0)} px`);
+          if (!(n.fs >= 12)) f.push(`letra ${n.fs} px`);
+          if (n.dir !== (t === 1)) f.push(`nome ${t} do lado errado`);
+          txt.push(`${t ? 'dir' : 'esq'} ${n.rect.l.toFixed(0)}–${n.rect.r.toFixed(0)} × ${n.rect.t.toFixed(0)}–${n.rect.b.toFixed(0)}, ${n.fs} px`);
+        }
+      }
+      meta('H13g PC 1280×720: com a dica na tela o nome da esquerda fica na linha de baixo a ≥ 4 px dela (560 e 800 px: ≥ 56 px longe da dica e do minimapa ou escondido abaixo de ~690 px); depois, os dois nos cantos a 14 px (≤ 200 px, letra ≥ 12 px) e a dica não volta depois de uma camada (replay, cena)',
+        `${f.length ? 'FALHAS: ' + f.join(', ') + ' — ' : ''}${txt.join('; ')}`, 'longe da dica e do minimapa; cantos a 14 ± 1 px; a dica fora', f.length === 0);
+    }
+    // H12f + H12b no PC: o minimapa no lugar de antes (centro W/2 ± 1, base H − 14 ± 1) em 1280×720 e 1920×1080; nada no alto
+    {
+      const pcMapa = [];
+      let okF = true, alto = [];
+      for (const [W, H] of [[1280, 720], [1920, 1080]]) {
+        if (W !== 1280) { await pagina.setViewportSize({ width: W, height: H }); await pagina.waitForTimeout(300); }
+        const r = await pagina.evaluate(async FS => {
+          await new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(ok)));
+          const q = document.getElementById('minimapa').getBoundingClientRect();
+          const alto = eval(FS)().f.filter(x => x.ret && x.ret[1] < innerHeight * 0.3 && !['placar', 'menu'].includes(x.nome)).map(x => x.nome);
+          return { cx: (q.left + q.right) / 2, b: q.bottom, w: q.width, W: innerWidth, H: innerHeight, alto };
+        }, FORMAS.toString());
+        const ok = r.w > 0 && Math.abs(r.cx - r.W / 2) <= 1 && Math.abs(r.H - 14 - r.b) <= 1;
+        if (!ok) okF = false;
+        alto.push(...r.alto);
+        pcMapa.push(`${W}×${H}: centro ${(r.cx - r.W / 2).toFixed(1)} px do meio, base a ${(r.H - r.b).toFixed(1)} px`);
+      }
+      await pagina.setViewportSize({ width: 1280, height: 720 }); await pagina.waitForTimeout(300);
+      meta('H12f PC: o minimapa embaixo no meio, como antes (1280×720 e 1920×1080)', pcMapa.join('; '), 'centro W/2 ± 1, base H − 14 ± 1', okF);
+      meta('H12b PC: nada no alto além do placar e do menu', alto.length ? alto.join(', ') : 'só placar e menu', 'só placar e menu', alto.length === 0);
+    }
     // H10 no PC: os 3 estados com o relógio manual parado (o laço não reescreve o placar)
     await pagina.evaluate(() => window.__golaco.relogio.usarManual(true));
     for (const [estado, gols, rel] of ESTADOS_PLACAR) {

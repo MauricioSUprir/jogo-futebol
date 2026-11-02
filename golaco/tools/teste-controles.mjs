@@ -31,6 +31,8 @@
 //    quem foi chamado em ≤ 3 quadros e ele chega a ≤ 2,5 m do condutor em 1,5 s; goleiro do humano com a bola no pé —
 //    o PEGAR aparece (sem encostar; também nos layouts de 70–140%) e pega com a mão; com o recuo ele não aparece; com a
 //    bola nas mãos ele anda pelo analógico sem sair da área e o anel dos 8 s aparece nos últimos 5 s.
+//  - O nome do jogador com a bola nos cantos de baixo (itens 59 e 60, dono 23/10): não pega toque (o toque nele chega ao
+//    analógico à esquerda; à direita não liga botão nem abre a pausa) e nenhum botão encosta nele (nos layouts de 70–140%).
 //  - Pênalti da pessoa (item 70, P2): F = PARADINHA e espaço = PULINHO no teclado, LT/LB no controle (o controle do
 //    pênalti), e no celular os botões PARADINHA e PULINHO só na cobrança — o estilo fica marcado antes do CHUTE.
 // Itens que dependem da lógica (Etapa 2: m.controlado, j.carga, m.voo...; Etapa 3: a entrada da
@@ -206,7 +208,19 @@ async function conferirTodosLayouts(pagina) {
         t.classList.toggle('goleiro-pe', f === 'goleiroPe');
         t.classList.toggle('goleiro-mao', f === 'goleiroMao');
       }, [tam, f]);
+      // (itens 59 e 60) o nome do jogador com a bola nos cantos de baixo, o mais largo, um de cada vez (o da esquerda, o
+      // time 0, e o da direita, o 1): é uma caixa do #hud como as outras — nenhum botão encosta nele (com nome-sem-lugar ele
+      // fica escondido e não entra)
       const l = await layoutToque(pagina);
+      const temNome = await pagina.evaluate(() => typeof window.__golaco.nomeCantoDeTeste === 'function');
+      if (temNome) {
+        for (const t of [0, 1]) {
+          await pagina.evaluate(t => window.__golaco.nomeCantoDeTeste({ time: t, num: 88, nome: 'Wwwwwwwwww' }), t);
+          const ln = await layoutToque(pagina);
+          for (const p of ln.problemas) if (!l.problemas.includes(p)) l.problemas.push(`(nome ${t}) ${p}`);
+        }
+        await pagina.evaluate(() => window.__golaco.nomeCantoDeTeste(null));
+      }
       const esperado = f === 'goleiroPe' ? ['chute', 'correr', 'enfiada', 'lancamento', 'passe', 'pegar'] : f === 'goleiroMao' ? ['chute', 'correr', 'enfiada', 'lancamento', 'passe', 'trocar-mao'] : f === 'ataque' ? ['chute', 'correr', 'enfiada', 'lancamento', 'passe'] : defE3 ? defesa : ['correr', 'goleiro', 'trocar'];
       const okIds = JSON.stringify(l.ids) === JSON.stringify(esperado);
       if (!okIds || l.problemas.length) ok = false;
@@ -1210,6 +1224,49 @@ async function conferirTodosLayouts(pagina) {
     const menu = await pagina.evaluate(() => !document.getElementById('menu').hidden);
     meta('Botão de menu (toque) abre o menu', String(menu), menu);
     meta('Celular sem erro no console', erros.length ? erros.join(' | ') : '0', erros.length === 0);
+  } finally { await navegador.close(); }
+}
+
+// ------------------------------------------------------------------ o nome nos cantos não pega toque (itens 59 e 60)
+// Celular 844×390 e 568×320 com entalhe, na partida: o meu goleiro com a bola no pé (o nome do time 0 no canto de baixo à
+// esquerda) e o adversário com a bola (o do time 1 à direita) — pointer-events none, quem está no centro dele não é ele, um
+// toque de verdade ali liga o analógico (à esquerda: a zona do analógico recebe) e não liga botão nem abre a pausa (à direita).
+// Na base o nome fica em cima do jogador, fora do canto.
+for (const t of [{ largura: 844, altura: 390 }, { largura: 568, altura: 320 }]) {
+  const { navegador, contexto, pagina, erros } = await abrir({ largura: t.largura, altura: t.altura, dpr: 2, toque: true });
+  const nome = `${t.largura}×${t.altura} com entalhe`;
+  try {
+    await pagina.goto(srv.url + '?q=baixa&entalhe=1&replay=0&comemoracao=0&cenas=0', { waitUntil: 'load' });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
+    await pagina.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); for (let i = 0; i < 30; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); g.pausar(true); });
+    const cdp = await contexto.newCDPSession(pagina);
+    const toque = (type, pontos) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pontos });
+    for (const [cena, lado] of [['goleiroPe', 'esq'], ['pressao', 'dir']]) {
+      const n = await pagina.evaluate(c => {
+        const g = window.__golaco; g.cenaDeTeste(c); g.relogio.avancar(1000);
+        const e = document.getElementById('nome-condutor');
+        const s = document.createElement('div'); s.style.cssText = 'position:fixed;left:var(--sa-l);right:var(--sa-r);top:var(--sa-t);bottom:var(--sa-b);visibility:hidden'; document.body.append(s);
+        const sa = s.getBoundingClientRect(); s.remove();
+        if (!e || e.hidden || getComputedStyle(e).display === 'none') return { vis: false };
+        const r = e.getBoundingClientRect(), cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
+        const no = document.elementFromPoint(cx, cy);
+        return { vis: true, cx, cy, l: r.left, r: r.right, b: r.bottom, saL: sa.left, saR: sa.right, saB: sa.bottom, eventos: getComputedStyle(e).pointerEvents, ehEle: !!no && (no === e || e.contains(no)), alvo: no ? (no.id || no.className || no.tagName) : '-' };
+      }, cena);
+      if (!n.vis) { meta(`${nome}: o nome ${lado === 'esq' ? 'da esquerda' : 'da direita'} não pega toque`, 'o nome não aparece', false); continue; }
+      const noCanto = lado === 'esq' ? n.l - n.saL <= 16 && n.saB - n.b <= 6.5 : n.saR - n.r <= 16 && n.saB - n.b <= 6.5;
+      await toque('touchStart', [{ x: Math.round(n.cx), y: Math.round(n.cy), id: 7 }]);
+      // (o navegador entrega o pointerdown do toque no quadro seguinte: espera o analógico acender, ou 0,4 s)
+      await pagina.waitForFunction(() => document.getElementById('analogico').classList.contains('ativo'), null, { timeout: 400 }).catch(() => {});
+      const durante = await pagina.evaluate(() => ({ analogico: document.getElementById('analogico').classList.contains('ativo'), botoes: [...document.querySelectorAll('#toque .btn-toque.ativo')].map(b => b.id) }));
+      await toque('touchEnd', []);
+      const depois = await pagina.evaluate(() => ({ menu: !document.getElementById('menu').hidden }));
+      if (depois.menu) await pagina.evaluate(() => window.__golaco.fecharMenu());
+      const okToque = lado === 'esq' ? durante.analogico && durante.botoes.length === 0 : !durante.analogico && durante.botoes.length === 0 && !depois.menu;
+      meta(`${nome}: o nome ${lado === 'esq' ? 'da esquerda (o meu goleiro com a bola) — o toque nele liga o analógico' : 'da direita (o adversário com a bola) — o toque nele não liga botão nem abre a pausa'}`,
+        `${noCanto ? 'no canto' : `FORA do canto (${n.l.toFixed(0)}–${n.r.toFixed(0)}, base ${n.b.toFixed(0)})`}; pointer-events ${n.eventos}; no centro: ${n.ehEle ? 'O NOME' : n.alvo}; toque: analógico ${durante.analogico ? 'ativo' : 'parado'}, botões [${durante.botoes.join(', ')}], pausa ${depois.menu ? 'ABERTA' : 'fechada'}`,
+        noCanto && n.eventos === 'none' && !n.ehEle && okToque);
+    }
+    meta(`${nome}: sem erro no console`, erros.length ? erros.join(' | ') : '0', erros.length === 0);
   } finally { await navegador.close(); }
 }
 

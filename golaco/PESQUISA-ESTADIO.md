@@ -169,6 +169,9 @@ mundo recebe as mesmas máscaras (hash do treino e da partida iguais). "Minimapa
 liga/desliga na barra da pausa: na lista de opções sobravam 3 px em 844×390 e uma linha a mais fazia a pausa rolar 62 px.
 Retorno do dono (12/10): "coloca o nome da função do botão de novo" — os nomes voltaram por padrão (a opção continua na
 pausa para quem quiser só o ícone); o resto da tela limpa fica como está (`teste-hud-minimo` H9).
+Depois (itens 59 e 60, dono 23/10): o minimapa ligado saiu do alto do celular para baixo no meio, entre o analógico e o
+arco, e o nome do jogador com a bola saiu de cima dele para os cantos de baixo, pelo lado do time no placar — o topo da
+partida ficou só placar e menu, como no "Time/Score Display" do FC. Fontes, decisões e medidas no §7.2.
 ### 7.1 Placar no formato da referência, menor e com a cara do GOLAÇO (12/10; `index.html`, `css/estilo.css`, `js/hud.js`)
 
 Pedido do dono (12/10), com uma imagem de referência: "quero o placar assim, tem que ser algo menor e mais com a nossa
@@ -211,6 +214,45 @@ versão nova passa. O placar ficou um pouco mais LARGO que o de antes (a marca e
 (24 × 30 px) e com área menor em todos os estados e telas; a tela limpa continua no orçamento (H1: 7,2–10,0% no celular,
 ≤ 11%; H5: 1,7% no PC, ≤ 2,5%). Nos treinos o placar é o mesmo, sem o relógio (159×24 px no celular, 168×26 no PC; nada
 encosta no painel nem no menu nas 3 telas e no PC — conferido à parte).
+
+### 7.2 A faixa de baixo: o minimapa embaixo no meio e o nome do jogador com a bola nos cantos (itens 59 e 60, dono 23/10; `js/entrada.js`, `js/hud.js`, `js/main.js`, `css/estilo.css`)
+Pedidos: "o campinho que está lá em cima tem que ficar lá embaixo" e "o nome do jogador com a bola fica tapando e
+atrapalhando o jogo" — o nome nos cantos de baixo pelo time do placar, "a faixa de baixo simétrica". Contrato "Faixa de
+baixo" no `CONTRATOS.md`.
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| Konami, manual oficial do PES 2019 (PS4), "The match screen" — https://dds.konami.com/games/manual/pes2019/PS4/en/screen.html (imagem `img/screen_01.png`, conferida) | Placar e tempo no alto à esquerda; **Radar (6) embaixo no meio**; **Player Box (7)** de cada lado: "7 V. BIGGS" embaixo à ESQUERDA (escudo por fora, número e nome) e "A. LEAR 17" embaixo à DIREITA (nome, número e escudo por fora), espelhados; "When taking Set Pieces, the Power Gauge is displayed above the Radar". Medido na imagem (área de jogo ~900×505): radar ≈ 124×73, a ~5% da borda de baixo; Player Box ≈ 185 × 14 px | A faixa de baixo inteira: [nome da casa] … [minimapa] … [nome de fora], o lado pelo time e o espelho (a cor do time por fora, o número junto dela). Na mira da bola parada o minimapa some (como antes) |
+| EA, acessibilidade do FIFA 22, "game settings" — https://www.ea.com/able/resources/fifa/fifa-22/ps5/game-settings | "Select whether you want the player name bar, the indicator or both"; o indicador mostra nome ou número (Default/Small/Large); Radar ON/OFF, 2D/3D | Radar e nome são camadas pequenas e opcionais: o minimapa continua opção da pausa (desligado no celular) e o nome fica no menor tamanho legível |
+| EA FC 26, guia da "Player Name Bar" (terceiro) — https://www.magicgameworld.com/?p=128868 | A barra fica "at the bottom of the screen", com o nome e a estamina; Off / Enabled / Enabled with Overhead | No console o nome do jogador fica EMBAIXO, não em cima dele: confirma o pedido |
+| FC 25, configurações (FIFPlay) — https://www.fifplay.com/fc-25-game-settings/ (já no §7) | "Radar Off/2D/3D", "Time/Score Display" | O padrão da TV é só placar e relógio; o resto é opcional |
+| FC Mobile, guia de configurações (terceiro, FC Mobile 24) — https://gamingonphone.com/guides/fc-mobile-best-settings-guide-and-tips | O radar é "a mini-pitch map in the middle of the screen", liga e desliga | No celular o radar fica no meio. Alto ou baixo não está escrito (sem fonte oficial) |
+| Fórum da EA (FC Mobile: diminuir o minimapa — https://forums.ea.com/discussions/fc-mobile-general-discussion-en/request-option-to-reduce-minimap-size/13539206; FC 26 Clubs: minimapa transparente demais — https://forums.ea.com/discussions/fc-26-feedback-en/please-improve-mini-map-visibility-and-customization-in-clubs/13697620) — 403 na leitura, só o resumo da busca | Reclamam do tamanho do minimapa no celular e de transparência demais | O menor tamanho legível (92×60, até 76×50) sem baixar a opacidade de 0,8; sem lugar, ele some em vez de tapar os controles |
+| Konami, notas da versão 1.1.4 do eFootball 2022 (Mobile) — https://www.konami.com/efootball/es/page/2022/season2_patch-notes_v1-1-4 — e guia do eFootball (terceiro) — https://gamingonphone.com/guides/efootball-guide-to-the-best-gameplay-and-game-plan-settings-for-a-smooth-experience/ | "Mostrar radar" em Opções > Tela da partida; "Display Radar: Toggle ON" | O radar é opção da tela da partida (como aqui); a posição no celular não está escrita |
+| Apple HIG / Material 3 (os do placar, §7.1) | Mínimo de 11 pt (Label Small 11) | O nome tem 11 px no celular e 12 no PC |
+
+Limite: não há texto OFICIAL da EA, do FC Mobile nem do eFootball Mobile com a posição do radar no celular; a evidência mais
+forte da faixa de baixo é a tela oficial do PES 2019.
+
+**Decisões** (medidas na base 643e2a87 com o Chromium do `tools/lib/navegador.mjs`):
+- **A faixa de baixo de 22 px** (`entrada.js FAIXA_BAIXO` = 3 de margem + 15 do nome + 4 de folga): embaixo do arco sobravam
+  12–14 px (o nome do canto direito teria 15–24 px de largura); o arco sobe 8–10 px de 70 a 100% e nada a 120% ou mais; o
+  analógico em repouso já ficava a 22 px. `teste-entrada` E-faixa: 12,0 → 22,0 px (6 telas × 4 tamanhos × 3 áreas seguras).
+- **O minimapa** (92×60 a `sa-b + 3`, ≥ 8 px do analógico e de todas as vagas, até 12% de W para o lado do vão, depois 84×55 e
+  76×50; senão some): no padrão de 80% cabe 92×60 nas 6 telas do `teste-hud-minimo` (em 568×320 com entalhe, centrado cabiam
+  52 px: fica 20 px para a esquerda). A 100% some em 568×320 com entalhe; a 140%, em 667×375 e 568×320. Torcida atrás do
+  minimapa ligado (844×390, os 8 instantes do H3): 5,4% no alto → 0,0% embaixo. Some com a faixa do fim de jogo (a de 202 px
+  chega a 261 em 568×320, e a do TM em 844×390 a 334) e com a "Você foi expulso" quando ela chega a ele (em 568×320 e no TM
+  em 667×375; na base, no alto, ela já ficava a 1 px dele em 568×320).
+- **O nome**: `[faixa | número | nome]` à esquerda e espelhado à direita; 15 px e letra de 11 no celular, sem caixa alta
+  (os 46 nomes de camisa do elenco medem 52–87 px sem caixa alta e 58–99 com: com caixa alta ~10% ganhariam reticências nos
+  88 px de 568×320). Com a bola solta fica apagado (num passe ou chute a viagem inteira até 3 s, no resto 0,8 s) e,
+  escondido, só volta depois de 0,8 s: em 2 min de jogo (844×390, semente 11) as voltas depois de < 0,8 s escondido foram de
+  19 para 0 (o nome visível 43% → 95% do tempo) e as escritas no DOM de 2913 para 207.
+- **O orçamento** (H1): contado, o nome de 88 px estoura os 11% em 568×320 na defesa com a régua de antes (11,77%; sem o nome, 10,98%). A régua
+  passou a medir pelo que se vê a caixa sem fundo, sem borda e sem sombra (o ≡ da partida: alvo de 44×44 transparente,
+  ícone de 22×22): base 10,16% → PR 10,95% (folga de 0,05 ponto, sem depender da fonte: o pior caso é o `max-width`).
+  Planos B se o dono não aceitar a régua: o nome sem o número até 600 px de largura; 12% só nessa tela; o nome só do meu time.
 
 ## 8. Rede véu de noiva e branca (pedido de 11/10; `js/rede-forma.js`, `js/bola.js`, `js/render/rede-onda.js`, `js/render/campo.js`)
 

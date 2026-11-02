@@ -96,7 +96,7 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   no chute fora do canto = regravar com `--gravar-referencia <pasta js>` e dizer no PR.
   **Dono, 23/10: a fila por CATEGORIAS** (A–I da FILA.md; a D FEITA em 26/10, #524–#550): ele diz qual categoria fazer e nada começa sem o aval dele
   ("tem algumas coisas a mais que vou te sinalizar, que vc só cmc dps do meu aval"). Os pedidos de 23/10 são os itens 57–66:
-  impedimento pelas partes do corpo (B), pausa igual à do FIFA, minimapa embaixo, nome do condutor nos cantos, a tela antes do jogo no nível do EA FC com a cara do TM (64), a mira das bolas paradas minimalista com uma curva boa (65), a câmera que acompanha a bola e mostra a área (66) (F),
+  impedimento pelas partes do corpo (B), pausa igual à do FIFA, minimapa embaixo e nome do condutor nos cantos (59 e 60 FEITOS, #598), a tela antes do jogo no nível do EA FC com a cara do TM (64), a mira das bolas paradas minimalista com uma curva boa (65), a câmera que acompanha a bola e mostra a área (66) (F),
   passada natural, costura da nuca e bordas dos decalques (I).
   **Pedidos de 29/10 (dono: "add nas categorias"; esperam o aval dele):** item 68, a mira pelo que se vê na tela do celular
   (achado na revisão do C2; dono: "publicar o C2 e pôr a mira na fila") e item 70, cobranças com corrida (pênalti, escanteio,
@@ -130,8 +130,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   caiu nas duas (real; achado desligando uma peça por vez com `--set`). As amostras pequenas dos testes que reprovam depois da
   mudança: medir base × PR com 4× a amostra; se empatam, a meta passa a reprovar quando a contagem prova (binomial/Poisson,
   p < 5%) e a amostra cresce o que o CI aguenta; as cenas de estados novos (cartão, substituição) são defeitos de verdade.
-- **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME em cima do jogador com a bola (`main.js marcarCondutor`,
-  `#nome-condutor` fora do #hud — exceção pedida à "sem narração") e (2) os overalls da tela iguais aos do TM (`elenco.js
+- **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME do jogador com a bola (`main.js marcarCondutor` → `hud.js nomeCanto`,
+  exceção pedida à "sem narração"; desde os itens 59 e 60 (23/10; #598) no `#hud`, nos CANTOS de baixo pelo time do placar — contrato
+  "Faixa de baixo") e (2) os overalls da tela iguais aos do TM (`elenco.js
   notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos). **FILA (dono: "o 3 e 4
   fica pra dps"):** (3) o campinho da escalação do jogo EM PÉ (retrato), não deitado (`escalacao-tela.js`); (4) a cena de
   substituição no online (hoje desligada no online porque seguraria a simulação de um lado só). Também a escalação
@@ -403,8 +404,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   partida (só cortes), "GOL!" SEM autor nem minuto escritos, torcida instanciada (`render/torcida.js`/`torcida-dados.js`,
   ânimo em `render/emocao.js`, 8/13/18 mil por qualidade) e som com gravações livres (`render/som.js`,
   `assets/sons/CREDITOS.md`; liga no 1º gesto; "Som da torcida" na pausa). **Sem narração na tela:** lance nenhum vira
-  texto (hud.js `TEXTO_EVENTO` só tem avisos de comando); na partida o topo é placar + minimapa + menu (painel
-  "Conduzindo" só nos treinos). **Câmera do celular deitado** (`CAMERA.celular`, só com `pequena`; o PC não muda): TV
+  texto (hud.js `TEXTO_EVENTO` só tem avisos de comando); na partida o topo é placar + menu (painel
+  "Conduzindo" só nos treinos; o minimapa embaixo no meio desde os itens 59 e 60). **Câmera do celular deitado** (`CAMERA.celular`, só com `pequena`; o PC não muda): TV
   mais baixa e mais longe (12,3 m a 46 m = 15°, o limite de cima da câmera principal da UEFA, 12–15°) — a torcida do
   outro lado entra no alto do quadro durante o jogo (40/40 instantes, mediana 11% da tela; antes 13/40) e o plano pela
   largura mantém o tamanho dos jogadores (36 → 38 px). **Celular só deitado:** em pé (com toque) a tela "Gire o celular" cobre tudo e o jogo
@@ -472,7 +473,7 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `escudo-ventania`; `hud.definirTimes` recebe `escudo` = id do elenco). 24 px de altura no celular e 26 no PC (antes 30/34;
   referência 29), números ≥ 14 px, siglas 11 px. Teste: `teste-hud-minimo` H10 (`--so-placar` roda só ele; o "antes" fica em
   `PLACAR_ANTES`). Igual nos treinos (sem o relógio). Só DOM/CSS: hash IGUAL. Contraprova (13/10): na partida o "1º T +4"/
-  "Intervalo" só sai depois de o minimapa encostar à direita do placar; gols 9 → 10 refazem o topo; nos treinos a marca só
+  "Intervalo" é o último a sair (os espaços apertam antes; o minimapa mora embaixo desde os itens 59 e 60); gols 9 → 10 refazem o topo; nos treinos a marca só
   sai se fizer falta; cada time é `role="img"` com o nome (leitor de tela).
 - **Etapa 4 (regras IFAB, goleiro, bolas paradas, equilíbrio)** — em PRs; pesquisa em `golaco/PESQUISA-ETAPA4.md`,
   contrato em `CONTRATOS.md`. **Painel** `tools/painel-equilibrio.mjs` (seção 11 inteira, 144 partidas em ~9 min com 4
@@ -484,8 +485,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   companheiro, infração no toque (também rebote de defesa e desvio), jogada deliberada do adversário zera, nada direto de
   tiro de meta/lateral/escanteio; tiro livre INDIRETO (`tiroLivre`, 9,15 m); linha viva amarelo-clara e a do lance parada
   no apito (`render/linha-impedimento.js`); ~1,2 por partida. **Acréscimos** (Regra 7.3): `PARTIDA.acrescimos`, "45+2'"
-  e "1º T +4" no placar. HUD no celular estreito: `topo-c4` aperta o placar e, se ainda encostar, o minimapa encosta à
-  direita dele (o relógio de 2 dígitos já encostava em 667/568 px). Teste: `teste-impedimento` (padrão; árbitro
+  e "1º T +4" no placar. HUD no celular estreito: `topo-c4` aperta o placar (o relógio de 2 dígitos já
+  encostava em 667/568 px; o minimapa, que ia para a direita dele, mora embaixo desde os itens 59 e 60). Teste: `teste-impedimento` (padrão; árbitro
   independente). Lição: a página com `?prints=1&demo=1` não refaz o laço do Node passo a passo — prints procuram o lance
   no próprio navegador. **Faltas** (`faltas.js`, Regra 12; PR 2 da Etapa 4): bote da IA, dividida do humano, carga por
   trás e falta tática (SPA); imprudente/temerária (amarelo)/força excessiva (vermelho); DOGSO = vermelho (na área
@@ -536,14 +537,17 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   acréscimos), menu só com o ícone, barra de força sem texto, dica do PC some em 8 s; botões de toque translúcidos
   (80%, 55%; chave `golaco.toque.v2`) com o ícone e o NOME da função (dono, 12/10: "coloca o nome da função do botão de
   novo" — "Nomes nos botões" ligado por padrão; desligado na pausa = só o ícone), analógico quase invisível em repouso (com o dedo, igual:
-  `escalaAnalogico`); minimapa desligado no celular (no PC fica, 112×73); "Minimapa" e "Nomes nos botões" são botões
+  `escalaAnalogico`); minimapa embaixo no meio (PC 112×73; no celular desligado por padrão e, ligado, 92×60 entre o
+  analógico e o arco desde os itens 59 e 60, #598 — `hud.js ajustarBaixo`, `entrada.js FAIXA_BAIXO` 22 px; sem lugar, some)
+  e o nome do jogador com a bola nos cantos de baixo pelo lado do time no placar (contrato "Faixa de baixo"; o H1 conta o
+  nome e mede o ≡ pelo ícone — régua nova, FILA "Depende do dono" 14); "Minimapa" e "Nomes nos botões" são botões
   de liga/desliga na barra da pausa (na lista não cabia: a pausa continua sem rolar em 844×390); sem a seta no chão do
   controlado; marca de queda só na bola alta do time do humano. **Defesa do toque com 5 botões** no 1º anel: o CONTER
   virou a DIVIDIDA segurada (`entrada.js criarToqueOuSegura`: tocar < `ENTRADA.toqueCurto` 0,25 s = bote, segurar =
   CONTER desde o 1º quadro, como o "Sprint & Tackle" do FC Mobile; só o `pointerup` dá o bote — toque cancelado pelo
   sistema não) e a PRESSÃO foi para a vaga b; teclado e controle não mudam. O mundo recebe as mesmas máscaras
   (hash-igual IGUAL). Teste: `teste-hud-minimo` (navegador, CI e deploy; celular ≤ 11% de HUD em 3 telas, 0 texto fora
-  do placar, ≤ 15% da torcida atrás do HUD, 0 linha viva, PC ≤ 2,5%, barra da pausa sem encostar). Peça nova de HUD na
+  do placar e do nome do condutor, ≤ 15% da torcida atrás do HUD, 0 linha viva, PC ≤ 2,5%, barra da pausa sem encostar). Peça nova de HUD na
   partida tem de caber nesse orçamento (ou ir para a pausa). Lição: o relógio das animações CSS do Chromium sem GPU
   atrasa 1–2 s do real com a máquina carregada — teste de algo que some por animação espera a animação, não um tempo fixo.
 - **Replay** (pedidos de 11/10: "o replay não funciona"; "no impedimento, o replay mostra a linha"; `PESQUISA-ESTADIO.md`

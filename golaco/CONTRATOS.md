@@ -882,7 +882,8 @@ faixa ENTRA/SAI (a simulação não muda).
   de par em par, sem trocar a < 0,5 s do corte); no jogo (depois da cena ou sem ela) passam primeiro as páginas vistas por
   menos de 0,6·porPar (a última da cena primeiro), cada uma porPar s, e a faixa vai até max(dur, o fim delas) — todo par
   aparece ≥ 1,5 s (`teste-substituicao-tela` T11).
-  Lugar: PC embaixo à esquerda (64 px da borda, 280–520 px; no jogo, sem chegar no minimapa); celular na cena embaixo à
+  Lugar: PC embaixo à esquerda (64 px da borda, 280–520 px; no jogo, sem chegar no minimapa nem no nome do jogador com a bola
+  dos cantos de baixo, itens 59 e 60: `teste-substituicao-tela` T8); celular na cena embaixo à
   esquerda (área segura + 14 px, ≤ 64 px de altura, sem chegar no "Pular"); celular no jogo, uma linha compacta no lugar
   do aviso (topo + 74 px, ≤ 360 px, nomes da camisa) com o aviso descendo 42 px (`html.faixa-subst-topo`). Sem aviso de
   texto da substituição (`TEXTO_EVENTO` sem `substituicao`).
@@ -1643,17 +1644,23 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
 `ia*.js` mudou e o mundo recebe as mesmas máscaras de sempre (`hash-igual` IGUAL; `teste-determinismo` passa).
 - **Orçamento de tela** (`tools/teste-hud-minimo.mjs`, navegador, no CI e antes do deploy): no celular deitado (844×390,
   667×375, 568×320 com entalhe, ataque e defesa) a união das formas do HUD (caixas visíveis do `#hud`, botões como
-  círculos, analógico em repouso se a opacidade passar de 0,25) cobre ≤ 11% da tela; 0 caracteres fora do placar; ≤ 15%
+  círculos, analógico em repouso se a opacidade passar de 0,25) cobre ≤ 11% da tela; 0 caracteres fora do placar (desde os
+  itens 59 e 60, também fora do nome do condutor nos cantos de baixo: exceção escrita, só "número nome"); ≤ 15%
   dos pixels de torcida atrás do HUD; 0 amostras com a linha viva; PC ≤ 2,5% depois de 9 s. Peça nova de HUD na partida
-  tem de caber nisso (ou ir para a pausa).
+  tem de caber nisso (ou ir para a pausa). Desde os itens 59 e 60 (seção "Faixa de baixo" abaixo) o nome do jogador com a
+  bola conta (o mais largo, no canto da fase) e a caixa sem fundo, sem borda e sem sombra conta pelo que se vê (o ≡ da
+  partida pelo ícone): no pior caso 10,95% (568×320 com entalhe, defesa, o nome de 88 px); pela régua de antes daria 11,77%
+  — o H1 só passa com a régua nova (FILA "Depende do dono" 14).
 - **`index.html`/`css/estilo.css`**: o placar é a barra de TV da seção "Placar (12/10)" abaixo (antes: compacto de 30 px
   no celular e 34 no PC, sem a marca) e o "1º T" só aparece com
   `.placar-relogio.com-tempo` (intervalo, fim e acréscimos; o texto fica no DOM); menu só com o ícone (44×44); barra de
   força 44×6 sem o rótulo (`#carga-tipo` continua com o texto, escondido); dica de teclas do PC (`#dica`) some 8 s depois
-  de `hud.pronto()` e de cada troca de modo. Botões de toque translúcidos (fundo 0,32, borda 1,5–2 px, sem sombra) com
+  de `hud.pronto()` e de cada troca de modo (desde os itens 59 e 60 ela não volta quando uma camada sai: `.vista` no
+  `animationend`, até o próximo `mostrarDica`). Botões de toque translúcidos (fundo 0,32, borda 1,5–2 px, sem sombra) com
   o ícone e o nome (`html.nomes-botoes`, `--ic`, `--fs`) — LIGADO sem escolha salva desde 12/10 (dono: "coloca o nome da
   função do botão de novo"; `main.js nomesLigados`); "Nomes nos botões" desligado na pausa = só o ícone (`--ic-so`). Analógico em repouso a 0,3 × a
-  opacidade e sem o pino; com o dedo, como antes. Minimapa 112×73 a 0,8; escondido com `html.mapa-desligado` ou, sem
+  opacidade e sem o pino; com o dedo, como antes. Minimapa 112×73 a 0,8 (embaixo no meio; no celular também, 92×60, desde o
+  item 59: "Faixa de baixo"); escondido com `html.mapa-desligado` ou, sem
   escolha salva, com `html.com-toque` sem `html.mapa-ligado` (escondido não redesenha: `hud.minimapa` sai antes).
 - **Pausa**: dois botões de liga/desliga na barra de cima (`#chip-minimapa`, `#chip-nomes`, `aria-pressed`; "Nomes nos
   botões" só com `html.com-toque`) — na barra para a pausa continuar cabendo sem rolar em 844×390 (a lista de opções não
@@ -1675,12 +1682,76 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
 - **Desenho** (só lê o mundo): `render/linha-impedimento.js` com `IMPEDIMENTO.linhaViva` (false); `render/jogador3d.js`
   sem a seta no chão do controlado (anel + triângulo de 2,2% do menor lado da tela); `render/marcas.js criarMarcas(cena,
   {timeHumano})`: a marca de queda só para a bola alta do time do humano (`m.voo.time`; null = os dois times).
-- **Testes**: `teste-hud-minimo` (H1–H8; `--raiz <pasta>` mede outra cópia; o H5 espera a animação da dica acabar — o
+- **Testes**: `teste-hud-minimo` (H1–H8; H12 e H13 da faixa de baixo; `--raiz <pasta>` mede outra cópia; o H5 espera a animação da dica acabar — o
   relógio das animações do Chromium sem GPU atrasa do real com a máquina carregada — e o H7 confere a barra da pausa nas 3
   telas), `teste-entrada` (5 botões, nada no 2º anel, `criarToqueOuSegura` e do toque ao jogo: tocada = bote, segurada =
   conter), `teste-controles` (lista da defesa com 5 e a DIVIDIDA tocada/segurada/cancelada pelo sistema com toque de
   verdade; volta ao tamanho salvo). `tools/prints.mjs`: sem as cenas da linha viva;
   cenas `*-jogador-ve*` sem o `?prints=1` (a página como ela abre).
+
+## Faixa de baixo (23/10, itens 59 e 60) — o minimapa embaixo no meio e o nome do jogador com a bola nos cantos (contrato)
+Pedidos do dono (23/10): "o campinho que está lá em cima tem que ficar lá embaixo" (59) e "o nome do jogador com a bola fica
+tapando e atrapalhando o jogo" (60). Pesquisa e medidas em `PESQUISA-ESTADIO.md` §7.2 (o "Radar" embaixo no meio e o
+"Player Box" de cada lado, espelhado, da tela da partida do PES 2019). **Só desenho, DOM e CSS**: nada no fecho do hash
+(`fecho-hash --diff` = 0; as constantes moram no `entrada.js`, no `hud.js` e no `main.js`, fora do `config.js`);
+`hash-igual` e `hash-partida` IGUAIS.
+- **A faixa de baixo** (`entrada.js FAIXA_BAIXO` = 22 px: 3 de margem + 15 do nome + 4 de folga): `calcularLayoutToque` põe
+  o arco a `max(borda, FAIXA_BAIXO)` da borda segura de baixo (dos lados e em cima, a `borda` de sempre) — o arco sobe 8–10 px
+  de 70 a 100% e nada a 120% ou mais; o analógico em repouso já ficava a 22 px (`repousoAnalogico()` → `{x, y, r}`; com os
+  controles escondidos por uma camada a zona é a do CSS). `layoutToque()` na interface da entrada → `{W, H, sa, botoes: [{x,
+  y, d}] de TODAS as vagas posicionadas (as duas fases, PEGAR, TROCAR da mão, CURVA, estilos do pênalti, CORRER), analogico:
+  {x, y, r}}` ou null sem toque; o `main.js` passa ao HUD (`criarHud({layoutToque})`). O curso do analógico, a zona da metade
+  esquerda, os diâmetros e a origem com o dedo não mudam (com o dedo, a base pode passar por cima do nome da esquerda e da
+  borda do minimapa: ela é desenhada por cima e o polegar está ali de qualquer jeito). Correção achada no teste novo: o
+  `mostrarToque(true)` de todo pointerdown da zona chamava `baseRepouso()` no quadro seguinte sem olhar o dedo — a base voltava
+  ao canto, apagada, com o dedo na tela até ele passar do raio; agora só sem dedo (como no resize).
+- **Minimapa** (`hud.js ajustarBaixo`, chamado no fim de `ajustarTopo`: resize, layout dos botões, "Tamanho", o botão
+  Minimapa, as fontes do TM): no celular (`html.com-toque`) embaixo no meio, com a base a `sa-b + 3 px`; o maior de 92×60,
+  84×55 e 76×50 que cabe a ≥ 8 px do analógico em repouso e de todas as vagas, no meio ou deslizando de 1 em 1 px até 12% de
+  W para o lado do vão (`MAPA_BAIXO`); escreve `--mapa-cx/-w/-h` no `<html>` (só quando muda). Nenhum cabe →
+  `html.mapa-sem-lugar` (some; o `#chip-minimapa` continua ligado, com o `title`/`aria-description` dizendo por quê; volta
+  sozinho quando o tamanho, a tela ou o entalhe mudam). No padrão (80%) cabe 92×60 nas telas medidas (em 568×320 com
+  entalhe, 20 px fora do meio). Some também com a faixa do fim de jogo (`html.fim-faixa`) e com uma faixa do meio que chegue
+  a ele (`html.mapa-sob-faixa`, medido em `hud.faixa`: a "Você foi expulso" em telas baixas), além das camadas, da disputa e
+  da mira como antes. PC: o de sempre (112×73 embaixo no meio, a 14 px). O topo do celular fica placar | painel (treinos) |
+  menu: saiu o minimapa do `caixasTopo`, o `mapaAoLado` e o 5º passo; o `encostaTopo` não devolve mais `false` com o minimapa
+  escondido (os treinos com o painel passam a apertar quando encosta); na partida a ordem é c1 → c2 → c4 → c3 (o "1º T +4" é o
+  último a sair), nos treinos c1 → c2 → c3 → c4.
+- **O nome** (`index.html #nome-condutor.nome-condutor[data-caixa="nome"]` DENTRO do `#hud`, antes do `#carga`: `.nc-cor` +
+  `.nc-num` + `.nc-nome`; `hud.nomeCanto(n)` com `n = null | {time, num, nome, apagado}`; `get nomeCantoEstado` → `{visivel,
+  lado, texto, apagado}`): o time 0 (à esquerda no placar) no canto de baixo à ESQUERDA, `[faixa | número | nome]`; o 1 à
+  DIREITA, espelhado (`.dir`, `row-reverse`) — pelo índice do time, que é a posição no placar (vale depois da troca de lado do
+  intervalo, no online e com o humano visitante no TM). A faixa = a cor do placar daquele time (`times[t].cor`; sem ela, o
+  verde e o claro do CSS). Número branco, nome sem caixa alta com reticências; celular 15 px de altura, letra de 11 px, a 8 px
+  da borda e 3 px da base, até 88 px (≤ 600 px de largura) / 120 px e nunca além da largura livre do canto (`ajustarBaixo` →
+  `--nome-livre-esq/dir`, a ≥ 4 px de todo círculo e ≥ 8 do minimapa ligado; < 56 px → `html.nome-sem-lugar-esq/dir`, some);
+  PC 18 px, letra de 12, a 14 px dos cantos, até 200 px (e sem chegar ao minimapa do meio). `pointer-events: none`. Escreve no
+  DOM só quando muda (`textContent`, nunca HTML). Cara do TM: `html.tm .nome-condutor` (Inter TM, o cartão do TM).
+- **Quando** (`main.js marcarCondutor(agoraMs)`, sem projetar nada): com `mundo.posse` (`NOME_SEGURA_MS` 800, `NOME_VOO_MS`
+  3000) na partida e no Modo Livre (`mundo.times`), fora da disputa (`mundo.disputa`), dos prints, das cenas (gol, cartão,
+  substituição, intervalo/pós-jogo), do replay, do pré-jogo e do `partida.estado` 'intervalo'/'fim'; nos treinos não aparece
+  (sem `mundo.times`). Bola solta: o último dono fica apagado (opacidade 0,6) enquanto ela voa num passe/chute (`mundo.voo`,
+  até 3 s) ou 0,8 s no resto, e então some; escondido, só volta depois de 0,8 s (nada de piscar a cada passe). Um rótulo por
+  vez. CSS: some nas 4 camadas (`html.em-*`), com `fim-faixa`, `modo-penaltis`, `modo-prints`, `sem-hud` e sem lugar; no PC,
+  com a dica de teclas na tela (`html.dica-visivel` e `--dica-w`, ligados em `mostrarDica` e a classe tirada no `animationend`
+  do `#dica`) o nome da esquerda fica na mesma linha, à DIREITA dela (em cima dela, como a especificação propunha, ele
+  encostava 8 px na faixa ENTRA/SAI do jogo, que mora logo acima: `teste-substituicao-tela` T8); em janela estreita (entre a
+  dica e o minimapa do meio cabem < 56 px, abaixo de ~690 px) ele some até a dica sumir (`html.nome-sem-lugar-dica`, `hud.js
+  nomeComDica`, refeito no resize). No `animationend` a dica ganha `.vista` (display:none) até o próximo `mostrarDica`: antes,
+  cada camada que a escondia (replay, comemoração, cena, substituição) recomeçava a animação na saída e ela voltava por 8 s
+  sem o `dica-visivel`, debaixo do nome (defeito da volta já existia na base; H13g liga e desliga `em-replay`/`em-cena`). O `.qps` (depuração) foi para o alto à direita também no PC. API de teste:
+  `__golaco.nomeCantoDeTeste(spec | 'nenhum' | null)` e `__golaco.nomeCantoEstado`.
+- **Orçamento** (`teste-hud-minimo`): o nome conta no H1 (o mais largo, forçado no canto da fase) e a régua mede pelo que se
+  vê a caixa `[data-caixa]` sem fundo, sem borda e sem sombra (a união dos filhos visíveis: o ≡ da partida, alvo de 44×44
+  transparente, conta o ícone de 22×22). H2: o nome é exceção escrita, só "número nome". Testes: `teste-entrada` (E-faixa),
+  `teste-hud-minimo` (H1, H2, H12a–f, H13a–g), `teste-controles` (o nome não pega toque; os layouts de 70–140% com os dois
+  nomes), `teste-tm-tela` 5b, `teste-substituicao-tela` T8, `teste-penaltis-tela` 1b.
+- **Medidas** (base 643e2a87 → PR, `teste-hud-minimo`, `teste-entrada`): faixa livre embaixo do arco 12,0 → 22,0 px; o
+  minimapa ligado no celular no alto → embaixo no meio (92×60 a 80% nas 6 telas medidas; em 568×320 com entalhe, 20 px fora do
+  meio); torcida atrás dele (844×390, 8 instantes) 5,4% → 0,0%; o nome: em cima do jogador → nos cantos, 19 → 0 voltas depois
+  de < 0,8 s escondido em 2 min (visível 43% → 95% do tempo: com a bola solta ele fica apagado), escritas no DOM 2913 → 207
+  (59 → 4,2 por nome); H1 no pior caso (568×320 com entalhe, defesa, o nome de 88 px): régua nova 10,16% sem o nome → 10,95% com
+  ele; régua de antes 10,98% → 11,77% — passa dos 11%: o H1 só passa com a régua nova (decisão do dono, FILA "Depende do dono" 14); PC (H5) 1,5% → 1,6%. `fecho-hash --diff` 0; `hash-igual` e `hash-partida` IGUAIS.
 
 ## Pedidos de 11/10 — regras e controles (contrato)
 
@@ -2068,9 +2139,10 @@ IGUAL; o hash Node = Chromium do `teste-carga` continua).
   bloco `--verde` (parado — intervalo e fim — o bloco fica `--verde-escuro` com letras `--texto`), "1º T +4" de 10 px; faixa de cor do time de 2 px de
   cima a baixo (casa verde depois da marca, visitante branca antes do relógio). Topo apertado (`hud.js ajustarTopo`):
   `topo-c1` tira a marca SÓ nos treinos e só se sem ela ainda encostar; `topo-c3` tira o "1º T"; `topo-c4` aperta só os
-  espaços (as fontes ficam nos mínimos do H10); depois o minimapa sai do meio e encosta à direita do placar (como antes).
-  Na PARTIDA o `topo-c3` vem por último: o "1º T +4", o "Intervalo" e o "Fim" só saem se nem com o minimapa ao lado couber
-  (contraprova de 13/10). O topo também se refaz quando os gols mudam de número de dígitos (9 → 10).
+  espaços (as fontes ficam nos mínimos do H10). Na PARTIDA o `topo-c3` vem por último (c1 → c2 → c4 → c3): o "1º T +4", o
+  "Intervalo" e o "Fim" são os últimos a sair (contraprova de 13/10). O topo também se refaz quando os gols mudam de número
+  de dígitos (9 → 10). Desde os itens 59 e 60 (seção "Faixa de baixo") o minimapa não mora mais no topo: saiu o passo que o
+  encostava à direita do placar (`mapaAoLado`) e, na partida, o topo é só placar e menu (nada encosta nas telas medidas).
 - **`hud.js`**: `definirTimes([{sigla, nome, escudo}])` — `escudo` = id do elenco (`main.js timesDoMundo`: `e.id`; treino:
   `golaco`/`ventania`); escreve sigla, o `href` do `<use>` (id desconhecido → o do treino) e o `aria-label` do time (o nome
   só para leitor de tela: nenhum texto novo na tela; cada `.placar-time` é `role="img"` — num `<span>` sem papel o nome
@@ -2083,7 +2155,8 @@ IGUAL; o hash Node = Chromium do `teste-carga` continua).
   contraste ≥ 4,5:1, nessa ordem), altura ≤ 24 px (PC ≤ 26) e altura e área menores que as de antes (`PLACAR_ANTES`) e que a
   referência (248×29 px), números ≥ 14 px, siglas ≥ 11, "1º T +4" ≥ 10, escudos ≥ 12, peças sem sobrepor e dentro da barra,
   e com o minimapa ligado o placar dos acréscimos não encosta no minimapa nem no menu, mantém o "1º T +4" e, com gols 10-9,
-  continua sem encostar; no treino de ataque com o minimapa e o painel nada encosta e a marca fica; a árvore de
+  continua sem encostar (desde os itens 59 e 60 o minimapa fica embaixo: o caso continua no teste e passa com folga; o
+  minimapa embaixo é medido no H12); no treino de ataque com o minimapa e o painel nada encosta e a marca fica; a árvore de
   acessibilidade tem "Golaço FC" e "Ventania FC" (contraprova de 13/10). `--so-placar` roda só essa parte
   (sem os 2 min de jogo).
 

@@ -43,7 +43,8 @@
     </symbol>
   </svg>
 
-  <!-- HUD fixo: placar, velocidade e modo (treinos), minimapa (opção da pausa), força do passe/chute, avisos.
+  <!-- HUD fixo: placar, velocidade e modo (treinos), minimapa (opção da pausa) e o nome do jogador com a bola na faixa de
+       baixo, força do passe/chute, avisos.
        Tela limpa (dono, 11/10): na partida, placar compacto de TV + menu só com o ícone (tools/teste-hud-minimo.mjs).
        Placar (dono, 12/10: "quero o placar assim, tem que ser algo menor e mais com a nossa cara"): uma barra só, no canto
        de cima à esquerda — marca do GOLAÇO | cor + escudo + sigla da casa | placar | sigla + escudo + cor do visitante |
@@ -78,7 +79,14 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
     </button>
 
+    <!-- minimapa (opção da pausa): embaixo no meio, entre o analógico e os botões no celular (item 59, dono 23/10: "o campinho
+         que está lá em cima tem que ficar lá embaixo"; o lugar e o tamanho vêm do hud.js ajustarBaixo) -->
     <canvas id="minimapa" class="minimapa" data-caixa="minimapa" role="img" aria-label="Minimapa do campo"></canvas>
+
+    <!-- o nome do jogador com a bola (dono, 17/10 e 23/10: "fica tapando e atrapalhando o jogo"): nos cantos de baixo, o do
+         time da esquerda do placar à esquerda e o da direita à direita — a exceção escrita à "sem narração": só número e nome
+         (main.js marcarCondutor → hud.js nomeCanto) -->
+    <div id="nome-condutor" class="nome-condutor" data-caixa="nome" aria-hidden="true" hidden><i class="nc-cor"></i><b class="nc-num"></b><span class="nc-nome"></span></div>
 
     <div id="carga" class="carga" aria-hidden="true">
       <div class="carga-barra"><i id="carga-nivel"></i></div>
