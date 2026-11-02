@@ -1,6 +1,6 @@
 // Bolas paradas no estilo FIFA na tela (pedido do dono, 16/10; carregado SOB DEMANDA pelo main.js na 1ª bola parada da
 // partida: fora do download inicial). Contrato "Cobrança mirada e câmera da bola parada" no CONTRATOS.md; pesquisa em
-// PESQUISA-ETAPA4.md §12 (e §12.6, item 65). Só lê o mundo (o hash não muda).
+// PESQUISA-ETAPA4.md §12 (e §12.1, item 65). Só lê o mundo (o hash não muda).
 //  - Câmera atrás do cobrador (escanteio, tiro livre, tiro de meta e pênalti do humano; pênalti contra): o plano em
 //    render/plano-bola-parada.js (puro) — no escanteio, alta (item 66: a área inteira grande no quadro).
 //  - A mira da cobrança (item 65, dono 23/10: "tem que estar com a cara do Total Match, alguma coisa mais minimalista"): a
@@ -22,16 +22,18 @@ import { preverMira, desenhoDaMira } from '../mira-linha.js';
 
 const TIPOS_CAM = ['escanteio', 'tiroLivre', 'tiroDeMeta', 'penalti'];
 
-// os chevrons do gesto (item 65): 5×9 px, traço de 2 px, a 7 px da borda do círculo, na altura do centro; verde do TM com o
-// botão solto e preto do TM no verde do .ativo; o lado do arrasto (data-curva no botão) em α 1, o outro em 0,35
+// os chevrons do gesto (item 65): ~4×8,5 px (um quadrado de 6 px girado com o traço de 2 px em dois lados), perto da borda do
+// círculo e 9 px acima do centro, ao lado do ícone (o nome do botão fica logo abaixo do centro e, nos botões pequenos, ocupa
+// quase toda a largura: teste-hud-minimo H9c, ≥ 1 px dele e ≥ 2 px da borda); verde do TM com o botão solto e preto do TM no
+// verde do .ativo; o lado do arrasto (data-curva) em α 1, o outro em 0,35
 const CSS = `
 html.mira-visivel .minimapa { display: none; }
 .toque.curva-arrasto .btn-chute::before, .toque.curva-arrasto .btn-chute::after,
 .toque.curva-arrasto .btn-lancamento::before, .toque.curva-arrasto .btn-lancamento::after {
-  content: ''; position: absolute; top: 50%; width: 6px; height: 6px; margin-top: -4px; box-sizing: border-box; pointer-events: none;
+  content: ''; position: absolute; top: 50%; width: 6px; height: 6px; margin-top: -12px; box-sizing: border-box; pointer-events: none;
   border: solid var(--tm-verde, #22c55e); filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.7)); }
-.toque.curva-arrasto .btn-chute::before, .toque.curva-arrasto .btn-lancamento::before { left: 8px; border-width: 0 0 2px 2px; transform: rotate(45deg); }
-.toque.curva-arrasto .btn-chute::after, .toque.curva-arrasto .btn-lancamento::after { right: 8px; border-width: 2px 2px 0 0; transform: rotate(45deg); }
+.toque.curva-arrasto .btn-chute::before, .toque.curva-arrasto .btn-lancamento::before { left: 7px; border-width: 0 0 2px 2px; transform: rotate(45deg); }
+.toque.curva-arrasto .btn-chute::after, .toque.curva-arrasto .btn-lancamento::after { right: 7px; border-width: 2px 2px 0 0; transform: rotate(45deg); }
 .toque.curva-arrasto .btn-toque.ativo::before, .toque.curva-arrasto .btn-toque.ativo::after { border-color: #050807; filter: none; }
 .toque.curva-arrasto .btn-toque[data-curva="d"]::before, .toque.curva-arrasto .btn-toque[data-curva="e"]::after { opacity: 0.35; }`;
 
@@ -48,8 +50,8 @@ export const MIRA_DESENHO = {
   verde: { miolo: [2.5, 0.0065], contorno: [1, 0.002] },
   aa: 0.75,
   // o arco da curva: 28° por degrau (0,25), centrado na horizontal, do lado da curva; raio = max(1,6 × o raio da bola na
-  // tela, 0,024·H) px; um ponto a cada 7°
-  arco: { grausPorDegrau: 28, raioBola: 1.6, raioTela: 0.024, passoGraus: 7 },
+  // tela, 0,026·H) px — ≥ 4 px de arco por degrau também em 568×320 (com 0,024·H, 3,75 px); um ponto a cada 7°
+  arco: { grausPorDegrau: 28, raioBola: 1.6, raioTela: 0.026, passoGraus: 7 },
   // o anel do alvo: o raio da marca de queda (render/marcas.js), no gramado
   anel: { raio: 0.9, lados: 32, y: 0.03 },
   acende: 0.15, // s até a linha acender (some na hora no chute)
