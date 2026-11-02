@@ -98,7 +98,9 @@
 //     de quem não tocou a bola quando o outro tocou (nas duas ordens e com os times trocados); D12 a montagem do tiro livre
 //     com o deslizante ainda no carrinho (≥ 12 faltas do carrinho): a bola posta nunca dentro do corpo desenhado de quem está
 //     no carrinho e ninguém do time que defende no carrinho a < 9,15 m dela, da montagem até a cobrança (partida.js
-//     tirarCarrinhos: deitado, ele pula a paredeParada).
+//     tirarCarrinhos: deitado, ele pula a paredeParada); D13 um desfecho só por carrinho, pelo passo inteiro: o tropeço na
+//     perna parada depois da parada dá a falta sem o 'fora' antes, e sem ninguém perto o 'fora' sai quando a janela do homem
+//     fecha (tS + 0,7 s).
 //  F1 a mesma semente e as mesmas entradas, com carrinhos: o mesmo hash em 2 rodadas. F2 os sorteios do m.rng por ORIGEM (um
 //     Proxy que lê a pilha): 0 do carrinho sem contato no homem (também na partida, e o bloqueio sorteado nunca com o
 //     deslizante); com contato exatamente 1 da chance (0 < p < 1) + os do cartão — nos montados e nos 36 casos do estado 0
@@ -2391,6 +2393,45 @@ else {
     reg('D12 a montagem do tiro livre com o deslizante ainda no carrinho: a bola posta fora do corpo de quem está no carrinho; ninguém do time que defende no carrinho dentro dos 9,15 m',
       `${faltas} faltas do carrinho, ${casos} com ele no carrinho na montagem: a bola dentro em ${dentro}, no carrinho na restrição em ${naRestricao}; menor folga ${Number.isFinite(pior) ? f3(pior) : '– (ninguém no carrinho)'} m${piorEx && pior < 0 ? ` (${piorEx})` : ''}`,
       '≥ 12 casos; 0; 0', casos >= 12 && dentro === 0 && naRestricao === 0);
+  }
+
+  // ---- D13: um DESFECHO só por carrinho (CONTRATOS "Carrinho", B.4/B.5: 'fora' OU 'falta'), pelo passo inteiro (sim.js:
+  // fimDoDeslize no passo 5, contatosHomemCarrinho no fim). O carrinho que erra, montado 0,05–0,1 s antes da parada (tS), e o
+  // adversário (o humano do time 1, correndo) entrando de lado na perna parada (o tropeço, Regra 12.1: a janela do homem vai
+  // até tS + 0,7 s); e o mesmo sem ninguém perto: o 'fora' sozinho, quando a janela fecha (o começo do levantar)
+  {
+    const r = [];
+    for (const [antes, vo, lat] of [[0.08, 3.5, 1.2], [0.1, 3.0, 1.0], [0.08, 5, 1.6], [0.08, 3.5, 99]]) {
+      const w = P.criarPartida({ semente: 3201, minutosPorTempo: 4, humanos: [0, 1] });
+      w.partida.estado = 'jogo'; w.parada = null; w.golTick = null; w.voo = null; w.naMao = null; w.posse = null; w.faltaPendente = null; w.eventos = [];
+      w.ataca = { 0: 1, 1: -1 }; w.tick = 1000; w.partida.tick0Tempo = 0;
+      let nn = 0;
+      for (const o of w.jogadores) {
+        if (o.posicao === 'GOL') P.teleportar(o, o.time === 0 ? -51 : 51, 30, o.time === 0 ? 0 : Math.PI);
+        else P.teleportar(o, o.time === 0 ? -48 : -44, -32 + (nn++ % 11) * 2.5, 0);
+      }
+      Object.assign(w.bola, BL.criarBola(30, 25));
+      const j = linhaDe(w, 0, 0), o = linhaDe(w, 1, 0);
+      AC.assumirControle(w, 0, j); AC.assumirControle(w, 1, o);
+      P.teleportar(j, 0, 0, 0); j.vx = 5; j.vz = 0; j.quadril = CC.hPe; j.imag = 1; j.ix = 1; j.iz = 0;
+      const c = K.montarCarrinho(j, w.tick, { bola: null, prever: null });
+      c.tick0 = w.tick - Math.round((c.tS - antes) / PASSO); c.fim = c.tick0 + Math.round((c.tS + c.tChao) / PASSO);
+      j.carrinho = c;
+      seguirQuadro(w, j);
+      const qS = K.quadroCarrinho(c, c.tS, K.novoQuadroCarrinho()), T = qS.to[c.frente], Pp = qS.po[c.frente];
+      P.teleportar(o, (T.x + Pp.x) / 2, (T.z + Pp.z) / 2 - lat, Math.PI / 2); o.vz = vo;
+      const ev = [];
+      for (let k = 0; k < 150 && j.carrinho && w.partida.estado === 'jogo'; k++) {
+        for (const e of P.passoPartida(w, { 0: { x: 0, z: 0, botoes: 0 }, 1: { x: 0, z: 1, botoes: B.CORRER } })) {
+          if (e.tipo === 'dividida' && e.id === j.id) ev.push({ m: e.motivo, t: (w.tick - c.tick0) * PASSO });
+        }
+      }
+      const fimJanela = c.tS + c.tChao - CC.levantar, contato = lat < 50;
+      const ok = ev.length === 1 && (contato ? ev[0].m === 'falta' : ev[0].m === 'fora' && Math.abs(ev[0].t - fimJanela) <= PASSO + 1e-9);
+      r.push([`${contato ? `a ${f2(vo)} m/s na perna parada` : 'ninguém perto'}`, ok, ev.map(e => `${e.m} @${f2(e.t)} s`).join(', ') || 'nenhum']);
+    }
+    reg('D13 um desfecho só por carrinho: a falta do tropeço depois da parada sem o \'fora\' antes; sem ninguém, o \'fora\' quando a janela fecha (tS + 0,7 s)',
+      r.map(x => `${x[0]}: ${x[2]}`).join('; '), 'um: falta / fora no fim da janela', r.every(x => x[1]));
   }
 
   // ---- F2: os sorteios por ORIGEM (o m.rng embrulhado: cada sorteio pela pilha). Sem contato no homem: 0 do carrinho (também na

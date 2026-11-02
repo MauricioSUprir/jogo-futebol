@@ -593,15 +593,17 @@ function tocarBolaCarrinho(m, j, s, u, k, i, bx0, by0, bz0, d0) {
   }
 }
 
-/** O fim do deslize sem tocar a bola (sim.js, depois da bola de cada passo): `dividida {ganhou: false, motivo: 'fora',
- * carrinho}` no passo em que o quadro passa da parada (tS) — só com a bola viva; quem fez falta no homem já teve o dele
- * (`motivo: 'falta'`, contatosHomemCarrinho). A súmula e o autor do gol ignoram. */
+/** O carrinho que não tocou a bola (sim.js, depois da bola de cada passo): `dividida {ganhou: false, motivo: 'fora',
+ * carrinho}` quando a janela do homem FECHA (janelaHomem: o começo do levantar, 0,7 s depois da parada no erro) — no passo
+ * em que o fim do passo já não confere o contato (contatosHomemCarrinho viu o tick de agora pela última vez). Um desfecho
+ * só por carrinho: a perna parada no caminho depois da parada ainda pode fazer a falta (o tropeço, `motivo: 'falta'`) e
+ * soltar o 'fora' na parada (tS) dava os dois. Só com a bola viva. A súmula e o autor do gol ignoram. */
 export function fimDoDeslize(m) {
   let viva = null;
   for (const j of m.jogadores) {
     const c = j.carrinho;
     if (!c || c.bola >= 0 || (c.homem && c.homem.falta)) continue;
-    if (!(tempoCarrinho(c, m.tick) < c.tS && tempoCarrinho(c, m.tick + 1) >= c.tS)) continue;
+    if (!(janelaHomem(c, tempoCarrinho(c, m.tick)) && !janelaHomem(c, tempoCarrinho(c, m.tick + 1)))) continue;
     if (viva === null) viva = vivaCarrinho(m);
     if (!viva) return;
     m.eventos.push({ tipo: 'dividida', id: j.id, ganhou: false, motivo: 'fora', carrinho: true });
