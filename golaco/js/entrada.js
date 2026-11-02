@@ -173,6 +173,13 @@ export const BOTOES_TOQUE = [
 // diâmetro de cada vaga (px CSS com tamanho 100%); nada fica abaixo de 48 px
 const DIAM = { grande: 104, a: 80, b: 72, c: 76, d: 68, e: 68, correr: 76 };
 const MIN_ALVO = 48;
+/**
+ * A faixa de baixo (itens 59 e 60 da FILA, dono 23/10: o minimapa embaixo no meio e o nome do jogador com a bola nos cantos
+ * de baixo — "a faixa de baixo simétrica"): px livres embaixo do arco de botões e do analógico em repouso, a partir da borda
+ * segura = 3 de margem + 15 do nome + 4 de folga. O analógico em repouso já ficava a 22 px; o arco ficava a 12–14 px (sobe
+ * 8–10 px de 70 a 100% e nada a 120% ou mais). Fora do config.js (que está no fecho do hash): é só desenho.
+ */
+export const FAIXA_BAIXO = 22;
 
 function lerAjustes() {
   try {
@@ -235,9 +242,11 @@ export function calcularLayoutToque(W, H, sa, tamanho = 1, vagas = ['grande', 'a
   const diam = v => Math.max(MIN_ALVO, Math.round(DIAM[v] * k));
   const folga = Math.max(10, Math.round(13 * k));
   const borda = Math.max(12, Math.round(18 * k));
+  // embaixo, a faixa livre (FAIXA_BAIXO: o nome do condutor nos cantos e o minimapa no meio); dos lados e em cima, a borda
+  const bordaBaixo = Math.max(borda, FAIXA_BAIXO);
   const out = {};
   const Dg = diam('grande'), rg = Dg / 2;
-  const cx = W - sa.r - borda - rg, cy = H - sa.b - borda - rg;
+  const cx = W - sa.r - borda - rg, cy = H - sa.b - bordaBaixo - rg;
   out.grande = { x: cx, y: cy, d: Dg };
   // 1º anel: ângulo matemático (y para cima) começando à esquerda, um pouco abaixo, subindo
   let ant = null;
@@ -270,7 +279,7 @@ export function calcularLayoutToque(W, H, sa, tamanho = 1, vagas = ['grande', 'a
     const D = diam(v), r = D / 2;
     const pos = (R2, a) => ({
       x: Math.max(sa.l + borda + r, Math.min(W - sa.r - borda - r, cx + R2 * Math.cos(a))),
-      y: Math.max(sa.t + borda + r, Math.min(H - sa.b - borda - r, cy - R2 * Math.sin(a))),
+      y: Math.max(sa.t + borda + r, Math.min(H - sa.b - bordaBaixo - r, cy - R2 * Math.sin(a))),
       d: D,
     });
     const livre = q => Object.values(out).every(o => Math.hypot(o.x - q.x, o.y - q.y) >= (o.d + D) / 2 + folga * 0.5);
@@ -486,16 +495,20 @@ export function criarEntrada(opc = {}) {
     pino.style.transform = `translate(${vx * r}px, ${-vy * r}px)`;
   }
   let ultimoPos = null;     // último layout dos botões (todas as vagas, das duas fases)
-  function baseRepouso() {
-    // posição de descanso (só a dica visual; o analógico é flutuante): canto inferior esquerdo,
-    // dentro da área segura. Tela estreita em pé com botões grandes: sobe o que precisar para
-    // não encostar em nenhuma vaga do arco (das duas fases: não pula quando a posse muda)
-    if (!zona) return;
-    const z = zona.getBoundingClientRect();
-    const r = raioBase();
+  /**
+   * Posição de descanso do analógico ({x, y, r} px CSS; só a dica visual — o analógico é flutuante): canto inferior
+   * esquerdo, dentro da área segura, com a faixa de baixo livre embaixo (FAIXA_BAIXO). Tela estreita em pé com botões
+   * grandes: sobe o que precisar para não encostar em nenhuma vaga do arco (das duas fases: não pula quando a posse muda).
+   * Com os controles escondidos por uma camada (a zona mede 0×0), a zona é a do CSS: a metade esquerda, de sa.t + 70 até o
+   * fim (o hud.js mede o minimapa e os nomes contra isto também nessas horas).
+   */
+  function repousoAnalogico() {
+    const zr = zona ? zona.getBoundingClientRect() : null;
     const sa = margensSeguras();
+    const z = zr && zr.width > 0 && zr.height > 0 ? zr : { left: 0, top: sa.t + 70, bottom: window.innerHeight };
+    const r = raioBase();
     const x = Math.max(z.left, sa.l) + r + 26;
-    let y = z.bottom - sa.b - r - 22;
+    let y = z.bottom - sa.b - r - FAIXA_BAIXO;
     if (ultimoPos) {
       for (let volta = 0, mexeu = true; mexeu && volta < 8; volta++) {
         mexeu = false;
@@ -508,7 +521,12 @@ export function criarEntrada(opc = {}) {
         }
       }
     }
-    posicionarBase(x, Math.max(y, z.top + r), false);
+    return { x, y: Math.max(y, z.top + r), r };
+  }
+  function baseRepouso() {
+    if (!zona) return;
+    const p = repousoAnalogico();
+    posicionarBase(p.x, p.y, false);
     posicionarPino(0, 0);
   }
   function limitarOrigem(x, y) {
@@ -805,6 +823,15 @@ export function criarEntrada(opc = {}) {
     get cobrancaPenalti() { return penalti; },
     /** Reaplica no DOM a fase visível (testes que mexem nas classes à mão). */
     sincronizarFase() { trocarFaseSePuder(true); },
+    /**
+     * A geometria dos controles de toque para a faixa de baixo (hud.js: o minimapa embaixo no meio e os nomes nos cantos;
+     * itens 59 e 60): {W, H, sa, botoes: [{x, y, d}] de TODAS as vagas posicionadas (as duas fases, PEGAR, TROCAR da mão,
+     * CURVA, estilos do pênalti, CORRER — nada pula na troca de posse), analogico: {x, y, r} em repouso} ou null (sem toque).
+     */
+    layoutToque() {
+      if (!raizToque || raizToque.hidden || !ultimoPos) return null;
+      return { W: window.innerWidth, H: window.innerHeight, sa: margensSeguras(), botoes: Object.values(ultimoPos), analogico: zona ? repousoAnalogico() : null };
+    },
     /** Ações pendentes (recomecar, maquina, marcador, camera, ajuda, pausa, qps). */
     consumirAcoes() { return fila.length ? fila.splice(0) : SEM_ACOES; },
     empurrarAcao(a) { emitir(a); },
