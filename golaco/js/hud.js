@@ -101,8 +101,10 @@ export function criarHud(opc) {
     acoes: $('menu-acoes'), modos: $('menu-modos'), estadoModo: $('estado-modo'), continuar: $('btn-continuar'),
     reiniciarPartida: $('btn-reiniciar-partida'), dica: $('dica'), replay: $('replay'), replayFaixa: $('replay-faixa'),
     comemoracao: $('comemoracao'), substituicao: $('substituicao'), faixaSub: $('faixa-subst'), cena: $('cena'),
-    terco: $('terco'), chipMapa: $('chip-minimapa'),
+    terco: $('terco'), nome: $('nome-condutor'), chipMapa: $('chip-minimapa'),
   };
+  const nomeEl = el.nome ? { cor: el.nome.querySelector('.nc-cor'), num: el.nome.querySelector('.nc-num'), nome: el.nome.querySelector('.nc-nome') } : null;
+  let nomeChave = null; // time|num|nome|apagado escrito no DOM (null = escondido): só escreve quando muda
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
   let ultimoHud = -1, tercoTipo = null;
   const ultimoTexto = { vel: '', modo: '', posicao: null, forte: false };
@@ -130,6 +132,8 @@ export function criarHud(opc) {
         el.timesPlacar[i].setAttribute('aria-label', t.nome ?? t.sigla);
       }
     });
+    // o nome do condutor escreve a cor do time de novo (a faixa da cor é a do placar)
+    nomeChave = nomeChave === null ? null : '';
     // cores do minimapa: as do time (Total Match) ou as de sempre
     const m0 = times[0]?.mapa, m1 = times[1]?.mapa;
     Object.assign(COR_MAPA, m0 && m1 ? { t0: m0.lin, t0gol: m0.gol, t1: m1.lin, t1gol: m1.gol } : COR_MAPA_PADRAO);
@@ -352,13 +356,19 @@ export function criarHud(opc) {
   window.addEventListener('resize', () => requestAnimationFrame(ajustarTopo));
   if (window.visualViewport) window.visualViewport.addEventListener('resize', () => requestAnimationFrame(ajustarTopo));
 
-  /** A dica de teclas do PC aparece de novo e some 8 s depois (CSS .dica: animação que começa ao ser reposta). */
+  /**
+   * A dica de teclas do PC aparece de novo e some 8 s depois (CSS .dica: animação que começa ao ser reposta). Enquanto ela
+   * está na tela, html.dica-visivel (o nome da esquerda sobe para cima dela; o fim da animação tira).
+   */
   function mostrarDica() {
     if (!el.dica) return;
     el.dica.style.animation = 'none';
     void el.dica.offsetWidth;
     el.dica.style.animation = '';
+    raiz.classList.add('dica-visivel');
   }
+  // (só o FIM da animação: a reposta acima cancela a anterior, e o cancelamento chega depois da classe nova)
+  el.dica?.addEventListener('animationend', e => { if (e.target === el.dica) raiz.classList.remove('dica-visivel'); });
   /** Itens do menu pelo modo (partida × treinos) e pelo fim de jogo. */
   function aplicarModoNoMenu() {
     // a disputa de pênaltis (modo Pênaltis) é um jogo como a partida: o topo e a pausa dela (data-so "partida penaltis":
@@ -846,6 +856,35 @@ export function criarHud(opc) {
     },
     /** Recalcula o topo do HUD e a faixa de baixo (os controles de toque apareceram ou a tela mudou). */
     ajustarTopo,
+    /**
+     * O nome do jogador com a bola nos cantos de baixo (item 60, dono 23/10; a exceção escrita à "sem narração": só número e
+     * nome): n = null (some) | {time: 0|1, num, nome, apagado} — o time 0 (à esquerda no placar) no canto de baixo à
+     * esquerda, o 1 à direita, a faixa da cor do time no placar; apagado = a bola solta (main.js marcarCondutor). Só escreve
+     * no DOM quando muda (texto puro, nunca HTML).
+     */
+    nomeCanto(n) {
+      if (!el.nome || !nomeEl) return;
+      const chave = n ? `${n.time === 1 ? 1 : 0}|${n.num ?? ''}|${n.nome ?? ''}|${n.apagado ? 1 : 0}` : null;
+      if (chave === nomeChave) return;
+      nomeChave = chave;
+      if (!n) { el.nome.hidden = true; return; }
+      const t = n.time === 1 ? 1 : 0;
+      el.nome.classList.toggle('dir', t === 1);
+      el.nome.classList.toggle('apagado', !!n.apagado);
+      const num = n.num != null ? String(n.num) : '';
+      if (nomeEl.num.textContent !== num) nomeEl.num.textContent = num;
+      const nome = String(n.nome ?? '');
+      if (nomeEl.nome.textContent !== nome) nomeEl.nome.textContent = nome;
+      // a cor da faixa: a do placar daquele time (o Total Match manda a do time; sem ela, a do CSS: verde × claro)
+      const cor = times[t]?.cor ?? '';
+      if (nomeEl.cor.style.background !== cor) nomeEl.cor.style.background = cor;
+      el.nome.hidden = false;
+    },
+    /** O nome dos cantos agora (testes): {visivel, lado: 'esq' | 'dir' | null, texto, apagado}. */
+    get nomeCantoEstado() {
+      const v = !!el.nome && !el.nome.hidden;
+      return { visivel: v, lado: v ? (el.nome.classList.contains('dir') ? 'dir' : 'esq') : null, texto: v ? `${nomeEl.num.textContent} ${nomeEl.nome.textContent}`.trim() : '', apagado: v && el.nome.classList.contains('apagado') };
+    },
     /** Estado das opções no menu. */
     definirEstado(e) {
       // itens do menu por modo (partida × treinos) e pelo fim de jogo

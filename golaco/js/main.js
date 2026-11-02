@@ -1176,31 +1176,41 @@ function projetar(x, y, z, out) {
   return out;
 }
 const _pt = { x: 0, y: 0, atras: false };
-// o NOME em cima do jogador com a bola (dono, 17/10): o nome de camisa acima da cabeça, só com a bola no pé, no jogo
-// (fora do pré-jogo, das cenas e do replay); um elemento só, fora do #hud (só desenho: o hash não muda)
-let elNome = null, nomeId = null;
-const _ptNome = { x: 0, y: 0, atras: false };
-function marcarCondutor() {
-  if (!elNome) {
-    elNome = document.createElement('div');
-    elNome.id = 'nome-condutor';
-    elNome.setAttribute('aria-hidden', 'true');
-    document.body.append(elNome);
-  }
-  const id = mundo.posse;
-  const e = id != null ? estJ.get(id) : null;
-  const livre = !!e && !cenaGol && !cenaSub && !cenaCartao && !cenaFim && !(diretor && diretor.ativo) && !(prejogo && prejogo.ativo) && !PRINTS;
-  if (livre) projetar(lerp(e.x0, e.x1, alfa), 2.2, lerp(e.z0, e.z1, alfa), _ptNome);
-  if (!livre || _ptNome.atras) { if (!elNome.hidden) elNome.hidden = true; return; }
-  if (nomeId !== id) {
-    // a caixa: número + nome da camisa (texto puro, nunca HTML)
-    const f = fichaDe(id), num = document.createElement('b'), nome = document.createElement('span');
-    num.className = 'nc-num'; num.textContent = f && f.num != null ? String(f.num) : '';
-    nome.className = 'nc-nome'; nome.textContent = f ? (f.camisa ?? f.nome ?? '') : '';
-    elNome.replaceChildren(...(num.textContent ? [num] : []), nome); nomeId = id;
-  }
-  elNome.style.transform = `translate(${_ptNome.x.toFixed(1)}px, ${_ptNome.y.toFixed(1)}px) translate(-50%, -100%)`;
-  if (elNome.hidden) elNome.hidden = false;
+// O NOME do jogador com a bola (dono, 17/10; item 60, 23/10: "fica tapando e atrapalhando o jogo"): nos CANTOS de baixo do
+// #hud — o do time da esquerda do placar (o 0) à esquerda, o da direita à direita (hud.js nomeCanto) —, número e nome da
+// camisa, só na partida (e no Modo Livre), fora do pré-jogo, das cenas, do replay, do intervalo e do fim, dos treinos e da
+// disputa de pênaltis. Com a bola solta (passe, chute, dividida) o último fica APAGADO enquanto ela voa num passe/chute (até
+// NOME_VOO_MS) ou NOME_SEGURA_MS no resto, e só então some; escondido, volta só depois de NOME_SEGURA_MS (nada de piscar a
+// cada passe: na base eram 22 voltas em < 0,8 s em 2 min). Só desenho: o hash não muda.
+const NOME_SEGURA_MS = 800, NOME_VOO_MS = 3000;
+// nomeVisto: {id, time, ultimo (o último quadro com a bola no pé dele), voo (a bola saiu num passe/chute)}; nomeOculto: desde
+// quando está escondido; nomeForcado: testes
+let nomeVisto = null, nomeOculto = -Infinity, nomeForcado = null, nomeNaTela = false;
+const nomeFicha = { id: null, f: null }; // a ficha do último (sem procurar a cada quadro)
+function marcarCondutor(agoraMs) {
+  if (nomeForcado) { hud.nomeCanto(nomeForcado === 'nenhum' ? null : nomeForcado); return; }
+  const est = mundo.partida?.estado;
+  const pode = !!mundo.times && !mundo.disputa && !PRINTS && !cenaGol && !cenaSub && !cenaCartao && !cenaFim
+    && !(diretor && diretor.ativo) && !(prejogo && prejogo.ativo) && est !== 'intervalo' && est !== 'fim';
+  const j = pode && mundo.posse != null ? jogadorPorId(mundo, mundo.posse) : null;
+  let mostra = null;
+  if (j) {
+    nomeVisto = { id: j.id, time: j.time, ultimo: agoraMs, voo: null };
+    mostra = { id: j.id, time: j.time, apagado: false };
+  } else if (pode && nomeVisto) {
+    // a bola solta: o último dono fica apagado (num passe ou chute, a viagem inteira até NOME_VOO_MS)
+    if (nomeVisto.voo === null) nomeVisto.voo = !!mundo.voo;
+    const solta = agoraMs - nomeVisto.ultimo;
+    if (solta <= NOME_SEGURA_MS || (nomeVisto.voo && mundo.voo && solta <= NOME_VOO_MS)) mostra = { id: nomeVisto.id, time: nomeVisto.time, apagado: true };
+    else nomeVisto = null;
+  } else nomeVisto = null;
+  // escondido há menos de NOME_SEGURA_MS: espera (o nome que some e volta logo é a "piscada")
+  if (mostra && !nomeNaTela && agoraMs - nomeOculto < NOME_SEGURA_MS) mostra = null;
+  if (mostra && nomeFicha.id !== mostra.id) { nomeFicha.id = mostra.id; nomeFicha.f = fichaDe(mostra.id); }
+  const f = mostra ? nomeFicha.f : null;
+  if (!f) { if (nomeNaTela) nomeOculto = agoraMs; nomeNaTela = false; hud.nomeCanto(null); return; }
+  nomeNaTela = true;
+  hud.nomeCanto({ time: mostra.time, num: f.num, nome: f.camisa ?? f.nome, apagado: mostra.apagado });
 }
 const _carga = { x: 0, y: 0, forca: 0, tipo: '' };
 const _queda = { x: 0, z: 0 };
@@ -1401,7 +1411,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   if (bp.tela) bp.tela.desenhar(cenaGol || cenaSub || cenaCartao || cenaFim ? null : mundo, cam.camera, dt, bp.linha);
   // (a câmera de jogo — a TV — sem cadeira 3D de perto: item 69)
   campo.atualizar(agoraMs / 1000, cam.camera, renderizar, cam.deJogo);
-  marcarCondutor();
+  marcarCondutor(agoraMs);
   torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
   const td0 = performance.now();
@@ -3894,6 +3904,17 @@ const api = {
    * laço escreve o de verdade de novo.
    */
   placarDeTeste(gols, rel) { if (gols) hud.placar(gols[0], gols[1]); if (rel !== undefined) hud.relogio(rel); },
+  /**
+   * O nome do jogador com a bola nos cantos de baixo, forçado (testes de layout, itens 59 e 60): spec = {time: 0|1, num,
+   * nome, apagado?} mostra esse (por cima do que o jogo mostraria), 'nenhum' esconde e null devolve ao jogo. Escreve já.
+   */
+  nomeCantoDeTeste(spec) {
+    nomeForcado = spec ?? null;
+    if (nomeForcado) hud.nomeCanto(nomeForcado === 'nenhum' ? null : nomeForcado);
+    else { nomeVisto = null; nomeOculto = -Infinity; nomeNaTela = false; hud.nomeCanto(null); }
+  },
+  /** O nome dos cantos agora (testes): {visivel, lado: 'esq' | 'dir' | null, texto, apagado}. */
+  get nomeCantoEstado() { return hud.nomeCantoEstado; },
   /** Escreve um modo/posição no painel do HUD já (testes de layout com o texto mais longo). */
   hudModo(texto, posicao = null) { hud.atualizar(performance.now(), 0, texto, false, posicao); },
   /** Mostra o aviso de um evento ({tipo, ...}) mesmo no modo de prints (conferência do HUD). */
