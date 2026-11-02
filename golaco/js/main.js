@@ -3061,13 +3061,15 @@ function resultadoAtualTM() {
 const FATIA_SIMULACAO = 30;
 let textoSimulando = '';
 function mostrarSimulando() {
+  // o relógio MM:SS do placar anda a cada pedaço simulado (item 32: os segundos), ANTES da saída pela faixa, que só muda com o
+  // minuto (o hud.relogio sai cedo e só escreve o que mudou). A disputa não tem relógio: o placar dela fica sem ele também
+  // enquanto simula
+  hud.relogio(mundo.disputa ? null : lerRelogio());
   const t = mundo.disputa ? textoPlacar() : `${minutoTM(mundo)}' · ${textoPlacar()}`;
   if (t === textoSimulando) return;
   textoSimulando = t;
   hud.faixa({ titulo: mundo.disputa ? 'Simulando o resto da disputa…' : 'Simulando o resto da partida…', placar: t });
   hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
-  // (a disputa não tem relógio: o placar dela fica sem ele também enquanto simula)
-  hud.relogio(mundo.disputa ? null : lerRelogio());
 }
 /**
  * "Simular o resto" (Total Match; contrato §5): fecha as cenas (pré-jogo, replay, comemoração, substituição, editor), a

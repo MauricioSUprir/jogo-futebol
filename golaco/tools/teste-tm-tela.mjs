@@ -10,6 +10,9 @@
 //   3  "Simular o resto": a faixa "Simulando o resto da partida…" com minuto e placar, a partida chega ao apito, a faixa do
 //      fim tem "Voltar ao Total Match", o resultado já está em localStorage["tm3d:resultado:<id>"] (formato do contrato,
 //      placar = o do mundo, posse somando 100).
+//   3b (item 32) Durante o "Simular o resto" o relógio MM:SS do placar é sempre o do mundo (≥ 20 leituras entre os pedaços
+//      da simulação, todas iguais à conta do relogio-placar.js; antes da correção a página só o reescrevia quando mudava o
+//      minuto da faixa) e termina em "Fim".
 //   4  "Voltar ao Total Match" (clique de verdade): o pai recebe 'tm3d:fim' com o MESMO resultado gravado.
 //   5  Celular 844×390 com toque, pedido B (Rumo ao Estrelato: o usuário é o visitante e controla SÓ o centroavante):
 //      humano 1, o controlado é o travado; TROCAR, GOLEIRO e o TROCAR da bola na mão escondidos; TROCAR/GOLEIRO apertados
@@ -133,6 +136,9 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
   meta(`2 PC: pausa do TM (Simular o resto${comTrava ? '' : ' e Editar time'}, Cenas da partida; sem Reiniciar nem os treinos${comTrava ? ' nem Editar time' : ''})`, listaItens(it),
     it.simular && it.editar === !comTrava && !it.reiniciar && it.modos && !it.treinos && !it.voltar);
   const tickSim0 = await fr.evaluate(() => window.__golaco.mundo.tick);
+  // 3b (item 32): a conta do texto do relógio (relogio-placar.js, a mesma do hud) carregada ANTES (as leituras do 3b ficam
+  // síncronas: nenhum pedaço da simulação entra entre ler o #relogio e ler o mundo)
+  await fr.evaluate(async () => { window.__textoRel = (await import('./js/relogio-placar.js')).textoRelogio; });
   const tSim0 = Date.now();
   await fr.click('#btn-simular-resto');
   let simTexto = null;
@@ -140,6 +146,22 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
     const t = await fr.evaluate(() => ({ titulo: document.getElementById('faixa-titulo')?.textContent, placar: document.getElementById('faixa-placar')?.textContent, vis: !document.getElementById('faixa').hidden }));
     if (t.vis && /Simulando/.test(t.titulo)) simTexto = `${t.titulo} ${t.placar}`;
     else await pg.waitForTimeout(50);
+  }
+  // 3b: enquanto simula, o #relogio é sempre o do mundo — o que a conta do relogio-placar.js dá para o estado da página
+  // (cada leitura entre dois pedaços da simulação; antes da correção a página só reescrevia o relógio quando mudava o minuto
+  // da faixa: os segundos ficavam parados até ~1 min de jogo)
+  const rel3b = { leituras: 0, iguais: 0, dif: [], textos: new Set() };
+  for (let i = 0; i < 4000; i++) {
+    const x = await fr.evaluate(() => {
+      const g = window.__golaco;
+      if (!g.tm.simulando) return null;
+      const r = g.estado().relogio;
+      return { visto: document.getElementById('relogio').textContent.trim(), esperado: r ? window.__textoRel(r).texto : '' };
+    });
+    if (!x) break;
+    rel3b.leituras++; rel3b.textos.add(x.visto);
+    if (x.visto === x.esperado) rel3b.iguais++; else if (rel3b.dif.length < 4) rel3b.dif.push(`"${x.visto}" ≠ "${x.esperado}"`);
+    await pg.waitForTimeout(20);
   }
   await esperar(fr, () => window.__golaco.mundo.partida.estado === 'fim' && !window.__golaco.tm.simulando);
   const tSim = (Date.now() - tSim0) / 1000;
@@ -153,6 +175,10 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
   meta('3 PC: Simular o resto → aviso com minuto e placar, apito, faixa com "Voltar ao Total Match", resultado gravado',
     `${fimInfo.tick - tickSim0} passos em ${tSim.toFixed(1).replace('.', ',')} s · aviso "${simTexto ?? 'não visto'}" · ${fimInfo.titulo} ${fimInfo.placar.join(' × ')} · botão "${fimInfo.botao}" (${fimInfo.cmd}) · gravado ${fimInfo.gravado ? 'sim' : 'não'}${igual ? '' : ' (≠ agora)'}${e3.length ? ' · ' + e3.join('; ') : ''}`,
     !!simTexto && /\d+' · /.test(simTexto) && fimInfo.titulo === 'Fim de jogo' && fimInfo.botao === 'Voltar ao Total Match' && fimInfo.cmd === 'voltar-tm' && !!fimInfo.gravado && igual && !e3.length);
+  const relFim = await fr.evaluate(() => document.getElementById('relogio').textContent.trim());
+  meta('3b PC (item 32): durante o "Simular o resto" o relógio MM:SS do placar é sempre o do mundo (não só na troca do minuto da faixa); no fim, "Fim"',
+    `${rel3b.iguais}/${rel3b.leituras} leituras iguais à conta do relogio-placar.js (${rel3b.textos.size} textos)${rel3b.dif.length ? ' — diferentes: ' + rel3b.dif.join(', ') : ''} · no fim "${relFim}"`,
+    rel3b.leituras >= 20 && rel3b.iguais === rel3b.leituras && relFim === 'Fim');
   await fr.click('#faixa-botao');
   await pg.waitForFunction(() => window.__msgs.some(m => m.tipo === 'tm3d:fim'), null, { timeout: 10000 }).catch(() => {});
   const m1 = await msgs(pg);
