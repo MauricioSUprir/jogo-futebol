@@ -1746,8 +1746,8 @@ tapando e atrapalhando o jogo" (60). Pesquisa e medidas em `PESQUISA-ESTADIO.md`
   minimapa ligado no celular no alto → embaixo no meio (92×60 a 80% nas 6 telas medidas; em 568×320 com entalhe, 20 px fora do
   meio); torcida atrás dele (844×390, 8 instantes) 5,4% → 0,0%; o nome: em cima do jogador → nos cantos, 19 → 0 voltas depois
   de < 0,8 s escondido em 2 min (visível 43% → 95% do tempo: com a bola solta ele fica apagado), escritas no DOM 2913 → 207
-  (59 → 4,2 por nome); H1 (a régua nova) 10,16% → 10,95% no pior caso (568×320 com entalhe, defesa, o nome de 88 px; com a régua
-  antiga seria ~11,7%); PC (H5) 1,5% → 1,6%. `fecho-hash --diff` 0; `hash-igual` e `hash-partida` IGUAIS.
+  (59 → 4,2 por nome); H1 no pior caso (568×320 com entalhe, defesa, o nome de 88 px): régua nova 10,16% sem o nome → 10,95% com
+  ele; régua de antes 10,98% → 11,77% — passa dos 11%: o H1 só passa com a régua nova (decisão do dono, FILA "Depende do dono" 14); PC (H5) 1,5% → 1,6%. `fecho-hash --diff` 0; `hash-igual` e `hash-partida` IGUAIS.
 
 ## Pedidos de 11/10 — regras e controles (contrato)
 

@@ -246,7 +246,7 @@ forte da faixa de baixo é a tela oficial do PES 2019.
   88 px de 568×320). Com a bola solta fica apagado (num passe ou chute a viagem inteira até 3 s, no resto 0,8 s) e,
   escondido, só volta depois de 0,8 s: em 2 min de jogo (844×390, semente 11) as voltas depois de < 0,8 s escondido foram de
   19 para 0 (o nome visível 43% → 95% do tempo) e as escritas no DOM de 2913 para 207.
-- **O orçamento** (H1): contado, o nome de 88 px estoura os 11% em 568×320 na defesa com a régua de antes (~11,7%). A régua
+- **O orçamento** (H1): contado, o nome de 88 px estoura os 11% em 568×320 na defesa com a régua de antes (11,77%; sem o nome, 10,98%). A régua
   passou a medir pelo que se vê a caixa sem fundo, sem borda e sem sombra (o ≡ da partida: alvo de 44×44 transparente,
   ícone de 22×22): base 10,16% → PR 10,95% (folga de 0,05 ponto, sem depender da fonte: o pior caso é o `max-width`).
   Planos B se o dono não aceitar a régua: o nome sem o número até 600 px de largura; 12% só nessa tela; o nome só do meu time.

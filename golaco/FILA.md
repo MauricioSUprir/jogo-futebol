@@ -268,8 +268,9 @@ IA × IA e o 25 (a corrida dos lances rápidos) com o dono ("Depende do dono" 9a
 14. **Itens 59 e 60 (a faixa de baixo): FEITOS com as escolhas recomendadas — o dono pode trocar qualquer uma** (contrato
     "Faixa de baixo", `PESQUISA-ESTADIO.md` §7.2):
     - a régua do H1: o nome conta (o mais largo, no canto da fase) e a caixa sem fundo, sem borda e sem sombra conta pelo que se
-      vê (o ≡ da partida pelo ícone de 22×22, não pelo alvo de 44×44): base 10,16% → 10,95% no pior caso (568×320 com entalhe,
-      defesa); com a régua de antes seria ~11,7%. Se ele recusar: o nome sem o número até 600 px de largura, 12% só nessa tela
+      vê (o ≡ da partida pelo ícone de 22×22, não pelo alvo de 44×44). **O H1 só passa com a régua nova**: no pior caso (568×320
+      com entalhe, defesa, o nome de 88 px) a régua nova dá 10,16% sem o nome → 10,95% com ele; a régua de antes, 10,98% → 11,77%
+      (PASSA dos 11%; em 667×375 na defesa, com o nome de 120 px: régua de antes 10,57%, nova 10,03%). Se ele recusar: o nome sem o número até 600 px de largura, 12% só nessa tela
       ou o nome só do meu time;
     - o arco de botões subiu 8–10 px (70 a 100%; nada a 120% ou mais) para a faixa de baixo de 22 px; o analógico não mudou;
     - o nome sem caixa alta (em caixa alta ~10% dos nomes ganham reticências em 568 px);
