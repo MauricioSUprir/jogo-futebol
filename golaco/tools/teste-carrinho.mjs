@@ -54,7 +54,8 @@
 //     carrinho, treino, disputa de pênaltis); E3 a borda (segurar não repete; o segurado na troca não dispara; o aperto novo
 //     depois do fim dispara); E4 o TROCAR no meio não muda o carrinho (bit a bit); E5 sai parado (impulso vMin), com a
 //     bola livre e no passe rasteiro deles; E7 o aperto zera o pulo no chão, o toque aéreo e a disputa pelo alto; E8 a IA
-//     não o escolhe (1º/2º homem, marcação, bola livre, PRESSÃO, alvo de passe) e a forma continua contando com ele.
+//     não o escolhe (1º/2º homem, marcação, bola livre, PRESSÃO, alvo de passe) e a forma continua contando com ele; E9 quem
+//     chega antes à bola livre não conta o deitado (a recepção assistida do controlado, o goleiro com o pé fora da área).
 //     E6 a bola morta (lateral, falta de outro, gol): o carrinho segue sem efeito — 0 eventos e o tempo no chão de erro
 //     (a mesma bola na perna com a bola viva toca: o controle).
 //  B. o contato da perna desenhada com a bola (defesa.js contatosCarrinho), no mundo mínimo do contato (sim.js passo 5:
@@ -1355,6 +1356,65 @@ const igualEstado = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     info('E8 sem a guarda (o mesmo estado sem o plano)', `${st.p12sem}, ${st.marcaSem}, ${st.livreSem}, ${st.pressSem}, ${st.alvoSem}`, 'mostra cada guarda');
     reg('E8 na forma ele continua contando (a referência do bloco igual com e sem o plano)', `${st.forma} de ${st.n} diferentes`, '0', st.forma === 0);
   }
+}
+
+// E9: quem chega antes à bola livre não conta quem está deitado no carrinho (ele não domina nem joga a bola até ficar de pé):
+// a recepção assistida do controlado (recepcao.js planejarRecepcao: o companheiro que "chega antes" tirava a assistência) e o
+// goleiro que vai com o pé à bola fora da área (regras-goleiro.js goleiroNoPe: o companheiro "mais perto" o segurava). Montado:
+// a partida em jogo com os outros longe, a bola livre; o companheiro DEITADO (o plano a 0,83 s do aperto, o corpo levado ao
+// lado do caminho da bola), AUSENTE (longe) e DE PÉ no mesmo ponto (o controle: aí ele chega antes de verdade)
+{
+  const RC = await imp('recepcao.js'), RG = await imp('regras-goleiro.js');
+  const mundoE9 = () => {
+    const w = P.criarPartida({ semente: 3201, minutosPorTempo: 4 });
+    w.partida.estado = 'jogo'; w.parada = null; w.golTick = null; w.voo = null; w.naMao = null; w.posse = null; w.faltaPendente = null; w.eventos = [];
+    w.ataca = { 0: 1, 1: -1 }; w.tick = 1000;
+    let n = 0;
+    for (const o of w.jogadores) {
+      if (o.posicao === 'GOL') P.teleportar(o, o.time === 0 ? -51 : 51, 30, o.time === 0 ? 0 : Math.PI);
+      else P.teleportar(o, o.time === 0 ? -48 : -44, -32 + (n++ % 11) * 2.5, 0);
+    }
+    return w;
+  };
+  /** j deitado no carrinho (aperto 50 ticks antes, a 5 m/s no rumo `ang`) com o centro do quadro de agora em (x, z). */
+  const deitar = (w, j, x, z, ang) => {
+    P.teleportar(j, x, z, ang); j.vx = 5 * Math.cos(ang); j.vz = 5 * Math.sin(ang); j.quadril = CC.hPe;
+    const c = K.montarCarrinho(j, w.tick - 50, { bola: null, prever: null });
+    let q = K.quadroCarrinho(c, K.tempoCarrinho(c, w.tick), K.novoQuadroCarrinho());
+    const dx = x - q.x, dz = z - q.z;
+    c.x0 += dx; c.z0 += dz; c.levX += dx; c.levZ += dz;
+    for (const p of c.p0) { p.x += dx; p.z += dz; }
+    j.carrinho = c;
+    q = K.quadroCarrinho(c, K.tempoCarrinho(c, w.tick), K.novoQuadroCarrinho());
+    j.x = q.x; j.z = q.z; j.vx = q.vx; j.vz = q.vz; j.rumo = q.yaw;
+    return K.carrinhoAtivo(j, w.tick);
+  };
+  const r = {};
+  for (const caso of ['deitado', 'ausente', 'dePe']) {
+    // a recepção: o controlado a 2,6 m, a bola livre rolando para ele a 1,5 m/s, o companheiro ao lado do caminho dela
+    {
+      const w = mundoE9(), lin = w.jogadores.filter(o => o.time === 0 && o.posicao !== 'GOL'), ctrl = lin[0], comp = lin[1];
+      P.teleportar(ctrl, 0, -2.6, Math.PI / 2);
+      Object.assign(w.bola, BL.criarBola(0, 0)); w.bola.v.z = -1.5; w.bola.rolando = true;
+      AC.assumirControle(w, 0, ctrl);
+      if (caso === 'deitado') r.ativo1 = deitar(w, comp, 0.5, -0.9, Math.PI);
+      else if (caso === 'dePe') P.teleportar(comp, 0.5, -0.9, Math.PI);
+      r['recep_' + caso] = !!RC.planejarRecepcao(w, ctrl);
+    }
+    // o goleiro com a bola livre fora da área (a mão não vale) e o companheiro mais perto dela
+    {
+      const w = mundoE9(), g = w.jogadores.find(o => o.time === 0 && o.posicao === 'GOL'), comp = w.jogadores.filter(o => o.time === 0 && o.posicao !== 'GOL')[1];
+      P.teleportar(g, -33, 0, 0);
+      Object.assign(w.bola, BL.criarBola(-30, 0));
+      if (caso === 'deitado') r.ativo2 = deitar(w, comp, -29.5, 0.5, Math.PI);
+      else if (caso === 'dePe') P.teleportar(comp, -29.2, 0.5, Math.PI);
+      r['gk_' + caso] = !!RG.goleiroNoPe(w, g);
+    }
+  }
+  const sn = b => (b ? 'sim' : 'não');
+  reg('E9 o companheiro deitado no carrinho não "chega antes": a recepção assistida do controlado e o goleiro com o pé seguem como sem ele',
+    `recepção assistida: deitado ${sn(r.recep_deitado)}, ausente ${sn(r.recep_ausente)}, de pé ${sn(r.recep_dePe)}; goleiro vai com o pé: deitado ${sn(r.gk_deitado)}, ausente ${sn(r.gk_ausente)}, de pé ${sn(r.gk_dePe)}`,
+    'deitado = ausente (sim); de pé: não', r.ativo1 && r.ativo2 && r.recep_deitado && r.recep_ausente && !r.recep_dePe && r.gk_deitado && r.gk_ausente && !r.gk_dePe);
 }
 
 // ------------------------------------------------------------------ B: o contato da perna desenhada com a bola

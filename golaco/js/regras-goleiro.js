@@ -180,7 +180,8 @@ export function goleiroNoPe(m, g) {
   if (dg > GOLEIRO.pe.busca) return false;
   let advAntes = false;
   for (const o of m.jogadores) {
-    if (o === g || o.papel === 'parado' || o.papel === 'marcador') continue;
+    // (no carrinho, deitado — carrinho.js —, ninguém joga a bola: nem o companheiro mais perto, nem o adversário)
+    if (o === g || o.papel === 'parado' || o.papel === 'marcador' || o.carrinho) continue;
     const d = MD.hypot(o.x - b.x, o.z - b.z);
     if (o.time === g.time && o.posicao !== 'GOL' && d < dg) return false;
     if (o.time !== g.time && d < dg) advAntes = true;

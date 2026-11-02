@@ -301,7 +301,8 @@ export function planejarRecepcao(m, j) {
     // o mais cedo que ele chega (a toda), para a corrida com o adversário
     let cedo = -1;
     for (const o of m.jogadores) {
-      if (o === j || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+      // (no carrinho, deitado — carrinho.js —, ninguém chega à bola: nem o companheiro, nem o adversário)
+      if (o === j || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador' || o.carrinho) continue;
       if (MD.hypot(o.x - _enc.bx, o.z - _enc.bz) > MD.hypot(j.x - _enc.bx, j.z - _enc.bz) + 12) continue;
       if (o.time === j.time) {
         if (encontroCompanheiro(o, pb, Math.min(H, meu + 2)) * DT < meu * DT - R.folgaCompanheiro) { if (st) st.ativo = false; return null; }
