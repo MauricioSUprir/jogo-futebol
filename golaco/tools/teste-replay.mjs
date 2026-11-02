@@ -182,9 +182,10 @@ const comR = await rodadaGol(raiz, '?q=baixa&hora=dia&semente=5', true);
   }
   seloForaDoFinal.push(...a.filter(x => x.selo && x.fase !== 'final').map(() => 'gol roteirizado'));
   const h = comR.hud;
+  // (o relógio do placar: "34'"/"45+2'"/"1º T +4" até o item 32; desde ele "34:12", o "+4", "Intervalo" e "Fim")
   meta('A6 tela do replay: só a marca "REPLAY" (sem texto de lance), sem minimapa, menu e avisos', h ? `marca ${h.marca}, placar ${h.placar}, minimapa ${h.minimapa}, menu ${h.menu}, aviso ${h.aviso}, "Pular" (PC) ${h.pular}; textos: ${JSON.stringify(h.textos)}` : '-',
     'marca e placar sim; o resto não; textos só do placar e "REPLAY"',
-    h && h.marca && h.placar && !h.minimapa && !h.menu && !h.aviso && !h.pular && h.textos.every(t => /^(REPLAY|[A-ZÇ]{2,4}|\d+|\d+'|\d+\+\d+'|[12]º T( \+\d+)?)$/.test(t)));
+    h && h.marca && h.placar && !h.minimapa && !h.menu && !h.aviso && !h.pular && h.textos.every(t => /^(REPLAY|[A-ZÇ]{2,4}|\d+|\d+'|\d+\+\d+'|[12]º T( \+\d+)?|\d{2,3}:\d{2}|\+\d+|Intervalo|Fim)$/.test(t)));
   meta('A7 depois do replay a câmera de jogo volta e a partida segue', comR.depois ? `câmera ${comR.depois.plano}, marca ${comR.depois.marca}; tick ${comR.depois.tick} → ${comR.tickFim}` : '-', 'jogo, sem marca, o tick anda',
     comR.depois && comR.depois.plano === 'jogo' && !comR.depois.marca && comR.tickFim > comR.depois.tick);
   {
