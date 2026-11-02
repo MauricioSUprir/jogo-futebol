@@ -91,7 +91,10 @@
 //     busca) e nunca com o mesmo gerador com fExc < 6 ou depois da bola; D8 o goleiro deitado (num mergulho de verdade) pelo
 //     corpo inteiro e com a bola nas mãos falta em 100% e tiro livre dele; D9 a intenção não muda com a fase da passada; D10
 //     o tropeço na perna parada (falta a 3,5 m/s; incidental a 0,8; nada no levantar); D11 dois carrinhos opostos: falta só
-//     de quem não tocou a bola quando o outro tocou (nas duas ordens e com os times trocados).
+//     de quem não tocou a bola quando o outro tocou (nas duas ordens e com os times trocados); D12 a montagem do tiro livre
+//     com o deslizante ainda no carrinho (≥ 12 faltas do carrinho): a bola posta nunca dentro do corpo desenhado de quem está
+//     no carrinho e ninguém do time que defende no carrinho a < 9,15 m dela, da montagem até a cobrança (partida.js
+//     tirarCarrinhos: deitado, ele pula a paredeParada).
 //  F1 a mesma semente e as mesmas entradas, com carrinhos: o mesmo hash em 2 rodadas. F2 os sorteios do m.rng por ORIGEM (um
 //     Proxy que lê a pilha): 0 do carrinho sem contato no homem (também na partida, e o bloqueio sorteado nunca com o
 //     deslizante); com contato exatamente 1 da chance (0 < p < 1) + os do cartão — nos montados e nos 36 casos do estado 0
@@ -2296,6 +2299,77 @@ else {
     }
     const ruins = r.filter(x => !x[1]);
     reg('D11 dois carrinhos opostos: falta só de quem NÃO tocou a bola quando o outro tocou; espelhado e nas duas ordens', `${r.length - ruins.length}/${r.length}${ruins.length ? ': ' + ruins.map(x => `${x[0]} → ${x[2]}`).join('; ') : ''}`, 'todos', ruins.length === 0);
+  }
+
+  // ---- D12: a montagem do tiro livre com o deslizante ainda no carrinho (deitado: ele pula a paredeParada). A bola posta no
+  // ponto da falta nunca dentro do corpo desenhado de quem está no carrinho (as cápsulas do manequim e a cabeça), da montagem
+  // até a cobrança (ou 1 s), e ninguém do time que defende fica no carrinho dentro da restrição dela (9,15 m: partida.js
+  // tirarCarrinhos). Os casos: as faltas do carrinho (a 2/3/4 m do condutor × de frente, de lado, por trás e na diagonal de trás
+  // × a 3/5/6,5 m/s; estados da semente 3102) cujo deslizante ainda estava no carrinho no passo da montagem
+  {
+    const folgaPose = (o, p) => {
+      let d = Infinity;
+      for (const [a, b, ra, rb] of A.SEGMENTOS) {
+        const ax = o[a * 3], ay = o[a * 3 + 1], az = o[a * 3 + 2], dx = o[b * 3] - ax, dy = o[b * 3 + 1] - ay, dz = o[b * 3 + 2] - az, l2 = dx * dx + dy * dy + dz * dz;
+        const u = l2 > 0 ? Math.max(0, Math.min(1, ((p.x - ax) * dx + (p.y - ay) * dy + (p.z - az) * dz) / l2)) : 0;
+        d = Math.min(d, Math.hypot(ax + dx * u - p.x, ay + dy * u - p.y, az + dz * u - p.z) - (ra + (rb - ra) * u) - CFG.BOLA.raio);
+      }
+      const ic = A.J.cabeca * 3;
+      return Math.min(d, Math.hypot(o[ic] - p.x, o[ic + 1] - p.y, o[ic + 2] - p.z) - A.RAIO_CABECA - CFG.BOLA.raio);
+    };
+    const mm = P.criarPartida({ semente: 3102, minutosPorTempo: 4 });
+    let ultimo = -1e9, faltas = 0, casos = 0, dentro = 0, naRestricao = 0, pior = Infinity, piorEx = '', estados = 0;
+    procura12: for (let i = 0; i < 12000 && estados < 8; i++) {
+      P.passoPartida(mm, P.entradaDemoPartida(mm));
+      if (mm.tick < 600 || mm.tick - ultimo <= 700) continue;
+      const dm = mm.posse != null ? porId(mm, mm.posse) : null;
+      if (!(mm.partida.estado === 'jogo' && !(mm.parada && !mm.parada.rolou) && mm.golTick == null && mm.naMao == null && dm && dm.time === 1 && dm.posicao !== 'GOL')) continue;
+      ultimo = mm.tick; estados++;
+      const base = SIM.copiarMundo(mm);
+      for (const dist of [2, 3, 4]) for (const ang of [0, Math.PI / 2, -Math.PI / 2, Math.PI, 2.6, -2.6]) for (const vel of [3, 5, 6.5]) {
+        const w = SIM.copiarMundo(base), d = porId(w, w.posse);
+        const vc = Math.hypot(d.vx, d.vz), dx0 = vc >= 1 ? d.vx / vc : Math.cos(d.rumo), dz0 = vc >= 1 ? d.vz / vc : Math.sin(d.rumo);
+        const ux = dx0 * Math.cos(ang) - dz0 * Math.sin(ang), uz = dx0 * Math.sin(ang) + dz0 * Math.cos(ang);
+        const b0 = w.bola.p, px = b0.x + ux * dist, pz = b0.z + uz * dist, j = linhaPerto(w, b0.x, b0.z);
+        const rx = b0.x - px, rz = b0.z - pz, rl = Math.hypot(rx, rz) || 1;
+        P.teleportar(j, px, pz, Math.atan2(rz, rx)); j.vx = vel * rx / rl; j.vz = vel * rz / rl;
+        if (!AC.assumirControle(w, 0, j)) continue;
+        passo(w, { x: rx / rl, z: rz / rl, botoes: B.CARRINHO });
+        if (!j.carrinho) continue;
+        let falta = false;
+        for (let k = 0; k < 200 && j.carrinho && !falta; k++) {
+          const ev = passo(w, { x: 0, z: 0, botoes: 0 });
+          falta = ev.some(e => e.tipo === 'falta' && e.def === j.id && e.origem === 'carrinho');
+        }
+        if (!falta || !w.parada || w.parada.tipo !== 'tiroLivre') continue;
+        faltas++;
+        // até a montagem (o evento tiroLivre), com o deslizante ainda no carrinho no passo antes dela
+        let montou = false, noCarr = false;
+        for (let k = 0; k < 200 && !montou; k++) {
+          noCarr = !!j.carrinho;
+          const ev = passo(w, { x: 0, z: 0, botoes: 0 });
+          montou = ev.some(e => e.tipo === 'tiroLivre');
+        }
+        if (!montou || !noCarr) continue;
+        casos++;
+        let fMin = Infinity, rest = 0;
+        for (let k = 0; k < 60 && w.parada && !w.parada.rolou; k++) {
+          for (const o of w.jogadores) {
+            if (!o.carrinho) continue;
+            fMin = Math.min(fMin, folgaPose(A.pose(o, w), w.bola.p));
+            if (o.time !== w.parada.time && o.id !== w.parada.cobrador && Math.hypot(o.x - w.parada.x, o.z - w.parada.z) < CFG.PARTIDA.raio.tiroLivre) rest++;
+          }
+          passo(w, { x: 0, z: 0, botoes: 0 });
+        }
+        if (fMin < 0) dentro++;
+        if (rest) naRestricao++;
+        if (fMin < pior) { pior = fMin; piorEx = `@${base.tick} ${f2(dist)} m, ${f2(ang)} rad, ${f2(vel)} m/s`; }
+        if (casos >= 24) break procura12;
+      }
+    }
+    reg('D12 a montagem do tiro livre com o deslizante ainda no carrinho: a bola posta fora do corpo de quem está no carrinho; ninguém do time que defende no carrinho dentro dos 9,15 m',
+      `${faltas} faltas do carrinho, ${casos} com ele no carrinho na montagem: a bola dentro em ${dentro}, no carrinho na restrição em ${naRestricao}; menor folga ${Number.isFinite(pior) ? f3(pior) : '– (ninguém no carrinho)'} m${piorEx && pior < 0 ? ` (${piorEx})` : ''}`,
+      '≥ 12 casos; 0; 0', casos >= 12 && dentro === 0 && naRestricao === 0);
   }
 
   // ---- F2: os sorteios por ORIGEM (o m.rng embrulhado: cada sorteio pela pilha). Sem contato no homem: 0 do carrinho (também na

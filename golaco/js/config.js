@@ -1781,6 +1781,10 @@ export const DEFESA_HUMANO = {
     dobra: { joelho: 50 * Math.PI / 180, canela: 200 * Math.PI / 180, yJoelho: 0.07 },
     mao: [-0.56, 0.54, 0.11],
     passoLevanta: 0.12,
+    // m — na montagem de uma bola parada, quem ainda está no carrinho (fora o cobrador) vai de pé para fora da restrição dela
+    // (o time que não cobra) ou a esta distância da bola (o que cobra): deitado, ele pula a paredeParada (partida.js
+    // tirarCarrinhos; desenho)
+    bolaParada: 2.5,
   },
   // PRESSÃO (segurar): grava m.pedidoPressao[time] = tick (contrato da Parte 0); o pedido vale até `validade` s depois do
   // último passo com o botão, só com o time defendendo (a retomada o encerra: defesa.js pressaoPedida/encerrarPressao).
