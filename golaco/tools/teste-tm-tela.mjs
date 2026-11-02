@@ -12,6 +12,8 @@
 //   5  Celular 844×390 com toque, pedido B (Rumo ao Estrelato: o usuário é o visitante e controla SÓ o centroavante):
 //      humano 1, o controlado é o travado; TROCAR, GOLEIRO e o TROCAR da bola na mão escondidos; TROCAR/GOLEIRO apertados
 //      não tiram o controle dele; a pausa sem "Editar time", "Reiniciar partida" e os treinos (o submenu vira "Cenas da partida").
+//   5b Celular (itens 59 e 60): o travado com a bola mostra o nome no canto de baixo à DIREITA (o humano é o visitante: o time
+//      da direita do placar), com a fonte do TM (Inter TM) e a faixa da cor do time 1 do placar.
 //   6  Celular: "Simular o resto" → o resultado traz `jogador` com o tmId do travado e a nota (4,5–10).
 //   7  Sem ?tm: nada do TM (sem "Simular o resto" nem "Voltar ao Total Match" na pausa, "Reiniciar partida" e "Modo de jogo"
 //      à vista, __golaco.tm null, nenhuma mensagem ao pai).
@@ -166,6 +168,25 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
     }
     return [...ids];
   }, [BIT]);
+  // 5b: o travado com a bola (a simulação parada; o desenho lê mundo.posse): o nome à direita, com a cara do TM
+  const nm = await fr.evaluate(async () => {
+    const g = window.__golaco, posse0 = g.mundo.posse;
+    g.relogio.usarManual(true); g.pausar(true);
+    g.mundo.posse = g.tm.trava; g.relogio.avancar(1000);
+    const e = document.getElementById('nome-condutor'), cs = e ? getComputedStyle(e) : null;
+    const vis = !!e && !e.hidden && cs.display !== 'none' && e.getBoundingClientRect().width > 0;
+    const r = e?.getBoundingClientRect(), cor = e?.querySelector('.nc-cor'), pc = document.querySelector('#placar-time-1 .placar-cor');
+    const s = document.createElement('div'); s.style.cssText = 'position:fixed;right:var(--sa-r);bottom:var(--sa-b);left:0;top:0;visibility:hidden'; document.body.append(s);
+    const sa = s.getBoundingClientRect(); s.remove();
+    const out = { vis, dir: !!e?.classList.contains('dir'), noHud: !!e?.closest('#hud'), fonte: cs?.fontFamily ?? '', fontes: document.documentElement.dataset.fontesTm ?? '-',
+      cor: cor ? getComputedStyle(cor).backgroundColor : null, corPlacar: pc ? getComputedStyle(pc).backgroundColor : null,
+      borda: r ? sa.right - r.right : NaN, base: r ? sa.bottom - r.bottom : NaN, texto: e?.textContent ?? '' };
+    g.mundo.posse = posse0; g.pausar(false); g.relogio.usarManual(false);
+    return out;
+  });
+  meta('5b celular, Estrelato: o travado com a bola — o nome no canto de baixo à direita (o time da direita do placar), fonte Inter TM, a cor do time 1 do placar',
+    `${nm.vis ? `"${nm.texto}" ${nm.dir ? 'à direita' : 'à ESQUERDA'}${nm.noHud ? '' : ' (fora do #hud)'}, a ${nm.borda.toFixed(0)} px da borda e ${nm.base.toFixed(0)} da base; fonte ${nm.fonte} (fontes ${nm.fontes}); cor ${nm.cor} × placar ${nm.corPlacar}` : 'o nome não aparece'}`,
+    nm.vis && nm.dir && nm.noHud && nm.borda <= 16 && nm.base <= 6.5 && /Inter TM/.test(nm.fonte) && !!nm.cor && nm.cor === nm.corPlacar);
   const it = await itensDaPausa(fr);
   meta('5 celular, Estrelato: humano 1, o controlado é o travado, sem TROCAR/GOLEIRO, a trava não solta, pausa sem Editar/Reiniciar/treinos',
     `humano ${info.humano} · travado ${info.trava} (${info.tmIdTrava}) · controlado ${info.ctrl} · escondidos ${escondidos.join(', ')} · controlados depois dos apertos [${depois.join(', ')}] · pausa: ${listaItens(it)}`,

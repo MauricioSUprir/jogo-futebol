@@ -261,6 +261,25 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
       }
     }
     reg(`toque: arco da defesa com ${def.length} botões sem encostar (5 telas × 3 tamanhos × 3 áreas seguras)`, `folga mínima ${fmt(pior, 1)} px, menor botão ${menor} px, fora da tela ${fora}`, 'folga ≥ 4 px, ≥ 48 px, 0 fora', pior >= 4 && menor >= 48 && fora === 0);
+    // E-faixa (itens 59 e 60, dono 23/10: o minimapa embaixo no meio e o nome do condutor nos cantos de baixo, "a faixa de
+    // baixo simétrica"): o arco deixa livre embaixo dele a faixa de FAIXA_BAIXO px (3 de margem + 15 do nome + 4 de folga;
+    // o analógico em repouso já deixava 22) — TODAS as vagas (ataque, defesa, PEGAR, TROCAR da mão, CURVA, estilos do
+    // pênalti, CORRER), nas telas do laço acima e em 568×320, nos tamanhos 70–140% e nas 3 áreas seguras. Na base sobravam
+    // 12–14 px (o nome do canto direito teria 15–24 px de largura)
+    {
+      const FAIXA = ENT.FAIXA_BAIXO ?? 22;
+      const todas = ['grande', 'a', 'b', 'c', 'd', 'e', 'correr'];
+      let menorFaixa = Infinity, ondeFaixa = '';
+      for (const [W, H] of [[844, 390], [390, 844], [1280, 720], [667, 375], [1920, 1080], [568, 320]]) {
+        for (const tam of [0.7, 0.8, 1, 1.4]) for (const sa of [{ l: 0, r: 0, t: 0, b: 0 }, { l: 44, r: 44, t: 0, b: 21 }, { l: 0, r: 0, t: 47, b: 34 }]) {
+          const ps = Object.values(calcularLayoutToque(W, H, sa, tam, todas));
+          const livre = H - sa.b - Math.max(...ps.map(p => p.y + p.d / 2));
+          if (livre < menorFaixa) { menorFaixa = livre; ondeFaixa = `${W}×${H} a ${Math.round(tam * 100)}%, sa.b ${sa.b}`; }
+        }
+      }
+      reg('toque: a faixa de baixo livre embaixo do arco (itens 59 e 60: o minimapa e o nome do condutor; 6 telas × 4 tamanhos × 3 áreas seguras)',
+        `${fmt(menorFaixa, 1)} px no pior caso (${ondeFaixa})`, `≥ ${FAIXA} px`, menorFaixa >= FAIXA - 0.01);
+    }
     // do aperto ao jogo: J segurado na defesa vira CONTER e o controlado contém o condutor
     {
       const m = criarMundo({

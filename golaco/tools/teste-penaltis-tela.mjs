@@ -1,7 +1,8 @@
 // teste-penaltis-tela: o modo Pênaltis 3D no navegador (pedido do dono de 15/10; js/disputa.js, js/disputa-tela.js; contrato
 // "Disputa de pênaltis" no CONTRATOS.md). Relógio manual (o laço da página, quadro a quadro).
 //   1  PC 1280×720, ?modo=penaltis&demo=1 (a IA joga pelo humano): a disputa abre (Golaço FC × Ventania FC, m.modo
-//      'penaltis'), sem o relógio no placar e sem minimapa; as bolinhas logo abaixo do placar, sem encostar nele nem no menu.
+//      'penaltis'), sem o relógio no placar e sem minimapa; as bolinhas logo abaixo do placar, sem encostar nele nem no menu;
+//      sem o nome do jogador com a bola (itens 59 e 60: o painel da disputa já diz quem bate) em toda a disputa (item 2).
 //   2  A disputa vai até o fim: os planos da câmera (abertura, cobrança, reação, fim), o placar do topo = o da disputa, as
 //      bolinhas = as cobranças (convertido/perdido), quem bate durante as cobranças.
 //   3  A faixa do fim: "X venceu nos pênaltis", o placar com as siglas e "Jogar de novo"; o clique abre outra disputa (outra
@@ -63,10 +64,13 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
     `modo ${ini.modo}, ${ini.siglas.join(' × ')}, ${ini.d?.estado}; relógio ${ini.relogio ? 'VISÍVEL' : 'escondido'}; minimapa ${ini.mapa ? 'VISÍVEL' : 'escondido'}; bolinhas ${ini.tela?.linhas?.join(' / ')} em y ${cx.disputa ? cx.disputa.t.toFixed(0) : '-'} (placar até ${cx.placar ? cx.placar.b.toFixed(0) : '-'})`,
     ini.modo === 'penaltis' && ini.siglas.join() === 'GLÇ,VNT' && !!ini.d && !ini.relogio && !ini.mapa && ini.tela?.visivel && !!cx.disputa && cx.disputa.t >= cx.placar.b + 2 && !encosta(cx.disputa, cx.menu));
   const planos = new Set(), vezes = new Set(), avisos = new Set();
-  let d = null, okBolas = true, okPlacar = true;
+  let d = null, okBolas = true, okPlacar = true, nomeVisto = 0, comPosse = 0;
   for (let k = 0; k < 60 * 6 * 30 && !(d && d.estado === 'fim'); k += 30) {
     d = await quadros(pg, 30);
-    const v = await pg.evaluate(() => ({ plano: window.__golaco.planoCamera, tela: window.__golaco.telaDisputa(), gols: [document.getElementById('gols-0').textContent, document.getElementById('gols-1').textContent], aviso: document.getElementById('aviso')?.textContent?.trim() }));
+    const v = await pg.evaluate(() => ({ plano: window.__golaco.planoCamera, tela: window.__golaco.telaDisputa(), gols: [document.getElementById('gols-0').textContent, document.getElementById('gols-1').textContent], aviso: document.getElementById('aviso')?.textContent?.trim(),
+      posse: window.__golaco.mundo.posse != null, nome: (() => { const e = document.getElementById('nome-condutor'); return !!e && !e.hidden && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0; })() }));
+    if (v.posse) comPosse++;
+    if (v.nome) nomeVisto++;
     if (v.plano) planos.add(v.plano);
     if (v.aviso) avisos.add(v.aviso);
     if (v.tela?.vez) vezes.add(v.tela.vez);
@@ -85,6 +89,7 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
   meta('2 PC: a disputa vai até o fim; planos da câmera; placar do topo = o da disputa; bolinhas = as cobranças; quem bate',
     `${d?.estado}, ${d?.placar.join(' × ')} em ${d?.cobrancas.length} cobranças; planos [${[...planos].join(', ')}]; placar ${okPlacar ? 'igual' : 'DIFERENTE'}; bolinhas ${okBolas ? 'iguais' : 'DIFERENTES'}; ${vezes.size} nomes em "Bate"`,
     d?.estado === 'fim' && ['abertura', 'cobranca', 'reacao', 'fim'].every(p => planos.has(p)) && okPlacar && okBolas && vezes.size >= 4);
+  meta('1b PC: na disputa nunca aparece o nome do jogador com a bola (itens 59 e 60; o painel da disputa diz quem bate)', `nome visível em ${nomeVisto} de ${comPosse} amostras com a bola no pé`, comPosse > 0 && nomeVisto === 0);
   await quadros(pg, 60, true);
   const faixa = await pg.evaluate(() => ({ vis: !document.getElementById('faixa').hidden, titulo: document.getElementById('faixa-titulo').textContent, placar: document.getElementById('faixa-placar').textContent, botao: document.getElementById('faixa-botao').textContent.trim(), cmd: document.getElementById('faixa-botao').dataset.cmd }));
   // 8) a pausa (sem o botão "Minimapa") e a Ajuda da disputa

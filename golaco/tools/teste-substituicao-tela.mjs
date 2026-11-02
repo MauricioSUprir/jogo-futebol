@@ -13,7 +13,8 @@
 //   T6 troca no intervalo (pedida nele, ou pedida antes e feita no apito): sem cena; a faixa ≥ 4 s na saída do 2º tempo;
 //   T7 pausa, aba escondida e celular em pé: o tempo da cena não anda na interrupção e volta em ≤ 1 quadro; trocarMundo
 //      cancela a cena e esvazia a fila;
-//   T8 nada sobre nada: folga ≥ 4 px entre a faixa (na cena e no jogo) e o placar, o menu, o minimapa (ligado e
+//   T8 nada sobre nada: folga ≥ 4 px entre a faixa (na cena e no jogo) e o placar, o menu, o nome do jogador com a bola (itens
+//      59 e 60: no jogo, forçado no canto de baixo à esquerda), o minimapa (ligado e
 //      desligado), o aviso, o "Pular" e os botões de toque, em 1280×720, 844×390 com entalhe, 667×375 e 568×320; o número
 //      e a palavra nunca cortados; a faixa cobre ≤ 10% da caixa do ator principal; a opção salva vale depois de recarregar;
 //   T9 celular 844×390 Média: p95 da CPU do quadro na cena ≤ p95 do jogo + 1 ms; chamadas de desenho ≤ jogo + 3 (sem
@@ -355,7 +356,8 @@ const MEDIR_FAIXA = () => {
   const f = cx(document.getElementById('faixa-subst'));
   if (!f) return { faixa: null };
   const folga = (a, b) => Math.max(b.x0 - a.x1, a.x0 - b.x1, b.y0 - a.y1, a.y0 - b.y1);
-  const outros = { placar: cx(document.querySelector('#hud .placar')), menu: cx(document.getElementById('btn-menu')), minimapa: cx(document.getElementById('minimapa')), aviso: document.getElementById('aviso').classList.contains('visivel') ? cx(document.getElementById('aviso')) : null, pular: cx(document.getElementById('substituicao-pular')) };
+  // (itens 59 e 60: o nome do jogador com a bola nos cantos de baixo — no PC a faixa do jogo fica acima dele)
+  const outros = { placar: cx(document.querySelector('#hud .placar')), menu: cx(document.getElementById('btn-menu')), minimapa: cx(document.getElementById('minimapa')), aviso: document.getElementById('aviso').classList.contains('visivel') ? cx(document.getElementById('aviso')) : null, pular: cx(document.getElementById('substituicao-pular')), nome: cx(document.getElementById('nome-condutor')) };
   const enc = [];
   for (const [k, b] of Object.entries(outros)) if (b && folga(f, b) < 4) enc.push(`${k} (${folga(f, b).toFixed(0)} px)`);
   for (const b of document.querySelectorAll('#toque .btn-toque')) {
@@ -429,8 +431,12 @@ for (const L of roda('L') ? LAYOUTS.filter(L => !telas || telas.some(t => L.nome
           const ch = document.getElementById('chip-minimapa');
           if (ch && (ch.getAttribute('aria-pressed') === 'true') !== (mapa === 'ligado')) ch.click();
           g.mostrarEvento({ tipo: 'timeEditado' });
+          // (itens 59 e 60) o nome do jogador com a bola no canto de baixo à esquerda (o da faixa no PC), o mais largo
+          g.nomeCantoDeTeste?.({ time: 0, num: 88, nome: 'Wwwwwwwwww' });
           g.relogio.avancar(1000 / 60, { desenhar: true });
-          return { mapa, ...eval(FS)() };
+          const r = eval(FS)();
+          g.nomeCantoDeTeste?.(null);
+          return { mapa, ...r };
         }, [mapa, MEDIR_FAIXA.toString()]));
       }
       const progs1 = await pg.evaluate(() => window.__golaco.estado().programas);
