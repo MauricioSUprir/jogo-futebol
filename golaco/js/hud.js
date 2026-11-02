@@ -274,7 +274,7 @@ export function criarHud(opc) {
   // O minimapa embaixo no meio e a largura livre dos cantos para o nome, pelos controles de toque (opc.layoutToque: a
   // entrada.js — as vagas de TODAS as fases e o analógico em repouso). Só no celular (html.com-toque); no PC o CSS decide
   // (o minimapa no meio embaixo, como sempre, e os nomes nos cantos).
-  const baixoVisto = { cx: null, w: null, h: null, semLugar: null, livreE: null, livreD: null, semE: null, semD: null };
+  const baixoVisto = { cx: null, w: null, h: null, semLugar: null, livreE: null, livreD: null, semE: null, semD: null, chave: '' };
   function ajustarBaixo() {
     const st = raiz.style;
     const lt = raiz.classList.contains('com-toque') ? opc.layoutToque?.() : null;
@@ -282,12 +282,18 @@ export function criarHud(opc) {
       if (baixoVisto.cx !== null || baixoVisto.semLugar || baixoVisto.livreE !== null) {
         for (const v of ['--mapa-cx', '--mapa-w', '--mapa-h', '--nome-livre-esq', '--nome-livre-dir']) st.removeProperty(v);
         raiz.classList.remove('mapa-sem-lugar', 'nome-sem-lugar-esq', 'nome-sem-lugar-dir');
-        Object.assign(baixoVisto, { cx: null, w: null, h: null, semLugar: null, livreE: null, livreD: null, semE: null, semD: null });
+        Object.assign(baixoVisto, { cx: null, w: null, h: null, semLugar: null, livreE: null, livreD: null, semE: null, semD: null, chave: '' });
         marcarChipMapa(false);
       }
       return;
     }
     const { W, H, sa, botoes } = lt;
+    // a mesma geometria (e o minimapa ligado ou não) de antes: nada a refazer (o ajustarTopo roda a cada texto novo do painel)
+    const an = lt.analogico;
+    let chave = `${W},${H},${sa.l},${sa.r},${sa.b},${an ? `${an.x.toFixed(1)},${an.y.toFixed(1)},${an.r}` : '-'},${raiz.classList.contains('mapa-ligado')}`;
+    for (const b of botoes) chave += `;${b.x.toFixed(1)},${b.y.toFixed(1)},${b.d}`;
+    if (chave === baixoVisto.chave) { mapaSobFaixa(); return; }
+    baixoVisto.chave = chave;
     const circ = lt.analogico ? [...botoes, { x: lt.analogico.x, y: lt.analogico.y, d: 2 * lt.analogico.r }] : botoes;
     const dist = (q, c) => Math.hypot(c.x - Math.max(q[0], Math.min(c.x, q[2])), c.y - Math.max(q[1], Math.min(c.y, q[3]))) - c.d / 2;
     // o minimapa: o maior tamanho que cabe, o mais perto do meio (de 1 em 1 px até desvio·W para os dois lados)
