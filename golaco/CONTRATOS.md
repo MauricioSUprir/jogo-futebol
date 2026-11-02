@@ -407,11 +407,16 @@ em `config.js` é `ESTADIO` (túnel e bancos: geometria que outras frentes podem
   definirLente(p | null), dispose}; atlas 1024² desenhado em canvas. `torcida.atualizar(t, emocao, camera, batida, desenha,
   lente)`: o main.js passa a posição da câmera quando a da bola parada está na mistura (`cam.misturaBolaParada > 0`); o
   replay, o pré-jogo e as outras câmeras passam null (as bandeiras inteiras).
-- **`fumaca.js`**: `FUMACA` (vida, subida, vento para FORA do campo, tamanho, alfa, partículas por qualidade: Baixa 0),
-  `fumacaParticula(s, p, P, t)` e `FUMACA_GLSL` (o caminho de cada partícula sai do shader: nada simulado na CPU).
-  **`sinalizadores.js`**: `criarSinalizadores(cena, {qualidade, hora})` → {mesh (1 chamada, só visível com fogo ou
-  fumaça; núcleo + halo + fumaça numa malha instanciada, mistura pré-multiplicada), atualizar(festa, t),
-  definirQualidade, definirHora, quantas, medirOverdraw(renderer, camera, escala) (em telas cheias), dispose}.
+- **`fumaca.js`**: `FUMACA` (vida, subida, vento para FORA do campo, tamanho, alfa, partículas por qualidade: Baixa 0; o
+  quadro do núcleo e do halo, `nucleo`/`halo`), `fumacaParticula(s, p, P, t)` e `FUMACA_GLSL` (o caminho de cada partícula
+  sai do shader: nada simulado na CPU), `forcaPelaLente(c, r, [x, y, z, liga])` e `LENTE_FUMACA_GLSL` (perto da lente da
+  câmera da bola parada cada quadro do sinalizador — o núcleo, o halo e cada partícula, centro c e raio r — some: inteiro
+  com a borda a ≥ `FUMACA.lente.raio` + `folga` m dela, 9 + 3, apagado abaixo de 9 m; multiplica a força do fogo e o alfa
+  da fumaça; liga 0 = 1; GPU = JS no `teste-estadio`). **`sinalizadores.js`**: `criarSinalizadores(cena, {qualidade,
+  hora})` → {mesh (1 chamada, só visível com fogo ou fumaça; núcleo + halo + fumaça numa malha instanciada, mistura
+  pré-multiplicada), uniforms (uLente), atualizar(festa, t), definirQualidade, definirHora, definirLente(p | null), quantas,
+  medirOverdraw(renderer, camera, escala) (em telas cheias), dispose}; a `torcida.atualizar(..., lente)` passa a mesma lente
+  às bandeiras e aos sinalizadores.
 - **`torcida-dados.js`**: setor 3 = lado de cá (z +), `GRUPOS` (lado, fundo+x, fundo−x, ca-frente, ca-cima: uma malha
   cada), `cameraNoLadoDeCa(p)` (a câmera de TV fica DENTRO da arquibancada de cá: com ela lá, a arquibancada e a
   torcida de cá saem do desenho), `cadeiraNoTunel(x, y)`, `TORCIDA.ocupacaoFrente`/`ocupacaoCa`/`frente` (as 9
@@ -2613,7 +2618,10 @@ acusa o `config.js`, só o `CAMERA`, que a simulação não lê) e todo o resto 
   item 65 — no escanteio de lá do Golaço e do Maracanã a lente, a 8 m sobre as fileiras da frente, ficava a 0,2–3,6 m de um
   pano de 2 × 1,4 m: uma placa verde e preta de 12–100% do quadro encostada na bola e no arco da curva; agora o que sobra
   fica a ≥ 8,6 m nos 106 estádios × 4 cantos × corrida, G5 do teste-camera, e o `teste-bola-parada-tela` 2b confere o de lá
-  em pixels). Os outros tipos: o `CAMERA_BOLA_PARADA` de sempre. A volta para a TV: a mistura de 1,1 s, menos quando o olhar da bola parada e o da TV apontam para lados opostos
+  em pixels). Os sinalizadores das quinas (`festa.js`) também não: com ela na mistura, o núcleo, o halo e a fumaça perto da
+  lente SOMEM (`fumaca.js forcaPelaLente`; a mesma revisão — a quina ficava a 3–4 m da lente e a fumaça passava por ela, um
+  véu de até 100% do quadro por cima da bola; agora o que se vê fica a ≥ 9,5 m e ≤ 4,1% do quadro, nada sobre a bola, G5, e
+  de noite no `teste-bola-parada-tela` 2b a festa a < 3 e < 6 m da lente 13–22% → 0%). Os outros tipos: o `CAMERA_BOLA_PARADA` de sempre. A volta para a TV: a mistura de 1,1 s, menos quando o olhar da bola parada e o da TV apontam para lados opostos
   (cosseno < −0,5: o escanteio de lá) — aí CORTA (`camera.js BP.corteOposto`; misturando 180°, o olhar passava pelo chão e
   a bola saía do quadro de 0,3 a 0,9 s). No Modo Livre, contra o rumo da câmera dele no chão (`est.extra.yaw`: as de lado
   olham como a TV e cortam; Atrás e Jogador, pelo comprimento, misturam; revisão R5 — antes no Livre a volta misturava e a

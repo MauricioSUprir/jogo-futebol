@@ -14,7 +14,13 @@
 //     balanço, com o abaixar que o uniform uLente da página manda — alturaPelaLente) a ≥ 6 m da lente, cada uma ≤ 5% do
 //     quadro e a ≥ 40 px da bola; e em PIXELS, com a malha da festa desenhando as 32 (o mesmo quadro com × sem ela): a maior
 //     mancha ≤ 5% do quadro (no de cá, as faixas da mureta de lá emendadas: 2,3–3,0%) e nenhum pixel dela a menos de 25% da
-//     altura da tela da bola.
+//     altura da tela da bola. E de noite, no escanteio de lá (a mesma revisão: a quina da festa ficava a 3–4 m da lente alta e
+//     a fumaça dela passava pela lente — 11–13% do quadro por cima da bola com a festa forçada), os SINALIZADORES (por
+//     último, em escanteios de lá montados de novo): 8 acesos (a quina mais perto da lente garantida; a fumaça da Alta), em
+//     3 instantes da queima (~3, ~10 e ~17 s: um escanteio por medida — a cobrança da pessoa espera só 6 s), a festa a menos
+//     de 3 m e a menos de 6 m da lente (o quadro × o mesmo com near 3 / 6; o par sem a festa tira o resto) ≤ 1% do quadro e
+//     nenhum pixel dela no disco da bola — com o abaixar do fogo e da fumaça que o uniform uLente dos sinalizadores manda
+//     (fumaca.js forcaPelaLente).
 //  3  A mira: visível no escanteio, no tiro livre e no tiro de meta (não no pênalti), mexe ≥ 150 px do quadro (com × sem
 //     ela) e custa ≤ +1 chamada de desenho; sem painel e sem texto na tela (item 65: o rótulo ALTA/CHUTE saiu) e o minimapa
 //     escondido (html.mira-visivel); some no chute.
@@ -189,6 +195,80 @@ async function FESTA_PIXELS(q) {
     maior = Math.max(maior, n);
   }
   return { mancha: maior / (w * h), perto: perto / h };
+}
+/**
+ * No navegador (2b, de noite, só no escanteio de lá): os SINALIZADORES perto da lente (revisão R2 do item 65: a quina da
+ * festa.js ficava a 3–4 m da lente alta e a fumaça dela passava por ela). ACENDER_NOITE, com a câmera do escanteio de lá
+ * parada: a noite, a fumaça da Alta e a festa forçada como na saída de um tempo (8 acesos da organizada e das quinas), com a
+ * quina mais perto DESTA lente garantida (as 6 vagas da organizada passam, só na hora de acender, para ela: ≥ 3 acesos ali,
+ * com o sorteio de ±0,6 m — o pior ponto do canto). Devolve a distância do fogo dela à lente.
+ */
+async function ACENDER_NOITE() {
+  const g = window.__golaco, si = g.estadio.torcidaObj.sinalizadores, c = g.bolaParada.estado.camera;
+  const FE = await import('./js/render/festa.js'), PS = FE.PONTOS_SINALIZADOR;
+  const dl = p => Math.hypot(p[0] - c.x, p[1] + 1.9 - c.y, p[2] - c.z);
+  const perto = [...PS.quinas].sort((a, b) => dl(a) - dl(b))[0], salva = PS.organizada.map(p => [...p]);
+  g.definirHora('noite'); si.definirQualidade('alta');
+  PS.organizada.forEach(p => p.splice(0, 3, ...perto));
+  g.estadio.forcarFesta({ sinalizadores: 8 });
+  PS.organizada.forEach((p, i) => p.splice(0, 3, ...salva[i]));
+  window.__noite = { t0: g.estadio.festa.t, perto };
+  return dl(perto);
+}
+/**
+ * No navegador (2b, de noite): com a câmera do escanteio de lá parada, o quadro de agora × o mesmo com a lente cortando tudo
+ * a menos de 3 m e de 6 m (near 3 e 6; o par sem a festa tira o resto: o fogo da quina ficava a 4 m e o corte de 3 m não
+ * pega o halo dele): a fração do quadro e a maior mancha da festa a menos de 3 m e de 6 m, e os pixels da festa (o quadro com
+ * × sem ela) no disco da bola; o instante da queima, o fogo aceso mais perto e o uLente do quadro desenhado.
+ */
+async function MEDIR_NOITE() {
+  const g = window.__golaco, si = g.estadio.torcidaObj.sinalizadores, e = g.bolaParada.estado, c = e.camera;
+  const so = si.medirOverdraw; let cam = null;
+  si.medirOverdraw = (r, cc) => { cam = cc; return null; }; g.estadio.overdrawFumaca(); si.medirOverdraw = so;
+  const cv = document.querySelector('canvas');
+  const off = document.createElement('canvas'); off.width = Math.round(cv.width / 2); off.height = Math.round(cv.height / 2);
+  const cx = off.getContext('2d', { willReadFrequently: true });
+  const w = off.width, h = off.height, k = w / window.innerWidth;
+  const ler = () => { g.desenhar(); cx.drawImage(cv, 0, 0, w, h); return cx.getImageData(0, 0, w, h).data; };
+  const dif = (a, b) => { const m = new Uint8Array(w * h); for (let i = 0; i < w * h; i++) { const j = 4 * i; if ((Math.abs(a[j] - b[j]) + Math.abs(a[j + 1] - b[j + 1]) + Math.abs(a[j + 2] - b[j + 2])) / 3 > 18) m[i] = 1; } return m; };
+  const mancha = m => {
+    const mm = Uint8Array.from(m), pilha = new Int32Array(w * h); let maior = 0, n = 0;
+    for (let i = 0; i < w * h; i++) {
+      if (mm[i] !== 1) continue;
+      let q = 0, t = 0; pilha[t++] = i; mm[i] = 2;
+      while (t) {
+        const j = pilha[--t]; q++; const x = j % w, y = (j - x) / w;
+        if (x > 0 && mm[j - 1] === 1) { mm[j - 1] = 2; pilha[t++] = j - 1; }
+        if (x < w - 1 && mm[j + 1] === 1) { mm[j + 1] = 2; pilha[t++] = j + 1; }
+        if (y > 0 && mm[j - w] === 1) { mm[j - w] = 2; pilha[t++] = j - w; }
+        if (y < h - 1 && mm[j + w] === 1) { mm[j + w] = 2; pilha[t++] = j + w; }
+      }
+      n += q; maior = Math.max(maior, q);
+    }
+    return { frac: n / (w * h), maior: maior / (w * h) };
+  };
+  const bo = e.bola, nb = g.naTela(bo.x, 0.11, bo.z), nb2 = g.naTela(bo.x, 0.22, bo.z);
+  const bx = nb.x * k, by = nb.y * k, rB = (Math.max(3, Math.hypot(nb2.x - nb.x, nb2.y - nb.y)) + 3) * k;
+  const near0 = cam.near;
+  const F1 = ler(); g.estadio.mostrarFesta(false); const F0 = ler(); g.estadio.mostrarFesta(true);
+  // (o uniform que a página mandou no quadro desenhado: o desenharQuadro o põe a cada desenho)
+  const lente = si.uniforms.uLente ? si.uniforms.uLente.value.toArray() : null;
+  const perto = N => {
+    cam.near = N; cam.updateProjectionMatrix();
+    const G1 = ler(); g.estadio.mostrarFesta(false); const G0 = ler(); g.estadio.mostrarFesta(true);
+    cam.near = near0; cam.updateProjectionMatrix();
+    const a = dif(F1, G1), b = dif(F0, G0), m = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) if (a[i] && !b[i]) m[i] = 1;
+    return mancha(m);
+  };
+  const m3 = perto(3), m6 = perto(6);
+  g.desenhar();
+  const fs = dif(F1, F0);
+  let naBola = 0, dBola = Infinity;
+  for (let i = 0; i < w * h; i++) if (fs[i]) { const d = Math.hypot(i % w - bx, Math.floor(i / w) - by); dBola = Math.min(dBola, d); if (d <= rB) naBola++; }
+  const dl = p => Math.hypot(p[0] - c.x, p[1] + 1.9 - c.y, p[2] - c.z), f = g.estadio.festa;
+  const acesos = f.flares.filter(s => f.t >= s.t0 && f.t <= s.t0 + s.dur).map(s => dl([s.x, s.y, s.z])).sort((x, y) => x - y);
+  return { t: f.t - window.__noite.t0, frac3: m3.frac, maior3: m3.maior, frac6: m6.frac, maior6: m6.maior, naBola, dBola: dBola / h, fogo: acesos[0] ?? null, nFogo: acesos.length, lente: !!(lente && lente[3] > 0), quina: dl(window.__noite.perto) };
 }
 /**
  * No navegador: o que a cobrança mostra no HUD — o painel antigo, texto visível no #hud fora do placar, do nome e da dica de
@@ -416,6 +496,27 @@ if (!SO || SO.split(',').some(x => x !== '7')) for (const tela of TELAS) {
     meta(`5 ${tela.nome}: a curva por arrasto no CHUTE e no LANÇAMENTO (toque de verdade): os chevrons só na cobrança mirada e nenhum botão CURVA; tiro de meta e pênalti sem arrasto; o CHUTE segurado desde antes dos chevrons também arrasta`,
       `fora da cobrança: chevrons ${fora.classe || fora.chute ? 'SIM' : 'não'}; na cobrança: chevrons ${na.classe && na.chute && na.lanc ? 'no CHUTE e no LANÇAMENTO' : JSON.stringify(na)}, botões CURVA ${na.curvas} · ${passos.join(' · ')} · ${semArrasto.join(' · ')}`,
       !fora.classe && !fora.chute && na.classe && na.chute && na.lanc && na.curvas === 0 && okA && cl === -1 && okBorda && semArrasto.ok !== false && semArrasto.length === 2 && okTarde);
+  }
+  // 2b de noite (por último: os sinalizadores acesos não mexem nas seções 1–5): acende com a câmera do escanteio de lá parada
+  // e mede em 3 escanteios de lá montados de novo ao longo da queima (a cobrança da pessoa espera só PARTIDA.cobrancaHumanoMax,
+  // 6 s: depois a IA bate e a câmera volta para a TV — cada medida no seu escanteio)
+  {
+    const r = [];
+    let txt = 'a câmera não veio', okN = false, quina = null;
+    const e0 = await montar(pg, 'escanteio-la');
+    if (e0.ativa) {
+      quina = await pg.evaluate(ACENDER_NOITE);
+      await terminar(pg);
+      for (let k = 0; k < 3; k++) {
+        const e = await montar(pg, 'escanteio-la');
+        r.push(e.ativa ? await pg.evaluate(MEDIR_NOITE) : null);
+        await terminar(pg);
+      }
+      await pg.evaluate(q => { const g = window.__golaco; g.definirHora('dia'); g.estadio.torcidaObj.sinalizadores.definirQualidade(q); g.desenhar(); }, tela.q);
+      okN = r.every(x => x && x.fogo != null && x.frac3 <= 0.01 && x.frac6 <= 0.01 && x.naBola === 0);
+      txt = `a quina a ${f1(quina)} m da lente; ${r.map(x => (!x ? 'a câmera não veio' : `${f1(x.t)} s da queima (${x.nFogo} acesos, o mais perto a ${f1(x.fogo)} m; uLente ${x.lente ? 'ligado' : 'desligado'}): a < 3 m ${f2(100 * x.frac3)}% (mancha ${f2(100 * x.maior3)}%), a < 6 m ${f2(100 * x.frac6)}% (mancha ${f2(100 * x.maior6)}%), ${x.naBola} px na bola, a festa a ${f1(100 * x.dBola)}% da altura da bola`)).join(' · ')}`;
+    }
+    meta(`2b ${tela.nome}: de noite no escanteio de lá, 8 sinalizadores acesos (a quina mais perto da lente garantida, a fumaça da Alta), em 3 instantes da queima: a festa a menos de 3 m e a menos de 6 m da lente ≤ 1% do quadro e nada dela no disco da bola`, txt, okN);
   }
   meta(`6 ${tela.nome}: nenhum erro no console`, s.erros.length ? s.erros.slice(0, 3).join(' | ') : 'nenhum', !s.erros.length);
   await s.navegador.close();

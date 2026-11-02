@@ -632,7 +632,13 @@ if (!SO || SO === 'G') {
 // (render/bandeiras-dados.js, as 32 da Alta — a Baixa e a Média desenham as primeiras —, o pano e o mastro pela conta do shader
 // de bandeiras.js, em todo o balanço; não são sólidos da câmera): o que sobra delas com a lente ali (alturaPelaLente: as de
 // perto abaixam; revisão R2 do item 65 — no Golaço e no Maracanã o pano ficava a 0,2–3,6 m da lente, uma placa de 12–100% do
-// quadro encostada na bola) a ≥ 6 m da lente, cada uma ≤ 5% do quadro do celular e a ≥ 40 px da bola nele.
+// quadro encostada na bola) a ≥ 6 m da lente, cada uma ≤ 5% do quadro do celular e a ≥ 40 px da bola nele. E os
+// SINALIZADORES (render/festa.js: os pontos da organizada, das quinas e do setor visitante de cada estádio, com o sorteio de
+// ±0,6 m; a queima inteira — 28 s de fogo e a fumaça até 7 s depois —, a Média e a Alta; render/sinalizadores.js: o núcleo,
+// o halo e cada partícula de fumaça pela conta do vertex shader — fumaca.js —, vezes o forcaPelaLente que o uLente manda; de
+// noite, o halo mais forte): o que se vê deles (a fumaça com alfa ≥ 0,1; o núcleo e o halo onde somam ≥ 0,1 de luz) a ≥ 3 m
+// da lente, cada quadro ≤ 5% do quadro do celular e nenhum mais perto que a bola por cima dela (revisão R2 do item 65: no
+// Golaço a quina ficava a 3–4 m da lente e a fumaça dela passava pela lente — um véu em todo o quadro, por cima da bola).
 /** Os pontos do pano (9 × 5) e do mastro de uma bandeira no tempo t (a conta do vertex shader de bandeiras.js), × k. */
 function pontosBandeira(BD, b, t, k, out = []) {
   const B = BD.BANDEIRAS, O = B.onda, nx = -b.ez, nz = b.ex;
@@ -655,8 +661,33 @@ function projetor(de, para, fov, asp) {
     const dx = p[0] - de[0], dy = p[1] - de[1], dz = p[2] - de[2];
     const w = -(zx * dx + zy * dy + zz * dz);
     out.x = f / asp * (xx * dx + xz * dz) / w; out.y = f * (yx * dx + yy * dy + yz * dz) / w; out.ok = w > 0.5;
+    out.w = w; out.f = w > 0.05 ? f / w : Infinity;          // (f / w: m → NDC de y à distância w)
     return out;
   };
+}
+/**
+ * Os quadros de um sinalizador s ({x, y, z, t0, dur, semente}) no tempo t que se veem (a conta do vertex shader de
+ * sinalizadores.js e do fumaca.js, com o forcaPelaLente da lente L; de noite): chama vis(centro, raio que se vê, tipo) para o
+ * núcleo e o halo (só com fogo; `fogoTambem` false pula os dois) e para cada partícula de P (0 = sem fumaça, a Baixa).
+ */
+function quadrosSinalizador(M, s, t, P, L, fogoTambem, vis) {
+  const { FU, FE, alturaFogo } = M, FL = FU.forcaPelaLente ?? (() => 1), nuc = FU.FUMACA.nucleo ?? 0.9, halo = FU.FUMACA.halo ?? 6;
+  const fogo = FE.fogoSinalizador(s, t);
+  if (fogoTambem && fogo > 0) {
+    const cf = [s.x, s.y + alturaFogo, s.z];
+    // núcleo: cor × (1,6 + 0,8·fogo) × exp(−5ρ²) (ρ no raio do quadro) — visível onde ≥ 0,1
+    const tamN = nuc * (0.85 + 0.25 * fogo), IN = (1.6 + 0.8 * fogo) * FL(cf, tamN / 2, L);
+    if (IN > 0.1) vis(cf, tamN / 2 * Math.min(1, Math.sqrt(Math.log(IN / 0.1) / 5)), 'núcleo');
+    // halo: cor × fogo × 0,7 (noite) × (1 − ρ²)³
+    const IH = fogo * 0.7 * FL(cf, halo / 2, L);
+    if (IH > 0.1) vis(cf, halo / 2 * Math.sqrt(1 - Math.cbrt(0.1 / IH)), 'halo');
+  }
+  for (let i = 0; i < P; i++) {
+    const pp = FU.fumacaParticula(s, i, P, t);
+    if (!pp) continue;
+    const c = [pp.x, pp.y, pp.z];
+    if (pp.alfa * FL(c, pp.tam / 2, L) >= 0.1) vis(c, pp.tam / 2, 'fumaça');
+  }
 }
 async function g5() {
   let PB = null;
@@ -664,6 +695,9 @@ async function g5() {
   if (!PB) { reg('G5 escanteio da pessoa: render/plano-bola-parada.js', 'não existe', 'existe', false); return; }
   const fs = await import('node:fs');
   const F = await imp('estadio-forma.js'), TD = await imp('render/torcida-dados.js'), BD = await imp('render/bandeiras-dados.js');
+  const FU = await imp('render/fumaca.js'), FE = await imp('render/festa.js'), LF = await imp('render/luz-falsa.js');
+  const MS = { FU, FE, alturaFogo: LF.LUZ_FALSA.altura };
+  const PS0 = FE.PONTOS_SINALIZADOR, PS = { organizada: PS0.organizada.map(p => [...p]), quinas: PS0.quinas.map(p => [...p]), visitante: PS0.visitante.map(p => [...p]) };
   const GEN = await imp('estadio-generico.js'), PL = await imp('estadio-planta.js');
   const base = JSON.parse(fs.readFileSync(path.join(PASTA_JS, '../assets/tm/estadios.json'), 'utf8'));
   const formas = [['Golaço', null]];
@@ -676,10 +710,14 @@ async function g5() {
   const tx = MX - 11; // o alvo do escanteio (mira.js alvoPadrao): a marca do pênalti
   const ruins = [], cabeca = [], faixas = [], faixasG = [], pxs = [], o = {};
   const bandRuins = [], bandDist = [], pts = [];
+  const sinRuins = [], sinDist = [], sinFrac = [];
+  let sinBola = 0, sinN = 0;
   for (const [nome, criar] of formas) {
     const P = criar ? criar() : null;
     F.definirForma(P); TD.definirLadoDeCa(P ? P.cameraNoLadoDeCa : null); BD.definirFormaBandeiras(P);
     const band = BD.bandeiras();
+    // (os pontos dos sinalizadores como a página: os do Golaço trocados pelos da forma — render/estadio-generico.js ligarForma)
+    const sp = P ? P.sinalizadores() : PS, pontosSin = [...sp.organizada, ...sp.quinas, ...sp.visitante];
     // (a corrida do escanteio: 2,5–4 m a 25–40° da linha — config.js CORRIDA_COBRANCA —, o recuo na linha bola–alvo ≤ 4 m)
     for (const sx of [1, -1]) for (const sz of [1, -1]) for (const recuo of [0, 2, 4]) {
       const bx = sx * (MX - 0.4), bz = sz * (MZ - 0.4), ax = sx * tx;
@@ -724,6 +762,35 @@ async function g5() {
       }
       bandDist.push(dMin);
       if (dMin < 6 || caixa > 0.05 || bolaPx < 40) bandRuins.push(`${caso}: ${f1(dMin)} m, ${f1(100 * caixa)}%, ${f1(bolaPx)} px`);
+      // os sinalizadores com a lente ali: os pontos a ≤ 30 m dela (a fumaça anda ≤ 9 m e o halo tem 3 m de raio), o sorteio de
+      // ±0,6 m nos cantos e no meio, 2 sementes × a Média e a Alta (48 partículas por ponto do sorteio), de 0,2 em 0,2 s
+      {
+        const L = [px, py, pz, 1], wBola = nb.w, rBola = Math.max(1.5, 0.11 * nb.f * H / 2), q2 = {};
+        let sMin = Infinity, sFr = 0, sBo = 0, quem = '';
+        const vis = (c, r, tipo) => {
+          sinN++;
+          const dl = Math.hypot(c[0] - px, c[1] - py, c[2] - pz) - r;
+          pj(c, q2);
+          if (q2.w < -r) return;                                  // atrás da lente
+          if (q2.w <= 0.05) { if (dl < sMin) { sMin = dl; quem = tipo; } return; }
+          const rp = Math.min(q2.f * r, 4);                       // o raio em NDC de y (× H/2 = px)
+          const cx = Math.max(-1, Math.min(1, q2.x)), cy = Math.max(-1, Math.min(1, q2.y));
+          if (Math.hypot((q2.x - cx) * asp, q2.y - cy) > rp) return; // fora do quadro
+          if (dl < sMin) { sMin = dl; quem = tipo; }
+          const rx = rp / asp, fr = Math.max(0, Math.min(1, q2.x + rx) - Math.max(-1, q2.x - rx)) * Math.max(0, Math.min(1, q2.y + rp) - Math.max(-1, q2.y - rp)) * Math.PI / 16;
+          if (fr > sFr) sFr = fr;
+          if (q2.w < wBola && Math.hypot((q2.x - nb.x) * asp, q2.y - nb.y) * H / 2 < rp * H / 2 + rBola) sBo++;
+        };
+        for (const q of pontosSin) {
+          if (Math.hypot(q[0] - px, q[1] - py, q[2] - pz) > 30) continue;
+          for (const [jx, jz] of [[0, 0], [-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]]) for (const sem of [0.05, 0.55]) for (const Pq of [10, 14]) {
+            const s = { ativo: true, t0: 0, dur: 28, x: q[0] + jx, y: q[1], z: q[2] + jz, semente: sem };
+            for (let t = 0; t < 35; t += 0.2) quadrosSinalizador(MS, s, t, Pq, L, sem === 0.05 && Pq === 14, vis);
+          }
+        }
+        sinDist.push(sMin); sinFrac.push(sFr); sinBola += sBo;
+        if (sMin < 3 || sFr > 0.05 || sBo > 0) sinRuins.push(`${caso}: ${f1(sMin)} m (${quem}), ${f1(100 * sFr)}%, ${sBo} na bola`);
+      }
       if (process.env.CAM_G5) console.error(`${caso}: lente (${pl.de.map(v => v.toFixed(1)).join(', ')}) fov ${pl.fov.toFixed(1)} faixa ${(100 * fx).toFixed(1)}% marca ${(Math.abs(a1.y - a0.y) / 2 * H).toFixed(1)} px`);
     }
   }
@@ -739,6 +806,8 @@ async function g5() {
   const pxG = pxs.slice(0, 12), ok18 = pxs.filter(v => v >= 18).length;
   reg('G5 … as bandeiras de mastro (as 32, pelo shader): a ≥ 6 m da lente, cada uma ≤ 5% do quadro do celular e a ≥ 40 px da bola',
     `${lista(bandRuins)} (a mais perto: ${f1(Math.min(...bandDist))} m; antes 0,2 m)`, '0', bandRuins.length === 0);
+  reg('G5 … os sinalizadores (núcleo, halo e fumaça pelo shader, a queima inteira, de noite): o que se vê a ≥ 3 m da lente, cada quadro ≤ 5% do quadro do celular e nada por cima da bola',
+    `${lista(sinRuins)} (a mais perto: ${f1(Math.min(...sinDist))} m, o maior ${f1(100 * Math.max(...sinFrac))}%, ${sinBola} na bola; ${sinN} quadros; antes 226 casos, −1,0 m, 78,5% e 8477 na bola)`, '0', sinRuins.length === 0);
   reg('G5 … o jogador na marca do pênalti no celular: no Golaço, o pior; em todos, ≥ 18 px e o pior', `${f1(Math.min(...pxG))} px; ${f1(pct(ok18, pxs.length))}% e ${f1(Math.min(...pxs))} px (mediana ${f1(q(pxs, 0.5))}; antes 13–15,6)`, '≥ 18 px; ≥ 90% e ≥ 13 px', Math.min(...pxG) >= 18 && ok18 >= 0.9 * pxs.length && Math.min(...pxs) >= 13);
 }
 

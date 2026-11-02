@@ -28,7 +28,8 @@
 //      linha de cá (no celular a cobertura deles aparecia no canto de baixo);
 //  12) a FESTA (11/10): faixas/bandeiras/bandeirões e sinalizadores ≤ 2 chamadas de desenho no jogo; onda da bandeira
 //      GPU = JS; "debaixo do bandeirão" GPU = JS (12/10); a bandeira abaixa perto da lente da câmera da bola parada GPU = JS
-//      (revisão R2 do item 65); no gol da casa a organizada muda na câmera do gol (bandeirão e sinalizadores); overdraw ≤ 0,5
+//      (revisão R2 do item 65), e o fogo e a fumaça dos sinalizadores somem perto dela GPU = JS (a mesma revisão); no gol da
+//      casa a organizada muda na câmera do gol (bandeirão e sinalizadores); overdraw ≤ 0,5
 //      tela;
 //  13) tiro de meta (Regra 16) com adversários na área: saem na montagem e a câmera CORTA (evento corteBolaParada);
 //  14) cadeiras e degraus (item 69, PR 1; celular e PC): o degrau em escada nas arquibancadas, as cadeiras 3D de perto
@@ -819,6 +820,54 @@ void main() { int i = int(gl_FragCoord.x); vec4 a = texelFetch(uEntrada, ivec2(i
       return { N, dif, zero, meio };
     });
     meta('GPU = JS: a bandeira de mastro abaixa perto da lente da câmera da bola parada (4096 mãos a 0–16 m dela)', gpuL.erro ?? `difere até ${gpuL.dif.toExponential(1)} (${gpuL.zero} abaixadas, ${gpuL.meio} subindo)`, '≤ 1e-4; ≥ 400 abaixadas, ≥ 200 subindo', !gpuL.erro && gpuL.dif <= 1e-4 && gpuL.zero >= 400 && gpuL.meio >= 200);
+    // os sinalizadores perto da mesma lente (revisão R2 do item 65: a quina da festa ficava a 3–4 m da lente alta e a fumaça
+    // dela passava por ela) — a conta da GPU (LENTE_FUMACA_GLSL, em sinalizadores.js) = a do JS (forcaPelaLente) em 4096
+    // quadros (centro a 0–20 m de uma lente, raio 0–3 m: o núcleo, o halo e as partículas), ligada e desligada
+    const gpuF = await pg.evaluate(async () => {
+      const FU = await import('./js/render/fumaca.js');
+      if (!FU.LENTE_FUMACA_GLSL) return { erro: 'não existe (o fogo e a fumaça ficam inteiros colados na lente)' };
+      const cv = document.createElement('canvas');
+      const gl = cv.getContext('webgl2');
+      if (!gl || !gl.getExtension('EXT_color_buffer_float')) return { erro: 'sem WebGL2 com textura float' };
+      const N = 4096;
+      cv.width = N; cv.height = 1;
+      const sh = (tipo, src) => { const o = gl.createShader(tipo); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+      const p = gl.createProgram();
+      gl.attachShader(p, sh(gl.VERTEX_SHADER, '#version 300 es\nvoid main(){ vec2 v = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(v * 2.0 - 1.0, 0.0, 1.0); }'));
+      gl.attachShader(p, sh(gl.FRAGMENT_SHADER, `#version 300 es
+precision highp float; precision highp sampler2D;
+uniform sampler2D uEntrada; out vec4 cor;
+${FU.LENTE_FUMACA_GLSL}
+void main() { int i = int(gl_FragCoord.x); vec4 a = texelFetch(uEntrada, ivec2(i, 0), 0), b = texelFetch(uEntrada, ivec2(i, 1), 0);
+  cor = vec4(forcaPelaLente(a.xyz, a.w, b), 0.0, 0.0, 1.0); }`));
+      gl.linkProgram(p);
+      let semente = 6061;
+      const rnd = () => { semente = (semente * 1664525 + 1013904223) >>> 0; return semente / 4294967296; };
+      const ent = new Float32Array(4 * N * 2);
+      for (let i = 0; i < N; i++) {
+        const L = [-60 + 120 * rnd(), 4 + 10 * rnd(), -55 + 110 * rnd(), rnd() < 0.15 ? 0 : 1];
+        const r = 20 * rnd(), th = 6.283 * rnd(), fi = Math.acos(2 * rnd() - 1);
+        ent.set([L[0] + r * Math.sin(fi) * Math.cos(th), L[1] + r * Math.cos(fi), L[2] + r * Math.sin(fi) * Math.sin(th), 3 * rnd()], 4 * i);
+        ent.set(L, 4 * (N + i));
+      }
+      const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, N, 2, 0, gl.RGBA, gl.FLOAT, ent);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      const alvo = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, alvo); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, N, 1, 0, gl.RGBA, gl.FLOAT, null);
+      const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, alvo, 0);
+      gl.useProgram(p); gl.viewport(0, 0, N, 1);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(gl.getUniformLocation(p, 'uEntrada'), 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      const out = new Float32Array(4 * N); gl.readPixels(0, 0, N, 1, gl.RGBA, gl.FLOAT, out);
+      let dif = 0, zero = 0, meio = 0, um = 0;
+      for (let i = 0; i < N; i++) {
+        const a = ent.subarray(4 * i, 4 * i + 4), L = Array.from(ent.subarray(4 * (N + i), 4 * (N + i) + 4));
+        const js = FU.forcaPelaLente([a[0], a[1], a[2]], a[3], L);
+        if (js === 0) zero++; else if (js < 1) meio++; else um++;
+        dif = Math.max(dif, Math.abs(js - out[4 * i]));
+      }
+      return { N, dif, zero, meio, um };
+    });
+    meta('GPU = JS: o fogo e a fumaça dos sinalizadores somem perto da lente da câmera da bola parada (4096 quadros a 0–20 m dela)', gpuF.erro ?? `difere até ${gpuF.dif.toExponential(1)} (${gpuF.zero} apagados, ${gpuF.meio} voltando, ${gpuF.um} inteiros)`, '≤ 1e-4; ≥ 400 apagados, ≥ 200 voltando', !gpuF.erro && gpuF.dif <= 1e-4 && gpuF.zero >= 400 && gpuF.meio >= 200);
     // (c) e (d): gol da casa, 2,2 s depois (ainda na câmera do gol, antes da saída de bola)
     const golF = await golRoteirizado(pg, { semente: 5, time: 0 });
     const festaGol = await pg.evaluate(() => {
