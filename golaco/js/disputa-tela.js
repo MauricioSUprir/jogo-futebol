@@ -41,8 +41,10 @@ html.modo-penaltis .aviso { top: calc(var(--sa-t) + var(--m) + var(--placar-h) +
 /* o minimapa não diz nada na disputa (todos parados, a câmera atrás do cobrador) e tapava a bola na marca; o botão
    "Minimapa" da pausa sai junto (não mudava nada na tela) */
 html.modo-penaltis .minimapa, html.modo-penaltis #chip-minimapa { display: none !important; }
-/* celular baixo (568×320): a faixa do fim, no meio da tela, cobria a ponta das bolinhas — desce para baixo delas */
-@media (max-height: 359px) {
+/* celular baixo (568×320) e, desde o placar de 28 px do item 32, também o de 375 px de altura (667×375, 812×375: as
+   bolinhas desceram 4 px junto com a --placar-h e a faixa do fim, no meio da tela, ficava a 1 px delas): a faixa desce para
+   baixo das bolinhas */
+@media (max-height: 380px) {
   html.modo-penaltis .faixa { top: calc(var(--sa-t) + var(--m) + var(--placar-h) + 56px); transform: translateX(-50%); }
 }
 `;
