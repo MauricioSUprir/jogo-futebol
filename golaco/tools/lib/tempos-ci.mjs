@@ -94,6 +94,7 @@ export const TEMPOS_NODE = {
   'teste-rostos-reais.mjs': 1,
   'teste-patrocinios.mjs': 1,
   'teste-ponte-tm.mjs': 21,
+  'teste-relogio-placar.mjs': 5, // item 32 (medido: ~5 s aqui)
   'teste-disputa.mjs': 16,
   'teste-livre.mjs': 60,
   // online 1×1 (medidos aqui, máquina dividida; acertar pelo log do CI)
