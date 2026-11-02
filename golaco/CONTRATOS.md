@@ -2709,7 +2709,10 @@ de meta; a linha da trajetória com mira, força e curva no escanteio e na falta
   quadro (main.js, depois de `bp.tela.desenhar`): ativa = a cobrança mirada da PESSOA esperando, fora do tiro de meta, da
   corrida do item 70 e das cenas; liga a classe `curva-arrasto` no `#toque` (os chevrons ‹ › dentro do CHUTE e do LANÇAMENTO:
   pseudo-elementos, verde do TM `var(--tm-verde, #22c55e)` / preto do TM no `.ativo`, o lado da curva em α 1 e o outro em
-  0,35 pelo `data-curva`) — nada de DOM novo, sem texto. PASSE e ENFIADA ignoram o arrasto. Teclado (Z/X) e controle
+  0,35 pelo `data-curva`) — nada de DOM novo, sem texto. Com o CHUTE ou o LANÇAMENTO JÁ segurado quando ela liga (o dedo posto
+  na montagem da falta, antes da mira, ~1 s), o arrasto começa ali, da última posição do dedo naquele botão (`ultX`, guardada no
+  `pointerdown`/`pointermove` de todo botão): os chevrons do botão segurado valem (revisão 1 do item 65, R1: antes a curva
+  ficava em 0 e, para tentar de novo, soltar batia). PASSE e ENFIADA ignoram o arrasto. Teclado (Z/X) e controle
   (analógico direito, |rx| > 0,55, degraus com repetição) iguais. A lógica (`mira.js`), o formato do online (9 bytes) e o hash
   NÃO mudam (`hash-igual`, `hash-partida` demo e humano IGUAIS; `fecho-hash --diff` 0).
 - **Câmera da bola parada** (`render/bola-parada.js CAMERA_BOLA_PARADA`, `planoBolaParada`; a mistura em `render/camera.js`): no

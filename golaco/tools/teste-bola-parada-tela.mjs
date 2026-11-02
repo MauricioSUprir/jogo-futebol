@@ -17,7 +17,8 @@
 //     e o arco verde junto da bola mostra 56° no MESMO quadro em que o mundo muda; no celular (item 65) a curva é o ARRASTO no
 //     CHUTE e no LANÇAMENTO, com toque de verdade (CDP): +40 px = 0,75, de volta = 0, só o lado conta (80 px na vertical = 0),
 //     −60 px no LANÇAMENTO = −1, a borda da tela repete (844×390: o toque a 20 px dela), soltar bate com a curva mostrada (nada
-//     muda depois); os chevrons só na cobrança mirada (curva-arrasto) e nenhum botão CURVA; tiro de meta e pênalti sem arrasto.
+//     muda depois); os chevrons só na cobrança mirada (curva-arrasto) e nenhum botão CURVA; tiro de meta e pênalti sem arrasto;
+//     o CHUTE apertado na montagem da falta (antes da mira e dos chevrons) e arrastado +40 px depois deles = 0,75.
 //  6  Nenhum erro no console.
 //  7  (item 65) A mira nova, medida pelos pixels (q=media; celular dpr 2 com o entalhe; dia e noite; com × sem a mira no
 //     MESMO quadro) — L1 largura da linha pela máscara (tiras de 6 px ao longo da parte cheia: área ÷ comprimento) p95 ≤ 4,8 px
@@ -288,9 +289,30 @@ if (!SO || SO.split(',').some(x => x !== '7')) for (const tela of TELAS) {
       semArrasto.push(`${tp}: arrasto ${r.arrasto ? 'LIGADO' : 'não'}, chevrons ${ch.classe ? 'SIM' : 'não'}, curva ${r.curva ?? '-'}`);
       if (r.arrasto || ch.classe || (r.curva ?? 0) !== 0) semArrasto.ok = false;
     }
-    meta(`5 ${tela.nome}: a curva por arrasto no CHUTE e no LANÇAMENTO (toque de verdade): os chevrons só na cobrança mirada e nenhum botão CURVA; tiro de meta e pênalti sem arrasto`,
+    // E) o CHUTE apertado na MONTAGEM da falta e arrastado depois que os chevrons aparecem: o arrasto começa do ponto onde o dedo
+    // está quando a cobrança liga (entrada.js definirCurva). Antes ele não começava com o dedo já no botão: a curva ficava em 0
+    // com os chevrons no botão segurado, e soltar batia. A falta sofrida com a bola do meu time (a fase visível 'ataque': aqui, a
+    // 2ª falta seguida — sem a posse antes, os botões da montagem são os da defesa até o cobrador pegar a bola, ~1 s): o dedo
+    // no CHUTE no 2º quadro, antes da mira e dos chevrons (~1 s; com o dedo no botão a fase visível não troca)
+    await montar(pg, 'falta');
+    const tarde = await pg.evaluate(() => {
+      const g = window.__golaco, t = document.getElementById('toque');
+      g.forcarEntrada(null); g.faltaDeTeste({ u: 22, w: 4 });
+      for (let i = 0; i < 2; i++) g.relogio.avancar(1000 / 60, { desenhar: true });
+      return { fase: t.dataset.fase, classe: t.classList.contains('curva-arrasto'), mira: !!g.mundo.parada?.mira };
+    });
+    const ce = await centro('btn-chute');
+    await toque('touchStart', ce.x, ce.y);
+    const ligou = await pg.evaluate(() => { const g = window.__golaco; for (let i = 1; i <= 300; i++) { g.relogio.avancar(1000 / 60, { desenhar: true }); if (document.getElementById('toque').classList.contains('curva-arrasto')) return { q: i, segurado: document.getElementById('btn-chute').classList.contains('ativo') }; } return null; });
+    await pg.evaluate(AVANCAR, 2);
+    await arrastar(ce.x, ce.y, ce.x + 40, ce.y); const cTarde = await pg.evaluate(AVANCAR, 8);
+    const arrTarde = await pg.evaluate(() => window.__golaco.bolaParada.arrasto);
+    await toque('touchEnd'); await pg.evaluate(AVANCAR, 300);
+    const okTarde = tarde.fase === 'ataque' && !tarde.classe && !tarde.mira && !!ligou?.segurado && cTarde === 0.75 && !!arrTarde;
+    passos.push(`CHUTE apertado na montagem da falta (fase ${tarde.fase}, chevrons ${tarde.classe ? 'já' : 'ainda não'}), os chevrons ${ligou ? `${ligou.q} quadros depois${ligou.segurado ? ' com ele segurado' : ' (SOLTO?)'}` : 'NÃO vieram'}, +40 px depois deles ${cTarde} (arrasto ${arrTarde ? 'ligado' : 'NÃO'})`);
+    meta(`5 ${tela.nome}: a curva por arrasto no CHUTE e no LANÇAMENTO (toque de verdade): os chevrons só na cobrança mirada e nenhum botão CURVA; tiro de meta e pênalti sem arrasto; o CHUTE segurado desde antes dos chevrons também arrasta`,
       `fora da cobrança: chevrons ${fora.classe || fora.chute ? 'SIM' : 'não'}; na cobrança: chevrons ${na.classe && na.chute && na.lanc ? 'no CHUTE e no LANÇAMENTO' : JSON.stringify(na)}, botões CURVA ${na.curvas} · ${passos.join(' · ')} · ${semArrasto.join(' · ')}`,
-      !fora.classe && !fora.chute && na.classe && na.chute && na.lanc && na.curvas === 0 && okA && cl === -1 && okBorda && semArrasto.ok !== false && semArrasto.length === 2);
+      !fora.classe && !fora.chute && na.classe && na.chute && na.lanc && na.curvas === 0 && okA && cl === -1 && okBorda && semArrasto.ok !== false && semArrasto.length === 2 && okTarde);
   }
   meta(`6 ${tela.nome}: nenhum erro no console`, s.erros.length ? s.erros.slice(0, 3).join(' | ') : 'nenhum', !s.erros.length);
   await s.navegador.close();

@@ -551,7 +551,9 @@ export function criarEntrada(opc = {}) {
   const toque = { id: null, ox: 0, oy: 0, vx: 0, vy: 0 };
   // botões: elemento, bit e quem está segurando (pointerId)
   // `dois`: botão de dois sentidos (DIVIDIDA: tocar = bote, segurar = CONTER)
-  const bts = BOTOES_TOQUE.map(d => ({ ...d, el: document.getElementById(d.id), span: document.getElementById(d.id)?.querySelector('span') ?? null, mask: BOTAO[d.bit] ?? 0, dedo: null, dois: d.segura ? criarToqueOuSegura(BOTAO[d.bit] ?? 0, BOTAO[d.segura] ?? 0) : null }))
+  // ultX: a última posição do dedo nele (px CSS) — o arrasto da curva começa dali se a cobrança mirada ligar com o dedo já
+  // no CHUTE/LANÇAMENTO (definirCurva)
+  const bts = BOTOES_TOQUE.map(d => ({ ...d, el: document.getElementById(d.id), span: document.getElementById(d.id)?.querySelector('span') ?? null, mask: BOTAO[d.bit] ?? 0, dedo: null, ultX: 0, dois: d.segura ? criarToqueOuSegura(BOTAO[d.bit] ?? 0, BOTAO[d.segura] ?? 0) : null }))
     .filter(b => b.el);
 
   function raioBase() { return 58 * escalaAnalogico(ajustes.tamanho); }
@@ -671,7 +673,7 @@ export function criarEntrada(opc = {}) {
       e.preventDefault();
       if (bloqueada) return;
       usandoToque = true;
-      b.dedo = e.pointerId;
+      b.dedo = e.pointerId; b.ultX = e.clientX;
       const v = botaoQueVale(b);
       b.como = v === b ? null : v;
       // dois sentidos: o pulso sai no soltar (se foi um toque curto); o segurado sai em lerToque
@@ -683,7 +685,11 @@ export function criarEntrada(opc = {}) {
         arrasto.comecar(e.clientX, curvaMundo, window.innerWidth); arrBotao = b; arrX = e.clientX;
       }
     });
-    el.addEventListener('pointermove', e => { if (arrBotao === b && e.pointerId === b.dedo) { arrX = e.clientX; e.preventDefault(); } });
+    el.addEventListener('pointermove', e => {
+      if (e.pointerId !== b.dedo) return;
+      b.ultX = e.clientX;
+      if (arrBotao === b) { arrX = e.clientX; e.preventDefault(); }
+    });
     const solta = e => {
       if (e.pointerId !== b.dedo) return;
       // soltar a batida acaba o arrasto: a cobrança sai com a curva que a tela mostrava (o pulso que o passo ainda não viu
@@ -940,7 +946,15 @@ export function criarEntrada(opc = {}) {
     definirCurva(ativa, curva = 0) {
       ativa = !!ativa;
       if (!ativa && arrBotao) fimArrasto();
+      const ligou = ativa && !curvaAtiva;
       curvaAtiva = ativa; curvaMundo = Number(curva) || 0;
+      // o CHUTE ou o LANÇAMENTO já segurado quando a cobrança mirada liga (a pessoa apertou na montagem da falta, antes da mira
+      // e dos chevrons: ~1 s): o arrasto começa daqui, do ponto onde o dedo está agora — os chevrons aparecem no botão
+      // segurado e o gesto vale (antes a curva ficava em 0 e, para tentar de novo, soltar batia)
+      if (ligou && !arrBotao) {
+        const b = bts.find(x => x.dedo !== null && !x.como && CURVA_TOQUE.botoes.includes(x.id));
+        if (b) { arrasto.comecar(b.ultX, curvaMundo, window.innerWidth); arrBotao = b; arrX = b.ultX; }
+      }
       if (raizToque && ativa !== classeCurva) { classeCurva = ativa; raizToque.classList.toggle('curva-arrasto', ativa); }
       const lado = !ativa ? '' : curvaMundo > 0 ? 'd' : curvaMundo < 0 ? 'e' : '';
       if (lado !== ladoCurva) {
