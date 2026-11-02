@@ -716,7 +716,9 @@ export function criarEntrada(opc = {}) {
     if (!raizToque) return;
     raizToque.hidden = !v;
     document.documentElement.classList.toggle('com-toque', v);
-    if (v) { layout(); requestAnimationFrame(() => { layout(); baseRepouso(); if (opc.aoMudarLayout) opc.aoMudarLayout(); }); }
+    // (o descanso só sem dedo no analógico, como no resize: o 1º toque na zona chama isto e, no quadro seguinte, a base voltava
+    // ao canto com o dedo ainda na tela — apagada até o dedo passar do raio)
+    if (v) { layout(); requestAnimationFrame(() => { layout(); if (toque.id === null) baseRepouso(); if (opc.aoMudarLayout) opc.aoMudarLayout(); }); }
     else if (opc.aoMudarLayout) opc.aoMudarLayout();
   }
   if (raizToque) { raizToque.classList.add('fase-ataque'); raizToque.dataset.fase = 'ataque'; }
