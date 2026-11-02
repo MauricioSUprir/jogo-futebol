@@ -35,7 +35,7 @@
 // Os treinadores (tecnicos.js treinadorDoTime, ids 210/211; PLANO-CENAS.md R1) entram como CÓPIAS paradas na área técnica
 // (opc.treinadores): os vivos da página não andam nem são desenhados durante a cena — se andassem, o 1º passo gravado
 // depois dela viraria corte no anel (REPLAY.saltoTecnico) e o replay da falta não atravessaria o corte.
-import { PASSO, CAMPO } from './config.js';
+import { PASSO, CAMPO, BOLA } from './config.js';
 import { CENA_CARTAO, CENAS } from './cenas-config.js';
 import {
   criarBase, adicionarJogador, adicionarArbitro, adicionarNovo, poseInicial, passoSozinho, recriarAtor, soltar, para, irPara, parar, levar,
@@ -48,6 +48,7 @@ import {
 import { cameraDoPlano } from './prejogo-roteiro.js';
 import { maoEm } from './comemoracao.js';
 import { carrinhoAtivo, quadroCarrinho, novoQuadroCarrinho } from './carrinho.js';
+import { pose, SEGMENTOS, RAIO_CABECA, NJ } from './anim.js';
 import { posicaoTatica } from './tatica.js';
 
 const K = CENA_CARTAO;
@@ -117,7 +118,65 @@ function paradaPrevista(j, out, bp = null, tick = null, dono = j) {
   return out;
 }
 
-const _pp = { x: 0, z: 0 };
+// ---- quem está no carrinho não passa por cima da bola parada (revisão do item 34). A página desenha a bola do mundo no
+// lugar do apito durante a cena, e o separarDaBola (cena-atores.js) não segura quem está no carrinho: o quadro manda. O
+// punido que deu o carrinho (o caso comum) deitava em cima dela — a pelve e a coxa com a bola dentro por até 2 s.
+const _poseB = new Float32Array(NJ * 3), _jB = { carrinho: null, fase: 0 }, _mB = { tick: 0, bola: { p: null } };
+const RB = BOLA.raio;
+/** A maior entrada (m; ≤ 0 = livre) da bola parada bp no corpo DESENHADO do plano cq (a pose do quadro: as cápsulas do
+ * SEGMENTOS e a esfera da cabeça, mais a folga), deslocado de (ox, oz), do tick t0 até o fim do plano. Pura. */
+function entradaNaBola(cq, fase, t0, bp, ox, oz) {
+  _jB.carrinho = cq; _jB.fase = fase; _mB.bola.p = bp;
+  const px = bp.x - ox, py = bp.y, pz = bp.z - oz, f = K.folgaBola + RB;
+  let e = -Infinity;
+  for (let tk = t0; tk <= cq.fim; tk++) {
+    _mB.tick = tk;
+    if (!carrinhoAtivo(_jB, tk)) continue;
+    const o = pose(_jB, _mB, _poseB);
+    for (let i = 0; i < SEGMENTOS.length; i++) {
+      const [a, b, ra, rb] = SEGMENTOS[i];
+      const ax = o[a * 3], ay = o[a * 3 + 1], az = o[a * 3 + 2], dx = o[b * 3] - ax, dy = o[b * 3 + 1] - ay, dz = o[b * 3 + 2] - az;
+      const l2 = dx * dx + dy * dy + dz * dz;
+      const u = l2 > 1e-12 ? clamp(((px - ax) * dx + (py - ay) * dy + (pz - az) * dz) / l2, 0, 1) : 0;
+      const g = ra + (rb - ra) * u + f - Math.hypot(ax + dx * u - px, ay + dy * u - py, az + dz * u - pz);
+      if (g > e) e = g;
+    }
+    const ic = J.cabeca * 3, g = RAIO_CABECA + f - Math.hypot(o[ic] - px, o[ic + 1] - py, o[ic + 2] - pz);
+    if (g > e) e = g;
+  }
+  _jB.carrinho = null; _mB.bola.p = null;
+  return e;
+}
+/**
+ * Quem está no carrinho (o plano de j ativo depois do `tick`) e passaria por cima da bola parada bp (no chão): o menor
+ * deslocamento — de lado (perpendicular ao deslize, para os dois lados) ou ao longo dele — que deixa o corpo desenhado do
+ * `tick` até ele ficar de pé a ≥ CENA_CARTAO.folgaBola da bola. A cena começa num corte: a cópia é levada (levar, com o plano)
+ * antes do 1º quadro. (ox, oz): onde j já foi levado (o expulso: o ponto desenhado). Em out {x, z}; 0 se já está livre, com a
+ * bola no ar ou sem carrinho. Pura (só lê o plano: uma cópia rasa sem o `congela` do apito, como a da cena).
+ */
+export function desvioDaBola(j, tick, bp, out, ox = 0, oz = 0) {
+  out.x = 0; out.z = 0;
+  const cp = j.carrinho;
+  if (!cp || !carrinhoAtivo(j, tick + 1) || bp.y >= 0.6) return out;
+  const cq = cp.congela != null ? { ...cp, congela: null } : cp;
+  if (entradaNaBola(cq, j.fase, tick, bp, ox, oz) <= 0) return out;
+  // as 4 direções: de lado (primeiro o lado de lá da bola), para trás e para a frente do deslize
+  const lat = (bp.x - cp.x0 - ox) * -cp.uz + (bp.z - cp.z0 - oz) * cp.ux, s = lat >= 0 ? -1 : 1;
+  const dirs = [[cp.uz * s, -cp.ux * s], [-cp.uz * s, cp.ux * s], [-cp.ux, -cp.uz], [cp.ux, cp.uz]];
+  let melhor = Infinity;
+  for (const [nx, nz] of dirs) {
+    let d = 0;
+    for (let it = 0; it < 12 && d < melhor; it++) {
+      const e = entradaNaBola(cq, j.fase, tick, bp, ox + nx * d, oz + nz * d);
+      if (e <= 0) { if (d < melhor) { melhor = d; out.x = nx * d; out.z = nz * d; } break; }
+      d += e + 0.005;
+      if (d > K.desvioBolaMax) break;
+    }
+  }
+  return out;
+}
+
+const _pp = { x: 0, z: 0 }, _dv = { x: 0, z: 0 };
 /**
  * Plano da cena (só LÊ o mundo). cartao = escolherCartao(...). opc = {ultimaAmarelo, ultimaVermelho, variante (força:
  * testes), timeHumano, posAntes(id) → {x, z} | null (o expulso saiu do mundo no passo do cartão: a posição DESENHADA no
@@ -155,7 +214,11 @@ export function planejarCartao(m, cartao, opc = {}) {
   const forte = cartao.motivo === 'forcaExcessiva' || cartao.motivo === 'dogso';
   // o árbitro: chega do lado da bola (ou do centro), de preferência do lado de lá do punido (a câmera do plano 'arbitro'
   // fica do lado da TV, sobre o ombro dele: ninguém atravessa a linha dos 180°); para a dPara m dele, dentro do campo
-  const P = paradaPrevista(posPunido ? { x: posPunido.x, z: posPunido.z, vx: j.vx, vz: j.vz } : j, _pp, null, m.tick, j), px = P.x, pz = P.z;
+  // (o punido no carrinho em cima da bola parada: a cópia vai de lado antes do 1º quadro — desvioDaBola —, e o árbitro para
+  // onde ele vai ficar de pé)
+  const desvioBola = desvioDaBola(j, m.tick, m.bola.p, { x: 0, z: 0 }, posPunido ? posPunido.x - j.x : 0, posPunido ? posPunido.z - j.z : 0);
+  const P = paradaPrevista(posPunido ? { x: posPunido.x, z: posPunido.z, vx: j.vx, vz: j.vz } : j, _pp, null, m.tick, j);
+  const px = clamp(P.x + desvioBola.x, -MX + 1.5, MX - 1.5), pz = clamp(P.z + desvioBola.z, -MZ + 1.5, MZ - 1.5);
   const b = m.bola.p;
   let rx = b.x - px, rz = b.z - pz;
   if (Math.hypot(rx, rz) < 2) { rx = -px; rz = -pz; }
@@ -207,7 +270,7 @@ export function planejarCartao(m, cartao, opc = {}) {
     tick: m.tick, id: j.id, time: j.time, cor: cartao.cor, segundo, motivo: cartao.motivo, forte, variante,
     apoio: temApoio ? apoio.id : null, apoioDist: apoio ? dm : Infinity, disponiveis, excluidas, outros: cartao.outros ?? [],
     arb: { x0: melhor.ax, z0: melhor.az, x1: melhor.sx, z1: melhor.sz, theta: melhor.th, dPara, dIni },
-    parada: { x: px, z: pz }, saida, planos, duracao: t, tempos: T, hash: h, timeHumano: opc.timeHumano ?? 0,
+    parada: { x: px, z: pz }, desvioBola, saida, planos, duracao: t, tempos: T, hash: h, timeHumano: opc.timeHumano ?? 0,
     posPunido, treinadores: (opc.treinadores ?? []).filter(Boolean).map(o => ({ ...o })),
     // o estádio de forma própria (TM, edição pro): a câmera dos trilhos de torcida do pré-jogo dele (estadio-planta.js /
     // estadio-generico.js ajustarPlano; a página passa IDENT.forma3d.planta.ajustarPlano)
@@ -231,6 +294,13 @@ export function criarCenaCartao(plano, m) {
   if (!pun) {
     pun = adicionarJogador(c, acharPunido(m, plano.id), 'resto');
     if (plano.posPunido) levar(pun.j, plano.posPunido.x - pun.j.x, plano.posPunido.z - pun.j.z);
+  }
+  // quem está no carrinho não passa por cima da bola parada (desvioDaBola): a cópia — com o plano — é levada antes do 1º
+  // quadro (a cena começa num corte); o punido pelo desvio do plano (o árbitro para onde ele vai ficar de pé)
+  for (const a of c.atores) {
+    if (!a.j.carrinho || !carrinhoAtivo(a.j, c.mF.tick + 1)) continue;
+    const d = a === pun && plano.desvioBola ? plano.desvioBola : desvioDaBola(a.j, c.mF.tick, c.mF.bola.p, _dv);
+    if (d.x || d.z) levar(a.j, d.x, d.z);
   }
   // os treinadores (cópias paradas na área técnica, olhando o lance; ninguém os empurra)
   c.treinadores = [];

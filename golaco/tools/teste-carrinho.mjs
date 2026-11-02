@@ -113,7 +113,9 @@
 //     depois de 1 passo) e a cópia da cena de substituição fica de pé no lugar; G5 o intervalo (o carrinho no último tick do
 //     1º tempo): a pelve desenhada parada (≤ 0,05 m) e a saída do 2º tempo zera o plano e o quadril; G6 o levar (3, −2 m) no
 //     meio do carrinho: sem salto e o pé dobrado parado no 1º tick do levantar (≤ 0,02 m); G7 o Modo Livre, "Bola no meu
-//     pé" com o controlado no carrinho: de pé no lugar, plano e quadril zerados, a bola a ≤ 0,5 m.
+//     pé" com o controlado no carrinho: de pé no lugar, plano e quadril zerados, a bola a ≤ 0,5 m; G8 a cena do cartão com o
+//     punido no carrinho (≥ 12 cenas do cartão do próprio deslizante, ≥ 6 com a bola a ≤ 0,3 m dele): a bola parada do
+//     mundo nunca dentro do corpo desenhado dele (as cápsulas do manequim e a cabeça) enquanto ele está no chão.
 //   node tools/teste-carrinho.mjs              (lógica do repositório)
 //   node tools/teste-carrinho.mjs --js <pasta> (outra cópia da lógica; a da main antes do carrinho → REPROVA)
 //   node tools/teste-carrinho.mjs --detalhe    (a tabela por entrada, cada caso do A9 e os encontros do C1 sem toque)
@@ -2710,6 +2712,72 @@ else {
         `no apito ${noApito ? 'congelado' : 'NÃO'}; ${n} ticks de intervalo, a pelve andou ${f3(mexeu)} m; saída: ${zerou ? 'zerou' : 'NÃO zerou'} (quadril depois ${f2(q1)})`,
         'congelado; ≤ 0,05 m; zerou; ≥ 0,85', noApito && n >= 60 && mexeu <= 0.05 && zerou && q1 >= 0.85);
     }
+  }
+
+  // ---- G8: a cena do CARTÃO com o punido no carrinho e a bola parada (a página desenha a do mundo, no lugar do apito): o corpo
+  // DESENHADO dele (as cápsulas do manequim e a cabeça) nunca entra na bola enquanto ele está no carrinho — a cópia vai de lado
+  // antes do 1º quadro (cena-cartao.js desvioDaBola). Os casos: o cartão do próprio deslizante (amarelo ou vermelho) nas
+  // entradas do G2, nos estados da semente 3102; "perto": a bola a ≤ 0,3 m do corpo desenhado no mundo, no tick do cartão
+  {
+    const folgaBola = (o, p) => {
+      let d = Infinity;
+      for (const [a, b, ra, rb] of A.SEGMENTOS) {
+        const ax = o[a * 3], ay = o[a * 3 + 1], az = o[a * 3 + 2], dx = o[b * 3] - ax, dy = o[b * 3 + 1] - ay, dz = o[b * 3 + 2] - az, l2 = dx * dx + dy * dy + dz * dz;
+        const u = l2 > 0 ? Math.max(0, Math.min(1, ((p.x - ax) * dx + (p.y - ay) * dy + (p.z - az) * dz) / l2)) : 0;
+        d = Math.min(d, Math.hypot(ax + dx * u - p.x, ay + dy * u - p.y, az + dz * u - p.z) - (ra + (rb - ra) * u) - CFG.BOLA.raio);
+      }
+      const ic = A.J.cabeca * 3;
+      return Math.min(d, Math.hypot(o[ic] - p.x, o[ic + 1] - p.y, o[ic + 2] - p.z) - A.RAIO_CABECA - CFG.BOLA.raio);
+    };
+    const mm = P.criarPartida({ semente: 3102, minutosPorTempo: 4 });
+    let ultimo = -1e9, n = 0, perto = 0, dentro = 0, pior = Infinity, piorEx = '', depois = Infinity, estados = 0;
+    procura8: for (let i = 0; i < 12000 && estados < 10; i++) {
+      P.passoPartida(mm, P.entradaDemoPartida(mm));
+      if (mm.tick < 600 || mm.tick - ultimo <= 700) continue;
+      const dm = mm.posse != null ? porId(mm, mm.posse) : null;
+      if (!(mm.partida.estado === 'jogo' && !(mm.parada && !mm.parada.rolou) && mm.golTick == null && mm.naMao == null && dm && dm.time === 1 && dm.posicao !== 'GOL')) continue;
+      ultimo = mm.tick; estados++;
+      const base = SIM.copiarMundo(mm);
+      for (const dist of [2.0, 2.5, 3.0, 3.5]) for (const ang of [Math.PI, 2.6, -2.6, Math.PI / 2, -Math.PI / 2]) for (const vel of [6.5, 5.5, 4.5]) {
+        const w = SIM.copiarMundo(base), d = porId(w, w.posse);
+        const vc = Math.hypot(d.vx, d.vz), dx0 = vc >= 1 ? d.vx / vc : Math.cos(d.rumo), dz0 = vc >= 1 ? d.vz / vc : Math.sin(d.rumo);
+        const ux = dx0 * Math.cos(ang) - dz0 * Math.sin(ang), uz = dx0 * Math.sin(ang) + dz0 * Math.cos(ang);
+        const b0 = w.bola.p, px = b0.x + ux * dist, pz = b0.z + uz * dist, j = linhaPerto(w, b0.x, b0.z);
+        const rx = b0.x - px, rz = b0.z - pz, rl = Math.hypot(rx, rz) || 1;
+        P.teleportar(j, px, pz, Math.atan2(rz, rx)); j.vx = vel * rx / rl; j.vz = vel * rz / rl;
+        if (!AC.assumirControle(w, 0, j)) continue;
+        passo(w, { x: rx / rl, z: rz / rl, botoes: B.CARRINHO });
+        if (!j.carrinho) continue;
+        for (let k = 0; k < 200 && j.carrinho; k++) {
+          const ev = passo(w, { x: 0, z: 0, botoes: 0 });
+          const cart = CCt.escolherCartao(ev);
+          if (!cart) continue;
+          if (cart.id === j.id && K.carrinhoAtivo(j, w.tick + 1) && w.bola.p.y < 0.6) {
+            n++;
+            if (folgaBola(A.pose(j, w), w.bola.p) <= 0.3) perto++;
+            const c = CCt.criarCenaCartao(CCt.planejarCartao(w, cart, {}), w);
+            const pun = c.punido;
+            let fCarr = Infinity, fDepois = Infinity, kPe = -1;
+            for (let t = 0; t < 600 && !c.acabou && (kPe < 0 || c.k - kPe <= 60); t++) {
+              CCt.passoCenaCartao(c);
+              if (!pun.ativo) continue;
+              const f = folgaBola(pun.atu, c.mF.bola.p);
+              if (pun.noCarrinho) fCarr = Math.min(fCarr, f);
+              else { if (kPe < 0) kPe = c.k; fDepois = Math.min(fDepois, f); }
+            }
+            if (fCarr < 0) dentro++;
+            if (fCarr < pior) { pior = fCarr; piorEx = `@${base.tick} ${f2(dist)} m, ${f2(ang)} rad, ${f2(vel)} m/s (${cart.cor})`; }
+            depois = Math.min(depois, fDepois);
+            if (n >= 24) break procura8;
+          }
+          break;
+        }
+      }
+    }
+    reg('G8 cena do cartão com o punido no carrinho: a bola parada fora do corpo desenhado dele enquanto ele está no chão',
+      `${n} cenas (${perto} com a bola a ≤ 0,3 m dele no tick do cartão): ${dentro} com a bola dentro; menor folga ${f3(pior)} m (${piorEx})`,
+      '≥ 12 cenas, ≥ 6 perto; 0 dentro (folga ≥ 0)', n >= 12 && perto >= 6 && dentro === 0);
+    info('G8 depois de ficar de pé (1 s; separarDaBola): a menor folga do corpo desenhado à bola', `${f3(depois)} m`, '—');
   }
 
   // ---- G6: o levar da cena (cena-atores.js; o expulso levado ao ponto desenhado no tick anterior) no meio do carrinho: o plano
