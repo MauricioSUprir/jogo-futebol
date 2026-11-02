@@ -85,7 +85,7 @@
 | 66 | ✅ **Câmera**: segue a bola (atraso p90 9,5 → 5,7 m, miolo 94,5 → 98,3%), a área inteira no último terço (15,9 → 96,7% com a bola nela), 6% mais aberta e o escanteio da pessoa alto (a área 7,7 → 23,6% da tela); na bola muito alta o gramado e os jogadores ficam no quadro, e no Rumo ao Estrelato o seu jogador fica no quadro (#600) | 8 |
 | 58 | 🆕 **Menu de pausa igual ao do FC 24**, com o campinho do seu time no canto direito | 8 |
 | 64 | 🆕 **Tela antes do jogo** (todo modo) no nível da do EA FC, com a cara do TM | 12 |
-| 65 | 🆕 **Mira das bolas paradas** minimalista, com um jeito bom de pôr curva | 8 |
+| 65 | ✅ **Mira das bolas paradas** minimalista, com a cara do TM: a linha fina branca com contorno (4 px no celular, antes até 11), o anel verde onde a bola cai, o arco verde da curva junto da bola, sem painel nem texto; no celular a curva é segurar o CHUTE ou o LANÇAMENTO e ARRASTAR o polegar para o lado (os 2 botões CURVA saíram: o HUD da cobrança 14,5 → 10,8% no celular pequeno); teclado e controle iguais (branch `golaco/f65-mira`) | 8 |
 | 59 | ✅ **Minimapa embaixo, no meio**, entre o analógico e os botões (92×60 no padrão; a torcida do alto livre: 5,4% → 0%), o topo só com placar e menu (#598) | 1,5 |
 | 60 | ✅ **Nome do jogador com a bola nos cantos de baixo** (o time da esquerda do placar à esquerda, o da direita à direita), sem piscar e sem pegar toque (#598) | 1,5 |
 | 32 | ✅ **Placar um pouco maior, com a cara do TM e o relógio em minutos e segundos** ("34:12"; nos acréscimos o relógio continua com o "+4"; "Intervalo"/"Fim" no lugar do relógio; 28 px no celular, 30 no PC) (#599) | 4,5 |

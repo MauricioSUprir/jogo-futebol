@@ -416,6 +416,42 @@ O roteirizado do "depois" é o teto: acha a melhor mira simulando a trajetória 
 na falta) e acerta a força no tick. Os dois ficam nas faixas dos canhões da IA (escanteio ≤ 12%, falta 2–12%). O gol de
 escanteio acima do real é o do jogo inteiro (o goleiro ainda não sai no cruzamento: pendência da Etapa 4, parte 3b).
 
+### 12.1 A mira minimalista com a cara do TM e a curva por gesto (item 65; dono, 23/10)
+
+Pedido (com o print de um escanteio): "essa seta, essa reta ... tem que estar com a cara do Total Match, alguma coisa mais
+minimalista, e tem que ter alguma forma de botar curva nas bolas paradas; não tá legal ... tem que melhorar de vdd". Contrato:
+`CONTRATOS.md`, "Cobrança mirada e câmera da bola parada" (a tela e a curva no toque). A física da bola NÃO mudou (a linha é a
+mesma simulação; `teste-mira` A, 0,0 cm).
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| EA, ajuda oficial das faltas (help.ea.com/en/articles/ea-sports-fc/free-kicks/); FUTWIZ e EA, PlayStyle Dead Ball (futwiz.com/fc24-tutorial/deadball-playstyle; ea.com … fc-24-playstyles-deepdive) | "Use the on-screen trajectory line as a guide"; o ponto de contato muda o efeito; o Dead Ball deixa a linha "longer" / "maximum length" (o comprimento é equilíbrio) | A linha continua a física e mostra a MESMA informação de antes (a dificuldade não muda sem o dono): onde a pessoa via o fim, vê o ANEL do alvo; encurtar a linha (estilo EA) ficou como escolha do dono (P3b) |
+| Charlie INTEL e FUT.GG, FIFA 23 (charlieintel.com/fifa-23/fifa-23-set-pieces-free-kicks-corners-penalties-188966/; fut.gg/news/fifa-23-guide-how-to-take-free-kicks/); Operation Sports, FC 25 (operationsports.com/ea-fc-25-how-to-master-set-pieces-explained) | A linha curta "for the first few meters"; o esquerdo mira, o direito põe o efeito; um marcador na bola e um rótulo do tipo | No CHUTE a gol a extensão de antes (a barreira + 4 m); a curva NA BOLA (o arco verde ao lado dela, no espaço do jogo, não num painel); o rótulo do tipo SAI (tela sem texto; P7) |
+| EarlyGame, FC 24 (capturas 4K medidas: earlygame.com/guides/fifa/ea-fc-24-free-kick-guide); THE GUIDE e Reddit (capturas de escanteio do FC 24 e 26) | Largura ~0,5–0,7% da altura, igual perto e longe, sem seta, a ponta esmaecendo, sem contorno | Largura CONSTANTE em px (miolo 2 px + contorno 1 px no celular, 3,6 + 1,4 no PC: ~1% da altura com o contorno), esmaecendo no fim, sem seta |
+| FC Mobile: EA, controles de bola parada (ea.com/playtesting/news/gameplay-controls-guide-set-pieces); wiki (easportsfcmobile.fandom.com/wiki/Player_actions); fifamobileguide.com/gameplay-controls | No celular as variações da batida são ARRASTOS NO PRÓPRIO BOTÃO ("press the 'shoot' button and swipe"); "curve while you swipe" | O gesto: segurar o CHUTE ou o LANÇAMENTO (a força) e arrastar o polegar para o lado (a curva); os dois botões CURVA saíram |
+| Konami: manual do eFootball (konami.com/efootball/en/page/mobile_controller), Touch & Flick (…/new_controls), PES 2019 (dds.konami.com …/control_set.html); PES Mastery (pesmastery.com/efootball-freekick-tutorial/) | A curva entra DURANTE a carga, no mesmo gesto da força ("Hold … until the kick is taken"); flick no botão de chute para o lado | A curva por arrasto durante a carga (o arrasto não pausa a força); a curva fica até a batida |
+| PGA TOUR 2K23 (pgatour.2k.com/2k23/up-your-game/shot-types/); Miniclip 8 Ball Pool (support.miniclip.com …) | O arco da trajetória se redesenha AO VIVO enquanto se molda a tacada; o efeito é opcional (o centro por padrão) | A linha dobra e o arco cresce no MESMO quadro em que o mundo muda (teste-bola-parada-tela 5); com curva 0 nada aparece |
+| WCAG 2.1, SC 1.4.11 (w3.org/WAI/WCAG21/Understanding/non-text-contrast.html); Xbox Accessibility Guideline 102 (learn.microsoft.com … /102) | Elementos gráficos ≥ 3:1 contra o pior fundo; linha fina sai mais fraca; contorno preto/branco | O miolo BRANCO (a única cor ≥ 3:1 em todo gramado medido, 3,7–8,0:1; o verde do TM sozinho dá 1,6–2,2:1 de dia) e o contorno preto; a meta L5 |
+| Esri, "casing" (esri.com/arcgis-blog/…/make-lines-legible-and-pop-with-casing); Geoapify/MapLibre (dev.to/geoapify-maps-api/…) | Um contorno contrastante em volta da linha a deixa legível em qualquer fundo (4 px + contorno escurecido) | O contorno `#050807` a α 0,8; a meta L5b (em qualquer fundo, o miolo ou o contorno ≥ 3:1) |
+| three.js r170 (LineBasicMaterial: `linewidth` sempre 1 no WebGL; LineMaterial dos addons) | A largura em px precisa de geometria própria; o LineMaterial pede MSAA para o antisserrilhado e outra chamada para o contorno | Uma fita própria de 2 vértices por ponto, a largura em m pela largura em px (`w = px × 2 × profundidade × tan(fov/2) / H`), um ShaderMaterial com o antisserrilhado por `fwidth` (a Média e a Baixa não têm MSAA), uma chamada; `renderer.compileAsync` na carga do módulo |
+| Hoober (zonas do polegar); cursa.app (controles de toque); Norman & Nielsen (gestos invisíveis) | O polegar direito nos botões; arrasto contínuo com zona morta e retorno visual; gesto precisa de sinal | Zona morta de 10 px, degrau de 14 px, histerese; o sinal: os chevrons ‹ › dentro dos dois botões (só na cobrança mirada) e o arco junto da bola |
+
+Medido (a mesma régua do mapa do item 65 e dos testes; base 2a13ca14 → depois):
+
+| | antes | depois | meta |
+|---|---|---|---|
+| largura da linha, p95 (844×390 · PC) | escanteio 6,0 · falta 6,1 · tiro de meta 11,3 px · PC 11,0 / 11,2 / 20,8 px | 3,6 · 3,7 · 3,6 px · PC 6,0 / 6,2 / 5,8 px | ≤ 4,8 · ≤ 7,5 px |
+| largura constante (p95/p5) | falta 2,3 · tiro de meta 2,6 | 1,03–1,14 | ≤ 1,35 |
+| área da mira (dia, 844×390) | escanteio 0,34% · falta 0,13% · tiro de meta 0,33% | 0,23% (68%) · 0,09% (71%) · 0,14% (43%) | ≤ 75% / ≤ 110% / ≤ 75% |
+| contraste do miolo × o gramado no mesmo ponto (tiras na parte cheia, dia e noite) | amarelo 2,1–3,2, azul 1,2–2,4 de dia (o mapa) | ≥ 3:1 em 95–100% das tiras (pior 2,90:1 numa tira do escanteio de dia no 844×390); em qualquer fundo — a barreira, as placas, a rede —, o miolo ou o contorno ≥ 3:1 em 100% (pior 3,38:1) | ≥ 3:1 em ≥ 95% |
+| amarelo/azul que a mira põe | quase toda a máscara (1.000–2.300 pixels) | 0 | 0 |
+| o anel do alvo no escanteio (844×390) · o arco por degrau | — · — | 27,7 × 8,8 px, 100% fora do HUD · 5,0–6,5 px no celular, 10,0–11,3 no PC | ≥ 20 × 6 px · ≥ 4 / ≥ 8 px |
+| HUD na cobrança (844 / 667 / 640 / 568, pior caso) | 10,53 / 12,95 / 13,14 / 14,45% | 8,16 / 10,05 / 10,02 / 10,79% | 11 / 11 / 11 / 12% |
+| texto fora do placar na cobrança · botões CURVA | o rótulo ALTA/CHUTE · 2 | 0 · 0 | 0 · 0 |
+| 568×320 com o entalhe: o painel × o CORRER | −11 px (sobrepostos) | nada encosta | ≥ 4 px |
+| curva no toque, 0 → +1 | 4 toques nos botões CURVA (ou 0,70 s segurando) | um arrasto de 52 px; o mundo em +1 0,003–0,012 s depois do dedo (30/60/120 qps) | ≤ 0,2 s |
+| custo da mira | +1 chamada, +48 a +528 triângulos | +1 chamada, +24 (tiro de meta) a +136 (escanteio com o anel; +32 com o arco de 112°); nenhum programa WebGL novo na 1ª cobrança (a base também não criava: o material dela já existia) | ≤ +1 · ≤ +500 · +0 |
+
 ## 13. Goleiro realista: defesa pela dificuldade, encaixe × espalmada, set, 1×1 e saída no cruzamento (pedido do dono, 15/10)
 
 Pedido: "os goleiros se movimentando melhor e as espalmas e as seguradas de bola mais realistas, ele defende mais bolas

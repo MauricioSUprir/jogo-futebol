@@ -829,9 +829,13 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
 - **Bolas paradas no estilo FIFA** (pedido de 16/10; `mira.js` na lógica; `render/bola-parada.js` + `mira-linha.js` SOB
   DEMANDA; PESQUISA-ETAPA4.md §12, contrato "Cobrança mirada" no CONTRATOS.md): câmera atrás do cobrador no
   escanteio, falta, pênalti e tiro de meta do humano (e no pênalti contra), o analógico pela câmera dela; na cobrança da
-  PESSOA o analógico gira a mira, a carga é a força e Z/X (analógico direito, botões CURVA) põem curva; a linha é a física
-  da bola passo a passo (a bola real passa a 0 cm dela sem o erro do cobrador; na falta só até 4 m além da barreira). A IA
-  não usa (hash-partida da demo IGUAL). Testes: `teste-mira` (Node) e `teste-bola-parada-tela` (navegador). **Download
+  PESSOA o analógico gira a mira, a carga é a força e Z/X, analógico direito; no toque, segurar CHUTE/LANÇAMENTO e arrastar
+  põem curva (item 65: os mesmos pulsos EFEITO_E/D, `entrada.js criarArrastoCurva`; os botões CURVA saíram); a linha é a física
+  da bola passo a passo (a bola real passa a 0 cm dela sem o erro do cobrador; na falta só até 4 m além da barreira),
+  desenhada fina com a cara do TM desde o item 65 (miolo branco + contorno preto de largura fixa em px, esmaecendo, sem seta;
+  ALTA/TENSA até 45% do caminho e o ANEL verde no alvo do voo; o arco verde da curva junto da bola; sem painel nem texto). A IA
+  não usa (hash-partida da demo IGUAL). Testes: `teste-mira` (Node; G o anel = o alvo do voo) e `teste-bola-parada-tela`
+  (navegador; 7 a mira pelos pixels), `teste-hud-minimo --so-mirada` (a cobrança mirada no orçamento do HUD). **Download
   inicial** (`teste-carga` 4 MB): desde 21/10 os sons da torcida (~1,4 MB de MP3) baixam no 1º GESTO (`render/som.js`;
   antes dele nada toca) — 3,88 → 2,57 MB, folga ~1,4 MB; código novo que não precisa do começo continua sob demanda.
 - **Carrinho (item 34)** (dono, 17/10 e 23/10: "preciso do botão de carrinho"; contrato "Carrinho (item 34)",
