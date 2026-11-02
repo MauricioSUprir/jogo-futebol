@@ -24,7 +24,7 @@
 //      "cima ou baixo" do pênalti da partida.
 //   9  A faixa do fim não encosta nas bolinhas nas telas baixas de celular (568×320, 667×375; antes cobria em 568×320).
 //  10  Sem ?semente: a disputa sorteia a semente (a 1ª, "Reiniciar disputa" e a volta pelo Modo de jogo, todas diferentes).
-//  11  ?tm: durante o "Simular o resto" o placar fica sem o relógio da partida (0' 1º T).
+//  11  ?tm: durante o "Simular o resto" o placar fica sem o relógio da partida (o "00:00" do relógio MM:SS; antes, o "0' 1º T").
 //   node tools/teste-penaltis-tela.mjs
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';

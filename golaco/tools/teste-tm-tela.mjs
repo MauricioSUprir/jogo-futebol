@@ -3,6 +3,8 @@
 // localStorage["tm3d:pedido:<id>"], abre golaco/index.html?tm=<id> num iframe e escuta o postMessage).
 //   1  PC 1280×720, pedido A (o usuário é o mandante, sem trava): 'tm3d:pronto' chega ao pai; as siglas do placar são as
 //      do pedido; o humano controla um jogador do time 0; o jogo anda uns segundos.
+//   1c PC, pedido A (item 32; dono, 17/10: "o placar com mais a cara do Total Match, um pouco MAIOR e o relógio com os
+//      SEGUNDOS"): o placar com 30 px, o #relogio em MM:SS na Inter TM (data-fontes-tm="ok") e o símbolo do TM na marca.
 //   2  A pausa do TM: com "Simular o resto", "Editar time" e "Cenas da partida" (pré-jogo e substituição), sem
 //      "Reiniciar partida" nem os treinos.
 //   3  "Simular o resto": a faixa "Simulando o resto da partida…" com minuto e placar, a partida chega ao apito, a faixa do
@@ -116,6 +118,17 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
   meta(`1 PC: tm3d:pronto ao pai, siglas do pedido, humano no time ${hEsp}${comTrava ? ' (com a trava)' : ''}, o jogo anda`,
     `${m0.map(m => m.tipo).join(', ') || 'nenhuma'} (id ${m0[0]?.id}) · ${siglas.join(' × ')} · humano ${info.humano}, trava ${info.trava ?? 'nenhuma'}, controlado do time ${info.timeCtrl} · elenco ${info.elenco} · ${tick1 - tick0} passos em 2,5 s`,
     m0.length === 1 && m0[0].tipo === 'tm3d:pronto' && m0[0].id === PEDIDO_A.id && siglas.join() === siglasPed.join() && info.humano === hEsp && (info.trava != null) === comTrava && info.timeCtrl === hEsp && info.elenco === 'tmcasa' && tick1 - tick0 > 30);
+  // 1c (item 32): o placar novo com a cara do TM no PC
+  await fr.waitForFunction(() => !!document.documentElement.dataset.fontesTm, null, { timeout: 15000 }).catch(() => {});
+  const pl = await fr.evaluate(() => {
+    const p = document.querySelector('#hud .placar'), r = document.getElementById('relogio'), m = p?.querySelector('.placar-marca');
+    const q = p?.getBoundingClientRect();
+    return { h: q?.height ?? 0, txt: r?.textContent.trim() ?? '', fonte: r ? getComputedStyle(r).fontFamily : '', fontes: document.documentElement.dataset.fontesTm ?? '-',
+      check: document.fonts.check('800 17px "Inter TM"'), marca: m && getComputedStyle(m).display !== 'none' ? getComputedStyle(m).backgroundImage : null };
+  });
+  meta('1c PC: o placar do item 32 com a cara do TM — 30 px, o relógio em MM:SS na Inter TM (fontes ok), o símbolo do TM na marca',
+    `${pl.h.toFixed(1)} px · "${pl.txt}" em ${pl.fonte} (fontes ${pl.fontes}, Inter TM 800 ${pl.check ? 'carregada' : 'NÃO'}) · marca ${pl.marca ?? 'ausente'}`,
+    Math.abs(pl.h - 30) <= 0.5 && /^\d{2}:\d{2}$/.test(pl.txt) && /^"?Inter TM/.test(pl.fonte) && pl.fontes === 'ok' && pl.check && /simbolo\.png/.test(pl.marca ?? ''));
   const it = await itensDaPausa(fr);
   meta(`2 PC: pausa do TM (Simular o resto${comTrava ? '' : ' e Editar time'}, Cenas da partida; sem Reiniciar nem os treinos${comTrava ? ' nem Editar time' : ''})`, listaItens(it),
     it.simular && it.editar === !comTrava && !it.reiniciar && it.modos && !it.treinos && !it.voltar);
