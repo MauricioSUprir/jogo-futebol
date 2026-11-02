@@ -2722,6 +2722,23 @@ de meta; a linha da trajetória com mira, força e curva no escanteio e na falta
   `entra` s (o corte da montagem entra direto) e volta em `sai` s no chute (posição, direção do olhar e fov misturados:
   sem salto). Com ela o analógico vira mundo pelo rumo dela (`yawEntrada` = a direção bola → alvo padrão): direita da
   tela = direita de quem bate (no pênalti contra, o goleiro escolhe o lado pela tela).
+- **Metas do desenho e do gesto** (item 65; a régua é a máscara com × sem a mira no MESMO quadro, q=media, celular dpr 2 com
+  o entalhe, dia e noite; os números de antes são os do mapa do item 65 na 2a13ca14, pela mesma régua): L1 a largura da linha
+  p95 ≤ 4,8 px no celular e ≤ 7,5 no PC; L2 constante ao longo dela (p95/p5 ≤ 1,35 por tipo); L4 a área da mira (linha +
+  anel + arco) ≤ 75% da de antes no escanteio e no tiro de meta e ≤ 110% na falta, no 844×390 e no PC (em 568×320 só ≤ 100%,
+  informativo: a largura fixa em px ocupa mais na tela pequena), e ≥ 150 px; L5 o miolo ≥ 3:1 contra o gramado no mesmo ponto
+  em ≥ 95% das tiras e L5b, em qualquer fundo (barreira, placas, rede), o miolo OU o contorno ≥ 3:1 em ≥ 95%; L6 nenhum pixel
+  amarelo nem azul posto pela mira; A2 o anel do escanteio ≥ 20 × 6 px no 844×390 e ≥ 95% fora do HUD; C1 com curva 0
+  nenhum pixel verde junto da bola e o arco crescendo ≥ 4 px (celular) / ≥ 8 px (PC) por degrau, para o lado da curva; custo
+  ≤ +1 chamada, ≤ +500 triângulos e NENHUM programa WebGL novo quando a mira aparece pela 1ª vez (a mira desligada até a 1ª
+  contagem — nenhum quadro a desenha antes — e acesa pelos quadros do relógio antes da 2ª; sem o `compileAsync` reprova,
+  33 → 34). HUD da cobrança mirada (`teste-hud-minimo`, a régua do H1 com o placar mais largo): H1c ≤ 11% em 844×390,
+  667×375 e 640×360 e ≤ 12% em 568×320 (base 10,53 / 12,95 / 13,14 / 14,45%); H2c nenhum texto fora do placar, do nome e dos
+  nomes dos botões; H1d nenhum botão CURVA; H1e folga ≥ 4 px entre as peças; H9c os chevrons ≥ 2 px dentro do círculo do
+  botão e ≥ 1 px do nome. Gesto (`teste-entrada`, contra o `atualizarMira` real): os degraus a 10 / 24 / 38 / 52 px; de 0 a +1 o
+  mundo chega em ≤ 0,2 s depois do dedo (medido 0,003–0,012 s a 30, 60 e 120 qps) e de +1 a −1 em ≤ 0,35 s, com a mesma
+  curva final nos três ritmos; tremor de ±3 px numa fronteira = no máximo 1 troca de degrau (medido 0); soltar com degraus
+  na fila = a curva mostrada no último quadro.
 - **Testes**: `teste-mira` (Node, padrão: A a bola = a linha a ≤ 3 cm; B curva para o lado certo; C controles, rótulos,
   a linha some no chute, tiro de meta; D o erro continua; E canhão do humano roteirizado, escanteio ≤ 12% e falta 2–12%;
   F a IA não usa; G o anel = `m.voo.alvo` ≤ 1 cm; H o plano do desenho), `teste-entrada` (a curva por arrasto: degraus,
@@ -2729,8 +2746,13 @@ de meta; a linha da trajetória com mira, força e curva no escanteio e na falta
   (navegador, CI: PC 1280×720 e celular 844×390 e 568×320 com o entalhe — o módulo fora do download inicial, câmera atrás do
   cobrador nos 4 tipos e no pênalti contra, cobrador e alvo no quadro, nada na lente, a mira ≥ 150 px e ≤ +1 chamada, sem
   painel nem texto, some no chute, a volta para a TV sem salto, teclado e o arco no mesmo quadro, o arrasto com toque de
-  verdade; seção 7, a mira pelos pixels: largura, contraste dia/noite, nada amarelo/azul, o anel, o arco por degrau, custo e
-  programas) e `teste-hud-minimo` H1c/H2c/H1d/H1e/H9c (a cobrança mirada de verdade nas 4 telas; `--so-mirada`).
+  verdade — seção 5, com o caso E: o CHUTE apertado na montagem da 2ª falta seguida, antes da mira e dos chevrons, e arrastado
+  +40 px depois deles = 0,75 —; seção 7, a mira pelos pixels: as metas acima) e `teste-hud-minimo` H1c/H2c/H1d/H1e/H9c (a
+  cobrança mirada de verdade nas 4 telas; `--so-mirada`). Na base 2a13ca14 reprovam o G/H do `teste-mira`, a seção nova do
+  `teste-entrada`, 28 de 49 itens do `teste-bola-parada-tela` (3, 5 e 7) e o H1c/H2c/H1d/H1e/H9c; o caso E reprova na
+  49d23386 (antes da revisão 1). Os de câmera, de cobrança e de online afetados passam (`teste-camera-tela`, `teste-controles`,
+  `teste-mira-tela`, `teste-corrida-cobranca`, `teste-online`, `teste-dois-humanos`, `teste-estilos-penalti`, `teste-tm-tela`,
+  `teste-carga` e o `testar-3d` do TM).
 
 ## Goleiro realista (16/10; contrato) — defesa pela dificuldade, encaixe × espalmada, set, 1×1 e saída no cruzamento
 

@@ -4,7 +4,7 @@
 > **Como funciona:** o dono escolhe a categoria; nada começa sem o aval dele. Cada item vira um PR.
 > Atualizado em 02/11.
 
-**Legenda:** 🆕 pedido novo (23/10 ou 29/10) · 🔎 achado na entrega do carrinho, da faixa de baixo, do placar ou da câmera (02/11) · ⏳ espera o seu aval para começar · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo) · ✅ entregue
+**Legenda:** 🆕 pedido novo (23/10 ou 29/10) · 🔎 achado na entrega do carrinho, da faixa de baixo, do placar, da câmera ou da mira (02/11) · ⏳ espera o seu aval para começar · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo) · ✅ entregue
 
 ---
 
@@ -31,6 +31,7 @@
 | 78 | 🔎 Carrinho: conferir as outras listas onde o jogador deitado ainda pode contar | 2 |
 | 71 | 🔎 Um item do teste do estádio (o "GOL!" na tela) que não mede nada | 1 |
 | 81 | 🔎 Testes de tela que oscilaram sem ligação com a mudança (a contagem de programas de shader na cena de substituição; a aba parada do online; o aviso do "Simular o resto" no teste do TM; o pico de CPU no replay de parada do CI do #599) | 3 |
+| 92 | 🔎 Os tempos dos testes da mira na divisão do CI: acertar pelo log do 1º CI do #601 | 0,25 |
 | 84 | ✅ O tempo do teste do HUD na divisão do CI: 131 s, do log do CI (#599) | 0,25 |
 
 ---
@@ -77,7 +78,7 @@
 
 ---
 
-## 📱 F. Telas, HUD, câmera e controles — ~86,5 h a fazer
+## 📱 F. Telas, HUD, câmera e controles — ~86 h a fazer
 
 | nº | o que é | horas |
 |---|---|---|
@@ -85,7 +86,7 @@
 | 66 | ✅ **Câmera**: segue a bola (atraso p90 9,5 → 5,7 m, miolo 94,5 → 98,3%), a área inteira no último terço (15,9 → 96,7% com a bola nela), 6% mais aberta e o escanteio da pessoa alto (a área 7,7 → 23,6% da tela); na bola muito alta o gramado e os jogadores ficam no quadro, e no Rumo ao Estrelato o seu jogador fica no quadro (#600) | 8 |
 | 58 | 🆕 **Menu de pausa igual ao do FC 24**, com o campinho do seu time no canto direito | 8 |
 | 64 | 🆕 **Tela antes do jogo** (todo modo) no nível da do EA FC, com a cara do TM | 12 |
-| 65 | ✅ **Mira das bolas paradas** minimalista, com a cara do TM: a linha fina branca com contorno (4 px no celular, antes até 11), o anel verde onde a bola cai, o arco verde da curva junto da bola, sem painel nem texto; no celular a curva é segurar o CHUTE ou o LANÇAMENTO e ARRASTAR o polegar para o lado (os 2 botões CURVA saíram: o HUD da cobrança 14,5 → 10,8% no celular pequeno); teclado e controle iguais (branch `golaco/f65-mira`) | 8 |
+| 65 | ✅ **Mira das bolas paradas** minimalista, com a cara do TM: a linha fina branca com contorno (4 px no celular, antes até 11), o anel verde onde a bola cai, o arco verde da curva junto da bola, sem painel nem texto; no celular a curva é segurar o CHUTE ou o LANÇAMENTO e ARRASTAR o polegar para o lado (os 2 botões CURVA saíram: o HUD da cobrança 14,5 → 10,8% no celular pequeno); teclado e controle iguais; o dedo que já estava no botão antes de a mira aparecer também arrasta (#601) | 8 |
 | 59 | ✅ **Minimapa embaixo, no meio**, entre o analógico e os botões (92×60 no padrão; a torcida do alto livre: 5,4% → 0%), o topo só com placar e menu (#598) | 1,5 |
 | 60 | ✅ **Nome do jogador com a bola nos cantos de baixo** (o time da esquerda do placar à esquerda, o da direita à direita), sem piscar e sem pegar toque (#598) | 1,5 |
 | 32 | ✅ **Placar um pouco maior, com a cara do TM e o relógio em minutos e segundos** ("34:12"; nos acréscimos o relógio continua com o "+4"; "Intervalo"/"Fim" no lugar do relógio; 28 px no celular, 30 no PC) (#599) | 4,5 |
@@ -102,6 +103,10 @@
 | 85 | 🔎 A câmera nova também na câmera aproximada, na janela estreita (em pé) do PC e no replay fechado (hoje só a TV acompanha a bola sem atraso) | 4 |
 | 86 | 🔎 Modo Livre com a câmera bem alta e perto: a bola alta ainda sai do quadro em ~27% das vezes (antes do item 66, 34%) | 2 |
 | 87 | 🔎 ⏳ Falta da IA de 30 a 35 m do gol no celular: a área não cabe inteira (a bola e o gol, sim) — abrir o plano só nessa cobrança, ou deixar | 2 |
+| 88 | 🔎 Tiro de meta que você cobra, nas telas baixas (667×375, e 568×320 com o entalhe): a bola fica debaixo do botão CORRER | 2 |
+| 89 | 🔎 Escanteio que você cobra do lado de lá: a câmera alta fica colada numa bandeira da torcida (uma mancha verde e preta no canto) | 2 |
+| 90 | 🔎 Na montagem da sua falta ou do seu escanteio, os botões do celular são os da defesa por ~1 s (o botão grande não é o CHUTE) | 1,5 |
+| 91 | 🔎 As outras marcas no gramado (as opções do lateral, amarelas, e a marca de onde a bola alta cai) com a mesma cara da mira nova | 2 |
 
 ---
 
@@ -167,11 +172,13 @@
 13. 📍 Itens 59 e 60 (a faixa de baixo): feitos com as escolhas recomendadas — o orçamento da tela conta o nome e mede o ≡ pelo ícone (10,95% no pior caso, medido com o relógio em "0'" — ver o 14; com a régua de antes, 11,77%: só passa dos 11% com a régua nova); o arco de botões subiu 8–10 px; o nome sem caixa alta; com a bola solta ele fica apagado (na tela ~95% do tempo, sem piscar); nada de nome nos treinos nem na disputa; o minimapa continua desligado por padrão no celular.
 14. ⏱️ Item 32 (o placar): feito com a escolha recomendada — na tela de 568×320 (o iPhone SE de 2016) o HUD pode ocupar até 12% (nas outras, 11%): ali o placar com minutos e segundos, escudos e siglas não cabe nos 11% (o de antes já passava dos 11% com o relógio de verdade: 12,06% nos acréscimos; o novo, 11,85%). Também escolhidos: nos acréscimos o relógio continua andando ("47:13 +4"), "Intervalo"/"Fim" no lugar do relógio, o símbolo do TM some do placar nas telas de até 700 px de largura. Na revisão: no celular, cada dígito a mais no placar (gols de 2 dígitos, ou o relógio passando de 99:59) aperta os espaços, e com dois a mais sai também o "+N" dos acréscimos; a tela de 640×360 usa o placar de 26 px e fica nos 11% (#599). Alternativas medidas na FILA ("Depende do dono" 15).
 15. 🎥 Item 66 (a câmera): feita com as escolhas recomendadas — 6% mais aberta (o seu jogador ~35 px no celular; o mínimo é 34; dá para abrir 4% ou 8%); um pouco de espaço à frente da jogada (dá para deixar a bola bem no centro, ou com o espaço da TV de verdade); o escanteio cobrado por você atrás do cobrador e alto (dá para voltar à baixa, só a TV, ou mais longe); a área inteira quando a bola está nela, mais do que a TV mostra; a câmera não gira como a da TV (giraria o analógico). Da revisão: no Rumo ao Estrelato o seu jogador vem antes da área (a área inteira com a bola nela cai de 96% para 76% só nesse modo); a câmera acelera mais vezes para acompanhar a bola, sem tremer (se achar agitada, dá para suavizar); a falta da IA de 30 a 35 m no celular sem a área inteira (item 87). Detalhes e números na FILA ("Depende do dono" 16).
+16. 🎯 Item 65 (a mira das bolas paradas): feita com as escolhas recomendadas — a linha fina BRANCA com contorno preto (o branco é a única cor que aparece em todo gramado; o verde do TM fica no anel, no arco e nas setinhas dos botões); a mesma informação de antes (nos cruzamentos a linha até perto da metade e o anel onde a bola cai; dá para mostrar só o começo, como no EA, mas aí fica mais difícil); a curva mostrada por um arco verde junto da bola (dá para usar o ponto de contato do EA, ou nada); no celular, segurar o CHUTE ou o LANÇAMENTO e arrastar o polegar para o lado, um degrau a cada 14 px (dá para mudar o passo, arrastar antes de carregar, usar o analógico ou voltar aos 2 botões CURVA, que estouram o espaço da tela); o nome do tipo da batida (ALTA, CHUTE...) saiu da tela. Para conferir no seu celular: o arrasto da curva (à direita do CHUTE sobra pouco espaço) e o traço da linha. Da revisão: na montagem da sua falta os botões são os da defesa por ~1 s (item 90; recomendado mostrar os do ataque). Detalhes na FILA ("Depende do dono" 17).
 
 ---
 
 ## ✅ Entregue nesta rodada
 
+- 🎯 A mira das bolas paradas minimalista, com a cara do TM: a linha fina branca, o anel onde a bola cai e o arco da curva junto da bola, sem painel nem texto; no celular a curva é arrastar o polegar no CHUTE ou no LANÇAMENTO (item 65, #601)
 - 🎥 A câmera que acompanha a bola e mostra a área: menos atraso, a bola mais no centro, a área inteira quando a bola está nela, 6% mais aberta e o escanteio que você cobra visto do alto (item 66, #600)
 - ⏱️ O placar um pouco maior, com a cara do TM e o relógio em minutos e segundos (item 32, #599)
 - 📍 A faixa de baixo: o minimapa embaixo no meio, entre o analógico e os botões, e o nome do jogador com a bola nos cantos de baixo (itens 59 e 60, #598)
