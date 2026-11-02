@@ -130,8 +130,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   caiu nas duas (real; achado desligando uma peça por vez com `--set`). As amostras pequenas dos testes que reprovam depois da
   mudança: medir base × PR com 4× a amostra; se empatam, a meta passa a reprovar quando a contagem prova (binomial/Poisson,
   p < 5%) e a amostra cresce o que o CI aguenta; as cenas de estados novos (cartão, substituição) são defeitos de verdade.
-- **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME em cima do jogador com a bola (`main.js marcarCondutor`,
-  `#nome-condutor` fora do #hud — exceção pedida à "sem narração") e (2) os overalls da tela iguais aos do TM (`elenco.js
+- **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME do jogador com a bola (`main.js marcarCondutor` → `hud.js nomeCanto`,
+  exceção pedida à "sem narração"; desde os itens 59 e 60 (23/10) no `#hud`, nos CANTOS de baixo pelo time do placar — contrato
+  "Faixa de baixo") e (2) os overalls da tela iguais aos do TM (`elenco.js
   notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos). **FILA (dono: "o 3 e 4
   fica pra dps"):** (3) o campinho da escalação do jogo EM PÉ (retrato), não deitado (`escalacao-tela.js`); (4) a cena de
   substituição no online (hoje desligada no online porque seguraria a simulação de um lado só). Também a escalação
@@ -536,7 +537,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   acréscimos), menu só com o ícone, barra de força sem texto, dica do PC some em 8 s; botões de toque translúcidos
   (80%, 55%; chave `golaco.toque.v2`) com o ícone e o NOME da função (dono, 12/10: "coloca o nome da função do botão de
   novo" — "Nomes nos botões" ligado por padrão; desligado na pausa = só o ícone), analógico quase invisível em repouso (com o dedo, igual:
-  `escalaAnalogico`); minimapa desligado no celular (no PC fica, 112×73); "Minimapa" e "Nomes nos botões" são botões
+  `escalaAnalogico`); minimapa desligado no celular (no PC fica, 112×73; desde os itens 59 e 60, embaixo no meio também no
+  celular, entre o analógico e o arco — `hud.js ajustarBaixo`, `entrada.js FAIXA_BAIXO`; o H1 conta o nome do condutor e mede
+  o ≡ pelo ícone); "Minimapa" e "Nomes nos botões" são botões
   de liga/desliga na barra da pausa (na lista não cabia: a pausa continua sem rolar em 844×390); sem a seta no chão do
   controlado; marca de queda só na bola alta do time do humano. **Defesa do toque com 5 botões** no 1º anel: o CONTER
   virou a DIVIDIDA segurada (`entrada.js criarToqueOuSegura`: tocar < `ENTRADA.toqueCurto` 0,25 s = bote, segurar =

@@ -84,8 +84,8 @@
 | 58 | 🆕 **Menu de pausa igual ao do FC 24**, com o campinho do seu time no canto direito | 8 |
 | 64 | 🆕 **Tela antes do jogo** (todo modo) no nível da do EA FC, com a cara do TM | 12 |
 | 65 | 🆕 **Mira das bolas paradas** minimalista, com um jeito bom de pôr curva | 8 |
-| 59 | 🆕 Minimapa embaixo, no meio | 1,5 |
-| 60 | 🆕 Nome do jogador com a bola nos cantos de baixo (casa à esquerda, fora à direita) | 1,5 |
+| 59 | ✅ **Minimapa embaixo, no meio**, entre o analógico e os botões (92×60 no padrão; a torcida do alto livre: 5,4% → 0%), o topo só com placar e menu | 1,5 |
+| 60 | ✅ **Nome do jogador com a bola nos cantos de baixo** (o time da esquerda do placar à esquerda, o da direita à direita), sem piscar e sem pegar toque | 1,5 |
 | 29 | Campinho da escalação em pé | 4 |
 | 30 | Cena de substituição no online | 4 |
 | 31 | Foto do autor do gol com número e nome na comemoração | 6 |
@@ -157,11 +157,13 @@
 10. 🏟️ Item 69: a qualidade Baixa sem bonecos 3D? Gente em toda cadeira perto da câmera nos estádios grandes? Entrega em 2 ou em 4 PRs?
 11. 🎯 Item 70: P1 e P2 feitas com as escolhas recomendadas (aval de 31/10: a falta também corre; a IA começa antes; os comandos do EA FC, com PARADINHA e PULINHO no toque só na cobrança do pênalti; a paradinha depois da corrida impossível; o rendimento realista, ± 10 pontos do normal; o goleiro na linha até o chute também na partida). Falta confirmar: a janela da cavadinha vale a corrida toda.
 12. 🦵 Item 34 (carrinho): feito com as escolhas recomendadas — "CARRIN." no botão; quem sofre não cai (item 76); sem "levantar rápido"; vale em toda bola baixa e parado; ~1,2 s no chão no erro e 0,5 s no acerto; L e X = carrinho na defesa e lançamento com a bola alta; vermelho direto de qualquer lado; dois carrinhos: falta só de quem não tocou a bola; o seu jogador no Rumo ao Estrelato também dá carrinho. A escolher: menos falta antes da bola (item 80), o SPA na área sem cartão para todos (item 74) e a IA dar carrinho (item 75).
+13. 📍 Itens 59 e 60 (a faixa de baixo): feitos com as escolhas recomendadas — o orçamento da tela conta o nome e mede o ≡ pelo ícone (10,95% no pior caso; com a régua de antes, ~11,7%); o arco de botões subiu 8–10 px; o nome sem caixa alta; com a bola solta ele fica apagado (na tela ~95% do tempo, sem piscar); nada de nome nos treinos nem na disputa; o minimapa continua desligado por padrão no celular.
 
 ---
 
 ## ✅ Entregue nesta rodada
 
+- 📍 A faixa de baixo: o minimapa embaixo no meio, entre o analógico e os botões, e o nome do jogador com a bola nos cantos de baixo (itens 59 e 60)
 - 🦵 Botão de CARRINHO: L e X na defesa e o botão "CARRIN." no celular, a perna desenhada na bola, falta e cartão pela Regra 12, as cenas continuam o deslize (#597)
 - 🧤 Goleiro espalmando bola alta (#568)
 - 🎯 Chute no ângulo com a barra cheia e o analógico no canto (#567)
