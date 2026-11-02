@@ -15,7 +15,9 @@
 //      lado a lado. Reprova se a nova não cumpre M1–M6c, M9–M11 e R1 (as metas no cabeçalho de cada linha); o legado sai
 //      impresso ao lado (ele reprova M1, M6 e M9). M2 conta a bola até a altura que cabe no quadro com o chão debaixo dela
 //      (enquadramento.js alturaQueCabe: 10,0 m no celular, 14,4 no PC); acima dela a bola sai por cima e o M2b cobra o chão.
-//   node tools/teste-camera.mjs [--js <pasta js>] [--so S|G|P] [--sementes 1-6] [--passivo 1-4] [--par 2]
+//   T) o Rumo ao Estrelato do ?tm (só o meu jogador: alvo.jCaixa; revisão R2): demo como a página, sementes 3 e 8, o travado
+//      zagueiro, atacante, lateral e meia do time 0: inteiro (os pés e a cabeça) no quadro ≥ o legado − 1 ponto em cada.
+//   node tools/teste-camera.mjs [--js <pasta js>] [--so S|G|P|T] [--sementes 1-6] [--passivo 1-4] [--trava 3,8] [--par 2]
 //   --rastro <json>: só a conferência com a página (teste-camera-tela J1). Diagnóstico (stderr): CAM_DBG=<m> os passos do foco
 //   maiores que isso, CAM_FORA=1 os instantes com a bola fora do quadro, CAM_G5=1 cada lente do G5.
 import path from 'node:path';
@@ -234,9 +236,57 @@ async function coletar(modo, sem, rastro = null) {
   return out;
 }
 
+/**
+ * T (revisão R2): o Rumo ao Estrelato do ?tm (só o meu jogador, sem troca: main.js TRAVA_TM → alvo.jCaixa). Demo como a página,
+ * o travado = o 1º do time 0 com a posição `pos`; a TV nova (com a caixa dele) e a de hoje (o legado com a pose de antes) nas
+ * duas telas, 1 amostra a cada 0,1 s de jogo: o travado inteiro no quadro (os pés e a cabeça), a bola no quadro e a área
+ * inteira com a bola nela.
+ */
+async function coletarTrava(sem, pos) {
+  const { criarGravador } = await import(pathToFileURL(path.join(AQUI, 'lib/anel-node.mjs')).href);
+  const GR = await criarGravador(PASTA_JS);
+  const S = GR.novaPartida(sem, { comoPagina: true, tecnicos: false }), m = S.m;
+  const alvo = alvoVazio(); alvo.jCaixa = true;
+  const J = m.jogadores.find(j => j.time === 0 && (j.posicao || '').startsWith(pos));
+  const cams = [];
+  for (const T of TELAS) for (const tipo of ['nova', 'legado']) cams.push({ T, tipo, est: { x: 0, z: 0, vx: 0, vz: 0 }, E: EQ.criarEnquadramento(), n: 0, jog: 0, bola: 0, nA: 0, area: 0 });
+  const _a = {}, o = {};
+  let corte = true;
+  for (let k = 0; k < 1e7; k++) {
+    const ev = GR.passo(S, false) ?? [];
+    let fim = false;
+    for (const e of ev) { if (['recomeco', 'saida', 'cobrancaPenalti', 'corteBolaParada', 'gol'].includes(e.tipo)) corte = true; if (e.tipo === 'fimDeJogo') fim = true; }
+    const j = m.jogadores.find(q => q.id === J.id), b = m.bola.p;
+    if (!j || fim) break;
+    alvo.jx = j.x; alvo.jz = j.z; alvo.jvx = j.vx; alvo.jvz = j.vz;
+    EQ.preencherAlvo(alvo, m, null, b);
+    const amostra = m.partida?.estado === 'jogo' && k % 6 === 0;
+    for (const c of cams) {
+      const { T } = c, g = c.tipo === 'nova' ? T.g : T.gA, p = c.tipo === 'nova' ? T.p : T.pA;
+      if (c.tipo === 'nova') EQ.focoTV(c.E, c.est, alvo, p, g, T.W, C.PASSO, corte);
+      else {
+        EQ.alvoLegado(alvo, p, _a);
+        const fx = Math.max(-p.limX, Math.min(p.limX, _a.x)), fz = Math.max(p.limZ0, Math.min(p.limZ1, _a.z));
+        if (corte) { c.est.x = fx; c.est.z = fz; c.est.vx = c.est.vz = 0; } else EQ.molaLegada(c.est, fx, fz, C.PASSO);
+      }
+      if (!amostra) continue;
+      const pr = (x, y, z) => dentro(EQ.projetarTV(g, c.est.x, c.est.z, x, y, z, o));
+      c.n++;
+      if (pr(j.x, 0, j.z) && pr(j.x, 1.8, j.z)) c.jog++;
+      if (pr(b.x, Math.max(0.11, b.y), b.z)) c.bola++;
+      if (Math.abs(b.x) >= MX - AP && Math.abs(b.x) <= MX && Math.abs(b.z) <= AL) { c.nA++; if (areaNoQuadro(g, c.est.x, c.est.z, Math.sign(b.x) * MX).inteira) c.area++; }
+    }
+    corte = false;
+  }
+  const out = { sem, pos, id: J.id, cams: {} };
+  for (const c of cams) out.cams[`${c.T.chave}-${c.tipo}`] = { n: c.n, jog: c.jog, bola: c.bola, nA: c.nA, area: c.area };
+  return out;
+}
+
 if (FILHO != null) {
-  const [modo, sem] = FILHO.split(':');
+  const [modo, sem, pos] = FILHO.split(':');
   const fs = await import('node:fs');
+  if (modo === 'trava') { const txt = JSON.stringify(await coletarTrava(+sem, pos)); await new Promise(ok => process.stdout.write(txt, ok)); process.exit(0); }
   const txt = JSON.stringify(await coletar(modo, +sem, RASTRO ? JSON.parse(fs.readFileSync(RASTRO, 'utf8')) : null));
   // (sair só depois de o pipe esvaziar: process.exit logo depois do write cortava a saída grande)
   await new Promise(ok => process.stdout.write(txt, ok));
@@ -629,6 +679,36 @@ if (!SO || SO === 'P') {
         reg(`R1 ${tag}: controlado, mediana (o p10 informativo)`, `${f1(L.hCtrl)} → ${f1(N.hCtrl)} px (p10 ${f1(L.hCtrlP10)} → ${f1(N.hCtrlP10)}; todos ${f1(L.hMed)} → ${f1(N.hMed)})`, '≥ 34 px', N.hCtrl >= 34);
       } else reg(`R1c ${tag}: controlado, mediana`, `${f1(L.hCtrl)} → ${f1(N.hCtrl)} px`, '≥ 43 px', N.hCtrl >= 43);
     }
+  }
+}
+
+// ------------------------------------------------------------------------------------------------ T: Rumo ao Estrelato
+if (!SO || SO === 'T') {
+  const fila = [];
+  for (const sem of faixa(arg('--trava', '3,8'))) for (const pos of ['ZAG', 'ATA', 'LAT', 'MEI']) fila.push(`trava:${sem}:${pos}`);
+  const res = [];
+  const rodar = id => new Promise((ok, falha) => {
+    const p = spawn(process.execPath, [fileURLToPath(import.meta.url), '--filho', id, '--js', PASTA_JS], { stdio: ['ignore', 'pipe', 'inherit'] });
+    let txt = '';
+    p.stdout.on('data', d => { txt += d; });
+    p.on('close', c => { if (c) falha(new Error(`${id}: saída ${c}`)); else { try { ok(JSON.parse(txt)); } catch (e) { falha(e); } } });
+  });
+  await Promise.all(Array.from({ length: Math.min(PAR, fila.length) }, async () => { while (fila.length) res.push(await rodar(fila.shift())); }));
+  res.sort((a, b) => a.sem - b.sem || a.pos.localeCompare(b.pos));
+  for (const T of TELAS) {
+    const piores = [], linhasT = [];
+    let nA = 0, aN = 0, aL = 0, bN = 0, bL = 0, n = 0;
+    for (const r of res) {
+      const N = r.cams[`${T.chave}-nova`], L = r.cams[`${T.chave}-legado`];
+      const pn = pct(N.jog, N.n), pl = pct(L.jog, L.n);
+      linhasT.push(`s${r.sem} ${r.pos} ${f1(pl)} → ${f1(pn)}`);
+      if (pn < pl - 1) piores.push(`s${r.sem} ${r.pos}`);
+      n += N.n; bN += N.bola; bL += L.bola; nA += N.nA; aN += N.area; aL += L.area;
+    }
+    reg(`T ${T.nome}, Rumo ao Estrelato (o travado, ${res.length} partidas): inteiro no quadro, legado → nova (%)`, linhasT.join('; '),
+      '≥ o legado − 1 em cada', piores.length === 0);
+    reg(`T ${T.nome} … a bola no quadro; a área inteira com a bola nela (informativo)`, `${f2(pct(bL, n))} → ${f2(pct(bN, n))}%; ${f1(pct(aL, nA))} → ${f1(pct(aN, nA))}% (${nA})`,
+      '≥ 99,5%', pct(bN, n) >= 99.5);
   }
 }
 

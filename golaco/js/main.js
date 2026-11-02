@@ -1172,8 +1172,10 @@ const _proj = new THREE.Vector3();
 // (controle.js miraPelaTela). ok = false antes do 1º quadro desenhado (a entrada usa o rumo, paraMundo)
 const telaMira = { cam: {}, ox: 0, oz: 0, ok: false };
 // o alvo da câmera de jogo: o controlado (jx, jz, jvx, jvz) daqui e o resto pelo render/enquadramento.js preencherAlvo (a
-// bola desenhada e a velocidade dela, a queda do voo e o tempo até ela, o condutor desenhado, o lado do ataque, a parada)
-const alvoCam = { jx: 0, jz: 0, jvx: 0, jvz: 0, bx: 0, by: 0, bz: 0, bvx: 0, bvy: 0, bvz: 0, ax: NaN, az: NaN, tRest: 0, cx: NaN, cz: NaN, cvx: 0, cvz: 0, dir: 0, parada: null, temParada: false };
+// bola desenhada e a velocidade dela, a queda do voo e o tempo até ela, o condutor desenhado, o lado do ataque, a parada).
+// jCaixa: o controlado TRAVADO do Rumo ao Estrelato (só o meu jogador) com os pés e a cabeça no quadro quando cabem com a
+// bola (item 66, revisão R2: sem troca, ele não é quem está perto da bola e a TV que segue a bola o deixava fora)
+const alvoCam = { jx: 0, jz: 0, jvx: 0, jvz: 0, bx: 0, by: 0, bz: 0, bvx: 0, bvy: 0, bvz: 0, ax: NaN, az: NaN, tRest: 0, cx: NaN, cz: NaN, cvx: 0, cvz: 0, dir: 0, parada: null, temParada: false, jCaixa: false };
 /** Ponto do mundo → px CSS (sem alocar). */
 function projetar(x, y, z, out) {
   _proj.set(x, y, z).project(cam.camera);
@@ -1354,6 +1356,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   // câmera: o controlado + a bola (a desenhada e a velocidade dela), a queda do voo em andamento, o condutor desenhado, o
   // lado do ataque e a bola parada (render/enquadramento.js preencherAlvo, a mesma conta do teste-camera)
   alvoCam.jx = hx; alvoCam.jz = hz; alvoCam.jvx = h ? h.vx : 0; alvoCam.jvz = h ? h.vz : 0;
+  alvoCam.jCaixa = TRAVA_TM != null && (achou || !!h);
   preencherAlvo(alvoCam, mundo, posDesenhada, _bp);
   if (cenaCartao) cameraCartao();
   else if (cenaFim) cameraFim();

@@ -186,6 +186,10 @@ export const ENQUADRAMENTO = {
   acelMax: 150,              // m/s² na soma dos eixos (~175°/s² a 49 m da lente)
   velMax: 36,                // m/s: o foco nunca anda mais que isto (≤ 1,2 m por quadro a 30 qps; o chute mais forte ~35 m/s)
   paradaPerto: 35,           // m da linha atacada: o tiro livre perto (a bola, a área e o gol no quadro, sem espaço à frente)
+  // o controlado TRAVADO (Rumo ao Estrelato no ?tm: só o meu jogador, sem troca — alvo.jCaixa; revisão R2): os pés e a cabeça
+  // dentro desta caixa no ALVO quando cabem junto com a bola (prioridade menor: senão, só a bola). Com a troca automática o
+  // controlado é quase sempre quem está perto da bola e não precisa dela
+  jogador: { x: 0.85, baixo: -0.8, cima: 0.85, altura: 1.8 },
 };
 const Q = ENQUADRAMENTO;
 const MX = CAMPO.meioX, AP = CAMPO.area.profundidade, AL = CAMPO.area.largura / 2, GL = CAMPO.gol.largura / 2, GA = CAMPO.gol.altura;
@@ -282,16 +286,35 @@ function intervaloBola(g, y, z, B, out) {
 }
 /**
  * O foco mais perto de (fx, fz) que põe a bola (bx, by, bz) dentro da caixa B (NDC) — a bola acima da altura que cabe, por
- * ela (alturaQueCabe), e o chão debaixo dela também dentro —; a bola perto da lente: não mexe.
+ * ela (alturaQueCabe), e o chão debaixo dela também dentro —; a bola perto da lente: não mexe. j = {x, z} (opcional): o
+ * jogador travado com os pés e a cabeça na caixa Q.jogador, quando cabe junto com a bola (em z e depois em x; senão só a bola).
  */
-export function limitarBola(g, bx, by, bz, B, fx, fz, out) {
+export function limitarBola(g, bx, by, bz, B, fx, fz, out, j = null) {
   intervaloBola(g, by, bz, B, _i);
-  const y = _i.y, fz2 = clamp(fz, _i.min, _i.max);
+  const y = _i.y;
+  let zlo = _i.min, zhi = _i.max;
+  const J = Q.jogador;
+  if (j) {
+    // os pés no piso e a cabeça no teto (a cabeça sobe na tela com o foco andando para lá antes dos pés: o mais baixo e o
+    // mais alto dos dois)
+    intervaloFz(g, 0, j.z, J.baixo, J.cima, _c); const lo = Math.max(zlo, _c.min);
+    intervaloFz(g, J.altura, j.z, J.baixo, J.cima, _c); const hi = Math.min(zhi, _c.max);
+    if (lo <= hi) { zlo = lo; zhi = hi; }
+  }
+  const fz2 = clamp(fz, zlo, zhi);
   if (!(profundidade(g, y, bz - fz2) >= Q.profMin)) { out.x = fx; out.z = fz; return out; }
   intervaloFx(g, fz2, bx, y, bz, B.x, _j);
-  out.x = clamp(fx, _j.min, _j.max); out.z = fz2;
+  let xlo = _j.min, xhi = _j.max;
+  if (j && profundidade(g, J.altura, j.z - fz2) >= Q.profMin) {
+    // (a cabeça, mais perto da lente que os pés, dá o intervalo mais estreito)
+    intervaloFx(g, fz2, j.x, J.altura, j.z, J.x, _j);
+    const lo = Math.max(xlo, _j.min), hi = Math.min(xhi, _j.max);
+    if (lo <= hi) { xlo = lo; xhi = hi; }
+  }
+  out.x = clamp(fx, xlo, xhi); out.z = fz2;
   return out;
 }
+const _jt = { x: 0, z: 0 };
 /** A bola parada que a TV enquadra com a área: o escanteio e o tiro livre a ≤ paradaPerto m da linha atacada. */
 function paradaComArea(a) {
   const pr = a.temParada ? a.parada : null;
@@ -377,8 +400,11 @@ export function alvoTV(E, a, g, W, p, dt, corte, out) {
   // (só a bola ALTA leva o foco além do limite do lado de lá, até bolaAlta m: limiteDuro; a bola que SOBE entra pela
   // altura que terá em até anteVoo s — a câmera sai antes, sem chicotear atrás dela —, no máximo a que cabe com o chão
   // debaixo dela no quadro: acima disto a bola sai por cima e o chão fica — limitarBola/alturaQueCabe)
+  // (o controlado travado do Rumo ao Estrelato, com prioridade menor: os pés e a cabeça no quadro quando cabem com a bola)
   const vy = Number.isFinite(a.bvy) ? a.bvy : 0, tSobe = clamp(vy / 9.81, 0, Q.anteVoo);
-  limitarBola(g, b.x, b.y + Math.max(0, vy * tSobe - 4.905 * tSobe * tSobe), b.z, Q.bola, fx, fz, _l);
+  const jt = a.jCaixa && !parada && Number.isFinite(a.jx) ? _jt : null;
+  if (jt) { jt.x = a.jx; jt.z = a.jz; }
+  limitarBola(g, b.x, b.y + Math.max(0, vy * tSobe - 4.905 * tSobe * tSobe), b.z, Q.bola, fx, fz, _l, jt);
   out.x = clamp(_l.x, -E.limX, E.limX); out.z = clamp(_l.z, E.limZ0 - Q.bolaAlta, E.limZ1);
   E.wA = wA; E.parada = parada;
   return out;

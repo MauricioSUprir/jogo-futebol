@@ -1063,6 +1063,18 @@ sintético (teste-camera S8, 5 voos × 2 telas × 60 e 30 qps): o chão fora 767
 vale para a bola ATÉ a altura que cabe (M2); acima dela a bola sai por cima de propósito (na página, com a bola rolando: s5
 0,90% na base → 0,58%; s11 0,48% → 0,43%; nas partidas sem bola acima de ~6 m, 0,00%) e o M2b cobra o chão.
 
+**O Rumo ao Estrelato (revisão R2).** Sem troca (`?tm` com a trava: só o meu jogador), o controlado não é quem está perto da
+bola, e a TV que segue a bola (o controlado puxa ≤ 25%) o deixava fora do quadro bem mais que a de antes. Agora os pés e a
+cabeça dele entram no limite do alvo (`alvo.jCaixa`), com prioridade menor que a bola e maior que a área. teste-camera T
+(demo como a página, sementes 3 e 8, o travado zagueiro, atacante, lateral e meia do time 0, a partida inteira; o legado →
+a 1ª versão → agora, celular): zagueiro 93,9 → 77,5 → 96,6% e 79,5 → 65,1 → 87,8%; atacante 96,9 → 89,5 → 97,1% e 94,0 →
+85,6 → 94,8%; lateral 86,4 → 74,4 → 98,8% e 80,0 → 70,7 → 94,8%; meia 99,9 → 97,3 → 100% e 98,9 → 94,4 → 99,6% (o PC igual
+ou melhor). O preço: a área inteira com a bola nela, no Rumo ao Estrelato, 96,4 → 76,1% no celular (98,7 → 75,6% no PC; o
+legado 7,3 / 14,2%) — o zagueiro lá atrás com a bola na área de lá não cabe com ela. Dando a vez à área perto do gol (o
+travado pesando 1 − wA), a área voltava a 95% mas o atacante e o meia ficavam abaixo do legado (92,1 × 96,9%): o jogador que
+a pessoa controla vem antes. Na página (teste-tm-tela 5c, o travado parado, 60 s, a mesma semente): 88,4% (a base) → 75,6% →
+91,9%.
+
 **O que custou e o que ficou.** O controlado no celular perde 2,2 px (o "afastar" pedido; o p10 vai a 31,3 px). O tiro livre
 na TV a 30–35 m da linha não põe a área inteira no celular sem abrir o plano (a bola e o gol sim; 61,9% da grade). A bola
 do lado de lá dentro da área sobe no quadro (o preço de mostrar a área). O vai e volta com o 'passivo' subiu 10,2 → 10,6/min

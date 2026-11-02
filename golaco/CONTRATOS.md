@@ -2556,7 +2556,8 @@ acusa o `config.js`, só o `CAMERA`, que a simulação não lê) e todo o resto 
   controlado, como antes) e: bx, by, bz (a bola desenhada), bvx, bvy, bvz (`m.bola.v`), ax, az (a queda do voo em andamento)
   e tRest (o tempo até ela), cx, cz, cvx, cvz (o condutor: `m.posse` sem `m.naMao`, na posição DESENHADA), dir (±1: o ataque
   de quem tem a bola — posse → voo.time → ultimoToque.time; 0 sem ninguém), parada/temParada ({tipo, x, z, dir} enquanto
-  a bola parada não rolou), legado (o plano 'fechada' do replay).
+  a bola parada não rolou), legado (o plano 'fechada' do replay), jCaixa (o controlado TRAVADO do Rumo ao Estrelato no
+  `?tm`: `main.js` TRAVA_TM — revisão R2).
 - **Quem usa a TV nova.** A TV com a mistura TV ↔ aproximada em 0, em paisagem (`retrato` 0), sem o efeito de gol do treino e
   sem `alvo.legado`: o jogo, o plano 'tv' do replay (a velocidade da bola gravada à frente e o lado do lance) e a "TV" do
   Livre (lê o foco). O foco de hoje fica na aproximada, no retrato, na transição de 0,6 s e no plano 'fechada' (o V11 do
@@ -2574,7 +2575,10 @@ acusa o `config.js`, só o `CAMERA`, que a simulação não lê) e todo o resto 
   `alturaQueCabe`, a conta fechada da altura acima da qual não há foco com a bola e o chão debaixo dela na caixa: 9,5 m no
   celular, 13,6 no PC; a TV não inclina, então acima disto a bola sai por cima e o chão, onde estão os jogadores e onde ela
   cai, fica (revisão R1: antes o foco ia até 37 m para a frente atrás do balão de 15 m, o chão saía e a bola continuava fora);
-  só a bola ALTA do lado de lá leva o foco além do limite, até `bolaAlta` 18 m). (9) A mola crítica (ω 4,5 em x e z) contra o alvo andando com 0,5 × a velocidade dele (filtrada 0,12 s; o
+  só a bola ALTA do lado de lá leva o foco além do limite, até `bolaAlta` 18 m). Com `alvo.jCaixa` (o Rumo ao Estrelato: só o
+  meu jogador, sem troca), os pés e a cabeça do travado entram na mesma conta, com prioridade menor que a bola e maior que a
+  área (`ENQUADRAMENTO.jogador`: NDC x ±0,85, y de −0,80 a 0,85; o intervalo dele cruzado com o da bola, em z e depois em x —
+  vazio, só a bola; fora da bola parada com a área). Sem a trava o controlado é quase sempre quem está perto da bola: nada muda. (9) A mola crítica (ω 4,5 em x e z) contra o alvo andando com 0,5 × a velocidade dele (filtrada 0,12 s; o
   alvo que salta > 3 m num quadro não tem velocidade), exata para qualquer dt (dt 0 não mexe). (10) O limite DURO na saída da
   mola (`limiteDuro`): fora de NDC x ±0,86, y de −0,72 a 0,86 (a mesma conta do chão e da altura que cabe: 10,0 m no
   celular, 14,4 no PC), a velocidade do foco no eixo passa a ser no MÍNIMO a do
@@ -2596,11 +2600,11 @@ acusa o `config.js`, só o `CAMERA`, que a simulação não lê) e todo o resto 
 - **API.** `cam.cortou` (o corte de verdade deste quadro: o pedido, o 1º quadro, a bola teletransportada, a volta oposta) e
   `cam.enquadramento` ({novo, wA, lado, frente, parada, duro, limX}); `__golaco.bolaParadaDeTeste(tipo, {time, lado})`.
 - **Testes.** `teste-camera` (Node, padrão; S sintético a 60 e 30 qps — S8 a bola alta: o chão debaixo dela nunca sai do
-  quadro —, G geometria — a área, o escanteio e o tiro livre na
-  TV, a projeção, o escanteio da pessoa em 106 estádios —, P 10 partidas com o legado lado a lado; `--rastro` confere com a
-  página) e `teste-camera-tela` (navegador, CI: J a página × a projeção e × o Node, HUD, torcida, controlado, custo; A a área;
-  E o escanteio da pessoa; F a bola parada da IA na TV; N noite). As cópias da pose (teste-tecnicos, teste-livre-tela,
-  teste-rede-tela, prints) importam o módulo.
+  quadro —, G geometria — a área, o escanteio e o tiro livre na TV, a projeção, o escanteio da pessoa em 106 estádios —, P 10
+  partidas com o legado lado a lado, T o travado do Rumo ao Estrelato em 8 partidas; `--rastro` confere com a página),
+  `teste-camera-tela` (navegador, CI: J a página × a projeção e × o Node, HUD, torcida, controlado, custo; A a área; E o
+  escanteio da pessoa; F a bola parada da IA na TV; N noite) e `teste-tm-tela` 5c (o travado parado na tela da página). As
+  cópias da pose (teste-tecnicos, teste-livre-tela, teste-rede-tela, prints) importam o módulo.
 
 ## Cobrança mirada e câmera da bola parada (16/10; contrato)
 
