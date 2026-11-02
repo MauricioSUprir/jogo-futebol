@@ -14,6 +14,8 @@
 //      lado a lado. Reprova se a nova não cumpre M1–M6c, M9–M11 e R1 (as metas no cabeçalho de cada linha); o legado sai
 //      impresso ao lado (ele reprova M1, M6 e M9).
 //   node tools/teste-camera.mjs [--js <pasta js>] [--so S|G|P] [--sementes 1-6] [--passivo 1-4] [--par 2]
+//   --rastro <json>: só a conferência com a página (teste-camera-tela J1). Diagnóstico (stderr): CAM_DBG=<m> os passos do foco
+//   maiores que isso, CAM_FORA=1 os instantes com a bola fora do quadro, CAM_G5=1 cada lente do G5.
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';

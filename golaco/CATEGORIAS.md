@@ -77,12 +77,12 @@
 
 ---
 
-## 📱 F. Telas, HUD, câmera e controles — ~86,5 h a fazer
+## 📱 F. Telas, HUD, câmera e controles — ~78,5 h a fazer
 
 | nº | o que é | horas |
 |---|---|---|
 | 34 | ✅ ⭐ **Botão de CARRINHO**: L e X na defesa (com a bola alta, lançamento) e o botão "CARRIN." no celular; desliza na bola pela perna desenhada, quem erra fica ~1,2 s no chão, falta e cartão pela Regra 12 (#597) | 14 |
-| 66 | 🆕 **Câmera**: acompanhar a bola, mostrar a área inteira, um pouco mais aberta e centralizada | 8 |
+| 66 | ✅ **Câmera**: segue a bola (atraso p90 9,5 → 5,7 m, miolo 94,5 → 98,3%), a área inteira no último terço (15,9 → 96,7% com a bola nela), 6% mais aberta e o escanteio da pessoa alto (a área 7,7 → 23,6% da tela) | 8 |
 | 58 | 🆕 **Menu de pausa igual ao do FC 24**, com o campinho do seu time no canto direito | 8 |
 | 64 | 🆕 **Tela antes do jogo** (todo modo) no nível da do EA FC, com a cara do TM | 12 |
 | 65 | 🆕 **Mira das bolas paradas** minimalista, com um jeito bom de pôr curva | 8 |

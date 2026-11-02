@@ -11,11 +11,11 @@
 // virar metade céu. Tela pequena (celular) fecha mais (CAMERA.telaPequena) e, deitado, usa a TV mais baixa e mais
 // longe (CAMERA.celular): a torcida do outro lado aparece no alto do quadro durante o jogo.
 //
-// Bola longe (lançamento, defesa): a bola manda — o foco nunca fica a mais de ~0,31 da largura
-// vista do "ponto da bola", e a bola nunca sai do quadro. Com a bola no ar (m.voo), o ponto da
-// bola antecipa a queda (vai parte do caminho até m.voo.alvo); a mola deixa tudo suave.
+// TV de jogo (item 66; dono, 23/10: "a câmera não acompanha a bola e não dá pra ver a área completamente"): o foco segue a
+// BOLA com a previsão do caso, o espaço à frente do ataque, a área inteira no último terço e a bola com prioridade, numa mola
+// com a velocidade do alvo (render/enquadramento.js focoTV; contrato "Câmera de TV (item 66)"). O foco de antes (o controlado +
+// a bola) fica na aproximada, no retrato e na transição (alvoLegado/molaLegada).
 import * as THREE from 'three';
-import { CAMPO } from '../config.js';
 import {
   mola, PERFIS_CAMERA as PERFIS, ASPECTO_TV, perfilCamera, fovPara as fovParaTV, alvoLegado, molaLegada,
   criarEnquadramento, focoTV, geometriaTV, larguraVista, poseTV,

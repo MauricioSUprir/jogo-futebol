@@ -975,3 +975,82 @@ Vila Belmiro —, 2 pistas — Nilton Santos, Almeidão — e 1 sem forma — Zu
 - **Câmeras de perto do PC** (meta ≤ 400 mil; as 6 de cada estádio): o padrão no pior plano 28/384,5 → 28/384,8 mil (as escadas
   novas); o Maracanã igual (pior 257,6); Aflitos 181,0 → 182,3; San Siro 205,8 → 159,9; Anfield 201,5 → 164,0 — os 20 blocos
   mais perto têm menos cadeiras (a escada de 1,3 m e a fileira de 0,8 m: a frente do San Siro com 544 → 436 cadeiras 3D).
+
+## 18. A câmera de TV que acompanha a bola e mostra a área (item 66 da FILA; `js/render/enquadramento.js`, `render/camera.js`, `render/plano-bola-parada.js`, `main.js`, `render/replay.js`)
+Pedido do dono (23/10, com o print de um escanteio do time dele): "a câmera não acompanha a bola e não dá pra ver a área
+completamente, e isso acontece durante todo o jogo ... tem que afastar muito pouco mais e centralizar mais". Contrato
+"Câmera de TV (item 66)" no `CONTRATOS.md`.
+
+**O que o pedido queria dizer, medido na 79bbfbc2.** (a) "Não acompanha" é ATRASO, não a bola sumindo: a bola saía do quadro
+em 0,14–0,35% dos instantes, mas a mola crítica (ω 3,2/s em x, 2,56/s em z) fica 2v/ω = 0,62 s × v atrás de um alvo a v
+(9,5 m no p90 com a bola a ≥ 8 m/s; 11,8 m com o humano 'passivo') e 55% do foco era o controlado. (b) "Não dá pra ver a
+área": com a bola NA área, a área inteira (4 cantos + o alto das 2 traves) em 15,9% (celular) / 25,5% (PC) — o foco preso em
+x ±38,5 e a lente andando em z com o foco jogavam o canto de cá da linha de fundo para fora; no escanteio da pessoa a área
+era uma tira de 7,7% da altura da tela com jogadores de 15 px no celular. (c) "Afastar muito pouco": a TV de verdade fica
+em 26–48 m de largura no foco (p10–p90, mediana ~35 m), o piso é o jogador (≥ 34 px no celular).
+
+**Fontes e o que se aproveitou de cada uma.**
+
+| Fonte | O que se aproveitou |
+|---|---|
+| UEFA, Regulamento da Champions 2025/26, Anexo E.2.1 (câmeras principais: 12° a ~15° até o centro; a página dá 404, o texto veio pelo resumo da busca) e Free TV Australia OP-32 (2015, §2.2: 12–16° até o centro) | O ângulo fica (15° no celular, 24,6° no PC): afastar sem mudar o ângulo — altura, distância e largura × 1,06 juntas |
+| Magera et al., BroadTrack (2024); Chen & Little (CVPRW 2019); Theiner & Ewerth, TVCalib (WACV 2023) | A câmera real fica no meio-campo e GIRA (pan grande, tilt quase fixo). Aqui ela não gira (o rumo do analógico, `yawEntrada`, ficaria à deriva — o que o Livre já evita): só o foco anda e a área entra pelo deslocamento (decisão D5) |
+| Kato et al. (NHK; ITE 1995/1996; SMPTE 1997), cinegrafistas de futebol | Espaço à frente que cresce com a velocidade; correção em ~0,3 s (a parada brusca assenta em 0,30 s); aceleração do pan ≤ ~200°/s² no ar (teto de 150 m/s² ≈ 170–184°/s² a 47–50 m da lente); frear antes da chegada (a previsão do voo para na queda) |
+| Owens (via Chen & Carr 2015), UNIC 2026, Videomaker 2012 | "Lead room" no movimento e nada de zoom que respira: o fov da TV é fixo |
+| EA FC 26 (FIFPlay; AllThingsHow — guias de fã) | Ball Tracking Speed, Far Side Focus e Penalty Area Zoom são coisas separadas (aqui: a previsão, o limite da bola e a área); os competitivos usam a câmera que não recentra a cada toque (a zona morta de 2 m) |
+| EA FC Mobile, "Visuals & Audio Deep Dive" (oficial): o escanteio "focus on the kick taker's perspective. The elevated angle ensures it is still Tap to Pass-friendly"; MagicGameWorld (FC 26): a câmera baixa do escanteio "doesn't give you a great look at the box" | O escanteio da pessoa atrás do cobrador e ALTO (13 m atrás, 8 m de altura) |
+| Goal.com (FIFA 21 GameCam) e Aftermath (Copa América 2024: o plano alto demais rejeitado) | Abrir só um pouco (+6%) |
+| Nesky, GDC 2014, "50 Camera Mistakes" (#16, #40, #42, #46, #47) | O atraso com teto na tela (o limite duro), frear suave nos limites (pela velocidade, com a freada antes da borda), distância/altura/fov juntos, corte em vez de travelling longo (a bola teletransportada corta; o escanteio de lá volta por corte) |
+| Keren, GDC 2015, "Scroll Back" | Camera-window (zona morta), dual forward focus com limiar (o espaço à frente com histerese de 0,5 s), projected focus (o ponto do voo), zoom-to-fit (a área) |
+| Unity Cinemachine 3.1 (Position/Rotation Composer) | Dead Zone, Soft Zone e Hard Limits; Lookahead Smoothing (só a velocidade do alvo filtrada, 0,12 s: filtrar a posição atrasaria) e o aviso de que a antecipação amplifica o ruído (no pé, o condutor — o corpo — e não a bola, que oscila entre os toques: com P na bola o vai e volta ia de 18,6 a 30,8/min no protótipo) |
+| Eiserloh, GDC 2016 | Corte não enjoa, travelling rápido sim (a volta do escanteio de lá) |
+| Chen & Carr (WACV 2015), Chen et al. (CVPR 2016), Carr et al. (ACM MM 2013), Chen & Carr (survey, AAAI 2014) | O foco pela bola; filtrar = atrasar, então prever (a mola com a velocidade do alvo); medir as mudanças de direção (o vai e volta, M10) e a histerese de Schmitt; o tamanho pelo que tem de caber (a área) |
+| Pixellot ("How to properly film soccer") | Largura útil de 1/3 a 1/2 do campo: 42 m (celular) e 47,7 m (PC) |
+| StatsBomb Open Data 360 (66.524 quadros de TV de 22 jogos da Copa 2022 e da Euro 2024; `tools/pesquisa/sb_quadro.py`) | As réguas: no meio-campo a bola fica um pouco atrás do centro (u mediano 0,37; 74% com mais quadro à frente), no último terço centrada (0,50), quase nunca nos 10% das bordas (2,2%); a TV mostra ~93% da área com a bola a < 16 m da linha mas a área INTEIRA só em 33–42% — o dono pede mais que a TV (decisão D4) |
+
+Não confirmado: o limite de cima de 15° da UEFA (o trecho não traz o número; a OP-32 dá 12–16°); nenhum manual público de
+enquadramento da Premier League, da HBS ou da UEFA; o Tele Broadcast do FC só por guias de fã; o livro do Haigh-Hutchinson
+não foi lido. A StatsBomb só tem TOQUES (a bola em voo não é amostrada) e o polígono é recortado nas linhas do campo.
+
+**A conta do atraso.** Mola crítica perseguindo um alvo a v: e = 2v/ω (0,62 s × v com ω 3,2). Com a mola alimentada por
+metade da velocidade do alvo (e = x − (r − 0,5·r'·dt), ė = v − 0,5·r'), ω 4,5: 0,22 s × v (teste-camera S1, rampas de 7,
+15 e 20 m/s). Com o avanço inteiro o vai e volta subia (o protótipo: 30,8/min).
+
+**Antes → depois** (a MESMA régua: o `teste-camera` roda o foco de hoje — a cópia exata, conferida com a `camera.js` da
+79bbfbc2 com three: 0 m de diferença nas sementes 1 e 2, TV e aproximada — e o novo lado a lado nas mesmas partidas; demo
+sementes 1–6, humano 'passivo' 1–4; celular / PC):
+
+| Medida | Antes | Depois | Meta |
+|---|---|---|---|
+| Bola no miolo 50% × 50% (demo) | 94,5 / 95,8% | 98,3 / 98,4% | ≥ 96% |
+| Idem, 'passivo' | 89,7 / 92,5% | 97,1 / 96,7% | ≥ 95% |
+| Bola fora do quadro (demo; 'passivo') | 0,14 / 0,05%; 0,35 / 0,07% | 0,03 / 0,00%; 0,00 / 0,00% | ≤ 0,05% |
+| \|NDC x\| p90 (demo; 'passivo') | 0,34 / 0,30; 0,46 / 0,41 | 0,28 / 0,24; 0,26 / 0,22 | ≤ 0,30; ≤ 0,32 |
+| Meio-campo, bola no pé: u mediano; mais quadro à frente | 0,52; 38,9% | 0,46; 81–84% ('passivo' 0,48; 70–74%) | 0,40–0,48; ≥ 65% |
+| Bola na área: a área inteira (demo; 'passivo') | 15,9 / 25,5%; 12,5 / 24,2% | 96,7 / 99,0%; 97,9 / 98,9% | ≥ 90% |
+| Bola a ≤ 25 m do gol: a área inteira | 11,0 / 18,2% | 74,7 / 78,4% | ≥ 70% |
+| Bola na área: a área no quadro p10; as 2 traves | 69%; 76 / 88% | 100%; 99,6 / 100% | ≥ 95%; ≥ 97% |
+| Atraso p90 com a bola a ≥ 8 m/s (demo; 'passivo') | 9,5; 11,8 m | 5,7; 6,6 m | ≤ 7,0; ≤ 7,5 m |
+| Vai e volta (inversões > 1 m por minuto; demo; 'passivo') | 18,8; 10,2 | 17,2; 10,6 | ≤ o legado + 1 |
+| Aceleração do olhar fora dos cortes: p99,9; máximo (celular) | 149; 199°/s² | 170; 173°/s² | ≤ 200; ≤ 400 |
+| Controlado no celular, mediana (p10) | 37,4 (33,1) px | 35,2 (31,3) px | ≥ 34 px |
+| Controlado no PC, mediana | 47,4 px | 44,4 px | ≥ 43 px |
+| Largura vista no foco | 39,6 / 45 m | 42,0 / 47,7 m | 41,5–43,5 / 47–49 |
+
+Na página (`teste-camera-tela`, sementes 4 e 11, 40 instantes por tela): a câmera da página × a do Node nos mesmos ticks
+0,000 m de mediana (pior 0,006 m no celular, 0,037 m no PC; o desenho a meio passo, alfa 0,5); a torcida em pixels 40/40
+instantes, mediana 8,6 → 9,2%; a bola atrás do HUD 0/40; o custo da TV no celular Média igual ao da base (28 chamadas, 101
+mil triângulos no p95); com a bola a ≤ 25 m do gol, a área no quadro 73,9 → 100% e inteira 0/7 → 6/7 (à vista, fora do
+HUD, 97,6%). A bola presa em 12 pontos das áreas: a área inteira 3/12 → 12/12. O escanteio da pessoa: a faixa da área 7,7
+→ 23,6% da altura, os jogadores na área 15,0 → 20,0 px no celular e 27,6 → 36,9 px no PC, o cobrador com a cabeça a 70% e
+os pés a 87% da altura, 29–32 chamadas e 110–121 mil triângulos no pior quadro (≤ 40 e ≤ 130 mil); os 3 s depois do
+cruzamento com a bola no quadro e a área inteira com a bola nela em 100% (o de lá: 81% antes do corte da volta). G5 (Node,
+106 estádios × 4 cantos × corrida de 0, 2 e 4 m): nenhuma lente em sólido, a faixa ≥ 15% em 100% (mediana 24,2%; no Golaço
+≥ 21,8%), o jogador na marca ≥ 18 px em 93,1% (no Golaço ≥ 19,0 px; o pior, 14,0 px, num estádio de arquibancada encostada,
+onde a lente sobe e olha mais de cima).
+
+**O que custou e o que ficou.** O controlado no celular perde 2,2 px (o "afastar" pedido; o p10 vai a 31,3 px). O tiro livre
+na TV a 30–35 m da linha não põe a área inteira no celular sem abrir o plano (a bola e o gol sim; 61,9% da grade). A bola
+do lado de lá dentro da área sobe no quadro (o preço de mostrar a área). O vai e volta com o 'passivo' subiu 10,2 → 10,6/min
+(dentro da meta de +1). O u do meio-campo com o 'passivo' fica em 0,483 (a régua de 2 casas da meta, 0,48). Pendentes para
+o dono: a mesma previsão na câmera aproximada; o plano 'fechada' do replay com o foco novo; a TV girando como a real (D5).
