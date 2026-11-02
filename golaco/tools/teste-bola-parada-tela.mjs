@@ -2,8 +2,9 @@
 // imagem do EA FC; render/camera.js CAMERA_BOLA_PARADA, render/linha-mira.js, js/mira.js; contrato "Cobrança mirada" no
 // CONTRATOS.md). Relógio manual (o laço da página, quadro a quadro). Em PC 1280×720, celular 844×390 e 568×320 (toque):
 //  1  Nos 4 tipos (escanteio, tiro livre, tiro de meta, pênalti) do humano e no pênalti CONTRA: a câmera vai para trás do
-//     cobrador (a lente do lado de trás da bola, a 2–8 m dela, a 1,8–4 m de altura), o cobrador inteiro no quadro e na
-//     metade de baixo (a cabeça abaixo de 40% da altura), o alvo (a área / o gol) no quadro e fora da caixa do cobrador.
+//     cobrador (a lente do lado de trás da bola, a 2–8 m dela, a 1,8–4 m de altura; no escanteio, alta — item 66,
+//     render/plano-bola-parada.js CAMERA_ESCANTEIO —: a 8–18 m dela e a 5–10 m de altura), o cobrador inteiro no quadro e
+//     na metade de baixo (a cabeça abaixo de 40% da altura), o alvo (a área / o gol) no quadro e fora da caixa do cobrador.
 //  2  Nada sólido na lente: fora de placas, gol, arquibancada (estadio-forma.js solidoEm, folga 0,3 m) e a ≥ 0,8 m de
 //     todo jogador.
 //  3  A linha: visível no escanteio, no tiro livre e no tiro de meta (não no pênalti), mexe ≥ 150 px do quadro (com ×
@@ -93,7 +94,9 @@ for (const tela of TELAS) {
     if (!e.ativa) { q1.push(`${tipo}: câmera não veio`); continue; }
     const md = await medir(pg);
     const dentro = (p, f = 0) => !p.atras && p.x >= f * md.W && p.x <= (1 - f) * md.W && p.y >= f * md.H && p.y <= (1 - f) * md.H;
-    const okCam = md.atras && md.dist >= 2 && md.dist <= 8 && md.altura >= 1.8 && md.altura <= 4;
+    // (a régua da lente por tipo: o escanteio alto do item 66; os outros como antes)
+    const R = tipo === 'escanteio' ? { d: [8, 18], h: [5, 10] } : { d: [2, 8], h: [1.8, 4] };
+    const okCam = md.atras && md.dist >= R.d[0] && md.dist <= R.d[1] && md.altura >= R.h[0] && md.altura <= R.h[1];
     const okCob = dentro(md.cab) && dentro(md.pes) && md.cab.y >= 0.4 * md.H && md.pes.y <= 0.985 * md.H;
     const okAlvo = dentro(md.alvo, 0.03) && !(md.alvo.x > md.caixa.l && md.alvo.x < md.caixa.r && md.alvo.y > md.caixa.t && md.alvo.y < md.caixa.b);
     q1.push(`${tipo}: ${okCam && okCob && okAlvo ? 'ok' : `câmera ${okCam ? 'ok' : `atrás ${md.atras} ${f1(md.dist)} m alt ${f1(md.altura)}`} · cobrador ${okCob ? 'ok' : `cabeça ${f1(md.cab.y / md.H * 100)}% pés ${f1(md.pes.y / md.H * 100)}%`} · alvo ${okAlvo ? 'ok' : JSON.stringify(md.alvo)}`}`);

@@ -382,6 +382,68 @@ if (!SO || SO === 'G') {
     }
     reg(`G4 ${T.nome}: projetarTV × a projeção 4×4 (${n4} pontos)`, pior4.toExponential(1), '≤ 1e-6', pior4 <= 1e-6);
   }
+  await g5();
+}
+
+// G5: o escanteio da pessoa (render/plano-bola-parada.js, a câmera atrás do cobrador e ALTA) nos 4 cantos × a corrida
+// da cobrança (recuo 0, 2,5 e 5 m) × as formas de estádio (o Golaço, o Maracanã e as formas genéricas da base): a lente fora
+// dos sólidos do desenho (dentro da arquibancada de cá só com ela escondida), ≥ 2 m acima do que houver embaixo, a faixa da
+// área na altura da tela e o jogador na marca do pênalti no celular (390 px de altura).
+async function g5() {
+  let PB = null;
+  try { PB = await imp('render/plano-bola-parada.js'); } catch { PB = null; }
+  if (!PB) { reg('G5 escanteio da pessoa: render/plano-bola-parada.js', 'não existe', 'existe', false); return; }
+  const fs = await import('node:fs');
+  const F = await imp('estadio-forma.js'), TD = await imp('render/torcida-dados.js');
+  const GEN = await imp('estadio-generico.js'), PL = await imp('estadio-planta.js');
+  const base = JSON.parse(fs.readFileSync(path.join(PASTA_JS, '../assets/tm/estadios.json'), 'utf8'));
+  const formas = [['Golaço', null]];
+  if (base.estadios.maracana?.forma) formas.push(['Maracanã', () => PL.criarPlanta(base.estadios.maracana.forma)]);
+  for (const [k, e] of Object.entries(base.estadios)) if (e.forma && e.forma.entorno !== 'maracana') formas.push([k, () => GEN.criarPlantaGenerica(e.forma)]);
+  const C = PB.CAMERA_ESCANTEIO, B = PB.CAMERA_BOLA_PARADA, H = 390, asp = 844 / 390;
+  const tx = MX - 11; // o alvo do escanteio (mira.js alvoPadrao): a marca do pênalti
+  const ruins = [], cabeca = [], faixas = [], faixasG = [], pxs = [], o = {};
+  for (const [nome, criar] of formas) {
+    const P = criar ? criar() : null;
+    F.definirForma(P); TD.definirLadoDeCa(P ? P.cameraNoLadoDeCa : null);
+    // (a corrida do escanteio: 2,5–4 m a 25–40° da linha — config.js CORRIDA_COBRANCA —, o recuo na linha bola–alvo ≤ 4 m)
+    for (const sx of [1, -1]) for (const sz of [1, -1]) for (const recuo of [0, 2, 4]) {
+      const bx = sx * (MX - 0.4), bz = sz * (MZ - 0.4), ax = sx * tx;
+      // o lado da lente: o mais para dentro do campo (a conta do bola-parada.js camera)
+      const dx = ax - bx, dz = -bz, d = Math.hypot(dx, dz);
+      const fora = q => { const x = bx - dx / d * B.atras - dz / d * B.lado * q, z = bz - dz / d * B.atras + dx / d * B.lado * q; return Math.max(0, Math.abs(x) - MX) + Math.max(0, Math.abs(z) - MZ); };
+      const lado = fora(1) < fora(-1) - 0.05 ? 1 : -1;
+      const pl = PB.planoBolaParada(bx, bz, ax, 0, 0, lado, [], {}, recuo, C);
+      const [px, py, pz] = pl.de, caso = `${nome} ${sx > 0 ? '+x' : '−x'} ${sz > 0 ? 'cá' : 'lá'} r${recuo}`;
+      const escondida = TD.cameraNoLadoDeCa({ x: px, y: py, z: pz });
+      const sol = F.solidoEm(px, py, pz, 0.3, false);
+      if (sol && !escondida) ruins.push(`${caso}: ${sol}`);
+      const solB = F.solidoEm(px, py - C.folgaCabeca, pz, 0.3, false);
+      if (solB && !escondida) cabeca.push(`${caso}: ${solB}`);
+      // a faixa da área (a grade 11 × 15) e o jogador na marca do pênalti
+      let y0 = Infinity, y1 = -Infinity;
+      for (let i = 0; i <= 10; i++) for (let k = 0; k <= 14; k++) {
+        const r = ndcReferencia(pl.de, pl.para, pl.fov, asp, [sx * (MX - AP * i / 10), 0, -AL + 2 * AL * k / 14]);
+        y0 = Math.min(y0, r.y); y1 = Math.max(y1, r.y);
+      }
+      const fx = (y1 - y0) / 2;
+      (nome === 'Golaço' ? faixasG : faixas).push(fx);
+      const a0 = ndcReferencia(pl.de, pl.para, pl.fov, asp, [sx * tx, 0, 0]), a1 = ndcReferencia(pl.de, pl.para, pl.fov, asp, [sx * tx, 1.8, 0]);
+      pxs.push(Math.abs(a1.y - a0.y) / 2 * H);
+      if (process.env.CAM_G5) console.error(`${caso}: lente (${pl.de.map(v => v.toFixed(1)).join(', ')}) fov ${pl.fov.toFixed(1)} faixa ${(100 * fx).toFixed(1)}% marca ${(Math.abs(a1.y - a0.y) / 2 * H).toFixed(1)} px`);
+    }
+  }
+  F.definirForma(null); TD.definirLadoDeCa(null);
+  const n = formas.length * 12, todas = [...faixas, ...faixasG];
+  const lista = (r, k = 3) => (r.length ? `${r.length}: ${r.slice(0, k).join(' · ')}` : '0');
+  reg(`G5 escanteio da pessoa (${formas.length} estádios × 4 cantos × corrida de 0, 2 e 4 m): a lente num sólido do desenho`, lista(ruins), '0', ruins.length === 0);
+  reg(`G5 … ≥ ${C.folgaCabeca} m acima do que houver embaixo (degraus, cabeças)`, lista(cabeca), '0', cabeca.length === 0);
+  const okF = todas.filter(v => v >= 0.15).length, minG = Math.min(...faixasG);
+  reg('G5 … a faixa da área na altura da tela: ≥ 15% (todos); no Golaço, o pior', `${f1(pct(okF, n))}% (mediana ${f1(100 * q(todas, 0.5))}%); ${f1(100 * minG)}% (antes 6,5–8,8%)`, '≥ 95%; ≥ 20%', okF >= 0.95 * n && minG >= 0.2);
+  // (no Golaço sempre ≥ 18 px; nos estádios com a arquibancada de lá encostada a lente sobe e olha mais de cima — a área fica
+  // maior na tela, o jogador mais baixo: ≥ 18 px em ≥ 90% e nunca abaixo do pior da câmera baixa de antes, 13 px)
+  const pxG = pxs.slice(0, 12), ok18 = pxs.filter(v => v >= 18).length;
+  reg('G5 … o jogador na marca do pênalti no celular: no Golaço, o pior; em todos, ≥ 18 px e o pior', `${f1(Math.min(...pxG))} px; ${f1(pct(ok18, pxs.length))}% e ${f1(Math.min(...pxs))} px (mediana ${f1(q(pxs, 0.5))}; antes 13–15,6)`, '≥ 18 px; ≥ 90% e ≥ 13 px', Math.min(...pxG) >= 18 && ok18 >= 0.9 * pxs.length && Math.min(...pxs) >= 13);
 }
 
 // ------------------------------------------------------------------------------------------------ P: partidas
