@@ -224,7 +224,7 @@ export function criarToqueOuSegura(toque, segura, limiar = ENTRADA.toqueCurto) {
 
 /**
  * A curva da cobrança mirada no toque (item 65 da FILA, dono 23/10: "tem que ter alguma forma de botar curva nas bolas
- * paradas"; contrato "Cobrança mirada" no CONTRATOS.md, pesquisa no PESQUISA-ETAPA4.md §12.6): segurar o CHUTE ou o LANÇAMENTO
+ * paradas"; contrato "Cobrança mirada" no CONTRATOS.md, pesquisa no PESQUISA-ETAPA4.md §12.1): segurar o CHUTE ou o LANÇAMENTO
  * (a força, como sempre) e arrastar o polegar para o LADO — só o eixo horizontal, relativo ao ponto do toque. Um degrau
  * (0,25 de curva, os 9 níveis de sempre) a cada `passo` px depois da `zonaMorta` (o polegar rola 3–6 px no aperto): ±1 a
  * 10 + 3 × 14 = 52 px. Histerese: o nível SOBE na fronteira e só DESCE `histerese` px aquém dela (um tremor de ±3 px numa
