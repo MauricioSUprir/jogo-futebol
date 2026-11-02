@@ -58,7 +58,8 @@ export function criarDiretor({ anel, aspecto }) {
   const seg = { lx: 0, ly: 0, lz: 0, cx: 0, corte: true };
   // enquadramento da câmera 'linha' (calculado uma vez por roteiro, no quadro do passe)
   const enq = { x: 0, z: 0, olharZ: 0, fov: 30 };
-  const _alvo = { jx: 0, jz: 0, jvx: 0, jvz: 0, bx: 0, bz: 0, ax: NaN, az: NaN };
+  // o alvo da TV do replay (camera.js; os campos do enquadramento.js preencherAlvo): a bola gravada, sem condutor nem voo
+  const _alvo = { jx: 0, jz: 0, jvx: 0, jvz: 0, bx: 0, by: 0.11, bz: 0, bvx: 0, bvz: 0, ax: NaN, az: NaN, tRest: 0, cx: NaN, cz: NaN, cvx: 0, cvz: 0, dir: 0, temParada: false, legado: false };
   const _linha = { visivel: false, x: 0, opacidade: 0 };
   const _foco = { x: 0, z: 0 };
   const _j = { x: 0, z: 0, time: 0, goleiro: false }, _d = { id: -1, x: 0, z: 0 };
@@ -128,6 +129,8 @@ export function criarDiretor({ anel, aspecto }) {
         if (v > T.velMax) { vx *= T.velMax / v; vz *= T.velMax / v; }
       }
       _alvo.jx = bp.x; _alvo.jz = bp.z; _alvo.jvx = vx; _alvo.jvz = vz; _alvo.bx = bp.x; _alvo.bz = bp.z;
+      // a TV nova do item 66 (a mesma do jogo): a bola com a velocidade à frente, o ataque pelo lado do lance (a área no gol)
+      _alvo.by = bp.y; _alvo.bvx = vx; _alvo.bvz = vz; _alvo.dir = Math.sign(ro.lado || 0); _alvo.legado = false;
       tv.atualizar(dtR, _alvo, corte);
       camera.position.copy(tv.camera.position); camera.quaternion.copy(tv.camera.quaternion);
       ajustarFov(tv.camera.fov);
@@ -140,6 +143,8 @@ export function criarDiretor({ anel, aspecto }) {
       // (camera.js limX ±38,5) e, com o campo de visão × lento.fov, a falta perto da linha de fundo saía do quadro
       const lx = Number.isFinite(ro.x) ? ro.x : bp.x, lz = Number.isFinite(ro.z) ? ro.z : bp.z;
       _alvo.jx = lx; _alvo.jz = lz; _alvo.jvx = 0; _alvo.jvz = 0; _alvo.bx = bp.x; _alvo.bz = bp.z;
+      // (o foco de HOJE, o legado do enquadramento.js: o olhar desviado abaixo conta com ele — teste-replay-paradas-tela V11)
+      _alvo.legado = true;
       tv.atualizar(dtR, _alvo, corte);
       const Ln = REPLAY_PARADA.lento;
       let ax = lx + (bp.x - lx) * Ln.mistura, az = lz + (bp.z - lz) * Ln.mistura;
