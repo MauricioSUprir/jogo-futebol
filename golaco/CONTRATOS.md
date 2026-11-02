@@ -1240,7 +1240,7 @@ quadro() ─ rodarPasso ──▶ passoPartida(m, entrada, acoes)
   `aba`, `modo`, `rascunho`), `medirQuadro({zerar}?)` → `{quadros, passos, sim, pose, jogadores, desenho, cpu}` (cada um
   `{media, p95, max}` em ms; `cpu` = o quadro sem o desenho), `trocarModo(v)` (como o menu "Modo de jogo"), `modoPagina`,
   `entradaEtapa3` (a entrada já tem os botões da defesa e o `bloquear()`), `estado()` com `times`, `relogio {tempo,
-  minuto}`, `parada` e `placar`. **Parâmetros da página:** `?modo=partida|ataque|conducao` (padrão: partida) e `?min=N`
+  minuto}` (desde o item 32 também `segundo`, `estado` e `acrescimo`: seção "Placar (17/10)"), `parada` e `placar`. **Parâmetros da página:** `?modo=partida|ataque|conducao` (padrão: partida) e `?min=N`
   (minutos reais por tempo da partida), além dos de antes.
 
 ### Testes da Etapa 3
@@ -2206,7 +2206,11 @@ IGUAIS.
   MM:SS na Inter TM, o símbolo do TM) e 3b (revisão: no "Simular o resto" o relógio é sempre o do mundo, "Fim" no fim); `teste-replay` A6 (o texto do placar na tela do replay aceita o MM:SS);
   `teste-online-tela` P7 ("Fim" nas duas abas); `teste-penaltis-tela` 9 (com a `--placar-h` de 28 px as bolinhas da disputa
   descem 4 px: a faixa do fim desce para baixo delas também nas telas de até 380 px de altura, `disputa-tela.js`).
-  `--so-placar` roda o H1/H10/H14 sem os 2 min de jogo.
+  `--so-placar` roda as telas do H1 (com o H1b, o H7 e o H9), o H5, o H10 e o H14, sem os 2 min de jogo.
+- **Fica** (FILA itens 82–84): a tarja do intervalo/fim e a faixa do "Simular o resto" escrevem o `minutoTM` da súmula ("45'"
+  num gol dos 47:13; a TV escreveria "45+2'" — o item 82 põe o acréscimo num campo opcional, sem mudar o minuto que vai ao TM);
+  a folga do H1 medida só com a DejaVu Sans e em 4 telas, e o custo da escrita do relógio no celular estimado, não medido (item
+  83); o tempo do `teste-hud-minimo` no `tempos-ci.mjs` é o de antes (item 84).
 
 ## Ponte com o Total Match (15/10; contrato)
 Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Match (TM). O TM grava o pedido em
