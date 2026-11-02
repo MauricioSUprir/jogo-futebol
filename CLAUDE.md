@@ -141,8 +141,8 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   **Mais para a fila (dono, 17/10: "coloca na lista para depois com limite"):** (5) o goleiro ESPALMA bola alta (hoje
   só rasteira e meia altura; `goleiro.js`/`anim.js` mergulho, `maoAlcanca`, `teste-mergulho`); (6) na cena de comemoração,
   a FOTO do autor com o número e o nome (`comemoracao.js` + a tela; a foto vem do pedido do TM); (7) o placar com mais a
-  cara do Total Match, um pouco MAIOR e o relógio com os SEGUNDOS além dos minutos (`hud.js`, `teste-hud-minimo` H10 —
-  continua cabendo no orçamento de HUD do celular).
+  cara do Total Match, um pouco MAIOR e o relógio com os SEGUNDOS além dos minutos — ENTREGUE (item 32 da FILA, #599;
+  ver "Placar de TV" abaixo).
   **Ainda para a fila (dono, 17/10: "isso tudo pra depois"):** (8) "A IA NÃO CORRE, NEM PRA DEFENDER, NEM PRA ATACAR, tem
   que ser mais difícil" — 1ª parte (21/10): medido com `tools/medir-corrida.mjs` (fases, contra o
   humano roteirizado de `tools/lib/humano-roteiro.mjs`: agressivo/conduz/calmo/passivo). A IA adversária DEFENDE forte
@@ -466,15 +466,22 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   na cortina). Câmera por cortes (`camera.js definirCinema`: rede → steadicam → contraplano → reação). `?comemoracao=0`
   desliga (sem opção na pausa: não cabe em 844×390). Testes: `teste-comemoracao` (Node, padrão) e
   `teste-comemoracao-tela` (navegador, CI e deploy); os de navegador que não são dela abrem com `?comemoracao=0`.
-- **Placar de TV** (pedido de 12/10 com imagem de referência: "quero o placar assim, tem que ser algo menor e mais com a
-  nossa cara"; `PESQUISA-ESTADIO.md` §7.1, contrato "Placar (12/10)" no `CONTRATOS.md`): uma barra só no canto de cima à
-  esquerda — símbolo do GOLAÇO | faixa de cor + escudo + sigla da casa | placar em verde | sigla + escudo + faixa do
-  visitante | relógio no bloco verde (verde-escuro quando parado). Escudos FICTÍCIOS em `<symbol>` no `index.html` (`escudo-golaco`,
-  `escudo-ventania`; `hud.definirTimes` recebe `escudo` = id do elenco). 24 px de altura no celular e 26 no PC (antes 30/34;
-  referência 29), números ≥ 14 px, siglas 11 px. Teste: `teste-hud-minimo` H10 (`--so-placar` roda só ele; o "antes" fica em
-  `PLACAR_ANTES`). Igual nos treinos (sem o relógio). Só DOM/CSS: hash IGUAL. Contraprova (13/10): na partida o "1º T +4"/
-  "Intervalo" é o último a sair (os espaços apertam antes; o minimapa mora embaixo desde os itens 59 e 60); gols 9 → 10 refazem o topo; nos treinos a marca só
-  sai se fizer falta; cada time é `role="img"` com o nome (leitor de tela).
+- **Placar de TV** (12/10, com imagem de referência: "menor e mais com a nossa cara"; 17/10, POSTERIOR e o que vale, item 32,
+  #599: "o placar com mais a cara do Total Match, um pouco MAIOR e o relógio com os SEGUNDOS além dos minutos";
+  `PESQUISA-ESTADIO.md` §7.1 e §7.3, contrato "Placar (17/10)" no `CONTRATOS.md`): uma barra no canto de cima à esquerda —
+  marca (na partida só acima de 700 px de largura) | faixa de cor de 3 px + escudo + sigla da casa | gols em verde | sigla +
+  escudo + faixa do visitante | relógio MM:SS no bloco verde ("47:13" com o "+4" nos acréscimos; "Intervalo"/"Fim" no
+  lugar dele, no bloco verde-escuro; saiu o "1º T"). 28 px no celular (a referência do dono: 29), 26 nas telas baixas (até
+  1000 × 340 e 700 × 360), 30 no PC; gols 18/20 px, relógio 16/17, siglas 12/13 (11 nas baixas). O relógio é
+  `js/relogio-placar.js` (puro, sem import, FORA do fecho: o minuto pela MESMA conta float do `minutoDeJogo`); o `hud.js`
+  escreve só quando muda (~11 por segundo; dígitos `tabular-nums`) e refaz o topo só na troca de formato. Com `?tm`: a Inter
+  TM, o cartão, o verde e o símbolo do TM (sem `?tm` a Inter não baixa). Escudos FICTÍCIOS em `<symbol>` no `index.html`
+  (`hud.definirTimes` recebe `escudo` = id do elenco); cada time é `role="img"` com o nome. Orçamento (H1): ≤ 11% em
+  844×390, 667×375 e 640×360 e **≤ 12% em 568×320** (escolha recomendada aplicada, decisão do dono: FILA "Depende do dono"
+  15), em todos os estados do relógio e nos mais largos, sem e com o TM; no celular cada dígito a mais (gols ≥ 10, relógio
+  ≥ 100:00) aperta os espaços e, com dois, sai o "+N" (`hud.js digitosExtra`); folga de 0,05 ponto em 667×375 (FILA item
+  83). Testes: `teste-relogio-placar` (Node), `teste-hud-minimo` H1/H1b/H10/H14 (`--so-placar`), `teste-tm-tela` 1c/3b. Só
+  DOM/CSS e a leitura do mundo: hash IGUAL, `fecho-hash` 0. Igual nos treinos, sem o relógio.
 - **Etapa 4 (regras IFAB, goleiro, bolas paradas, equilíbrio)** — em PRs; pesquisa em `golaco/PESQUISA-ETAPA4.md`,
   contrato em `CONTRATOS.md`. **Painel** `tools/painel-equilibrio.mjs` (seção 11 inteira, 144 partidas em ~9 min com 4
   CPUs; `--base <pasta js>` compara versões com as mesmas sementes; `--json`; `--partes a.json,b.json` junta pedaços). O CI
@@ -484,9 +491,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   40% dos gols de bola roubada perto da área. **Impedimento** (`impedimento.js`, Regra 11): foto em cada jogada do
   companheiro, infração no toque (também rebote de defesa e desvio), jogada deliberada do adversário zera, nada direto de
   tiro de meta/lateral/escanteio; tiro livre INDIRETO (`tiroLivre`, 9,15 m); linha viva amarelo-clara e a do lance parada
-  no apito (`render/linha-impedimento.js`); ~1,2 por partida. **Acréscimos** (Regra 7.3): `PARTIDA.acrescimos`, "45+2'"
-  e "1º T +4" no placar. HUD no celular estreito: `topo-c4` aperta o placar (o relógio de 2 dígitos já
-  encostava em 667/568 px; o minimapa, que ia para a direita dele, mora embaixo desde os itens 59 e 60). Teste: `teste-impedimento` (padrão; árbitro
+  no apito (`render/linha-impedimento.js`); ~1,2 por partida. **Acréscimos** (Regra 7.3): `PARTIDA.acrescimos`, o "+4"
+  no placar (desde o item 32 o relógio continua em MM:SS: "47:13 +4"). HUD no celular estreito: `topo-c4` aperta o placar (o
+  minimapa, que ia para a direita dele, mora embaixo desde os itens 59 e 60). Teste: `teste-impedimento` (padrão; árbitro
   independente). Lição: a página com `?prints=1&demo=1` não refaz o laço do Node passo a passo — prints procuram o lance
   no próprio navegador. **Faltas** (`faltas.js`, Regra 12; PR 2 da Etapa 4): bote da IA, dividida do humano, carga por
   trás e falta tática (SPA); imprudente/temerária (amarelo)/força excessiva (vermelho); DOGSO = vermelho (na área
@@ -533,8 +540,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   (a condução curta é de outra branch; a calibração final do painel é junto com ela).
 - **Tela limpa** (pedidos de 11/10: "quero menos informação na tela", "não quero a linha de impedimento durante o jogo";
   `PESQUISA-ESTADIO.md` §7, contrato "Tela limpa" no `CONTRATOS.md`): a **linha viva saiu** (`IMPEDIMENTO.linhaViva`
-  false; fica a do lance no apito — o replay mostra); na partida placar compacto de TV ("1º T" só no intervalo/fim/
-  acréscimos), menu só com o ícone, barra de força sem texto, dica do PC some em 8 s; botões de toque translúcidos
+  false; fica a do lance no apito — o replay mostra); na partida o placar de TV (seção "Placar de TV"; sem o "1º T"
+  desde o item 32), menu só com o ícone, barra de força sem texto, dica do PC some em 8 s; botões de toque translúcidos
   (80%, 55%; chave `golaco.toque.v2`) com o ícone e o NOME da função (dono, 12/10: "coloca o nome da função do botão de
   novo" — "Nomes nos botões" ligado por padrão; desligado na pausa = só o ícone), analógico quase invisível em repouso (com o dedo, igual:
   `escalaAnalogico`); minimapa embaixo no meio (PC 112×73; no celular desligado por padrão e, ligado, 92×60 entre o
@@ -546,7 +553,7 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   virou a DIVIDIDA segurada (`entrada.js criarToqueOuSegura`: tocar < `ENTRADA.toqueCurto` 0,25 s = bote, segurar =
   CONTER desde o 1º quadro, como o "Sprint & Tackle" do FC Mobile; só o `pointerup` dá o bote — toque cancelado pelo
   sistema não) e a PRESSÃO foi para a vaga b; teclado e controle não mudam. O mundo recebe as mesmas máscaras
-  (hash-igual IGUAL). Teste: `teste-hud-minimo` (navegador, CI e deploy; celular ≤ 11% de HUD em 3 telas, 0 texto fora
+  (hash-igual IGUAL). Teste: `teste-hud-minimo` (navegador, CI e deploy; celular ≤ 11% de HUD em 4 telas — 12% em 568×320 desde o item 32 —, 0 texto fora
   do placar e do nome do condutor, ≤ 15% da torcida atrás do HUD, 0 linha viva, PC ≤ 2,5%, barra da pausa sem encostar). Peça nova de HUD na
   partida tem de caber nesse orçamento (ou ir para a pausa). Lição: o relógio das animações CSS do Chromium sem GPU
   atrasa 1–2 s do real com a máquina carregada — teste de algo que some por animação espera a animação, não um tempo fixo.

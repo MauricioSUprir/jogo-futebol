@@ -8,6 +8,8 @@
 //      andam de novo e os hashes continuam iguais;
 //   P4 o menu aberto NÃO para o jogo (online: a IA joga pelo meu controlado);
 //   P5 a partida inteira (?min=0.25) acaba nas duas com o mesmo placar e o mesmo hash final;
+//   P7 (item 32) o relógio do placar no fim: as duas abas com "Fim" no #relogio, no bloco parado (o mesmo lerRelogio do
+//      quadroOnline nos dois aparelhos);
 //   P6 a pausa no celular deitado (844×390, toque) cabe sem rolar com "Pausar a partida" e "Sair da partida", sem Replay,
 //      Simular o resto, Reiniciar nem Modo de jogo.
 //   node tools/teste-online-tela.mjs
@@ -96,6 +98,9 @@ const hf = await Promise.all([A.evaluate(() => window.__golaco.hash()), B.evalua
 c = comparar(a, b);
 meta('P5 a partida inteira acaba nas duas com o mesmo placar e o mesmo jogo', `fim ${fa}/${fb} · placar ${a.placar.join('×')} / ${b.placar.join('×')} · ${c.difs} diferentes de ${c.comuns}`,
   fa && fb && a.placar.join() === b.placar.join() && c.difs === 0 && c.comuns >= 20);
+const relFim = await Promise.all([A, B].map(p => p.evaluate(() => { const r = document.getElementById('relogio'), b = document.getElementById('placar-relogio'); return { txt: r?.textContent.trim() ?? '', parado: !!b?.classList.contains('parado'), vis: !!b && !b.hidden }; })));
+meta('P7 o relógio do placar no fim: "Fim" no bloco parado nas duas abas (item 32)', relFim.map((x, i) => `${i ? 'B' : 'A'} "${x.txt}"${x.parado ? ' parado' : ''}${x.vis ? '' : ' (escondido)'}`).join(' · '),
+  relFim.every(x => x.vis && x.txt === 'Fim' && x.parado));
 meta('erros no console', erros.length ? erros.slice(0, 3).join(' | ') : '0', erros.length === 0);
 void hf;
 

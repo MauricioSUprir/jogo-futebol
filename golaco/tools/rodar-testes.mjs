@@ -150,6 +150,8 @@ const LISTA = [
   ['patrocínios nas camisas reais (versão de teste da pro): índice, logos 512 × 256, nada sobrando, decalques nos kits só com a base', 'teste-patrocinios.mjs'],
   // Ponte com o Total Match (15/10): o pedido do TM vira os times, o humano no lado do usuário, a trava e a súmula
   ['ponte com o Total Match: pedido → times, humano no visitante, trava "só o meu jogador", súmula e resultado', 'teste-ponte-tm.mjs'],
+  // Item 32 (dono, 17/10: "o relógio com os SEGUNDOS além dos minutos"): a conta pura do relógio do placar, fora do fecho
+  ['relógio do placar em MM:SS: o minuto = o minutoDeJogo, os acréscimos andando com o "+N", o texto, a partida de verdade e a pureza (fora do fecho)', 'teste-relogio-placar.mjs'],
   // Modo Pênaltis 3D (dono, 15/10: "crie uma versão só de jogador de pênaltis"): a disputa pela Regra 10 da IFAB
   ['disputa de pênaltis (Regra 10): 5 alternadas, fim antecipado, alternadas, fila dos cobradores, lugares, goleiro na linha, fim da cobrança, IA × IA até o fim, humano bate e defende, cavadinha repetida, resultado do TM', 'teste-disputa.mjs'],
   // Modo Livre 3D (dono, 16/10: "um modo livre, como no fifa ... a quantidade de jogadores que eu escolher"): N contra M

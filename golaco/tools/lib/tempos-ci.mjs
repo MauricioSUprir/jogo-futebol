@@ -94,6 +94,7 @@ export const TEMPOS_NODE = {
   'teste-rostos-reais.mjs': 1,
   'teste-patrocinios.mjs': 1,
   'teste-ponte-tm.mjs': 21,
+  'teste-relogio-placar.mjs': 5, // item 32 (medido: ~5 s aqui)
   'teste-disputa.mjs': 16,
   'teste-livre.mjs': 60,
   // online 1×1 (medidos aqui, máquina dividida; acertar pelo log do CI)
@@ -112,9 +113,9 @@ export const TEMPOS_NAVEGADOR = {
   'teste-prejogo.mjs': 298,
   'teste-som-jogo.mjs': 105,
   'teste-rede-tela.mjs': 53,
-  // (itens 59 e 60: + o H12 nas 3 telas com e sem entalhe e 4 tamanhos, o H13 numa página a mais e a de ?prints=1; medido aqui
-  // 159 s com outra página de teste junto; acertar pelo log do CI)
-  'teste-hud-minimo.mjs': 120,
+  // (itens 59 e 60: + o H12 nas 3 telas com e sem entalhe e 4 tamanhos, o H13 numa página a mais e a de ?prints=1; item 32: o
+  // H1 por estado do relógio e com a cara do TM, a 640×360 e o H14 — 130,9 s no log do CI do #599)
+  'teste-hud-minimo.mjs': 131,
   // (24/10, D1: + o C7, uma página até o impedimento do time 0, ~5300 passos; localmente 214 s com outra página junto)
   'teste-replay.mjs': 225,
   // medido aqui (máquina dividida, carga ~4 em 4 núcleos: 396 s, o online em tempo real ~285 s); acertar pelo log do CI

@@ -46,10 +46,12 @@
   <!-- HUD fixo: placar, velocidade e modo (treinos), minimapa (opção da pausa) e o nome do jogador com a bola na faixa de
        baixo, força do passe/chute, avisos.
        Tela limpa (dono, 11/10): na partida, placar compacto de TV + menu só com o ícone (tools/teste-hud-minimo.mjs).
-       Placar (dono, 12/10: "quero o placar assim, tem que ser algo menor e mais com a nossa cara"): uma barra só, no canto
-       de cima à esquerda — marca do GOLAÇO | cor + escudo + sigla da casa | placar | sigla + escudo + cor do visitante |
-       relógio no bloco verde (some nos treinos). Medido no teste-hud-minimo (H10). Cada time é role="img" com o nome no
-       aria-label (hud.js): num <span> sem papel o leitor de tela ignorava o nome e lia "GLÇ" -->
+       Placar (dono, 12/10: "quero o placar assim, tem que ser algo menor e mais com a nossa cara"; 17/10, item 32: "o placar
+       com mais a cara do Total Match, um pouco MAIOR e o relógio com os SEGUNDOS além dos minutos"): uma barra só, no canto
+       de cima à esquerda — marca do jogo (só com mais de 700 px de largura na partida) | cor + escudo + sigla da casa |
+       placar | sigla + escudo + cor do visitante | relógio MM:SS no bloco verde, com o "+N" dos acréscimos dentro dele e
+       "Intervalo"/"Fim" no lugar dele (some nos treinos). Medido no teste-hud-minimo (H1, H10, H14). Cada time é role="img"
+       com o nome no aria-label (hud.js): num <span> sem papel o leitor de tela ignorava o nome e lia "GLÇ" -->
   <div id="hud" class="hud" data-hud>
     <header class="placar" data-caixa="placar" aria-label="Placar">
       <span class="placar-marca" data-placar="marca">
@@ -65,8 +67,8 @@
         </span>
         <span class="placar-time t1" id="placar-time-1" role="img"><span class="placar-sigla" id="sigla-1">VIS</span><svg class="placar-escudo" data-placar="escudo" viewBox="0 0 20 22" aria-hidden="true"><use id="escudo-1" href="#escudo-ventania"/></svg><i class="placar-cor" aria-hidden="true"></i></span>
       </div>
-      <!-- relógio da partida no bloco verde (some nos treinos): minuto acelerado e o tempo -->
-      <span class="placar-relogio" id="placar-relogio" hidden><b id="relogio">0'</b><small id="relogio-tempo">1º T</small></span>
+      <!-- relógio da partida no bloco verde (some nos treinos): MM:SS acelerado e o "+N" dos acréscimos (hud.js relogio) -->
+      <span class="placar-relogio" id="placar-relogio" hidden><b id="relogio">00:00</b><small id="relogio-tempo"></small></span>
     </header>
 
     <section class="painel-jogo" data-caixa="painel">

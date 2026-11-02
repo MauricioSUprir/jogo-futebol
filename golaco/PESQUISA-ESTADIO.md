@@ -214,6 +214,10 @@ versão nova passa. O placar ficou um pouco mais LARGO que o de antes (a marca e
 (24 × 30 px) e com área menor em todos os estados e telas; a tela limpa continua no orçamento (H1: 7,2–10,0% no celular,
 ≤ 11%; H5: 1,7% no PC, ≤ 2,5%). Nos treinos o placar é o mesmo, sem o relógio (159×24 px no celular, 168×26 no PC; nada
 encosta no painel nem no menu nas 3 telas e no PC — conferido à parte).
+Depois (item 32, dono 17/10, POSTERIOR a este pedido e o que vale: "o placar com mais a cara do Total Match, um pouco MAIOR
+e o relógio com os SEGUNDOS além dos minutos"): a mesma barra cresceu para 28 px no celular (26 nas telas baixas, 30 no PC),
+na altura da referência do dono (29 px), com o relógio em MM:SS, o "+N" dentro do bloco nos acréscimos (sai o "1º T") e,
+com `?tm`, a fonte, as cores e o símbolo do TM. Fontes, decisões e medidas no §7.3.
 
 ### 7.2 A faixa de baixo: o minimapa embaixo no meio e o nome do jogador com a bola nos cantos (itens 59 e 60, dono 23/10; `js/entrada.js`, `js/hud.js`, `js/main.js`, `css/estilo.css`)
 Pedidos: "o campinho que está lá em cima tem que ficar lá embaixo" e "o nome do jogador com a bola fica tapando e
@@ -253,6 +257,80 @@ forte da faixa de baixo é a tela oficial do PES 2019.
   passou a medir pelo que se vê a caixa sem fundo, sem borda e sem sombra (o ≡ da partida: alvo de 44×44 transparente,
   ícone de 22×22): base 10,16% → PR 10,95% (folga de 0,05 ponto, sem depender da fonte: o pior caso é o `max-width`).
   Planos B se o dono não aceitar a régua: o nome sem o número até 600 px de largura; 12% só nessa tela; o nome só do meu time.
+
+### 7.3 Placar maior, com a cara do TM, e o relógio em MM:SS (item 32, dono 17/10; `js/relogio-placar.js`, `js/hud.js`, `js/main.js`, `index.html`, `css/estilo.css`, `css/tm.css`)
+Pedido (17/10, POSTERIOR ao "menor" de 12/10 do §7.1, e o que vale): "o placar com mais a cara do Total Match, um pouco MAIOR
+e o relógio com os SEGUNDOS além dos minutos". Contrato "Placar (17/10)" no `CONTRATOS.md`.
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| Konami, manual oficial do PES 2019 (PS4), "The match screen" — https://dds.konami.com/games/manual/pes2019/PS4/en/screen.html (imagem `img/screen_01.png`, baixada e conferida) | Item 2, "TIME ELAPSED", em MM:SS: **"45:20" com o relógio passando dos 45:00**; item 3, uma caixa separada com o acréscimo, **"+0"**; a barra tem ~225×20 px numa área de jogo de ~900×505 (~4% da altura) | MM:SS que **continua andando nos acréscimos**, com o "+N" à parte; no PC, 30/720 = 4,2% da altura, a mesma ordem do PES |
+| DFL/Bundesliga, "DFL announce change to added time in stadiums" (05/12/2025) — https://www.bundesliga.com/en/bundesliga/news/dfl-announce-change-to-added-time-in-stadiums-35064 | Até 2025 "the clock itself inside the stadium stops at 45 and 90 minutes played"; desde 1º/1/2026 "the added time will be displayed as it progresses, right up until the final whistle" | A tendência é o relógio correndo nos acréscimos; o congelado em 45:00 está saindo |
+| Crystal Palace FC, mudanças da Premier League 2023/24 (fonte de clube, não da liga) — https://www.cpfc.co.uk/news/information/whats-new-2023-2024-premier-league-rule-changes-schedules-teams/ | "you won't see stadium clocks stop at 45:00 and 90:00, but instead run on" | Idem |
+| UEFA, regulamento da EURO 2022–24, art. 36 (Clocks) — https://documents.uefa.com/r/Regulations-of-the-UEFA-European-Football-Championship-2022-24/Article-36-Clocks-Online (só o resumo da busca; a página não foi lida) | Os relógios do estádio param no fim do tempo normal | A convenção oposta, registrada como alternativa (FILA "Depende do dono" 15) |
+| Fórum da EA (só o resumo da busca; as páginas dão 403): FC Mobile — https://forums.ea.com/discussions/fc-mobile-bug-reports-en/too-much-extra-time/13702077; FC 25 — https://forums.ea.com/discussions/fc-25-general-discussion-en/when-90-minutes-is-up-/11979766 | O FC mostra MM:SS, passa dos 45:00/90:00 e põe o "+N" ao lado ("red +1, +2"; o relógio chegando ao minuto 94 com "+1") | Idem; **não há texto oficial da EA** sobre o formato dos acréscimos |
+| EA SPORTS FC 26, acessibilidade (https://www.ea.com/able/resources/ea-sports-fc/fc-26) e FIFPlay, configurações do FC 25 (https://www.fifplay.com/fc-25-game-settings/), já citados no §7 | "Score Clock" e "Time/Score Display" são camadas da tela | O topo da partida continua só com o placar e o menu (nenhuma peça nova no topo: o relógio MM:SS fica dentro do bloco de sempre) |
+| SportsVideo.org, "Designing the Modern Scorebug" (2026; §7 e §7.1) | Placar e relógio primeiro; "um placar menor pode ser mais legível que um maior se a tipografia e o espaço forem precisos" | "Um pouco maior" no limite da área (H1): os números crescem mais que a barra (18/16 px numa barra de 28) |
+| Score bug (Wikipédia) — https://en.wikipedia.org/wiki/Score_bug | Os do futebol ficam "in the top-left corner", minimalistas, com "indicators for stoppage time" | O canto de cima à esquerda continua; o "+N" é o indicador |
+| Máquina do Esporte (27/03/2025), o pacote gráfico do Brasileirão 2025 na Globo — https://maquinadoesporte.com.br/midia/globo-estende-pre-jogo-e-anuncia-nova-vinheta-pacote-grafico-para-brasileirao-2025 | O placar "será customizado com as cores dos times" | A faixa de cor de cada time passa de 2 para 3 px (a cor do time do TM já vinha, `--cor-time`) |
+| NSC Total (só o resumo da busca; a página dá 403) — https://www.nsctotal.com.br/?p=2476065 | SporTV e Premiere testaram uma linha do tempo no lugar do cronômetro e voltaram ao cronômetro | Para o público brasileiro, o relógio em MM:SS é o esperado |
+| A tela de partida do próprio TM: `legacy-total-match/js/matchview.js` e `legacy-total-match/css/styles.css` (`.broadcast`, `.live-score`, `.live-min`) e as `--tm-*` do `css/tm.css` | Placar de 34 px em Inter 900 com `tabular-nums`; o minuto numa pílula verde de 14 px 800; cartão em degradê de 160° com borda `rgba(34,197,94,.25)` | Com `?tm`: gols em Inter 900 `tabular-nums` no `--tm-verde-cl`, relógio em Inter 800 `tabular-nums`, o fundo no degradê do cartão do TM, o bloco do relógio no `--tm-botao` |
+| Apple HIG e Material 3 (§7.1) | Mínimo de 11 pt; Label Small 11; Title Medium 16 | Gols de 18 px (20 no PC), relógio de 16 (17), siglas de 12 (11 em 568×320), "+N" de 11, "Intervalo"/"Fim" de 13 |
+
+Limites: nenhuma emissora publica a altura do placar (a proporção fica pelo PES, ~4% da altura, e pela referência do dono,
+7,4% em 844×390); sem texto oficial da EA sobre os acréscimos.
+
+**Decisões** (medidas no Chromium do `tools/lib/navegador.mjs` com a DejaVu Sans, a fonte do CI, a mais larga das medidas):
+- **O relógio** (`relogio-placar.js`, puro e fora do fecho): o minuto pela MESMA conta float do `minutoDeJogo` e os segundos
+  pela fração — conferido em todos os ticks de 17 durações (0,25 a 45 min por tempo): 0 discordâncias e 0 voltas (a conta
+  inteira pura discordava em 34 de 537.402). Anda 11,25 segundos de jogo por segundo real (4 min por tempo).
+- **Acréscimos**: o relógio continua ("47:13") com o "+4" no bloco (PES, FC, Premier League, Bundesliga 2026); aqui os +10 do
+  2º tempo duram 53 s reais e um "45:00" parado por quase um minuto pareceria jogo travado; o contador separado "+1:23" (a
+  convenção da UEFA e da DFL até 2025) custaria ~0,3 ponto de H1 em 568×320. **Intervalo e fim**: "Intervalo"/"Fim" no lugar
+  do relógio, no bloco parado (o "HT"/"FT" da TV); sai o "1º T".
+- **Escrita no DOM**: ~11 por segundo; `textContent` + o layout forçado custam 0,033 ms por escrita (Chromium headless num PC;
+  o layout sozinho 0,0006 ms; `nodeValue` 0,037 ms, sem ganho) — ~0,006 ms por quadro; num celular 5–10× mais lento a
+  estimativa (não medida) fica abaixo de 0,06 ms por quadro. Os dígitos com `tabular-nums`: o topo só se refaz na troca de
+  formato (H14a: largura constante em 600 quadros).
+- **O tamanho (o desenho "R3")**: 28 px no celular (a referência do dono: 29), 26 em 568×320 e 30 no PC; os espaços de dentro
+  1–2 px mais justos; a marca só na partida a partir de 701 px de largura (em 667×375 ela custava 0,22 ponto de H1).
+
+**Antes → depois** (b3041818 → item 32; `teste-hud-minimo` com `--raiz` na base):
+
+| Medida | 12/10 (b3041818) | Item 32 | Meta |
+|---|---|---|---|
+| Caixa no jogo, 844×390 ("34'" → "34:12") | 202×24 = 4847 px² | 240×28 = 6719 px² (TM 234×28) | 28 ± 0,5 px; ≤ 1,5 × a de 12/10; ≤ 7192 px² (referência) |
+| Caixa no jogo, 667×375 / 568×320 | 202×24 / 202×24 | 220×28 / 213×26 (TM 210 / 202) | 28 / 26 px |
+| Caixa no jogo, PC 1280×720 | 206×26 = 5349 px² | 256×30 = 7691 px² (TM 254×30) | 30 px; ≤ 1,5 × |
+| Caixa nos acréscimos "+10" ("90+7' 2º T +10" → "97:13 +10"), 844×390 / PC | 276×24 / 279×26 | 268×28 / 286×30 | — |
+| Gols / relógio / siglas, celular (PC) | 16 / 14 / 11 px (17 / 15 / 12) | 18 / 16 / 12 px (20 / 17 / 13); 11 nas siglas de 568×320 | ≥ 18 / 16 / 12 (PC 20 / 17 / 12) |
+| H1 pior caso 844×390 / 667×375 / 568×320 (4 estados do relógio, defesa, o nome de 88 px) | 8,66 / 10,84 / **12,06%** (TM 8,58 / 10,74 / 11,93) | 8,91 / 10,95 / 11,85% (TM 8,82 / 10,79 / 11,62) | ≤ 11 / 11 / **12%** |
+| H1 como medido até a b3041818 (o relógio em "0'") | 8,04 / 10,03 / 10,95% | — | — |
+| H3 torcida atrás do HUD (844×390) | 7,3% | 9,4% | ≤ 15% |
+| H5 PC (o placar mais largo e o nome de 200 px) | 2,04% (TM 2,03) | 2,21% (TM 2,20) | ≤ 2,5% |
+| H14a o relógio em 10 s reais | "0'" → "1'" | "00:01" → "01:54" (113 s), 113 escritas para 114 textos | MM:SS, 112 ± 2 s, escritas ≤ textos + 1 |
+
+**568×320 não cabe nos 11%** com MM:SS, escudos e siglas: as outras peças somam 8,39 pontos e sobram 2,61 para o placar (a
+28 px, ≤ 169 px de barra; a 26 px, ≤ 182; a 24 px, ≤ 197); só os dois times com escudo e sigla mais o placar medem ~150 px e o
+relógio MM:SS ~61 (78 com o "+N" de 1 dígito, 89 com o "+10"). O placar de 12/10 já passava dali com o relógio de verdade.
+Aplicada a recomendada (≤ 12% só nessa tela); as alternativas medidas estão na FILA ("Depende do dono" 15): (a) sem os escudos
+e a 24 px ali — 10,77% no jogo e 11,14% nos +10 (ainda passa dos 11%; fecharia só com o nome do condutor ≤ 64 px até 600 px
+de largura); (b) a marca também em 667×375 (11,17%); (c) o relógio congelado em "45:00" com o "+4" (a mesma largura) ou com
+o contador "+1:23" (~+0,3 ponto); (d) "45:00 INT" no intervalo (a mesma largura, menos legível); (e) a Inter também sem `?tm`
+(+48 KB no download inicial, contra a regra do `tm.css`); (f) só o MM:SS, sem crescer (11,35% em 568×320, não atende o
+"maior").
+
+**Revisão do item 32 (R1).** (1) Os estados mais largos ficavam fora do H1 e passavam do orçamento: gols de 2 dígitos com o
+"+10" (667×375 11,10%, 568×320 12,02%), o relógio de 3 dígitos "100:18 +10" (só na pausa de um gol depois dos +10: 11,08% e
+11,99%) e os dois juntos com 10-10 (11,35% e 12,37%). O `hud.js ajustarTopo` passou a apertar o placar no celular, na partida,
+por dígito a mais que o de todo dia (gols de 1 dígito e "97:13 +10"), pelos mesmos passos do aperto: com um, os espaços
+(`topo-c4`, ~15 px); com dois ou mais, também o "+N" (`topo-c3`). As fontes não mudam. Depois: os largos ficam em até 10,92%
+(667×375), 11,79% (568×320) e 10,88% (640×360). O pior de cada tela continua sendo o "97:13 +10" de todo dia. (2) A 640×360 (o
+Android de 360 dp deitado) estava fora do H1 e passava dos 11% com 28 px: 11,21% com o "+10" e 11,09% no intervalo; a base
+de 12/10 já ia a 11,09%. Ela ganhou o placar das telas baixas (26 px, até 700 × 360) e ficou em 10,93% no pior caso (com o TM,
+10,75%). De 720×360 para cima o placar continua com 28 px (10,18% no pior caso). (3) O "Simular o resto" do TM só reescrevia o
+relógio quando mudava o minuto da faixa, e os segundos ficavam parados. Agora o relógio vem antes da saída antecipada
+(`teste-tm-tela` 3b: 161/219 → 280/280 leituras iguais à conta).
 
 ## 8. Rede véu de noiva e branca (pedido de 11/10; `js/rede-forma.js`, `js/bola.js`, `js/render/rede-onda.js`, `js/render/campo.js`)
 

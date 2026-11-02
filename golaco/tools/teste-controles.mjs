@@ -505,14 +505,15 @@ async function conferirTodosLayouts(pagina) {
       const r = {
         editar: vis('[data-cmd="editar-time"]'), reiniciar: vis('#menu [data-cmd="reiniciar-partida"]'),
         recomecar: vis('[data-cmd="recomecar"]'), maquina: vis('[data-cmd="maquina"]'), marcador: vis('[data-cmd="marcador"]'),
-        relogio: vis('#placar-relogio'), textoRelogio: document.getElementById('placar-relogio')?.textContent ?? '', siglas: document.getElementById('sigla-1')?.textContent,
+        relogio: vis('#placar-relogio'), textoRelogio: document.getElementById('relogio')?.textContent.trim() ?? '', siglas: document.getElementById('sigla-1')?.textContent,
       };
       g.fecharMenu();
       return r;
     });
     meta('Partida: menu com Editar time e Reiniciar partida, sem Recomeçar, Máquina e Marcador',
       `Editar ${mp.editar}, Reiniciar ${mp.reiniciar}, Recomeçar ${mp.recomecar}, Máquina ${mp.maquina}, Marcador ${mp.marcador}`, mp.editar && mp.reiniciar && !mp.recomecar && !mp.maquina && !mp.marcador);
-    meta('Partida: placar com o relógio e as siglas do elenco', `relógio "${mp.textoRelogio}", visitante ${mp.siglas}`, mp.relogio && /\d+'/.test(mp.textoRelogio) && mp.siglas === 'VNT');
+    // (item 32, dono 17/10: o relógio em MM:SS — "00:00" logo depois de abrir a partida; o "0'" de antes não serve mais)
+    meta('Partida: placar com o relógio em MM:SS e as siglas do elenco', `relógio "${mp.textoRelogio}", visitante ${mp.siglas}`, mp.relogio && /^\d{2}:\d{2}$/.test(mp.textoRelogio) && mp.siglas === 'VNT');
     const rP0 = await pagina.evaluate(() => window.__golaco.hash());
     await pagina.keyboard.press('KeyR');
     await pagina.keyboard.press('KeyM');

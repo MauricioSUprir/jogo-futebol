@@ -4,13 +4,16 @@
 // Reiniciar partida na partida; Recomeçar, Máquina e Marcador só nos treinos; "Modo de jogo" com a
 // partida e os treinos), ajuda, contador de qps e tela de carregamento. Só mexe no DOM; quem
 // decide é o main.js. Lê o mundo só para desenhar (placar, minimapa) e tolera campos que ainda não
-// existem. Tela limpa (dono, 11/10): na partida o "1º T" só aparece no intervalo, no fim e nos acréscimos
-// (.com-tempo), a barra de força não escreve o tipo (o CSS esconde o rótulo), a dica de teclas do PC some em 8 s
+// existem. Tela limpa (dono, 11/10): na partida o relógio do placar é MM:SS (item 32), o "+N" ao lado dele só nos
+// acréscimos (.com-tempo) e "Intervalo"/"Fim" no lugar dele com o bloco parado (.parado); a barra de força não escreve o
+// tipo (o CSS esconde o rótulo), a dica de teclas do PC some em 8 s
 // e o minimapa é opção da pausa (escondido = não redesenha). A faixa de baixo (itens 59 e 60, dono 23/10): no celular o
 // minimapa fica EMBAIXO no meio, entre o analógico e os botões (ajustarBaixo; no PC ele já ficava), e o nome do jogador com a
 // bola fica nos CANTOS de baixo — o do time da esquerda do placar à esquerda, o da direita à direita (nomeCanto).
 
 import { aoTocar, engolirClique } from './toque-botao.js';
+// o texto do relógio do placar em MM:SS (item 32): a conta pura, fora do fecho do hash
+import { textoRelogio } from './relogio-placar.js';
 
 // prio: um aviso não apaga outro de prioridade MAIOR que ainda está na tela (a substituição e o
 // resultado da edição do time saem no mesmo passo do recomeço e não podem sumir debaixo dele)
@@ -60,7 +63,6 @@ const COR_MAPA_PADRAO = { ...COR_MAPA };
 // <symbol id="escudo-..."> do index.html (desenhados lá, fictícios); o visitante do treino veste o branco do Ventania
 const TIMES_TREINO = [{ sigla: 'GLÇ', nome: 'Golaço', escudo: 'golaco' }, { sigla: 'VIS', nome: 'Visitante', escudo: 'ventania' }];
 const ESCUDOS = new Set(['golaco', 'ventania']);
-const NOME_TEMPO = { 1: '1º T', 2: '2º T' };
 
 const NOMES_Q = { baixa: 'Baixa', media: 'Média', alta: 'Alta' };
 const CAMPO_MX = 52.5, CAMPO_MZ = 34;
@@ -114,7 +116,9 @@ export function criarHud(opc) {
   let prints = false;
   const placarVisto = [null, null];
   let times = TIMES_TREINO;
-  const relogioVisto = { minuto: null, tempo: null, visivel: null, comTempo: null };
+  // o relógio escrito no DOM (item 32): a chave do quadro anterior (segundo, estado, anúncio; o {minuto} de antes) e o texto,
+  // o "+N" e o formato de agora — só escreve o que muda
+  const relogioVisto = { visivel: null, seg: null, est: null, an: null, min: null, dec: null, texto: null, extra: null, formato: null };
   let timerFaixa = null;
   let modoAtual = null, fimDeJogo = false;
   let ajudaDaPausa = false; // a Ajuda foi aberta pela pausa: fechar volta para ela
@@ -249,6 +253,15 @@ export function criarHud(opc) {
       // o painel (modo e posição) desce para baixo do placar, à esquerda, se o arco chega nele
       if (botaoNoTopo()) raiz.classList.add('topo-desce');
       apertarTopo();
+      // o orçamento do HUD no celular (H1 do teste-hud-minimo, item 32): na partida, cada dígito a mais que o placar mais largo
+      // de todo dia (gols de 1 dígito e "97:13 +10") — gols ≥ 10, o relógio ≥ 100:00 (só na pausa de um gol depois dos
+      // acréscimos) — aperta o placar pelos MESMOS passos do aperto, mesmo sem encostar: com um, os espaços (passo 4); com dois
+      // ou mais, também o "+N" (passo 3, o último a sair). As fontes não mudam
+      if (raiz.classList.contains('em-partida')) {
+        const extra = digitosExtra();
+        if (extra >= 1) raiz.classList.add('topo-c4');
+        if (extra >= 2) raiz.classList.add('topo-c3');
+      }
       // nos treinos a marca do GOLAÇO só fica de fora se fizer falta: quem encosta costuma ser o painel, e apertar o painel
       // (passo 2) já resolve (contraprova de 13/10: em 568 e 667 px ela saía com 40–90 px livres à direita do placar)
       if (raiz.classList.contains('topo-c1') && !raiz.classList.contains('em-partida')) {
@@ -262,13 +275,21 @@ export function criarHud(opc) {
     nomeComDica();
   }
   /**
-   * Os passos do aperto, em ordem, até nada encostar (ajustarTopo). Na partida o tempo escrito ("1º T +4", "Intervalo",
-   * "Fim") é o último a sair: os espaços do placar apertam antes (passo 4) — com o minimapa embaixo, na partida o topo é só
-   * placar e menu e nada encosta nas telas medidas.
+   * Os passos do aperto, em ordem, até nada encostar (ajustarTopo). Na partida o "+N" dos acréscimos (item 32) é o último
+   * a sair: os espaços do placar apertam antes (passo 4) — com o minimapa embaixo, na partida o topo é só placar e menu e
+   * nada encosta nas telas medidas.
    */
   function apertarTopo() {
     const ordem = raiz.classList.contains('em-partida') ? ['topo-c1', 'topo-c2', 'topo-c4', 'topo-c3'] : ['topo-c1', 'topo-c2', 'topo-c3', 'topo-c4'];
     for (const c of ordem) { if (!encostaTopo()) return; raiz.classList.add(c); }
+  }
+  /** Dígitos do placar além do "1 dígito nos gols e MM:SS" (ajustarTopo): os gols de 2 dígitos e o relógio de 3 nos minutos. */
+  function digitosExtra() {
+    let n = 0;
+    for (const g of placarVisto) if (g != null && g >= 10) n++;
+    const v = relogioVisto;
+    if (v.visivel && v.formato !== 'parado' && (v.texto?.length ?? 0) > 5) n++;
+    return n;
   }
 
   // ---------------------------------------------------------------- a faixa de baixo (itens 59 e 60)
@@ -811,36 +832,35 @@ export function criarHud(opc) {
     },
     get times() { return times; },
     /**
-     * Relógio da partida no placar: r = {minuto (0–90), tempo (1|2), estado, acrescimo: {anunciado, decorrido} |
-     * null} ou null (treino: some). Nos acréscimos: "45+2'" e o anúncio ao lado do tempo ("1º T +4"), como na TV.
-     * Só escreve no DOM quando muda.
+     * Relógio da partida no placar (item 32; dono, 17/10: "o relógio com os SEGUNDOS além dos minutos"): r = {segundo,
+     * tempo (1|2), estado, acrescimo: {anunciado, decorrido} | null} (o {minuto} de antes continua aceito) ou null (treino,
+     * Livre, disputa: some). MM:SS no bloco verde ("34:12"); nos acréscimos o relógio continua ("47:13") com o "+4" ao lado,
+     * dentro do bloco; no intervalo e no fim, "Intervalo"/"Fim" no lugar do relógio, no bloco parado (relogio-placar.js
+     * textoRelogio). Saída rápida pela chave do quadro anterior (nada aloca); escreve no DOM só o que muda (~11 vezes por
+     * segundo) e refaz o topo só na troca de formato, do "+N" ou do número de caracteres (os dígitos têm largura fixa).
      */
     relogio(r) {
       if (!el.relogio) return;
-      const vis = !!r;
-      if (vis !== relogioVisto.visivel) { el.relogio.hidden = !vis; relogioVisto.visivel = vis; ajustarTopo(); }
+      const v = relogioVisto, vis = !!r;
+      if (vis !== v.visivel) { el.relogio.hidden = !vis; v.visivel = vis; v.seg = null; ajustarTopo(); }
       if (!r) return;
-      const ac = r.acrescimo;
-      const min = ac && ac.decorrido > 0 ? `${r.minuto}+${ac.decorrido}'` : `${r.minuto}'`;
-      const tempo = r.estado === 'intervalo' ? 'Intervalo' : r.estado === 'fim' ? 'Fim' : `${NOME_TEMPO[r.tempo] ?? ''}${ac ? ` +${ac.anunciado}` : ''}`;
-      // o tempo escrito ao lado do minuto só no intervalo, no fim e nos acréscimos ("1º T +4", como na TV): no resto
-      // da partida o placar fica só com o minuto (tela limpa; o texto continua no DOM)
-      const comTempo = r.estado === 'intervalo' || r.estado === 'fim' || !!ac;
-      if (comTempo !== relogioVisto.comTempo) {
-        el.relogio.classList.toggle('com-tempo', comTempo); relogioVisto.comTempo = comTempo;
-        ajustarTopo();
+      const ac = r.acrescimo, seg = r.segundo ?? -1, min = r.minuto ?? -1, an = ac ? ac.anunciado : -1, dec = ac ? ac.decorrido : -1;
+      if (seg === v.seg && r.estado === v.est && an === v.an && min === v.min && dec === v.dec) return;
+      v.seg = seg; v.est = r.estado; v.an = an; v.min = min; v.dec = dec;
+      const t = textoRelogio(r);
+      let topo = false;
+      if (t.formato !== v.formato) {
+        el.relogio.classList.toggle('com-tempo', t.formato === 'acrescimo');
+        el.relogio.classList.toggle('parado', t.formato === 'parado');
+        v.formato = t.formato; topo = true;
       }
-      if (min !== relogioVisto.minuto) {
-        // 9' → 10': o placar alarga (a compactação do topo é refeita só quando muda o número de dígitos)
-        const largura = (relogioVisto.minuto ?? '').length !== min.length;
-        el.minuto.textContent = min; relogioVisto.minuto = min;
-        if (largura) ajustarTopo();
+      if (t.texto !== v.texto) {
+        // 99:59 → 100:00 (um gol nos acréscimos máximos do 2º tempo) ou o relógio → "Intervalo": o placar muda de largura
+        if ((v.texto ?? '').length !== t.texto.length) topo = true;
+        el.minuto.textContent = t.texto; v.texto = t.texto;
       }
-      if (tempo !== relogioVisto.tempo) {
-        el.tempo.textContent = tempo; relogioVisto.tempo = tempo;
-        el.relogio.classList.toggle('parado', r.estado === 'intervalo' || r.estado === 'fim');
-        ajustarTopo();
-      }
+      if (t.extra !== v.extra) { el.tempo.textContent = t.extra; v.extra = t.extra; topo = true; }
+      if (topo) ajustarTopo();
     },
     /**
      * Faixa no meio da tela: f = {titulo, placar, ms?, botao?, botaoTexto?, botaoCmd?, botao2?, botao2Texto?, botao2Cmd?}

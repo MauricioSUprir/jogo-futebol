@@ -3,11 +3,16 @@
 // localStorage["tm3d:pedido:<id>"], abre golaco/index.html?tm=<id> num iframe e escuta o postMessage).
 //   1  PC 1280×720, pedido A (o usuário é o mandante, sem trava): 'tm3d:pronto' chega ao pai; as siglas do placar são as
 //      do pedido; o humano controla um jogador do time 0; o jogo anda uns segundos.
+//   1c PC, pedido A (item 32; dono, 17/10: "o placar com mais a cara do Total Match, um pouco MAIOR e o relógio com os
+//      SEGUNDOS"): o placar com 30 px, o #relogio em MM:SS na Inter TM (data-fontes-tm="ok") e o símbolo do TM na marca.
 //   2  A pausa do TM: com "Simular o resto", "Editar time" e "Cenas da partida" (pré-jogo e substituição), sem
 //      "Reiniciar partida" nem os treinos.
 //   3  "Simular o resto": a faixa "Simulando o resto da partida…" com minuto e placar, a partida chega ao apito, a faixa do
 //      fim tem "Voltar ao Total Match", o resultado já está em localStorage["tm3d:resultado:<id>"] (formato do contrato,
 //      placar = o do mundo, posse somando 100).
+//   3b (item 32) Durante o "Simular o resto" o relógio MM:SS do placar é sempre o do mundo (≥ 20 leituras entre os pedaços
+//      da simulação, todas iguais à conta do relogio-placar.js; antes da correção a página só o reescrevia quando mudava o
+//      minuto da faixa) e termina em "Fim".
 //   4  "Voltar ao Total Match" (clique de verdade): o pai recebe 'tm3d:fim' com o MESMO resultado gravado.
 //   5  Celular 844×390 com toque, pedido B (Rumo ao Estrelato: o usuário é o visitante e controla SÓ o centroavante):
 //      humano 1, o controlado é o travado; TROCAR, GOLEIRO e o TROCAR da bola na mão escondidos; TROCAR/GOLEIRO apertados
@@ -116,10 +121,24 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
   meta(`1 PC: tm3d:pronto ao pai, siglas do pedido, humano no time ${hEsp}${comTrava ? ' (com a trava)' : ''}, o jogo anda`,
     `${m0.map(m => m.tipo).join(', ') || 'nenhuma'} (id ${m0[0]?.id}) · ${siglas.join(' × ')} · humano ${info.humano}, trava ${info.trava ?? 'nenhuma'}, controlado do time ${info.timeCtrl} · elenco ${info.elenco} · ${tick1 - tick0} passos em 2,5 s`,
     m0.length === 1 && m0[0].tipo === 'tm3d:pronto' && m0[0].id === PEDIDO_A.id && siglas.join() === siglasPed.join() && info.humano === hEsp && (info.trava != null) === comTrava && info.timeCtrl === hEsp && info.elenco === 'tmcasa' && tick1 - tick0 > 30);
+  // 1c (item 32): o placar novo com a cara do TM no PC
+  await fr.waitForFunction(() => !!document.documentElement.dataset.fontesTm, null, { timeout: 15000 }).catch(() => {});
+  const pl = await fr.evaluate(() => {
+    const p = document.querySelector('#hud .placar'), r = document.getElementById('relogio'), m = p?.querySelector('.placar-marca');
+    const q = p?.getBoundingClientRect();
+    return { h: q?.height ?? 0, txt: r?.textContent.trim() ?? '', fonte: r ? getComputedStyle(r).fontFamily : '', fontes: document.documentElement.dataset.fontesTm ?? '-',
+      check: document.fonts.check('800 17px "Inter TM"'), marca: m && getComputedStyle(m).display !== 'none' ? getComputedStyle(m).backgroundImage : null };
+  });
+  meta('1c PC: o placar do item 32 com a cara do TM — 30 px, o relógio em MM:SS na Inter TM (fontes ok), o símbolo do TM na marca',
+    `${pl.h.toFixed(1)} px · "${pl.txt}" em ${pl.fonte} (fontes ${pl.fontes}, Inter TM 800 ${pl.check ? 'carregada' : 'NÃO'}) · marca ${pl.marca ?? 'ausente'}`,
+    Math.abs(pl.h - 30) <= 0.5 && /^\d{2}:\d{2}$/.test(pl.txt) && /^"?Inter TM/.test(pl.fonte) && pl.fontes === 'ok' && pl.check && /simbolo\.png/.test(pl.marca ?? ''));
   const it = await itensDaPausa(fr);
   meta(`2 PC: pausa do TM (Simular o resto${comTrava ? '' : ' e Editar time'}, Cenas da partida; sem Reiniciar nem os treinos${comTrava ? ' nem Editar time' : ''})`, listaItens(it),
     it.simular && it.editar === !comTrava && !it.reiniciar && it.modos && !it.treinos && !it.voltar);
   const tickSim0 = await fr.evaluate(() => window.__golaco.mundo.tick);
+  // 3b (item 32): a conta do texto do relógio (relogio-placar.js, a mesma do hud) carregada ANTES (as leituras do 3b ficam
+  // síncronas: nenhum pedaço da simulação entra entre ler o #relogio e ler o mundo)
+  await fr.evaluate(async () => { window.__textoRel = (await import('./js/relogio-placar.js')).textoRelogio; });
   const tSim0 = Date.now();
   await fr.click('#btn-simular-resto');
   let simTexto = null;
@@ -127,6 +146,22 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
     const t = await fr.evaluate(() => ({ titulo: document.getElementById('faixa-titulo')?.textContent, placar: document.getElementById('faixa-placar')?.textContent, vis: !document.getElementById('faixa').hidden }));
     if (t.vis && /Simulando/.test(t.titulo)) simTexto = `${t.titulo} ${t.placar}`;
     else await pg.waitForTimeout(50);
+  }
+  // 3b: enquanto simula, o #relogio é sempre o do mundo — o que a conta do relogio-placar.js dá para o estado da página
+  // (cada leitura entre dois pedaços da simulação; antes da correção a página só reescrevia o relógio quando mudava o minuto
+  // da faixa: os segundos ficavam parados até ~1 min de jogo)
+  const rel3b = { leituras: 0, iguais: 0, dif: [], textos: new Set() };
+  for (let i = 0; i < 4000; i++) {
+    const x = await fr.evaluate(() => {
+      const g = window.__golaco;
+      if (!g.tm.simulando) return null;
+      const r = g.estado().relogio;
+      return { visto: document.getElementById('relogio').textContent.trim(), esperado: r ? window.__textoRel(r).texto : '' };
+    });
+    if (!x) break;
+    rel3b.leituras++; rel3b.textos.add(x.visto);
+    if (x.visto === x.esperado) rel3b.iguais++; else if (rel3b.dif.length < 4) rel3b.dif.push(`"${x.visto}" ≠ "${x.esperado}"`);
+    await pg.waitForTimeout(20);
   }
   await esperar(fr, () => window.__golaco.mundo.partida.estado === 'fim' && !window.__golaco.tm.simulando);
   const tSim = (Date.now() - tSim0) / 1000;
@@ -140,6 +175,10 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
   meta('3 PC: Simular o resto → aviso com minuto e placar, apito, faixa com "Voltar ao Total Match", resultado gravado',
     `${fimInfo.tick - tickSim0} passos em ${tSim.toFixed(1).replace('.', ',')} s · aviso "${simTexto ?? 'não visto'}" · ${fimInfo.titulo} ${fimInfo.placar.join(' × ')} · botão "${fimInfo.botao}" (${fimInfo.cmd}) · gravado ${fimInfo.gravado ? 'sim' : 'não'}${igual ? '' : ' (≠ agora)'}${e3.length ? ' · ' + e3.join('; ') : ''}`,
     !!simTexto && /\d+' · /.test(simTexto) && fimInfo.titulo === 'Fim de jogo' && fimInfo.botao === 'Voltar ao Total Match' && fimInfo.cmd === 'voltar-tm' && !!fimInfo.gravado && igual && !e3.length);
+  const relFim = await fr.evaluate(() => document.getElementById('relogio').textContent.trim());
+  meta('3b PC (item 32): durante o "Simular o resto" o relógio MM:SS do placar é sempre o do mundo (não só na troca do minuto da faixa); no fim, "Fim"',
+    `${rel3b.iguais}/${rel3b.leituras} leituras iguais à conta do relogio-placar.js (${rel3b.textos.size} textos)${rel3b.dif.length ? ' — diferentes: ' + rel3b.dif.join(', ') : ''} · no fim "${relFim}"`,
+    rel3b.leituras >= 20 && rel3b.iguais === rel3b.leituras && relFim === 'Fim');
   await fr.click('#faixa-botao');
   await pg.waitForFunction(() => window.__msgs.some(m => m.tipo === 'tm3d:fim'), null, { timeout: 10000 }).catch(() => {});
   const m1 = await msgs(pg);

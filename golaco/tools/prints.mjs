@@ -175,7 +175,7 @@ const CENAS = [
   { nome: 'celular-667-subst-jogo-noite', largura: 667, altura: 375, dpr: 2, toque: true, subst: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'subst:jogo:perto' },
   { nome: 'celular-568-subst-entra-noite', largura: 568, altura: 320, dpr: 2, toque: true, subst: true, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'subst:entra:longe' },
   { nome: 'celular-568-subst-jogo', largura: 568, altura: 320, dpr: 2, toque: true, subst: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'subst:jogo:longe' },
-  // Etapa 4: o relógio nos acréscimos ("45+1'", "1º T +N")
+  // Etapa 4: o relógio nos acréscimos (desde o item 32: "45:13" com o "+N" no bloco do relógio)
   { nome: 'celular-acrescimo', ...CEL, semente: 5, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1&min=0.25', prep: 'acrescimo' },
   { nome: 'celular-568-acrescimo', largura: 568, altura: 320, dpr: 2, toque: true, semente: 2, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1&min=0.25', prep: 'acrescimo' },
   // Etapa 4, faltas: o pênalti montado (todos fora da área e da meia-lua, o goleiro na linha), o cartão amarelo em cima

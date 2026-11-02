@@ -160,6 +160,8 @@ import { forcarFesta } from './render/festa.js';
 import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.js';
 import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar } from './partida.js';
+// o relógio do placar em MM:SS (item 32): a conta pura FORA do fecho do hash (só lê m.tick e m.partida)
+import { segundoDeJogo } from './relogio-placar.js';
 import { montarFalta } from './faltas.js';
 import { pressionadorVisivel } from './defesa.js';
 // a bola alta (o mesmo predicado que barra o disparo do carrinho): na defesa, o L e o X apertados com ela ficam LANÇAMENTO
@@ -2666,9 +2668,12 @@ function botaoPula(botoes) {
   return novos !== 0;
 }
 
-const _rel = { minuto: 0, tempo: 1, estado: 'jogo', acrescimo: null };
+// o relógio que o laço passa ao HUD: o segundo de jogo do placar (MM:SS, item 32) e, como antes, o minuto, o tempo, o estado e
+// os acréscimos (o "+N" no bloco do relógio)
+const _rel = { segundo: 0, minuto: 0, tempo: 1, estado: 'jogo', acrescimo: null };
 const _cartao = { x: 0, y: 0, cor: 'amarelo' };
 function lerRelogio() {
+  _rel.segundo = segundoDeJogo(mundo);
   _rel.minuto = minutoDeJogo(mundo); _rel.tempo = mundo.partida.tempo; _rel.estado = mundo.partida.estado;
   _rel.acrescimo = acrescimoDeJogo(mundo);
   return _rel;
@@ -3056,13 +3061,15 @@ function resultadoAtualTM() {
 const FATIA_SIMULACAO = 30;
 let textoSimulando = '';
 function mostrarSimulando() {
+  // o relógio MM:SS do placar anda a cada pedaço simulado (item 32: os segundos), ANTES da saída pela faixa, que só muda com o
+  // minuto (o hud.relogio sai cedo e só escreve o que mudou). A disputa não tem relógio: o placar dela fica sem ele também
+  // enquanto simula
+  hud.relogio(mundo.disputa ? null : lerRelogio());
   const t = mundo.disputa ? textoPlacar() : `${minutoTM(mundo)}' · ${textoPlacar()}`;
   if (t === textoSimulando) return;
   textoSimulando = t;
   hud.faixa({ titulo: mundo.disputa ? 'Simulando o resto da disputa…' : 'Simulando o resto da partida…', placar: t });
   hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
-  // (a disputa não tem relógio: o placar dela fica sem ele também enquanto simula)
-  hud.relogio(mundo.disputa ? null : lerRelogio());
 }
 /**
  * "Simular o resto" (Total Match; contrato §5): fecha as cenas (pré-jogo, replay, comemoração, substituição, editor), a
@@ -3885,7 +3892,7 @@ const api = {
       jogadores: mundo.jogadores.length, modoTreino: mundo.modo ?? null, logicaEtapa2: 'controlado' in mundo,
       // partida (Etapa 3)
       times: mundo.times ? { 0: resumoTime(mundo.times[0]), 1: resumoTime(mundo.times[1]) } : null,
-      relogio: mundo.partida ? { tempo: mundo.partida.tempo, minuto: minutoDeJogo(mundo), estado: mundo.partida.estado, acrescimo: acrescimoDeJogo(mundo) } : null,
+      relogio: mundo.partida ? { tempo: mundo.partida.tempo, minuto: minutoDeJogo(mundo), segundo: segundoDeJogo(mundo), estado: mundo.partida.estado, acrescimo: acrescimoDeJogo(mundo) } : null,
       parada: mundo.parada ? { ...mundo.parada } : null,
       edicaoNaFila: !!edicaoNaFila, editorAberto: !!editor?.aberto, menuAberto: hud.menuAberto,
       marcador: marcadorLigado(mundo), qualidade: qAtual, escolhaQualidade: escolhaQ, hora, camera: cam ? cam.modo : camInicial,
@@ -3899,9 +3906,9 @@ const api = {
     };
   },
   /**
-   * Placar de teste (layout do placar no teste-hud-minimo H10, com o relógio manual parado): gols [a, b] e o relógio
-   * como o laço passa ao HUD ({minuto, tempo, estado, acrescimo: {anunciado, decorrido} | null}). O próximo quadro do
-   * laço escreve o de verdade de novo.
+   * Placar de teste (layout do placar no teste-hud-minimo H1/H10, com o relógio manual parado): gols [a, b] e o relógio
+   * como o laço passa ao HUD ({segundo, tempo, estado, acrescimo: {anunciado, decorrido} | null}; o {minuto} de antes
+   * continua aceito: segundo = (minuto + decorrido)·60). O próximo quadro do laço escreve o de verdade de novo.
    */
   placarDeTeste(gols, rel) { if (gols) hud.placar(gols[0], gols[1]); if (rel !== undefined) hud.relogio(rel); },
   /**
