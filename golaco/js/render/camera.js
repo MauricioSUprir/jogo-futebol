@@ -20,8 +20,14 @@ import {
   mola, PERFIS_CAMERA as PERFIS, ASPECTO_TV, perfilCamera, fovPara as fovParaTV, alvoLegado, molaLegada,
   criarEnquadramento, focoTV, geometriaTV, larguraVista, poseTV,
 } from './enquadramento.js';
-// câmera da bola parada (plano: render/bola-parada.js): entra em `entra` s (no corte, direto) e volta em `sai` s
-const BP = { entra: 0.6, sai: 1.1, mola: 7 };
+// câmera da bola parada (plano: render/bola-parada.js): entra em `entra` s (no corte, direto) e volta em `sai` s — menos
+// quando ela olha para o lado OPOSTO ao da TV (o escanteio do lado de lá, de trás do cobrador para o lado de cá; item 66):
+// aí a volta é por CORTE (como o diretor de TV corta da câmera do escanteio para a principal; corte não enjoa — Eiserloh,
+// GDC 2016): misturando 180° de rumo, o olhar passava pelo chão e a bola saía do quadro de 0,3 a 0,9 s depois do chute
+// (teste-camera-tela E6: 81% com a bola no quadro). corteOposto = o cosseno entre os dois olhares abaixo do qual corta
+// (−0,5: mais de 120°; o escanteio de lá dá ~−0,9; o pênalti, o tiro livre e o tiro de meta, olhando para o gol, ~0 ± 0,3
+// e continuam misturando — com 0, o pênalti cortava: teste-bola-parada-tela item 4).
+const BP = { entra: 0.6, sai: 1.1, mola: 7, corteOposto: -0.5 };
 
 
 export const MODOS_CAMERA = ['tv', 'aproximada'];
@@ -202,9 +208,17 @@ export function criarCamera(aspecto) {
     camera.fov = lerp(camera.fov, fovFixo(q[6]), e); camera.updateProjectionMatrix();
   }
   const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d1 = new THREE.Vector3(), _d2 = new THREE.Vector3();
-  function atualizarBP(dt, corte) {
+  /** O olhar da bola parada (q: de, para) e o da TV (perfil p) apontam para lados opostos? */
+  function opostaTV(q, p) {
+    const dx = q[3] - q[0], dy = q[4] - q[1], dz = q[5] - q[2], ty = p.olharY - p.altura, tz = -p.distancia;
+    return (dy * ty + dz * tz) / ((Math.hypot(dx, dy, dz) * Math.hypot(ty, tz)) || 1) < BP.corteOposto;
+  }
+  function atualizarBP(dt, corte, p) {
     const bp = est.bp, pl = bp.plano;
-    if (!pl) { bp.s = Math.max(0, bp.s - dt / BP.sai); if (!bp.s) bp.ok = false; return; }
+    if (!pl) {
+      if (bp.ok && bp.s > 0 && !est.extra && opostaTV(bp.p, p)) { bp.s = 0; bp.ok = false; est.corteBP = true; return; }
+      bp.s = Math.max(0, bp.s - dt / BP.sai); if (!bp.s) bp.ok = false; return;
+    }
     const alvo = [...pl.de, ...pl.para, pl.fov], novo = !bp.ok || corte || bp.s <= 0;
     for (let i = 0; i < 7; i++) if (novo) { bp.p[i] = alvo[i]; bp.p[7 + i] = 0; } else mola(bp.p, i, 7 + i, alvo[i], BP.mola, dt);
     bp.ok = true;
@@ -249,7 +263,8 @@ export function criarCamera(aspecto) {
       fx = clamp(fx, -p.limX, p.limX);
       fz = clamp(fz, p.limZ0, p.limZ1);
       if (est.corte) { corte = true; est.corte = false; }
-      atualizarBP(dt, corte);
+      est.corteBP = false;
+      atualizarBP(dt, corte, p);
       const novo = est.mistura === 0 && p.retrato === 0 && !(g.ativo && !g.fechado) && !alvo.legado;
       if (novo) {
         // a TV nova (item 66): a bola teletransportada também corta (E.cortou)
@@ -305,8 +320,8 @@ export function criarCamera(aspecto) {
      */
     get deJogo() { return !est.cinema && !est.livre && !est.geral && !est.gol.ativo && !(est.bp.ok && est.bp.s > 0.01); },
     bolaParada(pl) { est.bp.plano = pl || null; },
-    /** Este quadro cortou (o corte pedido, o 1º quadro ou, na TV nova, a bola teletransportada)? */
-    get cortou() { return !!E.cortou; },
+    /** Este quadro cortou (o corte pedido, o 1º quadro, na TV nova a bola teletransportada, ou a volta da bola parada oposta)? */
+    get cortou() { return !!E.cortou || !!est.corteBP; },
     /** A TV nova agora (testes): o peso da área (wA), o lado do espaço à frente, a bola parada com a área, o limite duro. */
     get enquadramento() { return { novo: E.ok, wA: E.wA, lado: E.dir, frente: E.frente, parada: E.parada, duro: E.duro, limX: E.limX }; },
     get misturaBolaParada() { return est.bp.s; },

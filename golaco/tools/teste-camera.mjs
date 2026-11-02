@@ -25,6 +25,9 @@ const PASTA_JS = path.resolve(arg('--js', path.join(AQUI, '../js')));
 const SO = arg('--so', null);
 const PAR = Math.max(1, +arg('--par', 2));
 const FILHO = arg('--filho', null);
+// --rastro <json {cel: [{sem, tick, cam: {x, y, z}}], pc: [...]}>: a câmera da PÁGINA nesses ticks (teste-camera-tela J1);
+// devolve em JSON a distância até a lente da TV nova daqui nos mesmos ticks (a demo como a página: comoPagina)
+const RASTRO = arg('--rastro', null);
 const imp = f => import(pathToFileURL(path.join(PASTA_JS, f)).href);
 const EQ = await imp('render/enquadramento.js');
 const C = await imp('config.js');
@@ -82,7 +85,7 @@ function alvoVazio() {
 }
 
 // ================================================================================================= P: partidas (filho)
-async function coletar(modo, sem) {
+async function coletar(modo, sem, rastro = null) {
   const SIM = await imp('sim.js');
   const PA = await imp('partida.js');
   let m, passo;
@@ -108,6 +111,10 @@ async function coletar(modo, sem) {
   }
   const gol = { ativo: false, t: 0 };
   let geral = false, corte = true, quadro = 0;
+  const marcas = {}, rastroOut = [], ant = new Map(), des = new Map(), bDes = { x: 0, y: 0, z: 0 };
+  const bAnt3 = { x: m.bola.p.x, y: m.bola.p.y, z: m.bola.p.z };
+  if (rastro) for (const T of TELAS) marcas[T.chave] = new Map((rastro[T.chave] ?? []).filter(a => a.sem === sem).map(a => [a.tick, a.cam]));
+  const fimRastro = rastro ? Math.max(0, ...Object.values(marcas).flatMap(mm => [...mm.keys()])) : Infinity;
   const alvo = alvoVazio(), _leg = { x: 0, z: 0 };
   let bAnt = { x: m.bola.p.x, z: m.bola.p.z };
   for (let it = 0; it < 1e9; it++) {
@@ -120,10 +127,21 @@ async function coletar(modo, sem) {
       else if (t === 'intervalo' || t === 'fimDeJogo') { if (gol.ativo) { gol.ativo = false; corte = true; } geral = true; if (t === 'fimDeJogo') acabou = true; }
     }
     if (gol.ativo) { gol.t += dt; if (gol.t >= 4) { gol.ativo = false; corte = true; } }
-    // o alvo (main.js desenharQuadro): o controlado do time 0 (sem ele, a bola) + o preencherAlvo
+    // o alvo (main.js desenharQuadro): o controlado do time 0 (sem ele, a bola) + o preencherAlvo. Na conferência com a página
+    // (--rastro), as posições DESENHADAS como lá: com o relógio manual a 60 qps o desenho fica a meio passo (alfa 0,5)
     const h = SIM.jogadorPorId(m, m.controlado?.[0]), b = m.bola.p;
-    alvo.jx = h ? h.x : b.x; alvo.jz = h ? h.z : b.z; alvo.jvx = h ? h.vx : 0; alvo.jvz = h ? h.vz : 0;
-    EQ.preencherAlvo(alvo, m, null, b);
+    if (rastro) {
+      for (const j of m.jogadores) { const a = ant.get(j.id); des.set(j.id, a ? { x: (a.x + j.x) / 2, z: (a.z + j.z) / 2 } : { x: j.x, z: j.z }); }
+      bDes.x = (bAnt3.x + b.x) / 2; bDes.y = (bAnt3.y + b.y) / 2; bDes.z = (bAnt3.z + b.z) / 2;
+      const hd = h ? des.get(h.id) : null;
+      alvo.jx = hd ? hd.x : bDes.x; alvo.jz = hd ? hd.z : bDes.z; alvo.jvx = h ? h.vx : 0; alvo.jvz = h ? h.vz : 0;
+      EQ.preencherAlvo(alvo, m, id => des.get(id) ?? null, bDes);
+      for (const j of m.jogadores) ant.set(j.id, { x: j.x, z: j.z });
+      bAnt3.x = b.x; bAnt3.y = b.y; bAnt3.z = b.z;
+    } else {
+      alvo.jx = h ? h.x : b.x; alvo.jz = h ? h.z : b.z; alvo.jvx = h ? h.vx : 0; alvo.jvz = h ? h.vz : 0;
+      EQ.preencherAlvo(alvo, m, null, b);
+    }
     const deJogo = !gol.ativo && !geral;
     for (const k of cams) {
       const { T } = k;
@@ -158,6 +176,14 @@ async function coletar(modo, sem) {
       if (k.sent >= 0 && fx < k.ext - 1) { if (k.sent > 0) k.inv++; k.sent = -1; k.ext = fx; }
       else if (k.sent <= 0 && fx > k.ext + 1) { if (k.sent < 0) k.inv++; k.sent = 1; k.ext = fx; }
     }
+    if (rastro) {
+      for (const k of cams) {
+        if (k.tipo !== 'nova') continue;
+        const c = marcas[k.T.chave].get(m.tick);
+        if (c) rastroOut.push({ tela: k.T.chave, tick: m.tick, d: Math.hypot(k.est.x - c.x, k.T.p.altura - c.y, k.est.z + k.T.p.distancia - c.z) });
+      }
+      if (m.tick >= fimRastro) break;
+    }
     corte = false;
     quadro++;
     const vbx = (b.x - bAnt.x) / dt, vbz = (b.z - bAnt.z) / dt, vb = Math.hypot(vbx, vbz);
@@ -190,6 +216,7 @@ async function coletar(modo, sem) {
     }
     if (acabou) break;
   }
+  if (rastro) return { modo, sem, rastro: rastroOut };
   const out = { modo, sem, passos: m.tick, cams: {} };
   for (const k of cams) {
     k.acc.sort((a, c) => a - c);
@@ -200,13 +227,29 @@ async function coletar(modo, sem) {
 
 if (FILHO != null) {
   const [modo, sem] = FILHO.split(':');
-  const txt = JSON.stringify(await coletar(modo, +sem));
+  const fs = await import('node:fs');
+  const txt = JSON.stringify(await coletar(modo, +sem, RASTRO ? JSON.parse(fs.readFileSync(RASTRO, 'utf8')) : null));
   // (sair só depois de o pipe esvaziar: process.exit logo depois do write cortava a saída grande)
   await new Promise(ok => process.stdout.write(txt, ok));
   process.exit(0);
 }
 
 // ================================================================================================= o pai
+if (RASTRO) {
+  const fs = await import('node:fs');
+  const R = JSON.parse(fs.readFileSync(RASTRO, 'utf8'));
+  const sems = [...new Set([...(R.cel ?? []), ...(R.pc ?? [])].map(a => a.sem))];
+  const res = await Promise.all(sems.map(sem => new Promise((ok, falha) => {
+    const p = spawn(process.execPath, [fileURLToPath(import.meta.url), '--filho', `demo:${sem}`, '--rastro', RASTRO, '--js', PASTA_JS], { stdio: ['ignore', 'pipe', 'inherit'] });
+    let txt = '';
+    p.stdout.on('data', d => { txt += d; });
+    p.on('close', c => { if (c) falha(new Error(`rastro ${sem}: saída ${c}`)); else { try { ok(JSON.parse(txt)); } catch (e) { falha(e); } } });
+  })));
+  const out = { cel: [], pc: [] };
+  for (const r of res) for (const x of r.rastro) out[x.tela].push(x);
+  await new Promise(ok => process.stdout.write(JSON.stringify(out), ok));
+  process.exit(0);
+}
 const linhas = [['medida', 'medido', 'meta', '']];
 let falhas = 0;
 function reg(nome, medido, meta, ok) { linhas.push([nome, medido, meta, ok === null ? 'informativo' : ok ? 'PASSOU' : 'REPROVOU']); if (ok === false) falhas++; }
