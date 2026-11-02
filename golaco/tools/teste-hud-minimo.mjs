@@ -877,7 +877,9 @@ if (!soPlacar) {
       dica0 && fimDica && fimDica.ms > 0 && fimDica.ms <= 9000);
     const mapa = await pagina.evaluate(() => { const m = document.getElementById('minimapa'); return !!m && getComputedStyle(m).display !== 'none' && m.offsetWidth > 0; });
     meta('H7 PC: o minimapa continua ligado por padrão', String(mapa), 'true', mapa);
-    // H13g + H13a/c no PC (depois que a dica some): os dois nomes forçados nos cantos a 14 px, ≤ 200 px, letra ≥ 12 px
+    // H13g + H13a/c no PC (depois que a dica some): os dois nomes forçados nos cantos a 14 px, ≤ 200 px, letra ≥ 12 px (o
+    // animationend da dica, que devolve o nome ao canto, chega no quadro seguinte ao fim da animação: espera ele, até 3 s)
+    await pagina.waitForFunction(() => !document.documentElement.classList.contains('dica-visivel'), null, { timeout: 3000 }).catch(() => {});
     const pcNomes = await pagina.evaluate(LN => {
       const g = window.__golaco; if (!g.nomeCantoDeTeste) return null;
       const out = {};
