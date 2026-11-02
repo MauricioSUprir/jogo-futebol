@@ -2560,7 +2560,10 @@ acusa o `config.js`, só o `CAMERA`, que a simulação não lê) e todo o resto 
   `?tm`: `main.js` TRAVA_TM — revisão R2).
 - **Quem usa a TV nova.** A TV com a mistura TV ↔ aproximada em 0, em paisagem (`retrato` 0), sem o efeito de gol do treino e
   sem `alvo.legado`: o jogo, o plano 'tv' do replay (a velocidade da bola gravada à frente e o lado do lance) e a "TV" do
-  Livre (lê o foco). O foco de hoje fica na aproximada, no retrato, na transição de 0,6 s e no plano 'fechada' (o V11 do
+  Livre (lê o foco; com a Altura e a Distância dele a geometria dos limites é a da pose que ele desenha — `perfilAjustado`,
+  altura × fa, distância e largura × fd — e a lente presa pelo `segurarPose` perto do foco de agora — `camera-livre.js
+  segurarTV`: z ≤ 70 e a caixa da arquibancada de cá; revisão R3: com a geometria da TV padrão, a Altura 20 e a Distância 0
+  deixavam a bola alta fora do quadro em 62% dos instantes na página, antes do item 66 34%). O foco de hoje fica na aproximada, no retrato, na transição de 0,6 s e no plano 'fechada' (o V11 do
   teste-replay-paradas-tela intacto); a troca parte do estado (E.ok falso: a mola começa de onde está, sem salto). Não mudam:
   a câmera do gol, a comemoração, as cenas, o plano geral, o pré-jogo, a disputa e as 5 câmeras próprias do Livre.
 - **A TV nova, por quadro (`focoTV`).** (1) A bola andando > `salto` 6 m num quadro = corte. (2) O ponto da bola P: no voo,
@@ -2601,7 +2604,8 @@ acusa o `config.js`, só o `CAMERA`, que a simulação não lê) e todo o resto 
   `cam.enquadramento` ({novo, wA, lado, frente, parada, duro, limX}); `__golaco.bolaParadaDeTeste(tipo, {time, lado})`.
 - **Testes.** `teste-camera` (Node, padrão; S sintético a 60 e 30 qps — S8 a bola alta: o chão debaixo dela nunca sai do
   quadro —, G geometria — a área, o escanteio e o tiro livre na TV, a projeção, o escanteio da pessoa em 106 estádios —, P 10
-  partidas com o legado lado a lado, T o travado do Rumo ao Estrelato em 8 partidas; `--rastro` confere com a página),
+  partidas com o legado lado a lado, T o travado do Rumo ao Estrelato em 8 partidas, L a TV do Livre com a Altura e a
+  Distância nas pontas; `--rastro` confere com a página),
   `teste-camera-tela` (navegador, CI: J a página × a projeção e × o Node, HUD, torcida, controlado, custo; A a área; E o
   escanteio da pessoa; F a bola parada da IA na TV; N noite) e `teste-tm-tela` 5c (o travado parado na tela da página). As
   cópias da pose (teste-tecnicos, teste-livre-tela, teste-rede-tela, prints) importam o módulo.

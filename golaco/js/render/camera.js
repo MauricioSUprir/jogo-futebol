@@ -18,7 +18,7 @@
 import * as THREE from 'three';
 import {
   mola, PERFIS_CAMERA as PERFIS, ASPECTO_TV, perfilCamera, fovPara as fovParaTV, alvoLegado, molaLegada,
-  criarEnquadramento, focoTV, geometriaTV, larguraVista, poseTV,
+  criarEnquadramento, focoTV, geometriaTV, larguraVista, poseTV, perfilAjustado,
 } from './enquadramento.js';
 // câmera da bola parada (plano: render/bola-parada.js): entra em `entra` s (no corte, direto) e volta em `sai` s — menos
 // quando ela olha para o lado OPOSTO ao da TV (o escanteio do lado de lá, de trás do cobrador para o lado de cá; item 66):
@@ -96,6 +96,7 @@ export function criarCamera(aspecto) {
   const _p = {};
   const _foco = { x: 0, z: 0 }, _leg = { x: 0, z: 0 }, _pose = { de: [0, 0, 0], para: [0, 0, 0], fov: 32 };
   const E = criarEnquadramento(), G = {}; // a TV nova (item 66): o estado dela e a geometria do quadro
+  const _pAj = {}; // o perfil da TV com a Altura e a Distância do Livre (a geometria que ele desenha)
   const interno = { camera, est, p: _p, fovPara };
   // TV ↔ aproximada pela transição; paisagem ↔ retrato pelo formato da tela (1,25 → 0,75)
   function perfil() { return perfilCamera(_p, est.mistura, est.aspecto, est.pequena); }
@@ -267,9 +268,12 @@ export function criarCamera(aspecto) {
       atualizarBP(dt, corte, p);
       const novo = est.mistura === 0 && p.retrato === 0 && !(g.ativo && !g.fechado) && !alvo.legado;
       if (novo) {
-        // a TV nova (item 66): a bola teletransportada também corta (E.cortou)
-        geometriaTV(G, p, est.aspecto, est.pequena);
-        focoTV(E, est, alvo, p, G, larguraVista(p, est.pequena), dt, corte || !est.iniciado);
+        // a TV nova (item 66): a bola teletransportada também corta (E.cortou). No Livre, a geometria com a Altura e a
+        // Distância dele (a pose que a câmera dele desenha: render/camera-livre.js poseLateral; revisão R3)
+        const aj = est.extra?.fatores, pg = aj && (aj.fa !== 1 || aj.fd !== 1) ? perfilAjustado(_pAj, p, aj.fa, aj.fd) : p;
+        geometriaTV(G, pg, est.aspecto, est.pequena);
+        if (est.extra?.segurarTV && est.iniciado && !corte) est.extra.segurarTV(G, est.z);
+        focoTV(E, est, alvo, p, G, larguraVista(pg, est.pequena), dt, corte || !est.iniciado);
         est.iniciado = true;
       } else {
         E.ok = false; E.cortou = corte || !est.iniciado;

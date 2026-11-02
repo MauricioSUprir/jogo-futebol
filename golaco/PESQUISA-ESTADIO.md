@@ -1075,6 +1075,19 @@ travado pesando 1 − wA), a área voltava a 95% mas o atacante e o meia ficavam
 a pessoa controla vem antes. Na página (teste-tm-tela 5c, o travado parado, 60 s, a mesma semente): 88,4% (a base) → 75,6% →
 91,9%.
 
+**A TV do Modo Livre com a Altura e a Distância (revisão R3).** A câmera do Livre desenha a TV com a altura × fa e a distância
+e a largura × fd (0,6–1,5), mas os limites da bola e da área eram feitos com a geometria da TV padrão: com Altura 20 e
+Distância 0 (a TV a 34°, 25 m vistos no foco no celular) a bola saía mais que antes. Agora a geometria dos limites é a da pose
+que o Livre desenha (`perfilAjustado`) e a lente presa pelo `segurarPose` entra perto do foco de agora (`segurarTV`: a lente
+em z ≤ 70 e a caixa da arquibancada de cá). Na página (?modo=livre, 844×390, semente 4, 12 mil quadros, a régua da revisão;
+a base → a 1ª versão → agora): Altura 20/Distância 0, a bola fora 0,97 → 1,81 → 0,71%, a bola acima de 3 m fora 34,3 → 61,8
+→ 26,6%; no PC (1ª versão → agora) 1,36 → 0,06% e 44,6 → 2,2%; Altura 0/Distância 20, a bola fora 0 → 0 → 0, a área inteira
+com a bola nela 61,9 → 100 → 100% (sem o `segurarTV`, 98,0%: a lente presa em z 70 fecha o plano) e a ≤ 25 m do gol 44,7 →
+99,9 → 96,3%; 10/10 igual à 1ª versão. teste-camera L (Node, demo 1–3): a bola fora e a bola alta fora ≤ as da TV de antes
+do item 66 nas mesmas partidas (Altura 20/Distância 0 no celular: 0,59 e 30,6% antes; 0,63 e 30,6% na 1ª versão — reprova;
+0,12 e 7,1% agora). O que sobra fora é o enquadrar do Livre (`camera-livre.js enquadrar`), que põe o controlado e o chão
+debaixo da bola no quadro antes da bola alta.
+
 **O que custou e o que ficou.** O controlado no celular perde 2,2 px (o "afastar" pedido; o p10 vai a 31,3 px). O tiro livre
 na TV a 30–35 m da linha não põe a área inteira no celular sem abrir o plano (a bola e o gol sim; 61,9% da grade). A bola
 do lado de lá dentro da área sobe no quadro (o preço de mostrar a área). O vai e volta com o 'passivo' subiu 10,2 → 10,6/min

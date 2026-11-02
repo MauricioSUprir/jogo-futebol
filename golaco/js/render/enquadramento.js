@@ -66,6 +66,16 @@ export function fovPara(p, aspecto, pequena) {
 }
 /** A largura vista no foco (m) com o perfil p: a do perfil, × telaPequena no celular. */
 export function larguraVista(p, pequena) { return p.largura * (pequena ? CAMERA.telaPequena : 1); }
+/**
+ * O perfil p com a Altura e a Distância do Modo Livre (render/camera-livre.js poseLateral: altura × fa; distância e largura ×
+ * fd), em out — a geometria da TV que o Livre desenha, para os limites da bola e da área (revisão R3: com a geometria da TV
+ * padrão, a Altura 20 e a Distância 0 deixavam a bola alta fora do quadro em 62% dos instantes, antes 34%).
+ */
+export function perfilAjustado(out, p, fa, fd) {
+  for (const k in p) out[k] = p[k];
+  out.altura = p.altura * fa; out.distancia = p.distancia * fd; out.largura = p.largura * fd;
+  return out;
+}
 
 // ------------------------------------------------------------------------------------------------ a geometria da TV
 /**

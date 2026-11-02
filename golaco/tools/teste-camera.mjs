@@ -17,9 +17,13 @@
 //      (enquadramento.js alturaQueCabe: 10,0 m no celular, 14,4 no PC); acima dela a bola sai por cima e o M2b cobra o chão.
 //   T) o Rumo ao Estrelato do ?tm (só o meu jogador: alvo.jCaixa; revisão R2): demo como a página, sementes 3 e 8, o travado
 //      zagueiro, atacante, lateral e meia do time 0: inteiro (os pés e a cabeça) no quadro ≥ o legado − 1 ponto em cada.
-//   node tools/teste-camera.mjs [--js <pasta js>] [--so S|G|P|T] [--sementes 1-6] [--passivo 1-4] [--trava 3,8] [--par 2]
+//   L) a TV do Modo Livre com a Altura e a Distância (revisão R3): a geometria da TV nova com o perfil ajustado e a lente presa
+//      pelo segurarPose (a mesma conta do camera.js), a pose do Livre (poseLateral → segurarPose → enquadrar); demo como a
+//      página, sementes 1–3: com Altura 20/Distância 0, Altura 0/Distância 20 e 10/10, a bola fora e a bola acima de 3 m fora ≤
+//      as da TV de antes do item 66 (o legado com a pose de antes) nas mesmas partidas; a área inteira, informativa.
+//   node tools/teste-camera.mjs [--js <pasta js>] [--so S|G|P|T|L] [--sementes 1-6] [--passivo 1-4] [--trava 3,8] [--livre 1-3] [--par 2]
 //   --rastro <json>: só a conferência com a página (teste-camera-tela J1). Diagnóstico (stderr): CAM_DBG=<m> os passos do foco
-//   maiores que isso, CAM_FORA=1 os instantes com a bola fora do quadro, CAM_G5=1 cada lente do G5.
+//   maiores que isso, CAM_FORA=1 os instantes com a bola fora do quadro, CAM_G5=1 cada lente do G5, CAM_LFORA=1 os do L.
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -283,9 +287,86 @@ async function coletarTrava(sem, pos) {
   return out;
 }
 
+/**
+ * L (revisão R3): a TV do Modo Livre com a Altura e a Distância (render/camera-livre.js: altura × fa; distância e largura × fd).
+ * A mesma conta do camera.js atualizar — a geometria da TV nova com o perfil ajustado (enquadramento.js perfilAjustado) e o que
+ * o segurarPose faz com a lente perto do foco de agora (camera-livre.js segurarTV); sem eles (a base), a da TV padrão — e a
+ * pose que o Livre desenha (poseLateral → segurarPose → enquadrar). Demo como a página, 1 amostra a cada 0,25 s com a bola
+ * rolando: a bola no quadro (a projeção 4×4), a bola acima de 3 m no quadro e a área inteira com a bola nela.
+ */
+const AJUSTES_L = { a20: [20, 0], d20: [0, 20], padrao: [10, 10] };
+async function coletarLivre(sem) {
+  const CL = await imp('render/camera-livre.js');
+  const { criarGravador } = await import(pathToFileURL(path.join(AQUI, 'lib/anel-node.mjs')).href);
+  const GR = await criarGravador(PASTA_JS);
+  const S = GR.novaPartida(sem, { comoPagina: true, tecnicos: false }), m = S.m;
+  const SIM = await imp('sim.js');
+  const extra = CL.criarCameraLivre({});
+  const cams = [];
+  for (const T of TELAS) for (const [nome, [a, d]] of Object.entries(AJUSTES_L)) for (const tipo of ['nova', 'legado']) {
+    cams.push({ T, nome, tipo, fa: CL.fatorAjuste(a), fd: CL.fatorAjuste(d), est: { x: 0, z: 0, vx: 0, vz: 0 }, E: EQ.criarEnquadramento(), G: {}, pAj: {},
+      pose: { de: [0, 0, 0], para: [0, 0, 0], fov: 32 }, n: 0, fora: 0, nAlta: 0, foraAlta: 0, nA: 0, area: 0, iniciado: false });
+  }
+  const _a = {};
+  const alvo = alvoVazio(), pts = new Array(9).fill(0);
+  let corte = true, quadro = 0;
+  for (let k = 0; k < 1e7; k++) {
+    const ev = GR.passo(S, false) ?? [];
+    let fim = false;
+    for (const e of ev) { if (['recomeco', 'saida', 'cobrancaPenalti', 'corteBolaParada', 'gol', 'intervalo'].includes(e.tipo)) corte = true; if (e.tipo === 'fimDeJogo') fim = true; }
+    if (fim) break;
+    const h = SIM.jogadorPorId(m, m.controlado?.[0]), b = m.bola.p;
+    alvo.jx = h ? h.x : b.x; alvo.jz = h ? h.z : b.z; alvo.jvx = h ? h.vx : 0; alvo.jvz = h ? h.vz : 0;
+    EQ.preencherAlvo(alvo, m, null, b);
+    quadro++;
+    const pr = m.parada, amostra = quadro % AMOSTRA === 0 && m.partida?.estado === 'jogo' && (!pr || pr.rolou);
+    pts[0] = b.x; pts[1] = 0.11; pts[2] = b.z; pts[3] = alvo.jx; pts[4] = 0; pts[5] = alvo.jz; pts[6] = alvo.jx; pts[7] = 1.8; pts[8] = alvo.jz;
+    for (const c of cams) {
+      const { T } = c, pT = c.tipo === 'nova' ? T.p : T.pA;
+      if (c.tipo === 'nova') {
+        // a geometria do camera.js (a da TV padrão sem o perfilAjustado/segurarTV: a base)
+        const pg = EQ.perfilAjustado && (c.fa !== 1 || c.fd !== 1) ? EQ.perfilAjustado(c.pAj, T.p, c.fa, c.fd) : T.p;
+        EQ.geometriaTV(c.G, pg, T.asp, T.pequena);
+        if (extra.segurarTV && c.iniciado && !corte) extra.segurarTV(c.G, c.est.z);
+        EQ.focoTV(c.E, c.est, alvo, T.p, c.G, EQ.larguraVista(pg, T.pequena), C.PASSO, corte || !c.iniciado);
+      } else {
+        // a de antes do item 66 (79bbfbc2): o foco de hoje com a pose de antes
+        EQ.alvoLegado(alvo, pT, _a);
+        const fx = Math.max(-pT.limX, Math.min(pT.limX, _a.x)), fz = Math.max(pT.limZ0, Math.min(pT.limZ1, _a.z));
+        if (corte || !c.iniciado) { c.est.x = fx; c.est.z = fz; c.est.vx = c.est.vz = 0; } else EQ.molaLegada(c.est, fx, fz, C.PASSO);
+      }
+      c.iniciado = true;
+      if (!amostra) continue;
+      // a pose que o Livre desenha
+      CL.poseLateral({ ...pT, retrato: 0 }, c.est.x, c.est.z, c.fa, c.fd, T.asp, T.pequena, c.pose, q => EQ.fovPara(q, T.asp, T.pequena));
+      CL.segurarPose('tv', c.pose); CL.enquadrar(c.pose, T.asp, pts, 3);
+      const nb = ndcReferencia(c.pose.de, c.pose.para, c.pose.fov, T.asp, [b.x, Math.max(0.11, b.y), b.z]);
+      const dentroB = nb.ok && Math.abs(nb.x) <= 1 && Math.abs(nb.y) <= 1;
+      c.n++; if (!dentroB) c.fora++;
+      if (process.env.CAM_LFORA && !dentroB && c.nome !== 'padrao' && c.tipo === 'nova') console.error(`LFORA s${sem} ${T.chave} ${c.nome} tick ${m.tick} ndc ${nb.x.toFixed(2)},${nb.y.toFixed(2)} bola ${b.x.toFixed(1)},${b.y.toFixed(1)},${b.z.toFixed(1)} v ${m.bola.v.x.toFixed(1)},${m.bola.v.y.toFixed(1)},${m.bola.v.z.toFixed(1)} foco ${c.est.x.toFixed(1)},${c.est.z.toFixed(1)} lente ${c.pose.de.map(v => v.toFixed(1))} para ${c.pose.para.map(v => v.toFixed(1))} duro ${c.E.duro}`);
+      if (b.y > 3) { c.nAlta++; if (!dentroB) c.foraAlta++; }
+      if (Math.abs(b.x) >= MX - AP && Math.abs(b.x) <= MX && Math.abs(b.z) <= AL) {
+        c.nA++;
+        const gx = Math.sign(b.x) * MX, sg = Math.sign(gx);
+        let inteira = true;
+        for (const [u, y, z] of [[0, 0, AL], [AP, 0, AL], [0, 0, -AL], [AP, 0, -AL], [0, GA, GL], [0, GA, -GL]]) {
+          const q = ndcReferencia(c.pose.de, c.pose.para, c.pose.fov, T.asp, [gx - sg * u, y, z]);
+          if (!(q.ok && Math.abs(q.x) <= 1 && Math.abs(q.y) <= 1)) { inteira = false; break; }
+        }
+        if (inteira) c.area++;
+      }
+    }
+    corte = false;
+  }
+  const out = { sem, cams: {} };
+  for (const c of cams) out.cams[`${c.T.chave}-${c.nome}-${c.tipo}`] = { n: c.n, fora: c.fora, nAlta: c.nAlta, foraAlta: c.foraAlta, nA: c.nA, area: c.area };
+  return out;
+}
+
 if (FILHO != null) {
   const [modo, sem, pos] = FILHO.split(':');
   const fs = await import('node:fs');
+  if (modo === 'livre') { const txt = JSON.stringify(await coletarLivre(+sem)); await new Promise(ok => process.stdout.write(txt, ok)); process.exit(0); }
   if (modo === 'trava') { const txt = JSON.stringify(await coletarTrava(+sem, pos)); await new Promise(ok => process.stdout.write(txt, ok)); process.exit(0); }
   const txt = JSON.stringify(await coletar(modo, +sem, RASTRO ? JSON.parse(fs.readFileSync(RASTRO, 'utf8')) : null));
   // (sair só depois de o pipe esvaziar: process.exit logo depois do write cortava a saída grande)
@@ -489,7 +570,7 @@ function ndcReferencia(de, para, fov, asp, p) {
   const P = [[f / asp, 0, 0, 0], [0, f, 0, 0], [0, 0, (fa + n) / (n - fa), (2 * fa * n) / (n - fa)], [0, 0, -1, 0]];
   const mul = (M, a) => M.map(r => r[0] * a[0] + r[1] * a[1] + r[2] * a[2] + r[3] * a[3]);
   const c = mul(P, mul(V, [p[0], p[1], p[2], 1]));
-  return { x: c[0] / c[3], y: c[1] / c[3] };
+  return { x: c[0] / c[3], y: c[1] / c[3], ok: c[3] > 0.5 };
 }
 if (!SO || SO === 'G') {
   for (const T of TELAS) {
@@ -709,6 +790,35 @@ if (!SO || SO === 'T') {
       '≥ o legado − 1 em cada', piores.length === 0);
     reg(`T ${T.nome} … a bola no quadro; a área inteira com a bola nela (informativo)`, `${f2(pct(bL, n))} → ${f2(pct(bN, n))}%; ${f1(pct(aL, nA))} → ${f1(pct(aN, nA))}% (${nA})`,
       '≥ 99,5%', pct(bN, n) >= 99.5);
+  }
+}
+
+// ------------------------------------------------------------------------------------------------ L: a TV do Modo Livre
+if (!SO || SO === 'L') {
+  const fila = faixa(arg('--livre', '1-3')).map(s => `livre:${s}`);
+  const res = [];
+  const rodar = id => new Promise((ok, falha) => {
+    const p = spawn(process.execPath, [fileURLToPath(import.meta.url), '--filho', id, '--js', PASTA_JS], { stdio: ['ignore', 'pipe', 'inherit'] });
+    let txt = '';
+    p.stdout.on('data', d => { txt += d; });
+    p.on('close', c => { if (c) falha(new Error(`${id}: saída ${c}`)); else { try { ok(JSON.parse(txt)); } catch (e) { falha(e); } } });
+  });
+  await Promise.all(Array.from({ length: Math.min(PAR, fila.length) }, async () => { while (fila.length) res.push(await rodar(fila.shift())); }));
+  for (const T of TELAS) {
+    const soma = (nome, tipo) => {
+      const o = { n: 0, fora: 0, nAlta: 0, foraAlta: 0, nA: 0, area: 0 };
+      for (const r of res) for (const k of Object.keys(o)) o[k] += r.cams[`${T.chave}-${nome}-${tipo}`][k];
+      return o;
+    };
+    for (const nome of ['a20', 'd20', 'padrao']) {
+      const N = soma(nome, 'nova'), L = soma(nome, 'legado'), [a, d] = AJUSTES_L[nome];
+      // (a régua: a de antes do item 66 nas mesmas partidas — o que sobra fora é o enquadrar do Livre, que põe o controlado e o
+      // chão debaixo da bola no quadro antes da bola alta; a área inteira, informativa: com a Distância 0 ela não cabe)
+      reg(`L ${T.nome}, Livre com Altura ${a} e Distância ${d} (${res.length} partidas): a bola fora do quadro; a bola acima de 3 m fora; antes → agora`,
+        `${f2(pct(L.fora, L.n))} → ${f2(pct(N.fora, N.n))}%; ${f1(pct(L.foraAlta, L.nAlta))} → ${f1(pct(N.foraAlta, N.nAlta))}% (${N.nAlta})`,
+        '≤ antes; ≤ antes', N.fora <= L.fora && N.foraAlta <= L.foraAlta);
+      reg(`L ${T.nome} … a área inteira com a bola nela (informativo)`, `${f1(pct(L.area, L.nA))} → ${f1(pct(N.area, N.nA))}%`, '', null);
+    }
   }
 }
 
