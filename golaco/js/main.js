@@ -317,8 +317,11 @@ function temWebGL2() {
 
 // (tm: a pausa do Total Match — sem Reiniciar nem Modo de jogo, com "Simular o resto"; sem Editar time com a trava)
 // (aoFaixaFinal: a faixa do fim de jogo saiu — os controles de toque voltam: o arco é refeito com eles na tela)
+// (layoutToque: a geometria dos controles de toque para a faixa de baixo — o minimapa embaixo no meio e os nomes nos cantos,
+// itens 59 e 60; null sem toque ou antes de a entrada existir)
 const hud = criarHud({ aoComando: comando, tm: TM ? { trava: TRAVA_TM != null, timeHumano: TIME_HUMANO } : null, online: ONLINE,
-  aoFaixaFinal: final => { if (!final) try { entrada?.reposicionar?.(); } catch (_) { /* antes de a entrada existir */ } } });
+  aoFaixaFinal: final => { if (!final) try { entrada?.reposicionar?.(); } catch (_) { /* antes de a entrada existir */ } },
+  layoutToque: () => { try { return entrada?.layoutToque?.() ?? null; } catch (_) { return null; } } });
 // "Editar time" (partida; editor-time.js sob demanda: carregarSobDemanda): a tela entrega a edição no PRONTO (aoPronto)
 // e solta a entrada ao fechar. null até chegar
 let editor = null;

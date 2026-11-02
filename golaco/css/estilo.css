@@ -211,7 +211,7 @@ html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 74px); }
   78% { transform: scale(1.05) rotate(-3deg); }
   86%, 100% { transform: scale(1) rotate(-3deg); }
 }
-/* celular: compacto, logo abaixo da barra de cima (placar e minimapa terminam a ~74 px) e no meio, entre o
+/* celular: compacto, logo abaixo da barra de cima (placar e aviso terminam a ~74 px) e no meio, entre o
    analógico (esquerda, embaixo) e o arco de botões (direita): em 568×320 sobram ~180 px de largura ali
    (tools/teste-estadio confere 568×320, 667×375 e 844×390 nas duas fases dos botões) */
 html.com-toque .gol-tela { top: calc(var(--sa-t) + 128px); gap: 3px; }
@@ -249,7 +249,8 @@ html.com-toque .gol-faixa { height: clamp(64px, 26vmin, 150px); }
 
 /* minimapa: campo preto com linhas verdes e pontos dos dois times e da bola. Opção da pausa ("Minimapa", como o
    radar do EA FC): ligado no PC e DESLIGADO no celular por padrão (main.js liga html.mapa-ligado / mapa-desligado
-   quando a pessoa escolhe; sem escolha, html.com-toque decide) */
+   quando a pessoa escolhe; sem escolha, html.com-toque decide). EMBAIXO no meio, no PC e no celular (item 59, dono 23/10:
+   "o campinho que está lá em cima tem que ficar lá embaixo"; o "Radar" do PES 2019 embaixo no meio, com o nome de cada lado) */
 .minimapa {
   position: absolute; left: 50%; transform: translateX(-50%);
   bottom: calc(var(--sa-b) + var(--m)); width: 112px; height: 73px;
@@ -257,27 +258,34 @@ html.com-toque .gol-faixa { height: clamp(64px, 26vmin, 150px); }
   opacity: 0.8;
 }
 html.com-toque:not(.mapa-ligado) .minimapa, html.mapa-desligado .minimapa { display: none; }
-/* celular deitado: no topo, entre o placar e o painel (nada de dedo em cima) */
-html.com-toque .minimapa { bottom: auto; top: calc(var(--sa-t) + var(--m)); width: 92px; height: 60px; }
-/* celular: o painel mostra só o modo e a posição (o km/h fica para o PC) e abre espaço ao minimapa */
+/* celular deitado: embaixo no meio, ENTRE o analógico e o arco de botões, a 3 px da borda segura (a faixa de baixo de 22 px:
+   entrada.js FAIXA_BAIXO); o lugar (até 12% de W para o lado do vão) e o tamanho (92×60, 84×55 ou 76×50) vêm do hud.js
+   ajustarBaixo, a ≥ 8 px do analógico em repouso e de todas as vagas do arco. Sem lugar (a 140% em telas pequenas) some
+   sozinho (html.mapa-sem-lugar; o botão da pausa continua ligado). Some também com a faixa do fim de jogo (os botões dela
+   descem até ele) e com uma faixa do meio que chegue a ele (html.mapa-sob-faixa: a "Você foi expulso" em telas baixas) */
+html.com-toque .minimapa {
+  top: auto; bottom: calc(var(--sa-b) + 3px); left: var(--mapa-cx, 50%);
+  width: var(--mapa-w, 92px); height: var(--mapa-h, 60px); transform: translateX(-50%);
+}
+html.mapa-sem-lugar .minimapa, html.fim-faixa .minimapa, html.mapa-sob-faixa .minimapa { display: none; }
+/* celular: o painel mostra só o modo e a posição (o km/h fica para o PC) */
 @media (max-width: 1000px) {
   html.com-toque .vel { display: none; }
   html.com-toque .modo { border-left: 0; padding-left: 0; min-width: 0; }
 }
-/* topo apertado (celular estreito ou com entalhe; medido em js/hud.js ajustarTopo):
-   1) nos TREINOS sai a marca do placar, só se sem ela ainda encostar (na partida ela fica: o minimapa é que sai do meio,
-   passo 5); 2) sai o texto do
+/* topo apertado (celular estreito ou com entalhe; medido em js/hud.js ajustarTopo — o topo é placar | painel dos treinos |
+   menu; o minimapa foi para baixo): 1) nos TREINOS sai a marca do placar, só se sem ela ainda encostar; 2) sai o texto do
    modo (fica o ponto de estado e a posição) */
 html.topo-c1:not(.em-partida) .placar-marca { display: none; }
 html.topo-c2 .modo { font-size: 0; letter-spacing: 0; gap: 0; }
 html.topo-c2 .painel-jogo { gap: 9px; padding: 0 10px 0 12px; }
 /* arco de botões grande (140%) chegando ao topo: o painel desce para baixo do placar, à esquerda */
 html.topo-desce .painel-jogo { right: auto; left: calc(var(--sa-l) + var(--m)); top: calc(var(--sa-t) + var(--m) + var(--placar-h) + 8px); }
-/* 3) sai o "1º T" do relógio (fica o minuto); na PARTIDA só depois do passo 5 (o "1º T +4" e o "Intervalo" ficam se o
-   minimapa encostado à direita do placar resolver: hud.js ajustarTopo) */
+/* 3) sai o "1º T" do relógio (fica o minuto); na PARTIDA só depois do passo 4 (o "1º T +4" e o "Intervalo" são os últimos a
+   sair: hud.js apertarTopo) */
 html.topo-c3 .placar-relogio small { display: none; }
 /* 4) celular estreito com o relógio de 2 dígitos ou nos acréscimos ("45+2'"): os espaços apertam (as fontes NÃO: ficam
-   nos mínimos de leitura do H10); 5) se ainda encostar, o minimapa sai do meio e encosta à direita do placar (hud.js) */
+   nos mínimos de leitura do H10) */
 html.topo-c4 .placar-time { gap: 2px; padding-right: 4px; letter-spacing: 0.02em; }
 html.topo-c4 .placar-time.t1 { padding: 0 0 0 4px; }
 html.topo-c4 .placar-resultado { padding: 0 4px; gap: 2px; }
@@ -592,11 +600,9 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
 @media (max-width: 480px) {
   .painel-jogo { top: calc(var(--sa-t) + var(--m) + 48px + 10px); right: calc(var(--sa-r) + var(--m)); }
   .aviso { top: calc(var(--sa-t) + var(--m) + 116px); }
-  /* com o minimapa à direita na mesma altura, o aviso desce para baixo dele (aviso largo,
-     como "Defesa: espalmou", passaria por cima do minimapa) */
+  /* (celular em pé: o jogo fica parado embaixo do "Gire o celular"; o aviso e o qps descem para baixo do painel) */
   html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 186px); }
   html.com-toque .qps { top: calc(var(--sa-t) + var(--m) + 116px); right: auto; left: calc(var(--sa-l) + var(--m)); }
-  html.com-toque .minimapa { top: calc(var(--sa-t) + var(--m) + 116px); left: auto; right: calc(var(--sa-r) + var(--m)); transform: none; }
 }
 
 /* ------------------------------------------------------------------ celular em pé: gire o celular

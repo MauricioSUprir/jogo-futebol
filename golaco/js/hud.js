@@ -6,7 +6,9 @@
 // decide é o main.js. Lê o mundo só para desenhar (placar, minimapa) e tolera campos que ainda não
 // existem. Tela limpa (dono, 11/10): na partida o "1º T" só aparece no intervalo, no fim e nos acréscimos
 // (.com-tempo), a barra de força não escreve o tipo (o CSS esconde o rótulo), a dica de teclas do PC some em 8 s
-// e o minimapa é opção da pausa (escondido = não redesenha).
+// e o minimapa é opção da pausa (escondido = não redesenha). A faixa de baixo (itens 59 e 60, dono 23/10): no celular o
+// minimapa fica EMBAIXO no meio, entre o analógico e os botões (ajustarBaixo; no PC ele já ficava), e o nome do jogador com a
+// bola fica nos CANTOS de baixo — o do time da esquerda do placar à esquerda, o da direita à direita (nomeCanto).
 
 import { aoTocar, engolirClique } from './toque-botao.js';
 
@@ -62,6 +64,15 @@ const NOME_TEMPO = { 1: '1º T', 2: '2º T' };
 
 const NOMES_Q = { baixa: 'Baixa', media: 'Média', alta: 'Alta' };
 const CAMPO_MX = 52.5, CAMPO_MZ = 34;
+// A faixa de baixo no celular (itens 59 e 60; contrato "Faixa de baixo" no CONTRATOS.md). Constantes fora do config.js (que
+// está no fecho do hash): é só desenho. O minimapa: o maior dos tamanhos que cabe com a base a `base` px da borda segura, a
+// ≥ `folga` px do analógico em repouso e de TODAS as vagas do arco (as duas fases: não pula na troca de posse), no meio ou
+// deslizando até `desvio`·W para o lado do vão; nenhum serviu = html.mapa-sem-lugar (some sozinho, a opção da pausa fica).
+const MAPA_BAIXO = { tamanhos: [[92, 60], [84, 55], [76, 50]], folga: 8, desvio: 0.12, base: 3 };
+// O nome nos cantos: a caixa de `alt` px com a base a `base` px e a `borda` px da borda segura; a largura livre de cada canto
+// (a ≥ `folgaBotao` px de todo círculo e a ≥ `folgaMapa` do minimapa) vira o --nome-livre-esq/dir (o max-width do CSS não
+// passa dele); abaixo de `minimo` (número + 3 letras + margens), html.nome-sem-lugar-esq/dir (só a 140% em telas pequenas)
+const NOME_BAIXO = { alt: 15, base: 3, borda: 8, folgaBotao: 4, folgaMapa: 8, minimo: 56 };
 
 /**
  * opc = {aoComando(cmd, valor)}. Comandos: continuar, recomecar, maquina, marcador, ajuda,
@@ -90,7 +101,7 @@ export function criarHud(opc) {
     acoes: $('menu-acoes'), modos: $('menu-modos'), estadoModo: $('estado-modo'), continuar: $('btn-continuar'),
     reiniciarPartida: $('btn-reiniciar-partida'), dica: $('dica'), replay: $('replay'), replayFaixa: $('replay-faixa'),
     comemoracao: $('comemoracao'), substituicao: $('substituicao'), faixaSub: $('faixa-subst'), cena: $('cena'),
-    terco: $('terco'),
+    terco: $('terco'), chipMapa: $('chip-minimapa'),
   };
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
   let ultimoHud = -1, tercoTipo = null;
@@ -196,24 +207,24 @@ export function criarHud(opc) {
     });
   }
 
-  // Topo do HUD no celular deitado: placar | minimapa | painel numa linha só. Em tela estreita
-  // (ou com entalhe) eles encostariam: primeiro sai a marca do placar, depois o texto do modo
-  // (fica o ponto de estado e a posição). Medido de verdade (texto do modo muda de largura).
+  // Topo do HUD no celular deitado: placar | painel (treinos) | menu numa linha só (o minimapa foi para baixo: itens 59 e 60).
+  // Em tela estreita (ou com entalhe) eles encostariam: primeiro sai a marca do placar, depois o texto do modo (fica o ponto
+  // de estado e a posição). Medido de verdade (texto do modo muda de largura).
   const raiz = document.documentElement;
-  const caixasTopo = [$('hud')?.querySelector('.placar'), $('hud')?.querySelector('.painel-jogo'), el.mapa];
+  const caixasTopo = [$('hud')?.querySelector('.placar'), $('hud')?.querySelector('.painel-jogo')];
   function encostaTopo() {
-    const [pl, pa, mp] = caixasTopo.map(e => e?.getBoundingClientRect());
-    if (!pl || !pa || !mp || mp.width === 0) return false;
+    const [pl, pa] = caixasTopo.map(e => e?.getBoundingClientRect());
+    if (!pl || !pa) return false;
     // caixa escondida (o painel some na partida) não encosta em nada
     const enc = (a, b) => a.width > 0 && b.width > 0 && a.left < b.right + 6 && b.left < a.right + 6 && a.top < b.bottom + 4 && b.top < a.bottom + 4;
     // o botão de menu também conta: no celular em pé, o placar com o relógio da partida chega nele
     // (a largura depende da fonte do aparelho — no CI encostava e aqui não)
     const mn = $('btn-menu')?.getBoundingClientRect();
-    return enc(pl, mp) || enc(pa, mp) || enc(pl, pa) || (mn && mn.width > 0 && enc(pl, mn));
+    return enc(pl, pa) || (mn && mn.width > 0 && enc(pl, mn));
   }
   /**
    * Algum botão de toque (de QUALQUER fase: a posição de cada vaga vem do style que a entrada
-   * escreve) encosta no placar, no minimapa ou no painel? Com o arco grande (140%) e os 5 botões da
+   * escreve) encosta no placar ou no painel? Com o arco grande (140%) e os 5 botões da
    * defesa da Etapa 3, a vaga de cima chega à faixa do topo.
    */
   function botaoNoTopo() {
@@ -230,40 +241,113 @@ export function criarHud(opc) {
   }
   function ajustarTopo() {
     raiz.classList.remove('topo-c1', 'topo-c2', 'topo-c3', 'topo-c4', 'topo-desce');
-    if (el.mapa) { el.mapa.style.left = ''; el.mapa.style.transform = ''; }
-    if (!raiz.classList.contains('com-toque')) return;
-    // o painel (modo e posição) desce para baixo do placar, à esquerda, se o arco chega nele
-    if (botaoNoTopo()) raiz.classList.add('topo-desce');
-    apertarTopo();
-    // nos treinos a marca do GOLAÇO só fica de fora se fizer falta: quem encosta costuma ser o painel, e apertar o painel
-    // (passo 2) já resolve (contraprova de 13/10: em 568 e 667 px ela saía com 40–90 px livres à direita do placar)
-    if (raiz.classList.contains('topo-c1') && !raiz.classList.contains('em-partida') && !el.mapa?.style.left) {
-      raiz.classList.remove('topo-c1');
-      if (encostaTopo()) raiz.classList.add('topo-c1');
+    if (raiz.classList.contains('com-toque')) {
+      // o painel (modo e posição) desce para baixo do placar, à esquerda, se o arco chega nele
+      if (botaoNoTopo()) raiz.classList.add('topo-desce');
+      apertarTopo();
+      // nos treinos a marca do GOLAÇO só fica de fora se fizer falta: quem encosta costuma ser o painel, e apertar o painel
+      // (passo 2) já resolve (contraprova de 13/10: em 568 e 667 px ela saía com 40–90 px livres à direita do placar)
+      if (raiz.classList.contains('topo-c1') && !raiz.classList.contains('em-partida')) {
+        raiz.classList.remove('topo-c1');
+        if (encostaTopo()) raiz.classList.add('topo-c1');
+      }
     }
+    // a faixa de baixo (o minimapa e os nomes): todo lugar que refaz o topo refaz ela também (resize, layout dos botões,
+    // "Tamanho", o botão Minimapa, as fontes do TM)
+    ajustarBaixo();
   }
-  /** Os passos do aperto, em ordem, até nada encostar (ajustarTopo). */
+  /**
+   * Os passos do aperto, em ordem, até nada encostar (ajustarTopo). Na partida o tempo escrito ("1º T +4", "Intervalo",
+   * "Fim") é o último a sair: os espaços do placar apertam antes (passo 4) — com o minimapa embaixo, na partida o topo é só
+   * placar e menu e nada encosta nas telas medidas.
+   */
   function apertarTopo() {
-    if (!encostaTopo()) return;
-    raiz.classList.add('topo-c1');
-    if (!encostaTopo()) return;
-    raiz.classList.add('topo-c2');
-    if (!encostaTopo()) return;
-    // na partida o tempo escrito ("1º T +4", "Intervalo", "Fim") só sai se nem com o minimapa encostado à direita do
-    // placar couber (contraprova de 13/10: em 667 e 568 px ele saía antes, com espaço sobrando depois do minimapa)
-    const partida = raiz.classList.contains('em-partida');
-    if (!partida) { raiz.classList.add('topo-c3'); if (!encostaTopo()) return; }
-    raiz.classList.add('topo-c4');
-    if (!encostaTopo() || !el.mapa) return;
-    // 5) celular bem estreito (568 px com entalhe): o minimapa sai do meio e encosta à direita do placar
-    mapaAoLado();
-    if (!partida || !encostaTopo()) return;
-    raiz.classList.add('topo-c3');
-    mapaAoLado();
+    const ordem = raiz.classList.contains('em-partida') ? ['topo-c1', 'topo-c2', 'topo-c4', 'topo-c3'] : ['topo-c1', 'topo-c2', 'topo-c3', 'topo-c4'];
+    for (const c of ordem) { if (!encostaTopo()) return; raiz.classList.add(c); }
   }
-  function mapaAoLado() {
-    const pl = caixasTopo[0]?.getBoundingClientRect();
-    if (pl && pl.width > 0) { el.mapa.style.left = `${Math.round(pl.right + 8)}px`; el.mapa.style.transform = 'none'; }
+
+  // ---------------------------------------------------------------- a faixa de baixo (itens 59 e 60)
+  // O minimapa embaixo no meio e a largura livre dos cantos para o nome, pelos controles de toque (opc.layoutToque: a
+  // entrada.js — as vagas de TODAS as fases e o analógico em repouso). Só no celular (html.com-toque); no PC o CSS decide
+  // (o minimapa no meio embaixo, como sempre, e os nomes nos cantos).
+  const baixoVisto = { cx: null, w: null, h: null, semLugar: null, livreE: null, livreD: null, semE: null, semD: null };
+  function ajustarBaixo() {
+    const st = raiz.style;
+    const lt = raiz.classList.contains('com-toque') ? opc.layoutToque?.() : null;
+    if (!lt) {
+      if (baixoVisto.cx !== null || baixoVisto.semLugar || baixoVisto.livreE !== null) {
+        for (const v of ['--mapa-cx', '--mapa-w', '--mapa-h', '--nome-livre-esq', '--nome-livre-dir']) st.removeProperty(v);
+        raiz.classList.remove('mapa-sem-lugar', 'nome-sem-lugar-esq', 'nome-sem-lugar-dir');
+        Object.assign(baixoVisto, { cx: null, w: null, h: null, semLugar: null, livreE: null, livreD: null, semE: null, semD: null });
+        marcarChipMapa(false);
+      }
+      return;
+    }
+    const { W, H, sa, botoes } = lt;
+    const circ = lt.analogico ? [...botoes, { x: lt.analogico.x, y: lt.analogico.y, d: 2 * lt.analogico.r }] : botoes;
+    const dist = (q, c) => Math.hypot(c.x - Math.max(q[0], Math.min(c.x, q[2])), c.y - Math.max(q[1], Math.min(c.y, q[3]))) - c.d / 2;
+    // o minimapa: o maior tamanho que cabe, o mais perto do meio (de 1 em 1 px até desvio·W para os dois lados)
+    let mapa = null;
+    const bm = H - sa.b - MAPA_BAIXO.base;
+    for (const [w, h] of MAPA_BAIXO.tamanhos) {
+      const cabe = cx => cx - w / 2 >= sa.l && cx + w / 2 <= W - sa.r && circ.every(c => dist([cx - w / 2, bm - h, cx + w / 2, bm], c) >= MAPA_BAIXO.folga);
+      const lim = MAPA_BAIXO.desvio * W;
+      for (let d = 0; d <= lim && !mapa; d++) {
+        for (const sinal of d ? [-1, 1] : [1]) { const cx = Math.round(W / 2) + sinal * d; if (cabe(cx)) { mapa = { cx, w, h }; break; } }
+      }
+      if (mapa) break;
+    }
+    if (mapa) {
+      if (mapa.cx !== baixoVisto.cx) st.setProperty('--mapa-cx', `${mapa.cx}px`);
+      if (mapa.w !== baixoVisto.w) st.setProperty('--mapa-w', `${mapa.w}px`);
+      if (mapa.h !== baixoVisto.h) st.setProperty('--mapa-h', `${mapa.h}px`);
+      Object.assign(baixoVisto, { cx: mapa.cx, w: mapa.w, h: mapa.h });
+    }
+    const semLugar = !mapa;
+    if (semLugar !== baixoVisto.semLugar) { raiz.classList.toggle('mapa-sem-lugar', semLugar); baixoVisto.semLugar = semLugar; marcarChipMapa(semLugar); }
+    // os cantos: a largura livre de cada um (o minimapa conta só ligado e com lugar)
+    const mapaLigado = !!mapa && raiz.classList.contains('mapa-ligado') && !raiz.classList.contains('mapa-desligado');
+    const qm = mapaLigado ? [mapa.cx - mapa.w / 2, bm - mapa.h, mapa.cx + mapa.w / 2, bm] : null;
+    const bn = H - sa.b - NOME_BAIXO.base, tn = bn - NOME_BAIXO.alt;
+    const livre = esq => {
+      let lo = 0, hi = W / 2;
+      for (let i = 0; i < 24; i++) {
+        const w = (lo + hi) / 2;
+        const q = esq ? [sa.l + NOME_BAIXO.borda, tn, sa.l + NOME_BAIXO.borda + w, bn] : [W - sa.r - NOME_BAIXO.borda - w, tn, W - sa.r - NOME_BAIXO.borda, bn];
+        const okMapa = !qm || Math.max(q[0] - qm[2], qm[0] - q[2]) >= NOME_BAIXO.folgaMapa;
+        if (okMapa && circ.every(c => dist(q, c) >= NOME_BAIXO.folgaBotao)) lo = w; else hi = w;
+      }
+      return Math.floor(lo);
+    };
+    for (const [esq, k, kSem, v, cls] of [[true, 'livreE', 'semE', '--nome-livre-esq', 'nome-sem-lugar-esq'], [false, 'livreD', 'semD', '--nome-livre-dir', 'nome-sem-lugar-dir']]) {
+      const l = livre(esq);
+      if (l !== baixoVisto[k]) { st.setProperty(v, `${l}px`); baixoVisto[k] = l; }
+      const sem = l < NOME_BAIXO.minimo;
+      if (sem !== baixoVisto[kSem]) { raiz.classList.toggle(cls, sem); baixoVisto[kSem] = sem; }
+    }
+    mapaSobFaixa();
+  }
+  /**
+   * Uma faixa do meio da tela (intervalo, "Você foi expulso", "Simulando…") que chega ao minimapa embaixo esconde ele enquanto
+   * está na tela (html.mapa-sob-faixa; a do fim de jogo, com os botões, já o esconde: html.fim-faixa). Nas telas baixas a
+   * faixa com o botão desce até ele (a do TM é ancorada embaixo do aviso).
+   */
+  function mapaSobFaixa() {
+    if (!el.mapa) return;
+    let sob = false;
+    if (el.faixa && !el.faixa.hidden) {
+      raiz.classList.remove('mapa-sob-faixa');
+      const a = el.faixa.getBoundingClientRect(), b = el.mapa.getBoundingClientRect();
+      sob = a.width > 0 && b.width > 0 && a.left < b.right + 4 && b.left < a.right + 4 && a.top < b.bottom + 4 && b.top < a.bottom + 4;
+    }
+    raiz.classList.toggle('mapa-sob-faixa', sob);
+  }
+  /** O botão "Minimapa" da pausa diz por que ele sumiu (continua ligado: volta sozinho quando o tamanho ou a tela mudam). */
+  function marcarChipMapa(semLugar) {
+    const c = el.chipMapa;
+    if (!c) return;
+    if (semLugar) { c.title = 'Sem espaço entre o analógico e os botões neste tamanho'; c.setAttribute('aria-description', c.title); }
+    else if (c.hasAttribute('aria-description')) { c.removeAttribute('title'); c.removeAttribute('aria-description'); }
   }
   window.addEventListener('resize', () => requestAnimationFrame(ajustarTopo));
   if (window.visualViewport) window.visualViewport.addEventListener('resize', () => requestAnimationFrame(ajustarTopo));
@@ -730,7 +814,7 @@ export function criarHud(opc) {
       // ficava com o toque da metade esquerda deles). Qualquer outra faixa (ou nenhuma) os traz de volta (aoFaixaFinal).
       const final = !!f?.final && !(prints && !forcar);
       if (raiz.classList.contains('fim-faixa') !== final) { raiz.classList.toggle('fim-faixa', final); opc?.aoFaixaFinal?.(final); }
-      if (!f || (prints && !forcar)) { el.faixa.hidden = true; el.faixa.classList.remove('forcada'); return; }
+      if (!f || (prints && !forcar)) { el.faixa.hidden = true; el.faixa.classList.remove('forcada'); mapaSobFaixa(); return; }
       el.faixaTitulo.textContent = f.titulo ?? '';
       el.faixaPlacar.textContent = f.placar ?? '';
       el.faixaBotao.textContent = f.botaoTexto ?? 'Jogar de novo';
@@ -744,7 +828,8 @@ export function criarHud(opc) {
       if (el.faixaBotoes) el.faixaBotoes.hidden = !f.botao && !f.botao2;
       el.faixa.classList.toggle('forcada', !!forcar);
       el.faixa.hidden = false;
-      if (f.ms) timerFaixa = setTimeout(() => { el.faixa.hidden = true; }, f.ms);
+      mapaSobFaixa();
+      if (f.ms) timerFaixa = setTimeout(() => { el.faixa.hidden = true; mapaSobFaixa(); }, f.ms);
     },
     get faixaVisivel() { return !!el.faixa && !el.faixa.hidden; },
     /** O título da faixa na tela (null escondida): quem vai trocá-la sabe qual é (main.js guardarFaixaExpulso). */
@@ -759,7 +844,7 @@ export function criarHud(opc) {
       el.ajuda.hidden = true; soltarFoco(el.ajuda);
       if (ajudaDaPausa) { ajudaDaPausa = false; this.abrirMenu(true, '[data-cmd="ajuda"]'); }
     },
-    /** Recalcula o topo do HUD (os controles de toque apareceram ou a tela mudou). */
+    /** Recalcula o topo do HUD e a faixa de baixo (os controles de toque apareceram ou a tela mudou). */
     ajustarTopo,
     /** Estado das opções no menu. */
     definirEstado(e) {
