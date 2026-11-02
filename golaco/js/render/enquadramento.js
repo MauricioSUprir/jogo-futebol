@@ -3,7 +3,7 @@
 // a projeção em conta fechada, e o FOCO — o de hoje (alvoLegado/molaLegada: a aproximada, o retrato, a transição e o plano
 // 'fechada' do replay) e o da TV nova do item 66 (pedido do dono, 23/10: "a câmera não acompanha a bola e não dá pra ver a
 // área completamente ... afastar muito pouco mais e centralizar mais"; contrato "Câmera de TV (item 66)" no CONTRATOS.md,
-// pesquisa em PESQUISA-ESTADIO.md §14). render/camera.js aplica no three; os testes em Node (teste-camera) usam as MESMAS
+// pesquisa em PESQUISA-ESTADIO.md §18). render/camera.js aplica no three; os testes em Node (teste-camera) usam as MESMAS
 // funções.
 import { CAMERA, CAMPO } from '../config.js';
 
@@ -145,7 +145,7 @@ export function molaLegada(est, fx, fz, dt) {
 
 
 // ------------------------------------------------------------------------------------------------ a TV nova (item 66)
-// Pesquisa e fontes em PESQUISA-ESTADIO.md §14: o foco segue a BOLA (Chen & Carr 2015; Chen 2016), com a previsão do caso
+// Pesquisa e fontes em PESQUISA-ESTADIO.md §18: o foco segue a BOLA (Chen & Carr 2015; Chen 2016), com a previsão do caso
 // (no voo, o ponto onde a bola estará — o "projected focus" de Keren, GDC 2015; Kato 1996), o espaço à frente com histerese
 // ("dual forward focus" de Keren; Schmitt em Carr 2013), a zona morta ("camera-window"; Cinemachine Dead Zone), a área
 // inteira no último terço ("zoom-to-fit"; Chen & Carr 2014), a bola com prioridade por limites na tela (Nesky, GDC 2014,
