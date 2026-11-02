@@ -292,7 +292,9 @@ html.topo-c2 .painel-jogo { gap: 9px; padding: 0 10px 0 12px; }
 /* arco de botões grande (140%) chegando ao topo: o painel desce para baixo do placar, à esquerda */
 html.topo-desce .painel-jogo { right: auto; left: calc(var(--sa-l) + var(--m)); top: calc(var(--sa-t) + var(--m) + var(--placar-h) + 8px); }
 /* 3) sai o "+N" dos acréscimos (fica o relógio); na PARTIDA só depois do passo 4 (hud.js apertarTopo). Com o minimapa
-   embaixo (itens 59 e 60), na partida nada encosta nas telas medidas e nenhum dos dois liga */
+   embaixo (itens 59 e 60), na partida nada encosta nas telas medidas e nenhum dos dois liga POR ENCOSTAR; no celular, o
+   orçamento do HUD liga o 4 com um dígito a mais no placar (gols ≥ 10 ou o relógio ≥ 100:00) e o 3 com dois (hud.js
+   ajustarTopo; teste-hud-minimo H1/H1b) */
 html.topo-c3 .placar-relogio small { display: none; }
 /* 4) os espaços apertam (as fontes NÃO: ficam nos mínimos de leitura do H10) */
 html.topo-c4 .placar-time { gap: 2px; padding-right: 3px; letter-spacing: 0; }

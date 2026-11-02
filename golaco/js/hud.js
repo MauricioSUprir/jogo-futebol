@@ -253,6 +253,15 @@ export function criarHud(opc) {
       // o painel (modo e posição) desce para baixo do placar, à esquerda, se o arco chega nele
       if (botaoNoTopo()) raiz.classList.add('topo-desce');
       apertarTopo();
+      // o orçamento do HUD no celular (H1 do teste-hud-minimo, item 32): na partida, cada dígito a mais que o placar mais largo
+      // de todo dia (gols de 1 dígito e "97:13 +10") — gols ≥ 10, o relógio ≥ 100:00 (só na pausa de um gol depois dos
+      // acréscimos) — aperta o placar pelos MESMOS passos do aperto, mesmo sem encostar: com um, os espaços (passo 4); com dois
+      // ou mais, também o "+N" (passo 3, o último a sair). As fontes não mudam
+      if (raiz.classList.contains('em-partida')) {
+        const extra = digitosExtra();
+        if (extra >= 1) raiz.classList.add('topo-c4');
+        if (extra >= 2) raiz.classList.add('topo-c3');
+      }
       // nos treinos a marca do GOLAÇO só fica de fora se fizer falta: quem encosta costuma ser o painel, e apertar o painel
       // (passo 2) já resolve (contraprova de 13/10: em 568 e 667 px ela saía com 40–90 px livres à direita do placar)
       if (raiz.classList.contains('topo-c1') && !raiz.classList.contains('em-partida')) {
@@ -273,6 +282,14 @@ export function criarHud(opc) {
   function apertarTopo() {
     const ordem = raiz.classList.contains('em-partida') ? ['topo-c1', 'topo-c2', 'topo-c4', 'topo-c3'] : ['topo-c1', 'topo-c2', 'topo-c3', 'topo-c4'];
     for (const c of ordem) { if (!encostaTopo()) return; raiz.classList.add(c); }
+  }
+  /** Dígitos do placar além do "1 dígito nos gols e MM:SS" (ajustarTopo): os gols de 2 dígitos e o relógio de 3 nos minutos. */
+  function digitosExtra() {
+    let n = 0;
+    for (const g of placarVisto) if (g != null && g >= 10) n++;
+    const v = relogioVisto;
+    if (v.visivel && v.formato !== 'parado' && (v.texto?.length ?? 0) > 5) n++;
+    return n;
   }
 
   // ---------------------------------------------------------------- a faixa de baixo (itens 59 e 60)

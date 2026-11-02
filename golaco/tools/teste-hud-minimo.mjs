@@ -3,12 +3,16 @@
 // parar por impedimento, aí no replay vai mostrar a linha". Diagnóstico e pesquisa: PESQUISA-ESTADIO.md, "Tela limpa".
 //  H1 área do HUD no celular deitado (união geométrica: caixas visíveis do #hud + botões de toque como círculos +
 //     analógico em repouso quando a opacidade passa de 0,25), no ataque, na defesa e na cobrança do pênalti, em 844×390,
-//     667×375 e 568×320 (entalhe simulado), com o nome do condutor mais largo no canto da fase — desde o item 32 (17/10:
-//     placar maior e relógio MM:SS) em 4 estados do relógio ("34:12", "47:13 +4", "97:13 +10", "Intervalo"; o H1 de antes
-//     media o relógio em "0'", 240 passos depois de abrir, e o pior caso do jogo de verdade passava dele: 568×320 ia a
-//     11,06% com "34'" e a 11,95% nos acréscimos) e sem e com a cara do TM: ≤ 11% em 844×390 e 667×375 e ≤ 12% em 568×320
-//     (a tela do iPhone SE de 2016: com MM:SS, escudos e siglas a barra teria de ter ≤ 169 px para os 11%; decisão do
-//     dono, FILA "Depende do dono" 15)
+//     667×375 e 568×320 (entalhe simulado), com o nome do condutor mais largo no canto da fase — desde o item 32
+//     (17/10: placar maior e relógio MM:SS) em 4 estados do relógio ("34:12", "47:13 +4", "97:13 +10", "Intervalo"; o H1 de
+//     antes media o relógio em "0'", 240 passos depois de abrir, e o pior caso do jogo de verdade passava dele: 568×320 ia a
+//     11,06% com "34'" e a 11,95% nos acréscimos) e, desde a revisão, nos 4 MAIS LARGOS (gols de 2 dígitos com "+10", o
+//     relógio de 3 dígitos "100:18 +10", os dois com 10-10 e o intervalo com 10-9: o hud aperta o placar por dígito a mais),
+//     sem e com a cara do TM: ≤ 11% em 844×390 e 667×375 e ≤ 12% em 568×320 (a tela do iPhone SE de 2016: com MM:SS,
+//     escudos e siglas a barra teria de ter ≤ 169 px para os 11%; decisão do dono, FILA "Depende do dono" 15)
+//  H1b (revisão do item 32) nos 4 estados largos do H1, nas 3 telas e sem e com a cara do TM: os espaços do placar apertam
+//     (topo-c4) com 1 dígito a mais e o "+N" sai (topo-c3) só com 2 ou mais; relógio e gols com o texto certo, as fontes nos
+//     mínimos do H10 (gols ≥ 18, relógio ≥ 16, siglas ≥ 12 — 11 nas baixas —, escudos ≥ 14) e nada sai da barra nem se sobrepõe
 //  H2 texto na tela durante o jogo fora do placar e dos NOMES dos botões de toque (barra de força, painel, avisos):
 //     0 caracteres — nas duas fases das 3 telas e em 2 min de jogo de verdade (a barra de força aparece quando a IA
 //     carrega o passe). Os nomes dos botões voltaram por pedido do dono (12/10: "coloca o nome da função do botão
@@ -196,6 +200,19 @@ const ESTADOS_PLACAR = [
 ];
 /** H1: os estados do relógio medidos na área (o fim é o mais estreito: só no H10). */
 const ESTADOS_H1 = ESTADOS_PLACAR.slice(0, 4);
+// H1 (revisão do item 32): também os estados MAIS LARGOS, com o nº de dígitos a mais que o placar mais largo de todo dia (gols
+// de 1 dígito e "97:13 +10") — gols de 2 dígitos (10-9) e o relógio de 3 (o "100:18", que só existe na pausa de um gol depois
+// dos +10), cada um sozinho, os dois juntos com os dois gols de 2 dígitos (10-10 e "100:18 +10": o mais largo possível) e o
+// intervalo com 10-9. O hud aperta o placar pelos passos do aperto (1 dígito a mais: os espaços; 2 ou mais: também o "+N").
+// Antes da revisão: 667×375 a 11,10% com 10-9 e "+10" e a 11,08% com "100:18 +10"; 568×320 a 12,02%. Só no H1 e no H1b (o
+// H10 mede os 5 de todo dia)
+const REL_100 = { minuto: 90, segundo: 6018, tempo: 2, estado: 'gol', acrescimo: { anunciado: 10, decorrido: 10 } };
+const ESTADOS_H1_LARGOS = [
+  ['10-9 +10', [10, 9], ESTADOS_PLACAR[2][2], 1],
+  ['100:18 +10', [2, 1], REL_100, 1],
+  ['10-10 100:18 +10', [10, 10], REL_100, 3],
+  ['10-9 intervalo', [10, 9], ESTADOS_PLACAR[3][2], 1],
+];
 /** No navegador: liga (true) ou desliga a cara do TM como o ?tm faz (a classe tm + css/tm.css), com a Inter TM carregada. */
 const CARA_TM = async liga => {
   const raizEl = document.documentElement, espera = () => new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(ok)));
@@ -260,10 +277,14 @@ const MEDIR_PLACAR = async (gols, rel) => {
 const PLACAR_1210 = { celular: { h: 24, area: 4847 }, pc: { h: 26, area: 5349 } };
 const PLACAR_REF = { h: 29, area: 248 * 29 };
 const PLACAR_ALT = { celular: 28, baixo: 26, pc: 30 };
+/** As telas do celular deitado (com entalhe) do H1, H7, H9, H10, H11, H12 e H13. */
+const TELAS_CEL = [[844, 390], [667, 375], [568, 320]];
+/** A tela baixa do celular, com o placar de 26 px (o estilo.css): ≤ 340 px de altura. */
+const telaBaixa = (W, H) => H <= 340;
 const placarFalhas = [], placarLinhas = [];
 /** Confere um estado medido (H10 a–d). tela: '844×390' etc.; tipo: 'celular' | 'pc'. */
 function conferirPlacar(tela, tipo, estado, r) {
-  const f = [], c = r.caixa, baixo = tipo === 'celular' && r.H <= 340;
+  const f = [], c = r.caixa, baixo = tipo === 'celular' && telaBaixa(r.W, r.H);
   const alt = tipo === 'pc' ? PLACAR_ALT.pc : baixo ? PLACAR_ALT.baixo : PLACAR_ALT.celular;
   const rolando = estado === 'jogo' || estado === '+4' || estado === '+10', acresc = estado === '+4' || estado === '+10';
   const p = Object.fromEntries(r.pecas.map(x => [x.nome, x]));
@@ -321,18 +342,54 @@ function conferirPlacar(tela, tipo, estado, r) {
   if (acresc && r.tempo && !(r.tempo.fs >= 11)) f.push(`"${r.tempo.txt}" ${r.tempo.fs} px`);
   if (!rolando && !(r.relogio.fs >= 13)) f.push(`"${r.relogio.txt}" ${r.relogio.fs} px`);
   // d) peças dentro da barra e sem sobrepor
-  const dentro = r.pecas.filter(x => !x.ausente);
-  for (const x of dentro) if (x.l < c.l - 0.5 || x.r > c.r + 0.5 || x.t < c.t - 0.5 || x.b > c.b + 0.5) f.push(`${x.nome} sai do placar`);
-  for (let i = 0; i < dentro.length; i++) for (let k = i + 1; k < dentro.length; k++) {
-    const a = dentro[i], b = dentro[k];
-    if (a.l < b.r - 0.5 && b.l < a.r - 0.5 && a.t < b.b - 0.5 && b.t < a.b - 0.5) f.push(`${a.nome} × ${b.nome}`);
-  }
+  f.push(...pecasNaBarra(r));
   const rot = `${tela}${r.tm ? ' TM' : ''} ${estado}`;
   placarLinhas.push(`${rot} "${r.relogio.txt}${r.tempo ? ' ' + r.tempo.txt : ''}" ${c.w.toFixed(0)}×${c.h.toFixed(0)} = ${area.toFixed(0)} px²${p['gols da casa']?.fs ? ` (gols ${p['gols da casa'].fs}, sigla ${p['sigla da casa']?.fs}, relógio ${r.relogio.fs}${r.tempo ? `, ${r.tempo.txt} ${r.tempo.fs}` : ''} px)` : ''}`);
   if (f.length) placarFalhas.push(`${rot}: ${f.join('; ')}`);
   return { area, h: c.h };
 }
 const placarEncosta = [], placarTreino = []; let placarAria = '';
+/** H10d e H1b: as peças do placar medido dentro da barra e sem se sobrepor (a lista de falhas). */
+function pecasNaBarra(r) {
+  const f = [], c = r.caixa, dentro = r.pecas.filter(x => !x.ausente);
+  for (const x of dentro) if (x.l < c.l - 0.5 || x.r > c.r + 0.5 || x.t < c.t - 0.5 || x.b > c.b + 0.5) f.push(`${x.nome} sai do placar`);
+  for (let i = 0; i < dentro.length; i++) for (let k = i + 1; k < dentro.length; k++) {
+    const a = dentro[i], b = dentro[k];
+    if (a.l < b.r - 0.5 && b.l < a.r - 0.5 && a.t < b.b - 0.5 && b.t < a.b - 0.5) f.push(`${a.nome} × ${b.nome}`);
+  }
+  return f;
+}
+const largoFalhas = [], largoLinhas = [];
+/**
+ * H1b: o placar num estado largo (ESTADOS_H1_LARGOS; extra = dígitos a mais): o hud o aperta pelos passos do aperto — os
+ * espaços (topo-c4) com 1 ou mais; o "+N" (topo-c3) só sai com 2 ou mais —, os textos certos, as fontes nos mínimos do H10 e
+ * nada sai da barra nem se sobrepõe.
+ */
+function conferirLargo(tela, estado, extra, gols, rel, r) {
+  const f = [], c = r.caixa, baixo = telaBaixa(r.W, r.H);
+  const p = Object.fromEntries(r.pecas.map(x => [x.nome, x]));
+  const faltam = r.pecas.filter(x => x.ausente && x.nome !== 'marca').map(x => x.nome);
+  if (faltam.length) f.push(`falta: ${faltam.join(', ')}`);
+  const rolando = rel.estado !== 'intervalo' && rel.estado !== 'fim', dois = n => String(n).padStart(2, '0');
+  const txt = rolando ? `${dois(Math.floor(rel.segundo / 60))}:${dois(rel.segundo % 60)}` : 'Intervalo';
+  if (r.relogio.txt !== txt) f.push(`relógio "${r.relogio.txt}" ≠ "${txt}"`);
+  if (p['gols da casa']?.txt !== String(gols[0]) || p['gols do visitante']?.txt !== String(gols[1])) f.push(`gols ${p['gols da casa']?.txt}-${p['gols do visitante']?.txt}`);
+  const c4 = /\btopo-c4\b/.test(r.cls), c3 = /\btopo-c3\b/.test(r.cls);
+  if (!c4) f.push('os espaços não apertaram (sem topo-c4)');
+  if (rolando && rel.acrescimo) {
+    if (extra === 1 && r.tempo?.txt !== `+${rel.acrescimo.anunciado}`) f.push(`"+${rel.acrescimo.anunciado}" ${r.tempo ? `é "${r.tempo.txt}"` : 'escondido'} com 1 dígito a mais`);
+    if (extra >= 2 && r.tempo) f.push(`"${r.tempo.txt}" na tela com ${extra} dígitos a mais`);
+  }
+  for (const n of ['gols da casa', 'gols do visitante']) if (p[n] && !p[n].ausente && !(p[n].fs >= 18)) f.push(`${n} ${p[n].fs} px`);
+  if (rolando && !(r.relogio.fs >= 16)) f.push(`relógio ${r.relogio.fs} px`);
+  if (!rolando && !(r.relogio.fs >= 13)) f.push(`"${r.relogio.txt}" ${r.relogio.fs} px`);
+  for (const n of ['sigla da casa', 'sigla do visitante']) if (p[n] && !p[n].ausente && !(p[n].fs >= (baixo ? 11 : 12))) f.push(`${n} ${p[n].fs} px`);
+  for (const n of ['escudo da casa', 'escudo do visitante']) if (p[n] && !p[n].ausente && !(p[n].h >= 14 - 0.01)) f.push(`${n} ${p[n].h.toFixed(1)} px`);
+  f.push(...pecasNaBarra(r));
+  const rot = `${tela}${r.tm ? ' TM' : ''} ${estado}`;
+  largoLinhas.push(`${rot} "${r.relogio.txt}${r.tempo ? ' ' + r.tempo.txt : ''}" ${c.w.toFixed(0)}×${c.h.toFixed(0)}${c4 ? ' c4' : ''}${c3 ? ' c3' : ''}`);
+  if (f.length) largoFalhas.push(`${rot}: ${f.join('; ')}`);
+}
 
 // H12 + H13a: a faixa de baixo no celular (itens 59 e 60). No navegador: as margens seguras, os círculos de TODAS as vagas
 // do arco (as duas fases: o estilo que a entrada escreve), o analógico em repouso, o minimapa e os dois nomes forçados (o
@@ -457,7 +514,7 @@ let piorTexto = 0, h1SemNome = 0, h1Falhas = 0; const txtVisto = new Set(); cons
 const nomesBotoes = { botoes: 0, comNome: 0, sem: new Set() };
 const estilosVistos = []; let estilosFalhas = 0;
 let piorPausa = Infinity; const linhasPausa = [];
-for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
+for (const [w, h] of TELAS_CEL) {
   const { navegador, pagina } = await abrir({ largura: w, altura: h, dpr: 2, toque: true });
   try {
     await pagina.goto(`${srv.url}?q=baixa&toque=1&entalhe=1&demo=1&semente=4`, { waitUntil: 'load' });
@@ -505,15 +562,17 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
       nomesBotoes.botoes += r[fase].nomes.botoes; nomesBotoes.comNome += r[fase].nomes.comNome; r[fase].nomes.sem.forEach(id => nomesBotoes.sem.add(`${w}×${h} ${fase} ${id}`));
     }
     if (r.pausa) { linhasPausa.push(`${w}×${h} folga ${r.pausa.folga.toFixed(0)} px (${r.pausa.par})${r.pausa.transborda > 0 ? `, transborda ${r.pausa.transborda} px` : ''}`); piorPausa = Math.min(piorPausa, r.pausa.transborda > 0 ? -1 : r.pausa.folga); }
-    // H10 (os 5 estados) e H1 (os 4 do relógio × as 3 fases), sem e com a cara do TM (minimapa desligado, o padrão do celular)
+    // H10 (os 5 estados) e H1 (os 4 do relógio e os 4 largos × as 3 fases; os largos também no H1b), sem e com a cara do TM
+    // (minimapa desligado, o padrão do celular)
     const porCara = [];
     for (const tm of [false, true]) {
       await pagina.evaluate(([CT, tm]) => eval(CT)(tm), [CARA_TM.toString(), tm]);
       let pior = { a: 0 }; const est = [];
-      for (const [estado, gols, rel] of ESTADOS_PLACAR) {
+      for (const [estado, gols, rel, extra] of [...ESTADOS_PLACAR, ...ESTADOS_H1_LARGOS]) {
         const m = await pagina.evaluate(([MP, gols, rel]) => eval(MP)(gols, rel), [MEDIR_PLACAR.toString(), gols, rel]);
-        conferirPlacar(`${w}×${h}`, 'celular', estado, m);
-        if (!ESTADOS_H1.some(e => e[0] === estado)) continue;
+        if (extra == null) conferirPlacar(`${w}×${h}`, 'celular', estado, m);
+        else conferirLargo(`${w}×${h}`, estado, extra, gols, rel, m);
+        if (extra == null && !ESTADOS_H1.some(e => e[0] === estado)) continue;
         const a = await pagina.evaluate(([AF, FS, AS]) => eval(AF)([FS, AS]), [AREA_FASES.toString(), FORMAS.toString(), AREA.toString()]);
         let pe = { a: 0, fase: '' };
         for (const fase of ['ataque', 'defesa', 'penalti']) {
@@ -634,20 +693,23 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
   } finally { await navegador.close(); }
 }
 meta('H9 nomes dos botões de toque por padrão (dono, 12/10), inteiros dentro do círculo do botão (3 telas, 2 fases)', `${nomesBotoes.comNome}/${nomesBotoes.botoes} botões com o nome${nomesBotoes.sem.size ? ' — sem: ' + [...nomesBotoes.sem].slice(0, 8).join(', ') : ''}`, 'todos', nomesBotoes.botoes > 0 && nomesBotoes.comNome === nomesBotoes.botoes);
-meta('H1 área do HUD no celular (pior caso: ataque, defesa e a cobrança do pênalti da pessoa × os 4 estados do relógio × sem e com a cara do TM, 3 telas; com o nome do condutor mais largo no canto da fase; o ≡ transparente pelo ícone)',
-  `${linhasH1.join(' | ')}${h1SemNome ? ` — ${h1SemNome} medidas sem o nome` : ''}`, '≤ 11% em 844×390 e 667×375, ≤ 12% em 568×320 (decisão do dono, "Depende do dono" 15); o nome contado em todas', linhasH1.length === 3 && h1Falhas === 0 && h1SemNome === 0);
+meta('H1 área do HUD no celular (pior caso: ataque, defesa e a cobrança do pênalti da pessoa × os 4 estados do relógio e os 4 mais largos — gols de 2 dígitos, o relógio de 3, os dois — × sem e com a cara do TM, 3 telas; com o nome do condutor mais largo no canto da fase; o ≡ transparente pelo ícone)',
+  `${linhasH1.join(' | ')}${h1SemNome ? ` — ${h1SemNome} medidas sem o nome` : ''}`, '≤ 11% em 844×390 e 667×375, ≤ 12% em 568×320 (decisão do dono, "Depende do dono" 15); o nome contado em todas', linhasH1.length === TELAS_CEL.length && h1Falhas === 0 && h1SemNome === 0);
+meta('H1b o placar nos estados mais largos (revisão do item 32): o hud aperta pelos passos do aperto — os espaços com 1 dígito a mais, também o "+N" com 2 ou mais —, os textos certos, as fontes nos mínimos do H10 e nada sai da barra nem se sobrepõe (3 telas, sem e com a cara do TM)',
+  `${largoFalhas.length ? 'FALHAS: ' + largoFalhas.join(' | ') + ' — ' : ''}${largoLinhas.join('; ')}`, 'topo-c4 em todos; o "+N" com 1 dígito a mais, sem ele com 2 ou mais; gols ≥ 18, relógio ≥ 16, siglas ≥ 12 (11 nas baixas), escudos ≥ 14; nada sobrepõe',
+  largoFalhas.length === 0 && largoLinhas.length === 2 * TELAS_CEL.length * ESTADOS_H1_LARGOS.length);
 if (!soPlacar) {
   meta('H12a o minimapa embaixo, no meio, entre o analógico e os botões (3 telas, com e sem entalhe; 80% = 92×60; 70/100/140%: no lugar ou sem lugar de verdade)',
-    `${h12aFalhas.length ? 'FALHAS: ' + h12aFalhas.join(' | ') + ' — ' : ''}${h12a.join('; ')}`, '80%: 92×60 no meio; ≥ 76×50, ≤ 12% de W do meio, base ≤ 6 px, ≥ 8 px do analógico e dos botões, ≥ 4 px dos nomes; ou sem lugar', h12a.length === 24 && h12aFalhas.length === 0);
-  meta('H12e o "Tamanho" mudado (70 → 140 → 80%) reposiciona o minimapa sem resize (de volta ao lugar do 80%)', h12e.join('; '), 'mesmo lugar', h12e.length === 6 && h12eOk);
-  meta('H12b nada no alto além do placar e do menu (partida, minimapa ligado; 3 telas)', h12b.join('; '), 'só placar e menu', h12b.length === 3 && h12bFalhas.length === 0);
+    `${h12aFalhas.length ? 'FALHAS: ' + h12aFalhas.join(' | ') + ' — ' : ''}${h12a.join('; ')}`, '80%: 92×60 no meio; ≥ 76×50, ≤ 12% de W do meio, base ≤ 6 px, ≥ 8 px do analógico e dos botões, ≥ 4 px dos nomes; ou sem lugar', h12a.length === 8 * TELAS_CEL.length && h12aFalhas.length === 0);
+  meta('H12e o "Tamanho" mudado (70 → 140 → 80%) reposiciona o minimapa sem resize (de volta ao lugar do 80%)', h12e.join('; '), 'mesmo lugar', h12e.length === 2 * TELAS_CEL.length && h12eOk);
+  meta('H12b nada no alto além do placar e do menu (partida, minimapa ligado; 3 telas)', h12b.join('; '), 'só placar e menu', h12b.length === TELAS_CEL.length && h12bFalhas.length === 0);
   meta('H12d a faixa do fim de jogo esconde o minimapa; intervalo e "Você foi expulso" a ≥ 4 px dele (3 telas com entalhe, com e sem a cara do TM)',
-    `${h12dFalhas.length ? 'FALHAS: ' + h12dFalhas.join(' | ') + ' — ' : ''}${h12d.join('; ')}`, 'fim sem o minimapa; ≥ 4 px', h12d.length === 6 && h12dFalhas.length === 0);
+    `${h12dFalhas.length ? 'FALHAS: ' + h12dFalhas.join(' | ') + ' — ' : ''}${h12d.join('; ')}`, 'fim sem o minimapa; ≥ 4 px', h12d.length === 2 * TELAS_CEL.length && h12dFalhas.length === 0);
   meta('H13a os nomes forçados (o mais largo) nos cantos de baixo, embaixo do analógico e do arco, sem encostar (3 telas, com e sem entalhe, 70/80/100%)',
-    `${h13aFalhas.length ? 'FALHAS: ' + [...new Set(h13aFalhas)].slice(0, 12).join(' | ') + ' — ' : ''}${h13a.join('; ')}`, 'esq/dir ≤ 16 px da borda, base ≤ 6 px, embaixo do analógico/arco, ≥ 4 px de tudo', h13a.length === 24 && h13aFalhas.length === 0);
+    `${h13aFalhas.length ? 'FALHAS: ' + [...new Set(h13aFalhas)].slice(0, 12).join(' | ') + ' — ' : ''}${h13a.join('; ')}`, 'esq/dir ≤ 16 px da borda, base ≤ 6 px, embaixo do analógico/arco, ≥ 4 px de tudo', h13a.length === 8 * TELAS_CEL.length && h13aFalhas.length === 0);
 }
-meta('H11 os botões PARADINHA e PULINHO (item 70, P2): só na cobrança do pênalti da pessoa (3 telas; visíveis de 2)', estilosVistos.join('; '), 'ataque 0, defesa 0, pênalti 2 (ENFIADA/LANÇAMENTO 0)', estilosVistos.length === 3 && estilosFalhas === 0);
-meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada encosta nem transborda (3 telas com entalhe)', linhasPausa.join('; ') || 'sem a pausa', 'folga ≥ 4 px (a do ENCOSTA)', linhasPausa.length === 3 && piorPausa >= 4);
+meta('H11 os botões PARADINHA e PULINHO (item 70, P2): só na cobrança do pênalti da pessoa (3 telas; visíveis de 2)', estilosVistos.join('; '), 'ataque 0, defesa 0, pênalti 2 (ENFIADA/LANÇAMENTO 0)', estilosVistos.length === TELAS_CEL.length && estilosFalhas === 0);
+meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada encosta nem transborda (3 telas com entalhe)', linhasPausa.join('; ') || 'sem a pausa', 'folga ≥ 4 px (a do ENCOSTA)', linhasPausa.length === TELAS_CEL.length && piorPausa >= 4);
 
 // H11b (item 70, P2): na página de verdade, o pênalti a favor montado (a falta na área, __golaco.faltaDeTeste) liga a classe
 // cobranca-penalti com o cobrador da pessoa (os dois botões aparecem) e a bola rolando a desliga
@@ -1103,7 +1165,7 @@ if (!soPlacar) {
     meta('H10 placar maior e com a cara do TM (17/10, depois do "menor" de 12/10): formato com MM:SS, "+N" e "Intervalo"/"Fim", altura 28/26/30 px, legível e sem encostar (3 telas do celular + PC, sem e com o TM; jogo, +4, +10, intervalo e fim)',
       `${placarFalhas.length ? 'FALHAS: ' + placarFalhas.join(' | ') + ' — ' : ''}${placarLinhas.join('; ')}; com o minimapa: ${placarEncosta.join('; ')}; treino com o minimapa: ${placarTreino.join('; ')}; leitor de tela: ${placarAria}`,
       `marca (> 700 px e PC), 2 escudos, 2 siglas, placar, relógio MM:SS no bloco verde ("+N" só nos acréscimos; parado escuro); altura ${PLACAR_ALT.celular}/${PLACAR_ALT.baixo} (568×320)/${PLACAR_ALT.pc} (PC) > 12/10 (${PLACAR_1210.celular.h}/${PLACAR_1210.pc.h}) e ≤ ${PLACAR_REF.h} no celular; área no jogo ≤ 1,5 × a de 12/10 e ≤ ${PLACAR_REF.area} em 844×390; gols ≥ 18 (PC 20), relógio ≥ 16 (PC 17), siglas ≥ 12 (11 em 568×320), "+N" ≥ 11, palavra ≥ 13, escudos ≥ 14; nada encosta`,
-      placarFalhas.length === 0 && placarLinhas.length === 40 && placarEncosta.length === 3 && placarTreino.length === 3 && !!placarAria);
+      placarFalhas.length === 0 && placarLinhas.length === 10 * (TELAS_CEL.length + 1) && placarEncosta.length === TELAS_CEL.length && placarTreino.length === TELAS_CEL.length && !!placarAria);
   } finally { await navegador.close(); }
 }
 
