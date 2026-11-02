@@ -1173,7 +1173,7 @@ const _proj = new THREE.Vector3();
 const telaMira = { cam: {}, ox: 0, oz: 0, ok: false };
 // o alvo da câmera de jogo: o controlado (jx, jz, jvx, jvz) daqui e o resto pelo render/enquadramento.js preencherAlvo (a
 // bola desenhada e a velocidade dela, a queda do voo e o tempo até ela, o condutor desenhado, o lado do ataque, a parada)
-const alvoCam = { jx: 0, jz: 0, jvx: 0, jvz: 0, bx: 0, by: 0, bz: 0, bvx: 0, bvz: 0, ax: NaN, az: NaN, tRest: 0, cx: NaN, cz: NaN, cvx: 0, cvz: 0, dir: 0, parada: null, temParada: false };
+const alvoCam = { jx: 0, jz: 0, jvx: 0, jvz: 0, bx: 0, by: 0, bz: 0, bvx: 0, bvy: 0, bvz: 0, ax: NaN, az: NaN, tRest: 0, cx: NaN, cz: NaN, cvx: 0, cvz: 0, dir: 0, parada: null, temParada: false };
 /** Ponto do mundo → px CSS (sem alocar). */
 function projetar(x, y, z, out) {
   _proj.set(x, y, z).project(cam.camera);

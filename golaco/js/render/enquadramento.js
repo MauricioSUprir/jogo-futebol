@@ -168,12 +168,16 @@ export const ENQUADRAMENTO = {
   bolaDuro: { x: 0.86, baixo: -0.72, cima: 0.86, tempo: 0.25 }, // NDC: na saída da mola, pela velocidade (volta em `tempo` s)
   bolaCampo: { x: 53.5, z: 35 }, // m: nas contas, a bola presa às linhas (atrás do gol, dentro da rede, na placa)
   profMin: 5,                // m: com a bola a menos disto da lente (profundidade), o limite da bola não vale no quadro
+  bolaAlta: 18,              // m: além do limite do campo do lado de lá (limZ0), só para a bola ALTA não sair por cima (o
+                             // chutão de 12 m de altura perto do meio pede o foco em z ~ −39 no celular, de 15°: com o foco
+                             // preso em −22 ela saía do quadro; a câmera não inclina — anda — e volta quando a bola desce)
   salto: 6,                  // m num quadro: a bola teletransportada (montagem sem evento de corte) = corte
   omega: 4.5,                // 1/s: a mola crítica, em x e em z (hoje 3,2 e 2,56)
   avanco: 0.5,               // a mola segue o alvo andando com esta fração da velocidade dele (o atraso cai de 0,62 para 0,22 s × v)
   filtroAlvo: 0.12,          // s: a velocidade do alvo filtrada (filtrar atrasa: só a velocidade)
   saltoAlvo: 3,              // m num quadro: o alvo que salta (troca de controlado, entrada da área) vira mola sem tranco
   acelMax: 150,              // m/s² na soma dos eixos (~175°/s² a 49 m da lente)
+  velMax: 36,                // m/s: o foco nunca anda mais que isto (≤ 1,2 m por quadro a 30 qps; o chute mais forte ~35 m/s)
   paradaPerto: 35,           // m da linha atacada: o tiro livre perto (a bola, a área e o gol no quadro, sem espaço à frente)
 };
 const Q = ENQUADRAMENTO;
@@ -209,7 +213,7 @@ function jogadorDe(m, id) {
 export function preencherAlvo(alvo, m, posDe, bola) {
   alvo.bx = bola.x; alvo.by = Number.isFinite(bola.y) ? bola.y : RAIO_BOLA; alvo.bz = bola.z;
   const v = m.bola?.v;
-  alvo.bvx = v ? v.x : 0; alvo.bvz = v ? v.z : 0;
+  alvo.bvx = v ? v.x : 0; alvo.bvy = v ? v.y : 0; alvo.bvz = v ? v.z : 0;
   const voo = m.voo;
   const vooAtivo = !!(voo && voo.alvo && Number.isFinite(voo.alvo.x) && (voo.tickChegada == null || m.tick <= voo.tickChegada));
   alvo.ax = vooAtivo ? voo.alvo.x : NaN; alvo.az = vooAtivo ? voo.alvo.z : NaN;
@@ -332,8 +336,11 @@ export function alvoTV(E, a, g, W, p, dt, corte, out) {
   E.limX = p.limX + (Q.area.limX - p.limX) * wA; E.limZ0 = p.limZ0; E.limZ1 = p.limZ1;
   fx = clamp(fx, -E.limX, E.limX); fz = clamp(fz, E.limZ0, E.limZ1);
   // 7) a bola (de verdade) dentro do limite do alvo — prioridade —, e o foco sempre dentro dos limites do campo
-  limitarBola(g, b.x, b.y, b.z, Q.bola, fx, fz, _l);
-  out.x = clamp(_l.x, -E.limX, E.limX); out.z = clamp(_l.z, E.limZ0, E.limZ1);
+  // (só a bola ALTA leva o foco além do limite do lado de lá, até bolaAlta m: limiteDuro; a bola que SOBE entra pela
+  // altura que terá em até anteVoo s — a câmera sai antes, sem chicotear atrás dela)
+  const vy = Number.isFinite(a.bvy) ? a.bvy : 0, tSobe = clamp(vy / 9.81, 0, Q.anteVoo);
+  limitarBola(g, b.x, b.y + Math.max(0, vy * tSobe - 4.905 * tSobe * tSobe), b.z, Q.bola, fx, fz, _l);
+  out.x = clamp(_l.x, -E.limX, E.limX); out.z = clamp(_l.z, E.limZ0 - Q.bolaAlta, E.limZ1);
   E.wA = wA; E.parada = parada;
   return out;
 }
@@ -368,27 +375,56 @@ export function passoMola(E, est, rx, rz, dt, corte) {
 }
 
 /**
- * Na saída da mola: a bola (de verdade) dentro de bolaDuro e o foco dentro dos limites do campo — pela VELOCIDADE (a que
- * traz de volta ao limite em `tempo` s), nunca movendo a posição direto —, e o teto de aceleração na soma dos eixos.
- * vx0/vz0 = a velocidade do foco antes da mola deste quadro.
+ * Na saída da mola: a bola (de verdade) dentro de bolaDuro e o foco dentro dos limites do campo — pela VELOCIDADE, nunca
+ * movendo a posição direto (o "Hard Limit" do Cinemachine; Nesky #40 e #47: frear suave nos limites). Fora do limite, a
+ * velocidade do foco no eixo passa a ser no mínimo a do próprio limite (ele anda com a bola) mais a que o traz de volta em
+ * `tempo` s — um piso, sem acumular de um quadro para o outro. Depois, o teto de aceleração na soma dos eixos e a freada
+ * antes da caixa do campo (a velocidade que para nela com a aceleração do teto). vx0/vz0 = a velocidade antes da mola.
  */
-export function limiteDuro(E, est, a, g, dt, vx0, vz0) {
+export function limiteDuro(E, est, a, g, dt, vx0, vz0, px0 = NaN, pz0 = NaN) {
   if (!(dt > 0)) return;
   const B = Q.bolaDuro, b = bolaNasLinhas(a, _b);
   const x1 = est.x, z1 = est.z, vx1 = est.vx, vz1 = est.vz;
-  limitarBola(g, b.x, b.y, b.z, B, x1, z1, _l);
-  const lx = clamp(_l.x, -E.limX, E.limX), lz = clamp(_l.z, E.limZ0, E.limZ1);
+  // os limites deste quadro (o intervalo do foco que põe a bola na caixa B, preso aos limites do campo) e a velocidade deles
+  intervaloFz(g, b.y, b.z, B.baixo, B.cima, _i);
+  const zMin = E.limZ0 - Q.bolaAlta;
+  let z0 = clamp(_i.min, zMin, E.limZ1), zz1 = clamp(_i.max, zMin, E.limZ1);
+  const zc = clamp(z1, z0, zz1);
+  const valido = profundidade(g, b.y, b.z - zc) >= Q.profMin;
+  intervaloFx(g, zc, b.x, b.y, b.z, B.x, _j);
+  let x0 = clamp(_j.min, -E.limX, E.limX), xx1 = clamp(_j.max, -E.limX, E.limX);
+  if (!valido) { x0 = -E.limX; xx1 = E.limX; z0 = zMin; zz1 = E.limZ1; }
+  const L = E.lim ?? (E.lim = { ok: false, x0: 0, x1: 0, z0: 0, z1: 0 });
+  const vl = (v, v0) => (L.ok ? (v - v0) / dt : 0);
+  const vX0 = vl(x0, L.x0), vX1 = vl(xx1, L.x1), vZ0 = vl(z0, L.z0), vZ1 = vl(zz1, L.z1);
+  L.x0 = x0; L.x1 = xx1; L.z0 = z0; L.z1 = zz1; L.ok = true;
   let vdx = vx1, vdz = vz1;
-  E.duro = lx !== x1 || lz !== z1;
-  if (lx !== x1) vdx += (lx - x1) / B.tempo;
-  if (lz !== z1) vdz += (lz - z1) / B.tempo;
+  E.duro = false;
+  if (x1 < x0) { vdx = Math.max(vdx, vX0 + (x0 - x1) / B.tempo); E.duro = true; }
+  else if (x1 > xx1) { vdx = Math.min(vdx, vX1 + (xx1 - x1) / B.tempo); E.duro = true; }
+  if (z1 < z0) { vdz = Math.max(vdz, vZ0 + (z0 - z1) / B.tempo); E.duro = true; }
+  else if (z1 > zz1) { vdz = Math.min(vdz, vZ1 + (zz1 - z1) / B.tempo); E.duro = true; }
   // o teto de aceleração (a mola e a correção juntas)
   const ax = (vdx - vx0) / dt, az = (vdz - vz0) / dt, am = Math.hypot(ax, az);
   if (am > Q.acelMax) { const f = Q.acelMax / am; vdx = vx0 + ax * f * dt; vdz = vz0 + az * f * dt; }
-  est.x = x1 + (vdx - vx1) * dt; est.z = z1 + (vdz - vz1) * dt; est.vx = vdx; est.vz = vdz;
-  // a guarda: o foco nunca sai da caixa do campo (|x| ≤ area.limX, limZ0..limZ1; só a sobra da mola chega aqui)
-  if (est.x > Q.area.limX) { est.x = Q.area.limX; if (est.vx > 0) est.vx = 0; } else if (est.x < -Q.area.limX) { est.x = -Q.area.limX; if (est.vx < 0) est.vx = 0; }
-  if (est.z > E.limZ1) { est.z = E.limZ1; if (est.vz > 0) est.vz = 0; } else if (est.z < E.limZ0) { est.z = E.limZ0; if (est.vz < 0) est.vz = 0; }
+  // a freada antes da caixa do campo (|x| ≤ area.limX, limZ0..limZ1): a velocidade com que ainda se para nela
+  const A = Q.acelMax, LX = Q.area.limX;
+  const freia = (v, d) => Math.sqrt(2 * A * Math.max(0, d));
+  if (vdx > 0) vdx = Math.min(vdx, freia(vdx, LX - x1)); else if (vdx < 0) vdx = Math.max(vdx, -freia(-vdx, x1 + LX));
+  if (vdz > 0) vdz = Math.min(vdz, freia(vdz, E.limZ1 - z1)); else if (vdz < 0) vdz = Math.max(vdz, -freia(-vdz, z1 - zMin));
+  // e o teto de velocidade (a bola que sobe muito empurra o limite depressa: a câmera não chicoteia atrás dela)
+  const vm = Math.hypot(vdx, vdz);
+  if (vm > Q.velMax) { vdx *= Q.velMax / vm; vdz *= Q.velMax / vm; }
+  // a posição pela velocidade: com a velocidade mudada, a média da do começo e a do fim do quadro (aceleração constante no
+  // quadro — a 2ª diferença da posição fica no teto), senão a da mola
+  if (vdx !== vx1 || vdz !== vz1) {
+    if (Number.isFinite(px0)) { est.x = px0 + 0.5 * (vx0 + vdx) * dt; est.z = pz0 + 0.5 * (vz0 + vdz) * dt; }
+    else { est.x = x1 + (vdx - vx1) * dt; est.z = z1 + (vdz - vz1) * dt; }
+  }
+  est.vx = vdx; est.vz = vdz;
+  // a guarda: o foco nunca sai da caixa do campo (só a sobra do último quadro da freada chega aqui)
+  if (est.x > LX) { est.x = LX; if (est.vx > 0) est.vx = 0; } else if (est.x < -LX) { est.x = -LX; if (est.vx < 0) est.vx = 0; }
+  if (est.z > E.limZ1) { est.z = E.limZ1; if (est.vz > 0) est.vz = 0; } else if (est.z < zMin) { est.z = zMin; if (est.vz < 0) est.vz = 0; }
 }
 
 /**
@@ -399,9 +435,10 @@ export function focoTV(E, est, a, p, g, W, dt, corte) {
   if (!corte && E.ok && Number.isFinite(E.bx0) && Math.hypot(a.bx - E.bx0, a.bz - E.bz0) > Q.salto) corte = true;
   E.bx0 = a.bx; E.bz0 = a.bz;
   alvoTV(E, a, g, W, p, dt, corte, _r);
-  const vx0 = est.vx, vz0 = est.vz;
+  const vx0 = est.vx, vz0 = est.vz, px0 = est.x, pz0 = est.z;
   passoMola(E, est, _r.x, _r.z, dt, corte);
-  if (!corte) limiteDuro(E, est, a, g, dt, vx0, vz0);
+  if (!corte) limiteDuro(E, est, a, g, dt, vx0, vz0, px0, pz0);
+  else if (E.lim) E.lim.ok = false;
   E.cortou = !!corte;
   return E.cortou;
 }

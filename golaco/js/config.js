@@ -388,17 +388,20 @@ export const ATRIBUTOS_PADRAO = {
 // Câmera de TV. O enquadramento é pela LARGURA vista no foco (m), não pelo fov: o fov vertical
 // sai da largura e do formato da tela (render/camera.js). Celular deitado (19,5:9) mantém a
 // largura de um 16:9 e ganha jogadores maiores; em pé, perfil próprio (mais alto e inclinado,
-// sem céu); tela pequena (celular) fecha mais 12%.
+// sem céu); tela pequena (celular) fecha mais 12%. Item 66 (dono, 23/10: "afastar muito pouco mais"): a TV 6% mais
+// aberta — largura, distância e altura juntas (o ângulo e o fov não mudam; jogador controlado ~35 px no celular, o piso é
+// 34). Só o desenho lê o CAMERA (o hash não muda); o foco da TV mora em render/enquadramento.js.
 export const CAMERA = {
-  largura: 45,                // m vistos na horizontal, no foco, num 16:9 (fov vertical ~32°)
-  distancia: 40,              // do foco até a câmera, no chão (z)
-  altura: 18.3,               // inclinação ~24,6°
-  rigidez: 3.2,               // 1/s — mola crítica que segue o alvo
+  largura: 47.7,              // m vistos na horizontal, no foco, num 16:9 (fov vertical ~32°; era 45)
+  distancia: 42.4,            // do foco até a câmera, no chão (z; era 40)
+  altura: 19.4,               // inclinação ~24,6° (era 18,3)
+  rigidez: 3.2,               // 1/s — mola crítica que segue o alvo (a aproximada, o retrato e o Livre; a TV: enquadramento.js)
   telaPequena: 0.88,          // celular (menor lado < 520 px CSS): largura × 0,88
   // celular deitado (pedido do dono, 10/10): TV mais baixa e mais longe, a 15° do horizontal — o limite de cima da
   // câmera principal da UEFA (12–15° olhando o centro do campo) — para a torcida aparecer durante o jogo. O plano é
-  // pela largura, então os jogadores não diminuem e a arquibancada do outro lado entra no alto do quadro.
-  celular: { distancia: 46, altura: 12.3 },
+  // pela largura, então os jogadores não diminuem e a arquibancada do outro lado entra no alto do quadro. (item 66: × 1,06,
+  // era 46 e 12,3; 42 m vistos no foco)
+  celular: { distancia: 48.76, altura: 13.04 },
   aproximada: { largura: 23, distancia: 16, altura: 8 },
   // celular em pé: câmera mais alta e inclinada (~40°), largura menor; nada de céu no quadro
   retrato: { largura: 22, distancia: 25.3, altura: 21.2 },

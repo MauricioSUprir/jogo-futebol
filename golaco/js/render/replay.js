@@ -59,7 +59,7 @@ export function criarDiretor({ anel, aspecto }) {
   // enquadramento da câmera 'linha' (calculado uma vez por roteiro, no quadro do passe)
   const enq = { x: 0, z: 0, olharZ: 0, fov: 30 };
   // o alvo da TV do replay (camera.js; os campos do enquadramento.js preencherAlvo): a bola gravada, sem condutor nem voo
-  const _alvo = { jx: 0, jz: 0, jvx: 0, jvz: 0, bx: 0, by: 0.11, bz: 0, bvx: 0, bvz: 0, ax: NaN, az: NaN, tRest: 0, cx: NaN, cz: NaN, cvx: 0, cvz: 0, dir: 0, temParada: false, legado: false };
+  const _alvo = { jx: 0, jz: 0, jvx: 0, jvz: 0, bx: 0, by: 0.11, bz: 0, bvx: 0, bvy: 0, bvz: 0, ax: NaN, az: NaN, tRest: 0, cx: NaN, cz: NaN, cvx: 0, cvz: 0, dir: 0, temParada: false, legado: false };
   const _linha = { visivel: false, x: 0, opacidade: 0 };
   const _foco = { x: 0, z: 0 };
   const _j = { x: 0, z: 0, time: 0, goleiro: false }, _d = { id: -1, x: 0, z: 0 };

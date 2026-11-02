@@ -16,7 +16,10 @@
 // bola antecipa a queda (vai parte do caminho até m.voo.alvo); a mola deixa tudo suave.
 import * as THREE from 'three';
 import { CAMPO } from '../config.js';
-import { mola, PERFIS_CAMERA as PERFIS, ASPECTO_TV, perfilCamera, fovPara as fovParaTV, alvoLegado, molaLegada } from './enquadramento.js';
+import {
+  mola, PERFIS_CAMERA as PERFIS, ASPECTO_TV, perfilCamera, fovPara as fovParaTV, alvoLegado, molaLegada,
+  criarEnquadramento, focoTV, geometriaTV, larguraVista, poseTV,
+} from './enquadramento.js';
 // câmera da bola parada (plano: render/bola-parada.js): entra em `entra` s (no corte, direto) e volta em `sai` s
 const BP = { entra: 0.6, sai: 1.1, mola: 7 };
 
@@ -24,7 +27,10 @@ const BP = { entra: 0.6, sai: 1.1, mola: 7 };
 export const MODOS_CAMERA = ['tv', 'aproximada'];
 
 // os perfis (TV, aproximada, celular deitado, retrato), o fov pela largura e o foco moram no módulo puro
-// render/enquadramento.js (os testes em Node usam as mesmas contas)
+// render/enquadramento.js (os testes em Node usam as mesmas contas). A TV (mistura 0, paisagem) segue o foco NOVO do
+// item 66 (a bola com a previsão certa, o espaço à frente, a área inteira no último terço, a bola com prioridade, a mola
+// com a velocidade do alvo: enquadramento.js focoTV); a aproximada, o retrato, a transição, o efeito do gol do treino e o
+// plano 'fechada' do replay (alvo.legado) seguem o de hoje (alvoLegado/molaLegada) — a troca parte do estado, sem salto.
 
 // Efeito do gol (render): zoom leve (o fov fecha até 9%) e um tremor curto que morre em ~1 s — sem
 // enjoar: amplitude ≤ 0,12 m (a 44 m do foco: ~0,15°), 6–9,5 Hz, sem girar a câmera além do que o "olhar" desloca (metade do tremor), e o
@@ -82,7 +88,8 @@ export function criarCamera(aspecto) {
   const cin = { nome: null, de0: [0, 0, 0], para: [0, 0, 0], reduz: false };
   const yaw = -Math.PI / 2;
   const _p = {};
-  const _foco = { x: 0, z: 0 }, _leg = { x: 0, z: 0 };
+  const _foco = { x: 0, z: 0 }, _leg = { x: 0, z: 0 }, _pose = { de: [0, 0, 0], para: [0, 0, 0], fov: 32 };
+  const E = criarEnquadramento(), G = {}; // a TV nova (item 66): o estado dela e a geometria do quadro
   const interno = { camera, est, p: _p, fovPara };
   // TV ↔ aproximada pela transição; paisagem ↔ retrato pelo formato da tela (1,25 → 0,75)
   function perfil() { return perfilCamera(_p, est.mistura, est.aspecto, est.pequena); }
@@ -173,8 +180,9 @@ export function criarCamera(aspecto) {
       camera.position.set(est.x + ef.tx, p.altura + ef.ty, est.z + p.distancia);
       camera.lookAt(est.x + ef.tx * 0.5, p.olharY + ef.ty * 0.5, est.z);
     } else {
-      camera.position.set(est.x, p.altura, est.z + p.distancia);
-      camera.lookAt(est.x, p.olharY, est.z);
+      poseTV(p, est.x, est.z, est.aspecto, est.pequena, _pose);
+      camera.position.set(_pose.de[0], _pose.de[1], _pose.de[2]);
+      camera.lookAt(_pose.para[0], _pose.para[1], _pose.para[2]);
     }
     // bola parada: mistura posição, direção do olhar e fov (sem salto)
     if (est.bp.ok && suave(est.bp.s)) misturarBP(_d1.set(est.x, p.olharY, est.z).sub(camera.position).normalize());
@@ -242,9 +250,18 @@ export function criarCamera(aspecto) {
       fz = clamp(fz, p.limZ0, p.limZ1);
       if (est.corte) { corte = true; est.corte = false; }
       atualizarBP(dt, corte);
-      if (!est.iniciado || corte) {
-        est.x = fx; est.z = fz; est.vx = 0; est.vz = 0; est.iniciado = true;
-      } else molaLegada(est, fx, fz, dt);
+      const novo = est.mistura === 0 && p.retrato === 0 && !(g.ativo && !g.fechado) && !alvo.legado;
+      if (novo) {
+        // a TV nova (item 66): a bola teletransportada também corta (E.cortou)
+        geometriaTV(G, p, est.aspecto, est.pequena);
+        focoTV(E, est, alvo, p, G, larguraVista(p, est.pequena), dt, corte || !est.iniciado);
+        est.iniciado = true;
+      } else {
+        E.ok = false; E.cortou = corte || !est.iniciado;
+        if (!est.iniciado || corte) {
+          est.x = fx; est.z = fz; est.vx = 0; est.vz = 0; est.iniciado = true;
+        } else molaLegada(est, fx, fz, dt);
+      }
       posicionar(p);
       if (est.extra && !est.cinema && !(g.ativo && g.fechado) && !est.geral && !est.livre) {
         est.extra.atualizar(dt, alvo, corte, interno);
@@ -288,6 +305,10 @@ export function criarCamera(aspecto) {
      */
     get deJogo() { return !est.cinema && !est.livre && !est.geral && !est.gol.ativo && !(est.bp.ok && est.bp.s > 0.01); },
     bolaParada(pl) { est.bp.plano = pl || null; },
+    /** Este quadro cortou (o corte pedido, o 1º quadro ou, na TV nova, a bola teletransportada)? */
+    get cortou() { return !!E.cortou; },
+    /** A TV nova agora (testes): o peso da área (wA), o lado do espaço à frente, a bola parada com a área, o limite duro. */
+    get enquadramento() { return { novo: E.ok, wA: E.wA, lado: E.dir, frente: E.frente, parada: E.parada, duro: E.duro, limX: E.limX }; },
     get misturaBolaParada() { return est.bp.s; },
     /** Câmera livre para prints de conferência: {de:[x,y,z], para:[x,y,z], fov?} ou null. */
     definirLivre(l) { est.livre = l ? { de: [...l.de], para: [...l.para], fov: l.fov } : null; },

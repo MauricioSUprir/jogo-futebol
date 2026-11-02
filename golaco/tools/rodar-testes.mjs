@@ -89,6 +89,9 @@ const LISTA = [
   // Estádio: rede que balança, torcida e som (contas puras do desenho)
   ['rede que balança: bolsa, onda, batidas com a física da bola, bola desenhada no bojo', 'teste-rede.mjs'],
   ['rede véu de noiva: forma pela física, morre no fundo, nada atravessa, gol pelo véu, desenho', 'teste-rede-veu.mjs'],
+  // Item 66 (dono, 23/10: "a câmera não acompanha a bola e não dá pra ver a área completamente"): a TV nova em Node (a mola, a
+  // geometria da área e da bola parada, 10 partidas com o legado lado a lado; 2 processos)
+  ['câmera de TV: acompanha a bola (atraso, miolo, espaço à frente), a área inteira no último terço e na bola parada, a bola com prioridade, sem tranco, jogadores ≥ 34 px', 'teste-camera.mjs', [], 'padrao', 2],
   ['torcida: lugares, setores, atlas das poses e ânimo (murmúrio, gol, "uuuh", apitos); o torcedor 3D na cadeira (item 69)', 'teste-torcida.mjs'],
   ['replay: anel dos últimos 10 s, roteiros do gol/impedimento/pausa e o replay de lances de verdade', 'teste-replay-anel.mjs'],
   ['replays nas paradas: o classificador de lances (árbitro independente), o roteiro, o orçamento, a pureza e o predicado da montagem', 'teste-replay-paradas.mjs'],
