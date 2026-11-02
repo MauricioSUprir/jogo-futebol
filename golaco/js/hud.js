@@ -4,8 +4,9 @@
 // Reiniciar partida na partida; Recomeçar, Máquina e Marcador só nos treinos; "Modo de jogo" com a
 // partida e os treinos), ajuda, contador de qps e tela de carregamento. Só mexe no DOM; quem
 // decide é o main.js. Lê o mundo só para desenhar (placar, minimapa) e tolera campos que ainda não
-// existem. Tela limpa (dono, 11/10): na partida o "1º T" só aparece no intervalo, no fim e nos acréscimos
-// (.com-tempo), a barra de força não escreve o tipo (o CSS esconde o rótulo), a dica de teclas do PC some em 8 s
+// existem. Tela limpa (dono, 11/10): na partida o relógio do placar é MM:SS (item 32), o "+N" ao lado dele só nos
+// acréscimos (.com-tempo) e "Intervalo"/"Fim" no lugar dele com o bloco parado (.parado); a barra de força não escreve o
+// tipo (o CSS esconde o rótulo), a dica de teclas do PC some em 8 s
 // e o minimapa é opção da pausa (escondido = não redesenha). A faixa de baixo (itens 59 e 60, dono 23/10): no celular o
 // minimapa fica EMBAIXO no meio, entre o analógico e os botões (ajustarBaixo; no PC ele já ficava), e o nome do jogador com a
 // bola fica nos CANTOS de baixo — o do time da esquerda do placar à esquerda, o da direita à direita (nomeCanto).
