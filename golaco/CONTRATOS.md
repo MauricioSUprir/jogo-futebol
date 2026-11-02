@@ -400,9 +400,13 @@ em `config.js` é `ESTADIO` (túnel e bancos: geometria que outras frentes podem
   t, animada)` e `BANDEIRA_GLSL`, `ondaBandeirao(u, v, larg, t, animada)` e `BANDEIRAO_GLSL` (GPU = JS conferido no
   `teste-estadio`), `sobBandeirao(p, b, abre, margem)` e `SOB_GLSL` (debaixo do pano aberto: as bandeiras de mastro
   abaixam e os torcedores seguram o pano — braços em V, sem pular; `BANDEIRAS.sob`; altura 2,3 m e onda 0,25 m para o pano
-  nunca descer abaixo das mãos: ninguém fura o pano, `teste-torcida`; GPU = JS no `teste-estadio`). **`bandeiras.js`**: `criarBandeiras(cena, {qualidade, hora})` → {mesh (1 chamada, opaca, desenhada
-  antes da torcida), uniforms (uAbre), atualizar(festa, t), definirQualidade (prefixo por `drawRange`), definirHora,
-  dispose}; atlas 1024² desenhado em canvas.
+  nunca descer abaixo das mãos: ninguém fura o pano, `teste-torcida`; GPU = JS no `teste-estadio`), `alturaPelaLente(p,
+  [x, y, z, liga])` e `LENTE_GLSL` (perto da lente da câmera da bola parada a bandeira de mastro abaixa: inteira com a mão a
+  ≥ `BANDEIRAS.lente.raio` + `folga` m dela, 9 + 2, sumida na mão abaixo de 9 m; GPU = JS no `teste-estadio`). **`bandeiras.js`**: `criarBandeiras(cena, {qualidade, hora})` → {mesh (1 chamada, opaca, desenhada
+  antes da torcida), uniforms (uAbre, uLente), atualizar(festa, t), definirQualidade (prefixo por `drawRange`), definirHora,
+  definirLente(p | null), dispose}; atlas 1024² desenhado em canvas. `torcida.atualizar(t, emocao, camera, batida, desenha,
+  lente)`: o main.js passa a posição da câmera quando a da bola parada está na mistura (`cam.misturaBolaParada > 0`); o
+  replay, o pré-jogo e as outras câmeras passam null (as bandeiras inteiras).
 - **`fumaca.js`**: `FUMACA` (vida, subida, vento para FORA do campo, tamanho, alfa, partículas por qualidade: Baixa 0),
   `fumacaParticula(s, p, P, t)` e `FUMACA_GLSL` (o caminho de cada partícula sai do shader: nada simulado na CPU).
   **`sinalizadores.js`**: `criarSinalizadores(cena, {qualidade, hora})` → {mesh (1 chamada, só visível com fogo ou
@@ -2604,8 +2608,12 @@ acusa o `config.js`, só o `CAMERA`, que a simulação não lê) e todo o resto 
 - **O escanteio da pessoa (`CAMERA_ESCANTEIO`).** Atrás do cobrador e ALTO: 13 m atrás, 1,2 m de lado, 8 m de altura, a bola
   em 86% da altura do quadro e o alvo em 30%, fov 26–62°, a até 17 m da bola com a corrida (atrás do cobrador 6,5–13 m);
   a lente ≥ 2 m acima do que houver embaixo (`folgaCabeca`); dentro da caixa da arquibancada de cá ela não bloqueia (sai do
-  desenho, a regra da TV); bloqueada, chega 15% e sobe 1 m por tentativa (10). Os outros tipos: o `CAMERA_BOLA_PARADA` de
-  sempre. A volta para a TV: a mistura de 1,1 s, menos quando o olhar da bola parada e o da TV apontam para lados opostos
+  desenho, a regra da TV); bloqueada, chega 15% e sobe 1 m por tentativa (10). As bandeiras de mastro da torcida não são
+  sólidos da câmera: com ela na mistura, as de perto da lente ABAIXAM (`bandeiras-dados.js alturaPelaLente`; revisão R2 do
+  item 65 — no escanteio de lá do Golaço e do Maracanã a lente, a 8 m sobre as fileiras da frente, ficava a 0,2–3,6 m de um
+  pano de 2 × 1,4 m: uma placa verde e preta de 12–100% do quadro encostada na bola e no arco da curva; agora o que sobra
+  fica a ≥ 8,6 m nos 106 estádios × 4 cantos × corrida, G5 do teste-camera, e o `teste-bola-parada-tela` 2b confere o de lá
+  em pixels). Os outros tipos: o `CAMERA_BOLA_PARADA` de sempre. A volta para a TV: a mistura de 1,1 s, menos quando o olhar da bola parada e o da TV apontam para lados opostos
   (cosseno < −0,5: o escanteio de lá) — aí CORTA (`camera.js BP.corteOposto`; misturando 180°, o olhar passava pelo chão e
   a bola saía do quadro de 0,3 a 0,9 s). No Modo Livre, contra o rumo da câmera dele no chão (`est.extra.yaw`: as de lado
   olham como a TV e cortam; Atrás e Jogador, pelo comprimento, misturam; revisão R5 — antes no Livre a volta misturava e a

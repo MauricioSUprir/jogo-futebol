@@ -2,17 +2,25 @@
 // imagem do EA FC; render/plano-bola-parada.js, render/bola-parada.js, js/mira.js, js/mira-linha.js; contratos "Cobrança mirada"
 // e "Câmera da bola parada" no CONTRATOS.md). Relógio manual (o laço da página, quadro a quadro). Em PC 1280×720, celular 844×390
 // e 568×320 com o entalhe (toque; a tela em que o painel antigo da mira encostava no CORRER):
-//  1  Nos 4 tipos (escanteio, tiro livre, tiro de meta, pênalti) do humano e no pênalti CONTRA: a câmera vai para trás do
+//  1  Nos 4 tipos (escanteio — do lado de cá e do lado de LÁ, revisão R2 do item 65 —, tiro livre, tiro de meta, pênalti) do
+//     humano e no pênalti CONTRA: a câmera vai para trás do
 //     cobrador (a lente do lado de trás da bola, a 2–8 m dela, a 1,8–4 m de altura; no escanteio, alta — item 66,
 //     render/plano-bola-parada.js CAMERA_ESCANTEIO —: a 8–18 m dela e a 5–10 m de altura), o cobrador inteiro no quadro e
 //     na metade de baixo (a cabeça abaixo de 40% da altura), o alvo (a área / o gol) no quadro e fora da caixa do cobrador.
 //  2  Nada sólido na lente: fora de placas, gol, arquibancada (estadio-forma.js solidoEm, folga 0,3 m) e a ≥ 0,8 m de
-//     todo jogador.
+//     todo jogador. 2b (revisão R2 do item 65: no escanteio do lado de lá a lente alta ficava colada a uma bandeira de mastro
+//     da torcida — uma placa verde e preta de 12–19% do quadro encostada na bola e no arco da curva): nos dois escanteios, as
+//     32 bandeiras de mastro (as da Alta; render/bandeiras-dados.js, o pano e o mastro pela conta do shader, em todo o
+//     balanço, com o abaixar que o uniform uLente da página manda — alturaPelaLente) a ≥ 6 m da lente, cada uma ≤ 5% do
+//     quadro e a ≥ 40 px da bola; e em PIXELS, com a malha da festa desenhando as 32 (o mesmo quadro com × sem ela): a maior
+//     mancha ≤ 5% do quadro (no de cá, as faixas da mureta de lá emendadas: 2,3–3,0%) e nenhum pixel dela a menos de 25% da
+//     altura da tela da bola.
 //  3  A mira: visível no escanteio, no tiro livre e no tiro de meta (não no pênalti), mexe ≥ 150 px do quadro (com × sem
 //     ela) e custa ≤ +1 chamada de desenho; sem painel e sem texto na tela (item 65: o rótulo ALTA/CHUTE saiu) e o minimapa
 //     escondido (html.mira-visivel); some no chute.
 //  4  A volta para a TV no chute: a mistura cai até 0 em ≤ 1,3 s, sem salto (nenhum quadro anda mais que 2,5 m nem 3× a
-//     mediana dos passos da câmera).
+//     mediana dos passos da câmera); no escanteio de lá, que olha para o lado oposto da TV, a volta é um CORTE (camera.js
+//     oposta, item 66): a mistura já 0 no 1º quadro depois do chute.
 //  5  Controles: no PC (teclado, a entrada da página) D gira a mira para a direita da tela e X/Z põem curva (2 apertos = 0,5)
 //     e o arco verde junto da bola mostra 56° no MESMO quadro em que o mundo muda; no celular (item 65) a curva é o ARRASTO no
 //     CHUTE e no LANÇAMENTO, com toque de verdade (CDP): +40 px = 0,75, de volta = 0, só o lado conta (80 px na vertical = 0),
@@ -51,7 +59,7 @@ const TELAS = [
   // (com o entalhe: em 568×320 o painel antigo da mira encostava no CORRER, −11 px)
   { nome: 'celular 568×320 com entalhe', largura: 568, altura: 320, toque: true, q: 'baixa', entalhe: true },
 ];
-const TIPOS = ['escanteio', 'falta', 'meta', 'penalti', 'contra'];
+const TIPOS = ['escanteio', 'escanteio-la', 'falta', 'meta', 'penalti', 'contra'];
 const AVANCAR = k => { const g = window.__golaco; for (let i = 0; i < k; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); return g.mundo.parada?.mira?.curva ?? null; };
 
 /** Monta a bola parada `tipo` (os ganchos de teste da página) e anda até a câmera estar atrás do cobrador. */
@@ -60,6 +68,7 @@ async function montar(pg, tipo) {
     const g = window.__golaco;
     g.forcarEntrada(null);
     if (tipo === 'escanteio') g.bolaParadaDeTeste('escanteio', { lado: 'ca' });
+    else if (tipo === 'escanteio-la') g.bolaParadaDeTeste('escanteio', { lado: 'la' });
     else if (tipo === 'meta') g.bolaParadaDeTeste('tiroDeMeta');
     else if (tipo === 'falta') g.faltaDeTeste({ u: 22, w: 4 });
     else if (tipo === 'penalti') g.faltaDeTeste({ area: true });
@@ -81,6 +90,7 @@ async function terminar(pg) {
 }
 /** Medidas do quadro: lente, cobrador, alvo, sólidos e jogadores perto (na página). */
 async function medir(pg) {
+  await pg.evaluate(f => { window.MEDIR_BANDEIRAS = eval(`(${f})`); }, MEDIR_BANDEIRAS.toString());
   return pg.evaluate(async () => {
     const g = window.__golaco, e = g.bolaParada.estado;
     const { solidoEm } = await import('./js/estadio-forma.js');
@@ -98,9 +108,87 @@ async function medir(pg) {
     return {
       W, H, tipo: pr.tipo, atras: (dxB * dxA + dzB * dzA) < 0, dist: Math.hypot(dxB, dzB), altura: c.y,
       cab, pes, alvo, caixa: bx, solido: solidoEm(c.x, c.y, c.z, 0.3, false), perto,
-      linha: e.linha, classe: e.classe,
+      linha: e.linha, classe: e.classe, bandeiras: pr.tipo === 'escanteio' ? await MEDIR_BANDEIRAS() : null,
     };
   });
+}
+/**
+ * No navegador (2b): as 32 bandeiras de mastro (as da Alta: a Baixa e a Média desenham as primeiras) com a lente de agora — o
+ * pano (9 × 5 pontos) e o mastro pela conta do vertex shader de bandeiras.js em todo o balanço (1,7 s), vezes o abaixar que o
+ * uniform uLente manda (bandeiras-dados.js alturaPelaLente; sem ele — a base —, inteiras): {dMin (m da lente), caixa (fração do
+ * quadro da maior), bolaPx (px da bola à mais perto)}.
+ */
+async function MEDIR_BANDEIRAS() {
+  const g = window.__golaco, c = g.bolaParada.estado.camera, bo = g.bolaParada.estado.bola;
+  const BD = await import('./js/render/bandeiras-dados.js');
+  const B = BD.BANDEIRAS, O = B.onda, L = g.estadio.festaVisual?.lente ?? null;
+  const W = window.innerWidth, H = window.innerHeight, nb = g.naTela(bo.x, 0.11, bo.z);
+  let dMin = Infinity, caixa = 0, bolaPx = Infinity;
+  for (const b of BD.bandeiras()) {
+    const k = L && BD.alturaPelaLente ? BD.alturaPelaLente([b.x, b.y, b.z], L) : 1;
+    if (k <= 0) continue;
+    const nx = -b.ez, nz = b.ex;
+    for (let t = 0; t < 1.7; t += 0.1) {
+      const pts = [];
+      for (let i = 0; i <= 8; i++) for (let j = 0; j <= 4; j++) {
+        const l = BD.pontoBandeira(B.largura * i / 8, B.altura * j / 4, b.fase, t, 1);
+        pts.push([b.x + k * (b.ex * l.la + nx * l.ln), b.y + k * l.lb, b.z + k * (b.ez * l.la + nz * l.ln)]);
+      }
+      const th = O.bal * Math.sin(2 * Math.PI * O.balHz * t + b.fase), cs = Math.cos(th), sn = Math.sin(th);
+      for (let h = 0; h <= B.mastro + 0.1; h += 0.3) pts.push([b.x - k * b.ex * sn * h, b.y + k * cs * h, b.z - k * b.ez * sn * h]);
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, vis = false;
+      for (const p of pts) {
+        dMin = Math.min(dMin, Math.hypot(p[0] - c.x, p[1] - c.y, p[2] - c.z));
+        const q = g.naTela(p[0], p[1], p[2]);
+        if (q.atras) continue;
+        x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y);
+        if (q.x >= 0 && q.x <= W && q.y >= 0 && q.y <= H) { vis = true; bolaPx = Math.min(bolaPx, Math.hypot(q.x - nb.x, q.y - nb.y)); }
+      }
+      if (vis) caixa = Math.max(caixa, Math.max(0, Math.min(W, x1) - Math.max(0, x0)) * Math.max(0, Math.min(H, y1) - Math.max(0, y0)) / (W * H));
+    }
+  }
+  return { dMin, caixa, bolaPx, lente: !!(L && L[3] > 0) };
+}
+/**
+ * No navegador (2b, pixels): a malha da festa (faixas, bandeiras, bandeirões) desenhando as 32 bandeiras da Alta, o mesmo quadro
+ * com × sem ela (metade da resolução): a maior mancha conexa (fração do quadro) e o pixel dela mais perto da bola (fração da
+ * altura da tela). Volta a malha à qualidade de antes.
+ */
+async function FESTA_PIXELS(q) {
+  const g = window.__golaco, ban = g.estadio.torcidaObj.bandeiras, bo = g.bolaParada.estado.bola;
+  ban.definirQualidade('alta');
+  const cv = document.querySelector('canvas');
+  const off = document.createElement('canvas'); off.width = Math.round(cv.width / 2); off.height = Math.round(cv.height / 2);
+  const cx = off.getContext('2d', { willReadFrequently: true });
+  const ler = () => { cx.drawImage(cv, 0, 0, off.width, off.height); return cx.getImageData(0, 0, off.width, off.height).data; };
+  g.desenhar(); const a = ler();
+  g.estadio.mostrarFesta(false); g.desenhar(); const b = ler();
+  g.estadio.mostrarFesta(true); ban.definirQualidade(q); g.desenhar();
+  const w = off.width, h = off.height, m = new Uint8Array(w * h), k = off.width / window.innerWidth;
+  const nb = g.naTela(bo.x, 0.11, bo.z), bx = nb.x * k, by = nb.y * k;
+  let perto = Infinity;
+  for (let i = 0; i < w * h; i++) {
+    if ((Math.abs(a[i * 4] - b[i * 4]) + Math.abs(a[i * 4 + 1] - b[i * 4 + 1]) + Math.abs(a[i * 4 + 2] - b[i * 4 + 2])) / 3 > 18) {
+      m[i] = 1; perto = Math.min(perto, Math.hypot(i % w - bx, Math.floor(i / w) - by));
+    }
+  }
+  // a maior mancha (4-vizinhos)
+  let maior = 0;
+  const pilha = new Int32Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    if (m[i] !== 1) continue;
+    let n = 0, topo = 0; pilha[topo++] = i; m[i] = 2;
+    while (topo) {
+      const j = pilha[--topo]; n++;
+      const x = j % w, y = (j - x) / w;
+      if (x > 0 && m[j - 1] === 1) { m[j - 1] = 2; pilha[topo++] = j - 1; }
+      if (x < w - 1 && m[j + 1] === 1) { m[j + 1] = 2; pilha[topo++] = j + 1; }
+      if (y > 0 && m[j - w] === 1) { m[j - w] = 2; pilha[topo++] = j - w; }
+      if (y < h - 1 && m[j + w] === 1) { m[j + w] = 2; pilha[topo++] = j + w; }
+    }
+    maior = Math.max(maior, n);
+  }
+  return { mancha: maior / (w * h), perto: perto / h };
 }
 /**
  * No navegador: o que a cobrança mostra no HUD — o painel antigo, texto visível no #hud fora do placar, do nome e da dica de
@@ -128,14 +216,14 @@ if (!SO || SO.split(',').some(x => x !== '7')) for (const tela of TELAS) {
   await pg.evaluate(() => window.__golaco.bolaParada.carregar());
   await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 300; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); });
   meta(`0 ${tela.nome}: o módulo da bola parada fica fora do download inicial (sob demanda)`, `antes: módulo ${antes.mod ? 'baixado' : 'não'}, painel ${antes.painel ? 'existe' : 'não'}`, !antes.mod && !antes.painel);
-  const q1 = [], q2 = [], q3 = [];
+  const q1 = [], q2 = [], q3 = [], qb = [];
   for (const tipo of TIPOS) {
     const e = await montar(pg, tipo);
     if (!e.ativa) { q1.push(`${tipo}: câmera não veio`); continue; }
     const md = await medir(pg);
     const dentro = (p, f = 0) => !p.atras && p.x >= f * md.W && p.x <= (1 - f) * md.W && p.y >= f * md.H && p.y <= (1 - f) * md.H;
     // (a régua da lente por tipo: o escanteio alto do item 66; os outros como antes)
-    const R = tipo === 'escanteio' ? { d: [8, 18], h: [5, 10] } : { d: [2, 8], h: [1.8, 4] };
+    const R = tipo.startsWith('escanteio') ? { d: [8, 18], h: [5, 10] } : { d: [2, 8], h: [1.8, 4] };
     const okCam = md.atras && md.dist >= R.d[0] && md.dist <= R.d[1] && md.altura >= R.h[0] && md.altura <= R.h[1];
     const okCob = dentro(md.cab) && dentro(md.pes) && md.cab.y >= 0.4 * md.H && md.pes.y <= 0.985 * md.H;
     const okAlvo = dentro(md.alvo, 0.03) && !(md.alvo.x > md.caixa.l && md.alvo.x < md.caixa.r && md.alvo.y > md.caixa.t && md.alvo.y < md.caixa.b);
@@ -143,6 +231,13 @@ if (!SO || SO.split(',').some(x => x !== '7')) for (const tela of TELAS) {
     q2.push(`${tipo}: ${md.solido ?? 'livre'}, jogador a ${f1(md.perto)} m`);
     if (!(okCam && okCob && okAlvo)) q1.ok = false;
     if (md.solido || md.perto < 0.8) q2.ok = false;
+    // 2b) as bandeiras de mastro (pela conta do shader) e a festa em pixels, nos dois escanteios
+    if (md.bandeiras) {
+      const fp = await pg.evaluate(([f, q]) => eval(`(${f})`)(q), [FESTA_PIXELS.toString(), tela.q]);
+      const b = md.bandeiras, ok = b.dMin >= 6 && b.caixa <= 0.05 && !(b.bolaPx < 40) && fp.mancha <= 0.05 && fp.perto >= 0.25;
+      qb.push(`${tipo}: a mais perto a ${f1(b.dMin)} m da lente (uLente ${b.lente ? 'ligado' : 'desligado'}), ${f1(100 * b.caixa)}% do quadro, ${f1(b.bolaPx)} px da bola; festa: mancha ${f1(100 * fp.mancha)}%, a ${f1(100 * fp.perto)}% da altura da bola`);
+      if (!ok) qb.ok = false;
+    }
     // 3) a mira (não no pênalti) e o HUD da cobrança
     const comLinha = tipo !== 'penalti' && tipo !== 'contra';
     const px = await pg.evaluate(HC => {
@@ -150,15 +245,18 @@ if (!SO || SO.split(',').some(x => x !== '7')) for (const tela of TELAS) {
       const off = document.createElement('canvas'); off.width = Math.round(cv.width / 2); off.height = Math.round(cv.height / 2);
       const cx = off.getContext('2d', { willReadFrequently: true });
       const ler = () => { cx.drawImage(cv, 0, 0, off.width, off.height); return cx.getImageData(0, 0, off.width, off.height).data; };
-      g.bolaParada.linha(true); g.relogio.avancar(1000 / 60); const a = ler(); const ca = g.estado().desenhoChamadas;
-      g.bolaParada.linha(false); g.relogio.avancar(1000 / 60); const b = ler(); const cb = g.estado().desenhoChamadas;
+      // (o par com × sem a mira no MESMO instante: g.desenhar() não anda o relógio, só a mira muda entre os dois quadros — com o
+      // relógio andando 1 quadro entre eles, um grupo da torcida que entrava no quadro somava +1 chamada a um dos dois: a falta
+      // e o tiro de meta depois do escanteio de lá, revisão R2 do item 65)
+      g.bolaParada.linha(true); g.relogio.avancar(1000 / 60); g.desenhar(); const a = ler(); const ca = g.estado().desenhoChamadas;
+      g.bolaParada.linha(false); g.desenhar(); const b = ler(); const cb = g.estado().desenhoChamadas;
       g.bolaParada.linha(true); g.relogio.avancar(1000 / 60);
       let n = 0;
       for (let i = 0; i < a.length; i += 4) if ((Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2])) / 3 > 18) n++;
       return { n: n * 4, ca, cb, vis: g.bolaParada.estado.linha.visivel, hud: eval(HC)() };
     }, HUD_COBRANCA.toString());
     // prints (a linha acende em 0,15 s depois de religada: 20 quadros)
-    if (PRINTS && (tela.largura === 844 || tela.largura === 1280) && (tipo === 'escanteio' || tipo === 'falta')) {
+    if (PRINTS && (tela.largura === 844 || tela.largura === 1280) && (tipo.startsWith('escanteio') || tipo === 'falta')) {
       await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 20; i++) g.relogio.avancar(1000 / 60, { desenhar: i === 19 }); });
       await pg.screenshot({ path: path.join(PRINTS, `bola-parada-${tipo}-${tela.largura}x${tela.altura}.png`) });
     }
@@ -188,6 +286,8 @@ if (!SO || SO.split(',').some(x => x !== '7')) for (const tela of TELAS) {
   }
   meta(`1 ${tela.nome}: câmera atrás do cobrador, o cobrador inteiro na metade de baixo, o alvo no quadro e livre dele`, q1.join(' · '), q1.ok !== false && q1.length === TIPOS.length);
   meta(`2 ${tela.nome}: nada sólido na lente e nenhum jogador a < 0,8 m`, q2.join(' · '), q2.ok !== false && q2.length === TIPOS.length);
+  meta(`2b ${tela.nome}: nos escanteios de cá e de lá, as 32 bandeiras de mastro a ≥ 6 m da lente, ≤ 5% do quadro e a ≥ 40 px da bola; a festa em pixels: a maior mancha ≤ 5% do quadro e a ≥ 25% da altura da tela da bola`,
+    qb.join(' · '), qb.ok !== false && qb.length === 2);
   // (sem o painel e sem texto: o rótulo ALTA/CHUTE e as teclas Z/X saíram com o item 65; o minimapa sai com a mira)
   const okHud = h => !h.painel && h.texto.length === 0 && !h.minimapa && h.miraVisivel;
   const l = q3.map(x => `${x.tipo}: ${x.comLinha ? `${x.px.vis ? 'visível' : 'não'} ${x.px.n} px +${x.px.ca - x.px.cb} chamada; painel ${x.px.hud.painel ? 'sim' : 'não'}, texto ${x.px.hud.texto.length ? JSON.stringify(x.px.hud.texto) : 'nenhum'}, minimapa ${x.px.hud.minimapa ? 'visível' : 'escondido'}` : (x.px.vis ? 'linha no pênalti!' : 'sem linha')}; some no chute ${x.volta.linhaDepois === false ? 'sim' : 'não'}`);
@@ -195,8 +295,10 @@ if (!SO || SO.split(',').some(x => x !== '7')) for (const tela of TELAS) {
     q3.every(x => (x.comLinha ? x.px.vis && x.px.n >= 150 && x.px.ca - x.px.cb <= 1 && okHud(x.px.hud) : !x.px.vis) && x.volta.linhaDepois === false));
   // (a cobrança que vira gol corta para a câmera do gol antes do fim da volta: conta o que andou até o corte, ≥ 3 sem gol)
   const semCorte = q3.filter(x => !x.volta.cortou);
-  meta(`4 ${tela.nome}: a volta para a TV no chute sem salto`, q3.map(x => `${x.tipo}: ${x.volta.cortou ? `gol (corte) depois de ${x.volta.passos} quadros, ` : `${f1(x.volta.t)} s, `}maior passo ${f1(x.volta.maxP)} m (mediana ${f1(x.volta.med)})`).join(' · '),
-    semCorte.length >= 3 && q3.every(x => (x.volta.cortou || (x.volta.t > 0 && x.volta.t <= 1.3)) && x.volta.maxP <= 2.5 && x.volta.maxP <= Math.max(3 * x.volta.med, 0.3)));
+  // (o escanteio de lá: a câmera dele olha para o lado oposto da TV — a volta é um corte, a mistura 0 já no 1º quadro)
+  const corteLa = x => x.tipo === 'escanteio-la';
+  meta(`4 ${tela.nome}: a volta para a TV no chute sem salto (no escanteio de lá, um corte)`, q3.map(x => `${x.tipo}: ${x.volta.cortou ? `gol (corte) depois de ${x.volta.passos} quadros, ` : corteLa(x) ? `${x.volta.t === 0 ? 'corte' : `${f1(x.volta.t)} s (sem o corte!)`}, ` : `${f1(x.volta.t)} s, `}maior passo ${f1(x.volta.maxP)} m (mediana ${f1(x.volta.med)})`).join(' · '),
+    semCorte.length >= 3 && q3.every(x => (x.volta.cortou || (corteLa(x) ? x.volta.t === 0 : (x.volta.t > 0 && x.volta.t <= 1.3))) && x.volta.maxP <= 2.5 && x.volta.maxP <= Math.max(3 * x.volta.med, 0.3)));
   // 5) controles
   if (!tela.toque) {
     await montar(pg, 'escanteio');
