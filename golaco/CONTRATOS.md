@@ -1644,8 +1644,8 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
 ("Tela limpa"). **Só desenho, DOM e a forma de apertar o toque**: nenhuma linha de `sim.js`, `acoes.js`, `defesa.js` ou
 `ia*.js` mudou e o mundo recebe as mesmas máscaras de sempre (`hash-igual` IGUAL; `teste-determinismo` passa).
 - **Orçamento de tela** (`tools/teste-hud-minimo.mjs`, navegador, no CI e antes do deploy): no celular deitado (844×390,
-  667×375, 568×320 com entalhe, ataque e defesa) a união das formas do HUD (caixas visíveis do `#hud`, botões como
-  círculos, analógico em repouso se a opacidade passar de 0,25) cobre ≤ 11% da tela (≤ 12% em 568×320 desde o item 32: seção
+  667×375, 568×320 e, desde a revisão do item 32, 640×360, com entalhe, ataque e defesa) a união das formas do HUD (caixas
+  visíveis do `#hud`, botões como círculos, analógico em repouso se a opacidade passar de 0,25) cobre ≤ 11% da tela (≤ 12% em 568×320 desde o item 32: seção
   "Placar (17/10)", decisão do dono, FILA "Depende do dono" 15); 0 caracteres fora do placar (desde os
   itens 59 e 60, também fora do nome do condutor nos cantos de baixo: exceção escrita, só "número nome"); ≤ 15%
   dos pixels de torcida atrás do HUD; 0 amostras com a linha viva; PC ≤ 2,5% depois de 9 s. Peça nova de HUD na partida
@@ -1654,7 +1654,8 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
   partida pelo ícone): 10,95% (568×320 com entalhe, defesa, o nome de 88 px) MEDIDO COM O RELÓGIO EM "0'" (240 passos depois
   de abrir); pela régua de antes daria 11,77% — o H1 só passa com a régua nova (FILA "Depende do dono" 14). Achado do item 32:
   com o relógio de verdade aquela base já ia a 11,06% ("34'") e a 11,95–12,06% nos acréscimos em 568×320; desde o item 32 o
-  H1 mede 4 estados do relógio ("34:12", "+4", "+10", intervalo), sem e com a cara do TM (seção "Placar (17/10)").
+  H1 mede 4 estados do relógio ("34:12", "+4", "+10", intervalo) e, desde a revisão, os 4 mais largos (gols de 2 dígitos, o
+  relógio de 3), sem e com a cara do TM (seção "Placar (17/10)").
 - **`index.html`/`css/estilo.css`**: o placar é a barra de TV da seção "Placar (17/10)" abaixo (antes: compacto de 30 px
   no celular e 34 no PC, sem a marca; em 12/10, 24/26 px com o "1º T" só no intervalo, no fim e nos acréscimos; desde o item
   32, 28/26/30 px com o relógio MM:SS, o "+N" só nos acréscimos e "Intervalo"/"Fim" no lugar do relógio); menu só com o ícone (44×44); barra de
@@ -2150,7 +2151,9 @@ IGUAIS.
     `'Intervalo'`/`'Fim'` com `formato: 'parado'`.
 - **`main.js`**: `lerRelogio()` leva `segundo` (além de `minuto`, `tempo`, `estado`, `acrescimo`); `estado().relogio.segundo`;
   `__golaco.placarDeTeste([a, b], relogio)` aceita o `{segundo, …}` e o `{minuto, …}` de antes. Online e "Simular o resto"
-  chamam o mesmo `lerRelogio` (os dois aparelhos escrevem o mesmo texto no mesmo tick). A faixa "Simulando o resto da
+  chamam o mesmo `lerRelogio` (os dois aparelhos escrevem o mesmo texto no mesmo tick). No "Simular o resto",
+  `mostrarSimulando` escreve o relógio a cada pedaço simulado, ANTES de sair cedo pela faixa, que só muda com o minuto (na
+  revisão; antes os segundos ficavam parados até ~1 min de jogo). A faixa "Simulando o resto da
   partida…" continua com o minuto (`${minutoTM}'`): é a faixa do meio, não o placar. A súmula e a tarja do intervalo/fim
   continuam com o minuto ("45'"/"90'" num gol nos acréscimos; o resultado do TM não muda).
 - **`hud.js relogio(r)`**: saída rápida pela chave do quadro anterior (segundo, estado, anúncio; o `{minuto}` de antes) — nada
@@ -2165,33 +2168,42 @@ IGUAIS.
   Escudos fictícios em `<symbol>` no `svg.sprite`; igual na partida e nos treinos (nos treinos, no Livre e na disputa o
   relógio fica `hidden`). Cada time é `role="img"` com o nome no `aria-label`.
 - **`css/estilo.css`** (a geometria, a mesma nas duas páginas): `--placar-h` 28 px no celular (a referência do dono: 29), 26
-  nas telas baixas (`max-width: 1000px` e `max-height: 340px`: 568×320) e 30 no PC (`min-width: 1001px`); fundo
+  nas telas baixas (`max-width: 1000px` e `max-height: 340px`: 568×320; e, desde a revisão, `max-width: 700px` e `max-height:
+  360px`: 640×360, o Android de 360 dp deitado) e 30 no PC (`min-width: 1001px`); fundo
   `rgba(7,9,10,0.82)`, borda verde 0,3, cantos de 8 px; gols de 18 px (20 no PC) com `tabular-nums`; siglas de 12 px (11 nas
   baixas, 13 no PC); escudos 15×16 (14×15 nas baixas, 16×17 no PC); faixa da cor do time de 3 px; relógio de 16 px (17) 800
   `tabular-nums` no bloco `--verde`; o "+N" de 11 px (12) dentro do bloco; parado, a palavra de 13 px (14) no bloco
   `--verde-escuro`. A marca (20 px; 24 no PC) só aparece na partida com mais de 700 px de largura (`@media (max-width:
   700px) { html.em-partida .placar-marca { display: none } }`; nos treinos fica). Topo apertado (`hud.js ajustarTopo`):
   `topo-c1` tira a marca só nos treinos; `topo-c3` tira o "+N"; `topo-c4` aperta só os espaços; na partida c1 → c2 → c4 → c3
-  (com o minimapa embaixo nenhum liga nas telas medidas).
+  (com o minimapa embaixo nenhum liga POR ENCOSTAR nas telas medidas). O orçamento do HUD (revisão): no celular, na partida,
+  cada dígito a mais que o placar de todo dia (gols de 1 dígito e "97:13 +10") liga os mesmos passos mesmo sem encostar.
+  `digitosExtra` conta os gols ≥ 10 e o relógio ≥ 100:00, que só aparece na pausa de um gol depois dos +10. Com um dígito a
+  mais liga o `topo-c4` (~15 px); com dois ou mais, também o `topo-c3` (sai o "+N"). As fontes não mudam.
 - **`css/tm.css`** (só com `?tm`): a Inter TM (a `--fonte` de `html.tm`; a Inter continua sem baixar sem `?tm`), o fundo no
   degradê do cartão do TM, borda `rgba(34,197,94,.3)`, gols em `--tm-verde-cl`, o relógio no `--tm-botao` com `--tm-tinta`,
   parado no `--tm-verde-fundo` com `--tm-texto` (contraste ≈ 5:1), a marca com o `--tm-simbolo` (24 px a 18; PC 30 a 22).
 - **Medidas** (b3041818 → item 32; DejaVu Sans, a fonte do CI; caixa no jogo / "+10" / intervalo, px): 844×390 202×24 /
   276×24 / 270×24 → 240×28 / 268×28 / 257×28 (com o TM 234 / 258 / 249); 667×375 → 220 / 248 / 237 (TM 210 / 234 / 225);
-  568×320 → 213×26 / 241×26 / 230×26 (TM 202 / 226 / 217); PC 206×26 / 279×26 / 270×26 → 256×30 / 286×30 / 275×30.
+  568×320 → 213×26 / 241×26 / 230×26 (TM 202 / 226 / 217); 640×360 (revisão) 220×28 / 248×28 / 237×28 → 213×26 / 241×26 /
+  230×26; PC 206×26 / 279×26 / 270×26 → 256×30 / 286×30 / 275×30.
   Orçamento (H1, pior caso da tela: defesa, o nome de 88 px, o pior estado do relógio, sem/com o TM): 844×390 8,66 → 8,91%
   (TM 8,82); 667×375 10,84 → 10,95% (TM 10,79); 568×320 12,06 → 11,85% (TM 11,62) — a meta passou a ≤ 12% SÓ em 568×320
   (decisão do dono, FILA "Depende do dono" 15; com MM:SS, escudos e siglas, os 11% ali pedem uma barra de ≤ 169 px a 28 px).
   H3 (torcida atrás do HUD, 844×390) 7,3 → 9,4% (≤ 15%); H5 (PC, o placar mais largo e o nome de 200 px) 2,04 → 2,21% (TM
-  2,03 → 2,20; ≤ 2,5%).
+  2,03 → 2,20; ≤ 2,5%). Revisão: a 640×360 entrou no H1 (meta 11%; com 28 px ia a 11,21% no "+10", com 26 px fica em 10,93%;
+  TM 10,75%), e os 4 estados mais largos também (10-9 com "+10", "100:18 +10", 10-10 com "100:18 +10" e o intervalo com 10-9).
+  Sem o aperto eles chegavam a 11,35% em 667×375, 12,37% em 568×320 e 11,65% em 640×360; com o aperto ficam em 10,92, 11,79 e
+  10,88%. A folga em 667×375 no "+10" sem o TM continua 0,05 ponto (a fonte do sistema; o CI usa a DejaVu Sans).
 - **Testes**: `teste-relogio-placar` (Node, padrão; R1 a conta = o `minutoDeJogo` em todos os ticks de 7 durações, nunca
   volta, 675 mudanças em 3600 ticks; R2 os acréscimos = o `decorrido`; R3 o texto; R4 a partida de verdade e o minuto da
   súmula = o do relógio limitado ao tempo regulamentar em todo tick; R5 o hash igual chamando o relógio, sem import e fora do
-  fecho); `teste-hud-minimo` H1 (4 estados × sem/com o TM), H10 (formato, 28/26/30 px, "um pouco": ≤ 29 px, área no jogo
-  ≤ 1,5 × a de 12/10 e ≤ 7192 px² em 844×390, legível, nada encosta; 3 telas e o PC, sem e com o TM, 5 estados; a base
-  reprova), H5 (o placar mais largo), H14 (o relógio anda: 113 s de jogo em 10 s reais, 0 voltas, escritas ≤ textos + 1,
+  fecho); `teste-hud-minimo` H1 (os 4 estados do relógio e os 4 mais largos × sem/com o TM, 4 telas), H1b (revisão: nos
+  estados largos o aperto pelos passos, os textos, as fontes nos mínimos do H10 e nada sai da barra), H10 (formato, 28/26/30
+  px, "um pouco": ≤ 29 px, área no jogo ≤ 1,5 × a de 12/10 e ≤ 7192 px² em 844×390, legível, nada encosta; 4 telas e o PC,
+  sem e com o TM, 5 estados; a base reprova), H5 (o placar mais largo), H14 (o relógio anda: 113 s de jogo em 10 s reais, 0 voltas, escritas ≤ textos + 1,
   a largura constante; os estados com `?min=0.25`; a base reprova); `teste-controles` (MM:SS); `teste-tm-tela` 1c (30 px,
-  MM:SS na Inter TM, o símbolo do TM); `teste-replay` A6 (o texto do placar na tela do replay aceita o MM:SS);
+  MM:SS na Inter TM, o símbolo do TM) e 3b (revisão: no "Simular o resto" o relógio é sempre o do mundo, "Fim" no fim); `teste-replay` A6 (o texto do placar na tela do replay aceita o MM:SS);
   `teste-online-tela` P7 ("Fim" nas duas abas); `teste-penaltis-tela` 9 (com a `--placar-h` de 28 px as bolinhas da disputa
   descem 4 px: a faixa do fim desce para baixo delas também nas telas de até 380 px de altura, `disputa-tela.js`).
   `--so-placar` roda o H1/H10/H14 sem os 2 min de jogo.

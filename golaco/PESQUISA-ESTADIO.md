@@ -315,6 +315,18 @@ o contador "+1:23" (~+0,3 ponto); (d) "45:00 INT" no intervalo (a mesma largura,
 (+48 KB no download inicial, contra a regra do `tm.css`); (f) só o MM:SS, sem crescer (11,35% em 568×320, não atende o
 "maior").
 
+**Revisão do item 32 (R1).** (1) Os estados mais largos ficavam fora do H1 e passavam do orçamento: gols de 2 dígitos com o
+"+10" (667×375 11,10%, 568×320 12,02%), o relógio de 3 dígitos "100:18 +10" (só na pausa de um gol depois dos +10: 11,08% e
+11,99%) e os dois juntos com 10-10 (11,35% e 12,37%). O `hud.js ajustarTopo` passou a apertar o placar no celular, na partida,
+por dígito a mais que o de todo dia (gols de 1 dígito e "97:13 +10"), pelos mesmos passos do aperto: com um, os espaços
+(`topo-c4`, ~15 px); com dois ou mais, também o "+N" (`topo-c3`). As fontes não mudam. Depois: os largos ficam em até 10,92%
+(667×375), 11,79% (568×320) e 10,88% (640×360). O pior de cada tela continua sendo o "97:13 +10" de todo dia. (2) A 640×360 (o
+Android de 360 dp deitado) estava fora do H1 e passava dos 11% com 28 px: 11,21% com o "+10" e 11,09% no intervalo; a base
+de 12/10 já ia a 11,09%. Ela ganhou o placar das telas baixas (26 px, até 700 × 360) e ficou em 10,93% no pior caso (com o TM,
+10,75%). De 720×360 para cima o placar continua com 28 px (10,18% no pior caso). (3) O "Simular o resto" do TM só reescrevia o
+relógio quando mudava o minuto da faixa, e os segundos ficavam parados. Agora o relógio vem antes da saída antecipada
+(`teste-tm-tela` 3b: 161/219 → 280/280 leituras iguais à conta).
+
 ## 8. Rede véu de noiva e branca (pedido de 11/10; `js/rede-forma.js`, `js/bola.js`, `js/render/rede-onda.js`, `js/render/campo.js`)
 
 Pedido do dono: "as redes têm que ser brancas, e ter uma movimentação na rede quando a bola toca nela, quero que seja

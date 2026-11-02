@@ -471,20 +471,24 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   SEGUNDOS além dos minutos"; `PESQUISA-ESTADIO.md` §7.1 e §7.3, contrato "Placar (17/10)" no `CONTRATOS.md`): uma barra só
   no canto de cima à esquerda — marca do jogo (só na partida com mais de 700 px de largura) | faixa de cor (3 px) + escudo +
   sigla da casa | placar em verde | sigla + escudo + faixa do visitante | relógio MM:SS no bloco verde. Nos acréscimos o
-  relógio continua ("47:13") com o "+4" no bloco; "Intervalo"/"Fim" no lugar dele, no bloco verde-escuro (sem o "1º T").
-  28 px de altura no celular (a referência do dono: 29), 26 em 568×320 e 30 no PC; gols 18/20 px, relógio 16/17, siglas
-  12/13 (11 em 568×320). A conta do relógio é `js/relogio-placar.js` (puro, SEM import, FORA do fecho: o minuto pela MESMA
-  conta float do `minutoDeJogo`, os segundos pela fração; 11,25 s de jogo por segundo real); o `hud.js` escreve só quando muda
-  (~11 por segundo) e refaz o topo só na troca de formato (os dígitos com `tabular-nums`). Com `?tm`, o `tm.css` põe a Inter
-  TM, o degradê do cartão do TM, o verde do TM e o símbolo do TM (sem `?tm` a Inter não baixa). Escudos FICTÍCIOS em `<symbol>`
-  no `index.html` (`escudo-golaco`, `escudo-ventania`; `hud.definirTimes` recebe `escudo` = id do elenco). Orçamento do H1:
-  ≤ 11% em 844×390 e 667×375 e **≤ 12% em 568×320** (decisão do dono, FILA "Depende do dono" 15: ali MM:SS, escudos e siglas
-  não cabem nos 11%; o placar de 12/10 já passava com o relógio de verdade), medido em 4 estados do relógio, sem e com a cara
-  do TM (o H1 de antes media o relógio em "0'"). Testes: `teste-relogio-placar` (Node), `teste-hud-minimo` H1, H10 (o
-  registro de 12/10 × 17/10; `--so-placar` roda só o placar), H14 (o relógio anda na página), `teste-tm-tela` 1c. Igual nos
-  treinos (sem o relógio). Só DOM/CSS e a leitura do mundo: hash IGUAL, `fecho-hash` 0. Contraprova (13/10): na partida o
-  "+N" é o último a sair (os espaços apertam antes; o minimapa mora embaixo desde os itens 59 e 60); gols 9 → 10 refazem o
-  topo; nos treinos a marca só sai se fizer falta; cada time é `role="img"` com o nome (leitor de tela).
+  relógio continua ("47:13") com o "+4" no bloco; "Intervalo"/"Fim" no lugar dele, no bloco verde-escuro (sem o "1º T"). 28
+  px de altura no celular (a referência do dono: 29), 26 nas telas baixas (568×320 e, desde a revisão, 640×360: até 700 ×
+  360) e 30 no PC; gols 18/20 px, relógio 16/17, siglas 12/13 (11 nas baixas). A conta do relógio é `js/relogio-placar.js`
+  (puro, SEM import, FORA do fecho: o minuto pela MESMA conta float do `minutoDeJogo`, os segundos pela fração; 11,25 s de
+  jogo por segundo real); o `hud.js` escreve só quando muda (~11 por segundo) e refaz o topo só na troca de formato (os
+  dígitos com `tabular-nums`). Com `?tm`, o `tm.css` põe a Inter TM, o degradê do cartão do TM, o verde do TM e o símbolo do
+  TM (sem `?tm` a Inter não baixa). Escudos FICTÍCIOS em `<symbol>` no `index.html` (`escudo-golaco`, `escudo-ventania`;
+  `hud.definirTimes` recebe `escudo` = id do elenco). Orçamento do H1: ≤ 11% em 844×390, 667×375 e 640×360 e **≤ 12% em
+  568×320** (decisão do dono, FILA "Depende do dono" 15: ali MM:SS, escudos e siglas não cabem nos 11%; o placar de 12/10 já
+  passava com o relógio de verdade), medido em 4 estados do relógio e nos 4 mais largos (gols de 2 dígitos, o relógio de 3 —
+  "100:18", só na pausa de um gol depois dos +10), sem e com a cara do TM (o H1 de antes media o relógio em "0'"). No
+  celular, na partida, cada dígito a mais aperta o placar pelos passos do aperto (`hud.js digitosExtra`): com um, os
+  espaços; com dois, também o "+N". A folga em 667×375 no "+10" é de 0,05 ponto. Testes: `teste-relogio-placar` (Node),
+  `teste-hud-minimo` H1, H10 (o registro de 12/10 × 17/10; `--so-placar` roda só o placar), H14 (o relógio anda na página),
+  `teste-tm-tela` 1c e 3b (o relógio anda no "Simular o resto"). Igual nos treinos (sem o relógio). Só DOM/CSS e a leitura
+  do mundo: hash IGUAL, `fecho-hash` 0. Contraprova (13/10): na partida o "+N" é o último a sair (os espaços apertam antes;
+  o minimapa mora embaixo desde os itens 59 e 60); gols 9 → 10 refazem o topo; nos treinos a marca só sai se fizer falta;
+  cada time é `role="img"` com o nome (leitor de tela).
 - **Etapa 4 (regras IFAB, goleiro, bolas paradas, equilíbrio)** — em PRs; pesquisa em `golaco/PESQUISA-ETAPA4.md`,
   contrato em `CONTRATOS.md`. **Painel** `tools/painel-equilibrio.mjs` (seção 11 inteira, 144 partidas em ~9 min com 4
   CPUs; `--base <pasta js>` compara versões com as mesmas sementes; `--json`; `--partes a.json,b.json` junta pedaços). O CI
@@ -556,7 +560,7 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   virou a DIVIDIDA segurada (`entrada.js criarToqueOuSegura`: tocar < `ENTRADA.toqueCurto` 0,25 s = bote, segurar =
   CONTER desde o 1º quadro, como o "Sprint & Tackle" do FC Mobile; só o `pointerup` dá o bote — toque cancelado pelo
   sistema não) e a PRESSÃO foi para a vaga b; teclado e controle não mudam. O mundo recebe as mesmas máscaras
-  (hash-igual IGUAL). Teste: `teste-hud-minimo` (navegador, CI e deploy; celular ≤ 11% de HUD em 3 telas — 12% em 568×320 desde o item 32 —, 0 texto fora
+  (hash-igual IGUAL). Teste: `teste-hud-minimo` (navegador, CI e deploy; celular ≤ 11% de HUD em 4 telas — 12% em 568×320 desde o item 32 —, 0 texto fora
   do placar e do nome do condutor, ≤ 15% da torcida atrás do HUD, 0 linha viva, PC ≤ 2,5%, barra da pausa sem encostar). Peça nova de HUD na
   partida tem de caber nesse orçamento (ou ir para a pausa). Lição: o relógio das animações CSS do Chromium sem GPU
   atrasa 1–2 s do real com a máquina carregada — teste de algo que some por animação espera a animação, não um tempo fixo.
