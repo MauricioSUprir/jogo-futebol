@@ -185,6 +185,8 @@ html.tm .btn-toque svg { stroke: var(--tm-verde-cl); }
 html.tm .btn-chute, html.tm .btn-trocar { border-color: var(--tm-verde); }
 html.tm .btn-goleiro svg, html.tm .btn-pegar svg { stroke: var(--tm-alerta); }
 html.tm .btn-pressao svg { stroke: #86efac; }
+/* CARRINHO (item 34): laranja claro, separado do âmbar do GOLEIRO (a ação de risco da defesa) */
+html.tm .btn-carrinho svg { stroke: #fdba74; }
 html.tm .btn-toque.ativo { background: var(--tm-botao); color: var(--tm-tinta); border-color: #86efac; box-shadow: 0 0 18px rgba(34, 197, 94, 0.5); }
 html.tm .btn-toque.ativo svg { stroke: var(--tm-tinta); }
 html.tm .analogico-base { border-color: rgba(34, 197, 94, 0.55); background: radial-gradient(circle, rgba(34, 197, 94, 0.1) 0%, rgba(5, 8, 7, 0.42) 72%); }

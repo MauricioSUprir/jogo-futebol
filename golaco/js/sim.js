@@ -26,7 +26,9 @@ import { ACOES } from './config.js';
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
 import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe, cortandoPasse } from './ia-tatica.js';
 import { trocaAerea, alvoAereo, escolhaManual } from './troca.js';
-import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida, semAtropelar, chamadoRecente, boteContidoDoChamado, encerrarPressao, entradaPressaoPropria } from './defesa.js';
+import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida, pressaoPedida, semAtropelar, chamadoRecente, boteContidoDoChamado, encerrarPressao, entradaPressaoPropria, carrinho, contatosCarrinho, fimDoDeslize, contatosHomemCarrinho } from './defesa.js';
+// o carrinho (item 34; carrinho.js): o corpo pelo quadro do plano, como o mergulho do goleiro
+import { passoCarrinho, fixarCarrinho, pesCarrinho } from './carrinho.js';
 import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada, ladoPenaltiHumano } from './partida.js';
 import { planejarRecepcao } from './recepcao.js';
@@ -198,8 +200,9 @@ function colisaoCorpos(m) {
       const rv = (q.vx - p.vx) * nx + (q.vz - p.vz) * nz;
       // (só na partida) a força com que cada um entrou no outro, antes da resposta (faltas.js forcaContato)
       if (rv < 0 && m.partida) guardarChoque(m, p, q, nx, nz);
-      // Etapa 4 (só na partida): carga por trás no condutor (faltas.js; o árbitro decide nas regras)
-      if (rv < 0 && m.partida && m.posse != null && (p.id === m.posse || q.id === m.posse) && !m.faltaPendente) {
+      // Etapa 4 (só na partida): carga por trás no condutor (faltas.js; o árbitro decide nas regras). Com o carrinho num dos
+      // dois, a falta é só a do carrinho (defesa.js contatosHomemCarrinho): nunca duas pelo mesmo lance
+      if (rv < 0 && m.partida && m.posse != null && (p.id === m.posse || q.id === m.posse) && !m.faltaPendente && !p.carrinho && !q.carrinho) {
         const f = faltaNaCarga(m, p, q, -rv);
         if (f) registrarFalta(m, f);
       }
@@ -240,7 +243,8 @@ function bloqueioPerna(m, x0, z0) {
   const sx = b.p.x - x0, sz = b.p.z - z0, s2 = sx * sx + sz * sz;
   for (const j of m.jogadores) {
     if (j.time === v.time || j.posicao === 'GOL' || j.papel === 'parado' || j.papel === 'marcador') continue;
-    if (st.feitos.includes(j.id) || voando(j, m.tick)) continue;
+    // (no carrinho a perna é a DESENHADA: nada da perna esticada sorteada em volta da pelve deitada — carrinho.js)
+    if (st.feitos.includes(j.id) || voando(j, m.tick) || j.carrinho) continue;
     // o ponto do caminho da bola mais perto dele: neste passo (ou no começo dele, se já passou); ainda à frente, espera
     const t = s2 > 1e-9 ? Math.max(0, ((j.x - x0) * sx + (j.z - z0) * sz) / s2) : 1;
     if (t > 1) continue;
@@ -296,6 +300,8 @@ function colisaoBolaCorpo(m) {
     // decidida (sorteio da leitura) também não: o resultado é o da leitura
     if (m.ultimoToque && m.ultimoToque.id === j.id && m.tick - m.ultimoToque.tick < 10) continue;
     if (j.defesa && !j.defesa.fora && m.tick <= j.defesa.tick + 2) continue;
+    // a perna do carrinho acabou de tocar a bola neste passo (defesa.js contatosCarrinho): o contato já foi resolvido
+    if (j.carrinho && j.carrinho.bola === m.tick) continue;
     const dx = b.p.x - j.x, dz = b.p.z - j.z;
     const d = MD.hypot(dx, dz);
     const lim = RAIO_CORPO_BOLA;
@@ -451,6 +457,8 @@ function roubarComMarcador(m, j) {
  * (sorteio por passo, com descanso depois). A bola sai para longe de quem conduzia.
  */
 function boteIA(m, j) {
+  // no carrinho (deitado; o controle pode ter saído dele): nada de bote — sem gastar o descansoBote, que só desce aqui
+  if (j.carrinho) return;
   if (j.descansoBote > 0) { j.descansoBote--; return; }
   if (m.posse == null || m.naMao != null) return;
   if (naParada(m)) return; // partida: ninguém dá bote na cobrança
@@ -534,6 +542,9 @@ export function passo(m, entradas) {
     const d = jogadorPorId(m, m.posse);
     if (d) (m.possePorTime ??= {})[d.time] = m.tick;
   }
+  // o carrinho acabou (carrinho.js: de pé no tick `fim`, os dois pés plantados) → o plano some no começo do passo, antes das
+  // entradas: o botão apertado nesse passo já vale (no passo 2 o atualizarBotoesAcao ainda o via no carrinho e o perdia)
+  for (const j of js) if (j.carrinho && m.tick >= j.carrinho.fim) j.carrinho = null;
   // botões de cada time humano (bordas de TROCAR e botões segurados na troca)
   for (const t of m.humanos) {
     m.botoesTimeAnt[t] = m.botoesTimeAgora[t] ?? 0;
@@ -592,6 +603,13 @@ export function passo(m, entradas) {
   // 2) movimento de cada corpo
   for (const j of js) {
     let mv;
+    // CARRINHO (item 34; carrinho.js, defesa.js carrinho): com o plano (desde o tick do aperto: "fora do lance" é a
+    // EXISTÊNCIA dele) o corpo anda pelo quadro, sem a locomoção, o semAtropelar nem a parede da bola parada; a borda do bit
+    // no controlado monta o plano (só com as guardas)
+    if (j.carrinho || ((j.botoes & BOTAO.CARRINHO) && !(j.botoesAnt & BOTAO.CARRINHO) && ehControlado(m, j) && carrinho(m, j))) {
+      passoCarrinho(m, j);
+      continue;
+    }
     // cabeceio (cabeceio.js): o pulo acabou → some; no passo da saída do chão (m.tick = td) guarda a velocidade e os pés
     // (longe do ponto: não pula); no ar (até o pouso) o corpo segue com a velocidade da saída, sem a locomoção
     if (j.cab || j.disputaAlta) {
@@ -685,6 +703,8 @@ export function passo(m, entradas) {
   // a passada depois da trombada: o pé que sai do chão mira o pouso pela velocidade que o corpo
   // tem DEPOIS do contato (antes mirava pela de antes e o pé caía longe do corpo)
   for (const j of js) {
+    // carrinho: o corpo e a velocidade voltam ao quadro (não é empurrado) e os pés são os do quadro (carrinho.js)
+    if (j.carrinho) { fixarCarrinho(m, j); pesCarrinho(m, j); continue; }
     // goleiro na defesa desenhada: o corpo e os pés são os do quadro do mergulho (trombada não o tira dele)
     if (j.posicao === 'GOL' && mergulhoAtivo(j, m.tick + 1)) { fixarMergulho(m, j); pesMergulho(m, j); continue; }
     // pulo do cabeceio: os pés no ar (sobem e descem com o quadril) e plantados no pouso (cabeceio.js pesNoAr)
@@ -748,11 +768,15 @@ export function passo(m, entradas) {
   } else {
     const bx0 = m.bola.p.x, by0 = m.bola.p.y, bz0 = m.bola.p.z;
     passoBola(m.bola, m.eventos);
-    if (m.partida) bloqueioPerna(m, bx0, bz0);
+    // o carrinho (item 34): a perna DESENHADA de quem desliza na bola (defesa.js contatosCarrinho; sem carrinho nada roda) —
+    // tocou, o bloqueio sorteado não roda neste passo (um contato só)
+    if (m.partida && !contatosCarrinho(m, bx0, by0, bz0)) bloqueioPerna(m, bx0, bz0);
     colisaoBolaCorpo(m);
     if (m.partida) colisaoCorpoGoleiro(m, bx0, by0, bz0);
     if (m.partida && m.partida.barreira) colisaoBarreira(m); // tiro livre: a bola na barreira que pula (Etapa 4)
   }
+  // o carrinho que chegou à parada sem tocar a bola: o evento do erro (defesa.js fimDoDeslize; sem carrinho nada roda)
+  if (m.partida) fimDoDeslize(m);
   verificarGol(m);
   // 6) posse
   if (m.posse != null && m.naMao == null && !(m.parada && lateralSegurando(m))) {
@@ -777,9 +801,14 @@ export function passo(m, entradas) {
   for (const j of js) if (j.cond) atualizarGesto(m, j);
   // 8) pé desenhado no balanço (trajetória + gesto, com a velocidade de um pé humano) e altura
   // do quadril da pose (sobe com velocidade limitada: anim.js alturaQuadril)
-  for (const j of js) if (!(j.posicao === 'GOL' && mergulhoAtivo(j, m.tick + 1)) && !voando(j, m.tick + 1)) passoPeDesenhado(j, m, PASSO);
+  // (no carrinho os pés são os do quadro: carrinho.js pesCarrinho)
+  for (const j of js) if (!(j.posicao === 'GOL' && mergulhoAtivo(j, m.tick + 1)) && !voando(j, m.tick + 1) && !j.carrinho) passoPeDesenhado(j, m, PASSO);
   m.tick++;
   for (const j of js) j.quadril = alturaQuadril(j, m);
+  // o carrinho (item 34): a perna DESENHADA de quem desliza no adversário, com o quadro e a pose do tick novo — a falta pela
+  // Regra 12 (defesa.js contatosHomemCarrinho, faltas.js faltaNoCarrinho: os únicos sorteios do carrinho; sem carrinho nada
+  // roda)
+  if (m.partida) contatosHomemCarrinho(m);
 }
 
 /**
@@ -874,6 +903,8 @@ function bolaLivre(m) {
   for (let k = 0; k < nc; k++) {
     const j = _cands[k];
     if (j.id === passou) continue; // quem acabou de bater não domina a própria bola
+    // no carrinho (carrinho.js; desde o tick do aperto) não domina — nem no pé, nem no peito/cabeça — até ficar de pé
+    if (j.carrinho) continue;
     if (soMarcou && !bolaLentaNoPe(m, j) && (j.time === vooCorte.time || !(cortandoPasse(m, j) || (ehControlado(m, j) && !m.iaJoga?.[j.time])))) continue;
     if (naParada(m) && j.id !== m.parada.cobrador) continue; // partida: só o cobrador
     // toque aéreo vencido (a hora passou): não segura a bola livre para quem não vai mais nela
@@ -1206,7 +1237,7 @@ function noArAgora(m, j) {
 function agendarDisputa(m, j, cab) {
   let mel = null, mt = Infinity;
   for (const o of m.jogadores) {
-    if (o.time === j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+    if (o.time === j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador' || o.carrinho) continue;
     if (o.disputaAlta && o.disputaAlta.contra === j.id && o.disputaAlta.tc === cab.tc) return; // já agendado
     if (o.cab && o.cab.tf >= m.tick) continue; // já num pulo
     if (o.cond && o.cond.toque && o.cond.toque.tipo === 'aereo') continue; // ele mesmo vai na bola (o toque dele)
@@ -1308,7 +1339,7 @@ function ganhouPosse(m, j) {
     const chamado = pc && pc.ult >= 0 && m.tick - pc.ultTick <= 2 ? pc.ult : -1;
     let mel = null, dm = Infinity;
     for (const o of m.jogadores) {
-      if (o.time !== t || o.posicao === 'GOL' || o.id === chamado) continue;
+      if (o.time !== t || o.posicao === 'GOL' || o.id === chamado || o.carrinho) continue;
       const d = MD.hypot(o.x - m.bola.p.x, o.z - m.bola.p.z);
       if (d < dm) { dm = d; mel = o; }
     }
@@ -1382,7 +1413,7 @@ function goleiroComBola(m, g) {
       const a = m.voo?.alvo ?? b.p;
       let mel = null, dm = Infinity;
       for (const o of m.jogadores) {
-        if (o.time !== g.time || o.posicao === 'GOL') continue;
+        if (o.time !== g.time || o.posicao === 'GOL' || o.carrinho) continue;
         const d = MD.hypot(o.x - a.x, o.z - a.z);
         if (d < dm) { dm = d; mel = o; }
       }
@@ -1466,7 +1497,7 @@ function andamentoReposicao(m, g, ar) {
     const a = m.voo?.alvo ?? b.p;
     let mel = null, dm = Infinity;
     for (const o of m.jogadores) {
-      if (o.time !== g.time || o.posicao === 'GOL') continue;
+      if (o.time !== g.time || o.posicao === 'GOL' || o.carrinho) continue;
       const d = MD.hypot(o.x - a.x, o.z - a.z);
       if (d < dm) { dm = d; mel = o; }
     }
@@ -1658,6 +1689,7 @@ export function candidatoTroca(m, t) {
     // quem está parado (na barreira, cobrador) ou é o marcador do treino não recebe o controle: a simulação não lê a
     // entrada dele — o TROCAR na barreira dava um zagueiro que não andava com o analógico
     if (o.papel === 'parado' || o.papel === 'marcador') continue;
+    if (o.carrinho) continue; // no carrinho (deitado; carrinho.js): não recebe o controle
     const d = MD.hypot(o.x - px, o.z - pz);
     // chega antes = distância / velocidade de arrancada, com bônus para quem já corre para lá
     const v = Math.max(1, (o.vx * (px - o.x) + o.vz * (pz - o.z)) / Math.max(d, 1e-6));

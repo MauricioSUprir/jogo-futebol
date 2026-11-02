@@ -90,6 +90,8 @@ function cavadinhaPorDoisToques(m, j) {
  * Vale para o humano e para a IA (que aperta botões virtuais).
  */
 export function atualizarBotoesAcao(m, j) {
+  // no carrinho (carrinho.js): nenhuma ação até ficar de pé (PASSE, CHUTE, LANÇAMENTO, ENFIADA não carregam nem ficam pedidos)
+  if (j.carrinho) { j.carga = null; j.pedido = null; return; }
   const agora = j.botoes, antes = j.botoesAnt;
   for (const [b, tipo] of BOTOES_ACAO) {
     const apertou = (agora & b) && !(antes & b);
@@ -288,7 +290,7 @@ export function escolherAlvo(m, j, tipo, aceita = null) {
   for (let tent = 0; tent < 2 && !melhor; tent++) {
     const cone = cfg.cone * (tent === 0 ? 1 : 1.8);
     for (const o of m.jogadores) {
-      if (o.time !== j.time || o.id === j.id) continue;
+      if (o.time !== j.time || o.id === j.id || o.carrinho) continue; // (no carrinho, deitado: não recebe passe)
       if (o.posicao === 'GOL' && tipo !== 'passe') continue;
       // partida: a IA só recua para o goleiro rasteiro e seguro (ele não pode usar a mão: Regra 12.2) — livre e com a
       // bola que erra o goleiro passando longe do gol

@@ -413,7 +413,10 @@ export function criarEsqueleto(repouso) {
       WM[i] = 1 - juntas;
       PM[i * 3] = po[m3]; PM[i * 3 + 1] = po[m3 + 1]; PM[i * 3 + 2] = po[m3 + 2];
     }
-    // ajoelhado, deitado, carrinho: nada (o joelho no chão não pode subir; o tronco deitado não "endireita")
+    // ajoelhado, deitado, carrinho: nada (o joelho no chão não pode subir; o tronco deitado não "endireita"). No carrinho
+    // (carrinho.js; a pose copia as pernas do quadro) a perna dobrada passa de 85° ou o joelho fica a ≤ 0,22 m do chão de
+    // ~0,15 s depois do aperto até os últimos ~0,1 s do levantar, e os dois portões abaixo zeram; nas pontas, quase de pé, a
+    // postura age como na pose de sempre (teste-carrinho P3)
     const flexMax = Math.max(angJunta(po, JE.quadrilE, JE.joelhoE, JE.tornozeloE), angJunta(po, JE.quadrilD, JE.joelhoD, JE.tornozeloD));
     const joelhoChao = Math.min(po[JE.joelhoE * 3 + 1], po[JE.joelhoD * 3 + 1]);
     // 1) joelho: sobe o quadril com os pés no lugar
@@ -444,7 +447,8 @@ export function criarEsqueleto(repouso) {
       let kx = tz, kz = -tx; const lk = sq(kx * kx + kz * kz); // cima × inclinação = (tz, 0, −tx)
       if (lk > 1e-6) {
         kx /= lk; kz /= lk;
-        // deitado (mergulho, queda, carrinho) ou ajoelhado: nada
+        // deitado (mergulho, queda, carrinho — os mesmos portões do passo 1) ou ajoelhado: nada. A cabeça do carrinho já vem
+        // a ≤ 16° da linha do tronco (anim.js poseCarrinho): o passo 3, abaixo, não age nele
         const wt = w * (1 - suave(POSTURA.inclMax[0], POSTURA.inclMax[1], incl)) * (1 - suave(65, 85, flexMax)) * suave(0.22, 0.32, joelhoChao);
         const th = -(incl - POSTURA.inclMin) * POSTURA.inclK * wt * Math.PI / 180;
         if (th !== 0) {

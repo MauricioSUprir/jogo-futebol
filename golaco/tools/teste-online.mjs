@@ -3,7 +3,10 @@
 // (tools/lib/rede-memoria.mjs: latência, variação, perda, rajada, duplicação, controle confiável). Confere:
 //  O1 formato: 100 mil entradas sorteadas + extremos — decodificar(codificar(e)) = a quantização do jogo (1/1024, ±1),
 //     também a mira pela tela (C6: mx, mz; sem ela, a do analógico); pacotes inválidos (tipo, tamanho, k > 16, bits
-//     reservados, mira fora de −1…1) descartados;
+//     reservados, mira fora de −1…1) descartados; O1c o CARRINHO (item 34, bit 8 nos bytes 3–4) por um pacote de verdade:
+//     lido, recebido pelo outro aparelho e decodificado igual; O1d a PARADINHA e o PULINHO (bits 15 e 16 do BOTAO, que vão
+//     no byte 5) também — antes o entradaValida os tomava por bits reservados e o pacote era descartado: com Espaço ou F
+//     apertados (o TECLA_BIT liga os dois sempre) o outro aparelho nunca recebia o passo e o lockstep parava;
 //  O2 o MESMO jogo nos dois: em 5 redes (15±10 ms; 40±20 com 2% de perda; 80±40 com 5%; 40±20 com B a 30 qps e o relógio
 //     de B 0,5% mais rápido; 40±20 com 10% duplicados, degrau de latência 20 → 120 → 20 ms e rajada de 300 ms sem nada),
 //     com "replays" locais (um aparelho para sozinho 2–6 s), menu aberto (bit IA) e edições do time dos dois lados: o hash
@@ -75,6 +78,33 @@ function gerador(sem) {
   linha('O1 pacotes inválidos (tipo, tamanho, bit reservado, k > 16, mira fora) descartados', `${6 - invalidos} de 6`, '6 de 6', invalidos === 0 && O.lerPacote(bom) !== null);
 }
 
+/**
+ * Entradas com os botões `lista` (uma por passo) por um pacote de verdade de A para B: lido (lerPacote), recebido
+ * (receber: o remSeq de B chega ao fim) e decodificado com os mesmos botões. Devolve {lido, recebido, remSeq, prod, iguais}.
+ */
+function viajaPeloPacote(lista) {
+  const A = O.criarSessao({ lado: 0, D: 4 }), B = O.criarSessao({ lado: 1, D: 4 });
+  const ns = lista.map(bt => O.produzir(A, { x: 0.5, z: -0.25, botoes: bt }));
+  const ab = O.pacote(A, 1000);
+  const lido = O.lerPacote(ab) !== null, recebido = O.receber(B, ab, 1000);
+  const iguais = ns.filter((n, i) => O.decodificar(B.rem.buf, n * O.BYTES).botoes === lista[i]).length;
+  return { lido, recebido, remSeq: B.remSeq, prod: A.prod, iguais, n: lista.length };
+}
+// ------------------------------------------------------------------ O1c o CARRINHO pela rede (item 34)
+{
+  const r = viajaPeloPacote([BOTAO.CARRINHO, BOTAO.CARRINHO | BOTAO.CORRER, BOTAO.CARRINHO | BOTAO.DIVIDIDA, 0]);
+  linha('O1c CARRINHO (bit 8) por um pacote de verdade: lido, recebido e decodificado igual',
+    `lido ${r.lido}, recebido ${r.recebido}, remSeq ${r.remSeq}/${r.prod}, botões iguais ${r.iguais}/${r.n}`, 'sim, sim, tudo, tudo',
+    r.lido && r.recebido && r.remSeq === r.prod && r.iguais === r.n);
+}
+// ------------------------------------------------------------------ O1d PARADINHA e PULINHO pela rede (o byte 5)
+{
+  const r = viajaPeloPacote([BOTAO.PULINHO, BOTAO.PARADINHA, BOTAO.PARADINHA | BOTAO.PULINHO | BOTAO.CHUTE, BOTAO.PULINHO | BOTAO.CARRINHO, 0]);
+  linha('O1d PARADINHA e PULINHO (bits do byte 5) por um pacote de verdade: lido, recebido e decodificado igual',
+    `lido ${r.lido}, recebido ${r.recebido}, remSeq ${r.remSeq}/${r.prod}, botões iguais ${r.iguais}/${r.n}`, 'sim, sim, tudo, tudo',
+    r.lido && r.recebido && r.remSeq === r.prod && r.iguais === r.n);
+}
+
 // ------------------------------------------------------------------ dois aparelhos
 function edicao(m, t, k) {
   // a tática (a escalação como está): sempre válida — a de base velha (o time mudou entre pedir e entrar) é recusada nos dois
@@ -86,7 +116,8 @@ function edicao(m, t, k) {
 function criarPessoa(sem, lado) {
   const r = gerador(sem * 13 + lado + 1);
   let e = { x: 0, z: 0, botoes: 0 }, dura = 0, menu = 0;
-  const LISTA = [0, 0, 0, BOTAO.CORRER, BOTAO.PASSE, BOTAO.CHUTE, BOTAO.LANCAMENTO, BOTAO.ENFIADA, BOTAO.TROCAR, BOTAO.CONTER, BOTAO.DIVIDIDA, BOTAO.PRESSAO, BOTAO.CORRER | BOTAO.PASSE];
+  // (o CARRINHO, item 34: o deslize roda igual nos dois aparelhos)
+  const LISTA = [0, 0, 0, BOTAO.CORRER, BOTAO.PASSE, BOTAO.CHUTE, BOTAO.LANCAMENTO, BOTAO.ENFIADA, BOTAO.TROCAR, BOTAO.CONTER, BOTAO.DIVIDIDA, BOTAO.PRESSAO, BOTAO.CORRER | BOTAO.PASSE, BOTAO.CARRINHO];
   return () => {
     if (menu > 0) { menu--; return { x: 0, z: 0, botoes: 0, ia: true }; }
     if (r() < 0.0008) { menu = 120 + Math.floor(r() * 300); }

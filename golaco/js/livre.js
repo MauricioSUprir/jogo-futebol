@@ -364,6 +364,9 @@ export function recomecarLivre(m, onde = 'meio') {
   if (onde === 'meio') { montarSaida(m, h); return true; }
   const j = jogadorPorId(m, m.controlado[h]);
   if (!j) return false;
+  // no carrinho (carrinho.js): de pé no lugar, com o plano e a altura do quadril zerados (um recomeço pedido, como um corte;
+  // sem isto ele seria um condutor deitado)
+  if (j.carrinho) teleportar(j, j.x, j.z, j.rumo);
   // a parada em andamento acaba (o cobrador, parado nela, volta a se mexer — como partida.js encerrarParada)
   const pr = m.parada;
   if (pr && pr.cobrador != null && pr.papel != null) { const c = jogadorPorId(m, pr.cobrador); if (c && c.papel === 'parado') c.papel = pr.papel; }

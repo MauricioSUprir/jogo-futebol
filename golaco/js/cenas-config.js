@@ -59,6 +59,10 @@ export const CENA_CARTAO = {
   assentar: 2.0,
   companheiro: 15,            // m — A1, A2, V1 e V2 precisam de um companheiro até aqui
   apoioPerto: 6,              // m — o companheiro mais longe que isto já vem correndo (pré-rolagem invisível)
+  // m — quem está no carrinho na cena (o punido que deu o carrinho, o caso comum) tem o corpo desenhado (as cápsulas do
+  // manequim e a cabeça) a ≥ folgaBola da bola parada: a cópia vai de lado, no máximo desvioBolaMax m, antes do 1º quadro
+  // (cena-cartao.js desvioDaBola; o corpo novo é um pouco mais largo que as cápsulas)
+  folgaBola: 0.04, desvioBolaMax: 1.6,
   ifab: 4,                    // m — só o capitão e o punido mais perto do árbitro ("só o capitão": UEFA EURO 2024, PL 2025-26)
   esperaIfab: 0.8,            // s — no máximo, a pré-rolagem invisível de quem sai de perto do ponto do árbitro (A1, V2)
   afasta: 5.4,                // m — os outros vão para esta distância do árbitro (A1, V2: o árbitro isola o jogador com o braço

@@ -299,7 +299,8 @@ function estadoAtaque(m, t) {
   const B = blocoDoTime(m, t);
   A.ids.length = 0;
   for (const o of m.jogadores) {
-    if (o.time !== t || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador' || !o.vagaId) continue;
+    // (no carrinho — carrinho.js —, deitado: não é vaga de apoio nem recebe passe)
+    if (o.time !== t || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador' || !o.vagaId || o.carrinho) continue;
     A.ids.push(o);
     let r = A.ref.get(o.id);
     if (!r) { r = { u: 0, w: 0 }; A.ref.set(o.id, r); }
@@ -887,7 +888,7 @@ function decidir(m, j, A, ia, cobranca) {
   // 1) passe, enfiada e lançamento para cada companheiro de linha
   const faixaCruz = u0 > ACOES.cruzamento.terco && Math.abs(w0) > ACOES.cruzamento.faixa;
   for (const o of m.jogadores) {
-    if (o.time !== j.time || o === j || o.posicao === 'GOL' || o.papel === 'parado' || indo(m, o)) continue;
+    if (o.time !== j.time || o === j || o.posicao === 'GOL' || o.papel === 'parado' || o.carrinho || indo(m, o)) continue;
     const ou = o.x * lado, ow = o.z * lado;
     const L = MD.hypot(o.x - j.x, o.z - j.z);
     // impedido agora (Regra 11, impedimento.js: tocar a bola vira tiro livre); no Modo Livre não há impedimento

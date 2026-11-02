@@ -1469,6 +1469,120 @@ cruzamento) tem o contrato próprio: "Goleiro realista (16/10)", no fim deste ar
   Teste: `teste-faltas-sentido` (padrão; registro de toda falta com o contexto em `tools/lib/faltas-registro.mjs`; o
   árbitro do teste mede a força do contato com os corpos encostando ou a ≤ 1,2 m, antes ou depois da locomoção do passo).
 
+### Carrinho (item 34)
+Item 34 da FILA (dono, 17/10: "botão de CARRINHO — dividida deslizando; falta/cartão pela Regra 12"; 23/10: "preciso do botão
+de carrinho"). Só da PESSOA: a IA não usa nesta entrega (item 75 da FILA). Pesquisa em `PESQUISA-ETAPA4.md` §18; constantes
+em `config.js DEFESA_HUMANO.carrinho` (o corpo e o contato) e `FALTAS.carrinho` (a Regra 12). As escolhas de produto com a
+recomendada aplicada: "CARRIN." no toque; ninguém cai (item 76); sem "levantar rápido"; vale em toda bola baixa (condutor,
+passe, bola livre, chute) e parado (o impulso de 3 m/s); L/X na defesa = carrinho, com a bola alta = lançamento; o vermelho
+direto de qualquer lado; dois carrinhos que se tocam: falta só de quem não tocou a bola quando o outro tocou.
+- **O plano e o quadro** (`js/carrinho.js`, puro, folha: só `config.js`, `matdet.js`, `mat.js`; nada sorteia). No aperto,
+  `montarCarrinho(j, tick, {bola, prever})` grava o PLANO inteiro em `j.carrinho` (declarado `undefined` na forma única do
+  jogador), como o `j.mergulho`: `tick0`; centro, velocidade, rumo e quadril no aperto; a direção travada `ux, uz`;
+  `ve, tq, v1, aD, tD, tS`; o pé da bola `frente`; os tornozelos desenhados `p0`; o ponto do pé dobrado no levantar
+  `levX, levZ`; `esc` (o desarme 40 → 90: 0,85–1,05); `mirou`; `tChao`, `fim`. A simulação escreve só `bola` (o tick do 1º
+  toque), `tChao`/`fim` (`marcarAcerto`), `homem` e `desarmou`; o `fimDoTempo`, `congela`; a pose, nada.
+  `quadroCarrinho(c, t, q)` (t em s, aceita fração) dá o centro e a velocidade por fórmulas fechadas por trecho (contínuos no
+  aperto: nada de teletransporte), a pelve, o yaw, as juntas das DUAS pernas no mundo (`qd`, `jo`, `to`, `po`), os apoios e o
+  ponto da mão. Fases: a pelve cai pela gravidade (`tAr` 0,25 s, em qualquer entrada) → impacto do joelho ao quadril
+  (`tImpacto` 0,15 s, −`perdaImpacto`) → deslize (`desac/esc`) → chão → levantar (0,5 s; o pé dobrado plantado). Da parada
+  até de pé: `chaoErrou` 1,2 s, ou `chaoAcertou` 0,5 s quando a perna ganhou a bola antes da parada. A 4,75 m/s: 1,02 s até
+  parar, 2,22 s fora do lance no erro. `carrinhoAtivo(j, tick)` (a regra do `mergulhoAtivo`, com o `congela`) vale só para a
+  pose e a altura do quadril; na SIMULAÇÃO, fora do lance = o plano existe (já no tick do aperto). O plano sai no começo do
+  1º passo com `m.tick ≥ fim`.
+- **O disparo** (`defesa.js carrinho(m, j)`, sim.js passo 2): na BORDA do bit 256 (`BOTAO.CARRINHO`), só no controlado, só
+  com `m.times` (partida ou Modo Livre), estado 'jogo', sem `m.disputa` e com a bola viva (sem parada nem `m.golTick`); fora
+  do goleiro, do ar, de outro carrinho, da DIVIDIDA em andamento ou sem reação; a bola fora das mãos, do pé e de um voo do
+  meu time e não alta (`bolaAlta`: no ar acima de `altoBola` 0,6 m ou subindo). A direção: o analógico (sem ele, a bola a ≤
+  `assistLonge` 8 m; senão o rumo) com a ajuda de mira pelo ENCONTRO (a ponta da perna no quadro × a bola prevista em
+  `encontro` 0,2–1,0 s, duas voltas, até `assist` 0,35 rad) e o desvio da corrida limitado (`desvio`: 90° a 2 m/s → 45° a 6,
+  e ≤ asin(4,8/v)); depois do aperto nada vira. No aperto caem a ação carregada ou pedida, a DIVIDIDA, o CONTER, a recepção,
+  o toque marcado, o pulo do cabeceio ainda no chão e a disputa pelo alto; evento `carrinho {id, fase: 'inicio'}`.
+- **Os ganchos** (todos condicionais ao plano): sim.js passo 2 `passoCarrinho` (o corpo pelo quadro do próximo tick; pula a
+  locomoção, o `semAtropelar` e a `paredeParada`), 2b `fixarCarrinho` + `pesCarrinho` (não é empurrado; os pés do quadro), 8
+  sem `passoPeDesenhado`; `boteIA`, `dividida` e `atualizarBotoesAcao` saem no topo; não domina (`bolaLivre`); a
+  `colisaoCorpos` não chama a `faltaNaCarga`; o `bloqueioPerna` o pula; `anim.js alturaQuadril`/`pose` leem o quadro
+  (`poseCarrinho`). Fora das listas de quem AGE ou RECEBE (alvo de passe, controle e troca, 1º/2º homem, contrapressão, bola
+  livre, corte de passe, marcação, PRESSÃO, disputa pelo alto) e de quem "chega antes" à bola livre (a recepção assistida,
+  `recepcao.js`; o goleiro que vai com o pé, `regras-goleiro.js`); nas contas de forma e nos obstáculos ele continua
+  contando. O controle pode sair dele no meio (o plano é do corpo); com a trava do TM fica com ele e as entradas são
+  ignoradas até o fim.
+- **A perna na bola** (`defesa.js contatosCarrinho`, passo 5 logo depois do `passoBola`; sem sorteio): as 6 cápsulas das
+  pernas do quadro (coxa 0,085, canela 0,058, chuteira 0,045 m: os raios do `SEGMENTOS`; a pose as copia sem IK, então a
+  perna que toca é a desenhada) contra o caminho da bola em 4 trechos por passo, pela distância exata segmento × segmento.
+  Vale com a bola viva (`vivaCarrinho`), de 0 a `tS`, com o centro dela a ≤ 0,6 m, sem dono ou do ADVERSÁRIO; um toque por
+  carrinho; entre vários, o mais cedo (trecho, fração do trecho, profundidade, o time `m.tick % 2`). A física: a normal da
+  cápsula, a perna a ≤ `vPernaRel` 2 m/s do corpo, `eBola` 0,3. Pelo que a bola era: o condutor com a bola a ≥ `rouboVRel`
+  1 m/s dele → GANHOU (`dividida {ganhou: true, carrinho}` + `roubada {carrinho}`; o desarmado sem domínio 0,5 s;
+  `marcarAcerto`; `c.desarmou`); abaixo → raspão (a posse fica; `carrinho {fase: 'bola', de: 'raspao'}`, fora de TOQUES);
+  chute do adversário → `bateuCorpo {bloqueio: true, carrinho}` (desvio: o gol continua de quem chutou); passe ou bola livre
+  → `roubada {carrinho, de: 'passe' | 'livre'}` (o gol contra, o impedido que desliza marcado, o passe cortado).
+  `impedimento.js`, `render/autor-gol.js`, `lances.js` e `tecnicos.js` leem esses tipos sem mudar. No passo do toque o disco
+  do corpo dele não rebate a bola e o `bloqueioPerna` não roda. Sem toque, `dividida {ganhou: false, motivo: 'fora',
+  carrinho}` sai quando a janela do homem FECHA (`fimDoDeslize`: tS + 0,7 s no erro), e não sai se houve falta: um desfecho
+  por carrinho.
+- **A perna no homem e a Regra 12** (`defesa.js contatosHomemCarrinho`, no fim do passo, com o quadro e a pose do tick novo
+  num buffer pré-alocado; só com a bola viva, do aperto até o começo do levantar — a perna parada depois da parada é o
+  tropeço —, um contato por carrinho em `c.homem`, os carrinhos em duas voltas com o time `m.tick % 2` primeiro): as pernas
+  do quadro contra as pernas DESENHADAS dos adversários a ≤ `alcanceHomem` 2,5 m da ponta (deitado, com a pelve abaixo de
+  `pelveDeitado` 0,6 m: o corpo inteiro e a cabeça). `f` = a aproximação dos CORPOS na normal do contato (o tropeço conta);
+  `fExc` = só a do corpo de quem desliza. `faltas.js chanceFaltaCarrinho` (sem sortear): no Livre 0; o goleiro com a bola nas
+  mãos 1; antes da bola min(0,95, `antes` 0,9 × `fatorForca(f)`); depois (o "follow-through") min(0,95, `depois` [chegada]
+  0,10/0,20/0,45 × (1 + `porVel` 0,15 · (v − 4,5)⁺) × `rampaForca(f)`); sem redução na própria área. `faltaNoCarrinho` faz os
+  ÚNICOS sorteios do carrinho: a chance (só com 0 < p < 1), o vermelho direto (antes da bola com `fExc` ≥ `excessivoF` 6 m/s:
+  `excessivoP` 0,25, de qualquer lado — IFAB 12.4) e o amarelo pela chegada (0,30/0,35/0,55); depois `montarFalta(...,
+  'carrinho', tentouBola, exc, temerario)` (o 7º parâmetro é novo, padrão false: os outros chamadores não mudam).
+  `tentouBola` pela INTENÇÃO: a perna tocou a bola, ou `mirou` no aperto e a bola está a ≤ `tentouLonge` 2 m da perna no
+  contato. SPA na própria área tentando a bola: pênalti SEM cartão, só na origem 'carrinho' (a correção do bote da IA e da
+  DIVIDIDA muda a IA × IA: item 74). Dois carrinhos opostos que se tocam: falta só de quem não tocou a bola quando o outro
+  tocou, sem sorteio de chance (abaixo de `forca.min`, incidental). No adversário: com falta, a velocidade × 0,5 e, com a
+  bola, sem domínio por `FALTAS.queda`; sem falta, × 0,7; ninguém cai. A falta 'depois' no jogador que a perna desarmou
+  desfaz o desarme: evento `desarmeAnulado {id, de, carrinho}`, e a súmula tira o desarme, a roubada e as perdas do toque.
+  Daí em diante, o caminho de sempre (`registrarFalta`, `decidirFalta`: vantagem, tiro livre direto, pênalti; o cartão na
+  bola morta).
+- **Bola parada, intervalo e recomeços** (`partida.js`, `livre.js`): `teleportar` zera o plano e a altura do quadril (só com
+  o plano: zerar a de todos mudaria a demo); `fimDoTempo` grava `congela` (a pose para no apito; a saída do 2º tempo zera);
+  na montagem, quem ainda está no carrinho, fora o cobrador, vai de pé para fora da restrição (o time que não cobra) ou a
+  `bolaParada` 2,5 m da bola (o que cobra), com o corte de câmera (`tirarCarrinhos`); "Bola no meu pé" do Livre põe o
+  controlado de pé no lugar.
+- **As cenas** (as cópias andam o resto no relógio da cena; o plano do mundo nunca muda): `comemoracao.js copiaJogador` clona
+  o plano sem o `congela`; `passoCena` e `cena-atores.js passoAtores` andam pelo quadro com `a.noCarrinho` (zerado a cada
+  passo: sem gestos, não cede, não fica fixo), e os gestos entram `RAMPA_CARRINHO` 0,35 s depois de ficar de pé
+  (`misturarPose`); o `levar` desloca também o plano da cópia. Cena do cartão: a `paradaPrevista` pelo fim do quadro, a
+  reação do punido depois de ficar de pé (`atrasoPun`), a cópia no carrinho levada de lado para longe da bola parada antes do
+  1º quadro (`desvioDaBola`; `CENA_CARTAO.folgaBola` 0,04 m, até `desvioBolaMax` 1,6 m; `plano.desvioBola`) e o assentar
+  voltando também os ticks do plano, do mergulho e do pulo das cópias. `cena-fim.js` não separa dos sólidos quem está no
+  carrinho; `substituicao.js` põe a cópia de pé no lugar.
+- **A pose** (`anim.js poseCarrinho`, pura, só `MD`): a pelve e as pernas copiadas do quadro; o tronco para trás (`tronco`
+  0,9 rad) e caído para o lado da perna dobrada (`rolagem`); a cabeça olhando a bola a ≤ 16° da linha do tronco (o passo da
+  cabeça da postura do corpo novo, 17°, não age); o braço de apoio com o antebraço deitado na direção do ponto `mao`; o outro
+  aberto; no levantar, o tronco e os braços terminam na pose de pé parado. Corpo novo: os portões da postura
+  (`render/esqueleto.js`) zeram o joelho e o tronco; nada novo no render.
+- **A entrada** (`entrada.js`, `main.js`): L (teclado) e X (controle) com TRÊS sentidos no `SENTIDO_FASE`
+  (`[LANÇAMENTO, CARRINHO, LANÇAMENTO]`): ataque = lançamento; defesa = carrinho; defesa com a bola alta = lançamento (o
+  pedido de primeira e o cabeceio para longe no cruzamento do adversário), fixado no aperto (`criarSentidoFixo().bit(id,
+  apertado, fase, alta)`; `definirFase(..., alta)` com `lancaNaDefesa` = sem `m.times` ou `bolaAlta`: nos treinos L e X
+  continuam lançamento). Toque: `btn-carrinho` na vaga 'e' da defesa (6 botões), "CARRIN.", o bit no `pointerdown` (a
+  resposta no quadro do toque), só com `html.em-partida`; H1 do `teste-hud-minimo` 7,90 / 9,80 / 10,98% (meta ≤ 11%: peça
+  nova de HUD na defesa do celular estreito não cabe; o plano B é o arrasto a partir da DIVIDIDA). O `MASCARA_TRAVA` não tira
+  o bit (o travado do TM dá carrinho); o CARRINHO não entra no `BOTOES_DEFESA`.
+- **Online**: o bit 256 vai nos bytes 3–4 da entrada de 9 bytes (`online.js`) sem mudança; a simulação é a mesma nos dois
+  aparelhos (só `MD`, sorteios pelo `m.rng`, as guardas do disparo valem sem a fase da página, dois carrinhos sem depender da
+  ordem). Junto, a correção de um defeito publicado: `entradaValida` aceita PARADINHA e PULINHO no byte 5 (antes o pacote com
+  Espaço ou F apertados era descartado e o lockstep parava; `teste-online` O1d).
+- **Hash**: a IA nunca liga o bit e o `hash-partida` não o sorteia; sem o aperto `j.carrinho` fica `undefined` e nenhum ramo
+  novo roda nem sorteia. `hash-igual` (treino) e `hash-partida` (demo e humano) IGUAIS aos da main antes do carrinho
+  (`56a64c90`); o painel do CI repete a tabela da base. O plano não entra no `hashMundo` (como o `mergulho`): o efeito entra
+  pelo corpo, pelos pés e pelo rng.
+- **Testes**: `teste-carrinho` (padrão, 2 processos, ~90 s; na base reprova com "não existe nesta lógica"): 0 estrutura; A
+  física (A1 o deslize a 4,75 m/s em 0,95–1,15 s; A3 a pelve ≥ 0,05 m abaixo em 0,1 s; A5 1,2/0,5 s; A6 sem salto da pelve,
+  das mãos e da cabeça); P pose e corpo novo (P2 as pernas = o quadro; P3 as réguas do `teste-ossos`); B a perna na bola
+  contra um árbitro independente; C o canhão de 576 carrinhos em 16 estados do meio da partida (C1 e C6 reprovam pela prova
+  binomial; C2–C5 informativas contra a Wyscout no subconjunto alcançável); D a Regra 12 montada (D1–D14); E as travas; F o
+  determinismo (F2 os sorteios por origem; F4 o online espelhado); G as cenas (G1–G9). E mais: `teste-entrada`,
+  `teste-controles` (L, X e o toque; nos treinos, lançamento), `teste-botoes` B16, `teste-online` O1c/O1d,
+  `teste-dois-humanos` C4, `teste-math-proibido` (o bit na LISTA) e `teste-hud-minimo` H1 (com 2 casas).
+
 ### Bolas paradas (Regras 13, 15 e 16) e disputa pelo alto
 Pedido do dono (seção 8). Tudo só com `m.partida`: o treino fica bit a bit igual (`hash-igual`).
 - `lateral.js` (puro): `lateralSegurando(m)`; `pontoMaosLateral(c, s, out)` (s = 0 atrás da cabeça, 1 a soltura à

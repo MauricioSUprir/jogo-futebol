@@ -929,3 +929,79 @@ isso corre mais (2,16 s na média, ~0,7 s a mais que o normal): a demo na disput
 da IA não lê a paradinha (só sai cedo ou espera, pela paciência); a pessoa defendendo não tem a vantagem do goleiro que lê. O
 salto do pulinho é o corpo inteiro subindo (a perna de impulsão não estende mais que na passada). No toque não há o colocado
 (não há MOD no toque, como no resto do jogo).
+
+## 18. Carrinho (item 34 da FILA; pedido do dono de 17/10, de novo em 23/10: "preciso do botão de carrinho")
+
+**O que estava** (a main `56a64c90`). Só as reservas: `BOTAO.CARRINHO` no `config.js`, a vaga 'e' do toque comentada no
+`entrada.js` e as reservas da postura do corpo novo (`render/esqueleto.js`); nada no `defesa.js`, no `faltas.js` nem no
+`anim.js`. A pesquisa foi feita em 01/11 antes de mexer no código; os números marcados "medido" saíram do conjunto público da
+Wyscout com scripts próprios (fora do repositório). Contrato: `CONTRATOS.md` "Carrinho (item 34)".
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| IFAB, Regra 12 (theifab.com, `laws/latest`: o texto de 2025/26 e 2026/27 no que importa aqui) | 12.1: imprudente (só a falta), temerário (amarelo), força excessiva (vermelho); 12.4: "lunges at an opponent ... from the front, from the side or from behind using one or both legs, with excessive force or endangers the safety" = jogo brusco grave; DOGSO na própria área com tentativa de jogar a bola = amarelo; SPA com pênalti por tentativa de jogar a bola = sem cartão; vantagem nunca no jogo brusco grave sem chance clara | as três gravidades e o cartão (`faltas.js montarFalta`); o vermelho direto de QUALQUER lado (`FALTAS.carrinho.excessivoF/P`); o DOGSO e o SPA na área (pênalti sem cartão só na origem 'carrinho'); `tentouBola` pela INTENÇÃO de jogar a bola |
+| Memorando da US Soccer de 2011 (citado pela Referee Magazine) e Reading Refs | "Getting the ball first does not make a tackle legal"; "Not getting the ball first does make the tackle illegal"; o "follow-through" com a perna de trás continua falta | a falta ANTES da bola (`antes` 0,9 × `fatorForca`) e a falta DEPOIS dela, pela chegada (`depois`) |
+| Ask a Soccer Referee ("Sliding on the Turf") e Premier League (critérios do jogo brusco grave) | direção, velocidade e o que vem depois do toque; por trás é o mais provável; "the faster ... the more likely"; velocidade, força e ponto do contato decidem o vermelho | a ORDEM trás > lado > frente; `porVel` 0,15 acima de `vLivre` 4,5 m/s; o vermelho pela velocidade do CORPO de quem desliza no homem (`fExc`), e não pela da perna desenhada |
+| Wyscout 2017/18, conjunto público (Pappalardo et al. 2019, *Scientific Data* 6:236; CC BY 4.0): 1.941 partidas, 21.411 carrinhos (medido) | 5,5 carrinhos por time por partida; sucesso 50,5% (contra o condutor 45,8%); ganhou 26,7% (20,3%); falta 15,8% (19,8% contra o condutor; 4,8% na própria área); amarelo em 39,9% das faltas de carrinho (41,4% contra o condutor), vermelho direto 1,4%; o próximo lance com a bola em até 4 s é do time do carrinho em 22,8% | as informativas C2–C5 do `teste-carrinho` (no subconjunto alcançável); a falta sem redução na própria área (os 4,8% são o defensor evitando entrar); a meta da IA que usa o carrinho (item 75 da FILA, 2–5,5 por time por partida, com os 2–4 da Premier League 2025/26, Total Football Analysis) |
+| Fuller, Smith, Junge e Dvorak 2004 (*Am J Sports Med* 32(1 Suppl), 28S–35S e 43S–53S; a tabela por código na Tabela 3 de Tscholl 2007) e Tscholl et al. 2007 (*Br J Sports Med* 41 Suppl 1) | falta por "tackle" (o desafio COM contato de corpo) no carrinho: por trás 42,5%, de lado 30,5%, de frente 20,2% (homens, 1998–2000); nas mulheres 35/16/18%; de frente machuca mais | a ORDEM da tabela `depois` (a razão 2,1 : 1,5 : 1 não: ver a calibração) e a informativa C6 por chegada |
+| van den Eijnde 2017 (tese, Radboud University; e van den Eijnde et al. 2017, *J Sports Med Phys Fitness*) | 36 carrinhos a 4,5–5,0 m/s; queda → impacto do joelho ao quadril (Δt 0,15–0,16 s; picos horizontais 0,6–1,8 kN) → deslize; "~1 s" de contato; no "sliding-in" (defensivo) a queda é baixa | as fases do quadro; `tAr` 0,25 s (√(2·0,3/9,81)), `tImpacto` 0,15 s, `perdaImpacto` 1,5 m/s; a ÚNICA régua medida do tempo (A1: o deslize a 4,75 m/s em 0,95–1,15 s) |
+| Verhelst et al. (bancada de deslize, Universidade de Gante) e Tay et al. 2017 (*J Sports Sci* 35(15):1500–1507) | a bancada vai de 2,4 a 6,1 m/s; μ ≈ 0,57 da pele no gramado sintético com preenchimento (grama natural sem medida) | `vMin` 3 m/s (o impulso de um passo, inclusive parado) e `vMax` 7 m/s; `desac` 5 m/s² (μ ≈ 0,5) |
+| Wikipedia, "Sliding tackle", e a técnica descrita na tese | a perna do lado do deslize vai esticada, a outra dobrada embaixo do corpo, a mão do mesmo lado no chão, o tronco para trás | o desenho do quadro e da pose: a perna da bola quase reta (`joelhoFrente`), a dobrada no chão, o tronco 52° para trás (`tronco`) e caído para o lado (`rolagem`), a mão de apoio |
+| EA SPORTS FC 25/26 (os controles pela FIFPlay; Pitch Notes do FC 26) | carrinho = Quadrado/X no esquema Clássico; "Tackle Assistance"; quem é desarmado "will feel the effect of a tackle more severely"; o atraso depois do bote errado "more consistent"; o carrinho por trás menos eficaz | o X do controle (e o L do teclado) na defesa; a ajuda de mira pelo ENCONTRO (`assist`, `encontro`); o desarmado sem domínio por 0,5 s (`dividida.semDominio`); o tempo no chão FIXO, sem sorteio; por trás a geometria pega o corpo antes da bola |
+| FIFA 19 (guia) e GOALS, patch 0.42.0 | o carrinho errado custa "a couple of seconds", com o "levantar rápido" pelo 2º aperto; no GOALS o errado levanta depois do certo e "lower-rated players slide more slowly and with reduced distance" | `chaoErrou` 1,2 s (o plano da FILA) > `chaoAcertou` 0,5 s; `attr` 0,85–1,05 pelo desarme 40 → 90; sem o "levantar rápido" (escolha do dono, "Depende do dono" 13 da FILA) |
+| FC Mobile 23/24 e 24 (FIFPlay; o "gameplay deep dive" da EA), FIFA Mobile e eFootball | no celular o carrinho é o botão "SLIDE" ou um gesto; no FC Mobile 24 o bote forte é deslizar o dedo a partir do "Sprint & Tackle" | o botão na vaga 'e' da defesa; o plano B se o H1 do `teste-hud-minimo` estourar: o arrasto a partir da DIVIDIDA, e não dois toques (atrasariam todo bote) |
+
+**O que é estimativa, desenho ou calibração** (marcado no `config.js`). Estimativa: `aEntrada` 12 m/s² e `chaoAcertou` 0,5 s
+(`chaoErrou` 1,2 s é o plano da FILA). Desenho: `tronco`, `rolagem`, `joelhoFrente`, a dobra da perna de baixo (~150°: com os
+~90° que a pesquisa sugeria, sem fonte, a canela atravessava a pelve e a outra perna), `mao`, `pelveDeitado`, o `desvio` da
+corrida (90° a 2 m/s → 45° a 6, e ≤ asin(4,8/v)) e `altoBola` 0,6 m (a pesquisa pedia ≤ 0,45; 0,6 cobre a coxa no fim da
+queda). Calibração: `assist` 0,35 rad e `encontro` 0,2–1,0 s, `vPernaRel` 2 m/s, `eBola` 0,3, `rouboVRel` 1 m/s,
+`tentouMira`/`tentouLonge`, a tabela `depois` 0,10/0,20/0,45 (a ordem de Fuller; a razão de Fuller, partindo de 0,10, daria
+0,10/0,15/0,21) e o `amarelo` 0,30/0,35/0,55. O `excessivoF` 6 m/s é a régua do `FALTAS.temerario` (o `FALTAS.excessivo` 7,6
+nunca dispararia: a entrada do carrinho para em 7).
+
+**O modelo** (a pesquisa §3.2, derivado das medidas; com o desarme padrão 65, `esc` 0,95): a 4,75 m/s o quadril anda 2,79 m e
+para em 1,02 s (o modelo com `esc` 1: 2,85 m, 1,05 s); parado, 0,84 m; a 7 m/s, 5,56 m. Fora do lance no erro, do aperto até
+de pé: 2,22 s (a estimativa da pesquisa: ~2,2 s).
+
+**A calibração contra o real** (o canhão C do `teste-carrinho`: estados do meio da partida, o jogador do time 0 posto a
+2–5,5 m do condutor, de frente, de lado e por trás, a 3–6,5 m/s, o analógico para a bola; nenhuma constante mudou). As
+referências são de carrinhos que jogadores de verdade ESCOLHERAM dar; o subconjunto comparável é o ALCANÇÁVEL (a bola da
+cópia sem os contatos a ≤ 0,3 m da perna da bola no mesmo instante). Nele o toque fica perto do sucesso real.
+
+| medida | alcançável, 16 estados (n = 104) | alcançável, 48 estados (n = 346) | todos, 16 estados (576) | referência |
+|---|---|---|---|---|
+| toca a bola (C2) | 54,8% | 50,3% | 10,6% | Wyscout: 45,8% de sucesso contra o condutor |
+| a próxima posse (até 4 s) é do time do carrinho (C3) | 19,2% | 14,7% | 10,2% | Wyscout: 22,8% (o próximo lance); ganhou 20,3% |
+| falta (C4) | 35,6% | 36,1% | 17,2% | Wyscout: 19,8% contra o condutor |
+| amarelo por falta (C5) | 48,6% | 44,8% | 52,5% (48 estados: 40,7%) | Wyscout: 41,4% contra o condutor |
+| vermelho direto por falta (C5) | — | 1,6% | 2,0% (48 estados: 3,0%) | Wyscout: 1,4% |
+| falta por chegada, todos os contatos no homem (C6): frente / lado / trás | — | — | 51,3 / 63,6 / 62,9% (48 estados: 53,6 / 66,0 / 55,4%) | Fuller: 20,2 / 30,5 / 42,5% |
+
+- O C3 antigo (o time com a bola na foto aos 2 s: 8,7%) era ERRO DE MEDIDA: 591 dos 678 casos "sem dono" eram passes no ar.
+  Medido como a Wyscout (a próxima posse em até 4 s) fica dentro de ±10 pontos: `rouboVRel` e `eBola` ficam.
+- O amarelo por chegada (48 estados) dá 29,9 / 37,9 / 55,9%, as constantes 0,30 / 0,35 / 0,55; os 52,5% eram a amostra de 16
+  estados com 44% das faltas por trás.
+- O C4 (+16 pontos no alcançável) e o Fuller por chegada (+13 a +35) vêm das faltas ANTES da bola (35 das 37 no alcançável
+  dos 16 estados; 116 das 125 nos 48), a Regra 12 que o C6 cobra: o "quase" (a perna passa ao lado da bola, a 0,11–0,3 m, e
+  leva o pé do condutor; falta em 44,7–53,3%) e o carrinho no condutor de costas protegendo a bola, quase sempre na queda ou
+  no impacto. É a seleção do canhão (o carrinho forçado num instante fixo, que um defensor de verdade não escolhe), e o
+  condutor do jogo não pula a perna. A constante responsável, `antes` 0,9, está saturada pelo `fatorForca` (a força desses
+  contatos passa de 3 m/s): 0,9 / 0,6 / 0,3 dão C4 35,6 / 35,6 / 34,6% e C6 97,8 / 96,7 / 91,3% — só um valor que reprova o
+  C6 e contraria a USSF moveria o C4. Para a FILA (item 80; não são constantes): o condutor pular o carrinho (como no EA FC)
+  e o contato com o homem até 3 ticks antes da bola julgado "bola primeiro" (22 em 1.728).
+
+**Medido no `teste-carrinho`** (as metas que reprovam): o deslize a 4,75 m/s 1,02 s (A1); a pelve ≥ 0,05 m abaixo em 0,1 s em
+todas as entradas com h0 ≥ 0,77 m (A3, pior 0,052 m); da parada até de pé 1,199 s no erro e 0,499 s no acerto (A5); a ajuda
+de mira com a ponta a ≤ 0,06 m da bola no mesmo instante (A9; sem ela, 0,30–0,31 m); as pernas da pose = as do quadro em
+30.505 quadros (P2); a pele do corpo novo a −0,003 m no pior quadro (P1) e os saltos do esqueleto em 0,0064% (P3 O2); a bola
+dentro da perna tocada em 876 de 876 e a de fora nunca (B1, B2); o encontro toca 43 de 43 e o longe 0 de 299 (C1); antes da
+bola com f ≥ 1,5 m/s falta em 90 de 92, de frente tocando a bola primeiro 2 de 32 (C6). O H1 do `teste-hud-minimo` com o
+botão: 7,90 / 9,80 / 10,98% (844×390, 667×375, 568×320; meta ≤ 11%).
+
+**Limites/pendente** (itens 71–80 da FILA). Ninguém cai: as pernas de quem sofre o carrinho cruzam as do deslizante no
+desenho (item 76). A IA não usa o carrinho (item 75). A mão de apoio do manequim deitado fica 0,073 m acima do chão (no corpo
+novo os dedos seguem o antebraço; baixar a junta os enterra: item 77). Entre o apito e a montagem (~1 s) a bola ainda pode
+rolar por dentro das pernas deitadas (item 79). Na transição (os primeiros 0,4 s) o tornozelo desenhado chega a 11,6 m/s e a
+bola parada tocada de frente sai a até 0,70·|vc| (a perna da conta limitada a 2 m/s do corpo). O travado do TM (Rumo ao
+Estrelato) vê e usa o botão.

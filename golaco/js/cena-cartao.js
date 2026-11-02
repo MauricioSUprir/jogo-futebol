@@ -28,10 +28,14 @@
 // Planos (cortes secos; o nome muda = corte): amarelo 'arbitro' → 'reacao' → 'anota' (≈ 5,45 s); vermelho 'arbitro' →
 // 'reacao' → 'saida' → 'tunel' (ELIPSE: o expulso reaparece a 10–14 m do túnel e termina fora do campo, z > 34) →
 // 'torcida' (≈ 8,9 s; 2º amarelo +1,0 s). Nada é alocado por tick.
+// O punido no CHÃO (o carrinho faltoso, carrinho.js — o caso comum da falta do carrinho): ele termina o deslize, o chão e o
+// levantar pelo quadro (cena-atores.js), o árbitro o espera onde o quadro o planta (paradaPrevista: o fim do quadro, não a
+// freada de quem corre) e a reação dele (e a do companheiro, que reage junto) começa depois de ele ficar de pé
+// (c.atrasoPun), sem salto de pé.
 // Os treinadores (tecnicos.js treinadorDoTime, ids 210/211; PLANO-CENAS.md R1) entram como CÓPIAS paradas na área técnica
 // (opc.treinadores): os vivos da página não andam nem são desenhados durante a cena — se andassem, o 1º passo gravado
 // depois dela viraria corte no anel (REPLAY.saltoTecnico) e o replay da falta não atravessaria o corte.
-import { PASSO, CAMPO } from './config.js';
+import { PASSO, CAMPO, BOLA } from './config.js';
 import { CENA_CARTAO, CENAS } from './cenas-config.js';
 import {
   criarBase, adicionarJogador, adicionarArbitro, adicionarNovo, poseInicial, passoSozinho, recriarAtor, soltar, para, irPara, parar, levar,
@@ -43,6 +47,8 @@ import {
 } from './cena-atores.js';
 import { cameraDoPlano } from './prejogo-roteiro.js';
 import { maoEm } from './comemoracao.js';
+import { carrinhoAtivo, quadroCarrinho, novoQuadroCarrinho } from './carrinho.js';
+import { pose, SEGMENTOS, RAIO_CABECA, NJ } from './anim.js';
 import { posicaoTatica } from './tatica.js';
 
 const K = CENA_CARTAO;
@@ -53,6 +59,7 @@ export const AMARELOS = ['abertos', 'cabeca', 'aceita'];
 export const VERMELHOS = ['cabisbaixo', 'segurado', 'rosto'];
 const COM_APOIO = { abertos: true, cabeca: true, cabisbaixo: true, segurado: true };
 const IFAB = { abertos: true, segurado: true };
+const A3_DESCULPA = 0.5;   // s depois do cartão no alto: a desculpa do A3 (a única reação que começa antes do plano 'reacao')
 
 // ------------------------------------------------------------------------------------------------ plano
 /**
@@ -85,11 +92,20 @@ function acharPunido(m, id) {
   return null;
 }
 
+const _qp = novoQuadroCarrinho();
 /**
  * Onde o punido para (a freada dele: v²/2a) dentro do campo; com bp (a bola parada no chão), sem passar dela
- * (separarDaBola segura o centro dele a CENAS.bola dela).
+ * (separarDaBola segura o centro dele a CENAS.bola dela). No carrinho (o plano de `dono` ativo no `tick`; carrinho.js): o
+ * centro do quadro no fim — de pé, onde o quadro o planta; a bola parada não o segura —, deslocado como `j` está de `dono`
+ * (o expulso: o ponto desenhado no tick anterior).
  */
-function paradaPrevista(j, out, bp = null) {
+function paradaPrevista(j, out, bp = null, tick = null, dono = j) {
+  if (tick != null && dono.carrinho && carrinhoAtivo(dono, tick)) {
+    quadroCarrinho(dono.carrinho, Infinity, _qp);
+    out.x = clamp(_qp.x + j.x - dono.x, -MX + 1.5, MX - 1.5);
+    out.z = clamp(_qp.z + j.z - dono.z, -MZ + 1.5, MZ - 1.5);
+    return out;
+  }
   const v = Math.hypot(j.vx, j.vz);
   let d = v > 0.05 ? (v * v) / (2 * 5.5) : 0;
   if (d > 0 && bp && bp.y < 0.6) {
@@ -102,7 +118,74 @@ function paradaPrevista(j, out, bp = null) {
   return out;
 }
 
-const _pp = { x: 0, z: 0 };
+// ---- quem está no carrinho não passa por cima da bola parada (revisão do item 34). A página desenha a bola do mundo no
+// lugar do apito durante a cena, e o separarDaBola (cena-atores.js) não segura quem está no carrinho: o quadro manda. O
+// punido que deu o carrinho (o caso comum) deitava em cima dela — a pelve e a coxa com a bola dentro por até 2 s.
+const _poseB = new Float32Array(NJ * 3), _jB = { carrinho: null, fase: 0 }, _mB = { tick: 0, bola: { p: null } };
+const RB = BOLA.raio;
+/** A maior entrada (m; ≤ 0 = livre) da bola parada bp no corpo DESENHADO do plano cq (a pose do quadro: as cápsulas do
+ * SEGMENTOS e a esfera da cabeça, mais a folga), deslocado de (ox, oz), do tick t0 até o fim do plano. Pura. */
+function entradaNaBola(cq, fase, t0, bp, ox, oz) {
+  _jB.carrinho = cq; _jB.fase = fase; _mB.bola.p = bp;
+  const px = bp.x - ox, py = bp.y, pz = bp.z - oz, f = K.folgaBola + RB;
+  let e = -Infinity;
+  for (let tk = t0; tk <= cq.fim; tk++) {
+    _mB.tick = tk;
+    if (!carrinhoAtivo(_jB, tk)) continue;
+    const o = pose(_jB, _mB, _poseB);
+    for (let i = 0; i < SEGMENTOS.length; i++) {
+      const [a, b, ra, rb] = SEGMENTOS[i];
+      const ax = o[a * 3], ay = o[a * 3 + 1], az = o[a * 3 + 2], dx = o[b * 3] - ax, dy = o[b * 3 + 1] - ay, dz = o[b * 3 + 2] - az;
+      const l2 = dx * dx + dy * dy + dz * dz;
+      const u = l2 > 1e-12 ? clamp(((px - ax) * dx + (py - ay) * dy + (pz - az) * dz) / l2, 0, 1) : 0;
+      const g = ra + (rb - ra) * u + f - Math.hypot(ax + dx * u - px, ay + dy * u - py, az + dz * u - pz);
+      if (g > e) e = g;
+    }
+    const ic = J.cabeca * 3, g = RAIO_CABECA + f - Math.hypot(o[ic] - px, o[ic + 1] - py, o[ic + 2] - pz);
+    if (g > e) e = g;
+  }
+  _jB.carrinho = null; _mB.bola.p = null;
+  return e;
+}
+/**
+ * Quem está no carrinho (o plano de j ativo depois do `tick`) e passaria por cima da bola parada bp (no chão): o menor
+ * deslocamento — de lado (perpendicular ao deslize, para os dois lados) ou ao longo dele — que deixa o corpo desenhado do
+ * `tick` até ele ficar de pé a ≥ CENA_CARTAO.folgaBola da bola. A cena começa num corte: a cópia é levada (levar, com o plano)
+ * antes do 1º quadro. (ox, oz): onde j já foi levado (o expulso: o ponto desenhado). Em out {x, z}; 0 se já está livre, com a
+ * bola no ar ou sem carrinho. Pura (só lê o plano: uma cópia rasa sem o `congela` do apito, como a da cena).
+ */
+export function desvioDaBola(j, tick, bp, out, ox = 0, oz = 0) {
+  out.x = 0; out.z = 0;
+  const cp = j.carrinho;
+  if (!cp || !carrinhoAtivo(j, tick + 1) || bp.y >= 0.6) return out;
+  const cq = cp.congela != null ? { ...cp, congela: null } : cp;
+  if (entradaNaBola(cq, j.fase, tick, bp, ox, oz) <= 0) return out;
+  // as 4 direções: de lado (primeiro o lado de lá da bola: lat > 0 = a bola do lado de n = (−uz, ux), e a 1ª vai para −n),
+  // para trás e para a frente do deslize; vale o menor desvio (a ordem só decide o empate)
+  const lat = (bp.x - cp.x0 - ox) * -cp.uz + (bp.z - cp.z0 - oz) * cp.ux, s = lat >= 0 ? 1 : -1;
+  const dirs = [[cp.uz * s, -cp.ux * s], [-cp.uz * s, cp.ux * s], [-cp.ux, -cp.uz], [cp.ux, cp.uz]];
+  let melhor = Infinity;
+  for (const [nx, nz] of dirs) {
+    let d = 0;
+    for (let it = 0; it < 12 && d < melhor; it++) {
+      const e = entradaNaBola(cq, j.fase, tick, bp, ox + nx * d, oz + nz * d);
+      if (e <= 0) { if (d < melhor) { melhor = d; out.x = nx * d; out.z = nz * d; } break; }
+      d += e + 0.005;
+      if (d > K.desvioBolaMax) break;
+    }
+  }
+  return out;
+}
+
+const _pp = { x: 0, z: 0 }, _dv = { x: 0, z: 0 };
+// os ticks absolutos dos planos das cópias (carrinho.js; goleiro.js j.mergulho; cabeceio.js j.cab)
+const TICKS_CARRINHO = ['tick0', 'fim'], TICKS_MERGULHO = ['tick0', 'tc', 'tp', 'fim', 'ate'], TICKS_CAB = ['tA', 'td', 'tc', 'tp', 'tf'];
+/** Os planos com tick absoluto da cópia j voltam dt ticks (o relógio da cena que o assentar andou volta ao do cartão). */
+function voltarRelogio(j, dt) {
+  for (const [p, ks] of [[j.carrinho, TICKS_CARRINHO], [j.mergulho, TICKS_MERGULHO], [j.cab, TICKS_CAB]]) {
+    if (p) for (const k of ks) if (Number.isFinite(p[k])) p[k] -= dt;
+  }
+}
 /**
  * Plano da cena (só LÊ o mundo). cartao = escolherCartao(...). opc = {ultimaAmarelo, ultimaVermelho, variante (força:
  * testes), timeHumano, posAntes(id) → {x, z} | null (o expulso saiu do mundo no passo do cartão: a posição DESENHADA no
@@ -140,7 +223,11 @@ export function planejarCartao(m, cartao, opc = {}) {
   const forte = cartao.motivo === 'forcaExcessiva' || cartao.motivo === 'dogso';
   // o árbitro: chega do lado da bola (ou do centro), de preferência do lado de lá do punido (a câmera do plano 'arbitro'
   // fica do lado da TV, sobre o ombro dele: ninguém atravessa a linha dos 180°); para a dPara m dele, dentro do campo
-  const P = paradaPrevista(posPunido ? { x: posPunido.x, z: posPunido.z, vx: j.vx, vz: j.vz } : j, _pp), px = P.x, pz = P.z;
+  // (o punido no carrinho em cima da bola parada: a cópia vai de lado antes do 1º quadro — desvioDaBola —, e o árbitro para
+  // onde ele vai ficar de pé)
+  const desvioBola = desvioDaBola(j, m.tick, m.bola.p, { x: 0, z: 0 }, posPunido ? posPunido.x - j.x : 0, posPunido ? posPunido.z - j.z : 0);
+  const P = paradaPrevista(posPunido ? { x: posPunido.x, z: posPunido.z, vx: j.vx, vz: j.vz } : j, _pp, null, m.tick, j);
+  const px = clamp(P.x + desvioBola.x, -MX + 1.5, MX - 1.5), pz = clamp(P.z + desvioBola.z, -MZ + 1.5, MZ - 1.5);
   const b = m.bola.p;
   let rx = b.x - px, rz = b.z - pz;
   if (Math.hypot(rx, rz) < 2) { rx = -px; rz = -pz; }
@@ -192,7 +279,7 @@ export function planejarCartao(m, cartao, opc = {}) {
     tick: m.tick, id: j.id, time: j.time, cor: cartao.cor, segundo, motivo: cartao.motivo, forte, variante,
     apoio: temApoio ? apoio.id : null, apoioDist: apoio ? dm : Infinity, disponiveis, excluidas, outros: cartao.outros ?? [],
     arb: { x0: melhor.ax, z0: melhor.az, x1: melhor.sx, z1: melhor.sz, theta: melhor.th, dPara, dIni },
-    parada: { x: px, z: pz }, saida, planos, duracao: t, tempos: T, hash: h, timeHumano: opc.timeHumano ?? 0,
+    parada: { x: px, z: pz }, desvioBola, saida, planos, duracao: t, tempos: T, hash: h, timeHumano: opc.timeHumano ?? 0,
     posPunido, treinadores: (opc.treinadores ?? []).filter(Boolean).map(o => ({ ...o })),
     // o estádio de forma própria (TM, edição pro): a câmera dos trilhos de torcida do pré-jogo dele (estadio-planta.js /
     // estadio-generico.js ajustarPlano; a página passa IDENT.forma3d.planta.ajustarPlano)
@@ -216,6 +303,13 @@ export function criarCenaCartao(plano, m) {
   if (!pun) {
     pun = adicionarJogador(c, acharPunido(m, plano.id), 'resto');
     if (plano.posPunido) levar(pun.j, plano.posPunido.x - pun.j.x, plano.posPunido.z - pun.j.z);
+  }
+  // quem está no carrinho não passa por cima da bola parada (desvioDaBola): a cópia — com o plano — é levada antes do 1º
+  // quadro (a cena começa num corte); o punido pelo desvio do plano (o árbitro para onde ele vai ficar de pé)
+  for (const a of c.atores) {
+    if (!a.j.carrinho || !carrinhoAtivo(a.j, c.mF.tick + 1)) continue;
+    const d = a === pun && plano.desvioBola ? plano.desvioBola : desvioDaBola(a.j, c.mF.tick, c.mF.bola.p, _dv);
+    if (d.x || d.z) levar(a.j, d.x, d.z);
   }
   // os treinadores (cópias paradas na área técnica, olhando o lance; ninguém os empurra)
   c.treinadores = [];
@@ -241,7 +335,8 @@ export function criarCenaCartao(plano, m) {
     // o capitão/companheiro longe (até 15 m) já vem correndo: pré-rolagem invisível até faltar CENA_CARTAO.apoioPerto m
     // (no 1º quadro ele já está chegando; o V2 segura o punido ≥ 0,8 s)
     const q = c.apoio.j, pj = pun.j;
-    for (let t = 0; t < 300; t++) {
+    // (no carrinho ele não anda: termina o deslize pelo quadro — cena-atores.js — e vem depois)
+    for (let t = 0; t < 300 && !(q.carrinho && carrinhoAtivo(q, c.mF.tick + 1)); t++) {
       const ex = pj.x - q.x, ez = pj.z - q.z, d = Math.hypot(ex, ez);
       if (d <= K.apoioPerto) break;
       andarSozinho(q, c.mF, ex / d, ez / d, 6.2, Math.atan2(ez, ex));
@@ -260,8 +355,18 @@ export function criarCenaCartao(plano, m) {
       if (d <= K.arbitro.preRolagem) break;
       passoSozinho(j, c.mF, ex / d, ez / d, vel, Math.atan2(ez, ex));
     }
+    // (o assentar — a vantagem que virou gol — andou o relógio da cena: os planos das cópias com tick absoluto — o carrinho,
+    // o mergulho do goleiro e o pulo do cabeceio — voltam junto, e o quadro de agora fica o mesmo; sem isso o fixarMergulho
+    // levava a cópia do goleiro ao quadro de antes do assentar, um salto de 0,2–0,3 m no 1º passo)
+    const dt = c.mF.tick - m.tick;
+    if (dt) for (const a of c.atores) voltarRelogio(a.j, dt);
     c.mF.tick = m.tick;
   }
+  // o punido no chão (o carrinho faltoso): a reação dele — e a do companheiro — começa depois de ele ficar de pé (a 1ª pose
+  // de pé: o tick do fim do quadro + 1), não no tempo do plano 'reacao' (a desculpa do A3: com o cartão no alto). O
+  // desejoPunido, o desejoApoio e os gestos dos dois andam no relógio t − atrasoPun
+  const cp = pun.j.carrinho, tReage = plano.variante === 'aceita' ? plano.tempos.alto + A3_DESCULPA : plano.tempos.reacao;
+  c.atrasoPun = cp && carrinhoAtivo(pun.j, c.mF.tick + 1) ? Math.max(0, (cp.fim + 1 - c.mF.tick) * PASSO - tReage) : 0;
   // IFAB ("só o capitão"): quem está perto do ponto onde o árbitro para (nem o punido nem o capitão) já vem saindo —
   // pré-rolagem invisível como a do capitão e a do árbitro, até CENA_CARTAO.esperaIfab s: colado no punido do lado de
   // onde o árbitro chega, ele levava ~2,5 s para sair e ainda estava a ~3,4 m 1 s depois do cartão no alto
@@ -276,7 +381,7 @@ export function criarCenaCartao(plano, m) {
   // todos andando de volta para a saída e a lente parava no caminho de quem ainda vinha)
   for (const a of c.atores) {
     if (a.tipo === 'tecnico' || a === arb) { a.alvoX = a.j.x; a.alvoZ = a.j.z; }
-    else { paradaPrevista(a.j, _pp); a.alvoX = _pp.x; a.alvoZ = _pp.z; }
+    else { paradaPrevista(a.j, _pp, null, c.mF.tick); a.alvoX = _pp.x; a.alvoZ = _pp.z; }
     if (a.tipo === 'resto') a.afasta = false;
   }
   // a vaga do A3 (a posição tática da cópia) e a direção da saída do expulso
@@ -302,6 +407,7 @@ function isolar(c, A, n) {
     let algum = false;
     for (const a of c.atores) {
       if (!a.ativo || a === c.arbitro || a === c.punido || a === c.apoio || a.tipo === 'tecnico') continue;
+      if (a.j.carrinho && carrinhoAtivo(a.j, c.mF.tick + 1)) continue; // (no carrinho: termina o deslize pelo quadro)
       const j = a.j, ex = j.x - A.x1, ez = j.z - A.z1, d = Math.hypot(ex, ez);
       if (d >= lim) continue;
       algum = true;
@@ -416,11 +522,11 @@ function desejo(c, a, t) {
     if (dd < 1.0) d.rumo = Math.atan2(pun.z - arb.z, pun.x - arb.x);
     return d;
   }
-  if (a === c.punido) return desejoPunido(c, a, t);
+  if (a === c.punido) return desejoPunido(c, a, t - c.atrasoPun);
   // os treinadores ficam na área técnica (Regra 1), parados
   if (a.tipo === 'tecnico') return parar(c, a);
   // no plano do árbitro ninguém entra na frente do cartão (a reta da lente até o árbitro; o capitão também, enquanto chega)
-  if (a === c.apoio) { const fl0 = foraDaLinha(c, a, 1.2); return fl0 ?? desejoApoio(c, a, t); }
+  if (a === c.apoio) { const fl0 = foraDaLinha(c, a, 1.2); return fl0 ?? desejoApoio(c, a, t - c.atrasoPun); }
   // quem está na frente da lente sai dela
   _ev.x = arb.x; _ev.z = arb.z; _ev.r = c.limAfasta + 0.7;
   const fl = fugirDaLente(c, a, undefined, _ev);
@@ -621,6 +727,8 @@ function desejoApoio(c, a, t) {
 function gestos(c, a, t) {
   const P = c.plano, T = P.tempos, v = P.variante, o = a.atu, h = a.j.rumo;
   if (a === c.arbitro) { gestosArbitro(c, a, t); return; }
+  // (o punido e o companheiro reagem no relógio do punido: depois de ele ficar de pé, se estava no carrinho)
+  if (a === c.punido || a === c.apoio) t -= c.atrasoPun;
   if (a === c.punido) {
     const u = t - T.reacao;
     switch (v) {
@@ -637,9 +745,9 @@ function gestos(c, a, t) {
         break;
       }
       case 'aceita': {
-        const w = janela(t, T.alto + 0.5, T.altoFim, 0.2, 0.25);
+        const w = janela(t, T.alto + A3_DESCULPA, T.altoFim, 0.2, 0.25);
         gDesculpa(o, h, w);
-        balancaCabeca(o, h, t - T.alto - 0.5, janela(t, T.alto + 0.6, T.alto + 1.4, 0.05, 0.05), true);
+        balancaCabeca(o, h, t - T.alto - A3_DESCULPA, janela(t, T.alto + A3_DESCULPA + 0.1, T.alto + 1.4, 0.05, 0.05), true);
         break;
       }
       case 'cabisbaixo':
@@ -846,7 +954,7 @@ function escolherCamera(c, ip) {
       // (a bola parada segura o punido que corre para ela antes da parada prevista — a 5 m/s ele parava 1,3 m antes e a
       // reta da lente até o cartão passava pela cabeça dele — e o árbitro para a dPara m dele, onde ele estiver: o cartão
       // não pode ficar atrás dele em nenhuma das duas paradas)
-      paradaPrevista(pun.j, _pl); paradaPrevista(pun.j, _pb, c.mF.bola.p);
+      paradaPrevista(pun.j, _pl, null, c.mF.tick); paradaPrevista(pun.j, _pb, c.mF.bola.p, c.mF.tick);
       const bx = _pb.x - _pl.x, bz = _pb.z - _pl.z;
       // (fator > 1: a 2ª fileira, as mesmas direções mais longe — abaixo)
       const fileira = fator => {

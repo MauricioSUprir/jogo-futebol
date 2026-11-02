@@ -52,6 +52,8 @@ export function criarSumula() {
     passeCerto: null,  // o último passe que chegou a um companheiro {de, para, time}
     jog: {},           // por id: números de cada jogador (o travado: a nota)
     dono: null,        // quem tinha a bola no fim do passo anterior (a perda de quem foi desarmado)
+    carrinhos: {},     // por id de quem deslizou: o último desarme do carrinho {tick, de, des, rou, perdas}, o creditado no
+                       // toque, que a falta 'depois' no mesmo jogador desfaz (o evento desarmeAnulado)
     passos: 0,
   };
 }
@@ -189,7 +191,28 @@ export function sumulaPasso(s, m, eventos) {
         if (tipo === 'roubada') numeros(s, e.id).roubadas++; else numeros(s, e.id).desarmes++;
         // quem estava com a bola e foi desarmado perde ponto (o evento só traz quem ganhou)
         const t = timeDe(e.id);
-        if (donoAntes != null && donoAntes !== e.id && timeDe(donoAntes) != null && timeDe(donoAntes) !== t) numeros(s, donoAntes).perdas++;
+        const perdeu = donoAntes != null && donoAntes !== e.id && timeDe(donoAntes) != null && timeDe(donoAntes) !== t;
+        if (perdeu) numeros(s, donoAntes).perdas++;
+        // o carrinho (defesa.js tocarBolaCarrinho): o que foi creditado neste passo, para o desarmeAnulado desfazer
+        if (e.carrinho) {
+          const k0 = s.carrinhos[e.id];
+          const k = k0 && k0.tick === m.tick ? k0
+            : (s.carrinhos[e.id] = { tick: m.tick, de: donoAntes, des: 0, rou: 0, perdas: 0 });
+          if (tipo === 'roubada') k.rou++; else k.des++;
+          if (perdeu) k.perdas++;
+        }
+        break;
+      }
+      case 'desarmeAnulado': {
+        // o carrinho que tirou a bola do condutor e o derrubou logo depois (defesa.js homemDoCarrinho, a falta 'depois' no
+        // mesmo jogador): o lance é a falta — sem o desarme e a roubada de quem deslizou e sem as perdas de quem a sofreu
+        const k = s.carrinhos[e.id];
+        if (k && k.de === e.de) {
+          const n = numeros(s, e.id);
+          n.desarmes -= k.des; n.roubadas -= k.rou;
+          if (k.de != null && k.perdas) numeros(s, k.de).perdas -= k.perdas;
+          delete s.carrinhos[e.id];
+        }
         break;
       }
       case 'perda': if (e.id != null) numeros(s, e.id).perdas++; break;

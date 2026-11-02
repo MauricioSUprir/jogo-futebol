@@ -144,7 +144,8 @@ function reposicionar(m, j, B) {
  * bola e voltava logo (o tronco ia e voltava: ~45% dos tremores eram até 0,7 s depois de um passe).
  */
 function vaiNaLivre(m, j) {
-  if (j.posicao === 'GOL') return false;
+  // (no carrinho — carrinho.js —, deitado: não vai na bola livre nem corta o passe; os companheiros também não o contam)
+  if (j.posicao === 'GOL' || j.carrinho) return false;
   // quem cobrou a bola parada não toca de novo antes de outro jogador (partida.js rolou): não vai nela
   const cobrou = m.cobrou ? m.cobrou.id : -1;
   if (j.id === cobrou) return false;
@@ -162,7 +163,7 @@ function vaiNaLivre(m, j) {
   const tempo = o => MD.hypot(o.x - b.x, o.z - b.z) / o.par.vArrancada - (o.id === atual ? H : 0);
   const tj = tempo(j);
   for (const o of m.jogadores) {
-    if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador' || o.id === cobrou) continue;
+    if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador' || o.id === cobrou || o.carrinho) continue;
     const to = tempo(o);
     if (to < tj || (to === tj && o.id < j.id)) return false;
   }
@@ -232,7 +233,7 @@ function cortaPasse(m, j, v, Lv, atual) {
   if (!pj || !(pj.i * PASSO + L.antes <= tr)) return false;
   const tj = pj.i - (j.id === atual ? 6 : 0), cj = { i: pj.i, x: pj.x, z: pj.z };
   for (const o of m.jogadores) {
-    if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+    if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador' || o.carrinho) continue;
     if (o.iaT?.corte && o.iaT.corte.chave === v.tickChave && m.tick <= o.iaT.corte.ate) return false; // um companheiro já vai
     const po = pontoDeCorte(m, o, L.le);
     if (po && (po.i < tj || (po.i === tj && o.id < j.id))) return false;
@@ -306,7 +307,7 @@ function chegarNaBola(m, j, e) {
 function disputada(m, j, x, z) {
   const tj = MD.hypot(x - j.x, z - j.z) / j.par.vCorrida + IA_DEFESA.livre.disputa;
   for (const o of m.jogadores) {
-    if (o.time === j.time || o.posicao === 'GOL' || o.papel === 'parado') continue;
+    if (o.time === j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.carrinho) continue; // (o deitado não disputa)
     if (MD.hypot(x - o.x, z - o.z) / o.par.vArrancada <= tj) return true;
   }
   return false;
@@ -430,7 +431,9 @@ export function blocoDoTime(m, t) {
   B.compPessoa = semCtrl >= 0;
   let p1 = null, d1 = Infinity, at1 = null, dAt1 = Infinity;
   for (const o of js) {
-    if (o.time !== t || !ehLinha(o) || o.id === pedAnt || o.id === semCtrl) continue;
+    // (quem está no carrinho — carrinho.js —, deitado, não é o 1º nem o 2º homem nem faz a contrapressão; nas contas da
+    // forma ele continua contando)
+    if (o.time !== t || !ehLinha(o) || o.carrinho || o.id === pedAnt || o.id === semCtrl) continue;
     const d = efetiva(o);
     if (d < d1) { d1 = d; p1 = o; }
     if (o.id === B.p1) { at1 = o; dAt1 = d; }
@@ -438,7 +441,7 @@ export function blocoDoTime(m, t) {
   if (at1 && at1 !== p1 && dAt1 < d1 + IA.trocaPressao) p1 = at1;
   let p2 = null, d2 = Infinity, at2 = null, dAt2 = Infinity;
   for (const o of js) {
-    if (o.time !== t || !ehLinha(o) || o === p1 || o.id === pedAnt || o.id === semCtrl || o.x * lado > ub + 1) continue;
+    if (o.time !== t || !ehLinha(o) || o.carrinho || o === p1 || o.id === pedAnt || o.id === semCtrl || o.x * lado > ub + 1) continue;
     // (quem tem a referência à frente da bola — o atacante que a bola passou — paga frentePaga: a
     // cobertura é do meio; com o atacante cobrindo ~1/4 do tempo, a linha da frente ficava ~6 m
     // atrás da referência e o meio–ataque caía para ~8 m: teste-forma)
@@ -494,7 +497,7 @@ export function blocoDoTime(m, t) {
     const R = IA_DEFESA.contrapressao.raio, max = IA_DEFESA.contrapressao.max[p];
     let meus = 0, deles = 0;
     for (const o of js) {
-      if (!ehLinha(o) || MD.hypot(o.x - b.x, o.z - b.z) > R) continue;
+      if (!ehLinha(o) || o.carrinho || MD.hypot(o.x - b.x, o.z - b.z) > R) continue;
       if (o.time === t) meus++; else deles++;
     }
     const lugar = b.x * lado > IA_DEFESA.contrapressao.campo || Math.abs(b.z) > IA_DEFESA.gatilhos.lateral;
@@ -502,7 +505,7 @@ export function blocoDoTime(m, t) {
       for (let k = 0; k < max; k++) {
         let mel = null, dm = R;
         for (const o of js) {
-          if (o.time !== t || !ehLinha(o) || o.id === humano || B.contra.includes(o.id)) continue;
+          if (o.time !== t || !ehLinha(o) || o.carrinho || o.id === humano || B.contra.includes(o.id)) continue;
           const d = MD.hypot(o.x - b.x, o.z - b.z);
           if (d < dm || (d === dm && mel && o.vagaIdx < mel.vagaIdx)) { dm = d; mel = o; }
         }
@@ -1555,7 +1558,7 @@ export function entradaGoleiroPe(m, g) {
   let mel = null, ms = Infinity;
   if (dAdv >= P.pressao) {
     for (const o of m.jogadores) {
-      if (o.time !== g.time || o === g || o.posicao === 'GOL' || o.papel === 'parado') continue;
+      if (o.time !== g.time || o === g || o.posicao === 'GOL' || o.papel === 'parado' || o.carrinho) continue;
       const ox = o.x - g.x, oz = o.z - g.z, d = MD.hypot(ox, oz), u = ox * lado;
       if (d < P.dMin || d > P.dMax || u < -2) continue;
       const sc = 20 * riscoLinha(m, g, g.x, g.z, o.x, o.z, 12) + 0.3 * Math.abs(d - 14) - 0.1 * Math.max(-10, Math.min(15, u));

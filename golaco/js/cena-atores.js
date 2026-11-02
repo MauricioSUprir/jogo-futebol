@@ -18,14 +18,20 @@
 // fixo, sem locomoção, e o peito sobe e desce) e as contas de câmera (posição válida, lente livre, enquadramento).
 // Nada é alocado por tick (vetores e objetos reaproveitados). moverJuntas, inclinarTronco e flexionar (com pernaIK e
 // ponta) são CÓPIAS dos da comemoração: lá não são exportados e a comemoracao.js é do fecho (exportar mudaria o arquivo).
+// O CARRINHO (carrinho.js; item 34): quem estava deslizando no tick do evento termina o deslize, o chão e o levantar pelo
+// MESMO quadro da simulação (a cópia do plano: comemoracao.js copiaJogador), sem desejo, sem gestos, sem ser empurrado e sem
+// ficar fixo (a.noCarrinho, zerado a cada passo, como o a.mergulha); o levar desloca o plano junto; de pé, os gestos entram
+// na rampa da comemoração (RAMPA_CARRINHO).
 import { PASSO, CAMPO, JOGADOR, COMEMORACAO } from './config.js';
 import { CENAS } from './cenas-config.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado } from './jogador.js';
 import { pose, alturaQuadril, ik, J, NJ, RAIO_CABECA, BRACO, ANTEBRACO } from './anim.js';
 import {
   criarAtor, maoEm, gesto, hashGol, limitarCamera, ajustarCelular, cabeca, poseAgachado, G_CEU, G_SOCO, G_CABECA,
+  RAMPA_CARRINHO, misturarPose,
 } from './comemoracao.js';
 import { mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho } from './goleiro.js';
+import { carrinhoAtivo, passoCarrinho, fixarCarrinho, pesCarrinho } from './carrinho.js';
 import { solidoEm } from './estadio-forma.js';
 
 // ------------------------------------------------------------------------------------------------ cópias da comemoração
@@ -139,13 +145,18 @@ function prepararAtor(a, tipo) {
   a.tipo = tipo; a.cede = 1; a.ativo = true; a.fixo = false; a.parado = 0; a.podeFixar = true; a.kit = null;
   a.base = null; a.recriado = -1; a.respira = (a.id * 0.618) % 1;
   a.mergulha = false; a.gestoT = 0; a.olho = 0; a.cabecaW = 0; a.alvoX = a.j.x; a.alvoZ = a.j.z;
+  a.noCarrinho = false; a.tLivre = -1;
   return a;
 }
+
+/** O ator está (agora, no tick da cena) desenhado pelo quadro do carrinho? (carrinho.js; a cópia do plano, sem `congela`) */
+export function noCarrinho(a, tick) { return !!(a.j.carrinho && carrinhoAtivo(a.j, tick)); }
 
 /** Ator copiado de um jogador do mundo (o goleiro sem defesa em andamento anda como jogador de linha: as mãos livres). */
 export function adicionarJogador(c, j, tipo = 'resto') {
   const a = prepararAtor(criarAtor(j, c.atores.length), tipo);
   if (a.goleiro && !(a.j.mergulho && mergulhoAtivo(a.j, c.mF.tick))) { a.j.posicao = 'MEI'; a.j.mergulho = null; }
+  a.noCarrinho = noCarrinho(a, c.mF.tick);
   c.atores.push(a); c.mF.jogadores.push(a.j); c.porId.set(a.id, a);
   return a;
 }
@@ -170,10 +181,20 @@ export function adicionarNovo(c, o, tipo, posicao = 'TEC') {
   return a;
 }
 
-/** Desloca o jogador (corpo e pés: o desenho e os alvos) em (dx, dz). */
+/**
+ * Desloca o jogador (corpo e pés: o desenho e os alvos) em (dx, dz). No carrinho (carrinho.js), o plano DA CÓPIA anda junto:
+ * o quadro é do mundo (o centro e os tornozelos do aperto, o ponto do pé dobrado no levantar) — sem isto o corpo voltava ao
+ * quadro de antes no passo seguinte e o pé dobrado saltava no começo do levantar (o expulso da cena do cartão, levado ao
+ * ponto desenhado no tick anterior; recriarAtor).
+ */
 export function levar(j, dx, dz) {
   j.x += dx; j.z += dz;
   for (const p of j.pes) { p.x += dx; p.z += dz; p.lx += dx; p.lz += dz; p.gx += dx; p.gz += dz; p.tx += dx; p.tz += dz; p.bx += dx; p.bz += dz; }
+  const c = j.carrinho;
+  if (c) {
+    c.x0 += dx; c.z0 += dz; c.levX += dx; c.levZ += dz;
+    for (const p of c.p0) { p.x += dx; p.z += dz; }
+  }
 }
 
 /** Um passo da locomoção de um jogador sozinho (pré-rolagem): corpo, passada, pé desenhado e quadril. */
@@ -209,7 +230,7 @@ export function recriarAtor(c, a, x, z, rumo, anda = null) {
   a.j = j;
   const i = c.mF.jogadores.indexOf(v);
   if (i >= 0) c.mF.jogadores[i] = j;
-  a.fixo = false; a.parado = 0; a.base = null; a.mergulha = false;
+  a.fixo = false; a.parado = 0; a.base = null; a.mergulha = false; a.noCarrinho = false; a.tLivre = -1;
   a.recriado = c.k;
   c.recriados.push({ id: a.id, k: c.k });
   j.quadril = alturaQuadril(j, c.mF);
@@ -307,6 +328,8 @@ function contornarBola(a, d, bp) {
 
 /** O fixo que cede quando parado (a.cede > 0): volta a andar para sair do caminho de quem não cede (separarCena). */
 const cedeSeSoltar = a => a.fixo && !a.mergulha && a.cede > 0;
+/** Quanto o ator cede (separarCena): o fixo, o goleiro na defesa e quem está no carrinho (o quadro o recoloca) não cedem. */
+const cedeAtor = a => (a.fixo || a.mergulha || a.noCarrinho ? 0 : a.cede);
 
 /**
  * Ninguém dentro de ninguém (antes da passada, como o colisaoCorpos do jogo): centros a ≥ min m. Cada ator cede `a.cede`
@@ -324,14 +347,14 @@ export function separarCena(c, min = CENAS.separacao) {
       const A = at[p];
       if (!A.ativo) continue;
       const ja = A.j;
-      let fa = A.fixo || A.mergulha ? 0 : A.cede;
+      let fa = cedeAtor(A);
       for (let q = p + 1; q < n; q++) {
         const B = at[q];
         if (!B.ativo) continue;
         const jb = B.j;
         const dx = jb.x - ja.x, dz = jb.z - ja.z, d2 = dx * dx + dz * dz;
         if (d2 >= min2) continue;
-        let fb = B.fixo || B.mergulha ? 0 : B.cede, tot = fa + fb;
+        let fb = cedeAtor(B), tot = fa + fb;
         if (!tot) {
           if (cedeSeSoltar(A)) { soltar(A); fa = A.cede; }
           if (cedeSeSoltar(B)) { soltar(B); fb = B.cede; }
@@ -362,7 +385,7 @@ export function separarDaBola(c) {
   const bp = c.mF.bola.p;
   if (bp.y >= 0.6) return;
   for (const A of c.atores) {
-    if (!A.ativo || A.fixo || A.mergulha || !(A.bolaMin > 0)) continue;
+    if (!A.ativo || A.fixo || A.mergulha || A.noCarrinho || !(A.bolaMin > 0)) continue;
     const j = A.j, dx = j.x - bp.x, dz = j.z - bp.z, d2 = dx * dx + dz * dz, r = A.bolaMin;
     if (d2 >= r * r) continue;
     const d = Math.sqrt(d2);
@@ -394,6 +417,11 @@ export function passoAtores(c, desejo, gestos) {
     a.mergulha = false;
     if (!a.ativo) continue;
     const j = a.j;
+    const estava = a.noCarrinho;
+    a.noCarrinho = false;
+    // no carrinho (carrinho.js): o corpo pelo quadro do próximo tick, sem desejo (o papel começa depois de ficar de pé)
+    if (j.carrinho && carrinhoAtivo(j, mF.tick + 1)) { passoCarrinho(mF, j); a.noCarrinho = true; a.fixo = false; a.parado = 0; continue; }
+    if (estava) a.tLivre = (c.k + 1) * PASSO;
     if (a.fixo) {
       // parado: volta a andar quando o papel pede (o desejo com velocidade)
       const d = desejo(c, a, t);
@@ -411,9 +439,11 @@ export function passoAtores(c, desejo, gestos) {
     const a = at[i];
     if (!a.ativo || a.fixo) continue;
     if (a.mergulha) { fixarMergulho(mF, a.j); pesMergulho(mF, a.j); continue; }
+    // (o carrinho: o centro e a velocidade de volta ao quadro depois da separação e os pés do quadro, no lugar da passada)
+    if (a.noCarrinho) { fixarCarrinho(mF, a.j); pesCarrinho(mF, a.j); continue; }
     passoPassada(a.j, false, PASSO, null, null);
   }
-  for (let i = 0; i < at.length; i++) { const a = at[i]; if (a.ativo && !a.fixo && !a.mergulha) passoPeDesenhado(a.j, mF, PASSO); }
+  for (let i = 0; i < at.length; i++) { const a = at[i]; if (a.ativo && !a.fixo && !a.mergulha && !a.noCarrinho) passoPeDesenhado(a.j, mF, PASSO); }
   mF.tick++;
   c.k++;
   const tk = c.k * PASSO;
@@ -427,20 +457,30 @@ export function passoAtores(c, desejo, gestos) {
     a.ant.set(a.atu);
     a.x0 = a.x1; a.z0 = a.z1; a.r0 = a.r1;
     a.noAr = false;
-    if (a.fixo) { respirar(a, tk); gestos(c, a, tk); }
+    // no carrinho: só a pose do quadro (anim.js poseCarrinho), sem gestos
+    if (a.noCarrinho) pose(j, mF, a.atu);
     else {
-      pose(j, mF, a.atu);
-      // parado e plantado: fica fixo (a pose da locomoção de agora é a base — sem os gestos, que vão por cima a cada tick,
-      // como a respiração: quem parou antes de pôr as mãos na cintura põe depois)
-      if (a.podeFixar && Math.hypot(j.vx, j.vz) < 0.02 && j.pes[0].apoio && j.pes[1].apoio && !j.pes[0].pendente && !j.pes[1].pendente) {
-        if (++a.parado >= CENAS.parado) { a.fixo = true; a.base ??= new Float32Array(NJ * 3); a.base.set(a.atu); a.tFixo = tk; }
-      } else a.parado = 0;
+      if (a.fixo) respirar(a, tk);
+      else {
+        pose(j, mF, a.atu);
+        // parado e plantado: fica fixo (a pose da locomoção de agora é a base — sem os gestos, que vão por cima a cada tick,
+        // como a respiração: quem parou antes de pôr as mãos na cintura põe depois)
+        if (a.podeFixar && Math.hypot(j.vx, j.vz) < 0.02 && j.pes[0].apoio && j.pes[1].apoio && !j.pes[0].pendente && !j.pes[1].pendente) {
+          if (++a.parado >= CENAS.parado) { a.fixo = true; a.base ??= new Float32Array(NJ * 3); a.base.set(a.atu); a.tFixo = tk; }
+        } else a.parado = 0;
+      }
+      // de pé depois do carrinho: os gestos entram na rampa (do 0 na 1ª pose de pé; sem salto das mãos — também em quem
+      // fica fixo dentro dela: CENAS.parado é menor que a rampa)
+      const wl = a.tLivre >= 0 && tk - a.tLivre < RAMPA_CARRINHO ? suave((tk - a.tLivre) / RAMPA_CARRINHO) : 1;
+      if (wl < 1) _semGesto.set(a.atu);
       gestos(c, a, tk);
+      if (wl < 1) misturarPose(a.atu, _semGesto, wl);
     }
     a.x1 = j.x; a.z1 = j.z; a.r1 = j.rumo;
   }
 }
 
+const _semGesto = new Float32Array(NJ * 3);
 const RESPIRA = [J.lombar, J.peito, J.pescoco, J.cabeca, J.ombroE, J.ombroD, J.cotoveloE, J.cotoveloD, J.maoE, J.maoD];
 /**
  * Parado respirando (só no desenho, sobre a pose de base: os pés plantados e as pernas não mexem): o peito sobe e desce

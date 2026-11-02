@@ -82,6 +82,8 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     // partida chegava a 12 formas de jogador, a main a 9, e cada passo com a bola rolando custava ~40% mais depois da 1ª
     // cobrança com corrida; teste-custo 2,61× com a meta de 2,5×)
     choque: undefined, arremesso: undefined, arremessoGk: undefined, salto: undefined, guia: undefined,
+    // o carrinho (carrinho.js, item 34): o PLANO montado no aperto, como o j.mergulho do goleiro — undefined sem o botão
+    carrinho: undefined,
   };
   return j;
 }

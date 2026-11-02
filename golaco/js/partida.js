@@ -43,7 +43,7 @@
 // locomoção, e nunca a posição do corpo (os pés seguem pela passada). Nenhuma parada passa de
 // PARTIDA.paradaMax (8 s).
 
-import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META, ESCANTEIO, BARREIRA, DISPUTA, CORRIDA_COBRANCA, ESTILO_PENALTI } from './config.js';
+import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META, ESCANTEIO, BARREIRA, DISPUTA, CORRIDA_COBRANCA, ESTILO_PENALTI, DEFESA_HUMANO } from './config.js';
 import { criarMundo, passo, jogadorPorId, misturarHash, aplicarEntrada } from './sim.js';
 import { criarBola } from './bola.js';
 import { MD } from './matdet.js';
@@ -183,6 +183,9 @@ export function teleportar(j, x, z, rumo) {
   // o pulo do cabeceio e a disputa marcada (cabeceio.js): teletransportado no ar, os pés ficavam no ponto de pouso velho, a
   // até 15 m do corpo, e eram plantados lá (contraprova de 14/10, semente 1008: a montagem do tiro de meta)
   j.cab = null; j.disputaAlta = null;
+  // o carrinho (carrinho.js): de pé no ponto novo — o plano e a altura do quadril saem (sem zerar o quadril, ele subiria do
+  // chão a 1,5 m/s no ponto novo; zerar o de todos mudaria a demo: a altura entra no cabeceio e no mergulho)
+  if (j.carrinho) { j.carrinho = null; j.quadril = null; }
   const c = j.cond;
   if (c) { c.toque = null; c.busca = false; c.ref = null; c.longeDesde = -1; c.ult = null; c.pedalada = null; c.cortePendente = null; c.corteRumo = null; c.puxada = null; }
 }
@@ -265,7 +268,7 @@ function fecharMontagem(m, c, levado) {
     } else {
       let mel = null, dm = Infinity;
       for (const o of m.jogadores) {
-        if (o.time !== t || o.posicao === 'GOL') continue;
+        if (o.time !== t || o.posicao === 'GOL' || o.carrinho) continue; // (no carrinho, deitado: não recebe o controle)
         const d = MD.hypot(o.x - pr.x, o.z - pr.z);
         if (d < dm) { dm = d; mel = o; }
       }
@@ -400,12 +403,43 @@ function montarBolaParada(m) {
         : MD.atan2(-pr.z, lado * (CAMPO.meioX - CAMPO.marcaPenalti) - pr.x); // para a marca do pênalti
   const levado = cobradorNoPonto(m, c, pr.x, pr.z, rumo);
   if (pr.tipo === 'tiroLivre' && pr.direto) montarBarreira(m, c);
+  // quem ainda está no carrinho perto da bola posta (o deslizante que fez a falta, deitado sobre o ponto): de pé fora dela, com
+  // o corte de câmera da montagem (tirarCarrinhos). Só com carrinho: sem o botão nada muda
+  if (tirarCarrinhos(m, c, pr.x, pr.z) && !pr.barreira) m.eventos.push({ tipo: 'corteBolaParada', parada: pr.tipo });
   m.partida.estado = 'parada'; m.partida.desde = m.tick;
   fecharMontagem(m, c, levado);
   if (pr.tipo === 'tiroLivre') colocarNaCorrida(m, c, rumo); // a corrida da cobrança (item 70, P1)
   if (pr.tipo === 'lateral') m.eventos.push({ tipo: 'lateral', time: t, x: pr.x, z: pr.z, id: c.id, levado });
   else if (pr.tipo === 'tiroLivre') m.eventos.push({ tipo: 'tiroLivre', time: t, x: pr.x, z: pr.z, id: c.id, levado: pr.levado, indireto: !pr.direto });
   else m.eventos.push({ tipo: 'escanteio', time: t, lado: pr.z >= 0 ? 1 : -1, id: c.id, levado });
+}
+
+/**
+ * O CARRINHO na montagem (item 34; carrinho.js): quem está deitado pula a paredeParada e o separar da bola — o deslizante que
+ * fez a falta ficava com a bola posta dentro da pelve ou da coxa até se levantar (até ~0,7 s). Na montagem (já com corte de
+ * câmera), cada um no carrinho, fora o cobrador c, vai de pé (teleportar: o plano e o quadril zerados) para fora: o time que
+ * não cobra, para o ponto da restrição da parada (Regra 13: 9,15 m, como o tiro de meta faz com a Regra 16); o que cobra, a
+ * DEFESA_HUMANO.carrinho.bolaParada m da bola, se estiver mais perto. Devolve true se levou alguém. Sem ninguém no carrinho, nada.
+ */
+const BOLA_CARRINHO = DEFESA_HUMANO.carrinho.bolaParada;
+function tirarCarrinhos(m, c, bx, bz) {
+  let levou = false;
+  for (const o of m.jogadores) {
+    if (!o.carrinho || o === c) continue;
+    let x = o.x, z = o.z;
+    if (o.time !== m.parada.time) { restricaoParada(m, o, o.x, o.z, _r); x = _r.x; z = _r.z; }
+    else {
+      const dx = o.x - bx, dz = o.z - bz, d = MD.hypot(dx, dz);
+      if (d < BOLA_CARRINHO) {
+        const nx = d > 1e-6 ? dx / d : -m.ataca[o.time], nz = d > 1e-6 ? dz / d : 0;
+        x = clamp(bx + nx * BOLA_CARRINHO, -CAMPO.meioX + 0.5, CAMPO.meioX - 0.5); z = clamp(bz + nz * BOLA_CARRINHO, -CAMPO.meioZ + 0.5, CAMPO.meioZ - 0.5);
+      }
+    }
+    if (MD.hypot(x - o.x, z - o.z) <= 0.05) continue;
+    teleportar(o, x, z, MD.atan2(bz - z, bx - x));
+    levou = true;
+  }
+  return levou;
 }
 
 /**
@@ -1358,6 +1392,9 @@ function anunciarAcrescimo(m) {
 
 function fimDoTempo(m) {
   const p = m.partida;
+  // o carrinho em andamento para no apito (carrinho.js congela): no intervalo e no fim o passoPartida só anda o tick — sem
+  // isto a pose deslizaria e levantaria com o corpo parado. O plano congelado sai na saída do 2º tempo (teleportar)
+  for (const j of m.jogadores) if (j.carrinho) j.carrinho.congela = m.tick;
   encerrarParada(m);
   m.golTick = null; m.foraDesde = null;
   p.imped = null;

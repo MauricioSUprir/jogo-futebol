@@ -2,7 +2,8 @@
 // no Modo Livre (m.livre) não há falta nenhuma: o bote da IA que seria falta vira BOTE_SEM_GANHAR (contato sem apito) e a
 // dividida que seria falta segue como lance sem falta.
 // Ganchos: sim.js boteIA (bote da IA, falta tática/segurar), defesa.js resolverBote (DIVIDIDA), sim.js colisaoCorpos
-// (carga, guardarChoque). A falta vira m.faltaPendente e o evento 'falta'; partida.js decide vantagem, tiro livre ou
+// (carga, guardarChoque), defesa.js contatosHomemCarrinho (o CARRINHO: faltaNoCarrinho; item 34). A falta vira
+// m.faltaPendente e o evento 'falta'; partida.js decide vantagem, tiro livre ou
 // pênalti e o cartão (Regra 12.1: imprudente, temerária = amarelo, força excessiva = vermelho; 12.3: SPA amarelo, DOGSO
 // vermelho — na própria área tentando a bola, amarelo e pênalti). Contrato: CONTRATOS.md.
 
@@ -83,14 +84,18 @@ export function ataquePromissor(m, c) {
  * Monta a falta do defensor `d` no condutor `c` (pura, sem sortear): {def, cond, time (de quem sofreu), x, z, area
  * (pênalti), chegada, v (de quem chegou), grau, cartao, motivo, origem}. O cartão: excessivo → vermelho; DOGSO →
  * vermelho (na área, com tentativa de jogar a bola → amarelo); temerário → amarelo; SPA → amarelo; senão nenhum.
- * `tentouBola`: o bote/dividida (tentou jogar a bola) × carga/segurar (não tentou).
+ * `tentouBola`: o bote/dividida (tentou jogar a bola) × carga/segurar (não tentou). `temerario`: o temerário já sorteado
+ * (o carrinho, faltaNoCarrinho; os outros chamadores não o passam). SPA na própria área com a tentativa de jogar a bola:
+ * pênalti SEM cartão (Regra 12.4) — só no carrinho nesta entrega (a correção para o bote da IA e a DIVIDIDA mudaria a
+ * IA × IA: item à parte na FILA).
  */
-export function montarFalta(m, d, c, origem, tentouBola, excessivo = false) {
+export function montarFalta(m, d, c, origem, tentouBola, excessivo = false, temerario = false) {
   const ch = chegada(d, c);
   const v = MD.hypot(d.vx, d.vz);
   const area = naAreaDe(m, d.time, c.x, c.z);
   let grau = 'imprudente';
   if (excessivo) grau = 'excessivo';
+  else if (temerario) grau = 'temerario';
   else if (ch === 'tras' && v >= FALTAS.temerario) grau = 'temerario';
   else if (ch === 'tras' && origem === 'carga' && forcaContato(m, d, c) >= FALTAS.carga.temeraria) grau = 'temerario';
   const dogso = chanceClara(m, c, d);
@@ -99,7 +104,7 @@ export function montarFalta(m, d, c, origem, tentouBola, excessivo = false) {
   else if (dogso && !(area && tentouBola)) { cartao = 'vermelho'; motivo = 'dogso'; }
   else if (dogso) { cartao = 'amarelo'; motivo = 'dogsoArea'; }
   else if (grau === 'temerario') cartao = 'amarelo';
-  else if (origem === 'tatica' || ataquePromissor(m, c)) { cartao = 'amarelo'; motivo = 'spa'; }
+  else if (origem === 'tatica' || (ataquePromissor(m, c) && !(origem === 'carrinho' && area && tentouBola))) { cartao = 'amarelo'; motivo = 'spa'; }
   return { def: d.id, cond: c.id, time: c.time, x: c.x, z: c.z, area, chegada: ch, v, grau, cartao, motivo, origem, tick: m.tick };
 }
 
@@ -143,6 +148,12 @@ function anotarChoque(m, j, id, f) {
 export function fatorForca(f) {
   const F = FALTAS.forca;
   return clamp((f - F.min) / (F.cheia - F.min), 0, 1) * (1 + F.porForca * Math.max(0, f - F.min));
+}
+
+/** A rampa da força (o 1º fator do fatorForca): 0 até FALTAS.forca.min, 1 a partir de cheia. */
+export function rampaForca(f) {
+  const F = FALTAS.forca;
+  return clamp((f - F.min) / (F.cheia - F.min), 0, 1);
 }
 
 /** Chance de o bote/dividida de `d` em `c` ser falta (sem sortear). */
@@ -190,6 +201,42 @@ export function faltaNoBote(m, d, c, lento = false) {
   const v = MD.hypot(d.vx, d.vz);
   const exc = chegada(d, c) === 'tras' && v >= FALTAS.excessivo && uniforme(m.rng) < FALTAS.excessivoP;
   return montarFalta(m, d, c, 'bote', true, exc);
+}
+
+// ------------------------------------------------------------------------------------ CARRINHO (item 34)
+// A falta do carrinho é só no CONTATO da perna desenhada com o homem (defesa.js contatosHomemCarrinho, no fim do passo, com
+// a bola viva): os únicos sorteios do carrinho moram aqui. ctx = {depois, f, fExc, v, naMao, dois, tentouBola}: `depois` a
+// perna já tocou a bola (o "follow-through"); `f` a velocidade de aproximação dos CORPOS na normal do contato perna a perna
+// (o tropeço conta: quem corre para a perna parada também dá força); `fExc` só a do corpo de quem desliza na normal (o
+// vermelho: o atacante que corre não torna o carrinho "excessivo"); `v` a velocidade do corpo de quem desliza; `naMao` o
+// goleiro com a bola nas mãos (Regra 12.2: falta sempre); `dois` dois carrinhos de times opostos (falta de quem não tocou
+// a bola, sem sorteio de chance); `tentouBola` a intenção do aperto (Regra 12.4: a possibilidade de jogar a bola).
+
+/** A chance de o contato do carrinho de `d` no adversário `c` ser falta (sem sortear; CONTRATOS.md "Carrinho", C.1). */
+export function chanceFaltaCarrinho(m, d, c, ctx) {
+  if (m.livre) return 0; // Modo Livre: contato sem apito (também o goleiro com a bola na mão)
+  if (ctx.naMao) return 1;
+  if (ctx.dois) return fatorForca(ctx.f) > 0 ? 1 : 0; // (abaixo de forca.min o contato é incidental)
+  const K = FALTAS.carrinho;
+  if (!ctx.depois) return Math.min(0.95, K.antes * fatorForca(ctx.f));
+  const v = ctx.v ?? MD.hypot(d.vx, d.vz);
+  const vel = 1 + K.porVel * Math.max(0, v - K.vLivre);
+  return Math.min(0.95, K.depois[chegada(d, c)] * vel * rampaForca(ctx.f));
+}
+
+/**
+ * O contato do carrinho de `d` no adversário `c` é falta? Sorteia pelo m.rng, na ordem: a falta (só com 0 < chance < 1: o
+ * goleiro com a bola na mão e os dois carrinhos não sorteiam a chance), o vermelho direto (antes da bola, fExc ≥
+ * excessivoF: excessivoP) e o amarelo pela chegada; devolve a falta montada (origem 'carrinho') ou null.
+ */
+export function faltaNoCarrinho(m, d, c, ctx) {
+  const K = FALTAS.carrinho;
+  const p = chanceFaltaCarrinho(m, d, c, ctx);
+  if (!(p > 0)) return null;
+  if (p < 1 && uniforme(m.rng) >= p) return null;
+  const exc = !ctx.depois && ctx.fExc >= K.excessivoF && uniforme(m.rng) < K.excessivoP;
+  const tem = !exc && uniforme(m.rng) < K.amarelo[chegada(d, c)];
+  return montarFalta(m, d, c, 'carrinho', !!ctx.tentouBola, exc, tem);
 }
 
 /**

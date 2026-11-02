@@ -9,30 +9,33 @@
 //
 // Teclado: WASD/setas = analógico; J passe (ataque) / CONTER (defesa, segurar); K chute (ataque) /
 // DIVIDIDA (defesa); O PEGAR (ataque: goleiro com a bola no pé) / PRESSÃO (defesa, segurar: um companheiro aperta);
-// L lançamento; I enfiada (goleiro com a bola nas mãos: solta no chão); Shift correr; E modificador (colocado /
-// enfiada alta / cruzamento tenso; condução curta e proteção; dois toques = pedalada); Q trocar (segurar 0,4 s: o
-// goleiro, na partida); G goleiro (defesa; segurar = sai do gol); R recomeçar; M máquina de passes; N marcador; C câmera;
+// L lançamento (ataque) / CARRINHO (defesa; com a bola ALTA na defesa, lançamento: o afastamento de primeira e o
+// cabeceio para longe no cruzamento do adversário — item 34); I enfiada (goleiro com a bola nas mãos: solta no chão);
+// Shift correr; E modificador (colocado / enfiada alta / cruzamento tenso; condução curta e proteção; dois toques =
+// pedalada); Q trocar (segurar 0,4 s: o goleiro, na partida); G goleiro (defesa; segurar = sai do gol); R recomeçar;
+// M máquina de passes; N marcador; C câmera;
 // H ou F1 ajuda; Esc pausa; Z / X curva na cobrança mirada; F paradinha e barra de espaço pulinho (a cobrança do pênalti
 // da pessoa: item 70, P2 — com Shift no soltar do CHUTE, forte; com E, colocado).
-// Controle: analógico esquerdo; A passe / CONTER; B chute / DIVIDIDA; X lançamento; Y enfiada /
+// Controle: analógico esquerdo; A passe / CONTER; B chute / DIVIDIDA; X lançamento / CARRINHO (como o L); Y enfiada /
 // goleiro (segurar); RB PEGAR / PRESSÃO (defesa, segurar); LB trocar (segurar: o goleiro); RT correr; LT modificador;
-// Start pausa; View ajuda; R3 câmera; analógico direito = curva na cobrança mirada. (O mapa da defesa é o do EA FC: segurar A = conter, B = bote em pé, segurar
-// RB = companheiro pressiona.) Na pausa e na Ajuda: cruz/analógico escolhem o botão, A confirma, B volta.
+// Start pausa; View ajuda; R3 câmera; analógico direito = curva na cobrança mirada. (O mapa da defesa é o do EA FC: segurar A = conter, B = bote em pé, X =
+// carrinho, segurar RB = companheiro pressiona.) Na pausa e na Ajuda: cruz/analógico escolhem o botão, A confirma, B volta.
 // Na cobrança do pênalti da pessoa (item 70, P2; main.js definirCobrancaPenalti) o controle é o do pênalti do EA FC
 // (PAD_PENALTI): LT = paradinha, RB = colocado (o MOD; o "finesse" do EA FC), LB = pulinho, RT segurado = forte.
-// G só vale na defesa (como o Y do controle). Os botões que mudam de sentido pela fase (J, K, O, G, A, B, Y, RB) têm o
-// sentido FIXADO NO APERTO, pela fase do mundo NAQUELE passo (sem a histerese de 0,25 s dos botões visíveis):
+// G só vale na defesa (como o Y do controle). Os botões que mudam de sentido pela fase (J, K, O, G, L, A, B, X, Y, RB) têm o
+// sentido FIXADO NO APERTO, pela fase do mundo NAQUELE passo (sem a histerese de 0,25 s dos botões visíveis; o L e o X
+// também pela bola alta naquele passo: carrinho.js bolaAlta):
 // segurar J enquanto a posse muda não troca o passe por CONTER no meio (criarSentidoFixo, pura). Só o O/RB preso como
 // PEGAR (um toque: só a borda vale, segurado não faz nada) relê a fase quando ela vira defesa e vira PRESSÃO — apertado
 // logo antes de o adversário dominar a bola, ficava PEGAR o tempo todo segurado e ninguém apertava (D1, 23/10).
 // Toque: analógico flutuante na metade esquerda; à direita, um arco de botões ao alcance do
 // polegar, só com o ícone (os nomes são opção da pausa: html.nomes-botoes). ATAQUE (meu time com a
-// bola): CHUTE (o maior), PASSE, ENFIADA, LANÇAMENTO e CORRER. DEFESA (5 botões, tela limpa de 11/10):
-// TROCAR (o maior), GOLEIRO (segurar), PRESSÃO (segurar), DIVIDIDA (tocar = bote; SEGURAR = CONTER,
-// como o "Sprint & Tackle" do FC Mobile) e CORRER; o 2º anel (vagas d e e) fica livre — a 'e' é do
-// CARRINHO (Etapa 4). Quem decide ataque/defesa é o main.js (definirFase). bloquear(true) (o "Editar
-// time" aberto) não deixa nada vazar para o jogo: só a pausa (Esc/P/Start) passa, e o que estava
-// segurado conta como solto até ser apertado de novo.
+// bola): CHUTE (o maior), PASSE, ENFIADA, LANÇAMENTO e CORRER. DEFESA (6 botões; tela limpa de 11/10 + o
+// carrinho, item 34): TROCAR (o maior), GOLEIRO (segurar), PRESSÃO (segurar), DIVIDIDA (tocar = bote; SEGURAR =
+// CONTER, como o "Sprint & Tackle" do FC Mobile), CARRINHO (vaga 'e' do 2º anel, a de baixo; o bit no pointerdown) e
+// CORRER; a vaga 'd' fica livre na defesa (subia para dentro do campo). Quem decide ataque/defesa é o main.js
+// (definirFase). bloquear(true) (o "Editar time" aberto) não deixa nada vazar para o jogo: só a pausa (Esc/P/Start)
+// passa, e o que estava segurado conta como solto até ser apertado de novo.
 
 import { processarAnalogico, teclasParaAnalogico, paraMundo, miraPelaTela } from './controle.js';
 import { BOTAO, ENTRADA } from './config.js';
@@ -56,7 +59,7 @@ export const ACOES_TECLA = {
 };
 // tecla → bit da máscara (segurar = bit ligado), o mesmo nas duas fases
 export const TECLA_BIT = {
-  KeyL: BOTAO.LANCAMENTO, KeyI: BOTAO.ENFIADA,
+  KeyI: BOTAO.ENFIADA,
   KeyQ: BOTAO.TROCAR, KeyE: BOTAO.MOD,
   ShiftLeft: BOTAO.CORRER, ShiftRight: BOTAO.CORRER,
   KeyZ: BOTAO.EFEITO_E, KeyX: BOTAO.EFEITO_D,
@@ -68,17 +71,24 @@ export const TECLA_BIT = {
 // chute colocado — o "finesse" —, e um botão para o pulinho): o botão → o bit no lugar do de sempre
 export const PAD_PENALTI = { LT: 'PARADINHA', RB: 'MOD', LB: 'PULINHO' };
 // Botões físicos que mudam de sentido pela fase: [bit no ataque, bit na defesa] (0 = nada). Teclas pelo
-// `code`; botões do controle como 'pad:A' etc. (plano 2.8; mapa da defesa do EA FC)
+// `code`; botões do controle como 'pad:A' etc. (plano 2.8; mapa da defesa do EA FC). A 3ª coluna (opcional) é a defesa
+// com a bola ALTA (carrinho.js bolaAlta: no ar acima de 0,6 m ou subindo): o L e o X são o CARRINHO na defesa, mas com
+// a bola alta continuam LANÇAMENTO — no voo do adversário a fase é sempre 'defesa' (main.js faseDoMundo), e o L/X carregado
+// no cruzamento dele é o pedido de primeira e, no alto, o cabeceio para longe (item 34; o disparo do carrinho também
+// recusa a bola alta: a perna não alcança). Os outros não têm a 3ª coluna: com a bola alta, o da defesa.
 export const SENTIDO_FASE = {
   KeyJ: [BOTAO.PASSE, BOTAO.CONTER],
   KeyK: [BOTAO.CHUTE, BOTAO.DIVIDIDA],
   KeyO: [BOTAO.PEGAR, BOTAO.PRESSAO],
   // G só na defesa, como o Y do controle (no ataque o goleiro saía até ~21 m da linha com o meu time atacando)
   KeyG: [0, BOTAO.GOLEIRO],
+  // o carrinho (item 34): L no teclado, X no controle (o "Sliding Tackle" do esquema Clássico do EA FC)
+  KeyL: [BOTAO.LANCAMENTO, BOTAO.CARRINHO, BOTAO.LANCAMENTO],
   'pad:A': [BOTAO.PASSE, BOTAO.CONTER],
   'pad:B': [BOTAO.CHUTE, BOTAO.DIVIDIDA],
   'pad:Y': [BOTAO.ENFIADA, BOTAO.GOLEIRO],
   'pad:RB': [BOTAO.PEGAR, BOTAO.PRESSAO],
+  'pad:X': [BOTAO.LANCAMENTO, BOTAO.CARRINHO, BOTAO.LANCAMENTO],
 };
 // Botões cujo sentido do ATAQUE é uma ação de um toque só (a borda do aperto: PEGAR), sem uso enquanto segurados: presos
 // nele, viram o da defesa quando a fase vira defesa (o contrário nunca: PRESSÃO segurado não vira PEGAR no ataque — o
@@ -91,19 +101,21 @@ const REAPERTO = ~(BOTAO.CORRER | BOTAO.MOD);
 // (PARADINHA e PULINHO: um aperto marca o estilo — o reaperto entre passos vira solto + apertado, como os de ação)
 
 /**
- * Sentido fixado no aperto (pura; os testes em Node chamam): bit(id, apertado, fase) devolve o bit do
- * botão físico `id` — o da fase em que ele foi APERTADO, até ser solto (a posse pode mudar no meio). Os de `rele`
+ * Sentido fixado no aperto (pura; os testes em Node chamam): bit(id, apertado, fase, alta) devolve o bit do
+ * botão físico `id` — o da fase em que ele foi APERTADO, até ser solto (a posse pode mudar no meio). `alta` (a bola alta
+ * naquele passo) escolhe a 3ª coluna na defesa, onde ela existe (L e X); também fica fixada no aperto: o L apertado no
+ * cruzamento segue lançamento até soltar, e o apertado com a bola rasteira segue carrinho se ela subir. Os de `rele`
  * (RELE_NA_DEFESA) presos no sentido do ataque passam ao da defesa quando a fase vira defesa (e ficam nele até soltar).
  */
 export function criarSentidoFixo(tabela = SENTIDO_FASE, rele = RELE_NA_DEFESA) {
   const fixo = new Map();
   return {
-    bit(id, apertado, fase) {
+    bit(id, apertado, fase, alta = false) {
       if (!apertado) { fixo.delete(id); return 0; }
       let b = fixo.get(id);
       const s = tabela[id];
       if (b === undefined) {
-        b = s ? s[fase === 'defesa' ? 1 : 0] : 0;
+        b = s ? s[fase === 'defesa' ? (alta && s.length > 2 ? 2 : 1) : 0] : 0;
         fixo.set(id, b);
       } else if (fase === 'defesa' && s && b === s[0] && b !== s[1] && rele.has(id)) {
         b = s[1];
@@ -127,8 +139,9 @@ const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, VIEW: 8, START
 // 'a'..'e' no arco em volta dela (a = à esquerda, subindo até e), 'correr' (à esquerda da 'a'
 // deitado; no topo do arco em pé). Defesa (tela limpa, 11/10): PRESSÃO e DIVIDIDA nas vagas b e c do
 // 1º anel — o 2º anel (vaga d, onde ficava a PRESSÃO) subia para dentro do campo, em cima da jogada; o
-// CONTER virou a DIVIDIDA segurada (`segura`: tocar = o bit, segurar = o bit de `segura`). Um botão só
-// aparece se o elemento existir na página (index.html).
+// CONTER virou a DIVIDIDA segurada (`segura`: tocar = o bit, segurar = o bit de `segura`). O CARRINHO (item 34) fica na
+// vaga 'e', a de BAIXO do 2º anel (avança para o meio da tela, não para cima; já estava no layout: ninguém muda de lugar).
+// Um botão só aparece se o elemento existir na página (index.html).
 export const BOTOES_TOQUE = [
   { id: 'btn-chute', bit: 'CHUTE', fase: 'ataque', vaga: 'grande', rotulo: 'CHUTE' },
   { id: 'btn-passe', bit: 'PASSE', fase: 'ataque', vaga: 'a', rotulo: 'PASSE' },
@@ -139,6 +152,9 @@ export const BOTOES_TOQUE = [
   { id: 'btn-goleiro', bit: 'GOLEIRO', fase: 'defesa', vaga: 'a', rotulo: 'GOLEIRO' },
   { id: 'btn-pressao', bit: 'PRESSAO', fase: 'defesa', vaga: 'b', rotulo: 'PRESSÃO' },
   { id: 'btn-dividida', bit: 'DIVIDIDA', segura: 'CONTER', fase: 'defesa', vaga: 'c', rotulo: 'DIVIDIDA' },
+  // CARRINHO (item 34): botão SIMPLES — o bit no pointerdown, como PASSE/CHUTE (a resposta no quadro do toque; no
+  // pointerup ela ganharia a duração do toque, ~80–150 ms). O nome inteiro não cabe nas vagas de 48–54 px: "CARRIN."
+  { id: 'btn-carrinho', bit: 'CARRINHO', fase: 'defesa', vaga: 'e', rotulo: 'CARRINHO', curto: 'CARRIN.' },
   // goleiro do humano com a bola no pé, na área (recuo, a bola que ele soltou): pega com a mão — só aparece nessa hora
   // (main.js definirGoleiroPe; com recuo é tiro livre indireto: Regra 12.2)
   { id: 'btn-pegar', bit: 'PEGAR', fase: 'ataque', vaga: 'd', rotulo: 'PEGAR' },
@@ -306,13 +322,14 @@ export function criarEntrada(opc = {}) {
   let vistos = 0;          // botões que o último passo viu apertados
   let adiados = 0;         // reapertos guardados para o próximo passo (pulso)
   let fase = 'ataque';     // pedida pelo main.js (estado do mundo, com a histerese dos botões visíveis)
-  let faseAgora = 'ataque'; // a do mundo AGORA, sem a histerese: fixa o sentido de J/K/O e A/B/Y/RB no aperto
+  let faseAgora = 'ataque'; // a do mundo AGORA, sem a histerese: fixa o sentido de J/K/O/L e A/B/X/Y/RB no aperto
+  let altaAgora = false;   // a bola alta AGORA (carrinho.js bolaAlta): na defesa, L e X ficam LANÇAMENTO (SENTIDO_FASE)
   let posseRival = false;  // o adversário está com a bola no pé (a perda é certa)
   let faseVisivel = 'ataque';
   let bloqueada = false;   // "Editar time" aberto: nada vai para o jogo (só a pausa)
   let menuAtivo = false;   // pausa ou Ajuda aberta: o controle navega nos botões dela (lerMenuPad)
   let penalti = false;     // a cobrança do pênalti da pessoa (item 70, P2): o controle do pênalti (PAD_PENALTI)
-  const sentido = criarSentidoFixo(); // J/K/O e A/B/Y/RB: o sentido do aperto vale até soltar
+  const sentido = criarSentidoFixo(); // J/K/O/L e A/B/X/Y/RB: o sentido do aperto vale até soltar
   const ajustes = lerAjustes();
 
   // ---------------------------------------------------------------- teclado
@@ -333,7 +350,7 @@ export function criarEntrada(opc = {}) {
     if (e.repeat) return;
     teclas.add(code);
     if (TECLA_BIT[code]) pulsos |= TECLA_BIT[code];
-    if (SENTIDO_FASE[code]) pulsos |= sentido.bit(code, true, faseAgora); // o sentido fica fixado aqui (fase de agora)
+    if (SENTIDO_FASE[code]) pulsos |= sentido.bit(code, true, faseAgora, altaAgora); // o sentido fica fixado aqui (fase de agora)
     if (ACOES_TECLA[code]) emitir(ACOES_TECLA[code]);
   });
   window.addEventListener('keyup', e => {
@@ -354,7 +371,7 @@ export function criarEntrada(opc = {}) {
     // modificador só no E: Ctrl + W fecharia a aba do navegador (o navegador não deixa impedir)
     for (const c of teclas) {
       if (TECLA_BIT[c]) b |= TECLA_BIT[c];
-      else if (SENTIDO_FASE[c]) b |= sentido.bit(c, true, faseAgora);
+      else if (SENTIDO_FASE[c]) b |= sentido.bit(c, true, faseAgora, altaAgora);
     }
     fTec.ax = a.x; fTec.ay = a.y; fTec.mag = a.mag; fTec.botoes = b;
     return fTec;
@@ -376,11 +393,11 @@ export function criarEntrada(opc = {}) {
     if (p && !bloqueada) { bPad |= bit; if (!antes[i]) pulsos |= bit; } else if (antes[i]) soltas |= bit;
     antes[i] = p;
   }
-  // A, B, Y e RB: o sentido (ataque/defesa) é decidido no aperto e vale até soltar
+  // A, B, X, Y e RB: o sentido (ataque/defesa; o X também pela bola alta) é decidido no aperto e vale até soltar
   function seguraFase(i, id) {
     const p = lido(i);
     if (p && !bloqueada) {
-      const bit = sentido.bit(id, true, faseAgora);
+      const bit = sentido.bit(id, true, faseAgora, altaAgora);
       bPad |= bit;
       if (!antes[i]) pulsos |= bit;
     } else {
@@ -426,7 +443,7 @@ export function criarEntrada(opc = {}) {
     segura(PAD.LT, penalti ? BOTAO[PAD_PENALTI.LT] : BOTAO.MOD);
     seguraFase(PAD.A, 'pad:A');
     seguraFase(PAD.B, 'pad:B');
-    segura(PAD.X, BOTAO.LANCAMENTO);
+    seguraFase(PAD.X, 'pad:X'); // lançamento; na defesa, o carrinho (com a bola alta, lançamento)
     segura(PAD.LB, penalti ? BOTAO[PAD_PENALTI.LB] : BOTAO.TROCAR);
     seguraFase(PAD.Y, 'pad:Y');
     if (penalti) segura(PAD.RB, BOTAO[PAD_PENALTI.RB]); else seguraFase(PAD.RB, 'pad:RB');
@@ -760,14 +777,16 @@ export function criarEntrada(opc = {}) {
     passoUsou(botoes) { vistos = botoes | 0; },
     /**
      * Fases decididas no main.js: f = a dos botões visíveis (com a histerese de 0,25 s), agora = a do mundo neste passo
-     * (fixa o sentido de J/K/O e A/B/Y/RB no aperto; padrão: f), rival = o adversário com a bola no pé (o toque num
-     * botão de ataque ainda visível vale pelo da defesa da mesma vaga).
+     * (fixa o sentido de J/K/O/L e A/B/X/Y/RB no aperto; padrão: f), rival = o adversário com a bola no pé (o toque num
+     * botão de ataque ainda visível vale pelo da defesa da mesma vaga), alta = a bola alta neste passo (carrinho.js
+     * bolaAlta: na defesa, o L e o X apertados agora ficam LANÇAMENTO, não CARRINHO).
      */
-    definirFase(f, agora = f, rival = false) {
+    definirFase(f, agora = f, rival = false, alta = false) {
       if (f !== 'ataque' && f !== 'defesa') return;
       fase = f;
       faseAgora = agora === 'ataque' || agora === 'defesa' ? agora : f;
       posseRival = !!rival;
+      altaAgora = !!alta;
       trocarFaseSePuder();
     },
     get fase() { return faseVisivel; },

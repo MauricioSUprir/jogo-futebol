@@ -1,20 +1,29 @@
 // Botões de defesa do jogador do humano (Etapa 3, Parte 4; plano 2.8): CONTER (acompanha o condutor entre a bola e o
-// gol), DIVIDIDA (bote em pé) e PRESSÃO (o companheiro que chega primeiro aperta o condutor; marca no desenho). Pura;
-// constantes em config.js DEFESA_HUMANO. Ganchos em sim.js (só agem com os bits apertados ou j.defH ligado; a PRESSÃO
-// só na IA tática da partida): entradaConter/pedidoPressao (passo 1) e dividida (passo 3), semAtropelar. Estado:
+// gol), DIVIDIDA (bote em pé), PRESSÃO (o companheiro que chega primeiro aperta o condutor; marca no desenho) e o
+// disparo do CARRINHO (carrinho; o corpo é do carrinho.js) e os contatos da perna dele com a bola e com o homem. Pura;
+// constantes em config.js DEFESA_HUMANO. Ganchos em sim.js (só agem com os bits apertados, j.defH ligado ou um carrinho em
+// andamento; a PRESSÃO só na IA tática da partida): entradaConter/pedidoPressao (passo 1), carrinho (passo 2), dividida
+// (passo 3), contatosCarrinho e fimDoDeslize (passo 5, a bola), contatosHomemCarrinho (fim do passo), semAtropelar. Estado:
 // j.defH = null | {bote: null | {tick0, contato, cond, longe, pe, bx, bz}, semReacaoAte, tick}; j.conter (filtro e
 // histerese do CORRER). iaClassica (o "antes" dos testes): nada disto age. Contrato: CONTRATOS.md.
 
-import { BOTAO, CAMPO, PASSO, ENTRADA, DEFESA_HUMANO, FALTAS, JOGADOR, IA_PESSOA } from './config.js';
+import { BOTAO, CAMPO, PASSO, ENTRADA, DEFESA_HUMANO, FALTAS, JOGADOR, IA_PESSOA, SUBPASSOS_BOLA, BOLA } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp } from './mat.js';
 import { uniforme } from './rng.js';
-import { chutarRasteiro } from './bola.js';
+import { chutarRasteiro, proxVelRolando, DT_BOLA } from './bola.js';
+import {
+  montarCarrinho, bolaAlta, vivaCarrinho, quadroCarrinho, novoQuadroCarrinho, tempoCarrinho, marcarAcerto, segSeg, distPontoSeg,
+  juntaPerna, RAIOS_PERNA,
+} from './carrinho.js';
+// o contato do carrinho com o HOMEM: as pernas (e, deitado, o corpo inteiro) DESENHADAS do adversário (anim.js não importa
+// este módulo: sem ciclo)
+import { pose, NJ, J as JA, SEGMENTOS, RAIO_CABECA } from './anim.js';
 import { ataca } from './acoes.js';
 import { para } from './ia.js';
 import { estadoIA } from './ia-tatica.js';
 import { contraPessoa } from './tatica.js';
-import { chanceFaltaDividida, montarFalta, registrarFalta, chegada, forcaContato } from './faltas.js';
+import { chanceFaltaDividida, montarFalta, registrarFalta, chegada, forcaContato, faltaNoCarrinho } from './faltas.js';
 import { registrarToque } from './regras-goleiro.js';
 
 const C = DEFESA_HUMANO.conter, D = DEFESA_HUMANO.dividida, P = DEFESA_HUMANO.pressao, SA = DEFESA_HUMANO.semAtropelar;
@@ -211,6 +220,7 @@ export function chanceDividida(j, d0, bx, bz) {
  * Eventos: `dividida {id, ganhou, motivo}` e, ganhando, `roubada {id, dividida: true}`.
  */
 export function dividida(m, j) {
+  if (j.carrinho) return; // no carrinho (carrinho.js): uma ação de cada vez — a DIVIDIDA apertada no tick do aperto não sai
   const h = j.defH;
   if (h) {
     if (m.tick - h.tick > 2) { j.defH = null; } // estado velho (o controle saiu dele): descarta
@@ -296,6 +306,495 @@ function resolverBote(m, j, h) {
   // errou: sem reação (se o controle sair dele, a IA também não dá bote nesse tempo)
   j.defH = { bote: null, semReacaoAte: m.tick + seg(D.semReacao), tick: m.tick };
   j.descansoBote = Math.max(j.descansoBote ?? 0, seg(D.semReacao));
+}
+
+// ------------------------------------------------------------------------------------ CARRINHO
+// (item 34 da FILA; pedido do dono de 17/10: "botão de CARRINHO — dividida deslizando"). O corpo é um PLANO puro montado
+// no aperto (carrinho.js montarCarrinho, como o j.mergulho do goleiro) e um QUADRO puro do tempo, lidos pela simulação
+// (sim.js passo 2/2b/8), pela altura do quadril e pela pose (anim.js poseCarrinho). Aqui só o DISPARO: a borda do bit no
+// controlado, as guardas da especificação (A.2) e a bola prevista da ajuda de mira pelo encontro (A.3). Contrato:
+// CONTRATOS.md "Carrinho (item 34)". Nada sorteia; sem o botão nada daqui roda (a IA nunca liga o bit).
+
+const KC = DEFESA_HUMANO.carrinho;
+// a bola prevista para a ajuda de mira: nos instantes da procura (até encontro[1] s) e um tick além (a interpolação)
+const N_PREV = Math.round(KC.encontro[1] / PASSO) + 1;
+const _distRol = new Float64Array(N_PREV + 1);
+const _prev = { rolando: false, x: 0, z: 0, vx: 0, vz: 0, ux: 0, uz: 0 };
+const _bolaAgora = { x: 0, z: 0 };
+
+/** A bola prevista t s depois do aperto (em out.x/out.z; t aceita fração: a procura interpola o encontro). */
+function preverBolaCarrinho(t, out) {
+  const P = _prev;
+  if (P.rolando) {
+    // rolando sem dono: a distância exata da rolagem (bola.js distRolando, tick a tick) interpolada entre os ticks
+    let f = t / PASSO;
+    if (!(f > 0)) f = 0; else if (f > N_PREV) f = N_PREV;
+    let n = Math.floor(f);
+    if (n >= N_PREV) n = N_PREV - 1;
+    const d = _distRol[n] + (_distRol[n + 1] - _distRol[n]) * (f - n);
+    out.x = P.x + P.ux * d; out.z = P.z + P.uz * d;
+  } else { out.x = P.x + P.vx * t; out.z = P.z + P.vz * t; }
+  return out;
+}
+
+/** Monta a previsão da bola (o condutor adversário com ela no pé; rolando sem dono; no ar, baixa) em _prev. */
+function montarPrevisao(m) {
+  const b = m.bola, P = _prev;
+  P.x = b.p.x; P.z = b.p.z; P.rolando = false;
+  const d0 = m.posse != null ? porId(m, m.posse) : null;
+  if (d0) { P.vx = d0.vx; P.vz = d0.vz; return; }
+  if (!b.rolando) { P.vx = b.v.x; P.vz = b.v.z; return; }
+  const s0 = MD.hypot(b.v.x, b.v.z);
+  P.rolando = true;
+  if (s0 > 1e-9) { P.ux = b.v.x / s0; P.uz = b.v.z / s0; } else { P.ux = 1; P.uz = 0; }
+  // a mesma conta do distRolando (bola.js), guardando a distância no fim de cada tick: _distRol[n] = distRolando(s0, n)
+  let s = s0, d = 0;
+  _distRol[0] = 0;
+  for (let i = 1; i <= N_PREV; i++) {
+    if (s > 0) for (let k = 0; k < SUBPASSOS_BOLA; k++) { s = proxVelRolando(s, DT_BOLA); d += s * DT_BOLA; }
+    _distRol[i] = d;
+  }
+}
+
+/**
+ * CARRINHO (gancho do passo 2 do sim.js, só o CONTROLADO): na borda de BOTAO.CARRINHO monta o plano em j.carrinho e
+ * devolve true (o sim.js anda o corpo pelo quadro no mesmo passo). Só na partida (11×11 ou Modo Livre) com a bola VIVA —
+ * fora de parada não cobrada, do tick do gol e da disputa de pênaltis —, fora do goleiro, de um carrinho em andamento, do
+ * ar (o pulo do cabeceio saído), da DIVIDIDA em andamento ou sem reação; com a bola fora do pé de um companheiro, das
+ * mãos do goleiro e de um voo do próprio time (o bit chega cru no Node e no online), e não alta (carrinho.js bolaAlta).
+ * No aperto: a ação carregada/pedida, a DIVIDIDA, o CONTER, a recepção e o toque marcado caem; o pulo do cabeceio ainda
+ * no chão e a disputa pelo alto também (sim.js faz o mesmo na bola morta: senão o alguemNoAlto, o agendarDisputa e a
+ * trocaAerea o contariam como quem vai cabecear). Evento `carrinho {id, fase: 'inicio'}`.
+ */
+export function carrinho(m, j) {
+  if (!((j.botoes & BOTAO.CARRINHO) && !(j.botoesAnt & BOTAO.CARRINHO))) return false;
+  if (j.carrinho || !m.times || !m.partida || m.partida.estado !== 'jogo' || m.disputa || desligado(m)) return false;
+  if (j.posicao === 'GOL' || j.papel === 'parado' || j.papel === 'marcador') return false;
+  // a bola viva: nem parada não cobrada (naParada; o gol cria a parada), nem o tick do gol (sim.js grava m.golTick antes
+  // do regrasPartida)
+  if ((m.parada && !m.parada.rolou) || m.golTick != null) return false;
+  // uma ação de cada vez: no ar (o pulo do cabeceio que saiu do chão), a DIVIDIDA em andamento ou sem reação (o estado
+  // velho — o controle saiu dele no meio — o dividida descarta)
+  if (j.cab && j.cab.saiu && m.tick <= j.cab.tf) return false;
+  const h = j.defH;
+  if (h && m.tick - h.tick <= 2 && (h.bote || m.tick < h.semReacaoAte)) return false;
+  // a bola: nem nas mãos (Regra 12.3), nem no pé de um companheiro, nem num voo do meu time, nem alta (a perna não alcança)
+  if (m.naMao != null) return false;
+  if (m.posse != null) { const d0 = porId(m, m.posse); if (!d0 || d0.time === j.time) return false; }
+  if (m.voo && m.voo.time === j.time) return false;
+  if (bolaAlta(m)) return false;
+  // o plano (puro; a ajuda de mira pela bola prevista)
+  montarPrevisao(m);
+  _bolaAgora.x = m.bola.p.x; _bolaAgora.z = m.bola.p.z;
+  j.carrinho = montarCarrinho(j, m.tick, { bola: _bolaAgora, prever: preverBolaCarrinho });
+  // o aperto: uma ação de cada vez
+  j.defH = null; j.carga = null; j.pedido = null; j.conter = null; j.recebe = null;
+  if (j.cond) j.cond.toque = null;
+  if (j.cab && !j.cab.saiu) j.cab = null;
+  j.disputaAlta = null;
+  m.eventos.push({ tipo: 'carrinho', id: j.id, fase: 'inicio' });
+  return true;
+}
+
+// ---------------------------------------------- CARRINHO: o contato da perna DESENHADA com a BOLA (CONTRATOS.md, B.1/B.2)
+// As 6 cápsulas das pernas (coxa, canela, chuteira × 2) saem do QUADRO do carrinho (carrinho.js) e a pose as copia sem IK:
+// a perna que toca a bola é, bit a bit, a do manequim. A bola é conferida em KC.subpassos trechos por passo: o trecho que
+// ela percorre (o caminho do passo, em linha) contra a perna parada no quadro do FIM do trecho, com a distância EXATA
+// segmento × segmento — a bola nunca "pula" a perna, a qualquer velocidade. Só com a bola viva (vivaCarrinho), do aperto
+// até a parada (0 < t ≤ tS; o trecho que contém a parada inteiro, com a perna parada dela), com o centro da bola a
+// ≤ altoBola no ponto do contato, sem dono ou no pé/num voo do ADVERSÁRIO; um toque por carrinho (depois só o disco do
+// corpo, sim.js colisaoBolaCorpo). Entre vários carrinhos vale o contato MAIS CEDO (trecho, a fração do trecho na entrada,
+// a profundidade e, no empate exato, o time m.tick % 2): o resultado não depende da ordem de m.jogadores (o lado 0 não leva
+// vantagem no online). Sem sorteio.
+
+const SUB_C = KC.subpassos, RB_C = BOLA.raio;
+const _qk = novoQuadroCarrinho(), _qa = novoQuadroCarrinho(), _qb = novoQuadroCarrinho();
+const _ss = { s: 0, t: 0, d2: 0 }, _pt = { t: 0 };
+const _ent = { u: 0, prof: 0 };
+const _mel = { j: null, s: 0, u: 0, prof: 0, k: 0, i: 0 };
+
+/** A entrada da bola (o trecho B0 → B1) na cápsula A → B de raio R (a perna parada): false sem contato; com contato, em o
+ * a fração do trecho na entrada (u: a 1ª com a distância ≤ R) e a profundidade nela (> 0 só se a bola já começa dentro). */
+function entradaNaCapsula(b0x, b0y, b0z, b1x, b1y, b1z, A, B, R, o) {
+  segSeg(b0x, b0y, b0z, b1x, b1y, b1z, A.x, A.y, A.z, B.x, B.y, B.z, _ss);
+  if (_ss.d2 > R * R) return false;
+  const d0 = distPontoSeg(b0x, b0y, b0z, A.x, A.y, A.z, B.x, B.y, B.z);
+  if (d0 <= R) { o.u = 0; o.prof = R - d0; return true; }
+  // a distância de um ponto que anda em linha até um segmento é convexa: cai de d0 > R até a menor (≤ R, na fração s) —
+  // a entrada por bisseção (16 passos: ~2 µm num trecho de 15 cm)
+  let lo = 0, hi = _ss.s;
+  for (let it = 0; it < 16; it++) {
+    const u = (lo + hi) / 2;
+    if (distPontoSeg(b0x + (b1x - b0x) * u, b0y + (b1y - b0y) * u, b0z + (b1z - b0z) * u, A.x, A.y, A.z, B.x, B.y, B.z) <= R) hi = u;
+    else lo = u;
+  }
+  o.u = hi; o.prof = 0;
+  return true;
+}
+
+/** O t do quadro no fim do trecho s (1..SUB_C) do passo: o último é o mesmo t do corpo no tick seguinte (passoCarrinho). */
+const tTrecho = (c, tick, s) => (s === SUB_C ? tempoCarrinho(c, tick + 1) : tempoCarrinho(c, tick, s * PASSO / SUB_C));
+
+/**
+ * O contato das pernas de todos os carrinhos com a bola neste passo (sim.js passo 5, logo depois de passoBola: (bx0, by0,
+ * bz0) é a bola no começo do passo e m.bola no fim). Devolve true se uma perna tocou (o sim.js não roda o bloqueioPerna
+ * nesse passo: um contato só). Sem carrinho nada roda.
+ */
+export function contatosCarrinho(m, bx0, by0, bz0) {
+  let algum = false;
+  for (const j of m.jogadores) if (j.carrinho) { algum = true; break; }
+  if (!algum || m.naMao != null || !vivaCarrinho(m)) return false;
+  const b = m.bola;
+  const d0 = m.posse != null ? porId(m, m.posse) : null;
+  if (m.posse != null && !d0) return false;
+  const par = m.tick % 2;
+  _mel.j = null;
+  for (const j of m.jogadores) {
+    const c = j.carrinho;
+    if (!c || c.bola >= 0) continue;
+    // a bola de um companheiro (no pé ou num voo do meu time): a perna passa por ela
+    if ((d0 && d0.time === j.time) || (m.voo && m.voo.time === j.time)) continue;
+    // parado: a perna não toca mais (só o disco do corpo). O trecho que contém a parada conta inteiro, com a perna dele
+    // (de tS em diante o quadro das pernas é o mesmo: o corpo parado no chão)
+    let t0 = tempoCarrinho(c, m.tick);
+    if (t0 >= c.tS) continue;
+    for (let s = 1; s <= SUB_C; s++) {
+      if (t0 >= c.tS) break;
+      const t = tTrecho(c, m.tick, s);
+      t0 = t;
+      quadroCarrinho(c, t, _qk);
+      const f0 = (s - 1) / SUB_C, f1 = s / SUB_C;
+      const b0x = bx0 + (b.p.x - bx0) * f0, b0y = by0 + (b.p.y - by0) * f0, b0z = bz0 + (b.p.z - bz0) * f0;
+      const b1x = bx0 + (b.p.x - bx0) * f1, b1y = by0 + (b.p.y - by0) * f1, b1z = bz0 + (b.p.z - bz0) * f1;
+      let achou = false, cu = 0, cp = 0, ck = 0, ci = 0;
+      for (let k = 0; k < 2; k++) {
+        for (let i = 0; i < 3; i++) {
+          const A = juntaPerna(_qk, k, i, false), B = juntaPerna(_qk, k, i, true);
+          if (!entradaNaCapsula(b0x, b0y, b0z, b1x, b1y, b1z, A, B, RAIOS_PERNA[i] + RB_C, _ent)) continue;
+          // o centro da bola a ≤ altoBola no ponto do contato (acima disto a perna não alcança)
+          if (b0y + (b1y - b0y) * _ent.u > KC.altoBola) continue;
+          if (!achou || _ent.u < cu || (_ent.u === cu && _ent.prof > cp)) { achou = true; cu = _ent.u; cp = _ent.prof; ck = k; ci = i; }
+        }
+      }
+      if (!achou) continue;
+      // o mais cedo de todos: o trecho, a fração na entrada, a profundidade e, no empate exato, o time m.tick % 2 (nunca a
+      // ordem do array)
+      const M = _mel;
+      if (!M.j || s < M.s || (s === M.s && (cu < M.u || (cu === M.u && (cp > M.prof || (cp === M.prof && j.time === par && M.j.time !== par)))))) {
+        M.j = j; M.s = s; M.u = cu; M.prof = cp; M.k = ck; M.i = ci;
+      }
+      break;
+    }
+  }
+  if (!_mel.j) return false;
+  tocarBolaCarrinho(m, _mel.j, _mel.s, _mel.u, _mel.k, _mel.i, bx0, by0, bz0, d0);
+  return true;
+}
+
+/** O chute do adversário (o bloqueio da perna é desvio: o gol continua de quem chutou), como o chuteAdv do troca.js. */
+const vooDeChute = v => v.tipo === 'chute' || v.tipo === 'colocado' || v.tipo === 'cavadinha' || (v.tipo === 'cabeceio' && v.cabeceio === 'chute');
+
+/**
+ * O toque da perna (k, segmento i) de j na bola, na fração u do trecho s (B.2, sem sorteio): a física do contato na cápsula
+ * — a normal do ponto mais perto da perna ao centro da bola; a velocidade da perna pela diferença do quadro em t e
+ * t − PASSO/SUB_C, limitada a vPernaRel em relação ao corpo (o desenho da transição passa de 9 m/s: só a conta do toque é
+ * limitada); restituição eBola; a bola posta na superfície. Depois, pelo que a bola era: o condutor perde a bola só se ela
+ * sai a ≥ rouboVRel dele (GANHOU: dividida + roubada); abaixo disso, raspão (a posse fica); o chute do adversário é desvio
+ * (bateuCorpo bloqueio, como o bloqueioPerna); o passe do adversário ou a bola livre, roubada (TOQUES: o gol contra, o
+ * impedido que desliza marcado, o passe cortado). Quem ganhou a bola levanta mais cedo (marcarAcerto).
+ */
+function tocarBolaCarrinho(m, j, s, u, k, i, bx0, by0, bz0, d0) {
+  const c = j.carrinho, b = m.bola;
+  const t = tTrecho(c, m.tick, s), tp = s === 1 ? tempoCarrinho(c, m.tick) : tTrecho(c, m.tick, s - 1);
+  quadroCarrinho(c, t, _qa);
+  quadroCarrinho(c, tp, _qb);
+  const R = RAIOS_PERNA[i] + RB_C;
+  // o ponto da bola na entrada e o ponto mais perto dela na perna (o segmento no fim do trecho)
+  const f = (s - 1 + u) / SUB_C;
+  let px = bx0 + (b.p.x - bx0) * f, py = by0 + (b.p.y - by0) * f, pz = bz0 + (b.p.z - bz0) * f;
+  const A = juntaPerna(_qa, k, i, false), B = juntaPerna(_qa, k, i, true);
+  distPontoSeg(px, py, pz, A.x, A.y, A.z, B.x, B.y, B.z, _pt);
+  const v = _pt.t;
+  const lx = A.x + (B.x - A.x) * v, ly = A.y + (B.y - A.y) * v, lz = A.z + (B.z - A.z) * v;
+  let nx = px - lx, ny = py - ly, nz = pz - lz, nl = Math.sqrt(nx * nx + ny * ny + nz * nz);
+  if (nl < 1e-9) {
+    // a bola no eixo da perna (só se já começou dentro dela): sai pelo lado de onde veio, senão para a frente do carrinho
+    nx = bx0 - lx; ny = 0; nz = bz0 - lz; nl = Math.sqrt(nx * nx + nz * nz);
+    if (nl < 1e-9) { nx = c.ux; nz = c.uz; nl = 1; }
+  }
+  nx /= nl; ny /= nl; nz /= nl;
+  // a bola na superfície da cápsula (a rolando fica no chão; a que começou dentro sai pela normal até a superfície)
+  const rolando = b.rolando;
+  b.p.x = lx + nx * (R + 1e-4); b.p.y = ly + ny * (R + 1e-4); b.p.z = lz + nz * (R + 1e-4);
+  if (rolando) {
+    b.p.y = RB_C;
+    for (let it = 0; it < 3; it++) {
+      const d = distPontoSeg(b.p.x, b.p.y, b.p.z, A.x, A.y, A.z, B.x, B.y, B.z, _pt);
+      if (d >= R) break;
+      const qx = A.x + (B.x - A.x) * _pt.t, qz = A.z + (B.z - A.z) * _pt.t;
+      let hx = b.p.x - qx, hz = b.p.z - qz;
+      const hl = Math.sqrt(hx * hx + hz * hz);
+      if (hl > 1e-9) { hx /= hl; hz /= hl; } else { hx = nx; hz = nz; }
+      b.p.x += hx * (R - d + 1e-4); b.p.z += hz * (R - d + 1e-4);
+    }
+  } else if (b.p.y < RB_C) b.p.y = RB_C;
+  // a velocidade do ponto da perna (diferença do quadro no mesmo ponto do segmento), limitada a vPernaRel do corpo
+  const A0 = juntaPerna(_qb, k, i, false), B0 = juntaPerna(_qb, k, i, true);
+  const dt = t - tp;
+  const vcx = _qa.vx, vcz = _qa.vz;
+  let rx = 0, ry = 0, rz = 0;
+  if (dt > 1e-9) {
+    rx = (lx - (A0.x + (B0.x - A0.x) * v)) / dt - vcx;
+    ry = (ly - (A0.y + (B0.y - A0.y) * v)) / dt;
+    rz = (lz - (A0.z + (B0.z - A0.z) * v)) / dt - vcz;
+    const rl = Math.sqrt(rx * rx + ry * ry + rz * rz);
+    if (rl > KC.vPernaRel) { const e = KC.vPernaRel / rl; rx *= e; ry *= e; rz *= e; }
+  }
+  const vpx = vcx + rx, vpy = ry, vpz = vcz + rz;
+  const vn = (b.v.x - vpx) * nx + (b.v.y - vpy) * ny + (b.v.z - vpz) * nz;
+  if (vn < 0) {
+    const e1 = 1 + KC.eBola;
+    b.v.x -= e1 * vn * nx; b.v.y -= e1 * vn * ny; b.v.z -= e1 * vn * nz;
+  }
+  if (rolando) { b.v.y = 0; b.w.x = b.v.z / RB_C; b.w.y = 0; b.w.z = -b.v.x / RB_C; }
+  else { b.w.x *= 0.3; b.w.y *= 0.3; b.w.z *= 0.3; }
+  // um toque por carrinho; a bola desviada não passa mais onde o domínio aéreo / cabeceio marcado esperava
+  c.bola = m.tick;
+  for (const o of m.jogadores) if (o.cond && o.cond.toque && o.cond.toque.tipo === 'aereo') o.cond.toque = null;
+  if (d0) {
+    // a bola de um CONDUTOR adversário: ganhou só se ela sai a ≥ rouboVRel dele (senão é raspão: a condução dele segue)
+    if (MD.hypot(b.v.x - d0.vx, b.v.z - d0.vz) >= KC.rouboVRel) {
+      d0.cond.toque = null; d0.cond.busca = false; d0.cond.semDominioAte = m.tick + seg(D.semDominio);
+      m.posse = null; m.voo = null;
+      m.ultimoToque = { id: j.id, time: j.time, tick: m.tick };
+      if (m.stats) m.stats.roubadas++;
+      marcarAcerto(c, m.tick);
+      c.desarmou = d0.id;
+      m.eventos.push({ tipo: 'dividida', id: j.id, ganhou: true, motivo: null, carrinho: true });
+      m.eventos.push({ tipo: 'roubada', id: j.id, carrinho: true });
+    } else {
+      if (d0.cond) d0.cond.bolaDesviada = true;
+      m.eventos.push({ tipo: 'carrinho', id: j.id, fase: 'bola', de: 'raspao' });
+    }
+    registrarToque(m, j, 'roubada');
+  } else if (m.voo && vooDeChute(m.voo)) {
+    // o chute do adversário: desvio (o m.voo e o m.ultimoToque ficam: o gol desviado continua de quem chutou)
+    m.desvio = m.tick; // o goleiro relê o chute desviado (goleiro.js lerChute)
+    marcarAcerto(c, m.tick);
+    m.eventos.push({ tipo: 'bateuCorpo', id: j.id, bloqueio: true, carrinho: true });
+    registrarToque(m, j, 'corpo');
+  } else {
+    // o passe do adversário ou a bola livre: roubada (o passe acabou)
+    const de = m.voo ? 'passe' : 'livre';
+    m.voo = null;
+    m.ultimoToque = { id: j.id, time: j.time, tick: m.tick };
+    marcarAcerto(c, m.tick);
+    m.eventos.push({ tipo: 'roubada', id: j.id, carrinho: true, de });
+    registrarToque(m, j, 'roubada');
+  }
+}
+
+/** O carrinho que não tocou a bola (sim.js, depois da bola de cada passo): `dividida {ganhou: false, motivo: 'fora',
+ * carrinho}` quando a janela do homem FECHA (janelaHomem: o começo do levantar, 0,7 s depois da parada no erro) — no passo
+ * em que o fim do passo já não confere o contato (contatosHomemCarrinho viu o tick de agora pela última vez). Um desfecho
+ * só por carrinho: a perna parada no caminho depois da parada ainda pode fazer a falta (o tropeço, `motivo: 'falta'`) e
+ * soltar o 'fora' na parada (tS) dava os dois. Só com a bola viva. A súmula e o autor do gol ignoram. */
+export function fimDoDeslize(m) {
+  let viva = null;
+  for (const j of m.jogadores) {
+    const c = j.carrinho;
+    if (!c || c.bola >= 0 || (c.homem && c.homem.falta)) continue;
+    if (!(janelaHomem(c, tempoCarrinho(c, m.tick)) && !janelaHomem(c, tempoCarrinho(c, m.tick + 1)))) continue;
+    if (viva === null) viva = vivaCarrinho(m);
+    if (!viva) return;
+    m.eventos.push({ tipo: 'dividida', id: j.id, ganhou: false, motivo: 'fora', carrinho: true });
+  }
+}
+
+// ---------------------------------------------- CARRINHO: o contato da perna DESENHADA com o HOMEM (CONTRATOS.md, B.3/C)
+// No fim do passo (sim.js, depois do m.tick++ e da altura do quadril), com o quadro e a pose do tick NOVO: as 6 cápsulas das
+// pernas do quadro contra as pernas DESENHADAS do adversário (anim.js pose num buffer pré-alocado: coxa, canela e chuteira
+// das duas) — o corpo inteiro (todos os segmentos e a cabeça) quando ele está deitado (a pelve desenhada abaixo de
+// pelveDeitado: o goleiro no mergulho, outro carrinho). Só com a bola viva (vivaCarrinho), do aperto até o COMEÇO do levantar
+// (t ≤ tS + tChao − levantar: a perna parada no caminho depois da parada é o tropeço da Regra 12.1), uma vez por carrinho
+// (c.homem = o 1º contato com um adversário). Ordem sem viés: os carrinhos em duas voltas por m.jogadores (o time m.tick % 2
+// primeiro); os candidatos (a ≤ alcanceHomem da ponta da perna da bola) na ordem de m.jogadores. A falta pela Regra 12 é de
+// faltas.js faltaNoCarrinho — os ÚNICOS sorteios do carrinho, no tick do 1º contato. Companheiros: nada (as pernas
+// atravessam, como hoje). Ninguém cai nesta entrega: o adversário perde velocidade (× 0,5 com falta, × 0,7 sem) e, com
+// falta e a bola, o domínio por FALTAS.queda s.
+
+const _qh = novoQuadroCarrinho(), _qh2 = novoQuadroCarrinho();
+const _poseH = new Float32Array(NJ * 3), _poseH2 = new Float32Array(NJ * 3);
+const _cH = { g: 0, d: 0, r: 0, ax: 0, az: 0, bx: 0, bz: 0 }, _cH2 = { g: 0, d: 0, r: 0, ax: 0, az: 0, bx: 0, bz: 0 };
+// os segmentos do adversário [junta A, junta B, raio (o maior dos dois do SEGMENTOS)]: o corpo inteiro (deitado) e só as
+// pernas — coxa, canela e chuteira das duas (de pé)
+const SEG_CORPO = SEGMENTOS.map(s => [s[0], s[1], Math.max(s[2], s[3])]);
+const FIM_PERNA = [JA.joelhoE, JA.tornozeloE, JA.pontaE, JA.joelhoD, JA.tornozeloD, JA.pontaD];
+const SEG_PERNAS = SEG_CORPO.filter(s => FIM_PERNA.includes(s[1]));
+
+/**
+ * A menor folga (distância − a soma dos raios; ≤ 0 = contato) entre as 6 cápsulas das pernas do quadro q e os segmentos
+ * `segs` da pose P (com a esfera da cabeça se `cabeca`). Em o: a distância (d) e a soma dos raios (r) do par e os pontos mais
+ * perto no chão (a: na perna do quadro; b: no corpo da pose).
+ */
+function folgaPernasCorpo(q, P, segs, cabeca, o) {
+  let g = Infinity;
+  const hc = JA.cabeca * 3;
+  for (let k = 0; k < 2; k++) {
+    for (let i = 0; i < 3; i++) {
+      const A = juntaPerna(q, k, i, false), B = juntaPerna(q, k, i, true), r = RAIOS_PERNA[i];
+      for (let n = 0; n < segs.length; n++) {
+        const a3 = segs[n][0] * 3, b3 = segs[n][1] * 3;
+        segSeg(A.x, A.y, A.z, B.x, B.y, B.z, P[a3], P[a3 + 1], P[a3 + 2], P[b3], P[b3 + 1], P[b3 + 2], _ss);
+        const dd = Math.sqrt(_ss.d2), gg = dd - r - segs[n][2];
+        if (gg < g) {
+          g = gg; o.d = dd; o.r = r + segs[n][2];
+          o.ax = A.x + (B.x - A.x) * _ss.s; o.az = A.z + (B.z - A.z) * _ss.s;
+          o.bx = P[a3] + (P[b3] - P[a3]) * _ss.t; o.bz = P[a3 + 2] + (P[b3 + 2] - P[a3 + 2]) * _ss.t;
+        }
+      }
+      if (cabeca) {
+        const dd = distPontoSeg(P[hc], P[hc + 1], P[hc + 2], A.x, A.y, A.z, B.x, B.y, B.z, _pt), gg = dd - r - RAIO_CABECA;
+        if (gg < g) {
+          g = gg; o.d = dd; o.r = r + RAIO_CABECA;
+          o.ax = A.x + (B.x - A.x) * _pt.t; o.az = A.z + (B.z - A.z) * _pt.t;
+          o.bx = P[hc]; o.bz = P[hc + 2];
+        }
+      }
+    }
+  }
+  o.g = g;
+  return g;
+}
+
+/** A intenção de jogar a bola (Regra 12.4; CONTRATOS.md "Carrinho", C.2): a perna já tocou a bola, ou mirou nela no aperto
+ * (c.mirou) e a bola está a ≤ tentouLonge m da perna da bola no contato — nunca a distância instantânea sozinha (o cartão
+ * mudaria com a fase da passada do condutor). */
+function tentouBolaCarrinho(m, c, q) {
+  if (c.bola >= 0) return true;
+  if (!c.mirou) return false;
+  const b = m.bola.p, k = c.frente;
+  let d = Infinity;
+  for (let i = 0; i < 3; i++) {
+    const A = juntaPerna(q, k, i, false), B = juntaPerna(q, k, i, true);
+    const di = distPontoSeg(b.x, b.y, b.z, A.x, A.y, A.z, B.x, B.y, B.z);
+    if (di < d) d = di;
+  }
+  return d <= KC.tentouLonge;
+}
+
+/** O carrinho de j ainda pode tocar o homem no t (do aperto até o começo do levantar)? */
+const janelaHomem = (c, t) => t > 0 && t <= c.tS + c.tChao - KC.levantar;
+
+/**
+ * O contato das pernas de todos os carrinhos com os adversários neste passo (sim.js, no fim do passo). Sem carrinho sem
+ * contato, nada roda.
+ */
+export function contatosHomemCarrinho(m) {
+  let algum = false;
+  for (const j of m.jogadores) if (j.carrinho && !j.carrinho.homem) { algum = true; break; }
+  if (!algum || !vivaCarrinho(m)) return;
+  const par = m.tick % 2;
+  for (let volta = 0; volta < 2; volta++) {
+    const time = volta === 0 ? par : 1 - par;
+    for (const j of m.jogadores) {
+      const c = j.carrinho;
+      if (!c || c.homem || j.time !== time) continue;
+      const t = tempoCarrinho(c, m.tick);
+      if (janelaHomem(c, t)) homemDoCarrinho(m, j, c, t);
+    }
+  }
+}
+
+/** O 1º adversário que a perna de j toca neste tick (se houver): a falta e o efeito. */
+function homemDoCarrinho(m, j, c, t) {
+  const q = quadroCarrinho(c, t, _qh);
+  const pt = q.po[c.frente];
+  const A2 = KC.alcanceHomem * KC.alcanceHomem;
+  for (const o of m.jogadores) {
+    if (o.time === j.time) continue;
+    const dx = o.x - pt.x, dz = o.z - pt.z;
+    if (dx * dx + dz * dz > A2) continue;
+    pose(o, m, _poseH);
+    const deitado = _poseH[JA.pelve * 3 + 1] < KC.pelveDeitado;
+    let g = folgaPernasCorpo(q, _poseH, deitado ? SEG_CORPO : SEG_PERNAS, deitado, _cH);
+    let ax = _cH.ax, az = _cH.az, bx = _cH.bx, bz = _cH.bz, dd = _cH.d, rr = _cH.r;
+    // dois carrinhos de times opostos (o outro ainda sem contato e na janela dele): o contato é SIMÉTRICO — as pernas de cada
+    // um no corpo do outro, nos dois sentidos (o resultado não depende de quem a volta vê primeiro: o lado 0 do online não
+    // leva vantagem)
+    const oc = o.carrinho;
+    let dois = false;
+    if (oc && !oc.homem) {
+      const to = tempoCarrinho(oc, m.tick);
+      if (janelaHomem(oc, to)) {
+        dois = true;
+        pose(j, m, _poseH2);
+        const jDeitado = _poseH2[JA.pelve * 3 + 1] < KC.pelveDeitado;
+        const g2 = folgaPernasCorpo(quadroCarrinho(oc, to, _qh2), _poseH2, jDeitado ? SEG_CORPO : SEG_PERNAS, jDeitado, _cH2);
+        if (g2 < g) { g = g2; ax = _cH2.bx; az = _cH2.bz; bx = _cH2.ax; bz = _cH2.az; dd = _cH2.d; rr = _cH2.r; }
+      }
+    }
+    if (!(g <= 0)) continue;
+    // a normal (no chão) do contato: a dos pontos mais perto (de quem desliza ao adversário) quando ela diz algo — o contato
+    // raso (a distância ≥ 1/4 da soma dos raios) e de lado (a parte no chão ≥ metade dela); com as cápsulas cruzadas fundo ou
+    // uma por cima da outra (a perna por cima do pé), a direção dos pontos mais perto é qualquer uma (a força ia a 0 com o
+    // condutor correndo de lado): a linha dos centros dos corpos; no limite, u
+    let nx = bx - ax, nz = bz - az, nl = Math.sqrt(nx * nx + nz * nz);
+    if (!(dd >= 0.25 * rr && nl >= 0.5 * dd)) { nx = o.x - j.x; nz = o.z - j.z; nl = Math.sqrt(nx * nx + nz * nz); }
+    if (nl < 1e-6) { nx = c.ux; nz = c.uz; nl = 1; }
+    nx /= nl; nz /= nl;
+    // a força: a aproximação dos CORPOS na normal (o do carrinho é o do quadro; o tropeço conta)
+    const f = Math.max(0, (j.vx - o.vx) * nx + (j.vz - o.vz) * nz);
+    if (dois) { resolverDoisCarrinhos(m, j, o, nx, nz, f); return; }
+    const depois = c.bola >= 0;
+    const fExc = Math.max(0, j.vx * nx + j.vz * nz);
+    const h = c.homem = { id: o.id, tick: m.tick, depois, falta: false, f, fExc, ch: chegada(j, o) };
+    // (com a falta do passo já feita, o carrinho não sorteia: uma falta por passo, como a DIVIDIDA)
+    const fal = m.faltaPendente ? null : faltaNoCarrinho(m, j, o, {
+      depois, f, fExc, v: MD.hypot(j.vx, j.vz), naMao: m.naMao === o.id, tentouBola: tentouBolaCarrinho(m, c, q),
+    });
+    if (fal) {
+      // a perna tirou a bola DELE e o seguimento o derrubou (o 'depois' no mesmo jogador): o lance é a falta — a súmula
+      // desfaz o desarme, a roubada e as perdas que deu no toque (evento desarmeAnulado)
+      if (depois && c.desarmou === o.id) {
+        if (m.stats) m.stats.roubadas--;
+        m.eventos.push({ tipo: 'desarmeAnulado', id: j.id, de: o.id, carrinho: true });
+      }
+      m.eventos.push({ tipo: 'dividida', id: j.id, ganhou: false, motivo: 'falta', carrinho: true });
+      registrarFalta(m, fal);
+      h.falta = true;
+    }
+    // ninguém cai nesta entrega: com falta, a velocidade cai à metade (como a DIVIDIDA) e, com a bola, sem domínio por
+    // FALTAS.queda s; sem falta (incidental ou sorteio limpo) × 0,7 e ele segue com a bola se ainda a tem
+    if (!o.carrinho) {
+      const k = fal ? 0.5 : 0.7;
+      o.vx *= k; o.vz *= k;
+      if (fal && m.posse === o.id && o.cond) o.cond.semDominioAte = m.tick + seg(FALTAS.queda);
+    }
+    return;
+  }
+}
+
+/**
+ * Dois carrinhos de times opostos que se tocam (CONTRATOS.md "Carrinho", B.3 e I.11), tratados como um par, uma vez: se só
+ * UM tocou a bola antes, quem NÃO tocou comete a falta (sem sorteio de chance; abaixo de FALTAS.forca.min o contato é
+ * incidental; o cartão segue o sorteio de sempre); nenhum ou os dois: "dividida de dois carrinhos", sem falta. A normal
+ * (nx, nz) vai de j para o; f é a aproximação (a mesma dos dois lados).
+ */
+function resolverDoisCarrinhos(m, j, o, nx, nz, f) {
+  const c = j.carrinho, oc = o.carrinho;
+  const tj = c.bola >= 0, to = oc.bola >= 0;
+  const hj = c.homem = { id: o.id, tick: m.tick, depois: tj, falta: false, f, fExc: Math.max(0, j.vx * nx + j.vz * nz), ch: chegada(j, o) };
+  const ho = oc.homem = { id: j.id, tick: m.tick, depois: to, falta: false, f, fExc: Math.max(0, -(o.vx * nx + o.vz * nz)), ch: chegada(o, j) };
+  if (tj === to || m.faltaPendente) return;
+  const d = tj ? o : j, v = tj ? j : o, hd = tj ? ho : hj;
+  const qd = quadroCarrinho(d.carrinho, tempoCarrinho(d.carrinho, m.tick), _qh2);
+  const fal = faltaNoCarrinho(m, d, v, { dois: true, depois: false, f, fExc: hd.fExc, v: MD.hypot(d.vx, d.vz), tentouBola: tentouBolaCarrinho(m, d.carrinho, qd) });
+  if (fal) {
+    m.eventos.push({ tipo: 'dividida', id: d.id, ganhou: false, motivo: 'falta', carrinho: true });
+    registrarFalta(m, fal);
+    hd.falta = true;
+  }
 }
 
 // ------------------------------------------------------------------------------------ PRESSÃO
@@ -429,7 +928,8 @@ export function pressionadorDe(m, time, excluir = -1) {
   if (d0) {
     let mt = Infinity;
     for (const o of m.jogadores) {
-      if (o.time !== time || o.posicao === 'GOL' || o.id === ctrl || o.papel === 'parado' || o.papel === 'marcador') continue;
+      // (quem está no carrinho, deitado no chão — carrinho.js —, não é chamado)
+      if (o.time !== time || o.posicao === 'GOL' || o.id === ctrl || o.papel === 'parado' || o.papel === 'marcador' || o.carrinho) continue;
       if (o.id === excluir && o.id !== atual) continue;
       let t = pontoEncontro(m, time, o, d0, d0.vx, d0.vz, _pc).t;
       // a vantagem de quem já ia só vale se ele continua indo para lá: com o ponto novo (o passe do adversário mudou o

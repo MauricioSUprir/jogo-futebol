@@ -85,11 +85,16 @@ export function quantizada(e) {
   return decodificar(b, 0);
 }
 
-/** Uma entrada válida? (bits reservados zerados; x, z, mx e mz dentro de −1024…1024). */
+/**
+ * Uma entrada válida? (bits reservados zerados — os do byte 5 além de IA, AÇÃO, PARADINHA e PULINHO —; x, z, mx e mz dentro
+ * de −1024…1024). A PARADINHA e o PULINHO são botões de verdade (o codificar os põe no byte 5): antes eles contavam como
+ * bits reservados e o pacote inteiro era descartado — com Espaço ou F apertados (o TECLA_BIT liga os dois sempre) o outro
+ * aparelho nunca recebia o passo e o lockstep parava ("Aguardando o adversário").
+ */
 export function entradaValida(buf, o = 0) {
   const xi = buf[o] | ((buf[o + 1] & 0x0f) << 8), zi = (buf[o + 1] >> 4) | (buf[o + 2] << 4);
   const mxi = buf[o + 6] | ((buf[o + 7] & 0x0f) << 8), mzi = (buf[o + 7] >> 4) | (buf[o + 8] << 4);
-  return xi <= 2 * Q && zi <= 2 * Q && mxi <= 2 * Q && mzi <= 2 * Q && (buf[o + 5] & ~(F_IA | F_ACAO)) === 0;
+  return xi <= 2 * Q && zi <= 2 * Q && mxi <= 2 * Q && mzi <= 2 * Q && (buf[o + 5] & ~(F_IA | F_ACAO | F_PARADINHA | F_PULINHO)) === 0;
 }
 
 /** Atraso D (passos) pelo RTT (ms) e se algum aparelho está a 30 qps (contrato 2.3). */

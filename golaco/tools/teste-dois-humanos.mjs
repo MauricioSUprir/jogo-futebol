@@ -10,8 +10,8 @@
 //     de entrada), o mesmo passo de novo numa cópia do mundo com a entrada do OUTRO time trocada (analógico, botões e a
 //     marca `ia`): a entrada aplicada a cada jogador do time (botões, analógico, rumo pedido), os botões do time, a
 //     PRESSÃO pedida e a IA pelo humano não mudam;
-//  C) TROCAR, GOLEIRO (saída do goleiro) e PRESSÃO de cada um valem no time dele e só nele (o mesmo estado, o botão em
-//     um time e depois no outro);
+//  C) TROCAR, GOLEIRO (saída do goleiro), PRESSÃO e CARRINHO (item 34: o controlado desliza) de cada um valem no time
+//     dele e só nele (o mesmo estado, o botão em um time e depois no outro);
 //  D) o bit IA (entradaDemoPartida(m, time): a IA joga pelo controlado daquele time) — D1 m.iaJoga de cada time segue a
 //     entrada DELE a cada passo; D2 IA × humano (um lado só com o bit IA, a partida inteira, e o espelho): acaba, o lado
 //     da IA cobra sem esperar o prazo do humano e joga (passes e chutes);
@@ -31,6 +31,8 @@ const imp = f => import(new URL(`${JS}/${f}`, import.meta.url).href);
 const P = await imp('partida.js');
 const S = await imp('sim.js');
 const F = await imp('faltas.js');
+// o carrinho (item 34): o predicado da bola alta, o mesmo que barra o disparo (sem ele — a base —, o C4 reprova)
+const CR = await imp('carrinho.js').catch(() => null);
 const { BOTAO, PARTIDA, CAMPO, BOLA, PASSO } = await imp('config.js');
 const seg = s => Math.round(s / PASSO);
 const t0 = Date.now();
@@ -43,7 +45,7 @@ function gerador(sem) {
 const q = v => Math.round(v * 1024) / 1024 + 0; // como a rede (1/1024)
 const NEUTRA = Object.freeze({ x: 0, z: 0, botoes: 0 });
 const LISTA = [0, 0, 0, BOTAO.CORRER, BOTAO.PASSE, BOTAO.CHUTE, BOTAO.LANCAMENTO, BOTAO.ENFIADA, BOTAO.TROCAR, BOTAO.CONTER,
-  BOTAO.DIVIDIDA, BOTAO.PRESSAO, BOTAO.MOD, BOTAO.GOLEIRO, BOTAO.CORRER | BOTAO.PASSE];
+  BOTAO.DIVIDIDA, BOTAO.PRESSAO, BOTAO.MOD, BOTAO.GOLEIRO, BOTAO.CORRER | BOTAO.PASSE, BOTAO.CARRINHO];
 
 /** Gerador "pessoa" do time t: analógico e botões sorteados, a IA dele sem a marca `ia` ou a IA pelo humano (bit IA). */
 function criarPessoa(sem, t, comBitIA = true) {
@@ -197,7 +199,7 @@ const trocada = (e, r) => ({ x: q(-(e.z ?? 0) || 0.7 * (r() - 0.5)), z: q((e.x ?
 
 const resB = { casos: 0, falhas: [] };
 const resD1 = { casos: 0, falhas: 0 };
-const sondas = { TROCAR: [[], []], GOLEIRO: [[], []], PRESSAO: [[], []] }; // [time] → {ok, motivo}
+const sondas = { TROCAR: [[], []], GOLEIRO: [[], []], PRESSAO: [[], []], CARRINHO: [[], []] }; // [time] → {ok, motivo}
 function passoN(m, ents, n = 1) { const ev = []; for (let i = 0; i < n; i++) ev.push(...P.passoPartida(m, ents, null)); return ev; }
 
 /** Sondas da parte C no estado m (cópias): o botão no time T; e o mesmo botão no outro time não mexe no T. */
@@ -262,6 +264,27 @@ function sondarResto(m, T, O) {
     const okA = (a.pedidoPressao?.[T] === m.tick || encerrado(a, T)) && ((a.pedidoPressao?.[O] ?? null) === pa || encerrado(a, O));
     const okB = (b.pedidoPressao?.[T] ?? null) === pb || encerrado(b, T);
     sondas.PRESSAO[T].push({ ok: okA && okB, motivo: !okA ? 'a PRESSÃO do time não marcou o pedido dele (ou marcou o do outro)' : !okB ? 'a PRESSÃO do outro time marcou o pedido deste' : '' });
+  }
+  // CARRINHO (item 34): o controlado de T desliza só com o botão de T (o evento do disparo e o plano nele); o botão do outro
+  // time não põe ninguém de T no carrinho. Só nos estados em que o disparo vale (defesa.js carrinho: a bola viva, solta ou
+  // no pé do adversário e baixa; o controlado de linha, de pé, sem DIVIDIDA) — depois de um passo neutro (a borda do botão)
+  {
+    const a = structuredClone(m), b = structuredClone(m);
+    passoN(a, { 0: NEUTRA, 1: NEUTRA }); passoN(b, { 0: NEUTRA, 1: NEUTRA });
+    const c = S.jogadorPorId(a, a.controlado[T]);
+    const dono = a.posse != null ? S.jogadorPorId(a, a.posse) : null;
+    const pode = !CR || (!!c && a.partida.estado === 'jogo' && !(a.parada && !a.parada.rolou) && a.golTick == null && a.naMao == null &&
+      c.posicao !== 'GOL' && c.papel !== 'parado' && c.papel !== 'marcador' && !c.carrinho && !(c.cab && c.cab.saiu) && !c.defH &&
+      (!dono || dono.time !== T) && !(a.voo && a.voo.time === T) && !CR.bolaAlta(a));
+    if (pode) {
+      const antesB = new Set(b.jogadores.filter(o => o.time === T && o.carrinho).map(o => o.id));
+      const evA = passoN(a, ents2(T, { x: 0, z: 0, botoes: BOTAO.CARRINHO }, NEUTRA));
+      const evB = passoN(b, ents2(T, NEUTRA, { x: 0, z: 0, botoes: BOTAO.CARRINHO }));
+      const deT = (w, ev) => ev.some(e => e.tipo === 'carrinho' && e.fase === 'inicio' && S.jogadorPorId(w, e.id)?.time === T);
+      const okA = !!c && deT(a, evA) && !!S.jogadorPorId(a, c.id)?.carrinho;
+      const okB = !deT(b, evB) && !b.jogadores.some(o => o.time === T && o.carrinho && !antesB.has(o.id));
+      sondas.CARRINHO[T].push({ ok: okA && okB, motivo: !CR ? 'sem carrinho.js nesta lógica' : !okA ? 'o CARRINHO do time não pôs o controlado dele no carrinho' : !okB ? 'o CARRINHO do outro time pôs um jogador deste no carrinho' : '' });
+    }
   }
 }
 
@@ -371,7 +394,7 @@ for (const v of ['A1', 'A2']) {
 }
 linha('B a entrada de um time não muda a do controlado do outro nem a do time dele (passo repetido com a do outro trocada)', `${resB.falhas.length} de ${resB.casos} casos`, '0 casos', resB.falhas.length === 0 && resB.casos > 0);
 for (const x of resB.falhas.slice(0, 5)) console.log(`  B falhou: semente ${x.sem}, tick ${x.tick}, time ${x.T}`);
-for (const [nome, chave] of [['C1 TROCAR', 'TROCAR'], ['C2 GOLEIRO (saída do goleiro)', 'GOLEIRO'], ['C3 PRESSÃO', 'PRESSAO']]) {
+for (const [nome, chave] of [['C1 TROCAR', 'TROCAR'], ['C2 GOLEIRO (saída do goleiro)', 'GOLEIRO'], ['C3 PRESSÃO', 'PRESSAO'], ['C4 CARRINHO', 'CARRINHO']]) {
   const r = sondas[chave], n0 = r[0].length, n1 = r[1].length, ok0 = r[0].filter(x => x.ok).length, ok1 = r[1].filter(x => x.ok).length;
   linha(`${nome} de cada um vale só no time dele`, `time 0: ${ok0}/${n0} · time 1: ${ok1}/${n1}`, '100%, ≥ 5 por time', ok0 === n0 && ok1 === n1 && n0 >= 5 && n1 >= 5);
   for (const x of [...r[0], ...r[1]].filter(y => !y.ok).slice(0, 3)) console.log(`  ${chave} falhou: ${x.motivo}`);
