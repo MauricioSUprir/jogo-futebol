@@ -116,7 +116,9 @@ export const TEMPOS_NAVEGADOR = {
   'teste-rede-tela.mjs': 53,
   // (itens 59 e 60: + o H12 nas 3 telas com e sem entalhe e 4 tamanhos, o H13 numa página a mais e a de ?prints=1; item 32: o
   // H1 por estado do relógio e com a cara do TM, a 640×360 e o H14 — 130,9 s no log do CI do #599)
-  'teste-hud-minimo.mjs': 131,
+  // (item 65: + H1c/H2c/H1d/H1e/H9c, a cobrança mirada de verdade em 4 páginas: 194 s aqui com a máquina dividida; acertar pelo
+  // log do CI)
+  'teste-hud-minimo.mjs': 190,
   // (24/10, D1: + o C7, uma página até o impedimento do time 0, ~5300 passos; localmente 214 s com outra página junto)
   'teste-replay.mjs': 225,
   // medido aqui (máquina dividida, carga ~4 em 4 núcleos: 396 s, o online em tempo real ~285 s); acertar pelo log do CI
@@ -135,5 +137,8 @@ export const TEMPOS_NAVEGADOR = {
   'teste-mira-tela.mjs': 60,
   // (item 66: medido aqui com a máquina sozinha, J 75 s + A/E/F/N 130 s; acertar pelo log do CI)
   'teste-camera-tela.mjs': 210,
+  // (item 65: + a seção 7, a mira pelos pixels em 3 páginas na Média, e o arrasto com toque de verdade; a base com o teste novo
+  // 188 s — reprova cedo —, o teste inteiro ~280 s aqui com a máquina dividida; acertar pelo log do CI)
+  'teste-bola-parada-tela.mjs': 280,
   'teste-desempenho-celular.mjs': 35,
 };

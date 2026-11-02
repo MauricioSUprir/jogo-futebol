@@ -3681,7 +3681,8 @@ const api = {
   telaDisputa() { return telaDisp ? telaDisp.estado() : null; },
   get planoCamera() { return cam ? cam.cinema : null; },
   // bola parada (testes): o módulo sob demanda, o estado, a linha só no desenho, os pontos da linha
-  bolaParada: { carregar: carregarBP, get estado() { return bp.tela?.estado(mundo, cam, bp.plano) ?? null; }, linha(v) { bp.linha = !!v; }, pontos: () => bp.tela?.pontos(mundo) ?? [] },
+  // (item 65: arrasto = o arrasto da curva no toque agora, entrada.js arrastoCurva — {ativo, nivel, alvo, enviados} ou null)
+  bolaParada: { carregar: carregarBP, get estado() { return bp.tela?.estado(mundo, cam, bp.plano) ?? null; }, linha(v) { bp.linha = !!v; }, pontos: () => bp.tela?.pontos(mundo) ?? [], get arrasto() { return entrada?.arrastoCurva ?? null; } },
   /** Modo Livre: escolha(), ajustar({linha, goleiro}), recomecar('meio' | 'pe'), naFila (livre-pagina.js api; null fora). */
   get livre() { return PAG_LIVRE ? PAG_LIVRE.api : { escolha: () => null, ajustar: () => null, recomecar: () => null, naFila: null }; },
   /** Online 1×1 (testes): o estado da sessão — passo, atraso, RTT, paradas, os hashes guardados ([n, h]) e o placar. */

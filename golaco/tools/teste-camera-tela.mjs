@@ -55,14 +55,15 @@ const q = (v, p) => { const s = v.filter(Number.isFinite).sort((a, b) => a - b);
 const f1 = v => (Number.isFinite(v) ? v.toFixed(1).replace('.', ',') : '–');
 const f2 = v => (Number.isFinite(v) ? v.toFixed(2).replace('.', ',') : '–');
 
-// as formas do HUD visíveis (a régua do teste-hud-minimo, reduzida): retângulos e círculos
+// as formas do HUD visíveis (a régua do teste-hud-minimo, reduzida): retângulos e círculos (o painel #mira da cobrança mirada
+// saiu com o item 65: a tela da cobrança fica sem painel)
 const FORMAS = `(() => {
   const vis = e => e && e.offsetParent !== null && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden' && +getComputedStyle(e).opacity > 0.01;
   const alfa = c => { const v = (c.match(/[\\d.]+/g) ?? []).map(Number); return v.length > 3 ? v[3] : v.length ? 1 : 0; };
   const transparente = e => { const s = getComputedStyle(e); return alfa(s.backgroundColor) < 0.01 && s.backgroundImage === 'none' && s.boxShadow === 'none'
     && ['Top', 'Right', 'Bottom', 'Left'].every(l => parseFloat(s['border' + l + 'Width']) === 0 || s['border' + l + 'Style'] === 'none' || alfa(s['border' + l + 'Color']) < 0.01); };
   const f = [];
-  for (const e of document.querySelectorAll('#hud [data-caixa], #carga.visivel, #mira:not([hidden])')) {
+  for (const e of document.querySelectorAll('#hud [data-caixa], #carga.visivel')) {
     if (!vis(e)) continue;
     let r = e.getBoundingClientRect();
     if (e.children.length && transparente(e)) {

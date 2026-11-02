@@ -92,15 +92,24 @@
 //        encostava na faixa ENTRA/SAI do jogo); em janela estreita (560 × 600) ele cabe entre a dica e o minimapa (≥ 56 px,
 //        ≥ 4 px dos dois) ou some até ela sumir (era uma lasca de 8 px por cima do minimapa); depois que ela some, no canto, e
 //        uma camada (replay, cena) que liga e desliga não a traz de volta (voltava por 8 s debaixo do nome)
-//   node tools/teste-hud-minimo.mjs [--raiz <pasta do jogo>] [--so-placar]   (--raiz: mede outra cópia, ex.: a base;
-//   --so-placar: só as telas do H1/H7/H9, o H5 com o H10 e o H14, sem os 2 min de jogo nem as opções salvas — para iterar
-//   no placar)
+//  H1c/H2c/H1d/H1e/H9c (item 65: "essa seta, essa reta ... tem que estar com a cara do Total Match, alguma coisa mais
+//     minimalista") a cobrança mirada DE VERDADE (escanteio e tiro livre da pessoa, __golaco.bolaParadaDeTeste/faltaDeTeste,
+//     com o módulo da bola parada), nas 4 telas com o entalhe, sem e com a cara do TM, com o nome do condutor mais largo e o
+//     placar mais largo do H1 ("10-10 100:18 +10"): H1c a área do HUD ≤ 11 / 11 / 11 / 12% (a régua do H1; na base 12,95% em
+//     667×375, 13,14% em 640×360 e 14,45% em 568×320 — os 2 botões CURVA e o painel #mira); H2c nenhum texto fora do placar,
+//     do nome e dos nomes dos botões (na base o rótulo ALTA/CHUTE); H1d nenhum botão CURVA; H1e nada encosta (folga ≥ 4 px; na
+//     base o painel invadia o CORRER em 11 px em 568×320); H9c os chevrons ‹ › do gesto da curva (no CHUTE e no LANÇAMENTO)
+//     dentro do círculo (≥ 2 px da borda) e sem encostar no nome do botão (≥ 1 px)
+//   node tools/teste-hud-minimo.mjs [--raiz <pasta do jogo>] [--so-placar] [--so-mirada]   (--raiz: mede outra cópia, ex.: a
+//   base; --so-placar: só as telas do H1/H7/H9, o H5 com o H10 e o H14, sem os 2 min de jogo nem as opções salvas — para iterar
+//   no placar; --so-mirada: só a cobrança mirada, H1c/H2c/H1d/H1e/H9c)
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 
 const args = process.argv.slice(2);
 const raiz = path.resolve(args.includes('--raiz') ? args[args.indexOf('--raiz') + 1] : RAIZ);
 const soPlacar = args.includes('--so-placar');
+const soMirada = args.includes('--so-mirada');
 const res = [];
 const meta = (nome, medido, alvo, ok) => res.push({ nome, medido, alvo, ok: !!ok });
 const srv = await servidor(0, raiz);
@@ -511,6 +520,116 @@ const AREA_FASES = ([FS, AS]) => {
 };
 /** A meta do H1 por tela: 11%; 12% em 568×320 (≤ 340 px de altura: decisão do dono, "Depende do dono" 15); 11% em 640×360. */
 const metaH1 = h => (h <= 340 ? 0.12 : 0.11);
+
+// H1c/H2c/H1d/H1e/H9c (item 65): a cobrança mirada de verdade. No navegador: o HUD do escanteio ou da falta da pessoa montada
+// (a régua do H1: FORMAS, AREA e ENCOSTA), com o nome do condutor mais largo e o placar mais largo; os botões CURVA visíveis; e os
+// chevrons do gesto (::before/::after do CHUTE e do LANÇAMENTO, a caixa girada pelo estilo calculado) × o círculo e o nome
+const MEDIR_MIRADA = async ([FS, AS, ES, MP, gols, rel]) => {
+  const formas = eval(FS), area = eval(AS), encosta = eval(ES), g = window.__golaco;
+  if (gols) await eval(MP)(gols, rel);
+  if (g.nomeCantoDeTeste) g.nomeCantoDeTeste({ time: 0, num: 88, nome: 'Wwwwwwwwww' });
+  await new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(ok)));
+  const x = formas();
+  if (g.nomeCantoDeTeste) g.nomeCantoDeTeste(null);
+  const curvas = [...document.querySelectorAll('#toque [id^="btn-efeito"]')].filter(b => getComputedStyle(b).display !== 'none' && b.offsetWidth > 0).length;
+  const chev = [];
+  for (const id of ['btn-chute', 'btn-lancamento']) {
+    const b = document.getElementById(id);
+    if (!b || getComputedStyle(b).display === 'none' || !b.offsetWidth) { chev.push({ id, falta: 'botão escondido' }); continue; }
+    const D = b.offsetWidth, R = D / 2, sp = b.querySelector('span'), rb = b.getBoundingClientRect(), rs = sp && getComputedStyle(sp).display !== 'none' ? sp.getBoundingClientRect() : null;
+    for (const pse of ['::before', '::after']) {
+      const cs = getComputedStyle(b, pse);
+      if (cs.content === 'none' || cs.display === 'none') { chev.push({ id, pse, falta: 'sem chevron' }); continue; }
+      // (left/right/top do pseudo-elemento contam da borda de dentro do botão: soma a largura da borda dele)
+      const bs = getComputedStyle(b), bl = parseFloat(bs.borderLeftWidth) || 0, br = parseFloat(bs.borderRightWidth) || 0, bt = parseFloat(bs.borderTopWidth) || 0;
+      const w = parseFloat(cs.width), h = parseFloat(cs.height), mt = parseFloat(cs.marginTop) || 0;
+      const top = parseFloat(cs.top), cx = cs.left !== 'auto' && pse === '::before' ? bl + parseFloat(cs.left) + w / 2 : D - br - parseFloat(cs.right) - w / 2;
+      const cy = bt + top + mt + h / 2;
+      const mtx = cs.transform && cs.transform !== 'none' ? cs.transform.match(/-?[\d.e-]+/g).map(Number) : [1, 0, 0, 1];
+      const ex = (w / 2) * Math.abs(mtx[0]) + (h / 2) * Math.abs(mtx[2]), ey = (w / 2) * Math.abs(mtx[1]) + (h / 2) * Math.abs(mtx[3]);
+      // a folga até a borda do círculo (o canto da caixa mais longe do centro) e até o nome (retângulos)
+      let borda = Infinity;
+      for (const sx of [-1, 1]) for (const sy of [-1, 1]) borda = Math.min(borda, R - Math.hypot(cx + sx * ex - R, cy + sy * ey - R));
+      let nome = Infinity;
+      if (rs && rs.width > 0) {
+        const l = rb.left + cx - ex, r = rb.left + cx + ex, t = rb.top + cy - ey, bo = rb.top + cy + ey;
+        nome = Math.max(rs.left - r, l - rs.right, rs.top - bo, t - rs.bottom);
+      }
+      chev.push({ id, pse, borda, nome });
+    }
+  }
+  return { area: area(x.f, innerWidth, innerHeight), fora: x.fora, txt: x.txt, enc: encosta(x.f), curvas, chev, pecas: x.f.length };
+};
+{
+  const linhasMir = [], falhasMir = { h1c: 0, h2c: 0, h1d: 0, h1e: 0, h9c: 0 }, txtMir = new Set(), encMir = [], chevMir = [];
+  let medidas = 0;
+  for (const [w, h] of TELAS_CEL) {
+    const { navegador, pagina, erros } = await abrir({ largura: w, altura: h, dpr: 2, toque: true });
+    try {
+      await pagina.goto(`${srv.url}?q=baixa&toque=1&entalhe=1&semente=4&replay=0&comemoracao=0&cenas=0`, { waitUntil: 'load' });
+      await pronta(pagina);
+      await pagina.evaluate(async () => { const g = window.__golaco; g.relogio.usarManual(true); for (let i = 0; i < 120; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); await g.bolaParada.carregar(); });
+      const porCara = [];
+      for (const tm of [false, true]) {
+        await pagina.evaluate(([CT, tm]) => eval(CT)(tm), [CARA_TM.toString(), tm]);
+        const est = [];
+        for (const tipo of ['escanteio', 'falta']) {
+          const ok = await pagina.evaluate(tipo => {
+            const g = window.__golaco;
+            g.forcarEntrada(null);
+            if (tipo === 'escanteio') g.bolaParadaDeTeste('escanteio'); else g.faltaDeTeste({ u: 22, w: 4 });
+            for (let i = 0; i < 900; i++) {
+              g.relogio.avancar(1000 / 60, { desenhar: false });
+              const e = g.bolaParada.estado, pr = g.mundo.parada;
+              if (e && e.ativa && e.mistura >= 1 && pr && g.mundo.tick >= pr.pronta) break;
+            }
+            for (let i = 0; i < 20; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+            return !!g.bolaParada.estado?.ativa && document.documentElement.classList.contains('cobranca-mirada');
+          }, tipo);
+          if (!ok) { est.push(`${tipo}: a cobrança não veio`); falhasMir.h1c++; continue; }
+          // o relógio de verdade e o placar mais largo do H1 ("10-10 100:18 +10")
+          let pior = null;
+          for (const [gols, rel] of [[null, undefined], [[10, 10], REL_100]]) {
+            const r = await pagina.evaluate(([MM, FS, AS, ES, MP, gols, rel]) => eval(MM)([FS, AS, ES, MP, gols, rel]),
+              [MEDIR_MIRADA.toString(), FORMAS.toString(), AREA.toString(), ENCOSTA.toString(), MEDIR_PLACAR.toString(), gols, rel ?? null]);
+            medidas++;
+            if (!pior || r.area > pior.area) pior = r;
+            if (r.fora > 0) { falhasMir.h2c++; r.txt.forEach(t => txtMir.add(t)); }
+            if (r.curvas > 0) falhasMir.h1d++;
+            if (r.enc.length) { falhasMir.h1e++; encMir.push(`${w}×${h}${tm ? ' TM' : ''} ${tipo}: ${r.enc.join(', ')}`); }
+            for (const c of r.chev) if (c.falta || !(c.borda >= 2) || !(c.nome >= 1)) { falhasMir.h9c++; chevMir.push(`${w}×${h}${tm ? ' TM' : ''} ${c.id}${c.pse ?? ''}: ${c.falta ?? `borda ${c.borda.toFixed(1)} px, nome ${Number.isFinite(c.nome) ? c.nome.toFixed(1) : '-'} px`}`); }
+            if (w === 568 && !tm && tipo === 'escanteio' && gols) chevMir.push(`(568×320: ${r.chev.map(c => (c.falta ? `${c.id}${c.pse ?? ''} ${c.falta}` : `${c.id}${c.pse} borda ${c.borda.toFixed(1)}, nome ${Number.isFinite(c.nome) ? c.nome.toFixed(1) : '-'}`)).join('; ')})`);
+          }
+          if (pior.area > metaH1(h)) falhasMir.h1c++;
+          est.push(`${tipo} ${(pior.area * 100).toFixed(2)}%`);
+          // termina a cobrança (LANÇAMENTO solto) e deixa a bola rolar
+          await pagina.evaluate(() => { const g = window.__golaco; g.forcarEntrada({ x: 0, z: 0, botoes: 16 }); for (let i = 0; i < 20; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); g.forcarEntrada(null); for (let i = 0; i < 240; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); });
+        }
+        porCara.push(`${tm ? 'TM' : 'sem TM'}: ${est.join(' · ')}`);
+      }
+      await pagina.evaluate(CT => eval(CT)(false), CARA_TM.toString());
+      linhasMir.push(`${w}×${h} (meta ${Math.round(metaH1(h) * 100)}%) ${porCara.join('; ')}${erros.length ? ` — erros: ${erros.slice(0, 2).join(' | ')}` : ''}`);
+      if (erros.length) falhasMir.h1c++;
+    } finally { await navegador.close(); }
+  }
+  const nTelas = linhasMir.length === TELAS_CEL.length;
+  meta('H1c área do HUD na cobrança mirada de verdade (item 65: escanteio e tiro livre da pessoa; 4 telas com entalhe, sem e com a cara do TM, o nome mais largo, o relógio de verdade e o placar mais largo)',
+    linhasMir.join(' | '), '≤ 11% em 844×390, 667×375 e 640×360, ≤ 12% em 568×320', nTelas && falhasMir.h1c === 0);
+  meta('H2c texto na tela durante a cobrança mirada fora do placar, do nome e dos nomes dos botões (o rótulo ALTA/CHUTE do painel antigo)',
+    falhasMir.h2c ? `${falhasMir.h2c} medidas com texto: ${JSON.stringify([...txtMir])}` : `0 caracteres em ${medidas} medidas`, '0', nTelas && medidas > 0 && falhasMir.h2c === 0);
+  meta('H1d botões CURVA visíveis na cobrança mirada (a curva no toque é o arrasto no CHUTE e no LANÇAMENTO)', `${falhasMir.h1d} medidas com eles`, '0', nTelas && medidas > 0 && falhasMir.h1d === 0);
+  meta('H1e nada encosta na cobrança mirada (folga ≥ 4 px entre as peças do HUD)', encMir.join('; ') || 'nada encosta', 'nada', nTelas && medidas > 0 && falhasMir.h1e === 0);
+  meta('H9c os chevrons ‹ › do gesto da curva no CHUTE e no LANÇAMENTO: dentro do círculo (≥ 2 px da borda) e sem encostar no nome (≥ 1 px)',
+    chevMir.join('; ') || 'ok', 'borda ≥ 2 px, nome ≥ 1 px', nTelas && medidas > 0 && falhasMir.h9c === 0);
+}
+if (soMirada) {
+  await srv.fechar();
+  const lg = Math.max(...res.map(r => r.nome.length));
+  for (const r of res) console.log(`${r.ok ? 'PASSOU  ' : 'REPROVOU'}  ${r.nome.padEnd(lg)}  ${r.medido}   (alvo: ${r.alvo})`);
+  const okM = res.every(r => r.ok);
+  console.log(okM ? '\nteste-hud-minimo: PASSOU' : '\nteste-hud-minimo: REPROVOU');
+  process.exit(okM ? 0 : 1);
+}
 
 // H1 + H2: layout nas duas fases e nas quatro telas de celular (determinístico, sem simular)
 let piorTexto = 0, h1SemNome = 0, h1Falhas = 0; const txtVisto = new Set(); const linhasH1 = [];
