@@ -27,6 +27,11 @@
 //     / o canto e o botão): a tabela antes → depois.
 //  F. A IA não usa nada disto: uma partida IA × IA (a demo pelo humano) sem nenhuma mira (m.parada.mira) nem cobrança
 //     mirada (m.voo.mirada). O hash da partida IA × IA fica IGUAL: tools/hash-partida.mjs.
+//  G. (item 65) O anel do alvo do desenho (mira-linha.js desenhoDaMira) = o alvo do voo da cobrança (m.voo.alvo) depois do
+//     chute, com o erro zerado, ≤ 1 cm: escanteio ALTA com curva −1/0/+1, TENSA e o tiro livre de 40 m ALTA; CHUTE, CURTA e
+//     LONGA sem anel. (A regra do ponto é copiada do acoes.js cobrancaMirada: esta é a guarda das duas.)
+//  H. (item 65) O plano do desenho: ALTA/TENSA até 45% do arco até o alvo (esmaece de 30%), CHUTE a extensão de antes (a
+//     barreira + 4 m; sem barreira 11 m), CURTA/LONGA 12 m; o começo a 0,25 m do centro da bola.
 //
 //   node tools/teste-mira.mjs              (lógica do repositório)
 //   node tools/teste-mira.mjs --js <pasta> (outra cópia: sem mira.js, só o canhão do E com o humano de antes)
@@ -270,6 +275,98 @@ if (temMira) {
     reg('C5. tiro de meta: rótulo LONGA, o efeito não vale, o PASSE sai na direção da mira',
       `${metaRot} · efeito ${metaEf} · ${metaAng == null ? '-' : f1(metaAng * 180 / Math.PI)}° da mira`, 'LONGA · 0 · ≤ 20°',
       metaRot === 'LONGA' && metaEf === 0 && metaAng != null && metaAng <= 20 * Math.PI / 180);
+  }
+
+  // ------------------------------------------------------------------ G. o anel do alvo (item 65) = o alvo do voo
+  // (mira-linha.js desenhoDaMira copia a regra do acoes.js cobrancaMirada — o 1º ponto em que a bola, depois de subir além
+  // de yAlto + 0,3 m, desce a yAlto —; esta guarda reprova se uma das duas mudar sozinha)
+  {
+    const erro0 = MIRA.erro;
+    MIRA.erro = 0;
+    const ptsG = new Float64Array(MIRA.maxPontos * 3), out = [];
+    const casosG = [
+      { nome: 'escanteio ALTA curva −1', b: BOTAO.LANCAMENTO, k: 30, curva: -1 },
+      { nome: 'escanteio ALTA', b: BOTAO.LANCAMENTO, k: 30, curva: 0 },
+      { nome: 'escanteio ALTA curva +1 (barra cheia)', b: BOTAO.LANCAMENTO, k: 52, curva: 1 },
+      { nome: 'escanteio TENSA', b: BOTAO.CHUTE, k: 26, curva: 0.5 },
+      { nome: 'tiro livre a 40 m ALTA', b: BOTAO.LANCAMENTO, k: 36, curva: -0.25, falta: 40 },
+    ];
+    for (const cs of casosG) {
+      const m = copia(1001);
+      m.humanos = [0];
+      const pr = cs.falta ? (tiroLivre(m, 0, cs.falta, -4), ateMontarPronta(m, 'tiroLivre')) : escanteio(m);
+      if (!pr) { out.push({ nome: cs.nome, erro: Infinity }); continue; }
+      longe(m, pr);
+      pr.mira.curva = cs.curva;
+      carregarESoltar(m, cs.b, cs.k);
+      const info = M.preverMira(m, ptsG, {});
+      const d = info && M.desenhoDaMira ? M.desenhoDaMira(info, ptsG, {}) : null;
+      P.passoPartida(m, NADA); // solta (com a corrida da cobrança, o contato sai no fim dela)
+      ateRolar(m, pr);
+      const v = m.voo;
+      const erro = d?.alvo && v?.mirada ? Math.hypot(d.alvo.x - v.alvo.x, d.alvo.z - v.alvo.z) : Infinity;
+      out.push({ nome: cs.nome, tipo: info?.tipo, erro });
+    }
+    // (sem alvo: o CHUTE a gol, a CURTA e a LONGA)
+    const semAlvo = [];
+    {
+      const qf = copia(1003); qf.humanos = [0];
+      tiroLivre(qf, 0, 21, 0); ateMontarPronta(qf, 'tiroLivre');
+      P.passoPartida(qf, { x: 0, z: 0, botoes: BOTAO.CHUTE });
+      const i1 = M.preverMira(qf, ptsG, {});
+      semAlvo.push(`${i1?.tipo}: ${i1 && M.desenhoDaMira ? (M.desenhoDaMira(i1, ptsG, {}).alvo ? 'anel' : 'sem anel') : '-'}`);
+      const qc = copia(1003); qc.humanos = [0];
+      escanteio(qc);
+      P.passoPartida(qc, { x: 0, z: 0, botoes: BOTAO.PASSE });
+      const i2 = M.preverMira(qc, ptsG, {});
+      semAlvo.push(`${i2?.tipo}: ${i2 && M.desenhoDaMira ? (M.desenhoDaMira(i2, ptsG, {}).alvo ? 'anel' : 'sem anel') : '-'}`);
+      const qm = copia(1004); qm.humanos = [0];
+      bolaFora(qm, -qm.ataca[0] * (MX + 0.6), -9, 1);
+      if (ateMontarPronta(qm, 'tiroDeMeta')) {
+        const i3 = M.preverMira(qm, ptsG, {});
+        semAlvo.push(`${i3?.tipo}: ${i3 && M.desenhoDaMira ? (M.desenhoDaMira(i3, ptsG, {}).alvo ? 'anel' : 'sem anel') : '-'}`);
+      }
+    }
+    MIRA.erro = erro0;
+    reg('G. o anel do alvo (item 65: mira-linha.js desenhoDaMira) = o alvo do voo da cobrança (m.voo.alvo), erro do cobrador zerado; CHUTE, CURTA e LONGA sem anel',
+      `${out.map(r => `${r.nome} (${r.tipo ?? '-'}): ${Number.isFinite(r.erro) ? f2(r.erro * 100) + ' cm' : 'sem anel'}`).join(' · ')} · ${semAlvo.join(' · ')}`,
+      '≤ 1 cm nos 5; chute, curta e longa sem anel',
+      out.length === casosG.length && out.every(r => r.erro <= 0.01) && semAlvo.length === 3 && semAlvo.every(s => s.endsWith('sem anel')) && semAlvo.join() === 'chute: sem anel,curta: sem anel,longa: sem anel');
+  }
+
+  // ------------------------------------------------------------------ H. o plano do desenho (item 65)
+  // ALTA/TENSA: o fim visível a 45% ± 1% do arco até o alvo e o esmaecimento a partir de 30%; CHUTE: a extensão de antes (a
+  // barreira + MIRA.linhaChute m; sem barreira MIRA.semBarreira m, na distância no chão); CURTA/LONGA: MIRA.direcao m; em todos,
+  // o começo a 0,25 m do centro da bola
+  {
+    const ptsH = new Float64Array(MIRA.maxPontos * 3), med = [];
+    const plano = (m, nome) => {
+      const info = M.preverMira(m, ptsH, {});
+      if (!info || !M.desenhoDaMira) { med.push({ nome, ok: false, txt: `${nome}: sem plano` }); return; }
+      const d = M.desenhoDaMira(info, ptsH, {}), pr = m.parada, n = info.n;
+      const hFim = Math.hypot(ptsH[(n - 1) * 3] - ptsH[0], ptsH[(n - 1) * 3 + 2] - ptsH[2]);
+      let ok = Math.abs(d.inicio - 0.25) < 1e-9, txt;
+      if (info.tipo === 'alta' || info.tipo === 'tensa') {
+        ok = ok && !!d.alvo && Math.abs(d.fim / d.total - 0.45) <= 0.01 && Math.abs(d.esmaece / d.total - 0.30) <= 0.01;
+        txt = `${nome} (${info.tipo}): fim ${f2(d.fim / d.total * 100)}% e esmaece ${f2(d.esmaece / d.total * 100)}% de ${f1(d.total)} m até o alvo`;
+      } else if (info.tipo === 'chute') {
+        const br = pr.barreira, alvoM = br && br.n > 0 ? br.dist + MIRA.linhaChute : MIRA.semBarreira;
+        ok = ok && !d.alvo && d.fim === d.total && hFim >= alvoM && hFim <= alvoM + 0.6 && Math.abs(d.esmaece / d.total - 0.70) <= 0.01;
+        txt = `${nome} (chute): ${f1(hFim)} m no chão (meta ${f1(alvoM)}), esmaece ${f2(d.esmaece / d.total * 100)}%`;
+      } else {
+        ok = ok && !d.alvo && Math.abs(d.total - MIRA.direcao) < 1e-6 && Math.abs(d.esmaece / d.total - 0.60) <= 0.01;
+        txt = `${nome} (${info.tipo}): ${f1(d.total)} m, esmaece ${f2(d.esmaece / d.total * 100)}%`;
+      }
+      med.push({ nome, ok, txt: `${txt}, começo ${f2(d.inicio)} m` });
+    };
+    { const m = copia(1002); m.humanos = [0]; escanteio(m); P.passoPartida(m, { x: 0, z: 0, botoes: BOTAO.LANCAMENTO }); plano(m, 'escanteio LANÇAMENTO'); }
+    { const m = copia(1002); m.humanos = [0]; escanteio(m); P.passoPartida(m, { x: 0, z: 0, botoes: BOTAO.CHUTE }); plano(m, 'escanteio CHUTE'); }
+    { const m = copia(1002); m.humanos = [0]; escanteio(m); P.passoPartida(m, { x: 0, z: 0, botoes: BOTAO.PASSE }); plano(m, 'escanteio PASSE'); }
+    { const m = copia(1002); m.humanos = [0]; tiroLivre(m, 0, 22, 4); ateMontarPronta(m, 'tiroLivre'); plano(m, 'falta 22 m (barreira)'); }
+    { const m = copia(1002); m.humanos = [0]; tiroLivre(m, 0, 22, 4); const pr = ateMontarPronta(m, 'tiroLivre'); if (pr?.barreira) pr.barreira.n = 0; plano(m, 'falta 22 m sem barreira'); }
+    { const m = copia(1004); m.humanos = [0]; bolaFora(m, -m.ataca[0] * (MX + 0.6), -9, 1); if (ateMontarPronta(m, 'tiroDeMeta')) plano(m, 'tiro de meta'); }
+    reg('H. o plano do desenho da linha (item 65): ALTA/TENSA até 45% do arco até o alvo (esmaece de 30%), CHUTE a extensão de antes, CURTA/LONGA 12 m; o começo a 0,25 m',
+      med.map(x => x.txt).join(' · '), 'os 6 casos', med.length === 6 && med.every(x => x.ok));
   }
 
   // ------------------------------------------------------------------ D. o erro do cobrador continua
