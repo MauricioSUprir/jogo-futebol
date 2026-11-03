@@ -380,9 +380,14 @@ function entradaDemoDoMundo(m) {
 const ehJogo = m => m.modo === 'partida' || m.modo === 'penaltis' || m.modo === 'livre';
 /** Rumo da câmera no chão para o analógico: na disputa, o da câmera atrás do cobrador (esquerda/direita da tela). */
 function yawEntrada() { return mundo.disputa && MOD_DISP ? MOD_DISP.yawDisputa(mundo) : (bp.yaw ?? cam.yaw); }
-// bola parada no estilo FIFA (render/bola-parada.js, sob demanda): câmera atrás do cobrador (bp.yaw), linha e painel
+// bola parada no estilo FIFA (render/bola-parada.js, sob demanda): câmera atrás do cobrador (bp.yaw) e a mira (a linha, o anel
+// do alvo e o arco da curva). O programa da mira (um ShaderMaterial) compila na CARGA do módulo (renderer.compileAsync; item
+// 65): a 1ª cobrança mirada da pessoa não paga a compilação
 const bp = { tela: null, carga: null, yaw: null, plano: null, linha: true };
-const carregarBP = () => (bp.carga ??= import('./render/bola-parada.js').then(md => { bp.tela = md.criarTelaBolaParada(cena3d.cena, document.getElementById('hud')); }));
+const carregarBP = () => (bp.carga ??= import('./render/bola-parada.js').then(md => {
+  bp.tela = md.criarTelaBolaParada(cena3d.cena);
+  try { cena3d.renderer.compileAsync(bp.tela.malha, cam.camera, cena3d.cena).catch(() => {}); } catch (_) { /* sem compileAsync: compila no 1º desenho */ }
+}));
 function novoMundo(opc) {
   const ini = DEMO_ON && S.DEMO && modoPagina === 'conducao' ? S.DEMO.inicio : { x: 0, z: 0, rumo: 0 };
   return criarMundoTreino({ ...ini, marcador: params.get('marcador') === '1', ...opc });
@@ -1414,11 +1419,23 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     else linhaImped.atualizar(mundo, dt, renderizar);
     marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
   }
-  if (bp.tela) bp.tela.desenhar(cenaGol || cenaSub || cenaCartao || cenaFim ? null : mundo, cam.camera, dt, bp.linha);
+  if (bp.tela) {
+    const cena = cenaGol || cenaSub || cenaCartao || cenaFim, v = bp.tela.desenhar(cena ? null : mundo, cam.camera, dt, bp.linha);
+    // a curva por arrasto no toque (item 65): a cobrança mirada da PESSOA esperando — fora do tiro de meta (sem curva), da
+    // corrida do item 70 (a mira e a curva congeladas) e das cenas
+    if (entrada?.definirCurva) {
+      const pr = mundo.parada;
+      const ativa = !!v && !cena && !!pr?.mira && pr.tipo !== 'tiroDeMeta' && pr.time === TIME_HUMANO && mundo.controlado?.[TIME_HUMANO] === pr.cobrador
+        && !(pr.corrida && pr.corrida.estado === 'corre');
+      entrada.definirCurva(ativa, ativa ? pr.mira.curva : 0);
+    }
+  }
   // (a câmera de jogo — a TV — sem cadeira 3D de perto: item 69)
   campo.atualizar(agoraMs / 1000, cam.camera, renderizar, cam.deJogo);
   marcarCondutor(agoraMs);
-  torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar);
+  // (com a câmera da bola parada — a do escanteio sobe atrás do cobrador até em cima da arquibancada, item 66 — as bandeiras de
+  // mastro perto da lente abaixam e o fogo e a fumaça dos sinalizadores perto dela somem: revisão R2 do item 65)
+  torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar, cam.misturaBolaParada > 0 ? cam.camera.position : null);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
   const td0 = performance.now();
   if (renderizar) cena3d.desenhar(cam.camera);
@@ -2435,7 +2452,7 @@ function desenharReplay(dt, agoraMs, renderizar = true) {
   // análise; o selo da decisão no terço de baixo (só no quadro final)
   marcas.grupo.visible = false;
   marcasLat.atualizar(mundo, semPosicao, agoraMs / 1000, dt);
-  if (bp.tela) bp.tela.esconder();
+  if (bp.tela) { bp.tela.esconder(); entrada?.definirCurva?.(false); }
   linhaImped.mostrar(diretor.linha(dt));
   linhaImped.mostrarSaot(sc.ativa ? sc : null);
   hud.terco(sc.ativa && sc.decidido ? sc : null);
@@ -3666,7 +3683,8 @@ const api = {
   telaDisputa() { return telaDisp ? telaDisp.estado() : null; },
   get planoCamera() { return cam ? cam.cinema : null; },
   // bola parada (testes): o módulo sob demanda, o estado, a linha só no desenho, os pontos da linha
-  bolaParada: { carregar: carregarBP, get estado() { return bp.tela?.estado(mundo, cam, bp.plano) ?? null; }, linha(v) { bp.linha = !!v; }, pontos: () => bp.tela?.pontos(mundo) ?? [] },
+  // (item 65: arrasto = o arrasto da curva no toque agora, entrada.js arrastoCurva — {ativo, nivel, alvo, enviados} ou null)
+  bolaParada: { carregar: carregarBP, get estado() { return bp.tela?.estado(mundo, cam, bp.plano) ?? null; }, linha(v) { bp.linha = !!v; }, pontos: () => bp.tela?.pontos(mundo) ?? [], get arrasto() { return entrada?.arrastoCurva ?? null; } },
   /** Modo Livre: escolha(), ajustar({linha, goleiro}), recomecar('meio' | 'pe'), naFila (livre-pagina.js api; null fora). */
   get livre() { return PAG_LIVRE ? PAG_LIVRE.api : { escolha: () => null, ajustar: () => null, recomecar: () => null, naFila: null }; },
   /** Online 1×1 (testes): o estado da sessão — passo, atraso, RTT, paradas, os hashes guardados ([n, h]) e o placar. */
@@ -4424,7 +4442,7 @@ const api = {
     /** Os bancos de reservas neste quadro (vão na malha do lado de cá: fora do desenho com a câmera de TV dentro dela). */
     get bancosVisiveis() { return campo?.ladoDeCa ? campo.ladoDeCa.visible : null; },
     /** Faixas, bandeiras e sinalizadores agora: visíveis, vértices desenhados, instâncias, abertura do bandeirão. */
-    get festaVisual() { return torcida ? { bandeiras: torcida.bandeiras.mesh.visible, vertices: torcida.bandeiras.mesh.geometry.drawRange.count, sinalizadores: torcida.sinalizadores.mesh.visible && torcida.sinalizadores.quantas > 0, instancias: torcida.sinalizadores.quantas, abre: torcida.bandeiras.uniforms.uAbre.value.x } : null; },
+    get festaVisual() { return torcida ? { bandeiras: torcida.bandeiras.mesh.visible, vertices: torcida.bandeiras.mesh.geometry.drawRange.count, sinalizadores: torcida.sinalizadores.mesh.visible && torcida.sinalizadores.quantas > 0, instancias: torcida.sinalizadores.quantas, abre: torcida.bandeiras.uniforms.uAbre.value.x, lente: torcida.bandeiras.uniforms.uLente.value.toArray() } : null; },
     /** A agenda da festa (festa.js): canto, batucada, vaia, sinalizadores, bandeirão e ola. */
     get festa() { const f = emocao.festa; return { canto: { ...f.canto, cantados: [...f.canto.cantados] }, batucada: f.batucada, vaia: { ...f.vaia }, acesos: f.acesos, flares: f.flares.filter(s => s.ativo).map(s => ({ ...s })), bandeirao: { ...f.bandeirao }, ola: { ...f.ola }, t: f.t }; },
     /** Liga/desliga a onda da rede SÓ no desenho (testes: o mesmo instante com e sem a deformação). */

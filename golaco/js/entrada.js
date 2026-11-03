@@ -14,11 +14,11 @@
 // Shift correr; E modificador (colocado / enfiada alta / cruzamento tenso; condução curta e proteção; dois toques =
 // pedalada); Q trocar (segurar 0,4 s: o goleiro, na partida); G goleiro (defesa; segurar = sai do gol); R recomeçar;
 // M máquina de passes; N marcador; C câmera;
-// H ou F1 ajuda; Esc pausa; Z / X curva na cobrança mirada; F paradinha e barra de espaço pulinho (a cobrança do pênalti
-// da pessoa: item 70, P2 — com Shift no soltar do CHUTE, forte; com E, colocado).
+// H ou F1 ajuda; Esc pausa; Z / X curva na cobrança mirada (um toque = um degrau; segurar repete); F paradinha e barra de
+// espaço pulinho (a cobrança do pênalti da pessoa: item 70, P2 — com Shift no soltar do CHUTE, forte; com E, colocado).
 // Controle: analógico esquerdo; A passe / CONTER; B chute / DIVIDIDA; X lançamento / CARRINHO (como o L); Y enfiada /
 // goleiro (segurar); RB PEGAR / PRESSÃO (defesa, segurar); LB trocar (segurar: o goleiro); RT correr; LT modificador;
-// Start pausa; View ajuda; R3 câmera; analógico direito = curva na cobrança mirada. (O mapa da defesa é o do EA FC: segurar A = conter, B = bote em pé, X =
+// Start pausa; View ajuda; R3 câmera; analógico direito = curva na cobrança mirada (em degraus, como o Z/X). (O mapa da defesa é o do EA FC: segurar A = conter, B = bote em pé, X =
 // carrinho, segurar RB = companheiro pressiona.) Na pausa e na Ajuda: cruz/analógico escolhem o botão, A confirma, B volta.
 // Na cobrança do pênalti da pessoa (item 70, P2; main.js definirCobrancaPenalti) o controle é o do pênalti do EA FC
 // (PAD_PENALTI): LT = paradinha, RB = colocado (o MOD; o "finesse" do EA FC), LB = pulinho, RT segurado = forte.
@@ -30,7 +30,9 @@
 // logo antes de o adversário dominar a bola, ficava PEGAR o tempo todo segurado e ninguém apertava (D1, 23/10).
 // Toque: analógico flutuante na metade esquerda; à direita, um arco de botões ao alcance do
 // polegar, só com o ícone (os nomes são opção da pausa: html.nomes-botoes). ATAQUE (meu time com a
-// bola): CHUTE (o maior), PASSE, ENFIADA, LANÇAMENTO e CORRER. DEFESA (6 botões; tela limpa de 11/10 + o
+// bola): CHUTE (o maior), PASSE, ENFIADA, LANÇAMENTO e CORRER — na cobrança mirada (escanteio e tiro livre; item 65) a curva
+// é segurar o CHUTE ou o LANÇAMENTO (a força, como sempre) e ARRASTAR o polegar para o lado (criarArrastoCurva: os mesmos
+// pulsos EFEITO_E/D do Z/X; os dois botões CURVA saíram). DEFESA (6 botões; tela limpa de 11/10 + o
 // carrinho, item 34): TROCAR (o maior), GOLEIRO (segurar), PRESSÃO (segurar), DIVIDIDA (tocar = bote; SEGURAR =
 // CONTER, como o "Sprint & Tackle" do FC Mobile), CARRINHO (vaga 'e' do 2º anel, a de baixo; o bit no pointerdown) e
 // CORRER; a vaga 'd' fica livre na defesa (subia para dentro do campo). Quem decide ataque/defesa é o main.js
@@ -162,11 +164,9 @@ export const BOTOES_TOQUE = [
   // teclado e o LB do controle já faziam; no toque o TROCAR é da defesa) — só aparece nessa hora (main.js definirGoleiroMao)
   { id: 'btn-trocar-mao', bit: 'TROCAR', fase: 'ataque', vaga: 'e', rotulo: 'TROCAR' },
   { id: 'btn-correr', bit: 'CORRER', fase: 'ambas', vaga: 'correr', rotulo: 'CORRER' },
-  // CURVA (cobrança mirada; html.cobranca-mirada): as vagas do PEGAR e do TROCAR da bola na mão
-  { id: 'btn-efeito-e', bit: 'EFEITO_E', fase: 'ataque', vaga: 'e', rotulo: 'CURVA' },
-  { id: 'btn-efeito-d', bit: 'EFEITO_D', fase: 'ataque', vaga: 'd', rotulo: 'CURVA' },
-  // estilos do pênalti (item 70, P2): só na cobrança do pênalti da pessoa (classe cobranca-penalti: main.js) — as mesmas
-  // vagas da CURVA (o pênalti não é cobrança mirada) e do PEGAR/TROCAR da bola na mão (que não existem nela)
+  // (a CURVA da cobrança mirada não tem botão desde o item 65: é o arrasto no CHUTE e no LANÇAMENTO — CURVA_TOQUE)
+  // estilos do pênalti (item 70, P2): só na cobrança do pênalti da pessoa (classe cobranca-penalti: main.js) — as vagas do
+  // PEGAR/TROCAR da bola na mão (que não existem nela)
   { id: 'btn-paradinha', bit: 'PARADINHA', fase: 'ataque', vaga: 'd', rotulo: 'PARADINHA', curto: 'PARAR' },
   { id: 'btn-pulinho', bit: 'PULINHO', fase: 'ataque', vaga: 'e', rotulo: 'PULINHO', curto: 'PULO' },
 ];
@@ -220,6 +220,80 @@ export function criarToqueOuSegura(toque, segura, limiar = ENTRADA.toqueCurto) {
     cancelar() { dedo = false; t0 = null; },
     get segurando() { return dedo; },
   };
+}
+
+/**
+ * A curva da cobrança mirada no toque (item 65 da FILA, dono 23/10: "tem que ter alguma forma de botar curva nas bolas
+ * paradas"; contrato "Cobrança mirada" no CONTRATOS.md, pesquisa no PESQUISA-ETAPA4.md §12.1): segurar o CHUTE ou o LANÇAMENTO
+ * (a força, como sempre) e arrastar o polegar para o LADO — só o eixo horizontal, relativo ao ponto do toque. Um degrau
+ * (0,25 de curva, os 9 níveis de sempre) a cada `passo` px depois da `zonaMorta` (o polegar rola 3–6 px no aperto): ±1 a
+ * 10 + 3 × 14 = 52 px. Histerese: o nível SOBE na fronteira e só DESCE `histerese` px aquém dela (um tremor de ±3 px numa
+ * fronteira troca o nível no máximo uma vez). Na borda da tela (≤ `borda` px dela, o dedo para aquele lado) o degrau repete
+ * a cada `repeteBorda` s — à direita do CHUTE sobram só 46–56 px; o que a borda somou zera quando o dedo volta à zona morta.
+ * A página traduz o nível em PULSOS dos bits EFEITO_D (+) e EFEITO_E (−), um por degrau (os mesmos do Z/X: a lógica, o
+ * online e o hash não mudam; criarEntrada lerToque).
+ */
+export const CURVA_TOQUE = Object.freeze({
+  zonaMorta: 10, passo: 14, histerese: 6, borda: 8, repeteBorda: 0.15, degraus: 4, degrau: 0.25,
+  botoes: Object.freeze(['btn-chute', 'btn-lancamento']),
+});
+/**
+ * O arrasto da curva (pura; os testes em Node chamam). comecar(x, curva0, larguraTela) no toque (curva0 = a curva do mundo
+ * nele); mover(x, agoraMs) a cada leitura (o relógio do jogo: a repetição na borda); alvo = os degraus pedidos a partir de
+ * curva0 (−8…8, limitados a −1…1 de curva); pendente() = o sinal do próximo pulso (alvo − enviados; 0 = nada); enviou(d)
+ * conta um pulso que saiu (malha aberta: vale também no online, onde o mundo vê o pulso D passos depois); soltar().
+ */
+export function criarArrastoCurva(cfg = CURVA_TOQUE) {
+  let ativo = false, x0 = 0, W = 0, nPos = 0, extra = 0, tProx = null, enviados = 0, lo = -cfg.degraus, hi = cfg.degraus;
+  const bruto = a => (a < cfg.zonaMorta ? 0 : Math.min(cfg.degraus, Math.floor((a - cfg.zonaMorta) / cfg.passo) + 1));
+  function nivel(dx) {
+    const sg = Math.sign(dx), a = Math.abs(dx);
+    // do lado do nível atual: sobe na fronteira, desce `histerese` px aquém; do outro lado (ou do zero): pela fronteira
+    if (nPos !== 0 && sg === Math.sign(nPos)) {
+      const sobe = bruto(a), desce = bruto(a + cfg.histerese), n = Math.abs(nPos);
+      return sg * (sobe > n ? sobe : desce < n ? desce : n);
+    }
+    return sg * bruto(a);
+  }
+  return {
+    comecar(x, curva0 = 0, larguraTela = Infinity) {
+      ativo = true; x0 = x; W = larguraTela; nPos = 0; extra = 0; tProx = null; enviados = 0;
+      lo = Math.max(-2 * cfg.degraus, Math.round((-1 - curva0) / cfg.degrau)); hi = Math.min(2 * cfg.degraus, Math.round((1 - curva0) / cfg.degrau));
+    },
+    mover(x, agora) {
+      if (!ativo) return;
+      const dx = x - x0;
+      nPos = nivel(dx);
+      if (nPos === 0) { extra = 0; tProx = null; return; }
+      // a borda da tela, com o dedo indo para ela: o degrau repete
+      const lado = x >= W - cfg.borda ? 1 : x <= cfg.borda ? -1 : 0;
+      if (lado && lado === Math.sign(dx)) {
+        if (tProx === null) tProx = agora + cfg.repeteBorda * 1000;
+        while (agora >= tProx) { extra += lado; tProx += cfg.repeteBorda * 1000; }
+      } else tProx = null;
+      // (o que passa do limite não se acumula: voltando, o nível desce na hora; a borda só soma para o lado dela)
+      if (extra > 0) extra = Math.min(extra, Math.max(0, hi - nPos)); else if (extra < 0) extra = Math.max(extra, Math.min(0, lo - nPos));
+    },
+    get alvo() { return Math.min(hi, Math.max(lo, nPos + extra)); },
+    get nivel() { return nPos; },
+    get enviados() { return enviados; },
+    pendente() { return ativo ? Math.sign(this.alvo - enviados) : 0; },
+    enviou(d) { enviados += d; },
+    soltar() { ativo = false; tProx = null; },
+    get ativo() { return ativo; },
+  };
+}
+
+/**
+ * O próximo pulso da curva (pura): o bit EFEITO_D (+) ou EFEITO_E (−) que o arrasto pede agora, ou 0 — um por vez (nenhum bit
+ * da curva já na fila, `pulsos`) e só como BORDA nova (o último passo, `vistos`, não viu esse bit): mira.js atualizarMira conta
+ * um degrau por aperto. No máximo 30 degraus/s a 30, 60 e 120 qps (um passo vê o bit, o seguinte o vê solto).
+ */
+export function pulsoDaCurva(arrasto, pulsos, vistos) {
+  const d = arrasto.pendente();
+  if (!d || (pulsos & (BOTAO.EFEITO_E | BOTAO.EFEITO_D))) return 0;
+  const bit = d > 0 ? BOTAO.EFEITO_D : BOTAO.EFEITO_E;
+  return vistos & bit ? 0 : bit;
 }
 
 function salvarAjustes(a) {
@@ -338,6 +412,11 @@ export function criarEntrada(opc = {}) {
   let bloqueada = false;   // "Editar time" aberto: nada vai para o jogo (só a pausa)
   let menuAtivo = false;   // pausa ou Ajuda aberta: o controle navega nos botões dela (lerMenuPad)
   let penalti = false;     // a cobrança do pênalti da pessoa (item 70, P2): o controle do pênalti (PAD_PENALTI)
+  // a curva por arrasto na cobrança mirada (item 65; main.js definirCurva): o gesto liga só com ela ativa
+  let curvaAtiva = false, curvaMundo = 0, classeCurva = false, ladoCurva = '';
+  const arrasto = criarArrastoCurva();
+  let arrBotao = null, arrX = 0; // o botão que segura o arrasto e a última posição do dedo (px CSS)
+  let pulsoCurva = 0;            // o pulso EFEITO_E/D que o arrasto pôs em `pulsos` (o passo ainda não o consumiu)
   const sentido = criarSentidoFixo(); // J/K/O/L e A/B/X/Y/RB: o sentido do aperto vale até soltar
   const ajustes = lerAjustes();
 
@@ -472,7 +551,9 @@ export function criarEntrada(opc = {}) {
   const toque = { id: null, ox: 0, oy: 0, vx: 0, vy: 0 };
   // botões: elemento, bit e quem está segurando (pointerId)
   // `dois`: botão de dois sentidos (DIVIDIDA: tocar = bote, segurar = CONTER)
-  const bts = BOTOES_TOQUE.map(d => ({ ...d, el: document.getElementById(d.id), span: document.getElementById(d.id)?.querySelector('span') ?? null, mask: BOTAO[d.bit] ?? 0, dedo: null, dois: d.segura ? criarToqueOuSegura(BOTAO[d.bit] ?? 0, BOTAO[d.segura] ?? 0) : null }))
+  // ultX: a última posição do dedo nele (px CSS) — o arrasto da curva começa dali se a cobrança mirada ligar com o dedo já
+  // no CHUTE/LANÇAMENTO (definirCurva)
+  const bts = BOTOES_TOQUE.map(d => ({ ...d, el: document.getElementById(d.id), span: document.getElementById(d.id)?.querySelector('span') ?? null, mask: BOTAO[d.bit] ?? 0, dedo: null, ultX: 0, dois: d.segura ? criarToqueOuSegura(BOTAO[d.bit] ?? 0, BOTAO[d.segura] ?? 0) : null }))
     .filter(b => b.el);
 
   function raioBase() { return 58 * escalaAnalogico(ajustes.tamanho); }
@@ -592,16 +673,28 @@ export function criarEntrada(opc = {}) {
       e.preventDefault();
       if (bloqueada) return;
       usandoToque = true;
-      b.dedo = e.pointerId;
+      b.dedo = e.pointerId; b.ultX = e.clientX;
       const v = botaoQueVale(b);
       b.como = v === b ? null : v;
       // dois sentidos: o pulso sai no soltar (se foi um toque curto); o segurado sai em lerToque
       if (v.dois) v.dois.apertar(); else pulsos |= v.mask;
       el.classList.add('ativo');
       try { el.setPointerCapture(e.pointerId); } catch (_) { /* ok */ }
+      // a curva por arrasto (item 65): só no CHUTE e no LANÇAMENTO, só com a cobrança mirada ativa (main.js definirCurva)
+      if (curvaAtiva && !arrBotao && CURVA_TOQUE.botoes.includes(b.id)) {
+        arrasto.comecar(e.clientX, curvaMundo, window.innerWidth); arrBotao = b; arrX = e.clientX;
+      }
+    });
+    el.addEventListener('pointermove', e => {
+      if (e.pointerId !== b.dedo) return;
+      b.ultX = e.clientX;
+      if (arrBotao === b) { arrX = e.clientX; e.preventDefault(); }
     });
     const solta = e => {
       if (e.pointerId !== b.dedo) return;
+      // soltar a batida acaba o arrasto: a cobrança sai com a curva que a tela mostrava (o pulso que o passo ainda não viu
+      // não vai)
+      if (arrBotao === b) fimArrasto();
       b.dedo = null;
       const v = b.como ?? b;
       b.como = null;
@@ -622,7 +715,23 @@ export function criarEntrada(opc = {}) {
   aoTocar(btMenu, () => emitir('pausa'));
   window.addEventListener('touchstart', () => { if (!usandoToque) { usandoToque = true; mostrarToque(true); } }, { passive: true });
 
+  /** Acaba o arrasto da curva: o pulso que nenhum passo viu ainda é descartado (a batida sai com a curva que a tela mostrava). */
+  function fimArrasto() {
+    arrasto.soltar(); arrBotao = null;
+    if (pulsoCurva && !(vistos & pulsoCurva)) pulsos &= ~pulsoCurva;
+    pulsoCurva = 0;
+  }
+  // um pulso por vez (o próximo só depois de um passo ver o bit solto: cada pulso é uma BORDA nova para mira.js atualizarMira,
+  // que conta um degrau por aperto) — no máximo 30 degraus/s a 30, 60 e 120 qps
+  function pulsarCurva(agora) {
+    if (!arrBotao) return;
+    if (!curvaAtiva || arrBotao.dedo === null) { fimArrasto(); return; }
+    arrasto.mover(arrX, agora);
+    const bit = pulsoCurva ? 0 : pulsoDaCurva(arrasto, pulsos, vistos);
+    if (bit) { pulsos |= bit; pulsoCurva = bit; arrasto.enviou(bit === BOTAO.EFEITO_D ? 1 : -1); }
+  }
   function lerToque(agora) {
+    pulsarCurva(agora);
     let b = 0;
     for (const x of bts) {
       if (x.dedo === null) continue;
@@ -734,6 +843,7 @@ export function criarEntrada(opc = {}) {
     pulsos = 0; soltas = 0; adiados = 0;
     sentido.soltarTudo();
     toque.id = null; toque.vx = toque.vy = 0;
+    arrasto.soltar(); arrBotao = null; pulsoCurva = 0;
     for (const b of bts) { b.dedo = null; b.como = null; b.dois?.cancelar(); b.el.classList.remove('ativo'); }
     if (ignorarPad && gp) for (let i = 0; i < gp.buttons.length; i++) if (apertado(i)) ignorar[i] = true;
     trocarFaseSePuder();
@@ -789,7 +899,11 @@ export function criarEntrada(opc = {}) {
      * viu: sem passo (o replay), o reaperto não vale, e a tecla segurada no começo, solta e apertada de novo, tem que
      * aparecer (contraprova 13/10: antes ela ficava escondida o replay inteiro e não pulava).
      */
-    limparPulsos(passo = false) { pulsos = passo ? adiados : 0; adiados = 0; soltas = 0; if (!passo) vistos = 0; },
+    limparPulsos(passo = false) {
+      // (fora do laço — pausa, replay, cenas — o arrasto da curva acaba)
+      if (!passo && arrBotao) { arrasto.soltar(); arrBotao = null; }
+      pulsos = passo ? adiados : 0; adiados = 0; soltas = 0; pulsoCurva = 0; if (!passo) vistos = 0;
+    },
     /**
      * Os botões que um passo de simulação usa (main.js, ANTES de cada passo — um replay que começa dentro do passo
      * limpa isso em limparPulsos()): base do reaperto entre passos.
@@ -823,12 +937,39 @@ export function criarEntrada(opc = {}) {
       if (raizToque) raizToque.classList.toggle('cobranca-penalti', penalti);
     },
     get cobrancaPenalti() { return penalti; },
+    /**
+     * A cobrança mirada da pessoa esperando (item 65; main.js, a cada quadro: fora do tiro de meta, da corrida do item 70 e das
+     * cenas): o arrasto da curva no CHUTE e no LANÇAMENTO liga, com os chevrons ‹ › nos dois (classe curva-arrasto no #toque;
+     * data-curva = o lado da curva do mundo, 'd' ou 'e'). curva = a do mundo (o começo do próximo arrasto). Desligada, o arrasto
+     * em andamento acaba.
+     */
+    definirCurva(ativa, curva = 0) {
+      ativa = !!ativa;
+      if (!ativa && arrBotao) fimArrasto();
+      const ligou = ativa && !curvaAtiva;
+      curvaAtiva = ativa; curvaMundo = Number(curva) || 0;
+      // o CHUTE ou o LANÇAMENTO já segurado quando a cobrança mirada liga (a pessoa apertou na montagem da falta, antes da mira
+      // e dos chevrons: ~1 s): o arrasto começa daqui, do ponto onde o dedo está agora — os chevrons aparecem no botão
+      // segurado e o gesto vale (antes a curva ficava em 0 e, para tentar de novo, soltar batia)
+      if (ligou && !arrBotao) {
+        const b = bts.find(x => x.dedo !== null && !x.como && CURVA_TOQUE.botoes.includes(x.id));
+        if (b) { arrasto.comecar(b.ultX, curvaMundo, window.innerWidth); arrBotao = b; arrX = b.ultX; }
+      }
+      if (raizToque && ativa !== classeCurva) { classeCurva = ativa; raizToque.classList.toggle('curva-arrasto', ativa); }
+      const lado = !ativa ? '' : curvaMundo > 0 ? 'd' : curvaMundo < 0 ? 'e' : '';
+      if (lado !== ladoCurva) {
+        ladoCurva = lado;
+        for (const b of bts) if (CURVA_TOQUE.botoes.includes(b.id)) { if (lado) b.el.dataset.curva = lado; else delete b.el.dataset.curva; }
+      }
+    },
+    /** O arrasto da curva agora (testes): {ativo, nivel, alvo, enviados} ou null. */
+    get arrastoCurva() { return arrBotao ? { ativo: arrasto.ativo, nivel: arrasto.nivel, alvo: arrasto.alvo, enviados: arrasto.enviados } : null; },
     /** Reaplica no DOM a fase visível (testes que mexem nas classes à mão). */
     sincronizarFase() { trocarFaseSePuder(true); },
     /**
      * A geometria dos controles de toque para a faixa de baixo (hud.js: o minimapa embaixo no meio e os nomes nos cantos;
      * itens 59 e 60): {W, H, sa, botoes: [{x, y, d}] de TODAS as vagas posicionadas (as duas fases, PEGAR, TROCAR da mão,
-     * CURVA, estilos do pênalti, CORRER — nada pula na troca de posse), analogico: {x, y, r} em repouso} ou null (sem toque).
+     * estilos do pênalti, CORRER — nada pula na troca de posse), analogico: {x, y, r} em repouso} ou null (sem toque).
      */
     layoutToque() {
       if (!raizToque || raizToque.hidden || !ultimoPos) return null;

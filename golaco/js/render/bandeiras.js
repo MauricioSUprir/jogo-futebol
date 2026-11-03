@@ -9,7 +9,7 @@
 // Qualidade: o que desenhar é um prefixo da malha (Baixa ⊂ Média ⊂ Alta: 8/10/12 faixas, 6/16/32 bandeiras); na Baixa
 // nada mexe (sem onda nem balanço). Luz dos refletores à noite e a luz falsa dos sinalizadores (luz-falsa.js).
 import * as THREE from 'three';
-import { BANDEIRAS, faixas, bandeiras, bandeiroes, BANDEIRA_GLSL, BANDEIRAO_GLSL, SOB_GLSL } from './bandeiras-dados.js';
+import { BANDEIRAS, faixas, bandeiras, bandeiroes, BANDEIRA_GLSL, BANDEIRAO_GLSL, SOB_GLSL, LENTE_GLSL } from './bandeiras-dados.js';
 import { aberturaBandeirao } from './festa.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ } from './luz-falsa.js';
 import { criarCanvas, texturaCanvas } from './util.js';
@@ -37,12 +37,14 @@ uniform vec3 uBandN[2];
 uniform vec2 uBandLarg;
 uniform vec3 uSol;
 uniform vec2 uLuz;
+uniform vec4 uLente;
 varying vec2 vUv;
 varying float vLuz;
 varying vec3 vFlare;
 ${BANDEIRA_GLSL}
 ${BANDEIRAO_GLSL}
 ${SOB_GLSL}
+${LENTE_GLSL}
 ${LUZ_FALSA_GLSL}
 void main() {
   float tipo = aMeta.x;
@@ -64,7 +66,8 @@ void main() {
     // debaixo do bandeirão aberto a bandeira abaixa (some na mão): nada de mastro furando o pano
     vec2 mb = vec2(${BANDEIRAS.sob.bandeira.map(v => v.toFixed(2)).join(', ')});
     float sob = max(sobBandeirao(position, uBandA[0], uBandU[0], uBandV[0], uAbre.x, mb), sobBandeirao(position, uBandA[1], uBandU[1], uBandV[1], uAbre.y, mb));
-    l *= 1.0 - sob;
+    // perto da lente da câmera da bola parada ela também abaixa (bandeiras-dados.js alturaPelaLente; uLente.w 0 fora dela)
+    l *= (1.0 - sob) * alturaPelaLente(position, uLente);
     p = position + e * l.x + vec3(0.0, l.y, 0.0) + n * l.z;
   } else {
     bool k0 = tipo < 3.5;
@@ -262,6 +265,7 @@ export function criarBandeiras(cena, opc = {}) {
     uBandV: { value: lBand2.map(b => new THREE.Vector3(...b.V)) }, uBandN: { value: lBand2.map(b => new THREE.Vector3(...b.N)) },
     uBandLarg: { value: new THREE.Vector2(lBand2[0].larg, lBand2[1].larg) },
     uSol: { value: new THREE.Vector3(-0.42, 0.74, 0.52).normalize() }, uLuz: { value: new THREE.Vector2(0.62, 0.42) },
+    uLente: { value: new THREE.Vector4(0, 0, 0, 0) },
     uFlare: UNIFORMS_LUZ.uFlare, uFlareN: UNIFORMS_LUZ.uFlareN,
   };
   const material = new THREE.ShaderMaterial({ uniforms: uni, vertexShader: VERT, fragmentShader: FRAG, fog: true, side: THREE.DoubleSide });
@@ -286,6 +290,8 @@ export function criarBandeiras(cena, opc = {}) {
       uni.uAnimada.value = q === 'baixa' ? 0 : 1;
     },
     definirHora(h) { uni.uLuz.value.set(h === 'noite' ? 0.36 : 0.62, h === 'noite' ? 0.12 : 0.42); },
+    /** A lente da câmera da bola parada ({x, y, z}) neste quadro, ou null fora desse plano: as bandeiras perto dela abaixam. */
+    definirLente(p) { if (p) uni.uLente.value.set(p.x, p.y, p.z, 1); else uni.uLente.value.w = 0; },
     dispose() { cena.remove(mesh); geo.dispose(); material.dispose(); tex.dispose(); },
   };
   api.definirQualidade(opc.qualidade ?? 'media');

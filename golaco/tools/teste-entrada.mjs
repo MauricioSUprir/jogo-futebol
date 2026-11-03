@@ -361,6 +361,138 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
     }
   }
 }
+// ------------------------------------------------ item 65: a curva por arrasto no CHUTE e no LANÇAMENTO (toque)
+// entrada.js criarArrastoCurva (pura: o nível pelo arrasto, a histerese, a borda) e pulsoDaCurva (pura: um pulso EFEITO_D/E por
+// vez, só como borda nova); o protocolo do laço do main.js (passoUsou antes do passo, limparPulsos(true) e a releitura depois do
+// 1º passo; soltar descarta o pulso que nenhum passo viu) rodado contra o mira.js atualizarMira DE VERDADE
+{
+  const { atualizarMira } = await import('../js/mira.js');
+  const { PASSO } = await import('../js/config.js');
+  if (!ENT.criarArrastoCurva || !ENT.pulsoDaCurva || !ENT.CURVA_TOQUE) {
+    reg('curva por arrasto no toque (item 65: entrada.js criarArrastoCurva, pulsoDaCurva, CURVA_TOQUE)', 'não existe', 'existe', false);
+  } else {
+    const CT = ENT.CURVA_TOQUE, W = 844;
+    // T níveis: 10 / 24 / 38 / 52 px → 1 / 2 / 3 / 4 degraus; logo antes, o de baixo; para a esquerda, negativo
+    {
+      const a = ENT.criarArrastoCurva(), x0 = 400, out = [];
+      for (const dx of [9.9, 10, 23.9, 24, 37.9, 38, 51.9, 52, 80, -10, -52, 0]) { a.comecar(x0, 0, W); a.mover(x0 + dx, 0); out.push(a.alvo); }
+      reg('curva por arrasto: os degraus a 10 / 24 / 38 / 52 px (±1 a 52 px), para os dois lados; voltar ao ponto do toque = a curva de antes',
+        out.join(' · '), '0 · 1 · 1 · 2 · 2 · 3 · 3 · 4 · 4 · −1 · −4 · 0', out.join(',') === '0,1,1,2,2,3,3,4,4,-1,-4,0');
+      // a curva do mundo no toque limita: de +0,5, só mais 2 degraus para a direita e 6 para a esquerda
+      a.comecar(x0, 0.5, W); a.mover(x0 + 80, 0); const dir = a.alvo; a.mover(x0 - 80, 0); const esq = a.alvo; a.mover(x0 + 3, 0); const volta = a.alvo;
+      reg('curva por arrasto: a partir da curva do mundo no toque (+0,5), o limite de ±1 (mais 2 degraus; menos 4) e a volta ao toque = +0,5',
+        `${dir} · ${esq} · ${volta}`, '2 · −4 (o máximo do arrasto) · 0', dir === 2 && esq === -4 && volta === 0);
+    }
+    // T3 vertical: o arrasto só lê o eixo horizontal (na página o pointermove só passa o x)
+    {
+      const a = ENT.criarArrastoCurva(); a.comecar(500, 0, W);
+      for (let i = 0; i <= 20; i++) a.mover(500, i * 16);
+      reg('curva por arrasto: só o lado conta (arrasto vertical de 80 px: o x não muda)', `${a.alvo} degraus`, '0', a.alvo === 0);
+    }
+    // T4 histerese: tremor de ±3 px numa fronteira por 1 s (60 leituras): no máximo 1 troca de nível
+    {
+      let pior = 0;
+      for (const f of [10, 24, 38, 52]) for (const fase of [0, 1.3, 2.1]) {
+        const a = ENT.criarArrastoCurva(); a.comecar(300, 0, W);
+        let ant = null, trocas = 0;
+        for (let i = 0; i < 60; i++) {
+          a.mover(300 + f + 3 * Math.sin(i * 1.9 + fase), i * 1000 / 60);
+          if (ant !== null && a.alvo !== ant) trocas++;
+          ant = a.alvo;
+        }
+        pior = Math.max(pior, trocas);
+      }
+      reg('curva por arrasto: tremor de ±3 px numa fronteira por 1 s (as 4 fronteiras, 3 fases): trocas de nível (histerese)', `pior ${pior}`, '≤ 1', pior <= 1);
+    }
+    // T5 borda: o toque a 20 px da borda direita e o dedo levado à borda (≤ 8 px dela): o degrau repete a cada 0,15 s
+    {
+      const a = ENT.criarArrastoCurva(); a.comecar(W - 20, 0, W);
+      let t4 = null;
+      for (let q = 0; q <= 60; q++) { a.mover(W - 2, q * 1000 / 60); if (a.alvo === 4 && t4 === null) t4 = q / 60; }
+      a.mover(W - 20 + 3, 1000); const zona = a.alvo; a.mover(W - 2, 1100); const deNovo = a.alvo;
+      reg('curva por arrasto: na borda da tela o degrau repete (toque a 20 px da borda, o dedo nela): +1 em ≤ 0,15 s × os 3 que faltam + 1 quadro; de volta à zona morta o que a borda somou zera',
+        `+1 em ${t4 == null ? '-' : fmt(t4, 3)} s · na zona morta ${zona} · de volta à borda ${deNovo}`, '≤ 0,467 s · 0 · 1', t4 != null && t4 <= 0.45 + 1 / 60 + 1e-9 && zona === 0 && deNovo === 1);
+    }
+    // o laço do main.js com o arrasto (entrada.js lerToque: pulsoDaCurva; o passo: atualizarMira) — o dedo por x(t)
+    const rodar = (qps, dedo, tSolta = Infinity, dur = 1.2) => {
+      const m = { tick: 0 }, mi = { ang0: 0, ang: 0, curva: 0, cone: 1, rep: [-1, -1] }, c = { ix: 0, iz: 0, imag: 0, botoes: 0, botoesAnt: 0 };
+      const a = ENT.criarArrastoCurva(), log = [];
+      let pulsos = 0, pulso = 0, vistos = 0, acum = 0, solto = false, mostrada = null, naSolta = null, depois = 0;
+      a.comecar(500, 0, W);
+      const ler = t => {
+        if (!solto) { a.mover(500 + dedo(t), t * 1000); const b = pulso ? 0 : ENT.pulsoDaCurva(a, pulsos, vistos); if (b) { pulsos |= b; pulso = b; a.enviou(b === BOTAO.EFEITO_D ? 1 : -1); } }
+        return pulsos;
+      };
+      for (let q = 0; q < qps * dur; q++) {
+        const t = q / qps;
+        if (!solto && t >= tSolta) {
+          // soltar: o pulso que nenhum passo viu vai embora (a batida sai com a curva que a tela mostrava)
+          solto = true; a.soltar(); if (pulso && !(vistos & pulso)) pulsos &= ~pulso; pulso = 0; naSolta = mostrada;
+        }
+        let bot = ler(t);
+        acum += 1 / qps;
+        for (let i = 0; acum >= PASSO - 1e-9; i++) {
+          acum -= PASSO;
+          vistos = bot; c.botoesAnt = c.botoes; c.botoes = bot;
+          const antes = mi.curva;
+          atualizarMira(m, c, mi, 'escanteio'); m.tick++;
+          if (solto && mi.curva !== antes) depois++;
+          if (i === 0) { pulsos = 0; pulso = 0; bot = ler(t); }
+        }
+        mostrada = mi.curva; // o quadro desenhado (depois dos passos)
+        log.push([t, mi.curva]);
+      }
+      return { log, final: mi.curva, naSolta, depois };
+    };
+    const quando = (log, v, t0 = 0) => log.find(([t, cv]) => t >= t0 && cv === v)?.[0] ?? null;
+    // T1/T7: 0 → +1 arrastando 60 px em 0,15 s; T2: de volta a −1 (−60 px) em 0,2 s; parado a 40 px = +0,75 — a 30, 60 e 120 qps
+    {
+      const res = [];
+      for (const qps of [30, 60, 120]) {
+        const ida = rodar(qps, t => Math.min(60, t * 400));
+        const volta = rodar(qps, t => (t < 0.4 ? Math.min(60, t * 400) : Math.max(-60, 60 - (t - 0.4) * 600)));
+        const para = rodar(qps, t => Math.min(40, t * 400));
+        res.push({ qps, t1: quando(ida.log, 1), f1: ida.final, tm1: quando(volta.log, -1, 0.4), fm1: volta.final, f40: para.final });
+      }
+      // o dedo chega a 52 px (o +1) em 0,13 s e volta a −52 px em 0,4 + 0,187 s
+      const okT1 = res.every(r => r.t1 != null && r.t1 - 0.13 <= 0.2), okT2 = res.every(r => r.tm1 != null && r.tm1 - (0.4 + 112 / 600) <= 0.35);
+      const igual = res.every(r => r.f1 === 1 && r.fm1 === -1 && r.f40 === 0.75);
+      reg('curva por arrasto contra o atualizarMira real (30, 60 e 120 qps): 0 → +1 em ≤ 0,2 s depois do dedo; +1 → −1 em ≤ 0,35 s; parado a 40 px = +0,75; a mesma curva final nos três ritmos',
+        res.map(r => `${r.qps} qps: +1 ${r.t1 == null ? '-' : fmt(r.t1 - 0.13, 3)} s depois, −1 ${r.tm1 == null ? '-' : fmt(r.tm1 - (0.4 + 112 / 600), 3)} s depois, 40 px ${r.f40}`).join(' · '),
+        '≤ 0,2 · ≤ 0,35 · 0,75 (iguais)', okT1 && okT2 && igual);
+    }
+    // T6: soltar com degraus na fila — a batida sai com a curva do mundo na hora de soltar (nenhum pulso depois)
+    {
+      const res = [];
+      for (const qps of [30, 60, 120]) for (const tS of [0.05, 0.08, 0.1, 0.117, 0.133]) {
+        const r = rodar(qps, t => Math.min(60, t * 1200), tS, 0.6);
+        res.push({ qps, tS, ok: r.depois === 0 && r.final === r.naSolta, final: r.final, naSolta: r.naSolta });
+      }
+      const ruins = res.filter(r => !r.ok);
+      reg('curva por arrasto: soltar com degraus na fila (dedo a 60 px em 0,05 s; soltar de 0,05 a 0,133 s, 30/60/120 qps) — a curva da batida = a mostrada no último quadro, nenhum degrau depois',
+        `${res.length - ruins.length}/${res.length}${ruins.length ? ' — ' + ruins.slice(0, 3).map(r => `${r.qps} qps ${r.tS}: ${r.naSolta} → ${r.final}`).join(', ') : ''}`, `${res.length}/${res.length}`, ruins.length === 0);
+    }
+    // T8 (a parte pura): solto, nada pendente; um pulso por vez e só como borda nova
+    {
+      const a = ENT.criarArrastoCurva(); a.comecar(400, 0, W); a.mover(470, 0);
+      const comFila = ENT.pulsoDaCurva(a, BOTAO.EFEITO_D, 0), visto = ENT.pulsoDaCurva(a, 0, BOTAO.EFEITO_D), livre = ENT.pulsoDaCurva(a, 0, BOTAO.EFEITO_E);
+      a.soltar(); const solto = ENT.pulsoDaCurva(a, 0, 0);
+      reg('curva por arrasto: um pulso por vez (com um na fila, nenhum), só borda nova (o passo viu o bit: espera), solto nada',
+        `fila ${comFila} · visto ${visto} · livre ${livre === BOTAO.EFEITO_D ? 'EFEITO_D' : livre} · solto ${solto}`, 'fila 0 · visto 0 · livre EFEITO_D · solto 0',
+        comFila === 0 && visto === 0 && livre === BOTAO.EFEITO_D && solto === 0);
+    }
+    // os botões: sem os CURVA; o arrasto só no CHUTE e no LANÇAMENTO; as vagas d/e continuam (PEGAR, TROCAR da mão, CARRINHO,
+    // PARADINHA, PULINHO)
+    {
+      const ids = ENT.BOTOES_TOQUE.map(b => b.id), naD = ENT.BOTOES_TOQUE.filter(b => b.vaga === 'd').map(b => b.id), naE = ENT.BOTOES_TOQUE.filter(b => b.vaga === 'e').map(b => b.id);
+      reg('toque sem os botões CURVA (item 65): o arrasto no CHUTE e no LANÇAMENTO; nas vagas d/e só PEGAR, TROCAR da mão, CARRINHO, PARADINHA e PULINHO',
+        `CURVA ${ids.filter(i => /efeito/.test(i)).length}; arrasto ${CT.botoes.join(', ')}; d: ${naD.join(', ')}; e: ${naE.join(', ')}`,
+        'CURVA 0; btn-chute, btn-lancamento; d: btn-pegar, btn-paradinha; e: btn-carrinho, btn-trocar-mao, btn-pulinho',
+        !ids.some(i => /efeito/.test(i)) && CT.botoes.join() === 'btn-chute,btn-lancamento' && naD.join() === 'btn-pegar,btn-paradinha' && naE.join() === 'btn-carrinho,btn-trocar-mao,btn-pulinho');
+    }
+  }
+}
+
 console.log(tabelaTexto(linhas));
 console.log(falhas ? `\nteste-entrada: REPROVOU (${falhas})` : '\nteste-entrada: PASSOU');
 process.exit(falhas ? 1 : 0);

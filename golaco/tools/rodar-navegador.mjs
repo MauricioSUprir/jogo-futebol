@@ -30,7 +30,9 @@ const LISTA = [
   ['cena de substituição e faixa ENTRA/SAI (fila depois do replay, pular, pausa, celular, nada encosta; hash igual)', 'teste-substituicao-tela.mjs', { deploy: true }],
   ['cenas das paradas: cartão (o cartão na mão, a tarja só na cena, pular, sem o ícone, hash igual, celular e corpo novo, cartão → replay de parada, vantagem que virou gol, TM expulso), intervalo e pós-jogo (o mundo parado até a faixa final, tarjas = súmula, melhor em campo, troca de camisa, melhores momentos, celular, corpo novo, TM, online)', 'teste-cenas-tela.mjs', { deploy: true }],
   ['Pênaltis 3D (disputa até o fim, bolinhas, faixa, teclado com a câmera atrás do cobrador, celular, ?tm)', 'teste-penaltis-tela.mjs', { deploy: true }],
-  ['bolas paradas no estilo FIFA (câmera atrás do cobrador nos 4 tipos, nada na lente, linha da cobrança mirada, curva; PC e celular)', 'teste-bola-parada-tela.mjs'],
+  // (item 65: a mira minimalista pelos pixels — largura, contraste dia/noite, o anel, o arco, o custo — e a curva por arrasto com
+  // toque de verdade, também em 568×320 com o entalhe)
+  ['bolas paradas no estilo FIFA (câmera atrás do cobrador nos 4 tipos, nada na lente, a mira da cobrança mirada, a curva no teclado e por arrasto no toque; PC e celular)', 'teste-bola-parada-tela.mjs'],
   // Item 66 (dono, 23/10: "a câmera não acompanha a bola e não dá pra ver a área completamente")
   ['câmera de TV na tela (a projeção e a câmera = Node, a bola fora do HUD, a torcida, o controlado, o custo, a área inteira, o escanteio da pessoa alto e o da IA na TV, de noite; PC e celular)', 'teste-camera-tela.mjs'],
   ['Modo Livre (pausa sem rolar, as 6 câmeras pela pausa, C/R3, rumo do ataque, Altura/Distância salvas, celular, ?tm)', 'teste-livre-tela.mjs', { deploy: true }],

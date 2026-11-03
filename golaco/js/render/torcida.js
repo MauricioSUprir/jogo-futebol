@@ -385,10 +385,15 @@ export function criarTorcida(cena, opc) {
     /**
      * t: s (relógio do desenho); emocao: estado de emocao.js; camera: THREE.Camera; batida: relógio da batucada
      * (som.js relogioBatida, s) ou null (sem som: a organizada pula no relógio do desenho); desenha: este quadro vai
-     * mesmo ser desenhado (a pré-carga espera o 1º desenhado de verdade: com o celular em pé nada é desenhado).
+     * mesmo ser desenhado (a pré-carga espera o 1º desenhado de verdade: com o celular em pé nada é desenhado). lente: a
+     * posição da câmera da bola parada ({x, y, z}) quando é ela que desenha (as bandeiras de mastro perto dela abaixam:
+     * bandeiras-dados.js alturaPelaLente; o fogo e a fumaça dos sinalizadores perto dela somem: fumaca.js forcaPelaLente);
+     * null nos outros planos (o replay, o pré-jogo, a TV, as cenas).
      */
-    atualizar(tempo, emocao, camera, batida = null, desenha = true) {
+    atualizar(tempo, emocao, camera, batida = null, desenha = true, lente = null) {
       uni.uTempo.value = tempo % 3600;
+      bandeiras.definirLente(lente);
+      sinalizadores.definirLente(lente);
       uni.uTempoOrg.value = batida != null ? batida : tempo % 3600;
       if (emocao) {
         const [a, b] = emocao.torcida;

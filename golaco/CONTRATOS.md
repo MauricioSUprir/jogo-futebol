@@ -400,14 +400,23 @@ em `config.js` é `ESTADIO` (túnel e bancos: geometria que outras frentes podem
   t, animada)` e `BANDEIRA_GLSL`, `ondaBandeirao(u, v, larg, t, animada)` e `BANDEIRAO_GLSL` (GPU = JS conferido no
   `teste-estadio`), `sobBandeirao(p, b, abre, margem)` e `SOB_GLSL` (debaixo do pano aberto: as bandeiras de mastro
   abaixam e os torcedores seguram o pano — braços em V, sem pular; `BANDEIRAS.sob`; altura 2,3 m e onda 0,25 m para o pano
-  nunca descer abaixo das mãos: ninguém fura o pano, `teste-torcida`; GPU = JS no `teste-estadio`). **`bandeiras.js`**: `criarBandeiras(cena, {qualidade, hora})` → {mesh (1 chamada, opaca, desenhada
-  antes da torcida), uniforms (uAbre), atualizar(festa, t), definirQualidade (prefixo por `drawRange`), definirHora,
-  dispose}; atlas 1024² desenhado em canvas.
-- **`fumaca.js`**: `FUMACA` (vida, subida, vento para FORA do campo, tamanho, alfa, partículas por qualidade: Baixa 0),
-  `fumacaParticula(s, p, P, t)` e `FUMACA_GLSL` (o caminho de cada partícula sai do shader: nada simulado na CPU).
-  **`sinalizadores.js`**: `criarSinalizadores(cena, {qualidade, hora})` → {mesh (1 chamada, só visível com fogo ou
-  fumaça; núcleo + halo + fumaça numa malha instanciada, mistura pré-multiplicada), atualizar(festa, t),
-  definirQualidade, definirHora, quantas, medirOverdraw(renderer, camera, escala) (em telas cheias), dispose}.
+  nunca descer abaixo das mãos: ninguém fura o pano, `teste-torcida`; GPU = JS no `teste-estadio`), `alturaPelaLente(p,
+  [x, y, z, liga])` e `LENTE_GLSL` (perto da lente da câmera da bola parada a bandeira de mastro abaixa: inteira com a mão a
+  ≥ `BANDEIRAS.lente.raio` + `folga` m dela, 9 + 2, sumida na mão abaixo de 9 m; GPU = JS no `teste-estadio`). **`bandeiras.js`**: `criarBandeiras(cena, {qualidade, hora})` → {mesh (1 chamada, opaca, desenhada
+  antes da torcida), uniforms (uAbre, uLente), atualizar(festa, t), definirQualidade (prefixo por `drawRange`), definirHora,
+  definirLente(p | null), dispose}; atlas 1024² desenhado em canvas. `torcida.atualizar(t, emocao, camera, batida, desenha,
+  lente)`: o main.js passa a posição da câmera quando a da bola parada está na mistura (`cam.misturaBolaParada > 0`); o
+  replay, o pré-jogo e as outras câmeras passam null (as bandeiras inteiras).
+- **`fumaca.js`**: `FUMACA` (vida, subida, vento para FORA do campo, tamanho, alfa, partículas por qualidade: Baixa 0; o
+  quadro do núcleo e do halo, `nucleo`/`halo`), `fumacaParticula(s, p, P, t)` e `FUMACA_GLSL` (o caminho de cada partícula
+  sai do shader: nada simulado na CPU), `forcaPelaLente(c, r, [x, y, z, liga])` e `LENTE_FUMACA_GLSL` (perto da lente da
+  câmera da bola parada cada quadro do sinalizador — o núcleo, o halo e cada partícula, centro c e raio r — some: inteiro
+  com a borda a ≥ `FUMACA.lente.raio` + `folga` m dela, 9 + 3, apagado abaixo de 9 m; multiplica a força do fogo e o alfa
+  da fumaça; liga 0 = 1; GPU = JS no `teste-estadio`). **`sinalizadores.js`**: `criarSinalizadores(cena, {qualidade,
+  hora})` → {mesh (1 chamada, só visível com fogo ou fumaça; núcleo + halo + fumaça numa malha instanciada, mistura
+  pré-multiplicada), uniforms (uLente), atualizar(festa, t), definirQualidade, definirHora, definirLente(p | null), quantas,
+  medirOverdraw(renderer, camera, escala) (em telas cheias), dispose}; a `torcida.atualizar(..., lente)` passa a mesma lente
+  às bandeiras e aos sinalizadores.
 - **`torcida-dados.js`**: setor 3 = lado de cá (z +), `GRUPOS` (lado, fundo+x, fundo−x, ca-frente, ca-cima: uma malha
   cada), `cameraNoLadoDeCa(p)` (a câmera de TV fica DENTRO da arquibancada de cá: com ela lá, a arquibancada e a
   torcida de cá saem do desenho), `cadeiraNoTunel(x, y)`, `TORCIDA.ocupacaoFrente`/`ocupacaoCa`/`frente` (as 9
@@ -2604,8 +2613,15 @@ acusa o `config.js`, só o `CAMERA`, que a simulação não lê) e todo o resto 
 - **O escanteio da pessoa (`CAMERA_ESCANTEIO`).** Atrás do cobrador e ALTO: 13 m atrás, 1,2 m de lado, 8 m de altura, a bola
   em 86% da altura do quadro e o alvo em 30%, fov 26–62°, a até 17 m da bola com a corrida (atrás do cobrador 6,5–13 m);
   a lente ≥ 2 m acima do que houver embaixo (`folgaCabeca`); dentro da caixa da arquibancada de cá ela não bloqueia (sai do
-  desenho, a regra da TV); bloqueada, chega 15% e sobe 1 m por tentativa (10). Os outros tipos: o `CAMERA_BOLA_PARADA` de
-  sempre. A volta para a TV: a mistura de 1,1 s, menos quando o olhar da bola parada e o da TV apontam para lados opostos
+  desenho, a regra da TV); bloqueada, chega 15% e sobe 1 m por tentativa (10). As bandeiras de mastro da torcida não são
+  sólidos da câmera: com ela na mistura, as de perto da lente ABAIXAM (`bandeiras-dados.js alturaPelaLente`; revisão R2 do
+  item 65 — no escanteio de lá do Golaço e do Maracanã a lente, a 8 m sobre as fileiras da frente, ficava a 0,2–3,6 m de um
+  pano de 2 × 1,4 m: uma placa verde e preta de 12–100% do quadro encostada na bola e no arco da curva; agora o que sobra
+  fica a ≥ 8,6 m nos 106 estádios × 4 cantos × corrida, G5 do teste-camera, e o `teste-bola-parada-tela` 2b confere o de lá
+  em pixels). Os sinalizadores das quinas (`festa.js`) também não: com ela na mistura, o núcleo, o halo e a fumaça perto da
+  lente SOMEM (`fumaca.js forcaPelaLente`; a mesma revisão — a quina ficava a 3–4 m da lente e a fumaça passava por ela, um
+  véu de até 100% do quadro por cima da bola; agora o que se vê fica a ≥ 9,5 m e ≤ 4,1% do quadro, nada sobre a bola, G5, e
+  de noite no `teste-bola-parada-tela` 2b a festa a < 3 e < 6 m da lente 13–22% → 0%). Os outros tipos: o `CAMERA_BOLA_PARADA` de sempre. A volta para a TV: a mistura de 1,1 s, menos quando o olhar da bola parada e o da TV apontam para lados opostos
   (cosseno < −0,5: o escanteio de lá) — aí CORTA (`camera.js BP.corteOposto`; misturando 180°, o olhar passava pelo chão e
   a bola saía do quadro de 0,3 a 0,9 s). No Modo Livre, contra o rumo da câmera dele no chão (`est.extra.yaw`: as de lado
   olham como a TV e cortam; Atrás e Jogador, pelo comprimento, misturam; revisão R5 — antes no Livre a volta misturava e a
@@ -2646,9 +2662,9 @@ de meta; a linha da trajetória com mira, força e curva no escanteio e na falta
   (`criarMira`: `ang0` = a direção do alvo padrão `alvoPadrao` — escanteio: a marca do pênalti; tiro livre direto a ≤
   `MIRA.distChute` m: o meio do gol; outro tiro livre: 30 m na direção do gol; tiro de meta: 35 m para a frente).
   `atualizarMira` a cada tick: o componente do analógico para o LADO de `ang0` gira a mira (`MIRA.gira` rad/s, até
-  `cone[tipo]`); `BOTAO.EFEITO_E`/`EFEITO_D` (teclas Z/X, analógico direito do controle, botões CURVA do toque nas vagas d e e)
-  passam a curva um degrau de `curvaPasso` (segurar repete a cada `curvaRepete` s), de −1 a +1 (+ = para a direita de quem
-  bate); no tiro de meta a curva fica 0.
+  `cone[tipo]`); `BOTAO.EFEITO_E`/`EFEITO_D` (teclas Z/X, analógico direito do controle e, no toque, o ARRASTO no CHUTE ou no
+  LANÇAMENTO — item 65, abaixo) passam a curva um degrau de `curvaPasso` (segurar repete a cada `curvaRepete` s), de −1 a +1
+  (+ = para a direita de quem bate); no tiro de meta a curva fica 0.
 - **Tipo pelo botão** (`tipoMirado`): LANÇAMENTO = ALTA (E + LANÇAMENTO = TENSA); CHUTE = CHUTE no tiro livre direto a ≤
   `distChute` m, TENSA no resto; PASSE/ENFIADA = CURTA; tiro de meta = LONGA (sem botão: CURTA só com PASSE/ENFIADA). ALTA,
   TENSA e CHUTE têm a trajetória (`pedido.mirada = {tipo}`; o pedido vira `lancamento`/`chute`); CURTA e LONGA são o passe
@@ -2669,11 +2685,52 @@ de meta; a linha da trajetória com mira, força e curva no escanteio e na falta
   × `MIRA.erro` (os testes zeram). O ponto do voo (`m.voo.alvo`) e quem vai nela saem da trajetória prevista (cruzamento:
   onde desce a `yAlto`); `m.voo.mirada = true`.
 - **Tela** (só lê o mundo; o hash não muda), em `render/bola-parada.js` + `mira-linha.js`, carregados **sob demanda**
-  (main.js `carregarBP`, na 1ª bola morta de escanteio/tiro livre/tiro de meta/pênalti: fora do download inicial, que
-  está no teto de 4 MB do `teste-carga` — sobram ~0,6 KB): a linha (uma fita virada para a câmera, miolo amarelo → azul e
-  bordas escuras, desbotando no fim; mais apagada antes de carregar; 1 chamada de desenho; some no chute); o painel `#mira`
-  (rótulo e trilho do efeito; Z/X só sem toque; o CSS dele vem no módulo; com ele o minimapa sai: `html.mira-visivel`);
-  `html.cobranca-mirada` mostra os botões CURVA (e esconde PEGAR e TROCAR da bola na mão, das mesmas vagas).
+  (main.js `carregarBP`, na 1ª bola morta de escanteio/tiro livre/tiro de meta/pênalti: fora do download inicial) — desde o
+  item 65 (23/10, dono: "essa seta, essa reta ... tem que estar com a cara do Total Match, alguma coisa mais minimalista, e
+  tem que ter alguma forma de botar curva nas bolas paradas"; pesquisa em PESQUISA-ETAPA4.md §12.1):
+  - **A linha**: os pontos da física (`preverMira`), desenhados só no plano de `mira-linha.js desenhoDaMira` (puro): ALTA e
+    TENSA até `altaFim` (45%) do comprimento do arco até o ALVO, esmaecendo de `altaEsmaece` (30%); CHUTE a extensão de
+    antes (a barreira + `MIRA.linhaChute` m ou `MIRA.semBarreira` m), esmaecendo nos últimos 30%; CURTA/LONGA os `MIRA.direcao`
+    m no chão, esmaecendo nos últimos 40%; em todos começa a `inicio` 0,25 m do centro da bola e entra em 0,35 m. Largura
+    CONSTANTE na tela (`render/bola-parada.js MIRA_DESENHO`, px CSS pela altura H): miolo BRANCO `max(2; 0,005·H)` e contorno
+    preto do TM `#050807` a α 0,8 de `max(1; 0,002·H)` de cada lado (4 px no celular, 6,5 no PC); sem seta, sem amarelo nem
+    azul; acende em 0,15 s e some no chute.
+  - **O anel do alvo** (ALTA e TENSA): verde do TM `#22c55e` com o mesmo contorno, raio 0,9 m (o da marca de queda) no gramado,
+    no ponto em que a bola, depois de subir além de `ACOES.cruzamento.yAlto` + 0,3 m, desce a `yAlto` — a MESMA regra do
+    `m.voo.alvo` da cobrança (`acoes.js cobrancaMirada`), copiada em `desenhoDaMira` porque mira.js/acoes.js estão no fecho;
+    guarda: `teste-mira` G (≤ 1 cm).
+  - **O arco da curva**: verde do TM com contorno, centrado na bola e no plano da tela, do lado da curva (a direita de quem
+    bate = a direita da tela com a câmera atrás do cobrador; a conta pelo lado da mira projetado), 28° por degrau (0,25 → 28°,
+    1 → 112°), raio `max(1,6 × o raio da bola na tela; 0,026·H)` px (≥ 4 px de arco por degrau em 568×320); com curva 0 (e na CURTA/LONGA) não aparece. O verde (anel
+    e arco) tem miolo `max(2,5; 0,0065·H)`.
+  - **Custo**: uma malha, UMA chamada (polilinhas de 2 vértices por ponto; ≤ ~170 triângulos medidos, o teto do buffer 252 pontos = 496), um
+    `ShaderMaterial` com o antisserrilhado analítico (`fwidth`; a Média e a Baixa não têm MSAA), `depthTest`/`depthWrite`
+    false (por cima do cobrador e da barreira, como no EA FC), `renderOrder` 6, `toneMapped` false. O programa compila na
+    CARGA do módulo (`main.js carregarBP` → `renderer.compileAsync(tela.malha, câmera, cena)`), não na 1ª cobrança.
+  - **Sem painel e sem texto**: o painel `#mira` (rótulo ALTA/TENSA/CHUTE/CURTA/LONGA, trilho, Z/X) saiu; o rótulo continua nos
+    dados (`preverMira().rotulo`). `html.mira-visivel` (a mira na tela: o minimapa sai) e `html.cobranca-mirada` (a cobrança
+    mirada fora do tiro de meta: PEGAR e TROCAR da bola na mão saem das vagas d/e) continuam.
+  - **Estado para os testes** (`__golaco.bolaParada.estado.linha`): `{visivel, pontos, desenhados, opacidade, tipo, larguraPx:
+    {miolo, contorno}, verdePx, arco: {curva, graus, raioPx, lado} | null, alvo: {x, z} | null, anel, fimVisivel: {m, i, total,
+    inicio, esmaece}, triangulos}`; `__golaco.bolaParada.arrasto` = o arrasto da curva no toque agora.
+- **A curva no toque** (item 65; `entrada.js`, fora do fecho): os dois botões CURVA SAÍRAM. Segurar o CHUTE ou o LANÇAMENTO (a
+  força, como sempre) e ARRASTAR o polegar para o lado (`CURVA_TOQUE`: só o eixo horizontal, relativo ao ponto do toque; zona
+  morta 10 px; um degrau a cada 14 px, ±1 a 52 px; histerese — o nível sobe na fronteira e só desce 6 px aquém dela; na borda
+  da tela, ≤ 8 px dela com o dedo indo para ela, o degrau repete a cada 0,15 s; o que a borda somou zera na zona morta).
+  `criarArrastoCurva` (pura) dá o nível; a página o traduz em PULSOS dos bits `EFEITO_D` (+) / `EFEITO_E` (−), os mesmos do Z/X
+  (`pulsoDaCurva`, pura: um pulso por vez, só como borda nova — o próximo depois de um passo ver o bit solto; ≤ 30 degraus/s a
+  30, 60 e 120 qps), contados em malha aberta (vale no online, onde o mundo vê o pulso D passos depois). Soltar a batida acaba o
+  arrasto e DESCARTA o pulso que nenhum passo viu: a cobrança sai com a curva que a tela mostrava. Pausa, replay, cenas
+  (`limparPulsos()` fora do laço), `soltarTudo` e `bloquear` acabam o arrasto. `entrada.definirCurva(ativa, curva)` a cada
+  quadro (main.js, depois de `bp.tela.desenhar`): ativa = a cobrança mirada da PESSOA esperando, fora do tiro de meta, da
+  corrida do item 70 e das cenas; liga a classe `curva-arrasto` no `#toque` (os chevrons ‹ › dentro do CHUTE e do LANÇAMENTO:
+  pseudo-elementos, verde do TM `var(--tm-verde, #22c55e)` / preto do TM no `.ativo`, o lado da curva em α 1 e o outro em
+  0,35 pelo `data-curva`) — nada de DOM novo, sem texto. Com o CHUTE ou o LANÇAMENTO JÁ segurado quando ela liga (o dedo posto
+  na montagem da falta, antes da mira, ~1 s), o arrasto começa ali, da última posição do dedo naquele botão (`ultX`, guardada no
+  `pointerdown`/`pointermove` de todo botão): os chevrons do botão segurado valem (revisão 1 do item 65, R1: antes a curva
+  ficava em 0 e, para tentar de novo, soltar batia). PASSE e ENFIADA ignoram o arrasto. Teclado (Z/X) e controle
+  (analógico direito, |rx| > 0,55, degraus com repetição) iguais. A lógica (`mira.js`), o formato do online (9 bytes) e o hash
+  NÃO mudam (`hash-igual`, `hash-partida` demo e humano IGUAIS; `fecho-hash --diff` 0).
 - **Câmera da bola parada** (`render/bola-parada.js CAMERA_BOLA_PARADA`, `planoBolaParada`; a mistura em `render/camera.js`): no
   escanteio, tiro livre, tiro de meta e pênalti com o cobrador sendo o controlado do humano e no pênalti CONTRA (atrás do
   cobrador adversário). Lado: o que fica mais para dentro do campo (empate: à esquerda de quem bate). Nada sólido na lente
@@ -2681,12 +2738,37 @@ de meta; a linha da trajetória com mira, força e curva no escanteio e na falta
   `entra` s (o corte da montagem entra direto) e volta em `sai` s no chute (posição, direção do olhar e fov misturados:
   sem salto). Com ela o analógico vira mundo pelo rumo dela (`yawEntrada` = a direção bola → alvo padrão): direita da
   tela = direita de quem bate (no pênalti contra, o goleiro escolhe o lado pela tela).
+- **Metas do desenho e do gesto** (item 65; a régua é a máscara com × sem a mira no MESMO quadro, q=media, celular dpr 2 com
+  o entalhe, dia e noite; os números de antes são os do mapa do item 65 na 2a13ca14, pela mesma régua): L1 a largura da linha
+  p95 ≤ 4,8 px no celular e ≤ 7,5 no PC; L2 constante ao longo dela (p95/p5 ≤ 1,35 por tipo); L4 a área da mira (linha +
+  anel + arco) ≤ 75% da de antes no escanteio e no tiro de meta e ≤ 110% na falta, no 844×390 e no PC (em 568×320 só ≤ 100%,
+  informativo: a largura fixa em px ocupa mais na tela pequena), e ≥ 150 px; L5 o miolo ≥ 3:1 contra o gramado no mesmo ponto
+  em ≥ 95% das tiras e L5b, em qualquer fundo (barreira, placas, rede), o miolo OU o contorno ≥ 3:1 em ≥ 95%; L6 nenhum pixel
+  amarelo nem azul posto pela mira; A2 o anel do escanteio ≥ 20 × 6 px no 844×390 e ≥ 95% fora do HUD; C1 com curva 0
+  nenhum pixel verde junto da bola e o arco crescendo ≥ 4 px (celular) / ≥ 8 px (PC) por degrau, para o lado da curva; custo
+  ≤ +1 chamada, ≤ +500 triângulos e NENHUM programa WebGL novo quando a mira aparece pela 1ª vez (a mira desligada até a 1ª
+  contagem — nenhum quadro a desenha antes — e acesa pelos quadros do relógio antes da 2ª; sem o `compileAsync` reprova,
+  33 → 34). HUD da cobrança mirada (`teste-hud-minimo`, a régua do H1 com o placar mais largo): H1c ≤ 11% em 844×390,
+  667×375 e 640×360 e ≤ 12% em 568×320 (base 10,53 / 12,95 / 13,14 / 14,45%); H2c nenhum texto fora do placar, do nome e dos
+  nomes dos botões; H1d nenhum botão CURVA; H1e folga ≥ 4 px entre as peças; H9c os chevrons ≥ 2 px dentro do círculo do
+  botão e ≥ 1 px do nome. Gesto (`teste-entrada`, contra o `atualizarMira` real): os degraus a 10 / 24 / 38 / 52 px; de 0 a +1 o
+  mundo chega em ≤ 0,2 s depois do dedo (medido 0,003–0,012 s a 30, 60 e 120 qps) e de +1 a −1 em ≤ 0,35 s, com a mesma
+  curva final nos três ritmos; tremor de ±3 px numa fronteira = no máximo 1 troca de degrau (medido 0); soltar com degraus
+  na fila = a curva mostrada no último quadro.
 - **Testes**: `teste-mira` (Node, padrão: A a bola = a linha a ≤ 3 cm; B curva para o lado certo; C controles, rótulos,
   a linha some no chute, tiro de meta; D o erro continua; E canhão do humano roteirizado, escanteio ≤ 12% e falta 2–12%;
-  F a IA não usa) e `teste-bola-parada-tela` (navegador, CI: PC 1280×720 e celular 844×390 e 568×320 — o módulo fora do
-  download inicial, câmera atrás do
-  cobrador nos 4 tipos e no pênalti contra, cobrador e alvo no quadro, nada na lente, a linha ≥ 150 px e ≤ +1 chamada,
-  some no chute, a volta para a TV sem salto, teclado e botões CURVA).
+  F a IA não usa; G o anel = `m.voo.alvo` ≤ 1 cm; H o plano do desenho), `teste-entrada` (a curva por arrasto: degraus,
+  histerese, borda, contra o `atualizarMira` real a 30/60/120 qps, soltar com degraus na fila), `teste-bola-parada-tela`
+  (navegador, CI: PC 1280×720 e celular 844×390 e 568×320 com o entalhe — o módulo fora do download inicial, câmera atrás do
+  cobrador nos 4 tipos e no pênalti contra, cobrador e alvo no quadro, nada na lente, a mira ≥ 150 px e ≤ +1 chamada, sem
+  painel nem texto, some no chute, a volta para a TV sem salto, teclado e o arco no mesmo quadro, o arrasto com toque de
+  verdade — seção 5, com o caso E: o CHUTE apertado na montagem da 2ª falta seguida, antes da mira e dos chevrons, e arrastado
+  +40 px depois deles = 0,75 —; seção 7, a mira pelos pixels: as metas acima) e `teste-hud-minimo` H1c/H2c/H1d/H1e/H9c (a
+  cobrança mirada de verdade nas 4 telas; `--so-mirada`). Na base 2a13ca14 reprovam o G/H do `teste-mira`, a seção nova do
+  `teste-entrada`, 28 de 49 itens do `teste-bola-parada-tela` (3, 5 e 7) e o H1c/H2c/H1d/H1e/H9c; o caso E reprova na
+  49d23386 (antes da revisão 1). Os de câmera, de cobrança e de online afetados passam (`teste-camera-tela`, `teste-controles`,
+  `teste-mira-tela`, `teste-corrida-cobranca`, `teste-online`, `teste-dois-humanos`, `teste-estilos-penalti`, `teste-tm-tela`,
+  `teste-carga` e o `testar-3d` do TM).
 
 ## Goleiro realista (16/10; contrato) — defesa pela dificuldade, encaixe × espalmada, set, 1×1 e saída no cruzamento
 
