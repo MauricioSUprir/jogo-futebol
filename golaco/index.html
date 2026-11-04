@@ -37,6 +37,11 @@
       <path d="M10 1.2 18.6 3.8V11c0 5-3.7 8.4-8.6 9.9C5.1 19.4 1.4 16 1.4 11V3.8z" fill="#07090a" stroke="#19e07a" stroke-width="1.6" stroke-linejoin="round"/>
       <path d="M13.6 8.5a4.4 4.4 0 1 0 .9 3.9h-3.9" fill="none" stroke="#19e07a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
     </symbol>
+    <!-- a marca do GOLAÇO (o paralelogramo verde do favicon e da placa do estádio com o G vazado, inclinado com ele): o placar e
+         a pausa (item 58) usam o mesmo desenho -->
+    <symbol id="marca-golaco" viewBox="6 8 29 24">
+      <path d="M7 31 15.5 9H34L25.5 31z" fill="currentColor"/><path d="M25.11 15.85A6.2 6.2 0 1 0 26.64 20.86H21.1" transform="translate(20.5 20) skewX(-21) translate(-20.5 -20)" fill="none" stroke="#07090a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
     <symbol id="escudo-ventania" viewBox="0 0 20 22">
       <path d="M10 1.2 18.6 3.8V11c0 5-3.7 8.4-8.6 9.9C5.1 19.4 1.4 16 1.4 11V3.8z" fill="#e9ecee" stroke="#8d979d" stroke-width="1.4" stroke-linejoin="round"/>
       <path d="M4.6 9h7.2a2.1 2.1 0 1 0-2.1-2.1M4.6 12.2h9.6a2.2 2.2 0 1 1-2.2 2.2M5.6 15.3h3.6" fill="none" stroke="#15191b" stroke-width="1.6" stroke-linecap="round"/>
@@ -55,8 +60,8 @@
   <div id="hud" class="hud" data-hud>
     <header class="placar" data-caixa="placar" aria-label="Placar">
       <span class="placar-marca" data-placar="marca">
-        <!-- o símbolo do GOLAÇO (o paralelogramo verde do favicon e da placa do estádio) com o G vazado, inclinado com ele -->
-        <svg class="marca-simbolo" viewBox="6 8 29 24" aria-hidden="true"><path d="M7 31 15.5 9H34L25.5 31z" fill="currentColor"/><path d="M25.11 15.85A6.2 6.2 0 1 0 26.64 20.86H21.1" transform="translate(20.5 20) skewX(-21) translate(-20.5 -20)" fill="none" stroke="#07090a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <!-- o símbolo do GOLAÇO (<symbol id="marca-golaco"> do sprite) -->
+        <svg class="marca-simbolo" viewBox="6 8 29 24" aria-hidden="true"><use href="#marca-golaco"/></svg>
       </span>
       <div class="placar-linha">
         <span class="placar-time t0" id="placar-time-0" role="img"><i class="placar-cor" aria-hidden="true"></i><svg class="placar-escudo" data-placar="escudo" viewBox="0 0 20 22" aria-hidden="true"><use id="escudo-0" href="#escudo-golaco"/></svg><span class="placar-sigla" id="sigla-0">GLÇ</span></span>
@@ -221,127 +226,159 @@
        ENTRA/SAI da substituição é outra peça (#faixa-subst). Não pega toque (o toque na camada do replay continua pulando). -->
   <div id="terco" class="terco" data-caixa="terco" aria-live="polite" hidden></div>
 
-  <!-- Menu de pausa -->
-  <div id="menu" class="sobreposicao" hidden>
+  <!-- Pausa (item 58; dono, 23/10: "quero ele igual ao do FIFA ... o campinho do time no canto direito"; contrato "Pausa (item
+       58)" no CONTRATOS.md): o jogo congelado fica à vista. À esquerda a faixa escura em degradê com a marca, a competição e a
+       LISTA vertical de texto — um nível de cada vez: o 1º, Opções, Modo de jogo (no TM, Cenas da partida), Estatísticas e, no
+       Livre, Jogadores e Câmera (livre-pagina.js); no PC, a linha dos comandos no pé. No canto de cima à direita a pílula do
+       placar e o X no lugar do ≡; embaixo dele o cartão do meu time (js/pausa-tela.js, sob demanda). Os id, data-cmd,
+       data-valor e data-grupo são o contrato dos testes. A ordem do 1º nível é a do DOM (hud.js aplicarModoNoMenu esconde por
+       modo e, no fim de jogo, sobe o primário do fim para o 1º lugar; ele volta para antes da âncora <!--fim-->) -->
+  <div id="menu" class="sobreposicao pausa" data-entrada="teclado" hidden>
     <div class="janela janela-menu" role="dialog" aria-modal="true" aria-labelledby="menu-titulo">
-      <div class="janela-topo">
-        <h2 id="menu-titulo">Pausa</h2>
-        <!-- tela limpa (11/10): o que aparece na tela durante o jogo, liga/desliga com um toque — o minimapa (desligado
-             no celular por padrão, como o radar do EA FC) e os nomes nos botões de toque (desligados: só o ícone). Na
-             barra de cima: a pausa continua cabendo sem rolar no celular deitado -->
-        <div class="chips-tela" role="group" aria-label="Na tela">
-          <button type="button" class="chip" id="chip-minimapa" data-cmd="minimapa" aria-pressed="false">Minimapa</button>
-          <button type="button" class="chip chip-nomes" id="chip-nomes" data-cmd="nomes" aria-pressed="false">Nomes nos botões</button>
+      <div class="pausa-faixa">
+        <div class="janela-topo">
+          <svg class="pausa-marca" viewBox="6 8 29 24" aria-hidden="true"><use href="#marca-golaco"/></svg>
+          <h2 id="menu-titulo"><span class="sr">Pausa: </span><span id="pausa-competicao">Amistoso</span></h2>
         </div>
-        <!-- tela cheia (só onde a página pode pedir: Android e PC) fica no topo, ao lado do X -->
-        <button class="btn-fechar btn-tela-cheia" type="button" data-cmd="tela-cheia" id="btn-tela-cheia" aria-label="Tela cheia" title="Tela cheia" hidden>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <button class="btn-fechar" type="button" data-cmd="continuar" aria-label="Fechar o menu">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-        </button>
-      </div>
-      <div class="menu-corpo">
-        <!-- ações por modo: data-so="partida" só na partida; data-so="treino" só nos treinos; "penaltis" na disputa de pênaltis
-             (os valores separados por espaço: vale em qualquer um deles) -->
-        <div class="menu-acoes" id="menu-acoes">
-          <!-- Continuar e o Replay (dos últimos 10 s) na mesma linha: a pausa continua cabendo sem rolar no celular deitado -->
-          <div class="linha-continuar">
-            <button class="btn btn-primario" type="button" data-cmd="continuar" id="btn-continuar">Continuar</button>
-            <button class="btn btn-replay" type="button" data-cmd="replay" data-so="partida penaltis livre" title="Replay dos últimos 10 s" aria-label="Replay dos últimos 10 s">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.5 9.2v5.6l4.6-2.8z" fill="currentColor"/></svg>Replay
-            </button>
+        <div class="menu-corpo">
+          <!-- 1º nível (data-so: em que modo aparece — partida, treino, penaltis, livre; vários separados por espaço). O texto do
+               item é o 1º nó; <small class="estado"> é o estado à direita (só ele pode ganhar "…"); <small class="desc"> é a
+               descrição para o leitor de tela (aria-describedby; fica no textContent, escondida na tela) -->
+          <div class="menu-acoes" id="menu-acoes">
+            <button class="btn btn-primario" type="button" data-cmd="continuar" id="btn-continuar">Voltar ao jogo</button>
+            <button class="btn" type="button" data-cmd="editar-time" data-so="partida" aria-describedby="desc-editar">Editar time <small class="desc" id="desc-editar">escalação e tática</small></button>
+            <button class="btn" type="button" data-cmd="estatisticas" data-so="partida" id="btn-estatisticas">Estatísticas</button>
+            <button class="btn" type="button" data-cmd="recomecar" data-so="treino" aria-describedby="desc-recomecar">Recomeçar <small class="desc" id="desc-recomecar">bola no pé</small></button>
+            <button class="btn" type="button" data-cmd="maquina" data-so="treino">Máquina de passes</button>
+            <button class="btn btn-alternar" type="button" data-cmd="marcador" data-so="treino" aria-pressed="false">Marcador de treino <small class="estado" id="estado-marcador">desligado</small></button>
+            <button class="btn" type="button" data-cmd="replay" data-so="partida penaltis livre" aria-describedby="desc-replay">Replay <small class="desc" id="desc-replay">os últimos 10 segundos</small></button>
+            <button class="btn" type="button" data-cmd="opcoes" id="btn-opcoes">Opções</button>
+            <button class="btn" type="button" data-cmd="modos" id="btn-modos">Modo de jogo <small class="estado" id="estado-modo">partida</small></button>
+            <button class="btn" type="button" data-cmd="ajuda">Ajuda e controles</button>
+            <button class="btn" type="button" data-cmd="reiniciar-partida" data-so="partida penaltis" id="btn-reiniciar-partida">Reiniciar partida</button>
+            <!-- Total Match (?tm; hud.js aplicarModoNoMenu): sem ?tm ficam escondidos -->
+            <button class="btn" type="button" data-cmd="simular-resto" id="btn-simular-resto" aria-describedby="desc-simular" hidden>Simular o resto <small class="desc" id="desc-simular">até o apito final</small></button>
+            <button class="btn" type="button" data-cmd="voltar-tm" id="btn-voltar-tm" hidden>Voltar ao Total Match</button>
+            <!--fim-->
           </div>
-          <button class="btn" type="button" data-cmd="editar-time" data-so="partida">Editar time <small>escalação e tática</small></button>
-          <button class="btn" type="button" data-cmd="reiniciar-partida" data-so="partida penaltis" id="btn-reiniciar-partida">Reiniciar partida</button>
-          <!-- Total Match (?tm; hud.js aplicarModoNoMenu): sem ?tm ficam escondidos -->
-          <button class="btn" type="button" data-cmd="simular-resto" id="btn-simular-resto" hidden>Simular o resto <small>até o apito final</small></button>
-          <button class="btn" type="button" data-cmd="voltar-tm" id="btn-voltar-tm" hidden>Voltar ao Total Match</button>
-          <button class="btn" type="button" data-cmd="recomecar" data-so="treino">Recomeçar <small>bola no pé</small></button>
-          <button class="btn" type="button" data-cmd="maquina" data-so="treino">Máquina de passes</button>
-          <button class="btn btn-alternar" type="button" data-cmd="marcador" data-so="treino" aria-pressed="false">Marcador de treino <small id="estado-marcador">desligado</small></button>
-          <button class="btn" type="button" data-cmd="modos" id="btn-modos">Modo de jogo <small id="estado-modo">partida</small></button>
-          <button class="btn" type="button" data-cmd="ajuda">Ajuda e controles</button>
-        </div>
-        <!-- "Modo de jogo": a partida e os treinos (abre no lugar da lista de ações) -->
-        <div class="menu-acoes" id="menu-modos" hidden>
-          <button class="btn btn-voltar" type="button" data-cmd="modos-voltar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button>
-          <!-- a partida e a disputa de pênaltis lado a lado (numa linha só: o submenu continua cabendo sem rolar no celular deitado) -->
-          <div class="linha-cenas" role="group" aria-label="Jogos">
-            <button class="btn" type="button" data-cmd="modo" data-valor="partida" aria-pressed="false" aria-label="Partida: Golaço FC × Ventania FC">Partida <small>11 contra 11</small></button>
-            <button class="btn" type="button" data-cmd="modo" data-valor="penaltis" id="btn-modo-penaltis" aria-pressed="false" aria-label="Pênaltis: disputa de pênaltis em 3D">Pênaltis <small>disputa 3D</small></button>
-          </div>
-          <!-- o Modo Livre (livre.js; a pausa dele vem do livre-pagina.js) e os treinos lado a lado: 5 linhas, sem rolar -->
-          <button class="btn" type="button" data-cmd="modo" data-valor="livre" id="btn-modo-livre" aria-pressed="false">Modo Livre <small id="estado-modo-livre">5 contra 5</small></button>
-          <div class="linha-cenas" role="group" aria-label="Treinos">
-            <button class="btn" type="button" data-cmd="modo" data-valor="ataque" aria-pressed="false" aria-label="Treino de ataque: 6 contra 4">Ataque <small>6 contra 4</small></button>
-            <button class="btn" type="button" data-cmd="modo" data-valor="conducao" aria-pressed="false" aria-label="Treino de condução: bola no pé">Condução <small>bola no pé</small></button>
-          </div>
-          <!-- pré-jogo da partida (as cenas antes da saída de bola e as escalações): cada toque passa para o próximo —
-               completo, curto, só escalação, desligado; salvo (js/main.js modoPrejogo). Aqui e não nas opções: com uma
-               linha a mais a pausa rolava no celular deitado (ela tem de caber inteira) -->
-          <!-- as cenas da partida lado a lado (numa linha só: o submenu continua cabendo sem rolar no celular deitado) — o
-               pré-jogo, a cena de substituição (ligada ↔ só a faixa ENTRA/SAI: a faixa fica sempre, é o pedido do dono) e as
-               cenas das paradas (o cartão e o intervalo; desligadas = o ícone e a faixa de hoje) -->
-          <div class="linha-cenas tres" role="group" aria-label="Cenas da partida">
-            <button class="btn" type="button" data-cmd="prejogo-ciclo" id="btn-prejogo" aria-label="Pré-jogo da partida" aria-describedby="estado-prejogo">Pré-jogo <small id="estado-prejogo">completo</small></button>
-            <button class="btn" type="button" data-cmd="subst-ciclo" id="btn-subst" aria-label="Cena de substituição" aria-describedby="estado-subst">Substituição <small id="estado-subst">ligada</small></button>
-            <button class="btn" type="button" data-cmd="cenas-ciclo" id="btn-cenas" aria-label="Cenas das paradas (cartão e intervalo)" aria-describedby="estado-cenas">Cenas <small id="estado-cenas">ligadas</small></button>
-          </div>
-        </div>
-        <div class="menu-opcoes">
-          <div class="opcao">
-            <span class="opcao-rotulo">Qualidade</span>
-            <div class="segmentado" data-grupo="qualidade">
-              <button type="button" data-valor="baixa">Baixa</button>
-              <button type="button" data-valor="media">Média</button>
-              <button type="button" data-valor="alta">Alta</button>
-              <button type="button" data-valor="auto">Automática</button>
+          <!-- Opções (submenu): o que era a coluna da direita e a barra de cima. Cada linha tem o nome à esquerda e o controle à
+               direita; no celular em 2 colunas na faixa larga -->
+          <div class="menu-acoes submenu" id="menu-opcoes" role="group" aria-labelledby="titulo-opcoes" hidden>
+            <div class="sub-topo">
+              <button class="btn btn-voltar" type="button" data-cmd="opcoes-voltar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button>
+              <h3 class="sub-titulo" id="titulo-opcoes">Opções</h3>
             </div>
-            <small class="opcao-info" id="info-qualidade"></small>
-          </div>
-          <!-- Horário, Câmera e Replays: lado a lado no celular deitado (no PC, um embaixo do outro, como antes) -->
-          <div class="opcoes-linha">
-          <div class="opcao">
-            <span class="opcao-rotulo">Horário</span>
-            <div class="segmentado" data-grupo="hora">
-              <button type="button" data-valor="dia">Dia</button>
-              <button type="button" data-valor="noite">Noite</button>
-            </div>
-          </div>
-          <div class="opcao">
-            <span class="opcao-rotulo">Câmera</span>
-            <div class="segmentado" data-grupo="camera">
-              <button type="button" data-valor="tv">TV</button>
-              <button type="button" data-valor="aproximada">Aproximada</button>
-            </div>
-          </div>
-          <!-- replays automáticos: depois do gol e no apito do impedimento (o "Replay" da pausa funciona sempre) -->
-          <div class="opcao">
-            <span class="opcao-rotulo" title="Replays automáticos (gol, impedimento e paradas)">Replays</span>
-            <div class="segmentado" data-grupo="replayAuto" aria-label="Replays automáticos">
-              <button type="button" data-valor="ligado">Ligado</button>
-              <button type="button" data-valor="desligado">Desligado</button>
-            </div>
-          </div>
-          </div>
-          <div class="opcao opcao-som">
-            <span class="opcao-rotulo">Som da torcida</span>
-            <div class="opcao-som-linha">
-              <div class="segmentado" data-grupo="som">
-                <button type="button" data-valor="ligado">Ligado</button>
-                <button type="button" data-valor="desligado">Desligado</button>
+            <div class="opcoes-grade">
+              <div class="opcao op-larga" role="group" aria-labelledby="rot-qualidade" aria-describedby="info-qualidade">
+                <span class="opcao-rotulo" id="rot-qualidade">Qualidade</span>
+                <div class="segmentado" data-grupo="qualidade">
+                  <button type="button" data-valor="baixa">Baixa</button>
+                  <button type="button" data-valor="media">Média</button>
+                  <button type="button" data-valor="alta">Alta</button>
+                  <button type="button" data-valor="auto" aria-label="Automática">Auto</button>
+                </div>
+                <small class="opcao-info" id="info-qualidade"></small>
               </div>
-              <label class="deslizante">Volume <input type="range" id="som-volume" min="0" max="100" step="5"><output id="saida-volume"></output></label>
+              <div class="opcoes-col">
+                <div class="opcao" role="group" aria-labelledby="rot-camera">
+                  <span class="opcao-rotulo" id="rot-camera">Câmera</span>
+                  <div class="segmentado" data-grupo="camera">
+                    <button type="button" data-valor="tv">TV</button>
+                    <button type="button" data-valor="aproximada">Aproximada</button>
+                  </div>
+                </div>
+                <!-- liga/desliga: a linha inteira é o botão (a chave desenhada no ::after) -->
+                <button type="button" class="opcao opcao-chave" id="chip-minimapa" data-cmd="minimapa" aria-pressed="false">Minimapa</button>
+                <!-- replays automáticos: depois do gol, no apito do impedimento e nas paradas (o "Replay" da pausa funciona sempre) -->
+                <div class="opcao" role="group" aria-label="Replays automáticos">
+                  <span class="opcao-rotulo" title="Replays automáticos (gol, impedimento e paradas)">Replays</span>
+                  <div class="segmentado" data-grupo="replayAuto">
+                    <button type="button" data-valor="ligado">Ligado</button>
+                    <button type="button" data-valor="desligado">Desligado</button>
+                  </div>
+                </div>
+                <div class="opcao" role="group" aria-labelledby="rot-hora">
+                  <span class="opcao-rotulo" id="rot-hora">Horário</span>
+                  <div class="segmentado" data-grupo="hora">
+                    <button type="button" data-valor="dia">Dia</button>
+                    <button type="button" data-valor="noite">Noite</button>
+                  </div>
+                </div>
+                <!-- tela cheia (só onde a página pode pedir: Android e PC; hud.js mostra) -->
+                <button type="button" class="opcao opcao-chave" id="btn-tela-cheia" data-cmd="tela-cheia" aria-pressed="false" hidden>Tela cheia</button>
+              </div>
+              <div class="opcoes-col">
+                <div class="opcao" role="group" aria-label="Som da torcida" aria-describedby="info-som">
+                  <span class="opcao-rotulo">Som</span>
+                  <div class="segmentado" data-grupo="som">
+                    <button type="button" data-valor="ligado">Ligado</button>
+                    <button type="button" data-valor="desligado">Desligado</button>
+                  </div>
+                  <small class="opcao-info" id="info-som"></small>
+                </div>
+                <label class="opcao deslizante"><span class="opcao-rotulo">Volume</span><input type="range" id="som-volume" min="0" max="100" step="5"><output id="saida-volume"></output></label>
+                <!-- nomes nos botões de toque (só com os controles de toque) -->
+                <button type="button" class="opcao opcao-chave chip-nomes" id="chip-nomes" data-cmd="nomes" aria-pressed="false">Nomes nos botões</button>
+                <label class="opcao deslizante"><span class="opcao-rotulo">Tamanho</span><input type="range" id="toque-tamanho" min="70" max="140" step="5" aria-label="Tamanho dos botões de toque"><output id="saida-tamanho"></output></label>
+                <label class="opcao deslizante"><span class="opcao-rotulo">Transparência</span><input type="range" id="toque-opacidade" min="25" max="100" step="5" aria-label="Transparência dos botões de toque"><output id="saida-opacidade"></output></label>
+              </div>
             </div>
-            <small class="opcao-info" id="info-som"></small>
           </div>
-          <div class="opcao">
-            <span class="opcao-rotulo">Controles de toque</span>
-            <label class="deslizante">Tamanho <input type="range" id="toque-tamanho" min="70" max="140" step="5"><output id="saida-tamanho"></output></label>
-            <label class="deslizante">Transparência <input type="range" id="toque-opacidade" min="25" max="100" step="5"><output id="saida-opacidade"></output></label>
+          <!-- "Modo de jogo" (no TM, "Cenas da partida"): a partida, os Pênaltis, o Livre, os treinos e as cenas -->
+          <div class="menu-acoes submenu" id="menu-modos" role="group" aria-labelledby="titulo-modos" hidden>
+            <div class="sub-topo">
+              <button class="btn btn-voltar" type="button" data-cmd="modos-voltar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button>
+              <h3 class="sub-titulo" id="titulo-modos">Modo de jogo</h3>
+            </div>
+            <!-- a partida e a disputa de pênaltis lado a lado (numa linha só) -->
+            <div class="linha-cenas" role="group" aria-label="Jogos">
+              <button class="btn" type="button" data-cmd="modo" data-valor="partida" aria-pressed="false" aria-label="Partida: Golaço FC × Ventania FC">Partida <small>11 contra 11</small></button>
+              <button class="btn" type="button" data-cmd="modo" data-valor="penaltis" id="btn-modo-penaltis" aria-pressed="false" aria-label="Pênaltis: disputa de pênaltis em 3D">Pênaltis <small>disputa 3D</small></button>
+            </div>
+            <!-- o Modo Livre (livre.js; a pausa dele vem do livre-pagina.js) -->
+            <button class="btn" type="button" data-cmd="modo" data-valor="livre" id="btn-modo-livre" aria-pressed="false">Modo Livre <small id="estado-modo-livre">5 contra 5</small></button>
+            <div class="linha-cenas" role="group" aria-label="Treinos">
+              <button class="btn" type="button" data-cmd="modo" data-valor="ataque" aria-pressed="false" aria-label="Treino de ataque: 6 contra 4">Ataque <small>6 contra 4</small></button>
+              <button class="btn" type="button" data-cmd="modo" data-valor="conducao" aria-pressed="false" aria-label="Treino de condução: bola no pé">Condução <small>bola no pé</small></button>
+            </div>
+            <!-- as cenas da partida lado a lado: o pré-jogo (completo → curto → só escalação → desligado), a cena de substituição
+                 (ligada ↔ só a faixa ENTRA/SAI) e as cenas das paradas (o cartão e o intervalo); salvos (main.js) -->
+            <div class="linha-cenas tres" role="group" aria-label="Cenas da partida">
+              <button class="btn" type="button" data-cmd="prejogo-ciclo" id="btn-prejogo" aria-label="Pré-jogo da partida" aria-describedby="estado-prejogo">Pré-jogo <small id="estado-prejogo">completo</small></button>
+              <button class="btn" type="button" data-cmd="subst-ciclo" id="btn-subst" aria-label="Cena de substituição" aria-describedby="estado-subst">Substituição <small id="estado-subst">ligada</small></button>
+              <button class="btn" type="button" data-cmd="cenas-ciclo" id="btn-cenas" aria-label="Cenas das paradas (cartão e intervalo)" aria-describedby="estado-cenas">Cenas <small id="estado-cenas">ligadas</small></button>
+            </div>
+          </div>
+          <!-- Estatísticas da partida até agora (js/pausa-tela.js preenche a tabela; só na partida) -->
+          <div class="menu-acoes submenu" id="menu-estatisticas" role="group" aria-labelledby="titulo-estatisticas" hidden>
+            <div class="sub-topo">
+              <button class="btn btn-voltar" type="button" data-cmd="estatisticas-voltar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button>
+              <h3 class="sub-titulo" id="titulo-estatisticas">Estatísticas</h3>
+            </div>
+            <table class="pausa-est"></table>
           </div>
         </div>
+        <!-- a linha dos comandos (só no PC; data-entrada no #menu pelo último meio usado: teclado ou controle) -->
+        <div class="pausa-comandos" aria-hidden="true">
+          <span class="pc-teclado"><kbd>Enter</kbd> Selecionar</span><span class="pc-teclado"><kbd>Esc</kbd> Voltar</span>
+          <span class="pc-pad"><i class="pc-disco pc-a">A</i> Selecionar</span><span class="pc-pad"><i class="pc-disco pc-b">B</i> Voltar</span>
+        </div>
+      </div>
+      <!-- o canto direito: a pílula do placar (espelho do placar do HUD; não pega toque) e o X no lugar do ≡; o cartão do meu time
+           embaixo (tocar nele abre o Editar time; fora da ordem do foco: o teclado e o controle usam o item da lista) -->
+      <div class="pausa-direita">
+        <div class="pausa-topo-dir">
+          <div class="pausa-placar" id="pausa-placar" role="img" aria-label="Placar" hidden>
+            <svg class="pp-escudo" viewBox="0 0 20 22" aria-hidden="true"><use href="#escudo-golaco"/></svg><b class="pp-sigla">GLÇ</b>
+            <span class="pp-gols"><b>0</b><i aria-hidden="true"></i><b>0</b></span>
+            <b class="pp-sigla">VIS</b><svg class="pp-escudo" viewBox="0 0 20 22" aria-hidden="true"><use href="#escudo-ventania"/></svg>
+            <span class="pp-relogio" hidden></span>
+          </div>
+          <button class="btn-fechar" type="button" data-cmd="continuar" aria-label="Voltar ao jogo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <section class="pausa-time" id="pausa-time" role="region" hidden></section>
       </div>
     </div>
   </div>

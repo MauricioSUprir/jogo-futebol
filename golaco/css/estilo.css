@@ -468,7 +468,6 @@ html.cobranca-mirada .btn-pegar, html.cobranca-mirada .btn-trocar-mao { display:
 }
 .janela-topo h2 { margin: 0 auto 0 0; font-size: 15px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; }
 .janela-topo h2::before { content: ""; display: inline-block; width: 4px; height: 14px; background: var(--verde); margin-right: 10px; vertical-align: -1px; border-radius: 2px; }
-.janela-topo .btn-fechar + .btn-fechar { margin-left: 8px; }
 .btn-fechar[hidden] { display: none; }
 .btn-fechar {
   width: 48px; height: 48px; display: grid; place-items: center; padding: 0; cursor: pointer;
@@ -476,48 +475,7 @@ html.cobranca-mirada .btn-pegar, html.cobranca-mirada .btn-trocar-mao { display:
 }
 .btn-fechar svg { width: 18px; height: 18px; }
 .btn-fechar:hover, .btn-fechar:focus-visible { color: var(--verde); border-color: var(--verde); outline: none; }
-/* tela limpa (11/10): liga/desliga do que aparece na tela, na barra de cima da pausa (Minimapa; Nomes nos botões só com
-   os controles de toque) — sem custo de altura: a pausa continua cabendo sem rolar no celular deitado */
-.chips-tela { display: flex; gap: 6px; margin: 0 10px; } /* margem à esquerda: nunca encostando no título */
-.chip {
-  height: 34px; padding: 0 12px 0 10px; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap;
-  font-size: 13px; font-weight: 700; color: var(--texto-2); background: var(--preto); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 17px;
-}
-.chip::before { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--texto-2); box-sizing: border-box; }
-.chip[aria-pressed="true"] { color: var(--preto); background: var(--verde); border-color: var(--verde); }
-.chip[aria-pressed="true"]::before { background: var(--preto); border-color: var(--preto); }
-.chip:hover, .chip:focus-visible { border-color: var(--verde); outline: none; }
-html:not(.com-toque) .chip-nomes { display: none; }
-@media (max-width: 600px) {
-  .chips-tela { margin-right: 6px; }
-  /* sem a bolinha (o estado fica no fundo verde) e mais justos: em 568×320 com entalhe o "PAUSA" ficava a 1 px do
-     "Minimapa"; assim sobram ~30 px (tools/teste-hud-minimo.mjs, H7) */
-  .chip { font-size: 12px; padding: 0 10px; gap: 0; }
-  .chip::before { display: none; }
-}
-
-.menu-corpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 20px; padding: 16px 20px 20px; }
-.menu-acoes { display: flex; flex-direction: column; gap: 8px; }
-.menu-acoes[hidden] { display: none; }
-/* Continuar + Replay na mesma linha (nos treinos o Replay some e o Continuar ocupa a linha toda) */
-.linha-continuar { display: flex; gap: 8px; }
-.linha-continuar .btn-primario { flex: 1 1 auto; }
-.btn-replay { flex: none; justify-content: center; gap: 7px; }
-/* "Modo de jogo": as cenas da partida (pré-jogo e substituição) lado a lado, o nome em cima e o estado embaixo */
-.linha-cenas { display: flex; gap: 8px; }
-.linha-cenas[hidden] { display: none; }
-/* o estado embaixo do nome numa linha só (a linha da Partida e dos Pênaltis: o texto que quebrava fazia a pausa rolar 2 px) */
-.linha-cenas .btn small { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.linha-cenas .btn { flex: 1 1 0; min-width: 0; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; padding: 4px 12px; line-height: 1.2; }
-/* a linha das cenas da partida com três (Pré-jogo, Substituição e Cenas, 22/10): cada botão cresce pelo próprio texto (o
-   "Substituição" é o mais largo), sem quebrar, e o rótulo fica em 13 px (o resto da pausa, 14) — com os três do mesmo
-   tamanho e 14 px ele não cabia nos 300 px da coluna em 844×390; numa linha a mais a pausa rolava 50 px */
-.linha-cenas.tres { gap: 5px; }
-.linha-cenas.tres .btn { flex: 1 1 auto; padding: 4px 8px; white-space: nowrap; font-size: 13px; }
-.linha-cenas.tres .btn small { font-size: 10px; }
-.btn-replay svg { width: 18px; height: 18px; flex: none; }
-/* no PC as três opções ficam uma embaixo da outra, como as outras */
-.opcoes-linha { display: contents; }
+/* os botões das janelas (a faixa do fim de jogo, os avisos do online) — a pausa tem os dela (bloco "Pausa (item 58)") */
 .btn {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   min-height: 48px; padding: 0 14px; cursor: pointer; text-align: left;
@@ -529,33 +487,8 @@ html:not(.com-toque) .chip-nomes { display: none; }
 .btn:hover, .btn:focus-visible { border-color: var(--verde); outline: none; }
 .btn-primario { background: var(--verde); color: var(--preto); border-color: var(--verde); justify-content: center; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; }
 .btn-primario:hover, .btn-primario:focus-visible { background: #3cf092; }
-.btn-alternar[aria-pressed="true"] small { color: var(--verde); }
-.btn-voltar { justify-content: flex-start; gap: 6px; }
-.btn-voltar svg { width: 18px; height: 18px; flex: none; }
-#menu-modos .btn[aria-pressed="true"] { border-color: var(--verde); }
-#menu-modos .btn[aria-pressed="true"] small { color: var(--verde); }
-
-.menu-opcoes { display: flex; flex-direction: column; gap: 14px; }
-.opcao { display: flex; flex-direction: column; gap: 7px; }
-.opcao-rotulo { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--texto-2); }
-.opcao-info { font-size: 11px; color: var(--texto-2); min-height: 1em; }
-.segmentado { display: flex; padding: 3px; gap: 3px; background: var(--preto); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 9px; }
-.segmentado button {
-  flex: 1 1 0; min-width: 0; height: 36px; padding: 0 6px; cursor: pointer;
-  font-size: 13px; font-weight: 700; color: var(--texto-2);
-  background: transparent; border: 0; border-radius: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.segmentado button:hover { color: var(--texto); }
-.segmentado button[aria-pressed="true"] { background: var(--verde); color: var(--preto); }
-.segmentado button:focus-visible { outline: 2px solid var(--verde); outline-offset: 1px; }
-.deslizante { display: grid; grid-template-columns: 96px minmax(0, 1fr) 46px; align-items: center; gap: 10px; font-size: 13px; color: var(--texto); }
-.deslizante output { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--texto-2); text-align: right; }
-.opcao-som-linha { display: flex; flex-direction: column; gap: 7px; }
-input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; touch-action: pan-x; }
-input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: var(--preto-3); border-radius: 2px; }
-input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; margin-top: -8px; border-radius: 50%; background: var(--verde); border: 3px solid var(--preto); }
-input[type="range"]::-moz-range-track { height: 4px; background: var(--preto-3); border-radius: 2px; }
-input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--verde); border: 3px solid var(--preto); }
+/* "Nomes nos botões" (Opções da pausa) só com os controles de toque */
+html:not(.com-toque) .chip-nomes { display: none; }
 
 .ajuda-colunas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; padding: 16px 20px 20px; }
 .ajuda-colunas h3 { margin: 0 0 10px; font-size: 12px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; color: var(--verde); }
@@ -573,41 +506,285 @@ html.modo-penaltis .ajuda-colunas .so-partida-pen { display: none; }
 .nota.creditos { margin: 0 20px 16px; }
 
 @media (max-width: 680px) {
-  .menu-corpo { grid-template-columns: 1fr; }
   .ajuda-colunas { grid-template-columns: 1fr; }
 }
 /* no celular a coluna do toque vem primeiro na ajuda */
 html.com-toque .ajuda-colunas section:last-child { order: -1; }
-/* tela baixa (celular deitado): janelas mais compactas */
+/* tela baixa (celular deitado): a Ajuda mais compacta */
 @media (max-height: 480px) {
   .janela-topo { padding: 4px 6px 4px 16px; }
-  .menu-corpo { padding: 8px 16px 10px; gap: 16px; }
-  .menu-acoes { gap: 6px; }
-  /* os botões da pausa ficam com 48 px também no celular deitado (alvo de toque) */
-  .btn { min-height: 48px; }
-  .segmentado button { height: 32px; }
-  /* celular deitado: Horário e Câmera lado a lado, para o menu inteiro caber sem rolar */
-  .menu-opcoes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; row-gap: 6px; }
-  .menu-opcoes .opcao { gap: 5px; }
-  .menu-opcoes > .opcao:first-child, .menu-opcoes > .opcao:last-child { grid-column: 1 / -1; }
-  /* som: ligado/desligado e o volume na mesma linha (o menu continua cabendo sem rolar) */
-  .menu-opcoes .opcao-som { grid-column: 1 / -1; }
-  /* Horário, Câmera e Replays na mesma linha: cada botão com a largura do texto (nada cortado) */
-  .opcoes-linha { grid-column: 1 / -1; display: grid; grid-template-columns: auto auto auto; column-gap: 10px; }
-  .opcoes-linha .segmentado button { flex: 1 1 auto; padding: 0 7px; }
-  .opcao-som-linha { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; align-items: center; }
-  .opcao-som .deslizante { grid-template-columns: auto minmax(0, 1fr) 40px; }
-  .opcao-som .opcao-info { display: none; }
-  /* controles de toque: Tamanho e Transparência lado a lado (a linha do som não faz o menu rolar) */
-  .menu-opcoes > .opcao:last-child { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; row-gap: 5px; }
-  .menu-opcoes > .opcao:last-child .opcao-rotulo { grid-column: 1 / -1; }
-  .menu-opcoes > .opcao:last-child .deslizante { grid-template-columns: auto minmax(0, 1fr) 40px; }
-  .menu-opcoes .segmentado button { font-size: 12px; padding: 0 4px; }
   .ajuda-colunas { padding: 10px 16px 14px; gap: 16px; }
   .ajuda-colunas dd::after { height: 4px; }
   .ajuda-colunas dt, .ajuda-colunas dd { font-size: 11.5px; }
   .nota.creditos { margin: 0 16px 12px; }
 }
+/* ------------------------------------------------------------------ Pausa (item 58: a pausa do FC 24 com o campinho do meu time;
+   dono, 23/10; contrato "Pausa (item 58)" no CONTRATOS.md; PESQUISA-ESTADIO.md §7.3). O jogo congelado à vista, sem janela nem
+   véu: à esquerda a faixa escura em degradê (α 0,9 até o fim da lista, sumindo depois), com a marca, a competição e a LISTA de
+   texto; no canto direito a pílula do placar, o X no lugar do ≡ e o cartão do meu time (o desenho dele em css/pausa.css, sob
+   demanda). A cara do TM com e sem ?tm: as cores do TM e a Inter TM — a fonte só baixa com a pausa na tela ou pela pré-carga
+   (main.js SOB.pausa: fora do download inicial; teste-carga). Dois regimes pela ALTURA: celular deitado (≤ 480 px: tamanhos em
+   px, cabe sem rolar de 844×390 a 568×320 com o entalhe) e PC/tablet (as proporções do FC 24 medidas em 1280×720, em vh/vw).
+   Medido no tools/teste-pausa-tela.mjs (P1–P10). Peça nova no 1º nível: o 568×320 já está no limite (8 linhas de 28,6 px). */
+@font-face { font-family: 'Inter TM'; font-style: normal; font-weight: 400; font-display: swap; src: url('../assets/tm/fontes/inter-400.woff2') format('woff2'); }
+@font-face { font-family: 'Inter TM'; font-style: normal; font-weight: 600; font-display: swap; src: url('../assets/tm/fontes/inter-600.woff2') format('woff2'); }
+@font-face { font-family: 'Inter TM'; font-style: normal; font-weight: 800; font-display: swap; src: url('../assets/tm/fontes/inter-800.woff2') format('woff2'); }
+/* com a pausa (ou a Ajuda) aberta o HUD do jogo sai, como no FC (o layout dele não muda: o ajustarTopo mede igual); o aviso
+   fica (o resultado da edição do time, o "Time atualizado"); o hud.js põe inert neles (o Tab e o leitor de tela não chegam lá) */
+html.pausa-aberta #hud, html.pausa-aberta #toque, html.pausa-aberta #cena .btn-replay-pular, html.pausa-aberta #cena .btn-cena-menu { visibility: hidden; }
+html.pausa-aberta .gol-tela, html.pausa-aberta .replay-faixa { visibility: hidden !important; }
+html.pausa-aberta #aviso { visibility: visible; }
+#menu {
+  --p-preto: #050807; --p-painel: #0f1612; --p-verde: #22c55e; --p-verde-cl: #4ade80;
+  --p-texto: #eef5f0; --p-fraco: #8a9d90; --p-linha: rgba(255, 255, 255, 0.13);
+  --p-fonte: 'Inter TM', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+#menu.sobreposicao { display: block; padding: 0; background: none; }
+#menu.sobreposicao[hidden] { display: none; }
+/* o que o hud.js esconde por modo (data-so, a trava, o online) some de verdade: as regras da pausa abaixo põem display nos itens */
+#menu [hidden] { display: none !important; }
+#menu .sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+#menu .janela-menu {
+  /* o celular deitado (o padrão; o PC muda no bloco min-height: 481px). M = --pm, a margem da borda útil ao texto */
+  --pm: 16px;
+  --fx-x: calc(var(--sa-l) + var(--pm));
+  --fx-w: clamp(196px, calc(18vw + 100px), 260px);
+  --fx-cheia: calc(var(--fx-x) + var(--fx-w) + 16px);
+  --fx-fade: 12vw;
+  --topo-y: var(--pm); --topo-h: 28px; --topo-gap: 10px;
+  --item-f: 15px; --item-f-foco: 17px;
+  --card-w: min(300px, calc(100vw - var(--sa-r) - var(--pm) - var(--fx-x) - var(--fx-w) - 10px));
+  --card-y: 66px;
+  position: absolute; inset: 0; width: auto; max-height: none; overflow: hidden; overscroll-behavior: none;
+  border: 0; border-radius: 0; box-shadow: none; color: var(--p-texto); font-family: var(--p-fonte);
+  background: linear-gradient(90deg, rgba(5, 8, 7, 0.9) 0, rgba(5, 8, 7, 0.9) var(--fx-cheia), rgba(5, 8, 7, 0) calc(var(--fx-cheia) + var(--fx-fade)));
+  -webkit-font-smoothing: antialiased;
+}
+#menu .janela-menu::after { display: none; }
+/* a faixa: do x 0 até o fim da parte cheia (tocar nela, fora dos itens, não fecha a pausa: hud.js) */
+#menu .pausa-faixa { position: absolute; left: 0; top: 0; bottom: 0; width: var(--fx-cheia); }
+#menu .janela-topo {
+  position: absolute; left: var(--fx-x); top: calc(var(--sa-t) + var(--topo-y)); width: var(--fx-w); height: var(--topo-h);
+  display: flex; align-items: center; gap: 8px; padding: 0; background: none; border: 0;
+}
+#menu .janela-topo h2 {
+  margin: 0; min-width: 0; flex: 1 1 auto; font-size: 14px; font-weight: 800; line-height: 1.2; letter-spacing: 0; text-transform: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--p-texto);
+}
+#menu .janela-topo h2::before { display: none; }
+#menu .pausa-marca { flex: none; width: 24px; height: 20px; color: var(--p-verde); }
+#menu .menu-corpo {
+  position: absolute; left: var(--fx-x); width: var(--fx-w); padding: 0;
+  top: calc(var(--sa-t) + var(--topo-y) + var(--topo-h) + var(--topo-gap)); bottom: calc(var(--sa-b) + var(--pm));
+  display: block; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
+}
+#menu .menu-corpo::-webkit-scrollbar { display: none; }
+#menu .menu-acoes { display: flex; flex-direction: column; gap: 2px; }
+#menu .menu-acoes[hidden], #menu .linha-par[hidden], #menu .linha-cenas[hidden] { display: none; }
+/* o 1º nível: a lista vertical de TEXTO (sem caixas), a linha na largura toda da faixa (o alvo maior que o texto), 28–44 px
+   e 2 px entre as linhas; o item com o foco (classe .selecionado, que segue o foco: hud.js) em negrito com a barra verde de 3 px
+   à esquerda e um brilho que some para a direita, como o FC 24. O primário (Voltar ao jogo, Jogar de novo, Voltar ao TM no fim)
+   em verde-claro quando não tem o foco */
+#menu #menu-acoes { height: 100%; }
+#menu #menu-acoes > .btn, #menu #menu-acoes > .linha-par { flex: 1 1 0; min-height: 28px; max-height: 44px; }
+#menu #menu-acoes > .btn, #menu .linha-par > .btn {
+  position: relative; min-width: 0; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 0 8px 0 14px; background: transparent; border: 0; border-radius: 4px; box-shadow: none; outline: 0;
+  font: 500 var(--item-f) / 1.15 var(--p-fonte); letter-spacing: 0; text-transform: none; color: rgba(238, 245, 240, 0.86);
+  white-space: nowrap; text-align: left; cursor: pointer;
+}
+#menu #menu-acoes > .btn::before, #menu .linha-par > .btn::before {
+  content: ""; position: absolute; left: 2px; top: 5px; bottom: 5px; width: 3px; border-radius: 2px; background: transparent;
+}
+#menu #menu-acoes > .btn.selecionado, #menu #menu-acoes > .btn:focus-visible, #menu .linha-par > .btn.selecionado, #menu .linha-par > .btn:focus-visible {
+  font-weight: 800; color: #fff; background: linear-gradient(90deg, rgba(34, 197, 94, 0.16), rgba(34, 197, 94, 0) 80%);
+}
+#menu #menu-acoes > .btn.selecionado, #menu #menu-acoes > .btn:focus-visible { font-size: var(--item-f-foco); }
+#menu #menu-acoes > .btn.selecionado::before, #menu #menu-acoes > .btn:focus-visible::before,
+#menu .linha-par > .btn.selecionado::before, #menu .linha-par > .btn:focus-visible::before { background: var(--p-verde); }
+#menu #menu-acoes > .btn-primario:not(.selecionado):not(:focus-visible) { color: var(--p-verde-cl); }
+#menu #menu-acoes > .btn:disabled { opacity: 0.45; cursor: default; }
+/* a linha com dois (no Livre: Recomeçar | Bola no meu pé): o peso não muda no foco (em 568×320 os dois cabem por pouco) */
+#menu #menu-acoes > .linha-par { display: flex; gap: 6px; }
+#menu .linha-par > .btn { flex: 1 1 auto; width: auto; min-height: 0; padding: 0 6px 0 10px; font-size: 13px; font-weight: 500; }
+#menu .linha-par > .btn.selecionado, #menu .linha-par > .btn:focus-visible { font-weight: 600; }
+/* o estado à direita (o modo, o marcador, os do Livre, as pausas do online): o único que pode ganhar "…" */
+#menu small.estado, #menu #menu-acoes small:not(.desc) {
+  flex: 0 1 auto; min-width: 0; margin-left: auto; overflow: hidden; text-overflow: ellipsis;
+  font: 500 12px / 1.2 var(--p-fonte); letter-spacing: 0; text-transform: none; color: var(--p-fraco);
+}
+#menu .btn-alternar[aria-pressed="true"] small { color: var(--p-verde-cl); }
+/* a descrição (escalação e tática, até o apito final...): só para o leitor de tela (aria-describedby; fica no textContent) */
+#menu small.desc { display: none; }
+
+/* os submenus: a linha de cima (Voltar + o nome) e os botões em pílula do TM, borda fina, o escolhido em verde */
+#menu .sub-topo { display: flex; align-items: center; gap: 12px; flex: none; min-height: 44px; }
+#menu .sub-titulo { margin: 0; min-width: 0; font: 800 15px / 1.2 var(--p-fonte); color: var(--p-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#menu .btn-voltar {
+  flex: none; display: inline-flex; align-items: center; justify-content: flex-start; gap: 4px; min-width: 44px; min-height: 36px; height: 36px;
+  padding: 0 14px 0 8px; border-radius: 999px; border: 1px solid var(--p-linha); background: var(--p-painel);
+  font: 600 13px / 1 var(--p-fonte); letter-spacing: 0; text-transform: none; color: var(--p-texto); cursor: pointer; outline: 0;
+}
+#menu .btn-voltar svg { width: 18px; height: 18px; flex: none; }
+/* (:where: a especificidade de um #menu .x .btn — as regras próprias do submenu, como as do Livre, ficam por cima) */
+#menu .menu-acoes:where(:not(#menu-acoes)) .btn:where(:not(.btn-voltar)) {
+  min-height: 44px; padding: 0 16px; border-radius: 999px; background: var(--p-painel); border: 1px solid var(--p-linha);
+  font: 600 14px / 1.2 var(--p-fonte); letter-spacing: 0; text-transform: none; color: var(--p-texto); box-shadow: none; outline: 0;
+}
+#menu .menu-acoes:where(:not(#menu-acoes)) .btn small { font: 500 12px / 1.2 var(--p-fonte); letter-spacing: 0; text-transform: none; color: var(--p-fraco); }
+#menu .menu-acoes:where(:not(#menu-acoes)) .btn:hover, #menu .menu-acoes:where(:not(#menu-acoes)) .btn.selecionado, #menu .menu-acoes:where(:not(#menu-acoes)) .btn:focus-visible {
+  border-color: var(--p-verde); box-shadow: 0 0 0 1px var(--p-verde) inset;
+}
+#menu .menu-acoes:where(:not(#menu-acoes)) .btn.btn-primario { justify-content: center; background: linear-gradient(120deg, #34d572, #1fae55); color: #04130a; border-color: transparent; font-weight: 800; }
+#menu .menu-acoes:where(:not(#menu-acoes)) .btn.btn-primario.selecionado, #menu .menu-acoes:where(:not(#menu-acoes)) .btn.btn-primario:focus-visible { box-shadow: 0 0 0 2px #86efac; }
+#menu #menu-modos .btn[aria-pressed="true"] { border-color: var(--p-verde); }
+#menu #menu-modos .btn[aria-pressed="true"] small { color: var(--p-verde-cl); }
+#menu .linha-cenas { display: flex; gap: 8px; }
+#menu .linha-cenas .btn { flex: 1 1 0; min-width: 0; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; padding: 4px 16px; line-height: 1.2; }
+#menu .linha-cenas .btn small { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#menu .linha-cenas.tres { gap: 6px; }
+#menu .linha-cenas.tres .btn { flex: 1 1 auto; padding: 4px 12px; white-space: nowrap; font-size: 13px; }
+#menu .linha-cenas.tres .btn small { font-size: 11px; }
+
+/* Opções: cada linha com o nome à esquerda e o controle à direita; liga/desliga = a linha inteira é o botão, a chave desenhada */
+#menu .opcoes-grade { display: flex; flex-direction: column; gap: 2px; }
+#menu .opcoes-col { display: contents; }
+#menu .opcao {
+  display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 2px 0 4px; flex-wrap: wrap; row-gap: 0;
+  font: 600 13px / 1.2 var(--p-fonte); color: var(--p-texto); background: transparent; border: 0; border-radius: 6px; text-align: left;
+}
+#menu .opcao-rotulo { flex: 1 1 auto; min-width: 0; font: 600 13px / 1.2 var(--p-fonte); letter-spacing: 0; text-transform: none; color: var(--p-texto); white-space: nowrap; }
+#menu .opcao-info { flex-basis: 100%; font: 500 12px / 1.3 var(--p-fonte); color: var(--p-fraco); min-height: 0; }
+#menu .opcao-info:empty { display: none; }
+#menu .segmentado { display: flex; flex: none; gap: 4px; padding: 0; background: none; border: 0; border-radius: 0; }
+#menu .segmentado button {
+  flex: none; min-width: 44px; height: 32px; padding: 0 10px; cursor: pointer; border-radius: 8px;
+  border: 1px solid var(--p-linha); background: var(--p-painel); color: var(--p-fraco);
+  font: 600 13px / 1 var(--p-fonte); white-space: nowrap; outline: 0;
+}
+#menu .segmentado button:hover { color: var(--p-texto); border-color: rgba(34, 197, 94, 0.45); }
+#menu .segmentado button[aria-pressed="true"] { background: linear-gradient(120deg, #4ade80, #22c55e); color: var(--p-preto); border-color: transparent; font-weight: 800; }
+#menu .segmentado button:focus-visible, #menu .segmentado button.selecionado { outline: 2px solid var(--p-verde-cl); outline-offset: 1px; color: var(--p-texto); }
+#menu .segmentado button[aria-pressed="true"]:focus-visible, #menu .segmentado button[aria-pressed="true"].selecionado { color: var(--p-preto); }
+#menu .opcao-chave { width: 100%; justify-content: space-between; cursor: pointer; outline: 0; }
+#menu .opcao-chave[hidden] { display: none; }
+#menu .opcao-chave::after {
+  content: ""; flex: none; width: 36px; height: 20px; border-radius: 999px; box-sizing: border-box;
+  border: 1px solid var(--p-linha); background: radial-gradient(circle at 10px 50%, var(--p-fraco) 0 6px, transparent 6.5px) var(--p-painel);
+}
+#menu .opcao-chave[aria-pressed="true"]::after { border-color: transparent; background: radial-gradient(circle at 26px 50%, var(--p-preto) 0 6px, transparent 6.5px), linear-gradient(120deg, #4ade80, #22c55e); }
+html:not(.com-toque) #menu .chip-nomes { display: none; }
+#menu .opcao-chave:hover, #menu .opcao-chave.selecionado, #menu .opcao-chave:focus-visible { background: rgba(34, 197, 94, 0.12); box-shadow: 0 0 0 2px var(--p-verde-cl) inset; }
+#menu .deslizante { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; }
+#menu .deslizante .opcao-rotulo { flex: 0 0 auto; }
+#menu .deslizante output { flex: none; width: 38px; font: 600 12px / 1 var(--p-fonte); font-variant-numeric: tabular-nums; color: var(--p-verde-cl); text-align: right; }
+#menu input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1 1 0; width: 0; min-width: 60px; height: 32px; margin: 0; background: transparent; touch-action: pan-x; outline: 0; accent-color: var(--p-verde); }
+#menu input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: rgba(255, 255, 255, 0.14); border-radius: 2px; }
+#menu input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -9px; border-radius: 50%; background: var(--p-verde); border: 3px solid var(--p-preto); }
+#menu input[type="range"]::-moz-range-track { height: 4px; background: rgba(255, 255, 255, 0.14); border-radius: 2px; }
+#menu input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--p-verde); border: 3px solid var(--p-preto); }
+#menu input[type="range"]:focus-visible::-webkit-slider-thumb, #menu input[type="range"].selecionado::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--p-verde-cl); }
+
+/* o canto direito: só o X e o cartão pegam toque (a pílula e o resto deixam o toque cair no "fundo", que fecha: hud.js) */
+#menu .pausa-direita { position: absolute; inset: 0; pointer-events: none; }
+#menu .pausa-topo-dir {
+  position: absolute; top: calc(var(--sa-t) + 14px); right: calc(var(--sa-r) + 14px); height: 44px;
+  display: flex; align-items: center; gap: 8px;
+}
+#menu .pausa-topo-dir .btn-fechar {
+  pointer-events: auto; flex: none; width: 44px; height: 44px; border-radius: 999px;
+  background: rgba(5, 8, 7, 0.72); border: 1px solid var(--p-linha); color: var(--p-texto);
+}
+#menu .pausa-topo-dir .btn-fechar svg { width: 20px; height: 20px; }
+#menu .pausa-topo-dir .btn-fechar:hover, #menu .pausa-topo-dir .btn-fechar:focus-visible, #menu .pausa-topo-dir .btn-fechar.selecionado { color: var(--p-verde-cl); border-color: var(--p-verde); box-shadow: 0 0 0 1px var(--p-verde) inset; }
+/* a pílula do placar (espelho do placar do HUD: hud.js espelharPlacar); sem lugar, perde o relógio e depois os escudos */
+#menu .pausa-placar {
+  display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; white-space: nowrap;
+  background: rgba(5, 8, 7, 0.86); border: 1px solid var(--p-linha); font: 800 13px / 1 var(--p-fonte); color: var(--p-texto);
+}
+#menu .pausa-placar[hidden] { display: none; }
+#menu .pp-escudo { flex: none; width: 15px; height: 17px; }
+#menu .pp-sigla { font-size: 12px; font-weight: 800; letter-spacing: 0.02em; }
+#menu .pp-gols { display: inline-flex; align-items: center; gap: 6px; padding: 0 2px; font-size: 15px; font-variant-numeric: tabular-nums; color: var(--p-verde-cl); }
+#menu .pp-gols i { width: 6px; height: 2px; border-radius: 1px; background: var(--p-fraco); }
+#menu .pp-relogio { padding-left: 8px; border-left: 1px solid var(--p-linha); font: 600 12px / 1 var(--p-fonte); font-variant-numeric: tabular-nums; color: var(--p-fraco); }
+#menu .pp-relogio[hidden], #menu .pausa-placar.sem-relogio .pp-relogio, #menu .pausa-placar.sem-escudo .pp-escudo { display: none; }
+/* o cartão do meu time (o conteúdo e o desenho: js/pausa-tela.js e css/pausa.css, sob demanda) */
+#menu .pausa-time { position: absolute; top: calc(var(--sa-t) + var(--card-y)); right: calc(var(--sa-r) + var(--pm)); width: var(--card-w); max-height: calc(100% - var(--sa-t) - var(--card-y) - var(--sa-b) - var(--pm)); pointer-events: auto; }
+#menu .pausa-time[hidden] { display: none; }
+/* a linha dos comandos: só no PC (bloco abaixo), pelo último meio usado (data-entrada no #menu: teclado ou controle) */
+#menu .pausa-comandos { display: none; }
+#menu kbd { display: inline-block; min-width: 1.6em; padding: 2px 6px; border-radius: 5px; border: 1px solid var(--p-linha); background: var(--p-painel); font: 600 12px / 1.2 var(--p-fonte); color: var(--p-texto); text-align: center; }
+#menu .pc-disco { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font: 800 11px / 1 var(--p-fonte); font-style: normal; color: var(--p-preto); }
+#menu .pc-a { background: #4ade80; }
+#menu .pc-b { background: #f87171; }
+#menu[data-entrada="pad"] .pc-teclado, #menu:not([data-entrada="pad"]) .pc-pad { display: none; }
+
+/* ---- celular deitado: as margens e as letras pela largura (844 → 16, 667/640 → 14, 568 → 12) */
+@media (max-height: 480px) and (max-width: 760px) { #menu .janela-menu { --pm: 14px; --topo-gap: 8px; } }
+@media (max-height: 480px) and (max-width: 660px) { #menu .janela-menu { --item-f-foco: 16px; } }
+@media (max-height: 480px) and (max-width: 600px) { #menu .janela-menu { --pm: 12px; --topo-h: 24px; --item-f-foco: 15px; } }
+/* os submenus no celular: a faixa LARGA (até a borda útil da direita menos M), sem a competição em cima (a linha do Voltar fica
+   na altura do X), o cartão e a pílula saem de cena; Opções, Modo de jogo e os do Livre em 2 colunas */
+@media (max-height: 480px) {
+  #menu .janela-menu[data-nivel="sub"] { --fx-w: calc(100vw - var(--sa-l) - var(--sa-r) - 2 * var(--pm)); --fx-cheia: 100vw; --fx-fade: 0px; }
+  #menu .janela-menu[data-nivel="sub"] .janela-topo { display: none; }
+  #menu .janela-menu[data-nivel="sub"] .menu-corpo { top: calc(var(--sa-t) + 14px); }
+  #menu .janela-menu[data-nivel="sub"] .pausa-time, #menu .janela-menu[data-nivel="sub"] .pausa-placar { display: none; }
+  #menu .janela-menu[data-nivel="sub"] .sub-topo { margin-bottom: 8px; }
+  #menu .opcoes-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; row-gap: 2px; }
+  #menu .op-larga { grid-column: 1 / -1; }
+  #menu .opcoes-col { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  #menu .opcao { min-height: 34px; }
+  #menu .opcao-info { display: none; }
+  #menu #menu-modos:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 12px; align-content: start; }
+  #menu #menu-modos > .sub-topo { grid-column: 1 / -1; margin-bottom: 2px; }
+  #menu #menu-modos > .linha-cenas.tres { grid-column: 1 / -1; }
+}
+@media (max-height: 480px) and (max-width: 600px) {
+  #menu .opcao { min-height: 32px; }
+  #menu .segmentado button { height: 30px; padding: 0 8px; }
+}
+
+/* ---- PC e tablet: as proporções do FC 24 (1280×720: o texto em x 5,2vw, a marca em y 4,3vh, o 1º item em 19,3vh, o passo
+   6,67vh, a letra 2,65vh e 3,6vh no foco, a faixa cheia até 28vw e o degradê até 50vw; a linha dos comandos em 93vh) */
+@media (min-height: 481px) {
+  #menu .janela-menu {
+    --fx-x: calc(var(--sa-l) + 5.2vw);
+    --fx-w: 24vw;
+    --fx-cheia: max(28vw, calc(var(--fx-x) + var(--fx-w) + 16px));
+    --fx-fade: 22vw;
+    --item-h: clamp(42px, calc(6.67vh - 2px), 70px);
+    --item-f: 2.65vh; --item-f-foco: 3.6vh;
+    --card-w: 30vw; --card-y: 72px;
+  }
+  #menu .janela-menu[data-sub="menu-opcoes"], #menu .janela-menu[data-sub="menu-estatisticas"] { --fx-w: max(24vw, 380px); }
+  #menu .janela-topo { top: calc(var(--sa-t) + 4.3vh); height: calc(min(3vh, 30px) * 1.5); gap: 12px; }
+  #menu .janela-topo h2 { font-size: min(3vh, 30px); }
+  #menu .pausa-marca { width: calc(min(3vh, 30px) * 1.25); height: min(3vh, 30px); }
+  #menu .menu-corpo { top: calc(var(--sa-t) + 19.3vh); bottom: calc(var(--sa-b) + 9vh); }
+  #menu #menu-acoes { height: auto; }
+  #menu #menu-acoes > .btn, #menu #menu-acoes > .linha-par { flex: none; height: var(--item-h); min-height: 0; max-height: none; }
+  #menu #menu-acoes > .btn { padding-left: 18px; }
+  #menu #menu-acoes > .btn::before { top: 22%; bottom: 22%; }
+  #menu .linha-par > .btn { font-size: var(--item-f); }
+  #menu small.estado, #menu #menu-acoes small:not(.desc) { font-size: max(12px, 1.9vh); }
+  #menu .sub-topo { margin-bottom: 6px; }
+  #menu .opcao { min-height: clamp(34px, 5.2vh, 48px); font-size: 14px; }
+  #menu .opcao-rotulo { font-size: 14px; }
+  #menu .segmentado button { height: clamp(32px, 5vh, 40px); }
+  #menu .pausa-comandos { display: flex; gap: 22px; position: absolute; left: var(--fx-x); top: 93vh; font: 600 14px / 1.4 var(--p-fonte); color: var(--p-fraco); white-space: nowrap; }
+  #menu .pausa-comandos > span { display: inline-flex; align-items: center; gap: 7px; }
+  #menu[data-entrada="toque"] .pausa-comandos { display: none; }
+  #menu .pausa-placar { height: 34px; }
+  #menu .pausa-time { right: calc(var(--sa-r) + 14px); }
+}
+/* janela estreita de PC (sem toque; com toque e em pé vale a tela "Gire o celular"): só a lista */
+@media (max-width: 559px) and (min-height: 481px) {
+  #menu .janela-menu { --fx-w: min(320px, calc(100vw - var(--fx-x) - 70px)); }
+  #menu .pausa-time { display: none; }
+}
+
 /* tela estreita: HUD do topo mais compacto para nada encostar */
 @media (max-width: 560px) {
   .modo { min-width: 0; }

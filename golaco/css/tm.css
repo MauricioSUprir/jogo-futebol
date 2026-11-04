@@ -202,27 +202,28 @@ html.tm .btn-toque.ativo svg { stroke: var(--tm-tinta); }
 html.tm .analogico-base { border-color: rgba(34, 197, 94, 0.55); background: radial-gradient(circle, rgba(34, 197, 94, 0.1) 0%, rgba(5, 8, 7, 0.42) 72%); }
 html.tm .analogico-pino { background: radial-gradient(circle at 40% 35%, #86efac, #22c55e 58%, #15803d); box-shadow: 0 0 0 3px rgba(5, 8, 7, 0.55); }
 
-/* ------------------------------------------------------------------ pausa e ajuda (o modal do TM) */
-html.tm .sobreposicao { background: rgba(2, 4, 3, 0.76); }
-html.tm .janela {
+/* ------------------------------------------------------------------ ajuda (o modal do TM) e os botões das janelas (a faixa do fim de
+   jogo, os avisos do online). A pausa (item 58) tem a cara do TM com e sem ?tm no estilo.css (bloco "Pausa"): aqui fica só a
+   marca do TM no topo dela */
+html.tm #ajuda.sobreposicao { background: rgba(2, 4, 3, 0.76); }
+html.tm #ajuda .janela {
   background: var(--tm-cartao); border: 1px solid var(--tm-borda); border-radius: 18px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
 }
-html.tm .janela::after { background: linear-gradient(rgba(11, 17, 14, 0), #0b110e 85%); }
-html.tm .janela-topo { background: #0d1410; border-bottom-color: var(--tm-linha); }
-html.tm .janela-topo h2 { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; text-transform: none; white-space: nowrap; }
+html.tm #ajuda .janela::after { background: linear-gradient(rgba(11, 17, 14, 0), #0b110e 85%); }
+html.tm #ajuda .janela-topo { background: #0d1410; border-bottom-color: var(--tm-linha); }
+html.tm #ajuda .janela-topo h2 { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; text-transform: none; white-space: nowrap; }
 /* a marca do TM no lugar da barrinha verde do título */
-html.tm .janela-topo h2::before {
+html.tm #ajuda .janela-topo h2::before {
   width: 22px; height: 12px; margin-right: 9px; vertical-align: -0.5px; border-radius: 0;
   background: var(--tm-simbolo) center / contain no-repeat;
 }
-html.tm .btn-fechar { border-radius: 999px; background: var(--tm-preto2); border-color: var(--tm-linha2); color: var(--tm-fraco); }
-html.tm .btn-fechar:hover, html.tm .btn-fechar:focus-visible { color: var(--tm-verde-cl); border-color: var(--tm-verde); }
-html.tm .chip { background: var(--tm-preto2); border-color: rgba(255, 255, 255, 0.14); color: var(--tm-texto); border-radius: 999px; }
-html.tm .chip::before { border-color: var(--tm-fraco); }
-html.tm .chip[aria-pressed="true"] { background: var(--tm-ativo); color: var(--tm-preto); border-color: transparent; }
-html.tm .chip[aria-pressed="true"]::before { background: var(--tm-preto); border-color: var(--tm-preto); }
-html.tm .chip:hover, html.tm .chip:focus-visible { border-color: var(--tm-verde); }
+html.tm #ajuda .btn-fechar { border-radius: 999px; background: var(--tm-preto2); border-color: var(--tm-linha2); color: var(--tm-fraco); }
+html.tm #ajuda .btn-fechar:hover, html.tm #ajuda .btn-fechar:focus-visible { color: var(--tm-verde-cl); border-color: var(--tm-verde); }
+/* a pausa: o símbolo do TM no lugar do do GOLAÇO, antes da competição */
+html.tm #menu .pausa-marca { display: none; }
+html.tm #menu .janela-topo::before { content: ""; flex: none; width: 27px; height: 15px; background: var(--tm-simbolo) center / contain no-repeat; }
+@media (min-height: 481px) { html.tm #menu .janela-topo::before { width: calc(min(3vh, 30px) * 1.8); height: min(3vh, 30px); } }
 
 /* botões: a pílula do TM (borda fina, painel); o principal com o degradê verde */
 html.tm .btn {
@@ -238,38 +239,6 @@ html.tm .btn-primario {
 }
 html.tm .btn-primario:hover, html.tm .btn-primario:focus-visible { background: var(--tm-botao); filter: brightness(1.07); box-shadow: 0 8px 22px rgba(34, 197, 94, 0.4); }
 html.tm .btn-primario:focus-visible { outline: 2px solid #86efac; outline-offset: 2px; }
-html.tm .btn-replay { padding: 0 16px; }
-html.tm .btn-alternar[aria-pressed="true"] small { color: var(--tm-verde-cl); }
-html.tm #menu-modos .btn[aria-pressed="true"] { border-color: var(--tm-verde); }
-/* Modo Livre (js/livre-pagina.js põe o HTML): −/+ redondos, o número e o goleiro ligado em verde, as 6 câmeras em pílula
-   (a escolhida no degradê, como os segmentados) e o nome da câmera na coluna das opções */
-html.tm .livre-time .btn { padding: 0 12px; }
-html.tm .livre-time .livre-passo { padding: 0; }
-html.tm .livre-n { color: var(--tm-verde-cl); }
-html.tm .livre-gol[aria-pressed="true"] { border-color: var(--tm-verde); color: var(--tm-verde-cl); }
-html.tm .livre-cameras .btn { padding: 0 6px; font-weight: 600; }
-html.tm .livre-cameras .btn[aria-pressed="true"] { background: var(--tm-ativo); color: var(--tm-preto); border-color: transparent; font-weight: 700; }
-html.tm.em-livre .btn-camera-livre { background: var(--tm-ativo); color: var(--tm-preto); border: 1px solid transparent; outline: 0; font-weight: 700; }
-html.tm.em-livre .btn-camera-livre:focus-visible { outline: 2px solid #86efac; outline-offset: 1px; }
-
-/* opções: os segmentados do TM (botões separados, o escolhido em degradê) */
-html.tm .opcao-rotulo { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; color: var(--tm-verde-cl); }
-html.tm .opcao-info { color: var(--tm-fraco); }
-html.tm .segmentado { padding: 0; gap: 6px; background: transparent; border: 0; border-radius: 0; }
-html.tm .segmentado button {
-  border: 1px solid var(--tm-linha2); background: var(--tm-preto2); border-radius: 9px;
-  font-weight: 600; color: var(--tm-fraco);
-}
-html.tm .segmentado button:hover { color: var(--tm-texto); border-color: rgba(34, 197, 94, 0.45); }
-html.tm .segmentado button[aria-pressed="true"] { background: var(--tm-ativo); color: var(--tm-preto); border-color: transparent; font-weight: 700; }
-html.tm .segmentado button:focus-visible { outline: 2px solid #86efac; outline-offset: 1px; }
-html.tm .deslizante { color: var(--tm-texto); }
-html.tm .deslizante output { color: var(--tm-verde-cl); }
-html.tm input[type="range"] { accent-color: var(--tm-verde); }
-html.tm input[type="range"]::-webkit-slider-runnable-track { background: rgba(255, 255, 255, 0.12); }
-html.tm input[type="range"]::-moz-range-track { background: rgba(255, 255, 255, 0.12); }
-html.tm input[type="range"]::-webkit-slider-thumb { background: var(--tm-verde); border-color: var(--tm-preto); }
-html.tm input[type="range"]::-moz-range-thumb { background: var(--tm-verde); border-color: var(--tm-preto); }
 
 html.tm .ajuda-colunas h3 { letter-spacing: 0.1em; font-weight: 800; color: var(--tm-verde-cl); }
 html.tm .ajuda-colunas dd { color: var(--tm-fraco); }
